@@ -27,11 +27,14 @@ lib/
                   #   cada una con domain/ (reglas+casos de uso), data/, presentation/
   netcode/
     contracts/        # NetSession — la interfaz que TODO lo demás usa
-    p2p_webrtc/        # implementación de HOY (WebRTC + señalización Firestore)
+    protocol/          # el protocolo de la sala (JSON), común a todos los transportes
+    loopback/          # en memoria (tests)
+    lan/               # WebSocket en la red local (main_lan.dart)
+    p2p_webrtc/        # WebRTC + señalización Firestore (main_p2p.dart)
     dedicated_server/  # implementación futura (ver README ahí)
     rollback/          # implementación futura, opcional (ver README ahí)
   app/
-    flavors/       # composition roots: main_p2p.dart, main_dev.dart, (futuros main_dedicated.dart, etc.)
+    flavors/       # composition roots: main_p2p.dart, main_lan.dart, main_dev.dart, (futuros main_dedicated.dart, etc.)
     feature_flags.dart
 ```
 
@@ -52,7 +55,16 @@ Todavía en el prototipo HTML, pendiente de portar (ver `docs/specs/`):
 - Catálogo completo de armas/clases/habilidades (hoy solo hay ejemplos
   mínimos en los tests)
 - UI real con Flame (hoy solo hay un placeholder en `app/app.dart`)
-- `WebRTCNetSession` sin probar en dispositivo real
+- `WebRTCNetSession` sin probar en dispositivo real (falta un proyecto
+  Firebase: pasos en `docs/specs/netcode.md`)
+
+## Multijugador
+
+- LAN (sin Firebase): `flutter run -d windows -t lib/app/flavors/main_lan.dart`
+  en cada PC (o dos veces en la misma). Uno toca CREAR SALA y comparte el
+  código `IP:PUERTO` del HUD; los demás lo escriben y tocan UNIRSE.
+- P2P por internet: `main_p2p.dart`, después de configurar Firebase
+  (docs/specs/netcode.md § "Qué tiene que hacer el dueño").
 
 ## Specs (SDD)
 

@@ -9,6 +9,13 @@ class PassiveNode {
   final String kind; // 'st' (inicio) | 's' (normal) | 'n' (notable) | 'k' (keystone)
   final List<String> links;
 
+  /// Camino temático al que pertenece (v2, `PassiveTreeCatalog.paths`);
+  /// `null` en inicios y anillo.
+  final String? pathId;
+
+  /// Mecánica del notable o keystone v2 (`kMechanics`).
+  final String? mechanicId;
+
   const PassiveNode({
     required this.id,
     required this.x,
@@ -18,6 +25,23 @@ class PassiveNode {
     required this.kind,
     required this.links,
     this.keystoneId,
+    this.pathId,
+    this.mechanicId,
+  });
+}
+
+/// Un camino temático del árbol v2 (docs/specs/passive_tree_v2.md § 2).
+class PassivePath {
+  final String id;
+  final String name;
+  final String theme;
+  final String classId;
+
+  const PassivePath({
+    required this.id,
+    required this.name,
+    required this.theme,
+    required this.classId,
   });
 }
 
@@ -28,10 +52,14 @@ class PassiveTreeCatalog {
   final Map<String, String> startNodeByClass; // classId -> nodeId
   final Map<String, String> exclusions; // nodeId -> nodeId mutuamente excluyente
 
+  /// Caminos temáticos por id (v2).
+  final Map<String, PassivePath> paths;
+
   const PassiveTreeCatalog({
     required this.nodes,
     required this.startNodeByClass,
     required this.exclusions,
+    this.paths = const {},
   });
 }
 

@@ -33,6 +33,8 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   yaml: ^3.1.2
+  material_ui: ^1.11.1
+  audioplayers: ^6.8.1
 
 dev_dependencies:
   flutter_test:
@@ -47,7 +49,25 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sprites/sprite_manifest.yaml
-    - assets/sprites/characters/
-    - assets/sprites/enemies/
+    # Los directorios de assets NO son recursivos: cada carpeta de
+    # sprites va listada (docs/specs/sprites.md).
+    - assets/sprites/characters/guerrero/
+    - assets/sprites/characters/maga/
+    - assets/sprites/characters/paladin/
+    - assets/sprites/characters/tirador/
+    - assets/sprites/enemies/slime/
+    - assets/sprites/enemies/bat/
+    - assets/sprites/enemies/golem/
+    - assets/sprites/enemies/ghost/
+    - assets/sprites/enemies/reyLimo/
+    - assets/sprites/enemies/golemReloj/
+    - assets/sprites/enemies/devorador/
     - assets/sprites/effects/
     - assets/sprites/tiles/
+
+  # Fuente pixel del estilo 8 bits (docs/specs/ui_style.md).
+  # Licencia SIL OFL 1.1: assets/fonts/OFL.txt
+  fonts:
+    - family: PressStart2P
+      fonts:
+        - asset: assets/fonts/PressStart2P-Regular.ttf

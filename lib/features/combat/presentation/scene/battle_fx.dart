@@ -1,0 +1,990 @@
+import 'dart:ui';
+
+import '../../../../game_engine/data/passive_mechanics.dart';
+import '../../../../game_engine/data/skills_catalog.dart';
+import '../../../../game_engine/models/battle_event.dart';
+import '../../../../game_engine/models/battle_state.dart';
+import '../../../../game_engine/models/passive_mechanic.dart';
+import '../../../../game_engine/models/skill.dart';
+import '../../../../game_engine/models/status.dart';
+import '../../../../game_engine/rules/js_math.dart';
+import 'fx_style.dart';
+import 'proc_fx.dart';
+import 'ult_cinematic.dart';
+
+/// Tipo de efecto (`k` de `addFx` en el prototipo, más los de los
+/// disparadores del árbol: docs/specs/battle_presentation.md
+/// § "Disparadores del árbol (procs)").
+enum FxKind {
+  num,
+  txt,
+  slash,
+  proj,
+  ring,
+  aura,
+  flash,
+  poof,
+  act,
+  ult,
+
+  /// Cartel con el nombre de una notable / keystone.
+  tag,
+
+  /// Rayo o estela de un rebote (de `(x, y)` a `(tx, ty)`).
+  arc,
+
+  /// Estallido de Combustión.
+  blast,
+
+  /// Rayo de luz desde arriba (Castigo Divino).
+  beam,
+
+  /// Escudo que se arma.
+  bubble,
+
+  /// Escudo que se quiebra al absorber.
+  crack,
+
+  /// Pulso / latido alrededor de un actor.
+  pulse,
+
+  /// Retícula que se cierra (Marca del Cazador).
+  reticle,
+
+  /// Flecha arriba / abajo (buff / debuff de ATQ).
+  arrow,
+
+  /// Chorro de partículas de `(x, y)` a `(tx, ty)` (Plaga Contagiosa).
+  stream,
+
+  /// Congelado del tiempo (Danza de Cuchillas).
+  timeStop,
+
+  /// Copias del héroe detrás de él (Frenesí).
+  afterimage,
+
+  /// Vapor (Choque Térmico): solo partículas.
+  puff,
+
+  /// Chispas doradas (Guardián): solo partículas.
+  spark,
+}
+
+/// Datos de la cinemática de una ultimate (`addFx({k:'ult'})`).
+class UltFx {
+  const UltFx({
+    required this.name,
+    required this.casterName,
+    required this.bulwark,
+    this.ultId,
+    this.casterClass,
+    this.script = kDefaultUltScript,
+    this.targets = const [],
+  });
+
+  final String name;
+  final String casterName;
+
+  /// Baluarte: los objetivos de la cinemática son los aliados.
+  final bool bulwark;
+
+  /// `SkillDef.id` de la ULT (`null` si el arma no se conoce).
+  final String? ultId;
+
+  /// Clase del lanzador (sprite grande de la tarjeta).
+  final String? casterClass;
+
+  /// Guion (fases, impactos): docs/specs/battle_presentation.md
+  /// § "Ultimates".
+  final UltScript script;
+
+  /// Objetivos en el orden de los eventos (el índice `i` de
+  /// `impactFor(i)`): los golpeados, o los curados en Baluarte.
+  final List<String> targets;
+
+  UltFx withTargets(List<String> ids) => UltFx(
+      name: name,
+      casterName: casterName,
+      bulwark: bulwark,
+      ultId: ultId,
+      casterClass: casterClass,
+      script: script,
+      targets: ids);
+}
+
+/// Un efecto de batalla: el objeto de `addFx` del prototipo, en
+/// coordenadas del mundo (píxeles virtuales, `(x, y)` = pies o punto de
+/// impacto). Inmutable; la escena le agrega la hora de inicio.
+class BattleFx {
+  const BattleFx(
+    this.kind, {
+    this.x = 0,
+    this.y = 0,
+    this.tx = 0,
+    this.ty = 0,
+    this.color = fxWhite,
+    this.text,
+    this.big = false,
+    this.hurt = false,
+    this.heavy = false,
+    this.el = FxElement.phys,
+    this.delayMs = 0,
+    this.who,
+    this.ult,
+    this.ghost = false,
+    this.up = false,
+    this.slot = 0,
+  });
+
+  final FxKind kind;
+  final double x, y;
+
+  /// Destino de un `proj`.
+  final double tx, ty;
+  final Color color;
+  final String? text;
+
+  /// `num` de crítico (12 px) o `ring` grande.
+  final bool big;
+
+  /// Daño recibido por un jugador (sacudida y destello rojo).
+  final bool hurt;
+
+  /// Número de una ULT: más grande, con rebote, dura más.
+  final bool heavy;
+  final FxElement el;
+
+  /// `dl`: el efecto empieza [delayMs] después de agregarse.
+  final int delayMs;
+
+  /// `act`: el actor que se lanza. `slash`: el golpeado (destello).
+  final String? who;
+  final UltFx? ult;
+
+  /// Repetición fantasma (Eco Arcano): `proj`, `slash` y `ring` a 50%.
+  final bool ghost;
+
+  /// `arrow` hacia arriba (si no, abajo).
+  final bool up;
+
+  /// `tag`: lugar en la pila de carteles del actor en el paso (0, 1...).
+  final int slot;
+
+  /// Duración visible (ms), contada desde que empieza.
+  int get durationMs => switch (kind) {
+        FxKind.num => heavy ? heavyNumMs : numMs,
+        FxKind.txt => txtMs,
+        FxKind.slash => slashMs,
+        FxKind.proj => projMs,
+        FxKind.ring => ringMs,
+        FxKind.poof => poofMs,
+        FxKind.flash => flashMs,
+        FxKind.act => actMs,
+        FxKind.ult => ult?.script.totalMs ?? kDefaultUltScript.totalMs,
+        FxKind.aura || FxKind.puff || FxKind.spark => 0,
+        FxKind.tag => tagMs,
+        FxKind.arc => arcMs,
+        FxKind.blast => blastMs,
+        FxKind.beam => beamMs,
+        FxKind.bubble => bubbleMs,
+        FxKind.crack => crackMs,
+        FxKind.pulse => heavy ? heartbeatMs : pulseMs,
+        FxKind.reticle => reticleMs,
+        FxKind.arrow => arrowMs,
+        FxKind.stream => streamMs,
+        FxKind.timeStop => timeStopMs,
+        FxKind.afterimage => afterimageMs,
+      };
+
+  static const numMs = 1100;
+  static const heavyNumMs = 1400;
+  static const txtMs = 1400;
+  static const slashMs = 220;
+  static const projMs = 280;
+  static const ringMs = 450;
+  static const poofMs = 500;
+  static const flashMs = 350;
+  static const actMs = 260;
+  static const tagMs = 1300;
+  static const arcMs = 240;
+  static const blastMs = 520;
+  static const beamMs = 480;
+  static const bubbleMs = 650;
+  static const crackMs = 420;
+  static const pulseMs = 520;
+  static const heartbeatMs = 700;
+  static const reticleMs = 500;
+  static const arrowMs = 900;
+  static const streamMs = 520;
+  static const timeStopMs = 420;
+  static const afterimageMs = 650;
+
+  /// Retraso del impacto de un dúo.
+  static const dualDelayMs = 300;
+
+  /// La misma cinemática con otro [UltFx].
+  BattleFx withUlt(UltFx u) => _copy(ult: u);
+
+  /// El mismo efecto [ms] más tarde.
+  BattleFx shifted(int ms) => ms == 0 ? this : _copy(delayMs: delayMs + ms);
+
+  /// El mismo efecto con otro texto (cartel con el valor del buff).
+  BattleFx withText(String s) => _copy(text: s);
+
+  BattleFx _copy({UltFx? ult, int? delayMs, String? text}) => BattleFx(kind,
+      x: x,
+      y: y,
+      tx: tx,
+      ty: ty,
+      color: color,
+      text: text ?? this.text,
+      big: big,
+      hurt: hurt,
+      heavy: heavy,
+      el: el,
+      delayMs: delayMs ?? this.delayMs,
+      who: who,
+      ult: ult ?? this.ult,
+      ghost: ghost,
+      up: up,
+      slot: slot);
+
+  @override
+  String toString() => 'BattleFx($kind, ($x, $y), text: $text, '
+      'color: $color, big: $big, dl: $delayMs, who: $who)';
+}
+
+// Colores fijos del prototipo (arte).
+const _gold = Color(0xFFFFD166);
+const _hurtRed = Color(0xFFFF6B81);
+const _critRed = Color(0xFFFF4757);
+const _healGreen = Color(0xFF7BED9F);
+const _regenGreen = Color(0xFF55EFC4);
+const _manaBlue = Color(0xFF74B9FF);
+const _orange = Color(0xFFFF9F43);
+const _violet = Color(0xFFA29BFE);
+const _holyLight = Color(0xFFFFF3B0);
+
+/// Contexto de la acción en curso dentro de un paso.
+class _Action {
+  _Action(this.event, this.actor);
+
+  final ActionEvent event;
+  final Combatant? actor;
+  SkillDef? skill;
+  Color color = fxWhite;
+
+  /// Guion de la ULT (solo en una acción `ultimate`).
+  UltScript? ult;
+  FxElement el = FxElement.phys;
+
+  /// Retraso del impacto ya decidido por objetivo.
+  final dl = <String, int>{};
+
+  /// Último enemigo golpeado por un golpe primario (de ahí sale el
+  /// primer rebote).
+  String? lastTarget;
+
+  /// Rebotes: último objetivo del salto y cuántos saltos van.
+  String? chainPrev;
+  int hops = 0;
+}
+
+/// Traduce los [BattleEvent] de un paso a efectos (los `addFx` que el
+/// prototipo hacía dentro de la lógica). Puro: no tiene reloj ni azar.
+/// Tabla en docs/specs/battle_presentation.md § "Eventos → efectos".
+///
+/// [state] es el estado DESPUÉS del paso (quién es jugador, nombres,
+/// armas, aliados vivos); [position] da los pies de cada actor en la
+/// escena.
+List<BattleFx> mapBattleEvents(
+  List<BattleEvent> events,
+  BattleState state,
+  Offset Function(String id) position,
+) {
+  final out = <BattleFx>[];
+  _Action? action;
+
+  // La acción de la ULT del paso y dónde quedó su cinemática.
+  _Action? ultAction;
+  int? ultIndex;
+
+  // Procs del árbol (§ "Disparadores del árbol (procs)").
+  /// `dl` del último efecto secundario en cada objetivo (sus estados,
+  /// `RETRASO` y `poof` caen con él).
+  final procDl = <String, int>{};
+  final tagCount = <String, int>{};
+
+  /// Índice en `out` del cartel de cada `actor|mecánica`.
+  final tagAt = <String, int>{};
+  ProcEvent? lastProc;
+  String? lastKo;
+  String? blastCenter;
+  var blastIdx = 0, echoIdx = 0;
+
+  /// Escudos que absorbieron un golpe en este paso.
+  final shieldHit = <String>{};
+
+  /// Viento a Favor: la próxima acción (el ataque gratis) se corre.
+  int? pendingOffset;
+  int? segStart;
+  var segOffset = 0;
+
+  bool isPlayer(String id) => state.byId(id)?.isPlayer ?? false;
+  Iterable<Combatant> aliveParty() => state.party.where((p) => p.alive);
+
+  void txt(String id, double dy, String text, Color color, {int dl = 0}) {
+    final p = position(id);
+    out.add(BattleFx(FxKind.txt,
+        x: p.dx, y: p.dy + dy, text: text, color: color, delayMs: dl));
+  }
+
+  void num(String id, double dy, String text, Color color,
+      {bool big = false, bool hurt = false, bool heavy = false, int dl = 0}) {
+    final p = position(id);
+    out.add(BattleFx(FxKind.num,
+        x: p.dx,
+        y: p.dy + dy,
+        text: text,
+        color: color,
+        big: big,
+        hurt: hurt,
+        heavy: heavy,
+        delayMs: dl));
+  }
+
+  void aura(String id, FxElement el, {int dl = 0}) {
+    final p = position(id);
+    out.add(BattleFx(FxKind.aura, x: p.dx, y: p.dy, el: el, delayMs: dl));
+  }
+
+  /// Impacto de la ULT en [id] (en el orden en que aparecen).
+  int ultDelay(_Action a, String id) =>
+      a.dl[id] ??= (a.ult ?? kDefaultUltScript).impactFor(a.dl.length);
+
+  void ring(double x, double y, Color color, {bool big = false}) =>
+      out.add(BattleFx(FxKind.ring, x: x, y: y, color: color, big: big));
+
+  void act(String id) => out.add(BattleFx(FxKind.act, who: id));
+
+  /// `proj(p, e, col, el)`: devuelve el `dl` (280).
+  int proj(String from, String to, Color color, FxElement el) {
+    final a = position(from), b = position(to);
+    out.add(BattleFx(FxKind.proj,
+        x: a.dx, y: a.dy - 10, tx: b.dx, ty: b.dy - 10, color: color, el: el));
+    return BattleFx.projMs;
+  }
+
+  bool ranged(Combatant? c) =>
+      c != null && kRangedWeaponTypes.contains(c.weaponType);
+
+  /// Retraso del golpe a [targetId] dentro de la acción (y sus
+  /// proyectiles, la primera vez).
+  int hitDelay(_Action a, String targetId) {
+    final known = a.dl[targetId];
+    if (known != null) return known;
+    final e = a.event;
+    final actorId = e.actorId;
+    var dl = 0;
+    switch (e.kind) {
+      case BattleActionKind.attack:
+        if (!e.allTargets && ranged(a.actor)) {
+          dl = proj(actorId, targetId, fxWhite, FxElement.phys);
+        }
+      case BattleActionKind.ultimate:
+        if (a.skill?.dealsDamage ?? false) return ultDelay(a, targetId);
+      case BattleActionKind.skill:
+        final sk = a.skill;
+        if (sk != null &&
+            sk.dealsDamage &&
+            (sk.kind == SkillKind.magical || ranged(a.actor))) {
+          dl = proj(actorId, targetId, a.color, a.el);
+        }
+      case BattleActionKind.dual:
+        proj(actorId, targetId, a.color, a.el);
+        if (e.partnerId != null) proj(e.partnerId!, targetId, a.color, a.el);
+        dl = BattleFx.dualDelayMs;
+      default:
+        break;
+    }
+    a.dl[targetId] = dl;
+    return dl;
+  }
+
+  void startAction(ActionEvent e) {
+    final actor = state.byId(e.actorId);
+    final a = _Action(e, actor);
+    action = a;
+    final here = position(e.actorId);
+    switch (e.kind) {
+      case BattleActionKind.attack:
+        act(e.actorId);
+        if (e.allTargets) ring(here.dx, here.dy - 8, fxWhite);
+      case BattleActionKind.skill:
+      case BattleActionKind.ultimate:
+        final sk = kSkillsById[e.skillId];
+        a
+          ..skill = sk
+          ..color = skillColor(e.skillId)
+          ..el = sk == null ? FxElement.phys : skillElement(sk);
+        final ult = e.kind == BattleActionKind.ultimate;
+        if (ult) {
+          final script = ultScriptFor(e.skillId);
+          a.ult = script;
+          ultAction = a;
+          // El lanzador se lanza al descargar.
+          out.add(BattleFx(FxKind.act,
+              who: e.actorId, delayMs: script.buildMs));
+        } else {
+          act(e.actorId);
+        }
+        if (sk == null) break;
+        switch (sk.kind) {
+          case SkillKind.physical || SkillKind.magical:
+            if (sk.allTargets && !ult) ring(here.dx, here.dy - 8, a.color);
+          case SkillKind.defenseUp:
+            txt(e.actorId, -30, 'DEF +${sk.amount}', _manaBlue);
+            aura(e.actorId, FxElement.mana);
+          case SkillKind.protect:
+            ring(here.dx, here.dy - 8, const Color(0xFFFFEAA7), big: true);
+            for (final q in aliveParty()) {
+              if (q.id != e.actorId) aura(q.id, FxElement.holy);
+            }
+          case SkillKind.taunt:
+            txt(e.actorId, -30, '¡PROVOCA!', const Color(0xFFFF7675));
+            ring(here.dx, here.dy - 8, const Color(0xFFFF7675), big: true);
+          case SkillKind.guard:
+            for (final q in aliveParty()) {
+              txt(q.id, -30, 'ESCUDO', _manaBlue);
+              aura(q.id, FxElement.holy);
+            }
+          case SkillKind.haste:
+            for (final q in aliveParty()) {
+              if (q.id != e.actorId) txt(q.id, -26, '¡PRISA!', _gold);
+            }
+          case SkillKind.heal || SkillKind.regen || SkillKind.bulwark:
+            break; // los HealEvent traen números y auras
+        }
+      case BattleActionKind.dual:
+        final partner = e.partnerId;
+        final q = partner == null ? null : state.byId(partner);
+        final st = actor == null || q == null
+            ? null
+            : kDuals[dualKey(actor.classId ?? '', q.classId ?? '')];
+        a
+          ..color = actor == null || q == null
+              ? fxWhite
+              : kDualColors[dualKey(actor.classId ?? '', q.classId ?? '')] ??
+                  fxWhite
+          ..el = st == null ? FxElement.arcane : elementOfStatus(st.status.kind);
+        act(e.actorId);
+        if (partner != null) act(partner);
+        out.add(BattleFx(FxKind.flash, color: a.color));
+        final pq = partner == null ? here : position(partner);
+        ring((here.dx + pq.dx) / 2, (here.dy + pq.dy) / 2 - 8, a.color,
+            big: true);
+      case BattleActionKind.enemyAttack || BattleActionKind.enemyHeavy:
+        act(e.actorId);
+        a.el = actor?.inflicts == null
+            ? FxElement.phys
+            : elementOfStatus(actor!.inflicts!.kind);
+      case BattleActionKind.enemyArea:
+        act(e.actorId);
+        a.el = actor?.inflicts == null
+            ? FxElement.phys
+            : elementOfStatus(actor!.inflicts!.kind);
+        const pink = Color(0xFFE84393);
+        out.add(const BattleFx(FxKind.flash, color: pink));
+        ring(here.dx, here.dy - 10, pink, big: true);
+      case BattleActionKind.potion ||
+            BattleActionKind.ether ||
+            BattleActionKind.defend:
+        break;
+    }
+  }
+
+  // ------------------------------------------------ procs del árbol
+
+  /// Hora base de los procs en este punto del paso.
+  int procBase() {
+    final a = action;
+    var hit = 0;
+    if (a != null) {
+      for (final v in a.dl.values) {
+        if (v > hit) hit = v;
+      }
+    }
+    return ProcTiming.base(inAction: a != null, hitMs: hit, ult: a?.ult);
+  }
+
+  /// La base, pero después de todo lo secundario ya programado (lo que
+  /// se dispara al final de la acción: Sed de Sangre, Plaga).
+  int lateBase() {
+    var b = procBase();
+    for (final v in procDl.values) {
+      if (v + 60 > b) b = v + 60;
+    }
+    return b;
+  }
+
+  /// Cartel con el nombre (una vez por actor y mecánica en el paso). El
+  /// pintor lo pone sobre la etiqueta del actor, apilado por `slot`.
+  void tag(String actorId, String source, int base) {
+    final key = '$actorId|$source';
+    if (tagAt.containsKey(key)) return;
+    final k = tagCount[actorId] ?? 0;
+    tagCount[actorId] = k + 1;
+    final p = position(actorId);
+    tagAt[key] = out.length;
+    out.add(BattleFx(FxKind.tag,
+        x: p.dx,
+        y: p.dy - 30,
+        text: procName(source),
+        color: procTagColor(source),
+        delayMs: ProcTiming.tagAt(base, k),
+        who: actorId,
+        slot: k % 4));
+  }
+
+  /// Suma [extra] al cartel de [source] de [actorId] (el valor de un
+  /// buff o escudo propio: `Frenesí · VEL +20%`). `false` si no hay.
+  bool addToTag(String actorId, String source, String extra) {
+    final i = tagAt['$actorId|$source'];
+    if (i == null) return false;
+    out[i] = out[i].withText('${out[i].text} · $extra');
+    return true;
+  }
+
+  /// El efecto es del propio dueño de la mecánica del último proc.
+  bool own(String targetId, String source) {
+    final lp = lastProc;
+    return lp != null && lp.actorId == targetId && lp.sourceId == source;
+  }
+
+  /// Un efecto en [id] (`(x, y+dy)`), con destino [to] si lo tiene.
+  void at(FxKind kind, String id,
+      {double dy = -8,
+      Color color = fxWhite,
+      FxElement el = FxElement.phys,
+      int dl = 0,
+      bool heavy = false,
+      bool up = false,
+      String? to}) {
+    final p = position(id);
+    final q = to == null ? null : position(to);
+    out.add(BattleFx(kind,
+        x: p.dx,
+        y: p.dy + dy,
+        tx: q?.dx ?? 0,
+        ty: (q?.dy ?? 0) + dy,
+        color: color,
+        el: el,
+        delayMs: dl,
+        heavy: heavy,
+        up: up,
+        who: id));
+  }
+
+  void proc(ProcEvent e) {
+    final src = e.sourceId;
+    final late = src == 'sedSangre' || src == 'plagaContagiosa';
+    final base = late ? lateBase() : procBase();
+    lastProc = e;
+    tag(e.actorId, src, base);
+    final t = e.targetId;
+    final a = action;
+    if (kChainMechanics.contains(src) && t != null) {
+      final hop = a?.hops ?? 0;
+      final from = a?.chainPrev ?? a?.lastTarget ?? e.actorId;
+      if (a != null) {
+        a
+          ..hops = hop + 1
+          ..chainPrev = t;
+      }
+      final (color, el) = procHitStyle(src)!;
+      at(FxKind.arc, from,
+          to: t, color: color, el: el, dl: ProcTiming.hopAt(base, hop));
+      procDl[t] = ProcTiming.hopHitAt(base, hop);
+      return;
+    }
+    switch (src) {
+      case 'combustion' when t != null:
+        at(FxKind.blast, t,
+            color: const Color(0xFFFF7B29), el: FxElement.burn, dl: base);
+        blastCenter = t;
+        blastIdx = 0;
+      case 'ecoArcano':
+        echoIdx = 0;
+        final p = position(e.actorId);
+        out.add(BattleFx(FxKind.ring,
+            x: p.dx,
+            y: p.dy - 8,
+            color: a?.color ?? fxWhite,
+            delayMs: ProcTiming.echoAt(base, 0),
+            ghost: true));
+      case 'contraataque' when t != null:
+        out.add(BattleFx(FxKind.act, who: e.actorId, delayMs: base));
+        at(FxKind.arc, e.actorId, to: t, color: fxWhite, dl: base);
+        procDl[t] = base + ProcTiming.counterHitMs;
+      case 'castigoDivino' when t != null:
+        at(FxKind.beam, t, dy: 0, color: const Color(0xFFFFD166), dl: base);
+        procDl[t] = base + ProcTiming.beamHitMs;
+      case 'choqueTermico' when t != null:
+        at(FxKind.puff, t, dy: -10, dl: base);
+        txt(t, -34, '¡ATURDIDO!', ProcColors.stun, dl: base);
+        procDl[t] = base;
+      case 'tiempoGelido' when t != null:
+        aura(t, FxElement.freeze, dl: base);
+        procDl[t] = base;
+      case 'martilloBendito' when t != null:
+        aura(t, FxElement.stun, dl: base);
+        procDl[t] = base;
+      case 'plagaContagiosa' when t != null:
+        at(FxKind.stream, lastKo ?? e.actorId,
+            to: t, color: ProcColors.plague, el: FxElement.poison, dl: base);
+        procDl[t] = base + ProcTiming.streamMs;
+      case 'sedSangre' when t == null:
+        at(FxKind.pulse, e.actorId,
+            color: ProcColors.blood, heavy: true, dl: base);
+      case 'guardian':
+        at(FxKind.spark, e.actorId, dy: -10, dl: base);
+        final v = kMechanics[src]?.effects.firstOrNull?.value ?? 0;
+        addToTag(e.actorId, src, '+${v.round()} ULT');
+      case 'danza':
+        at(FxKind.timeStop, e.actorId, dl: base);
+        final p = position(e.actorId);
+        // Cartel grande sobre el cuerpo del actor (no en la pila).
+        out.add(BattleFx(FxKind.tag,
+            x: p.dx,
+            y: p.dy - 10,
+            text: '¡OTRA VEZ!',
+            color: procKeystoneColor,
+            big: true,
+            delayMs: base + ProcTiming.bannerMs,
+            who: e.actorId));
+      case 'vientoFavor':
+        pendingOffset = base;
+      default:
+        break;
+    }
+  }
+
+  /// Daño secundario de una mecánica (`DamageEvent.sourceId`).
+  void procDamage(DamageEvent e, String src) {
+    final id = e.targetId;
+    final base = procBase();
+    final style = procHitStyle(src);
+    final color = style?.$1 ?? action?.color ?? fxWhite;
+    final el = style?.$2 ?? action?.el ?? FxElement.phys;
+    var ghost = false;
+    int dl;
+    switch (src) {
+      case 'combustion':
+        dl = ProcTiming.blastHitAt(base, blastIdx++);
+        final a = position(blastCenter ?? id), b = position(id);
+        out.add(BattleFx(FxKind.proj,
+            x: a.dx,
+            y: a.dy - 10,
+            tx: b.dx,
+            ty: b.dy - 10,
+            color: color,
+            el: el,
+            delayMs: dl - BattleFx.projMs));
+      case 'ecoArcano':
+        final from = lastProc?.actorId ?? action?.event.actorId ?? id;
+        final go = ProcTiming.echoAt(base, echoIdx++);
+        final a = position(from), b = position(id);
+        out.add(BattleFx(FxKind.proj,
+            x: a.dx,
+            y: a.dy - 10,
+            tx: b.dx,
+            ty: b.dy - 10,
+            color: color,
+            el: el,
+            delayMs: go,
+            ghost: true));
+        dl = go + BattleFx.projMs;
+        ghost = true;
+      default:
+        dl = procDl[id] ?? base;
+    }
+    procDl[id] = dl;
+    final p = position(id);
+    num(id, -20, '${e.amount}', color, dl: dl);
+    out.add(BattleFx(FxKind.slash,
+        x: p.dx,
+        y: p.dy - 8,
+        color: color,
+        el: el,
+        delayMs: dl,
+        who: id,
+        ghost: ghost));
+  }
+
+  /// Cura de una mecánica (Sed de Sangre, Plegaria). `false` si no es.
+  bool procHeal(HealEvent e) {
+    final lp = lastProc;
+    if (lp == null || e.mana || lp.targetId != e.targetId) return false;
+    final sed = lp.sourceId == 'sedSangre';
+    if (!sed && lp.sourceId != 'plegaria') return false;
+    lastProc = null;
+    final dl = sed ? lateBase() + ProcTiming.healAfterMs : procBase();
+    num(e.targetId, -26, '+${e.amount}', _healGreen, dl: dl);
+    aura(e.targetId, sed ? FxElement.heal : FxElement.holy, dl: dl);
+    return true;
+  }
+
+  void shield(ShieldEvent e) {
+    final id = e.targetId;
+    if (e.absorbed) {
+      shieldHit.add(id);
+      // Con el golpe enemigo que absorbe.
+      final dl = action?.dl[id] ?? 0;
+      at(FxKind.crack, id, color: ProcColors.shield, dl: dl);
+      txt(id, -30, 'ABSORBE ${e.amount}', ProcColors.shield, dl: dl);
+      return;
+    }
+    final dl = procDl[id] ?? procBase();
+    at(FxKind.bubble, id, color: ProcColors.shield, dl: dl);
+    final lp = lastProc;
+    final label = 'ESCUDO +${e.amount}';
+    // Escudo propio: el valor va en el cartel; si no, sobre el aliado.
+    if (lp == null ||
+        lp.actorId != id ||
+        lp.targetId != id ||
+        !addToTag(id, lp.sourceId, label)) {
+      txt(id, -30, label, ProcColors.shield, dl: dl);
+    }
+  }
+
+  void buff(BuffAppliedEvent e) {
+    final id = e.targetId;
+    final dl = procDl[id] ?? procBase();
+    final pct = '${(e.value.abs() * 100).round()}%';
+    final (String label, Color color) = switch (e.stat) {
+      BuffStat.speed => ('VEL +$pct', ProcColors.frenzy),
+      BuffStat.attack when e.value >= 0 => ('ATQ +$pct', ProcColors.retaliate),
+      BuffStat.attack => ('ATQ −$pct', ProcColors.weaken),
+      BuffStat.damageTaken => ('+$pct DAÑO', ProcColors.mark),
+      BuffStat.stunLock => ('ATURDIDO +${e.turns}', ProcColors.stun),
+      _ => ('${e.stat.label} ${e.value < 0 ? '−' : '+'}$pct', _gold),
+    };
+    switch (e.stat) {
+      case BuffStat.speed:
+        at(FxKind.afterimage, id, color: color, dl: dl);
+      case BuffStat.attack when e.value >= 0:
+        at(FxKind.pulse, id, color: color, dl: dl);
+        at(FxKind.arrow, id, color: color, up: true, dl: dl);
+      case BuffStat.attack:
+        at(FxKind.arrow, id, color: color, dl: dl);
+      case BuffStat.damageTaken:
+        at(FxKind.reticle, id, dy: -10, color: color, dl: dl);
+      default:
+        break;
+    }
+    // Buff propio: el valor va en el cartel; si no, sobre el objetivo.
+    if (!own(id, e.sourceId) || !addToTag(id, e.sourceId, label)) {
+      txt(id, -30, label, color, dl: dl);
+    }
+  }
+
+  /// Cierra el tramo corrido por Viento a Favor.
+  void closeSegment() {
+    final st = segStart;
+    if (st == null) return;
+    for (var i = st; i < out.length; i++) {
+      out[i] = out[i].shifted(segOffset);
+    }
+    segStart = null;
+  }
+
+  // ------------------------------------------------ golpes y curas
+
+  void damage(DamageEvent e) {
+    final id = e.targetId;
+    final src = e.sourceId;
+    if (src != null && !e.fromStatus && !isPlayer(id)) {
+      procDamage(e, src);
+      return;
+    }
+    if (e.fromStatus) {
+      final burn = e.statusSource == StatusKind.burn;
+      aura(id, burn ? FxElement.burn : FxElement.poison);
+      num(id, -20, '${e.amount}', burn ? _orange : _healGreen);
+      return;
+    }
+    if (isPlayer(id)) {
+      // `hurt`: enemigo → jugador.
+      final p = position(id);
+      if (e.amount == 0 && shieldHit.contains(id)) {
+        // El escudo absorbió todo: la grieta es el golpe (sin número,
+        // tajo ni sacudida).
+        return;
+      }
+      num(id, -18, '${e.amount}', e.critical ? _critRed : _hurtRed,
+          big: e.critical, hurt: true);
+      out.add(BattleFx(FxKind.slash,
+          x: p.dx,
+          y: p.dy - 8,
+          color: _hurtRed,
+          el: action?.el ?? FxElement.phys,
+          who: id));
+      if (e.critical) {
+        txt(id, -34, '¡CRÍTICO ×${fm(e.critMultiplier)}!', _critRed);
+      }
+      if (e.pierceMultiplier > 1) {
+        txt(id, -44, '¡PERFORANTE ×${fm(e.pierceMultiplier)}!', _orange);
+      }
+      return;
+    }
+    // `dmgEnemy`: jugador → enemigo.
+    final a = action;
+    var color = a?.color ?? fxWhite;
+    var el = a?.el ?? FxElement.phys;
+    var dl = 0;
+    if (a != null) {
+      if (a.event.kind == BattleActionKind.skill &&
+          a.skill?.kind == SkillKind.regen) {
+        // Luz de la rama creyente.
+        color = _holyLight;
+        el = FxElement.holy;
+      } else {
+        dl = hitDelay(a, id);
+      }
+      a.lastTarget = id;
+    }
+    final p = position(id);
+    final heavy = a?.ult != null;
+    num(id, -20, '${e.amount}', e.critical ? _gold : fxWhite,
+        big: e.critical, heavy: heavy, dl: dl);
+    if (e.critical) {
+      txt(id, -34, '¡CRÍTICO ×${fm(e.critMultiplier)}!', _gold, dl: dl);
+      if (heavy) out.add(BattleFx(FxKind.flash, color: fxWhite, delayMs: dl));
+    }
+    out.add(BattleFx(FxKind.slash,
+        x: p.dx, y: p.dy - 8, color: color, el: el, delayMs: dl, who: id));
+  }
+
+  void heal(HealEvent e) {
+    if (procHeal(e)) return;
+    final a = action;
+    final id = e.targetId;
+    if (a == null) {
+      // Regeneración al empezar el turno (el maná no se muestra).
+      if (e.mana) return;
+      num(id, -30, '+${e.amount}', _regenGreen);
+      aura(id, FxElement.heal);
+      return;
+    }
+    if (e.mana) {
+      num(id, -18, '+${e.amount} MP', _manaBlue);
+      aura(id, FxElement.mana);
+      return;
+    }
+    switch (a.event.kind) {
+      case BattleActionKind.attack:
+        // Fe (rama creyente).
+        num(id, -26, '+${e.amount}', _healGreen);
+        aura(id, FxElement.holy);
+      case BattleActionKind.ultimate:
+        // Baluarte: con el impacto de su guion en cada aliado.
+        final dl = ultDelay(a, id);
+        num(id, -18, '+${e.amount}', _healGreen, heavy: true, dl: dl);
+        aura(id, FxElement.holy, dl: dl);
+      default:
+        aura(id, FxElement.heal);
+        num(id, -18, '+${e.amount}', _healGreen);
+    }
+  }
+
+  for (final e in events) {
+    switch (e) {
+      case TurnStartedEvent():
+        closeSegment();
+        action = null;
+      case ActionEvent():
+        closeSegment();
+        final off = pendingOffset;
+        if (off != null) {
+          pendingOffset = null;
+          segStart = out.length;
+          segOffset = off;
+        }
+        startAction(e);
+      case UltimateUsedEvent(:final actorId, :final name):
+        final c = state.byId(actorId);
+        final sk = kUltimates[c?.weaponType];
+        final p = position(actorId);
+        ultIndex = out.length;
+        out.add(BattleFx(FxKind.ult,
+            x: p.dx,
+            y: p.dy,
+            color: skillColor(sk?.id),
+            el: sk == null ? FxElement.phys : skillElement(sk),
+            who: actorId,
+            ult: UltFx(
+              name: name,
+              casterName: c?.name ?? '',
+              bulwark: sk?.kind == SkillKind.bulwark,
+              ultId: sk?.id,
+              casterClass: c?.classId,
+              script: ultScriptFor(sk?.id),
+            )));
+      case DamageEvent():
+        damage(e);
+      case HealEvent():
+        heal(e);
+      case StatusAppliedEvent(:final targetId, :final kind, :final stacks):
+        txt(targetId, -46,
+            '${statusLetter(kind)}+$stacks${e.weakness ? ' (débil)' : ''}',
+            statusColor(kind),
+            dl: procDl[targetId] ?? action?.dl[targetId] ?? 0);
+      case DelayedEvent(:final targetId):
+        if (!isPlayer(targetId)) {
+          txt(targetId, -44, 'RETRASO', _violet, dl: procDl[targetId] ?? 0);
+        }
+      case TurnSkippedEvent(:final actorId, :final cause):
+        if (cause == StatusKind.stun) {
+          txt(actorId, -34, '¡ATURDIDO!', const Color(0xFFFFEAA7));
+        } else {
+          txt(actorId, -34, '¡CONGELADO!', _manaBlue);
+          aura(actorId, FxElement.freeze);
+        }
+      case KnockedOutEvent(:final targetId):
+        if (isPlayer(targetId)) {
+          txt(targetId, -28, 'K.O.', _critRed);
+        } else {
+          final p = position(targetId);
+          lastKo = targetId;
+          // En una ULT, al impactar en él; por un efecto secundario, con él.
+          final a = action;
+          final dl = procDl[targetId] ??
+              (a?.ult == null ? 0 : a!.dl[targetId] ?? 0);
+          out.add(BattleFx(FxKind.poof, x: p.dx, y: p.dy - 6, delayMs: dl));
+        }
+      case RevivedEvent():
+        break;
+      case BattleEndedEvent(:final victory, :final credits):
+        if (victory) {
+          for (final p in state.party) {
+            txt(p.id, -40, '+₵$credits', _gold);
+          }
+        }
+      case ProcEvent():
+        proc(e);
+      case BuffAppliedEvent():
+        buff(e);
+      case ShieldEvent():
+        shield(e);
+    }
+  }
+  closeSegment();
+  // Los objetivos de la cinemática, en el orden de sus impactos.
+  final ui = ultIndex;
+  if (ui != null) {
+    final u = out[ui];
+    out[ui] = u.withUlt(u.ult!.withTargets([...?ultAction?.dl.keys]));
+  }
+  return out;
+}
+

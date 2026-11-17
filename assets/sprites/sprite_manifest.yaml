@@ -2,35 +2,46 @@
 # `SpriteCatalog` (lib/features/*/presentation) lee esto — el código
 # nunca referencia un nombre de archivo de sprite directamente.
 #
-# Exportá desde Aseprite (recomendado, soporta flame_aseprite directo)
-# o Piskel (gratis, web) como PNG + JSON de atlas con este mismo nombre.
+# Los PNG actuales salen de `dart run tool/export_sprites.dart` (puerto
+# 1:1 del pixel art del prototipo). Para reemplazarlos por arte hecho a
+# mano (Aseprite, Piskel, ...) exportá PNG 1 px por píxel con fondo
+# transparente a la misma ruta, o cambiá la ruta acá (y agregá la
+# carpeta nueva en pubspec.yaml). Detalle: docs/specs/sprites.md.
+#
+# Un solo frame `idle` por sprite: caminar, estocada, flash de golpe y
+# flotación son animaciones procedurales (ver el spec), no frames.
 
 characters:
   guerrero:
     idle: characters/guerrero/idle.png
-    walk: characters/guerrero/walk.png
-    attack: characters/guerrero/attack.png
   maga:
     idle: characters/maga/idle.png
-    walk: characters/maga/walk.png
-    attack: characters/maga/attack.png
-  tirador:
-    idle: characters/tirador/idle.png
-    walk: characters/tirador/walk.png
-    attack: characters/tirador/attack.png
   paladin:
     idle: characters/paladin/idle.png
-    walk: characters/paladin/walk.png
-    attack: characters/paladin/attack.png
+  tirador:
+    idle: characters/tirador/idle.png
 
+# `scale`: multiplicador de dibujo (`sc` del prototipo). Por defecto 1.
+# `float`: flota en el aire (murciélagos y espectros del prototipo, que
+# reusan sus formas base). Por defecto false.
 enemies:
-  slime: enemies/slime/idle.png
-  bat: enemies/bat/idle.png
-  golem: enemies/golem/idle.png
-  ghost: enemies/ghost/idle.png
-
-effects:
-  burn: effects/burn.png
-  poison: effects/poison.png
-  freeze: effects/freeze.png
-  holy: effects/holy.png
+  slime:
+    idle: enemies/slime/idle.png
+  bat:
+    idle: enemies/bat/idle.png
+    float: true
+  golem:
+    idle: enemies/golem/idle.png
+  ghost:
+    idle: enemies/ghost/idle.png
+    float: true
+  reyLimo:
+    idle: enemies/reyLimo/idle.png
+    scale: 2
+  golemReloj:
+    idle: enemies/golemReloj/idle.png
+    scale: 2
+  devorador:
+    idle: enemies/devorador/idle.png
+    scale: 2.4
+    float: true

@@ -38,17 +38,20 @@ class PassiveTreeRules {
 
   /// Agrega los efectos de todos los nodos tomados (+ el nodo de inicio).
   /// Replica `treeMods` del prototipo, incluidas las keystones con
-  /// trade-offs (furia, mente, halcón, toxicidad).
+  /// trade-offs (furia, mente, halcón, toxicidad; v2: égida), y junta las
+  /// mecánicas de notables y keystones v2.
   TreeMods aggregate(String classId, PlayerPassiveProgress progress) {
     final startId = catalog.startNodeByClass[classId];
     final ids = [if (startId != null) startId, ...progress.takenNodeIds];
 
     final m = TreeMods.zero();
     final keys = <String>{};
+    final mechanics = <String>{};
 
     for (final id in ids) {
       final node = catalog.nodes[id];
       if (node == null) continue;
+      if (node.mechanicId case final mech?) mechanics.add(mech);
       node.effects.forEach((k, v) {
         if (k == 'key' && node.keystoneId != null) {
           keys.add(node.keystoneId!);
@@ -73,28 +76,50 @@ class PassiveTreeRules {
       m.add('poi', 2);
       m.add('atk', -0.10);
     }
+    // Keystones v2 (passive_tree_v2.md § 4).
+    if (keys.contains('egida')) {
+      m.add('atk', -0.20);
+      m.add('mag', -0.20);
+    }
 
-    return m.withKeys(keys);
+    return m.withKeys(keys, mechanics);
   }
 }
 
-/// Resultado agregado de `treeMods`: igual forma que en el prototipo JS.
+/// Resultado agregado de `treeMods`: igual forma que en el prototipo JS,
+/// más la lista de mecánicas v2 (notables y keystones nuevas, ids de
+/// `kMechanics`).
 class TreeMods {
   final Map<String, double> _values;
   final Set<String> keys;
+  final Set<String> mechanics;
 
-  TreeMods._(this._values, this.keys);
+  TreeMods._(this._values, this.keys, [this.mechanics = const {}]);
+
+  /// Tope de crítico: 40% con Danza de Cuchillas, si no 75%.
+  double get critCap => keys.contains('danza') ? 0.40 : 0.75;
 
   factory TreeMods.zero() => TreeMods._({
-        'hp': 0, 'mp': 0, 'atk': 0, 'mag': 0, 'crit': 0, 'spd': 0,
-        'def': 0, 'ult': 0, 'heal': 0, 'burn': 0, 'poi': 0, 'frz': 0,
-      }, {});
+        'hp': 0,
+        'mp': 0,
+        'atk': 0,
+        'mag': 0,
+        'crit': 0,
+        'spd': 0,
+        'def': 0,
+        'ult': 0,
+        'heal': 0,
+        'burn': 0,
+        'poi': 0,
+        'frz': 0,
+      }, {}, {});
 
   double operator [](String k) => _values[k] ?? 0;
 
   void add(String k, double v) => _values[k] = (_values[k] ?? 0) + v;
 
-  TreeMods withKeys(Set<String> k) => TreeMods._(_values, k);
+  TreeMods withKeys(Set<String> k, [Set<String> mechanics = const {}]) =>
+      TreeMods._(_values, k, mechanics);
 
   bool hasKey(String k) => keys.contains(k);
 }

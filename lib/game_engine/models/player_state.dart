@@ -1,5 +1,6 @@
 import 'attributes.dart';
 import 'passive_tree.dart';
+import 'status.dart';
 import 'weapon.dart';
 
 /// Insumos de un jugador para calcular sus stats derivados. Inmutable:
@@ -15,6 +16,10 @@ class PlayerBuild {
   final WeaponUpgradeLevels weaponUpgrades;
   final PlayerPassiveProgress passiveProgress;
 
+  /// DEF extra que solo existe dentro de una batalla (`p.bdef`: Fortaleza,
+  /// Baluarte). Fuera de combate siempre es 0.
+  final int bonusDefense;
+
   const PlayerBuild({
     required this.classId,
     required this.level,
@@ -22,7 +27,18 @@ class PlayerBuild {
     required this.equippedWeapon,
     this.weaponUpgrades = const WeaponUpgradeLevels(),
     this.passiveProgress = PlayerPassiveProgress.empty,
+    this.bonusDefense = 0,
   });
+
+  PlayerBuild withBonusDefense(int value) => PlayerBuild(
+        classId: classId,
+        level: level,
+        attributes: attributes,
+        equippedWeapon: equippedWeapon,
+        weaponUpgrades: weaponUpgrades,
+        passiveProgress: passiveProgress,
+        bonusDefense: value,
+      );
 }
 
 /// Resultado de `StatsCalculator.calculate` — equivalente a los campos
@@ -42,6 +58,12 @@ class DerivedStats {
   final double healBonus;
   final Set<String> keystones;
 
+  /// Mecánicas del árbol v2 (`kMechanics`): notables y keystones nuevas.
+  final Set<String> mechanics;
+
+  /// Stacks extra de cada estado que este jugador aplica (`p.stb`).
+  final Map<StatusKind, int> statusBonus;
+
   const DerivedStats({
     required this.maxHp,
     required this.maxMp,
@@ -55,5 +77,7 @@ class DerivedStats {
     required this.ultChargeBonus,
     required this.healBonus,
     required this.keystones,
+    this.mechanics = const {},
+    this.statusBonus = const {},
   });
 }

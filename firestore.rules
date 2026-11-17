@@ -1,0 +1,32 @@
+rules_version = '2';
+// Reglas de la señalización P2P (docs/specs/netcode.md § "P2P por
+// internet"). Firestore solo guarda el apretón de manos WebRTC; el juego
+// nunca pasa por acá. Sin autenticación: alcanza para jugar entre amigos.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function roomExists(room) {
+      return exists(/databases/$(database)/documents/rooms/$(room));
+    }
+    match /rooms/{room} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if room.matches('^[A-HJ-NP-Z2-9]{5}$')
+        && request.resource.data.keys().hasOnly(['v', 'createdAt', 'expiresAt']);
+      allow update: if false;
+      allow delete: if true;
+      match /peers/{peer} {
+        allow read, delete: if true;
+        allow create: if roomExists(room)
+          && request.resource.data.keys().hasOnly(['offer', 'createdAt', 'expiresAt']);
+        allow update: if request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['answer']);
+        match /{side}/{cand} {
+          allow read, delete: if side in ['clientCandidates', 'hostCandidates'];
+          allow create: if side in ['clientCandidates', 'hostCandidates']
+            && request.resource.data.keys().size() <= 6;
+          allow update: if false;
+        }
+      }
+    }
+  }
+}

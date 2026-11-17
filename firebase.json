@@ -1,0 +1,18 @@
+{
+  "flutter": {
+    "platforms": {
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "echos-del-tiempo",
+          "configurations": {
+            "web": "1:396934147216:web:91f2a230b097c81e6abc15",
+            "windows": "1:396934147216:web:b2053ef62bbf90d36abc15"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}
