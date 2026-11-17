@@ -103,6 +103,9 @@ class BattleSceneController extends ChangeNotifier {
 
   static const maxFx = 70;
 
+  /// Hit-stop del quiebre (ms).
+  static const breakHitStopMs = 80;
+
   /// Otra batalla: se borra todo lo visual.
   void reset() {
     fx.clear();
@@ -271,6 +274,11 @@ class BattleSceneController extends ChangeNotifier {
           particles.addShake(6);
         case FxKind.poof:
           particles.burst(f.x, f.y, FxElement.arcane, 0.8);
+        // ¡QUIEBRE!: cristal que estalla, sacudida y un hit-stop corto.
+        case FxKind.shatter:
+          particles.burstWith(kBreakShardFx, f.x, f.y, 2.2);
+          particles.addShake(7);
+          hitStop = math.max(hitStop, breakHitStopMs.toDouble());
         default:
           break;
       }
@@ -285,7 +293,7 @@ class BattleSceneController extends ChangeNotifier {
     final b = f.battle;
     var ids = u.fx.ult?.targets ?? const <String>[];
     if (ids.isEmpty) {
-      ids = (u.fx.ult?.bulwark ?? false)
+      ids = (u.fx.ult?.bulwark ?? false) || (u.fx.ult?.enemy ?? false)
           ? [for (final p in b.party) p.id]
           : [
               for (final e in b.enemies)

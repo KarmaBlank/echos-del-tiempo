@@ -10,6 +10,9 @@ import '../../../core/di/service_locator.dart';
 import '../../../game_engine/data/skills_catalog.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
+import '../../../game_engine/models/item.dart';
+import '../../../game_engine/models/loot.dart';
+import '../../../game_engine/models/loot_filter.dart';
 import '../../../game_engine/models/passive_mechanic.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/skill.dart';
@@ -19,6 +22,7 @@ import '../../combat/presentation/scene/battle_fx.dart';
 import '../../combat/presentation/scene/fx_style.dart';
 import '../../combat/presentation/scene/proc_fx.dart';
 import '../../combat/presentation/scene/ult_cinematic.dart';
+import 'hud/loot_feed.dart';
 import 'session_controller.dart';
 import 'session_view.dart';
 
@@ -31,7 +35,13 @@ final sfxServiceProvider = Provider<SfxService>((ref) =>
 final sessionSfxProvider = Provider.autoDispose<SessionSfx>((ref) {
   final controller = ref.watch(sessionControllerProvider.notifier);
   final sfx = SessionSfx(ref.watch(sfxServiceProvider),
-      localId: controller.localId);
+      localId: controller.localId, lootVerdict: (d) {
+    final p = controller.session?.players[controller.localId]?.profile;
+    return p == null ? null : controller.engine.lootVerdict(p, d);
+  });
+  // Mantiene vivo el registro de loot del HUD mientras la pantalla del
+  // juego vive (también en batalla, cuando el HUD no está montado).
+  ref.watch(lootFeedProvider);
   final sub = controller.events.listen(sfx.onEvent);
   final removeView = controller.addListener(sfx.onView);
   ref.onDispose(() {
@@ -46,17 +56,25 @@ SfxCue cue(String id, [int delayMs = 0]) => (id: id, delayMs: delayMs);
 
 /// Contexto de la acción en curso dentro de un paso.
 class _Act {
-  _Act(this.event, this.actor, this.skill)
-      : ult = event.kind == BattleActionKind.ultimate
-            ? ultScriptFor(event.skillId)
-            : null;
+  _Act(this.event, this.actor, this.skill, {UltScript? enemyUlt})
+      : ult = enemyUlt ??
+            (event.kind == BattleActionKind.ultimate
+                ? ultScriptFor(event.skillId)
+                : null),
+        enemyUlt = enemyUlt != null;
 
   final ActionEvent event;
   final Combatant? actor;
   final SkillDef? skill;
 
-  /// Guion de la ULT (solo en una acción `ultimate`).
+  /// Guion de la ULT (acción `ultimate` o ULT enemiga).
   final UltScript? ult;
+
+  /// ULT de un enemigo (`EnemyUltEvent`).
+  final bool enemyUlt;
+
+  /// Ya sonó el acento de golpe a un quebrado.
+  bool vulnAccent = false;
 
   /// Impactos ya sonados / objetivos vistos, en orden.
   final targets = <String>[];
@@ -72,10 +90,14 @@ class _Act {
 /// Traduce eventos y vistas de la sesión a efectos de sonido, fuera del
 /// motor. Ver docs/specs/audio.md § "Qué evento suena".
 class SessionSfx {
-  SessionSfx(this.service, {required this.localId});
+  SessionSfx(this.service, {required this.localId, this.lootVerdict});
 
   final SfxService service;
   final String localId;
+
+  /// Cómo ve el jugador local un drop según su filtro (sonido del filtro).
+  /// `null` = sin filtro: el estilo por defecto (sin sonido).
+  final FilterVerdict? Function(LootDrop d)? lootVerdict;
 
   /// Tope de impactos (y curas) que suenan por acción con varios
   /// objetivos; separación entre ellos.
@@ -95,7 +117,9 @@ class SessionSfx {
   static const koAfterMs = 100;
   static const healAfterMs = 120;
   static const potionHealMs = 200;
-  static const heavyBoomMs = 80;
+
+  /// Golpe brutal: con el golpe del enemigo (después del wind-up).
+  static const heavyBoomMs = BattleFx.enemyStrikeMs;
 
   String? _lastTurn;
   int? _lastTick;
@@ -114,10 +138,42 @@ class SessionSfx {
         }
       case LevelUpEvent():
         service.play(Sfx.levelUp);
+      case LootDropEvent() || LootPickedEvent():
+        for (final c in lootSounds(e)) {
+          service.play(c.id, delayMs: c.delayMs);
+        }
       default:
         break;
     }
   }
+
+  /// Sonidos del loot del jugador local (docs/specs/audio.md § "Loot"):
+  /// al caer, el sonido que pide su filtro (y el haz si es Legendario);
+  /// al levantar, el de levantar.
+  List<SfxCue> lootSounds(SessionEvent e) {
+    switch (e) {
+      case LootDropEvent(:final playerId, :final drop)
+          when playerId == localId:
+        final v = lootVerdict?.call(drop);
+        if (v != null && !v.visible) return const [];
+        final out = <SfxCue>[];
+        final sound = v?.style.sound;
+        if (sound != null && service.catalog.containsKey(Sfx.loot(sound))) {
+          out.add(cue(Sfx.loot(sound)));
+        }
+        if (drop.item?.rarity == Rarity.legendario) {
+          out.add(cue(Sfx.lootBeam, lootBeamDelayMs));
+        }
+        return out;
+      case LootPickedEvent(:final playerId) when playerId == localId:
+        return [cue(Sfx.lootPickup)];
+      default:
+        return const [];
+    }
+  }
+
+  /// El haz del Legendario suena un instante después del aviso.
+  static const lootBeamDelayMs = 120;
 
   /// Los sonidos de un paso, en orden de llegada (cada uno con su
   /// retraso). Sigue la acción en curso: de ella salen el arma, la
@@ -223,11 +279,51 @@ class SessionSfx {
       }
     }
 
+    // Quiebre: el tic suena una vez por paso.
+    var ticked = false;
+    int hitAt(String id) {
+      final p = procAt[id];
+      if (p != null) return p;
+      final a = action;
+      return a == null ? 0 : _impactTime(a, id);
+    }
+
     for (final b in events) {
       switch (b) {
         case TurnStartedEvent():
           closeSegment();
           action = null;
+        case BreakEvent(:final targetId, :final phase):
+          switch (phase) {
+            case BreakPhase.fill:
+              if (!ticked) {
+                ticked = true;
+                out.add(cue(Sfx.breakTick, hitAt(targetId)));
+              }
+            case BreakPhase.broken:
+              out.add(cue(Sfx.breakShatter, hitAt(targetId)));
+            case BreakPhase.skipped:
+              out.add(cue(Sfx.breakDazed));
+            case BreakPhase.decay || BreakPhase.recovered:
+              break;
+          }
+        case EnemyUltWarningEvent():
+          out.add(cue(Sfx.enemyUltWarn));
+        case EnemyUltEvent():
+          closeSegment();
+          final script = ultScriptFor(b.ultId);
+          action = _Act(
+              ActionEvent(b.actorId, BattleActionKind.enemyAttack,
+                  skillId: b.ultId, targetId: b.targetId, allTargets: b.allTargets),
+              battle?.byId(b.actorId),
+              null,
+              enemyUlt: script);
+          if (service.catalog.containsKey(Sfx.ult(b.ultId, Sfx.ultBuild))) {
+            out.add(cue(Sfx.ult(b.ultId, Sfx.ultBuild)));
+            out.add(cue(Sfx.ult(b.ultId, Sfx.ultRelease), script.buildMs));
+          } else {
+            out.add(cue(Sfx.ultimate));
+          }
         case ActionEvent():
           closeSegment();
           final off = pendingOffset;
@@ -270,8 +366,7 @@ class SessionSfx {
           final a = action;
           if (a == null) {
             out.add(cue(Sfx.status(kind.name)));
-          } else if (a.event.kind != BattleActionKind.ultimate &&
-              a.statuses.add(kind)) {
+          } else if (a.ult == null && a.statuses.add(kind)) {
             final p = procAt[targetId];
             out.add(cue(Sfx.status(kind.name),
                 (p ?? _impactTime(a, targetId)) + statusAfterMs));
@@ -347,7 +442,7 @@ class SessionSfx {
   /// impactos van con cada golpe. Con arma desconocida, el `beep` del
   /// prototipo.
   List<SfxCue> ultimateCues(UltimateUsedEvent e) {
-    final sk = kUltimates[battle?.byId(e.actorId)?.weaponType];
+    final sk = kAllUltimates[battle?.byId(e.actorId)?.weaponType];
     if (sk == null ||
         !service.catalog.containsKey(Sfx.ult(sk.id, Sfx.ultBuild))) {
       return [cue(Sfx.ultimate)];
@@ -396,7 +491,10 @@ class SessionSfx {
       case BattleActionKind.enemyHeavy:
         return [cue(_enemySfx(a.actor)), cue(Sfx.enemyHeavy, heavyBoomMs)];
       case BattleActionKind.enemyArea:
-        return [cue(Sfx.flash), cue(_enemySfx(a.actor))];
+        return [
+          cue(_enemySfx(a.actor)),
+          cue(Sfx.flash, BattleFx.enemyStrikeMs),
+        ];
     }
   }
 
@@ -427,6 +525,11 @@ class SessionSfx {
             : 0;
       case BattleActionKind.dual:
         return BattleFx.dualDelayMs;
+      case BattleActionKind.enemyAttack ||
+            BattleActionKind.enemyHeavy ||
+            BattleActionKind.enemyArea:
+        // El golpe cae después del wind-up (como en la escena).
+        return a.ult?.impactMs ?? BattleFx.enemyStrikeMs;
       default:
         return 0;
     }
@@ -468,6 +571,10 @@ class SessionSfx {
         out.add(cue(_ultImpact(a), at));
       }
       if (e.critical) out.add(cue(Sfx.critClink, at));
+      if (e.vulnerable && !a.vulnAccent) {
+        a.vulnAccent = true;
+        out.add(cue(Sfx.breakVuln, at));
+      }
       return out;
     }
     final at = _impactTime(a, e.targetId);
@@ -477,12 +584,24 @@ class SessionSfx {
     }
     // Cada crítico, aunque su impacto no suene (tope de impactos).
     if (e.critical) out.add(cue(Sfx.critClink, at));
+    // Golpe a un quebrado: el acento, una vez por acción.
+    if (e.vulnerable && !a.vulnAccent) {
+      a.vulnAccent = true;
+      out.add(cue(Sfx.breakVuln, at));
+    }
     return out;
   }
 
   /// Impacto según el elemento del golpe (`skillElement`) y el arma.
   String _impactSfx(_Act a, String targetId) {
-    if (_isPlayer(targetId)) return Sfx.impactHurt;
+    if (_isPlayer(targetId)) {
+      // El impacto propio del enemigo que pega.
+      final type = a.actor?.isPlayer ?? true ? null : a.actor?.enemyType;
+      final id = Sfx.enemyHit(type ?? '');
+      return type != null && service.catalog.containsKey(id)
+          ? id
+          : Sfx.impactHurt;
+    }
     final e = a.event;
     final sk = a.skill;
     FxElement el;

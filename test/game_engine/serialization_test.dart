@@ -84,6 +84,15 @@ const _allBattleEvents = <BattleEvent>[
   BuffAppliedEvent('e1', 'debilitar', BuffStat.attack, -0.15, 2),
   ShieldEvent('p2', 12),
   ShieldEvent('p2', 5, absorbed: true),
+  // Quiebre y ULT enemigas.
+  DamageEvent('e1', 30, vulnerable: true),
+  BreakEvent('e1', BreakPhase.fill, 12.5, 50),
+  BreakEvent('e1', BreakPhase.broken, 50, 50, cancelledUlt: true),
+  BreakEvent('e1', BreakPhase.recovered, 0, 62.5),
+  EnemyUltWarningEvent('e0', 'eult_diluvio', 'Diluvio Ácido'),
+  EnemyUltEvent('e0', 'eult_finEras', 'Fin de las Eras',
+      allTargets: true, wipedBuffs: true),
+  EnemyUltEvent('e0', 'eult_furia', 'Furia Élite', targetId: 'p1'),
 ];
 
 final _result = MissionResult(
@@ -213,7 +222,8 @@ void main() {
       expect([act.kind, act.skillId, act.partnerId, act.targetId, act.allTargets],
           [BattleActionKind.skill, 'corte', 'p2', 'e1', true]);
       expect(dmg.sourceId, isNull);
-      final bounce = evs.whereType<DamageEvent>().last;
+      final bounce =
+          evs.whereType<DamageEvent>().firstWhere((d) => d.sourceId != null);
       expect([bounce.targetId, bounce.amount, bounce.sourceId],
           ['e2', 7, 'rebote']);
       final proc = evs.whereType<ProcEvent>().last;
@@ -224,6 +234,27 @@ void main() {
           ['e1', 'debilitar', BuffStat.attack, -0.15, 2]);
       final shield = evs.whereType<ShieldEvent>().last;
       expect([shield.targetId, shield.amount, shield.absorbed], ['p2', 5, true]);
+      // Quiebre y ULT enemigas.
+      expect(evs.whereType<DamageEvent>().last.vulnerable, isTrue);
+      expect(dmg.vulnerable, isFalse);
+      final brk = evs.whereType<BreakEvent>().toList();
+      expect(
+          [for (final b in brk) [b.targetId, b.phase, b.gauge, b.max, b.cancelledUlt]],
+          [
+            ['e1', BreakPhase.fill, 12.5, 50, false],
+            ['e1', BreakPhase.broken, 50, 50, true],
+            ['e1', BreakPhase.recovered, 0, 62.5, false],
+          ]);
+      final warn = evs.whereType<EnemyUltWarningEvent>().single;
+      expect([warn.actorId, warn.ultId, warn.name],
+          ['e0', 'eult_diluvio', 'Diluvio Ácido']);
+      final ults = evs.whereType<EnemyUltEvent>().toList();
+      expect(
+          [for (final u in ults) [u.actorId, u.ultId, u.name, u.targetId, u.allTargets, u.wipedBuffs]],
+          [
+            ['e0', 'eult_finEras', 'Fin de las Eras', null, true, true],
+            ['e0', 'eult_furia', 'Furia Élite', 'p1', false, false],
+          ]);
     });
 
     test('eventos viejos sin las claves del árbol v2 se siguen leyendo', () {

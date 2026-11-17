@@ -47,6 +47,17 @@ defp   = min(0.60, defn * 0.03)          // % de daño que se resta
 critMult = 2.0 con keystone halcon, si no 1.5
 ```
 
+Loot v2 (loot.md § 12): con un arma con implícito / afijos, sus
+atributos se suman antes de todo; `atk = round((fórmula + plano) × (1 +
+%ATQ) × forja)` (igual MAG), y vida, maná, velocidad, crítico (antes del
+tope 0.60), DEF, daño crítico, carga de ULT, curación y stacks de estados
+suman lo suyo. La pasiva del arma entra como mecánica (`wp:<id>:<nivel>`)
+con el sistema de disparadores del árbol (§ "Disparadores del árbol"). En
+combate: robo de vida (% del daño de la acción), regeneración al empezar
+el turno, resistencia a estados (−N stacks de Quemadura / Veneno /
+Congelación, mín. 1) y curación recibida. `DerivedStats.breakdown` tiene
+el desglose de cada stat para el log y la UI.
+
 `bonus_def_batalla` (`p.bdef`) solo existe dentro de una batalla: lo suben
 Fortaleza (+2) y Baluarte (+4), tope 12, y vuelve a 0 al empezar la
 siguiente batalla.
@@ -162,6 +173,19 @@ en el resto. `daño_total` no cuenta el daño que sobra al matar.
   todos, los retrasa `IV × 0.4` y les aplica su estado.
 - Jefe, cada 4 acciones: Golpe Brutal `ATQ × 1.6`.
 - Si no: `ATQ` al objetivo. Siempre aplica su estado (`inf`) si tiene.
+- Jefes y élites con la carga de ULT en 100: avisan (pierden la acción)
+  y en su siguiente turno lanzan su ULT. Ver
+  docs/specs/break_and_enemy_ults.md § 2.
+
+## Barra de quiebre
+
+Cada enemigo tiene una barra que llenan los golpes del grupo; al llegar
+al umbral queda **quebrado** (pierde su próximo turno y recibe +50% de
+daño durante 2 turnos del grupo). Números, llenado por tipo de acción,
+baja, umbral creciente y cancelación de la ULT avisada en
+docs/specs/break_and_enemy_ults.md § 1. Daño a un quebrado:
+`daño = max(1, round(base × crítico × Fractura × Cadena × Marca × 1.5))`
+(log `× 1.5 QUIEBRE`), también en el daño secundario.
 
 ## Estados alterados
 
@@ -216,9 +240,13 @@ UI, ver docs/specs/battle_presentation.md):
 | `ProcEvent(actor, fuente, objetivo?)` | disparó una mecánica del árbol v2 (`fuente` = id en `kMechanics`) |
 | `BuffAppliedEvent(objetivo, fuente, stat, valor, turnos)` | buff / debuff / marca con duración |
 | `ShieldEvent(objetivo, cantidad, absorbed)` | ganó un escudo, o su escudo absorbió daño |
+| `BreakEvent(objetivo, fase, barra, umbral, cancelledUlt)` | la barra de quiebre se llena (`fill`), baja (`decay`), se quiebra (`broken`), pierde el turno quebrado (`skipped`) o se recupera (`recovered`) |
+| `EnemyUltWarningEvent(actor, ultId, nombre)` | un jefe / élite avisa su ULT |
+| `EnemyUltEvent(actor, ultId, nombre, targetId?, allTargets, wipedBuffs)` | lanza su ULT: abre la acción (los golpes, estados y retrasos que siguen son de la ULT) |
 
 `DamageEvent.sourceId`: id de la mecánica en el daño secundario (rebote,
-explosión, eco, reflejo, sagrado). `BattleEvent` no es `sealed`: un
+explosión, eco, reflejo, sagrado). `DamageEvent.vulnerable`: el objetivo
+estaba quebrado (lleva el +50%). `BattleEvent` no es `sealed`: un
 `switch` que no conoce los eventos nuevos los ignora.
 
 `ActionEvent.kind` (`BattleActionKind`):
@@ -276,6 +304,9 @@ Detalle y números en passive_tree_v2.md § 3-5. Resumen del motor:
   turno más (no jefes).
 - Sin mecánicas no se tira azar extra: los números de siempre no cambian.
 - Red: `Combatant` serializa `mech`, `fx`, `xt` (opcionales).
+- Quiebre: el daño secundario llena la barra × 0.5 y los Aturdidos /
+  Congelaciones de procs suman el +15 plano
+  (docs/specs/break_and_enemy_ults.md § 1).
 
 ## Fuera de este motor
 

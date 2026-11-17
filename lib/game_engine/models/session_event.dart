@@ -1,6 +1,8 @@
 import 'battle_command.dart';
 import 'battle_event.dart';
 import 'game_session.dart';
+import 'item.dart' show CraftOp;
+import 'loot.dart';
 
 /// Lo que pasó en un paso de la sesión, en orden, para que la UI lo
 /// muestre (mensajes, sonidos, animaciones). El estado nuevo siempre
@@ -106,4 +108,44 @@ class MissionEndedEvent extends SessionEvent {
 
 class ReturnedToLobbyEvent extends SessionEvent {
   const ReturnedToLobbyEvent();
+}
+
+// ---------------- loot v2 (docs/specs/loot.md) ----------------
+
+/// A [playerId] le tocó [drop] de [source] (`battle`, `elite`, `boss`,
+/// `chest`, `mission`). [groundId] != null: quedó en el piso (modo con
+/// loot en el mapa, o inventario lleno); si no, ya está en su inventario
+/// con el `uid` [uid].
+class LootDropEvent extends SessionEvent {
+  final String playerId;
+  final LootDrop drop;
+  final LootSource source;
+  final int? groundId;
+  final String? uid;
+  const LootDropEvent(this.playerId, this.drop, this.source,
+      {this.groundId, this.uid});
+}
+
+/// [playerId] levantó del piso el objeto [groundId].
+class LootPickedEvent extends SessionEvent {
+  final String playerId;
+  final int groundId;
+  final LootDrop drop;
+  const LootPickedEvent(this.playerId, this.groundId, this.drop);
+}
+
+/// [fromId] le dio [drop] a [toId].
+class ItemGivenEvent extends SessionEvent {
+  final String fromId;
+  final String toId;
+  final LootDrop drop;
+  const ItemGivenEvent(this.fromId, this.toId, this.drop);
+}
+
+/// Una operación de forja / fusión de [playerId] sobre el arma [uid].
+class CraftedEvent extends SessionEvent {
+  final String playerId;
+  final CraftOp op;
+  final String uid;
+  const CraftedEvent(this.playerId, this.op, this.uid);
 }

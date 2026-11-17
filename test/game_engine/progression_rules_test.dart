@@ -1,6 +1,8 @@
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
+import 'package:echos_del_tiempo/game_engine/models/item.dart';
+
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/upgrade_stat.dart';
 import 'package:echos_del_tiempo/game_engine/models/weapon.dart';
@@ -24,10 +26,43 @@ PlayerProfile _warriorL3({int credits = 0, List<String>? inventory}) =>
 
 void main() {
   group('niveles', () {
-    test('xpNeed = 10 + l² × 8', () {
+    test('xpNeed = 10 + l² × 8 hasta el 10', () {
       expect(ProgressionRules.xpNeed(1), 18);
       expect(ProgressionRules.xpNeed(2), 42);
       expect(ProgressionRules.xpNeed(7), 402);
+      expect(ProgressionRules.xpNeed(10), 810);
+    });
+
+    test('curva hasta 50: creciente y a un ritmo razonable', () {
+      expect(ProgressionRules.maxLevel, 50);
+      for (var l = 1; l < 49; l++) {
+        expect(ProgressionRules.xpNeed(l + 1),
+            greaterThan(ProgressionRules.xpNeed(l)),
+            reason: 'nivel $l');
+      }
+      // Desde el 11: 32 × (1 + 0.15 (l − 1)) × (11 + 0.36 (l − 10)).
+      expect(ProgressionRules.xpNeed(11), 909);
+      expect(ProgressionRules.xpNeed(30), 3116);
+      // Batallas por nivel con la XP esperada de una zona de ese nivel
+      // (32 × xpFactor): ~11 en el 11, ~25 en el 49.
+      double battles(int l) =>
+          ProgressionRules.xpNeed(l) / (32 * ProgressionRules.xpFactor(l));
+      expect(battles(11), closeTo(11.4, 0.1));
+      expect(battles(49), closeTo(25.0, 0.1));
+      var total = 0.0;
+      for (var l = 11; l < 50; l++) {
+        total += battles(l);
+      }
+      // 10 → 50 en ~700 batallas (~70 misiones de 10 grupos).
+      expect(total, inInclusiveRange(600, 800));
+      expect(ProgressionRules.totalXpTo(50), greaterThan(100000));
+    });
+
+    test('gainXp se detiene en el nivel 50', () {
+      final p = newProfile('A', 'maga').copyWith(level: 49);
+      final g = progression.gainXp(p, 10000000);
+      expect(g.profile.level, 50);
+      expect(g.levelsGained, 1);
     });
 
     test('gainXp sube varios niveles de una y da 3 puntos por nivel', () {
@@ -96,15 +131,43 @@ void main() {
   });
 
   group('armas y tienda', () {
-    test('buyWeapon: de su clase, a la venta, no repetida y con créditos', () {
+    test('buyWeapon: cualquier base a la venta, no repetida y con créditos', () {
       final p = _warriorL3(credits: 300);
       final b = progression.buyWeapon(p, 'espada_ignea')!;
       expect(b.credits, 0);
       expect(b.inventory, contains('espada_ignea'));
+      expect(b.item('espada_ignea')!.rarity, Rarity.comun);
       expect(progression.buyWeapon(b, 'espada_ignea'), isNull);
-      expect(progression.buyWeapon(p, 'baculo_fuego'), isNull); // otra clase
+      // Loot v2: la clase no restringe (otra familia se compra igual).
+      expect(progression.buyWeapon(p, 'baculo_fuego'), isNotNull);
       expect(progression.buyWeapon(p, 'espada_bronce'), isNull); // precio 0
       expect(progression.buyWeapon(p, 'hacha_rompe'), isNull); // 650 > 300
+    });
+
+    test('cualquier clase equipa cualquier arma si cumple nivel y requisitos',
+        () {
+      // Guerrero nivel 5 con ESP 14: puede usar el Báculo de Fuego.
+      final p = progression.normalize(PlayerProfile.fromJson({
+        'cls': 'guerrero',
+        'lvl': 5,
+        'st': {'VIT': 10, 'ESP': 14, 'AGI': 6, 'FUE': 12, 'DES': 6},
+        'pts': 2,
+        'inv': ['espada_bronce', 'baculo_fuego', 'tomo_tiempo'],
+      }));
+      expect(progression.canEquip(p, 'baculo_fuego'), isTrue);
+      final e = progression.equip(p, 'baculo_fuego')!;
+      expect(e.equipped, 'baculo_fuego');
+      // La ULT sigue al tipo de arma y las habilidades vienen del arma.
+      expect(progression.weaponSkills(e), ['bola', 'llamarada']);
+      // Tomo del Tiempo: nivel 7 y ESP 22.
+      expect(progression.canEquip(p, 'tomo_tiempo'), isFalse);
+      final lvl = p.copyWith(level: 7, points: 8);
+      expect(progression.canEquip(lvl, 'tomo_tiempo'), isFalse,
+          reason: 'falta ESP');
+      expect(
+          progression.canEquip(lvl, 'tomo_tiempo',
+              attributes: p.attributes.add({Attribute.esp: 8})),
+          isTrue);
     });
 
     test('equip exige tenerla y cumplir requisitos', () {
@@ -138,18 +201,31 @@ void main() {
       expect(progression.upgradeCost('mandoble_eco', 2), 924);
     });
 
-    test('sube de a 1 hasta 5, cobra y cambia los stats', () {
+    test('sube de a 1 hasta el tope de la rareza, cobra y cambia los stats',
+        () {
+      // Común: tope 3 niveles de forja en total.
       var p = _warriorL3(credits: 10000);
       final before = progression.derivedStats(p);
-      for (var l = 0; l < 5; l++) {
+      for (var l = 0; l < 3; l++) {
         final next = progression.upgrade(p, 'espada_bronce', UpgradeStat.pow)!;
         expect(next.credits, p.credits - progression.upgradeCost('espada_bronce', l));
         p = next;
       }
-      expect(p.upgradesFor('espada_bronce').pow, 5);
+      expect(p.upgradesFor('espada_bronce').pow, 3);
       expect(progression.upgrade(p, 'espada_bronce', UpgradeStat.pow), isNull);
+      expect(progression.upgrade(p, 'espada_bronce', UpgradeStat.crit), isNull);
       expect(progression.derivedStats(p).attack, greaterThan(before.attack));
-      expect(progression.weaponDisplayName(p, 'espada_bronce'), 'Espada de Bronce +5');
+      expect(progression.weaponDisplayName(p, 'espada_bronce'), 'Espada de Bronce +3');
+      // Una Épica llega a 5 en una estadística (tope por estadística).
+      var e = p.copyWith(items: [
+        for (final i in p.items)
+          i.baseId == 'espada_bronce' ? i.copyWith(rarity: Rarity.epico) : i,
+      ]);
+      e = progression.upgrade(e, 'espada_bronce', UpgradeStat.pow)!;
+      e = progression.upgrade(e, 'espada_bronce', UpgradeStat.pow)!;
+      expect(e.upgradesFor('espada_bronce').pow, 5);
+      expect(progression.upgrade(e, 'espada_bronce', UpgradeStat.pow), isNull);
+      expect(progression.upgrade(e, 'espada_bronce', UpgradeStat.crit), isNotNull);
     });
 
     test('Defensa solo en armas con escudo', () {
@@ -164,10 +240,10 @@ void main() {
       expect(progression.upgradeStatsFor(kWeaponsShield), contains(UpgradeStat.def));
     });
 
-    test('no mejora armas que no tiene ni de otra clase', () {
+    test('no mejora armas que no tiene; las de otra familia, sí', () {
       final p = _warriorL3(credits: 1000, inventory: ['espada_bronce', 'baculo_fuego']);
       expect(progression.upgrade(p, 'espada_ignea', UpgradeStat.crit), isNull);
-      expect(progression.upgrade(p, 'baculo_fuego', UpgradeStat.crit), isNull);
+      expect(progression.upgrade(p, 'baculo_fuego', UpgradeStat.crit), isNotNull);
     });
   });
 

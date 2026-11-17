@@ -5,6 +5,8 @@ import '../models/attributes.dart';
 import '../models/battle_state.dart';
 import '../models/passive_mechanic.dart';
 import '../models/game_session.dart';
+import '../models/item.dart';
+import '../models/loot.dart';
 import '../models/passive_tree.dart';
 import '../models/player_profile.dart';
 import '../models/player_state.dart';
@@ -40,6 +42,9 @@ class SessionJson {
         'grace': s.graceUntil,
         'after': s.afterLevelUp?.name,
         'seq': s.seq,
+        if (s.ground.isNotEmpty)
+          'ground': [for (final g in s.ground) groundToJson(g)],
+        if (s.groundSeq != 0) 'gseq': s.groundSeq,
       };
 
   GameSession fromJson(Json j) {
@@ -60,8 +65,34 @@ class SessionJson {
       graceUntil: j.dbl('grace'),
       afterLevelUp: j.enumOrNull('after', AfterLevelUp.values),
       seq: j.integer('seq'),
+      ground: j['ground'] == null
+          ? null
+          : [for (final raw in j.list('ground')) groundFromJson(asJson(raw))],
+      groundSeq: j.intOrNull('gseq') ?? 0,
     );
   }
+
+  // ------------------------------------------------------------------
+  // Loot v2: piso (todo el loot va en el snapshot; cada cliente muestra
+  // solo el suyo y el compartido, ver netcode.md § "Loot instanciado")
+  // ------------------------------------------------------------------
+
+  Json groundToJson(GroundLoot g) => {
+        'id': g.id,
+        'd': g.drop.toJson(),
+        'x': g.x,
+        'y': g.y,
+        if (g.ownerId != null) 'own': g.ownerId,
+      };
+
+  GroundLoot groundFromJson(Json j) => GroundLoot(
+        id: j.integer('id'),
+        drop: LootDrop.fromJson(j['d']) ??
+            (throw FormatException('JSON inválido: drop', j['d'])),
+        x: j.dbl('x'),
+        y: j.dbl('y'),
+        ownerId: j.strOrNull('own'),
+      );
 
   static T? _opt<T>(Json? j, T Function(Json) f) => j == null ? null : f(j);
 
@@ -123,6 +154,7 @@ class SessionJson {
         'eliteDrops': [for (final d in m.eliteDrops) dropToJson(d)],
         'fe': [for (final e in m.enemies) enemyToJson(e)],
         'items': [for (final i in m.items) itemToJson(i)],
+        if (m.zoneLevel != 1) 'zl': m.zoneLevel,
       };
 
   MissionRun missionFromJson(Json j) => MissionRun(
@@ -150,11 +182,18 @@ class SessionJson {
         ],
         enemies: [for (final raw in j.list('fe')) enemyFromJson(asJson(raw))],
         items: [for (final raw in j.list('items')) itemFromJson(asJson(raw))],
+        zoneLevel: j.intOrNull('zl') ?? 1,
       );
 
-  Json dropToJson(WeaponDrop d) => {'p': d.playerId, 'w': d.weaponId};
+  Json dropToJson(WeaponDrop d) => {
+        'p': d.playerId,
+        'w': d.weaponId,
+        if (d.uid != null) 'u': d.uid,
+        if (d.rarity != null) 'r': d.rarity!.name,
+      };
 
-  WeaponDrop dropFromJson(Json j) => WeaponDrop(j.str('p'), j.str('w'));
+  WeaponDrop dropFromJson(Json j) => WeaponDrop(j.str('p'), j.str('w'),
+      uid: j.strOrNull('u'), rarity: j.enumOrNull('r', Rarity.values));
 
   Json enemyToJson(FieldEnemy e) => {
         'id': e.id,
@@ -387,6 +426,19 @@ class SessionJson {
         if (c.effects.isNotEmpty)
           'fx': [for (final e in c.effects) timedEffectToJson(e)],
         if (c.extraTurn != 0) 'xt': c.extraTurn,
+        // Quiebre y ULT enemiga (opcionales).
+        if (c.breakBase != 0) 'brkB': c.breakBase,
+        if (c.breakGauge != 0) 'brk': c.breakGauge,
+        if (c.breaks != 0) 'brkN': c.breaks,
+        if (c.vulnerable != 0) 'vul': c.vulnerable,
+        if (c.breakSkip) 'brkS': true,
+        if (c.ultId != null) 'eult': c.ultId,
+        if (c.ultPending) 'ultP': true,
+        // Afijos del arma (loot v2, opcionales).
+        if (c.lifeSteal != 0) 'ls': c.lifeSteal,
+        if (c.regenPerTurn != 0) 'rgn': c.regenPerTurn,
+        if (c.statusResist != 0) 'sres': c.statusResist,
+        if (c.healReceived != 0) 'hrec': c.healReceived,
       };
 
   Json timedEffectToJson(TimedEffect e) => {
@@ -463,6 +515,17 @@ class SessionJson {
           ? []
           : [for (final raw in j.list('fx')) timedEffectFromJson(asJson(raw))],
       extraTurn: j.intOrNull('xt') ?? 0,
+      breakBase: j.dblOrNull('brkB') ?? 0,
+      breakGauge: j.dblOrNull('brk') ?? 0,
+      breaks: j.intOrNull('brkN') ?? 0,
+      vulnerable: j.intOrNull('vul') ?? 0,
+      breakSkip: j.flag('brkS'),
+      ultId: j.strOrNull('eult'),
+      ultPending: j.flag('ultP'),
+      lifeSteal: j.dblOrNull('ls') ?? 0,
+      regenPerTurn: j.dblOrNull('rgn') ?? 0,
+      statusResist: j.intOrNull('sres') ?? 0,
+      healReceived: j.dblOrNull('hrec') ?? 0,
     );
   }
 
@@ -477,6 +540,7 @@ class SessionJson {
         'up': b.weaponUpgrades.toJson(),
         'tree': b.passiveProgress.takenNodeIds,
         'bdef': b.bonusDefense,
+        if (b.item != null) 'item': b.item!.toJson(),
       };
 
   PlayerBuild buildFromJson(Json j) {
@@ -502,6 +566,10 @@ class SessionJson {
       equippedWeapon: weapon,
       weaponUpgrades: up,
       passiveProgress: PlayerPassiveProgress(List.unmodifiable(j.strings('tree'))),
+      item: j['item'] == null
+          ? null
+          : ItemInstance.fromJson(j['item']) ??
+              (throw FormatException('JSON inválido: arma', j['item'])),
       bonusDefense: j.integer('bdef'),
     );
   }

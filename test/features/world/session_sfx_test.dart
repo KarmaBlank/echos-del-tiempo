@@ -91,6 +91,8 @@ void main() {
   });
 
   const m = SessionSfx.meleeImpactMs;
+  // Golpe enemigo: después del wind-up.
+  const k = BattleFx.enemyStrikeMs;
   const st = SessionSfx.staggerMs;
   const p = BattleFx.projMs;
 
@@ -223,15 +225,15 @@ void main() {
         ]),
         [
           cue('enemy.slime'),
-          cue(Sfx.impactHurt, m),
-          cue('status.poison', m + SessionSfx.statusAfterMs),
+          cue(Sfx.enemyHit('slime'), k),
+          cue('status.poison', k + SessionSfx.statusAfterMs),
           cue('enemy.bat'),
-          cue(Sfx.impactHurt, m),
-          cue(Sfx.critClink, m),
+          cue(Sfx.enemyHit('bat'), k),
+          cue(Sfx.critClink, k),
           cue('enemy.golem'),
-          cue(Sfx.enemyHeavy, SessionSfx.heavyBoomMs),
-          cue(Sfx.impactHurt, m),
-          cue(Sfx.koPlayer, m + SessionSfx.koAfterMs),
+          cue(Sfx.enemyHeavy, k),
+          cue(Sfx.enemyHit('golem'), k),
+          cue(Sfx.koPlayer, k + SessionSfx.koAfterMs),
         ]);
     expect(
         sfx.battleSounds(const [
@@ -240,10 +242,10 @@ void main() {
           DamageEvent('archer', 4),
         ]),
         [
-          cue(Sfx.flash),
           cue(Sfx.enemyGeneric), // tipo desconocido
-          cue(Sfx.impactHurt, m),
-          cue(Sfx.impactHurt, m + st),
+          cue(Sfx.flash, k),
+          cue(Sfx.impactHurt, k),
+          cue(Sfx.impactHurt, k + st),
         ]);
   });
 
@@ -314,7 +316,7 @@ void main() {
   test('ULT de cada tipo de arma: preparación @0, descarga al terminar la '
       'preparación, impacto en el impacto del guion de cada objetivo (3 '
       'como máximo) y clink en los críticos', () {
-    for (final e in kUltimates.entries) {
+    for (final e in kAllUltimates.entries) {
       final sk = e.value;
       final script = ultScriptFor(sk.id);
       final sfx = SessionSfx(_Recorder(), localId: 'p')
@@ -390,7 +392,7 @@ void main() {
           cue(Sfx.swingBlade),
           cue(Sfx.impactSlash, m),
           cue(Sfx.enemyGeneric),
-          cue(Sfx.impactHurt, m),
+          cue(Sfx.impactHurt, k),
         ]);
   });
 
@@ -504,9 +506,9 @@ void main() {
           ]),
           [
             cue('enemy.slime'),
-            cue(Sfx.impactHurt, m),
-            cue(Sfx.clang, base + ProcTiming.counterHitMs),
-            cue(Sfx.flare, base),
+            cue(Sfx.enemyHit('slime'), k),
+            cue(Sfx.clang, k + base + ProcTiming.counterHitMs),
+            cue(Sfx.flare, k + base),
           ]);
     });
 
@@ -550,8 +552,8 @@ void main() {
           ]),
           [
             cue('enemy.slime'),
-            cue(Sfx.impactHurt, m),
-            cue(Sfx.shieldBreak, m),
+            cue(Sfx.enemyHit('slime'), k),
+            cue(Sfx.shieldBreak, k),
           ]);
       // Égida al empezar el turno: en el acto.
       expect(
@@ -673,6 +675,93 @@ void main() {
       expect(cues.where((c) => c.id.startsWith('proc.')),
           hasLength(SessionSfx.maxProcCues));
       expect(cues.first, cue('enemy.slime'));
+    });
+  });
+
+  // docs/specs/audio.md § "Quiebre y ULT enemigas".
+  group('quiebre y ULT enemigas', () {
+    test('tic de la barra una vez por paso, con el golpe; cristal al '
+        'quebrarse en el golpe que quiebra', () {
+      final sfx = _sfx(_Recorder());
+      expect(
+          sfx.battleSounds(const [
+            ActionEvent('archer', BattleActionKind.attack, targetId: 'e1'),
+            DamageEvent('e1', 10),
+            BreakEvent('e1', BreakPhase.fill, 10, 50),
+          ]),
+          [cue(Sfx.shotBow), cue(Sfx.impactArrow, p), cue(Sfx.breakTick, p)]);
+      expect(
+          sfx.battleSounds(const [
+            ActionEvent('knight', BattleActionKind.skill,
+                skillId: 'giro', allTargets: true),
+            DamageEvent('e1', 5),
+            BreakEvent('e1', BreakPhase.fill, 5, 50),
+            DamageEvent('e2', 5),
+            BreakEvent('e2', BreakPhase.fill, 5, 50),
+            DamageEvent('e3', 5),
+            BreakEvent('e3', BreakPhase.broken, 50, 50),
+          ]).where((c) => c.id.startsWith('break.')),
+          [cue(Sfx.breakTick, m), cue(Sfx.breakShatter, m + 2 * st)]);
+    });
+
+    test('golpes a un quebrado: el acento una vez por acción', () {
+      final cues = _sfx(_Recorder()).battleSounds(const [
+        ActionEvent('knight', BattleActionKind.skill,
+            skillId: 'giro', allTargets: true),
+        DamageEvent('e1', 9, vulnerable: true),
+        DamageEvent('e2', 9, vulnerable: true),
+      ]);
+      expect(cues.where((c) => c.id == Sfx.breakVuln), [cue(Sfx.breakVuln, m)]);
+    });
+
+    test('aviso de ULT, quebrado que pierde el turno; bajar o recuperarse '
+        'no suenan', () {
+      expect(
+          _sfx(_Recorder()).battleSounds(const [
+            TurnStartedEvent('e1'),
+            BreakEvent('e1', BreakPhase.decay, 5, 50),
+            EnemyUltWarningEvent('e1', 'eult_diluvio', 'Diluvio Ácido'),
+            TurnStartedEvent('e2'),
+            BreakEvent('e2', BreakPhase.skipped, 50, 50),
+            BreakEvent('e3', BreakPhase.recovered, 0, 62.5),
+          ]),
+          [cue(Sfx.enemyUltWarn), cue(Sfx.breakDazed)]);
+    });
+
+    test('cada ULT enemiga: preparación, descarga e impacto propios en los '
+        'tiempos de su guion; los estados no suenan encima', () {
+      for (final id in kEnemyUltScripts.keys) {
+        final script = ultScriptFor(id);
+        final cues = _sfx(_Recorder()).battleSounds([
+          EnemyUltEvent('e1', id, '?', allTargets: true),
+          const DamageEvent('mage', 20),
+          const StatusAppliedEvent('mage', StatusKind.poison, 2),
+          const DamageEvent('archer', 20, critical: true),
+          const DamageEvent('knight', 20),
+          const DamageEvent('pal', 20),
+          const KnockedOutEvent('pal'),
+        ]);
+        final impact = Sfx.ult(id, Sfx.ultImpact);
+        expect(cues, [
+          cue(Sfx.ult(id, Sfx.ultBuild)),
+          cue(Sfx.ult(id, Sfx.ultRelease), script.buildMs),
+          cue(impact, script.impactFor(0)),
+          cue(impact, script.impactFor(1)),
+          cue(Sfx.critClink, script.impactFor(1)),
+          cue(impact, script.impactFor(2)),
+          cue(Sfx.koPlayer, script.impactFor(3) + SessionSfx.koAfterMs),
+        ], reason: id);
+        for (final c in cues) {
+          expect(kSfxCatalog, contains(c.id), reason: c.id);
+        }
+      }
+    });
+
+    test('ULT enemiga sin sonidos propios: el beep del prototipo', () {
+      expect(
+          _sfx(_Recorder())
+              .battleSounds(const [EnemyUltEvent('e1', 'eult_x', '?')]),
+          [cue(Sfx.ultimate)]);
     });
   });
 }

@@ -58,6 +58,10 @@ class Combatant {
     this.pierceWeakness = 1,
     this.statusWeakness = 0,
     this.stunOnAttackChance = 0,
+    this.lifeSteal = 0,
+    this.regenPerTurn = 0,
+    this.statusResist = 0,
+    this.healReceived = 0,
     this.build,
     this.classId,
     this.weaponType,
@@ -81,6 +85,13 @@ class Combatant {
     this.actions = 0,
     List<TimedEffect>? effects,
     this.extraTurn = 0,
+    this.breakBase = 0,
+    this.breakGauge = 0,
+    this.breaks = 0,
+    this.vulnerable = 0,
+    this.breakSkip = false,
+    this.ultId,
+    this.ultPending = false,
   })  : statusBonus = statusBonus ?? {},
         keystones = keystones ?? {},
         mechanics = mechanics ?? {},
@@ -115,6 +126,12 @@ class Combatant {
   final int statusWeakness;
   final double stunOnAttackChance;
 
+  // ---- afijos del arma (loot v2, solo jugadores) ----
+  double lifeSteal;
+  double regenPerTurn;
+  int statusResist;
+  double healReceived;
+
   // ---- solo jugadores ----
   final PlayerBuild? build;
   final String? classId;
@@ -148,6 +165,39 @@ class Combatant {
   /// Danza de Cuchillas: 0 nada, 1 tiene un turno extra pendiente, 2 está
   /// jugando un turno extra (no puede ganar otro).
   int extraTurn;
+
+  // ---- quiebre y ULT enemiga (docs/specs/break_and_enemy_ults.md) ----
+
+  /// Umbral base de la barra de quiebre (ya escalado por grupo y élite).
+  /// 0: sin barra (jugadores).
+  final double breakBase;
+
+  /// Barra de quiebre actual (0..[breakMax]).
+  double breakGauge;
+
+  /// Quiebres ya sufridos: cada uno sube el umbral +25% (tope ×2).
+  int breaks;
+
+  /// Turnos del grupo que le quedan de vulnerabilidad (+50% de daño).
+  int vulnerable;
+
+  /// Quebrado: pierde su próximo turno.
+  bool breakSkip;
+
+  /// ULT del enemigo (`EnemyUltDef.id`), si tiene. Su carga es [ult].
+  final String? ultId;
+
+  /// Avisó su ULT: la lanza en su próximo turno.
+  bool ultPending;
+
+  bool get hasBreak => breakBase > 0;
+
+  /// Umbral actual: `base × min(2, 1 + 0.25 × quiebres)`.
+  double get breakMax =>
+      breakBase * (1 + 0.25 * breaks).clamp(1.0, 2.0).toDouble();
+
+  /// Quebrado y vulnerable.
+  bool get broken => vulnerable > 0;
 
   bool get alive => hp > 0;
 
@@ -204,6 +254,10 @@ class Combatant {
         pierceWeakness: pierceWeakness,
         statusWeakness: statusWeakness,
         stunOnAttackChance: stunOnAttackChance,
+        lifeSteal: lifeSteal,
+        regenPerTurn: regenPerTurn,
+        statusResist: statusResist,
+        healReceived: healReceived,
         build: build,
         classId: classId,
         weaponType: weaponType,
@@ -227,6 +281,13 @@ class Combatant {
         actions: actions,
         effects: List.of(effects),
         extraTurn: extraTurn,
+        breakBase: breakBase,
+        breakGauge: breakGauge,
+        breaks: breaks,
+        vulnerable: vulnerable,
+        breakSkip: breakSkip,
+        ultId: ultId,
+        ultPending: ultPending,
       );
 }
 

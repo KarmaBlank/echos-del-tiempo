@@ -19,6 +19,9 @@ class GameCatalog {
   final Map<String, DualDef> duals; // por dualKey(claseA, claseB)
   final Map<String, EnemyDef> enemies;
 
+  /// ULT enemigas por id (jefes y élites).
+  final Map<String, EnemyUltDef> enemyUlts;
+
   /// Misiones del mostrador, en orden (índice + 1 = tier de sus drops).
   final List<MissionDef> missions;
 
@@ -29,6 +32,7 @@ class GameCatalog {
     required this.ultimates,
     required this.duals,
     required this.enemies,
+    this.enemyUlts = kEnemyUlts,
     this.missions = kMissions,
   });
 
@@ -36,7 +40,7 @@ class GameCatalog {
     classes: kClasses,
     weapons: kWeapons,
     skills: kSkills,
-    ultimates: kUltimates,
+    ultimates: kAllUltimates,
     duals: kDuals,
     enemies: kEnemies,
   );

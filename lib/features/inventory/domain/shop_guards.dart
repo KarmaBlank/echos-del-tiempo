@@ -4,14 +4,20 @@ import '../../../game_engine/data/items_catalog.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/game_session.dart';
+import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
+import '../../../game_engine/rules/craft_rules.dart';
+import '../../../game_engine/rules/inventory_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import 'item_text.dart';
 
 /// Por qué el motor rechazaría una acción de los paneles, en el mismo
-/// orden en que la comprueba (`SessionEngine.apply` + `ProgressionRules`).
-/// `null` = el botón está habilitado. Ver docs/specs/panels.md § "Botones
-/// con motivo". Solo explica: la validación real la sigue haciendo el host.
+/// orden en que la comprueba (`SessionEngine.apply` + `ProgressionRules`
+/// + `CraftRules` / `InventoryRules`). `null` = el botón está habilitado.
+/// Ver docs/specs/panels.md § "Botones con motivo". Solo explica: la
+/// validación real la sigue haciendo el host.
 class ShopGuards {
   const ShopGuards(this.rules, this.mode);
 
@@ -24,15 +30,14 @@ class ShopGuards {
 
   static String _missing(int need, int have) => 'Faltan \$${need - have}';
 
-  /// `BuyWeaponAction` (armas de su clase a la venta).
+  /// `BuyWeaponAction`: cualquier base a la venta (loot v2: sin clase).
   String? buyWeapon(PlayerProfile p, String weaponId) {
     if (!canShop) return notShopping;
     final w = rules.catalog.weapons[weaponId];
-    if (w == null || w.classId != p.classId || w.price <= 0) {
-      return 'No está a la venta';
-    }
-    if (p.inventory.contains(weaponId)) return 'Ya la tienes';
+    if (w == null || w.price <= 0) return 'No está a la venta';
+    if (p.items.any((i) => i.baseId == weaponId)) return 'Ya la tienes';
     if (p.credits < w.price) return _missing(w.price, p.credits);
+    if (InventoryRules.freeCells(p) <= 0) return 'Inventario lleno';
     return null;
   }
 
@@ -45,75 +50,94 @@ class ShopGuards {
     }
     final price = kItems[item]!.price;
     if (p.credits < price) return _missing(price, p.credits);
+    if (have == 0 && InventoryRules.freeCells(p) <= 0) {
+      return 'Inventario lleno';
+    }
     return null;
   }
 
-  /// `EquipAction`. Con [pending] (reparto sin confirmar) distingue
-  /// "Confirma puntos" de "Requisitos", como el botón del prototipo.
+  /// `EquipAction` ([weaponId] = `uid` o base). Cualquier clase: nivel y
+  /// requisitos. Con [pending] (reparto sin confirmar) distingue
+  /// "Confirma puntos" de los requisitos que faltan.
   String? equip(PlayerProfile p, String weaponId,
       {Map<Attribute, int> pending = const {}}) {
-    if (!canShop) return 'Solo en preparación';
-    if (!p.inventory.contains(weaponId)) return 'No la tienes';
-    if (p.equipped == weaponId) return 'Equipada';
-    if (rules.canEquip(p, weaponId)) return null;
-    final w = rules.catalog.weapons[weaponId];
-    if (w != null &&
-        w.classId == p.classId &&
-        pending.values.any((v) => v > 0) &&
+    if (!canShop) return notShopping;
+    final it = p.item(weaponId);
+    if (it == null) return 'No la tienes';
+    if (it.uid == p.equippedUid) return 'Equipada';
+    if (rules.canEquip(p, it.uid)) return null;
+    final w = rules.baseFor(p, it.uid);
+    if (w == null) return 'No se puede equipar';
+    if (p.level < w.level) return 'Nivel ${w.level}';
+    if (pending.values.any((v) => v > 0) &&
         w.meetsRequirements(p.attributes.add(pending))) {
       return 'Confirma puntos';
     }
-    return 'Requisitos';
+    return 'Requisitos: ${missingRequirements(w, p.attributes)}';
   }
 
-  /// `UpgradeAction`.
+  /// `UpgradeAction` (forja de una instancia): el tope por estadística y
+  /// el de la rareza los dice el motor (`CraftRules.forge`).
   String? upgrade(PlayerProfile p, String weaponId, UpgradeStat stat) {
     if (!canShop) return notShopping;
-    final w = rules.catalog.weapons[weaponId];
-    if (w == null ||
-        !rules.upgradeStatsFor(w).contains(stat) ||
-        !p.inventory.contains(weaponId) ||
-        w.classId != p.classId) {
-      return 'No se puede mejorar';
-    }
-    final l = p.upgradesFor(weaponId).level(stat);
-    if (l >= ProgressionRules.upgradeMax) return 'MAX';
-    final cost = rules.upgradeCost(weaponId, l);
-    if (p.credits < cost) return _missing(cost, p.credits);
-    return null;
+    final it = p.item(weaponId);
+    if (it == null) return 'No la tienes';
+    return rules.crafting.forge(p, it.uid, stat).error;
   }
 
-  /// Armas que pueden ser base de una fusión (`mine`).
-  List<String> fuseBases(PlayerProfile p) => p.inventory
-      .where((id) => rules.catalog.weapons[id]?.classId == p.classId)
-      .toList();
+  /// Vista previa de una operación de la mesa de fusión (sin azar: las
+  /// aleatorias solo dicen costo y qué puede salir).
+  CraftResult craftPreview(PlayerProfile p, CraftAction a) =>
+      rules.crafting.apply(p, a.op, a.targetUid,
+          sourceUid: a.sourceUid, index: a.index, skillId: a.skillId);
 
-  /// Armas que se pueden sacrificar con [baseId] como base (`others`).
-  List<String> fuseSacrifices(PlayerProfile p, String? baseId) {
-    final start = rules.catalog.classes[p.classId]?.startWeaponId;
-    return fuseBases(p)
-        .where((id) => id != baseId && id != start && id != p.equipped)
-        .toList();
-  }
-
-  /// `FuseAction`.
-  String? fuse(PlayerProfile p, String? baseId, String? sacrificeId,
-      String? skillId) {
+  /// `CraftAction`.
+  String? craft(PlayerProfile p, CraftAction a) {
     if (!canShop) return notShopping;
-    if (baseId == null || sacrificeId == null) {
-      return 'Elige un arma a sacrificar';
+    return craftPreview(p, a).error;
+  }
+
+  /// Armas que se pueden sacrificar en un traslado hacia [targetUid]: no
+  /// la destino, ni la equipada, ni la última del arma inicial.
+  List<ItemInstance> sacrifices(PlayerProfile p, String? targetUid) => [
+        for (final i in p.items)
+          if (i.uid != targetUid && !rules.inventory.isProtected(p, i.uid)) i,
+      ];
+
+  /// `GiveItemAction` de [count] de [token] a [to] (`null` = sin
+  /// compañeros en la sala).
+  String? give(PlayerProfile p, String token, SessionPlayer? to,
+      {int count = 1}) {
+    if (mode == SessionMode.battle) return 'No en batalla';
+    if (to == null) return 'No hay compañeros en la sala';
+    final t = rules.inventory.take(p, token, count: count);
+    final drop = t.drop;
+    if (drop == null) return t.error ?? 'No se puede dar';
+    final why = InventoryRules.cannotReceive(to.profile, drop);
+    return why == null ? null : '${to.name}: $why';
+  }
+
+  /// `DropItemAction`: al piso, en el lobby o el campo, vivo.
+  String? drop(PlayerProfile p, String token,
+      {int count = 1, bool alive = true}) {
+    if (mode != SessionMode.lobby && mode != SessionMode.field) {
+      return 'Solo en el lobby o en el campo';
     }
-    if (!fuseSacrifices(p, baseId).contains(sacrificeId) ||
-        !fuseBases(p).contains(baseId)) {
-      return 'No se puede fusionar';
+    if (!alive) return 'Estás K.O.';
+    final t = rules.inventory.take(p, token, count: count);
+    return t.drop == null ? t.error ?? 'No se puede tirar' : null;
+  }
+
+  /// `SetLootFilterAction` desde el editor: [saved] es el texto guardado
+  /// (`null` = por defecto) y [errors] los del parser.
+  static String? saveFilter(String text, String? saved, int errors,
+      {required String defaultText}) {
+    final current = saved ?? defaultText;
+    if (text == current) return 'Sin cambios';
+    if (text.length > SetLootFilterAction.maxLength) {
+      return 'Máximo ${SetLootFilterAction.maxLength} caracteres';
     }
-    final b = rules.catalog.weapons[sacrificeId]!;
-    if (skillId == null || !b.skillIds.contains(skillId)) {
-      return 'Elige una habilidad';
-    }
-    if (p.credits < ProgressionRules.fuseCost) {
-      return _missing(ProgressionRules.fuseCost, p.credits);
-    }
+    if (errors > 0) return 'Corrige $errors error${errors == 1 ? '' : 'es'}';
     return null;
   }
 

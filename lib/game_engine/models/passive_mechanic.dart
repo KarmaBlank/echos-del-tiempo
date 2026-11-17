@@ -41,6 +41,9 @@ enum ProcTrigger {
 
   /// Condición: el objetivo está marcado.
   vsMarked,
+
+  /// Condición siempre cierta (modificadores fijos de pasivas de arma).
+  always,
 }
 
 /// Filtro extra sobre la acción o el golpe que disparó la mecánica.
@@ -94,6 +97,18 @@ enum ProcEffectKind {
   /// Modificador de las condiciones (`whileLowHealth`, `vsStatus`,
   /// `vsMarked`) sobre [ProcEffect.stat].
   statBonus,
+
+  /// Pasivas de arma: suma `value` stacks del estado recién aplicado
+  /// ([ProcEffect.status] o el de la mecánica) al mismo objetivo.
+  extraStacks,
+
+  /// Pasivas de arma: aplica [ProcEffect.status] (`value` stacks) al
+  /// objetivo del golpe. Secundario: no dispara nada.
+  inflict,
+
+  /// Pasivas de arma: modificador de condición, +`value` (fracción) al
+  /// llenado de la barra de quiebre.
+  breakBonus,
 }
 
 /// Stat que toca un efecto con duración o un modificador.
@@ -119,12 +134,16 @@ enum BuffStat {
 /// Un efecto de una mecánica con sus parámetros. `value` depende del
 /// tipo: fracción (0.2 = 20%), puntos de ULT, etc.
 class ProcEffect {
-  const ProcEffect(this.kind, {this.value = 0, this.turns = 0, this.stat});
+  const ProcEffect(this.kind,
+      {this.value = 0, this.turns = 0, this.stat, this.status});
 
   final ProcEffectKind kind;
   final double value;
   final int turns;
   final BuffStat? stat;
+
+  /// Estado que aplica (`inflict`, `extraStacks`).
+  final StatusKind? status;
 
   /// Efectos que caen sobre el objetivo (se disparan una vez por objetivo
   /// y acción en vez de una vez por acción).
@@ -134,7 +153,9 @@ class ProcEffect {
         ProcEffectKind.shatterStun ||
         ProcEffectKind.delayTarget ||
         ProcEffectKind.holyDamage ||
-        ProcEffectKind.shieldHealed =>
+        ProcEffectKind.shieldHealed ||
+        ProcEffectKind.extraStacks ||
+        ProcEffectKind.inflict =>
           true,
         _ => false,
       };
@@ -179,7 +200,8 @@ class PassiveMechanic {
   bool get isCondition =>
       trigger == ProcTrigger.whileLowHealth ||
       trigger == ProcTrigger.vsStatus ||
-      trigger == ProcTrigger.vsMarked;
+      trigger == ProcTrigger.vsMarked ||
+      trigger == ProcTrigger.always;
 }
 
 /// Un efecto con duración sobre un combatiente (buff, debuff, marca,

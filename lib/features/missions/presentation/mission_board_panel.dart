@@ -1,113 +1,80 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/theme/proto_colors.dart';
-
-import '../../../app/feature_flags.dart';
 import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/retro_text.dart';
-import '../../../app/theme/retro_theme.dart';
-import '../../../game_engine/models/class_def.dart';
+import '../../../app/theme/panel_widgets.dart';
+import '../../../app/theme/proto_colors.dart';
 import '../../../game_engine/models/mission_def.dart';
+import 'mission_card.dart';
 
-/// Mostrador de misiones (`board` del prototipo): proponer una misión y
-/// cambiar de clase. Ver docs/specs/exploration.md § "Paneles".
+/// Mostrador de misiones (`board` del prototipo): una tarjeta por misión
+/// con objetivo y recompensas, y `PROPONER`. Ver docs/specs/panels.md §
+/// "Mostrador".
 class MissionBoardPanel extends StatelessWidget {
   const MissionBoardPanel({
     super.key,
     required this.missions,
-    required this.classes,
-    required this.currentClassId,
     required this.voteOpen,
     required this.onPropose,
-    required this.onChangeClass,
     required this.onClose,
     this.onCharacter,
+    this.bossName,
+    this.playerLevel,
   });
 
   final List<MissionDef> missions;
-  final Map<String, ClassDef> classes;
-  final String currentClassId;
 
   /// Ya hay una votación en curso: no se puede proponer otra.
   final bool voteOpen;
   final ValueChanged<String> onPropose;
-  final ValueChanged<String> onChangeClass;
   final VoidCallback onClose;
 
   /// `Personaje [C]` (botones de abajo del prototipo, línea 1360).
   final VoidCallback? onCharacter;
 
+  /// Nombre del jefe de una misión (para el objetivo).
+  final String? Function(MissionDef m)? bossName;
+
+  /// Nivel del jugador local.
+  final int? playerLevel;
+
+  static const help = '<b>Mostrador</b><br>'
+      'Elige una misión y pulsa PROPONER: se abre una votación para todo el '
+      'grupo.<br>'
+      'Cuando <b>todos</b> votan SÍ pasan a la preparación (tienda, forja, '
+      'equipo) y la misión empieza cuando todos marcan ¡LISTO!.<br>'
+      '<span class="k">Rango</span>: S si terminas a tiempo sin K.O.; más '
+      'rango = más créditos y más chance de arma.';
+
   @override
   Widget build(BuildContext context) {
     return PanelFrame(
       title: 'MOSTRADOR DE MISIONES',
+      width: 900,
+      help: help,
+      onClose: onClose,
       actions: [
         if (onCharacter != null)
           PanelButton('PERSONAJE [C]', onPressed: onCharacter),
         PanelButton('CERRAR [ESC]', onPressed: onClose),
       ],
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final m in missions)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 40,
-                    // `.mrow .rk`: 16 px `#ff9f1c`.
-                    child: Text(m.rank,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 16, color: ProtoColors.amber)),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(retroText(m.name)),
-                        const SizedBox(height: 4),
-                        Text(
-                          retroText('${m.type} · Lv recomendado '
-                              '${m.recommendedLevel} · Elimina ${m.goal} grupos '
-                              'y vence al jefe · S: < ${m.sTime ~/ 60} min sin '
-                              'K.O. · Jefe suelta armas'),
-                          style: const TextStyle(color: ProtoColors.sky),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  PanelButton('PROPONER',
-                      key: ValueKey('propose-${m.id}'),
-                      onPressed: voteOpen ? null : () => onPropose(m.id)),
-                ],
-              ),
+          const PanelHint('Propón una misión: cuando todos votan SÍ pasan a '
+              'la preparación.'),
+          for (var i = 0; i < missions.length; i++)
+            MissionCard(
+              key: ValueKey('mission-${missions[i].id}'),
+              mission: missions[i],
+              tier: i + 1,
+              bossName: bossName?.call(missions[i]),
+              playerLevel: playerLevel,
+              action: PanelButton('PROPONER',
+                  key: ValueKey('propose-${missions[i].id}'),
+                  accent: ProtoColors.green,
+                  reason: voteOpen ? 'Ya hay una votación' : null,
+                  onPressed: () => onPropose(missions[i].id)),
             ),
-          const SizedBox(height: 8),
-          const Text('Clase:'),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final c in classes.values)
-                if (FeatureFlags.instance.isCharacterAllowed(c.id))
-                  PanelButton(c.name,
-                      onPressed: c.id == currentClassId
-                          ? null
-                          : () => onChangeClass(c.id)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            retroText('Cuando TODOS votan que sí pasan a la preparación '
-                '(tienda, herrería, equipo) y la '
-                'misión empieza cuando todos marcan ¡Listo!. Cambiar de clase '
-                'reinicia tus atributos (mantienes nivel y puntos).'),
-            style: const TextStyle(color: RetroPalette.muted),
-          ),
         ],
       ),
     );

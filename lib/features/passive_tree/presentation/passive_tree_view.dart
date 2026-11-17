@@ -26,6 +26,8 @@ class PassiveTreeView extends StatefulWidget {
     this.onReset,
     this.showReset = true,
     this.resetLabel = 'REINICIAR ÁRBOL',
+    this.height = PassiveTreeView.viewportHeight,
+    this.showHelp = true,
   });
 
   final PassiveTreeRules rules;
@@ -39,11 +41,17 @@ class PassiveTreeView extends StatefulWidget {
   final bool showReset;
   final String resetLabel;
 
+  /// Alto del visor (el panel lo ajusta al espacio que tiene).
+  final double height;
+
+  /// Línea de ayuda propia (el panel de personaje ya pone la suya).
+  final bool showHelp;
+
   /// Lado del lienzo (mundo) y píxeles por unidad de árbol.
   static const size = 680.0;
   static const scale = 30.0;
 
-  /// Alto del visor.
+  /// Alto del visor por defecto.
   static const viewportHeight = 420.0;
 
   /// Centro del nodo [n] en el lienzo (coordenadas del mundo).
@@ -159,16 +167,18 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                   onPressed: widget.onReset),
           ],
         ),
-        const SizedBox(height: 4),
-        const Text('Arrastrá para mover, rueda para zoom. Clic: tomar nodo.',
-            style: TextStyle(color: ProtoColors.dim)),
+        if (widget.showHelp) ...[
+          const SizedBox(height: 4),
+          const Text('Arrastrá para mover, rueda para zoom. Clic: tomar nodo.',
+              style: TextStyle(color: ProtoColors.dim)),
+        ],
         const SizedBox(height: 8),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: SizedBox(
-                height: PassiveTreeView.viewportHeight,
+                height: widget.height,
                 child: LayoutBuilder(builder: (context, box) {
                   _fit(box.biggest);
                   return _viewport(box.biggest, states, hoverPath);

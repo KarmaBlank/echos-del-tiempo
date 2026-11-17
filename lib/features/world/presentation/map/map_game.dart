@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -6,17 +7,33 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../game_engine/models/game_session.dart';
+import '../../../../game_engine/models/item.dart';
+import '../../../../game_engine/models/loot.dart';
+import '../../../../game_engine/models/loot_filter.dart';
+import '../../../../game_engine/models/session_event.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import 'actor_painter.dart';
+import 'loot_painter.dart';
 import 'map_themes.dart';
 import 'tile_painter.dart';
 
 /// Lee la entrada de movimiento (-1..1 en cada eje). Por defecto, el
 /// estado del teclado físico (WASD / flechas).
 typedef MoveInputReader = (double, double) Function();
+
+/// Lee si una tecla está apretada (Alt para ver todo el loot, E /
+/// Espacio para levantar). Por defecto, el teclado físico.
+typedef KeyReader = bool Function();
+
+/// Haz de luz de un Legendario que fue directo al inventario (sin piso):
+/// sale del jugador local un rato.
+class _Beam {
+  _Beam(this.t0);
+  final double t0;
+}
 
 /// Posición suavizada (`disp[key]` de `lerpPos`).
 class _Disp {
@@ -33,14 +50,44 @@ class MapGame extends Game {
     required this.controller,
     required this.sprites,
     MoveInputReader? input,
+    KeyReader? showAllLoot,
+    KeyReader? pickupKey,
   })  : _input = input ?? keyboardInput,
-        actors = ActorPainter(sprites);
+        _showAll = showAllLoot ?? altHeld,
+        _pickKey = pickupKey ?? pickupHeld,
+        actors = ActorPainter(sprites) {
+    loot = LootPainter(
+      nameOf: (d) => lootName(controller, d),
+      weaponTypeOf: (id) => controller.engine.catalog.weapons[id]?.type,
+    );
+    _events = controller.events.listen(_onEvent);
+  }
 
   final SessionController controller;
   final GameSprites sprites;
   final MoveInputReader _input;
   final ActorPainter actors;
   final tiles = TilePainter();
+  late final LootPainter loot;
+  final KeyReader _showAll;
+  final KeyReader _pickKey;
+  final _pickEdge = KeyEdge();
+  late final StreamSubscription<SessionEvent> _events;
+
+  /// Cuándo se vio por primera vez cada objeto del piso (estallido del
+  /// haz del Legendario al caer).
+  final _seen = <int, double>{};
+  final _beams = <_Beam>[];
+
+  /// Veredicto del filtro por objeto del piso (se recalcula si cambia
+  /// el filtro o el nivel del jugador).
+  final _verdicts = <int, (String?, int, FilterVerdict)>{};
+
+  /// Duración del estallido del haz al caer (ms).
+  static const beamBurstMs = 1500.0;
+
+  /// Duración del haz de un Legendario que fue al inventario (ms).
+  static const inventoryBeamMs = 2600.0;
 
   /// Resolución virtual (`VW`, `VH`).
   static const vw = 480;
@@ -79,6 +126,83 @@ class MapGame extends Game {
     return (vx, vy);
   }
 
+  /// Alt (izquierdo o derecho): mostrar también el loot oculto.
+  static bool altHeld() => HardwareKeyboard.instance.isAltPressed;
+
+  /// E / Espacio (levantar; el controlador las usa antes para el
+  /// mostrador, la armería y los sellos).
+  static bool pickupHeld() {
+    final k = HardwareKeyboard.instance.logicalKeysPressed;
+    return k.contains(LogicalKeyboardKey.keyE) ||
+        k.contains(LogicalKeyboardKey.space);
+  }
+
+  /// Nombre para mostrar de un drop (arma o pila).
+  static String lootName(SessionController c, LootDrop d) =>
+      lootDropName(c.engine.progression.items.displayName, d);
+
+  /// Veredicto del filtro del jugador local para [g].
+  FilterVerdict verdictFor(GroundLoot g) {
+    final me = controller.session?.players[controller.localId];
+    if (me == null) return const FilterVerdict(true, FilterStyle.empty);
+    final p = me.profile;
+    final cached = _verdicts[g.id];
+    if (cached != null && cached.$1 == p.lootFilter && cached.$2 == p.level) {
+      return cached.$3;
+    }
+    final v = controller.engine.lootVerdict(p, g.drop);
+    _verdicts[g.id] = (p.lootFilter, p.level, v);
+    return v;
+  }
+
+  void _onEvent(SessionEvent e) {
+    if (e case LootDropEvent(:final playerId, :final drop, :final groundId)
+        when playerId == controller.localId &&
+            groundId == null &&
+            drop.item?.rarity == Rarity.legendario) {
+      _beams.add(_Beam(t));
+    }
+  }
+
+  @override
+  void onRemove() {
+    unawaited(_events.cancel());
+    super.onRemove();
+  }
+
+  /// E / Espacio sin otra interacción a mano: levanta lo más cercano.
+  /// Devuelve el id pedido (o `null`).
+  int? tryPickUp() {
+    final view = controller.view;
+    final s = controller.session;
+    if (view == null ||
+        s == null ||
+        view.panel != null ||
+        view.prompt != null ||
+        controller.typing ||
+        (s.mode != SessionMode.field && s.mode != SessionMode.lobby) ||
+        s.players[controller.localId] == null) {
+      return null;
+    }
+    final target = nearestPickable(
+        _visible(s), controller.local.x, controller.local.y);
+    if (target == null) return null;
+    controller.pickUp(target.ground.id);
+    return target.ground.id;
+  }
+
+  List<LootOnFloor> _visible(GameSession s) => visibleLoot(
+      s, controller.localId, (d) => _verdictOf(d, s),
+      showAll: _showAll());
+
+  FilterVerdict _verdictOf(LootDrop d, GameSession s) {
+    for (final g in s.ground) {
+      if (identical(g.drop, d)) return verdictFor(g);
+    }
+    final p = s.players[controller.localId]!.profile;
+    return controller.engine.lootVerdict(p, d);
+  }
+
   @override
   Color backgroundColor() => kMapBackground;
 
@@ -92,6 +216,7 @@ class MapGame extends Game {
     _frameDt = dt;
     final (ix, iy) = _input();
     controller.updateLocal(math.min(0.05, dt), ix, iy);
+    if (_pickEdge.poll(_pickKey())) tryPickUp();
     final view = controller.view;
     if (view != null) _updateCamera(view, dt);
   }
@@ -184,6 +309,19 @@ class MapGame extends Game {
       actors.text(c, 'ARMERÍA', 21.5 * ts, ts + 10, const Color(0xFFFF9F43), 7);
     }
 
+    // Loot en el piso (debajo de los actores; docs/specs/loot.md § 4).
+    final onMap = s.mode == SessionMode.field ||
+        s.mode == SessionMode.levelUp ||
+        s.mode == SessionMode.lobby;
+    final floor = onMap && s.players[view.localId] != null
+        ? _visible(s)
+        : const <LootOnFloor>[];
+    _verdicts.removeWhere((id, _) => !s.ground.any((g) => g.id == id));
+    for (final l in floor) {
+      _seen.putIfAbsent(l.ground.id, () => t);
+      loot.drawItem(c, l, t);
+    }
+
     // Entidades ordenadas por y (desempate: orden de llegada).
     final ents = <(double, int, void Function())>[];
     void add(double y, void Function() draw) => ents.add((y, ents.length, draw));
@@ -259,6 +397,27 @@ class MapGame extends Game {
     for (final e in ents) {
       e.$3();
     }
+
+    // Haces de los Legendarios y etiquetas del loot, encima de todo.
+    for (final l in floor) {
+      if (!l.legendary || l.hidden) continue;
+      final age = t - (_seen[l.ground.id] ?? t);
+      loot.drawBeam(c, l.ground.x, l.ground.y, t,
+          boost: (1 - age / beamBurstMs).clamp(0.0, 1.0));
+    }
+    _beams.removeWhere((b) => t - b.t0 > inventoryBeamMs);
+    for (final b in _beams) {
+      final q = (t - b.t0) / inventoryBeamMs;
+      loot.drawBeam(c, controller.local.x, controller.local.y, t,
+          boost: (1 - q * 2).clamp(0.0, 1.0));
+    }
+    for (final p in loot.placeLabels(floor,
+        view: Rect.fromLTWH(camX, camY, vw.toDouble(), vh.toDouble()))) {
+      loot.drawLabel(c, p);
+    }
     c.restore();
   }
+
+  /// Haces de Legendarios recién caídos al inventario en curso (tests).
+  int get activeBeams => _beams.length;
 }

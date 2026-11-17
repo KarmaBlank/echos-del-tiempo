@@ -1,5 +1,6 @@
 import 'attributes.dart';
 import 'battle_command.dart';
+import 'item.dart' show CraftOp;
 import 'upgrade_stat.dart';
 
 /// Lo que un jugador le pide al host (`onMsg` del prototipo, un caso por
@@ -133,4 +134,58 @@ class ChatAction extends SessionAction {
 /// `back`: salir de la pantalla de resultados.
 class BackToLobbyAction extends SessionAction {
   const BackToLobbyAction();
+}
+
+// ---------------- loot v2 (docs/specs/loot.md) ----------------
+
+/// `craft`: una operación de la forja / mesa de fusión sobre el arma
+/// [targetUid] (`CraftRules`). [sourceUid] es el arma que se sacrifica
+/// (traslados), [index] el afijo elegido y [skillId] la habilidad.
+class CraftAction extends SessionAction {
+  final CraftOp op;
+  final String targetUid;
+  final String? sourceUid;
+  final int index;
+  final String? skillId;
+  const CraftAction(this.op, this.targetUid,
+      {this.sourceUid, this.index = 0, this.skillId});
+}
+
+/// `give`: dar un arma (`uid`) o [count] de una pila (`pot`, `eter`,
+/// `mat:<material>`) a otro jugador de la sala. Fuera de batalla; llega
+/// al instante si el otro tiene lugar.
+class GiveItemAction extends SessionAction {
+  final String toPlayerId;
+  final String token;
+  final int count;
+  const GiveItemAction(this.toPlayerId, this.token, {this.count = 1});
+}
+
+/// `drop`: soltar al piso (compartido) un arma o [count] de una pila.
+class DropItemAction extends SessionAction {
+  final String token;
+  final int count;
+  const DropItemAction(this.token, {this.count = 1});
+}
+
+/// `pick`: levantar un objeto del piso (tecla E), propio o compartido.
+class PickUpAction extends SessionAction {
+  final int groundId;
+  const PickUpAction(this.groundId);
+}
+
+/// `invMove`: mover / intercambiar dos casillas del inventario.
+class MoveInventoryAction extends SessionAction {
+  final int from;
+  final int to;
+  const MoveInventoryAction(this.from, this.to);
+}
+
+/// `filter`: guardar el filtro de loot (texto; `null` = el por defecto).
+class SetLootFilterAction extends SessionAction {
+  final String? text;
+  const SetLootFilterAction(this.text);
+
+  /// Tope de largo del texto.
+  static const maxLength = 8000;
 }

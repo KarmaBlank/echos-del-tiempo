@@ -18,3 +18,7 @@ ios/.symlinks/
 windows/flutter/ephemeral/
 linux/flutter/ephemeral/
 macos/Flutter/ephemeral/
+
+# Distribucion (tool/release.ps1, installer/*.iss)
+dist/
+installer/Output/

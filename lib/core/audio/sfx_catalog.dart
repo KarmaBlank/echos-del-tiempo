@@ -138,6 +138,12 @@ abstract final class Sfx {
   static const shotStaff = 'shot.staff';
   static const shotTome = 'shot.tome';
 
+  /// Tipos de loot v2 (docs/specs/audio.md § "Arranque por arma").
+  static const swingSpear = 'swing.spear';
+  static const swingDaggers = 'swing.daggers';
+  static const shotWand = 'shot.wand';
+  static const shotCrossbow = 'shot.crossbow';
+
   // ---- impactos ----
   static const impactSlash = 'impact.slash';
   static const impactBlunt = 'impact.blunt';
@@ -149,6 +155,10 @@ abstract final class Sfx {
   static const impactPoison = 'impact.poison';
   static const impactHoly = 'impact.holy';
   static const impactHurt = 'impact.hurt';
+  static const impactPierce = 'impact.pierce';
+  static const impactDagger = 'impact.dagger';
+  static const impactWand = 'impact.wand';
+  static const impactBolt = 'impact.bolt';
 
   /// "Clink" de cada golpe crítico, encima del impacto.
   static const critClink = 'crit.clink';
@@ -172,6 +182,27 @@ abstract final class Sfx {
   // ---- enemigos ----
   static const enemyGeneric = 'enemy.generic';
   static const enemyHeavy = 'enemy.heavy';
+
+  /// Impacto propio de un tipo de enemigo sobre un jugador.
+  static String enemyHit(String type) => 'enemy.hit.$type';
+
+  // ---- quiebre y ULT enemigas ----
+  static const breakTick = 'break.tick';
+  static const breakShatter = 'break.shatter';
+  static const breakVuln = 'break.vuln';
+  static const breakDazed = 'break.dazed';
+  static const enemyUltWarn = 'enemyUlt.warn';
+
+  // ---- loot en el mapa (docs/specs/audio.md § "Loot") ----
+  /// Sonido de un filtro de loot (`FilterStyle.sound`, uno por nombre
+  /// de `kLootFilterSounds`).
+  static String loot(String name) => 'loot.$name';
+
+  /// Levantar algo del piso.
+  static const lootPickup = 'loot.pickup';
+
+  /// Haz de luz de un Legendario que cae (encima del sonido del filtro).
+  static const lootBeam = 'loot.beam';
 
   /// Firma de una habilidad (`SkillDef.id`).
   static String skill(String id) => 'skill.$id';
@@ -242,6 +273,21 @@ abstract final class SfxLevel {
   static const ultBuild = 0.45;
   static const ultRelease = 0.46;
   static const ultImpact = 0.50;
+
+  /// Ataques enemigos (wind-up + golpe): más fuertes que los del grupo.
+  static const enemy = 0.42;
+  static const enemyBoss = 0.45;
+  static const enemyHit = 0.42;
+
+  /// Quiebre: el tic de la barra es sutil; el estallido, fuerte.
+  static const breakTick = 0.16;
+  static const breakShatter = 0.45;
+  static const breakVuln = 0.36;
+  static const enemyUltWarn = 0.44;
+
+  /// Loot: aviso del filtro y levantar; el haz del Legendario, fuerte.
+  static const loot = 0.34;
+  static const lootBeam = 0.44;
 }
 
 /// Las voces del prototipo, copiadas de las llamadas a `beep(`.

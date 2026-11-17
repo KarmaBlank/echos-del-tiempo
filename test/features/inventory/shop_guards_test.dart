@@ -3,9 +3,11 @@ import 'package:echos_del_tiempo/game_engine/data/weapons_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
+import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/upgrade_stat.dart';
+import 'package:echos_del_tiempo/game_engine/rules/inventory_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -61,26 +63,45 @@ void main() {
           expect(reason == null, ok, reason: '$a: "$reason" vs motor $ok');
         }
 
-        for (final w in kWeapons.values.where((w) => w.classId == prof.classId)) {
+        // Loot v2: cualquier base a la venta, cualquier clase.
+        for (final w in kWeapons.values) {
           if (w.price > 0) same(g.buyWeapon(prof, w.id), BuyWeaponAction(w.id));
-          if (prof.inventory.contains(w.id) && prof.equipped != w.id) {
-            same(g.equip(prof, w.id), EquipAction(w.id));
+        }
+        for (final it in prof.items) {
+          if (it.uid != prof.equippedUid) {
+            same(g.equip(prof, it.uid), EquipAction(it.uid));
           }
-          if (prof.inventory.contains(w.id)) {
-            for (final st in e.progression.upgradeStatsFor(w)) {
-              same(g.upgrade(prof, w.id, st), UpgradeAction(w.id, st));
+          final w = kWeapons[it.baseId]!;
+          for (final st in e.progression.upgradeStatsFor(w)) {
+            same(g.upgrade(prof, it.uid, st), UpgradeAction(it.uid, st));
+          }
+          // Mesa de fusión: cada operación contra cada fuente posible.
+          for (final op in CraftOp.values) {
+            final sources = op == CraftOp.transferAffix ||
+                    op == CraftOp.transferPassive ||
+                    op == CraftOp.transferSkill
+                ? [for (final x in prof.items) x.uid]
+                : <String?>[null];
+            for (final src in sources) {
+              final skills = src == null
+                  ? <String?>[null]
+                  : e.progression.items.skillsOf(prof.itemByUid(src)!);
+              for (final sk in op == CraftOp.transferSkill ? skills : [null]) {
+                final a = CraftAction(op, it.uid,
+                    sourceUid: src, index: 0, skillId: sk);
+                same(g.craft(prof, a), a);
+              }
             }
           }
         }
         for (final it in BattleItem.values) {
           same(g.buyItem(prof, it), BuyItemAction(it));
         }
-        for (final b in g.fuseBases(prof)) {
-          for (final x in g.fuseSacrifices(prof, b)) {
-            for (final sk in kWeapons[x]!.skillIds) {
-              same(g.fuse(prof, b, x, sk), FuseAction(b, x, sk));
-            }
-          }
+        // Dar sin compañeros y tirar al piso.
+        for (final t in InventoryRules.tokens(prof)) {
+          expect(g.give(prof, t, null), isNotNull);
+          same(g.drop(prof, t, alive: s.players['p0']!.alive),
+              DropItemAction(t));
         }
         same(g.respec(), const RespecAction());
         for (final cls in ['guerrero', 'maga']) {
@@ -95,12 +116,18 @@ void main() {
   }
 
   test('upgrade al máximo: MAX', () {
+    // Loot v2: el tope total de forja depende de la rareza (Común 3); una
+    // Épica (8) llega al tope de 5 por estadística.
     final p = progression.normalize(PlayerProfile(
         name: 'A',
         classId: 'guerrero',
         credits: 5000,
-        upgrades: const {},
-        inventory: const ['espada_bronce']));
+        items: const [
+          ItemInstance(
+              uid: 'espada_bronce',
+              baseId: 'espada_bronce',
+              rarity: Rarity.epico),
+        ]));
     var q = p;
     for (var i = 0; i < 5; i++) {
       q = progression.upgrade(q, 'espada_bronce', UpgradeStat.pow)!;

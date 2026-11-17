@@ -66,6 +66,17 @@ const Map<String, SkillDef> kSkills = {
   'ceroAbs': SkillDef(id: 'ceroAbs', name: 'Cero Absoluto', mp: 6, kind: _phys, power: 1.8, status: StatusApplication(_frz, 3)),
   'flechaSolar': SkillDef(id: 'flechaSolar', name: 'Flecha Solar', mp: 5, kind: _phys, power: 1.7, status: StatusApplication(_burn, 2)),
   'perfora': SkillDef(id: 'perfora', name: 'Tiro Perforante', mp: 6, kind: _phys, power: 2.6, critBonus: 0.35),
+  // ---- loot v2: tipos nuevos (lanza, varita, ballesta, dagas) ----
+  'perforar': SkillDef(id: 'perforar', name: 'Lanza Perforante', mp: 4, kind: _phys, power: 1.7, critBonus: 0.2),
+  'barrido': SkillDef(id: 'barrido', name: 'Barrido de Lanza', mp: 5, kind: _phys, power: 1.0, allTargets: true, delay: 0.2),
+  'empalar': SkillDef(id: 'empalar', name: 'Empalar', mp: 6, kind: _phys, power: 2.1, status: StatusApplication(_stun, 1, chance: 0.25)),
+  'misil': SkillDef(id: 'misil', name: 'Misil Arcano', mp: 2, kind: _mag, power: 1.4, critBonus: 0.15),
+  'escarchaFugaz': SkillDef(id: 'escarchaFugaz', name: 'Escarcha Fugaz', mp: 4, kind: _mag, power: 1.2, delay: 0.2, status: StatusApplication(_frz, 1)),
+  'rayoArcano': SkillDef(id: 'rayoArcano', name: 'Rayo Arcano', mp: 6, kind: _mag, power: 2.2),
+  'virote': SkillDef(id: 'virote', name: 'Virote Pesado', mp: 5, kind: _phys, power: 2.2, delay: 0.4),
+  'viroteIgneo': SkillDef(id: 'viroteIgneo', name: 'Virote Ígneo', mp: 5, kind: _phys, power: 1.8, status: StatusApplication(_burn, 2)),
+  'tajoGemelo': SkillDef(id: 'tajoGemelo', name: 'Tajo Gemelo', mp: 3, kind: _phys, power: 1.3, critBonus: 0.3),
+  'abanico': SkillDef(id: 'abanico', name: 'Abanico de Dagas', mp: 6, kind: _phys, power: 0.8, allTargets: true, status: StatusApplication(_poi, 2)),
 };
 
 /// ULT por tipo de arma (`ULTS`). No cuestan MP: requieren 100 de carga.
@@ -80,6 +91,19 @@ const Map<String, SkillDef> kUltimates = {
   'maza+escudo': SkillDef(id: 'ult_maza_escudo', name: 'Juicio Divino', kind: _mag, power: 1.6, allTargets: true, status: StatusApplication(_stun, 1)),
   'martillo+escudo': SkillDef(id: 'ult_martillo_escudo', name: 'Martillo Celestial', kind: _phys, power: 4.0, status: StatusApplication(_stun, 1)),
 };
+
+/// ULT de los tipos de arma nuevos de loot v2 (loot.md § 8.2). Viven
+/// aparte de [kUltimates] hasta que la UI tenga su cinemática y su
+/// sonido; el motor usa [kAllUltimates].
+const Map<String, SkillDef> kNewUltimates = {
+  'lanza': SkillDef(id: 'ult_lanza', name: 'Lluvia de Lanzas', kind: _phys, power: 1.7, allTargets: true, delay: 0.4),
+  'varita': SkillDef(id: 'ult_varita', name: 'Tormenta Arcana', kind: _mag, power: 1.9, allTargets: true, critBonus: 0.2),
+  'ballesta': SkillDef(id: 'ult_ballesta', name: 'Andanada', kind: _phys, power: 3.2, status: StatusApplication(_stun, 1)),
+  'dagas': SkillDef(id: 'ult_dagas', name: 'Danza de Mil Cortes', kind: _phys, power: 2.8, critBonus: 0.5),
+};
+
+/// Todas las ULT por tipo de arma (las del prototipo + las nuevas).
+const Map<String, SkillDef> kAllUltimates = {...kUltimates, ...kNewUltimates};
 
 /// Ataques combinados (`DUALS`). La clave son los dos ids de clase
 /// ordenados alfabéticamente y unidos con '+' (ver [dualKey]).

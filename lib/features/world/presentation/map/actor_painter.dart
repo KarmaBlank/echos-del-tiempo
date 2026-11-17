@@ -7,6 +7,7 @@ import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
+import '../../../combat/presentation/weapon_overlay.dart';
 
 /// `drawHero`, `drawEnemy`, los objetos del campo y `txt` del prototipo
 /// (líneas 989-1018 y 1040-1052). Números en docs/specs/sprites.md y
@@ -102,47 +103,9 @@ class ActorPainter {
     _oval(c, _shadow, 0, 1, 6, 2);
     c.translate(0, -bob.toDouble());
     if (img != null) c.drawImage(img, const Offset(-7, -17), _sprite);
-    _weapon(c, classId, weaponType);
+    WeaponOverlay.draw(c, classId, weaponType);
     if (alpha < 1) c.restore();
     c.restore();
-  }
-
-  void _sword(Canvas c) {
-    _rect(c, const Color(0xFFDFE6E9), 5, -17, 2, 9);
-    _rect(c, const Color(0xFFFFD166), 3, -9, 6, 1);
-  }
-
-  void _weapon(Canvas c, String classId, String? weaponType) {
-    switch (classId) {
-      case 'guerrero':
-        _sword(c);
-      case 'maga':
-        _rect(c, const Color(0xFF8A5A2B), 6, -15, 1, 15);
-        _fill.color = const Color(0xFF74B9FF);
-        c.drawCircle(const Offset(6.5, -16), 2.2, _fill);
-      case 'paladin':
-        if (weaponType == 'martillo+escudo') {
-          _rect(c, const Color(0xFF8A5A2B), 6, -14, 1, 11);
-          _rect(c, const Color(0xFF95A5A6), 3, -18, 7, 5);
-          _rect(c, const Color(0xFF636E72), 3, -14, 7, 1);
-        } else if (weaponType == 'maza+escudo') {
-          _rect(c, const Color(0xFF8A5A2B), 6, -13, 1, 9);
-          _fill.color = const Color(0xFFB2BEC3);
-          c.drawCircle(const Offset(6.5, -15), 2.6, _fill);
-          for (final (px, py) in const [(4.0, -16.0), (8.0, -16.0), (6.0, -18.0)]) {
-            _rect(c, const Color(0xFFDFE6E9), px, py, 1, 1);
-          }
-        } else {
-          _sword(c);
-        }
-        _rect(c, const Color(0xFF2C3E50), -10, -13, 6, 9);
-        _rect(c, const Color(0xFFECF0F1), -9, -12, 4, 7);
-        _rect(c, const Color(0xFFD4AF37), -8, -11, 2, 5);
-        _rect(c, const Color(0xFFD4AF37), -9, -9, 4, 1);
-      default:
-        _rect(c, const Color(0xFF636E72), 5, -8, 6, 2);
-        _rect(c, const Color(0xFF636E72), 5, -7, 2, 3);
-    }
   }
 
   // ------------------------------------------------------------------

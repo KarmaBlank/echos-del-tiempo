@@ -22,6 +22,11 @@ const _expected = {
   'espada+escudo': (UltStyle.bulwark, 800, 1100, 400, 1150, 60),
   'maza+escudo': (UltStyle.judgment, 900, 1100, 400, 1300, 90),
   'martillo+escudo': (UltStyle.skyHammer, 900, 1000, 400, 1300, 0),
+  // loot v2 (`kNewUltimates`).
+  'lanza': (UltStyle.spearRain, 800, 1100, 400, 1300, 80),
+  'varita': (UltStyle.arcaneStorm, 800, 1200, 400, 1350, 60),
+  'ballesta': (UltStyle.volley, 900, 900, 400, 1300, 0),
+  'dagas': (UltStyle.thousandCuts, 700, 1100, 400, 1500, 0),
 };
 
 Combatant _hero(String id, String weapon) => Combatant(
@@ -57,7 +62,7 @@ BattleState _state(String weapon) => BattleState(
 /// Los eventos de una ULT del arma [weapon] (de daño a 3 enemigos, uno
 /// de ellos crítico; Baluarte cura al grupo).
 List<BattleEvent> _ultEvents(String weapon) {
-  final sk = kUltimates[weapon]!;
+  final sk = kAllUltimates[weapon]!;
   return [
     UltimateUsedEvent('p1', sk.name),
     ActionEvent('p1', BattleActionKind.ultimate, skillId: sk.id, targetId: 'e0'),
@@ -79,9 +84,9 @@ void main() {
   group('guiones', () {
     test('cada ULT tiene su guion con las fases y tiempos del spec', () {
       expect(kUltScripts.keys.toSet(),
-          {for (final s in kUltimates.values) s.id});
+          {for (final s in kAllUltimates.values) s.id});
       for (final e in _expected.entries) {
-        final sk = kUltimates[e.key]!;
+        final sk = kAllUltimates[e.key]!;
         final s = ultScriptFor(sk.id);
         final (style, build, release, ret, impact, stagger) = e.value;
         expect(s.style, style, reason: sk.name);
@@ -149,7 +154,7 @@ void main() {
       test('$weapon: guion, objetivos y números en el impacto de cada uno',
           () {
         final st = _state(weapon);
-        final sk = kUltimates[weapon]!;
+        final sk = kAllUltimates[weapon]!;
         final script = ultScriptFor(sk.id);
         final fx = mapBattleEvents(_ultEvents(weapon), st,
             (id) => Offset(10.0 * id.codeUnitAt(1), 100));

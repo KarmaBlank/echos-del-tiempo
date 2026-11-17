@@ -1,7 +1,10 @@
 import 'dart:math' as math;
 
+import '../data/affixes_catalog.dart';
+import '../data/weapon_passives.dart';
 import '../models/attributes.dart';
 import '../models/class_def.dart';
+import '../models/item.dart';
 import '../models/player_state.dart';
 import '../models/status.dart';
 import '../models/weapon.dart';
@@ -10,6 +13,9 @@ import 'passive_tree_rules.dart';
 
 /// Puerto 1:1 de la función `stats(p)` del prototipo HTML, incluidos sus
 /// redondeos intermedios — ver docs/specs/combat.md § "Cálculo de stats".
+/// Loot v2 (docs/specs/loot.md § 12) agrega, en este orden: atributos de
+/// los afijos → base del arma → implícito → afijos → forja → árbol. Sin
+/// arma con mods los números son los de siempre.
 /// Dart puro, sin Flutter: se testea con
 /// `test/game_engine/stats_calculator_test.dart`.
 class StatsCalculator {
@@ -18,60 +24,185 @@ class StatsCalculator {
 
   const StatsCalculator({required this.classes, required this.treeRules});
 
+  /// Suma de implícito + afijos del arma, por estadística (puntos).
+  static Map<ModStat, int> modTotals(WeaponDef w, ItemInstance? item) {
+    final out = <ModStat, int>{};
+    for (final m in w.implicit) {
+      out[m.stat] = (out[m.stat] ?? 0) + m.value;
+    }
+    if (item != null) {
+      for (final a in item.affixes) {
+        final def = kAffixes[a.affixId];
+        if (def == null) continue;
+        out[def.stat] = (out[def.stat] ?? 0) + a.value;
+      }
+    }
+    return out;
+  }
+
+  static String _n(num v) => v == v.roundToDouble()
+      ? v.round().toString()
+      : (v * 10).round() / 10 == v
+          ? v.toString()
+          : v.toStringAsFixed(1);
+
+  static String _x(double v) => '× ${v.toStringAsFixed(2)}';
+
   DerivedStats calculate(PlayerBuild build) {
-    final s = build.attributes;
     final cls = classes[build.classId]!;
     final w = build.equippedWeapon;
-    final up = build.weaponUpgrades;
+    final up = build.forge;
+    final mods = modTotals(w, build.item);
+    int m(ModStat s) => mods[s] ?? 0;
 
-    var maxHp = jsRound(20 + s[Attribute.vit] * 4 + build.level * 2);
-    var maxMp = jsRound(4 + s[Attribute.esp] * 1.5 + build.level);
+    // Atributos de los afijos (no cuentan para los requisitos del arma).
+    final attrMods = {
+      Attribute.vit: m(ModStat.vit),
+      Attribute.esp: m(ModStat.esp),
+      Attribute.agi: m(ModStat.agi),
+      Attribute.fue: m(ModStat.fue),
+      Attribute.des: m(ModStat.des),
+    };
+    final s = attrMods.values.any((v) => v != 0)
+        ? build.attributes.add(attrMods)
+        : build.attributes;
+
+    final hpBase = jsRound(20 + s[Attribute.vit] * 4 + build.level * 2);
+    final mpBase = jsRound(4 + s[Attribute.esp] * 1.5 + build.level);
+    var maxHp = hpBase + m(ModStat.maxHp);
+    var maxMp = mpBase + m(ModStat.maxMp);
     var speed = jsRound((6 +
                 s[Attribute.agi] * 0.5 +
                 s[Attribute.des] * 0.1 -
                 w.weight +
-                up.spd * WeaponUpgradeLevels.spdPer) *
+                up.spd * WeaponUpgradeLevels.spdPer +
+                m(ModStat.speed) * ModStat.speed.scale) *
             10) /
         10;
     var crit = math.min(
       0.6,
-      0.03 + s[Attribute.des] * 0.012 + up.crit * WeaponUpgradeLevels.critPer,
+      0.03 +
+          s[Attribute.des] * 0.012 +
+          up.crit * WeaponUpgradeLevels.critPer +
+          m(ModStat.critChance) * ModStat.critChance.scale,
     );
-    final defense =
-        cls.baseDefense + w.shieldDefense + build.bonusDefense + up.def;
+    final defense = cls.baseDefense +
+        w.shieldDefense +
+        build.bonusDefense +
+        up.def +
+        m(ModStat.defense);
 
     final powMult = 1 + WeaponUpgradeLevels.powPer * up.pow;
-    var attack = jsRound(w.atk.evaluate(s) * powMult);
-    var magic = jsRound((w.mag ?? w.atk).evaluate(s) * powMult);
+    final atkBase = w.atk.evaluate(s);
+    final atkFlat = m(ModStat.flatAtk);
+    final atkPct = m(ModStat.atkPct) * ModStat.atkPct.scale;
+    var attack = jsRound((atkBase + atkFlat) * (1 + atkPct) * powMult);
+    // Sin fórmula de MAG, la magia copia al ataque (como el prototipo).
+    final magFormula = w.mag;
+    final magBase = (magFormula ?? w.atk).evaluate(s);
+    final magFlat = magFormula == null ? atkFlat : m(ModStat.flatMag);
+    final magPct = magFormula == null
+        ? atkPct
+        : m(ModStat.magPct) * ModStat.magPct.scale;
+    var magic = jsRound((magBase + magFlat) * (1 + magPct) * powMult);
 
-    final mods = treeRules.aggregate(build.classId, build.passiveProgress);
-    maxHp = math.max(1, jsRound(maxHp * (1 + mods['hp'])));
-    maxMp = jsRound(maxMp * (1 + mods['mp']));
-    attack = math.max(1, jsRound(attack * (1 + mods['atk'])));
-    magic = math.max(1, jsRound(magic * (1 + mods['mag'])));
-    crit = math.min(mods.critCap, crit + mods['crit']);
-    speed = jsRound((speed + mods['spd']) * 10) / 10;
-    final defenseTotal = math.max(0.0, defense + mods['def']);
+    final tree = treeRules.aggregate(build.classId, build.passiveProgress);
+    maxHp = math.max(1, jsRound(maxHp * (1 + tree['hp'])));
+    maxMp = jsRound(maxMp * (1 + tree['mp']));
+    attack = math.max(1, jsRound(attack * (1 + tree['atk'])));
+    magic = math.max(1, jsRound(magic * (1 + tree['mag'])));
+    final critBeforeTree = crit;
+    crit = math.min(tree.critCap, crit + tree['crit']);
+    speed = jsRound((speed + tree['spd']) * 10) / 10;
+    final defenseTotal = math.max(0.0, defense + tree['def']);
+
+    final item = build.item;
+    final mechanics = {...tree.mechanics};
+    final passive = item?.passiveId;
+    if (item != null && passive != null && item.rarity.hasPassive) {
+      mechanics.addAll(
+          weaponPassiveMechanicIds(passive, item.effectivePassiveLevel));
+    }
+
+    String treeStep(String key) =>
+        tree[key] == 0 ? '' : _x(1 + tree[key]);
+    List<String> clean(List<String> l) => [for (final x in l) if (x.isNotEmpty) x];
+    final breakdown = <String, StatBreakdown>{
+      'ATQ': StatBreakdown('ATQ', attack, clean([
+        'base ${_n(atkBase)}',
+        if (atkFlat != 0) '+ $atkFlat plano',
+        if (atkPct != 0) '${_x(1 + atkPct)} afijos',
+        if (up.pow > 0) '${_x(powMult)} forja',
+        if (tree['atk'] != 0) '${treeStep('atk')} árbol',
+      ])),
+      'MAG': StatBreakdown('MAG', magic, clean([
+        'base ${_n(magBase)}',
+        if (magFlat != 0) '+ $magFlat plano',
+        if (magPct != 0) '${_x(1 + magPct)} afijos',
+        if (up.pow > 0) '${_x(powMult)} forja',
+        if (tree['mag'] != 0) '${treeStep('mag')} árbol',
+      ])),
+      'HP': StatBreakdown('HP', maxHp, clean([
+        'base $hpBase',
+        if (m(ModStat.maxHp) != 0) '+ ${m(ModStat.maxHp)} afijos',
+        if (tree['hp'] != 0) '${treeStep('hp')} árbol',
+      ])),
+      'MP': StatBreakdown('MP', maxMp, clean([
+        'base $mpBase',
+        if (m(ModStat.maxMp) != 0) '+ ${m(ModStat.maxMp)} afijos',
+        if (tree['mp'] != 0) '${treeStep('mp')} árbol',
+      ])),
+      'VEL': StatBreakdown('VEL', speed, clean([
+        'base ${_n(6 + s[Attribute.agi] * 0.5 + s[Attribute.des] * 0.1)}',
+        if (w.weight != 0) '− ${_n(w.weight)} peso',
+        if (m(ModStat.speed) != 0)
+          '+ ${_n(m(ModStat.speed) * ModStat.speed.scale)} afijos',
+        if (up.spd > 0) '+ ${_n(up.spd * WeaponUpgradeLevels.spdPer)} forja',
+        if (tree['spd'] != 0) '+ ${_n(tree['spd'])} árbol',
+      ])),
+      'CRIT': StatBreakdown('CRIT', jsRound(crit * 100), clean([
+        'base ${jsRound((0.03 + s[Attribute.des] * 0.012) * 100)}%',
+        if (m(ModStat.critChance) != 0) '+ ${m(ModStat.critChance)}% afijos',
+        if (up.crit > 0)
+          '+ ${jsRound(up.crit * WeaponUpgradeLevels.critPer * 100)}% forja',
+        if (tree['crit'] != 0) '+ ${jsRound(tree['crit'] * 100)}% árbol',
+        if (critBeforeTree >= 0.6) '(tope 60% sin árbol)',
+      ])),
+      'DEF': StatBreakdown('DEF', jsRound(defenseTotal), clean([
+        'clase ${cls.baseDefense}',
+        if (w.shieldDefense != 0) '+ ${w.shieldDefense} escudo',
+        if (m(ModStat.defense) != 0) '+ ${m(ModStat.defense)} afijos',
+        if (up.def > 0) '+ ${up.def} forja',
+        if (build.bonusDefense != 0) '+ ${build.bonusDefense} batalla',
+        if (tree['def'] != 0) '+ ${_n(tree['def'])} árbol',
+      ])),
+    };
 
     return DerivedStats(
       maxHp: maxHp,
       maxMp: maxMp,
       speed: speed,
       critChance: crit,
-      critMultiplier: mods.hasKey('halcon') ? 2.0 : 1.5,
+      critMultiplier: (tree.hasKey('halcon') ? 2.0 : 1.5) +
+          m(ModStat.critMulti) * ModStat.critMulti.scale,
       defense: jsRound(defenseTotal),
       defensePercent: math.min(0.6, defenseTotal * 0.03),
       attack: attack,
       magic: magic,
-      ultChargeBonus: mods['ult'],
-      healBonus: mods['heal'],
-      keystones: mods.keys,
-      mechanics: mods.mechanics,
+      ultChargeBonus: tree['ult'] + m(ModStat.ultCharge) * ModStat.ultCharge.scale,
+      healBonus: tree['heal'] + m(ModStat.healPower) * ModStat.healPower.scale,
+      keystones: tree.keys,
+      mechanics: mechanics,
       statusBonus: {
-        StatusKind.burn: mods['burn'].toInt(),
-        StatusKind.poison: mods['poi'].toInt(),
-        StatusKind.freeze: mods['frz'].toInt(),
+        StatusKind.burn: tree['burn'].toInt() + m(ModStat.burnStacks),
+        StatusKind.poison: tree['poi'].toInt() + m(ModStat.poisonStacks),
+        StatusKind.freeze: tree['frz'].toInt() + m(ModStat.freezeStacks),
       },
+      lifeSteal: m(ModStat.lifeSteal) * ModStat.lifeSteal.scale,
+      regenPerTurn: m(ModStat.regen) * ModStat.regen.scale,
+      statusResist: m(ModStat.statusResist),
+      healReceived: m(ModStat.healReceived) * ModStat.healReceived.scale,
+      breakdown: breakdown,
     );
   }
 }

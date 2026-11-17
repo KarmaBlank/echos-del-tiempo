@@ -1,6 +1,8 @@
 import 'dart:collection';
 
 import 'battle_state.dart';
+import 'item.dart';
+import 'loot.dart';
 import 'player_profile.dart';
 
 /// Modo de la sesión (`S.mode` del prototipo).
@@ -183,11 +185,14 @@ class MissionObjective {
   MissionObjective copy() => MissionObjective(kind, goal, count: count);
 }
 
-/// Un arma ganada (élite, fin de misión o cofre).
+/// Un arma ganada (élite, fin de misión o cofre). [weaponId] es la base;
+/// [uid] y [rarity], la instancia (loot v2; `null` en resultados viejos).
 class WeaponDrop {
   final String playerId;
   final String weaponId;
-  const WeaponDrop(this.playerId, this.weaponId);
+  final String? uid;
+  final Rarity? rarity;
+  const WeaponDrop(this.playerId, this.weaponId, {this.uid, this.rarity});
 }
 
 /// La misión en curso (`S.mission` + `S.fe` + `S.items`).
@@ -207,10 +212,14 @@ class MissionRun {
     this.open = false,
     this.elites = 0,
     List<WeaponDrop>? eliteDrops,
+    this.zoneLevel = 1,
   }) : eliteDrops = eliteDrops ?? [];
 
   final String missionId;
   final int seed;
+
+  /// Nivel de zona del loot (`LootRules.zoneLevel`, fijado al empezar).
+  final int zoneLevel;
 
   /// Grupos normales a derrotar (`min(goal, grupos ubicados)`).
   final int goal;
@@ -263,6 +272,7 @@ class MissionRun {
         open: open,
         elites: elites,
         eliteDrops: [...eliteDrops],
+        zoneLevel: zoneLevel,
       );
 }
 
@@ -407,7 +417,10 @@ class GameSession {
     this.graceUntil = 0,
     this.afterLevelUp,
     this.seq = 0,
-  }) : players = players ?? LinkedHashMap();
+    List<GroundLoot>? ground,
+    this.groundSeq = 0,
+  })  : players = players ?? LinkedHashMap(),
+        ground = ground ?? [];
 
   SessionMode mode;
 
@@ -428,6 +441,18 @@ class GameSession {
 
   /// Contador para ids de batallas y resultados.
   int seq;
+
+  /// Loot en el piso del mapa actual (instanciado por dueño, o
+  /// compartido si lo soltó un jugador). Se vacía al cambiar de mapa.
+  /// Ver loot.md § 4 y netcode.md § "Loot instanciado".
+  final List<GroundLoot> ground;
+
+  /// Contador para ids de [ground].
+  int groundSeq;
+
+  /// El loot del piso que ve [playerId] (el suyo y el compartido).
+  Iterable<GroundLoot> groundFor(String playerId) =>
+      ground.where((g) => g.visibleTo(playerId));
 
   Iterable<SessionPlayer> get playerList => players.values;
 
@@ -460,5 +485,7 @@ class GameSession {
         graceUntil: graceUntil,
         afterLevelUp: afterLevelUp,
         seq: seq,
+        ground: [...ground],
+        groundSeq: groundSeq,
       );
 }

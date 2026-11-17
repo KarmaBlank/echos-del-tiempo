@@ -1,154 +1,355 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
+import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../game_engine/data/items_catalog.dart';
 import '../../../game_engine/models/attributes.dart';
+import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/models/player_state.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
 import '../../../game_engine/models/weapon.dart';
+import '../../../game_engine/models/weapon_passive.dart';
+import '../../../game_engine/rules/craft_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import '../../combat/domain/skill_text.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
+import '../domain/item_text.dart';
 import '../domain/shop_guards.dart';
-import '../domain/weapon_text.dart';
+import '../domain/shop_preview.dart';
+import 'craft_bench.dart';
 
-/// Lo que comparten las secciones de tienda: el jugador local, las
-/// reglas y los motivos de bloqueo del modo actual.
+/// Lo que comparten las pestañas de tienda e inventario: el jugador
+/// local, las reglas, los motivos de bloqueo del modo actual y las
+/// vistas previas.
 class ShopContext {
   ShopContext(this.view, this.controller)
       : rules = controller.engine.progression,
-        guards = ShopGuards(controller.engine.progression, view.mode);
+        guards = ShopGuards(controller.engine.progression, view.mode),
+        preview = ShopPreview(controller.engine.progression);
 
   final SessionView view;
   final SessionController controller;
   final ProgressionRules rules;
   final ShopGuards guards;
+  final ShopPreview preview;
 
   PlayerProfile get profile => view.me!.profile;
 
-  /// Armas de su clase a la venta, en el orden del catálogo.
-  List<WeaponDef> get forSale => [
+  /// Bases a la venta (cualquier familia: loot v2), por nivel.
+  List<WeaponDef> forSale([String? family]) => [
         for (final w in rules.catalog.weapons.values)
-          if (w.classId == profile.classId && w.price > 0) w,
-      ];
+          if (w.price > 0 && (family == null || w.classId == family)) w,
+      ]..sort((a, b) => a.level != b.level
+          ? a.level.compareTo(b.level)
+          : a.price.compareTo(b.price));
 
-  /// Armas propias de su clase, en orden de obtención.
-  List<WeaponDef> get owned => [
-        for (final id in profile.inventory)
-          if (rules.catalog.weapons[id] case final w?
-              when w.classId == profile.classId)
-            w,
-      ];
+  /// Tus armas: la equipada primero y después en orden de obtención.
+  List<ItemInstance> get owned {
+    final p = profile;
+    return [
+      ...p.items.where((i) => i.uid == p.equippedUid),
+      ...p.items.where((i) => i.uid != p.equippedUid),
+    ];
+  }
+
+  String className() =>
+      rules.catalog.classes[profile.classId]?.name ?? profile.classId;
+
+  String itemName(ItemInstance it) => rules.items.displayName(it);
 }
 
-/// Nombre, tipo, requisitos coloreados, escala, peso y habilidades de
-/// un arma (el cuerpo de cada `.mrow` de armas del prototipo).
-class WeaponInfo extends StatelessWidget {
-  const WeaponInfo({
+/// Pestañas de la tienda (armería del lobby y preparación). Ver
+/// docs/specs/panels.md § "Armería" (loot v2).
+enum ArmoryTab {
+  buy('COMPRAR',
+      'Bases Comunes por nivel. Cualquier clase puede equiparlas si cumple '
+          'nivel y requisitos.'),
+  forge('FORJA',
+      'Sube 1 nivel una estadística (máx 5 c/u) hasta el tope de la rareza. '
+          'Cada 2 niveles de forja, la pasiva del arma sube 1.'),
+  fuse('FUSIÓN',
+      'Mesa de fusión: traslada, quita, agrega o re-tira mods, o sube la '
+          'rareza. Siempre ves el resultado antes de confirmar.'),
+  items('CONSUMIBLES',
+      'Se usan en batalla desde el menú. Máximo ${ProgressionRules.maxItems} '
+          'de cada uno.');
+
+  const ArmoryTab(this.label, this.hint);
+  final String label;
+  final String hint;
+
+  Widget build(ShopContext shop) => switch (this) {
+        ArmoryTab.buy => BuyTab(shop: shop),
+        ArmoryTab.forge => ForgeTab(shop: shop),
+        ArmoryTab.fuse => CraftBench(shop: shop),
+        ArmoryTab.items => ItemsTab(shop: shop),
+      };
+
+  /// Como [PanelTabSpec] para un panel con pestañas.
+  PanelTabSpec spec(ShopContext Function() shop) =>
+      PanelTabSpec(label, hint, (_) => build(shop()));
+}
+
+/// Ayuda `[?]` de la tienda.
+const kShopHelp = '<b>Armería</b><br>'
+    '<span class="k">COMPRAR</span>: bases Comunes de cualquier clase; '
+    'compara con la equipada antes de pagar.<br>'
+    '<span class="k">FORJA</span>: sube Poder, Crítico, Velocidad o Defensa '
+    '(5 c/u, tope total por rareza). Cada 2 niveles sube la pasiva.<br>'
+    '<span class="k">FUSIÓN</span>: mesa libre: traslada mods, pasivas o '
+    'habilidades (el arma origen se destruye), quita o agrega mods y sube '
+    'la rareza con materiales.<br>'
+    'Elige en la lista de la izquierda; el botón de la acción está abajo a '
+    'la derecha del detalle.';
+
+// ---------------------------------------------------------------------
+// Fichas comunes
+// ---------------------------------------------------------------------
+
+/// Ficha de un arma (tooltip completo) y, con [describe], cada habilidad
+/// con su descripción.
+class ItemCard extends StatelessWidget {
+  const ItemCard({
     super.key,
-    required this.shop,
-    required this.weapon,
-    this.attributes,
-    this.showWeightNote = false,
+    required this.rules,
+    required this.item,
+    required this.level,
+    required this.attributes,
+    this.stats,
+    this.equipped = false,
+    this.describe = false,
   });
 
-  final ShopContext shop;
-  final WeaponDef weapon;
-
-  /// Atributos para colorear los requisitos (por defecto los del perfil).
-  final PlayerAttributes? attributes;
-
-  /// `(-vel.)` después del peso, como en la armería.
-  final bool showWeightNote;
+  final ProgressionRules rules;
+  final ItemInstance item;
+  final int level;
+  final PlayerAttributes attributes;
+  final DerivedStats? stats;
+  final bool equipped;
+  final bool describe;
 
   @override
   Widget build(BuildContext context) {
-    final p = shop.profile;
-    final w = weapon;
-    final owned = p.inventory.contains(w.id);
-    final name = owned ? shop.rules.weaponDisplayName(p, w.id) : w.name;
-    // `.mrow` de armas: nombre, `tipo ⓘ` en `#9fb4ff` y dos `<small>`.
+    final cat = rules.catalog;
+    final w = cat.weapons[item.baseId];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ProtoText('${protoEsc(name)} <span class="k">${w.type}</span>'),
-        ProtoText(
-          '<small>Req: ${requirementsMarkup(w, attributes ?? p.attributes)}'
-          ' · Escala: ${weaponScaleText(w)} · Peso ${fmtNum(w.weight)}'
-          '${showWeightNote ? ' (−vel.)' : ''}</small>',
-        ),
-        ProtoText(
-          '<small>Habilidades: '
-          '${skillListMarkup(shop.rules.catalog, w, fusedId: owned ? p.fused[w.id] : null)}'
-          '</small>',
-        ),
+        ProtoText(itemTooltipMarkup(rules, item,
+            level: level,
+            attributes: attributes,
+            stats: stats,
+            equipped: equipped)),
+        if (describe) ...[
+          const SizedBox(height: 8),
+          const Text('HABILIDADES', style: TextStyle(color: ProtoColors.sky)),
+          for (final id in rules.items.skillsOf(item))
+            if (cat.skills[id] case final s?)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: ProtoText(describeSkillMarkup(s, null)),
+              ),
+          if (w != null && cat.ultimates[w.type] != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: ProtoText(describeSkillMarkup(cat.ultimates[w.type]!, null,
+                  ultimate: true, nameColor: ProtoColors.hex(ProtoColors.pink))),
+            ),
+        ],
       ],
     );
   }
 }
 
-/// Armas de su clase a la venta (`shop`, líneas 1352-1356).
-class WeaponShopSection extends StatelessWidget {
-  const WeaponShopSection({super.key, required this.shop, this.title});
+/// ATQ / MAG / VEL / CRÍT / DEF de [before] → [after].
+class StatsCompare extends StatelessWidget {
+  const StatsCompare(
+      {super.key, required this.title, required this.before, required this.after});
 
-  final ShopContext shop;
-  final String? title;
+  final String title;
+  final DerivedStats before;
+  final DerivedStats after;
 
   @override
   Widget build(BuildContext context) {
-    final p = shop.profile;
-    final cls = shop.rules.catalog.classes[p.classId]?.name ?? p.classId;
-    return PanelSection(
-      title ?? 'Armería ($cls)',
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final w in shop.forSale)
-            PanelRow(
-              tooltip: weaponTooltip(shop.rules, p, w),
-              trailing: p.inventory.contains(w.id)
-                  ? const Text('TIENES',
-                      style: TextStyle(color: ProtoColors.green))
-                  : PanelButton('\$${w.price}',
-                      key: ValueKey('buy-${w.id}'),
-                      reason: shop.guards.buyWeapon(p, w.id),
-                      onPressed: () => shop.controller.buyWeapon(w.id)),
-              child: WeaponInfo(shop: shop, weapon: w, showWeightNote: true),
-            ),
+          ProtoText(title, style: const TextStyle(color: ProtoColors.sky)),
+          Wrap(
+            spacing: 16,
+            children: [
+              StatChange('ATQ', before.attack, after.attack),
+              StatChange('MAG', before.magic, after.magic),
+              StatChange('VEL', before.speed, after.speed,
+                  format: (x) => x.toStringAsFixed(1)),
+              StatChange('CRÍT', before.critChance, after.critChance,
+                  format: (x) => '${(x * 100).round()}%'),
+              StatChange('DEF', before.defense, after.defense),
+              StatChange('HP', before.maxHp, after.maxHp),
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
+/// Encabezado de grupo dentro de una lista.
+class ListHeader extends StatelessWidget {
+  const ListHeader(this.text, {super.key});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 4, bottom: 4),
+        child: Text(retroText(text),
+            style: const TextStyle(color: ProtoColors.gold)),
+      );
+}
+
+// ---------------------------------------------------------------------
+// COMPRAR
+// ---------------------------------------------------------------------
+
+/// Bases Comunes a la venta (cualquier familia), por nivel, con filtro
+/// de familia y comparación con la equipada.
+class BuyTab extends StatefulWidget {
+  const BuyTab({super.key, required this.shop});
+
+  final ShopContext shop;
+
+  @override
+  State<BuyTab> createState() => _BuyTabState();
+}
+
+class _BuyTabState extends State<BuyTab> {
+  String? _sel;
+  late String? _family = widget.shop.profile.classId;
+
+  @override
+  Widget build(BuildContext context) {
+    final shop = widget.shop;
+    final p = shop.profile;
+    final rules = shop.rules;
+    final list = shop.forSale(_family);
+    final families = rules.catalog.classes.values.toList();
+    final filter = Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        PanelButton('TODAS',
+            key: const ValueKey('buy-family-all'),
+            selected: _family == null,
+            onPressed: () => setState(() => _family = null)),
+        for (final c in families)
+          PanelButton(c.name.toUpperCase(),
+              key: ValueKey('buy-family-${c.id}'),
+              selected: _family == c.id,
+              onPressed: () => setState(() => _family = c.id)),
+      ],
+    );
+    if (list.isEmpty) {
+      return Column(children: [filter, const Text('No hay armas a la venta.')]);
+    }
+    final w = list.firstWhere((w) => w.id == _sel, orElse: () => list.first);
+    final owned = p.items.any((i) => i.baseId == w.id);
+    final sample = ItemInstance.common('_shop', w.id, itemLevel: w.level);
+    final eq = shop.rules.equippedItem(p);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        filter,
+        const SizedBox(height: 8),
+        Expanded(
+          child: PanelSplit(
+            list: [
+              for (final x in list)
+                PanelListItem(
+                  key: ValueKey('shop-row-${x.id}'),
+                  selected: x.id == w.id,
+                  onTap: () => setState(() => _sel = x.id),
+                  trailing: p.items.any((i) => i.baseId == x.id)
+                      ? const Text('TIENES',
+                          style: TextStyle(color: ProtoColors.green))
+                      : ProtoText(
+                          '${rules.meetsRequirements(p, x) ? protoColor(ProtoColors.green, 'OK') : protoColor(ProtoColors.red, 'Req')} '
+                          '<b>₵${x.price}</b>'),
+                  child: ProtoText('${protoEsc(x.name)}<br>'
+                      '<small>Nv ${x.level} · ${x.type}</small>'),
+                ),
+            ],
+            detail: PanelDetail(
+              footer: owned
+                  ? const [
+                      Text('TIENES', style: TextStyle(color: ProtoColors.green))
+                    ]
+                  : [
+                      CostLine(cost: w.price, credits: p.credits),
+                      PanelButton('COMPRAR \$${w.price}',
+                          key: ValueKey('buy-${w.id}'),
+                          accent: ProtoColors.green,
+                          reason: shop.guards.buyWeapon(p, w.id),
+                          onPressed: () => shop.controller.buyWeapon(w.id)),
+                    ],
+              children: [
+                ItemCard(
+                    rules: rules,
+                    item: sample,
+                    level: p.level,
+                    attributes: p.attributes,
+                    describe: true),
+                StatsCompare(
+                  title: 'Si la equipas (ahora: '
+                      '${protoEsc(eq == null ? '-' : shop.itemName(eq))})'
+                      '${rules.meetsRequirements(p, w) ? '' : ' · ${protoColor(ProtoColors.red, 'no cumples nivel o requisitos')}'}',
+                  before: shop.preview.current(p),
+                  after: shop.preview.withBase(p, w),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------
+// CONSUMIBLES
+// ---------------------------------------------------------------------
+
 /// Consumibles (`itemsHtml`, línea 1267).
-class ItemShopSection extends StatelessWidget {
-  const ItemShopSection({super.key, required this.shop});
+class ItemsTab extends StatelessWidget {
+  const ItemsTab({super.key, required this.shop});
 
   final ShopContext shop;
 
   @override
   Widget build(BuildContext context) {
     final p = shop.profile;
-    return PanelSection(
-      'Consumibles (máx. ${ProgressionRules.maxItems} de cada uno)',
+    return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           for (final it in kItems.values)
             PanelRow(
-              trailing: PanelButton('\$${it.price}',
+              trailing: PanelButton('COMPRAR \$${it.price}',
                   key: ValueKey('item-${it.key}'),
                   reason: shop.guards.buyItem(p, it.item),
                   onPressed: () => shop.controller.buyItem(it.item)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ProtoText('${it.name} '
-                      '${protoColor(ProtoColors.gold, 'tienes ${it.key == 'pot' ? p.potions : p.ethers}')}'),
+                  ProtoText('<b>${it.name}</b> '
+                      '${protoColor(ProtoColors.green, 'tienes ${it.key == 'pot' ? p.potions : p.ethers}/${ProgressionRules.maxItems}')}'),
                   ProtoText('<small>${it.description}</small>'),
                 ],
               ),
@@ -159,7 +360,11 @@ class ItemShopSection extends StatelessWidget {
   }
 }
 
-/// `UPSTATS[k].fmt(l × per)`.
+// ---------------------------------------------------------------------
+// FORJA
+// ---------------------------------------------------------------------
+
+/// Valor del bono de forja de [s] con [level] niveles.
 String upgradeValueText(UpgradeStat s, int level) {
   final v = level * s.perLevel;
   return switch (s) {
@@ -169,232 +374,185 @@ String upgradeValueText(UpgradeStat s, int level) {
   };
 }
 
-/// Herrería (`upHtml`, líneas 1278-1285) + equipar (agregado del puerto).
-class ForgeSection extends StatelessWidget {
-  const ForgeSection({super.key, required this.shop});
-
-  final ShopContext shop;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = shop.profile;
-    return PanelSection(
-      'Herrería: elige qué estadística mejorar en cada arma (máx nivel '
-      '${ProgressionRules.upgradeMax} por estadística)',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final w in shop.owned)
-            PanelRow(
-              tooltip: weaponTooltip(shop.rules, p, w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                          child: Text(retroText(
-                              shop.rules.weaponDisplayName(p, w.id)))),
-                      if (p.equipped == w.id)
-                        const Text('EQUIPADA',
-                            style: TextStyle(color: ProtoColors.gold))
-                      else
-                        PanelButton('EQUIPAR',
-                            key: ValueKey('equip-${w.id}'),
-                            reason: shop.guards.equip(p, w.id),
-                            onPressed: () => shop.controller.equip(w.id)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 16,
-                    runSpacing: 8,
-                    children: [
-                      for (final s in shop.rules.upgradeStatsFor(w))
-                        _UpgradeCell(shop: shop, weapon: w, stat: s),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
+/// Cuándo sube la pasiva de [it] con la forja (texto en markup).
+String passiveForgeNote(ItemInstance it) {
+  if (it.passiveId == null || !it.rarity.hasPassive) {
+    return protoColor(ProtoColors.dim, 'Sin pasiva (Épico y Legendario la traen)');
   }
-}
-
-class _UpgradeCell extends StatelessWidget {
-  const _UpgradeCell(
-      {required this.shop, required this.weapon, required this.stat});
-
-  final ShopContext shop;
-  final WeaponDef weapon;
-  final UpgradeStat stat;
-
-  @override
-  Widget build(BuildContext context) {
-    final p = shop.profile;
-    final l = p.upgradesFor(weapon.id).level(stat);
-    const max = ProgressionRules.upgradeMax;
-    final reason = shop.guards.upgrade(p, weapon.id, stat);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // `<div style="font-size:7px;color:#9fb4ff">` del prototipo.
-        ProtoText(
-            '${stat.label} ${protoColor(ProtoColors.green, upgradeValueText(stat, l))}'
-            ' ($l/$max)',
-            style: const TextStyle(color: ProtoColors.sky)),
-        const SizedBox(height: 4),
-        if (l >= max)
-          const Text('MAX', style: TextStyle(color: ProtoColors.green))
-        else
-          PanelButton(
-            '+1 \$${shop.rules.upgradeCost(weapon.id, l)}',
-            key: ValueKey('up-${weapon.id}-${stat.key}'),
-            reason: reason,
-            onPressed: () => shop.controller.upgrade(weapon.id, stat),
-          ),
-      ],
-    );
+  final l = it.effectivePassiveLevel;
+  if (l >= ItemInstance.maxPassiveLevel) {
+    return protoColor(ProtoColors.green, 'Pasiva al máximo (V)');
   }
+  final left = it.rarity.forgeCap - it.forgeLevel;
+  final need = 2 - it.forgeLevel % 2;
+  if (need > left) {
+    return protoColor(ProtoColors.dim,
+        'La pasiva no sube más: tope de forja de ${it.rarity.label}');
+  }
+  final next = WeaponPassiveDef.roman(l + 1);
+  return '<span style="color:$kPassiveHex">Sube a nivel $next '
+      '${need == 1 ? 'en la próxima mejora' : 'en $need mejoras'}</span>';
 }
 
-/// Fusión (`fuseHtml`, líneas 1270-1277): una fila de botones por lista
-/// en vez de los `<select>` del prototipo.
-class FuseSection extends StatefulWidget {
-  const FuseSection({super.key, required this.shop});
+/// Herrería sobre instancias: lista de tus armas y, por estadística,
+/// valor y stats antes → después, con el tope de la rareza y la subida de
+/// la pasiva cada 2 niveles.
+class ForgeTab extends StatefulWidget {
+  const ForgeTab({super.key, required this.shop});
 
   final ShopContext shop;
 
   @override
-  State<FuseSection> createState() => _FuseSectionState();
+  State<ForgeTab> createState() => _ForgeTabState();
 }
 
-class _FuseSectionState extends State<FuseSection> {
-  String? _base, _sacrifice, _skill;
+class _ForgeTabState extends State<ForgeTab> {
+  String? _sel;
 
   @override
   Widget build(BuildContext context) {
     final shop = widget.shop;
     final p = shop.profile;
-    final cat = shop.rules.catalog;
-    final g = shop.guards;
-    final bases = g.fuseBases(p);
-    // Mismos valores por defecto que el prototipo.
-    if (!bases.contains(_base)) _base = p.equipped;
-    final others = g.fuseSacrifices(p, _base);
-    if (!others.contains(_sacrifice)) {
-      _sacrifice = others.isEmpty ? null : others.first;
-    }
-    final skills = _sacrifice == null
-        ? const <String>[]
-        : cat.weapons[_sacrifice]!.skillIds;
-    if (!skills.contains(_skill)) _skill = skills.isEmpty ? null : skills.first;
-    final replaces = _base == null ? null : p.fused[_base];
-    final reason = g.fuse(p, _base, _sacrifice, _skill);
-
-    Widget choices(String label, List<String> ids, String? sel,
-            String Function(String) name, ValueChanged<String> pick,
-            {required String prefix, String? empty}) =>
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              SizedBox(width: 160, child: Text(retroText(label))),
-              if (ids.isEmpty && empty != null)
-                Text(empty, style: const TextStyle(color: ProtoColors.dim)),
-              for (final id in ids)
-                PanelButton(name(id),
-                    key: ValueKey('$prefix-$id'),
-                    selected: id == sel,
-                    accent: id == sel ? ProtoColors.gold : null,
-                    onPressed: () => setState(() => pick(id))),
-            ],
+    final rules = shop.rules;
+    final list = shop.owned;
+    if (list.isEmpty) return const Text('No tienes armas.');
+    final it = list.firstWhere((i) => i.uid == _sel, orElse: () => list.first);
+    final equipped = p.equippedUid == it.uid;
+    final cap = it.rarity.forgeCap;
+    final passive = rules.items.passiveText(it);
+    return PanelSplit(
+      list: [
+        for (final x in list)
+          PanelListItem(
+            key: ValueKey('forge-row-${x.uid}'),
+            selected: x.uid == it.uid,
+            onTap: () => setState(() => _sel = x.uid),
+            trailing: p.equippedUid == x.uid
+                ? const Text('EQUIPADA',
+                    style: TextStyle(color: ProtoColors.gold))
+                : null,
+            child: ProtoText('${itemNameMarkup(rules, x)}<br>'
+                '<small>${x.rarity.label} · forja ${x.forgeLevel}/${x.rarity.forgeCap}</small>'),
           ),
-        );
-
-    return PanelSection(
-      'Fusión (\$${ProgressionRules.fuseCost}): un arma hereda una habilidad '
-      'de otra; la segunda se consume',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      ],
+      detail: PanelDetail(
+        footer: [
+          if (equipped)
+            const Text('EQUIPADA', style: TextStyle(color: ProtoColors.gold))
+          else
+            PanelButton('EQUIPAR',
+                key: ValueKey('equip-${it.uid}'),
+                reason: shop.guards.equip(p, it.uid),
+                onPressed: () => shop.controller.equip(it.uid)),
+        ],
         children: [
-          choices('Base:', bases, _base,
-              (id) => shop.rules.weaponDisplayName(p, id), (id) => _base = id,
-              prefix: 'fuse-base'),
-          choices('< Sacrificar:', others, _sacrifice,
-              (id) => shop.rules.weaponDisplayName(p, id),
-              (id) => _sacrifice = id,
-              prefix: 'fuse-sac',
-              empty: '(no hay armas disponibles)'),
-          choices('Habilidad a heredar:', skills, _skill,
-              (id) => cat.skills[id]?.name ?? id, (id) => _skill = id,
-              prefix: 'fuse-skill'),
-          Wrap(
-            spacing: 8,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          ProtoText('${itemNameMarkup(rules, it)} '
+              '<span class="k">${it.rarity.label}</span>'
+              '${equipped ? '' : ' <small>(efecto si la equipas)</small>'}'),
+          const SizedBox(height: 4),
+          Row(
+            key: const ValueKey('forge-cap'),
             children: [
-              PanelButton('FUSIONAR',
-                  key: const ValueKey('fuse'),
-                  reason: reason,
-                  onPressed: () =>
-                      shop.controller.fuse(_base!, _sacrifice!, _skill!)),
-              if (replaces != null)
-                Text(
-                    retroText(
-                        '(reemplaza ${cat.skills[replaces]?.name ?? replaces})'),
-                    style: const TextStyle(color: ProtoColors.orange)),
+              Text(retroText('Forja ${it.forgeLevel}/$cap  ')),
+              LevelPips(it.forgeLevel.clamp(0, cap), cap),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(retroText('(tope de ${it.rarity.label})'),
+                    style: const TextStyle(color: ProtoColors.dim)),
+              ),
             ],
           ),
-          const SizedBox(height: 8),
-          const Text(
-            'No se puede sacrificar el arma inicial ni la equipada. Cada arma '
-            'guarda 1 habilidad fusionada.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: ProtoColors.dim),
-          ),
+          if (passive != null)
+            ProtoText('Pasiva: <span style="color:$kPassiveHex">'
+                '${protoEsc(passive)}</span>'),
+          ProtoText(passiveForgeNote(it),
+              key: const ValueKey('forge-passive-note')),
+          const SizedBox(height: 4),
+          for (final s in rules.upgradeStatsFor(rules.catalog.weapons[it.baseId]!))
+            _UpgradeRow(shop: shop, item: it, stat: s),
         ],
       ),
     );
   }
 }
 
-/// Armas propias con requisitos según el reparto pendiente y botón de
-/// equipar (sección "Armas" del panel de personaje, líneas 1325-1329).
-class OwnedWeaponsSection extends StatelessWidget {
-  const OwnedWeaponsSection(
-      {super.key, required this.shop, this.pending = const {}});
+class _UpgradeRow extends StatelessWidget {
+  const _UpgradeRow(
+      {required this.shop, required this.item, required this.stat});
 
   final ShopContext shop;
-
-  /// Reparto de puntos sin confirmar (`alloc`).
-  final Map<Attribute, int> pending;
+  final ItemInstance item;
+  final UpgradeStat stat;
 
   @override
   Widget build(BuildContext context) {
     final p = shop.profile;
-    final c = shop.rules.catalog.classes[p.classId];
-    final preview = p.attributes.add(pending);
-    return PanelSection(
-      'Armas (${c?.allowedWeaponTypes.join(' / ') ?? ''})',
+    final rules = shop.rules;
+    final w = rules.catalog.weapons[item.baseId]!;
+    final l = item.forge.level(stat);
+    const max = WeaponUpgradeLevels.upMax;
+    final atMax = l >= max;
+    final r = rules.crafting.forge(p, item.uid, stat);
+    final after = r.after ?? item;
+    final b = shop.preview.withItem(p, item);
+    final a = shop.preview.withItem(p, after);
+    final effect = switch (stat) {
+      UpgradeStat.pow => w.mag != null
+          ? StatChange('MAG', b.magic, a.magic)
+          : StatChange('ATQ', b.attack, a.attack),
+      UpgradeStat.crit => StatChange('CRÍT', b.critChance, a.critChance,
+          format: (x) => '${(x * 100).round()}%'),
+      UpgradeStat.spd => StatChange('VEL', b.speed, a.speed,
+          format: (x) => x.toStringAsFixed(1)),
+      UpgradeStat.def => StatChange('DEF', b.defense, a.defense),
+    };
+    final passiveUp = r.after != null &&
+        r.after!.effectivePassiveLevel > item.effectivePassiveLevel &&
+        item.rarity.hasPassive &&
+        item.passiveId != null;
+    final def = rules.items.passiveOf(item);
+    final cost = CraftRules.forgeCost(w, item.rarity, l);
+    return PanelRow(
+      key: ValueKey('forge-stat-${stat.key}'),
+      trailing: atMax
+          ? const Text('MAX', style: TextStyle(color: ProtoColors.green))
+          : PanelButton(
+              '+1 \$$cost',
+              key: ValueKey('up-${item.uid}-${stat.key}'),
+              reason: shop.guards.upgrade(p, item.uid, stat),
+              onPressed: () => shop.controller.upgrade(item.uid, stat),
+            ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          for (final w in shop.owned)
-            PanelRow(
-              tooltip: weaponTooltip(shop.rules, p, w),
-              trailing: p.equipped == w.id
-                  ? const Text('EQUIPADA',
-                      style: TextStyle(color: ProtoColors.gold))
-                  : PanelButton('EQUIPAR',
-                      key: ValueKey('equip-${w.id}'),
-                      reason: shop.guards.equip(p, w.id, pending: pending),
-                      onPressed: () => shop.controller.equip(w.id)),
-              child: WeaponInfo(shop: shop, weapon: w, attributes: preview),
+          Row(
+            children: [
+              SizedBox(
+                width: 96,
+                child: Text(retroText(stat.label),
+                    style: const TextStyle(color: ProtoColors.sky)),
+              ),
+              LevelPips(l, max),
+              const SizedBox(width: 8),
+              Text('$l/$max'),
+            ],
+          ),
+          Wrap(
+            spacing: 16,
+            children: [
+              StatChange('Bono', l, atMax ? l : l + 1,
+                  format: (x) => upgradeValueText(stat, x.toInt())),
+              effect,
+            ],
+          ),
+          if (passiveUp && def != null)
+            ProtoText(
+              key: ValueKey('forge-passive-up-${stat.key}'),
+              '<b style="color:$kPassiveHex">¡La pasiva sube!</b> '
+              '<span style="color:$kPassiveHex">${protoEsc(def.name)} '
+              '${WeaponPassiveDef.roman(item.effectivePassiveLevel)} → '
+              '${WeaponPassiveDef.roman(r.after!.effectivePassiveLevel)}: '
+              '${protoEsc(def.descriptionAt(r.after!.effectivePassiveLevel))}</span>',
             ),
         ],
       ),

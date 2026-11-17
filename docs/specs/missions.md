@@ -113,7 +113,8 @@ ignoran.
 - Créditos: `20 + floor(azar × 31) + tier × 10`.
 - `azar < 0.5`: +1 Poción de vida; si no, `azar < 0.6`: +1 Poción de maná
   (tope 9 de cada una).
-- `azar < 0.12`: un arma de su clase con `tier ≤ tier` que no tenga (al azar).
+- Loot v2 (loot.md § 14): el que lo abre tira el loot de cofre (35% de
+  un arma, materiales ×2) con el nivel de zona de la misión.
 
 ## Batalla en la sesión
 
@@ -153,10 +154,11 @@ batalla vuelven al jugador.
 
 - Derrota → `missionEnd(false)`.
 - El enemigo del campo muere.
-- Élite: `elites + 1`, objetivo élite + 1, y cada jugador tiene 60% de
-  recibir un arma de su clase con `1 ≤ tier ≤ min(3, nº de misión)` que
-  no tenga (sin candidatas no se tira el azar).
-- Grupo normal: `kills + 1`. Jefe: nada acá.
+- Élite: `elites + 1`, objetivo élite + 1, y cada jugador tira su loot
+  de élite (loot.md § 14: 1 arma segura + 50% de otra, materiales ×3);
+  `eliteDrops` guarda la base de la primera.
+- Grupo normal: `kills + 1` y cada jugador tira su loot de batalla (30%
+  de un arma, materiales). Jefe: loot de jefe (2 armas, materiales ×5).
 - `updateOpen`. Los jugadores caídos quedan con 1 de vida; época +1.
 - Si alguien subió de nivel y tiene puntos: modo `levelUp` (el reloj de la
   misión se detiene). Cuando todos los que subieron repartieron sus
@@ -172,7 +174,11 @@ batalla vuelven al jugador.
   campo y batalla.
 - Bonus de créditos para cada jugador: `round(créditos_misión × {S 0.5, A 0.25, B 0, D 0})`.
 - Victoria: cada jugador tiene `{S 90%, A 70%, B 50%}` de recibir un
-  arma de su clase de `tier` = nº de misión que no tenga.
+  arma de fin de misión (loot v2, nivel de zona + 1, bonus de rareza S
+  +1 / A +0.5, siempre al inventario); `drops` guarda su base.
+- Nivel de zona: `LootRules.zoneLevel` al empezar la misión
+  (`MissionRun.zoneLevel`, loot.md § 14). El loot del piso se vacía al
+  empezar la misión y al volver al lobby.
 - Los caídos quedan con 1 de vida. Modo `result` por 25 s
   (`BackToLobbyAction` lo corta antes).
 

@@ -1,4 +1,5 @@
 import 'attributes.dart';
+import 'item.dart';
 
 /// Fórmula de poder de un arma: `base + Σ coef[attr] * attr`.
 /// Puerto de los objetos `atk`/`mag` del prototipo (`{b: 9, FUE: 0.5}`).
@@ -14,19 +15,30 @@ class PowerFormula {
   }
 }
 
+/// Una base de arma (loot.md § 1). Cualquier clase la equipa si cumple
+/// el nivel y los requisitos de atributos; [classId] es solo la
+/// "familia" (para la tienda, el sesgo de drops y la UI).
 class WeaponDef {
   final String id;
   final String name;
+
+  /// Familia de la base (la clase que más la aprovecha). No restringe.
   final String classId;
-  final String type; // 'espada','hacha','báculo','tomo','arco','rifle','espada+escudo',...
+  final String type; // 'espada','hacha','lanza','báculo','tomo','varita','arco','rifle','ballesta','dagas','espada+escudo',...
   final int tier;
+
+  /// Nivel de personaje requerido (y nivel mínimo de objeto para salir).
+  final int level;
   final int price;
   final Map<Attribute, int> requirements;
   final PowerFormula atk;
   final PowerFormula? mag;
   final List<String> skillIds;
   final double weight; // resta velocidad
-  final int shieldDefense; // solo armas de paladín con escudo
+  final int shieldDefense; // armas con escudo: su implícito de DEF
+
+  /// Implícito fijo de la base (además del DEF del escudo).
+  final List<ItemMod> implicit;
 
   const WeaponDef({
     required this.id,
@@ -34,6 +46,7 @@ class WeaponDef {
     required this.classId,
     required this.type,
     required this.tier,
+    this.level = 1,
     required this.price,
     required this.requirements,
     required this.atk,
@@ -41,7 +54,10 @@ class WeaponDef {
     this.skillIds = const [],
     this.weight = 0,
     this.shieldDefense = 0,
+    this.implicit = const [],
   });
+
+  String get family => classId;
 
   bool meetsRequirements(PlayerAttributes attrs) =>
       requirements.entries.every((e) => attrs[e.key] >= e.value);

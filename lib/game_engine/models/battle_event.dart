@@ -35,6 +35,9 @@ class DamageEvent extends BattleEvent {
   /// `contraataque`...). `null` en el daño normal.
   final String? sourceId;
 
+  /// El objetivo estaba quebrado: el golpe lleva el +50% del quiebre.
+  final bool vulnerable;
+
   const DamageEvent(
     this.targetId,
     this.amount, {
@@ -44,6 +47,7 @@ class DamageEvent extends BattleEvent {
     this.fromStatus = false,
     this.statusSource,
     this.sourceId,
+    this.vulnerable = false,
   });
 }
 
@@ -173,4 +177,62 @@ class ShieldEvent extends BattleEvent {
   final int amount;
   final bool absorbed;
   const ShieldEvent(this.targetId, this.amount, {this.absorbed = false});
+}
+
+/// Qué le pasó a la barra de quiebre de un enemigo.
+enum BreakPhase {
+  /// Un golpe la llenó (sin llegar al máximo).
+  fill,
+
+  /// Bajó al empezar su turno.
+  decay,
+
+  /// Llegó al máximo: ¡QUIEBRE!
+  broken,
+
+  /// Pierde su turno por estar quebrado.
+  skipped,
+
+  /// Se terminó la vulnerabilidad: la barra vuelve a 0.
+  recovered,
+}
+
+/// Cambio en la barra de quiebre de [targetId] (docs/specs/
+/// break_and_enemy_ults.md § 1). [gauge] y [max] son los valores después
+/// del cambio; [cancelledUlt]: el quiebre canceló la ULT avisada.
+class BreakEvent extends BattleEvent {
+  final String targetId;
+  final BreakPhase phase;
+  final double gauge;
+  final double max;
+  final bool cancelledUlt;
+  const BreakEvent(this.targetId, this.phase, this.gauge, this.max,
+      {this.cancelledUlt = false});
+}
+
+/// Un enemigo avisa su ULT: la lanza en su próximo turno.
+class EnemyUltWarningEvent extends BattleEvent {
+  final String actorId;
+
+  /// `EnemyUltDef.id`.
+  final String ultId;
+  final String name;
+  const EnemyUltWarningEvent(this.actorId, this.ultId, this.name);
+}
+
+/// Un enemigo lanza su ULT. Abre la acción (como un [ActionEvent]): los
+/// golpes, estados y retrasos que siguen son de la ULT.
+class EnemyUltEvent extends BattleEvent {
+  final String actorId;
+  final String ultId;
+  final String name;
+
+  /// Víctima elegida (antes de la Protección); `null` si es a todos.
+  final String? targetId;
+  final bool allTargets;
+
+  /// Borró los buffs del equipo (Fin de las Eras).
+  final bool wipedBuffs;
+  const EnemyUltEvent(this.actorId, this.ultId, this.name,
+      {this.targetId, this.allTargets = false, this.wipedBuffs = false});
 }

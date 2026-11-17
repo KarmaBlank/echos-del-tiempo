@@ -165,14 +165,16 @@ Claves principales:
 
 | Objeto | Claves |
 |---|---|
-| `GameSession` | `mode`, `players` (lista), `mission`, `battle`, `vote`, `prep`, `result`, `time`, `grace`, `after`, `seq` |
+| `GameSession` | `mode`, `players` (lista), `mission`, `battle`, `vote`, `prep`, `result`, `time`, `grace`, `after`, `seq`, `ground`? (loot en el piso), `gseq`? |
 | `SessionPlayer` | `id`, `p` (perfil), `x`, `y`, `dir`, `ep`, `mv`, `hp`, `mp`, `mhp`, `mmp`, `ult`, `lvup` |
-| `MissionRun` | `id`, `seed`, `goal`, `kills`, `elapsed`, `kos`, `xp`, `cr`, `obj`, `open`, `elites`, `eliteDrops`, `fe`, `items` |
+| `MissionRun` | `id`, `seed`, `goal`, `kills`, `elapsed`, `kos`, `xp`, `cr`, `obj`, `open`, `elites`, `eliteDrops` (`{p, w, u?, r?}`), `fe`, `items`, `zl`? (nivel de zona) |
 | `FieldEnemy` | `id`, `x`, `y`, `hx`, `hy`, `g`, `boss`, `elite`, `alive`, `tm`, `vx`, `vy`, `dir`, `aggro` |
 | `MissionItem` | `id`, `k` (`fragment`/`seal`/`chest`), `x`, `y`, `done` |
 | `SessionBattle` | `id`, `st` (`BattleState`), `fe`, `boss`, `elite`, `wait`, `turn`, `end` |
 | `BattleState` | `party`, `enemies`, `clock`, `cur`, `log`, `out` (`{win, xp, cr}`), `boss`, `elite` |
-| `Combatant` | todos los campos (stats, estados, cooldowns, ULT, pociones...); `build` como `{cls, lvl, st, w, up, tree, bdef}` (el arma por id) |
+| `Combatant` | todos los campos (stats, estados, cooldowns, ULT, pociones...; loot v2: `ls`, `rgn`, `sres`, `hrec` opcionales); `build` como `{cls, lvl, st, w, up, tree, bdef, item?}` (la base por id y la instancia equipada) |
+| `GroundLoot` | `id`, `d` (`{it: <arma>}` o `{st: <token>, n}`), `x`, `y`, `own`? (dueño; sin `own` = compartido) |
+| Perfil (`p`) | perfil v3 (loot.md § 15): `items` (`{u, b, r?, il?, a?, p?, pl?, f?, s?, q?, n?}`), `eq` (`uid`), `mats`, `grid`, `lf`, `seq`, `pv` |
 | `MissionResult` | `id`, `m`, `name`, `ok`, `rank`, `time`, `xp`, `cr`, `bonus`, `bonusPct`, `kos`, `elites`, `eliteDrops`, `drops`, `left` |
 
 Los enums viajan por su nombre Dart (`lobby`, `burn`, `s`...).
@@ -183,7 +185,8 @@ sistema), `chat`, `joined`, `left`, `missionStart`, `obj`, `gate`,
 `chest`, `battleStart`, `battleStep` (con los `BattleEvent` para animar:
 `turn`, `dmg`, `act`, `heal`, `status`, `skip`, `delay`, `ko`, `revive`,
 `ult`, `end`), `lvl`, `battleEnd`, `drop`, `missionEnd` (con el
-resultado) y `lobby`. Todos los eventos van a todos los clientes (el
+resultado), `lobby` y, de loot v2, `loot` (`{id, d, src, g?, u?}`),
+`picked`, `given` y `crafted`. Todos los eventos van a todos los clientes (el
 prototipo también hace `broadcast` de todo el chat de sistema).
 
 **Desvío respecto del prototipo:** allá los efectos de batalla vivían
@@ -198,6 +201,25 @@ después.
 (≈ 150-450 KB/s por cliente a 15 Hz), igual que el prototipo, que
 también mandaba `S` entero. Si hiciera falta, la optimización natural es
 mandar deltas; no está hecha.
+
+### Loot instanciado (loot v2)
+
+Decisión: **un solo snapshot para todos**, como hasta ahora (sin tocar
+`NetSession` ni hacer proyecciones por cliente). El loot del piso viaja
+completo en `GameSession.ground`, cada objeto con su dueño (`own`); el
+cliente dibuja solo el suyo y el compartido (`GameSession.groundFor`).
+No es un secreto (co-op entre amigos): es una regla de presentación, y
+el host igual valida que solo el dueño lo levante. Los inventarios viajan
+dentro de los perfiles (los de los compañeros se ven en solo lectura).
+
+Costo: un arma pesa ~60–200 bytes en JSON compacto; 4 jugadores con el
+inventario lleno suman ~20–30 KB más por snapshot, y el piso tiene tope
+de 80 objetos. Si pesa, la optimización natural (no hecha) es mandar el
+perfil solo cuando cambia (hash por jugador) y deltas del piso.
+
+Acciones nuevas (cliente → host): `craft` (`{op, w, src?, i?, sk?}`),
+`give` (`{to, tok, n?}`), `drop` (`{tok, n?}`), `pick` (`{id}`),
+`invMove` (`{a, b}`), `filter` (`{txt}`). Todas las valida el host.
 
 ### Desconexiones
 

@@ -78,6 +78,61 @@ const _dust = ElementFx([
   Color(0xFF8D8270),
   Color(0xFFDFE6E9),
 ], 16, 90, -10, 0.7, ParticleShape.square);
+// ULT enemigas.
+const _acid = ElementFx([
+  Color(0xFF7BED9F),
+  Color(0xFF20BF6B),
+  Color(0xFFBADC58),
+], 14, 70, 220, 0.6, ParticleShape.square);
+const _voidFx = ElementFx([
+  Color(0xFF6C5CE7),
+  Color(0xFFD63031),
+  Color(0xFF2D1B4E),
+  Color(0xFFFF7B29),
+], 14, 60, 0, 0.6, ParticleShape.square);
+
+/// Diluvio Ácido: la nube revienta sobre el grupo.
+const _acidCloudAt = 1150;
+Offset _acidCloud(UltStage st) =>
+    Offset(st.centroid.dx, _topOf(st.targets, st.centroid.dy) - 42);
+
+/// El `y` más alto (menor) de [l].
+double _topOf(List<Offset> l, double fallback) =>
+    l.isEmpty ? fallback : l.map((p) => p.dy).reduce(math.min);
+
+/// Fin de las Eras: el vórtice arriba del lanzador, que en la descarga
+/// viaja sobre el grupo.
+Offset _vortexAt(UltCinematic u, double a, UltStage st) {
+  final s = u.script;
+  // Se forma delante del lanzador y viaja sobre el grupo.
+  final home = st.caster.translate(st.dir * 30, -24);
+  final over = Offset(st.centroid.dx, _topOf(st.targets, st.centroid.dy) - 30);
+  final q = ((a - s.buildMs) / 300).clamp(0.0, 1.0);
+  return Offset.lerp(home, over, q * q * (3 - 2 * q))!;
+}
+
+/// Lluvia de Lanzas: cuándo salen las lanzas al cielo.
+const _spearHurlAt = 520;
+
+/// Dónde se clava la lanza decorativa [slot] (alrededor de los objetivos).
+Offset _spearLand(UltStage st, int slot) {
+  final g = st.targets[slot % st.targets.length];
+  final dx = ((slot * 37) % 41) - 20.0;
+  final dy = ((slot * 23) % 17) - 8.0;
+  return g.translate(dx, dy);
+}
+
+/// Tormenta Arcana: dónde cae el rayo [slot].
+Offset _stormStrike(UltStage st, int slot) {
+  final g = st.targets[slot % st.targets.length];
+  final dx = ((slot * 29) % 33) - 16.0;
+  final dy = ((slot * 13) % 11) - 5.0;
+  return g.translate(dx, dy);
+}
+
+/// Andanada: virotes chicos antes del grande y cuándo pega el [k].
+const _volleySmall = 4;
+int _volleyHit(UltScript s, int k) => s.buildMs + 230 + k * 60;
 
 /// Disparos (partículas, sacudidas, hit-stop) y dibujo en el mundo de
 /// cada ULT. Diseño en docs/specs/battle_presentation.md § "Ultimates".
@@ -93,6 +148,14 @@ abstract final class UltDirector {
         UltStyle.bulwark => FxElement.holy,
         UltStyle.judgment => FxElement.holy,
         UltStyle.skyHammer => FxElement.holy,
+        UltStyle.acidFlood => FxElement.poison,
+        UltStyle.endGear => FxElement.freeze,
+        UltStyle.endOfEras => FxElement.burn,
+        UltStyle.eliteFury => FxElement.burn,
+        UltStyle.spearRain => FxElement.phys,
+        UltStyle.arcaneStorm => FxElement.arcane,
+        UltStyle.volley => FxElement.phys,
+        UltStyle.thousandCuts => FxElement.phys,
       };
 
   /// Oscurecido del fondo del mundo (0.85 en la preparación, 0.62 en la
@@ -140,8 +203,10 @@ abstract final class UltDirector {
     for (var k = 0; k < s.preHitsMs.length; k++) {
       if (a >= s.preHitsMs[k] && n > 0 && once('pre$k')) {
         final g = st.targets.first;
-        p.burst(g.dx, g.dy - 10, FxElement.phys, 2);
-        if (!u.skipped) p.addShake(5);
+        final cuts = s.style == UltStyle.thousandCuts;
+        p.burst(g.dx, g.dy - 10, FxElement.phys, cuts ? 1 : 2);
+        if (cuts) p.burstWith(_sparks, g.dx, g.dy - 10, 0.8);
+        if (!u.skipped) p.addShake(cuts ? 3 : 5);
       }
     }
     // Momentos propios de cada estilo.
@@ -172,6 +237,85 @@ abstract final class UltDirector {
             p.burst(q.dx, q.dy - 10, FxElement.holy, 1.2);
           }
           if (!u.skipped) p.addShake(3);
+        }
+      case UltStyle.acidFlood:
+        // El limo se hincha y escupe la bola de ácido al cielo.
+        if (a >= s.buildMs + 40 && once('spit')) {
+          p.burst(c.dx, c.dy - 20, FxElement.poison, 2.5);
+          if (!u.skipped) p.addShake(4);
+        }
+        // La nube revienta sobre el grupo.
+        if (a >= _acidCloudAt && once('cloud') && n > 0) {
+          final cl = _acidCloud(st);
+          p.burst(cl.dx, cl.dy, FxElement.poison, 3);
+        }
+      case UltStyle.endGear:
+        if (a < s.buildMs) {
+          final slot = (a / 100).floor();
+          if (once('tick$slot') && !u.skipped) p.addShake(0.8);
+        }
+        // Onda de tiempo que retrasa a todo el grupo.
+        if (a >= s.impactMs + 160 && once('ripple')) {
+          for (final q in st.party) {
+            p.burst(q.dx, q.dy - 10, FxElement.freeze, 0.9);
+          }
+        }
+      case UltStyle.endOfEras:
+        if (a < s.buildMs) {
+          final slot = (a / 140).floor();
+          if (once('suck$slot')) {
+            final v = _vortexAt(u, a, st);
+            p.burstWith(_voidFx, v.dx, v.dy, 0.5);
+            if (!u.skipped) p.addShake(1 + a / s.buildMs * 1.5);
+          }
+        }
+      case UltStyle.eliteFury:
+        if (a >= s.buildMs && once('dash')) {
+          p.burst(c.dx, c.dy - 8, FxElement.burn, 1.5);
+          if (!u.skipped) p.addShake(3);
+        }
+      case UltStyle.spearRain:
+        // Lanza las lanzas al cielo y empiezan a clavarse alrededor.
+        if (a >= _spearHurlAt && once('hurl')) {
+          p.burstWith(_sparks, c.dx, c.dy - 20, 1.2);
+          if (!u.skipped) p.addShake(3);
+        }
+        if (a >= s.buildMs + 150 && a < s.returnAt - 150 && n > 0) {
+          final slot = (a / 90).floor();
+          if (once('stake$slot')) {
+            final g = _spearLand(st, slot);
+            p.burstWith(_dust, g.dx, g.dy, 0.35);
+            if (!u.skipped) p.addShake(1.5);
+          }
+        }
+      case UltStyle.arcaneStorm:
+        // Rayos arcanos que caen sin parar alrededor de los objetivos.
+        if (a >= s.buildMs + 120 && a < s.returnAt - 120 && n > 0) {
+          final slot = (a / 90).floor();
+          if (once('zap$slot')) {
+            final g = _stormStrike(st, slot);
+            p.burst(g.dx, g.dy - 4, FxElement.arcane, 0.5);
+            if (!u.skipped) p.addShake(1.5);
+          }
+        }
+      case UltStyle.volley:
+        if (a >= s.buildMs + 50 && once('fire')) {
+          p.burst(c.dx + st.dir * 12, c.dy - 9, FxElement.phys, 2);
+          p.burstWith(_sparks, c.dx + st.dir * 12, c.dy - 9, 1.5);
+          if (!u.skipped) p.addShake(6);
+        }
+        // Virotes de la andanada que llegan antes del grande.
+        for (var k = 0; k < _volleySmall; k++) {
+          if (n > 0 && a >= _volleyHit(s, k) && once('bolt$k')) {
+            final g = st.targets.first;
+            p.burstWith(_sparks, g.dx, g.dy - 10, 1);
+            if (!u.skipped) p.addShake(3);
+          }
+        }
+      case UltStyle.thousandCuts:
+        if (a >= s.buildMs && once('dash')) {
+          p.burstWith(_sparks, c.dx, c.dy - 8, 1.2);
+          if (!u.skipped) p.addShake(2);
         }
       default:
         break;
@@ -211,6 +355,38 @@ abstract final class UltDirector {
           p.burst(g.dx, g.dy - 6, FxElement.phys, 5);
           p.burstWith(_dust, g.dx, g.dy, 2);
           p.burst(g.dx, g.dy - 10, FxElement.holy, 2);
+        case UltStyle.acidFlood:
+          p.burst(g.dx, g.dy - 6, FxElement.poison, 3.5);
+          p.burstWith(_acid, g.dx, g.dy - 2, 1.4);
+        case UltStyle.endGear:
+          p.burst(g.dx, g.dy - 10, FxElement.freeze, 4);
+          p.burstWith(_debris, g.dx, g.dy - 4, 0.8);
+          p.burstWith(_sparks, g.dx, g.dy - 10, 1.5);
+        case UltStyle.endOfEras:
+          p.burst(g.dx, g.dy - 8, FxElement.burn, 4);
+          p.burstWith(_voidFx, g.dx, g.dy - 14, 1.2);
+          p.burst(g.dx, g.dy - 10, FxElement.arcane, 1.5);
+        case UltStyle.eliteFury:
+          p.burst(g.dx, g.dy - 10, FxElement.phys, 4);
+          p.burst(g.dx, g.dy - 10, FxElement.burn, 2);
+          p.burstWith(_sparks, g.dx, g.dy - 10, 1.5);
+        case UltStyle.spearRain:
+          p.burst(g.dx, g.dy - 8, FxElement.phys, 3);
+          p.burstWith(_debris, g.dx, g.dy - 2, 0.8);
+          p.burstWith(_dust, g.dx, g.dy, 0.8);
+        case UltStyle.arcaneStorm:
+          p.burst(g.dx, g.dy - 10, FxElement.arcane, 4);
+          p.burstWith(_sparks, g.dx, g.dy - 10, 1.5);
+          p.burst(g.dx, g.dy - 10, FxElement.level, 0.5);
+        case UltStyle.volley:
+          p.burst(g.dx, g.dy - 10, FxElement.phys, 4);
+          p.burst(g.dx, g.dy - 8, FxElement.burn, 2);
+          p.burstWith(_debris, g.dx, g.dy - 4, 1);
+          p.burstWith(_sparks, g.dx, g.dy - 10, 2);
+        case UltStyle.thousandCuts:
+          p.burst(g.dx, g.dy - 10, FxElement.phys, 4);
+          p.burstWith(_sparks, g.dx, g.dy - 10, 2.5);
+          p.burst(g.dx, g.dy - 10, FxElement.level, 0.8);
       }
       if (!u.skipped) {
         p.addShake(i == n - 1 ? s.shake : s.shake * 0.6);
@@ -329,6 +505,22 @@ abstract final class UltDirector {
         _judgment(c, u, a, st, visible, out);
       case UltStyle.skyHammer:
         _hammer(c, u, a, st, visible, out);
+      case UltStyle.acidFlood:
+        _acidFlood(c, u, a, st, visible, out);
+      case UltStyle.endGear:
+        _endGear(c, u, a, st, out);
+      case UltStyle.endOfEras:
+        _endOfEras(c, u, a, st, visible, out);
+      case UltStyle.eliteFury:
+        _eliteFury(c, u, a, st, visible);
+      case UltStyle.spearRain:
+        _spearRain(c, u, a, st, visible, out);
+      case UltStyle.arcaneStorm:
+        _arcaneStorm(c, u, a, st, visible, out);
+      case UltStyle.volley:
+        _volley(c, u, a, st, out);
+      case UltStyle.thousandCuts:
+        _thousandCuts(c, u, a, st, visible);
     }
   }
 
@@ -870,6 +1062,668 @@ abstract final class UltDirector {
         final rx = 20 + 80 * _ease(e);
         _ring(c, g.translate(0, 1), rx, rx * 0.3,
             _a(k == 0 ? const Color(0xFFFFFFFF) : const Color(0xFFFFD166), 1 - e), 3 * (1 - e) + 1);
+      }
+    }
+  }
+
+  // ---------------- ULT enemigas ----------------
+
+  /// Diluvio Ácido (Rey Limo): se hincha, escupe una bola de ácido que
+  /// revienta en una nube sobre el grupo y llueve ácido; charcos.
+  static void _acidFlood(Canvas c, UltCinematic u, double a, UltStage st,
+      Rect vis, double out) {
+    final s = u.script;
+    final o = st.caster;
+    const green = Color(0xFF7BED9F);
+    const dark = Color(0xFF20BF6B);
+    const sick = Color(0xFFBADC58);
+    _gather(c, o, a, s.buildMs, green);
+    // Cielo verdoso.
+    final tint = s.darkness(a) * 0.12 * (a < s.buildMs ? _q(a, 150, 500) : 1);
+    if (tint > 0) {
+      _fill.color = Color.fromRGBO(60, 220, 120, tint);
+      c.drawRect(vis, _fill);
+    }
+    // El limo se hincha (membrana que tiembla) y burbujas que suben.
+    if (a < s.buildMs + 80) {
+      final g = _ease(_q(a, 0, s.buildMs));
+      final wob = math.sin(a / 45) * 2;
+      _oval(c, o.translate(0, -16), 18 + 12 * g + wob, 14 + 9 * g - wob,
+          _a(green, 0.18 + 0.12 * g));
+      _ring(c, o.translate(0, -16), 18 + 12 * g + wob, 14 + 9 * g - wob,
+          _a(dark, 0.8), 1);
+      for (var k = 0; k < 9; k++) {
+        final e = ((a / 600) + _h(k, 4)) % 1.0;
+        final x = o.dx + (_h(k, 8) - 0.5) * 40;
+        final y = o.dy - 4 - e * 50;
+        _ring(c, Offset(x, y), 1.5 + 2 * _h(k, 1), 1.5 + 2 * _h(k, 1),
+            _a(sick, 1 - e), 1);
+      }
+    }
+    if (st.targets.isEmpty) return;
+    final cloud = _acidCloud(st);
+    // Bola de ácido al cielo (de la boca del limo a la nube).
+    if (a >= s.buildMs && a < _acidCloudAt) {
+      final q = _q(a, s.buildMs, _acidCloudAt - s.buildMs);
+      final from = o.translate(0, -24);
+      final p = Offset.lerp(from, cloud, q)!.translate(0, -math.sin(q * math.pi) * 40);
+      for (var k = 4; k >= 0; k--) {
+        _disc(c, p.translate(0, k * 4.0), 7 - k * 1.1, _a(k == 0 ? sick : dark, 1 - k / 5));
+      }
+      _disc(c, p.translate(-2, -2), 2, _a(const Color(0xFFFFFFFF), 0.8));
+    }
+    if (a < _acidCloudAt) return;
+    // Nube que cubre al grupo.
+    final spread = math.max(60.0, st.targets.fold<double>(0, (m, t) => math.max(m, (t.dx - cloud.dx).abs())) * 2 + 40);
+    final grow = _ease(_q(a, _acidCloudAt, 200));
+    for (var k = 0; k < 7; k++) {
+      final x = cloud.dx + (k - 3) / 3 * spread / 2;
+      final y = cloud.dy + math.sin(k * 1.7 + a / 300) * 3;
+      _oval(c, Offset(x, y), (14 + 6 * _h(k, 2)) * grow, (7 + 3 * _h(k, 5)) * grow,
+          _a(k.isEven ? const Color(0xFF145A32) : dark, 0.85 * out));
+    }
+    // Lluvia de ácido.
+    for (var k = 0; k < 36; k++) {
+      final t0 = _acidCloudAt + 40 + (k * 29) % 520;
+      final q = (a - t0) / 260;
+      if (q < 0 || q > 1) continue;
+      final x = cloud.dx + (_h(k, 7) - 0.5) * spread;
+      final gy = st.centroid.dy + (_h(k, 3) - 0.5) * 30;
+      final y = cloud.dy + 6 + (gy - cloud.dy - 6) * q;
+      _line(c, Offset(x, y - 6), Offset(x, y), _a(sick, 0.9), 1.5);
+      _fill.color = _a(green, 1);
+      c.drawRect(Rect.fromCenter(center: Offset(x, y), width: 2, height: 2), _fill);
+    }
+    // Charcos y salpicaduras en cada objetivo.
+    for (var i = 0; i < st.targets.length; i++) {
+      final g = st.targets[i];
+      final imp = s.impactFor(i);
+      if (a < imp) continue;
+      final e = _q(a, imp, 400);
+      _oval(c, g.translate(0, 1), 10 + 6 * _ease(e), 3 + 2 * _ease(e), _a(dark, 0.7 * out));
+      _ring(c, g.translate(0, 1), 10 + 6 * _ease(e), 3 + 2 * _ease(e), _a(sick, 0.9 * out), 1);
+      if (e < 1) {
+        _ring(c, g.translate(0, -6), 26 * e, 12 * e, _a(green, 1 - e), 2);
+      }
+    }
+  }
+
+  /// Engranaje dentado de radio [r] girado [ang].
+  static void _gear(Canvas c, Offset o, double r, double ang, double alpha) {
+    const bronze = Color(0xFFE1B12C);
+    const dark = Color(0xFF6D4C1F);
+    const teeth = 12;
+    final path = Path();
+    for (var k = 0; k < teeth * 2; k++) {
+      final a0 = ang + k * math.pi / teeth;
+      final rr = k.isEven ? r : r * 0.8;
+      final a1 = a0 + math.pi / teeth;
+      final p0 = o + Offset(math.cos(a0), math.sin(a0)) * rr;
+      final p1 = o + Offset(math.cos(a1), math.sin(a1)) * rr;
+      if (k == 0) {
+        path.moveTo(p0.dx, p0.dy);
+      } else {
+        path.lineTo(p0.dx, p0.dy);
+      }
+      path.lineTo(p1.dx, p1.dy);
+    }
+    path.close();
+    _fill.color = _a(dark, alpha);
+    c.drawPath(path.shift(const Offset(1, 1)), _fill);
+    _fill.color = _a(bronze, alpha);
+    c.drawPath(path, _fill);
+    _disc(c, o, r * 0.55, _a(const Color(0xFF8A6D1F), alpha));
+    _ring(c, o, r * 0.55, r * 0.55, _a(const Color(0xFFFFF3B0), alpha * 0.7), 1);
+    for (var k = 0; k < 4; k++) {
+      final aa = ang * 1.5 + k * math.pi / 2;
+      _line(c, o, o + Offset(math.cos(aa), math.sin(aa)) * r * 0.5,
+          _a(dark, alpha), 2);
+    }
+    _disc(c, o, 2.5, _a(const Color(0xFFFFF3B0), alpha));
+  }
+
+  /// Engranaje del Fin (Gólem Reloj): un engranaje gigante gira detrás
+  /// del gólem, sale rodando y aplasta al objetivo con hielo; una onda de
+  /// tiempo retrasa a todo el grupo.
+  static void _endGear(
+      Canvas c, UltCinematic u, double a, UltStage st, double out) {
+    final s = u.script;
+    final o = st.caster;
+    const ice = Color(0xFF74B9FF);
+    const pale = Color(0xFFDFF9FB);
+    _gather(c, o, a, s.buildMs, const Color(0xFFE1B12C));
+    final home = o.translate(-st.dir * 4, -24);
+    if (a < s.buildMs) {
+      final g = _ease(_q(a, 0, 300));
+      // Gira a los saltos, como un reloj.
+      final tick = (a / 100).floor() * math.pi / 24;
+      _gear(c, home, 26 * g, tick, 0.95 * g);
+      _ring(c, home, 32 * g, 32 * g, _a(pale, 0.35 * g), 1);
+      return;
+    }
+    if (st.targets.isEmpty) return;
+    final g = st.targets.first.translate(0, -14);
+    final imp = s.impactMs;
+    if (a < imp) {
+      final q = _q(a, s.buildMs, imp - s.buildMs);
+      final p = Offset.lerp(home, g, q * q)!.translate(0, -math.sin(q * math.pi) * 30);
+      // Estela de hielo.
+      for (var k = 1; k <= 4; k++) {
+        final pq = Offset.lerp(home, g, math.max(0, q - k * 0.06) * math.max(0, q - k * 0.06))!
+            .translate(0, -math.sin(math.max(0, q - k * 0.06) * math.pi) * 30);
+        _disc(c, pq, 18 - k * 3.0, _a(ice, 0.25 / k));
+      }
+      _gear(c, p, 22, a / 40, 1);
+    } else if (a < imp + 300) {
+      final e = _q(a, imp, 300);
+      _gear(c, g.translate(0, 4 * e), 22 * (1 - e * 0.3), imp / 40, 1 - e);
+    }
+    if (a >= imp) {
+      final e = _q(a, imp, 520);
+      // Cristales de hielo que encierran al objetivo.
+      for (var k = -3; k <= 3; k++) {
+        final h = (26 - k.abs() * 4) * _ease(_q(a, imp, 120)) * out;
+        final x = g.dx + k * 5;
+        final base = g.dy + 15;
+        final path = Path()
+          ..moveTo(x - 3, base)
+          ..lineTo(x + k * 0.6, base - h)
+          ..lineTo(x + 3, base)
+          ..close();
+        _fill.color = _a(k.isEven ? pale : ice, 0.85 * out);
+        c.drawPath(path, _fill);
+      }
+      if (e < 1) {
+        _ring(c, g, 46 * _ease(e), 24 * _ease(e), _a(pale, 1 - e), 2);
+      }
+      // Onda de tiempo sobre todo el grupo.
+      final r = _q(a, imp + 120, 600);
+      if (r > 0 && r < 1) {
+        for (final q in st.party) {
+          for (var k = 0; k < 2; k++) {
+            final rr = (r + k * 0.3).clamp(0.0, 1.0);
+            _ring(c, q.translate(0, -8), 6 + 18 * rr, 3 + 9 * rr, _a(ice, 0.8 * (1 - rr)), 1);
+          }
+        }
+      }
+    }
+  }
+
+  /// Fin de las Eras (Devorador): un vórtice traga la luz sobre el
+  /// lanzador, viaja sobre el grupo, colapsa y estallan columnas de fuego;
+  /// los buffs del grupo se rompen como cristal.
+  static void _endOfEras(Canvas c, UltCinematic u, double a, UltStage st,
+      Rect vis, double out) {
+    final s = u.script;
+    const crimson = Color(0xFFD63031);
+    const violet = Color(0xFF6C5CE7);
+    const ember = Color(0xFFFF7B29);
+    // Cielo rojo que se oscurece.
+    final tint = s.darkness(a) * (a < s.buildMs ? 0.2 * _q(a, 100, 700) : 0.2);
+    if (tint > 0) {
+      _fill.color = Color.fromRGBO(120, 0, 20, tint);
+      c.drawRect(vis, _fill);
+    }
+    final imp = s.impactMs;
+    final v = _vortexAt(u, a, st);
+    if (a < imp) {
+      final grow = _ease(_q(a, 0, s.buildMs));
+      final swell = a < s.buildMs ? 1.0 : 1 + 0.9 * _ease(_q(a, s.buildMs, 300));
+      final collapse = 1 - _ease(_q(a, imp - 120, 120));
+      final r = (10 + 16 * grow) * swell * collapse;
+      // Polvo y luz que caen en espiral hacia el vórtice.
+      for (var k = 0; k < 16; k++) {
+        final f = ((a / 500) + _h(k, 6)) % 1.0;
+        final ang = k * 0.9 + a / 220;
+        final rr = r + 50 * (1 - f);
+        final p = v + Offset(math.cos(ang), math.sin(ang) * 0.5) * rr;
+        _fill.color = _a(k.isEven ? ember : violet, f);
+        c.drawRect(Rect.fromCenter(center: p, width: 2, height: 2), _fill);
+      }
+      _disc(c, v, r * 1.25, _a(violet, 0.3));
+      for (var k = 0; k < 3; k++) {
+        final aa = a / (90 + k * 40) + k;
+        _stroke
+          ..color = _a(k == 1 ? violet : crimson, 0.9)
+          ..strokeWidth = 2;
+        c.drawArc(Rect.fromCenter(center: v, width: r * 2.2 + k * 6, height: (r * 2.2 + k * 6) * 0.6),
+            aa, 2.2, false, _stroke);
+      }
+      _disc(c, v, r, const Color(0xFF0B0010));
+      _ring(c, v, r, r, _a(crimson, 0.9), 1);
+    }
+    if (a >= imp - 120 && a < imp + 120) {
+      // Destello del colapso.
+      final e = _q(a, imp - 120, 240);
+      _disc(c, v, 30 * math.sin(e * math.pi), _a(const Color(0xFFFFFFFF), 0.8 * (1 - e)));
+    }
+    for (var i = 0; i < st.targets.length; i++) {
+      final g = st.targets[i];
+      final ti = s.impactFor(i);
+      if (a < ti) {
+        if (a > s.buildMs + 200) {
+          // Grieta incandescente bajo cada objetivo.
+          final q = _q(a, s.buildMs + 200, ti - s.buildMs - 200);
+          _oval(c, g.translate(0, 1), 4 + 8 * q, 1.5 + 2 * q, _a(ember, 0.5 + 0.4 * math.sin(a / 40).abs()));
+        }
+        continue;
+      }
+      final e = _q(a, ti, 700);
+      final h = 100 * _ease(_q(a, ti, 120)) * (1 - e * 0.4);
+      final w = 16 * (1 - e * 0.5);
+      final al = (1 - e) * out;
+      final rect = Rect.fromLTRB(g.dx - w / 2, g.dy - h, g.dx + w / 2, g.dy + 2);
+      final paint = Paint()
+        ..isAntiAlias = false
+        ..shader = ui.Gradient.linear(rect.topCenter, rect.bottomCenter, [
+          Color.fromRGBO(214, 48, 49, 0.1 * al),
+          Color.fromRGBO(255, 123, 41, 0.95 * al),
+        ]);
+      c.drawRect(rect, paint);
+      _fill.color = _a(const Color(0xFFFFF3B0), al);
+      c.drawRect(Rect.fromLTRB(g.dx - w / 6, g.dy - h * 0.7, g.dx + w / 6, g.dy + 2), _fill);
+      _ring(c, g.translate(0, 1), w + 26 * e, 4 + 6 * e, _a(crimson, al), 2);
+      // Buffs que se rompen: astillas violetas que salen volando.
+      for (var k = 0; k < 6; k++) {
+        final t = e * 0.9;
+        final ang = k * math.pi / 3 + 0.4;
+        final p = g.translate(0, -18) + Offset(math.cos(ang), math.sin(ang)) * (6 + 40 * t) + Offset(0, 60 * t * t);
+        _fill.color = _a(violet, 1 - e);
+        c.drawRect(Rect.fromCenter(center: p, width: 3, height: 2), _fill);
+      }
+    }
+  }
+
+  /// Furia Élite: el élite arde en rojo, se lanza dejando imágenes y
+  /// desgarra al objetivo con tres zarpazos (el último, crítico).
+  static void _eliteFury(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis) {
+    final s = u.script;
+    final o = st.caster;
+    const red = Color(0xFFFF4757);
+    const ember = Color(0xFFFF9F43);
+    _gather(c, o, a, s.buildMs, red);
+    if (a < s.buildMs + 100) {
+      // Llamas rojas alrededor del cuerpo.
+      for (var k = 0; k < 10; k++) {
+        final ph = (a / 160 + _h(k, 2)) % 1.0;
+        final x = o.dx + (k - 4.5) * 4.5;
+        final hgt = 8 + 14 * math.sin(ph * math.pi) * _q(a, 0, 300);
+        final path = Path()
+          ..moveTo(x - 3, o.dy)
+          ..lineTo(x, o.dy - hgt - 10)
+          ..lineTo(x + 3, o.dy)
+          ..close();
+        _fill.color = _a(k.isEven ? red : ember, 0.55);
+        c.drawPath(path, _fill);
+      }
+      // Brillo en los ojos.
+      if (a > 480) {
+        final q = _q(a, 480, 220);
+        _star(c, o.translate(st.dir * 4, -18), 2 + 8 * math.sin(q * math.pi), _a(const Color(0xFFFFFFFF), 1));
+        _star(c, o.translate(st.dir * 4, -18), 1 + 4 * math.sin(q * math.pi), red);
+      }
+    }
+    if (st.targets.isEmpty) return;
+    final g = st.targets.first.translate(0, -10);
+    // Embestida con imágenes.
+    if (a >= s.buildMs && a < s.buildMs + 300) {
+      final q = _q(a, s.buildMs, 220);
+      for (var k = 0; k < 5; k++) {
+        final p = Offset.lerp(o.translate(0, -10), g, (q - k * 0.12).clamp(0.0, 1.0))!;
+        _oval(c, p, 9, 11, _a(red, 0.45 * (1 - k / 5) * (1 - _q(a, s.buildMs + 200, 100))));
+      }
+    }
+    // Zarpazos: dos previos y el final, enorme.
+    final hits = [...s.preHitsMs, s.impactMs];
+    for (var k = 0; k < hits.length; k++) {
+      final h = hits[k];
+      final last = k == hits.length - 1;
+      final dur = last ? 360.0 : 200.0;
+      if (a < h || a > h + dur) continue;
+      final q = _q(a, h, dur);
+      final len = (last ? 70.0 : 40.0) * math.min(1.0, q * 5);
+      final ang = last ? -0.9 : (k.isEven ? -0.7 : -1.2);
+      final d = Offset(math.cos(ang), math.sin(ang));
+      final n = Offset(-d.dy, d.dx);
+      for (var j = -1; j <= 1; j++) {
+        final off = n * (j * (last ? 9.0 : 6.0));
+        final w = (last ? 6.0 : 3.0) * (1 - q) + 1;
+        _line(c, g + off - d * len / 2, g + off + d * len / 2, _a(red, 0.9 * (1 - q)), w + 2);
+        _line(c, g + off - d * len / 2, g + off + d * len / 2, _a(const Color(0xFFFFFFFF), 1 - q * 0.8), w * 0.5);
+      }
+      if (last) {
+        _ring(c, g, 60 * q, 30 * q, _a(red, 1 - q), 3);
+      }
+    }
+  }
+
+  // ---------------- Lluvia de Lanzas ----------------
+
+  /// Una lanza con la punta en [tip] apuntando en [dirv].
+  static void _spear(Canvas c, Offset tip, Offset dirv, double len, double alpha) {
+    final n = Offset(-dirv.dy, dirv.dx);
+    _line(c, tip - dirv * len, tip - dirv * 4, _a(const Color(0xFF8A5A2B), alpha), 2);
+    _fill.color = _a(const Color(0xFFDFE6E9), alpha);
+    c.drawPath(
+        Path()
+          ..moveTo(tip.dx, tip.dy)
+          ..lineTo((tip - dirv * 5 + n * 2).dx, (tip - dirv * 5 + n * 2).dy)
+          ..lineTo((tip - dirv * 5 - n * 2).dx, (tip - dirv * 5 - n * 2).dy)
+          ..close(),
+        _fill);
+    _line(c, tip - dirv * 6 + n * 1.5, tip - dirv * 6 - n * 1.5,
+        _a(const Color(0xFFD63031), alpha), 1);
+  }
+
+  static void _spearRain(Canvas c, UltCinematic u, double a, UltStage st,
+      Rect vis, double out) {
+    final s = u.script;
+    final o = st.caster;
+    const rose = Color(0xFFFF6B81);
+    _gather(c, o, a, s.buildMs, rose);
+    // La lanza gira sobre la cabeza, cada vez más rápido.
+    if (a < _spearHurlAt) {
+      final ang = a * a / 40000 * math.pi * 2;
+      final d = Offset(math.cos(ang), math.sin(ang) * 0.45);
+      final ctr = o.translate(0, -26);
+      _spear(c, ctr + d * 11, d, 22, 1);
+      _ring(c, ctr, 13, 6, _a(rose, 0.4 * _q(a, 100, 300)), 1);
+    }
+    // Las lanzas suben al cielo (andanada en abanico).
+    if (a >= _spearHurlAt && a < s.buildMs + 200) {
+      for (var k = 0; k < 7; k++) {
+        final e = (a - _spearHurlAt - k * 30) / 1000;
+        if (e < 0) continue;
+        final dirv = Offset(st.dir * (k - 3) * 0.06, -1);
+        final p = o.translate(st.dir * (k - 3) * 2.0, -20) + dirv * (e * 560);
+        if (p.dy < vis.top - 30) continue;
+        _spear(c, p, dirv / dirv.distance, 18, 1);
+      }
+    }
+    if (a < s.buildMs || st.targets.isEmpty) return;
+    final dirv = Offset(st.dir * 0.22, 1) / Offset(st.dir * 0.22, 1).distance;
+    const fall = 200.0;
+    // Lanzas decorativas que se clavan alrededor (las del tick).
+    final first = ((s.buildMs + 150) / 90).ceil();
+    final last = ((s.returnAt - 150) / 90).floor();
+    for (var slot = first; slot <= last; slot++) {
+      final land = slot * 90.0;
+      final q = (a - (land - fall)) / fall;
+      if (q < 0) continue;
+      final g = _spearLand(st, slot);
+      if (q < 1) {
+        _spear(c, g - dirv * (1 - q) * 240, dirv, 20, 1);
+      } else {
+        _spear(c, g.translate(0, 3), dirv, 12, 0.9 * out);
+      }
+    }
+    // Tres lanzas grandes por objetivo que llegan en su impacto.
+    for (var i = 0; i < st.targets.length; i++) {
+      final g = st.targets[i];
+      final imp = s.impactFor(i);
+      for (var k = 0; k < 3; k++) {
+        final land = imp - (2 - k) * 40.0;
+        final q = (a - (land - 240)) / 240;
+        if (q < 0) continue;
+        final at = g.translate((k - 1) * 7.0, -2);
+        if (q < 1) {
+          final p = at - dirv * (1 - q) * 280;
+          _line(c, p - dirv * 40, p - dirv * 20, _a(rose, 0.5), 2);
+          _spear(c, p, dirv, 28, 1);
+        } else {
+          _spear(c, at, dirv, 18, out);
+        }
+      }
+      final e = _q(a, imp, 500);
+      if (a >= imp && e < 1) {
+        _ring(c, g.translate(0, 1), 30 * e + 6, 10 * e + 2, _a(rose, 1 - e), 2);
+        _disc(c, g.translate(0, -10), 14 * (1 - e), _a(const Color(0xFFFFFFFF), 0.8 * (1 - e)));
+      }
+    }
+  }
+
+  // ---------------- Tormenta Arcana ----------------
+
+  /// Rayo quebrado de [from] a [to].
+  static void _bolt(Canvas c, Offset from, Offset to, int seed, Color col,
+      double alpha, double w) {
+    var prev = from;
+    const k = 6;
+    for (var i = 1; i <= k; i++) {
+      final f = i / k;
+      final p = Offset.lerp(from, to, f)!
+          .translate(i == k ? 0 : (_h(seed, i) - 0.5) * 14, 0);
+      _line(c, prev, p, _a(col, alpha), w + 2);
+      _line(c, prev, p, _a(const Color(0xFFFFFFFF), alpha), w);
+      prev = p;
+    }
+  }
+
+  static void _arcaneStorm(Canvas c, UltCinematic u, double a, UltStage st,
+      Rect vis, double out) {
+    final s = u.script;
+    final o = st.caster;
+    const magenta = Color(0xFFE84393);
+    const violet = Color(0xFFA29BFE);
+    // Sello arcano que gira bajo el lanzador y runas que suben.
+    if (a < s.returnAt) {
+      final grow = _ease(_q(a, 0, 300));
+      final fade = 1 - _q(a, s.buildMs, 300);
+      final ctr = o.translate(0, 1);
+      _ring(c, ctr, 22 * grow, 7 * grow, _a(magenta, 0.9 * fade), 2);
+      _ring(c, ctr, 14 * grow, 4.5 * grow, _a(violet, 0.8 * fade), 1);
+      for (var k = 0; k < 6; k++) {
+        final ang = -a / 200 + k * math.pi / 3;
+        final p = ctr + Offset(math.cos(ang) * 18 * grow, math.sin(ang) * 6 * grow);
+        _fill.color = _a(k.isEven ? violet : magenta, fade);
+        c.drawRect(Rect.fromCenter(center: p, width: 3, height: 3), _fill);
+        final rise = ((a / 700 + k / 6) % 1.0);
+        final r = o.translate((k - 2.5) * 6, -4 - rise * 30);
+        _fill.color = _a(violet, (1 - rise) * 0.8 * fade);
+        c.drawRect(Rect.fromCenter(center: r, width: 2, height: 3), _fill);
+      }
+      // La punta de la varita junta energía.
+      if (a < s.buildMs + 60) {
+        final q = _q(a, 300, s.buildMs - 300);
+        final tip = o.translate(st.dir * 7, -15);
+        _star(c, tip, 2 + 7 * q, _a(const Color(0xFFFFFFFF), 0.9));
+        _star(c, tip, 1 + 4 * q, magenta);
+      }
+    }
+    if (st.targets.isEmpty) return;
+    final cen = st.centroid;
+    final top = _topOf(st.targets, cen.dy) - 46;
+    // Nube arcana que se forma sobre los objetivos al final de la carga.
+    final form = _ease(_q(a, s.buildMs - 250, 400));
+    if (form > 0) {
+      final cloud = Offset(cen.dx, top);
+      final spread = math.max(60.0, st.targets.fold<double>(0, (m, t) => math.max(m, (t.dx - cen.dx).abs())) + 40);
+      _oval(c, cloud, spread * form, 12 * form, _a(const Color(0xFF2D1B4E), 0.85 * out));
+      for (var k = 0; k < 3; k++) {
+        final r = (spread - k * 14) * form;
+        final rot = a / (300 + k * 120) * (k.isEven ? 1 : -1);
+        _stroke
+          ..color = _a(k == 1 ? magenta : violet, 0.7 * out)
+          ..strokeWidth = 1;
+        c.drawArc(Rect.fromCenter(center: cloud, width: r * 2, height: (10 - k * 2) * 2 * form),
+            rot, 2.2, false, _stroke);
+      }
+    }
+    if (a < s.buildMs) return;
+    // Rayos de fondo (los del tick) y los de cada impacto.
+    final slot = (a / 90).floor();
+    for (var k = slot - 1; k <= slot; k++) {
+      if (k * 90 < s.buildMs + 120 || k * 90 >= s.returnAt - 120) continue;
+      final age = a - k * 90;
+      if (age < 0 || age > 120) continue;
+      final g = _stormStrike(st, k);
+      _bolt(c, Offset(g.dx + (_h(k, 4) - 0.5) * 20, top + 6), g, k,
+          violet, 1 - age / 120, 1);
+    }
+    for (var i = 0; i < st.targets.length; i++) {
+      final g = st.targets[i];
+      final imp = s.impactFor(i);
+      final e = _q(a, imp, 260);
+      if (a >= imp - 40 && e < 1) {
+        _bolt(c, Offset(g.dx, top + 6), g.translate(0, -4), i + 77, magenta,
+            1 - e, 2);
+        _ring(c, g.translate(0, -6), 26 * e + 4, 12 * e + 2, _a(magenta, 1 - e), 2);
+      }
+    }
+  }
+
+  // ---------------- Andanada ----------------
+
+  /// Un virote de [tip] en dirección [dirv].
+  static void _crossbowBolt(Canvas c, Offset tip, Offset dirv, double len,
+      double alpha, {double w = 2}) {
+    final n = Offset(-dirv.dy, dirv.dx);
+    _line(c, tip - dirv * len, tip, _a(const Color(0xFFDFE6E9), alpha), w);
+    _disc(c, tip, w * 0.9, _a(const Color(0xFFFF9F43), alpha));
+    _line(c, tip - dirv * len, tip - dirv * (len + 3) + n * 3,
+        _a(const Color(0xFFD63031), alpha), 1);
+    _line(c, tip - dirv * len, tip - dirv * (len + 3) - n * 3,
+        _a(const Color(0xFFD63031), alpha), 1);
+  }
+
+  static void _volley(Canvas c, UltCinematic u, double a, UltStage st,
+      double out) {
+    final s = u.script;
+    final o = st.caster;
+    const orange = Color(0xFFFF9F43);
+    _gather(c, o, a, s.buildMs, orange);
+    final muzzle = o.translate(st.dir * 12, -9);
+    if (st.targets.isEmpty) return;
+    final g = st.targets.first.translate(0, -10);
+    // Mira: cuatro esquinas que se cierran sobre el objetivo.
+    if (a > 250 && a < s.buildMs + 80) {
+      final q = _ease(_q(a, 250, s.buildMs - 300));
+      final r = 26 - 14 * q;
+      final col = _a(orange, 0.5 + 0.5 * q);
+      for (final (sx, sy) in const [(-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)]) {
+        final corner = g + Offset(sx * r, sy * r);
+        _line(c, corner, corner - Offset(sx * 6, 0), col, 2);
+        _line(c, corner, corner - Offset(0, sy * 6), col, 2);
+      }
+      _disc(c, g, 1.5 + q, _a(orange, 0.9));
+      // Brillo en la punta del virote que se tensa.
+      _disc(c, muzzle, 1 + 3 * q + math.sin(a / 35), _a(const Color(0xFFFFE066), 0.9));
+    }
+    final dirv = (g - muzzle) / math.max(1, (g - muzzle).distance);
+    final n = Offset(-dirv.dy, dirv.dx);
+    // Andanada: virotes chicos que salen en abanico y convergen.
+    for (var k = 0; k < _volleySmall; k++) {
+      final hit = _volleyHit(s, k);
+      final launch = s.buildMs + 50 + k * 45;
+      final q = _q(a, launch, hit - launch);
+      if (a < launch || a > hit + 40) continue;
+      final arc = math.sin(q * math.pi) * (k.isEven ? 1 : -1) * (10 + k * 3);
+      final p = Offset.lerp(muzzle, g, q)! + n * arc;
+      _crossbowBolt(c, p, dirv, 10, 1, w: 1.5);
+    }
+    // El virote grande, del fogonazo al impacto, con estela y ondas.
+    final launch = s.buildMs + 50;
+    if (a >= launch && a < s.impactMs) {
+      final q = _q(a, launch, s.impactMs - launch);
+      final p = Offset.lerp(muzzle, g, q * q)!;
+      _line(c, muzzle, p, _a(orange, 0.35), 3);
+      for (var k = 1; k <= 3; k++) {
+        final w = Offset.lerp(muzzle, p, k / 4)!;
+        _ring(c, w, 3 + 2.0 * k, 6 + 2.0 * k, _a(const Color(0xFFFFFFFF), 0.35), 1);
+      }
+      _crossbowBolt(c, p, dirv, 18, 1, w: 3);
+    }
+    if (a >= s.impactMs) {
+      final e = _q(a, s.impactMs, 420);
+      if (e < 1) {
+        _disc(c, g, 20 * (1 - e) * _ease(e * 5), _a(const Color(0xFFFFF3B0), 0.9 * (1 - e)));
+        _ring(c, g, 50 * e, 24 * e, _a(orange, 1 - e), 3);
+      }
+      // Clavado y mareado: estrellitas que giran.
+      _crossbowBolt(c, g - dirv * 2, dirv, 14, out, w: 2.5);
+      for (var k = 0; k < 3; k++) {
+        final ang = a / 160 + k * math.pi * 2 / 3;
+        _star(c, g + Offset(math.cos(ang) * 9, -12 + math.sin(ang) * 3), 2.5,
+            _a(const Color(0xFFFFEAA7), out));
+      }
+    }
+  }
+
+  // ---------------- Danza de Mil Cortes ----------------
+
+  static void _thousandCuts(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis) {
+    final s = u.script;
+    final o = st.caster;
+    const mint = Color(0xFF55EFC4);
+    // Viento que se arremolina alrededor del lanzador.
+    if (a < s.buildMs + 80) {
+      final grow = _q(a, 0, 300);
+      for (var k = 0; k < 8; k++) {
+        final ang = a / 90 + k * math.pi / 4;
+        final p = o.translate(math.cos(ang) * 14, -10 + math.sin(ang) * 6);
+        final p2 = o.translate(math.cos(ang + 0.5) * 14, -10 + math.sin(ang + 0.5) * 6);
+        _line(c, p, p2, _a(mint, 0.6 * grow), 1);
+      }
+      // Destello de las hojas al desenvainar.
+      if (a > 420) {
+        final q = _q(a, 420, 240);
+        _star(c, o.translate(st.dir * 7, -12), 2 + 8 * math.sin(q * math.pi), _a(const Color(0xFFFFFFFF), 1));
+        _star(c, o.translate(-st.dir * 8, -11), 1 + 5 * math.sin(q * math.pi), mint);
+      }
+    }
+    if (st.targets.isEmpty) return;
+    final g = st.targets.first.translate(0, -10);
+    // Embestida: imágenes que van del lanzador al objetivo.
+    if (a >= s.buildMs && a < s.buildMs + 260) {
+      final q = _q(a, s.buildMs, 180);
+      for (var k = 0; k < 6; k++) {
+        final p = Offset.lerp(o.translate(0, -8), g, (q - k * 0.1).clamp(0.0, 1.0))!;
+        _oval(c, p, 5, 9, _a(mint, 0.45 * (1 - k / 6) * (1 - _q(a, s.buildMs + 160, 100))));
+      }
+    }
+    // Cortes en todas direcciones (uno por golpe previo, más finos).
+    final hits = s.preHitsMs;
+    for (var k = 0; k < hits.length; k++) {
+      final h = hits[k];
+      if (a < h || a > h + 160) continue;
+      final q = _q(a, h, 160);
+      final ang = _h(k, 11) * math.pi;
+      final d = Offset(math.cos(ang), math.sin(ang));
+      final len = 60.0 * math.min(1.0, q * 5);
+      _line(c, g - d * len / 2, g + d * len / 2, _a(mint, 0.85 * (1 - q)), 3 * (1 - q) + 1);
+      _line(c, g - d * len / 2, g + d * len / 2, _a(const Color(0xFFFFFFFF), 1 - q), 1);
+    }
+    // Remolino de hojas verdes durante la ráfaga.
+    if (a >= s.buildMs + 200 && a < s.impactMs + 300) {
+      for (var k = 0; k < 12; k++) {
+        final ang = a / 120 + k * math.pi / 6;
+        final r = 18 + 6 * math.sin(a / 80 + k);
+        final p = g + Offset(math.cos(ang) * r, math.sin(ang) * r * 0.5);
+        _fill.color = _a(k.isEven ? mint : const Color(0xFFDFF9FB), 0.8);
+        c.drawRect(Rect.fromCenter(center: p, width: 2, height: 2), _fill);
+      }
+    }
+    // El final: un tajo horizontal que cruza la vista y una estrella de
+    // ocho cortes.
+    final imp = s.impactMs;
+    if (a >= imp - 80 && a < imp + 380) {
+      final q = _q(a, imp - 80, 460);
+      final span = vis.width * math.min(1.0, q * 3);
+      _line(c, Offset(g.dx - span / 2, g.dy), Offset(g.dx + span / 2, g.dy),
+          _a(mint, 0.9 * (1 - q)), 6 * (1 - q) + 2);
+      _line(c, Offset(g.dx - span / 2, g.dy), Offset(g.dx + span / 2, g.dy),
+          _a(const Color(0xFFFFFFFF), 1 - q * 0.7), 2 * (1 - q) + 1);
+      if (a >= imp) {
+        final e = _q(a, imp, 380);
+        for (var k = 0; k < 8; k++) {
+          final ang = k * math.pi / 4 + 0.2;
+          final d = Offset(math.cos(ang), math.sin(ang));
+          _line(c, g + d * (6 + 10 * e), g + d * (18 + 34 * e),
+              _a(mint, 1 - e), 2);
+        }
+        _ring(c, g, 55 * e, 28 * e, _a(const Color(0xFFFFFFFF), 1 - e), 2);
       }
     }
   }

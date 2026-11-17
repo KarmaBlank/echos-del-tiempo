@@ -100,7 +100,12 @@ y queden márgenes cuando varios suenan juntos:
 | Interfaz (`myTurn`, `turnTick`, `levelUp`) | 0.28 |
 | Números del prototipo (`hit`, `hurt`, `heal`), `flash` | 0.30 |
 | Estados (aplicación y tic), curas, maná, ítems | 0.30 |
-| Arranque de acción (golpe/disparo/conjuro, firma de habilidad, enemigo) | 0.36 |
+| Tic de la barra de quiebre | 0.16 |
+| Arranque de acción (golpe/disparo/conjuro, firma de habilidad) | 0.36 |
+| Acento de golpe a un quebrado | 0.36 |
+| Ataque enemigo (wind-up + golpe) e impacto propio del tipo | 0.42 (jefes 0.45) |
+| Aviso de ULT enemiga | 0.44 |
+| Quiebre (cristal) | 0.45 |
 | Impactos | 0.38 |
 | Golpe pesado de jefe, K.O. | 0.42 |
 | `crit.clink` (tiene que oírse sobre el impacto) | 0.45 |
@@ -124,8 +129,19 @@ barrido; `+` = capas; `@t` = retraso.
 | `shot.rifle` | ruido 20 k 0.03 (fogonazo) + ruido 3 k→700 0.28 lowpass 2.5 k (eco) + square 140→55 0.10 | `rifle` |
 | `shot.staff` | square 520→1250 0.18 vibrato 22 Hz + triangle 1040→2500 0.16 | `báculo` |
 | `shot.tome` | pulse 300→900 0.2 crush 4 + sine 1200 0.18 vibrato 9 Hz | `tomo` |
+| `swing.spear` | ruido 10 k→5 k 0.08 ataque 5 ms lowpass 7 k (estocada) + pulse 900→1800 0.06 + ruido 3 k→6 k 0.1 @0.02 | `lanza` |
+| `swing.daggers` | dos silbidos cortos: ruido 12 k→6 k 0.06 @0 y 12 k→7 k @0.07 + pulse 2200→1400 0.03 @0.07 | `dagas` |
+| `shot.wand` | triangle 1500→3000 0.1 + square 3000 0.03 @0.04 + ruido 15 k 0.02 crush 3 (chispa) | `varita` |
+| `shot.crossbow` | ruido 20 k 0.02 (gatillo) + triangle 180→120 0.18 vibrato 25 Hz (cuerda pesada) + ruido 4 k→1.5 k 0.2 lowpass 2.5 k | `ballesta` |
 
-Sin arma conocida: `swing.blade`.
+Sin arma conocida: `swing.blade`. Tipos de loot v2: arranque e impacto
+propios (`lanza` `swing.spear` / `impact.pierce`, `dagas`
+`swing.daggers` / `impact.dagger`, `varita` `shot.wand` / `impact.wand`,
+`ballesta` `shot.crossbow` / `impact.bolt`). Las 10
+habilidades nuevas (Lanza Perforante, Barrido, Empalar, Misil Arcano,
+Escarcha Fugaz, Rayo Arcano, Virote Pesado, Virote Ígneo, Tajo Gemelo,
+Abanico de Dagas) tienen firma propia en `kSkillVoices`. Las 4 ULT nuevas
+(`kNewUltimates`) tienen sus tres partes (§ "Ultimates").
 
 ### Impactos
 
@@ -141,6 +157,10 @@ Sin arma conocida: `swing.blade`.
 | `impact.poison` | sine 520→260 0.07, 440→220 @0.06, 600→300 @0.12 (burbujas) + ruido 1.5 k 0.2 lowpass 700 | elemento Veneno |
 | `impact.holy` | sine 1047 + 1568 @0.02 + 2093 @0.04 con vibrato 7 Hz, 0.35 | elemento Sagrado |
 | `impact.hurt` | square 190→85 0.13 + ruido 3 k 0.08 lowpass 1.8 k | un jugador recibe daño |
+| `impact.pierce` | ruido 10 k 0.04 + triangle 300→90 0.09 ("tunk") | físico, lanza |
+| `impact.dagger` | ruido 16 k 0.03 + square 1400→700 0.04 + ruido 16 k 0.03 @0.05 (doble) | físico, dagas |
+| `impact.wand` | triangle 2400→800 0.1 + pulse 1600→500 0.08 crush 3 | físico/arcano, varita |
+| `impact.bolt` | ruido 6 k 0.05 + sine 130→45 0.18 + square 700→200 0.05 | físico, ballesta |
 | `crit.clink` | sine 2093→2030 0.26 + sine 5267→5110 0.18 (parciales inarmónicos ×2.52) + triangle 3140→3050 0.12 muy suave, ataque 2 ms, + ruido 18 k 0.012 (transitorio) | **cada** golpe crítico, encima del impacto |
 
 Elemento de un golpe = el del efecto visual (`skillElement` de
@@ -231,6 +251,36 @@ Alma de Hielo no tienen evento ni sonido.
 
 ### Enemigos (`enemy.<tipo>`, uno por id de `kEnemies`, cubierto por test)
 
+Pedido del dueño: ataques enemigos con más punch. `enemy.<tipo>` =
+**wind-up** del tipo (0-0.16 s, sube hacia el golpe: el enemigo se echa
+atrás en la escena) + la voz del ataque desde `kEnemyBodyAt` = 0.11 s.
+El golpe al jugador suena con el **impacto propio del tipo**
+(`enemy.hit.<tipo>`, en vez de `impact.hurt`) a los 160 ms
+(`BattleFx.enemyStrikeMs`, cuando aparece el número). Más fuertes que
+las acciones del grupo (pico 0.42; jefes 0.45; impactos 0.42).
+
+| Wind-up | Receta |
+|---|---|
+| limo | triangle 110→260 vibrato (borboteo que se junta) + ruido 900→1.8 k lowpass |
+| murciélago | 3 aleteos (ruido 3.5 k cortos) + square 1400→2400 |
+| gólem | ruido 300→900 lowpass 500 (roce de piedra) + sawtooth 55→85 |
+| espectro | inhalación (ruido 800→3 k) + sine 300→600 vibrato |
+| Rey Limo | gorgoteo grave (triangle 70→170) + ruido |
+| Gólem Reloj | 4 tics de trinquete square 2.4 k + roce |
+| Devorador | rugido que sube (sawtooth 38→75 vibrato) + ruido 500→2.2 k |
+
+| Impacto (`enemy.hit.<tipo>`) | Receta |
+|---|---|
+| limo | salpicón: ruido 2 k lowpass 900 + sine 220→80 + gota |
+| murciélago | mordida doble: ruido 9 k + square 1500→600, dos veces |
+| gólem | golpe sordo: sine 95→32 + ruido 1.5 k lowpass + triangle crush |
+| espectro | escalofrío: triangle 2637 + 1976 (cristal frío) + ruido 12 k + sine 300→150 |
+| Rey Limo | gran salpicón: ruido 1.5 k + sine 150→45 + dos gotas |
+| Gólem Reloj | metal y piedra: sine 90→30 + parciales 1320 / 2980 + ruido |
+| Devorador | mordisco ardiente: sine 70→25 + ruido 1.2 k + chisporroteo |
+
+Voces del ataque (desde 0.11 s):
+
 | Sonido | Receta |
 |---|---|
 | `enemy.slime` | triangle 180→420 0.12 + ruido 1.5 k 0.1 lowpass 800 (húmedo) + triangle 420→160 @0.1 (squish) |
@@ -240,8 +290,35 @@ Alma de Hielo no tienen evento ni sonido.
 | `enemy.reyLimo` | squish del limo una 5ta abajo, más largo, con capa grave |
 | `enemy.golemReloj` | pisotón del gólem + 4 tics de reloj square 2 k |
 | `enemy.devorador` | sawtooth 80→50 0.6 vibrato + ruido 800 lowpass (rugido) + sine 45 |
-| `enemy.generic` | ruido 5 k→2 k 0.12 + square 300→150 (tipo desconocido) |
-| `enemy.heavy` | sine 60→30 0.4 + ruido 2 k 0.3 lowpass 600 (golpe brutal, encima del sonido del enemigo) |
+| `enemy.generic` | wind-up (ruido 600→2 k) + ruido 5 k→2 k 0.12 + square 300→150 (tipo desconocido; su golpe suena con `impact.hurt`) |
+| `enemy.heavy` | sine 60→30 0.4 + ruido 2 k 0.3 lowpass 600 (golpe brutal, encima del sonido del enemigo, con el golpe a 160 ms) |
+
+### Quiebre y ULT enemigas
+
+(docs/specs/break_and_enemy_ults.md.)
+
+| Sonido | Receta | Cuándo |
+|---|---|---|
+| `break.tick` | triangle 2349 0.04 + sine 3520 (vidrio chico), pico 0.16 | `BreakEvent(fill)`: una vez por paso, con el golpe |
+| `break.shatter` | sine 110→38 (golpe sordo) + ruido 16 k + ruido 3 k→900 + 7 parciales de cristal escalonados (3136-5274) + "shing" 1500→3000 | `BreakEvent(broken)`, en el tiempo del golpe que lo quiebra |
+| `break.vuln` | square 1760→2349 + sine 3520 ("ting") + ruido 14 k | golpe a un quebrado (`DamageEvent.vulnerable`), una vez por acción, con el impacto |
+| `break.dazed` | triangle 900 vibrato 9 Hz (mareo) + 3 campanitas 3136 | `BreakEvent(skipped)` |
+| `enemyUlt.warn` | alarma de dos tonos (sawtooth 880 / 622 ×4) + dron sine 55 que crece + ruido 400→1.6 k | `EnemyUltWarningEvent` |
+
+`decay` y `recovered` no suenan.
+
+Cada ULT enemiga tiene sus tres partes `<id>.build` / `.release` /
+`.impact` (`kEnemyUltVoices`, mismos picos que las del grupo), en los
+tiempos de su guion (`kEnemyUltScripts`): preparación @0, descarga
+@`build`, impacto en `impactFor(i)` de los 3 primeros golpeados (más el
+`crit.clink` de cada crítico); los estados de la ULT no suenan encima.
+
+| ULT | Preparación | Descarga | Impacto |
+|---|---|---|---|
+| Diluvio Ácido | borboteo grave que crece (burbujas + sawtooth 60→120) | escupitajo (sine 300→900) + lluvia (ruido largo + gotas) | salpicón: ruido 2.5 k + sine 120→40 + burbujas |
+| Engranaje del Fin | tic-tac que se acelera + engranaje que rechina (sawtooth 80 vibrato) | rueda que rueda (ruido 1 k→3 k) + traqueteo | campanazo de metal (523 / 1320 / 2980) + hielo + golpe sine 70→25 + tiempo que se estira (pulse 900→150 crush) |
+| Fin de las Eras | el vacío que traga (sine 30→60, ruido 400→200 con ataque largo) | rugido que sube y colapso (sine 200→40) | estallido: ruido 1.2 k + sine 50→20 + chisporroteo + vidrios (los buffs) |
+| Furia Élite | gruñido (sawtooth 70→140 vibrato 20 Hz) + fuego | embestida + dos zarpazos | desgarro triple (ruido 12 k→2 k) + golpe + campana del crítico |
 
 ## Ultimates
 
@@ -255,7 +332,9 @@ salen del mismo guion `UltScript`, así sonido e imagen no se separan):
 | `<ultId>.release` | descarga, @`build` (incluye silbidos, tajos previos, disparo…) | 0.46 |
 | `<ultId>.impact` | cada impacto, @`impactFor(i)`, 3 objetivos como máximo | 0.50 |
 
-`<ultId>` = `SkillDef.id` de `kUltimates` (`ult_espada`, `ult_hacha`, …).
+`<ultId>` = `SkillDef.id` de `kAllUltimates` (`ult_espada`, `ult_hacha`,
+…, y las de loot v2 `ult_lanza`, `ult_varita`, `ult_ballesta`,
+`ult_dagas`).
 El `crit.clink` sigue sonando encima en cada crítico de la ULT.
 
 Recetas ("@t" relativo al inicio de ESE sonido):
@@ -272,6 +351,31 @@ Recetas ("@t" relativo al inicio de ESE sonido):
 | Juicio Divino | coro (sines 523/659/784 con vibrato, ataque 0.5) + campanita | campana que baja + zumbido de puntería que sube | pilar: campanas sagradas + ruido 3 k→9 k (whoosh) + sine 80→30 |
 | Martillo Celestial | trueno lejano (ruido 400 lowpass 250) + chispas eléctricas (ruido 20 k crush 2) + tono que sube | caída: ruido 6 k→600 que baja @0.1-0.4 | golpe brutal: sine 80→22 largo + ruido 1 k lowpass 700 + "clang" inarmónico + mareo (triangle 1000 vibrato 9 Hz) |
 
+
+| Lluvia de Lanzas | giro metálico: ruido 3 k→8 k ataque 0.45 + triangle 1760 vibrato 14 Hz + sawtooth 110→165 | 6 silbidos que suben (lanzas al cielo) @0.02-0.27 + 4 silbidos que bajan (sine 2400→600) @0.3-0.66 | tres clavadas (ruido 10 k + triangle 240→70, cada 60 ms) + zumbido del asta (triangle 1245) + golpe sine 55→30 |
+| Tormenta Arcana | zumbido arcano (pulse 220→440 vibrato 6 Hz + sine 440→1760) + 4 chispas crush 2 | 10 chispazos (square 1600-2200 → 3200-3800, cada 80 ms) + viento de fondo (ruido 5 k→2.5 k) | estallido: pulse 1200→300 crush 4 + ruido 12 k + sine 880 vibrato + triangle 2637 |
+| Andanada | manivela: 8 clics square 600 que se aceleran + crujido (triangle 120→180 vibrato) + traba @0.8 | gatillo (ruido 20 k) + cuerda pesada (triangle 160→90 vibrato 25 Hz) + silbido del virote (ruido 6 k→2 k) | golpe brutal: ruido 6 k + sine 90→28 largo + ruido 2 k lowpass 1 k + mareo (triangle 1000 vibrato 9 Hz @0.2) |
+| Danza de Mil Cortes | dos latidos (sine 60→45 @0, @0.22) + brillo de hoja (triangle 3520) + desenvaine @0.45 + destello sine 4186 | 12 tajos rápidos (silbido de hoja agudo, cada 60 ms) | corte final (ruido 14 k→3 k) + clink inarmónico (sine 2349 + 5919) + golpe sine 100→35 |
+
+## Loot
+
+Sonidos del loot en el mapa (`buildLootSfx`, pico 0.34; el haz 0.44).
+Suenan solo para el jugador local (`SessionSfx.lootSounds`):
+
+| Id | Receta | Cuándo |
+|---|---|---|
+| `loot.alerta` | square 880 0.08 + square 1175 0.12 @0.09 | filtro `Sonido alerta` |
+| `loot.campana` | sine 1319 0.7 + sine 3317 0.45 (inarmónico) + triangle 659 | `Sonido campana` |
+| `loot.gema` | arpegio triangle 2093, 2637, 3136, 4186 + sine 4186 con vibrato | `Sonido gema` |
+| `loot.legendario` | arpegio square 523, 659, 784 + acorde 1047/1319/1568 @0.24 | `Sonido legendario` |
+| `loot.material` | triangle 1568 0.12 + 1976 0.16 @0.05 | `Sonido material` |
+| `loot.suave` | sine 660→880 0.18 | `Sonido suave` |
+| `loot.pickup` | sine 700→1400 0.06 + triangle 1760 0.05 @0.05 | el jugador local levanta algo (`LootPickedEvent`) |
+| `loot.beam` | ruido 2 k→8 k 0.6 + sawtooth 220→880 + sines 1760 / 2637 con vibrato | cae un Legendario del jugador local, @120 ms (encima del sonido de su filtro) |
+
+`LootDropEvent` del jugador local: si su filtro lo muestra, el sonido de
+la regla (`FilterStyle.sound`; sin sonido, nada) y, si es Legendario,
+`loot.beam`. Oculto por el filtro: silencio.
 
 ## Qué evento suena (`SessionSfx`)
 
@@ -290,6 +394,10 @@ motor no cambia. Cada sonido de batalla es un `SfxCue(id, delayMs)`:
   la separación por objetivo), si no 0.
 - Cuerpo a cuerpo (sin proyectil): el impacto suena 50 ms después del
   arranque, para que el silbido se oiga antes del golpe.
+- Ataque enemigo: el golpe a los 160 ms (después del wind-up, como en
+  la escena); sus estados y `K.O.` cuentan desde ahí; los procs de una
+  acción enemiga usan `base` = 160 + 120. En una ULT enemiga, los
+  impactos de su guion.
 - Varios objetivos: el impacto suena en los **3 primeros** con 70 ms de
   separación; los demás no suenan (sin cacofonía). Los clinks de crítico
   no tienen tope: uno por cada golpe crítico, en el tiempo de su impacto
@@ -312,15 +420,16 @@ motor no cambia. Cada sonido de batalla es un `SfxCue(id, delayMs)`:
   - `potion` → `item.potion`; `ether` → `item.ether`; `defend` →
     `defend`;
   - `enemyAttack`: `enemy.<tipo>`; `enemyHeavy`: `enemy.<tipo>` +
-    `enemy.heavy` @80 ms; `enemyArea`: `flash` (prototipo) +
-    `enemy.<tipo>`.
+    `enemy.heavy` @160 ms; `enemyArea`: `enemy.<tipo>` + `flash`
+    (prototipo) @160 ms.
 - `DamageEvent`:
   - de estado (`fromStatus`, sin acción): `tick.<statusSource>` (una vez
     por estado y por paso);
   - dentro de una ULT: `<ult>.impact` en `impactFor(i)` del guion
     (§ "Ultimates"), en los 3 primeros objetivos; si es crítico además
     `crit.clink` en ese mismo tiempo (sin tope);
-  - a un jugador: `impact.hurt`;
+  - a un jugador: `enemy.hit.<tipo>` del enemigo que pega (si no lo
+    hay, `impact.hurt`), @160 ms;
   - a un enemigo: impacto del elemento (§ "Impactos"); dentro de
     Aura Restauradora (luz de la rama creyente) → `impact.holy`;
   - sin acción y sin estado: `hit` (prototipo);
@@ -361,7 +470,7 @@ impactos), si no el retraso del golpe de la acción (`hitDelay`) +
   Marca `proc.mark`, Debilitar `proc.weaken`, en `base`.
 - `ShieldEvent`: gana → `proc.shield` en `base` (una vez por paso);
   absorbe → `proc.shieldBreak` en el tiempo del golpe enemigo
-  (cuerpo a cuerpo: 50 ms).
+  (160 ms, después del wind-up).
 - `DamageEvent` con `sourceId` (daño secundario): **no** suena el
   impacto normal (el proc ya tiene su sonido); su K.O. suena 100 ms
   después del golpe secundario.
