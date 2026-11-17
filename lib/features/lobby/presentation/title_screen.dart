@@ -7,6 +7,7 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_panel.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../core/update/presentation/update_banner.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/class_def.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -221,6 +222,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                       '${p != null && p.level > 1 ? ' · Tu nivel guardado: ${p.level}' : ''}'),
                   style: const TextStyle(color: RetroPalette.muted),
                 ),
+                const SizedBox(height: 12),
+                // Aviso de versión nueva (docs/specs/distribution.md).
+                const UpdateBanner(),
                 const SizedBox(height: 24),
                 Row(
                   mainAxisSize: MainAxisSize.min,

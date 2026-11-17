@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'proto_colors.dart';
@@ -7,66 +8,248 @@ import 'retro_text.dart';
 import 'retro_theme.dart';
 
 /// Marco común de los paneles sobre el mapa (`#board` del prototipo):
-/// `RetroPanel` centrado, título de 16 px, contenido con scroll y una
-/// fila de botones compactos abajo a la derecha. Ver
-/// docs/specs/ui_style.md § "Panel sobre el mapa".
+/// `RetroPanel` centrado, título de 16 px con la ayuda `[?]`, contenido
+/// con scroll y los botones compactos abajo (secundarios a la izquierda
+/// en [leading], el resto a la derecha con el primario último). Atrapa
+/// el foco del teclado: `Esc` cierra ([onClose]), `Tab` / flechas mueven
+/// el foco y `Enter` / `Espacio` activan. Ver docs/specs/ui_style.md §
+/// "Panel sobre el mapa" y docs/specs/panels.md § "Marco común".
 class PanelFrame extends StatelessWidget {
   const PanelFrame({
     super.key,
     required this.title,
     required this.child,
     this.actions = const [],
+    this.leading = const [],
     this.width = 760,
     this.header,
+    this.help,
+    this.titleTrailing,
+    this.onClose,
+    this.fill = false,
   });
 
   final String title;
   final Widget child;
+
+  /// Botones de abajo a la derecha; el último es el primario.
   final List<Widget> actions;
+
+  /// Botones de abajo a la izquierda (reiniciar, cancelar misión...).
+  final List<Widget> leading;
   final double width;
 
   /// Fila fija entre el título y el contenido con scroll (p. ej. pestañas).
   final Widget? header;
 
+  /// Ayuda de la pantalla (markup) en el `[?]` junto al título.
+  final String? help;
+
+  /// Algo a la derecha del título (p. ej. los créditos).
+  final Widget? titleTrailing;
+
+  /// `Esc` cierra el panel. Sin [onClose] el `Esc` sigue de largo.
+  final VoidCallback? onClose;
+
+  /// Ocupa el alto máximo y [child] llena el espacio sin scroll propio
+  /// (para lista + detalle con scroll cada uno).
+  final bool fill;
+
   @override
   Widget build(BuildContext context) {
     final small = Theme.of(context).textTheme.bodySmall!;
     return LayoutBuilder(
-      builder: (context, box) => Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: width.clamp(0, box.maxWidth - 32),
-            maxHeight: box.maxHeight * 0.86,
-          ),
-          child: RetroPanel(
-            // `.panel`: borde `#5b74c9`.
-            child: DefaultTextStyle.merge(
-              style: small.copyWith(height: 1.8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      builder: (context, box) {
+        final maxH = box.maxHeight * 0.86;
+        final column = Column(
+          mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // El título toma lo que necesita; lo de la derecha queda
+                // pegado al borde.
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(retroText(title),
+                            style: const TextStyle(
+                                fontSize: 16, color: ProtoColors.gold)),
+                      ),
+                      if (help != null) ...[
+                        const SizedBox(width: 12),
+                        _HelpChip(help!),
+                      ],
+                    ],
+                  ),
+                ),
+                if (titleTrailing != null) ...[
+                  const SizedBox(width: 16),
+                  titleTrailing!,
+                ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (header != null) ...[header!, const SizedBox(height: 8)],
+            if (fill)
+              Expanded(child: child)
+            else
+              Flexible(child: SingleChildScrollView(child: child)),
+            if (actions.isNotEmpty || leading.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(retroText(title),
-                      style: const TextStyle(
-                          fontSize: 16, color: ProtoColors.gold)),
-                  const SizedBox(height: 16),
-                  if (header != null) ...[header!, const SizedBox(height: 8)],
-                  Flexible(child: SingleChildScrollView(child: child)),
-                  if (actions.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Wrap(
+                  Wrap(spacing: 8, runSpacing: 8, children: leading),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Wrap(
                       alignment: WrapAlignment.end,
                       spacing: 8,
                       runSpacing: 8,
                       children: actions,
                     ),
-                  ],
+                  ),
                 ],
+              ),
+            ],
+          ],
+        );
+        return Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: width.clamp(0, box.maxWidth - 32),
+              maxHeight: maxH,
+            ),
+            child: _PanelKeys(
+              onClose: onClose,
+              child: SizedBox(
+                height: fill ? maxH : null,
+                child: RetroPanel(
+                  // `.panel`: borde `#5b74c9`.
+                  child: DefaultTextStyle.merge(
+                    style: small.copyWith(height: 1.8),
+                    child: column,
+                  ),
+                ),
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+/// `[?]` del título: la ayuda en un [RetroTooltip].
+class _HelpChip extends StatelessWidget {
+  const _HelpChip(this.help);
+
+  final String help;
+
+  @override
+  Widget build(BuildContext context) {
+    return RetroTooltip(
+      message: help,
+      child: Container(
+        key: const ValueKey('panel-help'),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          border: Border.all(
+              color: ProtoColors.buttonBorder,
+              width: RetroTheme.thinBorderWidth),
         ),
+        child: const Text('?',
+            style: TextStyle(fontSize: 8, color: ProtoColors.sky)),
       ),
+    );
+  }
+}
+
+/// Teclado común de los paneles. Un [FocusScope] que se enfoca solo al
+/// abrir el panel: así `Tab` no se escapa al chat ni al mapa.
+class _PanelKeys extends StatefulWidget {
+  const _PanelKeys({required this.child, this.onClose});
+
+  final Widget child;
+  final VoidCallback? onClose;
+
+  @override
+  State<_PanelKeys> createState() => _PanelKeysState();
+}
+
+class _PanelKeysState extends State<_PanelKeys> {
+  final _scope = FocusScopeNode(debugLabel: 'panel');
+
+  @override
+  void dispose() {
+    _scope.dispose();
+    super.dispose();
+  }
+
+  static final _dirs = {
+    LogicalKeyboardKey.arrowUp: TraversalDirection.up,
+    LogicalKeyboardKey.arrowDown: TraversalDirection.down,
+    LogicalKeyboardKey.arrowLeft: TraversalDirection.left,
+    LogicalKeyboardKey.arrowRight: TraversalDirection.right,
+  };
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent e) {
+    if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final focused = FocusManager.instance.primaryFocus;
+    final ctx = focused?.context;
+    // Escribiendo en un campo: las teclas son del campo.
+    if (ctx != null && ctx.findAncestorWidgetOfExactType<EditableText>() != null) {
+      return KeyEventResult.ignored;
+    }
+    final k = e.logicalKey;
+    if (k == LogicalKeyboardKey.escape) {
+      if (widget.onClose == null || e is! KeyDownEvent) {
+        return KeyEventResult.ignored;
+      }
+      widget.onClose!();
+      return KeyEventResult.handled;
+    }
+    final inside = focused != null && focused != _scope;
+    if (k == LogicalKeyboardKey.tab) {
+      final back = HardwareKeyboard.instance.isShiftPressed;
+      final from = inside ? focused : _scope;
+      back ? from.previousFocus() : from.nextFocus();
+      return KeyEventResult.handled;
+    }
+    if (_dirs[k] case final dir?) {
+      if (!inside) {
+        _scope.nextFocus();
+      } else if (!focused.focusInDirection(dir)) {
+        dir == TraversalDirection.up || dir == TraversalDirection.left
+            ? focused.previousFocus()
+            : focused.nextFocus();
+      }
+      return KeyEventResult.handled;
+    }
+    if (inside &&
+        e is KeyDownEvent &&
+        (k == LogicalKeyboardKey.enter ||
+            k == LogicalKeyboardKey.numpadEnter ||
+            k == LogicalKeyboardKey.space)) {
+      Actions.maybeInvoke(ctx!, const ActivateIntent());
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FocusScope(
+      node: _scope,
+      autofocus: true,
+      onKeyEvent: _onKey,
+      child: widget.child,
     );
   }
 }

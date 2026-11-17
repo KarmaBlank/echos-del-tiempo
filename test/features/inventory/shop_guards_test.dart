@@ -3,6 +3,7 @@ import 'package:echos_del_tiempo/game_engine/data/weapons_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
+import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/upgrade_stat.dart';
@@ -95,12 +96,18 @@ void main() {
   }
 
   test('upgrade al máximo: MAX', () {
+    // Loot v2: el tope total de forja depende de la rareza (Común 3); una
+    // Épica (8) llega al tope de 5 por estadística.
     final p = progression.normalize(PlayerProfile(
         name: 'A',
         classId: 'guerrero',
         credits: 5000,
-        upgrades: const {},
-        inventory: const ['espada_bronce']));
+        items: const [
+          ItemInstance(
+              uid: 'espada_bronce',
+              baseId: 'espada_bronce',
+              rarity: Rarity.epico),
+        ]));
     var q = p;
     for (var i = 0; i < 5; i++) {
       q = progression.upgrade(q, 'espada_bronce', UpgradeStat.pow)!;

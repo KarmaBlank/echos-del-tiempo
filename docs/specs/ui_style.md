@@ -35,9 +35,14 @@ mejoras, etc." Se concilia con el 1:1 así:
   las mejoras, cuánto cuesta y una vista previa del resultado antes de
   confirmar.
 - Toda acción deshabilitada dice por qué (`PanelButton(reason: ...)`).
-- Pendiente: una pasada dedicada de UX de menús (mostrador, preparación,
-  armería, herrería/fusión, personaje) aplicará este principio; hasta
-  entonces los paneles conservan su estructura actual.
+- Lista compacta a un lado y detalle / vista previa al otro; costo y
+  resultado (antes → después) visibles antes de confirmar.
+- Un `[?]` junto al título de cada panel con la ayuda de la pantalla.
+- Botón primario abajo a la derecha; secundarios a su izquierda; los
+  que reinician o cancelan, abajo a la izquierda.
+- Teclado igual en todos los paneles: `Esc` cierra, `Tab` / flechas
+  mueven el foco, `Enter` confirma.
+- Esqueleto y piezas: docs/specs/panels.md § "Marco común".
 
 ## Tipografía
 
@@ -171,6 +176,12 @@ se pida) y alto máximo 86%, título `h2` de 16 px en `#FFD166`, contenido
 de 8 px (interlineado 1.8) con scroll y los botones compactos abajo a la
 derecha. `header` es una fila fija entre el título y el scroll.
 
+`help` agrega el `[?]` (`PanelHelp`) al lado del título; `onClose` hace
+que `Esc` cierre; `leading` son los botones de abajo a la izquierda;
+`fill` hace que el panel ocupe el alto máximo y el contenido no tenga
+scroll propio (para lista + detalle). El marco atrapa el foco del
+teclado (docs/specs/panels.md § "Marco común").
+
 Piezas (mismo archivo):
 - `PanelButton(reason: ...)`: deshabilitado con el motivo en `dim` a la
   izquierda; `selected` pinta el borde `gold`.
@@ -182,6 +193,21 @@ Piezas (mismo archivo):
   `#FFD166`, padding 8×10, texto 8 px `#E8ECFF` interlineado 1.8, ancho
   máximo 360, sombra `0 4 18 #000a`; `<b>` dorado y `.k` `#9FB4FF`.
   Aparece sin espera al pasar el mouse.
+
+Piezas de `lib/app/theme/panel_widgets.dart`:
+- `PanelHelp`: cajita `?` de 2 px `buttonBorder` con texto `sky`; al
+  pasar el mouse, `RetroTooltip` con la ayuda.
+- `PanelHint`: la línea "qué hace", 8 px `dim` (markup).
+- `PanelSplit`: lista (360 px, scroll propio) + detalle (`Expanded`).
+- `PanelDetail`: caja del detalle (borde 2 px `panelBorder`, padding 8)
+  con scroll y una fila fija abajo a la derecha (`footer`).
+- `PanelListItem`: fila elegible (`.mrow`); borde `gold` si está elegida,
+  `sky` con foco o mouse; se activa con clic, `Enter` o `Espacio`.
+- `StatChange`: `ETIQUETA antes → después`, después en `green` si mejora
+  y `red` si empeora (negrita).
+- `LevelPips`: n cuadritos de 6 px (`gold` llenos, `barBg` vacíos).
+- `CostLine`: `Costo $N · Te quedan $M` (si no alcanza, solo `Costo $N`:
+  el `Faltan $X` lo dice el motivo del botón).
 
 ## Campos de texto
 
@@ -221,3 +247,10 @@ PNG de sprites.
 - **v2.1** (dueño): principio de menús minimalistas y autoexplicativos
   (§ "Principio: menús minimalistas"), con el lenguaje visual del
   prototipo. La pasada de UX de menús queda como tarea aparte.
+- **v3** (pasada de UX de menús): armería y preparación en pestañas
+  (COMPRAR · FORJA · FUSIÓN · CONSUMIBLES) con lista + detalle; vista
+  previa de fusión (habilidades resultantes, qué se pierde, costo) y de
+  herrería (valor y stats antes → después); personaje con vista previa
+  al costado y comparación de armas; mostrador con tarjetas de misión
+  (objetivo y recompensas); `[?]` de ayuda, teclado y botón primario
+  abajo a la derecha en todos los paneles.

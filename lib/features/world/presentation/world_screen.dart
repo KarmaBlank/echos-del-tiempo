@@ -9,6 +9,7 @@ import '../../combat/presentation/battle_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../inventory/presentation/armory_panel.dart';
 import '../../inventory/presentation/shop_sections.dart';
+import '../../missions/domain/mission_text.dart';
 import '../../missions/presentation/mission_board_panel.dart';
 import '../../missions/presentation/prep_panel.dart';
 import '../../missions/presentation/results_panel.dart';
@@ -213,14 +214,13 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       case WorldPanel.missionBoard:
         return MissionBoardPanel(
           missions: catalog.missions,
-          classes: catalog.classes,
-          currentClassId: me.profile.classId,
           voteOpen: s.vote != null,
+          bossName: (m) => missionBossName(catalog, m),
+          playerLevel: me.profile.level,
           // Proponer cierra el mostrador (línea 1363).
           onPropose: (id) {
             if (controller.proposeMission(id)) controller.closePanel();
           },
-          onChangeClass: controller.changeClass,
           onClose: controller.closePanel,
           onCharacter: () => controller.openPanel(WorldPanel.character),
         );
@@ -241,32 +241,27 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 catalog.classes[p.profile.classId]?.name ?? p.profile.classId,
                 p.profile.level,
                 ready: prep.ready[p.id] ?? false,
+                isLocal: p.id == view.localId,
               ),
           ],
           ready: prep.ready[view.localId] ?? false,
           credits: me.profile.credits,
+          potions: me.profile.potions,
+          ethers: me.profile.ethers,
+          tier: missionTier(catalog, mission),
+          bossName: missionBossName(catalog, mission),
           weaponName: me.profile.equipped == null
               ? '-'
               : rules.weaponDisplayName(me.profile, me.profile.equipped!),
           onReady: controller.setReady,
           onCancel: controller.cancelPrep,
           onCharacter: () => controller.openPanel(WorldPanel.character),
-          shop: _prepShop(view, controller),
+          // Las pestañas de la armería (en `prep` la del lobby no se abre).
+          shopTabs: [
+            for (final t in ArmoryTab.values)
+              t.spec(() => ShopContext(view, controller)),
+          ],
         );
     }
-  }
-
-  /// Tienda de la preparación, en el orden del prototipo (línea 1346).
-  Widget _prepShop(SessionView view, SessionController controller) {
-    final shop = ShopContext(view, controller);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        ItemShopSection(shop: shop),
-        ForgeSection(shop: shop),
-        FuseSection(shop: shop),
-        WeaponShopSection(shop: shop),
-      ],
-    );
   }
 }
