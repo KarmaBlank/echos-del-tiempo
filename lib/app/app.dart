@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../features/combat/presentation/battle_screen.dart';
+import '../features/combat/presentation/demo_battle.dart';
 import 'theme/retro_panel.dart';
 import 'theme/retro_theme.dart';
 
@@ -46,13 +48,17 @@ class _ScaffoldPlaceholder extends StatelessWidget {
               const SizedBox(height: 32),
               RetroPanel(
                 child: Text(
-                  'Scaffold en migración...',
+                  'Batalla de prueba: 4 clases vs. Pradera Esmeralda',
                   style: text.bodyMedium,
                 ),
               ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => BattleScreen(setup: demoBattleSetup()),
+                  ),
+                ),
                 child: const Text('> COMENZAR'),
               ),
             ],

@@ -1,5 +1,8 @@
 import 'package:get_it/get_it.dart';
 
+import '../../game_engine/data/game_catalog.dart';
+import '../../game_engine/data/passive_tree_catalog.dart';
+import '../../game_engine/rules/battle_engine.dart';
 import '../../game_engine/rules/passive_tree_rules.dart';
 import '../../game_engine/rules/stats_calculator.dart';
 import '../../netcode/contracts/net_session.dart';
@@ -15,16 +18,21 @@ final sl = GetIt.instance;
 void registerSharedDependencies() {
   if (sl.isRegistered<PassiveTreeRules>()) return;
 
-  // TODO(migración): reemplazar por el catálogo real portado del
-  // prototipo (TREE completo) una vez migrados los datos de clases/armas.
+  sl.registerLazySingleton<GameCatalog>(() => GameCatalog.standard);
   sl.registerLazySingleton<PassiveTreeRules>(
-    () => throw UnimplementedError(
-      'Registrar PassiveTreeRules con el catálogo real en el composition root',
-    ),
+    () => PassiveTreeRules(kPassiveTree),
   );
   sl.registerLazySingleton<StatsCalculator>(
-    () => throw UnimplementedError(
-      'Registrar StatsCalculator con las clases/armas reales en el composition root',
+    () => StatsCalculator(
+      classes: sl<GameCatalog>().classes,
+      treeRules: sl<PassiveTreeRules>(),
+    ),
+  );
+  // Sin `random`: azar real. El host P2P es quien corre el motor.
+  sl.registerFactory<BattleEngine>(
+    () => BattleEngine(
+      stats: sl<StatsCalculator>(),
+      catalog: sl<GameCatalog>(),
     ),
   );
 }
