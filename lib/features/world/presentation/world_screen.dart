@@ -39,6 +39,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
   final _battleKey = GlobalKey<BattleViewState>();
   MapGame? _game;
 
+  /// Ya se pidió volver al título por una desconexión.
+  bool _leaving = false;
+
   @override
   void initState() {
     super.initState();
@@ -102,11 +105,24 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       if (mounted && !_focus.hasFocus) _focus.requestFocus();
     });
 
+    // Se perdió la sala (el host se fue): vuelve al título con el motivo.
+    final lost = view?.disconnected;
+    if (lost != null && !_leaving) {
+      _leaving = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).maybePop(lost);
+      });
+    }
+
     final Widget body;
-    if (view == null || !sprites.hasValue) {
+    if (view == null || !sprites.hasValue || lost != null) {
       body = Center(
         child: Text(
-          sprites.hasError ? 'ERROR AL CARGAR SPRITES' : 'CARGANDO...',
+          lost != null
+              ? 'DESCONECTADO'
+              : sprites.hasError
+                  ? 'ERROR AL CARGAR SPRITES'
+                  : 'CARGANDO...',
           style: const TextStyle(color: RetroPalette.gold),
         ),
       );

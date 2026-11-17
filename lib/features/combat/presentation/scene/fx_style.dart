@@ -42,25 +42,6 @@ String statusLetter(StatusKind k) => switch (k) {
       StatusKind.regen => 'R',
     };
 
-/// `STATUS[k].desc`.
-String statusDescription(StatusKind k) => switch (k) {
-      StatusKind.burn =>
-        'Stacks sin límite. Al inicio de su turno: 4% vida máx. por stack '
-            '(máx 8 por stack). Luego los stacks se reducen a la mitad.',
-      StatusKind.poison =>
-        'Stacks sin límite. Al inicio de su turno: 3% vida máx. por stack '
-            '(máx 5 por stack). Pierde 1 stack por turno.',
-      StatusKind.freeze =>
-        '-12% velocidad por stack. Con 5 stacks: CONGELADO, pierde su turno '
-            'y se descongela. Pierde 1 stack por turno.',
-      StatusKind.stun => 'Pierde su próximo turno.',
-      StatusKind.holy =>
-        '5 de daño por stack al inicio de su turno, dura 3 turnos (se renueva '
-            'al aplicar).',
-      StatusKind.regen =>
-        'Recupera 5% de vida y maná máx. al inicio de su turno (3 turnos).',
-    };
-
 /// Color (`col`) de cada habilidad y ULT por `SkillDef.id`.
 const Map<String, Color> kSkillColors = {
   'giro': Color(0xFFDFE6E9),

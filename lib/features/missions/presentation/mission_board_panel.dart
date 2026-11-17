@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/theme/proto_colors.dart';
+
 import '../../../app/feature_flags.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_text.dart';
@@ -54,23 +56,24 @@ class MissionBoardPanel extends StatelessWidget {
                 children: [
                   SizedBox(
                     width: 40,
+                    // `.mrow .rk`: 16 px `#ff9f1c`.
                     child: Text(m.rank,
+                        textAlign: TextAlign.center,
                         style: const TextStyle(
-                            fontSize: 24, color: RetroPalette.gold)),
+                            fontSize: 16, color: ProtoColors.amber)),
                   ),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(retroText(m.name),
-                            style: const TextStyle(fontSize: 16)),
+                        Text(retroText(m.name)),
                         const SizedBox(height: 4),
                         Text(
                           retroText('${m.type} · Lv recomendado '
                               '${m.recommendedLevel} · Elimina ${m.goal} grupos '
                               'y vence al jefe · S: < ${m.sTime ~/ 60} min sin '
                               'K.O. · Jefe suelta armas'),
-                          style: const TextStyle(color: RetroPalette.muted),
+                          style: const TextStyle(color: ProtoColors.sky),
                         ),
                       ],
                     ),

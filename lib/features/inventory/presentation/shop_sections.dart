@@ -1,8 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
+import '../../../app/theme/proto_colors.dart';
+import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
-import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/data/items_catalog.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -69,37 +70,20 @@ class WeaponInfo extends StatelessWidget {
     final w = weapon;
     final owned = p.inventory.contains(w.id);
     final name = owned ? shop.rules.weaponDisplayName(p, w.id) : w.name;
-    final req = requirementParts(w, attributes ?? p.attributes);
-    const small = TextStyle(color: RetroPalette.muted);
+    // `.mrow` de armas: nombre, `tipo ⓘ` en `#9fb4ff` y dos `<small>`.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text.rich(TextSpan(children: [
-          TextSpan(text: retroText(name)),
-          TextSpan(
-              text: '  ${retroText(w.type)}',
-              style: const TextStyle(color: RetroPalette.muted)),
-        ])),
-        const SizedBox(height: 4),
-        Text.rich(
-          TextSpan(style: small, children: [
-            const TextSpan(text: 'Req: '),
-            for (final (i, r) in req.indexed)
-              TextSpan(
-                text: '${i > 0 ? ' ' : ''}${r.text}',
-                style: TextStyle(
-                    color: r.ok ? RetroPalette.green : RetroPalette.red),
-              ),
-            TextSpan(
-                text: ' · Escala: ${weaponScaleText(w)} · Peso '
-                    '${fmtNum(w.weight)}${showWeightNote ? ' (-vel.)' : ''}'),
-          ]),
+        ProtoText('${protoEsc(name)} <span class="k">${w.type}</span>'),
+        ProtoText(
+          '<small>Req: ${requirementsMarkup(w, attributes ?? p.attributes)}'
+          ' · Escala: ${weaponScaleText(w)} · Peso ${fmtNum(w.weight)}'
+          '${showWeightNote ? ' (−vel.)' : ''}</small>',
         ),
-        const SizedBox(height: 2),
-        Text(
-          retroText('Habilidades: '
-              '${skillListText(shop.rules.catalog, w, fusedId: owned ? p.fused[w.id] : null)}'),
-          style: small,
+        ProtoText(
+          '<small>Habilidades: '
+          '${skillListMarkup(shop.rules.catalog, w, fusedId: owned ? p.fused[w.id] : null)}'
+          '</small>',
         ),
       ],
     );
@@ -127,7 +111,7 @@ class WeaponShopSection extends StatelessWidget {
               tooltip: weaponTooltip(shop.rules, p, w),
               trailing: p.inventory.contains(w.id)
                   ? const Text('TIENES',
-                      style: TextStyle(color: RetroPalette.green))
+                      style: TextStyle(color: ProtoColors.green))
                   : PanelButton('\$${w.price}',
                       key: ValueKey('buy-${w.id}'),
                       reason: shop.guards.buyWeapon(p, w.id),
@@ -163,16 +147,9 @@ class ItemShopSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text.rich(TextSpan(children: [
-                    TextSpan(text: retroText(it.name)),
-                    TextSpan(
-                        text:
-                            '  tienes ${it.key == 'pot' ? p.potions : p.ethers}',
-                        style: const TextStyle(color: RetroPalette.gold)),
-                  ])),
-                  const SizedBox(height: 4),
-                  Text(retroText(it.description),
-                      style: const TextStyle(color: RetroPalette.muted)),
+                  ProtoText('${it.name} '
+                      '${protoColor(ProtoColors.gold, 'tienes ${it.key == 'pot' ? p.potions : p.ethers}')}'),
+                  ProtoText('<small>${it.description}</small>'),
                 ],
               ),
             ),
@@ -220,7 +197,7 @@ class ForgeSection extends StatelessWidget {
                               shop.rules.weaponDisplayName(p, w.id)))),
                       if (p.equipped == w.id)
                         const Text('EQUIPADA',
-                            style: TextStyle(color: RetroPalette.gold))
+                            style: TextStyle(color: ProtoColors.gold))
                       else
                         PanelButton('EQUIPAR',
                             key: ValueKey('equip-${w.id}'),
@@ -263,18 +240,14 @@ class _UpgradeCell extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text.rich(TextSpan(children: [
-          TextSpan(text: retroText(stat.label)),
-          TextSpan(
-              text: ' ${upgradeValueText(stat, l)}',
-              style: const TextStyle(color: RetroPalette.green)),
-          TextSpan(
-              text: ' ($l/$max)',
-              style: const TextStyle(color: RetroPalette.muted)),
-        ])),
+        // `<div style="font-size:7px;color:#9fb4ff">` del prototipo.
+        ProtoText(
+            '${stat.label} ${protoColor(ProtoColors.green, upgradeValueText(stat, l))}'
+            ' ($l/$max)',
+            style: const TextStyle(color: ProtoColors.sky)),
         const SizedBox(height: 4),
         if (l >= max)
-          const Text('MAX', style: TextStyle(color: RetroPalette.green))
+          const Text('MAX', style: TextStyle(color: ProtoColors.green))
         else
           PanelButton(
             '+1 \$${shop.rules.upgradeCost(weapon.id, l)}',
@@ -333,13 +306,12 @@ class _FuseSectionState extends State<FuseSection> {
             children: [
               SizedBox(width: 160, child: Text(retroText(label))),
               if (ids.isEmpty && empty != null)
-                Text(empty,
-                    style: const TextStyle(color: RetroPalette.muted)),
+                Text(empty, style: const TextStyle(color: ProtoColors.dim)),
               for (final id in ids)
                 PanelButton(name(id),
                     key: ValueKey('$prefix-$id'),
                     selected: id == sel,
-                    accent: id == sel ? RetroPalette.gold : null,
+                    accent: id == sel ? ProtoColors.gold : null,
                     onPressed: () => setState(() => pick(id))),
             ],
           ),
@@ -375,14 +347,15 @@ class _FuseSectionState extends State<FuseSection> {
                 Text(
                     retroText(
                         '(reemplaza ${cat.skills[replaces]?.name ?? replaces})'),
-                    style: const TextStyle(color: RetroPalette.gold)),
+                    style: const TextStyle(color: ProtoColors.orange)),
             ],
           ),
           const SizedBox(height: 8),
           const Text(
             'No se puede sacrificar el arma inicial ni la equipada. Cada arma '
             'guarda 1 habilidad fusionada.',
-            style: TextStyle(color: RetroPalette.muted),
+            textAlign: TextAlign.center,
+            style: TextStyle(color: ProtoColors.dim),
           ),
         ],
       ),
@@ -416,7 +389,7 @@ class OwnedWeaponsSection extends StatelessWidget {
               tooltip: weaponTooltip(shop.rules, p, w),
               trailing: p.equipped == w.id
                   ? const Text('EQUIPADA',
-                      style: TextStyle(color: RetroPalette.gold))
+                      style: TextStyle(color: ProtoColors.gold))
                   : PanelButton('EQUIPAR',
                       key: ValueKey('equip-${w.id}'),
                       reason: shop.guards.equip(p, w.id, pending: pending),

@@ -1,7 +1,7 @@
 # Feature: passive_tree
 
 - domain/   — entidades + casos de uso puros (sin Flutter, sin red)
-- data/     — repos concretos, mapeo de GameEvent/GameAction <-> modelos de domain
+- data/     — repos concretos, mapeo de los modelos de game_engine (SessionAction, SessionEvent) <-> modelos de domain
 - presentation/ — widgets/Flame components + controllers (Riverpod)
 
 Cada capa solo conoce la de abajo (presentation -> domain <- data).

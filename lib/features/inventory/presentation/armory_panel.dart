@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/theme/proto_colors.dart';
+
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
@@ -37,7 +39,8 @@ class ArmoryPanel extends StatelessWidget {
             const TextSpan(text: 'Créditos: '),
             TextSpan(
                 text: retroText('₵${p.credits}'),
-                style: const TextStyle(color: RetroPalette.gold)),
+                style: const TextStyle(
+                    color: ProtoColors.gold, fontWeight: FontWeight.bold)),
             TextSpan(text: retroText(' · Solo armas de tu clase ($cls)')),
           ])),
           WeaponShopSection(shop: shop, title: 'Armas a la venta'),

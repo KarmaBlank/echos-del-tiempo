@@ -328,6 +328,12 @@ enemigos vivos o muertos hace < 1500 ms; con Baluarte, los jugadores.
 
 ## Menú y ayudas
 
+(Actualizado: el menú, las cajas del grupo y el `#tip` siguen 1:1 los
+colores del prototipo; ver docs/specs/exploration.md § "Batalla" y
+docs/specs/ui_style.md. La ayuda ya no va al pie del panel sino en el
+tooltip, y los textos salen de `lib/features/combat/domain/skill_text.dart`
+en markup.)
+
 El menú plano numerado, Q/Tab y el submenú de pociones siguen como en
 docs/specs/exploration.md § "Batalla". El panel muestra el objetivo
 actual. Al pasar el mouse por una técnica o la ULT se muestra su
@@ -347,8 +353,9 @@ actual. Al pasar el mouse por una técnica o la ULT se muestra su
 - La cámara puede bajar más que en el prototipo (`extra`) porque el
   menú tapa la parte de abajo de la escena (en el prototipo está fuera
   del canvas).
-- Log y etiqueta de tiempo son texto Flutter de 8 px (en el prototipo,
-  5-6 px dentro del canvas): se lee mejor con Press Start 2P.
+- Log (blanco) y etiqueta de tiempo (caja negra, dorado / `#ff6b81`)
+  son texto Flutter: el log va en 16 px si entra en una línea (≈ 6 px
+  virtuales escalados), si no en 8 px.
 - Los emojis de los textos flotantes (`🔥+2`, `💫`, `🛡`) se cambian por
   la letra del estado (`Q+2`), el texto `¡ATURDIDO!` y `ESCUDO`: la
   fuente no tiene emojis.

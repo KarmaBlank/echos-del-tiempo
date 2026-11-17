@@ -134,7 +134,7 @@ class _MinimapPainter extends CustomPainter {
         final blink = (w.time * 1000 / 300).floor() % 2 == 1;
         final tp = TextPainter(
           text: TextSpan(
-            text: '*',
+            text: '★',
             style: TextStyle(
               fontFamily: RetroTheme.fontFamily,
               fontSize: 8,

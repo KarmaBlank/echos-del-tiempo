@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
+import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/passive_tree.dart';
@@ -109,12 +110,16 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text.rich(TextSpan(children: [
-              TextSpan(text: retroText('Puntos de árbol disponibles: ')),
-              TextSpan(
-                  text: '$points',
-                  style: const TextStyle(color: RetroPalette.gold)),
-            ])),
+            Text.rich(TextSpan(
+                style: const TextStyle(color: ProtoColors.sky),
+                children: [
+                  TextSpan(text: retroText('Puntos de árbol disponibles: ')),
+                  TextSpan(
+                      text: '$points',
+                      style: const TextStyle(
+                          color: ProtoColors.gold,
+                          fontWeight: FontWeight.bold)),
+                ])),
             if (widget.showReset)
               PanelButton('REINICIAR ÁRBOL',
                   key: const ValueKey('tree-reset'),
@@ -161,9 +166,9 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         for (final (label, color) in const [
           ('Inicio de tu clase', RetroPalette.gold),
           ('Tomado', RetroPalette.green),
-          ('Keystone tomada', RetroPalette.red),
-          ('Disponible: clic para tomar', RetroPalette.ink),
-          ('Bloqueado', RetroPalette.muted),
+          ('Keystone tomada', Color(0xFFFF6B6B)),
+          ('Disponible: clic para tomar', ProtoColors.sky),
+          ('Bloqueado', Color(0xFF3A4570)),
         ])
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
@@ -191,7 +196,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     final (stateText, stateColor) = switch (st.state) {
       TreeNodeState.start => ('Nodo inicial', RetroPalette.muted),
       TreeNodeState.taken => ('Tomado', RetroPalette.green),
-      TreeNodeState.available => ('Disponible: clic para tomar', RetroPalette.ink),
+      TreeNodeState.available => ('Disponible: clic para tomar', ProtoColors.sky),
       TreeNodeState.locked => (st.reason ?? 'Bloqueado', RetroPalette.red),
     };
     return Column(
@@ -199,7 +204,8 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(retroText(node.name),
-            style: const TextStyle(color: RetroPalette.gold)),
+            style: const TextStyle(
+                color: ProtoColors.gold, fontWeight: FontWeight.bold)),
         if (node.kind == 'k' || node.kind == 'n')
           Text(node.kind == 'k' ? 'KEYSTONE' : 'NOTABLE',
               style: const TextStyle(color: RetroPalette.muted)),
@@ -228,7 +234,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   }
 }
 
-/// Dibuja enlaces y nodos con la paleta de 8 colores.
+/// Dibuja enlaces y nodos con los colores del `treeHtml` del prototipo.
 class PassiveTreePainter extends CustomPainter {
   PassiveTreePainter({
     required this.catalog,
@@ -249,13 +255,13 @@ class PassiveTreePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    canvas.drawRect(Offset.zero & size, Paint()..color = RetroPalette.night);
+    canvas.drawRect(Offset.zero & size, Paint()..color = ProtoColors.bg);
     canvas.drawRect(
       (Offset.zero & size).deflate(1),
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = RetroTheme.thinBorderWidth
-        ..color = RetroPalette.panel,
+        ..color = ProtoColors.panelBorder,
     );
     final link = Paint()..strokeWidth = 2;
     final seen = <String>{};
@@ -266,8 +272,8 @@ class PassiveTreePainter extends CustomPainter {
         final b = catalog.nodes[l];
         if (b == null) continue;
         link.color = _has(n.id) && _has(l)
-            ? RetroPalette.green
-            : RetroPalette.panel;
+            ? ProtoColors.green
+            : ProtoColors.panelBorder;
         canvas.drawLine(PassiveTreeView.nodeCenter(n),
             PassiveTreeView.nodeCenter(b), link);
       }
@@ -277,11 +283,11 @@ class PassiveTreePainter extends CustomPainter {
       final r = PassiveTreeView.nodeRadius(n, start: n.id == startId);
       final state = states[n.id] ?? TreeNodeState.locked;
       final fill = switch (state) {
-        TreeNodeState.start => RetroPalette.gold,
+        TreeNodeState.start => ProtoColors.gold,
         TreeNodeState.taken =>
-          n.kind == 'k' ? RetroPalette.red : RetroPalette.green,
-        TreeNodeState.available => RetroPalette.ink,
-        TreeNodeState.locked => RetroPalette.panel,
+          n.kind == 'k' ? const Color(0xFFFF6B6B) : ProtoColors.green,
+        TreeNodeState.available => ProtoColors.sky,
+        TreeNodeState.locked => const Color(0xFF3A4570),
       };
       canvas.drawCircle(c, r, Paint()..color = fill);
       canvas.drawCircle(
@@ -289,10 +295,8 @@ class PassiveTreePainter extends CustomPainter {
         r,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = state == TreeNodeState.locked
-              ? RetroPalette.muted
-              : RetroPalette.night,
+          ..strokeWidth = 1.5
+          ..color = ProtoColors.bg,
       );
       if (n.id == focus) {
         canvas.drawCircle(
@@ -301,7 +305,7 @@ class PassiveTreePainter extends CustomPainter {
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2
-            ..color = RetroPalette.gold,
+            ..color = ProtoColors.gold,
         );
       }
     }

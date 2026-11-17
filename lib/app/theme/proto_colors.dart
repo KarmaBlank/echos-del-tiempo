@@ -1,0 +1,111 @@
+import 'package:material_ui/material_ui.dart';
+
+/// Paleta de la UI HTML del prototipo (`<style>` y los `color:` en línea
+/// de `hud()`, `descSkill`, `weaponTip`, `renderPanel`, ...). Ver
+/// docs/specs/ui_style.md § "Paleta".
+abstract final class ProtoColors {
+  /// Fondo de `body`; `#tip` con alfa `f5`.
+  static const bg = Color(0xFF0B0E1A);
+
+  /// Texto base de `body`.
+  static const ink = Color(0xFFE8ECFF);
+
+  /// `.pbox`, `.panel`, `#menu`.
+  static const panel = Color(0xFF121936);
+
+  /// Borde de `.pbox`, `.mrow`, canvas.
+  static const panelBorder = Color(0xFF2E3B6B);
+
+  /// `button`.
+  static const button = Color(0xFF22305A);
+  static const buttonBorder = Color(0xFF5B74C9);
+  static const buttonHover = Color(0xFF2E4280);
+  static const buttonHoverBorder = Color(0xFF9FB4FF);
+
+  /// `input`.
+  static const input = Color(0xFF0F1530);
+  static const inputBorder = Color(0xFF3A4A85);
+
+  /// `<b>` del tip y del menú, créditos, jugador local, títulos.
+  static const gold = Color(0xFFFFD166);
+
+  /// `.k` del tip, clase y nivel, DEF/VEL, `small`.
+  static const sky = Color(0xFF9FB4FF);
+
+  /// `.help`, XP y créditos, "Turno en N".
+  static const dim = Color(0xFF7D8BC4);
+
+  /// `#chatlog`.
+  static const chat = Color(0xFFC8D2FF);
+
+  /// `.sys`, `#mission`, curas, requisitos cumplidos, `TIENES`.
+  static const green = Color(0xFF7BED9F);
+
+  /// Relleno de `.hp`.
+  static const hp = Color(0xFF2ED573);
+
+  /// Relleno de `.mp`.
+  static const mp = Color(0xFF1E90FF);
+
+  /// Fondo de `.bar`.
+  static const barBg = Color(0xFF222A48);
+
+  /// MP de técnicas, DEF de escudo, éter, Congelación.
+  static const ice = Color(0xFF74B9FF);
+
+  /// `#err`, requisitos que faltan, `+% crít`, tiempo ≤ 10 s.
+  static const red = Color(0xFFFF6B81);
+
+  /// Timer ≤ 10 s del menú, golpe crítico recibido.
+  static const crimson = Color(0xFFFF4757);
+
+  /// Arma equipada, `(fusión)`, avisos.
+  static const orange = Color(0xFFFF9F43);
+
+  /// Borde de `button.dual`.
+  static const amber = Color(0xFFFF9F1C);
+
+  /// ULT lista / nombre de la ULT en los tips.
+  static const pink = Color(0xFFE84393);
+
+  /// ULT cargando.
+  static const violet = Color(0xFFA29BFE);
+
+  /// Protege, aturdir del Paladín.
+  static const cream = Color(0xFFFFEAA7);
+
+  /// Sagrado.
+  static const holy = Color(0xFFFFF3B0);
+
+  /// Regeneración.
+  static const mint = Color(0xFF55EFC4);
+
+  /// Quemadura.
+  static const burn = Color(0xFFFF7B29);
+
+  /// Provoca.
+  static const taunt = Color(0xFFFF7675);
+
+  /// Sombra del título y del rango grande.
+  static const titleShadow = Color(0xFFA3471D);
+
+  static const white = Color(0xFFFFFFFF);
+
+  /// `#rgb`, `#rrggbb` o `#rrggbbaa` (orden CSS) → [Color]; `null` si no
+  /// se entiende.
+  static Color? parse(String hex) {
+    var h = hex.trim();
+    if (h.startsWith('#')) h = h.substring(1);
+    if (h.length == 3) h = h.split('').map((c) => c + c).join();
+    if (h.length == 6) h = '${h}ff';
+    if (h.length != 8) return null;
+    final v = int.tryParse(h, radix: 16);
+    if (v == null) return null;
+    // CSS es RRGGBBAA; Flutter, AARRGGBB.
+    return Color(((v & 0xFF) << 24) | (v >> 8));
+  }
+
+  /// `#rrggbb` de [c] (para armar markup).
+  static String hex(Color c) =>
+      '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+}

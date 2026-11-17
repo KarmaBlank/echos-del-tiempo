@@ -67,6 +67,9 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
       sprites: widget.sprites,
       arena: _arena,
       localId: view.localId,
+      pendingPoints: {
+        for (final p in view.session.playerList) p.id: p.profile.points,
+      },
       onCommand: widget.onCommand,
     );
   }

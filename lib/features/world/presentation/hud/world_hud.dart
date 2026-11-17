@@ -1,6 +1,9 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../../app/theme/retro_bar.dart';
+import '../../../../app/theme/party_box.dart';
+import '../../../../app/theme/proto_colors.dart';
+import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
@@ -55,133 +58,155 @@ class WorldHud extends StatelessWidget {
         !view.map.lobby &&
         s.mission != null;
     final small = Theme.of(context).textTheme.bodySmall!;
-    return DefaultTextStyle.merge(
-      style: small,
-      child: Stack(
-        children: [
-          Positioned(
-            top: _gap,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: _MissionBar(
-                view: view,
-                missionName: s.mission == null
-                    ? ''
-                    : controller.engine.catalog
-                            .mission(s.mission!.missionId)
-                            ?.name ??
-                        s.mission!.missionId,
-              ),
-            ),
-          ),
-          if (s.mode == SessionMode.lobby && onExit != null)
+    final players = s.playerList;
+    final partyWidth = players.length * (PartyBox.defaultWidth + 6);
+    return LayoutBuilder(builder: (context, box) {
+      final chatWidth =
+          (box.maxWidth - partyWidth - _gap * 3).clamp(240.0, 520.0);
+      return DefaultTextStyle.merge(
+        style: small,
+        child: Stack(
+          children: [
             Positioned(
               top: _gap,
-              left: _gap,
-              child: ElevatedButton(
-                style: RetroTheme.compactButton(),
-                onPressed: onExit,
-                child: const Text('< TITULO'),
-              ),
-            ),
-          if (field && s.mission != null)
-            Positioned(
-              top: _gap + 48,
-              left: _gap,
-              child: _Objectives(mission: s.mission!),
-            ),
-          if (showMinimap)
-            Positioned(
-              top: _gap + 48,
-              right: _gap,
-              child: RetroPanel(
-                padding: const EdgeInsets.all(4),
-                child: Minimap(
-                  map: view.map,
-                  session: s,
-                  localId: view.localId,
-                  localX: controller.local.x,
-                  localY: controller.local.y,
-                  time: s.time,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: _MissionBar(
+                  view: view,
+                  missionName: s.mission == null
+                      ? ''
+                      : controller.engine.catalog
+                              .mission(s.mission!.missionId)
+                              ?.name ??
+                          s.mission!.missionId,
                 ),
               ),
             ),
-          Positioned(
-            left: _gap,
-            bottom: _gap,
-            width: 520,
-            child: chatFocus == null
-                ? _MessageLog(messages: view.messages)
-                : ChatBox(
-                    lines: view.chat,
-                    focusNode: chatFocus!,
-                    onSend: controller.sendChat,
-                    onDone: onChatDone ?? () {},
+            if (s.mode == SessionMode.lobby && onExit != null)
+              Positioned(
+                top: _gap,
+                left: _gap,
+                child: ElevatedButton(
+                  style: RetroTheme.compactButton(),
+                  onPressed: onExit,
+                  child: const Text('< TITULO'),
+                ),
+              ),
+            // `Sala: CODIGO [Copiar]` del prototipo (HTML línea 87).
+            if (view.roomCode case final code?)
+              Positioned(
+                top: _gap,
+                right: _gap,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Sala: $code',
+                        key: const ValueKey('hud-room-code'),
+                        style: const TextStyle(color: RetroPalette.gold)),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: RetroTheme.compactButton(),
+                      onPressed: () =>
+                          Clipboard.setData(ClipboardData(text: code)),
+                      child: const Text('COPIAR'),
+                    ),
+                  ],
+                ),
+              ),
+            if (field && s.mission != null)
+              Positioned(
+                top: _gap + 48,
+                left: _gap,
+                child: _Objectives(mission: s.mission!),
+              ),
+            if (showMinimap)
+              Positioned(
+                top: _gap + 48,
+                right: _gap,
+                child: RetroPanel(
+                  padding: const EdgeInsets.all(4),
+                  child: Minimap(
+                    map: view.map,
+                    session: s,
+                    localId: view.localId,
+                    localX: controller.local.x,
+                    localY: controller.local.y,
+                    time: s.time,
                   ),
-          ),
-          if (_voteBox(s) case final vote?)
+                ),
+              ),
             Positioned(
-              top: _gap + 48,
-              left: 0,
-              right: 0,
-              child: Center(child: vote),
+              left: _gap,
+              bottom: _gap,
+              width: chatWidth,
+              child: chatFocus == null
+                  ? _MessageLog(messages: view.messages)
+                  : ChatBox(
+                      lines: view.chat,
+                      focusNode: chatFocus!,
+                      onSend: controller.sendChat,
+                      onDone: onChatDone ?? () {},
+                    ),
             ),
-          Positioned(
-            right: _gap,
-            bottom: _gap,
-            width: 360,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final p in s.playerList)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: _PlayerBox(
+            if (_voteBox(s) case final vote?)
+              Positioned(
+                top: _gap + 48,
+                left: 0,
+                right: 0,
+                child: Center(child: vote),
+              ),
+            // `#party`: una fila de `.pbox`.
+            Positioned(
+              right: _gap,
+              bottom: _gap,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  for (final (i, p) in players.indexed) ...[
+                    if (i > 0) const SizedBox(width: 6),
+                    _PlayerBox(
                       player: p,
                       local: p.id == view.localId,
                       progression: controller.engine.progression,
                     ),
-                  ),
-              ],
-            ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 200,
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final line in _banners(s))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: RetroPanel(
-                        padding: const EdgeInsets.all(8),
-                        child: Text(retroText(line.$1),
-                            style: TextStyle(color: line.$2)),
-                      ),
-                    ),
-                  if (view.prompt case final prompt?)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: RetroPanel(
-                        selected: true,
-                        padding: const EdgeInsets.all(8),
-                        child: Text(prompt.label,
-                            style: const TextStyle(
-                                fontSize: 16, color: RetroPalette.gold)),
-                      ),
-                    ),
+                  ],
                 ],
               ),
             ),
-          ),
-          if (s.mode == SessionMode.levelUp) _LevelUpBanner(session: s),
-        ],
-      ),
-    );
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 200,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final line in _banners(s))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: _CanvasLabel(line.$1, color: line.$2),
+                      ),
+                    // `[E] ...`: caja `#000a` y texto dorado (sello violeta).
+                    if (view.prompt case final prompt?)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: _CanvasLabel(prompt.label,
+                            fontSize: 16,
+                            color: prompt == WorldPrompt.seal
+                                ? ProtoColors.violet
+                                : ProtoColors.gold),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            if (s.mode == SessionMode.levelUp) _LevelUpBanner(session: s),
+          ],
+        ),
+      );
+    });
   }
 
   /// Votación en curso (`renderVote`), solo en el lobby.
@@ -212,8 +237,10 @@ class WorldHud extends StatelessWidget {
         WorldRules.distance(
                 controller.local.x, controller.local.y, boss.x, boss.y) >
             140) {
-      out.add(('La barrera se abrió → busca al JEFE (★ en el minimapa)',
-          RetroPalette.gold));
+      out.add((
+        'La barrera se abrió → busca al JEFE (★ en el minimapa)',
+        ProtoColors.gold
+      ));
     }
     return out;
   }
@@ -230,7 +257,9 @@ class _MissionBar extends StatelessWidget {
     final s = view.session;
     final m = s.mission;
     final String text;
-    if (m != null && s.mode != SessionMode.lobby && s.mode != SessionMode.prep) {
+    if (m != null &&
+        s.mode != SessionMode.lobby &&
+        s.mode != SessionMode.prep) {
       final goals = m.open
           ? '¡Derrota al jefe!'
           : m.objectives
@@ -243,11 +272,30 @@ class _MissionBar extends StatelessWidget {
     } else {
       text = 'Lobby · Mostrador [E] · Armería [E] · Personaje [C]';
     }
+    // `#mission`: verde `#7bed9f`.
     return RetroPanel(
       padding: const EdgeInsets.all(8),
-      child: Text(retroText(text)),
+      child: Text(retroText(text),
+          style: const TextStyle(color: ProtoColors.green)),
     );
   }
+}
+
+/// Texto dibujado en el canvas del prototipo sobre una caja `#000a`.
+class _CanvasLabel extends StatelessWidget {
+  const _CanvasLabel(this.text, {required this.color, this.fontSize = 8});
+
+  final String text;
+  final Color color;
+  final double fontSize;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        color: const Color(0xAA000000),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Text(retroText(text),
+            style: TextStyle(fontSize: fontSize, color: color)),
+      );
 }
 
 class _Objectives extends StatelessWidget {
@@ -260,17 +308,25 @@ class _Objectives extends StatelessWidget {
     Widget line(String text, bool ok) => Padding(
           padding: const EdgeInsets.only(bottom: 4),
           child: Text(retroText(text),
-              style: TextStyle(color: ok ? RetroPalette.green : RetroPalette.ink)),
+              style:
+                  TextStyle(color: ok ? ProtoColors.green : ProtoColors.ink)),
         );
-    return RetroPanel(
-      padding: const EdgeInsets.all(8),
+    // `drawObjectives`: caja `#000a` con borde `#5b74c9`.
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+      decoration: BoxDecoration(
+        color: const Color(0xAA000000),
+        border: Border.all(color: ProtoColors.buttonBorder),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           for (final o in mission.objectives)
-            line('${o.done ? '> ' : '· '}${o.kind.label} '
-                '${o.count.clamp(0, o.goal)}/${o.goal}', o.done),
+            line(
+                '${o.done ? '> ' : '· '}${o.kind.label} '
+                '${o.count.clamp(0, o.goal)}/${o.goal}',
+                o.done),
           line(
               mission.open
                   ? '★ ¡Ve por el JEFE!'
@@ -304,10 +360,10 @@ class _MessageLog extends StatelessWidget {
           for (final m in last)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
-              child: Text(retroText(m),
+              child: Text(retroText('» $m'),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: RetroPalette.muted)),
+                  style: const TextStyle(color: ProtoColors.green)),
             ),
         ],
       ),
@@ -315,7 +371,10 @@ class _MessageLog extends StatelessWidget {
   }
 }
 
-/// Caja de un jugador (`.pbox` del prototipo, fuera de batalla).
+/// Caja de un jugador (`.pbox` del prototipo, fuera de batalla; `hud()`
+/// línea 1195): nombre, `Clase LvN` en `#9fb4ff`, arma en `#ff9f43` con
+/// `+N pts` dorado, barras HP/MP, `XP · ₵` y pociones (`♥` verde, `✦`
+/// celeste).
 class _PlayerBox extends StatelessWidget {
   const _PlayerBox({
     required this.player,
@@ -333,41 +392,33 @@ class _PlayerBox extends StatelessWidget {
     final prof = p.profile;
     final cls = progression.catalog.classes[prof.classId]?.name ?? prof.classId;
     final weapon = prof.equipped == null
-        ? '-'
+        ? '—'
         : progression.weaponDisplayName(prof, prof.equipped!);
-    return RetroPanel(
-      selected: local,
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(retroText('${p.name}  $cls Lv${prof.level}'),
-              style: TextStyle(
-                  color: p.alive ? RetroPalette.ink : RetroPalette.red)),
-          const SizedBox(height: 4),
-          Text(
-            retroText('$weapon${prof.points > 0 ? '  +${prof.points} pts' : ''}'),
-            style: const TextStyle(color: RetroPalette.gold),
-          ),
-          const SizedBox(height: 6),
-          RetroBar(
-              value: p.hp, max: p.maxHp, color: RetroPalette.green, height: 10),
-          const SizedBox(height: 2),
-          Text('HP ${p.hp.ceil()}/${p.maxHp}'),
-          const SizedBox(height: 4),
-          RetroBar(
-              value: p.mp, max: p.maxMp, color: RetroPalette.muted, height: 10),
-          const SizedBox(height: 2),
-          Text('MP ${p.mp.floor()}/${p.maxMp}'),
-          const SizedBox(height: 4),
-          Text(
-            retroText('XP ${prof.xp}/${ProgressionRules.xpNeed(prof.level)} · '
-                '₵${prof.credits} · Poc. ${prof.potions} · Éter ${prof.ethers}'),
-            style: const TextStyle(color: RetroPalette.muted),
-          ),
-        ],
-      ),
+    return PartyBox(
+      local: local,
+      knockedOut: !p.alive,
+      children: [
+        ProtoText('${protoEsc(p.name)} '
+            '<span class="k">$cls Lv${prof.level}</span>'),
+        ProtoText(protoColor(
+            ProtoColors.orange,
+            '⚔ ${protoEsc(weapon)}'
+            '${prof.points > 0 ? ' ${protoColor(ProtoColors.gold, '+${prof.points} pts')}' : ''}')),
+        hpBar(p.hp, p.maxHp),
+        Text('HP ${p.hp.ceil()}/${p.maxHp}'),
+        mpBar(p.mp, p.maxMp),
+        Text('MP ${p.mp.floor()}/${p.maxMp}'),
+        Text(
+          retroText('XP ${prof.xp}/${ProgressionRules.xpNeed(prof.level)} · '
+              '₵${prof.credits}'),
+          style: const TextStyle(color: ProtoColors.dim),
+        ),
+        ProtoText(
+          'Pociones: ${protoColor(ProtoColors.green, '♥${prof.potions}')} '
+          '${protoColor(ProtoColors.ice, '✦${prof.ethers}')}',
+          style: const TextStyle(color: ProtoColors.dim),
+        ),
+      ],
     );
   }
 }
@@ -387,19 +438,19 @@ class _LevelUpBanner extends StatelessWidget {
       left: 0,
       right: 0,
       top: 96,
-      child: Center(
-        child: RetroPanel(
-          selected: true,
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('¡SUBIDA DE NIVEL!',
-                  style: TextStyle(fontSize: 16, color: RetroPalette.gold)),
-              const SizedBox(height: 8),
-              Text(retroText('Esperando a: $waiting')),
-            ],
-          ),
+      // Franja `#000c` a todo el ancho, como el canvas del prototipo.
+      child: Container(
+        color: const Color(0xCC000000),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('¡SUBIDA DE NIVEL!',
+                style: TextStyle(fontSize: 16, color: ProtoColors.gold)),
+            const SizedBox(height: 8),
+            Text(retroText('Esperando a: $waiting'),
+                style: const TextStyle(color: ProtoColors.white)),
+          ],
         ),
       ),
     );

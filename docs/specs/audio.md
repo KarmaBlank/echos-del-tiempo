@@ -1,4 +1,4 @@
-# Spec: Sonido (efectos 8 bits)
+# Spec: Sonido (efectos chiptune)
 
 Fuente de verdad: prototipo `ecos-del-tiempo.html`, `sfxInit` y `beep`
 (líneas 1392-1395) y cada llamada a `beep(`:
@@ -48,8 +48,14 @@ duración, onda, volumen, retraso)`.
 
 Un oyente fuera del motor (el motor no sabe de sonido) escucha
 `SessionController.events` y las vistas nuevas:
-- `BattleStepEvent`: por cada `BattleEvent`, en orden:
-  - `HealEvent` de vida → `heal`; de maná → `hit`;
+- `BattleStepEvent`: por cada `BattleEvent`, en orden, siguiendo la
+  acción en curso del paso (`ActionEvent`; `TurnStartedEvent` la borra),
+  igual que `mapBattleEvents` decide el color del número:
+  - `HealEvent` dentro de una acción: de vida → `heal` (número
+    `#7bed9f`); de maná → `hit` (`+N MP` `#74b9ff`);
+  - `HealEvent` sin acción (Regeneración al empezar el turno, línea
+    736): de vida → `hit` (número `#55efc4`); de maná → nada (el
+    prototipo no lo dibuja);
   - `DamageEvent` de estado (`fromStatus`): `hit` si el estado que manda
     es Quemadura (número naranja), si no `heal` (número verde: el
     prototipo pinta así el daño de Veneno/Sagrado, línea 737, y por eso
@@ -98,8 +104,11 @@ paquete `audioplayers`):
 - Cada WAV se escribe **una sola vez** a un archivo temporal y se
   reproduce con `DeviceFileSource`, que funciona igual en todas las
   plataformas de escritorio (no depende del soporte de `BytesSource`).
-- Pool de 4 `AudioPlayer` en rotación: hasta 4 sonidos a la vez; el
-  quinto corta al más viejo.
+- Pool de 12 `AudioPlayer`: cada sonido va al primer reproductor libre
+  (desde la posición de la rotación) y, si están todos sonando, al más
+  viejo. Con 4 se cortaba la ULT (1.75 s) cuando un golpe a TODOS + sus
+  estados sonaban en el mismo paso; el prototipo suma osciladores sin
+  límite.
 - `NoopSfxPlayer` queda para tests y plataformas sin audio.
 
 `sfxInit` (crear el `AudioContext` con el primer clic) no hace falta en

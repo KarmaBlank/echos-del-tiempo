@@ -9,7 +9,8 @@ import '../../game_engine/rules/passive_tree_rules.dart';
 import '../../game_engine/rules/progression_rules.dart';
 import '../../game_engine/rules/session_engine.dart';
 import '../../game_engine/rules/stats_calculator.dart';
-import '../../netcode/contracts/net_session.dart';
+import '../../netcode/contracts/net_session_factory.dart';
+import '../../netcode/lan/lan_net_session.dart';
 import '../../netcode/p2p_webrtc/firestore_signaling_service.dart';
 import '../../netcode/p2p_webrtc/webrtc_net_session.dart';
 import '../audio/audioplayers_sfx_player.dart';
@@ -67,14 +68,39 @@ void registerSharedDependencies() {
   );
 }
 
-/// Variante P2P (la de HOY): WebRTC + señalización por Firestore.
-void registerP2PNetcode() {
+/// Variante P2P por internet: WebRTC + señalización por Firestore.
+/// [firebaseReady] lo decide el composition root (si
+/// `Firebase.initializeApp` funcionó); si no, el título muestra
+/// [p2pUnavailable]. Ver docs/specs/netcode.md § "P2P por internet".
+void registerP2PNetcode({required bool firebaseReady}) {
+  if (!firebaseReady) {
+    sl.registerSingleton<NetSessionFactory>(
+        NetSessionFactory.unavailable('P2P', p2pUnavailable));
+    return;
+  }
   sl.registerLazySingleton<FirestoreSignalingService>(
     () => FirestoreSignalingService(),
   );
-  sl.registerLazySingleton<NetSession>(
-    () => WebRTCNetSession(signaling: sl<FirestoreSignalingService>()),
-  );
+  sl.registerSingleton<NetSessionFactory>(NetSessionFactory(
+    label: 'P2P',
+    codeHint: 'CODIGO',
+    create: () => WebRTCNetSession(
+      signaling: sl<FirestoreSignalingService>(),
+      catalog: sl<GameCatalog>(),
+    ),
+  ));
+}
+
+const p2pUnavailable = 'P2P por internet: falta configurar Firebase';
+
+/// Variante LAN: WebSocket en la red local, código `IP:PUERTO`, sin
+/// Firebase. Ver docs/specs/netcode.md § "LAN".
+void registerLanNetcode() {
+  sl.registerSingleton<NetSessionFactory>(NetSessionFactory(
+    label: 'LAN',
+    codeHint: 'IP:PUERTO',
+    create: () => LanNetSession(catalog: sl<GameCatalog>()),
+  ));
 }
 
 // void registerDedicatedServerNetcode() { ... } // futuro

@@ -46,9 +46,8 @@ class SessionSfx {
   void onEvent(SessionEvent e) {
     switch (e) {
       case BattleStepEvent(:final events):
-        for (final b in events) {
-          final sfx = battleSfx(b);
-          if (sfx != null) service.play(sfx);
+        for (final sfx in battleSounds(events)) {
+          service.play(sfx);
         }
       case LevelUpEvent():
         service.play(Sfx.levelUp);
@@ -57,13 +56,45 @@ class SessionSfx {
     }
   }
 
-  /// El número flotante de `onNewFx` (línea 1469) según su color.
-  Sfx? battleSfx(BattleEvent b) => switch (b) {
-        HealEvent(:final mana) => mana ? Sfx.hit : Sfx.heal,
+  /// Los sonidos de un paso, en orden: el `beep` de `onNewFx` (línea
+  /// 1469) por cada número, destello y ULT que el paso dibuja (los mismos
+  /// que arma `mapBattleEvents`). Sigue la acción en curso porque el
+  /// color del número depende de ella (regeneración vs. curación).
+  List<Sfx> battleSounds(List<BattleEvent> events) {
+    final out = <Sfx>[];
+    ActionEvent? action;
+    for (final b in events) {
+      switch (b) {
+        case TurnStartedEvent():
+          action = null;
+        case ActionEvent():
+          action = b;
+        default:
+          break;
+      }
+      final sfx = battleSfx(b, inAction: action != null);
+      if (sfx != null) out.add(sfx);
+    }
+    return out;
+  }
+
+  /// El `beep` del número / efecto de [b] según su color (`onNewFx`):
+  /// verde `#7bed9f` → 880 Hz (`heal`), `#ff6b81` → 160 Hz (`hurt`),
+  /// cualquier otro número → 420 Hz (`hit`). [inAction]: hay una acción
+  /// en curso en el paso (sin ella, una cura es la Regeneración del
+  /// inicio de turno: número `#55efc4` → 420 Hz, y su maná no tiene
+  /// número).
+  Sfx? battleSfx(BattleEvent b, {bool inAction = true}) => switch (b) {
+        // `+N MP` `#74b9ff` de la poción de maná; la Regeneración no
+        // dibuja el maná.
+        HealEvent(mana: true) => inAction ? Sfx.hit : null,
+        // Regeneración (`#55efc4`, línea 736) vs. curas (`#7bed9f`).
+        HealEvent() => inAction ? Sfx.heal : Sfx.hit,
         // Daño de estados: naranja con Quemadura (420 Hz), si no verde
         // (880 Hz, como una cura: así lo hace el prototipo, línea 737).
         DamageEvent(fromStatus: true, :final statusSource) =>
           statusSource == StatusKind.burn ? Sfx.hit : Sfx.heal,
+        // `hurt` (línea 791): `#ff6b81` normal, `#ff4757` crítico.
         DamageEvent(:final targetId, :final critical) =>
           !critical && _isPlayer(targetId) ? Sfx.hurt : Sfx.hit,
         UltimateUsedEvent() => Sfx.ultimate,

@@ -1,16 +1,16 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'retro_theme.dart';
+import 'proto_colors.dart';
 
-/// Barra pixelada de vida/maná/ULT (docs/specs/ui_style.md § "Barras"):
-/// fondo `night`, borde `ink` de 2 px y relleno sólido sin degradé.
+/// Barra `.bar` del prototipo (docs/specs/ui_style.md § "Barras"): fondo
+/// `#222a48`, sin borde, relleno sólido sin degradé.
 class RetroBar extends StatelessWidget {
   const RetroBar({
     super.key,
     required this.value,
     required this.max,
     required this.color,
-    this.height = 16,
+    this.height = 6,
   });
 
   final num value;
@@ -23,11 +23,8 @@ class RetroBar extends StatelessWidget {
     final f = max <= 0 ? 0.0 : (value / max).clamp(0, 1).toDouble();
     return Container(
       height: height,
-      decoration: BoxDecoration(
-        color: RetroPalette.night,
-        border: Border.all(
-            color: RetroPalette.ink, width: RetroTheme.thinBorderWidth),
-      ),
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      color: ProtoColors.barBg,
       child: Align(
         alignment: Alignment.centerLeft,
         child: FractionallySizedBox(

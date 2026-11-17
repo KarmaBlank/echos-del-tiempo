@@ -41,8 +41,11 @@ void main() {
     final rec = _Recorder();
     final sfx = SessionSfx(rec, localId: c.localId)..onView(c.view);
     sfx.onEvent(const BattleStepEvent([
+      ActionEvent('local', BattleActionKind.skill, skillId: 'cura'),
       HealEvent('local', 10),
+      ActionEvent('local', BattleActionKind.ether, targetId: 'local'),
       HealEvent('local', 5, mana: true),
+      ActionEvent('e1', BattleActionKind.enemyAttack, targetId: 'local'),
       DamageEvent('local', 7),
       DamageEvent('local', 12, critical: true),
       DamageEvent('local', 3, fromStatus: true, statusSource: StatusKind.poison),
@@ -57,8 +60,8 @@ void main() {
     sfx.onEvent(const LevelUpEvent('local', 2));
     sfx.onEvent(const SystemMessageEvent('nada'));
     expect(rec.played, [
-      Sfx.heal,
-      Sfx.hit,
+      Sfx.heal, // cura: número verde
+      Sfx.hit, // +MP celeste
       Sfx.hurt,
       Sfx.hit, // crítico a un jugador
       Sfx.heal, // veneno: número verde
@@ -69,6 +72,20 @@ void main() {
       Sfx.flash,
       Sfx.levelUp,
     ]);
+  });
+
+  test('Regeneración al empezar el turno: número #55efc4 (420 Hz), el '
+      'maná no suena', () async {
+    await started();
+    final rec = _Recorder();
+    final sfx = SessionSfx(rec, localId: c.localId)..onView(c.view);
+    sfx.onEvent(const BattleStepEvent([
+      TurnStartedEvent('local'),
+      HealEvent('local', 6),
+      HealEvent('local', 2, mana: true),
+      DamageEvent('local', 4, fromStatus: true, statusSource: StatusKind.burn),
+    ]));
+    expect(rec.played, [Sfx.hit, Sfx.hit]);
   });
 
   test('tu turno suena una vez y la cuenta regresiva con ≤ 5 s', () async {

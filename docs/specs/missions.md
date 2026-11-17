@@ -200,9 +200,16 @@ caracteres (`ChatAction.maxLength`). No cambia el estado: emite
 `ChatMessageEvent(id, nombre, texto)` (el `broadcast` + `addChat` del
 prototipo). Test: `test/game_engine/session_chat_test.dart`.
 
+## Red
+
+El transporte, el broadcast periódico del snapshot (66 ms) y la
+serialización de `GameSession`, `SessionAction` y `SessionEvent`
+(`lib/game_engine/serialization/`) están en docs/specs/netcode.md. Los
+jugadores remotos entran con `addPlayer` (ids `p1`, `p2`...; el host es
+`h`) y salen con `removePlayer` cuando se cae su conexión.
+
 ## Fuera de alcance (fases siguientes)
 
-Transporte P2P real y el broadcast periódico del snapshot (lo hará
-`netcode` con este `GameSession`). La UI de votación y preparación está
+La UI de votación y preparación está
 en docs/specs/panels.md, el sonido en audio.md y el chat del cliente en
 exploration.md § "Chat".

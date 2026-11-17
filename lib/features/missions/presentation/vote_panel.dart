@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/theme/proto_colors.dart';
+
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_panel.dart';
 import '../../../app/theme/retro_text.dart';
@@ -46,11 +48,12 @@ class VotePanel extends StatelessWidget {
             TextSpan(children: [
               const TextSpan(
                   text: 'Votación',
-                  style: TextStyle(color: RetroPalette.gold)),
+                  style: TextStyle(
+                      color: ProtoColors.gold, fontWeight: FontWeight.bold)),
               TextSpan(text: retroText(' · $proposedBy propone ')),
               TextSpan(
                   text: retroText(missionName),
-                  style: const TextStyle(color: RetroPalette.gold)),
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               TextSpan(text: ' (rango $rank)'),
             ]),
             textAlign: TextAlign.center,

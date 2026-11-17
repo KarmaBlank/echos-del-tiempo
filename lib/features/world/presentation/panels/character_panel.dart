@@ -2,8 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/feature_flags.dart';
 import '../../../../app/theme/panel_frame.dart';
+import '../../../../app/theme/proto_colors.dart';
+import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_text.dart';
-import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../inventory/presentation/shop_sections.dart';
@@ -85,12 +86,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
       header: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text.rich(TextSpan(children: [
-            TextSpan(text: retroText('${prof.name} · $cls Lv${prof.level} · Puntos: ')),
-            TextSpan(
-                text: '$left',
-                style: const TextStyle(color: RetroPalette.gold)),
-          ])),
+          ProtoText('${protoEsc(prof.name)} · $cls Lv${prof.level} · Puntos: '
+              '<b>$left</b>'),
           const SizedBox(height: 8),
           if (!must)
             PanelTabs(
@@ -142,7 +139,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
             _stat('VEL', now.speed, next.speed, (x) => x.toStringAsFixed(1)),
             Text(retroText('(6 + AGI×0.5 + DES×0.1 − peso arma '
                 '${w.weight.toStringAsFixed(1)})'),
-                style: const TextStyle(color: RetroPalette.muted)),
+                style: const TextStyle(color: ProtoColors.dim)),
           ],
         ),
         const SizedBox(height: 8),
@@ -154,13 +151,13 @@ class _CharacterPanelState extends State<CharacterPanel> {
             _stat('MAG', now.magic, next.magic),
             _stat('DEF', now.defense, next.defense),
             Text('(-${(now.defensePercent * 100).round()}% daño)',
-                style: const TextStyle(color: RetroPalette.muted)),
+                style: const TextStyle(color: ProtoColors.dim)),
             _stat('CRÍT', now.critChance, next.critChance,
                 (x) => '${(x * 100).round()}%'),
             Text(
                 retroText('(daño crítico ×'
                     '${now.critMultiplier == 2 ? '2' : '1.5'})'),
-                style: const TextStyle(color: RetroPalette.muted)),
+                style: const TextStyle(color: ProtoColors.dim)),
           ],
         ),
         const SizedBox(height: 16),
@@ -170,7 +167,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
           children: [
             PanelButton('CONFIRMAR PUNTOS',
                 key: const ValueKey('confirm-points'),
-                accent: RetroPalette.green,
+                accent: ProtoColors.green,
                 onPressed: _allocSum == 0 ? null : _confirm),
             if (canShop)
               PanelButton('REINICIAR PUNTOS',
@@ -186,7 +183,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
           const Text(
               'El equipo sigue cuando todos los que subieron de nivel '
               'confirmen sus puntos.',
-              style: TextStyle(color: RetroPalette.muted)),
+              style: TextStyle(color: ProtoColors.dim)),
         ],
         PanelSection(
           'Clase',
@@ -210,7 +207,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 retroText(view.mode == SessionMode.lobby
                     ? 'Cambiar de clase reinicia tus atributos y tu árbol.'
                     : 'Solo en el lobby'),
-                style: const TextStyle(color: RetroPalette.muted),
+                style: const TextStyle(color: ProtoColors.dim),
               ),
             ],
           ),
@@ -238,8 +235,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
         TextSpan(text: retroText('$label ${f(a)}')),
         if (changed)
           TextSpan(
-              text: ' > ${f(b)}',
-              style: const TextStyle(color: RetroPalette.green)),
+              text: ' → ${f(b)}',
+              style: const TextStyle(
+                  color: ProtoColors.green, fontWeight: FontWeight.bold)),
       ]),
     );
   }
@@ -254,9 +252,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
           SizedBox(width: 160, child: Text(retroText('$short $name'))),
           SizedBox(
             width: 72,
-            child: Text('$value${add > 0 ? ' +$add' : ''}',
-                style: TextStyle(
-                    color: add > 0 ? RetroPalette.green : RetroPalette.ink)),
+            child: ProtoText('$value'
+                '${add > 0 ? ' ${protoColor(ProtoColors.green, '+$add')}' : ''}'),
           ),
           PanelButton('-',
               key: ValueKey('dec-${a.name}'),
@@ -271,7 +268,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
           const SizedBox(width: 16),
           Expanded(
             child: Text(retroText(desc),
-                style: const TextStyle(color: RetroPalette.muted)),
+                style: const TextStyle(color: ProtoColors.dim)),
           ),
         ],
       ),
@@ -297,14 +294,14 @@ class _CharacterPanelState extends State<CharacterPanel> {
         OwnedWeaponsSection(shop: shop, pending: Map.of(_alloc)),
         PanelSection(
           'Consumibles',
-          child: Text(retroText('Poción de vida x${p.potions} · '
-              'Poción de maná x${p.ethers} · ₵${p.credits}')),
+          child: ProtoText('Poción de vida x${p.potions} · '
+              'Poción de maná x${p.ethers} · Créditos: <b>₵${p.credits}</b>'),
         ),
         const SizedBox(height: 8),
         const Text(
             'Las armas se compran, mejoran y fusionan en la Armería del lobby '
             'o en la preparación.',
-            style: TextStyle(color: RetroPalette.muted)),
+            style: TextStyle(color: ProtoColors.dim)),
       ],
     );
   }

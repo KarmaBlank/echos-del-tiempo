@@ -11,15 +11,18 @@ import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/class_def.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import '../../../netcode/contracts/net_session.dart';
+import '../../../netcode/contracts/net_session_factory.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/pixel_sprite.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/world_screen.dart';
 
 /// Pantalla de título (prototipo, HTML líneas 70-83 y `title()` desde la
-/// línea 1471): nombre, elección de clase y entrada al juego. Crear sala
-/// / unirse por código son P2P (próxima fase) y se muestran
-/// deshabilitados. Ver docs/specs/exploration.md § "Título".
+/// línea 1471): nombre, elección de clase y entrada al juego, solo o en
+/// una sala de red (`CREAR SALA` / código + `UNIRSE`, según la
+/// `NetSessionFactory` del flavor). Ver docs/specs/exploration.md
+/// § "Título" y docs/specs/netcode.md.
 class TitleScreen extends ConsumerStatefulWidget {
   const TitleScreen({super.key, this.onStart});
 
@@ -33,9 +36,14 @@ class TitleScreen extends ConsumerStatefulWidget {
 
 class _TitleScreenState extends ConsumerState<TitleScreen> {
   final _name = TextEditingController();
+  final _code = TextEditingController();
   PlayerProfile? _profile;
   bool _busy = false;
   late final Future<void> _loading;
+
+  /// Línea de estado de la red (`setErr` del prototipo) y si es un error.
+  String? _netStatus;
+  bool _netError = false;
 
   ProgressionRules get _rules => ref.read(sessionEngineProvider).progression;
 
@@ -48,6 +56,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
   @override
   void dispose() {
     _name.dispose();
+    _code.dispose();
     super.dispose();
   }
 
@@ -79,13 +88,13 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     });
   }
 
-  /// `prep()`: nombre recortado (vacío → "Héroe"), guardar y entrar.
-  Future<void> _start() async {
-    if (_busy) return;
+  /// `prep()`: nombre recortado (vacío → "Héroe") y guardar. `null` si
+  /// la pantalla ya no está o el perfil no cargó.
+  Future<PlayerProfile?> _prepare() async {
     // Se puede tocar antes de que termine de cargar el perfil.
     await _loading;
     final p = _profile;
-    if (p == null || !mounted) return;
+    if (p == null || !mounted) return null;
     var name = _name.text.trim();
     if (name.isEmpty) name = SessionController.defaultName;
     if (name.length > ProgressionRules.maxNameLength) {
@@ -101,15 +110,80 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     } catch (_) {
       // Sin disco se juega igual (el controlador vuelve a intentar).
     }
-    if (!mounted) return;
+    return mounted ? next : null;
+  }
+
+  /// `> COMENZAR`: un jugador, sin red.
+  Future<void> _start() async {
+    if (_busy) return;
+    final p = await _prepare();
+    if (p == null) return;
     setState(() => _busy = false);
     final onStart = widget.onStart;
     if (onStart != null) {
       onStart();
     } else {
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(builder: (_) => const WorldScreen()),
-      );
+      await _enter(null);
+    }
+  }
+
+  /// `CREAR SALA` (`startHost`) o `UNIRSE` (`startJoin`).
+  Future<void> _connect(NetSessionFactory factory, {String? code}) async {
+    if (_busy) return;
+    if (code != null && code.trim().length < 4) {
+      setState(() {
+        _netStatus = 'Escribe el código de la sala.';
+        _netError = true;
+      });
+      return;
+    }
+    final p = await _prepare();
+    if (p == null) return;
+    setState(() {
+      _netStatus =
+          code == null ? 'Creando sala...' : 'Conectando a ${code.trim()}...';
+      _netError = false;
+    });
+    final net = factory.create();
+    try {
+      await net.connect(SessionConfig(profile: p, roomCode: code?.trim()));
+    } on Object catch (e) {
+      await net.disconnect();
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _netStatus = e is NetException ? e.message : 'Error de red: $e';
+        _netError = true;
+      });
+      return;
+    }
+    if (!mounted) {
+      await net.disconnect();
+      return;
+    }
+    setState(() {
+      _busy = false;
+      _netStatus = null;
+    });
+    await _enter(net);
+  }
+
+  /// Abre el juego con [net] (`null` = solo). Si vuelve por una
+  /// desconexión, muestra el motivo.
+  Future<void> _enter(NetSession? net) async {
+    ref.read(activeNetSessionProvider.notifier).state = net;
+    final reason = await Navigator.of(context).push(
+      MaterialPageRoute<String>(builder: (_) => const WorldScreen()),
+    );
+    // El controlador la cierra al descartarse; por las dudas (idempotente).
+    if (net != null) await net.disconnect();
+    if (!mounted) return;
+    ref.read(activeNetSessionProvider.notifier).state = null;
+    if (reason != null) {
+      setState(() {
+        _netStatus = reason;
+        _netError = true;
+      });
     }
   }
 
@@ -121,6 +195,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
         .where((c) => FeatureFlags.instance.isCharacterAllowed(c.id))
         .toList();
     final sprites = ref.watch(gameSpritesProvider).valueOrNull;
+    final factory = ref.watch(netSessionFactoryProvider);
+    final netOk = factory != null && factory.available && !_busy;
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -208,31 +284,60 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                   alignment: WrapAlignment.center,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    const PanelButton('CREAR SALA'),
+                    PanelButton('CREAR SALA',
+                        key: const ValueKey('title-host'),
+                        onPressed:
+                            netOk ? () => _connect(factory) : null),
                     const Text('o', style: TextStyle(color: RetroPalette.muted)),
-                    const SizedBox(
-                      width: 110,
+                    SizedBox(
+                      width: 170,
                       child: TextField(
-                        enabled: false,
-                        style: TextStyle(
-                            fontFamily: RetroTheme.fontFamily, fontSize: 8),
+                        key: const ValueKey('title-code'),
+                        controller: _code,
+                        enabled: netOk,
+                        style: const TextStyle(
+                            fontFamily: RetroTheme.fontFamily,
+                            fontSize: 8,
+                            color: RetroPalette.ink),
+                        cursorColor: RetroPalette.gold,
+                        onSubmitted: (_) {
+                          if (netOk) _connect(factory, code: _code.text);
+                        },
                         decoration: InputDecoration(
                           isDense: true,
-                          hintText: 'CODIGO',
-                          hintStyle: TextStyle(
+                          hintText: factory?.codeHint ?? 'CODIGO',
+                          hintStyle: const TextStyle(
                               fontFamily: RetroTheme.fontFamily,
                               fontSize: 8,
                               color: RetroPalette.muted),
-                          contentPadding: EdgeInsets.all(8),
+                          contentPadding: const EdgeInsets.all(8),
                         ),
                       ),
                     ),
-                    const PanelButton('UNIRSE'),
-                    Text(retroText('P2P: próximamente'),
+                    PanelButton('UNIRSE',
+                        key: const ValueKey('title-join'),
+                        onPressed: netOk
+                            ? () => _connect(factory, code: _code.text)
+                            : null),
+                    Text(
+                        retroText(factory == null
+                            ? 'P2P: próximamente'
+                            : factory.unavailableReason ??
+                                'Red: ${factory.label}'),
                         key: const ValueKey('title-p2p'),
                         style: const TextStyle(color: RetroPalette.muted)),
                   ],
                 ),
+                if (_netStatus case final status?) ...[
+                  const SizedBox(height: 8),
+                  Text(retroText(status),
+                      key: const ValueKey('title-net-status'),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: _netError
+                              ? RetroPalette.red
+                              : RetroPalette.muted)),
+                ],
                 const SizedBox(height: 24),
                 const Text(
                   'Mover: WASD/Flechas · Interactuar: E/Espacio · Combate por '

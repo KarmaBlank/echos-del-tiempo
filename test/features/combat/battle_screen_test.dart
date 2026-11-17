@@ -75,11 +75,13 @@ void main() {
       return true;
     });
 
-    expect(find.text('¡TU TURNO! GUERRERO'), findsOneWidget);
+    // Cabecera `<b>` del `#menu` y la caja del grupo con su turno.
+    expect(find.textContaining('¡Tu turno! (Guerrero)'), findsOneWidget);
+    expect(find.textContaining('SU TURNO'), findsOneWidget);
     // 4 jugadores → vida ×2.35: Limo 30 × 2.35 = 70.5 → 71
-    expect(find.textContaining('71/71'), findsOneWidget);
+    expect(state.enemies[0].maxHp, 71);
 
-    await tester.tap(find.text('  1. Atacar'));
+    await tester.tap(find.textContaining('1. Atacar'));
     await tester.pump();
     expect(sent, isA<AttackCommand>());
     // Sin elegir, el objetivo es el primer enemigo vivo.
@@ -111,7 +113,8 @@ void main() {
     });
     await tester.tap(find.textContaining('Poción de vida x2'));
     await tester.pump();
-    expect(find.text('¿A QUIEN?'), findsOneWidget);
+    expect(find.textContaining('¿A quién le das la Poción de vida'),
+        findsOneWidget);
     await tester.tap(find.textContaining('. Maga'));
     await tester.pump();
     expect(sent, isA<ItemCommand>());
@@ -120,8 +123,10 @@ void main() {
 
   testWidgets('sin turno propio no hay menú', (tester) async {
     await pump(tester, canAct: false, onCommand: (_) => fail('no debía mandar'));
-    expect(find.text('TURNO DE GUERRERO'), findsOneWidget);
-    expect(find.text('  1. Atacar'), findsNothing);
+    // Como el prototipo: sin menú; la caja del guerrero dice que es su
+    // turno.
+    expect(find.textContaining('SU TURNO'), findsOneWidget);
+    expect(find.textContaining('1. Atacar'), findsNothing);
   });
 
   testWidgets('un paso nuevo (eventSeq) crea los efectos una sola vez',

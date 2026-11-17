@@ -42,6 +42,8 @@ class SessionView {
     this.chat = const [],
     this.battleEvents = const [],
     this.battleEventSeq = 0,
+    this.roomCode,
+    this.disconnected,
   });
 
   final GameSession session;
@@ -63,6 +65,13 @@ class SessionView {
 
   /// Sube con cada `BattleStepEvent` (para animar una sola vez).
   final int battleEventSeq;
+
+  /// Código de la sala de red (`Sala: X` del HUD); `null` sin red.
+  final String? roomCode;
+
+  /// Motivo si se perdió la sala (p. ej. el host se fue): la pantalla
+  /// del juego vuelve al título y lo muestra.
+  final String? disconnected;
 
   SessionMode get mode => session.mode;
   SessionPlayer? get me => session.players[localId];
@@ -97,5 +106,7 @@ class SessionView {
         chat: chat ?? this.chat,
         battleEvents: battleEvents ?? this.battleEvents,
         battleEventSeq: battleEventSeq ?? this.battleEventSeq,
+        roomCode: roomCode,
+        disconnected: disconnected,
       );
 }

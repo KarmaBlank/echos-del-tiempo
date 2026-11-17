@@ -29,9 +29,9 @@ void main() {
     final preview = progression.previewAllocation(
         start, {Attribute.vit: 2, Attribute.fue: 1});
     expect(preview.maxHp, greaterThan(before.maxHp));
-    expect(_plain(tester, 'stat-HP'), 'HP ${before.maxHp} > ${preview.maxHp}');
+    expect(_plain(tester, 'stat-HP'), 'HP ${before.maxHp} → ${preview.maxHp}');
     expect(_plain(tester, 'stat-ATQ'),
-        'ATQ ${before.attack} > ${preview.attack}');
+        'ATQ ${before.attack} → ${preview.attack}');
     expect(find.textContaining('Puntos: 3'), findsOneWidget);
     // Nada cambió todavía en el host.
     expect(c.view!.me!.profile.points, 6);

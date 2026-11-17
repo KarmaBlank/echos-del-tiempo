@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -18,6 +19,8 @@ import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
 import '../../../game_engine/rules/session_engine.dart';
 import '../../../game_engine/rules/world_rules.dart';
+import '../../../netcode/contracts/net_session.dart';
+import '../../../netcode/contracts/net_session_factory.dart';
 import 'local_player.dart';
 import 'session_view.dart';
 
@@ -47,35 +50,80 @@ final profileStoreProvider = Provider<ProfileStore>((ref) => sl<ProfileStore>())
 
 final sessionClockProvider = Provider<SessionClock>((ref) => const SessionClock());
 
-/// La sesión local. `null` mientras carga el perfil. Se descarta (y
-/// guarda) al salir de `WorldScreen`.
+/// La sala de red con la que se abre `WorldScreen` (la llena el título
+/// al crear o unirse; `null` = sesión local de un jugador).
+final activeNetSessionProvider = StateProvider<NetSession?>((ref) => null);
+
+/// La red que registró el composition root (`null` = este build no
+/// tiene multijugador). El título la usa para crear / unirse a salas.
+final netSessionFactoryProvider = Provider<NetSessionFactory?>((ref) =>
+    sl.isRegistered<NetSessionFactory>() ? sl<NetSessionFactory>() : null);
+
+/// La sesión de juego. `null` mientras carga el perfil (o, en un
+/// cliente, hasta el primer snapshot). Se descarta (y guarda) al salir
+/// de `WorldScreen`.
 final sessionControllerProvider =
     StateNotifierProvider.autoDispose<SessionController, SessionView?>((ref) {
   final c = SessionController(
     engine: ref.watch(sessionEngineProvider),
     store: ref.watch(profileStoreProvider),
     clock: ref.watch(sessionClockProvider),
+    net: ref.read(activeNetSessionProvider),
   );
   unawaited(c.start());
   return c;
 });
 
-/// Host local de una sala con un solo jugador en este dispositivo: es
-/// dueño del `SessionEngine`, lo hace avanzar a ritmo fijo, traduce la
-/// entrada en `SessionAction` y expone la sesión + eventos a la UI.
-/// Ver docs/specs/exploration.md § "Controlador de sesión".
+/// Rol de este dispositivo en la sala.
+enum SessionRole {
+  /// Un jugador, sin red: corre el motor.
+  local,
+
+  /// Creó la sala: corre el motor y difunde el estado.
+  host,
+
+  /// Se unió a una sala: nunca corre reglas, aplica snapshots.
+  client,
+}
+
+/// La sesión de juego de este dispositivo. Según [net] es local (sin
+/// red), host (dueño del `SessionEngine`, agrega a los jugadores remotos,
+/// aplica sus acciones y difunde el estado) o cliente (aplica snapshots,
+/// predice solo su movimiento y manda acciones). En los tres casos
+/// traduce la entrada en `SessionAction` y expone la misma
+/// [SessionView] + eventos a la UI. Ver docs/specs/exploration.md
+/// § "Controlador de sesión" y docs/specs/netcode.md.
 class SessionController extends StateNotifier<SessionView?> {
   SessionController({
     required this.engine,
     required this.store,
     this.clock = const SessionClock(),
-    this.localId = 'local',
-  }) : super(null);
+    this.net,
+    String localId = 'local',
+  })  : localId = net?.localId ?? localId,
+        super(null);
 
   final SessionEngine engine;
   final ProfileStore store;
   final SessionClock clock;
+
+  /// La sala de red; `null` = sesión local.
+  final NetSession? net;
+
+  /// Id del jugador de este dispositivo: el de la [net] (`h`, `p1`...) o
+  /// `local` sin red.
   final String localId;
+
+  SessionRole get role => net == null
+      ? SessionRole.local
+      : net!.isHost
+          ? SessionRole.host
+          : SessionRole.client;
+
+  bool get isClient => role == SessionRole.client;
+
+  /// Cada cuánto el host difunde el estado (`setInterval(broadcast, 66)`).
+  static const broadcastInterval = Duration(milliseconds: 66);
 
   /// Nombre y clase del perfil nuevo cuando no hay uno guardado.
   static const defaultName = 'Héroe';
@@ -91,6 +139,15 @@ class SessionController extends StateNotifier<SessionView?> {
   final _events = StreamController<SessionEvent>.broadcast();
   GameSession? _s;
   Timer? _timer;
+  Timer? _broadcastTimer;
+  StreamSubscription<NetEvent>? _netSub;
+
+  /// Eventos del host que todavía no se difundieron.
+  final _unsent = <SessionEvent>[];
+
+  /// Motivo de la desconexión, si se perdió la sala.
+  String? _disconnected;
+  bool _started = false;
 
   WorldPanel? _panel;
   bool _autoChar = false;
@@ -118,9 +175,19 @@ class SessionController extends StateNotifier<SessionView?> {
   // Ciclo de vida
   // ------------------------------------------------------------------
 
-  /// Carga el perfil, crea la sala y entra el jugador local.
+  /// Local / host: carga el perfil, crea la sala y entra el jugador
+  /// local. Cliente: empieza a escuchar snapshots y a mandar su posición.
   Future<void> start() async {
-    if (_s != null) return;
+    if (_started) return;
+    _started = true;
+    final n = net;
+    if (isClient) {
+      _netSub = n!.events.listen(_onNet);
+      if (clock.autoStart) {
+        _timer = Timer.periodic(clock.interval, (_) => _clientTick(clock.dt));
+      }
+      return;
+    }
     PlayerProfile? profile;
     try {
       profile = await store.load();
@@ -129,27 +196,108 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     if (!mounted) return;
     profile ??= PlayerProfile(name: defaultName, classId: defaultClass);
-    final step = engine.addPlayer(engine.create(), localId, profile)!;
+    var step = engine.addPlayer(engine.create(), localId, profile)!;
+    final code = n?.roomCode;
+    if (code != null) {
+      // `sysChat('Sala creada. Comparte el código ...')` del prototipo.
+      step = SessionStep(step.state, [
+        ...step.events,
+        SystemMessageEvent(
+            'Sala creada. Comparte el código $code con tus amigos.'),
+      ]);
+    }
     _lastSaved = null;
     _step(step);
     _save(force: true);
+    // Recién con la sala creada: los que se unieron mientras cargaba el
+    // perfil quedaron guardados en el stream de la red.
+    if (n != null) _netSub = n.events.listen(_onNet);
     if (clock.autoStart) {
       _timer = Timer.periodic(clock.interval, (_) => _hostTick(clock.dt));
+      if (n != null) {
+        _broadcastTimer =
+            Timer.periodic(broadcastInterval, (_) => _broadcast());
+      }
     }
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _broadcastTimer?.cancel();
+    unawaited(_netSub?.cancel());
     _save(force: true);
     unawaited(_events.close());
+    unawaited(net?.disconnect());
     super.dispose();
   }
 
   /// Avanza [seconds] de juego en ticks de 50 ms (tests y depuración).
+  /// El host difunde el estado después de cada tick; el cliente solo
+  /// manda su posición (no corre reglas).
   void advance(double seconds) {
     for (var t = 0.0; t < seconds - 1e-9; t += 0.05) {
-      _hostTick(math.min(0.05, seconds - t));
+      final dt = math.min(0.05, seconds - t);
+      if (isClient) {
+        _clientTick(dt);
+      } else {
+        _hostTick(dt);
+        _broadcast();
+      }
+    }
+  }
+
+  /// Host: manda el estado y los eventos pendientes a los clientes.
+  void _broadcast() {
+    final n = net, s = _s;
+    if (n == null || !n.isHost || s == null || !mounted) return;
+    final events = List<SessionEvent>.of(_unsent);
+    _unsent.clear();
+    n.broadcast(s, events);
+  }
+
+  /// Cliente: el `send({t:'pos'})` cada 50 ms.
+  void _clientTick(double dt) {
+    if (_s == null || !mounted) return;
+    _sendPosition();
+    _sinceSave += dt;
+    _save();
+  }
+
+  // ------------------------------------------------------------------
+  // Red
+  // ------------------------------------------------------------------
+
+  void _onNet(NetEvent e) {
+    if (!mounted) return;
+    final s = _s;
+    switch (e) {
+      case SnapshotEvent(:final session, :final events):
+        if (isClient) _step(SessionStep(session, events));
+      case PeerJoinedEvent(:final peerId, :final profile):
+        if (s == null || isClient) return;
+        final step = engine.addPlayer(s, peerId, profile);
+        if (step != null) _step(step);
+      case PeerActionEvent(:final peerId, :final action):
+        if (s == null || isClient) return;
+        final step = engine.apply(s, peerId, action);
+        if (step == null) return;
+        // Las posiciones (20 por segundo por cliente) no traen eventos:
+        // se aplican sin emitir una vista nueva; la emite el próximo tick.
+        if (action is MoveAction && step.events.isEmpty) {
+          _s = step.state;
+        } else {
+          _step(step);
+        }
+      case PeerLeftEvent(:final peerId):
+        if (s == null || isClient) return;
+        final step = engine.removePlayer(s, peerId);
+        if (step != null) _step(step);
+      case ConnectionLostEvent(:final reason):
+        _disconnected = reason;
+        _timer?.cancel();
+        _broadcastTimer?.cancel();
+        _emit();
     }
   }
 
@@ -197,12 +345,14 @@ class SessionController extends StateNotifier<SessionView?> {
       local.moving = false;
       return;
     }
-    final step = engine.apply(
-        s,
-        localId,
-        MoveAction((local.x * 10).roundToDouble() / 10,
-            (local.y * 10).roundToDouble() / 10,
-            epoch: local.epoch, dir: local.dir, moving: local.moving));
+    final move = MoveAction((local.x * 10).roundToDouble() / 10,
+        (local.y * 10).roundToDouble() / 10,
+        epoch: local.epoch, dir: local.dir, moving: local.moving);
+    if (isClient) {
+      net!.sendAction(move);
+      return;
+    }
+    final step = engine.apply(s, localId, move);
     if (step != null) _s = step.state;
   }
 
@@ -383,9 +533,16 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Enter en el campo de chat (`send({t:'chat'})`).
   bool sendChat(String text) => _apply(ChatAction(text));
 
+  /// Local / host: aplica la acción y devuelve si el motor la aceptó.
+  /// Cliente: la manda al host y devuelve `true` (enviada); el resultado
+  /// llega con un snapshot.
   bool _apply(SessionAction action) {
     final s = _s;
     if (s == null) return false;
+    if (isClient) {
+      net!.sendAction(action);
+      return true;
+    }
     final step = engine.apply(s, localId, action);
     if (step == null) return false;
     _step(step);
@@ -398,6 +555,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   void _step(SessionStep step) {
     _s = step.state;
+    if (role == SessionRole.host) _unsent.addAll(step.events);
     var forceSave = false;
     // Un mismo tick puede traer varios pasos de batalla (p. ej. el turno
     // del enemigo y el inicio del siguiente): se juntan todos para que la
@@ -442,15 +600,34 @@ class SessionController extends StateNotifier<SessionView?> {
     final p = _s?.players[localId]?.profile;
     if (p == null || identical(p, _lastSaved)) return;
     if (!force && _sinceSave < saveEvery) return;
+    final last = _lastSaved;
     _lastSaved = p;
+    // El cliente recibe un perfil nuevo (otro objeto) en cada snapshot:
+    // solo se guarda si cambió de verdad.
+    if (last != null && jsonEncode(last.toJson()) == jsonEncode(p.toJson())) {
+      return;
+    }
     _sinceSave = 0;
     unawaited(store.save(p).catchError((Object _) {}));
   }
 
   /// Reglas automáticas de paneles de `hud()` + avisos, y emite la vista.
   void _emit() {
+    if (!mounted) return;
     final s = _s;
-    if (s == null || !mounted) return;
+    if (s == null) {
+      // Un cliente puede perder la sala antes del primer snapshot.
+      if (_disconnected != null) {
+        final empty = engine.create();
+        state = SessionView(
+          session: empty,
+          localId: localId,
+          map: engine.mapFor(empty),
+          disconnected: _disconnected,
+        );
+      }
+      return;
+    }
     final mode = s.mode;
     final must = s.mustAllocate(localId);
     if (mode == SessionMode.prep &&
@@ -490,6 +667,8 @@ class SessionController extends StateNotifier<SessionView?> {
       chat: List.unmodifiable(_chat),
       battleEvents: _battleEvents,
       battleEventSeq: _battleSeq,
+      roomCode: net?.roomCode,
+      disconnected: _disconnected,
     );
   }
 

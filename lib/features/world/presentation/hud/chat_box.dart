@@ -1,15 +1,17 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/theme/proto_colors.dart';
+import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_panel.dart';
-import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/session_action.dart';
 import '../session_view.dart';
 
 /// Chat (`#chatbox` del prototipo, líneas 103-106 y 1376-1379): las
-/// últimas 5 líneas (sistema en verde con `>`, jugadores con su nombre
-/// en dorado) y el campo `Enter para chatear...` de 120 caracteres.
+/// últimas 5 líneas (`#chatlog` en `#c8d2ff`; sistema `.sys` en verde
+/// con `» `, jugadores con su nombre en negrita dorada) y el campo
+/// `Enter para chatear…` de 120 caracteres.
 ///
 /// Enter en el campo manda el mensaje y devuelve el foco al juego; Esc lo
 /// devuelve sin mandar (líneas 909-912). Ver docs/specs/exploration.md §
@@ -92,17 +94,11 @@ class _ChatBoxState extends State<ChatBox> {
           for (final l in last)
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
-              child: Text.rich(
+              child: ProtoText(
                 l.system
-                    ? TextSpan(
-                        text: retroText('> ${l.text}'),
-                        style: const TextStyle(color: RetroPalette.green))
-                    : TextSpan(children: [
-                        TextSpan(
-                            text: retroText('${l.from}: '),
-                            style: const TextStyle(color: RetroPalette.gold)),
-                        TextSpan(text: retroText(l.text)),
-                      ]),
+                    ? '<span class="sys">» ${protoEsc(l.text)}</span>'
+                    : '<b>${protoEsc(l.from ?? '')}:</b> ${protoEsc(l.text)}',
+                style: const TextStyle(color: ProtoColors.chat, height: 1.6),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -120,16 +116,16 @@ class _ChatBoxState extends State<ChatBox> {
               style: const TextStyle(
                   fontFamily: RetroTheme.fontFamily,
                   fontSize: 8,
-                  color: RetroPalette.ink),
-              cursorColor: RetroPalette.gold,
+                  color: ProtoColors.white),
+              cursorColor: ProtoColors.gold,
               decoration: const InputDecoration(
                 isDense: true,
                 counterText: '',
-                hintText: 'Enter para chatear...',
+                hintText: 'Enter para chatear…',
                 hintStyle: TextStyle(
                     fontFamily: RetroTheme.fontFamily,
                     fontSize: 8,
-                    color: RetroPalette.muted),
+                    color: ProtoColors.dim),
                 contentPadding:
                     EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               ),

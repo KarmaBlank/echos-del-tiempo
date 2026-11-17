@@ -1,5 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/theme/proto_markup.dart';
+
+import '../../../app/theme/proto_colors.dart';
+
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
@@ -73,7 +77,8 @@ class PrepPanel extends StatelessWidget {
             const TextSpan(text: 'Dentro de la misión vas con lo que lleves: '),
             const TextSpan(
                 text: 'no hay tienda ni cambio de arma',
-                style: TextStyle(color: RetroPalette.gold)),
+                style: TextStyle(
+                    color: ProtoColors.orange, fontWeight: FontWeight.bold)),
             TextSpan(text: retroText(', solo subes de nivel.')),
           ])),
           const SizedBox(height: 8),
@@ -91,8 +96,8 @@ class PrepPanel extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(retroText('Créditos: ₵$credits · Arma: $weaponName'),
-              style: const TextStyle(color: RetroPalette.gold)),
+          ProtoText('Créditos: <b>₵$credits</b> · Arma: '
+              '<b style="color:#ff9f43">${protoEsc(weaponName)}</b>'),
           if (shop != null) shop!,
         ],
       ),

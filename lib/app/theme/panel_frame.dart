@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'proto_colors.dart';
+import 'proto_markup.dart';
 import 'retro_panel.dart';
 import 'retro_text.dart';
 import 'retro_theme.dart';
@@ -37,16 +39,16 @@ class PanelFrame extends StatelessWidget {
             maxHeight: box.maxHeight * 0.86,
           ),
           child: RetroPanel(
-            selected: true,
+            // `.panel`: borde `#5b74c9`.
             child: DefaultTextStyle.merge(
-              style: small,
+              style: small.copyWith(height: 1.8),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(retroText(title),
                       style: const TextStyle(
-                          fontSize: 16, color: RetroPalette.gold)),
+                          fontSize: 16, color: ProtoColors.gold)),
                   const SizedBox(height: 16),
                   if (header != null) ...[header!, const SizedBox(height: 8)],
                   Flexible(child: SingleChildScrollView(child: child)),
@@ -72,7 +74,7 @@ class PanelFrame extends StatelessWidget {
 /// Botón compacto del tema (8 px). [onPressed] `null` = deshabilitado.
 ///
 /// Con [reason] el botón queda deshabilitado y el motivo se escribe en
-/// `muted` a su izquierda (docs/specs/panels.md § "Botones con motivo").
+/// `dim` a su izquierda (docs/specs/panels.md § "Botones con motivo").
 /// [selected] pinta el borde `gold` (opción elegida de una lista).
 class PanelButton extends StatelessWidget {
   const PanelButton(
@@ -105,7 +107,7 @@ class PanelButton extends StatelessWidget {
     if (selected) {
       style = style.copyWith(
         side: const WidgetStatePropertyAll(BorderSide(
-            color: RetroPalette.gold, width: RetroTheme.thinBorderWidth)),
+            color: ProtoColors.gold, width: RetroTheme.thinBorderWidth)),
       );
     }
     final button = ElevatedButton(
@@ -122,7 +124,7 @@ class PanelButton extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 220),
           child: Text(retroText(reason!),
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 8, color: RetroPalette.muted)),
+              style: const TextStyle(fontSize: 8, color: ProtoColors.dim)),
         ),
         const SizedBox(width: 8),
         button,
@@ -142,13 +144,13 @@ class ComingSoon extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(retroText('$what: próximamente.'),
-          style: const TextStyle(color: RetroPalette.muted)),
+          style: const TextStyle(color: ProtoColors.dim)),
     );
   }
 }
 
-/// Subtítulo de una sección de panel (`h2` chico del prototipo): 8 px
-/// `gold` con una línea `night` debajo.
+/// Subtítulo de una sección de panel (`h2` de 10 px del prototipo, acá
+/// 8 px): `#ffd166`, margen de arriba.
 class PanelSection extends StatelessWidget {
   const PanelSection(this.title, {super.key, required this.child});
 
@@ -162,18 +164,8 @@ class PanelSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            padding: const EdgeInsets.only(bottom: 4),
-            decoration: const BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                    color: RetroPalette.night,
-                    width: RetroTheme.thinBorderWidth),
-              ),
-            ),
-            child: Text(retroText(title),
-                style: const TextStyle(color: RetroPalette.gold)),
-          ),
+          Text(retroText(title),
+              style: const TextStyle(color: ProtoColors.gold)),
           const SizedBox(height: 8),
           child,
         ],
@@ -182,25 +174,26 @@ class PanelSection extends StatelessWidget {
   }
 }
 
-/// Fila enmarcada de una lista (`.mrow`): borde `night` de 2 px, padding
-/// 8, contenido a la izquierda y [trailing] a la derecha.
+/// Fila enmarcada de una lista (`.mrow`): borde `#2e3b6b` de 2 px,
+/// padding 8, contenido a la izquierda y [trailing] a la derecha.
 class PanelRow extends StatelessWidget {
   const PanelRow({super.key, required this.child, this.trailing, this.tooltip});
 
   final Widget child;
   final Widget? trailing;
 
-  /// Detalle al pasar el mouse (`data-tip` del prototipo).
+  /// Detalle al pasar el mouse (`data-tip` del prototipo), en markup
+  /// (`ProtoMarkup`).
   final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
     Widget row = Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         border: Border.all(
-            color: RetroPalette.night, width: RetroTheme.thinBorderWidth),
+            color: ProtoColors.panelBorder, width: RetroTheme.thinBorderWidth),
       ),
       child: Row(
         children: [
@@ -214,31 +207,40 @@ class PanelRow extends StatelessWidget {
   }
 }
 
-/// Tooltip del tema (`#tip` del prototipo): caja `night` con borde `gold`
-/// y texto de 8 px.
+/// Tooltip `#tip` del prototipo: caja `#0b0e1a` (alfa `f5`) con borde
+/// `#ffd166` de 2 px, padding 8×10, texto de 8 px `#e8ecff` con
+/// interlineado 1.8, ancho máximo 360 y sombra. [message] es markup
+/// (`<b>` dorado, `class="k"` `#9fb4ff`, `<span style="color:...">`).
 class RetroTooltip extends StatelessWidget {
   const RetroTooltip({super.key, required this.message, required this.child});
 
   final String message;
   final Widget child;
 
+  static const textStyle = TextStyle(
+      fontFamily: RetroTheme.fontFamily,
+      fontSize: 8,
+      height: 1.8,
+      color: ProtoColors.ink);
+
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: retroText(message),
-      waitDuration: const Duration(milliseconds: 300),
-      constraints: const BoxConstraints(maxWidth: 420),
-      padding: const EdgeInsets.all(8),
+      richMessage: protoSpan(message, boldColor: ProtoColors.gold),
+      waitDuration: Duration.zero,
+      exitDuration: Duration.zero,
+      constraints: const BoxConstraints(maxWidth: 360),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: RetroPalette.night,
+        color: ProtoColors.bg.withValues(alpha: 0xF5 / 0xFF),
         border: Border.all(
-            color: RetroPalette.gold, width: RetroTheme.thinBorderWidth),
+            color: ProtoColors.gold, width: RetroTheme.thinBorderWidth),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0xAA000000), offset: Offset(0, 4), blurRadius: 18),
+        ],
       ),
-      textStyle: const TextStyle(
-          fontFamily: RetroTheme.fontFamily,
-          fontSize: 8,
-          height: 1.8,
-          color: RetroPalette.ink),
+      textStyle: textStyle,
       child: child,
     );
   }

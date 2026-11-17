@@ -10,10 +10,12 @@ import 'sfx_service.dart';
 /// Cada WAV se escribe una sola vez a un archivo temporal y se reproduce
 /// desde ahí: así funciona igual en todas las plataformas de escritorio,
 /// sin depender del soporte de audio desde bytes en memoria. Usa un pool
-/// chico de reproductores en rotación para que los sonidos se superpongan
-/// (p. ej. el golpe y la curación del mismo turno).
+/// de reproductores para que los sonidos se superpongan como los
+/// osciladores del prototipo (un golpe a TODOS + estados + la ULT suenan
+/// juntos): cada sonido va a un reproductor libre y, si no hay, al más
+/// viejo de la rotación.
 class AudioplayersSfxPlayer implements SfxPlayer {
-  AudioplayersSfxPlayer({this.voices = 4})
+  AudioplayersSfxPlayer({this.voices = 12})
       : _players = List.generate(voices, (_) => AudioPlayer());
 
   final int voices;
@@ -33,8 +35,17 @@ class AudioplayersSfxPlayer implements SfxPlayer {
   @override
   Future<void> play(Uint8List wav) async {
     final path = await _fileFor(wav);
-    final player = _players[_next];
-    _next = (_next + 1) % voices;
+    // Primero uno libre (así un efecto largo, como la ULT, no se corta).
+    var i = _next;
+    for (var k = 0; k < voices; k++) {
+      final j = (_next + k) % voices;
+      if (_players[j].state != PlayerState.playing) {
+        i = j;
+        break;
+      }
+    }
+    _next = (i + 1) % voices;
+    final player = _players[i];
     await player.stop();
     await player.play(DeviceFileSource(path));
   }

@@ -19,7 +19,7 @@ Implementación Dart (feature `world` + piezas de `missions` y `combat`):
 
 | Pieza | Archivo |
 |---|---|
-| Controlador de sesión (host local) | `lib/features/world/presentation/session_controller.dart` |
+| Controlador de sesión (local, host o cliente) | `lib/features/world/presentation/session_controller.dart` |
 | Vista inmutable para la UI | `lib/features/world/presentation/session_view.dart` |
 | Jugador local (`me`) | `lib/features/world/presentation/local_player.dart` |
 | Pantalla raíz del juego | `lib/features/world/presentation/world_screen.dart` |
@@ -60,8 +60,22 @@ Tests: `test/features/world/session_flow_test.dart`,
   guarda el perfil con `ProfileStore.save` y abre `WorldScreen`, que lo
   carga. **Agregado del puerto**: el prototipo solo tiene "Crear sala" /
   "Unirse".
-- `CREAR SALA`, el campo `CODIGO` y `UNIRSE` se ven pero están
-  deshabilitados con `P2P: próximamente` (netcode es la fase siguiente).
+- `CREAR SALA`, el campo de código y `UNIRSE` dependen de la
+  `NetSessionFactory` que registró el composition root (docs/specs/netcode.md):
+  - sin fábrica (tests, builds sin red): deshabilitados con
+    `P2P: próximamente`;
+  - fábrica no disponible (P2P sin Firebase): deshabilitados con su
+    motivo (`P2P por internet: falta configurar Firebase`);
+  - disponible: el campo muestra `codeHint` (`IP:PUERTO` en LAN,
+    `CODIGO` en P2P) y una etiqueta con `label` (`LAN` / `P2P`).
+    `CREAR SALA` guarda el perfil y conecta como host; `UNIRSE` exige un
+    código (`Escribe el código de la sala.`), guarda el perfil y conecta
+    como cliente. Mientras conecta se muestra `Creando sala…` /
+    `Conectando a X…` y los botones se deshabilitan; un error de
+    conexión (`NetException`) se muestra en rojo debajo.
+  - Al conectar se abre `WorldScreen` con esa `NetSession`. Si la
+    pantalla del juego se cierra por una desconexión, el título muestra
+    el motivo (p. ej. `Se perdió la conexión con el host.`).
 - La línea de ayuda de controles del prototipo.
 
 ## Flujo de pantallas
@@ -82,17 +96,25 @@ vuelve al título; eso descarta el controlador (`autoDispose`), que
 guarda el perfil. El `GameWidget` sigue montado (y dibujando) debajo de
 la batalla y del resultado.
 
-## Controlador de sesión (host local)
+## Controlador de sesión (local, host o cliente)
 
 `SessionController` (Riverpod `StateNotifier<SessionView?>`, `null`
-mientras carga) es el host del prototipo corriendo en este dispositivo,
-con un único jugador local (`localId = 'local'`). Sin red todavía: cuando
-exista `NetSession`, el host seguirá usando este mismo controlador y los
-clientes recibirán snapshots.
+mientras carga) tiene tres roles según la `NetSession` que recibe
+(`activeNetSessionProvider`, que el título llena al crear/unirse):
+
+| Rol | `net` | `localId` | Motor |
+|---|---|---|---|
+| Local | `null` | `local` | corre `SessionEngine` |
+| Host | `isHost` | `net.localId` (`h`) | corre `SessionEngine` |
+| Cliente | `!isHost` | `net.localId` (el del `welcome`) | **no** corre reglas |
+
+Local y host (el host del prototipo corriendo en este dispositivo):
 
 1. `start()`: `ProfileStore.load()`; si no hay perfil se crea
    `PlayerProfile(name: 'Héroe', classId: 'guerrero')`. `engine.create()`
-   + `engine.addPlayer(s, localId, perfil)`.
+   + `engine.addPlayer(s, localId, perfil)`. El host además dice
+   `Sala creada. Comparte el código X con tus amigos.` (como el
+   prototipo) y empieza a escuchar `net.events`.
 2. **Tick fijo**: un `Timer.periodic` cada `SessionClock.interval`
    (50 ms, el `setInterval(hostTick, 50)` del prototipo) llama a
    `engine.tick(s, interval × timeScale)`. Los tests usan `timeScale`
@@ -103,14 +125,41 @@ clientes recibirán snapshots.
    `send({t:'pos'})` cada 50 ms del prototipo, redondeado a 0.1 px).
 4. **Entrada**: cada acción de la UI pasa por `engine.apply`; si devuelve
    `null` la acción se ignora (como el host del prototipo).
-5. **Eventos**: `SystemMessageEvent` se agrega al registro (últimos 50).
+5. **Red (solo host)**: `PeerJoinedEvent` → `engine.addPlayer(id,
+   perfil)`; `PeerActionEvent` → `engine.apply(id, acción)` (con el id
+   del enlace); `PeerLeftEvent` → `engine.removePlayer(id)`. Un segundo
+   `Timer.periodic` de 66 ms hace `net.broadcast(estado, eventos
+   pendientes)`; `advance` (tests) difunde después de cada tick.
+
+Cliente:
+
+1. `start()`: no crea sala ni agrega jugadores; la vista sigue en `null`
+   (`CARGANDO...`) hasta el primer snapshot.
+2. `SnapshotEvent(sesión, eventos)` pasa por el mismo `_step` que los
+   pasos del motor (mensajes, chat, eventos de batalla, sonido,
+   guardado), así la UI no distingue roles.
+3. Un `Timer.periodic` de 50 ms manda la posición local con
+   `net.sendAction(MoveAction(...))` (mismas condiciones que el punto 3
+   del host).
+4. Cada acción de la UI se manda con `net.sendAction` y devuelve `true`
+   (enviada); el host decide. Nunca se infiere estado de una acción: se
+   espera el snapshot.
+5. `ConnectionLostEvent` → `SessionView.disconnected` con el motivo;
+   `WorldScreen` vuelve al título y lo muestra.
+
+Comunes:
+
+6. **Eventos**: `SystemMessageEvent` se agrega al registro (últimos 50).
    `BattleStepEvent` reemplaza `battleEvents` (la batalla los usa para
    los números de daño) y sube `battleEventSeq`. Todos los eventos se
    publican además en `events` (un `Stream`) para sonido/animaciones.
-6. **Guardado** (`saveProfile`): si el perfil del jugador local cambió,
-   se guarda como mucho cada 2 s (`lastSave` del prototipo), y siempre
-   al terminar una misión, al volver al lobby y al descartar el
-   controlador.
+7. **Guardado** (`saveProfile`): si el perfil del jugador local cambió
+   (mismo objeto o, en el cliente, el mismo JSON), se guarda como mucho
+   cada 2 s (`lastSave` del prototipo), y siempre al terminar una
+   misión, al volver al lobby y al descartar el controlador. El cliente
+   guarda el perfil que le manda el host (como el prototipo).
+8. **Salida**: descartar el controlador cancela los timers y llama a
+   `net.disconnect()`.
 
 ### Jugador local (`updateMe`)
 
@@ -325,9 +374,14 @@ Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
   cofres `#ffd166`, jefe `*` que alterna `#e84393`/`#ffd166` cada 300 ms,
   jugador local blanco y aliados `#48dbfb`. Son colores de arte (como el
   mapa).
-- **Grupo** (abajo a la derecha, `#party`): por jugador nombre, clase y
-  nivel, arma, `+N pts`, barras HP/MP (`RetroBar`) con `ceil(hp)` y
-  `floor(mp)`, `XP n/xpNeed · ₵créditos`, pociones.
+- **Grupo** (abajo a la derecha, `#party`): una fila de `.pbox`
+  (`PartyBox`, docs/specs/ui_style.md § "Caja de jugador"), una por
+  jugador, con los colores de `hud()` (línea 1195): nombre +
+  `Clase LvN` en `#9fb4ff`; arma en `#ff9f43` con `+N pts` en `#ffd166`;
+  barra `#2ed573` + `HP ceil(hp)/max`; barra `#1e90ff` + `MP
+  floor(mp)/max`; `XP n/xpNeed · ₵créditos` en `#7d8bc4`; `Pociones:`
+  con `♥n` `#7bed9f` y `✦n` (`♦`) `#74b9ff`. El chat se achica para que
+  la fila entre.
 - **Chat** (abajo a la izquierda): ver § "Chat".
 - **Aviso de interacción** (abajo al centro): `[E] Ver misiones`,
   `[E] Armería`, `[E] Activar sello`, `[E] Tienda y herrería`.
@@ -375,11 +429,25 @@ Resumen:
   jugador local; cada opción manda `BattleAction(cmd)` con el objetivo
   actual (`tgt` del prototipo: primer enemigo vivo si el elegido cayó;
   Q/Tab o clic sobre el enemigo en la escena lo cambian).
-- Menú plano numerado como el prototipo (en dos columnas si entra):
-  `Atacar`, `ULTIMATE` (si la barra está al 100%), técnicas del arma
-  (deshabilitadas sin MP), dúos con cada aliado vivo, `Poción de vida
-  xN >` y `Poción de maná xN >` (submenú: a quién) y `Defender`. Al pasar
-  el mouse, la ayuda (`descSkill`) al pie del panel.
+- Menú (`#menu`, líneas 1205-1223) solo en el turno del jugador local,
+  centrado sobre la escena (máx. 900 px), borde 2 px `#ffd166`: cabecera
+  `<b>` dorada `Ns · ¡Tu turno! (nombre) · ATQ · MAG · DEF · Crítico n%
+  (×m)` (el tiempo en `#ff4757` con ≤ 10 s) y botones numerados en 3
+  columnas (`button`; `.dual` = ULT y dúos a fila entera con borde
+  `#ff9f1c` y texto `#ffd166`), con los textos coloreados del prototipo:
+  daño estimado `#ffd166` y `(crít N)` `#7d8bc4`, estado `+N` + letra en
+  su color, `+X% crít` `#ff6b81`, MP `#74b9ff`, curas `#7bed9f`, etc.
+  Orden: `Atacar`, `★ ULTIMATE` (deshabilitada < 100%), técnicas
+  (deshabilitadas sin MP), dúos, `Poción de vida xN ▸ elegir a quién`,
+  `Poción de maná xN ▸ ...` (submenú `¿A quién le das ...?` con HP/MP en
+  `#9fb4ff` y `+N` verde/celeste) y `Defender`. Al pasar el mouse, el
+  `#tip` (`RetroTooltip`) con `descSkill` en markup.
+- Cajas del grupo en batalla (`BattlePartyBox`): como las del mapa más
+  barra de ULT de 5 px (`#a29bfe`, `#e84393` + `¡LISTA!` al 100%), la
+  línea `DEF n [Protege] · VEL x.x` en `#9fb4ff` con los estados (letra +
+  stacks en su color) y `Provoca n` `#ff7675`, y el turno: `▶ SU TURNO`
+  dorado o `Turno en N` / `Fuera de combate` en `#7d8bc4` (índice en
+  `predictTurns`). Sin menú, solo se ven las cajas.
 - Tiempo de turno: `30 − turnTime` s (`TURN_LIMIT`), en la franja.
 
 ## Persistencia

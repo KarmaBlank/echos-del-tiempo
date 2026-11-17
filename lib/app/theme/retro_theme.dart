@@ -1,25 +1,29 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Paleta de 8 colores del estilo 8 bits (ver docs/specs/ui_style.md).
-/// Ningún widget debería usar colores fuera de esta lista.
+import 'proto_colors.dart';
+
+/// Constantes de conveniencia para el chrome neutro, con los valores del
+/// prototipo (docs/specs/ui_style.md § "Paleta"). No es una regla: donde
+/// el prototipo usa otro color se usa [ProtoColors].
 abstract final class RetroPalette {
-  static const night = Color(0xFF0F0F1B);
-  static const panel = Color(0xFF1D2B53);
-  static const panelDark = Color(0xFF111A33);
-  static const ink = Color(0xFFFFF1E8);
-  static const muted = Color(0xFF8B93AF);
-  static const gold = Color(0xFFFFCC33);
-  static const red = Color(0xFFE43B44);
-  static const green = Color(0xFF63C74D);
+  static const night = ProtoColors.bg;
+  static const panel = ProtoColors.panel;
+  static const panelDark = ProtoColors.input;
+  static const ink = ProtoColors.ink;
+  static const muted = ProtoColors.dim;
+  static const gold = ProtoColors.gold;
+  static const red = ProtoColors.red;
+  static const green = ProtoColors.green;
 }
 
-/// Tema global estilo 8 bits: fuente pixel, esquinas rectas, bordes
-/// gruesos, sin sombras suaves ni ripples.
+/// Tema global pixel art con los estilos del prototipo: fuente pixel,
+/// esquinas rectas, botones `#22305a`/`#5b74c9`, sin sombras ni ripples.
 abstract final class RetroTheme {
   /// Familia declarada en `pubspec.yaml` (bloque `fonts:`).
   static const fontFamily = 'PressStart2P';
 
-  static const borderWidth = 4.0;
+  /// Borde de `.panel` (3 px en el prototipo).
+  static const borderWidth = 3.0;
   static const thinBorderWidth = 2.0;
 
   static const _square = RoundedRectangleBorder();
@@ -27,27 +31,16 @@ abstract final class RetroTheme {
   /// Botón compacto para paneles y HUD (docs/specs/ui_style.md §
   /// "Botón compacto"): texto de 8 px, padding de 8 px y borde de 2 px.
   /// Hereda colores y estados del tema; se pasa como `style:`.
-  static ButtonStyle compactButton() => ButtonStyle(
+  static ButtonStyle compactButton() => const ButtonStyle(
         // Cambio de color instantáneo (sin la animación de Material).
         animationDuration: Duration.zero,
-        padding: const WidgetStatePropertyAll(
+        padding: WidgetStatePropertyAll(
           EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         ),
-        minimumSize: const WidgetStatePropertyAll(Size(0, 32)),
+        minimumSize: WidgetStatePropertyAll(Size(0, 32)),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        textStyle: const WidgetStatePropertyAll(
+        textStyle: WidgetStatePropertyAll(
           TextStyle(fontFamily: fontFamily, fontSize: 8),
-        ),
-        side: WidgetStateProperty.resolveWith(
-          (s) => BorderSide(
-            width: thinBorderWidth,
-            color: s.contains(WidgetState.disabled)
-                ? RetroPalette.muted
-                : s.contains(WidgetState.focused) ||
-                        s.contains(WidgetState.hovered)
-                    ? RetroPalette.gold
-                    : RetroPalette.ink,
-          ),
         ),
       );
 
@@ -65,7 +58,7 @@ abstract final class RetroTheme {
     );
 
     final buttonStyle = ButtonStyle(
-      // Sin transiciones: el feedback 8 bits es el cambio instantáneo.
+      // Sin transiciones: el feedback es el cambio instantáneo.
       animationDuration: Duration.zero,
       elevation: const WidgetStatePropertyAll(0),
       shape: const WidgetStatePropertyAll(_square),
@@ -77,23 +70,30 @@ abstract final class RetroTheme {
       textStyle: const WidgetStatePropertyAll(
         TextStyle(fontFamily: fontFamily, fontSize: 16),
       ),
+      // `button` / `button:hover` / `button:disabled` del prototipo.
       backgroundColor: WidgetStateProperty.resolveWith(
-        (s) => s.contains(WidgetState.pressed)
-            ? RetroPalette.panelDark
-            : RetroPalette.panel,
+        (s) => s.contains(WidgetState.disabled)
+            ? ProtoColors.button.withValues(alpha: 0.35)
+            : s.contains(WidgetState.hovered) ||
+                    s.contains(WidgetState.focused) ||
+                    s.contains(WidgetState.pressed)
+                ? ProtoColors.buttonHover
+                : ProtoColors.button,
       ),
       foregroundColor: WidgetStateProperty.resolveWith(
         (s) => s.contains(WidgetState.disabled)
-            ? RetroPalette.muted
-            : RetroPalette.ink,
+            ? ProtoColors.white.withValues(alpha: 0.35)
+            : ProtoColors.white,
       ),
       side: WidgetStateProperty.resolveWith(
         (s) => BorderSide(
-          width: borderWidth,
-          color: s.contains(WidgetState.focused) ||
-                  s.contains(WidgetState.hovered)
-              ? RetroPalette.gold
-              : RetroPalette.ink,
+          width: thinBorderWidth,
+          color: s.contains(WidgetState.disabled)
+              ? ProtoColors.buttonBorder.withValues(alpha: 0.35)
+              : s.contains(WidgetState.focused) ||
+                      s.contains(WidgetState.hovered)
+                  ? ProtoColors.buttonHoverBorder
+                  : ProtoColors.buttonBorder,
         ),
       ),
     );
@@ -125,28 +125,28 @@ abstract final class RetroTheme {
         elevation: 0,
         color: RetroPalette.panel,
         shape: RoundedRectangleBorder(
-          side: BorderSide(color: RetroPalette.ink, width: borderWidth),
+          side: BorderSide(color: ProtoColors.buttonBorder, width: borderWidth),
         ),
       ),
       dialogTheme: const DialogThemeData(
         elevation: 0,
         backgroundColor: RetroPalette.panel,
         shape: RoundedRectangleBorder(
-          side: BorderSide(color: RetroPalette.ink, width: borderWidth),
+          side: BorderSide(color: ProtoColors.buttonBorder, width: borderWidth),
         ),
       ),
       inputDecorationTheme: const InputDecorationTheme(
         filled: true,
-        fillColor: RetroPalette.panelDark,
+        fillColor: ProtoColors.input,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.zero,
           borderSide:
-              BorderSide(color: RetroPalette.ink, width: thinBorderWidth),
+              BorderSide(color: ProtoColors.inputBorder, width: thinBorderWidth),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.zero,
           borderSide:
-              BorderSide(color: RetroPalette.ink, width: thinBorderWidth),
+              BorderSide(color: ProtoColors.inputBorder, width: thinBorderWidth),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.zero,
