@@ -84,6 +84,16 @@ const _acid = ElementFx([
   Color(0xFF20BF6B),
   Color(0xFFBADC58),
 ], 14, 70, 220, 0.6, ParticleShape.square);
+const _webBits = ElementFx([
+  Color(0xFFEDEFF5),
+  Color(0xFFDCDDE1),
+  Color(0xFF9B59B6),
+], 10, 60, 120, 0.7, ParticleShape.square);
+const _frostBits = ElementFx([
+  Color(0xFFF4FDFF),
+  Color(0xFF9FE3F0),
+  Color(0xFF74B9FF),
+], 12, 70, 60, 0.6, ParticleShape.shard);
 const _voidFx = ElementFx([
   Color(0xFF6C5CE7),
   Color(0xFFD63031),
@@ -152,6 +162,9 @@ abstract final class UltDirector {
         UltStyle.endGear => FxElement.freeze,
         UltStyle.endOfEras => FxElement.burn,
         UltStyle.eliteFury => FxElement.burn,
+        UltStyle.venomNest => FxElement.poison,
+        UltStyle.glacialBreath => FxElement.freeze,
+        UltStyle.hollowJudgment => FxElement.arcane,
         UltStyle.spearRain => FxElement.phys,
         UltStyle.arcaneStorm => FxElement.arcane,
         UltStyle.volley => FxElement.phys,
@@ -274,6 +287,38 @@ abstract final class UltDirector {
           p.burst(c.dx, c.dy - 8, FxElement.burn, 1.5);
           if (!u.skipped) p.addShake(3);
         }
+      case UltStyle.venomNest:
+        // Escupe la red al cielo.
+        if (a >= s.buildMs + 40 && once('net')) {
+          p.burst(c.dx, c.dy - 18, FxElement.poison, 2);
+          p.burstWith(_webBits, c.dx, c.dy - 18, 1.2);
+          if (!u.skipped) p.addShake(4);
+        }
+      case UltStyle.glacialBreath:
+        if (a < s.buildMs) {
+          final slot = (a / 110).floor();
+          if (once('chill$slot')) {
+            p.burstWith(_frostBits, c.dx + st.dir * 14, c.dy - 22, 0.4);
+            if (!u.skipped) p.addShake(0.6 + a / s.buildMs);
+          }
+        }
+        // Chorro de aliento: escarcha a lo largo del cono.
+        if (a >= s.buildMs && a < s.impactMs + 200) {
+          final slot = (a / 70).floor();
+          if (once('breath$slot') && n > 0) {
+            final g = st.targets[slot % n];
+            final q = ((a - s.buildMs) / 420).clamp(0.0, 1.0);
+            final o = Offset.lerp(c.translate(st.dir * 14, -22), g.translate(0, -10), q)!;
+            p.burstWith(_frostBits, o.dx, o.dy, 0.5);
+          }
+        }
+      case UltStyle.hollowJudgment:
+        // La espada fantasma aparece sobre el objetivo.
+        if (a >= s.buildMs + 120 && once('summon') && n > 0) {
+          final g = st.targets.first;
+          p.burst(g.dx, g.dy - 60, FxElement.arcane, 1.5);
+          if (!u.skipped) p.addShake(3);
+        }
       case UltStyle.spearRain:
         // Lanza las lanzas al cielo y empiezan a clavarse alrededor.
         if (a >= _spearHurlAt && once('hurl')) {
@@ -370,6 +415,19 @@ abstract final class UltDirector {
           p.burst(g.dx, g.dy - 10, FxElement.phys, 4);
           p.burst(g.dx, g.dy - 10, FxElement.burn, 2);
           p.burstWith(_sparks, g.dx, g.dy - 10, 1.5);
+        case UltStyle.venomNest:
+          p.burst(g.dx, g.dy - 6, FxElement.poison, 3.5);
+          p.burstWith(_acid, g.dx, g.dy - 2, 1.2);
+          p.burstWith(_webBits, g.dx, g.dy - 10, 1);
+        case UltStyle.glacialBreath:
+          p.burst(g.dx, g.dy - 10, FxElement.freeze, 4);
+          p.burstWith(_frostBits, g.dx, g.dy - 8, 1.6);
+          p.burstWith(_sparks, g.dx, g.dy - 10, 0.8);
+        case UltStyle.hollowJudgment:
+          p.burst(g.dx, g.dy - 10, FxElement.arcane, 4);
+          p.burst(g.dx, g.dy - 6, FxElement.phys, 3);
+          p.burstWith(_dust, g.dx, g.dy, 2);
+          p.burstWith(_sparks, g.dx, g.dy - 12, 2);
         case UltStyle.spearRain:
           p.burst(g.dx, g.dy - 8, FxElement.phys, 3);
           p.burstWith(_debris, g.dx, g.dy - 2, 0.8);
@@ -513,6 +571,12 @@ abstract final class UltDirector {
         _endOfEras(c, u, a, st, visible, out);
       case UltStyle.eliteFury:
         _eliteFury(c, u, a, st, visible);
+      case UltStyle.venomNest:
+        _venomNest(c, u, a, st, visible, out);
+      case UltStyle.glacialBreath:
+        _glacialBreath(c, u, a, st, visible, out);
+      case UltStyle.hollowJudgment:
+        _hollowJudgment(c, u, a, st, visible, out);
       case UltStyle.spearRain:
         _spearRain(c, u, a, st, visible, out);
       case UltStyle.arcaneStorm:
@@ -1394,6 +1458,295 @@ abstract final class UltDirector {
       }
       if (last) {
         _ring(c, g, 60 * q, 30 * q, _a(red, 1 - q), 3);
+      }
+    }
+  }
+
+  // ---------------- ULT de los jefes v0.2 ----------------
+
+  /// Telaraña radial de radio [r] centrada en [o] (anillos + rayos).
+  static void _webDisc(Canvas c, Offset o, double r, double rot, Color col,
+      double alpha, {double squash = 1}) {
+    if (r <= 1 || alpha <= 0) return;
+    const spokes = 8;
+    Offset pt(double ang, double rr) =>
+        o + Offset(math.cos(ang) * rr, math.sin(ang) * rr * squash);
+    for (var k = 0; k < spokes; k++) {
+      final ang = rot + k * math.pi * 2 / spokes;
+      _line(c, o, pt(ang, r), _a(col, alpha), 1);
+    }
+    for (final f in [0.3, 0.55, 0.8, 1.0]) {
+      final path = Path();
+      for (var k = 0; k <= spokes; k++) {
+        final ang = rot + k * math.pi * 2 / spokes;
+        // Los hilos se comban hacia adentro entre rayos.
+        final q = pt(ang, r * f);
+        if (k == 0) {
+          path.moveTo(q.dx, q.dy);
+        } else {
+          final mid = pt(ang - math.pi / spokes, r * f * 0.86);
+          path.quadraticBezierTo(mid.dx, mid.dy, q.dx, q.dy);
+        }
+      }
+      _stroke
+        ..color = _a(col, alpha * 0.85)
+        ..strokeWidth = 1;
+      c.drawPath(path, _stroke);
+    }
+  }
+
+  /// Nido Venenoso (Matriarca Araña): hilos que salen de ella y sacos de
+  /// huevos que laten; escupe una red enorme que cae sobre todo el grupo
+  /// y revienta en veneno.
+  static void _venomNest(Canvas c, UltCinematic u, double a, UltStage st,
+      Rect vis, double out) {
+    final s = u.script;
+    final o = st.caster;
+    const silk = Color(0xFFEDEFF5);
+    const purple = Color(0xFF9B59B6);
+    const green = Color(0xFF7BED3F);
+    _gather(c, o, a, s.buildMs, purple);
+    // Bosque que se oscurece en violeta.
+    final tint = s.darkness(a) * 0.14 * (a < s.buildMs ? _q(a, 100, 500) : 1);
+    if (tint > 0) {
+      _fill.color = Color.fromRGBO(70, 20, 90, tint);
+      c.drawRect(vis, _fill);
+    }
+    if (a < s.buildMs + 120) {
+      // Hilos tendidos desde la Matriarca hacia arriba y los costados.
+      final g = _ease(_q(a, 0, 400));
+      for (var k = 0; k < 7; k++) {
+        final ang = -math.pi / 2 + (k - 3) * 0.42;
+        final end = o.translate(0, -16) +
+            Offset(math.cos(ang), math.sin(ang)) * (30 + 50 * g);
+        _line(c, o.translate(0, -16), end, _a(silk, 0.55 * g), 1);
+      }
+      // Sacos de huevos que laten alrededor.
+      for (var k = 0; k < 4; k++) {
+        final q = o.translate((k - 1.5) * 16, -4 - (k % 2) * 10);
+        final r = (3 + 1.5 * math.sin(a / 90 + k)) * g;
+        _disc(c, q, r + 1, _a(const Color(0xFF2E1834), 0.9));
+        _disc(c, q, r, _a(green, 0.75));
+        _disc(c, q.translate(-1, -1), r * 0.35, _a(const Color(0xFFFFFFFF), 0.7));
+      }
+    }
+    if (st.targets.isEmpty) return;
+    // Centro de la red sobre el grupo.
+    final top = _topOf(st.targets, st.centroid.dy);
+    final over = Offset(st.centroid.dx, top - 34);
+    final spread = math.max(
+        44.0,
+        st.targets.fold<double>(0, (m, t) => math.max(m, (t.dy - st.centroid.dy).abs())) +
+            30);
+    final land = s.impactMs - 40;
+    if (a >= s.buildMs && a < land) {
+      // La red vuela en arco, girando y abriéndose.
+      final q = _q(a, s.buildMs, land - s.buildMs);
+      final from = o.translate(0, -20);
+      final p = Offset.lerp(from, over, q)!.translate(0, -math.sin(q * math.pi) * 40);
+      _webDisc(c, p, 6 + (spread - 6) * _ease(q) * 0.7, a / 160, silk, 0.95,
+          squash: 0.8);
+    }
+    if (a >= land) {
+      // Cae y envuelve al grupo; gotea veneno.
+      final q = _ease(_q(a, land, 160));
+      final ctr = Offset.lerp(over, st.centroid.translate(0, -12), q)!;
+      _webDisc(c, ctr, spread * (0.7 + 0.3 * q), 0.4, silk, 0.9 * out,
+          squash: 1.2);
+      for (var k = 0; k < 18; k++) {
+        final t0 = land + 60 + (k * 37) % 420;
+        final dq = (a - t0) / 300;
+        if (dq < 0 || dq > 1) continue;
+        final x = ctr.dx + (_h(k, 3) - 0.5) * spread * 1.6;
+        final y = ctr.dy - spread * 0.4 + dq * spread;
+        _fill.color = _a(green, 0.9 * (1 - dq));
+        c.drawRect(Rect.fromCenter(center: Offset(x, y), width: 2, height: 3), _fill);
+      }
+    }
+    for (var i = 0; i < st.targets.length; i++) {
+      final g = st.targets[i];
+      final imp = s.impactFor(i);
+      if (a < imp) continue;
+      final e = _q(a, imp, 420);
+      _oval(c, g.translate(0, 1), 9 + 6 * _ease(e), 3 + 2 * _ease(e),
+          _a(const Color(0xFF2E7D32), 0.6 * out));
+      if (e < 1) {
+        _ring(c, g.translate(0, -8), 24 * e, 12 * e, _a(green, 1 - e), 2);
+        _ring(c, g.translate(0, -8), 14 * e, 7 * e, _a(purple, 1 - e), 1);
+      }
+    }
+  }
+
+  /// Aliento Glacial (Sierpe de Escarcha): la escarcha se junta en sus
+  /// fauces, sopla un cono de hielo sobre todo el grupo y los encierra en
+  /// cristales.
+  static void _glacialBreath(Canvas c, UltCinematic u, double a, UltStage st,
+      Rect vis, double out) {
+    final s = u.script;
+    final o = st.caster;
+    const ice = Color(0xFF9FE3F0);
+    const pale = Color(0xFFF4FDFF);
+    const deep = Color(0xFF2E6FB5);
+    final mouth = o.translate(st.dir * 16, -24);
+    _gather(c, mouth.translate(0, 10), a, s.buildMs, ice);
+    // Niebla fría que cubre la vista.
+    final tint = s.darkness(a) * (a < s.buildMs ? 0.18 * _q(a, 100, 700) : 0.18);
+    if (tint > 0) {
+      _fill.color = Color.fromRGBO(160, 230, 255, tint);
+      c.drawRect(vis, _fill);
+    }
+    if (a < s.buildMs + 60) {
+      // Copos que entran en espiral a las fauces y un núcleo que crece.
+      final g = _ease(_q(a, 0, s.buildMs));
+      for (var k = 0; k < 18; k++) {
+        final f = ((a / 520) + _h(k, 5)) % 1.0;
+        final ang = k * 0.7 + a / 260;
+        final rr = 8 + 60 * (1 - f);
+        final p = mouth + Offset(math.cos(ang), math.sin(ang) * 0.6) * rr;
+        _fill.color = _a(k.isEven ? pale : ice, f);
+        c.drawRect(Rect.fromCenter(center: p, width: 2, height: 2), _fill);
+      }
+      _disc(c, mouth, 3 + 6 * g + math.sin(a / 40), _a(ice, 0.5));
+      _disc(c, mouth, 2 + 3 * g, _a(pale, 0.95));
+    }
+    if (st.targets.isEmpty) return;
+    // Cono de aliento: de las fauces al grupo.
+    if (a >= s.buildMs && a < s.returnAt) {
+      final grow = _ease(_q(a, s.buildMs, 260));
+      final fade = 1 - _q(a, s.impactMs + 300, 300);
+      final far = st.centroid.translate(st.dir * 10, -10);
+      final reach = Offset.lerp(mouth, far, grow)!;
+      final half = (st.targets.fold<double>(0, (m, t) => math.max(m, (t.dy - st.centroid.dy).abs())) + 18) * grow;
+      final cone = Path()
+        ..moveTo(mouth.dx, mouth.dy - 3)
+        ..lineTo(reach.dx, reach.dy - half)
+        ..lineTo(reach.dx + st.dir * 10, reach.dy)
+        ..lineTo(reach.dx, reach.dy + half)
+        ..lineTo(mouth.dx, mouth.dy + 3)
+        ..close();
+      _fill.color = _a(ice, 0.35 * fade * out);
+      c.drawPath(cone, _fill);
+      // Vetas blancas que corren por el cono.
+      for (var k = 0; k < 10; k++) {
+        final f = ((a / 200) + _h(k, 2)) % 1.0;
+        final side = (_h(k, 7) - 0.5) * 2;
+        final p0 = Offset.lerp(mouth, reach.translate(0, side * half), f)!;
+        final p1 = Offset.lerp(mouth, reach.translate(0, side * half), math.min(1, f + 0.12))!;
+        _line(c, p0, p1, _a(pale, 0.9 * fade * out), 1);
+      }
+    }
+    // Cristales que encierran a cada objetivo.
+    for (var i = 0; i < st.targets.length; i++) {
+      final g = st.targets[i];
+      final imp = s.impactFor(i);
+      if (a < imp) continue;
+      final up = _ease(_q(a, imp, 140)) * out;
+      for (var k = -2; k <= 2; k++) {
+        final hgt = (22 - k.abs() * 5) * up;
+        final x = g.dx + k * 4.5;
+        final path = Path()
+          ..moveTo(x - 2.5, g.dy + 2)
+          ..lineTo(x + k * 0.8, g.dy + 2 - hgt)
+          ..lineTo(x + 2.5, g.dy + 2)
+          ..close();
+        _fill.color = _a(k.isEven ? ice : deep, 0.85 * out);
+        c.drawPath(path, _fill);
+        _line(c, Offset(x, g.dy + 1), Offset(x + k * 0.6, g.dy + 3 - hgt),
+            _a(pale, 0.8 * out), 1);
+      }
+      final e = _q(a, imp, 500);
+      if (e < 1) _ring(c, g.translate(0, -6), 30 * _ease(e), 14 * _ease(e), _a(pale, 1 - e), 2);
+    }
+  }
+
+  /// Juicio Hueco (Caballero Hueco): sus ojos arden en cian, runas giran a
+  /// su alrededor; una espada espectral gigante cae sobre el objetivo y
+  /// estalla en una cruz de luz.
+  static void _hollowJudgment(Canvas c, UltCinematic u, double a, UltStage st,
+      Rect vis, double out) {
+    final s = u.script;
+    final o = st.caster;
+    const cyan = Color(0xFF6FF7FF);
+    const ghost = Color(0xFFD9FBFF);
+    const dark = Color(0xFF1B2A3A);
+    _gather(c, o, a, s.buildMs, cyan);
+    final tint = s.darkness(a) * 0.16;
+    if (tint > 0) {
+      _fill.color = Color.fromRGBO(10, 30, 50, tint);
+      c.drawRect(vis, _fill);
+    }
+    if (a < s.buildMs + 100) {
+      // Runas que giran (cuadrados con cruz) y ojos que arden.
+      final g = _ease(_q(a, 0, 300));
+      for (var k = 0; k < 6; k++) {
+        final ang = a / 300 + k * math.pi / 3;
+        final p = o.translate(0, -16) + Offset(math.cos(ang) * 26, math.sin(ang) * 10) * g;
+        _fill.color = _a(cyan, 0.8 * g);
+        c.drawRect(Rect.fromCenter(center: p, width: 4, height: 4), _fill);
+        _fill.color = _a(dark, 0.9 * g);
+        c.drawRect(Rect.fromCenter(center: p, width: 2, height: 2), _fill);
+      }
+      if (a > 450) {
+        final q = _q(a, 450, 300);
+        _star(c, o.translate(st.dir * 3, -26), 2 + 7 * math.sin(q * math.pi), _a(ghost, 1));
+        _star(c, o.translate(st.dir * 3, -26), 1 + 3 * math.sin(q * math.pi), cyan);
+      }
+    }
+    if (st.targets.isEmpty) return;
+    final g = st.targets.first;
+    final imp = s.impactMs;
+    // La espada espectral se forma arriba y cae.
+    if (a >= s.buildMs && a < imp + 260) {
+      final form = _ease(_q(a, s.buildMs, 260));
+      final fall = _q(a, imp - 220, 220);
+      final tipY = g.dy - 26 + 24 * fall * fall;
+      final alpha = (a < imp ? form : 1 - _q(a, imp, 260)) * out;
+      const len = 24.0;
+      // Hoja.
+      final blade = Path()
+        ..moveTo(g.dx, tipY)
+        ..lineTo(g.dx - 5, tipY - 8)
+        ..lineTo(g.dx - 5, tipY - len)
+        ..lineTo(g.dx + 5, tipY - len)
+        ..lineTo(g.dx + 5, tipY - 8)
+        ..close();
+      _fill.color = _a(cyan, 0.45 * alpha);
+      c.drawPath(blade, _fill);
+      _stroke
+        ..color = _a(ghost, 0.95 * alpha)
+        ..strokeWidth = 1;
+      c.drawPath(blade, _stroke);
+      _line(c, Offset(g.dx, tipY - 4), Offset(g.dx, tipY - len + 2), _a(ghost, alpha), 1);
+      // Guarda y empuñadura.
+      _fill.color = _a(const Color(0xFFB8963E), alpha);
+      c.drawRect(Rect.fromLTWH(g.dx - 12, tipY - len - 3, 24, 3), _fill);
+      _fill.color = _a(dark, alpha);
+      c.drawRect(Rect.fromLTWH(g.dx - 2, tipY - len - 14, 4, 11), _fill);
+      _disc(c, Offset(g.dx, tipY - len - 15), 3, _a(cyan, alpha));
+      // Estela de la caída.
+      if (fall > 0 && a < imp) {
+        for (var k = 1; k <= 3; k++) {
+          _fill.color = _a(cyan, 0.2 / k * alpha);
+          c.drawRect(Rect.fromLTWH(g.dx - 5, tipY - len - k * 10, 10, len), _fill);
+        }
+      }
+    }
+    if (a >= imp) {
+      // Cruz de luz y onda en el suelo.
+      final e = _q(a, imp, 520);
+      final w = 90 * _ease(e);
+      final al = (1 - e) * out;
+      _fill.color = _a(ghost, 0.9 * al);
+      c.drawRect(Rect.fromCenter(center: g.translate(0, -10), width: w, height: 3), _fill);
+      c.drawRect(Rect.fromCenter(center: g.translate(0, -10), width: 3, height: w * 0.8), _fill);
+      _ring(c, g.translate(0, 1), 10 + 50 * e, 4 + 14 * e, _a(cyan, al), 2);
+      // Grietas en el piso.
+      for (var k = 0; k < 6; k++) {
+        final ang = k * math.pi / 3 + 0.3;
+        final r = 6 + 22 * _ease(_q(a, imp, 160));
+        _line(c, g.translate(0, 1),
+            g.translate(math.cos(ang) * r, 1 + math.sin(ang) * r * 0.35),
+            _a(dark, out), 2);
       }
     }
   }

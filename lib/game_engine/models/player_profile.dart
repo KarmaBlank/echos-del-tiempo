@@ -38,6 +38,7 @@ class PlayerProfile {
     int itemSeq = 0,
     List<String> tree = const [],
     int treeRefunded = 0,
+    int unlockedZone = 1,
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -61,6 +62,7 @@ class PlayerProfile {
       itemSeq: itemSeq,
       tree: List.unmodifiable(tree),
       treeRefunded: treeRefunded,
+      unlockedZone: unlockedZone.clamp(1, maxZone),
     );
   }
 
@@ -82,7 +84,22 @@ class PlayerProfile {
     required this.itemSeq,
     required this.tree,
     required this.treeRefunded,
+    required this.unlockedZone,
   });
+
+  /// Zonas del mapa del mundo (docs/specs/worldgen.md § 6.4).
+  static const maxZone = 10;
+
+  /// Zona más alta que puede proponer (1..10, JSON `zu`). Sube al vencer
+  /// al jefe de la zona anterior.
+  final int unlockedZone;
+
+  /// Zona desbloqueada de un perfil guardado sin `zu` (migración):
+  /// `min(5, (nivel − 1) ~/ 5 + 1)`.
+  static int migratedZone(int level) {
+    final z = ((level < 1 ? 1 : level) - 1) ~/ 5 + 1;
+    return z > 5 ? 5 : z;
+  }
 
   /// Pociones con las que arranca un perfil nuevo (`d.pot ?? 3`, `d.eter ?? 1`).
   static const defaultPotions = 3;
@@ -215,6 +232,7 @@ class PlayerProfile {
     bool clearLootFilter = false,
     int? itemSeq,
     List<String>? tree,
+    int? unlockedZone,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -250,6 +268,7 @@ class PlayerProfile {
       itemSeq: itemSeq ?? this.itemSeq,
       tree: tree == null ? this.tree : List.unmodifiable(tree),
       treeRefunded: treeRefunded,
+      unlockedZone: (unlockedZone ?? this.unlockedZone).clamp(1, maxZone),
     );
   }
 
@@ -361,6 +380,7 @@ class PlayerProfile {
         'tree': tree,
         'tv': treeVersion,
         if (treeRefunded > 0) 'tvRef': treeRefunded,
+        'zu': unlockedZone,
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -446,6 +466,9 @@ class PlayerProfile {
       itemSeq: _int(json['seq']),
       tree: tree,
       treeRefunded: refunded,
+      unlockedZone: json['zu'] is num
+          ? _int(json['zu'], 1)
+          : migratedZone(_int(json['lvl'], 1)),
     );
   }
 

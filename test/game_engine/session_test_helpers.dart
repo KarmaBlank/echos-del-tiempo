@@ -1,4 +1,6 @@
 import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/game_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/missions_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
@@ -14,7 +16,22 @@ import 'package:flutter_test/flutter_test.dart';
 
 final treeRules = PassiveTreeRules(kPassiveTree);
 final statsCalc = StatsCalculator(classes: kClasses, treeRules: treeRules);
-final progression = ProgressionRules(stats: statsCalc);
+/// El catálogo estándar con las 3 misiones del prototipo (un solo mapa,
+/// sin zona): los tests de sesión verifican la paridad con el prototipo.
+/// Las misiones de zona usan [zoneProgression] (worldgen.md).
+final prototypeCatalog = GameCatalog(
+  classes: GameCatalog.standard.classes,
+  weapons: GameCatalog.standard.weapons,
+  skills: GameCatalog.standard.skills,
+  ultimates: GameCatalog.standard.ultimates,
+  duals: GameCatalog.standard.duals,
+  enemies: GameCatalog.standard.enemies,
+  missions: kPrototypeMissions,
+);
+final progression = ProgressionRules(stats: statsCalc, catalog: prototypeCatalog);
+
+/// Reglas con el catálogo estándar (misiones de zona).
+final zoneProgression = ProgressionRules(stats: statsCalc);
 
 /// Azar fijo: devuelve [rolls] en orden y después [fallback].
 RandomSource rolls(List<double> rolls, {double fallback = 0.99}) {
@@ -27,10 +44,11 @@ SessionEngine sessionEngine({
   double fieldFallback = 0.99,
   List<double> battleRolls = const [],
   int seed = 500000000,
+  bool zones = false,
 }) =>
     SessionEngine(
       battles: BattleEngine(stats: statsCalc, random: rolls(battleRolls)),
-      progression: progression,
+      progression: zones ? zoneProgression : progression,
       random: rolls(fieldRolls, fallback: fieldFallback),
       seeds: () => seed,
     );

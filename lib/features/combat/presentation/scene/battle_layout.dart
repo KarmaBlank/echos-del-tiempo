@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../../../game_engine/models/battle_state.dart';
+import '../../domain/turn_order.dart' show isPassiveAdd;
 import 'ult_cinematic.dart';
 
 /// Dibuja el mundo detrás de la batalla (tiles, enemigos lejanos) en
@@ -139,6 +140,13 @@ class BattleLayout {
     Offset(40, 0),
   ];
 
+  /// Invocaciones (cristales): hacia el grupo desde el ancla.
+  static const _addOffsets = [
+    Offset(30, -22),
+    Offset(30, 24),
+    Offset(44, 0),
+  ];
+
   /// Márgenes de la caja de la pelea (px del mundo).
   static const marginX = 16.0, marginTop = 6.0, marginBottom = 6.0;
 
@@ -164,11 +172,18 @@ class BattleLayout {
       boxes[state.party[i].id] = Rect.fromLTWH(p.dx - 10, p.dy - 19, 20, 22);
     }
     final bossFirst = state.enemies.isNotEmpty && state.enemies.first.boss;
-    for (var i = 0; i < state.enemies.length; i++) {
-      final e = state.enemies[i];
-      final o = _offsets[math.min(i, _offsets.length - 1)];
-      final p =
-          Offset(bx - s * (o.dx + (i > 0 && bossFirst ? 18 : 0)), by + o.dy);
+    var i = 0, k = 0;
+    for (final e in state.enemies) {
+      final Offset p;
+      if (isPassiveAdd(e)) {
+        // Cristales de la Sierpe: delante del jefe, entre él y el grupo.
+        final o = _addOffsets[math.min(k++, _addOffsets.length - 1)];
+        p = Offset(bx + s * o.dx, by + o.dy);
+      } else {
+        final o = _offsets[math.min(i, _offsets.length - 1)];
+        p = Offset(bx - s * (o.dx + (i > 0 && bossFirst ? 18 : 0)), by + o.dy);
+        i++;
+      }
       pos[e.id] = p;
       final sz = enemySize?.call(e) ??
           (e.elite ? const Size(16 * 1.45, 14 * 1.45) : const Size(16, 14));

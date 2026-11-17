@@ -45,3 +45,28 @@ enemies:
     idle: enemies/devorador/idle.png
     scale: 2.4
     float: true
+  # v0.2 — arte propio (tool/export_sprites.dart, misma tubería).
+  arana:
+    idle: enemies/arana/idle.png
+  lobo:
+    idle: enemies/lobo/idle.png
+  murcielagoHielo:
+    idle: enemies/murcielagoHielo/idle.png
+    float: true
+  elementalEscarcha:
+    idle: enemies/elementalEscarcha/idle.png
+  esqueleto:
+    idle: enemies/esqueleto/idle.png
+  caballeroCaido:
+    idle: enemies/caballeroCaido/idle.png
+  cristalHielo:
+    idle: enemies/cristalHielo/idle.png
+  matriarca:
+    idle: enemies/matriarca/idle.png
+    scale: 1.8
+  sierpe:
+    idle: enemies/sierpe/idle.png
+    scale: 1.8
+  caballeroHueco:
+    idle: enemies/caballeroHueco/idle.png
+    scale: 1.7

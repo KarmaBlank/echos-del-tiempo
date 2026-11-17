@@ -449,6 +449,97 @@ Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
   verde `#7bed9f`, azul `#4b7bec`, amarillo `#ffd166`, naranja
   `#ff8c28`, violeta `#be6eff`, celeste `#48dbfb`).
 
+## Mundo y pisos (v0.2.0, worldgen.md § 7)
+
+Implementación: `map/tile_painter.dart` + `map/map_themes.dart` (tiles y
+temas), `map/map_game.dart` (carteles de entradas, cámara por piso,
+fundido), `hud/minimap.dart`, `hud/world_hud.dart`,
+`session_controller.dart` (avisos y E), `world_text.dart` (textos).
+Tests: `test/features/world/world_ui_test.dart`.
+
+### Tiles nuevos
+
+Mismo estilo que `drawTile` (rects enteros, hash por tile, sin
+antialias). Colores = arte (`map_themes.dart`).
+
+| Char | Dibujo |
+|---|---|
+| `g` | pasto `#4fa046` con matas `#67b85a` (`h%3`), punto 2×2 (`h%5`) y flor amarilla/rosa (`h%17`); sin damero |
+| `T` | pasto + árbol redondo (tronco `#4a2f1a`, copa `#1f5f2a` r8, brillo `#2f7d37` r4) |
+| `^` | pasto + montaña triangular gris (`rock`/`rock2`, la mitad izquierda más clara) con nieve `#e8f0ff` arriba |
+| `1`..`9`, `0` | pasto + base de piedra; encima de los tiles `MapGame` dibuja el **arco** (`TilePainter.entrance`, 32×40 px con la base en el borde de abajo del tile): escalón, dos pilares `#8a8e9a`/`#44474f` con juntas, dintel con piedra clave del color de la zona; abierta: portal del color de la zona que late (`0.55 + 0.25·sin(t/220 + z)`) con chispas que suben; bloqueada o "Próximamente": interior `#1c1e25` con candado gris |
+| `>` | suelo + agujero `#07070c` con borde `w2` y 3 peldaños que se oscurecen hacia abajo |
+| `<` | suelo + 4 peldaños claros (`#dde0e8` → `#8a8e9a`) con barandas `w2` |
+| `:` | suelo + borde dorado tenue `#ffd16640` arriba e izquierda (grilla de baldosas) y un punto dorado (`h%7`) |
+
+Un código desconocido se pinta magenta (`TilePainter.handles` lista los
+conocidos; el test recorre el mundo y los atlas de las zonas 1–5).
+
+Temas nuevos (`g/g2/w/w2/path/p2/wat`):
+
+| Tema | g | g2 | w | w2 | path | p2 | wat | `#` |
+|---|---|---|---|---|---|---|---|---|
+| mundo | #4fa046 | #67b85a | #1f5f2a | #2f7d37 | #c2a266 | #a88b52 | #2e86de | árbol |
+| bosque | #2a5a2c | #356e36 | #113a1c | #1d5a2a | #6e5a3a | #5c4a2e | #1e5f74 | pino o copa (por hash) sobre `#0e2a14` |
+| cavernas | #4a5a70 | #5b6e86 | #26304a | #9fdcf5 | #6e8299 | #5e7188 | #3fc4e6 | roca con facetas y cristal de hielo (`h%3`); agua con placas de hielo |
+| fortaleza | #3a3642 | #47424f | #221e2a | #55505f | #5f5967 | #4c4755 | #2a4a6a | ladrillo con juntas desfasadas, musgo (`h%9`), grieta (`h%7`) |
+
+En el tema `mundo` el pueblo (tiles `0..25 × 0..13`) se dibuja con el
+tema y el estilo del `lobby` (damero, ventanas, mostrador, armería); el
+resto al aire libre (`lobby = false`).
+
+### Mapa del mundo
+
+- **Carteles de entrada** (en el mundo, encima de las entidades): nombre
+  de la zona (7 px) con la línea base a 47 px sobre el centro de la
+  entrada y `Lv a-b` (6 px, a 38 px); abierta en el color de la zona, bloqueada en gris
+  `#9aa0ac` con `PRÓXIMAMENTE` o `BLOQUEADA` (6 px) encima. El estado
+  sale de `ZoneRules.zoneList(catalog, perfil local)`.
+- **Aviso** (abajo al centro) a < `WorldRules.entranceRange` de una
+  entrada:
+  - abierta: `[E] Entrar: <zona> (Lv a-b)`; si hay una votación por esa
+    misión y el jugador no votó: `[E] Votar SÍ: <zona>`; si hay otra
+    votación: `<zona> · Ya hay una votación`;
+  - bloqueada: `<zona> · Lv a-b · Bloqueada: vencé a <jefe> en <zona>`;
+  - próximamente: `<zona> · Lv a-b · Próximamente`.
+- **E en una entrada abierta** propone la misión de la zona
+  (`ProposeMissionAction`) o vota que sí si ya hay votación por ella; lo
+  demás es la votación y preparación de siempre. **Decisión de UX**: se
+  propone directo (no se abre el mostrador filtrado) porque la entrada ya
+  es la elección de zona y la votación que aparece arriba es la
+  confirmación (se puede cancelar con N). El mostrador sigue en el pueblo
+  con todas las zonas.
+- **Barra de misión** en el mundo: `Lobby · Mostrador [E] · Armería [E]
+  · Zonas: puertas [E] · Personaje [C]`.
+- **Minimapa** también en el mundo (antes nunca en el lobby): tiles
+  (pasto como suelo, árbol/roca como muro), el pueblo en su color de
+  suelo, las entradas como cuadros de 3 tiles del color de la zona (gris
+  si está bloqueada) y los jugadores.
+
+### Pisos de una zona
+
+- **Cámara**: se limita al `bounds` del piso actual
+  (`session.mission!.floor`), no al atlas entero; el minimapa también se
+  recorta a ese rectángulo. Se dibujan solo los enemigos y objetos de ese
+  piso (`FieldEnemy.floor`, `MissionItem.floor`).
+- **Escaleras** a < `WorldRules.stairsRange`: aviso `[E] Bajar al piso
+  N` / `[E] Subir al piso N` (N desde 1). E manda
+  `UseStairsAction(down: true/false)`. Pisar `>` también baja (host).
+- **Fundido**: con `FloorChangedEvent` el mapa se cubre de negro y se
+  aclara en 700 ms (`MapGame.fadeMs`) con el cartel `<zona> · Piso N/F`
+  centrado (8 px dorado). La cámara salta al piso nuevo.
+- **HUD**: arriba de los objetivos, `<zona> · Piso N/F` (dorado) y
+  `Lv L` del piso; en el último piso `¡Piso del JEFE!` en rojo. Objetivos
+  del piso: `Grupos del piso k/cuota` y, en pisos con escalera,
+  `Escalera: despejá el piso` / `> Escalera abierta: bajá [E]`; en el
+  último piso la línea del jefe de siempre. Los objetivos de la misión
+  (fragmentos, sellos, élite) siguen debajo.
+- **Barra de misión** en una zona: `<zona> · Piso N/F · objetivos ·
+  mm:ss`.
+- El aviso de barrera abierta (`busca al JEFE`) solo en el último piso;
+  en los demás: `La escalera se abrió → bajá al piso N` mientras el
+  jugador está a más de 140 px de la `>`.
+
 ## Paneles
 
 El contenido y las reglas de cada panel (mostrador, votación,

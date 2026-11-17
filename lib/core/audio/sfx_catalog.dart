@@ -193,6 +193,20 @@ abstract final class Sfx {
   static const breakDazed = 'break.dazed';
   static const enemyUltWarn = 'enemyUlt.warn';
 
+  // ---- mecánicas de jefe v0.2 (docs/specs/audio.md § "Mecánicas de
+  // jefe") ----
+  /// Cartel de entrada de un jefe.
+  static const bossIntro = 'boss.intro';
+  static const webCast = 'boss.web';
+  static const webFree = 'boss.webFree';
+  static const webStuck = 'boss.webStuck';
+  static const frost = 'boss.frost';
+  static const thaw = 'boss.thaw';
+  static const crystalBreak = 'boss.crystal';
+  static const crystalReform = 'boss.reform';
+  static const stanceShift = 'boss.stance';
+  static const stanceBlock = 'boss.block';
+
   // ---- loot en el mapa (docs/specs/audio.md § "Loot") ----
   /// Sonido de un filtro de loot (`FilterStyle.sound`, uno por nombre
   /// de `kLootFilterSounds`).

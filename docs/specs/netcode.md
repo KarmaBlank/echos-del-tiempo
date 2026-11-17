@@ -128,6 +128,7 @@ Las claves de `onMsg` del prototipo (`lib/game_engine/serialization/action_json.
 | `BuyWeaponAction` | `{"t":"buy","w":arma}` |
 | `ChatAction` | `{"t":"chat","txt":"hola"}` |
 | `BackToLobbyAction` | `{"t":"back"}` |
+| `UseStairsAction` | `{"t":"stairs","down":true}` (worldgen.md § 6.7) |
 | `BattleAction` | `{"t":"cmd","a":...}` (abajo) |
 
 `BattleCommand` dentro de `cmd` (las claves de `battleCmd`):
@@ -167,21 +168,22 @@ Claves principales:
 |---|---|
 | `GameSession` | `mode`, `players` (lista), `mission`, `battle`, `vote`, `prep`, `result`, `time`, `grace`, `after`, `seq`, `ground`? (loot en el piso), `gseq`? |
 | `SessionPlayer` | `id`, `p` (perfil), `x`, `y`, `dir`, `ep`, `mv`, `hp`, `mp`, `mhp`, `mmp`, `ult`, `lvup` |
-| `MissionRun` | `id`, `seed`, `goal`, `kills`, `elapsed`, `kos`, `xp`, `cr`, `obj`, `open`, `elites`, `eliteDrops` (`{p, w, u?, r?}`), `fe`, `items`, `zl`? (nivel de zona) |
-| `FieldEnemy` | `id`, `x`, `y`, `hx`, `hy`, `g`, `boss`, `elite`, `alive`, `tm`, `vx`, `vy`, `dir`, `aggro` |
-| `MissionItem` | `id`, `k` (`fragment`/`seal`/`chest`), `x`, `y`, `done` |
-| `SessionBattle` | `id`, `st` (`BattleState`), `fe`, `boss`, `elite`, `wait`, `turn`, `end` |
+| `MissionRun` | `id`, `seed`, `goal`, `kills`, `elapsed`, `kos`, `xp`, `cr`, `obj`, `open`, `elites`, `eliteDrops` (`{p, w, u?, r?}`), `fe`, `items`, `zl`? (nivel de zona), `zone`?, `floor`?, `floors`?, `fg`? (cuota por piso), `lv`? (nivel por piso), `opened`? (pisos con escalera abierta) |
+| `FieldEnemy` | `id`, `x`, `y`, `hx`, `hy`, `g`, `boss`, `elite`, `alive`, `tm`, `vx`, `vy`, `dir`, `aggro`, `f`? (piso) |
+| `MissionItem` | `id`, `k` (`fragment`/`seal`/`chest`), `x`, `y`, `done`, `f`? (piso) |
+| `SessionBattle` | `id`, `st` (`BattleState`), `fe`, `boss`, `elite`, `wait`, `turn`, `end`, `lv`? (nivel de los enemigos) |
 | `BattleState` | `party`, `enemies`, `clock`, `cur`, `log`, `out` (`{win, xp, cr}`), `boss`, `elite` |
 | `Combatant` | todos los campos (stats, estados, cooldowns, ULT, pociones...; loot v2: `ls`, `rgn`, `sres`, `hrec` opcionales); `build` como `{cls, lvl, st, w, up, tree, bdef, item?}` (la base por id y la instancia equipada) |
 | `GroundLoot` | `id`, `d` (`{it: <arma>}` o `{st: <token>, n}`), `x`, `y`, `own`? (dueño; sin `own` = compartido) |
-| Perfil (`p`) | perfil v3 (loot.md § 15): `items` (`{u, b, r?, il?, a?, p?, pl?, f?, s?, q?, n?}`), `eq` (`uid`), `mats`, `grid`, `lf`, `seq`, `pv` |
-| `MissionResult` | `id`, `m`, `name`, `ok`, `rank`, `time`, `xp`, `cr`, `bonus`, `bonusPct`, `kos`, `elites`, `eliteDrops`, `drops`, `left` |
+| Perfil (`p`) | perfil v3 (loot.md § 15): `items` (`{u, b, r?, il?, a?, p?, pl?, f?, s?, q?, n?}`), `eq` (`uid`), `mats`, `grid`, `lf`, `seq`, `pv`, `zu` (zona desbloqueada) |
+| `MissionResult` | `id`, `m`, `name`, `ok`, `rank`, `time`, `xp`, `cr`, `bonus`, `bonusPct`, `kos`, `elites`, `eliteDrops`, `drops`, `left`, `zone`?, `unl`? (jugador → zona desbloqueada) |
 
 Los enums viajan por su nombre Dart (`lobby`, `burn`, `s`...).
 
 `ev` son los `SessionEvent` del host desde el `state` anterior, en orden
 (`lib/game_engine/serialization/event_json.dart`): `sys` (mensaje de
 sistema), `chat`, `joined`, `left`, `missionStart`, `obj`, `gate`,
+`floor` (`f`, `down`), `stairs` (`f`), `zoneUnlocked` (`id`, `z`),
 `chest`, `battleStart`, `battleStep` (con los `BattleEvent` para animar:
 `turn`, `dmg`, `act`, `heal`, `status`, `skip`, `delay`, `ko`, `revive`,
 `ult`, `end`), `lvl`, `battleEnd`, `drop`, `missionEnd` (con el

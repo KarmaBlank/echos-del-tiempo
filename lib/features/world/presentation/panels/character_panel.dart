@@ -35,8 +35,8 @@ enum CharacterTab {
       'Reparte puntos con + y -; nada cambia hasta CONFIRMAR. Cada nivel da '
           '${ProgressionRules.pointsPerLevel} puntos.'),
   inventory('INVENTARIO',
-      'Arrastra para mover · clic para ver · EQUIPAR, TIRAR o DAR A un '
-          'compañero. Cualquier clase equipa si cumple nivel y requisitos.'),
+      'Arrastra para mover · clic para ver · EQUIPAR, DAR A, TIRAR, DESARMAR '
+          '(materiales) o VENDER (créditos). LIMPIAR INVENTARIO: por rareza.'),
   tree('ÁRBOL',
       'Pasivas de clase: 1 punto por nivel. Arrastra para mover, rueda para '
           'zoom, clic para tomar un nodo.'),

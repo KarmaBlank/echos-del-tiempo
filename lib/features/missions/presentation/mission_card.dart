@@ -4,6 +4,7 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/mission_def.dart';
+import '../../../game_engine/rules/zone_rules.dart';
 import '../domain/mission_text.dart';
 
 /// Tarjeta de misión (mostrador y preparación): rango, nombre, tipo,
@@ -18,7 +19,12 @@ class MissionCard extends StatelessWidget {
     this.bossName,
     this.playerLevel,
     this.action,
+    this.zone,
   });
+
+  /// Zona de la misión con su estado para el jugador local (mostrador de
+  /// zonas): agrega la línea de zona y, si está bloqueada, el motivo.
+  final ZoneStatus? zone;
 
   final MissionDef mission;
 
@@ -38,12 +44,16 @@ class MissionCard extends StatelessWidget {
         '${low ? ' · tu Lv $playerLevel' : ''}';
     String row(String label, String text) =>
         '<span class="k">$label</span> ${protoEsc(text)}';
+    final z = zone;
+    final locked = z != null && !z.open;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
+        color: locked ? const Color(0x22000000) : null,
         border: Border.all(
-            color: ProtoColors.panelBorder, width: RetroTheme.thinBorderWidth),
+            color: locked ? ProtoColors.barBg : ProtoColors.panelBorder,
+            width: RetroTheme.thinBorderWidth),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,6 +76,15 @@ class MissionCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (z != null)
+                  ProtoText(
+                      key: ValueKey('mission-zone-${m.id}'),
+                      protoColor(locked ? ProtoColors.dim : ProtoColors.gold,
+                          protoEsc(zoneLineText(z.zone)))),
+                if (z != null && z.label.isNotEmpty)
+                  ProtoText(
+                      key: ValueKey('mission-lock-${m.id}'),
+                      protoColor(ProtoColors.red, protoEsc(z.label))),
                 ProtoText('<b style="color:#e8ecff">${protoEsc(m.name)}</b> · '
                     '<span class="k">${protoEsc(m.type)}</span> · '
                     '${low ? protoColor(ProtoColors.red, lv) : protoColor(ProtoColors.green, lv)}'),

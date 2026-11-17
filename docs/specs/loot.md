@@ -572,8 +572,10 @@ legendarios, épicos, raros y materiales; oculta Comunes con
 
 ## 14. Drops
 
-**Nivel de zona** (`LootRules.zoneLevel`, gancho hasta que exista el
-mundo de worldgen.md): `max(nivel recomendado de la misión + rango (C 0,
+**Nivel de zona**: en las misiones de zona (v0.2.0) es el nivel de la
+batalla (piso, élite o jefe), el del piso para cofres y el máximo de la
+zona para el arma de fin de misión (worldgen.md § 6.3). En misiones sin
+zona (`LootRules.zoneLevel`, solo tests de paridad): `max(nivel recomendado de la misión + rango (C 0,
 B 1, A 2), promedio de nivel del grupo)`, tope 50; se fija al empezar la
 misión (`MissionRun.zoneLevel`). El mundo nuevo pasará el nivel de su
 zona. **Nivel de objeto**: zona (+1 élite y fin de misión, +2 jefe),
@@ -652,7 +654,8 @@ niveles totales la pasiva sube 1 (I → V).
 
 **Fusión libre** (`CraftAction`, solo en lobby / preparación). El arma
 que se sacrifica no puede ser la equipada ni la última del arma inicial
-de la clase. Todas devuelven `CraftResult` (vista previa = resultado):
+de la clase. Todas devuelven `CraftResult` (vista previa = resultado).
+Desarmar, vender y reforjar base: § 21.
 
 | Operación | Regla | Costo |
 |---|---|---|
@@ -732,7 +735,8 @@ class ItemInstance {
 }
 enum CraftMaterial { esquirla, cristal, prisma } // .label, .description, maxStack = 99
 enum CraftOp { transferAffix, transferPassive, transferSkill, removeAffix,
-  addAffix, reroll, upgradeRarity }
+  addAffix, reroll, upgradeRarity, salvage, sell, reforge, salvageAll,
+  sellAll }   // las 5 últimas: § 21
 ```
 Base: `rules.catalog.weapons[item.baseId]` (`WeaponDef`: `name`, `type`,
 `level`, `requirements`, `implicit`, `shieldDefense`, `skillIds`,
@@ -835,6 +839,7 @@ de un legendario', 'No sale en este tipo de arma', 'Ya tiene ese afijo',
 'Sin lugar (…)', 'No tiene pasiva', 'Pasiva única', 'Solo a un arma
 Épica', 'Elige una habilidad', 'Un arma Común no lleva afijos', 'No tiene
 afijos', 'Ya está en la rareza máxima', 'Falta <material>', 'Faltan $N'.
+Desarmar, vender y reforjar: § 21 (con sus motivos).
 
 ### 19.6 Loot en el piso
 
@@ -899,6 +904,117 @@ nuevas (`kNewUltimates`, ver § 8.1).
    hasta cambiar de mapa).
 6. Sin loot en el mapa todavía (`groundLoot = false`), lo oculto por el
    filtro no entra al inventario (sirve de "auto-descarte").
-7. La XP de las misiones actuales no escala con el nivel de zona (sus
-   enemigos no tienen nivel); `ProgressionRules.xpFactor` es el gancho
-   para el mundo nuevo (progression.md § "Niveles").
+7. ~~La XP de las misiones actuales no escala con el nivel de zona~~
+   v0.2.0: las misiones de zona usan el nivel real de la zona para el
+   loot y la XP (worldgen.md § 6.3); `LootRules.zoneLevel` queda solo
+   para misiones sin zona.
+8. (v0.2.0) Sumideros de loot (§ 21): desarmar y vender destruyen; el
+   tope de 99 por material se respeta y lo que sobra se pierde (avisado
+   en la vista previa). Reforjar: cualquier tipo de base con nivel ≤
+   nivel de objeto; no Legendarios. La equipada y la última arma inicial
+   no se desarman, venden ni reforjan.
+
+## 21. Sumideros de loot (v0.2.0)
+
+Pedido del dueño: "qué hacer con el loot que no sirve para mi
+personaje". Aprobado: **Desarmar en materiales**, **Vender por
+créditos** y **Reforjar base** (no "loot inteligente"). Todo vive en
+`CraftRules` (`rules/craft_rules.dart`) como operaciones nuevas de
+`CraftOp`, se manda con `CraftAction` (solo lobby / preparación, como la
+fusión) y devuelve `CraftResult` (vista previa = resultado). Ninguna se
+puede hacer sobre la **equipada** (`Está equipada`) ni sobre la **última
+instancia del arma inicial** de la clase (`Arma inicial`). UI: panels.md
+§ "Inventario" (DESARMAR, VENDER, LIMPIAR INVENTARIO) y § "FUSIÓN"
+(REFORJAR BASE).
+
+### 21.1 Desarmar (`CraftOp.salvage`, `CraftOp.salvageAll`)
+
+El arma se destruye y da materiales. Seguro, por rareza (`+1` = desde
+nivel de objeto 25, `CraftRules.salvageHighLevel`), más **+1 Esquirla
+cada 2 niveles de forja**; y una tirada extra:
+
+| Rareza | Seguro | Puede salir |
+|---|---|---|
+| Común | 1 Esquirla (+1) | — |
+| Mágico | 2 Esquirlas (+1) | 25% de +1 Cristal |
+| Raro | 1 Cristal + 1 Esquirla (+1) | 10% de +1 Prisma |
+| Épico | 2 Cristales (+1) | 35% de +1 Prisma |
+| Legendario | 1 Prisma + 2 Cristales (+1) | — |
+
+`CraftRules.salvageYield(item)` → `SalvageYield(guaranteed, chances)`.
+Sin tirada (Común, Legendario) el resultado es completo aun sin azar;
+con tirada y sin `RandomSource`, vista previa: `gainedMaterials` = lo
+seguro, `chances` / `outcomes` = lo que puede salir (`25% de +1 Cristal
+de Era`). El host tira con su azar. Pila máx. 99: lo que pasa del tope
+se pierde y va en `lost` (`2 Esquirla del Eco (tope 99)`).
+
+**Lote** (`salvageAll`, `CraftAction.batch(op, rareza)`: `targetUid =
+'*'`, `index = Rarity.index`): todas las armas de esa rareza menos la
+equipada y la última inicial (`CraftRules.batchTargets`: si hay dos
+iniciales, se va una). Las tiradas se agrupan (`25% de +1 Cristal de
+Era (×3 armas)`). Sin armas: `No hay armas de rareza <R>`.
+
+### 21.2 Vender (`CraftOp.sell`, `CraftOp.sellAll`)
+
+El arma se destruye y da créditos: `max(10, round(valor(nivel de
+objeto) × fracción + 25% de lo gastado en forja))`, con `valor(L) =
+100·L + 4·L²` (la fórmula de precio de las bases) y fracción Común 10%,
+Mágico 15%, Raro 25%, Épico 40%, Legendario 60%. Lo gastado en forja es
+la suma de `forgeCost` de cada nivel que tiene. No hay arbitraje con la
+tienda (una base Común se compra a `valor(L)` y se vende al 10%).
+Ejemplos: Común nv 1 ₵10, Común nv 30 ₵660, Mágico nv 10 ₵210, Épico
+nv 20 ₵1440, Legendario nv 50 ₵9000. Lote `sellAll` como en § 21.1.
+Determinístico.
+
+### 21.3 Reforjar base (`CraftOp.reforge`)
+
+Cambia la base de un arma por **otra de cualquier tipo** con **nivel de
+base ≤ nivel de objeto** (la misma regla con la que cae el loot) y
+distinta de la actual. Así un Épico de arco que cayó para una maga se
+vuelve báculo sin perder lo invertido. Se conservan rareza, nivel de
+objeto, nombre generado, mods, pasiva, forja y habilidades traídas. Se
+pierden (y la vista previa lo lista en `lost`):
+- los mods que no salen en el tipo nuevo (`Mod +1 stack de Veneno al
+  aplicar (T2) (no sale en espada)`);
+- la pasiva si no está en el pool del tipo nuevo (§ 8.4; `Pasiva Ímpetu
+  (no sale en báculo)`): el Épico queda sin pasiva hasta que se le
+  traiga otra (determinístico: no se tira una nueva);
+- la forja de Defensa si la base nueva no tiene escudo.
+
+Costo (`CraftRules.reforgeCost`): créditos `round((100 + 25·nivel de
+objeto) × factor de rareza)` y Común 1 Esquirla, Mágico / Raro 1
+Cristal, Épico 1 Cristal + 1 Prisma (p. ej. Épico nv 20: ₵1200 + 1
+Cristal + 1 Prisma). Legendario: no (`Un Legendario no cambia de base`:
+la base es parte del único). `CraftAction.reforge(uid, baseId)` (la base
+nueva viaja en `sourceUid`). Bases posibles:
+`CraftRules.reforgeBases(item)` (de la más alta a la más baja). Motivos,
+en orden: `No la tienes`, `Está equipada`, `Arma inicial`, `Un
+Legendario no cambia de base`, `Elige una base`, `Ya tiene esa base`,
+`Base de nivel N (el arma es de nivel M)`, `Falta <material>`, `Faltan
+$N`.
+
+### 21.4 API
+
+```dart
+enum CraftOp { …, salvage, sell, reforge, salvageAll, sellAll }
+  // .destroys, .isBatch
+class CraftResult { …; int gainedCredits; Map<CraftMaterial, int> gainedMaterials;
+  List<MaterialChance> chances; List<String> lost; }
+class MaterialChance { CraftMaterial material; double chance; int count, rolls; String text; }
+static SalvageYield CraftRules.salvageYield(ItemInstance i)
+CraftResult salvage(PlayerProfile p, String uid, {RandomSource? random})
+CraftResult salvageAll(PlayerProfile p, Rarity r, {RandomSource? random})
+CraftResult sell(PlayerProfile p, String uid) / sellAll(PlayerProfile p, Rarity r)
+int sellPrice(ItemInstance i); int forgeSpent(ItemInstance i); static int itemValue(int itemLevel)
+CraftResult reforge(PlayerProfile p, String uid, String baseId)
+List<WeaponDef> reforgeBases(ItemInstance i)
+static (int, Map<CraftMaterial, int>)? reforgeCost(ItemInstance i)
+List<ItemInstance> batchTargets(PlayerProfile p, Rarity r)
+const CraftAction.reforge(String uid, String baseId)
+CraftAction.batch(CraftOp op, Rarity r)   // salvageAll / sellAll
+ItemInstance.copyWith(baseId: …)          // nuevo parámetro
+```
+Red: `CraftAction` ya serializa `op` por nombre (`{'t': 'craft', 'op':
+'sellAll', 'w': '*', 'i': 0}`); no cambia el formato. `SessionEngine`
+solo suma el verbo del log de `reforge` (las que destruyen no tienen
+`after` y no se anuncian). Tests: `test/game_engine/loot_sinks_test.dart`.

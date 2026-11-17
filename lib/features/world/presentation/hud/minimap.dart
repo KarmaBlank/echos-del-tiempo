@@ -7,6 +7,7 @@ import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/loot_filter.dart';
+import '../map/map_themes.dart';
 
 /// Un ícono de loot en el minimapa (`Icono` del filtro, loot.md § 6).
 class MinimapLoot {
@@ -39,7 +40,16 @@ class Minimap extends StatelessWidget {
     required this.localY,
     required this.time,
     this.loot = const [],
+    this.bounds,
+    this.entranceOpen,
   });
+
+  /// Rectángulo del atlas a mostrar (el piso actual); `null` = todo.
+  final TileRect? bounds;
+
+  /// Si la entrada de la zona está abierta para el jugador local (mapa del
+  /// mundo; las cerradas van en gris).
+  final bool Function(int zone)? entranceOpen;
 
   /// Píxeles de pantalla por tile (el prototipo usa 1.25 px virtuales,
   /// ×2 para la pantalla).
@@ -62,8 +72,8 @@ class Minimap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: map.width * cell,
-      height: map.height * cell,
+      width: (bounds?.w ?? map.width) * cell,
+      height: (bounds?.h ?? map.height) * cell,
       child: CustomPaint(
         painter: _MinimapPainter(this),
       ),
@@ -89,11 +99,17 @@ class _MinimapPainter extends CustomPainter {
     final p = Paint()..isAntiAlias = false;
     for (var y = 0; y < map.height; y++) {
       for (var x = 0; x < map.width; x++) {
-        p.color = switch (map.tileAt(x, y)) {
+        final ch = map.tileAt(x, y);
+        p.color = switch (ch) {
           Tile.wall || Tile.gate => const Color(0xFF0B0E1A),
+          Tile.tree => const Color(0xFF1D3B26),
+          Tile.rock => const Color(0xFF3A3D48),
           Tile.water => const Color(0xFF2E86DE),
           Tile.merchant => const Color(0xFFFFD166),
           Tile.path => const Color(0xFF6C7A9C),
+          Tile.grass => const Color(0xFF3E6B48),
+          Tile.stairsDown || Tile.stairsUp => const Color(0xFFFFD166),
+          _ when Tile.entranceZone(ch) != null => const Color(0xFF3E6B48),
           _ => const Color(0xFF4B5878),
         };
         c.drawRect(
@@ -109,15 +125,28 @@ class _MinimapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final map = w.map;
     final s = w.session;
-    canvas.saveLayer(Offset.zero & size,
-        Paint()..color = const Color.fromRGBO(0, 0, 0, 0.85));
+    final b = w.bounds;
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    if (b != null) {
+      canvas.translate(-b.x * Minimap.cell, -b.y * Minimap.cell);
+    }
+    final shown = b == null
+        ? Offset.zero & Size(map.width * Minimap.cell, map.height * Minimap.cell)
+        : Rect.fromLTWH(b.x * Minimap.cell, b.y * Minimap.cell,
+            b.w * Minimap.cell, b.h * Minimap.cell);
+    canvas.saveLayer(
+        shown, Paint()..color = const Color.fromRGBO(0, 0, 0, 0.85));
     canvas.drawPicture(_base(map));
     canvas.restore();
 
     final p = Paint()..isAntiAlias = false;
     const cell = Minimap.cell;
-    for (var y = 0; y < map.height; y++) {
-      for (var x = 0; x < map.width; x++) {
+    final x0 = b?.x ?? 0, y0 = b?.y ?? 0;
+    final x1 = b == null ? map.width : b.x + b.w;
+    final y1 = b == null ? map.height : b.y + b.h;
+    for (var y = y0; y < y1; y++) {
+      for (var x = x0; x < x1; x++) {
         if (map.tileAt(x, y) != Tile.gate) continue;
         p.color =
             s.gateOpen ? const Color(0xFF7BED9F) : const Color(0xFFFF4757);
@@ -132,9 +161,25 @@ class _MinimapPainter extends CustomPainter {
           p);
     }
 
+    // Entradas de zona (mundo): cuadro de 3 tiles del color de la zona.
+    for (final e in map.entrances) {
+      final open = w.entranceOpen?.call(e.zone) ?? true;
+      p.color = const Color(0xFF000000);
+      canvas.drawRect(
+          Rect.fromLTWH((e.tx - 1) * cell - 1, (e.ty - 1) * cell - 1,
+              cell * 3 + 2, cell * 3 + 2),
+          p);
+      p.color = open ? zoneColor(e.zone) : kLockedZoneColor;
+      canvas.drawRect(
+          Rect.fromLTWH((e.tx - 1) * cell, (e.ty - 1) * cell, cell * 3,
+              cell * 3),
+          p);
+    }
+
     final m = s.mission;
     if (m != null) {
       for (final e in m.enemies) {
+        if (e.floor != m.floor) continue;
         if (e.alive && !e.boss) {
           dot(e.x, e.y,
               e.elite ? const Color(0xFFFFD166) : const Color(0xFFFF4757),
@@ -142,6 +187,7 @@ class _MinimapPainter extends CustomPainter {
         }
       }
       for (final it in m.items) {
+        if (it.floor != m.floor) continue;
         switch (it.kind) {
           case MissionItemKind.fragment when !it.done:
             dot(it.x, it.y, const Color(0xFF48DBFB), 3);
@@ -155,7 +201,7 @@ class _MinimapPainter extends CustomPainter {
         }
       }
       for (final e in m.enemies) {
-        if (!e.boss || !e.alive) continue;
+        if (!e.boss || !e.alive || e.floor != m.floor) continue;
         final blink = (w.time * 1000 / 300).floor() % 2 == 1;
         final tp = TextPainter(
           text: TextSpan(
@@ -187,6 +233,7 @@ class _MinimapPainter extends CustomPainter {
       dot(mine ? w.localX : pl.x, mine ? w.localY : pl.y,
           mine ? const Color(0xFFFFFFFF) : const Color(0xFF48DBFB), 3);
     }
+    canvas.restore();
   }
 
   /// Ícono de 5 px (de pantalla) con contorno negro.

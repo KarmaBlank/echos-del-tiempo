@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 // ecos-del-tiempo.html. `fnv` es FNV-1a de 32 bits sobre las filas del
 // mapa unidas con '\n', calculado igual en JS.
 
-MissionDef _mission(String id) => kMissions.firstWhere((m) => m.id == id);
+MissionDef _mission(String id) => kPrototypeMissions.firstWhere((m) => m.id == id);
 
 int _fnv(String s) {
   var h = 0x811c9dc5;

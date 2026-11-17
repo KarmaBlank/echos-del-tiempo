@@ -97,6 +97,11 @@ compensan la ULT): no endurece las peleas, les da ritmo.
 | Gólem Reloj | `eult_engranaje` | Engranaje del Fin | ATQ × 1.5 al objetivo + 3 Congelación; retrasa a todos `IV × 0.5` |
 | Devorador de Eras | `eult_finEras` | Fin de las Eras | ATQ × 1.4 a todos + 2 Quemadura; después borra los buffs del grupo (efectos positivos del árbol, escudos y DEF de batalla) |
 | Élite (cualquiera) | `eult_furia` | Furia Élite | ATQ × 2.0 al objetivo, crítico garantizado (× 1.5) |
+| Matriarca Araña | `eult_nido` | Nido Venenoso | ATQ × 1.1 a todos + 3 Veneno; con 2+ vivos atrapa en telaraña al de más vida (`EnemyUltExtra.web`) |
+| Sierpe de Escarcha | `eult_aliento` | Aliento Glacial | ATQ × 1.2 a todos + 2 Congelación; rearma los cristales rotos (`reformCrystals`) |
+| Caballero Hueco | `eult_juicio` | Juicio Hueco | ATQ × 1.9 al objetivo + 1 Aturdido; cambia de postura (`stanceShift`) |
+
+Mecánicas de cada jefe nuevo: docs/specs/bosses.md § "v0.2".
 
 - Objetivo (a uno): como un golpe normal (Provocar primero, si no al
   azar). Defender reduce a la mitad, Protección desvía cada golpe al
@@ -122,7 +127,10 @@ impacto). Tope de 12 sonidos por paso como siempre.
 ## 4. Red
 
 `Combatant` serializa (opcionales) `brkB`, `brk`, `brkN`, `vul`, `brkS`,
-`eult`, `ultP`; la carga va en `ult` como la de los jugadores. Eventos:
+`eult`, `ultP`; la carga va en `ult` como la de los jugadores. Mecánicas
+de jefe v0.2 (opcionales): `web` (atrapado), `stc` (postura), `stcN`
+(turnos para cambiarla); evento `boss` (`BossMechanicEvent`: `id`, `ph`,
+`tg`, `v`). Eventos:
 `brk` (`BreakEvent`), `eultWarn`, `eult`; `DamageEvent.vulnerable` →
 `vul`. Un estado o evento viejo sin esas claves se lee con los valores
 por defecto (sin barra).

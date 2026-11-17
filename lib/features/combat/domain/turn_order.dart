@@ -1,13 +1,20 @@
+import '../../../game_engine/data/enemies_catalog.dart';
 import '../../../game_engine/models/battle_state.dart';
+import '../../../game_engine/models/passive_mechanic.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart';
 
-/// `IVa`: tiempo entre turnos con la congelación aplicada (el mismo
-/// cálculo que `BattleEngine.interval`).
+/// `IVa`: tiempo entre turnos con la congelación y los efectos de
+/// velocidad aplicados (el mismo cálculo que `BattleEngine.interval`).
 double turnInterval(Combatant a) =>
     100 /
     (a.speed *
+        (1 + a.effectTotal(BuffStat.speed)) *
         (1 - BattleEngine.freezeSlowPerStack * a.stacks(StatusKind.freeze)));
+
+/// Invocación sin turno (cristales de la Sierpe).
+bool isPassiveAdd(Combatant c) =>
+    !c.isPlayer && (kEnemies[c.enemyType]?.passive ?? false);
 
 /// `predictTurns(v, n)` del prototipo: los ids de los próximos [n] turnos
 /// según el timeline actual. Ver docs/specs/battle_presentation.md
@@ -17,7 +24,8 @@ List<String> predictTurns(BattleState state, int n) {
     for (final p in state.party)
       if (p.alive) _Slot(p.id, p.nextTurn, turnInterval(p)),
     for (final e in state.enemies)
-      if (e.alive) _Slot(e.id, e.nextTurn, turnInterval(e)),
+      if (e.alive && !isPassiveAdd(e))
+        _Slot(e.id, e.nextTurn, turnInterval(e)),
   ];
   final out = <String>[];
   if (actors.isEmpty) return out;

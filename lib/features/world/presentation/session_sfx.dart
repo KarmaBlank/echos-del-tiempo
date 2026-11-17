@@ -138,6 +138,9 @@ class SessionSfx {
         }
       case LevelUpEvent():
         service.play(Sfx.levelUp);
+      case BattleStartedEvent(:final boss) when boss:
+        // Cartel de entrada del jefe.
+        service.play(Sfx.bossIntro);
       case LootDropEvent() || LootPickedEvent():
         for (final c in lootSounds(e)) {
           service.play(c.id, delayMs: c.delayMs);
@@ -309,6 +312,31 @@ class SessionSfx {
           }
         case EnemyUltWarningEvent():
           out.add(cue(Sfx.enemyUltWarn));
+        case BossMechanicEvent(:final phase, :final actorId):
+          // Mecánicas de jefe (docs/specs/audio.md § "Mecánicas de jefe").
+          final ult = action?.ult;
+          final afterUlt = ult == null ? 0 : ult.lastImpact(3) + 120;
+          switch (phase) {
+            case BossMechanicPhase.webCast:
+              out.add(cue(Sfx.webCast,
+                  ult != null ? afterUlt : BattleFx.enemyStrikeMs + 60));
+            case BossMechanicPhase.webFreed:
+              out.add(cue(Sfx.webFree, 100));
+            case BossMechanicPhase.webSkip || BossMechanicPhase.webStruggle:
+              out.add(cue(Sfx.webStuck));
+            case BossMechanicPhase.frost:
+              out.add(cue(Sfx.frost));
+            case BossMechanicPhase.thaw:
+              out.add(cue(Sfx.thaw, base() + 120));
+            case BossMechanicPhase.shatter:
+              out.add(cue(Sfx.crystalBreak, hitAt(actorId) + 180));
+            case BossMechanicPhase.reform:
+              once(Sfx.crystalReform, afterUlt + 80);
+            case BossMechanicPhase.stanceShift:
+              out.add(cue(Sfx.stanceShift, ult == null ? 0 : afterUlt + 80));
+            case BossMechanicPhase.resisted:
+              out.add(cue(Sfx.stanceBlock, hitAt(actorId)));
+          }
         case EnemyUltEvent():
           closeSegment();
           final script = ultScriptFor(b.ultId);

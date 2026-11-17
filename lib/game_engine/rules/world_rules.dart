@@ -24,6 +24,9 @@ abstract final class WorldRules {
         c == Tile.counter ||
         c == Tile.armory ||
         c == Tile.merchant ||
+        c == Tile.tree ||
+        c == Tile.rock ||
+        Tile.entranceZone(c) != null ||
         (c == Tile.gate && !gateOpen);
   }
 
@@ -79,4 +82,34 @@ abstract final class WorldRules {
   /// Distancia a la que la UI ofrece activar un sello (`nearSeal`). El
   /// host acepta hasta `SessionEngine.sealRange`.
   static const sealPromptRange = 26.0;
+
+  /// Distancia (px, al centro del tile de la entrada) para entrar a una
+  /// zona con E (worldgen.md § 7.3).
+  static const entranceRange = 28.0;
+
+  /// Distancia (px, al centro del tile) para usar una escalera con E.
+  static const stairsRange = 24.0;
+
+  /// La entrada de zona frente a la que está el jugador, o `null`.
+  static ZoneEntrance? nearEntrance(GameMap map, double x, double y) {
+    for (final e in map.entrances) {
+      final c = e.center;
+      if (distance(x, y, c.x, c.y) < entranceRange) return e;
+    }
+    return null;
+  }
+
+  /// La escalera del piso actual cerca del jugador, o `null`.
+  static StairsKind? nearStairs(GameMap map, double x, double y) {
+    final f = map.floorAt(x, y);
+    if (f == null) return null;
+    final d = f.stairsDown, u = f.stairsUp;
+    if (d != null && distance(x, y, d.x, d.y) < stairsRange) {
+      return StairsKind.down;
+    }
+    if (u != null && distance(x, y, u.x, u.y) < stairsRange) {
+      return StairsKind.up;
+    }
+    return null;
+  }
 }

@@ -30,7 +30,7 @@ Implementación:
 | Textos de objetos (ficha / tooltip, requisitos) — loot v2 | `lib/features/inventory/domain/item_text.dart` |
 | Colores de rareza, ícono de objeto, etiqueta de loot con el estilo del filtro | `lib/features/inventory/presentation/item_widgets.dart` |
 | Inventario (grilla 8×5, equipada, dar / tirar, compañeros) | `lib/features/inventory/presentation/inventory_tab.dart` |
-| Mesa de fusión libre (pestaña FUSIÓN) | `lib/features/inventory/presentation/craft_bench.dart` |
+| Mesa de fusión en 3 pasos (pestaña FUSIÓN) | `lib/features/inventory/presentation/craft_bench.dart` |
 | Editor del filtro de loot (pestaña FILTRO) | `lib/features/inventory/presentation/loot_filter_tab.dart` |
 | Árbol (dibujo + info lateral) | `lib/features/passive_tree/presentation/passive_tree_view.dart` |
 | Textos del árbol (`fxTxt`, `KEYS`) y estado de cada nodo | `lib/features/passive_tree/domain/passive_text.dart` |
@@ -42,6 +42,7 @@ Implementación:
 Tests: `test/features/inventory/armory_panel_test.dart`,
 `test/features/inventory/inventory_tab_test.dart`,
 `test/features/inventory/craft_bench_test.dart`,
+`test/features/inventory/loot_sinks_ui_test.dart`,
 `test/features/inventory/loot_filter_tab_test.dart`,
 `test/features/inventory/item_text_test.dart`,
 `test/features/missions/mission_panels_test.dart`,
@@ -64,6 +65,8 @@ exactamente el orden de las comprobaciones del motor:
 | Equipar (`EquipAction`) | `Solo en el lobby o la preparación` (`canShop`), `No la tienes`, `Equipada`, `Nivel N` (nivel de la base), `Confirma puntos` (cumple con el reparto pendiente pero no con los atributos actuales), `Requisitos: FUE 14 DES 8` (los que faltan). **Cualquier clase** equipa cualquier arma si cumple (loot.md § 0.2) |
 | Forjar (`UpgradeAction(uid, stat)`) | `canShop`, y el `error` de `CraftRules.forge` (`MAX` = 5 por estadística, `Tope de forja (N)` = tope de la rareza leído de `Rarity.forgeCap`, `Faltan $N`) |
 | Fusión libre (`CraftAction`) | `canShop`, y el `error` del `CraftResult` de la operación (loot.md § 19.5: `Está equipada`, `Arma inicial`, `Sin lugar (…)`, `Solo a un arma Épica`, `Pasiva única`, `Ya está en la rareza máxima`, `Falta Cristal de Era`, `Faltan $N`, ...) |
+| Desarmar / vender (`CraftAction` `salvage` / `sell`, y en lote `salvageAll` / `sellAll`) | `canShop`, y el `error` del motor (loot.md § 21: `Está equipada`, `Arma inicial`, `No hay armas de rareza <R>`) |
+| Reforjar base (`CraftAction.reforge`) | `canShop`, `Está equipada`, `Arma inicial`, `Un Legendario no cambia de base`, `Ya tiene esa base`, `Base de nivel N (el arma es de nivel M)`, `Falta <material>`, `Faltan $N` |
 | Dar (`GiveItemAction`) | `No en batalla`, `No hay compañeros en la sala` (solo), el `error` de `InventoryRules.take` (`Equipada`, `Arma inicial`, `No tienes tantos`), `<nombre>: Inventario lleno` / `<nombre>: Máximo N` (`cannotReceive` del compañero) |
 | Tirar al piso (`DropItemAction`) | `Solo en el lobby o en el campo`, `Estás K.O.`, el `error` de `take` |
 | Mover casilla (`MoveInventoryAction`) | (siempre; el motor ignora un movimiento inválido) |
@@ -146,6 +149,26 @@ por misión (`MissionCard`, borde `panelBorder`):
 **Desvío** (un propósito por pantalla): el cambio de clase sale del
 mostrador; queda en Personaje › Atributos.
 
+**Zonas (v0.2.0, worldgen.md § 7.2)**: el mostrador lista las 10 zonas
+de `ZoneRules.zoneList` en orden:
+- Zonas con misión: la `MissionCard` con una línea de zona arriba
+  `Zona N · <nombre> · Lv a-b · F pisos · Jefe: <jefe>` (en el color de
+  la zona) y el objetivo por pisos `Derrota K grupos por piso (F pisos)
+  y vence al jefe (<jefe>) en el último` (+ extras). Bloqueada: borde
+  gris, la línea `Bloqueada: vencé a <jefe> en <zona>` en rojo y
+  `PROPONER` deshabilitado con ese motivo (`Bloqueada`).
+- Zonas "Próximamente" (sin misión): una fila compacta gris
+  `Zona N · <nombre> · Lv a-b · Próximamente` (`zone-soon-<N>`), sin
+  botón.
+- La línea "qué hace" suma `También podés entrar por las puertas del
+  mapa del mundo.`
+
+**Resultado** (zonas): debajo del nombre de la misión, `Zona N ·
+<nombre> · Piso P/F` (P = piso alcanzado, F en una victoria); si el
+jugador local desbloqueó una zona (`MissionResult.unlocked[local]`):
+`¡Zona M desbloqueada! <nombre>` en dorado (`results-unlocked`), y una
+línea por los demás jugadores que también desbloquearon.
+
 ## Votación (`renderVote`, 1364-1375)
 
 Caja arriba al centro (debajo de la barra de misión) en el lobby
@@ -205,28 +228,10 @@ donde difieren (esas quedan como referencia del prototipo).
   <efecto>` (`forge-passive-up-<stat>`). Botón `+1 $costo`
   (`up-<uid>-<stat>`) con el motivo del motor. `EQUIPAR`
   (`equip-<uid>`) abajo si no es la equipada.
-- **FUSIÓN** = mesa de fusión libre (`craft_bench.dart`). Arriba, una
-  fila de operaciones (`craft-op-<op>`): `TRASLADAR MOD · TRASLADAR
-  PASIVA · TRASLADAR HABILIDAD · QUITAR MOD · AGREGAR MOD · RE-TIRAR ·
-  SUBIR RAREZA` y el contador de materiales (`craft-materials`:
-  `Esquirla xN · Cristal xN · Prisma xN`). Debajo, la línea "qué hace"
-  de la operación, con las reglas de loot.md § 20 dichas en claro (el
-  Prisma sube hasta Épico; la pasiva solo va a un Épico y las únicas no
-  se trasladan; cupos de habilidades 1 / 2 y la nueva reemplaza a la más
-  vieja). Lista: `1. Arma destino` (`craft-target-<uid>`; por defecto la
-  equipada); en los traslados `2. Arma a sacrificar (se destruye)`
-  (`craft-source-<uid>`: no la equipada ni la última inicial) y `3. Qué
-  trasladar` (`craft-pick-<i>`: los mods del arma sacrificada con su
-  tier, o sus habilidades); en QUITAR MOD `2. Mod a quitar`. Detalle =
-  **vista previa** del `CraftResult` (vista previa = resultado):
-  `RESULTADO` con el nombre, la rareza antes → después, `Mods n/max`
-  (cupo de la rareza) con la lista después (nuevo en verde `(nuevo)`,
-  quitado en rojo `(se quita)`), la pasiva y las habilidades antes →
-  después (`Reemplaza X` en naranja), en las aleatorias `Puede salir:`
-  con `outcomes`, `Se pierde: <arma>` en rojo (con sus mods, pasiva y
-  forja), `Costo $N` + materiales (`1 Cristal de Era (tienes N)`). El
-  botón primario (`craft-confirm`) dice la operación y está
-  deshabilitado con el `error` del motor.
+- **FUSIÓN** = mesa de fusión (`craft_bench.dart`), rediseñada en
+  v0.2.0 (pedido del dueño: "el menú de fusión es muy confuso") como un
+  **asistente de 3 pasos**: `1 ARMA › 2 ACCIÓN › 3 CONFIRMAR`. Ver
+  § "FUSIÓN (v0.2.0: 3 pasos)" abajo.
 
 ### COMPRAR
 
@@ -283,6 +288,90 @@ guarda 1 habilidad fusionada: una nueva reemplaza a la anterior.`
   <sacrificio +N>` en rojo (con sus mejoras y su fusión), `CostLine` y
   `FUSIONAR` (`fuse`, `FuseAction`) con los motivos de la tabla.
 
+### FUSIÓN (v0.2.0: 3 pasos)
+
+Reemplaza a la mesa de loot v2 (fila de 7 operaciones + lista en 3
+bloques + detalle). Pedido del dueño: "el menú de fusión es muy
+confuso".
+
+**Por qué un asistente de 3 pasos y no un panel de verbos**: la mesa
+vieja mostraba a la vez 7 operaciones, dos listas de armas (destino y
+sacrificio) y la de mods, y no quedaba claro cuál era "el arma que
+mejoro" y cuál "la que se destruye". Con 1000 px de ancho y la fuente
+pixel, un panel de verbos (slots a la izquierda + verbos a la derecha +
+vista previa) vuelve a meter tres columnas en una pantalla. El
+asistente cumple "una pantalla, un propósito" (ui_style.md): cada paso
+hace **una** pregunta, las migas dejan volver a cualquier paso con un
+clic, y el paso 2 muestra **de antemano** si cada acción se puede y, si
+no, por qué. Un usuario que repite (p. ej. re-tirar varias veces) se
+queda en el paso 3 y confirma de nuevo.
+
+- **Arriba, siempre**: migas `1 ARMA › 2 ACCIÓN › 3 CONFIRMAR`
+  (`bench-crumb-<0|1|2>`, la actual en dorado; clic = ir a ese paso), el
+  arma elegida y la acción (`bench-summary`), y a la derecha `Tienes:
+  Esquirla xN · Cristal xN · Prisma xN` (`craft-materials`; el tooltip
+  explica cada material y que salen del loot o de desarmar).
+- **Paso 1 — ¿Qué arma?** (línea `Paso 1 de 3: elige el arma que quieres
+  mejorar o cambiar.`): lista de tus armas (`bench-weapon-<uid>`,
+  `EQUIPADA` en dorado; por defecto la equipada) y a la derecha su ficha.
+  Primario `ELEGIR ESTA ARMA ›` (`bench-next`).
+- **Paso 2 — ¿Qué querés hacer?** (línea `Paso 2 de 3: ...`): lista
+  ancha (560 px) de acciones agrupadas, cada una con nombre en negrita,
+  **una línea** "qué hace" y a la derecha `Se puede` (verde) o el motivo
+  (rojo) calculado con la elección por defecto (`bench-op-<op>`,
+  `bench-op-why-<op>`). Para traer un mod / la pasiva, `Se puede` si
+  **alguna** combinación arma × mod es válida. Clic = paso 3. A la
+  derecha, `AHORA` con la ficha del arma.
+
+| Grupo | Acción (`CraftOp`) | Línea "qué hace" |
+|---|---|---|
+| MEJORAR · con materiales | Re-tirar valores (`reroll`) | Nuevos valores para cada mod, dentro de su rango. Usa 1 Esquirla del Eco. |
+| | Agregar un mod (`addAffix`) | Un mod al azar, si el arma tiene lugar. Usa 1 Cristal de Era. |
+| | Subir rareza (`upgradeRarity`) | Común → Mágico → Raro → Épico: más lugar para mods (y pasiva en Épico). Usa Prismas Rotos. |
+| TRASLADAR · de otra arma, que se destruye | Traer un mod (`transferAffix`) | Copia un mod de otra arma a esta. La otra arma se destruye. |
+| | Traer la pasiva (`transferPassive`) | La pasiva de otra arma pasa a esta (las dos Épicas). La otra se destruye. |
+| | Traer una habilidad (`transferSkill`) | Esta arma aprende una habilidad de otra, que se destruye. |
+| QUITAR · para hacer lugar | Quitar un mod (`removeAffix`) | Borra un mod. Los mods fijos de un legendario no se quitan. |
+| CAMBIAR · el tipo de arma | Reforjar base (`reforge`, loot.md § 21.3) | Cambia el tipo de arma (p. ej. arco → báculo) y conserva rareza, mods y forja. |
+
+- **Paso 3 — Vista previa y confirmar** (línea `Paso 3 de 3 · <acción>:
+  <qué hace>`). Izquierda = solo lo que hay que elegir:
+  - traer: `¿De qué arma? (se destruye)` (`craft-source-<uid>`: solo
+    las que sirven —con mods / con pasiva—, nunca la equipada ni la
+    última inicial) y `¿Qué mod traer?` / `¿Qué habilidad?`
+    (`craft-pick-<i>`);
+  - quitar: `¿Qué mod quitar?` (`craft-pick-<i>`);
+  - reforjar: `¿Qué base nueva?` con filtro de familia
+    (`bench-family-<id>` / `bench-family-all`, por defecto la tuya) y
+    las bases posibles (`bench-base-<id>`: nombre, `Nv · tipo`, `OK` /
+    `Req` según tus requisitos);
+  - mejorar (sin nada que elegir): `AHORA` con la ficha del arma.
+  Derecha, siempre en este orden:
+  1. `AHORA → DESPUÉS` (`(al azar)` en las aleatorias): nombre antes →
+     después (`craft-name`), en reforjar `Base: X (tipo) → Y (tipo, Nv)`
+     (`craft-base`) y los requisitos de la base nueva, rareza antes →
+     después, `Mods n/max (lugar de un <rareza>)` (`craft-mods-title`)
+     con `[¿T1–T5?]` (`craft-tier-help`: tooltip que explica los tiers y
+     prefijos / sufijos sin jerga), la lista con `(nuevo)` en verde y
+     `(se quita)` en rojo (`craft-mods`), pasiva y habilidades antes →
+     después (`(traídas n/cupo)`); `PUEDE SALIR` (`craft-outcomes`) en
+     las aleatorias.
+  2. `GASTAS` (`craft-cost`): `$N (tienes $M) · 1 Cristal de Era
+     (tienes K)`, en rojo lo que no alcanza; `Nada` si es gratis.
+  3. `PIERDES` (`craft-lost`): el arma que se destruye (con sus mods,
+     pasiva y forja), `Reemplaza X`, lo que `CraftResult.lost` lista
+     (mods / pasiva / forja de Defensa al reforjar); `Nada` en verde.
+  4. `No se puede: <motivo>` (`craft-error`) si hay error.
+  5. `Tus stats si la equipas` (ATQ / MAG / VEL / CRÍT / DEF / HP antes →
+     después) cuando hay resultado determinístico.
+  Abajo: `‹ OTRA ACCIÓN` (`bench-back`) y el primario (`craft-confirm`,
+  `RE-TIRAR`, `AGREGAR MOD`, `SUBIR RAREZA`, `TRAER MOD`, `TRAER
+  PASIVA`, `TRAER HABILIDAD`, `QUITAR MOD`, `REFORJAR`) deshabilitado
+  con el `error` del motor. Después de confirmar: `¡Listo! Ahora:` con
+  los mods nuevos (`craft-last`) y se queda en el paso 3.
+
+Tests: `test/features/inventory/craft_bench_test.dart`.
+
 ### CONSUMIBLES (`itemsHtml`)
 
 `Se usan en batalla desde el menú. Máximo 9 de cada uno.` Una fila por
@@ -317,8 +406,9 @@ casilla y como ficha en los detalles:
 ## Inventario (pestaña INVENTARIO del personaje, tecla I)
 
 Reemplaza a la pestaña ARMAS (equipar y comparar están acá). Línea "qué
-hace": `Arrastra para mover · clic para ver · EQUIPAR, TIRAR o DAR A un
-compañero.`
+hace": `Arrastra para mover · clic para ver · EQUIPAR, DAR A, TIRAR,
+DESARMAR (materiales) o VENDER (créditos). LIMPIAR INVENTARIO: por
+rareza.`
 
 - Arriba de la grilla, pestañas de dueño (`inv-owner-<id>`): `TÚ` y una
   por compañero de sala (solo lectura: `Inventario de <nombre> (solo
@@ -337,11 +427,34 @@ compañero.`
   equipada, `Comparada con <equipada>` (ATQ / MAG / VEL / CRÍT / DEF,
   `StatChange`). Botones: `EQUIPAR` (`inv-equip`, motivos de la tabla),
   `TIRAR` (`inv-drop`) que pide confirmación (`inv-drop-confirm`:
-  `¿Tirar X al piso? Lo puede levantar cualquiera.`; es la única forma de
-  liberar casillas: el motor no tiene vender), y `DAR A <nombre>`
+  `¿Tirar X al piso? Lo puede levantar cualquiera.`), y `DAR A <nombre>`
   (`inv-give-<id>`) por compañero, o `DAR A...` deshabilitado con el
   motivo. Las pilas tienen cantidad (`inv-count-dec` / `inv-count-inc`,
   1..N) para dar o tirar.
+- **DESARMAR / VENDER** (v0.2.0, loot.md § 21) en las armas:
+  `DESARMAR` (`inv-salvage`) y `VENDER $N` (`inv-sell`, con el precio)
+  piden confirmación en la misma fila (`inv-craft-question`: `¿Desarmar
+  X? Recibes +2 Cristal de Era (puede salir: 35% de +1 Prisma Roto). El
+  arma se destruye.` / `¿Vender X? Recibes +$N...`, más lo que se pierde
+  por el tope de 99), `CANCELAR` (`inv-craft-cancel`) y el botón rojo
+  (`inv-craft-confirm`). Deshabilitados con el motivo del motor
+  (`Solo en el lobby o la preparación`, `Está equipada`, `Arma
+  inicial`).
+- **LIMPIAR INVENTARIO...** (`inv-clean`, debajo de la grilla, solo el
+  tuyo): reemplaza el detalle por el limpiador (un propósito): línea
+  `Desarma o vende de una vez todas las armas de una rareza. Nunca toca
+  la equipada ni tu última arma inicial.`, verbo `DESARMAR (materiales)`
+  / `VENDER (créditos)` (`inv-clean-salvage` / `inv-clean-sell`, por
+  defecto desarmar), rareza `COMUNES (n) · MÁGICOS (n) · RAROS (n)`
+  (`inv-clean-rarity-<rareza>`, con cuántas hay; Épicos y Legendarios
+  no se ofrecen en lote), el **resumen** (`inv-clean-summary`: `Vas a
+  desarmar 7 Comunes → +9 Esquirla del Eco` / `Vas a vender 7 Comunes →
+  +$450`, con lo que puede salir) y la lista `Se destruyen:`
+  (`inv-clean-list`, con el precio de cada una al vender). Abajo
+  `CANCELAR` (`inv-clean-cancel`) y el primario rojo `DESARMAR 7
+  COMUNES` (`inv-clean-confirm`, `CraftAction.batch`) con el motivo
+  (`No hay armas de rareza Común`, `canShop`). Tests:
+  `test/features/inventory/loot_sinks_ui_test.dart`.
 
 ## Filtro de loot (pestaña FILTRO del personaje)
 

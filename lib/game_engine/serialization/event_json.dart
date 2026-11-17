@@ -71,6 +71,9 @@ class EventJson {
             'r': session.resultToJson(e.result),
           },
         ReturnedToLobbyEvent() => {'t': 'lobby'},
+        FloorChangedEvent() => {'t': 'floor', 'f': e.floor, 'down': e.down},
+        StairsOpenedEvent() => {'t': 'stairs', 'f': e.floor},
+        ZoneUnlockedEvent() => {'t': 'zoneUnlocked', 'id': e.playerId, 'z': e.zone},
         LootDropEvent() => {
             't': 'loot',
             'id': e.playerId,
@@ -143,6 +146,12 @@ class EventJson {
         return MissionEndedEvent(session.resultFromJson(j.obj('r')));
       case 'lobby':
         return const ReturnedToLobbyEvent();
+      case 'floor':
+        return FloorChangedEvent(j.integer('f'), down: j.boolean('down'));
+      case 'stairs':
+        return StairsOpenedEvent(j.integer('f'));
+      case 'zoneUnlocked':
+        return ZoneUnlockedEvent(j.str('id'), j.integer('z'));
       case 'loot':
         return LootDropEvent(j.str('id'), _drop(j['d']),
             j.enumByName('src', LootSource.values),
@@ -252,6 +261,13 @@ class EventJson {
             'all': e.allTargets,
             if (e.wipedBuffs) 'wipe': true,
           },
+        BossMechanicEvent() => {
+            'k': 'boss',
+            'id': e.actorId,
+            'ph': e.phase.name,
+            if (e.targetId != null) 'tg': e.targetId,
+            if (e.value != 0) 'v': e.value,
+          },
         _ => throw ArgumentError('Evento de batalla sin JSON: $e'),
       };
 
@@ -325,6 +341,10 @@ class EventJson {
             targetId: j.strOrNull('tg'),
             allTargets: j.boolean('all'),
             wipedBuffs: j.flag('wipe'));
+      case 'boss':
+        return BossMechanicEvent(
+            j.str('id'), j.enumByName('ph', BossMechanicPhase.values),
+            targetId: j.strOrNull('tg'), value: j.dblOrNull('v') ?? 0);
     }
     throw FormatException('JSON inválido: evento de batalla desconocido', k);
   }

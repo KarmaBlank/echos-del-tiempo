@@ -836,3 +836,66 @@ actual. Al pasar el mouse por una técnica o la ULT se muestra su
   rediseño pedido por el dueño (§ "Ultimates", § "Cámara y encuadre",
   § "Etiquetas"); los tiempos de ULT ya no son los 1150 / 2200 ms del
   prototipo.
+
+## Mecánicas de jefe
+
+(docs/specs/bosses.md § "v0.2".)
+
+- **Cartel de entrada** (`BossIntro`, 2600 ms, capa de pantalla
+  `BattleOverlayPainter`): al abrir una batalla de jefe, banda negra a
+  todo el ancho al 30% del alto del mundo con filetes dorados, el sprite
+  del jefe (× `min(2, 50/alto)`) que entra deslizándose, `! JEFE !`
+  (rojo/dorado alternando cada 160 ms), el nombre en 16·u con contorno y
+  el título (`EnemyDef.title`) en crema. Entra en 260 ms y se apaga los
+  últimos 400. Con su sonido `boss.intro` (`BattleStartedEvent` de jefe).
+- **Telaraña**: el héroe atrapado lleva una tela radial (6 rayos + 3
+  anillos), un capullo blanco que late y el hilo que cuelga. `webCast` →
+  `¡TELARAÑA!` blanco en `y−50` y anillo, con el golpe (`enemyStrikeMs +
+  60`; en Nido Venenoso, después del último impacto); `webFreed` →
+  `¡LIBRE!` verde + anillo + aura; `webSkip` → `¡ATRAPADO!` + aura de
+  aturdido; `webStruggle` → `FORCEJEA ½`.
+- **Campo Helado**: con el grupo ralentizado el mapa se tiñe de celeste
+  (`0.10 + 0.30 × lentitud`) y caen copos (20 + 60 × lentitud); de cada
+  cristal vivo sube un hilo de partículas de escarcha a la Sierpe; los
+  cristales tienen un brillo celeste. Los cristales se ubican delante del
+  jefe, entre él y el grupo (`BattleLayout`, `(30, −22)`, `(30, 24)`).
+  `frost` → `VEL −N%` celeste en cada aliado + aura de hielo y pulso en
+  la Sierpe; `thaw` → `DESHIELO` verde; `shatter` → estallido de
+  cristal + `CRISTAL ROTO`; `reform` → aura de hielo + `SE REFORMA`.
+- **Postura**: aura del color de la postura detrás del Caballero (azul
+  `#74b9ff` escudo, rojo `#ff6b6b` espada, gris quebrado) e ícono 7×9
+  (escudo o espada) arriba a la derecha; con `stanceTurns` 1 titila un
+  `!` del color de la próxima postura. `stanceShift` → cartel grande
+  `POSTURA: ESPADA` en su color + pulso; `resisted` → `BLOQUEA −70%` gris
+  con el golpe.
+- **HUD**: fila de chips de mecánica arriba del menú y del panel de
+  espera (`bossMechanicChips`): `Telaraña · N atrapados`, `Campo Helado:
+  N cristales · VEL −X%`, `Postura ESCUDO −70% físico · cambia en N
+  turnos` (gris "rota" si está quebrado), cada uno con tooltip de cómo
+  contrarrestarla (`BossMechanicDef.counter`). Chip `Telaraña` en el
+  atrapado y `▼VEL −X%` (Campo Helado) en los ralentizados. El menú
+  agrega `Liberar a X (telaraña, ½ turno)` por cada aliado atrapado. La
+  franja de turnos no muestra los cristales y cuenta los efectos de
+  velocidad.
+
+### ULT de los jefes v0.2
+
+| ULT | Prep. | Descarga | Total | Impacto `i` | Hit-stop | Sacudida | Cámara |
+|---|---|---|---|---|---|---|---|
+| Nido Venenoso | 900 | 1100 | 2400 | 1350 + 70·i | 100 | 10 | `group` |
+| Aliento Glacial | 1000 | 1100 | 2500 | 1420 + 60·i | 120 | 12 | `group` |
+| Juicio Hueco | 900 | 1000 | 2300 | 1400 | 160 | 15 | `single` |
+
+- **Nido Venenoso** (violeta `#9b59b6` / verde): preparación — hilos
+  tendidos desde la Matriarca, sacos de huevos verdes que laten, bosque
+  violáceo. Descarga — escupe una telaraña que vuela en arco girando y
+  abriéndose, cae sobre todo el grupo y gotea veneno; en cada impacto
+  charco y anillos verde/violeta.
+- **Aliento Glacial** (cian `#9ff3ff`): preparación — copos que entran en
+  espiral a las fauces y un núcleo blanco que crece, niebla fría.
+  Descarga — cono de aliento de las fauces al grupo con vetas blancas;
+  cristales que encierran a cada objetivo y anillo.
+- **Juicio Hueco** (cian `#6ff7ff`): preparación — runas que giran
+  alrededor del Caballero y destello en los ojos. Descarga — una espada
+  espectral se forma sobre el objetivo y cae; cruz de luz, onda y grietas
+  en el piso.

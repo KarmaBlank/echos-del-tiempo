@@ -12,6 +12,7 @@ import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/loot_filter.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../../game_engine/rules/world_rules.dart';
+import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import '../../../missions/presentation/vote_panel.dart';
@@ -59,9 +60,14 @@ class WorldHud extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = view.session;
     final field = s.mode == SessionMode.field;
-    final showMinimap = (field || s.mode == SessionMode.levelUp) &&
-        !view.map.lobby &&
-        s.mission != null;
+    final world = s.mode == SessionMode.lobby && view.map.entrances.isNotEmpty;
+    final showMinimap = world ||
+        ((field || s.mode == SessionMode.levelUp) &&
+            !view.map.lobby &&
+            s.mission != null);
+    final zones = world
+        ? {for (final z in controller.zones) z.zone.index: z.open}
+        : const <int, bool>{};
     final small = Theme.of(context).textTheme.bodySmall!;
     final players = s.playerList;
     final partyWidth = players.length * (PartyBox.defaultWidth + 6);
@@ -79,12 +85,7 @@ class WorldHud extends StatelessWidget {
               child: Center(
                 child: _MissionBar(
                   view: view,
-                  missionName: s.mission == null
-                      ? ''
-                      : controller.engine.catalog
-                              .mission(s.mission!.missionId)
-                              ?.name ??
-                          s.mission!.missionId,
+                  missionName: _missionName(s),
                 ),
               ),
             ),
@@ -123,7 +124,10 @@ class WorldHud extends StatelessWidget {
               Positioned(
                 top: _gap + 48,
                 left: _gap,
-                child: _Objectives(mission: s.mission!),
+                child: _Objectives(
+                    mission: s.mission!,
+                    zoneName: _missionName(s),
+                    floorLevel: MapGame.currentFloor(view)?.level),
               ),
             if (showMinimap)
               Positioned(
@@ -139,6 +143,8 @@ class WorldHud extends StatelessWidget {
                     localY: controller.local.y,
                     time: s.time,
                     loot: _minimapLoot(s),
+                    bounds: MapGame.currentFloor(view)?.bounds,
+                    entranceOpen: (z) => zones[z] ?? false,
                   ),
                 ),
               ),
@@ -211,14 +217,17 @@ class WorldHud extends StatelessWidget {
                         child: _CanvasLabel(line.$1, color: line.$2),
                       ),
                     // `[E] ...`: caja `#000a` y texto dorado (sello violeta).
-                    if (view.prompt case final prompt?)
+                    if (view.promptLabel case final label?)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: _CanvasLabel(prompt.label,
-                            fontSize: 16,
-                            color: prompt == WorldPrompt.seal
+                        child: _CanvasLabel(label,
+                            key: const ValueKey('hud-prompt'),
+                            fontSize: label.startsWith('[E]') ? 16 : 10,
+                            color: view.prompt == WorldPrompt.seal
                                 ? ProtoColors.violet
-                                : ProtoColors.gold),
+                                : label.startsWith('[E]')
+                                    ? ProtoColors.gold
+                                    : ProtoColors.sky),
                       )
                     else if (_pickPrompt(s) case final text?)
                       Padding(
@@ -237,6 +246,16 @@ class WorldHud extends StatelessWidget {
         ),
       );
     });
+  }
+
+  /// Nombre de la misión en curso: la zona si es de zona.
+  String _missionName(GameSession s) {
+    final m = s.mission;
+    if (m == null) return '';
+    final cat = controller.engine.catalog;
+    return cat.zone(m.zone)?.name ??
+        cat.mission(m.missionId)?.name ??
+        m.missionId;
   }
 
   /// Lo que el jugador local ve del piso (con Alt, también lo oculto).
@@ -292,10 +311,27 @@ class WorldHud extends StatelessWidget {
     );
   }
 
-  /// Avisos de una línea: barrera abierta.
+  /// Avisos de una línea: barrera abierta (escalera o jefe).
   List<(String, Color)> _banners(GameSession s) {
     final out = <(String, Color)>[];
-    final boss = view.map.boss;
+    final m = s.mission;
+    final f = MapGame.currentFloor(view);
+    if (m != null && f != null && !f.last) {
+      final d = f.stairsDown;
+      if (s.mode == SessionMode.field &&
+          s.gateOpen &&
+          d != null &&
+          WorldRules.distance(
+                  controller.local.x, controller.local.y, d.x, d.y) >
+              140) {
+        out.add((
+          'La escalera se abrió → bajá al piso ${m.floor + 2}',
+          ProtoColors.gold
+        ));
+      }
+      return out;
+    }
+    final boss = f?.boss ?? view.map.boss;
     if (s.mode == SessionMode.field &&
         s.gateOpen &&
         boss != null &&
@@ -331,9 +367,15 @@ class _MissionBar extends StatelessWidget {
               .map((o) =>
                   '${o.kind.label.split(' ').first} ${o.count.clamp(0, o.goal)}/${o.goal}')
               .join(' · ');
-      text = '$missionName · $goals · ${clockText(m.elapsed)}';
+      final name = m.floors > 1
+          ? floorLabelText(missionName, m.floor, m.floors)
+          : missionName;
+      text = '$name · $goals · ${clockText(m.elapsed)}';
     } else if (s.mode == SessionMode.prep) {
       text = 'Preparación de misión';
+    } else if (view.map.entrances.isNotEmpty) {
+      text = 'Lobby · Mostrador [E] · Armería [E] · Zonas: puertas [E] · '
+          'Personaje [C]';
     } else {
       text = 'Lobby · Mostrador [E] · Armería [E] · Personaje [C]';
     }
@@ -365,9 +407,19 @@ class _CanvasLabel extends StatelessWidget {
 }
 
 class _Objectives extends StatelessWidget {
-  const _Objectives({required this.mission});
+  const _Objectives({
+    required this.mission,
+    this.zoneName = '',
+    this.floorLevel,
+  });
 
   final MissionRun mission;
+
+  /// Nombre de la zona (cabecera `<zona> · Piso N/F`).
+  final String zoneName;
+
+  /// Nivel de los enemigos del piso actual.
+  final int? floorLevel;
 
   @override
   Widget build(BuildContext context) {
@@ -377,6 +429,12 @@ class _Objectives extends StatelessWidget {
               style:
                   TextStyle(color: ok ? ProtoColors.green : ProtoColors.ink)),
         );
+    final floors = mission.floors > 1;
+    final f = mission.floor;
+    final goal = floors && f < mission.floorGoals.length
+        ? mission.floorGoals[f]
+        : 0;
+    final floorDone = floors && mission.floorKills(f) >= goal;
     // `drawObjectives`: caja `#000a` con borde `#5b74c9`.
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
@@ -388,16 +446,46 @@ class _Objectives extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          for (final o in mission.objectives)
+          if (floors) ...[
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                  retroText(
+                      '${floorLabelText(zoneName, f, mission.floors)}'
+                      '${floorLevel == null ? '' : ' · Lv $floorLevel'}'),
+                  key: const ValueKey('hud-floor'),
+                  style: const TextStyle(color: ProtoColors.gold)),
+            ),
+            if (mission.isLastFloor)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(retroText('¡Piso del JEFE!'),
+                    key: const ValueKey('hud-boss-floor'),
+                    style: const TextStyle(color: ProtoColors.crimson)),
+              ),
             line(
-                '${o.done ? '> ' : '· '}${o.kind.label} '
-                '${o.count.clamp(0, o.goal)}/${o.goal}',
-                o.done),
-          line(
-              mission.open
-                  ? '★ ¡Ve por el JEFE!'
-                  : 'Jefe: completa los objetivos',
-              mission.open),
+                '${floorDone ? '> ' : '· '}Grupos del piso '
+                '${mission.floorKills(f).clamp(0, goal)}/$goal',
+                floorDone),
+            if (!mission.isLastFloor)
+              line(
+                  mission.floorOpen(f)
+                      ? '> Escalera abierta: bajá [E]'
+                      : 'Escalera: despejá el piso',
+                  mission.floorOpen(f)),
+          ],
+          for (final o in mission.objectives)
+            if (!floors || o.kind != ObjectiveKind.kills)
+              line(
+                  '${o.done ? '> ' : '· '}${o.kind.label} '
+                  '${o.count.clamp(0, o.goal)}/${o.goal}',
+                  o.done),
+          if (!floors || mission.isLastFloor)
+            line(
+                mission.open
+                    ? '★ ¡Ve por el JEFE!'
+                    : 'Jefe: completa los objetivos',
+                mission.open),
         ],
       ),
     );

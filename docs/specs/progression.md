@@ -90,10 +90,9 @@ implementación con disco o `shared_preferences` vive fuera de
     de los enemigos) por ~11 batallas en el 11 hasta ~25 en el 49.
     Ejemplos: 909 (11), 3116 (30), 6570 (49).
   - Ritmo: del 10 al 50 son ~700 batallas (~70 misiones de 10 grupos).
-  - Gancho del mundo nuevo: `xpFactor(nivel del enemigo)` multiplica la
-    XP de los enemigos cuando tengan nivel (worldgen.md). Las misiones de
-    hoy no lo aplican (sus enemigos no tienen nivel), así que pasado el
-    10 se sube despacio hasta que exista ese contenido.
+  - Mundo por zonas (v0.2.0): la XP de cada batalla se multiplica por
+    `ZoneRules.xpMult(nivel) = xpFactor(nivel) × bonus del mundo`
+    (worldgen.md § 6.3); ~nivel 25 en unas 10 misiones de zona.
 - `gainXp`: suma la XP y mientras alcance resta `xpNeed(nivel)`, sube
   1 nivel y da `+3` puntos de atributo (`PTS_LVL`), hasta el 50 (la XP
   sobrante se guarda). El árbol gana 1 punto por nivel (passive_tree.md).

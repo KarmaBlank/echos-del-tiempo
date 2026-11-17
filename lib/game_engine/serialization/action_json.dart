@@ -61,6 +61,7 @@ abstract final class ActionJson {
         BattleAction() => {'t': 'cmd', ...commandToJson(a.command)},
         ChatAction() => {'t': 'chat', 'txt': a.text},
         BackToLobbyAction() => {'t': 'back'},
+        UseStairsAction() => {'t': 'stairs', 'down': a.down},
         CraftAction() => {
             't': 'craft',
             'op': a.op.name,
@@ -138,6 +139,8 @@ abstract final class ActionJson {
         return ChatAction(j.str('txt'));
       case 'back':
         return const BackToLobbyAction();
+      case 'stairs':
+        return UseStairsAction(down: j.boolean('down'));
       case 'craft':
         return CraftAction(j.enumByName('op', CraftOp.values), j.str('w'),
             sourceUid: j.strOrNull('src'),

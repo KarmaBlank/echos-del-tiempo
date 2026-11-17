@@ -73,8 +73,8 @@ enum ArmoryTab {
       'Sube 1 nivel una estadística (máx 5 c/u) hasta el tope de la rareza. '
           'Cada 2 niveles de forja, la pasiva del arma sube 1.'),
   fuse('FUSIÓN',
-      'Mesa de fusión: traslada, quita, agrega o re-tira mods, o sube la '
-          'rareza. Siempre ves el resultado antes de confirmar.'),
+      'Mesa de fusión en 3 pasos: elige un arma, qué hacerle (mejorar, '
+          'traer de otra, quitar o reforjar) y mira el resultado antes de pagar.'),
   items('CONSUMIBLES',
       'Se usan en batalla desde el menú. Máximo ${ProgressionRules.maxItems} '
           'de cada uno.');
@@ -101,9 +101,11 @@ const kShopHelp = '<b>Armería</b><br>'
     'compara con la equipada antes de pagar.<br>'
     '<span class="k">FORJA</span>: sube Poder, Crítico, Velocidad o Defensa '
     '(5 c/u, tope total por rareza). Cada 2 niveles sube la pasiva.<br>'
-    '<span class="k">FUSIÓN</span>: mesa libre: traslada mods, pasivas o '
-    'habilidades (el arma origen se destruye), quita o agrega mods y sube '
-    'la rareza con materiales.<br>'
+    '<span class="k">FUSIÓN</span>: 1 ARMA → 2 ACCIÓN → 3 CONFIRMAR. '
+    'Mejora con materiales, trae mods / pasiva / habilidades de otra arma '
+    '(que se destruye), quita mods o reforja la base a otro tipo.<br>'
+    'Para <b>desarmar</b> o <b>vender</b> lo que no te sirve: Personaje › '
+    'Inventario.<br>'
     'Elige en la lista de la izquierda; el botón de la acción está abajo a '
     'la derecha del detalle.';
 

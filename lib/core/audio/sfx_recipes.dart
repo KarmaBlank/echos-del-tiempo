@@ -353,6 +353,59 @@ const double kEnemyBodyAt = 0.11;
 /// "Wind-up" de cada tipo: lo que se oye mientras el enemigo se echa
 /// atrás (~0.14 s, sube hacia el golpe).
 final Map<String, List<SfxTone>> kEnemyWindups = {
+  // ---- v0.2 ----
+  // Araña: patitas que corretean (clics secos) + siseo.
+  'arana': [
+    for (final at in [0.0, 0.03, 0.06, 0.09, 0.12]) _n(7000, 0.015, lp: 5000, v: 0.4, at: at, seed: 211),
+    _n(5000, 0.14, to: 9000, lp: 7000, a: 0.1, v: 0.25, seed: 213),
+  ],
+  // Lobo: gruñido que sube.
+  'lobo': [
+    _t(90, 0.16, w: _saw, to: 150, a: 0.1, vr: 22, vd: 0.15, lp: 900, v: 0.55),
+    _n(600, 0.14, to: 1200, lp: 800, a: 0.1, v: 0.3, seed: 217),
+  ],
+  // Murciélago de hielo: aleteos + campanita fría.
+  'murcielagoHielo': [
+    for (final at in [0.0, 0.05, 0.1]) _n(4200, 0.03, lp: 3000, v: 0.4, at: at, seed: 219),
+    _t(2637, 0.12, w: _tri, to: 3520, a: 0.08, v: 0.15),
+  ],
+  // Elemental: hielo que cruje al juntarse.
+  'elementalEscarcha': [
+    _n(1500, 0.16, to: 5000, lp: 3000, a: 0.12, crush: 3, v: 0.5, seed: 221),
+    _t(70, 0.16, w: _tri, to: 110, a: 0.1, v: 0.4),
+  ],
+  // Esqueleto: huesos que castañetean.
+  'esqueleto': [
+    for (final at in [0.0, 0.04, 0.08, 0.12]) _t(1100 + at * 1000, 0.018, w: _sq, v: 0.35, at: at),
+    _n(2500, 0.12, lp: 1800, a: 0.08, v: 0.2, seed: 223),
+  ],
+  // Caballero caído: armadura que rechina.
+  'caballeroCaido': [
+    _n(900, 0.16, to: 2400, lp: 1600, a: 0.12, v: 0.45, seed: 227),
+    _t(330, 0.14, w: _saw, to: 300, vr: 18, vd: 0.05, a: 0.1, lp: 1200, v: 0.25),
+  ],
+  // Cristal de hielo (no ataca): zumbido de cristal.
+  'cristalHielo': [
+    _t(1568, 0.14, w: _sin, a: 0.1, vr: 9, vd: 0.02, v: 0.35),
+    _n(9000, 0.1, lp: 6000, a: 0.08, v: 0.15, seed: 229),
+  ],
+  // Matriarca: siseo grande + patas.
+  'matriarca': [
+    _n(4000, 0.16, to: 9000, lp: 6000, a: 0.12, v: 0.45, seed: 231),
+    for (final at in [0.0, 0.05, 0.1]) _n(2500, 0.02, lp: 2000, v: 0.4, at: at, seed: 233),
+    _t(60, 0.16, w: _saw, to: 90, a: 0.1, lp: 500, v: 0.3),
+  ],
+  // Sierpe: inhalación helada.
+  'sierpe': [
+    _n(700, 0.16, to: 3500, lp: 2500, a: 0.14, v: 0.5, seed: 237),
+    _t(220, 0.16, w: _sin, to: 440, a: 0.12, vr: 6, vd: 0.03, v: 0.3),
+  ],
+  // Caballero Hueco: eco de metal hueco que se levanta.
+  'caballeroHueco': [
+    _t(98, 0.16, w: _saw, to: 147, a: 0.12, lp: 700, v: 0.45),
+    _t(1245, 0.16, w: _sin, a: 0.1, vr: 5, vd: 0.02, v: 0.2),
+    _n(800, 0.15, to: 1600, lp: 900, a: 0.1, v: 0.3, seed: 239),
+  ],
   'slime': [
     _t(110, 0.14, w: _tri, to: 260, a: 0.1, vr: 14, vd: 0.12, v: 0.5),
     _n(900, 0.12, to: 1800, lp: 700, a: 0.1, v: 0.35),
@@ -395,6 +448,51 @@ final Map<String, List<SfxTone>> kEnemyVoices = {
 
 /// La voz del ataque de cada tipo (lo que era `enemy.<tipo>`).
 final Map<String, List<SfxTone>> _enemyBodies = {
+  'arana': [
+    _n(6000, 0.08, to: 2000, lp: 5000, v: 0.45, seed: 241),
+    _t(900, 0.06, w: _sq, to: 400, v: 0.25, at: 0.02),
+    ..._x(_bubbles(1.4, 0.4, 2), dt: 0.05),
+  ],
+  'lobo': [
+    _t(260, 0.18, w: _saw, to: 520, vr: 14, vd: 0.1, lp: 1500, v: 0.45),
+    _n(3000, 0.1, lp: 2000, v: 0.4, at: 0.06, seed: 243),
+  ],
+  'murcielagoHielo': [
+    _t(3136, 0.1, w: _sq, to: 4186, vr: 40, vd: 0.05, v: 0.25),
+    _t(2093, 0.15, w: _tri, at: 0.04, v: 0.3),
+  ],
+  'elementalEscarcha': [
+    _t(55, 0.3, w: _sin, to: 35, v: 0.6),
+    ..._x(_ice(0.7, 0.8), dt: 0.02),
+    _n(3000, 0.2, lp: 1500, crush: 3, v: 0.35, seed: 247),
+  ],
+  'esqueleto': [
+    ..._swingBlade(0.8, 1.1),
+    for (final at in [0.08, 0.13]) _t(900, 0.02, w: _sq, v: 0.25, at: at),
+  ],
+  'caballeroCaido': [
+    ..._swingHeavy(0.85, 1.2),
+    _t(190, 0.15, w: _sq, to: 120, v: 0.2, at: 0.05),
+  ],
+  'cristalHielo': [
+    _t(2637, 0.2, w: _tri, v: 0.35),
+    _t(3951, 0.16, w: _sin, at: 0.03, v: 0.2),
+  ],
+  'matriarca': [
+    _n(5000, 0.25, to: 1500, lp: 4000, a: 0.03, v: 0.5, seed: 251),
+    _t(80, 0.3, w: _saw, to: 45, lp: 600, v: 0.45),
+    ..._x(_bubbles(1.1, 0.6, 3), dt: 0.08),
+  ],
+  'sierpe': [
+    _n(3000, 0.4, to: 8000, lp: 6000, a: 0.05, v: 0.5, seed: 253),
+    _t(110, 0.35, w: _saw, to: 70, vr: 7, vd: 0.08, lp: 800, v: 0.45),
+    ..._x(_ice(1, 0.7), dt: 0.12, g: 0.6),
+  ],
+  'caballeroHueco': [
+    ..._swingHeavy(0.7, 1.3),
+    _t(73, 0.35, w: _sin, to: 49, v: 0.5),
+    _t(1245, 0.3, w: _sin, a: 0.002, at: 0.06, v: 0.2),
+  ],
   'slime': _slime(),
   'bat': [
     _t(2400, 0.12, w: _sq, to: 3400, vr: 40, vd: 0.05, v: 0.3),
@@ -423,6 +521,70 @@ final Map<String, List<SfxTone>> _enemyBodies = {
 /// Impacto propio de cada tipo de enemigo sobre un jugador
 /// (`enemy.hit.<tipo>`), en vez de `impact.hurt`.
 final Map<String, List<SfxTone>> kEnemyHitVoices = {
+  // ---- v0.2 ----
+  // Picadura venenosa.
+  'arana': [
+    _n(10000, 0.03, v: 0.6, seed: 257),
+    _t(700, 0.08, w: _sq, to: 300, v: 0.35),
+    ..._x(_bubbles(1.2, 0.5, 2), dt: 0.04),
+  ],
+  // Mordisco con desgarro.
+  'lobo': [
+    _n(8000, 0.06, to: 2500, v: 0.6, seed: 259),
+    _t(180, 0.12, w: _sin, to: 70, v: 0.6),
+    _n(6000, 0.05, to: 2000, v: 0.45, at: 0.06, seed: 261),
+  ],
+  // Colmillo de hielo.
+  'murcielagoHielo': [
+    _n(12000, 0.04, v: 0.55, seed: 263),
+    _t(3136, 0.15, w: _tri, v: 0.35),
+    _t(400, 0.1, w: _sin, to: 200, v: 0.4),
+  ],
+  // Mazazo helado.
+  'elementalEscarcha': [
+    _t(85, 0.3, w: _sin, to: 30, v: 0.85),
+    _n(14000, 0.08, v: 0.5, seed: 267),
+    _t(2093, 0.2, w: _tri, at: 0.02, v: 0.3),
+    _t(2794, 0.2, w: _tri, at: 0.04, v: 0.25),
+  ],
+  // Tajo de hueso: corte + crujido.
+  'esqueleto': [
+    _n(11000, 0.08, to: 3000, lp: 9000, v: 0.6, seed: 269),
+    _t(1300, 0.03, w: _sq, v: 0.35, at: 0.03),
+    _t(140, 0.12, w: _sin, to: 60, v: 0.5),
+  ],
+  // Escudazo de metal.
+  'caballeroCaido': [
+    _t(110, 0.3, w: _sin, to: 40, v: 0.8),
+    _t(587, 0.35, w: _sin, a: 0.002, v: 0.3),
+    _t(1661, 0.25, w: _sin, a: 0.002, v: 0.25),
+    _n(3000, 0.1, lp: 1500, v: 0.5, seed: 271),
+  ],
+  // Cristal (no ataca): tintineo.
+  'cristalHielo': [
+    _t(4186, 0.12, w: _tri, v: 0.35),
+    _t(3520, 0.12, w: _tri, at: 0.03, v: 0.3),
+  ],
+  // Colmillos de la reina.
+  'matriarca': [
+    _n(9000, 0.06, v: 0.6, seed: 273),
+    _t(160, 0.25, w: _sin, to: 45, v: 0.8),
+    ..._x(_bubbles(0.9, 0.8, 3), dt: 0.05),
+  ],
+  // Coletazo helado.
+  'sierpe': [
+    _t(75, 0.35, w: _sin, to: 28, v: 0.85),
+    _n(1800, 0.2, lp: 1200, v: 0.55, seed: 277),
+    _t(2637, 0.25, w: _tri, at: 0.03, v: 0.3),
+    _n(15000, 0.06, v: 0.4, at: 0.02, seed: 279),
+  ],
+  // Espadazo hueco: metal que retumba.
+  'caballeroHueco': [
+    _n(12000, 0.08, to: 3000, lp: 9000, v: 0.6, seed: 281),
+    _t(65, 0.4, w: _sin, to: 25, v: 0.85),
+    _t(830, 0.45, w: _sin, a: 0.002, vr: 4, vd: 0.01, v: 0.3),
+    _t(2217, 0.3, w: _sin, a: 0.002, v: 0.2),
+  ],
   // Salpicón húmedo.
   'slime': [
     _n(2000, 0.12, lp: 900, v: 0.6, seed: 59),
@@ -471,7 +633,10 @@ final Map<String, List<SfxTone>> kEnemyHitVoices = {
   ],
 };
 
-const _kBossTypes = {'reyLimo', 'golemReloj', 'devorador'};
+const _kBossTypes = {
+  'reyLimo', 'golemReloj', 'devorador', //
+  'matriarca', 'sierpe', 'caballeroHueco',
+};
 
 List<SfxTone> _slime() => [
       _t(180, 0.12, w: _tri, to: 420, v: 0.5),
@@ -1185,6 +1350,7 @@ Map<String, SfxDef> buildBreakSfx() => {
         _t(55, 0.7, w: _sin, a: 0.3, vr: 6, vd: 0.05, v: 0.6),
         _n(400, 0.7, to: 1600, lp: 900, a: 0.5, v: 0.4, seed: 107),
       ], peak: SfxLevel.enemyUltWarn),
+      ...buildBossMechanicSfx(),
       for (final e in kEnemyUltVoices.entries) ...{
         Sfx.ult(e.key, Sfx.ultBuild):
             SfxDef(e.value.build, peak: SfxLevel.ultBuild),
@@ -1195,8 +1361,137 @@ Map<String, SfxDef> buildBreakSfx() => {
       },
     };
 
+/// Mecánicas de los jefes v0.2 (docs/specs/audio.md § "Mecánicas de
+/// jefe").
+Map<String, SfxDef> buildBossMechanicSfx() => {
+      // Cartel de entrada: golpe grave + acorde menor de metales.
+      Sfx.bossIntro: SfxDef([
+        _t(55, 0.9, w: _sin, to: 40, v: 0.7),
+        _n(600, 0.6, lp: 500, a: 0.02, v: 0.4, seed: 301),
+        for (final (k, f) in [(0, 220.0), (1, 262.0), (2, 330.0)])
+          _t(f, 0.8, w: _saw, a: 0.05 + k * 0.04, lp: 1400, vr: 5, vd: 0.01, v: 0.25),
+        _t(110, 0.9, w: _sq, a: 0.3, lp: 600, v: 0.2),
+      ], peak: SfxLevel.enemyUltWarn),
+      // Telaraña: hilo que vuela (silbido) y se pega (chasquido húmedo).
+      Sfx.webCast: SfxDef([
+        _n(6000, 0.18, to: 2500, lp: 5000, a: 0.04, v: 0.4, seed: 303),
+        _t(1200, 0.12, w: _tri, to: 500, v: 0.25),
+        _n(1500, 0.08, lp: 900, v: 0.5, at: 0.16, seed: 307),
+        _t(300, 0.1, w: _sin, to: 150, v: 0.4, at: 0.16),
+      ], peak: SfxLevel.status),
+      // Liberar: hilos que se cortan (dos "snip") + campanita.
+      Sfx.webFree: SfxDef([
+        _n(12000, 0.03, v: 0.5, seed: 309),
+        _n(12000, 0.03, v: 0.45, at: 0.06, seed: 311),
+        ..._arp([1319, 1760], step: 0.06, d: 0.1, at: 0.1, v: 0.3),
+      ], peak: SfxLevel.status),
+      // Atrapado: forcejeo (cuerda tensa que vibra).
+      Sfx.webStuck: SfxDef([
+        _t(180, 0.35, w: _tri, vr: 12, vd: 0.12, v: 0.45),
+        _n(2000, 0.3, lp: 1200, a: 0.05, v: 0.25, seed: 313),
+      ], peak: SfxLevel.status),
+      // Campo Helado: viento frío + cristales que crecen.
+      Sfx.frost: SfxDef([
+        ..._wind(0.8, 0.8),
+        ..._x(_ice(0.8, 1), dt: 0.08, g: 0.7),
+      ], peak: SfxLevel.status),
+      // Deshielo: goteo y acorde que sube.
+      Sfx.thaw: SfxDef([
+        for (var k = 0; k < 4; k++) _t(900 - k * 60, 0.05, w: _sin, to: 500, at: k * 0.07, v: 0.3),
+        ..._arp([523, 659, 784, 1047], step: 0.06, d: 0.18, w: _sin, at: 0.1, v: 0.3),
+      ], peak: SfxLevel.status),
+      // Cristal roto: estallido de vidrio.
+      Sfx.crystalBreak: SfxDef([
+        _n(15000, 0.08, v: 0.7, seed: 317),
+        for (var k = 0; k < 5; k++)
+          _t(const [3951.0, 3136.0, 4699.0, 2637.0, 5274.0][k], 0.1, w: _tri, at: 0.01 + k * 0.03, v: 0.3),
+        _t(140, 0.15, w: _sin, to: 60, v: 0.45),
+      ], peak: SfxLevel.impact),
+      // Cristal que se reforma: cristales al revés (de grave a agudo).
+      Sfx.crystalReform: SfxDef([
+        ..._arp([1568, 2093, 2637, 3136], step: 0.05, d: 0.15, at: 0, v: 0.3),
+        _n(4000, 0.3, to: 12000, lp: 9000, a: 0.25, v: 0.25, seed: 319),
+      ], peak: SfxLevel.status),
+      // Cambio de postura: metal que gira y queda en guardia.
+      Sfx.stanceShift: SfxDef([
+        _n(3000, 0.2, to: 8000, lp: 6000, a: 0.08, v: 0.4, seed: 321),
+        _t(220, 0.05, w: _sq, at: 0.2, v: 0.4),
+        _t(1661, 0.35, w: _sin, at: 0.2, a: 0.002, v: 0.3),
+        _t(2489, 0.25, w: _sin, at: 0.21, a: 0.002, v: 0.2),
+      ], peak: SfxLevel.heavy),
+      // La postura bloquea: golpe sordo contra metal ("clonk").
+      Sfx.stanceBlock: SfxDef([
+        _t(160, 0.12, w: _sq, to: 90, v: 0.45),
+        _t(740, 0.2, w: _sin, a: 0.002, v: 0.3),
+        _n(2500, 0.05, lp: 1500, v: 0.35, seed: 323),
+      ], peak: SfxLevel.impact),
+    };
+
 /// Las tres partes de cada ULT enemiga por `EnemyUltDef.id`.
 final Map<String, UltVoices> kEnemyUltVoices = {
+  // Nido Venenoso: sacos que laten y patas; red que vuela; red que cae
+  // y revienta en veneno.
+  'eult_nido': (
+    build: [
+      for (final at in [0.0, 0.25, 0.5, 0.7]) _t(65, 0.12, w: _sin, to: 45, at: at, v: 0.6),
+      for (var k = 0; k < 10; k++) _n(6000, 0.015, lp: 4500, at: 0.05 + k * 0.08, v: 0.35, seed: 331),
+      _n(4000, 0.85, to: 8000, lp: 6000, a: 0.6, v: 0.3, seed: 333),
+    ],
+    release: [
+      _n(7000, 0.3, to: 2500, lp: 6000, a: 0.03, v: 0.55, seed: 335),
+      _t(400, 0.4, w: _tri, to: 900, a: 0.05, vr: 8, vd: 0.05, v: 0.3),
+      _n(3000, 0.5, to: 1200, lp: 2500, a: 0.2, at: 0.3, v: 0.35, seed: 337),
+    ],
+    impact: [
+      _n(1500, 0.3, lp: 900, v: 0.7, seed: 339),
+      _t(130, 0.35, w: _sin, to: 45, v: 0.75),
+      ..._x(_bubbles(0.8, 1.4, 5), dt: 0.06),
+      _n(10000, 0.05, v: 0.4, at: 0.02, seed: 341),
+    ],
+  ),
+  // Aliento Glacial: inhalación helada que crece; soplido de ventisca;
+  // cristales que encierran.
+  'eult_aliento': (
+    build: [
+      _n(600, 0.95, to: 4000, lp: 3000, a: 0.85, v: 0.55, seed: 343),
+      _t(110, 0.95, w: _saw, to: 220, a: 0.7, lp: 800, vr: 5, vd: 0.05, v: 0.35),
+      for (var k = 0; k < 5; k++) _t(2093 + k * 300, 0.06, w: _tri, at: 0.4 + k * 0.1, v: 0.2),
+    ],
+    release: [
+      _n(4000, 0.95, to: 9000, lp: 7000, a: 0.08, v: 0.6, seed: 347),
+      _n(900, 0.9, lp: 600, a: 0.1, v: 0.4, seed: 349),
+      _t(80, 0.8, w: _saw, vr: 9, vd: 0.1, lp: 500, v: 0.3),
+    ],
+    impact: [
+      _t(70, 0.45, w: _sin, to: 28, v: 0.8),
+      _n(16000, 0.1, v: 0.6, seed: 351),
+      ..._x(_ice(1.1, 1.3), dt: 0.02),
+      _t(2093, 0.5, w: _sin, vr: 6, vd: 0.01, at: 0.1, v: 0.25),
+    ],
+  ),
+  // Juicio Hueco: coro hueco y runas; espada que se forma y cae;
+  // impacto sagrado-metálico enorme con mareo.
+  'eult_juicio': (
+    build: [
+      for (final f in [147.0, 175.0, 220.0])
+        _t(f, 0.9, w: _saw, a: 0.5, lp: 900, vr: 4, vd: 0.01, v: 0.3),
+      _t(1245, 0.8, w: _sin, a: 0.3, vr: 6, vd: 0.02, v: 0.2),
+      _t(37, 0.9, w: _sin, a: 0.6, v: 0.5),
+    ],
+    release: [
+      _t(2637, 0.4, w: _sin, to: 1319, a: 0.1, v: 0.3),
+      _n(2000, 0.5, to: 9000, lp: 7000, a: 0.4, at: 0.1, v: 0.5, seed: 353),
+      _t(400, 0.45, w: _sin, to: 1600, a: 0.3, at: 0.05, v: 0.25),
+    ],
+    impact: [
+      _t(55, 0.7, w: _sin, to: 20, v: 0.9),
+      _n(9000, 0.12, to: 2000, lp: 8000, v: 0.65, seed: 357),
+      _t(523, 0.8, w: _sin, a: 0.002, v: 0.3),
+      _t(1397, 0.6, w: _sin, a: 0.002, v: 0.25),
+      _t(3322, 0.4, w: _sin, a: 0.002, v: 0.15),
+      _t(1000, 0.4, w: _tri, vr: 9, vd: 0.15, at: 0.25, v: 0.3),
+    ],
+  ),
   // Diluvio Ácido: borboteo que crece; escupitajo y lluvia; salpicón.
   'eult_diluvio': (
     build: [

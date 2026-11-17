@@ -193,6 +193,13 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               playerName: (id) => s.players[id]?.name ?? '?',
               weaponName: (id) => weapons[id]?.name ?? id,
               onBack: controller.backToLobby,
+              zoneProgress: _zoneProgress(s, r, controller),
+              unlocked: switch (r.unlocked[view.localId]) {
+                final z? => zoneUnlockedText(
+                    z, controller.engine.catalog.zone(z)?.name),
+                null => null,
+              },
+              othersUnlocked: _othersUnlocked(s, r, view.localId),
               loot: [
                 for (final d in view.missionLoot)
                   if (view.me case final me?)
@@ -227,6 +234,28 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     }
   }
 
+  /// `Zona 2 · Bosque Hondo · Piso 3/3` del resultado de una misión de
+  /// zona (piso alcanzado; todos en una victoria).
+  static String? _zoneProgress(
+      GameSession s, MissionResult r, SessionController controller) {
+    final z = controller.engine.catalog.zone(r.zone);
+    if (z == null) return null;
+    final floors = s.mission?.floors ?? z.floors;
+    final reached = r.success ? floors : (s.mission?.floor ?? 0) + 1;
+    return 'Zona ${z.index} · ${z.name} · Piso $reached/$floors';
+  }
+
+  /// Los demás jugadores que desbloquearon una zona (`Bo: Zona 3`).
+  static String? _othersUnlocked(
+      GameSession s, MissionResult r, String localId) {
+    final others = [
+      for (final e in r.unlocked.entries)
+        if (e.key != localId)
+          '${s.players[e.key]?.name ?? e.key}: Zona ${e.value}',
+    ];
+    return others.isEmpty ? null : 'También desbloquearon · ${others.join(' · ')}';
+  }
+
   Widget _panel(
       WorldPanel panel, SessionView view, SessionController controller) {
     final s = view.session;
@@ -240,6 +269,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           voteOpen: s.vote != null,
           bossName: (m) => missionBossName(catalog, m),
           playerLevel: me.profile.level,
+          zones: controller.zones,
           // Proponer cierra el mostrador (línea 1363).
           onPropose: (id) {
             if (controller.proposeMission(id)) controller.closePanel();

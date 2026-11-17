@@ -265,6 +265,7 @@ class ProgressionRules {
       lootFilter: raw.lootFilter,
       itemSeq: math.max(0, raw.itemSeq),
       tree: tree,
+      unlockedZone: raw.unlockedZone,
     );
 
     final base = catalog.classes[cls]!.baseAttributes;

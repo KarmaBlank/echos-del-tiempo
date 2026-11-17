@@ -6,6 +6,8 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../game_engine/data/classes_catalog.dart';
+import '../../../game_engine/data/enemies_catalog.dart';
+import '../../../game_engine/models/enemy_def.dart';
 import '../../../game_engine/data/passive_mechanics.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/passive_mechanic.dart';
@@ -142,20 +144,112 @@ List<StatusChip> combatantChips(Combatant p) {
             '<span class="k">(Congelación ×$ice)</span><br>'
             '−12% velocidad por stack: su turno llega más tarde.'));
   }
+  if (p.webbed && p.alive) {
+    chips.add(const StatusChip(
+        'Telaraña',
+        'Atrapado (telaraña)',
+        Color(0xFFEDEFF5),
+        '<b style="color:#edeff5">Atrapado en la telaraña</b>'
+        '<br>Pierde su próximo turno salvo que un aliado lo '
+        'libere usando <b>Atacar</b> sobre él (opción "Liberar" del menú). '
+        '<span class="k">Solo: forcejea y pierde medio turno.</span>'));
+  }
   chips.addAll(treeEffectChips(p));
   return chips;
+}
+
+/// Chips de las mecánicas de los jefes vivos (docs/specs/bosses.md
+/// § "v0.2"): qué hacen ahora y cómo contrarrestarlas.
+List<StatusChip> bossMechanicChips(BattleState b) {
+  final chips = <StatusChip>[];
+  for (final e in b.enemies) {
+    if (!e.alive) continue;
+    final m = bossMechanicOf(kEnemies[e.enemyType]);
+    if (m == null) continue;
+    switch (m.kind) {
+      case BossMechanicKind.web:
+        final n = b.party.where((p) => p.alive && p.webbed).length;
+        chips.add(StatusChip(
+            '${m.name}${n > 0 ? ' ×$n' : ''}',
+            '${m.name}${n > 0 ? ' · $n atrapado${n == 1 ? '' : 's'}' : ''}',
+            const Color(0xFFEDEFF5),
+            '<b style="color:#edeff5">${m.name}</b> '
+            '<span class="k">(${protoEsc(e.name)})</span><br>${m.counter}'));
+      case BossMechanicKind.frost:
+        final n = b.enemies.where((c) => c.alive && c.enemyType == m.addType).length;
+        var slow = 0.0;
+        for (final p in b.party) {
+          final fx = p.effectFrom(m.id, BuffStat.speed);
+          if (fx != null && -fx.value > slow) slow = -fx.value;
+        }
+        chips.add(StatusChip(
+            'Cristales $n${slow > 0 ? ' −${jsRound(slow * 100)}%' : ''}',
+            '${m.name}: $n cristal${n == 1 ? '' : 'es'}'
+                '${slow > 0 ? ' · VEL −${jsRound(slow * 100)}%' : ''}',
+            const Color(0xFF9FE3F0),
+            '<b style="color:#9fe3f0">${m.name}</b> '
+            '<span class="k">($n cristal${n == 1 ? '' : 'es'} vivo${n == 1 ? '' : 's'})</span>'
+            '<br>${m.counter}'));
+      case BossMechanicKind.stance:
+        final shield = e.stance == 1;
+        final pct = jsRound(m.value * 100);
+        final hex = e.broken ? '#7f8c8d' : shield ? '#74b9ff' : '#ff6b6b';
+        final when = e.broken
+            ? 'rota (quebrado)'
+            : e.stanceTurns <= 1
+                ? 'cambia en su próximo turno'
+                : 'cambia en ${e.stanceTurns} turnos';
+        chips.add(StatusChip(
+            shield ? 'ESCUDO' : 'ESPADA',
+            'Postura ${shield ? 'ESCUDO −$pct% físico' : 'ESPADA −$pct% mágico'} · $when',
+            e.broken
+                ? const Color(0xFF7F8C8D)
+                : shield
+                    ? ProtoColors.ice
+                    : const Color(0xFFFF6B6B),
+            '<b style="color:$hex">Postura de ${shield ? 'escudo' : 'espada'}</b> '
+            '<span class="k">($when)</span><br>${m.counter}'));
+    }
+  }
+  return chips;
+}
+
+/// La fila de chips de las mecánicas de jefe (vacía si no hay).
+Widget bossMechanicRow(BattleState b) {
+  final chips = bossMechanicChips(b);
+  if (chips.isEmpty) return const SizedBox.shrink();
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 4),
+    child: Wrap(
+      spacing: 3,
+      runSpacing: 3,
+      children: [for (final c in chips) StatusChipView(c, long: true)],
+    ),
+  );
 }
 
 /// Chips de los efectos del árbol de pasivas v2 (passive_tree_v2.md § 7):
 /// cada uno dice su origen y los turnos que le quedan.
 List<StatusChip> treeEffectChips(Combatant p) {
   final chips = <StatusChip>[];
-  String src(TimedEffect e) => kMechanics[e.sourceId]?.name ?? e.sourceId;
+  String src(TimedEffect e) =>
+      kMechanics[e.sourceId]?.name ??
+      kBossMechanics[e.sourceId]?.name ??
+      e.sourceId;
   String turns(TimedEffect e) => '${e.turns} turno${e.turns == 1 ? '' : 's'}';
   for (final e in p.effects) {
     final pct = jsRound(e.value.abs() * 100);
     final from = src(e);
     switch (e.stat) {
+      case BuffStat.speed when e.value < 0:
+        chips.add(StatusChip(
+            '▼VEL',
+            '▼VEL −$pct%',
+            ProtoColors.ice,
+            '<b style="color:#74b9ff">▼ Velocidad −$pct%</b> '
+                '<span class="k">($from)</span><br>'
+                'Su turno llega más tarde. Rompé los cristales de hielo para '
+                'quitarlo.'));
       case BuffStat.speed:
         chips.add(StatusChip(
             '▲VEL',

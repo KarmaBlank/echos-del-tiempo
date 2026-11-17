@@ -88,6 +88,57 @@ void main() {
     });
   });
 
+  group('enemigos v0.2', () {
+    test('tamaños de PNG (grilla + 1 px de contorno por lado)', () {
+      const sizes = {
+        'arana': (20, 15),
+        'lobo': (20, 14),
+        'murcielagoHielo': (20, 12),
+        'elementalEscarcha': (18, 17),
+        'esqueleto': (17, 18),
+        'caballeroCaido': (18, 17),
+        'cristalHielo': (11, 15),
+        'matriarca': (30, 21),
+        'sierpe': (26, 22),
+        'caballeroHueco': (24, 23),
+      };
+      for (final e in sizes.entries) {
+        final s = enemySprite(e.key);
+        expect((s.width, s.height), e.value, reason: e.key);
+      }
+    });
+
+    test('todo carácter de cada grilla tiene color (sin #f0f de relleno)', () {
+      for (final id in enemyLooks.keys) {
+        final pal = enemyPalette(id);
+        for (final row in enemyBaseRows[enemyLooks[id]!.spr]!) {
+          for (final ch in row.split('')) {
+            if (ch != '.') expect(pal.containsKey(ch), isTrue, reason: '$id: $ch');
+          }
+        }
+      }
+    });
+
+    test('los enemigos del prototipo no reciben colores extra', () {
+      expect(enemyPalette('slime').keys, ['X', 'W', 'O', 'R']);
+      expect(enemyPalette('devorador').keys, ['X', 'W', 'O', 'R']);
+    });
+
+    test('colores extra planos en la grilla', () {
+      // Lobo fila 2 "..XXEXXX...": celda (4,2) = E (ojo amarillo).
+      expect(enemySprite('lobo').rgbaAt(5, 3), opaque('#f9ca24'));
+      // Caballero Hueco fila 4 "..SS..XDEDEDDDX": celda (8,4) = E (ojo).
+      expect(enemySprite('caballeroHueco').rgbaAt(9, 5), opaque('#6ff7ff'));
+    });
+
+    test('X sigue recibiendo brillo y sombra', () {
+      // Araña fila 1 ".........XXXXXX...": celda (9,1) aclarada ×1.2.
+      expect(enemySprite('arana').rgbaAt(10, 2), opaque(shade('#6a3d66', 1.2)));
+      // Sierpe fila 17 "..XXXX...": celda (2,17) (17 > 20*0.6) sombreada.
+      expect(enemySprite('sierpe').rgbaAt(3, 18), opaque(shade('#4fb9d8', 0.78)));
+    });
+  });
+
   group('PNG', () {
     test('CRC32 de referencia', () {
       expect(crc32('123456789'.codeUnits), 0xcbf43926);
@@ -101,10 +152,10 @@ void main() {
       expect(String.fromCharCodes(png.sublist(png.length - 8, png.length - 4)), 'IEND');
     });
 
-    test('exporta las 11 rutas del manifest', () {
+    test('exporta las 21 rutas del manifest', () {
       // No compara bytes con los archivos del repo a propósito: el arte
       // puede reemplazarse a mano (docs/specs/sprites.md).
-      expect(buildAllSprites().keys, hasLength(11));
+      expect(buildAllSprites().keys, hasLength(21));
       for (final path in buildAllSprites().keys) {
         expect(File('assets/sprites/$path').existsSync(), isTrue, reason: path);
       }

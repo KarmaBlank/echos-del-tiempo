@@ -289,6 +289,15 @@ class BattleViewState extends State<BattleView>
         '${cur.branch == 'creyente' ? ' ${hexSpan('#7bed9f', '25% cura 2%')}' : cur.branch == 'inherente' ? ' ${hexSpan('#fff3b0', '25% S')}' : ''}',
         () => _send(AttackCommand(targetId: tg)),
       ),
+      // Telaraña de la Matriarca: Atacar sobre un aliado atrapado lo libera.
+      for (final q in allies)
+        if (q.webbed)
+          _Option(
+            'Liberar a ${protoEsc(q.name)} ${hexSpan('#edeff5', '(telaraña, ½ turno)')}',
+            () => _send(AttackCommand(targetId: q.id)),
+            tip: '<b>Liberar</b><br>Cortás la telaraña de ${protoEsc(q.name)}: '
+                'no pierde su turno. Te cuesta medio turno.',
+          ),
       if (ult != null)
         _Option(
           '★ ULTIMATE: ${ult.name} ${hexSpan('#ffd166', '[${cur.ult.floor()}%]')}'
@@ -558,6 +567,7 @@ class BattleViewState extends State<BattleView>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            bossMechanicRow(b),
             ProtoText(who,
                 style: const TextStyle(fontSize: 16, height: 1.5),
                 textAlign: TextAlign.center),
@@ -636,6 +646,7 @@ class BattleViewState extends State<BattleView>
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
               const SizedBox(height: 4),
+              bossMechanicRow(widget.battle),
               ...rows,
             ],
           ),

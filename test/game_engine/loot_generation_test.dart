@@ -140,7 +140,7 @@ void main() {
   });
 
   test('nivel de zona y de objeto', () {
-    final m1 = kMissions[0], m3 = kMissions[2];
+    final m1 = kPrototypeMissions[0], m3 = kPrototypeMissions[2];
     expect(LootRules.zoneLevel(m1, [1]), 1);
     expect(LootRules.zoneLevel(m3, [1, 1]), 9); // 7 + rango A
     expect(LootRules.zoneLevel(m1, [20, 30]), 25);
