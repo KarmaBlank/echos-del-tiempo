@@ -1,0 +1,36 @@
+# Único archivo que tocás para cambiar qué sprite usa cada cosa.
+# `SpriteCatalog` (lib/features/*/presentation) lee esto — el código
+# nunca referencia un nombre de archivo de sprite directamente.
+#
+# Exportá desde Aseprite (recomendado, soporta flame_aseprite directo)
+# o Piskel (gratis, web) como PNG + JSON de atlas con este mismo nombre.
+
+characters:
+  guerrero:
+    idle: characters/guerrero/idle.png
+    walk: characters/guerrero/walk.png
+    attack: characters/guerrero/attack.png
+  maga:
+    idle: characters/maga/idle.png
+    walk: characters/maga/walk.png
+    attack: characters/maga/attack.png
+  tirador:
+    idle: characters/tirador/idle.png
+    walk: characters/tirador/walk.png
+    attack: characters/tirador/attack.png
+  paladin:
+    idle: characters/paladin/idle.png
+    walk: characters/paladin/walk.png
+    attack: characters/paladin/attack.png
+
+enemies:
+  slime: enemies/slime/idle.png
+  bat: enemies/bat/idle.png
+  golem: enemies/golem/idle.png
+  ghost: enemies/ghost/idle.png
+
+effects:
+  burn: effects/burn.png
+  poison: effects/poison.png
+  freeze: effects/freeze.png
+  holy: effects/holy.png

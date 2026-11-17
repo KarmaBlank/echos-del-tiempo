@@ -1,0 +1,53 @@
+name: echos_del_tiempo
+description: >
+  Ecos del Tiempo — co-op JRPG táctico por turnos. Clean Architecture,
+  Feature-First, netcode agnóstico (P2P hoy, servidor dedicado / rollback
+  a futuro vía la interfaz en lib/netcode/contracts).
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # --- Motor de juego ---
+  flame: ^1.18.0
+
+  # --- Estado / DI ---
+  flutter_riverpod: ^2.5.1
+  get_it: ^7.7.0
+  injectable: ^2.4.4
+
+  # --- Modelos inmutables ---
+  equatable: ^2.0.5
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+  # --- Netcode: P2P (implementación actual) ---
+  flutter_webrtc: ^0.11.7
+  cloud_firestore: ^5.4.4
+  firebase_core: ^3.6.0
+
+  cupertino_icons: ^1.0.8
+  yaml: ^3.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.13
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+  injectable_generator: ^2.6.2
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/sprites/sprite_manifest.yaml
+    - assets/sprites/characters/
+    - assets/sprites/enemies/
+    - assets/sprites/effects/
+    - assets/sprites/tiles/
