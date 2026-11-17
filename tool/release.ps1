@@ -181,6 +181,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 $prerelease = @()
 if ($Version.Contains('-')) { $prerelease = @('--prerelease') }
+# Las notas van por archivo: PowerShell 5.1 rompe los argumentos con
+# comillas dobles al pasarlos a un ejecutable (las notas las tienen).
+$notesTmp = Join-Path ([IO.Path]::GetTempPath()) "ecos-release-notes-$Tag.md"
+[IO.File]::WriteAllText($notesTmp, $Notes, (New-Object System.Text.UTF8Encoding($false)))
 Run gh (@('release', 'create', $Tag, $setup, $shaFile,
-  '--target', 'main', '--title', "Ecos del Tiempo $Tag", '--notes', $Notes) + $prerelease)
+  '--target', 'main', '--title', "Ecos del Tiempo $Tag", '--notes-file', $notesTmp) + $prerelease)
+Remove-Item $notesTmp -ErrorAction SilentlyContinue
 Write-Host "`nPublicado: https://github.com/KarmaBlank/echos-del-tiempo/releases/tag/$Tag" -ForegroundColor Green
