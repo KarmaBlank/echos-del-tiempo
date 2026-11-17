@@ -7,12 +7,18 @@ import '../models/battle_event.dart';
 import '../models/battle_state.dart';
 import '../models/game_map.dart';
 import '../models/game_session.dart';
+import '../models/item.dart';
+import '../models/loot.dart';
+import '../models/loot_filter.dart';
 import '../models/mission_def.dart';
 import '../models/player_profile.dart';
 import '../models/session_action.dart';
 import '../models/session_event.dart';
 import 'battle_engine.dart';
+import 'inventory_rules.dart';
 import 'js_math.dart';
+import 'loot_filter_rules.dart';
+import 'loot_rules.dart';
 import 'map_generator.dart';
 import 'mulberry32.dart';
 import 'progression_rules.dart';
@@ -46,6 +52,7 @@ class SessionEngine {
     required this.progression,
     RandomSource? random,
     SeedSource? seeds,
+    this.groundLoot = false,
   })  : _random = random ?? math.Random().nextDouble,
         _seeds = seeds ?? (() => math.Random().nextInt(1000000000));
 
@@ -54,7 +61,26 @@ class SessionEngine {
   final RandomSource _random;
   final SeedSource _seeds;
 
+  /// Loot v2: con `true` el loot cae al piso del mapa (instanciado por
+  /// jugador) y se levanta caminando encima o con E (`PickUpAction`).
+  /// Con `false` (hoy, hasta que la UI dibuje el loot en el mapa) va
+  /// directo al inventario y solo cae al piso si no hay lugar. Ver
+  /// loot.md § 4.
+  final bool groundLoot;
+
   GameCatalog get catalog => progression.catalog;
+
+  final _filters = <String?, LootFilter>{};
+
+  /// El filtro de loot de un perfil (texto → filtro, con caché).
+  LootFilter filterOf(PlayerProfile p) => _filters.putIfAbsent(
+      p.lootFilter, () => const LootFilterRules().fromProfileText(p.lootFilter));
+
+  /// Cómo ve [p] un drop según su filtro (para la UI y el auto-levantar).
+  FilterVerdict lootVerdict(PlayerProfile p, LootDrop d) =>
+      LootFilterRules(catalog: catalog).evaluate(filterOf(p), d,
+          FilterContext(
+              level: p.level, attributes: p.attributes, classId: p.classId));
 
   // ---- constantes del prototipo ----
   static const maxPlayers = 4;
@@ -72,6 +98,12 @@ class SessionEngine {
   static const calmRange = 120.0;
   static const turnLimit = 30.0; // TURN_LIMIT
   static const resultSeconds = 25.0;
+
+  /// Distancia para levantar con E (`PickUpAction`).
+  static const pickReach = 24.0;
+
+  /// Tope de objetos en el piso (se pierden los más viejos).
+  static const maxGround = 80;
 
   final Map<int, GameMap> _maps = {};
   GameMap? _lobby;
@@ -145,7 +177,6 @@ class SessionEngine {
       ult: p.ult,
       potions: p.profile.potions,
       ethers: p.profile.ethers,
-      fusedSkillId: p.profile.fused[build.equippedWeapon.id],
     );
   }
 }
@@ -327,14 +358,16 @@ class _Op {
 
       case FuseAction():
         if (!s.canShop) return false;
+        final before = p.profile;
         if (!_profileChange(
             p,
             rules.fuse(p.profile, a.baseWeaponId, a.sacrificeWeaponId,
                 a.skillId))) {
           return false;
         }
-        say('${p.name} fusionó ${catalog.weapons[a.sacrificeWeaponId]!.name} '
-            'en ${catalog.weapons[a.baseWeaponId]!.name}: hereda '
+        say('${p.name} fusionó '
+            '${rules.weaponDisplayName(before, a.sacrificeWeaponId)} en '
+            '${rules.weaponDisplayName(before, a.baseWeaponId)}: hereda '
             '${catalog.skills[a.skillId]!.name}');
         return true;
 
@@ -345,6 +378,30 @@ class _Op {
         }
         say('${p.name} mejoró ${a.stat.label} de '
             '${rules.weaponDisplayName(p.profile, a.weaponId)}');
+        return true;
+
+      case CraftAction():
+        return _craft(p, a);
+
+      case GiveItemAction():
+        return _give(p, a);
+
+      case DropItemAction():
+        return _drop(p, a);
+
+      case PickUpAction():
+        return _pickUp(p, a.groundId);
+
+      case MoveInventoryAction():
+        return _profileChange(
+            p, InventoryRules.move(p.profile, a.from, a.to));
+
+      case SetLootFilterAction():
+        final t = a.text;
+        if (t != null && t.length > SetLootFilterAction.maxLength) {
+          return false;
+        }
+        p.profile = p.profile.copyWith(lootFilter: t, clearLootFilter: t == null);
         return true;
 
       case BuyItemAction():
@@ -388,6 +445,183 @@ class _Op {
     refresh(p, gain: gain);
     if (refill) fill(p);
     return true;
+  }
+
+  // ---------------- loot v2: forja, inventario y piso ----------------
+
+  String _dropText(LootDrop d) {
+    final it = d.item;
+    if (it == null) return '${d.count} ${d.stack!.label}';
+    return '${rules.items.displayName(it)} (${it.rarity.label})';
+  }
+
+  bool _craft(SessionPlayer p, CraftAction a) {
+    if (!s.canShop) return false;
+    final before = p.profile;
+    final r = rules.crafting.apply(before, a.op, a.targetUid,
+        sourceUid: a.sourceUid,
+        index: a.index,
+        skillId: a.skillId,
+        random: _rand);
+    if (!_profileChange(p, r.profile)) return false;
+    events.add(CraftedEvent(p.id, a.op, a.targetUid));
+    final after = r.after;
+    if (after != null) {
+      say('${p.name}: ${rules.items.displayName(after)} '
+          '(${_craftVerb(a.op)})');
+    }
+    return true;
+  }
+
+  static String _craftVerb(CraftOp op) => switch (op) {
+        CraftOp.transferAffix => 'afijo trasladado',
+        CraftOp.transferPassive => 'pasiva trasladada',
+        CraftOp.transferSkill => 'habilidad trasladada',
+        CraftOp.removeAffix => 'afijo quitado',
+        CraftOp.addAffix => 'Cristal de Era: afijo nuevo',
+        CraftOp.reroll => 'Esquirla del Eco: valores nuevos',
+        CraftOp.upgradeRarity => 'Prisma Roto: rareza mejorada',
+      };
+
+  /// `GiveItemAction`: fuera de batalla, a otro jugador de la sala con
+  /// lugar. El host valida todo; si no se puede, nada cambia.
+  bool _give(SessionPlayer p, GiveItemAction a) {
+    if (s.mode == SessionMode.battle) return false;
+    final to = s.players[a.toPlayerId];
+    if (to == null || to.id == p.id) return false;
+    final t = rules.inventory.take(p.profile, a.token, count: a.count);
+    final drop = t.drop;
+    if (drop == null) return false;
+    final got = rules.grant(to.profile, drop);
+    if (got == null) return false;
+    _profileChange(p, t.profile);
+    _profileChange(to, got);
+    events.add(ItemGivenEvent(p.id, to.id, drop));
+    say('${p.name} le dio ${_dropText(drop)} a ${to.name}');
+    return true;
+  }
+
+  bool get _onMap =>
+      s.mode == SessionMode.lobby || s.mode == SessionMode.field;
+
+  /// `DropItemAction`: al piso, compartido, donde está el jugador.
+  bool _drop(SessionPlayer p, DropItemAction a) {
+    if (!_onMap || !p.alive) return false;
+    final t = rules.inventory.take(p.profile, a.token, count: a.count);
+    final drop = t.drop;
+    if (drop == null) return false;
+    _profileChange(p, t.profile);
+    _toGround(drop, p.x, p.y);
+    say('${p.name} soltó ${_dropText(drop)}');
+    return true;
+  }
+
+  /// `PickUpAction` (E): propio o compartido, cerca y con lugar.
+  bool _pickUp(SessionPlayer p, int groundId) {
+    if (!_onMap || !p.alive) return false;
+    final g = s.ground.where((x) => x.id == groundId).firstOrNull;
+    if (g == null ||
+        !g.visibleTo(p.id) ||
+        _dist(p.x, p.y, g.x, g.y) > SessionEngine.pickReach) {
+      return false;
+    }
+    return _take(p, g);
+  }
+
+  bool _take(SessionPlayer p, GroundLoot g) {
+    final next = rules.grant(p.profile, g.drop);
+    if (next == null) return false;
+    _profileChange(p, next);
+    s.ground.remove(g);
+    events.add(LootPickedEvent(p.id, g.id, g.drop));
+    return true;
+  }
+
+  /// Deja [d] en el piso cerca de ([x], [y]); [owner] = loot instanciado.
+  GroundLoot _toGround(LootDrop d, double x, double y, {String? owner}) {
+    final id = ++s.groundSeq;
+    // Desparramado en espiral, sin azar (determinístico).
+    final ang = id * 2.4;
+    final r = 6.0 + (id % 3) * 4;
+    final g = GroundLoot(
+      id: id,
+      drop: d,
+      x: x + math.cos(ang) * r,
+      y: y + math.sin(ang) * r,
+      ownerId: owner,
+    );
+    s.ground.add(g);
+    if (s.ground.length > SessionEngine.maxGround) s.ground.removeAt(0);
+    return g;
+  }
+
+  /// Entrega el loot de [p] (instanciado). Con `groundLoot` todo cae al
+  /// piso; sin él va al inventario lo que su filtro muestra (lo oculto
+  /// queda en el piso, invisible, y se pierde al cambiar de mapa) y lo
+  /// que no entra cae al piso. El de fin de misión va siempre al
+  /// inventario (el mapa se cierra). Un mensaje por jugador con lo visible.
+  void _deliver(SessionPlayer p, List<LootDrop> drops, LootSource src,
+      double x, double y) {
+    if (drops.isEmpty) return;
+    var full = false;
+    final shown = <LootDrop>[];
+    for (final d in drops) {
+      final mission = src == LootSource.mission;
+      final visible = mission || e.lootVerdict(p.profile, d).visible;
+      if (visible) shown.add(d);
+      if ((!e.groundLoot || mission) && visible) {
+        final next = rules.grant(p.profile, d);
+        if (next != null) {
+          p.profile = next;
+          events.add(LootDropEvent(p.id, d, src,
+              uid: d.isItem ? next.items.last.uid : null));
+          continue;
+        }
+        full = true;
+      }
+      final g = _toGround(d, x, y, owner: p.id);
+      events.add(LootDropEvent(p.id, d, src, groundId: g.id));
+    }
+    if (shown.isEmpty) return;
+    say('${p.name} obtuvo: ${shown.map(_dropText).join(', ')}'
+        '${full ? ' (inventario lleno: quedó en el piso)' : ''}');
+  }
+
+  /// Tira y entrega el loot de [src] a cada jugador (loot por jugador),
+  /// en ([x], [y]) o, sin posición, donde está cada uno. Devuelve la
+  /// primera arma de cada uno (para los resultados).
+  Map<String, LootDrop> _lootAll(LootSource src, double? x, double? y,
+      {double? chance, double extraBonus = 0}) {
+    final firsts = <String, LootDrop>{};
+    final zone = s.mission?.zoneLevel ?? 1;
+    for (final p in players) {
+      final drops = rules.loot.rollDrops(_rand,
+          zoneLevel: zone,
+          source: src,
+          family: p.profile.classId,
+          chance: chance,
+          extraBonus: extraBonus);
+      final w = drops.where((d) => d.isItem).firstOrNull;
+      if (w != null) firsts[p.id] = w;
+      _deliver(p, drops, src, x ?? p.x, y ?? p.y);
+    }
+    return firsts;
+  }
+
+  /// Auto-levantar: cada jugador levanta su loot (no el compartido) al
+  /// pasar encima, si su filtro lo muestra y tiene lugar.
+  void _autoPickup() {
+    if (s.ground.isEmpty) return;
+    for (final g in [...s.ground]) {
+      final owner = g.ownerId == null ? null : s.players[g.ownerId];
+      if (owner == null ||
+          !owner.alive ||
+          _dist(owner.x, owner.y, g.x, g.y) >= SessionEngine.pickupRange ||
+          !e.lootVerdict(owner.profile, g.drop).visible) {
+        continue;
+      }
+      _take(owner, g);
+    }
   }
 
   bool _activateSeal(SessionPlayer p, int itemId) {
@@ -592,7 +826,9 @@ class _Op {
       objectives: objectives,
       enemies: enemies,
       items: items,
+      zoneLevel: LootRules.zoneLevel(m, [for (final p in players) p.profile.level]),
     );
+    s.ground.clear();
     s.mode = SessionMode.field;
     var i = 0;
     for (final p in players) {
@@ -625,30 +861,15 @@ class _Op {
 
   MissionDef get _missionDef => catalog.mission(s.mission!.missionId)!;
 
-  int get _missionTier => catalog.missions.indexOf(_missionDef) + 1;
-
-  /// Armas de la clase de [p] que no tiene y cumplen [tierOk], en el
-  /// orden del catálogo (`Object.keys(WEAPONS)`).
-  List<String> _weaponPool(SessionPlayer p, bool Function(int tier) tierOk) => [
-        for (final w in catalog.weapons.values)
-          if (w.classId == p.profile.classId &&
-              tierOk(w.tier) &&
-              !p.profile.inventory.contains(w.id))
-            w.id,
-      ];
-
-  void _grantWeapon(SessionPlayer p, String weaponId) {
-    p.profile = rules.grantWeapon(p.profile, weaponId);
-  }
-
-  /// `openChest`.
-  void openChest(SessionPlayer p) {
+  /// `openChest`: créditos y poción como el prototipo; el arma y los
+  /// materiales salen del loot v2 (fuente `chest`, solo para quien lo
+  /// abre).
+  void openChest(SessionPlayer p, MissionItem chest) {
     final tier = _missionDef.chestTier;
     final cr = 20 + (_rand() * 31).floor() + tier * 10;
     var prof = p.profile.copyWith(credits: p.profile.credits + cr);
     var msg = '${p.name} abrió un cofre: +$cr créditos';
     BattleItem? item;
-    String? weapon;
     if (_rand() < 0.5) {
       prof = prof.copyWith(
           potions: math.min(ProgressionRules.maxItems, prof.potions + 1));
@@ -659,17 +880,16 @@ class _Op {
       item = BattleItem.ether;
     }
     if (item != null) msg += ' · +1 ${kItems[item]!.name}';
-    p.profile = prof;
-    if (_rand() < 0.12) {
-      final pool = _weaponPool(p, (t) => t <= tier);
-      if (pool.isNotEmpty) {
-        weapon = pool[(_rand() * pool.length).floor()];
-        _grantWeapon(p, weapon);
-        msg += ' · ¡${catalog.weapons[weapon]!.name}!';
-      }
-    }
-    events.add(ChestOpenedEvent(p.id, cr, item: item, weaponId: weapon));
+    p.profile = InventoryRules.relayout(prof);
+    final drops = rules.loot.rollDrops(_rand,
+        zoneLevel: s.mission!.zoneLevel,
+        source: LootSource.chest,
+        family: p.profile.classId);
+    final weapon = drops.where((d) => d.isItem).firstOrNull?.item;
+    events.add(
+        ChestOpenedEvent(p.id, cr, item: item, weaponId: weapon?.baseId));
     say(msg);
+    _deliver(p, drops, LootSource.chest, chest.x, chest.y);
   }
 
   /// `calmEnemies`.
@@ -712,8 +932,9 @@ class _Op {
       final pl = _touching(it.x, it.y, SessionEngine.pickupRange);
       if (pl == null) continue;
       it.done = true;
-      openChest(pl);
+      openChest(pl, it);
     }
+    _autoPickup();
 
     final map = e.mapFor(s);
     for (final p in players) {
@@ -938,26 +1159,27 @@ class _Op {
       return;
     }
     final m = s.mission!;
-    m.enemy(b.fieldEnemyId)?.alive = false;
+    final fe = m.enemy(b.fieldEnemyId);
+    fe?.alive = false;
+    final lx = fe?.x ?? 0, ly = fe?.y ?? 0;
     if (b.elite) {
       m.elites++;
       _bump(ObjectiveKind.elite);
-      final tier = math.min(3, _missionTier);
-      for (final p in players) {
-        final pool = _weaponPool(p, (t) => t >= 1 && t <= tier);
-        if (pool.isEmpty || _rand() >= 0.6) continue;
-        final w = pool[(_rand() * pool.length).floor()];
-        _grantWeapon(p, w);
-        m.eliteDrops.add(WeaponDrop(p.id, w));
-        events.add(WeaponDropEvent(p.id, w, 'elite'));
-        say('${p.name} obtuvo ${catalog.weapons[w]!.name} del élite');
+      final firsts = _lootAll(LootSource.elite, lx, ly);
+      for (final d in firsts.entries) {
+        final it = d.value.item!;
+        m.eliteDrops.add(WeaponDrop(d.key, it.baseId, rarity: it.rarity));
+        events.add(WeaponDropEvent(d.key, it.baseId, 'elite'));
       }
-    } else if (!b.boss) {
+    } else if (b.boss) {
+      _lootAll(LootSource.boss, lx, ly);
+    } else {
       m.kills++;
       final k = m.objective(ObjectiveKind.kills);
       if (k != null) {
         events.add(ObjectiveProgressEvent(ObjectiveKind.kills, m.kills, k.goal));
       }
+      _lootAll(LootSource.battle, lx, ly);
     }
     updateOpen();
     for (final p in players) {
@@ -1006,20 +1228,22 @@ class _Op {
       MissionRank.d: 0.0,
     };
     const dropChance = {MissionRank.s: 0.9, MissionRank.a: 0.7, MissionRank.b: 0.5};
+    // Bonus de rareza del arma de fin de misión según el rango.
+    const rankBonus = {MissionRank.s: 1.0, MissionRank.a: 0.5};
     final pct = bonusPct[rank]!;
     final bonus = jsRound(m.credits * pct);
-    final tier = _missionTier;
     final drops = <String, String>{};
     for (final p in players) {
       p.profile = p.profile.copyWith(credits: p.profile.credits + bonus);
       if (p.hp <= 0) p.hp = 1;
-      if (!ok) continue;
-      final pool = _weaponPool(p, (t) => t == tier);
-      if (pool.isEmpty || _rand() >= (dropChance[rank] ?? 0)) continue;
-      final w = pool[(_rand() * pool.length).floor()];
-      _grantWeapon(p, w);
-      drops[p.id] = w;
-      events.add(WeaponDropEvent(p.id, w, 'mission'));
+    }
+    if (ok) {
+      final firsts = _lootAll(LootSource.mission, null, null,
+          chance: dropChance[rank] ?? 0, extraBonus: rankBonus[rank] ?? 0);
+      for (final d in firsts.entries) {
+        drops[d.key] = d.value.item!.baseId;
+        events.add(WeaponDropEvent(d.key, d.value.item!.baseId, 'mission'));
+      }
     }
     s.seq++;
     final result = MissionResult(
@@ -1056,6 +1280,7 @@ class _Op {
       ..vote = null
       ..prep = null
       ..afterLevelUp = null;
+    s.ground.clear();
     var i = 0;
     for (final p in players) {
       final pos = spawnPos(i++);

@@ -1,0 +1,204 @@
+import '../data/affixes_catalog.dart';
+import '../data/game_catalog.dart';
+import '../data/uniques_catalog.dart';
+import '../data/weapon_passives.dart';
+import '../models/item.dart';
+import '../models/upgrade_stat.dart';
+import '../models/weapon.dart';
+import '../models/weapon_passive.dart';
+
+/// Consultas y validación de instancias de arma (loot.md § 1–3). Puras:
+/// no tocan perfiles (eso es `InventoryRules` / `CraftRules`).
+class ItemRules {
+  const ItemRules({this.catalog = GameCatalog.standard});
+
+  final GameCatalog catalog;
+
+  static const maxItemLevel = 50;
+
+  WeaponDef? baseOf(ItemInstance i) => catalog.weapons[i.baseId];
+
+  AffixDef? affixOf(AffixRoll r) => kAffixes[r.affixId];
+
+  UniqueDef? uniqueOf(ItemInstance i) =>
+      i.uniqueId == null ? null : kUniques[i.uniqueId];
+
+  WeaponPassiveDef? passiveOf(ItemInstance i) =>
+      i.passiveId == null ? null : kWeaponPassives[i.passiveId];
+
+  /// Implícito + afijos como mods con texto.
+  List<ItemMod> implicitMods(WeaponDef w) => [
+        if (w.shieldDefense > 0) ItemMod(ModStat.defense, w.shieldDefense),
+        ...w.implicit,
+      ];
+
+  ItemMod? modOf(AffixRoll r) {
+    final a = affixOf(r);
+    return a == null ? null : ItemMod(a.stat, r.value);
+  }
+
+  int prefixCount(ItemInstance i) => i.affixes
+      .where((a) => affixOf(a)?.slot == AffixSlot.prefix)
+      .length;
+
+  int suffixCount(ItemInstance i) => i.affixes
+      .where((a) => affixOf(a)?.slot == AffixSlot.suffix)
+      .length;
+
+  /// Cuántos mods más entran respetando el total y el lado del afijo.
+  bool hasRoomFor(ItemInstance i, AffixDef a) {
+    if (i.affixes.length >= i.rarity.maxMods) return false;
+    if (i.affixes.any((x) => x.affixId == a.id)) return false;
+    final side = a.slot == AffixSlot.prefix ? prefixCount(i) : suffixCount(i);
+    return side < i.rarity.affixSideCap;
+  }
+
+  /// Afijos que todavía pueden salir en [i] (tipo, lado, cupo y nivel).
+  List<AffixDef> candidateAffixes(ItemInstance i) {
+    final w = baseOf(i);
+    if (w == null) return const [];
+    return [
+      for (final a in kAffixes.values)
+        if (a.allows(w.type) &&
+            hasRoomFor(i, a) &&
+            a.tiersFor(i.itemLevel).isNotEmpty)
+          a,
+    ];
+  }
+
+  /// Habilidades del arma: las de la base + las trasladadas.
+  List<String> skillsOf(ItemInstance i) {
+    final w = baseOf(i);
+    final out = [...?w?.skillIds];
+    for (final s in i.extraSkills) {
+      if (!out.contains(s)) out.add(s);
+    }
+    return out;
+  }
+
+  /// Nombre para mostrar: Común = base; Mágico = base + prefijo + sufijo;
+  /// Raro / Épico = nombre generado; Legendario = nombre único. Con forja,
+  /// `+N` al final (como `wName`).
+  String displayName(ItemInstance i) {
+    final w = baseOf(i);
+    final base = w?.name ?? i.baseId;
+    final name = switch (i.rarity) {
+      Rarity.comun => base,
+      Rarity.magico => [
+          base,
+          for (final a in i.affixes)
+            if (affixOf(a) case final d? when d.slot == AffixSlot.prefix) d.name,
+          for (final a in i.affixes)
+            if (affixOf(a) case final d? when d.slot == AffixSlot.suffix) d.name,
+        ].join(' '),
+      Rarity.raro || Rarity.epico => i.name ?? base,
+      Rarity.legendario => uniqueOf(i)?.name ?? i.name ?? base,
+    };
+    final t = i.forgeLevel;
+    return '$name${t > 0 ? ' +$t' : ''}';
+  }
+
+  /// Texto de un afijo con su tier: `+12% ATQ (T3)`.
+  String affixText(AffixRoll r) {
+    final m = modOf(r);
+    if (m == null) return r.affixId;
+    return '${m.text} (${r.fixed ? 'único' : 'T${r.tier}'})';
+  }
+
+  /// Rango del valor de [r] (su tier, o el del mod fijo del único).
+  (int, int)? rangeOf(ItemInstance i, AffixRoll r) {
+    if (r.fixed) {
+      for (final f in uniqueOf(i)?.fixed ?? const <UniqueMod>[]) {
+        if (f.affixId == r.affixId) return (f.min, f.max);
+      }
+      return null;
+    }
+    final t = affixOf(r)?.tier(r.tier);
+    return t == null ? null : (t.min, t.max);
+  }
+
+  /// Ids de las mecánicas que la pasiva del arma aporta al combate.
+  List<String> mechanicIds(ItemInstance i) =>
+      i.passiveId == null || !i.rarity.hasPassive
+          ? const []
+          : weaponPassiveMechanicIds(i.passiveId!, i.effectivePassiveLevel);
+
+  /// Mecánicas efectivas (para mostrar el texto de la pasiva).
+  String? passiveText(ItemInstance i) {
+    final p = passiveOf(i);
+    if (p == null || !i.rarity.hasPassive) return null;
+    final l = i.effectivePassiveLevel;
+    return '${p.nameAt(l)}: ${p.descriptionAt(l)}';
+  }
+
+  /// Deja una instancia leída de disco o de la red en un estado válido.
+  /// `null` si la base no existe. Lo inválido se corrige o se descarta:
+  /// afijos desconocidos, de otro tipo, repetidos o fuera de cupo; valores
+  /// fuera de su rango; pasiva en una rareza sin pasiva; habilidades
+  /// desconocidas o de más; mejoras > 5 por estadística (la suma no se
+  /// recorta: las armas migradas conservan su forja).
+  ItemInstance? sanitize(ItemInstance raw) {
+    final w = catalog.weapons[raw.baseId];
+    if (w == null) return null;
+    var rarity = raw.rarity;
+    final unique = raw.uniqueId == null ? null : kUniques[raw.uniqueId];
+    if (rarity == Rarity.legendario &&
+        (unique == null || unique.baseId != raw.baseId)) {
+      rarity = Rarity.epico;
+    }
+    var item = ItemInstance(
+      uid: raw.uid,
+      baseId: raw.baseId,
+      rarity: rarity,
+      itemLevel: raw.itemLevel.clamp(1, maxItemLevel),
+      name: raw.name,
+      uniqueId: rarity == Rarity.legendario ? raw.uniqueId : null,
+    );
+    final kept = <AffixRoll>[];
+    for (final a in raw.affixes) {
+      final def = kAffixes[a.affixId];
+      if (def == null || !def.allows(w.type)) continue;
+      final probe = item.copyWith(affixes: kept);
+      if (!hasRoomFor(probe, def)) continue;
+      if (a.fixed) {
+        if (rarity != Rarity.legendario) continue;
+        final r = rangeOf(item, a);
+        if (r == null) continue;
+        kept.add(a.withValue(a.value.clamp(r.$1, r.$2)));
+      } else {
+        final t = def.tier(a.tier);
+        if (t == null) continue;
+        kept.add(a.withValue(a.value.clamp(t.min, t.max)));
+      }
+    }
+    var passive = raw.passiveId;
+    final pdef = passive == null ? null : kWeaponPassives[passive];
+    if (!rarity.hasPassive ||
+        pdef == null ||
+        (rarity == Rarity.legendario && passive != unique!.passiveId) ||
+        (rarity == Rarity.epico && pdef.unique)) {
+      passive = null;
+    }
+    var forge = const WeaponUpgradeLevels();
+    for (final s in UpgradeStat.values) {
+      if (s == UpgradeStat.def && w.shieldDefense <= 0) continue;
+      forge = forge.withLevel(
+          s, raw.forge.level(s).clamp(0, WeaponUpgradeLevels.upMax));
+    }
+    final skills = <String>[];
+    for (final s in raw.extraSkills) {
+      if (catalog.skills.containsKey(s) && !skills.contains(s)) skills.add(s);
+    }
+    item = item.copyWith(
+      affixes: kept,
+      passiveId: passive,
+      clearPassive: passive == null,
+      passiveLevel: raw.passiveLevel.clamp(1, ItemInstance.maxPassiveLevel),
+      forge: forge,
+      extraSkills: skills.length > rarity.skillSlots
+          ? skills.sublist(skills.length - rarity.skillSlots)
+          : skills,
+    );
+    return item;
+  }
+}

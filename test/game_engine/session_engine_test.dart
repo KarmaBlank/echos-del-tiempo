@@ -1,6 +1,8 @@
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
+import 'package:echos_del_tiempo/game_engine/models/item.dart';
+import 'package:echos_del_tiempo/game_engine/models/loot.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_event.dart';
@@ -128,11 +130,14 @@ void main() {
   });
 
   group('campo', () {
-    test('cofre: créditos, poción y arma según el azar', () {
+    test('cofre: créditos, poción y loot v2 según el azar', () {
       // m2 es rango B (tier 2). Azar: créditos 0.5 → 20 + 15 + 20 = 55;
-      // 0.3 < 0.5 → poción; 0.05 < 0.12 → arma; 0.0 → la primera.
-      final e = sessionEngine(fieldRolls: [0.5, 0.3, 0.05, 0.0]);
+      // 0.3 < 0.5 → poción; 0.05 < 0.35 → arma; rareza 0.0 → Común; base
+      // 0.0 → la primera (Espada de Bronce); materiales 0.99 → nada.
+      final e = sessionEngine(fieldRolls: [0.5, 0.3, 0.05, 0.0, 0.0]);
       var s = inField(e, 'm2');
+      // Zona de m2: recomendado 4 + rango B = 5.
+      expect(s.mission!.zoneLevel, 5);
       final chest = s.mission!.items.firstWhere((i) => i.kind == MissionItemKind.chest);
       s = moveTo(e, s, 'p0', chest.x, chest.y);
       final step = e.tick(s, 0.05);
@@ -140,12 +145,21 @@ void main() {
       final p = s.players['p0']!.profile;
       expect(p.credits, 55);
       expect(p.potions, 4);
-      expect(p.inventory, ['espada_bronce', 'espada_ignea']);
+      expect(p.items, hasLength(2));
+      final got = p.items.last;
+      expect(got.baseId, 'espada_bronce');
+      expect(got.rarity, Rarity.comun);
+      expect(got.itemLevel, 5);
+      expect(got.uid, isNot('espada_bronce'), reason: 'uid nuevo');
       expect(s.mission!.items.firstWhere((i) => i.id == chest.id).done, isTrue);
       final ev = step.events.whereType<ChestOpenedEvent>().single;
       expect(ev.credits, 55);
       expect(ev.item, BattleItem.potion);
-      expect(ev.weaponId, 'espada_ignea');
+      expect(ev.weaponId, 'espada_bronce');
+      final loot = step.events.whereType<LootDropEvent>().single;
+      expect(loot.source, LootSource.chest);
+      expect(loot.uid, got.uid);
+      expect(loot.groundId, isNull, reason: 'sin loot en el piso: inventario');
     });
 
     test('fragmentos se recogen al pasar por encima', () {
@@ -282,20 +296,32 @@ void main() {
       expect(s.mode, SessionMode.field);
     });
 
-    test('élite: cuenta élites y 60% de dropear un arma de tier 1..misión', () {
+    test('élite: cuenta élites, 1 arma segura + 50% de otra y materiales ×3',
+        () {
       final e = sessionEngine(fieldFallback: 0.0);
       var s = _afterGrace(e, inField(e, 'm1', profiles: [_strong(10)]));
       final elite = s.mission!.enemies.firstWhere((x) => x.elite);
       s = _touch(e, s, elite.id);
       expect(s.battle!.elite, isTrue);
       expect(s.battle!.state.enemies.first.elite, isTrue);
-      s = runBattle(e, s);
+      final log = <SessionEvent>[];
+      s = runBattle(e, s, log: log);
       expect(s.mode, SessionMode.field);
       final m = s.mission!;
       expect(m.elites, 1);
       expect(m.kills, 0, reason: 'los élites no cuentan como grupo');
-      expect(m.eliteDrops.single.weaponId, 'espada_ignea');
-      expect(s.players['p0']!.profile.inventory, contains('espada_ignea'));
+      // Azar 0.0: todo sale, Común y la primera base.
+      expect(m.eliteDrops.single.weaponId, 'espada_bronce');
+      final p = s.players['p0']!.profile;
+      expect(p.items, hasLength(3));
+      expect(p.items.skip(1).every((i) => i.itemLevel == m.zoneLevel + 1),
+          isTrue);
+      for (final mat in CraftMaterial.values) {
+        expect(p.material(mat), 1, reason: mat.name);
+      }
+      expect(log.whereType<LootDropEvent>().where((x) => x.source == LootSource.elite),
+          hasLength(5));
+      expect(log.whereType<WeaponDropEvent>().single.source, 'elite');
     });
 
     test('derrota → misión fallida (rango D) y vuelta al lobby', () {
@@ -317,7 +343,7 @@ void main() {
 
     test('jefe: victoria → rango S, bonus 50% y arma de la misión', () {
       final e = sessionEngine(fieldFallback: 0.0);
-      var s = _afterGrace(e, inField(e, 'm1', profiles: [_strong(60, vit: 60)]));
+      var s = _afterGrace(e, inField(e, 'm1', profiles: [_strong(50, vit: 60)]));
       final boss = s.mission!.enemies.firstWhere((x) => x.boss);
       final log = <SessionEvent>[];
       s = _touch(e, s, boss.id);
@@ -329,8 +355,17 @@ void main() {
       expect(r.rank, MissionRank.s);
       expect(r.credits, 90); // 80 + 5 + 5
       expect(r.bonus, 45);
-      expect(r.drops, {'p0': 'espada_ignea'});
+      expect(r.drops, {'p0': 'espada_bronce'});
       expect(s.players['p0']!.profile.credits, 90 + 45);
+      // Jefe: 2 armas + materiales ×5 (+1 Esquirla); fin de misión: 1 arma
+      // + materiales ×2. Todo al inventario.
+      final p = s.players['p0']!.profile;
+      expect(p.items, hasLength(1 + 2 + 1));
+      expect(p.material(CraftMaterial.esquirla), 3);
+      expect(p.material(CraftMaterial.cristal), 2);
+      expect(p.material(CraftMaterial.prisma), 2);
+      // Zona: el promedio del grupo (50) manda sobre la misión (1).
+      expect(p.items.last.itemLevel, 50, reason: 'fin de misión: zona + 1, tope 50');
       expect(log.whereType<MissionEndedEvent>(), hasLength(1));
       s = wait(e, s, SessionEngine.resultSeconds + 0.1);
       expect(s.mode, SessionMode.lobby);
@@ -338,8 +373,9 @@ void main() {
 
     test('rango A si tarda más que sTime pero menos de 1.5×', () {
       final e = sessionEngine(fieldFallback: 0.0);
-      var s = _afterGrace(e, inField(e, 'm1', profiles: [_strong(60, vit: 60)]));
+      var s = _afterGrace(e, inField(e, 'm1', profiles: [_strong(50, vit: 60)]));
       s.mission!.elapsed = 500; // sTime de m1 = 420
+
       s = _touch(e, s, s.mission!.enemies.firstWhere((x) => x.boss).id);
       s = runBattle(e, s);
       expect(s.result!.rank, MissionRank.a);

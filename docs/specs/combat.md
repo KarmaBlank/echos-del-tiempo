@@ -47,6 +47,17 @@ defp   = min(0.60, defn * 0.03)          // % de daño que se resta
 critMult = 2.0 con keystone halcon, si no 1.5
 ```
 
+Loot v2 (loot.md § 12): con un arma con implícito / afijos, sus
+atributos se suman antes de todo; `atk = round((fórmula + plano) × (1 +
+%ATQ) × forja)` (igual MAG), y vida, maná, velocidad, crítico (antes del
+tope 0.60), DEF, daño crítico, carga de ULT, curación y stacks de estados
+suman lo suyo. La pasiva del arma entra como mecánica (`wp:<id>:<nivel>`)
+con el sistema de disparadores del árbol (§ "Disparadores del árbol"). En
+combate: robo de vida (% del daño de la acción), regeneración al empezar
+el turno, resistencia a estados (−N stacks de Quemadura / Veneno /
+Congelación, mín. 1) y curación recibida. `DerivedStats.breakdown` tiene
+el desglose de cada stat para el log y la UI.
+
 `bonus_def_batalla` (`p.bdef`) solo existe dentro de una batalla: lo suben
 Fortaleza (+2) y Baluarte (+4), tope 12, y vuelve a 0 al empezar la
 siguiente batalla.

@@ -1,5 +1,7 @@
 import '../models/attributes.dart';
 import '../models/battle_command.dart';
+import '../models/item.dart' show CraftOp;
+
 import '../models/player_profile.dart';
 import '../models/session_action.dart';
 import '../models/upgrade_stat.dart';
@@ -59,6 +61,28 @@ abstract final class ActionJson {
         BattleAction() => {'t': 'cmd', ...commandToJson(a.command)},
         ChatAction() => {'t': 'chat', 'txt': a.text},
         BackToLobbyAction() => {'t': 'back'},
+        CraftAction() => {
+            't': 'craft',
+            'op': a.op.name,
+            'w': a.targetUid,
+            if (a.sourceUid != null) 'src': a.sourceUid,
+            if (a.index != 0) 'i': a.index,
+            if (a.skillId != null) 'sk': a.skillId,
+          },
+        GiveItemAction() => {
+            't': 'give',
+            'to': a.toPlayerId,
+            'tok': a.token,
+            if (a.count != 1) 'n': a.count,
+          },
+        DropItemAction() => {
+            't': 'drop',
+            'tok': a.token,
+            if (a.count != 1) 'n': a.count,
+          },
+        PickUpAction() => {'t': 'pick', 'id': a.groundId},
+        MoveInventoryAction() => {'t': 'invMove', 'a': a.from, 'b': a.to},
+        SetLootFilterAction() => {'t': 'filter', 'txt': a.text},
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -114,6 +138,22 @@ abstract final class ActionJson {
         return ChatAction(j.str('txt'));
       case 'back':
         return const BackToLobbyAction();
+      case 'craft':
+        return CraftAction(j.enumByName('op', CraftOp.values), j.str('w'),
+            sourceUid: j.strOrNull('src'),
+            index: j.intOrNull('i') ?? 0,
+            skillId: j.strOrNull('sk'));
+      case 'give':
+        return GiveItemAction(j.str('to'), j.str('tok'),
+            count: j.intOrNull('n') ?? 1);
+      case 'drop':
+        return DropItemAction(j.str('tok'), count: j.intOrNull('n') ?? 1);
+      case 'pick':
+        return PickUpAction(j.integer('id'));
+      case 'invMove':
+        return MoveInventoryAction(j.integer('a'), j.integer('b'));
+      case 'filter':
+        return SetLootFilterAction(j.strOrNull('txt'));
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

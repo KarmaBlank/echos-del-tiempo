@@ -58,6 +58,10 @@ class Combatant {
     this.pierceWeakness = 1,
     this.statusWeakness = 0,
     this.stunOnAttackChance = 0,
+    this.lifeSteal = 0,
+    this.regenPerTurn = 0,
+    this.statusResist = 0,
+    this.healReceived = 0,
     this.build,
     this.classId,
     this.weaponType,
@@ -121,6 +125,12 @@ class Combatant {
   final double pierceWeakness;
   final int statusWeakness;
   final double stunOnAttackChance;
+
+  // ---- afijos del arma (loot v2, solo jugadores) ----
+  double lifeSteal;
+  double regenPerTurn;
+  int statusResist;
+  double healReceived;
 
   // ---- solo jugadores ----
   final PlayerBuild? build;
@@ -244,6 +254,10 @@ class Combatant {
         pierceWeakness: pierceWeakness,
         statusWeakness: statusWeakness,
         stunOnAttackChance: stunOnAttackChance,
+        lifeSteal: lifeSteal,
+        regenPerTurn: regenPerTurn,
+        statusResist: statusResist,
+        healReceived: healReceived,
         build: build,
         classId: classId,
         weaponType: weaponType,

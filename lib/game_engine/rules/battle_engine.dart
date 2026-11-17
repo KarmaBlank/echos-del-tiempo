@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import '../data/enemies_catalog.dart';
 import '../data/game_catalog.dart';
-import '../data/passive_mechanics.dart';
+import '../data/passive_mechanics.dart' show mechanicById;
 import '../data/skills_catalog.dart';
 import '../models/battle_command.dart';
 import '../models/battle_event.dart';
@@ -261,11 +261,14 @@ class BattleEngine {
     final cls = catalog.classes[m.build.classId]!;
     final w = m.build.equippedWeapon;
     final skills = [...cls.kitSkillIds, ...w.skillIds];
-    final fused = m.fusedSkillId;
-    if (fused != null &&
-        catalog.skills.containsKey(fused) &&
-        !skills.contains(fused)) {
-      skills.add(fused);
+    // Habilidades trasladadas por fusión (loot v2) y la fusión vieja.
+    for (final extra in [
+      ...?m.build.item?.extraSkills,
+      if (m.fusedSkillId != null) m.fusedSkillId!,
+    ]) {
+      if (catalog.skills.containsKey(extra) && !skills.contains(extra)) {
+        skills.add(extra);
+      }
     }
     final c = Combatant(
       id: m.id,
@@ -311,6 +314,10 @@ class BattleEngine {
       ..statusBonus = Map.of(d.statusBonus)
       ..keystones = Set.of(d.keystones)
       ..mechanics = Set.of(d.mechanics)
+      ..lifeSteal = d.lifeSteal
+      ..regenPerTurn = d.regenPerTurn
+      ..statusResist = d.statusResist
+      ..healReceived = d.healReceived
       ..hp = math.min(c.hp, d.maxHp)
       ..mp = math.min(c.mp, d.maxMp.toDouble());
   }
@@ -443,6 +450,13 @@ class _Turn {
       text = text == null ? t : '$text · $t';
     }
     if (text != null) state.log = text;
+    // Regeneración del arma (afijo `del Renacer`, loot.md § 12).
+    if (best.alive && best.isPlayer && best.regenPerTurn > 0 &&
+        best.hp < best.maxHp) {
+      final h = math.max(1, jsRound(best.maxHp * best.regenPerTurn));
+      _heal(best, h);
+      _notes.add('${best.name} regenera $h HP (arma)');
+    }
     if (best.alive) _fire(ProcTrigger.onTurnStart, best);
     if ((!best.alive || skip) && best.isPlayer) _tickVulnerable();
     _flush();
@@ -617,7 +631,15 @@ class _Turn {
         a.isPlayer && a.statusWeakness > 0 && st.kind != StatusKind.regen
             ? a.statusWeakness
             : 0;
-    final n = st.stacks + bonus + weak;
+    var n = st.stacks + bonus + weak;
+    // Resistencia del arma: menos stacks de daño / Congelación (mín. 1).
+    if (a.isPlayer &&
+        a.statusResist > 0 &&
+        (st.kind == StatusKind.burn ||
+            st.kind == StatusKind.poison ||
+            st.kind == StatusKind.freeze)) {
+      n = math.max(1, n - a.statusResist);
+    }
     a.statuses[st.kind] = math.min(st.kind.maxStacks, a.stacks(st.kind) + n);
     if (st.kind == StatusKind.holy) a.holyTurns = 3;
     if (st.kind == StatusKind.regen) a.statuses[StatusKind.regen] = 3;
@@ -660,6 +682,10 @@ class _Turn {
   }
 
   void _heal(Combatant q, int amount) {
+    // Curación recibida del arma (afijo `de la Gracia`).
+    if (q.isPlayer && q.healReceived != 0) {
+      amount = math.max(1, jsRound(amount * (1 + q.healReceived)));
+    }
     q.hp = math.min(q.maxHp, q.hp + amount);
     events.add(HealEvent(q.id, amount));
   }
@@ -734,6 +760,7 @@ class _Turn {
           target != null && m.status != null && target.stacks(m.status!) > 0,
         ProcTrigger.vsMarked =>
           target != null && target.hasEffect(BuffStat.damageTaken),
+        ProcTrigger.always => true,
         _ => false,
       };
       if (!ok) continue;
@@ -741,6 +768,27 @@ class _Turn {
         if (fx.kind == ProcEffectKind.statBonus && fx.stat == stat) {
           total += fx.value;
         }
+      }
+    }
+    return total;
+  }
+
+  /// Bonus al llenado de quiebre de las pasivas de arma de [a] contra
+  /// [target] (Rompehielos, Grieta).
+  double _breakBonus(Combatant a, Combatant target) {
+    var total = 0.0;
+    for (final m in _mechanicsOf(a)) {
+      final ok = switch (m.trigger) {
+        ProcTrigger.vsStatus =>
+          m.status != null && target.stacks(m.status!) > 0,
+        ProcTrigger.vsMarked => target.hasEffect(BuffStat.damageTaken),
+        ProcTrigger.whileLowHealth => a.hp < a.maxHp * m.threshold,
+        ProcTrigger.always => true,
+        _ => false,
+      };
+      if (!ok) continue;
+      for (final fx in m.effects) {
+        if (fx.kind == ProcEffectKind.breakBonus) total += fx.value;
       }
     }
     return total;
@@ -795,6 +843,7 @@ class _Turn {
     }
     final crit = _rand() < chance;
     final dmg = math.max(1, jsRound(base * (crit ? cm : 1) * mult));
+    final breakBonus = a == null ? 0.0 : _breakBonus(a, e);
     final lost = math.min(dmg, e.hp);
     _dealt += lost;
     _dealtMaxHp = math.max(_dealtMaxHp, e.maxHp);
@@ -809,7 +858,8 @@ class _Turn {
             (primary
                 ? (_act?.breakFactor ?? BattleEngine.breakAttack)
                 : BattleEngine.breakSecondary) *
-            (crit ? BattleEngine.breakCrit : 1));
+            (crit ? BattleEngine.breakCrit : 1) *
+            (1 + breakBonus));
     final hit = _Hit(dmg, crit, e, mods);
     if (primary && a != null && _act != null) {
       _fire(ProcTrigger.onHit, a, target: e, amount: dmg);
@@ -896,7 +946,7 @@ class _Turn {
 
   Iterable<PassiveMechanic> _mechanicsOf(Combatant c) sync* {
     for (final id in c.mechanics) {
-      final m = kMechanics[id];
+      final m = mechanicById(id);
       if (m != null) yield m;
     }
   }
@@ -1114,9 +1164,27 @@ class _Turn {
             owner, target, math.max(1, jsRound(owner.magic * fx.value)), m.id);
         _notes.add('${m.name}: $dealt sagrado a ${target.name} '
             '(MAG ${owner.magic} × ${fm(fx.value)})');
+      case ProcEffectKind.extraStacks:
+        final st = fx.status ?? m.status;
+        if (target == null || !target.alive || st == null) return;
+        final n = fx.value.round();
+        if (n <= 0) return;
+        events.add(ProcEvent(owner.id, m.id, targetId: target.id));
+        _addStatus(target, StatusApplication(st, n), source: owner);
+        _notes.add('${m.name}: +$n ${st.label} a ${target.name}');
+      case ProcEffectKind.inflict:
+        final st = fx.status;
+        if (target == null || !target.alive || st == null) return;
+        final n = math.max(1, fx.value.round());
+        events.add(ProcEvent(owner.id, m.id, targetId: target.id));
+        if (_addStatus(target, StatusApplication(st, n), source: owner)) {
+          _notes.add('${m.name}: ${target.name} +$n ${st.label}');
+        }
       case ProcEffectKind.stunExtend:
       case ProcEffectKind.statBonus:
-        // Modificadores: los aplican `_addStatus` y `_conditionBonus`.
+      case ProcEffectKind.breakBonus:
+        // Modificadores: los aplican `_addStatus`, `_conditionBonus` y
+        // `_breakBonus`.
         break;
     }
   }
@@ -1551,6 +1619,13 @@ class _Turn {
     }
 
     _resolveAction(p, act);
+    // Robo de vida del arma (afijo `del Vampiro`): sobre todo el daño de
+    // la acción.
+    if (p.lifeSteal > 0 && _dealt > 0 && p.alive && p.hp < p.maxHp) {
+      final h = math.max(1, jsRound(_dealt * p.lifeSteal));
+      _heal(p, h);
+      _notes.add('robo de vida +$h HP');
+    }
     if (!usedUlt) {
       final dealtBonus =
           _dealt > 0 ? math.min(22.0, 5 + _dealt / _dealtMaxHp * 30) : 0.0;

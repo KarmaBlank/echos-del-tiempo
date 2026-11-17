@@ -1,5 +1,8 @@
 import '../models/battle_event.dart';
 import '../models/game_session.dart';
+import '../models/item.dart' show CraftOp;
+import '../models/loot.dart';
+
 import '../models/passive_mechanic.dart';
 import '../models/session_event.dart';
 import '../models/status.dart';
@@ -68,7 +71,37 @@ class EventJson {
             'r': session.resultToJson(e.result),
           },
         ReturnedToLobbyEvent() => {'t': 'lobby'},
+        LootDropEvent() => {
+            't': 'loot',
+            'id': e.playerId,
+            'd': e.drop.toJson(),
+            'src': e.source.name,
+            if (e.groundId != null) 'g': e.groundId,
+            if (e.uid != null) 'u': e.uid,
+          },
+        LootPickedEvent() => {
+            't': 'picked',
+            'id': e.playerId,
+            'g': e.groundId,
+            'd': e.drop.toJson(),
+          },
+        ItemGivenEvent() => {
+            't': 'given',
+            'from': e.fromId,
+            'to': e.toId,
+            'd': e.drop.toJson(),
+          },
+        CraftedEvent() => {
+            't': 'crafted',
+            'id': e.playerId,
+            'op': e.op.name,
+            'u': e.uid,
+          },
       };
+
+  static LootDrop _drop(Object? raw) =>
+      LootDrop.fromJson(raw) ??
+      (throw FormatException('JSON inválido: drop', raw));
 
   SessionEvent fromJson(Json j) {
     final t = j.str('t');
@@ -110,6 +143,17 @@ class EventJson {
         return MissionEndedEvent(session.resultFromJson(j.obj('r')));
       case 'lobby':
         return const ReturnedToLobbyEvent();
+      case 'loot':
+        return LootDropEvent(j.str('id'), _drop(j['d']),
+            j.enumByName('src', LootSource.values),
+            groundId: j.intOrNull('g'), uid: j.strOrNull('u'));
+      case 'picked':
+        return LootPickedEvent(j.str('id'), j.integer('g'), _drop(j['d']));
+      case 'given':
+        return ItemGivenEvent(j.str('from'), j.str('to'), _drop(j['d']));
+      case 'crafted':
+        return CraftedEvent(
+            j.str('id'), j.enumByName('op', CraftOp.values), j.str('u'));
     }
     throw FormatException('JSON inválido: evento desconocido', t);
   }

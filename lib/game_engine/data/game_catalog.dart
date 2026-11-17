@@ -40,7 +40,7 @@ class GameCatalog {
     classes: kClasses,
     weapons: kWeapons,
     skills: kSkills,
-    ultimates: kUltimates,
+    ultimates: kAllUltimates,
     duals: kDuals,
     enemies: kEnemies,
   );
