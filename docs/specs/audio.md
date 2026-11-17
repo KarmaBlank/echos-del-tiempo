@@ -91,17 +91,16 @@ bytes de cada `Sfx`.
 
 ## Reproducción
 
-El proyecto no tiene un plugin de audio (y no se agregan dependencias
-en esta fase). `SfxPlayer` es la interfaz (`play(Uint8List wav)`); el
-service locator registra `NoopSfxPlayer` (no suena). Para escucharlo:
+`SfxPlayer` es la interfaz (`play(Uint8List wav)`). El juego registra
+`AudioplayersSfxPlayer` (`lib/core/audio/audioplayers_sfx_player.dart`,
+paquete `audioplayers`):
 
-1. Agregar `audioplayers` (o `flame_audio`, que lo usa por debajo) a
-   `pubspec.yaml`.
-2. Implementar `AudioplayersSfxPlayer` en `lib/core/audio/` con
-   `AudioPlayer()..play(BytesSource(wav))` (un `AudioPlayer` por sonido
-   simultáneo, modo `PlayerMode.lowLatency`).
-3. Cambiar una línea en `registerSharedDependencies`:
-   `sl.registerLazySingleton<SfxPlayer>(() => AudioplayersSfxPlayer());`
+- Cada WAV se escribe **una sola vez** a un archivo temporal y se
+  reproduce con `DeviceFileSource`, que funciona igual en todas las
+  plataformas de escritorio (no depende del soporte de `BytesSource`).
+- Pool de 4 `AudioPlayer` en rotación: hasta 4 sonidos a la vez; el
+  quinto corta al más viejo.
+- `NoopSfxPlayer` queda para tests y plataformas sin audio.
 
 `sfxInit` (crear el `AudioContext` con el primer clic) no hace falta en
 escritorio.

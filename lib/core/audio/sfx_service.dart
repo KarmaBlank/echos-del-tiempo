@@ -4,14 +4,13 @@ import 'dart:typed_data';
 import 'sfx_catalog.dart';
 import 'wav_synth.dart';
 
-/// Reproduce un WAV en memoria. La implementación real necesita un
-/// plugin de audio (p. ej. `audioplayers`, ver docs/specs/audio.md
-/// § "Reproducción"); hoy se registra [NoopSfxPlayer].
+/// Reproduce un WAV en memoria. El juego registra
+/// `AudioplayersSfxPlayer` (docs/specs/audio.md § "Reproducción").
 abstract interface class SfxPlayer {
   Future<void> play(Uint8List wav);
 }
 
-/// No suena: el proyecto todavía no tiene un plugin de audio.
+/// No suena: para tests y plataformas sin audio.
 class NoopSfxPlayer implements SfxPlayer {
   const NoopSfxPlayer();
 
