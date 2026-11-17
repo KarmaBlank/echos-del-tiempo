@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
+
+import 'theme/retro_panel.dart';
+import 'theme/retro_theme.dart';
 
 /// Shell de la app. Todas las pantallas reales (lobby, personaje,
 /// batalla con Flame, etc.) se agregan en `features/*/presentation` y
@@ -9,11 +12,12 @@ class EcosApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ProviderScope(
+    return ProviderScope(
       child: MaterialApp(
         title: 'Ecos del Tiempo',
         debugShowCheckedModeBanner: false,
-        home: _ScaffoldPlaceholder(),
+        theme: RetroTheme.build(),
+        home: const _ScaffoldPlaceholder(),
       ),
     );
   }
@@ -26,9 +30,34 @@ class _ScaffoldPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    final text = Theme.of(context).textTheme;
+    return Scaffold(
       body: Center(
-        child: Text('Ecos del Tiempo — scaffold en migración'),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'ECOS DEL TIEMPO',
+                textAlign: TextAlign.center,
+                style: text.displayLarge?.copyWith(color: RetroPalette.gold),
+              ),
+              const SizedBox(height: 32),
+              RetroPanel(
+                child: Text(
+                  'Scaffold en migración...',
+                  style: text.bodyMedium,
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: () {},
+                child: const Text('> COMENZAR'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

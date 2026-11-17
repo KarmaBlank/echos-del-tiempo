@@ -8,13 +8,13 @@ import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 
 void main() {
-  final emptyCatalog = const PassiveTreeCatalog(
+  const emptyCatalog = PassiveTreeCatalog(
     nodes: {},
     startNodeByClass: {'guerrero': 's_gue'},
     exclusions: {},
   );
-  final calculator = StatsCalculator(
-    classes: const {
+  const calculator = StatsCalculator(
+    classes: {
       'guerrero': ClassDef(
         id: 'guerrero', name: 'Guerrero',
         allowedWeaponTypes: ['espada'], startWeaponId: 'espada_bronce',
@@ -23,7 +23,7 @@ void main() {
     treeRules: PassiveTreeRules(emptyCatalog),
   );
 
-  final espadaBronce = const WeaponDef(
+  const espadaBronce = WeaponDef(
     id: 'espada_bronce', name: 'Espada de Bronce', classId: 'guerrero',
     type: 'espada', tier: 1, price: 0,
     requirements: {},
