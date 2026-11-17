@@ -160,6 +160,29 @@ class BattleEngine {
     return t.result;
   }
 
+  /// Un jugador llega a mitad de batalla (`addPlayer` con `S.battle`):
+  /// entra con su vida/maná y su primer turno en `reloj + IV`. Si ya
+  /// estaba, no cambia nada.
+  BattleStep join(BattleState state, BattlePartyMember member) {
+    final s = state.copy();
+    if (s.ended || s.party.any((c) => c.id == member.id)) {
+      return BattleStep(s, const []);
+    }
+    final c = _playerCombatant(member);
+    c.nextTurn = s.clock + interval(c);
+    s.party.add(c);
+    return BattleStep(s, const []);
+  }
+
+  /// Un jugador se va de la sala en plena batalla: sale del timeline y,
+  /// si tenía el turno, el turno queda libre.
+  BattleStep leave(BattleState state, String playerId) {
+    final s = state.copy();
+    s.party.removeWhere((c) => c.id == playerId);
+    if (s.currentId == playerId) s.currentId = null;
+    return BattleStep(s, const []);
+  }
+
   // ------------------------------------------------------------------
   // Jugadores
   // ------------------------------------------------------------------

@@ -182,10 +182,25 @@ El Paladín recibe +1 stack de cualquier estado que no sea Regeneración.
 
 - Victoria: todos los enemigos caídos. Cada jugador recibe la suma de XP
   y créditos de los enemigos (× 3 los élite). El reparto y la subida de
-  nivel quedan fuera del motor (los hace quien llama, ver `missions`).
+  nivel quedan fuera del motor (los hace `SessionEngine`, ver missions.md).
 - Derrota: todos los jugadores caídos.
 
-## Fuera de este motor (todavía)
+## Entrar y salir de una batalla en curso
 
-Movimiento en el mapa, misiones, recompensas de élite, subida de nivel,
-árbol de pasivas completo (`TREE`), tienda y mejoras de armas.
+- `BattleEngine.join`: un jugador que llega a mitad de batalla entra con
+  su vida y maná actuales y su próximo turno en `reloj + IV`. No cambia
+  la vida de los enemigos.
+- `BattleEngine.leave`: el jugador sale de la batalla; si tenía el turno,
+  el turno queda libre. Si el resto del equipo está caído, la derrota se
+  detecta al terminar el próximo turno enemigo.
+
+## Fuera de este motor
+
+Lo que pasa alrededor de la batalla lo hace `SessionEngine`
+(`lib/game_engine/rules/session_engine.dart`):
+- Ritmo de la batalla (pausas, límite de 30 s) y conteo de K.O. de la
+  misión: missions.md § "Batalla en la sesión".
+- Reparto de XP y créditos, subida de nivel, drops de élite, contadores
+  de la misión y derrota → misión fallida: missions.md y progression.md.
+- Movimiento en el mapa y contacto con enemigos: world.md.
+- Tienda, mejoras de armas, fusión y perfil: progression.md.
