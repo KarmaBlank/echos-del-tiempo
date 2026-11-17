@@ -1,0 +1,178 @@
+﻿<#
+.SYNOPSIS
+  Arma y publica un release de Ecos del Tiempo para Windows (instalador +
+  auto-actualización). Ver docs/specs/distribution.md.
+
+.DESCRIPTION
+  1. (sin -DryRun) Verifica: rama main, árbol git limpio, al día con
+     origin/main, `gh` autenticado y que el tag vX.Y.Z no exista.
+  2. Escribe la versión en pubspec.yaml (`version: X.Y.Z+N`, N = build
+     anterior + 1) y en lib/app/app_version.dart.
+  3. flutter analyze + flutter test (salvo -SkipChecks).
+  4. flutter build windows --release -t lib/app/flavors/main_p2p.dart
+  5. Copia el runtime de MSVC (msvcp140, vcruntime140, vcruntime140_1) a
+     dist\runtime y compila installer\ecos_del_tiempo.iss con Inno Setup 6.
+  6. Escribe dist\EcosDelTiempo-Setup-X.Y.Z.exe.sha256.
+  7. (sin -DryRun) Commit "chore(release): vX.Y.Z" del pubspec + versión,
+     push a origin main y `gh release create vX.Y.Z <setup> <sha256>`.
+
+.EXAMPLE
+  .\tool\release.ps1 -Version 0.2.0 -Notes "Jefe nuevo y arreglos" -DryRun
+  .\tool\release.ps1 -Version 0.2.0 -NotesFile notas.md
+#>
+[CmdletBinding()]
+param(
+  [Parameter(Mandatory = $true)]
+  [string]$Version,
+  [string]$Notes = '',
+  [string]$NotesFile = '',
+  [switch]$DryRun,
+  [switch]$SkipChecks,
+  [string]$FlutterBin = 'C:\tools\flutter\bin'
+)
+
+$ErrorActionPreference = 'Stop'
+$Root = Split-Path -Parent $PSScriptRoot
+Set-Location $Root
+$Utf8NoBom = New-Object System.Text.UTF8Encoding $false
+
+function Step($msg) { Write-Host "`n==> $msg" -ForegroundColor Cyan }
+function Fail($msg) { Write-Host "ERROR: $msg" -ForegroundColor Red; exit 1 }
+function Run($exe, [string[]]$argv) {
+  & $exe @argv
+  if ($LASTEXITCODE -ne 0) { Fail "$exe $($argv -join ' ') salió con código $LASTEXITCODE" }
+}
+
+# --- Versión ---------------------------------------------------------------
+$semver = '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+if ($Version.StartsWith('v')) { $Version = $Version.Substring(1) }
+if ($Version -notmatch $semver) { Fail "Versión inválida '$Version' (formato X.Y.Z o X.Y.Z-pre.N)" }
+$numeric = ($Version -split '-')[0]
+$Tag = "v$Version"
+if ($NotesFile) { $Notes = [IO.File]::ReadAllText((Resolve-Path $NotesFile), [Text.Encoding]::UTF8) }
+if (-not $Notes) { $Notes = "Ecos del Tiempo $Tag" }
+
+$env:Path = "$FlutterBin;$env:Path"
+$Flutter = Join-Path $FlutterBin 'flutter.bat'
+if (-not (Test-Path $Flutter)) { Fail "No encuentro Flutter en $FlutterBin" }
+
+# --- Chequeos de publicación ----------------------------------------------
+if (-not $DryRun) {
+  Step 'Verificando git y gh'
+  $branch = (git rev-parse --abbrev-ref HEAD).Trim()
+  if ($branch -ne 'main') { Fail "Hay que publicar desde main (estás en '$branch')." }
+  $dirty = git status --porcelain
+  if ($dirty) { Fail "El árbol git tiene cambios sin commitear:`n$($dirty -join "`n")" }
+  Run git @('fetch', 'origin', 'main', '--tags')
+  $head = (git rev-parse HEAD).Trim()
+  $remote = (git rev-parse origin/main).Trim()
+  if ($head -ne $remote) { Fail 'main local no coincide con origin/main (hacé pull/push primero).' }
+  & gh auth status *> $null
+  if ($LASTEXITCODE -ne 0) { Fail 'gh no está autenticado: corré "gh auth login".' }
+  & gh release view $Tag *> $null
+  if ($LASTEXITCODE -eq 0) { Fail "El release $Tag ya existe en GitHub." }
+  if (git tag --list $Tag) { Fail "El tag $Tag ya existe." }
+} else {
+  Write-Host 'DRY RUN: se arma todo pero NO se commitea, pushea ni publica.' -ForegroundColor Yellow
+}
+
+# --- 1. Versión en pubspec y app_version.dart -----------------------------
+Step "Versión $Version"
+$pubspecPath = Join-Path $Root 'pubspec.yaml'
+$pubspec = [IO.File]::ReadAllText($pubspecPath, [Text.Encoding]::UTF8)
+$m = [regex]::Match($pubspec, '(?m)^version:[ \t]*([^\s+]+)(?:\+(\d+))?[ \t]*(?=\r?$)')
+if (-not $m.Success) { Fail 'No encuentro la línea version: en pubspec.yaml' }
+$oldVersion = $m.Groups[1].Value
+$oldBuild = if ($m.Groups[2].Success) { [int]$m.Groups[2].Value } else { 0 }
+$build = if ($oldVersion -eq $Version) { [math]::Max($oldBuild, 1) } else { $oldBuild + 1 }
+$pubspec = $pubspec.Substring(0, $m.Index) + "version: $Version+$build" +
+  $pubspec.Substring($m.Index + $m.Length)
+[IO.File]::WriteAllText($pubspecPath, $pubspec, $Utf8NoBom)
+$versionDart = @"
+// GENERADO por tool/release.ps1 — no editar a mano.
+// Copia en código de la línea ``version:`` de pubspec.yaml (sin el ``+build``)
+// para que el auto-actualizador sepa qué versión corre (docs/specs/distribution.md
+// § "Versionado"). test/core/update/app_version_test.dart verifica que no
+// se desincronice del pubspec.
+
+/// Versión instalada (``X.Y.Z``), la misma que el tag ``vX.Y.Z`` del release.
+const String appVersion = '$Version';
+
+"@
+[IO.File]::WriteAllText((Join-Path $Root 'lib\app\app_version.dart'), $versionDart.Replace("`r`n", "`n"), $Utf8NoBom)
+Write-Host "pubspec: $oldVersion+$oldBuild -> $Version+$build"
+
+# --- 2. Análisis y tests ---------------------------------------------------
+if (-not $SkipChecks) {
+  Step 'flutter analyze'
+  Run $Flutter @('analyze')
+  Step 'flutter test'
+  Run $Flutter @('test')
+}
+
+# --- 3. Build release (flavor P2P) ----------------------------------------
+Step 'flutter build windows --release (main_p2p)'
+Run $Flutter @('build', 'windows', '--release', '-t', 'lib/app/flavors/main_p2p.dart',
+  '--build-name', $Version, '--build-number', "$build")
+$bundle = Join-Path $Root 'build\windows\x64\runner\Release'
+if (-not (Test-Path (Join-Path $bundle 'echos_del_tiempo.exe'))) { Fail "No está el exe en $bundle" }
+
+# --- 4. Runtime MSVC app-local --------------------------------------------
+Step 'Runtime de MSVC (app-local)'
+$dist = Join-Path $Root 'dist'
+$runtime = Join-Path $dist 'runtime'
+New-Item -ItemType Directory -Force $runtime | Out-Null
+Get-ChildItem $runtime -Filter *.dll -ErrorAction SilentlyContinue | Remove-Item -Force
+$crt = Get-ChildItem -Directory -ErrorAction SilentlyContinue -Path @(
+  "${env:ProgramFiles(x86)}\Microsoft Visual Studio\*\*\VC\Redist\MSVC\*\x64\Microsoft.VC14*.CRT",
+  "$env:ProgramFiles\Microsoft Visual Studio\*\*\VC\Redist\MSVC\*\x64\Microsoft.VC14*.CRT"
+) | Sort-Object { [version]($_.Parent.Parent.Name -replace '[^\d.]', '') } -Descending | Select-Object -First 1
+if (-not $crt) { Fail 'No encuentro el redist de MSVC (VS 2022 Build Tools, VC\Redist\MSVC\...\x64\Microsoft.VC143.CRT).' }
+foreach ($dll in 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll') {
+  Copy-Item (Join-Path $crt.FullName $dll) $runtime -Force
+}
+Write-Host "Desde $($crt.FullName)"
+
+# --- 5. Instalador ---------------------------------------------------------
+Step 'Inno Setup'
+$iscc = @(
+  "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
+  "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+  "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+) | Where-Object { Test-Path $_ } | Select-Object -First 1
+if (-not $iscc) { Fail 'No encuentro ISCC.exe (Inno Setup 6).' }
+Run $iscc @('/Q', "/DAppVersion=$Version", "/DAppVersionNumeric=$numeric",
+  "/DSourceDir=$bundle", "/DRuntimeDir=$runtime", "/DOutputDir=$dist",
+  (Join-Path $Root 'installer\ecos_del_tiempo.iss'))
+$setupName = "EcosDelTiempo-Setup-$Version.exe"
+$setup = Join-Path $dist $setupName
+if (-not (Test-Path $setup)) { Fail "ISCC no generó $setup" }
+
+# --- 6. Checksum -----------------------------------------------------------
+$hash = (Get-FileHash -Algorithm SHA256 $setup).Hash.ToLower()
+$shaFile = "$setup.sha256"
+[IO.File]::WriteAllText($shaFile, "$hash  $setupName`n", (New-Object System.Text.ASCIIEncoding))
+$size = (Get-Item $setup).Length
+Step 'Listo'
+Write-Host ("Instalador: {0} ({1:N1} MB, {2:N0} bytes)" -f $setup, ($size / 1MB), $size)
+Write-Host "SHA-256:    $hash"
+
+if ($DryRun) {
+  Write-Host "`nDRY RUN: no se publicó nada. Para publicar (desde main, árbol limpio):" -ForegroundColor Yellow
+  Write-Host "  .\tool\release.ps1 -Version $Version -Notes `"...`""
+  exit 0
+}
+
+# --- 7. Commit + push + release --------------------------------------------
+Step "Publicando $Tag"
+Run git @('add', 'pubspec.yaml', 'lib/app/app_version.dart')
+& git diff --cached --quiet
+if ($LASTEXITCODE -ne 0) {
+  Run git @('commit', '-m', "chore(release): $Tag")
+  Run git @('push', 'origin', 'main')
+}
+$prerelease = @()
+if ($Version.Contains('-')) { $prerelease = @('--prerelease') }
+Run gh (@('release', 'create', $Tag, $setup, $shaFile,
+  '--target', 'main', '--title', "Ecos del Tiempo $Tag", '--notes', $Notes) + $prerelease)
+Write-Host "`nPublicado: https://github.com/KarmaBlank/echos-del-tiempo/releases/tag/$Tag" -ForegroundColor Green
