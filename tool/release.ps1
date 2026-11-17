@@ -67,10 +67,18 @@ if (-not $DryRun) {
   $head = (git rev-parse HEAD).Trim()
   $remote = (git rev-parse origin/main).Trim()
   if ($head -ne $remote) { Fail 'main local no coincide con origin/main (hacé pull/push primero).' }
+  # En Windows PowerShell 5.1, con ErrorActionPreference = Stop, cualquier
+  # línea de stderr de un comando nativo se vuelve error fatal (p. ej. el
+  # "release not found" esperado de gh). Acá solo importa el exit code.
+  $prevEap = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
   & gh auth status *> $null
-  if ($LASTEXITCODE -ne 0) { Fail 'gh no está autenticado: corré "gh auth login".' }
+  $authCode = $LASTEXITCODE
   & gh release view $Tag *> $null
-  if ($LASTEXITCODE -eq 0) { Fail "El release $Tag ya existe en GitHub." }
+  $viewCode = $LASTEXITCODE
+  $ErrorActionPreference = $prevEap
+  if ($authCode -ne 0) { Fail 'gh no está autenticado: corré "gh auth login".' }
+  if ($viewCode -eq 0) { Fail "El release $Tag ya existe en GitHub." }
   if (git tag --list $Tag) { Fail "El tag $Tag ya existe." }
 } else {
   Write-Host 'DRY RUN: se arma todo pero NO se commitea, pushea ni publica.' -ForegroundColor Yellow
