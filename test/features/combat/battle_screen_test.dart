@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/battle_screen.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_fx.dart';
@@ -9,6 +10,7 @@ import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_state.dart';
+import 'package:echos_del_tiempo/game_engine/models/status.dart';
 import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
@@ -54,14 +56,20 @@ void main() {
   });
 
   Future<void> pump(WidgetTester tester,
-      {required bool canAct, required bool Function(BattleCommand) onCommand}) async {
+      {required bool canAct,
+      required bool Function(BattleCommand) onCommand,
+      String? localId}) async {
     tester.view.physicalSize = const Size(1280, 720);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     await tester.pumpWidget(MaterialApp(
       theme: RetroTheme.build(),
       home: Scaffold(
-        body: BattleView(battle: state, canAct: canAct, onCommand: onCommand),
+        body: BattleView(
+            battle: state,
+            canAct: canAct,
+            localId: localId,
+            onCommand: onCommand),
       ),
     ));
   }
@@ -75,9 +83,9 @@ void main() {
       return true;
     });
 
-    // Cabecera `<b>` del `#menu` y la caja del grupo con su turno.
+    // Cabecera `<b>` del `#menu` y mis datos con el turno.
     expect(find.textContaining('¡Tu turno! (Guerrero)'), findsOneWidget);
-    expect(find.textContaining('SU TURNO'), findsOneWidget);
+    expect(find.textContaining('TU TURNO'), findsOneWidget);
     // 4 jugadores → vida ×2.35: Limo 30 × 2.35 = 70.5 → 71
     expect(state.enemies[0].maxHp, 71);
 
@@ -121,12 +129,84 @@ void main() {
     expect((sent! as ItemCommand).targetPlayerId, 'maga');
   });
 
-  testWidgets('sin turno propio no hay menú', (tester) async {
-    await pump(tester, canAct: false, onCommand: (_) => fail('no debía mandar'));
-    // Como el prototipo: sin menú; la caja del guerrero dice que es su
-    // turno.
-    expect(find.textContaining('SU TURNO'), findsOneWidget);
+  testWidgets('sin turno propio no hay menú: dice de quién es el turno',
+      (tester) async {
+    await pump(tester,
+        canAct: false,
+        localId: 'maga',
+        onCommand: (_) => fail('no debía mandar'));
+    // Como el prototipo: sin menú. El panel del medio dice de quién es el
+    // turno y cuándo me toca; la fila del guerrero lo marca.
+    expect(find.byKey(const ValueKey('battle-menu')), findsNothing);
     expect(find.textContaining('1. Atacar'), findsNothing);
+    Finder waiting(String text) => find.descendant(
+        of: find.byKey(const ValueKey('battle-waiting')),
+        matching: find.text(text));
+    expect(waiting('Turno de Guerrero'), findsOneWidget);
+    expect(waiting('Tu turno en 3'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('member-guerrero')),
+            matching: find.textContaining('SU TURNO')),
+        findsOneWidget);
+  });
+
+  testWidgets('solo veo mis datos; el resto del grupo en filas compactas',
+      (tester) async {
+    Combatant m(String id) => state.party.firstWhere((p) => p.id == id);
+    m('tirador')
+      ..statuses = {StatusKind.freeze: 2}
+      ..defending = true;
+    m('paladin')
+      ..protecting = true
+      ..taunt = 2
+      ..bonusDefense = 4
+      ..statuses = {StatusKind.regen: 2};
+    m('guerrero').hp = 0;
+    await pump(tester, canAct: false, localId: 'maga', onCommand: (_) => true);
+
+    // Un solo panel detallado: el mío.
+    expect(find.byKey(const ValueKey('my-panel-maga')), findsOneWidget);
+    for (final id in ['guerrero', 'tirador', 'paladin']) {
+      expect(find.byKey(ValueKey('my-panel-$id')), findsNothing);
+      expect(find.byKey(ValueKey('member-$id')), findsOneWidget);
+    }
+    expect(find.byKey(const ValueKey('member-maga')), findsNothing);
+    expect(find.textContaining('ATQ '), findsOneWidget);
+
+    Finder inRow(String id, String text) => find.descendant(
+        of: find.byKey(ValueKey('member-$id')), matching: find.text(text));
+    expect(inRow('tirador', 'C2'), findsOneWidget);
+    expect(inRow('tirador', 'Defiende'), findsOneWidget);
+    expect(inRow('tirador', '▼VEL'), findsOneWidget);
+    expect(inRow('paladin', 'R2'), findsOneWidget);
+    expect(inRow('paladin', 'Protege'), findsOneWidget);
+    expect(inRow('paladin', 'Provoca 2'), findsOneWidget);
+    expect(inRow('paladin', '▲DEF+4'), findsOneWidget);
+    expect(inRow('guerrero', 'K.O.'), findsOneWidget);
+    // Cada chip explica el efecto en su `#tip`.
+    expect(
+        find.byWidgetPredicate((w) =>
+            w is RetroTooltip &&
+            w.message.contains('Congelación') &&
+            w.message.contains('pierde su turno')),
+        findsOneWidget);
+  });
+
+  testWidgets('en solitario la lista del grupo dice Solo', (tester) async {
+    state = engine
+        .nextTurn(engine
+            .start(
+              party: [member('maga')],
+              enemyTypes: const ['slime'],
+              triggeredBy: 'maga',
+            )
+            .state)
+        .state;
+    await pump(tester, canAct: true, localId: 'maga', onCommand: (_) => true);
+    expect(find.text('Solo'), findsOneWidget);
+    expect(find.byKey(const ValueKey('my-panel-maga')), findsOneWidget);
+    expect(find.textContaining('1. Atacar'), findsOneWidget);
   });
 
   testWidgets('un paso nuevo (eventSeq) crea los efectos una sola vez',

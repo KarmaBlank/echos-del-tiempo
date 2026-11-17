@@ -429,25 +429,73 @@ Resumen:
   jugador local; cada opción manda `BattleAction(cmd)` con el objetivo
   actual (`tgt` del prototipo: primer enemigo vivo si el elegido cayó;
   Q/Tab o clic sobre el enemigo en la escena lo cambian).
-- Menú (`#menu`, líneas 1205-1223) solo en el turno del jugador local,
-  centrado sobre la escena (máx. 900 px), borde 2 px `#ffd166`: cabecera
-  `<b>` dorada `Ns · ¡Tu turno! (nombre) · ATQ · MAG · DEF · Crítico n%
-  (×m)` (el tiempo en `#ff4757` con ≤ 10 s) y botones numerados en 3
-  columnas (`button`; `.dual` = ULT y dúos a fila entera con borde
-  `#ff9f1c` y texto `#ffd166`), con los textos coloreados del prototipo:
-  daño estimado `#ffd166` y `(crít N)` `#7d8bc4`, estado `+N` + letra en
-  su color, `+X% crít` `#ff6b81`, MP `#74b9ff`, curas `#7bed9f`, etc.
-  Orden: `Atacar`, `★ ULTIMATE` (deshabilitada < 100%), técnicas
-  (deshabilitadas sin MP), dúos, `Poción de vida xN ▸ elegir a quién`,
-  `Poción de maná xN ▸ ...` (submenú `¿A quién le das ...?` con HP/MP en
-  `#9fb4ff` y `+N` verde/celeste) y `Defender`. Al pasar el mouse, el
-  `#tip` (`RetroTooltip`) con `descSkill` en markup.
-- Cajas del grupo en batalla (`BattlePartyBox`): como las del mapa más
-  barra de ULT de 5 px (`#a29bfe`, `#e84393` + `¡LISTA!` al 100%), la
-  línea `DEF n [Protege] · VEL x.x` en `#9fb4ff` con los estados (letra +
-  stacks en su color) y `Provoca n` `#ff7675`, y el turno: `▶ SU TURNO`
-  dorado o `Turno en N` / `Fuera de combate` en `#7d8bc4` (índice en
-  `predictTurns`). Sin menú, solo se ven las cajas.
+- **Barra de batalla** (pedido del dueño; reemplaza el `#menu`
+  flotante y la fila de `.pbox` del prototipo): una barra fija abajo,
+  de alto `clamp(alto × 0.42, 200, 300)` px (302 px con 720 de alto), que **nunca tapa la escena**:
+  la escena y la franja de turnos usan solo el alto que queda arriba
+  (docs/specs/battle_presentation.md § "Geometría"). Tres paneles
+  (`#121936`, borde 2 px), separados 6 px:
+
+  ```
+  ┌ MIS DATOS ──────┬ ACCIONES ───────────────┬ GRUPO ──────────────┐
+  │ nombre Clase Lv │ ¡Tu turno! · Objetivo   │ [sprite] nombre ▶   │
+  │ arma +pts       │ 1. Atacar   2. Técnica  │ HP ▬▬ n/m  MP ▬▬ n/m│
+  │ HP/MP/ULT barras│ ★ ULT / dúos (fila)     │ chips de estado     │
+  │ ATQ MAG DEF     │ 5. Poción…  6. Defender │ (una fila por cada  │
+  │ Crít · VEL      │ (fuera de turno:        │  OTRO jugador)      │
+  │ chips · turno   │  "Turno de X")          │                     │
+  └─────────────────┴─────────────────────────┴─────────────────────┘
+  ```
+
+  - **Mis datos** (izq., ancho `clamp(ancho × 0.21, 250, 360)`, borde
+    `#ffd166`): **solo el jugador de este dispositivo** (`localId` de la
+    sesión; sin `localId` —tests, previsualización— el de turno si puede
+    actuar, si no el primero del grupo). Nombre y `Clase LvN`, arma
+    `#ff9f43` (+`+N pts` dorado), barras HP / MP / ULT con `n/m` a la
+    derecha (ULT `#a29bfe`, `#e84393` + `¡LISTA!`), `ATQ · MAG · DEF` y
+    `Crít n% (×m) · VEL x.x` en `#9fb4ff`, los chips de estado y
+    buffs/debuffs con nombre completo, y el turno: `▶ TU TURNO  Ns`
+    (dorado; el tiempo en `#ff4757` con ≤ 10 s), `Turno en N`
+    (`#7d8bc4`, índice en `predictTurns`) o `Fuera de combate`. A 50% de
+    opacidad si está K.O.
+  - **Acciones** (centro, el resto del ancho, borde `#ffd166` en mi
+    turno): el menú del prototipo (`#menu`, líneas 1205-1223) solo si
+    `battle.waitingForPlayer` y el turno es del jugador local. Cabecera
+    `<b>` dorada `¡Tu turno! (nombre) · Objetivo: <enemigo>` + `Q/Tab
+    cambia` en `#9fb4ff`, o la pregunta del submenú de pociones; botones
+    numerados en una grilla pareja de 2 columnas (3 si el panel mide
+    ≥ 840 px; cada fila toma el alto de su botón más alto). `.dual` (ULT
+    y dúos) conserva borde `#ff9f1c` y texto `#ffd166` pero ocupa una
+    celda, no la fila entera: en la barra no hay lugar. Los dúos dicen
+    `★ Nombre (+aliado) N c/u (crít M) +nX 4MP c/u`; "aliado pierde su
+    próximo turno" y la fórmula van a su `#tip`. Con los textos coloreados del
+    prototipo: daño estimado `#ffd166` y `(crít N)` `#7d8bc4`, estado
+    `+N` + letra en su color, `+X% crít` `#ff6b81`, MP `#74b9ff`, curas
+    `#7bed9f`, etc. Orden: `Atacar`, `★ ULTIMATE` (deshabilitada < 100%),
+    técnicas (deshabilitadas sin MP), dúos, `Poción de vida xN ▸ elegir a
+    quién`, `Poción de maná xN ▸ ...` (submenú `¿A quién le das ...?` con
+    HP/MP en `#9fb4ff` y `+N` verde/celeste) y `Defender`. Al pasar el
+    mouse, el `#tip` (`RetroTooltip`) con `descSkill` en markup. Si no
+    hay lugar, el panel se desplaza (scroll) en vez de desbordar. Fuera
+    de mi turno, en vez de botones: `Turno de <nombre>` (dorado; `Turno
+    de <enemigo>` en `#ff6b81`) y `Tu turno en N` / `Estás fuera de
+    combate` en `#7d8bc4`.
+  - **Grupo** (der., ancho `clamp(ancho × 0.25, 270, 400)`): una fila
+    compacta por cada **otro** jugador (el local no se repite): su sprite
+    `idle` ×2 (`PixelSprite`, vecino más cercano) como avatar, nombre y
+    `Clase LvN`, a la derecha `▶ SU TURNO` (dorado, y la fila con borde
+    dorado) o `Turno en N`; barras HP y MP lado a lado con `n/m`; y los
+    chips con letra + stacks. K.O. al 50%. En solitario: `Solo` en
+    `#7d8bc4`.
+  - **Chips** (`combatantChips`, caja con borde 1 px y texto del color):
+    estados `Quemadura/Veneno/Congelación/Aturdido/Sagrado/Regeneración`
+    con stacks en su color (`STATUS[k].col`); buffs/debuffs derivados del
+    `Combatant`: `Defiende` (`defending`, `#74b9ff`), `Protege`
+    (`protecting`, `#ffeaa7`), `Provoca N` (`taunt`, `#ff7675`), `▲DEF +N`
+    (`bonusDefense` de Fortaleza / Baluarte, `#74b9ff`), `▼VEL −N%`
+    (12% por stack de Congelación, `#74b9ff`) y `K.O.` (`#ff4757`). Al
+    pasar el mouse, `RetroTooltip` con el nombre y la descripción
+    (`statusDescriptionOf` / textos de `skill_text.dart`).
 - Tiempo de turno: `30 − turnTime` s (`TURN_LIMIT`), en la franja.
 
 ## Persistencia

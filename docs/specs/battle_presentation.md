@@ -20,7 +20,8 @@ Implementación Dart:
 
 | Pieza | Archivo |
 |---|---|
-| Pantalla de batalla (menú, log, grupo, overlays) | `lib/features/combat/presentation/battle_screen.dart` (`BattleView`) |
+| Pantalla de batalla (escena, log, barra, menú, overlays) | `lib/features/combat/presentation/battle_screen.dart` (`BattleView`) |
+| Barra: mis datos, lista del grupo, chips de estado | `lib/features/combat/presentation/battle_hud.dart` |
 | Escena (ticker + pintor) | `lib/features/combat/presentation/scene/battle_scene.dart` |
 | Dibujo de actores, efectos, cinemática y timeline | `lib/features/combat/presentation/scene/battle_painter.dart` |
 | Geometría, posiciones y cámara | `lib/features/combat/presentation/scene/battle_layout.dart` |
@@ -65,9 +66,13 @@ les pone hora de inicio y los dibuja según su edad.
   `floor(alto / s) − 54` para llenar la pantalla (el prototipo deja
   barras negras). Todo se dibuja en píxeles enteros del lienzo virtual,
   que se rasteriza y se escala con `FilterQuality.none`.
-- Los overlays Flutter usan esa misma escala para ubicarse: el log va en
-  la banda `y ∈ [38, 54)` de la franja, el grupo y el menú abajo,
-  encima de la escena.
+- La escena ocupa solo el área **encima de la barra de batalla** (alto
+  `clamp(alto × 0.42, 200, 300)`, docs/specs/exploration.md § "Batalla"):
+  `ancho × (alto − barra)`. La barra nunca se superpone a la escena ni a
+  la franja; con 1280×720 la escena queda en 1280×418 (`s ≈ 1.22`, ancho
+  virtual ≈ 1047); con 1920×1080, 1920×780 (`s ≈ 2.28`).
+- El log usa esa misma escala para ubicarse: va en la banda
+  `y ∈ [38, 54)` de la franja.
 
 ## Posiciones (`startBattle`)
 
@@ -87,8 +92,8 @@ Con `(bx, by)` = posición del enemigo del campo que empezó la batalla y
   ancho virtual): `tx = clamp(cx − VW/2, −40, mw − VW + 40)`,
   `ty = clamp(cy − 288/2 + 40, −70, mh − 288 + 30 + extra)` (si el mapa
   es más chico que la vista, centrado). `extra` = alto de escena que
-  queda debajo de los 288 px nominales más el que tapan los paneles,
-  para que el grupo nunca quede debajo del menú. La cámara arranca en la
+  queda debajo de los 288 px nominales (`coverBottom` queda en 0: la
+  barra de batalla ya no tapa la escena). La cámara arranca en la
   del campo (centrada en el jugador local) y se mueve con suavizado
   `0.12` por frame de 60 Hz (`cam += (t − cam)·k`), salto directo si la
   distancia es > 200.
@@ -328,7 +333,7 @@ enemigos vivos o muertos hace < 1500 ms; con Baluarte, los jugadores.
 
 ## Menú y ayudas
 
-(Actualizado: el menú, las cajas del grupo y el `#tip` siguen 1:1 los
+(Actualizado: el menú, los paneles de la barra y el `#tip` siguen 1:1 los
 colores del prototipo; ver docs/specs/exploration.md § "Batalla" y
 docs/specs/ui_style.md. La ayuda ya no va al pie del panel sino en el
 tooltip, y los textos salen de `lib/features/combat/domain/skill_text.dart`
@@ -350,9 +355,10 @@ actual. Al pasar el mouse por una técnica o la ULT se muestra su
 
 - El lienzo se estira al ancho/alto de la ventana (más mapa visible) en
   vez de barras negras; la escala no es entera (como `MapGame`).
-- La cámara puede bajar más que en el prototipo (`extra`) porque el
-  menú tapa la parte de abajo de la escena (en el prototipo está fuera
-  del canvas).
+- El menú y el grupo van en una barra fija debajo de la escena (como
+  en el prototipo, fuera del canvas), pero con el layout pedido por el
+  dueño: mis datos / acciones / resto del grupo (exploration.md §
+  "Batalla").
 - Log (blanco) y etiqueta de tiempo (caja negra, dorado / `#ff6b81`)
   son texto Flutter: el log va en 16 px si entra en una línea (≈ 6 px
   virtuales escalados), si no en 8 px.

@@ -1,0 +1,441 @@
+import 'package:material_ui/material_ui.dart';
+
+import '../../../app/theme/panel_frame.dart';
+import '../../../app/theme/party_box.dart';
+import '../../../app/theme/proto_colors.dart';
+import '../../../app/theme/proto_markup.dart';
+import '../../../app/theme/retro_text.dart';
+import '../../../game_engine/data/classes_catalog.dart';
+import '../../../game_engine/models/battle_state.dart';
+import '../../../game_engine/models/status.dart';
+import '../../../game_engine/rules/battle_engine.dart';
+import '../../../game_engine/rules/js_math.dart';
+import '../domain/skill_text.dart';
+import '../domain/turn_order.dart';
+import 'game_sprites.dart';
+import 'pixel_sprite.dart';
+
+/// Piezas de la barra de batalla (docs/specs/exploration.md § "Batalla"):
+/// el panel "Mis datos" del jugador local, la lista compacta del resto
+/// del grupo y los chips de estados y buffs/debuffs.
+
+/// Fondo y borde de un panel de la barra (`.pbox` / `.panel`).
+class BattleBarPanel extends StatelessWidget {
+  const BattleBarPanel({
+    super.key,
+    required this.child,
+    this.highlight = false,
+    this.padding = const EdgeInsets.all(6),
+  });
+
+  final Widget child;
+
+  /// Borde dorado (`.me` / el menú de mi turno).
+  final bool highlight;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: ProtoColors.panel,
+        border: Border.all(
+          color: highlight ? ProtoColors.gold : ProtoColors.panelBorder,
+          width: 2,
+        ),
+      ),
+      child: DefaultTextStyle.merge(
+        style:
+            const TextStyle(fontSize: 8, height: 1.6, color: ProtoColors.ink),
+        child: child,
+      ),
+    );
+  }
+}
+
+/// Un chip de estado o buff/debuff: [short] para la lista del grupo,
+/// [long] para mis datos; [tip] en markup.
+class StatusChip {
+  const StatusChip(this.short, this.long, this.color, this.tip);
+
+  final String short;
+  final String long;
+  final Color color;
+  final String tip;
+}
+
+Color _hex(String hex) =>
+    Color(0xFF000000 | int.parse(hex.substring(1), radix: 16));
+
+/// Estados (con stacks) y buffs/debuffs que se derivan del [Combatant]:
+/// K.O., `defending`, `protecting`, `taunt`, `bonusDefense` (Fortaleza /
+/// Baluarte) y la lentitud de Congelación.
+List<StatusChip> combatantChips(Combatant p) {
+  final chips = <StatusChip>[];
+  if (!p.alive) {
+    chips.add(const StatusChip(
+        'K.O.',
+        'K.O.',
+        ProtoColors.crimson,
+        '<b style="color:#ff4757">Fuera de combate</b><br>No actúa hasta que '
+            'un aliado lo reviva con una Poción de vida.'));
+  }
+  for (final k in StatusKind.values) {
+    final n = p.stacks(k);
+    if (n <= 0) continue;
+    final hex = statusHex(k);
+    chips.add(StatusChip(
+      '${statusLetterOf(k)}$n',
+      '${k.label} $n',
+      _hex(hex),
+      '<b style="color:$hex">${k.label}</b> '
+          '<span class="k">×$n${k == StatusKind.holy && p.holyTurns > 0 ? ' · ${p.holyTurns} turnos' : ''}</span>'
+          '<br>${statusDescriptionOf(k)}',
+    ));
+  }
+  if (p.defending) {
+    chips.add(const StatusChip(
+        'Defiende',
+        'Defiende ½',
+        ProtoColors.ice,
+        '<b style="color:#74b9ff">Defendiendo</b><br>Recibe la mitad del daño '
+            'hasta su próximo turno.'));
+  }
+  if (p.protecting) {
+    chips.add(const StatusChip(
+        'Protege',
+        'Protege',
+        ProtoColors.cream,
+        '<b style="color:#ffeaa7">Protección</b><br>Hasta su próximo turno, '
+            'TODO el daño dirigido a sus aliados lo recibe él.'));
+  }
+  if (p.taunt > 0) {
+    chips.add(StatusChip(
+        'Provoca ${p.taunt}',
+        'Provoca ${p.taunt}',
+        ProtoColors.taunt,
+        '<b style="color:#ff7675">Provoca</b><br>Los próximos ${p.taunt} '
+            'ataques enemigos van contra él.'));
+  }
+  if (p.bonusDefense > 0) {
+    chips.add(StatusChip(
+        '▲DEF+${p.bonusDefense}',
+        '▲DEF +${p.bonusDefense}',
+        ProtoColors.ice,
+        '<b style="color:#74b9ff">▲ Defensa +${p.bonusDefense}</b> '
+            '<span class="k">(Fortaleza / Baluarte)</span><br>'
+            '+${p.bonusDefense} DEF durante el combate (cada punto = −3% de '
+            'daño recibido, máx −60%). DEF total ${p.defense}.'));
+  }
+  final ice = p.stacks(StatusKind.freeze);
+  if (ice > 0) {
+    final pct = jsRound(BattleEngine.freezeSlowPerStack * ice * 100);
+    chips.add(StatusChip(
+        '▼VEL',
+        '▼VEL −$pct%',
+        ProtoColors.ice,
+        '<b style="color:#74b9ff">▼ Velocidad −$pct%</b> '
+            '<span class="k">(Congelación ×$ice)</span><br>'
+            '−12% velocidad por stack: su turno llega más tarde.'));
+  }
+  return chips;
+}
+
+/// Caja de un chip: borde 1 px y texto del color, fondo oscuro, con su
+/// `#tip` al pasar el mouse.
+class StatusChipView extends StatelessWidget {
+  const StatusChipView(this.chip, {super.key, this.long = false});
+
+  final StatusChip chip;
+  final bool long;
+
+  @override
+  Widget build(BuildContext context) {
+    return RetroTooltip(
+      message: chip.tip,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+        decoration: BoxDecoration(
+          color: ProtoColors.bg,
+          border: Border.all(color: chip.color),
+        ),
+        child: Text(
+          retroText(long ? chip.long : chip.short),
+          style: TextStyle(fontSize: 8, height: 1.25, color: chip.color),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _chips(List<StatusChip> chips, {bool long = false}) => Wrap(
+      spacing: 3,
+      runSpacing: 3,
+      children: [for (final c in chips) StatusChipView(c, long: long)],
+    );
+
+/// Barra con `n/m` a la derecha (y una etiqueta opcional a la izquierda).
+Widget _barRow(Widget bar, String value,
+        {String? label, Color color = ProtoColors.ink, double valueWidth = 64}) =>
+    Row(
+      children: [
+        if (label != null)
+          SizedBox(
+              width: 30,
+              child: Text(label, style: TextStyle(color: color))),
+        Expanded(child: bar),
+        SizedBox(
+          width: valueWidth,
+          child: Text(value,
+              textAlign: TextAlign.right, style: TextStyle(color: color)),
+        ),
+      ],
+    );
+
+String _classLine(Combatant p) {
+  final cls = kClasses[p.classId]?.name ?? p.classId ?? '';
+  final lvl = p.build?.level;
+  return '$cls${lvl == null ? '' : ' Lv$lvl'}';
+}
+
+/// Panel izquierdo: los datos completos del jugador local.
+class MyBattlePanel extends StatelessWidget {
+  const MyBattlePanel({
+    super.key,
+    required this.battle,
+    required this.player,
+    this.turnTimeLeft,
+    this.points = 0,
+  });
+
+  final BattleState battle;
+  final Combatant player;
+  final double? turnTimeLeft;
+  final int points;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = player;
+    final build = p.build;
+    final up = build?.weaponUpgrades.total ?? 0;
+    final weapon = build == null
+        ? ''
+        : '${build.equippedWeapon.name}${up > 0 ? ' +$up' : ''}';
+    final ult = p.ult;
+    final ultColor = ult >= 100 ? ProtoColors.pink : ProtoColors.violet;
+    final speed = 100 / turnInterval(p);
+    final chips = combatantChips(p);
+    final String turn;
+    if (battle.currentId == p.id) {
+      final left = turnTimeLeft;
+      turn = '<b>▶ TU TURNO</b>'
+          '${left == null ? '' : '  ${hexSpan(left <= 10 ? '#ff4757' : '#ffd166', '${left.ceil().clamp(0, 99)}s')}'}';
+    } else if (!p.alive) {
+      turn = hexSpan('#7d8bc4', 'Fuera de combate');
+    } else {
+      final i = predictTurns(battle, 10).indexOf(p.id);
+      turn = hexSpan('#7d8bc4', i < 0 ? 'Turno: —' : 'Turno en $i');
+    }
+    return BattleBarPanel(
+      key: ValueKey('my-panel-${p.id}'),
+      highlight: true,
+      child: Opacity(
+        opacity: p.alive ? 1 : 0.5,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ProtoText(
+                '<b>${protoEsc(p.name)}</b> '
+                '<span class="k">${_classLine(p)}</span>',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (weapon.isNotEmpty)
+                ProtoText(
+                  hexSpan(
+                      '#ff9f43',
+                      '⚔ ${protoEsc(weapon)}'
+                          '${points > 0 ? ' ${hexSpan('#ffd166', '+$points pts')}' : ''}'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              _barRow(hpBar(p.hp, p.maxHp), '${p.hp}/${p.maxHp}',
+                  label: 'HP', valueWidth: 72),
+              _barRow(mpBar(p.mp, p.maxMp), '${p.mp.floor()}/${p.maxMp}',
+                  label: 'MP', valueWidth: 72),
+              _barRow(ultBar(ult),
+                  ult >= 100 ? '¡LISTA!' : '${ult.floor()}%',
+                  label: 'ULT', color: ultColor, valueWidth: 72),
+              ProtoText(
+                'ATQ ${p.attack} · MAG ${p.magic} · DEF ${p.defense}',
+                style: const TextStyle(color: ProtoColors.sky),
+              ),
+              ProtoText(
+                'Crít ${jsRound(p.critChance * 100)}% '
+                '(×${fm(p.critMultiplier)}) · VEL ${speed.toStringAsFixed(1)}',
+                style: const TextStyle(color: ProtoColors.sky),
+              ),
+              if (chips.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                _chips(chips, long: true),
+                const SizedBox(height: 2),
+              ],
+              ProtoText(turn),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Panel derecho: una fila compacta por cada otro jugador del grupo.
+class PartyListPanel extends StatelessWidget {
+  const PartyListPanel({
+    super.key,
+    required this.battle,
+    required this.localId,
+    this.sprites,
+  });
+
+  final BattleState battle;
+  final String? localId;
+  final GameSprites? sprites;
+
+  @override
+  Widget build(BuildContext context) {
+    final others = [
+      for (final p in battle.party)
+        if (p.id != localId) p,
+    ];
+    final order = predictTurns(battle, 10);
+    return BattleBarPanel(
+      key: const ValueKey('party-list'),
+      padding: const EdgeInsets.all(4),
+      child: others.isEmpty
+          ? const Center(
+              child: Text('Solo', style: TextStyle(color: ProtoColors.dim)),
+            )
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final (i, p) in others.indexed) ...[
+                    if (i > 0) const SizedBox(height: 4),
+                    _MemberRow(
+                      player: p,
+                      current: battle.currentId == p.id,
+                      turnIndex: order.indexOf(p.id),
+                      sprites: sprites,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+class _MemberRow extends StatelessWidget {
+  const _MemberRow({
+    required this.player,
+    required this.current,
+    required this.turnIndex,
+    this.sprites,
+  });
+
+  final Combatant player;
+  final bool current;
+  final int turnIndex;
+  final GameSprites? sprites;
+
+  static const _avatar = Size(32, 40);
+
+  @override
+  Widget build(BuildContext context) {
+    final p = player;
+    final img = sprites?.hero(p.classId ?? '');
+    final chips = combatantChips(p);
+    final turn = current
+        ? hexSpan('#ffd166', '▶ SU TURNO')
+        : hexSpan(
+            '#7d8bc4',
+            !p.alive
+                ? ''
+                : turnIndex < 0
+                    ? '—'
+                    : 'Turno en $turnIndex');
+    return Opacity(
+      key: ValueKey('member-${p.id}'),
+      opacity: p.alive ? 1 : 0.5,
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: ProtoColors.input,
+          border: Border.all(
+            color: current ? ProtoColors.gold : ProtoColors.panelBorder,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: _avatar.width,
+              height: _avatar.height,
+              color: ProtoColors.bg,
+              alignment: Alignment.center,
+              child: img == null
+                  ? const SizedBox.shrink()
+                  : PixelSprite(img, scale: 2),
+            ),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ProtoText(
+                          '${protoEsc(p.name)} '
+                          '<span class="k">${_classLine(p)}</span>',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      ProtoText(turn),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _barRow(
+                            hpBar(p.hp, p.maxHp), '${p.hp}/${p.maxHp}',
+                            valueWidth: 60),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _barRow(mpBar(p.mp, p.maxMp),
+                            '${p.mp.floor()}/${p.maxMp}',
+                            valueWidth: 52),
+                      ),
+                    ],
+                  ),
+                  if (chips.isNotEmpty) ...[
+                    const SizedBox(height: 1),
+                    _chips(chips),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

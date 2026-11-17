@@ -1,99 +1,280 @@
 # Spec: Sonido (efectos chiptune)
 
-Fuente de verdad: prototipo `ecos-del-tiempo.html`, `sfxInit` y `beep`
-(líneas 1392-1395) y cada llamada a `beep(`:
+Fuente de verdad del **origen**: prototipo `ecos-del-tiempo.html`,
+`sfxInit` y `beep` (líneas 1392-1395) y cada llamada a `beep(`:
 - 1200: empieza tu turno (`myTurn` con un `B.bid:B.clock` nuevo);
 - 1231: cuenta regresiva del turno (`left ≤ 5`, una vez por segundo);
 - 1461: cinemática de ULT (`fxVisual`, `k:'ult'`);
 - 1469: `onNewFx` — números de daño/cura, destello (`flash`) y
   `¡NIVEL N!`.
 
+El prototipo hace sonar el mismo `beep` para todos los ataques. El
+dueño pidió **un sonido para cada ataque** y **un "clink" satisfactorio
+en cada crítico**: el diseño de abajo (§ "Diseño de sonido de combate")
+reemplaza los `beep` de los números de batalla por sonidos por
+habilidad / arma / elemento / enemigo. Los sonidos de turno, cuenta
+regresiva, nivel, destello y ULT siguen siendo los del prototipo.
+
 Implementación:
 
 | Pieza | Archivo |
 |---|---|
-| Catálogo (`Sfx`, `SfxTone`, `kSfxCatalog`) | `lib/core/audio/sfx_catalog.dart` |
+| Modelo de voz y efecto (`SfxTone`, `SfxDef`, `Waveform`) | `lib/core/audio/sfx_catalog.dart` |
+| Catálogo (`Sfx` ids, `kSfxCatalog`, recetas por habilidad / enemigo) | `lib/core/audio/sfx_catalog.dart`, `lib/core/audio/sfx_recipes.dart` |
 | Sintetizador a WAV PCM 16 bits | `lib/core/audio/wav_synth.dart` |
 | Servicio y reproductor (`SfxService`, `SfxPlayer`, `NoopSfxPlayer`) | `lib/core/audio/sfx_service.dart` |
 | Traducción de eventos de la sesión a sonidos | `lib/features/world/presentation/session_sfx.dart` |
 | Registro en el service locator | `lib/core/di/service_locator.dart` |
 
 Tests: `test/core/audio/wav_synth_test.dart`,
+`test/core/audio/sfx_catalog_test.dart`,
 `test/features/world/session_sfx_test.dart`.
 
-## `beep(f, d, type, vol)`
+## `beep(f, d, type, vol)` (prototipo)
 
 Un oscilador `type` (por defecto `square`) a `f` Hz con ganancia inicial
 `vol` (por defecto `0.05`) y una rampa exponencial hasta `0.0001` en `d`
 segundos; se corta en `d`. Varios `beep` encadenados con `setTimeout` son
-un mismo efecto con tonos desplazados.
+un mismo efecto con tonos desplazados. El puerto lo modela como una
+`SfxTone` con los parámetros nuevos en su valor por defecto.
 
-El puerto lo modela como un `Sfx` = lista de `SfxTone(frecuencia,
-duración, onda, volumen, retraso)`.
+## Sintetizador (`WavSynth`)
 
-## Catálogo
+Dart puro, sin plugins, **determinista** (el ruido sale de un LFSR con
+semilla fija, no de `Random`). Mezcla las voces (`SfxTone`) de un efecto
+en un buffer mono de 22050 Hz (configurable).
 
-| `Sfx` | Tonos (Hz, s, onda, vol, retraso) | Cuándo (prototipo) |
+Cada voz:
+
+| Parámetro | Por defecto | Qué hace |
 |---|---|---|
-| `myTurn` | 523 0.08 square 0.05 @0; 784 0.12 square 0.05 @0.09 | empieza tu turno (1200) |
-| `turnTick` | 1200 0.04 square 0.05 | cada segundo con ≤ 5 s de turno (1231) |
-| `ultimate` | 196 0.5 sawtooth 0.05 @0; 392 0.4 square 0.04 @0.3; 98 0.6 sawtooth 0.07 @1.15 (`ULT_DL`) | ULT (1461) |
-| `heal` | 880 0.08 square 0.05 | número verde `#7bed9f` (1469) |
-| `hurt` | 160 0.08 square 0.05 | número `#ff6b81`: daño normal a un jugador (1469) |
-| `hit` | 420 0.08 square 0.05 | cualquier otro número: daño a enemigos, crítico a un jugador, maná, estados (1469) |
-| `flash` | 220 0.3 sawtooth 0.04 | destello (área de jefe, dúo) (1469) |
-| `levelUp` | 660 0.1 square 0.05 @0; 990 0.15 square 0.05 @0.1 | texto `¡NIVEL N!` (1469) |
+| `frequency` | — | Hz. En `noise`, la frecuencia de reloj del LFSR (más alta = más brillante). |
+| `duration` | — | segundos que dura la voz |
+| `wave` | `square` | `square`, `pulse` (25 %), `sawtooth`, `triangle`, `sine`, `noise` |
+| `volume` | 0.05 | ganancia pico de la voz |
+| `delay` | 0 | segundos desde el inicio del efecto |
+| `endFrequency` | = `frequency` | barrido exponencial `f(t) = f0·(f1/f0)^(t/d)` (sube o baja) |
+| `attack` | 0 | subida lineal 0 → 1 (s) |
+| `hold` | 0 | meseta a volumen pleno después del ataque (s) |
+| `vibratoRate`, `vibratoDepth` | 0 | `f(t)·(1 + depth·sin(2π·rate·t))` |
+| `lowpass` | 0 (apagado) | filtro de un polo (Hz) sobre la onda: ruido "filtrado" |
+| `crush` | 0 (apagado) | bits del envolvente×onda cuantizado (sonido "4 bits") |
+| `seed` | 1 | semilla del LFSR (variantes de ruido) |
+
+Envolvente (ADSR simplificado: ataque, meseta, caída exponencial):
+
+```
+env(t) = t/attack                                   t < attack
+       = 1                                          t < attack + hold
+       = (0.0001/vol)^((t − attack − hold)/(d − attack − hold))   después
+muestra(t) = onda(fase(t)) × env(t) × vol
+```
+
+Con `attack = hold = 0` y frecuencia constante es exactamente el `beep`
+del prototipo (`fase = f·t`). Con barrido o vibrato la fase se acumula
+muestra a muestra. Ruido: LFSR de 15 bits estilo NES (`bit = b0 ⊕ b1`),
+avanza una vez por cada ciclo de la fase; salida ±1.
+
+Mezcla y nivel (`SfxDef`):
+- las voces se suman sin recortar;
+- si el efecto tiene `peak`, la mezcla se **normaliza** para que su pico
+  sea exactamente `peak` (nunca recorta; las voces son "recetas" y el
+  nivel final lo fija la categoría, ver § "Niveles");
+- recién ahí se recorta a `[-1, 1]` (sin `peak`, como el prototipo);
+- se escriben como PCM con signo de 16 bits little-endian
+  (`round(x × 32767)`) detrás de una cabecera RIFF/WAVE de 44 bytes
+  (`fmt ` PCM = 1, 1 canal, `byteRate = rate × 2`, `blockAlign = 2`).
+
+Largo = `max(retraso + duración)` del efecto. `SfxService` cachea los
+bytes de cada id.
+
+## Niveles
+
+Los picos se fijan por categoría (normalización) para que nada recorte
+y queden márgenes cuando varios suenan juntos:
+
+| Categoría | Pico |
+|---|---|
+| Interfaz (`myTurn`, `turnTick`, `levelUp`) | 0.28 |
+| Números del prototipo (`hit`, `hurt`, `heal`), `flash` | 0.30 |
+| Estados (aplicación y tic), curas, maná, ítems | 0.30 |
+| Arranque de acción (golpe/disparo/conjuro, firma de habilidad, enemigo) | 0.36 |
+| Impactos | 0.38 |
+| Golpe pesado de jefe, K.O. | 0.42 |
+| `crit.clink` (tiene que oírse sobre el impacto) | 0.45 |
+| `ultimate` | 0.45 |
+
+## Diseño de sonido de combate
+
+Ids de sonido = `String` (`Sfx.*` para los fijos, `skill.<id>` y
+`enemy.<tipo>` para las familias). "Ruido" = `noise` (LFSR); `a→b` =
+barrido; `+` = capas; `@t` = retraso.
+
+### Arranque por arma (ataque normal y debajo de las habilidades físicas)
+
+| Sonido | Receta | Armas |
+|---|---|---|
+| `swing.blade` | ruido 9 k→3 k Hz 0.12 s, ataque 20 ms, lowpass 6 k (silbido de hoja) + pulse 1400→700 0.05 | `espada`, `espada+escudo` |
+| `swing.heavy` | ruido 4 k→1.2 k 0.2 s, ataque 50 ms, lowpass 2.2 k + triangle 160→90 0.16 | `hacha`, `maza+escudo`, `martillo+escudo` |
+| `shot.bow` | triangle 330→240 0.14 vibrato 18 Hz (cuerda) + ruido 5 k→9 k 0.22 @0.02 lowpass 5 k (flecha) | `arco` |
+| `shot.rifle` | ruido 20 k 0.03 (fogonazo) + ruido 3 k→700 0.28 lowpass 2.5 k (eco) + square 140→55 0.10 | `rifle` |
+| `shot.staff` | square 520→1250 0.18 vibrato 22 Hz + triangle 1040→2500 0.16 | `báculo` |
+| `shot.tome` | pulse 300→900 0.2 crush 4 + sine 1200 0.18 vibrato 9 Hz | `tomo` |
+
+Sin arma conocida: `swing.blade`.
+
+### Impactos
+
+| Sonido | Receta | Cuándo |
+|---|---|---|
+| `impact.slash` | ruido 12 k 0.06 + square 900→280 0.06 | físico, arma de hoja |
+| `impact.blunt` | sine 150→45 0.2 + ruido 2.5 k 0.09 lowpass 1.2 k + triangle 90→40 0.14 | físico, arma pesada |
+| `impact.arrow` | ruido 7 k 0.04 + square 620→180 0.05 ("toc") | físico, arco |
+| `impact.bullet` | ruido 16 k 0.05 + triangle 1500→900 0.08 | físico, rifle |
+| `impact.arcane` | pulse 1200→380 0.14 crush 4 + ruido 8 k 0.05 | arcano (mágico sin estado), báculo/tomo |
+| `impact.fire` | ruido 2.6 k 0.28 lowpass 2.2 k ataque 10 ms + ruido 11 k 0.18 crush 3 (chisporroteo) | elemento Quemadura |
+| `impact.ice` | triangle 3136 0.3 + triangle 2349 0.34 @0.02 + ruido 14 k 0.05 (cristal) | elemento Congelación |
+| `impact.poison` | sine 520→260 0.07, 440→220 @0.06, 600→300 @0.12 (burbujas) + ruido 1.5 k 0.2 lowpass 700 | elemento Veneno |
+| `impact.holy` | sine 1047 + 1568 @0.02 + 2093 @0.04 con vibrato 7 Hz, 0.35 | elemento Sagrado |
+| `impact.hurt` | square 190→85 0.13 + ruido 3 k 0.08 lowpass 1.8 k | un jugador recibe daño |
+| `crit.clink` | sine 2093→2030 0.26 + sine 5267→5110 0.18 (parciales inarmónicos ×2.52) + triangle 3140→3050 0.12 muy suave, ataque 2 ms, + ruido 18 k 0.012 (transitorio) | **cada** golpe crítico, encima del impacto |
+
+Elemento de un golpe = el del efecto visual (`skillElement` de
+`fx_style.dart`): Sagrado si la habilidad es sagrada, si no el estado
+que aplica, si no arcano (mágica) o físico. Físico → impacto según el
+arma del atacante (hoja/pesada/arco/rifle/arcano). Aturdido → impacto
+físico del arma (el mareo lo pone el sonido del estado).
+
+### Firma de cada habilidad (`skill.<id>`)
+
+Una por cada id de `kSkills` (cubierto por test). Se toca al arrancar la
+acción; si la habilidad es física, encima del arranque del arma. Cada
+una es una variante de la base de su elemento con su propia altura y
+largo, para que se reconozca:
+
+| Familia (base) | Receta base | Habilidades (altura × / largo ×) |
+|---|---|---|
+| Corte | ruido barrido 10 k→3 k + pulse descendente | `giro` (dos cortes, 1.0/1.0), `embestida` (pasos + corte 0.8/1.2), `estocada` (estocada aguda 1.4/0.6), `tajoT` (+ warble temporal 0.7/1.6), `sagrado` (+ campana sagrada 1.2/1.0), `golpeEscudo` (+ "clank" de escudo 1.0/0.8) |
+| Corte elemental | corte + capa del elemento | `ignea` (+ fuego), `tajoCarmesi` (+ fuego grave, 0.85), `corteGlacial` (+ cristal), `tajoOcaso` (+ burbujas graves, 0.7), `hendir` (+ burbujas) |
+| Pesado | triangle grave + retumbo de ruido lowpass | `sismo` (retumbo largo 1.0/1.4), `temblor` (temblor con vibrato 0.9/1.2), `aplastar` (golpe seco 1.1/0.8), `juicio` (+ campanas sagradas 1.0/1.3), `erupcion` (+ fuego, 0.8/1.3), `vendaval` (viento helado: ruido largo + cristal 1.0/1.5) |
+| Flecha / disparo | silbido + cola | `rafaga` (3 silbidos cortos), `lluvia` (5 silbidos descendentes), `certero` (silbido agudo y tenso), `aturdir` (+ warble), `rayoF` (+ zap eléctrico), `venenosa` (+ burbujas), `saeta` (+ cristal), `ceroAbs` (+ cristal grave), `sombra` (silbido grave + pulso oscuro), `flechaSolar` (+ campana), `metralla` (ráfaga de 4 chasquidos + burbujas), `perfora` (silbido largo + estampido) |
+| Fuego | ruido que sube (whoosh) + sawtooth grave | `chispa` (corto, agudo 1.4/0.6), `bola` (1.0/1.0), `llamarada` (1.0/1.4 + chisporroteo), `infierno` (0.7/1.8, dos capas), `consagrar` (fuego + campana sagrada) |
+| Hielo | campanitas triangle + barrido agudo | `lanzaH` (1.0/1.0), `ventisca` (viento + campanas, 1.0/1.6) |
+| Veneno | burbujas square + ruido lowpass | `dardo` (1.2/0.7), `niebla` (0.9/1.4), `plaga` (0.7/1.8) |
+| Arcano / tiempo | pulse con vibrato + crush | `detener` (reloj que se frena: tics + barrido descendente), `descarga` (zap eléctrico: ruido 20 k + square 2 k↔1.5 k) |
+| Sagrado | sines en quinta con vibrato | `lanzaLuz` (barrido ascendente + campana) |
+| Cura | arpegio triangle ascendente | `cura` (4 notas), `curaM` (6 notas, una 8va arriba al final), `sanar` (3 notas suaves), `bendicion` (arpegio + campana) |
+| Mejora / escudo | arpegio square / barrido + anillo metálico | `prisa` (arpegio rápido ascendente ×2), `fortaleza` (dos notas graves + anillo), `proteccion` (barrido + acorde sagrado), `escudoFe` (anillo de escudo + campana), `aura` (acorde sostenido con vibrato lento) |
+| Provocar | sawtooth 150 Hz con vibrato 30 Hz (zumbido "grito") + square 300 | `provocar` |
+
+### Otros sonidos
+
+| Sonido | Receta | Cuándo |
+|---|---|---|
+| `heal.sparkle` | triangle 1319, 1568, 2093, 2637 de 0.08 cada 0.04 | cada jugador curado por una acción |
+| `mana.up` | sine 600→1200 0.2 vibrato 8 Hz + triangle 1800 @0.1 | `+N MP` |
+| `item.potion` | sine 300→520 0.07, 280→500 @0.09 (tragos) + burbuja | poción |
+| `item.ether` | sine 900→1800 0.22 vibrato + triangle 2400 @0.12 | éter |
+| `defend` | square 220 0.05 + ruido 8 k 0.05 + triangle 1500 0.22 (anillo) | defender |
+| `dual.cast` | acorde square 392/494/587 → una 8va arriba, 0.35 | dúo (junto al `flash`) |
+| `status.burn` | ruido 9 k 0.22 crush 3 + sawtooth 220→330 0.12 | aplica Quemadura |
+| `status.poison` | 3 burbujas square descendentes | aplica Veneno |
+| `status.freeze` | triangle 2637, 3520 @0.03, 4186 @0.06 | aplica Congelación |
+| `status.stun` | triangle 1200→700 0.4 vibrato 9 Hz (mareo) | aplica Aturdido |
+| `status.holy` | sine 1568 + 2349 0.3 | aplica Sagrado |
+| `status.regen` | triangle 784→1175 0.25 | aplica Regeneración |
+| `tick.burn` | ruido 3 k 0.16 lowpass 2 k + ruido 10 k 0.1 crush 3 | Quemadura al empezar el turno |
+| `tick.poison` | 2 burbujas sine graves | Veneno al empezar el turno |
+| `tick.holy` | sine 1319 0.18 | Sagrado al empezar el turno |
+| `tick.regen` | triangle 1047, 1319 @0.05 | Regeneración al empezar el turno |
+| `skip.freeze` | ruido 16 k 0.12 + triangle 2637, 3520, 1760 cortos escalonados (hielo que se quiebra) | `TurnSkippedEvent` por Congelación |
+| `skip.stun` | triangle 1000↔ vibrato 10 Hz 0.45 + square 1500 tics | `TurnSkippedEvent` por Aturdido |
+| `ko.enemy` | ruido 6 k→400 0.35 lowpass 3 k + square 400→80 0.3 | `KnockedOutEvent` de un enemigo |
+| `ko.player` | square 392, 330, 262, 196 de 0.12 en cadena | `KnockedOutEvent` de un jugador |
+| `revive` | triangle 262→1047 0.3 + arpegio corto | `RevivedEvent` |
+| `delay` | sawtooth 800→200 0.35 vibrato 6 Hz | `DelayedEvent` (una vez por acción) |
+
+### Enemigos (`enemy.<tipo>`, uno por id de `kEnemies`, cubierto por test)
+
+| Sonido | Receta |
+|---|---|
+| `enemy.slime` | triangle 180→420 0.12 + ruido 1.5 k 0.1 lowpass 800 (húmedo) + triangle 420→160 @0.1 (squish) |
+| `enemy.bat` | square 2400→3400 0.12 vibrato 40 Hz + square 2800→3800 @0.1 (chillido) |
+| `enemy.golem` | sine 70→40 0.3 + ruido 1.2 k 0.2 lowpass 400 + triangle 110→55 crush 3 (pisotón) |
+| `enemy.ghost` | sine 520→340 0.6 ataque 0.15 vibrato 6 Hz + triangle 780→510 (lamento) |
+| `enemy.reyLimo` | squish del limo una 5ta abajo, más largo, con capa grave |
+| `enemy.golemReloj` | pisotón del gólem + 4 tics de reloj square 2 k |
+| `enemy.devorador` | sawtooth 80→50 0.6 vibrato + ruido 800 lowpass (rugido) + sine 45 |
+| `enemy.generic` | ruido 5 k→2 k 0.12 + square 300→150 (tipo desconocido) |
+| `enemy.heavy` | sine 60→30 0.4 + ruido 2 k 0.3 lowpass 600 (golpe brutal, encima del sonido del enemigo) |
 
 ## Qué evento suena (`SessionSfx`)
 
 Un oyente fuera del motor (el motor no sabe de sonido) escucha
-`SessionController.events` y las vistas nuevas:
-- `BattleStepEvent`: por cada `BattleEvent`, en orden, siguiendo la
-  acción en curso del paso (`ActionEvent`; `TurnStartedEvent` la borra),
-  igual que `mapBattleEvents` decide el color del número:
-  - `HealEvent` dentro de una acción: de vida → `heal` (número
-    `#7bed9f`); de maná → `hit` (`+N MP` `#74b9ff`);
-  - `HealEvent` sin acción (Regeneración al empezar el turno, línea
-    736): de vida → `hit` (número `#55efc4`); de maná → nada (el
-    prototipo no lo dibuja);
-  - `DamageEvent` de estado (`fromStatus`): `hit` si el estado que manda
-    es Quemadura (número naranja), si no `heal` (número verde: el
-    prototipo pinta así el daño de Veneno/Sagrado, línea 737, y por eso
-    suena a 880 Hz);
-  - `DamageEvent` a un jugador, no crítico → `hurt`;
-  - cualquier otro `DamageEvent` → `hit`;
-  - `UltimateUsedEvent` → `ultimate`;
-  - `ActionEvent` de un dúo o del Colapso Temporal de un jefe
-    (`enemyArea`) → `flash` (los `addFx({k:'flash'})` de las líneas 781
-    y 853).
-  Como cada `addFx` del prototipo, todos los números de un paso suenan
-  (el reproductor decide si se superponen).
+`SessionController.events` y las vistas nuevas. De la vista guarda el
+último `BattleState` (arma de cada jugador, tipo de cada enemigo) — el
+motor no cambia. Cada sonido de batalla es un `SfxCue(id, delayMs)`:
+`SfxService.play(id, delayMs:)` lo programa con un `Timer`.
+
+### Tiempos (los de `battle_fx.dart`)
+
+- Retraso del impacto en un objetivo (`hitDelay`): proyectil 280 ms
+  (ataque normal a distancia a un objetivo; habilidad que hace daño y es
+  mágica o de un arma a distancia), dúo 300 ms, ULT 1150 ms, si no 0.
+- Cuerpo a cuerpo (sin proyectil): el impacto suena 50 ms después del
+  arranque, para que el silbido se oiga antes del golpe.
+- Varios objetivos: el impacto suena en los **3 primeros** con 70 ms de
+  separación; los demás no suenan (sin cacofonía). Los clinks de crítico
+  no tienen tope: uno por cada golpe crítico, en el tiempo de su impacto
+  (con la misma separación por objetivo).
+- Estados aplicados: una vez por estado y por acción, 90 ms después del
+  impacto en su objetivo.
+- K.O.: 100 ms después del impacto en ese objetivo.
+- Tope global: 12 sonidos por paso (el pool de voces).
+
+### Mapeo
+
+- `TurnStartedEvent` cierra la acción en curso.
+- `ActionEvent` (arranque, @0):
+  - `attack`: arranque del arma del actor;
+  - `skill`: física → arranque del arma + `skill.<id>`; el resto →
+    `skill.<id>`;
+  - `ultimate`: **nada** (lo cubre `UltimateUsedEvent`; gancho
+    `ultimateCues` para que el diseño de ULT con cinemáticas lo
+    reemplace más adelante);
+  - `dual`: `flash` (prototipo) + `dual.cast`;
+  - `potion` → `item.potion`; `ether` → `item.ether`; `defend` →
+    `defend`;
+  - `enemyAttack`: `enemy.<tipo>`; `enemyHeavy`: `enemy.<tipo>` +
+    `enemy.heavy` @80 ms; `enemyArea`: `flash` (prototipo) +
+    `enemy.<tipo>`.
+- `DamageEvent`:
+  - de estado (`fromStatus`, sin acción): `tick.<statusSource>` (una vez
+    por estado y por paso);
+  - dentro de una ULT: como el prototipo (`hurt` a un jugador no
+    crítico, si no `hit`), y si es crítico además `crit.clink` @1150 ms;
+  - a un jugador: `impact.hurt`;
+  - a un enemigo: impacto del elemento (§ "Impactos"); dentro de
+    Aura Restauradora (luz de la rama creyente) → `impact.holy`;
+  - sin acción y sin estado: `hit` (prototipo);
+  - crítico: además `crit.clink` en el tiempo del impacto.
+- `HealEvent`: maná dentro de una acción → `mana.up`; maná sin acción →
+  nada; vida sin acción (Regeneración) → `tick.regen`; vida dentro de
+  una ULT (Baluarte) → `heal` (prototipo); vida dentro de una acción →
+  `heal.sparkle` (@120 ms; poción @200 ms, después del trago), tope 3
+  con separación.
+- `StatusAppliedEvent` → `status.<kind>`.
+- `TurnSkippedEvent` → `skip.freeze` / `skip.stun`.
+- `DelayedEvent` → `delay`.
+- `KnockedOutEvent` → `ko.enemy` / `ko.player`.
+- `RevivedEvent` → `revive`.
+- `UltimateUsedEvent` → `ultimate` (prototipo, sin cambios).
 - `LevelUpEvent` → `levelUp` (una vez por evento).
 - Vista: `myTurn` cuando `view.myTurn` y cambió `(battle.id,
   state.clock)`; `turnTick` cuando, con `myTurn`, `ceil(30 − turnTime)`
   es `≤ 5` y distinto del último.
 
-Igual que en `onNewFx`, el sonido de un número suena al llegar el evento
-aunque la animación espere al proyectil (`f.dl`). El chat, los pasos y
-los menús no suenan (el prototipo tampoco).
-
-## Sintetizador (`WavSynth`)
-
-Dart puro, sin plugins. Mezcla los tonos de un `Sfx` en un buffer mono
-de 22050 Hz (configurable):
-
-```
-muestra(t) = onda(2π·f·t) × vol × (0.0001 / vol)^(t / d)   para 0 ≤ t < d
-onda: square = signo(sin), sawtooth = 2·frac(f·t) − 1,
-      triangle = 1 − 4·|frac(f·t) − 0.5|, sine = sin
-```
-
-Las muestras de tonos superpuestos se suman y se recortan a `[-1, 1]`;
-se escriben como PCM con signo de 16 bits little-endian
-(`round(x × 32767)`) detrás de una cabecera RIFF/WAVE de 44 bytes
-(`fmt ` PCM = 1, 1 canal, `byteRate = rate × 2`, `blockAlign = 2`).
-Largo = `max(retraso + duración)` del efecto. `SfxService` cachea los
-bytes de cada `Sfx`.
+El chat, los pasos y los menús no suenan (el prototipo tampoco).
 
 ## Reproducción
 
@@ -113,3 +294,11 @@ paquete `audioplayers`):
 
 `sfxInit` (crear el `AudioContext` con el primer clic) no hace falta en
 escritorio.
+
+## Muestras
+
+Para escuchar una muestra representativa sin abrir el juego:
+`SFX_SAMPLES_DIR=<carpeta> flutter test test/core/audio/sfx_catalog_test.dart`
+escribe ahí un WAV por sonido de la lista `_samples` del test (nombres
+descriptivos, p. ej. `crit_clink.wav`, `enemy_bat_screech.wav`). Sin la
+variable, el test no escribe nada.

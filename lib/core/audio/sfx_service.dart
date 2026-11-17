@@ -18,29 +18,45 @@ class NoopSfxPlayer implements SfxPlayer {
   Future<void> play(Uint8List wav) async {}
 }
 
-/// Efectos de sonido del juego: sintetiza cada [Sfx] del catálogo una
-/// sola vez (caché) y lo manda al [SfxPlayer].
+/// Un sonido programado: id del catálogo y retraso en ms desde que llega
+/// el evento (para alinearlo con el efecto visual).
+typedef SfxCue = ({String id, int delayMs});
+
+/// Efectos de sonido del juego: sintetiza cada id del catálogo una sola
+/// vez (caché) y lo manda al [SfxPlayer], ahora o después de un retraso.
 class SfxService {
   SfxService({
     SfxPlayer player = const NoopSfxPlayer(),
     this.synth = const WavSynth(),
-    this.catalog = kSfxCatalog,
-  }) : _player = player;
+    Map<String, SfxDef>? catalog,
+  })  : _player = player,
+        catalog = catalog ?? kSfxCatalog;
 
   final SfxPlayer _player;
   final WavSynth synth;
-  final Map<Sfx, List<SfxTone>> catalog;
-  final _cache = <Sfx, Uint8List>{};
+  final Map<String, SfxDef> catalog;
+  final _cache = <String, Uint8List>{};
 
   /// Apagado: [play] no hace nada.
   bool muted = false;
 
-  /// Los bytes WAV de [sfx] (sintetizados la primera vez).
-  Uint8List wav(Sfx sfx) =>
-      _cache[sfx] ??= synth.render(catalog[sfx] ?? const []);
+  /// Los bytes WAV de [id] (sintetizados la primera vez). Un id que no
+  /// está en el catálogo es un WAV vacío.
+  Uint8List wav(String id) => _cache[id] ??=
+      synth.renderDef(catalog[id] ?? const SfxDef([]));
 
-  void play(Sfx sfx) {
-    if (muted) return;
-    unawaited(_player.play(wav(sfx)).catchError((Object _) {}));
+  /// Toca [id] ahora o dentro de [delayMs] milisegundos.
+  void play(String id, {int delayMs = 0}) {
+    if (muted || !catalog.containsKey(id)) return;
+    if (delayMs <= 0) {
+      _playNow(id);
+    } else {
+      Timer(Duration(milliseconds: delayMs), () {
+        if (!muted) _playNow(id);
+      });
+    }
   }
+
+  void _playNow(String id) =>
+      unawaited(_player.play(wav(id)).catchError((Object _) {}));
 }
