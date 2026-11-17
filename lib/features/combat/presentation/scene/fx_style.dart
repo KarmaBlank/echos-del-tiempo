@@ -96,6 +96,17 @@ const Map<String, Color> kSkillColors = {
   'ceroAbs': Color(0xFF74B9FF),
   'flechaSolar': Color(0xFFFDCB6E),
   'perfora': Color(0xFFFF4757),
+  // loot v2: lanza, varita, ballesta y dagas.
+  'perforar': Color(0xFFDFE6E9),
+  'barrido': Color(0xFFFAB1A0),
+  'empalar': Color(0xFFFF6B81),
+  'misil': Color(0xFFA29BFE),
+  'escarchaFugaz': Color(0xFF81ECEC),
+  'rayoArcano': Color(0xFFE84393),
+  'virote': Color(0xFFB2BEC3),
+  'viroteIgneo': Color(0xFFFF7B29),
+  'tajoGemelo': Color(0xFFDFE6E9),
+  'abanico': Color(0xFF7BED9F),
   // ULTS
   'ult_espada': Color(0xFFFFFFFF),
   'ult_hacha': Color(0xFFE1B12C),
@@ -106,6 +117,10 @@ const Map<String, Color> kSkillColors = {
   'ult_espada_escudo': Color(0xFF74B9FF),
   'ult_maza_escudo': Color(0xFFFFEAA7),
   'ult_martillo_escudo': Color(0xFFFFD166),
+  'ult_lanza': Color(0xFFFF6B81),
+  'ult_varita': Color(0xFFE84393),
+  'ult_ballesta': Color(0xFFFF9F43),
+  'ult_dagas': Color(0xFF55EFC4),
 };
 
 /// Habilidades con `el` propio en el prototipo (todas sagradas).
@@ -145,14 +160,64 @@ FxElement skillElement(SkillDef sk) {
   return sk.kind == SkillKind.magical ? FxElement.arcane : FxElement.phys;
 }
 
-/// Todas las habilidades y ULT por `SkillDef.id`.
+/// Todas las habilidades y ULT por `SkillDef.id` (las ULT de los tipos
+/// de loot v2 incluidas: `kAllUltimates`).
 final Map<String, SkillDef> kSkillsById = {
   for (final s in kSkills.values) s.id: s,
-  for (final s in kUltimates.values) s.id: s,
+  for (final s in kAllUltimates.values) s.id: s,
 };
 
 /// Tipos de arma a distancia (`ranged(p)`): sus golpes llevan proyectil.
-const Set<String> kRangedWeaponTypes = {'arco', 'rifle', 'báculo', 'tomo'};
+const Set<String> kRangedWeaponTypes = {
+  'arco',
+  'rifle',
+  'báculo',
+  'tomo',
+  'varita',
+  'ballesta',
+};
+
+/// Cómo se dibuja un proyectil (docs/specs/battle_presentation.md
+/// § "Catálogo de efectos").
+enum ProjStyle {
+  /// Orbe con estela del color de la habilidad (elemental).
+  orb,
+
+  /// Trazo blanco de 7 px (flecha / bala: físico).
+  arrow,
+
+  /// Virote de ballesta: trazo grueso con punta naranja y plumas.
+  bolt,
+
+  /// Misil arcano de varita: rombo violeta que zigzaguea con chispas.
+  missile,
+}
+
+/// Cómo se dibuja el tajo sobre el golpeado.
+enum SlashStyle {
+  /// La X del prototipo.
+  cross,
+
+  /// Lanza: estocada horizontal que atraviesa, con punta.
+  thrust,
+
+  /// Dagas: dos cortes paralelos rápidos.
+  twin,
+}
+
+/// Proyectil del arma [weaponType] para un golpe de elemento [el].
+ProjStyle projStyleFor(String? weaponType, FxElement el) => switch (weaponType) {
+      'ballesta' => ProjStyle.bolt,
+      'varita' => ProjStyle.missile,
+      _ => el == FxElement.phys ? ProjStyle.arrow : ProjStyle.orb,
+    };
+
+/// Tajo del arma [weaponType] (del atacante) sobre el golpeado.
+SlashStyle slashStyleFor(String? weaponType) => switch (weaponType) {
+      'lanza' => SlashStyle.thrust,
+      'dagas' => SlashStyle.twin,
+      _ => SlashStyle.cross,
+    };
 
 /// Forma de una partícula (`k` de `ELFX`).
 enum ParticleShape { square, shard, bubble, ray, plus }

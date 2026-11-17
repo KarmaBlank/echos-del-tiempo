@@ -152,6 +152,7 @@ class BattleFx {
     this.ghost = false,
     this.up = false,
     this.slot = 0,
+    this.weapon,
   });
 
   final FxKind kind;
@@ -187,6 +188,10 @@ class BattleFx {
 
   /// `tag`: lugar en la pila de carteles del actor en el paso (0, 1...).
   final int slot;
+
+  /// Tipo de arma de quien lanza el `proj` o da el `slash` (estilo del
+  /// dibujo: `projStyleFor` / `slashStyleFor`); `null` = el del prototipo.
+  final String? weapon;
 
   /// Duración visible (ms), contada desde que empieza.
   int get durationMs => switch (kind) {
@@ -419,7 +424,13 @@ List<BattleFx> mapBattleEvents(
   int proj(String from, String to, Color color, FxElement el) {
     final a = position(from), b = position(to);
     out.add(BattleFx(FxKind.proj,
-        x: a.dx, y: a.dy - 10, tx: b.dx, ty: b.dy - 10, color: color, el: el));
+        x: a.dx,
+        y: a.dy - 10,
+        tx: b.dx,
+        ty: b.dy - 10,
+        color: color,
+        el: el,
+        weapon: state.byId(from)?.weaponType));
     return BattleFx.projMs;
   }
 
@@ -938,7 +949,8 @@ List<BattleFx> mapBattleEvents(
         color: e.vulnerable ? breakColor : color,
         el: el,
         delayMs: dl,
-        who: id));
+        who: id,
+        weapon: a?.actor?.weaponType));
   }
 
   void heal(HealEvent e) {
@@ -1059,7 +1071,7 @@ List<BattleFx> mapBattleEvents(
         startAction(e);
       case UltimateUsedEvent(:final actorId, :final name):
         final c = state.byId(actorId);
-        final sk = kUltimates[c?.weaponType];
+        final sk = kAllUltimates[c?.weaponType];
         final p = position(actorId);
         ultIndex = out.length;
         out.add(BattleFx(FxKind.ult,

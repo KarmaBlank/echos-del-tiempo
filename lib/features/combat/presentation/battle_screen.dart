@@ -280,7 +280,7 @@ class BattleViewState extends State<BattleView>
       ];
     }
     final tg = target;
-    final ult = kUltimates[cur.weaponType];
+    final ult = kAllUltimates[cur.weaponType];
     final allies = b.party.where((q) => q.alive && q.id != cur.id);
     return [
       _Option(

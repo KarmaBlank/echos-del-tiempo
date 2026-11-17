@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
-/// Estilo visual de cada ULT (uno por `SkillDef.id` de `kUltimates`).
+/// Estilo visual de cada ULT (uno por `SkillDef.id` de `kAllUltimates`).
 enum UltStyle {
   finalSlash,
   cataclysm,
@@ -12,6 +12,12 @@ enum UltStyle {
   bulwark,
   judgment,
   skyHammer,
+
+  // Tipos de arma de loot v2 (`kNewUltimates`).
+  spearRain,
+  arcaneStorm,
+  volley,
+  thousandCuts,
 
   // ULT enemigas (docs/specs/break_and_enemy_ults.md § 2).
   acidFlood,
@@ -196,6 +202,44 @@ const Map<String, UltScript> kUltScripts = {
     impactMs: 1300,
     hitStopMs: 150,
     shake: 14,
+    focus: UltFocus.single,
+  ),
+  // ---- loot v2 (`kNewUltimates`) ----
+  'ult_lanza': UltScript(
+    style: UltStyle.spearRain,
+    buildMs: 800,
+    releaseMs: 1100,
+    impactMs: 1300,
+    staggerMs: 80,
+    hitStopMs: 90,
+    shake: 10,
+  ),
+  'ult_varita': UltScript(
+    style: UltStyle.arcaneStorm,
+    buildMs: 800,
+    releaseMs: 1200,
+    impactMs: 1350,
+    staggerMs: 60,
+    hitStopMs: 90,
+    shake: 9,
+  ),
+  'ult_ballesta': UltScript(
+    style: UltStyle.volley,
+    buildMs: 900,
+    releaseMs: 900,
+    impactMs: 1300,
+    hitStopMs: 150,
+    shake: 13,
+    focus: UltFocus.line,
+  ),
+  'ult_dagas': UltScript(
+    style: UltStyle.thousandCuts,
+    buildMs: 700,
+    releaseMs: 1100,
+    impactMs: 1500,
+    preHitsMs: [950, 1030, 1110, 1190, 1270, 1350, 1420],
+    hitStopMs: 130,
+    shake: 11,
     focus: UltFocus.single,
   ),
 };

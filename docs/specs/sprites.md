@@ -162,6 +162,26 @@ prototipo (pantalla 480×288, tile 16 px), con `(x, y)` = pies del actor.
   - `paladin` (siempre) escudo: `#2c3e50` `(-10,-13,6,9)`, `#ecf0f1`
     `(-9,-12,4,7)`, cruz `#d4af37` `(-8,-11,2,5)` y `(-9,-9,4,1)`.
   - `tirador`: arma `#636e72` `(5,-8,6,2)` y `(5,-7,2,3)`.
+
+  **Loot v2** (cualquier clase equipa cualquier arma): el arma se elige
+  por **tipo** (`WeaponOverlay`, `lib/features/combat/presentation/
+  weapon_overlay.dart`, la misma en el mapa y en batalla). Los tipos del
+  prototipo usan el arte de la clase que los traía (`espada`/`hacha` →
+  espada, `báculo`/`tomo` → vara, `arco`/`rifle` → arma de tirador,
+  `martillo+escudo`, `maza+escudo`, `espada+escudo` → los de paladín con
+  escudo); sin tipo, el de la clase. Tipos nuevos:
+  - `lanza`: asta `#8a5a2b` `(6,-20,1,21)`, punta `#dfe6e9` `(6,-25,1,5)`
+    y `(5,-23,3,2)` con brillo blanco `(6,-24)`, borla `#d63031`
+    `(5,-19,3,1)` y `(5,-18,1,2)`.
+  - `dagas`: una en cada mano — atrás hoja `#b2bec3` `(-8,-12,1,4)` y
+    guarda `#6c5ce7` `(-9,-8,3,1)`; adelante hoja `#dfe6e9` `(6,-12,1,5)`,
+    guarda `#6c5ce7` `(5,-7,3,1)`, mango `#2d3436` `(6,-6,1,2)`.
+  - `varita`: vara `#5a3a1a` `(6,-11,1,7)`, virola `#ffd166` `(5,-12,3,1)`,
+    gema `#a29bfe` `(5,-15,3,3)` con centro `#e84393`, destello blanco
+    `(8,-16)`.
+  - `ballesta`: culata `#6b4423` `(3,-9,8,2)` y `(3,-7,2,2)`, arco
+    `#95a5a6` `(11,-13,1,10)` con puntas `#636e72`, virote `#dfe6e9`
+    `(8,-10,6,1)` con punta `#ff7b29`.
 - **Etiquetas**: nombre en `y - 22`; marcador de turno (triángulo
   `#ffd166`) en `y - 36 + sin(t / 130) * 2`.
 

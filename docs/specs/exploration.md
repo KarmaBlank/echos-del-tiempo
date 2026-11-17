@@ -196,6 +196,8 @@ panel de preparación en vez de cerrar.
 | Enter | fuera de batalla y resultado (con el chat visible) | enfoca el campo de chat |
 | Enter / Esc | escribiendo en el chat | manda el mensaje / sale sin mandar; el foco vuelve al juego |
 | E / Espacio | campo, a < 26 px de un sello | `ActivateSealAction` |
+| E / Espacio | lobby o campo, sin otro aviso a mano, a ≤ 24 px de loot dibujado | `PickUpAction` del más cercano (`MapGame.tryPickUp`, se lee del teclado en cada frame: solo el flanco de bajada) |
+| Alt (mantener) | lobby o campo | muestra también el loot que el filtro oculta (etiqueta a media opacidad; se puede levantar con E) |
 | C | fuera de batalla | abre/cierra el panel de personaje |
 | Esc | con panel | cierra el panel (salvo las reglas de arriba) |
 | Y / N | lobby, votación pendiente | `VoteMissionAction(true/false)` |
@@ -281,6 +283,9 @@ enemigos del campo (el jugador local se dibuja en su posición exacta).
    - en campo / subida de nivel: enemigos vivos del campo (`drawEnemy`
      con el primer tipo del grupo) con `*ÉLITE` (`y−34`), `!` de aggro
      (`y−22 + sin(t/90)·1.5`, rojo, 9 px) y `JEFE` (`y−48`, 7 px).
+   - debajo de todas las entidades, después de los tiles: el **loot del
+     piso** (§ "Loot en el piso"); encima de todas: los haces de los
+     Legendarios y las etiquetas del loot.
 6. Fin del traslado. Los carteles en pantalla del prototipo (`[E] ...`,
    subida de nivel, barrera abierta), objetivos y minimapa son overlays
    Flutter del HUD (abajo).
@@ -352,6 +357,40 @@ en código.
   `sin(t/300 + id)·1.5`; el destello `✦` del prototipo es un rombo de
   3 px `#ffd166` con alfa `0.5 + 0.3·sin(t/180)`.
 
+### Loot en el piso (loot.md § 4, § 19.6)
+
+`MapGame` dibuja `session.groundFor(local)` (lo suyo + lo compartido) en
+lobby, campo y subida de nivel (`map/loot_painter.dart`):
+- **Qué**: lo que el filtro del jugador local muestra
+  (`engine.lootVerdict`); con **Alt** también lo oculto (a 45 % el ícono,
+  50 % la etiqueta).
+- **Ícono** (~9×6 px, tirado en diagonal) por tipo de arma (espada, hacha,
+  maza, martillo, báculo, tomo, arco, rifle, lanza, dagas, varita,
+  ballesta; las de escudo con el escudo al lado) o por pila (poción
+  roja/azul, Esquirla celeste, Cristal azul, Prisma triangular con tres
+  colores). Debajo, un **brillo** elíptico 16×6 del color de la rareza
+  (alfa 0.12 Común … 0.5 Legendario, late `sin(t/260)`); Épicos y
+  Legendarios con destello 1×3 cada 900 ms.
+- **Etiqueta** encima (centrada, 12 px sobre el objeto): texto del nombre
+  (`ItemRules.displayName`; pilas `N Material`) con el color del filtro
+  (o el de la rareza), fondo del filtro (o `#000000b3`) y borde del
+  filtro (sin borde si no trae); tamaño `round(5 + (Tamaño − 18)/13.5)`
+  px virtuales (18 → 5, 32 → 6, 45 → 7). Las etiquetas que se pisan se
+  apilan hacia arriba (de abajo hacia arriba por `y`) y no se salen de la
+  pantalla por los costados.
+- **Haz de luz** de los Legendarios: columna naranja `#ff8c28` de 9×90 px
+  con degradé, núcleo crema y motas que suben; los primeros 1.5 s después
+  de aparecer, más ancho y alto con un anillo que se cierra. Si un
+  Legendario fue directo al inventario (`groundLoot = false`), el haz sale
+  del jugador local durante 2.6 s.
+- **Levantar**: caminando encima (el host levanta lo propio y visible a
+  < 14 px, `SessionEngine.pickupRange`) o con E / Espacio a ≤ 24 px
+  (`SessionEngine.pickReach`) sin otro aviso; el HUD muestra
+  `[E] Recoger <nombre>`.
+- `SessionEngine.groundLoot`: con `false` (hoy) el loot visible va directo
+  al inventario y al piso solo cae lo oculto o lo que no entra; la UI
+  funciona igual en los dos casos.
+
 ## HUD (overlays Flutter sobre el `GameWidget`)
 
 Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
@@ -390,6 +429,25 @@ Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
 - **Votación** (arriba al centro, en el lobby): `VotePanel`, ver
   docs/specs/panels.md § "Votación".
 - **Subida de nivel**: `¡SUBIDA DE NIVEL!` + `Esperando a: nombres`.
+- **Registro de loot** (encima del chat, `hud/loot_feed.dart`): las
+  últimas 4 líneas `Ana encontró: <objeto>` (prefijo gris, objeto en el
+  color de su rareza; materiales `#78e6dc`), de cualquier jugador, solo
+  lo que el filtro de ESE jugador muestra; `A le dio a B: <objeto>` al
+  dar. Cada línea dura 14 s y se desvanece el último.
+- **Avisos de loot** (abajo al centro, encima del aviso de `[E]`): lo que
+  el jugador local levanta (`+ <objeto>`), lo que le entra directo al
+  inventario, lo que le dan (`Te dio Ana:`) y cada Legendario propio
+  (`¡LEGENDARIO!` en naranja, borde naranja de 3 px, 5 s). Estilo del
+  filtro: fondo (o `#000000cc`), borde, color del texto (o el de la
+  rareza) y tamaño `round(6 + Tamaño/6)` px de pantalla (18 → 9, 45 →
+  14). Duran 3 s, 3 a la vez como máximo. El registro vive mientras la
+  pantalla del juego vive (también en batalla: el loot de una pelea llega
+  con su fin).
+- **Minimapa**: además, el ícono del filtro (`Icono forma color`) de cada
+  objeto visible del piso (círculo, cuadrado, triángulo, diamante o
+  estrella de 6 px con contorno negro; blanco `#ffffff`, rojo `#ff4757`,
+  verde `#7bed9f`, azul `#4b7bec`, amarillo `#ffd166`, naranja
+  `#ff8c28`, violeta `#be6eff`, celeste `#48dbfb`).
 
 ## Paneles
 

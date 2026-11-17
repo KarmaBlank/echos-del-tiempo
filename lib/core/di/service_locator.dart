@@ -53,6 +53,9 @@ void registerSharedDependencies() {
     () => SessionEngine(
       battles: sl<BattleEngine>(),
       progression: sl<ProgressionRules>(),
+      // Los drops caen al piso por jugador y se levantan caminando o con
+      // E (docs/specs/loot.md, exploration.md § "Loot en el piso").
+      groundLoot: true,
     ),
   );
   // Perfil en disco en escritorio; en memoria donde todavía no hay una

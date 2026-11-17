@@ -78,6 +78,23 @@ const _samples = {
   'enemy_golemReloj_hit.wav': 'enemy.hit.golemReloj',
   'enemy_devorador_hit.wav': 'enemy.hit.devorador',
   'enemy_heavy.wav': Sfx.enemyHeavy,
+  // Armas de loot v2 y loot en el mapa.
+  'spear_attack_thrust.wav': Sfx.swingSpear,
+  'spear_impact_pierce.wav': Sfx.impactPierce,
+  'daggers_attack_swish.wav': Sfx.swingDaggers,
+  'daggers_impact.wav': Sfx.impactDagger,
+  'wand_shot.wav': Sfx.shotWand,
+  'wand_impact.wav': Sfx.impactWand,
+  'crossbow_shot.wav': Sfx.shotCrossbow,
+  'crossbow_impact_bolt.wav': Sfx.impactBolt,
+  'loot_alerta.wav': 'loot.alerta',
+  'loot_campana.wav': 'loot.campana',
+  'loot_gema.wav': 'loot.gema',
+  'loot_legendario.wav': 'loot.legendario',
+  'loot_material.wav': 'loot.material',
+  'loot_suave.wav': 'loot.suave',
+  'loot_pickup.wav': Sfx.lootPickup,
+  'loot_legendary_beam.wav': Sfx.lootBeam,
   // Quiebre y aviso.
   'break_tick.wav': Sfx.breakTick,
   'break_shatter.wav': Sfx.breakShatter,
@@ -285,7 +302,7 @@ void main() {
 
   test('ULT: cada una tiene preparación, descarga e impacto propios, '
       'que entran en sus fases', () {
-    for (final sk in kUltimates.values) {
+    for (final sk in kAllUltimates.values) {
       final script = ultScriptFor(sk.id);
       expect(kUltScripts, contains(sk.id));
       final build = kSfxCatalog[Sfx.ult(sk.id, Sfx.ultBuild)];
@@ -304,13 +321,13 @@ void main() {
     // Todas distintas entre sí.
     for (final part in Sfx.ultParts) {
       final voices = {
-        for (final sk in kUltimates.values)
+        for (final sk in kAllUltimates.values)
           kSfxCatalog[Sfx.ult(sk.id, part)]!
               .voices
               .map((v) => '${v.wave}:${v.frequency}:${v.duration}:${v.delay}')
               .join(','),
       };
-      expect(voices, hasLength(kUltimates.length), reason: part);
+      expect(voices, hasLength(kAllUltimates.length), reason: part);
     }
   });
 
@@ -350,7 +367,7 @@ void main() {
           .writeAsBytesSync(synth.encode(mix));
     }
     // Cada ULT completa: preparación + descarga + impactos en 3 objetivos.
-    for (final sk in kUltimates.values) {
+    for (final sk in kAllUltimates.values) {
       final script = ultScriptFor(sk.id);
       final parts = [
         (Sfx.ult(sk.id, Sfx.ultBuild), 0),

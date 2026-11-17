@@ -321,8 +321,8 @@ en los eventos de la acción); 300 en un dúo; 0 si no.
 |---|---|---|
 | `num` | 1100 | texto con sombra en `y − a/40`; 12 px si `big`, si no 8 |
 | `txt` | 1400 | texto 7 px en `y − a/60` |
-| `slash` | 220 | dos trazos de 2 px: `(x−10+4p, y−10)→(x+10−4p, y+10)` y `(x+10, y−10+4p)→(x−10, y+10−4p)`, `p = a/220` |
-| `proj` | 280 | de `(x, y−10)` del atacante a `(x, y−10)` del objetivo, arco de 10 px (`− sin(pπ)·10`); `phys`: trazo blanco de 1.5 px y 7 de largo; otro elemento: 5 círculos de estela (radio `3.5 − 0.5i`, alfa `(1 − i/5)·0.8`, retraso `0.05i`) + núcleo blanco radio 1.5 |
+| `slash` | 220 | dos trazos de 2 px: `(x−10+4p, y−10)→(x+10−4p, y+10)` y `(x+10, y−10+4p)→(x−10, y+10−4p)`, `p = a/220`. Según el arma del atacante (`slashStyleFor`): `lanza` = estocada horizontal de `14 + 10p` px a cada lado, trazo `3 − 2p`, con punta blanca 3×3; `dagas` = dos cortes paralelos de 18 px, el segundo 0.4 después |
+| `proj` | 280 | de `(x, y−10)` del atacante a `(x, y−10)` del objetivo, arco de 10 px (`− sin(pπ)·10`); `phys`: trazo blanco de 1.5 px y 7 de largo; otro elemento: 5 círculos de estela (radio `3.5 − 0.5i`, alfa `(1 − i/5)·0.8`, retraso `0.05i`) + núcleo blanco radio 1.5. Según el arma (`projStyleFor`): `ballesta` = virote recto (sin arco) `#dfe6e9` de 2 px y 9 de largo, punta `#ff9f43`, plumas `#d63031`; `varita` = misil arcano: rombo `#a29bfe` de 3×4 que zigzaguea (`sin(18p)·3` px) con 3 chispas del color |
 | `ring` | 450 | elipse sin relleno de radios `(big ? 60 : 34)·p × (big ? 30 : 17)·p`, trazo `big ? 3 : 2`, alfa `1 − p` |
 | `poof` | 500 | 8 cuadrados 3×3 blancos en círculo de radio `a/25`, alfa `1 − a/500` |
 | `flash` | 350 | rectángulo de toda la escena del color, alfa `0.35·(1 − a/350)` |
@@ -560,6 +560,16 @@ Con la base `(centro, zoom)` del encuadre:
 | Baluarte | `espada+escudo` | 800 | 1100 | 400 | 2300 | 1150 + 60·i (curas) | 0 | 4 |
 | Juicio Divino | `maza+escudo` | 900 | 1100 | 400 | 2400 | 1300 + 90·i | 90 | 9 |
 | Martillo Celestial | `martillo+escudo` | 900 | 1000 | 400 | 2300 | 1300 | 150 | 14 |
+| Lluvia de Lanzas | `lanza` | 800 | 1100 | 400 | 2300 | 1300 + 80·i | 90 | 10 |
+| Tormenta Arcana | `varita` | 800 | 1200 | 400 | 2400 | 1350 + 60·i | 90 | 9 |
+| Andanada | `ballesta` | 900 | 900 | 400 | 2200 | 1300 (virotes chicos 1130-1310, solo visuales) | 150 | 13 |
+| Danza de Mil Cortes | `dagas` | 700 | 1100 | 400 | 2200 | 1500 (cortes previos 950, 1030, …, 1420) | 130 | 11 |
+
+Las 4 ULT de los tipos de loot v2 viven en `kNewUltimates`; la UI (menú,
+cinemática, colores, sonido) lee `kAllUltimates`, así que funcionan sin
+moverlas a `kUltimates`. Cámara: Andanada en la línea lanzador–objetivo
+(como Disparo Letal), Danza de Mil Cortes en el objetivo (zoom base + 1),
+las otras dos en los objetivos.
 
 La descarga termina como mucho a los 2100 ms: antes de la pausa de 2.3 s
 de la sesión tras una ULT (docs/specs/missions.md), así el paso
@@ -628,6 +638,37 @@ Colores del arte (`kSkillColors`); "lanzador" `(x, y)` y objetivo
   (cabeza 44×26, mango) baja acelerando desde arriba de la vista
   (1000-1300), en el impacto ondas expansivas (3 elipses), polvo,
   destello y la sacudida más fuerte; queda incrustado y se desvanece.
+
+- **Lluvia de Lanzas** (rosa `#ff6b81`): preparación — líneas que
+  convergen, la lanza gira sobre la cabeza del lanzador cada vez más
+  rápido (anillo rosa), y a los 520 ms siete lanzas salen al cielo en
+  abanico (sacudida 3). Descarga — cada 90 ms una lanza decorativa cae en
+  diagonal alrededor de los objetivos y queda clavada (polvo, sacudida
+  1.5); en el impacto de cada objetivo llegan tres lanzas grandes (40 ms
+  entre sí, con estela rosa) que quedan clavadas hasta el regreso, anillo
+  rosa en el piso y destello blanco; `burst phys ×3` + escombros + polvo.
+- **Tormenta Arcana** (magenta `#e84393`): preparación — sello arcano que
+  gira bajo el lanzador (dos elipses y 6 runas cuadradas), runas que
+  suben, estrella creciente en la punta de la varita; en los últimos
+  250 ms se forma una nube violeta oscura con arcos que giran sobre los
+  objetivos. Descarga — cada 90 ms un rayo quebrado violeta cae de la
+  nube cerca de un objetivo (`burst arc ×0.5`, sacudida 1.5); en cada
+  impacto un rayo grueso magenta + anillo, `burst arc ×4`, chispas y
+  destello.
+- **Andanada** (naranja `#ff9f43`): preparación — mira de cuatro
+  esquinas que se cierra sobre el objetivo (250 ms → fin), brillo en el
+  virote tenso. Descarga — fogonazo (sacudida 6), cuatro virotes chicos
+  en abanico que convergen (impactan a 1130, 1190, 1250, 1310: chispas y
+  sacudida 3), el virote grande acelera hasta el impacto con estela y
+  ondas, y en 1300 explosión (disco crema + anillo naranja), virote
+  clavado y tres estrellitas de mareo que giran (Aturdido).
+- **Danza de Mil Cortes** (menta `#55efc4`): preparación — viento menta
+  que se arremolina alrededor del lanzador, destello de las dos hojas al
+  desenvainar (420-660). Descarga — embestida con 6 imágenes hasta el
+  objetivo, siete cortes finos en ángulos distintos (950-1420, chispas y
+  sacudida 3 cada uno), remolino de hojas verdes alrededor del objetivo
+  y el final en 1500: un tajo horizontal que cruza la vista + estrella de
+  ocho cortes y anillo blanco.
 
 ### Nuevos pasos durante la cinemática
 

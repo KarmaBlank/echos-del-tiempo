@@ -11,6 +11,7 @@ import '../../../../game_engine/models/passive_mechanic.dart';
 import '../../../../game_engine/models/status.dart';
 import '../../domain/turn_order.dart';
 import '../sprite_catalog.dart';
+import '../weapon_overlay.dart';
 import 'battle_fx.dart';
 import 'battle_labels.dart';
 import 'battle_layout.dart';
@@ -306,7 +307,7 @@ class BattleScenePainter extends CustomPainter {
     } else {
       _pen.rect(c, const Color(0xFF8B93AF), -6, -16, 12, 16);
     }
-    _weapon(c, p.classId ?? '', p.weaponType);
+    WeaponOverlay.draw(c, p.classId ?? '', p.weaponType);
     if (p.defending && !dead) {
       _pen.stroke
         ..color = const Color(0xAA74B9FF)
@@ -334,46 +335,6 @@ class BattleScenePainter extends CustomPainter {
     final th = kMechanics['ultimoAliento']?.threshold ?? 0.3;
     return p.hp < p.maxHp * th;
   }
-
-  void _sword(Canvas c) {
-    _pen.rect(c, const Color(0xFFDFE6E9), 5, -17, 2, 9);
-    _pen.rect(c, const Color(0xFFFFD166), 3, -9, 6, 1);
-  }
-
-  /// Armas del héroe (docs/specs/sprites.md § "Héroe").
-  void _weapon(Canvas c, String classId, String? weaponType) {
-    switch (classId) {
-      case 'guerrero':
-        _sword(c);
-      case 'maga':
-        _pen.rect(c, const Color(0xFF8A5A2B), 6, -15, 1, 15);
-        _pen.fill.color = const Color(0xFF74B9FF);
-        c.drawCircle(const Offset(6.5, -16), 2.2, _pen.fill);
-      case 'paladin':
-        if (weaponType == 'martillo+escudo') {
-          _pen.rect(c, const Color(0xFF8A5A2B), 6, -14, 1, 11);
-          _pen.rect(c, const Color(0xFF95A5A6), 3, -18, 7, 5);
-          _pen.rect(c, const Color(0xFF636E72), 3, -14, 7, 1);
-        } else if (weaponType == 'maza+escudo') {
-          _pen.rect(c, const Color(0xFF8A5A2B), 6, -13, 1, 9);
-          _pen.fill.color = const Color(0xFFB2BEC3);
-          c.drawCircle(const Offset(6.5, -15), 2.6, _pen.fill);
-          for (final (px, py) in const [(4.0, -16.0), (8.0, -16.0), (6.0, -18.0)]) {
-            _pen.rect(c, const Color(0xFFDFE6E9), px, py, 1, 1);
-          }
-        } else {
-          _sword(c);
-        }
-        _pen.rect(c, const Color(0xFF2C3E50), -10, -13, 6, 9);
-        _pen.rect(c, const Color(0xFFECF0F1), -9, -12, 4, 7);
-        _pen.rect(c, const Color(0xFFD4AF37), -8, -11, 2, 5);
-        _pen.rect(c, const Color(0xFFD4AF37), -9, -9, 4, 1);
-      default:
-        _pen.rect(c, const Color(0xFF636E72), 5, -8, 6, 2);
-        _pen.rect(c, const Color(0xFF636E72), 5, -7, 2, 3);
-    }
-  }
-
 
   // ---------------- enemigos (`drawEnemy` en batalla) ----------------
 
@@ -832,24 +793,59 @@ class BattleScenePainter extends CustomPainter {
           Offset at(double b) => Offset(f.x + (f.tx - f.x) * b,
               f.y + (f.ty - f.y) * b - math.sin(b * math.pi) * 10);
           final p = at(a);
-          if (f.el == FxElement.phys) {
-            final ang = math.atan2(f.ty - f.y, f.tx - f.x);
-            _pen.stroke
-              ..color = fxWhite.withValues(alpha: ga)
-              ..strokeWidth = 1.5;
-            c.drawLine(
-                Offset(p.dx - math.cos(ang) * 7, p.dy - math.sin(ang) * 7),
-                p,
-                _pen.stroke);
-          } else {
-            for (var i = 4; i >= 0; i--) {
-              final q = at(math.max(0, a - i * 0.05));
-              _pen.fill.color =
-                  f.color.withValues(alpha: (1 - i / 5) * 0.8 * ga);
-              c.drawCircle(q, 3.5 - i * 0.5, _pen.fill);
-            }
-            _pen.fill.color = fxWhite.withValues(alpha: ga);
-            c.drawCircle(p, 1.5, _pen.fill);
+          final ang = math.atan2(f.ty - f.y, f.tx - f.x);
+          final d = Offset(math.cos(ang), math.sin(ang));
+          switch (projStyleFor(f.weapon, f.el)) {
+            case ProjStyle.arrow:
+              _pen.stroke
+                ..color = fxWhite.withValues(alpha: ga)
+                ..strokeWidth = 1.5;
+              c.drawLine(p - d * 7, p, _pen.stroke);
+            case ProjStyle.bolt:
+              // Virote: más grueso, recto y con plumas.
+              final q = Offset(f.x + (f.tx - f.x) * a, f.y + (f.ty - f.y) * a);
+              _pen.stroke
+                ..color = const Color(0xFFDFE6E9).withValues(alpha: ga)
+                ..strokeWidth = 2;
+              c.drawLine(q - d * 9, q, _pen.stroke);
+              _pen.rect(c, const Color(0xFFFF9F43).withValues(alpha: ga),
+                  q.dx - 1, q.dy - 1, 2, 2);
+              final n = Offset(-d.dy, d.dx);
+              _pen.stroke
+                ..color = const Color(0xFFD63031).withValues(alpha: ga)
+                ..strokeWidth = 1;
+              c.drawLine(q - d * 9, q - d * 11 + n * 2, _pen.stroke);
+              c.drawLine(q - d * 9, q - d * 11 - n * 2, _pen.stroke);
+            case ProjStyle.missile:
+              // Misil arcano: rombo que zigzaguea y deja chispas.
+              final n = Offset(-d.dy, d.dx);
+              Offset zz(double b) => at(b) + n * (math.sin(b * 18) * 3);
+              for (var i = 3; i >= 1; i--) {
+                final q = zz(math.max(0, a - i * 0.06));
+                _pen.rect(c, f.color.withValues(alpha: (1 - i / 4) * 0.7 * ga),
+                    q.dx - 1, q.dy - 1, 2, 2);
+              }
+              final q = zz(a);
+              _pen.fill.color = const Color(0xFFA29BFE).withValues(alpha: ga);
+              c.drawPath(
+                  Path()
+                    ..moveTo(q.dx, q.dy - 4)
+                    ..lineTo(q.dx + 3, q.dy)
+                    ..lineTo(q.dx, q.dy + 4)
+                    ..lineTo(q.dx - 3, q.dy)
+                    ..close(),
+                  _pen.fill);
+              _pen.rect(c, fxWhite.withValues(alpha: ga), q.dx - 0.5,
+                  q.dy - 0.5, 1, 1);
+            case ProjStyle.orb:
+              for (var i = 4; i >= 0; i--) {
+                final q = at(math.max(0, a - i * 0.05));
+                _pen.fill.color =
+                    f.color.withValues(alpha: (1 - i / 5) * 0.8 * ga);
+                c.drawCircle(q, 3.5 - i * 0.5, _pen.fill);
+              }
+              _pen.fill.color = fxWhite.withValues(alpha: ga);
+              c.drawCircle(p, 1.5, _pen.fill);
           }
         case FxKind.ring when age < BattleFx.ringMs:
           final a = age / BattleFx.ringMs;
@@ -866,10 +862,31 @@ class BattleScenePainter extends CustomPainter {
           _pen.stroke
             ..color = f.color.withValues(alpha: ga)
             ..strokeWidth = 2;
-          c.drawLine(Offset(f.x - 10 + a * 4, f.y - 10),
-              Offset(f.x + 10 - a * 4, f.y + 10), _pen.stroke);
-          c.drawLine(Offset(f.x + 10, f.y - 10 + a * 4),
-              Offset(f.x - 10, f.y + 10 - a * 4), _pen.stroke);
+          switch (slashStyleFor(f.weapon)) {
+            case SlashStyle.cross:
+              c.drawLine(Offset(f.x - 10 + a * 4, f.y - 10),
+                  Offset(f.x + 10 - a * 4, f.y + 10), _pen.stroke);
+              c.drawLine(Offset(f.x + 10, f.y - 10 + a * 4),
+                  Offset(f.x - 10, f.y + 10 - a * 4), _pen.stroke);
+            case SlashStyle.thrust:
+              // Estocada: atraviesa de lado a lado y se afina.
+              final len = 14 + 10 * a;
+              _pen.stroke.strokeWidth = 3 - 2 * a;
+              c.drawLine(Offset(f.x - len, f.y), Offset(f.x + len, f.y),
+                  _pen.stroke);
+              _pen.rect(c, fxWhite.withValues(alpha: (1 - a) * ga),
+                  f.x + len - 2, f.y - 1, 3, 3);
+            case SlashStyle.twin:
+              // Dagas: dos cortes paralelos, el segundo un instante después.
+              for (var k = 0; k < 2; k++) {
+                final q = (a * 1.4 - k * 0.4).clamp(0.0, 1.0);
+                if (q <= 0) continue;
+                final o = (k * 6 - 3).toDouble();
+                c.drawLine(Offset(f.x - 9 + o, f.y - 9 - o),
+                    Offset(f.x - 9 + o + 18 * q, f.y - 9 - o + 18 * q),
+                    _pen.stroke);
+              }
+          }
         case FxKind.poof when age < BattleFx.poofMs:
           final col = Color.fromRGBO(255, 255, 255, 1 - age / BattleFx.poofMs);
           for (var i = 0; i < 8; i++) {

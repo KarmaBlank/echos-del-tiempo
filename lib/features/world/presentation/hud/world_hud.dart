@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/theme/party_box.dart';
@@ -8,12 +9,16 @@ import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/game_session.dart';
+import '../../../../game_engine/models/loot_filter.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../../game_engine/rules/world_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import '../../../missions/presentation/vote_panel.dart';
+import '../map/loot_painter.dart';
+import '../map/map_game.dart';
 import 'chat_box.dart';
+import 'loot_feed.dart';
 import 'minimap.dart';
 
 /// `m:ss` con minutos de dos dígitos (`mm:ss` del HUD del prototipo).
@@ -133,6 +138,7 @@ class WorldHud extends StatelessWidget {
                     localX: controller.local.x,
                     localY: controller.local.y,
                     time: s.time,
+                    loot: _minimapLoot(s),
                   ),
                 ),
               ),
@@ -140,14 +146,26 @@ class WorldHud extends StatelessWidget {
               left: _gap,
               bottom: _gap,
               width: chatWidth,
-              child: chatFocus == null
-                  ? _MessageLog(messages: view.messages)
-                  : ChatBox(
-                      lines: view.chat,
-                      focusNode: chatFocus!,
-                      onSend: controller.sendChat,
-                      onDone: onChatDone ?? () {},
-                    ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Registro de loot (`Ana encontró: ...`) encima del chat.
+                  Consumer(
+                    builder: (context, ref, _) =>
+                        LootLog(feed: ref.watch(lootFeedProvider)),
+                  ),
+                  const SizedBox(height: 6),
+                  chatFocus == null
+                      ? _MessageLog(messages: view.messages)
+                      : ChatBox(
+                          lines: view.chat,
+                          focusNode: chatFocus!,
+                          onSend: controller.sendChat,
+                          onDone: onChatDone ?? () {},
+                        ),
+                ],
+              ),
             ),
             if (_voteBox(s) case final vote?)
               Positioned(
@@ -183,6 +201,10 @@ class WorldHud extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    Consumer(
+                      builder: (context, ref, _) =>
+                          LootToasts(feed: ref.watch(lootFeedProvider)),
+                    ),
                     for (final line in _banners(s))
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
@@ -197,6 +219,14 @@ class WorldHud extends StatelessWidget {
                             color: prompt == WorldPrompt.seal
                                 ? ProtoColors.violet
                                 : ProtoColors.gold),
+                      )
+                    else if (_pickPrompt(s) case final text?)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: _CanvasLabel(text,
+                            key: const ValueKey('hud-pickup-prompt'),
+                            fontSize: 16,
+                            color: ProtoColors.gold),
                       ),
                   ],
                 ),
@@ -207,6 +237,41 @@ class WorldHud extends StatelessWidget {
         ),
       );
     });
+  }
+
+  /// Lo que el jugador local ve del piso (con Alt, también lo oculto).
+  List<LootOnFloor> _floor(GameSession s) {
+    final me = s.players[view.localId];
+    if (me == null ||
+        (s.mode != SessionMode.field && s.mode != SessionMode.lobby)) {
+      return const [];
+    }
+    return visibleLoot(s, view.localId,
+        (d) => controller.engine.lootVerdict(me.profile, d),
+        showAll: MapGame.altHeld());
+  }
+
+  /// `[E] Recoger <objeto>` a <= 24 px de algo dibujado (sin otra
+  /// interacción a mano; ver `MapGame.tryPickUp`).
+  String? _pickPrompt(GameSession s) {
+    if (view.panel != null) return null;
+    final l = nearestPickable(
+        _floor(s), controller.local.x, controller.local.y);
+    if (l == null) return null;
+    return '[E] Recoger ${MapGame.lootName(controller, l.ground.drop)}';
+  }
+
+  /// Íconos de minimapa que pide el filtro (`Icono`), de lo visible.
+  List<MinimapLoot> _minimapLoot(GameSession s) {
+    final me = s.players[view.localId];
+    if (me == null) return const [];
+    return [
+      for (final g in s.groundFor(view.localId))
+        if (controller.engine.lootVerdict(me.profile, g.drop)
+            case FilterVerdict(visible: true, :final style)
+            when style.icon != null)
+          MinimapLoot(g.x, g.y, style.icon!),
+    ];
   }
 
   /// Votación en curso (`renderVote`), solo en el lobby.
@@ -283,7 +348,8 @@ class _MissionBar extends StatelessWidget {
 
 /// Texto dibujado en el canvas del prototipo sobre una caja `#000a`.
 class _CanvasLabel extends StatelessWidget {
-  const _CanvasLabel(this.text, {required this.color, this.fontSize = 8});
+  const _CanvasLabel(this.text,
+      {super.key, required this.color, this.fontSize = 8});
 
   final String text;
   final Color color;

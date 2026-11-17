@@ -316,7 +316,7 @@ void main() {
   test('ULT de cada tipo de arma: preparación @0, descarga al terminar la '
       'preparación, impacto en el impacto del guion de cada objetivo (3 '
       'como máximo) y clink en los críticos', () {
-    for (final e in kUltimates.entries) {
+    for (final e in kAllUltimates.entries) {
       final sk = e.value;
       final script = ultScriptFor(sk.id);
       final sfx = SessionSfx(_Recorder(), localId: 'p')

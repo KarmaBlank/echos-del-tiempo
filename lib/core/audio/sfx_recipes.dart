@@ -158,6 +158,11 @@ const Map<String, String> kWeaponStartSfx = {
   'rifle': Sfx.shotRifle,
   'báculo': Sfx.shotStaff,
   'tomo': Sfx.shotTome,
+  // Tipos nuevos de loot v2 (docs/specs/loot.md § 8).
+  'lanza': Sfx.swingSpear,
+  'dagas': Sfx.swingDaggers,
+  'varita': Sfx.shotWand,
+  'ballesta': Sfx.shotCrossbow,
 };
 
 /// Impacto físico por tipo de arma.
@@ -171,6 +176,10 @@ const Map<String, String> kWeaponImpactSfx = {
   'rifle': Sfx.impactBullet,
   'báculo': Sfx.impactArcane,
   'tomo': Sfx.impactArcane,
+  'lanza': Sfx.impactPierce,
+  'dagas': Sfx.impactDagger,
+  'varita': Sfx.impactWand,
+  'ballesta': Sfx.impactBolt,
 };
 
 /// Firma de cada habilidad de `kSkills` (sin el prefijo `skill.`).
@@ -302,7 +311,39 @@ final Map<String, List<SfxTone>> kSkillVoices = {
     _t(150, 0.35, w: _saw, vr: 30, vd: 0.15, v: 0.5),
     _t(300, 0.3, w: _sq, vr: 30, vd: 0.1, v: 0.2),
   ],
+  // ---- loot v2: lanza, varita, ballesta y dagas ----
+  'perforar': [
+    _n(14000, 0.05, to: 7000, v: 0.55),
+    _t(1300, 0.1, w: _pu, to: 2600, v: 0.25),
+  ],
+  'barrido': [..._swingHeavy(1.3, 0.9), ..._x(_swingBlade(0.9), dt: 0.08)],
+  'empalar': [
+    _n(10000, 0.05, to: 4000, v: 0.6),
+    _t(140, 0.2, w: _tri, to: 60, v: 0.5, at: 0.04),
+    _t(900, 0.25, w: _tri, vr: 9, vd: 0.2, v: 0.25, at: 0.08),
+  ],
+  'misil': [_t(1200, 0.12, w: _sq, to: 2400, v: 0.3), ..._x(_zap(1.3), dt: 0.05)],
+  'escarchaFugaz': [..._whoosh(1.2, 0.7), ..._x(_ice(1.4, 0.5), dt: 0.03)],
+  'rayoArcano': [
+    ..._zap(0.8),
+    _t(700, 0.3, w: _saw, to: 1400, vr: 20, vd: 0.1, v: 0.25),
+  ],
+  'virote': [
+    _n(16000, 0.03, v: 0.6),
+    ..._x(_whoosh(0.7, 1.1), dt: 0.02),
+    _t(70, 0.2, w: _sq, to: 35, v: 0.4, at: 0.08),
+  ],
+  'viroteIgneo': [..._whoosh(0.85), ..._x(_fire(1.15, 0.7, 5), dt: 0.05)],
+  'tajoGemelo': [
+    ..._swingBlade(1.3, 0.6),
+    ..._x(_swingBlade(1.45, 0.6), dt: 0.07),
+  ],
+  'abanico': [
+    for (final at in [0.0, 0.04, 0.08, 0.12, 0.16]) ..._x(_whoosh(1.4, 0.4), dt: at),
+    ..._x(_bubbles(1.3, 0.5), dt: 0.12),
+  ],
 };
+
 
 /// Inicio del golpe dentro de `enemy.<tipo>`: el "wind-up" suena antes
 /// (docs/specs/audio.md § "Enemigos"). El impacto `enemy.hit.<tipo>`
@@ -472,6 +513,27 @@ Map<String, SfxDef> buildCombatSfx() {
       _t(300, 0.2, w: _pu, to: 900, crush: 4, v: 0.35),
       _t(1200, 0.18, w: _sin, vr: 9, vd: 0.05, v: 0.3),
     ]),
+    // Loot v2: estocada, dos tajitos, chispa de varita y cuerda pesada.
+    Sfx.swingSpear: act([
+      _n(10000, 0.08, to: 5000, a: 0.005, lp: 7000, v: 0.55),
+      _t(900, 0.06, w: _pu, to: 1800, v: 0.2),
+      _n(3000, 0.1, to: 6000, lp: 3000, at: 0.02, v: 0.25, seed: 3),
+    ]),
+    Sfx.swingDaggers: act([
+      _n(12000, 0.06, to: 6000, a: 0.01, lp: 8000, v: 0.45),
+      _n(12000, 0.06, to: 7000, a: 0.01, lp: 8000, at: 0.07, v: 0.45, seed: 5),
+      _t(2200, 0.03, w: _pu, to: 1400, at: 0.07, v: 0.12),
+    ]),
+    Sfx.shotWand: act([
+      _t(1500, 0.1, w: _tri, to: 3000, v: 0.4),
+      _t(3000, 0.03, w: _sq, at: 0.04, v: 0.15),
+      _n(15000, 0.02, crush: 3, at: 0.02, v: 0.3, seed: 6),
+    ]),
+    Sfx.shotCrossbow: act([
+      _n(20000, 0.02, v: 0.6, seed: 4),
+      _t(180, 0.18, w: _tri, to: 120, vr: 25, vd: 0.05, v: 0.55),
+      _n(4000, 0.2, to: 1500, lp: 2500, at: 0.02, v: 0.35, seed: 8),
+    ]),
     // ---- impactos ----
     Sfx.impactSlash: imp([
       _n(12000, 0.06, v: 0.5),
@@ -493,6 +555,24 @@ Map<String, SfxDef> buildCombatSfx() {
     Sfx.impactArcane: imp([
       _t(1200, 0.14, w: _pu, to: 380, crush: 4, v: 0.4),
       _n(8000, 0.05, v: 0.35),
+    ]),
+    Sfx.impactPierce: imp([
+      _n(10000, 0.04, v: 0.5),
+      _t(300, 0.09, w: _tri, to: 90, v: 0.45),
+    ]),
+    Sfx.impactDagger: imp([
+      _n(16000, 0.03, v: 0.45),
+      _t(1400, 0.04, w: _sq, to: 700, v: 0.25),
+      _n(16000, 0.03, at: 0.05, v: 0.35, seed: 9),
+    ]),
+    Sfx.impactWand: imp([
+      _t(2400, 0.1, w: _tri, to: 800, v: 0.4),
+      _t(1600, 0.08, w: _pu, to: 500, crush: 3, v: 0.25),
+    ]),
+    Sfx.impactBolt: imp([
+      _n(6000, 0.05, v: 0.55),
+      _t(130, 0.18, w: _sin, to: 45, v: 0.6),
+      _t(700, 0.05, w: _sq, to: 200, v: 0.25),
     ]),
     Sfx.impactFire: imp([
       _n(2600, 0.28, lp: 2200, a: 0.01, v: 0.6),
@@ -604,6 +684,8 @@ Map<String, SfxDef> buildCombatSfx() {
       Sfx.enemyHit(e.key): SfxDef(e.value, peak: SfxLevel.enemyHit),
     // ---- quiebre y ULT enemigas ----
     ...buildBreakSfx(),
+    // ---- loot en el mapa ----
+    ...buildLootSfx(),
     // ---- firma de cada habilidad ----
     for (final e in kSkillVoices.entries) Sfx.skill(e.key): act(e.value),
     // ---- procs del árbol ----
@@ -926,7 +1008,144 @@ final Map<String, UltVoices> kUltVoices = {
       _t(1000, 0.5, w: _tri, vr: 9, vd: 0.15, at: 0.25, v: 0.2),
     ],
   ),
+  // ---- loot v2 (kNewUltimates) ----
+  // Lluvia de Lanzas: giro metálico que sube; lanzas al cielo que caen
+  // silbando; clavadas.
+  'ult_lanza': (
+    build: [
+      _n(3000, 0.75, to: 8000, a: 0.45, lp: 5000, v: 0.35, seed: 14),
+      _t(1760, 0.7, w: _tri, vr: 14, vd: 0.02, a: 0.3, v: 0.25),
+      _t(110, 0.7, w: _saw, to: 165, a: 0.4, lp: 700, v: 0.2),
+    ],
+    release: [
+      for (var k = 0; k < 6; k++)
+        ..._x(_whoosh(1.0 + k * 0.1, 0.6), dt: 0.02 + k * 0.05),
+      for (var k = 0; k < 4; k++)
+        _t(2400 - k * 150, 0.4, w: _sin, to: 600, at: 0.3 + k * 0.12, v: 0.2),
+    ],
+    impact: [
+      for (var k = 0; k < 3; k++) ...[
+        _n(10000, 0.04, at: k * 0.06, v: 0.5, seed: 30 + k),
+        _t(240, 0.12, w: _tri, to: 70, at: k * 0.06, v: 0.45),
+      ],
+      _t(1245, 0.4, w: _tri, to: 1220, at: 0.04, v: 0.2),
+      _t(55, 0.4, w: _sin, to: 30, v: 0.5),
+    ],
+  ),
+  // Tormenta Arcana: zumbido arcano que gira y sube; lluvia de chispas
+  // arcanas; estallido cristalino.
+  'ult_varita': (
+    build: [
+      _t(220, 0.8, w: _pu, to: 440, vr: 6, vd: 0.06, a: 0.5, v: 0.3),
+      _t(440, 0.75, w: _sin, to: 1760, a: 0.5, vr: 9, vd: 0.02, v: 0.25),
+      for (var k = 0; k < 4; k++)
+        _n(18000, 0.04, crush: 2, at: 0.2 + k * 0.15, v: 0.2, seed: 40 + k),
+    ],
+    release: [
+      for (var k = 0; k < 10; k++)
+        _t(1600.0 + (k % 3) * 300, 0.06, w: _sq, to: 3200.0 + (k % 4) * 200,
+            at: 0.05 + k * 0.08, v: 0.22),
+      _n(5000, 0.9, to: 2500, lp: 4000, a: 0.3, v: 0.2, seed: 41),
+    ],
+    impact: [
+      _t(1200, 0.25, w: _pu, to: 300, crush: 4, v: 0.45),
+      _n(12000, 0.08, v: 0.45, seed: 42),
+      _t(880, 0.5, w: _sin, vr: 8, vd: 0.02, at: 0.05, v: 0.25),
+      _t(2637, 0.35, w: _tri, at: 0.06, v: 0.2),
+    ],
+  ),
+  // Andanada: manivela que tensa la ballesta; cuerda pesada y virote que
+  // silba; impacto brutal con mareo.
+  'ult_ballesta': (
+    build: [
+      for (final at in [0.05, 0.2, 0.33, 0.44, 0.53, 0.6, 0.66, 0.71])
+        _t(600, 0.02, w: _sq, at: at, v: 0.35),
+      _t(120, 0.85, w: _tri, to: 180, vr: 5, vd: 0.05, a: 0.4, v: 0.3),
+      _n(15000, 0.03, at: 0.8, v: 0.4, seed: 50),
+    ],
+    release: [
+      _n(20000, 0.03, at: 0.05, v: 0.7, seed: 51),
+      _t(160, 0.25, w: _tri, to: 90, vr: 25, vd: 0.06, at: 0.05, v: 0.6),
+      _n(6000, 0.4, to: 2000, lp: 4000, at: 0.08, a: 0.05, v: 0.4, seed: 52),
+    ],
+    impact: [
+      _n(6000, 0.08, v: 0.6),
+      _t(90, 0.7, w: _sin, to: 28, v: 0.8),
+      _n(2000, 0.5, lp: 1000, v: 0.55, seed: 53),
+      _t(1000, 0.5, w: _tri, vr: 9, vd: 0.15, at: 0.2, v: 0.2),
+    ],
+  ),
+  // Danza de Mil Cortes: latido y hojas que se desenvainan; ráfaga de
+  // cortes; el corte final cruzado con clink.
+  'ult_dagas': (
+    build: [
+      _t(60, 0.15, w: _sin, to: 45, v: 0.6),
+      _t(60, 0.15, w: _sin, to: 45, at: 0.22, v: 0.6),
+      _t(3520, 0.2, w: _tri, at: 0.35, vr: 9, vd: 0.01, v: 0.2),
+      ..._x(_swingBlade(1.6, 0.5), dt: 0.45),
+      _t(4186, 0.18, w: _sin, at: 0.55, v: 0.2),
+    ],
+    release: [
+      for (var k = 0; k < 12; k++)
+        ..._x(_swingBlade(1.25 + (k % 3) * 0.12, 0.45), dt: 0.08 + k * 0.06),
+    ],
+    impact: [
+      _n(14000, 0.2, to: 3000, v: 0.6),
+      _t(2349, 0.3, w: _sin, to: 2300, a: 0.002, v: 0.3),
+      _t(5919, 0.2, w: _sin, to: 5800, a: 0.002, v: 0.15),
+      _t(100, 0.4, w: _sin, to: 35, v: 0.6),
+    ],
+  ),
 };
+
+// ----------------------------------------------------------------- loot
+
+/// Sonidos del loot en el mapa (docs/specs/audio.md § "Loot"): uno por
+/// nombre de `kLootFilterSounds`, levantar y el haz del Legendario.
+Map<String, SfxDef> buildLootSfx() {
+  SfxDef l(List<SfxTone> v) => SfxDef(v, peak: SfxLevel.loot);
+  return {
+    // Dos tonos de aviso.
+    Sfx.loot('alerta'): l([
+      _t(880, 0.08, w: _sq, v: 0.35),
+      _t(1175, 0.12, w: _sq, at: 0.09, v: 0.35),
+    ]),
+    // Campana inarmónica que se apaga.
+    Sfx.loot('campana'): l([
+      _t(1319, 0.7, w: _sin, to: 1300, a: 0.003, v: 0.5),
+      _t(3317, 0.45, w: _sin, to: 3280, a: 0.003, v: 0.22),
+      _t(659, 0.5, w: _tri, v: 0.15),
+    ]),
+    // Destello de gema: arpegio agudo.
+    Sfx.loot('gema'): l([
+      ..._arp([2093, 2637, 3136, 4186], step: 0.045, d: 0.14),
+      _t(4186, 0.3, w: _sin, at: 0.18, vr: 8, vd: 0.01, v: 0.2),
+    ]),
+    // Fanfarria corta.
+    Sfx.loot('legendario'): l([
+      ..._arp([523, 659, 784], step: 0.08, d: 0.1, w: _sq, v: 0.3),
+      for (final f in [1047.0, 1319.0, 1568.0])
+        _t(f, 0.6, w: _sq, at: 0.24, vr: 6, vd: 0.01, v: 0.2),
+    ]),
+    // Clink de material.
+    Sfx.loot('material'): l([
+      _t(1568, 0.12, w: _tri, v: 0.4),
+      _t(1976, 0.16, w: _tri, at: 0.05, v: 0.3),
+    ]),
+    Sfx.loot('suave'): l([_t(660, 0.18, w: _sin, to: 880, a: 0.02, v: 0.4)]),
+    Sfx.lootPickup: l([
+      _t(700, 0.06, w: _sin, to: 1400, v: 0.45),
+      _t(1760, 0.05, w: _tri, at: 0.05, v: 0.3),
+    ]),
+    // Haz de luz: ruido que sube + tono que trepa + brillo.
+    Sfx.lootBeam: SfxDef([
+      _n(2000, 0.6, to: 8000, a: 0.2, lp: 5000, v: 0.4, seed: 12),
+      _t(220, 0.7, w: _saw, to: 880, a: 0.1, lp: 2000, v: 0.3),
+      _t(1760, 0.5, w: _sin, at: 0.35, vr: 7, vd: 0.01, v: 0.25),
+      _t(2637, 0.45, w: _sin, at: 0.4, vr: 7, vd: 0.01, v: 0.2),
+    ], peak: SfxLevel.lootBeam),
+  };
+}
 
 // ------------------------------------------- quiebre y ULT enemigas
 

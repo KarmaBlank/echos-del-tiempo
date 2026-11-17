@@ -10,6 +10,9 @@ import '../../../core/di/service_locator.dart';
 import '../../../game_engine/data/skills_catalog.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
+import '../../../game_engine/models/item.dart';
+import '../../../game_engine/models/loot.dart';
+import '../../../game_engine/models/loot_filter.dart';
 import '../../../game_engine/models/passive_mechanic.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/skill.dart';
@@ -19,6 +22,7 @@ import '../../combat/presentation/scene/battle_fx.dart';
 import '../../combat/presentation/scene/fx_style.dart';
 import '../../combat/presentation/scene/proc_fx.dart';
 import '../../combat/presentation/scene/ult_cinematic.dart';
+import 'hud/loot_feed.dart';
 import 'session_controller.dart';
 import 'session_view.dart';
 
@@ -31,7 +35,13 @@ final sfxServiceProvider = Provider<SfxService>((ref) =>
 final sessionSfxProvider = Provider.autoDispose<SessionSfx>((ref) {
   final controller = ref.watch(sessionControllerProvider.notifier);
   final sfx = SessionSfx(ref.watch(sfxServiceProvider),
-      localId: controller.localId);
+      localId: controller.localId, lootVerdict: (d) {
+    final p = controller.session?.players[controller.localId]?.profile;
+    return p == null ? null : controller.engine.lootVerdict(p, d);
+  });
+  // Mantiene vivo el registro de loot del HUD mientras la pantalla del
+  // juego vive (también en batalla, cuando el HUD no está montado).
+  ref.watch(lootFeedProvider);
   final sub = controller.events.listen(sfx.onEvent);
   final removeView = controller.addListener(sfx.onView);
   ref.onDispose(() {
@@ -80,10 +90,14 @@ class _Act {
 /// Traduce eventos y vistas de la sesión a efectos de sonido, fuera del
 /// motor. Ver docs/specs/audio.md § "Qué evento suena".
 class SessionSfx {
-  SessionSfx(this.service, {required this.localId});
+  SessionSfx(this.service, {required this.localId, this.lootVerdict});
 
   final SfxService service;
   final String localId;
+
+  /// Cómo ve el jugador local un drop según su filtro (sonido del filtro).
+  /// `null` = sin filtro: el estilo por defecto (sin sonido).
+  final FilterVerdict? Function(LootDrop d)? lootVerdict;
 
   /// Tope de impactos (y curas) que suenan por acción con varios
   /// objetivos; separación entre ellos.
@@ -124,10 +138,42 @@ class SessionSfx {
         }
       case LevelUpEvent():
         service.play(Sfx.levelUp);
+      case LootDropEvent() || LootPickedEvent():
+        for (final c in lootSounds(e)) {
+          service.play(c.id, delayMs: c.delayMs);
+        }
       default:
         break;
     }
   }
+
+  /// Sonidos del loot del jugador local (docs/specs/audio.md § "Loot"):
+  /// al caer, el sonido que pide su filtro (y el haz si es Legendario);
+  /// al levantar, el de levantar.
+  List<SfxCue> lootSounds(SessionEvent e) {
+    switch (e) {
+      case LootDropEvent(:final playerId, :final drop)
+          when playerId == localId:
+        final v = lootVerdict?.call(drop);
+        if (v != null && !v.visible) return const [];
+        final out = <SfxCue>[];
+        final sound = v?.style.sound;
+        if (sound != null && service.catalog.containsKey(Sfx.loot(sound))) {
+          out.add(cue(Sfx.loot(sound)));
+        }
+        if (drop.item?.rarity == Rarity.legendario) {
+          out.add(cue(Sfx.lootBeam, lootBeamDelayMs));
+        }
+        return out;
+      case LootPickedEvent(:final playerId) when playerId == localId:
+        return [cue(Sfx.lootPickup)];
+      default:
+        return const [];
+    }
+  }
+
+  /// El haz del Legendario suena un instante después del aviso.
+  static const lootBeamDelayMs = 120;
 
   /// Los sonidos de un paso, en orden de llegada (cada uno con su
   /// retraso). Sigue la acción en curso: de ella salen el arma, la
@@ -396,7 +442,7 @@ class SessionSfx {
   /// impactos van con cada golpe. Con arma desconocida, el `beep` del
   /// prototipo.
   List<SfxCue> ultimateCues(UltimateUsedEvent e) {
-    final sk = kUltimates[battle?.byId(e.actorId)?.weaponType];
+    final sk = kAllUltimates[battle?.byId(e.actorId)?.weaponType];
     if (sk == null ||
         !service.catalog.containsKey(Sfx.ult(sk.id, Sfx.ultBuild))) {
       return [cue(Sfx.ultimate)];

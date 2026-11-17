@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
@@ -5,6 +6,26 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
+import '../../../../game_engine/models/loot_filter.dart';
+
+/// Un ícono de loot en el minimapa (`Icono` del filtro, loot.md § 6).
+class MinimapLoot {
+  const MinimapLoot(this.x, this.y, this.icon);
+  final double x, y;
+  final MapIcon icon;
+}
+
+/// Color de arte de cada `MapIconColor`.
+Color mapIconColor(MapIconColor c) => switch (c) {
+      MapIconColor.blanco => const Color(0xFFFFFFFF),
+      MapIconColor.rojo => const Color(0xFFFF4757),
+      MapIconColor.verde => const Color(0xFF7BED9F),
+      MapIconColor.azul => const Color(0xFF4B7BEC),
+      MapIconColor.amarillo => const Color(0xFFFFD166),
+      MapIconColor.naranja => const Color(0xFFFF8C28),
+      MapIconColor.violeta => const Color(0xFFBE6EFF),
+      MapIconColor.celeste => const Color(0xFF48DBFB),
+    };
 
 /// `drawMinimap` del prototipo como widget (docs/specs/exploration.md §
 /// "HUD"). Colores = arte del prototipo, igual que el mapa.
@@ -17,6 +38,7 @@ class Minimap extends StatelessWidget {
     required this.localX,
     required this.localY,
     required this.time,
+    this.loot = const [],
   });
 
   /// Píxeles de pantalla por tile (el prototipo usa 1.25 px virtuales,
@@ -33,6 +55,9 @@ class Minimap extends StatelessWidget {
 
   /// Reloj de la sesión en segundos (parpadeo del jefe).
   final double time;
+
+  /// Loot del piso con ícono según el filtro del jugador local.
+  final List<MinimapLoot> loot;
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +175,9 @@ class _MinimapPainter extends CustomPainter {
                 e.y / _ts * cell - tp.height / 2));
       }
     }
+    for (final l in w.loot) {
+      _lootIcon(canvas, p, l);
+    }
     final merchant = map.merchant;
     if (merchant != null) {
       dot(merchant.x, merchant.y - 10, const Color(0xFFFFD166), 3);
@@ -159,6 +187,54 @@ class _MinimapPainter extends CustomPainter {
       dot(mine ? w.localX : pl.x, mine ? w.localY : pl.y,
           mine ? const Color(0xFFFFFFFF) : const Color(0xFF48DBFB), 3);
     }
+  }
+
+  /// Ícono de 5 px (de pantalla) con contorno negro.
+  void _lootIcon(Canvas canvas, Paint p, MinimapLoot l) {
+    const cell = Minimap.cell;
+    final o = Offset(l.x / _ts * cell, l.y / _ts * cell);
+    const r = 3.0;
+    final path = switch (l.icon.shape) {
+      MapIconShape.circulo => Path()
+        ..addOval(Rect.fromCircle(center: o, radius: r)),
+      MapIconShape.cuadrado => Path()
+        ..addRect(Rect.fromCircle(center: o, radius: r - 0.5)),
+      MapIconShape.triangulo => Path()
+        ..moveTo(o.dx, o.dy - r)
+        ..lineTo(o.dx + r, o.dy + r)
+        ..lineTo(o.dx - r, o.dy + r)
+        ..close(),
+      MapIconShape.diamante => Path()
+        ..moveTo(o.dx, o.dy - r - 0.5)
+        ..lineTo(o.dx + r, o.dy)
+        ..lineTo(o.dx, o.dy + r + 0.5)
+        ..lineTo(o.dx - r, o.dy)
+        ..close(),
+      MapIconShape.estrella => _star(o, r + 1),
+    };
+    canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = const Color(0xFF000000));
+    p.color = mapIconColor(l.icon.color);
+    canvas.drawPath(path, p);
+  }
+
+  static Path _star(Offset o, double r) {
+    final path = Path();
+    for (var i = 0; i < 10; i++) {
+      final rr = i.isEven ? r : r * 0.45;
+      final a = -1.5708 + i * 0.6283;
+      final pt = o + Offset(rr * math.cos(a), rr * math.sin(a));
+      if (i == 0) {
+        path.moveTo(pt.dx, pt.dy);
+      } else {
+        path.lineTo(pt.dx, pt.dy);
+      }
+    }
+    return path..close();
   }
 
   @override

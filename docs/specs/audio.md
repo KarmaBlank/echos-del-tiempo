@@ -129,8 +129,19 @@ barrido; `+` = capas; `@t` = retraso.
 | `shot.rifle` | ruido 20 k 0.03 (fogonazo) + ruido 3 k→700 0.28 lowpass 2.5 k (eco) + square 140→55 0.10 | `rifle` |
 | `shot.staff` | square 520→1250 0.18 vibrato 22 Hz + triangle 1040→2500 0.16 | `báculo` |
 | `shot.tome` | pulse 300→900 0.2 crush 4 + sine 1200 0.18 vibrato 9 Hz | `tomo` |
+| `swing.spear` | ruido 10 k→5 k 0.08 ataque 5 ms lowpass 7 k (estocada) + pulse 900→1800 0.06 + ruido 3 k→6 k 0.1 @0.02 | `lanza` |
+| `swing.daggers` | dos silbidos cortos: ruido 12 k→6 k 0.06 @0 y 12 k→7 k @0.07 + pulse 2200→1400 0.03 @0.07 | `dagas` |
+| `shot.wand` | triangle 1500→3000 0.1 + square 3000 0.03 @0.04 + ruido 15 k 0.02 crush 3 (chispa) | `varita` |
+| `shot.crossbow` | ruido 20 k 0.02 (gatillo) + triangle 180→120 0.18 vibrato 25 Hz (cuerda pesada) + ruido 4 k→1.5 k 0.2 lowpass 2.5 k | `ballesta` |
 
-Sin arma conocida: `swing.blade`.
+Sin arma conocida: `swing.blade`. Tipos de loot v2: arranque e impacto
+propios (`lanza` `swing.spear` / `impact.pierce`, `dagas`
+`swing.daggers` / `impact.dagger`, `varita` `shot.wand` / `impact.wand`,
+`ballesta` `shot.crossbow` / `impact.bolt`). Las 10
+habilidades nuevas (Lanza Perforante, Barrido, Empalar, Misil Arcano,
+Escarcha Fugaz, Rayo Arcano, Virote Pesado, Virote Ígneo, Tajo Gemelo,
+Abanico de Dagas) tienen firma propia en `kSkillVoices`. Las 4 ULT nuevas
+(`kNewUltimates`) tienen sus tres partes (§ "Ultimates").
 
 ### Impactos
 
@@ -146,6 +157,10 @@ Sin arma conocida: `swing.blade`.
 | `impact.poison` | sine 520→260 0.07, 440→220 @0.06, 600→300 @0.12 (burbujas) + ruido 1.5 k 0.2 lowpass 700 | elemento Veneno |
 | `impact.holy` | sine 1047 + 1568 @0.02 + 2093 @0.04 con vibrato 7 Hz, 0.35 | elemento Sagrado |
 | `impact.hurt` | square 190→85 0.13 + ruido 3 k 0.08 lowpass 1.8 k | un jugador recibe daño |
+| `impact.pierce` | ruido 10 k 0.04 + triangle 300→90 0.09 ("tunk") | físico, lanza |
+| `impact.dagger` | ruido 16 k 0.03 + square 1400→700 0.04 + ruido 16 k 0.03 @0.05 (doble) | físico, dagas |
+| `impact.wand` | triangle 2400→800 0.1 + pulse 1600→500 0.08 crush 3 | físico/arcano, varita |
+| `impact.bolt` | ruido 6 k 0.05 + sine 130→45 0.18 + square 700→200 0.05 | físico, ballesta |
 | `crit.clink` | sine 2093→2030 0.26 + sine 5267→5110 0.18 (parciales inarmónicos ×2.52) + triangle 3140→3050 0.12 muy suave, ataque 2 ms, + ruido 18 k 0.012 (transitorio) | **cada** golpe crítico, encima del impacto |
 
 Elemento de un golpe = el del efecto visual (`skillElement` de
@@ -317,7 +332,9 @@ salen del mismo guion `UltScript`, así sonido e imagen no se separan):
 | `<ultId>.release` | descarga, @`build` (incluye silbidos, tajos previos, disparo…) | 0.46 |
 | `<ultId>.impact` | cada impacto, @`impactFor(i)`, 3 objetivos como máximo | 0.50 |
 
-`<ultId>` = `SkillDef.id` de `kUltimates` (`ult_espada`, `ult_hacha`, …).
+`<ultId>` = `SkillDef.id` de `kAllUltimates` (`ult_espada`, `ult_hacha`,
+…, y las de loot v2 `ult_lanza`, `ult_varita`, `ult_ballesta`,
+`ult_dagas`).
 El `crit.clink` sigue sonando encima en cada crítico de la ULT.
 
 Recetas ("@t" relativo al inicio de ESE sonido):
@@ -334,6 +351,31 @@ Recetas ("@t" relativo al inicio de ESE sonido):
 | Juicio Divino | coro (sines 523/659/784 con vibrato, ataque 0.5) + campanita | campana que baja + zumbido de puntería que sube | pilar: campanas sagradas + ruido 3 k→9 k (whoosh) + sine 80→30 |
 | Martillo Celestial | trueno lejano (ruido 400 lowpass 250) + chispas eléctricas (ruido 20 k crush 2) + tono que sube | caída: ruido 6 k→600 que baja @0.1-0.4 | golpe brutal: sine 80→22 largo + ruido 1 k lowpass 700 + "clang" inarmónico + mareo (triangle 1000 vibrato 9 Hz) |
 
+
+| Lluvia de Lanzas | giro metálico: ruido 3 k→8 k ataque 0.45 + triangle 1760 vibrato 14 Hz + sawtooth 110→165 | 6 silbidos que suben (lanzas al cielo) @0.02-0.27 + 4 silbidos que bajan (sine 2400→600) @0.3-0.66 | tres clavadas (ruido 10 k + triangle 240→70, cada 60 ms) + zumbido del asta (triangle 1245) + golpe sine 55→30 |
+| Tormenta Arcana | zumbido arcano (pulse 220→440 vibrato 6 Hz + sine 440→1760) + 4 chispas crush 2 | 10 chispazos (square 1600-2200 → 3200-3800, cada 80 ms) + viento de fondo (ruido 5 k→2.5 k) | estallido: pulse 1200→300 crush 4 + ruido 12 k + sine 880 vibrato + triangle 2637 |
+| Andanada | manivela: 8 clics square 600 que se aceleran + crujido (triangle 120→180 vibrato) + traba @0.8 | gatillo (ruido 20 k) + cuerda pesada (triangle 160→90 vibrato 25 Hz) + silbido del virote (ruido 6 k→2 k) | golpe brutal: ruido 6 k + sine 90→28 largo + ruido 2 k lowpass 1 k + mareo (triangle 1000 vibrato 9 Hz @0.2) |
+| Danza de Mil Cortes | dos latidos (sine 60→45 @0, @0.22) + brillo de hoja (triangle 3520) + desenvaine @0.45 + destello sine 4186 | 12 tajos rápidos (silbido de hoja agudo, cada 60 ms) | corte final (ruido 14 k→3 k) + clink inarmónico (sine 2349 + 5919) + golpe sine 100→35 |
+
+## Loot
+
+Sonidos del loot en el mapa (`buildLootSfx`, pico 0.34; el haz 0.44).
+Suenan solo para el jugador local (`SessionSfx.lootSounds`):
+
+| Id | Receta | Cuándo |
+|---|---|---|
+| `loot.alerta` | square 880 0.08 + square 1175 0.12 @0.09 | filtro `Sonido alerta` |
+| `loot.campana` | sine 1319 0.7 + sine 3317 0.45 (inarmónico) + triangle 659 | `Sonido campana` |
+| `loot.gema` | arpegio triangle 2093, 2637, 3136, 4186 + sine 4186 con vibrato | `Sonido gema` |
+| `loot.legendario` | arpegio square 523, 659, 784 + acorde 1047/1319/1568 @0.24 | `Sonido legendario` |
+| `loot.material` | triangle 1568 0.12 + 1976 0.16 @0.05 | `Sonido material` |
+| `loot.suave` | sine 660→880 0.18 | `Sonido suave` |
+| `loot.pickup` | sine 700→1400 0.06 + triangle 1760 0.05 @0.05 | el jugador local levanta algo (`LootPickedEvent`) |
+| `loot.beam` | ruido 2 k→8 k 0.6 + sawtooth 220→880 + sines 1760 / 2637 con vibrato | cae un Legendario del jugador local, @120 ms (encima del sonido de su filtro) |
+
+`LootDropEvent` del jugador local: si su filtro lo muestra, el sonido de
+la regla (`FilterStyle.sound`; sin sonido, nada) y, si es Legendario,
+`loot.beam`. Oculto por el filtro: silencio.
 
 ## Qué evento suena (`SessionSfx`)
 
