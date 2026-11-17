@@ -499,6 +499,11 @@ paquete `audioplayers`):
   estados sonaban en el mismo paso; el prototipo suma osciladores sin
   límite.
 - `NoopSfxPlayer` queda para tests y plataformas sin audio.
+- Volumen: `SfxService.volume` (0..1, de los ajustes de audio; ver
+  docs/specs/music.md § 7) llega a cada sonido como
+  `SfxPlayer.play(wav, volume:)`; con 0 o `muted` no suena nada.
+
+La música de fondo tiene su propio spec: docs/specs/music.md.
 
 `sfxInit` (crear el `AudioContext` con el primer clic) no hace falta en
 escritorio.

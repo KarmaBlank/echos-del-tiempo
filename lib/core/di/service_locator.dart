@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get_it/get_it.dart';
 
 import '../../features/lobby/data/json_file_profile_store.dart';
@@ -13,7 +15,10 @@ import '../../netcode/contracts/net_session_factory.dart';
 import '../../netcode/lan/lan_net_session.dart';
 import '../../netcode/p2p_webrtc/signaling_service.dart';
 import '../../netcode/p2p_webrtc/webrtc_net_session.dart';
+import '../audio/audio_settings.dart';
+import '../audio/audioplayers_music_player.dart';
 import '../audio/audioplayers_sfx_player.dart';
+import '../audio/music/music_service.dart';
 import '../audio/sfx_service.dart';
 
 final sl = GetIt.instance;
@@ -69,6 +74,30 @@ void registerSharedDependencies() {
   sl.registerLazySingleton<SfxService>(
     () => SfxService(player: sl<SfxPlayer>()),
   );
+  // Música (docs/specs/music.md § 6): render en isolate y caché en disco.
+  sl.registerLazySingleton<MusicPlayer>(() => AudioplayersMusicPlayer());
+  sl.registerLazySingleton<MusicService>(
+    () => MusicService(player: sl<MusicPlayer>(), render: renderSongInIsolate),
+  );
+  // Ajustes de audio: `audio.json` junto al perfil; en memoria donde no
+  // hay carpeta de datos conocida.
+  sl.registerLazySingleton<AudioSettingsController>(() {
+    String? dir;
+    try {
+      dir = JsonFileProfileStore.dataDirectory();
+    } on UnsupportedError {
+      dir = null; // web
+    }
+    final c = AudioSettingsController(
+      store: dir == null
+          ? InMemoryAudioSettingsStore()
+          : JsonFileAudioSettingsStore.inDirectory(dir),
+      music: sl<MusicService>(),
+      sfx: sl<SfxService>(),
+    );
+    unawaited(c.load());
+    return c;
+  });
 }
 
 /// Variante P2P por internet: WebRTC + señalización por Firestore.

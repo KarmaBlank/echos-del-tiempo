@@ -20,6 +20,7 @@ import 'map/map_game.dart';
 import 'panels/character_panel.dart';
 import 'session_battle_screen.dart';
 import 'session_controller.dart';
+import 'session_music.dart';
 import 'session_sfx.dart';
 import 'session_view.dart';
 
@@ -109,10 +110,17 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final controller = ref.read(sessionControllerProvider.notifier);
     // Sonido: escucha los eventos de la sesión mientras la pantalla vive.
     ref.watch(sessionSfxProvider);
+    // Música: el bucle y los jingles según el estado (session_music.dart).
+    ref.watch(sessionMusicProvider);
 
     // Recupera el foco si un cambio de pantalla lo dejó sin dueño.
+    // No con un diálogo encima (p. ej. el panel de sonido).
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_focus.hasFocus) _focus.requestFocus();
+      if (mounted &&
+          !_focus.hasFocus &&
+          (ModalRoute.of(context)?.isCurrent ?? true)) {
+        _focus.requestFocus();
+      }
     });
 
     // Se perdió la sala (el host se fue): vuelve al título con el motivo.

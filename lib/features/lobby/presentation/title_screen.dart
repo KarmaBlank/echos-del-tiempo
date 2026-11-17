@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -7,6 +9,8 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_panel.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../core/audio/music/music_catalog.dart';
+import '../../../core/audio/presentation/audio_settings_panel.dart';
 import '../../../core/update/presentation/update_banner.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/class_def.dart';
@@ -52,6 +56,20 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
   void initState() {
     super.initState();
     _loading = _load();
+    // Ajustes de audio (cargan del disco) y la música del título; en
+    // segundo plano se preparan las piezas que suenan enseguida al jugar
+    // (docs/specs/music.md § 6).
+    ref.read(audioSettingsProvider);
+    final music = ref.read(musicServiceProvider)..playTrack(Music.title);
+    unawaited(music.preload(const [
+      Music.town,
+      Music.overworld,
+      Music.battle,
+      Music.victory,
+      Music.levelUp,
+      Music.boss,
+      Music.zone1,
+    ]));
   }
 
   @override
@@ -179,6 +197,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     // El controlador la cierra al descartarse; por las dudas (idempotente).
     if (net != null) await net.disconnect();
     if (!mounted) return;
+    ref.read(musicServiceProvider).playTrack(Music.title);
     ref.read(activeNetSessionProvider.notifier).state = null;
     if (reason != null) {
       setState(() {
@@ -332,6 +351,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                         style: const TextStyle(color: RetroPalette.muted)),
                   ],
                 ),
+                const SizedBox(height: 16),
+                const AudioSettingsButton(),
                 if (_netStatus case final status?) ...[
                   const SizedBox(height: 8),
                   Text(retroText(status),

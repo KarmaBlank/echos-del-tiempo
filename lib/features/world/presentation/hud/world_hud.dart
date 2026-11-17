@@ -8,6 +8,7 @@ import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../core/audio/presentation/audio_settings_panel.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/loot_filter.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
@@ -89,16 +90,25 @@ class WorldHud extends StatelessWidget {
                 ),
               ),
             ),
-            if (s.mode == SessionMode.lobby && onExit != null)
-              Positioned(
-                top: _gap,
-                left: _gap,
-                child: ElevatedButton(
-                  style: RetroTheme.compactButton(),
-                  onPressed: onExit,
-                  child: const Text('< TITULO'),
-                ),
+            // `< TITULO` (solo en el lobby) y `SONIDO` (siempre).
+            Positioned(
+              top: _gap,
+              left: _gap,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (s.mode == SessionMode.lobby && onExit != null) ...[
+                    ElevatedButton(
+                      style: RetroTheme.compactButton(),
+                      onPressed: onExit,
+                      child: const Text('< TITULO'),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  const AudioSettingsButton(),
+                ],
               ),
+            ),
             // `Sala: CODIGO [Copiar]` del prototipo (HTML línea 87).
             if (view.roomCode case final code?)
               Positioned(
