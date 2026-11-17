@@ -15,6 +15,7 @@ import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/session_engine.dart';
 import '../../combat/presentation/scene/battle_fx.dart';
 import '../../combat/presentation/scene/fx_style.dart';
+import '../../combat/presentation/scene/ult_cinematic.dart';
 import 'session_controller.dart';
 import 'session_view.dart';
 
@@ -42,11 +43,17 @@ SfxCue cue(String id, [int delayMs = 0]) => (id: id, delayMs: delayMs);
 
 /// Contexto de la acción en curso dentro de un paso.
 class _Act {
-  _Act(this.event, this.actor, this.skill);
+  _Act(this.event, this.actor, this.skill)
+      : ult = event.kind == BattleActionKind.ultimate
+            ? ultScriptFor(event.skillId)
+            : null;
 
   final ActionEvent event;
   final Combatant? actor;
   final SkillDef? skill;
+
+  /// Guion de la ULT (solo en una acción `ultimate`).
+  final UltScript? ult;
 
   /// Impactos ya sonados / objetivos vistos, en orden.
   final targets = <String>[];
@@ -159,9 +166,28 @@ class SessionSfx {
     return out.length > maxCuesPerStep ? out.sublist(0, maxCuesPerStep) : out;
   }
 
-  /// Gancho de la ULT: hoy es el `beep` del prototipo. El diseño de
-  /// sonido de cada ULT (junto con su cinemática) va acá.
-  List<SfxCue> ultimateCues(UltimateUsedEvent e) => [cue(Sfx.ultimate)];
+  /// Preparación y descarga de la ULT del arma del lanzador, en los
+  /// tiempos de su guion (docs/specs/audio.md § "Ultimates"); los
+  /// impactos van con cada golpe. Con arma desconocida, el `beep` del
+  /// prototipo.
+  List<SfxCue> ultimateCues(UltimateUsedEvent e) {
+    final sk = kUltimates[battle?.byId(e.actorId)?.weaponType];
+    if (sk == null ||
+        !service.catalog.containsKey(Sfx.ult(sk.id, Sfx.ultBuild))) {
+      return [cue(Sfx.ultimate)];
+    }
+    final script = ultScriptFor(sk.id);
+    return [
+      cue(Sfx.ult(sk.id, Sfx.ultBuild)),
+      cue(Sfx.ult(sk.id, Sfx.ultRelease), script.buildMs),
+    ];
+  }
+
+  /// Impacto propio de la ULT de [a] (o el genérico si no tiene).
+  String _ultImpact(_Act a) {
+    final id = Sfx.ult(a.event.skillId ?? '', Sfx.ultImpact);
+    return service.catalog.containsKey(id) ? id : Sfx.hit;
+  }
 
   // ---------------------------------------------------------------- acción
 
@@ -215,7 +241,7 @@ class SessionSfx {
       case BattleActionKind.attack:
         return !e.allTargets && _ranged(a.actor) ? BattleFx.projMs : 0;
       case BattleActionKind.ultimate:
-        return (a.skill?.dealsDamage ?? false) ? BattleFx.ultDelayMs : 0;
+        return (a.ult ?? kDefaultUltScript).impactMs;
       case BattleActionKind.skill:
         final sk = a.skill;
         if (sk == null || !sk.dealsDamage) return 0;
@@ -238,8 +264,11 @@ class SessionSfx {
       a.targets.add(targetId);
       i = a.targets.length - 1;
     }
+    final ult = a.ult;
+    // ULT: el impacto de su guion en ese objetivo (ya escalonado).
+    if (ult != null) return ult.impactFor(i);
     final dl = _hitDelay(a);
-    final melee = dl == 0 && a.event.kind != BattleActionKind.ultimate;
+    final melee = dl == 0;
     return dl + (melee ? meleeImpactMs : 0) + i * staggerMs;
   }
 
@@ -254,15 +283,17 @@ class SessionSfx {
       return [cue(!e.critical && _isPlayer(e.targetId) ? Sfx.hurt : Sfx.hit)];
     }
     final out = <SfxCue>[];
-    if (a.event.kind == BattleActionKind.ultimate) {
-      // ULT: como el prototipo (el diseño de ULT va en ultimateCues).
-      out.add(cue(!e.critical && _isPlayer(e.targetId) ? Sfx.hurt : Sfx.hit));
-      if (e.critical) {
-        out.add(cue(Sfx.critClink, _impactTime(a, e.targetId)));
+    final firstHit = !a.targets.contains(e.targetId);
+    if (a.ult != null) {
+      // ULT: su impacto propio en el ms del guion (3 como máximo).
+      final at = _impactTime(a, e.targetId);
+      if (firstHit && a.impacts < maxImpacts) {
+        a.impacts++;
+        out.add(cue(_ultImpact(a), at));
       }
+      if (e.critical) out.add(cue(Sfx.critClink, at));
       return out;
     }
-    final firstHit = !a.targets.contains(e.targetId);
     final at = _impactTime(a, e.targetId);
     if (firstHit && a.impacts < maxImpacts) {
       a.impacts++;
@@ -315,7 +346,11 @@ class SessionSfx {
       return e.mana ? const [] : [cue(Sfx.tick(StatusKind.regen.name))];
     }
     if (e.mana) return [cue(Sfx.manaUp)];
-    if (a.event.kind == BattleActionKind.ultimate) return [cue(Sfx.heal)];
+    final ult = a.ult;
+    if (ult != null) {
+      // Baluarte: una vez, en el primer impacto.
+      return a.heals++ == 0 ? [cue(_ultImpact(a), ult.impactFor(0))] : const [];
+    }
     if (a.heals >= maxImpacts) return const [];
     final base = a.event.kind == BattleActionKind.potion
         ? potionHealMs

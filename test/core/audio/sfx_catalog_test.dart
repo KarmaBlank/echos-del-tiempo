@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:echos_del_tiempo/core/audio/sfx_catalog.dart';
 import 'package:echos_del_tiempo/core/audio/sfx_recipes.dart';
 import 'package:echos_del_tiempo/core/audio/wav_synth.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/scene/ult_cinematic.dart';
 import 'package:echos_del_tiempo/game_engine/data/enemies_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/skills_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/weapons_catalog.dart';
@@ -101,7 +103,11 @@ void main() {
     for (final e in kSfxCatalog.entries) {
       final def = e.value;
       expect(def.peak, isNotNull, reason: e.key);
-      expect(def.peak!, lessThanOrEqualTo(SfxLevel.crit), reason: e.key);
+      // Solo las partes de las ULT pasan el nivel del crítico.
+      expect(def.peak!,
+          lessThanOrEqualTo(
+              e.key.startsWith('ult_') ? SfxLevel.ultImpact : SfxLevel.crit),
+          reason: e.key);
       final s = synth.samplesOf(def);
       var peak = 0.0;
       for (final x in s) {
@@ -130,6 +136,37 @@ void main() {
     }
   });
 
+  test('ULT: cada una tiene preparación, descarga e impacto propios, '
+      'que entran en sus fases', () {
+    for (final sk in kUltimates.values) {
+      final script = ultScriptFor(sk.id);
+      expect(kUltScripts, contains(sk.id));
+      final build = kSfxCatalog[Sfx.ult(sk.id, Sfx.ultBuild)];
+      final release = kSfxCatalog[Sfx.ult(sk.id, Sfx.ultRelease)];
+      final impact = kSfxCatalog[Sfx.ult(sk.id, Sfx.ultImpact)];
+      expect([build, release, impact], everyElement(isNotNull), reason: sk.id);
+      // La preparación termina con la descarga (un resto de 0.15 s).
+      expect(build!.length, lessThanOrEqualTo(script.buildMs / 1000 + 0.15),
+          reason: sk.id);
+      // La descarga no pasa del regreso.
+      expect(release!.length, lessThanOrEqualTo(script.releaseMs / 1000),
+          reason: sk.id);
+      expect(impact!.peak, SfxLevel.ultImpact);
+      expect(impact.peak!, greaterThan(kSfxCatalog[Sfx.impactBlunt]!.peak!));
+    }
+    // Todas distintas entre sí.
+    for (final part in Sfx.ultParts) {
+      final voices = {
+        for (final sk in kUltimates.values)
+          kSfxCatalog[Sfx.ult(sk.id, part)]!
+              .voices
+              .map((v) => '${v.wave}:${v.frequency}:${v.duration}:${v.delay}')
+              .join(','),
+      };
+      expect(voices, hasLength(kUltimates.length), reason: part);
+    }
+  });
+
   test('ULT: se conserva el beep del prototipo', () {
     expect(kSfxCatalog[Sfx.ultimate]!.voices, kLegacyTones[Sfx.ultimate]);
   });
@@ -144,6 +181,43 @@ void main() {
     for (final e in _samples.entries) {
       File('$dir${Platform.pathSeparator}${e.key}')
           .writeAsBytesSync(synth.renderDef(kSfxCatalog[e.value]!));
+    }
+    // Cada ULT completa: preparación + descarga + impactos en 3 objetivos.
+    for (final sk in kUltimates.values) {
+      final script = ultScriptFor(sk.id);
+      final parts = [
+        (Sfx.ult(sk.id, Sfx.ultBuild), 0),
+        (Sfx.ult(sk.id, Sfx.ultRelease), script.buildMs),
+        for (var i = 0; i < (sk.allTargets ? 3 : 1); i++)
+          (Sfx.ult(sk.id, Sfx.ultImpact), script.impactFor(i)),
+      ];
+      final layers = [
+        for (final (id, at) in parts) (synth.samplesOf(kSfxCatalog[id]!), at),
+      ];
+      final n = layers.fold<int>(0, (m, l) {
+        final end = (l.$2 / 1000 * synth.sampleRate).round() + l.$1.length;
+        return end > m ? end : m;
+      });
+      final mix = Float64List(n);
+      for (final (s, at) in layers) {
+        final o = (at / 1000 * synth.sampleRate).round();
+        for (var i = 0; i < s.length; i++) {
+          mix[o + i] += s[i];
+        }
+      }
+      for (var i = 0; i < n; i++) {
+        mix[i] = mix[i].clamp(-1.0, 1.0);
+      }
+      final name = sk.name
+          .toLowerCase()
+          .replaceAll(' ', '_')
+          .replaceAll('á', 'a')
+          .replaceAll('é', 'e')
+          .replaceAll('í', 'i')
+          .replaceAll('ó', 'o')
+          .replaceAll('ú', 'u');
+      File('$dir${Platform.pathSeparator}ult_$name.wav')
+          .writeAsBytesSync(synth.encode(mix));
     }
   });
 }

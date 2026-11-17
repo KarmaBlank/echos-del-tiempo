@@ -7,6 +7,7 @@ import '../../../../game_engine/models/skill.dart';
 import '../../../../game_engine/models/status.dart';
 import '../../../../game_engine/rules/js_math.dart';
 import 'fx_style.dart';
+import 'ult_cinematic.dart';
 
 /// Tipo de efecto (`k` de `addFx` en el prototipo).
 enum FxKind { num, txt, slash, proj, ring, aura, flash, poof, act, ult }
@@ -17,6 +18,10 @@ class UltFx {
     required this.name,
     required this.casterName,
     required this.bulwark,
+    this.ultId,
+    this.casterClass,
+    this.script = kDefaultUltScript,
+    this.targets = const [],
   });
 
   final String name;
@@ -24,6 +29,29 @@ class UltFx {
 
   /// Baluarte: los objetivos de la cinemática son los aliados.
   final bool bulwark;
+
+  /// `SkillDef.id` de la ULT (`null` si el arma no se conoce).
+  final String? ultId;
+
+  /// Clase del lanzador (sprite grande de la tarjeta).
+  final String? casterClass;
+
+  /// Guion (fases, impactos): docs/specs/battle_presentation.md
+  /// § "Ultimates".
+  final UltScript script;
+
+  /// Objetivos en el orden de los eventos (el índice `i` de
+  /// `impactFor(i)`): los golpeados, o los curados en Baluarte.
+  final List<String> targets;
+
+  UltFx withTargets(List<String> ids) => UltFx(
+      name: name,
+      casterName: casterName,
+      bulwark: bulwark,
+      ultId: ultId,
+      casterClass: casterClass,
+      script: script,
+      targets: ids);
 }
 
 /// Un efecto de batalla: el objeto de `addFx` del prototipo, en
@@ -40,6 +68,7 @@ class BattleFx {
     this.text,
     this.big = false,
     this.hurt = false,
+    this.heavy = false,
     this.el = FxElement.phys,
     this.delayMs = 0,
     this.who,
@@ -59,6 +88,9 @@ class BattleFx {
 
   /// Daño recibido por un jugador (sacudida y destello rojo).
   final bool hurt;
+
+  /// Número de una ULT: más grande, con rebote, dura más.
+  final bool heavy;
   final FxElement el;
 
   /// `dl`: el efecto empieza [delayMs] después de agregarse.
@@ -70,7 +102,7 @@ class BattleFx {
 
   /// Duración visible (ms), contada desde que empieza.
   int get durationMs => switch (kind) {
-        FxKind.num => numMs,
+        FxKind.num => heavy ? heavyNumMs : numMs,
         FxKind.txt => txtMs,
         FxKind.slash => slashMs,
         FxKind.proj => projMs,
@@ -78,11 +110,12 @@ class BattleFx {
         FxKind.poof => poofMs,
         FxKind.flash => flashMs,
         FxKind.act => actMs,
-        FxKind.ult => ultMs,
+        FxKind.ult => ult?.script.totalMs ?? kDefaultUltScript.totalMs,
         FxKind.aura => 0,
       };
 
   static const numMs = 1100;
+  static const heavyNumMs = 1400;
   static const txtMs = 1400;
   static const slashMs = 220;
   static const projMs = 280;
@@ -90,13 +123,25 @@ class BattleFx {
   static const poofMs = 500;
   static const flashMs = 350;
   static const actMs = 260;
-  static const ultMs = 2200;
-
-  /// `ULT_DL`: los números de una ultimate aparecen a los 1150 ms.
-  static const ultDelayMs = 1150;
 
   /// Retraso del impacto de un dúo.
   static const dualDelayMs = 300;
+
+  /// La misma cinemática con otro [UltFx].
+  BattleFx withUlt(UltFx u) => BattleFx(kind,
+      x: x,
+      y: y,
+      tx: tx,
+      ty: ty,
+      color: color,
+      text: text,
+      big: big,
+      hurt: hurt,
+      heavy: heavy,
+      el: el,
+      delayMs: delayMs,
+      who: who,
+      ult: u);
 
   @override
   String toString() => 'BattleFx($kind, ($x, $y), text: $text, '
@@ -122,6 +167,9 @@ class _Action {
   final Combatant? actor;
   SkillDef? skill;
   Color color = fxWhite;
+
+  /// Guion de la ULT (solo en una acción `ultimate`).
+  UltScript? ult;
   FxElement el = FxElement.phys;
 
   /// Retraso del impacto ya decidido por objetivo.
@@ -143,6 +191,10 @@ List<BattleFx> mapBattleEvents(
   final out = <BattleFx>[];
   _Action? action;
 
+  // La acción de la ULT del paso y dónde quedó su cinemática.
+  _Action? ultAction;
+  int? ultIndex;
+
   bool isPlayer(String id) => state.byId(id)?.isPlayer ?? false;
   Iterable<Combatant> aliveParty() => state.party.where((p) => p.alive);
 
@@ -153,7 +205,7 @@ List<BattleFx> mapBattleEvents(
   }
 
   void num(String id, double dy, String text, Color color,
-      {bool big = false, bool hurt = false, int dl = 0}) {
+      {bool big = false, bool hurt = false, bool heavy = false, int dl = 0}) {
     final p = position(id);
     out.add(BattleFx(FxKind.num,
         x: p.dx,
@@ -162,13 +214,18 @@ List<BattleFx> mapBattleEvents(
         color: color,
         big: big,
         hurt: hurt,
+        heavy: heavy,
         delayMs: dl));
   }
 
-  void aura(String id, FxElement el) {
+  void aura(String id, FxElement el, {int dl = 0}) {
     final p = position(id);
-    out.add(BattleFx(FxKind.aura, x: p.dx, y: p.dy, el: el));
+    out.add(BattleFx(FxKind.aura, x: p.dx, y: p.dy, el: el, delayMs: dl));
   }
+
+  /// Impacto de la ULT en [id] (en el orden en que aparecen).
+  int ultDelay(_Action a, String id) =>
+      a.dl[id] ??= (a.ult ?? kDefaultUltScript).impactFor(a.dl.length);
 
   void ring(double x, double y, Color color, {bool big = false}) =>
       out.add(BattleFx(FxKind.ring, x: x, y: y, color: color, big: big));
@@ -200,7 +257,7 @@ List<BattleFx> mapBattleEvents(
           dl = proj(actorId, targetId, fxWhite, FxElement.phys);
         }
       case BattleActionKind.ultimate:
-        if (a.skill?.dealsDamage ?? false) dl = BattleFx.ultDelayMs;
+        if (a.skill?.dealsDamage ?? false) return ultDelay(a, targetId);
       case BattleActionKind.skill:
         final sk = a.skill;
         if (sk != null &&
@@ -235,9 +292,18 @@ List<BattleFx> mapBattleEvents(
           ..skill = sk
           ..color = skillColor(e.skillId)
           ..el = sk == null ? FxElement.phys : skillElement(sk);
-        act(e.actorId);
-        if (sk == null) break;
         final ult = e.kind == BattleActionKind.ultimate;
+        if (ult) {
+          final script = ultScriptFor(e.skillId);
+          a.ult = script;
+          ultAction = a;
+          // El lanzador se lanza al descargar.
+          out.add(BattleFx(FxKind.act,
+              who: e.actorId, delayMs: script.buildMs));
+        } else {
+          act(e.actorId);
+        }
+        if (sk == null) break;
         switch (sk.kind) {
           case SkillKind.physical || SkillKind.magical:
             if (sk.allTargets && !ult) ring(here.dx, here.dy - 8, a.color);
@@ -345,10 +411,12 @@ List<BattleFx> mapBattleEvents(
       }
     }
     final p = position(id);
+    final heavy = a?.ult != null;
     num(id, -20, '${e.amount}', e.critical ? _gold : fxWhite,
-        big: e.critical, dl: dl);
+        big: e.critical, heavy: heavy, dl: dl);
     if (e.critical) {
       txt(id, -34, '¡CRÍTICO ×${fm(e.critMultiplier)}!', _gold, dl: dl);
+      if (heavy) out.add(BattleFx(FxKind.flash, color: fxWhite, delayMs: dl));
     }
     out.add(BattleFx(FxKind.slash,
         x: p.dx, y: p.dy - 8, color: color, el: el, delayMs: dl, who: id));
@@ -375,8 +443,10 @@ List<BattleFx> mapBattleEvents(
         num(id, -26, '+${e.amount}', _healGreen);
         aura(id, FxElement.holy);
       case BattleActionKind.ultimate:
-        num(id, -18, '+${e.amount}', _healGreen);
-        aura(id, FxElement.holy); // Baluarte
+        // Baluarte: con el impacto de su guion en cada aliado.
+        final dl = ultDelay(a, id);
+        num(id, -18, '+${e.amount}', _healGreen, heavy: true, dl: dl);
+        aura(id, FxElement.holy, dl: dl);
       default:
         aura(id, FxElement.heal);
         num(id, -18, '+${e.amount}', _healGreen);
@@ -393,6 +463,7 @@ List<BattleFx> mapBattleEvents(
         final c = state.byId(actorId);
         final sk = kUltimates[c?.weaponType];
         final p = position(actorId);
+        ultIndex = out.length;
         out.add(BattleFx(FxKind.ult,
             x: p.dx,
             y: p.dy,
@@ -403,6 +474,9 @@ List<BattleFx> mapBattleEvents(
               name: name,
               casterName: c?.name ?? '',
               bulwark: sk?.kind == SkillKind.bulwark,
+              ultId: sk?.id,
+              casterClass: c?.classId,
+              script: ultScriptFor(sk?.id),
             )));
       case DamageEvent():
         damage(e);
@@ -427,7 +501,10 @@ List<BattleFx> mapBattleEvents(
           txt(targetId, -28, 'K.O.', _critRed);
         } else {
           final p = position(targetId);
-          out.add(BattleFx(FxKind.poof, x: p.dx, y: p.dy - 6));
+          // En una ULT, al impactar en él.
+          final a = action;
+          final dl = a?.ult == null ? 0 : a!.dl[targetId] ?? 0;
+          out.add(BattleFx(FxKind.poof, x: p.dx, y: p.dy - 6, delayMs: dl));
         }
       case RevivedEvent():
         break;
@@ -438,6 +515,12 @@ List<BattleFx> mapBattleEvents(
           }
         }
     }
+  }
+  // Los objetivos de la cinemática, en el orden de sus impactos.
+  final ui = ultIndex;
+  if (ui != null) {
+    final u = out[ui];
+    out[ui] = u.withUlt(u.ult!.withTargets([...?ultAction?.dl.keys]));
   }
   return out;
 }

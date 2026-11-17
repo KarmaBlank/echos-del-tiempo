@@ -1,6 +1,8 @@
 import 'package:echos_del_tiempo/core/audio/sfx_catalog.dart';
 import 'package:echos_del_tiempo/core/audio/sfx_service.dart';
+import 'package:echos_del_tiempo/game_engine/data/skills_catalog.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_fx.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/scene/ult_cinematic.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_sfx.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
@@ -279,14 +281,15 @@ void main() {
         ]);
   });
 
-  test('ULT: el sonido del prototipo y sus números como antes (más el '
-      'clink del crítico al impacto); dúo con destello', () {
+  test('ULT: preparación, descarga e impacto propios en los tiempos del '
+      'guion (más el clink del crítico al impacto); dúo con destello', () {
     final sfx = _sfx(_Recorder());
+    final tajo = kUltScripts['ult_espada']!;
     expect(
         sfx.battleSounds(const [
+          UltimateUsedEvent('knight', 'Tajo Final'),
           ActionEvent('knight', BattleActionKind.ultimate,
               skillId: 'ult_espada', targetId: 'e1'),
-          UltimateUsedEvent('knight', 'Tajo Final'),
           DamageEvent('e1', 90, critical: true),
           KnockedOutEvent('e1'),
           ActionEvent('knight', BattleActionKind.dual,
@@ -294,15 +297,63 @@ void main() {
           DamageEvent('e2', 30),
         ]),
         [
-          cue(Sfx.ultimate),
-          cue(Sfx.hit),
-          cue(Sfx.critClink, BattleFx.ultDelayMs),
-          cue(Sfx.koEnemy, BattleFx.ultDelayMs + SessionSfx.koAfterMs),
+          cue(Sfx.ult('ult_espada', Sfx.ultBuild)),
+          cue(Sfx.ult('ult_espada', Sfx.ultRelease), tajo.buildMs),
+          cue(Sfx.ult('ult_espada', Sfx.ultImpact), tajo.impactMs),
+          cue(Sfx.critClink, tajo.impactMs),
+          cue(Sfx.koEnemy, tajo.impactMs + SessionSfx.koAfterMs),
           cue(Sfx.flash),
           cue(Sfx.dualCast),
           // guerrero+maga = Espada Llameante (Quemadura).
           cue(Sfx.impactFire, BattleFx.dualDelayMs),
         ]);
+  });
+
+  test('ULT de cada tipo de arma: preparación @0, descarga al terminar la '
+      'preparación, impacto en el impacto del guion de cada objetivo (3 '
+      'como máximo) y clink en los críticos', () {
+    for (final e in kUltimates.entries) {
+      final sk = e.value;
+      final script = ultScriptFor(sk.id);
+      final sfx = SessionSfx(_Recorder(), localId: 'p')
+        ..battle = BattleState(party: [
+          _player('p', e.key, 'guerrero'),
+          _player('q', 'arco', 'tirador'),
+        ], enemies: [
+          for (var i = 0; i < 4; i++) _enemy('e$i', 'golem'),
+        ]);
+      final cues = sfx.battleSounds([
+        UltimateUsedEvent('p', sk.name),
+        ActionEvent('p', BattleActionKind.ultimate, skillId: sk.id),
+        if (sk.dealsDamage)
+          for (var i = 0; i < 4; i++) DamageEvent('e$i', 10, critical: i == 3)
+        else ...[
+          const HealEvent('p', 10),
+          const HealEvent('q', 10),
+        ],
+      ]);
+      final impact = Sfx.ult(sk.id, Sfx.ultImpact);
+      expect(cues.take(2), [
+        cue(Sfx.ult(sk.id, Sfx.ultBuild)),
+        cue(Sfx.ult(sk.id, Sfx.ultRelease), script.buildMs),
+      ], reason: sk.name);
+      if (sk.dealsDamage) {
+        expect(cues.skip(2), [
+          for (var i = 0; i < 3; i++) cue(impact, script.impactFor(i)),
+          cue(Sfx.critClink, script.impactFor(3)),
+        ], reason: sk.name);
+      } else {
+        expect(cues.skip(2), [cue(impact, script.impactFor(0))]);
+      }
+      for (final c in cues) {
+        expect(kSfxCatalog, contains(c.id), reason: c.id);
+      }
+    }
+    // Arma desconocida: el beep del prototipo.
+    expect(
+        SessionSfx(_Recorder(), localId: 'x')
+            .battleSounds(const [UltimateUsedEvent('x', '?')]),
+        [cue(Sfx.ultimate)]);
   });
 
   test('onEvent manda cada sonido con su retraso; subida de nivel', () {

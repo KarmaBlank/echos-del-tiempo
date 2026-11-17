@@ -184,6 +184,16 @@ abstract final class Sfx {
 
   /// Daño / cura de un estado al empezar el turno (`StatusKind.name`).
   static String tick(String kind) => 'tick.$kind';
+
+  /// Partes del sonido de una ULT (docs/specs/audio.md § "Ultimates").
+  static const ultBuild = 'build';
+  static const ultRelease = 'release';
+  static const ultImpact = 'impact';
+  static const ultParts = [ultBuild, ultRelease, ultImpact];
+
+  /// Sonido [part] de la ULT [ultId] (`SkillDef.id`), p. ej.
+  /// `ult_baculo.impact`.
+  static String ult(String ultId, String part) => '$ultId.$part';
 }
 
 /// Retraso del impacto de la ULT (`ULT_DL`, 1150 ms).
@@ -199,6 +209,9 @@ abstract final class SfxLevel {
   static const heavy = 0.42;
   static const crit = 0.45;
   static const ultimate = 0.45;
+  static const ultBuild = 0.45;
+  static const ultRelease = 0.46;
+  static const ultImpact = 0.50;
 }
 
 /// Las voces del prototipo, copiadas de las llamadas a `beep(`.

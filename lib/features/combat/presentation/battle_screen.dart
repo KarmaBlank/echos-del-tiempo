@@ -337,10 +337,10 @@ class BattleViewState extends State<BattleView>
   void _tapScene(Offset local) {
     final f = scene.frame;
     if (f == null) return;
-    final v = f.geometry.toVirtual(local);
-    if (v.dy < SceneGeometry.stripHeight) return;
-    final cam = scene.camera ?? Offset.zero;
-    final wx = v.dx + cam.dx, wy = v.dy - SceneGeometry.stripHeight + cam.dy;
+    final vp = SceneViewport(f.geometry.worldRect, scene.viewFor(f));
+    if (!vp.area.contains(local)) return;
+    final w = vp.toWorld(local);
+    final wx = w.dx, wy = w.dy;
     for (final e in _foes) {
       final p = f.layout.of(e.id);
       final type = e.enemyType ?? '';
@@ -402,7 +402,20 @@ class BattleViewState extends State<BattleView>
                 ),
               ],
             ),
-            if (b.outcome != null) _EndOverlay(outcome: b.outcome!),
+            // La parte de pantalla de la ULT, encima también de la barra.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(painter: BattleOverlayPainter(scene)),
+              ),
+            ),
+            // El cartel final espera a que termine la cinemática.
+            if (b.outcome != null)
+              ListenableBuilder(
+                listenable: scene,
+                builder: (context, _) => scene.ult != null || scene.holding
+                    ? const SizedBox.shrink()
+                    : _EndOverlay(outcome: b.outcome!),
+              ),
           ],
         );
       }),
@@ -412,7 +425,15 @@ class BattleViewState extends State<BattleView>
   Widget _scene(BattleState b) {
     return LayoutBuilder(builder: (context, cons) {
       final g = SceneGeometry.fit(cons.biggest);
-      final layout = BattleLayout.compute(b, widget.arena, vw: g.virtualWidth);
+      final sprites = widget.sprites;
+      final layout = BattleLayout.compute(b, widget.arena,
+          vw: g.virtualWidth,
+          enemySize: (e) {
+            final type = e.enemyType ?? '';
+            final img = sprites?.enemy(type);
+            final sc = (sprites?.enemyScale(type) ?? 1) * (e.elite ? 1.45 : 1);
+            return Size((img?.width ?? 16) * sc, (img?.height ?? 14) * sc);
+          });
       scene.frame = SceneFrame(
         battle: b,
         geometry: g,
@@ -451,11 +472,6 @@ class BattleViewState extends State<BattleView>
                 turnTimeLeft: widget.turnTimeLeft,
                 localId: widget.localId,
                 scale: s,
-              ),
-            ),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(painter: BattleOverlayPainter(scene)),
               ),
             ),
           ],

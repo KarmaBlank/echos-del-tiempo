@@ -13,7 +13,9 @@ dueño pidió **un sonido para cada ataque** y **un "clink" satisfactorio
 en cada crítico**: el diseño de abajo (§ "Diseño de sonido de combate")
 reemplaza los `beep` de los números de batalla por sonidos por
 habilidad / arma / elemento / enemigo. Los sonidos de turno, cuenta
-regresiva, nivel, destello y ULT siguen siendo los del prototipo.
+regresiva, nivel y destello siguen siendo los del prototipo. Las ULT
+tienen sonido propio por ULT (§ "Ultimates"); el `ultimate` del
+prototipo queda solo como respaldo (arma desconocida).
 
 Implementación:
 
@@ -102,7 +104,9 @@ y queden márgenes cuando varios suenan juntos:
 | Impactos | 0.38 |
 | Golpe pesado de jefe, K.O. | 0.42 |
 | `crit.clink` (tiene que oírse sobre el impacto) | 0.45 |
-| `ultimate` | 0.45 |
+| `ultimate` (prototipo), preparación de ULT | 0.45 |
+| descarga de ULT | 0.46 |
+| impacto de ULT | 0.50 |
 
 ## Diseño de sonido de combate
 
@@ -208,6 +212,36 @@ largo, para que se reconozca:
 | `enemy.generic` | ruido 5 k→2 k 0.12 + square 300→150 (tipo desconocido) |
 | `enemy.heavy` | sine 60→30 0.4 + ruido 2 k 0.3 lowpass 600 (golpe brutal, encima del sonido del enemigo) |
 
+## Ultimates
+
+Cada ULT tiene **tres sonidos propios**, alineados con las fases de su
+cinemática (docs/specs/battle_presentation.md § "Ultimates"; los tiempos
+salen del mismo guion `UltScript`, así sonido e imagen no se separan):
+
+| Id | Cuándo | Pico |
+|---|---|---|
+| `<ultId>.build` | preparación, @0 (dura ≤ `build`) | 0.45 |
+| `<ultId>.release` | descarga, @`build` (incluye silbidos, tajos previos, disparo…) | 0.46 |
+| `<ultId>.impact` | cada impacto, @`impactFor(i)`, 3 objetivos como máximo | 0.50 |
+
+`<ultId>` = `SkillDef.id` de `kUltimates` (`ult_espada`, `ult_hacha`, …).
+El `crit.clink` sigue sonando encima en cada crítico de la ULT.
+
+Recetas ("@t" relativo al inicio de ESE sonido):
+
+| ULT | Preparación | Descarga | Impacto |
+|---|---|---|---|
+| Tajo Final | viento que sube (ruido 2 k→7 k, ataque 0.5 s) + "shing" de la hoja @0.62 (triangle 2637 + sine 3951, vibrato) | tres tajos rápidos @0.2, 0.32, 0.44 (silbido de hoja agudo) + inhalación de ruido que sube hacia el final | tajo pesado (ruido 12 k→2 k) + golpe sine 110→35 + campanazo metálico inarmónico + cola de ruido grave |
+| Cataclismo | retumbo que crece (sine 38 Hz + ruido 700 lowpass 300, ataque 0.7) + tics de piedras crush | golpe al piso @0.05 (sine 90→30 + ruido) + crujidos (ruido crush 3) @0.12-0.4 | estallido: ruido 1.2 k lowpass 900 largo + sine 60→22 + escombros (ruido 6 k crush 3 en ráfagas) |
+| Meteoro | dron ominoso (sawtooth 55→110 vibrato 5 Hz, lowpass 900) + crepitar de fuego | silbido que baja (sine 1800→300, 0.45 s) + rugido de fuego que sube | explosión: ruido 1.5 k lowpass 1.2 k + sine 70→28 + chisporroteo |
+| Paradoja | tic-tac que se acelera (square 2 k, 8 tics) + barrido pulse 900→150 crush 4 "al revés" | oleaje inverso (ruido 600→6 k con ataque largo 0.5 s) + arpegio descendente de campanitas | congelado: racimo de cristal (triangle 3136, 3951, 4699) + estallido de hielo (ruido 16 k) + sine 2093 con vibrato |
+| Tormenta de Flechas | cuerda que cruje (triangle 220 vibrato) + 5 silbidos que suben (andanada al cielo) | lluvia: 14 golpecitos de ruido cortos repartidos en 1.1 s + silbido largo de fondo | ráfaga de 4 impactos de flecha + burbujas de veneno |
+| Disparo Letal | carga que sube (sine 300→2400 vibrato 9 Hz, 0.8 s) + "clac" del cerrojo @0.72 | estampido @0.05 (ruido 20 k + ruido 2 k lowpass + square 120→40) + vuelo en cámara lenta (ruido 4 k→800 lowpass, 0.4 s) | impacto: crack (ruido 18 k) + ping metálico (sine 1760 + 4435) + golpe grave |
+| Baluarte | acorde que se hincha (sawtooth 196/247/294 lowpass 1.2 k, ataque 0.6) | "clang" de escudo + zumbido de cúpula (sines 392/587/784 con vibrato lento) | campanas de cura (arpegio sine 1047, 1319, 1568, 2093) + brillo |
+| Juicio Divino | coro (sines 523/659/784 con vibrato, ataque 0.5) + campanita | campana que baja + zumbido de puntería que sube | pilar: campanas sagradas + ruido 3 k→9 k (whoosh) + sine 80→30 |
+| Martillo Celestial | trueno lejano (ruido 400 lowpass 250) + chispas eléctricas (ruido 20 k crush 2) + tono que sube | caída: ruido 6 k→600 que baja @0.1-0.4 | golpe brutal: sine 80→22 largo + ruido 1 k lowpass 700 + "clang" inarmónico + mareo (triangle 1000 vibrato 9 Hz) |
+
+
 ## Qué evento suena (`SessionSfx`)
 
 Un oyente fuera del motor (el motor no sabe de sonido) escucha
@@ -220,7 +254,9 @@ motor no cambia. Cada sonido de batalla es un `SfxCue(id, delayMs)`:
 
 - Retraso del impacto en un objetivo (`hitDelay`): proyectil 280 ms
   (ataque normal a distancia a un objetivo; habilidad que hace daño y es
-  mágica o de un arma a distancia), dúo 300 ms, ULT 1150 ms, si no 0.
+  mágica o de un arma a distancia), dúo 300 ms, ULT `impactFor(i)` de
+  su guion (docs/specs/battle_presentation.md § "Ultimates"; ya incluye
+  la separación por objetivo), si no 0.
 - Cuerpo a cuerpo (sin proyectil): el impacto suena 50 ms después del
   arranque, para que el silbido se oiga antes del golpe.
 - Varios objetivos: el impacto suena en los **3 primeros** con 70 ms de
@@ -239,9 +275,8 @@ motor no cambia. Cada sonido de batalla es un `SfxCue(id, delayMs)`:
   - `attack`: arranque del arma del actor;
   - `skill`: física → arranque del arma + `skill.<id>`; el resto →
     `skill.<id>`;
-  - `ultimate`: **nada** (lo cubre `UltimateUsedEvent`; gancho
-    `ultimateCues` para que el diseño de ULT con cinemáticas lo
-    reemplace más adelante);
+  - `ultimate`: **nada** (lo cubre `UltimateUsedEvent` →
+    `ultimateCues`);
   - `dual`: `flash` (prototipo) + `dual.cast`;
   - `potion` → `item.potion`; `ether` → `item.ether`; `defend` →
     `defend`;
@@ -251,8 +286,9 @@ motor no cambia. Cada sonido de batalla es un `SfxCue(id, delayMs)`:
 - `DamageEvent`:
   - de estado (`fromStatus`, sin acción): `tick.<statusSource>` (una vez
     por estado y por paso);
-  - dentro de una ULT: como el prototipo (`hurt` a un jugador no
-    crítico, si no `hit`), y si es crítico además `crit.clink` @1150 ms;
+  - dentro de una ULT: `<ult>.impact` en `impactFor(i)` del guion
+    (§ "Ultimates"), en los 3 primeros objetivos; si es crítico además
+    `crit.clink` en ese mismo tiempo (sin tope);
   - a un jugador: `impact.hurt`;
   - a un enemigo: impacto del elemento (§ "Impactos"); dentro de
     Aura Restauradora (luz de la rama creyente) → `impact.holy`;
@@ -260,7 +296,7 @@ motor no cambia. Cada sonido de batalla es un `SfxCue(id, delayMs)`:
   - crítico: además `crit.clink` en el tiempo del impacto.
 - `HealEvent`: maná dentro de una acción → `mana.up`; maná sin acción →
   nada; vida sin acción (Regeneración) → `tick.regen`; vida dentro de
-  una ULT (Baluarte) → `heal` (prototipo); vida dentro de una acción →
+  una ULT (Baluarte) → `<ult>.impact` una vez, en `impactFor(0)`; vida dentro de una acción →
   `heal.sparkle` (@120 ms; poción @200 ms, después del trago), tope 3
   con separación.
 - `StatusAppliedEvent` → `status.<kind>`.
@@ -268,7 +304,9 @@ motor no cambia. Cada sonido de batalla es un `SfxCue(id, delayMs)`:
 - `DelayedEvent` → `delay`.
 - `KnockedOutEvent` → `ko.enemy` / `ko.player`.
 - `RevivedEvent` → `revive`.
-- `UltimateUsedEvent` → `ultimate` (prototipo, sin cambios).
+- `UltimateUsedEvent` → `ultimateCues`: `<ult>.build` @0 y
+  `<ult>.release` @`build` del guion; con arma desconocida, `ultimate`
+  (prototipo).
 - `LevelUpEvent` → `levelUp` (una vez por evento).
 - Vista: `myTurn` cuando `view.myTurn` y cambió `(battle.id,
   state.clock)`; `turnTick` cuando, con `myTurn`, `ceil(30 − turnTime)`
@@ -300,5 +338,7 @@ escritorio.
 Para escuchar una muestra representativa sin abrir el juego:
 `SFX_SAMPLES_DIR=<carpeta> flutter test test/core/audio/sfx_catalog_test.dart`
 escribe ahí un WAV por sonido de la lista `_samples` del test (nombres
-descriptivos, p. ej. `crit_clink.wav`, `enemy_bat_screech.wav`). Sin la
+descriptivos, p. ej. `crit_clink.wav`, `enemy_bat_screech.wav`) y, por
+cada ULT, `ult_<nombre>.wav` con la secuencia completa (preparación +
+descarga + impactos en 3 objetivos, en los tiempos del guion). Sin la
 variable, el test no escribe nada.

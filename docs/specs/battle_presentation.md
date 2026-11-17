@@ -25,6 +25,9 @@ Implementación Dart:
 | Escena (ticker + pintor) | `lib/features/combat/presentation/scene/battle_scene.dart` |
 | Dibujo de actores, efectos, cinemática y timeline | `lib/features/combat/presentation/scene/battle_painter.dart` |
 | Geometría, posiciones y cámara | `lib/features/combat/presentation/scene/battle_layout.dart` |
+| Guiones de las ULT y cámara de la cinemática (puro) | `lib/features/combat/presentation/scene/ult_cinematic.dart` |
+| Disparos y dibujo del mundo de cada ULT | `lib/features/combat/presentation/scene/ult_fx.dart` |
+| Ubicación de etiquetas sin superposición (puro) | `lib/features/combat/presentation/scene/battle_labels.dart` |
 | Eventos → efectos (puro) | `lib/features/combat/presentation/scene/battle_fx.dart` |
 | Partículas, sacudida, destello rojo | `lib/features/combat/presentation/scene/particles.dart` |
 | Colores, elementos, `ELFX`, letras de estado | `lib/features/combat/presentation/scene/fx_style.dart` |
@@ -33,6 +36,8 @@ Implementación Dart:
 | Mapa de fondo de la sesión | `lib/features/world/presentation/session_battle_screen.dart` |
 
 Tests: `test/features/combat/battle_fx_test.dart`,
+`test/features/combat/ult_cinematic_test.dart`,
+`test/features/combat/battle_framing_test.dart`,
 `test/features/combat/turn_order_test.dart`,
 `test/features/combat/battle_screen_test.dart`,
 `test/game_engine/battle_engine_test.dart` (eventos `ActionEvent`).
@@ -73,6 +78,20 @@ les pone hora de inicio y los dibuja según su edad.
   virtual ≈ 1047); con 1920×1080, 1920×780 (`s ≈ 2.28`).
 - El log usa esa misma escala para ubicarse: va en la banda
   `y ∈ [38, 54)` de la franja.
+- **Solo la franja** usa ese lienzo virtual. Debajo de ella, el **área
+  del mundo** (`ancho × (alto − 54·s)` px de pantalla; 1280×352 con
+  1280×720) se dibuja en tres capas (ver § "Cámara y encuadre"):
+  1. **mundo** (tiles, actores, efectos, partículas, cinemática) en
+     píxeles del mundo, rasterizado a `ceil(ancho/zoom) × ceil(alto/zoom)`
+     y escalado ×`zoom` con vecino más cercano (`zoom` entero fuera de
+     las cinemáticas: píxel perfecto);
+  2. destellos de pantalla (`hurtFlash`, `flash`);
+  3. **HUD de la escena** en píxeles de pantalla (texto nítido de la
+     fuente en múltiplos de 8 px): nombres, vida, insignias, marcas de
+     turno/objetivo, números y textos flotantes (§ "Etiquetas").
+- Unidad del HUD `u = escala < 2 ? 1 : 2` (1 con 1280×720, 2 con
+  1920×1080): nombres y textos 8·u px, números 16·u (crítico 24·u),
+  números de ULT 24·u (crítico 32·u).
 
 ## Posiciones (`startBattle`)
 
@@ -88,26 +107,85 @@ Con `(bx, by)` = posición del enemigo del campo que empezó la batalla y
 - Enemigo `i`, con `offs = [(0,0), (22,−26), (22,26), (40,0)]`:
   `x = bx − s·(offs[i].x + (i > 0 y el primero es jefe ? 18 : 0))`,
   `y = by + offs[i].y`. Miran a `s` (`dir = side`).
-- Centro de cámara `(bx + s·34, by)`. Objetivo de cámara (con `VW` el
-  ancho virtual): `tx = clamp(cx − VW/2, −40, mw − VW + 40)`,
-  `ty = clamp(cy − 288/2 + 40, −70, mh − 288 + 30 + extra)` (si el mapa
-  es más chico que la vista, centrado). `extra` = alto de escena que
-  queda debajo de los 288 px nominales (`coverBottom` queda en 0: la
-  barra de batalla ya no tapa la escena). La cámara arranca en la
-  del campo (centrada en el jugador local) y se mueve con suavizado
-  `0.12` por frame de 60 Hz (`cam += (t − cam)·k`), salto directo si la
-  distancia es > 200.
 - Sin mapa (tests, previsualización): `(bx, by) = (VW/2 − 34, 104)`,
   `s = 1`, fondo `#05060c`.
+- La cámara ya no es la del prototipo (`tx`/`ty` con la vista de
+  480×288 a escala ≈ 1.2, que dejaba a los combatientes chiquitos en el
+  medio de una escena de 1280×418): ver § "Cámara y encuadre".
+
+## Cámara y encuadre
+
+Pedido del dueño: los combatientes tienen que **llenar** el área del
+mundo, con el pixel art nítido.
+
+- Caja de cada actor (px del mundo, `(x, y)` = pies): héroe
+  `(x − 10, y − 19, 20, 22)`; enemigo `(x − w/2, y − h, w, h + 4)` con
+  `w × h` = sprite × `enemyScale` × (1.45 si élite) (sin sprites 16×14).
+- **Caja de la pelea** = unión de las cajas de todos los actores (vivos
+  y caídos) + margen de 16 px del mundo a los lados, 6 arriba y 6
+  abajo.
+- **Zoom base** (entero, vecino más cercano):
+  `zoom = clamp(floor(min(W / cw, (H − 22·u) / ch)), 1, 6)` con `W × H` el
+  área del mundo en px de pantalla y `cw × ch` la caja de la pelea; los
+  `22·u` px quedan para las etiquetas de la fila de arriba. Con
+  1280×720 y 4 contra 4 da ×3 (antes ≈ ×1.22).
+- **Centro**: el de la caja, corrido `11·u / zoom` px hacia arriba (lugar
+  para las etiquetas). La vista mide `W/zoom × H/zoom` px del mundo. Si
+  hay mapa se prefiere no mostrar fuera de él: el centro se lleva hacia
+  `[vista/2, mapa − vista/2]` **solo mientras la caja de la pelea siga
+  entera adentro** (el fondo del mapa se conserva; si el mapa es más
+  chico que la vista se ve el negro de alrededor).
+- La cámara (centro + zoom) arranca en la del campo (centro = jugador
+  local, mismo zoom) y se mueve hacia la base con suavizado `0.12` por
+  frame de 60 Hz (centro y zoom), salto directo si la distancia es
+  > 200 px del mundo.
+- Durante una cinemática de ULT la cámara la maneja el guion de la ULT
+  (§ "Ultimates"); al terminar vuelve exactamente a la base.
+- La esquina de la vista se redondea a píxeles enteros del mundo
+  (sin medio píxel). Sacudida: `round((azar − 0.5)·sh·2)·s` px de
+  pantalla (la misma amplitud en pantalla que antes, con `s` la escala
+  de la franja), al mundo y al HUD.
+- Clic/toque: pantalla → mundo con `cámara + (p − origen del área) /
+  zoom`.
+
+## Etiquetas (HUD de la escena)
+
+En px de pantalla, encima del mundo (nunca escaladas ni pixeladas):
+- héroe: `nombre` (8·u, dorado el local, blanco el resto) con la base
+  en el pie de la caja del héroe menos 2·u px (arriba de la cabeza),
+  seguido de las insignias compactas en la misma línea;
+- enemigo: `vida/máx` (8·u, `#ffd8a8`) + insignias en una línea y debajo
+  la barra de vida de `(jefe o élite ? 48 : 28)·u × 3·u` (colores de
+  antes), arriba del sprite;
+- insignia compacta: caja `#000000cc` de `(4 + ancho(letra+stacks))·u`
+  × 10·u con franja de color de 2·u a la izquierda;
+- **sin superposición**: cada etiqueta es un rectángulo; se ubican de
+  arriba hacia abajo (por `y` del ancla) con la primera posición libre
+  entre: la preferida, corrida 1, 2, 3 líneas hacia arriba, y corrida
+  media etiqueta a la izquierda/derecha; siempre dentro del área del
+  mundo (`placeLabels`, puro y con test de 4 contra 4);
+- turno de un jugador: triángulo `#ffd166` de `8·u` arriba de su
+  etiqueta (con el rebote `sin(t/130)·2·u`); objetivo: triángulo igual
+  arriba de la etiqueta del enemigo; turno de enemigo: barra `#ff4757`
+  bajo sus pies (en el mundo, como antes);
+- durante las fases de preparación y descarga de una ULT las etiquetas
+  se desvanecen (alfa `1 − oscurecido`); los números y textos flotantes
+  siguen.
+- Números y textos flotantes (`num`, `txt`): su ancla del mundo pasada
+  a pantalla, suben `edad/40 · 1.5·u` px; los de ULT (`heavy`) entran
+  con un rebote: escala `1 + 0.6·(1 − p)` con `p = min(1, edad/140)` y
+  saltito `|sin(edad/80)|·6·u·e^(−edad/260)`, y duran 1400 ms.
 
 ## Escena
 
-Orden de dibujo: fondo `#05060c`, tiles (los de `drawTile`, vía el
-callback del mapa), enemigos lejanos del campo (> 130 px del centro;
-el de la batalla nunca), actores ordenados por `y`, efectos del mundo,
-`ultWorld`, partículas; después, ya sin sacudida: `ultScreen`, destello
-rojo de daño (`hurtFlash`) y destellos `flash`. La sacudida traslada
-todo el mundo `round((azar − 0.5)·sh·2)` en x e y.
+Orden de dibujo (capa del mundo): fondo `#05060c`, tiles (los de
+`drawTile`, vía el callback del mapa), enemigos lejanos del campo
+(> 130 px del centro; el de la batalla nunca), el **oscurecido** de la
+ULT (solo sobre el fondo), actores ordenados por `y`, efectos del mundo,
+lo del mundo de la ULT, partículas. Después, en pantalla: destello rojo
+de daño (`hurtFlash`), destellos `flash`, el HUD de la escena y, en una
+capa aparte encima de toda la batalla (también de la barra), la parte de
+pantalla de la ULT (§ "Ultimates").
 
 ### Héroes
 
@@ -117,10 +195,9 @@ alfa 0.55. Además:
 - estocada de 6 px hacia donde mira mientras un `act` suyo tenga edad
   < 260 ms (la sombra no se mueve);
 - defendiendo: círculo `#74b9ffaa` radio 11 en `(0, −8)`;
-- nombre (6 px, `#ffd166` el local, `#ffffff` el resto) en `y − 22`;
-- insignias de estado en `y − 50`;
-- turno: triángulo `#ffd166` de `(x−4, y−36+b)`, `(x+4, y−36+b)`,
-  `(x, y−30+b)` con `b = sin(t/130)·2`.
+- nombre, insignias y marca de turno: en el HUD (§ "Etiquetas");
+- "tiempo congelado": durante la preparación y la descarga de una ULT
+  la flotación y los rebotes usan un reloj de pose que no avanza.
 
 ### Enemigos
 
@@ -129,17 +206,15 @@ aura élite y:
 - estocada de `6·dir` px con un `act` < 260 ms;
 - destello blanco (brillo ×3) con un `slash` sobre él de edad
   `[0, 120)` ms;
-- muerte: alfa `max(0.15, 1 − (t − t_muerte − (ulti ? 900 : 0)) / 350)`,
-  deja de dibujarse a los 350 ms (1250 ms con una ultimate en curso);
-  `t_muerte` es el primer frame en que la escena lo ve con vida 0;
-- barra de vida de ancho 40 (jefe o élite) o 20, alto 3 en
-  `y − hh − 3`: fondo `#000000aa`, relleno `#ff4757` (jefe), `#ffd166`
-  (élite) o `#ff9f43`;
-- vida `hp/máx` en 6 px `#ffd8a8` en `y − hh − 6`; insignias en
-  `y − hh − 32`;
-- turno: barra `#ff4757` de 20×2 en `(x − 10, y + 3)`;
-- objetivo (solo si es el turno del jugador local): triángulo `#ffd166`
-  con punta en `y − hh − 13 + b`, `b = sin(t/120)·2`.
+- muerte: alfa `max(0.15, 1 − (t − t_muerte) / 350)`, deja de
+  dibujarse a los 350 ms; `t_muerte` es el primer frame en que la escena
+  lo ve con vida 0. Si es objetivo de la ULT en curso, `t_muerte` pasa
+  a ser el impacto de la ULT en él + 120 ms (sigue entero hasta que le
+  pega);
+- barra de vida, `hp/máx`, insignias y marca de objetivo: en el HUD
+  (§ "Etiquetas"); barra de vida: fondo `#000000aa`, relleno `#ff4757`
+  (jefe), `#ffd166` (élite) o `#ff9f43`;
+- turno: barra `#ff4757` de 20×2 en `(x − 10, y + 3)`.
 
 Clic/toque sobre un enemigo vivo (caja de su sprite + 4 px) lo elige como
 objetivo.
@@ -147,8 +222,8 @@ objetivo.
 ### Insignias (`drawBadges`)
 
 Por estado activo, en el orden Quemadura, Veneno, Congelación, Aturdido,
-Sagrado, Regeneración: caja `12×9` `#000000cc`, franja de color 2×9 y
-`letra + stacks` en 6 px del color; ancho 13 por insignia, centradas.
+Sagrado, Regeneración: la insignia compacta de § "Etiquetas" (`letra +
+stacks` del color del estado), en la línea del nombre / de la vida.
 
 | Estado | Letra | Color | Nombre |
 |---|---|---|---|
@@ -198,13 +273,19 @@ paso se interpretan dentro de él.
 
 `dl` = retraso del impacto en ms: 280 si el ataque/habilidad es mágico o
 el arma es a distancia (`arco`, `rifle`, `báculo`, `tomo`) y lleva un
-`proj`; 1150 (`ULT_DL`) en una ultimate de daño; 300 en un dúo; 0 si no.
+`proj`; en una ultimate, el impacto de su guion en ese objetivo
+(`impactFor(i)`, § "Ultimates"; `i` = orden de aparición del objetivo
+en los eventos de la acción); 300 en un dúo; 0 si no.
 
 | Evento | Efectos (`addFx` del prototipo) |
 |---|---|
 | `ActionEvent` ataque | `act`; a distancia: `proj` blanco `phys`; Golpe Imparable (todos): `ring` blanco en el atacante |
 | `ActionEvent` habilidad / ULT | `act`; daño a todos sin ULT: `ring` del color de la habilidad; a distancia o mágica: `proj` por objetivo |
-| `UltimateUsedEvent` | `ult` (cinemática) con nombre, color y elemento de la ULT del arma |
+| `UltimateUsedEvent` | `ult` (cinemática) con nombre, color, elemento y guion de la ULT del arma, y la lista de objetivos (ids de los `DamageEvent` de la acción en orden; en Baluarte, los de los `HealEvent`) |
+| `ActionEvent` ULT | `act` con retraso = fin de la preparación (el lanzador se lanza al descargar); ni anillo ni proyectiles |
+| `DamageEvent` en una ULT | como un golpe a enemigo, con el `dl` del impacto, `num` **pesado** (`heavy`: grande y con rebote); crítico: además `flash` blanco con el mismo `dl` |
+| `HealEvent` en una ULT (Baluarte) | `num` `+n` pesado y `aura` sagrada con el `dl` del impacto en ese aliado |
+| `KnockedOutEvent` de enemigo en una ULT | `poof` con el `dl` del impacto en él |
 | `ActionEvent` dúo | `act` de ambos, `flash` del color del dúo, `ring` grande en el punto medio, `proj` de cada uno a cada enemigo |
 | `ActionEvent` Fortaleza | `txt` `DEF +n` `#74b9ff` en `y−30`, `aura` maná |
 | `ActionEvent` Protección | `ring` grande `#ffeaa7`, `aura` sagrada en los otros aliados vivos |
@@ -236,7 +317,7 @@ el arma es a distancia (`arco`, `rifle`, `báculo`, `tomo`) y lleva un
 | `flash` | 350 | rectángulo de toda la escena del color, alfa `0.35·(1 − a/350)` |
 | `act` | 260 | sin dibujo: activa la estocada |
 | `aura` | — | sin dibujo: al activarse, `burst(x, y−8, el)` |
-| `ult` | 2200 | cinemática (abajo) |
+| `ult` | guion (2200-2500) | cinemática (§ "Ultimates") |
 
 Al activarse (edad 0, después de `dl`) cada efecto dispara lo de
 `fxVisual`:
@@ -245,7 +326,7 @@ Al activarse (edad 0, después de `dl`) cada efecto dispara lo de
 - `num` grande: sacudida `max(sh, hurt ? 7 : 5)`, con `hurt` además
   `hurtFlash = 0.45`, y `burst(x, y+10, phys, 1.5)`; `num` con `hurt`:
   sacudida `max(sh, 2)`;
-- `flash`: sacudida `max(sh, 6)`; `ult`: sacudida `max(sh, 4)`.
+- `flash`: sacudida `max(sh, 6)`; `ult`: empieza la cinemática.
 
 ### Partículas (`ELFX` / `burst` / `drawParts`)
 
@@ -284,40 +365,163 @@ Martillo Celestial son `holy`. El daño de "Luz" (Aura Restauradora con
 Dúo: el estado del dúo y su color. Enemigo: el estado que inflige o
 `phys`.
 
-### Cinemática de ultimate (`ultWorld` / `ultScreen`)
+## Ultimates (cinemáticas)
 
-Edad `a` desde que se activa el `ult`; dura 2200 ms. Objetivos:
-enemigos vivos o muertos hace < 1500 ms; con Baluarte, los jugadores.
-- Aura en el lanzador (`a < 1100`): elipse de radios `r × (r/2 + 6)`,
-  `r = 14 + sin(a/60)·3`, centro `(x, y−8)`, trazo 2 del color, alfa
-  0.5; ráfagas `burst(x, y−6, el o lvl, 0.3)` cuando `a mod 90 < 20`.
-- Fase `ph = (a − 300)/800` en `(0, 1.15)`, por objetivo `i`:
-  `lp = clamp(ph·1.25 − 0.1i, 0, 1)`:
-  - `burn`: meteoro desde `(x+70, y−160)` hasta `(x, y−10)`: 6 círculos
-    (radio `6 − 0.7k`, `#fff3b0` los 2 primeros, si no `#ff7b29`, alfa
-    `1 − k/6`, desplazados `(5k, −11k)`); al llegar: `burst burn ×3`,
-    `burst phys ×1.5`, sacudida 7.
-  - `frz`: 5 picos de hielo (`#81ecec` / `#dff9fb`) de alto
-    `min(1, lp·1.6)·34·(1 − 0.22|k|)`; al llegar: `burst frz ×3`,
-    sacudida 6.
-  - `poi`: 7 trazos de lluvia `#badc58` de 1.5 px; al llegar
-    `burst poi ×2.5`.
-  - `holy`: columna de luz de 200 px de alto y ancho `10 + 8·lp`
-    (gradiente a `rgba(255,243,176, 0.85·min(1, 2lp))`, núcleo blanco de
-    un tercio); al llegar: `burst holy ×3`, sacudida 5.
-  - `arc`: 10 cuadrados 4×4 girando a radio `40·(1 − lp) + 4`; al
-    llegar `burst arc ×3`.
-  - resto (`phys`, `stun`): dos tajos gigantes blancos de 3 px; al
-    llegar `burst phys ×3`, sacudida 8.
-- A los 1150 ms (`ULT_DL`): `burst(x, y−10, el o lvl, 1.5)` en cada
-  objetivo (una vez). Es cuando aparecen los números (su `dl`).
-- Pantalla: oscurecido `rgba(5,5,15, 0.55·d)` con `d` subiendo en 250
-  ms, 1 hasta 1050 y bajando hasta 1500; banda diagonal del color (alfa
-  0.85) en `by = VH − 58` que entra desde la izquierda en 220 ms y sale a
-  la derecha de 1000 a 1300 ms, con 14 líneas de velocidad blancas
-  (alfa 0.35), `* ULTIMATE · nombre *` (7 px) y el nombre de la ULT en
-  mayúsculas (15 px); destello blanco `0.7·(1 − (a − 1110)/200)` entre
-  1110 y 1310 ms.
+Pedido del dueño: "que las ultis tengan impacto", con la **sensación**
+de los súper ataques de los JRPG clásicos de fines de los 90 (dramáticos,
+cinematográficos, con peso). No se copia ninguna animación, nombre, arte
+ni música de otro juego: los nombres y efectos son los de este juego
+(`kUltimates`). Reemplaza el `ultWorld` / `ultScreen` del prototipo.
+
+Implementación: guiones (datos puros) en
+`lib/features/combat/presentation/scene/ult_cinematic.dart`
+(`UltScript`, `kUltScripts`, `ultScriptFor`, `ultCameraAt`); disparos
+(partículas, sacudida, hit-stop) y dibujo del mundo en
+`scene/ult_fx.dart` (`UltDirector`); la parte de pantalla en
+`BattleOverlayPainter` (`battle_painter.dart`).
+
+### Fases
+
+Edad `a` (ms) desde que se activa el `ult`:
+
+1. **Preparación** `[0, build)`: todo lo demás se oscurece casi a negro
+   (el fondo del mundo `rgba(4,4,12, 0.85·d)`, la franja y la barra
+   `0.75·d`; `d` sube en 200 ms), el **tiempo se congela** (reloj de
+   pose quieto: sin flotación ni rebotes), barras de cine (letterbox) de
+   `9 %` del alto del área del mundo entran arriba y abajo, la cámara
+   hace zoom y paneo al lanzador, un aura/carga propia de la ULT se junta
+   en él (líneas que convergen, anillo, y cada 120 ms partículas del
+   elemento **a los costados** del lanzador, alternando, para que con el
+   zoom se lo siga viendo), y la **tarjeta con el nombre**: banda a todo
+   el ancho, arriba del área del mundo justo debajo de la barra de cine
+   (el lanzador queda en el centro), que entra cortando de izquierda a
+   derecha (`[80, 260)` ms, borde blanco de 2 px adelante), con el sprite
+   del lanzador grande (×3 de la unidad de la tarjeta) a la izquierda,
+   `★ ULTIMATE · lanzador` (8 px) y debajo el nombre de la ULT en
+   mayúsculas (16 px, con contorno) — la tarjeta se dibuja en una capa
+   pixelada (unidad `2·u`) — y sale hacia la derecha desvaneciéndose en
+   `[build − 140, build + 60)`.
+2. **Descarga** `[build, build + release)`: la cámara gira a los
+   objetivos, el efecto grande propio de la ULT, sacudidas fuertes,
+   partículas, **hit-stop** (el reloj de la escena se detiene `hitStop`
+   ms) en el **último** impacto, destello blanco de pantalla en el
+   último impacto (`0.7·k`, `k` baja de 1 a 0 en `[imp − 20, imp + 140)`;
+   dorado `0.35·k` en Baluarte; se mantiene durante el hit-stop), números pesados con rebote (los críticos además un
+   `flash` blanco). Oscurecido `0.6·d`.
+3. **Regreso** `[build + release, total)`: la cámara vuelve a la base,
+   el oscurecido y las barras de cine se van, los colores vuelven.
+
+Impacto en el objetivo `i` (orden de los eventos):
+`impactFor(i) = impact + stagger·min(i, 3)`. Los números, textos de
+estado, `poof` y el destello de crítico usan ese retraso (`dl`), y el
+sonido de impacto también (docs/specs/audio.md § "Ultimates"): todo
+cae en el mismo ms.
+
+### Cámara de la cinemática (`ultCameraAt`)
+
+Con la base `(centro, zoom)` del encuadre:
+- `[0, min(350, 0.45·build))`: interpolación suave (smoothstep) al
+  lanzador: centro `(x, y − 12)`, zoom `base + max(1, round(0.6·base))`
+  (entero: nítido en la pausa); se mantiene hasta `build`;
+- `[build, build + 250)`: al foco de la descarga: objetivos (centro de
+  sus pies, `y − 10`) con zoom `base` (a todos, Disparo Letal: punto
+  medio lanzador–objetivo) o `base + 1` (un objetivo: Tajo Final,
+  Martillo Celestial); Baluarte: el grupo, zoom `base`;
+- al impacto principal un "empujón" de `+0.15` de zoom que vuelve en
+  180 ms;
+- `[build + release, total)`: de vuelta a la base.
+
+### Guiones (ms; objetivo `i`)
+
+| ULT | Arma | Prep. | Descarga | Regreso | Total | Impacto `i` | Hit-stop | Sacudida |
+|---|---|---|---|---|---|---|---|---|
+| Tajo Final | `espada` | 800 | 1000 | 400 | 2200 | 1380 (tajos previos 1000, 1120, 1240) | 110 | 10 |
+| Cataclismo | `hacha` | 900 | 1100 | 400 | 2400 | 1300 + 60·i | 100 | 12 |
+| Meteoro | `báculo` | 900 | 1200 | 400 | 2500 | 1350 + 120·i | 100 | 11 |
+| Paradoja | `tomo` | 900 | 1100 | 400 | 2400 | 1450 + 50·i | 120 | 8 |
+| Tormenta de Flechas | `arco` | 700 | 1200 | 400 | 2300 | 1300 + 70·i | 80 | 8 |
+| Disparo Letal | `rifle` | 900 | 900 | 400 | 2200 | 1350 | 140 | 12 |
+| Baluarte | `espada+escudo` | 800 | 1100 | 400 | 2300 | 1150 + 60·i (curas) | 0 | 4 |
+| Juicio Divino | `maza+escudo` | 900 | 1100 | 400 | 2400 | 1300 + 90·i | 90 | 9 |
+| Martillo Celestial | `martillo+escudo` | 900 | 1000 | 400 | 2300 | 1300 | 150 | 14 |
+
+La descarga termina como mucho a los 2100 ms: antes de la pausa de 2.3 s
+de la sesión tras una ULT (docs/specs/missions.md), así el paso
+siguiente casi nunca llega con la cinemática en curso.
+
+### Diseño de cada ULT
+
+Colores del arte (`kSkillColors`); "lanzador" `(x, y)` y objetivo
+`(gx, gy)` en px del mundo.
+
+- **Tajo Final** (blanco acero): preparación — líneas de velocidad que
+  convergen hacia el lanzador, aura blanca, destello en forma de
+  estrella en la punta de la hoja a los 650 ms. Descarga — el lanzador
+  deja una estela de imágenes fantasma hasta el objetivo (800-950), tres
+  tajos que cruzan toda la vista en diagonales distintas (1000, 1120,
+  1240: trazo de 3 px blanco con borde del color, se abren y se
+  desvanecen en 160 ms, chispas y sacudida 5 cada uno), y el final: una
+  X gigante + destello blanco a 1380.
+- **Cataclismo** (ocre `#e1b12c`): preparación — polvo que sube a los
+  pies del lanzador, temblor continuo (sacudida 1.5), grietas que brillan
+  naranja debajo. Descarga — golpe al piso a 950; grietas en zigzag
+  corren por el suelo del lanzador a cada enemigo (950-1300, brillo
+  naranja), el suelo estalla bajo todos: columna de escombros (cuadrados
+  marrón/gris con gravedad) y destello de lava; quedan las grietas hasta
+  el final.
+- **Meteoro** (naranja `#ff7b29`): preparación — círculo mágico girando
+  bajo el lanzador (elipse con runas), el cielo se tiñe de rojo. Descarga
+  — un meteoro grande por objetivo (radio 9, estela de 8 círculos, desde
+  `(gx + 110, gy − 230)`, cae en 420 ms hasta su impacto) más 3 meteoritos
+  decorativos; al impactar: explosión (anillo naranja + `burst burn ×4` +
+  `phys ×2`), cráter (elipse oscura con borde naranja que queda hasta el
+  final), sacudida.
+- **Paradoja** (violeta `#a29bfe`): preparación — un reloj (círculo con 12
+  marcas) detrás del lanzador con las agujas girando hacia atrás,
+  distorsión de "rebobinado" (franjas horizontales corridas). Descarga —
+  un reloj gigante sobre los enemigos cuyas agujas barren, ecos
+  fantasma de cada enemigo corridos en el tiempo, cristales de hielo que
+  crecen encerrándolos (1000-1450) y se rompen en el impacto (`burst
+  frz ×4`, `arc ×2`).
+- **Tormenta de Flechas** (`#fdcb6e`): preparación — el arquero apunta
+  al cielo y suelta una andanada de trazos hacia arriba (350-700).
+  Descarga — el cielo se llena de flechas (40 trazos diagonales que caen
+  sobre la zona de los objetivos durante toda la descarga), cada una
+  que llega queda clavada (trazo corto), impactos con nube de veneno.
+- **Disparo Letal** (rojo `#ff4757`): preparación — mira láser roja del
+  lanzador al objetivo que se afina (400-900), carga que brilla en el
+  cañón. Descarga — fogonazo enorme (estrella blanca + destello) a 950,
+  bala en cámara lenta del lanzador al objetivo (950-1350) con anillos
+  de onda a lo largo del recorrido, en el impacto anillo de impacto que
+  se expande + destello blanco.
+- **Baluarte** (azul `#74b9ff`): preparación — el escudo en alto, rayos
+  dorados que convergen. Descarga — una **burbuja de escudo** enorme
+  (elipse translúcida con paralelos y meridianos, radio vertical = media
+  altura del grupo + 30, horizontal ≥ 0.9 del vertical) crece del
+  lanzador hasta cubrir a todo el grupo (800-1100), con un brillo que
+  recorre el borde y chispas sagradas; curas a 1150 + 60·i. Se
+  desvanece en el regreso.
+- **Juicio Divino** (`#ffeaa7`): preparación — halo sobre el lanzador y
+  haces de luz que barren el cielo. Descarga — una línea fina de
+  puntería baja sobre cada enemigo (950-1150) y después el **pilar de
+  luz** (columna ancha con degradé dorado, núcleo blanco, anillo en el
+  piso, rayos que suben) en su impacto.
+- **Martillo Celestial** (dorado `#ffd166`): preparación — chispas
+  eléctricas alrededor del lanzador, la sombra de un martillo gigante
+  aparece y crece sobre el objetivo. Descarga — un martillo gigante
+  (cabeza 44×26, mango) baja acelerando desde arriba de la vista
+  (1000-1300), en el impacto ondas expansivas (3 elipses), polvo,
+  destello y la sacudida más fuerte; queda incrustado y se desvanece.
+
+### Nuevos pasos durante la cinemática
+
+La escena nunca frena a la sesión. Si llega un paso nuevo con la
+cinemática en preparación o descarga, sus efectos **esperan en cola** y
+arrancan al empezar el regreso (con la hora de ese momento). Si se juntan
+2 o más pasos en cola, la cinemática se **adelanta**: salta al regreso y
+los efectos pendientes de la ULT (números, etc.) arrancan ya. Otra
+batalla limpia todo. El cartel de victoria/derrota espera a que termine
+la cinemática.
 
 ## Ritmo y repetición
 
@@ -329,6 +533,9 @@ enemigos vivos o muertos hace < 1500 ms; con Baluarte, los jugadores.
   crear la vista, el `eventSeq` actual se marca como visto (no se
   repiten efectos viejos). Otra batalla (`battleId`) limpia efectos,
   partículas y muertes vistas.
+- Excepción: con una cinemática de ULT en preparación o descarga, los
+  pasos nuevos esperan en cola (§ "Ultimates" → "Nuevos pasos durante la
+  cinemática").
 - Máximo 70 efectos vivos (como `B.fx`): se descartan los más viejos.
 
 ## Menú y ayudas
@@ -370,3 +577,7 @@ actual. Al pasar el mouse por una técnica o la ULT se muestra su
 - Los textos de subida de nivel (`¡NIVEL n!`) no se dibujan en la
   batalla: los muestra la sesión al terminar (progression.md).
 - Sin sonido en esta capa (`beep` de `onNewFx` es de otro módulo).
+- Cinemáticas de ULT, cámara con zoom entero y etiquetas en pantalla:
+  rediseño pedido por el dueño (§ "Ultimates", § "Cámara y encuadre",
+  § "Etiquetas"); los tiempos de ULT ya no son los 1150 / 2200 ms del
+  prototipo.

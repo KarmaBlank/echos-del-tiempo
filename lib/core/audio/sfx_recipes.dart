@@ -501,5 +501,207 @@ Map<String, SfxDef> buildCombatSfx() {
       Sfx.enemy(e.key): _kBossTypes.contains(e.key) ? heavy(e.value) : act(e.value),
     // ---- firma de cada habilidad ----
     for (final e in kSkillVoices.entries) Sfx.skill(e.key): act(e.value),
+    // ---- ultimates: preparación, descarga e impacto ----
+    for (final e in kUltVoices.entries) ...{
+      Sfx.ult(e.key, Sfx.ultBuild):
+          SfxDef(e.value.build, peak: SfxLevel.ultBuild),
+      Sfx.ult(e.key, Sfx.ultRelease):
+          SfxDef(e.value.release, peak: SfxLevel.ultRelease),
+      Sfx.ult(e.key, Sfx.ultImpact):
+          SfxDef(e.value.impact, peak: SfxLevel.ultImpact),
+    },
   };
 }
+
+// ------------------------------------------------------------ ultimates
+
+/// Las tres partes del sonido de una ULT ("@t" relativo al inicio de
+/// cada parte; la parte se toca en el ms de su fase del guion).
+typedef UltVoices = ({
+  List<SfxTone> build,
+  List<SfxTone> release,
+  List<SfxTone> impact,
+});
+
+/// Sonido de cada ULT por `SkillDef.id` (docs/specs/audio.md
+/// § "Ultimates").
+final Map<String, UltVoices> kUltVoices = {
+  // Tajo Final: viento que sube + brillo de la hoja; tres tajos; tajo
+  // pesado con campanazo.
+  'ult_espada': (
+    build: [
+      _n(2000, 0.75, to: 7000, a: 0.5, lp: 4000, v: 0.4, seed: 11),
+      _t(98, 0.7, w: _saw, a: 0.4, lp: 600, v: 0.25),
+      _t(2637, 0.18, w: _tri, at: 0.62, vr: 9, vd: 0.01, v: 0.35),
+      _t(3951, 0.16, w: _sin, at: 0.64, v: 0.25),
+    ],
+    release: [
+      _n(3000, 0.5, to: 9000, at: 0.05, a: 0.45, lp: 6000, v: 0.25, seed: 5),
+      for (final at in [0.2, 0.32, 0.44]) ..._x(_swingBlade(1.3, 0.9), dt: at),
+    ],
+    impact: [
+      _n(12000, 0.25, to: 2000, v: 0.6),
+      _t(110, 0.5, w: _sin, to: 35, v: 0.7),
+      _t(1568, 0.6, w: _tri, to: 1520, v: 0.25),
+      _t(3951, 0.4, w: _sin, to: 3830, v: 0.15),
+      _n(800, 0.6, lp: 400, at: 0.03, v: 0.4),
+    ],
+  ),
+  // Cataclismo: retumbo que crece; golpe al piso y crujidos; estallido.
+  'ult_hacha': (
+    build: [
+      _t(38, 0.9, w: _sin, a: 0.7, v: 0.6),
+      _n(700, 0.9, lp: 300, a: 0.7, v: 0.6),
+      for (var k = 0; k < 5; k++)
+        _n(5000, 0.03, crush: 3, at: 0.15 + k * 0.13, v: 0.25, seed: 3 + k),
+    ],
+    release: [
+      _t(90, 0.35, w: _sin, to: 30, at: 0.05, v: 0.8),
+      _n(2000, 0.25, lp: 900, at: 0.05, v: 0.6),
+      _t(55, 0.4, w: _tri, crush: 3, at: 0.1, v: 0.3),
+      for (var k = 0; k < 5; k++)
+        _n(9000, 0.06, crush: 3, at: 0.12 + k * 0.07, v: 0.35, seed: 7 + k),
+    ],
+    impact: [
+      _n(1200, 0.9, lp: 900, v: 0.7),
+      _t(60, 0.8, w: _sin, to: 22, v: 0.8),
+      for (var k = 0; k < 5; k++)
+        _n(6000, 0.08, crush: 3, at: 0.1 + k * 0.09, v: 0.3, seed: 2 + k),
+    ],
+  ),
+  // Meteoro: dron ominoso con fuego; silbido que cae; explosión.
+  'ult_baculo': (
+    build: [
+      _t(55, 0.9, w: _saw, to: 110, vr: 5, vd: 0.04, a: 0.5, lp: 900, v: 0.5),
+      _t(82.5, 0.9, w: _saw, to: 165, a: 0.6, lp: 900, v: 0.3),
+      _n(1500, 0.8, to: 4000, lp: 2500, a: 0.6, v: 0.3),
+      ..._crackle(2.5, 0.2),
+    ],
+    release: [
+      _t(1800, 0.45, w: _sin, to: 300, v: 0.4),
+      _t(1200, 0.4, w: _sin, to: 220, at: 0.12, v: 0.25),
+      _n(1500, 0.5, to: 6000, lp: 3500, a: 0.4, v: 0.45, seed: 3),
+    ],
+    impact: [
+      _n(1500, 0.7, lp: 1200, v: 0.8),
+      _t(70, 0.6, w: _sin, to: 28, v: 0.8),
+      ..._crackle(2, 0.05),
+    ],
+  ),
+  // Paradoja: tic-tac que se acelera + barrido al revés; oleaje inverso;
+  // cristal que se congela y estalla.
+  'ult_tomo': (
+    build: [
+      for (final at in [0.05, 0.17, 0.28, 0.38, 0.47, 0.55, 0.62, 0.68, 0.73, 0.77, 0.8])
+        _t(2000, 0.015, w: _sq, at: at, v: 0.4),
+      _t(900, 0.85, w: _pu, to: 150, crush: 4, vr: 6, vd: 0.05, v: 0.3),
+      _t(400, 0.7, w: _sin, to: 1200, a: 0.6, vr: 7, vd: 0.03, v: 0.2),
+    ],
+    release: [
+      _n(600, 0.55, to: 6000, a: 0.5, lp: 4000, v: 0.5, seed: 9),
+      ..._arp([3136, 2637, 2093, 1568], step: 0.1, d: 0.15, v: 0.25),
+    ],
+    impact: [
+      _t(3136, 0.5, w: _tri, v: 0.4),
+      _t(3951, 0.45, w: _tri, at: 0.02, v: 0.3),
+      _t(4699, 0.4, w: _tri, at: 0.04, v: 0.25),
+      _n(16000, 0.12, v: 0.5),
+      _t(2093, 0.6, w: _sin, vr: 6, vd: 0.02, v: 0.25),
+    ],
+  ),
+  // Tormenta de Flechas: cuerda + andanada al cielo; lluvia; ráfaga de
+  // impactos con burbujas.
+  'ult_arco': (
+    build: [
+      _t(220, 0.35, w: _tri, to: 180, vr: 12, vd: 0.04, v: 0.4),
+      for (var k = 0; k < 5; k++)
+        ..._x(_whoosh(1.0 + k * 0.12, 0.8), dt: 0.3 + k * 0.06),
+    ],
+    release: [
+      _n(4000, 1.1, to: 2500, lp: 3000, a: 0.3, v: 0.25, seed: 13),
+      for (var k = 0; k < 14; k++)
+        _n(7000, 0.03, at: 0.1 + k * 0.075 + (k % 3) * 0.01, v: 0.35, seed: k + 1),
+    ],
+    impact: [
+      for (var k = 0; k < 4; k++) _n(7000, 0.04, at: k * 0.05, v: 0.5, seed: k + 20),
+      _t(620, 0.05, w: _sq, to: 180, v: 0.35),
+      ..._x(_bubbles(1, 1.2), dt: 0.08),
+    ],
+  ),
+  // Disparo Letal: carga + cerrojo; estampido y vuelo lento; impacto con
+  // ping metálico.
+  'ult_rifle': (
+    build: [
+      _t(300, 0.8, w: _sin, to: 2400, vr: 9, vd: 0.03, v: 0.35),
+      _t(600, 0.8, w: _sq, to: 4800, a: 0.6, v: 0.06),
+      _n(15000, 0.02, at: 0.72, v: 0.5, seed: 4),
+      _t(1200, 0.03, w: _sq, at: 0.74, v: 0.3),
+    ],
+    release: [
+      _n(20000, 0.05, at: 0.05, v: 0.9),
+      _n(2000, 0.5, to: 500, lp: 1500, at: 0.05, v: 0.7, seed: 9),
+      _t(120, 0.3, w: _sq, to: 40, at: 0.05, v: 0.6),
+      _n(4000, 0.4, to: 800, lp: 2000, at: 0.08, a: 0.1, v: 0.35, seed: 6),
+    ],
+    impact: [
+      _n(18000, 0.06, v: 0.7),
+      _t(1760, 0.5, w: _sin, to: 1720, v: 0.35),
+      _t(4435, 0.35, w: _sin, to: 4320, v: 0.2),
+      _t(90, 0.3, w: _sin, to: 35, v: 0.7),
+    ],
+  ),
+  // Baluarte: acorde que se hincha; escudo + cúpula; campanas de cura.
+  'ult_espada_escudo': (
+    build: [
+      for (final f in [196.0, 247.0, 294.0])
+        _t(f, 0.8, w: _saw, a: 0.6, lp: 1200, v: 0.25),
+      _t(98, 0.8, w: _tri, a: 0.5, v: 0.3),
+    ],
+    release: [
+      ..._shieldRing(0.8),
+      for (final f in [392.0, 587.0, 784.0])
+        _t(f, 0.9, w: _sin, a: 0.2, vr: 3, vd: 0.01, at: 0.05, v: 0.25),
+    ],
+    impact: [
+      ..._arp([1047, 1319, 1568, 2093], step: 0.06, d: 0.25, w: _sin, v: 0.4),
+      ..._x(_holy(1.2, 0.8), dt: 0.2),
+    ],
+  ),
+  // Juicio Divino: coro; campana que baja + puntería; pilar de luz.
+  'ult_maza_escudo': (
+    build: [
+      for (final f in [523.0, 659.0, 784.0])
+        _t(f, 0.85, w: _sin, a: 0.5, vr: 5, vd: 0.012, v: 0.3),
+      _t(2093, 0.3, w: _sin, at: 0.55, vr: 7, vd: 0.01, v: 0.2),
+    ],
+    release: [
+      _t(1568, 0.5, w: _sin, to: 784, v: 0.35),
+      _t(400, 0.4, w: _tri, to: 1600, at: 0.02, v: 0.2),
+    ],
+    impact: [
+      ..._holy(0.9, 1.5),
+      _n(3000, 0.35, to: 9000, lp: 6000, v: 0.45),
+      _t(80, 0.5, w: _sin, to: 30, v: 0.6),
+    ],
+  ),
+  // Martillo Celestial: trueno y chispas; caída; golpe brutal con mareo.
+  'ult_martillo_escudo': (
+    build: [
+      _n(400, 0.9, lp: 250, a: 0.3, v: 0.6),
+      for (var k = 0; k < 4; k++)
+        _n(20000, 0.06, crush: 2, at: 0.1 + k * 0.2, v: 0.3, seed: k + 5),
+      _t(200, 0.85, w: _sq, to: 800, a: 0.5, lp: 1500, v: 0.2),
+    ],
+    release: [
+      _n(6000, 0.3, to: 600, lp: 4000, at: 0.1, a: 0.15, v: 0.55, seed: 3),
+      _t(800, 0.3, w: _tri, to: 150, at: 0.1, v: 0.2),
+    ],
+    impact: [
+      _t(80, 1.0, w: _sin, to: 22, v: 0.9),
+      _n(1000, 0.7, lp: 700, v: 0.7),
+      _t(1200, 0.4, w: _tri, to: 1150, v: 0.2),
+      _t(3030, 0.3, w: _sin, to: 2950, v: 0.12),
+      _t(1000, 0.5, w: _tri, vr: 9, vd: 0.15, at: 0.25, v: 0.2),
+    ],
+  ),
+};

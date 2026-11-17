@@ -10,9 +10,12 @@ import '../../../../game_engine/models/status.dart';
 import '../../domain/turn_order.dart';
 import '../sprite_catalog.dart';
 import 'battle_fx.dart';
+import 'battle_labels.dart';
 import 'battle_layout.dart';
 import 'battle_scene.dart';
 import 'fx_style.dart';
+import 'ult_cinematic.dart';
+import 'ult_fx.dart';
 
 /// Primitivas de dibujo en el lienzo virtual (sin antialias, texto con
 /// sombra como `txt` del prototipo).
@@ -63,23 +66,48 @@ class _Pen {
     });
   }
 
-  /// Texto con la línea base en [y]; centrado en [x] o desde [x].
+  /// Ancho de [s] en [size] px.
+  double width(String s, double size) => _layout(s, Colors.white, size).width;
+
+  /// Texto con la línea base en [y]; centrado en [x] o desde [x]. Con
+  /// [outline], contorno negro de `size/8` px (números de ULT).
   void text(Canvas c, String s, double x, double y, Color color, double size,
-      {bool center = true, bool shadow = true}) {
+      {bool center = true, bool shadow = true, bool outline = false}) {
     final fg = _layout(s, color, size);
     final left = center ? x - fg.width / 2 : x;
     final top = y - fg.computeDistanceToActualBaseline(TextBaseline.alphabetic);
-    if (shadow) {
-      _layout(s, Colors.black, size).paint(
-          c, Offset((left + 1).roundToDouble(), (top + 1).roundToDouble()));
+    final l = left.roundToDouble(), tp = top.roundToDouble();
+    if (outline) {
+      final bk = _layout(s, Colors.black, size);
+      final o = (size / 8).roundToDouble().clamp(1.0, 4.0);
+      for (final d in [
+        Offset(-o, 0), Offset(o, 0), Offset(0, -o), Offset(0, o), //
+        Offset(o, o), Offset(-o, o), Offset(o, -o), Offset(-o, -o),
+      ]) {
+        bk.paint(c, Offset(l, tp) + d);
+      }
+      bk.paint(c, Offset(l + o, tp + o * 2));
+    } else if (shadow) {
+      final o = size >= 16 ? (size / 8).roundToDouble() : 1.0;
+      _layout(s, Colors.black, size).paint(c, Offset(l + o, tp + o));
     }
-    fg.paint(c, Offset(left.roundToDouble(), top.roundToDouble()));
+    fg.paint(c, Offset(l, tp));
   }
 }
 
-/// La franja de turnos + la escena de batalla, dibujadas en el lienzo
-/// virtual y escaladas con vecino más cercano. Ver
-/// docs/specs/battle_presentation.md.
+/// Copia una imagen escalándola con vecino más cercano.
+void _blit(Canvas canvas, ui.Image image, Rect dst) {
+  canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      dst,
+      SpriteCatalog.pixelPaint());
+}
+
+/// La franja de turnos (lienzo virtual), el mundo (px del mundo × zoom
+/// entero) y el HUD de la escena (px de pantalla). Ver
+/// docs/specs/battle_presentation.md § "Geometría" y § "Cámara y
+/// encuadre".
 class BattleScenePainter extends CustomPainter {
   BattleScenePainter(this.scene) : super(repaint: scene);
 
@@ -92,48 +120,91 @@ class BattleScenePainter extends CustomPainter {
     final f = scene.frame;
     if (f == null) return;
     final g = f.geometry;
-    final vw = g.virtualWidth, vh = g.virtualHeight;
-    final recorder = ui.PictureRecorder();
-    final c = Canvas(recorder, Rect.fromLTWH(0, 0, vw.toDouble(), vh.toDouble()));
-    _pen.rect(c, const Color(0xFF05060C), 0, 0, vw.toDouble(), vh.toDouble());
 
-    _timeline(c, f);
+    // 1. Franja de turnos en el lienzo virtual.
+    final vw = g.virtualWidth;
+    const sh = SceneGeometry.stripHeight;
+    final rs = ui.PictureRecorder();
+    final cs = Canvas(rs, Rect.fromLTWH(0, 0, vw.toDouble(), sh.toDouble()));
+    _timeline(cs, f);
+    final ps = rs.endRecording();
+    final strip = ps.toImageSync(vw, sh);
+    ps.dispose();
+    _blit(canvas, strip,
+        Rect.fromLTWH(0, 0, (vw * g.scale).roundToDouble(), g.stripPx));
+    strip.dispose();
 
-    c.save();
-    c.translate(0, SceneGeometry.stripHeight.toDouble());
-    c.clipRect(Rect.fromLTWH(0, 0, vw.toDouble(), g.sceneHeight.toDouble()));
-    _scene(c, f);
-    c.restore();
+    // 2. El mundo en px del mundo, escalado ×zoom.
+    final vp = SceneViewport(g.worldRect, scene.viewFor(f));
+    final area = vp.area;
+    final z = vp.zoom;
+    final iw = (area.width / z).ceil() + 1, ih = (area.height / z).ceil() + 1;
+    final tl = vp.topLeft;
+    final rw = ui.PictureRecorder();
+    final cw = Canvas(rw, Rect.fromLTWH(0, 0, iw.toDouble(), ih.toDouble()));
+    cw.translate(-tl.dx, -tl.dy);
+    _world(cw, f, Rect.fromLTWH(tl.dx, tl.dy, iw.toDouble(), ih.toDouble()));
+    final pw = rw.endRecording();
+    final world = pw.toImageSync(iw, ih);
+    pw.dispose();
+    final shake = scene.particles.shakeOffset() * g.scale;
+    final shk = Offset(shake.dx.roundToDouble(), shake.dy.roundToDouble());
+    canvas.save();
+    canvas.clipRect(area);
+    canvas.drawRect(area, Paint()..color = const Color(0xFF05060C));
+    _blit(canvas, world,
+        Rect.fromLTWH(area.left + shk.dx, area.top + shk.dy, iw * z, ih * z));
+    world.dispose();
 
-    final picture = recorder.endRecording();
-    final image = picture.toImageSync(vw, vh);
-    picture.dispose();
-    canvas.drawImageRect(
-        image,
-        Rect.fromLTWH(0, 0, vw.toDouble(), vh.toDouble()),
-        Rect.fromLTWH(0, 0, (vw * g.scale).roundToDouble(),
-            (vh * g.scale).roundToDouble()),
-        _sprite);
-    image.dispose();
+    // 3. Destellos de pantalla.
+    final hf = scene.particles.hurtFlash;
+    if (hf > 0) {
+      final center = area.center;
+      final r = area.width * 0.65;
+      final paint = Paint()
+        ..shader = ui.Gradient.radial(center, r, [
+          const Color(0x00FF0000),
+          Color.fromRGBO(255, 40, 60, (hf * 1.6).clamp(0.0, 1.0)),
+        ], [
+          (area.height * 0.3 / r).clamp(0.0, 1.0),
+          1,
+        ]);
+      canvas.drawRect(area, paint);
+    }
+    final t = scene.t;
+    for (final live in scene.fx) {
+      if (live.fx.kind != FxKind.flash) continue;
+      final a = live.age(t);
+      if (a < 0 || a >= BattleFx.flashMs) continue;
+      canvas.drawRect(
+          area,
+          Paint()
+            ..color = live.fx.color
+                .withValues(alpha: 0.35 * (1 - a / BattleFx.flashMs)));
+    }
+
+    // 4. HUD de la escena.
+    _hud(canvas, f, vp, shk);
+    canvas.restore();
   }
 
   @override
   bool shouldRepaint(BattleScenePainter old) => old.scene != scene;
 
   // ------------------------------------------------------------------
-  // Escena
+  // Mundo
   // ------------------------------------------------------------------
 
-  void _scene(Canvas c, SceneFrame f) {
-    final g = f.geometry;
+  void _world(Canvas c, SceneFrame f, Rect visible) {
     final t = scene.t;
-    final cam = scene.camera ?? f.layout.cameraTarget(g, f.arena);
-    final sh = scene.particles.shakeOffset();
-    final vw = g.virtualWidth.toDouble(), vh = g.sceneHeight.toDouble();
-
-    c.save();
-    c.translate(-cam.dx.roundToDouble() + sh.dx, -cam.dy.roundToDouble() + sh.dy);
-    f.arena?.paintWorld?.call(c, Rect.fromLTWH(cam.dx, cam.dy, vw, vh), t);
+    _pen.rect(c, const Color(0xFF05060C), visible.left, visible.top,
+        visible.width, visible.height);
+    f.arena?.paintWorld?.call(c, visible, t);
+    final dim = scene.ultDim;
+    if (dim > 0) {
+      _pen.rect(c, Color.fromRGBO(4, 4, 12, dim), visible.left, visible.top,
+          visible.width, visible.height);
+    }
 
     // Actores ordenados por y.
     final b = f.battle;
@@ -157,39 +228,17 @@ class BattleScenePainter extends CustomPainter {
     }
 
     _worldFx(c);
-    _ultWorld(c, f);
+    final u = scene.ult;
+    final stage = scene.ultStage(f);
+    if (u != null && stage != null) {
+      UltDirector.paintWorld(c, u, t - u.t0, stage, visible);
+    }
     scene.particles.paint(c);
-    c.restore();
-
-    // Sin sacudida: destello rojo y `flash`.
-    final hf = scene.particles.hurtFlash;
-    final visibleH = math.max(1.0, vh - f.coverBottom);
-    if (hf > 0) {
-      final center = Offset(vw / 2, visibleH / 2);
-      final r = vw * 0.65;
-      final paint = Paint()
-        ..shader = ui.Gradient.radial(center, r, [
-          const Color(0x00FF0000),
-          Color.fromRGBO(255, 40, 60, (hf * 1.6).clamp(0.0, 1.0)),
-        ], [
-          (visibleH * 0.3 / r).clamp(0.0, 1.0),
-          1,
-        ]);
-      c.drawRect(Rect.fromLTWH(0, 0, vw, vh), paint);
-    }
-    for (final live in scene.fx) {
-      if (live.fx.kind != FxKind.flash) continue;
-      final a = live.age(t);
-      if (a < 0 || a >= BattleFx.flashMs) continue;
-      _pen.rect(c, live.fx.color.withValues(alpha: 0.35 * (1 - a / BattleFx.flashMs)),
-          0, 0, vw, vh);
-    }
   }
 
   // ---------------- héroes (`drawHero` en batalla) ----------------
 
   void _hero(Canvas c, SceneFrame f, Combatant p, Offset pos) {
-    final t = scene.t;
     final x = pos.dx.roundToDouble(), y = pos.dy.roundToDouble();
     final dir = -f.layout.side;
     final dead = !p.alive;
@@ -219,15 +268,6 @@ class BattleScenePainter extends CustomPainter {
     }
     if (dead) c.restore();
     c.restore();
-
-    _pen.text(c, p.name, x, y - 22,
-        p.id == f.localId ? const Color(0xFFFFD166) : const Color(0xFFFFFFFF), 6);
-    _badges(c, p, x, y - 50);
-    if (f.battle.currentId == p.id) {
-      final bb = math.sin(t / 130) * 2;
-      _pen.tri(c, const Color(0xFFFFD166), Offset(x - 4, y - 36 + bb),
-          Offset(x + 4, y - 36 + bb), Offset(x, y - 30 + bb));
-    }
   }
 
   void _sword(Canvas c) {
@@ -269,6 +309,7 @@ class BattleScenePainter extends CustomPainter {
     }
   }
 
+
   // ---------------- enemigos (`drawEnemy` en batalla) ----------------
 
   static const _brightness3 = ColorFilter.matrix([
@@ -279,7 +320,7 @@ class BattleScenePainter extends CustomPainter {
   ]);
 
   void _enemy(Canvas c, SceneFrame f, Combatant e, Offset pos, double alpha) {
-    final t = scene.t;
+    final pt = scene.poseT;
     final type = e.enemyType ?? '';
     final img = f.sprites?.enemy(type);
     final sc = (f.sprites?.enemyScale(type) ?? 1) * (e.elite ? 1.45 : 1);
@@ -288,14 +329,14 @@ class BattleScenePainter extends CustomPainter {
     final x = pos.dx, y = pos.dy;
     final dir = f.layout.side;
     final floats = f.sprites?.enemyFloats(type) ?? false;
-    final fl = floats ? math.sin(t / 200 + x) * 2 - 4 : 0.0;
+    final fl = floats ? math.sin(pt / 200 + x) * 2 - 4 : 0.0;
 
     if (alpha < 1) {
       c.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
     }
     _pen.oval(c, const Color(0x66000000), x, y + 1, w * 0.35, 2.5 * sc);
     if (e.elite) {
-      final a = (0.35 + 0.2 * math.sin(t / 180)).clamp(0.0, 1.0);
+      final a = (0.35 + 0.2 * math.sin(pt / 180)).clamp(0.0, 1.0);
       _pen.oval(c, const Color(0xFFFFD166).withValues(alpha: a), x,
           y - h / 2 + 2, w * 0.62, h * 0.6);
     }
@@ -313,49 +354,176 @@ class BattleScenePainter extends CustomPainter {
     }
     c.restore();
     if (alpha < 1) c.restore();
-
-    // Barra, vida, insignias, marcas (con alfa 1, como el prototipo).
-    final bw = e.boss || e.elite ? 40.0 : 20.0;
-    _pen.rect(c, const Color(0xAA000000), x - bw / 2, y - h - 3, bw, 3);
-    _pen.rect(
-        c,
-        e.boss
-            ? const Color(0xFFFF4757)
-            : e.elite
-                ? const Color(0xFFFFD166)
-                : const Color(0xFFFF9F43),
-        x - bw / 2,
-        y - h - 3,
-        bw * (e.hp / e.maxHp).clamp(0.0, 1.0),
-        3);
     if (f.battle.currentId == e.id) {
       _pen.rect(c, const Color(0xFFFF4757), x - 10, y + 3, 20, 2);
     }
-    _pen.text(c, '${e.hp}/${e.maxHp}', x, y - h - 6, const Color(0xFFFFD8A8), 6);
-    _badges(c, e, x, y - h - 32);
-    if (e.alive && f.targetId == e.id) {
-      final b = math.sin(t / 120) * 2;
-      _pen.tri(c, const Color(0xFFFFD166), Offset(x - 4, y - h - 19 + b),
-          Offset(x + 4, y - h - 19 + b), Offset(x, y - h - 13 + b));
+  }
+
+  // ---------------- HUD de la escena (px de pantalla) ----------------
+
+  /// Estados activos de [a], en el orden de las insignias.
+  static List<StatusKind> _statuses(Combatant a) => [
+        for (final k in StatusKind.values)
+          if (a.stacks(k) > 0) k
+      ];
+
+  /// Insignias compactas desde [x], con la caja en `[y, y + 10u)`.
+  void _badges(Canvas c, Combatant a, double x, double y, double u) {
+    for (final k in _statuses(a)) {
+      final s = '${statusLetter(k)}${a.stacks(k)}';
+      final tw = _pen.width(s, 8 * u);
+      final col = statusColor(k);
+      _pen.rect(c, const Color(0xCC000000), x, y, tw + 6 * u, 10 * u);
+      _pen.rect(c, col, x, y, 2 * u, 10 * u);
+      _pen.text(c, s, x + 4 * u, y + 9 * u, col, 8 * u,
+          center: false, shadow: false);
+      x += tw + 7 * u;
     }
   }
 
-  /// `drawBadges` (tamaño normal).
-  void _badges(Canvas c, Combatant a, double x, double y) {
-    final ks = [
-      for (final k in StatusKind.values)
-        if (a.stacks(k) > 0) k
-    ];
-    if (ks.isEmpty) return;
-    const w = 13.0;
-    var bx = (x - ks.length * w / 2).roundToDouble();
-    for (final k in ks) {
-      final col = statusColor(k);
-      _pen.rect(c, const Color(0xCC000000), bx, y, w - 1, 9);
-      _pen.rect(c, col, bx, y, 2, 9);
-      _pen.text(c, '${statusLetter(k)}${a.stacks(k)}', bx + 3, y + 8, col, 6,
-          center: false, shadow: false);
-      bx += w;
+  /// Etiquetas de todos los actores, ya ubicadas sin superposición
+  /// (px de pantalla, sin la sacudida). Las usa también el test.
+  static Map<String, Rect> labelRects(SceneFrame f, SceneViewport vp,
+      {double Function(String text, double size)? measure}) {
+    final u = f.geometry.hudUnit.toDouble();
+    final m = measure ?? _pen.width;
+    final reqs = <LabelRequest>[];
+    double badges(Combatant a) {
+      var w = 0.0;
+      for (final k in StatusKind.values) {
+        if (a.stacks(k) <= 0) continue;
+        w += m('${statusLetter(k)}${a.stacks(k)}', 8 * u) + 7 * u;
+      }
+      return w == 0 ? 0 : w + 2 * u;
+    }
+
+    for (final p in f.battle.party) {
+      final box = f.layout.boxOf(p.id);
+      final anchor = vp.toScreen(Offset(box.center.dx, box.top)) -
+          Offset(0, 2 * u);
+      reqs.add(LabelRequest(p.id, anchor,
+          Size(m(p.name, 8 * u) + badges(p), 10 * u)));
+    }
+    for (final e in f.battle.enemies) {
+      if (!e.alive) continue;
+      final box = f.layout.boxOf(e.id);
+      final anchor = vp.toScreen(Offset(box.center.dx, box.top)) -
+          Offset(0, 2 * u);
+      final line = m('${e.hp}/${e.maxHp}', 8 * u) + badges(e);
+      final bar = (e.boss || e.elite ? 48 : 28) * u;
+      reqs.add(LabelRequest(e.id, anchor, Size(math.max(line, bar), 15 * u)));
+    }
+    return placeLabels(reqs, vp.area.deflate(2));
+  }
+
+  void _hud(Canvas c, SceneFrame f, SceneViewport vp, Offset shake) {
+    final u = f.geometry.hudUnit.toDouble();
+    final pt = scene.poseT;
+    final u0 = scene.ult;
+    final labelAlpha =
+        u0 == null ? 1.0 : 1 - u0.script.darkness(scene.t - u0.t0);
+    c.save();
+    c.translate(shake.dx, shake.dy);
+    if (labelAlpha > 0.02) {
+      final rects = labelRects(f, vp);
+      if (labelAlpha < 1) {
+        c.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, labelAlpha));
+      }
+      final cur = f.battle.currentId;
+      for (final p in f.battle.party) {
+        final r = rects[p.id];
+        if (r == null) continue;
+        final x = r.left.roundToDouble(), y = r.top.roundToDouble();
+        _pen.text(c, p.name, x, y + 8 * u,
+            p.id == f.localId ? const Color(0xFFFFD166) : const Color(0xFFFFFFFF),
+            8 * u,
+            center: false);
+        final nw = _pen.width(p.name, 8 * u);
+        _badges(c, p, x + nw + 3 * u, y - u, u);
+        if (cur == p.id) _marker(c, r, math.sin(pt / 130) * 2 * u, u);
+      }
+      for (final e in f.battle.enemies) {
+        final r = rects[e.id];
+        if (r == null) continue;
+        final x = r.left.roundToDouble(), y = r.top.roundToDouble();
+        final hp = '${e.hp}/${e.maxHp}';
+        _pen.text(c, hp, x, y + 8 * u, const Color(0xFFFFD8A8), 8 * u,
+            center: false);
+        _badges(c, e, x + _pen.width(hp, 8 * u) + 3 * u, y - u, u);
+        final bw = (e.boss || e.elite ? 48 : 28) * u;
+        final bx = (r.center.dx - bw / 2).roundToDouble();
+        final by = y + 11 * u;
+        _pen.rect(c, const Color(0xAA000000), bx, by, bw, 3 * u);
+        _pen.rect(
+            c,
+            e.boss
+                ? const Color(0xFFFF4757)
+                : e.elite
+                    ? const Color(0xFFFFD166)
+                    : const Color(0xFFFF9F43),
+            bx,
+            by,
+            (bw * (e.hp / e.maxHp).clamp(0.0, 1.0)).roundToDouble(),
+            3 * u);
+        if (e.alive && f.targetId == e.id) {
+          _marker(c, r, math.sin(pt / 120) * 2 * u, u);
+        }
+      }
+      if (labelAlpha < 1) c.restore();
+    }
+    _floating(c, vp, u);
+    c.restore();
+  }
+
+  /// Triángulo dorado arriba de la etiqueta [r].
+  void _marker(Canvas c, Rect r, double b, double u) {
+    final x = r.center.dx.roundToDouble(), y = r.top - 3 * u + b;
+    _pen.tri(c, const Color(0xFFFFD166), Offset(x - 4 * u, y - 6 * u),
+        Offset(x + 4 * u, y - 6 * u), Offset(x, y));
+  }
+
+  /// Números y textos flotantes (`num`, `txt`).
+  void _floating(Canvas c, SceneViewport vp, double u) {
+    final t = scene.t;
+    for (final live in scene.fx) {
+      final f = live.fx;
+      final age = live.age(t);
+      if (age < 0) continue;
+      switch (f.kind) {
+        case FxKind.num when age < f.durationMs:
+          final p = vp.toScreen(Offset(f.x, f.y));
+          final size = f.heavy
+              ? (f.big ? 32 : 24) * u
+              : (f.big ? 24 : 16) * u;
+          var y = p.dy - age / 40 * 1.5 * u;
+          var k = 1.0;
+          if (f.heavy) {
+            final q = math.min(1.0, age / 140);
+            k = 1 + 0.6 * (1 - q);
+            y -= (math.sin(age / 80)).abs() * 6 * u * math.exp(-age / 260);
+          }
+          final alpha = age > f.durationMs - 200
+              ? (f.durationMs - age) / 200
+              : 1.0;
+          if (alpha < 1) {
+            c.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, alpha.clamp(0.0, 1.0)));
+          }
+          if (k != 1) {
+            c.save();
+            c.translate(p.dx, y);
+            c.scale(k);
+            _pen.text(c, f.text ?? '', 0, 0, f.color, size, outline: f.heavy);
+            c.restore();
+          } else {
+            _pen.text(c, f.text ?? '', p.dx, y, f.color, size, outline: f.heavy);
+          }
+          if (alpha < 1) c.restore();
+        case FxKind.txt when age < BattleFx.txtMs:
+          final p = vp.toScreen(Offset(f.x, f.y));
+          _pen.text(c, f.text ?? '', p.dx, p.dy - age / 60 * 1.5 * u, f.color, 8 * u);
+        default:
+          break;
+      }
     }
   }
 
@@ -401,10 +569,6 @@ class BattleScenePainter extends CustomPainter {
               Rect.fromCenter(
                   center: Offset(f.x, f.y), width: rx * 2, height: ry * 2),
               _pen.stroke);
-        case FxKind.num when age < BattleFx.numMs:
-          _pen.text(c, f.text ?? '', f.x, f.y - age / 40, f.color, f.big ? 12 : 8);
-        case FxKind.txt when age < BattleFx.txtMs:
-          _pen.text(c, f.text ?? '', f.x, f.y - age / 60, f.color, 7);
         case FxKind.slash when age < BattleFx.slashMs:
           final a = age / BattleFx.slashMs;
           _pen.stroke
@@ -422,93 +586,6 @@ class BattleScenePainter extends CustomPainter {
           }
         default:
           break;
-      }
-    }
-  }
-
-  /// La parte dibujada de `ultWorld`.
-  void _ultWorld(Canvas c, SceneFrame f) {
-    final u = scene.ult;
-    if (u == null) return;
-    final a = scene.t - u.t0;
-    final col = u.fx.color;
-    if (a < 1100) {
-      final r = 14 + math.sin(a / 60) * 3;
-      _pen.stroke
-        ..color = col.withValues(alpha: 0.5)
-        ..strokeWidth = 2;
-      c.drawOval(
-          Rect.fromCenter(
-              center: Offset(u.fx.x, u.fx.y - 8),
-              width: r * 2,
-              height: (r * 0.5 + 6) * 2),
-          _pen.stroke);
-    }
-    final ph = (a - 300) / 800;
-    if (ph <= 0 || ph >= 1.15) return;
-    final tg = scene.ultTargets(f);
-    for (var i = 0; i < tg.length; i++) {
-      final g = tg[i];
-      final lp = (ph * 1.25 - i * 0.1).clamp(0.0, 1.0);
-      switch (u.fx.el) {
-        case FxElement.burn:
-          if (lp < 1) {
-            final sx = g.dx + 70, sy = g.dy - 160;
-            final mx = sx + (g.dx - sx) * lp, my = sy + (g.dy - 10 - sy) * lp;
-            for (var k = 0; k < 6; k++) {
-              _pen.fill.color = (k < 2 ? const Color(0xFFFFF3B0) : const Color(0xFFFF7B29))
-                  .withValues(alpha: 1 - k / 6);
-              c.drawCircle(Offset(mx + k * 5, my - k * 11), 6 - k * 0.7, _pen.fill);
-            }
-          }
-        case FxElement.freeze:
-          final h = math.min(1.0, lp * 1.6) * 34;
-          for (var k = -2; k <= 2; k++) {
-            _pen.tri(
-                c,
-                k.isOdd ? const Color(0xFF81ECEC) : const Color(0xFFDFF9FB),
-                Offset(g.dx + k * 7 - 4, g.dy + 2),
-                Offset(g.dx + k * 7, g.dy + 2 - h * (1 - k.abs() * 0.22)),
-                Offset(g.dx + k * 7 + 4, g.dy + 2));
-          }
-        case FxElement.poison:
-          _pen.stroke
-            ..color = const Color(0xFFBADC58).withValues(alpha: 0.9)
-            ..strokeWidth = 1.5;
-          for (var k = 0; k < 7; k++) {
-            final ox = ((k * 37 + i * 13) % 40) - 20.0;
-            final fy = (a * 0.45 + k * 31) % 90;
-            c.drawLine(Offset(g.dx + ox + 6, g.dy - 90 + fy),
-                Offset(g.dx + ox, g.dy - 78 + fy), _pen.stroke);
-          }
-        case FxElement.holy:
-          final w = 10 + lp * 8;
-          final al = 0.85 * math.min(1.0, lp * 2);
-          final paint = Paint()
-            ..shader = ui.Gradient.linear(Offset(0, g.dy - 200), Offset(0, g.dy), [
-              const Color(0x00FFF3B0),
-              Color.fromRGBO(255, 243, 176, al),
-            ]);
-          c.drawRect(Rect.fromLTWH(g.dx - w / 2, g.dy - 200, w, 200), paint);
-          _pen.rect(c, Color.fromRGBO(255, 255, 255, math.min(1.0, lp * 2) * 0.9),
-              g.dx - w / 6, g.dy - 200, w / 3, 200);
-        case FxElement.arcane:
-          final rr = 40 * (1 - lp) + 4;
-          for (var k = 0; k < 10; k++) {
-            final an = a / 90 + k * 0.63;
-            _pen.rect(c, k.isOdd ? const Color(0xFFA29BFE) : const Color(0xFFE84393),
-                g.dx + math.cos(an) * rr - 2, g.dy - 10 + math.sin(an) * rr * 0.6 - 2, 4, 4);
-          }
-        default:
-          if (lp > 0 && lp < 1) {
-            _pen.stroke
-              ..color = Color.fromRGBO(255, 255, 255, 1 - lp * 0.5)
-              ..strokeWidth = 3;
-            c.drawLine(Offset(g.dx - 40 + lp * 10, g.dy - 50),
-                Offset(g.dx - 40 + lp * 80, g.dy - 50 + lp * 60), _pen.stroke);
-            c.drawLine(Offset(g.dx + 40 - lp * 10, g.dy - 50),
-                Offset(g.dx + 40 - lp * 80, g.dy - 50 + lp * 60), _pen.stroke);
-          }
       }
     }
   }
@@ -597,8 +674,10 @@ class BattleScenePainter extends CustomPainter {
   }
 }
 
-/// `ultScreen`: oscurecido, banda con el nombre y destello blanco de la
-/// ultimate, encima de TODO (también de los paneles Flutter).
+/// La parte de pantalla de la ULT, encima de toda la batalla (también de
+/// la barra): oscurecido de la franja y la barra, barras de cine,
+/// tarjeta con el nombre y destello blanco del impacto. Ver
+/// docs/specs/battle_presentation.md § "Ultimates".
 class BattleOverlayPainter extends CustomPainter {
   BattleOverlayPainter(this.scene) : super(repaint: scene);
 
@@ -610,68 +689,118 @@ class BattleOverlayPainter extends CustomPainter {
     final f = scene.frame;
     final u = scene.ult;
     if (f == null || u == null) return;
-    final g = f.geometry;
-    final vw = g.virtualWidth, vh = g.virtualHeight;
+    final s = u.script;
     final a = scene.t - u.t0;
-    if (a < 0) return;
+    if (a < 0 || a > s.totalMs) return;
+    final g = f.geometry;
+    final area = g.worldRect;
+    final d = s.darkness(a);
+    final fill = Paint();
 
-    final recorder = ui.PictureRecorder();
-    final c = Canvas(recorder, Rect.fromLTWH(0, 0, vw.toDouble(), vh.toDouble()));
-    final w = vw.toDouble(), h = vh.toDouble();
-    final dark = a < 250
-        ? a / 250
-        : a < 1050
-            ? 1.0
-            : a < 1500
-                ? 1 - (a - 1050) / 450
-                : 0.0;
-    if (dark > 0) _pen.rect(c, Color.fromRGBO(5, 5, 15, 0.55 * dark), 0, 0, w, h);
-    if (a < 1300) {
-      final inP = math.min(1.0, a / 220);
-      final outP = a > 1000 ? (a - 1000) / 300 : 0.0;
-      final bx = -w * (1 - inP) + w * outP * 1.2;
-      final alpha = (1 - outP).clamp(0.0, 1.0);
-      c.save();
-      c.translate(bx.roundToDouble(), 0);
-      c.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
-      final by = h - 58;
-      _pen.fill.color = u.fx.color.withValues(alpha: 0.85);
-      c.drawPath(
-          Path()
-            ..moveTo(0, by - 18)
-            ..lineTo(w, by - 28)
-            ..lineTo(w, by + 12)
-            ..lineTo(0, by + 22)
-            ..close(),
-          _pen.fill);
-      _pen.rect(c, const Color(0xFF000000), 0, by + 20, w, 2);
-      for (var i = 0; i < 14; i++) {
-        final ly = by - 22 + ((i * 17 + a * 0.6) % 44);
-        _pen.rect(c, const Color(0x59FFFFFF), ((i * 53 + a * 1.5) % (w + 80)) - 80,
-            ly, 60, 1);
-      }
-      final ult = u.fx.ult;
-      _pen.text(c, '★ ULTIMATE · ${ult?.casterName ?? ''} ★', w / 2, by - 10,
-          const Color(0xFFFFFFFF), 7);
-      _pen.text(c, (ult?.name ?? '').toUpperCase(), w / 2, by + 10,
-          const Color(0xFFFFFFFF), 15);
-      c.restore();
-      c.restore();
+    // Oscurecido de todo lo que no es el mundo.
+    if (d > 0) {
+      fill.color = Color.fromRGBO(4, 4, 12, 0.75 * d);
+      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, area.top), fill);
+      canvas.drawRect(
+          Rect.fromLTRB(0, area.bottom, size.width, size.height), fill);
+      // Barras de cine.
+      final bh = (area.height * 0.09 * d).roundToDouble();
+      fill.color = const Color(0xFF000000);
+      canvas.drawRect(Rect.fromLTWH(0, area.top, size.width, bh), fill);
+      canvas.drawRect(
+          Rect.fromLTWH(0, area.bottom - bh, size.width, bh), fill);
     }
-    const dl = BattleFx.ultDelayMs;
-    if (a > dl - 40 && a < dl + 160) {
-      _pen.rect(c, Color.fromRGBO(255, 255, 255, ((1 - (a - dl + 40) / 200) * 0.7).clamp(0.0, 1.0)),
-          0, 0, w, h);
+
+    // Tarjeta del nombre (capa pixelada, unidad 2u).
+    if (a < s.buildMs + 60) _card(canvas, f, u, a, size, area);
+
+    // Destello blanco en el impacto principal.
+    final n = math.max(1, u.fx.ult?.targets.length ?? 1);
+    final imp = s.lastImpact(n);
+    if (!u.skipped && a > imp - 20 && a < imp + 140) {
+      final k = (1 - (a - imp + 20) / 160).clamp(0.0, 1.0);
+      fill.color = s.style == UltStyle.bulwark
+          ? Color.fromRGBO(255, 234, 167, 0.35 * k)
+          : Color.fromRGBO(255, 255, 255, 0.7 * k);
+      canvas.drawRect(Offset.zero & size, fill);
     }
-    final picture = recorder.endRecording();
-    final image = picture.toImageSync(vw, vh);
-    picture.dispose();
-    canvas.drawImageRect(
-        image,
-        Rect.fromLTWH(0, 0, w, h),
-        Rect.fromLTWH(0, 0, (w * g.scale).roundToDouble(), (h * g.scale).roundToDouble()),
-        SpriteCatalog.pixelPaint());
-    image.dispose();
+  }
+
+  void _card(Canvas canvas, SceneFrame f, UltCinematic u, double a, Size size,
+      Rect area) {
+    final s = u.script;
+    final pu = 2.0 * f.geometry.hudUnit;
+    final w = (size.width / pu).ceil(), h = (size.height / pu).ceil();
+    final inP = Curves.easeOutCubic.transform(((a - 80) / 180).clamp(0.0, 1.0));
+    if (inP <= 0) return;
+    final outP = ((a - (s.buildMs - 140)) / 200).clamp(0.0, 1.0);
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec, Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()));
+    final wd = w.toDouble();
+    // Arriba del área del mundo, debajo de la barra de cine: la cámara
+    // tiene al lanzador en el centro.
+    final by = ((area.top + area.height * 0.09) / pu + 26).roundToDouble();
+    c.translate((wd * outP * 1.2).roundToDouble(), 0);
+    if (outP > 0) {
+      c.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, 1 - outP));
+    }
+    final right = wd * inP;
+    final col = u.fx.color;
+    final band = Path()
+      ..moveTo(0, by - 19)
+      ..lineTo(right + 12, by - 19)
+      ..lineTo(right - 6, by + 17)
+      ..lineTo(0, by + 17)
+      ..close();
+    _pen.fill.color = const Color(0xE6000000);
+    c.drawPath(band.shift(const Offset(0, 3)), _pen.fill);
+    _pen.fill.color = Color.lerp(col, const Color(0xFF000000), 0.35)!
+        .withValues(alpha: 0.92);
+    c.drawPath(band, _pen.fill);
+    // Franja clara arriba y líneas de velocidad.
+    c.save();
+    c.clipPath(band);
+    _pen.rect(c, col.withValues(alpha: 0.9), 0, by - 19, wd, 3);
+    _pen.rect(c, const Color(0xFF000000), 0, by + 14, wd, 3);
+    for (var i = 0; i < 12; i++) {
+      final ly = by - 14 + ((i * 7) % 26);
+      final lx = ((i * 97 + a * 0.9) % (wd + 80)) - 80;
+      _pen.rect(c, const Color(0x55FFFFFF), lx, ly, 40 + (i % 3) * 14, 1);
+    }
+    c.restore();
+    // Borde blanco del corte.
+    _pen.stroke
+      ..color = const Color(0xFFFFFFFF)
+      ..strokeWidth = 2;
+    c.drawLine(Offset(right + 12, by - 19), Offset(right - 6, by + 17), _pen.stroke);
+
+    // Sprite grande del lanzador y textos (entran con la banda).
+    final img = f.sprites?.hero(u.fx.ult?.casterClass ?? '');
+    final x0 = math.min(right - 40, 18.0);
+    if (img != null) {
+      const k = 3.0;
+      final dst = Rect.fromLTWH(x0, by + 17 - img.height * k + 8,
+          img.width * k, img.height * k);
+      final shadow = SpriteCatalog.pixelPaint()
+        ..colorFilter = const ColorFilter.mode(Color(0xFF000000), BlendMode.srcIn);
+      final src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
+      c.drawImageRect(img, src, dst.shift(const Offset(2, 2)), shadow);
+      c.drawImageRect(img, src, dst, SpriteCatalog.pixelPaint());
+    }
+    final tx = x0 + 52;
+    final ult = u.fx.ult;
+    _pen.text(c, '★ ULTIMATE · ${ult?.casterName ?? ''}', tx, by - 8,
+        const Color(0xFFFFFFFF), 8,
+        center: false);
+    _pen.text(c, (ult?.name ?? '').toUpperCase(), tx, by + 12,
+        const Color(0xFFFFFFFF), 16,
+        center: false, outline: true);
+    if (outP > 0) c.restore();
+    final pic = rec.endRecording();
+    final img2 = pic.toImageSync(w, h);
+    pic.dispose();
+    _blit(canvas, img2, Rect.fromLTWH(0, 0, w * pu, h * pu));
+    img2.dispose();
   }
 
   @override

@@ -9,6 +9,8 @@ import 'battle_fx.dart';
 import 'battle_layout.dart';
 import 'fx_style.dart';
 import 'particles.dart';
+import 'ult_cinematic.dart';
+import 'ult_fx.dart';
 
 /// Lo que la escena dibuja en este frame (datos del widget). Inmutable.
 class SceneFrame {
@@ -21,7 +23,6 @@ class SceneFrame {
     this.localId,
     this.targetId,
     this.turnTimeLeft,
-    this.coverBottom = 0,
   });
 
   final BattleState battle;
@@ -38,17 +39,19 @@ class SceneFrame {
 
   /// Segundos del turno del jugador (barra de tiempo); `null` si no espera.
   final double? turnTimeLeft;
-
-  /// Px virtuales de escena tapados por los paneles de abajo.
-  final double coverBottom;
 }
 
 /// Un efecto vivo: el [BattleFx] con su hora de alta (`fxSeen`).
 class LiveFx {
-  LiveFx(this.fx, this.t0);
+  LiveFx(this.fx, this.t0, [this.batch = 0]);
 
   final BattleFx fx;
-  final double t0;
+
+  /// Hora de alta (se corre si la cinemática se adelanta).
+  double t0;
+
+  /// Paso del que viene (para adelantar los de una ULT).
+  final int batch;
 
   /// Ya disparó sus partículas / sacudida (`fxVisual`).
   bool fired = false;
@@ -57,48 +60,55 @@ class LiveFx {
   double age(double t) => t - t0 - fx.delayMs;
 }
 
-/// Cinemática de ultimate en curso (`ultCine`).
-class UltCinematic {
-  UltCinematic(this.fx, this.t0);
-
-  final BattleFx fx;
-  final double t0;
-  final done = <String>{};
-}
-
 /// Estado de animación de la escena de batalla: reloj, efectos vivos,
-/// partículas, cinemática, muertes vistas y cámara. No decide nada del
-/// juego: se alimenta de los eventos y el estado que recibe. Ver
-/// docs/specs/battle_presentation.md.
+/// partículas, cinemática de ULT, muertes vistas y cámara. No decide
+/// nada del juego: se alimenta de los eventos y el estado que recibe.
+/// Ver docs/specs/battle_presentation.md.
 class BattleSceneController extends ChangeNotifier {
   BattleSceneController({math.Random? random})
       : particles = ParticleSystem(random);
 
-  /// Reloj de animación en ms (`performance.now()`).
+  /// Reloj de animación en ms (`performance.now()`); se detiene durante
+  /// el hit-stop.
   double t = 0;
+
+  /// Reloj de pose (flotación, rebotes): quieto mientras una ULT
+  /// "congela el tiempo".
+  double poseT = 0;
+
+  /// Hit-stop pendiente (ms de reloj real).
+  double hitStop = 0;
+
   final ParticleSystem particles;
   final fx = <LiveFx>[];
   UltCinematic? ult;
 
+  /// Pasos que llegaron con una cinemática en curso (§ "Nuevos pasos
+  /// durante la cinemática").
+  final pending = <List<BattleFx>>[];
+
   /// `deathSeen`: cuándo vio la escena caer a cada enemigo.
   final deathSeen = <String, double>{};
 
-  /// Cámara (esquina superior izquierda de la escena, px del mundo).
-  Offset? camera;
+  /// Cámara actual (centro y zoom, px del mundo).
+  CameraView? camera;
 
   /// Lo último que pidió dibujar el widget.
   SceneFrame? frame;
 
   int? _battleId;
   int? _seenSeq;
+  int _batch = 0;
 
   static const maxFx = 70;
 
   /// Otra batalla: se borra todo lo visual.
   void reset() {
     fx.clear();
+    pending.clear();
     particles.clear();
     ult = null;
+    hitStop = 0;
     deathSeen.clear();
     camera = null;
   }
@@ -123,24 +133,90 @@ class BattleSceneController extends ChangeNotifier {
     addEffects(mapBattleEvents(events, state, layout.of));
   }
 
+  /// La cinemática ocupa la escena (preparación o descarga, o está por
+  /// empezar): los pasos nuevos esperan.
+  bool get holding {
+    final u = ult;
+    if (u != null) {
+      final ph = u.script.phaseAt(t - u.t0);
+      return ph == UltPhase.buildUp || ph == UltPhase.release;
+    }
+    return fx.any((e) => e.fx.kind == FxKind.ult && !e.fired);
+  }
+
+  /// El tiempo está "congelado" (sin flotación ni rebotes).
+  bool get frozen => ult != null && holding;
+
   void addEffects(List<BattleFx> list) {
+    if (list.isEmpty) return;
+    if (holding) {
+      pending.add(list);
+      if (pending.length >= 2) fastForward();
+      return;
+    }
+    _add(list);
+  }
+
+  void _add(List<BattleFx> list) {
+    final b = ++_batch;
     for (final f in list) {
-      fx.add(LiveFx(f, t));
+      fx.add(LiveFx(f, t, b));
     }
     if (fx.length > maxFx) fx.removeRange(0, fx.length - maxFx);
   }
 
-  /// Avanza [dtMs] milisegundos.
+  /// Adelanta la cinemática al regreso: lo pendiente de la ULT arranca
+  /// ya y los pasos en cola también.
+  void fastForward() {
+    for (final live in fx) {
+      if (live.fx.kind == FxKind.ult && !live.fired) {
+        live.t0 = t - live.fx.delayMs;
+      }
+    }
+    _fire();
+    final u = ult;
+    if (u != null) {
+      final a = t - u.t0;
+      if (a < u.script.returnAt) {
+        u.t0 = t - u.script.returnAt;
+        u.skipped = true;
+        hitStop = 0;
+      }
+      for (final live in fx) {
+        if (live.batch == u.batch && live.age(t) < 0) {
+          live.t0 = t - live.fx.delayMs;
+        }
+      }
+    }
+    _flush();
+  }
+
+  void _flush() {
+    if (pending.isEmpty || holding) return;
+    final batches = [...pending];
+    pending.clear();
+    batches.forEach(_add);
+  }
+
+  /// Avanza [dtMs] milisegundos de reloj real.
   void advance(double dtMs) {
     final f = frame;
-    t += dtMs;
-    particles.update(dtMs / 1000);
+    var dt = dtMs;
+    if (hitStop > 0) {
+      final eat = math.min(hitStop, dt);
+      hitStop -= eat;
+      dt -= eat;
+    }
+    t += dt;
+    if (!frozen) poseT += dt;
+    particles.update(dt / 1000);
     if (f != null) {
       _trackDeaths(f.battle);
-      _fire();
-      _updateUlt(f);
-      _updateCamera(f, dtMs / 1000);
     }
+    _fire();
+    if (f != null) _updateUlt(f);
+    _flush();
+    if (f != null) _updateCamera(f, dt / 1000);
     fx.removeWhere((e) => e.age(t) > e.fx.durationMs && e.fired);
     notifyListeners();
   }
@@ -159,8 +235,7 @@ class BattleSceneController extends ChangeNotifier {
       final f = live.fx;
       switch (f.kind) {
         case FxKind.ult:
-          ult = UltCinematic(f, live.t0 + f.delayMs);
-          particles.addShake(4);
+          ult = UltCinematic(f, live.t0 + f.delayMs, live.batch);
         case FxKind.slash:
           particles.burst(f.x, f.y, f.el);
         case FxKind.aura:
@@ -181,98 +256,80 @@ class BattleSceneController extends ChangeNotifier {
     }
   }
 
-  /// Objetivos de la cinemática: enemigos vivos o caídos hace < 1500 ms
-  /// (con Baluarte, los jugadores).
-  List<Offset> ultTargets(SceneFrame f) {
+  /// Dónde están el lanzador, los objetivos y el grupo de la ULT.
+  UltStage? ultStage([SceneFrame? at]) {
     final u = ult;
-    if (u == null) return const [];
-    if (u.fx.ult?.bulwark ?? false) {
-      return [for (final p in f.battle.party) f.layout.of(p.id)];
+    final f = at ?? frame;
+    if (u == null || f == null) return null;
+    final b = f.battle;
+    var ids = u.fx.ult?.targets ?? const <String>[];
+    if (ids.isEmpty) {
+      ids = (u.fx.ult?.bulwark ?? false)
+          ? [for (final p in b.party) p.id]
+          : [
+              for (final e in b.enemies)
+                if (e.alive ||
+                    (deathSeen[e.id] != null && t - deathSeen[e.id]! < 1500))
+                  e.id,
+            ];
     }
-    return [
-      for (final e in f.battle.enemies)
-        if (e.alive ||
-            (deathSeen[e.id] != null && t - deathSeen[e.id]! < 1500))
-          f.layout.of(e.id),
-    ];
+    return UltStage(
+      caster: u.fx.who == null ? Offset(u.fx.x, u.fx.y) : f.layout.of(u.fx.who!),
+      targets: [for (final id in ids) f.layout.of(id)],
+      targetBoxes: [for (final id in ids) f.layout.boxOf(id)],
+      party: [for (final p in b.party) f.layout.of(p.id)],
+    );
   }
 
-  /// La parte "una vez" de `ultWorld` (ráfagas y sacudidas).
   void _updateUlt(SceneFrame f) {
     final u = ult;
     if (u == null) return;
     final a = t - u.t0;
-    if (a > BattleFx.ultMs) {
+    if (a > u.script.totalMs) {
       ult = null;
       return;
     }
-    final el = u.fx.el;
-    final auraEl = el == FxElement.phys ? FxElement.level : el;
-    if (a < 1100 && a % 90 < 20) {
-      particles.burst(u.fx.x, u.fx.y - 6, auraEl, 0.3);
-    }
-    final tg = ultTargets(f);
-    void once(String k, void Function() fn) {
-      if (u.done.add(k)) fn();
-    }
-
-    final ph = (a - 300) / 800;
-    if (ph > 0 && ph < 1.15) {
-      for (var i = 0; i < tg.length; i++) {
-        final g = tg[i];
-        final lp = (ph * 1.25 - i * 0.1).clamp(0.0, 1.0);
-        if (lp < 1) continue;
-        switch (el) {
-          case FxElement.burn:
-            once('m$i', () {
-              particles.burst(g.dx, g.dy - 8, FxElement.burn, 3);
-              particles.burst(g.dx, g.dy - 8, FxElement.phys, 1.5);
-              particles.addShake(7);
-            });
-          case FxElement.freeze:
-            once('f$i', () {
-              particles.burst(g.dx, g.dy - 10, FxElement.freeze, 3);
-              particles.addShake(6);
-            });
-          case FxElement.poison:
-            once('p$i', () => particles.burst(g.dx, g.dy - 8, FxElement.poison, 2.5));
-          case FxElement.holy:
-            once('h$i', () {
-              particles.burst(g.dx, g.dy - 8, FxElement.holy, 3);
-              particles.addShake(5);
-            });
-          case FxElement.arcane:
-            once('a$i', () => particles.burst(g.dx, g.dy - 10, FxElement.arcane, 3));
-          default:
-            once('s$i', () {
-              particles.burst(g.dx, g.dy - 10, FxElement.phys, 3);
-              particles.addShake(8);
-            });
-        }
-      }
-    }
-    if (a >= BattleFx.ultDelayMs) {
-      once('impact', () {
-        for (final g in tg) {
-          particles.burst(g.dx, g.dy - 10, auraEl, 1.5);
-        }
-      });
-    }
+    final stage = ultStage(f);
+    if (stage == null) return;
+    UltDirector.tick(u, a, stage, particles, (ms) {
+      hitStop = math.max(hitStop, ms.toDouble());
+    });
   }
+
+  /// Encuadre base de [f] (docs/specs/battle_presentation.md § "Cámara
+  /// y encuadre").
+  CameraView baseView(SceneFrame f) => f.layout.frame(f.geometry, f.arena);
 
   void _updateCamera(SceneFrame f, double dt) {
-    final target = f.layout.cameraTarget(f.geometry, f.arena,
-        coverBottom: f.coverBottom);
+    final base = baseView(f);
+    final u = ult;
+    final stage = ultStage(f);
+    if (u != null && stage != null) {
+      camera = ultCameraAt(u.script, t - u.t0,
+          base: base,
+          caster: stage.caster,
+          targets: stage.targets,
+          party: stage.party);
+      return;
+    }
     final arena = f.arena;
     var cam = camera ??
-        (arena == null ? target : BattleLayout.fieldCamera(f.geometry, arena));
+        (arena == null ? base : BattleLayout.fieldView(arena, base));
     final k = 1 - math.pow(1 - 0.12, dt * 60).toDouble();
-    cam = cam + (target - cam) * k;
-    if ((cam.dx - target.dx).abs() > 200 || (cam.dy - target.dy).abs() > 200) {
-      cam = target;
+    var c = cam.center + (base.center - cam.center) * k;
+    var z = cam.zoom + (base.zoom - cam.zoom) * k;
+    if ((c.dx - base.center.dx).abs() > 200 ||
+        (c.dy - base.center.dy).abs() > 200) {
+      c = base.center;
     }
+    if ((z - base.zoom).abs() < 0.01) z = base.zoom;
+    if ((c - base.center).distance < 0.05) c = base.center;
+    cam = CameraView(c, z);
     camera = cam;
   }
+
+  /// Cámara para dibujar este frame.
+  CameraView viewFor(SceneFrame f) => camera ?? baseView(f);
 
   /// El actor [id] se está lanzando (`act` de edad < 260 ms).
   bool lunging(String id) => fx.any((e) =>
@@ -288,12 +345,25 @@ class BattleSceneController extends ChangeNotifier {
       e.age(t) >= 0 &&
       e.age(t) < 120);
 
-  /// Alfa del enemigo caído, o `null` si ya no se dibuja.
+  /// Alfa del enemigo caído, o `null` si ya no se dibuja. Si es objetivo
+  /// de la ULT en curso, cae recién al recibir su impacto.
   double? deathAlpha(String id) {
-    final ds = deathSeen[id];
+    var ds = deathSeen[id];
     if (ds == null) return 1;
-    final cine = ult != null;
-    if (t - ds > (cine ? 1250 : 350)) return null;
-    return math.max(0.15, 1 - (t - ds - (cine ? 900 : 0)) / 350).clamp(0.0, 1.0);
+    final u = ult;
+    final i = u?.fx.ult?.targets.indexOf(id) ?? -1;
+    if (u != null && i >= 0) {
+      ds = math.max(ds, u.t0 + u.script.impactFor(i) + 120);
+      if (t < ds) return 1;
+    }
+    if (t - ds > 350) return null;
+    return math.max(0.15, 1 - (t - ds) / 350).clamp(0.0, 1.0);
+  }
+
+  /// Oscurecido del fondo del mundo por la ULT (0..0.85).
+  double get ultDim {
+    final u = ult;
+    if (u == null) return 0;
+    return UltDirector.worldDim(u, t - u.t0);
   }
 }

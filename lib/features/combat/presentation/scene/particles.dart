@@ -46,8 +46,12 @@ class ParticleSystem {
   double random() => _rnd.nextDouble();
 
   /// `burst(x, y, el, mult)`.
-  void burst(double x, double y, FxElement el, [double mult = 1]) {
-    final d = elementFx(el);
+  void burst(double x, double y, FxElement el, [double mult = 1]) =>
+      burstWith(elementFx(el), x, y, mult);
+
+  /// Como [burst] pero con una receta propia (escombros, chispas de las
+  /// ULT).
+  void burstWith(ElementFx d, double x, double y, [double mult = 1]) {
     final n = (d.count * mult).round();
     final wide = d.shape == ParticleShape.ray || d.shape == ParticleShape.plus;
     for (var i = 0; i < n; i++) {

@@ -4,6 +4,7 @@ import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_fx.da
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_layout.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_scene.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/fx_style.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/scene/ult_cinematic.dart';
 import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/weapons_catalog.dart';
@@ -135,7 +136,8 @@ void main() {
     expect(_of(fx, FxKind.slash).map((f) => f.who), ['e0', 'e1']);
   });
 
-  test('ultimate: cinemática y números a los 1150 ms', () {
+  test('ultimate: cinemática con guion y números en el impacto de cada '
+      'objetivo', () {
     final engine = _engine([]);
     final start = engine.start(
         party: [_member('p1', 'maga', ult: 100)],
@@ -151,13 +153,20 @@ void main() {
     expect(ult.color, const Color(0xFFFF7B29));
     expect(_of(fx, FxKind.ring), isEmpty); // la ULT no pone anillo
     expect(_of(fx, FxKind.proj), isEmpty);
-    for (final n in _of(fx, FxKind.num)) {
-      expect(n.delayMs, BattleFx.ultDelayMs);
-    }
+    final script = kUltScripts['ult_baculo']!;
+    expect(ult.ult!.script, same(script));
+    expect(ult.ult!.targets, ['e0', 'e1']);
+    final nums = _of(fx, FxKind.num).toList();
+    expect(nums.map((n) => n.delayMs),
+        [script.impactFor(0), script.impactFor(1)]);
+    expect(nums.every((n) => n.heavy), isTrue);
     // Estados aplicados con el mismo retraso que el golpe.
     final st = _of(fx, FxKind.txt).where((f) => f.text!.startsWith('Q+'));
     expect(st, hasLength(2));
-    expect(st.first.delayMs, BattleFx.ultDelayMs);
+    expect(st.map((f) => f.delayMs),
+        [script.impactFor(0), script.impactFor(1)]);
+    // El lanzador se lanza al descargar.
+    expect(_of(fx, FxKind.act).single.delayMs, script.buildMs);
   });
 
   test('enemigo crítico a un jugador: número rojo grande y hurt', () {
