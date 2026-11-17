@@ -2,6 +2,7 @@ import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
+import 'package:echos_del_tiempo/game_engine/rules/inventory_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -62,7 +63,7 @@ void main() {
     expect(c.view!.me!.profile.points, 6);
   });
 
-  testWidgets('personaje: cambio de clase en el lobby y equipar en Armas',
+  testWidgets('personaje: cambio de clase en el lobby y equipar en Inventario',
       (tester) async {
     final c = await pumpPanel(tester,
         profile: progression.normalize(PlayerProfile(
@@ -71,21 +72,23 @@ void main() {
             level: 3,
             inventory: const ['espada_bronce', 'espada_ignea'])),
         build: (v, c) => CharacterPanel(view: v, controller: c));
-    // Pestaña ARMAS con la Ígnea elegida en la lista.
+    // Pestaña INVENTARIO con la Ígnea elegida en la grilla.
     Future<void> armas() async {
       await tapVisible(tester, find.byKey(const ValueKey('tab-1')));
-      await tapVisible(
-          tester, find.byKey(const ValueKey('weapon-row-espada_ignea')));
+      final cell = InventoryRules.layout(c.view!.me!.profile)
+          .cells
+          .indexOf('espada_ignea');
+      await tapVisible(tester, find.byKey(ValueKey('inv-cell-$cell')));
     }
 
     // Armas: la Ígnea pide FUE 14 / DES 8; Lv3 tiene FUE 12, DES 6.
     await armas();
-    expect(find.text('EQUIPADA'), findsOneWidget);
+    expect(find.textContaining('EQUIPADA'), findsWidgets);
     // Comparación con la equipada antes de equipar.
     expect(find.textContaining('Comparada con Espada de Bronce'), findsOneWidget);
     expect(tester
-        .widget<PanelButton>(find.byKey(const ValueKey('equip-espada_ignea')))
-        .reason, 'Requisitos');
+        .widget<PanelButton>(find.byKey(const ValueKey('inv-equip')))
+        .reason, 'Requisitos: FUE 14 DES 8');
 
     // Con el reparto pendiente cumpliría: "Confirma puntos".
     await tapVisible(tester, find.byKey(const ValueKey('tab-0')));
@@ -95,12 +98,12 @@ void main() {
     await tapVisible(tester, find.byKey(const ValueKey('inc-des')));
     await armas();
     expect(tester
-        .widget<PanelButton>(find.byKey(const ValueKey('equip-espada_ignea')))
+        .widget<PanelButton>(find.byKey(const ValueKey('inv-equip')))
         .reason, 'Confirma puntos');
     await tapVisible(tester, find.byKey(const ValueKey('tab-0')));
     await tapVisible(tester, find.byKey(const ValueKey('confirm-points')));
     await armas();
-    await tapVisible(tester, find.byKey(const ValueKey('equip-espada_ignea')));
+    await tapVisible(tester, find.byKey(const ValueKey('inv-equip')));
     expect(c.view!.me!.profile.equipped, 'espada_ignea');
 
     // Cambio de clase (solo lobby).

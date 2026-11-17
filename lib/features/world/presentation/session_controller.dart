@@ -14,6 +14,7 @@ import '../../../game_engine/models/game_map.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/profile_store.dart';
+import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
@@ -153,6 +154,9 @@ class SessionController extends StateNotifier<SessionView?> {
   bool _autoChar = false;
   SessionMode? _lastMode;
   final _messages = <String>[];
+
+  /// Drops del jugador local en la misión actual (`SessionView.missionLoot`).
+  final _missionLoot = <LootDrop>[];
   final _chat = <ChatLine>[];
   List<BattleEvent> _battleEvents = const [];
   int _battleSeq = 0;
@@ -435,6 +439,10 @@ class SessionController extends StateNotifier<SessionView?> {
       toggleCharacter();
       return true;
     }
+    if (key == LogicalKeyboardKey.keyI && s.mode != SessionMode.battle) {
+      toggleInventory();
+      return true;
+    }
     final v = s.vote;
     if (s.mode == SessionMode.lobby &&
         v != null &&
@@ -490,6 +498,15 @@ class SessionController extends StateNotifier<SessionView?> {
     }
   }
 
+  /// Tecla I: el personaje en la pestaña INVENTARIO.
+  void toggleInventory() {
+    if (_panel == WorldPanel.inventory) {
+      closePanel();
+    } else {
+      openPanel(WorldPanel.inventory);
+    }
+  }
+
   // ------------------------------------------------------------------
   // Acciones (cada una devuelve si el host la aceptó)
   // ------------------------------------------------------------------
@@ -525,6 +542,30 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool fuse(String baseWeaponId, String sacrificeWeaponId, String skillId) =>
       _apply(FuseAction(baseWeaponId, sacrificeWeaponId, skillId));
+
+  // ---- loot v2 (loot.md § 19): el host valida todo ----
+
+  /// Forja y fusión libre (solo lobby / preparación).
+  bool craft(CraftAction a) => _apply(a);
+
+  /// Dar [count] de [token] (`uid`, `pot`, `eter`, `mat:<material>`) a
+  /// otro jugador de la sala.
+  bool give(String toPlayerId, String token, {int count = 1}) =>
+      _apply(GiveItemAction(toPlayerId, token, count: count));
+
+  /// Soltar al piso (compartido).
+  bool dropItem(String token, {int count = 1}) =>
+      _apply(DropItemAction(token, count: count));
+
+  /// Levantar del piso (E).
+  bool pickUp(int groundId) => _apply(PickUpAction(groundId));
+
+  /// Intercambiar dos casillas del inventario.
+  bool moveInventory(int from, int to) =>
+      _apply(MoveInventoryAction(from, to));
+
+  /// Guardar el filtro de loot (`null` = el por defecto).
+  bool setLootFilter(String? text) => _apply(SetLootFilterAction(text));
 
   bool takeNode(String nodeId) => _apply(TakeNodeAction(nodeId));
 
@@ -574,6 +615,11 @@ class SessionController extends StateNotifier<SessionView?> {
         case BattleStartedEvent():
           _battleEvents = const [];
           stepBattleEvents = null;
+        case MissionStartedEvent():
+          _missionLoot.clear();
+        case LootDropEvent(:final playerId, :final drop)
+            when playerId == localId:
+          _missionLoot.add(drop);
         case MissionEndedEvent() || ReturnedToLobbyEvent():
           forceSave = true;
         default:
@@ -637,7 +683,7 @@ class SessionController extends StateNotifier<SessionView?> {
       _panel = WorldPanel.prep;
     }
     if (_panel == WorldPanel.prep && mode != SessionMode.prep) _panel = null;
-    if (_panel == WorldPanel.character &&
+    if ((_panel == WorldPanel.character || _panel == WorldPanel.inventory) &&
         mode == SessionMode.field &&
         _lastMode == SessionMode.prep) {
       _panel = null;
@@ -669,6 +715,7 @@ class SessionController extends StateNotifier<SessionView?> {
       battleEventSeq: _battleSeq,
       roomCode: net?.roomCode,
       disconnected: _disconnected,
+      missionLoot: List.unmodifiable(_missionLoot),
     );
   }
 

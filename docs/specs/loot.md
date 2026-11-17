@@ -6,9 +6,12 @@ que las armas tengan modificadores". Se toman las **mecánicas** del género
 textos y contenido son propios de Ecos del Tiempo.
 
 Estado: diseño aprobado por el dueño (decisiones en § 7 y § 0). Motor
-implementado (Parte 2, § 8–20: datos exactos, reglas, API); la UI
-(paneles de inventario, forja, fusión, filtros y loot en el mapa) es la
-fase siguiente.
+implementado (Parte 2, § 8–20: datos exactos, reglas, API). Paneles
+implementados (panels.md § "Inventario", "Armería" loot v2, "Filtro de
+loot", "Resultado de misión"); el loot en el mapa es de la fase del
+mapa. El filtro se edita como **texto** en esta versión; el **editor
+visual** de reglas (§ 6: lista con ▲▼, agregar, duplicar, borrar) queda
+para la **próxima versión**.
 
 ## 0. Revisión 2 (decisiones del dueño, mandan sobre el resto)
 
@@ -234,10 +237,11 @@ demás bases nuevas reusan habilidades del catálogo. Cada habilidad nueva
 tiene su firma de sonido (`lib/core/audio/sfx_recipes.dart`).
 
 Las 4 ULT nuevas viven en `kNewUltimates`; el motor usa `kAllUltimates`
-(= `kUltimates` + nuevas). **UI**: `battle_screen` y la cinemática leen
-`kUltimates`, así que hasta la fase de UI un arma de tipo nuevo no ofrece
-su ULT en el menú (el motor sí la acepta). Al agregar guion
-(`kUltScripts`) y voces (`kUltVoices`), mover las 4 a `kUltimates`.
+(= `kUltimates` + nuevas). **UI**: el menú de batalla, la cinemática
+(`kUltScripts`), los colores y el sonido (`kUltVoices`) leen
+`kAllUltimates`, así que las 4 ya funcionan (docs/specs/
+battle_presentation.md § "Guiones"). Moverlas a `kUltimates` es solo
+orden (no cambia nada en la UI).
 
 ### 8.2 Tabla de bases
 

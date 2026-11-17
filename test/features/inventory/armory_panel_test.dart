@@ -1,20 +1,20 @@
-import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
-import 'package:echos_del_tiempo/app/theme/proto_markup.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/armory_panel.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/shop_sections.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
+import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/upgrade_stat.dart';
 import 'package:echos_del_tiempo/game_engine/models/weapon.dart';
-import 'package:echos_del_tiempo/game_engine/rules/progression_rules.dart';
+import 'package:echos_del_tiempo/game_engine/rules/craft_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../game_engine/session_test_helpers.dart';
 import '../panel_test_harness.dart';
+import 'loot_fixtures.dart';
 
 /// Guerrero Lv5 con FUE 16 / DES 10 (cumple Espada Ígnea), $1000 y el
-/// Hacha Rompeturnos para sacrificar.
+/// Hacha Rompeturnos.
 PlayerProfile richWarrior({int credits = 1000}) =>
     progression.normalize(PlayerProfile(
       name: 'Ana',
@@ -33,131 +33,90 @@ PlayerProfile richWarrior({int credits = 1000}) =>
       equipped: 'espada_bronce',
     ));
 
-PanelButton _button(WidgetTester tester, String key) =>
-    tester.widget<PanelButton>(find.byKey(ValueKey(key)));
-
-/// Texto plano de los `Text` / `ProtoText` debajo de [key].
-String _plain(WidgetTester tester, String key) => tester
-    .widgetList<Text>(find.descendant(
-        of: find.byKey(ValueKey(key)), matching: find.byType(Text)))
-    .map((t) => t.textSpan?.toPlainText() ?? t.data ?? '')
-    .join(' ');
-
 Future<void> _tab(WidgetTester tester, ArmoryTab t) =>
     tapVisible(tester, find.byKey(ValueKey('tab-${t.index}')));
 
 void main() {
-  testWidgets('armería: comprar, equipar, mejorar y fusionar', (tester) async {
+  testWidgets('armería: comprar (cualquier clase), equipar y forjar',
+      (tester) async {
     final c = await pumpPanel(tester,
         profile: richWarrior(),
         build: (v, c) => ArmoryPanel(view: v, controller: c));
     PlayerProfile me() => c.view!.me!.profile;
     expect(find.text('ARMERIA'), findsOneWidget);
-    // La pestaña explica qué hace.
-    expect(find.textContaining('Puedes comprarlas sin cumplir'), findsOneWidget);
+    expect(find.textContaining('Cualquier clase puede equiparlas'),
+        findsOneWidget);
 
-    // COMPRAR: elegir en la lista y comprar desde el detalle ($300).
+    // COMPRAR: por defecto la familia propia; comprar la Ígnea ($300).
     await tapVisible(tester, find.byKey(const ValueKey('shop-row-espada_ignea')));
     expect(find.textContaining('Si la equipas'), findsOneWidget);
     await tapVisible(tester, find.byKey(const ValueKey('buy-espada_ignea')));
-    expect(me().inventory, contains('espada_ignea'));
+    expect(me().items.any((i) => i.baseId == 'espada_ignea'), isTrue);
     expect(me().credits, 700);
-    expect(find.text('TIENES'), findsWidgets);
-    // Una que no alcanza: deshabilitada con el motivo y el costo.
+    // Otra familia (maga): se vende igual, con "Req" si no cumple.
+    await tapVisible(tester, find.byKey(const ValueKey('buy-family-maga')));
+    expect(find.byKey(const ValueKey('shop-row-baculo_fuego')), findsOneWidget);
+    expect(plain(tester, 'shop-row-baculo_fuego'), contains('Req'));
+    await tapVisible(tester, find.byKey(const ValueKey('shop-row-baculo_fuego')));
+    expect(button(tester, 'buy-baculo_fuego').reason, isNull);
+    // Una que no alcanza: motivo con lo que falta.
+    await tapVisible(tester, find.byKey(const ValueKey('buy-family-all')));
     await tapVisible(tester, find.byKey(const ValueKey('shop-row-mandoble_eco')));
-    expect(_button(tester, 'buy-mandoble_eco').reason, 'Faltan \$700');
-    expect(find.text('Faltan \$700'), findsOneWidget);
+    expect(button(tester, 'buy-mandoble_eco').reason, 'Faltan \$700');
 
-    // CONSUMIBLES ($30).
-    await _tab(tester, ArmoryTab.items);
-    final pots = me().potions;
-    await tapVisible(tester, find.byKey(const ValueKey('item-pot')));
-    expect(me().potions, pots + 1);
-    expect(me().credits, 670);
-
-    // FORJA: equipar y mejorar Poder: round(300 × 0.22 × 1) = 66.
+    // FORJA: equipar la Ígnea (por uid) y forjar Poder.
+    final uid = me().items.firstWhere((i) => i.baseId == 'espada_ignea').uid;
     await _tab(tester, ArmoryTab.forge);
-    await tapVisible(tester, find.byKey(const ValueKey('forge-row-espada_ignea')));
-    await tapVisible(tester, find.byKey(const ValueKey('equip-espada_ignea')));
-    expect(me().equipped, 'espada_ignea');
-    await tapVisible(
-        tester, find.byKey(const ValueKey('up-espada_ignea-pow')));
-    expect(me().upgradesFor('espada_ignea').level(UpgradeStat.pow), 1);
-    expect(me().credits, 604);
+    await tapVisible(tester, find.byKey(ValueKey('forge-row-$uid')));
+    await tapVisible(tester, find.byKey(ValueKey('equip-$uid')));
+    expect(me().equippedUid, uid);
+    await tapVisible(tester, find.byKey(ValueKey('up-$uid-pow')));
+    expect(me().itemByUid(uid)!.forge.level(UpgradeStat.pow), 1);
+    expect(me().credits,
+        700 - CraftRules.forgeCost(progression.catalog.weapons['espada_ignea']!, Rarity.comun, 0));
     expect(find.textContaining('Espada Ignea +1'), findsWidgets);
-
-    // FUSIÓN: base Ígnea, se sacrifica el hacha y hereda su 1ª habilidad
-    // (Golpe Sísmico) por $200.
-    await _tab(tester, ArmoryTab.fuse);
-    await tapVisible(
-        tester, find.byKey(const ValueKey('fuse-base-espada_ignea')));
-    await tapVisible(tester, find.byKey(const ValueKey('fuse-sac-hacha_rompe')));
-    expect(_button(tester, 'fuse').reason, isNull);
-    await tapVisible(tester, find.byKey(const ValueKey('fuse')));
-    expect(me().fused['espada_ignea'], 'sismo');
-    expect(me().inventory, isNot(contains('hacha_rompe')));
-    expect(me().credits, 404);
-    // Ya no hay nada para sacrificar.
-    expect(find.text('(no hay armas disponibles)'), findsOneWidget);
-    expect(_button(tester, 'fuse').reason, 'Elige un arma a sacrificar');
   });
 
-  testWidgets('fusión: la vista previa muestra habilidades, costo y pérdida',
+  testWidgets('forja: tope por rareza con pips y la pasiva sube cada 2',
       (tester) async {
-    // La base ya tenía una fusión: la nueva la reemplaza.
-    final start = richWarrior(credits: 150).copyWith(
-      fused: const {'espada_bronce': 'tajoT'},
-      upgrades: const {'hacha_rompe': WeaponUpgradeLevels(pow: 2)},
-    );
-    await pumpPanel(tester,
-        profile: start,
-        build: (v, c) =>
-            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.fuse));
-    final cat = progression.catalog;
-    final base = cat.weapons['espada_bronce']!;
-    final sismo = cat.skills['sismo']!.name;
-
-    final skills = _plain(tester, 'fuse-result-skills');
-    for (final id in base.skillIds) {
-      expect(skills, contains(protoPlain(cat.skills[id]!.name)));
-    }
-    expect(skills, contains('${protoPlain(sismo)} (nueva)'));
-    final old = cat.skills[start.fused['espada_bronce']];
-    expect(old, isNotNull);
-    {
-      expect(_plain(tester, 'fuse-replaces'), contains(protoPlain(old!.name)));
-    }
-    // Lo que se pierde: el hacha y sus mejoras.
-    final lost = _plain(tester, 'fuse-lost');
-    expect(lost, contains('Hacha'));
-    expect(lost, contains('Poder +2'));
-    // Costo y motivo: no alcanza ($150 de $200).
-    expect(find.textContaining('Costo \$${ProgressionRules.fuseCost}'),
-        findsOneWidget);
-    expect(_button(tester, 'fuse').reason, 'Faltan \$50');
-  });
-
-  testWidgets('forja: cada estadística muestra antes → después', (tester) async {
-    final start = richWarrior();
+    final start = lootWarrior();
     await pumpPanel(tester,
         profile: start,
         build: (v, c) =>
             ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.forge));
-    // Arma equipada elegida por defecto: Poder 0 → +12% y ATQ sube.
-    final before = progression.derivedStats(start);
-    final up = progression.stats.calculate(progression
-        .buildOf(start.copyWith(upgrades: {
-      'espada_bronce': const WeaponUpgradeLevels(pow: 1),
-    })));
-    expect(up.attack, greaterThan(before.attack));
-    final pow = _plain(tester, 'forge-stat-pow');
-    expect(pow, contains('Bono +0% → +12%'));
-    expect(pow, contains('ATQ ${before.attack} → ${up.attack}'));
-    expect(pow, contains('0/${ProgressionRules.upgradeMax}'));
-    expect(_plain(tester, 'forge-stat-crit'), contains('CRIT'));
-    expect(_plain(tester, 'forge-stat-spd'), contains('VEL'));
-    expect(_button(tester, 'up-espada_bronce-pow').label,
-        '+1 \$${progression.upgradeCost('espada_bronce', 0)}');
+    // Épico con forja 1: la próxima mejora sube Ímpetu I → II.
+    await tapVisible(tester, find.byKey(const ValueKey('forge-row-e1')));
+    expect(plain(tester, 'forge-cap'), contains('Forja 1/8'));
+    expect(plain(tester, 'forge-passive-note'),
+        contains('Sube a nivel II en la próxima mejora'));
+    final up = plain(tester, 'forge-passive-up-crit');
+    expect(up, contains('La pasiva sube'));
+    expect(up, contains('I → II'));
+    // Antes → después del stat (crítico) y bono.
+    final crit = plain(tester, 'forge-stat-crit');
+    expect(crit, contains('Bono +0% → +2%'));
+    expect(crit, contains('CRIT'));
+
+    // Común al tope de su rareza (3): motivo del motor.
+    await tapVisible(tester, find.byKey(const ValueKey('forge-row-espada_bronce')));
+    expect(plain(tester, 'forge-cap'), contains('Forja 0/3'));
+    expect(plain(tester, 'forge-passive-note'), contains('Sin pasiva'));
+  });
+
+  testWidgets('forja: Común al tope dice el motivo', (tester) async {
+    final p = lootWarrior(extra: const [
+      ItemInstance(
+          uid: 'x1',
+          baseId: 'espada_carmesi',
+          forge: WeaponUpgradeLevels(pow: 2, crit: 1)),
+    ]);
+    await pumpPanel(tester,
+        profile: p,
+        build: (v, c) =>
+            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.forge));
+    await tapVisible(tester, find.byKey(const ValueKey('forge-row-x1')));
+    expect(button(tester, 'up-x1-spd').reason, 'Tope de forja (3)');
+    expect(find.text('Tope de forja (3)'), findsWidgets);
   });
 
   testWidgets('armería: consumibles al máximo y sin créditos', (tester) async {
@@ -170,11 +129,9 @@ void main() {
             ethers: 0)),
         build: (v, c) =>
             ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.items));
-    expect(_button(tester, 'item-pot').reason, 'Máximo 9');
-    expect(_button(tester, 'item-eter').reason, 'Faltan \$5');
-    // El motivo se ve escrito, sin pasar el mouse.
+    expect(button(tester, 'item-pot').reason, 'Máximo 9');
+    expect(button(tester, 'item-eter').reason, 'Faltan \$5');
     expect(find.text('Máximo 9'), findsOneWidget);
-    // El motivo es solo informativo: tocar no hace nada.
     await tapVisible(tester, find.byKey(const ValueKey('item-pot')));
     expect(c.view!.me!.profile.potions, 9);
   });

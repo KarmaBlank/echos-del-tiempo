@@ -5,6 +5,18 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../game_engine/models/game_session.dart';
+import '../../../game_engine/models/loot_filter.dart';
+import '../../inventory/presentation/item_widgets.dart';
+
+/// Un drop propio de la misión con el veredicto de tu filtro.
+class ResultDrop {
+  const ResultDrop(this.text, this.verdict, {this.tooltip});
+  final String text;
+  final FilterVerdict verdict;
+
+  /// Ficha del objeto (markup).
+  final String? tooltip;
+}
 
 /// Pantalla de resultado de la misión (`#result` del prototipo): rango,
 /// tiempo, XP, créditos, bonus y armas obtenidas. Ver
@@ -17,7 +29,11 @@ class ResultsPanel extends StatelessWidget {
     required this.playerName,
     required this.weaponName,
     required this.onBack,
+    this.loot = const [],
   });
+
+  /// Tus drops de la misión (loot v2), con el estilo de tu filtro.
+  final List<ResultDrop> loot;
 
   final MissionResult result;
   final String localId;
@@ -80,6 +96,24 @@ class ResultsPanel extends StatelessWidget {
                     .map((e) => '${playerName(e.key)}: ${weaponName(e.value)}')
                     .join(' · '),
                 color: ProtoColors.dim),
+          if (loot.isNotEmpty) ...[
+            line('TUS DROPS (${loot.length})', color: ProtoColors.gold),
+            Wrap(
+              key: const ValueKey('results-loot'),
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final d in loot)
+                  LootLabel(
+                      text: d.text,
+                      verdict: d.verdict,
+                      hiddenNote: '(oculto por tu filtro)',
+                      tooltip: d.tooltip),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
           line('Regreso automático en ${r.timeLeft.ceil()}s',
               color: ProtoColors.dim),
         ],

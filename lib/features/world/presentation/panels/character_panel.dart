@@ -9,6 +9,8 @@ import '../../../../app/theme/retro_text.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
+import '../../../inventory/presentation/inventory_tab.dart';
+import '../../../inventory/presentation/loot_filter_tab.dart';
 import '../../../inventory/presentation/shop_sections.dart';
 import '../../../passive_tree/presentation/passive_tree_view.dart';
 import '../session_controller.dart';
@@ -32,12 +34,15 @@ enum CharacterTab {
   attributes('ATRIBUTOS',
       'Reparte puntos con + y -; nada cambia hasta CONFIRMAR. Cada nivel da '
           '${ProgressionRules.pointsPerLevel} puntos.'),
-  weapons('ARMAS',
-      'Equipa un arma de tu clase. Comprar, mejorar y fusionar: en la '
-          'Armería.'),
+  inventory('INVENTARIO',
+      'Arrastra para mover · clic para ver · EQUIPAR, TIRAR o DAR A un '
+          'compañero. Cualquier clase equipa si cumple nivel y requisitos.'),
   tree('ÁRBOL',
       'Pasivas de clase: 1 punto por nivel. Arrastra para mover, rueda para '
-          'zoom, clic para tomar un nodo.');
+          'zoom, clic para tomar un nodo.'),
+  filter('FILTRO',
+      'Reglas en orden: gana la primera que coincide. Ocultar no borra el '
+          'loot: lo deja en el piso. Ayuda de la gramática en [?] y abajo.');
 
   const CharacterTab(this.label, this.hint);
   final String label;
@@ -63,8 +68,10 @@ class CharacterPanel extends StatefulWidget {
   static const help = '<b>Personaje</b><br>'
       '<span class="k">ATRIBUTOS</span>: reparte los puntos de nivel; a la '
       'derecha ves cómo cambian tus stats antes de confirmar.<br>'
-      '<span class="k">ARMAS</span>: equipa y compara con la que llevas.<br>'
+      '<span class="k">INVENTARIO</span> (tecla I): tus objetos; equipa, '
+      'compara, tira o da a un compañero.<br>'
       '<span class="k">ÁRBOL</span>: pasivas de clase.<br>'
+      '<span class="k">FILTRO</span>: qué loot ves y cómo se marca.<br>'
       'Reiniciar puntos o árbol es gratis (salvo en batalla).';
 
   @override
@@ -93,8 +100,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
 
     final Widget body = switch (tab) {
       CharacterTab.attributes => _attributes(),
-      CharacterTab.weapons =>
-        EquipTab(shop: ShopContext(view, c), pending: Map.of(_alloc)),
+      CharacterTab.inventory =>
+        InventoryTab(shop: ShopContext(view, c), pending: Map.of(_alloc)),
+      CharacterTab.filter => LootFilterTab(shop: ShopContext(view, c)),
       // El visor del árbol se ajusta al alto que queda (fila de puntos y
       // reinicio arriba: ~40 px).
       CharacterTab.tree => LayoutBuilder(
@@ -115,7 +123,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
           : 'PERSONAJE',
       width: 1000,
       fill: true,
-      help: CharacterPanel.help,
+      help: tab == CharacterTab.filter ? kFilterHelp : CharacterPanel.help,
       onClose: close,
       titleTrailing: ProtoText('${protoEsc(prof.name)} · '
           '<span class="k">$cls Lv${prof.level}</span> · Puntos: '

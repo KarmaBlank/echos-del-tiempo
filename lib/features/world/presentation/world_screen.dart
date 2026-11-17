@@ -7,7 +7,9 @@ import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../combat/presentation/battle_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
+import '../../inventory/domain/item_text.dart';
 import '../../inventory/presentation/armory_panel.dart';
+import '../../inventory/presentation/item_widgets.dart';
 import '../../inventory/presentation/shop_sections.dart';
 import '../../missions/domain/mission_text.dart';
 import '../../missions/presentation/mission_board_panel.dart';
@@ -67,6 +69,13 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     // Escribiendo: ninguna tecla es del juego (ni atajos ni movimiento);
     // así llegan al campo de texto.
     if (_chatFocus.hasFocus) return KeyEventResult.ignored;
+    // Escribiendo en un campo de un panel (p. ej. el filtro de loot): las
+    // teclas son del campo, no atajos del mapa.
+    final focusCtx = FocusManager.instance.primaryFocus?.context;
+    if (focusCtx != null &&
+        focusCtx.findAncestorWidgetOfExactType<EditableText>() != null) {
+      return KeyEventResult.ignored;
+    }
     if (event is KeyDownEvent &&
         (event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.numpadEnter) &&
@@ -184,6 +193,20 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               playerName: (id) => s.players[id]?.name ?? '?',
               weaponName: (id) => weapons[id]?.name ?? id,
               onBack: controller.backToLobby,
+              loot: [
+                for (final d in view.missionLoot)
+                  if (view.me case final me?)
+                    ResultDrop(
+                      dropLabelText(controller.engine.progression, d),
+                      controller.engine.lootVerdict(me.profile, d),
+                      tooltip: d.item == null
+                          ? stackTooltipMarkup(d.stack!, d.count)
+                          : itemTooltipMarkup(
+                              controller.engine.progression, d.item!,
+                              level: me.profile.level,
+                              attributes: me.profile.attributes),
+                    ),
+              ],
             ),
           ),
         ];
@@ -227,7 +250,16 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       case WorldPanel.armory:
         return ArmoryPanel(view: view, controller: controller);
       case WorldPanel.character:
-        return CharacterPanel(view: view, controller: controller);
+        return CharacterPanel(
+            key: const ValueKey('panel-character'),
+            view: view,
+            controller: controller);
+      case WorldPanel.inventory:
+        return CharacterPanel(
+            key: const ValueKey('panel-inventory'),
+            view: view,
+            controller: controller,
+            initialTab: CharacterTab.inventory);
       case WorldPanel.prep:
         final prep = s.prep;
         final mission = prep == null ? null : catalog.mission(prep.missionId);
@@ -250,9 +282,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           ethers: me.profile.ethers,
           tier: missionTier(catalog, mission),
           bossName: missionBossName(catalog, mission),
-          weaponName: me.profile.equipped == null
+          weaponName: me.profile.equippedUid == null
               ? '-'
-              : rules.weaponDisplayName(me.profile, me.profile.equipped!),
+              : rules.weaponDisplayName(me.profile, me.profile.equippedUid!),
           onReady: controller.setReady,
           onCancel: controller.cancelPrep,
           onCharacter: () => controller.openPanel(WorldPanel.character),

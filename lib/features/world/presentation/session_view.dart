@@ -1,9 +1,13 @@
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/game_map.dart';
 import '../../../game_engine/models/game_session.dart';
+import '../../../game_engine/models/loot.dart';
 
 /// Panel abierto sobre el mapa (`panel` del prototipo).
-enum WorldPanel { missionBoard, armory, character, prep }
+///
+/// `inventory` es el panel de personaje abierto en la pestaña INVENTARIO
+/// (tecla I).
+enum WorldPanel { missionBoard, armory, character, prep, inventory }
 
 /// Una línea del chat (`addChat`): de un jugador o de sistema (`sys`).
 class ChatLine {
@@ -44,7 +48,12 @@ class SessionView {
     this.battleEventSeq = 0,
     this.roomCode,
     this.disconnected,
+    this.missionLoot = const [],
   });
+
+  /// Drops del jugador local desde que empezó la misión actual (o la
+  /// última), en orden (`LootDropEvent`). Para la pantalla de resultado.
+  final List<LootDrop> missionLoot;
 
   final GameSession session;
   final String localId;
@@ -108,5 +117,6 @@ class SessionView {
         battleEventSeq: battleEventSeq ?? this.battleEventSeq,
         roomCode: roomCode,
         disconnected: disconnected,
+        missionLoot: missionLoot,
       );
 }
