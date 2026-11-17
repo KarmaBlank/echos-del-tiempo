@@ -17,6 +17,6 @@ Future<void> main() async {
     enableExperimentalFeatures: true,
   );
   registerSharedDependencies();
-  registerP2PNetcode(firebaseReady: await initFirebaseIfConfigured());
+  registerP2PNetcode(signaling: await resolveP2PSignaling());
   runApp(const EcosApp());
 }

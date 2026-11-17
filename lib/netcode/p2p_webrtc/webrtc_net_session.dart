@@ -6,25 +6,23 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../game_engine/data/game_catalog.dart';
 import '../contracts/net_session.dart';
 import '../protocol/protocol_net_session.dart';
-import 'firestore_signaling_service.dart';
+import 'signaling_service.dart';
 
 /// [NetSession] P2P por internet: un `RTCDataChannel` por cliente
 /// (estrella alrededor del host, hasta 3 clientes) y Firestore solo para
-/// la señalización ([FirestoreSignalingService]). El protocolo del juego
+/// la señalización ([SignalingService]: SDK en web/móvil, REST en
+/// escritorio). El protocolo del juego
 /// es el de [ProtocolNetSession]; este archivo es el único del proyecto
 /// que sabe que existe WebRTC. Ver docs/specs/netcode.md § "P2P".
-///
-/// **Sin probar en dispositivo real**: hace falta un proyecto Firebase
-/// (pasos en el spec).
 class WebRTCNetSession extends ProtocolNetSession {
   WebRTCNetSession({
-    required FirestoreSignalingService signaling,
+    required SignalingService signaling,
     super.catalog = GameCatalog.standard,
     math.Random? random,
   })  : _signaling = signaling,
         _random = random ?? math.Random();
 
-  final FirestoreSignalingService _signaling;
+  final SignalingService _signaling;
   final math.Random _random;
 
   static const _config = <String, dynamic>{
@@ -38,6 +36,11 @@ class WebRTCNetSession extends ProtocolNetSession {
 
   /// Tiempo máximo para que el cliente abra el canal.
   static const joinTimeout = Duration(seconds: 20);
+
+  /// Host: una conexión que no abrió su canal en este tiempo se descarta
+  /// (el cliente ya se rindió a los [joinTimeout]); así no ocupa un lugar
+  /// de [maxPeerConnections] ni sigue consultando la señalización.
+  static const hostLinkTimeout = Duration(seconds: 30);
 
   /// Conexiones a medio armar que el host acepta a la vez (las de más se
   /// ignoran; el protocolo igual rechaza al quinto jugador).
@@ -66,6 +69,8 @@ class WebRTCNetSession extends ProtocolNetSession {
         // `unavailable-id` del prototipo: si el código existe, otro.
         if (await _signaling.createRoom(c)) code = c;
       }
+    } on SignalingException catch (e) {
+      throw NetException('No se pudo crear la sala: ${e.message}');
     } on Object catch (e) {
       throw NetException('Error de red al crear la sala ($e). '
           '¿Tienes internet? Prueba de nuevo.');
@@ -86,26 +91,32 @@ class WebRTCNetSession extends ProtocolNetSession {
   Future<void> _accept(
       String code, PeerOffer offer, void Function(PeerLink) onPeer) async {
     if (_rtcLinks.length >= maxPeerConnections) return;
+    _RtcLink? built;
     try {
       final pc = await createPeerConnection(_config);
-      final link = _RtcLink(pc, onClosed: (l) => _rtcLinks.remove(l));
+      final link = built = _RtcLink(pc, onClosed: (l) => _rtcLinks.remove(l));
       _rtcLinks.add(link);
       final ice = _IceQueue(pc);
       pc.onIceCandidate = (c) {
         if (c.candidate == null) return;
         unawaited(_signaling
             .addCandidate(code, offer.peerId,
-                fromHost: true, candidate: Map<String, dynamic>.from(c.toMap() as Map))
+                fromHost: true,
+                candidate: Map<String, dynamic>.from(c.toMap() as Map))
             .catchError((Object _) {}));
       };
       // El cliente crea el canal (es quien ofrece): llega acá. El host
       // no escribe hasta recibir el `hello`, así que no hace falta
-      // esperar a que esté abierto.
+      // esperar a que esté abierto. Abierto, la señalización de este
+      // cliente ya no hace falta (deja de escuchar candidatos; en REST,
+      // de consultar).
       pc.onDataChannel = (channel) {
-        link.attach(channel);
+        link.attach(channel, onOpen: link.stopSignaling);
         onPeer(link);
       };
-      await pc.setRemoteDescription(RTCSessionDescription(offer.sdp, offer.type));
+      link.expireUnlessOpen(hostLinkTimeout);
+      await pc
+          .setRemoteDescription(RTCSessionDescription(offer.sdp, offer.type));
       ice.remoteReady();
       final answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
@@ -115,7 +126,9 @@ class WebRTCNetSession extends ProtocolNetSession {
           .watchCandidates(code, offer.peerId, fromHost: false)
           .listen(ice.add, onError: (Object _) {}));
     } on Object {
-      // Una oferta rota no tumba la sala.
+      // Una oferta rota no tumba la sala, pero su conexión a medio armar
+      // no se queda ocupando lugar.
+      await built?.close();
     }
   }
 
@@ -137,6 +150,8 @@ class WebRTCNetSession extends ProtocolNetSession {
       }
     } on NetException {
       rethrow;
+    } on SignalingException catch (e) {
+      throw NetException(e.message);
     } on Object catch (e) {
       throw NetException('Error de red: $e');
     }
@@ -163,13 +178,15 @@ class WebRTCNetSession extends ProtocolNetSession {
         'game', RTCDataChannelInit()..ordered = true);
     final opened = Completer<void>();
     link.attach(channel, onOpen: () {
+      link.stopSignaling();
       if (!opened.isCompleted) opened.complete();
     });
 
     try {
       final offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      final id = await _signaling.createPeer(c, offer.sdp ?? '', offer.type ?? 'offer');
+      final id = await _signaling.createPeer(
+          c, offer.sdp ?? '', offer.type ?? 'offer');
       peerId = id;
       _clientPeerId = id;
       for (final m in pendingLocal) {
@@ -188,6 +205,10 @@ class WebRTCNetSession extends ProtocolNetSession {
           .listen(ice.add, onError: (Object _) {}));
 
       await opened.future.timeout(joinTimeout);
+    } on SignalingException catch (e) {
+      await link.close();
+      await _cleanupClientDoc();
+      throw NetException('No se pudo conectar a la sala $c: ${e.message}');
     } on Object {
       await link.close();
       await _cleanupClientDoc();
@@ -298,7 +319,36 @@ class _RtcLink implements PeerLink {
     if (channel.state == RTCDataChannelState.RTCDataChannelOpen) onOpen?.call();
   }
 
-  void addSubscription(StreamSubscription<Object?> s) => _subs.add(s);
+  bool _opened = false;
+  Timer? _expiry;
+
+  /// Suscripción de señalización de este enlace (se corta con
+  /// [stopSignaling] o al cerrar).
+  void addSubscription(StreamSubscription<Object?> s) {
+    if (_closed || _opened) {
+      unawaited(s.cancel());
+    } else {
+      _subs.add(s);
+    }
+  }
+
+  /// Canal abierto: corta la señalización (listeners/consultas).
+  void stopSignaling() {
+    _opened = true;
+    _expiry?.cancel();
+    for (final s in _subs) {
+      unawaited(s.cancel());
+    }
+    _subs.clear();
+  }
+
+  /// Cierra el enlace si a los [after] el canal no abrió.
+  void expireUnlessOpen(Duration after) {
+    _expiry?.cancel();
+    _expiry = Timer(after, () {
+      if (!_opened) unawaited(close());
+    });
+  }
 
   @override
   Stream<String> get incoming => _in.stream;
@@ -314,6 +364,7 @@ class _RtcLink implements PeerLink {
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    _expiry?.cancel();
     for (final s in _subs) {
       unawaited(s.cancel());
     }

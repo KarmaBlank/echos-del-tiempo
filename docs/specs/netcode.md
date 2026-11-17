@@ -226,7 +226,7 @@ Ver docs/specs/exploration.md § "Controlador de sesión". Resumen:
 |---|---|---|---|
 | Loopback (memoria, tests) | `netcode/loopback` | — (tests) | Probado |
 | LAN (WebSocket, `dart:io`) | `netcode/lan` | `main_lan.dart` | Probado con sockets reales en localhost |
-| P2P por internet (WebRTC + señalización Firestore) | `netcode/p2p_webrtc` | `main_p2p.dart`, `main_dev.dart` | Compila; **sin probar** (falta un proyecto Firebase) |
+| P2P por internet (WebRTC + señalización Firestore) | `netcode/p2p_webrtc` | `main_p2p.dart`, `main_dev.dart` | Señalización REST probada contra el proyecto real (`tool/p2p_signaling_smoke.dart`) y con servidor falso en tests; WebRTC de punta a punta pendiente de probar en dos PCs |
 | Servidor dedicado | `netcode/dedicated_server` | — | No empezado (README) |
 | Rollback | `netcode/rollback` | — | No empezado (README) |
 
@@ -256,7 +256,7 @@ proceso.
 - La primera vez Windows pregunta si deja pasar al juego por el firewall:
   hay que aceptar en **redes privadas** para que otra PC se conecte.
 
-### P2P por internet (`WebRTCNetSession` + `FirestoreSignalingService`)
+### P2P por internet (`WebRTCNetSession` + `SignalingService`)
 
 Firestore **nunca** transporta el juego: solo los SDP/ICE para armar una
 conexión WebRTC directa. Una vez abierto el `RTCDataChannel` (ordenado y
@@ -289,6 +289,85 @@ rooms/{CODIGO}/peers/{peerId}/hostCandidates/{auto}     ICE del host
   quede de una caída.
 - ICE: solo STUN (`stun:stun.l.google.com:19302`). Sin TURN, dos NAT
   simétricas no se conectan (fuera de alcance).
+- Fin de la señalización: apenas abre el `DataChannel`, cada lado corta
+  sus suscripciones de señalización de ese enlace (respuesta/candidatos).
+  El host descarta una conexión que no abrió su canal a los 30 s (el
+  cliente se rinde a los 20 s) o cuya oferta falló, para que no ocupe
+  lugar ni siga escuchando.
+
+#### Señalización: interfaz y dos implementaciones
+
+`WebRTCNetSession` solo conoce `SignalingService`
+(`netcode/p2p_webrtc/signaling_service.dart`: crear/consultar sala,
+ofertas, respuesta, candidatos, limpieza). El composition root elige la
+implementación según la plataforma (`resolveP2PSignaling` en
+`app/flavors/firebase_bootstrap.dart` → `registerP2PNetcode(signaling:)`):
+
+| Plataforma | Implementación | `Firebase.initializeApp` |
+|---|---|---|
+| Windows / Linux / macOS | `FirestoreRestSignaling` (API REST v1, `dart:io` `HttpClient`) | **No** se llama |
+| Web / Android / iOS | `FirestoreSignalingService` (SDK `cloud_firestore`, listeners) | Sí |
+
+Si `DefaultFirebaseOptions.currentPlatform` lanza (plataforma sin
+configurar) o falta `projectId`/`apiKey`, o `initializeApp` falla, la
+fábrica queda no disponible (`P2P por internet: falta configurar
+Firebase`).
+
+##### Señalización REST en escritorio
+
+**Por qué:** el plugin `cloud_firestore` de escritorio envuelve el SDK
+C++ de Firebase (oficialmente solo para desarrollo). En Windows sus
+canales (`plugins.flutter.io/firebase_firestore/transaction/...` y
+`.../query/...`) mandan mensajes de nativo a Flutter desde un hilo que no
+es el de la plataforma (`shell.cc: ... non-platform thread ... may result
+in data loss or crashes`). Se observó con dos ventanas en una PC: crear
+la sala (transacción) funcionaba, pero el cliente que pulsaba UNIRSE se
+quedaba esperando: los eventos de los listeners (`snapshots()` de la
+respuesta y de los candidatos; del lado del host, de `peers`) se
+perdían y la conexión nunca se armaba. Con REST no hay SDK nativo ni
+listeners: solo pedidos HTTP desde Dart.
+
+- Base `https://firestore.googleapis.com/v1/projects/{projectId}/databases/(default)/documents/...?key={apiKey}`
+  (la `apiKey` y el `projectId` de `lib/firebase_options.dart`). Sin
+  Firebase Auth: las reglas de `firestore.rules` se aplican igual.
+- Sala: `POST rooms?documentId={CODIGO}` con `{v, createdAt, expiresAt}`.
+  Si el código existe responde 409 (o 403, porque para las reglas sería
+  un `update`; en ese caso se confirma con un `GET`) → se sortea otro.
+- Unirse: `GET rooms/{CODIGO}` (404 = no existe; sin transacción), `POST
+  rooms/{CODIGO}/peers` (id automático) con `{offer, createdAt,
+  expiresAt}`.
+- Respuesta: `PATCH peers/{id}?updateMask.fieldPaths=answer&currentDocument.exists=true`
+  (las reglas solo dejan cambiar `answer`).
+- Candidatos: `POST peers/{id}/clientCandidates|hostCandidates`
+  (`candidate`, `sdpMid`, `sdpMLineIndex`, `expiresAt`).
+- `createdAt` va con la hora local (`timestampValue`): las reglas solo
+  limitan qué campos hay, no su valor. El SDK usa la hora del servidor.
+- Limpieza: listar y `DELETE` uno por uno (candidatos, peer, sala).
+- Valores tipados de Firestore (`stringValue`, `integerValue` como
+  texto, `doubleValue`, `booleanValue`, `nullValue`, `timestampValue`,
+  `mapValue`, `arrayValue`): `FirestoreRestCodec`.
+- **"Escuchar" = consultar** mientras haya una suscripción, sin solapar
+  pedidos, recordando los documentos ya vistos (cada oferta/candidato se
+  emite una vez):
+  - respuesta y candidatos: cada **500 ms**; la respuesta deja de
+    consultarse apenas llega; los candidatos, cuando abre el canal;
+  - ofertas nuevas (host): cada **1 s** mientras la sala está abierta
+    (alguien puede unirse en cualquier momento).
+  - 10 fallas seguidas de una consulta → el stream termina con error (en
+    el host: `Se perdió la conexión con el servidor de salas.`); una
+    falla suelta se ignora.
+- Cada pedido tiene timeout de 10 s. Los errores salen como
+  `SignalingException` con mensaje en castellano (sin internet, sin
+  respuesta, permiso denegado/reglas, clave inválida, cuota, error del
+  servidor) y la sesión los muestra como `NetException`.
+- **Costo:** cada consulta es una lectura facturable (una lista vacía
+  cuenta como 1). Durante el armado (unos segundos por cliente): ~2
+  lecturas por segundo y por lado. El host con la sala abierta: ~1
+  lectura/s (≈3600/h) por las ofertas. La cuota gratis de Firestore son
+  50 000 lecturas/día: alcanza para jugar entre amigos; si molesta, subir
+  `offerPollInterval`.
+- `tool/p2p_signaling_smoke.dart` (`dart run tool/p2p_signaling_smoke.dart`)
+  prueba todo esto contra el proyecto real y borra lo que crea.
 
 #### Qué tiene que hacer el dueño para habilitarlo
 
@@ -311,10 +390,12 @@ y el resto del juego funciona igual.
    `UnsupportedError` (por eso la app sabe que falta configurar).
 7. `flutter run -d windows -t lib/app/flavors/main_p2p.dart`.
 
-`main_p2p.dart` (vía `registerP2PNetcode`) llama a
-`Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform)`
-dentro de un `try`: si el stub lanza o la inicialización falla, la
-fábrica de red queda registrada como no disponible con ese motivo.
+`main_p2p.dart` llama a `resolveP2PSignaling()` y pasa el resultado a
+`registerP2PNetcode`: en escritorio solo lee `projectId`/`apiKey` de
+`DefaultFirebaseOptions.currentPlatform` (sin `Firebase.initializeApp`);
+en web/móvil llama a `Firebase.initializeApp` dentro de un `try`. Si el
+stub lanza o la inicialización falla, la fábrica de red queda registrada
+como no disponible con ese motivo.
 
 Reglas de Firestore: archivo **`firestore.rules`** en la raíz del repo
 (referenciado desde `firebase.json`). Sin autenticación: cualquiera con
@@ -333,8 +414,8 @@ por `flutterfire configure`; `lib/firebase_options.dart` y
 `firebase.json` versionados).
 
 FlutterFire en Windows usa el SDK C++ de Firebase y la documentación
-oficial lo considera apto para desarrollo; Android/iOS/macOS son las
-plataformas de producción.
+oficial lo considera apto para desarrollo; por eso en escritorio la
+señalización no usa el SDK sino la API REST (ver arriba).
 
 ## Fuera de alcance
 

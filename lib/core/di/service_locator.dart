@@ -11,7 +11,7 @@ import '../../game_engine/rules/session_engine.dart';
 import '../../game_engine/rules/stats_calculator.dart';
 import '../../netcode/contracts/net_session_factory.dart';
 import '../../netcode/lan/lan_net_session.dart';
-import '../../netcode/p2p_webrtc/firestore_signaling_service.dart';
+import '../../netcode/p2p_webrtc/signaling_service.dart';
 import '../../netcode/p2p_webrtc/webrtc_net_session.dart';
 import '../audio/audioplayers_sfx_player.dart';
 import '../audio/sfx_service.dart';
@@ -69,23 +69,22 @@ void registerSharedDependencies() {
 }
 
 /// Variante P2P por internet: WebRTC + señalización por Firestore.
-/// [firebaseReady] lo decide el composition root (si
-/// `Firebase.initializeApp` funcionó); si no, el título muestra
-/// [p2pUnavailable]. Ver docs/specs/netcode.md § "P2P por internet".
-void registerP2PNetcode({required bool firebaseReady}) {
-  if (!firebaseReady) {
+/// [signaling] lo decide el composition root según la plataforma (REST en
+/// escritorio, SDK en web/móvil: `resolveP2PSignaling`); `null` = Firebase
+/// sin configurar y el título muestra [p2pUnavailable]. Ver
+/// docs/specs/netcode.md § "P2P por internet".
+void registerP2PNetcode({required SignalingService Function()? signaling}) {
+  if (signaling == null) {
     sl.registerSingleton<NetSessionFactory>(
         NetSessionFactory.unavailable('P2P', p2pUnavailable));
     return;
   }
-  sl.registerLazySingleton<FirestoreSignalingService>(
-    () => FirestoreSignalingService(),
-  );
+  sl.registerLazySingleton<SignalingService>(signaling);
   sl.registerSingleton<NetSessionFactory>(NetSessionFactory(
     label: 'P2P',
     codeHint: 'CODIGO',
     create: () => WebRTCNetSession(
-      signaling: sl<FirestoreSignalingService>(),
+      signaling: sl<SignalingService>(),
       catalog: sl<GameCatalog>(),
     ),
   ));
