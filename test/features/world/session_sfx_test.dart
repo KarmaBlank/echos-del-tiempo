@@ -2,12 +2,14 @@ import 'package:echos_del_tiempo/core/audio/sfx_catalog.dart';
 import 'package:echos_del_tiempo/core/audio/sfx_service.dart';
 import 'package:echos_del_tiempo/game_engine/data/skills_catalog.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_fx.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/scene/proc_fx.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/ult_cinematic.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_sfx.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
+import 'package:echos_del_tiempo/game_engine/models/passive_mechanic.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_event.dart';
@@ -436,5 +438,241 @@ void main() {
     // El chat no tiene sonido en el prototipo.
     expect(rec.played, isEmpty);
     expect(const ChatAction('x').text, 'x');
+  });
+
+  // docs/specs/audio.md § "Procs del árbol".
+  group('procs del árbol', () {
+    const base = ProcTiming.afterMs; // cuerpo a cuerpo: golpe a 0
+
+    test('rebotes: un zip por salto que sube, en el tiempo de su arco; el '
+        'daño secundario no suena como impacto', () {
+      final cues = _sfx(_Recorder()).battleSounds(const [
+        ActionEvent('knight', BattleActionKind.attack, targetId: 'e1'),
+        DamageEvent('e1', 16),
+        ProcEvent('knight', 'rebote', targetId: 'e2'),
+        DamageEvent('e2', 6, sourceId: 'rebote'),
+        ProcEvent('knight', 'rebote', targetId: 'e3'),
+        DamageEvent('e3', 4, sourceId: 'rebote'),
+        ProcEvent('knight', 'rebote', targetId: 'e4'),
+        DamageEvent('e4', 2, sourceId: 'rebote'),
+        KnockedOutEvent('e4'),
+      ]);
+      expect(cues, [
+        cue(Sfx.swingBlade),
+        cue(Sfx.impactSlash, m),
+        cue(Sfx.koEnemy,
+            ProcTiming.hopHitAt(base, 2) + SessionSfx.koAfterMs),
+        cue(Sfx.zip(0), ProcTiming.hopAt(base, 0)),
+        cue(Sfx.zip(1), ProcTiming.hopAt(base, 1)),
+        cue(Sfx.zip(2), ProcTiming.hopAt(base, 2)),
+      ]);
+      expect(Sfx.zip(5), Sfx.zip(Sfx.maxZip));
+    });
+
+    test('Combustión (whump), Castigo Divino (campana) y Contraataque '
+        '(metal) en sus tiempos', () {
+      final sfx = _sfx(_Recorder());
+      // Bola de fuego: el golpe llega con el proyectil.
+      expect(
+          sfx.battleSounds(const [
+            ActionEvent('mage', BattleActionKind.skill,
+                skillId: 'bola', targetId: 'e1'),
+            DamageEvent('e1', 18),
+            ProcEvent('mage', 'combustion', targetId: 'e1'),
+            DamageEvent('e2', 9, sourceId: 'combustion'),
+            DamageEvent('e3', 9, sourceId: 'combustion'),
+          ]).where((c) => c.id.startsWith('proc.')),
+          [cue(Sfx.whump, p + base)]);
+      expect(
+          sfx.battleSounds(const [
+            ActionEvent('pal', BattleActionKind.attack, targetId: 'e1'),
+            DamageEvent('e1', 18),
+            StatusAppliedEvent('e1', StatusKind.stun, 1),
+            ProcEvent('pal', 'castigoDivino', targetId: 'e1'),
+            DamageEvent('e1', 12, sourceId: 'castigoDivino'),
+          ]).last,
+          cue(Sfx.bell, base));
+      expect(
+          sfx.battleSounds(const [
+            ActionEvent('e1', BattleActionKind.enemyAttack,
+                targetId: 'knight'),
+            DamageEvent('knight', 5),
+            ProcEvent('knight', 'contraataque', targetId: 'e1'),
+            DamageEvent('e1', 3, sourceId: 'contraataque'),
+            ProcEvent('knight', 'represalia'),
+            BuffAppliedEvent('knight', 'represalia', BuffStat.attack, 0.3, 1),
+          ]),
+          [
+            cue('enemy.slime'),
+            cue(Sfx.impactHurt, m),
+            cue(Sfx.clang, base + ProcTiming.counterHitMs),
+            cue(Sfx.flare, base),
+          ]);
+    });
+
+    test('Eco Arcano: la firma con eco cuando arranca la repetición', () {
+      final cues = _sfx(_Recorder()).battleSounds(const [
+        ActionEvent('mage', BattleActionKind.skill,
+            skillId: 'bola', targetId: 'e1'),
+        DamageEvent('e1', 18),
+        ProcEvent('mage', 'ecoArcano'),
+        DamageEvent('e1', 9, sourceId: 'ecoArcano'),
+        KnockedOutEvent('e1'),
+      ]);
+      expect(cues, contains(cue(Sfx.echo('bola'), ProcTiming.echoAt(p + base, 0))));
+      expect(
+          cues,
+          contains(cue(
+              Sfx.koEnemy,
+              ProcTiming.echoAt(p + base, 0) +
+                  p +
+                  SessionSfx.koAfterMs)));
+    });
+
+    test('escudos: se arma una vez por paso; se quiebra con el golpe', () {
+      final sfx = _sfx(_Recorder());
+      expect(
+          sfx.battleSounds(const [
+            ActionEvent('pal', BattleActionKind.skill, skillId: 'cura'),
+            HealEvent('pal', 10),
+            HealEvent('mage', 10),
+            ProcEvent('pal', 'manoSanadora', targetId: 'pal'),
+            ShieldEvent('pal', 2),
+            ProcEvent('pal', 'manoSanadora', targetId: 'mage'),
+            ShieldEvent('mage', 2),
+          ]).where((c) => c.id == Sfx.shieldUp),
+          [cue(Sfx.shieldUp, base)]);
+      expect(
+          sfx.battleSounds(const [
+            ActionEvent('e1', BattleActionKind.enemyAttack, targetId: 'pal'),
+            ShieldEvent('pal', 2, absorbed: true),
+            DamageEvent('pal', 5),
+          ]),
+          [
+            cue('enemy.slime'),
+            cue(Sfx.impactHurt, m),
+            cue(Sfx.shieldBreak, m),
+          ]);
+      // Égida al empezar el turno: en el acto.
+      expect(
+          sfx.battleSounds(const [
+            TurnStartedEvent('pal'),
+            ProcEvent('pal', 'egida', targetId: 'pal'),
+            ShieldEvent('pal', 5),
+          ]),
+          [cue(Sfx.shieldUp)]);
+    });
+
+    test('Danza, Sed de Sangre, Frenesí, Marca y Debilitar', () {
+      final sfx = _sfx(_Recorder());
+      expect(
+          sfx.battleSounds(const [
+            ActionEvent('knight', BattleActionKind.attack, targetId: 'e1'),
+            DamageEvent('e1', 30, critical: true),
+            ProcEvent('knight', 'frenesi'),
+            BuffAppliedEvent('knight', 'frenesi', BuffStat.speed, 0.2, 2),
+            ProcEvent('knight', 'danza'),
+            KnockedOutEvent('e1'),
+            ProcEvent('knight', 'sedSangre'),
+            ProcEvent('knight', 'sedSangre', targetId: 'knight'),
+            HealEvent('knight', 5),
+          ]),
+          [
+            cue(Sfx.swingBlade),
+            cue(Sfx.impactSlash, m),
+            cue(Sfx.critClink, m),
+            cue(Sfx.koEnemy, m + SessionSfx.koAfterMs),
+            cue(Sfx.healSparkle, base + ProcTiming.healAfterMs),
+            cue(Sfx.frenzyWhoosh, base),
+            cue(Sfx.extraTurn, base),
+            cue(Sfx.heartbeat, base),
+          ]);
+      expect(
+          sfx.battleSounds(const [
+            ActionEvent('archer', BattleActionKind.attack, targetId: 'e1'),
+            DamageEvent('e1', 10),
+            ProcEvent('archer', 'marcaCazador', targetId: 'e1'),
+            BuffAppliedEvent('e1', 'marcaCazador', BuffStat.damageTaken, 0.15, 3),
+            StatusAppliedEvent('e1', StatusKind.poison, 1),
+            ProcEvent('archer', 'debilitar', targetId: 'e1'),
+            BuffAppliedEvent('e1', 'debilitar', BuffStat.attack, -0.15, 2),
+          ]).where((c) => c.id.startsWith('proc.')),
+          [cue(Sfx.mark, p + base), cue(Sfx.weaken, p + base)]);
+    });
+
+    test('Plaga, Choque Térmico, Guardián y Martillo Bendito', () {
+      final cues = _sfx(_Recorder()).battleSounds(const [
+        ActionEvent('archer', BattleActionKind.attack, targetId: 'e1'),
+        DamageEvent('e1', 10),
+        KnockedOutEvent('e1'),
+        ProcEvent('archer', 'plagaContagiosa', targetId: 'e2'),
+        StatusAppliedEvent('e2', StatusKind.poison, 3),
+      ]);
+      expect(cues, contains(cue(Sfx.plague, p + base)));
+      expect(
+          cues,
+          contains(cue(Sfx.status('poison'),
+              p + base + ProcTiming.streamMs + SessionSfx.statusAfterMs)));
+      final more = _sfx(_Recorder()).battleSounds(const [
+        ActionEvent('mage', BattleActionKind.skill,
+            skillId: 'bola', targetId: 'e1'),
+        DamageEvent('e1', 18),
+        ProcEvent('mage', 'choqueTermico', targetId: 'e1'),
+        StatusAppliedEvent('e1', StatusKind.stun, 1),
+        ProcEvent('pal', 'guardian'),
+        ProcEvent('pal', 'martilloBendito', targetId: 'e1'),
+      ]).map((c) => c.id);
+      expect(more, containsAll([Sfx.steam, Sfx.ultCharge, Sfx.anvil]));
+    });
+
+    test('en una ULT los procs suenan después de los impactos', () {
+      final tajo = ultScriptFor('ult_espada');
+      final cues = _sfx(_Recorder()).battleSounds(const [
+        UltimateUsedEvent('knight', 'Tajo Final'),
+        ActionEvent('knight', BattleActionKind.ultimate,
+            skillId: 'ult_espada', targetId: 'e1'),
+        DamageEvent('e1', 90, critical: true),
+        ProcEvent('knight', 'frenesi'),
+        BuffAppliedEvent('knight', 'frenesi', BuffStat.speed, 0.2, 2),
+      ]);
+      expect(cues.last, cue(Sfx.frenzyWhoosh, tajo.returnAt));
+      expect(tajo.returnAt, greaterThan(tajo.lastImpact(1)));
+    });
+
+    test('Viento a Favor: el ataque gratis suena después de la habilidad',
+        () {
+      final cues = _sfx(_Recorder()).battleSounds(const [
+        ActionEvent('knight', BattleActionKind.skill,
+            skillId: 'giro', allTargets: true),
+        DamageEvent('e1', 10),
+        DamageEvent('e2', 10),
+        ProcEvent('knight', 'vientoFavor', targetId: 'e1'),
+        ActionEvent('knight', BattleActionKind.attack, targetId: 'e1'),
+        DamageEvent('e1', 20),
+      ]);
+      expect(
+          cues.where((c) => c.id == Sfx.swingBlade).map((c) => c.delayMs),
+          [0, base]);
+      expect(cues, contains(cue(Sfx.wind, base)));
+    });
+
+    test('tope: los procs entran (hasta 4) recortando primarios y el '
+        'total no pasa de 12', () {
+      final cues = _sfx(_Recorder()).battleSounds([
+        for (var i = 0; i < 10; i++) ...const [
+          ActionEvent('e1', BattleActionKind.enemyAttack, targetId: 'mage'),
+          DamageEvent('mage', 1),
+        ],
+        const ProcEvent('mage', 'danza'),
+        const ProcEvent('mage', 'guardian'),
+        const ProcEvent('mage', 'sedSangre'),
+        const ProcEvent('mage', 'combustion', targetId: 'e1'),
+        const ProcEvent('mage', 'castigoDivino', targetId: 'e1'),
+      ]);
+      expect(cues, hasLength(SessionSfx.maxCuesPerStep));
+      expect(cues.where((c) => c.id.startsWith('proc.')),
+          hasLength(SessionSfx.maxProcCues));
+      expect(cues.first, cue('enemy.slime'));
+    });
   });
 }

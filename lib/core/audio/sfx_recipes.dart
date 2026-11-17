@@ -501,6 +501,8 @@ Map<String, SfxDef> buildCombatSfx() {
       Sfx.enemy(e.key): _kBossTypes.contains(e.key) ? heavy(e.value) : act(e.value),
     // ---- firma de cada habilidad ----
     for (final e in kSkillVoices.entries) Sfx.skill(e.key): act(e.value),
+    // ---- procs del árbol ----
+    ...buildProcSfx(),
     // ---- ultimates: preparación, descarga e impacto ----
     for (final e in kUltVoices.entries) ...{
       Sfx.ult(e.key, Sfx.ultBuild):
@@ -510,6 +512,121 @@ Map<String, SfxDef> buildCombatSfx() {
       Sfx.ult(e.key, Sfx.ultImpact):
           SfxDef(e.value.impact, peak: SfxLevel.ultImpact),
     },
+  };
+}
+
+// ------------------------------------------------------- procs del árbol
+
+/// La firma de una habilidad con eco: el original más bajo y dos copias
+/// que se apagan (Eco Arcano).
+List<SfxTone> _echo(List<SfxTone> voices) => [
+      ..._x(voices, g: 0.7),
+      ..._x(voices, dt: 0.12, g: 0.4),
+      ..._x(voices, dt: 0.24, g: 0.2),
+    ];
+
+/// Los sonidos de los disparadores del árbol (docs/specs/audio.md
+/// § "Disparadores del árbol (procs)").
+Map<String, SfxDef> buildProcSfx() {
+  SfxDef proc(List<SfxTone> v) => SfxDef(v, peak: SfxLevel.proc);
+  SfxDef hit(List<SfxTone> v) => SfxDef(v, peak: SfxLevel.impact);
+
+  return {
+    // Rebotes: un "zip" que sube con cada salto.
+    for (var h = 0; h <= Sfx.maxZip; h++)
+      Sfx.zip(h): proc([
+        _t(600 * [1.0, 1.26, 1.5][h], 0.09,
+            w: _sq, to: 2400 * [1.0, 1.26, 1.5][h], vr: 30, vd: 0.1, v: 0.35),
+        _n(14000, 0.05, crush: 2, v: 0.35, seed: 5 + h),
+      ]),
+    // Combustión: golpe grave de fuego.
+    Sfx.whump: hit([
+      _t(90, 0.35, w: _sin, to: 40, v: 0.8),
+      _n(900, 0.3, lp: 500, v: 0.6),
+      _t(60, 0.25, w: _tri, crush: 3, v: 0.3),
+      ..._crackle(1, 0.06),
+    ]),
+    // Contraataque: metal contra metal.
+    Sfx.clang: hit([
+      _t(1760, 0.02, w: _sq, v: 0.4),
+      _t(1320, 0.35, w: _sin, to: 1300, a: 0.002, v: 0.45),
+      _t(2980, 0.25, w: _sin, to: 2940, a: 0.002, v: 0.3),
+      _t(4410, 0.15, w: _sin, a: 0.002, v: 0.15),
+      _n(12000, 0.02, v: 0.4, seed: 17),
+      _t(220, 0.08, w: _tri, to: 160, v: 0.35),
+    ]),
+    // Castigo Divino: campana (parciales inarmónicos).
+    Sfx.bell: hit([
+      _t(523, 0.9, w: _sin, a: 0.003, v: 0.35),
+      _t(1047, 0.9, w: _sin, a: 0.003, vr: 5, vd: 0.004, v: 0.4),
+      _t(2890, 0.6, w: _sin, a: 0.003, v: 0.18),
+      _t(5650, 0.3, w: _sin, a: 0.003, v: 0.08),
+      _n(9000, 0.02, v: 0.2, seed: 21),
+    ]),
+    Sfx.frenzyWhoosh: proc([
+      ..._whoosh(1.4, 0.7),
+      ..._whoosh(1.7, 0.5, 0.05),
+    ]),
+    Sfx.flare: proc([
+      _t(180, 0.25, w: _saw, to: 360, lp: 2000, v: 0.45),
+      _n(3000, 0.2, to: 6000, lp: 4000, a: 0.05, v: 0.35),
+    ]),
+    Sfx.mark: proc([
+      _t(2400, 0.02, w: _sq, v: 0.35),
+      _t(3200, 0.02, w: _sq, v: 0.35, at: 0.07),
+      _t(1600, 0.12, w: _sin, v: 0.4, at: 0.07),
+    ]),
+    Sfx.weaken: proc([
+      _t(600, 0.3, w: _tri, to: 220, v: 0.45),
+      _t(300, 0.3, w: _sin, to: 150, vr: 6, vd: 0.05, v: 0.35),
+    ]),
+    // Escudo: vidrio que se arma / que se quiebra.
+    Sfx.shieldUp: proc([
+      _t(400, 0.18, w: _tri, to: 1200, v: 0.4),
+      _t(1568, 0.4, w: _sin, at: 0.12, vr: 7, vd: 0.01, v: 0.3),
+      _t(2093, 0.4, w: _sin, at: 0.14, vr: 7, vd: 0.01, v: 0.25),
+    ]),
+    Sfx.shieldBreak: hit([
+      _n(16000, 0.06, v: 0.5, seed: 19),
+      _t(3136, 0.12, w: _tri, v: 0.35),
+      _t(4186, 0.1, w: _tri, at: 0.02, v: 0.3),
+      _t(2637, 0.14, w: _tri, at: 0.04, v: 0.3),
+      _t(220, 0.05, w: _sq, v: 0.3),
+    ]),
+    // Danza de Cuchillas: barrido al revés + reloj + campanitas.
+    Sfx.extraTurn: SfxDef([
+      _t(400, 0.25, w: _sin, to: 1600, a: 0.2, v: 0.4),
+      _t(2000, 0.015, w: _sq, at: 0.05, v: 0.35),
+      _t(2000, 0.015, w: _sq, at: 0.15, v: 0.35),
+      ..._arp([1568, 2093, 3136], step: 0.04, d: 0.1, w: _sq, v: 0.3, at: 0.22),
+    ], peak: SfxLevel.extraTurn),
+    Sfx.heartbeat: proc([
+      _t(70, 0.14, w: _sin, to: 45, v: 0.9),
+      _t(140, 0.08, w: _tri, to: 90, v: 0.3),
+      _t(70, 0.14, w: _sin, to: 45, v: 0.7, at: 0.2),
+      _t(140, 0.08, w: _tri, to: 90, v: 0.25, at: 0.2),
+    ]),
+    Sfx.plague: proc([
+      ..._bubbles(0.8, 1.2, 4),
+      _t(90, 0.4, w: _saw, vr: 5, vd: 0.1, v: 0.25),
+    ]),
+    Sfx.steam: proc([
+      _n(6000, 0.45, to: 9000, lp: 7000, a: 0.02, v: 0.5, seed: 23),
+      _n(2000, 0.2, lp: 1500, v: 0.35, seed: 29),
+    ]),
+    Sfx.ultCharge: proc([
+      ..._arp([1319, 1760, 2349], step: 0.035, d: 0.07, w: _sq, v: 0.25),
+      _t(2637, 0.15, w: _sin, at: 0.1, v: 0.3),
+    ]),
+    Sfx.anvil: proc([
+      _t(1100, 0.02, w: _sq, v: 0.4),
+      _t(880, 0.25, w: _tri, vr: 9, vd: 0.12, v: 0.4),
+      _t(2200, 0.12, w: _sin, v: 0.25),
+    ]),
+    Sfx.wind: proc(_wind(1.3, 0.6)),
+    // Eco Arcano: cada firma de habilidad con eco.
+    for (final e in kSkillVoices.entries)
+      Sfx.echo(e.key): SfxDef(_echo(e.value), peak: SfxLevel.status),
   };
 }
 

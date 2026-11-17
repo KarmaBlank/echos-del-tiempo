@@ -185,6 +185,31 @@ abstract final class Sfx {
   /// Daño / cura de un estado al empezar el turno (`StatusKind.name`).
   static String tick(String kind) => 'tick.$kind';
 
+  // ---- procs del árbol (docs/specs/audio.md § "Disparadores del
+  // árbol (procs)") ----
+  /// Salto [hop] de un rebote (0..2; cada salto suena más agudo).
+  static String zip(int hop) => 'proc.zip.${hop.clamp(0, maxZip)}';
+  static const maxZip = 2;
+  static const whump = 'proc.whump';
+  static const clang = 'proc.clang';
+  static const bell = 'proc.bell';
+  static const frenzyWhoosh = 'proc.whoosh';
+  static const flare = 'proc.flare';
+  static const mark = 'proc.mark';
+  static const weaken = 'proc.weaken';
+  static const shieldUp = 'proc.shield';
+  static const shieldBreak = 'proc.shieldBreak';
+  static const extraTurn = 'proc.extraTurn';
+  static const heartbeat = 'proc.heartbeat';
+  static const plague = 'proc.plague';
+  static const steam = 'proc.steam';
+  static const ultCharge = 'proc.ultCharge';
+  static const anvil = 'proc.anvil';
+  static const wind = 'proc.wind';
+
+  /// Eco Arcano: la firma de la habilidad [skillId] con eco.
+  static String echo(String skillId) => 'echo.$skillId';
+
   /// Partes del sonido de una ULT (docs/specs/audio.md § "Ultimates").
   static const ultBuild = 'build';
   static const ultRelease = 'release';
@@ -204,6 +229,11 @@ abstract final class SfxLevel {
   static const ui = 0.28;
   static const number = 0.30;
   static const status = 0.30;
+
+  /// Procs del árbol; los "golpes" de proc usan [impact] y el turno
+  /// extra 0.40.
+  static const proc = 0.34;
+  static const extraTurn = 0.40;
   static const action = 0.36;
   static const impact = 0.38;
   static const heavy = 0.42;

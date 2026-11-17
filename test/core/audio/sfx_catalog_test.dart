@@ -43,10 +43,67 @@ const _samples = {
   'item_potion_gulp.wav': Sfx.potion,
   'ko_enemy.wav': Sfx.koEnemy,
   'revive.wav': Sfx.revive,
+  // Procs del árbol.
+  'proc_zip_bounce_1.wav': 'proc.zip.0',
+  'proc_combustion_whump.wav': Sfx.whump,
+  'proc_contraataque_clang.wav': Sfx.clang,
+  'proc_castigo_divino_bell.wav': Sfx.bell,
+  'proc_eco_arcano_bola_echo.wav': 'echo.bola',
+  'proc_frenesi_whoosh.wav': Sfx.frenzyWhoosh,
+  'proc_represalia_flare.wav': Sfx.flare,
+  'proc_marca_cazador_lock.wav': Sfx.mark,
+  'proc_debilitar_weaken.wav': Sfx.weaken,
+  'proc_shield_up.wav': Sfx.shieldUp,
+  'proc_shield_break.wav': Sfx.shieldBreak,
+  'proc_danza_extra_turn.wav': Sfx.extraTurn,
+  'proc_sed_sangre_heartbeat.wav': Sfx.heartbeat,
+  'proc_plaga_contagiosa.wav': Sfx.plague,
+  'proc_choque_termico_steam.wav': Sfx.steam,
+  'proc_guardian_ult_charge.wav': Sfx.ultCharge,
+  'proc_martillo_bendito_anvil.wav': Sfx.anvil,
+  'proc_viento_favor_wind.wav': Sfx.wind,
+};
+
+/// Secuencias de procs en sus tiempos (ms), para escuchar el ritmo.
+const _procSequences = {
+  // Cadena Infinita: tres saltos a 130 ms.
+  'proc_chain_3_hops.wav': [('proc.zip.0', 0), ('proc.zip.1', 130), ('proc.zip.2', 260)],
+  // Golpe con escudo: impacto + vidrio que se quiebra.
+  'proc_shield_absorb_hit.wav': [(Sfx.impactHurt, 0), (Sfx.shieldBreak, 0)],
+  // Combustión: impacto de fuego, estallido 120 ms después.
+  'proc_combustion_full.wav': [(Sfx.impactFire, 0), (Sfx.whump, 120)],
 };
 
 void main() {
   const synth = WavSynth();
+
+  test('procs del árbol: cada sonido existe, suena y no recorta', () {
+    final ids = [
+      for (var h = 0; h <= Sfx.maxZip; h++) Sfx.zip(h),
+      Sfx.whump, Sfx.clang, Sfx.bell, Sfx.frenzyWhoosh, Sfx.flare, //
+      Sfx.mark, Sfx.weaken, Sfx.shieldUp, Sfx.shieldBreak, Sfx.extraTurn,
+      Sfx.heartbeat, Sfx.plague, Sfx.steam, Sfx.ultCharge, Sfx.anvil,
+      Sfx.wind,
+    ];
+    for (final id in ids) {
+      final def = kSfxCatalog[id];
+      expect(def, isNotNull, reason: id);
+      expect(def!.length, inInclusiveRange(0.05, 1.0), reason: id);
+      final s = synth.samplesOf(def);
+      final peak = s.fold<double>(0, (m, x) => x.abs() > m ? x.abs() : m);
+      expect(peak, closeTo(def.peak!, 1e-6), reason: id);
+    }
+    // Los zips suben con cada salto.
+    double f(int h) => kSfxCatalog[Sfx.zip(h)]!.voices.first.frequency;
+    expect(f(0) < f(1) && f(1) < f(2), isTrue);
+    // Eco Arcano: cada firma tiene su eco, más bajo que la firma.
+    for (final id in kSkillVoices.keys) {
+      final echo = kSfxCatalog[Sfx.echo(id)];
+      expect(echo, isNotNull, reason: id);
+      expect(echo!.peak!, lessThan(kSfxCatalog[Sfx.skill(id)]!.peak!));
+      expect(echo.length, greaterThan(kSfxCatalog[Sfx.skill(id)]!.length));
+    }
+  });
 
   test('cada habilidad de kSkills tiene su firma', () {
     for (final id in kSkills.keys) {
@@ -181,6 +238,26 @@ void main() {
     for (final e in _samples.entries) {
       File('$dir${Platform.pathSeparator}${e.key}')
           .writeAsBytesSync(synth.renderDef(kSfxCatalog[e.value]!));
+    }
+    // Secuencias de procs, mezcladas en sus tiempos.
+    for (final e in _procSequences.entries) {
+      final layers = [
+        for (final (id, at) in e.value)
+          (synth.samplesOf(kSfxCatalog[id]!), (at / 1000 * synth.sampleRate).round()),
+      ];
+      final n = layers.fold<int>(
+          0, (m, l) => l.$2 + l.$1.length > m ? l.$2 + l.$1.length : m);
+      final mix = Float64List(n);
+      for (final (s, o) in layers) {
+        for (var i = 0; i < s.length; i++) {
+          mix[o + i] += s[i];
+        }
+      }
+      for (var i = 0; i < n; i++) {
+        mix[i] = mix[i].clamp(-1.0, 1.0);
+      }
+      File('$dir${Platform.pathSeparator}${e.key}')
+          .writeAsBytesSync(synth.encode(mix));
     }
     // Cada ULT completa: preparación + descarga + impactos en 3 objetivos.
     for (final sk in kUltimates.values) {

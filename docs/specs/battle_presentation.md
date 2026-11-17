@@ -32,10 +32,12 @@ Implementación Dart:
 | Partículas, sacudida, destello rojo | `lib/features/combat/presentation/scene/particles.dart` |
 | Colores, elementos, `ELFX`, letras de estado | `lib/features/combat/presentation/scene/fx_style.dart` |
 | Textos de ayuda (`descSkill` / `stDesc`) | `lib/features/combat/presentation/skill_info.dart` |
+| Disparadores del árbol: tiempos, nombres y colores (puro) | `lib/features/combat/presentation/scene/proc_fx.dart` |
 | Predicción de turnos (`predictTurns`, puro) | `lib/features/combat/domain/turn_order.dart` |
 | Mapa de fondo de la sesión | `lib/features/world/presentation/session_battle_screen.dart` |
 
 Tests: `test/features/combat/battle_fx_test.dart`,
+`test/features/combat/proc_fx_test.dart`,
 `test/features/combat/ult_cinematic_test.dart`,
 `test/features/combat/battle_framing_test.dart`,
 `test/features/combat/turn_order_test.dart`,
@@ -364,6 +366,111 @@ Martillo Celestial son `holy`. El daño de "Luz" (Aura Restauradora con
 `creyente`) es `holy` color `#fff3b0`. Ataque normal: blanco, `phys`.
 Dúo: el estado del dúo y su color. Enemigo: el estado que inflige o
 `phys`.
+
+## Disparadores del árbol (procs)
+
+Pedido del dueño: que las notables y keystones del árbol v2 "se sientan
+bien y se lean". El motor emite `ProcEvent` (actor + mecánica + objetivo
+opcional) antes de lo que la mecánica produce, `BuffAppliedEvent`,
+`ShieldEvent` (gana / absorbe) y `DamageEvent.sourceId` en el daño
+secundario (combat.md § "Disparadores del árbol (v2)"). `battle_fx.dart`
+los traduce con los mismos principios que el resto: cada efecto corto
+(≤ 0.7 s salvo el cartel del nombre), legible, y **después** del golpe
+que lo causó. No se agregan datos al motor: el "de dónde viene" de un
+rebote o de un contagio lo deduce el mapeo (último enemigo golpeado por
+la acción / último enemigo caído en el paso).
+
+### Tiempos (`ProcTiming`, compartidos con el sonido)
+
+- `base` del paso: sin acción (inicio de turno: Plegaria, Égida) 0; en
+  una ULT, el **regreso** de su guion (`returnAt`, después de todos los
+  impactos: los procs de una ULT nunca pisan la cinemática); si no, el
+  mayor `dl` de golpe de la acción + **120 ms** (`afterMs`). En una
+  acción enemiga (Contraataque, Represalia, escudos) el golpe es a 0 →
+  120.
+- Cartel con el nombre: por actor y mecánica **una vez por paso**; el
+  `k`-ésimo cartel del mismo actor (`slot = k` mod 4) sale `k × 180 ms`
+  después y se apila encima del anterior, así varios procs no se pisan.
+- Rebote / Corte en Cadena / Arco Voltaico (y Cadena Infinita, que
+  usa los mismos ids): salto `h` (0, 1, ...) en `base + h × 130`; el
+  número y el tajo del salto caen 60 ms después del arco.
+- Combustión: estallido en `base`; los demás enemigos reciben la bola
+  de fuego (un `proj` de 280 ms) en `base + 280 + i × 50`.
+- Eco Arcano: la habilidad se repite fantasma desde `base + 220`
+  (`+ i × 60` por objetivo); el golpe llega con el proyectil (+280).
+- Contraataque: el héroe se lanza en `base`; el tajo cae en `base + 80`.
+- Castigo Divino: el rayo baja en `base`; el daño en `base + 180`.
+- Plaga Contagiosa: el chorro sale en `base` y llega en `base + 450`.
+- Sed de Sangre y Plaga Contagiosa se disparan al final de la acción:
+  usan la **base tardía** = `max(base, último efecto secundario
+  programado en el paso + 60)` (si el que mata es un rebote, el latido
+  va después de ese rebote). Sed de Sangre: latido en esa base, la cura
+  100 ms después.
+- Viento a Favor: el ataque gratis (su `ActionEvent` y todo lo que
+  sigue hasta la próxima acción) se corre a `base`.
+- Escudo que absorbe: en el mismo ms del golpe enemigo (0).
+- Los estados, `RETRASO` y `poof` de un objetivo tocado por un efecto
+  secundario usan el `dl` de ese efecto (no el del golpe primario).
+
+### Eventos → efectos de procs
+
+| Evento / mecánica | Efectos |
+|---|---|
+| `ProcEvent` (toda mecánica) | `tag` con el nombre (`kMechanics[id].name`) **sobre la etiqueta del actor**: **dorado `#ffd166` las notables, rojo `#ff4757` las keystones** (Danza de Cuchillas, Cadena Infinita, Égida Eterna, Alma de Hielo); caja negra 75% con barra del color a la izquierda; 1300 ms. Si el proc le da un buff o escudo **al mismo actor**, el valor va en el cartel (`Frenesí · VEL +20%`, `Égida Eterna · ESCUDO +10`, `Guardián · +8 ULT`); si cae sobre otro, va como `txt` sobre ese otro en `y−30` |
+| Rebote | `arc` `#81ecec` `phys` (estela curva, celeste de viento) del objetivo anterior al nuevo; número `#81ecec` + tajo |
+| Corte en Cadena | `arc` `#ff6b81` `phys`; número `#ff6b81` + tajo |
+| Arco Voltaico | `arc` `#74b9ff` `mana` (rayo quebrado que titila); número `#74b9ff` + tajo |
+| Combustión | `blast` en el centro (disco de fuego + anillo de 70 px, partículas de fuego ×2.2, sacudida 5); `proj` de fuego del centro a cada otro enemigo; número `#ff7b29` + tajo `burn` |
+| Choque Térmico | `puff` de vapor en el objetivo + `txt` `¡ATURDIDO!` `#ffeaa7` en `y−34` |
+| Eco Arcano | `ring` fantasma (50% alfa) del color de la habilidad en el lanzador; por objetivo `proj` y `slash` fantasma del color y elemento de la habilidad; número del color de la habilidad |
+| Contraataque | `act` del héroe, `arc` blanco héroe → enemigo, `slash` blanco; número blanco |
+| Castigo Divino | `beam` dorado desde arriba; número `#ffd166` + tajo `holy` |
+| Tiempo Gélido | `aura` de hielo en el objetivo; `RETRASO` con ese `dl` |
+| Martillo Bendito | `aura` de aturdido + `txt` `ATURDIDO +1` `#ffeaa7` en `y−40` |
+| Plaga Contagiosa | `stream` verde del enemigo caído al nuevo huésped; el `V+n` cae al llegar |
+| Sed de Sangre | `pulse` doble (latido) `#d63031` en el actor; la cura `+n` con aura de curación |
+| Plegaria | la cura (sin acción) con aura sagrada en vez de la de Regeneración |
+| Guardián | `spark` (chispas doradas) en el actor + `· +8 ULT` en su cartel (en la escena, no en la barra) |
+| Viento a Favor | solo el cartel (el ataque gratis se anima como un ataque normal, corrido a `base`) |
+| Danza de Cuchillas | `timeStop`: congela el reloj de la escena 90 ms (hit-stop) y tiñe la escena de celeste pálido; cartel grande `¡OTRA VEZ!` rojo con contorno **sobre el cuerpo** del actor (`y−10`) 150 ms después |
+| Desafío, Égida Eterna, Mano Sanadora | solo el cartel; el escudo lo dibuja el `ShieldEvent` |
+| `BuffAppliedEvent` Frenesí (velocidad) | `afterimage`: dos copias rojas `#ff6b81` del héroe detrás de él; `VEL +20%` en el cartel |
+| `BuffAppliedEvent` Represalia (ATQ +) | `pulse` naranja `#ff9f43` + `arrow` arriba naranja; `ATQ +30%` en el cartel |
+| `BuffAppliedEvent` Debilitar (ATQ −) | `arrow` abajo verde `#7bed9f` + `txt` `ATQ −15%` verde sobre el enemigo |
+| `BuffAppliedEvent` Marca del Cazador | `reticle` rojo `#ff4757` que se cierra sobre el enemigo + `txt` `+15% DAÑO` |
+| `BuffAppliedEvent` Martillo Bendito | `txt` `ATURDIDO +1` (ver arriba) |
+| `BuffAppliedEvent` otro | `txt` con el stat y el % |
+| `ShieldEvent` gana | `bubble` crema `#ffeaa7` alrededor; `ESCUDO +n` en el cartel si es propio, si no `txt` sobre el aliado en `y−30` |
+| `ShieldEvent` absorbe | `crack` con el golpe enemigo (destello y grietas en el borde de la burbuja + astillas crema, sacudida 2) + `txt` `ABSORBE n` en `y−30`; si absorbió todo (`DamageEvent` de 0) la grieta **es** el golpe: sin número, tajo ni sacudida de daño |
+
+Persistentes (del estado, sin evento):
+- Escudo activo (`hasEffect(shield)`): burbuja crema tenue que late
+  alrededor del héroe.
+- Marca del Cazador (`hasEffect(damageTaken)`): retícula roja chica
+  sobre la cabeza del enemigo mientras dure.
+- Último Aliento (mecánica `ultimoAliento` y vida < 30%): resplandor
+  rojo que late a los pies y alrededor del héroe.
+- Punto Débil, Fractura y Alma de Hielo no tienen evento ni efecto
+  propio (son modificadores; se leen en el log).
+
+### Catálogo de efectos de procs (edad `a`, `p = a / duración`)
+
+| Tipo | Duración | Dibujo |
+|---|---|---|
+| `tag` | 1300 | caja negra + barra de color + nombre (8 px de HUD) con la base 4 px de HUD arriba de la etiqueta del actor, `slot × (alto + 6)` más arriba, sube `a/160`; si no entra arriba del área del mundo se apila hacia abajo desde el borde; nunca se sale de los costados; se apaga los últimos 250 ms. `big`: 16 px con contorno y pop (×1.5 → ×1 en 110 ms) en `(x, y)` |
+| `arc` | 240 | alfa 1 hasta `p = 0.6`, después se apaga; `phys`: estela curva (bezier con 10 px de comba al costado) que llega al destino en `p = 0.4`, más tenue hacia el origen, con cabeza blanca; otro elemento: rayo quebrado de 7 tramos que titila cada 40 ms, trazo de color 2.5 px + núcleo blanco; al activarse, partículas del elemento en el destino |
+| `blast` | 520 | disco `6 + 18p` de fuego con núcleo blanco al principio, anillo `70p × 35p` naranja de 3 px, alfa `1 − p` |
+| `beam` | 480 | columna dorada desde 160 px arriba hasta los pies, ancho `2 + 6(1 − p)`, núcleo blanco, óvalo de luz abajo |
+| `bubble` | 650 | círculo de radio 6 → 12 en 150 ms alrededor de `(x, y−8)`, relleno crema 25% y borde que se apaga, brillo arriba a la izquierda |
+| `crack` | 420 | destello crema 35% los primeros 90 ms; círculo de radio 13 que se abre 2 px con 4 grietas cortas en zigzag hacia adentro desde el borde, alfa `1 − p`; al activarse 7 astillas y sacudida 2 |
+| `pulse` | 520 (doble: 700) | óvalo de 8 → 20 px, trazo y relleno 25% del color, alfa `1 − p`; doble: otro latido a los 220 ms |
+| `reticle` | 500 | círculo de radio 16 → 6 en 300 ms con 4 marcas, luego se queda y se apaga |
+| `arrow` | 900 | flecha pixel de 7 px arriba/abajo sobre el actor, se mueve 6 px en su dirección |
+| `stream` | 520 | 12 partículas del color sobre una curva ondulada que avanzan de origen a destino |
+| `timeStop` | 420 | tinte celeste pálido de toda la escena `0.3(1 − p)` + 2 franjas blancas que barren; al activarse, hit-stop de 90 ms |
+| `afterimage` | 650 | (en el héroe) 2 copias del sprite teñidas del color, 5 y 10 px detrás, alfa `0.45(1 − p)` |
+| `puff`, `spark` | — | sin dibujo: partículas de vapor / chispas doradas al activarse |
+| `proj`, `slash`, `ring` con `ghost` | igual | a 50% de alfa y la mitad de partículas (Eco Arcano) |
 
 ## Ultimates (cinemáticas)
 

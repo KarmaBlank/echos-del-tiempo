@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,12 +10,14 @@ import '../../../core/di/service_locator.dart';
 import '../../../game_engine/data/skills_catalog.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
+import '../../../game_engine/models/passive_mechanic.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/session_engine.dart';
 import '../../combat/presentation/scene/battle_fx.dart';
 import '../../combat/presentation/scene/fx_style.dart';
+import '../../combat/presentation/scene/proc_fx.dart';
 import '../../combat/presentation/scene/ult_cinematic.dart';
 import 'session_controller.dart';
 import 'session_view.dart';
@@ -61,6 +64,9 @@ class _Act {
   int heals = 0;
   final statuses = <StatusKind>{};
   bool delayed = false;
+
+  /// Saltos de rebote ya sonados.
+  int hops = 0;
 }
 
 /// Traduce eventos y vistas de la sesión a efectos de sonido, fuera del
@@ -78,6 +84,10 @@ class SessionSfx {
 
   /// Tope global de sonidos de un paso (el pool de voces).
   static const maxCuesPerStep = 12;
+
+  /// De ese tope, cuántos pueden ser de procs del árbol (se recortan
+  /// los últimos primarios para dejarles lugar).
+  static const maxProcCues = 4;
 
   /// Cuerpo a cuerpo: el impacto suena después del silbido.
   static const meleeImpactMs = 50;
@@ -117,29 +127,154 @@ class SessionSfx {
     final ticks = <StatusKind>{};
     _Act? action;
 
+    // Procs del árbol (docs/specs/audio.md § "Procs del árbol").
+    final procs = <SfxCue>[];
+    final played = <String>{};
+    final procAt = <String, int>{};
+    ProcEvent? lastProc;
+    var blastIdx = 0, echoIdx = 0;
+    int? pendingOffset, segOut, segProc;
+    var segOffset = 0;
+
+    int base() {
+      final a = action;
+      return ProcTiming.base(
+          inAction: a != null, hitMs: a == null ? 0 : _hitDelay(a), ult: a?.ult);
+    }
+
+    int lateBase() {
+      var b = base();
+      for (final v in procAt.values) {
+        if (v + 60 > b) b = v + 60;
+      }
+      return b;
+    }
+
+    void once(String id, int at) {
+      if (played.add(id)) procs.add(cue(id, at));
+    }
+
+    void closeSegment() {
+      final so = segOut, sp = segProc;
+      if (so == null || sp == null) return;
+      for (var i = so; i < out.length; i++) {
+        out[i] = cue(out[i].id, out[i].delayMs + segOffset);
+      }
+      for (var i = sp; i < procs.length; i++) {
+        procs[i] = cue(procs[i].id, procs[i].delayMs + segOffset);
+      }
+      segOut = segProc = null;
+    }
+
+    void proc(ProcEvent e) {
+      final src = e.sourceId;
+      final t = e.targetId;
+      final a = action;
+      final b = base();
+      lastProc = e;
+      if (kChainMechanics.contains(src) && t != null) {
+        final hop = a?.hops ?? 0;
+        if (a != null) a.hops = hop + 1;
+        if (hop <= Sfx.maxZip) {
+          procs.add(cue(Sfx.zip(hop), ProcTiming.hopAt(b, hop)));
+        }
+        procAt[t] = ProcTiming.hopHitAt(b, hop);
+        return;
+      }
+      switch (src) {
+        case 'combustion':
+          blastIdx = 0;
+          once(Sfx.whump, b);
+        case 'ecoArcano':
+          echoIdx = 0;
+          final id = Sfx.echo(a?.event.skillId ?? '');
+          if (service.catalog.containsKey(id)) {
+            once(id, ProcTiming.echoAt(b, 0));
+          }
+        case 'contraataque':
+          once(Sfx.clang, b + ProcTiming.counterHitMs);
+          if (t != null) procAt[t] = b + ProcTiming.counterHitMs;
+        case 'castigoDivino':
+          once(Sfx.bell, b);
+          if (t != null) procAt[t] = b + ProcTiming.beamHitMs;
+        case 'choqueTermico':
+          once(Sfx.steam, b);
+          if (t != null) procAt[t] = b;
+        case 'tiempoGelido':
+          if (t != null) procAt[t] = b;
+        case 'martilloBendito':
+          once(Sfx.anvil, b);
+          if (t != null) procAt[t] = b;
+        case 'plagaContagiosa':
+          final lb = lateBase();
+          once(Sfx.plague, lb);
+          if (t != null) procAt[t] = lb + ProcTiming.streamMs;
+        case 'sedSangre' when t == null:
+          once(Sfx.heartbeat, lateBase());
+        case 'guardian':
+          once(Sfx.ultCharge, b);
+        case 'danza':
+          once(Sfx.extraTurn, b);
+        case 'vientoFavor':
+          once(Sfx.wind, b);
+          pendingOffset = b;
+        default:
+          break;
+      }
+    }
+
     for (final b in events) {
       switch (b) {
         case TurnStartedEvent():
+          closeSegment();
           action = null;
         case ActionEvent():
+          closeSegment();
+          final off = pendingOffset;
+          if (off != null) {
+            pendingOffset = null;
+            segOut = out.length;
+            segProc = procs.length;
+            segOffset = off;
+          }
           final sk = b.kind == BattleActionKind.skill ||
                   b.kind == BattleActionKind.ultimate
               ? kSkillsById[b.skillId]
               : null;
           action = _Act(b, battle?.byId(b.actorId), sk);
           out.addAll(_actionStart(action));
+        case DamageEvent(:final sourceId, :final targetId)
+            when sourceId != null && !b.fromStatus && !_isPlayer(targetId):
+          // Daño secundario: suena el proc, no el impacto normal.
+          final at = base();
+          procAt[targetId] = switch (sourceId) {
+            'combustion' => ProcTiming.blastHitAt(at, blastIdx++),
+            'ecoArcano' =>
+              ProcTiming.echoAt(at, echoIdx++) + BattleFx.projMs,
+            _ => procAt[targetId] ?? at,
+          };
         case DamageEvent():
           out.addAll(_damage(b, action, ticks));
         case HealEvent():
-          out.addAll(_heal(b, action));
+          final lp = lastProc;
+          if (lp != null &&
+              lp.sourceId == 'sedSangre' &&
+              lp.targetId == b.targetId &&
+              !b.mana) {
+            lastProc = null;
+            out.add(cue(Sfx.healSparkle, lateBase() + ProcTiming.healAfterMs));
+          } else {
+            out.addAll(_heal(b, action));
+          }
         case StatusAppliedEvent(:final targetId, :final kind):
           final a = action;
           if (a == null) {
             out.add(cue(Sfx.status(kind.name)));
           } else if (a.event.kind != BattleActionKind.ultimate &&
               a.statuses.add(kind)) {
+            final p = procAt[targetId];
             out.add(cue(Sfx.status(kind.name),
-                _impactTime(a, targetId) + statusAfterMs));
+                (p ?? _impactTime(a, targetId)) + statusAfterMs));
           }
         case TurnSkippedEvent(:final cause):
           out.add(cue(cause == StatusKind.freeze ? Sfx.skipFreeze : Sfx.skipStun));
@@ -149,11 +284,18 @@ class SessionSfx {
             out.add(cue(Sfx.delay));
           } else if (!a.delayed) {
             a.delayed = true;
-            out.add(cue(Sfx.delay, _impactTime(a, targetId) + statusAfterMs));
+            final p = procAt[targetId];
+            out.add(cue(Sfx.delay,
+                (p ?? _impactTime(a, targetId)) + statusAfterMs));
           }
         case KnockedOutEvent(:final targetId):
           final a = action;
-          final at = a == null ? 0 : _impactTime(a, targetId) + koAfterMs;
+          final p = procAt[targetId];
+          final at = p != null
+              ? p + koAfterMs
+              : a == null
+                  ? 0
+                  : _impactTime(a, targetId) + koAfterMs;
           out.add(cue(_isPlayer(targetId) ? Sfx.koPlayer : Sfx.koEnemy, at));
         case RevivedEvent():
           out.add(cue(Sfx.revive));
@@ -161,9 +303,43 @@ class SessionSfx {
           out.addAll(ultimateCues(b));
         case BattleEndedEvent():
           break;
+        case ProcEvent():
+          proc(b);
+        case BuffAppliedEvent(:final targetId, :final stat, :final value):
+          final at = procAt[targetId] ?? base();
+          switch (stat) {
+            case BuffStat.speed:
+              once(Sfx.frenzyWhoosh, at);
+            case BuffStat.attack:
+              once(value >= 0 ? Sfx.flare : Sfx.weaken, at);
+            case BuffStat.damageTaken:
+              once(Sfx.mark, at);
+            default:
+              break;
+          }
+        case ShieldEvent(:final targetId, :final absorbed):
+          if (absorbed) {
+            final a = action;
+            once(Sfx.shieldBreak, a == null ? 0 : _peekImpact(a));
+          } else {
+            once(Sfx.shieldUp, procAt[targetId] ?? base());
+          }
       }
     }
-    return out.length > maxCuesPerStep ? out.sublist(0, maxCuesPerStep) : out;
+    closeSegment();
+    final reserve = math.min(procs.length, maxProcCues);
+    final room = maxCuesPerStep - reserve;
+    return [
+      ...out.length > room ? out.sublist(0, room) : out,
+      ...procs.take(reserve),
+    ];
+  }
+
+  /// Cuándo suena el golpe de [a] en su primer objetivo, sin anotarlo
+  /// (el escudo que absorbe suena con el golpe enemigo).
+  int _peekImpact(_Act a) {
+    final dl = _hitDelay(a);
+    return dl + (dl == 0 ? meleeImpactMs : 0);
   }
 
   /// Preparación y descarga de la ULT del arma del lanzador, en los

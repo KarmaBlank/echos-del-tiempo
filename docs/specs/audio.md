@@ -198,6 +198,37 @@ largo, para que se reconozca:
 | `revive` | triangle 262→1047 0.3 + arpegio corto | `RevivedEvent` |
 | `delay` | sawtooth 800→200 0.35 vibrato 6 Hz | `DelayedEvent` (una vez por acción) |
 
+### Disparadores del árbol (procs)
+
+Cada notable / keystone que se nota en batalla tiene un sonido corto
+(pico 0.34; los "golpes" — estallido, campana, metal, vidrio — 0.38;
+el turno extra 0.40). Ids `proc.*` y `echo.<skill>`:
+
+| Sonido | Receta | Mecánica |
+|---|---|---|
+| `proc.zip.0` / `.1` / `.2` | square 600→2400 0.09 vibrato 30 Hz + ruido 14 k crush 2, ×1, ×1.26, ×1.5 de altura (sube con cada salto) | Rebote, Corte en Cadena, Arco Voltaico, Cadena Infinita: uno por salto (hasta 3) |
+| `proc.whump` | sine 90→40 0.35 + ruido 900 lowpass 500 + triangle 60 crush 3 + chisporroteo @0.06 | Combustión |
+| `proc.clang` | square 1760 0.02 + sines inarmónicas 1320 / 2980 / 4410 que decaen + ruido 12 k 0.02 + triangle 220 (cuerpo) | Contraataque |
+| `proc.bell` | sine 523 + 1047 (vibrato leve) + parciales 2890 y 5650 de campana, 0.9 s | Castigo Divino |
+| `echo.<skill>` | la firma de la habilidad ×0.7 + copias @0.12 ×0.4 y @0.24 ×0.2 (eco) | Eco Arcano |
+| `proc.whoosh` | dos silbidos de ruido agudos y cortos | Frenesí |
+| `proc.flare` | sawtooth 180→360 0.25 lowpass 2 k + ruido 3 k→6 k | Represalia |
+| `proc.mark` | tics square 2400 y 3200 + sine 1600 (fijado) | Marca del Cazador |
+| `proc.weaken` | triangle 600→220 0.3 + sine 300→150 vibrato 6 Hz | Debilitar |
+| `proc.shield` | triangle 400→1200 0.18 + sines 1568 / 2093 @0.12 con vibrato (vidrio que se arma) | `ShieldEvent` gana (Mano Sanadora, Desafío, Égida) |
+| `proc.shieldBreak` | ruido 16 k 0.06 + triangle 3136 / 4186 / 2637 cortos escalonados + square 220 (golpe sordo) | `ShieldEvent` absorbe |
+| `proc.extraTurn` | sine 400→1600 0.25 con ataque (al revés) + 2 tics de reloj + arpegio 1568 / 2093 / 3136 @0.22 | Danza de Cuchillas |
+| `proc.heartbeat` | dos latidos sine 70→45 + triangle 140→90 @0 y @0.2 | Sed de Sangre |
+| `proc.plague` | 4 burbujas graves + sawtooth 90 vibrato 5 Hz | Plaga Contagiosa |
+| `proc.steam` | ruido 6 k→9 k 0.45 lowpass 7 k (siseo) + ruido 2 k grave | Choque Térmico |
+| `proc.ultCharge` | arpegio square 1319 / 1760 / 2349 + sine 2637 @0.1 | Guardián |
+| `proc.anvil` | square 1100 0.02 + triangle 880 vibrato 9 Hz (mareo) + sine 2200 | Martillo Bendito |
+| `proc.wind` | ráfaga de viento corta | Viento a Favor |
+
+Plegaria y Tiempo Gélido usan los sonidos de siempre (`tick.regen` de
+la cura sin acción, `delay`); Último Aliento, Punto Débil, Fractura y
+Alma de Hielo no tienen evento ni sonido.
+
 ### Enemigos (`enemy.<tipo>`, uno por id de `kEnemies`, cubierto por test)
 
 | Sonido | Receta |
@@ -312,6 +343,36 @@ motor no cambia. Cada sonido de batalla es un `SfxCue(id, delayMs)`:
   state.clock)`; `turnTick` cuando, con `myTurn`, `ceil(30 − turnTime)`
   es `≤ 5` y distinto del último.
 
+### Procs del árbol (tiempos de `ProcTiming`)
+
+Los procs suenan con los tiempos de su efecto visual
+(docs/specs/battle_presentation.md § "Disparadores del árbol (procs)"):
+`base` = 0 sin acción, el regreso del guion en una ULT (después de sus
+impactos), si no el retraso del golpe de la acción (`hitDelay`) +
+120 ms.
+
+- `ProcEvent`: zip del salto `h` en `base + h × 130` (hasta 3 saltos);
+  `proc.whump` y `proc.bell` en `base`; `proc.clang` en `base + 80`;
+  `echo.<skill>` en `base + 220` (si la habilidad no tiene eco, nada);
+  Danza, Sed de Sangre, Plaga, Choque Térmico, Guardián, Martillo
+  Bendito y Viento a Favor en `base`. Cada sonido de proc (salvo los
+  zips) suena **una vez por paso**.
+- `BuffAppliedEvent`: Frenesí `proc.whoosh`, Represalia `proc.flare`,
+  Marca `proc.mark`, Debilitar `proc.weaken`, en `base`.
+- `ShieldEvent`: gana → `proc.shield` en `base` (una vez por paso);
+  absorbe → `proc.shieldBreak` en el tiempo del golpe enemigo
+  (cuerpo a cuerpo: 50 ms).
+- `DamageEvent` con `sourceId` (daño secundario): **no** suena el
+  impacto normal (el proc ya tiene su sonido); su K.O. suena 100 ms
+  después del golpe secundario.
+- Sed de Sangre y Plaga usan la base tardía (después del último golpe
+  secundario del paso + 60 ms), como la escena; la cura de Sed de
+  Sangre: `heal.sparkle` 100 ms después del latido.
+- Viento a Favor: los sonidos del ataque gratis se corren a `base`.
+- Tope: los procs suman como mucho **4** sonidos por paso y entran en
+  el tope global de 12: si hace falta, se recortan los últimos sonidos
+  primarios para dejarles lugar.
+
 El chat, los pasos y los menús no suenan (el prototipo tampoco).
 
 ## Reproducción
@@ -340,5 +401,8 @@ Para escuchar una muestra representativa sin abrir el juego:
 escribe ahí un WAV por sonido de la lista `_samples` del test (nombres
 descriptivos, p. ej. `crit_clink.wav`, `enemy_bat_screech.wav`) y, por
 cada ULT, `ult_<nombre>.wav` con la secuencia completa (preparación +
-descarga + impactos en 3 objetivos, en los tiempos del guion). Sin la
+descarga + impactos en 3 objetivos, en los tiempos del guion). Los
+procs del árbol escriben `proc_<nombre>.wav` (uno por sonido) y tres
+secuencias en sus tiempos: `proc_chain_3_hops.wav`,
+`proc_shield_absorb_hit.wav` y `proc_combustion_full.wav`. Sin la
 variable, el test no escribe nada.

@@ -5,7 +5,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../game_engine/data/passive_mechanics.dart';
 import '../../../../game_engine/models/battle_state.dart';
+import '../../../../game_engine/models/passive_mechanic.dart';
 import '../../../../game_engine/models/status.dart';
 import '../../domain/turn_order.dart';
 import '../sprite_catalog.dart';
@@ -14,6 +16,7 @@ import 'battle_labels.dart';
 import 'battle_layout.dart';
 import 'battle_scene.dart';
 import 'fx_style.dart';
+import 'proc_fx.dart';
 import 'ult_cinematic.dart';
 import 'ult_fx.dart';
 
@@ -173,6 +176,24 @@ class BattleScenePainter extends CustomPainter {
     }
     final t = scene.t;
     for (final live in scene.fx) {
+      if (live.fx.kind == FxKind.timeStop) {
+        // Danza de Cuchillas: el tiempo se congela (tinte + franjas).
+        final a = live.age(t);
+        if (a < 0 || a >= BattleFx.timeStopMs) continue;
+        final p = a / BattleFx.timeStopMs;
+        canvas.drawRect(area,
+            Paint()..color = ProcColors.timeStop.withValues(alpha: 0.3 * (1 - p)));
+        final bar = Paint()
+          ..color = Color.fromRGBO(255, 255, 255, 0.5 * (1 - p));
+        for (var k = 0; k < 2; k++) {
+          final y = area.top + area.height * ((p * 1.6 + k * 0.5) % 1);
+          canvas.drawRect(
+              Rect.fromLTWH(area.left, y.roundToDouble(), area.width,
+                  (2 * g.scale).roundToDouble()),
+              bar);
+        }
+        continue;
+      }
       if (live.fx.kind != FxKind.flash) continue;
       final a = live.age(t);
       if (a < 0 || a >= BattleFx.flashMs) continue;
@@ -253,7 +274,33 @@ class BattleScenePainter extends CustomPainter {
     }
     if (dir < 0) c.scale(-1, 1);
     _pen.oval(c, const Color(0x66000000), 0, 1, 6, 2);
+    final pt = scene.poseT;
+    if (!dead && _lastStand(p)) {
+      // Último Aliento: resplandor rojo que late a los pies.
+      final k = 0.5 + 0.5 * math.sin(pt / 140);
+      _pen.oval(c, ProcColors.lastStand.withValues(alpha: 0.25 + 0.25 * k),
+          0, 1, 9, 3);
+      _pen.stroke
+        ..color = ProcColors.lastStand.withValues(alpha: 0.15 + 0.3 * k)
+        ..strokeWidth = 1;
+      c.drawOval(
+          Rect.fromCenter(center: const Offset(0, -8), width: 24, height: 26),
+          _pen.stroke);
+    }
     c.translate(!dead && scene.lunging(p.id) ? 6 : 0, 0);
+    final trail = dead ? null : scene.activeOn(FxKind.afterimage, p.id);
+    if (trail != null && img != null) {
+      // Frenesí: dos copias teñidas detrás.
+      final q = trail.age(scene.t) / trail.fx.durationMs;
+      for (var k = 2; k >= 1; k--) {
+        final paint = SpriteCatalog.pixelPaint()
+          ..colorFilter = ColorFilter.mode(
+              trail.fx.color.withValues(
+                  alpha: (0.45 * (1 - q) * (k == 1 ? 1 : 0.6)).clamp(0.0, 1.0)),
+              BlendMode.srcIn);
+        c.drawImage(img, Offset(-7 - 5.0 * k, -17), paint);
+      }
+    }
     if (img != null) {
       c.drawImage(img, const Offset(-7, -17), _sprite);
     } else {
@@ -266,8 +313,26 @@ class BattleScenePainter extends CustomPainter {
         ..strokeWidth = 1;
       c.drawCircle(const Offset(0, -8), 11, _pen.stroke);
     }
+    if (!dead && p.hasEffect(BuffStat.shield)) {
+      // Escudo del árbol activo: burbuja crema tenue que late.
+      final k = 0.5 + 0.5 * math.sin(pt / 220);
+      _pen.fill.color = ProcColors.shield.withValues(alpha: 0.08 + 0.06 * k);
+      c.drawCircle(const Offset(0, -8), 13, _pen.fill);
+      _pen.stroke
+        ..color = ProcColors.shield.withValues(alpha: 0.35 + 0.25 * k)
+        ..strokeWidth = 1;
+      c.drawCircle(const Offset(0, -8), 13, _pen.stroke);
+      _pen.rect(c, const Color(0xCCFFFFFF), -7, -17, 2, 1);
+    }
     if (dead) c.restore();
     c.restore();
+  }
+
+  /// Último Aliento activo: tiene la mecánica y poca vida.
+  static bool _lastStand(Combatant p) {
+    if (!p.mechanics.contains('ultimoAliento')) return false;
+    final th = kMechanics['ultimoAliento']?.threshold ?? 0.3;
+    return p.hp < p.maxHp * th;
   }
 
   void _sword(Canvas c) {
@@ -353,6 +418,12 @@ class BattleScenePainter extends CustomPainter {
       _pen.rect(c, const Color(0xFFE43B44), dst.left, dst.top, dst.width, dst.height);
     }
     c.restore();
+    if (e.alive && e.hasEffect(BuffStat.damageTaken)) {
+      // Marca del Cazador: retícula sobre la cabeza mientras dure.
+      final k = 0.5 + 0.5 * math.sin(pt / 160);
+      _reticle(c, Offset(x.roundToDouble(), (y + fl - h - 2).roundToDouble()),
+          3.5, ProcColors.mark.withValues(alpha: 0.6 + 0.4 * k));
+    }
     if (alpha < 1) c.restore();
     if (f.battle.currentId == e.id) {
       _pen.rect(c, const Color(0xFFFF4757), x - 10, y + 3, 20, 2);
@@ -424,8 +495,8 @@ class BattleScenePainter extends CustomPainter {
         u0 == null ? 1.0 : 1 - u0.script.darkness(scene.t - u0.t0);
     c.save();
     c.translate(shake.dx, shake.dy);
+    final rects = labelRects(f, vp);
     if (labelAlpha > 0.02) {
-      final rects = labelRects(f, vp);
       if (labelAlpha < 1) {
         c.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, labelAlpha));
       }
@@ -471,7 +542,7 @@ class BattleScenePainter extends CustomPainter {
       }
       if (labelAlpha < 1) c.restore();
     }
-    _floating(c, vp, u);
+    _floating(c, vp, u, rects);
     c.restore();
   }
 
@@ -483,7 +554,8 @@ class BattleScenePainter extends CustomPainter {
   }
 
   /// Números y textos flotantes (`num`, `txt`).
-  void _floating(Canvas c, SceneViewport vp, double u) {
+  void _floating(
+      Canvas c, SceneViewport vp, double u, Map<String, Rect> labels) {
     final t = scene.t;
     for (final live in scene.fx) {
       final f = live.fx;
@@ -521,10 +593,62 @@ class BattleScenePainter extends CustomPainter {
         case FxKind.txt when age < BattleFx.txtMs:
           final p = vp.toScreen(Offset(f.x, f.y));
           _pen.text(c, f.text ?? '', p.dx, p.dy - age / 60 * 1.5 * u, f.color, 8 * u);
+        case FxKind.tag when age < BattleFx.tagMs:
+          _tag(c, vp, f, age, u, labels[f.who]);
         default:
           break;
       }
     }
+  }
+
+  /// Cartel de una notable / keystone: caja negra con barra del color y
+  /// el nombre, sobre la etiqueta del actor ([label]) y apilado por
+  /// `slot`, siempre dentro del área del mundo (si no entra arriba, se
+  /// apila hacia abajo desde el borde); `big` (`¡OTRA VEZ!`): 16 px con
+  /// contorno y un pop, sobre el cuerpo del actor.
+  void _tag(Canvas c, SceneViewport vp, BattleFx f, double age, double u,
+      Rect? label) {
+    final s = f.text ?? '';
+    final p = vp.toScreen(Offset(f.x, f.y));
+    final size = (f.big ? 16 : 8) * u;
+    final area = vp.area;
+    var x = p.dx;
+    var y = p.dy;
+    if (!f.big) {
+      final h = size + 6 * u;
+      if (label != null) {
+        x = label.center.dx;
+        y = label.top - 4 * u;
+      }
+      y -= f.slot * h + age / 160 * u;
+      final minY = area.top + size + 4 * u;
+      if (y < minY) y = minY + f.slot * h;
+      final half = _pen.width(s, size) / 2 + 5 * u;
+      x = x.clamp(area.left + half, math.max(area.left + half, area.right - half));
+    }
+    y = y.roundToDouble();
+    final fade = age > BattleFx.tagMs - 250
+        ? ((BattleFx.tagMs - age) / 250).clamp(0.0, 1.0)
+        : 1.0;
+    if (fade < 1) {
+      c.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, fade));
+    }
+    if (f.big) {
+      final k = 1 + 0.5 * (1 - math.min(1.0, age / 110));
+      c.save();
+      c.translate(x.roundToDouble(), y);
+      c.scale(k);
+      _pen.text(c, s, 0, 0, f.color, size, outline: true);
+      c.restore();
+    } else {
+      final w = _pen.width(s, size);
+      final left = (x - w / 2).roundToDouble();
+      final box = Rect.fromLTWH(left - 5 * u, y - size - 2 * u, w + 8 * u, size + 4 * u);
+      _pen.rect(c, const Color(0xBF000000), box.left, box.top, box.width, box.height);
+      _pen.rect(c, f.color, box.left, box.top, 2 * u, box.height);
+      _pen.text(c, s, left, y, f.color, size, center: false);
+    }
+    if (fade < 1) c.restore();
   }
 
   // ---------------- efectos del mundo ----------------
@@ -535,6 +659,8 @@ class BattleScenePainter extends CustomPainter {
       final f = live.fx;
       final age = live.age(t);
       if (age < 0) continue;
+      // Repetición fantasma (Eco Arcano): a 50%.
+      final ga = f.ghost ? 0.5 : 1.0;
       switch (f.kind) {
         case FxKind.proj when age < BattleFx.projMs:
           final a = age / BattleFx.projMs;
@@ -544,7 +670,7 @@ class BattleScenePainter extends CustomPainter {
           if (f.el == FxElement.phys) {
             final ang = math.atan2(f.ty - f.y, f.tx - f.x);
             _pen.stroke
-              ..color = fxWhite
+              ..color = fxWhite.withValues(alpha: ga)
               ..strokeWidth = 1.5;
             c.drawLine(
                 Offset(p.dx - math.cos(ang) * 7, p.dy - math.sin(ang) * 7),
@@ -553,16 +679,17 @@ class BattleScenePainter extends CustomPainter {
           } else {
             for (var i = 4; i >= 0; i--) {
               final q = at(math.max(0, a - i * 0.05));
-              _pen.fill.color = f.color.withValues(alpha: (1 - i / 5) * 0.8);
+              _pen.fill.color =
+                  f.color.withValues(alpha: (1 - i / 5) * 0.8 * ga);
               c.drawCircle(q, 3.5 - i * 0.5, _pen.fill);
             }
-            _pen.fill.color = fxWhite;
+            _pen.fill.color = fxWhite.withValues(alpha: ga);
             c.drawCircle(p, 1.5, _pen.fill);
           }
         case FxKind.ring when age < BattleFx.ringMs:
           final a = age / BattleFx.ringMs;
           _pen.stroke
-            ..color = f.color.withValues(alpha: 1 - a)
+            ..color = f.color.withValues(alpha: (1 - a) * ga)
             ..strokeWidth = f.big ? 3 : 2;
           final rx = (f.big ? 60 : 34) * a, ry = (f.big ? 30 : 17) * a;
           c.drawOval(
@@ -572,7 +699,7 @@ class BattleScenePainter extends CustomPainter {
         case FxKind.slash when age < BattleFx.slashMs:
           final a = age / BattleFx.slashMs;
           _pen.stroke
-            ..color = f.color
+            ..color = f.color.withValues(alpha: ga)
             ..strokeWidth = 2;
           c.drawLine(Offset(f.x - 10 + a * 4, f.y - 10),
               Offset(f.x + 10 - a * 4, f.y + 10), _pen.stroke);
@@ -584,10 +711,220 @@ class BattleScenePainter extends CustomPainter {
             final a = i / 8 * 6.28, r = age / 25;
             _pen.rect(c, col, f.x + math.cos(a) * r - 1, f.y + math.sin(a) * r - 1, 3, 3);
           }
+        case FxKind.arc ||
+              FxKind.blast ||
+              FxKind.beam ||
+              FxKind.bubble ||
+              FxKind.crack ||
+              FxKind.pulse ||
+              FxKind.reticle ||
+              FxKind.arrow ||
+              FxKind.stream when age < f.durationMs:
+          _procFx(c, f, age);
         default:
           break;
       }
     }
+  }
+
+  // ---------------- procs del árbol (efectos del mundo) ----------------
+
+  /// Dibujo de los efectos de procs (docs/specs/battle_presentation.md
+  /// § "Catálogo de efectos de procs").
+  void _procFx(Canvas c, BattleFx f, double age) {
+    final p = (age / f.durationMs).clamp(0.0, 1.0);
+    final o = Offset(f.x, f.y);
+    switch (f.kind) {
+      case FxKind.arc:
+        _arc(c, f, age, p);
+      case FxKind.blast:
+        final r = 6 + 18 * p;
+        _pen.fill.color = f.color.withValues(alpha: 0.75 * (1 - p));
+        c.drawCircle(o, r, _pen.fill);
+        _pen.fill.color = const Color(0xFFFFD166).withValues(alpha: 0.8 * (1 - p));
+        c.drawCircle(o, r * 0.6, _pen.fill);
+        if (p < 0.35) {
+          _pen.fill.color = fxWhite.withValues(alpha: 1 - p / 0.35);
+          c.drawCircle(o, r * 0.35, _pen.fill);
+        }
+        _pen.stroke
+          ..color = const Color(0xFFFF9F43).withValues(alpha: 1 - p)
+          ..strokeWidth = 3;
+        c.drawOval(
+            Rect.fromCenter(center: o, width: 140 * p, height: 70 * p),
+            _pen.stroke);
+      case FxKind.beam:
+        final top = f.y - 160;
+        final grow = math.min(1.0, age / 90);
+        final bottom = top + (f.y - top) * grow;
+        final w = 2 + 6 * (1 - p);
+        _pen.rect(c, f.color.withValues(alpha: 0.35 * (1 - p)), f.x - w,
+            top, w * 2, bottom - top);
+        _pen.rect(c, f.color.withValues(alpha: 0.85 * (1 - p)), f.x - w / 2,
+            top, w, bottom - top);
+        _pen.rect(c, fxWhite.withValues(alpha: 1 - p), f.x - 0.5, top, 1.5,
+            bottom - top);
+        if (grow >= 1) {
+          _pen.oval(c, f.color.withValues(alpha: 0.6 * (1 - p)), f.x, f.y,
+              10 + 6 * p, 3 + 2 * p);
+        }
+      case FxKind.bubble:
+        final r = 6 + 6 * math.min(1.0, age / 150).toDouble();
+        _pen.fill.color = f.color.withValues(alpha: 0.25 * (1 - p * 0.6));
+        c.drawCircle(o, r, _pen.fill);
+        _pen.stroke
+          ..color = f.color.withValues(alpha: 1 - p)
+          ..strokeWidth = 1.5;
+        c.drawCircle(o, r, _pen.stroke);
+        _pen.rect(c, fxWhite.withValues(alpha: 1 - p), f.x - r * 0.55,
+            f.y - r * 0.65, 3, 1.5);
+      case FxKind.crack:
+        const r = 13.0;
+        if (age < 90) {
+          // Destello del golpe sobre la burbuja.
+          _pen.fill.color = f.color.withValues(alpha: 0.35 * (1 - age / 90));
+          c.drawCircle(o, r, _pen.fill);
+        }
+        _pen.stroke
+          ..color = f.color.withValues(alpha: 1 - p)
+          ..strokeWidth = 1;
+        c.drawCircle(o, r + 2 * p, _pen.stroke);
+        // Grietas cortas en el borde (no sobre la cara del héroe).
+        final open = math.min(1.0, age / 100);
+        for (final ang in const [-2.4, -0.5, 1.2, 2.6]) {
+          final d = Offset(math.cos(ang), math.sin(ang));
+          final n = Offset(-d.dy, d.dx);
+          final rim = o + d * (r + 2 * p);
+          final a2 = rim - d * (3 * open) + n * 1.5;
+          final a3 = rim - d * (5 * open) - n * 1;
+          c.drawPath(
+              Path()
+                ..moveTo(rim.dx, rim.dy)
+                ..lineTo(a2.dx, a2.dy)
+                ..lineTo(a3.dx, a3.dy),
+              _pen.stroke);
+        }
+      case FxKind.pulse:
+        for (final b in f.heavy ? const [0.0, 220.0] : const [0.0]) {
+          final q = (age - b) / 480;
+          if (q < 0 || q >= 1) continue;
+          final r = 8 + 12 * q;
+          final rect = Rect.fromCenter(center: o, width: r * 2, height: r * 1.7);
+          _pen.fill.color = f.color.withValues(alpha: 0.25 * (1 - q));
+          c.drawOval(rect, _pen.fill);
+          _pen.stroke
+            ..color = f.color.withValues(alpha: 1 - q)
+            ..strokeWidth = 1.5;
+          c.drawOval(rect, _pen.stroke);
+        }
+      case FxKind.reticle:
+        final q = math.min(1.0, age / 300);
+        final alpha = age < 300 ? 1.0 : 1 - (age - 300) / 200;
+        _reticle(c, o, 16 - 10 * q, f.color.withValues(alpha: alpha.clamp(0.0, 1.0)));
+      case FxKind.arrow:
+        final s = f.up ? -1.0 : 1.0;
+        final alpha = p > 0.75 ? (1 - p) / 0.25 : 1.0;
+        final col = f.color.withValues(alpha: alpha.clamp(0.0, 1.0));
+        final cx = (f.x + 11).roundToDouble();
+        final cy = (f.y - 6 + s * 6 * math.min(1.0, age / 300)).roundToDouble();
+        // Sombra y flecha pixel (asta 2×5, punta 7×4).
+        for (final (dx, color) in [(1.0, Color.fromRGBO(0, 0, 0, alpha * 0.6)), (0.0, col)]) {
+          // Asta detrás de la punta: arriba (s = −1) va de cy−1 a cy+4.
+          _pen.rect(c, color, cx - 1 + dx, (s < 0 ? cy - 1 : cy - 4) + dx, 2, 5);
+          final tip = Offset(cx + dx, cy + s * 5 + dx);
+          _pen.tri(c, color, Offset(cx - 3.5 + dx, cy + s * 1 + dx),
+              Offset(cx + 3.5 + dx, cy + s * 1 + dx), tip);
+        }
+      case FxKind.stream:
+        const colors = [
+          Color(0xFF7BED9F), Color(0xFFBADC58), Color(0xFF55EFC4), Color(0xFF20BF6B),
+        ];
+        final a = o, b = Offset(f.tx, f.ty);
+        final ctrl = Offset((a.dx + b.dx) / 2, math.min(a.dy, b.dy) - 26);
+        for (var i = 0; i < 12; i++) {
+          final s = p * 1.45 - i * 0.04;
+          if (s < 0 || s > 1) continue;
+          final u = 1 - s;
+          var pt = a * (u * u) + ctrl * (2 * u * s) + b * (s * s);
+          pt += Offset(0, math.sin(s * math.pi * 3 + i) * 3);
+          _pen.rect(c, colors[i % 4].withValues(alpha: 1 - i / 13),
+              pt.dx.roundToDouble() - 1, pt.dy.roundToDouble() - 1, 2.5, 2.5);
+        }
+      default:
+        break;
+    }
+  }
+
+  /// Rebote: estela curva (`phys`) o rayo quebrado que titila.
+  void _arc(Canvas c, BattleFx f, double age, double p) {
+    final a = Offset(f.x, f.y), b = Offset(f.tx, f.ty);
+    // Se ve entero hasta el 60% y después se apaga.
+    final alpha = p < 0.6 ? 1.0 : ((1 - p) / 0.4).clamp(0.0, 1.0);
+    if (f.el == FxElement.phys) {
+      // Comba de 10 px hacia un costado del camino.
+      final mid = (a + b) / 2;
+      final d0 = b - a;
+      final l0 = math.max(1.0, d0.distance);
+      final ctrl = mid + Offset(-d0.dy / l0, d0.dx / l0) * 10;
+      Offset at(double s) {
+        final u = 1 - s;
+        return a * (u * u) + ctrl * (2 * u * s) + b * (s * s);
+      }
+
+      final head = math.min(1.0, p / 0.4);
+      const tail = 0.0;
+      const n = 10;
+      _pen.stroke.strokeWidth = 2.5;
+      for (var i = 0; i < n; i++) {
+        final s0 = tail + (head - tail) * i / n;
+        final s1 = tail + (head - tail) * (i + 1) / n;
+        _pen.stroke.color =
+            f.color.withValues(alpha: alpha * (0.35 + 0.65 * (i + 1) / n));
+        c.drawLine(at(s0), at(s1), _pen.stroke);
+      }
+      if (head < 1) {
+        _pen.fill.color = f.color.withValues(alpha: 0.5 * alpha);
+        c.drawCircle(at(head), 3.5, _pen.fill);
+        _pen.fill.color = fxWhite.withValues(alpha: alpha);
+        c.drawCircle(at(head), 2, _pen.fill);
+      }
+      return;
+    }
+    // Rayo: 7 tramos con desvío al azar fijo por cuadro de 40 ms.
+    final seed = (age / 40).floor();
+    final d = b - a;
+    final len = d.distance;
+    if (len < 1) return;
+    final nrm = Offset(-d.dy / len, d.dx / len);
+    final path = Path()..moveTo(a.dx, a.dy);
+    const segs = 7;
+    for (var i = 1; i < segs; i++) {
+      final h = ((seed * 73856093) ^ (i * 19349663)) & 0xffff;
+      final off = (h / 0xffff - 0.5) * 10 * math.sin(i / segs * math.pi);
+      final q = a + d * (i / segs) + nrm * off;
+      path.lineTo(q.dx, q.dy);
+    }
+    path.lineTo(b.dx, b.dy);
+    _pen.stroke
+      ..color = f.color.withValues(alpha: alpha)
+      ..strokeWidth = 2.5;
+    c.drawPath(path, _pen.stroke);
+    _pen.stroke
+      ..color = fxWhite.withValues(alpha: alpha)
+      ..strokeWidth = 1;
+    c.drawPath(path, _pen.stroke);
+  }
+
+  /// Retícula: círculo de radio [r] con 4 marcas.
+  void _reticle(Canvas c, Offset o, double r, Color color) {
+    _pen.stroke
+      ..color = color
+      ..strokeWidth = 1;
+    c.drawCircle(o, r, _pen.stroke);
+    for (final d in const [Offset(0, -1), Offset(1, 0), Offset(0, 1), Offset(-1, 0)]) {
+      c.drawLine(o + d * (r - 1.5), o + d * (r + 2.5), _pen.stroke);
+    }
+    _pen.rect(c, color, o.dx - 0.5, o.dy - 0.5, 1, 1);
   }
 
   // ---------------- franja de turnos (`drawTimeline`) ----------------

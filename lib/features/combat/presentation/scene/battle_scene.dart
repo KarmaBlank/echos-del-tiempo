@@ -9,6 +9,7 @@ import 'battle_fx.dart';
 import 'battle_layout.dart';
 import 'fx_style.dart';
 import 'particles.dart';
+import 'proc_fx.dart';
 import 'ult_cinematic.dart';
 import 'ult_fx.dart';
 
@@ -237,7 +238,27 @@ class BattleSceneController extends ChangeNotifier {
         case FxKind.ult:
           ult = UltCinematic(f, live.t0 + f.delayMs, live.batch);
         case FxKind.slash:
-          particles.burst(f.x, f.y, f.el);
+          particles.burst(f.x, f.y, f.el, f.ghost ? 0.5 : 1);
+        // Procs del árbol (docs/specs/battle_presentation.md
+        // § "Disparadores del árbol (procs)").
+        case FxKind.arc:
+          particles.burst(f.tx, f.ty, f.el, 0.6);
+        case FxKind.blast:
+          particles.burst(f.x, f.y, FxElement.burn, 2.2);
+          particles.addShake(5);
+        case FxKind.bubble:
+          particles.burstWith(kShieldFx, f.x, f.y);
+        case FxKind.crack:
+          particles.burstWith(kShardFx, f.x, f.y);
+          particles.addShake(2);
+        case FxKind.puff:
+          particles.burstWith(kSteamFx, f.x, f.y);
+        case FxKind.spark:
+          particles.burstWith(kSparkFx, f.x, f.y);
+        case FxKind.beam:
+          particles.burst(f.x, f.y - 4, FxElement.holy, 1.2);
+        case FxKind.timeStop:
+          hitStop = math.max(hitStop, ProcTiming.timeStopHoldMs.toDouble());
         case FxKind.aura:
           particles.burst(f.x, f.y - 8, f.el);
         case FxKind.num when f.big:
@@ -337,6 +358,17 @@ class BattleSceneController extends ChangeNotifier {
       e.fx.who == id &&
       e.age(t) >= 0 &&
       e.age(t) < BattleFx.actMs);
+
+  /// El efecto [kind] activo sobre [id] (edad en [0, duración)), o
+  /// `null` (estelas de Frenesí).
+  LiveFx? activeOn(FxKind kind, String id) {
+    for (final e in fx) {
+      if (e.fx.kind != kind || e.fx.who != id) continue;
+      final a = e.age(t);
+      if (a >= 0 && a < e.fx.durationMs) return e;
+    }
+    return null;
+  }
 
   /// El enemigo [id] recibe un `slash` de edad en [0, 120) ms.
   bool flashing(String id) => fx.any((e) =>
