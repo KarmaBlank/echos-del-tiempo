@@ -28,6 +28,10 @@ class CraftResult {
     this.consumed = const [],
     this.replaced,
     this.outcomes = const [],
+    this.gainedCredits = 0,
+    this.gainedMaterials = const {},
+    this.chances = const [],
+    this.lost = const [],
   });
 
   const CraftResult.fail(String this.error)
@@ -38,7 +42,25 @@ class CraftResult {
         materials = const {},
         consumed = const [],
         replaced = null,
-        outcomes = const [];
+        outcomes = const [],
+        gainedCredits = 0,
+        gainedMaterials = const {},
+        chances = const [],
+        lost = const [];
+
+  /// Créditos que se ganan (vender).
+  final int gainedCredits;
+
+  /// Materiales que se ganan seguro (desarmar; ya con el tope de 99).
+  /// Con `RandomSource`, también lo que salió de [chances].
+  final Map<CraftMaterial, int> gainedMaterials;
+
+  /// Desarmar: lo que *puede* salir además de lo seguro.
+  final List<MaterialChance> chances;
+
+  /// Lo que se pierde además de las armas destruidas (mods o pasiva que
+  /// no salen en la base nueva, materiales por encima del tope...).
+  final List<String> lost;
 
   /// Motivo si no se puede (`null` = válida).
   final String? error;
@@ -63,6 +85,30 @@ class CraftResult {
   final List<String> outcomes;
 
   bool get ok => error == null;
+}
+
+/// Una tirada extra al desarmar: [chance] de sumar [count] de [material],
+/// [rolls] veces (una por arma en los lotes).
+class MaterialChance {
+  const MaterialChance(this.material, this.chance,
+      {this.count = 1, this.rolls = 1});
+
+  final CraftMaterial material;
+  final double chance;
+  final int count;
+  final int rolls;
+
+  /// `25% de +1 Cristal de Era` (`(×3 armas)` en los lotes).
+  String get text => '${(chance * 100).round()}% de +$count ${material.label}'
+      '${rolls > 1 ? ' (×$rolls armas)' : ''}';
+}
+
+/// Lo que da desarmar un arma (loot.md § 21.1).
+class SalvageYield {
+  const SalvageYield(this.guaranteed, this.chances);
+
+  final Map<CraftMaterial, int> guaranteed;
+  final List<MaterialChance> chances;
 }
 
 /// Forja y fusión libre sobre instancias (por `uid`).
@@ -117,6 +163,96 @@ class CraftRules {
         Rarity.raro => (4, 800),
         _ => null,
       };
+
+  // ------------------------------------------------------------------
+  // Sumideros de loot: desarmar, vender, reforjar (loot.md § 21)
+  // ------------------------------------------------------------------
+
+  /// Nivel de objeto desde el que desarmar da 1 material más.
+  static const salvageHighLevel = 25;
+
+  /// Lo que da desarmar [i]: seguro según rareza y nivel de objeto (+1
+  /// desde el nivel [salvageHighLevel]) y +1 Esquirla cada 2 niveles de
+  /// forja; y la tirada extra de la rareza.
+  static SalvageYield salvageYield(ItemInstance i) {
+    final hi = i.itemLevel >= salvageHighLevel ? 1 : 0;
+    final g = <CraftMaterial, int>{};
+    void add(CraftMaterial m, int n) {
+      if (n > 0) g[m] = (g[m] ?? 0) + n;
+    }
+
+    final chances = <MaterialChance>[];
+    switch (i.rarity) {
+      case Rarity.comun:
+        add(CraftMaterial.esquirla, 1 + hi);
+      case Rarity.magico:
+        add(CraftMaterial.esquirla, 2 + hi);
+        chances.add(const MaterialChance(CraftMaterial.cristal, 0.25));
+      case Rarity.raro:
+        add(CraftMaterial.cristal, 1);
+        add(CraftMaterial.esquirla, 1 + hi);
+        chances.add(const MaterialChance(CraftMaterial.prisma, 0.10));
+      case Rarity.epico:
+        add(CraftMaterial.cristal, 2 + hi);
+        chances.add(const MaterialChance(CraftMaterial.prisma, 0.35));
+      case Rarity.legendario:
+        add(CraftMaterial.prisma, 1);
+        add(CraftMaterial.cristal, 2 + hi);
+    }
+    add(CraftMaterial.esquirla, i.forgeLevel ~/ 2);
+    return SalvageYield(g, chances);
+  }
+
+  /// Valor de referencia de un objeto de nivel [itemLevel] (la fórmula de
+  /// precio de las bases: `100·L + 4·L²`).
+  static int itemValue(int itemLevel) =>
+      100 * itemLevel + 4 * itemLevel * itemLevel;
+
+  /// Fracción del valor que se cobra al vender, por rareza.
+  static double sellFraction(Rarity r) => switch (r) {
+        Rarity.comun => 0.10,
+        Rarity.magico => 0.15,
+        Rarity.raro => 0.25,
+        Rarity.epico => 0.40,
+        Rarity.legendario => 0.60,
+      };
+
+  /// Créditos que se gastaron en forjar [i] (lo que costaría hoy).
+  int forgeSpent(ItemInstance i) {
+    final w = items.baseOf(i);
+    if (w == null) return 0;
+    var total = 0;
+    for (final s in UpgradeStat.values) {
+      for (var l = 0; l < i.forge.level(s); l++) {
+        total += forgeCost(w, i.rarity, l);
+      }
+    }
+    return total;
+  }
+
+  /// Precio de venta: `valor(nivel de objeto) × fracción de la rareza +
+  /// 25% de lo gastado en forja`, mínimo ₵10.
+  int sellPrice(ItemInstance i) => math.max(
+      10,
+      jsRound(itemValue(i.itemLevel) * sellFraction(i.rarity) +
+          forgeSpent(i) * 0.25));
+
+  /// Costo de reforjar la base: créditos `(100 + 25·nivel de objeto) ×
+  /// factor de rareza` y Común 1 Esquirla, Mágico / Raro 1 Cristal, Épico
+  /// 1 Cristal + 1 Prisma. `null` = Legendario (su base es parte del
+  /// único).
+  static (int, Map<CraftMaterial, int>)? reforgeCost(ItemInstance i) {
+    final c = jsRound((100 + 25 * i.itemLevel) * i.rarity.costFactor);
+    return switch (i.rarity) {
+      Rarity.comun => (c, const {CraftMaterial.esquirla: 1}),
+      Rarity.magico || Rarity.raro => (c, const {CraftMaterial.cristal: 1}),
+      Rarity.epico => (
+          c,
+          const {CraftMaterial.cristal: 1, CraftMaterial.prisma: 1}
+        ),
+      Rarity.legendario => null,
+    };
+  }
 
   // ------------------------------------------------------------------
   // Forja
@@ -329,6 +465,163 @@ class CraftRules {
     return _done(p, t, after, credits: cost.$2, materials: mats);
   }
 
+  // ------------------------------------------------------------------
+  // Desarmar / vender / reforjar (loot.md § 21)
+  // ------------------------------------------------------------------
+
+  /// Motivo por el que [uid] no se puede destruir (desarmar / vender) ni
+  /// reforjar.
+  String? _keepError(PlayerProfile p, String uid) {
+    if (p.itemByUid(uid) == null) return 'No la tienes';
+    if (uid == p.equippedUid) return 'Está equipada';
+    if (inventory.isProtected(p, uid)) return 'Arma inicial';
+    return null;
+  }
+
+  /// Armas de rareza [r] que se pueden destruir de una vez: no la
+  /// equipada ni la última del arma inicial (se queda una).
+  List<ItemInstance> batchTargets(PlayerProfile p, Rarity r) {
+    final out = <ItemInstance>[];
+    var q = p;
+    for (final it in p.items) {
+      if (it.rarity != r || inventory.isProtected(q, it.uid)) continue;
+      out.add(it);
+      q = q.copyWith(items: [for (final x in q.items) if (x.uid != it.uid) x]);
+    }
+    return out;
+  }
+
+  /// Desarmar [uid]: se destruye y da materiales ([salvageYield]). Sin
+  /// tirada extra (Común, Legendario) el resultado es completo aun sin
+  /// `random`; con tirada y sin `random`, vista previa (lo seguro en
+  /// `gainedMaterials` y lo posible en `chances`).
+  CraftResult salvage(PlayerProfile p, String uid, {RandomSource? random}) {
+    final err = _keepError(p, uid);
+    if (err != null) return CraftResult.fail(err);
+    return _salvageMany(p, [p.itemByUid(uid)!], random);
+  }
+
+  /// Desarmar todas las armas de rareza [r] ([batchTargets]).
+  CraftResult salvageAll(PlayerProfile p, Rarity r, {RandomSource? random}) {
+    final list = batchTargets(p, r);
+    if (list.isEmpty) return CraftResult.fail('No hay armas de rareza ${r.label}');
+    return _salvageMany(p, list, random);
+  }
+
+  CraftResult _salvageMany(
+      PlayerProfile p, List<ItemInstance> list, RandomSource? random) {
+    final gained = <CraftMaterial, int>{};
+    final byChance = <(CraftMaterial, double, int), int>{};
+    for (final it in list) {
+      final y = salvageYield(it);
+      y.guaranteed.forEach((m, n) => gained[m] = (gained[m] ?? 0) + n);
+      for (final c in y.chances) {
+        final k = (c.material, c.chance, c.count);
+        byChance[k] = (byChance[k] ?? 0) + 1;
+        if (random != null && random() < c.chance) {
+          gained[c.material] = (gained[c.material] ?? 0) + c.count;
+        }
+      }
+    }
+    final chances = [
+      for (final e in byChance.entries)
+        MaterialChance(e.key.$1, e.key.$2, count: e.key.$3, rolls: e.value),
+    ];
+    final consumed = [for (final it in list) it.uid];
+    final before = list.length == 1 ? list.first : null;
+    if (random == null && chances.isNotEmpty) {
+      return CraftResult(
+        before: before,
+        consumed: consumed,
+        gainedMaterials: _capped(p, gained),
+        chances: chances,
+        outcomes: [for (final c in chances) c.text],
+        lost: _capLoss(p, gained),
+      );
+    }
+    return _done(p, before, null,
+        consumed: consumed, gainMaterials: gained, chances: chances);
+  }
+
+  /// Vender [uid]: se destruye y da [sellPrice] créditos.
+  CraftResult sell(PlayerProfile p, String uid) {
+    final err = _keepError(p, uid);
+    if (err != null) return CraftResult.fail(err);
+    final it = p.itemByUid(uid)!;
+    return _done(p, it, null, consumed: [uid], gainCredits: sellPrice(it));
+  }
+
+  /// Vender todas las armas de rareza [r] ([batchTargets]).
+  CraftResult sellAll(PlayerProfile p, Rarity r) {
+    final list = batchTargets(p, r);
+    if (list.isEmpty) return CraftResult.fail('No hay armas de rareza ${r.label}');
+    return _done(p, null, null,
+        consumed: [for (final it in list) it.uid],
+        gainCredits: list.fold(0, (a, it) => a + sellPrice(it)));
+  }
+
+  /// Bases a las que se puede reforjar [i]: cualquier tipo, de nivel ≤
+  /// nivel de objeto (la misma regla con la que cae el loot), sin la
+  /// actual; de la más cercana al nivel de objeto a la más baja.
+  List<WeaponDef> reforgeBases(ItemInstance i) => [
+        for (final w in catalog.weapons.values)
+          if (w.level <= i.itemLevel && w.id != i.baseId) w,
+      ]..sort((a, b) => a.level != b.level
+          ? b.level.compareTo(a.level)
+          : a.name.compareTo(b.name));
+
+  /// Reforjar [uid] a la base [baseId]: conserva rareza, nivel de objeto,
+  /// nombre, mods, pasiva, forja y habilidades trasladadas; se pierden los
+  /// mods que no salen en el tipo nuevo, la pasiva si no está en su pool
+  /// y la forja de Defensa si la base nueva no tiene escudo ([lost]).
+  CraftResult reforge(PlayerProfile p, String uid, String baseId) {
+    final err = _keepError(p, uid);
+    if (err != null) return CraftResult.fail(err);
+    final t = p.itemByUid(uid)!;
+    final cost = reforgeCost(t);
+    if (cost == null) {
+      return const CraftResult.fail('Un Legendario no cambia de base');
+    }
+    final w = catalog.weapons[baseId];
+    if (w == null) return const CraftResult.fail('Elige una base');
+    if (baseId == t.baseId) return const CraftResult.fail('Ya tiene esa base');
+    if (w.level > t.itemLevel) {
+      return CraftResult.fail(
+          'Base de nivel ${w.level} (el arma es de nivel ${t.itemLevel})');
+    }
+    final lost = <String>[];
+    final kept = <AffixRoll>[];
+    for (final a in t.affixes) {
+      final def = items.affixOf(a);
+      if (def != null && def.allows(w.type)) {
+        kept.add(a);
+      } else {
+        lost.add('Mod ${items.affixText(a)} (no sale en ${w.type})');
+      }
+    }
+    var keepPassive = true;
+    final pd = items.passiveOf(t);
+    if (pd != null &&
+        t.rarity.hasPassive &&
+        !weaponPassivePool(w.type).any((x) => x.id == pd.id)) {
+      keepPassive = false;
+      lost.add('Pasiva ${pd.name} (no sale en ${w.type})');
+    }
+    var forge = t.forge;
+    if (w.shieldDefense <= 0 && forge.def > 0) {
+      lost.add('Forja de Defensa +${forge.def} (la base nueva no tiene escudo)');
+      forge = forge.withLevel(UpgradeStat.def, 0);
+    }
+    final after = t.copyWith(
+      baseId: baseId,
+      affixes: kept,
+      clearPassive: !keepPassive,
+      forge: forge,
+    );
+    return _done(p, t, after,
+        credits: cost.$1, materials: cost.$2, lost: lost);
+  }
+
   /// Aplica una operación por su [op] (lo que usa `SessionEngine`).
   CraftResult apply(
     PlayerProfile p,
@@ -353,6 +646,17 @@ class CraftRules {
         CraftOp.addAffix => addAffix(p, targetUid, random: random),
         CraftOp.reroll => reroll(p, targetUid, random: random),
         CraftOp.upgradeRarity => upgradeRarity(p, targetUid, random: random),
+        CraftOp.salvage => salvage(p, targetUid, random: random),
+        CraftOp.sell => sell(p, targetUid),
+        CraftOp.reforge => sourceUid == null
+            ? const CraftResult.fail('Elige una base')
+            : reforge(p, targetUid, sourceUid),
+        CraftOp.salvageAll => index < 0 || index >= Rarity.values.length
+            ? const CraftResult.fail('Elige una rareza')
+            : salvageAll(p, Rarity.values[index], random: random),
+        CraftOp.sellAll => index < 0 || index >= Rarity.values.length
+            ? const CraftResult.fail('Elige una rareza')
+            : sellAll(p, Rarity.values[index]),
       };
 
   // ------------------------------------------------------------------
@@ -364,6 +668,25 @@ class CraftRules {
     if (p.credits < credits) return 'Faltan \$${credits - p.credits}';
     return null;
   }
+
+  /// [gained] recortado al tope de cada pila (99).
+  static Map<CraftMaterial, int> _capped(
+          PlayerProfile p, Map<CraftMaterial, int> gained) =>
+      {
+        for (final e in gained.entries)
+          if (math.min(e.value, CraftMaterial.maxStack - p.material(e.key)) > 0)
+            e.key: math.min(e.value, CraftMaterial.maxStack - p.material(e.key)),
+      };
+
+  /// Lo que se pierde por el tope de 99.
+  static List<String> _capLoss(
+          PlayerProfile p, Map<CraftMaterial, int> gained) =>
+      [
+        for (final e in gained.entries)
+          if (p.material(e.key) + e.value > CraftMaterial.maxStack)
+            '${p.material(e.key) + e.value - CraftMaterial.maxStack} '
+                '${e.key.label} (tope ${CraftMaterial.maxStack})',
+      ];
 
   CraftResult _preview(PlayerProfile p, ItemInstance before,
       {required int credits,
@@ -381,23 +704,32 @@ class CraftRules {
 
   CraftResult _done(
     PlayerProfile p,
-    ItemInstance before,
-    ItemInstance after, {
-    required int credits,
+    ItemInstance? before,
+    ItemInstance? after, {
+    int credits = 0,
     Map<CraftMaterial, int> materials = const {},
     List<String> consumed = const [],
     String? replaced,
+    int gainCredits = 0,
+    Map<CraftMaterial, int> gainMaterials = const {},
+    List<MaterialChance> chances = const [],
+    List<String> lost = const [],
   }) {
     final err = _payError(p, credits, materials);
-    var next = InventoryRules.replaceItem(p, after);
-    for (final uid in consumed) {
-      next = InventoryRules.removeItem(next, uid);
+    var next = after == null ? p : InventoryRules.replaceItem(p, after);
+    if (consumed.isNotEmpty) {
+      final gone = consumed.toSet();
+      next = next.copyWith(
+          items: [for (final i in next.items) if (!gone.contains(i.uid)) i]);
     }
     next = next.copyWith(
-      credits: p.credits - credits,
+      credits: p.credits - credits + gainCredits,
       materials: {
         ...next.materials,
-        for (final e in materials.entries) e.key: p.material(e.key) - e.value,
+        for (final m in {...materials.keys, ...gainMaterials.keys})
+          m: math.min(
+              CraftMaterial.maxStack,
+              p.material(m) - (materials[m] ?? 0) + (gainMaterials[m] ?? 0)),
       },
     );
     return CraftResult(
@@ -409,6 +741,11 @@ class CraftRules {
       materials: materials,
       consumed: consumed,
       replaced: replaced,
+      gainedCredits: gainCredits,
+      gainedMaterials: _capped(p, gainMaterials),
+      chances: chances,
+      outcomes: [for (final c in chances) c.text],
+      lost: [...lost, ..._capLoss(p, gainMaterials)],
     );
   }
 

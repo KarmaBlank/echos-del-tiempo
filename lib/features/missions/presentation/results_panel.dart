@@ -30,7 +30,20 @@ class ResultsPanel extends StatelessWidget {
     required this.weaponName,
     required this.onBack,
     this.loot = const [],
+    this.zoneProgress,
+    this.unlocked,
+    this.othersUnlocked,
   });
+
+  /// `Zona 2 · Bosque Hondo · Piso 3/3` (misiones de zona).
+  final String? zoneProgress;
+
+  /// `¡Zona 3 desbloqueada! Ruinas Cronales` si el jugador local
+  /// desbloqueó una zona.
+  final String? unlocked;
+
+  /// Los demás jugadores que desbloquearon (`Bo: Zona 3`).
+  final String? othersUnlocked;
 
   /// Tus drops de la misión (loot v2), con el estilo de tu filtro.
   final List<ResultDrop> loot;
@@ -64,6 +77,28 @@ class ResultsPanel extends StatelessWidget {
       child: Column(
         children: [
           line(r.missionName, color: ProtoColors.sky),
+          if (zoneProgress case final z?)
+            Padding(
+              key: const ValueKey('results-zone'),
+              padding: EdgeInsets.zero,
+              child: line(z, color: ProtoColors.dim),
+            ),
+          if (unlocked case final u?)
+            Padding(
+              key: const ValueKey('results-unlocked'),
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(retroText(u),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      color: ProtoColors.gold,
+                      shadows: [
+                        Shadow(
+                            color: ProtoColors.titleShadow,
+                            offset: Offset(2, 2)),
+                      ])),
+            ),
+          if (othersUnlocked case final o?) line(o, color: ProtoColors.gold),
           // `.bigrank`: dorado con sombra dura `#a3471d`.
           Text(rankLabel(r.rank),
               style: const TextStyle(

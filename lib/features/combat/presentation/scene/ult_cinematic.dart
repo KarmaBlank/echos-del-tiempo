@@ -24,6 +24,11 @@ enum UltStyle {
   endGear,
   endOfEras,
   eliteFury,
+
+  // Jefes de la v0.2 (docs/specs/bosses.md § "v0.2").
+  venomNest,
+  glacialBreath,
+  hollowJudgment,
 }
 
 /// Fase de la cinemática.
@@ -287,6 +292,35 @@ const Map<String, UltScript> kEnemyUltScripts = {
     hitStopMs: 140,
     shake: 14,
     focus: UltFocus.group,
+  ),
+  'eult_nido': UltScript(
+    style: UltStyle.venomNest,
+    buildMs: 900,
+    releaseMs: 1100,
+    impactMs: 1350,
+    staggerMs: 70,
+    hitStopMs: 100,
+    shake: 10,
+    focus: UltFocus.group,
+  ),
+  'eult_aliento': UltScript(
+    style: UltStyle.glacialBreath,
+    buildMs: 1000,
+    releaseMs: 1100,
+    impactMs: 1420,
+    staggerMs: 60,
+    hitStopMs: 120,
+    shake: 12,
+    focus: UltFocus.group,
+  ),
+  'eult_juicio': UltScript(
+    style: UltStyle.hollowJudgment,
+    buildMs: 900,
+    releaseMs: 1000,
+    impactMs: 1400,
+    hitStopMs: 160,
+    shake: 15,
+    focus: UltFocus.single,
   ),
   'eult_furia': UltScript(
     style: UltStyle.eliteFury,

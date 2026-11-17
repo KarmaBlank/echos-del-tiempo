@@ -1,8 +1,15 @@
 import '../models/mission_def.dart';
+import 'zones_catalog.dart';
 
-/// `MISSIONS` del prototipo, 1:1 y en el mismo orden (el índice + 1 es
-/// el "tier" de los drops de la misión). Ver docs/specs/missions.md.
-const List<MissionDef> kMissions = [
+/// Misiones del mostrador: las de las zonas jugables, en orden de zona
+/// (el índice + 1 es el "tier" de los drops). Ver docs/specs/worldgen.md
+/// § 6.2.
+const List<MissionDef> kMissions = kZoneMissions;
+
+/// `MISSIONS` del prototipo, 1:1 y en el mismo orden: un solo mapa
+/// (`genMap`), sin zona. Ya no están en el mostrador; quedan para los
+/// tests de paridad con el prototipo (docs/specs/missions.md).
+const List<MissionDef> kPrototypeMissions = [
   MissionDef(
     id: 'm1',
     name: 'Pradera Esmeralda',

@@ -43,6 +43,8 @@ final _allActions = <SessionAction>[
   const BuyWeaponAction('hacha1'),
   const ChatAction('hola sala'),
   const BackToLobbyAction(),
+  const UseStairsAction(down: true),
+  const UseStairsAction(down: false),
   const BattleAction(AttackCommand(targetId: 'e1')),
   const BattleAction(AttackCommand()),
   const BattleAction(SkillCommand('corte', targetId: 'e2')),
@@ -131,6 +133,10 @@ final _allEvents = <SessionEvent>[
   const WeaponDropEvent('h', 'espada3', 'elite'),
   MissionEndedEvent(_result),
   const ReturnedToLobbyEvent(),
+  const FloorChangedEvent(2, down: true),
+  const FloorChangedEvent(0, down: false),
+  const StairsOpenedEvent(1),
+  const ZoneUnlockedEvent('p1', 3),
 ];
 
 String _actionText(SessionAction a) => jsonEncode(ActionJson.toJson(a));

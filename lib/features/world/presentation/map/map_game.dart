@@ -6,13 +6,16 @@ import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/item.dart';
 import '../../../../game_engine/models/loot.dart';
 import '../../../../game_engine/models/loot_filter.dart';
 import '../../../../game_engine/models/session_event.dart';
+import '../../../../game_engine/rules/zone_rules.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
+import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import 'actor_painter.dart';
@@ -155,7 +158,17 @@ class MapGame extends Game {
     return v;
   }
 
+  /// Duración del fundido al cambiar de piso (ms).
+  static const fadeMs = 700.0;
+
+  /// Cuándo empezó el último fundido de cambio de piso (`null` = nunca).
+  double? _fadeT0;
+
+  /// Hay un fundido de cambio de piso en curso (tests).
+  bool get fading => _fadeT0 != null && t - _fadeT0! < fadeMs;
+
   void _onEvent(SessionEvent e) {
+    if (e is FloorChangedEvent) _fadeT0 = t;
     if (e case LootDropEvent(:final playerId, :final drop, :final groundId)
         when playerId == controller.localId &&
             groundId == null &&
@@ -221,13 +234,27 @@ class MapGame extends Game {
     if (view != null) _updateCamera(view, dt);
   }
 
-  /// `render`, líneas 1021-1025.
+  /// El piso actual de la misión dentro del atlas (o `null`).
+  static MapFloor? currentFloor(SessionView view) {
+    final m = view.session.mission;
+    if (m == null || view.map.floors.isEmpty) return null;
+    return view.map.floor(m.floor);
+  }
+
+  /// `render`, líneas 1021-1025. En una zona la cámara se limita al piso
+  /// actual del atlas (exploration.md § "Mundo y pisos").
   void _updateCamera(SessionView view, double dt) {
     final map = view.map;
-    final mw = map.width * ts, mh = map.height * ts;
+    final f = currentFloor(view)?.bounds;
+    final bx = (f?.x ?? 0) * ts, by = (f?.y ?? 0) * ts;
+    final mw = (f?.w ?? map.width) * ts, mh = (f?.h ?? map.height) * ts;
     final fx = controller.local.x, fy = controller.local.y;
-    final tx = mw < vw ? (mw - vw) / 2 : (fx - vw / 2).clamp(0.0, mw - vw);
-    final ty = mh < vh ? (mh - vh) / 2 : (fy - vh / 2).clamp(0.0, mh - vh);
+    final tx = mw < vw
+        ? bx + (mw - vw) / 2
+        : (fx - vw / 2).clamp(bx, bx + mw - vw);
+    final ty = mh < vh
+        ? by + (mh - vh) / 2
+        : (fy - vh / 2).clamp(by, by + mh - vh);
     final k = smoothing(0.25, dt);
     camX += (tx - camX) * k;
     camY += (ty - camY) * k;
@@ -287,6 +314,12 @@ class MapGame extends Game {
     c.save();
     c.translate(-camX.roundToDouble(), -camY.roundToDouble());
 
+    // Estado de las zonas para el jugador local (entradas del mundo).
+    final zones = map.entrances.isEmpty
+        ? const <int, ZoneStatus>{}
+        : {for (final z in controller.zones) z.zone.index: z};
+    bool open(int zone) => zones[zone]?.open ?? false;
+
     // Tiles visibles.
     final x0 = math.max(0, (camX / ts).floor());
     final y0 = math.max(0, (camY / ts).floor());
@@ -297,6 +330,13 @@ class MapGame extends Game {
         tiles.draw(c, map.tileAt(x, y), x * ts, y * ts, map.theme, x, y,
             t: t, gateOpen: s.gateOpen, lobby: map.lobby);
       }
+    }
+    // Arcos de las entradas de zona (sobresalen de su tile).
+    for (final e in map.entrances) {
+      if (e.tx < x0 - 2 || e.tx > x1 + 2 || e.ty < y0 || e.ty > y1 + 3) {
+        continue;
+      }
+      tiles.entrance(c, e.tx, e.ty, e.zone, open: open(e.zone), t: t);
     }
     final merchant = map.merchant;
     if (merchant != null) {
@@ -362,11 +402,12 @@ class MapGame extends Game {
         s.mode == SessionMode.field || s.mode == SessionMode.levelUp;
     if (mission != null && showField) {
       for (final it in mission.items) {
+        if (it.floor != mission.floor) continue;
         final visible = it.kind == MissionItemKind.seal || !it.done;
         if (visible) add(it.y, () => actors.item(c, it, t));
       }
       for (final e in mission.enemies) {
-        if (!e.alive) continue;
+        if (!e.alive || e.floor != mission.floor) continue;
         final d = _lerpPos('f${e.id}', e.x, e.y);
         add(d.y, () {
           actors.enemy(c,
@@ -398,6 +439,20 @@ class MapGame extends Game {
       e.$3();
     }
 
+    // Carteles de las entradas de zona (mapa del mundo).
+    for (final e in map.entrances) {
+      final z = zones[e.zone];
+      if (z == null) continue;
+      final cx = e.center.x, cy = e.center.y;
+      final col = z.open ? zoneColor(e.zone) : const Color(0xFF9AA0AC);
+      if (!z.open) {
+        actors.text(c, z.playable ? 'BLOQUEADA' : 'PRÓXIMAMENTE', cx, cy - 56,
+            const Color(0xFFFF6B81), 6);
+      }
+      actors.text(c, z.zone.name, cx, cy - 47, col, 7);
+      actors.text(c, z.zone.levelText, cx, cy - 38, col, 6);
+    }
+
     // Haces de los Legendarios y etiquetas del loot, encima de todo.
     for (final l in floor) {
       if (!l.legendary || l.hidden) continue;
@@ -416,6 +471,25 @@ class MapGame extends Game {
       loot.drawLabel(c, p);
     }
     c.restore();
+    _drawFade(c, view);
+  }
+
+  /// Fundido a negro al cambiar de piso con el cartel `<zona> · Piso N/F`.
+  void _drawFade(Canvas c, SessionView view) {
+    final t0 = _fadeT0;
+    if (t0 == null) return;
+    final q = (t - t0) / fadeMs;
+    if (q >= 1) return;
+    final a = q < 0.3 ? 1.0 : 1 - (q - 0.3) / 0.7;
+    c.drawRect(Rect.fromLTWH(0, 0, vw.toDouble(), vh.toDouble()),
+        Paint()..color = Color.fromRGBO(0, 0, 0, a.clamp(0.0, 1.0)));
+    final m = view.session.mission;
+    if (m == null) return;
+    final name = controller.engine.catalog.zone(m.zone)?.name ??
+        controller.engine.catalog.mission(m.missionId)?.name ??
+        '';
+    actors.text(c, floorLabelText(name, m.floor, m.floors), vw / 2, vh / 2,
+        const Color(0xFFFFD166), 8);
   }
 
   /// Haces de Legendarios recién caídos al inventario en curso (tests).

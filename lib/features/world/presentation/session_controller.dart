@@ -20,10 +20,12 @@ import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
 import '../../../game_engine/rules/session_engine.dart';
 import '../../../game_engine/rules/world_rules.dart';
+import '../../../game_engine/rules/zone_rules.dart';
 import '../../../netcode/contracts/net_session.dart';
 import '../../../netcode/contracts/net_session_factory.dart';
 import 'local_player.dart';
 import 'session_view.dart';
+import 'world_text.dart';
 
 /// Ritmo del host local. El prototipo corre `hostTick` cada 50 ms; los
 /// tests suben [timeScale] (más segundos de juego por tick) o apagan el
@@ -406,6 +408,50 @@ class SessionController extends StateNotifier<SessionView?> {
     return m != null && WorldRules.distance(local.x, local.y, m.x, m.y) < 40;
   }
 
+  /// La entrada de zona frente al jugador local (mapa del mundo).
+  ZoneEntrance? get nearEntrance {
+    final s = _s;
+    if (s == null || s.mode != SessionMode.lobby) return null;
+    return WorldRules.nearEntrance(engine.mapFor(s), local.x, local.y);
+  }
+
+  /// La escalera del piso actual bajo el jugador local (campo).
+  StairsKind? get nearStairs {
+    final s = _s;
+    if (s == null || s.mode != SessionMode.field || s.mission == null) {
+      return null;
+    }
+    return WorldRules.nearStairs(engine.mapFor(s), local.x, local.y);
+  }
+
+  /// Las 10 zonas con su estado para el jugador local.
+  List<ZoneStatus> get zones {
+    final me = _s?.players[localId];
+    if (me == null) return const [];
+    return ZoneRules.zoneList(engine.catalog, me.profile);
+  }
+
+  /// La zona [index] con su estado para el jugador local.
+  ZoneStatus? zoneStatus(int index) {
+    for (final z in zones) {
+      if (z.zone.index == index) return z;
+    }
+    return null;
+  }
+
+  /// E frente a la entrada [e]: propone la misión de la zona o vota que
+  /// sí si ya hay votación por ella. Devuelve si mandó algo.
+  bool enterZone(ZoneEntrance e) {
+    final s = _s;
+    final z = zoneStatus(e.zone);
+    if (s == null || z == null) return false;
+    return switch (entranceAction(z, s.vote, localId)) {
+      EntranceAction.propose => proposeMission(z.mission!.id),
+      EntranceAction.voteYes => vote(true),
+      EntranceAction.none => false,
+    };
+  }
+
   /// E / Espacio.
   void interact() {
     final s = _s;
@@ -415,10 +461,16 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.missionBoard);
       } else if (nearArmory) {
         openPanel(WorldPanel.armory);
+      } else if (nearEntrance case final e?) {
+        enterZone(e);
       }
     } else if (s.mode == SessionMode.field) {
       final seal = nearSeal;
-      if (seal != null) _apply(ActivateSealAction(seal.id));
+      if (seal != null) {
+        _apply(ActivateSealAction(seal.id));
+      } else if (nearStairs case final k?) {
+        useStairs(down: k == StairsKind.down);
+      }
     }
   }
 
@@ -515,6 +567,9 @@ class SessionController extends StateNotifier<SessionView?> {
       _apply(ProposeMissionAction(missionId));
 
   bool vote(bool yes) => _apply(VoteMissionAction(yes));
+
+  /// Bajar (`>`) o subir (`<`) de piso con todo el grupo.
+  bool useStairs({required bool down}) => _apply(UseStairsAction(down: down));
 
   bool setReady(bool ready) => _apply(ReadyAction(ready));
 
@@ -703,12 +758,14 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     if (mode == SessionMode.battle || mode == SessionMode.result) _panel = null;
 
+    final (prompt, promptText) = _prompt();
     state = SessionView(
       session: s,
       localId: localId,
       map: engine.mapFor(s),
       panel: _panel,
-      prompt: _prompt(),
+      prompt: prompt,
+      promptText: promptText,
       messages: List.unmodifiable(_messages),
       chat: List.unmodifiable(_chat),
       battleEvents: _battleEvents,
@@ -719,12 +776,24 @@ class SessionController extends StateNotifier<SessionView?> {
     );
   }
 
-  WorldPrompt? _prompt() {
-    if (_panel != null) return null;
-    if (nearArmory) return WorldPrompt.armory;
-    if (nearCounter) return WorldPrompt.missionBoard;
-    if (nearSeal != null) return WorldPrompt.seal;
-    if (nearMerchant) return WorldPrompt.merchant;
-    return null;
+  (WorldPrompt?, String?) _prompt() {
+    if (_panel != null) return (null, null);
+    if (nearArmory) return (WorldPrompt.armory, null);
+    if (nearCounter) return (WorldPrompt.missionBoard, null);
+    if (nearSeal != null) return (WorldPrompt.seal, null);
+    if (nearStairs case final k?) {
+      return (WorldPrompt.stairs, stairsPromptText(k, _s!.mission!.floor));
+    }
+    if (nearEntrance case final e?) {
+      final z = zoneStatus(e.zone);
+      if (z != null) {
+        return (
+          WorldPrompt.entrance,
+          entrancePromptText(z, _s!.vote, localId),
+        );
+      }
+    }
+    if (nearMerchant) return (WorldPrompt.merchant, null);
+    return (null, null);
   }
 }

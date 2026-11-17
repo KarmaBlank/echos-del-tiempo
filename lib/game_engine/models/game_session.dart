@@ -119,6 +119,7 @@ class FieldEnemy {
     this.vy = 0,
     this.dir = -1,
     this.aggro = false,
+    this.floor = 0,
   });
 
   final int id;
@@ -137,6 +138,9 @@ class FieldEnemy {
   int dir;
   bool aggro;
 
+  /// Piso de la zona donde está (0 en misiones de un solo mapa).
+  final int floor;
+
   FieldEnemy copy() => FieldEnemy(
         id: id,
         x: x,
@@ -152,6 +156,7 @@ class FieldEnemy {
         vy: vy,
         dir: dir,
         aggro: aggro,
+        floor: floor,
       );
 }
 
@@ -163,6 +168,7 @@ class MissionItem {
     required this.x,
     required this.y,
     this.done = false,
+    this.floor = 0,
   });
 
   final int id;
@@ -170,7 +176,11 @@ class MissionItem {
   final double x, y;
   bool done;
 
-  MissionItem copy() => MissionItem(id: id, kind: kind, x: x, y: y, done: done);
+  /// Piso de la zona donde está.
+  final int floor;
+
+  MissionItem copy() =>
+      MissionItem(id: id, kind: kind, x: x, y: y, done: done, floor: floor);
 }
 
 class MissionObjective {
@@ -213,13 +223,56 @@ class MissionRun {
     this.elites = 0,
     List<WeaponDrop>? eliteDrops,
     this.zoneLevel = 1,
-  }) : eliteDrops = eliteDrops ?? [];
+    this.zone = 0,
+    this.floor = 0,
+    this.floors = 1,
+    List<int>? floorGoals,
+    List<int>? levels,
+    Set<int>? opened,
+  })  : eliteDrops = eliteDrops ?? [],
+        floorGoals = List.unmodifiable(floorGoals ?? const <int>[]),
+        levels = List.unmodifiable(levels ?? const <int>[]),
+        opened = {...?opened};
 
   final String missionId;
   final int seed;
 
-  /// Nivel de zona del loot (`LootRules.zoneLevel`, fijado al empezar).
-  final int zoneLevel;
+  /// Nivel de zona del loot: en misiones de zona, el del piso actual
+  /// (worldgen.md § 6.3); en las viejas, `LootRules.zoneLevel` fijo.
+  int zoneLevel;
+
+  /// Zona de la misión (0 = misión de un solo mapa).
+  final int zone;
+
+  /// Piso actual (desde 0) y cantidad de pisos.
+  int floor;
+  final int floors;
+
+  /// Grupos normales a vencer en cada piso para abrir su barrera.
+  final List<int> floorGoals;
+
+  /// Nivel de los enemigos de cada piso (vacío = sin escalado).
+  final List<int> levels;
+
+  /// Pisos (no el último) con la barrera de la escalera abierta.
+  final Set<int> opened;
+
+  bool get isLastFloor => floor >= floors - 1;
+
+  Iterable<FieldEnemy> enemiesOn(int f) => enemies.where((e) => e.floor == f);
+  Iterable<MissionItem> itemsOn(int f) => items.where((i) => i.floor == f);
+
+  /// Grupos normales vencidos en el piso [f].
+  int floorKills(int f) =>
+      enemiesOn(f).where((e) => !e.alive && !e.boss && !e.elite).length;
+
+  /// Cuota de grupos y fragmentos/sellos del piso [f] cumplidos.
+  bool floorCleared(int f) =>
+      floorKills(f) >= (f < floorGoals.length ? floorGoals[f] : 0) &&
+      itemsOn(f).every((i) => i.kind == MissionItemKind.chest || i.done);
+
+  /// La barrera del piso [f] está abierta (escalera o jefe).
+  bool floorOpen(int f) => f >= floors - 1 ? open : opened.contains(f);
 
   /// Grupos normales a derrotar (`min(goal, grupos ubicados)`).
   final int goal;
@@ -273,6 +326,12 @@ class MissionRun {
         elites: elites,
         eliteDrops: [...eliteDrops],
         zoneLevel: zoneLevel,
+        zone: zone,
+        floor: floor,
+        floors: floors,
+        floorGoals: floorGoals,
+        levels: levels,
+        opened: opened,
       );
 }
 
@@ -288,7 +347,11 @@ class SessionBattle {
     this.wait = 1.0,
     this.turnTime = 0,
     this.endTimer,
+    this.level = 0,
   });
+
+  /// Nivel de los enemigos (worldgen.md § 6.3); 0 = sin escalar.
+  final int level;
 
   /// Sube con cada batalla (`bid`): la UI lo usa para saber que es otra.
   final int id;
@@ -321,6 +384,7 @@ class SessionBattle {
         wait: wait,
         turnTime: turnTime,
         endTimer: endTimer,
+        level: level,
       );
 }
 
@@ -361,7 +425,15 @@ class MissionResult {
     required this.eliteDrops,
     required this.drops,
     this.timeLeft = 25,
+    this.zone = 0,
+    this.unlocked = const {},
   });
+
+  /// Zona de la misión (0 = sin zona).
+  final int zone;
+
+  /// Zona nueva desbloqueada por jugador (worldgen.md § 6.4).
+  final Map<String, int> unlocked;
 
   final int id;
   final String missionId;
@@ -399,6 +471,8 @@ class MissionResult {
         eliteDrops: eliteDrops,
         drops: drops,
         timeLeft: timeLeft,
+        zone: zone,
+        unlocked: unlocked,
       );
 }
 
@@ -458,7 +532,11 @@ class GameSession {
 
   double get graceLeft => graceUntil > time ? graceUntil - time : 0;
 
-  bool get gateOpen => mission?.open ?? false;
+  /// La barrera del piso actual (escalera o jefe) está abierta.
+  bool get gateOpen {
+    final m = mission;
+    return m != null && m.floorOpen(m.floor);
+  }
 
   /// Tienda, herrería, fusión y equipar (`canShop`).
   bool get canShop => mode == SessionMode.lobby || mode == SessionMode.prep;

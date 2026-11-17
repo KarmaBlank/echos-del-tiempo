@@ -110,6 +110,28 @@ class ReturnedToLobbyEvent extends SessionEvent {
   const ReturnedToLobbyEvent();
 }
 
+// ---------------- mundo por zonas (docs/specs/worldgen.md § 7.5) ----------------
+
+/// El grupo cambió al piso [floor] (desde 0) de la zona.
+class FloorChangedEvent extends SessionEvent {
+  final int floor;
+  final bool down;
+  const FloorChangedEvent(this.floor, {required this.down});
+}
+
+/// Se despejó el piso [floor]: se abrió la barrera de su escalera.
+class StairsOpenedEvent extends SessionEvent {
+  final int floor;
+  const StairsOpenedEvent(this.floor);
+}
+
+/// [playerId] desbloqueó la zona [zone] (1..10).
+class ZoneUnlockedEvent extends SessionEvent {
+  final String playerId;
+  final int zone;
+  const ZoneUnlockedEvent(this.playerId, this.zone);
+}
+
 // ---------------- loot v2 (docs/specs/loot.md) ----------------
 
 /// A [playerId] le tocó [drop] de [source] (`battle`, `elite`, `boss`,

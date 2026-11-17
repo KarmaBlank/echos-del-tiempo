@@ -62,6 +62,16 @@ flutter:
     - assets/sprites/enemies/reyLimo/
     - assets/sprites/enemies/golemReloj/
     - assets/sprites/enemies/devorador/
+    - assets/sprites/enemies/arana/
+    - assets/sprites/enemies/lobo/
+    - assets/sprites/enemies/murcielagoHielo/
+    - assets/sprites/enemies/elementalEscarcha/
+    - assets/sprites/enemies/esqueleto/
+    - assets/sprites/enemies/caballeroCaido/
+    - assets/sprites/enemies/cristalHielo/
+    - assets/sprites/enemies/matriarca/
+    - assets/sprites/enemies/sierpe/
+    - assets/sprites/enemies/caballeroHueco/
     - assets/sprites/effects/
     - assets/sprites/tiles/
 

@@ -113,10 +113,17 @@ void main() {
       if (v.mode == SessionMode.battle && v.myTurn) {
         c.battleCommand(const AttackCommand());
       } else if (v.mode == SessionMode.field && v.session.graceLeft <= 0) {
-        // Grupos normales hasta subir de nivel; después, directo al jefe.
-        final target = v.session.mission!.enemies.firstWhere((e) =>
-            e.alive && (allocatedInUi ? e.boss : !e.boss && !e.elite));
-        c.teleport(target.x, target.y);
+        // Grupos normales hasta subir de nivel; después, directo al jefe
+        // (bajando por las escaleras si está en otro piso).
+        if (allocatedInUi) {
+          final (x, y) = bossOrStairs(c);
+          c.teleport(x, y);
+        } else {
+          final m = v.session.mission!;
+          final target = m.enemies.firstWhere((e) =>
+              e.alive && !e.boss && !e.elite && e.floor == m.floor);
+          c.teleport(target.x, target.y);
+        }
       }
       c.advance(0.05);
     }

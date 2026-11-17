@@ -222,6 +222,12 @@ class BattleScenePainter extends CustomPainter {
     _pen.rect(c, const Color(0xFF05060C), visible.left, visible.top,
         visible.width, visible.height);
     f.arena?.paintWorld?.call(c, visible, t);
+    final frost = frostLevel(f.battle);
+    if (frost > 0) {
+      // Campo Helado: el mapa se tiñe de celeste (más cuanto más lento).
+      _pen.rect(c, frostColor.withValues(alpha: 0.10 + 0.30 * frost),
+          visible.left, visible.top, visible.width, visible.height);
+    }
     final dim = scene.ultDim;
     if (dim > 0) {
       _pen.rect(c, Color.fromRGBO(4, 4, 12, dim), visible.left, visible.top,
@@ -249,6 +255,8 @@ class BattleScenePainter extends CustomPainter {
       e.$3();
     }
 
+    if (frost > 0) _snow(c, visible, frost);
+    _crystalLinks(c, f);
     _worldFx(c);
     final u = scene.ult;
     final stage = scene.ultStage(f);
@@ -325,8 +333,81 @@ class BattleScenePainter extends CustomPainter {
       c.drawCircle(const Offset(0, -8), 13, _pen.stroke);
       _pen.rect(c, const Color(0xCCFFFFFF), -7, -17, 2, 1);
     }
+    if (p.webbed && !dead) _web(c, pt);
     if (dead) c.restore();
     c.restore();
+  }
+
+  /// Telaraña sobre el héroe atrapado (coordenadas del héroe): hilos
+  /// cruzados, un capullo y la araña de seda que late.
+  void _web(Canvas c, double pt) {
+    final k = 0.5 + 0.5 * math.sin(pt / 260);
+    _pen.oval(c, webColor.withValues(alpha: 0.18 + 0.08 * k), 0, -8, 10, 11);
+    _pen.stroke
+      ..strokeWidth = 1
+      ..color = webColor.withValues(alpha: 0.85);
+    const o = Offset(0, -9);
+    for (var i = 0; i < 6; i++) {
+      final a = i * math.pi / 3 + 0.3;
+      c.drawLine(o, o + Offset(math.cos(a) * 12, math.sin(a) * 12), _pen.stroke);
+    }
+    _pen.stroke.color = webColor.withValues(alpha: 0.6);
+    for (final r in [4.0, 8.0, 11.0]) {
+      final path = Path();
+      for (var i = 0; i <= 6; i++) {
+        final a = i * math.pi / 3 + 0.3;
+        final q = o + Offset(math.cos(a) * r, math.sin(a) * r);
+        i == 0 ? path.moveTo(q.dx, q.dy) : path.lineTo(q.dx, q.dy);
+      }
+      c.drawPath(path, _pen.stroke);
+    }
+    // Hilo que cuelga desde arriba.
+    c.drawLine(const Offset(0, -30), const Offset(0, -20), _pen.stroke);
+  }
+
+  /// Velocidad perdida por el Campo Helado (0..0.5), la mayor del grupo.
+  static double frostLevel(BattleState b) {
+    var v = 0.0;
+    for (final p in b.party) {
+      final e = p.effectFrom('escarcha', BuffStat.speed);
+      if (e != null && -e.value > v) v = -e.value;
+    }
+    return v;
+  }
+
+  /// Copos que caen (deterministas) sobre la vista.
+  void _snow(Canvas c, Rect vis, double frost) {
+    final t = scene.poseT;
+    final n = (20 + 60 * frost).round();
+    for (var i = 0; i < n; i++) {
+      final h1 = ((i * 73856093) & 0xffff) / 65536;
+      final h2 = ((i * 19349663) & 0xffff) / 65536;
+      final fall = (t / (2600 + 1400 * h2) + h1) % 1.0;
+      final x = vis.left + ((h1 * 977 + math.sin(t / 900 + i) * 0.02) % 1.0) * vis.width;
+      final y = vis.top + fall * vis.height;
+      _pen.rect(c, const Color(0xCCF4FDFF), x.roundToDouble(), y.roundToDouble(),
+          i % 3 == 0 ? 2 : 1, i % 3 == 0 ? 2 : 1);
+    }
+  }
+
+  /// Hilo de escarcha entre cada cristal vivo y su jefe.
+  void _crystalLinks(Canvas c, SceneFrame f) {
+    final b = f.battle;
+    if (b.enemies.isEmpty) return;
+    final boss = b.enemies.first;
+    if (!boss.alive) return;
+    final t = scene.poseT;
+    final from = f.layout.of(boss.id).translate(0, -14);
+    for (final e in b.enemies) {
+      if (!e.alive || !isPassiveAdd(e)) continue;
+      final to = f.layout.of(e.id).translate(0, -7);
+      for (var k = 0; k < 6; k++) {
+        final q = ((t / 600) + k / 6) % 1.0;
+        final p = Offset.lerp(to, from, q)!;
+        _pen.rect(c, frostColor.withValues(alpha: 0.9 * math.sin(q * math.pi)),
+            p.dx.roundToDouble(), (p.dy + math.sin(q * 6 + t / 200) * 2).roundToDouble(), 2, 2);
+      }
+    }
   }
 
   /// Último Aliento activo: tiene la mecánica y poca vida.
@@ -378,6 +459,19 @@ class BattleScenePainter extends CustomPainter {
                 height: 6 + 4 * q),
             _pen.stroke);
       }
+    }
+    if (e.alive && e.stance != 0) {
+      // Postura del Caballero Hueco: aura del color de la postura (gris si
+      // está quebrado: la perdió).
+      final k = 0.5 + 0.5 * math.sin(pt / 200);
+      final col = e.broken ? const Color(0xFF7F8C8D) : stanceColor(e.stance);
+      _pen.oval(c, col.withValues(alpha: 0.16 + 0.14 * k), x, y - h / 2 + 2,
+          w * 0.62 + 2 * k, h * 0.62);
+    }
+    if (e.alive && isPassiveAdd(e)) {
+      final k = 0.5 + 0.5 * math.sin(pt / 240 + x);
+      _pen.oval(c, frostColor.withValues(alpha: 0.18 + 0.2 * k), x, y - h / 2 + 1,
+          w * 0.8, h * 0.6);
     }
     if (e.elite) {
       final a = (0.35 + 0.2 * math.sin(pt / 180)).clamp(0.0, 1.0);
@@ -431,9 +525,39 @@ class BattleScenePainter extends CustomPainter {
         _pen.rect(c, col, px, py - 1, 1, 3);
       }
     }
+    if (e.alive && e.stance != 0) {
+      _stanceIcon(c, e, (x + w / 2 + 1).roundToDouble(),
+          (y + fl - h - 4).roundToDouble(), pt);
+    }
     if (alpha < 1) c.restore();
     if (f.battle.currentId == e.id) {
       _pen.rect(c, const Color(0xFFFF4757), x - 10, y + 3, 20, 2);
+    }
+  }
+
+  /// Ícono de la postura (escudo o espada, 7×9 px) arriba a la derecha
+  /// del Caballero Hueco; titila con "!" si cambia en su próximo turno.
+  void _stanceIcon(Canvas c, Combatant e, double x, double y, double pt) {
+    final col = e.broken ? const Color(0xFF7F8C8D) : stanceColor(e.stance);
+    const ink = Color(0xFF0D0D14);
+    _pen.rect(c, ink, x - 1, y - 1, 9, 11);
+    if (e.stance == 1) {
+      _pen.rect(c, col, x, y, 7, 6);
+      _pen.rect(c, col, x + 1, y + 6, 5, 2);
+      _pen.rect(c, col, x + 2, y + 8, 3, 1);
+      _pen.rect(c, const Color(0xFFFFFFFF), x + 3, y + 1, 1, 5);
+      _pen.rect(c, const Color(0xFFFFFFFF), x + 1, y + 3, 5, 1);
+    } else {
+      _pen.rect(c, col, x + 3, y, 1, 6);
+      _pen.rect(c, const Color(0xFFFFFFFF), x + 2, y + 1, 1, 4);
+      _pen.rect(c, const Color(0xFFE1B12C), x + 1, y + 6, 5, 1);
+      _pen.rect(c, const Color(0xFF8D6E4F), x + 3, y + 7, 1, 2);
+    }
+    if (e.stanceTurns == 1 && !e.broken && (pt / 220).floor().isEven) {
+      final next = stanceColor(e.stance == 1 ? 2 : 1);
+      _pen.rect(c, ink, x + 9, y - 1, 4, 11);
+      _pen.rect(c, next, x + 10, y, 2, 6);
+      _pen.rect(c, next, x + 10, y + 7, 2, 2);
     }
   }
 
@@ -1264,6 +1388,8 @@ class BattleOverlayPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final f = scene.frame;
+    final intro = scene.intro;
+    if (f != null && intro != null) _intro(canvas, f, intro, size);
     final u = scene.ult;
     if (f == null || u == null) return;
     final s = u.script;
@@ -1387,6 +1513,66 @@ class BattleOverlayPainter extends CustomPainter {
     _pen.text(c, (ult?.name ?? '').toUpperCase(), tx, by + 12,
         const Color(0xFFFFFFFF), 16,
         center: false, outline: true);
+    if (outP > 0) c.restore();
+    final pic = rec.endRecording();
+    final img2 = pic.toImageSync(w, h);
+    pic.dispose();
+    _blit(canvas, img2, Rect.fromLTWH(0, 0, w * pu, h * pu));
+    img2.dispose();
+  }
+
+  /// Cartel de entrada del jefe: banda negra con filetes dorados, el
+  /// sprite grande, `JEFE`, el nombre y su título. Entra en 260 ms y se
+  /// apaga los últimos 400.
+  void _intro(Canvas canvas, SceneFrame f, BossIntro i, Size size) {
+    final a = scene.t - i.t0;
+    if (a < 0 || a > BossIntro.durationMs) return;
+    final pu = 2.0 * f.geometry.hudUnit;
+    final w = (size.width / pu).ceil(), h = (size.height / pu).ceil();
+    final area = f.geometry.worldRect;
+    final inP = Curves.easeOutCubic.transform((a / 260).clamp(0.0, 1.0));
+    final outP = ((a - (BossIntro.durationMs - 400)) / 400).clamp(0.0, 1.0);
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec, Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()));
+    final wd = w.toDouble();
+    if (outP > 0) {
+      c.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, 1 - outP));
+    }
+    final cy = ((area.top + area.height * 0.30) / pu).roundToDouble();
+    final bh = (30 * inP).roundToDouble();
+    const gold = Color(0xFFFFD166);
+    _pen.rect(c, const Color(0xE6000000), 0, cy - bh, wd, bh * 2);
+    _pen.rect(c, gold, 0, cy - bh, wd, 1);
+    _pen.rect(c, gold, 0, cy + bh - 1, wd, 1);
+    _pen.rect(c, const Color(0x66FFD166), 0, cy - bh + 2, wd, 1);
+    _pen.rect(c, const Color(0x66FFD166), 0, cy + bh - 3, wd, 1);
+    if (inP >= 1) {
+      // Polvo dorado que corre por la banda.
+      for (var k = 0; k < 10; k++) {
+        final lx = ((k * 131 + a * 0.12) % (wd + 40)) - 20;
+        _pen.rect(c, const Color(0x44FFD166), lx, cy - 22 + (k * 9) % 44, 18, 1);
+      }
+      final img = f.sprites?.enemy(i.enemyType);
+      final slide = (1 - Curves.easeOutCubic.transform(((a - 200) / 400).clamp(0.0, 1.0))) * 60;
+      final mid = wd / 2;
+      if (img != null) {
+        final k = math.min(2.0, 50 / img.height);
+        final dst = Rect.fromLTWH((mid - 150 - img.width * k / 2 - slide).roundToDouble(),
+            cy + 26 - img.height * k, img.width * k, img.height * k);
+        final src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
+        final shadow = SpriteCatalog.pixelPaint()
+          ..colorFilter = const ColorFilter.mode(Color(0xFF000000), BlendMode.srcIn);
+        c.drawImageRect(img, src, dst.shift(const Offset(2, 2)), shadow);
+        c.drawImageRect(img, src, dst, SpriteCatalog.pixelPaint());
+      }
+      final tx = mid - 100 + slide;
+      final blink = (a / 160).floor().isEven;
+      _pen.text(c, '! JEFE !', tx, cy - 12, blink ? const Color(0xFFFF4757) : gold, 8,
+          center: false);
+      _pen.text(c, i.name.toUpperCase(), tx, cy + 6, const Color(0xFFFFFFFF), 16,
+          center: false, outline: true);
+      _pen.text(c, i.title, tx, cy + 20, const Color(0xFFFFEAA7), 8, center: false);
+    }
     if (outP > 0) c.restore();
     final pic = rec.endRecording();
     final img2 = pic.toImageSync(w, h);

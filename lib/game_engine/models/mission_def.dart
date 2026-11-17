@@ -25,6 +25,19 @@ class MissionDef {
   /// Cuántos objetivos extra (`frag`, `seal`, `elite`) se sortean.
   final int extra;
 
+  /// Zona del mapa del mundo (1..10); 0 = misión vieja de un solo mapa
+  /// (`genMap`), sin escalado por nivel. Ver worldgen.md § 6.2.
+  final int zone;
+
+  /// Pisos de la misión (1 en las misiones viejas).
+  final int floors;
+
+  /// Grupos normales a vencer por piso (misiones de zona).
+  final int floorGoal;
+
+  /// Grupos posibles por piso (misiones de zona); vacío = [groups].
+  final List<List<List<String>>> floorGroups;
+
   const MissionDef({
     required this.id,
     required this.name,
@@ -38,7 +51,16 @@ class MissionDef {
     required this.sTime,
     required this.elite,
     required this.extra,
+    this.zone = 0,
+    this.floors = 1,
+    this.floorGoal = 0,
+    this.floorGroups = const [],
   });
+
+  /// Grupos posibles en el piso [f].
+  List<List<String>> groupsFor(int f) => floorGroups.isEmpty
+      ? groups
+      : floorGroups[f.clamp(0, floorGroups.length - 1)];
 
   /// Nivel de botín por rango (cofres): A 3, B 2, C 1.
   int get chestTier => rank == 'A'

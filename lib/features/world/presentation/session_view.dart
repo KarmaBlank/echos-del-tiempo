@@ -26,7 +26,15 @@ enum WorldPrompt {
   missionBoard('[E] Ver misiones'),
   armory('[E] Armería'),
   seal('[E] Activar sello'),
-  merchant('[E] Tienda y herrería');
+  merchant('[E] Tienda y herrería'),
+
+  /// Frente a la entrada de una zona (mapa del mundo). El texto real
+  /// (`[E] Entrar: <zona>`, bloqueada, próximamente) va en
+  /// [SessionView.promptText].
+  entrance('[E] Entrar'),
+
+  /// Sobre una escalera (`[E] Bajar al piso N` / `[E] Subir al piso N`).
+  stairs('[E] Escalera');
 
   const WorldPrompt(this.label);
   final String label;
@@ -49,7 +57,15 @@ class SessionView {
     this.roomCode,
     this.disconnected,
     this.missionLoot = const [],
+    this.promptText,
   });
+
+  /// Texto del aviso cuando depende del contexto (entradas de zona,
+  /// escaleras); si es `null` se usa `prompt.label`.
+  final String? promptText;
+
+  /// Lo que dice el aviso de interacción (o `null`).
+  String? get promptLabel => promptText ?? prompt?.label;
 
   /// Drops del jugador local desde que empezó la misión actual (o la
   /// última), en orden (`LootDropEvent`). Para la pantalla de resultado.
@@ -118,5 +134,6 @@ class SessionView {
         roomCode: roomCode,
         disconnected: disconnected,
         missionLoot: missionLoot,
+        promptText: prompt != null ? null : promptText,
       );
 }

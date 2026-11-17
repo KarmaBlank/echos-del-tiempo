@@ -515,3 +515,37 @@ procs del árbol escriben `proc_<nombre>.wav` (uno por sonido) y tres
 secuencias en sus tiempos: `proc_chain_3_hops.wav`,
 `proc_shield_absorb_hit.wav` y `proc_combustion_full.wav`. Sin la
 variable, el test no escribe nada.
+
+## Mecánicas de jefe
+
+(docs/specs/bosses.md § "v0.2".) Enemigos nuevos: cada id de `kEnemies`
+tiene wind-up, voz e impacto propios (`kEnemyWindups`, `_enemyBodies`,
+`kEnemyHitVoices`): araña (patitas + siseo / picadura venenosa), lobo
+(gruñido / mordisco con desgarro), murciélago de hielo (aleteos +
+campanita / colmillo de hielo), elemental de escarcha (hielo que cruje /
+mazazo helado), esqueleto (castañeteo / tajo de hueso), caballero caído
+(armadura que rechina / escudazo), cristal de hielo (zumbido / tintineo;
+no ataca), Matriarca (siseo grande / colmillos de la reina), Sierpe
+(inhalación helada / coletazo helado), Caballero Hueco (metal hueco /
+espadazo que retumba). Los tres jefes suenan a `SfxLevel.enemyBoss`.
+
+| Sonido | Receta | Cuándo |
+|---|---|---|
+| `boss.intro` | golpe sine 55→40 + acorde sawtooth 220/262/330 que se abre + dron | `BattleStartedEvent` de jefe |
+| `boss.web` | silbido de hilo (ruido 6 k→2.5 k) + chasquido húmedo | `webCast`, con el golpe (+60 ms) o después de la ULT |
+| `boss.webFree` | dos "snip" (ruido 12 k) + campanita 1319/1760 | `webFreed` @100 |
+| `boss.webStuck` | cuerda tensa que vibra (triangle 180 vibrato 12 Hz) | `webSkip` / `webStruggle` |
+| `boss.frost` | viento frío + cristales que crecen | `frost` |
+| `boss.thaw` | goteo + arpegio que sube | `thaw` |
+| `boss.crystal` | estallido de vidrio (ruido 15 k + 5 parciales) | `shatter`, 180 ms después del golpe |
+| `boss.reform` | cristales al revés + ruido que sube | `reform`, después de la ULT |
+| `boss.stance` | giro metálico + "clank" + parciales 1661/2489 | `stanceShift` |
+| `boss.block` | "clonk" contra metal | `resisted`, con el golpe |
+
+ULT nuevas (`kEnemyUltVoices`, tres partes en los tiempos de su guion):
+
+| ULT | Preparación | Descarga | Impacto |
+|---|---|---|---|
+| Nido Venenoso | latidos graves + patas que corretean + siseo que crece | red que vuela (ruido 7 k→2.5 k) + hilo que vibra | salpicón de veneno + burbujas + chasquido |
+| Aliento Glacial | inhalación helada que crece + campanitas | ventisca (ruido 4 k→9 k) + rugido grave | golpe sine 70→28 + estallido de hielo + cristales |
+| Juicio Hueco | coro hueco (sawtooth 147/175/220) + dron 37 Hz | campana que baja + espada que cae (ruido que sube) | golpe enorme + campanas metálicas + mareo |

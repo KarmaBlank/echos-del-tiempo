@@ -1,5 +1,6 @@
 import '../../../game_engine/data/game_catalog.dart';
 import '../../../game_engine/models/mission_def.dart';
+import '../../../game_engine/models/zone_def.dart';
 
 /// Textos de una misión para el mostrador y la preparación (tarjeta de
 /// misión). Solo describen las reglas de docs/specs/missions.md, que
@@ -18,9 +19,26 @@ String missionObjectiveText(MissionDef m, {String? bossName}) {
       ? ''
       : ' · +${m.extra} objetivo${m.extra == 1 ? '' : 's'} extra al azar '
           '(fragmentos, sellos o élite)';
+  if (m.floors > 1 && m.floorGoal > 0) {
+    return 'Derrota ${m.floorGoal} grupos por piso (${m.floors} pisos) y '
+        'vence al jefe$boss en el último$extra';
+  }
   return 'Derrota ${m.goal} grupos para abrir la barrera y vence al '
       'jefe$boss$extra';
 }
+
+/// `Zona 2 · Bosque Hondo · Lv 6-10 · 3 pisos · Jefe: Matriarca Araña`.
+String zoneLineText(ZoneDef z) =>
+    'Zona ${z.index} · ${z.name} · ${z.levelText} · '
+    '${z.floors} piso${z.floors == 1 ? '' : 's'} · Jefe: ${z.bossName}';
+
+/// `Bosque Hondo · Piso 2/3` ([floor] desde 0).
+String floorLabelText(String zoneName, int floor, int floors) =>
+    '$zoneName · Piso ${floor + 1}/$floors';
+
+/// `¡Zona 3 desbloqueada! Ruinas Cronales`.
+String zoneUnlockedText(int zone, String? name) =>
+    '¡Zona $zone desbloqueada!${name == null ? '' : ' $name'}';
 
 /// `< N min sin K.O.`
 String missionSRankText(MissionDef m) {

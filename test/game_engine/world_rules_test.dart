@@ -19,7 +19,7 @@ void main() {
   });
 
   test('la barrera G es sólida solo cerrada', () {
-    final m = MapGenerator.generate(kMissions.first, 12345);
+    final m = MapGenerator.generate(kPrototypeMissions.first, 12345);
     // Barrera al oeste en x = arena.x + 13, filas cy-1..cy+2.
     final ar = m.arena!;
     final gx = ar.x + 13, gy = ar.cy;

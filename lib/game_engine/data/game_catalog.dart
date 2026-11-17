@@ -3,11 +3,13 @@ import '../models/enemy_def.dart';
 import '../models/mission_def.dart';
 import '../models/skill.dart';
 import '../models/weapon.dart';
+import '../models/zone_def.dart';
 import 'classes_catalog.dart';
 import 'enemies_catalog.dart';
 import 'missions_catalog.dart';
 import 'skills_catalog.dart';
 import 'weapons_catalog.dart';
+import 'zones_catalog.dart';
 
 /// Todos los datos de juego juntos, para inyectarlos en el motor. Los
 /// tests pueden pasar un catálogo reducido; el juego usa [standard].
@@ -34,7 +36,25 @@ class GameCatalog {
     required this.enemies,
     this.enemyUlts = kEnemyUlts,
     this.missions = kMissions,
+    this.zones = kZones,
   });
+
+  /// Las 10 zonas del mapa del mundo, en orden (worldgen.md § 6.1).
+  final List<ZoneDef> zones;
+
+  /// La zona [index] (1..10), o `null`.
+  ZoneDef? zone(int index) {
+    for (final z in zones) {
+      if (z.index == index) return z;
+    }
+    return null;
+  }
+
+  /// La zona de una misión (`null` si es una misión sin zona).
+  ZoneDef? zoneOfMission(String missionId) {
+    final m = mission(missionId);
+    return m == null || m.zone == 0 ? null : zone(m.zone);
+  }
 
   static const standard = GameCatalog(
     classes: kClasses,

@@ -318,3 +318,11 @@ Lo que pasa alrededor de la batalla lo hace `SessionEngine`
   de la misión y derrota → misión fallida: missions.md y progression.md.
 - Movimiento en el mapa y contacto con enemigos: world.md.
 - Tienda, mejoras de armas, fusión y perfil: progression.md.
+
+## Mecánicas de jefe (v0.2)
+
+Telaraña, Campo Helado y Postura: docs/specs/bosses.md § "v0.2". Reglas
+que tocan el combate general: `AttackCommand` con un aliado atrapado como
+objetivo lo libera (medio turno); los enemigos `passive` (cristales) no
+entran a la línea de tiempo y mueren con su jefe; `EnemyDef.armor` y la
+postura multiplican el daño de los golpes primarios del grupo.

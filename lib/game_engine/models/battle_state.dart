@@ -92,6 +92,9 @@ class Combatant {
     this.breakSkip = false,
     this.ultId,
     this.ultPending = false,
+    this.webbed = false,
+    this.stance = 0,
+    this.stanceTurns = 0,
   })  : statusBonus = statusBonus ?? {},
         keystones = keystones ?? {},
         mechanics = mechanics ?? {},
@@ -168,9 +171,10 @@ class Combatant {
 
   // ---- quiebre y ULT enemiga (docs/specs/break_and_enemy_ults.md) ----
 
-  /// Umbral base de la barra de quiebre (ya escalado por grupo y élite).
+  /// Umbral base de la barra de quiebre (ya escalado por grupo, élite y
+  /// nivel de zona: `ZoneRules.scaleBattle`, por eso es mutable).
   /// 0: sin barra (jugadores).
-  final double breakBase;
+  double breakBase;
 
   /// Barra de quiebre actual (0..[breakMax]).
   double breakGauge;
@@ -189,6 +193,20 @@ class Combatant {
 
   /// Avisó su ULT: la lanza en su próximo turno.
   bool ultPending;
+
+  // ---- mecánicas de jefe (docs/specs/bosses.md § "v0.2") ----
+
+  /// Jugador atrapado en una telaraña de la Matriarca: pierde su próximo
+  /// turno salvo que un aliado lo libere.
+  bool webbed;
+
+  /// Postura del Caballero Hueco: 0 ninguna, 1 escudo (−daño físico),
+  /// 2 espada (−daño mágico).
+  int stance;
+
+  /// Turnos propios que faltan para cambiar de postura (1 = cambia en su
+  /// próximo turno).
+  int stanceTurns;
 
   bool get hasBreak => breakBase > 0;
 
@@ -288,6 +306,9 @@ class Combatant {
         breakSkip: breakSkip,
         ultId: ultId,
         ultPending: ultPending,
+        webbed: webbed,
+        stance: stance,
+        stanceTurns: stanceTurns,
       );
 }
 

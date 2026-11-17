@@ -48,7 +48,11 @@ void main() {
     expect(rewards, contains('Recompensas:'));
     expect(rewards, contains('arma de tier 1'));
     expect(rewards, contains('cofres nivel ${m1.chestTier}'));
-    expect(find.textContaining('Derrota ${m1.goal} grupos'), findsOneWidget);
+    // Misión de zona: el objetivo es por piso.
+    expect(
+        find.textContaining(
+            'Derrota ${m1.floorGoal} grupos por piso (${m1.floors} pisos)'),
+        findsOneWidget);
     // Nivel por debajo del recomendado: lo avisa.
     expect(find.textContaining('tu Lv 1'), findsWidgets);
     expect(find.byKey(const ValueKey('panel-help')), findsOneWidget);

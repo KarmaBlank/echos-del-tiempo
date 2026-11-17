@@ -155,6 +155,35 @@ class BattleEngine {
       ));
     }
 
+    // Mecánica propia del jefe (docs/specs/bosses.md § "v0.2").
+    final mech = first.boss ? bossMechanicOf(first) : null;
+    if (mech != null) {
+      final boss = enemies.first;
+      if (mech.kind == BossMechanicKind.stance) {
+        boss
+          ..stance = 1
+          ..stanceTurns = mech.every;
+      }
+      final add = catalog.enemies[mech.addType];
+      if (add != null) {
+        final n = party.length == 1 ? mech.soloAdds : mech.adds;
+        for (var k = 0; k < n; k++) {
+          final hp = jsRound(add.hp * mult);
+          enemies.add(Combatant(
+            id: 'e${enemies.length}',
+            name: add.name,
+            isPlayer: false,
+            hp: hp,
+            maxHp: hp,
+            speed: add.speed,
+            attack: add.attack,
+            critChance: 0,
+            enemyType: add.id,
+          ));
+        }
+      }
+    }
+
     final players = <Combatant>[];
     for (final m in party) {
       final c = _playerCombatant(m);
@@ -375,6 +404,9 @@ class _Action {
   /// primarios (ataque 1.0, habilidad física 1.3, mágica 0.8, ULT 2.0,
   /// dúo 1.5).
   double breakFactor = BattleEngine.breakAttack;
+
+  /// Dúo (la postura del Caballero Hueco no lo bloquea).
+  bool dual = false;
 }
 
 /// Un paso del motor sobre una copia del estado. Equivale al contexto
@@ -403,6 +435,9 @@ class _Turn {
   /// contar en el próximo turno del grupo).
   final _brokenNow = <String>{};
 
+  /// Enemigos cuya postura ya bloqueó en este paso (un evento por paso).
+  final _resisted = <String>{};
+
   BattleStep get result => BattleStep(state, List.unmodifiable(events));
 
   double _rand() => engine._random();
@@ -424,7 +459,11 @@ class _Turn {
     if (state.ended) return;
     Combatant? best;
     for (final c in [...state.party, ...state.enemies]) {
-      if (c.alive && (best == null || c.nextTurn < best.nextTurn)) best = c;
+      if (c.alive &&
+          !_passive(c) &&
+          (best == null || c.nextTurn < best.nextTurn)) {
+        best = c;
+      }
     }
     if (best == null) return;
 
@@ -449,6 +488,20 @@ class _Turn {
       final t = '${best.name} está QUEBRADO y pierde su turno';
       text = text == null ? t : '$text · $t';
     }
+    var struggle = false;
+    if (!skip && best.alive && best.isPlayer && best.webbed) {
+      // Telaraña de la Matriarca: pierde el turno (solo: medio turno).
+      best.webbed = false;
+      skip = true;
+      struggle = !_aliveParty.any((q) => q != best);
+      events.add(BossMechanicEvent(best.id,
+          struggle ? BossMechanicPhase.webStruggle : BossMechanicPhase.webSkip,
+          targetId: best.id));
+      final t = struggle
+          ? '${best.name} forcejea con la telaraña y pierde medio turno'
+          : '${best.name} está atrapado en la telaraña y pierde su turno';
+      text = text == null ? t : '$text · $t';
+    }
     if (text != null) state.log = text;
     // Regeneración del arma (afijo `del Renacer`, loot.md § 12).
     if (best.alive && best.isPlayer && best.regenPerTurn > 0 &&
@@ -463,7 +516,8 @@ class _Turn {
     if (!best.alive || skip) {
       if (skip) {
         tickEffects(best);
-        best.nextTurn = state.clock + _iv(best);
+        best.nextTurn = state.clock +
+            _iv(best) * (struggle ? kBossMechanics['telarana']!.soloValue : 1);
       }
       state.currentId = null;
       _checkEnd();
@@ -841,6 +895,20 @@ class _Turn {
       mult *= 1 + BattleEngine.vulnerableBonus;
       mods.add('× ${fm(1 + BattleEngine.vulnerableBonus)} QUIEBRE');
     }
+    final armor = engine.catalog.enemies[e.enemyType]?.armor ?? 0;
+    if (armor > 0) {
+      mult *= 1 - armor;
+      mods.add('× ${fm(1 - armor)} armadura');
+    }
+    final res = primary ? _stanceResist(e) : 0.0;
+    if (res > 0) {
+      mult *= 1 - res;
+      mods.add('× ${fm(1 - res)} POSTURA');
+      if (_resisted.add(e.id)) {
+        events.add(
+            BossMechanicEvent(e.id, BossMechanicPhase.resisted, value: res));
+      }
+    }
     final crit = _rand() < chance;
     final dmg = math.max(1, jsRound(base * (crit ? cm : 1) * mult));
     final breakBonus = a == null ? 0.0 : _breakBonus(a, e);
@@ -897,6 +965,7 @@ class _Turn {
   void _knockedOut(Combatant c) {
     events.add(KnockedOutEvent(c.id));
     if (c.isPlayer) return;
+    _mechanicDeath(c);
     _act?.killed = true;
     for (final p in state.party) {
       if (!p.alive) continue;
@@ -1320,6 +1389,20 @@ class _Turn {
     final ult = engine.catalog.enemyUlts[e.ultId];
     _notes.add('¡QUIEBRE! ${e.name}: pierde su turno, +50% de daño'
         '${cancelled && ult != null ? ' · ${ult.name} cancelada' : ''}');
+    // Sierpe: el quiebre rompe uno de sus cristales.
+    final m = _mechanicOf(e);
+    if (m != null && m.addType != null) {
+      final crystal =
+          state.enemies.where((c) => c.alive && c.enemyType == m.addType);
+      if (crystal.isNotEmpty) {
+        final c = crystal.first;
+        c.hp = 0;
+        events.add(
+            BossMechanicEvent(e.id, BossMechanicPhase.shatter, targetId: c.id));
+        _notes.add('el quiebre rompe un ${c.name}');
+        _knockedOut(c);
+      }
+    }
   }
 
   /// Al empezar su turno, la barra baja 10% del umbral (si no está
@@ -1362,6 +1445,8 @@ class _Turn {
   void enemyAct(Combatant e) {
     final alive = _aliveParty.toList();
     if (alive.isEmpty) return;
+    final mech = _mechanicOf(e);
+    if (mech != null) _mechanicTurn(e, mech);
     final ult = engine.catalog.enemyUlts[e.ultId];
     if (ult != null) {
       if (e.ultPending) {
@@ -1371,13 +1456,20 @@ class _Turn {
       if (e.ult >= 100) {
         e.ultPending = true;
         events.add(EnemyUltWarningEvent(e.id, ult.id, ult.name));
-        state.log = '¡El ${e.name} se prepara para ${ult.name}! · '
-            'Quiébralo, defiéndete o protégete';
+        final fem = engine.catalog.enemies[e.enemyType]?.feminine ?? false;
+        state.log = '¡${fem ? 'La' : 'El'} ${e.name} se prepara para '
+            '${ult.name}! · Quiébralo, defiéndete o protégete';
         return;
       }
       e.ult = math.min(100, e.ult + BattleEngine.enemyUltPerTurn);
     }
     e.actions++;
+    if (mech != null &&
+        mech.kind == BossMechanicKind.web &&
+        e.actions % mech.every == 0 &&
+        _castWeb(e, mech, alive)) {
+      return;
+    }
 
     final taunter = alive.where((p) => p.taunt > 0).firstOrNull;
     final pick0 = taunter ?? alive[(_rand() * alive.length).floor()];
@@ -1445,13 +1537,13 @@ class _Turn {
     } else if (e.boss && e.actions % 4 == 0) {
       final h = _hurt(pick, atk * 1.6, e.critChance, e.pierce, from: e);
       guarded(pick, pick0);
-      if (inf != null) _addStatus(pick, inf);
+      final got = inf != null && _addStatus(pick, inf);
       state.log = '${e.name} · Golpe Brutal → ${pick.name}: ${h.damage} = '
-          '${detail(h, 1.6, pick)}${infText(pick)}$tauntText$protText';
+          '${detail(h, 1.6, pick)}${got ? infText(pick) : ''}$tauntText$protText';
     } else {
       final h = _hurt(pick, atk.toDouble(), e.critChance, e.pierce, from: e);
       guarded(pick, pick0);
-      if (inf != null) _addStatus(pick, inf);
+      final got = inf != null && _addStatus(pick, inf);
       final explain = h.critical ||
           pick.defending ||
           h.pierce > 1 ||
@@ -1459,7 +1551,7 @@ class _Turn {
           atkMod != 0;
       state.log = '${e.name} → ${pick.name}: ${h.damage}'
           '${explain ? ' = ${detail(h, 1, pick)}' : ''}'
-          '${infText(pick)}$tauntText$protText';
+          '${got ? infText(pick) : ''}$tauntText$protText';
     }
   }
 
@@ -1526,6 +1618,7 @@ class _Turn {
         }
       }
     }
+    final extra = _ultExtra(e, ult);
     final st = ult.status;
     state.log = '${e.name} · ULT ${ult.name} '
         '(${ult.allTargets ? 'todos, ' : ''}$atkText × ${fm(ult.power)}'
@@ -1533,7 +1626,198 @@ class _Turn {
         '${parts.join(', ')}'
         '${st != null ? _statusText(st) : ''}'
         '${ult.delayAll > 0 ? ' · retrasa a todos' : ''}'
-        '${ult.wipeBuffs ? ' · borra los buffs del grupo' : ''}';
+        '${ult.wipeBuffs ? ' · borra los buffs del grupo' : ''}'
+        '$extra';
+  }
+
+  // ---------------- mecánicas de jefe (docs/specs/bosses.md § "v0.2") ----
+
+  /// Invocación que no actúa (cristales).
+  bool _passive(Combatant c) =>
+      !c.isPlayer && (engine.catalog.enemies[c.enemyType]?.passive ?? false);
+
+  BossMechanicDef? _mechanicOf(Combatant e) =>
+      e.isPlayer ? null : bossMechanicOf(engine.catalog.enemies[e.enemyType]);
+
+  /// Quedan invocaciones vivas del tipo [type].
+  bool _addsAlive(String type) =>
+      state.enemies.any((c) => c.alive && c.enemyType == type);
+
+  /// Fracción del golpe que bloquea la postura de [e] (0 si no aplica):
+  /// escudo → físico (ataque, habilidad o ULT física), espada → mágico.
+  /// Quebrado no bloquea; el dúo y los secundarios tampoco.
+  double _stanceResist(Combatant e) {
+    if (e.stance == 0 || e.broken) return 0;
+    final act = _act;
+    if (act == null || act.dual) return 0;
+    final sk = act.skill;
+    final physical = sk == null || sk.kind == SkillKind.physical;
+    if ((e.stance == 1) != physical) return 0;
+    final m = _mechanicOf(e);
+    if (m == null) return 0;
+    return _aliveParty.length == 1 ? m.soloValue : m.value;
+  }
+
+  /// Al empezar el turno del jefe: Campo Helado o cambio de postura.
+  void _mechanicTurn(Combatant e, BossMechanicDef m) {
+    switch (m.kind) {
+      case BossMechanicKind.frost:
+        if (m.addType != null && _addsAlive(m.addType!)) _frost(e, m);
+      case BossMechanicKind.stance:
+        e.stanceTurns--;
+        if (e.stanceTurns <= 0) _shiftStance(e, m);
+      case BossMechanicKind.web:
+        break;
+    }
+  }
+
+  void _shiftStance(Combatant e, BossMechanicDef m) {
+    e
+      ..stance = e.stance == 1 ? 2 : 1
+      ..stanceTurns = m.every;
+    events.add(BossMechanicEvent(e.id, BossMechanicPhase.stanceShift,
+        value: e.stance.toDouble()));
+    _notes.add('${e.name} cambia a postura de ${stanceName(e.stance)} '
+        '(−${_pct(m.value)} daño ${e.stance == 1 ? 'físico' : 'mágico'})');
+  }
+
+  /// −[BossMechanicDef.value] de velocidad a todo el grupo (tope `cap`).
+  void _frost(Combatant e, BossMechanicDef m) {
+    var total = 0.0;
+    for (final p in _aliveParty) {
+      final old = p.effectFrom(m.id, BuffStat.speed);
+      final v = math.max(-m.cap, (old?.value ?? 0) - m.value);
+      p.effects = [
+        for (final fx in p.effects)
+          if (!(fx.sourceId == m.id && fx.stat == BuffStat.speed)) fx,
+        TimedEffect(
+            sourceId: m.id,
+            stat: BuffStat.speed,
+            value: _r2(v),
+            turns: 99,
+            ownerId: e.id),
+      ];
+      total = math.max(total, _r2(-v));
+    }
+    events.add(BossMechanicEvent(e.id, BossMechanicPhase.frost, value: total));
+    _notes.add('${m.name}: el grupo pierde ${_pct(m.value)} de velocidad '
+        '(−${_pct(total)}) · rompé los cristales');
+  }
+
+  static double _r2(double v) => (v * 100).round() / 100;
+
+  /// Se fue la escarcha: el grupo recupera la velocidad.
+  void _thaw(Combatant boss, BossMechanicDef m) {
+    for (final p in state.party) {
+      p.effects = [
+        for (final fx in p.effects)
+          if (fx.sourceId != m.id) fx,
+      ];
+    }
+    events.add(BossMechanicEvent(boss.id, BossMechanicPhase.thaw));
+    _notes.add('¡Cristales rotos! El campo se descongela');
+  }
+
+  /// Murió [c]: si es un jefe, sus invocaciones caen con él; si era la
+  /// última invocación, se termina su efecto.
+  void _mechanicDeath(Combatant c) {
+    final m = _mechanicOf(c);
+    if (m != null && m.addType != null) {
+      for (final a in state.enemies) {
+        if (a.alive && a.enemyType == m.addType) {
+          a.hp = 0;
+          events.add(KnockedOutEvent(a.id));
+        }
+      }
+      if (state.party.any((p) => p.effectFrom(m.id, BuffStat.speed) != null)) {
+        _thaw(c, m);
+      }
+      return;
+    }
+    if (!_passive(c) || _addsAlive(c.enemyType!)) return;
+    for (final b in state.enemies) {
+      final bm = _mechanicOf(b);
+      if (b.alive && bm != null && bm.addType == c.enemyType) {
+        _thaw(b, bm);
+        return;
+      }
+    }
+  }
+
+  /// Golpe que teje la telaraña: ATQ × `value` a un jugador no atrapado
+  /// (el provocador si hay). `false` si todos están atrapados.
+  bool _castWeb(Combatant e, BossMechanicDef m, List<Combatant> alive) {
+    final free = alive.where((p) => !p.webbed).toList();
+    if (free.isEmpty) return false;
+    final taunter = free.where((p) => p.taunt > 0).firstOrNull;
+    final p = taunter ?? free[(_rand() * free.length).floor()];
+    if (taunter != null) taunter.taunt--;
+    events.add(ActionEvent(e.id, BattleActionKind.enemyAttack, targetId: p.id));
+    final atkMod = e.effectTotal(BuffStat.attack);
+    final atk =
+        atkMod == 0 ? e.attack : math.max(1, jsRound(e.attack * (1 + atkMod)));
+    final h = _hurt(p, atk * m.value, e.critChance, e.pierce, from: e);
+    var log = '${e.name} · ${m.name} → ${p.name}: ${h.damage}';
+    if (p.alive) {
+      p.webbed = true;
+      events.add(
+          BossMechanicEvent(e.id, BossMechanicPhase.webCast, targetId: p.id));
+      log += _aliveParty.length > 1
+          ? ' · ¡atrapado! Pierde su próximo turno si nadie lo libera '
+              '(Atacar sobre él)'
+          : ' · ¡atrapado! Forcejeará medio turno';
+    }
+    state.log = log;
+    return true;
+  }
+
+  /// [p] libera a [ally] de la telaraña: cuesta medio turno.
+  bool _freeAlly(Combatant p, Combatant ally) {
+    if (ally == p || !ally.alive || !ally.webbed) return false;
+    ally.webbed = false;
+    _act = null;
+    _attacker = null;
+    events.add(ActionEvent(p.id, BattleActionKind.attack, targetId: ally.id));
+    events.add(BossMechanicEvent(p.id, BossMechanicPhase.webFreed,
+        targetId: ally.id));
+    state.log = '${p.name} corta la telaraña: ¡${ally.name} queda libre! '
+        '(medio turno)';
+    tickEffects(p);
+    p.nextTurn = state.clock + _iv(p) * 0.5;
+    endTurn();
+    return true;
+  }
+
+  /// Efecto extra de la ULT de un jefe; devuelve el texto del log.
+  String _ultExtra(Combatant e, EnemyUltDef ult) {
+    final m = _mechanicOf(e);
+    switch (ult.extra) {
+      case EnemyUltExtra.none:
+        return '';
+      case EnemyUltExtra.web:
+        final free = _aliveParty.where((p) => !p.webbed).toList();
+        if (_aliveParty.length < 2 || free.isEmpty) return '';
+        final p = _lowest(free, (c) => -c.hp.toDouble())!;
+        p.webbed = true;
+        events.add(
+            BossMechanicEvent(e.id, BossMechanicPhase.webCast, targetId: p.id));
+        return ' · ${p.name} queda atrapado en la telaraña';
+      case EnemyUltExtra.reformCrystals:
+        if (m == null || m.addType == null) return '';
+        var n = 0;
+        for (final c in state.enemies) {
+          if (c.alive || c.enemyType != m.addType) continue;
+          c.hp = c.maxHp;
+          n++;
+          events.add(BossMechanicEvent(e.id, BossMechanicPhase.reform,
+              targetId: c.id));
+        }
+        return n == 0 ? '' : ' · se forman $n cristal${n == 1 ? '' : 'es'}';
+      case EnemyUltExtra.stanceShift:
+        if (m == null || e.stance == 0) return '';
+        _shiftStance(e, m);
+        return '';
+    }
   }
 
   // ---------------- jugadores ----------------
@@ -1542,6 +1826,12 @@ class _Turn {
   bool command(Combatant p, BattleCommand cmd) {
     final foes = state.enemies.where((e) => e.alive).toList();
     if (foes.isEmpty) return false;
+    if (cmd is AttackCommand) {
+      // Atacar a un aliado atrapado = liberarlo de la telaraña.
+      final ally =
+          state.party.where((q) => q.id == cmd.targetId).firstOrNull;
+      if (ally != null) return _freeAlly(p, ally);
+    }
     final targetId = switch (cmd) {
       AttackCommand(:final targetId) => targetId,
       SkillCommand(:final targetId) => targetId,
@@ -1600,7 +1890,9 @@ class _Turn {
         _useSkill(p, sk, foes, target, ultimate: true);
         _fire(ProcTrigger.onSkill, p);
       case DualCommand(:final partnerId):
-        act.breakFactor = BattleEngine.breakDual;
+        act
+          ..breakFactor = BattleEngine.breakDual
+          ..dual = true;
         if (!_dual(p, partnerId, foes)) return false;
       case ItemCommand(:final item, :final targetPlayerId):
         final ok = item == BattleItem.ether
@@ -1933,3 +2225,7 @@ class _Turn {
     return true;
   }
 }
+
+/// Nombre de la postura del Caballero Hueco (`Combatant.stance`).
+String stanceName(int stance) =>
+    stance == 1 ? 'ESCUDO' : stance == 2 ? 'ESPADA' : '—';

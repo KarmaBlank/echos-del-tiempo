@@ -14,6 +14,7 @@ import '../models/mission_def.dart';
 import '../models/player_profile.dart';
 import '../models/session_action.dart';
 import '../models/session_event.dart';
+import '../models/zone_def.dart';
 import 'battle_engine.dart';
 import 'inventory_rules.dart';
 import 'js_math.dart';
@@ -23,6 +24,7 @@ import 'map_generator.dart';
 import 'mulberry32.dart';
 import 'progression_rules.dart';
 import 'world_rules.dart';
+import 'zone_rules.dart';
 
 /// Genera la semilla de cada misión (`(Math.random() * 1e9) | 0`).
 typedef SeedSource = int Function();
@@ -99,14 +101,16 @@ class SessionEngine {
   static const turnLimit = 30.0; // TURN_LIMIT
   static const resultSeconds = 25.0;
 
+  /// Tocar la escalera de bajada (a menos de esto, px) baja al grupo.
+  static const stairsTouch = 10.0;
+
   /// Distancia para levantar con E (`PickUpAction`).
   static const pickReach = 24.0;
 
   /// Tope de objetos en el piso (se pierden los más viejos).
   static const maxGround = 80;
 
-  final Map<int, GameMap> _maps = {};
-  GameMap? _lobby;
+  final Map<String, GameMap> _maps = {};
 
   // ------------------------------------------------------------------
   // API pública
@@ -116,17 +120,25 @@ class SessionEngine {
   GameSession create() => GameSession();
 
   /// El mapa donde está la sesión (`mapFor`): el de la misión si hay
-  /// una en curso, si no el lobby. Determinístico por semilla.
+  /// una en curso (el atlas de pisos en misiones de zona), si no el mapa
+  /// del mundo con el pueblo. Determinístico por semilla.
   GameMap mapFor(GameSession s) {
     final m = s.mission;
     if (m == null || s.mode == SessionMode.lobby) {
-      return _lobby ??= MapGenerator.lobby();
+      return MapGenerator.overworld();
     }
     return _missionMap(catalog.mission(m.missionId)!, m.seed);
   }
 
-  GameMap _missionMap(MissionDef def, int seed) =>
-      _maps[seed] ??= MapGenerator.generate(def, seed);
+  GameMap _missionMap(MissionDef def, int seed) {
+    final key = '${def.id}:$seed';
+    final hit = _maps[key];
+    if (hit != null) return hit;
+    if (_maps.length > 8) _maps.clear();
+    return _maps[key] = def.zone == 0
+        ? MapGenerator.generate(def, seed)
+        : MapGenerator.zone(catalog.zone(def.zone)!, seed);
+  }
 
   /// `addPlayer`: entra un jugador con su perfil (se valida con
   /// `ProgressionRules.normalize`). `null` si la sala está llena o el id
@@ -205,9 +217,14 @@ class _Op {
   // ---------------- jugadores ----------------
 
   WorldPoint spawnPos(int i) {
-    final sp = e.mapFor(s).spawn;
-    return WorldPoint(sp.x + (i % 2) * 14 - 7, sp.y + (i ~/ 2) * 14 - 7);
+    final map = e.mapFor(s);
+    final m = s.mission;
+    final f = m == null ? null : map.floor(m.floor);
+    return _around(f?.spawn ?? map.spawn, i);
   }
+
+  static WorldPoint _around(WorldPoint sp, int i) =>
+      WorldPoint(sp.x + (i % 2) * 14 - 7, sp.y + (i ~/ 2) * 14 - 7);
 
   /// `stats(p)`: recalcula máximos. Con [gain], la vida y el maná actuales
   /// suben lo que subió el máximo; siempre se recortan al máximo nuevo.
@@ -285,7 +302,10 @@ class _Op {
 
       case ProposeMissionAction():
         final m = catalog.mission(a.missionId);
-        if (s.mode != SessionMode.lobby || s.vote != null || m == null) {
+        if (s.mode != SessionMode.lobby ||
+            s.vote != null ||
+            m == null ||
+            !ZoneRules.canPropose(catalog, p.profile, m.id)) {
           return false;
         }
         s.vote = MissionVote(m.id, p.name, {p.id});
@@ -435,6 +455,9 @@ class _Op {
         if (s.mode != SessionMode.result) return false;
         toLobby();
         return true;
+
+      case UseStairsAction():
+        return _useStairs(p, a.down);
     }
   }
 
@@ -481,6 +504,8 @@ class _Op {
         CraftOp.addAffix => 'Cristal de Era: afijo nuevo',
         CraftOp.reroll => 'Esquirla del Eco: valores nuevos',
         CraftOp.upgradeRarity => 'Prisma Roto: rareza mejorada',
+        CraftOp.reforge => 'base reforjada',
+        _ => 'desarmada / vendida', // destruyen: sin `after`, no se anuncia
       };
 
   /// `GiveItemAction`: fuera de batalla, a otro jugador de la sala con
@@ -591,9 +616,9 @@ class _Op {
   /// en ([x], [y]) o, sin posición, donde está cada uno. Devuelve la
   /// primera arma de cada uno (para los resultados).
   Map<String, LootDrop> _lootAll(LootSource src, double? x, double? y,
-      {double? chance, double extraBonus = 0}) {
+      {double? chance, double extraBonus = 0, int? level}) {
     final firsts = <String, LootDrop>{};
-    final zone = s.mission?.zoneLevel ?? 1;
+    final zone = level ?? s.mission?.zoneLevel ?? 1;
     for (final p in players) {
       final drops = rules.loot.rollDrops(_rand,
           zoneLevel: zone,
@@ -640,6 +665,56 @@ class _Op {
     say('${p.name} activó un sello (${o?.count ?? 0}/2)');
     updateOpen();
     return true;
+  }
+
+  // ---------------- pisos (worldgen.md § 6.7) ----------------
+
+  bool _useStairs(SessionPlayer p, bool down) {
+    final m = s.mission;
+    if (s.mode != SessionMode.field || m == null || !p.alive) return false;
+    final f = e.mapFor(s).floor(m.floor);
+    final at = f == null ? null : (down ? f.stairsDown : f.stairsUp);
+    if (at == null ||
+        _dist(p.x, p.y, at.x, at.y) >= WorldRules.stairsRange) {
+      return false;
+    }
+    changeFloor(m.floor + (down ? 1 : -1), down: down);
+    return true;
+  }
+
+  /// Todo el grupo pasa al piso [to].
+  void changeFloor(int to, {required bool down}) {
+    final m = s.mission!;
+    final f = e.mapFor(s).floor(to);
+    if (f == null) return;
+    m.floor = to;
+    if (to < m.levels.length) m.zoneLevel = m.levels[to];
+    final base = down ? f.spawn : (f.returnPoint ?? f.spawn);
+    var i = 0;
+    for (final p in players) {
+      final pos = _around(base, i++);
+      p
+        ..x = pos.x
+        ..y = pos.y
+        ..epoch += 1
+        ..moving = false;
+      if (p.hp <= 0) p.hp = 1;
+    }
+    s.graceUntil = s.time + SessionEngine.missionStartGrace;
+    events.add(FloorChangedEvent(to, down: down));
+    final verb = down ? 'Bajaron' : 'Subieron';
+    final boss = to == m.floors - 1 ? ' El jefe espera tras la barrera.' : '';
+    say('$verb al piso ${to + 1}/${m.floors}.$boss');
+  }
+
+  /// Nivel de los enemigos de [en] (0 = misión sin zona).
+  int _levelFor(FieldEnemy en) {
+    final m = s.mission;
+    final z = m == null || m.zone == 0 ? null : catalog.zone(m.zone);
+    if (z == null) return 0;
+    if (en.boss) return ZoneRules.bossLevel(z);
+    if (en.elite) return ZoneRules.eliteLevel(z, en.floor);
+    return ZoneRules.floorLevel(z, en.floor);
   }
 
   MissionObjective? _bump(ObjectiveKind k) {
@@ -713,6 +788,11 @@ class _Op {
     s.vote = null;
     final m = catalog.mission(missionId);
     if (m == null) return;
+    final z = m.zone == 0 ? null : catalog.zone(m.zone);
+    if (z != null) {
+      _startZoneMission(m, z);
+      return;
+    }
     final seed = e._seeds();
     final map = e._missionMap(m, seed);
     final r = mulberry32(seed + 7);
@@ -828,6 +908,183 @@ class _Op {
       items: items,
       zoneLevel: LootRules.zoneLevel(m, [for (final p in players) p.profile.level]),
     );
+    _enterField(m, seed);
+  }
+
+  /// `startMission` de una misión de zona: todos los pisos del atlas se
+  /// pueblan al empezar (worldgen.md § 6.7).
+  void _startZoneMission(MissionDef m, ZoneDef z) {
+    final seed = e._seeds();
+    final map = e._missionMap(m, seed);
+    final r = mulberry32(seed + 7);
+    int pick(int n) => (r() * n).floor();
+    bool solid(int tx, int ty) => WorldRules.isSolid(map, tx, ty);
+    List<String> res(List<String> g) => ZoneRules.resolveGroup(g, catalog);
+    WorldPoint px((int, int) t) => WorldPoint(t.$1 * 16 + 8.0, t.$2 * 16 + 8.0);
+
+    final enemies = <FieldEnemy>[];
+    final goals = <int>[];
+    var id = 0;
+    for (final fl in map.floors) {
+      final spots = fl.spots;
+      final groups = m.groupsFor(fl.index);
+      var placed = 0;
+      for (var i = 0; i < m.floorGoal + 3; i++) {
+        for (var tries = 0; tries < 90; tries++) {
+          if (spots.isEmpty) break;
+          final (tx, ty) = spots[pick(spots.length)];
+          final x = tx * 16 + 8.0, y = ty * 16 + 8.0;
+          final minD = tries < 40
+              ? 96
+              : tries < 70
+                  ? 64
+                  : 40;
+          if (!solid(tx, ty) &&
+              !solid(tx, ty + 1) &&
+              !solid(tx + 1, ty) &&
+              !solid(tx - 1, ty) &&
+              !enemies.any((o) => _dist(o.x, o.y, x, y) < minD)) {
+            enemies.add(FieldEnemy(
+              id: id++,
+              x: x,
+              y: y,
+              homeX: x,
+              homeY: y,
+              group: res(groups[pick(groups.length)]),
+              floor: fl.index,
+            ));
+            placed++;
+            break;
+          }
+        }
+      }
+      goals.add(math.min(m.floorGoal, placed));
+    }
+    final last = map.floors.last;
+    final boss = last.boss!;
+    enemies.add(FieldEnemy(
+      id: id++,
+      x: boss.x,
+      y: boss.y,
+      homeX: boss.x,
+      homeY: boss.y,
+      group: res(m.boss),
+      boss: true,
+      floor: last.index,
+    ));
+
+    final pool = ['frag', 'seal', 'elite'];
+    final extras = <String>[];
+    while (extras.length < m.extra) {
+      extras.add(pool.removeAt(pick(pool.length)));
+    }
+
+    final items = <MissionItem>[];
+    WorldPoint freeSpot(MapFloor fl, double minD) {
+      final spots =
+          fl.spots.isEmpty ? [(fl.bounds.cx, fl.bounds.cy)] : fl.spots;
+      final sp = fl.spawn;
+      for (var t = 0; t < 200; t++) {
+        final q = px(spots[pick(spots.length)]);
+        if (solid((q.x / 16).floor(), (q.y / 16).floor()) ||
+            _dist(q.x, q.y, sp.x, sp.y) < 120) {
+          continue;
+        }
+        if (items.any((it) => _dist(it.x, it.y, q.x, q.y) < minD) ||
+            enemies.any((o) => _dist(o.x, o.y, q.x, q.y) < 40)) {
+          continue;
+        }
+        return q;
+      }
+      return px(spots[pick(spots.length)]);
+    }
+
+    var iid = 0;
+    void place(MissionItemKind k, int n, double minD) {
+      for (var i = 0; i < n; i++) {
+        final fl = map.floors[i % map.floors.length];
+        final q = freeSpot(fl, minD);
+        items.add(
+            MissionItem(id: iid++, kind: k, x: q.x, y: q.y, floor: fl.index));
+      }
+    }
+
+    final goal = goals.fold(0, (a, b) => a + b);
+    final objectives = [MissionObjective(ObjectiveKind.kills, goal)];
+    if (extras.contains('frag')) {
+      place(MissionItemKind.fragment, 3, 90);
+      objectives.add(MissionObjective(ObjectiveKind.fragments, 3));
+    }
+    if (extras.contains('seal')) {
+      place(MissionItemKind.seal, 2, 140);
+      objectives.add(MissionObjective(ObjectiveKind.seals, 2));
+    }
+    // Élites: uno opcional por piso (en la marca `e` de un vault si hay)
+    // y otro en el último piso si salió el objetivo `elite`.
+    void elite(MapFloor fl, int mark) {
+      final q = mark < fl.eliteMarks.length
+          ? px(fl.eliteMarks[mark])
+          : freeSpot(fl, 80);
+      final groups = m.groupsFor(fl.index);
+      enemies.add(FieldEnemy(
+        id: id++,
+        x: q.x,
+        y: q.y,
+        homeX: q.x,
+        homeY: q.y,
+        group: res([m.elite, groups[pick(groups.length)].first]),
+        elite: true,
+        floor: fl.index,
+      ));
+    }
+
+    for (final fl in map.floors) {
+      elite(fl, 0);
+    }
+    if (extras.contains('elite')) {
+      elite(last, 1);
+      objectives.add(MissionObjective(ObjectiveKind.elite, 1));
+    }
+    for (final fl in map.floors) {
+      for (final c in fl.chestMarks) {
+        final q = px(c);
+        items.add(MissionItem(
+            id: iid++,
+            kind: MissionItemKind.chest,
+            x: q.x,
+            y: q.y,
+            floor: fl.index));
+      }
+      final n = 1 + pick(2);
+      for (var i = 0; i < n; i++) {
+        final q = freeSpot(fl, 70);
+        items.add(MissionItem(
+            id: iid++,
+            kind: MissionItemKind.chest,
+            x: q.x,
+            y: q.y,
+            floor: fl.index));
+      }
+    }
+
+    s.mission = MissionRun(
+      missionId: m.id,
+      seed: seed,
+      goal: goal,
+      objectives: objectives,
+      enemies: enemies,
+      items: items,
+      zoneLevel: map.floors.first.level,
+      zone: z.index,
+      floors: map.floors.length,
+      floorGoals: goals,
+      levels: [for (final fl in map.floors) fl.level],
+    );
+    _enterField(m, seed);
+  }
+
+  /// Fin común de `startMission`: jugadores al spawn, gracia y avisos.
+  void _enterField(MissionDef m, int seed) {
     s.ground.clear();
     s.mode = SessionMode.field;
     var i = 0;
@@ -846,10 +1103,20 @@ class _Op {
     say('¡Todos listos! Misión: ${m.name} [${m.type}]');
   }
 
-  /// `updateOpen`: abre la barrera cuando se cumplen todos los objetivos.
+  /// `updateOpen`: abre la barrera de cada piso despejado (escalera) y la
+  /// del jefe cuando se cumplen todos los objetivos.
   void updateOpen() {
     final m = s.mission;
-    if (m == null || m.open) return;
+    if (m == null) return;
+    for (var f = 0; f < m.floors - 1; f++) {
+      if (m.opened.contains(f) || !m.floorCleared(f)) continue;
+      m.opened.add(f);
+      events
+        ..add(StairsOpenedEvent(f))
+        ..add(const GateOpenedEvent());
+      say('¡Piso ${f + 1} despejado! Se abrió el paso a la escalera.');
+    }
+    if (m.open) return;
     final k = m.objective(ObjectiveKind.kills);
     if (k != null) k.count = m.kills;
     if (m.objectives.every((o) => o.done)) {
@@ -897,7 +1164,7 @@ class _Op {
     final m = s.mission;
     if (m == null) return;
     for (final en in m.enemies) {
-      if (!en.alive || en.boss) continue;
+      if (!en.alive || en.boss || en.floor != m.floor) continue;
       if (players.any((p) =>
           _dist(p.x, p.y, en.x, en.y) < SessionEngine.calmRange)) {
         en
@@ -919,7 +1186,11 @@ class _Op {
   void fieldTick(double dt) {
     final m = s.mission!;
     for (final it in m.items) {
-      if (it.done || it.kind != MissionItemKind.fragment) continue;
+      if (it.done ||
+          it.kind != MissionItemKind.fragment ||
+          it.floor != m.floor) {
+        continue;
+      }
       final pl = _touching(it.x, it.y, SessionEngine.pickupRange);
       if (pl == null) continue;
       it.done = true;
@@ -928,7 +1199,9 @@ class _Op {
       updateOpen();
     }
     for (final it in m.items) {
-      if (it.done || it.kind != MissionItemKind.chest) continue;
+      if (it.done || it.kind != MissionItemKind.chest || it.floor != m.floor) {
+        continue;
+      }
       final pl = _touching(it.x, it.y, SessionEngine.pickupRange);
       if (pl == null) continue;
       it.done = true;
@@ -937,12 +1210,19 @@ class _Op {
     _autoPickup();
 
     final map = e.mapFor(s);
+    // Escalera de bajada: tocarla baja a todo el grupo.
+    final down = map.floor(m.floor)?.stairsDown;
+    if (down != null &&
+        _touching(down.x, down.y, SessionEngine.stairsTouch) != null) {
+      changeFloor(m.floor + 1, down: true);
+      return;
+    }
     for (final p in players) {
       p.mp = math.min(p.maxMp.toDouble(), p.mp + dt * 0.4);
       p.hp = math.min(p.maxHp.toDouble(), p.hp + p.maxHp * 0.008 * dt);
     }
     for (final en in m.enemies) {
-      if (!en.alive) continue;
+      if (!en.alive || en.floor != m.floor) continue;
       if (!en.boss) _enemyAi(en, map, dt);
       if (s.time > s.graceUntil) {
         final range =
@@ -1012,12 +1292,15 @@ class _Op {
       elite: en.elite,
       triggeredBy: trigger.id,
     );
+    final level = _levelFor(en);
+    ZoneRules.scaleBattle(step.state, level);
     s.battle = SessionBattle(
       id: s.seq,
       state: step.state,
       fieldEnemyId: en.id,
       boss: en.boss,
       elite: en.elite,
+      level: level,
     );
     for (final p in players) {
       p
@@ -1045,8 +1328,23 @@ class _Op {
 
   /// Guarda el paso del motor, cuenta K.O. y detecta el fin.
   void _applyBattleStep(SessionBattle b, BattleStep step) {
+    var evs = step.events;
+    final won = step.state.outcome;
+    if (b.level > 0 && won != null && won.victory && b.endTimer == null) {
+      // XP por nivel de zona (worldgen.md § 6.3).
+      final xp = ZoneRules.battleXp(won.xp, b.level);
+      step.state
+        ..outcome = BattleOutcome(victory: true, xp: xp, credits: won.credits)
+        ..log = '¡Victoria! +$xp XP · +${won.credits} créditos para cada uno';
+      evs = [
+        for (final ev in evs)
+          ev is BattleEndedEvent && ev.victory
+              ? BattleEndedEvent(true, xp, won.credits)
+              : ev,
+      ];
+    }
     b.state = step.state;
-    if (step.events.isNotEmpty) events.add(BattleStepEvent(step.events));
+    if (evs.isNotEmpty) events.add(BattleStepEvent(evs));
     final m = s.mission;
     final partyIds = {for (final c in step.state.party) c.id};
     for (final ev in step.events) {
@@ -1162,24 +1460,25 @@ class _Op {
     final fe = m.enemy(b.fieldEnemyId);
     fe?.alive = false;
     final lx = fe?.x ?? 0, ly = fe?.y ?? 0;
+    final lootLevel = b.level > 0 ? b.level : null;
     if (b.elite) {
       m.elites++;
       _bump(ObjectiveKind.elite);
-      final firsts = _lootAll(LootSource.elite, lx, ly);
+      final firsts = _lootAll(LootSource.elite, lx, ly, level: lootLevel);
       for (final d in firsts.entries) {
         final it = d.value.item!;
         m.eliteDrops.add(WeaponDrop(d.key, it.baseId, rarity: it.rarity));
         events.add(WeaponDropEvent(d.key, it.baseId, 'elite'));
       }
     } else if (b.boss) {
-      _lootAll(LootSource.boss, lx, ly);
+      _lootAll(LootSource.boss, lx, ly, level: lootLevel);
     } else {
       m.kills++;
       final k = m.objective(ObjectiveKind.kills);
       if (k != null) {
         events.add(ObjectiveProgressEvent(ObjectiveKind.kills, m.kills, k.goal));
       }
-      _lootAll(LootSource.battle, lx, ly);
+      _lootAll(LootSource.battle, lx, ly, level: lootLevel);
     }
     updateOpen();
     for (final p in players) {
@@ -1237,12 +1536,30 @@ class _Op {
       p.profile = p.profile.copyWith(credits: p.profile.credits + bonus);
       if (p.hp <= 0) p.hp = 1;
     }
+    final zone = def.zone == 0 ? null : catalog.zone(def.zone);
+    final unlocked = <String, int>{};
     if (ok) {
       final firsts = _lootAll(LootSource.mission, null, null,
-          chance: dropChance[rank] ?? 0, extraBonus: rankBonus[rank] ?? 0);
+          chance: dropChance[rank] ?? 0,
+          extraBonus: rankBonus[rank] ?? 0,
+          level: zone?.maxLevel);
       for (final d in firsts.entries) {
         drops[d.key] = d.value.item!.baseId;
         events.add(WeaponDropEvent(d.key, d.value.item!.baseId, 'mission'));
+      }
+      // Desbloqueo de la zona siguiente (worldgen.md § 6.4).
+      if (zone != null && zone.index < ZoneRules.maxZone) {
+        final next = catalog.zone(zone.index + 1);
+        for (final p in players) {
+          if (ZoneRules.unlockedZone(p.profile) != zone.index) continue;
+          p.profile = p.profile.copyWith(unlockedZone: zone.index + 1);
+          unlocked[p.id] = zone.index + 1;
+          events.add(ZoneUnlockedEvent(p.id, zone.index + 1));
+          if (next != null) {
+            final soon = next.playable ? '' : ' · Próximamente';
+            say('${p.name} desbloqueó ${next.name} (${next.levelText})$soon');
+          }
+        }
       }
     }
     s.seq++;
@@ -1262,6 +1579,8 @@ class _Op {
       eliteDrops: List.unmodifiable(m.eliteDrops),
       drops: Map.unmodifiable(drops),
       timeLeft: SessionEngine.resultSeconds,
+      zone: def.zone,
+      unlocked: Map.unmodifiable(unlocked),
     );
     s
       ..result = result

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../game_engine/data/enemies_catalog.dart';
 import '../../../../game_engine/models/battle_event.dart';
 import '../../../../game_engine/models/battle_state.dart';
 import '../game_sprites.dart';
@@ -40,6 +41,20 @@ class SceneFrame {
 
   /// Segundos del turno del jugador (barra de tiempo); `null` si no espera.
   final double? turnTimeLeft;
+}
+
+/// Cartel de entrada de un jefe (docs/specs/battle_presentation.md
+/// § "Mecánicas de jefe").
+class BossIntro {
+  const BossIntro(this.enemyType, this.name, this.title, this.t0);
+  final String enemyType;
+  final String name;
+  final String title;
+
+  /// Hora de inicio en el reloj de la escena.
+  final double t0;
+
+  static const durationMs = 2600;
 }
 
 /// Un efecto vivo: el [BattleFx] con su hora de alta (`fxSeen`).
@@ -84,6 +99,9 @@ class BattleSceneController extends ChangeNotifier {
   final fx = <LiveFx>[];
   UltCinematic? ult;
 
+  /// Cartel de entrada del jefe de esta batalla (mientras dure).
+  BossIntro? intro;
+
   /// Pasos que llegaron con una cinemática en curso (§ "Nuevos pasos
   /// durante la cinemática").
   final pending = <List<BattleFx>>[];
@@ -112,6 +130,7 @@ class BattleSceneController extends ChangeNotifier {
     pending.clear();
     particles.clear();
     ult = null;
+    intro = null;
     hitStop = 0;
     deathSeen.clear();
     camera = null;
@@ -130,6 +149,11 @@ class BattleSceneController extends ChangeNotifier {
       if (_battleId != null) reset();
       _battleId = battleId;
       _seenSeq = eventSeq;
+      final boss = state.enemies.isEmpty ? null : state.enemies.first;
+      if (state.boss && boss != null) {
+        final d = kEnemies[boss.enemyType];
+        intro = BossIntro(boss.enemyType ?? '', boss.name, d?.title ?? 'Jefe', t);
+      }
       return;
     }
     if (_seenSeq == eventSeq) return;
@@ -222,12 +246,19 @@ class BattleSceneController extends ChangeNotifier {
     _flush();
     if (f != null) _updateCamera(f, dt / 1000);
     fx.removeWhere((e) => e.age(t) > e.fx.durationMs && e.fired);
+    final i = intro;
+    if (i != null && t - i.t0 > BossIntro.durationMs) intro = null;
     notifyListeners();
   }
 
   void _trackDeaths(BattleState s) {
     for (final e in s.enemies) {
-      if (!e.alive) deathSeen.putIfAbsent(e.id, () => t);
+      if (!e.alive) {
+        deathSeen.putIfAbsent(e.id, () => t);
+      } else {
+        // Un cristal que se volvió a formar.
+        deathSeen.remove(e.id);
+      }
     }
   }
 

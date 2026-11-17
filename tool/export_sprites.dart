@@ -5,7 +5,8 @@
 //   dart run tool/export_sprites.dart
 //
 // Es un puerto 1:1 de `HERO`, `SPR`, `shade` y `makeSprite` del prototipo
-// (ver docs/specs/sprites.md). Escribe un PNG por sprite, 1 píxel por
+// (ver docs/specs/sprites.md), más los enemigos de v0.2 dibujados con el
+// mismo pipeline. Escribe un PNG por sprite, 1 píxel por
 // píxel, con un codificador PNG propio (zlib de dart:io + CRC32): sin
 // paquetes externos.
 import 'dart:io';
@@ -21,7 +22,8 @@ const List<String> heroRows = [
   '...LL..LL...', '...LL..LL...', '..DDD..DDD..', '............',
 ];
 
-/// `SPR`: grillas base de enemigos (`X` = color del enemigo).
+/// `SPR`: grillas base de enemigos (`X` = color del enemigo). Las de v0.2
+/// usan además letras propias (ver [enemyExtraPalettes]).
 const Map<String, List<String>> enemyBaseRows = {
   'slime': [
     '................', '......XXXX......', '....XXXXXXXX....',
@@ -49,6 +51,194 @@ const Map<String, List<String>> enemyBaseRows = {
     'XXXXXXXXXXXXXX', 'XXXXXXXXXXXXXX', '.XXXXXXXXXXXX.',
     '.XX.XXX.XXX.X.', '..X..X...X....',
   ],
+
+  // ---- v0.2 (Bosque Hondo / Picos Helados / Ruinas): arte propio, no
+  // está en el prototipo. Mismo pipeline; colores extra en
+  // `enemyExtraPalettes`.
+  // Araña del Bosque Hondo: patas en arco, ojos R, colmillos G.
+  'arana': [
+    '..................',
+    '.........XXXXXX...',
+    '........XXXAXAXX..',
+    '.......XXXXXAXXXX.',
+    '..D....XXXXXAXXXX.',
+    '.D.D...XXXXAXAXXX.',
+    '.D..DXXXXXXXXXXXX.',
+    'D...RXRXXXXXXXXXD.',
+    '..DRXRXXXXXXXXX.D.',
+    '.D..XXXXXX...DD.D.',
+    '.D...XXXXDDD..D..D',
+    'D...GDG.....D..D.D',
+    'D..DG.......D..D.D',
+  ],
+  // Lobo de perfil mirando a la izquierda: orejas, cola, colmillos W, ojo E.
+  'lobo': [
+    '...X.X............',
+    '...XXXX...........',
+    '..XXEXXX.........X',
+    'XXXXXXXXX.......XX',
+    'OXXXXXXXXXXXXXXXX.',
+    '.WLWLXXXXXXXXXXXX.',
+    '...LLLXXXXXXXXXX..',
+    '....LXXXXXXXXXXX..',
+    '....XXDDX..XXDDX..',
+    '....XX.DD..XX.DD..',
+    '....XX.DD..XX.DD..',
+    '...XX..DD.XX..DD..',
+  ],
+  // Murciélago de hielo: puntas L escarchadas, colmillos de carámbano W.
+  'murcielagoHielo': [
+    'L................L',
+    'LL......DD......LL',
+    'LXX....DDDD....XXL',
+    '.XXX..DDDDDD..XXX.',
+    '.XXXXXDEDDEDXXXXX.',
+    '.XXXXXDDDDDDXXXXX.',
+    '..XXXXXDDDDXXXXX..',
+    '..XLXXXWDDWXXXLX..',
+    '...L.LX.W..W.XL.L.',
+    '.....L.......L....',
+  ],
+  // Elemental de escarcha: cuerpo de cristal macizo, núcleo W/A.
+  'elementalEscarcha': [
+    '..L....LL....L..',
+    '.LL..XXXXXX..LL.',
+    '.LXL.XWXXWX.LXL.',
+    'LXXXLXXXXXXLXXXL',
+    'LXXXXDXXXXDXXXXL',
+    'XXXX.XXAAXX.XXXX',
+    'XXXX.XAWWAX.XXXX',
+    'DXXD.XAWWAX.DXXD',
+    'DXXD.XXAAXX.DXXD',
+    '.DD..XXXXXX..DD.',
+    '.DD..DXXXXD..DD.',
+    '....XXX..XXX....',
+    '....XXX..XXX....',
+    '...DXXD..DXXD...',
+    '...DDDD..DDDD...',
+  ],
+  // Esqueleto guerrero: cuencas O con pupila R, espada oxidada S/T.
+  'esqueleto': [
+    '..S..XXXX......',
+    '..S.XXXXXX.....',
+    '..T.OOXOOX.....',
+    '..S.ORXORX.....',
+    '..S..XDXDX.....',
+    '..T...XX.......',
+    '..S.XXXXXXX....',
+    '..SXXDXDXDXX...',
+    '..SX.XDXDX.X...',
+    '.HHHXXDXDX..X..',
+    '..H...XXX...X..',
+    '..H..XX.XX.....',
+    '.....X...X.....',
+    '.....D...D.....',
+    '.....X...X.....',
+    '....XX...XX....',
+  ],
+  // Caballero caído: escudo torre D/L, visor G, capa rota P.
+  'caballeroCaido': [
+    '......XXXX......',
+    '.....XXXXXX.....',
+    '.....GGGXXX.....',
+    '.....XXXXXX.....',
+    '..LLLLXXXXXXPP..',
+    '.LDDDDLXXXXXPPP.',
+    '.LDDDDLXXXXXXPP.',
+    '.LDLLDLXXXXXXPPP',
+    '.LDLLDLDXXDXXPP.',
+    '.LDDDDLXXXXXXPPP',
+    '.LDDDDLXXXDX.P.P',
+    '.LDDDDLXX.XX.P..',
+    '..LDDL.XX.XX....',
+    '...LL..XX.XX....',
+    '......XXX.XXX...',
+  ],
+  // Cristal de hielo (add): esquirla facetada con núcleo W.
+  'cristalHielo': [
+    '....L....',
+    '...LXD...',
+    '...LXD...',
+    '..LXXDD..',
+    '..LXXXD..',
+    '..LXAXD..',
+    '.LXAWADD.',
+    '.LXAWADD.',
+    '.LXXAXDD.',
+    '.LXXXXDD.',
+    '..LXXXD..',
+    '.D.LXD.D.',
+    'DDDDDDDDD',
+  ],
+  // Jefa Matriarca Araña: reloj de arena R, corona C, patas K.
+  'matriarca': [
+    '.............XXXRRRRRX......',
+    '...........XXXXXXRRRXXXX....',
+    '..........XXAXXXXXRXXXAXX...',
+    '..........XXXXXXXRRRXXXXX...',
+    '...A.....XXXXXXXRRRRRXXXXX..',
+    '..K.K..C.CXCXXXXXXXXXXXXXX..',
+    '..K..K.CCCCCXXXXXXXXXXXAXX..',
+    '.K...K...XDDDXXXXXXXXXXXXX..',
+    '.K....R.RXRXXXAXXXXXAXXXXKA.',
+    '..AK...RXRXXXXXXXXXXXXXXX.K.',
+    '..K.KKDXXXXXXXXXDXXXXXXX..K.',
+    '..K...XXXXXXXXXXXXXXDDDD..K.',
+    '.K....DXXDXXXXXXDDDDDDD...K.',
+    '.K...AWXXWXXXXXX......K....K',
+    '.K...KG.DGXXXXD.KK.....K...K',
+    '.K...KG...DDD.....K....K...K',
+    'K...K.G..K........K....K...K',
+    'K...K....K.........K....K..K',
+    'K...K....K.........K....K..K',
+  ],
+  // Jefa Sierpe de Escarcha: anillos enroscados, crin L, aliento L.
+  'sierpe': [
+    '............L...........',
+    '...........L.L..L.......',
+    '......XXXX.XXXXL....L...',
+    '..XXXOEXXXXXXXXXXX.L....',
+    'L.XXXXXXXXXXXXXXXXXX..L.',
+    '.DWDWDXXXXXXBBXXXXXXXL..',
+    'L.XXXXXXXX....BBBXXXX...',
+    '................BBXXX.LL',
+    '.L...............BXXX...',
+    '................BXXXX...',
+    '..........BBBBBBXXXX..L.',
+    '.........XXXXXXBXXXX....',
+    '.........DDDDDBBXXX.....',
+    '......XBBBBBBBBBBBBBX..L',
+    '.....XXXXXXXXXXXBXXXXX..',
+    '.....DDDDDDDDDDDDDDDDD..',
+    '...XBBBBBBBBBBBBBBBBBBX.',
+    '..XXXXXXXXXXXXXXXXXXXXXX',
+    'XXXXXXXXXXXXXXXXXXXXXXXX',
+    'XDDDDDDDDDDDDDDDDDDDDDD.',
+  ],
+  // Jefe Caballero Hueco: yelmo vacío con ojos E, espada S y escudo Y.
+  'caballeroHueco': [
+    '..S..Y..XXXXX..Y......',
+    '..SS.YYXXXXXXXYY......',
+    '..SS..XYYYYYYYX.......',
+    '..SS..XDDDDDDDX.......',
+    '..SS..XDEDEDDDX.......',
+    '..SS..XXDDDDDXX.......',
+    '..SS.PPXXXXXXXPPPP....',
+    '..SSPYYYXXXXXYYYPPP...',
+    '..SSYXXXXXXXXXXXYPP...',
+    '.YYYYYXXXXXXXXDDDDDD..',
+    '..XDXPXXXXXXXXDYYYYD..',
+    '..XDXPXXXXXXXXDYDDYD..',
+    '...YPPXXXXXXXXDYDDYDP.',
+    '..PPPPYYYYYYYYDYYYYDP.',
+    '..PPPPXXXXPPXXDDYYDDP.',
+    '..PPPPXXXXPPXXXDDDDPPP',
+    '..PPPPXXXPPPPXXXDDPPPP',
+    '..P.PPXXXPPPPXXX.PP.PP',
+    '..P..PXXXPPPPXXX..P..P',
+    '.....PXXX....XXX.P....',
+    '.....DDDD....DDDD.....',
+  ],
 };
 
 /// `CLASSES[...].pal`: paletas de héroe por clase.
@@ -69,17 +259,45 @@ const Map<String, ({String spr, String col})> enemyLooks = {
   'reyLimo': (spr: 'slime', col: '#e1b12c'),
   'golemReloj': (spr: 'golem', col: '#d4a017'),
   'devorador': (spr: 'ghost', col: '#e84393'),
+  // v0.2: cada uno con su propia forma base.
+  'arana': (spr: 'arana', col: '#6a3d66'),
+  'lobo': (spr: 'lobo', col: '#7f8fa6'),
+  'murcielagoHielo': (spr: 'murcielagoHielo', col: '#9fe3f0'),
+  'elementalEscarcha': (spr: 'elementalEscarcha', col: '#6cb4e4'),
+  'esqueleto': (spr: 'esqueleto', col: '#e8e2cf'),
+  'caballeroCaido': (spr: 'caballeroCaido', col: '#5d6673'),
+  'cristalHielo': (spr: 'cristalHielo', col: '#86d8ff'),
+  'matriarca': (spr: 'matriarca', col: '#4e2b55'),
+  'sierpe': (spr: 'sierpe', col: '#4fb9d8'),
+  'caballeroHueco': (spr: 'caballeroHueco', col: '#4a4f5a'),
 };
 
 /// Color del contorno que agrega `makeSprite`.
 const String outlineColor = '#0d0d14';
 
-/// Paleta de `enSpr`: `{X: col, W: '#ffffff', O: '#111', R: '#ff3b3b'}`.
+/// Colores extra por enemigo (además de X/W/O/R), para el arte v0.2.
+/// Solo `X` recibe brillo/sombra en `makeSprite`; estos se pintan planos.
+const Map<String, Map<String, String>> enemyExtraPalettes = {
+  'arana': {'D': '#5c4033', 'A': '#a8679a', 'G': '#7bed3f'},
+  'lobo': {'D': '#4b5568', 'L': '#d2dae2', 'E': '#f9ca24'},
+  'murcielagoHielo': {'D': '#3f8fb3', 'L': '#f4fdff', 'E': '#0b2e59'},
+  'elementalEscarcha': {'D': '#2c6aa0', 'L': '#d4f1ff', 'A': '#9ff3ff'},
+  'esqueleto': {'D': '#9c9583', 'S': '#a39c90', 'T': '#b5562a', 'H': '#5a3d22'},
+  'caballeroCaido': {'D': '#2f3540', 'L': '#9aa5b1', 'P': '#6c3483', 'G': '#9effd8'},
+  'cristalHielo': {'D': '#2e6fb5', 'L': '#f2fdff', 'A': '#c4f1ff'},
+  'matriarca': {'D': '#2e1834', 'K': '#6e4a7c', 'A': '#9a5fa8', 'G': '#7bed3f', 'C': '#e0c068'},
+  'sierpe': {'D': '#1f4f8a', 'B': '#b5ecf5', 'L': '#e8fbff', 'E': '#f6e58d'},
+  'caballeroHueco': {'D': '#22252c', 'Y': '#b8963e', 'E': '#6ff7ff', 'P': '#4a3550', 'S': '#c8d0d8'},
+};
+
+/// Paleta de `enSpr`: `{X: col, W: '#ffffff', O: '#111', R: '#ff3b3b'}`,
+/// más los colores extra de [enemyExtraPalettes] si el enemigo los tiene.
 Map<String, String> enemyPalette(String enemyId) => {
       'X': enemyLooks[enemyId]!.col,
       'W': '#ffffff',
       'O': '#111',
       'R': '#ff3b3b',
+      ...?enemyExtraPalettes[enemyId],
     };
 
 // ================= LÓGICA DE PÍXELES =================

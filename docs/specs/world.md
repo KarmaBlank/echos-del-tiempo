@@ -68,6 +68,11 @@ Zonas de interacción (cliente, `WorldRules`):
 
 ## Mapa de misión (`MapGenerator.generate(misión, semilla)`)
 
+> v0.2.0: este es el generador "ruinas" (`MapGenerator.ruins`). El lobby
+> pasó a ser el pueblo del mapa del mundo y las misiones de zona usan un
+> atlas de pisos con otros generadores: ver worldgen.md § 6.5–6.6. Tiles
+> nuevos (`g`, `T`, `^`, `0`–`9`, `>`, `<`, `:`) en worldgen.md § 7.6.
+
 Determinístico: misma misión + misma semilla = mismo mapa (lo único que
 viaja por red es la semilla). Pasos, todos con `ri(a, b) = a + floor(r() * (b - a + 1))`
 sobre `mulberry32(semilla)`, **en este orden** (cambiar el orden de las

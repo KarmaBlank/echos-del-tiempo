@@ -237,6 +237,30 @@ enum CraftOp {
 
   /// Subir la rareza un nivel (Prisma Roto).
   upgradeRarity,
+
+  /// Desarmar un arma (se destruye) en materiales (loot.md § 21.1).
+  salvage,
+
+  /// Vender un arma (se destruye) por créditos (loot.md § 21.2).
+  sell,
+
+  /// Cambiar la base de un arma conservando rareza, mods, pasiva y forja
+  /// (loot.md § 21.3). `sourceUid` = id de la base nueva.
+  reforge,
+
+  /// Desarmar todas las armas de una rareza (`index` = `Rarity.index`)
+  /// que no estén equipadas ni protegidas.
+  salvageAll,
+
+  /// Vender todas las armas de una rareza (`index` = `Rarity.index`).
+  sellAll;
+
+  /// Destruye el arma (o las armas) en vez de cambiarla.
+  bool get destroys =>
+      this == salvage || this == sell || this == salvageAll || this == sellAll;
+
+  /// Opera sobre varias armas a la vez (`targetUid` se ignora).
+  bool get isBatch => this == salvageAll || this == sellAll;
 }
 
 /// Mod fijo de un legendario: afijo del pool con un rango propio.
@@ -359,6 +383,7 @@ class ItemInstance {
 
   ItemInstance copyWith({
     String? uid,
+    String? baseId,
     Rarity? rarity,
     int? itemLevel,
     List<AffixRoll>? affixes,
@@ -371,7 +396,7 @@ class ItemInstance {
   }) =>
       ItemInstance(
         uid: uid ?? this.uid,
-        baseId: baseId,
+        baseId: baseId ?? this.baseId,
         rarity: rarity ?? this.rarity,
         itemLevel: itemLevel ?? this.itemLevel,
         affixes: affixes ?? this.affixes,

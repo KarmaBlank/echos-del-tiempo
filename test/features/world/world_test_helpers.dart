@@ -37,11 +37,22 @@ void playUntilResult(SessionController c, {int maxTicks = 40000}) {
       case SessionMode.levelUp when v.mustAllocate:
         c.allocate({Attribute.vit: v.me!.profile.points});
       case SessionMode.field when v.session.graceLeft <= 0:
-        final boss = v.session.mission!.enemies.firstWhere((e) => e.boss);
-        c.teleport(boss.x, boss.y);
+        final (x, y) = bossOrStairs(c);
+        c.teleport(x, y);
       default:
         break;
     }
     c.advance(0.05);
   }
+}
+
+/// Dónde ir para llegar al jefe: el jefe si está en el piso actual; si no,
+/// la escalera de bajada del piso (tocarla baja a todo el grupo; ver
+/// docs/specs/worldgen.md § 6.7).
+(double, double) bossOrStairs(SessionController c) {
+  final m = c.session!.mission!;
+  final boss = m.enemies.firstWhere((e) => e.boss);
+  if (boss.floor == m.floor) return (boss.x, boss.y);
+  final down = c.map.floor(m.floor)!.stairsDown!;
+  return (down.x, down.y);
 }

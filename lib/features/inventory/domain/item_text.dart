@@ -169,6 +169,29 @@ String itemRowMarkup(ProgressionRules rules, ItemInstance it) {
       '</small>';
 }
 
+/// Plural de una rareza para los lotes: `Comunes`, `Mágicos`...
+String rarityPlural(Rarity r) => switch (r) {
+      Rarity.comun => 'Comunes',
+      Rarity.magico => 'Mágicos',
+      Rarity.raro => 'Raros',
+      Rarity.epico => 'Épicos',
+      Rarity.legendario => 'Legendarios',
+    };
+
+/// Lo que se gana al desarmar o vender (`CraftResult`): `+₵N`,
+/// `+2 Esquirla del Eco` y lo que puede salir. Texto plano.
+String gainsText(
+    {int credits = 0,
+    Map<CraftMaterial, int> materials = const {},
+    List<String> chances = const []}) {
+  final parts = [
+    if (credits > 0) '+₵$credits',
+    for (final e in materials.entries) '+${e.value} ${e.key.label}',
+  ];
+  final sure = parts.isEmpty ? 'nada seguro' : parts.join(' · ');
+  return chances.isEmpty ? sure : '$sure (puede salir: ${chances.join(', ')})';
+}
+
 /// Habilidad por id → nombre (o el id).
 String skillName(ProgressionRules rules, String id) =>
     rules.catalog.skills[id]?.name ?? id;

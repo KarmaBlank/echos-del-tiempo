@@ -236,3 +236,47 @@ class EnemyUltEvent extends BattleEvent {
   const EnemyUltEvent(this.actorId, this.ultId, this.name,
       {this.targetId, this.allTargets = false, this.wipedBuffs = false});
 }
+
+/// Qué hizo la mecánica propia de un jefe (docs/specs/bosses.md § "v0.2").
+enum BossMechanicPhase {
+  /// La Matriarca atrapa a [BossMechanicEvent.targetId] en su telaraña.
+  webCast,
+
+  /// [BossMechanicEvent.actorId] (un jugador) libera a `targetId`.
+  webFreed,
+
+  /// El atrapado pierde su turno (`targetId`).
+  webSkip,
+
+  /// Solo: el atrapado forcejea y pierde medio turno (`targetId`).
+  webStruggle,
+
+  /// La Sierpe congela el campo: `value` = velocidad perdida total
+  /// (0.2 = −20%).
+  frost,
+
+  /// Cayeron todos los cristales: el campo se descongela.
+  thaw,
+
+  /// El quiebre de la Sierpe rompe el cristal `targetId`.
+  shatter,
+
+  /// Aliento Glacial vuelve a formar el cristal `targetId`.
+  reform,
+
+  /// El Caballero Hueco cambia de postura: `value` = 1 escudo, 2 espada.
+  stanceShift,
+
+  /// La postura bloqueó parte del golpe: `value` = fracción bloqueada.
+  resisted,
+}
+
+/// Una mecánica de jefe. [actorId]: el jefe (o el jugador que libera).
+class BossMechanicEvent extends BattleEvent {
+  final String actorId;
+  final BossMechanicPhase phase;
+  final String? targetId;
+  final double value;
+  const BossMechanicEvent(this.actorId, this.phase,
+      {this.targetId, this.value = 0});
+}

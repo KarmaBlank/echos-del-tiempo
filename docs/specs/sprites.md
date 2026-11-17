@@ -26,7 +26,10 @@ carga real desde el bundle).
   - Héroes: `assets/sprites/characters/<clase>/idle.png` para
     `guerrero`, `maga`, `paladin`, `tirador`.
   - Enemigos: `assets/sprites/enemies/<tipo>/idle.png` para `slime`,
-    `bat`, `golem`, `ghost`, `reyLimo`, `golemReloj`, `devorador`.
+    `bat`, `golem`, `ghost`, `reyLimo`, `golemReloj`, `devorador` (del
+    prototipo) y, desde v0.2, `arana`, `lobo`, `murcielagoHielo`,
+    `elementalEscarcha`, `esqueleto`, `caballeroCaido`, `cristalHielo`,
+    `matriarca`, `sierpe`, `caballeroHueco` (arte propio, mismo pipeline).
 - Cada carpeta nueva bajo `assets/sprites/` tiene que figurar en
   `flutter: assets:` de `pubspec.yaml` (los directorios de assets de
   Flutter NO son recursivos).
@@ -40,6 +43,16 @@ carga real desde el bundle).
 | `bat`       | 16×10  | 18×12   |
 | `golem`     | 16×15  | 18×17   |
 | `ghost`     | 14×14  | 16×16   |
+| `arana`             | 18×13 | 20×15 |
+| `lobo`              | 18×12 | 20×14 |
+| `murcielagoHielo`   | 18×10 | 20×12 |
+| `elementalEscarcha` | 16×15 | 18×17 |
+| `esqueleto`         | 15×16 | 17×18 |
+| `caballeroCaido`    | 16×15 | 18×17 |
+| `cristalHielo`      | 9×13  | 11×15 |
+| `matriarca`         | 28×19 | 30×21 |
+| `sierpe`            | 24×20 | 26×22 |
+| `caballeroHueco`    | 22×21 | 24×23 |
 
 ## Construcción del sprite (`makeSprite`)
 
@@ -72,7 +85,9 @@ Los colores hex de 3 dígitos (`#111`) se expanden como en CSS (`#111111`).
 
 ### Paleta de enemigos (`enSpr`)
 
-`{X: EN[tipo].col, W: #ffffff, O: #111111, R: #ff3b3b}`.
+`{X: EN[tipo].col, W: #ffffff, O: #111111, R: #ff3b3b}`, más los colores
+extra de `enemyExtraPalettes` (solo enemigos v0.2). Los extra se pintan
+planos: solo `X` recibe el brillo/sombra de `makeSprite`.
 
 | Tipo         | Sprite base | `col`     | Escala (`sc`) | Jefe |
 |--------------|-------------|-----------|---------------|------|
@@ -83,10 +98,36 @@ Los colores hex de 3 dígitos (`#111`) se expanden como en CSS (`#111111`).
 | `reyLimo`    | `slime`     | `#e1b12c` | 2             | sí   |
 | `golemReloj` | `golem`     | `#d4a017` | 2             | sí   |
 | `devorador`  | `ghost`     | `#e84393` | 2.4           | sí   |
+| `arana`             | propio | `#6a3d66` | 1   | no |
+| `lobo`              | propio | `#7f8fa6` | 1   | no |
+| `murcielagoHielo`   | propio | `#9fe3f0` | 1   | no |
+| `elementalEscarcha` | propio | `#6cb4e4` | 1   | no |
+| `esqueleto`         | propio | `#e8e2cf` | 1   | no |
+| `caballeroCaido`    | propio | `#5d6673` | 1   | no |
+| `cristalHielo`      | propio | `#86d8ff` | 1   | no (add) |
+| `matriarca`         | propio | `#4e2b55` | 1.8 | sí |
+| `sierpe`            | propio | `#4fb9d8` | 1.8 | sí |
+| `caballeroHueco`    | propio | `#4a4f5a` | 1.7 | sí |
+
+Colores extra v0.2 (`enemyExtraPalettes`):
+
+| Tipo                | Letras extra |
+|---------------------|--------------|
+| `arana`             | D patas `#5c4033`, A marcas `#a8679a`, G veneno `#7bed3f` (+ R ojos) |
+| `lobo`              | D sombra `#4b5568`, L pecho `#d2dae2`, E ojo `#f9ca24` (+ W colmillos, O nariz) |
+| `murcielagoHielo`   | D cuerpo `#3f8fb3`, L escarcha `#f4fdff`, E ojos `#0b2e59` (+ W colmillos) |
+| `elementalEscarcha` | D faceta `#2c6aa0`, L brillo `#d4f1ff`, A halo `#9ff3ff` (+ W núcleo/ojos) |
+| `esqueleto`         | D sombra `#9c9583`, S hoja `#a39c90`, T óxido `#b5562a`, H empuñadura `#5a3d22` (+ O cuencas, R pupilas) |
+| `caballeroCaido`    | D escudo `#2f3540`, L borde `#9aa5b1`, P capa `#6c3483`, G visor `#9effd8` |
+| `cristalHielo`      | D faceta `#2e6fb5`, L brillo `#f2fdff`, A núcleo `#c4f1ff` (+ W) |
+| `matriarca`         | D vientre `#2e1834`, K patas `#6e4a7c`, A marcas `#9a5fa8`, G veneno `#7bed3f`, C corona `#e0c068` (+ R ojos/reloj de arena, W colmillos) |
+| `sierpe`            | D escamas `#1f4f8a`, B vientre/brillo `#b5ecf5`, L crin/aliento `#e8fbff`, E ojo `#f6e58d` (+ W dientes, O pupila) |
+| `caballeroHueco`    | D visor/escudo `#22252c`, Y oro `#b8963e`, E ojos `#6ff7ff`, P capa `#4a3550`, S hoja `#c8d0d8` |
 
 La escala vive en el manifest (`enemies.<tipo>.scale`, por defecto 1) y se
 lee con `SpriteCatalog.enemyScale`. Si el enemigo flota (los de forma
-base `bat` o `ghost`: `bat`, `ghost`, `devorador`) el manifest lo marca
+base `bat` o `ghost`: `bat`, `ghost`, `devorador`; en v0.2,
+`murcielagoHielo`) el manifest lo marca
 con `enemies.<tipo>.float: true` (`SpriteCatalog.enemyFloats`). Los jefes reusan la forma base con su
 propio color: son PNG propios, no un tinte en runtime.
 
@@ -98,7 +139,7 @@ Desde la raíz del proyecto, con el `dart` del SDK de Flutter:
 dart run tool/export_sprites.dart
 ```
 
-Sobrescribe los 11 PNG listados arriba. El script no toca el manifest.
+Sobrescribe los 21 PNG listados arriba. El script no toca el manifest.
 
 ## Reemplazar el arte por PNG hechos a mano
 

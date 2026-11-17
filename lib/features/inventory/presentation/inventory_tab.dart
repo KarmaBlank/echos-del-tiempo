@@ -7,8 +7,10 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/game_session.dart';
+import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/rules/inventory_rules.dart';
 import '../domain/item_text.dart';
 import 'item_widgets.dart';
@@ -50,6 +52,14 @@ class _InventoryTabState extends State<InventoryTab> {
   int _count = 1;
   bool _confirmDrop = false;
 
+  /// Confirmación de VENDER / DESARMAR del arma elegida.
+  CraftOp? _confirmCraft;
+
+  /// LIMPIAR INVENTARIO abierto en el detalle (lotes).
+  bool _cleaning = false;
+  CraftOp _cleanOp = CraftOp.salvageAll;
+  Rarity _cleanRarity = Rarity.comun;
+
   ShopContext get shop => widget.shop;
 
   CellContent? _content(PlayerProfile p, String? token) {
@@ -77,6 +87,8 @@ class _InventoryTabState extends State<InventoryTab> {
         _sel = token;
         _selCell = cell;
         _confirmDrop = false;
+        _confirmCraft = null;
+        _cleaning = false;
       });
 
   @override
@@ -97,6 +109,7 @@ class _InventoryTabState extends State<InventoryTab> {
       _sel = p.equippedUid;
       _selCell = null;
       _confirmDrop = false;
+      _confirmCraft = null;
     }
     final sel = _content(p, _sel);
 
@@ -248,8 +261,28 @@ class _InventoryTabState extends State<InventoryTab> {
             'Casillas ${InventoryRules.cellsUsed(p)}/${InventoryRules.cells}'
             '${mine ? ' · <b>₵${p.credits}</b>' : ''}'
             '${layout.overflow.isEmpty ? '' : ' · ${protoColor(ProtoColors.orange, '${layout.overflow.length} sin lugar')}'}'),
+        if (mine) ...[
+          const SizedBox(height: 6),
+          PanelButton('LIMPIAR INVENTARIO...',
+              key: const ValueKey('inv-clean'),
+              selected: _cleaning,
+              onPressed: () => setState(() {
+                    _cleaning = !_cleaning;
+                    _confirmDrop = false;
+                    _confirmCraft = null;
+                    _moveFrom = null;
+                  })),
+        ],
       ],
     );
+
+    if (_cleaning && mine) {
+      return PanelSplit(
+        listWidth: InventoryTab.gridWidth + 4,
+        list: [left],
+        detail: _cleaner(p),
+      );
+    }
 
     return PanelSplit(
       listWidth: InventoryTab.gridWidth + 4,
@@ -270,6 +303,84 @@ class _InventoryTabState extends State<InventoryTab> {
               ]
             : _detail(p, me.profile, sel, attrs, mine),
       ),
+    );
+  }
+
+  /// LIMPIAR INVENTARIO: desarmar o vender de una vez todas las armas de
+  /// una rareza, con el resumen antes de confirmar.
+  Widget _cleaner(PlayerProfile p) {
+    final rules = shop.rules;
+    final g = shop.guards;
+    final sell = _cleanOp == CraftOp.sellAll;
+    final a = CraftAction.batch(_cleanOp, _cleanRarity);
+    final r = g.craftPreview(p, a);
+    final targets = rules.crafting.batchTargets(p, _cleanRarity);
+    final n = targets.length;
+    final what = '$n ${n == 1 ? _cleanRarity.label : rarityPlural(_cleanRarity)}';
+    final summary = n == 0
+        ? protoColor(ProtoColors.dim,
+            'No tienes armas ${rarityPlural(_cleanRarity)} para ${sell ? 'vender' : 'desarmar'}.')
+        : 'Vas a ${sell ? 'vender' : 'desarmar'} <b>${protoEsc(what)}</b> → '
+            '${protoColor(ProtoColors.green, protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes)))}';
+    return PanelDetail(
+      footer: [
+        PanelButton('CANCELAR',
+            key: const ValueKey('inv-clean-cancel'),
+            onPressed: () => setState(() => _cleaning = false)),
+        PanelButton(
+            '${sell ? 'VENDER' : 'DESARMAR'} ${n == 0 ? '' : '$n '}'
+                '${rarityPlural(_cleanRarity).toUpperCase()}',
+            key: const ValueKey('inv-clean-confirm'),
+            accent: ProtoColors.red,
+            reason: g.craft(p, a),
+            onPressed: () {
+              shop.controller.craft(a);
+              setState(() {});
+            }),
+      ],
+      children: [
+        const Text('LIMPIAR INVENTARIO',
+            style: TextStyle(color: ProtoColors.gold)),
+        const SizedBox(height: 4),
+        ProtoText(protoColor(
+            ProtoColors.dim,
+            'Desarma o vende de una vez todas las armas de una rareza. Nunca '
+            'toca la equipada ni tu última arma inicial.')),
+        const SizedBox(height: 8),
+        Wrap(spacing: 6, runSpacing: 6, children: [
+          PanelButton('DESARMAR (materiales)',
+              key: const ValueKey('inv-clean-salvage'),
+              selected: !sell,
+              onPressed: () => setState(() => _cleanOp = CraftOp.salvageAll)),
+          PanelButton('VENDER (créditos)',
+              key: const ValueKey('inv-clean-sell'),
+              selected: sell,
+              onPressed: () => setState(() => _cleanOp = CraftOp.sellAll)),
+        ]),
+        const SizedBox(height: 6),
+        Wrap(spacing: 6, runSpacing: 6, children: [
+          for (final rr in const [Rarity.comun, Rarity.magico, Rarity.raro])
+            PanelButton(
+                '${rarityPlural(rr).toUpperCase()} '
+                '(${rules.crafting.batchTargets(p, rr).length})',
+                key: ValueKey('inv-clean-rarity-${rr.name}'),
+                selected: _cleanRarity == rr,
+                onPressed: () => setState(() => _cleanRarity = rr)),
+        ]),
+        const SizedBox(height: 8),
+        ProtoText(summary, key: const ValueKey('inv-clean-summary')),
+        if (r.lost.isNotEmpty)
+          ProtoText(protoColor(ProtoColors.orange,
+              'Se pierde: ${protoEsc(r.lost.join(', '))}')),
+        if (n > 0) ...[
+          const SizedBox(height: 6),
+          ProtoText(
+              key: const ValueKey('inv-clean-list'),
+              '${protoColor(ProtoColors.red, 'Se destruyen:')}<br>'
+              '${[for (final it in targets) '• ${itemNameMarkup(rules, it)}'
+                  '${sell ? ' <small>₵${rules.crafting.sellPrice(it)}</small>' : ''}'].join('<br>')}'),
+        ],
+      ],
     );
   }
 
@@ -310,6 +421,31 @@ class _InventoryTabState extends State<InventoryTab> {
     final name = it == null
         ? '$count ${c.stack!.label}'
         : shop.rules.items.displayName(it);
+    final confirmCraft = _confirmCraft;
+    if (it != null && confirmCraft != null) {
+      final a = CraftAction(confirmCraft, it.uid);
+      final r = g.craftPreview(p, a);
+      final sell = confirmCraft == CraftOp.sell;
+      return [
+        ProtoText(
+            key: const ValueKey('inv-craft-question'),
+            '¿${sell ? 'Vender' : 'Desarmar'} <b>${protoEsc(name)}</b>? '
+            'Recibes ${protoColor(ProtoColors.green, protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes)))}. '
+            '${protoColor(ProtoColors.red, 'El arma se destruye.')}'
+            '${r.lost.isEmpty ? '' : ' ${protoColor(ProtoColors.orange, 'Se pierde: ${protoEsc(r.lost.join(', '))}')}'}'),
+        PanelButton('CANCELAR',
+            key: const ValueKey('inv-craft-cancel'),
+            onPressed: () => setState(() => _confirmCraft = null)),
+        PanelButton(sell ? 'VENDER ₵${r.gainedCredits}' : 'DESARMAR',
+            key: const ValueKey('inv-craft-confirm'),
+            accent: ProtoColors.red,
+            reason: g.craft(p, a),
+            onPressed: () {
+              shop.controller.craft(a);
+              setState(() => _confirmCraft = null);
+            }),
+      ];
+    }
     if (_confirmDrop) {
       return [
         ProtoText(
@@ -359,6 +495,16 @@ class _InventoryTabState extends State<InventoryTab> {
           key: const ValueKey('inv-drop'),
           reason: g.drop(p, token, count: count, alive: me.alive),
           onPressed: () => setState(() => _confirmDrop = true)),
+      if (it != null) ...[
+        PanelButton('DESARMAR',
+            key: const ValueKey('inv-salvage'),
+            reason: g.craft(p, CraftAction(CraftOp.salvage, it.uid)),
+            onPressed: () => setState(() => _confirmCraft = CraftOp.salvage)),
+        PanelButton('VENDER ₵${shop.rules.crafting.sellPrice(it)}',
+            key: const ValueKey('inv-sell'),
+            reason: g.craft(p, CraftAction(CraftOp.sell, it.uid)),
+            onPressed: () => setState(() => _confirmCraft = CraftOp.sell)),
+      ],
       if (it != null && it.uid != p.equippedUid)
         PanelButton('EQUIPAR',
             key: const ValueKey('inv-equip'),

@@ -155,7 +155,22 @@ class SessionJson {
         'fe': [for (final e in m.enemies) enemyToJson(e)],
         'items': [for (final i in m.items) itemToJson(i)],
         if (m.zoneLevel != 1) 'zl': m.zoneLevel,
+        if (m.zone != 0) 'zone': m.zone,
+        if (m.floor != 0) 'floor': m.floor,
+        if (m.floors != 1) 'floors': m.floors,
+        if (m.floorGoals.isNotEmpty) 'fg': m.floorGoals,
+        if (m.levels.isNotEmpty) 'lv': m.levels,
+        if (m.opened.isNotEmpty) 'opened': (m.opened.toList()..sort()),
       };
+
+  static List<int> _ints(Json j, String k) {
+    final v = j[k];
+    if (v == null) return const [];
+    return [
+      for (final e in asList(v))
+        e is num ? e.toInt() : throw FormatException('JSON inválido: $k', v),
+    ];
+  }
 
   MissionRun missionFromJson(Json j) => MissionRun(
         missionId: j.str('id'),
@@ -183,6 +198,12 @@ class SessionJson {
         enemies: [for (final raw in j.list('fe')) enemyFromJson(asJson(raw))],
         items: [for (final raw in j.list('items')) itemFromJson(asJson(raw))],
         zoneLevel: j.intOrNull('zl') ?? 1,
+        zone: j.intOrNull('zone') ?? 0,
+        floor: j.intOrNull('floor') ?? 0,
+        floors: j.intOrNull('floors') ?? 1,
+        floorGoals: _ints(j, 'fg'),
+        levels: _ints(j, 'lv'),
+        opened: _ints(j, 'opened').toSet(),
       );
 
   Json dropToJson(WeaponDrop d) => {
@@ -210,6 +231,7 @@ class SessionJson {
         'vy': e.vy,
         'dir': e.dir,
         'aggro': e.aggro,
+        if (e.floor != 0) 'f': e.floor,
       };
 
   FieldEnemy enemyFromJson(Json j) => FieldEnemy(
@@ -227,10 +249,17 @@ class SessionJson {
         vy: j.dbl('vy'),
         dir: j.integer('dir'),
         aggro: j.boolean('aggro'),
+        floor: j.intOrNull('f') ?? 0,
       );
 
-  Json itemToJson(MissionItem i) =>
-      {'id': i.id, 'k': i.kind.name, 'x': i.x, 'y': i.y, 'done': i.done};
+  Json itemToJson(MissionItem i) => {
+        'id': i.id,
+        'k': i.kind.name,
+        'x': i.x,
+        'y': i.y,
+        'done': i.done,
+        if (i.floor != 0) 'f': i.floor,
+      };
 
   MissionItem itemFromJson(Json j) => MissionItem(
         id: j.integer('id'),
@@ -238,6 +267,7 @@ class SessionJson {
         x: j.dbl('x'),
         y: j.dbl('y'),
         done: j.boolean('done'),
+        floor: j.intOrNull('f') ?? 0,
       );
 
   // ------------------------------------------------------------------
@@ -278,6 +308,8 @@ class SessionJson {
         'eliteDrops': [for (final d in r.eliteDrops) dropToJson(d)],
         'drops': r.drops,
         'left': r.timeLeft,
+        if (r.zone != 0) 'zone': r.zone,
+        if (r.unlocked.isNotEmpty) 'unl': r.unlocked,
       };
 
   MissionResult resultFromJson(Json j) {
@@ -305,6 +337,13 @@ class SessionJson {
       ],
       drops: drops,
       timeLeft: j.dbl('left'),
+      zone: j.intOrNull('zone') ?? 0,
+      unlocked: {
+        for (final e in (j.objOrNull('unl') ?? const <String, Object?>{}).entries)
+          e.key: e.value is num
+              ? (e.value as num).toInt()
+              : throw FormatException('JSON inválido: unl', e.value),
+      },
     );
   }
 
@@ -321,6 +360,7 @@ class SessionJson {
         'wait': b.wait,
         'turn': b.turnTime,
         'end': b.endTimer,
+        if (b.level != 0) 'lv': b.level,
       };
 
   SessionBattle battleFromJson(Json j) => SessionBattle(
@@ -332,6 +372,7 @@ class SessionJson {
         wait: j.dbl('wait'),
         turnTime: j.dbl('turn'),
         endTimer: j.dblOrNull('end'),
+        level: j.intOrNull('lv') ?? 0,
       );
 
   Json battleStateToJson(BattleState s) => {
@@ -434,6 +475,10 @@ class SessionJson {
         if (c.breakSkip) 'brkS': true,
         if (c.ultId != null) 'eult': c.ultId,
         if (c.ultPending) 'ultP': true,
+        // Mecánicas de jefe v0.2 (opcionales).
+        if (c.webbed) 'web': true,
+        if (c.stance != 0) 'stc': c.stance,
+        if (c.stanceTurns != 0) 'stcN': c.stanceTurns,
         // Afijos del arma (loot v2, opcionales).
         if (c.lifeSteal != 0) 'ls': c.lifeSteal,
         if (c.regenPerTurn != 0) 'rgn': c.regenPerTurn,
@@ -522,6 +567,9 @@ class SessionJson {
       breakSkip: j.flag('brkS'),
       ultId: j.strOrNull('eult'),
       ultPending: j.flag('ultP'),
+      webbed: j.flag('web'),
+      stance: j.intOrNull('stc') ?? 0,
+      stanceTurns: j.intOrNull('stcN') ?? 0,
       lifeSteal: j.dblOrNull('ls') ?? 0,
       regenPerTurn: j.dblOrNull('rgn') ?? 0,
       statusResist: j.intOrNull('sres') ?? 0,

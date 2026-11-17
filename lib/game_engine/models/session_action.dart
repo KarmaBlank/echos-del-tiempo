@@ -1,6 +1,6 @@
 import 'attributes.dart';
 import 'battle_command.dart';
-import 'item.dart' show CraftOp;
+import 'item.dart' show CraftOp, Rarity;
 import 'upgrade_stat.dart';
 
 /// Lo que un jugador le pide al host (`onMsg` del prototipo, un caso por
@@ -136,11 +136,19 @@ class BackToLobbyAction extends SessionAction {
   const BackToLobbyAction();
 }
 
+/// `stairs`: usar la escalera del piso con E (bajar en `>`, subir en
+/// `<`). Mueve a todo el grupo. Ver docs/specs/worldgen.md § 6.7.
+class UseStairsAction extends SessionAction {
+  final bool down;
+  const UseStairsAction({required this.down});
+}
+
 // ---------------- loot v2 (docs/specs/loot.md) ----------------
 
 /// `craft`: una operación de la forja / mesa de fusión sobre el arma
 /// [targetUid] (`CraftRules`). [sourceUid] es el arma que se sacrifica
-/// (traslados), [index] el afijo elegido y [skillId] la habilidad.
+/// (traslados) o la base nueva (reforjar), [index] el afijo elegido (o la
+/// rareza en los lotes) y [skillId] la habilidad.
 class CraftAction extends SessionAction {
   final CraftOp op;
   final String targetUid;
@@ -149,6 +157,15 @@ class CraftAction extends SessionAction {
   final String? skillId;
   const CraftAction(this.op, this.targetUid,
       {this.sourceUid, this.index = 0, this.skillId});
+
+  /// Reforjar [uid] a la base [baseId] (loot.md § 21.3).
+  const CraftAction.reforge(String uid, String baseId)
+      : this(CraftOp.reforge, uid, sourceUid: baseId);
+
+  /// Desarmar ([CraftOp.salvageAll]) o vender ([CraftOp.sellAll]) todas
+  /// las armas de rareza [r] que no estén equipadas ni protegidas.
+  CraftAction.batch(CraftOp op, Rarity r)
+      : this(op, '*', index: r.index);
 }
 
 /// `give`: dar un arma (`uid`) o [count] de una pila (`pot`, `eter`,

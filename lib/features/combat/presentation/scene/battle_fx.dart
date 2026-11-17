@@ -8,6 +8,7 @@ import '../../../../game_engine/models/battle_state.dart';
 import '../../../../game_engine/models/passive_mechanic.dart';
 import '../../../../game_engine/models/skill.dart';
 import '../../../../game_engine/models/status.dart';
+import '../../../../game_engine/rules/battle_engine.dart' show stanceName;
 import '../../../../game_engine/rules/js_math.dart';
 import 'fx_style.dart';
 import 'proc_fx.dart';
@@ -1055,8 +1056,85 @@ List<BattleFx> mapBattleEvents(
     if (e.wipedBuffs) wipe = e;
   }
 
+  /// Mecánica de un jefe (docs/specs/battle_presentation.md § "Mecánicas
+  /// de jefe").
+  void bossMech(BossMechanicEvent e) {
+    final tg = e.targetId;
+    final strike = action == null ? 0 : BattleFx.enemyStrikeMs;
+    switch (e.phase) {
+      case BossMechanicPhase.webCast:
+        if (tg == null) return;
+        final a = action;
+        final dl = a != null && a.enemyUlt
+            ? a.ult!.lastImpact(math.max(1, a.dl.length)) + 120
+            : strike + 60;
+        txt(tg, -50, '¡TELARAÑA!', webColor, dl: dl);
+        at(FxKind.ring, tg, dy: -8, color: webColor, dl: dl);
+      case BossMechanicPhase.webFreed:
+        if (tg == null) return;
+        txt(tg, -40, '¡LIBRE!', _healGreen, dl: 120);
+        at(FxKind.ring, tg, dy: -8, color: _healGreen, dl: 120);
+        aura(tg, FxElement.heal, dl: 120);
+      case BossMechanicPhase.webSkip:
+        if (tg == null) return;
+        txt(tg, -34, '¡ATRAPADO!', webColor);
+        aura(tg, FxElement.stun);
+      case BossMechanicPhase.webStruggle:
+        if (tg == null) return;
+        txt(tg, -34, 'FORCEJEA ½', webColor);
+        at(FxKind.ring, tg, dy: -8, color: webColor);
+      case BossMechanicPhase.frost:
+        final pct = jsRound(e.value * 100);
+        for (final q in aliveParty()) {
+          txt(q.id, -40, 'VEL −$pct%', frostColor, dl: 80);
+          aura(q.id, FxElement.freeze, dl: 80);
+        }
+        at(FxKind.pulse, e.actorId, dy: -12, color: frostColor);
+      case BossMechanicPhase.thaw:
+        final dl = action == null ? 0 : lateBase();
+        for (final q in aliveParty()) {
+          txt(q.id, -40, 'DESHIELO', _healGreen, dl: dl + 120);
+          aura(q.id, FxElement.heal, dl: dl + 120);
+        }
+      case BossMechanicPhase.shatter:
+        if (tg == null) return;
+        final dl = procDl[e.actorId] ?? action?.dl[e.actorId] ?? 0;
+        procDl[tg] = dl + 180;
+        at(FxKind.shatter, tg, dy: -6, color: frostColor, dl: dl + 180);
+        txt(tg, -30, 'CRISTAL ROTO', frostColor, dl: dl + 200);
+      case BossMechanicPhase.reform:
+        if (tg == null) return;
+        final a = action;
+        final dl = a?.ult == null ? 0 : a!.ult!.lastImpact(math.max(1, a.dl.length)) + 200;
+        aura(tg, FxElement.freeze, dl: dl);
+        at(FxKind.ring, tg, dy: -6, color: frostColor, dl: dl);
+        txt(tg, -30, 'SE REFORMA', frostColor, dl: dl);
+      case BossMechanicPhase.stanceShift:
+        final st = e.value.round();
+        final p = position(e.actorId);
+        final a = action;
+        final dl = a?.ult == null ? 0 : a!.ult!.lastImpact(1) + 200;
+        out.add(BattleFx(FxKind.tag,
+            x: p.dx,
+            y: p.dy - 10,
+            text: 'POSTURA: ${stanceName(st)}',
+            color: stanceColor(st),
+            big: true,
+            delayMs: dl,
+            who: e.actorId));
+        at(FxKind.pulse, e.actorId, dy: -14, color: stanceColor(st), dl: dl);
+      case BossMechanicPhase.resisted:
+        final a = action;
+        final dl = a == null ? 0 : hitDelay(a, e.actorId);
+        txt(e.actorId, -54, 'BLOQUEA −${jsRound(e.value * 100)}%',
+            const Color(0xFFB2BEC3), dl: dl);
+    }
+  }
+
   for (final e in events) {
     switch (e) {
+      case BossMechanicEvent():
+        bossMech(e);
       case TurnStartedEvent():
         closeSegment();
         action = null;

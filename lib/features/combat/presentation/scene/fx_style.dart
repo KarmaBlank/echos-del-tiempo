@@ -292,6 +292,9 @@ const Map<String, Color> kEnemyUltColors = {
   'eult_engranaje': Color(0xFFE1B12C),
   'eult_finEras': Color(0xFFD63031),
   'eult_furia': Color(0xFFFF4757),
+  'eult_nido': Color(0xFF9B59B6),
+  'eult_aliento': Color(0xFF9FF3FF),
+  'eult_juicio': Color(0xFF6FF7FF),
 };
 
 Color enemyUltColor(String? id) => kEnemyUltColors[id] ?? enemyUltBarColor;
@@ -301,5 +304,24 @@ FxElement enemyUltElement(String? id) => switch (id) {
       'eult_diluvio' => FxElement.poison,
       'eult_engranaje' => FxElement.freeze,
       'eult_finEras' => FxElement.burn,
+      'eult_nido' => FxElement.poison,
+      'eult_aliento' => FxElement.freeze,
+      'eult_juicio' => FxElement.arcane,
       _ => FxElement.phys,
     };
+
+// ------------------------------------------------ mecánicas de jefe
+// (docs/specs/battle_presentation.md § "Mecánicas de jefe").
+
+/// Hilos de la telaraña.
+const webColor = Color(0xFFEDEFF5);
+
+/// Tinte del campo helado y los cristales.
+const frostColor = Color(0xFF9FE3F0);
+
+/// Postura de escudo (azul) y de espada (rojo).
+const stanceShieldColor = Color(0xFF74B9FF);
+const stanceSwordColor = Color(0xFFFF6B6B);
+
+Color stanceColor(int stance) =>
+    stance == 1 ? stanceShieldColor : stanceSwordColor;

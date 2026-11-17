@@ -37,6 +37,12 @@ en el campo), carga de ULT y `levelUpPending`.
 
 ## Misiones (`kMissions`)
 
+> v0.2.0: el mostrador ofrece las **misiones de zona** (`kMissions` =
+> `kZoneMissions`, con pisos, escaleras, nivel de zona y desbloqueo por
+> perfil): ver worldgen.md § 6. La tabla de abajo describe las 3 misiones
+> del prototipo (`kPrototypeMissions`, un solo mapa), que siguen
+> funcionando igual para los tests de paridad.
+
 | id | nombre | tipo | rango | Lv rec. | tema | grupos a vencer | jefe | tiempo S | élite | objetivos extra |
 |---|---|---|---|---|---|---|---|---|---|---|
 | m1 | Pradera Esmeralda | Exterminio | C | 1 | pradera | 7 | reyLimo + 2 slime | 420 s | bat | 1 |
