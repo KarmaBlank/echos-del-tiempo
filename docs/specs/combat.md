@@ -40,7 +40,7 @@ maxHp  = max(1, round(maxHp * (1 + árbol.hp)))
 maxMp  = round(maxMp * (1 + árbol.mp))
 atk    = max(1, round(atk * (1 + árbol.atk)))
 mag    = max(1, round(mag * (1 + árbol.mag)))
-crit   = min(0.75, crit + árbol.crit)
+crit   = min(0.75, crit + árbol.crit)     // 0.40 con la keystone danza
 speed  = round((speed + árbol.spd) * 10) / 10
 defn   = max(0, defn + árbol.def)
 defp   = min(0.60, defn * 0.03)          // % de daño que se resta
@@ -68,7 +68,8 @@ siguiente batalla.
 ## Timeline de turnos
 
 - `IV(actor) = 100 / vel_efectiva`, con
-  `vel_efectiva = vel × (1 − 0.12 × stacks_congelación)`.
+  `vel_efectiva = vel × (1 + buff_vel) × (1 − 0.12 × stacks_congelación)`
+  (`buff_vel`: Frenesí, ver § "Disparadores del árbol").
 - `nextTurn`: actúa el actor vivo con `nextTurn` más bajo; en empate,
   jugadores antes que enemigos y el de menor índice primero. El reloj
   avanza a `max(reloj, nextTurn)`.
@@ -212,6 +213,13 @@ UI, ver docs/specs/battle_presentation.md):
 | `DelayedEvent(objetivo)` | lo retrasaron en el timeline |
 | `KnockedOutEvent(objetivo)` / `RevivedEvent(objetivo)` | cae / revive |
 | `BattleEndedEvent(victoria, xp, créditos)` | `checkEnd` |
+| `ProcEvent(actor, fuente, objetivo?)` | disparó una mecánica del árbol v2 (`fuente` = id en `kMechanics`) |
+| `BuffAppliedEvent(objetivo, fuente, stat, valor, turnos)` | buff / debuff / marca con duración |
+| `ShieldEvent(objetivo, cantidad, absorbed)` | ganó un escudo, o su escudo absorbió daño |
+
+`DamageEvent.sourceId`: id de la mecánica en el daño secundario (rebote,
+explosión, eco, reflejo, sagrado). `BattleEvent` no es `sealed`: un
+`switch` que no conoce los eventos nuevos los ignora.
 
 `ActionEvent.kind` (`BattleActionKind`):
 - `attack` (con `targetId`; `allTargets` con la keystone `imparable`),
@@ -228,6 +236,46 @@ stacks de Quemadura, si no Veneno, si no Sagrado (el `hadBurn` del
 prototipo elige aura y color con esto).
 
 Todos los campos nuevos son opcionales: quien no los use no cambia.
+
+## Disparadores del árbol (v2)
+
+Detalle y números en passive_tree_v2.md § 3-5. Resumen del motor:
+
+- Cada jugador lleva `mechanics` (ids de `kMechanics`, de notables y
+  keystones nuevas) y `effects` (`TimedEffect`: buffs, debuffs, marcas,
+  escudos, aturdido extendido). `_Turn._fire(disparador, dueño, ...)`
+  evalúa las mecánicas del dueño con ese disparador (filtro, estado,
+  probabilidad) y aplica sus efectos por tipo.
+- Disparadores: `onHit` / `onCrit` (golpes primarios), `onStatusApplied`
+  (estados de golpes primarios), `onSkill`, `onHeal`, `onKill` (1 vez por
+  acción), `onEnemyDeath` (cualquier muerte, primer jugador con la
+  mecánica), `onHitTaken` (golpe enemigo recibido), `onProtectHit` (golpe
+  desviado por Protección), `onTurnStart` (después de los estados, si
+  sigue vivo). Condiciones en el cálculo: `whileLowHealth` (ATQ efectivo
+  y crítico), `vsStatus` / `vsMarked` (daño y crítico contra ese
+  objetivo).
+- Daño jugador → enemigo con árbol:
+  `daño = max(1, round(base × (crítico ? critMult : 1) × Fractura × Cadena
+  Infinita × Marca))`; `crit = min(tope, crit + condiciones)` (tope 0.40
+  con danza). ATQ efectivo: `round(ATQ × (1 + buff_atq + Último Aliento))`
+  (el log muestra `ATQ 26 (20 +30%)`).
+- Daño enemigo → jugador: el ATQ del enemigo se multiplica por
+  `1 + debuff` (Debilitar, log `ATQ 9 (debilitado)`); los escudos
+  absorben antes que la vida y la carga de ULT usa el daño que pasa.
+- Secundario (rebote, explosión, eco, reflejo, sagrado, ataque gratis):
+  no dispara `onHit` / `onCrit` / `onStatusApplied`. Tope: 64 efectos por
+  paso (`BattleEngine.maxProcsPerStep`).
+- Efectos con duración: se descuentan al terminar el turno del portador
+  (antes de calcular su próximo turno); los aplicados en su propio turno
+  empiezan a contar en el siguiente.
+- Turno: con Danza de Cuchillas (`extraTurn`) el próximo turno es
+  `reloj`; con Sed de Sangre `reloj + IV × 0.5`.
+- Alma de Hielo: la Congelación enemiga no baja sola mientras el jugador
+  con la keystone esté en pie; sus Quemaduras no se aplican (log `sin
+  Quemadura (Alma de Hielo)`). Martillo Bendito: el aturdido pierde un
+  turno más (no jefes).
+- Sin mecánicas no se tira azar extra: los números de siempre no cambian.
+- Red: `Combatant` serializa `mech`, `fx`, `xt` (opcionales).
 
 ## Fuera de este motor
 

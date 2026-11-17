@@ -4,6 +4,7 @@ import '../data/game_catalog.dart';
 import '../data/items_catalog.dart';
 import '../models/attributes.dart';
 import '../models/battle_command.dart';
+import '../models/game_session.dart';
 import '../models/passive_tree.dart';
 import '../models/player_profile.dart';
 import '../models/player_state.dart';
@@ -43,6 +44,18 @@ class ProgressionRules {
   static const maxInventory = 40;
   static const maxNameLength = 10;
   static const maxItems = kMaxItemStack;
+
+  /// Decisión temporal del dueño ("reiniciar puntos gratis siempre, por
+  /// ahora"): reiniciar el árbol y los puntos de atributo no cuesta nada
+  /// y se puede en cualquier modo salvo en batalla. Con `false` vuelve la
+  /// regla del prototipo: solo en lobby / preparación. Ver
+  /// docs/specs/progression.md § "Reiniciar".
+  static const freeRespec = true;
+
+  /// Si se puede reiniciar puntos o árbol en el modo [mode].
+  bool canRespec(SessionMode mode) => freeRespec
+      ? mode != SessionMode.battle
+      : mode == SessionMode.lobby || mode == SessionMode.prep;
 
   // ------------------------------------------------------------------
   // Consultas

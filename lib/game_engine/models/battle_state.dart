@@ -1,3 +1,4 @@
+import 'passive_mechanic.dart';
 import 'player_state.dart';
 import 'status.dart';
 
@@ -53,6 +54,7 @@ class Combatant {
     this.healBonus = 0,
     Map<StatusKind, int>? statusBonus,
     Set<String>? keystones,
+    Set<String>? mechanics,
     this.pierceWeakness = 1,
     this.statusWeakness = 0,
     this.stunOnAttackChance = 0,
@@ -77,8 +79,12 @@ class Combatant {
     this.bonusDefense = 0,
     this.ult = 0,
     this.actions = 0,
+    List<TimedEffect>? effects,
+    this.extraTurn = 0,
   })  : statusBonus = statusBonus ?? {},
         keystones = keystones ?? {},
+        mechanics = mechanics ?? {},
+        effects = effects ?? [],
         skillIds = skillIds ?? const [],
         statuses = statuses ?? {};
 
@@ -102,6 +108,9 @@ class Combatant {
   double healBonus;
   Map<StatusKind, int> statusBonus;
   Set<String> keystones;
+
+  /// Mecánicas del árbol v2 (`kMechanics`), ver passive_tree_v2.md.
+  Set<String> mechanics;
   final double pierceWeakness;
   final int statusWeakness;
   final double stunOnAttackChance;
@@ -133,7 +142,36 @@ class Combatant {
   double ult;
   int actions;
 
+  /// Buffs, debuffs, marcas y escudos con duración (árbol v2).
+  List<TimedEffect> effects;
+
+  /// Danza de Cuchillas: 0 nada, 1 tiene un turno extra pendiente, 2 está
+  /// jugando un turno extra (no puede ganar otro).
+  int extraTurn;
+
   bool get alive => hp > 0;
+
+  /// Suma de los efectos con duración sobre [stat].
+  double effectTotal(BuffStat stat) {
+    var t = 0.0;
+    for (final e in effects) {
+      if (e.stat == stat) t += e.value;
+    }
+    return t;
+  }
+
+  /// El efecto de [sourceId] sobre [stat], si tiene.
+  TimedEffect? effectFrom(String sourceId, BuffStat stat) {
+    for (final e in effects) {
+      if (e.sourceId == sourceId && e.stat == stat) return e;
+    }
+    return null;
+  }
+
+  bool hasEffect(BuffStat stat) => effects.any((e) => e.stat == stat);
+
+  /// Vida que absorben sus escudos.
+  int get shield => effectTotal(BuffStat.shield).round();
   int stacks(StatusKind k) => statuses[k] ?? 0;
 
   /// Rama de Paladín elegida en el árbol (`p.branch`).
@@ -162,6 +200,7 @@ class Combatant {
         healBonus: healBonus,
         statusBonus: Map.of(statusBonus),
         keystones: Set.of(keystones),
+        mechanics: Set.of(mechanics),
         pierceWeakness: pierceWeakness,
         statusWeakness: statusWeakness,
         stunOnAttackChance: stunOnAttackChance,
@@ -186,6 +225,8 @@ class Combatant {
         bonusDefense: bonusDefense,
         ult: ult,
         actions: actions,
+        effects: List.of(effects),
+        extraTurn: extraTurn,
       );
 }
 

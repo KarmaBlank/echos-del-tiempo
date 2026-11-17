@@ -109,4 +109,18 @@ void main() {
     expect(g.upgrade(q, 'espada_bronce', UpgradeStat.pow), 'MAX');
     expect(g.upgrade(q, 'espada_bronce', UpgradeStat.crit), isNull);
   });
+
+  test('reiniciar es gratis y vale en todo modo salvo batalla (freeRespec)',
+      () {
+    final p = newProfile('A', 'guerrero');
+    final withTree = p.copyWith(level: 3, tree: ['filo_1']);
+    for (final m in SessionMode.values) {
+      final g = ShopGuards(progression, m);
+      final battle = m == SessionMode.battle;
+      expect(g.showRespec, !battle, reason: m.name);
+      expect(g.respec(), battle ? 'No en batalla' : isNull, reason: m.name);
+      expect(g.resetTree(withTree), battle ? 'No en batalla' : isNull,
+          reason: m.name);
+    }
+  });
 }

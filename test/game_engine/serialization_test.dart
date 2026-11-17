@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
+import 'package:echos_del_tiempo/game_engine/models/passive_mechanic.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_event.dart';
@@ -75,6 +76,14 @@ const _allBattleEvents = <BattleEvent>[
   RevivedEvent('p2'),
   UltimateUsedEvent('h', 'Tajo del Tiempo'),
   BattleEndedEvent(true, 40, 25),
+  // Árbol v2.
+  DamageEvent('e2', 7, sourceId: 'rebote'),
+  ProcEvent('p1', 'frenesi'),
+  ProcEvent('p1', 'marcaCazador', targetId: 'e1'),
+  BuffAppliedEvent('p1', 'frenesi', BuffStat.speed, 0.2, 2),
+  BuffAppliedEvent('e1', 'debilitar', BuffStat.attack, -0.15, 2),
+  ShieldEvent('p2', 12),
+  ShieldEvent('p2', 5, absorbed: true),
 ];
 
 final _result = MissionResult(
@@ -203,6 +212,29 @@ void main() {
       final act = evs[3] as ActionEvent;
       expect([act.kind, act.skillId, act.partnerId, act.targetId, act.allTargets],
           [BattleActionKind.skill, 'corte', 'p2', 'e1', true]);
+      expect(dmg.sourceId, isNull);
+      final bounce = evs.whereType<DamageEvent>().last;
+      expect([bounce.targetId, bounce.amount, bounce.sourceId],
+          ['e2', 7, 'rebote']);
+      final proc = evs.whereType<ProcEvent>().last;
+      expect([proc.actorId, proc.sourceId, proc.targetId],
+          ['p1', 'marcaCazador', 'e1']);
+      final buff = evs.whereType<BuffAppliedEvent>().last;
+      expect([buff.targetId, buff.sourceId, buff.stat, buff.value, buff.turns],
+          ['e1', 'debilitar', BuffStat.attack, -0.15, 2]);
+      final shield = evs.whereType<ShieldEvent>().last;
+      expect([shield.targetId, shield.amount, shield.absorbed], ['p2', 5, true]);
+    });
+
+    test('eventos viejos sin las claves del árbol v2 se siguen leyendo', () {
+      final e = _eventJson.battleFromJson({
+        'k': 'dmg', 'id': 'e1', 'n': 3, 'crit': false, 'cm': 1.5, 'pm': 1,
+        'st': false, 'src': null,
+      }) as DamageEvent;
+      expect(e.sourceId, isNull);
+      final sh = _eventJson.battleFromJson({'k': 'shield', 'id': 'p', 'n': 4})
+          as ShieldEvent;
+      expect(sh.absorbed, isFalse);
     });
 
     test('resultado de misión completo', () {

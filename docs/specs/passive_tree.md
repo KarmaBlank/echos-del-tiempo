@@ -1,5 +1,11 @@
 # Spec: Árbol de pasivas (tipo Path of Exile)
 
+> **Versión vigente: v2** — docs/specs/passive_tree_v2.md (112 nodos,
+> anillo central compartido, 12 caminos con notables de mecánicas y
+> keystones). Las reglas de puntos de abajo siguen valiendo; la sección
+> "Datos y UI" describe la v1 (40 nodos), que ya no está en el código:
+> los perfiles con árbol v1 se reinician gratis al cargarlos.
+
 Fuente de verdad del comportamiento: prototipo `ecos-del-tiempo.html`,
 objeto `TREE` + funciones `treeHas/treeCan/treePts/treeMods`.
 Implementación Dart: `lib/game_engine/{models,rules}/passive_tree*.dart`.
@@ -17,7 +23,8 @@ Tests: `test/game_engine/passive_tree_rules_test.dart`.
    - está conectado (`links`) a un nodo que ya tiene (inicio incluido), **y**
    - no tiene una keystone excluyente ya tomada (tabla `exclusions`).
 4. Las **keystones** (`kind: 'k'`) son el nodo final de cada rama y
-   pueden traer trade-offs fijos, aparte de su efecto declarado:
+   pueden traer trade-offs fijos, aparte de su efecto declarado (v2 suma
+   `egida`: −20% ATQ y MAG, y `danza`: crítico máx. 40%):
    - `furia`: +35% ATQ, −4 DEF
    - `mente`: +30% MAG, −20% vida máx.
    - `halcon`: críticos ×2.0 en vez de ×1.5, pero −15% ATQ
@@ -28,9 +35,9 @@ Tests: `test/game_engine/passive_tree_rules_test.dart`.
    stale: ver `StatsCalculator.calculate`, que llama a `aggregate` en
    cada recálculo de stats).
 
-## Datos y UI
+## Datos y UI (v1, reemplazado)
 
-El `TREE` completo (40 nodos: 4 centros de clase con 2 ramas de 4 nodos
+El `TREE` completo de la v1 (40 nodos: 4 centros de clase con 2 ramas de 4 nodos
 y los puentes `b_ne`, `b_se`, `b_sw`, `b_nw`) está en
 `lib/game_engine/data/passive_tree_catalog.dart`; los nodos tomados se
 guardan en el perfil (`tree`, progression.md). El dibujo, los textos

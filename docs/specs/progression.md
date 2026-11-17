@@ -37,8 +37,14 @@ prototipo, para poder importar un perfil viejo:
 {"name":"Ana","cls":"maga","lvl":3,"xp":12,"cr":250,
  "st":{"VIT":6,"ESP":19,"AGI":7,"FUE":4,"DES":6},"pts":0,
  "inv":["baculo_aprendiz"],"eq":"baculo_aprendiz","pot":3,"eter":1,
- "up":{"baculo_aprendiz":{"pow":2}},"fuse":{},"tree":["mag_a0"]}
+ "up":{"baculo_aprendiz":{"pow":2}},"fuse":{},"tree":["brasa_1"],"tv":2}
 ```
+
+`tv` es la versión del árbol (hoy 2, `kPassiveTreeVersion`). Un perfil
+sin `tv` o con una versión vieja que tenía nodos se carga con el árbol
+vacío y recuerda cuántos devolvió (`treeRefunded`, clave `tvRef` solo
+hasta normalizar); al entrar a la sala el sistema avisa una vez
+(passive_tree_v2.md § 6).
 
 `fromJson` es tolerante (campos faltantes o de otro tipo toman su valor
 por defecto). Después `ProgressionRules.normalize` aplica la validación
@@ -82,7 +88,18 @@ subió y tiene puntos.
 
 `respec` / `resetBuild`: atributos al base de la clase, puntos
 `(nivel − 1) × 3`, agrega el arma inicial si falta y, si el arma equipada
-deja de cumplir requisitos, equipa la inicial. En la sesión llena vida y maná.
+deja de cumplir requisitos, equipa la inicial. En la sesión, en lobby o
+preparación llena vida y maná; en otro modo solo recorta al máximo nuevo.
+
+### Reiniciar (decisión temporal del dueño)
+
+"Reiniciar puntos gratis siempre (por ahora)": con
+`ProgressionRules.freeRespec = true` (hoy) reiniciar los puntos de
+atributo (`RespecAction`) y el árbol (`ResetTreeAction`) no cuesta nada y
+se puede en cualquier modo **salvo en batalla** (para no cambiar los
+stats en medio del estado de combate): `ProgressionRules.canRespec`. Los
+botones dicen `(GRATIS)`. Con `false` vuelve la regla del prototipo:
+solo en lobby / preparación.
 
 `changeClass`: árbol vacío, arma inicial de la nueva clase y
 `resetBuild` (mantiene nivel, XP, créditos e inventario).
@@ -123,7 +140,8 @@ habilidades del arma + la fusionada (si no estaba).
 
 ## Árbol de pasivas
 
-`takeNode` (`PassiveTreeRules.canTake`) y `resetTree` (vacía la lista).
+`takeNode` (`PassiveTreeRules.canTake`) y `resetTree` (vacía la lista;
+gratis, ver § "Reiniciar").
 Al tomar un nodo, vida y maná actuales suben lo que suba el máximo; al
 reiniciar se recortan al máximo nuevo. Ver passive_tree.md.
 

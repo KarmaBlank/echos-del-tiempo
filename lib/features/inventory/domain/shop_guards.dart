@@ -117,8 +117,18 @@ class ShopGuards {
     return null;
   }
 
+  /// Motivo por el que no se puede reiniciar (`ProgressionRules.canRespec`).
+  String? _respecMode() => rules.canRespec(mode)
+      ? null
+      : ProgressionRules.freeRespec
+          ? 'No en batalla'
+          : notShopping;
+
+  /// Si la UI ofrece reiniciar puntos / árbol en este modo.
+  bool get showRespec => rules.canRespec(mode);
+
   /// `RespecAction`.
-  String? respec() => canShop ? null : notShopping;
+  String? respec() => _respecMode();
 
   /// `ChangeClassAction`.
   String? changeClass(PlayerProfile p, String classId) {
@@ -129,7 +139,8 @@ class ShopGuards {
 
   /// `ResetTreeAction` (la UI no lo ofrece sin nodos tomados).
   String? resetTree(PlayerProfile p) {
-    if (!canShop) return notShopping;
+    final m = _respecMode();
+    if (m != null) return m;
     if (p.tree.isEmpty) return 'No hay nodos tomados';
     return null;
   }

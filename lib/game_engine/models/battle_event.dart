@@ -1,9 +1,14 @@
+import 'passive_mechanic.dart';
 import 'status.dart';
 
 /// Lo que pasó en un paso del motor, en orden, para que la UI lo anime
 /// (números flotantes, auras, textos). Equivale a los `addFx` del
 /// prototipo, sin coordenadas ni colores: eso lo decide la UI.
-sealed class BattleEvent {
+///
+/// No es `sealed` a propósito: el árbol v2 agrega eventos opcionales
+/// ([ProcEvent], [BuffAppliedEvent], [ShieldEvent]) y quien no los
+/// conoce (un `switch` sin `default`) los ignora sin dejar de compilar.
+abstract class BattleEvent {
   const BattleEvent();
 }
 
@@ -26,6 +31,10 @@ class DamageEvent extends BattleEvent {
   /// (Quemadura si tenía, si no Veneno, si no Sagrado). `null` si no.
   final StatusKind? statusSource;
 
+  /// Daño secundario de una mecánica del árbol (`rebote`, `combustion`,
+  /// `contraataque`...). `null` en el daño normal.
+  final String? sourceId;
+
   const DamageEvent(
     this.targetId,
     this.amount, {
@@ -34,6 +43,7 @@ class DamageEvent extends BattleEvent {
     this.pierceMultiplier = 1,
     this.fromStatus = false,
     this.statusSource,
+    this.sourceId,
   });
 }
 
@@ -134,4 +144,33 @@ class BattleEndedEvent extends BattleEvent {
   final int xp;
   final int credits;
   const BattleEndedEvent(this.victory, this.xp, this.credits);
+}
+
+/// Disparó una mecánica del árbol v2 de [actorId] (`sourceId` = id en
+/// `kMechanics`). Va antes de los eventos que produce.
+class ProcEvent extends BattleEvent {
+  final String actorId;
+  final String sourceId;
+  final String? targetId;
+  const ProcEvent(this.actorId, this.sourceId, {this.targetId});
+}
+
+/// Un efecto con duración (buff, debuff, marca) cayó sobre [targetId].
+class BuffAppliedEvent extends BattleEvent {
+  final String targetId;
+  final String sourceId;
+  final BuffStat stat;
+  final double value;
+  final int turns;
+  const BuffAppliedEvent(
+      this.targetId, this.sourceId, this.stat, this.value, this.turns);
+}
+
+/// [targetId] ganó un escudo de [amount] (o, con [absorbed], su escudo
+/// absorbió [amount] de daño).
+class ShieldEvent extends BattleEvent {
+  final String targetId;
+  final int amount;
+  final bool absorbed;
+  const ShieldEvent(this.targetId, this.amount, {this.absorbed = false});
 }

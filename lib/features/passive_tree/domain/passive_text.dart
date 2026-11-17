@@ -1,7 +1,9 @@
+import '../../../game_engine/data/passive_mechanics.dart';
 import '../../../game_engine/models/passive_tree.dart';
 import '../../../game_engine/rules/passive_tree_rules.dart';
 
-/// Texto de cada keystone (`KEYS` del prototipo, líneas 344-351).
+/// Texto de cada keystone (`KEYS` del prototipo, líneas 344-351, más las
+/// 4 nuevas del árbol v2: passive_tree_v2.md § 4).
 const Map<String, String> kKeystoneText = {
   'imparable':
       'Golpe Imparable: tu ataque básico golpea a TODOS los enemigos al 60% del daño.',
@@ -17,6 +19,14 @@ const Map<String, String> kKeystoneText = {
       'Paladín Creyente: Aura Restauradora también hace daño de luz (MAG × 0.8) a todos; cada básico 25% de curar 2% de vida a todos. Excluye Inherente.',
   'inherente':
       'Paladín Inherente: cada básico 25% de aplicar Sagrado (5 de daño/turno, 3 turnos, se acumula). Excluye Creyente.',
+  'danza':
+      'Danza de Cuchillas: cada crítico te da otro turno inmediato (un turno extra no da otro), pero tu crítico máximo baja a 40%.',
+  'almaHielo':
+      'Alma de Hielo: mientras estés en pie, la Congelación de los enemigos no se derrite sola, pero no podés aplicar Quemadura.',
+  'cadena':
+      'Cadena Infinita: tus rebotes saltan a todos los enemigos (cada salto 60% del anterior), pero tus acciones a un solo objetivo hacen −20%.',
+  'egida':
+      'Égida Eterna: al empezar tu turno ganás un escudo del 10% de tu vida máx. (1 turno, no acumula), pero −20% ATQ y −20% MAG.',
 };
 
 String _pct(num v) => '${(v * 100).round()}%';
@@ -43,7 +53,10 @@ List<String> passiveEffectsText(PassiveNode node) {
     if (f('burn') case final v?) '+$v stack de Quemadura que apliques',
     if (f('poi') case final v?) '+$v stack de Veneno que apliques',
     if (f('frz') case final v?) '+$v stack de Congelación que apliques',
-    if (node.keystoneId case final k?) kKeystoneText[k] ?? k,
+    if (node.keystoneId case final k?)
+      kKeystoneText[k] ?? k
+    else if (node.mechanicId case final m?)
+      kMechanics[m]?.description ?? m,
   ];
 }
 

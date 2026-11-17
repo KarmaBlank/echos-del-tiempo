@@ -6,7 +6,9 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../game_engine/data/classes_catalog.dart';
+import '../../../game_engine/data/passive_mechanics.dart';
 import '../../../game_engine/models/battle_state.dart';
+import '../../../game_engine/models/passive_mechanic.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart';
 import '../../../game_engine/rules/js_math.dart';
@@ -70,7 +72,8 @@ Color _hex(String hex) =>
 
 /// Estados (con stacks) y buffs/debuffs que se derivan del [Combatant]:
 /// K.O., `defending`, `protecting`, `taunt`, `bonusDefense` (Fortaleza /
-/// Baluarte) y la lentitud de Congelación.
+/// Baluarte), la lentitud de Congelación y los efectos del árbol v2
+/// (buffs con duración, marcas, escudos, Último Aliento activo).
 List<StatusChip> combatantChips(Combatant p) {
   final chips = <StatusChip>[];
   if (!p.alive) {
@@ -138,6 +141,85 @@ List<StatusChip> combatantChips(Combatant p) {
         '<b style="color:#74b9ff">▼ Velocidad −$pct%</b> '
             '<span class="k">(Congelación ×$ice)</span><br>'
             '−12% velocidad por stack: su turno llega más tarde.'));
+  }
+  chips.addAll(treeEffectChips(p));
+  return chips;
+}
+
+/// Chips de los efectos del árbol de pasivas v2 (passive_tree_v2.md § 7):
+/// cada uno dice su origen y los turnos que le quedan.
+List<StatusChip> treeEffectChips(Combatant p) {
+  final chips = <StatusChip>[];
+  String src(TimedEffect e) => kMechanics[e.sourceId]?.name ?? e.sourceId;
+  String turns(TimedEffect e) => '${e.turns} turno${e.turns == 1 ? '' : 's'}';
+  for (final e in p.effects) {
+    final pct = jsRound(e.value.abs() * 100);
+    final from = src(e);
+    switch (e.stat) {
+      case BuffStat.speed:
+        chips.add(StatusChip(
+            '▲VEL',
+            '▲VEL +$pct%',
+            ProtoColors.green,
+            '<b style="color:#7bed9f">▲ Velocidad +$pct%</b> '
+                '<span class="k">($from · ${turns(e)})</span><br>'
+                'Su próximo turno llega antes.'));
+      case BuffStat.attack:
+        final up = e.value >= 0;
+        chips.add(StatusChip(
+            up ? '▲ATQ' : '▼ATQ',
+            '${up ? '▲' : '▼'}ATQ ${up ? '+' : '−'}$pct%',
+            up ? ProtoColors.orange : ProtoColors.ice,
+            '<b style="color:${up ? '#ff9f43' : '#74b9ff'}">'
+                '${up ? '▲' : '▼'} Ataque ${up ? '+' : '−'}$pct%</b> '
+                '<span class="k">($from · ${turns(e)})</span><br>'
+                '${up ? 'Pega más fuerte.' : 'Pega más débil.'}'));
+      case BuffStat.damageTaken:
+        chips.add(StatusChip(
+            'Marca',
+            'Marca +$pct%',
+            ProtoColors.red,
+            '<b style="color:#ff6b81">Marcado</b> '
+                '<span class="k">($from · ${turns(e)})</span><br>'
+                'Recibe +$pct% de daño de todos.'));
+      case BuffStat.shield:
+        final n = e.value.round();
+        chips.add(StatusChip(
+            'Escudo $n',
+            'Escudo $n',
+            ProtoColors.cream,
+            '<b style="color:#ffeaa7">Escudo $n</b> '
+                '<span class="k">($from · ${turns(e)})</span><br>'
+                'Absorbe $n de daño de golpes enemigos antes que la vida.'));
+      case BuffStat.stunLock:
+        chips.add(StatusChip(
+            'Aturd+1',
+            'Aturdido +1',
+            ProtoColors.cream,
+            '<b style="color:#ffeaa7">Aturdimiento extendido</b> '
+                '<span class="k">($from)</span><br>'
+                'Su aturdimiento dura 1 turno más.'));
+      case BuffStat.crit:
+      case BuffStat.damage:
+        break;
+    }
+  }
+  // Último Aliento activo (condición, no tiene duración).
+  for (final id in p.mechanics) {
+    final m = kMechanics[id];
+    if (m == null ||
+        m.trigger != ProcTrigger.whileLowHealth ||
+        !p.alive ||
+        p.hp >= p.maxHp * m.threshold) {
+      continue;
+    }
+    chips.add(StatusChip(
+        m.name,
+        m.name,
+        ProtoColors.crimson,
+        '<b style="color:#ff4757">${m.name}</b> '
+        '<span class="k">(vida &lt; ${jsRound(m.threshold * 100)}%)</span>'
+        '<br>${m.description}'));
   }
   return chips;
 }

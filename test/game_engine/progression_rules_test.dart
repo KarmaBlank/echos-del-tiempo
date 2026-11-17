@@ -1,5 +1,6 @@
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
+import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/upgrade_stat.dart';
 import 'package:echos_del_tiempo/game_engine/models/weapon.dart';
@@ -81,7 +82,7 @@ void main() {
 
     test('changeClass: árbol vacío, arma inicial y atributos de la clase nueva', () {
       var p = _warriorL3();
-      p = progression.takeNode(p, 'gue_a0')!;
+      p = progression.takeNode(p, 'sangre_1')!;
       final m = progression.changeClass(p, 'maga')!;
       expect(m.classId, 'maga');
       expect(m.tree, isEmpty);
@@ -215,12 +216,19 @@ void main() {
 
   group('árbol', () {
     test('takeNode necesita puntos y conexión', () {
-      expect(progression.takeNode(newProfile('A', 'guerrero'), 'gue_a0'), isNull);
+      expect(progression.takeNode(newProfile('A', 'guerrero'), 'filo_1'), isNull);
       final p = _warriorL3();
-      final t = progression.takeNode(p, 'gue_a0')!;
-      expect(t.tree, ['gue_a0']);
-      expect(progression.takeNode(p, 'mag_a0'), isNull);
+      final t = progression.takeNode(p, 'filo_1')!;
+      expect(t.tree, ['filo_1']);
+      expect(progression.takeNode(p, 'brasa_1'), isNull);
       expect(progression.resetTree(t).tree, isEmpty);
+    });
+
+    test('freeRespec: reiniciar se puede en todo modo salvo batalla', () {
+      expect(ProgressionRules.freeRespec, isTrue);
+      for (final m in SessionMode.values) {
+        expect(progression.canRespec(m), m != SessionMode.battle, reason: '$m');
+      }
     });
   });
 
@@ -243,7 +251,8 @@ void main() {
           'nada': {'pow': 1},
         },
         'fuse': {'espada_ignea': 'giro', 'nada': 'giro', 'espada_bronce': 'nope'},
-        'tree': ['gue_a1', 'gue_a0'],
+        'tv': 2,
+        'tree': ['filo_2', 'filo_1'],
       }));
       expect(p.name, 'NombreDema');
       expect(p.classId, 'guerrero');
@@ -267,11 +276,12 @@ void main() {
       final p = progression.normalize(PlayerProfile.fromJson({
         'cls': 'guerrero',
         'lvl': 4,
-        'tree': ['gue_a1', 'gue_a0', 'gue_a1', 'mag_a0', 's_gue', 'gue_b0', 'gue_b1'],
+        'tv': 2,
+        'tree': ['filo_2', 'filo_1', 'filo_2', 'brasa_1', 's_gue', 'p_gue', 'r_gm1'],
       }));
-      // gue_a1 no conecta todavía; gue_a0 sí; después gue_a1 ya conecta;
-      // mag_a0 no conecta; s_gue ya lo tiene; gue_b0 entra y no quedan puntos.
-      expect(p.tree, ['gue_a0', 'gue_a1', 'gue_b0']);
+      // filo_2 no conecta todavía; filo_1 sí; después filo_2 ya conecta;
+      // brasa_1 no conecta; s_gue ya lo tiene; p_gue entra y no quedan puntos.
+      expect(p.tree, ['filo_1', 'filo_2', 'p_gue']);
     });
 
     test('perfil nuevo: 3 pociones, 1 de maná y arma inicial', () {

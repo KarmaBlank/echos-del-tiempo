@@ -58,6 +58,9 @@ class DerivedStats {
   final double healBonus;
   final Set<String> keystones;
 
+  /// Mecánicas del árbol v2 (`kMechanics`): notables y keystones nuevas.
+  final Set<String> mechanics;
+
   /// Stacks extra de cada estado que este jugador aplica (`p.stb`).
   final Map<StatusKind, int> statusBonus;
 
@@ -74,6 +77,7 @@ class DerivedStats {
     required this.ultChargeBonus,
     required this.healBonus,
     required this.keystones,
+    this.mechanics = const {},
     this.statusBonus = const {},
   });
 }

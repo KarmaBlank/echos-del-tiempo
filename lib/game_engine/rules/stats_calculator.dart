@@ -49,7 +49,7 @@ class StatsCalculator {
     maxMp = jsRound(maxMp * (1 + mods['mp']));
     attack = math.max(1, jsRound(attack * (1 + mods['atk'])));
     magic = math.max(1, jsRound(magic * (1 + mods['mag'])));
-    crit = math.min(0.75, crit + mods['crit']);
+    crit = math.min(mods.critCap, crit + mods['crit']);
     speed = jsRound((speed + mods['spd']) * 10) / 10;
     final defenseTotal = math.max(0.0, defense + mods['def']);
 
@@ -66,6 +66,7 @@ class StatsCalculator {
       ultChargeBonus: mods['ult'],
       healBonus: mods['heal'],
       keystones: mods.keys,
+      mechanics: mods.mechanics,
       statusBonus: {
         StatusKind.burn: mods['burn'].toInt(),
         StatusKind.poison: mods['poi'].toInt(),

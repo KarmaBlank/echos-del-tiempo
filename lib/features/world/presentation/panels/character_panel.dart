@@ -7,6 +7,7 @@ import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/game_session.dart';
+import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../inventory/presentation/shop_sections.dart';
 import '../../../passive_tree/presentation/passive_tree_view.dart';
 import '../session_controller.dart';
@@ -122,7 +123,6 @@ class _CharacterPanelState extends State<CharacterPanel> {
     final now = rules.derivedStats(prof);
     final next = _allocSum == 0 ? now : rules.previewAllocation(prof, _alloc);
     final w = rules.equippedWeapon(prof);
-    final canShop = view.session.canShop;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,8 +169,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 key: const ValueKey('confirm-points'),
                 accent: ProtoColors.green,
                 onPressed: _allocSum == 0 ? null : _confirm),
-            if (canShop)
-              PanelButton('REINICIAR PUNTOS',
+            if (guards.showRespec)
+              PanelButton(
+                  ProgressionRules.freeRespec
+                      ? 'REINICIAR PUNTOS (GRATIS)'
+                      : 'REINICIAR PUNTOS',
                   key: const ValueKey('respec'),
                   reason: guards.respec(),
                   onPressed: () {
@@ -318,7 +321,10 @@ class _CharacterPanelState extends State<CharacterPanel> {
       profile: p,
       inBattle: view.mode == SessionMode.battle,
       onTake: c.takeNode,
-      showReset: view.session.canShop,
+      showReset: guards.showRespec,
+      resetLabel: ProgressionRules.freeRespec
+          ? 'REINICIAR ÁRBOL (GRATIS)'
+          : 'REINICIAR ÁRBOL',
       resetReason: guards.resetTree(p),
       onReset: c.resetTree,
     );

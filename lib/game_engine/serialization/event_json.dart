@@ -1,5 +1,6 @@
 import '../models/battle_event.dart';
 import '../models/game_session.dart';
+import '../models/passive_mechanic.dart';
 import '../models/session_event.dart';
 import '../models/status.dart';
 import 'action_json.dart';
@@ -128,6 +129,7 @@ class EventJson {
             'pm': e.pierceMultiplier,
             'st': e.fromStatus,
             'src': e.statusSource?.name,
+            if (e.sourceId != null) 'proc': e.sourceId,
           },
         ActionEvent() => {
             'k': 'act',
@@ -162,6 +164,27 @@ class EventJson {
             'xp': e.xp,
             'cr': e.credits,
           },
+        ProcEvent() => {
+            'k': 'proc',
+            'id': e.actorId,
+            'src': e.sourceId,
+            'tg': e.targetId,
+          },
+        BuffAppliedEvent() => {
+            'k': 'buff',
+            'id': e.targetId,
+            'src': e.sourceId,
+            'stat': e.stat.name,
+            'v': e.value,
+            'turns': e.turns,
+          },
+        ShieldEvent() => {
+            'k': 'shield',
+            'id': e.targetId,
+            'n': e.amount,
+            'abs': e.absorbed,
+          },
+        _ => throw ArgumentError('Evento de batalla sin JSON: $e'),
       };
 
   BattleEvent battleFromJson(Json j) {
@@ -178,6 +201,7 @@ class EventJson {
           pierceMultiplier: j.dbl('pm'),
           fromStatus: j.boolean('st'),
           statusSource: j.enumOrNull('src', StatusKind.values),
+          sourceId: j.strOrNull('proc'),
         );
       case 'act':
         return ActionEvent(
@@ -208,6 +232,19 @@ class EventJson {
       case 'end':
         return BattleEndedEvent(
             j.boolean('win'), j.integer('xp'), j.integer('cr'));
+      case 'proc':
+        return ProcEvent(j.str('id'), j.str('src'),
+            targetId: j.strOrNull('tg'));
+      case 'buff':
+        return BuffAppliedEvent(
+            j.str('id'),
+            j.str('src'),
+            j.enumByName('stat', BuffStat.values),
+            j.dbl('v'),
+            j.integer('turns'));
+      case 'shield':
+        return ShieldEvent(j.str('id'), j.integer('n'),
+            absorbed: j.flag('abs'));
     }
     throw FormatException('JSON inválido: evento de batalla desconocido', k);
   }

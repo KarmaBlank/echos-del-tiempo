@@ -102,7 +102,12 @@ void main() {
       final e2 = sessionEngine();
       expect(e2.apply(f, 'p0', const BuyItemAction(BattleItem.potion)), isNull);
       expect(e2.apply(f, 'p0', const ChangeClassAction('maga')), isNull);
-      expect(e2.apply(f, 'p0', const RespecAction()), isNull);
+      // Reiniciar es gratis y se puede fuera del lobby (freeRespec), pero
+      // en el campo no llena vida y maná.
+      final hurt = f.players['p0']!..hp = 5;
+      final r = e2.apply(f, 'p0', const RespecAction())!.state.players['p0']!;
+      expect(r.hp, hurt.hp);
+      expect(e2.apply(f, 'p0', const ResetTreeAction()), isNotNull);
     });
   });
 

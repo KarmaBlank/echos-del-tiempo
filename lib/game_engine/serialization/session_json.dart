@@ -3,6 +3,7 @@ import 'dart:collection';
 import '../data/game_catalog.dart';
 import '../models/attributes.dart';
 import '../models/battle_state.dart';
+import '../models/passive_mechanic.dart';
 import '../models/game_session.dart';
 import '../models/passive_tree.dart';
 import '../models/player_profile.dart';
@@ -382,7 +383,29 @@ class SessionJson {
         'bdef': c.bonusDefense,
         'ult': c.ult,
         'acts': c.actions,
+        if (c.mechanics.isNotEmpty) 'mech': c.mechanics.toList(),
+        if (c.effects.isNotEmpty)
+          'fx': [for (final e in c.effects) timedEffectToJson(e)],
+        if (c.extraTurn != 0) 'xt': c.extraTurn,
       };
+
+  Json timedEffectToJson(TimedEffect e) => {
+        'src': e.sourceId,
+        'stat': e.stat.name,
+        'v': e.value,
+        'turns': e.turns,
+        if (e.ownerId != null) 'by': e.ownerId,
+        if (e.fresh) 'new': true,
+      };
+
+  TimedEffect timedEffectFromJson(Json j) => TimedEffect(
+        sourceId: j.str('src'),
+        stat: j.enumByName('stat', BuffStat.values),
+        value: j.dbl('v'),
+        turns: j.integer('turns'),
+        ownerId: j.strOrNull('by'),
+        fresh: j.flag('new'),
+      );
 
   Combatant combatantFromJson(Json j) {
     final inf = j.objOrNull('inf');
@@ -434,6 +457,12 @@ class SessionJson {
       bonusDefense: j.integer('bdef'),
       ult: j.dbl('ult'),
       actions: j.integer('acts'),
+      // Árbol v2: opcionales (un estado viejo no los trae).
+      mechanics: j['mech'] == null ? {} : j.strings('mech').toSet(),
+      effects: j['fx'] == null
+          ? []
+          : [for (final raw in j.list('fx')) timedEffectFromJson(asJson(raw))],
+      extraTurn: j.intOrNull('xt') ?? 0,
     );
   }
 

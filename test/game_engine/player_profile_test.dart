@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
+import 'package:echos_del_tiempo/game_engine/models/session_event.dart';
 import 'package:echos_del_tiempo/game_engine/models/weapon.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -29,7 +30,61 @@ void main() {
     expect(p.upgradesFor('baculo_fuego').pow, 2);
     expect(p.upgradesFor('baculo_fuego').spd, 1);
     expect(p.fused, {'baculo_fuego': 'cura'});
-    expect(p.tree, ['mag_a0', 'mag_a1']);
+    // Árbol v1 (sin `tv`): se reinicia gratis y devuelve los puntos.
+    expect(p.tree, isEmpty);
+  });
+
+  group('migración del árbol v1 → v2', () {
+    final v1 = {
+      'name': 'Ana',
+      'cls': 'guerrero',
+      'lvl': 6,
+      'tree': ['gue_a0', 'gue_a1', 'b_ne'],
+    };
+
+    test('un perfil v1 con nodos carga con el árbol vacío y todos los puntos',
+        () {
+      final raw = PlayerProfile.fromJson(v1);
+      expect(raw.tree, isEmpty);
+      expect(raw.treeRefunded, 3);
+      final p = progression.normalize(raw);
+      expect(p.tree, isEmpty);
+      expect(p.treeRefunded, 0, reason: 'normalize lo consume');
+      expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 5);
+      expect(p.toJson()['tv'], PlayerProfile.treeVersion);
+      expect(p.toJson().containsKey('tvRef'), isFalse);
+    });
+
+    test('un perfil v2 conserva su árbol', () {
+      final p = PlayerProfile.fromJson({
+        ...v1,
+        'tv': 2,
+        'tree': ['filo_1', 'filo_2'],
+      });
+      expect(p.tree, ['filo_1', 'filo_2']);
+      expect(p.treeRefunded, 0);
+    });
+
+    test('v1 sin nodos: nada que devolver', () {
+      final p = PlayerProfile.fromJson({...v1, 'tree': <String>[]});
+      expect(p.treeRefunded, 0);
+    });
+
+    test('el aviso viaja por la red (hello) y la sala avisa una vez', () {
+      final raw = PlayerProfile.fromJson(v1);
+      final sent = PlayerProfile.fromJson(
+          jsonDecode(jsonEncode(raw.toJson())) as Map<String, Object?>);
+      expect(sent.treeRefunded, 3);
+      final e = sessionEngine();
+      final step = e.addPlayer(e.create(), 'a', sent)!;
+      final notices = step.events
+          .whereType<SystemMessageEvent>()
+          .where((m) => m.text.contains('árbol de pasivas cambió'))
+          .toList();
+      expect(notices, hasLength(1));
+      expect(notices.single.text, contains('recuperaste 3 puntos'));
+      expect(step.state.players['a']!.profile.treeRefunded, 0);
+    });
   });
 
   test('toJson → JSON → fromJson da el mismo perfil', () {

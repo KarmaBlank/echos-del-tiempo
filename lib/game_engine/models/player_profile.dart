@@ -1,3 +1,4 @@
+import '../data/passive_tree_catalog.dart';
 import 'attributes.dart';
 import 'passive_tree.dart';
 import 'upgrade_stat.dart';
@@ -23,6 +24,7 @@ class PlayerProfile {
     Map<String, WeaponUpgradeLevels> upgrades = const {},
     Map<String, String> fused = const {},
     List<String> tree = const [],
+    this.treeRefunded = 0,
   })  : attributes = attributes ?? const PlayerAttributes({}),
         inventory = List.unmodifiable(inventory),
         upgrades = Map.unmodifiable(upgrades),
@@ -59,6 +61,15 @@ class PlayerProfile {
 
   /// Nodos del árbol tomados, en orden (`tree`).
   final List<String> tree;
+
+  /// Versión del árbol con la que se guardó `tree` (`tv`).
+  static const treeVersion = kPassiveTreeVersion;
+
+  /// Nodos del árbol viejo que se devolvieron al cargar este perfil (la
+  /// migración a una versión nueva del árbol lo reinicia gratis). Solo
+  /// vive hasta que la sala lo avisa: `ProgressionRules.normalize` lo
+  /// deja en 0. Ver passive_tree_v2.md § 6.
+  final int treeRefunded;
 
   PlayerPassiveProgress get passiveProgress => PlayerPassiveProgress(tree);
 
@@ -124,6 +135,8 @@ class PlayerProfile {
         },
         'fuse': fused,
         'tree': tree,
+        'tv': treeVersion,
+        if (treeRefunded > 0) 'tvRef': treeRefunded,
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -157,6 +170,13 @@ class PlayerProfile {
         if (k is String && v is String) fused[k] = v;
       });
     }
+    // Árbol de otra versión: se reinicia gratis (passive_tree_v2.md § 6).
+    var tree = _strings(json['tree']);
+    var refunded = _int(json['tvRef']);
+    if (_int(json['tv'], 1) < treeVersion && tree.isNotEmpty) {
+      refunded += tree.length;
+      tree = const [];
+    }
     return PlayerProfile(
       name: json['name'] is String ? json['name'] as String : '',
       classId: json['cls'] is String ? json['cls'] as String : 'guerrero',
@@ -171,7 +191,8 @@ class PlayerProfile {
       ethers: _int(json['eter'], defaultEthers),
       upgrades: up,
       fused: fused,
-      tree: _strings(json['tree']),
+      tree: tree,
+      treeRefunded: refunded,
     );
   }
 

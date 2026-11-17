@@ -220,6 +220,12 @@ class _Op {
     s.players[id] = p;
     events.add(PlayerJoinedEvent(id));
     say('${profile.name} se unió a la sala.');
+    if (raw.treeRefunded > 0) {
+      // Migración del árbol (passive_tree_v2.md § 6): aviso único.
+      say('${profile.name}: el árbol de pasivas cambió; se reinició gratis '
+          'y recuperaste ${raw.treeRefunded} '
+          'punto${raw.treeRefunded == 1 ? '' : 's'}.');
+    }
   }
 
   void removePlayer(String id) {
@@ -288,8 +294,10 @@ class _Op {
             refill: true);
 
       case RespecAction():
-        if (!s.canShop) return false;
-        return _profileChange(p, rules.resetBuild(p.profile), refill: true);
+        if (!rules.canRespec(s.mode)) return false;
+        // Fuera del lobby / preparación no llena vida y maná.
+        return _profileChange(p, rules.resetBuild(p.profile),
+            refill: s.canShop);
 
       case AllocateStatsAction():
         if (s.mode == SessionMode.battle) return false;
@@ -314,7 +322,7 @@ class _Op {
         return true;
 
       case ResetTreeAction():
-        if (!s.canShop) return false;
+        if (!rules.canRespec(s.mode)) return false;
         return _profileChange(p, rules.resetTree(p.profile));
 
       case FuseAction():

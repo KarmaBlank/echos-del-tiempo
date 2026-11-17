@@ -1,10 +1,12 @@
 import 'dart:math' as math;
 
 import '../data/game_catalog.dart';
+import '../data/passive_mechanics.dart';
 import '../data/skills_catalog.dart';
 import '../models/battle_command.dart';
 import '../models/battle_event.dart';
 import '../models/battle_state.dart';
+import '../models/passive_mechanic.dart';
 import '../models/skill.dart';
 import '../models/status.dart';
 import 'js_math.dart';
@@ -46,9 +48,17 @@ class BattleEngine {
   static const maxBonusDefense = 12;
   static const dualMpCost = 4;
 
-  /// Tiempo entre turnos (`IVa`): 100 / velocidad efectiva.
+  /// Tope de efectos disparados por el árbol en un paso del motor
+  /// (passive_tree_v2.md § 5, regla 4).
+  static const maxProcsPerStep = 64;
+
+  /// Tiempo entre turnos (`IVa`): 100 / velocidad efectiva. Los buffs de
+  /// velocidad del árbol (Frenesí) suben la velocidad efectiva.
   double interval(Combatant a) =>
-      100 / (a.speed * (1 - freezeSlowPerStack * a.stacks(StatusKind.freeze)));
+      100 /
+      (a.speed *
+          (1 + a.effectTotal(BuffStat.speed)) *
+          (1 - freezeSlowPerStack * a.stacks(StatusKind.freeze)));
 
   // ------------------------------------------------------------------
   // API pública
@@ -126,6 +136,7 @@ class BattleEngine {
     final e = t.state.current!;
     if (e.alive) {
       t.enemyAct(e);
+      t.tickEffects(e);
       e.nextTurn = t.state.clock + interval(e);
     }
     t.endTurn();
@@ -155,6 +166,7 @@ class BattleEngine {
     final p = t.state.current!;
     t.events.add(ActionEvent(p.id, BattleActionKind.defend));
     p.defending = true;
+    t.tickEffects(p);
     p.nextTurn = t.state.clock + interval(p);
     t.state.log = 'Tiempo agotado: ${p.name} se defiende automáticamente';
     t.endTurn();
@@ -241,6 +253,7 @@ class BattleEngine {
       ..healBonus = d.healBonus
       ..statusBonus = Map.of(d.statusBonus)
       ..keystones = Set.of(d.keystones)
+      ..mechanics = Set.of(d.mechanics)
       ..hp = math.min(c.hp, d.maxHp)
       ..mp = math.min(c.mp, d.maxMp.toDouble());
   }
@@ -249,7 +262,11 @@ class BattleEngine {
 class _Hit {
   final int damage;
   final bool critical;
-  const _Hit(this.damage, this.critical);
+  final Combatant target;
+
+  /// Multiplicadores del árbol que entraron en el golpe (`× 1.15 Marca`).
+  final List<String> mods;
+  const _Hit(this.damage, this.critical, this.target, [this.mods = const []]);
 }
 
 class _Hurt {
@@ -258,6 +275,37 @@ class _Hurt {
   final double pierce;
   final double defensePercent;
   const _Hurt(this.damage, this.critical, this.pierce, this.defensePercent);
+}
+
+/// Contexto de una acción de jugador para el sistema de disparadores del
+/// árbol v2 (passive_tree_v2.md § 5): qué acción es y qué efectos quedan
+/// diferidos para después de los golpes primarios.
+class _Action {
+  SkillDef? skill;
+  bool ultimate = false;
+
+  /// Acción de daño a un solo objetivo (ataque, habilidad o ULT).
+  bool single = false;
+  Combatant? mainTarget;
+  _Hit? mainHit;
+
+  /// Daño base de la habilidad (para Eco Arcano) y bonus de su estado.
+  double skillBase = 0;
+  int skillStatusBonus = 0;
+
+  /// Mecánicas ya disparadas en esta acción (`id` o `id|objetivo`).
+  final fired = <String>{};
+
+  double chain = 0;
+  PassiveMechanic? chainSource;
+  (Combatant, int, PassiveMechanic)? explosion;
+  (double, PassiveMechanic)? repeat;
+  PassiveMechanic? freeAttack;
+  bool killed = false;
+  bool extraTurn = false;
+
+  /// Factor del próximo turno (Sed de Sangre: 0.5).
+  double turnFactor = 1;
 }
 
 /// Un paso del motor sobre una copia del estado. Equivale al contexto
@@ -275,11 +323,27 @@ class _Turn {
   int _dealtMaxHp = 1;
   Combatant? _attacker;
 
+  /// Acción de jugador en curso (disparadores del árbol).
+  _Action? _act;
+
+  /// Efectos disparados que se agregan al log, con su origen.
+  final _notes = <String>[];
+  int _procBudget = BattleEngine.maxProcsPerStep;
+
   BattleStep get result => BattleStep(state, List.unmodifiable(events));
 
   double _rand() => engine._random();
   double _iv(Combatant c) => engine.interval(c);
   Iterable<Combatant> get _aliveParty => state.party.where((p) => p.alive);
+
+  /// Agrega los efectos disparados a la línea del log.
+  void _flush() {
+    if (_notes.isEmpty) return;
+    state.log = state.log.isEmpty
+        ? _notes.join(' · ')
+        : '${state.log} · ${_notes.join(' · ')}';
+    _notes.clear();
+  }
 
   // ---------------- turnos ----------------
 
@@ -297,20 +361,43 @@ class _Turn {
     if (best.isPlayer) {
       best.defending = false;
       best.protecting = false;
+      best.extraTurn = best.extraTurn == 1 ? 2 : 0;
       state.log = 'Turno de ${best.name}';
     }
     final (skip, text) = _statusTick(best);
     if (text != null) state.log = text;
+    if (best.alive) _fire(ProcTrigger.onTurnStart, best);
+    _flush();
     if (!best.alive || skip) {
-      if (skip) best.nextTurn = state.clock + _iv(best);
+      if (skip) {
+        tickEffects(best);
+        best.nextTurn = state.clock + _iv(best);
+      }
       state.currentId = null;
       _checkEnd();
     }
   }
 
   void endTurn() {
+    _flush();
     state.currentId = null;
     _checkEnd();
+  }
+
+  /// Fin del turno de [c]: descuenta 1 turno a sus efectos con duración
+  /// (los aplicados en este mismo turno empiezan a contar desde el
+  /// próximo) y quita los que llegan a 0.
+  void tickEffects(Combatant c) {
+    if (c.effects.isEmpty) return;
+    final next = <TimedEffect>[];
+    for (final e in c.effects) {
+      if (e.fresh) {
+        next.add(e.copyWith(fresh: false));
+      } else if (e.turns > 1) {
+        next.add(e.copyWith(turns: e.turns - 1));
+      }
+    }
+    c.effects = next;
   }
 
   void _checkEnd() {
@@ -338,6 +425,10 @@ class _Turn {
   }
 
   // ---------------- estados ----------------
+
+  /// Alma de Hielo: algún jugador en pie con la keystone.
+  bool get _almaHielo =>
+      state.party.any((p) => p.alive && p.keystones.contains('almaHielo'));
 
   /// `statusTick`: devuelve (pierde el turno, texto para el log).
   (bool, String?) _statusTick(Combatant a) {
@@ -390,22 +481,30 @@ class _Turn {
               : poison > 0
                   ? StatusKind.poison
                   : StatusKind.holy));
-      if (!a.alive) events.add(KnockedOutEvent(a.id));
+      if (!a.alive) _knockedOut(a);
     }
 
     var skip = false;
     var stunned = false;
+    var locked = false;
     if (a.stacks(StatusKind.stun) > 0 && a.alive) {
       skip = true;
       stunned = true;
-      a.statuses[StatusKind.stun] = 0;
+      // Martillo Bendito: el aturdimiento dura un turno más.
+      locked = a.hasEffect(BuffStat.stunLock);
+      if (locked) {
+        a.effects =
+            a.effects.where((e) => e.stat != BuffStat.stunLock).toList();
+      } else {
+        a.statuses[StatusKind.stun] = 0;
+      }
       events.add(TurnSkippedEvent(a.id, StatusKind.stun));
     } else if (a.stacks(StatusKind.freeze) >= StatusKind.freeze.maxStacks &&
         a.alive) {
       skip = true;
       a.statuses[StatusKind.freeze] = 0;
       events.add(TurnSkippedEvent(a.id, StatusKind.freeze));
-    } else if (a.stacks(StatusKind.freeze) > 0) {
+    } else if (a.stacks(StatusKind.freeze) > 0 && (a.isPlayer || !_almaHielo)) {
       a.statuses[StatusKind.freeze] = a.stacks(StatusKind.freeze) - 1;
     }
 
@@ -415,24 +514,65 @@ class _Turn {
             '${a.alive ? '' : ' y cae'}',
       if (healText != null) healText,
       if (skip)
-        '${a.name} está ${stunned ? 'ATURDIDO' : 'CONGELADO'} y pierde su turno',
+        '${a.name} está ${stunned ? 'ATURDIDO' : 'CONGELADO'} y pierde su turno'
+            '${locked ? ' (Martillo Bendito: sigue aturdido 1 turno más)' : ''}',
     ];
     return (skip, texts.isEmpty ? null : texts.join(' · '));
   }
 
-  /// `addStatus`.
-  bool _addStatus(Combatant a, StatusApplication st, {int bonus = 0}) {
+  /// `addStatus`. [source]: quién lo aplica; con [primary] (golpe
+  /// primario de su acción) dispara `onStatusApplied`.
+  bool _addStatus(Combatant a, StatusApplication st,
+      {int bonus = 0, Combatant? source, bool primary = false}) {
     if (!a.alive) return false;
+    // Alma de Hielo: no puede aplicar Quemadura.
+    if (st.kind == StatusKind.burn &&
+        source != null &&
+        source.keystones.contains('almaHielo')) {
+      return false;
+    }
     if (st.chance != null && _rand() >= st.chance!) return false;
-    final weak = a.isPlayer && a.statusWeakness > 0 && st.kind != StatusKind.regen
-        ? a.statusWeakness
-        : 0;
+    final weak =
+        a.isPlayer && a.statusWeakness > 0 && st.kind != StatusKind.regen
+            ? a.statusWeakness
+            : 0;
     final n = st.stacks + bonus + weak;
     a.statuses[st.kind] = math.min(st.kind.maxStacks, a.stacks(st.kind) + n);
     if (st.kind == StatusKind.holy) a.holyTurns = 3;
     if (st.kind == StatusKind.regen) a.statuses[StatusKind.regen] = 3;
     events.add(StatusAppliedEvent(a.id, st.kind, n, weakness: weak > 0));
+    if (source != null && source.isPlayer && !a.isPlayer) {
+      if (st.kind == StatusKind.stun && !a.boss) _extendStun(source, a);
+      if (primary) {
+        _fire(ProcTrigger.onStatusApplied, source, target: a, status: st.kind);
+      }
+    }
     return true;
+  }
+
+  /// Efecto `stunExtend` (Martillo Bendito): modificador, se aplica a
+  /// todos los aturdimientos de [source] (también los secundarios).
+  void _extendStun(Combatant source, Combatant target) {
+    for (final m in _mechanicsOf(source)) {
+      for (final fx in m.effects) {
+        if (fx.kind != ProcEffectKind.stunExtend) continue;
+        if (target.hasEffect(BuffStat.stunLock) || !_spend()) return;
+        target.effects = [
+          ...target.effects,
+          TimedEffect(
+              sourceId: m.id,
+              stat: BuffStat.stunLock,
+              value: 1,
+              turns: fx.turns,
+              ownerId: source.id),
+        ];
+        events.add(ProcEvent(source.id, m.id, targetId: target.id));
+        events.add(
+            BuffAppliedEvent(target.id, m.id, BuffStat.stunLock, 1, fx.turns));
+        _notes.add('${m.name}: ${target.name} queda aturdido 1 turno más');
+        return;
+      }
+    }
   }
 
   void _heal(Combatant q, int amount) {
@@ -442,8 +582,10 @@ class _Turn {
 
   // ---------------- daño ----------------
 
-  /// `hurt`: enemigo → jugador.
-  _Hurt _hurt(Combatant p, double base, double critChance, bool pierce) {
+  /// `hurt`: enemigo → jugador. Los escudos del árbol absorben antes que
+  /// la vida; [from] es el enemigo que pega (Contraataque, Represalia).
+  _Hurt _hurt(Combatant p, double base, double critChance, bool pierce,
+      {Combatant? from}) {
     final crit = _rand() < critChance;
     final pmul = pierce ? p.pierceWeakness : 1.0;
     final defp = p.defensePercent;
@@ -455,27 +597,157 @@ class _Turn {
           (p.defending ? 0.5 : 1) *
           (1 - defp)),
     );
-    p.ult = math.min(100, p.ult + dmg / p.maxHp * 110 * (1 + p.ultChargeBonus));
-    p.hp = math.max(0, p.hp - dmg);
-    events.add(DamageEvent(p.id, dmg,
+    final absorbed = _absorb(p, dmg);
+    final taken = dmg - absorbed;
+    if (taken > 0) {
+      p.ult =
+          math.min(100, p.ult + taken / p.maxHp * 110 * (1 + p.ultChargeBonus));
+    }
+    p.hp = math.max(0, p.hp - taken);
+    events.add(DamageEvent(p.id, taken,
         critical: crit,
         critMultiplier: BattleEngine.enemyCritMultiplier,
         pierceMultiplier: pmul));
     if (!p.alive) events.add(KnockedOutEvent(p.id));
+    if (from != null && p.alive) {
+      _fire(ProcTrigger.onHitTaken, p, target: from, amount: dmg);
+    }
     return _Hurt(dmg, crit, pmul, defp);
   }
 
-  /// `dmgEnemy`: jugador → enemigo.
-  _Hit _damageEnemy(Combatant e, double base, double critChance) {
-    final cm = _attacker?.critMultiplier ?? 1.5;
-    final crit = _rand() < critChance;
-    final dmg = math.max(1, jsRound(base * (crit ? cm : 1)));
+  /// Los escudos de [p] absorben hasta [dmg]; devuelve cuánto absorbieron.
+  int _absorb(Combatant p, int dmg) {
+    if (!p.hasEffect(BuffStat.shield)) return 0;
+    var left = dmg;
+    final next = <TimedEffect>[];
+    for (final e in p.effects) {
+      if (e.stat != BuffStat.shield || left <= 0) {
+        next.add(e);
+        continue;
+      }
+      final v = e.value.round();
+      final use = math.min(v, left);
+      left -= use;
+      if (v - use > 0) next.add(e.copyWith(value: (v - use).toDouble()));
+    }
+    p.effects = next;
+    final absorbed = dmg - left;
+    if (absorbed > 0) {
+      events.add(ShieldEvent(p.id, absorbed, absorbed: true));
+      _notes.add('escudo de ${p.name} absorbe $absorbed');
+    }
+    return absorbed;
+  }
+
+  /// Bonus de las condiciones del árbol de [a] (Último Aliento, Fractura,
+  /// Punto Débil) sobre [stat], contra [target] si hay.
+  double _conditionBonus(Combatant a, BuffStat stat, [Combatant? target]) {
+    var total = 0.0;
+    for (final m in _mechanicsOf(a)) {
+      final ok = switch (m.trigger) {
+        ProcTrigger.whileLowHealth => a.hp < a.maxHp * m.threshold,
+        ProcTrigger.vsStatus =>
+          target != null && m.status != null && target.stacks(m.status!) > 0,
+        ProcTrigger.vsMarked =>
+          target != null && target.hasEffect(BuffStat.damageTaken),
+        _ => false,
+      };
+      if (!ok) continue;
+      for (final fx in m.effects) {
+        if (fx.kind == ProcEffectKind.statBonus && fx.stat == stat) {
+          total += fx.value;
+        }
+      }
+    }
+    return total;
+  }
+
+  /// ATQ efectivo: con buffs (Represalia) y Último Aliento.
+  int _atk(Combatant p) {
+    final b =
+        p.effectTotal(BuffStat.attack) + _conditionBonus(p, BuffStat.attack);
+    return b == 0 ? p.attack : math.max(1, jsRound(p.attack * (1 + b)));
+  }
+
+  /// Texto de la fuente de daño con ATQ efectivo (`ATQ 36 (30 +20%)`).
+  String _atkText(Combatant p) {
+    final a = _atk(p);
+    if (a == p.attack) return 'ATQ ${p.attack}';
+    final pct = jsRound((a / p.attack - 1) * 100);
+    return 'ATQ $a (${p.attack} ${pct >= 0 ? '+' : ''}$pct%)';
+  }
+
+  /// `dmgEnemy`: jugador → enemigo. Con [primary] (golpe de la acción,
+  /// no de una mecánica) dispara `onHit` / `onCrit`.
+  _Hit _damageEnemy(Combatant e, double base, double critChance,
+      {bool primary = true, bool single = false}) {
+    final a = _attacker;
+    final cm = a?.critMultiplier ?? 1.5;
+    var chance = critChance;
+    var mult = 1.0;
+    final mods = <String>[];
+    if (a != null) {
+      chance += _conditionBonus(a, BuffStat.crit, e);
+      if (a.keystones.contains('danza')) chance = math.min(chance, 0.40);
+      final dmgBonus = _conditionBonus(a, BuffStat.damage, e);
+      if (dmgBonus != 0) {
+        mult *= 1 + dmgBonus;
+        mods.add('× ${fm(1 + dmgBonus)} Fractura');
+      }
+      if (single && primary && a.keystones.contains('cadena')) {
+        mult *= 0.8;
+        mods.add('× 0.8 Cadena Infinita');
+      }
+    }
+    final taken = e.effectTotal(BuffStat.damageTaken);
+    if (taken != 0) {
+      mult *= 1 + taken;
+      mods.add('× ${fm(1 + taken)} Marca');
+    }
+    final crit = _rand() < chance;
+    final dmg = math.max(1, jsRound(base * (crit ? cm : 1) * mult));
     _dealt += math.min(dmg, e.hp);
     _dealtMaxHp = math.max(_dealtMaxHp, e.maxHp);
     e.hp = math.max(0, e.hp - dmg);
     events.add(DamageEvent(e.id, dmg, critical: crit, critMultiplier: cm));
-    if (!e.alive) events.add(KnockedOutEvent(e.id));
-    return _Hit(dmg, crit);
+    if (!e.alive) _knockedOut(e);
+    final hit = _Hit(dmg, crit, e, mods);
+    if (primary && a != null && _act != null) {
+      _fire(ProcTrigger.onHit, a, target: e, amount: dmg);
+      if (crit) _fire(ProcTrigger.onCrit, a, target: e, amount: dmg);
+    }
+    return hit;
+  }
+
+  /// Daño secundario de una mecánica: sin crítico, solo la Marca del
+  /// objetivo. No dispara nada (salvo las muertes).
+  int _procDamage(Combatant owner, Combatant e, int amount, String sourceId) {
+    if (!e.alive) return 0;
+    final taken = e.effectTotal(BuffStat.damageTaken);
+    final dmg = math.max(1, jsRound(amount * (1 + taken)));
+    if (owner == _attacker) {
+      _dealt += math.min(dmg, e.hp);
+      _dealtMaxHp = math.max(_dealtMaxHp, e.maxHp);
+    }
+    e.hp = math.max(0, e.hp - dmg);
+    events.add(DamageEvent(e.id, dmg, sourceId: sourceId));
+    if (!e.alive) _knockedOut(e);
+    return dmg;
+  }
+
+  /// Un actor cae. Si es un enemigo: cuenta para `onKill` de la acción y
+  /// dispara `onEnemyDeath` (Plaga) del primer jugador que la tenga.
+  void _knockedOut(Combatant c) {
+    events.add(KnockedOutEvent(c.id));
+    if (c.isPlayer) return;
+    _act?.killed = true;
+    for (final p in state.party) {
+      if (!p.alive) continue;
+      if (_mechanicsOf(p).any((m) => m.trigger == ProcTrigger.onEnemyDeath)) {
+        _fire(ProcTrigger.onEnemyDeath, p, target: c);
+        return;
+      }
+    }
   }
 
   /// `dmgLog`: el desglose que ve el jugador. Muestra siempre el
@@ -495,16 +767,347 @@ class _Turn {
     if (!all) {
       final r = hits.first;
       return '$head: ${r.damage} = $formula'
-          '${r.critical ? ' × ${fm(cm)} CRÍTICO' : ''}';
+          '${r.critical ? ' × ${fm(cm)} CRÍTICO' : ''}'
+          '${r.mods.isEmpty ? '' : ' ${r.mods.join(' ')}'}';
     }
     final base = jsRound(sourceValue * power * tormenta);
     final crits = hits.where((h) => h.critical).length;
+    final modded = [
+      for (final h in hits)
+        if (h.mods.isNotEmpty)
+          '${h.target.name} ${h.mods.join(' ')} = ${h.damage}',
+    ];
     return '$head: $base c/u = $formula'
-        '${crits > 0 ? ' ($crits crítico${crits > 1 ? 's' : ''} → ${jsRound(base * cm)})' : ''}';
+        '${crits > 0 ? ' ($crits crítico${crits > 1 ? 's' : ''} → ${jsRound(base * cm)})' : ''}'
+        '${modded.isEmpty ? '' : ' · ${modded.join(', ')}'}';
   }
 
   String _statusText(StatusApplication? st, {int bonus = 0}) =>
       st == null ? '' : ' · +${st.stacks + bonus} ${st.kind.label}';
+
+  // ---------------- disparadores del árbol ----------------
+
+  Iterable<PassiveMechanic> _mechanicsOf(Combatant c) sync* {
+    for (final id in c.mechanics) {
+      final m = kMechanics[id];
+      if (m != null) yield m;
+    }
+  }
+
+  /// Gasta 1 del tope de efectos del paso. `false` si se acabó.
+  bool _spend() {
+    if (_procBudget <= 0) return false;
+    _procBudget--;
+    return true;
+  }
+
+  bool _passes(PassiveMechanic m, Combatant owner, Combatant? target,
+      StatusKind? status) {
+    final act = _act;
+    final sk = act?.skill;
+    final ult = act?.ultimate ?? false;
+    final okFilter = switch (m.filter) {
+      ProcFilter.any => true,
+      ProcFilter.singleTarget => act != null && act.single,
+      ProcFilter.magicalSingle =>
+        act != null && act.single && sk?.kind == SkillKind.magical,
+      ProcFilter.magicalSkill =>
+        sk != null && sk.kind == SkillKind.magical && !ult,
+      ProcFilter.areaSkill =>
+        sk != null && sk.dealsDamage && sk.allTargets && !ult,
+      ProcFilter.defending => owner.defending,
+      ProcFilter.guardSkill => sk != null &&
+          (sk.kind == SkillKind.taunt ||
+              sk.kind == SkillKind.protect ||
+              sk.kind == SkillKind.guard),
+    };
+    if (!okFilter) return false;
+    final st = m.status;
+    if (st == null) return true;
+    return switch (m.trigger) {
+      ProcTrigger.onStatusApplied => status == st,
+      ProcTrigger.onHit => target != null && target.stacks(st) >= m.minStacks,
+      ProcTrigger.onEnemyDeath => target != null && target.stacks(st) > 0,
+      _ => true,
+    };
+  }
+
+  /// Evalúa las mecánicas de [owner] con disparador [trigger]. [amount]:
+  /// daño del golpe, daño recibido o vida curada, según el disparador.
+  void _fire(ProcTrigger trigger, Combatant owner,
+      {Combatant? target, StatusKind? status, int amount = 0}) {
+    if (owner.mechanics.isEmpty) return;
+    for (final m in _mechanicsOf(owner).toList()) {
+      if (m.trigger != trigger || m.effects.isEmpty) continue;
+      if (!_passes(m, owner, target, status)) continue;
+      final act = _act;
+      if (act != null) {
+        final perTarget = target != null && m.effects.any((e) => e.onTarget);
+        if (!act.fired.add(perTarget ? '${m.id}|${target.id}' : m.id)) {
+          continue;
+        }
+      }
+      if (m.chance < 1 && _rand() >= m.chance) continue;
+      if (!_spend()) return;
+      for (final fx in m.effects) {
+        _applyEffect(m, fx, owner, target, amount);
+      }
+    }
+  }
+
+  String _pct(double v) => '${jsRound(v.abs() * 100)}%';
+  String _turns(int n) => '($n turno${n == 1 ? '' : 's'})';
+
+  /// Pone (o renueva) un efecto con duración de [m] sobre [c]. Los
+  /// escudos del mismo origen no acumulan: queda el mayor.
+  void _giveEffect(Combatant c, Combatant owner, PassiveMechanic m,
+      BuffStat stat, double value, int turns) {
+    final old = c.effectFrom(m.id, stat);
+    final v = stat == BuffStat.shield && old != null
+        ? math.max(old.value, value)
+        : value;
+    c.effects = [
+      for (final e in c.effects)
+        if (!(e.sourceId == m.id && e.stat == stat)) e,
+      TimedEffect(
+        sourceId: m.id,
+        stat: stat,
+        value: v,
+        turns: turns,
+        ownerId: owner.id,
+        fresh: state.currentId == c.id,
+      ),
+    ];
+  }
+
+  void _shield(
+      Combatant c, Combatant owner, PassiveMechanic m, int amount, int turns) {
+    if (amount <= 0 || !c.alive) return;
+    events.add(ProcEvent(owner.id, m.id, targetId: c.id));
+    _giveEffect(c, owner, m, BuffStat.shield, amount.toDouble(), turns);
+    events.add(ShieldEvent(c.id, amount));
+    _notes.add('${m.name}: escudo de $amount a ${c.name} ${_turns(turns)}');
+  }
+
+  void _applyEffect(PassiveMechanic m, ProcEffect fx, Combatant owner,
+      Combatant? target, int amount) {
+    final act = _act;
+    switch (fx.kind) {
+      case ProcEffectKind.buffSelf:
+        events.add(ProcEvent(owner.id, m.id));
+        _giveEffect(owner, owner, m, fx.stat!, fx.value, fx.turns);
+        events.add(
+            BuffAppliedEvent(owner.id, m.id, fx.stat!, fx.value, fx.turns));
+        _notes.add('${m.name}: +${_pct(fx.value)} ${fx.stat!.label} '
+            '${_turns(fx.turns)}');
+      case ProcEffectKind.debuffTarget:
+      case ProcEffectKind.markTarget:
+        if (target == null || !target.alive) return;
+        if (fx.kind == ProcEffectKind.markTarget &&
+            target.hasEffect(fx.stat!)) {
+          return;
+        }
+        events.add(ProcEvent(owner.id, m.id, targetId: target.id));
+        _giveEffect(target, owner, m, fx.stat!, fx.value, fx.turns);
+        events.add(
+            BuffAppliedEvent(target.id, m.id, fx.stat!, fx.value, fx.turns));
+        _notes.add(fx.kind == ProcEffectKind.markTarget
+            ? '${m.name}: ${target.name} recibe +${_pct(fx.value)} de daño '
+                '${_turns(fx.turns)}'
+            : '${m.name}: ${target.name} ${fx.value < 0 ? '−' : '+'}'
+                '${_pct(fx.value)} ${fx.stat!.label} ${_turns(fx.turns)}');
+      case ProcEffectKind.advanceTurn:
+        if (act == null) return;
+        events.add(ProcEvent(owner.id, m.id));
+        act.turnFactor = math.min(act.turnFactor, 1 - fx.value);
+        _notes.add('${m.name}: tu próximo turno llega ${_pct(fx.value)} antes');
+      case ProcEffectKind.extraTurn:
+        if (act == null || owner.extraTurn == 2 || act.extraTurn) return;
+        events.add(ProcEvent(owner.id, m.id));
+        act.extraTurn = true;
+        _notes.add('${m.name}: ¡turno extra!');
+      case ProcEffectKind.healSelf:
+        if (!owner.alive) return;
+        final h = math.max(1, jsRound(owner.maxHp * fx.value));
+        events.add(ProcEvent(owner.id, m.id, targetId: owner.id));
+        _heal(owner, h);
+        _notes.add('${m.name}: +$h HP');
+      case ProcEffectKind.healLowestAlly:
+        final q = _lowest(_aliveParty, (c) => c.hp / c.maxHp);
+        if (q == null || q.hp >= q.maxHp) return;
+        final h = math.max(1, jsRound(q.maxHp * fx.value));
+        events.add(ProcEvent(owner.id, m.id, targetId: q.id));
+        _heal(q, h);
+        _notes.add('${m.name}: ${q.name} +$h HP');
+      case ProcEffectKind.chain:
+        if (act == null || fx.value <= act.chain) return;
+        act
+          ..chain = fx.value
+          ..chainSource = m;
+      case ProcEffectKind.explode:
+        if (act == null || act.explosion != null || target == null) return;
+        act.explosion = (target, math.max(1, jsRound(amount * fx.value)), m);
+      case ProcEffectKind.reflect:
+        if (target == null || !target.alive) return;
+        final d = math.max(1, jsRound(amount * fx.value));
+        events.add(ProcEvent(owner.id, m.id, targetId: target.id));
+        final dealt = _procDamage(owner, target, d, m.id);
+        _notes.add('${m.name}: $dealt a ${target.name}');
+      case ProcEffectKind.shatterStun:
+        if (target == null ||
+            !target.alive ||
+            target.stacks(StatusKind.freeze) <= 0) {
+          return;
+        }
+        events.add(ProcEvent(owner.id, m.id, targetId: target.id));
+        target.statuses[StatusKind.freeze] = 0;
+        _notes.add('${m.name}: ${target.name} pierde la Congelación y queda '
+            'aturdido');
+        _addStatus(target, const StatusApplication(StatusKind.stun, 1),
+            source: owner);
+      case ProcEffectKind.delayTarget:
+        if (target == null || !target.alive) return;
+        events.add(ProcEvent(owner.id, m.id, targetId: target.id));
+        target.nextTurn += _iv(target) * fx.value;
+        events.add(DelayedEvent(target.id));
+        _notes.add('${m.name}: ${target.name} se retrasa ${_pct(fx.value)}');
+      case ProcEffectKind.repeatSkill:
+        if (act == null || act.repeat != null) return;
+        act.repeat = (fx.value, m);
+      case ProcEffectKind.spreadStatus:
+        final st = m.status;
+        if (target == null || st == null) return;
+        final n = target.stacks(st);
+        Combatant? dest;
+        for (final e in state.enemies) {
+          if (e != target && e.alive && (dest == null || e.hp > dest.hp)) {
+            dest = e;
+          }
+        }
+        if (n <= 0 || dest == null) return;
+        events.add(ProcEvent(owner.id, m.id, targetId: dest.id));
+        _addStatus(dest, StatusApplication(st, n), source: owner);
+        _notes.add('${m.name}: $n ${st.label} pasan a ${dest.name}');
+      case ProcEffectKind.freeAttack:
+        if (act == null || act.freeAttack != null) return;
+        act.freeAttack = m;
+      case ProcEffectKind.shieldHealed:
+        if (target == null) return;
+        _shield(target, owner, m, jsRound(amount * fx.value), fx.turns);
+      case ProcEffectKind.shieldSelf:
+        _shield(owner, owner, m, jsRound(owner.maxHp * fx.value), fx.turns);
+      case ProcEffectKind.ultCharge:
+        events.add(ProcEvent(owner.id, m.id));
+        owner.ult = math.min(100, owner.ult + fx.value);
+        _notes.add('${m.name}: +${jsRound(fx.value)} carga de ULT');
+      case ProcEffectKind.holyDamage:
+        if (target == null || !target.alive) return;
+        events.add(ProcEvent(owner.id, m.id, targetId: target.id));
+        final dealt = _procDamage(
+            owner, target, math.max(1, jsRound(owner.magic * fx.value)), m.id);
+        _notes.add('${m.name}: $dealt sagrado a ${target.name} '
+            '(MAG ${owner.magic} × ${fm(fx.value)})');
+      case ProcEffectKind.stunExtend:
+      case ProcEffectKind.statBonus:
+        // Modificadores: los aplican `_addStatus` y `_conditionBonus`.
+        break;
+    }
+  }
+
+  /// Resolución diferida de la acción (passive_tree_v2.md § 5, pasos 3-4):
+  /// rebote, explosión, eco, ataque gratis y `onKill`.
+  void _resolveAction(Combatant p, _Action act) {
+    // Rebote / cadena.
+    final hit = act.mainHit;
+    final src = act.chainSource;
+    if (act.chain > 0 && hit != null && src != null && _spend()) {
+      final infinite = p.keystones.contains('cadena');
+      final hitIds = {hit.target.id};
+      final start = state.enemies.indexOf(hit.target);
+      var prev = hit.damage.toDouble();
+      var frac = act.chain;
+      final parts = <String>[];
+      for (var k = 1; k < state.enemies.length; k++) {
+        final e = state.enemies[(start + k) % state.enemies.length];
+        if (!e.alive || hitIds.contains(e.id)) continue;
+        final d = math.max(1, jsRound(prev * frac));
+        events.add(ProcEvent(p.id, src.id, targetId: e.id));
+        parts.add('${_procDamage(p, e, d, src.id)} a ${e.name}');
+        hitIds.add(e.id);
+        prev = d.toDouble();
+        frac = 0.6;
+        if (!infinite) break;
+      }
+      if (parts.isNotEmpty) {
+        _notes.add('${src.name}${infinite ? ' (Cadena Infinita)' : ''}: '
+            '${parts.join(', ')}');
+      }
+    }
+
+    // Explosión (Combustión).
+    final ex = act.explosion;
+    if (ex != null) {
+      final (center, d, m) = ex;
+      final others =
+          state.enemies.where((e) => e != center && e.alive).toList();
+      if (others.isNotEmpty) {
+        events.add(ProcEvent(p.id, m.id, targetId: center.id));
+        final parts = [
+          for (final e in others) '${_procDamage(p, e, d, m.id)} a ${e.name}',
+        ];
+        _notes.add('${m.name}: ${center.name} explota → ${parts.join(', ')}');
+      }
+    }
+
+    // Eco Arcano.
+    final rep = act.repeat;
+    final sk = act.skill;
+    if (rep != null && sk != null) {
+      final (frac, m) = rep;
+      final alive = state.enemies.where((e) => e.alive).toList();
+      final main = act.mainTarget;
+      final targets = sk.allTargets
+          ? alive
+          : [
+              if (main != null && main.alive)
+                main
+              else if (alive.isNotEmpty)
+                alive.first,
+            ];
+      if (targets.isNotEmpty) {
+        events.add(ProcEvent(p.id, m.id));
+        final d = math.max(1, jsRound(act.skillBase * frac));
+        final parts = <String>[];
+        for (final e in targets) {
+          parts.add('${_procDamage(p, e, d, m.id)} a ${e.name}');
+          final st = sk.status;
+          if (st != null && e.alive) {
+            _addStatus(e, st, bonus: act.skillStatusBonus, source: p);
+          }
+        }
+        _notes.add('${m.name}: ${sk.name} se repite al ${_pct(frac)} '
+            '(${parts.join(', ')})');
+      }
+    }
+
+    // Viento a Favor.
+    final free = act.freeAttack;
+    if (free != null) {
+      final target =
+          _lowest(state.enemies.where((e) => e.alive), (c) => c.hp.toDouble());
+      if (target != null) {
+        events.add(ProcEvent(p.id, free.id, targetId: target.id));
+        events.add(
+            ActionEvent(p.id, BattleActionKind.attack, targetId: target.id));
+        final h = _damageEnemy(target, _atk(p).toDouble(), p.critChance,
+            primary: false);
+        _notes.add('${free.name}: ataque gratis → ${target.name}: ${h.damage}'
+            '${h.critical ? ' CRÍTICO' : ''}');
+      }
+    }
+
+    if (act.killed) _fire(ProcTrigger.onKill, p);
+  }
 
   // ---------------- enemigos ----------------
 
@@ -537,16 +1140,27 @@ class _Turn {
       allTargets: area,
     ));
 
-    String detail(_Hurt h, double mult, Combatant p) => 'ATQ ${e.attack}'
+    // Debilitar: el enemigo pega con menos ATQ.
+    final atkMod = e.effectTotal(BuffStat.attack);
+    final atk =
+        atkMod == 0 ? e.attack : math.max(1, jsRound(e.attack * (1 + atkMod)));
+    final atkText = atkMod == 0 ? 'ATQ ${e.attack}' : 'ATQ $atk (debilitado)';
+
+    String detail(_Hurt h, double mult, Combatant p) => '$atkText'
         '${mult != 1 ? ' × ${fm(mult)}' : ''}'
         '${h.critical ? ' × ${fm(BattleEngine.enemyCritMultiplier)} CRÍTICO' : ''}'
         '${h.pierce > 1 ? ' × ${fm(h.pierce)} perforante' : ''}'
         '${p.defending ? ' × ½ defender' : ''}'
         '${h.defensePercent > 0 ? ' − ${jsRound(h.defensePercent * 100)}% DEF' : ''}';
     String infText(Combatant p) => p.alive && inf != null
-        ? _statusText(inf, bonus: inf.kind == StatusKind.regen ? 0 : p.statusWeakness)
+        ? _statusText(inf,
+            bonus: inf.kind == StatusKind.regen ? 0 : p.statusWeakness)
         : '';
     final tauntText = taunter != null ? ' (provocado)' : '';
+    // Guardián: el protector recibió un golpe dirigido a un aliado.
+    void guarded(Combatant p, Combatant p0) {
+      if (p != p0 && p.alive) _fire(ProcTrigger.onProtectHit, p, target: e);
+    }
 
     if (area) {
       final parts = <String>[];
@@ -556,25 +1170,31 @@ class _Turn {
           parts.add('${p0.name} 0');
           continue;
         }
-        final h = _hurt(p, e.attack * 0.7, e.critChance, e.pierce);
+        final h = _hurt(p, atk * 0.7, e.critChance, e.pierce, from: e);
+        guarded(p, p0);
         p.nextTurn += _iv(p) * 0.4;
         if (inf != null) _addStatus(p, inf);
         events.add(DelayedEvent(p.id));
         final who = p != p0 ? '${p.name} (por ${p0.name})' : p.name;
         parts.add('$who ${h.damage}${h.critical ? '!' : ''}');
       }
-      state.log = '${e.name} · Colapso Temporal (todos, ATQ ${e.attack} × 0.7, '
+      state.log = '${e.name} · Colapso Temporal (todos, $atkText × 0.7, '
           'retrasa): ${parts.join(', ')}';
     } else if (e.boss && e.actions % 4 == 0) {
-      final h = _hurt(pick, e.attack * 1.6, e.critChance, e.pierce);
+      final h = _hurt(pick, atk * 1.6, e.critChance, e.pierce, from: e);
+      guarded(pick, pick0);
       if (inf != null) _addStatus(pick, inf);
       state.log = '${e.name} · Golpe Brutal → ${pick.name}: ${h.damage} = '
           '${detail(h, 1.6, pick)}${infText(pick)}$tauntText$protText';
     } else {
-      final h = _hurt(pick, e.attack.toDouble(), e.critChance, e.pierce);
+      final h = _hurt(pick, atk.toDouble(), e.critChance, e.pierce, from: e);
+      guarded(pick, pick0);
       if (inf != null) _addStatus(pick, inf);
-      final explain =
-          h.critical || pick.defending || h.pierce > 1 || h.defensePercent > 0;
+      final explain = h.critical ||
+          pick.defending ||
+          h.pierce > 1 ||
+          h.defensePercent > 0 ||
+          atkMod != 0;
       state.log = '${e.name} → ${pick.name}: ${h.damage}'
           '${explain ? ' = ${detail(h, 1, pick)}' : ''}'
           '${infText(pick)}$tauntText$protText';
@@ -599,6 +1219,7 @@ class _Turn {
     _dealt = 0;
     _dealtMaxHp = 1;
     _attacker = p;
+    final act = _act = _Action();
     var ultGain = 0.0;
     var usedUlt = false;
 
@@ -618,9 +1239,12 @@ class _Turn {
             skillId: sk.id,
             targetId: sk.dealsDamage && !sk.allTargets ? target.id : null,
             allTargets: sk.allTargets));
+        act.skill = sk;
         final gain = _useSkill(p, sk, foes, target, ultimate: false);
-        if (gain == null) return true; // Prisa sin aliados: ya terminó el turno.
+        // Prisa sin aliados: ya terminó el turno.
+        if (gain == null) return true;
         ultGain = gain;
+        _fire(ProcTrigger.onSkill, p);
       case UltimateCommand():
         final sk = engine.catalog.ultimates[p.weaponType];
         if (sk == null || p.ult < 100) return false;
@@ -631,7 +1255,11 @@ class _Turn {
             skillId: sk.id,
             targetId: sk.dealsDamage && !sk.allTargets ? target.id : null,
             allTargets: sk.allTargets));
+        act
+          ..skill = sk
+          ..ultimate = true;
         _useSkill(p, sk, foes, target, ultimate: true);
+        _fire(ProcTrigger.onSkill, p);
       case DualCommand(:final partnerId):
         if (!_dual(p, partnerId, foes)) return false;
       case ItemCommand(:final item, :final targetPlayerId):
@@ -643,39 +1271,58 @@ class _Turn {
         events.add(ActionEvent(p.id, BattleActionKind.defend));
         p.defending = true;
         state.log = '${p.name} se defiende (actúa antes)';
+        _act = null;
+        tickEffects(p);
         p.nextTurn = state.clock + _iv(p) * 0.7;
         endTurn();
         return true;
     }
 
+    _resolveAction(p, act);
     if (!usedUlt) {
       final dealtBonus =
           _dealt > 0 ? math.min(22.0, 5 + _dealt / _dealtMaxHp * 30) : 0.0;
-      p.ult = math.min(100, p.ult + (ultGain + dealtBonus) * (1 + p.ultChargeBonus));
+      p.ult = math.min(
+          100, p.ult + (ultGain + dealtBonus) * (1 + p.ultChargeBonus));
     }
     _attacker = null;
-    p.nextTurn = state.clock + _iv(p);
+    _act = null;
+    tickEffects(p);
+    if (act.extraTurn) {
+      // Danza de Cuchillas: el próximo turno es ahora.
+      p.extraTurn = 1;
+      p.nextTurn = state.clock;
+    } else {
+      p.nextTurn = state.clock + _iv(p) * act.turnFactor;
+    }
     endTurn();
     return true;
   }
 
   void _attack(Combatant p, List<Combatant> foes, Combatant target) {
+    final atk = _atk(p);
     if (p.keystones.contains('imparable')) {
       final hits = [
-        for (final e in foes) _damageEnemy(e, p.attack * 0.6, p.critChance),
+        for (final e in foes) _damageEnemy(e, atk * 0.6, p.critChance),
       ];
-      state.log = _damageLog('${p.name} · Golpe Imparable (todos)',
-          'ATQ ${p.attack}', p.attack, 0.6, hits,
+      state.log = _damageLog(
+          '${p.name} · Golpe Imparable (todos)', _atkText(p), atk, 0.6, hits,
           all: true);
       return;
     }
-    final hit = _damageEnemy(target, p.attack.toDouble(), p.critChance);
-    var log = _damageLog('${p.name} ataca → ${target.name}', 'ATQ ${p.attack}',
-        p.attack, 1, [hit],
+    final act = _act!..single = true;
+    final hit =
+        _damageEnemy(target, atk.toDouble(), p.critChance, single: true);
+    act
+      ..mainTarget = target
+      ..mainHit = hit;
+    var log = _damageLog(
+        '${p.name} ataca → ${target.name}', _atkText(p), atk, 1, [hit],
         all: false);
     final stunChance = p.stunOnAttackChance;
     if (stunChance > 0 && target.alive && _rand() < stunChance) {
-      _addStatus(target, const StatusApplication(StatusKind.stun, 1));
+      _addStatus(target, const StatusApplication(StatusKind.stun, 1),
+          source: p, primary: true);
       log += ' · ¡aturde! (${jsRound(stunChance * 100)}%)';
     }
     if (p.branch == 'creyente' && _rand() < 0.25) {
@@ -685,7 +1332,8 @@ class _Turn {
       log += ' · Fe: cura 2% a todos';
     }
     if (p.branch == 'inherente' && target.alive && _rand() < 0.25) {
-      _addStatus(target, const StatusApplication(StatusKind.holy, 1));
+      _addStatus(target, const StatusApplication(StatusKind.holy, 1),
+          source: p, primary: true);
       log += ' · Sagrado (5/turno, 3 turnos)';
     }
     state.log = log;
@@ -709,6 +1357,7 @@ class _Turn {
         for (final q in allies) {
           _heal(q, a);
           _addStatus(q, const StatusApplication(StatusKind.regen, 3));
+          _fire(ProcTrigger.onHeal, p, target: q, amount: a);
         }
         var log = '${p.name} · ${tk.name}: +$a a cada aliado '
             '(MAG ${p.magic} × ${fm(tk.power)} + 4) y Regeneración 5% vida y maná × 3 turnos';
@@ -738,8 +1387,10 @@ class _Turn {
 
       case SkillKind.bulwark:
         for (final q in allies) {
-          _heal(q, jsRound(q.maxHp * 0.3));
+          final h = jsRound(q.maxHp * 0.3);
+          _heal(q, h);
           q.defending = true;
+          _fire(ProcTrigger.onHeal, p, target: q, amount: h);
         }
         p.protecting = true;
         p.bonusDefense =
@@ -759,6 +1410,7 @@ class _Turn {
             }
             q.holyTurns = math.max(0, q.holyTurns - tk.cleanse);
           }
+          _fire(ProcTrigger.onHeal, p, target: q, amount: a);
         }
         final cleanseText = tk.cleanse <= 0
             ? ''
@@ -785,13 +1437,13 @@ class _Turn {
 
       case SkillKind.haste:
         for (final q in allies.where((q) => q != p)) {
-          q.nextTurn =
-              math.max(state.clock + 0.01, q.nextTurn - _iv(q) * 0.5);
+          q.nextTurn = math.max(state.clock + 0.01, q.nextTurn - _iv(q) * 0.5);
         }
         if (state.party.length == 1) {
           p.mp += tk.mp;
           p.nextTurn = state.clock;
           state.log = 'Prisa necesita aliados';
+          _act = null;
           endTurn();
           return null;
         }
@@ -803,14 +1455,29 @@ class _Turn {
             ? (tk.allTargets ? 1.25 : 0.85)
             : 1.0;
         final magical = tk.kind == SkillKind.magical;
-        final sourceValue = magical ? p.magic : p.attack;
+        final sourceValue = magical ? p.magic : _atk(p);
         final base = sourceValue * tk.power * tormenta;
         final st = tk.status;
         final bonus = st == null ? 0 : (p.statusBonus[st.kind] ?? 0);
+        final act = _act!
+          ..single = !tk.allTargets
+          ..skillBase = base
+          ..skillStatusBonus = bonus;
+        final burnBlocked =
+            st?.kind == StatusKind.burn && p.keystones.contains('almaHielo');
         final hits = <_Hit>[];
         for (final e in tk.allTargets ? foes : [target]) {
-          hits.add(_damageEnemy(e, base, p.critChance + tk.critBonus));
-          if (st != null) _addStatus(e, st, bonus: bonus);
+          final hit = _damageEnemy(e, base, p.critChance + tk.critBonus,
+              single: !tk.allTargets);
+          hits.add(hit);
+          if (!tk.allTargets) {
+            act
+              ..mainTarget = e
+              ..mainHit = hit;
+          }
+          if (st != null && !burnBlocked) {
+            _addStatus(e, st, bonus: bonus, source: p, primary: true);
+          }
           if (tk.delay > 0 && e.alive) {
             e.nextTurn += _iv(e) * tk.delay;
             events.add(DelayedEvent(e.id));
@@ -818,11 +1485,13 @@ class _Turn {
         }
         final head = '${p.name} · ${ultimate ? 'ULT ' : ''}${tk.name}'
             '${tk.allTargets ? ' (todos)' : ' → ${target.name}'}';
-        var log = _damageLog(
-            head, '${magical ? 'MAG' : 'ATQ'} $sourceValue', sourceValue, tk.power, hits,
+        var log = _damageLog(head, magical ? 'MAG $sourceValue' : _atkText(p),
+            sourceValue, tk.power, hits,
             all: tk.allTargets, tormenta: tormenta);
         if (tk.delay > 0) log += ' · retrasa';
-        if (st != null) {
+        if (burnBlocked) {
+          log += ' · sin Quemadura (Alma de Hielo)';
+        } else if (st != null) {
           log += st.chance != null
               ? ' · ${jsRound(st.chance! * 100)}% ${st.stacks + bonus} ${st.kind.label}'
               : _statusText(st, bonus: bonus);
@@ -851,14 +1520,14 @@ class _Turn {
     q.mp -= BattleEngine.dualMpCost;
     q.nextTurn = math.max(q.nextTurn, state.clock) + _iv(q);
 
-    final pv = math.max(p.attack, p.magic);
-    final qv = math.max(q.attack, q.magic);
+    final pv = math.max(_atk(p), p.magic);
+    final qv = math.max(_atk(q), q.magic);
     final bonus = p.statusBonus[du.status.kind] ?? 0;
     final hits = <_Hit>[];
     for (final e in foes) {
       hits.add(_damageEnemy(
           e, (pv + qv) * du.power, (p.critChance + q.critChance) / 2));
-      _addStatus(e, du.status, bonus: bonus);
+      _addStatus(e, du.status, bonus: bonus, source: p, primary: true);
     }
     state.log = _damageLog('${p.name} + ${q.name} · ${du.name} (todos)',
             '($pv + $qv)', pv + qv, du.power, hits,
@@ -889,7 +1558,8 @@ class _Turn {
     final a = jsRound(t.maxMp * 0.5);
     t.mp = math.min(t.maxMp.toDouble(), t.mp + a);
     events.add(HealEvent(t.id, a, mana: true));
-    state.log = '${p.name} usa Poción de maná en ${t.name}: +$a MP = 50% de ${t.maxMp}';
+    state.log =
+        '${p.name} usa Poción de maná en ${t.name}: +$a MP = 50% de ${t.maxMp}';
     return true;
   }
 

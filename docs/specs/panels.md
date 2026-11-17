@@ -50,10 +50,10 @@ exactamente el orden de las comprobaciones del motor:
 | Equipar (`EquipAction`) | `Solo en preparación` (texto del prototipo, fuera de `canShop`), `Confirma puntos` (cumple con el reparto pendiente pero no con los atributos actuales), `Requisitos` |
 | Mejorar (`UpgradeAction`) | `canShop`, `MAX` (nivel 5), `Faltan $N` |
 | Fusionar (`FuseAction`) | `canShop`, `Elige un arma a sacrificar`, `Faltan $N` |
-| Reiniciar puntos (`RespecAction`) | `canShop` (el botón solo se muestra en lobby/preparación, como el prototipo) |
+| Reiniciar puntos (`RespecAction`) | `No en batalla` (gratis y en cualquier otro modo mientras `ProgressionRules.freeRespec`; el botón dice `REINICIAR PUNTOS (GRATIS)` y no se muestra en batalla; con `freeRespec = false`: `canShop`, como el prototipo) |
 | Cambiar clase (`ChangeClassAction`) | `Solo en el lobby`, `Es tu clase` |
 | Tomar nodo (`TakeNodeAction`) | `No en batalla`, `Ya lo tienes` / `Nodo inicial`, `Sin puntos de árbol`, `Excluye <keystone>`, `Necesita un nodo conectado` |
-| Reiniciar árbol (`ResetTreeAction`) | `canShop`, `No hay nodos tomados` (el motor lo acepta igual; la UI no lo ofrece porque no hace nada) |
+| Reiniciar árbol (`ResetTreeAction`) | `No en batalla` (o `canShop` sin `freeRespec`), `No hay nodos tomados` (el motor lo acepta igual; la UI no lo ofrece porque no hace nada) |
 
 ## Marco común (`PanelFrame`)
 
@@ -142,7 +142,9 @@ columna con scroll; a 1280×720 con fuente de 8 px no entra):
   Halcón): `valor` o `valor > nuevo` (el nuevo en verde) si el reparto
   lo cambia. Se calcula con `ProgressionRules.previewAllocation`.
 - `CONFIRMAR PUNTOS` (deshabilitado sin reparto) → `AllocateStatsAction`;
-  `REINICIAR PUNTOS` (solo lobby/preparación) → `RespecAction`.
+  `REINICIAR PUNTOS (GRATIS)` (todo modo salvo batalla mientras
+  `ProgressionRules.freeRespec`, decisión temporal del dueño; si no, solo
+  lobby/preparación) → `RespecAction`.
 - `Clase:` (cambio de clase, solo lobby; **agregado del puerto**, el
   prototipo lo tiene solo en el mostrador).
 - Paladín: el texto del kit (`Kit de Paladín`).
@@ -156,30 +158,33 @@ columna con scroll; a 1280×720 con fuente de 8 px no entra):
 motivos de la tabla (`Solo en preparación`, `Confirma puntos`). Debajo,
 `Consumibles: Poción de vida xN · Poción de maná xN`.
 
-### Árbol (`treeHtml`)
+### Árbol (v2, passive_tree_v2.md § 7)
 
-- `Puntos de árbol disponibles: N` (`treePts`) y `REINICIAR ÁRBOL` (solo
-  lobby/preparación, `ResetTreeAction`).
-- Lienzo cuadrado de 400 px (el prototipo usa 320 con `SC = 34`; acá
-  `SC = 42.5`, centro en 200): fondo `night`, enlaces de 2 px (`green`
-  si los dos extremos están tomados, si no `panel`), nodos con radio 9
-  (keystone), 8 (inicio) o 6 (resto) × 1.25, borde `night`:
-  - inicio de la clase: `gold`;
-  - tomado: `green` (keystone tomada: `red`);
-  - disponible (se puede tomar ahora): `ink`;
-  - bloqueado: `panel` con borde `muted` (incluye el excluido por la
-    keystone opuesta, p. ej. Creyente con Inherente tomada).
-  - el nodo seleccionado o bajo el mouse lleva un anillo `gold`.
-- **Desvío**: los colores del prototipo (`#ffd166`, `#7bed9f`, `#ff6b6b`,
-  `#9fb4ff`, `#3a4570`) se cambian por la paleta de 8 colores (el árbol
-  es interfaz, no arte del mundo).
-- Clic en un nodo: lo selecciona y, si se puede tomar, manda
-  `TakeNodeAction` (como el prototipo). Pasar el mouse muestra su info.
-- Info lateral (el tooltip del prototipo): nombre, efectos (`fxTxt`: una
-  línea por efecto, `KEYS` para las keystones; sin emojis, la fuente no
-  los tiene), `Nodo inicial` y el estado: `Tomado`, `Disponible: clic
-  para tomar` o, si está bloqueado, el botón `TOMAR NODO` deshabilitado
-  con el motivo de la tabla a su lado.
+- `Puntos de árbol disponibles: N` (`treePts`) y `REINICIAR ÁRBOL
+  (GRATIS)` (`ResetTreeAction`; se muestra en todo modo salvo batalla
+  mientras `freeRespec`). Debajo, una línea de ayuda: arrastrar para
+  mover, rueda para zoom, clic para tomar.
+- Visor de 420 px de alto (ancho flexible) con el lienzo de 680 × 680
+  (30 px por unidad, centro 340) dentro de un `InteractiveViewer`
+  (arrastre, rueda, zoom 0.5×–2.5×). Arranca a escala `min(ancho, alto) /
+  544` (entre 0.6 y 1.2) y, si el árbol no entra, centrado hacia la zona
+  de tu clase.
+- Dibujo: aro tenue del anillo central; enlaces de 2 px (`green` si los
+  dos extremos están tomados, dorado de 3 px si son del camino bajo el
+  mouse, si no `panel`); nombre de cada camino más allá de su keystone
+  (dorado si está resaltado). Nodos: chico círculo r 6, inicio y notable
+  r 9, keystone hexágono r 12; notables y keystones con borde dorado.
+  Relleno por estado: inicio `gold`, tomado `green` (keystone tomada
+  roja), disponible `sky`, bloqueado `#3a4570` (incluye el excluido por
+  la keystone opuesta). El camino bajo el mouse y el nodo enfocado llevan
+  anillo dorado.
+- Pasar el mouse: tooltip junto al nodo (nombre, `NOTABLE` / `KEYSTONE`
+  / `INICIO DE CLASE`, `Camino X: tema`, efectos con el texto completo de
+  la mecánica y el estado). Clic: lo selecciona y, si se puede tomar,
+  manda `TakeNodeAction`.
+- Panel lateral (352 px): el nodo elegido (o el del mouse) con nombre,
+  tipo, camino, efectos, estado o el botón `TOMAR NODO` deshabilitado con
+  el motivo de la tabla, y la leyenda.
 - El motor permite tomar nodos en cualquier modo salvo batalla; el
   prototipo solo en lobby/preparación (`ed`). El puerto sigue al motor
   (**desvío**): se pueden tomar al subir de nivel en una misión.
