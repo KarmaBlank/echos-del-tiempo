@@ -15,6 +15,7 @@ import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/profile_store.dart';
 import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/models/session_event.dart';
+import '../../../game_engine/models/upgrade_stat.dart';
 import '../../../game_engine/rules/session_engine.dart';
 import '../../../game_engine/rules/world_rules.dart';
 import 'local_player.dart';
@@ -95,6 +96,7 @@ class SessionController extends StateNotifier<SessionView?> {
   bool _autoChar = false;
   SessionMode? _lastMode;
   final _messages = <String>[];
+  final _chat = <ChatLine>[];
   List<BattleEvent> _battleEvents = const [];
   int _battleSeq = 0;
 
@@ -171,9 +173,14 @@ class SessionController extends StateNotifier<SessionView?> {
     final me = s?.players[localId];
     if (s == null || me == null) return;
     local.sync(me);
+    // Escribiendo en el chat las teclas son texto, no movimiento.
+    if (typing) ix = iy = 0;
     local.step(engine.mapFor(s), ix, iy, dt,
         canMove: _canMove(s, me), gateOpen: s.gateOpen);
   }
+
+  /// El campo de chat tiene el foco: no hay movimiento ni atajos.
+  bool typing = false;
 
   bool _canMove(GameSession s, SessionPlayer me) =>
       (s.mode == SessionMode.lobby || s.mode == SessionMode.field) &&
@@ -354,6 +361,28 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool backToLobby() => _apply(const BackToLobbyAction());
 
+  /// "Reiniciar puntos".
+  bool respec() => _apply(const RespecAction());
+
+  bool equip(String weaponId) => _apply(EquipAction(weaponId));
+
+  bool buyWeapon(String weaponId) => _apply(BuyWeaponAction(weaponId));
+
+  bool buyItem(BattleItem item) => _apply(BuyItemAction(item));
+
+  bool upgrade(String weaponId, UpgradeStat stat) =>
+      _apply(UpgradeAction(weaponId, stat));
+
+  bool fuse(String baseWeaponId, String sacrificeWeaponId, String skillId) =>
+      _apply(FuseAction(baseWeaponId, sacrificeWeaponId, skillId));
+
+  bool takeNode(String nodeId) => _apply(TakeNodeAction(nodeId));
+
+  bool resetTree() => _apply(const ResetTreeAction());
+
+  /// Enter en el campo de chat (`send({t:'chat'})`).
+  bool sendChat(String text) => _apply(ChatAction(text));
+
   bool _apply(SessionAction action) {
     final s = _s;
     if (s == null) return false;
@@ -370,16 +399,23 @@ class SessionController extends StateNotifier<SessionView?> {
   void _step(SessionStep step) {
     _s = step.state;
     var forceSave = false;
+    // Un mismo tick puede traer varios pasos de batalla (p. ej. el turno
+    // del enemigo y el inicio del siguiente): se juntan todos para que la
+    // UI anime cada uno, en orden.
+    List<BattleEvent>? stepBattleEvents;
     for (final e in step.events) {
       switch (e) {
         case SystemMessageEvent(:final text):
           _messages.add(text);
           if (_messages.length > maxMessages) _messages.removeAt(0);
+          _addChat(ChatLine.system(text));
+        case ChatMessageEvent(:final from, :final text):
+          _addChat(ChatLine(from, text));
         case BattleStepEvent(:final events):
-          _battleEvents = List.unmodifiable(events);
-          _battleSeq++;
+          (stepBattleEvents ??= []).addAll(events);
         case BattleStartedEvent():
           _battleEvents = const [];
+          stepBattleEvents = null;
         case MissionEndedEvent() || ReturnedToLobbyEvent():
           forceSave = true;
         default:
@@ -387,10 +423,19 @@ class SessionController extends StateNotifier<SessionView?> {
       }
       if (!_events.isClosed) _events.add(e);
     }
+    if (stepBattleEvents != null) {
+      _battleEvents = List.unmodifiable(stepBattleEvents);
+      _battleSeq++;
+    }
     final me = _s!.players[localId];
     if (me != null) local.sync(me);
     if (forceSave) _save(force: true);
     _emit();
+  }
+
+  void _addChat(ChatLine line) {
+    _chat.add(line);
+    if (_chat.length > maxMessages) _chat.removeAt(0);
   }
 
   void _save({bool force = false}) {
@@ -442,6 +487,7 @@ class SessionController extends StateNotifier<SessionView?> {
       panel: _panel,
       prompt: _prompt(),
       messages: List.unmodifiable(_messages),
+      chat: List.unmodifiable(_chat),
       battleEvents: _battleEvents,
       battleEventSeq: _battleSeq,
     );

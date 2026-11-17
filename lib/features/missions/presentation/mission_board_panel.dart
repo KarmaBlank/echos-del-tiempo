@@ -19,6 +19,7 @@ class MissionBoardPanel extends StatelessWidget {
     required this.onPropose,
     required this.onChangeClass,
     required this.onClose,
+    this.onCharacter,
   });
 
   final List<MissionDef> missions;
@@ -31,11 +32,18 @@ class MissionBoardPanel extends StatelessWidget {
   final ValueChanged<String> onChangeClass;
   final VoidCallback onClose;
 
+  /// `Personaje [C]` (botones de abajo del prototipo, línea 1360).
+  final VoidCallback? onCharacter;
+
   @override
   Widget build(BuildContext context) {
     return PanelFrame(
       title: 'MOSTRADOR DE MISIONES',
-      actions: [PanelButton('CERRAR [ESC]', onPressed: onClose)],
+      actions: [
+        if (onCharacter != null)
+          PanelButton('PERSONAJE [C]', onPressed: onCharacter),
+        PanelButton('CERRAR [ESC]', onPressed: onClose),
+      ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -91,7 +99,8 @@ class MissionBoardPanel extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            retroText('Cuando TODOS votan que sí pasan a la preparación y la '
+            retroText('Cuando TODOS votan que sí pasan a la preparación '
+                '(tienda, herrería, equipo) y la '
                 'misión empieza cuando todos marcan ¡Listo!. Cambiar de clase '
                 'reinicia tus atributos (mantienes nivel y puntos).'),
             style: const TextStyle(color: RetroPalette.muted),

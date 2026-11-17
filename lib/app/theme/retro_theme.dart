@@ -28,6 +28,8 @@ abstract final class RetroTheme {
   /// "Botón compacto"): texto de 8 px, padding de 8 px y borde de 2 px.
   /// Hereda colores y estados del tema; se pasa como `style:`.
   static ButtonStyle compactButton() => ButtonStyle(
+        // Cambio de color instantáneo (sin la animación de Material).
+        animationDuration: Duration.zero,
         padding: const WidgetStatePropertyAll(
           EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         ),
@@ -63,6 +65,8 @@ abstract final class RetroTheme {
     );
 
     final buttonStyle = ButtonStyle(
+      // Sin transiciones: el feedback 8 bits es el cambio instantáneo.
+      animationDuration: Duration.zero,
       elevation: const WidgetStatePropertyAll(0),
       shape: const WidgetStatePropertyAll(_square),
       padding: const WidgetStatePropertyAll(

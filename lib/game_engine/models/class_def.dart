@@ -4,6 +4,9 @@ import 'attributes.dart';
 class ClassDef {
   final String id;
   final String name;
+
+  /// Texto corto de la tarjeta del título (`desc`).
+  final String description;
   final List<String> allowedWeaponTypes;
   final String startWeaponId;
   final int baseDefense;
@@ -24,6 +27,7 @@ class ClassDef {
   const ClassDef({
     required this.id,
     required this.name,
+    this.description = '',
     required this.allowedWeaponTypes,
     required this.startWeaponId,
     this.baseDefense = 0,

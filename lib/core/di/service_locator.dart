@@ -12,6 +12,7 @@ import '../../game_engine/rules/stats_calculator.dart';
 import '../../netcode/contracts/net_session.dart';
 import '../../netcode/p2p_webrtc/firestore_signaling_service.dart';
 import '../../netcode/p2p_webrtc/webrtc_net_session.dart';
+import '../audio/sfx_service.dart';
 
 final sl = GetIt.instance;
 
@@ -56,6 +57,13 @@ void registerSharedDependencies() {
   // carpeta conocida (docs/specs/exploration.md § "Persistencia").
   sl.registerLazySingleton<ProfileStore>(
     () => JsonFileProfileStore.forPlatform() ?? InMemoryProfileStore(),
+  );
+  // Sonido: sin plugin de audio todavía, el reproductor no suena. Para
+  // escucharlo, cambiar esta línea por el reproductor real
+  // (docs/specs/audio.md § "Reproducción").
+  sl.registerLazySingleton<SfxPlayer>(() => const NoopSfxPlayer());
+  sl.registerLazySingleton<SfxService>(
+    () => SfxService(player: sl<SfxPlayer>()),
   );
 }
 

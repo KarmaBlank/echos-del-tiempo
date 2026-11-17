@@ -192,8 +192,17 @@ lobby con vida y maná llenos (la ULT se conserva), época +1.
   perfil (el prototipo aceptaba puntos negativos si cuadraba la suma).
 - La acción `branch_old` (código muerto) no se porta.
 
+## Chat (`case 'chat'`, línea 582)
+
+`ChatAction(texto)`: en cualquier modo, de un jugador de la sala. El
+host recorta espacios, rechaza el texto vacío y lo corta a 120
+caracteres (`ChatAction.maxLength`). No cambia el estado: emite
+`ChatMessageEvent(id, nombre, texto)` (el `broadcast` + `addChat` del
+prototipo). Test: `test/game_engine/session_chat_test.dart`.
+
 ## Fuera de alcance (fases siguientes)
 
-Chat de texto, UI de votación/preparación, posiciones de batalla y
-efectos visuales (`addFx`), sonidos, transporte P2P real y el broadcast
-periódico del snapshot (lo hará `netcode` con este `GameSession`).
+Transporte P2P real y el broadcast periódico del snapshot (lo hará
+`netcode` con este `GameSession`). La UI de votación y preparación está
+en docs/specs/panels.md, el sonido en audio.md y el chat del cliente en
+exploration.md § "Chat".

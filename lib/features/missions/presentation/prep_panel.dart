@@ -14,8 +14,10 @@ class PrepEntry {
   final bool ready;
 }
 
-/// Fase de preparación (`prep` del prototipo): marcar ¡Listo!, cancelar
-/// o ir al personaje. Tienda/herrería/fusión son de la fase 5.
+/// Fase de preparación (`prep` del prototipo, líneas 1341-1349): marcar
+/// ¡Listo!, cancelar, ir al personaje y la tienda (consumibles, herrería,
+/// fusión y armería, que llegan armadas en [shop]). Ver
+/// docs/specs/panels.md § "Preparación".
 class PrepPanel extends StatelessWidget {
   const PrepPanel({
     super.key,
@@ -27,6 +29,7 @@ class PrepPanel extends StatelessWidget {
     required this.onReady,
     required this.onCancel,
     required this.onCharacter,
+    this.shop,
   });
 
   final MissionDef mission;
@@ -40,40 +43,57 @@ class PrepPanel extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onCharacter;
 
+  /// Secciones de tienda (consumibles, herrería, fusión, armería).
+  final Widget? shop;
+
   @override
   Widget build(BuildContext context) {
     return PanelFrame(
       title: 'PREPARACIÓN · ${mission.name} (rango ${mission.rank})',
-      actions: [
-        PanelButton(ready ? 'YA NO ESTOY LISTO' : '¡LISTO!',
-            key: const ValueKey('prep-ready'),
-            accent: ready ? null : RetroPalette.green,
-            onPressed: () => onReady(!ready)),
-        PanelButton('PERSONAJE [C]', onPressed: onCharacter),
-        PanelButton('CANCELAR MISIÓN', onPressed: onCancel),
-      ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      width: 1000,
+      header: Wrap(
+        spacing: 8,
+        runSpacing: 8,
         children: [
-          Text(
-            retroText('Dentro de la misión vas con lo que lleves: no hay '
-                'tienda ni cambio de arma, solo subes de nivel.'),
+          PanelButton(ready ? 'YA NO ESTOY LISTO' : '¡LISTO!',
+              key: const ValueKey('prep-ready'),
+              accent: ready ? null : RetroPalette.green,
+              selected: !ready,
+              onPressed: () => onReady(!ready)),
+          PanelButton('PERSONAJE / EQUIPAR [C]',
+              key: const ValueKey('prep-character'), onPressed: onCharacter),
+          PanelButton('CANCELAR MISIÓN',
+              key: const ValueKey('prep-cancel'), onPressed: onCancel),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text.rich(TextSpan(children: [
+            const TextSpan(text: 'Dentro de la misión vas con lo que lleves: '),
+            const TextSpan(
+                text: 'no hay tienda ni cambio de arma',
+                style: TextStyle(color: RetroPalette.gold)),
+            TextSpan(text: retroText(', solo subes de nivel.')),
+          ])),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 16,
+            runSpacing: 4,
+            children: [
+              for (final p in players)
+                Text(
+                  retroText('${p.ready ? '> ' : '... '}${p.name} '
+                      '(${p.className} Lv${p.level})'),
+                  style: TextStyle(
+                      color: p.ready ? RetroPalette.green : RetroPalette.muted),
+                ),
+            ],
           ),
-          const SizedBox(height: 16),
-          for (final p in players)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                retroText('${p.ready ? '> ' : '... '}${p.name} '
-                    '(${p.className} Lv${p.level})'),
-                style: TextStyle(
-                    color: p.ready ? RetroPalette.green : RetroPalette.muted),
-              ),
-            ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           Text(retroText('Créditos: ₵$credits · Arma: $weaponName'),
               style: const TextStyle(color: RetroPalette.gold)),
-          const ComingSoon('Tienda, herrería y fusión'),
+          if (shop != null) shop!,
         ],
       ),
     );

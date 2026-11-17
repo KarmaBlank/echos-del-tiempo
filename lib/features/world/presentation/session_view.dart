@@ -5,6 +5,18 @@ import '../../../game_engine/models/game_session.dart';
 /// Panel abierto sobre el mapa (`panel` del prototipo).
 enum WorldPanel { missionBoard, armory, character, prep }
 
+/// Una línea del chat (`addChat`): de un jugador o de sistema (`sys`).
+class ChatLine {
+  const ChatLine(this.from, this.text);
+  const ChatLine.system(this.text) : from = null;
+
+  /// Nombre de quien escribió; `null` = mensaje de sistema.
+  final String? from;
+  final String text;
+
+  bool get system => from == null;
+}
+
 /// Aviso de interacción cerca de algo (`[E] ...` del prototipo).
 enum WorldPrompt {
   missionBoard('[E] Ver misiones'),
@@ -27,6 +39,7 @@ class SessionView {
     this.panel,
     this.prompt,
     this.messages = const [],
+    this.chat = const [],
     this.battleEvents = const [],
     this.battleEventSeq = 0,
   });
@@ -41,6 +54,9 @@ class SessionView {
 
   /// Mensajes de sistema, el más nuevo al final (máx. 50).
   final List<String> messages;
+
+  /// Chat y mensajes de sistema mezclados, el más nuevo al final (máx. 50).
+  final List<ChatLine> chat;
 
   /// Eventos del último paso de batalla (para números de daño).
   final List<BattleEvent> battleEvents;
@@ -67,6 +83,7 @@ class SessionView {
     WorldPanel? Function()? panel,
     WorldPrompt? Function()? prompt,
     List<String>? messages,
+    List<ChatLine>? chat,
     List<BattleEvent>? battleEvents,
     int? battleEventSeq,
   }) =>
@@ -77,6 +94,7 @@ class SessionView {
         panel: panel != null ? panel() : this.panel,
         prompt: prompt != null ? prompt() : this.prompt,
         messages: messages ?? this.messages,
+        chat: chat ?? this.chat,
         battleEvents: battleEvents ?? this.battleEvents,
         battleEventSeq: battleEventSeq ?? this.battleEventSeq,
       );

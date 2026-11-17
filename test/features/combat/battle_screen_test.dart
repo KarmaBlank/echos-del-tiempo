@@ -1,5 +1,7 @@
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/battle_screen.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_fx.dart';
+import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
 import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/weapons_catalog.dart';
@@ -120,5 +122,38 @@ void main() {
     await pump(tester, canAct: false, onCommand: (_) => fail('no debía mandar'));
     expect(find.text('TURNO DE GUERRERO'), findsOneWidget);
     expect(find.text('  1. Atacar'), findsNothing);
+  });
+
+  testWidgets('un paso nuevo (eventSeq) crea los efectos una sola vez',
+      (tester) async {
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    Widget view(BattleState b, List<BattleEvent> ev, int seq) => MaterialApp(
+          theme: RetroTheme.build(),
+          home: Scaffold(
+            body: BattleView(
+                battle: b,
+                events: ev,
+                eventSeq: seq,
+                battleId: 1,
+                onCommand: (_) => true),
+          ),
+        );
+    await tester.pumpWidget(view(state, const [], 0));
+    final step = engine.command(state, 'guerrero', const AttackCommand())!;
+    await tester.pumpWidget(view(step.state, step.events, 1));
+    await tester.pump(const Duration(milliseconds: 16));
+    final scene = tester.state<BattleViewState>(find.byType(BattleView)).scene;
+    final kinds = scene.fx.map((f) => f.fx.kind).toList();
+    expect(kinds, containsAll([FxKind.act, FxKind.num, FxKind.slash]));
+    final n = scene.fx.length;
+    // Reconstruir con el mismo eventSeq no repite.
+    await tester.pumpWidget(view(step.state, step.events, 1));
+    expect(scene.fx.length, n);
+    // Los efectos caducan solos (no frenan nada).
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(scene.fx, isEmpty);
   });
 }

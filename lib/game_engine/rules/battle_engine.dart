@@ -153,6 +153,7 @@ class BattleEngine {
     if (state.ended || cur == null || !cur.isPlayer) return null;
     final t = _Turn(this, state.copy());
     final p = t.state.current!;
+    t.events.add(ActionEvent(p.id, BattleActionKind.defend));
     p.defending = true;
     p.nextTurn = t.state.clock + interval(p);
     t.state.log = 'Tiempo agotado: ${p.name} se defiende automáticamente';
@@ -382,7 +383,13 @@ class _Turn {
 
     if (total > 0) {
       a.hp = math.max(0, a.hp - total);
-      events.add(DamageEvent(a.id, total, fromStatus: true));
+      events.add(DamageEvent(a.id, total,
+          fromStatus: true,
+          statusSource: burn > 0
+              ? StatusKind.burn
+              : poison > 0
+                  ? StatusKind.poison
+                  : StatusKind.holy));
       if (!a.alive) events.add(KnockedOutEvent(a.id));
     }
 
@@ -518,6 +525,17 @@ class _Turn {
         ? ' (Protección: ${protector.name} recibe el golpe dirigido a ${pick0.name})'
         : '';
     final inf = e.inflicts;
+    final area = e.areaAttack && e.actions % 3 == 0;
+    events.add(ActionEvent(
+      e.id,
+      area
+          ? BattleActionKind.enemyArea
+          : e.boss && e.actions % 4 == 0
+              ? BattleActionKind.enemyHeavy
+              : BattleActionKind.enemyAttack,
+      targetId: area ? null : pick.id,
+      allTargets: area,
+    ));
 
     String detail(_Hurt h, double mult, Combatant p) => 'ATQ ${e.attack}'
         '${mult != 1 ? ' × ${fm(mult)}' : ''}'
@@ -530,7 +548,7 @@ class _Turn {
         : '';
     final tauntText = taunter != null ? ' (provocado)' : '';
 
-    if (e.areaAttack && e.actions % 3 == 0) {
+    if (area) {
       final parts = <String>[];
       for (final p0 in alive) {
         final p = victim(p0);
@@ -586,6 +604,9 @@ class _Turn {
 
     switch (cmd) {
       case AttackCommand():
+        events.add(ActionEvent(p.id, BattleActionKind.attack,
+            targetId: target.id,
+            allTargets: p.keystones.contains('imparable')));
         _attack(p, foes, target);
       case SkillCommand(:final skillId):
         final sk = engine.catalog.skills[skillId];
@@ -593,6 +614,10 @@ class _Turn {
           return false;
         }
         p.mp -= sk.mp;
+        events.add(ActionEvent(p.id, BattleActionKind.skill,
+            skillId: sk.id,
+            targetId: sk.dealsDamage && !sk.allTargets ? target.id : null,
+            allTargets: sk.allTargets));
         final gain = _useSkill(p, sk, foes, target, ultimate: false);
         if (gain == null) return true; // Prisa sin aliados: ya terminó el turno.
         ultGain = gain;
@@ -602,6 +627,10 @@ class _Turn {
         p.ult = 0;
         usedUlt = true;
         events.add(UltimateUsedEvent(p.id, sk.name));
+        events.add(ActionEvent(p.id, BattleActionKind.ultimate,
+            skillId: sk.id,
+            targetId: sk.dealsDamage && !sk.allTargets ? target.id : null,
+            allTargets: sk.allTargets));
         _useSkill(p, sk, foes, target, ultimate: true);
       case DualCommand(:final partnerId):
         if (!_dual(p, partnerId, foes)) return false;
@@ -611,6 +640,7 @@ class _Turn {
             : _potion(p, targetPlayerId);
         if (!ok) return false;
       case DefendCommand():
+        events.add(ActionEvent(p.id, BattleActionKind.defend));
         p.defending = true;
         state.log = '${p.name} se defiende (actúa antes)';
         p.nextTurn = state.clock + _iv(p) * 0.7;
@@ -814,6 +844,8 @@ class _Turn {
     final du = engine.catalog.duals[dualKey(p.classId!, q.classId!)];
     if (du == null) return false;
 
+    events.add(ActionEvent(p.id, BattleActionKind.dual,
+        partnerId: q.id, allTargets: true));
     q.defending = false;
     p.mp -= BattleEngine.dualMpCost;
     q.mp -= BattleEngine.dualMpCost;
@@ -852,6 +884,7 @@ class _Turn {
         ? chosen
         : _lowest(_aliveParty, (c) => c.mp / c.maxMp);
     if (t == null) return false;
+    events.add(ActionEvent(p.id, BattleActionKind.ether, targetId: t.id));
     p.ethers--;
     final a = jsRound(t.maxMp * 0.5);
     t.mp = math.min(t.maxMp.toDouble(), t.mp + a);
@@ -867,6 +900,7 @@ class _Turn {
         ? chosen
         : _lowest(state.party, (c) => c.hp / c.maxHp);
     if (t == null) return false;
+    events.add(ActionEvent(p.id, BattleActionKind.potion, targetId: t.id));
     p.potions--;
     final a = jsRound(t.maxHp * 0.45);
     final was = t.hp;

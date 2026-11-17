@@ -3,11 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../combat/presentation/battle_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
+import '../../inventory/presentation/armory_panel.dart';
+import '../../inventory/presentation/shop_sections.dart';
 import '../../missions/presentation/mission_board_panel.dart';
 import '../../missions/presentation/prep_panel.dart';
 import '../../missions/presentation/results_panel.dart';
@@ -16,6 +17,7 @@ import 'map/map_game.dart';
 import 'panels/character_panel.dart';
 import 'session_battle_screen.dart';
 import 'session_controller.dart';
+import 'session_sfx.dart';
 import 'session_view.dart';
 
 /// Pantalla raíz del juego: dibuja lo que pide `session.mode` (mapa +
@@ -33,16 +35,41 @@ class WorldScreen extends ConsumerStatefulWidget {
 
 class _WorldScreenState extends ConsumerState<WorldScreen> {
   final _focus = FocusNode(debugLabel: 'world');
+  final _chatFocus = FocusNode(debugLabel: 'chat');
   final _battleKey = GlobalKey<BattleViewState>();
   MapGame? _game;
 
   @override
+  void initState() {
+    super.initState();
+    // Mientras se escribe, el jugador no se mueve (las teclas son texto).
+    _chatFocus.addListener(() {
+      final c = ref.read(sessionControllerProvider.notifier);
+      if (c.mounted) c.typing = _chatFocus.hasFocus;
+    });
+  }
+
+  @override
   void dispose() {
+    _chatFocus.dispose();
     _focus.dispose();
     super.dispose();
   }
 
+  /// Fin del chat (Enter o Esc): el foco vuelve a la pantalla.
+  void _chatDone() => _focus.requestFocus();
+
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    // Escribiendo: ninguna tecla es del juego (ni atajos ni movimiento);
+    // así llegan al campo de texto.
+    if (_chatFocus.hasFocus) return KeyEventResult.ignored;
+    if (event is KeyDownEvent &&
+        (event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.numpadEnter) &&
+        _chatFocus.context != null) {
+      _chatFocus.requestFocus();
+      return KeyEventResult.handled;
+    }
     if (event is! KeyDownEvent) {
       // Las de movimiento se leen del estado del teclado: que no lleguen
       // a los atajos de foco.
@@ -67,6 +94,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final view = ref.watch(sessionControllerProvider);
     final sprites = ref.watch(gameSpritesProvider);
     final controller = ref.read(sessionControllerProvider.notifier);
+    // Sonido: escucha los eventos de la sesión mientras la pantalla vive.
+    ref.watch(sessionSfxProvider);
 
     // Recupera el foco si un cambio de pantalla lo dejó sin dueño.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -148,6 +177,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               view: view,
               controller: controller,
               onExit: () => Navigator.of(context).maybePop(),
+              chatFocus: _chatFocus,
+              onChatDone: _chatDone,
             ),
           ),
           if (view.panel case final panel?)
@@ -169,18 +200,16 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           classes: catalog.classes,
           currentClassId: me.profile.classId,
           voteOpen: s.vote != null,
-          onPropose: controller.proposeMission,
+          // Proponer cierra el mostrador (línea 1363).
+          onPropose: (id) {
+            if (controller.proposeMission(id)) controller.closePanel();
+          },
           onChangeClass: controller.changeClass,
           onClose: controller.closePanel,
+          onCharacter: () => controller.openPanel(WorldPanel.character),
         );
       case WorldPanel.armory:
-        return PanelFrame(
-          title: 'ARMERÍA',
-          actions: [
-            PanelButton('CERRAR [ESC]', onPressed: controller.closePanel),
-          ],
-          child: const ComingSoon('Armas, pociones, herrería y fusión'),
-        );
+        return ArmoryPanel(view: view, controller: controller);
       case WorldPanel.character:
         return CharacterPanel(view: view, controller: controller);
       case WorldPanel.prep:
@@ -206,7 +235,22 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           onReady: controller.setReady,
           onCancel: controller.cancelPrep,
           onCharacter: () => controller.openPanel(WorldPanel.character),
+          shop: _prepShop(view, controller),
         );
     }
+  }
+
+  /// Tienda de la preparación, en el orden del prototipo (línea 1346).
+  Widget _prepShop(SessionView view, SessionController controller) {
+    final shop = ShopContext(view, controller);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ItemShopSection(shop: shop),
+        ForgeSection(shop: shop),
+        FuseSection(shop: shop),
+        WeaponShopSection(shop: shop),
+      ],
+    );
   }
 }

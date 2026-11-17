@@ -9,6 +9,8 @@ import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../../game_engine/rules/world_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
+import '../../../missions/presentation/vote_panel.dart';
+import 'chat_box.dart';
 import 'minimap.dart';
 
 /// `m:ss` con minutos de dos dígitos (`mm:ss` del HUD del prototipo).
@@ -27,6 +29,8 @@ class WorldHud extends StatelessWidget {
     required this.view,
     required this.controller,
     this.onExit,
+    this.chatFocus,
+    this.onChatDone,
   });
 
   final SessionView view;
@@ -34,6 +38,12 @@ class WorldHud extends StatelessWidget {
 
   /// Volver al título (solo en el lobby).
   final VoidCallback? onExit;
+
+  /// Foco del campo de chat (sin él no se muestra el campo).
+  final FocusNode? chatFocus;
+
+  /// Se terminó de escribir: el foco vuelve al juego.
+  final VoidCallback? onChatDone;
 
   static const _gap = 16.0;
 
@@ -101,8 +111,22 @@ class WorldHud extends StatelessWidget {
             left: _gap,
             bottom: _gap,
             width: 520,
-            child: _MessageLog(messages: view.messages),
+            child: chatFocus == null
+                ? _MessageLog(messages: view.messages)
+                : ChatBox(
+                    lines: view.chat,
+                    focusNode: chatFocus!,
+                    onSend: controller.sendChat,
+                    onDone: onChatDone ?? () {},
+                  ),
           ),
+          if (_voteBox(s) case final vote?)
+            Positioned(
+              top: _gap + 48,
+              left: 0,
+              right: 0,
+              child: Center(child: vote),
+            ),
           Positioned(
             right: _gap,
             bottom: _gap,
@@ -160,15 +184,27 @@ class WorldHud extends StatelessWidget {
     );
   }
 
-  /// Avisos de una línea: votación y barrera abierta.
+  /// Votación en curso (`renderVote`), solo en el lobby.
+  Widget? _voteBox(GameSession s) {
+    final v = s.vote;
+    if (s.mode != SessionMode.lobby || v == null) return null;
+    final m = controller.engine.catalog.mission(v.missionId);
+    return VotePanel(
+      proposedBy: v.proposedBy,
+      missionName: m?.name ?? v.missionId,
+      rank: m?.rank ?? '?',
+      players: [
+        for (final p in s.playerList)
+          VoteEntry(p.name, yes: v.yes.contains(p.id)),
+      ],
+      voted: v.yes.contains(view.localId),
+      onVote: controller.vote,
+    );
+  }
+
+  /// Avisos de una línea: barrera abierta.
   List<(String, Color)> _banners(GameSession s) {
     final out = <(String, Color)>[];
-    final v = s.vote;
-    if (s.mode == SessionMode.lobby && v != null && !v.yes.contains(view.localId)) {
-      final m = controller.engine.catalog.mission(v.missionId);
-      out.add(('Votación: ${m?.name ?? v.missionId} · [Y] sí / [N] no',
-          RetroPalette.gold));
-    }
     final boss = view.map.boss;
     if (s.mode == SessionMode.field &&
         s.gateOpen &&

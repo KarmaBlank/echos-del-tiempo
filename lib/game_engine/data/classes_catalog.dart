@@ -7,6 +7,7 @@ const Map<String, ClassDef> kClasses = {
   'guerrero': ClassDef(
     id: 'guerrero',
     name: 'Guerrero',
+    description: 'Espadas y hachas',
     allowedWeaponTypes: ['espada', 'hacha'],
     startWeaponId: 'espada_bronce',
     baseDefense: 3,
@@ -18,6 +19,7 @@ const Map<String, ClassDef> kClasses = {
   'maga': ClassDef(
     id: 'maga',
     name: 'Maga',
+    description: 'Báculos y tomos · cada uno se especializa',
     allowedWeaponTypes: ['báculo', 'tomo'],
     startWeaponId: 'baculo_aprendiz',
     baseAttributes: {
@@ -28,6 +30,7 @@ const Map<String, ClassDef> kClasses = {
   'paladin': ClassDef(
     id: 'paladin',
     name: 'Paladín',
+    description: 'Escudo · vida y defensa altas, daño bajo, lento',
     allowedWeaponTypes: ['espada+escudo', 'maza+escudo', 'martillo+escudo'],
     startWeaponId: 'espada_escudo_novato',
     baseDefense: 6,
@@ -43,6 +46,7 @@ const Map<String, ClassDef> kClasses = {
   'tirador': ClassDef(
     id: 'tirador',
     name: 'Tirador',
+    description: 'Arcos y rifles',
     allowedWeaponTypes: ['arco', 'rifle'],
     startWeaponId: 'arco_corto',
     baseDefense: 1,

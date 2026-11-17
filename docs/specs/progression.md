@@ -127,8 +127,8 @@ habilidades del arma + la fusionada (si no estaba).
 Al tomar un nodo, vida y maná actuales suben lo que suba el máximo; al
 reiniciar se recortan al máximo nuevo. Ver passive_tree.md.
 
-## Fuera de alcance (fases siguientes)
+## UI
 
-Paneles y botones (UI), tooltips, el autoguardado cada 2 s del cliente
-(lo hará la capa `features`/`data` llamando a `ProfileStore.save` con
-`SessionPlayer.profile`).
+Los paneles y botones que mandan estas acciones están en
+docs/specs/panels.md; el autoguardado cada 2 s lo hace
+`SessionController` (exploration.md § "Controlador de sesión").

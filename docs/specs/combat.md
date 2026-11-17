@@ -194,6 +194,41 @@ El Paladín recibe +1 stack de cualquier estado que no sea Regeneración.
   el turno queda libre. Si el resto del equipo está caído, la derrota se
   detecta al terminar el próximo turno enemigo.
 
+## Eventos para la UI (`BattleEvent`)
+
+Cada paso devuelve, en orden, lo que pasó (el equivalente semántico de
+los `addFx` del prototipo, sin coordenadas ni colores: eso lo decide la
+UI, ver docs/specs/battle_presentation.md):
+
+| Evento | Cuándo |
+|---|---|
+| `TurnStartedEvent(actor)` | `nextTurn` le da el turno a alguien |
+| `ActionEvent(actor, kind, skillId?, partnerId?, targetId?, allTargets)` | un actor empieza una acción, **antes** de los eventos que produce |
+| `UltimateUsedEvent(actor, nombre)` | se usa una ULT (antes de su `ActionEvent`) |
+| `DamageEvent(objetivo, daño, critical, critMultiplier, pierceMultiplier, fromStatus, statusSource?)` | cada golpe o daño de estado |
+| `HealEvent(objetivo, n, mana)` | curación de vida o maná |
+| `StatusAppliedEvent(objetivo, estado, stacks, weakness)` | `addStatus` aplicó stacks |
+| `TurnSkippedEvent(actor, causa)` | aturdido o congelado ×5 |
+| `DelayedEvent(objetivo)` | lo retrasaron en el timeline |
+| `KnockedOutEvent(objetivo)` / `RevivedEvent(objetivo)` | cae / revive |
+| `BattleEndedEvent(victoria, xp, créditos)` | `checkEnd` |
+
+`ActionEvent.kind` (`BattleActionKind`):
+- `attack` (con `targetId`; `allTargets` con la keystone `imparable`),
+  `skill` / `ultimate` (con `skillId` = `SkillDef.id`, p. ej. `giro` o
+  `ult_espada`; `targetId` solo si es de daño a un enemigo), `dual`
+  (`partnerId`, siempre `allTargets`), `potion` / `ether` (`targetId` =
+  el aliado que la recibe), `defend` (también al agotarse el tiempo);
+- enemigos: `enemyAttack` y `enemyHeavy` (Golpe Brutal), con
+  `targetId` = la víctima elegida (antes de la Protección),
+  `enemyArea` (Colapso Temporal, `allTargets`).
+
+`DamageEvent.statusSource` (solo con `fromStatus`): Quemadura si tenía
+stacks de Quemadura, si no Veneno, si no Sagrado (el `hadBurn` del
+prototipo elige aura y color con esto).
+
+Todos los campos nuevos son opcionales: quien no los use no cambia.
+
 ## Fuera de este motor
 
 Lo que pasa alrededor de la batalla lo hace `SessionEngine`

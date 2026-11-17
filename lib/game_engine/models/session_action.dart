@@ -120,6 +120,16 @@ class BattleAction extends SessionAction {
   const BattleAction(this.command);
 }
 
+/// `chat`: un mensaje de texto para la sala. El host lo recorta (espacios
+/// y [maxLength] caracteres) y rechaza los vacíos.
+class ChatAction extends SessionAction {
+  final String text;
+  const ChatAction(this.text);
+
+  /// `maxlength` del `#chatin` y `slice(0,120)` del host.
+  static const maxLength = 120;
+}
+
 /// `back`: salir de la pantalla de resultados.
 class BackToLobbyAction extends SessionAction {
   const BackToLobbyAction();

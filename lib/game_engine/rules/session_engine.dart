@@ -354,6 +354,18 @@ class _Op {
       case BattleAction():
         return _battleCommand(p, a.command);
 
+      case ChatAction():
+        // `case 'chat'`: en cualquier modo; el estado no cambia.
+        final text = a.text.trim();
+        if (text.isEmpty) return false;
+        events.add(ChatMessageEvent(
+            p.id,
+            p.name,
+            text.length > ChatAction.maxLength
+                ? text.substring(0, ChatAction.maxLength)
+                : text));
+        return true;
+
       case BackToLobbyAction():
         if (s.mode != SessionMode.result) return false;
         toLobby();

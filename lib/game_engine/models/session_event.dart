@@ -15,6 +15,16 @@ class SystemMessageEvent extends SessionEvent {
   const SystemMessageEvent(this.text);
 }
 
+/// Mensaje de chat de un jugador (`{t:'chat', from, txt}` del host).
+class ChatMessageEvent extends SessionEvent {
+  final String playerId;
+
+  /// Nombre del jugador cuando escribió.
+  final String from;
+  final String text;
+  const ChatMessageEvent(this.playerId, this.from, this.text);
+}
+
 class PlayerJoinedEvent extends SessionEvent {
   final String playerId;
   const PlayerJoinedEvent(this.playerId);

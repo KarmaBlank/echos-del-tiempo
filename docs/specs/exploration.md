@@ -27,21 +27,47 @@ Implementación Dart (feature `world` + piezas de `missions` y `combat`):
 | Tiles y temas | `lib/features/world/presentation/map/tile_painter.dart`, `map_themes.dart` |
 | Héroes, enemigos y objetos | `lib/features/world/presentation/map/actor_painter.dart` |
 | HUD (overlays Flutter) | `lib/features/world/presentation/hud/*.dart` |
-| Personaje / reparto de puntos | `lib/features/world/presentation/panels/character_panel.dart` |
+| Título (nombre, clase) | `lib/features/lobby/presentation/title_screen.dart` |
+| Chat | `lib/features/world/presentation/hud/chat_box.dart` |
+| Sonido (oyente de eventos) | `lib/features/world/presentation/session_sfx.dart` (docs/specs/audio.md) |
+| Personaje (atributos, armas, árbol) | `lib/features/world/presentation/panels/character_panel.dart` (docs/specs/panels.md) |
+| Armería, herrería, fusión | `lib/features/inventory/presentation/*.dart` (docs/specs/panels.md) |
+| Árbol de pasivas | `lib/features/passive_tree/presentation/passive_tree_view.dart` |
 | Marco de paneles, botón compacto, barras | `lib/app/theme/panel_frame.dart`, `retro_theme.dart`, `retro_bar.dart` |
-| Mostrador, preparación, resultado | `lib/features/missions/presentation/*.dart` |
+| Mostrador, votación, preparación, resultado | `lib/features/missions/presentation/*.dart` |
 | Batalla dirigida por la sesión | `lib/features/world/presentation/session_battle_screen.dart` + `lib/features/combat/presentation/battle_screen.dart` (`BattleView`) |
 | Sprites ya decodificados | `lib/features/combat/presentation/game_sprites.dart` (+ `pixel_sprite.dart` para widgets) |
 | Perfil en disco | `lib/features/lobby/data/json_file_profile_store.dart` |
 
 Tests: `test/features/world/session_flow_test.dart`,
 `test/features/world/session_controller_test.dart`,
+`test/features/world/chat_input_test.dart`,
+`test/features/lobby/title_screen_test.dart`,
 `test/features/combat/battle_screen_test.dart`.
+
+## Título (`#title` y `title()`, HTML 70-83 y líneas 1471-1490)
+
+- `ECOS DEL TIEMPO` (32 px `gold`, sombra dura `red`), subtítulo y, si
+  el perfil guardado es de nivel > 1, `· Tu nivel guardado: N`.
+- `Nombre:` campo de 10 caracteres (`maxlength`), con el nombre guardado.
+- Una tarjeta por clase permitida (`FeatureFlags`): sprite del héroe
+  ×4, nombre, descripción (`ClassDef.description`, el `desc` del
+  prototipo), atributos base y arma inicial. La elegida tiene borde
+  `gold`. Elegir otra clase hace lo mismo que el prototipo:
+  `classId = k`, `equipped = arma inicial` y `resetBuild` (el árbol que
+  no sirva lo descarta `normalize` al entrar).
+- `> COMENZAR` (`prep()`): nombre recortado (vacío → `Héroe`, máx. 10),
+  guarda el perfil con `ProfileStore.save` y abre `WorldScreen`, que lo
+  carga. **Agregado del puerto**: el prototipo solo tiene "Crear sala" /
+  "Unirse".
+- `CREAR SALA`, el campo `CODIGO` y `UNIRSE` se ven pero están
+  deshabilitados con `P2P: próximamente` (netcode es la fase siguiente).
+- La línea de ayuda de controles del prototipo.
 
 ## Flujo de pantallas
 
 ```
-Título ("> COMENZAR") ──push──> WorldScreen
+Título ("> COMENZAR", guarda nombre y clase) ──push──> WorldScreen
 WorldScreen según SessionMode:
   lobby / prep / field / levelUp → mapa Flame + HUD + paneles
   battle                          → SessionBattleScreen (encima del mapa)
@@ -117,7 +143,9 @@ panel de preparación en vez de cerrar.
 |---|---|---|
 | WASD / flechas | lobby, campo | mover (se leen del estado del teclado cada frame) |
 | E / Espacio | lobby, frente al mostrador | abre el mostrador de misiones |
-| E / Espacio | lobby, frente a la armería | abre la armería (placeholder) |
+| E / Espacio | lobby, frente a la armería | abre la armería |
+| Enter | fuera de batalla y resultado (con el chat visible) | enfoca el campo de chat |
+| Enter / Esc | escribiendo en el chat | manda el mensaje / sale sin mandar; el foco vuelve al juego |
 | E / Espacio | campo, a < 26 px de un sello | `ActivateSealAction` |
 | C | fuera de batalla | abre/cierra el panel de personaje |
 | Esc | con panel | cierra el panel (salvo las reglas de arriba) |
@@ -133,8 +161,29 @@ pero el mapa nunca tiene mercader (ver world.md).
 
 Las teclas llegan a un `Focus` raíz de `WorldScreen` (que recupera el
 foco si lo pierde); WASD, flechas, Tab y Espacio se marcan como
-manejadas para que no muevan el foco entre botones. Enter (chat) todavía
-no existe.
+manejadas para que no muevan el foco entre botones.
+
+## Chat (`#chatbox`, líneas 103-106, 582, 909-916 y 1376-1379)
+
+- `ChatBox` (abajo a la izquierda, reemplaza al registro): las últimas 5
+  líneas de `SessionView.chat` (sistema en `green` con `> `, jugadores
+  `nombre:` en `gold` + texto) y el campo `Enter para chatear...` de
+  120 caracteres.
+- Enter en el mapa enfoca el campo. Mientras el campo tiene el foco, el
+  `Focus` raíz de `WorldScreen` deja pasar **todas** las teclas
+  (`ignored`) para que lleguen al texto, y `SessionController.typing`
+  anula el movimiento (`updateLocal` usa entrada 0 aunque el teclado
+  tenga WASD apretadas). Enter manda `ChatAction(texto)` (si no está
+  vacío) y Esc sale sin mandar; en ambos casos el foco vuelve al juego.
+- El host (`SessionEngine`, `case 'chat'`) recorta espacios y a 120
+  caracteres, rechaza vacíos y emite `ChatMessageEvent(id, nombre,
+  texto)` sin cambiar el estado: en la sesión local es el eco del
+  prototipo (`broadcast(m); addChat(m)`). El controlador guarda chat y
+  sistema mezclados (máx. 50); `messages` sigue teniendo solo los de
+  sistema.
+- **Desvío / pendiente**: en batalla y en el resultado el chat no se
+  muestra (la pantalla de batalla ocupa todo); el prototipo lo tiene
+  siempre debajo del canvas.
 
 ## Resolución virtual y escalado
 
@@ -279,31 +328,33 @@ Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
 - **Grupo** (abajo a la derecha, `#party`): por jugador nombre, clase y
   nivel, arma, `+N pts`, barras HP/MP (`RetroBar`) con `ceil(hp)` y
   `floor(mp)`, `XP n/xpNeed · ₵créditos`, pociones.
-- **Registro** (abajo a la izquierda): los últimos 5 mensajes de sistema.
+- **Chat** (abajo a la izquierda): ver § "Chat".
 - **Aviso de interacción** (abajo al centro): `[E] Ver misiones`,
   `[E] Armería`, `[E] Activar sello`, `[E] Tienda y herrería`.
 - **Barrera abierta**: `La barrera se abrió > busca al JEFE (* en el
   minimapa)` mientras el jugador está a más de 140 px del jefe.
-- **Votación**: `Votación: <misión> · [Y] sí / [N] no` si hay una y el
-  jugador local todavía no votó.
+- **Votación** (arriba al centro, en el lobby): `VotePanel`, ver
+  docs/specs/panels.md § "Votación".
 - **Subida de nivel**: `¡SUBIDA DE NIVEL!` + `Esperando a: nombres`.
 
 ## Paneles
 
-- **Mostrador** (`board`): las misiones del catálogo con rango, tipo,
-  nivel recomendado, objetivo y tiempo S; `PROPONER` (deshabilitado si ya
-  hay votación) → `ProposeMissionAction`. Debajo, cambio de clase
-  (`ChangeClassAction`, solo lobby). Con un solo jugador la votación
-  pasa sola en el siguiente tick (el que propone ya votó que sí).
-- **Preparación** (`prep`): misión, lista de jugadores listos,
-  `¡LISTO!` / `YA NO ESTOY LISTO` (`ReadyAction`), `CANCELAR MISIÓN`
-  (`CancelPrepAction`), `PERSONAJE [C]`. Tienda, herrería y fusión:
-  "próximamente" (fase 5).
-- **Armería**: placeholder "próximamente".
-- **Personaje**: resumen (clase, nivel, arma, HP/MP/ATQ/MAG/DEF) y el
-  **reparto mínimo de puntos**: `+`/`−` por atributo y `CONFIRMAR`
-  (`AllocateStatsAction`). Árbol, armas y fusión: "próximamente".
-  Cuando `mustAllocate` es cierto se abre solo y no se puede cerrar.
+El contenido y las reglas de cada panel (mostrador, votación,
+preparación, armería, personaje y árbol) están en docs/specs/panels.md.
+Resumen:
+
+- **Mostrador** (`board`): misiones y `PROPONER` (cierra el panel), cambio
+  de clase. Con un solo jugador la votación pasa sola en el siguiente
+  tick (el que propone ya votó que sí).
+- **Preparación** (`prep`): listos, `¡LISTO!`, `PERSONAJE / EQUIPAR
+  [C]`, `CANCELAR MISIÓN` y la tienda completa (consumibles, herrería,
+  fusión, armería).
+- **Armería** (lobby): armas de su clase, consumibles, herrería (+
+  equipar) y fusión.
+- **Personaje**: pestañas `ATRIBUTOS` (reparto con vista previa
+  antes > después, reiniciar, clase), `ARMAS` (equipar) y `ÁRBOL`.
+  Cuando `mustAllocate` es cierto se abre solo en Atributos, sin
+  pestañas, y no se puede cerrar.
 - **Resultado**: `MISIÓN COMPLETADA`/`MISIÓN FALLIDA`, misión, rango
   grande, tiempo `m:ss`, K.O., XP, créditos de peleas, bonus de rango
   (`+₵ (n%)`), élites y sus armas, arma obtenida por cada jugador,
@@ -312,21 +363,24 @@ Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
 ## Batalla
 
 `SessionBattleScreen` lee `session.battle`:
-- `BattleView` dibuja enemigos (sprites de `GameSprites` ×6 (héroes ×2 en el grupo), escala del
-  manifest, ×1.45 élite), el log, el grupo y el menú de comandos.
+- `BattleView` dibuja la escena del prototipo **sobre el mapa de la
+  misión**, en el lugar del enemigo del campo que empezó la batalla
+  (grupo a un lado, enemigos al otro), con animaciones, efectos,
+  cinemáticas de ultimate y la franja de turnos: todo en
+  docs/specs/battle_presentation.md. `SessionBattleScreen` le pasa la
+  arena (posición, lado, tamaño del mapa y un callback que dibuja tiles y
+  enemigos lejanos con `TilePainter` / `ActorPainter`), `battleEvents`,
+  `battleEventSeq` y el id de la batalla.
 - El menú aparece solo si `battle.waitingForPlayer` y el turno es del
   jugador local; cada opción manda `BattleAction(cmd)` con el objetivo
   actual (`tgt` del prototipo: primer enemigo vivo si el elegido cayó;
-  Q/Tab o clic en la carta lo cambian).
-- Menú plano numerado como el prototipo: `Atacar`, `ULTIMATE` (si la
-  barra está al 100%), técnicas del arma (deshabilitadas sin MP), dúos
-  con cada aliado vivo, `Poción de vida xN >` y `Poción de maná xN >`
-  (submenú: a quién) y `Defender`.
-- Tiempo de turno: `30 − turnTime` s (`TURN_LIMIT`).
-- Daño del último paso (`BattleStepEvent`) flotando sobre cada carta.
-
-Línea de tiempo de turnos, animaciones de ataque, partículas y
-cinemáticas de ultimate quedan para la fase 4.
+  Q/Tab o clic sobre el enemigo en la escena lo cambian).
+- Menú plano numerado como el prototipo (en dos columnas si entra):
+  `Atacar`, `ULTIMATE` (si la barra está al 100%), técnicas del arma
+  (deshabilitadas sin MP), dúos con cada aliado vivo, `Poción de vida
+  xN >` y `Poción de maná xN >` (submenú: a quién) y `Defender`. Al pasar
+  el mouse, la ayuda (`descSkill`) al pie del panel.
+- Tiempo de turno: `30 − turnTime` s (`TURN_LIMIT`), en la franja.
 
 ## Persistencia
 
@@ -344,8 +398,6 @@ cinemáticas de ultimate quedan para la fase 4.
 
 ## Desvíos respecto del prototipo
 
-- Batalla en una pantalla Flutter propia en vez de dibujarse sobre el
-  mapa (la escena Flame de batalla es de la fase 4).
 - Suavizado de cámara y `lerpPos` independientes del frame rate.
 - `★`, `✔`, `✦`, `🔒`, `₵` y las mayúsculas acentuadas no existen en
   Press Start 2P: `*`, color verde, rombo dibujado, texto plano, `$` y
@@ -353,8 +405,10 @@ cinemáticas de ultimate quedan para la fase 4.
 - Las teclas de interacción usan el `Focus` de la pantalla; el
   `GameWidget` queda fuera del foco (`ExcludeFocus`) porque se tragaría
   todas las teclas.
-- Batalla: el menú apunta al objetivo con Q/Tab o clic en la carta,
+- Batalla: el menú apunta al objetivo con Q/Tab o clic en el enemigo,
   sin submenú de "elegí un enemigo" (como el prototipo).
 - Objetivos y minimapa son widgets (no se dibujan en el canvas) y usan
   píxeles de pantalla, no virtuales.
-- Sin chat (Enter) ni sonido todavía.
+- Chat sin mostrarse en batalla ni en el resultado (ver § "Chat").
+- Sonido sintetizado pero mudo hasta agregar un plugin de audio
+  (docs/specs/audio.md).

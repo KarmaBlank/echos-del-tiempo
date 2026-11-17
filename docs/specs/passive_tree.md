@@ -28,11 +28,11 @@ Tests: `test/game_engine/passive_tree_rules_test.dart`.
    stale: ver `StatsCalculator.calculate`, que llama a `aggregate` en
    cada recálculo de stats).
 
-## No migrado todavía
+## Datos y UI
 
-- El árbol completo con los 4 "centros" de clase y los nodos puente
-  entre ellos (`b_ne`, `b_se`, `b_sw`, `b_nw`) — hoy solo hay un árbol
-  de ejemplo de 3 nodos en los tests. Portar el `TREE` completo del
-  prototipo es el próximo paso de `game_engine/models/passive_tree.dart`
-  (un data file, no requiere cambiar reglas).
-- Persistencia (perfil local) de `PlayerPassiveProgress`.
+El `TREE` completo (40 nodos: 4 centros de clase con 2 ramas de 4 nodos
+y los puentes `b_ne`, `b_se`, `b_sw`, `b_nw`) está en
+`lib/game_engine/data/passive_tree_catalog.dart`; los nodos tomados se
+guardan en el perfil (`tree`, progression.md). El dibujo, los textos
+(`fxTxt`, `KEYS`) y los motivos de bloqueo están en
+docs/specs/panels.md § "Árbol".

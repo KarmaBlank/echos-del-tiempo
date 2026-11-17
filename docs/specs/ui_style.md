@@ -83,12 +83,42 @@ pantalla, título de 16 px en `gold`, contenido de 8 px con scroll y los
 botones compactos abajo a la derecha. Lo usan el mostrador, la
 preparación, el personaje, la armería y el resultado. `ComingSoon`
 muestra "X: próximamente." en `muted` para lo que todavía no existe.
+`header` es una fila fija entre el título y el scroll (pestañas, botones
+principales). Armería, personaje y preparación usan 1000 px de ancho.
+
+Piezas de contenido (mismo archivo):
+- `PanelButton(reason: ...)`: deshabilitado con el motivo en `muted` a
+  la izquierda (docs/specs/panels.md § "Botones con motivo");
+  `selected` pinta el borde `gold` (opción elegida de una lista).
+- `PanelTabs`: fila de `PanelButton`, la pestaña activa en `gold`.
+- `PanelSection`: subtítulo de 8 px `gold` con línea `night` de 2 px
+  debajo (los `h2` chicos del prototipo).
+- `PanelRow`: fila enmarcada (`.mrow`) con borde `night` de 2 px,
+  padding 8 y un widget a la derecha (precio, `TIENES`, `EQUIPADA`).
+- `RetroTooltip`: el `#tip` del prototipo; caja `night`, borde `gold` de
+  2 px, texto de 8 px con interlineado 1.8, ancho máximo 420.
+- Texto en verde/rojo para requisitos cumplidos/no cumplidos y `gold`
+  para créditos y lo equipado.
+
+## Campos de texto
+
+`TextField` con el `inputDecorationTheme`: relleno `panelDark`, borde
+`ink` de 2 px (`gold` con foco), sin radio, texto y pista de 8 px
+(`muted` la pista), `counterText` vacío aunque tenga `maxLength`. Lo usan
+el nombre del título y el chat.
+
+## Árbol de pasivas
+
+Es interfaz, no arte: usa la paleta (fondo `night`, enlaces `panel` o
+`green`, nodos `gold`/`green`/`red`/`ink`/`panel`), ver
+docs/specs/panels.md § "Árbol".
 
 ## HUD
 
 Overlays Flutter sobre el mapa con `RetroPanel` de padding 8 y texto de
 8 px; el jugador local tiene el borde `gold`. Los avisos de interacción
-(`[E] ...`) van en 16 px `gold`. Detalle de qué va dónde:
+(`[E] ...`) van en 16 px `gold`. La votación es una `RetroPanel` con
+borde `gold` arriba al centro. Detalle de qué va dónde:
 docs/specs/exploration.md § "HUD".
 
 ## Arte vs. chrome

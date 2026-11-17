@@ -319,4 +319,111 @@ void main() {
       expect(engine.interval(slime), closeTo(100 / (7 * 0.76), 1e-9));
     });
   });
+
+  group('eventos para la UI (ActionEvent)', () {
+    test('ataque: la acción va antes del daño, con actor y objetivo', () {
+      final engine = _engine();
+      final turn = _warriorTurn(engine, ['slime', 'bat']);
+      final step = engine.command(turn, 'p1', const AttackCommand(targetId: 'e1'))!;
+      final action = step.events.first as ActionEvent;
+      expect(action.actorId, 'p1');
+      expect(action.kind, BattleActionKind.attack);
+      expect(action.targetId, 'e1');
+      expect(action.allTargets, isFalse);
+      expect(step.events[1], isA<DamageEvent>());
+      expect((step.events[1] as DamageEvent).targetId, 'e1');
+    });
+
+    test('habilidad a todos: trae el id de la habilidad', () {
+      final engine = _engine();
+      final turn = _warriorTurn(engine, ['slime', 'bat']);
+      final step = engine.command(turn, 'p1', const SkillCommand('giro'))!;
+      final action = step.events.whereType<ActionEvent>().single;
+      expect(action.kind, BattleActionKind.skill);
+      expect(action.skillId, 'giro');
+      expect(action.allTargets, isTrue);
+      expect(action.targetId, isNull);
+      expect(step.events.whereType<DamageEvent>(), hasLength(2));
+    });
+
+    test('ULT: UltimateUsedEvent y después la acción con el id de la ULT', () {
+      final engine = _engine();
+      final start = engine.start(
+        party: [_member('p1', 'guerrero', ult: 100)],
+        enemyTypes: ['golem'],
+        triggeredBy: 'p1',
+      );
+      final step = engine.command(
+          engine.nextTurn(start.state).state, 'p1', const UltimateCommand())!;
+      expect(step.events[0], isA<UltimateUsedEvent>());
+      final action = step.events[1] as ActionEvent;
+      expect(action.kind, BattleActionKind.ultimate);
+      expect(action.skillId, 'ult_espada');
+      expect(action.targetId, 'e0');
+    });
+
+    test('dúo: actor y compañero', () {
+      final engine = _engine();
+      final start = engine.start(
+        party: [_member('p1', 'guerrero'), _member('p2', 'maga')],
+        enemyTypes: ['slime'],
+        triggeredBy: 'p1',
+      );
+      final step = engine.command(
+          engine.nextTurn(start.state).state, 'p1', const DualCommand('p2'))!;
+      final action = step.events.whereType<ActionEvent>().single;
+      expect(action.kind, BattleActionKind.dual);
+      expect(action.partnerId, 'p2');
+      expect(action.allTargets, isTrue);
+    });
+
+    test('poción, defender y tiempo agotado', () {
+      final engine = _engine();
+      final start = engine.start(
+        party: [_member('p1', 'guerrero', potions: 1), _member('p2', 'maga', hp: 0)],
+        enemyTypes: ['slime'],
+        triggeredBy: 'p1',
+      );
+      final turn = engine.nextTurn(start.state).state;
+      final pot = engine.command(turn, 'p1', const ItemCommand(BattleItem.potion))!;
+      final a = pot.events.first as ActionEvent;
+      expect(a.kind, BattleActionKind.potion);
+      expect(a.targetId, 'p2');
+
+      final def = engine.command(turn, 'p1', const DefendCommand())!;
+      expect((def.events.first as ActionEvent).kind, BattleActionKind.defend);
+      final out = engine.timeout(turn)!;
+      expect((out.events.first as ActionEvent).kind, BattleActionKind.defend);
+    });
+
+    test('enemigo: acción con su víctima', () {
+      final engine = _engine([0.0]);
+      final step = engine.enemyTurn(_slimeTurn(engine, 'guerrero'))!;
+      final action = step.events.first as ActionEvent;
+      expect(action.actorId, 'e0');
+      expect(action.kind, BattleActionKind.enemyAttack);
+      expect(action.targetId, 'p1');
+    });
+
+    test('Devorador: Colapso Temporal (a todos) en su 3ª acción', () {
+      final engine = _engine([0.0]);
+      final turn = _slimeTurn(engine, 'guerrero', enemy: 'devorador');
+      turn.enemies.first.actions = 2;
+      final step = engine.enemyTurn(turn)!;
+      final action = step.events.first as ActionEvent;
+      expect(action.kind, BattleActionKind.enemyArea);
+      expect(action.allTargets, isTrue);
+      expect(action.targetId, isNull);
+    });
+
+    test('daño de estado: dice qué estado lo causó', () {
+      final engine = _engine([0.0]);
+      final start = engine.start(party: [_member('p1', 'guerrero')], enemyTypes: ['slime']);
+      start.state.enemies.first.statuses[StatusKind.poison] = 2;
+      final step = engine.nextTurn(start.state);
+      final dmg = step.events.whereType<DamageEvent>().single;
+      expect(dmg.fromStatus, isTrue);
+      expect(dmg.statusSource, StatusKind.poison);
+    });
+  });
 }
