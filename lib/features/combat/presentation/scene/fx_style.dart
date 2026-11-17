@@ -202,3 +202,39 @@ const Map<FxElement, ElementFx> kElementFx = {
 };
 
 ElementFx elementFx(FxElement el) => kElementFx[el] ?? kElementFx[FxElement.phys]!;
+
+// ------------------------------------------- quiebre y ULT enemigas
+// (docs/specs/battle_presentation.md § "Quiebre" y § "ULT enemigas").
+
+/// Amarillo de la barra de quiebre, `¡QUIEBRE!` y los golpes a un
+/// enemigo quebrado.
+const breakColor = Color(0xFFFFE14D);
+
+/// Destello de pantalla del quiebre.
+const breakFlashColor = Color(0xFFFFF7C2);
+
+/// Rojo de la carga de ULT enemiga y del aviso.
+const enemyUltBarColor = Color(0xFFFF3355);
+
+/// Astillas de cristal del quiebre.
+const kBreakShardFx = ElementFx(
+    [Color(0xFFFFE14D), Color(0xFFFFFFFF), Color(0xFFFFF7C2), Color(0xFFFFB142)],
+    16, 95, 140, 0.55, ParticleShape.shard);
+
+/// Color de cada ULT enemiga (`EnemyUltDef.id`).
+const Map<String, Color> kEnemyUltColors = {
+  'eult_diluvio': Color(0xFF7BED9F),
+  'eult_engranaje': Color(0xFFE1B12C),
+  'eult_finEras': Color(0xFFD63031),
+  'eult_furia': Color(0xFFFF4757),
+};
+
+Color enemyUltColor(String? id) => kEnemyUltColors[id] ?? enemyUltBarColor;
+
+/// Elemento de las partículas de cada ULT enemiga.
+FxElement enemyUltElement(String? id) => switch (id) {
+      'eult_diluvio' => FxElement.poison,
+      'eult_engranaje' => FxElement.freeze,
+      'eult_finEras' => FxElement.burn,
+      _ => FxElement.phys,
+    };

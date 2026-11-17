@@ -12,6 +12,12 @@ enum UltStyle {
   bulwark,
   judgment,
   skyHammer,
+
+  // ULT enemigas (docs/specs/break_and_enemy_ults.md § 2).
+  acidFlood,
+  endGear,
+  endOfEras,
+  eliteFury,
 }
 
 /// Fase de la cinemática.
@@ -30,6 +36,10 @@ enum UltFocus {
 
   /// El grupo (Baluarte), zoom base.
   party,
+
+  /// Todo el grupo (ULT enemigas a todos: el grupo está en columna),
+  /// con el alto del encuadre base y zoom base − 1.
+  group,
 }
 
 /// Guion de una ULT: duraciones de las fases, impactos y peso. Datos
@@ -202,8 +212,55 @@ const UltScript kDefaultUltScript = UltScript(
   focus: UltFocus.single,
 );
 
+/// Los guiones de las ULT enemigas por `EnemyUltDef.id`
+/// (docs/specs/battle_presentation.md § "ULT enemigas").
+const Map<String, UltScript> kEnemyUltScripts = {
+  'eult_diluvio': UltScript(
+    style: UltStyle.acidFlood,
+    buildMs: 900,
+    releaseMs: 1100,
+    impactMs: 1380,
+    staggerMs: 70,
+    hitStopMs: 90,
+    shake: 10,
+    focus: UltFocus.group,
+  ),
+  'eult_engranaje': UltScript(
+    style: UltStyle.endGear,
+    buildMs: 900,
+    releaseMs: 1000,
+    impactMs: 1400,
+    hitStopMs: 130,
+    shake: 12,
+    focus: UltFocus.single,
+  ),
+  'eult_finEras': UltScript(
+    style: UltStyle.endOfEras,
+    buildMs: 1000,
+    releaseMs: 1100,
+    impactMs: 1500,
+    staggerMs: 60,
+    hitStopMs: 140,
+    shake: 14,
+    focus: UltFocus.group,
+  ),
+  'eult_furia': UltScript(
+    style: UltStyle.eliteFury,
+    buildMs: 700,
+    releaseMs: 900,
+    impactMs: 1150,
+    preHitsMs: [1000, 1070],
+    hitStopMs: 120,
+    shake: 12,
+    focus: UltFocus.single,
+  ),
+};
+
+/// La ULT es de un enemigo.
+bool isEnemyUlt(String? ultId) => kEnemyUltScripts.containsKey(ultId);
+
 UltScript ultScriptFor(String? ultId) =>
-    kUltScripts[ultId] ?? kDefaultUltScript;
+    kUltScripts[ultId] ?? kEnemyUltScripts[ultId] ?? kDefaultUltScript;
 
 /// Una vista de cámara: centro (px del mundo) y zoom (px de pantalla
 /// por px del mundo).
@@ -264,6 +321,12 @@ CameraView ultCameraAt(
     case UltFocus.targets:
       releaseView = CameraView(
           targets.isEmpty ? base.center : centroid(targets), bz);
+    case UltFocus.group:
+      // Un paso más lejos: el grupo en columna entra entero entre las
+      // barras de cine, con sus números arriba.
+      final c = targets.isEmpty ? base.center : centroid(targets);
+      releaseView =
+          CameraView(Offset(c.dx, base.center.dy), math.max(1, bz - 1));
   }
 
   final inMs = math.min(350.0, 0.45 * s.buildMs);

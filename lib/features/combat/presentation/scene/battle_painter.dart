@@ -400,19 +400,53 @@ class BattleScenePainter extends CustomPainter {
       c.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
     }
     _pen.oval(c, const Color(0x66000000), x, y + 1, w * 0.35, 2.5 * sc);
+    final warned = e.alive && e.ultPending;
+    if (warned) {
+      // Avisó su ULT: aura roja que late y anillos que suben.
+      final k = 0.5 + 0.5 * math.sin(pt / 110);
+      _pen.oval(c, enemyUltBarColor.withValues(alpha: 0.18 + 0.22 * k), x,
+          y - h / 2 + 2, w * 0.7 + 3 * k, h * 0.66 + 2 * k);
+      _pen.stroke.strokeWidth = 1;
+      for (var r = 0; r < 2; r++) {
+        final q = ((pt / 700) + r * 0.5) % 1.0;
+        _pen.stroke.color = enemyUltBarColor.withValues(alpha: 0.8 * (1 - q));
+        c.drawOval(
+            Rect.fromCenter(
+                center: Offset(x, y - 2 - q * h * 0.5),
+                width: w * (0.8 + 0.4 * q),
+                height: 6 + 4 * q),
+            _pen.stroke);
+      }
+    }
     if (e.elite) {
       final a = (0.35 + 0.2 * math.sin(pt / 180)).clamp(0.0, 1.0);
       _pen.oval(c, const Color(0xFFFFD166).withValues(alpha: a), x,
           y - h / 2 + 2, w * 0.62, h * 0.6);
     }
+    // Preparación del golpe: se echa atrás y se enciende en rojo.
+    final wind = e.alive ? scene.activeOn(FxKind.windup, e.id) : null;
+    final wq = wind == null ? -1.0 : wind.age(scene.t) / BattleFx.windupMs;
+    final back = wq < 0 ? 0.0 : -3.0 * dir * math.sin(math.min(1.0, wq / 0.6) * math.pi / 2);
+    final lunge = e.alive && scene.lunging(e.id) ? 6 * dir : 0;
     c.save();
-    c.translate((x + (e.alive && scene.lunging(e.id) ? 6 * dir : 0)).roundToDouble(),
+    c.translate((x + (lunge != 0 ? lunge : back)).roundToDouble(),
         (y + fl).roundToDouble());
     if (dir > 0) c.scale(-1, 1);
     final dst = Rect.fromLTWH(-w / 2, -h + 2, w, h);
     if (img != null) {
       final paint = SpriteCatalog.pixelPaint();
-      if (scene.flashing(e.id)) paint.colorFilter = _brightness3;
+      if (scene.flashing(e.id)) {
+        paint.colorFilter = _brightness3;
+      } else if (wq >= 0) {
+        paint.colorFilter = ColorFilter.mode(
+            const Color(0xFFFF3355).withValues(alpha: 0.45 * (1 - wq)),
+            BlendMode.srcATop);
+      } else if (warned) {
+        final k = 0.5 + 0.5 * math.sin(pt / 110);
+        paint.colorFilter = ColorFilter.mode(
+            enemyUltBarColor.withValues(alpha: 0.12 + 0.18 * k),
+            BlendMode.srcATop);
+      }
       c.drawImageRect(img, Rect.fromLTWH(0, 0, iw, ih), dst, paint);
     } else {
       _pen.rect(c, const Color(0xFFE43B44), dst.left, dst.top, dst.width, dst.height);
@@ -423,6 +457,18 @@ class BattleScenePainter extends CustomPainter {
       final k = 0.5 + 0.5 * math.sin(pt / 160);
       _reticle(c, Offset(x.roundToDouble(), (y + fl - h - 2).roundToDouble()),
           3.5, ProcColors.mark.withValues(alpha: 0.6 + 0.4 * k));
+    }
+    if (e.alive && (e.broken || e.breakSkip)) {
+      // Quebrado: estrellas amarillas que giran sobre la cabeza.
+      final cy = y + fl - h - 3;
+      for (var k = 0; k < 3; k++) {
+        final ang = pt / 260 + k * math.pi * 2 / 3;
+        final px = (x + math.cos(ang) * (w * 0.32 + 3)).roundToDouble();
+        final py = (cy + math.sin(ang) * 2.5).roundToDouble();
+        final col = k == 0 ? fxWhite : breakColor;
+        _pen.rect(c, col, px - 1, py, 3, 1);
+        _pen.rect(c, col, px, py - 1, 1, 3);
+      }
     }
     if (alpha < 1) c.restore();
     if (f.battle.currentId == e.id) {
@@ -482,10 +528,25 @@ class BattleScenePainter extends CustomPainter {
           Offset(0, 2 * u);
       final line = m('${e.hp}/${e.maxHp}', 8 * u) + badges(e);
       final bar = (e.boss || e.elite ? 48 : 28) * u;
-      reqs.add(LabelRequest(e.id, anchor, Size(math.max(line, bar), 15 * u)));
+      final chip = e.broken ? m(vulnerableText, 8 * u) + 8 * u : 0.0;
+      reqs.add(LabelRequest(e.id, anchor,
+          Size(math.max(math.max(line, bar), chip), enemyLabelHeight(e, u))));
     }
     return placeLabels(reqs, vp.area.deflate(2));
   }
+
+  /// Texto del chip de un enemigo quebrado.
+  static const vulnerableText = 'VULNERABLE';
+
+  /// Alto de la etiqueta de un enemigo: vida (texto + barra) y, debajo,
+  /// la barra de quiebre, la de carga de ULT (jefes y élites) y el chip
+  /// `VULNERABLE` (docs/specs/battle_presentation.md § "Quiebre").
+  static double enemyLabelHeight(Combatant e, double u) =>
+      (15 +
+          (e.hasBreak ? 4 : 0) +
+          (e.ultId != null ? 3 : 0) +
+          (e.broken ? 12 : 0)) *
+      u;
 
   void _hud(Canvas c, SceneFrame f, SceneViewport vp, Offset shake) {
     final u = f.geometry.hudUnit.toDouble();
@@ -536,6 +597,7 @@ class BattleScenePainter extends CustomPainter {
             by,
             (bw * (e.hp / e.maxHp).clamp(0.0, 1.0)).roundToDouble(),
             3 * u);
+        _breakBars(c, e, bx, by + 4 * u, bw, u, pt);
         if (e.alive && f.targetId == e.id) {
           _marker(c, r, math.sin(pt / 120) * 2 * u, u);
         }
@@ -544,6 +606,54 @@ class BattleScenePainter extends CustomPainter {
     }
     _floating(c, vp, u, rects);
     c.restore();
+  }
+
+  /// Barra de quiebre (amarilla; parpadea quebrado), carga de ULT (roja;
+  /// late con el aviso) y el chip `VULNERABLE`, desde `(x, y)`.
+  void _breakBars(Canvas c, Combatant e, double x, double y, double w,
+      double u, double t) {
+    var yy = y;
+    if (e.hasBreak) {
+      // Quiebre: barra amarilla de 3·u con brillo arriba.
+      final max = e.breakMax;
+      final frac = max <= 0 ? 0.0 : (e.breakGauge / max).clamp(0.0, 1.0);
+      _pen.rect(c, const Color(0xCC000000), x, yy, w, 3 * u);
+      final blink = e.broken && (t / 110).floor().isEven;
+      final fw = (w * (e.broken ? 1 : frac)).roundToDouble();
+      _pen.rect(c, blink ? fxWhite : breakColor, x, yy, fw, 3 * u);
+      _pen.rect(c, blink ? breakColor : const Color(0xFFFFF7C2), x, yy, fw, u);
+      yy += 4 * u;
+    }
+    if (e.ultId != null) {
+      // Carga de ULT: 5 segmentos rojos (se distingue de la vida).
+      const segs = 5;
+      final gap = u;
+      final sw = ((w - gap * (segs - 1)) / segs).floorToDouble();
+      final hot = e.ultPending && (t / 150).floor().isEven;
+      final charge = (e.ult / 100).clamp(0.0, 1.0) * segs;
+      for (var k = 0; k < segs; k++) {
+        final sx = x + k * (sw + gap);
+        _pen.rect(c, const Color(0xCC000000), sx, yy, sw, 2 * u);
+        final f = (charge - k).clamp(0.0, 1.0);
+        if (f > 0) {
+          _pen.rect(c, hot ? fxWhite : enemyUltBarColor, sx, yy,
+              (sw * f).roundToDouble(), 2 * u);
+        }
+      }
+      yy += 3 * u;
+    }
+    if (e.broken) {
+      final tw = _pen.width(vulnerableText, 8 * u);
+      final cw = tw + 6 * u;
+      final cx = (x + w / 2 - cw / 2).roundToDouble();
+      final on = (t / 220).floor().isEven;
+      _pen.rect(c, const Color(0xE6000000), cx, yy + u, cw, 10 * u);
+      _pen.rect(c, breakColor, cx, yy + u, cw, u);
+      _pen.rect(c, breakColor, cx, yy + 10 * u, cw, u);
+      _pen.text(c, vulnerableText, cx + 3 * u, yy + 9 * u,
+          on ? breakColor : fxWhite, 8 * u,
+          center: false, shadow: false);
+    }
   }
 
   /// Triángulo dorado arriba de la etiqueta [r].
@@ -595,10 +705,65 @@ class BattleScenePainter extends CustomPainter {
           _pen.text(c, f.text ?? '', p.dx, p.dy - age / 60 * 1.5 * u, f.color, 8 * u);
         case FxKind.tag when age < BattleFx.tagMs:
           _tag(c, vp, f, age, u, labels[f.who]);
+        case FxKind.warn when age < BattleFx.warnMs:
+          _warnBanner(c, vp, f, age, u);
         default:
           break;
       }
     }
+  }
+
+  /// Cartel del aviso de ULT enemiga: banda negra con franjas rojas que
+  /// entra desde la izquierda, signos `!` que titilan a los costados y el
+  /// texto (`¡El Rey Limo se prepara para Diluvio Ácido!`).
+  void _warnBanner(
+      Canvas c, SceneViewport vp, BattleFx f, double age, double u) {
+    final area = vp.area;
+    final s = f.text ?? '';
+    final fade = age > BattleFx.warnMs - 300
+        ? ((BattleFx.warnMs - age) / 300).clamp(0.0, 1.0)
+        : 1.0;
+    final slide = Curves.easeOutCubic.transform((age / 180).clamp(0.0, 1.0));
+    final big = _pen.width(s, 16 * u) + 70 * u < area.width;
+    final size = (big ? 16 : 8) * u;
+    final bh = size + 14 * u;
+    // Arriba del área del mundo (no tapa a los combatientes).
+    final cy = (area.top + 4 * u + bh / 2).roundToDouble();
+    final top = (cy - bh / 2).roundToDouble();
+    final dx = ((1 - slide) * -area.width).roundToDouble();
+    if (fade < 1) {
+      c.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, fade));
+    }
+    c.save();
+    c.translate(dx, 0);
+    _pen.rect(c, const Color(0xD9000000), area.left, top, area.width, bh);
+    final stripe = Color.lerp(f.color, enemyUltBarColor, 0.6)!;
+    _pen.rect(c, stripe, area.left, top, area.width, 2 * u);
+    _pen.rect(c, stripe, area.left, top + bh - 2 * u, area.width, 2 * u);
+    // Franjas de peligro que corren.
+    for (var i = 0; i < 24; i++) {
+      final lx = area.left + ((i * 64 * u + age * 0.12 * u) % (area.width + 64 * u)) - 32 * u;
+      _pen.rect(c, enemyUltBarColor.withValues(alpha: 0.18), lx, top + 2 * u,
+          10 * u, bh - 4 * u);
+    }
+    final on = (age / 200).floor().isEven;
+    final tw = _pen.width(s, size);
+    final mid = area.center.dx;
+    for (final sx in [mid - tw / 2 - 18 * u, mid + tw / 2 + 8 * u]) {
+      _warnSign(c, sx, top + bh / 2, u, on ? enemyUltBarColor : breakColor);
+    }
+    _pen.text(c, s, mid, top + bh / 2 + size / 2, on ? fxWhite : breakColor,
+        size, outline: big);
+    c.restore();
+    if (fade < 1) c.restore();
+  }
+
+  /// Triángulo de peligro con `!` (10·u de ancho).
+  void _warnSign(Canvas c, double x, double cy, double u, Color col) {
+    _pen.tri(c, col, Offset(x, cy + 5 * u), Offset(x + 10 * u, cy + 5 * u),
+        Offset(x + 5 * u, cy - 6 * u));
+    _pen.rect(c, const Color(0xFF000000), x + 4 * u, cy - 2 * u, 2 * u, 4 * u);
+    _pen.rect(c, const Color(0xFF000000), x + 4 * u, cy + 3 * u, 2 * u, u);
   }
 
   /// Cartel de una notable / keystone: caja negra con barra del color y
@@ -721,6 +886,8 @@ class BattleScenePainter extends CustomPainter {
               FxKind.arrow ||
               FxKind.stream when age < f.durationMs:
           _procFx(c, f, age);
+        case FxKind.shatter when age < BattleFx.shatterMs:
+          _shatter(c, f, age);
         default:
           break;
       }
@@ -853,6 +1020,62 @@ class BattleScenePainter extends CustomPainter {
       default:
         break;
     }
+  }
+
+  /// ¡QUIEBRE!: destello, grietas que se abren desde el centro y
+  /// esquirlas de cristal que salen volando (docs/specs/
+  /// battle_presentation.md § "Quiebre").
+  void _shatter(Canvas c, BattleFx f, double age) {
+    final p = (age / BattleFx.shatterMs).clamp(0.0, 1.0);
+    final o = Offset(f.x, f.y);
+    if (age < 110) {
+      _pen.fill.color = breakFlashColor.withValues(alpha: 0.9 * (1 - age / 110));
+      c.drawCircle(o, 16 - age / 110 * 6, _pen.fill);
+    }
+    // Grietas en zigzag.
+    final open = math.min(1.0, age / 120);
+    _pen.stroke
+      ..strokeWidth = 1
+      ..color = fxWhite.withValues(alpha: (1 - p).clamp(0.0, 1.0));
+    for (var k = 0; k < 8; k++) {
+      final ang = k * math.pi / 4 + 0.3;
+      final d = Offset(math.cos(ang), math.sin(ang) * 0.8);
+      final nrm = Offset(-d.dy, d.dx);
+      final len = (10 + (k % 3) * 5) * open;
+      final a1 = o + d * (len * 0.4) + nrm * 2;
+      final a2 = o + d * (len * 0.7) - nrm * 2;
+      final a3 = o + d * len;
+      c.drawPath(
+          Path()
+            ..moveTo(o.dx, o.dy)
+            ..lineTo(a1.dx, a1.dy)
+            ..lineTo(a2.dx, a2.dy)
+            ..lineTo(a3.dx, a3.dy),
+          _pen.stroke);
+    }
+    // Esquirlas (triángulos que giran y caen).
+    final ease = Curves.easeOutCubic.transform(p);
+    for (var k = 0; k < 12; k++) {
+      final h = ((k * 73856093) ^ 19349663) & 0xff;
+      final ang = k * math.pi * 2 / 12 + h / 255 * 0.5;
+      final dist = 6 + (40 + h % 30) * ease;
+      final ctr = o +
+          Offset(math.cos(ang) * dist, math.sin(ang) * dist * 0.7) +
+          Offset(0, 50 * p * p);
+      final rot = ang + p * 6 * (k.isEven ? 1 : -1);
+      final sz = 3.0 + (k % 3);
+      final pts = [
+        for (var j = 0; j < 3; j++)
+          ctr + Offset(math.cos(rot + j * 2.1), math.sin(rot + j * 2.1)) * sz,
+      ];
+      _pen.tri(c, (k.isEven ? breakColor : fxWhite).withValues(alpha: (1 - p).clamp(0.0, 1.0)),
+          pts[0], pts[1], pts[2]);
+    }
+    _pen.stroke
+      ..strokeWidth = 2
+      ..color = f.color.withValues(alpha: (1 - p).clamp(0.0, 1.0));
+    c.drawOval(Rect.fromCenter(center: o, width: 100 * ease, height: 50 * ease),
+        _pen.stroke);
   }
 
   /// Rebote: estela curva (`phys`) o rayo quebrado que titila.
@@ -1058,7 +1281,9 @@ class BattleOverlayPainter extends CustomPainter {
       final k = (1 - (a - imp + 20) / 160).clamp(0.0, 1.0);
       fill.color = s.style == UltStyle.bulwark
           ? Color.fromRGBO(255, 234, 167, 0.35 * k)
-          : Color.fromRGBO(255, 255, 255, 0.7 * k);
+          : (u.fx.ult?.enemy ?? false)
+              ? Color.fromRGBO(255, 70, 80, 0.55 * k)
+              : Color.fromRGBO(255, 255, 255, 0.7 * k);
       canvas.drawRect(Offset.zero & size, fill);
     }
   }
@@ -1083,6 +1308,7 @@ class BattleOverlayPainter extends CustomPainter {
     }
     final right = wd * inP;
     final col = u.fx.color;
+    final enemy = u.fx.ult?.enemy ?? false;
     final band = Path()
       ..moveTo(0, by - 19)
       ..lineTo(right + 12, by - 19)
@@ -1091,7 +1317,10 @@ class BattleOverlayPainter extends CustomPainter {
       ..close();
     _pen.fill.color = const Color(0xE6000000);
     c.drawPath(band.shift(const Offset(0, 3)), _pen.fill);
-    _pen.fill.color = Color.lerp(col, const Color(0xFF000000), 0.35)!
+    _pen.fill.color = Color.lerp(
+            enemy ? Color.lerp(col, enemyUltBarColor, 0.5)! : col,
+            const Color(0xFF000000),
+            enemy ? 0.5 : 0.35)!
         .withValues(alpha: 0.92);
     c.drawPath(band, _pen.fill);
     // Franja clara arriba y líneas de velocidad.
@@ -1112,10 +1341,12 @@ class BattleOverlayPainter extends CustomPainter {
     c.drawLine(Offset(right + 12, by - 19), Offset(right - 6, by + 17), _pen.stroke);
 
     // Sprite grande del lanzador y textos (entran con la banda).
-    final img = f.sprites?.hero(u.fx.ult?.casterClass ?? '');
+    final img = enemy
+        ? f.sprites?.enemy(u.fx.ult?.enemyType ?? '')
+        : f.sprites?.hero(u.fx.ult?.casterClass ?? '');
     final x0 = math.min(right - 40, 18.0);
     if (img != null) {
-      const k = 3.0;
+      final k = enemy ? math.min(3.0, 40 / img.height) : 3.0;
       final dst = Rect.fromLTWH(x0, by + 17 - img.height * k + 8,
           img.width * k, img.height * k);
       final shadow = SpriteCatalog.pixelPaint()
@@ -1126,8 +1357,15 @@ class BattleOverlayPainter extends CustomPainter {
     }
     final tx = x0 + 52;
     final ult = u.fx.ult;
-    _pen.text(c, '★ ULTIMATE · ${ult?.casterName ?? ''}', tx, by - 8,
-        const Color(0xFFFFFFFF), 8,
+    _pen.text(
+        c,
+        enemy
+            ? '! ULTIMATE ENEMIGA · ${ult?.casterName ?? ''}'
+            : '★ ULTIMATE · ${ult?.casterName ?? ''}',
+        tx,
+        by - 8,
+        enemy ? breakColor : const Color(0xFFFFFFFF),
+        8,
         center: false);
     _pen.text(c, (ult?.name ?? '').toUpperCase(), tx, by + 12,
         const Color(0xFFFFFFFF), 16,

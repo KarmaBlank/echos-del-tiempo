@@ -201,26 +201,28 @@ void main() {
       _foe('e0')..nextTurn = 0,
     ], currentId: 'e0'))!;
     final fx = _map(step.events, step.state);
+    // En una acción enemiga el golpe cae después del wind-up.
+    const enemyBase = BattleFx.enemyStrikeMs + ProcTiming.afterMs;
 
     final tags = _of(fx, FxKind.tag).toList();
     // El buff propio va en el cartel.
     expect(tags.map((t) => t.text),
         ['Contraataque', 'Represalia · ATQ +30%']);
     expect(tags.map((t) => t.delayMs),
-        [ProcTiming.tagAt(_base, 0), ProcTiming.tagAt(_base, 1)]);
+        [ProcTiming.tagAt(enemyBase, 0), ProcTiming.tagAt(enemyBase, 1)]);
     expect(tags.map((t) => t.slot), [0, 1]);
 
     expect(_of(fx, FxKind.act).where((a) => a.who == 'p1').single.delayMs,
-        _base);
+        enemyBase);
     final arc = _of(fx, FxKind.arc).single;
     expect([arc.x, arc.tx, arc.color], [0, 100, fxWhite]);
     final slash = _of(fx, FxKind.slash).singleWhere((f) => f.who == 'e0');
-    expect(slash.delayMs, _base + ProcTiming.counterHitMs);
+    expect(slash.delayMs, enemyBase + ProcTiming.counterHitMs);
 
     expect(_of(fx, FxKind.pulse).single.color, ProcColors.retaliate);
     final arrow = _of(fx, FxKind.arrow).single;
     expect(arrow.up, isTrue);
-    expect(arrow.delayMs, _base);
+    expect(arrow.delayMs, enemyBase);
     expect(_of(fx, FxKind.txt).where((t) => t.text == 'ATQ +30%'), isEmpty);
   });
 
@@ -266,8 +268,9 @@ void main() {
         ShieldEvent('p1', 7, absorbed: true),
         DamageEvent('p1', 0),
       ], s);
-      expect(_of(fx, FxKind.crack).single.delayMs, 0);
-      expect(_txt(fx, 'ABSORBE 7').delayMs, 0);
+      // Con el golpe del enemigo (después de su wind-up).
+      expect(_of(fx, FxKind.crack).single.delayMs, BattleFx.enemyStrikeMs);
+      expect(_txt(fx, 'ABSORBE 7').delayMs, BattleFx.enemyStrikeMs);
       expect(_of(fx, FxKind.num), isEmpty);
       expect(_of(fx, FxKind.slash), isEmpty);
     });

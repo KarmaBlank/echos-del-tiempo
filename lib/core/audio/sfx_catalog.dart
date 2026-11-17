@@ -173,6 +173,16 @@ abstract final class Sfx {
   static const enemyGeneric = 'enemy.generic';
   static const enemyHeavy = 'enemy.heavy';
 
+  /// Impacto propio de un tipo de enemigo sobre un jugador.
+  static String enemyHit(String type) => 'enemy.hit.$type';
+
+  // ---- quiebre y ULT enemigas ----
+  static const breakTick = 'break.tick';
+  static const breakShatter = 'break.shatter';
+  static const breakVuln = 'break.vuln';
+  static const breakDazed = 'break.dazed';
+  static const enemyUltWarn = 'enemyUlt.warn';
+
   /// Firma de una habilidad (`SkillDef.id`).
   static String skill(String id) => 'skill.$id';
 
@@ -242,6 +252,17 @@ abstract final class SfxLevel {
   static const ultBuild = 0.45;
   static const ultRelease = 0.46;
   static const ultImpact = 0.50;
+
+  /// Ataques enemigos (wind-up + golpe): más fuertes que los del grupo.
+  static const enemy = 0.42;
+  static const enemyBoss = 0.45;
+  static const enemyHit = 0.42;
+
+  /// Quiebre: el tic de la barra es sutil; el estallido, fuerte.
+  static const breakTick = 0.16;
+  static const breakShatter = 0.45;
+  static const breakVuln = 0.36;
+  static const enemyUltWarn = 0.44;
 }
 
 /// Las voces del prototipo, copiadas de las llamadas a `beep(`.

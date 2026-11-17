@@ -203,6 +203,21 @@ class BattleViewState extends State<BattleView>
 
   // ---------------- menú (`hud()`, líneas 1205-1223) ----------------
 
+  /// `Quiebre n/m` del enemigo [e] (docs/specs/break_and_enemy_ults.md
+  /// § 1), con `¡VULNERABLE!` si está quebrado y `¡ULT!` si la avisó.
+  static String breakInfoMarkup(Combatant e) {
+    if (!e.hasBreak && !e.ultPending) return '';
+    final parts = <String>[
+      if (e.hasBreak)
+        e.broken
+            ? hexSpan('#ffe14d', '¡VULNERABLE! ×1.5')
+            : hexSpan('#ffe14d',
+                'Quiebre ${e.breakGauge.floor()}/${e.breakMax.round()}'),
+      if (e.ultPending) hexSpan('#ff3355', '¡ULT!'),
+    ];
+    return ' · ${parts.join(' ')}';
+  }
+
   /// `est(v, all)`: daño estimado en dorado y el crítico en `#7d8bc4`.
   static String _est(Combatant p, num v, {bool all = false}) =>
       ' <span style="color:#ffd166">${jsRound(v)}${all ? ' c/u' : ''}</span>'
@@ -568,6 +583,7 @@ class BattleViewState extends State<BattleView>
       final tg = _foes.where((e) => e.id == target).firstOrNull;
       header = '<b>¡Tu turno! (${protoEsc(cur.name)})'
           '${tg == null ? '' : ' · Objetivo: ${protoEsc(tg.name)}'}</b>'
+          '${tg == null ? '' : breakInfoMarkup(tg)}'
           ' <span class="k">Q/Tab cambia</span>';
     } else if (_potMode == BattleItem.potion) {
       header = '<b>¿A quién le das la Poción de vida (+45% vida, revive, '

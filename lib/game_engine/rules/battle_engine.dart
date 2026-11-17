@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 
+import '../data/enemies_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/passive_mechanics.dart';
 import '../data/skills_catalog.dart';
 import '../models/battle_command.dart';
 import '../models/battle_event.dart';
 import '../models/battle_state.dart';
+import '../models/enemy_def.dart';
 import '../models/passive_mechanic.dart';
 import '../models/skill.dart';
 import '../models/status.dart';
@@ -37,11 +39,56 @@ class BattleEngine {
     required this.stats,
     this.catalog = GameCatalog.standard,
     RandomSource? random,
+    this.breakEnabled = true,
+    this.enemyUltsEnabled = true,
   }) : _random = random ?? math.Random().nextDouble;
 
   final StatsCalculator stats;
   final GameCatalog catalog;
   final RandomSource _random;
+
+  /// Barra de quiebre de los enemigos (docs/specs/break_and_enemy_ults.md
+  /// § 1). Los tests angostos pueden apagarla.
+  final bool breakEnabled;
+
+  /// ULT de jefes y élites (§ 2).
+  final bool enemyUltsEnabled;
+
+  // ---- quiebre: llenado por tipo de acción ----
+  static const breakAttack = 1.0;
+  static const breakPhysicalSkill = 1.3;
+  static const breakMagicalSkill = 0.8;
+  static const breakUltimate = 2.0;
+  static const breakDual = 1.5;
+
+  /// Daño secundario de notables (rebotes, explosiones, eco, reflejo,
+  /// ataque gratis).
+  static const breakSecondary = 0.5;
+  static const breakCrit = 1.5;
+
+  /// Aturdir / congelar aplicado por el grupo.
+  static const breakStatusFlat = 15.0;
+
+  /// Baja al empezar el turno del enemigo (fracción del umbral).
+  static const breakDecay = 0.10;
+
+  /// Turnos del grupo con +50% de daño.
+  static const vulnerableTurns = 2;
+  static const vulnerableBonus = 0.5;
+
+  /// Élite: umbral × 1.5.
+  static const eliteBreak = 1.5;
+
+  // ---- ULT enemiga ----
+  /// Carga por turno propio.
+  static const enemyUltPerTurn = 25.0;
+
+  /// Carga por vida perdida: +1 por cada 1% (= 100 × fracción).
+  static const enemyUltPerHp = 100.0;
+
+  /// Carga con la que empiezan jefes y élites (la primera ULT llega
+  /// hacia su 3.er turno).
+  static const enemyUltStart = 40.0;
 
   static const freezeSlowPerStack = 0.12;
   static const enemyCritMultiplier = 1.5;
@@ -78,6 +125,7 @@ class BattleEngine {
       final d = catalog.enemies[enemyTypes[i]]!;
       final el = elite && i == 0;
       final hp = jsRound(d.hp * mult * (el ? 2.6 : 1));
+      final ultId = el ? kEliteUltId : d.ultId;
       enemies.add(Combatant(
         id: 'e$i',
         name: el ? '${d.name} Élite' : d.name,
@@ -93,6 +141,15 @@ class BattleEngine {
         areaAttack: d.areaAttack,
         pierce: d.pierce,
         inflicts: d.inflicts,
+        breakBase: breakEnabled
+            ? d.breakMax * mult * (el ? eliteBreak : 1)
+            : 0,
+        ultId: enemyUltsEnabled && catalog.enemyUlts.containsKey(ultId)
+            ? ultId
+            : null,
+        ult: enemyUltsEnabled && catalog.enemyUlts.containsKey(ultId)
+            ? enemyUltStart
+            : 0,
         // Con la velocidad base, como el prototipo (IVa(d)).
         nextTurn: (100 / d.speed) * (0.35 + _random() * 0.6),
       ));
@@ -306,6 +363,11 @@ class _Action {
 
   /// Factor del próximo turno (Sed de Sangre: 0.5).
   double turnFactor = 1;
+
+  /// Llenado de la barra de quiebre por punto de daño de los golpes
+  /// primarios (ataque 1.0, habilidad física 1.3, mágica 0.8, ULT 2.0,
+  /// dúo 1.5).
+  double breakFactor = BattleEngine.breakAttack;
 }
 
 /// Un paso del motor sobre una copia del estado. Equivale al contexto
@@ -329,6 +391,10 @@ class _Turn {
   /// Efectos disparados que se agregan al log, con su origen.
   final _notes = <String>[];
   int _procBudget = BattleEngine.maxProcsPerStep;
+
+  /// Enemigos quebrados en este paso (su vulnerabilidad empieza a
+  /// contar en el próximo turno del grupo).
+  final _brokenNow = <String>{};
 
   BattleStep get result => BattleStep(state, List.unmodifiable(events));
 
@@ -363,10 +429,22 @@ class _Turn {
       best.protecting = false;
       best.extraTurn = best.extraTurn == 1 ? 2 : 0;
       state.log = 'Turno de ${best.name}';
+    } else {
+      _decayBreak(best);
     }
-    final (skip, text) = _statusTick(best);
+    var (skip, text) = _statusTick(best);
+    if (!skip && best.alive && best.breakSkip) {
+      // Quebrado: pierde su turno (como aturdido).
+      skip = true;
+      best.breakSkip = false;
+      events.add(BreakEvent(
+          best.id, BreakPhase.skipped, best.breakGauge, best.breakMax));
+      final t = '${best.name} está QUEBRADO y pierde su turno';
+      text = text == null ? t : '$text · $t';
+    }
     if (text != null) state.log = text;
     if (best.alive) _fire(ProcTrigger.onTurnStart, best);
+    if ((!best.alive || skip) && best.isPlayer) _tickVulnerable();
     _flush();
     if (!best.alive || skip) {
       if (skip) {
@@ -379,6 +457,8 @@ class _Turn {
   }
 
   void endTurn() {
+    final cur = state.current;
+    if (cur != null && cur.isPlayer) _tickVulnerable();
     _flush();
     state.currentId = null;
     _checkEnd();
@@ -473,6 +553,7 @@ class _Turn {
     }
 
     if (total > 0) {
+      _chargeUlt(a, math.min(total, a.hp));
       a.hp = math.max(0, a.hp - total);
       events.add(DamageEvent(a.id, total,
           fromStatus: true,
@@ -542,6 +623,9 @@ class _Turn {
     if (st.kind == StatusKind.regen) a.statuses[StatusKind.regen] = 3;
     events.add(StatusAppliedEvent(a.id, st.kind, n, weakness: weak > 0));
     if (source != null && source.isPlayer && !a.isPlayer) {
+      if (st.kind == StatusKind.stun || st.kind == StatusKind.freeze) {
+        _addBreak(a, BattleEngine.breakStatusFlat);
+      }
       if (st.kind == StatusKind.stun && !a.boss) _extendStun(source, a);
       if (primary) {
         _fire(ProcTrigger.onStatusApplied, source, target: a, status: st.kind);
@@ -704,13 +788,28 @@ class _Turn {
       mult *= 1 + taken;
       mods.add('× ${fm(1 + taken)} Marca');
     }
+    final vul = e.broken;
+    if (vul) {
+      mult *= 1 + BattleEngine.vulnerableBonus;
+      mods.add('× ${fm(1 + BattleEngine.vulnerableBonus)} QUIEBRE');
+    }
     final crit = _rand() < chance;
     final dmg = math.max(1, jsRound(base * (crit ? cm : 1) * mult));
-    _dealt += math.min(dmg, e.hp);
+    final lost = math.min(dmg, e.hp);
+    _dealt += lost;
     _dealtMaxHp = math.max(_dealtMaxHp, e.maxHp);
     e.hp = math.max(0, e.hp - dmg);
-    events.add(DamageEvent(e.id, dmg, critical: crit, critMultiplier: cm));
+    events.add(DamageEvent(e.id, dmg,
+        critical: crit, critMultiplier: cm, vulnerable: vul));
     if (!e.alive) _knockedOut(e);
+    _chargeUlt(e, lost);
+    _addBreak(
+        e,
+        dmg *
+            (primary
+                ? (_act?.breakFactor ?? BattleEngine.breakAttack)
+                : BattleEngine.breakSecondary) *
+            (crit ? BattleEngine.breakCrit : 1));
     final hit = _Hit(dmg, crit, e, mods);
     if (primary && a != null && _act != null) {
       _fire(ProcTrigger.onHit, a, target: e, amount: dmg);
@@ -724,14 +823,22 @@ class _Turn {
   int _procDamage(Combatant owner, Combatant e, int amount, String sourceId) {
     if (!e.alive) return 0;
     final taken = e.effectTotal(BuffStat.damageTaken);
-    final dmg = math.max(1, jsRound(amount * (1 + taken)));
+    final vul = e.broken;
+    final dmg = math.max(
+        1,
+        jsRound(amount *
+            (1 + taken) *
+            (vul ? 1 + BattleEngine.vulnerableBonus : 1)));
+    final lost = math.min(dmg, e.hp);
     if (owner == _attacker) {
-      _dealt += math.min(dmg, e.hp);
+      _dealt += lost;
       _dealtMaxHp = math.max(_dealtMaxHp, e.maxHp);
     }
     e.hp = math.max(0, e.hp - dmg);
-    events.add(DamageEvent(e.id, dmg, sourceId: sourceId));
+    events.add(DamageEvent(e.id, dmg, sourceId: sourceId, vulnerable: vul));
     if (!e.alive) _knockedOut(e);
+    _chargeUlt(e, lost);
+    _addBreak(e, dmg * BattleEngine.breakSecondary);
     return dmg;
   }
 
@@ -1109,12 +1216,99 @@ class _Turn {
     if (act.killed) _fire(ProcTrigger.onKill, p);
   }
 
+  // ---------------- quiebre (docs/specs/break_and_enemy_ults.md § 1) ----
+
+  static double _r1(double v) => (v * 10).round() / 10;
+
+  /// Suma [amount] a la barra de quiebre de [e]; al llegar al umbral,
+  /// ¡QUIEBRE!. Quebrado, la barra no se llena.
+  void _addBreak(Combatant e, double amount) {
+    if (e.isPlayer || !e.alive || !e.hasBreak || e.broken || amount <= 0) {
+      return;
+    }
+    final max = e.breakMax;
+    e.breakGauge = math.min(max, _r1(e.breakGauge + amount));
+    if (e.breakGauge >= max) {
+      _break(e);
+    } else {
+      events.add(BreakEvent(e.id, BreakPhase.fill, e.breakGauge, max));
+    }
+  }
+
+  /// Quiebre: pierde su próximo turno, su ULT vuelve a 0 (y se cancela
+  /// si la había avisado) y recibe +50% de daño 2 turnos del grupo.
+  void _break(Combatant e) {
+    final max = e.breakMax;
+    final cancelled = e.ultPending;
+    e
+      ..breakGauge = max
+      ..vulnerable = BattleEngine.vulnerableTurns
+      ..breakSkip = true
+      ..ultPending = false;
+    if (e.ultId != null) e.ult = 0;
+    _brokenNow.add(e.id);
+    events.add(BreakEvent(e.id, BreakPhase.broken, max, max,
+        cancelledUlt: cancelled));
+    final ult = engine.catalog.enemyUlts[e.ultId];
+    _notes.add('¡QUIEBRE! ${e.name}: pierde su turno, +50% de daño'
+        '${cancelled && ult != null ? ' · ${ult.name} cancelada' : ''}');
+  }
+
+  /// Al empezar su turno, la barra baja 10% del umbral (si no está
+  /// quebrado).
+  void _decayBreak(Combatant e) {
+    if (!e.alive || !e.hasBreak || e.broken || e.breakGauge <= 0) return;
+    final max = e.breakMax;
+    e.breakGauge =
+        math.max(0, _r1(e.breakGauge - max * BattleEngine.breakDecay));
+    events.add(BreakEvent(e.id, BreakPhase.decay, e.breakGauge, max));
+  }
+
+  /// Terminó un turno del grupo: descuenta la vulnerabilidad de los
+  /// quebrados antes de este paso; al llegar a 0 se recuperan (barra a 0
+  /// y umbral +25%).
+  void _tickVulnerable() {
+    for (final e in state.enemies) {
+      if (e.vulnerable <= 0 || _brokenNow.contains(e.id)) continue;
+      e.vulnerable--;
+      if (e.vulnerable > 0) continue;
+      e
+        ..breakGauge = 0
+        ..breaks += 1;
+      if (!e.alive) continue;
+      events.add(BreakEvent(e.id, BreakPhase.recovered, 0, e.breakMax));
+      _notes.add('${e.name} se recupera del quiebre');
+    }
+  }
+
+  /// Carga de ULT enemiga por vida perdida: +1 cada 2%.
+  void _chargeUlt(Combatant e, int lost) {
+    if (e.isPlayer || e.ultId == null || e.ultPending || lost <= 0) return;
+    e.ult = math.min(100, e.ult + lost / e.maxHp * BattleEngine.enemyUltPerHp);
+  }
+
   // ---------------- enemigos ----------------
 
-  /// `enemyAct`.
+  /// `enemyAct`. Con ULT (jefes y élites): con la carga llena avisa (pierde
+  /// la acción) y en su siguiente turno la lanza.
   void enemyAct(Combatant e) {
     final alive = _aliveParty.toList();
     if (alive.isEmpty) return;
+    final ult = engine.catalog.enemyUlts[e.ultId];
+    if (ult != null) {
+      if (e.ultPending) {
+        _enemyUlt(e, ult, alive);
+        return;
+      }
+      if (e.ult >= 100) {
+        e.ultPending = true;
+        events.add(EnemyUltWarningEvent(e.id, ult.id, ult.name));
+        state.log = '¡El ${e.name} se prepara para ${ult.name}! · '
+            'Quiébralo, defiéndete o protégete';
+        return;
+      }
+      e.ult = math.min(100, e.ult + BattleEngine.enemyUltPerTurn);
+    }
     e.actions++;
 
     final taunter = alive.where((p) => p.taunt > 0).firstOrNull;
@@ -1201,6 +1395,79 @@ class _Turn {
     }
   }
 
+  /// La ULT de [e] (docs/specs/break_and_enemy_ults.md § 2): Defender,
+  /// Protección, Provocar y escudos aplican como en un golpe normal.
+  void _enemyUlt(Combatant e, EnemyUltDef ult, List<Combatant> alive) {
+    e
+      ..ultPending = false
+      ..ult = 0;
+    final taunter = alive.where((p) => p.taunt > 0).firstOrNull;
+    final protector = alive.where((p) => p.protecting).firstOrNull;
+    Combatant victim(Combatant q) =>
+        protector != null && q != protector ? protector : q;
+    Combatant? pick0;
+    if (!ult.allTargets) {
+      pick0 = taunter ?? alive[(_rand() * alive.length).floor()];
+      if (taunter != null) taunter.taunt--;
+    }
+    events.add(EnemyUltEvent(e.id, ult.id, ult.name,
+        targetId: pick0?.id,
+        allTargets: ult.allTargets,
+        wipedBuffs: ult.wipeBuffs));
+
+    final atkMod = e.effectTotal(BuffStat.attack);
+    final atk =
+        atkMod == 0 ? e.attack : math.max(1, jsRound(e.attack * (1 + atkMod)));
+    final atkText = atkMod == 0 ? 'ATQ ${e.attack}' : 'ATQ $atk (debilitado)';
+    final crit = ult.guaranteedCrit ? 1.0 : e.critChance;
+    final parts = <String>[];
+    void strike(Combatant p0) {
+      final p = victim(p0);
+      if (!p.alive) {
+        parts.add('${p0.name} 0');
+        return;
+      }
+      final h = _hurt(p, atk * ult.power, crit, e.pierce, from: e);
+      if (p != p0 && p.alive) _fire(ProcTrigger.onProtectHit, p, target: e);
+      final st = ult.status;
+      if (st != null) _addStatus(p, st);
+      final who = p != p0 ? '${p.name} (por ${p0.name})' : p.name;
+      parts.add('$who ${h.damage}${h.critical ? '!' : ''}');
+    }
+
+    if (ult.allTargets) {
+      alive.forEach(strike);
+    } else {
+      strike(pick0!);
+    }
+    if (ult.delayAll > 0) {
+      for (final p in _aliveParty) {
+        p.nextTurn += _iv(p) * ult.delayAll;
+        events.add(DelayedEvent(p.id));
+      }
+    }
+    if (ult.wipeBuffs) {
+      for (final p in state.party) {
+        p.effects = [
+          for (final fx in p.effects)
+            if (fx.value <= 0 || fx.stat == BuffStat.stunLock) fx,
+        ];
+        if (p.bonusDefense > 0) {
+          p.bonusDefense = 0;
+          engine._refreshStats(p);
+        }
+      }
+    }
+    final st = ult.status;
+    state.log = '${e.name} · ULT ${ult.name} '
+        '(${ult.allTargets ? 'todos, ' : ''}$atkText × ${fm(ult.power)}'
+        '${ult.guaranteedCrit ? ' × ${fm(BattleEngine.enemyCritMultiplier)} CRÍTICO' : ''}): '
+        '${parts.join(', ')}'
+        '${st != null ? _statusText(st) : ''}'
+        '${ult.delayAll > 0 ? ' · retrasa a todos' : ''}'
+        '${ult.wipeBuffs ? ' · borra los buffs del grupo' : ''}';
+  }
+
   // ---------------- jugadores ----------------
 
   /// `battleCmd`. Devuelve false si el comando no es válido.
@@ -1234,6 +1501,9 @@ class _Turn {
         if (sk == null || !p.skillIds.contains(skillId) || p.mp < sk.mp) {
           return false;
         }
+        act.breakFactor = sk.kind == SkillKind.physical
+            ? BattleEngine.breakPhysicalSkill
+            : BattleEngine.breakMagicalSkill;
         p.mp -= sk.mp;
         events.add(ActionEvent(p.id, BattleActionKind.skill,
             skillId: sk.id,
@@ -1257,10 +1527,12 @@ class _Turn {
             allTargets: sk.allTargets));
         act
           ..skill = sk
-          ..ultimate = true;
+          ..ultimate = true
+          ..breakFactor = BattleEngine.breakUltimate;
         _useSkill(p, sk, foes, target, ultimate: true);
         _fire(ProcTrigger.onSkill, p);
       case DualCommand(:final partnerId):
+        act.breakFactor = BattleEngine.breakDual;
         if (!_dual(p, partnerId, foes)) return false;
       case ItemCommand(:final item, :final targetPlayerId):
         final ok = item == BattleItem.ether

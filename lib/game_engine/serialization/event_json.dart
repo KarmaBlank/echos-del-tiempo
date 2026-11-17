@@ -130,6 +130,7 @@ class EventJson {
             'st': e.fromStatus,
             'src': e.statusSource?.name,
             if (e.sourceId != null) 'proc': e.sourceId,
+            if (e.vulnerable) 'vul': true,
           },
         ActionEvent() => {
             'k': 'act',
@@ -184,6 +185,29 @@ class EventJson {
             'n': e.amount,
             'abs': e.absorbed,
           },
+        BreakEvent() => {
+            'k': 'brk',
+            'id': e.targetId,
+            'ph': e.phase.name,
+            'g': e.gauge,
+            'max': e.max,
+            if (e.cancelledUlt) 'cu': true,
+          },
+        EnemyUltWarningEvent() => {
+            'k': 'eultWarn',
+            'id': e.actorId,
+            'u': e.ultId,
+            'name': e.name,
+          },
+        EnemyUltEvent() => {
+            'k': 'eult',
+            'id': e.actorId,
+            'u': e.ultId,
+            'name': e.name,
+            'tg': e.targetId,
+            'all': e.allTargets,
+            if (e.wipedBuffs) 'wipe': true,
+          },
         _ => throw ArgumentError('Evento de batalla sin JSON: $e'),
       };
 
@@ -202,6 +226,7 @@ class EventJson {
           fromStatus: j.boolean('st'),
           statusSource: j.enumOrNull('src', StatusKind.values),
           sourceId: j.strOrNull('proc'),
+          vulnerable: j.flag('vul'),
         );
       case 'act':
         return ActionEvent(
@@ -245,6 +270,17 @@ class EventJson {
       case 'shield':
         return ShieldEvent(j.str('id'), j.integer('n'),
             absorbed: j.flag('abs'));
+      case 'brk':
+        return BreakEvent(j.str('id'), j.enumByName('ph', BreakPhase.values),
+            j.dbl('g'), j.dbl('max'),
+            cancelledUlt: j.flag('cu'));
+      case 'eultWarn':
+        return EnemyUltWarningEvent(j.str('id'), j.str('u'), j.str('name'));
+      case 'eult':
+        return EnemyUltEvent(j.str('id'), j.str('u'), j.str('name'),
+            targetId: j.strOrNull('tg'),
+            allTargets: j.boolean('all'),
+            wipedBuffs: j.flag('wipe'));
     }
     throw FormatException('JSON inválido: evento de batalla desconocido', k);
   }

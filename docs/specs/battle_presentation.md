@@ -33,10 +33,12 @@ Implementación Dart:
 | Colores, elementos, `ELFX`, letras de estado | `lib/features/combat/presentation/scene/fx_style.dart` |
 | Textos de ayuda (`descSkill` / `stDesc`) | `lib/features/combat/presentation/skill_info.dart` |
 | Disparadores del árbol: tiempos, nombres y colores (puro) | `lib/features/combat/presentation/scene/proc_fx.dart` |
+| Quiebre y ULT enemigas: colores (`breakColor`, `kEnemyUltColors`), guiones (`kEnemyUltScripts`) | `scene/fx_style.dart`, `scene/ult_cinematic.dart`, `scene/ult_fx.dart` |
 | Predicción de turnos (`predictTurns`, puro) | `lib/features/combat/domain/turn_order.dart` |
 | Mapa de fondo de la sesión | `lib/features/world/presentation/session_battle_screen.dart` |
 
 Tests: `test/features/combat/battle_fx_test.dart`,
+`test/features/combat/break_fx_test.dart`,
 `test/features/combat/proc_fx_test.dart`,
 `test/features/combat/ult_cinematic_test.dart`,
 `test/features/combat/battle_framing_test.dart`,
@@ -158,7 +160,9 @@ En px de pantalla, encima del mundo (nunca escaladas ni pixeladas):
   seguido de las insignias compactas en la misma línea;
 - enemigo: `vida/máx` (8·u, `#ffd8a8`) + insignias en una línea y debajo
   la barra de vida de `(jefe o élite ? 48 : 28)·u × 3·u` (colores de
-  antes), arriba del sprite;
+  antes), arriba del sprite; debajo, la **barra de quiebre** (§
+  "Quiebre"), la **carga de ULT** (jefes y élites) y, quebrado, el chip
+  `VULNERABLE`; alto `(15 + 4 + 3 + 12)·u` según tenga cada parte;
 - insignia compacta: caja `#000000cc` de `(4 + ancho(letra+stacks))·u`
   × 10·u con franja de color de 2·u a la izquierda;
 - **sin superposición**: cada etiqueta es un rectángulo; se ubican de
@@ -216,7 +220,12 @@ aura élite y:
 - barra de vida, `hp/máx`, insignias y marca de objetivo: en el HUD
   (§ "Etiquetas"); barra de vida: fondo `#000000aa`, relleno `#ff4757`
   (jefe), `#ffd166` (élite) o `#ff9f43`;
-- turno: barra `#ff4757` de 20×2 en `(x − 10, y + 3)`.
+- turno: barra `#ff4757` de 20×2 en `(x − 10, y + 3)`;
+- avisó su ULT (`ultPending`): aura roja `#ff3355` que late detrás y
+  dos anillos que suben, y el sprite teñido de rojo (latiendo);
+- quebrado (`broken` o `breakSkip`): 3 estrellitas (amarilla / blanca)
+  que giran sobre la cabeza;
+- `windup`: se echa 3 px hacia atrás y se tiñe de rojo hasta lanzarse.
 
 Clic/toque sobre un enemigo vivo (caja de su sprite + 4 px) lo elige como
 objetivo.
@@ -294,9 +303,9 @@ en los eventos de la acción); 300 en un dúo; 0 si no.
 | `ActionEvent` Provocar | `txt` `¡PROVOCA!` `#ff7675` en `y−30`, `ring` grande `#ff7675` |
 | `ActionEvent` Escudo de Fe | por aliado vivo: `txt` `ESCUDO` `#74b9ff` en `y−30`, `aura` sagrada |
 | `ActionEvent` Prisa | por otro aliado vivo: `txt` `¡PRISA!` `#ffd166` en `y−26` |
-| `ActionEvent` enemigo | `act`; Colapso Temporal: `flash` `#e84393` y `ring` grande `#e84393` en `(x, y−10)` |
+| `ActionEvent` enemigo | `windup` (se echa atrás, § "Ataque enemigo") y `act` a los 100 ms; Colapso Temporal: `flash` `#e84393` y `ring` grande `#e84393` en `(x, y−10)` en el golpe (160 ms) |
 | `DamageEvent` a enemigo | `num` en `y−20` (`#ffd166` 12 px si crítico, si no `#ffffff` 8 px) con `dl`; crítico: `txt` `¡CRÍTICO ×cm!` `#ffd166` en `y−34`; `slash` en `(x, y−8)` del color y elemento de la acción |
-| `DamageEvent` a jugador | `num` en `y−18` (`#ff4757` 12 px crítico, si no `#ff6b81`), `hurt`; `slash` `#ff6b81` con el elemento del estado que inflige el enemigo; crítico: `txt` `¡CRÍTICO ×1.5!` `#ff4757` en `y−34`; perforante: `txt` `¡PERFORANTE ×m!` `#ff9f43` en `y−44` |
+| `DamageEvent` a jugador | con el golpe del enemigo (`dl` = 160 ms; en su ULT, el impacto del guion): `num` en `y−18` (`#ff4757` 12 px crítico, si no `#ff6b81`; pesado en una ULT), `hurt`; `slash` `#ff6b81` (en una ULT, de su color) con el elemento del estado que inflige el enemigo; crítico: `txt` `¡CRÍTICO ×1.5!` `#ff4757` en `y−34`; perforante: `txt` `¡PERFORANTE ×m!` `#ff9f43` en `y−44`. Sus estados, `K.O.` y el escudo que absorbe usan ese mismo `dl` |
 | `DamageEvent` de estado | `aura` (quemadura o veneno) y `num` en `y−20` `#ff9f43` (quemadura) / `#7bed9f` (resto) |
 | `HealEvent` en una acción | `num` `+n` `#7bed9f` en `y−18` (`y−26` y aura sagrada en la cura de Fe); `aura` de curación (sagrada en Baluarte); maná: `+n MP` `#74b9ff` y `aura` maná |
 | `HealEvent` de Regeneración | `num` `+n` `#55efc4` en `y−30`, `aura` de curación |
@@ -629,6 +638,104 @@ arrancan al empezar el regreso (con la hora de ese momento). Si se juntan
 los efectos pendientes de la ULT (números, etc.) arrancan ya. Otra
 batalla limpia todo. El cartel de victoria/derrota espera a que termine
 la cinemática.
+
+## Ataque enemigo (wind-up)
+
+Pedido del dueño: ataques enemigos con más peso. Cada `ActionEvent`
+enemigo (`enemyAttack`, `enemyHeavy`, `enemyArea`) arranca con un
+`windup` de 160 ms (el enemigo se echa 3 px atrás y se tiñe de rojo),
+el `act` (estocada) a los 100 ms y el **golpe a los 160 ms**
+(`BattleFx.enemyStrikeMs`): números, tajos, estados, `K.O.`, la grieta
+del escudo y el sonido del impacto (docs/specs/audio.md) caen ahí. Los
+procs de una acción enemiga usan esa hora como golpe (`base` = 160 +
+120).
+
+## Quiebre
+
+(docs/specs/break_and_enemy_ults.md § 1.)
+
+- **Barras** (HUD, bajo la vida del enemigo, mismo ancho): quiebre
+  amarillo `#ffe14d` de 3·u (brillo `#fff7c2` de 1·u arriba) sobre
+  `#000000cc`; quebrado queda llena y **parpadea** blanco / amarillo
+  cada 110 ms. Carga de ULT (solo jefes y élites): 5 segmentos rojos
+  `#ff3355` de 2·u (se distingue de la vida roja del jefe), que
+  parpadean en blanco cada 150 ms con la ULT avisada.
+- **Chip `VULNERABLE`** (8·u) centrado bajo las barras mientras está
+  quebrado: caja negra con filetes amarillos y el texto que alterna
+  amarillo / blanco cada 220 ms.
+- `BreakEvent(broken)`, en el `dl` del golpe que lo quebró (o del
+  efecto secundario): `shatter` (650 ms: destello `#fff7c2` 110 ms,
+  8 grietas en zigzag que se abren en 120 ms, 12 esquirlas triangulares
+  amarillas / blancas que salen girando y caen, anillo `100p × 50p`);
+  al activarse astillas de cristal (`kBreakShardFx` × 2.2), sacudida 7
+  y **hit-stop de 80 ms**; `flash` de pantalla `#fff7c2`; cartel grande
+  `¡QUIEBRE!` (`tag` big, `#ffe14d`, pop y contorno) sobre el cuerpo 60
+  ms después; si canceló la ULT avisada, `txt` `ULT CANCELADA`
+  `#ff4757` en `y−60` 250 ms después.
+- Golpes a un quebrado (`DamageEvent.vulnerable`): número amarillo
+  grande y tajo amarillo; `QUIEBRE ×1.5` en `y−44` la primera vez en el
+  paso.
+- `BreakEvent(skipped)`: `txt` `¡QUEBRADO!` amarillo en `y−34` + `aura`
+  de aturdido. `recovered`: `txt` `SE RECUPERA` gris en `y−40`. `fill`
+  y `decay` no dibujan nada (las barras ya lo muestran).
+- Barra de batalla: la cabecera del menú dice `Objetivo: Rey Limo ·
+  Quiebre 31/80` (o `¡VULNERABLE! ×1.5`, y `¡ULT!` si la avisó).
+
+## ULT enemigas
+
+(docs/specs/break_and_enemy_ults.md § 2.)
+
+- `EnemyUltWarningEvent` → `warn` (2000 ms, pantalla): banda negra a
+  todo el ancho arriba del área del mundo con filetes rojos y franjas
+  de peligro que corren, triángulos `!` que titilan a los costados y el
+  texto `¡El Rey Limo se prepara para Diluvio Ácido!` (16·u con
+  contorno si entra, si no 8·u); entra desde la izquierda en 180 ms y
+  se apaga los últimos 300 ms. Además `pulse` rojo doble en el enemigo
+  (el aura persistente la dibuja el estado).
+- `EnemyUltEvent` → la misma cinemática que las ULT del grupo (`ult`
+  con `UltFx.enemyType`): oscurecido, tiempo congelado, barras de cine,
+  cámara al lanzador y después al grupo, hit-stop y destello (rojo
+  `rgba(255,70,80)` 0.55 en vez de blanco). Tarjeta: banda roja oscura,
+  el sprite del enemigo (× `min(3, 40/alto)`), `! ULTIMATE ENEMIGA ·
+  Rey Limo` en amarillo y el nombre. Los golpes al grupo son números
+  pesados en `impactFor(i)` (orden de los eventos); estados, `RETRASO`
+  (Engranaje del Fin) y `K.O.` con ellos; `BUFFS BORRADOS` violeta en
+  `y−56` de cada aliado 120 ms después del último impacto (Fin de las
+  Eras). El enemigo se lanza al descargar.
+
+| ULT | Prep. | Descarga | Total | Impacto `i` | Hit-stop | Sacudida | Cámara |
+|---|---|---|---|---|---|---|---|
+| Diluvio Ácido | 900 | 1100 | 2400 | 1380 + 70·i | 90 | 10 | `group` |
+| Engranaje del Fin | 900 | 1000 | 2300 | 1400 | 130 | 12 | `single` |
+| Fin de las Eras | 1000 | 1100 | 2500 | 1500 + 60·i | 140 | 14 | `group` |
+| Furia Élite | 700 | 900 | 2000 | 1150 (zarpazos previos 1000, 1070) | 120 | 12 | `single` |
+
+Cámara `group` (ULT a todo el grupo, que está en columna): en la
+descarga, centro `(x del centro de los objetivos, y de la base)` y zoom
+`base − 1` (mínimo 1), para que entren todos con sus números entre las
+barras de cine.
+
+- **Diluvio Ácido** (verde `#7bed9f`): preparación — el limo se hincha
+  (membrana translúcida que tiembla), burbujas que suben, cielo verdoso.
+  Descarga — escupe una bola de ácido en arco hasta arriba del grupo
+  (900-1150), revienta en una nube oscura sobre todos, llueve ácido
+  (36 gotas) y en cada impacto salpicón + charco que queda.
+- **Engranaje del Fin** (bronce `#e1b12c`): preparación — un engranaje
+  gigante (12 dientes) gira a saltos de reloj detrás del gólem.
+  Descarga — sale rodando en arco con estela de hielo y aplasta al
+  objetivo (1400): cristales de hielo lo encierran, anillo; después una
+  onda de tiempo (anillos celestes) pasa por todo el grupo (retraso).
+- **Fin de las Eras** (carmesí `#d63031` / violeta `#6c5ce7`):
+  preparación — un vórtice negro con arcos que giran se forma delante
+  del Devorador, polvo y brasas caen en espiral hacia él, el cielo se
+  pone rojo, temblor creciente. Descarga — viaja sobre el grupo y crece,
+  colapsa con un destello y bajo cada objetivo (grietas incandescentes
+  antes) estalla una columna de fuego; astillas violetas (los buffs que
+  se rompen) salen volando.
+- **Furia Élite** (rojo `#ff4757`): preparación — llamas rojas alrededor
+  del cuerpo y brillo en los ojos. Descarga — embestida con imágenes
+  rojas hasta el objetivo, dos zarpazos (3 trazos paralelos) y el final
+  enorme con anillo en el impacto (crítico garantizado).
 
 ## Ritmo y repetición
 

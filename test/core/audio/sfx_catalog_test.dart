@@ -62,6 +62,28 @@ const _samples = {
   'proc_guardian_ult_charge.wav': Sfx.ultCharge,
   'proc_martillo_bendito_anvil.wav': Sfx.anvil,
   'proc_viento_favor_wind.wav': Sfx.wind,
+  // Enemigos (wind-up + golpe) y su impacto propio.
+  'enemy_slime_attack.wav': 'enemy.slime',
+  'enemy_bat_attack.wav': 'enemy.bat',
+  'enemy_golem_attack.wav': 'enemy.golem',
+  'enemy_ghost_attack.wav': 'enemy.ghost',
+  'enemy_reyLimo_attack.wav': 'enemy.reyLimo',
+  'enemy_golemReloj_attack.wav': 'enemy.golemReloj',
+  'enemy_devorador_attack.wav': 'enemy.devorador',
+  'enemy_slime_hit.wav': 'enemy.hit.slime',
+  'enemy_bat_hit.wav': 'enemy.hit.bat',
+  'enemy_golem_hit.wav': 'enemy.hit.golem',
+  'enemy_ghost_hit.wav': 'enemy.hit.ghost',
+  'enemy_reyLimo_hit.wav': 'enemy.hit.reyLimo',
+  'enemy_golemReloj_hit.wav': 'enemy.hit.golemReloj',
+  'enemy_devorador_hit.wav': 'enemy.hit.devorador',
+  'enemy_heavy.wav': Sfx.enemyHeavy,
+  // Quiebre y aviso.
+  'break_tick.wav': Sfx.breakTick,
+  'break_shatter.wav': Sfx.breakShatter,
+  'break_vulnerable_hit_accent.wav': Sfx.breakVuln,
+  'break_dazed_skip.wav': Sfx.breakDazed,
+  'enemy_ult_warning_sting.wav': Sfx.enemyUltWarn,
 };
 
 /// Secuencias de procs en sus tiempos (ms), para escuchar el ritmo.
@@ -72,6 +94,13 @@ const _procSequences = {
   'proc_shield_absorb_hit.wav': [(Sfx.impactHurt, 0), (Sfx.shieldBreak, 0)],
   // Combustión: impacto de fuego, estallido 120 ms después.
   'proc_combustion_full.wav': [(Sfx.impactFire, 0), (Sfx.whump, 120)],
+  // Ataque enemigo completo: wind-up + golpe y su impacto a 160 ms.
+  'enemy_golem_full.wav': [('enemy.golem', 0), ('enemy.hit.golem', 160)],
+  'enemy_slime_full.wav': [('enemy.slime', 0), ('enemy.hit.slime', 160)],
+  'enemy_bat_full.wav': [('enemy.bat', 0), ('enemy.hit.bat', 160)],
+  'enemy_devorador_full.wav': [('enemy.devorador', 0), ('enemy.hit.devorador', 160)],
+  // Un golpe que quiebra: impacto, tic y cristal.
+  'break_full_hit.wav': [(Sfx.impactBlunt, 0), (Sfx.breakShatter, 0)],
 };
 
 void main() {
@@ -133,6 +162,66 @@ void main() {
     expect(kSfxCatalog, contains(Sfx.enemyHeavy));
   });
 
+  test('enemigos: wind-up antes del golpe, impacto propio por tipo y más '
+      'fuertes que las acciones del grupo', () {
+    final hits = <String>{};
+    for (final type in kEnemies.keys) {
+      final def = kSfxCatalog[Sfx.enemy(type)]!;
+      // Voces del wind-up antes del golpe y la voz del ataque después.
+      expect(def.voices.any((v) => v.delay < kEnemyBodyAt && v.end <= 0.2),
+          isTrue, reason: type);
+      expect(def.voices.any((v) => v.delay >= kEnemyBodyAt), isTrue, reason: type);
+      expect(def.peak!, greaterThan(SfxLevel.action), reason: type);
+      final hit = kSfxCatalog[Sfx.enemyHit(type)];
+      expect(hit, isNotNull, reason: type);
+      expect(hit!.peak!, greaterThan(SfxLevel.impact), reason: type);
+      hits.add(hit.voices
+          .map((v) => '${v.wave}:${v.frequency}:${v.duration}:${v.delay}')
+          .join(','));
+    }
+    expect(hits, hasLength(kEnemies.length), reason: 'impactos distintos');
+    // Los jefes, más que los comunes.
+    expect(kSfxCatalog[Sfx.enemy('devorador')]!.peak!,
+        greaterThan(kSfxCatalog[Sfx.enemy('slime')]!.peak!));
+  });
+
+  test('quiebre: tic sutil, cristal fuerte, acento y aviso', () {
+    final tick = kSfxCatalog[Sfx.breakTick]!;
+    expect(tick.peak!, lessThan(SfxLevel.status));
+    expect(tick.length, lessThan(0.1));
+    final shatter = kSfxCatalog[Sfx.breakShatter]!;
+    expect(shatter.peak!, greaterThan(SfxLevel.impact));
+    expect(shatter.length, inInclusiveRange(0.3, 0.8));
+    expect(kSfxCatalog[Sfx.breakVuln]!.length, lessThan(0.25));
+    expect(kSfxCatalog[Sfx.breakDazed], isNotNull);
+    final warn = kSfxCatalog[Sfx.enemyUltWarn]!;
+    expect(warn.peak!, greaterThan(SfxLevel.impact));
+    expect(warn.length, lessThan(1.0));
+  });
+
+  test('ULT enemigas: tres partes propias que entran en sus fases', () {
+    for (final id in kEnemyUlts.keys) {
+      final script = ultScriptFor(id);
+      expect(kEnemyUltVoices, contains(id));
+      final build = kSfxCatalog[Sfx.ult(id, Sfx.ultBuild)]!;
+      final release = kSfxCatalog[Sfx.ult(id, Sfx.ultRelease)]!;
+      final impact = kSfxCatalog[Sfx.ult(id, Sfx.ultImpact)]!;
+      expect(build.length, lessThanOrEqualTo(script.buildMs / 1000 + 0.15), reason: id);
+      expect(release.length, lessThanOrEqualTo(script.releaseMs / 1000), reason: id);
+      expect(impact.peak, SfxLevel.ultImpact);
+    }
+    for (final part in Sfx.ultParts) {
+      final voices = {
+        for (final id in kEnemyUlts.keys)
+          kSfxCatalog[Sfx.ult(id, part)]!
+              .voices
+              .map((v) => '${v.wave}:${v.frequency}:${v.duration}:${v.delay}')
+              .join(','),
+      };
+      expect(voices, hasLength(kEnemyUlts.length), reason: part);
+    }
+  });
+
   test('cada tipo de arma tiene arranque e impacto', () {
     for (final w in kWeapons.values) {
       expect(kSfxCatalog, contains(kWeaponStartSfx[w.type]), reason: w.type);
@@ -160,10 +249,11 @@ void main() {
     for (final e in kSfxCatalog.entries) {
       final def = e.value;
       expect(def.peak, isNotNull, reason: e.key);
-      // Solo las partes de las ULT pasan el nivel del crítico.
+      // Solo las partes de las ULT (del grupo y enemigas) pasan el nivel
+      // del crítico.
+      final ult = e.key.startsWith('ult_') || e.key.startsWith('eult_');
       expect(def.peak!,
-          lessThanOrEqualTo(
-              e.key.startsWith('ult_') ? SfxLevel.ultImpact : SfxLevel.crit),
+          lessThanOrEqualTo(ult ? SfxLevel.ultImpact : SfxLevel.crit),
           reason: e.key);
       final s = synth.samplesOf(def);
       var peak = 0.0;
@@ -294,6 +384,36 @@ void main() {
           .replaceAll('ó', 'o')
           .replaceAll('ú', 'u');
       File('$dir${Platform.pathSeparator}ult_$name.wav')
+          .writeAsBytesSync(synth.encode(mix));
+    }
+    // Cada ULT enemiga completa (a todos: 3 impactos; a uno: 1).
+    for (final ult in kEnemyUlts.values) {
+      final script = ultScriptFor(ult.id);
+      final parts = [
+        (Sfx.ult(ult.id, Sfx.ultBuild), 0),
+        (Sfx.ult(ult.id, Sfx.ultRelease), script.buildMs),
+        for (var i = 0; i < (ult.allTargets ? 3 : 1); i++)
+          (Sfx.ult(ult.id, Sfx.ultImpact), script.impactFor(i)),
+        if (ult.guaranteedCrit) (Sfx.critClink, script.impactMs),
+      ];
+      final layers = [
+        for (final (id, at) in parts) (synth.samplesOf(kSfxCatalog[id]!), at),
+      ];
+      final n = layers.fold<int>(0, (m, l) {
+        final end = (l.$2 / 1000 * synth.sampleRate).round() + l.$1.length;
+        return end > m ? end : m;
+      });
+      final mix = Float64List(n);
+      for (final (s, at) in layers) {
+        final o = (at / 1000 * synth.sampleRate).round();
+        for (var i = 0; i < s.length; i++) {
+          mix[o + i] += s[i];
+        }
+      }
+      for (var i = 0; i < n; i++) {
+        mix[i] = mix[i].clamp(-1.0, 1.0);
+      }
+      File('$dir${Platform.pathSeparator}enemy_ult_${ult.id.substring(5)}.wav')
           .writeAsBytesSync(synth.encode(mix));
     }
   });

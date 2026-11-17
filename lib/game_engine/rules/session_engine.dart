@@ -907,7 +907,16 @@ class _Op {
     if (!b.state.current!.isPlayer) {
       final step = e.battles.enemyTurn(b.state);
       if (step != null) _applyBattleStep(b, step);
-      if (b.endTimer == null) b.wait = 0.8;
+      // ULT enemiga: la pausa de una ULT (cinemática); aviso: tiempo para
+      // leer el cartel (docs/specs/break_and_enemy_ults.md § 2).
+      final evs = step?.events ?? const <BattleEvent>[];
+      if (b.endTimer == null) {
+        b.wait = evs.any((ev) => ev is EnemyUltEvent)
+            ? 2.3
+            : evs.any((ev) => ev is EnemyUltWarningEvent)
+                ? 1.4
+                : 0.8;
+      }
       return;
     }
 

@@ -387,6 +387,14 @@ class SessionJson {
         if (c.effects.isNotEmpty)
           'fx': [for (final e in c.effects) timedEffectToJson(e)],
         if (c.extraTurn != 0) 'xt': c.extraTurn,
+        // Quiebre y ULT enemiga (opcionales).
+        if (c.breakBase != 0) 'brkB': c.breakBase,
+        if (c.breakGauge != 0) 'brk': c.breakGauge,
+        if (c.breaks != 0) 'brkN': c.breaks,
+        if (c.vulnerable != 0) 'vul': c.vulnerable,
+        if (c.breakSkip) 'brkS': true,
+        if (c.ultId != null) 'eult': c.ultId,
+        if (c.ultPending) 'ultP': true,
       };
 
   Json timedEffectToJson(TimedEffect e) => {
@@ -463,6 +471,13 @@ class SessionJson {
           ? []
           : [for (final raw in j.list('fx')) timedEffectFromJson(asJson(raw))],
       extraTurn: j.intOrNull('xt') ?? 0,
+      breakBase: j.dblOrNull('brkB') ?? 0,
+      breakGauge: j.dblOrNull('brk') ?? 0,
+      breaks: j.intOrNull('brkN') ?? 0,
+      vulnerable: j.intOrNull('vul') ?? 0,
+      breakSkip: j.flag('brkS'),
+      ultId: j.strOrNull('eult'),
+      ultPending: j.flag('ultP'),
     );
   }
 
