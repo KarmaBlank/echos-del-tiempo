@@ -1,9 +1,13 @@
 import 'package:get_it/get_it.dart';
 
+import '../../features/lobby/data/json_file_profile_store.dart';
 import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/data/passive_tree_catalog.dart';
+import '../../game_engine/models/profile_store.dart';
 import '../../game_engine/rules/battle_engine.dart';
 import '../../game_engine/rules/passive_tree_rules.dart';
+import '../../game_engine/rules/progression_rules.dart';
+import '../../game_engine/rules/session_engine.dart';
 import '../../game_engine/rules/stats_calculator.dart';
 import '../../netcode/contracts/net_session.dart';
 import '../../netcode/p2p_webrtc/firestore_signaling_service.dart';
@@ -34,6 +38,24 @@ void registerSharedDependencies() {
       stats: sl<StatsCalculator>(),
       catalog: sl<GameCatalog>(),
     ),
+  );
+  sl.registerLazySingleton<ProgressionRules>(
+    () => ProgressionRules(
+      stats: sl<StatsCalculator>(),
+      catalog: sl<GameCatalog>(),
+    ),
+  );
+  // Una sala nueva = un motor nuevo (cachea los mapas de sus misiones).
+  sl.registerFactory<SessionEngine>(
+    () => SessionEngine(
+      battles: sl<BattleEngine>(),
+      progression: sl<ProgressionRules>(),
+    ),
+  );
+  // Perfil en disco en escritorio; en memoria donde todavía no hay una
+  // carpeta conocida (docs/specs/exploration.md § "Persistencia").
+  sl.registerLazySingleton<ProfileStore>(
+    () => JsonFileProfileStore.forPlatform() ?? InMemoryProfileStore(),
   );
 }
 

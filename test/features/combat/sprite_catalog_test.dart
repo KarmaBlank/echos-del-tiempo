@@ -71,6 +71,9 @@ void main() {
       expect(catalog.enemyScale('devorador'), 2.4);
       expect(catalog.enemyScale('reyLimo'), 2.0);
       expect(catalog.enemyScale('slime'), 1.0);
+      expect(catalog.enemyFloats('bat'), isTrue);
+      expect(catalog.enemyFloats('devorador'), isTrue);
+      expect(catalog.enemyFloats('slime'), isFalse);
 
       // Mismo archivo → misma imagen (cache).
       final again = await catalog.enemy('devorador');

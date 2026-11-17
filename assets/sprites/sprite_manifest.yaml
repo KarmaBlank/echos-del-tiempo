@@ -22,15 +22,19 @@ characters:
     idle: characters/tirador/idle.png
 
 # `scale`: multiplicador de dibujo (`sc` del prototipo). Por defecto 1.
+# `float`: flota en el aire (murciélagos y espectros del prototipo, que
+# reusan sus formas base). Por defecto false.
 enemies:
   slime:
     idle: enemies/slime/idle.png
   bat:
     idle: enemies/bat/idle.png
+    float: true
   golem:
     idle: enemies/golem/idle.png
   ghost:
     idle: enemies/ghost/idle.png
+    float: true
   reyLimo:
     idle: enemies/reyLimo/idle.png
     scale: 2
@@ -40,3 +44,4 @@ enemies:
   devorador:
     idle: enemies/devorador/idle.png
     scale: 2.4
+    float: true

@@ -24,6 +24,31 @@ abstract final class RetroTheme {
 
   static const _square = RoundedRectangleBorder();
 
+  /// Botón compacto para paneles y HUD (docs/specs/ui_style.md §
+  /// "Botón compacto"): texto de 8 px, padding de 8 px y borde de 2 px.
+  /// Hereda colores y estados del tema; se pasa como `style:`.
+  static ButtonStyle compactButton() => ButtonStyle(
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        ),
+        minimumSize: const WidgetStatePropertyAll(Size(0, 32)),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        textStyle: const WidgetStatePropertyAll(
+          TextStyle(fontFamily: fontFamily, fontSize: 8),
+        ),
+        side: WidgetStateProperty.resolveWith(
+          (s) => BorderSide(
+            width: thinBorderWidth,
+            color: s.contains(WidgetState.disabled)
+                ? RetroPalette.muted
+                : s.contains(WidgetState.focused) ||
+                        s.contains(WidgetState.hovered)
+                    ? RetroPalette.gold
+                    : RetroPalette.ink,
+          ),
+        ),
+      );
+
   static ThemeData build() {
     const scheme = ColorScheme.dark(
       primary: RetroPalette.gold,

@@ -52,3 +52,48 @@ Paleta corta de 8 colores. Ningún widget usa colores fuera de esta lista
 La caja estilo JRPG clásico para menús, diálogos y paneles de stats:
 fondo `panel`, borde exterior `ink` de 4 px, línea interior `night` de
 2 px y sombra dura. Padding interno de 16 px.
+
+## Texto y la fuente
+
+Press Start 2P no tiene flechas, `★`, `₵` ni las MAYÚSCULAS acentuadas
+(dibuja "MISIÓN" como "MISIóN"). Todo texto de UI que pueda traerlas pasa
+por `retroText` (`lib/app/theme/retro_text.dart`), que las cambia por
+equivalentes (`>`, `*`, `$`, `A E I O U`). Las minúsculas acentuadas, `ñ`
+y `¡ ¿` sí existen.
+
+## Botón compacto (`RetroTheme.compactButton`)
+
+Para paneles y HUD, donde el botón de 16 px ocupa demasiado: texto de
+8 px, padding 8 px, alto mínimo 32 px y borde de 2 px (`ink`, `gold` con
+foco/hover, `muted` deshabilitado). `PanelButton`
+(`lib/app/theme/panel_frame.dart`) lo aplica y acepta un color de acento
+(p. ej. `green` para "¡LISTO!").
+
+## Barras (`RetroBar`)
+
+`lib/app/theme/retro_bar.dart`: fondo `night`, borde `ink` de 2 px y
+relleno sólido. Vida `green` (enemigos `red`, jefes/élites `gold`), maná
+`muted`, ULT `gold`. Alto 16 px en batalla y 10 px en el HUD.
+
+## Panel sobre el mapa (`PanelFrame`)
+
+`lib/app/theme/panel_frame.dart`: `RetroPanel` con borde `gold`,
+centrado, ancho máximo 760 px (o el que se pida) y alto máximo 86% de la
+pantalla, título de 16 px en `gold`, contenido de 8 px con scroll y los
+botones compactos abajo a la derecha. Lo usan el mostrador, la
+preparación, el personaje, la armería y el resultado. `ComingSoon`
+muestra "X: próximamente." en `muted` para lo que todavía no existe.
+
+## HUD
+
+Overlays Flutter sobre el mapa con `RetroPanel` de padding 8 y texto de
+8 px; el jugador local tiene el borde `gold`. Los avisos de interacción
+(`[E] ...`) van en 16 px `gold`. Detalle de qué va dónde:
+docs/specs/exploration.md § "HUD".
+
+## Arte vs. chrome
+
+Los colores de tiles, muebles, objetos, minimapa y actores del mapa
+vienen del prototipo (`THEMES`, `drawTile`, ...) y son **arte**: no pasan
+por `RetroPalette` (como los PNG de sprites). La regla de "solo 8
+colores" aplica al chrome (paneles, botones, textos de interfaz).

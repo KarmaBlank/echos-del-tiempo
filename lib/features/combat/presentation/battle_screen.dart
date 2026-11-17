@@ -1,6 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/theme/retro_bar.dart';
 import '../../../app/theme/retro_panel.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
@@ -8,220 +9,291 @@ import '../../../game_engine/data/skills_catalog.dart';
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
-import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
-import 'battle_controller.dart';
+import 'game_sprites.dart';
+import 'pixel_sprite.dart';
 
 /// Pantalla de batalla 8 bits: enemigos arriba, log en el medio, grupo y
-/// menú de comandos abajo. Estilo en docs/specs/ui_style.md.
+/// menú de comandos abajo. Estilo en docs/specs/ui_style.md; menú y
+/// teclas en docs/specs/exploration.md § "Batalla".
 ///
-/// Los sprites todavía no existen (`assets/sprites` está vacío): cada
-/// actor se dibuja como un recuadro con su inicial hasta que se carguen
-/// por `SpriteCatalog`.
-class BattleScreen extends ConsumerStatefulWidget {
-  const BattleScreen({super.key, required this.setup});
+/// No tiene lógica de juego: dibuja el [battle] que recibe y entrega los
+/// comandos del jugador local por [onCommand]. Quien la usa decide de
+/// dónde sale el estado (hoy: la sesión, `SessionBattleScreen`).
+class BattleView extends StatefulWidget {
+  const BattleView({
+    super.key,
+    required this.battle,
+    required this.onCommand,
+    this.events = const [],
+    this.canAct = false,
+    this.turnTimeLeft,
+    this.sprites,
+  });
 
-  final BattleSetup setup;
+  final BattleState battle;
+
+  /// Eventos del último paso (números de daño flotando).
+  final List<BattleEvent> events;
+
+  /// Le toca al jugador de este dispositivo: se muestra el menú.
+  final bool canAct;
+
+  /// Segundos que le quedan al jugador de turno (`TURN_LIMIT − turnT`).
+  final double? turnTimeLeft;
+
+  /// Manda un comando del actor de turno. Devuelve si fue aceptado.
+  final bool Function(BattleCommand command) onCommand;
+
+  /// Sprites ya cargados; sin ellos se dibuja la inicial del actor.
+  final GameSprites? sprites;
 
   @override
-  ConsumerState<BattleScreen> createState() => _BattleScreenState();
+  State<BattleView> createState() => BattleViewState();
 }
 
-enum _Menu { root, skills, target, items, itemTarget, dual }
+/// Una opción del menú plano numerado (`btn` del prototipo).
+class _Option {
+  const _Option(this.label, this.onSelect);
+  final String label;
 
-class _BattleScreenState extends ConsumerState<BattleScreen> {
-  _Menu _menu = _Menu.root;
+  /// `null` = deshabilitada.
+  final VoidCallback? onSelect;
+}
 
-  /// Comando que espera que se elija un enemigo.
-  BattleCommand Function(String targetId)? _pendingTarget;
-  BattleItem? _pendingItem;
+class BattleViewState extends State<BattleView> {
+  /// Enemigo apuntado (`tgt` del prototipo).
+  String? _target;
 
-  void _reset() => setState(() {
-        _menu = _Menu.root;
-        _pendingTarget = null;
-        _pendingItem = null;
-      });
+  /// Submenú de poción abierto (`potMode`).
+  BattleItem? _potMode;
 
-  void _send(BattleCommand cmd) {
-    ref.read(battleControllerProvider(widget.setup).notifier).command(cmd);
-    _reset();
+  List<Combatant> get _foes =>
+      widget.battle.enemies.where((e) => e.alive).toList();
+
+  /// El objetivo actual, o el primer enemigo vivo si cayó.
+  String? get target {
+    final foes = _foes;
+    if (foes.isEmpty) return null;
+    if (foes.any((e) => e.id == _target)) return _target;
+    return foes.first.id;
   }
 
-  /// Si hay más de un enemigo vivo, pide objetivo; si no, ejecuta directo.
-  void _withTarget(BattleState b, BattleCommand Function(String?) build) {
-    final foes = b.enemies.where((e) => e.alive).toList();
-    if (foes.length <= 1) {
-      _send(build(null));
-    } else {
-      setState(() {
-        _pendingTarget = build;
-        _menu = _Menu.target;
-      });
+  @override
+  void didUpdateWidget(BattleView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.canAct && _potMode != null) _potMode = null;
+  }
+
+  /// `cycleTarget`: el siguiente enemigo vivo.
+  void cycleTarget() {
+    final foes = _foes;
+    if (foes.isEmpty) return;
+    final i = foes.indexWhere((e) => e.id == target);
+    setState(() => _target = foes[(i + 1) % foes.length].id);
+  }
+
+  void _send(BattleCommand cmd) {
+    if (widget.onCommand(cmd)) setState(() => _potMode = null);
+  }
+
+  /// Teclas de batalla: 1-9 eligen la opción N, Q/Tab cambian de
+  /// objetivo, Esc sale del submenú. Devuelve si la tecla se usó.
+  bool handleKey(LogicalKeyboardKey key) {
+    if (key == LogicalKeyboardKey.keyQ || key == LogicalKeyboardKey.tab) {
+      cycleTarget();
+      return true;
     }
+    if (key == LogicalKeyboardKey.escape && _potMode != null) {
+      setState(() => _potMode = null);
+      return true;
+    }
+    const digits = [
+      LogicalKeyboardKey.digit1,
+      LogicalKeyboardKey.digit2,
+      LogicalKeyboardKey.digit3,
+      LogicalKeyboardKey.digit4,
+      LogicalKeyboardKey.digit5,
+      LogicalKeyboardKey.digit6,
+      LogicalKeyboardKey.digit7,
+      LogicalKeyboardKey.digit8,
+      LogicalKeyboardKey.digit9,
+    ];
+    final n = digits.indexOf(key);
+    if (n < 0) return false;
+    final cur = widget.battle.current;
+    if (!widget.canAct || cur == null) return true;
+    final opts = _options(cur);
+    if (n < opts.length) opts[n].onSelect?.call();
+    return true;
+  }
+
+  List<_Option> _options(Combatant cur) {
+    final b = widget.battle;
+    final item = _potMode;
+    if (item != null) {
+      final pot = item == BattleItem.potion;
+      return [
+        for (final q in b.party)
+          if (pot || q.alive)
+            _Option(
+              '${q.id == cur.id ? 'Yo (${q.name})' : q.name} '
+              '${pot ? '${q.hp}/${q.maxHp} HP' : '${q.mp.floor()}/${q.maxMp} MP'}'
+              '${pot && !q.alive ? ' ¡revive!' : ''}',
+              () => _send(ItemCommand(item, targetPlayerId: q.id)),
+            ),
+        _Option('< Volver', () => setState(() => _potMode = null)),
+      ];
+    }
+    final tg = target;
+    final ult = kUltimates[cur.weaponType];
+    final allies = b.party.where((q) => q.alive && q.id != cur.id);
+    return [
+      _Option('Atacar', () => _send(AttackCommand(targetId: tg))),
+      if (ult != null)
+        _Option('★ ULTIMATE: ${ult.name} [${cur.ult.floor()}%]',
+            cur.ult >= 100 ? () => _send(UltimateCommand(targetId: tg)) : null),
+      for (final id in cur.skillIds)
+        if (kSkills[id] case final sk?)
+          _Option('${sk.name} ${sk.mp}MP',
+              cur.mp >= sk.mp ? () => _send(SkillCommand(id, targetId: tg)) : null),
+      for (final q in allies)
+        _Option(
+          '★ ${kDuals[dualKey(cur.classId ?? '', q.classId ?? '')]?.name ?? 'Dúo'}'
+          ' (+${q.name}) 4MP c/u',
+          cur.mp >= 4 && q.mp >= 4 ? () => _send(DualCommand(q.id)) : null,
+        ),
+      _Option('Poción de vida x${cur.potions} ▸',
+          cur.potions > 0 ? () => setState(() => _potMode = BattleItem.potion) : null),
+      _Option('Poción de maná x${cur.ethers} ▸',
+          cur.ethers > 0 ? () => setState(() => _potMode = BattleItem.ether) : null),
+      _Option('Defender', () => _send(const DefendCommand())),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
-    final view = ref.watch(battleControllerProvider(widget.setup));
-    final b = view.battle;
-    final targeting = _menu == _Menu.target && view.waitingForPlayer;
-
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Stack(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    flex: 5,
-                    child: _EnemyRow(
-                      battle: b,
-                      events: view.lastEvents,
-                      onTap:
-                          targeting ? (id) => _send(_pendingTarget!(id)) : null,
-                    ),
+    final b = widget.battle;
+    final tg = target;
+    return ColoredBox(
+      color: RetroPalette.night,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Stack(
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: _EnemyRow(
+                    battle: b,
+                    events: widget.events,
+                    target: widget.canAct ? tg : null,
+                    sprites: widget.sprites,
+                    onTap: (id) => setState(() => _target = id),
                   ),
-                  const SizedBox(height: 16),
-                  RetroPanel(
-                    child: SizedBox(
-                      height: 72,
-                      child: Text(
-                        retroText(b.log),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    flex: 4,
+                ),
+                const SizedBox(height: 16),
+                RetroPanel(
+                  child: SizedBox(
+                    height: 48,
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          flex: 3,
-                          child:
-                              _PartyPanel(battle: b, events: view.lastEvents),
+                          child: Text(
+                            retroText(b.log),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(flex: 2, child: _commandPanel(view)),
+                        if (widget.turnTimeLeft case final left?)
+                          Text(
+                            'TIEMPO ${left.ceil().clamp(0, 99)}s',
+                            style: TextStyle(
+                              fontSize: 8,
+                              color: left <= 10
+                                  ? RetroPalette.red
+                                  : RetroPalette.gold,
+                            ),
+                          ),
                       ],
                     ),
                   ),
-                ],
-              ),
-              if (b.outcome != null) _EndOverlay(outcome: b.outcome!),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _commandPanel(BattleView view) {
-    final b = view.battle;
-    final cur = b.current;
-    if (!view.waitingForPlayer || cur == null || !cur.isPlayer) {
-      return const RetroPanel(child: Center(child: Text('...')));
-    }
-    final allies = b.party.where((q) => q.alive && q != cur).toList();
-
-    final List<Widget> options = switch (_menu) {
-      _Menu.root => [
-          _MenuOption('ATACAR',
-              onTap: () => _withTarget(b, (t) => AttackCommand(targetId: t))),
-          _MenuOption('TÉCNICA',
-              onTap: () => setState(() => _menu = _Menu.skills)),
-          _MenuOption('ULT ${cur.ult.floor()}%',
-              onTap: cur.ult >= 100 ? () => _ultimate(b, cur) : null),
-          _MenuOption('DÚO',
-              onTap: cur.mp >= 4 && allies.any((q) => q.mp >= 4)
-                  ? () => setState(() => _menu = _Menu.dual)
-                  : null),
-          _MenuOption('OBJETO',
-              onTap: () => setState(() => _menu = _Menu.items)),
-          _MenuOption('DEFENDER', onTap: () => _send(const DefendCommand())),
-        ],
-      _Menu.skills => [
-          for (final id in cur.skillIds)
-            if (kSkills[id] case final SkillDef sk)
-              _MenuOption('${sk.name}  ${sk.mp}MP',
-                  onTap: cur.mp >= sk.mp ? () => _skill(b, sk) : null),
-          _MenuOption('VOLVER', onTap: _reset),
-        ],
-      _Menu.target => [
-          const Text('Elegí un enemigo'),
-          for (final e in b.enemies.where((e) => e.alive))
-            _MenuOption(e.name, onTap: () => _send(_pendingTarget!(e.id))),
-          _MenuOption('VOLVER', onTap: _reset),
-        ],
-      _Menu.items => [
-          _MenuOption('Poción de vida x${cur.potions}',
-              onTap:
-                  cur.potions > 0 ? () => _pickItem(BattleItem.potion) : null),
-          _MenuOption('Poción de maná x${cur.ethers}',
-              onTap: cur.ethers > 0 ? () => _pickItem(BattleItem.ether) : null),
-          _MenuOption('VOLVER', onTap: _reset),
-        ],
-      _Menu.itemTarget => [
-          const Text('¿A quién?'),
-          for (final q in b.party)
-            if (_pendingItem == BattleItem.potion || q.alive)
-              _MenuOption(q.name,
-                  onTap: () =>
-                      _send(ItemCommand(_pendingItem!, targetPlayerId: q.id))),
-          _MenuOption('VOLVER', onTap: _reset),
-        ],
-      _Menu.dual => [
-          const Text('¿Con quién?'),
-          for (final q in allies)
-            _MenuOption(q.name,
-                onTap: q.mp >= 4 ? () => _send(DualCommand(q.id)) : null),
-          _MenuOption('VOLVER', onTap: _reset),
-        ],
-    };
-
-    return RetroPanel(
-      selected: true,
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(retroText('TURNO: ${cur.name.toUpperCase()}'),
-                style: const TextStyle(color: RetroPalette.gold)),
-            const SizedBox(height: 16),
-            for (final o in options)
-              Padding(padding: const EdgeInsets.only(bottom: 8), child: o),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  flex: 4,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: _PartyPanel(
+                            battle: b,
+                            events: widget.events,
+                            sprites: widget.sprites),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(flex: 2, child: _commandPanel()),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (b.outcome != null) _EndOverlay(outcome: b.outcome!),
           ],
         ),
       ),
     );
   }
 
-  void _skill(BattleState b, SkillDef sk) {
-    if (sk.dealsDamage && !sk.allTargets) {
-      _withTarget(b, (t) => SkillCommand(sk.id, targetId: t));
-    } else {
-      _send(SkillCommand(sk.id));
+  Widget _commandPanel() {
+    final cur = widget.battle.current;
+    if (cur == null || !cur.isPlayer) {
+      return const RetroPanel(child: Center(child: Text('...')));
     }
-  }
-
-  void _ultimate(BattleState b, Combatant cur) {
-    final ult = kUltimates[cur.weaponType];
-    if (ult != null && ult.dealsDamage && !ult.allTargets) {
-      _withTarget(b, (t) => UltimateCommand(targetId: t));
-    } else {
-      _send(const UltimateCommand());
+    if (!widget.canAct) {
+      return RetroPanel(
+        child: Center(
+          child: Text(retroText('TURNO DE ${cur.name.toUpperCase()}'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 8, color: RetroPalette.muted)),
+        ),
+      );
     }
+    final options = _options(cur);
+    return RetroPanel(
+      selected: true,
+      padding: const EdgeInsets.all(12),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              retroText(_potMode == null
+                  ? '¡TU TURNO! ${cur.name.toUpperCase()}'
+                  : '¿A QUIÉN?'),
+              style: const TextStyle(color: RetroPalette.gold),
+            ),
+            const SizedBox(height: 4),
+            Text('Q/Tab: objetivo · 1-9: elegir',
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: RetroPalette.muted)),
+            const SizedBox(height: 12),
+            for (var i = 0; i < options.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _MenuOption('${i + 1}. ${options[i].label}',
+                    onTap: options[i].onSelect),
+              ),
+          ],
+        ),
+      ),
+    );
   }
-
-  void _pickItem(BattleItem item) => setState(() {
-        _pendingItem = item;
-        _menu = _Menu.itemTarget;
-      });
 }
 
 // ----------------------------------------------------------------------
@@ -258,36 +330,7 @@ class _MenuOptionState extends State<_MenuOption> {
         onTap: widget.onTap,
         child: Text(
           retroText('${_hover && enabled ? '> ' : '  '}${widget.label}'),
-          style: TextStyle(color: color),
-        ),
-      ),
-    );
-  }
-}
-
-/// Barra de vida/maná/ULT pixelada.
-class _Bar extends StatelessWidget {
-  const _Bar({required this.value, required this.max, required this.color});
-
-  final num value;
-  final num max;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final f = max <= 0 ? 0.0 : (value / max).clamp(0, 1).toDouble();
-    return Container(
-      height: 16,
-      decoration: BoxDecoration(
-        color: RetroPalette.night,
-        border: Border.all(color: RetroPalette.ink, width: 2),
-      ),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: FractionallySizedBox(
-          widthFactor: f,
-          heightFactor: 1,
-          child: ColoredBox(color: color),
+          style: TextStyle(color: color, fontSize: 8, height: 1.5),
         ),
       ),
     );
@@ -326,14 +369,12 @@ String? _lastHit(String id, List<BattleEvent> events) {
   return total == 0 ? null : '-$total${crit ? '!' : ''}';
 }
 
-/// Recuadro con la inicial: reemplazo hasta que haya sprites.
+/// Recuadro con la inicial: solo si los sprites no cargaron.
 class _PlaceholderSprite extends StatelessWidget {
-  const _PlaceholderSprite(this.letter,
-      {required this.size, required this.color});
+  const _PlaceholderSprite(this.letter, {required this.size});
 
   final String letter;
   final double size;
-  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -343,20 +384,31 @@ class _PlaceholderSprite extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: RetroPalette.panelDark,
-        border: Border.all(color: color, width: 4),
+        border: Border.all(color: RetroPalette.muted, width: 2),
       ),
-      child: Text(letter,
-          style: TextStyle(fontSize: size >= 96 ? 32 : 16, color: color)),
+      child: Text(letter, style: const TextStyle(color: RetroPalette.muted)),
     );
   }
 }
 
+/// Píxeles de pantalla por píxel de sprite en batalla.
+const _enemyPixel = 6.0;
+const _heroPixel = 2.0;
+
 class _EnemyRow extends StatelessWidget {
-  const _EnemyRow({required this.battle, required this.events, this.onTap});
+  const _EnemyRow({
+    required this.battle,
+    required this.events,
+    required this.target,
+    required this.sprites,
+    required this.onTap,
+  });
 
   final BattleState battle;
   final List<BattleEvent> events;
-  final void Function(String id)? onTap;
+  final String? target;
+  final GameSprites? sprites;
+  final void Function(String id) onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -365,6 +417,7 @@ class _EnemyRow extends StatelessWidget {
       fit: BoxFit.scaleDown,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           for (final e in battle.enemies)
             Padding(
@@ -372,8 +425,10 @@ class _EnemyRow extends StatelessWidget {
               child: _EnemyCard(
                 enemy: e,
                 active: battle.currentId == e.id,
+                targeted: target == e.id,
                 hit: _lastHit(e.id, events),
-                onTap: onTap != null && e.alive ? () => onTap!(e.id) : null,
+                sprites: sprites,
+                onTap: e.alive ? () => onTap(e.id) : null,
               ),
             ),
         ],
@@ -383,44 +438,69 @@ class _EnemyRow extends StatelessWidget {
 }
 
 class _EnemyCard extends StatelessWidget {
-  const _EnemyCard(
-      {required this.enemy, required this.active, this.hit, this.onTap});
+  const _EnemyCard({
+    required this.enemy,
+    required this.active,
+    required this.targeted,
+    required this.sprites,
+    this.hit,
+    this.onTap,
+  });
 
   final Combatant enemy;
   final bool active;
+  final bool targeted;
+  final GameSprites? sprites;
   final String? hit;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final small = Theme.of(context).textTheme.bodySmall;
+    final type = enemy.enemyType ?? '';
+    final img = sprites?.enemy(type);
+    final scale = _enemyPixel *
+        (sprites?.enemyScale(type) ?? 1) *
+        (enemy.elite ? 1.45 : 1);
+    final spriteW = (img?.width ?? 16) * scale;
     final card = Opacity(
       opacity: enemy.alive ? 1 : 0.3,
       child: SizedBox(
-        width: 240,
+        width: spriteW + 64 < 240 ? 240 : spriteW + 64,
         child: RetroPanel(
-          selected: active || onTap != null,
+          selected: targeted,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
                 height: 24,
-                child: hit == null
-                    ? null
-                    : Text(hit!,
-                        style: const TextStyle(color: RetroPalette.gold)),
+                child: Text(
+                  hit ?? (active ? 'ACTUA' : ''),
+                  style: TextStyle(
+                      color: hit != null ? RetroPalette.gold : RetroPalette.red),
+                ),
               ),
-              _PlaceholderSprite(
-                enemy.name.substring(0, 1),
-                size: enemy.boss ? 128 : 96,
-                color: enemy.elite || enemy.boss
-                    ? RetroPalette.gold
-                    : RetroPalette.red,
-              ),
+              if (img != null)
+                PixelSprite(img, scale: scale)
+              else
+                _PlaceholderSprite(enemy.name.substring(0, 1),
+                    size: enemy.boss ? 128 : 96),
               const SizedBox(height: 16),
-              Text(enemy.name, textAlign: TextAlign.center, maxLines: 1),
+              Text(
+                retroText('${targeted ? '> ' : ''}${enemy.elite ? '★' : ''}'
+                    '${enemy.name}'),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                style: small?.copyWith(
+                    color: targeted ? RetroPalette.gold : RetroPalette.ink),
+              ),
               const SizedBox(height: 8),
-              _Bar(value: enemy.hp, max: enemy.maxHp, color: RetroPalette.red),
+              RetroBar(
+                  value: enemy.hp,
+                  max: enemy.maxHp,
+                  color: enemy.boss || enemy.elite
+                      ? RetroPalette.gold
+                      : RetroPalette.red),
               const SizedBox(height: 8),
               Text('${enemy.hp}/${enemy.maxHp}  ${_statusLine(enemy)}',
                   style: small, maxLines: 1),
@@ -438,10 +518,12 @@ class _EnemyCard extends StatelessWidget {
 }
 
 class _PartyPanel extends StatelessWidget {
-  const _PartyPanel({required this.battle, required this.events});
+  const _PartyPanel(
+      {required this.battle, required this.events, required this.sprites});
 
   final BattleState battle;
   final List<BattleEvent> events;
+  final GameSprites? sprites;
 
   @override
   Widget build(BuildContext context) {
@@ -461,8 +543,16 @@ class _PartyPanel extends StatelessWidget {
                         style: const TextStyle(color: RetroPalette.gold)),
                   ),
                   SizedBox(
-                    width: 176,
-                    child: Text(p.alive ? p.name : '${p.name} KO', maxLines: 1),
+                    width: 40,
+                    child: switch (sprites?.hero(p.classId ?? '')) {
+                      final img? => PixelSprite(img, scale: _heroPixel),
+                      null => const SizedBox.shrink(),
+                    },
+                  ),
+                  SizedBox(
+                    width: 160,
+                    child: Text(p.alive ? p.name : '${p.name} KO',
+                        maxLines: 1, overflow: TextOverflow.clip),
                   ),
                   Expanded(
                     child: Column(
@@ -473,21 +563,21 @@ class _PartyPanel extends StatelessWidget {
                           children: [
                             Expanded(
                               flex: 2,
-                              child: _Bar(
+                              child: RetroBar(
                                   value: p.hp,
                                   max: p.maxHp,
                                   color: RetroPalette.green),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: _Bar(
+                              child: RetroBar(
                                   value: p.mp,
                                   max: p.maxMp,
                                   color: RetroPalette.muted),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: _Bar(
+                              child: RetroBar(
                                   value: p.ult,
                                   max: 100,
                                   color: RetroPalette.gold),
@@ -539,13 +629,8 @@ class _EndOverlay extends StatelessWidget {
               ),
               if (outcome.victory) ...[
                 const SizedBox(height: 24),
-                Text('+${outcome.xp} XP   +${outcome.credits} CRÉDITOS'),
+                Text('+${outcome.xp} XP   +${outcome.credits} CREDITOS'),
               ],
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('> VOLVER'),
-              ),
             ],
           ),
         ),

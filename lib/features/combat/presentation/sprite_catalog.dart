@@ -73,6 +73,13 @@ class SpriteCatalog {
     return scale is num ? scale.toDouble() : 1.0;
   }
 
+  /// El enemigo flota en el aire (`float:` del manifest; en el prototipo,
+  /// los que usan la forma base `bat` o `ghost`). Por defecto `false`.
+  bool enemyFloats(String enemyId) {
+    final entry = _section('enemies')[enemyId];
+    return entry is YamlMap && entry['float'] == true;
+  }
+
   /// Ruta (relativa a [spritesRoot]) del sprite de una clase, o `null`.
   String? characterPath(String classId, String animation) {
     final entry = _section('characters')[classId];

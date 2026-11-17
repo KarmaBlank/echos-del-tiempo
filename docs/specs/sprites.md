@@ -85,7 +85,9 @@ Los colores hex de 3 dígitos (`#111`) se expanden como en CSS (`#111111`).
 | `devorador`  | `ghost`     | `#e84393` | 2.4           | sí   |
 
 La escala vive en el manifest (`enemies.<tipo>.scale`, por defecto 1) y se
-lee con `SpriteCatalog.enemyScale`. Los jefes reusan la forma base con su
+lee con `SpriteCatalog.enemyScale`. Si el enemigo flota (los de forma
+base `bat` o `ghost`: `bat`, `ghost`, `devorador`) el manifest lo marca
+con `enemies.<tipo>.float: true` (`SpriteCatalog.enemyFloats`). Los jefes reusan la forma base con su
 propio color: son PNG propios, no un tinte en runtime.
 
 ## Regenerar los PNG
@@ -170,7 +172,7 @@ prototipo (pantalla 480×288, tile 16 px), con `(x, y)` = pies del actor.
 - **Ancla**: el sprite se dibuja en `(-w/2, -h + 2)` respecto del punto
   trasladado: queda centrado en x y 2 px bajo los pies.
 - **Flotación** (solo sprites base `bat` y `ghost`, o sea también
-  `devorador`): `fl = sin(t / 200 + x) * 2 − 4` px en y (amplitud 2 px,
+  `devorador`; en Dart, `float: true` del manifest): `fl = sin(t / 200 + x) * 2 − 4` px en y (amplitud 2 px,
   período `2π·200 ≈ 1257 ms`, elevado 4 px). La fase depende de `x` para
   que no floten sincronizados. El resto: `fl = 0`.
 - **Sombra**: elipse centro `(x, y + 1)`, radios `w * 0.35 × 2.5 * sc`,
