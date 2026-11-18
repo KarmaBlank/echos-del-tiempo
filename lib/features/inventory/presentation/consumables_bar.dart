@@ -101,7 +101,22 @@ class InventoryStacksBar extends StatelessWidget {
           if (consumables)
             _group('CONSUMIBLES', 'consumables', InventoryRules.consumables),
           if (materials)
-            _group('MATERIALES', 'materials', InventoryRules.materials),
+            _group('MATERIALES', 'materials', [
+              for (final k in InventoryRules.materials)
+                if (!_abyss.contains(k)) k,
+            ]),
+          // Jefes del Abismo (v0.8): Fragmentos y Esencia, solo cuando
+          // hay alguno (no ocupan lugar antes del endgame).
+          if (materials && _abyss.any((k) => _count(k) > 0))
+            _group('ABISMO', 'abyss', _abyss),
         ],
       );
+
+  static const _abyss = [
+    StackKind.fragReloj,
+    StackKind.fragEco,
+    StackKind.fragCorona,
+    StackKind.fragEras,
+    StackKind.esencia,
+  ];
 }

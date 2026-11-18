@@ -169,6 +169,8 @@ class _ImpactPanelState extends State<ImpactPanel> {
       case BalanceKind.dual:
       case BalanceKind.reaction:
       case BalanceKind.elementStatus:
+      case BalanceKind.abyssBoss:
+      case BalanceKind.fragmentDrop:
         return const _Plan();
     }
   }

@@ -130,6 +130,31 @@ const Map<ArenaTheme, ArenaPalette> kArenaPalettes = {
     joint: Color(0xFF222C44), accent: Color(0xFF48DBFB),
     light: Color(0xFFFFE6A8), open: true,
   ),
+  // v0.8 · Jefe secreto del Abismo.
+  ArenaTheme.primordial: ArenaPalette(
+    sky: Color(0xFF05020E), sky2: Color(0xFF1A0A30),
+    wall: Color(0xFF1A1230), wall2: Color(0xFFC39BFF),
+    floor: Color(0xFF2A1F4A), floor2: Color(0xFF3A2A5A),
+    joint: Color(0xFF140A2A), accent: Color(0xFFC39BFF),
+    light: Color(0xFFE8DFFF), open: true,
+  ),
+};
+
+/// Colores de los cinco elementos de la arena primordial.
+const kPrimordialColors = [
+  Color(0xFFFF7B29), // fuego
+  Color(0xFF48DBFB), // agua
+  Color(0xFFFFD166), // electro
+  Color(0xFFBFF4FF), // hielo
+  Color(0xFF7BED3F), // veneno
+];
+
+/// Jefe base de cada Jefe del Abismo (su set-piece).
+const Map<String, String> kAbyssBaseBoss = {
+  'golemAbismo': 'golemReloj',
+  'hechiceraAbismo': 'hechicera',
+  'espectroAbismo': 'espectroCoronado',
+  'devoradorAbismo': 'devorador',
 };
 
 /// Luz propia de cada jefe (set-piece).
@@ -144,6 +169,12 @@ const Map<String, Color> kBossArenaLight = {
   'espectroCoronado': Color(0xFFB8C6FF),
   'centinela': Color(0xFFB57BFF),
   'devorador': Color(0xFFFFD166),
+  // v0.8 · Jefes del Abismo: luz fría del vacío.
+  'golemAbismo': Color(0xFFC39BFF),
+  'hechiceraAbismo': Color(0xFFC39BFF),
+  'espectroAbismo': Color(0xFFC39BFF),
+  'devoradorAbismo': Color(0xFFC39BFF),
+  'ecoPrimordial': Color(0xFFE8DFFF),
 };
 
 /// Luz de la segunda fase del Devorador.
@@ -267,6 +298,7 @@ class ArenaPainter {
     }
     _sideProps(c, spec, pal, ft);
     if (spec.eco) _ecoTint(c, pal);
+    if (spec.abyss) _abyssTint(c, pal);
     _vignette(c, spec);
     return r.endRecording();
   }
@@ -399,6 +431,16 @@ class ArenaPainter {
           final x = 10.0 + i * 122;
           _house(c, x, ft, 70 + _h(i, 1) * 30, 40 + _h(i, 2) * 30, p);
         }
+      case ArenaTheme.primordial:
+        // Vacío con cristales flotantes de los cinco elementos.
+        _stars(c, ArenaStage.height, const Color(0xCCC39BFF), 80, 11);
+        for (var i = 0; i < 10; i++) {
+          final x = 50.0 + i * 96 + _h(i, 12) * 20;
+          final y = 30.0 + _h(i, 13) * (ft - 70);
+          final col = kPrimordialColors[i % kPrimordialColors.length];
+          _crystal(c, x, y + 30, 6 + _h(i, 14) * 6, 16 + _h(i, 15) * 20,
+              _shade(col, 0.6), col);
+        }
     }
     // Zócalo: línea entre el fondo y el piso.
     _Px.rect(c, _shade(p.wall, 0.6), 0, ft - 2, ArenaStage.width, 2);
@@ -476,7 +518,7 @@ class ArenaPainter {
           _Px.rect(c, p.wall2, x, y, 1, 3);
           _Px.rect(c, p.wall2, x + 2, y + 1, 1, 2);
         }
-      case ArenaTheme.abismo:
+      case ArenaTheme.abismo || ArenaTheme.primordial:
         // La isla: el piso es roca flotante sobre el vacío.
         _Px.rect(c, p.sky, 0, ft, w, h - ft);
         _stars(c, h, const Color(0x998A96C0), 40, 7, top: ft);
@@ -618,7 +660,8 @@ class ArenaPainter {
       _Px.oval(c, light.withValues(alpha: 0.05 + k * 0.012), cx,
           ft - 10, 260.0 - k * 46, 90.0 - k * 14);
     }
-    switch (s.bossType) {
+    // Jefes del Abismo: el set-piece de su jefe base.
+    switch (kAbyssBaseBoss[s.bossType] ?? s.bossType) {
       case 'reyLimo':
         for (var i = 0; i < 9; i++) {
           final x = 80.0 + i * 100;
@@ -771,7 +814,30 @@ class ArenaPainter {
               const Color(0xFFB57BFF));
         case ArenaTheme.pueblo:
           _lamp(c, x, y);
+        case ArenaTheme.primordial:
+          final col = kPrimordialColors[i % kPrimordialColors.length];
+          _crystal(c, x, y, 7, 16 + _h(i, 6) * 14, _shade(col, 0.6), col);
       }
+    }
+  }
+
+  /// Variante del Abismo (v0.8): el vacío se come los bordes, grietas
+  /// violetas en el piso y luz fría.
+  static void _abyssTint(Canvas c, ArenaPalette p) {
+    const w = ArenaStage.width, h = ArenaStage.height;
+    _Px.rect(c, const Color(0x332A0F4A), 0, 0, w, h);
+    for (var i = 0; i < 8; i++) {
+      _crackLine(c, 40.0 + i * 120, ArenaStage.floorY + 60,
+          -math.pi / 2 + (_h(i, 31) - 0.5), 10, 120, const Color(0xFFC39BFF),
+          i + 40);
+    }
+    for (var i = 0; i < 5; i++) {
+      final a = 0.20 * (1 - i / 5);
+      final d = i * 14.0;
+      final col = Color.fromRGBO(20, 6, 40, a);
+      _Px.rect(c, col, 0, d, w, 14);
+      _Px.rect(c, col, d, 0, 14, h);
+      _Px.rect(c, col, w - d - 14, 0, 14, h);
     }
   }
 
@@ -848,10 +914,15 @@ class ArenaPainter {
       ArenaTheme.corazon => (20, const Color(0xDDFFF3C4), _Mote.rise),
       ArenaTheme.prueba => (14, const Color(0xCCE6DAFF), _Mote.fall),
       ArenaTheme.pueblo => (8, const Color(0x99FFE6A8), _Mote.twinkle),
+      ArenaTheme.primordial => (24, const Color(0xDDC39BFF), _Mote.twinkle),
     };
     var count = scaledCount(n, density);
     if (s.kind == EncounterKind.boss) count += scaledCount(8, density);
     _motes(c, v, t, count, color, mode);
+    if (s.abyss) {
+      _motes(c, v, t + 9000, scaledCount(10, density),
+          const Color(0xBBC39BFF), _Mote.rise);
+    }
     if (s.eco) {
       _motes(c, v, t + 5000, scaledCount(8, density),
           const Color(0xAA9FF3FF), _Mote.rise);

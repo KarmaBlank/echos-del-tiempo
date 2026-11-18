@@ -106,6 +106,9 @@ abstract final class ActionJson {
         TakeAscensionNodeAction() => {'t': 'ascNode', 'id': a.nodeId},
         ResetAscensionAction() => {'t': 'ascReset', if (a.full) 'full': true},
         DevGrantTrialAction() => {'t': 'devTrial', 'n': a.trial},
+        // Jefes del Abismo v0.8 (abyss_bosses.md § 5).
+        ProposeAbyssAction() => {'t': 'abyss', 'n': a.boss},
+        DevAbyssAction() => {'t': 'devAbyss', 'k': a.kind},
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -206,6 +209,10 @@ abstract final class ActionJson {
         return ResetAscensionAction(full: j.flag('full'));
       case 'devTrial':
         return DevGrantTrialAction(j.integer('n'));
+      case 'abyss':
+        return ProposeAbyssAction(j.integer('n'));
+      case 'devAbyss':
+        return DevAbyssAction(j.str('k'));
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

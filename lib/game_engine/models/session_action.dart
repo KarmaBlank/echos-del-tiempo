@@ -311,3 +311,22 @@ class DevGrantTrialAction extends SessionAction {
   final int trial;
   const DevGrantTrialAction(this.trial);
 }
+
+// ---------------- Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md) -----
+
+/// Abrir el Jefe del Abismo [boss] (1..5) en el Portal: lo propone al
+/// grupo; su costo se consume al empezar.
+class ProposeAbyssAction extends SessionAction {
+  final int boss;
+  const ProposeAbyssAction(this.boss);
+}
+
+/// Solo desarrollo (`FeatureFlags.devTools`): [kind] `frag` da 5 de cada
+/// Fragmento y 3 Esencias; `kills` marca los 4 jefes como vencidos.
+class DevAbyssAction extends SessionAction {
+  final String kind;
+  const DevAbyssAction(this.kind);
+
+  static const fragments = 'frag';
+  static const kills = 'kills';
+}

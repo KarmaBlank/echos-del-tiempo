@@ -43,6 +43,7 @@ extension CraftOpText on CraftOp {
     CraftOp.reroll,
     CraftOp.addAffix,
     CraftOp.upgradeRarity,
+    CraftOp.essence,
     CraftOp.transferAffix,
     CraftOp.transferPassive,
     CraftOp.transferSkill,
@@ -53,7 +54,8 @@ extension CraftOpText on CraftOp {
   BenchGroup get group => switch (this) {
         CraftOp.reroll ||
         CraftOp.addAffix ||
-        CraftOp.upgradeRarity =>
+        CraftOp.upgradeRarity ||
+        CraftOp.essence =>
           BenchGroup.improve,
         CraftOp.transferAffix ||
         CraftOp.transferPassive ||
@@ -78,6 +80,7 @@ extension CraftOpText on CraftOp {
         CraftOp.sellAll => 'Vender todas',
         CraftOp.salvageSelected => 'Desarmar elegidas',
         CraftOp.sellSelected => 'Vender elegidas',
+        CraftOp.essence => 'Esencia del Abismo',
       };
 
   /// Explicación de 3-6 palabras para la fila del paso 2.
@@ -90,6 +93,7 @@ extension CraftOpText on CraftOp {
         CraftOp.transferSkill => 'Aprende una habilidad de otra arma',
         CraftOp.removeAffix => 'Borra un mod (no los fijos)',
         CraftOp.reforge => 'Otro tipo de arma, mismos mods',
+        CraftOp.essence => 'Mejora los mods fijos',
         _ => line,
       };
 
@@ -121,6 +125,9 @@ extension CraftOpText on CraftOp {
         CraftOp.sellAll => 'Vende todas las armas de una rareza.',
         CraftOp.salvageSelected => 'Desarma las armas que elegiste.',
         CraftOp.sellSelected => 'Vende las armas que elegiste.',
+        CraftOp.essence =>
+          'Solo legendarios: cada mod fijo se tira 2 veces y queda el mayor; '
+              'nunca baja. Usa 1 Esencia del Abismo.',
       };
 
   /// Texto del botón de confirmar.
@@ -138,6 +145,7 @@ extension CraftOpText on CraftOp {
         CraftOp.salvageSelected =>
           'DESARMAR',
         CraftOp.sell || CraftOp.sellAll || CraftOp.sellSelected => 'VENDER',
+        CraftOp.essence => 'USAR ESENCIA',
       };
 
   bool get needsSource =>
@@ -148,7 +156,8 @@ extension CraftOpText on CraftOp {
   bool get isRandom =>
       this == CraftOp.addAffix ||
       this == CraftOp.reroll ||
-      this == CraftOp.upgradeRarity;
+      this == CraftOp.upgradeRarity ||
+      this == CraftOp.essence;
 }
 
 /// Ayuda de los tiers (tooltip junto a los mods).
@@ -419,9 +428,12 @@ class _CraftBenchState extends State<CraftBench> {
 
   /// Migas (pasos, se puede volver) y contador de materiales.
   Widget _header(PlayerProfile p, ItemInstance target) {
+    // Los Fragmentos no se usan en la forja (abren Jefes del Abismo).
     final mats = [
       for (final m in CraftMaterial.values)
-        '${m.label.split(' ').first} <b>x${p.material(m)}</b>',
+        if (!m.isFragment &&
+            (m != CraftMaterial.esencia || p.material(m) > 0))
+          '${m.label.split(' ').first} <b>x${p.material(m)}</b>',
     ].join(' · ');
     return Row(
       children: [
@@ -467,6 +479,12 @@ class _CraftBenchState extends State<CraftBench> {
         CraftMaterial.cristal => PixelIconKind.gem,
         CraftMaterial.prisma => PixelIconKind.prism,
         CraftMaterial.ancla => PixelIconKind.anchor,
+        CraftMaterial.fragReloj ||
+        CraftMaterial.fragEco ||
+        CraftMaterial.fragCorona ||
+        CraftMaterial.fragEras =>
+          PixelIconKind.shard,
+        CraftMaterial.esencia => PixelIconKind.star,
       };
 
   static Color _matColor(CraftMaterial m) => switch (m) {
@@ -474,6 +492,12 @@ class _CraftBenchState extends State<CraftBench> {
         CraftMaterial.cristal => ProtoColors.violet,
         CraftMaterial.prisma => ProtoColors.pink,
         CraftMaterial.ancla => ProtoColors.gold,
+        CraftMaterial.fragReloj ||
+        CraftMaterial.fragEco ||
+        CraftMaterial.fragCorona ||
+        CraftMaterial.fragEras =>
+          ProtoColors.violet,
+        CraftMaterial.esencia => ProtoColors.crimson,
       };
 
   static PixelIconKind _opIcon(CraftOp op) => switch (op) {
@@ -522,6 +546,7 @@ class _CraftBenchState extends State<CraftBench> {
       CraftOp.transferSkill =>
         'Habilidades traídas ${t.extraSkills.length} → ${t.extraSkills.length + 1}',
       CraftOp.removeAffix => 'Mods $n/$max → ${n > 0 ? n - 1 : 0}/$max',
+      CraftOp.essence => 'Mods fijos: mejor de 2 tiradas, nunca bajan',
       _ => 'Otro tipo de arma, misma rareza',
     };
   }

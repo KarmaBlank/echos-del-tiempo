@@ -10,6 +10,9 @@ import '../../../app/theme/retro_bar.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/theme/vision_palette.dart';
+import '../../../game_engine/data/abyss_catalog.dart';
+import '../../../game_engine/models/elements.dart';
+import '../../../game_engine/rules/abyss_rules.dart';
 import '../../../game_engine/data/ascension_catalog.dart';
 import '../../../game_engine/data/ascension_mechanics.dart';
 import '../../../game_engine/data/classes_catalog.dart';
@@ -323,9 +326,77 @@ List<StatusChip> bossMechanicChips(BattleState b) {
             two ? ProtoColors.crimson : ProtoColors.pink,
             '<b style="color:#d63031">${m.name}</b> '
             '<span class="k">(${two ? 'fase 2' : 'fase 1'})</span><br>${m.counter}'));
+
+      // ---- Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 4) ----
+      case BossMechanicKind.abyss:
+        chips.addAll(abyssChips(b, e, m));
     }
   }
   return chips;
+}
+
+/// Chips de un Jefe del Abismo: fase, próximo movimiento, furia, sello,
+/// aspecto, inmunidad y buffs comidos.
+List<StatusChip> abyssChips(BattleState b, Combatant e, BossMechanicDef m) {
+  final d = abyssBossOf(e.enemyType);
+  if (d == null) return const [];
+  final ph = AbyssRules.phaseOf(d, e);
+  final n = AbyssRules.phaseIndex(d, e) + 1;
+  final tip = '<b style="color:#c39bff">${protoEsc(d.name)}</b> '
+      '<span class="k">(fase $n/${d.phases.length} · ${protoEsc(ph.name)})</span>'
+      '<br>${m.counter}';
+  const violet = Color(0xFFC39BFF);
+  final next = AbyssRules.nextMove(d, e);
+  final enrage = AbyssRules.enrageIn(d, e);
+  final addsAlive = m.addType != null &&
+      b.enemies.any((c) => c.alive && c.enemyType == m.addType);
+  final solo = b.party.length == 1;
+  final immune = ph.immuneWhileAdds && addsAlive;
+  // Lo más urgente primero: la caja del detalle puede cortar los últimos.
+  return [
+    StatusChip(
+        immune ? 'INMUNE' : 'FASE $n/${d.phases.length}',
+        immune
+            ? 'FASE $n/${d.phases.length} · INMUNE al daño · matá a sus invocaciones'
+            : 'FASE $n/${d.phases.length} · ${ph.name}',
+        immune
+            ? const Color(0xFFB8C6FF)
+            : n >= d.phases.length
+                ? ProtoColors.crimson
+                : ProtoColors.pink,
+        tip),
+    if (e.abyssEnraged)
+      StatusChip('FURIA', 'FURIA: golpea a todos', ProtoColors.crimson, tip),
+    if (!e.abyssEnraged && next.kind.telegraphed)
+      StatusChip('PRÓX: ${next.label}', 'PRÓXIMO: ${next.label}', violet, tip),
+    if (e.abyssSeal > 0)
+      () {
+        final r = ReactionKind.values[
+            (e.abyssSeal - 1).clamp(0, ReactionKind.values.length - 1)];
+        final need = solo ? 'cualquier reacción' : r.label;
+        return StatusChip('SELLO ${e.abyssSealTurns}',
+            'SELLO ${e.abyssSealTurns}t · rompelo con $need', violet, tip);
+      }(),
+    if (e.abyssAspect > 0)
+      () {
+        final el = GameElement.values[
+            (e.abyssAspect - 1).clamp(0, GameElement.values.length - 1)];
+        return StatusChip('Aspecto ${el.label}',
+            'Aspecto ${el.label} · resiste ${el.label}', ProtoColors.ice, tip);
+      }(),
+    if (!e.abyssEnraged)
+      StatusChip(
+          'Furia en $enrage',
+          'Furia en $enrage turno${enrage == 1 ? '' : 's'}',
+          enrage <= 5 ? ProtoColors.crimson : ProtoColors.dim,
+          tip),
+    if (d.healHurts > 0)
+      StatusChip('Curas lo dañan', 'Las curas lo dañan (${jsRound(d.healHurts * 100)}%)',
+          ProtoColors.green, tip),
+    if (e.abyssFeast > 0)
+      StatusChip('Comió ${e.abyssFeast}', 'Buffs comidos: ${e.abyssFeast}',
+          ProtoColors.orange, tip),
+  ];
 }
 
 /// La fila de chips de las mecánicas de jefe (vacía si no hay).
@@ -802,9 +873,16 @@ class TargetBar extends StatelessWidget {
     final e = enemy;
     // Sigue al modo daltónico (accessibility.md § 3).
     const breakColor = VisionColor(VisionSlot.breakBar);
+    final hpText = '${e.hp}/${e.maxHp}';
+    final breakText = e.broken
+        ? '¡ROTO!'
+        : '${e.breakGauge.floor()}/${e.breakMax.round()}';
+    // Jefes del Abismo: 5 cifras ("3300/10000") — la columna crece.
+    final chars =
+        math.max(9, math.max(hpText.length, breakText.length)).toDouble();
     return Container(
       key: const ValueKey('target-bar'),
-      width: RetroType.width(context, 200),
+      width: RetroType.width(context, 200 + (chars - 9) * 8.0),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: ProtoColors.bg.withValues(alpha: 0.9),
@@ -820,9 +898,9 @@ class TargetBar extends StatelessWidget {
                 '${e.ultPending ? ' ${hexSpan('#ff3355', '¡ULT!')}' : ''}'),
             _BarRow(
                 RetroBar(value: e.hp, max: e.maxHp, color: ProtoColors.crimson),
-                '${e.hp}/${e.maxHp}',
+                hpText,
                 label: 'HP',
-                valueChars: 9),
+                valueChars: chars),
             if (e.hasBreak)
               _BarRow(
                   RetroBar(
@@ -830,12 +908,10 @@ class TargetBar extends StatelessWidget {
                       max: e.breakMax,
                       height: 4,
                       color: breakColor),
-                  e.broken
-                      ? '¡ROTO!'
-                      : '${e.breakGauge.floor()}/${e.breakMax.round()}',
+                  breakText,
                   label: 'QB',
                   color: breakColor,
-                  valueChars: 9),
+                  valueChars: chars),
           ],
         ),
       ),

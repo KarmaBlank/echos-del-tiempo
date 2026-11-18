@@ -9,6 +9,7 @@ import '../../build_planner/presentation/build_feed.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../core/settings/game_settings.dart';
 import '../../../core/settings/settings_providers.dart';
+import '../../../game_engine/data/uniques_catalog.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/rules/eco_rules.dart';
@@ -481,6 +482,13 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               ecoAtlas: r.missionId == EcoRules.missionId && r.success
                   ? ecoAtlasText(view.atlasGain)
                   : null,
+              abyss: switch (controller.lastAbyss) {
+                (final n, final points) when r.success =>
+                  abyssResultText(
+                      controller.engine.catalog.abyssBosses[n]?.name ?? '?',
+                      points),
+                _ => null,
+              },
               trial: switch (controller.lastTrial) {
                 (final n, final gained) when r.success =>
                   trialResultText(n, gained),
@@ -499,6 +507,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                       dropLabelText(controller.engine.progression, d),
                       controller.engine.lootVerdict(me.profile, d,
                           wants: controller.localWants),
+                      exclusive:
+                          kUniques[d.item?.uniqueId]?.exclusive ?? false,
                       tooltip: d.eco != null
                           ? ecoTooltipMarkup(
                               controller.engine.progression, d.eco!)
@@ -599,7 +609,10 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       case WorldPanel.armory:
         return ArmoryPanel(view: view, controller: controller);
       case WorldPanel.ecoPortal:
-        return EcoPortalPanel(view: view, controller: controller);
+        return EcoPortalPanel(
+            view: view,
+            controller: controller,
+            sprites: ref.read(gameSpritesProvider).valueOrNull);
       case WorldPanel.ascension:
         return AscensionPanel(
             view: view,

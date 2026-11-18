@@ -163,6 +163,26 @@ List<AdminEntry> buildAdminIndex(BalanceBase base) {
         name: e.name,
         detail: 'turnos ${e.turns}'));
   }
+  // Jefes del Abismo v0.8 (abyss_bosses.md).
+  for (final d in c.abyssBosses.values) {
+    out.add(AdminEntry(
+      kind: BalanceKind.abyssBoss,
+      id: '${d.number}',
+      name: d.name,
+      detail: 'nivel ${d.level} · ${d.phases.length} fases · furia '
+          '${d.enrageTurns}',
+      links: [
+        if (c.enemies.containsKey(d.enemyId)) (BalanceKind.enemy, d.enemyId),
+      ],
+    ));
+  }
+  for (final f in c.fragmentDrops.values) {
+    out.add(AdminEntry(
+        kind: BalanceKind.fragmentDrop,
+        id: f.id,
+        name: f.name,
+        detail: 'tier ${f.minTier}+ · jefe ${trimNum(f.boss)}'));
+  }
   for (final a in kAscensions.values) {
     out.add(AdminEntry(
       kind: null,

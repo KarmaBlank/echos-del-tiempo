@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
 
@@ -44,8 +45,10 @@ class PassiveTreeView extends StatefulWidget {
   final bool showReset;
   final String resetLabel;
 
-  /// Alto del visor (el panel lo ajusta al espacio que tiene).
-  final double height;
+  /// Alto del visor; `null` = ocupa lo que queda debajo de la fila de
+  /// arriba (el padre debe dar un alto acotado, como el panel de
+  /// personaje).
+  final double? height;
 
   /// Línea de ayuda propia (el panel de personaje ya pone la suya).
   final bool showHelp;
@@ -59,12 +62,15 @@ class PassiveTreeView extends StatefulWidget {
 
   bool get planning => onPlan != null;
 
-  /// Lado del lienzo (mundo) y píxeles por unidad de árbol.
-  static const size = 1080.0;
+  /// Lado del lienzo (mundo) y píxeles por unidad de árbol. El árbol v6
+  /// llega a ±21.5 unidades con las etiquetas (passive_tree_v6.md § 2):
+  /// ±23.
+  static const size = 1380.0;
   static const scale = 30.0;
 
-  /// Zoom mínimo y máximo del visor.
-  static const minZoom = 0.3;
+  /// Zoom mínimo y máximo del visor (0.2: TODO encuadra el árbol v6 de
+  /// ~41 unidades en un visor de ~350 px de alto).
+  static const minZoom = 0.2;
   static const maxZoom = 2.5;
 
   /// Alto del visor por defecto.
@@ -113,6 +119,35 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   }
 
   PassiveTreeCatalog get _cat => widget.rules.catalog;
+
+  /// Estados de todos los nodos, recalculados solo cuando cambia el
+  /// perfil (no al mover el mouse: ~600 nodos en el árbol v6).
+  Map<String, TreeNodeState>? _states;
+  String? _statesKey;
+
+  Map<String, TreeNodeState> _allStates() {
+    final p = widget.profile;
+    final key = '${identityHashCode(_cat)}|${p.classId}|${p.treeLevel}|'
+        '${widget.inBattle}|${p.tree.join(',')}';
+    if (_statesKey != key || _states == null) {
+      _statesKey = key;
+      _states = {for (final id in _cat.nodes.keys) id: _status(id).state};
+    }
+    return _states!;
+  }
+
+  /// Caja de todos los nodos (unidades de árbol).
+  static final _bounds = Expando<Rect>();
+
+  Rect get _treeBounds => _bounds[_cat] ??= _cat.nodes.values.fold<Rect?>(
+          null,
+          (r, n) => (r ?? Rect.fromLTWH(n.x, n.y, 0, 0))
+              .expandToInclude(Rect.fromLTWH(n.x, n.y, 0, 0))) ??
+      Rect.zero;
+
+  /// Margen de TODO en px de pantalla: el radio de una keystone (11) más
+  /// su anillo de foco y un respiro.
+  static const fitMargin = 20.0;
 
   TreeNodeStatus _status(String id) => treeNodeStatus(
         widget.rules,
@@ -187,9 +222,16 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   void _zoomBy(double f) => setState(() => _look(_viewCenter, _zoom * f));
 
   /// Todo el árbol en el visor.
-  void _fitAll() => setState(() => _look(
-      const Offset(PassiveTreeView.size / 2, PassiveTreeView.size / 2),
-      math.min(_view.width, _view.height) / (36 * PassiveTreeView.scale)));
+  /// Todo el árbol en el visor: la caja de todos los nodos (más el radio
+  /// de los nodos) entra en los dos ejes, centrada.
+  void _fitAll() {
+    final b = _treeBounds;
+    const s = PassiveTreeView.scale;
+    final zx = (_view.width - 2 * fitMargin) / math.max(1, b.width * s);
+    final zy = (_view.height - 2 * fitMargin) / math.max(1, b.height * s);
+    setState(() => _look(
+        PassiveTreeView.toCanvas(b.center.dx, b.center.dy), math.min(zx, zy)));
+  }
 
   /// La zona de tu clase (su ruta y sus clusters).
   void _home({bool rebuild = true}) {
@@ -198,15 +240,17 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         const Offset(PassiveTreeView.size / 2, PassiveTreeView.size / 2);
     var z = 0.8;
     if (start != null) {
-      // Caja de la zona: los nodos a ±40° de la dirección de la clase,
-      // del inicio a las keystones (sin los puentes).
+      // Caja de la zona: los nodos de clusters de tu clase (v4 y
+      // exteriores v6), del inicio a las keystones (sin los puentes).
       final dir = math.atan2(start.y, start.x);
       var box = Rect.fromCircle(center: Offset(start.x, start.y), radius: 1);
       for (final n in _cat.nodes.values) {
         final r = math.sqrt(n.x * n.x + n.y * n.y);
         var da = (math.atan2(n.y, n.x) - dir).abs();
         if (da > math.pi) da = 2 * math.pi - da;
-        if (r < 2.5 || r > 13.5 || da > 40 * math.pi / 180) continue;
+        if (r < 2.5 || r > 21.0 || da > 40 * math.pi / 180) continue;
+        final path = _cat.paths[n.pathId];
+        if (path != null && path.kind != 'clase') continue;
         box = box.expandToInclude(Rect.fromLTWH(n.x, n.y, 0, 0));
       }
       // Margen para las etiquetas de los clusters (1 unidad más allá).
@@ -245,20 +289,28 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     final rules = widget.rules;
     final p = widget.profile;
     final points = rules.pointsAvailable(p.treeLevel, p.passiveProgress);
-    final states = {
-      for (final id in _cat.nodes.keys) id: _status(id).state,
-    };
+    final states = _allStates();
     final hits = _hits();
     final focusId = _hover ?? _selected;
     final route = focusId == null
         ? const <String>[]
         : rules.pathTo(p.classId, p.passiveProgress, focusId) ?? const [];
     final hoverPath = focusId == null ? null : _cat.nodes[focusId]?.pathId;
+    final fill = widget.height == null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
       children: [
+        if (widget.showHelp) ...[
+          const Text(
+              'Arrastrá para mover, rueda o +/− para zoom. Clic: tomar nodo.',
+              style: TextStyle(color: ProtoColors.dim)),
+          const SizedBox(height: 8),
+        ],
+        // Puntos, reinicio, buscador y zoom en una sola fila (si entra):
+        // más alto para el visor (árbol v6).
         Wrap(
-          spacing: 16,
+          spacing: 12,
           runSpacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
@@ -276,18 +328,11 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                   key: const ValueKey('tree-reset'),
                   reason: widget.resetReason,
                   onPressed: widget.onReset),
+            _toolbar(hits.length),
           ],
         ),
-        if (widget.showHelp) ...[
-          const SizedBox(height: 4),
-          const Text(
-              'Arrastrá para mover, rueda o +/− para zoom. Clic: tomar nodo.',
-              style: TextStyle(color: ProtoColors.dim)),
-        ],
         const SizedBox(height: 8),
-        _toolbar(hits.length),
-        const SizedBox(height: 8),
-        Row(
+        _grow(fill, Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
@@ -308,10 +353,13 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
               child: SingleChildScrollView(child: _info(focusId, route)),
             ),
           ],
-        ),
+        )),
       ],
     );
   }
+
+  static Widget _grow(bool fill, Widget child) =>
+      fill ? Expanded(child: child) : child;
 
   /// Buscador y botones de zoom.
   Widget _toolbar(int hitCount) => Wrap(
@@ -342,7 +390,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                 key: const ValueKey('tree-search-count'),
                 style: TextStyle(
                     color: hitCount == 0 ? ProtoColors.dim : ProtoColors.sky)),
-          const SizedBox(width: 16),
+          const SizedBox(width: 8),
           PanelButton('−',
               key: const ValueKey('tree-zoom-out'),
               onPressed: () => _zoomBy(1 / 1.25)),
@@ -721,8 +769,29 @@ class PassiveTreePainter extends CustomPainter {
   bool _onRoute(String id) =>
       route.contains(id) || (id == focus && route.isNotEmpty);
 
-  @override
-  void paint(Canvas canvas, Size size) {
+  /// Capa fija (anillo, enlaces y nodos con su estado y el plan),
+  /// grabada una vez y reutilizada mientras no cambien los estados, el
+  /// plan ni la clase: mover el mouse o buscar solo redibuja la capa de
+  /// resaltado (árbol v6, ~600 nodos; passive_tree_v6.md § 9).
+  static ui.Picture? _base;
+  static (PassiveTreeCatalog, String?, Map<String, TreeNodeState>,
+      Set<String>)? _baseKey;
+
+  /// Cuántas veces se grabó la capa fija (tests de rendimiento).
+  @visibleForTesting
+  static int baseBuilds = 0;
+
+  bool _baseValid() {
+    final k = _baseKey;
+    return _base != null &&
+        k != null &&
+        identical(k.$1, catalog) &&
+        k.$2 == startId &&
+        (identical(k.$3, states) || _sameStates(k.$3, states)) &&
+        _sameSet(k.$4, planned);
+  }
+
+  void _paintBase(Canvas canvas) {
     const center = Offset(PassiveTreeView.size / 2, PassiveTreeView.size / 2);
     // Anillo central compartido.
     final ringR = math.sqrt(math.pow(catalog.nodes['p_gue']?.x ?? 0, 2) +
@@ -735,64 +804,119 @@ class PassiveTreePainter extends CustomPainter {
           ..strokeWidth = 8
           ..color = ProtoColors.panelBorder.withValues(alpha: 0.35));
 
-    final link = Paint()..strokeWidth = 2;
-    final seen = <String>{};
+    final idle = Paint()
+      ..strokeWidth = 2
+      ..color = ProtoColors.panelBorder;
+    final owned = Paint()
+      ..strokeWidth = 2
+      ..color = ProtoColors.green;
     for (final n in catalog.nodes.values) {
+      for (final l in n.links) {
+        if (n.id.compareTo(l) >= 0) continue;
+        final b = catalog.nodes[l];
+        if (b == null) continue;
+        canvas.drawLine(PassiveTreeView.nodeCenter(n),
+            PassiveTreeView.nodeCenter(b), _has(n.id) && _has(l) ? owned : idle);
+      }
+    }
+    for (final n in catalog.nodes.values) {
+      _drawNode(canvas, n);
+    }
+  }
+
+  void _drawNode(Canvas canvas, PassiveNode n) {
+    final c = PassiveTreeView.nodeCenter(n);
+    final r = PassiveTreeView.nodeRadius(n, start: n.id == startId);
+    final state = states[n.id] ?? TreeNodeState.locked;
+    final fill = switch (state) {
+      TreeNodeState.start => ProtoColors.gold,
+      TreeNodeState.taken => n.kind == 'k' ? keyTaken : ProtoColors.green,
+      TreeNodeState.available => ProtoColors.sky,
+      TreeNodeState.locked => locked,
+    };
+    final big = n.kind == 'n' || n.kind == 'k';
+    final border = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = big ? 2.5 : 1.5
+      ..color = big ? ProtoColors.gold : ProtoColors.bg;
+    if (n.kind == 'k') {
+      final hex = _hexagon(c, r);
+      canvas.drawPath(hex, Paint()..color = fill);
+      canvas.drawPath(hex, border);
+    } else {
+      canvas.drawCircle(c, r, Paint()..color = fill);
+      canvas.drawCircle(c, r, border);
+    }
+    if (planned.contains(n.id)) {
+      canvas.drawCircle(
+          c,
+          r + 5,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.5
+            ..color = planColor);
+    }
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!_baseValid()) {
+      final rec = ui.PictureRecorder();
+      _paintBase(Canvas(rec));
+      _base?.dispose();
+      _base = rec.endRecording();
+      _baseKey = (catalog, startId, states, Set.of(planned));
+      baseBuilds++;
+    }
+    canvas.drawPicture(_base!);
+
+    // Resaltado: enlaces del camino y del cluster bajo el mouse (encima
+    // de la capa fija), y se vuelven a dibujar sus nodos.
+    final hot = <String>{
+      ...route,
+      if (focus != null) focus!,
+      if (highlightPath != null)
+        for (final n in catalog.nodes.values)
+          if (n.pathId == highlightPath) n.id,
+    };
+    final link = Paint();
+    final redraw = <String>{};
+    final seen = <String>{};
+    for (final id in hot) {
+      final n = catalog.nodes[id];
+      if (n == null) continue;
       for (final l in n.links) {
         final key = n.id.compareTo(l) < 0 ? '${n.id}|$l' : '$l|${n.id}';
         if (!seen.add(key)) continue;
         final b = catalog.nodes[l];
         if (b == null) continue;
+        if (_has(n.id) && _has(l)) continue;
         final routeLink = (_onRoute(n.id) || _has(n.id)) &&
             (_onRoute(l) || _has(l)) &&
             (_onRoute(n.id) || _onRoute(l));
         final lit = _inPath(n) && _inPath(b);
+        if (!routeLink && !lit) continue;
         link
-          ..color = _has(n.id) && _has(l)
-              ? ProtoColors.green
-              : routeLink
-                  ? ProtoColors.gold
-                  : lit
-                      ? ProtoColors.gold.withValues(alpha: 0.5)
-                      : ProtoColors.panelBorder
-          ..strokeWidth = routeLink ? 4 : (lit ? 3 : 2);
+          ..color = routeLink
+              ? ProtoColors.gold
+              : ProtoColors.gold.withValues(alpha: 0.5)
+          ..strokeWidth = routeLink ? 4 : 3;
         canvas.drawLine(
             PassiveTreeView.nodeCenter(n), PassiveTreeView.nodeCenter(b), link);
+        redraw
+          ..add(n.id)
+          ..add(l);
       }
     }
+    for (final id in redraw) {
+      _drawNode(canvas, catalog.nodes[id]!);
+    }
 
-    for (final n in catalog.nodes.values) {
+    for (final id in {...hits, ...hot}) {
+      final n = catalog.nodes[id];
+      if (n == null) continue;
       final c = PassiveTreeView.nodeCenter(n);
       final r = PassiveTreeView.nodeRadius(n, start: n.id == startId);
-      final state = states[n.id] ?? TreeNodeState.locked;
-      final fill = switch (state) {
-        TreeNodeState.start => ProtoColors.gold,
-        TreeNodeState.taken => n.kind == 'k' ? keyTaken : ProtoColors.green,
-        TreeNodeState.available => ProtoColors.sky,
-        TreeNodeState.locked => locked,
-      };
-      final big = n.kind == 'n' || n.kind == 'k';
-      final border = Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = big ? 2.5 : 1.5
-        ..color = big ? ProtoColors.gold : ProtoColors.bg;
-      if (n.kind == 'k') {
-        final hex = _hexagon(c, r);
-        canvas.drawPath(hex, Paint()..color = fill);
-        canvas.drawPath(hex, border);
-      } else {
-        canvas.drawCircle(c, r, Paint()..color = fill);
-        canvas.drawCircle(c, r, border);
-      }
-      if (planned.contains(n.id)) {
-        canvas.drawCircle(
-            c,
-            r + (hits.contains(n.id) ? 9 : 5),
-            Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 2.5
-              ..color = planColor);
-      }
       if (hits.contains(n.id)) {
         canvas.drawCircle(
             c,
@@ -801,6 +925,16 @@ class PassiveTreePainter extends CustomPainter {
               ..style = PaintingStyle.stroke
               ..strokeWidth = 2.5
               ..color = searchColor);
+        // Planificado y encontrado: el anillo del plan va por fuera.
+        if (planned.contains(n.id)) {
+          canvas.drawCircle(
+              c,
+              r + 9,
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 2.5
+                ..color = planColor);
+        }
       }
       if (_onRoute(n.id) || n.id == focus || _inPath(n)) {
         canvas.drawCircle(

@@ -34,7 +34,8 @@ void main() {
     final cost =
         kAtlasNodes.where((n) => !n.locked).fold(0, (a, n) => a + n.cost);
     expect(cost, 51);
-    expect(AtlasRules.maxPoints, 44, reason: 'no alcanza para todo');
+    // v0.8: +6 de los Jefes del Abismo (x1..x5), sigue sin alcanzar.
+    expect(AtlasRules.maxPoints, 50, reason: 'no alcanza para todo');
     expect(kAtlasNodes.where((n) => n.locked).map((n) => n.id),
         ['grieta', 'grietamayor']);
   });

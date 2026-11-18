@@ -346,6 +346,13 @@ const Map<String, int> kEnemyBaseLevel = {
   // Invocaciones de jefes (las crea la batalla; nunca en el campo).
   'ecoHechicera': 30,
   'siervoEspectral': 40,
+  // Jefes del Abismo v0.8 (abyss_bosses.md § 2.2): stats a su nivel.
+  'golemAbismo': 85,
+  'hechiceraAbismo': 86,
+  'espectroAbismo': 88,
+  'devoradorAbismo': 90,
+  'ecoPrimordial': 90,
+  'ecoAbismo': 86,
 };
 
 /// PROVISORIO: reemplazo de los ids de enemigos nuevos mientras no

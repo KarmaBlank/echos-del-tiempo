@@ -1,4 +1,9 @@
+import '../../../app/theme/proto_markup.dart';
+import '../../../game_engine/data/abyss_catalog.dart';
+import '../../../game_engine/data/uniques_catalog.dart';
 import '../../../game_engine/models/eco.dart';
+import '../../../game_engine/models/item.dart';
+import '../../../game_engine/rules/abyss_rules.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
@@ -62,6 +67,75 @@ String ecoCraftRowMarkup(EcoItem e, EcoCraftOp op) {
   return '<b>$what</b>'
       '${c == null ? '' : ' <span style="color:#7d8bc4">${c.$2} ${c.$1.label.substring(0, 3)}.</span>'}';
 }
+
+// ---------------------------------------------------------------------
+// Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 4). Sin lore:
+// nombres y textos de mecánica.
+// ---------------------------------------------------------------------
+
+/// Ayuda `[?]` de la pestaña ABISMO.
+const kAbyssHelp = '<b>Jefes del Abismo</b><br>'
+    'Versiones extremas de 4 jefes (nivel 85–90) y un jefe secreto. '
+    '<span class="k">Fragmentos</span>: caen en Ecos de tier 10 o más '
+    '(más tier, rareza y mods = más chance; el Eco cuyo jefe coincide da '
+    'más de ese Fragmento). 5 abren su jefe; se consumen al entrar.<br>'
+    'Pelea directa, sin mazmorra: fases, avisos del próximo movimiento y '
+    'furia si tarda. Cada jugador gana su propio botín: el legendario '
+    'exclusivo es seguro la primera vez; Esencias del Abismo (forja).<br>'
+    'El secreto pide vencer a los 4 y 1 Fragmento de cada uno.';
+
+/// Por qué no se puede abrir [d] ahora (o `null`).
+String? abyssOpenBlocked(
+    GameSession s, PlayerProfile p, AbyssBossDef d, AbyssRules rules) {
+  if (s.mode != SessionMode.lobby) return 'Solo en el pueblo';
+  if (s.vote != null) return 'Ya hay una votación';
+  return rules.cannotOpen(p, d);
+}
+
+/// Nombre visible de [d]: `???` hasta vencerlo (el secreto, hasta vencer
+/// a los 4).
+String abyssBossLabel(PlayerProfile p, AbyssBossDef d) {
+  if (d.secret && !AbyssRules.visible(p, d)) return '??? · Jefe secreto';
+  return AbyssRules.known(p, d) || !d.secret ? d.name : '???';
+}
+
+/// Ficha de [d] (markup): nivel, fases, costo, mecánica y recompensas.
+String abyssDetailMarkup(
+    PlayerProfile p, AbyssBossDef d, AbyssRules rules, String counter) {
+  if (d.secret && !AbyssRules.visible(p, d)) {
+    return '<b>??? · Jefe secreto</b><br>'
+        '<span class="k">Requisito:</span> vencer a los 4 Jefes del Abismo '
+        '(${p.abyssKills.where((n) => n <= 4).length}/4).<br>'
+        '<span class="k">Costo:</span> ${rules.costText(d)}.';
+  }
+  final legs = [
+    for (final id in d.legendaryIds)
+      if (kUniques[id] case final u?) protoEsc(u.name),
+  ];
+  return '<b>${protoEsc(d.name)}</b>'
+      '${AbyssRules.known(p, d) ? ' <span class="k">(vencido)</span>' : ''}<br>'
+      '<span class="k">Nivel</span> ${d.level} · '
+      '<span class="k">Fases</span> ${d.phases.map((f) => protoEsc(f.name)).join(' → ')}<br>'
+      '<span class="k">Costo:</span> ${rules.costText(d)} (se consume al entrar)<br>'
+      '<span class="k">Furia:</span> en su turno ${d.enrageTurns}<br>'
+      '$counter<br>'
+      '<span class="k">Recompensas:</span> ${legs.join(' o ')} (seguro la '
+      'primera vez, después ${(d.legendaryChance * 100).round()}%), '
+      'Esencia del Abismo, +${d.atlasPoints} punto${d.atlasPoints == 1 ? '' : 's'} '
+      'de Atlas la primera vez.';
+}
+
+/// Línea de Fragmentos del jugador.
+String abyssFragmentsMarkup(PlayerProfile p) => [
+      for (final f in kFragments)
+        '${protoEsc(f.label.split(' ').last)} <b>${p.material(f)}</b>',
+      'Esencia <b>${p.material(CraftMaterial.esencia)}</b>',
+    ].join(' · ');
+
+/// Línea del resultado de un Jefe del Abismo vencido.
+String abyssResultText(String name, int points) => points > 0
+    ? '$name vencido: +$points punto${points == 1 ? '' : 's'} de Atlas'
+    : '$name vencido de nuevo';
 
 /// Texto de la Maestría para la barra / el panel.
 String masteryText(PlayerProfile p) => p.mastery >= PlayerProfile.maxMastery

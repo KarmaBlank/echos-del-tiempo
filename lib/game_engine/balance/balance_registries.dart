@@ -117,6 +117,11 @@ class BalanceBase {
         BalanceKind.mechanic => mechanics,
         BalanceKind.reaction => catalog.reactions,
         BalanceKind.elementStatus => catalog.elementStatuses,
+        // Por número de jefe como texto (`1`..`5`).
+        BalanceKind.abyssBoss => {
+            for (final e in catalog.abyssBosses.entries) '${e.key}': e.value,
+          },
+        BalanceKind.fragmentDrop => catalog.fragmentDrops,
       };
 
   late final BalanceContext context = BalanceContext(

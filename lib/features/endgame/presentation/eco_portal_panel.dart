@@ -14,7 +14,9 @@ import '../../../game_engine/models/player_profile.dart';
 import '../../inventory/domain/item_text.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
+import '../../combat/presentation/game_sprites.dart';
 import '../domain/endgame_text.dart';
+import 'abyss_view.dart';
 import 'atlas_view.dart';
 
 /// Pestañas del Portal del Eco.
@@ -22,7 +24,9 @@ enum EcoPortalTab {
   ecos('ECOS',
       'Elegí un Eco: ABRIR lo propone al grupo; los materiales lo mejoran.'),
   atlas('ATLAS',
-      'Árbol de la cuenta: ganás puntos al completar algo por primera vez.');
+      'Árbol de la cuenta: ganás puntos al completar algo por primera vez.'),
+  abismo('ABISMO',
+      'Jefes del Abismo: juntá Fragmentos en Ecos de tier 10+ y abrí su pelea.');
 
   const EcoPortalTab(this.label, this.hint);
   final String label;
@@ -37,11 +41,15 @@ class EcoPortalPanel extends StatefulWidget {
     required this.view,
     required this.controller,
     this.initialTab = EcoPortalTab.ecos,
+    this.sprites,
   });
 
   final SessionView view;
   final SessionController controller;
   final EcoPortalTab initialTab;
+
+  /// Para las tarjetas de los Jefes del Abismo (silueta / sprite).
+  final GameSprites? sprites;
 
   @override
   State<EcoPortalPanel> createState() => _EcoPortalPanelState();
@@ -69,7 +77,7 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
         title: 'PORTAL DEL ECO',
         width: 1040,
         fill: true,
-        help: kEcoPortalHelp,
+        help: _tab == EcoPortalTab.abismo ? kAbyssHelp : kEcoPortalHelp,
         onClose: c.closePanel,
         titleTrailing: ProtoText(
             key: const ValueKey('portal-points'),
@@ -96,6 +104,11 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
               child: switch (_tab) {
                 EcoPortalTab.ecos => _ecos(p),
                 EcoPortalTab.atlas => _atlas(atlas),
+                EcoPortalTab.abismo => AbyssView(
+                    key: const ValueKey('abyss-view'),
+                    view: view,
+                    controller: c,
+                    sprites: widget.sprites),
               },
             ),
           ],

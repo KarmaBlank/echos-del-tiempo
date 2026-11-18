@@ -360,8 +360,35 @@ class LootPainter {
         _rect(c, const Color(0xFFE84393), -1, -3, 1, 1);
         _rect(c, const Color(0xFF74B9FF), 0, -3, 1, 1);
         _rect(c, const Color(0xFF55EFC4), 1, -3, 1, 1);
+      // Jefes del Abismo v0.8: Fragmentos (rombo violeta con núcleo del
+      // color de su jefe) y Esencia (gota carmesí).
+      case StackKind.fragReloj ||
+            StackKind.fragEco ||
+            StackKind.fragCorona ||
+            StackKind.fragEras:
+        _fill.color = const Color(0xFF6C3FA0);
+        c.drawPath(
+            Path()
+              ..moveTo(0, -8)
+              ..lineTo(3, -4)
+              ..lineTo(0, 0)
+              ..lineTo(-3, -4)
+              ..close(),
+            _fill);
+        _rect(c, _fragmentCore(k), -1, -5, 2, 2);
+      case StackKind.esencia:
+        _rect(c, const Color(0xFFD63031), -1, -7, 2, 2);
+        _rect(c, const Color(0xFFD63031), -2, -5, 4, 4);
+        _rect(c, const Color(0xFFFF7675), -1, -4, 1, 1);
     }
   }
+
+  static Color _fragmentCore(StackKind k) => switch (k) {
+        StackKind.fragReloj => const Color(0xFFFFD166),
+        StackKind.fragEco => const Color(0xFF7FF3FF),
+        StackKind.fragCorona => const Color(0xFFB8C6FF),
+        _ => const Color(0xFFFF7B29),
+      };
 
   /// Haz de luz vertical (Legendario en el piso o recién caído). [boost]
   /// 0..1 = estallido de los primeros instantes.

@@ -105,6 +105,14 @@ class Combatant {
     this.brittle = false,
     this.freezeResist = 0,
     Map<StatusKind, String>? primedBy,
+    this.abyssTurns = 0,
+    this.abyssEnraged = false,
+    this.abyssSeal = 0,
+    this.abyssSealTurns = 0,
+    this.abyssAspect = 0,
+    this.abyssTaken = 0,
+    this.abyssFeast = 0,
+    this.abyssCopy,
   })  : primedBy = primedBy ?? {},
         family = family ??
             (isPlayer || enemyType == null ? null : kEnemyFamily[enemyType]),
@@ -261,6 +269,32 @@ class Combatant {
   /// árbol (passive_tree_v4.md § 8).
   Map<StatusKind, String> primedBy;
 
+  // ---- Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 2) ----
+
+  /// Turnos propios jugados (la furia llega en `enrageTurns`).
+  int abyssTurns;
+
+  /// En furia: ATQ × `enragePower` y golpes a todos.
+  bool abyssEnraged;
+
+  /// Sello activo: `ReactionKind.index + 1` (0 = sin sello).
+  int abyssSeal;
+
+  /// Turnos propios que le quedan al sello.
+  int abyssSealTurns;
+
+  /// Aspecto elemental: `GameElement.index + 1` (0 = sin aspecto).
+  int abyssAspect;
+
+  /// Daño recibido desde su acción anterior (Rebobinar).
+  int abyssTaken;
+
+  /// Buffs del grupo que se comió (Devorar).
+  int abyssFeast;
+
+  /// Última habilidad del grupo que copia (Reflejo).
+  String? abyssCopy;
+
   /// Ascensión del jugador (`null` = clase base o enemigo).
   String? get ascensionId => build?.ascension.id;
 
@@ -374,6 +408,14 @@ class Combatant {
         brittle: brittle,
         freezeResist: freezeResist,
         primedBy: Map.of(primedBy),
+        abyssTurns: abyssTurns,
+        abyssEnraged: abyssEnraged,
+        abyssSeal: abyssSeal,
+        abyssSealTurns: abyssSealTurns,
+        abyssAspect: abyssAspect,
+        abyssTaken: abyssTaken,
+        abyssFeast: abyssFeast,
+        abyssCopy: abyssCopy,
       );
 }
 

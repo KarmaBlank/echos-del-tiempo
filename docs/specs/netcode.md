@@ -584,3 +584,16 @@ Servidor dedicado y rollback (ver sus README), TURN / NAT simétrica,
 anti-trampas (el host confía en las posiciones y perfiles de los
 clientes, como el prototipo), reconexión de un cliente caído (vuelve a
 entrar como jugador nuevo con su perfil guardado) y migración de host.
+
+## Protocolo 9 (v0.8.0, Jefes del Abismo)
+
+Aditivo (docs/specs/abyss_bosses.md § 5): acciones `{"t":"abyss","n":1..5}`
+y `{"t":"devAbyss","k":"frag"|"kills"}` (solo `devTools`); evento
+`{"t":"abyssDone","n":..,"ids":[..]}` (cada cliente anota `x<n>` en el
+Atlas de su cuenta); sesión `abyss`, `abyssBy`; perfil `aby` (vencidos);
+combatiente `abT` `abE` `abS` `abSN` `abA` `abK` `abF` `abC`; fases de
+`BossMechanicEvent` `abyssTelegraph` `enrage` `sealCast` `sealBroken`
+`sealFade` `rewind` `timeWarp` `mirror` `devour` `aspect`; pilas
+`mat:fragReloj` `mat:fragEco` `mat:fragCorona` `mat:fragEras`
+`mat:esencia`; forja `essence`. El cliente suma los vencidos de su
+cuenta al perfil antes del `hello` (`AbyssRules.withAccount`).

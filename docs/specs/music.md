@@ -484,3 +484,15 @@ Los tests piden RMS entre −22 y −14 dBFS en todas las piezas.
 Tests de la costura: el bucle plegado es idéntico (diferencia < 1e-9) a
 la segunda vuelta de un render de dos vueltas seguidas, y el salto
 `|s[fin] − s[0]|` nunca supera el mayor salto entre muestras del bucle.
+
+## Jefes del Abismo (v0.8.0)
+
+Dos piezas nuevas (docs/specs/abyss_bosses.md § 4), mismas reglas del
+repertorio (bucle 30–75 s, ocarina al frente, RMS −22…−14 dBFS):
+- `bossAbyss` · **Jefe del Abismo** (Gólem, Hechicera, Espectro y
+  Devorador del Abismo): Mi menor frigio con el tritono como color, 172
+  bpm, 32 compases; riff en 3+3+2.
+- `bossSecret` · **Eco Primordial**: Do menor con acordes aumentados, 156
+  bpm, 32 compases en tres texturas (Origen, Reflejo, Primordial).
+`MusicSelector.trackFor` elige por el jefe de la batalla
+(`MusicSelector.abyssTrack`); las dos cuentan como pieza de batalla.

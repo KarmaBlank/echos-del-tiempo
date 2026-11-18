@@ -159,7 +159,10 @@ class LootRules {
   UniqueDef? pickUnique(RandomSource rng, int itemLevel, {String? family}) {
     final pool = [
       for (final u in kUniques.values)
-        if ((catalog.weapons[u.baseId]?.level ?? 99) <= itemLevel) u,
+        // Los exclusivos del Abismo nunca salen del pool (v0.8).
+        if (!u.exclusive &&
+            (catalog.weapons[u.baseId]?.level ?? 99) <= itemLevel)
+          u,
     ];
     return pickWeighted(
         rng,

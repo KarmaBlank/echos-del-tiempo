@@ -45,6 +45,12 @@ void main() {
         StackKind.cristal,
         StackKind.prisma,
         StackKind.ancla,
+        // v0.8: Fragmentos y Esencia del Abismo.
+        StackKind.fragReloj,
+        StackKind.fragEco,
+        StackKind.fragCorona,
+        StackKind.fragEras,
+        StackKind.esencia,
       ]);
     });
 

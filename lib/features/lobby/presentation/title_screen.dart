@@ -21,6 +21,7 @@ import '../../../core/settings/settings_providers.dart';
 import '../../../core/update/presentation/update_banner.dart';
 import '../../../game_engine/models/class_def.dart';
 import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/rules/abyss_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../../netcode/contracts/net_session.dart';
 import '../../../netcode/contracts/net_session_factory.dart';
@@ -287,7 +288,13 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     } catch (_) {
       // Sin disco se juega igual (el controlador vuelve a intentar).
     }
-    return mounted ? _norm(slot) : null;
+    // Jefes del Abismo vencidos por la cuenta: el personaje los lleva al
+    // `hello` (el host valida el secreto con el perfil; abyss_bosses.md
+    // § 1.3).
+    final atlas = ref.read(accountRepositoryProvider).current?.atlas;
+    return mounted
+        ? (atlas == null ? _norm(slot) : AbyssRules.withAccount(_norm(slot), atlas))
+        : null;
   }
 
   /// `> JUGAR`: un jugador, sin red.

@@ -20,6 +20,8 @@ void main() {
       Music.battle,
       Music.boss,
       Music.bossFinal,
+      Music.bossAbyss,
+      Music.bossSecret,
       Music.victory,
       Music.defeat,
       Music.levelUp,

@@ -259,7 +259,11 @@ enum CraftOp {
   salvageSelected,
 
   /// Vender las armas elegidas a mano (`CraftAction.uids`, v0.5.1).
-  sellSelected;
+  sellSelected,
+
+  /// Esencia del Abismo (v0.8): re-tira con ventaja los mods fijos de un
+  /// legendario (docs/specs/abyss_bosses.md § 3.1).
+  essence;
 
   /// Destruye el arma (o las armas) en vez de cambiarla.
   bool get destroys =>
@@ -312,7 +316,12 @@ class UniqueDef {
     this.randomMin = 1,
     this.randomMax = 2,
     this.flavor = '',
+    this.exclusive = false,
   });
+
+  /// Exclusivo de un Jefe del Abismo (v0.8): nunca sale del pool normal
+  /// (docs/specs/abyss_bosses.md § 3).
+  final bool exclusive;
 }
 
 /// Material de crafteo (loot.md § 5). Se apila hasta [maxStack].
@@ -322,11 +331,35 @@ enum CraftMaterial {
   prisma('Prisma Roto', 'Sube la rareza del arma un nivel (hasta Épico).'),
 
   /// Solo cae dentro de los Ecos (docs/specs/ecos_atlas.md § 3).
-  ancla('Ancla Temporal', 'Sube el tier de un Eco en 1 (hasta 16).');
+  ancla('Ancla Temporal', 'Sube el tier de un Eco en 1 (hasta 16).'),
+
+  // ---- Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 1) ----
+
+  /// Fragmentos: caen en Ecos de tier 10+; 5 abren su Jefe del Abismo.
+  fragReloj('Fragmento del Reloj',
+      'Caen en Ecos de tier 10+. 5 abren al Gólem Reloj del Abismo.'),
+  fragEco('Fragmento del Eco',
+      'Caen en Ecos de tier 10+. 5 abren a la Hechicera del Eco del Abismo.'),
+  fragCorona('Fragmento de la Corona',
+      'Caen en Ecos de tier 10+. 5 abren al Espectro Coronado del Abismo.'),
+  fragEras('Fragmento de las Eras',
+      'Caen en Ecos de tier 10+. 5 abren al Devorador de Eras del Abismo.'),
+
+  /// Cae de los Jefes del Abismo: re-tira con ventaja los mods fijos de
+  /// un legendario (`CraftOp.essence`).
+  esencia('Esencia del Abismo',
+      'Re-tira con ventaja los mods fijos de un legendario (nunca bajan).');
 
   const CraftMaterial(this.label, this.description);
   final String label;
   final String description;
+
+  /// Fragmento de un Jefe del Abismo.
+  bool get isFragment =>
+      this == fragReloj ||
+      this == fragEco ||
+      this == fragCorona ||
+      this == fragEras;
 
   static const maxStack = 99;
 

@@ -5,6 +5,7 @@ import '../models/skill.dart';
 import '../models/status.dart';
 import '../models/weapon.dart';
 import '../models/zone_def.dart';
+import 'abyss_catalog.dart';
 import 'classes_catalog.dart';
 import 'elements_catalog.dart';
 import 'enemies_catalog.dart';
@@ -42,7 +43,21 @@ class GameCatalog {
     this.balanceHash = baseBalanceHash,
     this.reactions = kReactions,
     this.elementStatuses = kElementStatuses,
+    this.abyssBosses = kAbyssBosses,
+    this.fragmentDrops = kFragmentDrops,
   });
+
+  /// Jefes del Abismo por número (docs/specs/abyss_bosses.md § 2).
+  final Map<int, AbyssBossDef> abyssBosses;
+
+  /// Números del drop de Fragmentos (una sola entrada, `fragmentos`).
+  final Map<String, FragmentDropDef> fragmentDrops;
+
+  FragmentDropDef get fragmentDrop =>
+      fragmentDrops['fragmentos'] ?? const FragmentDropDef();
+
+  /// El Jefe del Abismo del enemigo [enemyId] (o `null`).
+  AbyssBossDef? abyssOf(String? enemyId) => abyssBossOf(enemyId, abyssBosses);
 
   /// Números de las reacciones elementales por `ReactionKind.name`
   /// (docs/specs/elemental_reactions.md § 2).

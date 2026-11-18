@@ -158,3 +158,31 @@ enemies:
     idle: enemies/devoradorFase2/idle.png
     scale: 2.8
     float: true
+  # v0.8 — Jefes del Abismo (docs/specs/abyss_bosses.md): la forma del
+  # jefe base con paleta del vacío; el secreto, arte propio (escala como
+  # el Devorador). `devoradorAbismoFase2`: fases 2 y 3.
+  golemAbismo:
+    idle: enemies/golemAbismo/idle.png
+    scale: 2.2
+  hechiceraAbismo:
+    idle: enemies/hechiceraAbismo/idle.png
+    scale: 1.9
+  ecoAbismo:
+    idle: enemies/ecoAbismo/idle.png
+    scale: 1.4
+  espectroAbismo:
+    idle: enemies/espectroAbismo/idle.png
+    scale: 2.0
+    float: true
+  devoradorAbismo:
+    idle: enemies/devoradorAbismo/idle.png
+    scale: 2.6
+    float: true
+  devoradorAbismoFase2:
+    idle: enemies/devoradorAbismoFase2/idle.png
+    scale: 2.9
+    float: true
+  ecoPrimordial:
+    idle: enemies/ecoPrimordial/idle.png
+    scale: 2.6
+    float: true

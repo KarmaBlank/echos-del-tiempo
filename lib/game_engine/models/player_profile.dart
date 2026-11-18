@@ -46,6 +46,7 @@ class PlayerProfile {
     bool ecosUnlocked = false,
     int mastery = 0,
     AscensionProgress ascension = AscensionProgress.empty,
+    Set<int> abyssKills = const {},
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -74,11 +75,13 @@ class PlayerProfile {
       ecosUnlocked: ecosUnlocked,
       mastery: mastery.clamp(0, maxMastery),
       ascension: ascension,
+      abyssKills: Set.unmodifiable(abyssKills),
     );
   }
 
   const PlayerProfile._({
     required this.ascension,
+    required this.abyssKills,
     required this.ecos,
     required this.ecosUnlocked,
     required this.mastery,
@@ -117,12 +120,17 @@ class PlayerProfile {
   /// Nivel de Maestría 0–20 (JSON `ms`): con nivel 50 la XP la llena.
   final int mastery;
 
-  /// Nivel para los puntos del árbol: cada maestría da 1 punto más.
+  /// Nivel para los puntos del árbol: cada maestría cuenta como un nivel más (2 puntos desde el árbol v6).
   int get treeLevel => level + mastery;
 
   /// Pruebas del Tiempo, ascensión y sus nodos (JSON `asc`,
   /// docs/specs/ascension.md).
   final AscensionProgress ascension;
+
+  /// Jefes del Abismo vencidos (1..5, JSON `aby`;
+  /// docs/specs/abyss_bosses.md § 1.3). Se le suman los de la cuenta al
+  /// entrar a jugar.
+  final Set<int> abyssKills;
 
   EcoItem? ecoByUid(String uid) {
     for (final e in ecos) {
@@ -278,6 +286,7 @@ class PlayerProfile {
     bool? ecosUnlocked,
     int? mastery,
     AscensionProgress? ascension,
+    Set<int>? abyssKills,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -318,6 +327,8 @@ class PlayerProfile {
       ecosUnlocked: ecosUnlocked ?? this.ecosUnlocked,
       mastery: (mastery ?? this.mastery).clamp(0, maxMastery),
       ascension: ascension ?? this.ascension,
+      abyssKills:
+          abyssKills == null ? this.abyssKills : Set.unmodifiable(abyssKills),
     );
   }
 
@@ -436,6 +447,8 @@ class PlayerProfile {
         if (mastery > 0) 'ms': mastery,
         // Ascensión v0.5 (ascension.md § 2): opcional.
         if (!ascension.isEmpty) 'asc': ascension.toJson(),
+        // Jefes del Abismo v0.8 (abyss_bosses.md § 1.3): opcional.
+        if (abyssKills.isNotEmpty) 'aby': (abyssKills.toList()..sort()),
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -537,6 +550,12 @@ class PlayerProfile {
       ecosUnlocked: json['eco'] == true,
       mastery: _int(json['ms']),
       ascension: AscensionProgress.fromJson(json['asc']),
+      abyssKills: json['aby'] is List
+          ? {
+              for (final v in json['aby'] as List)
+                if (v is num && v >= 1 && v <= 5) v.toInt()
+            }
+          : const {},
     );
   }
 

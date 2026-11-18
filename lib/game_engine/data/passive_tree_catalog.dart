@@ -1,18 +1,22 @@
 import 'dart:math' as math;
 
 import '../models/passive_tree.dart';
+import 'passive_tree_v6.dart';
 
 /// Versión del árbol que guarda el perfil (`tv`). Un perfil con una
-/// versión menor se migra al cargarlo (passive_tree_v4.md § 6).
+/// versión menor se migra al cargarlo (passive_tree_v4.md § 6). El árbol
+/// v6 (v0.8) solo agrega nodos: los ids de la v5 siguen iguales, así que
+/// la versión no cambia (passive_tree_v6.md § 8).
 const kPassiveTreeVersion = 5;
 
-/// Árbol de pasivas v4 (v5 desde v0.7: 15 notables de reacción, mismos
-/// nodos; passive_tree_v4.md § 8): 4 inicios, anillo central de 12, rutas de clase,
-/// 20 clusters de clase con 4 notables cada uno, 4 puentes híbridos y 4
-/// clusters de grupo (308 nodos, 104 notables). Forma, coordenadas e ids
-/// exactos en docs/specs/passive_tree_v4.md (y passive_tree_v3.md para lo
-/// que no cambió); todo se genera desde las definiciones de abajo, con
-/// ids determinísticos.
+/// Árbol de pasivas v6 (v0.8, passive_tree_v6.md): el árbol v5 (4
+/// inicios, anillo central de 12, rutas de clase, 20 clusters de clase
+/// con 4 notables cada uno, 4 puentes híbridos y 4 clusters de grupo;
+/// passive_tree_v4.md) sin tocar, más el anillo exterior: 12 clusters
+/// exteriores de clase, 4 puentes elementales y 4 clusters de grupo
+/// exteriores (584 nodos, 200 notables, 36 keystones). Forma, coordenadas
+/// e ids exactos en los specs; todo se genera desde las definiciones de
+/// abajo y de passive_tree_v6.dart, con ids determinísticos.
 final PassiveTreeCatalog kPassiveTree = _build();
 
 /// Ids que existen igual en la v2 y la v4 (mismo id, nombre y efecto):
@@ -549,7 +553,10 @@ PassiveTreeCatalog _build() {
     for (var i = 0; i < list.length; i++) {
       final (pid, pname, theme, a, b, n1, na, nb, nc, ks) = list[i];
       final deg = th + (i - 2) * kClusterSpread;
-      final (lx, ly) = _local(kClusterRadius, deg, kKeystoneOffset + 1.0, 0);
+      // v6: la etiqueta se corre al costado (v = −1) para dejar libre el
+      // tallo del cluster exterior que sale de acá (lado +v).
+      final (lx, ly) =
+          _local(kClusterRadius, deg, kKeystoneOffset + 1.0, -1.0);
       paths[pid] = PassivePath(
           id: pid,
           name: pname,
@@ -593,7 +600,9 @@ PassiveTreeCatalog _build() {
     final (pid, pname, theme, a, b, h, n1, nl, nr) = _bridges[i];
     final ca = _classes[i], cb = _classes[(i + 1) % _classes.length];
     final deg = ca.angle + 45;
-    final (lx, ly) = _local(0, deg, 17.2, 0);
+    // v6: la etiqueta pasa de u = 17.2 (ahí está el puente elemental) al
+    // hueco entre el cluster de grupo y el puente.
+    final (lx, ly) = _local(0, deg, 10.8, 0);
     paths[pid] = PassivePath(
         id: pid,
         name: pname,
@@ -658,12 +667,204 @@ PassiveTreeCatalog _build() {
     link(_ring[3 * i + 2].$1, '${pid}_e1');
   }
 
+  _buildV6(add, link, paths);
+
   return PassiveTreeCatalog(
     nodes: {for (final n in nodes.values) n.id: n.freeze()},
     startNodeByClass: {for (final c in _classes) c.id: 's_${c.short}'},
     exclusions: const {'fe_k': 'juicio_k', 'juicio_k': 'fe_k'},
     paths: paths,
   );
+}
+
+// ---- Anillo exterior v6 (passive_tree_v6.md § 2) ----
+
+/// Radio de la entrada (`_n1`) de los clusters exteriores de clase.
+const kOuterRadius = 13.5;
+
+/// Plantilla de un cluster exterior, en el marco del cluster v4 del que
+/// cuelga (u desde [kOuterRadius]): tallo `s1`/`s2` desde el `_nc` v4,
+/// notable de entrada, bifurcación de 2 notables, unión, cola y keystone.
+const _outerShape = <(String, double, double, String)>[
+  ('s1', -2.0, 0.85, 's'),
+  ('s2', -1.0, 0.85, 's'),
+  ('n1', 0, 0, 'n1'),
+  ('m1', 0.8, 0, 's'),
+  ('m2', 1.6, 0, 's'),
+  ('na', 2.4, -0.85, 'na'),
+  ('nb', 2.4, 0.85, 'nb'),
+  ('ma', 3.2, -1.05, 's'),
+  ('mb', 3.2, 1.05, 's'),
+  ('ma2', 4.0, -1.0, 's'),
+  ('mb2', 4.0, 1.0, 's'),
+  ('nc', 4.6, 0, 'nc'),
+  ('m3', 5.4, 0, 's'),
+  ('nd', 6.2, 0, 'nd'),
+  ('k', 7.1, 0, 'k'),
+];
+const _outerLinks = [
+  ('s1', 's2'), ('s2', 'n1'), ('n1', 'm1'), ('m1', 'm2'), ('m2', 'na'), //
+  ('m2', 'nb'), ('na', 'ma'), ('nb', 'mb'), ('ma', 'ma2'), ('mb', 'mb2'),
+  ('ma2', 'nc'), ('mb2', 'nc'), ('nc', 'm3'), ('m3', 'nd'), ('nd', 'k'),
+];
+
+/// Plantilla de un puente elemental en la diagonal (u = radio): eje
+/// `i1` (cuelga de las puntas del puente v3), brazos hacia el cluster
+/// exterior de cada clase, notable central, 2 notables y keystone.
+const _elemShape = <(String, double, double, String)>[
+  ('i1', 17.2, 0, 's'),
+  ('a1', 16.6, -6.4, 's'),
+  ('a2', 17.3, -5.0, 's'),
+  ('na', 18.0, -3.6, 'na'),
+  ('h1', 18.6, -1.8, 's'),
+  ('b1', 16.6, 6.4, 's'),
+  ('b2', 17.3, 5.0, 's'),
+  ('nb', 18.0, 3.6, 'nb'),
+  ('h2', 18.6, 1.8, 's'),
+  ('n1', 19.2, 0, 'n1'),
+  ('l1', 19.9, -0.9, 's'),
+  ('nl', 20.6, -1.7, 'nl'),
+  ('r1', 19.9, 0.9, 's'),
+  ('nr', 20.6, 1.7, 'nr'),
+  ('k', 20.3, 0, 'k'),
+];
+const _elemLinks = [
+  ('a1', 'a2'), ('a2', 'na'), ('na', 'h1'), ('h1', 'n1'), ('b1', 'b2'), //
+  ('b2', 'nb'), ('nb', 'h2'), ('h2', 'n1'), ('i1', 'n1'), ('n1', 'l1'),
+  ('l1', 'nl'), ('n1', 'r1'), ('r1', 'nr'), ('n1', 'k'),
+];
+
+/// Plantilla de un cluster de grupo exterior en la diagonal.
+const _outerGroupShape = <(String, double, double, String)>[
+  ('e1', 21.4, 0, 's'),
+  ('n0', 22.2, 0, 'n0'),
+  ('a1', 22.9, -0.7, 's'),
+  ('b1', 22.9, 0.7, 's'),
+  ('na', 23.6, -1.1, 'na'),
+  ('nb', 23.6, 1.1, 'nb'),
+  ('a2', 24.35, -0.75, 's'),
+  ('b2', 24.35, 0.75, 's'),
+  ('nt', 25.0, 0, 'nt'),
+];
+const _outerGroupLinks = [
+  ('e1', 'n0'), ('n0', 'a1'), ('n0', 'b1'), ('a1', 'na'), ('b1', 'nb'), //
+  ('na', 'a2'), ('nb', 'b2'), ('a2', 'nt'), ('b2', 'nt'),
+];
+
+final Map<String, String> _v6Names = {
+  for (final m in kTreeV6Mechanics) m.id: m.name,
+  for (final m in kTreeV6SmallMechanics) m.id: m.name,
+};
+
+void _buildV6(
+  void Function(String id, (double, double) at, String name, _Fx fx,
+          String kind,
+          {String? key, String? path, String? mech})
+      add,
+  void Function(String a, String b) link,
+  Map<String, PassivePath> paths,
+) {
+  void node(String id, (double, double) at, String kind, String path,
+      String mech) {
+    switch (kind) {
+      case 's':
+        add(id, at, _v6Names[id]!, const {}, 's', path: path, mech: id);
+      case 'k':
+        add(id, at, _v6Names[mech]!, const {'key': 1}, 'k',
+            key: mech, path: path, mech: mech);
+      default:
+        add(id, at, _v6Names[mech]!, const {}, 'n', path: path, mech: mech);
+    }
+  }
+
+  // Clusters exteriores de clase: el j cuelga del `_nc` del cluster v4
+  // j + 1 (θ − 15°, θ, θ + 15°).
+  for (final c in _classes) {
+    final outer = kTreeV6Clusters[c.id]!;
+    final inner = _clusters[c.id]!;
+    for (var j = 0; j < outer.length; j++) {
+      final (pid, pname, theme, _, _, notables, ks) = outer[j];
+      final deg = c.angle + (j - 1) * kClusterSpread;
+      final (lx, ly) = _local(kOuterRadius, deg, 8.7, 0);
+      paths[pid] = PassivePath(
+          id: pid,
+          name: pname,
+          theme: theme,
+          classId: c.id,
+          labelX: lx,
+          labelY: ly);
+      for (final (s, u, v, kind) in _outerShape) {
+        final at = _local(kOuterRadius, deg, u, v);
+        final i = kV6ClusterNotables.indexOf(kind);
+        node('${pid}_$s', at, kind == 's' || kind == 'k' ? kind : 'n', pid,
+            kind == 'k' ? ks : (i < 0 ? '' : notables[i]));
+      }
+      for (final (x, y) in _outerLinks) {
+        link('${pid}_$x', '${pid}_$y');
+      }
+      link('${inner[j + 1].$1}_nc', '${pid}_s1');
+      // Atajo con el cluster exterior anterior de la misma clase.
+      if (j > 0) link('${outer[j - 1].$1}_mb2', '${pid}_ma2');
+    }
+  }
+
+  // Puentes elementales: detrás de cada puente v3, entre el último
+  // cluster exterior de la clase i y el primero de la i + 1.
+  for (var i = 0; i < kTreeV6Bridges.length; i++) {
+    final (pid, pname, theme, _, _, _, notables, ks) = kTreeV6Bridges[i];
+    final ca = _classes[i], cb = _classes[(i + 1) % _classes.length];
+    final deg = ca.angle + 45;
+    final (lx, ly) = _local(0, deg, 18.2, 0);
+    paths[pid] = PassivePath(
+        id: pid,
+        name: pname,
+        theme: theme,
+        classId: '${ca.id}+${cb.id}',
+        kind: 'puente',
+        labelX: lx,
+        labelY: ly);
+    for (final (s, u, v, kind) in _elemShape) {
+      final at = _local(0, deg, u, v);
+      final n = kV6BridgeNotables.indexOf(kind);
+      node('${pid}_$s', at, kind == 's' || kind == 'k' ? kind : 'n', pid,
+          kind == 'k' ? ks : (n < 0 ? '' : notables[n]));
+    }
+    for (final (x, y) in _elemLinks) {
+      link('${pid}_$x', '${pid}_$y');
+    }
+    final old = _bridges[i].$1;
+    link('${old}_nl', '${pid}_i1');
+    link('${old}_nr', '${pid}_i1');
+    link('${kTreeV6Clusters[ca.id]!.last.$1}_mb2', '${pid}_a1');
+    link('${kTreeV6Clusters[cb.id]!.first.$1}_ma2', '${pid}_b1');
+  }
+
+  // Clusters de grupo exteriores: detrás de cada puente elemental.
+  for (var i = 0; i < kTreeV6Groups.length; i++) {
+    final (pid, pname, theme, _, _, notables) = kTreeV6Groups[i];
+    final deg = _classes[i].angle + 45;
+    final (lx, ly) = _local(0, deg, 26.0, 0);
+    paths[pid] = PassivePath(
+        id: pid,
+        name: pname,
+        theme: theme,
+        classId: 'grupo',
+        kind: 'grupo',
+        labelX: lx,
+        labelY: ly);
+    for (final (s, u, v, kind) in _outerGroupShape) {
+      final at = _local(0, deg, u, v);
+      final n = kV6GroupNotables.indexOf(kind);
+      node('${pid}_$s', at, kind == 's' ? 's' : 'n', pid,
+          n < 0 ? '' : notables[n]);
+    }
+    for (final (x, y) in _outerGroupLinks) {
+      link('${pid}_$x', '${pid}_$y');
+    }
+    final bridge = kTreeV6Bridges[i].$1;
+    link('${bridge}_nl', '${pid}_e1');
+    link('${bridge}_nr', '${pid}_e1');
+  }
 }
 
 class _MutableNode {

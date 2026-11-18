@@ -1,3 +1,4 @@
+import '../data/abyss_catalog.dart';
 import '../data/eco_catalog.dart';
 import '../models/atlas.dart';
 
@@ -30,6 +31,11 @@ class AtlasRules {
       final t = int.tryParse(key.substring(1)) ?? 0;
       return t >= 9 ? 2 : 1;
     }
+    // Jefes del Abismo v0.8 (abyss_bosses.md § 1.3): `x1`..`x5`.
+    if (key.startsWith('x')) {
+      final n = int.tryParse(key.substring(1));
+      return kAbyssBosses[n]?.atlasPoints ?? 0;
+    }
     return 1;
   }
 
@@ -38,6 +44,9 @@ class AtlasRules {
     var t = 0;
     for (var i = 1; i <= 16; i++) {
       t += pointsFor('t$i');
+    }
+    for (final n in kAbyssBosses.keys) {
+      t += pointsFor('x$n');
     }
     return t + 10 + 10;
   }

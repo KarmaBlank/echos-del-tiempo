@@ -1,3 +1,4 @@
+import '../../../../../game_engine/data/abyss_catalog.dart';
 import '../../../../../game_engine/models/battle_state.dart';
 
 /// Qué arena se dibuja en una batalla (docs/specs/battle_presentation.md
@@ -43,6 +44,10 @@ enum ArenaTheme {
 
   /// Pueblo / mapa del mundo / sin datos: plaza empedrada.
   pueblo,
+
+  /// v0.8 · Jefe secreto del Abismo: vacío con cristales de los cinco
+  /// elementos (docs/specs/abyss_bosses.md § 4).
+  primordial,
 }
 
 /// La arena elegida: escenografía, tipo, jefe (set-piece) y variantes.
@@ -53,7 +58,12 @@ class ArenaSpec {
     this.bossType,
     this.phase2 = false,
     this.eco = false,
+    this.abyss = false,
   });
+
+  /// Variante del Abismo (v0.8): vacío violeta, grietas y luz fría sobre
+  /// la escenografía de su jefe base.
+  final bool abyss;
 
   final ArenaTheme theme;
   final EncounterKind kind;
@@ -70,7 +80,7 @@ class ArenaSpec {
   /// Clave de la capa estática cacheada.
   String get cacheKey =>
       '${theme.name}/${kind.name}/${bossType ?? '-'}/${phase2 ? 2 : 1}/'
-      '${eco ? 'eco' : '-'}';
+      '${eco ? 'eco' : '-'}${abyss ? '/abismo' : ''}';
 
   @override
   bool operator ==(Object other) =>
@@ -152,12 +162,20 @@ ArenaSpec selectArena({
       }
     }
   }
+  // Jefes del Abismo (v0.8): la arena de su jefe base en variante del
+  // Abismo; el secreto, la suya.
+  final abyss = abyssBossOf(boss?.enemyType);
   return ArenaSpec(
-    theme: arenaThemeFor(mapTheme: mapTheme, zone: zone, trial: trial),
+    theme: abyss == null
+        ? arenaThemeFor(mapTheme: mapTheme, zone: zone, trial: trial)
+        : abyss.arenaZone == 0
+            ? ArenaTheme.primordial
+            : arenaThemeFor(zone: abyss.arenaZone),
     kind: kind,
     bossType: boss?.enemyType,
     phase2: (boss?.phase ?? 0) >= 2,
     eco: eco,
+    abyss: abyss != null,
   );
 }
 

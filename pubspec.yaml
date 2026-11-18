@@ -91,6 +91,14 @@ flutter:
     - assets/sprites/enemies/heraldoEras/
     - assets/sprites/enemies/fragmentoTiempo/
     - assets/sprites/enemies/devoradorFase2/
+    # v0.8 — Jefes del Abismo.
+    - assets/sprites/enemies/golemAbismo/
+    - assets/sprites/enemies/hechiceraAbismo/
+    - assets/sprites/enemies/ecoAbismo/
+    - assets/sprites/enemies/espectroAbismo/
+    - assets/sprites/enemies/devoradorAbismo/
+    - assets/sprites/enemies/devoradorAbismoFase2/
+    - assets/sprites/enemies/ecoPrimordial/
     - assets/sprites/effects/
     - assets/sprites/tiles/
 

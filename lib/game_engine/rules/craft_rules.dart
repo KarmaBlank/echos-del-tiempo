@@ -756,7 +756,47 @@ class CraftRules {
         CraftOp.sellAll => index < 0 || index >= Rarity.values.length
             ? const CraftResult.fail('Elige una rareza')
             : sellAll(p, Rarity.values[index]),
+        CraftOp.essence => essence(p, targetUid, random: random),
       };
+
+  /// Esencia del Abismo (v0.8, abyss_bosses.md § 3.1): los mods fijos de
+  /// un legendario se re-tiran dos veces cada uno y queda el mayor, nunca
+  /// por debajo del actual.
+  CraftResult essence(PlayerProfile p, String uid, {RandomSource? random}) {
+    final t = p.itemByUid(uid);
+    if (t == null) return const CraftResult.fail('No la tienes');
+    if (t.rarity != Rarity.legendario) {
+      return const CraftResult.fail('Solo legendarios');
+    }
+    final fixed = [
+      for (final a in t.affixes)
+        if (a.fixed)
+          if (items.rangeOf(t, a) case (final lo, final hi)) (a, lo, hi),
+    ];
+    if (fixed.isEmpty) return const CraftResult.fail('No tiene mods fijos');
+    if (fixed.every((f) => f.$1.value >= f.$3)) {
+      return const CraftResult.fail('Los mods fijos ya están al máximo');
+    }
+    const mats = {CraftMaterial.esencia: 1};
+    final outcomes = [
+      for (final (a, lo, hi) in fixed)
+        '${items.affixOf(a)?.stat.label ?? a.affixId}: ${a.value} → '
+            '${a.value}–$hi (mejor de 2, nunca baja; rango $lo–$hi)',
+    ];
+    if (random == null) {
+      return _preview(p, t, credits: 0, materials: mats, outcomes: outcomes);
+    }
+    AffixRoll better(AffixRoll a) {
+      final r = a.fixed ? items.rangeOf(t, a) : null;
+      if (r == null) return a;
+      final best = math.max(LootRules.rollValue(random, r.$1, r.$2),
+          LootRules.rollValue(random, r.$1, r.$2));
+      return AffixRoll(a.affixId, a.tier, math.max(a.value, best));
+    }
+
+    final after = t.copyWith(affixes: [for (final a in t.affixes) better(a)]);
+    return _done(p, t, after, materials: mats);
+  }
 
   // ------------------------------------------------------------------
 

@@ -172,4 +172,56 @@ const List<UniqueDef> _list = [
     passiveId: 'milEras',
     flavor: 'Mil eras lo golpearon. Mil eras perdieron.',
   ),
+
+  // ---------------- Exclusivos de los Jefes del Abismo (v0.8) ----------
+  // docs/specs/abyss_bosses.md § 3: solo los sueltan sus jefes (nunca el
+  // pool normal). Sin texto de ambientación (lore pendiente).
+  UniqueDef(
+    id: 'manecillaAbismo',
+    name: 'Manecilla del Abismo',
+    baseId: 'baculo_origen',
+    fixed: [UniqueMod('arcano', 30, 40), UniqueMod('del_eter', 15, 20)],
+    passiveId: 'tiempoPrestado',
+    exclusive: true,
+  ),
+  UniqueDef(
+    id: 'espejoSinFondo',
+    name: 'Espejo sin Fondo',
+    baseId: 'varita_vacio',
+    fixed: [UniqueMod('arcano', 25, 35), UniqueMod('letal', 25, 35)],
+    passiveId: 'preparacionCompartida',
+    exclusive: true,
+  ),
+  UniqueDef(
+    id: 'coronaInvertida',
+    name: 'Corona Invertida',
+    baseId: 'maza_escudo_eterna',
+    fixed: [UniqueMod('de_la_fe', 20, 30), UniqueMod('de_la_vida', 60, 90)],
+    passiveId: 'luzInvertida',
+    exclusive: true,
+  ),
+  UniqueDef(
+    id: 'fauceEras',
+    name: 'Fauce de las Eras',
+    baseId: 'espada_cronos',
+    fixed: [UniqueMod('feroz', 40, 50), UniqueMod('del_vampiro', 4, 6)],
+    passiveId: 'hambreEterna',
+    exclusive: true,
+  ),
+  UniqueDef(
+    id: 'prismaPrimordial',
+    name: 'Prisma Primordial',
+    baseId: 'arco_eterno',
+    fixed: [UniqueMod('feroz', 35, 45), UniqueMod('del_halcon', 15, 20)],
+    passiveId: 'todasReacciones',
+    exclusive: true,
+  ),
+  UniqueDef(
+    id: 'filoPrimordial',
+    name: 'Filo Primordial',
+    baseId: 'hacha_cataclismo',
+    fixed: [UniqueMod('feroz', 35, 45), UniqueMod('del_toro', 12, 18)],
+    passiveId: 'ecoGolpe',
+    exclusive: true,
+  ),
 ];

@@ -228,6 +228,28 @@ const _icons = <String, List<String>>{
     '.g.gg.g.',
     '..gggg..',
   ],
+  // Fragmento del Abismo (v0.8): rombo partido con núcleo.
+  'fragmento': [
+    '...m....',
+    '..mgm...',
+    '.mgwgm..',
+    'mggwggm.',
+    '.mggm...',
+    '..mgm...',
+    '...m....',
+    '........',
+  ],
+  // Esencia del Abismo (v0.8): gota.
+  'esencia': [
+    '...g....',
+    '...g....',
+    '..ggg...',
+    '.ggwgg..',
+    '.gwggg..',
+    '.ggggg..',
+    '..ggg...',
+    '........',
+  ],
 };
 
 /// Clave del ícono de un tipo de arma (`espada+escudo` → `escudo`).
@@ -243,6 +265,12 @@ String iconKeyForType(String type) => type.contains('escudo')
       StackKind.cristal => ('cristal', ProtoColors.violet),
       StackKind.prisma => ('prisma', ProtoColors.gold),
       StackKind.ancla => ('ancla', ProtoColors.sky),
+      // Jefes del Abismo v0.8: Fragmentos y Esencia.
+      StackKind.fragReloj => ('fragmento', ProtoColors.gold),
+      StackKind.fragEco => ('fragmento', ProtoColors.ice),
+      StackKind.fragCorona => ('fragmento', ProtoColors.violet),
+      StackKind.fragEras => ('fragmento', ProtoColors.orange),
+      StackKind.esencia => ('esencia', ProtoColors.crimson),
     };
 
 /// Ícono pixel (8 × 8 escalado) sin difuminado.

@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/features/passive_tree/domain/passive_text.dart';
 import 'package:echos_del_tiempo/features/passive_tree/presentation/passive_tree_view.dart';
@@ -82,14 +84,15 @@ void main() {
 
   testWidgets('árbol: Creyente/Inherente excluidos, bloqueos y reiniciar',
       (tester) async {
-    // Paladín Lv15 (14 puntos): ruta + Fe completo (Creyente) + Juicio
-    // por el atajo hasta antes de Inherente: le queda 1 punto.
+    // Paladín Lv8 (14 puntos, 2 por nivel desde la v0.8): ruta + Fe
+    // completo (Creyente) + Juicio por el atajo hasta antes de Inherente:
+    // le queda 1 punto.
     final c = await _pumpTree(
         tester,
         PlayerProfile(
           name: 'Ana',
           classId: 'paladin',
-          level: 15,
+          level: 8,
           tree: [
             'pal_r1', 'pal_f3', ..._c('fe'), //
             'juicio_mb', 'juicio_nc',
@@ -143,8 +146,8 @@ void main() {
         PlayerProfile(
           name: 'Leo',
           classId: 'tirador',
-          level: 10,
-          tree: ['tir_r1', 'tir_f3', ..._c('precision', 5)],
+          level: 6,
+          tree: ['tir_r1', 'tir_f3', ..._c('precision', 6)],
         ));
     expect(
         find.textContaining('Puntos de árbol disponibles: 2'), findsOneWidget);
@@ -272,5 +275,98 @@ void main() {
     await tester.pump();
     expect(_painter(tester).hits, isEmpty);
     expect(find.text('Sin coincidencias'), findsOneWidget);
+  });
+
+  testWidgets('árbol v6: tooltip de un notable del anillo exterior',
+      (tester) async {
+    await _pumpTree(
+        tester,
+        PlayerProfile(
+            name: 'Ana', classId: 'maga', level: 50, mastery: 20));
+    expect(find.textContaining('Puntos de árbol disponibles: 138'),
+        findsOneWidget);
+    final mouse = await _mouse(tester);
+    await mouse.moveTo(nodeOnScreen(tester, 'marea_nb'));
+    await tester.pump();
+    final tip = find.byKey(const ValueKey('tree-tooltip'));
+    expect(find.descendant(of: tip, matching: find.text('Ahogo')),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: tip, matching: find.textContaining('NOTABLE · Cluster Marea')),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: tip, matching: find.textContaining('+20% de daño contra')),
+        findsOneWidget);
+    // Un chico nuevo también dice su efecto (no es un stat pelado).
+    await mouse.moveTo(nodeOnScreen(tester, 'marea_m1'));
+    await tester.pump();
+    expect(
+        find.descendant(
+            of: tip, matching: find.textContaining('contra enemigos Mojados')),
+        findsOneWidget);
+  });
+
+  testWidgets('rendimiento: mover el mouse no vuelve a grabar la capa fija',
+      (tester) async {
+    await _pumpTree(
+        tester, PlayerProfile(name: 'Leo', classId: 'tirador', level: 30));
+    await tester.tap(find.byKey(const ValueKey('tree-fit')));
+    await tester.pump();
+    final builds = PassiveTreePainter.baseBuilds;
+    final mouse = await _mouse(tester);
+    final ids = kPassiveTree.nodes.keys.toList();
+    for (var i = 0; i < ids.length; i += 20) {
+      await mouse.moveTo(nodeOnScreen(tester, ids[i]));
+      await tester.pump();
+    }
+    expect(PassiveTreePainter.baseBuilds, builds,
+        reason: 'el hover solo redibuja el resaltado');
+    // Buscar tampoco.
+    await tester.enterText(find.byKey(const ValueKey('tree-search')), 'mojad');
+    await tester.pump();
+    expect(_painter(tester).hits.length, greaterThan(10));
+    expect(PassiveTreePainter.baseBuilds, builds);
+
+    // Pintar el árbol entero (~600 nodos) con la capa ya grabada es
+    // barato: 200 cuadros con resaltado en menos de 1 s (holgado).
+    final painter = _painter(tester);
+    final sw = Stopwatch()..start();
+    for (var i = 0; i < 200; i++) {
+      final rec = ui.PictureRecorder();
+      painter.paint(Canvas(rec), const Size.square(PassiveTreeView.size));
+      rec.endRecording().dispose();
+    }
+    sw.stop();
+    expect(sw.elapsedMilliseconds, lessThan(1000));
+    expect(PassiveTreePainter.baseBuilds, builds);
+  });
+
+  testWidgets('TODO: cada nodo (con su radio) entra en el visor visible',
+      (tester) async {
+    await _pumpTree(tester,
+        PlayerProfile(name: 'Ana', classId: 'maga', level: 50, mastery: 20));
+    await tapVisible(tester, find.byKey(const ValueKey('tree-fit')));
+    final rect = tester.getRect(find.byKey(const ValueKey('tree-viewport')));
+    // El visor entero se ve dentro del panel: termina antes del botón de
+    // cerrar y dentro de la ventana de 1280×720.
+    expect(rect.bottom,
+        lessThanOrEqualTo(tester.getRect(find.text('CERRAR [ESC]')).top));
+    expect(rect.top, greaterThan(0));
+    expect(rect.height, greaterThan(330), reason: 'más alto que antes');
+    final box = tester
+        .renderObject<RenderBox>(find.byKey(const ValueKey('tree-canvas')));
+    for (final n in kPassiveTree.nodes.values) {
+      final c = box.localToGlobal(PassiveTreeView.nodeCenter(n));
+      final r = (box.localToGlobal(PassiveTreeView.nodeCenter(n) +
+                  Offset(PassiveTreeView.nodeRadius(n, start: false), 0)) -
+              c)
+          .dx;
+      final node = Rect.fromCircle(center: c, radius: r);
+      expect(rect.contains(node.topLeft) && rect.contains(node.bottomRight),
+          isTrue,
+          reason: n.id);
+    }
   });
 }

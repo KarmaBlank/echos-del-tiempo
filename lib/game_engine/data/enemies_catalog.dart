@@ -116,6 +116,27 @@ const Map<String, EnemyDef> kEnemies = {
       ]),
   'fragmentoTiempo': EnemyDef(id: 'fragmentoTiempo', name: 'Fragmento del Tiempo', hp: 160, attack: 45, speed: 17,
       xp: 14, credits: 16, breakMax: 128, delayHit: 0.25),
+
+  // ---- Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 2.2): stats
+  // ya al nivel 85–90 (`kEnemyBaseLevel`). Sin título (sin lore). ----
+  'golemAbismo': EnemyDef(id: 'golemAbismo', name: 'Gólem Reloj del Abismo', hp: 6400, attack: 98, speed: 8,
+      xp: 700, credits: 900, boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 2240,
+      ultId: 'eult_abismoReloj', mechanicId: 'abismoReloj'),
+  'hechiceraAbismo': EnemyDef(id: 'hechiceraAbismo', name: 'Hechicera del Eco del Abismo', hp: 6600, attack: 100,
+      speed: 10, xp: 720, credits: 920, boss: true, inflicts: StatusApplication(StatusKind.freeze, 1),
+      breakMax: 2310, ultId: 'eult_abismoEco', mechanicId: 'abismoEco', feminine: true),
+  'espectroAbismo': EnemyDef(id: 'espectroAbismo', name: 'Espectro Coronado del Abismo', hp: 7200, attack: 104,
+      speed: 11, xp: 760, credits: 960, boss: true, inflicts: StatusApplication(StatusKind.freeze, 1),
+      breakMax: 2520, ultId: 'eult_abismoCorona', mechanicId: 'abismoCorona'),
+  'devoradorAbismo': EnemyDef(id: 'devoradorAbismo', name: 'Devorador de Eras del Abismo', hp: 8400, attack: 110,
+      speed: 10, xp: 800, credits: 1000, boss: true, inflicts: StatusApplication(StatusKind.burn, 2),
+      breakMax: 2940, ultId: 'eult_abismoEras', mechanicId: 'abismoEras'),
+  'ecoPrimordial': EnemyDef(id: 'ecoPrimordial', name: 'Eco Primordial', hp: 10000, attack: 112, speed: 11,
+      xp: 1000, credits: 1300, boss: true, breakMax: 3500, ultId: 'eult_primordial', mechanicId: 'abismoPrimordial'),
+  // Eco del Abismo (invocación que actúa, nivel 86): copia la última
+  // habilidad del grupo y recibe ×0.5.
+  'ecoAbismo': EnemyDef(id: 'ecoAbismo', name: 'Eco del Abismo', hp: 600, attack: 60, speed: 10, xp: 0,
+      credits: 0),
 };
 
 /// Mecánicas propias de los jefes (docs/specs/bosses.md § "v0.2").
@@ -230,6 +251,67 @@ const Map<String, BossMechanicDef> kBossMechanics = {
         '<b>Colapso Temporal cada 2 acciones</b> (a todos, retrasa). Guardá '
         'curas y defensas para la fase 2; Fin de las Eras borra los buffs.',
   ),
+
+  // ---- Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 2): las
+  // fases y movimientos viven en `kAbyssBosses`. ----
+  'abismoReloj': BossMechanicDef(
+    id: 'abismoReloj',
+    kind: BossMechanicKind.abyss,
+    name: 'Reloj del Abismo',
+    counter: '<b>3 fases</b>. <b>Rebobinar</b>: se cura lo que recibió desde su '
+        'acción anterior; <b>quebralo antes</b> (avisa). <b>Distorsión</b>: '
+        'retrasa al grupo. Fase 2: <b>Diluvio</b> moja y <b>Descarga</b> '
+        'electrocuta a los Mojados: <b>Defendé</b> para que no reaccione. '
+        '<span class="k">Solo: rebobina 50% y retrasa menos.</span>',
+  ),
+  'abismoEco': BossMechanicDef(
+    id: 'abismoEco',
+    kind: BossMechanicKind.abyss,
+    name: 'Ecos del Abismo',
+    value: 0.5,
+    addType: 'ecoAbismo',
+    adds: 2,
+    soloAdds: 1,
+    counter: 'Sus <b>Ecos</b> copian <b>la última habilidad</b> del grupo '
+        '(su elemento incluido) y reciben 50%. <b>Sello</b>: recibe 25% '
+        'hasta que lo rompa la <b>reacción</b> que pide (o un quiebre). '
+        '<span class="k">Solo: 1 eco y cualquier reacción rompe el sello.</span>',
+  ),
+  'abismoCorona': BossMechanicDef(
+    id: 'abismoCorona',
+    kind: BossMechanicKind.abyss,
+    name: 'Corona del Abismo',
+    addType: 'siervoEspectral',
+    adds: 2,
+    soloAdds: 1,
+    counter: '<b>Las curas del grupo lo dañan</b> (60%, también las pociones). '
+        'Con siervos vivos es inmune a estados y, en la <b>fase 2</b>, '
+        '<b>inmune al daño</b>: matá a los siervos o curá. '
+        '<span class="k">Solo: 1 siervo.</span>',
+  ),
+  'abismoEras': BossMechanicDef(
+    id: 'abismoEras',
+    kind: BossMechanicKind.abyss,
+    name: 'Hambre del Abismo',
+    counter: '<b>3 fases</b>. <b>Devorar</b>: se come los buffs y escudos del '
+        'grupo y gana +5% ATQ por cada uno: <b>no los acumules antes del '
+        'aviso</b>. Fase 3: cambia de <b>aspecto</b> cada turno (Fuego, Agua, '
+        'Electro, Hielo) y resiste su propio elemento.',
+  ),
+  'abismoPrimordial': BossMechanicDef(
+    id: 'abismoPrimordial',
+    kind: BossMechanicKind.abyss,
+    name: 'Primordial',
+    value: 0.5,
+    addType: 'ecoAbismo',
+    adds: 2,
+    soloAdds: 1,
+    counter: 'Todos los elementos: <b>aspecto</b> en ciclo, <b>sellos</b>, '
+        '<b>ecos</b> que copian, <b>devorar</b>, <b>rebobinar</b> y '
+        '<b>distorsión</b>. Las curas lo dañan (40%). Fase 3: <b>inmune al '
+        'daño</b> con ecos vivos. <span class="k">Solo: 1 eco, cualquier '
+        'reacción rompe el sello.</span>',
+  ),
 };
 
 BossMechanicDef? bossMechanicOf(EnemyDef? d) =>
@@ -321,6 +403,48 @@ const Map<String, EnemyUltDef> kEnemyUlts = {
     // Mojado para que sus golpes de Electro electrocuten.
     status: StatusApplication(StatusKind.wet, 1),
     extra: EnemyUltExtra.voidMark,
+  ),
+  // ---- Jefes del Abismo v0.8 ----
+  'eult_abismoReloj': EnemyUltDef(
+    id: 'eult_abismoReloj',
+    name: 'Engranaje del Fin',
+    power: 1.5,
+    allTargets: true,
+    status: StatusApplication(StatusKind.freeze, 2),
+    delayAll: 0.5,
+  ),
+  'eult_abismoEco': EnemyUltDef(
+    id: 'eult_abismoEco',
+    name: 'Coro de Ecos',
+    power: 1.1,
+    allTargets: true,
+    delayAll: 0.3,
+    perAdd: 0.3,
+    extra: EnemyUltExtra.echoChorus,
+  ),
+  'eult_abismoCorona': EnemyUltDef(
+    id: 'eult_abismoCorona',
+    name: 'Lamento Eterno',
+    power: 1.3,
+    allTargets: true,
+    status: StatusApplication(StatusKind.freeze, 2),
+    extra: EnemyUltExtra.summonAll,
+  ),
+  'eult_abismoEras': EnemyUltDef(
+    id: 'eult_abismoEras',
+    name: 'Fin de las Eras',
+    power: 1.5,
+    allTargets: true,
+    status: StatusApplication(StatusKind.burn, 2),
+    wipeBuffs: true,
+  ),
+  'eult_primordial': EnemyUltDef(
+    id: 'eult_primordial',
+    name: 'Todas las Eras',
+    power: 1.6,
+    allTargets: true,
+    status: StatusApplication(StatusKind.wet, 1),
+    wipeBuffs: true,
   ),
   kEliteUltId: EnemyUltDef(
     id: kEliteUltId,

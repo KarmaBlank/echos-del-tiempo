@@ -328,6 +328,39 @@ enum BossMechanicPhase {
 
   /// Un común esquiva (el golpe solo lo roza): `actorId` = el enemigo.
   evaded,
+
+  // ---- Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 2) ----
+
+  /// Aviso: la próxima acción es el movimiento `value`
+  /// (`AbyssMoveKind.index`).
+  abyssTelegraph,
+
+  /// Entra en furia (`value` = multiplicador de ATQ).
+  enrage,
+
+  /// Levanta un sello: `value` = `ReactionKind.index` que lo rompe.
+  sealCast,
+
+  /// Se rompe el sello (`targetId` = quien lo rompió, si fue un jugador).
+  sealBroken,
+
+  /// El sello se apaga solo.
+  sealFade,
+
+  /// Rebobina: `value` = vida recuperada.
+  rewind,
+
+  /// Distorsión: retrasa al grupo (`value` = fracción de turno).
+  timeWarp,
+
+  /// Un eco (`actorId`) copia la habilidad del grupo sobre `targetId`.
+  mirror,
+
+  /// Se come `value` buffs del grupo.
+  devour,
+
+  /// Cambia de aspecto: `value` = `GameElement.index`.
+  aspect,
 }
 
 /// Una mecánica de jefe. [actorId]: el jefe (o el jugador que libera).

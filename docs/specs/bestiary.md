@@ -214,3 +214,13 @@ título (`BESTIARIO`, solo lectura, `BestiaryScreen`).
 - Teclado (`menu_focus.dart`): flechas dentro de cada zona (`FocusGrid`,
   sale por el borde a la siguiente), `Tab` entre filtros y grilla; elegir
   una ficha con el cursor muestra su detalle.
+
+## v0.8.0: Jefes del Abismo
+
+Sección propia **Jefes del Abismo** al final del bestiario (zona 11 en
+`bestiaryEntries`). Familias: Gólem Reloj del Abismo constructo,
+Hechicera del Eco del Abismo y Devorador de Eras del Abismo temporales,
+Espectro Coronado del Abismo espectro, Eco Primordial aberración del
+Vacío, Eco del Abismo (invocación) temporal. El orden de las fichas
+desempata por el orden del catálogo (el `sort` de Dart no es estable con
+más de 32 elementos).

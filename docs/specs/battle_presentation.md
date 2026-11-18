@@ -1272,3 +1272,22 @@ dibujo), `status_icons.dart` (íconos), textos en
   contorno `#0b0e1a`, relleno del color del estado, brillo blanco. Los
   chips de Mojado / Cargado llevan ícono + letra (`M`, `E`) + stacks: la
   forma y la letra los distinguen sin color (accessibility.md § 3).
+
+## Jefes del Abismo (v0.8.0)
+
+Ver docs/specs/abyss_bosses.md § 4. `ArenaSpec.abyss`: la arena del jefe
+base (Ruinas, Laberinto, Cementerio, Corazón; `AbyssBossDef.arenaZone`)
+con la variante del Abismo (`_abyssTint`: velo violeta, grietas de luz
+fría en el piso, bordes comidos por el vacío y motas que suben) y el
+set-piece del jefe base (`kAbyssBaseBoss`). El secreto usa
+`ArenaTheme.primordial` (vacío con cristales de los cinco elementos). Luz
+de jefe `#c39bff`. Eventos: `FASE n` (todas las fases, también el
+Devorador), `PRÓXIMO: <movimiento>` sobre el jefe, `¡FURIA!` con
+destello, `SELLO · <reacción>` / `¡SELLO ROTO!` / `EL SELLO SE APAGA`,
+`REBOBINA +N`, `RETRASO` en el grupo, arco del `REFLEJO`, `DEVORA N
+BUFFS` y `ASPECTO: <elemento>`. Chips del jefe (por prioridad, la caja
+corta los últimos): FASE (o INMUNE), PRÓX, SELLO, Aspecto, Furia,
+Curas lo dañan, Comió N. ULT: los estilos de su jefe base, a todo el
+grupo (`kEnemyUltScripts`). Sprites: forma del jefe base con paleta del
+vacío; el Devorador del Abismo usa `devoradorAbismoFase2` desde la
+fase 2; el Eco Primordial, arte propio (24 × 22, escala 2.6).

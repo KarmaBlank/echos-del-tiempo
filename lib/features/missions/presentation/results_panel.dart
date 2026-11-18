@@ -15,12 +15,16 @@ import '../../inventory/presentation/item_widgets.dart' hide PixelIcon;
 
 /// Un drop propio de la misión con el veredicto de tu filtro.
 class ResultDrop {
-  const ResultDrop(this.text, this.verdict, {this.tooltip});
+  const ResultDrop(this.text, this.verdict,
+      {this.tooltip, this.exclusive = false});
   final String text;
   final FilterVerdict verdict;
 
   /// Ficha del objeto (markup).
   final String? tooltip;
+
+  /// Legendario exclusivo de un Jefe del Abismo (se destaca aparte).
+  final bool exclusive;
 }
 
 /// Pantalla de resultado de la misión (`#result` del prototipo): rango,
@@ -42,7 +46,12 @@ class ResultsPanel extends StatelessWidget {
     this.ecoAtlas,
     this.trial,
     this.onAscend,
+    this.abyss,
   });
+
+  /// Jefe del Abismo vencido: `X vencido: +2 puntos de Atlas`
+  /// (docs/specs/abyss_bosses.md § 4).
+  final String? abyss;
 
   /// Prueba del Tiempo superada: `+2 puntos de ascensión` (o que ya la
   /// tenías). Ver docs/specs/ascension.md § 1.2.
@@ -65,7 +74,8 @@ class ResultsPanel extends StatelessWidget {
       r.success &&
       r.zone == 10 &&
       r.missionId != 'eco' &&
-      r.missionId != 'trial';
+      r.missionId != 'trial' &&
+      r.missionId != 'abismo';
 
   static const finalTitle = '¡Venciste al Devorador de Eras!';
   static const finalSubtitle = 'El tiempo vuelve a fluir. Gracias por jugar.';
@@ -125,7 +135,12 @@ class ResultsPanel extends StatelessWidget {
         line(a,
             color: const Color(0xFF5AE6D2),
             key: const ValueKey('results-atlas')),
+      if (abyss case final a?)
+        line(a,
+            color: const Color(0xFFC39BFF),
+            key: const ValueKey('results-abyss')),
     ];
+    final exclusive = [for (final d in this.loot) if (d.exclusive) d];
     final loot = <Widget>[
       if (mine != null)
         Padding(
@@ -144,6 +159,36 @@ class ResultsPanel extends StatelessWidget {
             'Élites derrotados: ${r.elites} · '
             '${r.eliteDrops.map((d) => '${playerName(d.playerId)}: ${weaponName(d.weaponId)}').join(' · ')}',
             color: ProtoColors.gold),
+      if (exclusive.isNotEmpty)
+        Container(
+          key: const ValueKey('results-exclusive'),
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A0F2A),
+            border: Border.all(color: ProtoColors.gold, width: 3),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(retroText('EXCLUSIVO DEL ABISMO'),
+                  style: const TextStyle(
+                      fontFamily: RetroType.pixelFamily,
+                      fontSize: RetroType.title,
+                      color: ProtoColors.gold,
+                      shadows: shadow)),
+              const SizedBox(height: 4),
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final d in exclusive)
+                  LootLabel(
+                      text: d.text,
+                      verdict: d.verdict,
+                      hiddenNote: '(oculto por tu filtro)',
+                      tooltip: d.tooltip),
+              ]),
+            ],
+          ),
+        ),
       if (this.loot.isNotEmpty) ...[
         line('TUS DROPS (${this.loot.length})', color: ProtoColors.gold),
         Wrap(

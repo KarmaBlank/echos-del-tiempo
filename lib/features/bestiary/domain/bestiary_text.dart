@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
+import '../../../game_engine/data/abyss_catalog.dart';
 import '../../../game_engine/data/enemies_catalog.dart';
 import '../../../game_engine/data/enemy_descriptions.dart';
 import '../../../game_engine/data/uniques_catalog.dart';
@@ -24,6 +25,9 @@ Color familyColor(EnemyFamily f) => switch (f) {
       EnemyFamily.temporal => ProtoColors.sky,
       EnemyFamily.aberration => ProtoColors.crimson,
     };
+
+/// "Zona" de los Jefes del Abismo en el bestiario (después de la 10).
+const kAbyssBestiaryZone = 11;
 
 /// Texto cuando todavía no se lo mató (bestiary.md § 3).
 const kBestiaryUnknownHint = 'Derrotalo para agregarlo al bestiario';
@@ -56,9 +60,11 @@ class BestiaryEntry {
   EnemyFamily? get family => familyOf(def.id);
   FamilyRule? get rule => familyRuleOf(def.id);
 
-  String get zoneName => zone <= 0 || zone > kZones.length
-      ? 'Desconocida'
-      : kZones[zone - 1].name;
+  String get zoneName => zone == kAbyssBestiaryZone
+      ? 'Abismo'
+      : zone <= 0 || zone > kZones.length
+          ? 'Desconocida'
+          : kZones[zone - 1].name;
 
   String get role => def.boss
       ? 'Jefe'
@@ -91,6 +97,10 @@ List<BestiaryEntry> bestiaryEntries([Map<String, EnemyDef> enemies = kEnemies]) 
       elites.add(m.elite);
     }
   }
+  // Jefes del Abismo (v0.8): una sección propia, después de las zonas.
+  for (final d in kAbyssBosses.values) {
+    zoneOf[d.enemyId] = kAbyssBestiaryZone;
+  }
   final summons = <String>{};
   for (final e in enemies.values) {
     final add = bossMechanicOf(e)?.addType;
@@ -110,12 +120,17 @@ List<BestiaryEntry> bestiaryEntries([Map<String, EnemyDef> enemies = kEnemies]) 
       ),
   ];
   int rank(BestiaryEntry b) => b.def.boss ? 2 : (b.summon ? 1 : 0);
+  // Desempate por el orden del catálogo: `sort` no es estable con listas
+  // largas (v0.8 pasó de 32 fichas).
+  final order = {for (final (i, e) in out.indexed) e.id: i};
   out.sort((a, b) {
     final z = a.zone.compareTo(b.zone);
     if (z != 0) return z;
     final r = rank(a).compareTo(rank(b));
     if (r != 0) return r;
-    return a.level.compareTo(b.level);
+    final l = a.level.compareTo(b.level);
+    if (l != 0) return l;
+    return order[a.id]!.compareTo(order[b.id]!);
   });
   return out;
 }

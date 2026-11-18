@@ -109,6 +109,28 @@ void main() {
           Music.battle);
     });
 
+    test('Jefes del Abismo: su pieza; el secreto, la suya (v0.8)', () {
+      for (final id in const [
+        'golemAbismo',
+        'hechiceraAbismo',
+        'espectroAbismo',
+        'devoradorAbismo'
+      ]) {
+        expect(
+            MusicSelector.trackFor(
+                mode: SessionMode.battle, zone: 3, boss: true, bossId: id),
+            Music.bossAbyss,
+            reason: id);
+      }
+      expect(
+          MusicSelector.trackFor(
+              mode: SessionMode.battle, boss: true, bossId: 'ecoPrimordial'),
+          Music.bossSecret);
+      expect(MusicSelector.isBattleTrack(Music.bossAbyss), isTrue);
+      expect(MusicSelector.isBattleTrack(Music.bossSecret), isTrue);
+      expect(kMusicCatalog.keys, containsAll([Music.bossAbyss, Music.bossSecret]));
+    });
+
     test('el id del jefe sale del enemigo marcado como jefe', () {
       Combatant enemy(String type, {bool boss = false}) => Combatant(
           id: type,

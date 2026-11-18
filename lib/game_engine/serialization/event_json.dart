@@ -147,6 +147,12 @@ class EventJson {
             'k': e.kind.name,
             'd': e.damage,
           },
+        // Jefes del Abismo v0.8 (abyss_bosses.md § 5).
+        AbyssDefeatedEvent() => {
+            't': 'abyssDone',
+            'n': e.boss,
+            'ids': e.playerIds,
+          },
       };
 
   static LootDrop _drop(Object? raw) =>
@@ -240,6 +246,9 @@ class EventJson {
       case 'trap':
         return TrapTriggeredEvent(j.str('id'),
             j.enumByName('k', TrapKind.values), j.integer('d'));
+      case 'abyssDone':
+        return AbyssDefeatedEvent(
+            j.integer('n'), List.unmodifiable(j.strings('ids')));
     }
     throw FormatException('JSON inválido: evento desconocido', t);
   }
