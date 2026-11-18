@@ -1018,3 +1018,25 @@ Red: `CraftAction` ya serializa `op` por nombre (`{'t': 'craft', 'op':
 'sellAll', 'w': '*', 'i': 0}`); no cambia el formato. `SessionEngine`
 solo suma el verbo del log de `reforge` (las que destruyen no tienen
 `after` y no se anuncian). Tests: `test/game_engine/loot_sinks_test.dart`.
+
+## 22. Ecos y Ancla Temporal (v0.4.0)
+
+Spec propia: docs/specs/ecos_atlas.md. Lo que toca al loot:
+- **Ecos** como objetos: `EcoItem` en `PlayerProfile.ecos` (JSON
+  `ecos`), 1 casilla de la grilla cada uno (token = `uid`, `eco<n>`),
+  `LootDrop.eco` (`{eco: {...}}`), se pueden dar, tirar y guardar en el
+  alijo; no se equipan, venden ni desarman. Caen de enemigos de nivel
+  ≥ 45 (batalla 2%, cofre 4%, élite 10%, jefe 30%) con su propio azar
+  (`SessionEngine.ecoRandom`) para no cambiar el orden de las tiradas de
+  siempre.
+- **Dentro de un Eco** cada tirada de loot se repite `⌊1+Q⌋` (+1 con
+  `frac`) veces y suma `R/100` al bonus de rareza (§ 2.2 del spec).
+- **Ancla Temporal** (`CraftMaterial.ancla`, token `mat:ancla`): solo
+  cae dentro de los Ecos; no entra en `materialChance` ni en el
+  desarmado. Sube el tier de un Eco.
+- **Filtro**: `Objeto Eco` (`LootKind.eco`), `Tier <op> n`
+  (`TierCondition`), y `Rareza` / `Mods` también miran Ecos. El filtro
+  por defecto tiene primero `Mostrar # Ecos` (turquesa, `gema`,
+  `cuadrado celeste`).
+- **Fortuna de Eras** (Atlas) multiplica el peso del Legendario:
+  `LootRules.rarityOdds(..., legendaryMult)`.

@@ -303,7 +303,10 @@ class UniqueDef {
 enum CraftMaterial {
   esquirla('Esquirla del Eco', 'Vuelve a tirar los valores de los afijos.'),
   cristal('Cristal de Era', 'Agrega un afijo si hay lugar.'),
-  prisma('Prisma Roto', 'Sube la rareza del arma un nivel (hasta Épico).');
+  prisma('Prisma Roto', 'Sube la rareza del arma un nivel (hasta Épico).'),
+
+  /// Solo cae dentro de los Ecos (docs/specs/ecos_atlas.md § 3).
+  ancla('Ancla Temporal', 'Sube el tier de un Eco en 1 (hasta 16).');
 
   const CraftMaterial(this.label, this.description);
   final String label;

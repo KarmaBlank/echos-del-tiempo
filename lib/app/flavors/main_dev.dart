@@ -17,6 +17,7 @@ Future<void> main() async {
     unlockAllCharacters: true,
     showDebugOverlay: true,
     enableExperimentalFeatures: true,
+    devTools: true,
   );
   registerSharedDependencies();
   registerP2PNetcode(signaling: await resolveP2PSignaling());

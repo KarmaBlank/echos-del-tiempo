@@ -52,7 +52,9 @@ void main() {
     expect(m.rows, [
       '##########################',
       '#,,,,,,,,,,,,,,,,,,,,,,,,#',
-      '#........CCCCCCCC..AAAAA.#',
+      // v0.4: Portal del Eco (P) a la izquierda del mostrador
+      // (docs/specs/ecos_atlas.md § 1).
+      '#..PPP...CCCCCCCC..AAAAA.#',
       '#...........,,...........#',
       '#...........,,...........#',
       '#...........,,...........#',

@@ -32,6 +32,10 @@ abstract final class MapGenerator {
     for (var x = 19; x <= 23; x++) {
       t[2][x] = Tile.armory;
     }
+    // Portal del Eco (ecos_atlas.md § 1), a la izquierda del mostrador.
+    for (var x = 3; x <= 5; x++) {
+      t[2][x] = Tile.portal;
+    }
     for (var y = 7; y <= 8; y++) {
       for (var x = 20; x <= 22; x++) {
         t[y][x] = Tile.water;

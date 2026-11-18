@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../../../game_engine/models/atlas.dart';
+import '../../../game_engine/models/atlas_store.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/profile_store.dart';
 import '../domain/account.dart';
@@ -95,5 +97,21 @@ class SelectedCharacterProfileStore implements ProfileStore {
       final added = a.add(profile, now: when);
       return added == null ? a : added.touch(added.selectedId!, when);
     });
+  }
+}
+
+/// `AtlasStore` sobre la cuenta: el Atlas es uno solo para todos los
+/// personajes (docs/specs/ecos_atlas.md § 5).
+class AccountAtlasStore implements AtlasStore {
+  AccountAtlasStore(this.repository);
+
+  final AccountRepository repository;
+
+  @override
+  Future<AtlasProgress> load() async => (await repository.load()).atlas;
+
+  @override
+  Future<void> save(AtlasProgress atlas) async {
+    await repository.update((a) => a.withAtlas(atlas));
   }
 }

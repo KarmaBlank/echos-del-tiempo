@@ -1,8 +1,10 @@
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
+import 'package:echos_del_tiempo/game_engine/models/atlas_store.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
+import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -15,6 +17,8 @@ Future<SessionController> pumpPanel(
   WidgetTester tester, {
   required PlayerProfile profile,
   required Widget Function(SessionView view, SessionController c) build,
+  SessionEngine? engine,
+  AtlasStore? atlas,
 }) async {
   tester.view.physicalSize = const Size(1280, 720);
   tester.view.devicePixelRatio = 1;
@@ -23,8 +27,9 @@ Future<SessionController> pumpPanel(
   late SessionController controller;
   await tester.pumpWidget(ProviderScope(
     overrides: [
-      sessionEngineProvider.overrideWithValue(sessionEngine()),
+      sessionEngineProvider.overrideWithValue(engine ?? sessionEngine()),
       profileStoreProvider.overrideWithValue(store),
+      atlasStoreProvider.overrideWithValue(atlas ?? InMemoryAtlasStore()),
       sessionClockProvider
           .overrideWithValue(const SessionClock(autoStart: false)),
     ],

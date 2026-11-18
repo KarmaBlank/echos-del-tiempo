@@ -153,7 +153,7 @@ class Combatant {
   final bool boss;
   final bool areaAttack;
   final bool pierce;
-  final StatusApplication? inflicts;
+  StatusApplication? inflicts;
 
   // ---- estado de batalla ----
   Map<StatusKind, int> statuses;

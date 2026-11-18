@@ -11,11 +11,17 @@ class FeatureFlags {
   final bool enableExperimentalFeatures;
   final Set<String> restrictedCharacterIds; // vacío = todos permitidos
 
+  /// Atajos de prueba del endgame (dar Ecos desde el Portal). Solo
+  /// `main_dev`: el motor rechaza `DevGrantEcoAction` sin esto
+  /// (docs/specs/ecos_atlas.md § 8).
+  final bool devTools;
+
   const FeatureFlags({
     this.unlockAllCharacters = false,
     this.showDebugOverlay = false,
     this.enableExperimentalFeatures = false,
     this.restrictedCharacterIds = const {},
+    this.devTools = false,
   });
 
   static FeatureFlags instance = const FeatureFlags();

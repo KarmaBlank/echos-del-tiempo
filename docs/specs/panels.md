@@ -645,6 +645,39 @@ Armería.`
   prototipo solo en lobby/preparación (`ed`). El puerto sigue al motor
   (**desvío**): se pueden tomar al subir de nivel en una misión.
 
+## Portal del Eco (v0.4.0)
+
+`EcoPortalPanel` (`lib/features/endgame/presentation`), con E frente al
+portal del pueblo (`WorldPanel.ecoPortal`, aviso `[E] Portal del Eco`).
+Título `PORTAL DEL ECO` con `[?]`, a la derecha `Atlas: N puntos libres`,
+pestañas ECOS y ATLAS. Spec: docs/specs/ecos_atlas.md.
+
+- Sin el portal activado: línea naranja `Portal apagado: vencé al
+  Devorador de Eras...` (las pestañas se ven igual).
+- **ECOS**: lista (380 px) de los Ecos del inventario (nombre en color
+  de rareza + `T<n>`, zona · jefe · mods, la casilla a la derecha) y la
+  ficha (`ecoTooltipMarkup`): tier y nivel de monstruos, zona y pisos,
+  jefe, `Modificadores n/max` (rojo, cada uno con su `+% cant. +% rar.`)
+  y `Botín: +Q% cantidad · +R% rareza` con el Atlas de la sala y el
+  grupo. Abajo: los 4 crafteos (`MODS NUEVOS`, `+1 MOD`, `RAREZA`,
+  `+1 TIER`, cada uno con su material y el motivo si no se puede) y
+  `ABRIR ECO` (verde; propone al grupo y cierra el panel). En `main_dev`:
+  `DEV: +ECO T1 / T8 / T16`.
+- **ATLAS** (`AtlasView`): grilla 9 × 7 de nodos (cuadrados del color de
+  su rama; lleno = tomado, borde grueso = se puede tomar, `?` = próxima-
+  mente, el número = costo; notables más grandes) unidos por líneas; a
+  la derecha (340 px) puntos libres y ganados, primeras veces, el nodo
+  elegido con `TOMAR` (o el motivo), la leyenda y `REINICIAR (gratis)`.
+  Solo se edita en el pueblo. Un cliente ve la nota `En grupo vale el
+  Atlas del anfitrión...`.
+- Inventario: los Ecos se ven en la grilla (ícono de portal y `T<n>`
+  abajo a la derecha); la ficha es la misma. Acciones: MOVER, DAR A,
+  TIRAR (sin COMPARAR, EQUIPAR, DESARMAR ni VENDER).
+- HUD: con nivel 50, barra violeta de Maestría y `MAESTRÍA m · XP x/y`
+  (`MAESTRÍA MÁX`); el título del panel de personaje la suma junto al
+  nivel. Resultado de un Eco: `Eco T<n> · zona · jefe · Piso` y la línea
+  turquesa con los puntos de Atlas ganados.
+
 ## Fuera de alcance
 
 Tienda ambulante (`merchant`): el mapa nunca genera mercader

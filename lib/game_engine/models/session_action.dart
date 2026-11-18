@@ -1,5 +1,6 @@
 import 'attributes.dart';
 import 'battle_command.dart';
+import 'eco.dart' show EcoCraftOp;
 import 'item.dart' show CraftOp, Rarity;
 import 'upgrade_stat.dart';
 
@@ -212,4 +213,26 @@ class SetLootFilterAction extends SessionAction {
 
   /// Tope de largo del texto.
   static const maxLength = 8000;
+}
+
+// ---------------- endgame v0.4 (docs/specs/ecos_atlas.md) ----------------
+
+/// Abrir un Eco propio en el Portal (propone la misión del Eco).
+class ProposeEcoAction extends SessionAction {
+  final String uid;
+  const ProposeEcoAction(this.uid);
+}
+
+/// Craftear un Eco del inventario (Esquirla, Cristal, Prisma, Ancla).
+class EcoCraftAction extends SessionAction {
+  final String uid;
+  final EcoCraftOp op;
+  const EcoCraftAction(this.uid, this.op);
+}
+
+/// Solo desarrollo (`FeatureFlags.devTools`): activa el portal y da un
+/// Eco Raro de [tier]. El motor la rechaza si no tiene `devTools`.
+class DevGrantEcoAction extends SessionAction {
+  final int tier;
+  const DevGrantEcoAction(this.tier);
 }

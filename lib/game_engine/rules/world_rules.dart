@@ -84,6 +84,10 @@ abstract final class WorldRules {
   static bool nearArmory(double x, double y) =>
       y < 4.6 * tileSize && x > 18.5 * tileSize && x < 24.5 * tileSize;
 
+  /// Frente al Portal del Eco del pueblo (tiles x 3–5, y 2).
+  static bool nearPortal(double x, double y) =>
+      y < 4.6 * tileSize && x > 2.5 * tileSize && x < 6.5 * tileSize;
+
   /// Distancia a la que la UI ofrece activar un sello (`nearSeal`). El
   /// host acepta hasta `SessionEngine.sealRange`.
   static const sealPromptRange = 26.0;

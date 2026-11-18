@@ -136,7 +136,7 @@ class SessionSfx {
         for (final c in battleSounds(events)) {
           service.play(c.id, delayMs: c.delayMs);
         }
-      case LevelUpEvent():
+      case LevelUpEvent() || MasteryUpEvent():
         service.play(Sfx.levelUp);
       case BattleStartedEvent(:final boss) when boss:
         // Cartel de entrada del jefe.

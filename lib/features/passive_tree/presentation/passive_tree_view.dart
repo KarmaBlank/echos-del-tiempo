@@ -85,7 +85,8 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   TreeNodeStatus _status(String id) => treeNodeStatus(
         widget.rules,
         classId: widget.profile.classId,
-        level: widget.profile.level,
+        // La Maestría suma puntos de árbol (ecos_atlas.md § 6).
+        level: widget.profile.treeLevel,
         progress: widget.profile.passiveProgress,
         nodeId: id,
         inBattle: widget.inBattle,
@@ -136,7 +137,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   Widget build(BuildContext context) {
     final rules = widget.rules;
     final p = widget.profile;
-    final points = rules.pointsAvailable(p.level, p.passiveProgress);
+    final points = rules.pointsAvailable(p.treeLevel, p.passiveProgress);
     final states = {
       for (final id in rules.catalog.nodes.keys) id: _status(id).state,
     };

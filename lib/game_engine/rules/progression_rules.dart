@@ -4,6 +4,7 @@ import '../data/game_catalog.dart';
 import '../data/items_catalog.dart';
 import '../models/attributes.dart';
 import '../models/battle_command.dart';
+import '../models/eco.dart';
 import '../models/game_session.dart';
 import '../models/item.dart';
 import '../models/loot.dart';
@@ -13,6 +14,7 @@ import '../models/player_state.dart';
 import '../models/upgrade_stat.dart';
 import '../models/weapon.dart';
 import 'craft_rules.dart';
+import 'eco_rules.dart';
 import 'inventory_rules.dart';
 import 'item_rules.dart';
 import 'js_math.dart';
@@ -21,7 +23,11 @@ import 'passive_tree_rules.dart';
 import 'stats_calculator.dart';
 
 /// Resultado de [ProgressionRules.gainXp].
-typedef XpGain = ({PlayerProfile profile, int levelsGained});
+typedef XpGain = ({
+  PlayerProfile profile,
+  int levelsGained,
+  int masteryGained,
+});
 
 /// Progresión y economía de un jugador — puerto de `xpNeed`, `resetBuild`,
 /// `canEquip`, `upCost`, `wSkills`, `wName` y de las acciones del host
@@ -51,6 +57,7 @@ class ProgressionRules {
   LootRules get loot => LootRules(items: items);
   InventoryRules get inventory => InventoryRules(items: items);
   CraftRules get crafting => CraftRules(loot: loot);
+  EcoRules get ecos => EcoRules(catalog: catalog);
 
   static const pointsPerLevel = 3;
   static const upgradeMax = WeaponUpgradeLevels.upMax;
@@ -218,11 +225,15 @@ class ProgressionRules {
   PlayerProfile normalize(PlayerProfile raw) {
     final cls = catalog.classes.containsKey(raw.classId) ? raw.classId : 'guerrero';
     final level = raw.level.clamp(1, maxLevel);
+    // La Maestría solo existe en el nivel 50.
+    final mastery = level >= maxLevel ? raw.mastery : 0;
 
-    // Árbol: en orden, solo nodos que se podrían haber tomado.
+    // Árbol: en orden, solo nodos que se podrían haber tomado (la
+    // Maestría suma puntos).
     final tree = <String>[];
     for (final id in raw.tree) {
-      if (treeRules.canTake(cls, level, PlayerPassiveProgress(tree), id)) {
+      if (treeRules.canTake(
+          cls, level + mastery, PlayerPassiveProgress(tree), id)) {
         tree.add(id);
       }
     }
@@ -241,6 +252,18 @@ class ProgressionRules {
       }
       uids.add(uid);
       list.add(uid == it.uid ? it : it.copyWith(uid: uid));
+    }
+
+    // Ecos: válidos y con `uid` que no choque con nada de la grilla.
+    final ecos = <EcoItem>[];
+    for (final e in raw.ecos) {
+      if (ecos.length >= InventoryRules.cells) break;
+      var uid = e.uid;
+      while (uids.contains(uid)) {
+        uid = '$uid#';
+      }
+      uids.add(uid);
+      ecos.add(EcoRules.sanitize(uid == e.uid ? e : e.copyWith(uid: uid)));
     }
 
     var p = PlayerProfile(
@@ -266,6 +289,9 @@ class ProgressionRules {
       itemSeq: math.max(0, raw.itemSeq),
       tree: tree,
       unlockedZone: raw.unlockedZone,
+      ecos: ecos,
+      ecosUnlocked: raw.ecosUnlocked,
+      mastery: mastery,
     );
 
     final base = catalog.classes[cls]!.baseAttributes;
@@ -315,7 +341,9 @@ class ProgressionRules {
   }
 
   /// Suma XP y sube los niveles que alcance (+3 puntos cada uno), hasta
-  /// el nivel máximo (la XP sobrante se guarda).
+  /// el nivel máximo; en el 50 la XP llena la Maestría (+1 punto de árbol
+  /// cada nivel, tope 20; docs/specs/ecos_atlas.md § 6). Con la Maestría
+  /// al tope la XP deja de acumularse.
   XpGain gainXp(PlayerProfile p, int xp) {
     var level = p.level, rest = p.xp + xp, points = p.points, gained = 0;
     while (level < maxLevel && rest >= xpNeed(level)) {
@@ -324,10 +352,34 @@ class ProgressionRules {
       points += pointsPerLevel;
       gained++;
     }
+    var mastery = p.mastery, mGained = 0;
+    if (level >= maxLevel) {
+      while (mastery < PlayerProfile.maxMastery &&
+          rest >= masteryNeed(mastery)) {
+        rest -= masteryNeed(mastery);
+        mastery++;
+        mGained++;
+      }
+      if (mastery >= PlayerProfile.maxMastery) rest = 0;
+    }
     return (
-      profile: p.copyWith(xp: rest, level: level, points: points),
+      profile: p.copyWith(
+          xp: rest, level: level, points: points, mastery: mastery),
       levelsGained: gained,
+      masteryGained: mGained,
     );
+  }
+
+  /// XP para pasar de la Maestría [m] a la siguiente: `12 000 + 3 000 m`.
+  static int masteryNeed(int m) => 12000 + 3000 * m;
+
+  /// XP total de la Maestría 0 a la 20.
+  static int get totalMasteryXp {
+    var t = 0;
+    for (var m = 0; m < PlayerProfile.maxMastery; m++) {
+      t += masteryNeed(m);
+    }
+    return t;
   }
 
   /// `stats`: reparte puntos. Negativos cuentan como 0; el total debe
@@ -405,7 +457,8 @@ class ProgressionRules {
 
   /// `node`: toma un nodo del árbol de pasivas.
   PlayerProfile? takeNode(PlayerProfile p, String nodeId) {
-    if (!treeRules.canTake(p.classId, p.level, p.passiveProgress, nodeId)) {
+    if (!treeRules.canTake(
+        p.classId, p.treeLevel, p.passiveProgress, nodeId)) {
       return null;
     }
     return p.copyWith(tree: [...p.tree, nodeId]);

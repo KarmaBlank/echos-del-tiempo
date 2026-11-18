@@ -5,7 +5,9 @@ import '../data/items_catalog.dart';
 import '../data/uniques_catalog.dart';
 import '../models/battle_command.dart';
 import '../models/battle_event.dart';
+import '../models/atlas.dart';
 import '../models/battle_state.dart';
+import '../models/eco.dart';
 import '../models/game_map.dart';
 import '../models/game_session.dart';
 import '../models/item.dart';
@@ -16,7 +18,9 @@ import '../models/player_profile.dart';
 import '../models/session_action.dart';
 import '../models/session_event.dart';
 import '../models/zone_def.dart';
+import 'atlas_rules.dart';
 import 'battle_engine.dart';
+import 'eco_rules.dart';
 import 'inventory_rules.dart';
 import 'js_math.dart';
 import 'loot_filter_rules.dart';
@@ -56,8 +60,41 @@ class SessionEngine {
     RandomSource? random,
     SeedSource? seeds,
     this.groundLoot = false,
+    RandomSource? ecoRandom,
+    this.devTools = false,
+    this.atlasRules = const AtlasRules(),
   })  : _random = random ?? math.Random().nextDouble,
+        _ecoRandom = ecoRandom ?? math.Random().nextDouble,
         _seeds = seeds ?? (() => math.Random().nextInt(1000000000));
+
+  /// Azar propio de los Ecos (drops de Ecos y Anclas, mods gratis): así
+  /// las tiradas de siempre no cambian de orden (ecos_atlas.md § 3).
+  final RandomSource _ecoRandom;
+
+  /// Acepta `DevGrantEcoAction` (solo el flavor de desarrollo).
+  final bool devTools;
+  final AtlasRules atlasRules;
+
+  EcoRules get ecoRules => progression.ecos;
+
+  /// Efectos del Atlas de la sala (el del anfitrión).
+  AtlasEffects atlasOf(GameSession s) => atlasRules.effects(s.atlas);
+
+  /// La misión [id] en la sala [s]: la del Eco si es `eco` y hay uno.
+  MissionDef? missionOf(GameSession s, String id) {
+    if (id == EcoRules.missionId) {
+      final eco = s.eco;
+      return eco == null ? null : ecoRules.missionDef(eco);
+    }
+    return catalog.mission(id);
+  }
+
+  /// El anfitrión fija su Atlas para la sala (al crearla y cada vez que
+  /// lo cambia en el pueblo). Los nodos inválidos se ignoran al usarlos.
+  SessionStep setAtlas(GameSession session, List<String> nodes) {
+    final s = session.copy()..atlas = List.unmodifiable(nodes);
+    return SessionStep(s, const []);
+  }
 
   final BattleEngine battles;
   final ProgressionRules progression;
@@ -132,7 +169,20 @@ class SessionEngine {
     if (m == null || s.mode == SessionMode.lobby) {
       return MapGenerator.overworld();
     }
+    final eco = s.eco;
+    if (m.missionId == EcoRules.missionId && eco != null) {
+      return _ecoMap(eco);
+    }
     return _missionMap(catalog.mission(m.missionId)!, m.seed);
+  }
+
+  /// La mazmorra de un Eco: función pura de su zona, pisos y semilla.
+  GameMap _ecoMap(EcoItem eco) {
+    final key = 'eco:${eco.zone}:${eco.floors}:${eco.tier}:${eco.seed}';
+    final hit = _maps[key];
+    if (hit != null) return hit;
+    if (_maps.length > 8) _maps.clear();
+    return _maps[key] = MapGenerator.zone(ecoRules.zoneDef(eco), eco.seed);
   }
 
   GameMap _missionMap(MissionDef def, int seed) {
@@ -223,6 +273,14 @@ class _Op {
   ProgressionRules get rules => e.progression;
   GameCatalog get catalog => e.catalog;
   double _rand() => e._random();
+  double _ecoRand() => e._ecoRandom();
+  EcoRules get ecos => e.ecoRules;
+
+  /// El Eco que se está jugando (`null` fuera de una misión de Eco).
+  EcoItem? get _eco =>
+      s.mission?.missionId == EcoRules.missionId ? s.eco : null;
+
+  AtlasEffects get _atlas => e.atlasOf(s);
   Iterable<SessionPlayer> get players => s.players.values;
 
   void say(String text) => events.add(SystemMessageEvent(text));
@@ -298,6 +356,26 @@ class _Op {
     if (b != null) b.state = e.battles.leave(b.state, id).state;
     events.add(PlayerLeftEvent(id));
     say('${p.name} salió de la sala.');
+    // Se fue quien abrió el Eco antes de empezar: se cancela (no se
+    // consumió nada).
+    if (s.ecoOwner == id && s.mission == null) {
+      if (s.vote != null || s.prep != null) {
+        say('Se canceló el Eco: ${p.name} salió.');
+      }
+      _clearEcoVote();
+    }
+  }
+
+  /// Saca la votación / preparación del Eco (sin consumirlo).
+  void _clearEcoVote() {
+    if (s.vote?.missionId == EcoRules.missionId) s.vote = null;
+    if (s.prep?.missionId == EcoRules.missionId) {
+      s.prep = null;
+      if (s.mode == SessionMode.prep) s.mode = SessionMode.lobby;
+    }
+    s
+      ..eco = null
+      ..ecoOwner = null;
   }
 
   // ---------------- acciones (`onMsg`) ----------------
@@ -336,6 +414,7 @@ class _Op {
         } else {
           say('${p.name} rechazó la misión.');
           s.vote = null;
+          if (v.missionId == EcoRules.missionId) _clearEcoVote();
         }
         return true;
 
@@ -350,6 +429,7 @@ class _Op {
         s.prep = null;
         s.mode = SessionMode.lobby;
         say('${p.name} canceló la preparación.');
+        _clearEcoVote();
         return true;
 
       case ActivateSealAction():
@@ -488,8 +568,63 @@ class _Op {
 
       case UseStairsAction():
         return _useStairs(p, a.down);
+
+      case ProposeEcoAction():
+        return _proposeEco(p, a.uid);
+
+      case EcoCraftAction():
+        return _ecoCraft(p, a);
+
+      case DevGrantEcoAction():
+        if (!e.devTools) return false;
+        final eco = ecos.generate(_ecoRand,
+            tier: a.tier, rarity: Rarity.raro, atlas: _atlas);
+        final next = rules.grant(
+            p.profile.copyWith(ecosUnlocked: true), LootDrop.eco(eco));
+        if (next == null) return false;
+        p.profile = next;
+        say('[DEV] ${p.name} recibió ${ecos.fullName(eco)}');
+        return true;
     }
   }
+
+  // ---------------- Ecos (docs/specs/ecos_atlas.md § 4) ----------------
+
+  /// `ProposeEcoAction`: en el pueblo, con el portal activado y el Eco en
+  /// el inventario. No se consume hasta empezar.
+  bool _proposeEco(SessionPlayer p, String uid) {
+    final eco = p.profile.ecoByUid(uid);
+    if (s.mode != SessionMode.lobby ||
+        s.vote != null ||
+        !p.profile.ecosUnlocked ||
+        eco == null) {
+      return false;
+    }
+    s
+      ..eco = eco
+      ..ecoOwner = p.id
+      ..vote = MissionVote(EcoRules.missionId, p.name, {p.id});
+    say('${p.name} abre ${ecos.fullName(eco)} (jefe: ${ecos.bossName(eco)}). '
+        '¡Voten!');
+    return true;
+  }
+
+  bool _ecoCraft(SessionPlayer p, EcoCraftAction a) {
+    if (!s.canShop) return false;
+    // El Eco que se vota o prepara no se toca.
+    if (s.ecoOwner == p.id && s.eco?.uid == a.uid) return false;
+    final r = ecos.craft(p.profile, a.uid, a.op, _rand);
+    if (!_profileChange(p, r.profile)) return false;
+    say('${p.name}: ${ecos.fullName(r.after!)} (${_ecoVerb(a.op)})');
+    return true;
+  }
+
+  static String _ecoVerb(EcoCraftOp op) => switch (op) {
+        EcoCraftOp.reroll => 'Esquirla del Eco: modificadores nuevos',
+        EcoCraftOp.addMod => 'Cristal de Era: modificador nuevo',
+        EcoCraftOp.rarity => 'Prisma Roto: rareza mejorada',
+        EcoCraftOp.tier => 'Ancla Temporal: tier +1',
+      };
 
   bool _profileChange(SessionPlayer p, PlayerProfile? next,
       {bool gain = false, bool refill = false}) {
@@ -502,7 +637,16 @@ class _Op {
 
   // ---------------- loot v2: forja, inventario y piso ----------------
 
+  /// El Eco que [p] abrió y todavía se vota / prepara: no se suelta ni
+  /// se da.
+  bool _ecoLocked(SessionPlayer p, String token) =>
+      s.mission == null && s.ecoOwner == p.id && s.eco?.uid == token;
+
   String _dropText(LootDrop d) {
+    final eco = d.eco;
+    if (eco != null) {
+      return '${ecos.fullName(eco)} (${eco.rarity.label})';
+    }
     final it = d.item;
     if (it == null) return '${d.count} ${d.stack!.label}';
     return '${rules.items.displayName(it)} (${it.rarity.label})';
@@ -543,7 +687,7 @@ class _Op {
   bool _give(SessionPlayer p, GiveItemAction a) {
     if (s.mode == SessionMode.battle) return false;
     final to = s.players[a.toPlayerId];
-    if (to == null || to.id == p.id) return false;
+    if (to == null || to.id == p.id || _ecoLocked(p, a.token)) return false;
     final t = rules.inventory.take(p.profile, a.token, count: a.count);
     final drop = t.drop;
     if (drop == null) return false;
@@ -561,7 +705,7 @@ class _Op {
 
   /// `DropItemAction`: al piso, compartido, donde está el jugador.
   bool _drop(SessionPlayer p, DropItemAction a) {
-    if (!_onMap || !p.alive) return false;
+    if (!_onMap || !p.alive || _ecoLocked(p, a.token)) return false;
     final t = rules.inventory.take(p.profile, a.token, count: a.count);
     final drop = t.drop;
     if (drop == null) return false;
@@ -629,7 +773,11 @@ class _Op {
         if (next != null) {
           p.profile = next;
           events.add(LootDropEvent(p.id, d, src,
-              uid: d.isItem ? next.items.last.uid : null));
+              uid: d.isItem
+                  ? next.items.last.uid
+                  : d.isEco
+                      ? next.ecos.last.uid
+                      : null));
           continue;
         }
         full = true;
@@ -650,17 +798,74 @@ class _Op {
     final firsts = <String, LootDrop>{};
     final zone = level ?? s.mission?.zoneLevel ?? 1;
     for (final p in players) {
-      final drops = rules.loot.rollDrops(_rand,
-          zoneLevel: zone,
-          source: src,
-          family: p.profile.classId,
-          chance: chance,
-          extraBonus: extraBonus);
+      final drops = _rollFor(p, src, zone, chance: chance, extraBonus: extraBonus);
       final w = drops.where((d) => d.isItem).firstOrNull;
       if (w != null) firsts[p.id] = w;
       _deliver(p, drops, src, x ?? p.x, y ?? p.y);
     }
     return firsts;
+  }
+
+  /// Las tiradas de loot de [p] para [src] a nivel [zone]. Dentro de un
+  /// Eco cada tirada se repite según la cantidad y suma la rareza de los
+  /// mods y del Atlas (ecos_atlas.md § 2.2); desde nivel 45 pueden caer
+  /// Ecos (§ 3).
+  List<LootDrop> _rollFor(SessionPlayer p, LootSource src, int zone,
+      {double? chance, double extraBonus = 0}) {
+    final eco = _eco;
+    final atlas = _atlas;
+    final bonus = eco == null
+        ? null
+        : EcoRules.lootBonus(eco, atlas: atlas, players: s.players.length);
+    final drops = <LootDrop>[];
+    final repeats =
+        bonus == null ? 1 : EcoRules.rollRepeats(_rand, bonus.quantity);
+    for (var i = 0; i < repeats; i++) {
+      drops.addAll(rules.loot.rollDrops(_rand,
+          zoneLevel: zone,
+          source: src,
+          family: p.profile.classId,
+          chance: chance,
+          extraBonus: extraBonus + (bonus?.rarity ?? 0),
+          legendaryMult: eco == null ? 1 : 1 + atlas.legendary));
+    }
+    if (eco != null) drops.addAll(_ecoExtras(p, src, zone, bonus!, atlas));
+    final ecoDrop = ecos.rollDrop(_ecoRand,
+        level: zone, source: src, current: eco, atlas: atlas);
+    if (ecoDrop != null) drops.add(LootDrop.eco(ecoDrop));
+    return drops;
+  }
+
+  /// Lo extra de una fuente dentro de un Eco: armas del Atlas (Trofeo,
+  /// Élites Codiciosas), Eco del Jefe y Ancla Temporal.
+  List<LootDrop> _ecoExtras(SessionPlayer p, LootSource src, int zone,
+      EcoBonus bonus, AtlasEffects atlas) {
+    final out = <LootDrop>[];
+    final weapons = switch (src) {
+      LootSource.boss => atlas.bossWeapons,
+      LootSource.elite => atlas.eliteWeapons,
+      _ => 0,
+    };
+    for (var i = 0; i < weapons; i++) {
+      out.add(LootDrop.item(rules.loot.generate(_rand,
+          itemLevel: LootRules.itemLevelFor(zone, src),
+          family: p.profile.classId,
+          source: src,
+          extraBonus: bonus.rarity,
+          legendaryMult: 1 + atlas.legendary)));
+    }
+    if (src == LootSource.boss) {
+      for (var i = 0; i < atlas.bossEcos; i++) {
+        out.add(LootDrop.eco(ecos.generate(_ecoRand,
+            tier: EcoRules.dropTier(_ecoRand, _eco),
+            source: src,
+            atlas: atlas)));
+      }
+    }
+    if (EcoRules.rollAnchor(_ecoRand, src, atlas: atlas)) {
+      out.add(const LootDrop.stack(StackKind.ancla, 1));
+    }
+    return out;
   }
 
   /// El legendario propio del jefe de [b] (si tiene): a cada jugador con
@@ -671,8 +876,10 @@ class _Op {
     final u = id == null ? null : kUniques[id];
     if (u == null || !catalog.weapons.containsKey(u.baseId)) return;
     final il = level ?? s.mission?.zoneLevel ?? 1;
+    final chance = SessionEngine.bossLegendaryChance +
+        (_eco == null ? 0 : _atlas.bossUnique);
     for (final p in players) {
-      if (_rand() >= SessionEngine.bossLegendaryChance) continue;
+      if (_rand() >= chance) continue;
       final item = rules.loot.generateUnique(_rand, u, il);
       _deliver(p, [LootDrop.item(item)], LootSource.boss, x, y);
     }
@@ -755,7 +962,12 @@ class _Op {
   /// Nivel de los enemigos de [en] (0 = misión sin zona).
   int _levelFor(FieldEnemy en) {
     final m = s.mission;
-    final z = m == null || m.zone == 0 ? null : catalog.zone(m.zone);
+    final eco = _eco;
+    final z = eco != null
+        ? ecos.zoneDef(eco)
+        : m == null || m.zone == 0
+            ? null
+            : catalog.zone(m.zone);
     if (z == null) return 0;
     if (en.boss) return ZoneRules.bossLevel(z);
     if (en.elite) return ZoneRules.eliteLevel(z, en.floor);
@@ -831,6 +1043,10 @@ class _Op {
 
   void startMission(String missionId) {
     s.vote = null;
+    if (missionId == EcoRules.missionId) {
+      _startEco();
+      return;
+    }
     final m = catalog.mission(missionId);
     if (m == null) return;
     final z = m.zone == 0 ? null : catalog.zone(m.zone);
@@ -958,9 +1174,10 @@ class _Op {
 
   /// `startMission` de una misión de zona: todos los pisos del atlas se
   /// pueblan al empezar (worldgen.md § 6.7).
-  void _startZoneMission(MissionDef m, ZoneDef z) {
-    final seed = e._seeds();
-    final map = e._missionMap(m, seed);
+  void _startZoneMission(MissionDef m, ZoneDef z,
+      {int? seed, GameMap? atlasMap, int extraChests = 0}) {
+    seed ??= e._seeds();
+    final map = atlasMap ?? e._missionMap(m, seed);
     final r = mulberry32(seed + 7);
     int pick(int n) => (r() * n).floor();
     bool solid(int tx, int ty) =>
@@ -1101,7 +1318,7 @@ class _Op {
             y: q.y,
             floor: fl.index));
       }
-      final n = 1 + pick(2);
+      final n = 1 + pick(2) + extraChests;
       for (var i = 0; i < n; i++) {
         final q = freeSpot(fl, 70);
         items.add(MissionItem(
@@ -1127,6 +1344,30 @@ class _Op {
       levels: [for (final fl in map.floors) fl.level],
     );
     _enterField(m, seed);
+  }
+
+  /// Empieza el Eco votado: se consume del inventario de quien lo abrió,
+  /// se le suman los mods gratis del Atlas y se arma su mazmorra
+  /// (ecos_atlas.md § 4).
+  void _startEco() {
+    final eco = s.eco;
+    final owner = s.players[s.ecoOwner];
+    final have = eco == null ? null : owner?.profile.ecoByUid(eco.uid);
+    if (have == null || owner == null) {
+      say('El Eco ya no está en el inventario: se canceló.');
+      _clearEcoVote();
+      s.mode = SessionMode.lobby;
+      return;
+    }
+    owner.profile = InventoryRules.removeEco(owner.profile, have.uid);
+    final run = EcoRules.withFreeMods(_ecoRand, have, _atlas.freeMods);
+    s.eco = run;
+    _startZoneMission(ecos.missionDef(run), ecos.zoneDef(run),
+        seed: run.seed, atlasMap: e._ecoMap(run), extraChests: _atlas.chests);
+    if (run.mods.length > have.mods.length) {
+      say('Atlas: +${run.mods.length - have.mods.length} modificador'
+          '${run.mods.length - have.mods.length == 1 ? '' : 'es'} gratis.');
+    }
   }
 
   /// Fin común de `startMission`: jugadores al spawn, gracia y avisos.
@@ -1172,7 +1413,7 @@ class _Op {
     }
   }
 
-  MissionDef get _missionDef => catalog.mission(s.mission!.missionId)!;
+  MissionDef get _missionDef => e.missionOf(s, s.mission!.missionId)!;
 
   /// `openChest`: créditos y poción como el prototipo; el arma y los
   /// materiales salen del loot v2 (fuente `chest`, solo para quien lo
@@ -1194,10 +1435,7 @@ class _Op {
     }
     if (item != null) msg += ' · +1 ${kItems[item]!.name}';
     p.profile = InventoryRules.relayout(prof);
-    final drops = rules.loot.rollDrops(_rand,
-        zoneLevel: s.mission!.zoneLevel,
-        source: LootSource.chest,
-        family: p.profile.classId);
+    final drops = _rollFor(p, LootSource.chest, s.mission!.zoneLevel);
     final weapon = drops.where((d) => d.isItem).firstOrNull?.item;
     events.add(
         ChestOpenedEvent(p.id, cr, item: item, weaponId: weapon?.baseId));
@@ -1264,7 +1502,9 @@ class _Op {
       changeFloor(m.floor + 1, down: true);
       return;
     }
-    for (final p in players) {
+    // Modificador `sequia` del Eco: sin regeneración en el campo.
+    final regen = !(_eco != null && EcoRules.noRegen(_eco!));
+    for (final p in regen ? players : const <SessionPlayer>[]) {
       p.mp = math.min(p.maxMp.toDouble(), p.mp + dt * 0.4);
       p.hp = math.min(p.maxHp.toDouble(), p.hp + p.maxHp * 0.008 * dt);
     }
@@ -1361,6 +1601,10 @@ class _Op {
     );
     final level = _levelFor(en);
     ZoneRules.scaleBattle(step.state, level);
+    final eco = _eco;
+    if (eco != null) {
+      EcoRules.applyBattle(step.state, eco, atlas: _atlas, boss: en.boss);
+    }
     s.battle = SessionBattle(
       id: s.seq,
       state: step.state,
@@ -1399,7 +1643,9 @@ class _Op {
     final won = step.state.outcome;
     if (b.level > 0 && won != null && won.victory && b.endTimer == null) {
       // XP por nivel de zona (worldgen.md § 6.3).
-      final xp = ZoneRules.battleXp(won.xp, b.level);
+      // Maestro del Eco (Atlas): +XP dentro de los Ecos.
+      final xpBonus = _eco == null ? 0.0 : _atlas.xp;
+      final xp = jsRound(ZoneRules.battleXp(won.xp, b.level) * (1 + xpBonus));
       step.state
         ..outcome = BattleOutcome(victory: true, xp: xp, credits: won.credits)
         ..log = '¡Victoria! +$xp XP · +${won.credits} créditos para cada uno';
@@ -1454,6 +1700,15 @@ class _Op {
         for (var l = oldLevel + 1; l <= g.profile.level; l++) {
           events.add(LevelUpEvent(p.id, l));
         }
+      }
+      // Maestría (ecos_atlas.md § 6): +1 punto de árbol, sin pausar.
+      if (g.masteryGained > 0) {
+        final m = g.profile.mastery;
+        for (var k = m - g.masteryGained + 1; k <= m; k++) {
+          events.add(MasteryUpEvent(p.id, k));
+        }
+        say('${p.name} alcanzó Maestría $m: +${g.masteryGained} punto'
+            '${g.masteryGained == 1 ? '' : 's'} de árbol.');
       }
     }
   }
@@ -1604,13 +1859,18 @@ class _Op {
       p.profile = p.profile.copyWith(credits: p.profile.credits + bonus);
       if (p.hp <= 0) p.hp = 1;
     }
-    final zone = def.zone == 0 ? null : catalog.zone(def.zone);
+    final eco = _eco;
+    // Un Eco usa el tipo de zona solo para el mapa: no desbloquea zonas.
+    final zone = eco != null || def.zone == 0 ? null : catalog.zone(def.zone);
     final unlocked = <String, int>{};
     if (ok) {
       final firsts = _lootAll(LootSource.mission, null, null,
           chance: dropChance[rank] ?? 0,
           extraBonus: rankBonus[rank] ?? 0,
-          level: zone?.maxLevel);
+          level: eco?.monsterLevel ?? zone?.maxLevel);
+      if (eco != null) _ecoCompleted(eco);
+      // El jefe final activa el Portal del Eco (ecos_atlas.md § 1).
+      if (zone != null && zone.index == ZoneRules.maxZone) _unlockEcos();
       for (final d in firsts.entries) {
         drops[d.key] = d.value.item!.baseId;
         events.add(WeaponDropEvent(d.key, d.value.item!.baseId, 'mission'));
@@ -1657,9 +1917,38 @@ class _Op {
     events.add(MissionEndedEvent(result));
   }
 
+  /// Eco completado: evento para el Atlas de cada jugador y el loot de
+  /// fin (1 Eco por jugador y, con Resonancia, chance de otro).
+  void _ecoCompleted(EcoItem eco) {
+    events.add(EcoCompletedEvent([for (final p in players) p.id],
+        tier: eco.tier, zone: eco.zone, boss: eco.boss));
+    say('¡Eco completado! ${ecos.fullName(eco)}');
+    for (final p in players) {
+      final drops = ecos.completionDrops(_ecoRand, eco, atlas: _atlas);
+      _deliver(p, [for (final d in drops) LootDrop.eco(d)], LootSource.mission,
+          p.x, p.y);
+    }
+  }
+
+  /// Activa el Portal del Eco de quien no lo tenía y le da un Eco de
+  /// tier 1 (Mágico) para empezar.
+  void _unlockEcos() {
+    for (final p in players) {
+      if (p.profile.ecosUnlocked) continue;
+      p.profile = p.profile.copyWith(ecosUnlocked: true);
+      events.add(EcosUnlockedEvent(p.id));
+      say('${p.name} activó el Portal del Eco en el pueblo.');
+      final first = ecos.generate(_ecoRand,
+          tier: 1, rarity: Rarity.magico, atlas: _atlas);
+      _deliver(p, [LootDrop.eco(first)], LootSource.mission, p.x, p.y);
+    }
+  }
+
   /// `toLobby`.
   void toLobby() {
     s
+      ..eco = null
+      ..ecoOwner = null
       ..mode = SessionMode.lobby
       ..mission = null
       ..result = null

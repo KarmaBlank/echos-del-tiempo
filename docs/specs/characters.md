@@ -161,6 +161,8 @@ Destructivo, por eso pide **escribir el nombre**:
     (el inventario del personaje sigue con su tope de 99). Guardar mueve
     toda la pila del personaje (lo que entre). Sacar mueve lo que entre
     en el personaje (hasta 99); el resto queda en el alijo.
+  - **Ecos** (v0.4.0): una casilla cada uno, como las armas (sin
+    protecciones). Al cargar pasan por `EcoRules.sanitize`.
   - **Pociones** de vida y de maná: **no** (son consumibles de cada
     personaje: `Las pociones no van al alijo`).
   - **Créditos**: siguen siendo **de cada personaje** (no hay moneda
@@ -181,3 +183,11 @@ Destructivo, por eso pide **escribir el nombre**:
 - Sin elegir cuántos materiales mover (se mueve la pila, lo que entre).
 - El Atlas del Tiempo (endgame.md § 2) va a vivir en la cuenta junto al
   alijo cuando se implemente.
+
+## 5. Atlas del Tiempo (v0.4.0)
+
+`Account.atlas` (JSON `atlas`, opcional: una cuenta v0.3 carga con el
+Atlas vacío y no lo escribe hasta tener algo) guarda el Atlas del Tiempo
+compartido por todos los personajes: nodos tomados y primeras veces.
+Al leer pasa por `AtlasRules.sanitize`. La sesión lo usa a través de
+`AtlasStore` (`AccountAtlasStore`); ver docs/specs/ecos_atlas.md § 5.

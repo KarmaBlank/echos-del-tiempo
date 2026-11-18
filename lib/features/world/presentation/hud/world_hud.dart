@@ -5,13 +5,16 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/theme/party_box.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/proto_markup.dart';
+import '../../../../app/theme/retro_bar.dart';
 import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/loot_filter.dart';
+import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../../game_engine/rules/world_rules.dart';
+import '../../../endgame/domain/endgame_text.dart';
 import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
@@ -268,6 +271,11 @@ class WorldHud extends StatelessWidget {
     final m = s.mission;
     if (m == null) return '';
     final cat = controller.engine.catalog;
+    // Eco: `Eco T7 · Grieta Ígnea` (docs/specs/ecos_atlas.md § 4).
+    final eco = s.eco;
+    if (eco != null && m.missionId == 'eco') {
+      return 'Eco T${eco.tier} · ${cat.zone(eco.zone)?.name ?? ''}';
+    }
     return cat.zone(m.zone)?.name ??
         cat.mission(m.missionId)?.name ??
         m.missionId;
@@ -312,7 +320,7 @@ class WorldHud extends StatelessWidget {
   Widget? _voteBox(GameSession s) {
     final v = s.vote;
     if (s.mode != SessionMode.lobby || v == null) return null;
-    final m = controller.engine.catalog.mission(v.missionId);
+    final m = controller.engine.missionOf(s, v.missionId);
     return VotePanel(
       proposedBy: v.proposedBy,
       missionName: m?.name ?? v.missionId,
@@ -577,11 +585,31 @@ class _PlayerBox extends StatelessWidget {
         Text('HP ${p.hp.ceil()}/${p.maxHp}'),
         mpBar(p.mp, p.maxMp),
         Text('MP ${p.mp.floor()}/${p.maxMp}'),
-        Text(
-          retroText('XP ${prof.xp}/${ProgressionRules.xpNeed(prof.level)} · '
-              '₵${prof.credits}'),
-          style: const TextStyle(color: ProtoColors.dim),
-        ),
+        // Con nivel 50 la XP llena la Maestría (ecos_atlas.md § 6).
+        if (prof.level >= ProgressionRules.maxLevel) ...[
+          RetroBar(
+              key: const ValueKey('hud-mastery-bar'),
+              value: prof.mastery >= PlayerProfile.maxMastery ? 1 : prof.xp,
+              max: prof.mastery >= PlayerProfile.maxMastery
+                  ? 1
+                  : ProgressionRules.masteryNeed(prof.mastery),
+              height: 4,
+              color: ProtoColors.violet),
+          Text(
+            key: const ValueKey('hud-mastery'),
+            retroText(prof.mastery >= PlayerProfile.maxMastery
+                ? '${masteryText(prof)} · ₵${prof.credits}'
+                : '${masteryText(prof)} · XP ${prof.xp}/'
+                    '${ProgressionRules.masteryNeed(prof.mastery)} · '
+                    '₵${prof.credits}'),
+            style: const TextStyle(color: ProtoColors.violet),
+          ),
+        ] else
+          Text(
+            retroText('XP ${prof.xp}/${ProgressionRules.xpNeed(prof.level)} · '
+                '₵${prof.credits}'),
+            style: const TextStyle(color: ProtoColors.dim),
+          ),
         ProtoText(
           'Pociones: ${protoColor(ProtoColors.green, '♥${prof.potions}')} '
           '${protoColor(ProtoColors.ice, '✦${prof.ethers}')}',

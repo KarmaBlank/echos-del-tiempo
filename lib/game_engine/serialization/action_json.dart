@@ -1,5 +1,6 @@
 import '../models/attributes.dart';
 import '../models/battle_command.dart';
+import '../models/eco.dart' show EcoCraftOp;
 import '../models/item.dart' show CraftOp;
 
 import '../models/player_profile.dart';
@@ -85,6 +86,9 @@ abstract final class ActionJson {
         PickUpAction() => {'t': 'pick', 'id': a.groundId},
         MoveInventoryAction() => {'t': 'invMove', 'a': a.from, 'b': a.to},
         SetLootFilterAction() => {'t': 'filter', 'txt': a.text},
+        ProposeEcoAction() => {'t': 'eco', 'u': a.uid},
+        EcoCraftAction() => {'t': 'ecoCraft', 'u': a.uid, 'op': a.op.name},
+        DevGrantEcoAction() => {'t': 'devEco', 'tier': a.tier},
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -160,6 +164,12 @@ abstract final class ActionJson {
         return MoveInventoryAction(j.integer('a'), j.integer('b'));
       case 'filter':
         return SetLootFilterAction(j.strOrNull('txt'));
+      case 'eco':
+        return ProposeEcoAction(j.str('u'));
+      case 'ecoCraft':
+        return EcoCraftAction(j.str('u'), j.enumByName('op', EcoCraftOp.values));
+      case 'devEco':
+        return DevGrantEcoAction(j.integer('tier'));
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

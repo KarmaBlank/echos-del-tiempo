@@ -10,6 +10,7 @@ import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/attributes.dart';
+import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
@@ -160,9 +161,16 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       final n = InventoryRules.stackCount(p, st);
       return n > 0 ? CellContent.stack(st, n) : null;
     }
+    final eco = p.ecoByUid(token);
+    if (eco != null) return CellContent.eco(eco);
     final it = p.itemByUid(token);
     return it == null ? null : CellContent.item(it);
   }
+
+  /// Ficha de un Eco con el Atlas y el grupo de la sala.
+  String _ecoTip(EcoItem e) => ecoTooltipMarkup(shop.rules, e,
+      atlas: shop.controller.engine.atlasOf(shop.view.session),
+      players: shop.view.session.players.length);
 
   String _tooltip(PlayerProfile viewer, CellContent c, PlayerAttributes attrs) {
     final it = c.item;
@@ -170,6 +178,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       return itemTooltipMarkup(shop.rules, it,
           level: viewer.level, attributes: attrs);
     }
+    final eco = c.eco;
+    if (eco != null) return _ecoTip(eco);
     return stackTooltipMarkup(c.stack!, c.count);
   }
 
@@ -528,6 +538,10 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   List<Widget> _detail(PlayerProfile p, PlayerProfile viewer, CellContent c,
       PlayerAttributes attrs, bool mine) {
     final it = c.item;
+    final eco = c.eco;
+    if (eco != null) {
+      return [ProtoText(key: const ValueKey('inv-eco-detail'), _ecoTip(eco))];
+    }
     if (it == null) {
       return [ProtoText(stackTooltipMarkup(c.stack!, c.count))];
     }
@@ -559,9 +573,11 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final token = _sel!;
     final it = c.item;
     final count = it == null ? _count.clamp(1, c.count) : 1;
-    final name = it == null
-        ? '$count ${c.stack!.label}'
-        : shop.rules.items.displayName(it);
+    final name = it != null
+        ? shop.rules.items.displayName(it)
+        : c.eco != null
+            ? shop.rules.ecos.fullName(c.eco!)
+            : '$count ${c.stack!.label}';
     final confirmCraft = _confirmCraft;
     if (it != null && confirmCraft != null) {
       final a = CraftAction(confirmCraft, it.uid);
@@ -606,7 +622,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       ];
     }
     return [
-      if (it == null && c.count > 1) ...[
+      if (it == null && c.eco == null && c.count > 1) ...[
         PanelButton('-',
             key: const ValueKey('inv-count-dec'),
             onPressed:

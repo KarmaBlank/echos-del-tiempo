@@ -1,4 +1,6 @@
+import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/rules/atlas_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import 'stash.dart';
 
@@ -62,9 +64,11 @@ class Account {
     String? selectedId,
     this.seq = 0,
     Stash? stash,
+    AtlasProgress? atlas,
   })  : characters = List.unmodifiable(characters),
         selectedId = _pick(characters, selectedId),
-        stash = stash ?? Stash.empty();
+        stash = stash ?? Stash.empty(),
+        atlas = atlas ?? AtlasProgress.empty;
 
   static const maxCharacters = 8;
   static const formatVersion = 1;
@@ -78,6 +82,10 @@ class Account {
   /// Contador de `id` (`c<n>`): nunca se reusa uno borrado.
   final int seq;
   final Stash stash;
+
+  /// Atlas del Tiempo, compartido por todos los personajes (JSON `atlas`,
+  /// opcional; docs/specs/ecos_atlas.md § 5).
+  final AtlasProgress atlas;
 
   bool get isFull => characters.length >= maxCharacters;
 
@@ -100,12 +108,14 @@ class Account {
     String? selectedId,
     int? seq,
     Stash? stash,
+    AtlasProgress? atlas,
   }) =>
       Account(
         characters: characters ?? this.characters,
         selectedId: selectedId ?? this.selectedId,
         seq: seq ?? this.seq,
         stash: stash ?? this.stash,
+        atlas: atlas ?? this.atlas,
       );
 
   /// Agrega un personaje con un `id` nuevo y lo elige. `null` si está
@@ -135,6 +145,7 @@ class Account {
       selectedId: selectedId == id ? null : selectedId,
       seq: seq,
       stash: stash,
+      atlas: atlas,
     );
   }
 
@@ -153,12 +164,16 @@ class Account {
 
   Account withStash(Stash stash) => _copy(stash: stash);
 
+  Account withAtlas(AtlasProgress atlas) => _copy(atlas: atlas);
+
   Map<String, Object?> toJson() => {
         'v': formatVersion,
         'sel': selectedId,
         'seq': seq,
         'chars': [for (final c in characters) c.toJson()],
         'stash': stash.toJson(),
+        if (atlas.nodes.isNotEmpty || atlas.done.isNotEmpty)
+          'atlas': atlas.toJson(),
       };
 
   /// Lectura tolerante (lo que falta toma su valor por defecto; entradas
@@ -182,6 +197,8 @@ class Account {
       selectedId: json['sel'] is String ? json['sel'] as String : null,
       seq: seq is num ? seq.toInt() : 0,
       stash: Stash.fromJson(json['stash']),
+      atlas: const AtlasRules()
+          .sanitize(AtlasProgress.fromJson(json['atlas'])),
     );
   }
 }

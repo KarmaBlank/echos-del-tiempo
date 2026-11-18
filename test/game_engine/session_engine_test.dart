@@ -6,6 +6,7 @@ import 'package:echos_del_tiempo/game_engine/models/loot.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_event.dart';
+import 'package:echos_del_tiempo/game_engine/rules/loot_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -316,9 +317,11 @@ void main() {
       expect(p.items, hasLength(3));
       expect(p.items.skip(1).every((i) => i.itemLevel == m.zoneLevel + 1),
           isTrue);
-      for (final mat in CraftMaterial.values) {
+      for (final mat in LootRules.materialChance.keys) {
         expect(p.material(mat), 1, reason: mat.name);
       }
+      // El Ancla Temporal solo cae dentro de los Ecos (ecos_atlas.md § 3).
+      expect(p.material(CraftMaterial.ancla), 0);
       expect(log.whereType<LootDropEvent>().where((x) => x.source == LootSource.elite),
           hasLength(5));
       expect(log.whereType<WeaponDropEvent>().single.source, 'elite');

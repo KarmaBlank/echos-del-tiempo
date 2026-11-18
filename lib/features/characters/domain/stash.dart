@@ -1,25 +1,40 @@
 import 'dart:math' as math;
 
+import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/rules/eco_rules.dart';
 import '../../../game_engine/rules/inventory_rules.dart';
 import '../../../game_engine/rules/item_rules.dart';
 
-/// Lo que hay en una casilla del alijo: un arma o una pila de material.
+/// Lo que hay en una casilla del alijo: un arma, un Eco o una pila de
+/// material.
 class StashEntry {
   const StashEntry.item(ItemInstance this.item)
       : material = null,
+        eco = null,
         count = 1;
   const StashEntry.material(CraftMaterial this.material, this.count)
-      : item = null;
+      : item = null,
+        eco = null;
+
+  /// Los Ecos también van al alijo (docs/specs/ecos_atlas.md § 2).
+  const StashEntry.eco(EcoItem this.eco)
+      : item = null,
+        material = null,
+        count = 1;
 
   final ItemInstance? item;
   final CraftMaterial? material;
+  final EcoItem? eco;
   final int count;
 
-  Map<String, Object?> toJson() =>
-      item != null ? {'it': item!.toJson()} : {'m': material!.name, 'n': count};
+  Map<String, Object?> toJson() => item != null
+      ? {'it': item!.toJson()}
+      : eco != null
+          ? {'eco': eco!.toJson()}
+          : {'m': material!.name, 'n': count};
 
   /// `null` si no tiene la forma esperada. Las armas pasan por
   /// [ItemRules.sanitize] (las inválidas se descartan).
@@ -29,6 +44,8 @@ class StashEntry {
       final ok = rules.sanitize(it);
       return ok == null ? null : StashEntry.item(ok);
     }
+    final eco = EcoItem.fromJson(raw['eco']);
+    if (eco != null) return StashEntry.eco(EcoRules.sanitize(eco));
     final m = raw['m'], n = raw['n'];
     final mat = m is String ? CraftMaterial.byName(m) : null;
     if (mat == null || n is! num || n < 1) return null;
@@ -168,6 +185,13 @@ class StashRules {
       return StashMove(
           taken.profile!, s.put(at, StashEntry.material(m, inStash + n)));
     }
+    final eco = p.ecoByUid(token);
+    if (eco != null) {
+      final at = s.firstFree(tab: tab);
+      if (at == null) return const StashMove.error(stashFull);
+      return StashMove(
+          InventoryRules.removeEco(p, token), s.put(at, StashEntry.eco(eco)));
+    }
     final it = p.itemByUid(token);
     if (it == null) return const StashMove.error('No lo tienes');
     if (inventory.isProtected(p, token)) {
@@ -190,8 +214,9 @@ class StashRules {
     final e = s.cells[cell];
     if (e == null) return const StashMove.error('Casilla vacía');
     final it = e.item;
-    if (it != null) {
-      final drop = LootDrop.item(it);
+    final eco = e.eco;
+    if (it != null || eco != null) {
+      final drop = it != null ? LootDrop.item(it) : LootDrop.eco(eco!);
       final why = InventoryRules.cannotReceive(p, drop);
       if (why != null) return StashMove.error(why);
       return StashMove(InventoryRules.receive(p, drop)!, s.put(cell, null));

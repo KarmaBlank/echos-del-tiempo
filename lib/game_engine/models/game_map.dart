@@ -37,6 +37,9 @@ abstract final class Tile {
   static const merchant = 'M';
   static const gate = 'G';
 
+  /// Portal del Eco del pueblo (sólido; docs/specs/ecos_atlas.md § 1).
+  static const portal = 'P';
+
   // ---- mundo y zonas (worldgen.md § 7.6) ----
   /// Pasto del mapa del mundo (caminable).
   static const grass = 'g';
@@ -77,6 +80,7 @@ abstract final class Tile {
   /// ni las entradas de zona).
   static const solidTiles = {
     wall, water, counter, armory, merchant, tree, rock, lava, tombstone, gear,
+    portal,
   };
 
   /// Se puede pisar (el vacío cuenta: se pisa y se cae).

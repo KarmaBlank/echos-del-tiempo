@@ -1,13 +1,17 @@
+import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/game_map.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/loot.dart';
+import '../../../game_engine/rules/atlas_rules.dart';
 
 /// Panel abierto sobre el mapa (`panel` del prototipo).
 ///
 /// `inventory` es el panel de personaje abierto en la pestaña INVENTARIO
 /// (tecla I).
-enum WorldPanel { missionBoard, armory, character, prep, inventory }
+/// `ecoPortal`: el Portal del Eco del pueblo (ECOS y ATLAS,
+/// docs/specs/ecos_atlas.md).
+enum WorldPanel { missionBoard, armory, character, prep, inventory, ecoPortal }
 
 /// Una línea del chat (`addChat`): de un jugador o de sistema (`sys`).
 class ChatLine {
@@ -27,6 +31,9 @@ enum WorldPrompt {
   armory('[E] Armería'),
   seal('[E] Activar sello'),
   merchant('[E] Tienda y herrería'),
+
+  /// Frente al Portal del Eco del pueblo.
+  ecoPortal('[E] Portal del Eco'),
 
   /// Frente a la entrada de una zona (mapa del mundo). El texto real
   /// (`[E] Entrar: <zona>`, bloqueada, próximamente) va en
@@ -58,7 +65,16 @@ class SessionView {
     this.disconnected,
     this.missionLoot = const [],
     this.promptText,
+    this.atlas,
+    this.atlasGain,
   });
+
+  /// El Atlas de la cuenta de este dispositivo (`null` hasta cargarlo).
+  final AtlasProgress? atlas;
+
+  /// Lo que ganó el Atlas local con el último Eco completado (para el
+  /// resultado); `null` si todavía no hubo uno en esta misión.
+  final AtlasGain? atlasGain;
 
   /// Texto del aviso cuando depende del contexto (entradas de zona,
   /// escaleras); si es `null` se usa `prompt.label`.
@@ -135,5 +151,7 @@ class SessionView {
         disconnected: disconnected,
         missionLoot: missionLoot,
         promptText: prompt != null ? null : promptText,
+        atlas: atlas,
+        atlasGain: atlasGain,
       );
 }

@@ -13,6 +13,7 @@ import '../../../../game_engine/models/item.dart';
 import '../../../../game_engine/models/loot.dart';
 import '../../../../game_engine/models/loot_filter.dart';
 import '../../../../game_engine/models/session_event.dart';
+import '../../../../game_engine/rules/eco_rules.dart';
 import '../../../../game_engine/rules/zone_rules.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
@@ -164,7 +165,8 @@ class MapGame extends Game {
 
   /// Nombre para mostrar de un drop (arma o pila).
   static String lootName(SessionController c, LootDrop d) =>
-      lootDropName(c.engine.progression.items.displayName, d);
+      lootDropName(c.engine.progression.items.displayName, d,
+          ecoName: c.engine.progression.ecos.fullName);
 
   /// Veredicto del filtro del jugador local para [g].
   FilterVerdict verdictFor(GroundLoot g) {
@@ -432,6 +434,9 @@ class MapGame extends Game {
       actors.text(c, 'MOSTRADOR DE MISIONES', 13 * ts, ts + 10,
           const Color(0xFF48DBFB), 7);
       actors.text(c, 'ARMERÍA', 21.5 * ts, ts + 10, const Color(0xFFFF9F43), 7);
+      // Portal del Eco (docs/specs/ecos_atlas.md § 1).
+      actors.text(c, 'PORTAL', 4.5 * ts, ts + 10,
+          const Color(0xFF5AE6D2), 7);
     }
 
     // Loot en el piso (debajo de los actores; docs/specs/loot.md § 4).
@@ -640,7 +645,10 @@ class MapGame extends Game {
         Paint()..color = Color.fromRGBO(0, 0, 0, a.clamp(0.0, 1.0)));
     final m = view.session.mission;
     if (m == null) return;
-    final name = controller.engine.catalog.zone(m.zone)?.name ??
+    final name = (m.missionId == EcoRules.missionId
+            ? controller.engine.missionOf(view.session, m.missionId)?.name
+            : null) ??
+        controller.engine.catalog.zone(m.zone)?.name ??
         controller.engine.catalog.mission(m.missionId)?.name ??
         '';
     actors.text(c, floorLabelText(name, m.floor, m.floors), vw / 2, vh / 2,

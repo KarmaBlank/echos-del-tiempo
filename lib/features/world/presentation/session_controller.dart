@@ -7,7 +7,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../game_engine/models/atlas.dart';
+import '../../../game_engine/models/atlas_store.dart';
 import '../../../game_engine/models/attributes.dart';
+import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/game_map.dart';
@@ -18,6 +21,7 @@ import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
+import '../../../game_engine/rules/atlas_rules.dart';
 import '../../../game_engine/rules/session_engine.dart';
 import '../../../game_engine/rules/world_rules.dart';
 import '../../../game_engine/rules/zone_rules.dart';
@@ -51,6 +55,11 @@ final sessionEngineProvider =
 
 final profileStoreProvider = Provider<ProfileStore>((ref) => sl<ProfileStore>());
 
+/// El Atlas de la cuenta (docs/specs/ecos_atlas.md § 5); sin registro
+/// (tests), uno en memoria.
+final atlasStoreProvider = Provider<AtlasStore>((ref) =>
+    sl.isRegistered<AtlasStore>() ? sl<AtlasStore>() : InMemoryAtlasStore());
+
 final sessionClockProvider = Provider<SessionClock>((ref) => const SessionClock());
 
 /// La sala de red con la que se abre `WorldScreen` (la llena el título
@@ -70,6 +79,7 @@ final sessionControllerProvider =
   final c = SessionController(
     engine: ref.watch(sessionEngineProvider),
     store: ref.watch(profileStoreProvider),
+    atlasStore: ref.watch(atlasStoreProvider),
     clock: ref.watch(sessionClockProvider),
     net: ref.read(activeNetSessionProvider),
   );
@@ -103,8 +113,19 @@ class SessionController extends StateNotifier<SessionView?> {
     this.clock = const SessionClock(),
     this.net,
     String localId = 'local',
+    AtlasStore? atlasStore,
   })  : localId = net?.localId ?? localId,
+        atlasStore = atlasStore ?? InMemoryAtlasStore(),
         super(null);
+
+  /// El Atlas de la cuenta de este dispositivo (ecos_atlas.md § 5).
+  final AtlasStore atlasStore;
+  AtlasProgress? _atlas;
+  AtlasGain? _atlasGain;
+  static const _atlasRules = AtlasRules();
+
+  /// El Atlas local (vacío hasta cargarlo).
+  AtlasProgress get atlas => _atlas ?? AtlasProgress.empty;
 
   final SessionEngine engine;
   final ProfileStore store;
@@ -188,6 +209,7 @@ class SessionController extends StateNotifier<SessionView?> {
     _started = true;
     final n = net;
     if (isClient) {
+      unawaited(_loadAtlas());
       _netSub = n!.events.listen(_onNet);
       if (clock.autoStart) {
         _timer = Timer.periodic(clock.interval, (_) => _clientTick(clock.dt));
@@ -202,7 +224,11 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     if (!mounted) return;
     profile ??= PlayerProfile(name: defaultName, classId: defaultClass);
-    var step = engine.addPlayer(engine.create(), localId, profile)!;
+    await _loadAtlas();
+    if (!mounted) return;
+    // El Atlas del anfitrión vale para toda la sala (ecos_atlas.md § 5.2).
+    var step = engine.addPlayer(
+        engine.setAtlas(engine.create(), atlas.nodes).state, localId, profile)!;
     final code = n?.roomCode;
     if (code != null) {
       // `sysChat('Sala creada. Comparte el código ...')` del prototipo.
@@ -225,6 +251,58 @@ class SessionController extends StateNotifier<SessionView?> {
             Timer.periodic(broadcastInterval, (_) => _broadcast());
       }
     }
+  }
+
+  Future<void> _loadAtlas() async {
+    try {
+      _atlas = await atlasStore.load();
+    } catch (_) {
+      _atlas = AtlasProgress(); // sin disco: un Atlas vacío esta vez
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Atlas del Tiempo (docs/specs/ecos_atlas.md § 5)
+  // ------------------------------------------------------------------
+
+  /// Se edita solo en el pueblo.
+  bool get canEditAtlas => _s?.mode == SessionMode.lobby;
+
+  /// Toma un nodo del Atlas de la cuenta. Devuelve si se pudo.
+  bool takeAtlasNode(String id) {
+    if (!canEditAtlas) return false;
+    final next = _atlasRules.take(atlas, id);
+    if (next == null) return false;
+    _setAtlas(next);
+    return true;
+  }
+
+  /// Reinicio gratis (conserva las primeras veces).
+  bool resetAtlas() {
+    if (!canEditAtlas || atlas.nodes.isEmpty) return false;
+    _setAtlas(_atlasRules.reset(atlas));
+    return true;
+  }
+
+  void _setAtlas(AtlasProgress next, {bool emit = true}) {
+    _atlas = next;
+    unawaited(atlasStore.save(next).catchError((Object _) {}));
+    // Local / anfitrión: la sala usa este Atlas (los clientes, el del host).
+    final s = _s;
+    if (!isClient && s != null) {
+      _s = engine.setAtlas(s, next.nodes).state;
+    }
+    if (emit) _emit();
+  }
+
+  /// Eco completado: si este jugador estaba, anota las primeras veces en
+  /// el Atlas de SU cuenta (§ 5.1).
+  void _onEcoCompleted(EcoCompletedEvent e) {
+    if (!e.playerIds.contains(localId)) return;
+    final g = _atlasRules.complete(atlas,
+        tier: e.tier, zone: e.zone, boss: e.boss);
+    _atlasGain = g;
+    if (g.points > 0) _setAtlas(g.progress, emit: false);
   }
 
   @override
@@ -411,6 +489,10 @@ class SessionController extends StateNotifier<SessionView?> {
   bool get nearArmory =>
       _s?.mode == SessionMode.lobby && WorldRules.nearArmory(local.x, local.y);
 
+  /// Frente al Portal del Eco del pueblo (ecos_atlas.md § 1).
+  bool get nearPortal =>
+      _s?.mode == SessionMode.lobby && WorldRules.nearPortal(local.x, local.y);
+
   /// `nearSeal`: el sello sin activar más cercano a menos de 26 px.
   MissionItem? get nearSeal {
     final s = _s;
@@ -487,6 +569,8 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.missionBoard);
       } else if (nearArmory) {
         openPanel(WorldPanel.armory);
+      } else if (nearPortal) {
+        openPanel(WorldPanel.ecoPortal);
       } else if (nearEntrance case final e?) {
         enterZone(e);
       }
@@ -652,6 +736,18 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool resetTree() => _apply(const ResetTreeAction());
 
+  // ---- endgame (docs/specs/ecos_atlas.md) ----
+
+  /// Abrir un Eco propio (propone la misión del Eco).
+  bool proposeEco(String uid) => _apply(ProposeEcoAction(uid));
+
+  /// Craftear un Eco del inventario.
+  bool ecoCraft(String uid, EcoCraftOp op) => _apply(EcoCraftAction(uid, op));
+
+  /// Solo desarrollo: un Eco Raro de [tier] (el motor la rechaza sin
+  /// `devTools`).
+  bool devGrantEco(int tier) => _apply(DevGrantEcoAction(tier));
+
   /// Enter en el campo de chat (`send({t:'chat'})`).
   bool sendChat(String text) => _apply(ChatAction(text));
 
@@ -703,6 +799,9 @@ class SessionController extends StateNotifier<SessionView?> {
           stepBattleEvents = null;
         case MissionStartedEvent():
           _missionLoot.clear();
+          _atlasGain = null;
+        case EcoCompletedEvent():
+          _onEcoCompleted(e);
         case LootDropEvent(:final playerId, :final drop)
             when playerId == localId:
           _missionLoot.add(drop);
@@ -775,7 +874,9 @@ class SessionController extends StateNotifier<SessionView?> {
       _panel = null;
     }
     _lastMode = mode;
-    if ((_panel == WorldPanel.missionBoard || _panel == WorldPanel.armory) &&
+    if ((_panel == WorldPanel.missionBoard ||
+            _panel == WorldPanel.armory ||
+            _panel == WorldPanel.ecoPortal) &&
         mode != SessionMode.lobby) {
       _panel = null;
     }
@@ -804,12 +905,15 @@ class SessionController extends StateNotifier<SessionView?> {
       roomCode: net?.roomCode,
       disconnected: _disconnected,
       missionLoot: List.unmodifiable(_missionLoot),
+      atlas: _atlas,
+      atlasGain: _atlasGain,
     );
   }
 
   (WorldPrompt?, String?) _prompt() {
     if (_panel != null) return (null, null);
     if (nearArmory) return (WorldPrompt.armory, null);
+    if (nearPortal) return (WorldPrompt.ecoPortal, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
     if (nearStairs case final k?) {

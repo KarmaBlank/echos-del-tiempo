@@ -2,11 +2,13 @@ import 'dart:async';
 
 import 'package:get_it/get_it.dart';
 
+import '../../app/feature_flags.dart';
 import '../../features/characters/data/account_repository.dart';
 import '../../features/characters/data/account_store.dart';
 import '../../features/lobby/data/json_file_profile_store.dart';
 import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/data/passive_tree_catalog.dart';
+import '../../game_engine/models/atlas_store.dart';
 import '../../game_engine/models/profile_store.dart';
 import '../../game_engine/rules/battle_engine.dart';
 import '../../game_engine/rules/passive_tree_rules.dart';
@@ -66,6 +68,9 @@ void registerSharedDependencies() {
       // Los drops caen al piso por jugador y se levantan caminando o con
       // E (docs/specs/loot.md, exploration.md § "Loot en el piso").
       groundLoot: true,
+      // Atajos de desarrollo de los Ecos solo en `main_dev`
+      // (docs/specs/ecos_atlas.md § 8).
+      devTools: FeatureFlags.instance.devTools,
     ),
   );
   // Cuenta con varios personajes y alijo (`account.json`, migra el
@@ -78,6 +83,10 @@ void registerSharedDependencies() {
   );
   sl.registerLazySingleton<ProfileStore>(
     () => SelectedCharacterProfileStore(sl<AccountRepository>()),
+  );
+  // Atlas del Tiempo: uno por cuenta (docs/specs/ecos_atlas.md § 5).
+  sl.registerLazySingleton<AtlasStore>(
+    () => AccountAtlasStore(sl<AccountRepository>()),
   );
   // Sonido real con audioplayers (docs/specs/audio.md § "Reproducción").
   // Los tests no pasan por acá: usan su propio reproductor o el no-op.

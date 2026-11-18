@@ -38,7 +38,10 @@ enum FilterOp {
 enum LootKind {
   arma('Arma'),
   material('Material'),
-  pocion('Pocion');
+  pocion('Pocion'),
+
+  /// Eco (docs/specs/ecos_atlas.md § 3).
+  eco('Eco');
 
   const LootKind(this.word);
   final String word;
@@ -188,6 +191,17 @@ class UsableCondition extends FilterCondition {
   String get keyword => 'Utilizable';
   @override
   String get args => usable ? '' : 'No';
+}
+
+/// `Tier >= 5` (solo Ecos; docs/specs/ecos_atlas.md § 3).
+class TierCondition extends FilterCondition {
+  const TierCondition(this.op, this.tier);
+  final FilterOp op;
+  final int tier;
+  @override
+  String get keyword => 'Tier';
+  @override
+  String get args => '${op.symbol} $tier';
 }
 
 /// Color RGBA (0–255).

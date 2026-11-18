@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../data/game_catalog.dart';
 import '../data/items_catalog.dart';
+import '../models/eco.dart';
 import '../models/item.dart';
 import '../models/loot.dart';
 import '../models/player_profile.dart';
@@ -54,6 +55,7 @@ class InventoryRules {
   static List<String> tokens(PlayerProfile p) => [
         for (final i in p.items)
           if (i.uid != p.equippedUid) i.uid,
+        for (final e in p.ecos) e.uid,
         for (final k in StackKind.values)
           if (stackCount(p, k) > 0) k.token,
       ];
@@ -124,6 +126,7 @@ class InventoryRules {
       if (have == 0 && freeCells(p) <= 0) return 'Inventario lleno';
       return null;
     }
+    if (d.eco != null) return freeCells(p) <= 0 ? 'Inventario lleno' : null;
     if (p.items.length >= maxItems || freeCells(p) <= 0) {
       return 'Inventario lleno';
     }
@@ -140,6 +143,36 @@ class InventoryRules {
     return ('i$n', n);
   }
 
+  /// Un `uid` libre de Eco (`eco<n>`, mismo contador que las armas; no
+  /// choca con ningún token de la grilla).
+  static (String, int) nextEcoUid(PlayerProfile p) {
+    final taken = {
+      for (final e in p.ecos) e.uid,
+      for (final i in p.items) i.uid,
+    };
+    var n = p.itemSeq + 1;
+    while (taken.contains('eco$n')) {
+      n++;
+    }
+    return ('eco$n', n);
+  }
+
+  /// Agrega un Eco con un `uid` nuevo (sin mirar el lugar).
+  static (PlayerProfile, String) addEco(PlayerProfile p, EcoItem eco) {
+    final (uid, seq) = nextEcoUid(p);
+    final next =
+        p.copyWith(ecos: [...p.ecos, eco.copyWith(uid: uid)], itemSeq: seq);
+    return (relayout(next), uid);
+  }
+
+  /// Saca un Eco.
+  static PlayerProfile removeEco(PlayerProfile p, String uid) => relayout(
+      p.copyWith(ecos: [for (final e in p.ecos) if (e.uid != uid) e]));
+
+  /// Reemplaza un Eco por su versión nueva (mismo `uid`).
+  static PlayerProfile replaceEco(PlayerProfile p, EcoItem eco) =>
+      p.copyWith(ecos: [for (final e in p.ecos) e.uid == eco.uid ? eco : e]);
+
   /// Agrega un arma con un `uid` nuevo (sin mirar el lugar: eso es
   /// [receive]). Devuelve el perfil y el `uid` asignado.
   static (PlayerProfile, String) addItem(PlayerProfile p, ItemInstance item) {
@@ -154,6 +187,8 @@ class InventoryRules {
     if (cannotReceive(p, d) != null) return null;
     final it = d.item;
     if (it != null) return addItem(p, it).$1;
+    final eco = d.eco;
+    if (eco != null) return addEco(p, eco).$1;
     final st = d.stack!;
     return relayout(withStack(p, st, stackCount(p, st) + d.count));
   }
@@ -195,6 +230,10 @@ class InventoryRules {
         drop: LootDrop.stack(st, count),
         error: null,
       );
+    }
+    final eco = p.ecoByUid(token);
+    if (eco != null) {
+      return (profile: removeEco(p, token), drop: LootDrop.eco(eco), error: null);
     }
     final it = p.itemByUid(token);
     if (it == null) return (profile: null, drop: null, error: 'No lo tienes');

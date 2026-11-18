@@ -193,3 +193,29 @@ class CraftedEvent extends SessionEvent {
   final String uid;
   const CraftedEvent(this.playerId, this.op, this.uid);
 }
+
+// ---------------- endgame v0.4 (docs/specs/ecos_atlas.md) ----------------
+
+/// Se completó un Eco. Cada cliente cuyo id está en [playerIds] anota
+/// las "primeras veces" (tier, zona, jefe) en el Atlas de SU cuenta.
+class EcoCompletedEvent extends SessionEvent {
+  final List<String> playerIds;
+  final int tier;
+  final int zone;
+  final int boss;
+  const EcoCompletedEvent(this.playerIds,
+      {required this.tier, required this.zone, required this.boss});
+}
+
+/// [playerId] subió a la Maestría [mastery] (+1 punto de árbol).
+class MasteryUpEvent extends SessionEvent {
+  final String playerId;
+  final int mastery;
+  const MasteryUpEvent(this.playerId, this.mastery);
+}
+
+/// [playerId] activó el Portal del Eco (venció al Devorador).
+class EcosUnlockedEvent extends SessionEvent {
+  final String playerId;
+  const EcosUnlockedEvent(this.playerId);
+}

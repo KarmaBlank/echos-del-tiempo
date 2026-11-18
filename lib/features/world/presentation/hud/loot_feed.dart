@@ -162,7 +162,8 @@ final lootFeedProvider = Provider.autoDispose<LootFeed>((ref) {
   final feed = LootFeed(
     localId: c.localId,
     playerName: (id) => c.session?.players[id]?.name ?? id,
-    itemName: (d) => lootDropName(c.engine.progression.items.displayName, d),
+    itemName: (d) => lootDropName(c.engine.progression.items.displayName, d,
+        ecoName: c.engine.progression.ecos.fullName),
     verdictFor: (id, d) {
       final p = c.session?.players[id]?.profile;
       return p == null ? null : c.engine.lootVerdict(p, d);

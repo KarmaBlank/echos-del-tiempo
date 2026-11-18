@@ -1,4 +1,11 @@
-# Spec (aprobada, sin implementar): Endgame — qué hacer después del nivel 50
+# Spec (aprobada): Endgame — qué hacer después del nivel 50
+
+> **Estado (v0.4.0):** implementados § 1 (Ecos), § 2 (Atlas del
+> Tiempo), § 4 primer punto (Maestría), § 5 (varios personajes) y las
+> reglas de § 7 que les tocan. Detalle con números:
+> docs/specs/ecos_atlas.md. Pendientes: § 3 (Jefes del Abismo), § 4
+> Ascensión y § 8, § 6 (Temporadas) y las Grietas del Atlas (nodos
+> bloqueados "Próximamente").
 
 Pregunta del dueño: "si llegaste a nivel 50, ¿qué más podrías hacer con el
 personaje? ¿O ya terminaste y te creás otro? ¿Cómo sería el endgame? Revisá
@@ -32,6 +39,12 @@ probar otra build en otro personaje → nueva **Temporada**.
   solo). Fallar consume el Eco.
 - Crafteo de Ecos con los mismos materiales (re-tirar modificadores,
   subir rareza) y un material nuevo, **Ancla Temporal** (sube el tier).
+- **Implementado (v0.4.0)**: ecos_atlas.md § 1–4 (tier → nivel 48 + 2t,
+  9 modificadores con +% cantidad y rareza, drops desde nivel 45, 1–3
+  pisos con el generador de su zona, crafteo con Esquirla / Cristal /
+  Prisma / Ancla).
+  Zonas: el "tipo de zona" es una de las 10 zonas (su generador, tema,
+  enemigos y música), no solo los 5 generadores de la lista de arriba.
 
 ## 2. Atlas del Tiempo
 
@@ -40,6 +53,10 @@ probar otra build en otro personaje → nueva **Temporada**.
 - Nodos: más Ecos de cierto tipo de zona, más chance de legendarios,
   jefes con loot extra, Ecos con un modificador gratis, "Grietas" (un
   evento dentro del Eco: oleadas por tiempo con loot extra), etc.
+- **Implementado (v0.4.0)**: ecos_atlas.md § 5 (26 nodos, 51 de costo,
+  44 puntos máximos; puntos por la primera vez de cada tier, zona y
+  jefe — no por combinación, para que el árbol tenga decisiones). Las
+  Grietas quedan como nodos "Próximamente".
 
 ## 3. Jefes del Abismo (pináculo)
 
@@ -53,6 +70,7 @@ probar otra build en otro personaje → nueva **Temporada**.
 - **Nivel 50 es el tope.** Después la XP llena la **Maestría**: cada
   nivel de maestría da 1 punto extra de árbol (tope 20), con una curva
   muy lenta — es un objetivo largo, no obligatorio.
+  **Implementado (v0.4.0)**: ecos_atlas.md § 6.
 - **Ascensión** (subclases): al completar una **Prueba del Tiempo**
   (mazmorra especial con trampas y un jefe) en nivel 30, 40 y 50 se
   ganan puntos de ascensión. Cada clase elige **1 de 2 ascensiones**,
@@ -105,6 +123,9 @@ co-op".
   único jugador pero se puede contrarrestar defendiendo).
 - El host del grupo usa su Atlas para los modificadores del Eco; cada
   jugador recibe sus puntos de Atlas.
+- **Implementado para los Ecos (v0.4.0)**: escalado 1–4 de siempre,
+  +10% de cantidad por jugador extra, Atlas del host, puntos para cada
+  uno (ecos_atlas.md § 7). Pendiente: Jefes del Abismo.
 
 ## 8. La ascensión tiene que **sentirse**
 
