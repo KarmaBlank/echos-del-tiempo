@@ -16,7 +16,13 @@ Set<(int, int)> _reach(GameMap m, int sx, int sy, {required bool gateOpen}) {
     final (x, y) = stack.removeLast();
     for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
       final n = (x + dx, y + dy);
-      // Sin pisar el vacío (caminar sin caerse).
+      // Sin pisar el vacío (caminar sin caerse). Las paredes agrietadas y
+      // los atajos (v0.6) cuentan como abiertos.
+      final c = m.contains(n.$1, n.$2) ? m.tileAt(n.$1, n.$2) : Tile.wall;
+      if (c == Tile.cracked || c == Tile.shortcut) {
+        if (seen.add(n)) stack.add(n);
+        continue;
+      }
       if (WorldRules.isSolid(m, n.$1, n.$2, gateOpen: gateOpen, blockVoid: true)) {
         continue;
       }
@@ -245,7 +251,7 @@ void main() {
     });
 
     test('v0.3: tiles de cada generador y vacío/lava donde corresponde', () {
-      const v2 = {'#', '.', ',', '~', 'G', '>', '<', ':'};
+      const v2 = {'#', '.', ',', '~', 'G', '>', '<', ':', ...Tile.poiTiles};
       final want = <int, Set<String>>{
         6: {...v2, 'o'},
         7: {...v2, '%', '='},
@@ -326,11 +332,11 @@ void main() {
       }
     });
 
-    test('laberinto: más grande que la fortaleza', () {
+    test('laberinto: el único recorte de v0.6 (worldgen.md § 11.1)', () {
       final lab = MapGenerator.zone(kZones[5], 7);
       for (final f in lab.floors) {
-        expect(f.bounds.w, greaterThanOrEqualTo(70));
-        expect(f.bounds.h, greaterThanOrEqualTo(50));
+        expect(f.bounds.w, inInclusiveRange(64, 72));
+        expect(f.bounds.h, inInclusiveRange(46, 52));
       }
     });
 

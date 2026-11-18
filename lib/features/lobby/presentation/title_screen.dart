@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../bestiary/presentation/bestiary_screen.dart';
 import '../../build_planner/presentation/build_planner_screen.dart';
 import '../../../app/feature_flags.dart';
 import '../../../app/theme/panel_frame.dart';
@@ -248,6 +249,12 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
         builder: (_) => BuildPlannerScreen(characterId: c.id)));
   }
 
+  Future<void> _openBestiary() async {
+    if (_busy) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => const BestiaryScreen()));
+  }
+
   Future<void> _openStash() async {
     final c = _account?.selected;
     if (c == null || _busy) return;
@@ -426,6 +433,10 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             PanelButton('BUILD',
                 key: const ValueKey('char-build'),
                 onPressed: has ? _openBuild : null),
+            // Bestiario de la cuenta, solo lectura (bestiary.md § 4).
+            PanelButton('BESTIARIO',
+                key: const ValueKey('title-bestiary'),
+                onPressed: _busy ? null : _openBestiary),
           ],
         ),
       ],

@@ -202,6 +202,16 @@ así que no hay sombreado automático.
 | `aura_templario` | `characters/paladin/aura_templario.png` | halo solar dorado detrás de la cabeza con 8 rayos |
 | `aura_guardian` | `characters/paladin/aura_guardian.png` | cúpula de escudo azul con remaches celestes que envuelve al guardián |
 
+## Exploración (v0.6)
+
+Los tiles y objetos nuevos de la exploración (pared agrietada, sala
+secreta, atajo, santuarios, piedras de paso, Viento del Eco, braseros,
+cofres reforzado y dorado, reliquia) se dibujan **procedurales** en
+`TilePainter` / `ActorPainter`, como el resto de los tiles del mapa:
+no hay PNG ni ids nuevos en `sprite_manifest.yaml`. Detalle en
+exploration.md § "Exploración (v0.6)". Si el dueño quiere arte a mano,
+se agregan como ids de manifiesto y el painter los usa cuando existan.
+
 ## Regenerar los PNG
 
 Desde la raíz del proyecto, con el `dart` del SDK de Flutter:

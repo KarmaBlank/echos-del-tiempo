@@ -94,9 +94,12 @@ root registra para que el título sepa si hay red: `label` (`LAN`, `P2P`),
 `P2P por internet: falta configurar Firebase`) y `create()` (una
 `NetSession` nueva por sala).
 
-## Protocolo (versión 6)
+## Protocolo (versión 7)
 
-`kProtocolVersion` (`wire.dart`) = 6 desde v0.5.1 (acción `wants`:
+`kProtocolVersion` (`wire.dart`) = 7 desde v0.6.0 (exploración: acción
+`poi`, eventos `poi` y `quest`, campos de misión `pu` `ps` `qd` `qf` `bl`
+`wind` y de cofre `tr` `gd` `sc`, `ChestOpenedEvent.tr`;
+§ "Exploración"). Antes: 6 desde v0.5.1 (acción `wants`:
 resumen del plan de build para la condición `Build` del filtro de loot;
 § "Build y filtro"). Antes: 5 desde la Ascensión v0.5.0
 (acciones `trial`, `ascChoose`, `ascNode`, `ascReset`, `devTrial`;
@@ -331,6 +334,26 @@ estado autoritativo ni la pausa) y se ignoran antes del `hello` /
   indicador prendido): con el indicador apagado no viaja nada.
 - Un `t` desconocido (cliente viejo) se sigue ignorando: el `ping` no
   rompe a nadie, pero todos tienen que tener el protocolo 6 igual.
+
+### Exploración (v0.6.0, protocolo 7)
+
+docs/specs/worldgen.md § 11.9. Todo aditivo y host-autoritativo; los
+puntos de interés salen del mapa (la semilla), así que solo viaja su
+estado.
+- Acción `InteractPoiAction` → `{"t":"poi","id":101}` (E frente a un
+  punto de interés; el host valida campo, piso, distancia y que no esté
+  usado). Se rechaza con la sala pausada.
+- Eventos `{"t":"poi","id":"p1","poi":101,"k":"shrine","bl":"fuerza"}`
+  (`to`: piedra de destino de un viaje rápido) y
+  `{"t":"quest","q":150,"f":1,"k":"braseros"}` (misión opcional cumplida).
+- Snapshot (`MissionRun`): `pu` (PdI usados), `ps` (descubiertos), `qd` /
+  `qf` (misiones opcionales cumplidas / falladas), `bl` (bendición), `wind`
+  (Viento del Eco hasta ese `time`); cofres (`MissionItem`): `tr`
+  (calidad, se omite `madera`), `gd` (id del guardián), `sc` (PdI de su
+  sala secreta). Sin las claves = nada usado.
+- El viaje rápido sube la época del jugador (el cliente adopta la
+  posición). El Viento del Eco lo aplica cada cliente a su propio
+  movimiento (`ExplorationRules.speedMult`).
 
 ### Desconexiones
 

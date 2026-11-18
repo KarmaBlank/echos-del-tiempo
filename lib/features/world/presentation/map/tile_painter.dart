@@ -297,6 +297,37 @@ class TilePainter {
       case Tile.gear:
         floor();
         _gear(c, px, py, tx, ty, t);
+      // ---- exploración v0.6 (worldgen.md § 11, exploration.md) ----
+      case Tile.secretFloor:
+        // Sala secreta sin abrir: muro del tema (no se delata).
+        draw(c, Tile.wall, px, py, themeId, tx, ty,
+            t: t, gateOpen: gateOpen, lobby: lobby, at: at,
+            voidBackdrop: voidBackdrop, density: density, pulse: pulse);
+        return;
+      case Tile.cracked || Tile.shortcut:
+        // El muro del tema con grietas (sala secreta) o con una reja y su
+        // palanca (atajo).
+        draw(c, Tile.wall, px, py, themeId, tx, ty,
+            t: t, gateOpen: gateOpen, lobby: lobby, at: at,
+            voidBackdrop: voidBackdrop, density: density, pulse: pulse);
+        if (ch == Tile.cracked) {
+          _cracks(c, px, py, t);
+        } else {
+          _shortcut(c, px, py);
+        }
+        return;
+      case Tile.shrine || Tile.shrineUsed:
+        floor();
+        _shrine(c, px, py, t, used: ch == Tile.shrineUsed);
+      case Tile.waystone || Tile.waystoneOn:
+        floor();
+        _waystone(c, px, py, t, on: ch == Tile.waystoneOn);
+      case Tile.wind:
+        floor();
+        _windShrine(c, px, py, t);
+      case Tile.brazier || Tile.brazierLit:
+        floor();
+        _brazier(c, px, py, t, lit: ch == Tile.brazierLit);
       default:
         final zone = Tile.entranceZone(ch);
         if (zone != null) {
@@ -350,8 +381,102 @@ class TilePainter {
         Tile.lava,
         Tile.tombstone,
         Tile.gear,
+        ...Tile.poiTiles,
       }.contains(ch) ||
       Tile.entranceZone(ch) != null;
+
+  // ------------------------------------------------------------------
+  // Puntos de interés (v0.6, worldgen.md § 11)
+  // ------------------------------------------------------------------
+
+  /// Grietas en zigzag con un brillo violeta tenue que late.
+  void _cracks(Canvas c, double px, double py, double t) {
+    const dark = Color(0xEE07080F);
+    final k = 0.45 + 0.3 * math.sin(t / 380);
+    final glow = Color.fromRGBO(190, 110, 255, k);
+    // Halo violeta tenue: algo hay detrás.
+    _rect(c, Color.fromRGBO(190, 110, 255, 0.12 + 0.1 * k), px, py, ts, ts);
+    for (final (x, y) in const [
+      (7, 0), (8, 1), (7, 2), (6, 3), (7, 4), (8, 5), (9, 6), (8, 7),
+      (7, 8), (6, 9), (7, 10), (8, 11), (8, 12), (9, 13), (5, 5), (4, 6),
+      (3, 7), (10, 8), (11, 9), (12, 10), (13, 11),
+    ]) {
+      _rect(c, dark, px + x, py + y, 2, 1);
+    }
+    _rect(c, glow, px + 8, py + 3, 1, 3);
+    _rect(c, glow, px + 7, py + 8, 1, 3);
+    _rect(c, glow, px + 11, py + 9, 1, 1);
+  }
+
+  /// Atajo: reja de hierro con una palanca a un costado.
+  void _shortcut(Canvas c, double px, double py) {
+    _rect(c, const Color(0xFF2A2D38), px + 2, py + 2, ts - 4, ts - 3);
+    for (var i = 4.0; i < ts - 3; i += 3) {
+      _rect(c, const Color(0xFF8395A7), px + i, py + 2, 1, ts - 3);
+    }
+    _rect(c, const Color(0xFF8395A7), px + 2, py + 6, ts - 4, 1);
+    _rect(c, const Color(0xFFB08A3A), px + 12, py + 9, 1, 5);
+    _rect(c, const Color(0xFFFF6B6B), px + 11, py + 8, 3, 2);
+  }
+
+  /// Santuario: pedestal con un cristal que flota; usado, apagado.
+  void _shrine(Canvas c, double px, double py, double t, {required bool used}) {
+    _rect(c, const Color(0x55000000), px + 2, py + 13, ts - 4, 2);
+    _rect(c, const Color(0xFF5A5F73), px + 3, py + 9, ts - 6, 5);
+    _rect(c, const Color(0xFF7D8399), px + 3, py + 9, ts - 6, 1);
+    final bob = used ? 0.0 : (math.sin(t / 260) * 1.5).roundToDouble();
+    final gem = used ? const Color(0xFF6C707A) : const Color(0xFF5AE6D2);
+    _rect(c, gem, px + 6, py - 2 + bob, 4, 8);
+    _rect(c, used ? const Color(0xFF8A8E99) : const Color(0xFFDFFFFA),
+        px + 7, py - 1 + bob, 1, 3);
+    if (!used) {
+      final k = 0.25 + 0.2 * math.sin(t / 200);
+      _rect(c, Color.fromRGBO(90, 230, 210, k), px + 3, py - 4 + bob, 10, 12);
+    }
+  }
+
+  /// Piedra de paso: menhir con una runa (dorada encendida).
+  void _waystone(Canvas c, double px, double py, double t, {required bool on}) {
+    _rect(c, const Color(0x55000000), px + 3, py + 13, ts - 6, 2);
+    _rect(c, const Color(0xFF4E5568), px + 4, py - 6, 8, 20);
+    _rect(c, const Color(0xFF6B7388), px + 4, py - 6, 2, 20);
+    _rect(c, const Color(0xFF4E5568), px + 5, py - 8, 6, 2);
+    final k = 0.6 + 0.4 * math.sin(t / 300);
+    final rune = on
+        ? Color.fromRGBO(255, 209, 102, k)
+        : const Color(0xFF2A2F3D);
+    _rect(c, rune, px + 7, py - 3, 2, 8);
+    _rect(c, rune, px + 6, py, 4, 1);
+    if (on) {
+      _rect(c, Color.fromRGBO(255, 209, 102, 0.2 * k), px + 2, py - 9, 12, 24);
+    }
+  }
+
+  /// Santuario del Viento del Eco: arco bajo con remolinos celestes.
+  void _windShrine(Canvas c, double px, double py, double t) {
+    _rect(c, const Color(0x55000000), px + 2, py + 13, ts - 4, 2);
+    _rect(c, const Color(0xFF7A8AA8), px + 2, py - 2, 2, 15);
+    _rect(c, const Color(0xFF7A8AA8), px + 12, py - 2, 2, 15);
+    _rect(c, const Color(0xFF9AAAC8), px + 2, py - 4, 12, 2);
+    for (var i = 0; i < 3; i++) {
+      final a = t / 180 + i * 2.1;
+      _rect(c, const Color(0xCCBFEFFF), px + 7 + math.cos(a) * 3,
+          py + 5 + math.sin(a) * 3, 2, 1);
+    }
+  }
+
+  /// Brasero de piedra; encendido, con llama animada.
+  void _brazier(Canvas c, double px, double py, double t, {required bool lit}) {
+    _rect(c, const Color(0x55000000), px + 3, py + 13, ts - 6, 2);
+    _rect(c, const Color(0xFF5A4636), px + 6, py + 8, 4, 6);
+    _rect(c, const Color(0xFF7A5F48), px + 3, py + 5, 10, 3);
+    _rect(c, const Color(0xFF3A2A20), px + 4, py + 4, 8, 1);
+    if (!lit) return;
+    final f = (t / 90).floor() % 3;
+    _rect(c, const Color(0xFFFF6B1F), px + 5, py - 1 + f * 0.5, 6, 5);
+    _rect(c, const Color(0xFFFFD166), px + 6 + (f == 1 ? 1 : 0), py - 3, 3, 4);
+    _rect(c, const Color(0x55FFB347), px + 2, py - 5, 12, 10);
+  }
 
   // ------------------------------------------------------------------
   // Mundo

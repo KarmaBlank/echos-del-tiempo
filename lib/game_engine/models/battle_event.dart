@@ -48,6 +48,10 @@ class DamageEvent extends BattleEvent {
   /// Atraviesa (`SkillDef.pierce`): golpe al de atrás del objetivo.
   final bool pierced;
 
+  /// Factor de la familia del objetivo (docs/specs/bestiary.md § 1.3):
+  /// > 1 = débil (DÉBIL en la escena), < 1 = resiste, 1 = neutro.
+  final double affinity;
+
   const DamageEvent(
     this.targetId,
     this.amount, {
@@ -61,6 +65,7 @@ class DamageEvent extends BattleEvent {
     this.hitIndex = 0,
     this.chainFrom,
     this.pierced = false,
+    this.affinity = 1,
   });
 }
 

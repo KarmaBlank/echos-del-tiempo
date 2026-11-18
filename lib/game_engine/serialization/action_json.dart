@@ -66,6 +66,7 @@ abstract final class ActionJson {
         PauseAction() => {'t': 'pause', 'on': a.paused},
         BackToLobbyAction() => {'t': 'back'},
         UseStairsAction() => {'t': 'stairs', 'down': a.down},
+        InteractPoiAction() => {'t': 'poi', 'id': a.poiId},
         CraftAction() => {
             't': 'craft',
             'op': a.op.name,
@@ -164,6 +165,8 @@ abstract final class ActionJson {
         return const BackToLobbyAction();
       case 'stairs':
         return UseStairsAction(down: j.boolean('down'));
+      case 'poi':
+        return InteractPoiAction(j.integer('id'));
       case 'craft':
         return CraftAction(j.enumByName('op', CraftOp.values), j.str('w'),
             sourceUid: j.strOrNull('src'),

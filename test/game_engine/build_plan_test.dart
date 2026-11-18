@@ -368,7 +368,7 @@ void main() {
   group('diff y avisos', () {
     const plan = BuildPlan(
       attributes: {Attribute.fue: 40},
-      treeNodes: ['gue_r1', 'gue_r2', 'sangre_na'],
+      treeNodes: ['gue_r1', 'gue_f3', 'sangre_na'],
       weaponBases: ['hacha_rompe'],
     );
 
@@ -382,7 +382,7 @@ void main() {
             Attribute.fue: 32
           }, tree: [
             'gue_r1',
-            'gue_r2'
+            'gue_f3'
           ], items: [
             ItemInstance.common('espada_bronce', 'espada_bronce'),
             ItemInstance.common('h', 'hacha_rompe'),

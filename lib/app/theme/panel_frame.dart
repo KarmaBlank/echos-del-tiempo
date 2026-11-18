@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../widgets/points_badge.dart';
 import 'proto_colors.dart';
 import 'retro_hover_card.dart';
 import 'retro_panel.dart';
@@ -435,32 +436,51 @@ class RetroTooltip extends StatelessWidget {
 }
 
 /// Pestañas de un panel: una fila de [PanelButton] con la elegida en
-/// `gold`.
+/// `gold`. [badges]: insignia `+N` (quieta) sobre la pestaña `i`, p. ej.
+/// puntos sin usar en ÁRBOL / ATRIBUTOS (passive_tree_v4.md § 7).
 class PanelTabs extends StatelessWidget {
   const PanelTabs({
     super.key,
     required this.labels,
     required this.index,
     required this.onChanged,
+    this.badges = const {},
   });
 
   final List<String> labels;
   final int index;
   final ValueChanged<int> onChanged;
+  final Map<int, int> badges;
 
   @override
   Widget build(BuildContext context) {
+    Widget tab(int i) {
+      final button = PanelButton(labels[i],
+          key: ValueKey('tab-$i'),
+          selected: i == index,
+          accent: i == index ? RetroPalette.gold : null,
+          onPressed: () => onChanged(i));
+      final n = badges[i] ?? 0;
+      if (n <= 0) return button;
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          button,
+          Positioned(
+            top: -13,
+            right: -8,
+            child: IgnorePointer(
+                child: PointsBadge(
+                    key: ValueKey('tab-badge-$i'), count: n, pulse: false)),
+          ),
+        ],
+      );
+    }
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: [
-        for (var i = 0; i < labels.length; i++)
-          PanelButton(labels[i],
-              key: ValueKey('tab-$i'),
-              selected: i == index,
-              accent: i == index ? RetroPalette.gold : null,
-              onPressed: () => onChanged(i)),
-      ],
+      children: [for (var i = 0; i < labels.length; i++) tab(i)],
     );
   }
 }

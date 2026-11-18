@@ -13,11 +13,13 @@ import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/atlas_store.dart';
 import '../../../game_engine/models/attributes.dart';
+import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/build_wants.dart';
 import '../../../game_engine/models/loot_filter.dart' show FilterVerdict;
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/battle_event.dart';
+import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/game_map.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/inventory_sort.dart';
@@ -28,6 +30,7 @@ import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
+import '../../../game_engine/rules/exploration_rules.dart';
 import '../../../game_engine/rules/session_engine.dart';
 import '../../../game_engine/rules/world_rules.dart';
 import '../../../game_engine/rules/zone_rules.dart';
@@ -68,6 +71,13 @@ final profileStoreProvider =
 final atlasStoreProvider = Provider<AtlasStore>((ref) =>
     sl.isRegistered<AtlasStore>() ? sl<AtlasStore>() : InMemoryAtlasStore());
 
+/// El bestiario de la cuenta (docs/specs/bestiary.md § 2); sin registro
+/// (tests), uno en memoria.
+final bestiaryStoreProvider = Provider<BestiaryStore>((ref) =>
+    sl.isRegistered<BestiaryStore>()
+        ? sl<BestiaryStore>()
+        : InMemoryBestiaryStore());
+
 final sessionClockProvider =
     Provider<SessionClock>((ref) => const SessionClock());
 
@@ -89,6 +99,7 @@ final sessionControllerProvider =
     engine: ref.watch(sessionEngineProvider),
     store: ref.watch(profileStoreProvider),
     atlasStore: ref.watch(atlasStoreProvider),
+    bestiaryStore: ref.watch(bestiaryStoreProvider),
     clock: ref.watch(sessionClockProvider),
     net: ref.read(activeNetSessionProvider),
     turnTimer: ref.read(gameSettingsProvider).turnTimer,
@@ -128,11 +139,29 @@ class SessionController extends StateNotifier<SessionView?> {
     this.net,
     String localId = 'local',
     AtlasStore? atlasStore,
+    BestiaryStore? bestiaryStore,
     TurnTimer turnTimer = TurnTimer.normal,
   })  : localId = net?.localId ?? localId,
         _turnTimer = turnTimer,
         atlasStore = atlasStore ?? InMemoryAtlasStore(),
+        bestiaryStore = bestiaryStore ?? InMemoryBestiaryStore(),
         super(null);
+
+  /// El bestiario de la cuenta de este dispositivo (bestiary.md § 2): se
+  /// actualiza solo con lo que este jugador ve ganar (eventos y estado de
+  /// la batalla), también como cliente; no viaja por la red.
+  final BestiaryStore bestiaryStore;
+  BestiaryProgress? _bestiary;
+
+  /// La última batalla vista (para saber a quiénes se venció cuando
+  /// llega `BattleFinishedEvent`, que puede venir ya sin batalla).
+  BattleState? _lastBattle;
+
+  /// Lo que desbloqueó la última victoria (para el aviso del chat).
+  Set<String> lastUnlocked = const {};
+
+  /// El bestiario local (vacío hasta cargarlo).
+  BestiaryProgress get bestiary => _bestiary ?? BestiaryProgress.empty;
 
   /// El Atlas de la cuenta de este dispositivo (ecos_atlas.md § 5).
   final AtlasStore atlasStore;
@@ -299,6 +328,34 @@ class SessionController extends StateNotifier<SessionView?> {
     } catch (_) {
       _atlas = AtlasProgress(); // sin disco: un Atlas vacío esta vez
     }
+    try {
+      _bestiary = await bestiaryStore.load();
+    } catch (_) {
+      _bestiary = BestiaryProgress(); // ídem con el bestiario
+    }
+  }
+
+  /// Batalla ganada con este jugador adentro: suma las muertes al
+  /// bestiario de SU cuenta (bestiary.md § 2.2). Solo, anfitrión o
+  /// cliente: sale del estado que ya llega a este dispositivo.
+  void _onBattleWon() {
+    final b = _lastBattle;
+    _lastBattle = null;
+    if (b == null || !b.party.any((p) => p.id == localId)) return;
+    final kills = bestiaryKills(b);
+    if (kills.isEmpty) return;
+    final before = bestiary;
+    final next = before.record(kills);
+    lastUnlocked = before.newIn(kills);
+    _bestiary = next;
+    for (final t in lastUnlocked) {
+      final name = engine.battles.catalog.enemies[t]?.name ?? t;
+      _addChat(ChatLine.system('Bestiario: $name agregado'));
+    }
+    unawaited(bestiaryStore.save(next).catchError((Object e) {
+      EcosLog.error('Guardado del bestiario', e);
+      _saveFailed(e);
+    }));
   }
 
   // ------------------------------------------------------------------
@@ -456,7 +513,12 @@ class SessionController extends StateNotifier<SessionView?> {
     // menú de pausa abierto tampoco se camina.
     if (typing || menuOpen || s.paused) ix = iy = 0;
     local.step(engine.mapFor(s), ix, iy, dt,
-        canMove: _canMove(s, me), gateOpen: s.gateOpen);
+        canMove: _canMove(s, me),
+        gateOpen: s.gateOpen,
+        // Viento del Eco (worldgen.md § 11.3).
+        speedMult: s.mode == SessionMode.field
+            ? ExplorationRules.speedMult(s.mission, s.time)
+            : 1);
   }
 
   /// El campo de chat tiene el foco: no hay movimiento ni atajos.
@@ -577,6 +639,19 @@ class SessionController extends StateNotifier<SessionView?> {
     return WorldRules.nearEntrance(engine.mapFor(s), local.x, local.y);
   }
 
+  /// El punto de interés del piso actual que el jugador local puede usar
+  /// con E (worldgen.md § 11.3), o `null`.
+  MapPoi? get nearPoi {
+    final s = _s;
+    final m = s?.mission;
+    if (s == null || m == null || s.mode != SessionMode.field) return null;
+    final f = engine.mapFor(s).floor(m.floor);
+    if (f == null) return null;
+    final p = ExplorationRules.usable(f, m, local.x, local.y);
+    if (p == null) return null;
+    return p;
+  }
+
   /// La escalera del piso actual bajo el jugador local (campo).
   StairsKind? get nearStairs {
     final s = _s;
@@ -634,6 +709,8 @@ class SessionController extends StateNotifier<SessionView?> {
       final seal = nearSeal;
       if (seal != null) {
         _apply(ActivateSealAction(seal.id));
+      } else if (nearPoi case final p?) {
+        _apply(InteractPoiAction(p.id));
       } else if (nearStairs case final k?) {
         useStairs(down: k == StairsKind.down);
       }
@@ -894,6 +971,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   void _step(SessionStep step) {
     _s = step.state;
+    if (step.state.battle case final b?) _lastBattle = b.state;
     if (role == SessionRole.host) _unsent.addAll(step.events);
     var forceSave = false;
     // Un mismo tick puede traer varios pasos de batalla (p. ej. el turno
@@ -935,6 +1013,8 @@ class SessionController extends StateNotifier<SessionView?> {
         case LootDropEvent(:final playerId, :final drop)
             when playerId == localId:
           _missionLoot.add(drop);
+        case BattleFinishedEvent(victory: true):
+          _onBattleWon();
         case MissionEndedEvent() || ReturnedToLobbyEvent():
           forceSave = true;
         default:
@@ -1069,6 +1149,7 @@ class SessionController extends StateNotifier<SessionView?> {
       missionLoot: List.unmodifiable(_missionLoot),
       atlas: _atlas,
       atlasGain: _atlasGain,
+      bestiary: _bestiary,
       saveError: _saveError,
     );
   }
@@ -1080,6 +1161,14 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearStatue) return (WorldPrompt.statue, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
+    if (nearPoi case final p?) {
+      final s = _s!;
+      final m = s.mission!;
+      return (
+        WorldPrompt.poi,
+        poiPromptText(p, m, engine.mapFor(s).floor(m.floor)!, s.time),
+      );
+    }
     if (nearStairs case final k?) {
       return (WorldPrompt.stairs, stairsPromptText(k, _s!.mission!.floor));
     }

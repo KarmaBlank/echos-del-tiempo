@@ -9,6 +9,7 @@ import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fixtures/passive_tree_v2_catalog.dart';
+import 'fixtures/passive_tree_v3_catalog.dart';
 
 /// Distancias (en nodos) desde [from] por los enlaces.
 Map<String, int> _bfs(PassiveTreeCatalog tree, String from) {
@@ -25,21 +26,20 @@ Map<String, int> _bfs(PassiveTreeCatalog tree, String from) {
   return dist;
 }
 
-const _classCluster = [
-  'e1', 'e2', 'f', 'a1', 'a2', 'na', 'b1', 'b2', 'nb', 'j', 'k', //
-];
+/// Plantilla de un cluster de clase v4 (passive_tree_v4.md § 2).
+const _classCluster = ['n1', 'm1', 'm2', 'na', 'nb', 'ma', 'mb', 'nc', 'k'];
 
 void main() {
   final tree = kPassiveTree;
   final rules = PassiveTreeRules(tree);
 
-  test('352 nodos: 60 notables, 20 keystones (passive_tree_v3.md § 1)', () {
-    expect(tree.nodes, hasLength(352));
+  test('308 nodos: 104 notables, 20 keystones (passive_tree_v4.md § 1)', () {
+    expect(tree.nodes, hasLength(308));
     final kinds = <String, int>{};
     for (final n in tree.nodes.values) {
       kinds[n.kind] = (kinds[n.kind] ?? 0) + 1;
     }
-    expect(kinds, {'st': 4, 's': 352 - 4 - 60 - 20, 'n': 60, 'k': 20});
+    expect(kinds, {'st': 4, 's': 308 - 4 - 104 - 20, 'n': 104, 'k': 20});
     expect(tree.paths, hasLength(28));
     for (final cls in tree.startNodeByClass.keys) {
       expect(tree.paths.values.where((p) => p.classId == cls), hasLength(5),
@@ -47,8 +47,23 @@ void main() {
     }
     expect(tree.paths.values.where((p) => p.kind == 'puente'), hasLength(4));
     expect(tree.paths.values.where((p) => p.kind == 'grupo'), hasLength(4));
-    // Con el máximo (nivel 50 + 20 de Maestría = 69 puntos) se cubre ~20%.
-    expect(69 / tree.nodes.length, inInclusiveRange(0.18, 0.22));
+    // Con el máximo (nivel 50 + 20 de Maestría = 69 puntos) se cubre
+    // ~22%: un poco más que la v3 (19.6%) porque hay menos relleno.
+    expect(69 / tree.nodes.length, inInclusiveRange(0.20, 0.23));
+  });
+
+  test('cada cluster de clase tiene 4 notables y menos chicos que notables+1',
+      () {
+    for (final path in tree.paths.values.where((p) => p.kind == 'clase')) {
+      final nodes = tree.nodes.values.where((n) => n.pathId == path.id);
+      expect(nodes.where((n) => n.kind == 'n'), hasLength(4), reason: path.id);
+      expect(nodes.where((n) => n.kind == 's'), hasLength(4), reason: path.id);
+      expect(nodes.where((n) => n.kind == 'k'), hasLength(1), reason: path.id);
+    }
+    for (final path in tree.paths.values.where((p) => p.kind == 'grupo')) {
+      final nodes = tree.nodes.values.where((n) => n.pathId == path.id);
+      expect(nodes.where((n) => n.kind == 'n'), hasLength(3), reason: path.id);
+    }
   });
 
   test('ids únicos y determinísticos; enlaces simétricos y sin repetir', () {
@@ -84,21 +99,20 @@ void main() {
     }
   });
 
-  test('cada cluster de clase: entrada → bifurcación → 2 notables → keystone',
-      () {
+  test('cluster de clase: notable → 2 chicos → bifurcación de notables → '
+      'unión notable → keystone', () {
     for (final path in tree.paths.values.where((p) => p.kind == 'clase')) {
-      final ids = [for (final s in _classCluster) '${path.id}_$s'];
-      final kinds = [for (final id in ids) tree.nodes[id]!.kind];
-      expect(kinds, ['s', 's', 's', 's', 's', 'n', 's', 's', 'n', 's', 'k'],
+      String id(String s) => '${path.id}_$s';
+      final kinds = [for (final s in _classCluster) tree.nodes[id(s)]!.kind];
+      expect(kinds, ['n', 's', 's', 'n', 'n', 's', 's', 'n', 'k'],
           reason: path.id);
-      for (final id in ids) {
-        expect(tree.nodes[id]!.pathId, path.id);
+      for (final s in _classCluster) {
+        expect(tree.nodes[id(s)]!.pathId, path.id);
       }
-      expect(tree.nodes['${path.id}_f']!.links,
-          containsAll(['${path.id}_a1', '${path.id}_b1']));
-      expect(tree.nodes['${path.id}_j']!.links,
-          containsAll(['${path.id}_na', '${path.id}_nb', '${path.id}_k']));
-      expect(tree.nodes['${path.id}_k']!.links, ['${path.id}_j'],
+      expect(tree.nodes[id('m2')]!.links, containsAll([id('na'), id('nb')]));
+      expect(tree.nodes[id('nc')]!.links,
+          containsAll([id('ma'), id('mb'), id('k')]));
+      expect(tree.nodes[id('k')]!.links, [id('nc')],
           reason: 'la keystone es la punta del cluster');
     }
   });
@@ -125,45 +139,87 @@ void main() {
         {'r_pg1', 'r_pg2', 'refugio_e2'});
   });
 
-  test('costo de viajar: tu zona barata, las lejanas caras', () {
+  test('ids estables desde la v3: iguales en todo (lo demás se devuelve)', () {
+    final v3 = kPassiveTreeV3;
+    // 16 + 4 × (r1 + 5 abanico) + 20 × 3 + 4 × 12 + 4 × 9.
+    expect(kTreeIdsStableSinceV3, hasLength(16 + 24 + 60 + 48 + 36));
+    for (final id in kTreeIdsStableSinceV3) {
+      final a = tree.nodes[id], b = v3.nodes[id];
+      expect(a, isNotNull, reason: id);
+      expect(b, isNotNull, reason: id);
+      expect(a!.name, b!.name, reason: id);
+      expect(a.kind, b.kind, reason: id);
+      expect(a.effects, b.effects, reason: id);
+      expect(a.mechanicId, b.mechanicId, reason: id);
+      expect(a.keystoneId, b.keystoneId, reason: id);
+    }
+    // Y ningún otro id de la v3 que siga existiendo cambió de sentido sin
+    // estar en la lista: los que siguen iguales están todos.
+    for (final id in v3.nodes.keys) {
+      final a = tree.nodes[id], b = v3.nodes[id]!;
+      if (a == null) continue;
+      final same = a.name == b.name &&
+          a.kind == b.kind &&
+          a.mechanicId == b.mechanicId &&
+          '${a.effects}' == '${b.effects}';
+      expect(kTreeIdsStableSinceV3.contains(id), same, reason: id);
+    }
+  });
+
+  test('costo de viajar: el primer notable de tu clase a 3 puntos', () {
     for (final start in tree.startNodeByClass.values) {
       expect(_bfs(tree, start).keys.toSet(), tree.nodes.keys.toSet(),
           reason: 'todo se alcanza desde $start');
     }
-    // Puntos antes del primer nodo del cluster = distancia − 1.
+    // Puntos para tomar un nodo = su distancia al inicio.
+    for (final (cls, start) in [
+      ('guerrero', 's_gue'),
+      ('maga', 's_mag'),
+      ('tirador', 's_tir'),
+      ('paladin', 's_pal'),
+    ]) {
+      final d = _bfs(tree, start);
+      final mine = tree.paths.values.where((p) => p.classId == cls).toList();
+      final costs = [for (final p in mine) d['${p.id}_n1']!];
+      expect(costs, [4, 3, 3, 3, 4], reason: cls);
+      // Toda la keystone de tu clase a 9-10 puntos (v3: 9-11).
+      for (final p in mine) {
+        expect(d['${p.id}_k']!, inInclusiveRange(9, 10), reason: p.id);
+      }
+    }
     final g = _bfs(tree, 's_gue');
-    expect(g['quiebre_e1']! - 1, 3, reason: 'cluster central propio');
-    expect(g['sangre_e1']! - 1, 4);
-    expect(g['muralla_e1']! - 1, 5);
-    expect(g['estandarte_e1']! - 1, 2, reason: 'cluster de grupo');
-    expect(g['cronos_e1']! - 1, 8, reason: 'zona vecina');
-    expect(g['precision_e1']! - 1, 11, reason: 'zona opuesta');
-    expect(g['hojaArcana_n1']!, greaterThanOrEqualTo(14));
+    expect(g['estandarte_e1']!, 3, reason: 'cluster de grupo');
+    expect(g['cronos_n1']!, 8, reason: 'zona vecina');
+    expect(g['precision_n1']!, 11, reason: 'zona opuesta');
+    expect(g['hojaArcana_n1']!, greaterThanOrEqualTo(11));
   });
 
   test('atajos entre clusters vecinos y puentes entre clases vecinas', () {
-    expect(tree.nodes['muralla_b2']!.links, contains('sangre_a2'));
-    expect(tree.nodes['filo_b2']!.links, isNot(contains('arcano_a2')),
+    expect(tree.nodes['muralla_mb']!.links, contains('sangre_ma'));
+    expect(tree.nodes['filo_mb']!.links, isNot(contains('arcano_ma')),
         reason: 'el atajo es solo dentro de la clase');
     expect(tree.nodes['hojaArcana_a1']!.links, contains('filo_nb'));
     expect(tree.nodes['hojaArcana_b1']!.links, contains('arcano_na'));
     expect(tree.nodes['coloso_a1']!.links, contains('bastion_nb'));
     expect(tree.nodes['coloso_b1']!.links, contains('muralla_na'));
     expect(tree.paths['runas']!.classId, 'maga+tirador');
+    expect(tree.nodes['gue_r1']!.links.toSet(),
+        {'s_gue', 'gue_f2', 'gue_f3', 'gue_f4'});
   });
 
   test('un guerrero puede tomar nodos de la Maga viajando por el anillo', () {
     var progress = PlayerPassiveProgress.empty;
     for (final id in [
-      'p_gue', 'r_gm1', 'r_gm2', 'p_mag', 's_mag', 'mag_r1', 'mag_r2', //
-      'mag_f3', 'cronos_e1',
+      'p_gue', 'r_gm1', 'r_gm2', 'p_mag', 's_mag', 'mag_r1', 'mag_f3', //
+      'cronos_n1', 'cronos_m1',
     ]) {
       expect(rules.canTake('guerrero', 30, progress, id), isTrue, reason: id);
       progress = PlayerPassiveProgress([...progress.takenNodeIds, id]);
     }
     final mods = rules.aggregate('guerrero', progress);
-    expect(mods['mag'], closeTo(0.04 + 0.04 + 0.03 + 0.02 + 0.03, 1e-9),
+    expect(mods['mag'], closeTo(0.04 + 0.04 + 0.03 + 0.02 + 0.045, 1e-9),
         reason: 'umbral + inicio de la maga + Estudio + Sendero + Segundero');
+    expect(mods.mechanics, {'arenaTiempo'});
   });
 
   test('notables y keystones tienen su mecánica en kMechanics', () {
@@ -178,7 +234,8 @@ void main() {
             reason: '$m choca con una habilidad');
       }
     }
-    expect(mechs, hasLength(60 + 4 + 8));
+    // 104 notables + 12 keystones con mecánica propia.
+    expect(mechs, hasLength(104 + 12));
     final keys = {
       for (final n in tree.nodes.values)
         if (n.kind == 'k') n.keystoneId!,
@@ -193,26 +250,27 @@ void main() {
 
   test('aggregate junta las mecánicas tomadas', () {
     final p = PlayerPassiveProgress([
-      'gue_r1', 'gue_r2', 'gue_f3', 'gue_f4', 'gue_f5', //
+      'gue_r1', 'gue_f4', 'gue_f5', //
       for (final s in _classCluster) 'filo_$s',
     ]);
     final m = rules.aggregate('guerrero', p);
-    expect(m.mechanics, {'frenesi', 'corteCadena', 'danza'});
+    expect(m.mechanics,
+        {'estocadaPrecisa', 'frenesi', 'corteCadena', 'desarme', 'danza'});
     expect(m.keys, {'danza'});
     expect(m.critCap, 0.40);
-    expect(m['crit'], closeTo(0.015 * 6, 1e-9));
-    expect(m['spd'], closeTo(0.15 * 3, 1e-9));
+    expect(m['crit'], closeTo(0.02 * 2 + 0.015 * 2, 1e-9));
+    expect(m['spd'], closeTo(0.2 * 2 + 0.15, 1e-9));
   });
 
   test('contras de las keystones nuevas', () {
     TreeMods only(String classId, String cluster) => rules.aggregate(classId,
         PlayerPassiveProgress([for (final s in _classCluster) '${cluster}_$s']));
     final small = {
-      'demoledor': ('guerrero', 'quiebre', 'hp', 0.03 * 3 - 0.15),
-      'caudillo': ('guerrero', 'gritos', 'ult', 0.03 * 5 + 0.04 - 0.30),
-      'bucle': ('maga', 'cronos', 'spd', 0.15 * 5 - 1.0),
-      'singularidad': ('maga', 'prisma', 'mag', 0.02 * 5 - 0.10),
-      'diluvio': ('tirador', 'lluvia', 'atk', 0.03 * 6 - 0.15),
+      'demoledor': ('guerrero', 'quiebre', 'hp', 0.04 * 2 - 0.15),
+      'caudillo': ('guerrero', 'gritos', 'ult', 0.05 * 2 + 0.03 + 0.04 + 0.03 - 0.30),
+      'bucle': ('maga', 'cronos', 'spd', 0.2 * 2 + 0.15 * 4 - 1.0),
+      'singularidad': ('maga', 'prisma', 'mag', 0.03 * 3 - 0.10),
+      'diluvio': ('tirador', 'lluvia', 'atk', 0.05 * 2 + 0.03 * 2 - 0.15),
       'depredador': ('tirador', 'acecho', 'hp', -0.20),
       'solInterior': ('paladin', 'luz', 'atk', -0.15),
       'inamovible': ('paladin', 'vigilia', 'spd', -1.0),
@@ -229,40 +287,40 @@ void main() {
 
   test('Creyente e Inherente se excluyen', () {
     final progress = PlayerPassiveProgress([
-      'pal_r1', 'pal_r2', 'pal_f3', //
+      'pal_r1', 'pal_f3', //
       for (final s in _classCluster) 'fe_$s',
       'pal_f2',
-      for (final s in _classCluster.take(10)) 'juicio_$s',
+      for (final s in _classCluster.take(8)) 'juicio_$s',
     ]);
-    expect(rules.canTake('paladin', 69, progress, 'juicio_j'), isFalse,
+    expect(rules.canTake('paladin', 69, progress, 'juicio_nc'), isFalse,
         reason: 'ya lo tiene');
     expect(rules.canTake('paladin', 69, progress, 'juicio_k'), isFalse);
   });
 
   test('posiciones: el cluster central de cada clase sale en su ángulo', () {
-    final n = tree.nodes['quiebre_e1']!; // guerrero (−90°)
+    final n = tree.nodes['quiebre_n1']!; // guerrero (−90°)
     expect(n.x, closeTo(0, 1e-9));
     expect(n.y, closeTo(-kClusterRadius, 1e-9));
     final k = tree.nodes['fe_k']!; // paladín (180°)
-    expect(k.x, closeTo(-(kClusterRadius + 5.55), 1e-9));
+    expect(k.x, closeTo(-(kClusterRadius + kKeystoneOffset), 1e-9));
     expect(k.y, closeTo(0, 1e-9));
   });
 
   test('pathTo: el camino más corto que falta, con su costo', () {
     const empty = PlayerPassiveProgress.empty;
-    expect(rules.pathTo('guerrero', empty, 'quiebre_e1'),
-        ['gue_r1', 'gue_r2', 'gue_f3', 'quiebre_e1']);
+    expect(rules.pathTo('guerrero', empty, 'quiebre_n1'),
+        ['gue_r1', 'gue_f3', 'quiebre_n1']);
     expect(rules.pathTo('guerrero', empty, 's_gue'), isEmpty);
-    const some = PlayerPassiveProgress(['gue_r1', 'gue_r2']);
-    expect(rules.pathTo('guerrero', some, 'gue_f4'), ['gue_f3', 'gue_f4']);
+    const some = PlayerPassiveProgress(['gue_r1']);
+    expect(rules.pathTo('guerrero', some, 'gue_f5'), ['gue_f4', 'gue_f5']);
     expect(rules.pathTo('guerrero', some, 'nope'), isNull);
     // La keystone excluida no tiene camino.
     final fe = PlayerPassiveProgress([
-      'pal_r1', 'pal_r2', 'pal_f3', for (final s in _classCluster) 'fe_$s',
+      'pal_r1', 'pal_f3', for (final s in _classCluster) 'fe_$s',
     ]);
     expect(rules.pathTo('paladin', fe, 'juicio_k'), isNull);
-    // Por el atajo fe_a2 ↔ juicio_b2, no por la entrada de Juicio.
-    expect(rules.pathTo('paladin', fe, 'juicio_j'),
-        ['juicio_b2', 'juicio_nb', 'juicio_j']);
+    // Por el atajo fe_ma ↔ juicio_mb, no por la entrada de Juicio.
+    expect(rules.pathTo('paladin', fe, 'juicio_nc'),
+        ['juicio_mb', 'juicio_nc']);
   });
 }

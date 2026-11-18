@@ -64,10 +64,11 @@ abstract final class WorldRules {
   /// antes de mandar su `MoveAction`.
   static WorldPoint stepPlayer(GameMap map, double x, double y, double ix,
       double iy, double dt,
-      {bool gateOpen = false}) {
+      {bool gateOpen = false, double speedMult = 1}) {
     final l = math.sqrt(ix * ix + iy * iy);
     if (l == 0) return WorldPoint(x, y);
-    return move(map, x, y, ix / l * playerSpeed * dt, iy / l * playerSpeed * dt,
+    final v = playerSpeed * speedMult * dt;
+    return move(map, x, y, ix / l * v, iy / l * v,
         gateOpen: gateOpen);
   }
 

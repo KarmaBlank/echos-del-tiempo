@@ -31,7 +31,12 @@ Color mapIconColor(MapIconColor c) => switch (c) {
 /// Color de un tile en el minimapa (exploration.md § "HUD" y § "Minimapa
 /// (v0.3)"). Colores = arte del prototipo.
 Color minimapTileColor(String ch) => switch (ch) {
-      Tile.wall || Tile.gate => const Color(0xFF0B0E1A),
+      // v0.6: los PdI no se ven en la base (worldgen.md § 11.7).
+      Tile.wall ||
+      Tile.gate ||
+      Tile.cracked ||
+      Tile.shortcut =>
+        const Color(0xFF0B0E1A),
       Tile.tree => const Color(0xFF1D3B26),
       Tile.rock => const Color(0xFF3A3D48),
       Tile.water => const Color(0xFF2E86DE),
@@ -47,6 +52,23 @@ Color minimapTileColor(String ch) => switch (ch) {
       _ when Tile.entranceZone(ch) != null => const Color(0xFF3E6B48),
       _ => const Color(0xFF4B5878),
     };
+
+/// Color del punto de un PdI descubierto (worldgen.md § 11.7); `null` = no
+/// se marca (reliquia ya levantada).
+Color? poiMinimapColor(MapPoi p, MissionRun m) {
+  final used = m.poiUsed.contains(p.id);
+  const spent = Color(0xFF6C707A);
+  return switch (p.kind) {
+    PoiKind.secret => used ? spent : const Color(0xFFBE6EFF),
+    PoiKind.shrine => used ? spent : const Color(0xFF5AE6D2),
+    PoiKind.waystone =>
+      used ? const Color(0xFFFFD166) : const Color(0xFFB0B6C8),
+    PoiKind.wind => const Color(0xFFBFEFFF),
+    PoiKind.shortcut => used ? spent : const Color(0xFFFF8C28),
+    PoiKind.brazier => used ? const Color(0xFFFF8C28) : const Color(0xFFE8D6B0),
+    PoiKind.relic => used ? null : const Color(0xFFFFB347),
+  };
+}
 
 /// Vacío en el minimapa (como el fondo fuera del mapa).
 const kMinimapVoid = Color(0xFF05060C);
@@ -209,11 +231,22 @@ class _MinimapPainter extends CustomPainter {
           case MissionItemKind.seal:
             dot(it.x, it.y,
                 it.done ? const Color(0xFF7BED9F) : const Color(0xFFA29BFE), 3);
-          case MissionItemKind.chest when !it.done:
-            dot(it.x, it.y, const Color(0xFFFFD166), 3);
+          case MissionItemKind.chest
+              when !it.done &&
+                  (it.secret == null || m.poiUsed.contains(it.secret)):
+            dot(it.x, it.y, const Color(0xFFFFD166),
+                it.tier == ChestTier.oro ? 4 : 3);
           default:
             break;
         }
+      }
+      // Puntos de interés descubiertos (worldgen.md § 11.7).
+      final fl = map.floor(m.floor);
+      for (final poi in fl?.pois ?? const <MapPoi>[]) {
+        if (!m.poiSeen.contains(poi.id)) continue;
+        final c = poiMinimapColor(poi, m);
+        if (c == null) continue;
+        dot(poi.center.x, poi.center.y, c, 3);
       }
       for (final e in m.enemies) {
         if (!e.boss || !e.alive || e.floor != m.floor) continue;

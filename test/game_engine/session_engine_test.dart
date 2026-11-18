@@ -132,10 +132,11 @@ void main() {
 
   group('campo', () {
     test('cofre: créditos, poción y loot v2 según el azar', () {
-      // m2 es rango B (tier 2). Azar: créditos 0.5 → 20 + 15 + 20 = 55;
-      // 0.3 < 0.5 → poción; 0.05 < 0.35 → arma; rareza 0.0 → Común; base
+      // m2 es rango B (tier 2), cofre común (loot.md § 23). Azar: créditos
+      // 0.5 → 20 + 15 + 20 = 55; 0.1 < 0.30 → consumible, 0.3 < 0.6 → poción;
+      // 0.05 < 0.45 → arma; rareza 0.0 → Común; base
       // 0.0 → la primera (Espada de Bronce); materiales 0.99 → nada.
-      final e = sessionEngine(fieldRolls: [0.5, 0.3, 0.05, 0.0, 0.0]);
+      final e = sessionEngine(fieldRolls: [0.5, 0.1, 0.3, 0.05, 0.0, 0.0]);
       var s = inField(e, 'm2');
       // Zona de m2: recomendado 4 + rango B = 5.
       expect(s.mission!.zoneLevel, 5);

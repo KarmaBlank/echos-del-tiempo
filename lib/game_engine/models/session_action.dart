@@ -153,6 +153,12 @@ class UseStairsAction extends SessionAction {
   const UseStairsAction({required this.down});
 }
 
+/// E frente a un punto de interés del piso (worldgen.md § 11.3).
+class InteractPoiAction extends SessionAction {
+  final int poiId;
+  const InteractPoiAction(this.poiId);
+}
+
 // ---------------- loot v2 (docs/specs/loot.md) ----------------
 
 /// `craft`: una operación de la forja / mesa de fusión sobre el arma

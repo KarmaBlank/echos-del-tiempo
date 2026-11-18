@@ -405,6 +405,9 @@ List<BattleFx> mapBattleEvents(
 
   /// Enemigos quebrados que ya mostraron `QUIEBRE ×1.5` en el paso.
   final vulnShown = <String>{};
+
+  /// Enemigos que ya mostraron DÉBIL / RESISTE en esta acción.
+  final affinityShown = <String>{};
   EnemyUltEvent? wipe;
 
   /// Viento a Favor: la próxima acción (el ataque gratis) se corre.
@@ -994,6 +997,15 @@ List<BattleFx> mapBattleEvents(
     }
     if (e.vulnerable && vulnShown.add(id)) {
       txt(id, -44, 'QUIEBRE ×1.5', breakColor, dl: dl);
+    }
+    // Familia del enemigo (docs/specs/bestiary.md § 1.3): una vez por
+    // acción, encima del QUIEBRE si lo hay.
+    if (e.affinity != 1 && affinityShown.add(id)) {
+      final weak = e.affinity > 1;
+      txt(id, e.vulnerable ? -54 : -44,
+          '${weak ? 'DÉBIL' : 'RESISTE'} ×${fm(e.affinity)}',
+          weak ? _orange : _gray,
+          dl: dl);
     }
     out.add(BattleFx(FxKind.slash,
         x: p.dx,

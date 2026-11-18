@@ -15,6 +15,7 @@ import '../../../../game_engine/models/item.dart';
 import '../../../../game_engine/models/loot.dart';
 import '../../../../game_engine/models/loot_filter.dart';
 import '../../../../game_engine/models/session_event.dart';
+import '../../../../game_engine/data/exploration_catalog.dart';
 import '../../../../game_engine/rules/eco_rules.dart';
 import '../../../../game_engine/rules/trial_rules.dart';
 import '../../../../game_engine/rules/zone_rules.dart';
@@ -209,6 +210,15 @@ class MapGame extends Game {
   /// Texto del cartel de caída del jugador local.
   static const fallToastText = '¡Caíste al vacío!';
 
+  /// Cartel de misión opcional cumplida (worldgen.md § 11.8).
+  static const questToastMs = 2800.0;
+  double? _questT0;
+  String _questText = '';
+
+  /// Se ve el cartel de misión opcional cumplida (tests).
+  bool get showingQuestToast =>
+      _questT0 != null && t - _questT0! < questToastMs;
+
   /// Caídas en curso por jugador.
   final _falls = <String, _Fall>{};
 
@@ -248,6 +258,10 @@ class MapGame extends Game {
   void _onEvent(SessionEvent e) {
     if (e is FloorChangedEvent) _fadeT0 = t;
     if (e case FellIntoVoidEvent(:final playerId)) startFall(playerId);
+    if (e case QuestDoneEvent(:final kind)) {
+      _questT0 = t;
+      _questText = questText(kind);
+    }
     if (e case LootDropEvent(:final playerId, :final drop, :final groundId)
         when playerId == controller.localId &&
             groundId == null &&
@@ -542,8 +556,18 @@ class MapGame extends Game {
     if (mission != null && showField) {
       for (final it in mission.items) {
         if (it.floor != mission.floor) continue;
-        final visible = it.kind == MissionItemKind.seal || !it.done;
-        if (visible) add(it.y, () => actors.item(c, it, t));
+        // El cofre de una sala secreta no se ve hasta abrirla.
+        final hidden = it.secret != null && !mission.poiUsed.contains(it.secret);
+        final visible = !hidden && (it.kind == MissionItemKind.seal || !it.done);
+        final g = it.guard;
+        final locked = g != null && (mission.enemy(g)?.alive ?? false);
+        if (visible) add(it.y, () => actors.item(c, it, t, locked: locked));
+      }
+      // Reliquias de las misiones opcionales (worldgen.md § 11.8).
+      for (final p in currentFloor(view)?.pois ?? const <MapPoi>[]) {
+        if (p.kind != PoiKind.relic || mission.poiUsed.contains(p.id)) continue;
+        final cx = p.center.x, cy = p.center.y;
+        add(cy, () => actors.relic(c, cx, cy, t));
       }
       for (final e in mission.enemies) {
         if (!e.alive || e.floor != mission.floor) continue;
@@ -625,6 +649,17 @@ class MapGame extends Game {
       final a = q < 0.8 ? 1.0 : (1 - q) / 0.2;
       actors.text(c, fallToastText, vw / 2, 56,
           const Color(0xFFA29BFE).withValues(alpha: a.clamp(0.0, 1.0)), 8);
+    }
+    if (showingQuestToast) {
+      final q = (t - _questT0!) / questToastMs;
+      final a = (q < 0.85 ? 1.0 : (1 - q) / 0.15).clamp(0.0, 1.0);
+      final y = 44.0 + (q < 0.1 ? (0.1 - q) * 80 : 0.0);
+      c.drawRect(Rect.fromLTWH(vw / 2 - 110, y - 12, 220, 28),
+          Paint()..color = Color.fromRGBO(10, 8, 24, 0.75 * a));
+      actors.text(c, '¡Misión opcional cumplida!', vw / 2, y,
+          const Color(0xFFFFD166).withValues(alpha: a), 8);
+      actors.text(c, _questText, vw / 2, y + 11,
+          const Color(0xFFFFFFFF).withValues(alpha: a), 6);
     }
     _drawFade(c, view);
   }

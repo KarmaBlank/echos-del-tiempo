@@ -41,6 +41,9 @@ BattleEngine _engine([List<double> rolls = const [], bool on = true]) {
     random: () => i < rolls.length ? rolls[i++] : 0.99,
     breakEnabled: on,
     enemyUltsEnabled: on,
+    // Las fórmulas de quiebre sin el ×1.5 de los constructos (el gólem):
+    // las familias tienen sus propios tests (enemy_families_test.dart).
+    familiesEnabled: false,
   );
 }
 

@@ -170,7 +170,8 @@ class ActorPainter {
   // Objetos del campo
   // ------------------------------------------------------------------
 
-  void item(Canvas c, MissionItem it, double t) {
+  /// [locked]: cofre custodiado con su guardián vivo (worldgen.md § 11.5).
+  void item(Canvas c, MissionItem it, double t, {bool locked = false}) {
     final x = it.x, y = it.y;
     switch (it.kind) {
       case MissionItemKind.fragment:
@@ -205,19 +206,74 @@ class ActorPainter {
           c.drawCircle(Offset(x, y - 8), 12, _fill);
         }
       case MissionItemKind.chest:
-        final bob = math.sin(t / 300 + it.id) * 1.5;
+        // Calidad (loot.md § 23): madera, reforzado (plata) y dorado.
+        final (body, lid, band, edge) = switch (it.tier) {
+          ChestTier.madera => (
+              const Color(0xFF8A5A2B),
+              const Color(0xFFB3781F),
+              const Color(0xFFFFD166),
+              const Color(0xFF5A3A1A),
+            ),
+          ChestTier.plata => (
+              const Color(0xFF4A5A78),
+              const Color(0xFF7D8DAE),
+              const Color(0xFFDFE6E9),
+              const Color(0xFF2A3348),
+            ),
+          ChestTier.oro => (
+              const Color(0xFFB8860B),
+              const Color(0xFFFFC93C),
+              const Color(0xFFFFF3B0),
+              const Color(0xFF7A5200),
+            ),
+        };
+        final bob = locked ? 0.0 : math.sin(t / 300 + it.id) * 1.5;
         _oval(c, _shadow, x, y + 4, 8, 2.5);
-        _rect(c, const Color(0xFF8A5A2B), x - 8, y - 6 + bob, 16, 10);
-        _rect(c, const Color(0xFFB3781F), x - 8, y - 9 + bob, 16, 5);
-        _rect(c, const Color(0xFFFFD166), x - 1, y - 5 + bob, 2, 5);
-        _stroke.color = const Color(0xFF5A3A1A);
+        if (it.tier == ChestTier.oro && !locked) {
+          final g = (0.18 + 0.12 * math.sin(t / 220)).clamp(0.0, 1.0);
+          _oval(c, Color.fromRGBO(255, 209, 102, g), x, y - 2 + bob, 13, 10);
+        }
+        _rect(c, body, x - 8, y - 6 + bob, 16, 10);
+        _rect(c, lid, x - 8, y - 9 + bob, 16, 5);
+        _rect(c, band, x - 1, y - 5 + bob, 2, 5);
+        if (it.tier != ChestTier.madera) {
+          _rect(c, band, x - 8, y - 4 + bob, 16, 1);
+        }
+        _stroke.color = edge;
         c.drawRect(Rect.fromLTWH(x - 7.5, y - 8.5 + bob, 15, 14), _stroke);
+        if (locked) {
+          // Candado: el guardián vive.
+          _rect(c, const Color(0xFF2A2D38), x - 3, y - 4, 6, 5);
+          _stroke.color = const Color(0xFF2A2D38);
+          c.drawRect(Rect.fromLTWH(x - 2, y - 8, 4, 4), _stroke);
+          _rect(c, const Color(0xFFFF4757), x - 0.5, y - 3, 1, 2);
+          return;
+        }
         // Destello `✦`: rombo de 3 px (la fuente no tiene el glifo).
         final a = (0.5 + 0.3 * math.sin(t / 180)).clamp(0.0, 1.0);
-        final spark = const Color(0xFFFFD166).withValues(alpha: a);
+        final spark = band.withValues(alpha: a);
         final sy = (y - 16 + bob).roundToDouble();
         _rect(c, spark, x - 1, sy, 3, 1);
         _rect(c, spark, x, sy - 1, 1, 3);
     }
+  }
+
+  /// Reliquia perdida de una misión opcional (worldgen.md § 11.8): un
+  /// fragmento ámbar que flota y brilla.
+  void relic(Canvas c, double x, double y, double t) {
+    final b = math.sin(t / 230) * 2;
+    _oval(c, const Color(0x55000000), x, y + 3, 5, 1.5);
+    final k = (0.35 + 0.25 * math.sin(t / 160)).clamp(0.0, 1.0);
+    _oval(c, Color.fromRGBO(255, 179, 71, k), x, y - 6 + b, 9, 9);
+    _fill.color = const Color(0xFFFFB347);
+    c.drawPath(
+        Path()
+          ..moveTo(x, y - 13 + b)
+          ..lineTo(x + 5, y - 6 + b)
+          ..lineTo(x, y + 1 + b)
+          ..lineTo(x - 5, y - 6 + b)
+          ..close(),
+        _fill);
+    _rect(c, const Color(0xFFFFF3B0), x - 1, y - 9 + b, 2, 4);
   }
 }

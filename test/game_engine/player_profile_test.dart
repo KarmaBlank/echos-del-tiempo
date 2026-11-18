@@ -34,7 +34,7 @@ void main() {
     expect(p.tree, isEmpty);
   });
 
-  group('migración del árbol (v1 / v2 → v3)', () {
+  group('migración del árbol (v1 / v2 / v3 → v4)', () {
     final v1 = {
       'name': 'Ana',
       'cls': 'guerrero',
@@ -55,14 +55,42 @@ void main() {
       expect(p.toJson().containsKey('tvRef'), isFalse);
     });
 
-    test('un perfil v3 conserva su árbol', () {
+    test('un perfil v4 conserva su árbol', () {
       final p = PlayerProfile.fromJson({
         ...v1,
-        'tv': 3,
-        'tree': ['gue_r1', 'gue_r2'],
+        'tv': 4,
+        'tree': ['gue_r1', 'gue_f3'],
       });
-      expect(p.tree, ['gue_r1', 'gue_r2']);
+      expect(p.tree, ['gue_r1', 'gue_f3']);
       expect(p.treeRefunded, 0);
+    });
+
+    // passive_tree_v4.md § 6: de la v3 queda lo que sigue igual (anillo,
+    // inicios, r1, abanico, notables A/B, keystones, puentes y grupos salvo
+    // la punta) si sigue conectado; el resto vuelve gratis.
+    test('un perfil v3 conserva lo que no cambió y recupera lo demás', () {
+      final raw = PlayerProfile.fromJson({
+        ...v1,
+        'lvl': 30,
+        'tv': 3,
+        'tree': [
+          'gue_r1', 'gue_r2', 'gue_f3', 'quiebre_e1', 'quiebre_e2', //
+          'quiebre_f', 'quiebre_a1', 'quiebre_a2', 'quiebre_na', 'p_gue',
+          'r_gm1', 'estandarte_e1', 'estandarte_e2', 'estandarte_a1',
+          'estandarte_a2', 'estandarte_na', 'estandarte_j', 'estandarte_t',
+        ],
+      });
+      expect(raw.tree, [
+        'gue_r1', 'gue_f3', 'p_gue', 'r_gm1', 'estandarte_e1', //
+        'estandarte_e2', 'estandarte_a1', 'estandarte_a2', 'estandarte_na',
+        'estandarte_j',
+      ]);
+      expect(raw.treeRefunded, 8,
+          reason: 'quiebre_na sigue igual pero ya no conecta: también vuelve');
+      final p = progression.normalize(raw);
+      expect(p.tree, raw.tree);
+      expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 29 - 10);
+      expect(p.toJson()['tv'], PlayerProfile.treeVersion);
     });
 
     // passive_tree_v3.md § 11: de la v2 solo quedan el anillo y los
@@ -82,7 +110,7 @@ void main() {
       final p = progression.normalize(raw);
       expect(p.tree, raw.tree);
       expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 19 - 5);
-      expect(p.toJson()['tv'], 3);
+      expect(p.toJson()['tv'], PlayerProfile.treeVersion);
     });
 
     test('v2 con una clase desconocida o ids basura no rompe', () {

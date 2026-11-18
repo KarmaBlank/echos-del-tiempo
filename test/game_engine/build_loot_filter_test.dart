@@ -55,7 +55,7 @@ void main() {
       name: 'Mi build',
       notes: 'notas largas',
       attributes: {Attribute.fue: 40},
-      treeNodes: ['sangre_e1'],
+      treeNodes: ['sangre_n1'],
       weaponTypes: ['hacha'],
       weaponBases: ['espada_ignea'],
       mods: [ModGoal('feroz', 3)],
@@ -211,8 +211,8 @@ Mostrar # algo
   });
 
   group('red y host', () {
-    test('acción wants: ida y vuelta; protocolo 6', () {
-      expect(kProtocolVersion, 6);
+    test('acción wants: ida y vuelta; protocolo 7 (v0.6)', () {
+      expect(kProtocolVersion, 7);
       final w = BuildWants.fromPlan(const BuildPlan(
           weaponTypes: ['hacha'], mods: [ModGoal('feroz', 2)], skills: ['hendir']));
       final j = ActionJson.toJson(SetBuildWantsAction(w));

@@ -300,6 +300,7 @@ const List<PassiveMechanic> _list = [
     description: 'Al aturdir a un enemigo: daño sagrado MAG × 0.6.',
   ),
   ..._v3,
+  ..._v4,
 ];
 
 const _bonus = ProcEffectKind.statBonus;
@@ -741,5 +742,431 @@ const List<PassiveMechanic> _v3 = [
     effects: [ProcEffect(ProcEffectKind.healLowestAlly, value: 0.03)],
     description: 'Al empezar tu turno: el aliado con menor % de vida (vos '
         'incluido) se cura 3% de su vida máx.',
+  ),
+];
+
+const _fxStatus = ProcEffectKind.inflict;
+
+/// Notables nuevos del árbol v4 (passive_tree_v4.md § 3-4): el de entrada
+/// (`_n1`) y el de unión (`_nc`) de cada cluster de clase y la punta
+/// (`_nt`) de cada cluster de grupo. Solo disparadores y efectos que ya
+/// existían.
+const List<PassiveMechanic> _v4 = [
+  // ---------------- Guerrero ----------------
+  PassiveMechanic(
+    id: 'rompeolas',
+    name: 'Rompeolas',
+    trigger: ProcTrigger.onHitTaken,
+    filter: ProcFilter.defending,
+    effects: [ProcEffect(ProcEffectKind.delayTarget, value: 0.25)],
+    description: 'Al recibir un golpe defendiendo: el atacante se retrasa un '
+        '25% de su espera en el timeline.',
+  ),
+  PassiveMechanic(
+    id: 'corazaEspinas',
+    name: 'Coraza de Espinas',
+    trigger: ProcTrigger.onHitTaken,
+    effects: [ProcEffect(ProcEffectKind.reflect, value: 0.20)],
+    description: 'Al recibir cualquier golpe: devolvés el 20% del daño al '
+        'atacante (suma con Contraataque).',
+  ),
+  PassiveMechanic(
+    id: 'sangriaVital',
+    name: 'Sangría',
+    trigger: ProcTrigger.always,
+    effects: [ProcEffect(_bonus, value: 0.10, stat: BuffStat.lifeSteal)],
+    description: 'Robás el 10% del daño que hacés como vida.',
+  ),
+  PassiveMechanic(
+    id: 'frenesiSangriento',
+    name: 'Frenesí Sangriento',
+    trigger: ProcTrigger.whileMissingHealth,
+    effects: [ProcEffect(_bonus, value: 0.40, stat: BuffStat.damage)],
+    description: 'Hacés más daño cuanta más vida te falta: hasta +40% (a '
+        'media vida, +20%).',
+  ),
+  PassiveMechanic(
+    id: 'mazazo',
+    name: 'Mazazo',
+    trigger: ProcTrigger.onHit,
+    filter: ProcFilter.singleTarget,
+    chance: 0.12,
+    effects: [ProcEffect(_fxStatus, value: 1, status: StatusKind.stun)],
+    description: 'Tus golpes a un solo objetivo tienen 12% de aturdirlo (el '
+        'aturdimiento también llena su barra de quiebre).',
+  ),
+  PassiveMechanic(
+    id: 'brecha',
+    name: 'Brecha',
+    trigger: ProcTrigger.onBreak,
+    effects: [ProcEffect(ProcEffectKind.advanceAlly, value: 0.30)],
+    description: 'Cuando vos o un aliado quiebran a un enemigo: el aliado más '
+        'lento se adelanta 30% de su espera (solo: tu próximo turno llega '
+        '30% antes).',
+  ),
+  PassiveMechanic(
+    id: 'arenga',
+    name: 'Arenga',
+    trigger: ProcTrigger.onKill,
+    effects: [
+      ProcEffect(ProcEffectKind.buffParty,
+          value: 0.15, turns: 2, stat: BuffStat.speed)
+    ],
+    description: 'Al matar: todo el grupo (vos incluido) +15% velocidad por 2 '
+        'turnos (1 vez por acción).',
+  ),
+  PassiveMechanic(
+    id: 'estruendo',
+    name: 'Estruendo',
+    trigger: ProcTrigger.always,
+    effects: [
+      ProcEffect(_bonus, value: 0.30, stat: BuffStat.buffPower),
+      ProcEffect(_bonus, value: 1, stat: BuffStat.buffTurns),
+    ],
+    description: 'Tus buffs de grupo (Clamor, Arenga, Caudillo, gritos) son '
+        '30% más fuertes y duran 1 turno más.',
+  ),
+  PassiveMechanic(
+    id: 'estocadaPrecisa',
+    name: 'Estocada Precisa',
+    trigger: ProcTrigger.always,
+    filter: ProcFilter.singleTarget,
+    effects: [ProcEffect(_bonus, value: 0.30, stat: BuffStat.critMulti)],
+    description: 'Tus críticos a un solo objetivo pegan ×0.3 más (×1.8 en vez '
+        'de ×1.5).',
+  ),
+  PassiveMechanic(
+    id: 'desarme',
+    name: 'Desarme',
+    trigger: ProcTrigger.onCrit,
+    effects: [
+      ProcEffect(ProcEffectKind.debuffTarget,
+          value: -0.20, turns: 2, stat: BuffStat.attack)
+    ],
+    description: 'Al hacer crítico: el objetivo pega −20% ATQ por 2 turnos. '
+        'No acumula.',
+  ),
+  // ---------------- Maga ----------------
+  PassiveMechanic(
+    id: 'canalizar',
+    name: 'Canalizar',
+    trigger: ProcTrigger.onSkill,
+    filter: ProcFilter.magicalSkill,
+    effects: [ProcEffect(ProcEffectKind.ultCharge, value: 4)],
+    description: 'Cada habilidad mágica (no ULT): +4 de carga de ULT.',
+  ),
+  PassiveMechanic(
+    id: 'pulsoArcano',
+    name: 'Pulso Arcano',
+    trigger: ProcTrigger.onUltimate,
+    effects: [ProcEffect(ProcEffectKind.advanceTurn, value: 0.50)],
+    description: 'Después de tu ULT: tu próximo turno llega 50% antes.',
+  ),
+  PassiveMechanic(
+    id: 'ascuasVivas',
+    name: 'Ascuas Vivas',
+    trigger: ProcTrigger.vsStatus,
+    status: StatusKind.burn,
+    effects: [ProcEffect(_bonus, value: 0.15, stat: BuffStat.crit)],
+    description: '+15% crítico contra enemigos con Quemadura.',
+  ),
+  PassiveMechanic(
+    id: 'pira',
+    name: 'Pira',
+    trigger: ProcTrigger.onEnemyDeath,
+    status: StatusKind.burn,
+    effects: [ProcEffect(ProcEffectKind.spreadStatus)],
+    description: 'Al morir un enemigo quemado: su Quemadura pasa al enemigo '
+        'vivo con más vida.',
+  ),
+  PassiveMechanic(
+    id: 'arenaTiempo',
+    name: 'Arena del Tiempo',
+    trigger: ProcTrigger.onHit,
+    filter: ProcFilter.singleTarget,
+    chance: 0.25,
+    effects: [ProcEffect(ProcEffectKind.delayTarget, value: 0.15)],
+    description: 'Tus golpes a un solo objetivo tienen 25% de retrasarlo un '
+        '15% de su espera.',
+  ),
+  PassiveMechanic(
+    id: 'anclaTemporal',
+    name: 'Ancla Temporal',
+    trigger: ProcTrigger.onDelayApplied,
+    effects: [
+      ProcEffect(ProcEffectKind.debuffTarget,
+          value: -0.20, turns: 2, stat: BuffStat.speed)
+    ],
+    description: 'Al retrasar a un enemigo con una habilidad: queda −20% '
+        'velocidad por 2 turnos (sus turnos tardan más).',
+  ),
+  PassiveMechanic(
+    id: 'frioPenetrante',
+    name: 'Frío Penetrante',
+    trigger: ProcTrigger.onStatusApplied,
+    status: StatusKind.freeze,
+    chance: 0.5,
+    effects: [ProcEffect(ProcEffectKind.extraStacks, value: 1)],
+    description: 'Al congelar a un enemigo: 50% de +1 Congelación (con 5 '
+        'pierde el turno).',
+  ),
+  PassiveMechanic(
+    id: 'hieloQuebradizo',
+    name: 'Hielo Quebradizo',
+    trigger: ProcTrigger.vsStatus,
+    status: StatusKind.freeze,
+    effects: [ProcEffect(ProcEffectKind.breakBonus, value: 0.50)],
+    description: 'Contra enemigos con Congelación tus golpes llenan la barra '
+        'de quiebre un 50% más.',
+  ),
+  PassiveMechanic(
+    id: 'chispaPrismatica',
+    name: 'Chispa Prismática',
+    trigger: ProcTrigger.onHit,
+    filter: ProcFilter.magicalSingle,
+    effects: [ProcEffect(_fxStatus, value: 1, status: StatusKind.freeze)],
+    description: 'Tus habilidades mágicas a un solo objetivo aplican además 1 '
+        'Congelación (2 elementos con un solo hechizo de fuego o veneno).',
+  ),
+  PassiveMechanic(
+    id: 'descomposicion',
+    name: 'Descomposición',
+    trigger: ProcTrigger.onEnemyDeath,
+    effects: [ProcEffect(ProcEffectKind.spreadAll, value: 0.5)],
+    description: 'Al morir un enemigo: la mitad de sus Quemadura, '
+        'Congelación y Veneno (redondeo arriba) pasa a todos los demás.',
+  ),
+  // ---------------- Tirador ----------------
+  PassiveMechanic(
+    id: 'vientoCortante',
+    name: 'Viento Cortante',
+    trigger: ProcTrigger.onSkill,
+    filter: ProcFilter.areaSkill,
+    effects: [
+      ProcEffect(ProcEffectKind.buffSelf,
+          value: 0.15, turns: 2, stat: BuffStat.crit)
+    ],
+    description: 'Después de una habilidad de daño a todos (no ULT): +15% '
+        'crítico por 2 turnos (renueva).',
+  ),
+  PassiveMechanic(
+    id: 'huracan',
+    name: 'Huracán',
+    trigger: ProcTrigger.onKill,
+    chance: 0.35,
+    effects: [ProcEffect(ProcEffectKind.extraTurn)],
+    description: 'Al matar: 35% de turno extra inmediato (un turno extra no '
+        'da otro).',
+  ),
+  PassiveMechanic(
+    id: 'lluviaAcida',
+    name: 'Lluvia Ácida',
+    trigger: ProcTrigger.onHit,
+    filter: ProcFilter.areaSkill,
+    effects: [ProcEffect(_fxStatus, value: 1, status: StatusKind.poison)],
+    description: 'Tus habilidades de daño a todos (no ULT) aplican 1 Veneno a '
+        'cada enemigo.',
+  ),
+  PassiveMechanic(
+    id: 'granizo',
+    name: 'Granizo',
+    trigger: ProcTrigger.onHit,
+    filter: ProcFilter.areaSkill,
+    effects: [ProcEffect(ProcEffectKind.delayTarget, value: 0.10)],
+    description: 'Tus habilidades de daño a todos (no ULT) retrasan un 10% a '
+        'cada enemigo.',
+  ),
+  PassiveMechanic(
+    id: 'tiroALaCabeza',
+    name: 'Tiro a la Cabeza',
+    trigger: ProcTrigger.onCrit,
+    filter: ProcFilter.singleTarget,
+    chance: 0.25,
+    effects: [ProcEffect(_fxStatus, value: 1, status: StatusKind.stun)],
+    description: 'Al hacer crítico a un solo objetivo: 25% de aturdirlo.',
+  ),
+  PassiveMechanic(
+    id: 'grietaExpuesta',
+    name: 'Grieta Expuesta',
+    trigger: ProcTrigger.vsMarked,
+    effects: [ProcEffect(ProcEffectKind.breakBonus, value: 0.40)],
+    description: 'Contra enemigos marcados tus golpes llenan la barra de '
+        'quiebre un 40% más.',
+  ),
+  PassiveMechanic(
+    id: 'trampaCaza',
+    name: 'Trampa de Caza',
+    trigger: ProcTrigger.onHit,
+    filter: ProcFilter.singleTarget,
+    chance: 0.30,
+    effects: [
+      ProcEffect(ProcEffectKind.plantTrap,
+          value: 0.6, turns: 2, stat: BuffStat.trap)
+    ],
+    description: 'Tus golpes a un solo objetivo tienen 30% de dejarle una '
+        'trampa: ATQ × 0.6 al empezar su turno (2 turnos).',
+  ),
+  PassiveMechanic(
+    id: 'caceria',
+    name: 'Cacería',
+    trigger: ProcTrigger.onTrap,
+    effects: [
+      ProcEffect(ProcEffectKind.markTarget,
+          value: 0.20, turns: 3, stat: BuffStat.damageTaken)
+    ],
+    description: 'Cuando salta una trampa tuya: marca al enemigo si no tiene '
+        'marca (+20% de daño recibido de todos, 3 turnos).',
+  ),
+  PassiveMechanic(
+    id: 'toxinaParalizante',
+    name: 'Toxina Paralizante',
+    trigger: ProcTrigger.onStatusApplied,
+    status: StatusKind.poison,
+    effects: [
+      ProcEffect(ProcEffectKind.debuffTarget,
+          value: -0.15, turns: 2, stat: BuffStat.speed)
+    ],
+    description: 'Al envenenar a un enemigo: −15% velocidad por 2 turnos. No '
+        'acumula.',
+  ),
+  PassiveMechanic(
+    id: 'nubeToxica',
+    name: 'Nube Tóxica',
+    trigger: ProcTrigger.onHit,
+    status: StatusKind.poison,
+    minStacks: 4,
+    effects: [ProcEffect(ProcEffectKind.burst, value: 0.40)],
+    description: 'Al golpear a un enemigo con 4+ Veneno: el 40% de ese golpe '
+        'salpica a cada otro enemigo.',
+  ),
+  // ---------------- Paladín ----------------
+  PassiveMechanic(
+    id: 'manoLuminosa',
+    name: 'Mano Luminosa',
+    trigger: ProcTrigger.onHit,
+    filter: ProcFilter.singleTarget,
+    effects: [ProcEffect(ProcEffectKind.healLowestAlly, value: 0.03)],
+    description: 'Tus golpes a un solo objetivo curan 3% de su vida máx. al '
+        'aliado con menor % de vida (vos incluido).',
+  ),
+  PassiveMechanic(
+    id: 'estallidoSolar',
+    name: 'Estallido Solar',
+    trigger: ProcTrigger.onHit,
+    status: StatusKind.holy,
+    minStacks: 3,
+    effects: [ProcEffect(ProcEffectKind.holyDamage, value: 0.50)],
+    description: 'Al golpear a un enemigo con 3+ Sagrado: daño sagrado extra '
+        'MAG × 0.5.',
+  ),
+  PassiveMechanic(
+    id: 'sentencia',
+    name: 'Sentencia',
+    trigger: ProcTrigger.vsStatus,
+    status: StatusKind.stun,
+    effects: [ProcEffect(_bonus, value: 0.30, stat: BuffStat.damage)],
+    description: '+30% de daño a enemigos aturdidos.',
+  ),
+  PassiveMechanic(
+    id: 'veredicto',
+    name: 'Veredicto',
+    trigger: ProcTrigger.onStatusApplied,
+    status: StatusKind.stun,
+    effects: [
+      ProcEffect(ProcEffectKind.markTarget,
+          value: 0.20, turns: 3, stat: BuffStat.damageTaken)
+    ],
+    description: 'Al aturdir a un enemigo: lo marca si no tiene marca (+20% '
+        'de daño recibido de todos, 3 turnos).',
+  ),
+  PassiveMechanic(
+    id: 'comunion',
+    name: 'Comunión',
+    trigger: ProcTrigger.onHeal,
+    effects: [ProcEffect(ProcEffectKind.healSelf, value: 0.05)],
+    description: 'Cada curación tuya también te cura 5% de tu vida máx. (1 '
+        'vez por acción).',
+  ),
+  PassiveMechanic(
+    id: 'milagro',
+    name: 'Milagro',
+    trigger: ProcTrigger.always,
+    effects: [ProcEffect(ProcEffectKind.cheatDeath)],
+    description: 'Una vez por batalla, el primer golpe que te mataría te deja '
+        'en 1 HP.',
+  ),
+  PassiveMechanic(
+    id: 'represaliaSagrada',
+    name: 'Represalia Sagrada',
+    trigger: ProcTrigger.onHitTaken,
+    effects: [ProcEffect(_fxStatus, value: 1, status: StatusKind.holy)],
+    description: 'Al recibir un golpe: +1 Sagrado al atacante.',
+  ),
+  PassiveMechanic(
+    id: 'resiliencia',
+    name: 'Resiliencia',
+    trigger: ProcTrigger.whileMissingHealth,
+    effects: [ProcEffect(_bonus, value: 0.30, stat: BuffStat.guard)],
+    description: 'Recibís menos daño cuanta más vida te falta: hasta −30% (a '
+        'media vida, −15%; tope de defensa 60%).',
+  ),
+  PassiveMechanic(
+    id: 'puas',
+    name: 'Púas',
+    trigger: ProcTrigger.always,
+    effects: [ProcEffect(_bonus, value: 0.40, stat: BuffStat.shieldReflect)],
+    description: 'Tus escudos (los que das vos, a vos o a aliados) devuelven '
+        'el 40% de lo que absorben al atacante.',
+  ),
+  PassiveMechanic(
+    id: 'escudoSolidario',
+    name: 'Escudo Solidario',
+    trigger: ProcTrigger.onHitTaken,
+    effects: [
+      ProcEffect(ProcEffectKind.shieldLowestAlly,
+          value: 0.06, turns: 1, stat: BuffStat.shield)
+    ],
+    description: 'Al recibir un golpe: el aliado con menor % de vida (vos '
+        'incluido) gana un escudo del 6% de tu vida máx. (1 turno).',
+  ),
+  // ---------------- Clusters de grupo (punta) ----------------
+  PassiveMechanic(
+    id: 'estandarteAlzado',
+    name: 'Estandarte Alzado',
+    trigger: ProcTrigger.onUltimate,
+    effects: [ProcEffect(ProcEffectKind.advanceParty, value: 0.25)],
+    description: 'Al usar tu ULT: todos tus aliados se adelantan 25% de su '
+        'espera (solo: tu próximo turno llega 25% antes).',
+  ),
+  PassiveMechanic(
+    id: 'resonanciaGrupal',
+    name: 'Resonancia',
+    trigger: ProcTrigger.onBreak,
+    effects: [
+      ProcEffect(ProcEffectKind.ultCharge, value: 6),
+      ProcEffect(ProcEffectKind.ultChargeParty, value: 6),
+    ],
+    description: 'Cuando vos o un aliado quiebran a un enemigo: +6 de carga de '
+        'ULT para todo el grupo.',
+  ),
+  PassiveMechanic(
+    id: 'angelGuardian',
+    name: 'Ángel Guardián',
+    trigger: ProcTrigger.partyAura,
+    effects: [ProcEffect(ProcEffectKind.cheatDeath)],
+    description: 'Una vez por batalla, mientras estés en pie, el primer golpe '
+        'mortal a alguien del grupo (vos incluido) lo deja en 1 HP.',
+  ),
+  PassiveMechanic(
+    id: 'muroEscudos',
+    name: 'Muro de Escudos',
+    trigger: ProcTrigger.onHitTaken,
+    filter: ProcFilter.defending,
+    effects: [
+      ProcEffect(ProcEffectKind.shieldParty,
+          value: 0.06, turns: 2, stat: BuffStat.shield)
+    ],
+    description: 'Al recibir un golpe defendiendo: todo el grupo gana un '
+        'escudo del 6% de tu vida máx. (2 turnos).',
   ),
 ];

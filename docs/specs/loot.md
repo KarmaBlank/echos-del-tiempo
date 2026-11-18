@@ -1255,3 +1255,61 @@ Spec propia: docs/specs/ecos_atlas.md. Lo que toca al loot:
   `cuadrado celeste`).
 - **Fortuna de Eras** (Atlas) multiplica el peso del Legendario:
   `LootRules.rarityOdds(..., legendaryMult)`.
+
+## 23. Cofres y premios de la exploración (v0.6)
+
+Pedido del dueño: "los cofres a veces dan cosas pero siempre solo dinero
+o pociones". Dónde salen los cofres y las misiones: worldgen.md § 11.
+Números en `lib/game_engine/data/exploration_catalog.dart`
+(`kChestTiers`, `kThemeBaseWords`, `kQuest*`); tiradas en
+`SessionEngine.openChest` / `_questReward`.
+
+### 23.1 Calidad de los cofres (`ChestTier`, `MissionItem.tier`)
+
+Quien toca el cofre lo abre, pero **cada jugador** tira lo suyo (loot
+instanciado como las batallas; antes solo el que lo abría). El filtro de
+loot de cada uno (con la condición `Build`) decide qué ve, como siempre
+(`_deliver`); el loot va al piso actual (`GroundLoot.floor`).
+
+| Calidad | Dónde | Créditos | Consumible | Armas | Materiales extra | Endgame |
+|---|---|---|---|---|---|---|
+| `madera` (un cofre) | lugares de cofre, 70% | 20–50 + 10 × rango | 30% | 45% (rareza de cofre) | — | — |
+| `plata` (un cofre reforzado) | lugares de cofre 24%, marcas `c` de vault, salas secretas 60% | ×1.5 | 15% | 85%: la mitad de las veces una **base temática** de la zona; rareza +0.75 | 1 tirada más + 1 Esquirla | Eco 8% (nivel ≥ 46), Ancla 10% (en Ecos) |
+| `oro` (un cofre dorado) | lugares 6%, custodiados por la élite, salas secretas 40% | ×2 | 10% | **1 Rara o mejor segura** (50% temática, rareza +1.5) + 30% de otra | 2 tiradas más + 2 Esquirlas | Eco 20% (≥ 46), Ancla 30% (en Ecos) |
+
+- Consumible: 60% Poción de vida, 40% de maná. Las pociones/créditos
+  pasan a ser lo de menos: la mayoría de los cofres reforzados y todos los
+  dorados traen un arma.
+- **Bases temáticas** (`kThemeBaseWords`): palabras del id de la base por
+  generador (cavernas: escarcha/glacial/hielo/glaciar; grieta: ígnea/
+  volcánica/infernal/fuego/dragón; laberinto: tiempo/eco/cronal…), de
+  nivel ≤ nivel de objeto, con el peso de siempre (últimos 10 niveles ×3,
+  familia del jugador ×2). Un Legendario rolado no usa base temática (sale
+  su único).
+- La calidad de cada cofre sale de `mulberry32(semilla + 13)` al empezar
+  la misión (no mueve las tiradas de siempre); el contenido, del azar del
+  host al abrirlo. Ecos y Anclas con `ecoRandom`.
+- `ChestOpenedEvent.tier` (JSON `tr`).
+
+### 23.2 Bendición de Fortuna
+
+Mientras está activa (worldgen.md § 11.5), cada tirada de loot (`_rollFor`:
+batallas, élites, jefe, cofres) suma +0.5 al bonus de rareza y tiene 30%
+de una tirada extra.
+
+### 23.3 Premio de las misiones opcionales
+
+Por jugador (worldgen.md § 11.8), siempre al inventario (fuente
+`mission`, como el arma de fin de misión):
+- **Principal** (`QuestReward`, de la semilla del piso):
+  - `arma` (55%): **Rara** (70%) o **Épica** (30%), nivel de objeto del
+    piso como una élite (+1). Con plan de build, 60% de una base o tipo
+    de arma del plan (`BuildWants.weaponBases` ×3 / `weaponTypes`); si no,
+    base temática de la zona.
+  - `eco` (25%): un Eco (tier como los drops: el del Eco actual o 1). Bajo
+    nivel 45 pasa a `arma`.
+  - `bendicion` (20%): una bendición de santuario distinta de la activa
+    para el grupo (además del paquete de abajo).
+- **Siempre**: 3 Esquirlas del Eco + 1 Cristal de Era (+1 Prisma Roto
+  desde nivel 30; +1 Ancla dentro de un Eco) y `60 + 6 × nivel del piso`
+  créditos.

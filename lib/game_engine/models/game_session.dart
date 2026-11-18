@@ -3,11 +3,13 @@ import 'dart:collection';
 import 'battle_state.dart';
 import 'build_wants.dart';
 import 'eco.dart';
+import 'exploration.dart';
 import 'item.dart';
 import 'loot.dart';
 import 'player_profile.dart';
 import 'turn_timer.dart';
 
+export 'exploration.dart';
 export 'turn_timer.dart';
 
 /// Modo de la sesión (`S.mode` del prototipo).
@@ -187,6 +189,9 @@ class MissionItem {
     required this.y,
     this.done = false,
     this.floor = 0,
+    this.tier = ChestTier.madera,
+    this.guard,
+    this.secret,
   });
 
   final int id;
@@ -197,8 +202,25 @@ class MissionItem {
   /// Piso de la zona donde está.
   final int floor;
 
-  MissionItem copy() =>
-      MissionItem(id: id, kind: kind, x: x, y: y, done: done, floor: floor);
+  /// Calidad del cofre (worldgen.md § 11, loot.md § 23).
+  final ChestTier tier;
+
+  /// Grupo élite que lo custodia (no se abre mientras viva).
+  final int? guard;
+
+  /// PdI de la sala secreta donde está.
+  final int? secret;
+
+  MissionItem copy() => MissionItem(
+      id: id,
+      kind: kind,
+      x: x,
+      y: y,
+      done: done,
+      floor: floor,
+      tier: tier,
+      guard: guard,
+      secret: secret);
 }
 
 class MissionObjective {
@@ -247,10 +269,39 @@ class MissionRun {
     List<int>? floorGoals,
     List<int>? levels,
     Set<int>? opened,
+    Set<int>? poiUsed,
+    Set<int>? poiSeen,
+    Set<int>? questsDone,
+    Set<int>? questsFailed,
+    this.blessing,
+    this.windUntil = 0,
   })  : eliteDrops = eliteDrops ?? [],
         floorGoals = List.unmodifiable(floorGoals ?? const <int>[]),
         levels = List.unmodifiable(levels ?? const <int>[]),
-        opened = {...?opened};
+        opened = {...?opened},
+        poiUsed = {...?poiUsed},
+        poiSeen = {...?poiSeen},
+        questsDone = {...?questsDone},
+        questsFailed = {...?questsFailed};
+
+  // ---- exploración v0.6 (worldgen.md § 11) ----
+
+  /// PdI usados: salas abiertas, santuarios, piedras activadas, atajos,
+  /// braseros encendidos, reliquias levantadas.
+  final Set<int> poiUsed;
+
+  /// PdI descubiertos (el minimapa los muestra).
+  final Set<int> poiSeen;
+
+  /// Misiones opcionales cumplidas / falladas.
+  final Set<int> questsDone;
+  final Set<int> questsFailed;
+
+  /// Bendición de santuario activa (una por misión).
+  BlessingKind? blessing;
+
+  /// Viento del Eco activo para el grupo hasta este `GameSession.time`.
+  double windUntil;
 
   final String missionId;
   final int seed;
@@ -350,6 +401,12 @@ class MissionRun {
         floorGoals: floorGoals,
         levels: levels,
         opened: opened,
+        poiUsed: poiUsed,
+        poiSeen: poiSeen,
+        questsDone: questsDone,
+        questsFailed: questsFailed,
+        blessing: blessing,
+        windUntil: windUntil,
       );
 }
 

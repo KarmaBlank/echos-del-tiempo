@@ -1,5 +1,7 @@
+import '../../../game_engine/data/exploration_catalog.dart';
 import '../../../game_engine/models/game_map.dart';
 import '../../../game_engine/models/game_session.dart';
+import '../../../game_engine/rules/exploration_rules.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 
 /// Textos del mapa del mundo y de los pisos (avisos y carteles). Ver
@@ -48,3 +50,35 @@ String entrancePromptText(ZoneStatus z, MissionVote? vote, String localId) {
 String stairsPromptText(StairsKind kind, int floor) => kind == StairsKind.down
     ? '[E] Bajar al piso ${floor + 2}'
     : '[E] Subir al piso $floor';
+
+/// Cartel de E frente a un punto de interés (worldgen.md § 11.3).
+String poiPromptText(MapPoi p, MissionRun m, MapFloor f, double time) {
+  switch (p.kind) {
+    case PoiKind.secret:
+      return '[E] Romper la pared agrietada';
+    case PoiKind.shortcut:
+      return '[E] Abrir el atajo';
+    case PoiKind.brazier:
+      return '[E] Encender el brasero';
+    case PoiKind.shrine:
+      final b = kBlessings[
+          BlessingKind.values[p.variant % BlessingKind.values.length]]!;
+      return '[E] Santuario: ${b.name} (${b.effect})';
+    case PoiKind.wind:
+      return time < m.windUntil
+          ? '[E] Viento del Eco (renovar)'
+          : '[E] Viento del Eco: +${((kWindSpeed - 1) * 100).round()}% '
+              'velocidad ${kWindSeconds.round()} s';
+    case PoiKind.waystone:
+      if (!m.poiUsed.contains(p.id)) return '[E] Activar la piedra de paso';
+      final to = ExplorationRules.nextWaystone(f, m, p);
+      if (to == null) return 'Piedra de paso: activá otra para viajar';
+      final stones = [
+        for (final s in f.pois)
+          if (s.kind == PoiKind.waystone && m.poiUsed.contains(s.id)) s,
+      ];
+      return '[E] Viajar a la piedra ${stones.indexOf(to) + 1}/${stones.length}';
+    case PoiKind.relic:
+      return '';
+  }
+}
