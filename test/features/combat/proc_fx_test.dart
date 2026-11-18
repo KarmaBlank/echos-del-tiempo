@@ -5,6 +5,7 @@ import 'package:echos_del_tiempo/features/combat/presentation/scene/proc_fx.dart
 import 'package:echos_del_tiempo/features/combat/presentation/scene/ult_cinematic.dart';
 import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/passive_tree_v6.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
@@ -474,6 +475,8 @@ void main() {
       'danza', 'almaHielo', 'cadena', 'egida', //
       'demoledor', 'caudillo', 'bucle', 'singularidad', 'diluvio',
       'depredador', 'solInterior', 'inamovible',
+      // Las 16 del árbol v6 (passive_tree_v6.md § 6).
+      for (final (k, _, _) in kTreeV6Drawbacks) k,
     });
     expect(procTagColor('inamovible'), procKeystoneColor);
     expect(procName('corteCadena'), 'Corte en Cadena');

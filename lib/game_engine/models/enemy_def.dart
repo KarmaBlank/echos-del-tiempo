@@ -125,6 +125,11 @@ enum BossMechanicKind {
 
   /// Fases: al bajar del `value` de la vida se transforma (fase 2).
   phases,
+
+  /// Jefe del Abismo v0.8: fases con rotación de movimientos
+  /// (`kAbyssBosses`, docs/specs/abyss_bosses.md § 2). `value` = daño que
+  /// reciben sus invocaciones si son ecos (0 = no son ecos).
+  abyss,
 }
 
 /// Mecánica propia de un jefe, como datos.

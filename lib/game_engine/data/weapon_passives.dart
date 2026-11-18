@@ -535,4 +535,68 @@ final List<WeaponPassiveDef> _uniques = [
     mech: (id, n, v, d) => _m(id, n, ProcTrigger.onHitTaken,
         [ProcEffect(ProcEffectKind.reflect, value: v)], d),
   ),
+
+  // ---- Exclusivos de los Jefes del Abismo v0.8 (abyss_bosses.md § 3) ----
+  _one(
+    id: 'tiempoPrestado',
+    name: 'Tiempo Prestado',
+    unique: true,
+    values: [0.25, 0.30, 0.35, 0.40, 0.45],
+    describe: (v) =>
+        'Al detonar una reacción: tu próximo turno llega ${_pct(v)} antes.',
+    mech: (id, n, v, d) => _m(id, n, ProcTrigger.onReaction,
+        [ProcEffect(ProcEffectKind.advanceTurn, value: v)], d),
+  ),
+  _one(
+    id: 'preparacionCompartida',
+    name: 'Preparación Compartida',
+    unique: true,
+    values: [8, 10, 12, 14, 16],
+    describe: (v) => 'Si una reacción consume un estado que preparaste: '
+        '+${v.round()} carga de ULT a tus aliados.',
+    mech: (id, n, v, d) => _m(id, n, ProcTrigger.onPrimedReaction,
+        [ProcEffect(ProcEffectKind.ultChargeParty, value: v)], d),
+  ),
+  _one(
+    id: 'luzInvertida',
+    name: 'Luz Invertida',
+    unique: true,
+    values: [0.40, 0.50, 0.60, 0.70, 0.80],
+    describe: (v) => 'Al curar a un aliado: escudo del ${_pct(v)} de lo '
+        'curado por 2 turnos.',
+    mech: (id, n, v, d) => _m(id, n, ProcTrigger.onHeal, [
+      ProcEffect(ProcEffectKind.shieldHealed,
+          value: v, turns: 2, stat: BuffStat.shield)
+    ], d),
+  ),
+  _one(
+    id: 'hambreEterna',
+    name: 'Hambre Eterna',
+    unique: true,
+    values: [0.20, 0.25, 0.30, 0.35, 0.40],
+    describe: (v) =>
+        'Cuando el grupo quiebra a un enemigo: +${_pct(v)} ATQ por 3 turnos.',
+    mech: (id, n, v, d) => _m(id, n, ProcTrigger.onBreak, [
+      ProcEffect(ProcEffectKind.buffSelf,
+          value: v, turns: 3, stat: BuffStat.attack)
+    ], d),
+  ),
+  _one(
+    id: 'todasReacciones',
+    name: 'Todas las Reacciones',
+    unique: true,
+    values: [0.40, 0.50, 0.60, 0.70, 0.80],
+    describe: (v) => '+${_pct(v)} al golpe que detona una reacción.',
+    mech: (id, n, v, d) => _m(id, n, ProcTrigger.always,
+        [ProcEffect(ProcEffectKind.reactionBonus, value: v)], d),
+  ),
+  _one(
+    id: 'ecoGolpe',
+    name: 'Eco del Golpe',
+    unique: true,
+    values: [0.15, 0.20, 0.25, 0.30, 0.35],
+    describe: (v) => 'Al detonar una reacción: ${_pct(v)} de un turno extra.',
+    mech: (id, n, v, d) => _m(id, n, ProcTrigger.onReaction,
+        [const ProcEffect(ProcEffectKind.extraTurn)], d, chance: v),
+  ),
 ];

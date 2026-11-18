@@ -790,11 +790,11 @@ void main() {
     }
 
     test('sin bucles infinitos y determinístico con el mismo azar', () {
-      // Semilla 8 desde v0.7 (con reacciones, la 7 ya no pasa por un
+      // Semilla 9 desde v0.8 (con el árbol v6 la 8 ya no pasa por un
       // rebote de Cadena Infinita; es solo suerte del azar).
-      final a = run(8);
+      final a = run(9);
       expect(a.any((l) => l.contains('Rebote (Cadena Infinita)')), isTrue);
-      expect(run(8), a);
+      expect(run(9), a);
     });
 
     test('Combatant con mecánicas, efectos y turno extra: ida y vuelta JSON',

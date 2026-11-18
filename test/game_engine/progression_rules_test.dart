@@ -354,13 +354,18 @@ void main() {
     test('valida el árbol en orden', () {
       final p = progression.normalize(PlayerProfile.fromJson({
         'cls': 'guerrero',
-        'lvl': 4,
+        'lvl': 3,
         'tv': 4,
-        'tree': ['gue_f3', 'gue_r1', 'gue_f3', 'mag_r1', 's_gue', 'p_gue', 'r_gm1'],
+        'tree': [
+          'gue_f3', 'gue_r1', 'gue_f3', 'mag_r1', 's_gue', 'p_gue', 'r_gm1', //
+          'r_gm2',
+        ],
       }));
-      // gue_f3 no conecta todavía; gue_r1 sí; después gue_f3 ya conecta;
-      // mag_r1 no conecta; s_gue ya lo tiene; p_gue entra y no quedan puntos.
-      expect(p.tree, ['gue_r1', 'gue_f3', 'p_gue']);
+      // Nivel 3: 4 puntos (2 por nivel desde el árbol v6). gue_f3 no
+      // conecta todavía; gue_r1 sí; después gue_f3 ya conecta; mag_r1 no
+      // conecta; s_gue ya lo tiene; p_gue y r_gm1 entran y no quedan
+      // puntos para r_gm2.
+      expect(p.tree, ['gue_r1', 'gue_f3', 'p_gue', 'r_gm1']);
     });
 
     test('perfil nuevo: 3 pociones, 1 de maná y arma inicial', () {

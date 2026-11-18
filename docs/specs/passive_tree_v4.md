@@ -1,5 +1,9 @@
 # Spec: Árbol de pasivas v4 — más notables que cambian la jugabilidad
 
+> **v0.8:** este árbol (v5) sigue entero dentro del árbol v6, que le
+> agrega un anillo exterior y duplica los puntos: ver
+> `passive_tree_v6.md`.
+
 Pedido del dueño (v0.6, backlog_v0.6.md § 2-3): "el árbol me gusta mucho,
 pero hay pocos nodos notables que cambien la jugabilidad; tenés que
 avanzar mucho. Los nodos chicos son como subir atributos (para eso está

@@ -29,6 +29,7 @@ import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
+import '../../../game_engine/rules/abyss_rules.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
 import '../../../game_engine/rules/exploration_rules.dart';
 import '../../../game_engine/rules/session_engine.dart';
@@ -292,6 +293,8 @@ class SessionController extends StateNotifier<SessionView?> {
     profile ??= PlayerProfile(name: defaultName, classId: defaultClass);
     await _loadAtlas();
     if (!mounted) return;
+    // Jefes del Abismo vencidos por la cuenta (abyss_bosses.md § 1.3).
+    profile = AbyssRules.withAccount(profile, atlas);
     // El Atlas del anfitrión vale para toda la sala (ecos_atlas.md § 5.2).
     // Y su tiempo de turno (accessibility.md § 7).
     final room = engine.setTurnTimer(
@@ -913,6 +916,25 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Abrir un Eco propio (propone la misión del Eco).
   bool proposeEco(String uid) => _apply(ProposeEcoAction(uid));
 
+  /// Abrir el Jefe del Abismo [n] (docs/specs/abyss_bosses.md § 1.2).
+  bool proposeAbyss(int n) => _apply(ProposeAbyssAction(n));
+
+  /// Solo desarrollo: Fragmentos (`frag`) o los 4 vencidos (`kills`).
+  bool devAbyss(String kind) => _apply(DevAbyssAction(kind));
+
+  /// El último Jefe del Abismo vencido con este jugador y los puntos de
+  /// Atlas que dio (para el resultado).
+  (int, int)? lastAbyss;
+
+  /// Jefe del Abismo vencido: si este jugador estaba, lo anota en el
+  /// Atlas de SU cuenta (`x<n>`, 2–3 puntos la primera vez).
+  void _onAbyssDefeated(AbyssDefeatedEvent e) {
+    if (!e.playerIds.contains(localId)) return;
+    final g = AbyssRules(catalog: engine.catalog).recordAccount(atlas, e.boss);
+    lastAbyss = (e.boss, g.points);
+    if (g.points > 0) _setAtlas(g.progress, emit: false);
+  }
+
   /// Craftear un Eco del inventario.
   bool ecoCraft(String uid, EcoCraftOp op) => _apply(EcoCraftAction(uid, op));
 
@@ -1006,8 +1028,11 @@ class SessionController extends StateNotifier<SessionView?> {
           _missionLoot.clear();
           _atlasGain = null;
           lastTrial = null;
+          lastAbyss = null;
         case EcoCompletedEvent():
           _onEcoCompleted(e);
+        case AbyssDefeatedEvent():
+          _onAbyssDefeated(e);
         case TrialCompletedEvent(:final trial, :final playerIds):
           lastTrial = (trial, playerIds.contains(localId));
         case LootDropEvent(:final playerId, :final drop)

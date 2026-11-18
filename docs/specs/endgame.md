@@ -6,9 +6,10 @@
 > docs/specs/ecos_atlas.md.
 > **v0.5.0:** § 4 Ascensión (Pruebas del Tiempo, 8 ascensiones,
 > mini-árboles, kit) y § 8 completos, con las reglas co-op de § 7 que les
-> tocan: detalle con números en docs/specs/ascension.md. Pendientes: § 3
-> (Jefes del Abismo), § 6 (Temporadas) y las Grietas del Atlas (nodos
-> bloqueados "Próximamente").
+> tocan: detalle con números en docs/specs/ascension.md.
+> **v0.8.0:** § 3 Jefes del Abismo completo (docs/specs/abyss_bosses.md).
+> Pendientes: § 6 (Temporadas) y las Grietas del Atlas (nodos bloqueados
+> "Próximamente").
 
 Pregunta del dueño: "si llegaste a nivel 50, ¿qué más podrías hacer con el
 personaje? ¿O ya terminaste y te creás otro? ¿Cómo sería el endgame? Revisá
@@ -67,6 +68,14 @@ probar otra build en otro personaje → nueva **Temporada**.
   Coronado, Devorador) + un jefe secreto final.
 - Para invocarlos hay que juntar **Fragmentos** que caen en Ecos de tier
   alto. Sueltan legendarios exclusivos y materiales raros.
+- **Implementado (v0.8.0)**: docs/specs/abyss_bosses.md. 4 Fragmentos
+  (Reloj, Eco, Corona, Eras) desde Ecos T10+, 5 abren su jefe (se
+  consumen al entrar); el secreto (Eco Primordial) pide los 4 vencidos y
+  1 de cada Fragmento. Peleas directas de 2–3 fases a nivel 85–90 con
+  aviso del próximo movimiento y furia; 6 legendarios exclusivos, Esencia
+  del Abismo (re-tira con ventaja los mods fijos de un legendario) y 1
+  punto de Atlas por jefe (2 el secreto). Pestaña ABISMO del Portal.
+  Co-op primero con variante solo en cada mecánica (§ 7).
 
 ## 4. Progreso del personaje en el endgame
 
@@ -132,7 +141,10 @@ co-op".
   jugador recibe sus puntos de Atlas.
 - **Implementado para los Ecos (v0.4.0)**: escalado 1–4 de siempre,
   +10% de cantidad por jugador extra, Atlas del host, puntos para cada
-  uno (ecos_atlas.md § 7). Pendiente: Jefes del Abismo.
+  uno (ecos_atlas.md § 7).
+- **Implementado para los Jefes del Abismo (v0.8.0)**: escalado 1–4, cada
+  jugador tira sus Fragmentos y su botín exclusivo, puntos de Atlas para
+  cada uno; mecánicas de grupo con variante solo (abyss_bosses.md § 2.3).
 - **Implementado para la Ascensión (v0.5.0)**: cada jugador que supera
   una Prueba gana sus propios puntos; Señor de la Guerra, Guardián y
   Templario tienen auras y buffs de grupo (ascension.md § 1.2, § 3).

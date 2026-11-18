@@ -254,10 +254,11 @@ void main() {
       expect(String.fromCharCodes(png.sublist(png.length - 8, png.length - 4)), 'IEND');
     });
 
-    test('exporta las 54 rutas del manifest', () {
+    test('exporta las 61 rutas del manifest', () {
       // No compara bytes con los archivos del repo a propósito: el arte
       // puede reemplazarse a mano (docs/specs/sprites.md).
-      expect(buildAllSprites().keys, hasLength(54));
+      // v0.8: +7 de los Jefes del Abismo.
+      expect(buildAllSprites().keys, hasLength(61));
       for (final path in buildAllSprites().keys) {
         expect(File('assets/sprites/$path').existsSync(), isTrue, reason: path);
       }

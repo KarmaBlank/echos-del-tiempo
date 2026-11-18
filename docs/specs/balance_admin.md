@@ -293,3 +293,14 @@ batallas para balancear con datos.
 - En el admin: una pestaña con uso por habilidad, TTK medio por
   zona y tasa de derrota, comparando antes/después de cada parche
   (`balanceHash`).
+
+## v0.8.0: Jefes del Abismo
+
+Dos tipos nuevos (docs/specs/abyss_bosses.md): `abyssBoss` (por número
+`1`..`5`: Fragmentos para abrirlo, turno y ATQ de la furia, curas que
+dañan, daño de su aspecto, chance del exclusivo repetido, Esencias y
+puntos de Atlas) y `fragmentDrop` (una entrada `fragmentos`: tier
+mínimo, chance por fuente, + por tier / rareza / mod, jefe que coincide y
+tope). Vida, ATQ, quiebre y ULT de los jefes, en Enemigos y ULT
+enemigas como siempre. Las fases y rotaciones de movimientos no se
+editan (son diseño).

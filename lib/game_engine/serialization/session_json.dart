@@ -60,6 +60,9 @@ class SessionJson {
         // Tiempo de turno v0.5.1 (accessibility.md § 7): opcional, solo
         // si no es el normal (un cliente viejo lo ignora).
         if (s.turnTimer != TurnTimer.normal) 'tt': s.turnTimer.name,
+        // Jefes del Abismo v0.8 (abyss_bosses.md § 5): opcionales.
+        if (s.abyss != null) 'abyss': s.abyss,
+        if (s.abyssOwner != null) 'abyssBy': s.abyssOwner,
       };
 
   GameSession fromJson(Json j) {
@@ -94,6 +97,8 @@ class SessionJson {
       atlas: j['atlas'] == null ? null : j.strings('atlas'),
       trial: j.intOrNull('trial'),
       turnTimer: TurnTimer.fromName(j['tt']),
+      abyss: j.intOrNull('abyss'),
+      abyssOwner: j.strOrNull('abyssBy'),
     );
   }
 
@@ -547,6 +552,15 @@ class SessionJson {
         if (c.freezeResist != 0) 'frzR': c.freezeResist,
         if (c.primedBy.isNotEmpty)
           'prim': {for (final e in c.primedBy.entries) e.key.name: e.value},
+        // Jefes del Abismo v0.8 (opcionales; abyss_bosses.md § 5).
+        if (c.abyssTurns != 0) 'abT': c.abyssTurns,
+        if (c.abyssEnraged) 'abE': true,
+        if (c.abyssSeal != 0) 'abS': c.abyssSeal,
+        if (c.abyssSealTurns != 0) 'abSN': c.abyssSealTurns,
+        if (c.abyssAspect != 0) 'abA': c.abyssAspect,
+        if (c.abyssTaken != 0) 'abK': c.abyssTaken,
+        if (c.abyssFeast != 0) 'abF': c.abyssFeast,
+        if (c.abyssCopy != null) 'abC': c.abyssCopy,
       };
 
   Json timedEffectToJson(TimedEffect e) => {
@@ -651,6 +665,14 @@ class SessionJson {
             if (StatusKind.values.asNameMap()[e.key] case final k?)
               if (e.value case final String id) k: id,
       },
+      abyssTurns: j.intOrNull('abT') ?? 0,
+      abyssEnraged: j.flag('abE'),
+      abyssSeal: j.intOrNull('abS') ?? 0,
+      abyssSealTurns: j.intOrNull('abSN') ?? 0,
+      abyssAspect: j.intOrNull('abA') ?? 0,
+      abyssTaken: j.intOrNull('abK') ?? 0,
+      abyssFeast: j.intOrNull('abF') ?? 0,
+      abyssCopy: j.strOrNull('abC'),
     );
   }
 

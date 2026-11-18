@@ -2,7 +2,8 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../../../game_engine/data/elements_catalog.dart'
-    show ReactionKind, kElementStatuses;
+    show GameElement, ReactionKind, kElementStatuses;
+import '../../../../game_engine/models/abyss.dart' show AbyssMoveKind;
 import '../../../../game_engine/data/passive_mechanics.dart';
 import '../../../../game_engine/data/skills_catalog.dart';
 import '../../../../game_engine/models/battle_event.dart';
@@ -1413,7 +1414,7 @@ List<BattleFx> mapBattleEvents(
         out.add(BattleFx(FxKind.tag,
             x: p.dx,
             y: p.dy - 10,
-            text: 'FASE 2',
+            text: 'FASE ${e.value.round()}',
             color: phaseColor,
             big: true,
             delayMs: dl + BattleFx.transformFlashMs + 60,
@@ -1422,6 +1423,56 @@ List<BattleFx> mapBattleEvents(
         final a = action;
         final dl = a == null ? 0 : hitDelay(a, e.actorId);
         txt(e.actorId, -54, '¡ESQUIVA!', const Color(0xFFB2BEC3), dl: dl);
+
+      // ---- Jefes del Abismo v0.8 (abyss_bosses.md § 4) ----
+      case BossMechanicPhase.abyssTelegraph:
+        final k = AbyssMoveKind.values[
+            e.value.round().clamp(0, AbyssMoveKind.values.length - 1)];
+        txt(e.actorId, -66, 'PRÓXIMO: ${k.label.toUpperCase()}', abyssColor,
+            dl: lateBase() + 200);
+      case BossMechanicPhase.enrage:
+        final p = position(e.actorId);
+        out.add(const BattleFx(FxKind.flash, color: phaseColor));
+        out.add(BattleFx(FxKind.tag,
+            x: p.dx,
+            y: p.dy - 10,
+            text: '¡FURIA!',
+            color: phaseColor,
+            big: true,
+            who: e.actorId));
+      case BossMechanicPhase.sealCast:
+        final r = ReactionKind.values[
+            e.value.round().clamp(0, ReactionKind.values.length - 1)];
+        at(FxKind.ring, e.actorId, dy: -12, color: abyssColor);
+        txt(e.actorId, -60, 'SELLO · ${r.label.toUpperCase()}', abyssColor);
+      case BossMechanicPhase.sealBroken:
+        final dl = (procDl[e.actorId] ?? action?.dl[e.actorId] ?? 0) + 160;
+        at(FxKind.shatter, e.actorId, dy: -12, color: abyssColor, dl: dl);
+        txt(e.actorId, -60, '¡SELLO ROTO!', _healGreen, dl: dl);
+      case BossMechanicPhase.sealFade:
+        txt(e.actorId, -50, 'EL SELLO SE APAGA', _gray);
+      case BossMechanicPhase.rewind:
+        aura(e.actorId, FxElement.heal, dl: 120);
+        txt(e.actorId, -56, 'REBOBINA +${e.value.round()}', abyssColor,
+            dl: 120);
+      case BossMechanicPhase.timeWarp:
+        at(FxKind.pulse, e.actorId, dy: -14, color: abyssColor);
+        for (final q in aliveParty()) {
+          txt(q.id, -40, 'RETRASO', abyssColor, dl: 120);
+        }
+      case BossMechanicPhase.mirror:
+        if (tg == null) return;
+        at(FxKind.arc, e.actorId,
+            dy: -14, to: tg, color: echoColor, el: FxElement.arcane);
+        txt(e.actorId, -46, 'REFLEJO', echoColor);
+      case BossMechanicPhase.devour:
+        at(FxKind.pulse, e.actorId, dy: -14, color: phaseColor);
+        txt(e.actorId, -56, 'DEVORA ${e.value.round()} BUFF'
+            '${e.value.round() == 1 ? '' : 'S'}', phaseColor, dl: 120);
+      case BossMechanicPhase.aspect:
+        final el = GameElement.values[
+            e.value.round().clamp(0, GameElement.values.length - 1)];
+        txt(e.actorId, -56, 'ASPECTO: ${el.label.toUpperCase()}', abyssColor);
     }
   }
 

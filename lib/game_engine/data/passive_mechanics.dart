@@ -3,6 +3,7 @@ import '../models/passive_mechanic.dart';
 import '../models/status.dart';
 import 'enemy_families.dart' show EnemyFamily;
 import 'ascension_mechanics.dart';
+import 'passive_tree_v6.dart';
 import 'weapon_passives.dart';
 
 // Notables y keystones v2 como datos: disparador + filtro + efectos.
@@ -12,6 +13,10 @@ import 'weapon_passives.dart';
 /// keystones nuevas).
 final Map<String, PassiveMechanic> kMechanics = {
   for (final m in _list) m.id: m,
+  // Árbol v6 (v0.8, passive_tree_v6.md): notables, keystones y un efecto
+  // chico por cada nodo chico nuevo (con el id del nodo).
+  for (final m in kTreeV6Mechanics) m.id: m,
+  for (final m in kTreeV6SmallMechanics) m.id: m,
 };
 
 /// Una mecánica por id: del árbol ([kMechanics]) o de una pasiva de arma

@@ -1,5 +1,7 @@
 import 'music_score.dart';
+import 'tracks/abyss_boss_theme.dart';
 import 'tracks/battle_theme.dart';
+import 'tracks/secret_boss_theme.dart';
 import 'tracks/boss_theme.dart';
 import 'tracks/final_boss_theme.dart';
 import 'tracks/jingles.dart';
@@ -27,6 +29,12 @@ abstract final class Music {
 
   /// Variante del jefe final (Devorador de Eras, zona 10).
   static const bossFinal = 'bossFinal';
+
+  /// Jefes del Abismo 1–4 (v0.8, docs/specs/abyss_bosses.md § 4).
+  static const bossAbyss = 'bossAbyss';
+
+  /// Jefe secreto del Abismo (Eco Primordial).
+  static const bossSecret = 'bossSecret';
 
   static const victory = 'jingle.victory';
   static const defeat = 'jingle.defeat';
@@ -64,6 +72,8 @@ final Map<String, Song> kMusicCatalog = {
     battleTheme(),
     bossTheme(),
     finalBossTheme(),
+    abyssBossTheme(),
+    secretBossTheme(),
     victoryJingle(),
     defeatJingle(),
     levelUpJingle(),

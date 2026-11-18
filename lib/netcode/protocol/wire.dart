@@ -10,7 +10,12 @@ import '../../game_engine/serialization/event_json.dart';
 import '../../game_engine/serialization/json_read.dart';
 import '../../game_engine/serialization/session_json.dart';
 
-/// Versión del protocolo (`v` del `hello` / `welcome`). 8 desde v0.7.0
+/// Versión del protocolo (`v` del `hello` / `welcome`). 9 desde v0.8.0
+/// (Jefes del Abismo: acciones `abyss` y `devAbyss`, evento `abyssDone`,
+/// sesión `abyss` `abyssBy`, perfil `aby`, combatiente `abT` `abE` `abS`
+/// `abSN` `abA` `abK` `abF` `abC`, materiales `mat:frag*` y
+/// `mat:esencia`, operación de forja `essence`;
+/// docs/specs/abyss_bosses.md § 5). 8 desde v0.7.0
 /// (elementos y reacciones: estados `wet` / `charged`, eventos de
 /// batalla `react` e `ice`, combatiente `fam` `brit` `frzR`;
 /// docs/specs/elemental_reactions.md). 7 desde v0.6.0
@@ -19,7 +24,7 @@ import '../../game_engine/serialization/session_json.dart';
 /// docs/specs/worldgen.md § 11.6). 6 desde v0.5.1:
 /// acción `wants` (resumen del plan de build para la condición `Build`
 /// del filtro de loot; docs/specs/netcode.md § "Build y filtro").
-const kProtocolVersion = 8;
+const kProtocolVersion = 9;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {

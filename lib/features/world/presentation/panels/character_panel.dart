@@ -57,7 +57,7 @@ enum CharacterTab {
           'por rareza o elegidas a mano.'),
   tree(
       'ÁRBOL',
-      'Pasivas de clase: 1 punto por nivel. Arrastra para mover, rueda para '
+      'Pasivas de clase: 2 puntos por nivel. Arrastra para mover, rueda para '
           'zoom, clic para tomar un nodo.'),
   filter(
       'FILTRO',
@@ -139,11 +139,13 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 plan: ref.watch(buildPlanProvider).plan,
                 onChanged: (p) => ref.read(buildPlanProvider.notifier).save(p),
               )),
-      // El visor del árbol se ajusta al alto que queda (fila de puntos y
-      // reinicio arriba: ~40 px).
+      // El visor del árbol ocupa todo el alto que queda debajo de su fila
+      // de arriba (puntos, reinicio, buscador y zoom); con muy poco alto,
+      // un visor mínimo que se desplaza.
       CharacterTab.tree => LayoutBuilder(
-          builder: (context, box) => SingleChildScrollView(
-              child: _tree((box.maxHeight - 44).clamp(240.0, 420.0)))),
+          builder: (context, box) => box.maxHeight >= 330
+              ? _tree(null)
+              : SingleChildScrollView(child: _tree(240))),
       // Bestiario de la cuenta (docs/specs/bestiary.md § 4).
       CharacterTab.bestiary => Consumer(
           builder: (context, ref, _) => BestiaryView(
@@ -496,7 +498,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
 
   // ---------------- árbol ----------------
 
-  Widget _tree(double height) {
+  Widget _tree(double? height) {
     final view = widget.view;
     final c = widget.controller;
     final p = view.me!.profile;

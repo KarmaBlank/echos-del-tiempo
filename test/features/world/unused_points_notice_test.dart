@@ -35,11 +35,12 @@ void main() {
       final u = UnusedPoints.of(p, progression);
       final attr = p.points;
       expect(attr, greaterThan(0));
-      expect(u, UnusedPoints(attributes: attr, tree: 4, ascension: 2));
-      expect(u.total, attr + 6);
+      // 2 puntos de árbol por nivel (v0.8): 5 × 2 − 1.
+      expect(u, UnusedPoints(attributes: attr, tree: 9, ascension: 2));
+      expect(u.total, attr + 11);
       expect(u.parts, [
         '$attr puntos de atributos',
-        '4 puntos de árbol',
+        '9 puntos de árbol',
         '2 puntos de ascensión',
       ]);
       expect(
@@ -148,7 +149,8 @@ void main() {
   group('en el juego', () {
     testWidgets('HUD: PERSONAJE [C] +N abre el panel; pestañas con +N',
         (tester) async {
-      // Nivel 6 sin repartir: 5 de árbol (y los de atributos del nivel).
+      // Nivel 6 sin repartir: 10 de árbol (2 por nivel desde la v0.8; y
+      // los de atributos del nivel).
       final c = await pumpPanel(tester,
           profile: progression.normalize(
               PlayerProfile(name: 'Ana', classId: 'guerrero', level: 6)),
@@ -158,7 +160,7 @@ void main() {
               ]));
       final me = c.view!.me!.profile;
       final u = UnusedPoints.of(me, c.engine.progression);
-      expect(u.tree, 5);
+      expect(u.tree, 10);
       expect(find.byKey(const ValueKey('hud-points-button')), findsOneWidget);
       expect(
           find.descendant(
@@ -173,7 +175,7 @@ void main() {
       expect(
           find.descendant(
               of: find.byKey(ValueKey('tab-badge-${CharacterTab.tree.index}')),
-              matching: find.text('+5')),
+              matching: find.text('+10')),
           findsOneWidget);
       if (me.points > 0) {
         expect(

@@ -123,7 +123,8 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
             kind: kind,
             bossType: base.bossType,
             phase2: base.phase2,
-            eco: base.eco);
+            eco: base.eco,
+            abyss: base.abyss);
   }
 
   void _paintArena(Canvas c, Rect visible, double t) {

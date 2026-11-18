@@ -1,8 +1,10 @@
 import 'dart:collection';
 import 'dart:math' as math;
 
+import 'package:echos_del_tiempo/game_engine/data/ascension_mechanics.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_mechanics.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/passive_tree_v6.dart';
 import 'package:echos_del_tiempo/game_engine/data/skills_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/passive_tree.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
@@ -10,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'fixtures/passive_tree_v2_catalog.dart';
 import 'fixtures/passive_tree_v3_catalog.dart';
+import 'fixtures/passive_tree_v5_catalog.dart';
 
 /// Distancias (en nodos) desde [from] por los enlaces.
 Map<String, int> _bfs(PassiveTreeCatalog tree, String from) {
@@ -29,38 +32,101 @@ Map<String, int> _bfs(PassiveTreeCatalog tree, String from) {
 /// Plantilla de un cluster de clase v4 (passive_tree_v4.md § 2).
 const _classCluster = ['n1', 'm1', 'm2', 'na', 'nb', 'ma', 'mb', 'nc', 'k'];
 
+/// Ids de los clusters del árbol v5 (de clase, puentes y grupo).
+final _v5Paths = kV5PassiveTree.paths.keys.toSet();
+
 void main() {
   final tree = kPassiveTree;
   final rules = PassiveTreeRules(tree);
 
-  test('308 nodos: 104 notables, 20 keystones (passive_tree_v4.md § 1)', () {
-    expect(tree.nodes, hasLength(308));
+  test('584 nodos: 200 notables, 36 keystones (passive_tree_v6.md § 1)', () {
+    expect(tree.nodes, hasLength(584));
     final kinds = <String, int>{};
     for (final n in tree.nodes.values) {
       kinds[n.kind] = (kinds[n.kind] ?? 0) + 1;
     }
-    expect(kinds, {'st': 4, 's': 308 - 4 - 104 - 20, 'n': 104, 'k': 20});
-    expect(tree.paths, hasLength(28));
+    expect(kinds, {'st': 4, 's': 584 - 4 - 200 - 36, 'n': 200, 'k': 36});
+    expect(tree.paths, hasLength(48));
     for (final cls in tree.startNodeByClass.keys) {
-      expect(tree.paths.values.where((p) => p.classId == cls), hasLength(5),
+      expect(tree.paths.values.where((p) => p.classId == cls), hasLength(8),
           reason: cls);
     }
-    expect(tree.paths.values.where((p) => p.kind == 'puente'), hasLength(4));
-    expect(tree.paths.values.where((p) => p.kind == 'grupo'), hasLength(4));
-    // Con el máximo (nivel 50 + 20 de Maestría = 69 puntos) se cubre
-    // ~22%: un poco más que la v3 (19.6%) porque hay menos relleno.
-    expect(69 / tree.nodes.length, inInclusiveRange(0.20, 0.23));
+    expect(tree.paths.values.where((p) => p.kind == 'puente'), hasLength(8));
+    expect(tree.paths.values.where((p) => p.kind == 'grupo'), hasLength(8));
+    // Con el máximo (nivel 50 + 20 de Maestría = 138 puntos) se cubre
+    // ~23.6%, lo mismo que la v5 (69 / 308 = 22.4%): sigue habiendo que
+    // elegir.
+    final max = PassiveTreeRules.pointsEarned(50 + 20);
+    expect(max, 138);
+    expect(max / tree.nodes.length, inInclusiveRange(0.21, 0.25));
+  });
+
+  test('anillo exterior: forma de los clusters, puentes y grupos v6', () {
+    for (final list in kTreeV6Clusters.values) {
+      for (final c in list) {
+        final nodes = tree.nodes.values.where((n) => n.pathId == c.$1);
+        expect(nodes.where((n) => n.kind == 'n'), hasLength(5), reason: c.$1);
+        expect(nodes.where((n) => n.kind == 's'), hasLength(9), reason: c.$1);
+        expect(nodes.where((n) => n.kind == 'k'), hasLength(1), reason: c.$1);
+        expect(tree.nodes['${c.$1}_k']!.links, ['${c.$1}_nd'],
+            reason: 'la keystone es la punta');
+      }
+    }
+    for (final b in kTreeV6Bridges) {
+      final nodes = tree.nodes.values.where((n) => n.pathId == b.$1);
+      expect(nodes.where((n) => n.kind == 'n'), hasLength(5), reason: b.$1);
+      expect(nodes.where((n) => n.kind == 's'), hasLength(9), reason: b.$1);
+      expect(nodes.where((n) => n.kind == 'k'), hasLength(1), reason: b.$1);
+    }
+    for (final g in kTreeV6Groups) {
+      final nodes = tree.nodes.values.where((n) => n.pathId == g.$1);
+      expect(nodes.where((n) => n.kind == 'n'), hasLength(4), reason: g.$1);
+      expect(nodes.where((n) => n.kind == 's'), hasLength(5), reason: g.$1);
+    }
+    // Ningún nodo nuevo es un stat pelado (regla del dueño, v6 § 3).
+    for (final n in tree.nodes.values) {
+      if (_v5Paths.contains(n.pathId) || n.pathId == null) continue;
+      expect(n.mechanicId, isNotNull, reason: n.id);
+      expect(n.effects.keys.where((k) => k != 'key'), isEmpty, reason: n.id);
+    }
+  });
+
+  test('ids estables desde la v5: mismo nodo, posición y enlaces', () {
+    final v5 = kV5PassiveTree;
+    expect(v5.nodes, hasLength(308));
+    for (final b in v5.nodes.values) {
+      final a = tree.nodes[b.id];
+      expect(a, isNotNull, reason: b.id);
+      expect(a!.name, b.name, reason: b.id);
+      expect(a.kind, b.kind, reason: b.id);
+      expect(a.effects, b.effects, reason: b.id);
+      expect(a.mechanicId, b.mechanicId, reason: b.id);
+      expect(a.keystoneId, b.keystoneId, reason: b.id);
+      expect(a.pathId, b.pathId, reason: b.id);
+      expect(a.x, closeTo(b.x, 1e-9), reason: b.id);
+      expect(a.y, closeTo(b.y, 1e-9), reason: b.id);
+      // Solo se agregan enlaces (hacia el anillo exterior), nunca se
+      // quitan: todo build v5 sigue siendo válido.
+      expect(a.links, containsAll(b.links), reason: b.id);
+      for (final l in a.links.where((l) => !b.links.contains(l))) {
+        expect(v5.nodes.containsKey(l), isFalse, reason: '${b.id} → $l');
+      }
+    }
+    expect(tree.exclusions, v5.exclusions);
+    expect(tree.startNodeByClass, v5.startNodeByClass);
   });
 
   test('cada cluster de clase tiene 4 notables y menos chicos que notables+1',
       () {
-    for (final path in tree.paths.values.where((p) => p.kind == 'clase')) {
+    for (final path in tree.paths.values
+        .where((p) => p.kind == 'clase' && _v5Paths.contains(p.id))) {
       final nodes = tree.nodes.values.where((n) => n.pathId == path.id);
       expect(nodes.where((n) => n.kind == 'n'), hasLength(4), reason: path.id);
       expect(nodes.where((n) => n.kind == 's'), hasLength(4), reason: path.id);
       expect(nodes.where((n) => n.kind == 'k'), hasLength(1), reason: path.id);
     }
-    for (final path in tree.paths.values.where((p) => p.kind == 'grupo')) {
+    for (final path in tree.paths.values
+        .where((p) => p.kind == 'grupo' && _v5Paths.contains(p.id))) {
       final nodes = tree.nodes.values.where((n) => n.pathId == path.id);
       expect(nodes.where((n) => n.kind == 'n'), hasLength(3), reason: path.id);
     }
@@ -93,15 +159,20 @@ void main() {
       }
     }
     expect(minD, greaterThanOrEqualTo(0.75), reason: pair);
-    // Todo entra en el lienzo de la UI (±18 unidades).
+    // Todo entra en el lienzo de la UI (±23 unidades, con las etiquetas).
     for (final n in list) {
-      expect(math.max(n.x.abs(), n.y.abs()), lessThan(18), reason: n.id);
+      expect(math.max(n.x.abs(), n.y.abs()), lessThan(21.5), reason: n.id);
+    }
+    for (final p in tree.paths.values) {
+      expect(math.max(p.labelX.abs(), p.labelY.abs()), lessThan(23),
+          reason: p.id);
     }
   });
 
   test('cluster de clase: notable → 2 chicos → bifurcación de notables → '
       'unión notable → keystone', () {
-    for (final path in tree.paths.values.where((p) => p.kind == 'clase')) {
+    for (final path in tree.paths.values
+        .where((p) => p.kind == 'clase' && _v5Paths.contains(p.id))) {
       String id(String s) => '${path.id}_$s';
       final kinds = [for (final s in _classCluster) tree.nodes[id(s)]!.kind];
       expect(kinds, ['n', 's', 's', 'n', 'n', 's', 's', 'n', 'k'],
@@ -180,7 +251,9 @@ void main() {
       ('paladin', 's_pal'),
     ]) {
       final d = _bfs(tree, start);
-      final mine = tree.paths.values.where((p) => p.classId == cls).toList();
+      final mine = tree.paths.values
+          .where((p) => p.classId == cls && _v5Paths.contains(p.id))
+          .toList();
       final costs = [for (final p in mine) d['${p.id}_n1']!];
       expect(costs, [4, 3, 3, 3, 4], reason: cls);
       // Toda la keystone de tu clase a 9-10 puntos (v3: 9-11).
@@ -193,6 +266,37 @@ void main() {
     expect(g['cronos_n1']!, 8, reason: 'zona vecina');
     expect(g['precision_n1']!, 11, reason: 'zona opuesta');
     expect(g['hojaArcana_n1']!, greaterThanOrEqualTo(11));
+  });
+
+  test('anillo exterior: el primer notable de cada cluster nuevo a 3 puntos '
+      'de un hub del árbol v5', () {
+    for (final MapEntry(key: cls, value: list) in kTreeV6Clusters.entries) {
+      final start = tree.startNodeByClass[cls]!;
+      final d = _bfs(tree, start);
+      for (final c in list) {
+        final hub = tree.nodes['${c.$1}_s1']!.links
+            .firstWhere((l) => l.endsWith('_nc') && !l.startsWith(c.$1));
+        // Desde el notable de unión v4 del que cuelga: s1, s2, n1.
+        expect(_bfs(tree, hub)['${c.$1}_n1'], 3, reason: c.$1);
+        expect(d['${c.$1}_n1']! - d[hub]!, 3, reason: c.$1);
+        // La keystone exterior, a 11 de ese hub (pasando por los 5
+        // notables).
+        expect(d['${c.$1}_k']! - d[hub]!, inInclusiveRange(10, 12),
+            reason: c.$1);
+      }
+    }
+    // Puente elemental: 2 puntos desde la punta del puente v3, 3 desde el
+    // cluster exterior de cada clase.
+    for (final (i, b) in kTreeV6Bridges.indexed) {
+      final old = ['hojaArcana', 'runas', 'centinela', 'coloso'][i];
+      expect(_bfs(tree, '${old}_nl')['${b.$1}_n1'], 2, reason: b.$1);
+      expect(tree.nodes['${b.$1}_a1']!.links.where((l) => l.endsWith('_mb2')),
+          hasLength(1));
+    }
+    // Grupo exterior: 2 desde las puntas del puente elemental.
+    for (final (i, g) in kTreeV6Groups.indexed) {
+      expect(_bfs(tree, '${kTreeV6Bridges[i].$1}_nl')['${g.$1}_n0'], 2);
+    }
   });
 
   test('atajos entre clusters vecinos y puentes entre clases vecinas', () {
@@ -235,8 +339,16 @@ void main() {
             reason: '$m choca con una habilidad');
       }
     }
-    // 104 notables + 12 keystones con mecánica propia.
-    expect(mechs, hasLength(104 + 12));
+    // 200 notables + 12 + 16 keystones con mecánica propia + un efecto
+    // por cada nodo chico nuevo (v6).
+    expect(mechs, hasLength(200 + 12 + 16 + kTreeV6SmallMechanics.length));
+    expect(kTreeV6SmallMechanics, hasLength(164));
+    // Ninguna mecánica nueva pisa una de ascensión (mechanicById mira el
+    // árbol primero).
+    for (final m in [...kTreeV6Mechanics, ...kTreeV6SmallMechanics]) {
+      expect(kAscensionMechanics.containsKey(m.id), isFalse, reason: m.id);
+      expect(m.description, isNotEmpty, reason: m.id);
+    }
     final keys = {
       for (final n in tree.nodes.values)
         if (n.kind == 'k') n.keystoneId!,
@@ -246,7 +358,10 @@ void main() {
       'halcon', 'toxicidad', 'cadena', 'creyente', 'inherente', 'egida',
       'demoledor', 'caudillo', 'bucle', 'singularidad', 'diluvio',
       'depredador', 'solInterior', 'inamovible',
+      // v6 (passive_tree_v6.md § 6).
+      for (final (k, _, _) in kTreeV6Drawbacks) k,
     });
+    expect(kTreeV6Drawbacks, hasLength(16));
   });
 
   test('aggregate junta las mecánicas tomadas', () {

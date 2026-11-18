@@ -125,9 +125,11 @@ class _BestiaryViewState extends State<BestiaryView> {
                             Padding(
                               padding: const EdgeInsets.only(top: 4, bottom: 4),
                               child: Text(
-                                  z <= 0 || z > kZones.length
-                                      ? 'Otros'
-                                      : 'Zona $z · ${kZones[z - 1].name}',
+                                  z == kAbyssBestiaryZone
+                                      ? 'Jefes del Abismo'
+                                      : z <= 0 || z > kZones.length
+                                          ? 'Otros'
+                                          : 'Zona $z · ${kZones[z - 1].name}',
                                   style: const TextStyle(
                                       color: ProtoColors.sky)),
                             ),
@@ -301,7 +303,7 @@ class _BestiaryViewState extends State<BestiaryView> {
           ProtoText(enemyDropsMarkup(e))
         else
           ProtoText(protoColor(ProtoColors.dim,
-              'Zona: ${e.zone > 0 ? '${e.zone} · ' : ''}${protoEsc(e.zoneName)}')),
+              'Zona: ${e.zone > 0 && e.zone != kAbyssBestiaryZone ? '${e.zone} · ' : ''}${protoEsc(e.zoneName)}')),
       ],
     );
   }

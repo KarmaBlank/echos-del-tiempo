@@ -224,4 +224,11 @@ const Map<String, EnemyFamily> kEnemyFamily = {
   'heraldoEras': EnemyFamily.temporal,
   'fragmentoTiempo': EnemyFamily.temporal,
   'devorador': EnemyFamily.temporal,
+  // Jefes del Abismo v0.8 (abyss_bosses.md § 2.2)
+  'golemAbismo': EnemyFamily.construct,
+  'hechiceraAbismo': EnemyFamily.temporal,
+  'espectroAbismo': EnemyFamily.spectre,
+  'devoradorAbismo': EnemyFamily.temporal,
+  'ecoPrimordial': EnemyFamily.aberration,
+  'ecoAbismo': EnemyFamily.temporal,
 };

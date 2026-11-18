@@ -12,7 +12,13 @@ enum StackKind {
   esquirla('mat:esquirla', 'Esquirla del Eco', CraftMaterial.maxStack),
   cristal('mat:cristal', 'Cristal de Era', CraftMaterial.maxStack),
   prisma('mat:prisma', 'Prisma Roto', CraftMaterial.maxStack),
-  ancla('mat:ancla', 'Ancla Temporal', CraftMaterial.maxStack);
+  ancla('mat:ancla', 'Ancla Temporal', CraftMaterial.maxStack),
+  // Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 1).
+  fragReloj('mat:fragReloj', 'Fragmento del Reloj', CraftMaterial.maxStack),
+  fragEco('mat:fragEco', 'Fragmento del Eco', CraftMaterial.maxStack),
+  fragCorona('mat:fragCorona', 'Fragmento de la Corona', CraftMaterial.maxStack),
+  fragEras('mat:fragEras', 'Fragmento de las Eras', CraftMaterial.maxStack),
+  esencia('mat:esencia', 'Esencia del Abismo', CraftMaterial.maxStack);
 
   const StackKind(this.token, this.label, this.maxStack);
 
@@ -25,6 +31,11 @@ enum StackKind {
         StackKind.cristal => CraftMaterial.cristal,
         StackKind.prisma => CraftMaterial.prisma,
         StackKind.ancla => CraftMaterial.ancla,
+        StackKind.fragReloj => CraftMaterial.fragReloj,
+        StackKind.fragEco => CraftMaterial.fragEco,
+        StackKind.fragCorona => CraftMaterial.fragCorona,
+        StackKind.fragEras => CraftMaterial.fragEras,
+        StackKind.esencia => CraftMaterial.esencia,
         _ => null,
       };
 
@@ -33,6 +44,11 @@ enum StackKind {
         CraftMaterial.cristal => StackKind.cristal,
         CraftMaterial.prisma => StackKind.prisma,
         CraftMaterial.ancla => StackKind.ancla,
+        CraftMaterial.fragReloj => StackKind.fragReloj,
+        CraftMaterial.fragEco => StackKind.fragEco,
+        CraftMaterial.fragCorona => StackKind.fragCorona,
+        CraftMaterial.fragEras => StackKind.fragEras,
+        CraftMaterial.esencia => StackKind.esencia,
       };
 
   static StackKind? byToken(String token) {

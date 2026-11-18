@@ -410,7 +410,8 @@ void main() {
       var p = endgamer('Ana').copyWith(mastery: 2);
       final rules = zoneProgression.treeRules;
       final free = rules.pointsAvailable(p.treeLevel, p.passiveProgress);
-      expect(free, 51);
+      // 2 puntos por nivel y por Maestría (árbol v6): (49 + 2) × 2.
+      expect(free, 102);
       expect(zoneProgression.normalize(p).mastery, 2);
       // Sin nivel 50 no hay Maestría.
       expect(

@@ -299,6 +299,11 @@ class ProgressionRules {
       ecosUnlocked: raw.ecosUnlocked,
       mastery: mastery,
       ascension: ascensions.sanitize(cls, level, raw.ascension),
+      // Jefes del Abismo vencidos (v0.8): solo 1..5.
+      abyssKills: {
+        for (final n in raw.abyssKills)
+          if (n >= 1 && n <= 5) n
+      },
     );
 
     final base = catalog.classes[cls]!.baseAttributes;
@@ -348,7 +353,7 @@ class ProgressionRules {
   }
 
   /// Suma XP y sube los niveles que alcance (+3 puntos cada uno), hasta
-  /// el nivel máximo; en el 50 la XP llena la Maestría (+1 punto de árbol
+  /// el nivel máximo; en el 50 la XP llena la Maestría (+2 puntos de árbol
   /// cada nivel, tope 20; docs/specs/ecos_atlas.md § 6). Con la Maestría
   /// al tope la XP deja de acumularse.
   XpGain gainXp(PlayerProfile p, int xp) {

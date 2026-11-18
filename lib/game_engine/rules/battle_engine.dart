@@ -13,9 +13,13 @@ import '../models/enemy_def.dart';
 import '../models/passive_mechanic.dart';
 import '../models/skill.dart';
 import '../models/status.dart';
+import '../data/abyss_catalog.dart';
+import 'abyss_rules.dart';
 import 'family_rules.dart';
 import 'js_math.dart';
 import 'stats_calculator.dart';
+
+part 'battle_engine_abyss.dart';
 
 /// Fuente de azar: devuelve un número en [0, 1), igual que `Math.random`.
 /// Los tests inyectan una secuencia fija para que todo sea reproducible.
@@ -196,7 +200,17 @@ class BattleEngine {
           ..stance = 1
           ..stanceTurns = mech.every;
       }
-      final add = catalog.enemies[mech.addType];
+      // Jefe del Abismo (abyss_bosses.md § 2): fase 1, su aspecto, y las
+      // invocaciones solo si su primera fase las pide.
+      final abyss = catalog.abyssOf(first.id);
+      if (abyss != null) {
+        final ph = abyss.phases.first;
+        boss.phase = 1;
+        if (ph.aspects.isNotEmpty) boss.abyssAspect = ph.aspects.first.index + 1;
+      }
+      final add = abyss != null && !abyss.phases.first.summon
+          ? null
+          : catalog.enemies[mech.addType];
       if (add != null) {
         final n = party.length == 1 ? mech.soloAdds : mech.adds;
         for (var k = 0; k < n; k++) {
@@ -253,6 +267,9 @@ class BattleEngine {
       // suma a su próxima espera.
       e.nextTurn =
           t.state.clock + interval(e) + math.max(0.0, e.nextTurn - before);
+      // Distorsión de un Jefe del Abismo: su próximo turno llega antes.
+      final haste = _abyssHaste[t];
+      if (haste != null) e.nextTurn -= interval(e) * haste;
     }
     t.endTurn();
     return t.result;
@@ -914,8 +931,11 @@ class _Turn {
     if (q.isPlayer && q.healReceived != 0) {
       amount = math.max(1, jsRound(amount * (1 + q.healReceived)));
     }
+    final before = q.hp;
     q.hp = math.min(q.maxHp, q.hp + amount);
     events.add(HealEvent(q.id, amount));
+    // Jefes del Abismo: las curas del grupo los dañan.
+    if (q.isPlayer) _abyssHealed(q, q.hp - before);
   }
 
   // ---------------- daño ----------------
@@ -1577,6 +1597,14 @@ class _Turn {
       for (final (_, v) in parts) {
         dmgBonus += v;
       }
+      // Buffs de daño con duración (Combo de Equipo; árbol v6:
+      // Preparación, Golpe Maestro, Ejecución Pública). Antes de la v0.8
+      // no se leían (passive_tree_v6.md § 5).
+      final buff = a.effectTotal(BuffStat.damage);
+      if (buff != 0) {
+        mult *= 1 + buff;
+        mods.add('× ${fm(1 + buff)} buff');
+      }
       // Aura Sagrada (Templario): todo el grupo hace más daño.
       final aura = a.isPlayer ? _aura(BuffStat.damage) : 0.0;
       if (dmgBonus != 0) {
@@ -1664,6 +1692,9 @@ class _Turn {
             BossMechanicEvent(e.id, BossMechanicPhase.echoResist, value: echo));
       }
     }
+    // Jefes del Abismo: inmunidad, sello y aspecto (abyss_bosses.md § 2).
+    final abyss = _abyssFactor(e, el, mods);
+    mult *= abyss;
     // Esquiva de los comunes (solo tira el dado si la tiene).
     final ev = engine.catalog.enemies[e.enemyType]?.evasion ?? 0;
     if (primary && ev > 0 && _rand() < ev) {
@@ -1672,7 +1703,9 @@ class _Turn {
       events.add(BossMechanicEvent(e.id, BossMechanicPhase.evaded));
     }
     final crit = _rand() < chance;
-    final dmg = math.max(1, jsRound(base * (crit ? cm : 1) * mult));
+    final dmg = abyss == 0
+        ? 0
+        : math.max(1, jsRound(base * (crit ? cm : 1) * mult));
     final breakBonus = a == null ? 0.0 : _breakBonus(a, e);
     final before = e.hp;
     e.hp = math.max(0, e.hp - dmg);
@@ -1721,12 +1754,16 @@ class _Turn {
     if (!e.alive) return 0;
     final taken = e.effectTotal(BuffStat.damageTaken);
     final vul = e.broken;
-    final dmg = math.max(
-        1,
-        jsRound(amount *
-            (1 + taken) *
-            _echoFactor(e) *
-            (vul ? 1 + BattleEngine.vulnerableBonus : 1)));
+    final abyss = _abyssFactor(e, null);
+    final dmg = abyss == 0
+        ? 0
+        : math.max(
+            1,
+            jsRound(amount *
+                (1 + taken) *
+                _echoFactor(e) *
+                abyss *
+                (vul ? 1 + BattleEngine.vulnerableBonus : 1)));
     final before = e.hp;
     e.hp = math.max(0, e.hp - dmg);
     final shift = _gatePhase(e);
@@ -1940,6 +1977,8 @@ class _Turn {
     }
     _reactionTriggers(by, t, k, hitDamage, consumed, primer,
         {t.id, ...splash.keys}, hitStatus);
+    // Sello de un Jefe del Abismo: lo rompe la reacción pedida.
+    _abyssReacted(by, t, k);
   }
 
   /// Disparadores del árbol de una reacción que detonó [by] sobre [t]
@@ -1994,6 +2033,10 @@ class _Turn {
         _knockedOut(t);
       }
       return taken;
+    }
+    // Jefe del Abismo inmune al daño (las curas que dañan sí entran).
+    if (sourceId != kAbyssHealSourceId && _abyssFactor(t, null) == 0) {
+      return 0;
     }
     final before = t.hp;
     t.hp = math.max(0, t.hp - amount);
@@ -2763,6 +2806,8 @@ class _Turn {
     for (final q in state.party) {
       if (q.alive) _fire(ProcTrigger.onBreak, q, target: e);
     }
+    // Jefe del Abismo: el quiebre rompe su sello.
+    _abyssBroken(e);
     // Sierpe: el quiebre rompe uno de sus cristales (Hechicera: disipa un
     // eco).
     final m = _mechanicOf(e);
@@ -2813,6 +2858,8 @@ class _Turn {
 
   /// Carga de ULT enemiga por vida perdida: +1 cada 2%.
   void _chargeUlt(Combatant e, int lost) {
+    // Rebobinar (Jefes del Abismo): lo recibido desde su acción anterior.
+    if (lost > 0 && _abyssDef(e) != null) e.abyssTaken += lost;
     if (e.isPlayer || e.ultId == null || e.ultPending || lost <= 0) return;
     e.ult = math.min(100, e.ult + lost / e.maxHp * BattleEngine.enemyUltPerHp);
   }
@@ -2845,6 +2892,11 @@ class _Turn {
       e.ult = math.min(100, e.ult + BattleEngine.enemyUltPerTurn);
     }
     e.actions++;
+    // Jefe del Abismo: su rotación de movimientos (abyss_bosses.md § 2).
+    if (mech != null && mech.kind == BossMechanicKind.abyss) {
+      _abyssAct(e, mech, alive);
+      return;
+    }
     if (mech != null &&
         mech.kind == BossMechanicKind.web &&
         e.actions % mech.every == 0 &&
@@ -2874,6 +2926,10 @@ class _Turn {
 
   /// Estado que aplica el golpe de [e] (en ciclo si su tipo lo tiene).
   StatusApplication? _inflictsOf(Combatant e) {
+    // Aspecto de un Jefe del Abismo: sus golpes dejan el estado de ese
+    // elemento.
+    final asp = _abyssAspectStatus(e);
+    if (asp != null) return asp;
     final cyc = engine.catalog.enemies[e.enemyType]?.inflictCycle ?? const [];
     if (cyc.isEmpty) return e.inflicts;
     return cyc[math.max(0, e.actions - 1) % cyc.length];
@@ -3152,6 +3208,8 @@ class _Turn {
         _refillTurn(e, m);
       case BossMechanicKind.lava:
         _lavaTick(e, m);
+      case BossMechanicKind.abyss:
+        _abyssTurnStart(e);
       case BossMechanicKind.web ||
             BossMechanicKind.mark ||
             BossMechanicKind.phases:
@@ -3164,7 +3222,9 @@ class _Turn {
   /// Fracción del daño que recibe cada tipo de eco (`ecoHechicera` 0.5).
   static final Map<String, double> _echoAdds = {
     for (final m in kBossMechanics.values)
-      if (m.kind == BossMechanicKind.echo && m.addType != null)
+      if ((m.kind == BossMechanicKind.echo ||
+              (m.kind == BossMechanicKind.abyss && m.value > 0)) &&
+          m.addType != null)
         m.addType!: m.value,
   };
 
@@ -3175,6 +3235,9 @@ class _Turn {
   /// Séquito vivo: el jefe es inmune a los estados.
   bool _immune(Combatant e) {
     final m = _mechanicOf(e);
+    if (m != null && m.kind == BossMechanicKind.abyss) {
+      return _abyssStatusImmune(e);
+    }
     return m != null &&
         m.kind == BossMechanicKind.summon &&
         m.addType != null &&
@@ -3365,7 +3428,10 @@ class _Turn {
   /// pasa a la fase 2. `true` si hay que llamar a [_transform] (después
   /// del `DamageEvent`).
   bool _gatePhase(Combatant e) {
-    if (e.isPlayer || e.phase >= 2) return false;
+    if (e.isPlayer) return false;
+    // Jefes del Abismo: 2–3 fases (abyss_bosses.md § 2).
+    if (_abyssDef(e) != null) return _abyssGate(e);
+    if (e.phase >= 2) return false;
     final m = _mechanicOf(e);
     if (m == null || m.kind != BossMechanicKind.phases) return false;
     final gate = (e.maxHp * m.value).ceil();
@@ -3378,6 +3444,10 @@ class _Turn {
 
   /// Transformación: fuera estados y barra, ATQ × power, acciones a 0.
   void _transform(Combatant e) {
+    if (_abyssDef(e) != null) {
+      _abyssTransform(e);
+      return;
+    }
     final m = _mechanicOf(e);
     if (m == null) return;
     e
@@ -3632,6 +3702,8 @@ class _Turn {
             targetId: sk.dealsDamage && !sk.allTargets ? target.id : null,
             allTargets: sk.allTargets));
         act.skill = sk;
+        // Reflejo de los Jefes del Abismo: copian la última habilidad.
+        _abyssCopied(sk.id);
         final gain = _useSkill(p, sk, foes, target, ultimate: false);
         // Prisa sin aliados: ya terminó el turno.
         if (gain == null) return true;

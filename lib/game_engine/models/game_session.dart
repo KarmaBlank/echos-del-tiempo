@@ -575,6 +575,8 @@ class GameSession {
     List<String>? atlas,
     this.trial,
     this.turnTimer = TurnTimer.normal,
+    this.abyss,
+    this.abyssOwner,
   })  : players = players ?? LinkedHashMap(),
         ground = ground ?? [],
         atlas = List.unmodifiable(atlas ?? const <String>[]);
@@ -632,6 +634,13 @@ class GameSession {
   /// La Prueba del Tiempo (1..3) que se vota, prepara o juega
   /// (docs/specs/ascension.md § 1).
   int? trial;
+
+  /// El Jefe del Abismo (1..5) que se vota, prepara o juega
+  /// (docs/specs/abyss_bosses.md § 1.2).
+  int? abyss;
+
+  /// Quien lo abrió (se le consumen los Fragmentos al empezar).
+  String? abyssOwner;
 
   /// Tiempo de turno de la sala: el ajuste del anfitrión (o el local
   /// jugando solo). Ver [TurnTimer].
@@ -707,5 +716,7 @@ class GameSession {
         atlas: atlas,
         trial: trial,
         turnTimer: turnTimer,
+        abyss: abyss,
+        abyssOwner: abyssOwner,
       );
 }

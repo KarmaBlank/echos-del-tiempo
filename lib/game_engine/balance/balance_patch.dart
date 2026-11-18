@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../data/game_catalog.dart';
+import '../models/abyss.dart';
 import '../models/class_def.dart';
 import '../models/elements.dart';
 import '../models/enemy_def.dart';
@@ -325,6 +326,14 @@ class BalancePatch {
       reactions: patched<ReactionDef>(BalanceKind.reaction, catalog.reactions),
       elementStatuses: patched<ElementStatusDef>(
           BalanceKind.elementStatus, catalog.elementStatuses),
+      abyssBosses: {
+        for (final e in patched<AbyssBossDef>(BalanceKind.abyssBoss, {
+          for (final b in catalog.abyssBosses.entries) '${b.key}': b.value,
+        }).entries)
+          int.parse(e.key): e.value,
+      },
+      fragmentDrops: patched<FragmentDropDef>(
+          BalanceKind.fragmentDrop, catalog.fragmentDrops),
     );
   }
 

@@ -1,3 +1,4 @@
+import '../models/abyss.dart';
 import '../models/class_def.dart';
 import '../models/elements.dart';
 import '../models/enemy_def.dart';
@@ -27,7 +28,13 @@ enum BalanceKind {
   reaction('reaction', 'Reacciones', 'Reacción'),
 
   /// Mojado, Cargado y Congelación (elemental_reactions.md § 1 y § 7).
-  elementStatus('elementStatus', 'Estados elementales', 'Estado elemental');
+  elementStatus('elementStatus', 'Estados elementales', 'Estado elemental'),
+
+  /// Jefes del Abismo v0.8 (abyss_bosses.md § 2–3).
+  abyssBoss('abyssBoss', 'Jefes del Abismo', 'Jefe del Abismo'),
+
+  /// Drop de Fragmentos del Abismo (abyss_bosses.md § 1.1).
+  fragmentDrop('fragmentDrop', 'Fragmentos', 'Drop de Fragmentos');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -674,8 +681,118 @@ final elementStatusCodec = EntityCodec(
   nameOf: (o) => (o as ElementStatusDef).name,
 );
 
+// ---------------------------------------------------------------------
+// Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md)
+// ---------------------------------------------------------------------
+
+final abyssBossCodec = EntityCodec(
+  kind: BalanceKind.abyssBoss,
+  fields: const [
+    BalanceField('fragmentCost', 'Fragmentos para abrirlo', _int, min: 1, max: 50),
+    BalanceField('enrageTurns', 'Furia: turno propio', _int, min: 5, max: 200),
+    BalanceField('enragePower', 'Furia: ATQ ×', _dec, min: 1, max: 5, step: 0.05),
+    BalanceField('healHurts', 'Las curas lo dañan (fracción)', _frac, max: 2, step: 0.05),
+    BalanceField('aspectResist', 'Daño de su aspecto (×)', _frac, max: 1, step: 0.05),
+    BalanceField('legendaryChance', 'Chance del exclusivo (repetido)', _frac, max: 1, step: 0.01),
+    BalanceField('essence', 'Esencias seguras', _int, max: 10),
+    BalanceField('essenceExtra', 'Chance de 1 Esencia más', _frac, max: 1, step: 0.05),
+    BalanceField('atlasPoints', 'Puntos de Atlas (1.ª vez)', _int, max: 10),
+  ],
+  read: (o) {
+    final d = o as AbyssBossDef;
+    return {
+      'fragmentCost': d.fragmentCost,
+      'enrageTurns': d.enrageTurns,
+      'enragePower': d.enragePower,
+      'healHurts': d.healHurts,
+      'aspectResist': d.aspectResist,
+      'legendaryChance': d.legendaryChance,
+      'essence': d.essence,
+      'essenceExtra': d.essenceExtra,
+      'atlasPoints': d.atlasPoints,
+    };
+  },
+  write: (o, f) {
+    final d = o as AbyssBossDef;
+    return AbyssBossDef(
+      number: d.number,
+      enemyId: d.enemyId,
+      name: d.name,
+      level: d.level,
+      phases: d.phases,
+      arenaZone: d.arenaZone,
+      legendaryIds: d.legendaryIds,
+      fragment: d.fragment,
+      matchBoss: d.matchBoss,
+      secret: d.secret,
+      fragmentCost: f.i('fragmentCost'),
+      enrageTurns: f.i('enrageTurns'),
+      enragePower: f.d('enragePower'),
+      healHurts: f.d('healHurts'),
+      aspectResist: f.d('aspectResist'),
+      legendaryChance: f.d('legendaryChance'),
+      essence: f.i('essence'),
+      essenceExtra: f.d('essenceExtra'),
+      atlasPoints: f.i('atlasPoints'),
+    );
+  },
+  nameOf: (o) => (o as AbyssBossDef).name,
+);
+
+final fragmentDropCodec = EntityCodec(
+  kind: BalanceKind.fragmentDrop,
+  fields: const [
+    BalanceField('minTier', 'Tier mínimo del Eco', _int, min: 1, max: 16),
+    BalanceField('battle', 'Chance en batalla', _frac, max: 1, step: 0.005),
+    BalanceField('chest', 'Chance en cofre', _frac, max: 1, step: 0.005),
+    BalanceField('elite', 'Chance en élite', _frac, max: 1, step: 0.005),
+    BalanceField('boss', 'Chance en jefe', _frac, max: 1, step: 0.01),
+    BalanceField('mission', 'Chance al completar el Eco', _frac, max: 1, step: 0.01),
+    BalanceField('perTier', '+ por tier sobre el mínimo', _frac, max: 1, step: 0.01),
+    BalanceField('perRarity', '+ por rareza del Eco', _frac, max: 1, step: 0.01),
+    BalanceField('perMod', '+ por mod del Eco', _frac, max: 1, step: 0.01),
+    BalanceField('matchChance', 'Jefe que coincide: chance ×', _dec, min: 1, max: 5, step: 0.05),
+    BalanceField('matchWeight', 'Jefe que coincide: peso ×', _dec, min: 1, max: 20, step: 0.5),
+    BalanceField('cap', 'Tope de la chance', _frac, max: 1, step: 0.01),
+  ],
+  read: (o) {
+    final d = o as FragmentDropDef;
+    return {
+      'minTier': d.minTier,
+      'battle': d.battle,
+      'chest': d.chest,
+      'elite': d.elite,
+      'boss': d.boss,
+      'mission': d.mission,
+      'perTier': d.perTier,
+      'perRarity': d.perRarity,
+      'perMod': d.perMod,
+      'matchChance': d.matchChance,
+      'matchWeight': d.matchWeight,
+      'cap': d.cap,
+    };
+  },
+  write: (o, f) => FragmentDropDef(
+    minTier: f.i('minTier'),
+    battle: f.d('battle'),
+    chest: f.d('chest'),
+    elite: f.d('elite'),
+    boss: f.d('boss'),
+    mission: f.d('mission'),
+    perTier: f.d('perTier'),
+    perRarity: f.d('perRarity'),
+    perMod: f.d('perMod'),
+    matchChance: f.d('matchChance'),
+    matchWeight: f.d('matchWeight'),
+    cap: f.d('cap'),
+  ),
+  nameOf: (o) => (o as FragmentDropDef).name,
+);
+
 /// El codec de cada tipo.
 EntityCodec codecOf(BalanceKind k) => switch (k) {
+      BalanceKind.abyssBoss => abyssBossCodec,
+      BalanceKind.fragmentDrop => fragmentDropCodec,
       BalanceKind.skill => skillCodec,
       BalanceKind.ultimate => ultimateCodec,
       BalanceKind.dual => dualCodec,

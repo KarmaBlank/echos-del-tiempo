@@ -103,7 +103,8 @@ implementación con disco o `shared_preferences` vive fuera de
     (worldgen.md § 6.3); ~nivel 25 en unas 10 misiones de zona.
 - `gainXp`: suma la XP y mientras alcance resta `xpNeed(nivel)`, sube
   1 nivel y da `+3` puntos de atributo (`PTS_LVL`), hasta el 50 (la XP
-  sobrante se guarda). El árbol gana 1 punto por nivel (passive_tree.md).
+  sobrante se guarda). El árbol gana 1 punto por nivel (passive_tree.md; 2 desde la v0.8,
+  passive_tree_v6.md § 7).
 - Al subir, la vida y el maná actuales suben lo mismo que el máximo
   (lo hace la sesión).
 - **Maestría** (v0.4.0, docs/specs/ecos_atlas.md § 6): con nivel 50 la

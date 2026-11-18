@@ -393,6 +393,12 @@ const Map<String, Color> kEnemyUltColors = {
   'eult_erupcion': Color(0xFFFF7B29),
   'eult_lamento': Color(0xFFB8C6FF),
   'eult_colapsoVacio': Color(0xFF9B59FF),
+  // v0.8 · Jefes del Abismo.
+  'eult_abismoReloj': Color(0xFFC39BFF),
+  'eult_abismoEco': Color(0xFFC39BFF),
+  'eult_abismoCorona': Color(0xFFB8C6FF),
+  'eult_abismoEras': Color(0xFFD63031),
+  'eult_primordial': Color(0xFFE8DFFF),
 };
 
 Color enemyUltColor(String? id) => kEnemyUltColors[id] ?? enemyUltBarColor;
@@ -409,6 +415,11 @@ FxElement enemyUltElement(String? id) => switch (id) {
       'eult_erupcion' => FxElement.burn,
       'eult_lamento' => FxElement.freeze,
       'eult_colapsoVacio' => FxElement.arcane,
+      'eult_abismoReloj' => FxElement.freeze,
+      'eult_abismoEco' => FxElement.arcane,
+      'eult_abismoCorona' => FxElement.freeze,
+      'eult_abismoEras' => FxElement.burn,
+      'eult_primordial' => FxElement.arcane,
       _ => FxElement.phys,
     };
 
@@ -445,6 +456,9 @@ const voidMarkColor = Color(0xFFB57BFF);
 
 /// Fase 2 del Devorador.
 const phaseColor = Color(0xFFD63031);
+
+/// Jefes del Abismo v0.8: avisos, sellos y distorsión.
+const abyssColor = Color(0xFFC39BFF);
 
 /// Escoria y brasas de la lava.
 const kLavaFx = ElementFx([

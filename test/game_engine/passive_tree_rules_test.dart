@@ -42,9 +42,14 @@ void main() {
   });
 
   test('sin puntos disponibles no se puede tomar nada', () {
-    final progress = PlayerPassiveProgress(List.generate(4, (i) => 'gue_a0'));
-    // nivel 5 -> 4 puntos disponibles (lvl-1); si ya "gastó" 4, quedan 0
+    final progress = PlayerPassiveProgress(List.generate(8, (i) => 'gue_a0'));
+    // nivel 5 -> 8 puntos (2 por nivel desde el árbol v6, v0.8); si ya
+    // "gastó" 8, quedan 0
     expect(rules.pointsAvailable(5, progress), 0);
+    expect(rules.pointsAvailable(5, PlayerPassiveProgress.empty), 8);
+    expect(PassiveTreeRules.pointsEarned(1), 0);
+    expect(PassiveTreeRules.pointsEarned(50), 98);
+    expect(PassiveTreeRules.pointsEarned(50 + 20), 138, reason: 'Maestría 20');
   });
 
   test('la keystone furia aplica su trade-off (+atk, -def)', () {

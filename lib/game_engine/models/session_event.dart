@@ -236,7 +236,7 @@ class EcoCompletedEvent extends SessionEvent {
       {required this.tier, required this.zone, required this.boss});
 }
 
-/// [playerId] subió a la Maestría [mastery] (+1 punto de árbol).
+/// [playerId] subió a la Maestría [mastery] (+2 puntos de árbol desde la v0.8).
 class MasteryUpEvent extends SessionEvent {
   final String playerId;
   final int mastery;
@@ -264,6 +264,15 @@ class AscensionChosenEvent extends SessionEvent {
   final String playerId;
   final String ascensionId;
   const AscensionChosenEvent(this.playerId, this.ascensionId);
+}
+
+/// Se venció al Jefe del Abismo [boss] (1..5). Cada cliente cuyo id está
+/// en [playerIds] lo anota en el Atlas de SU cuenta (`x<boss>`,
+/// docs/specs/abyss_bosses.md § 1.3).
+class AbyssDefeatedEvent extends SessionEvent {
+  final int boss;
+  final List<String> playerIds;
+  const AbyssDefeatedEvent(this.boss, this.playerIds);
 }
 
 /// Saltó una trampa de la Prueba sobre [playerId] ([damage] = vida que

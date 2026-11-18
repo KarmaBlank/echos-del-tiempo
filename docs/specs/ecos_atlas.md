@@ -162,7 +162,9 @@ Primera vez **de la cuenta** que se completa un Eco de:
 - cada **jefe**: 1 → `b<n>`.
 
 Un Eco nuevo puede dar hasta 4 puntos. Máximo total 44 (8 + 16 + 10 +
-10); los nodos cuestan 51 → no se puede tomar todo. Se aplica en el
+10); los nodos cuestan 51 → no se puede tomar todo. **v0.8**: los Jefes
+del Abismo suman sus primeras veces `x1`…`x5` (1 punto cada uno, 2 el
+secreto; abyss_bosses.md § 1.3): máximo 50, todavía menos que 51. Se aplica en el
 cliente de cada jugador al recibir `EcoCompletedEvent` (si su id está
 en la lista), sobre su propia cuenta.
 
@@ -217,7 +219,7 @@ Tesoro a la derecha, Caza abajo, Dominio a la izquierda): ver
   personaje). XP para pasar de la maestría m a m+1:
   `12 000 + 3 000 × m` (12 000 … 69 000; 810 000 en total, ~100+ Ecos).
 - Cada nivel de maestría da **1 punto de árbol** (`treeLevel = nivel +
-  maestría`). No da puntos de atributo ni pausa la sala.
+  maestría`; **2 desde la v0.8**, passive_tree_v6.md § 7). No da puntos de atributo ni pausa la sala.
 - Evento `MasteryUpEvent(id, m)` y aviso `X alcanzó Maestría m`.
 - Con 20 la XP deja de acumularse (`xp = 0`).
 - HUD: con nivel 50 la barra de XP muestra `MAESTRÍA m · x/y`
@@ -253,8 +255,9 @@ pedido) y el panel ECOS muestra `DEV: +ECO T1 / T8 / T16`. En
 
 - **Grietas** (Atlas): nodos `grieta`/`grietamayor` bloqueados; el
   evento iría como un `MissionItemKind` nuevo dentro del Eco.
-- **Jefes del Abismo / Fragmentos** (endgame.md § 3): drop nuevo en
-  `EcoRules` (mismo `ecoRandom`), a partir de T11.
+- **Jefes del Abismo / Fragmentos** (endgame.md § 3): **implementado en
+  v0.8.0** (abyss_bosses.md): desde T10, con su propio azar
+  (`SessionEngine.abyssRandom`) en vez de `ecoRandom`, en `AbyssRules`.
 - **Ascensión / Prueba del Tiempo** (§ 4, § 8): la Prueba puede usar el
   mismo camino `ProposeEcoAction` con un `EcoItem` especial.
 - **Temporadas** (§ 6): el Atlas es por cuenta; una temporada usaría un

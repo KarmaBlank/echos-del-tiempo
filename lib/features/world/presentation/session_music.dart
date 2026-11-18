@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/audio/music/music_catalog.dart';
 import '../../../core/audio/music/music_service.dart';
 import '../../../core/audio/presentation/audio_providers.dart';
+import '../../../game_engine/data/abyss_catalog.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/game_session.dart';
@@ -70,7 +71,18 @@ abstract final class MusicSelector {
 
   /// Piezas de batalla (se cortan rápido al terminar la pelea).
   static bool isBattleTrack(String id) =>
-      id == Music.battle || id == Music.boss || id == Music.bossFinal;
+      id == Music.battle ||
+      id == Music.boss ||
+      id == Music.bossFinal ||
+      id == Music.bossAbyss ||
+      id == Music.bossSecret;
+
+  /// Pieza de un Jefe del Abismo (v0.8): el secreto tiene la suya.
+  static String? abyssTrack(String? bossId) {
+    final d = abyssBossOf(bossId);
+    if (d == null) return null;
+    return d.secret ? Music.bossSecret : Music.bossAbyss;
+  }
 
   /// La pieza de bucle del estado.
   static String trackFor({
@@ -89,7 +101,8 @@ abstract final class MusicSelector {
         return Music.town;
       case SessionMode.battle:
         if (!boss) return Music.battle;
-        return bossId == finalBossId ? Music.bossFinal : Music.boss;
+        return abyssTrack(bossId) ??
+            (bossId == finalBossId ? Music.bossFinal : Music.boss);
       case SessionMode.field:
       case SessionMode.levelUp:
         final z = Music.zones.contains(zone) ? zone : zoneForTheme(theme);

@@ -544,6 +544,34 @@ const Map<String, List<String>> enemyBaseRows = {
     '.X...X...X..X...X...X.',
     'X...X....X..X....X...X',
   ],
+  // v0.8 · Jefe secreto del Abismo, Eco Primordial (abyss_bosses.md): una
+  // silueta del vacío X con un núcleo C y cinco orbes de elemento que la
+  // rodean (F fuego, A agua, E electro, H hielo, V veneno), ojos W y
+  // grietas de luz L.
+  'ecoPrimordial': [
+    '...........FF...........',
+    '..........FFFF..........',
+    '...AA......FF......EE...',
+    '..AAAA.....XX.....EEEE..',
+    '...AA....XXXXXX....EE...',
+    '........XXXXXXXX........',
+    '.......XXWXXXXWXX.......',
+    '.......XXXXXXXXXX.......',
+    '......XXXLXXXXLXXX......',
+    '.....XXXXXXCCXXXXXX.....',
+    '....XXXXXXCCCCXXXXXX....',
+    '...XXXLXXCCYYCCXXLXXX...',
+    '...XXXXXXCCYYCCXXXXXX...',
+    '....XXXXXXCCCCXXXXXX....',
+    '.....XXXXXXCCXXXXXX.....',
+    '..HH..XXXLXXXXLXXX..VV..',
+    '.HHHH..XXXXXXXXXX..VVVV.',
+    '..HH...XXX.XX.XXX...VV..',
+    '.......XX..XX..XX.......',
+    '......XX...XX...XX......',
+    '.....X....X..X....X.....',
+    '....X....X....X....X....',
+  ],
 };
 
 /// `CLASSES[...].pal`: paletas de héroe por clase.
@@ -595,6 +623,15 @@ const Map<String, ({String spr, String col})> enemyLooks = {
   // Devorador transformado (fase 2): no es un tipo de enemigo, es el
   // sprite que usa la escena con `Combatant.phase == 2`.
   'devoradorFase2': (spr: 'devoradorFase2', col: '#a3123a'),
+  // v0.8 · Jefes del Abismo (abyss_bosses.md): la forma del jefe base con
+  // una paleta del vacío; el secreto, arte propio.
+  'golemAbismo': (spr: 'golem', col: '#4b3a78'),
+  'hechiceraAbismo': (spr: 'hechicera', col: '#2a1a4a'),
+  'ecoAbismo': (spr: 'hechicera', col: '#b8a6ff'),
+  'espectroAbismo': (spr: 'espectroCoronado', col: '#5a4f8a'),
+  'devoradorAbismo': (spr: 'ghost', col: '#6b2fb0'),
+  'devoradorAbismoFase2': (spr: 'devoradorFase2', col: '#3a0f5a'),
+  'ecoPrimordial': (spr: 'ecoPrimordial', col: '#1a1230'),
 };
 
 /// Color del contorno que agrega `makeSprite`.
@@ -633,6 +670,15 @@ const Map<String, Map<String, String>> enemyExtraPalettes = {
   'heraldoEras': {'H': '#2b1620', 'G': '#e1b12c', 'S': '#f6e58d', 'B': '#8e44ad', 'E': '#ffd166', 'D': '#2b1620'},
   'fragmentoTiempo': {'L': '#fff3b0', 'D': '#8a6a10', 'S': '#f6e58d'},
   'devoradorFase2': {'H': '#2d1b2e', 'E': '#ffd166', 'D': '#3d0a1f', 'C': '#ff7b29', 'Y': '#fff3b0'},
+  // v0.8 · Jefes del Abismo: ojos fríos y luz violeta.
+  'hechiceraAbismo': {'H': '#140a2a', 'Y': '#c39bff', 'S': '#8a7bc4', 'E': '#e8ffff', 'C': '#c39bff',
+      'T': '#3a2a5a', 'A': '#9b7bff', 'P': '#6c3fa0'},
+  'ecoAbismo': {'H': '#6c5ce7', 'Y': '#f2e8ff', 'S': '#d4c8ff', 'E': '#ffffff', 'C': '#ffffff',
+      'T': '#8a7bc4', 'A': '#f2e8ff', 'P': '#d4c8ff', 'W': '#c39bff'},
+  'espectroAbismo': {'C': '#c39bff', 'E': '#e8ffff', 'D': '#140a2a', 'M': '#2a1f4a'},
+  'devoradorAbismoFase2': {'H': '#140a2a', 'E': '#e8ffff', 'D': '#1a0630', 'C': '#c39bff', 'Y': '#ffffff'},
+  'ecoPrimordial': {'C': '#c39bff', 'Y': '#ffffff', 'L': '#e8ffff', 'F': '#ff7b29', 'A': '#48dbfb',
+      'E': '#ffd166', 'H': '#bff4ff', 'V': '#7bed3f'},
 };
 
 /// Paleta de `enSpr`: `{X: col, W: '#ffffff', O: '#111', R: '#ff3b3b'}`,

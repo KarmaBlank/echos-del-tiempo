@@ -406,6 +406,28 @@ class SessionSfx {
               out.add(cue(Sfx.phaseShift, hitAt(actorId) + 120));
             case BossMechanicPhase.evaded:
               out.add(cue(Sfx.evade, hitAt(actorId)));
+            // Jefes del Abismo v0.8 (abyss_bosses.md § 4): sonidos de
+            // siempre, sin piezas nuevas.
+            case BossMechanicPhase.abyssTelegraph:
+              once(Sfx.enemyUltWarn, base() + 160);
+            case BossMechanicPhase.enrage:
+              out.add(cue(Sfx.phaseShift, 0));
+            case BossMechanicPhase.sealCast:
+              out.add(cue(Sfx.immune, 120));
+            case BossMechanicPhase.sealBroken:
+              out.add(cue(Sfx.breakShatter, hitAt(actorId) + 120));
+            case BossMechanicPhase.sealFade:
+              out.add(cue(Sfx.thaw, 0));
+            case BossMechanicPhase.rewind:
+              out.add(cue(Sfx.healSparkle, 120));
+            case BossMechanicPhase.timeWarp:
+              out.add(cue(Sfx.delay, 120));
+            case BossMechanicPhase.mirror:
+              once(Sfx.echoSummon, 60);
+            case BossMechanicPhase.devour:
+              out.add(cue(Sfx.shieldBreak, 120));
+            case BossMechanicPhase.aspect:
+              out.add(cue(Sfx.stanceShift, 0));
           }
         case EnemyUltEvent():
           closeSegment();

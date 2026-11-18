@@ -1338,3 +1338,17 @@ Por jugador (worldgen.md § 11.8), siempre al inventario (fuente
 - **Siempre**: 3 Esquirlas del Eco + 1 Cristal de Era (+1 Prisma Roto
   desde nivel 30; +1 Ancla dentro de un Eco) y `60 + 6 × nivel del piso`
   créditos.
+
+## v0.8.0: legendarios exclusivos y Esencia del Abismo
+
+- `UniqueDef.exclusive`: los 6 legendarios de los Jefes del Abismo
+  (Manecilla del Abismo, Espejo sin Fondo, Corona Invertida, Fauce de las
+  Eras, Prisma Primordial, Filo Primordial) nunca salen de
+  `LootRules.pickUnique`; los suelta su jefe (docs/specs/abyss_bosses.md
+  § 3). Sin texto de ambientación.
+- Materiales nuevos (`CraftMaterial`, pila 99): los 4 Fragmentos y la
+  **Esencia del Abismo**. En el inventario y el alijo van en su propia
+  sección **ABISMO**, que aparece recién cuando hay alguno.
+- `CraftOp.essence` (MEJORAR): solo legendarios; cada mod fijo se tira 2
+  veces dentro de su rango y queda el mayor, nunca por debajo del actual.
+  1 Esencia, sin créditos.

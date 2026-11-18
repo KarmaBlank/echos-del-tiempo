@@ -1,18 +1,25 @@
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/passive_tree.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
+import 'package:echos_del_tiempo/game_engine/data/passive_mechanics.dart';
+import 'package:echos_del_tiempo/game_engine/models/passive_mechanic.dart';
+import 'package:echos_del_tiempo/game_engine/models/status.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'fixtures/passive_tree_v2_catalog.dart';
 import 'fixtures/passive_tree_v3_catalog.dart';
+import 'fixtures/passive_tree_v5_catalog.dart';
 
 // Chequeo de balance del árbol v4 contra el v2 de la v0.4 (y el v3 de la
 // v0.5) con los mismos puntos (docs/specs/passive_tree_v3.md § 10 y
 // passive_tree_v4.md § 5): más notables a elegir, no builds absurdamente
 // más fuertes.
 
-/// Puntos máximos: nivel 50 (49) + 20 de Maestría.
+/// Puntos máximos del árbol v5: nivel 50 (49) + 20 de Maestría.
 const _points = 69;
+
+/// Puntos máximos del árbol v6 (v0.8): el doble.
+const _pointsV6 = 138;
 
 /// Peso de cada stat para el "bono agregado" de un build (≈ cuánto vale
 /// un +1 de ese stat comparado con +100% de ATQ).
@@ -160,5 +167,107 @@ void main() {
     expect(b.keys, a.keys);
     // Cuesta más puntos (33 vs 24) y da un bono parecido.
     expect(_weighted(b), lessThanOrEqualTo(_weighted(a) * 1.25));
+  });
+
+  // ---- Árbol v6 (v0.8, passive_tree_v6.md § 7): el doble de puntos ----
+  //
+  // Topes: con 138 puntos el árbol v6 rinde más que el v5 con 69 (es el
+  // pedido), pero acotado:
+  // 1. Un stat: ≤ 1.35× el v5 (los nodos nuevos no dan stats: el techo
+  //    es el mismo pozo de stats del v5). Medido: vida 1.21-1.30, ATQ
+  //    1.15-1.19, el resto 1.00.
+  // 2. Build mixto: entre 1.4× y 1.9× el v5 (medido 1.75×).
+  // 3. Mecánicas por condición: lo que se puede juntar contra un mismo
+  //    estado ≤ +80% de daño y ≤ +75% de crítico (medido: Cargado +69% /
+  //    +66%, Mojado +44% / +68%, Sagrado +74% / +12%).
+  test('138 puntos v6 contra 69 v5: un stat ≤ 1.35×', () {
+    final v5 = PassiveTreeRules(kV5PassiveTree);
+    final over = <String>[];
+    for (final cls in classes) {
+      for (final k in ['hp', 'atk', 'mag', 'crit', 'spd', 'def', 'mp']) {
+        double best(PassiveTreeRules r, int pts) {
+          final b = _greedy(r, cls, pts, (m) => m[k]);
+          expect(b.length, lessThanOrEqualTo(pts));
+          final v = r.aggregate(cls, PlayerPassiveProgress(b))[k];
+          return k == 'def' ? (v * 0.03).clamp(0.0, 0.6) : v;
+        }
+
+        final a = best(v5, _points), b = best(v4, _pointsV6);
+        expect(b, greaterThanOrEqualTo(a - 1e-9), reason: '$cls $k');
+        if (b > a * 1.35 + 1e-9) {
+          over.add('$cls $k: v5 ${a.toStringAsFixed(2)} → v6 '
+              '${b.toStringAsFixed(2)}');
+        }
+      }
+    }
+    expect(over, isEmpty);
+  });
+
+  test('138 puntos v6 contra 69 v5: build mixto entre 1.4× y 1.9×', () {
+    final v5 = PassiveTreeRules(kV5PassiveTree);
+    for (final cls in classes) {
+      double total(PassiveTreeRules r, int pts) {
+        final b = _greedy(r, cls, pts, _weighted);
+        return _weighted(r.aggregate(cls, PlayerPassiveProgress(b)));
+      }
+
+      final a = total(v5, _points), b = total(v4, _pointsV6);
+      expect(b, inInclusiveRange(a * 1.4, a * 1.9),
+          reason: '$cls: v5 ${a.toStringAsFixed(2)} → v6 '
+              '${b.toStringAsFixed(2)}');
+    }
+  });
+
+  test('138 puntos v6: lo que se junta contra un mismo estado tiene tope', () {
+    double cond(TreeMods m, StatusKind st, BuffStat stat) {
+      var t = 0.0;
+      for (final id in m.mechanics) {
+        final mm = kMechanics[id];
+        if (mm == null) continue;
+        final ok = (mm.trigger == ProcTrigger.always &&
+                mm.filter == ProcFilter.any) ||
+            (mm.trigger == ProcTrigger.vsStatus && mm.status == st);
+        if (!ok) continue;
+        for (final fx in mm.effects) {
+          if (fx.kind == ProcEffectKind.statBonus && fx.stat == stat) {
+            t += fx.value;
+          }
+        }
+      }
+      return t;
+    }
+
+    for (final st in StatusKind.values) {
+      for (final (stat, cap) in [(BuffStat.damage, 0.80), (BuffStat.crit, 0.75)]) {
+        final b = _greedy(v4, 'maga', _pointsV6, (m) => cond(m, st, stat));
+        final v = cond(v4.aggregate('maga', PlayerPassiveProgress(b)), st, stat);
+        expect(v, lessThanOrEqualTo(cap + 1e-9), reason: '${st.name} $stat');
+      }
+    }
+  });
+
+  test('el build v5 de 69 puntos sigue entero en el v6 y suma mecánicas', () {
+    final v5 = PassiveTreeRules(kV5PassiveTree);
+    for (final cls in classes) {
+      final old = _greedy(v5, cls, _points, _weighted);
+      // Mismos nodos, mismos stats: el v6 solo agrega.
+      final a = v5.aggregate(cls, PlayerPassiveProgress(old));
+      final b = v4.aggregate(cls, PlayerPassiveProgress(old));
+      for (final k in _weights.keys) {
+        expect(b[k], closeTo(a[k], 1e-9), reason: '$cls $k');
+      }
+      expect(b.mechanics, a.mechanics);
+      // Con los 69 puntos nuevos se toma el v5 entero y además notables
+      // del anillo exterior.
+      for (var i = 0; i < old.length; i++) {
+        expect(
+            v4.canTake(cls, 1 << 20,
+                PlayerPassiveProgress(old.sublist(0, i)), old[i]),
+            isTrue,
+            reason: '$cls ${old[i]}');
+      }
+      expect(v4.pointsAvailable(70, PlayerPassiveProgress(old)),
+          _pointsV6 - old.length);
+    }
   });
 }

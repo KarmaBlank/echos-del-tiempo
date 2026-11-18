@@ -1,3 +1,4 @@
+import '../data/passive_tree_v6.dart' show kTreeV6Drawbacks;
 import '../models/passive_tree.dart';
 
 /// Reglas puras del árbol de pasivas — puerto 1:1 de `treeHas` / `treeCan`
@@ -12,12 +13,20 @@ class PassiveTreeRules {
         progress.takenNodeIds.contains(nodeId);
   }
 
-  /// Puntos de árbol disponibles: 1 por nivel ganado después del 1,
-  /// menos los ya gastados.
+  /// Puntos de árbol disponibles: [pointsEarned] (2 por nivel ganado
+  /// después del 1 y por Maestría) menos los ya gastados.
   int pointsAvailable(int level, PlayerPassiveProgress progress) {
     final spent = progress.takenNodeIds.length;
-    return (level - 1 - spent).clamp(0, 1 << 30);
+    return (pointsEarned(level) - spent).clamp(0, 1 << 30);
   }
+
+  /// Puntos de árbol por nivel ganado después del 1 y por nivel de
+  /// Maestría (árbol v6, v0.8: 2; antes 1; passive_tree_v6.md § 7).
+  static const pointsPerLevel = 2;
+
+  /// Puntos de árbol ganados con [level] (`PlayerProfile.treeLevel`:
+  /// nivel + Maestría): nivel 50 + 20 de Maestría = 138.
+  static int pointsEarned(int level) => (level - 1) * pointsPerLevel;
 
   bool canTake(
     String classId,
@@ -83,6 +92,10 @@ class PassiveTreeRules {
     }
     // Contras de las keystones v3 (passive_tree_v3.md § 6).
     for (final (key, stat, v) in _drawbacks) {
+      if (keys.contains(key)) m.add(stat, v);
+    }
+    // Contras de las keystones v6 (passive_tree_v6.md § 6).
+    for (final (key, stat, v) in kTreeV6Drawbacks) {
       if (keys.contains(key)) m.add(stat, v);
     }
 

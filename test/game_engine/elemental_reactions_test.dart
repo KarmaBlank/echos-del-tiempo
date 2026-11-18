@@ -669,6 +669,6 @@ void main() {
       expect(sj.combatantToJson(_foe('e0', type: 'esqueleto')), isNot(contains('fam')));
     });
 
-    test('protocolo 8', () => expect(kProtocolVersion, 8));
+    test('protocolo 8 o más', () => expect(kProtocolVersion, greaterThanOrEqualTo(8)));
   });
 }

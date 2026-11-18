@@ -50,7 +50,7 @@ void main() {
       final p = progression.normalize(raw);
       expect(p.tree, isEmpty);
       expect(p.treeRefunded, 0, reason: 'normalize lo consume');
-      expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 5);
+      expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 10);
       expect(p.toJson()['tv'], PlayerProfile.treeVersion);
       expect(p.toJson().containsKey('tvRef'), isFalse);
     });
@@ -89,7 +89,7 @@ void main() {
           reason: 'quiebre_na sigue igual pero ya no conecta: también vuelve');
       final p = progression.normalize(raw);
       expect(p.tree, raw.tree);
-      expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 29 - 10);
+      expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 58 - 10);
       expect(p.toJson()['tv'], PlayerProfile.treeVersion);
     });
 
@@ -109,7 +109,7 @@ void main() {
       expect(raw.treeRefunded, 6, reason: 'r_tp1 no conecta: también vuelve');
       final p = progression.normalize(raw);
       expect(p.tree, raw.tree);
-      expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 19 - 5);
+      expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 38 - 5);
       expect(p.toJson()['tv'], PlayerProfile.treeVersion);
     });
 

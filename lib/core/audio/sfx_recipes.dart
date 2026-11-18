@@ -699,6 +699,11 @@ final Map<String, List<SfxTone>> kEnemyVoices = {
       ...?kEnemyWindups[e.key],
       ..._x(e.value, dt: kEnemyBodyAt),
     ],
+  for (final (id, base, p) in _kAbyssEnemySfx)
+    id: [
+      ..._x(kEnemyWindups[base] ?? const [], p: p),
+      ..._x(_enemyBodies[base]!, dt: kEnemyBodyAt, p: p),
+    ],
 };
 
 /// La voz del ataque de cada tipo (lo que era `enemy.<tipo>`).
@@ -847,6 +852,12 @@ final Map<String, List<SfxTone>> _enemyBodies = {
 /// Impacto propio de cada tipo de enemigo sobre un jugador
 /// (`enemy.hit.<tipo>`), en vez de `impact.hurt`.
 final Map<String, List<SfxTone>> kEnemyHitVoices = {
+  ..._kBaseEnemyHitVoices,
+  for (final (id, base, p) in _kAbyssEnemySfx)
+    id: _x(_kBaseEnemyHitVoices[base]!, p: p),
+};
+
+final Map<String, List<SfxTone>> _kBaseEnemyHitVoices = {
   // ---- v0.3 ----
   // Corte sombrío con eco.
   'ecoSombra': [
@@ -1066,7 +1077,30 @@ const _kBossTypes = {
   'reyLimo', 'golemReloj', 'devorador', //
   'matriarca', 'sierpe', 'caballeroHueco', //
   'hechicera', 'bestiaMagma', 'espectroCoronado', 'centinela',
+  // v0.8 · Jefes del Abismo.
+  'golemAbismo', 'hechiceraAbismo', 'espectroAbismo', 'devoradorAbismo',
+  'ecoPrimordial',
 };
+
+/// v0.8 · Jefes del Abismo (docs/specs/abyss_bosses.md § 4): la voz de
+/// su jefe base, transpuesta (más grave: el vacío). Sin piezas nuevas.
+const _kAbyssEnemySfx = [
+  ('golemAbismo', 'golemReloj', 0.8),
+  ('hechiceraAbismo', 'hechicera', 0.84),
+  ('ecoAbismo', 'ecoHechicera', 1.12),
+  ('espectroAbismo', 'espectroCoronado', 0.82),
+  ('devoradorAbismo', 'devorador', 0.86),
+  ('ecoPrimordial', 'centinela', 0.74),
+];
+
+/// ULT de los Jefes del Abismo: las de su jefe base, transpuestas.
+const _kAbyssUltSfx = [
+  ('eult_abismoReloj', 'eult_engranaje', 0.82),
+  ('eult_abismoEco', 'eult_coro', 0.84),
+  ('eult_abismoCorona', 'eult_lamento', 0.8),
+  ('eult_abismoEras', 'eult_finEras', 0.86),
+  ('eult_primordial', 'eult_colapsoVacio', 0.76),
+];
 
 List<SfxTone> _slime() => [
       _t(180, 0.12, w: _tri, to: 420, v: 0.5),
@@ -1931,6 +1965,16 @@ Map<String, SfxDef> buildBossMechanicSfx() => {
 
 /// Las tres partes de cada ULT enemiga por `EnemyUltDef.id`.
 final Map<String, UltVoices> kEnemyUltVoices = {
+  ..._kBaseEnemyUltVoices,
+  for (final (id, base, p) in _kAbyssUltSfx)
+    id: (
+      build: _x(_kBaseEnemyUltVoices[base]!.build, p: p),
+      release: _x(_kBaseEnemyUltVoices[base]!.release, p: p),
+      impact: _x(_kBaseEnemyUltVoices[base]!.impact, p: p),
+    ),
+};
+
+final Map<String, UltVoices> _kBaseEnemyUltVoices = {
   // ---- v0.3 ----
   // Coro de Ecos: coro que se multiplica; ondas del canto; resonancia.
   'eult_coro': (

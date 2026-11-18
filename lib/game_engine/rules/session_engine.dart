@@ -22,6 +22,8 @@ import '../models/player_profile.dart';
 import '../models/session_action.dart';
 import '../models/session_event.dart';
 import '../models/zone_def.dart';
+import '../data/abyss_catalog.dart';
+import 'abyss_rules.dart';
 import 'atlas_rules.dart';
 import 'battle_engine.dart';
 import 'eco_rules.dart';
@@ -69,9 +71,28 @@ class SessionEngine {
     RandomSource? ecoRandom,
     this.devTools = false,
     this.atlasRules = const AtlasRules(),
+    RandomSource? abyssRandom,
   })  : _random = random ?? math.Random().nextDouble,
         _ecoRandom = ecoRandom ?? math.Random().nextDouble,
+        _abyssRandom = abyssRandom ?? math.Random().nextDouble,
         _seeds = seeds ?? (() => math.Random().nextInt(1000000000));
+
+  /// Azar propio de los Jefes del Abismo (Fragmentos y recompensas
+  /// exclusivas, docs/specs/abyss_bosses.md § 1.1): no mueve ninguna
+  /// tirada de antes.
+  final RandomSource _abyssRandom;
+
+  /// Reglas de los Jefes del Abismo.
+  AbyssRules get abyssRules => AbyssRules(catalog: catalog);
+
+  /// La pelea de un Jefe del Abismo: el mapa de su zona base, 1 piso.
+  GameMap _abyssMap(AbyssBossDef d, int seed) {
+    final key = 'abyss:${d.number}:$seed';
+    final hit = _maps[key];
+    if (hit != null) return hit;
+    if (_maps.length > 8) _maps.clear();
+    return _maps[key] = MapGenerator.zone(abyssRules.zoneDef(d), seed);
+  }
 
   /// Azar propio de los Ecos (drops de Ecos y Anclas, mods gratis): así
   /// las tiradas de siempre no cambian de orden (ecos_atlas.md § 3).
@@ -95,6 +116,10 @@ class SessionEngine {
     if (id == TrialRules.missionId) {
       final t = trialDef(s.trial);
       return t == null ? null : trialRules.missionDef(t);
+    }
+    if (id == AbyssRules.missionId) {
+      final d = abyssRules.def(s.abyss);
+      return d == null ? null : abyssRules.missionDef(d);
     }
     return catalog.mission(id);
   }
@@ -233,6 +258,10 @@ class SessionEngine {
     if (m.missionId == TrialRules.missionId && trial != null) {
       return _trialMap(trial, m.seed);
     }
+    final abyss = abyssRules.def(s.abyss);
+    if (m.missionId == AbyssRules.missionId && abyss != null) {
+      return _abyssMap(abyss, m.seed);
+    }
     return _missionMap(catalog.mission(m.missionId)!, m.seed);
   }
 
@@ -349,6 +378,12 @@ class _Op {
       ? trialDef(s.trial)
       : null;
 
+  /// El Jefe del Abismo que se está peleando (`null` fuera de uno).
+  AbyssBossDef? get _abyss => s.mission?.missionId == AbyssRules.missionId
+      ? e.abyssRules.def(s.abyss)
+      : null;
+  double _abyssRand() => e._abyssRandom();
+
   AtlasEffects get _atlas => e.atlasOf(s);
   Iterable<SessionPlayer> get players => s.players.values;
 
@@ -433,6 +468,24 @@ class _Op {
       }
       _clearEcoVote();
     }
+    if (s.abyssOwner == id && s.mission == null) {
+      if (s.vote != null || s.prep != null) {
+        say('Se canceló el Jefe del Abismo: ${p.name} salió.');
+      }
+      _clearAbyssVote();
+    }
+  }
+
+  /// Saca la votación / preparación de un Jefe del Abismo (sin consumir).
+  void _clearAbyssVote() {
+    if (s.vote?.missionId == AbyssRules.missionId) s.vote = null;
+    if (s.prep?.missionId == AbyssRules.missionId) {
+      s.prep = null;
+      if (s.mode == SessionMode.prep) s.mode = SessionMode.lobby;
+    }
+    s
+      ..abyss = null
+      ..abyssOwner = null;
   }
 
   /// Saca la votación / preparación del Eco (sin consumirlo).
@@ -485,6 +538,7 @@ class _Op {
           s.vote = null;
           if (v.missionId == EcoRules.missionId) _clearEcoVote();
           if (v.missionId == TrialRules.missionId) s.trial = null;
+          if (v.missionId == AbyssRules.missionId) _clearAbyssVote();
         }
         return true;
 
@@ -500,6 +554,7 @@ class _Op {
         s.mode = SessionMode.lobby;
         say('${p.name} canceló la preparación.');
         _clearEcoVote();
+        _clearAbyssVote();
         s.trial = null;
         return true;
 
@@ -730,7 +785,121 @@ class _Op {
         say('[DEV] ${p.name}: Pruebas hasta la ${t.roman} superadas '
             '(nivel ${prof.level}).');
         return true;
+
+      // ---- Jefes del Abismo v0.8 (abyss_bosses.md) ----
+      case ProposeAbyssAction():
+        return _proposeAbyss(p, a.boss);
+
+      case DevAbyssAction():
+        if (!e.devTools || !s.canShop) return false;
+        switch (a.kind) {
+          case DevAbyssAction.fragments:
+            var prof = p.profile.copyWith(ecosUnlocked: true);
+            for (final f in kFragments) {
+              prof = prof.copyWith(materials: {
+                ...prof.materials,
+                f: math.min(CraftMaterial.maxStack, prof.material(f) + 5),
+              });
+            }
+            prof = prof.copyWith(materials: {
+              ...prof.materials,
+              CraftMaterial.esencia: math.min(CraftMaterial.maxStack,
+                  prof.material(CraftMaterial.esencia) + 3),
+            });
+            _profileChange(p, prof);
+            say('[DEV] ${p.name}: +5 de cada Fragmento y +3 Esencias.');
+            return true;
+          case DevAbyssAction.kills:
+            _profileChange(
+                p,
+                p.profile.copyWith(
+                    ecosUnlocked: true,
+                    abyssKills: {...p.profile.abyssKills, 1, 2, 3, 4}));
+            say('[DEV] ${p.name}: los 4 Jefes del Abismo, vencidos.');
+            return true;
+        }
+        return false;
     }
+  }
+
+  // ---------------- Jefes del Abismo (abyss_bosses.md § 1–3) ------------
+
+  /// `ProposeAbyssAction`: en el pueblo, sin votación, con el costo.
+  bool _proposeAbyss(SessionPlayer p, int n) {
+    final d = e.abyssRules.def(n);
+    if (s.mode != SessionMode.lobby ||
+        s.vote != null ||
+        d == null ||
+        e.abyssRules.cannotOpen(p.profile, d) != null) {
+      return false;
+    }
+    s
+      ..abyss = n
+      ..abyssOwner = p.id
+      ..vote = MissionVote(AbyssRules.missionId, p.name, {p.id});
+    say('${p.name} abre ${d.name} (${e.abyssRules.costText(d)}). ¡Voten!');
+    return true;
+  }
+
+  /// Empieza la pelea votada: consume el costo de quien la abrió y entra
+  /// directo a la batalla con el jefe (sin mazmorra).
+  void _startAbyss() {
+    final d = e.abyssRules.def(s.abyss);
+    final owner = s.players[s.abyssOwner];
+    final paid = d == null || owner == null
+        ? null
+        : e.abyssRules.consume(owner.profile, d);
+    if (d == null || owner == null || paid == null) {
+      say('Faltan los Fragmentos: se canceló el Jefe del Abismo.');
+      _clearAbyssVote();
+      s.mode = SessionMode.lobby;
+      return;
+    }
+    owner.profile = paid;
+    final seed = e._seeds();
+    final map = e._abyssMap(d, seed);
+    final def = e.abyssRules.missionDef(d);
+    final sp = map.floors.first.spawn;
+    final boss = FieldEnemy(
+      id: 0,
+      x: sp.x + 24,
+      y: sp.y,
+      homeX: sp.x + 24,
+      homeY: sp.y,
+      group: [d.enemyId],
+      boss: true,
+    );
+    s.mission = MissionRun(
+      missionId: def.id,
+      seed: seed,
+      goal: 0,
+      objectives: [],
+      enemies: [boss],
+      items: [],
+      open: true,
+      zoneLevel: d.level,
+      zone: def.zone,
+      floors: 1,
+      levels: [d.level],
+    );
+    _enterField(def, seed);
+    final first = players.firstOrNull;
+    if (first != null) startBattle(boss, first);
+  }
+
+  /// Jefe del Abismo vencido: cada jugador recibe su exclusivo (seguro la
+  /// primera vez) y sus Esencias, y queda anotado en su perfil; el
+  /// evento lo anota en la cuenta de cada uno.
+  void _abyssCompleted(AbyssBossDef d) {
+    for (final p in players) {
+      final drops =
+          e.abyssRules.rewards(_abyssRand, d, p.profile, rules.loot);
+      p.profile = p.profile
+          .copyWith(abyssKills: {...p.profile.abyssKills, d.number});
+      _deliver(p, drops, LootSource.mission, p.x, p.y);
+    }
+    events.add(AbyssDefeatedEvent(d.number, [for (final p in players) p.id]));
+    say('¡${d.name} vencido!');
   }
 
   // ---------------- Pruebas del Tiempo (ascension.md § 1) ----------------
@@ -910,6 +1079,7 @@ class _Op {
         CraftOp.reroll => 'Esquirla del Eco: valores nuevos',
         CraftOp.upgradeRarity => 'Prisma Roto: rareza mejorada',
         CraftOp.reforge => 'base reforjada',
+        CraftOp.essence => 'Esencia del Abismo: mods fijos mejorados',
         _ => 'desarmada / vendida', // destruyen: sin `after`, no se anuncia
       };
 
@@ -1070,6 +1240,11 @@ class _Op {
           legendaryMult: eco == null ? 1 : 1 + atlas.legendary));
     }
     if (eco != null) drops.addAll(_ecoExtras(p, src, zone, bonus!, atlas));
+    // Fragmentos del Abismo: Ecos de tier 10+ (abyss_bosses.md § 1.1).
+    if (eco != null) {
+      final f = e.abyssRules.rollFragment(_abyssRand, eco, src);
+      if (f != null) drops.add(LootDrop.stack(StackKind.of(f), 1));
+    }
     final ecoDrop = ecos.rollDrop(_ecoRand,
         level: zone, source: src, current: eco, atlas: atlas);
     if (ecoDrop != null) drops.add(LootDrop.eco(ecoDrop));
@@ -1234,6 +1409,8 @@ class _Op {
     final m = s.mission;
     final eco = _eco;
     final trial = _trial;
+    final abyss = _abyss;
+    if (abyss != null) return abyss.level;
     final z = eco != null
         ? ecos.zoneDef(eco)
         : trial != null
@@ -1322,6 +1499,10 @@ class _Op {
     }
     if (missionId == TrialRules.missionId) {
       _startTrial();
+      return;
+    }
+    if (missionId == AbyssRules.missionId) {
+      _startAbyss();
       return;
     }
     final m = catalog.mission(missionId);
@@ -2379,7 +2560,7 @@ class _Op {
           events.add(LevelUpEvent(p.id, l));
         }
       }
-      // Maestría (ecos_atlas.md § 6): +1 punto de árbol, sin pausar.
+      // Maestría (ecos_atlas.md § 6): +2 puntos de árbol (v0.8), sin pausar.
       if (g.masteryGained > 0) {
         final m = g.profile.mastery;
         for (var k = m - g.masteryGained + 1; k <= m; k++) {
@@ -2540,9 +2721,10 @@ class _Op {
     }
     final eco = _eco;
     final trial = _trial;
-    // Un Eco o una Prueba usan el tipo de zona solo para el mapa: no
-    // desbloquean zonas.
-    final zone = eco != null || trial != null || def.zone == 0
+    final abyss = _abyss;
+    // Un Eco, una Prueba o un Jefe del Abismo usan el tipo de zona solo
+    // para el mapa: no desbloquean zonas.
+    final zone = eco != null || trial != null || abyss != null || def.zone == 0
         ? null
         : catalog.zone(def.zone);
     final unlocked = <String, int>{};
@@ -2550,9 +2732,13 @@ class _Op {
       final firsts = _lootAll(LootSource.mission, null, null,
           chance: dropChance[rank] ?? 0,
           extraBonus: rankBonus[rank] ?? 0,
-          level: eco?.monsterLevel ?? trial?.monsterLevel ?? zone?.maxLevel);
+          level: eco?.monsterLevel ??
+              trial?.monsterLevel ??
+              abyss?.level ??
+              zone?.maxLevel);
       if (eco != null) _ecoCompleted(eco);
       if (trial != null) _trialCompleted(trial);
+      if (abyss != null) _abyssCompleted(abyss);
       // El jefe final activa el Portal del Eco (ecos_atlas.md § 1).
       if (zone != null && zone.index == ZoneRules.maxZone) _unlockEcos();
       for (final d in firsts.entries) {
@@ -2634,6 +2820,8 @@ class _Op {
       ..eco = null
       ..ecoOwner = null
       ..trial = null
+      ..abyss = null
+      ..abyssOwner = null
       ..mode = SessionMode.lobby
       ..mission = null
       ..result = null

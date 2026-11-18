@@ -17,7 +17,8 @@ Tests: `test/game_engine/passive_tree_rules_test.dart`.
 1. Cada clase tiene un nodo de **inicio** fijo, que se considera siempre
    tomado y NO cuenta contra los puntos disponibles del jugador.
 2. El jugador gana **1 punto de árbol por nivel ganado después del 1**
-   (nivel 5 → 4 puntos totales).
+   (nivel 5 → 4 puntos totales). **Desde la v0.8 (árbol v6) son 2 por
+   nivel y por Maestría** (nivel 5 → 8; passive_tree_v6.md § 7).
 3. Un nodo solo se puede tomar si:
    - todavía no lo tiene, **y**
    - tiene al menos 1 punto disponible (`puntos_totales - nodos_tomados`), **y**
