@@ -13,6 +13,7 @@ uniform float uVignette; // viñeta (0..1)
 uniform float uCurve;    // curvatura de barril (k)
 uniform float uLine;     // px físicos por scanline (>= 2)
 uniform float uMaskW;    // px físicos por columna de la máscara
+uniform float uBezel;    // radio de las esquinas redondeadas (× lado menor)
 uniform sampler2D uTexture;
 
 out vec4 fragColor;
@@ -20,6 +21,16 @@ out vec4 fragColor;
 vec3 glowAt(vec2 uv) {
   vec3 c = texture(uTexture, clamp(uv, 0.0, 1.0)).rgb;
   return max(c - 0.55, 0.0) / 0.45;
+}
+
+float bezelAt(vec2 p, vec2 size, float bezel) {
+  if (bezel <= 0.0) return 1.0;
+  float r = bezel * min(size.x, size.y);
+  vec2 q = abs(p - size * 0.5) - (size * 0.5 - r);
+  float d = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+  float edge = 1.0 - smoothstep(-1.5, 0.0, d);
+  float shade = 1.0 - 0.3 * smoothstep(-r * 0.6, 0.0, d);
+  return edge * shade;
 }
 
 void main() {
@@ -68,6 +79,10 @@ void main() {
   // Viñeta.
   float v = 1.0 - uVignette * smoothstep(0.08, 0.5, dot(c, c));
   col *= v;
+
+  // Bisel (v0.8.2): esquinas redondeadas negras y un borde apenas más
+  // oscuro. No remuestrea: el texto queda nítido (settings.md § 3.2).
+  col *= bezelAt(frag, uSize, uBezel);
 
   fragColor = vec4(min(col, vec3(base.a)), base.a);
 }

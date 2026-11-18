@@ -1,5 +1,7 @@
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
+import 'package:echos_del_tiempo/core/settings/game_settings.dart';
+import 'package:echos_del_tiempo/core/settings/settings_providers.dart';
 import 'package:echos_del_tiempo/features/endgame/presentation/atlas_view.dart';
 import 'package:echos_del_tiempo/features/endgame/presentation/eco_portal_panel.dart';
 import 'package:echos_del_tiempo/features/world/presentation/hud/world_hud.dart';
@@ -163,6 +165,10 @@ void main() {
         profileStoreProvider.overrideWithValue(InMemoryProfileStore()),
         sessionClockProvider
             .overrideWithValue(const SessionClock(autoStart: false)),
+        // Cajas del grupo desplegadas (compactas por defecto, v0.8.2).
+        gameSettingsProvider.overrideWith((ref) => GameSettingsController(
+            store: InMemoryGameSettingsStore(),
+            initial: const GameSettings(partyExpanded: true))),
       ],
       child: MaterialApp(
         theme: RetroTheme.build(),

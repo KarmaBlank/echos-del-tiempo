@@ -74,7 +74,7 @@ botones no cambiaron (`display-text-*`, `display-font-*`,
 
 | Ajuste | Opciones | Efecto |
 |---|---|---|
-| TEMA DE INTERFAZ (ACCESIBILIDAD, v0.8.1) | AZUL / **OSCURO** / ALTO CONTRASTE | colores de paneles, botones, bordes y texto de toda la UI; el arte no cambia. `game.json`: `uiTheme` (accessibility.md § 8.1) |
+| TEMA DE INTERFAZ (ACCESIBILIDAD, v0.8.1) | AZUL / OSCURO / **ALTO CONTRASTE** (por defecto desde v0.8.2) | colores de paneles, botones, bordes y texto de toda la UI; el arte no cambia. `game.json`: `uiTheme` (accessibility.md § 8.1) |
 | COLORES DEL TEXTO (ACCESIBILIDAD, v0.8.1) | COMPLETO / **REDUCIDO** | REDUCIDO pinta el markup por roles (título, cuerpo, atenuado, acento, mejora / empeora; rarezas y estados igual). Fijo en REDUCIDO con ALTO CONTRASTE. `textColors` (§ 8.2) |
 | ESPACIADO (ACCESIBILIDAD, v0.8.1) | **NORMAL** / AMPLIO | más interlineado, párrafos y separadores en las fichas, más aire en filas y tarjetas. `spacing` (§ 8.3). Vista previa en vivo debajo |
 | TAMAÑO DEL TEXTO (ACCESIBILIDAD › TEXTO) | **NORMAL** / GRANDE / MUY GRANDE / ENORME | accesibilidad: agranda el texto de toda la UI (tooltips, fichas, comparación, paneles, chat, HUD, menú y log de batalla, árbol, etiquetas de la escena) ×1 / ×1.25 / ×1.5 / ×2 (los títulos crecen menos; ENORME v0.8.1, accessibility.md § 9.3), siempre en la grilla nítida de cada fuente (§ 3.6). Se aplica en vivo |
@@ -86,7 +86,7 @@ botones no cambiaron (`display-text-*`, `display-font-*`,
 | FONDO DEL TEXTO EN EL MAPA (ACCESIBILIDAD › TEXTO, v0.8.1) | **NINGUNO** / SOMBREADO / CAJA OPACA | detrás de nombres, carteles, avisos y loot del mapa. `mapLabelBackdrop` (§ 9.6) |
 | REGISTRO DE BATALLA (ACCESIBILIDAD › TEXTO, v0.8.1) | **NORMAL** / EXTENDIDO | EXTENDIDO: las 3 últimas líneas del log arriba de la escena, 10 s cada una. `battleLog` (§ 9.7) |
 | ESCALADO | PIXEL PERFECT / **AJUSTAR** | cómo se agranda el mundo pixelado (§ 3.1) |
-| FILTRO CRT | APAGADO / SUAVE / **NORMAL** / FUERTE | post-proceso retro sobre toda la pantalla (§ 3.2) |
+| FILTRO CRT | APAGADO / SUAVE / NORMAL / **FUERTE** (por defecto desde v0.8.2) | post-proceso retro sobre toda la pantalla (§ 3.2) |
 | PARTÍCULAS | BAJA / MEDIA / **ALTA** | cantidad de partículas: ×0.3 / ×0.6 / ×1 (§ 3.3) |
 | LÍMITE DE FPS | 30 / **60** / SIN LÍMITE | tope de cuadros por segundo de toda la app (§ 3.4) |
 | FPS Y PING (v0.5.1) | SÍ / **NO** | indicador chico en una esquina con los cuadros por segundo y, en una sala, el ping (§ 3.9) |
@@ -150,16 +150,16 @@ elige.
 Post-proceso sobre **toda** la pantalla (título, mapa, batalla, HUD y
 menús: `MaterialApp.builder` envuelve el `Navigator` en `CrtFilter`),
 como los filtros retro de los emuladores. Prendido por defecto en
-NORMAL. Shader de fragmento propio (`shaders/crt.frag` y
+FUERTE desde v0.8.2 (antes NORMAL; ver "Por defecto FUERTE" abajo). Shader de fragmento propio (`shaders/crt.frag` y
 `shaders/crt_overlay.frag`, en `flutter: shaders:` del pubspec), sin
 paquetes nuevos.
 
-| Nivel | Scanlines | Máscara RGB | Brillo (bloom) | Viñeta | Curvatura |
-|---|---|---|---|---|---|
-| APAGADO | — | — | — | — | — |
-| SUAVE | 0.14 | 0.05 | 0.15 | 0.15 | 0 |
-| NORMAL | 0.24 | 0.09 | 0.25 | 0.25 | 0 |
-| FUERTE | 0.38 | 0.16 | 0.40 | 0.40 | 0.05 |
+| Nivel | Scanlines | Máscara RGB | Brillo (bloom) | Viñeta | Curvatura | Bisel |
+|---|---|---|---|---|---|---|
+| APAGADO | — | — | — | — | — | — |
+| SUAVE | 0.14 | 0.05 | 0.15 | 0.15 | 0 | 0 |
+| NORMAL | 0.24 | 0.09 | 0.25 | 0.25 | 0 | 0 |
+| FUERTE | 0.38 | 0.16 | 0.40 | 0.40 | 0 (era 0.05) | 0.035 |
 
 - Scanlines: una línea oscura cada `round(alto físico / 240)` px (≥ 2;
   3 px en 720p), con forma de seno para que no titile. Máscara: rejilla
@@ -167,7 +167,13 @@ paquetes nuevos.
   Bloom: los píxeles claros (> 0.55) de un entorno de 8 muestras a 1.5 y
   3 px se suman suaves (el texto blanco "brilla" sin desenfocarse: el
   píxel central no se mezcla). Viñeta: oscurece hacia las esquinas.
-  Curvatura: barril leve (`uv' = 0.5 + c·(1 + k·|c|²)`), negro fuera.
+  Curvatura: barril leve (`uv' = 0.5 + c·(1 + k·|c|²)`), negro fuera
+  (hoy 0 en todos los niveles; el código queda por si vuelve). Bisel
+  (v0.8.2, uniforme `uBezel`, el último): esquinas redondeadas negras de
+  radio `bezel × lado menor` (~25 px en 720p) con 1.5 px de borde suave
+  y un sombreado de hasta 30 % en los últimos `0.6 × radio` px. Solo
+  multiplica: no mueve ningún píxel, así que está en los dos caminos
+  (también en `crt_overlay.frag`).
 - **Dos caminos** según el motor de render:
   - Con Impeller (`ImageFilter.isShaderFilterSupported`): `ImageFiltered`
     con `ImageFilter.shader(crt.frag)` — todo lo de arriba, muestreando
@@ -186,8 +192,19 @@ paquetes nuevos.
   (curvatura 0, era 0.02): sin curva el shader lee cada píxel en su
   lugar (vecino más cercano, identidad) y el texto queda igual de nítido
   que sin filtro; scanlines, máscara, bloom (sin mezclar el píxel
-  central) y viñeta se mantienen. Solo FUERTE curva (0.05, bilineal):
-  es el look marcado, a pedido, con el texto apenas más suave.
+  central) y viñeta se mantienen. Hasta v0.8.1 FUERTE curvaba (0.05,
+  bilineal), con el texto apenas más suave.
+- **Por defecto FUERTE (v0.8.2)**: pedido del dueño ("el filtro CRT que
+  venga FUERTE por defecto"). Como ahora es lo que ve todo jugador nuevo,
+  FUERTE **ya no remuestrea**: curvatura 0 y vecino más cercano (cada
+  píxel en su lugar, texto igual de nítido que sin filtro); el look de
+  "tubo curvo" lo dan el bisel de esquinas redondeadas y la viñeta
+  fuerte, y scanlines / máscara / bloom siguen siendo los fuertes
+  (0.38 / 0.16 / 0.40). Se descartó curvar solo la escena de juego: el
+  filtro es uno solo sobre toda la app (`MaterialApp.builder`) y partirlo
+  en capas costaba dos pasadas de shader y bordes raros entre HUD y
+  mapa. Captura de referencia: un tooltip con CRT FUERTE + ALTO
+  CONTRASTE a 1280×720 (release notes v0.8.2).
 - Costo: ver § 3.5.
 
 ### 3.3 PARTÍCULAS (`ParticleLevel`)
@@ -392,7 +409,7 @@ del cliente.
 ## 5. CONTROLES
 
 Lista de solo lectura (exploration.md § "Teclado"): MAPA (WASD/flechas,
-E/Espacio, Alt, C, I, J, M, rueda sobre el minimapa, Y/N), BATALLA (1-9/clic, Q/Tab/clic, Esc del
+E/Espacio, Alt, C, I, J, H (v0.8.2), M, rueda sobre el minimapa, Y/N), BATALLA (1-9/clic, Q/Tab/clic, Esc del
 submenú), MENÚS (Esc, Tab/flechas, Enter/Espacio) y CHAT (Enter, Esc).
 No se pueden reasignar (fuera de alcance).
 
@@ -462,6 +479,12 @@ está abierto:
   deja la sala y pide al motor cerrar la app
   (`ServicesBinding.exitApplication(AppExitType.required)`,
   `appExitProvider`).
+- **SALIR DEL JUEGO en el título** (v0.8.2): botón junto a
+  CONFIGURACIÓN (`title-quit`). Abre la confirmación `¿Salir del juego?`
+  (`showQuitGameDialog`: CANCELAR con el foco al abrir, `Esc` / clic
+  afuera = cancelar; SALIR DEL JUEGO en rojo). Confirmado, llama a
+  `appExitProvider` (guarda todo con `ExitGuard.flushAll` —la cuenta— y
+  cierra la ventana).
 
 ## 8. Persistencia
 
@@ -483,6 +506,16 @@ está abierto:
   `box`) y `battleLog` (`normal` / `extended`) son aditivos; también los
   valores nuevos `textSize: "enormous"` y `readingFont: "atkinson"`. Un
   `game.json` sin ellos (o con basura) se ve como antes.
+- **v0.8.2**: `partyExpanded` (por defecto `false`: cajas del grupo
+  compactas; aditivo). Los **valores por defecto** de `crt` (`normal` →
+  `strong`) y `uiTheme` (`dark` → `highContrast`) cambian. `game.json`
+  se escribe **siempre entero** (`toJson`, todas las claves) en cuanto
+  se cambia cualquier ajuste —también al plegar los objetivos o tocar el
+  zoom del minimapa—, así que: un jugador con `game.json` ya guardado
+  **conserva** su CRT y su tema (los que tenía, aunque fueran los de por
+  defecto de antes); un jugador sin `game.json` (instalación nueva o que
+  nunca tocó nada) arranca en FUERTE + ALTO CONTRASTE. No hay migración
+  forzada: los dos se cambian en PANTALLA y ACCESIBILIDAD.
 - **v0.8.1 (HUD)**: `chat` (`hidden` / `always`, por defecto `hidden`),
   `chatNotices` (por defecto `true`) y `objectivesCollapsed` (por
   defecto `false`) son nuevos y aditivos: un `game.json` sin ellos carga
@@ -562,7 +595,8 @@ está abierto:
   para varias ventanas, `scaledCount`, ráfagas de partículas por nivel,
   `FrameLimiter` (30 / 60 / sin límite en monitores de 60, 120 y 144 Hz,
   re-sincronizar), zoom entero de la batalla en PIXEL PERFECT.
-- `test/core/settings/crt_filter_test.dart`: CRT en NORMAL por defecto,
+- `test/core/settings/crt_filter_test.dart`: CRT en FUERTE por defecto
+  (v0.8.2; ningún nivel curva, FUERTE con bisel),
   APAGADO no envuelve nada, uniformes de cada nivel, corrección del
   hit-test con curvatura.
 - `test/app/text_size_test.dart`: `textSize` por defecto, JSON (viejo

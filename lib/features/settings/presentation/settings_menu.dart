@@ -253,6 +253,41 @@ Future<void> showSettingsDialog(BuildContext context) => showDialog<void>(
           SettingsMenu(onClose: () => Navigator.of(ctx).maybePop()),
     );
 
+/// Confirmación de SALIR DEL JUEGO desde el título (v0.8.2): `true` si
+/// se confirma. `Esc` / CANCELAR / clic afuera = no. El foco arranca en
+/// CANCELAR (Enter no cierra el juego por accidente).
+Future<bool> showQuitGameDialog(BuildContext context) async =>
+    await showDialog<bool>(
+      context: context,
+      barrierColor: ProtoColors.scrim(0.6),
+      builder: (ctx) => Material(
+        type: MaterialType.transparency,
+        child: PanelFrame(
+          key: const ValueKey('quit-dialog'),
+          title: 'SALIR DEL JUEGO',
+          width: 460,
+          onClose: () => Navigator.of(ctx).pop(false),
+          actions: [
+            InitialFocus(
+              child: PanelButton('CANCELAR',
+                  key: const ValueKey('quit-cancel'),
+                  onPressed: () => Navigator.of(ctx).pop(false)),
+            ),
+            PanelButton('SALIR DEL JUEGO',
+                key: const ValueKey('quit-yes'),
+                accent: ProtoColors.red,
+                onPressed: () => Navigator.of(ctx).pop(true)),
+          ],
+          child: ProtoText(
+            key: const ValueKey('quit-question'),
+            '<b>¿Salir del juego?</b> '
+            '${protoColor(ProtoColors.green, 'Tu cuenta y tus personajes quedan guardados.')}',
+          ),
+        ),
+      ),
+    ) ??
+    false;
+
 /// Botón `≡ MENÚ [ESC]` (HUD del mapa y batalla) que abre la pausa.
 class PauseMenuButton extends StatelessWidget {
   const PauseMenuButton({super.key, required this.onPressed});
@@ -1300,6 +1335,7 @@ class _ControlsTab extends StatelessWidget {
         ('C', 'Personaje'),
         ('I', 'Inventario'),
         ('J', 'Plegar / desplegar los objetivos'),
+        ('H / clic en una caja', 'Detalle del grupo (arma, pts, XP, pociones)'),
         ('Retroceso', 'Cerrar todos los avisos del HUD'),
         ('M', 'Mapa en grande (flechas / arrastrar: mover; + - / rueda: zoom)'),
         ('Rueda sobre el minimapa', 'Zoom del minimapa'),

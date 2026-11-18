@@ -251,6 +251,14 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       toggleObjectives(ref);
       return KeyEventResult.handled;
     }
+    // H: despliega / compacta las cajas del grupo (fuera de batalla, sin
+    // panel; v0.8.2).
+    if (event.logicalKey == LogicalKeyboardKey.keyH &&
+        view.mode != SessionMode.battle &&
+        view.panel == null) {
+      togglePartyBoxes(ref);
+      return KeyEventResult.handled;
+    }
     final bool used;
     if (view.mode == SessionMode.battle) {
       used = _battleKey.currentState?.handleKey(event.logicalKey) ?? false;

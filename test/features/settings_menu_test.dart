@@ -163,10 +163,10 @@ void main() {
       (tester) async {
     final f = await _pumpMenu(tester);
     await _tap(tester, 'tab-1');
-    // Por defecto: AJUSTAR, CRT NORMAL, ALTA, 60.
+    // Por defecto: AJUSTAR, CRT FUERTE (v0.8.2), ALTA, 60.
     for (final k in [
       'display-scale-AJUSTAR',
-      'display-crt-NORMAL',
+      'display-crt-FUERTE',
       'display-particles-ALTA',
       'display-fps-60',
     ]) {
@@ -182,6 +182,8 @@ void main() {
         findsOneWidget);
     await _tap(tester, 'display-crt-APAGADO');
     expect(f.game.saved!.crt, CrtLevel.off);
+    await _tap(tester, 'display-crt-NORMAL');
+    expect(f.game.saved!.crt, CrtLevel.normal);
     await _tap(tester, 'display-crt-FUERTE');
     expect(f.game.saved!.crt, CrtLevel.strong);
     await _tap(tester, 'display-particles-BAJA');

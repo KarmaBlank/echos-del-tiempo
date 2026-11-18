@@ -17,6 +17,7 @@ class PartyBox extends StatelessWidget {
     this.local = false,
     this.knockedOut = false,
     this.width,
+    this.padding = const EdgeInsets.all(6),
   });
 
   /// 170 px en el HTML con texto de 7-8 px; acá el texto mínimo es 10
@@ -27,6 +28,13 @@ class PartyBox extends StatelessWidget {
   static double widthOf(BuildContext context) =>
       RetroType.width(context, defaultWidth);
 
+  /// Caja compacta del HUD del mapa (v0.8.2): una fila por miembro.
+  static const compactWidth = 200.0;
+
+  /// Ancho de una caja compacta con el tamaño del texto de [context].
+  static double compactWidthOf(BuildContext context) =>
+      RetroType.width(context, compactWidth);
+
   final List<Widget> children;
   final bool local;
   final bool knockedOut;
@@ -34,13 +42,16 @@ class PartyBox extends StatelessWidget {
   /// Ancho fijo; `null` = [widthOf].
   final double? width;
 
+  /// Aire interior (6 px; la compacta usa menos en vertical).
+  final EdgeInsets padding;
+
   @override
   Widget build(BuildContext context) {
     return Opacity(
       opacity: knockedOut ? 0.5 : 1,
       child: Container(
         width: width ?? PartyBox.widthOf(context),
-        padding: const EdgeInsets.all(6),
+        padding: padding,
         decoration: BoxDecoration(
           color: ProtoColors.panel,
           border: Border.all(

@@ -244,6 +244,14 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     });
   }
 
+  /// SALIR DEL JUEGO (v0.8.2): confirma y cierra con la salida segura
+  /// (`appExitProvider`: guarda todo con `ExitGuard` y cierra la ventana).
+  Future<void> _quitGame() async {
+    final ok = await showQuitGameDialog(context);
+    if (!ok || !mounted) return;
+    await ref.read(appExitProvider)();
+  }
+
   /// Plan de build del elegido (build_planner.md § 4).
   Future<void> _openBuild() async {
     final c = _account?.selected;
@@ -748,9 +756,22 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                     _netRow(factory),
                   ],
                   const SizedBox(height: 16),
-                  PanelButton('CONFIGURACIÓN',
-                      key: const ValueKey('title-settings'),
-                      onPressed: () => showSettingsDialog(context)),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      PanelButton('CONFIGURACIÓN',
+                          key: const ValueKey('title-settings'),
+                          onPressed: () => showSettingsDialog(context)),
+                      // Salida segura (v0.8.2): confirma y guarda todo
+                      // (ExitGuard) antes de cerrar, como la pausa.
+                      PanelButton('SALIR DEL JUEGO',
+                          key: const ValueKey('title-quit'),
+                          accent: ProtoColors.red,
+                          onPressed: _quitGame),
+                    ],
+                  ),
                   if (_netStatus case final status?) ...[
                     const SizedBox(height: 8),
                     Text(retroText(status),

@@ -226,7 +226,14 @@ toda la UI (menús, tooltips, HUD, batalla) con `UiThemeScope`
 El arte (arenas, mapa, sprites, lienzo del árbol) no cambia.
 
 **Por defecto (decisión v0.8.1): OSCURO + REDUCIDO + NORMAL**, porque es
-lo que pidió el dueño. AZUL + COMPLETO es el aspecto de v0.8.0 y sigue a
+lo que pidió el dueño. **Desde v0.8.2 el tema por defecto es ALTO
+CONTRASTE** (pedido del dueño), junto con el CRT FUERTE por defecto
+(settings.md § 3.2): FUERTE ya no curva ni remuestrea, así que el texto
+blanco sobre negro de ALTO CONTRASTE queda nítido bajo scanlines y
+máscara (el bloom hace "brillar" el blanco sin desenfocarlo). Un
+`game.json` ya guardado conserva su `uiTheme` (se escribe siempre
+entero); solo quien no tiene `game.json` arranca en ALTO CONTRASTE
+(settings.md § 8). AZUL + COMPLETO es el aspecto de v0.8.0 y sigue a
 un clic. Los estáticos de `UiTheme` arrancan en AZUL + COMPLETO + NORMAL
 (lo que esperan los tests existentes, que no montan el scope); el valor
 del jugador sale de `GameSettings`.

@@ -514,6 +514,26 @@ Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
   floor(mp)/max`; `XP n/xpNeed · ₵créditos` en `#7d8bc4`; `Pociones:`
   con `♥n` `#7bed9f` y `✦n` (`♦`) `#74b9ff`. El chat se achica para que
   la fila entre.
+  - **Compactas por defecto (v0.8.2)**. Pedido del dueño: "tapa mucho
+    eso abajo; pudieran ir compactos y que se puedan abrir si uno quiere
+    ver más detalle". Cada miembro (humanos en co-op y compañeros de la
+    party) es una caja `CompactPlayerBox` de 200 px base
+    (`PartyBox.compactWidthOf`, crece con el texto) y **dos líneas**:
+    `Nombre[, Ascensión] Clase` (nombre en `title`, ascensión en su
+    color, clase en `sky`; con elipsis) + `LvN` (siempre visible) +
+    chips de texto (`K.O.` carmesí, `+N` dorado con puntos sin usar; sin
+    caja, para no agrandar la línea) + `[+]`; debajo, barras finas de HP
+    y MP lado a lado con `hp/max` y `mp/max` (el número toma a lo sumo
+    el 65 % de su mitad: se recorta antes que desbordar). Misma fila
+    abajo a la derecha: a 1280×720 Normal, 4 miembros ocupan **50 px**
+    de alto en vez de ~200; con texto Muy grande / Enorme pasan a dos
+    filas (el chat cede hasta 200 px base en vez de 240, porque es una
+    píldora) sin pisar objetivos, minimapa ni chat (test).
+  - **Desplegar**: `H` (fuera de batalla, sin panel abierto; no choca
+    con `kMenuKeys` ni con las teclas del mapa) o clic en cualquier caja
+    despliega **todas** a la caja completa de siempre (arma + pts, XP ·
+    ₵, pociones); otra vez `H` / clic las compacta. Se recuerda en
+    `game.json` (`partyExpanded`, por defecto `false`).
 - **Chat** (abajo a la izquierda): ver § "Chat".
 - **Menú** (arriba a la izquierda, junto a `< TITULO` en el lobby):
   `≡ MENU [ESC]` abre la pausa / configuración (docs/specs/settings.md);

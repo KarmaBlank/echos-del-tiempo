@@ -45,9 +45,13 @@ void main() {
   });
 
   group('ajustes', () {
-    test('por defecto OSCURO + REDUCIDO + NORMAL; game.json aditivo', () {
+    test('por defecto ALTO CONTRASTE (v0.8.2) + REDUCIDO + NORMAL; '
+        'game.json aditivo', () {
       const d = GameSettings();
-      expect(d.uiTheme, InterfaceTheme.dark);
+      expect(d.uiTheme, InterfaceTheme.highContrast);
+      // Un tema guardado se conserva.
+      expect(GameSettings.fromJson(const {'uiTheme': 'dark'}).uiTheme,
+          InterfaceTheme.dark);
       expect(d.textColors, TextColorMode.reduced);
       expect(d.spacing, UiSpacing.normal);
       const s = GameSettings(
@@ -60,7 +64,7 @@ void main() {
       expect(GameSettings.fromJson(s.toJson()), s);
       // game.json de v0.8.0 (sin las claves) o con basura: por defecto.
       final old = GameSettings.fromJson(const {'crt': 'soft', 'uiTheme': 'x'});
-      expect(old.uiTheme, InterfaceTheme.dark);
+      expect(old.uiTheme, InterfaceTheme.highContrast);
       expect(old.textColors, TextColorMode.reduced);
       expect(old.spacing, UiSpacing.normal);
     });
@@ -349,8 +353,10 @@ void main() {
     ));
     await tester.pump();
     expect(find.byKey(const ValueKey('a11y-theme-preview')), findsOneWidget);
-    expect(UiTheme.kind, InterfaceTheme.dark);
+    // ALTO CONTRASTE por defecto desde v0.8.2.
+    expect(UiTheme.kind, InterfaceTheme.highContrast);
     for (final (key, check) in <(String, bool Function())>[
+      ('a11y-theme-OSCURO', () => store.saved?.uiTheme == InterfaceTheme.dark),
       (
         'a11y-theme-ALTO CONTRASTE',
         () => store.saved?.uiTheme == InterfaceTheme.highContrast

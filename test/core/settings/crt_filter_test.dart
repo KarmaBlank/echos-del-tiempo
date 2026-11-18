@@ -19,11 +19,15 @@ void main() {
         expect(b.bloom, greaterThan(a.bloom));
         expect(b.vignette, greaterThan(a.vignette));
         expect(b.curve, greaterThanOrEqualTo(a.curve));
+        expect(b.bezel, greaterThanOrEqualTo(a.bezel));
       }
       expect(s.curve, 0, reason: 'SUAVE no curva');
-      // La curva remuestrea la UI y ensucia la fuente pixel: solo FUERTE.
-      expect(n.curve, 0, reason: 'NORMAL (por defecto) no curva');
-      expect(f.curve, greaterThan(0));
+      // La curva remuestrea la UI y ensucia la fuente pixel: ningún nivel
+      // curva (v0.8.2: FUERTE es el por defecto); FUERTE tiene bisel.
+      expect(n.curve, 0, reason: 'NORMAL no curva');
+      expect(f.curve, 0, reason: 'FUERTE (por defecto) no remuestrea');
+      expect(f.bezel, greaterThan(0));
+      expect(n.bezel, 0);
       // Legible: la scanline de NORMAL oscurece como mucho un 24%.
       expect(n.scan, lessThanOrEqualTo(0.25));
     });
@@ -35,7 +39,7 @@ void main() {
       expect(CrtParams.lineFor(300), 2);
       expect(CrtParams.maskWidthFor(1), 1);
       expect(CrtParams.maskWidthFor(2), 2);
-      expect(CrtParams.of(CrtLevel.normal)!.uniforms(3, 1), hasLength(7));
+      expect(CrtParams.of(CrtLevel.normal)!.uniforms(3, 1), hasLength(8));
     });
   });
 
@@ -77,7 +81,7 @@ void main() {
   });
 
   group('CrtFilter en la app', () {
-    testWidgets('prendido por defecto (NORMAL) y se apaga en vivo',
+    testWidgets('prendido por defecto (FUERTE) y se apaga en vivo',
         (tester) async {
       final settings = GameSettingsController(store: InMemoryGameSettingsStore());
       await tester.pumpWidget(ProviderScope(
@@ -96,7 +100,7 @@ void main() {
       await tester.runAsync(() => CrtShaders.load());
       await tester.pump();
       final state = tester.state<CrtFilterState>(find.byType(CrtFilter));
-      expect(state.widget.level, CrtLevel.normal);
+      expect(state.widget.level, CrtLevel.strong);
       expect(state.mode, isNot('off'));
       expect(state.mode, 'overlay', reason: 'flutter test no usa Impeller');
       // Sin Impeller (flutter test): capa encima, o nada si no cargó.
