@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/data/passive_mechanics.dart';
 import '../../../../game_engine/models/battle_state.dart';
 import '../../../../game_engine/models/passive_mechanic.dart';
@@ -263,6 +264,7 @@ class BattleScenePainter extends CustomPainter {
     final u = scene.ult;
     final stage = scene.ultStage(f);
     if (u != null && stage != null) {
+      UltDirector.density = scene.particles.density;
       UltDirector.paintWorld(c, u, t - u.t0, stage, visible);
     }
     scene.particles.paint(c);
@@ -380,7 +382,7 @@ class BattleScenePainter extends CustomPainter {
   /// Copos que caen (deterministas) sobre la vista.
   void _snow(Canvas c, Rect vis, double frost) {
     final t = scene.poseT;
-    final n = (20 + 60 * frost).round();
+    final n = scaledCount((20 + 60 * frost).round(), scene.particles.density);
     for (var i = 0; i < n; i++) {
       final h1 = ((i * 73856093) & 0xffff) / 65536;
       final h2 = ((i * 19349663) & 0xffff) / 65536;

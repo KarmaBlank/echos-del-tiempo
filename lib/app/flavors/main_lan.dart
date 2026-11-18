@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/di/service_locator.dart';
+import '../../core/settings/frame_limiter.dart';
 import '../app.dart';
 
 /// Composition root de la versión LAN: misma red local (o dos ventanas en
@@ -8,7 +9,8 @@ import '../app.dart';
 /// `IP:PUERTO` del host (docs/specs/netcode.md § "LAN").
 /// `flutter run -d windows -t lib/app/flavors/main_lan.dart`
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
+  // Binding con límite de FPS (docs/specs/settings.md § 3.4).
+  EcosBinding.ensureInitialized();
   registerSharedDependencies();
   registerLanNetcode();
   runApp(const EcosApp());

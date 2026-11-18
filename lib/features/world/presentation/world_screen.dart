@@ -244,6 +244,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         sprites: sprites.requireValue,
         input: widget.moveInput,
       );
+      // Ajustes gráficos del mapa (docs/specs/settings.md § 3).
+      final gfx = ref.watch(gameSettingsProvider);
+      game
+        ..scaleMode = gfx.scale
+        ..particleDensity = gfx.particles.factor;
       body = Stack(
         children: [
           // El GameWidget se queda con todas las teclas si tiene el foco:
@@ -393,7 +398,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         shake: s.screenShake,
         flash: s.flashes.factor,
         damageNumbers: s.damageNumbers,
-        speed: s.battleSpeed,
+        pixelPerfect: s.scale == ScaleMode.pixelPerfect,
+        particles: s.particles.factor,
       );
 
   /// `Zona 2 · Bosque Hondo · Piso 3/3` del resultado de una misión de

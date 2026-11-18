@@ -200,13 +200,15 @@ void main() {
         screenShake: false,
         flashes: FlashLevel.off,
         damageNumbers: false,
-        battleSpeed: 2));
+        scale: ScaleMode.pixelPerfect,
+        particles: ParticleLevel.low));
     await tester.pump();
     final o = battle.scene.options;
     expect(o.damageNumbers, isFalse);
     expect(o.shake, isFalse);
     expect(o.flash, 0);
-    expect(o.speed, 2);
+    expect(o.pixelPerfect, isTrue);
+    expect(o.particles, 0.3);
     // Sin sacudida: la escena la anula en cada frame.
     battle.scene.particles.addShake(7);
     battle.scene.advance(16);

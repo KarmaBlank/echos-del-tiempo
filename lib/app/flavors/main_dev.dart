@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/di/service_locator.dart';
+import '../../core/settings/frame_limiter.dart';
 import '../app.dart';
 import '../feature_flags.dart';
 import 'firebase_bootstrap.dart';
@@ -10,7 +11,8 @@ import 'firebase_bootstrap.dart';
 /// personajes/features en prueba, debug overlay). Es el build en el
 /// que vos probás cosas antes de que lleguen al resto.
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // Binding con límite de FPS (docs/specs/settings.md § 3.4).
+  EcosBinding.ensureInitialized();
   FeatureFlags.instance = const FeatureFlags(
     unlockAllCharacters: true,
     showDebugOverlay: true,

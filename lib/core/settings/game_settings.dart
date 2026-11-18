@@ -3,7 +3,11 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'frame_limiter.dart';
+import 'graphics.dart';
 import 'window_mode.dart';
+
+export 'graphics.dart';
 
 /// Destellos de pantalla completa en batalla (accesibilidad): el rojo de
 /// "te pegaron fuerte", el blanco de los golpes brutales y del quiebre y
@@ -26,13 +30,13 @@ class GameSettings {
     this.fullscreen = false,
     this.screenShake = true,
     this.flashes = FlashLevel.normal,
-    this.battleSpeed = 1,
     this.damageNumbers = true,
     this.confirmDrop = true,
+    this.scale = ScaleMode.fit,
+    this.crt = CrtLevel.normal,
+    this.particles = ParticleLevel.high,
+    this.fpsLimit = FpsLimit.fps60,
   });
-
-  /// Velocidades de animación de batalla que se ofrecen.
-  static const battleSpeeds = [1.0, 1.5, 2.0];
 
   /// Pantalla completa sin bordes (solo Windows; ver `WindowMode`).
   final bool fullscreen;
@@ -41,65 +45,75 @@ class GameSettings {
   final bool screenShake;
   final FlashLevel flashes;
 
-  /// Multiplicador del reloj de animación de la escena de batalla (y de
-  /// los retrasos de sus sonidos). No cambia los turnos: los marca el host.
-  final double battleSpeed;
-
   /// Números de daño / cura flotantes en la escena de batalla.
   final bool damageNumbers;
 
   /// Pedir confirmación antes de tirar un objeto al piso.
   final bool confirmDrop;
 
+  /// Escalado del mundo pixelado (mapa y batalla).
+  final ScaleMode scale;
+
+  /// Filtro retro CRT sobre toda la pantalla.
+  final CrtLevel crt;
+
+  /// Cantidad de partículas.
+  final ParticleLevel particles;
+
+  /// Tope de cuadros por segundo.
+  final FpsLimit fpsLimit;
+
   GameSettings copyWith({
     bool? fullscreen,
     bool? screenShake,
     FlashLevel? flashes,
-    double? battleSpeed,
     bool? damageNumbers,
     bool? confirmDrop,
+    ScaleMode? scale,
+    CrtLevel? crt,
+    ParticleLevel? particles,
+    FpsLimit? fpsLimit,
   }) =>
       GameSettings(
         fullscreen: fullscreen ?? this.fullscreen,
         screenShake: screenShake ?? this.screenShake,
         flashes: flashes ?? this.flashes,
-        battleSpeed: _speed(battleSpeed ?? this.battleSpeed),
         damageNumbers: damageNumbers ?? this.damageNumbers,
         confirmDrop: confirmDrop ?? this.confirmDrop,
+        scale: scale ?? this.scale,
+        crt: crt ?? this.crt,
+        particles: particles ?? this.particles,
+        fpsLimit: fpsLimit ?? this.fpsLimit,
       );
-
-  /// La velocidad ofrecida más cercana a [v].
-  static double _speed(double v) {
-    var best = battleSpeeds.first;
-    for (final s in battleSpeeds) {
-      if ((s - v).abs() < (best - v).abs()) best = s;
-    }
-    return best;
-  }
 
   Map<String, Object?> toJson() => {
         'fullscreen': fullscreen,
         'shake': screenShake,
         'flashes': flashes.name,
-        'battleSpeed': battleSpeed,
         'damageNumbers': damageNumbers,
         'confirmDrop': confirmDrop,
+        'scale': scale.name,
+        'crt': crt.name,
+        'particles': particles.name,
+        'fpsLimit': fpsLimit.json,
       };
 
-  /// Valores inválidos o ausentes caen al de por defecto.
+  /// Valores inválidos o ausentes caen al de por defecto. Claves viejas
+  /// (`battleSpeed` de v0.2.1) se ignoran.
   factory GameSettings.fromJson(Map<String, Object?> json) {
     const d = GameSettings();
     bool flag(Object? v, bool def) => v is bool ? v : def;
-    final speed = json['battleSpeed'];
     return GameSettings(
       fullscreen: flag(json['fullscreen'], d.fullscreen),
       screenShake: flag(json['shake'], d.screenShake),
       flashes: FlashLevel.values.firstWhere((f) => f.name == json['flashes'],
           orElse: () => d.flashes),
-      battleSpeed:
-          speed is num && speed.isFinite ? _speed(speed.toDouble()) : 1,
       damageNumbers: flag(json['damageNumbers'], d.damageNumbers),
       confirmDrop: flag(json['confirmDrop'], d.confirmDrop),
+      scale: ScaleMode.fromName(json['scale'], d.scale),
+      crt: CrtLevel.fromName(json['crt'], d.crt),
+      particles: ParticleLevel.fromName(json['particles'], d.particles),
+      fpsLimit: FpsLimit.fromJson(json['fpsLimit'], d.fpsLimit),
     );
   }
 
@@ -109,13 +123,16 @@ class GameSettings {
       other.fullscreen == fullscreen &&
       other.screenShake == screenShake &&
       other.flashes == flashes &&
-      other.battleSpeed == battleSpeed &&
       other.damageNumbers == damageNumbers &&
-      other.confirmDrop == confirmDrop;
+      other.confirmDrop == confirmDrop &&
+      other.scale == scale &&
+      other.crt == crt &&
+      other.particles == particles &&
+      other.fpsLimit == fpsLimit;
 
   @override
   int get hashCode => Object.hash(fullscreen, screenShake, flashes,
-      battleSpeed, damageNumbers, confirmDrop);
+      damageNumbers, confirmDrop, scale, crt, particles, fpsLimit);
 
   @override
   String toString() => 'GameSettings(${toJson()})';
@@ -172,17 +189,24 @@ class JsonFileGameSettingsStore implements GameSettingsStore {
   }
 }
 
-/// Los ajustes de juego vivos: cada cambio se aplica (la ventana; el
-/// resto lo leen la batalla y el inventario del provider) y se guarda.
+/// Los ajustes de juego vivos: cada cambio se aplica (la ventana y el
+/// límite de FPS; el resto lo leen el mapa, la batalla, el filtro CRT y
+/// el inventario del provider) y se guarda.
 class GameSettingsController extends StateNotifier<GameSettings> {
   GameSettingsController({
     required this.store,
     this.window = const WindowMode.unsupported(),
+    this.frameLimiter,
     GameSettings initial = const GameSettings(),
-  }) : super(initial);
+  }) : super(initial) {
+    frameLimiter?.fps = initial.fpsLimit.fps;
+  }
 
   final GameSettingsStore store;
   final WindowMode window;
+
+  /// El limitador de cuadros de la app (`null` en tests: no hay binding).
+  final FrameLimiter? frameLimiter;
 
   /// Carga lo guardado (si hay) y lo aplica (p. ej. arranca en pantalla
   /// completa si así quedó).
@@ -195,6 +219,7 @@ class GameSettingsController extends StateNotifier<GameSettings> {
     }
     if (s == null || !mounted) return;
     state = s;
+    frameLimiter?.fps = s.fpsLimit.fps;
     if (s.fullscreen) await window.setFullscreen(true);
   }
 
@@ -203,6 +228,7 @@ class GameSettingsController extends StateNotifier<GameSettings> {
     if (s == state) return;
     final old = state;
     state = s;
+    frameLimiter?.fps = s.fpsLimit.fps;
     if (s.fullscreen != old.fullscreen) {
       await window.setFullscreen(s.fullscreen);
     }

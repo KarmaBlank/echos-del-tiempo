@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:echos_del_tiempo/core/audio/audio_settings.dart';
 import 'package:echos_del_tiempo/core/audio/music/music_service.dart';
 import 'package:echos_del_tiempo/core/audio/sfx_service.dart';
+import 'package:echos_del_tiempo/core/settings/frame_limiter.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/core/settings/window_mode.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,9 +26,12 @@ void main() {
         fullscreen: true,
         screenShake: false,
         flashes: FlashLevel.reduced,
-        battleSpeed: 2,
         damageNumbers: false,
         confirmDrop: false,
+        scale: ScaleMode.pixelPerfect,
+        crt: CrtLevel.strong,
+        particles: ParticleLevel.low,
+        fpsLimit: FpsLimit.none,
       );
       expect(GameSettings.fromJson(s.toJson()), s);
       expect(
@@ -35,13 +39,61 @@ void main() {
             'fullscreen': 'sí',
             'shake': 3,
             'flashes': 'cegador',
-            'battleSpeed': 'x',
             'damageNumbers': null,
+            'scale': 'estirar',
+            'crt': true,
+            'particles': 'ultra',
+            'fpsLimit': 45,
           }),
           const GameSettings());
-      // La velocidad se ajusta a la ofrecida más cercana.
-      expect(GameSettings.fromJson({'battleSpeed': 1.4}).battleSpeed, 1.5);
-      expect(const GameSettings().copyWith(battleSpeed: 9).battleSpeed, 2);
+      expect(s.toJson()['fpsLimit'], 0, reason: 'sin límite = 0');
+    });
+
+    test('por defecto: CRT NORMAL, partículas ALTA, 60 FPS, AJUSTAR', () {
+      const d = GameSettings();
+      expect(d.crt, CrtLevel.normal);
+      expect(d.particles, ParticleLevel.high);
+      expect(d.fpsLimit, FpsLimit.fps60);
+      expect(d.scale, ScaleMode.fit);
+      expect(GameSettings.fromJson(const {}), d);
+    });
+
+    test('migración: un game.json de v0.2.1 con battleSpeed carga igual',
+        () async {
+      final dir = await Directory.systemTemp.createTemp('ecos_game_mig_');
+      addTearDown(() => dir.delete(recursive: true));
+      final store = JsonFileGameSettingsStore.inDirectory(dir.path);
+      await store.file.writeAsString('{"fullscreen":false,"shake":false,'
+          '"flashes":"reduced","battleSpeed":2,"damageNumbers":true,'
+          '"confirmDrop":false}');
+      final s = await store.load();
+      expect(
+          s,
+          const GameSettings(
+              screenShake: false,
+              flashes: FlashLevel.reduced,
+              confirmDrop: false));
+      // Los gráficos nuevos, por defecto (CRT prendido).
+      expect(s!.crt, CrtLevel.normal);
+      await store.save(s);
+      final raw = await store.file.readAsString();
+      expect(raw, isNot(contains('battleSpeed')));
+      expect(raw, contains('"crt":"normal"'));
+    });
+
+    test('el controlador aplica el límite de FPS (al crear, cargar y cambiar)',
+        () async {
+      final limiter = FrameLimiter(fps: 999);
+      final c = GameSettingsController(
+          store: InMemoryGameSettingsStore(
+              const GameSettings(fpsLimit: FpsLimit.fps30)),
+          frameLimiter: limiter);
+      expect(limiter.fps, 60);
+      await c.load();
+      expect(limiter.fps, 30);
+      await c.update(c.state.copyWith(fpsLimit: FpsLimit.none));
+      expect(limiter.fps, isNull);
+      c.dispose();
     });
 
     test('el controlador guarda cada cambio y aplica la ventana', () async {
@@ -80,7 +132,7 @@ void main() {
       addTearDown(() => dir.delete(recursive: true));
       final store = JsonFileGameSettingsStore.inDirectory(dir.path);
       expect(await store.load(), isNull);
-      const s = GameSettings(flashes: FlashLevel.off, battleSpeed: 1.5);
+      const s = GameSettings(flashes: FlashLevel.off, crt: CrtLevel.off);
       await store.save(s);
       expect(await store.load(), s);
       await store.file.writeAsString('[1, 2');

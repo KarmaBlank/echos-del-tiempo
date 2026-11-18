@@ -75,6 +75,11 @@ flutter:
     - assets/sprites/effects/
     - assets/sprites/tiles/
 
+  # Filtro retro CRT (docs/specs/settings.md § 3.2).
+  shaders:
+    - shaders/crt.frag
+    - shaders/crt_overlay.frag
+
   # Fuente pixel del estilo 8 bits (docs/specs/ui_style.md).
   # Licencia SIL OFL 1.1: assets/fonts/OFL.txt
   fonts:

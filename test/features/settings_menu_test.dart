@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/core/audio/audio_settings.dart';
 import 'package:echos_del_tiempo/core/audio/music/music_service.dart';
@@ -141,6 +142,39 @@ void main() {
     expect(f.window.calls, [true, false]);
   });
 
+  testWidgets('PANTALLA: escalado, CRT, partículas y FPS (sin VSync)',
+      (tester) async {
+    final f = await _pumpMenu(tester);
+    await _tap(tester, 'tab-1');
+    // Por defecto: AJUSTAR, CRT NORMAL, ALTA, 60.
+    for (final k in [
+      'display-scale-AJUSTAR',
+      'display-crt-NORMAL',
+      'display-particles-ALTA',
+      'display-fps-60',
+    ]) {
+      final b = tester.widget<PanelButton>(find.byKey(ValueKey(k)));
+      expect(b.selected, isTrue, reason: k);
+    }
+    expect(find.textContaining('VSYNC'), findsNothing);
+    expect(find.textContaining('ANIMACIONES'), findsNothing);
+
+    await _tap(tester, 'display-scale-PIXEL PERFECT');
+    expect(f.game.saved!.scale, ScaleMode.pixelPerfect);
+    expect(find.text('Píxeles exactos (×2, ×3...) con barras negras.'),
+        findsOneWidget);
+    await _tap(tester, 'display-crt-APAGADO');
+    expect(f.game.saved!.crt, CrtLevel.off);
+    await _tap(tester, 'display-crt-FUERTE');
+    expect(f.game.saved!.crt, CrtLevel.strong);
+    await _tap(tester, 'display-particles-BAJA');
+    expect(f.game.saved!.particles, ParticleLevel.low);
+    await _tap(tester, 'display-fps-30');
+    expect(f.game.saved!.fpsLimit, FpsLimit.fps30);
+    await _tap(tester, 'display-fps-SIN LÍMITE');
+    expect(f.game.saved!.fpsLimit, FpsLimit.none);
+  });
+
   testWidgets('PANTALLA: sin soporte de ventana no ofrece pantalla completa',
       (tester) async {
     await _pumpMenu(tester, windowSupported: false);
@@ -149,14 +183,12 @@ void main() {
     expect(find.byKey(const ValueKey('display-shake-SÍ')), findsOneWidget);
   });
 
-  testWidgets('JUEGO: velocidad, números de daño y confirmar al tirar',
+  testWidgets('JUEGO: números de daño y confirmar al tirar',
       (tester) async {
     final f = await _pumpMenu(tester);
     await _tap(tester, 'tab-2');
-    await _tap(tester, 'game-speed-x2');
-    expect(f.game.saved!.battleSpeed, 2);
-    await _tap(tester, 'game-speed-x1.5');
-    expect(f.game.saved!.battleSpeed, 1.5);
+    expect(find.byKey(const ValueKey('game-speed-x2')), findsNothing,
+        reason: 'la velocidad de animaciones ya no existe');
     await _tap(tester, 'game-numbers-NO');
     expect(f.game.saved!.damageNumbers, isFalse);
     await _tap(tester, 'game-confirm-drop-NO');
