@@ -198,6 +198,26 @@ String bar(String s, {int steps = 16, bool drums = false}) {
   return s;
 }
 
+/// [s] transportado [semitones] semitonos (las notas; silencios, ligas
+/// y duraciones quedan igual). Para doblar una melodía en otra octava
+/// dentro de la misma pista.
+String shift(String s, int semitones) => s
+    .split(RegExp(r'\s+'))
+    .where((t) => t.isNotEmpty)
+    .map((t) {
+      final i = t.lastIndexOf(':');
+      final head = i > 0 ? t.substring(0, i) : t;
+      final dur = i > 0 ? t.substring(i) : '';
+      if (head == '.' || head == '-' || head == '|') return t;
+      final notes = head.split('+').map((n) {
+        final m = noteToMidi(n);
+        if (m == null) throw FormatException('nota desconocida', t);
+        return midiToNote(m + semitones);
+      });
+      return '${notes.join('+')}$dur';
+    })
+    .join(' ');
+
 /// [s] repetido [n] veces.
 String rep(String s, int n) => List.filled(n, s).join(' ');
 

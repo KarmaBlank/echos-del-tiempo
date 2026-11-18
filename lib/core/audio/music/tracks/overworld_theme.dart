@@ -4,73 +4,122 @@ import '../music_score.dart';
 
 /// Mapa del mundo.
 ///
-/// Clima: aventura, ganas de salir a caminar. Marcha con bajo que camina
-/// en negras; el Re mayor sobre Do (cuarta aumentada, color lidio) le da
-/// el aire de "horizonte abierto". Do mayor, 120 bpm, 4/4, 24 compases
-/// (48 s). A (1–8) tema que sube por el acorde; B (9–16) se expande
-/// hasta el Do agudo; C (17–24) puente legato a medio tiempo que vuelve.
+/// Clima: salir de viaje. Paso de caminata con el balanceo del huayno
+/// (semicorchea + corchea con punto, "ta-taka" del charango y del
+/// bombo), esperanzado y con sensación de distancia: zampoñas que
+/// llaman y responden con eco a lo lejos. Sol mixolidio (el Fa mayor,
+/// VII grado, le da el aire épico de leyenda y la cadencia Fa → Sol)
+/// que se va a su relativa Mi menor pentatónica en la B, como en la
+/// música andina. 104 bpm, 2/4, 44 compases (50.8 s). Grilla de fusas
+/// (8 pasos por negra) para los adornos de quena.
+///
+/// Forma: intro (1–4) charango, bombo y la llamada de una zampoña
+/// lejana; A (5–20) tema de viaje de la ocarina en dos frases de 8
+/// (semicadencia en Re, cierre Fa → Sol); B (21–28) Mi menor, la
+/// ocarina canta un compás y la zampoña le contesta el siguiente
+/// (hoquetus de sikus), con arpa y chajchas; A' (29–44) el tema otra
+/// vez, más grande: sikus doblándolo una octava abajo, arpa y rasgueo
+/// lleno.
+///
+/// Original: no cita ni imita de cerca ninguna melodía existente.
 Song overworldTheme() {
-  const a = 'C D/C C D/C Am F G G';
-  const b = 'F G Em Am F G C C';
-  const c = 'Am Em F C Dm G F G';
-  final ab = ch('$a $b', 16);
-  final cc = ch(c, 16);
+  const intro = 'G F G G';
+  const a = 'G G C G F F G D G G C Em C F G G';
+  const b = 'Em D Em D C G D Em';
+  final chI = ch(intro, 16);
+  final chA = ch(a, 16);
+  final chB = ch(b, 16);
 
-  final melody = join([
-    // A
-    bar('G4:2 C5:2 E5:2 G5:2 G5:6 E5:2'),
-    bar('F#5:4 E5:2 D5:2 A4:8'),
-    bar('G4:2 C5:2 E5:2 G5:2 C6:6 B5:2'),
-    bar('A5:8 F#5:4 D5:4'),
-    bar('E5:6 A5:2 G5:4 E5:4'),
-    bar('F5:6 A5:2 G5:4 F5:4'),
-    bar('D5:6 E5:2 F5:4 G5:4'),
-    bar('G5:12 .:4'),
-    // B
-    bar('A5:6 G5:2 F5:4 C5:4'),
-    bar('B4:6 C5:2 D5:4 G5:4'),
-    bar('G5:6 F#5:2 E5:4 B4:4'),
-    bar('C5:6 D5:2 E5:8'),
-    bar('F5:4 E5:2 F5:2 A5:4 C6:4'),
-    bar('B5:6 A5:2 G5:4 D5:4'),
-    bar('E5:4 G5:4 C6:4 G5:4'),
-    bar('C6:12 .:4'),
-    // C (puente)
-    bar('E5:8 A4:8'),
-    bar('B4:8 E5:8'),
-    bar('F5:8 C5:4 A4:4'),
-    bar('G4:12 .:4'),
-    bar('A4:6 D5:2 F5:8'),
-    bar('G5:6 F5:2 D5:8'),
-    bar('C5:6 D5:2 E5:4 F5:4'),
-    bar('G5:8 F5:4 D5:4'),
+  // Compás de 2/4 = 16 pasos (negra 8, corchea 4, semicorchea 2).
+  String m(String s) => bar(s);
+  final themeA = join([
+    m('D5:2 G5:6 A5:4 B5:4'),
+    m('A5:2 G5:6 D5:8'),
+    m('E5:4 G5:4 A5:2 C6:6'),
+    m('B5:1 A5:1 G5:14'), // grupeto de quena
+    m('F5:2 A5:6 C6:4 A5:4'), // Fa natural: mixolidio
+    m('G5:2 F5:6 D5:8'),
+    m('D5:2 G5:6 B5:4 A5:4'),
+    m('A5:1 G5:1 A5:14'),
+    m('D5:2 G5:6 A5:4 B5:4'),
+    m('A5:2 G5:6 D5:8'),
+    m('E5:4 G5:4 A5:2 C6:6'),
+    m('D6:1 B5:7 G5:4 E5:4'),
+    m('G5:2 E5:6 D5:4 E5:4'),
+    m('F5:2 A5:6 C6:8'),
+    m('A5:2 B5:6 D6:4 B5:4'),
+    m('C6:1 B5:1 A5:2 G5:12'),
   ]);
+  // B: la ocarina pregunta, la zampoña contesta (hoquetus).
+  final themeB = join([
+    m('B5:2 A5:2 G5:4 E5:8'),
+    m('.:16'),
+    m('G5:2 A5:2 B5:4 D6:2 B5:6'),
+    m('.:16'),
+    m('G5:2 E5:6 G5:2 A5:6'),
+    m('B5:2 A5:2 G5:2 D5:2 G5:8'),
+    m('A5:2 B5:2 A5:2 F#5:2 D5:8'),
+    m('F#5:1 E5:15'),
+  ]);
+  final melody = join(['.:64', themeA, themeB, themeA]);
 
-  final march = bar('k:2 h:2 s:2 h:2 k:2 k:2 s:2 h:2', drums: true);
+  final call = join([
+    // Intro: la llamada lejana.
+    m('D5:2 G5:14'),
+    m('.:8 F5:2 C5:6'),
+    m('D5:2 G5:6 B5:2 A5:6'),
+    m('G5:8 .:8'),
+    '.:256',
+    // B: respuestas.
+    m('.:16'),
+    m('D5:2 E5:2 D5:4 A4:8'),
+    m('.:16'),
+    m('F#5:2 E5:2 D5:4 B4:4 A4:4'),
+    '.:64',
+    '.:256',
+  ]);
+  final sikus = join(['.:64', '.:256', '.:128', shift(themeA, -12)]);
+
+  const huayno = 'x:4 x:2 x:2 x:4 x:2 x:2';
   final drums = join([
-    rep(march, 7),
-    bar('k:2 h:2 s:2 h:2 s:2 s:2 T:2 t:2', drums: true),
-    rep(march, 7),
-    bar('k:2 h:2 s:2 s:2 T:2 T:2 t:2 t:2', drums: true),
-    rep(bar('k:4 h:4 s:4 h:4', drums: true), 7),
-    bar('k:4 h:4 s:2 s:2 s:2 s:2', drums: true),
+    rep(bar('b:4 a:2 a:2 b:4 a:4', drums: true), 4),
+    rep(bar('b:4 a:2 a:2 b:4 a:4', drums: true), 15),
+    bar('b:4 a:2 a:2 b:2 b:2 b:2 b:2', drums: true),
+    rep(bar('b:6 a:2 b:4 a:2 a:2', drums: true), 7),
+    bar('b:2 b:2 b:2 b:2 a:2 a:2 b:4', drums: true),
+    bar('b+c:4 a:2 a:2 b:4 a:4', drums: true),
+    rep(bar('b:4 a:2 a:2 b:4 a:4', drums: true), 14),
+    bar('b:4 a:2 a:2 b:2 b:2 a:2 a:2', drums: true),
+  ]);
+  final rattle = join([
+    '.:320',
+    rep(bar('h:4 h:2 h:2 h:4 h:2 h:2', drums: true), 24),
   ]);
 
   return Song(
     id: 'overworld',
     title: 'Mapa del mundo',
-    bpm: 120,
+    bpm: 104,
+    stepsPerBeat: 8,
+    beatsPerBar: 2,
     tracks: [
       Track('ocarina', Inst.ocarina, melody),
-      Track('marcha', Inst.harmony,
-          '${comp(ab, 'x:2 .:2 x:1 .:1 x:2', center: 64)} '
-          '${comp(cc, 'x:8', center: 64)}'),
-      Track('arpegio', Inst.arp,
-          '${arp(ab, center: 72, count: 4, shape: const [0, 1, 2, 3], rhythm: 'x:2')} '
-          '${arp(cc, center: 72, count: 4, shape: const [0, 2, 1, 3], rhythm: 'x:4')}'),
-      Track('bajo', Inst.bass,
-          '${bassLine(ab, 'R:4 5:4 8:4 5:4')} ${bassLine(cc, 'R:8 5:8')}'),
-      Track.drums('batería', drums, gain: 0.6),
+      Track('zampoña', Inst.zamponaEcho, call),
+      Track('sikus', Inst.zampona, sikus, gain: 0.9),
+      Track('charango', Inst.charango,
+          '${comp(chI, huayno, center: 71, count: 4)} '
+          '${comp('$chA $chB $chA', huayno, center: 71, count: 4)}'),
+      Track('arpa', Inst.arp,
+          '.:320 '
+          '${arp('$chB $chA', center: 64, count: 4, shape: const [0, 1, 2, 3, 4, 3, 2, 1], rhythm: 'x:2')}',
+          gain: 0.8),
+      Track('colchón', Inst.pad,
+          '.:64 ${comp('$chA $chB $chA', 'x:16', center: 60, count: 3)}'),
+      Track('bajo', Inst.bass.copyWith(volume: 0.19),
+          '.:32 ${bassLine(ch('G G', 16), 'R:6 5:2 8:4 5:4')} '
+          '${bassLine('$chA $chB $chA', 'R:6 5:2 8:4 5:4')}'),
+      Track.drums('bombo', drums, gain: 0.55),
+      Track.drums('chajchas', rattle, gain: 0.9),
     ],
   );
 }

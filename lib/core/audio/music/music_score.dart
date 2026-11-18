@@ -24,7 +24,7 @@ enum Voice {
   /// Seno puro (campanitas).
   sine,
 
-  /// Kit de batería (tokens `k s h o t T c r q`).
+  /// Kit de batería (tokens `k s h o t T c r q b a`).
   drums,
 }
 
@@ -47,6 +47,7 @@ class Instrument {
     this.echoSteps = 0,
     this.echoGain = 0,
     this.transpose = 0,
+    this.strum = 0,
   });
 
   final Voice voice;
@@ -82,6 +83,12 @@ class Instrument {
   /// Semitonos que se suman a cada nota (doblar una melodía 8va abajo).
   final int transpose;
 
+  /// Rasgueo (s): las notas simultáneas de un paso (`C5+E5+G5`) no
+  /// entran juntas sino escalonadas cada [strum] s, como las cuerdas de
+  /// un charango; un golpe sí y otro no va hacia arriba (orden inverso).
+  /// 0: todas juntas.
+  final double strum;
+
   /// El mismo instrumento con algunos parámetros cambiados.
   Instrument copyWith({
     double? volume,
@@ -99,6 +106,7 @@ class Instrument {
     double? echoGain,
     int? echoSteps,
     int? transpose,
+    double? strum,
   }) =>
       Instrument(
         voice: voice,
@@ -117,15 +125,18 @@ class Instrument {
         echoGain: echoGain ?? this.echoGain,
         echoSteps: echoSteps ?? this.echoSteps,
         transpose: transpose ?? this.transpose,
+        strum: strum ?? this.strum,
       );
 
   /// Lo que puede sonar después del final de una nota (s).
-  double get tail => release + 0.01;
+  double get tail => release + 0.01 + 6 * strum;
 
   /// Texto estable con todos los parámetros (para la firma de la pieza).
   String get signature => '$voice/$volume/$attack/$decay/$sustain/$release/'
       '$gate/$vibratoRate/$vibratoDepth/$vibratoDelay/$breath/$scoop/'
-      '$lowpass/$echoSteps/$echoGain/$transpose';
+      '$lowpass/$echoSteps/$echoGain/$transpose'
+      // Solo si hay rasgueo: las firmas anteriores no cambian.
+      '${strum > 0 ? '/strum$strum' : ''}';
 }
 
 /// Un evento de la partitura: [midi] (nota) o [drum] (golpe), desde el
@@ -153,8 +164,8 @@ class NoteEvent {
   int get hashCode => Object.hash(start, length, midi, drum);
 }
 
-/// Golpes del kit de batería.
-const kDrumTokens = {'k', 's', 'h', 'o', 't', 'T', 'c', 'r', 'q'};
+/// Golpes del kit de batería (`b` bombo legüero, `a` su aro).
+const kDrumTokens = {'k', 's', 'h', 'o', 't', 'T', 'c', 'r', 'q', 'b', 'a'};
 
 const _pitchClass = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11};
 final _noteRe = RegExp(r'^([A-G])([#b]?)(-?\d)$');

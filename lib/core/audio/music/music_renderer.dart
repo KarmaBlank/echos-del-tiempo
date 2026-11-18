@@ -127,6 +127,24 @@ class MusicRenderer {
       next[j] = found;
     }
     final ins = track.instrument;
+    // Rasgueo: posición de cada nota dentro de su golpe (notas que
+    // empiezan en el mismo paso), alternando bajada / subida.
+    final strumN = ins.strum > 0 ? (ins.strum * sampleRate).round() : 0;
+    final strumPos = List<int>.filled(events.length, 0);
+    if (strumN > 0) {
+      var g = 0;
+      for (var j = 0; j < events.length;) {
+        var k = j;
+        while (k < events.length && events[k].start == events[j].start) {
+          k++;
+        }
+        for (var m = j; m < k; m++) {
+          strumPos[m] = g.isEven ? m - j : k - 1 - m;
+        }
+        g++;
+        j = k;
+      }
+    }
     for (var c = 0; c < cycles; c++) {
       final wraps = cyclic || c < cycles - 1;
       for (var j = 0; j < events.length; j++) {
@@ -137,6 +155,13 @@ class MusicRenderer {
           continue;
         }
         final nx = next[j] ?? (wraps ? events.first.start + song.steps : null);
+        if (strumN > 0) {
+          final off = strumPos[j] * strumN;
+          _note(buf, start + off, math.max(1, e.length * sps - off),
+              nx == null ? null : math.max(1, (nx - e.start) * sps - off),
+              midiToHz(e.midi! + ins.transpose), ins, j);
+          continue;
+        }
         _note(buf, start, e.length * sps, nx == null ? null : (nx - e.start) * sps,
             midiToHz(e.midi! + ins.transpose), ins, j);
       }
@@ -269,6 +294,14 @@ class MusicRenderer {
         _noise(out, start, 18000, 0.008, 0.04);
       case 'q':
         _tone(out, start, 1100, 1000, 0.04, 0.2, triangle: true);
+      case 'b':
+        // Bombo legüero: parche grave de cuero, caída larga + golpe sordo.
+        _tone(out, start, 92, 50, 0.38, 0.5);
+        _noise(out, start, 2200, 0.06, 0.1, lowpass: 700);
+      case 'a':
+        // Aro del bombo (la baqueta sobre la madera): "tac" seco.
+        _tone(out, start, 760, 700, 0.03, 0.14, triangle: true);
+        _noise(out, start, 9000, 0.014, 0.05, lowpass: 3500);
     }
   }
 

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:echos_del_tiempo/core/audio/music/music_renderer.dart';
 import 'package:echos_del_tiempo/core/audio/music/music_score.dart';
+import 'package:echos_del_tiempo/core/audio/music/tracks/overworld_theme.dart';
 import 'package:echos_del_tiempo/core/audio/music/tracks/title_theme.dart';
 import 'package:echos_del_tiempo/core/audio/music/tracks/zone2_bosque.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -86,6 +87,35 @@ void main() {
     });
   });
 
+  group('rasgueo', () {
+    test('las notas de un golpe entran escalonadas, alternando el sentido',
+        () {
+      final strum = _probe.copyWith(strum: 0.01);
+      final song = _song('C5+E5+G5:8 C5+E5+G5:8', ins: strum);
+      final sps = song.samplesPerStep(sr);
+      final off = (0.01 * sr).round();
+      // Bajada: Do primero, Mi a +off, Sol a +2·off.
+      final down = r.mix(_song('C5:8 .:8', ins: strum), fold: false);
+      final s = r.mix(song, fold: false);
+      for (var i = 0; i < off; i++) {
+        expect(s[i], closeTo(down[i], 1e-12), reason: 'muestra $i');
+      }
+      // Subida: Sol primero (el Mi entra a +off); el golpe anterior se
+      // apaga en el fundido monofónico.
+      final up = r.mix(_song('.:8 G5:8', ins: strum), fold: false);
+      final fade = (MusicRenderer.monoFadeSeconds * sr).round();
+      for (var i = 8 * sps + fade + 1; i < 8 * sps + off; i++) {
+        expect(s[i], closeTo(up[i], 1e-12), reason: 'muestra $i');
+      }
+    });
+
+    test('bombo y aro suenan y no recortan', () {
+      final s = r.mix(Song(id: 'd', title: 'd', bpm: 100, loop: false,
+          tracks: [Track.drums('d', 'b:4 a:4 b+a:8')]), fold: false);
+      expect(MusicRenderer.peakOf(s), inExclusiveRange(0.1, 1));
+    });
+  });
+
   group('bucles', () {
     test('la costura es exacta: el bucle plegado = la 2.ª vuelta de corrido',
         () {
@@ -96,6 +126,7 @@ void main() {
           Track.drums('d', 'k:4 s:4 k:4 c:4'),
         ]),
         titleTheme(),
+        overworldTheme(), // charango rasgueado y zampoña con eco
         zone2Bosque(), // ocarina con eco
       ]) {
         final loop = r.mix(song);

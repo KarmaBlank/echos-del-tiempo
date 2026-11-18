@@ -132,4 +132,47 @@ abstract final class Inst {
     gate: 0.88,
     lowpass: 3800,
   );
+
+  /// Charango: pulso 25 % brillante y corto, acordes rasgueados (las
+  /// cuerdas entran escalonadas cada 11 ms, bajada / subida).
+  static const charango = Instrument(
+    voice: Voice.pulse25,
+    volume: 0.034,
+    attack: 0.001,
+    decay: 0.11,
+    sustain: 0.22,
+    release: 0.06,
+    gate: 0.7,
+    lowpass: 5600,
+    strum: 0.011,
+  );
+
+  /// Zampoña / sikus: la misma voz de la ocarina pero sin vibrato, con
+  /// mucho más soplo y un scoop corto (caña soplada de costado).
+  static const zampona = Instrument(
+    voice: Voice.ocarina,
+    volume: 0.2,
+    attack: 0.045,
+    decay: 0.2,
+    sustain: 0.72,
+    release: 0.12,
+    gate: 0.92,
+    breath: 0.16,
+    scoop: 0.15,
+  );
+
+  /// Zampoña lejana (llamadas y respuestas en hoquetus, con eco).
+  static const zamponaEcho = Instrument(
+    voice: Voice.ocarina,
+    volume: 0.18,
+    attack: 0.05,
+    decay: 0.2,
+    sustain: 0.7,
+    release: 0.14,
+    gate: 0.9,
+    breath: 0.17,
+    scoop: 0.15,
+    echoSteps: 6,
+    echoGain: 0.35,
+  );
 }

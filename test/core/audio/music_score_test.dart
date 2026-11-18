@@ -47,6 +47,8 @@ void main() {
       expect(() => parseScore('C4:0'), throwsFormatException);
       expect(() => parseScore('- C4'), throwsFormatException);
       expect(() => parseScore('k z', drums: true), throwsFormatException);
+      // Bombo legüero y su aro.
+      expect(parseScore('b a:2 b+a', drums: true).steps, 4);
     });
   });
 
@@ -115,6 +117,19 @@ void main() {
       expect(() => bar('C4:8 D4:7'), throwsArgumentError);
       expect(bar('k:3 h:3', steps: 6, drums: true), 'k:3 h:3');
       expect(rep('C4', 3), 'C4 C4 C4');
+    });
+
+    test('shift transporta notas y díadas, deja silencios y ligas', () {
+      expect(shift('D5:2 G5 .:4 - C5+E5:3', -12), 'D4:2 G4 .:4 - C4+E4:3');
+      expect(shift('B4', 1), 'C5');
+      expect(() => shift('X4', 1), throwsFormatException);
+    });
+
+    test('el rasgueo solo cambia la firma si se usa', () {
+      expect(Inst.ocarina.signature, isNot(contains('strum')));
+      expect(Inst.charango.signature, contains('strum'));
+      expect(Inst.charango.copyWith(strum: 0).signature,
+          isNot(contains('strum')));
     });
   });
 }
