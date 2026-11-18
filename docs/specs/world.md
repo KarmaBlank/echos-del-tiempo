@@ -65,6 +65,10 @@ fila 3. Spawn en `(13*16, 9*16)`. Tema `lobby`.
 Zonas de interacción (cliente, `WorldRules`):
 - Mostrador: `y < 4.6*TS` y `8.5*TS < x < 17.5*TS`.
 - Armería: `y < 4.6*TS` y `18.5*TS < x < 24.5*TS`.
+- Portal del Eco (v0.4.0, tile `P` sólido en `x = 3..5` de la fila 2,
+  cartel `PORTAL`): `y < 4.6*TS` y `2.5*TS < x < 6.5*TS`. Ver
+  docs/specs/ecos_atlas.md § 1. Es el único cambio del lobby respecto
+  del prototipo.
 
 ## Mapa de misión (`MapGenerator.generate(misión, semilla)`)
 

@@ -96,20 +96,25 @@ class LootRules {
       (zoneLevel.clamp(1, maxLevel) - 1) / (maxLevel - 1) * 0.5;
 
   /// Probabilidades normalizadas de cada rareza.
+  /// [legendaryMult] multiplica el peso del Legendario (Atlas: Fortuna
+  /// de Eras, ecos_atlas.md § 5.3).
   static Map<Rarity, double> rarityOdds(int zoneLevel, LootSource source,
-      {double extraBonus = 0}) {
+      {double extraBonus = 0, double legendaryMult = 1}) {
     final b = zoneBonus(zoneLevel) + sourceBonus(source) + extraBonus;
     final w = {
       for (final r in Rarity.values)
-        r: baseRarityWeights[r]! * (1 + rarityBonusScale[r]! * b),
+        r: baseRarityWeights[r]! *
+            (1 + rarityBonusScale[r]! * b) *
+            (r == Rarity.legendario ? legendaryMult : 1),
     };
     final total = w.values.fold(0.0, (a, x) => a + x);
     return {for (final e in w.entries) e.key: e.value / total};
   }
 
   Rarity rollRarity(RandomSource rng, int zoneLevel, LootSource source,
-      {double extraBonus = 0}) {
-    final odds = rarityOdds(zoneLevel, source, extraBonus: extraBonus);
+      {double extraBonus = 0, double legendaryMult = 1}) {
+    final odds = rarityOdds(zoneLevel, source,
+        extraBonus: extraBonus, legendaryMult: legendaryMult);
     var r = rng();
     for (final e in odds.entries) {
       if (r < e.value) return e.key;
@@ -231,10 +236,13 @@ class LootRules {
     String? family,
     LootSource source = LootSource.battle,
     double extraBonus = 0,
+    double legendaryMult = 1,
     String uid = newUid,
   }) {
     final il = itemLevel.clamp(1, maxLevel);
-    var r = rarity ?? rollRarity(rng, il, source, extraBonus: extraBonus);
+    var r = rarity ??
+        rollRarity(rng, il, source,
+            extraBonus: extraBonus, legendaryMult: legendaryMult);
     if (r == Rarity.legendario && baseId == null) {
       final u = pickUnique(rng, il, family: family);
       if (u != null) return generateUnique(rng, u, il, uid: uid);
@@ -351,6 +359,7 @@ class LootRules {
     String? family,
     double? chance,
     double extraBonus = 0,
+    double legendaryMult = 1,
   }) {
     final il = itemLevelFor(zoneLevel, source);
     final out = <LootDrop>[];
@@ -358,7 +367,8 @@ class LootRules {
         itemLevel: il,
         family: family,
         source: source,
-        extraBonus: extraBonus);
+        extraBonus: extraBonus,
+        legendaryMult: legendaryMult);
     if (rng() < (chance ?? weaponChance(source))) {
       out.add(LootDrop.item(gen()));
       final (more, maybe) = extraWeapons(source);

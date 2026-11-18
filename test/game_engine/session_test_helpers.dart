@@ -45,12 +45,17 @@ SessionEngine sessionEngine({
   List<double> battleRolls = const [],
   int seed = 500000000,
   bool zones = false,
+  RandomSource? ecoRandom,
+  bool devTools = false,
 }) =>
     SessionEngine(
       battles: BattleEngine(stats: statsCalc, random: rolls(battleRolls)),
       progression: zones ? zoneProgression : progression,
       random: rolls(fieldRolls, fallback: fieldFallback),
       seeds: () => seed,
+      // Ecos (ecos_atlas.md § 3): por defecto 0.999, así nunca caen solos.
+      ecoRandom: ecoRandom ?? () => 0.999,
+      devTools: devTools,
     );
 
 /// Perfil válido de [classId] (nivel 1, recién creado).

@@ -1,9 +1,13 @@
+import '../../../game_engine/data/eco_catalog.dart';
+import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/attributes.dart';
+import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/player_state.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
 import '../../../game_engine/models/weapon.dart';
+import '../../../game_engine/rules/eco_rules.dart';
 import '../../../game_engine/rules/loot_filter_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import 'weapon_text.dart';
@@ -200,4 +204,49 @@ String skillName(ProgressionRules rules, String id) =>
 String? passiveAtMarkup(ProgressionRules rules, ItemInstance it, int forgeLevels) {
   final t = rules.crafting.passiveAt(it, forgeLevels);
   return t == null ? null : _c(kPassiveHex, _esc(t));
+}
+
+// ---------------------------------------------------------------------
+// Ecos (docs/specs/ecos_atlas.md § 2)
+// ---------------------------------------------------------------------
+
+/// Turquesa de los Ecos.
+const kEcoHex = '#5ae6d2';
+
+/// Nombre de un Eco en el color de su rareza, con su tier.
+String ecoNameMarkup(ProgressionRules rules, EcoItem e) =>
+    '<b style="color:${rarityHex(e.rarity)}">'
+    '${_esc(rules.ecos.displayName(e))}</b> ${_c(kEcoHex, 'T${e.tier}')}';
+
+/// Ficha de un Eco: tier y nivel, zona, jefe, pisos, mods y lo que suman
+/// al botín. [atlas] = efectos del Atlas de la sala (Potencia cambia el
+/// bonus); [players] = jugadores en la sala (+10% cantidad por extra).
+String ecoTooltipMarkup(ProgressionRules rules, EcoItem e,
+    {AtlasEffects atlas = AtlasEffects.none, int players = 1}) {
+  final eco = rules.ecos;
+  final z = eco.zoneOf(e);
+  final l = <String>[
+    ecoNameMarkup(rules, e),
+    '<span class="k">Eco ${e.rarity.label} · Tier ${e.tier} · '
+        'monstruos nivel ${e.monsterLevel}</span>',
+    'Zona: <b>${_esc(z?.name ?? '?')}</b> · '
+        '${e.floors} piso${e.floors == 1 ? '' : 's'}',
+    'Jefe: <b style="color:$_orange">${_esc(eco.bossName(e))}</b>',
+  ];
+  final cap = ecoModRange(e.rarity).$2;
+  if (cap > 0 || e.mods.isNotEmpty) {
+    l.add('<span class="k">Modificadores ${e.mods.length}/$cap</span>');
+    for (final m in e.mods) {
+      final d = kEcoMods[m.id];
+      l.add('• ${_c(_red, _esc(EcoRules.modText(m)))}'
+          '${d == null ? '' : ' ${_c(_dim, '(+${d.quantity}% cant. +${d.rarity}% rar.)')}'}');
+    }
+  }
+  final b = EcoRules.lootBonus(e, atlas: atlas, players: players);
+  l.add('Botín: ${_c(_green, '+${(b.quantity * 100).round()}% cantidad')} · '
+      '${_c(_green, '+${(b.rarity * 100).round()}% rareza')}'
+      '${players > 1 ? ' ${_c(_dim, '(con el grupo)')}' : ''}');
+  l.add(_c(_dim, 'Se abre en el Portal del Eco (pueblo). Se consume al '
+      'entrar, se complete o no.'));
+  return l.join('<br>');
 }

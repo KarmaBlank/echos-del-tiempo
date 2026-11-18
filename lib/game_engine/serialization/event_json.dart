@@ -103,6 +103,15 @@ class EventJson {
             'op': e.op.name,
             'u': e.uid,
           },
+        EcoCompletedEvent() => {
+            't': 'ecoDone',
+            'ids': e.playerIds,
+            'tier': e.tier,
+            'z': e.zone,
+            'b': e.boss,
+          },
+        MasteryUpEvent() => {'t': 'mastery', 'id': e.playerId, 'm': e.mastery},
+        EcosUnlockedEvent() => {'t': 'ecoUnlocked', 'id': e.playerId},
       };
 
   static LootDrop _drop(Object? raw) =>
@@ -172,6 +181,13 @@ class EventJson {
       case 'crafted':
         return CraftedEvent(
             j.str('id'), j.enumByName('op', CraftOp.values), j.str('u'));
+      case 'ecoDone':
+        return EcoCompletedEvent(List.unmodifiable(j.strings('ids')),
+            tier: j.integer('tier'), zone: j.integer('z'), boss: j.integer('b'));
+      case 'mastery':
+        return MasteryUpEvent(j.str('id'), j.integer('m'));
+      case 'ecoUnlocked':
+        return EcosUnlockedEvent(j.str('id'));
     }
     throw FormatException('JSON inválido: evento desconocido', t);
   }

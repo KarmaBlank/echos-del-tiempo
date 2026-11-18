@@ -3,6 +3,7 @@ import 'dart:collection';
 import '../data/game_catalog.dart';
 import '../models/attributes.dart';
 import '../models/battle_state.dart';
+import '../models/eco.dart';
 import '../models/passive_mechanic.dart';
 import '../models/game_session.dart';
 import '../models/item.dart';
@@ -48,6 +49,10 @@ class SessionJson {
         // Opcional: solo con la sala pausada.
         if (s.pausedBy != null)
           'pause': {'id': s.pausedBy, 'name': s.pausedName ?? ''},
+        // Endgame v0.4 (ecos_atlas.md § 7): opcionales.
+        if (s.eco != null) 'eco': s.eco!.toJson(),
+        if (s.ecoOwner != null) 'ecoBy': s.ecoOwner,
+        if (s.atlas.isNotEmpty) 'atlas': s.atlas,
       };
 
   GameSession fromJson(Json j) {
@@ -74,6 +79,12 @@ class SessionJson {
       groundSeq: j.intOrNull('gseq') ?? 0,
       pausedBy: j.objOrNull('pause')?.str('id'),
       pausedName: j.objOrNull('pause')?.str('name'),
+      eco: j['eco'] == null
+          ? null
+          : EcoItem.fromJson(j['eco']) ??
+              (throw FormatException('JSON inválido: eco', j['eco'])),
+      ecoOwner: j.strOrNull('ecoBy'),
+      atlas: j['atlas'] == null ? null : j.strings('atlas'),
     );
   }
 

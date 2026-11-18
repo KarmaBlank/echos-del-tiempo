@@ -192,6 +192,8 @@ class _StashScreenState extends ConsumerState<StashScreen> {
     if (st != null) {
       return CellContent.stack(st, InventoryRules.stackCount(p, st));
     }
+    final eco = p.ecoByUid(token);
+    if (eco != null) return CellContent.eco(eco);
     final it = p.itemByUid(token);
     return it == null ? null : CellContent.item(it);
   }
@@ -200,6 +202,7 @@ class _StashScreenState extends ConsumerState<StashScreen> {
     if (e == null) return null;
     final it = e.item;
     if (it != null) return CellContent.item(it);
+    if (e.eco case final eco?) return CellContent.eco(eco);
     return CellContent.stack(StackKind.of(e.material!), e.count);
   }
 
@@ -209,6 +212,7 @@ class _StashScreenState extends ConsumerState<StashScreen> {
       return itemTooltipMarkup(_rules, it,
           level: p.level, attributes: p.attributes, equipped: equipped);
     }
+    if (c.eco case final eco?) return ecoTooltipMarkup(_rules, eco);
     return stackTooltipMarkup(c.stack!, c.count);
   }
 
@@ -356,6 +360,7 @@ class _StashScreenState extends ConsumerState<StashScreen> {
     if (c == null) return null;
     final it = c.item;
     if (it != null) return itemNameMarkup(_rules, it);
+    if (c.eco case final eco?) return ecoNameMarkup(_rules, eco);
     return '<b style="color:#78e6dc">${protoEsc(c.stack!.label)}</b> x${c.count}';
   }
 

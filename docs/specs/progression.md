@@ -105,6 +105,13 @@ implementación con disco o `shared_preferences` vive fuera de
   sobrante se guarda). El árbol gana 1 punto por nivel (passive_tree.md).
 - Al subir, la vida y el maná actuales suben lo mismo que el máximo
   (lo hace la sesión).
+- **Maestría** (v0.4.0, docs/specs/ecos_atlas.md § 6): con nivel 50 la
+  XP llena la Maestría (perfil `ms`, 0–20). Pasar de `m` a `m+1` cuesta
+  `12 000 + 3 000 × m` (810 000 en total). Cada nivel da **+1 punto de
+  árbol** (`PlayerProfile.treeLevel = nivel + maestría`), no da puntos
+  de atributo ni pausa la sala (`MasteryUpEvent`). Con 20 la XP deja de
+  acumularse. Un perfil v0.3 de nivel 50 con XP de sobra la convierte
+  con la próxima ganancia.
 
 ## Atributos (`allocate`)
 

@@ -4,6 +4,7 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/loot_filter.dart';
@@ -101,6 +102,16 @@ const _icons = <String, List<String>>{
     '...g....', '...gg...', '..gggm..', '..ggmm..',
     '.ggmmmh.', '.gmmmhh.', 'gggmmhhh', '........',
   ],
+  // Eco: un portal con un reloj adentro (ecos_atlas.md § 2).
+  'eco': [
+    '..gggg..', '.gwwwwg.', 'gww.mwwg', 'gww.mwwg',
+    'gwwmmwwg', 'gwwwwwwg', '.gwwwwg.', '..gggg..',
+  ],
+  // Ancla Temporal.
+  'ancla': [
+    '...gg...', '...gg...', '.mmggmm.', '...gg...',
+    '...gg...', 'g..gg..g', '.g.gg.g.', '..gggg..',
+  ],
 };
 
 /// Clave del ícono de un tipo de arma (`espada+escudo` → `escudo`).
@@ -114,6 +125,7 @@ String iconKeyForType(String type) =>
       StackKind.esquirla => ('esquirla', RarityColors.stack),
       StackKind.cristal => ('cristal', ProtoColors.violet),
       StackKind.prisma => ('prisma', ProtoColors.gold),
+      StackKind.ancla => ('ancla', ProtoColors.sky),
     };
 
 /// Ícono pixel (8 × 8 escalado) sin difuminado.
@@ -171,13 +183,26 @@ class _PixelPainter extends CustomPainter {
 class CellContent {
   const CellContent.item(ItemInstance this.item)
       : stack = null,
+        eco = null,
         count = 1;
-  const CellContent.stack(StackKind this.stack, this.count) : item = null;
+  const CellContent.stack(StackKind this.stack, this.count)
+      : item = null,
+        eco = null;
+  const CellContent.eco(EcoItem this.eco)
+      : item = null,
+        stack = null,
+        count = 1;
 
   final ItemInstance? item;
   final StackKind? stack;
+
+  /// Eco (docs/specs/ecos_atlas.md § 2).
+  final EcoItem? eco;
   final int count;
 }
+
+/// Color del marco de los Ecos (turquesa, como el filtro por defecto).
+const kEcoColor = Color(0xFF5AE6D2);
 
 /// Casilla de inventario de [size] px: fondo `input`, borde del color de
 /// la rareza (2 px; dorado y 3 px si está elegida), el ícono y, en las
@@ -210,6 +235,12 @@ class ItemCell extends StatelessWidget {
       final type = rules.catalog.weapons[it.baseId]?.type ?? 'espada';
       icon = PixelIcon(iconKeyForType(type),
           accent: RarityColors.of(it.rarity), size: size - 12);
+    } else if (c?.eco case final e?) {
+      border = RarityColors.of(e.rarity);
+      // Más chico y arriba: abajo a la derecha va el tier.
+      icon = Align(
+          alignment: const Alignment(-0.5, -0.6),
+          child: PixelIcon('eco', accent: kEcoColor, size: size - 16));
     } else if (c?.stack case final st?) {
       border = ProtoColors.panelBorder;
       final (key, accent) = iconForStack(st);
@@ -230,6 +261,16 @@ class ItemCell extends StatelessWidget {
       child: Stack(
         children: [
           if (icon != null) Center(child: icon),
+          if (c?.eco case final e?)
+            Positioned(
+              right: 2,
+              bottom: 0,
+              child: Text('T${e.tier}',
+                  style: const TextStyle(
+                      fontSize: 8,
+                      color: kEcoColor,
+                      shadows: [Shadow(offset: Offset(1, 1))])),
+            ),
           if (c?.stack != null)
             Positioned(
               right: 2,
@@ -312,5 +353,7 @@ class LootLabel extends StatelessWidget {
 String dropLabelText(ProgressionRules rules, LootDrop d) {
   final it = d.item;
   if (it != null) return rules.items.displayName(it);
+  final eco = d.eco;
+  if (eco != null) return rules.ecos.fullName(eco);
   return d.count > 1 ? '${d.count} ${d.stack!.label}' : d.stack!.label;
 }

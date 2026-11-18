@@ -9,6 +9,7 @@ import '../../../../app/theme/retro_text.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
+import '../../../endgame/domain/endgame_text.dart';
 import '../../../inventory/presentation/inventory_tab.dart';
 import '../../../inventory/presentation/loot_filter_tab.dart';
 import '../../../inventory/presentation/shop_sections.dart';
@@ -31,16 +32,20 @@ const kAttributeInfo = {
 
 /// Pestañas del panel de personaje.
 enum CharacterTab {
-  attributes('ATRIBUTOS',
+  attributes(
+      'ATRIBUTOS',
       'Reparte puntos con + y -; nada cambia hasta CONFIRMAR. Cada nivel da '
           '${ProgressionRules.pointsPerLevel} puntos.'),
-  inventory('INVENTARIO',
+  inventory(
+      'INVENTARIO',
       'Arrastra para mover · clic para ver · EQUIPAR, DAR A, TIRAR, DESARMAR '
           '(materiales) o VENDER (créditos). LIMPIAR INVENTARIO: por rareza.'),
-  tree('ÁRBOL',
+  tree(
+      'ÁRBOL',
       'Pasivas de clase: 1 punto por nivel. Arrastra para mover, rueda para '
           'zoom, clic para tomar un nodo.'),
-  filter('FILTRO',
+  filter(
+      'FILTRO',
       'Reglas en orden: gana la primera que coincide. Ocultar no borra el '
           'loot: lo deja en el piso. Ayuda de la gramática en [?] y abajo.');
 
@@ -126,7 +131,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
       help: tab == CharacterTab.filter ? kFilterHelp : CharacterPanel.help,
       onClose: close,
       titleTrailing: ProtoText('${protoEsc(prof.name)} · '
-          '<span class="k">$cls Lv${prof.level}</span> · Puntos: '
+          '<span class="k">$cls Lv${prof.level}</span>'
+          '${prof.level >= ProgressionRules.maxLevel ? ' · <span style="color:#a29bfe">${protoEsc(masteryText(prof))}</span>' : ''} · Puntos: '
           '<b>$left</b>'),
       header: must
           ? null
@@ -142,10 +148,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
                   ? 'REINICIAR PUNTOS (GRATIS)'
                   : 'REINICIAR PUNTOS',
               key: const ValueKey('respec'),
-              reason: guards.respec(),
-              onPressed: () {
-                if (c.respec()) setState(_alloc.clear);
-              }),
+              reason: guards.respec(), onPressed: () {
+            if (c.respec()) setState(_alloc.clear);
+          }),
       ],
       actions: [
         if (isAttr)
@@ -318,9 +323,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
           const SizedBox(width: 8),
           PanelButton('+',
               key: ValueKey('inc-${a.name}'),
-              onPressed: left > 0
-                  ? () => setState(() => _alloc[a] = add + 1)
-                  : null),
+              onPressed:
+                  left > 0 ? () => setState(() => _alloc[a] = add + 1) : null),
           const SizedBox(width: 12),
           Expanded(
             child: Text(retroText(desc),

@@ -40,6 +40,14 @@ class LootFilterRules {
   /// legendarios y materiales.
   static const defaultText = '''
 # Filtro por defecto de Ecos del Tiempo
+Mostrar # Ecos
+  Objeto Eco
+  Color 90 230 210
+  Borde 90 230 210
+  Fondo 0 30 30 220
+  Tamaño 40
+  Sonido gema
+  Icono cuadrado celeste
 Mostrar # Legendarios
   Rareza Legendario
   Color 255 140 40
@@ -94,10 +102,15 @@ Ocultar # Mágicos de nivel bajo
         Rarity.legendario => const FilterColor(255, 140, 40),
       };
 
+  /// Color de los Ecos (turquesa).
+  static const ecoColor = FilterColor(90, 230, 210);
+
   static FilterStyle defaultStyle(LootDrop d) => FilterStyle(
         textColor: d.item != null
             ? rarityColor(d.item!.rarity)
-            : const FilterColor(120, 230, 220),
+            : d.eco != null
+                ? rarityColor(d.eco!.rarity)
+                : const FilterColor(120, 230, 220),
         size: FilterStyle.defaultSize,
       );
 
@@ -120,20 +133,34 @@ Ocultar # Mágicos de nivel bajo
 
   bool matches(FilterCondition c, LootDrop d, FilterContext ctx) {
     final it = d.item;
+    final eco = d.eco;
     final w = it == null ? null : catalog.weapons[it.baseId];
     switch (c) {
       case KindCondition(:final kinds):
         final k = it != null
             ? LootKind.arma
-            : d.stack!.material != null
-                ? LootKind.material
-                : LootKind.pocion;
+            : eco != null
+                ? LootKind.eco
+                : d.stack!.material != null
+                    ? LootKind.material
+                    : LootKind.pocion;
         return kinds.contains(k);
       case MaterialCondition(:final materials):
         final m = d.stack?.material;
         return m != null && materials.contains(m);
       default:
         break;
+    }
+    // Ecos: rareza, cantidad de mods y tier (ecos_atlas.md § 3).
+    if (eco != null) {
+      return switch (c) {
+        RarityCondition(:final op, :final rarity) =>
+          op.test(eco.rarity.index, rarity.index),
+        ModCountCondition(:final op, :final count) =>
+          op.test(eco.mods.length, count),
+        TierCondition(:final op, :final tier) => op.test(eco.tier, tier),
+        _ => false,
+      };
     }
     if (it == null || w == null) return false;
     return switch (c) {
@@ -159,7 +186,7 @@ Ocultar # Mágicos de nivel bajo
       UsableCondition(:final usable) =>
         (ctx.level >= w.level && w.meetsRequirements(ctx.attributes)) ==
             usable,
-      KindCondition() || MaterialCondition() => false,
+      KindCondition() || MaterialCondition() || TierCondition() => false,
     };
   }
 
@@ -317,7 +344,7 @@ Ocultar # Mágicos de nivel bajo
                 catalog.classes.keys.firstWhere((k) => _fold(k) == f),
             ]));
           }
-        case 'nivelobjeto' || 'nivelrelativo' || 'mods':
+        case 'nivelobjeto' || 'nivelrelativo' || 'mods' || 'tier':
           final ov = _opValue(a);
           final v = ov == null ? null : int.tryParse(ov.$2);
           if (v == null) {
@@ -326,6 +353,8 @@ Ocultar # Mágicos de nivel bajo
             conds.add(ItemLevelCondition(ov!.$1, v));
           } else if (key == 'nivelrelativo') {
             conds.add(RelativeLevelCondition(ov!.$1, v));
+          } else if (key == 'tier') {
+            conds.add(TierCondition(ov!.$1, v));
           } else {
             conds.add(ModCountCondition(ov!.$1, v));
           }
@@ -366,7 +395,7 @@ Ocultar # Mágicos de nivel bajo
                   .firstOrNull,
           ];
           if (a.isEmpty || ks.any((k) => k == null)) {
-            err('se esperaba Arma, Material o Pocion');
+            err('se esperaba Arma, Material, Pocion o Eco');
           } else {
             conds.add(KindCondition([for (final k in ks) k!]));
           }

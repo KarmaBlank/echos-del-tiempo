@@ -77,10 +77,11 @@ root registra para que el título sepa si hay red: `label` (`LAN`, `P2P`),
 `P2P por internet: falta configurar Firebase`) y `create()` (una
 `NetSession` nueva por sala).
 
-## Protocolo (versión 3)
+## Protocolo (versión 4)
 
-`kProtocolVersion` (`wire.dart`) = 3 desde la pausa de grupo (v0.2.1):
-un cliente de antes no entiende `pause` ni el estado pausado y recibe
+`kProtocolVersion` (`wire.dart`) = 4 desde el endgame v0.4.0 (Ecos,
+Atlas y Maestría; docs/specs/ecos_atlas.md § 7). Antes: 3 desde la
+pausa de grupo (v0.2.1). Un cliente de otra versión recibe
 `reject version`. Los ejemplos de abajo muestran `"v":1` por historia.
 
 Cada mensaje es **un texto JSON** con la clave `t` (como los objetos que
@@ -237,6 +238,24 @@ perfil solo cuando cambia (hash por jugador) y deltas del piso.
 Acciones nuevas (cliente → host): `craft` (`{op, w, src?, i?, sk?}`),
 `give` (`{to, tok, n?}`), `drop` (`{tok, n?}`), `pick` (`{id}`),
 `invMove` (`{a, b}`), `filter` (`{txt}`). Todas las valida el host.
+
+### Endgame (v0.4.0, protocolo 4)
+
+Docs/specs/ecos_atlas.md. Todo aditivo y opcional en el JSON:
+
+- Acciones: `eco` (`{u}`: abrir un Eco propio), `ecoCraft` (`{u, op}`;
+  `op` = `reroll` / `addMod` / `rarity` / `tier`), `devEco` (`{tier}`;
+  el host la rechaza salvo con `devTools`, solo `main_dev`).
+- Eventos: `ecoDone` (`{ids, tier, z, b}`: cada cliente cuyo id está
+  en `ids` anota las primeras veces en el Atlas de SU cuenta),
+  `mastery` (`{id, m}`), `ecoUnlocked` (`{id}`).
+- Snapshot: `eco` (el Eco que se vota / prepara / juega, con los mods
+  gratis ya agregados), `ecoBy` (id de quien lo abrió), `atlas` (nodos
+  del Atlas del anfitrión: valen para toda la sala; lo fija el host con
+  `SessionEngine.setAtlas`, nunca un cliente).
+- Drops (`LootDrop`): `{eco: {...}}` además de `{it}` y `{st, n}`.
+- Perfil (`hello` y snapshot): `ecos`, `eco` (portal activado), `ms`
+  (Maestría).
 
 ### Desconexiones
 

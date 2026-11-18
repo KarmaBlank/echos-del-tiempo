@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../core/settings/graphics.dart';
+import '../../../../game_engine/models/eco.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/item.dart';
 import '../../../../game_engine/models/loot.dart';
@@ -26,13 +27,18 @@ Color rarityColor(Rarity r) => filterColor(LootFilterRules.rarityColor(r));
 /// Color "de rareza" de un drop: el de su rareza, o el de los materiales.
 Color dropColor(LootDrop d) => d.item != null
     ? rarityColor(d.item!.rarity)
-    : filterColor(LootFilterRules.defaultStyle(d).textColor!);
+    : d.eco != null
+        ? rarityColor(d.eco!.rarity)
+        : filterColor(LootFilterRules.defaultStyle(d).textColor!);
 
 /// Nombre para mostrar de un drop: el del arma ([itemName], p. ej.
 /// `ItemRules.displayName`) o `N Material`.
-String lootDropName(String Function(ItemInstance) itemName, LootDrop d) {
+String lootDropName(String Function(ItemInstance) itemName, LootDrop d,
+    {String Function(EcoItem)? ecoName}) {
   final it = d.item;
   if (it != null) return itemName(it);
+  final eco = d.eco;
+  if (eco != null) return ecoName?.call(eco) ?? 'Eco T${eco.tier}';
   final k = d.stack!;
   return d.count > 1 ? '${d.count} ${k.label}' : k.label;
 }
@@ -184,7 +190,7 @@ class LootPainter {
     final x = g.x.roundToDouble(), y = g.y.roundToDouble();
     final col = dropColor(d);
     final alpha = l.hidden ? 0.45 : 1.0;
-    final rarity = d.item?.rarity;
+    final rarity = d.item?.rarity ?? d.eco?.rarity;
     // Brillo en el piso: más fuerte cuanto más rara.
     final k = 0.5 + 0.5 * math.sin(t / 260 + g.id);
     final strength = switch (rarity) {
@@ -206,6 +212,8 @@ class LootPainter {
     }
     if (d.item case final it?) {
       _weaponIcon(c, weaponTypeOf(it.baseId));
+    } else if (d.eco != null) {
+      _ecoIcon(c, t);
     } else {
       _stackIcon(c, d.stack!);
     }
@@ -291,6 +299,18 @@ class LootPainter {
     _rect(c, const Color(0xFFD4AF37), -5, -5, 2, 3);
   }
 
+  /// Eco en el piso: un anillo turquesa que late, con un punto adentro.
+  void _ecoIcon(Canvas c, double t) {
+    const ring = Color(0xFF5AE6D2);
+    const core = Color(0xFFE8FFFB);
+    final k = ((t / 200).floor() % 2).toDouble();
+    _rect(c, ring, -2, -7, 4, 1);
+    _rect(c, ring, -2, -1, 4, 1);
+    _rect(c, ring, -3, -6, 1, 5);
+    _rect(c, ring, 2, -6, 1, 5);
+    _rect(c, core, -1, -5 + k, 2, 2);
+  }
+
   void _stackIcon(Canvas c, StackKind k) {
     switch (k) {
       case StackKind.potion || StackKind.ether:
@@ -314,6 +334,12 @@ class LootPainter {
         _rect(c, const Color(0xFF0984E3), -2, -6, 4, 6);
         _rect(c, const Color(0xFF74B9FF), -1, -6, 2, 5);
         _rect(c, const Color(0xFFFFFFFF), -1, -5, 1, 1);
+      case StackKind.ancla:
+        _rect(c, const Color(0xFF9FB4FF), 0, -7, 1, 6);
+        _rect(c, const Color(0xFFDFE6E9), -2, -6, 5, 1);
+        _rect(c, const Color(0xFF9FB4FF), -2, -2, 1, 1);
+        _rect(c, const Color(0xFF9FB4FF), 2, -2, 1, 1);
+        _rect(c, const Color(0xFF9FB4FF), -1, -1, 3, 1);
       case StackKind.prisma:
         _fill.color = const Color(0xFFFDCB6E);
         c.drawPath(

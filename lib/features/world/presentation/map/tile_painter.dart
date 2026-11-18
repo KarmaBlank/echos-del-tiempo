@@ -193,6 +193,22 @@ class TilePainter {
           _rect(c, const Color(0xFF8A5A2B), px + 7, py - 6, 1, 10);
           _rect(c, const Color(0xFFFF7B29), px + 6, py - 8, 3, 3);
         }
+      case Tile.portal:
+        // Portal del Eco (ecos_atlas.md § 1): base de piedra y, en el
+        // tile del medio, un anillo turquesa que late.
+        floor();
+        _rect(c, const Color(0xFF2E3142), px, py + 4, ts, ts - 4);
+        _rect(c, const Color(0xFF555A70), px, py + 4, ts, 3);
+        if (tx % 3 == 1) {
+          final k = 0.5 + 0.5 * math.sin(t / 220);
+          final glow = Color.fromRGBO(90, 230, 210, 0.55 + 0.35 * k);
+          _rect(c, const Color(0xFF555A70), px - 6, py - 12, 2, 16);
+          _rect(c, const Color(0xFF555A70), px + ts + 4, py - 12, 2, 16);
+          _rect(c, const Color(0xFF555A70), px - 6, py - 14, ts + 12, 2);
+          _rect(c, glow, px - 3, py - 11, ts + 6, 14);
+          _rect(c, const Color(0xCC0B0E1A), px, py - 8, ts, 8);
+          _rect(c, glow, px + 6, py - 6 + (k * 2).round(), 4, 3);
+        }
       case Tile.counter:
         floor();
         _rect(c, const Color(0xFF6B4423), px, py + 3, ts, ts - 3);
@@ -274,6 +290,7 @@ class TilePainter {
         Tile.merchant,
         Tile.armory,
         Tile.counter,
+        Tile.portal,
         Tile.grass,
         Tile.tree,
         Tile.rock,

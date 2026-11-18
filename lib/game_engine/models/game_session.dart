@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import 'battle_state.dart';
+import 'eco.dart';
 import 'item.dart';
 import 'loot.dart';
 import 'player_profile.dart';
@@ -495,8 +496,12 @@ class GameSession {
     this.groundSeq = 0,
     this.pausedBy,
     this.pausedName,
+    this.eco,
+    this.ecoOwner,
+    List<String>? atlas,
   })  : players = players ?? LinkedHashMap(),
-        ground = ground ?? [];
+        ground = ground ?? [],
+        atlas = List.unmodifiable(atlas ?? const <String>[]);
 
   SessionMode mode;
 
@@ -533,6 +538,20 @@ class GameSession {
 
   /// Su nombre cuando pausó (para el cartel aunque ya no esté).
   String? pausedName;
+
+  /// El Eco que se vota, se prepara o se juega (docs/specs/ecos_atlas.md
+  /// § 4), con los modificadores gratis del Atlas ya agregados al empezar.
+  EcoItem? eco;
+
+  /// Quien abrió el Eco (se le consume al empezar).
+  String? ecoOwner;
+
+  /// Nodos del Atlas del anfitrión (§ 5.2): sus efectos valen para toda
+  /// la sala.
+  List<String> atlas;
+
+  /// Se vota, prepara o juega un Eco.
+  bool get inEco => eco != null;
 
   bool get paused => pausedBy != null;
 
@@ -579,5 +598,8 @@ class GameSession {
         groundSeq: groundSeq,
         pausedBy: pausedBy,
         pausedName: pausedName,
+        eco: eco,
+        ecoOwner: ecoOwner,
+        atlas: atlas,
       );
 }

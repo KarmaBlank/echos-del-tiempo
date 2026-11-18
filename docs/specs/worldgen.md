@@ -546,3 +546,15 @@ puede usar el de `fortaleza` (laberinto), `cavernas` (grieta) o `abismo`.
   `m1, z2, m2, z4, z5, z6, z7, z8, z9, z10`. Desbloqueo igual que § 6.4
   hasta la zona 10. `ZoneDef.gen` de 7–10: `grieta`, `cementerio`,
   `abismo`, `corazon`.
+
+## 10. Ecos (v0.4.0)
+
+Los Ecos reusan los generadores de zona (docs/specs/ecos_atlas.md § 4):
+`EcoRules.zoneDef` arma un `ZoneDef` sintético con el generador y el
+tema de la zona del Eco, sus pisos (1–3) y el nivel de monstruo del
+tier (`48 + 2 × tier`) en todos los pisos; `MapGenerator.zone` con la
+semilla del Eco. La misión (`EcoRules.missionDef`, id `eco`) usa los
+grupos del último piso de la misión de esa zona y el grupo del jefe de
+la zona del jefe del Eco. `MissionRun.zone` = la zona del Eco (música y
+tema), pero un Eco **no** desbloquea zonas. Vencer la zona 10 activa el
+Portal del Eco (§ 1 del spec).

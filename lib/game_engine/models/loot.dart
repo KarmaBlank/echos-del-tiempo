@@ -1,3 +1,4 @@
+import 'eco.dart';
 import 'item.dart';
 
 /// De dónde sale un drop (cambia la rareza, el nivel y los materiales).
@@ -10,7 +11,8 @@ enum StackKind {
   ether('eter', 'Poción de maná', 9),
   esquirla('mat:esquirla', 'Esquirla del Eco', CraftMaterial.maxStack),
   cristal('mat:cristal', 'Cristal de Era', CraftMaterial.maxStack),
-  prisma('mat:prisma', 'Prisma Roto', CraftMaterial.maxStack);
+  prisma('mat:prisma', 'Prisma Roto', CraftMaterial.maxStack),
+  ancla('mat:ancla', 'Ancla Temporal', CraftMaterial.maxStack);
 
   const StackKind(this.token, this.label, this.maxStack);
 
@@ -22,6 +24,7 @@ enum StackKind {
         StackKind.esquirla => CraftMaterial.esquirla,
         StackKind.cristal => CraftMaterial.cristal,
         StackKind.prisma => CraftMaterial.prisma,
+        StackKind.ancla => CraftMaterial.ancla,
         _ => null,
       };
 
@@ -29,6 +32,7 @@ enum StackKind {
         CraftMaterial.esquirla => StackKind.esquirla,
         CraftMaterial.cristal => StackKind.cristal,
         CraftMaterial.prisma => StackKind.prisma,
+        CraftMaterial.ancla => StackKind.ancla,
       };
 
   static StackKind? byToken(String token) {
@@ -39,28 +43,43 @@ enum StackKind {
   }
 }
 
-/// Un drop: un arma o una pila (pociones / materiales).
+/// Un drop: un arma, un Eco o una pila (pociones / materiales).
 class LootDrop {
   const LootDrop.item(ItemInstance this.item)
       : stack = null,
+        eco = null,
         count = 1;
-  const LootDrop.stack(StackKind this.stack, this.count) : item = null;
+  const LootDrop.stack(StackKind this.stack, this.count)
+      : item = null,
+        eco = null;
+  const LootDrop.eco(EcoItem this.eco)
+      : item = null,
+        stack = null,
+        count = 1;
 
   final ItemInstance? item;
   final StackKind? stack;
+
+  /// Eco (docs/specs/ecos_atlas.md § 2).
+  final EcoItem? eco;
   final int count;
 
   bool get isItem => item != null;
+  bool get isEco => eco != null;
 
   Map<String, Object?> toJson() => item != null
       ? {'it': item!.toJson()}
-      : {'st': stack!.token, 'n': count};
+      : eco != null
+          ? {'eco': eco!.toJson()}
+          : {'st': stack!.token, 'n': count};
 
   /// `null` si no tiene la forma esperada.
   static LootDrop? fromJson(Object? raw) {
     if (raw is! Map) return null;
     final it = ItemInstance.fromJson(raw['it']);
     if (it != null) return LootDrop.item(it);
+    final eco = EcoItem.fromJson(raw['eco']);
+    if (eco != null) return LootDrop.eco(eco);
     final st = raw['st'], n = raw['n'];
     final k = st is String ? StackKind.byToken(st) : null;
     if (k == null || n is! num || n <= 0) return null;

@@ -11,9 +11,12 @@ import '../../../core/settings/game_settings.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/session_event.dart';
+import '../../../game_engine/rules/eco_rules.dart';
 import '../../combat/presentation/battle_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/scene/battle_scene.dart';
+import '../../endgame/domain/endgame_text.dart';
+import '../../endgame/presentation/eco_portal_panel.dart';
 import '../../inventory/domain/item_text.dart';
 import '../../inventory/presentation/armory_panel.dart';
 import '../../inventory/presentation/item_widgets.dart';
@@ -263,9 +266,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           if (!_pauseOpen && (view.session.paused || _resumedBy != null))
             Positioned.fill(
               child: PauseBanner(
-                pausedBy: view.session.paused
-                    ? view.session.pausedName ?? '?'
-                    : null,
+                pausedBy:
+                    view.session.paused ? view.session.pausedName ?? '?' : null,
                 resumedBy: _resumedBy,
                 onResume: () => controller.pauseGroup(false),
               ),
@@ -353,24 +355,30 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               onBack: controller.backToLobby,
               zoneProgress: _zoneProgress(s, r, controller),
               unlocked: switch (r.unlocked[view.localId]) {
-                final z? => zoneUnlockedText(
-                    z, controller.engine.catalog.zone(z)?.name),
+                final z? =>
+                  zoneUnlockedText(z, controller.engine.catalog.zone(z)?.name),
                 null => null,
               },
               othersUnlocked: _othersUnlocked(s, r, view.localId),
               finalVictory: ResultsPanel.isFinalVictory(r),
+              ecoAtlas: r.missionId == EcoRules.missionId && r.success
+                  ? ecoAtlasText(view.atlasGain)
+                  : null,
               loot: [
                 for (final d in view.missionLoot)
                   if (view.me case final me?)
                     ResultDrop(
                       dropLabelText(controller.engine.progression, d),
                       controller.engine.lootVerdict(me.profile, d),
-                      tooltip: d.item == null
-                          ? stackTooltipMarkup(d.stack!, d.count)
-                          : itemTooltipMarkup(
-                              controller.engine.progression, d.item!,
-                              level: me.profile.level,
-                              attributes: me.profile.attributes),
+                      tooltip: d.eco != null
+                          ? ecoTooltipMarkup(
+                              controller.engine.progression, d.eco!)
+                          : d.item == null
+                              ? stackTooltipMarkup(d.stack!, d.count)
+                              : itemTooltipMarkup(
+                                  controller.engine.progression, d.item!,
+                                  level: me.profile.level,
+                                  attributes: me.profile.attributes),
                     ),
               ],
             ),
@@ -411,6 +419,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     if (z == null) return null;
     final floors = s.mission?.floors ?? z.floors;
     final reached = r.success ? floors : (s.mission?.floor ?? 0) + 1;
+    final eco = s.eco;
+    if (r.missionId == EcoRules.missionId && eco != null) {
+      return 'Eco T${eco.tier} · ${z.name} · '
+          '${controller.engine.ecoRules.bossName(eco)} · Piso $reached/$floors';
+    }
     return 'Zona ${z.index} · ${z.name} · Piso $reached/$floors';
   }
 
@@ -422,7 +435,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         if (e.key != localId)
           '${s.players[e.key]?.name ?? e.key}: Zona ${e.value}',
     ];
-    return others.isEmpty ? null : 'También desbloquearon · ${others.join(' · ')}';
+    return others.isEmpty
+        ? null
+        : 'También desbloquearon · ${others.join(' · ')}';
   }
 
   Widget _panel(
@@ -448,6 +463,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         );
       case WorldPanel.armory:
         return ArmoryPanel(view: view, controller: controller);
+      case WorldPanel.ecoPortal:
+        return EcoPortalPanel(view: view, controller: controller);
       case WorldPanel.character:
         return CharacterPanel(
             key: const ValueKey('panel-character'),
@@ -461,7 +478,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             initialTab: CharacterTab.inventory);
       case WorldPanel.prep:
         final prep = s.prep;
-        final mission = prep == null ? null : catalog.mission(prep.missionId);
+        final mission = prep == null
+            ? null
+            : controller.engine.missionOf(s, prep.missionId);
         if (prep == null || mission == null) return const SizedBox.shrink();
         return PrepPanel(
           mission: mission,
@@ -479,7 +498,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           credits: me.profile.credits,
           potions: me.profile.potions,
           ethers: me.profile.ethers,
-          tier: missionTier(catalog, mission),
+          tier: s.eco?.tier ?? missionTier(catalog, mission),
           bossName: missionBossName(catalog, mission),
           weaponName: me.profile.equippedUid == null
               ? '-'

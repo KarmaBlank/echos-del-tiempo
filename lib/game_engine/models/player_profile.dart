@@ -1,5 +1,6 @@
 import '../data/passive_tree_catalog.dart';
 import 'attributes.dart';
+import 'eco.dart';
 import 'item.dart';
 import 'passive_tree.dart';
 import 'upgrade_stat.dart';
@@ -39,6 +40,9 @@ class PlayerProfile {
     List<String> tree = const [],
     int treeRefunded = 0,
     int unlockedZone = 1,
+    List<EcoItem> ecos = const [],
+    bool ecosUnlocked = false,
+    int mastery = 0,
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -63,10 +67,16 @@ class PlayerProfile {
       tree: List.unmodifiable(tree),
       treeRefunded: treeRefunded,
       unlockedZone: unlockedZone.clamp(1, maxZone),
+      ecos: List.unmodifiable(ecos),
+      ecosUnlocked: ecosUnlocked,
+      mastery: mastery.clamp(0, maxMastery),
     );
   }
 
   const PlayerProfile._({
+    required this.ecos,
+    required this.ecosUnlocked,
+    required this.mastery,
     required this.name,
     required this.classId,
     required this.level,
@@ -89,6 +99,28 @@ class PlayerProfile {
 
   /// Zonas del mapa del mundo (docs/specs/worldgen.md § 6.4).
   static const maxZone = 10;
+
+  /// Tope de la Maestría (docs/specs/ecos_atlas.md § 6).
+  static const maxMastery = 20;
+
+  /// Ecos en el inventario (ocupan casilla; JSON `ecos`).
+  final List<EcoItem> ecos;
+
+  /// Portal del Eco activado (venció al Devorador; JSON `eco`).
+  final bool ecosUnlocked;
+
+  /// Nivel de Maestría 0–20 (JSON `ms`): con nivel 50 la XP la llena.
+  final int mastery;
+
+  /// Nivel para los puntos del árbol: cada maestría da 1 punto más.
+  int get treeLevel => level + mastery;
+
+  EcoItem? ecoByUid(String uid) {
+    for (final e in ecos) {
+      if (e.uid == uid) return e;
+    }
+    return null;
+  }
 
   /// Zona más alta que puede proponer (1..10, JSON `zu`). Sube al vencer
   /// al jefe de la zona anterior.
@@ -233,6 +265,9 @@ class PlayerProfile {
     int? itemSeq,
     List<String>? tree,
     int? unlockedZone,
+    List<EcoItem>? ecos,
+    bool? ecosUnlocked,
+    int? mastery,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -269,6 +304,9 @@ class PlayerProfile {
       tree: tree == null ? this.tree : List.unmodifiable(tree),
       treeRefunded: treeRefunded,
       unlockedZone: (unlockedZone ?? this.unlockedZone).clamp(1, maxZone),
+      ecos: ecos == null ? this.ecos : List.unmodifiable(ecos),
+      ecosUnlocked: ecosUnlocked ?? this.ecosUnlocked,
+      mastery: (mastery ?? this.mastery).clamp(0, maxMastery),
     );
   }
 
@@ -381,6 +419,10 @@ class PlayerProfile {
         'tv': treeVersion,
         if (treeRefunded > 0) 'tvRef': treeRefunded,
         'zu': unlockedZone,
+        // Endgame v0.4 (ecos_atlas.md): opcionales.
+        if (ecos.isNotEmpty) 'ecos': [for (final e in ecos) e.toJson()],
+        if (ecosUnlocked) 'eco': true,
+        if (mastery > 0) 'ms': mastery,
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -469,6 +511,14 @@ class PlayerProfile {
       unlockedZone: json['zu'] is num
           ? _int(json['zu'], 1)
           : migratedZone(_int(json['lvl'], 1)),
+      ecos: json['ecos'] is List
+          ? [
+              for (final r in json['ecos'] as List)
+                if (EcoItem.fromJson(r) case final e?) e
+            ]
+          : const [],
+      ecosUnlocked: json['eco'] == true,
+      mastery: _int(json['ms']),
     );
   }
 

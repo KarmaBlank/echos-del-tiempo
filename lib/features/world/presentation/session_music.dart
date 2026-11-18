@@ -128,6 +128,7 @@ class SessionMusic {
   int? _jingledBattle;
   int? _resultId;
   int? _level;
+  int? _mastery;
   int _battleSeq = 0;
 
   /// Desenlace del último jingle de batalla todavía "vigente" (se olvida
@@ -203,6 +204,12 @@ class SessionMusic {
       }
       _lastOutcome = r.success;
       if (r.unlocked[localId] != null) music.playJingle(Music.zoneUnlocked);
+      // Eco completado con puntos nuevos de Atlas (ecos_atlas.md § 5.1).
+      if (r.success &&
+          r.missionId == 'eco' &&
+          (view.atlasGain?.points ?? 0) > 0) {
+        music.playJingle(Music.zoneUnlocked);
+      }
     }
     final level = view.me?.profile.level;
     final last = _level;
@@ -210,5 +217,12 @@ class SessionMusic {
       music.playJingle(Music.levelUp);
     }
     if (level != null) _level = level;
+    // Maestría (§ 6): el mismo jingle que subir de nivel.
+    final mastery = view.me?.profile.mastery;
+    final lastM = _mastery;
+    if (mastery != null && lastM != null && mastery > lastM) {
+      music.playJingle(Music.levelUp);
+    }
+    if (mastery != null) _mastery = mastery;
   }
 }
