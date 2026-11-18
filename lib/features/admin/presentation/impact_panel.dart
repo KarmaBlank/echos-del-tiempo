@@ -167,6 +167,8 @@ class _ImpactPanelState extends State<ImpactPanel> {
         );
       case BalanceKind.affix:
       case BalanceKind.dual:
+      case BalanceKind.reaction:
+      case BalanceKind.elementStatus:
         return const _Plan();
     }
   }

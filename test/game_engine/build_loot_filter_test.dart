@@ -212,7 +212,7 @@ Mostrar # algo
 
   group('red y host', () {
     test('acción wants: ida y vuelta; protocolo 7 (v0.6)', () {
-      expect(kProtocolVersion, 7);
+      expect(kProtocolVersion, greaterThanOrEqualTo(7)); // 8 desde v0.7
       final w = BuildWants.fromPlan(const BuildPlan(
           weaponTypes: ['hacha'], mods: [ModGoal('feroz', 2)], skills: ['hendir']));
       final j = ActionJson.toJson(SetBuildWantsAction(w));

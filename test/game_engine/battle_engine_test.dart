@@ -301,22 +301,26 @@ void main() {
       expect(step.state.log, 'Limo sufre Quemadura 4 = 4 de daño');
     });
 
-    test('Congelación ×5: pierde el turno y se descongela', () {
+    // Hielo v0.7 (elemental_reactions.md § 7): cambio intencional. Con 5
+    // pierde el turno y queda Quebradizo (no se descongela en el acto).
+    test('Congelación ×5: pierde el turno y queda Quebradizo', () {
       final engine = _engine([0.0]);
       final start = engine.start(party: [_member('p1', 'guerrero')], enemyTypes: ['slime']);
       start.state.enemies.first.statuses[StatusKind.freeze] = 5;
       final step = engine.nextTurn(start.state);
       final slime = step.state.enemies.first;
       expect(step.state.currentId, isNull);
-      expect(slime.stacks(StatusKind.freeze), 0);
+      expect(slime.stacks(StatusKind.freeze), 5);
+      expect(slime.brittle, isTrue);
       expect(step.events.whereType<TurnSkippedEvent>().single.cause, StatusKind.freeze);
+      expect(step.events.whereType<IceEvent>().single.phase, IcePhase.brittle);
     });
 
-    test('Congelación baja la velocidad 12% por stack', () {
+    test('Congelación baja la velocidad 6% por stack', () {
       final engine = _engine();
       final s = engine.start(party: [_member('p1', 'guerrero')], enemyTypes: ['slime']).state;
       final slime = s.enemies.first..statuses[StatusKind.freeze] = 2;
-      expect(engine.interval(slime), closeTo(100 / (7 * 0.76), 1e-9));
+      expect(engine.interval(slime), closeTo(100 / (7 * 0.88), 1e-9));
     });
   });
 

@@ -10,13 +10,16 @@ import '../../game_engine/serialization/event_json.dart';
 import '../../game_engine/serialization/json_read.dart';
 import '../../game_engine/serialization/session_json.dart';
 
-/// Versión del protocolo (`v` del `hello` / `welcome`). 7 desde v0.6.0
+/// Versión del protocolo (`v` del `hello` / `welcome`). 8 desde v0.7.0
+/// (elementos y reacciones: estados `wet` / `charged`, eventos de
+/// batalla `react` e `ice`, combatiente `fam` `brit` `frzR`;
+/// docs/specs/elemental_reactions.md). 7 desde v0.6.0
 /// (exploración: acción `poi`, eventos `poi` y `quest`, campos de misión
 /// `pu` `ps` `qd` `qf` `bl` `wind` y de cofre `tr` `gd` `sc`;
 /// docs/specs/worldgen.md § 11.6). 6 desde v0.5.1:
 /// acción `wants` (resumen del plan de build para la condición `Build`
 /// del filtro de loot; docs/specs/netcode.md § "Build y filtro").
-const kProtocolVersion = 7;
+const kProtocolVersion = 8;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {

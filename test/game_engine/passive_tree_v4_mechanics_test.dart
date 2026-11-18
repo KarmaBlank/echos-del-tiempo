@@ -126,20 +126,19 @@ double _gauge(Set<String> mech, {Map<StatusKind, int>? st, bool mark = false}) {
 }
 
 void main() {
-  test('todas las mecánicas nuevas del árbol v4 existen y no son de v3', () {
+  // 13 de los 44 notables de la v4 se reemplazaron por notables de
+  // reacción en la v5 (passive_tree_v4.md § 8; reaction_notables_test).
+  test('todas las mecánicas nuevas del árbol v4 que siguen existen', () {
     const v4 = [
       'rompeolas', 'corazaEspinas', 'sangriaVital', 'frenesiSangriento', //
       'mazazo', 'brecha', 'arenga', 'estruendo', 'estocadaPrecisa', 'desarme',
-      'canalizar', 'pulsoArcano', 'ascuasVivas', 'pira', 'arenaTiempo',
-      'anclaTemporal', 'frioPenetrante', 'hieloQuebradizo', 'chispaPrismatica',
-      'descomposicion', 'vientoCortante', 'huracan', 'lluviaAcida', 'granizo',
-      'tiroALaCabeza', 'grietaExpuesta', 'trampaCaza', 'caceria',
-      'toxinaParalizante', 'nubeToxica', 'manoLuminosa', 'estallidoSolar',
-      'sentencia', 'veredicto', 'comunion', 'milagro', 'represaliaSagrada',
-      'resiliencia', 'puas', 'escudoSolidario', 'estandarteAlzado',
-      'resonanciaGrupal', 'angelGuardian', 'muroEscudos',
+      'pulsoArcano', 'arenaTiempo', 'frioPenetrante', 'vientoCortante',
+      'huracan', 'lluviaAcida', 'tiroALaCabeza', 'grietaExpuesta',
+      'trampaCaza', 'toxinaParalizante', 'manoLuminosa', 'sentencia',
+      'veredicto', 'comunion', 'milagro', 'represaliaSagrada', 'resiliencia',
+      'puas', 'escudoSolidario', 'angelGuardian', 'muroEscudos',
     ];
-    expect(v4.toSet(), hasLength(44));
+    expect(v4.toSet(), hasLength(31));
     final inTree = {
       for (final n in kPassiveTree.nodes.values)
         if (n.mechanicId != null) n.mechanicId!,
@@ -322,26 +321,6 @@ void main() {
   });
 
   group('Maga', () {
-    test('Canalizar: cada habilidad mágica +4 ULT', () {
-      final a = _cmd(
-          _engine(),
-          _battle([
-            _hero(skills: ['chispa'])
-          ], [
-            _foe('e0')
-          ]),
-          _sk('chispa'));
-      final b = _cmd(
-          _engine(),
-          _battle([
-            _hero(mech: {'canalizar'}, skills: ['chispa'])
-          ], [
-            _foe('e0')
-          ]),
-          _sk('chispa'));
-      expect(_p(b).ult - _p(a).ult, closeTo(4, 1e-9));
-    });
-
     test('Pulso Arcano: después de la ULT, turno 50% antes', () {
       final a = _cmd(
           _engine(), _battle([_hero(ult: 100)], [_foe('e0', hp: 999)]), _ult);
@@ -354,37 +333,6 @@ void main() {
           ]),
           _ult);
       expect(_p(b).nextTurn, closeTo(_p(a).nextTurn * 0.5, 1e-9));
-    });
-
-    test('Ascuas Vivas: +15% crítico contra quemados', () {
-      bool crit(Map<StatusKind, int>? st) => _cmd(
-              _engine([0.1]),
-              _battle([
-                _hero(mech: {'ascuasVivas'})
-              ], [
-                _foe('e0', st: st)
-              ]),
-              _atk)
-          .events
-          .whereType<DamageEvent>()
-          .first
-          .critical;
-      expect(crit({StatusKind.burn: 1}), isTrue);
-      expect(crit(null), isFalse);
-    });
-
-    test('Pira: la Quemadura de un enemigo que muere pasa al de más vida', () {
-      final st = _cmd(
-          _engine(),
-          _battle([
-            _hero(mech: {'pira'})
-          ], [
-            _foe('e0', hp: 5, st: {StatusKind.burn: 3}),
-            _foe('e1'),
-          ]),
-          _atk);
-      expect(_e(st).alive, isFalse);
-      expect(_e(st, 1).stacks(StatusKind.burn), 3);
     });
 
     test('Arena del Tiempo: 25% de retrasar 15% a un solo objetivo', () {
@@ -408,19 +356,6 @@ void main() {
       expect(_e(no).nextTurn, 50);
     });
 
-    test('Ancla Temporal: retrasar deja al enemigo −20% velocidad', () {
-      final st = _cmd(
-          _engine(),
-          _battle([
-            _hero(mech: {'anclaTemporal'}, skills: ['embestida'])
-          ], [
-            _foe('e0')
-          ]),
-          _sk('embestida'));
-      final fx = _e(st).effectFrom('anclaTemporal', BuffStat.speed)!;
-      expect((fx.value, fx.turns), (-0.20, 2));
-    });
-
     test('Frío Penetrante: 50% de +1 Congelación al congelar', () {
       Combatant mage() => _hero(mech: {'frioPenetrante'}, skills: ['lanzaH']);
       final yes = _cmd(
@@ -431,39 +366,6 @@ void main() {
       expect(_e(no).stacks(StatusKind.freeze), 2);
     });
 
-    test('Hielo Quebradizo: +50% de quiebre contra congelados', () {
-      const frz = {StatusKind.freeze: 1};
-      expect(_gauge({'hieloQuebradizo'}, st: frz),
-          closeTo(_gauge({}, st: frz) * 1.5, 0.11));
-      expect(_gauge({'hieloQuebradizo'}), _gauge({}));
-    });
-
-    test('Chispa Prismática: la mágica a uno suma 1 Congelación', () {
-      final st = _cmd(
-          _engine(),
-          _battle([
-            _hero(mech: {'chispaPrismatica'}, skills: ['chispa'])
-          ], [
-            _foe('e0')
-          ]),
-          _sk('chispa'));
-      expect(_e(st).stacks(StatusKind.burn), 1);
-      expect(_e(st).stacks(StatusKind.freeze), 1);
-    });
-
-    test('Descomposición: los elementos del muerto se esparcen a la mitad', () {
-      final st = _cmd(
-          _engine(),
-          _battle([
-            _hero(mech: {'descomposicion'})
-          ], [
-            _foe('e0', hp: 5, st: {StatusKind.burn: 2, StatusKind.poison: 3}),
-            _foe('e1'),
-          ]),
-          _atk);
-      expect(_e(st, 1).stacks(StatusKind.burn), 1);
-      expect(_e(st, 1).stacks(StatusKind.poison), 2);
-    });
   });
 
   group('Tirador', () {
@@ -505,22 +407,21 @@ void main() {
       expect(_proc(no, 'huracan'), isFalse);
     });
 
-    test('Lluvia Ácida y Granizo: a todos, +1 Veneno y retraso 10%', () {
+    test('Lluvia Ácida: habilidades a todos, +1 Veneno', () {
       final st = _cmd(
           _engine(),
           _battle([
-            archer({'lluviaAcida', 'granizo'})
+            archer({'lluviaAcida'})
           ], foes()),
           _sk('rafaga'));
       for (final f in st.state.enemies) {
         expect(f.stacks(StatusKind.poison), 1, reason: f.id);
-        expect(f.nextTurn, closeTo(50 + 20 * 0.10, 1e-9), reason: f.id);
       }
-      // A un solo objetivo no aplican.
+      // A un solo objetivo no aplica.
       final one = _cmd(
           _engine(),
           _battle([
-            archer({'lluviaAcida', 'granizo'})
+            archer({'lluviaAcida'})
           ], foes()),
           _atk);
       expect(_e(one).stacks(StatusKind.poison), 0);
@@ -544,12 +445,12 @@ void main() {
       expect(_gauge({'grietaExpuesta'}), _gauge({}));
     });
 
-    test('Trampa de Caza y Cacería: trampa al 30%; al saltar, marca', () {
+    test('Trampa de Caza: trampa al 30%; salta al empezar su turno', () {
       final e = _engine([0.99, 0.1]);
       final st = _cmd(
           e,
           _battle([
-            _hero(mech: {'trampaCaza', 'caceria'})
+            _hero(mech: {'trampaCaza'})
           ], [
             _foe('e0', nextTurn: 1)
           ]),
@@ -560,7 +461,6 @@ void main() {
       expect(next.state.currentId, 'e0');
       final e0 = next.state.enemies.first;
       expect(e0.hp, 80 - 12);
-      expect(e0.effectFrom('caceria', BuffStat.damageTaken)!.value, 0.20);
     });
 
     test('Toxina Paralizante: envenenar → −15% velocidad', () {
@@ -577,28 +477,6 @@ void main() {
       expect((fx.value, fx.turns), (-0.15, 2));
     });
 
-    test('Nube Tóxica: con 4+ Veneno el golpe salpica 40%', () {
-      final st = _cmd(
-          _engine(),
-          _battle([
-            _hero(mech: {'nubeToxica'})
-          ], [
-            _foe('e0', st: {StatusKind.poison: 4}),
-            _foe('e1'),
-          ]),
-          _atk);
-      expect(_e(st, 1).hp, 100 - 8);
-      final few = _cmd(
-          _engine(),
-          _battle([
-            _hero(mech: {'nubeToxica'})
-          ], [
-            _foe('e0', st: {StatusKind.poison: 3}),
-            _foe('e1'),
-          ]),
-          _atk);
-      expect(_e(few, 1).hp, 100);
-    });
   });
 
   group('Paladín', () {
@@ -612,27 +490,6 @@ void main() {
           ]),
           _atk);
       expect(_p(st).hp, 53);
-    });
-
-    test('Estallido Solar: con 3+ Sagrado, daño sagrado MAG × 0.5', () {
-      final st = _cmd(
-          _engine(),
-          _battle([
-            _hero(mech: {'estallidoSolar'})
-          ], [
-            _foe('e0', st: {StatusKind.holy: 3})
-          ]),
-          _atk);
-      expect(_e(st).hp, 100 - 20 - 10);
-      final two = _cmd(
-          _engine(),
-          _battle([
-            _hero(mech: {'estallidoSolar'})
-          ], [
-            _foe('e0', st: {StatusKind.holy: 2})
-          ]),
-          _atk);
-      expect(_e(two).hp, 80);
     });
 
     test('Sentencia: +30% a aturdidos', () {
@@ -741,32 +598,6 @@ void main() {
   });
 
   group('Clusters de grupo: la punta', () {
-    test('Estandarte Alzado: tu ULT adelanta al grupo 25%', () {
-      final st = _cmd(
-          _engine(),
-          _battle([
-            _hero(mech: {'estandarteAlzado'}, ult: 100),
-            _hero(id: 'p2', nextTurn: 50),
-          ], [
-            _foe('e0', hp: 999)
-          ]),
-          _ult);
-      expect(_p(st, 'p2').nextTurn, closeTo(47.5, 1e-9));
-    });
-
-    test('Resonancia: al quebrar, +6 ULT para todo el grupo', () {
-      List<Combatant> party(Set<String> mech) =>
-          [_hero(mech: mech), _hero(id: 'p2', nextTurn: 50)];
-      final a = _cmd(
-          _engine(), _battle(party({}), [_foe('e0', breakBase: 10)]), _atk);
-      final b = _cmd(
-          _engine(),
-          _battle(party({'resonanciaGrupal'}), [_foe('e0', breakBase: 10)]),
-          _atk);
-      expect(_p(b).ult - _p(a).ult, closeTo(6, 1e-9));
-      expect(_p(b, 'p2').ult, 6);
-    });
-
     test('Ángel Guardián: el primer aliado que caería queda en 1 HP', () {
       final st = _enemyHits(
           _engine([0.0]),

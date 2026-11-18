@@ -11,6 +11,7 @@ import 'battle_layout.dart';
 import 'fx_style.dart';
 import 'particles.dart';
 import 'proc_fx.dart';
+import 'reaction_fx.dart';
 import 'ult_cinematic.dart';
 import 'ult_fx.dart';
 
@@ -367,6 +368,17 @@ class BattleSceneController extends ChangeNotifier {
         case FxKind.lavaBurst:
           particles.burstWith(kLavaFx, f.x, f.y - 2, 1.2);
           particles.addShake(3);
+        // Reacciones elementales: chispas / salpicadura del elemento.
+        case FxKind.reaction:
+          switch (f.reaction?.part) {
+            case ReactionPart.ring:
+              particles.burst(f.x, f.y, f.el, f.big ? 1.8 : 0.8);
+              if (f.big) particles.addShake(4);
+            case ReactionPart.zap:
+              particles.burst(f.tx, f.ty, f.el, 0.6);
+            case ReactionPart.banner || null:
+              break;
+          }
         case FxKind.transform:
           particles.burst(f.x, f.y - 20, FxElement.burn, 3);
           particles.burst(f.x, f.y - 20, FxElement.arcane, 2);

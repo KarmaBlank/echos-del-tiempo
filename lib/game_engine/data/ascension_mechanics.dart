@@ -226,49 +226,49 @@ const List<PassiveMechanic> _list = [
     description: 'Los enemigos que retrasás reciben +20% de daño de todos (2 '
         'turnos).',
   ),
-  // ---------------- Maga · Elementalista ----------------
+  // ---------------- Maga · Elementalista (v0.7: reacciones) ----------------
   PassiveMechanic(
     id: 'elementalista_r',
-    name: 'Reacción Elemental',
-    trigger: ProcTrigger.vsElements,
-    minStacks: 2,
-    effects: [ProcEffect(_fx, value: 0.30, stat: BuffStat.damage)],
-    description: '+30% de daño contra enemigos con 2 o más estados '
-        'elementales distintos.',
+    name: 'Catalizadora',
+    trigger: ProcTrigger.always,
+    effects: [ProcEffect(ProcEffectKind.reactionBonus, value: 0.25)],
+    description: 'Tus reacciones pegan +25% (el golpe que detona y, con él, '
+        'la explosión y el salto).',
   ),
   PassiveMechanic(
     id: 'elementalista_a1',
-    name: 'Contagio Elemental',
+    name: 'Conductora',
     trigger: ProcTrigger.onStatusApplied,
-    effects: [ProcEffect(ProcEffectKind.addElement, value: 1)],
-    description: 'Al aplicar Quemadura, Congelación o Veneno, el objetivo '
-        'recibe además 1 stack del primero que no tiene.',
+    status: StatusKind.wet,
+    effects: [
+      ProcEffect(ProcEffectKind.inflict, value: 1, status: StatusKind.charged)
+    ],
+    description: 'Al mojar a un enemigo, también queda Cargado (listo para '
+        'Electrocución y Cortocircuito).',
   ),
   PassiveMechanic(
     id: 'elementalista_a3',
-    name: 'Detonación',
-    trigger: ProcTrigger.onEnemyDeath,
-    effects: [ProcEffect(ProcEffectKind.spreadAll, value: 0.5)],
-    description: 'Al morir un enemigo con estados elementales, la mitad de '
-        'cada uno pasa a cada enemigo vivo.',
+    name: 'Detonación en Cadena',
+    trigger: ProcTrigger.onReaction,
+    effects: [ProcEffect(ProcEffectKind.burst, value: 0.4)],
+    description: 'Al detonar una reacción: 40% del golpe a cada otro '
+        'enemigo.',
   ),
   PassiveMechanic(
     id: 'elementalista_b1',
-    name: 'Estallido Glacial',
-    trigger: ProcTrigger.onHit,
-    status: StatusKind.freeze,
-    minStacks: 3,
-    effects: [ProcEffect(ProcEffectKind.explode, value: 0.6)],
-    description: 'Golpear a un enemigo con 3+ Congelación lo hace estallar: '
-        '60% del golpe a cada otro enemigo.',
+    name: 'Chispa Compartida',
+    trigger: ProcTrigger.onPrimedReaction,
+    effects: [ProcEffect(ProcEffectKind.ultCharge, value: 12)],
+    description: 'Cuando una reacción (tuya o de un aliado) consume un estado '
+        'que preparaste: +12 de carga de ULT.',
   ),
   PassiveMechanic(
     id: 'elementalista_b2',
-    name: 'Fiebre',
+    name: 'Estática',
     trigger: ProcTrigger.vsStatus,
-    status: StatusKind.burn,
+    status: StatusKind.charged,
     effects: [ProcEffect(_fx, value: 0.25, stat: BuffStat.crit)],
-    description: '+25% de crítico contra enemigos con Quemadura.',
+    description: '+25% de crítico contra enemigos Cargados.',
   ),
   PassiveMechanic(
     id: 'elementalista_b3',
@@ -283,14 +283,11 @@ const List<PassiveMechanic> _list = [
   PassiveMechanic(
     id: 'elementalista_k',
     name: 'Tormenta Perfecta',
-    trigger: ProcTrigger.vsElements,
-    minStacks: 3,
-    effects: [
-      ProcEffect(_fx, value: 0.5, stat: BuffStat.damage),
-      ProcEffect(_fx, value: 0.25, stat: BuffStat.crit),
-    ],
-    description: 'Contra enemigos con los 3 estados: +50% de daño y +25% de '
-        'crítico.',
+    trigger: ProcTrigger.onReaction,
+    chance: 0.5,
+    effects: [ProcEffect(ProcEffectKind.extraTurn)],
+    description: 'Al detonar una reacción: 50% de turno extra (un turno extra '
+        'no da otro).',
   ),
   // ---------------- Tirador · Francotirador ----------------
   PassiveMechanic(

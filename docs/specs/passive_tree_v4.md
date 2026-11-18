@@ -12,7 +12,7 @@ sigue igual (anillo, inicios, puentes, reglas de puntos, exclusión
 Creyente ↔ Inherente, motor de mecánicas, UI del visor). Reiniciar sigue
 siendo gratis.
 
-Implementación: `lib/game_engine/data/passive_tree_catalog.dart`
+Implementación (v5 desde v0.7, § 8): `lib/game_engine/data/passive_tree_catalog.dart`
 (`kPassiveTreeVersion = 4`, `kTreeIdsStableSinceV3`),
 `lib/game_engine/data/passive_mechanics.dart` (`_v4`),
 `lib/game_engine/rules/passive_tree_migration.dart`. Aviso:
@@ -81,7 +81,10 @@ DEF +2; mixtos +3%/+3% (Facetas, Destello) y Rastro +1.5% crít. +0.15
 vel. Cada notable trae además un stat chico (+3% / +1.5% / +0.15 / +1).
 
 Notables nuevos (`_n1` / `_nc`), todos con disparadores y efectos que ya
-existían (passive_tree_v2.md § 5, ascension.md § 3.1, v3 § 9):
+existían (passive_tree_v2.md § 5, ascension.md § 3.1, v3 § 9). **Desde
+v0.7 (árbol v5)** 15 de ellos (y 2 de puente) se reemplazaron por
+notables de reacción y de familia: la tabla de abajo es la de la v4; los
+reemplazos están en § 8.1.
 
 | Cluster | `_n1` (id) | Efecto | `_nc` (id) | Efecto |
 |---|---|---|---|---|
@@ -177,3 +180,91 @@ viajan en el perfil y el host migra igual).
   No depende solo del color: el `+N` y la marca `▲` se leen igual con
   cualquier paleta. Desactivar el aviso desde ajustes queda para más
   adelante (no hizo falta un ajuste nuevo).
+
+## 8. Notables de reacción (v0.7, árbol v5)
+
+Pedido del dueño (elemental_reactions.md § 4): notables que cambian la
+forma de jugar con las reacciones, en los clusters de la Maga, los de
+veneno / área del Tirador, los puentes Runas y Hoja Arcana y los
+clusters de grupo (preparar y detonar en co-op), más 2 de familia.
+
+**No crece el árbol**: se reemplazan 15 notables (mismo nodo, misma
+posición, mismo stat chico; cambian nombre y mecánica). Los ids de
+nodo no cambian, pero su efecto sí, así que `kPassiveTreeVersion` pasa
+a **5** y esos 15 nodos se devuelven gratis al migrar (§ 8.3). Totales
+sin cambios: 308 nodos, 104 notables.
+
+### 8.1 Los 15 notables
+
+| Nodo | Antes | Ahora (id) | Efecto |
+|---|---|---|---|
+| `arcano_n1` | Canalizar | Salto Voltaico (`saltoVoltaico`) | Tus Cortocircuitos saltan a 1 enemigo más (mismo daño del salto). |
+| `brasa_n1` | Ascuas Vivas | Fundición (`fundicion`) | Al detonar Derretir: recuperás el MP de la habilidad que lo detonó. |
+| `brasa_nc` | Pira | Mecha Corta (`mechaCorta`) | Tu Explosión tóxica deja Quemadura = la mitad de los Venenos consumidos (redondeo arriba). |
+| `escarcha_nc` | Hielo Quebradizo | Cristalizar (`cristalizar`) | Tu Congelación súbita deja Quebradizos a los demás enemigos con Congelación (hasta su próximo turno). |
+| `prisma_n1` | Chispa Prismática | Rocío Arcano (`rocioArcano`) | Mojar a un enemigo: +10 de carga de ULT (1 vez por acción). |
+| `prisma_nc` | Descomposición | Alto Voltaje (`altoVoltaje`) | Tus Electrocuciones aturden 2 turnos (no a jefes). |
+| `cronos_nc` | Ancla Temporal | Estasis (`estasis`) | Al detonar una reacción: el objetivo se retrasa 25%. |
+| `toxina_nc` | Nube Tóxica | Reguero de Pólvora (`reguero`) | Cuando alguien (vos incluido) detona tu Veneno con fuego: +20 de carga de ULT. |
+| `lluvia_nc` | Granizo | Chaparrón (`chaparron`) | Tus habilidades a todos (no ULT) dejan Mojado en cada golpeado. |
+| `runas_nr` | Disparo Rúnico | Pulso Rúnico (`pulsoRunico`) | Al detonar una reacción: tu próximo turno llega 25% antes. |
+| `hojaArcana_nl` | Hechizo Afilado | Hoja de Marea (`hojaMarea`) | Tus golpes a un solo objetivo: 30% de dejarlo Mojado. |
+| `estandarte_nt` | Estandarte Alzado | Combo de Equipo (`comboEquipo`) | Un aliado detona una reacción sobre un estado que preparaste vos: ambos +20% de daño (2 turnos). Si la detonás vos, solo vos. |
+| `sintonia_nt` | Resonancia | Sincronía Elemental (`sincroniaElemental`) | Vos o un aliado detonan una reacción: +6 de carga de ULT a todo el grupo (1 vez por acción). |
+| `luz_nc` | Estallido Solar | Luz Purificadora (`luzPurificadora`) | Tus curas queman +50% a las familias que las curas dañan (no muertos, espectros). |
+| `acecho_nc` | Cacería | Cazador de Bestias (`cazadorBestias`) | Contra Bestias: +25% de daño y +10% de crítico. |
+
+Los notables que salen (y sus mecánicas) se quitan del catálogo.
+Cacería dependía de Trampa de Caza (que se queda): sola, Trampa de Caza
+sigue funcionando.
+
+### 8.2 Reglas del motor (además de passive_tree_v2.md § 5 y ascension.md § 3.1)
+
+- Disparadores nuevos:
+  - `onReaction`: un golpe tuyo detonó una reacción (sobre un enemigo).
+  - `onPrimedReaction`: una reacción (de cualquiera del grupo, vos
+    incluido) consumió un estado que **preparaste vos** (el último
+    jugador que aplicó ese estado al enemigo: `Combatant.primedBy`,
+    JSON `prim`).
+  - `onPartyReaction`: vos o un aliado detonaron una reacción (el dueño
+    vivo; como `onBreak`).
+  - Condición `vsFamily`: el objetivo es de la familia
+    `PassiveMechanic.family` (respeta el interruptor de familias).
+  - `PassiveMechanic.reaction` filtra los tres disparadores por tipo de
+    reacción (`null` = cualquiera).
+- Efectos nuevos: `extraJump` (Cortocircuito salta a 1 más, mismo daño
+  y estado del salto), `refundMp` (el MP de la habilidad de la acción;
+  no la ULT), `reactionStatus` (`ProcEffect.status` × ⌈consumidos ×
+  valor⌉ al objetivo), `brittleAll`, `lockStun` (como Martillo Bendito
+  pero solo para esa reacción; no a jefes), `buffDuo` (buff a vos y a
+  quien detonó).
+- Stats nuevos (`BuffStat`): `reactionPower` (+daño del golpe que
+  detona, y con él la explosión y el salto: lo usa la Elementalista) y
+  `healHarm` (+daño de las curas a las familias con `healHarm`).
+- Son efectos secundarios (regla 1): no disparan otras mecánicas. Una
+  reacción dispara cada mecánica 1 vez por acción (por objetivo si el
+  efecto cae sobre el objetivo), igual que el resto.
+- Solo jugadores: un enemigo que detona una reacción sobre un jugador
+  (reglas simétricas) no dispara mecánicas del árbol.
+
+### 8.3 Migración (reinicio gratis)
+
+`tv` pasa a 5 (`kTreeIdsChangedInV5` = los 15 nodos de § 8.1):
+
+- `tv` 5: sin cambios.
+- `tv` 4: se conserva todo salvo esos 15 nodos (y lo que quede sin
+  conexión), en el orden tomado.
+- `tv` 3: como antes (`kTreeIdsStableSinceV3`), que ya no incluye
+  `runas_nr` ni `hojaArcana_nl` (cambiaron).
+- `tv` 2 / sin `tv`: como antes.
+
+Mismo aviso de la sala que en la v4 (`…se reinició gratis y recuperaste
+N puntos`).
+
+### 8.4 Balance
+
+Los stats chicos de cada nodo no cambian, así que el balance de stats
+(§ 5) es el mismo. Los números de las reacciones salen del catálogo
+(`kReactions`, admin de balance `reaction`); las mecánicas nuevas se
+editan desde el admin como cualquier mecánica (probabilidad, efectos,
+descripción; el disparador, la reacción y la familia no se editan).

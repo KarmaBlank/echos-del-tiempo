@@ -7,11 +7,11 @@ import 'ascension_mechanics.dart';
 // Las 8 ascensiones (docs/specs/ascension.md § 2-4): mini-árbol de 8
 // nodos, 2 habilidades de kit (el Guardián 3) y una ULT propia.
 
-const _burn = StatusKind.burn;
 const _poi = StatusKind.poison;
-const _frz = StatusKind.freeze;
 const _stun = StatusKind.stun;
 const _holy = StatusKind.holy;
+const _wet = StatusKind.wet;
+const _chg = StatusKind.charged;
 
 /// Habilidades del kit de las ascensiones (se suman a `kSkills`).
 const Map<String, SkillDef> kAscensionSkills = {
@@ -25,8 +25,10 @@ const Map<String, SkillDef> kAscensionSkills = {
   'aceleron': SkillDef(id: 'aceleron', name: 'Acelerón', mp: 6, kind: SkillKind.support, advanceAllies: 0.40),
   'grietaTemporal': SkillDef(id: 'grietaTemporal', name: 'Grieta Temporal', mp: 5, kind: SkillKind.magical, power: 1.5, delay: 0.8),
   // Elementalista
-  'prismaElemental': SkillDef(id: 'prismaElemental', name: 'Prisma Elemental', mp: 4, kind: SkillKind.magical, power: 1.4, status: StatusApplication(_burn, 1), extraStatuses: [StatusApplication(_frz, 1), StatusApplication(_poi, 1)]),
-  'detonar': SkillDef(id: 'detonar', name: 'Detonar', mp: 6, kind: SkillKind.magical, power: 1.2, detonate: 0.30),
+  // Elementalista (v0.7, ascension.md § 4.1): Prisma prepara, Detonar
+  // detona (catalizador).
+  'prismaElemental': SkillDef(id: 'prismaElemental', name: 'Prisma Elemental', mp: 4, kind: SkillKind.magical, power: 1.3, status: StatusApplication(_wet, 1), extraStatuses: [StatusApplication(_chg, 1)]),
+  'detonar': SkillDef(id: 'detonar', name: 'Detonar', mp: 5, kind: SkillKind.magical, power: 1.5, catalyst: 0.30),
   // Francotirador
   'tiroCabeza': SkillDef(id: 'tiroCabeza', name: 'Tiro a la Cabeza', mp: 6, kind: SkillKind.physical, power: 2.4, critBonus: 0.35, execute: 0.25),
   'apuntar': SkillDef(id: 'apuntar', name: 'Apuntar', mp: 3, kind: SkillKind.support, selfBuff: PartyBuff(BuffStat.crit, 1.0, 1), selfTurn: 0.5),
@@ -48,7 +50,7 @@ const Map<String, SkillDef> kAscensionUltimates = {
   'berserker': SkillDef(id: 'ult_berserker', name: 'Frenesí Carmesí', kind: SkillKind.physical, power: 3.6, critBonus: 0.3, lifeSteal: 0.5),
   'senorGuerra': SkillDef(id: 'ult_senorGuerra', name: 'Llamado a las Armas', kind: SkillKind.physical, power: 1.6, allTargets: true, partyBuffs: [PartyBuff(BuffStat.attack, 0.30, 3)], advanceAllies: 0.30),
   'cronomante': SkillDef(id: 'ult_cronomante', name: 'Detener el Tiempo', kind: SkillKind.magical, power: 1.4, allTargets: true, delay: 1.2, advanceAllies: 0.50),
-  'elementalista': SkillDef(id: 'ult_elementalista', name: 'Trinidad', kind: SkillKind.magical, power: 1.7, allTargets: true, status: StatusApplication(_burn, 2), extraStatuses: [StatusApplication(_frz, 2), StatusApplication(_poi, 2)]),
+  'elementalista': SkillDef(id: 'ult_elementalista', name: 'Trinidad', kind: SkillKind.magical, power: 1.5, allTargets: true, catalyst: 0.30, status: StatusApplication(_wet, 1), extraStatuses: [StatusApplication(_chg, 1), StatusApplication(_poi, 2)]),
   'francotirador': SkillDef(id: 'ult_francotirador', name: 'Bala del Juicio', kind: SkillKind.physical, power: 4.5, critBonus: 1.0, execute: 0.30),
   'trampero': SkillDef(id: 'ult_trampero', name: 'Campo Minado', kind: SkillKind.physical, power: 1.5, allTargets: true, trap: 0.8),
   'templario': SkillDef(id: 'ult_templario', name: 'Juicio Final', kind: SkillKind.magical, power: 2.0, allTargets: true, status: StatusApplication(_stun, 1), extraStatuses: [StatusApplication(_holy, 1)]),
@@ -99,7 +101,8 @@ List<AscensionNode> _tree(String a) {
 const _statNames = {'elementalista_a2': 'Sobrecarga'};
 const _statTexts = {
   'elementalista_a2':
-      '+1 stack a toda Quemadura, Congelación y Veneno que aplicás.',
+      '+1 stack a toda Quemadura, Congelación y Veneno que aplicás '
+          '(Explosiones tóxicas más grandes).',
 };
 
 /// Las 8 ascensiones por id (contrato fijo con el arte).
@@ -108,7 +111,7 @@ final Map<String, AscensionDef> kAscensions = {
     AscensionDef(id: 'berserker', classId: 'guerrero', name: 'Berserker', theme: 'vida baja = más daño, robo de vida', motto: 'Cuanto más sangra, más pega.', color: 0xFFFF4757, skillIds: const ['sangria', 'torbellino'], ultId: 'ult_berserker', nodes: _tree('berserker')),
     AscensionDef(id: 'senorGuerra', classId: 'guerrero', name: 'Señor de la Guerra', theme: 'gritos que buffean al grupo', motto: 'Su voz es el estandarte del grupo.', color: 0xFFFFB142, skillIds: const ['gritoGuerra', 'estandarte'], ultId: 'ult_senorGuerra', nodes: _tree('senorGuerra')),
     AscensionDef(id: 'cronomante', classId: 'maga', name: 'Cronomante', theme: 'adelanta aliados, retrasa enemigos', motto: 'El tiempo obedece a su mano.', color: 0xFFA29BFE, skillIds: const ['aceleron', 'grietaTemporal'], ultId: 'ult_cronomante', nodes: _tree('cronomante')),
-    AscensionDef(id: 'elementalista', classId: 'maga', name: 'Elementalista', theme: 'combos de Quemadura, Congelación y Veneno', motto: 'Fuego, hielo y veneno en una sola mano.', color: 0xFFFF9F43, skillIds: const ['prismaElemental', 'detonar'], ultId: 'ult_elementalista', nodes: _tree('elementalista')),
+    AscensionDef(id: 'elementalista', classId: 'maga', name: 'Elementalista', theme: 'prepara y detona reacciones', motto: 'Ella prepara la tormenta; cualquiera la desata.', color: 0xFFFF9F43, skillIds: const ['prismaElemental', 'detonar'], ultId: 'ult_elementalista', nodes: _tree('elementalista')),
     AscensionDef(id: 'francotirador', classId: 'tirador', name: 'Francotirador', theme: 'críticos enormes a un objetivo', motto: 'Un disparo. Una baja.', color: 0xFFFF6B81, skillIds: const ['tiroCabeza', 'apuntar'], ultId: 'ult_francotirador', nodes: _tree('francotirador')),
     AscensionDef(id: 'trampero', classId: 'tirador', name: 'Trampero', theme: 'trampas y daño en área', motto: 'El campo de batalla ya es suyo.', color: 0xFF7BED9F, skillIds: const ['trampaPuas', 'redCaza'], ultId: 'ult_trampero', nodes: _tree('trampero')),
     AscensionDef(id: 'templario', classId: 'paladin', name: 'Templario', theme: 'daño sagrado y aturdir', motto: 'La luz juzga y no perdona.', color: 0xFFFFEAA7, skillIds: const ['castigo', 'luzCegadora'], ultId: 'ult_templario', nodes: _tree('templario')),

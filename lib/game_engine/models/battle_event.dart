@@ -1,3 +1,4 @@
+import 'elements.dart';
 import 'passive_mechanic.dart';
 import 'status.dart';
 
@@ -337,4 +338,58 @@ class BossMechanicEvent extends BattleEvent {
   final double value;
   const BossMechanicEvent(this.actorId, this.phase,
       {this.targetId, this.value = 0});
+}
+
+/// Reacción elemental (docs/specs/elemental_reactions.md § 2): el golpe
+/// de [sourceId] detonó el estado de [targetId]. Va después del
+/// `DamageEvent` del golpe que la detona y antes de los daños extra de la
+/// reacción (`DamageEvent.sourceId` = [reactionSourceId]).
+///
+/// [amount]: Electrocución / Derretir, el daño del golpe (ya con ×1.5);
+/// Explosión tóxica, el daño extra al objetivo (con el tope de jefe);
+/// Cortocircuito, el daño del salto; Congelación súbita, 0.
+/// [consumedStacks]: stacks / turnos del estado consumido (Veneno,
+/// Mojado, Congelación, Cargado). [splash]: daño a cada otro afectado
+/// (salpicadura de la explosión o salto del cortocircuito), por id.
+class ReactionEvent extends BattleEvent {
+  final String targetId;
+  final ReactionKind kind;
+  final int amount;
+  final String? sourceId;
+  final int consumedStacks;
+  final Map<String, int> splash;
+
+  const ReactionEvent(
+    this.targetId,
+    this.kind,
+    this.amount, {
+    this.sourceId,
+    this.consumedStacks = 0,
+    this.splash = const {},
+  });
+}
+
+/// `DamageEvent.sourceId` del daño extra de una reacción.
+String reactionSourceId(ReactionKind k) => 'reaction.${k.name}';
+
+/// Qué le pasó al hielo de un combatiente (docs/specs/elemental_reactions.md
+/// § 7).
+enum IcePhase {
+  /// Perdió el turno congelado y queda Quebradizo.
+  brittle,
+
+  /// Un golpe físico lo rompió (×1.5) y se descongeló.
+  shattered,
+
+  /// Se descongeló solo (o lo derritió el fuego): resistencia 2 turnos.
+  thawed,
+
+  /// Resiste la Congelación (recién descongelado).
+  resisted,
+}
+
+class IceEvent extends BattleEvent {
+  final String targetId;
+  final IcePhase phase;
+  const IceEvent(this.targetId, this.phase);
 }

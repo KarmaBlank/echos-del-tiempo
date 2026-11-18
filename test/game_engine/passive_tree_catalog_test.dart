@@ -141,8 +141,9 @@ void main() {
 
   test('ids estables desde la v3: iguales en todo (lo demás se devuelve)', () {
     final v3 = kPassiveTreeV3;
-    // 16 + 4 × (r1 + 5 abanico) + 20 × 3 + 4 × 12 + 4 × 9.
-    expect(kTreeIdsStableSinceV3, hasLength(16 + 24 + 60 + 48 + 36));
+    // 16 + 4 × (r1 + 5 abanico) + 20 × 3 + 4 × 12 + 4 × 9, menos los 2
+    // notables de puente que cambiaron en la v5 (runas_nr, hojaArcana_nl).
+    expect(kTreeIdsStableSinceV3, hasLength(16 + 24 + 60 + 48 + 36 - 2));
     for (final id in kTreeIdsStableSinceV3) {
       final a = tree.nodes[id], b = v3.nodes[id];
       expect(a, isNotNull, reason: id);

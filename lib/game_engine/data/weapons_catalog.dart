@@ -5,7 +5,8 @@ import '../models/weapon.dart';
 // Bases de arma (docs/specs/loot.md § 8). Las 32 primeras son `WEAPONS`
 // del prototipo, 1:1 (`wt` → weight, `def` → shieldDefense, `req` →
 // requirements, `sk` → skillIds) con su nivel requerido; las 48
-// siguientes son las bases nuevas de loot v2 (niveles 2–50). `classId` es
+// siguientes son las bases nuevas de loot v2 (niveles 2–50) y las 9
+// últimas, las de Agua y Electro de v0.7 (niveles 9–41). `classId` es
 // la familia: no restringe quién la equipa.
 
 const _vit = Attribute.vit;
@@ -273,4 +274,32 @@ const Map<String, WeaponDef> kWeapons = {
   'maza_escudo_eterna': WeaponDef(id: 'maza_escudo_eterna', name: 'Maza y Escudo de la Eternidad', classId: 'paladin', type: 'maza+escudo', tier: 3, level: 50, price: 15000, weight: 0.6, shieldDefense: 8,
       requirements: {_vit: 60, _esp: 30}, atk: PowerFormula(base: 14, coefficients: {_fue: 0.2}), mag: PowerFormula(base: 39, coefficients: {_esp: 1.08}),
       skillIds: ['marea', 'bendicion', 'escudoFe']),
+  // ---- v0.7: Agua y Electro (loot.md § 8.7, elemental_reactions.md) ----
+  'espada_coral': WeaponDef(id: 'espada_coral', name: 'Espada de Coral', classId: 'guerrero', type: 'espada', tier: 2, level: 9, price: 1224,
+      requirements: {_fue: 17, _des: 10}, atk: PowerFormula(base: 15, coefficients: {_fue: 0.69, _des: 0.3}),
+      skillIds: ['tajoMarea', 'escudoAgua'], implicit: [ItemMod(ModStat.critChance, 3)]),
+  'varita_voltaica': WeaponDef(id: 'varita_voltaica', name: 'Varita Voltaica', classId: 'maga', type: 'varita', tier: 2, level: 10, price: 1400,
+      requirements: {_esp: 19, _des: 10}, atk: PowerFormula(base: 4, coefficients: {_fue: 0.3}), mag: PowerFormula(base: 13, coefficients: {_esp: 0.8}),
+      skillIds: ['chispazo', 'corriente'], implicit: [ItemMod(ModStat.maxMp, 8)]),
+  'baculo_marea': WeaponDef(id: 'baculo_marea', name: 'Báculo de Marea', classId: 'maga', type: 'báculo', tier: 3, level: 18, price: 3096,
+      requirements: {_esp: 27, _agi: 14}, atk: PowerFormula(base: 5, coefficients: {_fue: 0.4}), mag: PowerFormula(base: 22, coefficients: {_esp: 0.93}),
+      skillIds: ['chorro', 'oleada', 'escudoAgua'], implicit: [ItemMod(ModStat.magPct, 6)]),
+  'lanza_mareas': WeaponDef(id: 'lanza_mareas', name: 'Tridente de las Mareas', classId: 'guerrero', type: 'lanza', tier: 3, level: 21, price: 3864, weight: 0.5,
+      requirements: {_fue: 30, _agi: 16}, atk: PowerFormula(base: 26, coefficients: {_fue: 0.81, _agi: 0.25}),
+      skillIds: ['lanzaMareas', 'remolino'], implicit: [ItemMod(ModStat.speed, 3)]),
+  'arco_relampago': WeaponDef(id: 'arco_relampago', name: 'Arco de Relámpago', classId: 'tirador', type: 'arco', tier: 3, level: 22, price: 4136,
+      requirements: {_des: 31, _agi: 16}, atk: PowerFormula(base: 27, coefficients: {_des: 0.87, _agi: 0.2}),
+      skillIds: ['flechaVoltaica', 'relampago', 'flechaAcuatica'], implicit: [ItemMod(ModStat.critChance, 3)]),
+  'dagas_electricas': WeaponDef(id: 'dagas_electricas', name: 'Dagas Eléctricas', classId: 'tirador', type: 'dagas', tier: 3, level: 25, price: 5000,
+      requirements: {_des: 34, _agi: 18}, atk: PowerFormula(base: 27, coefficients: {_des: 0.8, _agi: 0.35}),
+      skillIds: ['dagaElectrica', 'campoEstatico'], implicit: [ItemMod(ModStat.critChance, 7)]),
+  'tomo_tormentas': WeaponDef(id: 'tomo_tormentas', name: 'Tomo de Tormentas', classId: 'maga', type: 'tomo', tier: 3, level: 30, price: 6600, weight: 0.4,
+      requirements: {_esp: 40}, atk: PowerFormula(base: 6, coefficients: {_fue: 0.3}), mag: PowerFormula(base: 37, coefficients: {_esp: 1.05}),
+      skillIds: ['tormentaElectrica', 'cadenaRayos', 'descargaEstatica'], implicit: [ItemMod(ModStat.ultCharge, 12)]),
+  'hacha_tronante': WeaponDef(id: 'hacha_tronante', name: 'Hacha Tronante', classId: 'guerrero', type: 'hacha', tier: 3, level: 34, price: 8024, weight: 1.3,
+      requirements: {_fue: 44}, atk: PowerFormula(base: 42, coefficients: {_fue: 1.09}),
+      skillIds: ['golpeTrueno', 'remolino'], implicit: [ItemMod(ModStat.atkPct, 10)]),
+  'tomo_mareas': WeaponDef(id: 'tomo_mareas', name: 'Tomo de las Mareas Profundas', classId: 'maga', type: 'tomo', tier: 3, level: 41, price: 10824, weight: 0.5,
+      requirements: {_esp: 51}, atk: PowerFormula(base: 7, coefficients: {_fue: 0.3}), mag: PowerFormula(base: 48, coefficients: {_esp: 1.16}),
+      skillIds: ['torrente', 'bruma', 'geiser'], implicit: [ItemMod(ModStat.ultCharge, 12)]),
 };

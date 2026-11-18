@@ -245,8 +245,9 @@ void main() {
               'p1',
               const AttackCommand(targetId: 'e0'))!
           .state;
-      expect(run({}).enemies.single.breakGauge, 20);
-      expect(run({'wp:rompehielos:1'}).enemies.single.breakGauge, 24);
+      // v0.7: cada stack de Congelación suma +10% de quiebre (× 1.1).
+      expect(run({}).enemies.single.breakGauge, 22);
+      expect(run({'wp:rompehielos:1'}).enemies.single.breakGauge, 26.4);
     });
 
     test('Escarcha Viva: +1 Congelación con su probabilidad', () {

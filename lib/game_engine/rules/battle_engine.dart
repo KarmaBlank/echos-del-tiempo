@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../data/ascension_catalog.dart';
+import '../data/elements_catalog.dart';
 import '../data/enemies_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/passive_mechanics.dart' show mechanicById;
@@ -116,7 +117,9 @@ class BattleEngine {
   /// hacia su 3.er turno).
   static const enemyUltStart = 40.0;
 
-  static const freezeSlowPerStack = 0.12;
+  /// −velocidad por stack de Congelación del código (§ 7); el motor usa
+  /// la del catálogo (`ElementStatusDef.slowPerStack`, editable).
+  static const freezeSlowPerStack = 0.06;
   static const enemyCritMultiplier = 1.5;
   static const maxBonusDefense = 12;
   static const dualMpCost = 4;
@@ -134,7 +137,9 @@ class BattleEngine {
       100 /
       (a.speed *
           (1 + a.effectTotal(BuffStat.speed)) *
-          (1 - freezeSlowPerStack * a.stacks(StatusKind.freeze)));
+          (1 -
+              catalog.elementStatus(StatusKind.freeze).slowPerStack *
+                  a.stacks(StatusKind.freeze)));
 
   // ------------------------------------------------------------------
   // API pública
@@ -462,6 +467,18 @@ class _Action {
   bool dual = false;
 }
 
+/// Contexto de una reacción para las mecánicas del árbol (§ 8 de
+/// passive_tree_v4.md): tipo, stacks consumidos, quién detonó, a quiénes
+/// ya les llegó (objetivo y salto) y el estado del golpe.
+class _Rx {
+  _Rx(this.kind, this.consumed, this.by, this.hitIds, this.hitStatus);
+  final ReactionKind kind;
+  final int consumed;
+  final Combatant by;
+  final Set<String> hitIds;
+  final StatusApplication? hitStatus;
+}
+
 /// Un paso del motor sobre una copia del estado. Equivale al contexto
 /// global (`S.battle`, `DEALT`, `ATT`) que el prototipo usaba durante
 /// un `battleCmd`.
@@ -494,6 +511,14 @@ class _Turn {
 
   /// Jefes cuya inmunidad ya se avisó en este paso.
   final _immuneShown = <String>{};
+
+  /// Derretidos en este paso: Choque Térmico igual los aturde (la
+  /// reacción ya les quitó la Congelación).
+  final _meltedNow = <String>{};
+
+  /// Reacción cuyos disparadores del árbol se están evaluando
+  /// (passive_tree_v4.md § 8).
+  _Rx? _rx;
 
   BattleStep get result => BattleStep(state, List.unmodifiable(events));
 
@@ -650,8 +675,18 @@ class _Turn {
     // los estados transforma al Devorador (fase 2 limpia los estados), el
     // aturdimiento / congelación ya ganado igual le cuesta este turno.
     final stunnedAtStart = a.stacks(StatusKind.stun) > 0;
+    // Hielo v0.7 (elemental_reactions.md § 7): con 5 stacks pierde el
+    // turno y queda Quebradizo; el turno siguiente se descongela solo.
     final frozenAtStart =
-        a.stacks(StatusKind.freeze) >= StatusKind.freeze.maxStacks;
+        a.stacks(StatusKind.freeze) >= StatusKind.freeze.maxStacks &&
+            !a.brittle;
+    final brittleAtStart = a.brittle;
+    if (a.freezeResist > 0) a.freezeResist--;
+    // Mojado y Cargado: pierden 1 turno (no hacen daño).
+    for (final k in const [StatusKind.wet, StatusKind.charged]) {
+      final n = a.stacks(k);
+      if (n > 0) a.statuses[k] = n - 1;
+    }
 
     final burn = a.stacks(StatusKind.burn);
     if (burn > 0) {
@@ -672,12 +707,11 @@ class _Turn {
     if (holy > 0) {
       // Ira Divina (Templario): el Sagrado de los enemigos hace más.
       // No muertos / espectros: el Sagrado arde más (bestiary.md § 1).
-      final d = a.isPlayer
-          ? 5 * holy
-          : jsRound(5 *
-              holy *
-              (1 + _aura(BuffStat.holyPower)) *
-              (_fam(a)?.holyTick ?? 1));
+      // Simétrico (§ 5.3): la familia / raza vale también para jugadores.
+      final d = jsRound(5 *
+          holy *
+          (a.isPlayer ? 1 : 1 + _aura(BuffStat.holyPower)) *
+          (_fam(a)?.holyTick ?? 1));
       total += d;
       parts.add('Sagrado $d');
       a.holyTurns = (a.holyTurns == 0 ? 1 : a.holyTurns) - 1;
@@ -689,12 +723,21 @@ class _Turn {
     if (regen > 0 && a.alive) {
       final hh = jsRound(a.maxHp * 0.05);
       final mm = jsRound(a.maxMp * 0.05);
-      a.hp = math.min(a.maxHp, a.hp + hh);
-      if (a.maxMp > 0) a.mp = math.min(a.maxMp.toDouble(), a.mp + mm);
-      a.statuses[StatusKind.regen] = regen - 1;
-      healText = '${a.name} regenera +$hh HP${mm > 0 ? ' +$mm MP' : ''}';
-      events.add(HealEvent(a.id, hh));
-      if (mm > 0) events.add(HealEvent(a.id, mm, mana: true));
+      final harm = _fam(a)?.healHarm ?? 0;
+      if (harm > 0) {
+        // Raza / familia a la que las curas dañan (no muertos).
+        a.statuses[StatusKind.regen] = regen - 1;
+        final d = _rawDamage(null, a, math.max(1, jsRound(hh * harm)),
+            kHealHarmSourceId);
+        healText = '¡La regeneración quema a ${a.name}! $d';
+      } else {
+        a.hp = math.min(a.maxHp, a.hp + hh);
+        if (a.maxMp > 0) a.mp = math.min(a.maxMp.toDouble(), a.mp + mm);
+        a.statuses[StatusKind.regen] = regen - 1;
+        healText = '${a.name} regenera +$hh HP${mm > 0 ? ' +$mm MP' : ''}';
+        events.add(HealEvent(a.id, hh));
+        if (mm > 0) events.add(HealEvent(a.id, mm, mana: true));
+      }
     }
 
     if (total > 0) {
@@ -729,9 +772,18 @@ class _Turn {
       if (!locked) a.statuses[StatusKind.stun] = 0;
       events.add(TurnSkippedEvent(a.id, StatusKind.stun));
     } else if (frozenAtStart && a.alive) {
+      // Congelado: pierde el turno y queda Quebradizo (el próximo golpe
+      // físico hace ×1.5 y lo descongela).
       skip = true;
-      a.statuses[StatusKind.freeze] = 0;
+      a.brittle = true;
       events.add(TurnSkippedEvent(a.id, StatusKind.freeze));
+      events.add(IceEvent(a.id, IcePhase.brittle));
+    } else if (brittleAtStart && a.alive) {
+      // Nadie lo rompió: se descongela solo (salvo Alma de Hielo).
+      if (a.isPlayer || !_almaHielo) {
+        _thawFreeze(a);
+        _notes.add('${a.name} se descongela');
+      }
     } else if (a.stacks(StatusKind.freeze) > 0 && (a.isPlayer || !_almaHielo)) {
       a.statuses[StatusKind.freeze] = a.stacks(StatusKind.freeze) - 1;
     }
@@ -743,7 +795,9 @@ class _Turn {
       if (healText != null) healText,
       if (skip)
         '${a.name} está ${stunned ? 'ATURDIDO' : 'CONGELADO'} y pierde su turno'
-            '${locked ? ' (Martillo Bendito: sigue aturdido 1 turno más)' : ''}',
+            '${locked ? ' (Martillo Bendito: sigue aturdido 1 turno más)' : ''}'
+            '${stunned ? '' : ' · queda QUEBRADIZO (próximo golpe físico ×'
+                '${fm(_frz.brittleMult)})'}',
     ];
     return (skip, texts.isEmpty ? null : texts.join(' · '));
   }
@@ -768,6 +822,14 @@ class _Turn {
       return false;
     }
     if (st.chance != null && _rand() >= st.chance!) return false;
+    // Recién descongelado: resiste la Congelación (§ 7).
+    if (st.kind == StatusKind.freeze && a.freezeResist > 0) {
+      if (_immuneShown.add('${a.id}|resist')) {
+        events.add(IceEvent(a.id, IcePhase.resisted));
+        _notes.add('${a.name} resiste la Congelación (recién descongelado)');
+      }
+      return false;
+    }
     // Familia (bestiary.md § 1): inmunidades y stacks de más / de menos.
     final family = _fam(a);
     if (family != null && family.immune.contains(st.kind)) {
@@ -791,9 +853,24 @@ class _Turn {
       n = math.max(1, n - a.statusResist);
     }
     if (family != null) n = familyStacks(family, st.kind, n);
-    a.statuses[st.kind] = math.min(st.kind.maxStacks, a.stacks(st.kind) + n);
+    if (st.kind.timed) {
+      // Mojado / Cargado: no se acumulan, se renuevan a su duración.
+      final turns = engine.catalog.elementStatus(st.kind).turns;
+      if (turns <= 0) return false;
+      a.statuses[st.kind] = math.max(a.stacks(st.kind), turns);
+    } else {
+      a.statuses[st.kind] =
+          math.min(st.kind.maxStacks, a.stacks(st.kind) + n);
+    }
     if (st.kind == StatusKind.holy) a.holyTurns = 3;
     if (st.kind == StatusKind.regen) a.statuses[StatusKind.regen] = 3;
+    // Quién preparó la reacción (árbol v5: onPrimedReaction).
+    if (source != null &&
+        source.isPlayer &&
+        !a.isPlayer &&
+        kReactionTable.any((r) => r.primer == st.kind)) {
+      a.primedBy[st.kind] = source.id;
+    }
     events.add(StatusAppliedEvent(a.id, st.kind, n, weakness: weak > 0));
     if (source != null && source.isPlayer && !a.isPlayer) {
       if (st.kind == StatusKind.stun || st.kind == StatusKind.freeze) {
@@ -845,9 +922,25 @@ class _Turn {
 
   /// `hurt`: enemigo → jugador. Los escudos del árbol absorben antes que
   /// la vida; [from] es el enemigo que pega (Contraataque, Represalia).
+  ///
+  /// v0.7: el golpe tiene [element] (reacciones sobre el jugador, § 5.3)
+  /// y la familia / raza del jugador cuenta como la de un enemigo.
+  /// [inflicted]: el estado del golpe (Cortocircuito lo lleva al salto).
   _Hurt _hurt(Combatant p, double base, double critChance, bool pierce,
-      {Combatant? from}) {
+      {Combatant? from,
+      GameElement element = GameElement.fisico,
+      StatusApplication? inflicted}) {
     final crit = _rand() < critChance;
+    // Reacción (una por golpe) o golpe a un Quebradizo (los golpes
+    // enemigos cuentan como físicos).
+    final reaction = _reactionFor(p, element);
+    var react = _reactionMult(reaction);
+    if (reaction == null && _isBrittle(p)) react = _frz.brittleMult;
+    // Familia / raza del jugador (null hasta que existan las razas).
+    final affinity = familyMultiplier(_fam(p), {
+      DamageTag.physical,
+      if (damageTagOf(element) case final t?) t,
+    });
     final pmul = pierce ? p.pierceWeakness : 1.0;
     final defp = p.defensePercent;
     // Marca del Vigilante del Vacío: +daño recibido.
@@ -867,7 +960,9 @@ class _Turn {
           pmul *
           (p.defending ? 0.5 : 1) *
           (1 - defp) *
-          (1 - guard)),
+          (1 - guard) *
+          react *
+          affinity),
     );
     // Juramento Eterno (Guardián): parte del golpe va al Guardián.
     dmg -= _shareDamage(p, dmg);
@@ -882,11 +977,17 @@ class _Turn {
     events.add(DamageEvent(p.id, taken,
         critical: crit,
         critMultiplier: BattleEngine.enemyCritMultiplier,
-        pierceMultiplier: pmul));
+        pierceMultiplier: pmul,
+        affinity: affinity));
     if (!p.alive) {
       events.add(KnockedOutEvent(p.id));
       p.voidMarked = false;
       _allyDown(p);
+    }
+    if (reaction != null) {
+      _react(from, p, reaction, dmg, hitStatus: inflicted);
+    } else if (react != 1) {
+      _shatter(p);
     }
     if (from != null && p.alive) {
       _fire(ProcTrigger.onHitTaken, p, target: from, amount: dmg);
@@ -1376,6 +1477,9 @@ class _Turn {
             return scale > 0;
           }(),
         ProcTrigger.vsBroken => target != null && target.broken,
+        ProcTrigger.vsFamily => target != null &&
+            m.family != null &&
+            _fam(target)?.family == m.family,
         ProcTrigger.vsElements => target != null &&
             kElementalStatuses.where((k) => target.stacks(k) > 0).length >=
                 m.minStacks,
@@ -1444,9 +1548,23 @@ class _Turn {
       int hitIndex = 0,
       String? chainFrom,
       bool pierced = false,
-      Set<DamageTag>? tags}) {
+      Set<DamageTag>? tags,
+      GameElement? element,
+      bool? physical,
+      StatusApplication? hitStatus}) {
     final a = _attacker;
     final cm = _critMult(a);
+    // Elemento del golpe (v0.7): el de la habilidad de la acción, si no
+    // físico (ataque normal).
+    // Catalizador (Elementalista, ascension.md § 4.1): toma el elemento
+    // que reacciona con lo que tenga el objetivo.
+    final sk0 = _act?.skill;
+    final catalyst = element == null && sk0 != null ? sk0.catalyst : 0.0;
+    final el = element ??
+        (catalyst > 0 ? _catalystElement(e) : null) ??
+        elementOf(sk0?.id);
+    final phys = physical ??
+        (_act?.skill == null || _act!.skill!.kind == SkillKind.physical);
     var chance = critChance;
     var mult = 1.0;
     final mods = <String>[];
@@ -1495,9 +1613,38 @@ class _Turn {
     }
     // Familia: debilidades y resistencias por tipo de daño
     // (bestiary.md § 1.3).
-    final affinity = _familyMods(family, tags ?? skillDamageTags(_act?.skill),
+    final affinity = _familyMods(
+        family,
+        {
+          ...(tags ?? skillDamageTags(_act?.skill)),
+          if (damageTagOf(el) case final t?) t,
+        },
         mods);
     mult *= affinity;
+    // Reacción elemental (una por golpe) o golpe físico a un Quebradizo
+    // (elemental_reactions.md § 2 y § 7).
+    final reaction = _reactionFor(e, el);
+    var shatter = false;
+    if (reaction != null) {
+      final rm = _reactionMult(reaction);
+      if (rm != 1) {
+        mult *= rm;
+        mods.add('× ${fm(rm)} ${reaction.label.toUpperCase()}');
+      }
+      if (catalyst > 0) {
+        mult *= 1 + catalyst;
+        mods.add('× ${fm(1 + catalyst)} CATALIZADOR');
+      }
+      final rb = a == null ? 0.0 : _modTotal(a, ProcEffectKind.reactionBonus);
+      if (rb > 0) {
+        mult *= 1 + rb;
+        mods.add('× ${fm(1 + rb)} reacción');
+      }
+    } else if (phys && _isBrittle(e)) {
+      shatter = true;
+      mult *= _frz.brittleMult;
+      mods.add('× ${fm(_frz.brittleMult)} QUEBRADIZO');
+    }
     final res = primary ? _stanceResist(e) : 0.0;
     if (res > 0) {
       mult *= 1 - res;
@@ -1544,6 +1691,11 @@ class _Turn {
     if (!e.alive) _knockedOut(e);
     if (shift) _transform(e);
     _chargeUlt(e, lost);
+    if (reaction != null) {
+      _react(a, e, reaction, dmg, hitStatus: hitStatus ?? _act?.skill?.status);
+    } else if (shatter) {
+      _shatter(e);
+    }
     // La transformación vacía la barra: el golpe que la causa no llena.
     if (!shift) {
       _addBreak(
@@ -1593,11 +1745,287 @@ class _Turn {
 
   // ---------------- familias (docs/specs/bestiary.md § 1) ----------------
 
-  /// Reglas de la familia del enemigo [c] (`null`: jugador, sin familia o
-  /// familias apagadas).
-  FamilyRule? _fam(Combatant c) => !engine.familiesEnabled || c.isPlayer
-      ? null
-      : familyRuleOf(c.enemyType);
+  /// Reglas de la familia / raza de [c] (`null`: sin familia o familias
+  /// apagadas). Simétrico desde v0.7 (elemental_reactions.md § 5.3): un
+  /// jugador con raza usa las mismas reglas que un enemigo.
+  FamilyRule? _fam(Combatant c) {
+    final f = c.family;
+    return !engine.familiesEnabled || f == null ? null : kFamilyRules[f];
+  }
+
+  // ---------------- elementos v0.7 (elemental_reactions.md) ------------
+
+  /// Reglas de la Congelación (§ 7).
+  ElementStatusDef get _frz =>
+      engine.catalog.elementStatus(StatusKind.freeze);
+
+  /// La reacción que detonaría un golpe de [el] sobre [t] (§ 2), o
+  /// `null`. Congelación súbita solo si [t] se puede congelar.
+  ReactionKind? _reactionFor(Combatant t, GameElement el) {
+    if (el == GameElement.fisico || !t.alive) return null;
+    for (final r in kReactionTable) {
+      if (r.detonator != el || t.stacks(r.primer) <= 0) continue;
+      if (r.kind == ReactionKind.congelacionSubita && !_canFreeze(t)) continue;
+      return r.kind;
+    }
+    return null;
+  }
+
+  /// Elemento con el que un golpe catalizador detona lo que tiene [t]
+  /// (orden de prioridad de la tabla), o `null` si no hay nada.
+  GameElement? _catalystElement(Combatant t) {
+    for (final r in kReactionTable) {
+      if (t.stacks(r.primer) > 0 && _reactionFor(t, r.detonator) == r.kind) {
+        return r.detonator;
+      }
+    }
+    return null;
+  }
+
+  /// Suma de un modificador fijo (`always`) del árbol de [a]
+  /// (`reactionBonus`, `healHarmBonus`).
+  double _modTotal(Combatant a, ProcEffectKind kind) {
+    var total = 0.0;
+    for (final m in _mechanicsOf(a)) {
+      if (m.trigger != ProcTrigger.always || !_filterOk(m, a)) continue;
+      for (final fx in m.effects) {
+        if (fx.kind == kind) total += fx.value;
+      }
+    }
+    return total;
+  }
+
+  /// [t] puede quedar congelado ya (Congelación súbita).
+  bool _canFreeze(Combatant t) =>
+      t.freezeResist <= 0 &&
+      !t.brittle &&
+      t.stacks(StatusKind.freeze) < StatusKind.freeze.maxStacks &&
+      !(_fam(t)?.immune.contains(StatusKind.freeze) ?? false) &&
+      !(!t.isPlayer && _immune(t));
+
+  /// Multiplicador del golpe que detona [k] (1 si no cambia el golpe).
+  double _reactionMult(ReactionKind? k) => switch (k) {
+        ReactionKind.electrocucion ||
+        ReactionKind.derretir =>
+          engine.catalog.reaction(k!).damageMult,
+        _ => 1.0,
+      };
+
+  /// Quebradizo con Congelación encima.
+  bool _isBrittle(Combatant c) =>
+      c.brittle && c.stacks(StatusKind.freeze) > 0;
+
+  /// Se descongela: sin Congelación ni Quebradizo y, si estaba congelado,
+  /// resistencia a la Congelación ([ElementStatusDef.turns]).
+  void _thawFreeze(Combatant c, {bool resist = true}) {
+    final wasFrozen = c.brittle ||
+        c.stacks(StatusKind.freeze) >= StatusKind.freeze.maxStacks;
+    c.statuses[StatusKind.freeze] = 0;
+    c.brittle = false;
+    if (resist && wasFrozen) {
+      c.freezeResist = math.max(c.freezeResist, _frz.turns);
+      events.add(IceEvent(c.id, IcePhase.thawed));
+    }
+  }
+
+  /// Un golpe físico rompió al Quebradizo [c].
+  void _shatter(Combatant c) {
+    _thawFreeze(c, resist: false);
+    c.freezeResist = math.max(c.freezeResist, _frz.turns);
+    events.add(IceEvent(c.id, IcePhase.shattered));
+    _notes.add('¡${c.name} se rompe! (Quebradizo ×${fm(_frz.brittleMult)}, '
+        'se descongela)');
+  }
+
+  /// Los demás vivos del bando de [t], en orden de formación desde [t].
+  List<Combatant> _sideOf(Combatant t) {
+    final side = t.isPlayer ? state.party : state.enemies;
+    final i = side.indexOf(t);
+    final out = <Combatant>[];
+    for (var k = 1; k < side.length; k++) {
+      final c = side[(i + k) % side.length];
+      if (c.alive && !_passive(c)) out.add(c);
+    }
+    return out;
+  }
+
+  /// La reacción [k]: [by] detonó el estado de [t] con un golpe de
+  /// [hitDamage] (ya con el ×1.5 si corresponde). [hitStatus]: el estado
+  /// del golpe (Cortocircuito lo lleva al salto).
+  void _react(Combatant? by, Combatant t, ReactionKind k, int hitDamage,
+      {StatusApplication? hitStatus}) {
+    final def = engine.catalog.reaction(k);
+    final consumed = t.stacks(k.primer);
+    // La transformación (Devorador) pudo limpiar el estado.
+    if (consumed <= 0) return;
+    final primer = t.primedBy.remove(k.primer);
+    final src = reactionSourceId(k);
+    final splash = <String, int>{};
+    var amount = hitDamage;
+    switch (k) {
+      case ReactionKind.electrocucion:
+        t.statuses[StatusKind.wet] = 0;
+        events.add(ReactionEvent(t.id, k, amount,
+            sourceId: by?.id, consumedStacks: consumed));
+        final stunned = def.stunTurns > 0 &&
+            _addStatus(t, StatusApplication(StatusKind.stun, def.stunTurns),
+                source: by);
+        _notes.add('¡ELECTROCUCIÓN! ${t.name} ×${fm(def.damageMult)}'
+            '${stunned ? ' y queda aturdido' : ''}');
+      case ReactionKind.explosionToxica:
+        t.statuses[StatusKind.poison] = 0;
+        final base = math.max(1, jsRound(hitDamage * def.perStack * consumed));
+        int capped(Combatant c, int d) => c.boss && def.bossCap > 0
+            ? math.min(d, math.max(1, jsRound(c.maxHp * def.bossCap)))
+            : d;
+        amount = t.alive ? capped(t, base) : 0;
+        final others = _sideOf(t);
+        if (def.splash > 0) {
+          final sp = math.max(1, jsRound(base * def.splash));
+          for (final c in others) {
+            splash[c.id] = capped(c, sp);
+          }
+        }
+        events.add(ReactionEvent(t.id, k, amount,
+            sourceId: by?.id, consumedStacks: consumed, splash: splash));
+        if (amount > 0) _rawDamage(by, t, amount, src);
+        for (final c in others) {
+          final d = splash[c.id];
+          if (d != null) _rawDamage(by, c, d, src);
+        }
+        final capNote = t.boss && amount < base ? ' (tope de jefe)' : '';
+        final splashNote = splash.isEmpty
+            ? ''
+            : ' · salpica a ${splash.length} '
+                '(${splash.values.map((d) => '$d').join(', ')})';
+        _notes.add('¡EXPLOSIÓN TÓXICA! $consumed Veneno × $hitDamage = '
+            '$amount a ${t.name}$capNote$splashNote');
+      case ReactionKind.congelacionSubita:
+        t.statuses[StatusKind.wet] = 0;
+        final n = StatusKind.freeze.maxStacks - t.stacks(StatusKind.freeze);
+        t.statuses[StatusKind.freeze] = StatusKind.freeze.maxStacks;
+        events.add(ReactionEvent(t.id, k, 0,
+            sourceId: by?.id, consumedStacks: consumed));
+        events.add(StatusAppliedEvent(t.id, StatusKind.freeze, n));
+        if (by != null && by.isPlayer && !t.isPlayer) {
+          _addBreak(t, BattleEngine.breakStatusFlat);
+        }
+        _notes.add('¡CONGELACIÓN SÚBITA! ${t.name} queda CONGELADO');
+      case ReactionKind.derretir:
+        events.add(ReactionEvent(t.id, k, amount,
+            sourceId: by?.id, consumedStacks: consumed));
+        _meltedNow.add(t.id);
+        _thawFreeze(t);
+        _notes.add('¡DERRETIR! ${t.name} ×${fm(def.damageMult)} y pierde la '
+            'Congelación');
+      case ReactionKind.cortocircuito:
+        t.statuses[StatusKind.charged] = 0;
+        final next = _sideOf(t).firstOrNull;
+        amount = 0;
+        if (next != null && def.splash > 0) {
+          amount = math.max(1, jsRound(hitDamage * def.splash));
+          splash[next.id] = amount;
+        }
+        events.add(ReactionEvent(t.id, k, amount,
+            sourceId: by?.id, consumedStacks: consumed, splash: splash));
+        if (next != null && amount > 0) {
+          final d = _rawDamage(by, next, amount, src);
+          if (hitStatus != null && next.alive) {
+            _addStatus(next, hitStatus, source: by);
+          }
+          _notes.add('¡CORTOCIRCUITO! salta a ${next.name}: $d');
+        } else {
+          _notes.add('¡CORTOCIRCUITO! (nadie a quien saltar)');
+        }
+    }
+    _reactionTriggers(by, t, k, hitDamage, consumed, primer,
+        {t.id, ...splash.keys}, hitStatus);
+  }
+
+  /// Disparadores del árbol de una reacción que detonó [by] sobre [t]
+  /// (passive_tree_v4.md § 8): `onReaction` (quien detonó),
+  /// `onPrimedReaction` (quien preparó el estado consumido) y
+  /// `onPartyReaction` (todo el grupo vivo). Solo jugadores sobre
+  /// enemigos.
+  void _reactionTriggers(
+      Combatant? by,
+      Combatant t,
+      ReactionKind k,
+      int hitDamage,
+      int consumed,
+      String? primer,
+      Set<String> hitIds,
+      StatusApplication? hitStatus) {
+    if (by == null || !by.isPlayer || t.isPlayer) return;
+    final prev = _rx;
+    _rx = _Rx(k, consumed, by, hitIds, hitStatus);
+    _fire(ProcTrigger.onReaction, by, target: t, amount: hitDamage);
+    if (primer != null) {
+      final q = state.party.where((c) => c.id == primer).firstOrNull;
+      if (q != null && q.alive) {
+        _fire(ProcTrigger.onPrimedReaction, q, target: t, amount: hitDamage);
+      }
+    }
+    for (final q in state.party) {
+      if (q.alive) {
+        _fire(ProcTrigger.onPartyReaction, q, target: t, amount: hitDamage);
+      }
+    }
+    _rx = prev;
+  }
+
+  /// Daño directo (reacciones, curas que dañan): sin crítico ni
+  /// multiplicadores; a un jugador lo absorben sus escudos. Devuelve el
+  /// daño hecho.
+  int _rawDamage(Combatant? by, Combatant t, int amount, String sourceId) {
+    if (!t.alive || amount <= 0) return 0;
+    if (t.isPlayer) {
+      final absorbed = _absorb(t, amount);
+      var taken = amount - absorbed;
+      if (taken >= t.hp) taken = _cheatDeath(t, taken);
+      if (taken > 0) {
+        t.ult = math.min(
+            100, t.ult + taken / t.maxHp * 110 * (1 + t.ultChargeBonus));
+      }
+      t.hp = math.max(0, t.hp - taken);
+      events.add(DamageEvent(t.id, taken, sourceId: sourceId));
+      if (!t.alive) {
+        t.voidMarked = false;
+        _knockedOut(t);
+      }
+      return taken;
+    }
+    final before = t.hp;
+    t.hp = math.max(0, t.hp - amount);
+    final shift = _gatePhase(t);
+    final lost = before - t.hp;
+    if (by != null && by == _attacker) {
+      _dealt += lost;
+      _dealtMaxHp = math.max(_dealtMaxHp, t.maxHp);
+    }
+    events.add(DamageEvent(t.id, amount, sourceId: sourceId));
+    if (!t.alive) _knockedOut(t);
+    if (shift) _transform(t);
+    _chargeUlt(t, lost);
+    if (!shift && by != null && by.isPlayer) {
+      _addBreak(t, amount * BattleEngine.breakSecondary);
+    }
+    return amount;
+  }
+
+  /// Cura de habilidad de [p] a [q]; a una raza / familia con `healHarm`
+  /// (no muerto) le hace daño (§ 5.4). Devuelve lo curado (0 si dañó).
+  int _skillHeal(Combatant p, Combatant q, int amount) {
+    final harm = _fam(q)?.healHarm ?? 0;
+    if (harm <= 0) {
+      _heal(q, amount);
+      return amount;
+    }
+    final d = _rawDamage(null, q, math.max(1, jsRound(amount * harm)),
+        kHealHarmSourceId);
+    _notes.add('¡La cura quema a ${q.name}! $d');
+    return 0;
+  }
 
   /// Factor de la familia [r] para un golpe con [tags]; agrega cada
   /// factor a [mods] (`× 1.5 DÉBIL Sagrado`).
@@ -1621,7 +2049,9 @@ class _Turn {
       if (!e.alive) continue;
       final r = _fam(e);
       if (r == null || r.healHarm <= 0) continue;
-      final d = math.max(1, jsRound(amount * r.healHarm));
+      // Luz Purificadora (árbol v5): +daño de tus curas a estas familias.
+      final bonus = 1 + _modTotal(p, ProcEffectKind.healHarmBonus);
+      final d = math.max(1, jsRound(amount * r.healHarm * bonus));
       hit.add((e, _procDamage(p, e, d, kHealHarmSourceId)));
     }
     if (hit.isEmpty) return '';
@@ -1732,6 +2162,13 @@ class _Turn {
   bool _passes(PassiveMechanic m, Combatant owner, Combatant? target,
       StatusKind? status) {
     if (!_filterOk(m, owner)) return false;
+    if (m.reaction != null &&
+        (m.trigger == ProcTrigger.onReaction ||
+            m.trigger == ProcTrigger.onPrimedReaction ||
+            m.trigger == ProcTrigger.onPartyReaction) &&
+        _rx?.kind != m.reaction) {
+      return false;
+    }
     final st = m.status;
     if (st == null) return true;
     return switch (m.trigger) {
@@ -1781,7 +2218,13 @@ class _Turn {
       final act = _act;
       if (act != null) {
         final perTarget = target != null && m.effects.any((e) => e.onTarget);
-        if (!act.fired.add(perTarget ? '${m.id}|${target.id}' : m.id)) {
+        // Reacciones (árbol v5): cada dueño dispara la suya.
+        final who = trigger == ProcTrigger.onPrimedReaction ||
+                trigger == ProcTrigger.onPartyReaction
+            ? '@${owner.id}'
+            : '';
+        if (!act.fired
+            .add('${perTarget ? '${m.id}|${target.id}' : m.id}$who')) {
           continue;
         }
       }
@@ -1934,6 +2377,105 @@ class _Turn {
       case ProcEffectKind.cheatDeath:
         break; // modificador: lo aplica `_cheatDeath`
 
+      // ---- reacciones v0.7 (passive_tree_v4.md § 8) ----
+      case ProcEffectKind.extraJump:
+        final rx = _rx;
+        if (rx == null || target == null) return;
+        final def = engine.catalog.reaction(rx.kind);
+        final d = math.max(1, jsRound(amount * def.splash));
+        final next = [
+          for (final c in _sideOf(target))
+            if (!rx.hitIds.contains(c.id)) c,
+        ].take(math.max(1, fx.value.round())).toList();
+        if (next.isEmpty || def.splash <= 0) return;
+        events.add(ProcEvent(owner.id, m.id, targetId: next.first.id));
+        final parts = <String>[];
+        for (final c in next) {
+          rx.hitIds.add(c.id);
+          final dealt = _rawDamage(owner, c, d, reactionSourceId(rx.kind));
+          if (rx.hitStatus != null && c.alive) {
+            _addStatus(c, rx.hitStatus!, source: owner);
+          }
+          parts.add('$dealt a ${c.name}');
+        }
+        _notes.add('${m.name}: salta otra vez · ${parts.join(', ')}');
+      case ProcEffectKind.refundMp:
+        final sk = act?.skill;
+        if (act == null || sk == null || act.ultimate || sk.mp <= 0) return;
+        events.add(ProcEvent(owner.id, m.id));
+        owner.mp = math.min(owner.maxMp.toDouble(), owner.mp + sk.mp);
+        events.add(HealEvent(owner.id, sk.mp, mana: true));
+        _notes.add('${m.name}: +${sk.mp} MP');
+      case ProcEffectKind.reactionStatus:
+        final rx = _rx;
+        final st = fx.status;
+        if (rx == null || st == null || target == null || !target.alive) {
+          return;
+        }
+        final n = (rx.consumed * fx.value).ceil();
+        if (n <= 0) return;
+        events.add(ProcEvent(owner.id, m.id, targetId: target.id));
+        if (_addStatus(target, StatusApplication(st, n), source: owner)) {
+          _notes.add('${m.name}: ${target.name} +$n ${st.label}');
+        }
+      case ProcEffectKind.brittleAll:
+        final hit = [
+          for (final e in state.enemies)
+            if (e != target &&
+                e.alive &&
+                !e.brittle &&
+                e.stacks(StatusKind.freeze) > 0 &&
+                e.stacks(StatusKind.freeze) < StatusKind.freeze.maxStacks)
+              e,
+        ];
+        if (hit.isEmpty) return;
+        events.add(ProcEvent(owner.id, m.id, targetId: target?.id));
+        for (final e in hit) {
+          e.brittle = true;
+          events.add(IceEvent(e.id, IcePhase.brittle));
+        }
+        _notes.add('${m.name}: ${hit.map((e) => e.name).join(', ')} '
+            'quedan QUEBRADIZOS');
+      case ProcEffectKind.lockStun:
+        if (target == null ||
+            !target.alive ||
+            target.boss ||
+            target.stacks(StatusKind.stun) <= 0 ||
+            target.hasEffect(BuffStat.stunLock)) {
+          return;
+        }
+        final turns = math.max(1, fx.turns);
+        target.effects = [
+          ...target.effects,
+          TimedEffect(
+              sourceId: m.id,
+              stat: BuffStat.stunLock,
+              value: 1,
+              turns: turns,
+              ownerId: owner.id),
+        ];
+        events.add(ProcEvent(owner.id, m.id, targetId: target.id));
+        events.add(
+            BuffAppliedEvent(target.id, m.id, BuffStat.stunLock, 1, turns));
+        _notes.add('${m.name}: ${target.name} queda aturdido 1 turno más');
+      case ProcEffectKind.buffDuo:
+        final rx = _rx;
+        events.add(ProcEvent(owner.id, m.id));
+        final who = [
+          owner,
+          if (rx != null && rx.by != owner && rx.by.alive) rx.by,
+        ];
+        for (final c in who) {
+          _giveEffect(c, owner, m, fx.stat!, fx.value, fx.turns);
+          events.add(
+              BuffAppliedEvent(c.id, m.id, fx.stat!, fx.value, fx.turns));
+        }
+        _notes.add('${m.name}: ${who.map((c) => c.name).join(' y ')} '
+            '+${_pct(fx.value)} ${fx.stat!.label} ${_turns(fx.turns)}');
+      case ProcEffectKind.reactionBonus:
+      case ProcEffectKind.healHarmBonus:
+        break; // modificadores: los aplican `_damageEnemy` y `_healHarm`
+
       case ProcEffectKind.buffSelf:
         events.add(ProcEvent(owner.id, m.id));
         _giveEffect(owner, owner, m, fx.stat!, fx.value, fx.turns);
@@ -1997,11 +2539,13 @@ class _Turn {
       case ProcEffectKind.shatterStun:
         if (target == null ||
             !target.alive ||
-            target.stacks(StatusKind.freeze) <= 0) {
+            (target.stacks(StatusKind.freeze) <= 0 &&
+                !_meltedNow.contains(target.id))) {
           return;
         }
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
         target.statuses[StatusKind.freeze] = 0;
+        target.brittle = false;
         // El log solo dice "aturdido" si el estado entró.
         final stunned = _addStatus(
             target, const StatusApplication(StatusKind.stun, 1),
@@ -2165,7 +2709,7 @@ class _Turn {
         events.add(
             ActionEvent(p.id, BattleActionKind.attack, targetId: target.id));
         final h = _damageEnemy(target, _atk(p).toDouble(), p.critChance,
-            primary: false);
+            primary: false, element: GameElement.fisico, physical: true);
         _notes.add('${free.name}: ataque gratis → ${target.name}: ${h.damage}'
             '${h.critical ? ' CRÍTICO' : ''}');
       }
@@ -2186,6 +2730,9 @@ class _Turn {
     }
     // Familia (bestiary.md § 1): los constructos se quiebran antes.
     amount *= _fam(e)?.breakMult ?? 1;
+    // Hielo (elemental_reactions.md § 7): +10% de quiebre por stack.
+    final ice = e.stacks(StatusKind.freeze);
+    if (ice > 0) amount *= 1 + _frz.breakPerStack * ice;
     final max = e.breakMax;
     e.breakGauge = math.min(max, _r1(e.breakGauge + amount));
     if (e.breakGauge >= max) {
@@ -2375,6 +2922,8 @@ class _Turn {
         ? ' (Protección: ${protector.name} recibe el golpe dirigido a ${pick0.name})'
         : '';
     final inf = _inflictsOf(e);
+    // Elemento del golpe (v0.7): reacciones sobre los jugadores.
+    final el = enemyAttackElement(engine.catalog.enemies[e.enemyType], inf);
     // Devorador en fase 2: Colapso Temporal cada `every` acciones.
     final areaEvery =
         mech != null && mech.kind == BossMechanicKind.phases && e.phase >= 2
@@ -2425,7 +2974,8 @@ class _Turn {
           parts.add('${p0.name} 0');
           continue;
         }
-        final h = _hurt(p, atk * 0.7, e.critChance, e.pierce, from: e);
+        final h = _hurt(p, atk * 0.7, e.critChance, e.pierce,
+            from: e, element: el, inflicted: inf);
         guarded(p, p0, h.damage);
         p.nextTurn += _iv(p) * 0.4;
         if (inf != null) _addStatus(p, inf);
@@ -2436,13 +2986,15 @@ class _Turn {
       state.log = '${e.name} · Colapso Temporal (todos, $atkText × 0.7, '
           'retrasa): ${parts.join(', ')}';
     } else if (e.boss && e.actions % 4 == 0) {
-      final h = _hurt(pick, atk * 1.6, e.critChance, e.pierce, from: e);
+      final h = _hurt(pick, atk * 1.6, e.critChance, e.pierce,
+          from: e, element: el, inflicted: inf);
       guarded(pick, pick0, h.damage);
       final got = inf != null && _addStatus(pick, inf);
       state.log = '${e.name} · Golpe Brutal → ${pick.name}: ${h.damage} = '
           '${detail(h, 1.6, pick)}${got ? infText(pick) : ''}$tauntText$protText${_onHitExtras(e, pick)}';
     } else {
-      final h = _hurt(pick, atk.toDouble(), e.critChance, e.pierce, from: e);
+      final h = _hurt(pick, atk.toDouble(), e.critChance, e.pierce,
+          from: e, element: el, inflicted: inf);
       guarded(pick, pick0, h.damage);
       final got = inf != null && _addStatus(pick, inf);
       final explain = h.critical ||
@@ -2510,7 +3062,8 @@ class _Turn {
         events.add(BossMechanicEvent(e.id, BossMechanicPhase.markHit,
             targetId: p0.id, value: mult));
       }
-      final h = _hurt(p, atk * power * mult, crit, e.pierce, from: e);
+      final h = _hurt(p, atk * power * mult, crit, e.pierce,
+          from: e, element: enemyUltElement(ult), inflicted: ult.status);
       if (p != p0 && p.alive) {
         _fire(ProcTrigger.onProtectHit, p, target: e, amount: h.damage);
       }
@@ -2680,6 +3233,8 @@ class _Turn {
         ..hp = c.maxHp
         ..statuses = {}
         ..holyTurns = 0
+        ..brittle = false
+        ..freezeResist = 0
         ..effects = []
         ..actions = 0;
       entered(c);
@@ -2785,11 +3340,14 @@ class _Turn {
     final atkMod = e.effectTotal(BuffStat.attack);
     final atk =
         atkMod == 0 ? e.attack : math.max(1, jsRound(e.attack * (1 + atkMod)));
-    final h = _hurt(victim, atk * mult, e.critChance, e.pierce, from: e);
+    final inf = _inflictsOf(e);
+    final h = _hurt(victim, atk * mult, e.critChance, e.pierce,
+        from: e,
+        element: enemyAttackElement(engine.catalog.enemies[e.enemyType], inf),
+        inflicted: inf);
     if (protector != null && victim.alive) {
       _fire(ProcTrigger.onProtectHit, victim, target: e, amount: h.damage);
     }
-    final inf = _inflictsOf(e);
     final got = inf != null && _addStatus(victim, inf);
     state.log = guarded
         ? '${e.name} · ${m.name} → ${marked.name}: '
@@ -2825,6 +3383,7 @@ class _Turn {
     e
       ..statuses = {}
       ..holyTurns = 0
+      ..brittle = false
       ..attack = jsRound(e.attack * (m.power > 0 ? m.power : 1))
       ..actions = 0;
     if (!e.broken) e.breakGauge = 0;
@@ -3248,7 +3807,7 @@ class _Turn {
             ? [if (_lowest(allies, (c) => c.hp / c.maxHp) case final q?) q]
             : allies;
         for (final q in regenTo) {
-          _heal(q, a);
+          if (_skillHeal(p, q, a) <= 0) continue;
           _addStatus(q, const StatusApplication(StatusKind.regen, 3));
           _fire(ProcTrigger.onHeal, p, target: q, amount: a);
         }
@@ -3311,7 +3870,7 @@ class _Turn {
         final m = _skillMech(tk);
         for (final q in healed) {
           final before = q.hp;
-          _heal(q, a);
+          if (_skillHeal(p, q, a) <= 0) continue;
           // Desborde: lo que sobra de la cura se vuelve escudo.
           final over = a - (q.hp - before);
           if (tk.overheal > 0 && over > 0) {
@@ -3418,6 +3977,7 @@ class _Turn {
             for (final k in kElementalStatuses) {
               e.statuses[k] = 0;
             }
+            e.brittle = false;
           }
           final hit = _damageEnemy(e, b, p.critChance + tk.critBonus,
               single: !tk.allTargets);
@@ -3514,7 +4074,8 @@ class _Turn {
     var tried = 0, landed = 0;
     for (final e in foes) {
       hits.add(_damageEnemy(
-          e, (pv + qv) * du.power, (p.critChance + q.critChance) / 2));
+          e, (pv + qv) * du.power, (p.critChance + q.critChance) / 2,
+          element: elementOfDual(du), hitStatus: du.status));
       if (e.alive) tried++;
       if (_addStatus(e, du.status, bonus: bonus, source: p, primary: true)) {
         landed++;

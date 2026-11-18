@@ -115,16 +115,75 @@ corta un turno ya, sin preparación.
 Nombres fijos para que motor, contenido y presentación trabajen en
 paralelo:
 
-- `enum Element { fisico, fuego, hielo, veneno, sagrado, agua, electro }`
-  en `lib/game_engine/models/elements.dart`; `elementOf(skillId)`
-  (tabla `kSkillElement` en el catálogo, como `kSkillDelivery`).
+- `enum GameElement { fisico, fuego, hielo, veneno, sagrado, agua, electro }`
+  en `lib/game_engine/models/elements.dart` (se llama `GameElement` y no
+  `Element` para no chocar con la clase `Element` de Flutter);
+  `elementOf(skillId)` (tabla `kSkillElement` en
+  `lib/game_engine/data/elements_catalog.dart`, como `kSkillDelivery`).
 - `StatusKind.wet` ("Mojado", 2 turnos, sin daño) y
   `StatusKind.charged` ("Cargado", 1 turno, sin daño).
 - `enum ReactionKind { electrocucion, explosionToxica,
   congelacionSubita, derretir, cortocircuito }`.
 - Evento `ReactionEvent(targetId, kind, amount, {sourceId,
-  consumedStacks, splash})`, serializado con clave `t: 'react'`.
+  consumedStacks, splash})`, serializado como evento de batalla
+  `{"k":"react", ...}` (los eventos de batalla usan la clave `k`; `t` es
+  la del mensaje). `splash` es `Map<id, daño>`.
 - Ids de sonido: `sfx.reaction.<kind>`; ids de ícono de estado:
   `status_wet`, `status_charged`.
 - Familia/raza simétrica: `Combatant.family` vale para jugadores y
   enemigos (jugadores: `null` hasta que existan razas).
+
+## 9. Implementación (v0.7.0)
+
+Lo que quedó en el código (el resto del spec sigue mandando):
+
+- **Elemento de un golpe.** Habilidades / ULT: `elementOf(id)`. Ataque
+  normal y golpes sin elemento: `fisico` (no reacciona). Dúo: el de su
+  estado. Enemigos: `kEnemyElement[tipo]`, si no el elemento del estado
+  que aplica ese golpe, si no físico; ULT enemigas igual
+  (`kEnemyUltElement`). El daño de las mecánicas (rebotes del árbol,
+  Combustión, trampas, Eco Arcano) y los ticks de estados **no**
+  reaccionan; los rebotes / atraviesa de las variantes sí (son golpes de
+  la habilidad).
+- **Cuándo.** La reacción se decide antes de calcular el golpe (el ×1.5
+  entra en el golpe, log `× 1.5 ELECTROCUCIÓN`), se resuelve después de
+  su `DamageEvent` y **antes** de que el golpe aplique su propio estado
+  (Chorro sobre un Cargado: Cortocircuito y después Mojado). Una por
+  golpe; prioridad = orden de la tabla de § 2.
+- **Números (catálogo `kReactions`, editables: `BalanceKind.reaction`):**
+  Electrocución ×1.5 + 1 turno de Aturdido; Explosión tóxica `golpe × 1 ×
+  stacks` al objetivo, 50% de eso a cada otro del **bando del objetivo**,
+  tope contra jefes 25% de su vida máx. por objetivo; Congelación súbita
+  lleva la Congelación a 5 (pierde su próximo turno; no reacciona si no se
+  puede congelar: resistencia, inmunidad, ya congelado); Derretir ×1.5 y
+  quita la Congelación (si estaba Congelado, resistencia); Cortocircuito
+  50% al siguiente vivo de la formación y le lleva el estado del golpe.
+  El daño extra es directo (`DamageEvent.sourceId = reaction.<kind>`,
+  sin crítico ni Marca; a un jugador lo absorben sus escudos).
+- **Mojado / Cargado** (`kElementStatuses`, `BalanceKind.elementStatus`):
+  su valor son turnos (no se acumulan, se renuevan a 2 / 1); bajan 1 al
+  empezar el turno del afectado.
+- **Hielo** (§ 7): `ElementStatusDef freeze`: −6% velocidad y +10%
+  quiebre por stack, Quebradizo ×1.5, resistencia 2 turnos propios
+  (`Combatant.brittle`, `Combatant.freezeResist`, `IceEvent`). Con 5
+  stacks pierde el turno y queda Quebradizo (la Congelación sigue en 5);
+  el próximo golpe **físico** (ataque, habilidad física o golpe enemigo)
+  hace ×1.5 y lo descongela; si nadie lo rompe, al empezar su turno
+  siguiente se descongela solo (con Alma de Hielo, no). Choque Térmico
+  sigue aturdiendo cuando el fuego derrite (Derretir le quitó la
+  Congelación antes).
+- **Simetría** (§ 5.3–5.4): `Combatant.family` (enemigos: la de su tipo;
+  jugadores: `null`). Inmunidades, stacks, daño por tipo (los golpes
+  enemigos son físicos + su elemento), Sagrado por turno y "las curas
+  dañan" (Cura, Regeneración y su tick) valen igual para un jugador con
+  raza. Las reacciones también le pasan a los jugadores.
+- **Elementalista (v0.7, ascension.md § 4.1):** kit de reacciones.
+  Prisma (neutro) deja Mojado + Cargado; Detonar y Trinidad son
+  **catalizadores** (`SkillDef.catalyst`: el golpe toma el elemento que
+  reacciona con lo que tenga el objetivo y, si detona, ×1.3).
+  `kElementalStatuses` (Contagio, Detonación de la v0.5) sigue siendo
+  Quemadura / Congelación / Veneno.
+- **Árbol (§ 4):** 15 notables de reacción y de familia en el árbol v5
+  (passive_tree_v4.md § 8), con los disparadores `onReaction`,
+  `onPrimedReaction` (quién preparó: `Combatant.primedBy`, JSON `prim`)
+  y `onPartyReaction`.

@@ -1,3 +1,4 @@
+import '../data/elements_catalog.dart';
 import '../data/enemy_families.dart';
 import '../models/battle_state.dart';
 import '../models/skill.dart';
@@ -21,14 +22,23 @@ FamilyRule? familyRuleOf(String? enemyType) {
   return f == null ? null : kFamilyRules[f];
 }
 
-/// [c] es un enemigo de la familia [f] (para notables / pasivas:
-/// `isFamily(target, EnemyFamily.undead)`).
-bool isFamily(Combatant? c, EnemyFamily f) =>
-    c != null && !c.isPlayer && familyOf(c.enemyType) == f;
+/// [c] es de la familia / raza [f] (para notables / pasivas:
+/// `isFamily(target, EnemyFamily.undead)`). Simétrico desde v0.7: vale
+/// para jugadores con raza (elemental_reactions.md § 5.4).
+bool isFamily(Combatant? c, EnemyFamily f) => c != null && c.family == f;
 
-/// Familia del combatiente (enemigo), o `null`.
-EnemyFamily? familyOfCombatant(Combatant? c) =>
-    c == null || c.isPlayer ? null : familyOf(c.enemyType);
+/// Familia / raza del combatiente, o `null`.
+EnemyFamily? familyOfCombatant(Combatant? c) => c?.family;
+
+/// Tipo de daño de familia de un elemento (`null`: físico y veneno).
+DamageTag? damageTagOf(GameElement e) => switch (e) {
+      GameElement.fuego => DamageTag.fire,
+      GameElement.hielo => DamageTag.ice,
+      GameElement.sagrado => DamageTag.holy,
+      GameElement.agua => DamageTag.water,
+      GameElement.electro => DamageTag.electric,
+      GameElement.fisico || GameElement.veneno => null,
+    };
 
 /// Tipos de daño de un golpe con la habilidad [sk] (`null` = ataque
 /// normal, físico). Las curas / regeneraciones son Sagradas (la luz del
@@ -60,6 +70,9 @@ Set<DamageTag> skillDamageTags(SkillDef? sk) {
     }
   }
   if (kHolySkillIds.contains(sk.id)) tags.add(DamageTag.holy);
+  // v0.7: el elemento de la habilidad (Agua, Electro...).
+  final el = damageTagOf(elementOf(sk.id));
+  if (el != null) tags.add(el);
   return tags;
 }
 

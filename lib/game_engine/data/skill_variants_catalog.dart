@@ -1,6 +1,7 @@
 import '../models/passive_mechanic.dart' show BuffStat;
 import '../models/skill.dart';
 import '../models/status.dart';
+import 'elemental_skills_catalog.dart';
 
 // Variantes de habilidades v0.5 (docs/specs/combat.md § "Variantes de
 // habilidades"): familias de curación, escudos, disparos, debuffs,
@@ -134,8 +135,9 @@ const Map<String, SkillFamily> kSkillVariantFamily = {
   'ojoAguila': SkillFamily.buff,
 };
 
-/// Cada variante se ve y suena como una habilidad existente (color, FX
-/// y firma de sonido: battle_presentation.md / audio.md). Sin arte nuevo.
+/// Cada variante (y cada habilidad de Agua / Electro v0.7) se ve y suena
+/// como una habilidad existente (color, FX y firma de sonido:
+/// battle_presentation.md / audio.md). Sin arte nuevo.
 const Map<String, String> kSkillLooks = {
   'curaFocal': 'curaM',
   'rocio': 'sanar',
@@ -185,4 +187,6 @@ const Map<String, String> kSkillLooks = {
   'vientoPrisa': 'prisa',
   'impulso': 'aceleron',
   'ojoAguila': 'apuntar',
+  // Agua y Electro v0.7: también se parecen a una existente.
+  ...kElementalSkillLooks,
 };

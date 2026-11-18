@@ -1,3 +1,4 @@
+import '../data/enemy_families.dart';
 import 'passive_mechanic.dart';
 import 'player_state.dart';
 import 'status.dart';
@@ -100,7 +101,14 @@ class Combatant {
     this.phase = 0,
     this.mechTurns = 0,
     Set<String>? once,
-  })  : once = once ?? {},
+    EnemyFamily? family,
+    this.brittle = false,
+    this.freezeResist = 0,
+    Map<StatusKind, String>? primedBy,
+  })  : primedBy = primedBy ?? {},
+        family = family ??
+            (isPlayer || enemyType == null ? null : kEnemyFamily[enemyType]),
+        once = once ?? {},
         statusBonus = statusBonus ?? {},
         keystones = keystones ?? {},
         mechanics = mechanics ?? {},
@@ -233,6 +241,26 @@ class Combatant {
   /// docs/specs/ascension.md § 3.1).
   Set<String> once;
 
+  // ---- elementos v0.7 (docs/specs/elemental_reactions.md) ----
+
+  /// Familia / raza (§ 5.3–5.4): vale igual para jugadores y enemigos.
+  /// Enemigos: la de su tipo (`kEnemyFamily`) si no se pasa otra;
+  /// jugadores: `null` hasta que existan las razas.
+  final EnemyFamily? family;
+
+  /// Quebradizo (§ 7): perdió el turno congelado; el próximo golpe
+  /// físico hace ×1.5 y lo descongela.
+  bool brittle;
+
+  /// Turnos propios que le quedan de resistencia a la Congelación
+  /// (recién descongelado).
+  int freezeResist;
+
+  /// Quién preparó cada estado que una reacción puede consumir (el
+  /// último jugador que lo aplicó): disparador `onPrimedReaction` del
+  /// árbol (passive_tree_v4.md § 8).
+  Map<StatusKind, String> primedBy;
+
   /// Ascensión del jugador (`null` = clase base o enemigo).
   String? get ascensionId => build?.ascension.id;
 
@@ -342,6 +370,10 @@ class Combatant {
         phase: phase,
         mechTurns: mechTurns,
         once: Set.of(once),
+        family: family,
+        brittle: brittle,
+        freezeResist: freezeResist,
+        primedBy: Map.of(primedBy),
       );
 }
 

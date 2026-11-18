@@ -601,3 +601,26 @@ ULT nuevas (`kEnemyUltVoices`, tres partes en los tiempos de su guion):
 Muestras: `v03_enemy_<id>.wav`, `v03_hit_<id>.wav`, `v03_boss_*.wav` y
 `enemy_ult_<id>.wav` (test de `sfx_catalog_test.dart` con
 `SFX_SAMPLES_DIR`).
+
+## Reacciones elementales (v0.7)
+
+Ids del contrato (docs/specs/elemental_reactions.md § 8):
+`sfx.reaction.<kind>`, pico **0.42** (`SfxLevel.heavy`: por encima del
+golpe que la detona, por debajo del crítico). Recetas en
+`lib/core/audio/reaction_sfx.dart`; test en
+`test/features/combat/reaction_fx_test.dart`.
+
+| Sonido | Receta |
+|---|---|
+| `sfx.reaction.electrocucion` | salpicadura (ruido 3.3 k→1 k lowpass + sine 770→286) + chispazo (ruido 12 k crush 2 + sawtooth 180 vibrato 38 Hz + pulse 2400→600) @0.03 y otro ×1.25 @0.16 + zumbido square 1200 vibrato 14 Hz @0.3 (aturdido) |
+| `sfx.reaction.explosionToxica` | 3 burbujas square 560/490/420→240 + estallido ruido 1.4 k→300 lowpass 900 y sine 80→34 @0.1 + ruido 5 k→1.5 k + triangle 140→60 crush 3 |
+| `sfx.reaction.congelacionSubita` | salpicadura ×0.9 + 4 cristales triangle 2093·(1 + 0.26 i) @0.06 + 0.03 i + crujido ruido 9 k crush 3 @0.2 + sine 3136 |
+| `sfx.reaction.derretir` | siseo ruido 7 k→3 k + sine 1760→440 + sawtooth 220→110 lowpass 900 @0.05 + ruido 2 k grave @0.2 |
+| `sfx.reaction.cortocircuito` | salpicadura ×1.3 + dos chispazos cortos ×1.1 @0.02 y ×1.6 @0.15 + 2 tics square 3000 / 3500 |
+| `status.wet` | gota: sine 1320→520 + ruido 2.5 k lowpass (pico 0.30) |
+| `status.charged` | zumbido sawtooth 220→660 vibrato 30 Hz + ruido 10 k crush 2 @0.12 (pico 0.30) |
+
+Suena una vez por tipo y por paso, con el golpe que la detona
+(`SessionSfx`); el daño extra (`reaction.<kind>`) no suena aparte.
+Hielo (`IceEvent`): `brittle` → `boss.frost`, `shattered` →
+`boss.crystal` con el golpe.

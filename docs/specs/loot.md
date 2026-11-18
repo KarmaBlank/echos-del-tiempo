@@ -383,6 +383,31 @@ Conteo por tipo y banda de nivel:
 | dagas | 1 | 1 | 0 | 1 | 0 | 3 |
 | ballesta | 1 | 0 | 1 | 0 | 1 | 3 |
 
+### 8.7 Bases de Agua y Electro (v0.7)
+
+9 bases nuevas (89 en total: guerrero 23, maga 24, tirador 22, paladín
+20) con las habilidades de Agua y Electro (combat.md § "Elementos y
+reacciones"; docs/specs/elemental_reactions.md). Mismas fórmulas que § 8
+(precio `100·L + 4·L²`, implícito por tipo); tier 2 hasta nivel 10, 3
+después. Cada habilidad nueva la da al menos una base; ninguna pasa de 3;
+las de golpe cuerpo a cuerpo van en armas melee y las de disparo en armas
+a distancia (`kSkillDelivery`, § 16.1).
+
+| id | Nombre | familia | tipo | nivel | requisitos | ATQ | MAG | peso | habilidades | implícito | precio |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `espada_coral` | Espada de Coral | guerrero | espada | 9 | FUE 17, DES 10 | 15.0 + 0.69·FUE + 0.3·DES | — | — | Tajo de Marea, Escudo de Agua | +3% crítico | 1224 |
+| `varita_voltaica` | Varita Voltaica | maga | varita | 10 | ESP 19, DES 10 | 4.0 + 0.3·FUE | 13.0 + 0.8·ESP | — | Chispazo, Corriente | +8 maná | 1400 |
+| `baculo_marea` | Báculo de Marea | maga | báculo | 18 | ESP 27, AGI 14 | 5.0 + 0.4·FUE | 22.0 + 0.93·ESP | — | Chorro de Agua, Oleada, Escudo de Agua | +6% MAG | 3096 |
+| `lanza_mareas` | Tridente de las Mareas | guerrero | lanza | 21 | FUE 30, AGI 16 | 26.0 + 0.81·FUE + 0.25·AGI | — | 0.5 | Lanza de las Mareas, Remolino | +0.3 velocidad | 3864 |
+| `arco_relampago` | Arco de Relámpago | tirador | arco | 22 | DES 31, AGI 16 | 27.0 + 0.87·DES + 0.2·AGI | — | — | Flecha Voltaica, Relámpago, Flecha Acuática | +3% crítico | 4136 |
+| `dagas_electricas` | Dagas Eléctricas | tirador | dagas | 25 | DES 34, AGI 18 | 27.0 + 0.8·DES + 0.35·AGI | — | — | Puñalada Eléctrica, Campo Estático | +7% crítico | 5000 |
+| `tomo_tormentas` | Tomo de Tormentas | maga | tomo | 30 | ESP 40 | 6.0 + 0.3·FUE | 37.0 + 1.05·ESP | 0.4 | Tormenta Eléctrica, Cadena de Rayos, Descarga Estática | +12% carga de ULT | 6600 |
+| `hacha_tronante` | Hacha Tronante | guerrero | hacha | 34 | FUE 44 | 42.0 + 1.09·FUE | — | 1.3 | Golpe de Trueno, Remolino | +10% ATQ | 8024 |
+| `tomo_mareas` | Tomo de las Mareas Profundas | maga | tomo | 41 | ESP 51 | 7.0 + 0.3·FUE | 48.0 + 1.16·ESP | 0.5 | Torrente, Bruma Densa, Géiser | +12% carga de ULT | 10824 |
+
+Las bases existentes no cambian (Flecha Rayo y Descarga pasan a ser de
+Electro, Marea Vital de Agua).
+
 ### 8.3 Afijos
 
 | id | Nombre | Lado | Estadística | Peso | Solo en | Tiers (nivel: rango) |

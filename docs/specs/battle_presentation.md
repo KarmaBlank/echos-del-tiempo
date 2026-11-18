@@ -1217,3 +1217,58 @@ actual. Al pasar el mouse por una técnica o la ULT se muestra su
   negro con disco de acreción crece sobre el Centinela y curva la luz
   hacia él. Descarga — viaja sobre el grupo y colapsa (onda doble); un
   rayo del vacío baja a cada objetivo y saltan esquirlas violetas/negras.
+
+## Reacciones elementales (v0.7)
+
+Fuente: docs/specs/elemental_reactions.md § 3. Código:
+`lib/features/combat/presentation/scene/reaction_fx.dart` (plan puro +
+dibujo), `status_icons.dart` (íconos), textos en
+`lib/features/combat/domain/element_text.dart`.
+
+- **Cartel** sobre el objetivo (`y − 34` del mundo, dibujado en px de
+  pantalla con la unidad de las etiquetas `u`): banda negra `#000000`
+  85% con franjas de 1·u arriba y abajo del color del **estado
+  consumido** (`statusColor`: Mojado `#3fa9f5`, Cargado `#c77dff`,
+  Congelación `#74b9ff`; en la Explosión tóxica, el naranja del fuego), texto Press Start 2P 12·u del color de la reacción con
+  contorno negro. Dura **600 ms**: entra a escala 1.5 → 1 en 90 ms, sube
+  6·u y se apaga en los últimos 160 ms. Golpe blanco 55% en los primeros
+  80 ms × `flashFactor` (DESTELLOS apagados: sin golpe). REDUCIR
+  MOVIMIENTO: sin escala de entrada ni subida.
+
+| Reacción | Cartel | Color | Extra |
+|---|---|---|---|
+| Electrocución | `¡ELECTROCUCIÓN!` | `#c77dff` | 2 rayos quebrados que cruzan al objetivo (@0 y @40 ms) |
+| Explosión tóxica | `¡EXPLOSIÓN TÓXICA!` | `#badc58` | anillo grande (radio 4 → 26) en el objetivo + anillo chico (→ 14) en cada salpicado a `+90 + 40·i` ms |
+| Congelación súbita | `¡CONGELACIÓN SÚBITA!` | `#81ecec` | anillo chico |
+| Derretir | `¡DERRETIR!` | `#ff9f43` | anillo chico |
+| Cortocircuito | `¡CORTOCIRCUITO!` | `#c77dff` | rayo del objetivo al segundo enemigo (llega a los 140 ms: ahí cae su número) |
+
+- **Anillo** (420 ms): trazo 2 px (3 el grande) del color + anillo
+  interior 60% del color del estado; gotas de 2 px alrededor
+  (`scaledCount(12 | 6, PARTÍCULAS)`). REDUCIR MOVIMIENTO: aparece ya
+  abierto y solo se apaga.
+- **Rayo** (260 ms): 6 tramos quebrados (amplitud `12%` del largo, 2–6
+  px) que cambian cada 40 ms (fijos con REDUCIR MOVIMIENTO), trazo de
+  color 2.5 px + núcleo blanco 1 px; llega al destino en el 40% y se
+  apaga desde el 60%; chispas en la punta (`scaledCount(4, PARTÍCULAS)`).
+- **Eventos → efectos** (`battle_fx.dart`): `ReactionEvent` (llega
+  después del `DamageEvent` que la detona) → piezas `FxKind.reaction` a
+  la hora de ese golpe + 30 ms. El daño extra (`DamageEvent` con
+  `sourceId` `reaction.<kind>`) sale como número del color de la reacción
+  en `(x + 14, y − 8)` (al costado del número del golpe, debajo del
+  cartel) con su tajo: en el
+  objetivo con el cartel; en cada salpicado a `+90 + 40·i`; el salto del
+  Cortocircuito a `+140`. Partículas del elemento al abrir el anillo /
+  llegar el rayo; el anillo grande sacude 4 (si la sacudida está
+  activa).
+- **Hielo** (`IceEvent`): `brittle` → `¡QUEBRADIZO!` `#81ecec` en
+  `y − 46`; `shattered` → `shatter` cian + `¡SE ROMPE! ×1.5` con el
+  golpe; `thawed` → `DESCONGELADO` (salvo que lo haya derretido una
+  reacción en el paso); `resisted` → `RESISTE HIELO` gris.
+- **Chips** (`battle_hud.dart`): Mojado / Cargado con ícono, letra y
+  turnos que quedan (`M2` / `Mojado 2`, tooltip "2 turnos"); `▼VEL` con
+  la lentitud y el quiebre extra; `Quebradizo`; `Resiste hielo N`.
+- **Íconos de estado** (8×8, `status_wet` gota, `status_charged` rayo):
+  contorno `#0b0e1a`, relleno del color del estado, brillo blanco. Los
+  chips de Mojado / Cargado llevan ícono + letra (`M`, `E`) + stacks: la
+  forma y la letra los distinguen sin color (accessibility.md § 3).

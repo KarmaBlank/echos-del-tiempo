@@ -73,7 +73,8 @@ String skillTipMarkup(SkillDef s,
 /// efecto · efecto`.
 String skillOneLineMarkup(SkillDef s,
     {DerivedStats? stats, bool ultimate = false}) {
-  final lines = describeSkillMarkup(s, tipUser(stats), ultimate: ultimate)
+  final lines = describeSkillMarkup(s, tipUser(stats),
+          ultimate: ultimate, element: false)
       .split('<br>')
       .skip(1)
       .toList();

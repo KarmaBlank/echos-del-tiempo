@@ -351,7 +351,8 @@ void main() {
           ]),
           const SkillCommand('lanzaH', targetId: 'e0'));
       final foe = s.state.enemies.single;
-      expect(foe.nextTurn, closeTo(50 + 100 / (5 * (1 - 0.24)) * 0.2, 1e-9));
+      // v0.7: −6% de velocidad por stack de Congelación.
+      expect(foe.nextTurn, closeTo(50 + 100 / (5 * (1 - 0.12)) * 0.2, 1e-9));
       expect(s.events.whereType<DelayedEvent>(), hasLength(1));
     });
 
@@ -789,9 +790,11 @@ void main() {
     }
 
     test('sin bucles infinitos y determinístico con el mismo azar', () {
-      final a = run(7);
+      // Semilla 8 desde v0.7 (con reacciones, la 7 ya no pasa por un
+      // rebote de Cadena Infinita; es solo suerte del azar).
+      final a = run(8);
       expect(a.any((l) => l.contains('Rebote (Cadena Infinita)')), isTrue);
-      expect(run(7), a);
+      expect(run(8), a);
     });
 
     test('Combatant con mecánicas, efectos y turno extra: ida y vuelta JSON',

@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import '../data/enemy_families.dart';
 import '../data/game_catalog.dart';
 import '../models/ascension.dart';
 import '../models/attributes.dart';
@@ -537,6 +538,15 @@ class SessionJson {
         if (c.healReceived != 0) 'hrec': c.healReceived,
         // Ascensión (opcional): mecánicas de 1 vez por batalla ya usadas.
         if (c.once.isNotEmpty) 'once': c.once.toList(),
+        // Elementos v0.7 (opcionales). La familia solo viaja si no es la
+        // del tipo de enemigo (razas de jugador, pruebas).
+        if (c.family != null &&
+            (c.isPlayer || c.family != kEnemyFamily[c.enemyType]))
+          'fam': c.family!.name,
+        if (c.brittle) 'brit': true,
+        if (c.freezeResist != 0) 'frzR': c.freezeResist,
+        if (c.primedBy.isNotEmpty)
+          'prim': {for (final e in c.primedBy.entries) e.key.name: e.value},
       };
 
   Json timedEffectToJson(TimedEffect e) => {
@@ -632,6 +642,15 @@ class SessionJson {
       statusResist: j.intOrNull('sres') ?? 0,
       healReceived: j.dblOrNull('hrec') ?? 0,
       once: j['once'] == null ? {} : j.strings('once').toSet(),
+      family: j.enumOrNull('fam', EnemyFamily.values),
+      brittle: j.flag('brit'),
+      freezeResist: j.intOrNull('frzR') ?? 0,
+      primedBy: {
+        if (j.objOrNull('prim') case final m?)
+          for (final e in m.entries)
+            if (StatusKind.values.asNameMap()[e.key] case final k?)
+              if (e.value case final String id) k: id,
+      },
     );
   }
 

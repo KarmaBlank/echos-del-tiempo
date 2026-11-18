@@ -110,7 +110,7 @@ void main() {
     expect(find.byKey(const ValueKey('asc-tree')), findsOneWidget);
     expect(plain(tester, 'asc-points'), contains('Puntos libres 4'));
     await tapVisible(tester, find.byKey(const ValueKey('asc-node-elementalista_b1')));
-    expect(plain(tester, 'asc-node-detail'), contains('Estallido Glacial'));
+    expect(plain(tester, 'asc-node-detail'), contains('Chispa Compartida'));
     await tapVisible(tester, find.byKey(const ValueKey('asc-take')));
     expect(c.session!.players[c.localId]!.profile.ascension.nodes,
         ['elementalista_b1']);

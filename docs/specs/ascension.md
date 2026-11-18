@@ -164,18 +164,23 @@ sistema de disparadores de passive_tree_v2.md § 5) salvo `Sobrecarga`
 | b3 | Instante Eterno | Al usar tu ULT, **todos los aliados actúan ya** (pasan al frente del timeline; solo: tu próximo turno llega 50% antes). |
 | k | Desfase | Los enemigos que retrasás reciben +20% de daño de todos (2 turnos). |
 
-### Maga · Elementalista (combos Quemadura / Congelación / Veneno)
+### Maga · Elementalista (prepara y detona reacciones, v0.7)
+
+Desde v0.7 (elemental_reactions.md § 4, § 4.1 de abajo) el kit y el
+mini-árbol giran alrededor de las reacciones: Prisma **prepara**,
+Detonar **detona**, y en co-op cualquier aliado puede detonar lo que
+ella preparó. Ids sin cambios.
 
 | Nodo | Nombre | Efecto |
 |---|---|---|
-| r | Reacción Elemental | +30% de daño contra enemigos con **2 o más** estados elementales distintos. |
-| a1 | Contagio Elemental | Al aplicar Quemadura, Congelación o Veneno, el objetivo recibe además 1 stack del primero que no tiene (Quemadura → Congelación → Veneno). |
-| a2 | Sobrecarga | +1 stack a toda Quemadura, Congelación y Veneno que aplicás. |
-| a3 | Detonación | Al morir un enemigo con estados elementales, la mitad (redondeo arriba) de cada uno **pasa a cada enemigo vivo**. |
-| b1 | Estallido Glacial | Golpear a un enemigo con 3+ Congelación lo hace estallar: 60% del golpe a cada otro enemigo. |
-| b2 | Fiebre | +25% de crítico contra enemigos con Quemadura. |
+| r | Catalizadora | Tus reacciones pegan **+25%** (el golpe que detona y, con él, la explosión y el salto). |
+| a1 | Conductora | Al mojar a un enemigo, también queda **Cargado**. |
+| a2 | Sobrecarga | +1 stack a toda Quemadura, Congelación y Veneno que aplicás (Explosiones tóxicas más grandes). |
+| a3 | Detonación en Cadena | Al detonar una reacción: **40% del golpe a cada otro enemigo**. |
+| b1 | Chispa Compartida | Cuando una reacción (tuya o de un aliado) consume un estado que preparaste: +12 de carga de ULT. |
+| b2 | Estática | +25% de crítico contra enemigos **Cargados**. |
 | b3 | Eco Elemental | 35% de que una habilidad mágica (no ULT) se repita gratis al 60%. |
-| k | Tormenta Perfecta | Contra enemigos con **los 3** estados: +50% de daño y +25% de crítico. |
+| k | Tormenta Perfecta | Al detonar una reacción: **50% de turno extra** (un turno extra no da otro). |
 
 ### Tirador · Francotirador (críticos enormes a un objetivo)
 
@@ -278,7 +283,7 @@ tu próximo turno), `protect` (Protección). `SkillKind.support`: sin daño.
 | Berserker | **Sangría** (`sangria`, 3 MP): físico 2.4, cuesta 10% de vida | **Torbellino Rojo** (`torbellino`, 6 MP): físico a todos 1.2, roba 30% | **Frenesí Carmesí** (`ult_berserker`): físico 3.6, +30% crít, roba 50% |
 | Señor de la Guerra | **Grito de Guerra** (`gritoGuerra`, 5 MP): grupo +25% ATQ 3 turnos | **Estandarte** (`estandarte`, 6 MP): grupo −25% daño recibido 2 turnos | **Llamado a las Armas** (`ult_senorGuerra`): físico a todos 1.6, grupo +30% ATQ 3 turnos, adelanta aliados 30% |
 | Cronomante | **Acelerón** (`aceleron`, 6 MP): adelanta a los aliados 40% (solo: a vos) | **Grieta Temporal** (`grietaTemporal`, 5 MP): mágico 1.5, retrasa 0.8 | **Detener el Tiempo** (`ult_cronomante`): mágico a todos 1.4, retrasa 1.2, adelanta aliados 50% |
-| Elementalista | **Prisma Elemental** (`prismaElemental`, 4 MP): mágico 1.4, +1 Quemadura +1 Congelación +1 Veneno | **Detonar** (`detonar`, 6 MP): mágico 1.2, +30% por stack elemental del objetivo y los consume | **Trinidad** (`ult_elementalista`): mágico a todos 1.7, +2 de cada elemento |
+| Elementalista | **Prisma Elemental** (`prismaElemental`, 4 MP): mágico 1.3, deja Mojado y Cargado (golpe neutro: no detona) | **Detonar** (`detonar`, 5 MP): mágico 1.5, catalizador ×1.3 | **Trinidad** (`ult_elementalista`): mágico a todos 1.5, catalizador ×1.3; después deja Mojado, Cargado y 2 Veneno a todos |
 | Francotirador | **Tiro a la Cabeza** (`tiroCabeza`, 6 MP): físico 2.4, +35% crít, remata < 25% | **Apuntar** (`apuntar`, 3 MP): +100% crít 1 turno y tu turno llega 50% antes | **Bala del Juicio** (`ult_francotirador`): físico 4.5, crítico seguro, remata < 30% |
 | Trampero | **Trampa de Púas** (`trampaPuas`, 4 MP): trampa ATQ × 1.0 a todos | **Red de Caza** (`redCaza`, 4 MP): físico 1.1, retrasa 0.5, 2 Veneno | **Campo Minado** (`ult_trampero`): físico a todos 1.5 y trampa ATQ × 0.8 a todos |
 | Templario | **Castigo Sagrado** (`castigo`, 4 MP): mágico 1.6, 35% aturdir, +1 Sagrado | **Luz Cegadora** (`luzCegadora`, 7 MP): mágico a todos 0.9, 25% aturdir | **Juicio Final** (`ult_templario`): mágico a todos 2.0, aturde, +1 Sagrado |
@@ -305,6 +310,35 @@ una habilidad trasladada nunca puede ser del kit de una ascensión
 (`ItemRules.sanitize` la descarta). Los rasgos de clase del Paladín
 (DEF base 6, VIT 15, 3% de aturdir al atacar, débil a perforante ×1.5 y
 a estados +1) no cambian.
+
+### 4.1 Elementalista v0.7: catalizador
+
+Habilidad nueva de `SkillDef`: `catalyst` (opcional, 0 = apagado).
+Un golpe **catalizador** no tiene elemento propio: toma el elemento que
+reacciona con lo que el objetivo tiene encima, en el orden de prioridad
+de la tabla de reacciones (Mojado → Electro = Electrocución; Veneno →
+Fuego = Explosión tóxica; Mojado → Hielo = Congelación súbita;
+Congelación → Fuego = Derretir; Cargado → Agua = Cortocircuito). Si
+detona, el golpe hace además × (1 + `catalyst`) (`× 1.3 CATALIZADOR`
+en el registro). Sin nada que detonar es un golpe neutro (físico de
+elemento, mágico de tipo). Los saltos y rebotes de la misma habilidad
+también son catalizadores.
+
+| Antes (v0.5) | Ahora (v0.7) |
+|---|---|
+| Prisma: mágico 1.4, +1 Quemadura +1 Congelación +1 Veneno | mágico 1.3, Mojado + Cargado: el objetivo queda listo para Electro, Hielo **y** Agua |
+| Detonar: mágico 1.2, +30% por stack elemental, los consume | mágico 1.5, catalizador ×1.3 (5 MP) |
+| Trinidad: mágico a todos 1.7, +2 de cada elemento | mágico a todos 1.5, catalizador ×1.3, después Mojado + Cargado + 2 Veneno a todos: el grupo tiene 4 reacciones listas |
+
+El ciclo propio es Prisma → Detonar (Electrocución, que aturde); con
+Eco Elemental, el eco de Detonar detona además el Cargado que dejó
+Prisma (Cortocircuito). En co-op, Prisma y Trinidad preparan para que
+detonen los aliados (Chispa Compartida, Combo de Equipo).
+
+El elemento de Prisma y de Detonar es `fisico` en `kSkillElement`
+(neutro); el de Trinidad, `agua` (el estado que deja primero). El
+catalizador lo resuelve el motor golpe a golpe. `catalyst` se edita
+desde el admin de balance (`Catalizador (× al detonar)`).
 
 Las ULT de ascensión usan el guion y los colores de `kUltScripts` con su
 propio id (reusan un estilo visual y lo tiñen) y tienen sonido propio.
