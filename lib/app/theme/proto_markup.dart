@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'proto_colors.dart';
 import 'retro_text.dart';
+import 'retro_type.dart';
 
 /// `esc` del prototipo: escapa un texto libre (nombres, chat) antes de
 /// meterlo en markup.
@@ -37,7 +38,7 @@ TextSpan protoSpan(String markup, {TextStyle? style, Color? boldColor}) {
 
   void flush() {
     if (buf.isEmpty) return;
-    children.add(TextSpan(text: retroText(_unescape(buf.toString()))));
+    children.addAll(symbolSpans(retroText(_unescape(buf.toString()))));
     buf.clear();
   }
 
@@ -96,6 +97,28 @@ TextSpan protoSpan(String markup, {TextStyle? style, Color? boldColor}) {
   return TextSpan(style: style, children: root);
 }
 
+/// Símbolos que VT323 (texto de lectura) no tiene y salen de Press
+/// Start 2P: van en su tamaño chico ([RetroType.label]) para no salir
+/// enormes al lado del texto.
+final _symbols = RegExp('[←→★♥▶▲▼½♦◀▸▾]');
+
+const _symbolStyle = TextStyle(
+    fontFamily: RetroType.pixelFamily, fontSize: RetroType.label, height: 1);
+
+/// [text] en trozos: los símbolos de [_symbols] con su estilo propio.
+List<InlineSpan> symbolSpans(String text) {
+  if (!_symbols.hasMatch(text)) return [TextSpan(text: text)];
+  final out = <InlineSpan>[];
+  var i = 0;
+  for (final m in _symbols.allMatches(text)) {
+    if (m.start > i) out.add(TextSpan(text: text.substring(i, m.start)));
+    out.add(TextSpan(text: m.group(0), style: _symbolStyle));
+    i = m.end;
+  }
+  if (i < text.length) out.add(TextSpan(text: text.substring(i)));
+  return out;
+}
+
 String _unescape(String s) => s
     .replaceAll('&nbsp;', ' ')
     .replaceAll('&lt;', '<')
@@ -103,6 +126,46 @@ String _unescape(String s) => s
     .replaceAll('&quot;', '"')
     .replaceAll('&#39;', "'")
     .replaceAll('&amp;', '&');
+
+/// Corta un markup en sus líneas (`<br>`), cerrando al final de cada una
+/// las etiquetas abiertas y reabriéndolas en la siguiente: cada línea es
+/// un markup válido con el mismo aspecto. Para repartir un tip largo en
+/// columnas (`RetroTipText`).
+List<String> protoSplitLines(String markup) {
+  final out = <String>[];
+  // (nombre, etiqueta de apertura tal cual)
+  final open = <(String, String)>[];
+  var line = StringBuffer();
+  var i = 0;
+  for (final m in _tag.allMatches(markup)) {
+    line.write(markup.substring(i, m.start));
+    i = m.end;
+    final closing = m.group(1) == '/';
+    final name = m.group(2)!.toLowerCase();
+    if (name == 'br') {
+      for (final (n, _) in open.reversed) {
+        line.write('</$n>');
+      }
+      out.add(line.toString());
+      line = StringBuffer();
+      for (final (_, tag) in open) {
+        line.write(tag);
+      }
+      continue;
+    }
+    line.write(m.group(0));
+    if (!const {'b', 'span', 'small'}.contains(name)) continue;
+    if (closing) {
+      final at = open.lastIndexWhere((e) => e.$1 == name);
+      if (at >= 0) open.removeRange(at, open.length);
+    } else {
+      open.add((name, m.group(0)!));
+    }
+  }
+  line.write(markup.substring(i));
+  out.add(line.toString());
+  return out;
+}
 
 /// Texto plano de un markup (tests, accesibilidad).
 String protoPlain(String markup) => protoSpan(markup).toPlainText();

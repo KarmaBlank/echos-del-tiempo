@@ -1,4 +1,6 @@
 import '../data/passive_tree_catalog.dart';
+import '../rules/passive_tree_migration.dart';
+import 'ascension.dart';
 import 'attributes.dart';
 import 'eco.dart';
 import 'item.dart';
@@ -43,6 +45,7 @@ class PlayerProfile {
     List<EcoItem> ecos = const [],
     bool ecosUnlocked = false,
     int mastery = 0,
+    AscensionProgress ascension = AscensionProgress.empty,
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -70,10 +73,12 @@ class PlayerProfile {
       ecos: List.unmodifiable(ecos),
       ecosUnlocked: ecosUnlocked,
       mastery: mastery.clamp(0, maxMastery),
+      ascension: ascension,
     );
   }
 
   const PlayerProfile._({
+    required this.ascension,
     required this.ecos,
     required this.ecosUnlocked,
     required this.mastery,
@@ -114,6 +119,10 @@ class PlayerProfile {
 
   /// Nivel para los puntos del árbol: cada maestría da 1 punto más.
   int get treeLevel => level + mastery;
+
+  /// Pruebas del Tiempo, ascensión y sus nodos (JSON `asc`,
+  /// docs/specs/ascension.md).
+  final AscensionProgress ascension;
 
   EcoItem? ecoByUid(String uid) {
     for (final e in ecos) {
@@ -268,6 +277,7 @@ class PlayerProfile {
     List<EcoItem>? ecos,
     bool? ecosUnlocked,
     int? mastery,
+    AscensionProgress? ascension,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -307,6 +317,7 @@ class PlayerProfile {
       ecos: ecos == null ? this.ecos : List.unmodifiable(ecos),
       ecosUnlocked: ecosUnlocked ?? this.ecosUnlocked,
       mastery: (mastery ?? this.mastery).clamp(0, maxMastery),
+      ascension: ascension ?? this.ascension,
     );
   }
 
@@ -423,6 +434,8 @@ class PlayerProfile {
         if (ecos.isNotEmpty) 'ecos': [for (final e in ecos) e.toJson()],
         if (ecosUnlocked) 'eco': true,
         if (mastery > 0) 'ms': mastery,
+        // Ascensión v0.5 (ascension.md § 2): opcional.
+        if (!ascension.isEmpty) 'asc': ascension.toJson(),
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -438,12 +451,16 @@ class PlayerProfile {
         attrs[a] = _int(st[attributeKey(a)]);
       }
     }
-    // Árbol de otra versión: se reinicia gratis (passive_tree_v2.md § 6).
+    // Árbol de otra versión: se migra y lo que no sigue igual se devuelve
+    // gratis (passive_tree_v3.md § 11).
     var tree = _strings(json['tree']);
     var refunded = _int(json['tvRef']);
-    if (_int(json['tv'], 1) < treeVersion && tree.isNotEmpty) {
-      refunded += tree.length;
-      tree = const [];
+    final tv = _int(json['tv'], 1);
+    if (tv < treeVersion && tree.isNotEmpty) {
+      final kept = migrateTreeIds(
+          json['cls'] is String ? json['cls'] as String : 'guerrero', tree, tv);
+      refunded += tree.length - kept.length;
+      tree = kept;
     }
     final rawItems = json['items'];
     List<ItemInstance>? items;
@@ -519,6 +536,7 @@ class PlayerProfile {
           : const [],
       ecosUnlocked: json['eco'] == true,
       mastery: _int(json['ms']),
+      ascension: AscensionProgress.fromJson(json['asc']),
     );
   }
 

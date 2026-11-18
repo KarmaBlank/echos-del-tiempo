@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 
+import '../data/ascension_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/items_catalog.dart';
+import '../data/trials_catalog.dart';
 import '../data/uniques_catalog.dart';
 import '../models/battle_command.dart';
 import '../models/battle_event.dart';
@@ -28,6 +30,7 @@ import 'loot_rules.dart';
 import 'map_generator.dart';
 import 'mulberry32.dart';
 import 'progression_rules.dart';
+import 'trial_rules.dart';
 import 'world_rules.dart';
 import 'zone_rules.dart';
 
@@ -86,7 +89,23 @@ class SessionEngine {
       final eco = s.eco;
       return eco == null ? null : ecoRules.missionDef(eco);
     }
+    if (id == TrialRules.missionId) {
+      final t = trialDef(s.trial);
+      return t == null ? null : trialRules.missionDef(t);
+    }
     return catalog.mission(id);
+  }
+
+  /// Reglas de las Pruebas del Tiempo (docs/specs/ascension.md § 1).
+  TrialRules get trialRules => progression.trials;
+
+  /// La mazmorra de una Prueba: función pura de su número y la semilla.
+  GameMap _trialMap(TrialDef t, int seed) {
+    final key = 'trial:${t.number}:$seed';
+    final hit = _maps[key];
+    if (hit != null) return hit;
+    if (_maps.length > 8) _maps.clear();
+    return _maps[key] = trialRules.map(t, seed);
   }
 
   /// El anfitrión fija su Atlas para la sala (al crearla y cada vez que
@@ -172,6 +191,10 @@ class SessionEngine {
     final eco = s.eco;
     if (m.missionId == EcoRules.missionId && eco != null) {
       return _ecoMap(eco);
+    }
+    final trial = trialDef(s.trial);
+    if (m.missionId == TrialRules.missionId && trial != null) {
+      return _trialMap(trial, m.seed);
     }
     return _missionMap(catalog.mission(m.missionId)!, m.seed);
   }
@@ -279,6 +302,11 @@ class _Op {
   /// El Eco que se está jugando (`null` fuera de una misión de Eco).
   EcoItem? get _eco =>
       s.mission?.missionId == EcoRules.missionId ? s.eco : null;
+
+  /// La Prueba que se está jugando (`null` fuera de una).
+  TrialDef? get _trial => s.mission?.missionId == TrialRules.missionId
+      ? trialDef(s.trial)
+      : null;
 
   AtlasEffects get _atlas => e.atlasOf(s);
   Iterable<SessionPlayer> get players => s.players.values;
@@ -415,6 +443,7 @@ class _Op {
           say('${p.name} rechazó la misión.');
           s.vote = null;
           if (v.missionId == EcoRules.missionId) _clearEcoVote();
+          if (v.missionId == TrialRules.missionId) s.trial = null;
         }
         return true;
 
@@ -430,6 +459,7 @@ class _Op {
         s.mode = SessionMode.lobby;
         say('${p.name} canceló la preparación.');
         _clearEcoVote();
+        s.trial = null;
         return true;
 
       case ActivateSealAction():
@@ -585,7 +615,155 @@ class _Op {
         p.profile = next;
         say('[DEV] ${p.name} recibió ${ecos.fullName(eco)}');
         return true;
+
+      // ---- ascensión (docs/specs/ascension.md) ----
+      case ProposeTrialAction():
+        return _proposeTrial(p, a.trial);
+
+      case ChooseAscensionAction():
+        if (s.mode != SessionMode.lobby &&
+            s.mode != SessionMode.prep &&
+            s.mode != SessionMode.result) {
+          return false;
+        }
+        if (!_profileChange(
+            p, rules.ascensions.choose(p.profile, a.ascensionId),
+            gain: true)) {
+          return false;
+        }
+        events.add(AscensionChosenEvent(p.id, a.ascensionId));
+        say('¡${p.name} ascendió: ${kAscensions[a.ascensionId]!.name}!');
+        return true;
+
+      case TakeAscensionNodeAction():
+        if (s.mode == SessionMode.battle) return false;
+        if (!_profileChange(p, rules.ascensions.take(p.profile, a.nodeId),
+            gain: true)) {
+          return false;
+        }
+        final node = rules.ascensions.of(p.profile)?.node(a.nodeId);
+        if (node != null && node.major) {
+          say('${p.name} despertó ${node.name}');
+        }
+        return true;
+
+      case ResetAscensionAction():
+        // Reiniciar nodos: como el árbol. Sacar la ascensión: solo pueblo.
+        if (!rules.canRespec(s.mode) ||
+            (a.full && !s.canShop) ||
+            (p.profile.ascension.id == null)) {
+          return false;
+        }
+        if (!a.full && p.profile.ascension.nodes.isEmpty) return false;
+        _profileChange(p, rules.ascensions.reset(p.profile, full: a.full));
+        if (a.full) say('${p.name} volvió a su clase base.');
+        return true;
+
+      case DevGrantTrialAction():
+        if (!e.devTools) return false;
+        final t = trialDef(a.trial);
+        if (t == null) return false;
+        var prof = p.profile;
+        if (prof.level < t.level) {
+          final g = rules.gainXp(
+              prof,
+              ProgressionRules.totalXpTo(t.level) -
+                  ProgressionRules.totalXpTo(prof.level) -
+                  prof.xp);
+          prof = g.profile;
+        }
+        for (var n = 1; n <= t.number; n++) {
+          prof = e.trialRules.complete(prof, n);
+        }
+        _profileChange(p, prof, gain: true);
+        say('[DEV] ${p.name}: Pruebas hasta la ${t.roman} superadas '
+            '(nivel ${prof.level}).');
+        return true;
     }
+  }
+
+  // ---------------- Pruebas del Tiempo (ascension.md § 1) ----------------
+
+  /// `ProposeTrialAction`: en el pueblo, con el nivel y la anterior.
+  bool _proposeTrial(SessionPlayer p, int n) {
+    final t = trialDef(n);
+    if (s.mode != SessionMode.lobby ||
+        s.vote != null ||
+        t == null ||
+        e.trialRules.cannotPropose(p.profile, n) != null) {
+      return false;
+    }
+    s
+      ..trial = n
+      ..vote = MissionVote(TrialRules.missionId, p.name, {p.id});
+    final boss = catalog.zone(t.bossZone)?.bossName ?? '?';
+    say('${p.name} propone la ${t.fullName} (jefe: $boss). ¡Voten!');
+    return true;
+  }
+
+  /// Empieza la Prueba votada: su mazmorra con trampas.
+  void _startTrial() {
+    final t = trialDef(s.trial);
+    if (t == null) {
+      s.mode = SessionMode.lobby;
+      return;
+    }
+    final seed = e._seeds();
+    _startZoneMission(e.trialRules.missionDef(t), e.trialRules.zoneDef(t),
+        seed: seed, atlasMap: e._trialMap(t, seed));
+    say('Cuidado con las púas y los Pulsos del Tiempo (violeta): '
+        'cuando brillan te devuelven al inicio del piso.');
+  }
+
+  /// Trampas de la Prueba bajo cada jugador (§ 1.1).
+  void _traps(GameMap map, MissionRun m) {
+    final t = trialDef(s.trial);
+    final f = map.floor(m.floor);
+    if (t == null || f == null) return;
+    final active = TrialRules.pulseActive(s.time);
+    var i = 0;
+    for (final p in players) {
+      if (!p.alive) continue;
+      final tx = (p.x / WorldRules.tileSize).floor();
+      final ty = (p.y / WorldRules.tileSize).floor();
+      if (!map.contains(tx, ty)) continue;
+      switch (TrialRules.trapAt(map.tileAt(tx, ty))) {
+        case TrapKind.spikes when s.time >= p.spikeReady:
+          p.spikeReady = s.time + TrialRules.spikeEvery;
+          final dmg = math.min(
+              (p.hp - 1).floor(), jsRound(p.maxHp * t.spikeDamage));
+          if (dmg <= 0) continue;
+          p.hp -= dmg;
+          events.add(TrapTriggeredEvent(p.id, TrapKind.spikes, dmg));
+        case TrapKind.pulse when active:
+          final pos = _around(f.spawn, i++);
+          p
+            ..x = pos.x
+            ..y = pos.y
+            ..epoch += 1
+            ..moving = false;
+          events.add(TrapTriggeredEvent(p.id, TrapKind.pulse, 0));
+          say('${p.name} fue devuelto por un Pulso del Tiempo.');
+        default:
+          break;
+      }
+    }
+  }
+
+  /// Prueba completada: cada jugador que cumple gana sus puntos.
+  void _trialCompleted(TrialDef t) {
+    final winners = <String>[];
+    for (final p in players) {
+      if (!e.trialRules.earnsPoints(p.profile, t.number)) continue;
+      p.profile = e.trialRules.complete(p.profile, t.number);
+      winners.add(p.id);
+      say('${p.name} superó la ${t.fullName}: +${TrialRules.points} puntos '
+          'de ascensión.');
+      if (p.profile.ascension.id == null) {
+        say('${p.name}: elegí tu ascensión en la Estatua del Tiempo.');
+      }
+    }
+    events.add(TrialCompletedEvent(t.number, winners));
   }
 
   // ---------------- Ecos (docs/specs/ecos_atlas.md § 4) ----------------
@@ -653,7 +831,7 @@ class _Op {
   }
 
   bool _craft(SessionPlayer p, CraftAction a) {
-    if (!s.canShop) return false;
+    if (!(a.op.destroys ? s.canDiscard : s.canShop)) return false;
     final before = p.profile;
     final r = rules.crafting.apply(before, a.op, a.targetUid,
         sourceUid: a.sourceUid,
@@ -963,11 +1141,14 @@ class _Op {
   int _levelFor(FieldEnemy en) {
     final m = s.mission;
     final eco = _eco;
+    final trial = _trial;
     final z = eco != null
         ? ecos.zoneDef(eco)
-        : m == null || m.zone == 0
-            ? null
-            : catalog.zone(m.zone);
+        : trial != null
+            ? e.trialRules.zoneDef(trial)
+            : m == null || m.zone == 0
+                ? null
+                : catalog.zone(m.zone);
     if (z == null) return 0;
     if (en.boss) return ZoneRules.bossLevel(z);
     if (en.elite) return ZoneRules.eliteLevel(z, en.floor);
@@ -1045,6 +1226,10 @@ class _Op {
     s.vote = null;
     if (missionId == EcoRules.missionId) {
       _startEco();
+      return;
+    }
+    if (missionId == TrialRules.missionId) {
+      _startTrial();
       return;
     }
     final m = catalog.mission(missionId);
@@ -1495,6 +1680,7 @@ class _Op {
 
     final map = e.mapFor(s);
     _voidFalls(map, m);
+    if (_trial != null) _traps(map, m);
     // Escalera de bajada: tocarla baja a todo el grupo.
     final down = map.floor(m.floor)?.stairsDown;
     if (down != null &&
@@ -1860,15 +2046,20 @@ class _Op {
       if (p.hp <= 0) p.hp = 1;
     }
     final eco = _eco;
-    // Un Eco usa el tipo de zona solo para el mapa: no desbloquea zonas.
-    final zone = eco != null || def.zone == 0 ? null : catalog.zone(def.zone);
+    final trial = _trial;
+    // Un Eco o una Prueba usan el tipo de zona solo para el mapa: no
+    // desbloquean zonas.
+    final zone = eco != null || trial != null || def.zone == 0
+        ? null
+        : catalog.zone(def.zone);
     final unlocked = <String, int>{};
     if (ok) {
       final firsts = _lootAll(LootSource.mission, null, null,
           chance: dropChance[rank] ?? 0,
           extraBonus: rankBonus[rank] ?? 0,
-          level: eco?.monsterLevel ?? zone?.maxLevel);
+          level: eco?.monsterLevel ?? trial?.monsterLevel ?? zone?.maxLevel);
       if (eco != null) _ecoCompleted(eco);
+      if (trial != null) _trialCompleted(trial);
       // El jefe final activa el Portal del Eco (ecos_atlas.md § 1).
       if (zone != null && zone.index == ZoneRules.maxZone) _unlockEcos();
       for (final d in firsts.entries) {
@@ -1949,6 +2140,7 @@ class _Op {
     s
       ..eco = null
       ..ecoOwner = null
+      ..trial = null
       ..mode = SessionMode.lobby
       ..mission = null
       ..result = null

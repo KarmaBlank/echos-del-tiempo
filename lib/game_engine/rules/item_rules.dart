@@ -1,4 +1,5 @@
 import '../data/affixes_catalog.dart';
+import '../data/ascension_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/uniques_catalog.dart';
 import '../data/weapon_passives.dart';
@@ -135,7 +136,7 @@ class ItemRules {
   /// `null` si la base no existe. Lo inválido se corrige o se descarta:
   /// afijos desconocidos, de otro tipo, repetidos o fuera de cupo; valores
   /// fuera de su rango; pasiva en una rareza sin pasiva; habilidades
-  /// desconocidas o de más; mejoras > 5 por estadística (la suma no se
+  /// desconocidas, del kit de una ascensión o de más; mejoras > 5 por estadística (la suma no se
   /// recorta: las armas migradas conservan su forja).
   ItemInstance? sanitize(ItemInstance raw) {
     final w = catalog.weapons[raw.baseId];
@@ -187,7 +188,13 @@ class ItemRules {
     }
     final skills = <String>[];
     for (final s in raw.extraSkills) {
-      if (catalog.skills.containsKey(s) && !skills.contains(s)) skills.add(s);
+      // Solo habilidades de arma: el kit de una ascensión (p. ej. el viejo
+      // kit del Paladín, hoy del Guardián) nunca se traslada.
+      if (catalog.skills.containsKey(s) &&
+          !kAscensionSkills.containsKey(s) &&
+          !skills.contains(s)) {
+        skills.add(s);
+      }
     }
     item = item.copyWith(
       affixes: kept,

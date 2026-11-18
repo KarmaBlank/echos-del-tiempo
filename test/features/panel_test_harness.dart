@@ -1,4 +1,5 @@
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
+import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
 import 'package:echos_del_tiempo/game_engine/models/atlas_store.dart';
@@ -10,18 +11,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../game_engine/session_test_helpers.dart';
+import '../real_fonts.dart';
 
 /// Un panel dibujado sobre la sesión local real (motor + controlador),
 /// sin el mapa: cada acción del panel pasa por `SessionController`.
+///
+/// Con [textSize] aplica el "Tamaño del texto" como la app
+/// (`MaterialApp.builder` → `RetroTextScale`); [devicePixelRatio] cambia
+/// la escala de la pantalla (la ventana sigue siendo 1280×720 lógicos).
 Future<SessionController> pumpPanel(
   WidgetTester tester, {
   required PlayerProfile profile,
   required Widget Function(SessionView view, SessionController c) build,
   SessionEngine? engine,
   AtlasStore? atlas,
+  TextSize? textSize,
+  ReadingFont readingFont = ReadingFont.vt323,
+  double devicePixelRatio = 1,
 }) async {
-  tester.view.physicalSize = const Size(1280, 720);
-  tester.view.devicePixelRatio = 1;
+  // Fuentes reales: el desborde depende del ancho de los glifos.
+  await loadRealFonts(tester);
+  RetroType.classic = readingFont == ReadingFont.classic;
+  addTearDown(() => RetroType.classic = false);
+  tester.view.physicalSize =
+      Size(1280 * devicePixelRatio, 720 * devicePixelRatio);
+  tester.view.devicePixelRatio = devicePixelRatio;
   addTearDown(tester.view.reset);
   final store = InMemoryProfileStore(profile);
   late SessionController controller;
@@ -35,6 +49,12 @@ Future<SessionController> pumpPanel(
     ],
     child: MaterialApp(
       theme: RetroTheme.build(),
+      builder: textSize == null
+          ? null
+          : (context, child) => RetroTextScale(
+              factor: textSize.factor,
+              classic: readingFont == ReadingFont.classic,
+              child: child!),
       home: Scaffold(
         body: Consumer(builder: (context, ref, _) {
           final view = ref.watch(sessionControllerProvider);

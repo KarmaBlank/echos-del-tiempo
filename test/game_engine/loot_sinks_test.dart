@@ -304,7 +304,7 @@ void main() {
           {'t': 'craft', 'op': 'sellAll', 'w': '*', 'i': 2});
     });
 
-    test('en la sesión: lobby sí (con el azar del host), campo no', () {
+    test('en la sesión: lobby sí (con el azar del host)', () {
       final e = sessionEngine(fieldFallback: 0.1);
       final s = e.addPlayer(e.create(), 'p0', _p())!.state;
       final sold = e.apply(s, 'p0', const CraftAction(CraftOp.sell, 'c3'))!;
@@ -323,10 +323,21 @@ void main() {
           'espada_carmesi');
       expect(e.apply(s, 'p0', const CraftAction(CraftOp.sell, 'espada_bronce')),
           isNull);
+    });
+
+    test('en la aventura: desarmar, vender y limpiar sí; reforjar no', () {
       final f = inField(sessionEngine(), 'm1', profiles: [_p()]);
       expect(f.mode, SessionMode.field);
-      expect(sessionEngine().apply(f, 'p0', const CraftAction(CraftOp.sell, 'c3')),
+      final e = sessionEngine();
+      final sold = e.apply(f, 'p0', const CraftAction(CraftOp.sell, 'c3'))!;
+      expect(sold.state.players['p0']!.profile.itemByUid('c3'), isNull);
+      final batch =
+          e.apply(f, 'p0', CraftAction.batch(CraftOp.salvageAll, Rarity.comun))!;
+      expect(batch.events.whereType<CraftedEvent>().single.op,
+          CraftOp.salvageAll);
+      expect(e.apply(f, 'p0', const CraftAction.reforge('e1', 'espada_carmesi')),
           isNull);
+      expect(f.canDiscard && !f.canShop, isTrue);
     });
   });
 }

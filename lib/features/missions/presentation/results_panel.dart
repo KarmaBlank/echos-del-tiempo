@@ -4,6 +4,7 @@ import '../../../app/theme/proto_colors.dart';
 
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/loot_filter.dart';
 import '../../inventory/presentation/item_widgets.dart';
@@ -35,7 +36,16 @@ class ResultsPanel extends StatelessWidget {
     this.othersUnlocked,
     this.finalVictory = false,
     this.ecoAtlas,
+    this.trial,
+    this.onAscend,
   });
+
+  /// Prueba del Tiempo superada: `+2 puntos de ascensión` (o que ya la
+  /// tenías). Ver docs/specs/ascension.md § 1.2.
+  final String? trial;
+
+  /// ELEGIR ASCENSIÓN (con la Prueba I y todavía sin ascensión).
+  final VoidCallback? onAscend;
 
   /// Eco: lo que ganó tu Atlas (`+3 puntos de Atlas: tier 5, zona, jefe`)
   /// o que no hubo primeras veces (docs/specs/ecos_atlas.md § 5.1).
@@ -48,7 +58,10 @@ class ResultsPanel extends StatelessWidget {
   /// Si [r] es la victoria final: misión ganada de la zona 10 (el motor
   /// no tiene otra señal; el jefe de la zona 10 es el Devorador).
   static bool isFinalVictory(MissionResult r) =>
-      r.success && r.zone == 10 && r.missionId != 'eco';
+      r.success &&
+      r.zone == 10 &&
+      r.missionId != 'eco' &&
+      r.missionId != 'trial';
 
   static const finalTitle = '¡Venciste al Devorador de Eras!';
   static const finalSubtitle = 'El tiempo vuelve a fluir. Gracias por jugar.';
@@ -89,6 +102,11 @@ class ResultsPanel extends StatelessWidget {
       width: 640,
       title: r.success ? 'MISIÓN COMPLETADA' : 'MISIÓN FALLIDA',
       actions: [
+        if (onAscend != null)
+          PanelButton('ELEGIR ASCENSIÓN',
+              key: const ValueKey('results-ascend'),
+              accent: ProtoColors.violet,
+              onPressed: onAscend),
         PanelButton('VOLVER AL LOBBY',
             key: const ValueKey('results-back'), onPressed: onBack),
       ],
@@ -106,7 +124,7 @@ class ResultsPanel extends StatelessWidget {
               child: Text(retroText(finalTitle),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 14,
+                      fontFamily: RetroType.pixelFamily, fontSize: 14,
                       color: ProtoColors.gold,
                       shadows: [
                         Shadow(
@@ -129,6 +147,12 @@ class ResultsPanel extends StatelessWidget {
               padding: EdgeInsets.zero,
               child: line(a, color: const Color(0xFF5AE6D2)),
             ),
+          if (trial case final t?)
+            Padding(
+              key: const ValueKey('results-trial'),
+              padding: EdgeInsets.zero,
+              child: line(t, color: ProtoColors.violet),
+            ),
           if (unlocked case final u?)
             Padding(
               key: const ValueKey('results-unlocked'),
@@ -136,7 +160,7 @@ class ResultsPanel extends StatelessWidget {
               child: Text(retroText(u),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 12,
+                      fontFamily: RetroType.pixelFamily, fontSize: 12,
                       color: ProtoColors.gold,
                       shadows: [
                         Shadow(
@@ -148,7 +172,7 @@ class ResultsPanel extends StatelessWidget {
           // `.bigrank`: dorado con sombra dura `#a3471d`.
           Text(rankLabel(r.rank),
               style: const TextStyle(
-                  fontSize: 56,
+                  fontFamily: RetroType.pixelFamily, fontSize: 56,
                   height: 1.4,
                   color: ProtoColors.gold,
                   shadows: [

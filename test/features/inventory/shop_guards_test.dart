@@ -140,7 +140,7 @@ void main() {
   test('reiniciar es gratis y vale en todo modo salvo batalla (freeRespec)',
       () {
     final p = newProfile('A', 'guerrero');
-    final withTree = p.copyWith(level: 3, tree: ['filo_1']);
+    final withTree = p.copyWith(level: 3, tree: ['gue_r1']);
     for (final m in SessionMode.values) {
       final g = ShopGuards(progression, m);
       final battle = m == SessionMode.battle;

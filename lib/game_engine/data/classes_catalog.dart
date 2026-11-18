@@ -34,7 +34,8 @@ const Map<String, ClassDef> kClasses = {
     allowedWeaponTypes: ['espada+escudo', 'maza+escudo', 'martillo+escudo'],
     startWeaponId: 'espada_escudo_novato',
     baseDefense: 6,
-    kitSkillIds: ['aura', 'fortaleza', 'proteccion'],
+    // Sin kit de clase desde v0.5: Aura Restauradora, Fortaleza y
+    // Protección son el kit del Guardián (docs/specs/ascension.md § 4).
     stunOnAttackChance: 0.03,
     pierceWeakness: 1.5,
     statusWeakness: 1,

@@ -8,7 +8,8 @@ import '../../../../game_engine/models/battle_state.dart';
 import '../../../../game_engine/models/passive_mechanic.dart';
 import '../../../../game_engine/models/skill.dart';
 import '../../../../game_engine/models/status.dart';
-import '../../../../game_engine/rules/battle_engine.dart' show stanceName;
+import '../../../../game_engine/rules/battle_engine.dart'
+    show stanceName, ultimateOf;
 import '../../../../game_engine/rules/js_math.dart';
 import 'fx_style.dart';
 import 'proc_fx.dart';
@@ -95,10 +96,14 @@ class UltFx {
     required this.bulwark,
     this.ultId,
     this.casterClass,
+    this.casterAscension,
     this.script = kDefaultUltScript,
     this.targets = const [],
     this.enemyType,
   });
+
+  /// Ascensión del lanzador (sprite ascendido de la tarjeta).
+  final String? casterAscension;
 
   final String name;
   final String casterName;
@@ -132,6 +137,7 @@ class UltFx {
       bulwark: bulwark,
       ultId: ultId,
       casterClass: casterClass,
+      casterAscension: casterAscension,
       script: script,
       targets: ids,
       enemyType: enemyType);
@@ -513,8 +519,8 @@ List<BattleFx> mapBattleEvents(
           a.ult = script;
           ultAction = a;
           // El lanzador se lanza al descargar.
-          out.add(BattleFx(FxKind.act,
-              who: e.actorId, delayMs: script.buildMs));
+          out.add(
+              BattleFx(FxKind.act, who: e.actorId, delayMs: script.buildMs));
         } else {
           act(e.actorId);
         }
@@ -544,6 +550,14 @@ List<BattleFx> mapBattleEvents(
             }
           case SkillKind.heal || SkillKind.regen || SkillKind.bulwark:
             break; // los HealEvent traen números y auras
+          case SkillKind.support:
+            // Kit de ascensión: grito / escudo / adelanto para el grupo.
+            ring(here.dx, here.dy - 8, a.color, big: true);
+            if (sk.rally || sk.protect) {
+              for (final q in aliveParty()) {
+                aura(q.id, FxElement.level);
+              }
+            }
         }
       case BattleActionKind.dual:
         final partner = e.partnerId;
@@ -556,7 +570,8 @@ List<BattleFx> mapBattleEvents(
               ? fxWhite
               : kDualColors[dualKey(actor.classId ?? '', q.classId ?? '')] ??
                   fxWhite
-          ..el = st == null ? FxElement.arcane : elementOfStatus(st.status.kind);
+          ..el =
+              st == null ? FxElement.arcane : elementOfStatus(st.status.kind);
         act(e.actorId);
         if (partner != null) act(partner);
         out.add(BattleFx(FxKind.flash, color: a.color));
@@ -1026,8 +1041,7 @@ List<BattleFx> mapBattleEvents(
         txt(id, -34, '¡QUEBRADO!', breakColor);
         aura(id, FxElement.stun);
       case BreakPhase.recovered:
-        txt(id, -40, 'SE RECUPERA', _gray,
-            dl: action == null ? 0 : lateBase());
+        txt(id, -40, 'SE RECUPERA', _gray, dl: action == null ? 0 : lateBase());
       case BreakPhase.fill || BreakPhase.decay:
         break; // la barra de la etiqueta ya lo muestra
     }
@@ -1079,7 +1093,6 @@ List<BattleFx> mapBattleEvents(
     return u.lastImpact(math.max(1, a.dl.length)) + 200;
   }
 
-
   /// Mecánica de un jefe (docs/specs/battle_presentation.md § "Mecánicas
   /// de jefe").
   void bossMech(BossMechanicEvent e) {
@@ -1129,7 +1142,9 @@ List<BattleFx> mapBattleEvents(
       case BossMechanicPhase.reform:
         if (tg == null) return;
         final a = action;
-        final dl = a?.ult == null ? 0 : a!.ult!.lastImpact(math.max(1, a.dl.length)) + 200;
+        final dl = a?.ult == null
+            ? 0
+            : a!.ult!.lastImpact(math.max(1, a.dl.length)) + 200;
         aura(tg, FxElement.freeze, dl: dl);
         at(FxKind.ring, tg, dy: -6, color: frostColor, dl: dl);
         txt(tg, -30, 'SE REFORMA', frostColor, dl: dl);
@@ -1151,7 +1166,8 @@ List<BattleFx> mapBattleEvents(
         final a = action;
         final dl = a == null ? 0 : hitDelay(a, e.actorId);
         txt(e.actorId, -54, 'BLOQUEA −${jsRound(e.value * 100)}%',
-            const Color(0xFFB2BEC3), dl: dl);
+            const Color(0xFFB2BEC3),
+            dl: dl);
 
       // ---- v0.3 (docs/specs/battle_presentation.md § "Mecánicas de jefe
       // v0.3") ----
@@ -1191,8 +1207,7 @@ List<BattleFx> mapBattleEvents(
             who: e.actorId));
       case BossMechanicPhase.lavaBurn:
         if (tg == null) return;
-        at(FxKind.lavaBurst, tg,
-            dy: 0, color: lavaColor, el: FxElement.burn);
+        at(FxKind.lavaBurst, tg, dy: 0, color: lavaColor, el: FxElement.burn);
         aura(tg, FxElement.burn, dl: 120);
         txt(tg, -44, '¡LAVA! Q+${e.value.round()}', lavaColor, dl: 80);
       case BossMechanicPhase.lavaFade:
@@ -1207,7 +1222,11 @@ List<BattleFx> mapBattleEvents(
         if (tg == null) return;
         final dl = action?.ult != null ? afterUlt(160) : 120;
         at(FxKind.arc, e.actorId,
-            dy: -14, to: tg, color: voidMarkColor, el: FxElement.arcane, dl: dl);
+            dy: -14,
+            to: tg,
+            color: voidMarkColor,
+            el: FxElement.arcane,
+            dl: dl);
         at(FxKind.reticle, tg, dy: -10, color: voidMarkColor, dl: dl + 200);
         txt(tg, -46, '¡MARCADO!', voidMarkColor, dl: dl + 200);
       case BossMechanicPhase.markHit:
@@ -1220,8 +1239,11 @@ List<BattleFx> mapBattleEvents(
         final a = action;
         final dl = a == null ? 0 : hitDelay(a, e.actorId);
         at(FxKind.ring, e.actorId, dy: -8, color: _healGreen, dl: dl);
-        txt(e.actorId, -56,
-            tg == e.actorId ? 'MARCA ANULADA' : '¡PROTEGE LA MARCA!', _healGreen,
+        txt(
+            e.actorId,
+            -56,
+            tg == e.actorId ? 'MARCA ANULADA' : '¡PROTEGE LA MARCA!',
+            _healGreen,
             dl: dl);
       case BossMechanicPhase.phaseShift:
         final dl = (procDl[e.actorId] ?? action?.dl[e.actorId] ?? 0) + 120;
@@ -1268,7 +1290,7 @@ List<BattleFx> mapBattleEvents(
         startAction(e);
       case UltimateUsedEvent(:final actorId, :final name):
         final c = state.byId(actorId);
-        final sk = kAllUltimates[c?.weaponType];
+        final sk = c == null ? null : ultimateOf(c);
         final p = position(actorId);
         ultIndex = out.length;
         out.add(BattleFx(FxKind.ult,
@@ -1280,9 +1302,11 @@ List<BattleFx> mapBattleEvents(
             ult: UltFx(
               name: name,
               casterName: c?.name ?? '',
-              bulwark: sk?.kind == SkillKind.bulwark,
+              bulwark: sk?.kind == SkillKind.bulwark ||
+                  sk?.kind == SkillKind.support,
               ultId: sk?.id,
               casterClass: c?.classId,
+              casterAscension: c?.ascensionId,
               script: ultScriptFor(sk?.id),
             )));
       case DamageEvent():
@@ -1290,7 +1314,9 @@ List<BattleFx> mapBattleEvents(
       case HealEvent():
         heal(e);
       case StatusAppliedEvent(:final targetId, :final kind, :final stacks):
-        txt(targetId, -46,
+        txt(
+            targetId,
+            -46,
             '${statusLetter(kind)}+$stacks${e.weakness ? ' (débil)' : ''}',
             statusColor(kind),
             dl: procDl[targetId] ?? action?.dl[targetId] ?? 0);
@@ -1313,15 +1339,14 @@ List<BattleFx> mapBattleEvents(
         }
       case KnockedOutEvent(:final targetId):
         if (isPlayer(targetId)) {
-          txt(targetId, -28, 'K.O.', _critRed,
-              dl: action?.dl[targetId] ?? 0);
+          txt(targetId, -28, 'K.O.', _critRed, dl: action?.dl[targetId] ?? 0);
         } else {
           final p = position(targetId);
           lastKo = targetId;
           // En una ULT, al impactar en él; por un efecto secundario, con él.
           final a = action;
-          final dl = procDl[targetId] ??
-              (a?.ult == null ? 0 : a!.dl[targetId] ?? 0);
+          final dl =
+              procDl[targetId] ?? (a?.ult == null ? 0 : a!.dl[targetId] ?? 0);
           out.add(BattleFx(FxKind.poof, x: p.dx, y: p.dy - 6, delayMs: dl));
         }
       case RevivedEvent():
@@ -1374,4 +1399,3 @@ List<BattleFx> mapBattleEvents(
   }
   return out;
 }
-

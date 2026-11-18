@@ -197,8 +197,9 @@ void main() {
             passiveProgress: PlayerPassiveProgress(tree),
           );
       const filo = [
-        'filo_1', 'filo_2', 'filo_3', 'filo_n1', 'filo_4', 'filo_5', //
-        'filo_n2',
+        'gue_r1', 'gue_r2', 'gue_f3', 'gue_f4', 'gue_f5', 'filo_e1', //
+        'filo_e2', 'filo_f', 'filo_a1', 'filo_a2', 'filo_na', 'filo_b1',
+        'filo_b2', 'filo_nb', 'filo_j',
       ];
       expect(_stats.calculate(build(filo)).critChance, greaterThan(0.4));
       final d = _stats.calculate(build([...filo, 'filo_k']));

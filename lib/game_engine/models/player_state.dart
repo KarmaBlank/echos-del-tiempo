@@ -1,3 +1,4 @@
+import 'ascension.dart';
 import 'attributes.dart';
 import 'item.dart';
 import 'passive_tree.dart';
@@ -26,6 +27,10 @@ class PlayerBuild {
   /// Baluarte). Fuera de combate siempre es 0.
   final int bonusDefense;
 
+  /// Ascensión elegida y sus nodos (docs/specs/ascension.md). Vacía =
+  /// sin ascender.
+  final AscensionProgress ascension;
+
   const PlayerBuild({
     required this.classId,
     required this.level,
@@ -35,7 +40,11 @@ class PlayerBuild {
     this.passiveProgress = PlayerPassiveProgress.empty,
     this.item,
     this.bonusDefense = 0,
+    this.ascension = AscensionProgress.empty,
   });
+
+  /// Id de la ascensión elegida (`null` = clase base).
+  String? get ascensionId => ascension.id;
 
   /// Mejoras de forja efectivas.
   WeaponUpgradeLevels get forge => item?.forge ?? weaponUpgrades;
@@ -49,6 +58,7 @@ class PlayerBuild {
         passiveProgress: passiveProgress,
         item: item,
         bonusDefense: value,
+        ascension: ascension,
       );
 }
 

@@ -24,6 +24,8 @@ import '../audio/audioplayers_music_player.dart';
 import '../audio/audioplayers_sfx_player.dart';
 import '../audio/music/music_service.dart';
 import '../audio/sfx_service.dart';
+import '../persistence/ecos_log.dart';
+import '../persistence/exit_guard.dart';
 import '../settings/frame_limiter.dart';
 import '../settings/game_settings.dart';
 import '../settings/window_mode.dart';
@@ -34,8 +36,24 @@ final sl = GetIt.instance;
 /// Cada `main_*.dart` llama primero a esto y después a su propio
 /// `registerNetcode*()` — así el "composition root" queda explícito:
 /// mirás el main y sabés exactamente qué build estás armando.
-void registerSharedDependencies() {
+///
+/// [accountStore] reemplaza el `account.json` de la carpeta de datos
+/// (tests); todas las variantes (solo, host, LAN, P2P) usan la misma
+/// cuenta: no hay un store por modo (docs/specs/characters.md § 1.4).
+void registerSharedDependencies({AccountStore? accountStore}) {
   if (sl.isRegistered<PassiveTreeRules>()) return;
+  // `ecos.log` junto a la cuenta (docs/specs/characters.md § 1.5).
+  if (accountStore == null) {
+    try {
+      final dir = JsonFileProfileStore.dataDirectory();
+      if (dir != null) {
+        EcosLog.init(dir);
+        EcosLog.info('Inicio del juego');
+      }
+    } on UnsupportedError {
+      // web: sin registro en disco
+    }
+  }
 
   sl.registerLazySingleton<GameCatalog>(() => GameCatalog.standard);
   sl.registerLazySingleton<PassiveTreeRules>(
@@ -77,10 +95,15 @@ void registerSharedDependencies() {
   // `profile.json` viejo); en memoria donde todavía no hay una carpeta
   // conocida. La sesión ve solo el personaje elegido
   // (docs/specs/characters.md § 1).
-  sl.registerLazySingleton<AccountRepository>(
-    () => AccountRepository(
-        JsonFileAccountStore.forPlatform() ?? InMemoryAccountStore()),
-  );
+  sl.registerLazySingleton<AccountRepository>(() {
+    final repo = AccountRepository(accountStore ??
+        JsonFileAccountStore.forPlatform() ??
+        InMemoryAccountStore());
+    // Al salir, lo que quedó sin escribir va a disco (después de la
+    // sesión, que le pasa el último perfil).
+    ExitGuard.register(repo, repo.flush, last: true);
+    return repo;
+  });
   sl.registerLazySingleton<ProfileStore>(
     () => SelectedCharacterProfileStore(sl<AccountRepository>()),
   );

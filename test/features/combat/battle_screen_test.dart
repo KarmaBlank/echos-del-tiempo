@@ -1,5 +1,6 @@
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/battle_command_window.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/battle_screen.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_fx.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
@@ -14,6 +15,7 @@ import 'package:echos_del_tiempo/game_engine/models/status.dart';
 import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -74,6 +76,8 @@ void main() {
     ));
   }
 
+  Finder act(String id) => find.byKey(ValueKey('battle-act-$id'));
+
   testWidgets('el guerrero ataca al Limo desde el menú', (tester) async {
     // El guerrero tocó al enemigo: arranca primero.
     expect(state.currentId, 'guerrero');
@@ -83,13 +87,21 @@ void main() {
       return true;
     });
 
-    // Cabecera `<b>` del `#menu` y mis datos con el turno.
-    expect(find.textContaining('¡Tu turno! (Guerrero)'), findsOneWidget);
-    expect(find.textContaining('TU TURNO'), findsOneWidget);
+    // Ventana de comandos: quién actúa, categorías y el objetivo.
+    expect(find.textContaining('¡Tu turno! Guerrero'), findsOneWidget);
+    expect(find.byKey(const ValueKey('battle-cat-attack')), findsOneWidget);
+    expect(find.byKey(const ValueKey('battle-cat-skills')), findsOneWidget);
+    expect(find.byKey(const ValueKey('battle-cat-items')), findsOneWidget);
+    expect(find.byKey(const ValueKey('battle-cat-defend')), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('battle-target')),
+            matching: find.textContaining('Limo', findRichText: true)),
+        findsOneWidget);
     // 4 jugadores → vida ×2.35: Limo 30 × 2.35 = 70.5 → 71
     expect(state.enemies[0].maxHp, 71);
 
-    await tester.tap(find.textContaining('1. Atacar'));
+    await tester.tap(act('attack'));
     await tester.pump();
     expect(sent, isA<AttackCommand>());
     // Sin elegir, el objetivo es el primer enemigo vivo.
@@ -113,20 +125,93 @@ void main() {
     expect((sent! as AttackCommand).targetId, 'e1');
   });
 
+  testWidgets('teclado: ←/→ categorías, ↑/↓ acción, Enter confirma',
+      (tester) async {
+    BattleCommand? sent;
+    await pump(tester, canAct: true, onCommand: (c) {
+      sent = c;
+      return true;
+    });
+    final menu = tester.state<BattleViewState>(find.byType(BattleView));
+    expect(menu.category, BattleCategory.attack);
+    menu.handleKey(LogicalKeyboardKey.arrowRight);
+    await tester.pump();
+    expect(menu.category, BattleCategory.skills);
+    // Las técnicas del arma, una fila cada una con su costo.
+    final cur = state.current!;
+    for (final id in cur.skillIds) {
+      expect(act('skill-$id'), findsOneWidget);
+    }
+    menu.handleKey(LogicalKeyboardKey.arrowDown);
+    await tester.pump();
+    expect(menu.selectedAction, 1);
+    // La descripción es la de la acción elegida.
+    expect(find.byKey(ValueKey('battle-desc-skill-${cur.skillIds[1]}')),
+        findsOneWidget);
+    menu.handleKey(LogicalKeyboardKey.enter);
+    expect((sent! as SkillCommand).skillId, cur.skillIds[1]);
+  });
+
   testWidgets('poción: submenú para elegir a quién', (tester) async {
     BattleCommand? sent;
     await pump(tester, canAct: true, onCommand: (c) {
       sent = c;
       return true;
     });
-    await tester.tap(find.textContaining('Poción de vida x2'));
+    await tester.tap(find.byKey(const ValueKey('battle-cat-items')));
+    await tester.pump();
+    await tester.tap(act('potion'));
     await tester.pump();
     expect(find.textContaining('¿A quién le das la Poción de vida'),
         findsOneWidget);
-    await tester.tap(find.textContaining('. Maga'));
+    final menu = tester.state<BattleViewState>(find.byType(BattleView));
+    expect(menu.hasSubmenu, isTrue);
+    await tester.tap(act('give-maga'));
     await tester.pump();
     expect(sent, isA<ItemCommand>());
     expect((sent! as ItemCommand).targetPlayerId, 'maga');
+    expect(menu.hasSubmenu, isFalse);
+  });
+
+  testWidgets(
+      'la descripción nunca es la de otra técnica cuando el menú cambia '
+      'bajo el mouse', (tester) async {
+    await pump(tester, canAct: true, onCommand: (_) => true);
+    final menu = tester.state<BattleViewState>(find.byType(BattleView));
+    menu.selectCategory(BattleCategory.skills);
+    await tester.pump();
+    final g = state.current!;
+    final first = g.skillIds.first;
+    // Mouse sobre la primera técnica del guerrero.
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(tester.getCenter(act('skill-$first')));
+    await tester.pump();
+    expect(find.byKey(ValueKey('battle-desc-skill-$first')), findsOneWidget);
+    // Turno de otro jugador (otras técnicas) con el mouse quieto.
+    var next = engine.command(state, 'guerrero', const DefendCommand())!.state;
+    while (next.currentId == 'guerrero' ||
+        !(next.current?.isPlayer ?? false)) {
+      next = engine.nextTurn(next).state;
+    }
+    final other = next.current!;
+    await tester.pumpWidget(MaterialApp(
+      theme: RetroTheme.build(),
+      home: Scaffold(
+        body: BattleView(battle: next, canAct: true, onCommand: (_) => true),
+      ),
+    ));
+    await tester.pump();
+    // El menú vuelve a ATACAR de quien actúa ahora; ninguna descripción
+    // del guerrero queda a la vista.
+    expect(menu.category, BattleCategory.attack);
+    expect(find.textContaining('¡Tu turno! ${other.name}'), findsOneWidget);
+    for (final id in g.skillIds) {
+      if (other.skillIds.contains(id)) continue;
+      expect(find.byKey(ValueKey('battle-desc-skill-$id')), findsNothing);
+    }
+    expect(find.byKey(const ValueKey('battle-desc-attack')), findsOneWidget);
   });
 
   testWidgets('sin turno propio no hay menú: dice de quién es el turno',
@@ -135,10 +220,9 @@ void main() {
         canAct: false,
         localId: 'maga',
         onCommand: (_) => fail('no debía mandar'));
-    // Como el prototipo: sin menú. El panel del medio dice de quién es el
-    // turno y cuándo me toca; la fila del guerrero lo marca.
+    // Como el prototipo: sin menú. El panel dice de quién es el turno y
+    // cuándo me toca; la tarjeta del guerrero lo marca (▶).
     expect(find.byKey(const ValueKey('battle-menu')), findsNothing);
-    expect(find.textContaining('1. Atacar'), findsNothing);
     Finder waiting(String text) => find.descendant(
         of: find.byKey(const ValueKey('battle-waiting')),
         matching: find.text(text));
@@ -147,11 +231,11 @@ void main() {
     expect(
         find.descendant(
             of: find.byKey(const ValueKey('member-guerrero')),
-            matching: find.textContaining('SU TURNO')),
+            matching: find.textContaining('▶', findRichText: true)),
         findsOneWidget);
   });
 
-  testWidgets('solo veo mis datos; el resto del grupo en filas compactas',
+  testWidgets('barra del grupo: una tarjeta por jugador, la mía con el detalle',
       (tester) async {
     Combatant m(String id) => state.party.firstWhere((p) => p.id == id);
     m('tirador')
@@ -165,14 +249,20 @@ void main() {
     m('guerrero').hp = 0;
     await pump(tester, canAct: false, localId: 'maga', onCommand: (_) => true);
 
-    // Un solo panel detallado: el mío.
+    // Mi tarjeta y las del resto del grupo.
     expect(find.byKey(const ValueKey('my-panel-maga')), findsOneWidget);
     for (final id in ['guerrero', 'tirador', 'paladin']) {
       expect(find.byKey(ValueKey('my-panel-$id')), findsNothing);
       expect(find.byKey(ValueKey('member-$id')), findsOneWidget);
     }
     expect(find.byKey(const ValueKey('member-maga')), findsNothing);
-    expect(find.textContaining('ATQ '), findsOneWidget);
+    // Las stats detalladas, en el tooltip de mi tarjeta.
+    expect(
+        find.byWidgetPredicate((w) =>
+            w is RetroTooltip &&
+            w.message.contains('ATQ ') &&
+            w.message.contains('Maga')),
+        findsOneWidget);
 
     Finder inRow(String id, String text) => find.descendant(
         of: find.byKey(ValueKey('member-$id')), matching: find.text(text));
@@ -193,7 +283,7 @@ void main() {
         findsOneWidget);
   });
 
-  testWidgets('en solitario la lista del grupo dice Solo', (tester) async {
+  testWidgets('en solitario: una sola tarjeta y el menú', (tester) async {
     state = engine
         .nextTurn(engine
             .start(
@@ -204,9 +294,9 @@ void main() {
             .state)
         .state;
     await pump(tester, canAct: true, localId: 'maga', onCommand: (_) => true);
-    expect(find.text('Solo'), findsOneWidget);
     expect(find.byKey(const ValueKey('my-panel-maga')), findsOneWidget);
-    expect(find.textContaining('1. Atacar'), findsOneWidget);
+    expect(find.byKey(const ValueKey('battle-cat-duos')), findsNothing);
+    expect(act('attack'), findsOneWidget);
   });
 
   testWidgets('un paso nuevo (eventSeq) crea los efectos una sola vez',

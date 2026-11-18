@@ -44,19 +44,130 @@ mejoras, etc." Se concilia con el 1:1 así:
   mueven el foco, `Enter` confirma.
 - Esqueleto y piezas: docs/specs/panels.md § "Marco común".
 
+## Menús: lista + detalle (v0.5)
+
+Pedido del dueño (v0.5): "la accesibilidad y experiencia aplica para
+todos los menús, como por ejemplo el de la fusión, que mucho texto y
+tenés que bajar para ver qué habilidad elegir". Mismos principios que
+el menú de batalla aprobado (lista de categorías │ acciones de una línea
+con el costo a la derecha │ descripción corta + `Enter Confirmar · Esc
+Volver`):
+
+- **No bajar para encontrar la elección.** Las opciones son filas de
+  **una línea** (`MenuRow`, `lib/app/widgets/menu_widgets.dart`):
+  etiqueta a la izquierda (se corta con "…") y el valor alineado a la
+  derecha (costo, nivel, `EQUIPADA`, o el motivo en rojo si no se
+  puede; nunca más de la mitad de la fila). Los grupos llevan la
+  etiqueta en una columna al costado (`MenuGroup`), no en una línea
+  propia. Las elecciones que dependen de otra van **justo debajo** de
+  la elegida, con sangría (p. ej. las habilidades del arma origen).
+- **Detalle al costado, no párrafos arriba.** La explicación de la fila
+  con mouse / foco / elegida va en el panel de detalle
+  (`PanelDetail`); arriba de la lista, como mucho, **una** línea
+  (`PanelHint`). El texto largo vive en el `[?]`.
+- **Pasos.** Los asistentes muestran las migas (`StepCrumbs`), solo las
+  opciones del paso actual y el resumen de lo elegido arriba del
+  detalle; el resultado (`ANTES → DESPUÉS`, lo que gastás y lo que
+  perdés) se ve siempre, y lo primero que se lee es lo que cuesta.
+- **Filtros de una línea.** Un filtro de N opciones es un selector
+  `Familia ‹ MAGA ›` (`ChoiceCycler`), no una fila de N botones.
+- **Teclas iguales.** `Enter` / clic elige o confirma, `Esc` vuelve (un
+  paso en los asistentes; cierra el panel si no hay paso atrás); la
+  línea `KeyHints` lo recuerda al pie del detalle. Toda acción
+  deshabilitada dice su motivo en una línea (`PanelButton(reason:)`).
+- **Tamaño del texto.** Nada de tamaños de fuente a mano: tokens
+  `RetroType`; anchos que dependen del texto con `RetroType.width` /
+  `RetroType.em`; alturas de una línea con `RetroType.line` × el tamaño
+  escalado. A 1280×720 nada desborda en Normal / Grande / Muy grande.
+- Piezas (`lib/app/widgets/menu_widgets.dart`): `MenuRow`, `MenuGroup`,
+  `MenuHeader`, `StepCrumbs`, `ChoiceCycler`, `KeyHints`, `InfoLine`
+  (`Etiqueta  valor` con la etiqueta en columna).
+
 ## Tipografía
 
-- Fuente única: **Press Start 2P** (`assets/fonts/PressStart2P-Regular.ttf`,
-  licencia SIL OFL 1.1 en `assets/fonts/OFL.txt`). Familia en Dart:
-  `RetroTheme.fontFamily`.
-- Tamaños múltiplos de 8 (8, 16, 24, 32) para que no se vea borrosa. El
-  prototipo usa 7-10 px en el HUD: el puerto usa 8 (los 7 px del HTML
-  también van en 8).
-- `<b>` del prototipo = `FontWeight.bold` (el navegador también lo
-  sintetiza: la fuente no trae negrita).
-- Interlineado: `.pbox` 1.6, `#tip` 1.8, paneles 1.8; el resto 1.5.
-- Cambiar de fuente = reemplazar el `.ttf` y el bloque `fonts:` de
-  `pubspec.yaml`; ningún widget nombra la fuente directamente.
+Dos fuentes pixel, las dos SIL OFL 1.1:
+
+| Fuente | Archivo | Licencia | Para |
+|---|---|---|---|
+| **VT323** (`RetroType.bodyFamily`) | `assets/fonts/VT323-Regular.ttf` (google/fonts `ofl/vt323`) | `assets/fonts/OFL-VT323.txt` | texto de lectura: tooltips, fichas, chat, descripciones, ayudas (`PanelHint`), filas de menús, ventana de comandos y log de batalla, tarjetas del grupo, HUD |
+| **Press Start 2P** (`RetroType.pixelFamily` = `RetroTheme.fontFamily`) | `assets/fonts/PressStart2P-Regular.ttf` | `assets/fonts/OFL.txt` | títulos, botones, pestañas, encabezados, cifras de las barras, etiquetas cortas |
+
+- `<b>` del prototipo = `FontWeight.bold` (negrita sintetizada).
+- Ningún widget nombra el `.ttf`: familias en `pubspec.yaml` (`fonts:`).
+- Lo que VT323 no tiene (`→ ← ★ ♥ ▶ ▲ ▼ ♦`) sale de Press Start 2P
+  (`RetroType.bodyFallback`); en el markup (`protoSpan`) esos símbolos
+  van en `RetroType.label` para no salir más grandes que el texto.
+
+### Por qué VT323 (v0.5)
+
+El dueño pidió letra más grande ("muy pequeñas") y nítida ("como baja
+resolución"); la primera prueba (Jersey 10) le pareció "muy gorda" y
+"fosforescente". Se compararon con el mismo tooltip, a Normal y 100 %,
+Press Start 8, Jersey 10, Pixelify Sans, Silkscreen, VT323, Micro 5,
+DotGothic16 y Handjet Light; el dueño eligió **VT323** (hoja "1-E":
+estilo azul actual + VT323):
+
+- Trazos finos de terminal, monoespaciada (0.4 em por letra: 8 px a
+  20 px, el mismo ancho por letra que Press Start a 8: los layouts
+  entran), mayúsculas de 11 px a 20 px, acentos, ñ, ¿ ¡ completos.
+- Filas de 40/1000 em (exacta a 25 px) y columnas "corridas" a propósito
+  (imita el haz del CRT): no tiene grilla horizontal exacta; se usa en px
+  enteros.
+- Descartadas: Jersey 10 (pesada), Silkscreen (todo mayúsculas), Micro 5
+  (fina e ilegible), Pixelify Sans (redondeada, fuera de grilla),
+  DotGothic16 (2 MB por los glifos japoneses), Handjet (borrosa).
+
+### Escala (tokens `RetroType`, `lib/app/theme/retro_type.dart`)
+
+Los widgets **no escriben tamaños a mano**. Tamaños **nominales**: el
+real lo pone `RetroTextScaler` (abajo). El tamaño nominal decide la
+fuente (`RetroType.style(size)`, `familyFor`).
+
+| Token | Nominal | Fuente | Real a 100 % (Normal / Grande / Muy grande) | Uso |
+|---|---|---|---|---|
+| `small` | 10 | VT323 | 20 / 25 / 30 | texto de lectura (`bodySmall` / `labelSmall` del tema, `smallStyle`) |
+| `body` | 11 | VT323 | 20 / 25 / 30 | lectura destacada |
+| `label` | 9 | Press Start 2P | 8 / 16 / 16 | botón compacto, cifras de barras, `?` de ayuda, letras de casillas |
+| `title` | 16 | Press Start 2P | 16 / 16 / 16 (24 a 150 %) | `h2` de panel, botón grande, avisos `[E]` |
+| `heading` | 24 | Press Start 2P | 24 | encabezados |
+| `display` | 32 | Press Start 2P | 32 | `¡VICTORIA!`, título |
+
+Interlineado de lectura `RetroType.line` = 1 (ascenso + descenso de
+VT323); Press Start 1.5. Para anchos: `RetroType.em(context, n, size:)`
+(Press Start: 1 em por glifo; VT323: 0.4 em) y
+`RetroType.width(context, base)` (`base` para Normal a 100 %, agrandado
+como el texto, nunca achicado). Texto en casillas de tamaño fijo:
+`textScaler: RetroType.fixedScaler(context)`.
+
+### Tamaño del texto y nitidez (`RetroTextScaler`)
+
+Un solo `TextScaler` (`MaterialApp.builder` → `RetroTextScale`, overlays
+incluidos) con el ajuste "Tamaño del texto" y la escala de Windows (la UI
+no se agranda con la ventana, solo el mundo: settings.md § 3.1).
+
+- **VT323** (lectura): 20 × factor (20 / 25 / 30 px lógicos) llevado a px
+  físicos enteros (a 150 %: 30 / 38 / 45 físicos).
+- **Press Start 2P** (resto): tamaño buscado (texto < 16 × factor,
+  títulos + 8 × (factor − 1)) llevado al múltiplo de 8 px físicos de
+  arriba (2 px de tolerancia, mínimo 8): su grilla es de 8 × 8.
+
+Las cajas de los tooltips caen en px físicos enteros (si no, la fuente se
+ve corrida medio píxel).
+
+### Tooltips (`RetroTooltip` / `RetroHoverCard`)
+
+Una sola caja (`lib/app/theme/retro_hover_card.dart`): `RetroTooltip`
+(texto en markup) aparece debajo del objetivo, centrada (arriba si no
+entra); `RetroHoverCard` (widgets, p. ej. la comparación de armas) a la
+derecha. Nunca se sale de la pantalla. Si el texto es más alto que la
+pantalla, `RetroTipText` lo reparte en columnas cortando en los `<br>`
+(`protoSplitLines` cierra y reabre las etiquetas abiertas); como último
+recurso la caja se achica lo justo para entrar (nunca recorta). Ancho
+máximo del texto: `RetroHoverCard.textWidth` (400 en Normal) agrandado
+con el texto. La comparación del inventario, con factor ≥ 1.5, pasa a
+dos columnas (arma | qué cambia, con el nombre de la equipada).
+
+Interlineado: paneles, tooltips, `.pbox` y chat `RetroType.line`.
 
 ## Paleta (`ProtoColors`, `lib/app/theme/proto_colors.dart`)
 
@@ -65,28 +176,28 @@ Todos los hex que usa el prototipo en la UI HTML:
 | Constante | Hex | Dónde (prototipo) |
 |---|---|---|
 | `bg` | `#0B0E1A` | fondo de `body`, `#tip` (`f5` de alfa) |
-| `ink` | `#E8ECFF` | texto base |
+| `ink` | `#B0BAE5` (prototipo `#E8ECFF`, suavizado) | texto base |
 | `panel` | `#121936` | `.pbox`, `.panel`/`#menu` (`ee` de alfa) |
 | `panelBorder` | `#2E3B6B` | borde de `.pbox`, `.mrow`, canvas |
 | `button` | `#22305A` | fondo de `button` |
 | `buttonBorder` | `#5B74C9` | borde de `button` y `.panel`, líneas |
 | `buttonHover` / `buttonHoverBorder` | `#2E4280` / `#9FB4FF` | `button:hover` |
 | `input` / `inputBorder` | `#0F1530` / `#3A4A85` | `input` |
-| `gold` | `#FFD166` | `<b>` del tip y menú, créditos, `.me`, `▶ SU TURNO`, títulos `h2` |
-| `sky` | `#9FB4FF` | `.k` del tip, clase/nivel, DEF/VEL, `small` |
-| `dim` | `#7D8BC4` | `.help`, XP/créditos, "Turno en N", crítico estimado |
+| `gold` | `#D3AC4F` (prototipo `#FFD166`, suavizado) | `<b>` del tip y menú, créditos, `.me`, `▶ SU TURNO`, títulos `h2` |
+| `sky` | `#8FA1DF` (prototipo `#9FB4FF`, suavizado) | `.k` del tip, clase/nivel, DEF/VEL, `small` |
+| `dim` | `#929ABA` (prototipo `#7D8BC4`, suavizado AA) | `.help`, XP/créditos, "Turno en N", crítico estimado |
 | `chat` | `#C8D2FF` | `#chatlog` |
-| `green` | `#7BED9F` | `.sys`, misión, curas, requisitos ok, `TIENES`, ♥ pociones |
+| `green` | `#5EB77A` (prototipo `#7BED9F`, suavizado) | `.sys`, misión, curas, requisitos ok, `TIENES`, ♥ pociones |
 | `hp` | `#2ED573` | relleno `.hp` |
 | `mp` | `#1E90FF` | relleno `.mp` |
 | `barBg` | `#222A48` | fondo `.bar` |
-| `ice` | `#74B9FF` | MP de técnicas, DEF de escudo, ✦ éter, Congelación |
-| `red` | `#FF6B81` | `#err`, requisitos que faltan, `+% crít`, tiempo ≤ 10 s |
-| `crimson` | `#FF4757` | timer ≤ 10 s del menú, crítico recibido |
-| `orange` | `#FF9F43` | arma (`⚔`), `(fusión)`, avisos naranjas |
+| `ice` | `#77A7D7` (prototipo `#74B9FF`, suavizado) | MP de técnicas, DEF de escudo, ✦ éter, Congelación |
+| `red` | `#DB828F` (prototipo `#FF6B81`, suavizado) | `#err`, requisitos que faltan, `+% crít`, tiempo ≤ 10 s |
+| `crimson` | `#DB8289` (prototipo `#FF4757`, suavizado AA) | timer ≤ 10 s del menú, crítico recibido |
+| `orange` | `#D1975F` (prototipo `#FF9F43`, suavizado) | arma (`⚔`), `(fusión)`, avisos naranjas |
 | `amber` | `#FF9F1C` | borde de `button.dual` |
-| `pink` | `#E84393` | ULT lista, nombre de ULT en tips |
-| `violet` | `#A29BFE` | barra/texto ULT cargando |
+| `pink` | `#CF85A8` (prototipo `#E84393`, suavizado AA) | ULT lista, nombre de ULT en tips |
+| `violet` | `#9E99E0` (prototipo `#A29BFE`, suavizado) | barra/texto ULT cargando |
 | `cream` | `#FFEAA7` | Protege, aturdir del Paladín |
 | `holy` | `#FFF3B0` | Sagrado |
 | `mint` | `#55EFC4` | Regeneración |
@@ -145,9 +256,9 @@ insignias del canvas.
 
 `button` del prototipo: fondo `button` `#22305A`, borde 2 px
 `buttonBorder` `#5B74C9`, texto blanco; hover fondo `#2E4280` y borde
-`#9FB4FF`; deshabilitado al 35% de opacidad. Botón grande: texto 16 px,
+`#9FB4FF`; deshabilitado al 35% de opacidad. Botón grande: texto `title` (16 px),
 padding 16. Botón compacto (`RetroTheme.compactButton`, paneles y HUD):
-texto 8 px, padding 8, alto mínimo 32. `PanelButton` acepta un color de
+texto `small`, padding 8, alto mínimo 32. `PanelButton` acepta un color de
 acento (p. ej. `green` para "¡LISTO!", como el borde/texto verde del
 prototipo).
 
@@ -160,8 +271,10 @@ batalla). Padding interno de 16 px por defecto.
 ## Caja de jugador (`PartyBox`, `.pbox`)
 
 `lib/app/theme/party_box.dart`: fondo `#121936`, borde 2 px `#2E3B6B`
-(`#FFD166` el jugador local), padding 6, ancho 200 (170 en el HTML a
-7-8 px), interlineado 1.6, opacidad 0.5 si está K.O. Contenido en
+(`#FFD166` el jugador local), padding 6, ancho 230 en Normal (170 en el
+HTML a 7-8 px; crece con el texto, `PartyBox.widthOf`), texto `small`,
+interlineado 1.6, opacidad 0.5 si está K.O. En el HUD del mapa, si con
+texto grande no entran en una fila sin pisar el chat, pasan a dos. Contenido en
 docs/specs/exploration.md § "HUD" y § "Batalla".
 
 ## Barras (`RetroBar`)
@@ -172,8 +285,9 @@ vida `#2ED573`, maná `#1E90FF`, ULT `#A29BFE` (`#E84393` al 100%).
 ## Panel sobre el mapa (`PanelFrame`)
 
 `RetroPanel` (borde `#5B74C9`), centrado, ancho máximo 760 px (o el que
-se pida) y alto máximo 86%, título `h2` de 16 px en `#FFD166`, contenido
-de 8 px (interlineado 1.8) con scroll y los botones compactos abajo a la
+se pida, agrandado con el tamaño del texto hasta la pantalla) y alto
+máximo 86%, título `h2` `title` en `#FFD166`, contenido `small`
+(interlineado 1.6) con scroll y los botones compactos abajo a la
 derecha. `header` es una fila fija entre el título y el scroll.
 
 `help` agrega el `[?]` (`PanelHelp`) al lado del título; `onClose` hace
@@ -186,19 +300,20 @@ Piezas (mismo archivo):
 - `PanelButton(reason: ...)`: deshabilitado con el motivo en `dim` a la
   izquierda; `selected` pinta el borde `gold`.
 - `PanelTabs`: fila de `PanelButton`, la pestaña activa en `gold`.
-- `PanelSection`: `h2` chico, 8 px `gold`.
+- `PanelSection`: `h2` chico, `small` `gold`.
 - `PanelRow`: `.mrow`, borde 2 px `#2E3B6B`, padding 8; `tooltip` en
   markup.
 - `RetroTooltip`: el `#tip`: fondo `#0B0E1A` (alfa `f5`), borde 2 px
-  `#FFD166`, padding 8×10, texto 8 px `#E8ECFF` interlineado 1.8, ancho
-  máximo 360, sombra `0 4 18 #000a`; `<b>` dorado y `.k` `#9FB4FF`.
-  Aparece sin espera al pasar el mouse.
+  `#FFD166`, padding 8×10, texto `small` `#E8ECFF` interlineado 1.6, ancho
+  máximo 400 (crece con el texto), sombra `0 4 18 #000a`; `<b>` dorado y
+  `.k` `#9FB4FF`. Aparece sin espera al pasar el mouse (§ "Tooltips").
 
 Piezas de `lib/app/theme/panel_widgets.dart`:
 - `PanelHelp`: cajita `?` de 2 px `buttonBorder` con texto `sky`; al
   pasar el mouse, `RetroTooltip` con la ayuda.
-- `PanelHint`: la línea "qué hace", 8 px `dim` (markup).
-- `PanelSplit`: lista (360 px, scroll propio) + detalle (`Expanded`).
+- `PanelHint`: la línea "qué hace", `small` `dim` (markup).
+- `PanelSplit`: lista (360 px, crece con el texto hasta la mitad del
+  panel salvo `scaleList: false`; scroll propio) + detalle (`Expanded`).
 - `PanelDetail`: caja del detalle (borde 2 px `panelBorder`, padding 8)
   con scroll y una fila fija abajo a la derecha (`footer`).
 - `PanelListItem`: fila elegible (`.mrow`); borde `gold` si está elegida,
@@ -212,7 +327,7 @@ Piezas de `lib/app/theme/panel_widgets.dart`:
 ## Campos de texto
 
 `input`: relleno `#0F1530`, borde 2 px `#3A4A85` (`#FFD166` con foco),
-sin radio, texto 8 px, pista en `dim`, `counterText` vacío.
+sin radio, texto `small`, pista en `dim`, `counterText` vacío.
 
 ## Árbol de pasivas
 
@@ -254,3 +369,11 @@ PNG de sprites.
   al costado y comparación de armas; mostrador con tarjetas de misión
   (objetivo y recompensas); `[?]` de ayuda, teclado y botón primario
   abajo a la derecha en todos los paneles.
+- **v4** (v0.5, accesibilidad): escala tipográfica en tokens
+  (`RetroType`, mínimo 10 px buscados en vez de 8), ajuste "Tamaño del
+  texto" y tamaños llevados a la grilla de 8 px físicos para que la
+  fuente pixel se vea nítida en cualquier escala de Windows; tooltips
+  propios que nunca se salen de la pantalla (columnas). Segunda fuente
+  pixel (VT323) para el texto de lectura (§
+  "Tipografía"); colores de texto a contraste AA y señales que no son
+  solo color (docs/specs/accessibility.md).

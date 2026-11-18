@@ -120,21 +120,31 @@ abstract final class ProcColors {
 }
 
 /// Vapor de Choque Térmico.
-const kSteamFx = ElementFx(
-    [Color(0xFFFFFFFF), Color(0xFFDFE6E9), Color(0xFFB2BEC3), Color(0xFF81ECEC)],
-    16, 26, -60, 0.7, ParticleShape.bubble);
+const kSteamFx = ElementFx([
+  Color(0xFFFFFFFF),
+  Color(0xFFDFE6E9),
+  Color(0xFFB2BEC3),
+  Color(0xFF81ECEC)
+], 16, 26, -60, 0.7, ParticleShape.bubble);
 
 /// Chispas doradas de Guardián.
 const kSparkFx = ElementFx(
     [Color(0xFFFFD166), Color(0xFFFFF3B0), Color(0xFFA29BFE)],
-    12, 30, -70, 0.7, ParticleShape.ray);
+    12,
+    30,
+    -70,
+    0.7,
+    ParticleShape.ray);
 
 /// Astillas del escudo que se quiebra.
 const kShardFx = ElementFx(
     [Color(0xFFFFEAA7), Color(0xFFFFFFFF), Color(0xFFFFF3B0)],
-    7, 55, 120, 0.35, ParticleShape.shard);
+    7,
+    55,
+    120,
+    0.35,
+    ParticleShape.shard);
 
 /// Brillo del escudo al armarse.
-const kShieldFx = ElementFx(
-    [Color(0xFFFFEAA7), Color(0xFFFFFFFF)],
-    8, 18, -30, 0.6, ParticleShape.plus);
+const kShieldFx = ElementFx([Color(0xFFFFEAA7), Color(0xFFFFFFFF)], 8, 18, -30,
+    0.6, ParticleShape.plus);

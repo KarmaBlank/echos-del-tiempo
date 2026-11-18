@@ -54,7 +54,14 @@ void main() {
             'Derrota ${m1.floorGoal} grupos por piso (${m1.floors} pisos)'),
         findsOneWidget);
     // Nivel por debajo del recomendado: lo avisa.
+    // Lista + detalle: la fila dice el nivel; el detalle avisa si estás
+    // por debajo del recomendado.
+    final m2 = cat.missions[1];
+    await tester.tap(find.byKey(ValueKey('mission-${m2.id}')));
+    await tester.pump();
     expect(find.textContaining('tu Lv 1'), findsWidgets);
+    await tester.tap(find.byKey(ValueKey('mission-${m1.id}')));
+    await tester.pump();
     expect(find.byKey(const ValueKey('panel-help')), findsOneWidget);
 
     await tester.tap(find.byKey(ValueKey('propose-${m1.id}')));
@@ -78,7 +85,13 @@ void main() {
     final b = tester.widget<PanelButton>(
         find.byKey(ValueKey('propose-${cat.missions.first.id}')));
     expect(b.reason, 'Ya hay una votación');
-    expect(find.text('Ya hay una votación'), findsNWidgets(cat.missions.length));
+    // Un solo PROPONER (el de la elegida), con el motivo al lado.
+    expect(find.text('Ya hay una votación'), findsOneWidget);
+    // Elegir otra fila cambia el detalle.
+    final m2 = cat.missions[1];
+    await tester.tap(find.byKey(ValueKey('mission-${m2.id}')));
+    await tester.pump();
+    expect(find.byKey(ValueKey('propose-${m2.id}')), findsOneWidget);
   });
 
   testWidgets('preparación: quién está listo y ¡LISTO! abajo a la derecha',

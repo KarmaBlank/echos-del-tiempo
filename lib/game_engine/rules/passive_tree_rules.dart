@@ -81,8 +81,69 @@ class PassiveTreeRules {
       m.add('atk', -0.20);
       m.add('mag', -0.20);
     }
+    // Contras de las keystones v3 (passive_tree_v3.md § 6).
+    for (final (key, stat, v) in _drawbacks) {
+      if (keys.contains(key)) m.add(stat, v);
+    }
 
     return m.withKeys(keys, mechanics);
+  }
+
+  static const _drawbacks = [
+    ('demoledor', 'hp', -0.15),
+    ('caudillo', 'ult', -0.30),
+    ('bucle', 'spd', -1.0),
+    ('singularidad', 'mag', -0.10),
+    ('diluvio', 'atk', -0.15),
+    ('depredador', 'hp', -0.20),
+    ('solInterior', 'atk', -0.15),
+    ('inamovible', 'spd', -1.0),
+  ];
+
+  /// Nodos que faltan tomar para llegar a [nodeId], en orden (el camino
+  /// más corto desde lo que ya tiene, sin pasar por una keystone
+  /// excluida). Vacío si ya lo tiene; `null` si no existe o no se puede
+  /// llegar (passive_tree_v3.md § 13). No mira los puntos.
+  List<String>? pathTo(
+      String classId, PlayerPassiveProgress progress, String nodeId) {
+    if (!catalog.nodes.containsKey(nodeId)) return null;
+    if (hasNode(classId, progress, nodeId)) return const [];
+    final taken = {
+      if (catalog.startNodeByClass[classId] case final s?) s,
+      ...progress.takenNodeIds,
+    };
+    bool blocked(String id) {
+      final ex = catalog.exclusions[id];
+      return ex != null && taken.contains(ex);
+    }
+
+    if (blocked(nodeId)) return null;
+    final prev = <String, String?>{for (final t in taken) t: null};
+    var frontier = [
+      for (final t in taken)
+        if (catalog.nodes.containsKey(t)) t
+    ];
+    while (frontier.isNotEmpty) {
+      final next = <String>[];
+      for (final id in frontier) {
+        for (final l in catalog.nodes[id]!.links) {
+          if (prev.containsKey(l) || blocked(l)) continue;
+          prev[l] = id;
+          if (l == nodeId) {
+            final out = <String>[];
+            String? at = l;
+            while (at != null && !taken.contains(at)) {
+              out.add(at);
+              at = prev[at];
+            }
+            return out.reversed.toList();
+          }
+          next.add(l);
+        }
+      }
+      frontier = next;
+    }
+    return null;
   }
 }
 

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../di/service_locator.dart';
+import '../persistence/exit_guard.dart';
 import 'game_settings.dart';
 import 'window_mode.dart';
 
@@ -25,8 +26,10 @@ final gameSettingsProvider =
   );
 });
 
-/// Cerrar la aplicación (SALIR DEL JUEGO). En escritorio le pide al
-/// motor que cierre la ventana; los tests lo reemplazan.
+/// Cerrar la aplicación (SALIR DEL JUEGO). Guarda todo lo pendiente
+/// ([ExitGuard]) y le pide al motor que cierre la ventana; los tests lo
+/// reemplazan.
 final appExitProvider = Provider<Future<void> Function()>((ref) => () async {
+      await ExitGuard.flushAll();
       await ServicesBinding.instance.exitApplication(AppExitType.required);
     });

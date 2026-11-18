@@ -1,19 +1,26 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../build_planner/presentation/build_feed.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../core/settings/game_settings.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/rules/eco_rules.dart';
+import '../../../game_engine/rules/trial_rules.dart';
+import '../../../app/theme/panel_frame.dart';
+import '../../ascension/domain/ascension_text.dart';
+import '../../ascension/presentation/ascension_cinematic.dart';
+import '../../ascension/presentation/ascension_panel.dart';
+import '../../ascension/presentation/ascension_views.dart';
 import '../../combat/presentation/battle_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
+import '../../combat/presentation/scene/arena/arena_transition.dart';
 import '../../combat/presentation/scene/battle_scene.dart';
 import '../../endgame/domain/endgame_text.dart';
 import '../../endgame/presentation/eco_portal_panel.dart';
@@ -92,7 +99,26 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     _focus.requestFocus();
   }
 
+  /// Cinemáticas de ascensión pendientes (docs/specs/ascension.md § 5):
+  /// (nombre, clase, ascensión). Se muestra la primera.
+  final _cinematics = <(String, String, String)>[];
+  final _cineKey = GlobalKey<AscensionCinematicState>();
+
+  /// La elección de ascensión abierta sobre el resultado de una Prueba.
+  bool _choosing = false;
+
   void _onSessionEvent(SessionEvent e) {
+    if (e is AscensionChosenEvent && mounted) {
+      final c = ref.read(sessionControllerProvider.notifier);
+      final p = c.session?.players[e.playerId];
+      if (p != null) {
+        setState(() {
+          _choosing = false;
+          _cinematics.add((p.name, p.profile.classId, e.ascensionId));
+        });
+      }
+      return;
+    }
     if (e is! ResumedEvent || !mounted) return;
     final c = ref.read(sessionControllerProvider.notifier);
     if (c.net == null) return; // solo: no hace falta avisar
@@ -157,6 +183,22 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     // Con la pausa abierta, sus teclas las maneja el menú; nada llega al
     // juego (ni atajos de batalla).
     if (_pauseOpen) return KeyEventResult.ignored;
+    // Cinemática de ascensión: Esc / Enter / Espacio la saltan.
+    if (_cinematics.isNotEmpty) {
+      if (event is KeyDownEvent &&
+          (event.logicalKey == LogicalKeyboardKey.escape ||
+              event.logicalKey == LogicalKeyboardKey.enter ||
+              event.logicalKey == LogicalKeyboardKey.space)) {
+        _cineKey.currentState?.skip();
+      }
+      return KeyEventResult.handled;
+    }
+    if (_choosing &&
+        event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.escape) {
+      setState(() => _choosing = false);
+      return KeyEventResult.handled;
+    }
     if (event is KeyDownEvent &&
         (event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.numpadEnter) &&
@@ -207,6 +249,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     _events ??= controller.events.listen(_onSessionEvent);
     // Sonido: escucha los eventos de la sesión mientras la pantalla vive.
     ref.watch(sessionSfxProvider);
+    // Avisos del plan de build: viven toda la sesión (no solo el HUD).
+    ref.watch(buildFeedProvider);
     // Música: el bucle y los jingles según el estado (session_music.dart).
     ref.watch(sessionMusicProvider);
 
@@ -262,6 +306,71 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             ),
           ),
           ..._overlays(view, controller, sprites.requireValue),
+          // Vuelta de la arena al mapa: fundido de bloques
+          // (docs/specs/battle_presentation.md § "Arenas" → "Transición").
+          Positioned.fill(
+            child: BattleExitWipe(inBattle: view.mode == SessionMode.battle),
+          ),
+          // Elegir ascensión desde el resultado de la Prueba I.
+          if (_choosing && view.me != null)
+            Positioned.fill(
+              child: ColoredBox(
+                color: const Color(0xCC0B0E1A),
+                child: PanelFrame(
+                  title: 'ELEGÍ TU ASCENSIÓN',
+                  width: 1040,
+                  fill: true,
+                  onClose: () => setState(() => _choosing = false),
+                  actions: [
+                    PanelButton('MÁS TARDE [ESC]',
+                        onPressed: () => setState(() => _choosing = false)),
+                  ],
+                  child: AscensionChoiceView(
+                    classId: view.me!.profile.classId,
+                    sprites: sprites.requireValue,
+                    onChoose: controller.chooseAscension,
+                  ),
+                ),
+              ),
+            ),
+          if (_cinematics.isNotEmpty)
+            Positioned.fill(
+              child: AscensionCinematic(
+                key: _cineKey,
+                playerName: _cinematics.first.$1,
+                classId: _cinematics.first.$2,
+                ascensionId: _cinematics.first.$3,
+                sprites: sprites.requireValue,
+                onDone: () {
+                  if (mounted) setState(() => _cinematics.removeAt(0));
+                },
+              ),
+            ),
+          // El progreso no llegó a disco (se reintenta solo): aviso en
+          // rojo, nunca en silencio (docs/specs/characters.md § 1.4).
+          if (view.saveError case final err?)
+            Positioned(
+              top: 4,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Center(
+                  child: Container(
+                    key: const ValueKey('world-save-error'),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    color: const Color(0xCC0B0E1A),
+                    child: Text(
+                      '$err (ver ecos.log)',
+                      style: const TextStyle(
+                          fontFamily: RetroType.pixelFamily,
+                          fontSize: RetroType.label,
+                          color: RetroPalette.red),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           // Pausa de grupo: cartel para todos (o `X reanudó` un momento).
           if (!_pauseOpen && (view.session.paused || _resumedBy != null))
             Positioned.fill(
@@ -328,8 +437,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 children: [
                   Positioned(
                     left: 8,
-                    bottom: math.min(BattleViewState.barHeight(box.maxHeight),
-                            box.maxHeight * 0.6) +
+                    bottom: BattleViewState.barHeight(
+                            box.maxHeight, RetroType.factorOf(context)) +
                         8,
                     child: PauseMenuButton(onPressed: _openPause),
                   ),
@@ -363,6 +472,16 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               finalVictory: ResultsPanel.isFinalVictory(r),
               ecoAtlas: r.missionId == EcoRules.missionId && r.success
                   ? ecoAtlasText(view.atlasGain)
+                  : null,
+              trial: switch (controller.lastTrial) {
+                (final n, final gained) when r.success =>
+                  trialResultText(n, gained),
+                _ => null,
+              },
+              onAscend: r.success &&
+                      (view.me?.profile.ascension.trials.contains(1) ?? false) &&
+                      view.me?.profile.ascension.id == null
+                  ? () => setState(() => _choosing = true)
                   : null,
               loot: [
                 for (final d in view.missionLoot)
@@ -420,6 +539,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final floors = s.mission?.floors ?? z.floors;
     final reached = r.success ? floors : (s.mission?.floor ?? 0) + 1;
     final eco = s.eco;
+    if (r.missionId == TrialRules.missionId) {
+      return '${z.name} · Piso $reached/$floors';
+    }
     if (r.missionId == EcoRules.missionId && eco != null) {
       return 'Eco T${eco.tier} · ${z.name} · '
           '${controller.engine.ecoRules.bossName(eco)} · Piso $reached/$floors';
@@ -465,6 +587,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return ArmoryPanel(view: view, controller: controller);
       case WorldPanel.ecoPortal:
         return EcoPortalPanel(view: view, controller: controller);
+      case WorldPanel.ascension:
+        return AscensionPanel(
+            view: view,
+            controller: controller,
+            sprites: ref.read(gameSpritesProvider).valueOrNull);
       case WorldPanel.character:
         return CharacterPanel(
             key: const ValueKey('panel-character'),
@@ -487,7 +614,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           players: [
             for (final p in s.playerList)
               PrepEntry(
-                p.name,
+                profileTitle(p.profile),
                 catalog.classes[p.profile.classId]?.name ?? p.profile.classId,
                 p.profile.level,
                 ready: prep.ready[p.id] ?? false,

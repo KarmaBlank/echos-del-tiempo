@@ -36,6 +36,14 @@ PlayerProfile richWarrior({int credits = 1000}) =>
 Future<void> _tab(WidgetTester tester, ArmoryTab t) =>
     tapVisible(tester, find.byKey(ValueKey('tab-${t.index}')));
 
+/// Recorre el selector de familia de COMPRAR hasta [label].
+Future<void> _family(WidgetTester tester, String label) async {
+  for (var i = 0; i < 20 && plain(tester, 'buy-family-value') != label; i++) {
+    await tapVisible(tester, find.byKey(const ValueKey('buy-family-next')));
+  }
+  expect(plain(tester, 'buy-family-value'), label);
+}
+
 void main() {
   testWidgets('armería: comprar (cualquier clase), equipar y forjar',
       (tester) async {
@@ -44,7 +52,7 @@ void main() {
         build: (v, c) => ArmoryPanel(view: v, controller: c));
     PlayerProfile me() => c.view!.me!.profile;
     expect(find.text('ARMERIA'), findsOneWidget);
-    expect(find.textContaining('Cualquier clase puede equiparlas'),
+    expect(find.textContaining('cualquier clase las equipa'),
         findsOneWidget);
 
     // COMPRAR: por defecto la familia propia; comprar la Ígnea ($300).
@@ -54,13 +62,13 @@ void main() {
     expect(me().items.any((i) => i.baseId == 'espada_ignea'), isTrue);
     expect(me().credits, 700);
     // Otra familia (maga): se vende igual, con "Req" si no cumple.
-    await tapVisible(tester, find.byKey(const ValueKey('buy-family-maga')));
+    await _family(tester, 'MAGA');
     expect(find.byKey(const ValueKey('shop-row-baculo_fuego')), findsOneWidget);
     expect(plain(tester, 'shop-row-baculo_fuego'), contains('Req'));
     await tapVisible(tester, find.byKey(const ValueKey('shop-row-baculo_fuego')));
     expect(button(tester, 'buy-baculo_fuego').reason, isNull);
     // Una que no alcanza: motivo con lo que falta.
-    await tapVisible(tester, find.byKey(const ValueKey('buy-family-all')));
+    await _family(tester, 'TODAS');
     await tapVisible(tester, find.byKey(const ValueKey('shop-row-mandoble_eco')));
     expect(button(tester, 'buy-mandoble_eco').reason, 'Faltan \$700');
 

@@ -20,6 +20,44 @@ characters:
     idle: characters/paladin/idle.png
   tirador:
     idle: characters/tirador/idle.png
+  # v0.5 — Ascensiones (`<clase>_<ascensión>`): misma grilla/tamaño/ancla
+  # que el héroe base, se cambian 1:1 por el id de la clase. PNG en la
+  # carpeta de la clase base (ya listada en pubspec.yaml).
+  guerrero_berserker:
+    idle: characters/guerrero/berserker.png
+  guerrero_senorGuerra:
+    idle: characters/guerrero/senorGuerra.png
+  maga_cronomante:
+    idle: characters/maga/cronomante.png
+  maga_elementalista:
+    idle: characters/maga/elementalista.png
+  paladin_templario:
+    idle: characters/paladin/templario.png
+  paladin_guardian:
+    idle: characters/paladin/guardian.png
+  tirador_francotirador:
+    idle: characters/tirador/francotirador.png
+  tirador_trampero:
+    idle: characters/tirador/trampero.png
+  # Overlays de aura opcionales (`aura_<ascensión>`, 24×26, sin contorno):
+  # se dibujan DETRÁS del héroe en (-12, -25) respecto de los pies.
+  # Ver docs/specs/sprites.md § "Ascensiones".
+  aura_berserker:
+    idle: characters/guerrero/aura_berserker.png
+  aura_senorGuerra:
+    idle: characters/guerrero/aura_senorGuerra.png
+  aura_cronomante:
+    idle: characters/maga/aura_cronomante.png
+  aura_elementalista:
+    idle: characters/maga/aura_elementalista.png
+  aura_templario:
+    idle: characters/paladin/aura_templario.png
+  aura_guardian:
+    idle: characters/paladin/aura_guardian.png
+  aura_francotirador:
+    idle: characters/tirador/aura_francotirador.png
+  aura_trampero:
+    idle: characters/tirador/aura_trampero.png
 
 # `scale`: multiplicador de dibujo (`sc` del prototipo). Por defecto 1.
 # `float`: flota en el aire (murciélagos y espectros del prototipo, que

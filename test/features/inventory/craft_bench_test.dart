@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/widgets/action_card.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/armory_panel.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/shop_sections.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
@@ -24,14 +25,35 @@ Future<void> _tap(WidgetTester tester, String key) =>
 
 /// Paso 1 → [uid]; paso 2 → [op] (queda en el paso 3).
 Future<void> _choose(WidgetTester tester, String uid, CraftOp op) async {
-  await _tap(tester, 'bench-crumb-0');
-  await _tap(tester, 'bench-weapon-$uid');
-  await _tap(tester, 'bench-next');
+  await _pickWeapon(tester, uid);
   await _tap(tester, 'bench-op-${op.name}');
 }
 
+/// Paso 1 → [uid] → paso 2 (tocar la fila ya elegida también avanza).
+Future<void> _pickWeapon(WidgetTester tester, String uid) async {
+  await _tap(tester, 'bench-crumb-0');
+  await _tap(tester, 'bench-weapon-$uid');
+  if (find.byKey(const ValueKey('bench-next')).evaluate().isNotEmpty) {
+    await _tap(tester, 'bench-next');
+  }
+}
+
+/// Recorre el selector de familia de reforjar hasta [label].
+Future<void> _family(WidgetTester tester, String label) async {
+  for (var i = 0; i < 20 && plain(tester, 'bench-family-value') != label; i++) {
+    await _tap(tester, 'bench-family-next');
+  }
+  expect(plain(tester, 'bench-family-value'), label);
+}
+
+/// Valor de la fila del paso 2: costo corto o motivo corto (el completo
+/// va en el detalle).
 String _why(WidgetTester tester, CraftOp op) =>
     plain(tester, 'bench-op-why-${op.name}');
+
+/// El botón grande de confirmar del paso 3.
+ConfirmButton _confirm(WidgetTester tester) =>
+    tester.widget<ConfirmButton>(find.byKey(const ValueKey('craft-confirm')));
 
 void main() {
   testWidgets('pasos: arma → acción (con motivo por fila) → confirmar',
@@ -44,7 +66,7 @@ void main() {
     expect(plain(tester, 'craft-materials'), contains('Cristal x1'));
     await _tap(tester, 'bench-weapon-r1');
     await _tap(tester, 'bench-next');
-    // Paso 2: una fila por acción, agrupadas, con "se puede" o el motivo.
+    // Paso 2: una fila por acción, agrupadas, con el costo o el motivo.
     for (final op in [
       CraftOp.reroll,
       CraftOp.addAffix,
@@ -59,7 +81,7 @@ void main() {
     }
     expect(find.textContaining('MEJORAR'), findsWidgets);
     expect(find.textContaining('TRASLADAR'), findsWidgets);
-    expect(_why(tester, CraftOp.reroll), 'Se puede');
+    expect(_why(tester, CraftOp.reroll), contains('1 Esquirla'));
     expect(_why(tester, CraftOp.upgradeRarity), 'Falta Prisma Roto');
     expect(_why(tester, CraftOp.transferPassive), 'Solo a un arma Epica');
     expect(plain(tester, 'bench-summary'), contains('Eco Voraz'));
@@ -88,7 +110,7 @@ void main() {
     final cost =
         CraftRules.transferAffixCost(magicKatana.affixes[0], Rarity.raro);
     expect(plain(tester, 'craft-cost'), contains('\$$cost (tienes \$5000)'));
-    expect(button(tester, 'craft-confirm').reason, isNull);
+    expect(_confirm(tester).reason, isNull);
     await _tap(tester, 'craft-confirm');
     expect(me().itemByUid('r1')!.affixes.length, 3);
     expect(me().itemByUid('m1'), isNull);
@@ -101,20 +123,16 @@ void main() {
     await _bench(tester, lootWarrior());
     await _choose(tester, 'c1', CraftOp.transferAffix);
     await _tap(tester, 'craft-source-m1');
-    expect(button(tester, 'craft-confirm').reason,
+    expect(_confirm(tester).reason,
         startsWith('Sin lugar (Común'));
     expect(plain(tester, 'craft-error'), contains('No se puede'));
     await _choose(tester, 'e1', CraftOp.transferPassive);
     await _tap(tester, 'craft-source-l1');
-    expect(button(tester, 'craft-confirm').reason, 'Pasiva única');
+    expect(_confirm(tester).reason, 'Pasiva única');
     // Reforjar: la equipada y los legendarios no.
-    await _tap(tester, 'bench-crumb-0');
-    await _tap(tester, 'bench-weapon-espada_bronce');
-    await _tap(tester, 'bench-next');
+    await _pickWeapon(tester, 'espada_bronce');
     expect(_why(tester, CraftOp.reforge), 'Está equipada');
-    await _tap(tester, 'bench-crumb-0');
-    await _tap(tester, 'bench-weapon-l1');
-    await _tap(tester, 'bench-next');
+    await _pickWeapon(tester, 'l1');
     expect(_why(tester, CraftOp.reforge), 'Un Legendario no cambia de base');
   });
 
@@ -142,7 +160,7 @@ void main() {
     final c = await _bench(tester, lootWarrior());
     PlayerProfile me() => c.view!.me!.profile;
     await _choose(tester, 'c1', CraftOp.addAffix);
-    expect(button(tester, 'craft-confirm').reason,
+    expect(_confirm(tester).reason,
         'Un arma Común no lleva afijos');
     await _choose(tester, 'r1', CraftOp.addAffix);
     expect(plain(tester, 'craft-outcomes'), isNotEmpty);
@@ -151,17 +169,17 @@ void main() {
     expect(me().itemByUid('r1')!.affixes.length, 3);
     expect(me().material(CraftMaterial.cristal), 0);
     expect(plain(tester, 'craft-last'), contains('(nuevo)'));
-    expect(button(tester, 'craft-confirm').reason, 'Falta Cristal de Era');
+    expect(_confirm(tester).reason, 'Falta Cristal de Era');
 
     await _choose(tester, 'r1', CraftOp.reroll);
     expect(plain(tester, 'craft-outcomes'), contains('% ATQ: 5–9'));
-    expect(button(tester, 'craft-confirm').reason, isNull);
+    expect(_confirm(tester).reason, isNull);
 
     await _choose(tester, 'r1', CraftOp.upgradeRarity);
-    expect(button(tester, 'craft-confirm').reason, 'Falta Prisma Roto');
+    expect(_confirm(tester).reason, 'Falta Prisma Roto');
     expect(plain(tester, 'craft-outcomes'), contains('Raro → '));
     await _choose(tester, 'e1', CraftOp.upgradeRarity);
-    expect(button(tester, 'craft-confirm').reason,
+    expect(_confirm(tester).reason,
         'Ya está en la rareza máxima');
   });
 
@@ -177,14 +195,14 @@ void main() {
     await _choose(tester, 'e1', CraftOp.reforge);
     // Por defecto, las bases de tu familia; se cambia con el filtro.
     expect(find.byKey(const ValueKey('bench-base-hacha_rompe')), findsOneWidget);
-    await _tap(tester, 'bench-family-maga');
+    await _family(tester, 'MAGA');
     await _tap(tester, 'bench-base-baculo_fuego');
     expect(plain(tester, 'craft-base'), contains('Espada Ignea'));
     expect(plain(tester, 'craft-base'), contains('Báculo de Fuego'));
     expect(plain(tester, 'craft-lost'), contains('Pasiva Impetu'));
     expect(plain(tester, 'craft-cost'), contains('\$700'));
     expect(plain(tester, 'craft-cost'), contains('1 Prisma Roto (tienes 1)'));
-    expect(button(tester, 'craft-confirm').reason, isNull);
+    expect(_confirm(tester).reason, isNull);
     await _tap(tester, 'craft-confirm');
     final it = me().itemByUid('e1')!;
     expect(it.baseId, 'baculo_fuego');
@@ -193,14 +211,14 @@ void main() {
     expect(me().material(CraftMaterial.prisma), 0);
     // Sin materiales: el motivo.
     await _tap(tester, 'bench-base-baculo_ponzona');
-    expect(button(tester, 'craft-confirm').reason, 'Falta Cristal de Era');
+    expect(_confirm(tester).reason, 'Falta Cristal de Era');
   });
 
   testWidgets('subir rareza con Prisma: Común → Mágico', (tester) async {
     final c = await _bench(
         tester, lootWarrior(materials: const {CraftMaterial.prisma: 1}));
     await _choose(tester, 'c1', CraftOp.upgradeRarity);
-    expect(button(tester, 'craft-confirm').reason, isNull);
+    expect(_confirm(tester).reason, isNull);
     await _tap(tester, 'craft-confirm');
     final it = c.view!.me!.profile.itemByUid('c1')!;
     expect(it.rarity, Rarity.magico);

@@ -108,7 +108,8 @@ class ComparisonDelta extends StatelessWidget {
   }
 }
 
-/// `ATQ 21 → 30 +9` (verde si mejora, rojo si empeora; sin cambio, dim).
+/// `ATQ 21 → 30 +9 ▲` (verde y ▲ si mejora, rojo y ▼ si empeora; sin
+/// cambio, dim).
 class _StatDeltaText extends StatelessWidget {
   const _StatDeltaText(this.s);
   final StatDelta s;
@@ -120,11 +121,13 @@ class _StatDeltaText extends StatelessWidget {
           style: const TextStyle(color: ProtoColors.dim));
     }
     final c = s.better ? ProtoColors.green : ProtoColors.red;
+    // ▲ mejora / ▼ empeora: no solo el color (daltonismo).
     return Text.rich(TextSpan(children: [
       TextSpan(text: retroText('${s.label} ${s.format(s.before)}')),
       TextSpan(
-          text: retroText(' → ${s.format(s.after)} ${s.diffText}'),
-          style: TextStyle(color: c, fontWeight: FontWeight.bold)),
+          style: TextStyle(color: c, fontWeight: FontWeight.bold),
+          children: symbolSpans(retroText(
+              ' → ${s.format(s.after)} ${s.diffText} ${s.better ? '▲' : '▼'}'))),
     ]));
   }
 }
@@ -169,7 +172,7 @@ class HoverCompareCard extends StatelessWidget {
     this.ownerName,
   });
 
-  static const cardWidth = 296.0;
+  static const cardWidth = 340.0;
 
   final ProgressionRules rules;
   final PlayerProfile viewer;
@@ -179,13 +182,79 @@ class HoverCompareCard extends StatelessWidget {
   /// Dueño si no es el jugador local.
   final String? ownerName;
 
+  /// Desde este agrandamiento del texto la ficha va en dos columnas
+  /// (arma | comparación) sin la equipada al lado: con las tres no entra
+  /// en 720 px de alto.
+  static const compactFrom = 1.5;
+
   @override
   Widget build(BuildContext context) {
     final eq = rules.equippedItem(viewer);
     final cmp = compareWeapons(rules, viewer, to: item, attributes: attributes);
+    final f = RetroType.factorOf(context);
+    // Dos tarjetas + separación dentro de la pantalla (márgenes, padding
+    // y borde de la caja del tip).
+    final room = (MediaQuery.sizeOf(context).width - 16 - 24 - 16) / 2;
+    final width = RetroType.width(context, cardWidth).clamp(0.0, room);
+    final card = _LabeledCard(
+        rules: rules,
+        item: item,
+        level: viewer.level,
+        attributes: attributes,
+        label: ownerName == null
+            ? null
+            : protoColor(ProtoColors.dim, 'de ${protoEsc(ownerName!)}'));
+    final delta = ComparisonDelta(
+      key: const ValueKey('inv-cmp-tip-delta'),
+      rules: rules,
+      cmp: cmp,
+      level: viewer.level,
+      attributes: attributes,
+      title: 'Si la equipas:',
+    );
+    final equipped = eq == null
+        ? ProtoText(protoColor(ProtoColors.dim, 'Sin arma'))
+        : _LabeledCard(
+            rules: rules,
+            item: eq,
+            level: viewer.level,
+            attributes: attributes,
+            label: '<b style="color:#ffd166">EQUIPADA</b>');
+    if (f >= compactFrom) {
+      // Texto muy grande: el arma y, al lado, qué cambia respecto de la
+      // equipada (solo su nombre).
+      return SizedBox(
+        key: const ValueKey('inv-cmp-tip'),
+        width: width * 2 + 16,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(width: width, child: card),
+            const SizedBox(width: 16),
+            SizedBox(
+              width: width,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  KeyedSubtree(
+                    key: const ValueKey('inv-cmp-tip-equipped'),
+                    child: ProtoText(eq == null
+                        ? protoColor(ProtoColors.dim, 'Sin arma')
+                        : '<b style="color:#ffd166">EQUIPADA</b> '
+                            '${itemNameMarkup(rules, eq)}'),
+                  ),
+                  const SizedBox(height: 6),
+                  delta,
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return SizedBox(
       key: const ValueKey('inv-cmp-tip'),
-      width: cardWidth * 2 + 16,
+      width: width * 2 + 16,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,44 +262,19 @@ class HoverCompareCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                width: cardWidth,
-                child: _LabeledCard(
-                    rules: rules,
-                    item: item,
-                    level: viewer.level,
-                    attributes: attributes,
-                    label: ownerName == null
-                        ? null
-                        : protoColor(
-                            ProtoColors.dim, 'de ${protoEsc(ownerName!)}')),
-              ),
+              SizedBox(width: width, child: card),
               const SizedBox(width: 16),
               SizedBox(
                 key: const ValueKey('inv-cmp-tip-equipped'),
-                width: cardWidth,
-                child: eq == null
-                    ? ProtoText(protoColor(ProtoColors.dim, 'Sin arma'))
-                    : _LabeledCard(
-                        rules: rules,
-                        item: eq,
-                        level: viewer.level,
-                        attributes: attributes,
-                        label: '<b style="color:#ffd166">EQUIPADA</b>'),
+                width: width,
+                child: equipped,
               ),
             ],
           ),
           const SizedBox(height: 6),
           Container(height: 2, color: ProtoColors.panelBorder),
           const SizedBox(height: 6),
-          ComparisonDelta(
-            key: const ValueKey('inv-cmp-tip-delta'),
-            rules: rules,
-            cmp: cmp,
-            level: viewer.level,
-            attributes: attributes,
-            title: 'Si la equipas:',
-          ),
+          delta,
         ],
       ),
     );

@@ -106,8 +106,7 @@ class UltScript {
   int get totalMs => buildMs + releaseMs + returnMs;
 
   /// Impacto en el objetivo [i] (orden de los eventos).
-  int impactFor(int i) =>
-      impactMs + staggerMs * i.clamp(0, maxStaggered - 1);
+  int impactFor(int i) => impactMs + staggerMs * i.clamp(0, maxStaggered - 1);
 
   /// Impacto del último de [n] objetivos (el del hit-stop).
   int lastImpact(int n) => impactFor(math.max(0, n - 1));
@@ -252,6 +251,81 @@ const Map<String, UltScript> kUltScripts = {
     hitStopMs: 130,
     shake: 11,
     focus: UltFocus.single,
+  ),
+  // ---- ascensiones (docs/specs/ascension.md § 4): reusan un estilo
+  // visual, teñido con el color de la ascensión (kSkillColors). ----
+  'ult_berserker': UltScript(
+    style: UltStyle.thousandCuts,
+    buildMs: 900,
+    releaseMs: 1100,
+    impactMs: 1550,
+    preHitsMs: [1050, 1150, 1250, 1350, 1450],
+    hitStopMs: 150,
+    shake: 13,
+    focus: UltFocus.single,
+  ),
+  'ult_senorGuerra': UltScript(
+    style: UltStyle.cataclysm,
+    buildMs: 900,
+    releaseMs: 1100,
+    impactMs: 1300,
+    staggerMs: 60,
+    hitStopMs: 110,
+    shake: 12,
+  ),
+  'ult_cronomante': UltScript(
+    style: UltStyle.paradox,
+    buildMs: 900,
+    releaseMs: 1200,
+    impactMs: 1500,
+    staggerMs: 50,
+    hitStopMs: 160,
+    shake: 9,
+  ),
+  'ult_elementalista': UltScript(
+    style: UltStyle.meteor,
+    buildMs: 900,
+    releaseMs: 1200,
+    impactMs: 1350,
+    staggerMs: 110,
+    hitStopMs: 110,
+    shake: 12,
+  ),
+  'ult_francotirador': UltScript(
+    style: UltStyle.deadShot,
+    buildMs: 900,
+    releaseMs: 1000,
+    impactMs: 1400,
+    hitStopMs: 180,
+    shake: 14,
+    focus: UltFocus.line,
+  ),
+  'ult_trampero': UltScript(
+    style: UltStyle.arrowStorm,
+    buildMs: 800,
+    releaseMs: 1200,
+    impactMs: 1300,
+    staggerMs: 80,
+    hitStopMs: 90,
+    shake: 10,
+  ),
+  'ult_templario': UltScript(
+    style: UltStyle.judgment,
+    buildMs: 900,
+    releaseMs: 1100,
+    impactMs: 1300,
+    staggerMs: 90,
+    hitStopMs: 120,
+    shake: 11,
+  ),
+  'ult_guardian': UltScript(
+    style: UltStyle.bulwark,
+    buildMs: 900,
+    releaseMs: 1100,
+    impactMs: 1150,
+    staggerMs: 60,
+    shake: 5,
+    focus: UltFocus.party,
   ),
 };
 
@@ -444,8 +518,8 @@ CameraView ultCameraAt(
     case UltFocus.party:
       releaseView = CameraView(centroid(party.isEmpty ? [caster] : party), bz);
     case UltFocus.targets:
-      releaseView = CameraView(
-          targets.isEmpty ? base.center : centroid(targets), bz);
+      releaseView =
+          CameraView(targets.isEmpty ? base.center : centroid(targets), bz);
     case UltFocus.group:
       // Un paso más lejos: el grupo en columna entra entero entre las
       // barras de cine, con sus números arriba.

@@ -77,10 +77,14 @@ root registra para que el título sepa si hay red: `label` (`LAN`, `P2P`),
 `P2P por internet: falta configurar Firebase`) y `create()` (una
 `NetSession` nueva por sala).
 
-## Protocolo (versión 4)
+## Protocolo (versión 5)
 
-`kProtocolVersion` (`wire.dart`) = 4 desde el endgame v0.4.0 (Ecos,
-Atlas y Maestría; docs/specs/ecos_atlas.md § 7). Antes: 3 desde la
+`kProtocolVersion` (`wire.dart`) = 5 desde la Ascensión v0.5.0
+(acciones `trial`, `ascChoose`, `ascNode`, `ascReset`, `devTrial`;
+eventos `trialDone`, `ascChosen`, `trap`; sesión `trial`; perfil y
+build `asc`; combatiente `once`; docs/specs/ascension.md § 6). Antes: 4
+desde el endgame v0.4.0 (Ecos,
+Atlas y Maestría; docs/specs/ecos_atlas.md § 7); 3 desde la
 pausa de grupo (v0.2.1). Un cliente de otra versión recibe
 `reject version`. Los ejemplos de abajo muestran `"v":1` por historia.
 

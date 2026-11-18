@@ -95,7 +95,7 @@ void main() {
     expect(find.byType(BattleView), findsOneWidget);
     waitForMyTurn(c);
     await tester.pump();
-    expect(find.textContaining('1. Atacar'), findsOneWidget);
+    expect(find.byKey(const ValueKey('battle-act-attack')), findsOneWidget);
     final seq = c.view!.battleEventSeq;
     final hp = c.view!.session.battle!.state.enemies.first.hp;
     await tester.sendKeyEvent(LogicalKeyboardKey.digit1);

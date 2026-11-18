@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/di/service_locator.dart';
+import '../../core/persistence/exit_on_close.dart';
 import '../../core/settings/frame_limiter.dart';
 import '../app.dart';
 
@@ -12,6 +13,8 @@ void main() {
   // Binding con límite de FPS (docs/specs/settings.md § 3.4).
   EcosBinding.ensureInitialized();
   registerSharedDependencies();
+  // Cerrar la ventana guarda antes (docs/specs/characters.md § 1.4).
+  installExitOnClose();
   registerLanNetcode();
   runApp(const EcosApp());
 }

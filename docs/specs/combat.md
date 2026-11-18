@@ -132,7 +132,9 @@ Objetivo: el enemigo vivo pedido, o el primero vivo.
   a todos. Paladín: 3% de aturdir. Rama `creyente`: 25% de curar 2% de
   vida máx. a todos los aliados. Rama `inherente`: 25% de aplicar 1 Sagrado.
 - **Habilidad** (`SK`): debe estar en `kit de clase + habilidades del arma
-  (+ habilidad fusionada)` y alcanzar el MP. Base `ATQ` (físicas) o
+  (+ habilidad fusionada) + kit de la ascensión` y alcanzar el MP. Desde
+  v0.5 ninguna clase tiene kit de clase (el del Paladín pasó al Guardián,
+  ascension.md § 4); `ClassDef.kitSkillIds` queda vacío. Base `ATQ` (físicas) o
   `MAG` (mágicas) × poder. Con `tormenta`: × 1.25 si es a todos, × 0.85
   si es a uno. Crítico: `crit + bonus_crit_habilidad`. Después del daño
   aplica su estado (con probabilidad `stc` si la tiene, + bonus del árbol)
@@ -140,11 +142,13 @@ Objetivo: el enemigo vivo pedido, o el primero vivo.
   `IV(enemigo) × delay`.
   - Curación: `round((MAG × poder + 6) × (1 + árbol.heal))` a cada aliado
     vivo, y resta `cleanse` stacks de cada estado.
-  - Aura Restauradora (regen): `round((MAG × poder + 4) × (1 + árbol.heal))`
-    + Regeneración 3 a cada aliado. Con `creyente` además `MAG × 0.8` a
-    cada enemigo.
-  - Fortaleza: `bonus_def_batalla + 2` (tope 12). Protección: absorbe los
-    golpes dirigidos a sus aliados hasta su próximo turno. Provocar: los
+  - Aura Restauradora (regen, kit del Guardián, poder 1.0):
+    `round((MAG × poder + 4) × (1 + árbol.heal))` + Regeneración 3 a cada
+    aliado. Con `creyente` además `MAG × 0.8` a cada enemigo.
+  - Fortaleza (kit del Guardián): `bonus_def_batalla + 2` (tope 12) y sus
+    efectos de grupo (escudo 15% y −10% daño, ascension.md § 4).
+    Protección (kit del Guardián): absorbe los golpes dirigidos a sus
+    aliados hasta su próximo turno (y −20% de daño propio 1 turno). Provocar: los
     próximos 3 ataques enemigos van contra él. Escudo de Fe: todo el
     equipo defiende. Prisa: adelanta `IV × 0.5` a cada aliado (sin
     aliados, devuelve el MP y repite turno).
@@ -159,6 +163,56 @@ Objetivo: el enemigo vivo pedido, o el primero vivo.
 - **Poción de maná**: 50% del maná máx. Sin objetivo: el aliado vivo con
   menor % de maná.
 - **Defender**: ½ daño hasta su próximo turno, que llega antes (`IV × 0.7`).
+
+### Variantes de habilidades (v0.5)
+
+48 habilidades nuevas en `data/skill_variants_catalog.dart`
+(`kSkillVariants`, se suman a `kSkills`; 120 en total). Cada una tiene
+familia (`kSkillVariantFamily`) y "se parece" a una habilidad existente
+(`kSkillLooks`): de ahí salen su color, su FX y su firma de sonido (sin
+arte ni sonido nuevo). Los campos nuevos de `SkillDef` vienen apagados;
+ninguna variante se apunta a un aliado a mano: lo que dice "al más
+herido" elige al aliado vivo con menor % de vida.
+
+| Campo | Efecto |
+|---|---|
+| `lowestAlly` | Curación / Regeneración solo al aliado más herido. |
+| `revive` | Curación: si hay un aliado caído, revive al primero con `round(vida_máx × revive)` (con `cleanse` le quita todos los estados; si no, Quemadura y Veneno), `RevivedEvent`, su próximo turno es `reloj + IV`; y no cura a nadie más. Sin caídos: cura normal. |
+| `overheal` | Curación: lo que sobra (vida llena) × `overheal` se vuelve escudo (`shieldTurns`). |
+| `drainHeal` | Daño: `round(daño_de_la_acción × drainHeal)` cura al aliado más herido (si no está lleno). |
+| `allyShield` / `selfShield` | Escudo de `vida_máx_del_que_la_usa × valor` (× escudos del árbol) al más herido / a uno mismo, por `shieldTurns` (2). |
+| `shieldReflect` | Los escudos de esa habilidad devuelven `round(absorbido × valor)` al enemigo que pega (daño secundario). |
+| `shieldBurst` | Al romperse por daño, explota: `ATQ_dueño × valor` a cada enemigo (secundario). |
+| `shieldGrow` | Tras absorber, el escudo queda en `max(resto, min(50% vida máx. del portador, resto + absorbido × valor))`. |
+| `hits` | Golpes seguidos al mismo objetivo, cada uno de `poder` (todos primarios). |
+| `pierce` | Tras el golpe a un objetivo, golpea a cada enemigo vivo **detrás** (siguientes en la formación) con `base × pierce` (secundario: sin árbol), con el estado y los debuffs. |
+| `bounces` | Rebota N veces a otro enemigo vivo al azar (`base × 0.7^k`); si no hay otro, vuelve al mismo. |
+| `charge` | Disparo cargado: no pega; pone en el tirador un `TimedEffect` `BuffStat.charge` (valor `round(ATQ × charge)`, `ownerId` = objetivo). Al empezar su próximo turno cae como daño secundario sobre el objetivo (o el primer enemigo en pie) + su estado; si mata al último, la batalla termina. Carga ULT 6. |
+| `debuffs` | `PartyBuff`s a cada enemigo golpeado (o a los objetivos de una de apoyo): Marca `damageTaken` (+daño recibido de todos), Debilitar `attack` < 0, Lentitud `speed` < 0. |
+| `breakBonus` | `factor_de_quiebre × (1 + breakBonus)`. |
+| `ultDrain` | Silencio: resta esa carga de ULT a cada enemigo golpeado (no si ya la anunció). |
+
+Familias (ids): **Curación** `curaFocal` (2.6 al más herido), `rocio`
+(0.7 a todos), `brotes` (regen 0.5 a todos), `semilla` (regen 1.2 al más
+herido), `purificar` (1.2 + quita todo, al más herido), `resurreccion`
+(revive 35%), `fenix` (revive 70% sin estados), `graciaDesbordante` (2.0 al más
+herido, desborde 100%), `marea` (1.2 a todos, desborde 60%),
+`flechaSanadora` / `drenar` / `sifon` (drenan 100/60/50%). **Escudos**
+`escudoArcano` (30% al más herido), `barrera` (12% a todos),
+`egidaEspinosa` (22% + refleja 60%), `escudoVolatil` (20% + explota ATQ
+× 1.2), `bastionCreciente` (12% propio, crece 130%, 3 turnos), `retoEscudado`
+(Provocar ×2 + 20% propio), `murallaFe` (18% a todos + refleja 30%),
+`cupula` (10% a todos + −10% daño). **Disparos** `flechaPerforante`,
+`balaTraspasante`, `tiroRebote`, `dagaSaltarina`, `disparoCargado`
+(ATQ × 3.4), `viroteAsedio` (ATQ × 4.2, 50% aturdir), `rafagaTriple`
+(3 × 0.6), `cadencia` (5 × 0.45), `flechaMarcadora`, `senalar` (Marca 35%
+sin daño, turno 40% antes), `flechaIncendiaria`, `flechaEscarcha`,
+`balaCorrosiva`, `tiroQuebrantador` (+100% quiebre). **Debuffs**
+`rompearmaduras`, `rugidoIntimidante` (−25% ATQ a todos, sin daño),
+`golpeDebilitante`, `lentitud`, `maldicion`, `pesoTiempo`. **Control**
+`golpeConmocion` (50% aturdir), `silencio` (−50 ULT), `selloSagrado`,
+`retroceso` (retrasa 35% a todos). **Apoyo** `inspirar`, `vientoPrisa`,
+`impulso`, `ojoAguila`. Números exactos: el catálogo.
 
 Carga de ULT por acción (no al usar el ULT):
 `(base_acción + (hizo daño ? min(22, 5 + daño_total / maxHp_enemigo_mayor × 30) : 0)) × (1 + árbol.ult)`,
@@ -265,9 +319,9 @@ prototipo elige aura y color con esto).
 
 Todos los campos nuevos son opcionales: quien no los use no cambia.
 
-## Disparadores del árbol (v2)
+## Disparadores del árbol (v2 / v3)
 
-Detalle y números en passive_tree_v2.md § 3-5. Resumen del motor:
+Detalle y números en passive_tree_v2.md § 3-5 y passive_tree_v3.md § 5-9 (v3 suma la condición `vsBroken` y la guarda por condición: `statBonus` de `guard` propio). Resumen del motor:
 
 - Cada jugador lleva `mechanics` (ids de `kMechanics`, de notables y
   keystones nuevas) y `effects` (`TimedEffect`: buffs, debuffs, marcas,

@@ -4,8 +4,14 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/party_box.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
+import '../../../app/theme/retro_bar.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../app/theme/retro_theme.dart';
+import '../../../game_engine/data/ascension_catalog.dart';
+import '../../../game_engine/data/ascension_mechanics.dart';
 import '../../../game_engine/data/classes_catalog.dart';
+import '../../../game_engine/data/skills_catalog.dart';
+import '../../ascension/domain/ascension_text.dart';
 import '../../../game_engine/data/enemies_catalog.dart';
 import '../../../game_engine/models/enemy_def.dart';
 import '../../../game_engine/data/passive_mechanics.dart';
@@ -50,8 +56,12 @@ class BattleBarPanel extends StatelessWidget {
         ),
       ),
       child: DefaultTextStyle.merge(
-        style:
-            const TextStyle(fontSize: 8, height: 1.6, color: ProtoColors.ink),
+        style: TextStyle(
+            fontFamily: RetroType.bodyFamily,
+            fontFamilyFallback: RetroType.bodyFallback,
+            fontSize: RetroType.small,
+            height: RetroType.line,
+            color: ProtoColors.ink),
         child: child,
       ),
     );
@@ -150,9 +160,9 @@ List<StatusChip> combatantChips(Combatant p) {
         'Atrapado (telaraña)',
         Color(0xFFEDEFF5),
         '<b style="color:#edeff5">Atrapado en la telaraña</b>'
-        '<br>Pierde su próximo turno salvo que un aliado lo '
-        'libere usando <b>Atacar</b> sobre él (opción "Liberar" del menú). '
-        '<span class="k">Solo: forcejea y pierde medio turno.</span>'));
+            '<br>Pierde su próximo turno salvo que un aliado lo '
+            'libere usando <b>Atacar</b> sobre él (opción "Liberar" del menú). '
+            '<span class="k">Solo: forcejea y pierde medio turno.</span>'));
   }
   if (p.voidMarked && p.alive) {
     chips.add(const StatusChip(
@@ -160,9 +170,9 @@ List<StatusChip> combatantChips(Combatant p) {
         'Marca del Vacío ×2',
         Color(0xFFB57BFF),
         '<b style="color:#b57bff">Marca del Vacío</b><br>El próximo golpe del '
-        'Centinela va contra él y pega <b>×2</b>, salvo que otro aliado lo '
-        '<b>Proteja</b>. <span class="k">Solo: Defender también la '
-        'contrarresta.</span>'));
+            'Centinela va contra él y pega <b>×2</b>, salvo que otro aliado lo '
+            '<b>Proteja</b>. <span class="k">Solo: Defender también la '
+            'contrarresta.</span>'));
   }
   chips.addAll(treeEffectChips(p));
   return chips;
@@ -184,9 +194,10 @@ List<StatusChip> bossMechanicChips(BattleState b) {
             '${m.name}${n > 0 ? ' · $n atrapado${n == 1 ? '' : 's'}' : ''}',
             const Color(0xFFEDEFF5),
             '<b style="color:#edeff5">${m.name}</b> '
-            '<span class="k">(${protoEsc(e.name)})</span><br>${m.counter}'));
+                '<span class="k">(${protoEsc(e.name)})</span><br>${m.counter}'));
       case BossMechanicKind.frost:
-        final n = b.enemies.where((c) => c.alive && c.enemyType == m.addType).length;
+        final n =
+            b.enemies.where((c) => c.alive && c.enemyType == m.addType).length;
         var slow = 0.0;
         for (final p in b.party) {
           final fx = p.effectFrom(m.id, BuffStat.speed);
@@ -198,12 +209,16 @@ List<StatusChip> bossMechanicChips(BattleState b) {
                 '${slow > 0 ? ' · VEL −${jsRound(slow * 100)}%' : ''}',
             const Color(0xFF9FE3F0),
             '<b style="color:#9fe3f0">${m.name}</b> '
-            '<span class="k">($n cristal${n == 1 ? '' : 'es'} vivo${n == 1 ? '' : 's'})</span>'
-            '<br>${m.counter}'));
+                '<span class="k">($n cristal${n == 1 ? '' : 'es'} vivo${n == 1 ? '' : 's'})</span>'
+                '<br>${m.counter}'));
       case BossMechanicKind.stance:
         final shield = e.stance == 1;
         final pct = jsRound(m.value * 100);
-        final hex = e.broken ? '#7f8c8d' : shield ? '#74b9ff' : '#ff6b6b';
+        final hex = e.broken
+            ? '#7f8c8d'
+            : shield
+                ? '#74b9ff'
+                : '#ff6b6b';
         final when = e.broken
             ? 'rota (quebrado)'
             : e.stanceTurns <= 1
@@ -218,17 +233,17 @@ List<StatusChip> bossMechanicChips(BattleState b) {
                     ? ProtoColors.ice
                     : const Color(0xFFFF6B6B),
             '<b style="color:$hex">Postura de ${shield ? 'escudo' : 'espada'}</b> '
-            '<span class="k">($when)</span><br>${m.counter}'));
+                '<span class="k">($when)</span><br>${m.counter}'));
 
       // ---- v0.3 (docs/specs/bosses.md § "v0.3") ----
       case BossMechanicKind.echo || BossMechanicKind.summon:
         final echo = m.kind == BossMechanicKind.echo;
-        final n = b.enemies.where((c) => c.alive && c.enemyType == m.addType).length;
+        final n =
+            b.enemies.where((c) => c.alive && c.enemyType == m.addType).length;
         final max = b.party.length == 1 ? m.soloAdds : m.adds;
         final back = m.every - e.mechTurns;
-        final when = n >= max
-            ? ''
-            : ' · vuelven en $back turno${back == 1 ? '' : 's'}';
+        final when =
+            n >= max ? '' : ' · vuelven en $back turno${back == 1 ? '' : 's'}';
         final (String short, String long, Color col, String hex) = echo
             ? (
                 'Ecos $n',
@@ -249,7 +264,10 @@ List<StatusChip> bossMechanicChips(BattleState b) {
                     ProtoColors.green,
                     '#7bed9f'
                   );
-        chips.add(StatusChip(short, long, col,
+        chips.add(StatusChip(
+            short,
+            long,
+            col,
             '<b style="color:$hex">${m.name}</b> '
             '<span class="k">(${protoEsc(e.name)} · $n/$max)</span><br>${m.counter}'));
       case BossMechanicKind.lava:
@@ -265,7 +283,8 @@ List<StatusChip> bossMechanicChips(BattleState b) {
             '<span class="k">(${up ? 'activa ${e.lava} turnos' : 'sube en $next acciones'})</span>'
             '<br>${m.counter}'));
       case BossMechanicKind.mark:
-        final marked = b.party.where((p) => p.alive && p.voidMarked).firstOrNull;
+        final marked =
+            b.party.where((p) => p.alive && p.voidMarked).firstOrNull;
         final next = m.every - e.actions % m.every;
         final x = fm(b.party.length == 1 ? m.soloValue : m.value);
         chips.add(StatusChip(
@@ -285,7 +304,7 @@ List<StatusChip> bossMechanicChips(BattleState b) {
             two
                 ? 'FASE 2 · Colapso Temporal cada ${m.every} (en $next)'
                 : 'FASE 1 · se transforma al ${jsRound(m.value * 100)}%',
-            two ? const Color(0xFFD63031) : const Color(0xFFE84393),
+            two ? ProtoColors.crimson : ProtoColors.pink,
             '<b style="color:#d63031">${m.name}</b> '
             '<span class="k">(${two ? 'fase 2' : 'fase 1'})</span><br>${m.counter}'));
     }
@@ -313,6 +332,9 @@ List<StatusChip> treeEffectChips(Combatant p) {
   final chips = <StatusChip>[];
   String src(TimedEffect e) =>
       kMechanics[e.sourceId]?.name ??
+      kAscensionMechanics[e.sourceId]?.name ??
+      kSkills[e.sourceId]?.name ??
+      kAscensionUltimatesById[e.sourceId]?.name ??
       kBossMechanics[e.sourceId]?.name ??
       (e.sourceId == 'vigilancia' ? 'Vigilante del Vacío' : null) ??
       e.sourceId;
@@ -328,8 +350,8 @@ List<StatusChip> treeEffectChips(Combatant p) {
             ProtoColors.ice,
             '<b style="color:#74b9ff">▼ Velocidad −$pct%</b> '
                 '<span class="k">($from)</span><br>'
-                'Su turno llega más tarde. Rompé los cristales de hielo para '
-                'quitarlo.'));
+                'Su turno llega más tarde.'
+                '${kSkills.containsKey(e.sourceId) ? ' (${turns(e)})' : ' Rompé los cristales de hielo para quitarlo.'}'));
       case BuffStat.speed:
         chips.add(StatusChip(
             '▲VEL',
@@ -373,8 +395,57 @@ List<StatusChip> treeEffectChips(Combatant p) {
             '<b style="color:#ffeaa7">Aturdimiento extendido</b> '
                 '<span class="k">($from)</span><br>'
                 'Su aturdimiento dura 1 turno más.'));
+      // ---- ascensión (docs/specs/ascension.md) ----
+      case BuffStat.guard:
+        chips.add(StatusChip(
+            '▼DAÑO',
+            'Defensa −$pct%',
+            ProtoColors.sky,
+            '<b style="color:#74b9ff">Defensa: −$pct% de daño recibido</b> '
+                '<span class="k">($from · ${turns(e)})</span>'));
       case BuffStat.crit:
-      case BuffStat.damage:
+        chips.add(StatusChip(
+            '▲CRÍT',
+            '▲CRÍT +$pct%',
+            ProtoColors.pink,
+            '<b style="color:#ff6b81">Crítico +$pct%</b> '
+                '<span class="k">($from · ${turns(e)})</span>'));
+      case BuffStat.critMulti:
+        chips.add(StatusChip(
+            '▲×CRÍT',
+            '▲×CRÍT +${fm(e.value)}',
+            ProtoColors.pink,
+            '<b style="color:#ff6b81">Multiplicador de crítico +${fm(e.value)}</b> '
+                '<span class="k">($from · ${turns(e)})</span>'));
+      case BuffStat.trap:
+        final n = e.value.round();
+        chips.add(StatusChip(
+            'Trampa',
+            'Trampa $n',
+            ProtoColors.green,
+            '<b style="color:#7bed9f">Trampa $n</b> '
+                '<span class="k">($from · ${turns(e)})</span><br>'
+                'Salta al empezar su turno: $n de daño.'));
+      case BuffStat.charge:
+        final n = e.value.round();
+        chips.add(StatusChip(
+            'Carga',
+            'Carga $n',
+            ProtoColors.orange,
+            '<b style="color:#ff9f43">Disparo cargado $n</b> '
+                '<span class="k">($from)</span><br>'
+                'Cae al empezar su próximo turno: $n de daño.'));
+      case BuffStat.damage ||
+            BuffStat.lifeSteal ||
+            BuffStat.delayPower ||
+            BuffStat.buffPower ||
+            BuffStat.buffTurns ||
+            BuffStat.trapPower ||
+            BuffStat.trapTurns ||
+            BuffStat.shieldPower ||
+            BuffStat.shieldReflect ||
+            BuffStat.holyPower ||
+            BuffStat.shareDamage:
         break;
     }
   }
@@ -418,7 +489,12 @@ class StatusChipView extends StatelessWidget {
         ),
         child: Text(
           retroText(long ? chip.long : chip.short),
-          style: TextStyle(fontSize: 8, height: 1.25, color: chip.color),
+          style: TextStyle(
+              fontFamily: RetroType.bodyFamily,
+              fontFamilyFallback: RetroType.bodyFallback,
+              fontSize: RetroType.small,
+              height: RetroType.lineTight,
+              color: chip.color),
         ),
       ),
     );
@@ -432,22 +508,52 @@ Widget _chips(List<StatusChip> chips, {bool long = false}) => Wrap(
     );
 
 /// Barra con `n/m` a la derecha (y una etiqueta opcional a la izquierda).
-Widget _barRow(Widget bar, String value,
-        {String? label, Color color = ProtoColors.ink, double valueWidth = 64}) =>
-    Row(
-      children: [
-        if (label != null)
+/// Los anchos de la etiqueta y del valor van en caracteres ([labelChars],
+/// `valueChars`) para que crezcan con el tamaño del texto.
+class _BarRow extends StatelessWidget {
+  const _BarRow(this.bar, this.value,
+      {this.label, this.color = ProtoColors.ink, this.valueChars = 8});
+
+  final Widget bar;
+  final String value;
+  final String? label;
+  final Color color;
+  final double valueChars;
+
+  /// Ancho de la etiqueta (`ULT`) en caracteres.
+  static const labelChars = 3.5;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          if (label != null)
+            SizedBox(
+                width: RetroType.em(context, labelChars),
+                child: Text(label!,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: RetroType.style(RetroType.label, color: color))),
+          Expanded(child: bar),
           SizedBox(
-              width: 30,
-              child: Text(label, style: TextStyle(color: color))),
-        Expanded(child: bar),
-        SizedBox(
-          width: valueWidth,
-          child: Text(value,
-              textAlign: TextAlign.right, style: TextStyle(color: color)),
-        ),
-      ],
-    );
+            width: RetroType.em(context, valueChars),
+            child: Text(value,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.fade,
+                textAlign: TextAlign.right,
+                // Cifras de las barras: Press Start 2P (monoespaciada).
+                style: RetroType.style(RetroType.label, color: color)),
+          ),
+        ],
+      );
+}
+
+/// `<b>Ana</b>, Cronomante` con la ascensión en su color (ascension.md § 5).
+String heroNameMarkup(Combatant p) {
+  final a = ascensionFor(p.classId, p.ascensionId);
+  final n = '<b>${protoEsc(p.name)}</b>';
+  return a == null ? n : '$n, ${hexSpan(ascensionHex(a), protoEsc(a.name))}';
+}
 
 String _classLine(Combatant p) {
   final cls = kClasses[p.classId]?.name ?? p.classId ?? '';
@@ -455,240 +561,233 @@ String _classLine(Combatant p) {
   return '$cls${lvl == null ? '' : ' Lv$lvl'}';
 }
 
-/// Panel izquierdo: los datos completos del jugador local.
-class MyBattlePanel extends StatelessWidget {
-  const MyBattlePanel({
+/// Detalle de [p] para el tooltip de su tarjeta: ATQ, MAG, DEF, crítico,
+/// velocidad y arma (lo que antes ocupaba el panel izquierdo).
+String heroStatsMarkup(Combatant p, {int points = 0}) {
+  final build = p.build;
+  final up = build?.weaponUpgrades.total ?? 0;
+  final weapon = build == null
+      ? ''
+      : '${build.equippedWeapon.name}${up > 0 ? ' +$up' : ''}';
+  final speed = 100 / turnInterval(p);
+  final pts = points > 0 ? ' ${hexSpan('#ffd166', '+$points pts')}' : '';
+  return [
+    '${heroNameMarkup(p)} <span class="k">${_classLine(p)}</span>',
+    if (weapon.isNotEmpty) hexSpan('#ff9f43', '⚔ ${protoEsc(weapon)}$pts'),
+    'HP ${p.hp}/${p.maxHp} · MP ${p.mp.floor()}/${p.maxMp} · '
+        'ULT ${p.ult.floor()}%',
+    '<span class="k">ATQ ${p.attack} · MAG ${p.magic} · '
+        'DEF ${p.defense}</span>',
+    '<span class="k">Crít ${jsRound(p.critChance * 100)}% '
+        '(×${fm(p.critMultiplier)}) · VEL ${speed.toStringAsFixed(1)}</span>',
+  ].join('<br>');
+}
+
+/// Barra del grupo (v0.5, battle_presentation.md § "Barra de batalla"):
+/// una tarjeta por jugador, una al lado de la otra; la del turno con borde
+/// dorado. La tarjeta propia (`my-panel-<id>`) lleva el detalle de stats en
+/// su tooltip; las otras son `member-<id>`.
+class BattlePartyBar extends StatelessWidget {
+  const BattlePartyBar({
     super.key,
     required this.battle,
-    required this.player,
+    required this.localId,
+    this.sprites,
     this.turnTimeLeft,
     this.points = 0,
   });
 
   final BattleState battle;
-  final Combatant player;
+  final String? localId;
+  final GameSprites? sprites;
   final double? turnTimeLeft;
   final int points;
 
   @override
   Widget build(BuildContext context) {
-    final p = player;
-    final build = p.build;
-    final up = build?.weaponUpgrades.total ?? 0;
-    final weapon = build == null
-        ? ''
-        : '${build.equippedWeapon.name}${up > 0 ? ' +$up' : ''}';
-    final ult = p.ult;
-    final ultColor = ult >= 100 ? ProtoColors.pink : ProtoColors.violet;
-    final speed = 100 / turnInterval(p);
-    final chips = combatantChips(p);
-    final String turn;
-    if (battle.currentId == p.id) {
-      final left = turnTimeLeft;
-      turn = '<b>▶ TU TURNO</b>'
-          '${left == null ? '' : '  ${hexSpan(left <= 10 ? '#ff4757' : '#ffd166', '${left.ceil().clamp(0, 99)}s')}'}';
-    } else if (!p.alive) {
-      turn = hexSpan('#7d8bc4', 'Fuera de combate');
-    } else {
-      final i = predictTurns(battle, 10).indexOf(p.id);
-      turn = hexSpan('#7d8bc4', i < 0 ? 'Turno: —' : 'Turno en $i');
-    }
-    return BattleBarPanel(
-      key: ValueKey('my-panel-${p.id}'),
-      highlight: true,
-      child: Opacity(
-        opacity: p.alive ? 1 : 0.5,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ProtoText(
-                '<b>${protoEsc(p.name)}</b> '
-                '<span class="k">${_classLine(p)}</span>',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (weapon.isNotEmpty)
-                ProtoText(
-                  hexSpan(
-                      '#ff9f43',
-                      '⚔ ${protoEsc(weapon)}'
-                          '${points > 0 ? ' ${hexSpan('#ffd166', '+$points pts')}' : ''}'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              _barRow(hpBar(p.hp, p.maxHp), '${p.hp}/${p.maxHp}',
-                  label: 'HP', valueWidth: 72),
-              _barRow(mpBar(p.mp, p.maxMp), '${p.mp.floor()}/${p.maxMp}',
-                  label: 'MP', valueWidth: 72),
-              _barRow(ultBar(ult),
-                  ult >= 100 ? '¡LISTA!' : '${ult.floor()}%',
-                  label: 'ULT', color: ultColor, valueWidth: 72),
-              ProtoText(
-                'ATQ ${p.attack} · MAG ${p.magic} · DEF ${p.defense}',
-                style: const TextStyle(color: ProtoColors.sky),
-              ),
-              ProtoText(
-                'Crít ${jsRound(p.critChance * 100)}% '
-                '(×${fm(p.critMultiplier)}) · VEL ${speed.toStringAsFixed(1)}',
-                style: const TextStyle(color: ProtoColors.sky),
-              ),
-              if (chips.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                _chips(chips, long: true),
-                const SizedBox(height: 2),
-              ],
-              ProtoText(turn),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Panel derecho: una fila compacta por cada otro jugador del grupo.
-class PartyListPanel extends StatelessWidget {
-  const PartyListPanel({
-    super.key,
-    required this.battle,
-    required this.localId,
-    this.sprites,
-  });
-
-  final BattleState battle;
-  final String? localId;
-  final GameSprites? sprites;
-
-  @override
-  Widget build(BuildContext context) {
-    final others = [
-      for (final p in battle.party)
-        if (p.id != localId) p,
-    ];
     final order = predictTurns(battle, 10);
-    return BattleBarPanel(
-      key: const ValueKey('party-list'),
-      padding: const EdgeInsets.all(4),
-      child: others.isEmpty
-          ? const Center(
-              child: Text('Solo', style: TextStyle(color: ProtoColors.dim)),
-            )
-          : SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final (i, p) in others.indexed) ...[
-                    if (i > 0) const SizedBox(height: 4),
-                    _MemberRow(
-                      player: p,
-                      current: battle.currentId == p.id,
-                      turnIndex: order.indexOf(p.id),
-                      sprites: sprites,
-                    ),
-                  ],
-                ],
-              ),
+    return Row(
+      key: const ValueKey('party-bar'),
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (final (i, p) in battle.party.indexed) ...[
+          if (i > 0) const SizedBox(width: 6),
+          Expanded(
+            child: _PartyCard(
+              key: ValueKey(
+                  p.id == localId ? 'my-panel-${p.id}' : 'member-${p.id}'),
+              player: p,
+              local: p.id == localId,
+              current: battle.currentId == p.id,
+              turnIndex: order.indexOf(p.id),
+              sprites: sprites,
+              turnTimeLeft: battle.currentId == p.id ? turnTimeLeft : null,
+              points: p.id == localId ? points : 0,
             ),
+          ),
+        ],
+      ],
     );
   }
 }
 
-class _MemberRow extends StatelessWidget {
-  const _MemberRow({
+class _PartyCard extends StatelessWidget {
+  const _PartyCard({
+    super.key,
     required this.player,
+    required this.local,
     required this.current,
     required this.turnIndex,
     this.sprites,
+    this.turnTimeLeft,
+    this.points = 0,
   });
 
   final Combatant player;
+  final bool local;
   final bool current;
   final int turnIndex;
   final GameSprites? sprites;
+  final double? turnTimeLeft;
+  final int points;
 
   static const _avatar = Size(32, 40);
 
   @override
   Widget build(BuildContext context) {
     final p = player;
-    final img = sprites?.hero(p.classId ?? '');
+    final img = sprites?.heroFor(p.classId, p.ascensionId);
     final chips = combatantChips(p);
-    final turn = current
-        ? hexSpan('#ffd166', '▶ SU TURNO')
-        : hexSpan(
-            '#7d8bc4',
-            !p.alive
-                ? ''
-                : turnIndex < 0
-                    ? '—'
-                    : 'Turno en $turnIndex');
-    return Opacity(
-      key: ValueKey('member-${p.id}'),
-      opacity: p.alive ? 1 : 0.5,
+    final left = turnTimeLeft;
+    // Turno: corto para que el nombre no se corte ("T+3").
+    final String turn;
+    if (current) {
+      turn = hexSpan(
+          '#ffd166', '▶${left == null ? '' : ' ${left.ceil().clamp(0, 99)}s'}');
+    } else if (!p.alive) {
+      turn = hexSpan('#7d8bc4', 'K.O.');
+    } else {
+      turn = turnIndex < 0 ? '' : hexSpan('#7d8bc4', 'T+$turnIndex');
+    }
+    final ultColor = p.ult >= 100 ? ProtoColors.pink : ProtoColors.violet;
+    final nameColor = local ? ' style="color:#ffd166"' : '';
+    final card = Opacity(
+      opacity: p.alive ? 1 : 0.55,
       child: Container(
-        padding: const EdgeInsets.all(3),
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: ProtoColors.input,
+          color: local ? ProtoColors.panel : ProtoColors.input,
           border: Border.all(
-            color: current ? ProtoColors.gold : ProtoColors.panelBorder,
+            color: current
+                ? ProtoColors.gold
+                : local
+                    ? ProtoColors.buttonBorder
+                    : ProtoColors.panelBorder,
+            width: 2,
           ),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: _avatar.width,
-              height: _avatar.height,
-              color: ProtoColors.bg,
-              alignment: Alignment.center,
-              child: img == null
-                  ? const SizedBox.shrink()
-                  : PixelSprite(img, scale: 2),
-            ),
-            const SizedBox(width: 5),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ProtoText(
-                          '${protoEsc(p.name)} '
-                          '<span class="k">${_classLine(p)}</span>',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      ProtoText(turn),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _barRow(
-                            hpBar(p.hp, p.maxHp), '${p.hp}/${p.maxHp}',
-                            valueWidth: 60),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: _barRow(mpBar(p.mp, p.maxMp),
-                            '${p.mp.floor()}/${p.maxMp}',
-                            valueWidth: 52),
-                      ),
-                    ],
-                  ),
-                  if (chips.isNotEmpty) ...[
-                    const SizedBox(height: 1),
-                    _chips(chips),
-                  ],
-                ],
+        child: DefaultTextStyle.merge(
+          style: RetroType.smallStyle.copyWith(color: ProtoColors.ink),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: _avatar.width,
+                height: _avatar.height,
+                color: ProtoColors.bg,
+                alignment: Alignment.center,
+                child: img == null
+                    ? const SizedBox.shrink()
+                    : PixelSprite(img, scale: 2),
               ),
-            ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // El nombre baja de línea antes que cortarse.
+                        Expanded(
+                          child: ProtoText('<b$nameColor>${protoEsc(p.name)}'
+                              '</b> <span class="k">'
+                              'Lv${p.build?.level ?? '?'}</span>'),
+                        ),
+                        if (turn.isNotEmpty) ProtoText(turn),
+                      ],
+                    ),
+                    _BarRow(hpBar(p.hp, p.maxHp), '${p.hp}/${p.maxHp}',
+                        label: 'HP', valueChars: 9),
+                    _BarRow(mpBar(p.mp, p.maxMp), '${p.mp.floor()}/${p.maxMp}',
+                        label: 'MP', valueChars: 9),
+                    if (local)
+                      _BarRow(ultBar(p.ult),
+                          p.ult >= 100 ? '¡LISTA!' : '${p.ult.floor()}%',
+                          label: 'ULT', color: ultColor, valueChars: 9),
+                    if (chips.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      _chips(chips),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return RetroTooltip(
+        message: heroStatsMarkup(p, points: points), child: card);
+  }
+}
+
+/// Barra del objetivo (arriba a la izquierda de la escena): nombre, vida
+/// con números, quiebre y si avisó su ULT.
+class TargetBar extends StatelessWidget {
+  const TargetBar({super.key, required this.enemy});
+
+  final Combatant enemy;
+
+  @override
+  Widget build(BuildContext context) {
+    final e = enemy;
+    const breakColor = Color(0xFFFFE14D);
+    return Container(
+      key: const ValueKey('target-bar'),
+      width: RetroType.width(context, 200),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: ProtoColors.bg.withValues(alpha: 0.9),
+        border: Border.all(color: ProtoColors.crimson, width: 2),
+      ),
+      child: DefaultTextStyle.merge(
+        style: RetroType.smallStyle.copyWith(color: ProtoColors.ink),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ProtoText('<b style="color:#ff6b81">${protoEsc(e.name)}</b>'
+                '${e.ultPending ? ' ${hexSpan('#ff3355', '¡ULT!')}' : ''}'),
+            _BarRow(
+                RetroBar(value: e.hp, max: e.maxHp, color: ProtoColors.crimson),
+                '${e.hp}/${e.maxHp}',
+                label: 'HP',
+                valueChars: 9),
+            if (e.hasBreak)
+              _BarRow(
+                  RetroBar(
+                      value: e.broken ? e.breakMax : e.breakGauge,
+                      max: e.breakMax,
+                      height: 4,
+                      color: breakColor),
+                  e.broken
+                      ? '¡ROTO!'
+                      : '${e.breakGauge.floor()}/${e.breakMax.round()}',
+                  label: 'QB',
+                  color: breakColor,
+                  valueChars: 9),
           ],
         ),
       ),

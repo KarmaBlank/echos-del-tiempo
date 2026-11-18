@@ -82,7 +82,7 @@ void main() {
     });
 
     test('solo tiles conocidos; árboles y rocas son sólidos', () {
-      const known = {'#', '.', ',', '~', 'C', 'A', 'P', 'g', 'T', '^',
+      const known = {'#', '.', ',', '~', 'C', 'A', 'P', 'S', 'g', 'T', '^',
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
       for (final r in w.rows) {
         for (final c in r.split('')) {

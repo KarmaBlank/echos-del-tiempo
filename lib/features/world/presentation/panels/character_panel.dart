@@ -1,11 +1,17 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/feature_flags.dart';
+import '../../../ascension/domain/ascension_text.dart';
+import '../../../build_planner/presentation/build_fit_badge.dart';
+import '../../../build_planner/presentation/build_plan_providers.dart';
+import '../../../build_planner/presentation/build_planner_view.dart';
 import '../../../../app/theme/panel_frame.dart';
 import '../../../../app/theme/panel_widgets.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_text.dart';
+import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
@@ -47,7 +53,11 @@ enum CharacterTab {
   filter(
       'FILTRO',
       'Reglas en orden: gana la primera que coincide. Ocultar no borra el '
-          'loot: lo deja en el piso. Ayuda de la gramática en [?] y abajo.');
+          'loot: lo deja en el piso. Ayuda de la gramática en [?] y abajo.'),
+  build(
+      'BUILD',
+      'Tu plan: metas con progreso automático. ★ marca en tienda, '
+          'inventario y fusión lo que sirve; te avisa cuando avanzás.');
 
   const CharacterTab(this.label, this.hint);
   final String label;
@@ -108,6 +118,14 @@ class _CharacterPanelState extends State<CharacterPanel> {
       CharacterTab.inventory =>
         InventoryTab(shop: ShopContext(view, c), pending: Map.of(_alloc)),
       CharacterTab.filter => LootFilterTab(shop: ShopContext(view, c)),
+      CharacterTab.build => Consumer(
+          builder: (context, ref, _) => BuildPlannerView(
+                key: const ValueKey('build-planner'),
+                rules: ref.watch(buildPlanRulesProvider),
+                profile: prof,
+                plan: ref.watch(buildPlanProvider).plan,
+                onChanged: (p) => ref.read(buildPlanProvider.notifier).save(p),
+              )),
       // El visor del árbol se ajusta al alto que queda (fila de puntos y
       // reinicio arriba: ~40 px).
       CharacterTab.tree => LayoutBuilder(
@@ -128,9 +146,13 @@ class _CharacterPanelState extends State<CharacterPanel> {
           : 'PERSONAJE',
       width: 1000,
       fill: true,
-      help: tab == CharacterTab.filter ? kFilterHelp : CharacterPanel.help,
+      help: switch (tab) {
+        CharacterTab.filter => kFilterHelp,
+        CharacterTab.build => BuildPlannerView.help,
+        _ => CharacterPanel.help,
+      },
       onClose: close,
-      titleTrailing: ProtoText('${protoEsc(prof.name)} · '
+      titleTrailing: ProtoText('${protoEsc(profileTitle(prof))} · '
           '<span class="k">$cls Lv${prof.level}</span>'
           '${prof.level >= ProgressionRules.maxLevel ? ' · <span style="color:#a29bfe">${protoEsc(masteryText(prof))}</span>' : ''} · Puntos: '
           '<b>$left</b>'),
@@ -193,8 +215,32 @@ class _CharacterPanelState extends State<CharacterPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final a in Attribute.values)
-                  _attrRow(a, prof.attributes[a], left),
+                // Con plan de build: el objetivo de cada atributo y a cuál
+                // le faltan puntos (build_planner.md § 4.1).
+                Consumer(builder: (context, ref, _) {
+                  final plan = ref.watch(buildPlanProvider).plan;
+                  final want = [
+                    for (final a in Attribute.values)
+                      if ((plan.attributes[a] ?? 0) > prof.attributes[a])
+                        kAttributeInfo[a]!.$1,
+                  ];
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (want.isNotEmpty && prof.points > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                              retroText('★ Según tu build: ${want.join(', ')}'),
+                              key: const ValueKey('build-attr-hint'),
+                              style: const TextStyle(color: kPlanColor)),
+                        ),
+                      for (final a in Attribute.values)
+                        _attrRow(a, prof.attributes[a], left,
+                            target: plan.attributes[a]),
+                    ],
+                  );
+                }),
                 if (view.mustAllocate) ...[
                   const SizedBox(height: 8),
                   const Text(
@@ -233,12 +279,12 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 ),
                 if (prof.classId == 'paladin')
                   const PanelSection(
-                    'Kit de Paladín',
+                    'Rasgos de Paladín',
                     child: Text(
-                      'Básico: 3% aturdir · Aura Restauradora (cura + regen 5% '
-                      'vida/maná × 3 turnos) · Fortaleza (+2 DEF por uso) · '
-                      'Protección (absorbes el daño de tus aliados)\n'
-                      'Débil a daño perforante (×1.5) y a estados (+1 stack)',
+                      'Básico: 3% aturdir · habilidades según el arma\n'
+                      'Débil a daño perforante (×1.5) y a estados (+1 stack)\n'
+                      'Aura Restauradora, Fortaleza y Protección: kit del '
+                      'Guardián (ascensión)',
                     ),
                   ),
               ],
@@ -298,7 +344,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
     );
   }
 
-  Widget _attrRow(Attribute a, int value, int left) {
+  Widget _attrRow(Attribute a, int value, int left, {int? target}) {
     final (short, name, desc) = kAttributeInfo[a]!;
     final add = _alloc[a] ?? 0;
     return Padding(
@@ -316,6 +362,16 @@ class _CharacterPanelState extends State<CharacterPanel> {
             child: ProtoText('$value'
                 '${add > 0 ? ' ${protoColor(ProtoColors.green, '+$add')}' : ''}'),
           ),
+          if (target != null)
+            SizedBox(
+              width: RetroType.width(context, 100),
+              child: Text('★ ${value + add}/$target',
+                  key: ValueKey('build-attr-${a.name}'),
+                  style: TextStyle(
+                      color: value + add >= target
+                          ? ProtoColors.green
+                          : kPlanColor)),
+            ),
           PanelButton('-',
               key: ValueKey('dec-${a.name}'),
               onPressed:
@@ -350,19 +406,22 @@ class _CharacterPanelState extends State<CharacterPanel> {
     final c = widget.controller;
     final p = view.me!.profile;
     final guards = ShopContext(view, c).guards;
-    return PassiveTreeView(
-      rules: c.engine.progression.treeRules,
-      profile: p,
-      inBattle: view.mode == SessionMode.battle,
-      onTake: c.takeNode,
-      showReset: guards.showRespec,
-      resetLabel: ProgressionRules.freeRespec
-          ? 'REINICIAR ÁRBOL (GRATIS)'
-          : 'REINICIAR ÁRBOL',
-      resetReason: guards.resetTree(p),
-      onReset: c.resetTree,
-      height: height,
-      showHelp: false,
+    return Consumer(
+      builder: (context, ref, _) => PassiveTreeView(
+        planned: ref.watch(buildPlanProvider).plan.treeNodes.toSet(),
+        rules: c.engine.progression.treeRules,
+        profile: p,
+        inBattle: view.mode == SessionMode.battle,
+        onTake: c.takeNode,
+        showReset: guards.showRespec,
+        resetLabel: ProgressionRules.freeRespec
+            ? 'REINICIAR ÁRBOL (GRATIS)'
+            : 'REINICIAR ÁRBOL',
+        resetReason: guards.resetTree(p),
+        onReset: c.resetTree,
+        height: height,
+        showHelp: false,
+      ),
     );
   }
 }

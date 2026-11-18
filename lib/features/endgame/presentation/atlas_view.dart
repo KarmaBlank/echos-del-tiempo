@@ -115,9 +115,16 @@ class _AtlasViewState extends State<AtlasView> {
         ),
         const SizedBox(width: 16),
         SizedBox(
-          width: 340,
+          // Crece con el texto (sin pasar de 45 % del panel).
+          width: RetroType.width(context, 340)
+              .clamp(340.0, MediaQuery.sizeOf(context).width * 0.45),
           child: PanelDetail(
             footer: [
+              PanelButton('REINICIAR',
+                  key: const ValueKey('atlas-reset'),
+                  onPressed: widget.editBlocked != null || p.nodes.isEmpty
+                      ? null
+                      : widget.onReset),
               if (!node.locked && !taken)
                 PanelButton('TOMAR',
                     key: const ValueKey('atlas-take'),
@@ -126,43 +133,40 @@ class _AtlasViewState extends State<AtlasView> {
                     onPressed: () => widget.onTake?.call(node.id)),
             ],
             children: [
+              // Primero el nodo elegido (lo que se decide), después el resto.
+              ProtoText(
+                  key: const ValueKey('atlas-detail'),
+                  atlasNodeMarkup(node, state: _state(node))),
+              const SizedBox(height: 8),
               ProtoText(
                   key: const ValueKey('atlas-points'),
                   'Puntos libres <b>$free</b> · ganados $earned/'
                   '${AtlasRules.maxPoints}'),
-              ProtoText(protoColor(
-                  ProtoColors.dim,
-                  'Primeras veces: tiers ${count('t')}/16 · zonas '
-                  '${count('z')}/10 · jefes ${count('b')}/10')),
               if (widget.note != null)
                 ProtoText(protoColor(ProtoColors.sky, protoEsc(widget.note!))),
-              const SizedBox(height: 8),
-              ProtoText(
-                  key: const ValueKey('atlas-detail'),
-                  atlasNodeMarkup(node, state: _state(node))),
-              const SizedBox(height: 12),
-              ProtoText(
-                  key: const ValueKey('atlas-legend'),
-                  '${protoColor(ProtoColors.dim, 'Lleno = tomado · borde fuerte = '
-                      'podés tomarlo · ? = próximamente · el número es el costo.')}<br>'
-                  '${[
-                    for (final (b, where) in const [
-                      (AtlasBranch.cartografia, 'arriba'),
-                      (AtlasBranch.tesoro, 'derecha'),
-                      (AtlasBranch.caza, 'abajo'),
-                      (AtlasBranch.dominio, 'izquierda'),
-                    ])
-                      '${protoColor(atlasBranchColor(b), b.label)} '
-                          '${protoColor(ProtoColors.dim, where)}',
-                  ].join(' · ')}'),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Align(
                 alignment: Alignment.centerLeft,
-                child: PanelButton('REINICIAR (gratis)',
-                    key: const ValueKey('atlas-reset'),
-                    onPressed: widget.editBlocked != null || p.nodes.isEmpty
-                        ? null
-                        : widget.onReset),
+                child: RetroTooltip(
+                  key: const ValueKey('atlas-legend'),
+                  message: '${protoColor(ProtoColors.dim, 'Primeras veces: tiers '
+                      '${count('t')}/16 · zonas ${count('z')}/10 · jefes '
+                      '${count('b')}/10')}<br>'
+                      'Lleno = tomado · borde fuerte = podés tomarlo · ? = '
+                      'próximamente · el número es el costo. Reiniciar es '
+                      'gratis.<br>'
+                      '${[
+                        for (final (b, where) in const [
+                          (AtlasBranch.cartografia, 'arriba'),
+                          (AtlasBranch.tesoro, 'derecha'),
+                          (AtlasBranch.caza, 'abajo'),
+                          (AtlasBranch.dominio, 'izquierda'),
+                        ])
+                          '${protoColor(atlasBranchColor(b), b.label)} $where',
+                      ].join(' · ')}',
+                  child: const Text('[? Leyenda]',
+                      style: TextStyle(color: ProtoColors.sky)),
+                ),
               ),
             ],
           ),
@@ -214,8 +218,11 @@ class _AtlasViewState extends State<AtlasView> {
                     : taken || n.cost == 0
                         ? ''
                         : '${n.cost}',
+                // Nodo de tamaño fijo: nítido pero sin agrandarse.
+                textScaler: RetroType.fixedScaler(context),
                 style: TextStyle(
-                    fontSize: 8, color: n.locked ? ProtoColors.dim : color),
+                    fontFamily: RetroType.pixelFamily, fontSize: RetroType.label,
+                    color: n.locked ? ProtoColors.dim : color),
               ),
             ),
           ),

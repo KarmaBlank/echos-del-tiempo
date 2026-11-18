@@ -7,6 +7,7 @@ import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/loot_filter.dart';
@@ -150,7 +151,8 @@ class _LootFilterTabState extends State<LootFilterTab> {
             expands: true,
             keyboardType: TextInputType.multiline,
             textAlignVertical: TextAlignVertical.top,
-            style: const TextStyle(fontSize: 8, height: 1.8),
+            style: TextStyle(fontFamily: RetroType.bodyFamily,
+ fontFamilyFallback: RetroType.bodyFallback, fontSize: RetroType.small, height: 1.8),
             decoration: const InputDecoration(
                 contentPadding: EdgeInsets.all(8), isDense: true),
           ),

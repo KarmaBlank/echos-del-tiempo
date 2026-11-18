@@ -1,4 +1,5 @@
 import '../../../game_engine/models/battle_state.dart';
+import '../../../game_engine/models/passive_mechanic.dart' show BuffStat;
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/js_math.dart';
@@ -83,12 +84,34 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
   ];
   final mag = tk.kind == SkillKind.magical;
   switch (tk.kind) {
+    case SkillKind.physical || SkillKind.magical when tk.charge > 0:
+      final v = p?.attack ?? 0;
+      l.add('${hexSpan('#ff9f43', 'Disparo cargado')}: no pega ahora. Al '
+          'empezar tu próximo turno cae ATQ × ${fm(tk.charge)}'
+          '${p != null ? ' = <b>${jsRound(v * tk.charge)}</b>' : ''} sobre el '
+          'objetivo (si cayó, sobre el primer enemigo en pie)');
+      final st = tk.status;
+      if (st != null) {
+        l.add(statusApplicationMarkup(st,
+            bonus: p?.statusBonus[st.kind] ?? 0));
+      }
     case SkillKind.physical || SkillKind.magical:
       final v = p == null ? 0 : (mag ? p.magic : p.attack);
       l.add('Daño ${mag ? 'mágico' : 'físico'}: ${mag ? 'MAG' : 'ATQ'} × '
           '${fm(tk.power)}${p != null ? ' = <b>${jsRound(v * tk.power)}</b>' : ''}'
           '${tk.allTargets ? ' a TODOS los enemigos' : ' a 1 enemigo'}'
+          '${tk.hits > 1 ? ', <b>${tk.hits} golpes</b> seguidos' : ''}'
           '${p != null ? ' (crítico ${jsRound(v * tk.power * p.critMultiplier)})' : ''}');
+      if (tk.pierce > 0) {
+        l.add('${hexSpan('#dfe6e9', 'Atraviesa')}: también golpea a los '
+            'enemigos detrás del objetivo con el ${jsRound(tk.pierce * 100)}% '
+            'del daño');
+      }
+      if (tk.bounces > 0) {
+        l.add('${hexSpan('#fdcb6e', 'Rebota')} ${tk.bounces} '
+            '${tk.bounces == 1 ? 'vez' : 'veces'} a otro enemigo al azar '
+            '(−30% por rebote; solo hay uno: vuelve a él)');
+      }
       if (tk.critBonus > 0) {
         l.add('+${jsRound(tk.critBonus * 100)}% de probabilidad de crítico');
       }
@@ -102,14 +125,21 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
             bonus: p?.statusBonus[st.kind] ?? 0));
       }
     case SkillKind.heal:
+      if (tk.revive > 0) {
+        l.add('${hexSpan('#ffd166', 'Revive')} al primer aliado caído con el '
+            '${jsRound(tk.revive * 100)}% de su vida máx.'
+            '${tk.cleanse > 0 ? ' y sin estados' : ''}. Si no hay caídos:');
+      }
       l.add('Cura MAG × ${fm(tk.power)} + 6'
-          '${p != null ? ' = <b>${jsRound(p.magic * tk.power + 6)}</b>' : ''} a cada aliado'
+          '${p != null ? ' = <b>${jsRound(p.magic * tk.power + 6)}</b>' : ''} '
+          '${tk.lowestAlly ? 'al aliado más herido' : 'a cada aliado'}'
           '${tk.cleanse <= 0 ? '' : tk.cleanse >= 5 ? ' y quita todos los estados' : ' y quita 1 stack de cada estado'}');
     case SkillKind.regen:
       l.add('Cura MAG × ${fm(tk.power)} + 4'
-          '${p != null ? ' = <b>${jsRound(p.magic * tk.power + 4)}</b>' : ''} a cada aliado '
-          'y les da Regeneración: 5% de vida y maná máx. al inicio de su '
-          'turno, 3 turnos');
+          '${p != null ? ' = <b>${jsRound(p.magic * tk.power + 4)}</b>' : ''} '
+          '${tk.lowestAlly ? 'al aliado más herido' : 'a cada aliado'} '
+          'y ${tk.lowestAlly ? 'le' : 'les'} da Regeneración: 5% de vida y '
+          'maná máx. al inicio de su turno, 3 turnos');
     case SkillKind.haste:
       l.add('Adelanta el próximo turno de tus aliados 50% de un turno');
     case SkillKind.defenseUp:
@@ -125,6 +155,124 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
       l.add('Los próximos ${tk.amount} ataques enemigos van contra ti');
     case SkillKind.guard:
       l.add('Todo el equipo recibe ½ daño hasta su próximo turno');
+    case SkillKind.support:
+      break;
   }
+  l.addAll(kitEffectLines(tk));
   return l.join('<br>');
+}
+
+/// Las líneas de los efectos del kit de ascensión (ascension.md § 4).
+List<String> kitEffectLines(SkillDef tk) {
+  String pct(double v) => '${jsRound(v * 100)}%';
+  return [
+    if (tk.hpCost > 0) hexSpan('#ff4757', 'Cuesta ${pct(tk.hpCost)} de tu vida máx.'),
+    for (final x in tk.extraStatuses) statusApplicationMarkup(x),
+    if (tk.detonate > 0)
+      '+${pct(tk.detonate)} de daño por cada stack de Quemadura, '
+          'Congelación y Veneno del objetivo (los consume)',
+    if (tk.execute > 0)
+      'Remata (no jefes ni élites) si queda con menos de ${pct(tk.execute)} '
+          'de vida',
+    if (tk.lifeSteal > 0) 'Roba ${pct(tk.lifeSteal)} del daño que hace',
+    if (tk.trap > 0)
+      'Deja una trampa de ATQ × ${fm(tk.trap)} en '
+          '${tk.allTargets ? 'cada enemigo' : 'el objetivo'}: salta al '
+          'empezar su turno',
+    for (final b in tk.partyBuffs)
+      'Grupo: ${b.value < 0 ? '−' : '+'}${pct(b.value.abs())} ${b.stat.label} '
+          '(${b.turns} turno${b.turns == 1 ? '' : 's'})',
+    if (tk.partyShield > 0)
+      'Escudo del ${pct(tk.partyShield)} de tu vida máx. a cada aliado '
+          '(${tk.partyShieldTurns} turnos)',
+    if (tk.advanceAllies > 0)
+      'Adelanta a tus aliados ${pct(tk.advanceAllies)} de su espera (solo: '
+          'a vos)',
+    if (tk.selfBuff case final b?)
+      '+${pct(b.value)} ${b.stat.label} (${b.turns} turno${b.turns == 1 ? '' : 's'})',
+    if (tk.selfTurn < 1)
+      'Tu próximo turno llega ${pct(1 - tk.selfTurn)} antes',
+    if (tk.protect) 'Protección: recibís el daño dirigido a tus aliados',
+    ...variantEffectLines(tk),
+  ];
+}
+
+/// Las líneas de las variantes de habilidades (combat.md § "Variantes de
+/// habilidades"), con el color de su familia.
+List<String> variantEffectLines(SkillDef tk) {
+  String pct(double v) => '${jsRound(v * 100)}%';
+  String t(int n) => '$n turno${n == 1 ? '' : 's'}';
+  const heal = '#7bed9f', shield = '#ffeaa7', debuff = '#ff6b81';
+  return [
+    if (tk.overheal > 0)
+      hexSpan(heal, 'Desborde: ${pct(tk.overheal)} de la cura que sobra '
+          '(vida llena) se vuelve escudo (${t(tk.shieldTurns)})'),
+    if (tk.drainHeal > 0)
+      hexSpan(heal, 'Drena: ${pct(tk.drainHeal)} del daño cura al aliado '
+          'más herido'),
+    if (tk.allyShield > 0)
+      hexSpan(shield, 'Escudo del ${pct(tk.allyShield)} de tu vida máx. al '
+          'aliado más herido (${t(tk.shieldTurns)})'),
+    if (tk.selfShield > 0)
+      hexSpan(shield, 'Escudo del ${pct(tk.selfShield)} de tu vida máx. '
+          'para vos (${t(tk.shieldTurns)})'),
+    if (tk.shieldReflect > 0)
+      hexSpan(shield, 'Espinoso: el escudo devuelve ${pct(tk.shieldReflect)} '
+          'de lo que absorbe al enemigo que pega'),
+    if (tk.shieldBurst > 0)
+      hexSpan(shield, 'Volátil: al romperse explota, ATQ × '
+          '${fm(tk.shieldBurst)} a todos los enemigos'),
+    if (tk.shieldGrow > 0)
+      hexSpan(shield, 'Creciente: cada golpe que para lo agranda '
+          '${pct(tk.shieldGrow)} de lo absorbido (máx. 50% de la vida)'),
+    for (final d in tk.debuffs)
+      hexSpan(
+          debuff,
+          switch (d.stat) {
+            BuffStat.damageTaken =>
+              'Marca: recibe +${pct(d.value)} de daño de todos (${t(d.turns)})',
+            BuffStat.attack =>
+              'Debilita: −${pct(d.value.abs())} de ataque (${t(d.turns)})',
+            BuffStat.speed =>
+              'Lentitud: −${pct(d.value.abs())} de velocidad (${t(d.turns)})',
+            _ => '${d.stat.label} ${pct(d.value)} (${t(d.turns)})',
+          }),
+    if (tk.breakBonus > 0)
+      hexSpan('#ffe14d', 'Quiebre: +${pct(tk.breakBonus)} de llenado de la '
+          'barra de quiebre'),
+    if (tk.ultDrain > 0)
+      hexSpan('#a29bfe', 'Silencio: le quita ${jsRound(tk.ultDrain)} de '
+          'carga de ULT'),
+  ];
+}
+
+/// Etiqueta corta de una variante para la fila del menú de batalla
+/// (vacía si la habilidad no es una variante).
+String variantTagMarkup(SkillDef tk) {
+  final tags = <String>[
+    if (tk.revive > 0) hexSpan('#ffd166', 'revive'),
+    if (tk.lowestAlly) hexSpan('#7bed9f', 'al más herido'),
+    if (tk.overheal > 0) hexSpan('#ffeaa7', 'sobra→escudo'),
+    if (tk.drainHeal > 0) hexSpan('#7bed9f', 'drena'),
+    if (tk.allyShield > 0 || tk.selfShield > 0) hexSpan('#ffeaa7', 'escudo'),
+    if (tk.shieldReflect > 0) hexSpan('#ffeaa7', 'refleja'),
+    if (tk.shieldBurst > 0) hexSpan('#ffeaa7', 'explota'),
+    if (tk.shieldGrow > 0) hexSpan('#ffeaa7', 'crece'),
+    if (tk.charge > 0) hexSpan('#ff9f43', 'carga 1 turno'),
+    if (tk.hits > 1) hexSpan('#fdcb6e', '×${tk.hits}'),
+    if (tk.pierce > 0) hexSpan('#dfe6e9', 'atraviesa'),
+    if (tk.bounces > 0) hexSpan('#fdcb6e', 'rebota ×${tk.bounces}'),
+    for (final d in tk.debuffs)
+      hexSpan(
+          '#ff6b81',
+          switch (d.stat) {
+            BuffStat.damageTaken => 'marca',
+            BuffStat.attack => '▼ATQ',
+            BuffStat.speed => '▼VEL',
+            _ => d.stat.label,
+          }),
+    if (tk.breakBonus > 0) hexSpan('#ffe14d', 'quiebre+'),
+    if (tk.ultDrain > 0) hexSpan('#a29bfe', 'silencio'),
+  ];
+  return tags.isEmpty ? '' : ' ${tags.join(' ')}';
 }

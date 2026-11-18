@@ -4,20 +4,22 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_panel.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/data/skills_catalog.dart';
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
+import '../../../game_engine/rules/battle_engine.dart' show ultimateOf;
 import '../../../game_engine/rules/js_math.dart';
 import '../domain/skill_text.dart';
 import '../domain/turn_order.dart';
+import 'battle_command_window.dart';
 import 'battle_hud.dart';
 import 'game_sprites.dart';
 import 'scene/battle_layout.dart';
@@ -96,20 +98,51 @@ class BattleView extends StatefulWidget {
   State<BattleView> createState() => BattleViewState();
 }
 
-/// Una opción del menú plano numerado (`btn(lab, act, dis, cls, tip)` del
-/// prototipo). [label] y [tip] son markup.
-class _Option {
-  const _Option(this.label, this.onSelect, {this.tip, this.dual = false});
-  final String label;
+/// Teclas numéricas del menú de batalla (1-9).
+const kBattleMenuKeys = 9;
 
-  /// `null` = deshabilitada.
-  final VoidCallback? onSelect;
-
-  /// `data-tip`: el `#tip` al pasar el mouse.
-  final String? tip;
-
-  /// `button.dual`: borde `#ff9f1c`, texto `#ffd166` (ULT y dúos).
-  final bool dual;
+/// La página [page] del menú de batalla (docs/specs/exploration.md §
+/// "Batalla"). Con [keys] opciones o menos, todas juntas. Si no, la
+/// página 0 conserva [head] (Atacar, Liberar, ULT) y [tail] (pociones y
+/// Defender), mete las de [middle] (técnicas y dúos) que entran y
+/// `more(n)` (n = las que quedan); las páginas siguientes muestran el
+/// resto de [middle] (con otro `more` si no entra) y terminan en [back].
+/// Nunca devuelve más de [keys] opciones. [page] fuera de rango = la
+/// última.
+List<T> battleMenuPage<T>(
+  List<T> head,
+  List<T> middle,
+  List<T> tail,
+  int page, {
+  required T Function(int hidden) more,
+  required T back,
+  int keys = kBattleMenuKeys,
+}) {
+  if (head.length + middle.length + tail.length <= keys) {
+    return [...head, ...middle, ...tail];
+  }
+  final room = math.max(0, keys - head.length - tail.length - 1);
+  final pages = <List<T>>[
+    [
+      ...head,
+      ...middle.take(room),
+      more(middle.length - room),
+      ...tail,
+    ],
+  ];
+  var i = room;
+  while (i < middle.length) {
+    final left = middle.length - i;
+    if (left <= keys - 1) {
+      pages.add([...middle.skip(i), back]);
+      i = middle.length;
+    } else {
+      final n = keys - 2;
+      pages.add([...middle.skip(i).take(n), more(left - n), back]);
+      i += n;
+    }
+  }
+  return pages[page.clamp(0, pages.length - 1)];
 }
 
 class BattleViewState extends State<BattleView>
@@ -117,8 +150,27 @@ class BattleViewState extends State<BattleView>
   /// Enemigo apuntado (`tgt` del prototipo).
   String? _target;
 
-  /// Submenú de poción abierto (`potMode`).
+  /// Submenú de poción abierto (`potMode`): elegir a quién.
   BattleItem? _potMode;
+
+  /// Categoría elegida en la ventana de comandos.
+  BattleCategory _category = BattleCategory.attack;
+
+  /// Acción elegida (índice en la lista que se ve).
+  int _selected = 0;
+
+  /// Página de la categoría cuando tiene más de 9 acciones
+  /// ([battleMenuPage]).
+  int _page = 0;
+
+  /// Página de la categoría que se ve (0 = la primera).
+  int get menuPage => _page;
+
+  /// Categoría que se ve (tests).
+  BattleCategory get category => _category;
+
+  /// Acción elegida (tests).
+  int get selectedAction => _selected;
 
   late final BattleSceneController scene =
       BattleSceneController(random: widget.random);
@@ -157,10 +209,22 @@ class BattleViewState extends State<BattleView>
     super.dispose();
   }
 
+  void _resetMenu() {
+    _potMode = null;
+    _category = BattleCategory.attack;
+    _selected = 0;
+    _page = 0;
+  }
+
   @override
   void didUpdateWidget(BattleView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!widget.canAct && _potMode != null) _potMode = null;
+    // Turno nuevo (u otro actor) o sin poder actuar: el menú vuelve al
+    // principio (nunca queda elegida una acción del turno anterior).
+    if (!widget.canAct ||
+        oldWidget.battle.currentId != widget.battle.currentId) {
+      _resetMenu();
+    }
   }
 
   /// `cycleTarget`: el siguiente enemigo vivo.
@@ -172,18 +236,82 @@ class BattleViewState extends State<BattleView>
   }
 
   void _send(BattleCommand cmd) {
-    if (widget.onCommand(cmd)) setState(() => _potMode = null);
+    if (widget.onCommand(cmd)) setState(_resetMenu);
   }
 
-  /// Teclas de batalla: 1-9 eligen la opción N, Q/Tab cambian de
-  /// objetivo, Esc sale del submenú. Devuelve si la tecla se usó.
+  /// Cambia de categoría (la lista vuelve a la primera acción).
+  void selectCategory(BattleCategory c) {
+    if (_potMode == null && c == _category) return;
+    setState(() {
+      _potMode = null;
+      _category = c;
+      _selected = 0;
+      _page = 0;
+    });
+  }
+
+  void _moveCategory(int d) {
+    final cur = widget.battle.current;
+    if (cur == null) return;
+    final cats = [for (final e in _entries(cur)) e.category];
+    if (cats.isEmpty) return;
+    final i = cats.indexOf(_category);
+    final n = (i < 0 ? 0 : i + d).clamp(0, cats.length - 1);
+    selectCategory(cats[n]);
+  }
+
+  /// Teclas de batalla: 1-9 eligen la acción N de la lista que se ve,
+  /// ↑/↓ mueven la elegida, ←/→ cambian de categoría, Enter/Espacio
+  /// confirman, Q/Tab cambian de objetivo y Esc sale del submenú (o
+  /// vuelve a la primera página). Devuelve si la tecla se usó.
   bool handleKey(LogicalKeyboardKey key) {
     if (key == LogicalKeyboardKey.keyQ || key == LogicalKeyboardKey.tab) {
       cycleTarget();
       return true;
     }
     if (key == LogicalKeyboardKey.escape && _potMode != null) {
-      setState(() => _potMode = null);
+      setState(() {
+        _potMode = null;
+        _selected = 0;
+      });
+      return true;
+    }
+    if (key == LogicalKeyboardKey.escape && _page > 0) {
+      setState(() {
+        _page = 0;
+        _selected = 0;
+      });
+      return true;
+    }
+    final cur = widget.battle.current;
+    final acting = widget.canAct && cur != null && cur.isPlayer;
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      if (acting && _potMode == null) {
+        _moveCategory(key == LogicalKeyboardKey.arrowLeft ? -1 : 1);
+      }
+      return true;
+    }
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown) {
+      if (acting) {
+        final n = _visible(cur).length;
+        if (n > 0) {
+          setState(() => _selected =
+              (_selected + (key == LogicalKeyboardKey.arrowUp ? -1 : 1)) % n);
+        }
+      }
+      return true;
+    }
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.space) {
+      if (acting) {
+        final v = _visible(cur);
+        if (_selected >= 0 && _selected < v.length) {
+          v[_selected].onSelect?.call();
+        }
+      }
       return true;
     }
     const digits = [
@@ -199,10 +327,12 @@ class BattleViewState extends State<BattleView>
     ];
     final n = digits.indexOf(key);
     if (n < 0) return false;
-    final cur = widget.battle.current;
-    if (!widget.canAct || cur == null) return true;
-    final opts = _options(cur);
-    if (n < opts.length) opts[n].onSelect?.call();
+    if (!acting) return true;
+    final opts = _visible(cur);
+    if (n < opts.length) {
+      setState(() => _selected = n);
+      opts[n].onSelect?.call();
+    }
     return true;
   }
 
@@ -224,9 +354,12 @@ class BattleViewState extends State<BattleView>
   }
 
   /// `est(v, all)`: daño estimado en dorado y el crítico en `#7d8bc4`.
-  static String _est(Combatant p, num v, {bool all = false}) =>
+  /// Sin [crit] (filas del menú) solo la cifra: el crítico va en la
+  /// descripción.
+  static String _est(Combatant p, num v,
+          {bool all = false, bool crit = true}) =>
       ' <span style="color:#ffd166">${jsRound(v)}${all ? ' c/u' : ''}</span>'
-      '<span style="color:#7d8bc4"> (crít ${jsRound(v * p.critMultiplier)})</span>';
+      '${crit ? '<span style="color:#7d8bc4"> (crít ${jsRound(v * p.critMultiplier)})</span>' : ''}';
 
   /// `+N` / `P%` y la letra del estado en su color.
   static String _stTag(StatusApplication st) => hexSpan(
@@ -235,10 +368,16 @@ class BattleViewState extends State<BattleView>
       '${statusLetterOf(st.kind)}');
 
   /// Lo que se agrega al nombre de una técnica (`info`, línea 1217).
-  static String _skillInfo(SkillDef tk, Combatant p) {
+  static String _skillInfo(SkillDef tk, Combatant p, {bool crit = true}) =>
+      (tk.charge > 0
+          ? _est(p, p.attack * tk.charge, crit: crit)
+          : _skillInfoBase(tk, p, crit: crit)) +
+      variantTagMarkup(tk);
+
+  static String _skillInfoBase(SkillDef tk, Combatant p, {bool crit = true}) {
     switch (tk.kind) {
       case SkillKind.heal:
-        return ' ${hexSpan('#7bed9f', '+${jsRound(p.magic * tk.power + 6)} c/u')}';
+        return ' ${hexSpan('#7bed9f', '+${jsRound(p.magic * tk.power + 6)}${tk.lowestAlly ? '' : ' c/u'}')}';
       case SkillKind.haste:
         return ' ${hexSpan('#ffd166', 'adelanta aliados')}';
       case SkillKind.taunt:
@@ -246,18 +385,29 @@ class BattleViewState extends State<BattleView>
       case SkillKind.guard:
         return ' ${hexSpan('#74b9ff', 'equipo recibe ½')}';
       case SkillKind.regen:
-        return ' ${hexSpan('#7bed9f', '+${jsRound(p.magic * tk.power + 4)} c/u + regen 5%×3')}';
+        return ' ${hexSpan('#7bed9f', '+${jsRound(p.magic * tk.power + 4)}${tk.lowestAlly ? '' : ' c/u'} + regen 5%×3')}';
       case SkillKind.defenseUp:
-        return ' ${hexSpan('#74b9ff', 'DEF +${tk.amount} (ahora ${p.defense})')}';
+        // Fortaleza del Guardián: también escudo al grupo.
+        return ' ${hexSpan('#74b9ff', 'DEF +${tk.amount} (ahora ${p.defense})${tk.partyShield > 0 ? ' + escudo a todos' : ''}')}';
       case SkillKind.protect:
         return ' ${hexSpan('#ffeaa7', 'absorbe el daño de aliados')}';
       case SkillKind.bulwark:
         return ' ${hexSpan('#74b9ff', 'cura 30%, defensa y protección')}';
+      case SkillKind.support:
+        // Kit de ascensión: el primer efecto, corto.
+        final b = tk.partyBuffs.firstOrNull;
+        // Variantes (escudos, debuffs sin daño): solo su etiqueta.
+        if (b == null &&
+            tk.partyShield <= 0 &&
+            variantTagMarkup(tk).isNotEmpty) {
+          return '';
+        }
+        return ' ${hexSpan('#ffb142', b != null ? 'grupo ${b.stat.label} ${jsRound(b.value * 100)}%' : tk.partyShield > 0 ? 'escudo a todos' : tk.advanceAllies > 0 ? 'adelanta aliados' : tk.trap > 0 ? 'trampas' : tk.selfBuff != null ? 'crítico seguro' : 'apoyo')}';
       case SkillKind.physical || SkillKind.magical:
         final st = tk.status;
         return _est(p,
                 (tk.kind == SkillKind.magical ? p.magic : p.attack) * tk.power,
-                all: tk.allTargets) +
+                all: tk.allTargets, crit: crit) +
             (st != null ? ' ${_stTag(st)}' : '') +
             (tk.critBonus > 0
                 ? hexSpan('#ff6b81', ' +${jsRound(tk.critBonus * 100)}% crít')
@@ -265,7 +415,177 @@ class BattleViewState extends State<BattleView>
     }
   }
 
-  List<_Option> _options(Combatant cur) {
+  /// Descripción de Atacar.
+  static String _attackDesc(Combatant cur) =>
+      '<b>Atacar</b> <span class="k">sin costo</span><br>'
+      'Daño físico ATQ ${cur.attack}:${_est(cur, cur.attack)}'
+      '${cur.stunOnAttackChance > 0 ? '<br>${hexSpan('#ffeaa7', '${jsRound(cur.stunOnAttackChance * 100)}% de aturdir')}' : ''}'
+      '${cur.branch == 'creyente' ? '<br>${hexSpan('#7bed9f', '25%: cura 2% al grupo')}' : cur.branch == 'inherente' ? '<br>${hexSpan('#fff3b0', '25%: aplica Sagrado')}' : ''}';
+
+  /// Las categorías del menú de [cur] con sus acciones (las vacías no
+  /// están). Cada acción con su id estable.
+  List<BattleCategoryEntry> _entries(Combatant cur) {
+    final b = widget.battle;
+    final tg = target;
+    final ult = ultimateOf(cur);
+    final allies = b.party.where((q) => q.alive && q.id != cur.id).toList();
+    final out = <BattleCategoryEntry>[];
+
+    out.add(BattleCategoryEntry(BattleCategory.attack, [
+      BattleAction(
+        id: 'attack',
+        name: 'Atacar',
+        value: _est(cur, cur.attack, crit: false),
+        description: _attackDesc(cur),
+        onSelect: () => _send(AttackCommand(targetId: tg)),
+      ),
+      // Telaraña de la Matriarca: Atacar sobre un aliado atrapado lo libera.
+      for (final q in allies)
+        if (q.webbed)
+          BattleAction(
+            id: 'free-${q.id}',
+            name: 'Liberar a ${protoEsc(q.name)}',
+            cost: hexSpan('#edeff5', '½ turno'),
+            description: '<b>Liberar</b><br>Cortás la telaraña de '
+                '${protoEsc(q.name)}: no pierde su turno. Te cuesta medio '
+                'turno.',
+            onSelect: () => _send(AttackCommand(targetId: q.id)),
+          ),
+    ]));
+
+    final skills = [
+      for (final id in cur.skillIds)
+        if (kSkills[id] case final sk?)
+          BattleAction(
+            id: 'skill-$id',
+            name: '${sk.name}${sk.delay > 0 ? ' ⏳' : ''}',
+            value: _skillInfo(sk, cur, crit: false).trim(),
+            cost: hexSpan('#74b9ff', '${sk.mp} MP'),
+            description: describeSkillMarkup(sk, cur),
+            reason: cur.mp >= sk.mp ? null : 'Falta maná (${sk.mp} MP).',
+            onSelect: cur.mp >= sk.mp
+                ? () => _send(SkillCommand(id, targetId: tg))
+                : null,
+          ),
+    ];
+    if (skills.isNotEmpty) {
+      out.add(BattleCategoryEntry(BattleCategory.skills, skills,
+          badge: hexSpan('#9fb4ff', '${skills.length}')));
+    }
+
+    final duos = [
+      for (final q in allies)
+        if (kDuals[dualKey(cur.classId ?? '', q.classId ?? '')] case final du?)
+          BattleAction(
+            id: 'duo-${q.id}',
+            name: '★ ${du.name} (+${protoEsc(q.name)})',
+            value:
+                '${_est(cur, (math.max(cur.attack, cur.magic) + math.max(q.attack, q.magic)) * du.power, all: true, crit: false)} ${_stTag(du.status)}',
+            cost: hexSpan('#74b9ff', '4 MP c/u'),
+            dual: true,
+            description: '<b>★ ${du.name}</b> <span class="k">dúo con '
+                '${protoEsc(q.name)}</span><br>'
+                '(máx(ATQ, MAG) tuyo + suyo) × ${fm(du.power)} = <b>'
+                '${jsRound((math.max(cur.attack, cur.magic) + math.max(q.attack, q.magic)) * du.power)}</b>'
+                ' a TODOS los enemigos<br>'
+                '${statusApplicationMarkup(du.status)}<br>'
+                '4 MP cada uno · ${protoEsc(q.name)} pierde su próximo turno',
+            reason:
+                cur.mp >= 4 && q.mp >= 4 ? null : 'Hace falta 4 MP cada uno.',
+            onSelect: cur.mp >= 4 && q.mp >= 4
+                ? () => _send(DualCommand(q.id))
+                : null,
+          ),
+    ];
+    if (duos.isNotEmpty) {
+      out.add(BattleCategoryEntry(BattleCategory.duos, duos,
+          badge: hexSpan('#ffd166', '${duos.length}')));
+    }
+
+    if (ult != null) {
+      final ready = cur.ult >= 100;
+      out.add(BattleCategoryEntry(
+          BattleCategory.ultimate,
+          [
+            BattleAction(
+              id: 'ult',
+              name: '★ ${ult.name}',
+              value: ult.dealsDamage
+                  ? _est(
+                      cur,
+                      (ult.kind == SkillKind.magical ? cur.magic : cur.attack) *
+                          ult.power,
+                      all: ult.allTargets)
+                  : hexSpan('#74b9ff', 'apoyo'),
+              cost:
+                  hexSpan(ready ? '#ee70ad' : '#a29bfe', '${cur.ult.floor()}%'),
+              dual: true,
+              description: describeSkillMarkup(ult, cur, ultimate: true),
+              reason: ready ? null : 'La barra ULT tiene que llegar al 100%.',
+              onSelect:
+                  ready ? () => _send(UltimateCommand(targetId: tg)) : null,
+            ),
+          ],
+          badge:
+              hexSpan(ready ? '#ee70ad' : '#a29bfe', '${cur.ult.floor()}%')));
+    }
+
+    out.add(BattleCategoryEntry(
+        BattleCategory.items,
+        [
+          BattleAction(
+            id: 'potion',
+            name: 'Poción de vida',
+            value: hexSpan('#7bed9f', '+45%'),
+            cost: hexSpan('#9fb4ff', 'x${cur.potions}'),
+            description:
+                '<b>Poción de vida</b> ▸ elegir a quién<br>Cura 45% de '
+                'la vida máx. del aliado que elijas (o a ti). Revive a un aliado '
+                'caído y quita ${statusNameMarkup(StatusKind.burn)} y '
+                '${statusNameMarkup(StatusKind.poison)}.',
+            reason: cur.potions > 0 ? null : 'No te quedan.',
+            onSelect: cur.potions > 0
+                ? () => setState(() {
+                      _potMode = BattleItem.potion;
+                      _selected = 0;
+                    })
+                : null,
+          ),
+          BattleAction(
+            id: 'ether',
+            name: 'Poción de maná',
+            value: hexSpan('#74b9ff', '+50%'),
+            cost: hexSpan('#9fb4ff', 'x${cur.ethers}'),
+            description:
+                '<b>Poción de maná</b> ▸ elegir a quién<br>Restaura 50% '
+                'del maná máx. del aliado que elijas (o a ti).',
+            reason: cur.ethers > 0 ? null : 'No te quedan.',
+            onSelect: cur.ethers > 0
+                ? () => setState(() {
+                      _potMode = BattleItem.ether;
+                      _selected = 0;
+                    })
+                : null,
+          ),
+        ],
+        badge: hexSpan('#9fb4ff', 'x${cur.potions + cur.ethers}')));
+
+    out.add(BattleCategoryEntry(BattleCategory.defend, [
+      BattleAction(
+        id: 'defend',
+        name: 'Defender',
+        value: hexSpan('#74b9ff', '½ daño'),
+        description: '<b>Defender</b><br>Recibes la mitad del daño hasta tu '
+            'próximo turno, y tu siguiente turno llega 30% antes.',
+        onSelect: () => _send(const DefendCommand()),
+      ),
+    ]));
+    return out;
+  }
+
+  /// Las acciones que se ven: los aliados de la poción elegida, o la
+  /// página de la categoría (con `Más ▸` / `← Volver` si pasa de 9).
+  List<BattleAction> _visible(Combatant cur) {
     final b = widget.battle;
     final item = _potMode;
     if (item != null) {
@@ -273,93 +593,62 @@ class BattleViewState extends State<BattleView>
       return [
         for (final q in b.party)
           if (pot || q.alive)
-            _Option(
-              '${q.id == cur.id ? 'Yo (${protoEsc(q.name)})' : protoEsc(q.name)} '
-              '<span style="color:#9fb4ff">'
-              '${pot ? '${q.hp}/${q.maxHp} HP' : '${q.mp.floor()}/${q.maxMp} MP'}'
-              '</span> '
-              '${hexSpan(pot ? '#7bed9f' : '#74b9ff', '+${pot ? jsRound(q.maxHp * 0.45) : jsRound(q.maxMp * 0.5)}${!q.alive ? ' ¡revive!' : ''}')}',
-              () => _send(ItemCommand(item, targetPlayerId: q.id)),
+            BattleAction(
+              id: 'give-${q.id}',
+              name: q.id == cur.id
+                  ? 'Yo (${protoEsc(q.name)})'
+                  : protoEsc(q.name),
+              value: hexSpan(pot ? '#7bed9f' : '#74b9ff',
+                  '+${pot ? jsRound(q.maxHp * 0.45) : jsRound(q.maxMp * 0.5)}${!q.alive ? ' ¡revive!' : ''}'),
+              cost: hexSpan(
+                  '#9fb4ff',
+                  pot
+                      ? '${q.hp}/${q.maxHp} HP'
+                      : '${q.mp.floor()}/${q.maxMp} MP'),
+              description: pot
+                  ? '<b>Poción de vida</b> para ${protoEsc(q.name)}: '
+                      '${q.hp}/${q.maxHp} HP → +${jsRound(q.maxHp * 0.45)}'
+                  : '<b>Poción de maná</b> para ${protoEsc(q.name)}: '
+                      '${q.mp.floor()}/${q.maxMp} MP → +${jsRound(q.maxMp * 0.5)}',
+              onSelect: () => _send(ItemCommand(item, targetPlayerId: q.id)),
             ),
-        _Option('← Volver', () => setState(() => _potMode = null)),
+        BattleAction(
+          id: 'back',
+          name: '← Volver',
+          description: 'Vuelve a los objetos (Esc).',
+          onSelect: () => setState(() {
+            _potMode = null;
+            _selected = 0;
+          }),
+        ),
       ];
     }
-    final tg = target;
-    final ult = kAllUltimates[cur.weaponType];
-    final allies = b.party.where((q) => q.alive && q.id != cur.id);
-    return [
-      _Option(
-        'Atacar${_est(cur, cur.attack)}'
-        '${cur.stunOnAttackChance > 0 ? ' ${hexSpan('#ffeaa7', '${jsRound(cur.stunOnAttackChance * 100)}%A')}' : ''}'
-        '${cur.branch == 'creyente' ? ' ${hexSpan('#7bed9f', '25% cura 2%')}' : cur.branch == 'inherente' ? ' ${hexSpan('#fff3b0', '25% S')}' : ''}',
-        () => _send(AttackCommand(targetId: tg)),
-      ),
-      // Telaraña de la Matriarca: Atacar sobre un aliado atrapado lo libera.
-      for (final q in allies)
-        if (q.webbed)
-          _Option(
-            'Liberar a ${protoEsc(q.name)} ${hexSpan('#edeff5', '(telaraña, ½ turno)')}',
-            () => _send(AttackCommand(targetId: q.id)),
-            tip: '<b>Liberar</b><br>Cortás la telaraña de ${protoEsc(q.name)}: '
-                'no pierde su turno. Te cuesta medio turno.',
-          ),
-      if (ult != null)
-        _Option(
-          '★ ULTIMATE: ${ult.name} ${hexSpan('#ffd166', '[${cur.ult.floor()}%]')}'
-          '${ult.dealsDamage ? _est(cur, (ult.kind == SkillKind.magical ? cur.magic : cur.attack) * ult.power, all: ult.allTargets) : ' ${hexSpan('#74b9ff', 'cura 30%, defensa y protección')}'}',
-          cur.ult >= 100 ? () => _send(UltimateCommand(targetId: tg)) : null,
-          tip: describeSkillMarkup(ult, cur, ultimate: true),
-          dual: true,
-        ),
-      for (final id in cur.skillIds)
-        if (kSkills[id] case final sk?)
-          _Option(
-            '${sk.name}${sk.delay > 0 ? ' ⏳' : ''}${_skillInfo(sk, cur)} '
-            '${hexSpan('#74b9ff', '${sk.mp}MP')}',
-            cur.mp >= sk.mp
-                ? () => _send(SkillCommand(id, targetId: tg))
-                : null,
-            tip: describeSkillMarkup(sk, cur),
-          ),
-      for (final q in allies)
-        if (kDuals[dualKey(cur.classId ?? '', q.classId ?? '')] case final du?)
-          _Option(
-            '★ ${du.name} (+${protoEsc(q.name)})'
-            '${_est(cur, (math.max(cur.attack, cur.magic) + math.max(q.attack, q.magic)) * du.power, all: true)}'
-            ' ${_stTag(du.status)} ${hexSpan('#74b9ff', '4MP c/u')}',
-            cur.mp >= 4 && q.mp >= 4 ? () => _send(DualCommand(q.id)) : null,
-            // Lo que no entra en la fila de la barra va al `#tip`.
-            tip: '<b>★ ${du.name}</b> <span class="k">dúo con '
-                '${protoEsc(q.name)}</span><br>'
-                '(máx(ATQ, MAG) tuyo + suyo) × ${fm(du.power)} = <b>'
-                '${jsRound((math.max(cur.attack, cur.magic) + math.max(q.attack, q.magic)) * du.power)}</b>'
-                ' a TODOS los enemigos<br>'
-                '${statusApplicationMarkup(du.status)}<br>'
-                '4 MP cada uno · ${protoEsc(q.name)} pierde su próximo turno',
-            dual: true,
-          ),
-      _Option(
-        'Poción de vida x${cur.potions} ▸ ${hexSpan('#7bed9f', 'elegir a quién')}',
-        cur.potions > 0
-            ? () => setState(() => _potMode = BattleItem.potion)
-            : null,
-        tip: 'Cura 45% de la vida máx. del aliado que elijas (o a ti). '
-            'Revive a un aliado caído y quita quemadura y veneno.',
-      ),
-      _Option(
-        'Poción de maná x${cur.ethers} ▸ ${hexSpan('#74b9ff', 'elegir a quién')}',
-        cur.ethers > 0
-            ? () => setState(() => _potMode = BattleItem.ether)
-            : null,
-        tip: 'Restaura 50% del maná máx. del aliado que elijas (o a ti).',
-      ),
-      _Option(
-        'Defender (½ daño, vuelves antes)',
-        () => _send(const DefendCommand()),
-        tip: 'Recibes la mitad del daño hasta tu próximo turno, y tu '
-            'siguiente turno llega 30% antes.',
-      ),
-    ];
+    final entries = _entries(cur);
+    final entry = entries.firstWhere((e) => e.category == _category,
+        orElse: () => entries.first);
+    // Más de 9 en una categoría: se pagina (las teclas llegan a 9).
+    return battleMenuPage(
+        const <BattleAction>[], entry.actions, const [], _page,
+        more: (n) => BattleAction(
+              id: 'more',
+              name: 'Más ▸',
+              value: hexSpan('#9fb4ff', '+$n'),
+              description: 'Más acciones de esta categoría. Esc vuelve a la '
+                  'primera página.',
+              onSelect: () => setState(() {
+                _page++;
+                _selected = 0;
+              }),
+            ),
+        back: BattleAction(
+          id: 'page-back',
+          name: '← Volver',
+          description: 'Vuelve a la primera página (Esc).',
+          onSelect: () => setState(() {
+            _page = 0;
+            _selected = 0;
+          }),
+        ));
   }
 
   /// Clic en la escena: elige al enemigo vivo bajo el puntero.
@@ -402,12 +691,20 @@ class BattleViewState extends State<BattleView>
     return party.isEmpty ? null : party.first;
   }
 
-  /// Alto de la barra de batalla para una pantalla de alto [h].
-  static double barHeight(double h) => (h * 0.42).clamp(200.0, 300.0);
+  /// Alto de la barra de batalla (ventana de comandos + grupo) para una
+  /// pantalla de alto [h] y el texto agrandado [textFactor]
+  /// (`RetroType.factorOf`): más alta con texto grande; la escena se
+  /// achica (los sprites son chicos).
+  static double barHeight(double h, [double textFactor = 1]) {
+    final f = textFactor < 1 ? 1.0 : textFactor;
+    return math
+        .min(h * (0.42 + 0.08 * (f - 1)), h * 0.62)
+        .clamp(math.min(260.0, h * 0.6), double.infinity);
+  }
 
-  /// Si hay un submenú abierto (el de pociones): `Esc` lo cierra en vez
-  /// de abrir la pausa.
-  bool get hasSubmenu => _potMode != null;
+  /// Si hay un submenú abierto (el de pociones o una página del menú
+  /// que no es la primera): `Esc` lo cierra en vez de abrir la pausa.
+  bool get hasSubmenu => _potMode != null || _page > 0;
 
   @override
   Widget build(BuildContext context) {
@@ -417,7 +714,7 @@ class BattleViewState extends State<BattleView>
       color: ProtoColors.bg,
       child: LayoutBuilder(builder: (context, cons) {
         final size = cons.biggest;
-        final barH = math.min(barHeight(size.height), size.height * 0.6);
+        final barH = barHeight(size.height, RetroType.factorOf(context));
         final me = _me;
         return Stack(
           children: [
@@ -431,7 +728,7 @@ class BattleViewState extends State<BattleView>
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(
                         _margin, _margin, _margin, _margin),
-                    child: _bar(b, me, size.width),
+                    child: _bar(b, me),
                   ),
                 ),
               ],
@@ -460,14 +757,13 @@ class BattleViewState extends State<BattleView>
     return LayoutBuilder(builder: (context, cons) {
       final g = SceneGeometry.fit(cons.biggest);
       final sprites = widget.sprites;
-      final layout = BattleLayout.compute(b, widget.arena,
-          vw: g.virtualWidth,
+      final layout = BattleLayout.compute(b, widget.arena, vw: g.virtualWidth,
           enemySize: (e) {
-            final type = sprites.enemySpriteId(e.enemyType ?? '', e.phase);
-            final img = sprites?.enemy(type);
-            final sc = (sprites?.enemyScale(type) ?? 1) * (e.elite ? 1.45 : 1);
-            return Size((img?.width ?? 16) * sc, (img?.height ?? 14) * sc);
-          });
+        final type = sprites.enemySpriteId(e.enemyType ?? '', e.phase);
+        final img = sprites?.enemy(type);
+        final sc = (sprites?.enemyScale(type) ?? 1) * (e.elite ? 1.45 : 1);
+        return Size((img?.width ?? 16) * sc, (img?.height ?? 14) * sc);
+      });
       scene.frame = SceneFrame(
         battle: b,
         geometry: g,
@@ -508,49 +804,40 @@ class BattleViewState extends State<BattleView>
                 scale: s,
               ),
             ),
+            // El objetivo: nombre, vida y quiebre (arriba a la izquierda).
+            if (_foes.where((e) => e.id == target).firstOrNull case final tg?)
+              Positioned(
+                left: 8,
+                top: (54 * s).roundToDouble() + 4,
+                child: IgnorePointer(child: TargetBar(enemy: tg)),
+              ),
           ],
         ),
       );
     });
   }
 
-  /// La barra de abajo: mis datos · acciones · resto del grupo.
-  Widget _bar(BattleState b, Combatant? me, double width) {
-    final leftW = (width * 0.21).clamp(250.0, 360.0);
-    final rightW = (width * 0.25).clamp(270.0, 400.0);
-    return Row(
+  /// La barra de abajo: la ventana de comandos (o de quién es el turno)
+  /// y la barra del grupo.
+  Widget _bar(BattleState b, Combatant? me) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          width: leftW,
-          child: me == null
-              ? const BattleBarPanel(child: SizedBox.shrink())
-              : MyBattlePanel(
-                  battle: b,
-                  player: me,
-                  turnTimeLeft: widget.turnTimeLeft,
-                  points: widget.pendingPoints[me.id] ?? 0,
-                ),
-        ),
-        const SizedBox(width: _margin),
-        Expanded(child: _actions(b, me)),
-        const SizedBox(width: _margin),
-        SizedBox(
-          width: rightW,
-          child: PartyListPanel(
-            battle: b,
-            localId: me?.id,
-            sprites: widget.sprites,
-          ),
+        Expanded(child: _menu() ?? _waiting(b, me)),
+        const SizedBox(height: _margin),
+        BattlePartyBar(
+          battle: b,
+          localId: me?.id,
+          sprites: widget.sprites,
+          turnTimeLeft: widget.turnTimeLeft,
+          points: me == null ? 0 : widget.pendingPoints[me.id] ?? 0,
         ),
       ],
     );
   }
 
-  /// Panel del medio: el menú en mi turno; si no, de quién es el turno.
-  Widget _actions(BattleState b, Combatant? me) {
-    final menu = _menu();
-    if (menu != null) return menu;
+  /// Fuera de mi turno: de quién es el turno y cuándo me toca.
+  Widget _waiting(BattleState b, Combatant? me) {
     final cur = b.current;
     final String who;
     if (cur == null) {
@@ -574,94 +861,67 @@ class BattleViewState extends State<BattleView>
     return BattleBarPanel(
       key: const ValueKey('battle-waiting'),
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            bossMechanicRow(b),
-            ProtoText(who,
-                style: const TextStyle(fontSize: 16, height: 1.5),
-                textAlign: TextAlign.center),
-            if (mine.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              ProtoText(mine, textAlign: TextAlign.center),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              bossMechanicRow(b),
+              ProtoText(who,
+                  style: RetroType.style(RetroType.title),
+                  textAlign: TextAlign.center),
+              if (mine.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                ProtoText(mine, textAlign: TextAlign.center),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 
-  /// `#menu`: solo en el turno del jugador local (el prototipo lo oculta
-  /// en cualquier otro momento). Cabecera `<b>` dorada con el objetivo y
-  /// botones numerados en 2 columnas (3 si hay lugar).
+  /// La ventana de comandos: solo en el turno del jugador local (el
+  /// prototipo la oculta en cualquier otro momento).
   Widget? _menu() {
     final cur = widget.battle.current;
     if (!widget.canAct || cur == null || !cur.isPlayer) return null;
-    final options = _options(cur);
-    final String header;
-    if (_potMode == null) {
-      final tg = _foes.where((e) => e.id == target).firstOrNull;
-      header = '<b>¡Tu turno! (${protoEsc(cur.name)})'
-          '${tg == null ? '' : ' · Objetivo: ${protoEsc(tg.name)}'}</b>'
-          '${tg == null ? '' : breakInfoMarkup(tg)}'
-          ' <span class="k">Q/Tab cambia</span>';
-    } else if (_potMode == BattleItem.potion) {
-      header = '<b>¿A quién le das la Poción de vida (+45% vida, revive, '
-          'quita ${statusNameMarkup(StatusKind.burn)} y '
-          '${statusNameMarkup(StatusKind.poison)})?</b>';
-    } else {
-      header = '<b>¿A quién le das la Poción de maná (+50% maná)?</b>';
+    final entries = _entries(cur);
+    if (!entries.any((e) => e.category == _category)) {
+      _category = entries.first.category;
     }
-    return BattleBarPanel(
-      key: const ValueKey('battle-menu'),
-      highlight: true,
-      child: LayoutBuilder(builder: (context, box) {
-        const gap = 4.0;
-        final cols = box.maxWidth >= 840 ? 3 : 2;
-        // Grilla pareja (también ULT y dúos, con su borde `.dual`): en la
-        // barra no hay lugar para filas enteras. Cada fila toma el alto de
-        // su botón más alto.
-        final rows = <Widget>[];
-        for (var r = 0; r < options.length; r += cols) {
-          rows.add(Padding(
-            padding: EdgeInsets.only(top: r == 0 ? 0 : gap),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var c = 0; c < cols; c++) ...[
-                    if (c > 0) const SizedBox(width: gap),
-                    Expanded(
-                      child: r + c < options.length
-                          ? _MenuButton(
-                              '${r + c + 1}. ${options[r + c].label}',
-                              onTap: options[r + c].onSelect,
-                              tip: options[r + c].tip,
-                              dual: options[r + c].dual,
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ));
-        }
-        return SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ProtoText(header,
-                  style: const TextStyle(fontSize: 8, height: 1.5),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 4),
-              bossMechanicRow(widget.battle),
-              ...rows,
-            ],
-          ),
-        );
-      }),
+    final visible = _visible(cur);
+    if (_selected >= visible.length) _selected = 0;
+    final tg = _foes.where((e) => e.id == target).firstOrNull;
+    final String? header = switch (_potMode) {
+      BattleItem.potion => '<b>¿A quién le das la Poción de vida (+45% vida, '
+          'revive, quita ${statusNameMarkup(StatusKind.burn)} y '
+          '${statusNameMarkup(StatusKind.poison)})?</b>',
+      BattleItem.ether => '<b>¿A quién le das la Poción de maná (+50% '
+          'maná)?</b>',
+      _ => null,
+    };
+    final targetLine = tg == null
+        ? ''
+        : 'Objetivo: <b style="color:#ff6b81">${protoEsc(tg.name)}</b> '
+            '<span class="k">${tg.hp}/${tg.maxHp} HP</span>'
+            '${breakInfoMarkup(tg)}';
+    return BattleCommandWindow(
+      actorName: '¡Tu turno! ${cur.name}',
+      categories: entries,
+      category: _category,
+      visible: visible,
+      selected: _selected,
+      header: header,
+      target: targetLine,
+      resources:
+          '<span style="color:#74b9ff">MP ${cur.mp.floor()}/${cur.maxMp}</span>'
+          ' · <span style="color:${cur.ult >= 100 ? '#ee70ad' : '#a29bfe'}">'
+          'ULT ${cur.ult.floor()}%</span>',
+      extra: bossMechanicRow(widget.battle),
+      onCategory: selectCategory,
+      onHoverAction: (i) {
+        if (i != _selected) setState(() => _selected = i);
+      },
     );
   }
 }
@@ -695,111 +955,65 @@ class _LogBand extends StatelessWidget {
         : cur.id == localId
             ? 'TÚ'
             : (cur.name.length > 6 ? cur.name.substring(0, 6) : cur.name);
-    return LayoutBuilder(builder: (context, box) {
-      final log = retroText(battle.log);
-      final labelW = showTimer ? 84 * scale : 0.0;
-      // 6 px virtuales del prototipo (5 si el log es largo), redondeado a
-      // la grilla de la fuente: 16 si entra en una línea, si no 8.
-      final big = 6 * scale >= 12 &&
-          log.length <= 52 &&
-          log.length * 16 <= box.maxWidth - labelW - 16;
-      return Row(
-        children: [
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Center(
+    // La banda tiene el alto de la escena (16 px virtuales): su texto no
+    // crece con el ajuste (sigue nítido); el log completo está en la
+    // ventana de comandos y el detalle en las tarjetas.
+    return MediaQuery(
+      data: MediaQuery.of(context)
+          .copyWith(textScaler: RetroType.fixedScaler(context)),
+      child: LayoutBuilder(builder: (context, box) {
+        final log = retroText(battle.log);
+        // La caja del reloj crece si el texto no entra (tamaño del texto).
+        final timerW = math.max(82 * scale, RetroType.em(context, 7) + 8);
+        final labelW = showTimer ? timerW + 2 * scale : 0.0;
+        // 6 px virtuales del prototipo (5 si el log es largo), redondeado a
+        // la grilla de la fuente: 16 si entra en una línea, si no 8.
+        final big = 6 * scale >= 12 &&
+            log.length <= 52 &&
+            RetroType.em(context, log.length, size: RetroType.title) <=
+                box.maxWidth - labelW - 16;
+        return Row(
+          children: [
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Center(
+                  child: Text(
+                    log,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontFamilyFallback: RetroType.bodyFallback,
+                        fontFamily: RetroType.familyFor(
+                            big ? RetroType.title : RetroType.small),
+                        fontSize: big ? RetroType.title : RetroType.small,
+                        height: 1.25,
+                        color: ProtoColors.white),
+                  ),
+                ),
+              ),
+            ),
+            if (showTimer)
+              Container(
+                width: timerW,
+                margin: EdgeInsets.only(
+                    right: 2 * scale, top: scale, bottom: 2 * scale),
+                color: const Color(0xFF000000),
+                alignment: Alignment.center,
                 child: Text(
-                  log,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
+                  retroText('$who ${left.ceil().clamp(0, 99)}s'),
                   style: TextStyle(
-                      fontSize: big ? 16 : 8,
-                      height: 1.25,
-                      color: ProtoColors.white),
+                    fontFamily: RetroType.pixelFamily,
+                    fontSize: RetroType.label,
+                    color: left <= 10 ? ProtoColors.red : ProtoColors.gold,
+                  ),
                 ),
               ),
-            ),
-          ),
-          if (showTimer)
-            Container(
-              width: 82 * scale,
-              margin: EdgeInsets.only(
-                  right: 2 * scale, top: scale, bottom: 2 * scale),
-              color: const Color(0xFF000000),
-              alignment: Alignment.center,
-              child: Text(
-                retroText('$who ${left.ceil().clamp(0, 99)}s'),
-                style: TextStyle(
-                  fontSize: 8,
-                  color: left <= 10 ? ProtoColors.red : ProtoColors.gold,
-                ),
-              ),
-            ),
-        ],
-      );
-    });
-  }
-}
-
-/// `#menu button`: fondo `#22305a`, borde 2 px `#5b74c9` (hover `#2e4280`
-/// / `#9fb4ff`), texto blanco alineado a la izquierda, 35% de opacidad
-/// deshabilitado; `.dual` con borde `#ff9f1c` y texto `#ffd166`. El
-/// [tip] se muestra en el `#tip` al pasar el mouse.
-class _MenuButton extends StatefulWidget {
-  const _MenuButton(this.label, {this.onTap, this.tip, this.dual = false});
-
-  final String label;
-  final VoidCallback? onTap;
-  final String? tip;
-  final bool dual;
-
-  @override
-  State<_MenuButton> createState() => _MenuButtonState();
-}
-
-class _MenuButtonState extends State<_MenuButton> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = widget.onTap != null;
-    final hot = enabled && _hover;
-    final border = widget.dual
-        ? ProtoColors.amber
-        : hot
-            ? ProtoColors.buttonHoverBorder
-            : ProtoColors.buttonBorder;
-    Widget button = MouseRegion(
-      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: Opacity(
-          opacity: enabled ? 1 : 0.35,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            decoration: BoxDecoration(
-              color: hot ? ProtoColors.buttonHover : ProtoColors.button,
-              border: Border.all(color: border, width: 2),
-            ),
-            child: ProtoText(
-              widget.label,
-              style: TextStyle(
-                  fontSize: 8,
-                  height: 1.5,
-                  color: widget.dual ? ProtoColors.gold : ProtoColors.white),
-            ),
-          ),
-        ),
-      ),
+          ],
+        );
+      }),
     );
-    if (widget.tip case final tip?) {
-      button = RetroTooltip(message: tip, child: button);
-    }
-    return button;
   }
 }
 

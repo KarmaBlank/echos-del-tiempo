@@ -28,6 +28,11 @@ class ShopGuards {
 
   bool get canShop => mode == SessionMode.lobby || mode == SessionMode.prep;
 
+  static const notDiscarding = 'No en batalla';
+
+  /// Desarmar / vender / limpiar: también en la aventura (no en batalla).
+  bool get canDiscard => canShop || mode == SessionMode.field;
+
   static String _missing(int need, int have) => 'Faltan \$${need - have}';
 
   /// `BuyWeaponAction`: cualquier base a la venta (loot v2: sin clase).
@@ -93,7 +98,9 @@ class ShopGuards {
 
   /// `CraftAction`.
   String? craft(PlayerProfile p, CraftAction a) {
-    if (!canShop) return notShopping;
+    if (a.op.destroys ? !canDiscard : !canShop) {
+      return a.op.destroys ? notDiscarding : notShopping;
+    }
     return craftPreview(p, a).error;
   }
 

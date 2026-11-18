@@ -1,3 +1,4 @@
+import '../models/ascension.dart' show TrapKind;
 import '../models/battle_event.dart';
 import '../models/game_session.dart';
 import '../models/item.dart' show CraftOp;
@@ -112,6 +113,23 @@ class EventJson {
           },
         MasteryUpEvent() => {'t': 'mastery', 'id': e.playerId, 'm': e.mastery},
         EcosUnlockedEvent() => {'t': 'ecoUnlocked', 'id': e.playerId},
+        // Ascensión v0.5 (ascension.md § 6).
+        TrialCompletedEvent() => {
+            't': 'trialDone',
+            'n': e.trial,
+            'ids': e.playerIds,
+          },
+        AscensionChosenEvent() => {
+            't': 'ascChosen',
+            'id': e.playerId,
+            'asc': e.ascensionId,
+          },
+        TrapTriggeredEvent() => {
+            't': 'trap',
+            'id': e.playerId,
+            'k': e.kind.name,
+            'd': e.damage,
+          },
       };
 
   static LootDrop _drop(Object? raw) =>
@@ -188,6 +206,14 @@ class EventJson {
         return MasteryUpEvent(j.str('id'), j.integer('m'));
       case 'ecoUnlocked':
         return EcosUnlockedEvent(j.str('id'));
+      case 'trialDone':
+        return TrialCompletedEvent(
+            j.integer('n'), List.unmodifiable(j.strings('ids')));
+      case 'ascChosen':
+        return AscensionChosenEvent(j.str('id'), j.str('asc'));
+      case 'trap':
+        return TrapTriggeredEvent(j.str('id'),
+            j.enumByName('k', TrapKind.values), j.integer('d'));
     }
     throw FormatException('JSON inválido: evento desconocido', t);
   }

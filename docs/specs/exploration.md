@@ -161,7 +161,14 @@ Comunes:
    (mismo objeto o, en el cliente, el mismo JSON), se guarda como mucho
    cada 2 s (`lastSave` del prototipo), y siempre al terminar una
    misión, al volver al lobby y al descartar el controlador. El cliente
-   guarda el perfil que le manda el host (como el prototipo).
+   guarda el perfil que le manda el host (como el prototipo). Un
+   guardado solo cuenta si la escritura salió bien: si falla se
+   reintenta (2 s) y la vista lleva `saveError` (aviso rojo en el HUD).
+   Al iniciar, el controlador se registra en `ExitGuard` para guardar
+   si se cierra la ventana o se actualiza a mitad de partida. El
+   cliente carga el Atlas de su cuenta antes del primer snapshot
+   (un Eco completado suma a ese, no a uno vacío). Ver
+   characters.md § 1.4.
 8. **Salida**: descartar el controlador cancela los timers y llama a
    `net.disconnect()`.
 
@@ -659,14 +666,16 @@ Resumen:
 ## Batalla
 
 `SessionBattleScreen` lee `session.battle`:
-- `BattleView` dibuja la escena del prototipo **sobre el mapa de la
-  misión**, en el lugar del enemigo del campo que empezó la batalla
-  (grupo a un lado, enemigos al otro), con animaciones, efectos,
-  cinemáticas de ultimate y la franja de turnos: todo en
-  docs/specs/battle_presentation.md. `SessionBattleScreen` le pasa la
-  arena (posición, lado, tamaño del mapa y un callback que dibuja tiles y
-  enemigos lejanos con `TilePainter` / `ActorPainter`), `battleEvents`,
-  `battleEventSeq` y el id de la batalla.
+- `BattleView` dibuja la escena en una **arena temática propia** (v0.5,
+  pedido del dueño: ya no sobre el mapa), elegida por zona, Eco / Prueba
+  y tipo de encuentro (normal, élite, jefe), con el grupo a la derecha y
+  los enemigos a la izquierda, animaciones, efectos, cinemáticas de
+  ultimate y la franja de turnos: todo en
+  docs/specs/battle_presentation.md § "Arenas". `SessionBattleScreen` le
+  pasa `BattleArena.stage` (tipo de encuentro + un callback que dibuja la
+  arena con `ArenaPainter`), `battleEvents`, `battleEventSeq` y el id de
+  la batalla. Al entrar y al volver al mapa hay un fundido de bloques de
+  420 ms.
 - El menú aparece solo si `battle.waitingForPlayer` y el turno es del
   jugador local; cada opción manda `BattleAction(cmd)` con el objetivo
   actual (`tgt` del prototipo: primer enemigo vivo si el elegido cayó;
@@ -718,7 +727,15 @@ Resumen:
     quién`, `Poción de maná xN ▸ ...` (submenú `¿A quién le das ...?` con
     HP/MP en `#9fb4ff` y `+N` verde/celeste) y `Defender`. Al pasar el
     mouse, el `#tip` (`RetroTooltip`) con `descSkill` en markup. Si no
-    hay lugar, el panel se desplaza (scroll) en vez de desbordar. Fuera
+    hay lugar, el panel se desplaza (scroll) en vez de desbordar.
+    **Más de 9 opciones** (teclas 1-9; p. ej. Guardián con 3 habilidades
+    de arma, 2 trasladadas y su kit = 13, más dúos en grupo): el menú se
+    pagina (`battleMenuPage`). La página 1 siempre tiene `Atacar`, los
+    `Liberar`, la ULT, las pociones y `Defender`; las técnicas y dúos que
+    entran, y en el lugar 9 − (pociones + Defender) `Más ▸ +N`. Las
+    páginas siguientes muestran el resto (hasta 8, o 7 + `Más ▸`) y
+    `← Volver` al final. `Esc` (o usar cualquier acción, o un turno
+    nuevo) vuelve a la página 1. Nunca hay más de 9 botones numerados. Fuera
     de mi turno, en vez de botones: `Turno de <nombre>` (dorado; `Turno
     de <enemigo>` en `#ff6b81`) y `Tu turno en N` / `Estás fuera de
     combate` en `#7d8bc4`.

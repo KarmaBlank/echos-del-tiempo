@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../build_planner/presentation/build_planner_screen.dart';
 import '../../../app/feature_flags.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_text.dart';
@@ -62,6 +63,10 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
   /// Aviso de la cuenta (archivo dañado) en rojo.
   String? _notice;
 
+  /// El último guardado de la cuenta falló (se reintenta solo).
+  String? _saveError;
+  StreamSubscription<String?>? _saveStatus;
+
   /// Línea de estado (`setErr` del prototipo: red, errores de guardado) y
   /// si es un error.
   String? _netStatus;
@@ -99,6 +104,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
   @override
   void dispose() {
     unawaited(_changes?.cancel());
+    unawaited(_saveStatus?.cancel());
     _name.dispose();
     _code.dispose();
     super.dispose();
@@ -110,6 +116,11 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     // se refresca sola (nivel, zona, fecha).
     _changes = repo.changes.listen((a) {
       if (mounted) setState(() => _setAccount(a));
+    });
+    // Un guardado que falla no pasa en silencio (characters.md § 1.4).
+    _saveError = repo.saveError;
+    _saveStatus = repo.saveStatus.listen((e) {
+      if (mounted) setState(() => _saveError = e);
     });
     final a = await repo.load();
     if (!mounted) return;
@@ -223,6 +234,14 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     });
   }
 
+  /// Plan de build del elegido (build_planner.md § 4).
+  Future<void> _openBuild() async {
+    final c = _account?.selected;
+    if (c == null || _busy) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => BuildPlannerScreen(characterId: c.id)));
+  }
+
   Future<void> _openStash() async {
     final c = _account?.selected;
     if (c == null || _busy) return;
@@ -244,14 +263,19 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     setState(() => _busy = true);
     final now = ref.read(accountRepositoryProvider).now();
     await _update((a) => a.touch(c.id, now));
+    // Siempre el de la cuenta en memoria, nunca la copia de esta pantalla
+    // (si hubiera quedado vieja, la sala — también como cliente — y el
+    // guardado pisarían lo jugado). docs/specs/characters.md § 1.4.
+    final slot =
+        ref.read(accountRepositoryProvider).current?.byId(c.id) ?? c;
     try {
       // En la app es el mismo personaje de la cuenta (no cambia nada);
       // con otro `ProfileStore` (tests, flavors) la sesión lo recibe igual.
-      await ref.read(profileStoreProvider).save(c.profile);
+      await ref.read(profileStoreProvider).save(slot.profile);
     } catch (_) {
       // Sin disco se juega igual (el controlador vuelve a intentar).
     }
-    return mounted ? _norm(c) : null;
+    return mounted ? _norm(slot) : null;
   }
 
   /// `> JUGAR`: un jugador, sin red.
@@ -343,7 +367,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             style: const TextStyle(color: RetroPalette.muted)),
         const SizedBox(height: 12),
         SizedBox(
-          width: 4 * CharacterSlotCard.width + 3 * 12,
+          width: 4 * CharacterSlotCard.widthOf(context) + 3 * 12,
           child: Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -390,6 +414,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             PanelButton('ALIJO',
                 key: const ValueKey('char-stash'),
                 onPressed: has ? _openStash : null),
+            PanelButton('BUILD',
+                key: const ValueKey('char-build'),
+                onPressed: has ? _openBuild : null),
           ],
         ),
       ],
@@ -403,7 +430,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
       children: [
         Text(first ? 'CREA TU PRIMER PERSONAJE' : 'CREAR PERSONAJE',
             key: const ValueKey('char-creator'),
-            style: const TextStyle(fontSize: 12, color: RetroPalette.gold)),
+            style: const TextStyle(fontFamily: RetroType.pixelFamily, fontSize: 12, color: RetroPalette.gold)),
         const SizedBox(height: 16),
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -481,8 +508,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             controller: _code,
             enabled: netOk,
             style: const TextStyle(
-                fontFamily: RetroTheme.fontFamily,
-                fontSize: 8,
+                                fontFamily: RetroType.pixelFamily, fontSize: RetroType.label,
                 color: RetroPalette.ink),
             cursorColor: RetroPalette.gold,
             onSubmitted: (_) {
@@ -492,8 +518,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
               isDense: true,
               hintText: factory?.codeHint ?? 'CODIGO',
               hintStyle: const TextStyle(
-                  fontFamily: RetroTheme.fontFamily,
-                  fontSize: 8,
+                                    fontFamily: RetroType.pixelFamily, fontSize: RetroType.label,
                   color: RetroPalette.muted),
               contentPadding: const EdgeInsets.all(8),
             ),
@@ -543,7 +568,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                 const SizedBox(height: 12),
                 // Aviso de versión nueva (docs/specs/distribution.md).
                 const UpdateBanner(),
-                if (_notice case final n?) ...[
+                if ([_notice, _saveError].nonNulls.join('\n')
+                    case final n when n.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 900),

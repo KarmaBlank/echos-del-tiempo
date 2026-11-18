@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/game_session.dart';
+import '../../../ascension/presentation/ascension_aura.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
 import '../../../combat/presentation/weapon_overlay.dart';
@@ -86,8 +87,9 @@ class ActorPainter {
     required bool moving,
     required bool dead,
     required bool blink,
+    String? ascensionId,
   }) {
-    final img = sprites.hero(classId);
+    final img = sprites.heroFor(classId, ascensionId);
     c.save();
     c.translate(x.roundToDouble(), y.roundToDouble());
     final alpha = dead ? 0.55 : (blink ? 0.35 : 1.0);
@@ -101,6 +103,8 @@ class ActorPainter {
     if (dir < 0) c.scale(-1, 1);
     final bob = moving ? (t / 140).floor() % 2 : 0;
     _oval(c, _shadow, 0, 1, 6, 2);
+    // Aura de la ascensión (docs/specs/ascension.md § 5).
+    if (!dead) paintAscensionAura(c, ascensionId, sprites: sprites, t: t);
     c.translate(0, -bob.toDouble());
     if (img != null) c.drawImage(img, const Offset(-7, -17), _sprite);
     WeaponOverlay.draw(c, classId, weaponType);

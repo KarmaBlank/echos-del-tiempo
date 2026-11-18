@@ -5,6 +5,7 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -262,7 +263,7 @@ class _StashScreenState extends ConsumerState<StashScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(retroText('${p.name} · $cls · Nv ${p.level}'),
-              style: const TextStyle(fontSize: 12, color: ProtoColors.ink)),
+              style: const TextStyle(fontFamily: RetroType.pixelFamily, fontSize: 12, color: ProtoColors.ink)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -316,7 +317,7 @@ class _StashScreenState extends ConsumerState<StashScreen> {
         Row(
           children: [
             const Text('ALIJO',
-                style: TextStyle(fontSize: 12, color: ProtoColors.ink)),
+                style: TextStyle(fontFamily: RetroType.pixelFamily, fontSize: 12, color: ProtoColors.ink)),
             const SizedBox(width: 12),
             Text('${s.used}/${Stash.size}',
                 key: const ValueKey('stash-used'),
@@ -409,8 +410,11 @@ class _StashScreenState extends ConsumerState<StashScreen> {
             ],
           ),
           const SizedBox(height: 12),
+          // Una línea (con el alto del texto, no 20 px fijos: con texto
+          // grande no se corta).
           SizedBox(
-            height: 20,
+            height: RetroType.line *
+                MediaQuery.textScalerOf(context).scale(RetroType.small),
             child: _error != null
                 ? Text(retroText(_error!),
                     key: const ValueKey('stash-error'),
@@ -418,8 +422,10 @@ class _StashScreenState extends ConsumerState<StashScreen> {
                 : sel != null
                     ? ProtoText(sel)
                     : const Text(
-                        'Armas y materiales se comparten entre tus '
-                        'personajes. Créditos y pociones no.',
+                        'Armas y materiales se comparten; créditos y '
+                        'pociones no.',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(color: ProtoColors.dim)),
           ),
         ],

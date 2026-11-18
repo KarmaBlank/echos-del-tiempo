@@ -157,6 +157,9 @@ class SessionMusic {
       _resultId = s.result?.id;
       _level = me?.profile.level;
       _battleSeq = view.battleEventSeq;
+      for (final p in s.playerList) {
+        _ascensions[p.id] = p.profile.ascension.id;
+      }
     } else {
       _jingles(view);
       if (view.battleEventSeq != _battleSeq) {
@@ -224,5 +227,19 @@ class SessionMusic {
       music.playJingle(Music.levelUp);
     }
     if (mastery != null) _mastery = mastery;
+    // Ascensión de cualquiera de la sala (docs/specs/ascension.md § 5).
+    var ascended = false;
+    for (final p in s.playerList) {
+      final now = p.profile.ascension.id;
+      final was = _ascensions[p.id];
+      if (now != null && was == null && _ascensions.containsKey(p.id)) {
+        ascended = true;
+      }
+      _ascensions[p.id] = now;
+    }
+    if (ascended) music.playJingle(Music.ascension);
   }
+
+  /// La ascensión de cada jugador en la última vista.
+  final _ascensions = <String, String?>{};
 }

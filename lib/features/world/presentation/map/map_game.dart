@@ -14,7 +14,9 @@ import '../../../../game_engine/models/loot.dart';
 import '../../../../game_engine/models/loot_filter.dart';
 import '../../../../game_engine/models/session_event.dart';
 import '../../../../game_engine/rules/eco_rules.dart';
+import '../../../../game_engine/rules/trial_rules.dart';
 import '../../../../game_engine/rules/zone_rules.dart';
+import '../../../ascension/domain/ascension_text.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
 import '../../../missions/domain/mission_text.dart';
@@ -406,6 +408,8 @@ class MapGame extends Game {
     final x1 = math.min(map.width - 1, x0 + vw ~/ ts + 1);
     final y1 = math.min(map.height - 1, y0 + vh ~/ ts + 1);
     String? at(int x, int y) => map.contains(x, y) ? map.tileAt(x, y) : null;
+    // Pulso del Tiempo: con el reloj de la sala (el mismo que usa el host).
+    final pulse = TrialRules.pulseCharge(s.time);
     for (var y = y0; y <= y1; y++) {
       for (var x = x0; x <= x1; x++) {
         tiles.draw(c, map.tileAt(x, y), x * ts, y * ts, map.theme, x, y,
@@ -414,7 +418,8 @@ class MapGame extends Game {
             lobby: map.lobby,
             at: at,
             voidBackdrop: abyss,
-            density: particleDensity);
+            density: particleDensity,
+            pulse: pulse);
       }
     }
     // Arcos de las entradas de zona (sobresalen de su tile).
@@ -437,6 +442,9 @@ class MapGame extends Game {
       // Portal del Eco (docs/specs/ecos_atlas.md § 1).
       actors.text(c, 'PORTAL', 4.5 * ts, ts + 10,
           const Color(0xFF5AE6D2), 7);
+      // Estatua del Tiempo (docs/specs/ascension.md § 1).
+      actors.text(c, 'ESTATUA DEL TIEMPO', 21.5 * ts, 9 * ts - 12,
+          const Color(0xFFA29BFE), 6);
     }
 
     // Loot en el piso (debajo de los actores; docs/specs/loot.md § 4).
@@ -484,7 +492,8 @@ class MapGame extends Game {
           dir: mine ? controller.local.dir : p.dir,
           moving: mine ? controller.local.moving : p.moving,
           dead: p.hp <= 0,
-          blink: grace && p.hp > 0);
+          blink: grace && p.hp > 0,
+          ascensionId: p.profile.ascension.id);
       if (fall != null && fq != null) {
         if (fq < 0.5) {
           // Se achica y se desvanece donde cayó.
@@ -498,7 +507,7 @@ class MapGame extends Game {
       _lastDrawn[p.id] = (px, py);
       add(py, () {
         hero(px, py);
-        actors.text(c, p.name, px, py - 22,
+        actors.text(c, profileTitle(p.profile), px, py - 22,
             mine ? const Color(0xFFFFD166) : const Color(0xFFFFFFFF), 6);
       });
     }
@@ -645,7 +654,8 @@ class MapGame extends Game {
         Paint()..color = Color.fromRGBO(0, 0, 0, a.clamp(0.0, 1.0)));
     final m = view.session.mission;
     if (m == null) return;
-    final name = (m.missionId == EcoRules.missionId
+    final name = (m.missionId == EcoRules.missionId ||
+                m.missionId == TrialRules.missionId
             ? controller.engine.missionOf(view.session, m.missionId)?.name
             : null) ??
         controller.engine.catalog.zone(m.zone)?.name ??

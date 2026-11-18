@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import '../../../../game_engine/models/battle_state.dart';
 import '../../domain/turn_order.dart' show isPassiveAdd;
+import 'arena/arena_spec.dart';
 import 'ult_cinematic.dart';
 
 /// Dibuja el mundo detrás de la batalla (tiles, enemigos lejanos) en
@@ -10,9 +11,10 @@ import 'ult_cinematic.dart';
 /// vista; [t] el reloj de animación en ms.
 typedef WorldPainter = void Function(Canvas canvas, Rect visible, double t);
 
-/// Dónde ocurre la batalla en el mapa (lo que `startBattle` tomaba del
-/// enemigo del campo). Lo arma quien hospeda la batalla (la sesión); sin
-/// arena la escena usa un fondo liso.
+/// Dónde ocurre la batalla: un escenario temático propio
+/// ([BattleArena.stage], docs/specs/battle_presentation.md § "Arenas") o,
+/// en tests y herramientas, un punto de un mapa. Lo arma quien hospeda la
+/// batalla (la sesión); sin arena la escena usa un fondo liso.
 class BattleArena {
   const BattleArena({
     required this.anchorX,
@@ -23,7 +25,29 @@ class BattleArena {
     this.fieldFocusX,
     this.fieldFocusY,
     this.paintWorld,
+    this.stage = false,
+    this.kind = EncounterKind.normal,
   });
+
+  /// Escenario temático de [ArenaStage]: formación simétrica fija (grupo
+  /// a la derecha, enemigos a la izquierda) e independiente del mapa.
+  const BattleArena.stage({
+    this.kind = EncounterKind.normal,
+    this.paintWorld,
+  })  : anchorX = ArenaStage.centerX,
+        anchorY = ArenaStage.floorY,
+        side = 1,
+        worldWidth = ArenaStage.width,
+        worldHeight = ArenaStage.height,
+        fieldFocusX = null,
+        fieldFocusY = null,
+        stage = true;
+
+  /// Es un escenario (no un punto del mapa).
+  final bool stage;
+
+  /// Tipo de encuentro (espaciado y aire del encuadre del escenario).
+  final EncounterKind kind;
 
   /// `(bx, by)`: posición del enemigo del campo.
   final double anchorX, anchorY;
@@ -97,13 +121,13 @@ class SceneGeometry {
       return const SceneGeometry(
           scale: 1, virtualWidth: baseWidth, sceneHeight: baseSceneHeight);
     }
-    final s = math.min(size.width / baseWidth,
-        size.height / (stripHeight + baseSceneHeight));
+    final s = math.min(
+        size.width / baseWidth, size.height / (stripHeight + baseSceneHeight));
     return SceneGeometry(
       scale: s,
       virtualWidth: math.max(baseWidth, (size.width / s).floor()),
-      sceneHeight: math.max(
-          baseSceneHeight, (size.height / s).floor() - stripHeight),
+      sceneHeight:
+          math.max(baseSceneHeight, (size.height / s).floor() - stripHeight),
       size: size,
     );
   }
@@ -159,6 +183,9 @@ class BattleLayout {
   /// Sin arena: el enemigo en `(VW/2 − 34, 104)` de una vista de [vw].
   factory BattleLayout.compute(BattleState state, BattleArena? arena,
       {int vw = SceneGeometry.baseWidth, EnemySize? enemySize}) {
+    if (arena != null && arena.stage) {
+      return BattleLayout._stage(state, arena, enemySize);
+    }
     final s = arena?.side ?? 1;
     final bx = arena?.anchorX ?? vw / 2 - 34.0;
     final by = arena?.anchorY ?? 104.0;
@@ -187,10 +214,106 @@ class BattleLayout {
       pos[e.id] = p;
       final sz = enemySize?.call(e) ??
           (e.elite ? const Size(16 * 1.45, 14 * 1.45) : const Size(16, 14));
-      boxes[e.id] =
-          Rect.fromLTWH(p.dx - sz.width / 2, p.dy - sz.height, sz.width, sz.height + 4);
+      boxes[e.id] = Rect.fromLTWH(
+          p.dx - sz.width / 2, p.dy - sz.height, sz.width, sz.height + 4);
     }
     return BattleLayout._(pos, boxes, s, bx + s * 34, by);
+  }
+
+  /// Tamaño por defecto de un enemigo sin sprites.
+  static Size _defaultSize(Combatant e) =>
+      e.elite ? const Size(16 * 1.45, 14 * 1.45) : const Size(16, 14);
+
+  /// Separación vertical entre cajas de una columna de enemigos.
+  static const stageRowGap = 4.0;
+
+  /// Separación horizontal entre columnas de enemigos.
+  static const stageColGap = 10.0;
+
+  /// Máximo de enemigos por columna.
+  static const stageColMax = 3;
+
+  /// Paso vertical mínimo entre enemigos de una columna (el del grupo).
+  static const stagePitch = 26.0;
+
+  /// Corrimiento hacia afuera de las filas impares (como el grupo).
+  static const stageStagger = 14.0;
+
+  /// Formación del escenario (§ "Arenas" → "Formación"): el grupo en una
+  /// columna escalonada a la derecha del centro y los enemigos en
+  /// columnas a la izquierda, de adentro hacia afuera: invocaciones
+  /// pasivas (cristales), comunes (de a 3 por columna) y el jefe atrás.
+  /// Cada columna se apila centrada en la línea de los pies sin que sus
+  /// cajas se toquen; al final todo se corre para que la pelea quede
+  /// centrada en el escenario.
+  factory BattleLayout._stage(
+      BattleState state, BattleArena arena, EnemySize? enemySize) {
+    final cx = arena.anchorX, by = arena.anchorY;
+    final gap = ArenaStage.gapFor(arena.kind);
+    final pos = <String, Offset>{};
+    final boxes = <String, Rect>{};
+    // Centro vertical de las cajas (el de un héroe parado en `by`).
+    const mid = -8.5;
+    final n = state.party.length;
+    for (var i = 0; i < n; i++) {
+      final p = Offset(
+          cx + gap + 10 + (i % 2) * 14, by + (i - (n - 1) / 2) * 24);
+      pos[state.party[i].id] = p;
+      boxes[state.party[i].id] = Rect.fromLTWH(p.dx - 10, p.dy - 19, 20, 22);
+    }
+    final adds = <Combatant>[], foes = <Combatant>[], bosses = <Combatant>[];
+    for (final e in state.enemies) {
+      if (isPassiveAdd(e)) {
+        adds.add(e);
+      } else if (e.boss) {
+        bosses.add(e);
+      } else {
+        foes.add(e);
+      }
+    }
+    final cols = <List<Combatant>>[
+      for (var i = 0; i < adds.length; i += stageColMax)
+        adds.sublist(i, math.min(adds.length, i + stageColMax)),
+      for (var i = 0; i < foes.length; i += stageColMax)
+        foes.sublist(i, math.min(foes.length, i + stageColMax)),
+      for (final b in bosses) [b],
+    ];
+    Size sizeOf(Combatant e) => enemySize?.call(e) ?? _defaultSize(e);
+    var inner = cx - gap;
+    for (final col in cols) {
+      final sizes = [for (final e in col) sizeOf(e)];
+      final w = sizes.fold<double>(0, (m, z) => math.max(m, z.width));
+      final h = sizes.fold<double>(0, (m, z) => math.max(m, z.height));
+      // Paso vertical como el del grupo (24) o más si son grandes; las
+      // filas impares se corren hacia afuera, espejo del grupo.
+      final pitch = math.max(h + 4 + stageRowGap, stagePitch);
+      final stagger = col.length > 1 ? stageStagger : 0.0;
+      final x = inner - w / 2;
+      for (var k = 0; k < col.length; k++) {
+        final z = sizes[k];
+        final cy = by + mid + (k - (col.length - 1) / 2) * pitch;
+        final feet = (cy + z.height / 2 - 2).roundToDouble();
+        final p = Offset((x - (k.isOdd ? stagger : 0)).roundToDouble(), feet);
+        pos[col[k].id] = p;
+        boxes[col[k].id] = Rect.fromLTWH(
+            p.dx - z.width / 2, feet - z.height, z.width, z.height + 4);
+      }
+      inner = x - w / 2 - stagger - stageColGap;
+    }
+    // Centrar la pelea en el escenario (los dos bandos a la misma
+    // distancia del centro de la arena).
+    var r = boxes.values.isEmpty
+        ? Rect.fromCenter(center: Offset(cx, by), width: 1, height: 1)
+        : boxes.values.first;
+    for (final b in boxes.values) {
+      r = r.expandToInclude(b);
+    }
+    final shift = (cx - r.center.dx).roundToDouble();
+    if (shift != 0) {
+      pos.updateAll((_, p) => p.translate(shift, 0));
+      boxes.updateAll((_, b) => b.shift(Offset(shift, 0)));
+    }
+    return BattleLayout._(pos, boxes, 1, cx, by);
   }
 
   Offset of(String id) => positions[id] ?? Offset(centerX, centerY);
@@ -208,8 +331,8 @@ class BattleLayout {
     for (final b in boxes.values) {
       r = r.expandToInclude(b);
     }
-    return Rect.fromLTRB(r.left - marginX, r.top - marginTop,
-        r.right + marginX, r.bottom + marginBottom);
+    return Rect.fromLTRB(r.left - marginX, r.top - marginTop, r.right + marginX,
+        r.bottom + marginBottom);
   }
 
   /// Encuadre base: zoom entero que hace que la pelea llene el área del
@@ -218,7 +341,12 @@ class BattleLayout {
   CameraView frame(SceneGeometry g, BattleArena? arena) {
     final area = g.worldRect;
     final room = (labelRoom * g.hudUnit).toDouble();
-    final fb = fightBox;
+    var fb = fightBox;
+    if (arena != null && arena.stage) {
+      final (px, py) = ArenaStage.padFor(arena.kind);
+      fb = Rect.fromLTRB(
+          fb.left - px, fb.top - py, fb.right + px, fb.bottom + py);
+    }
     final fit = math.min(
         area.width / fb.width, math.max(1.0, area.height - room) / fb.height);
     final zoom = fit.floor().clamp(1, maxZoom).toDouble();
@@ -241,11 +369,10 @@ class BattleLayout {
 
   /// Cámara del campo al empezar (centrada en el jugador local), con el
   /// zoom de [base].
-  static CameraView fieldView(BattleArena arena, CameraView base) =>
-      CameraView(
-          Offset(arena.fieldFocusX ?? arena.anchorX,
-              arena.fieldFocusY ?? arena.anchorY),
-          base.zoom);
+  static CameraView fieldView(BattleArena arena, CameraView base) => CameraView(
+      Offset(arena.fieldFocusX ?? arena.anchorX,
+          arena.fieldFocusY ?? arena.anchorY),
+      base.zoom);
 }
 
 /// Una vista de cámara aplicada a un área de pantalla: conversión

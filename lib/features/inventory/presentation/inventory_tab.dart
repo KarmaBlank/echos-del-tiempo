@@ -17,6 +17,10 @@ import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/rules/inventory_rules.dart';
+import '../../../game_engine/models/build_plan.dart';
+import '../../../game_engine/rules/build_plan_rules.dart';
+import '../../build_planner/presentation/build_fit_badge.dart';
+import '../../build_planner/presentation/build_plan_providers.dart';
 import '../domain/item_text.dart';
 import 'item_widgets.dart';
 import 'shop_sections.dart';
@@ -71,6 +75,21 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   WeaponRef? _cmpB;
   bool get _picking => _cmpA != null && _cmpB == null;
 
+  /// Plan de build del jugador local y sus reglas (★ Tu build,
+  /// build_planner.md § 4.1); se leen en cada `build`.
+  BuildPlan _plan = BuildPlan.empty;
+  BuildPlanRules? _fitRules;
+
+  ItemFit _fit(ItemInstance it) => _plan.goalCount == 0 || _fitRules == null
+      ? ItemFit.none
+      : _fitRules!.itemFit(_plan, it);
+
+  /// La línea "★ Tu build — Cumple: ..." de la ficha, con salto antes.
+  String _fitLine(ItemInstance it) {
+    final m = buildFitMarkup(_fit(it));
+    return m == null ? '' : '<br>$m';
+  }
+
   /// Foco propio: `Esc` cancela "elige B" sin cerrar el panel.
   final _keys = FocusNode(debugLabel: 'inventory');
 
@@ -120,18 +139,35 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           message: it == null
               ? _tooltip(me.profile, c, attrs)
               : itemTooltipMarkup(shop.rules, it,
-                  level: me.profile.level,
-                  attributes: attrs,
-                  equipped: equipped),
+                      level: me.profile.level,
+                      attributes: attrs,
+                      equipped: equipped) +
+                  _fitLine(it),
           child: child);
     }
+    final fit = buildFitMarkup(_fit(it));
+    final card = HoverCompareCard(
+        rules: shop.rules,
+        viewer: me.profile,
+        item: it,
+        attributes: attrs,
+        ownerName: mine ? null : owner.name);
     return RetroHoverCard(
-      builder: (_) => HoverCompareCard(
-          rules: shop.rules,
-          viewer: me.profile,
-          item: it,
-          attributes: attrs,
-          ownerName: mine ? null : owner.name),
+      builder: (_) => fit == null
+          ? card
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                card,
+                Container(
+                  key: const ValueKey('inv-build-fit-hover'),
+                  padding: const EdgeInsets.all(6),
+                  color: ProtoColors.bg,
+                  child: ProtoText(fit),
+                ),
+              ],
+            ),
       child: child,
     );
   }
@@ -200,6 +236,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       for (final pl in view.session.playerList)
         if (pl.id != view.localId) pl,
     ];
+    _plan = ref.watch(buildPlanProvider).plan;
+    _fitRules = ref.watch(buildPlanRulesProvider);
     final owner = view.session.players[_owner] ?? me;
     final mine = owner.id == me.id;
     final p = owner.profile;
@@ -247,6 +285,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         content: c,
         selected: selected || _moveFrom == i,
         highlight: _moveFrom != null && _moveFrom != i,
+        buildMatch: c?.item != null && _fit(c!.item!).any,
       );
       if (c != null) w = _withTip(me, owner, c, attrs, w);
       void tap() {
@@ -311,7 +350,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             ItemCell(
                 rules: shop.rules,
                 content: CellContent.item(eq),
-                selected: _sel == eq.uid),
+                selected: _sel == eq.uid,
+                buildMatch: _fit(eq).any),
             equipped: true);
     final left = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -411,6 +451,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     if (_cleaning && mine) {
       return PanelSplit(
         listWidth: InventoryTab.gridWidth + 4,
+        scaleList: false,
         list: [left],
         detail: _cleaner(p),
       );
@@ -426,6 +467,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       onKeyEvent: _onKey,
       child: PanelSplit(
         listWidth: InventoryTab.gridWidth + 4,
+        scaleList: false,
         list: [left],
         detail: PanelDetail(
           footer: sel == null || !mine
@@ -557,6 +599,11 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         stats: shop.preview.withItem(viewer, it, attributes: attrs),
         equipped: equipped,
       ),
+      if (buildFitMarkup(_fit(it)) case final fit?)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: ProtoText(fit, key: const ValueKey('inv-build-fit')),
+        ),
       if (!equipped || !mine)
         StatsCompare(
           title: 'Comparada con '

@@ -130,7 +130,8 @@ class ParticleSystem {
           stroke.color = color;
           c.drawCircle(Offset(p.x, p.y), p.size + 0.5, stroke);
         case ParticleShape.ray:
-          c.drawRect(Rect.fromLTWH(p.x - 0.5, p.y - 4, 1.5, 6 + p.size * 2), fill);
+          c.drawRect(
+              Rect.fromLTWH(p.x - 0.5, p.y - 4, 1.5, 6 + p.size * 2), fill);
         case ParticleShape.plus:
           c.drawRect(Rect.fromLTWH(p.x - 2, p.y - 0.5, 5, 2), fill);
           c.drawRect(Rect.fromLTWH(p.x - 0.5, p.y - 2, 2, 5), fill);

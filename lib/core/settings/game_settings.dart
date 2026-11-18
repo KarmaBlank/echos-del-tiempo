@@ -23,6 +23,37 @@ enum FlashLevel {
   final double factor;
 }
 
+/// "Tamaño del texto" (accesibilidad): cuánto se agranda el texto de la
+/// UI sobre la escala base (`RetroType`, `RetroTextScaler`). Ver
+/// docs/specs/settings.md § 3 y docs/specs/ui_style.md § "Tipografía".
+enum TextSize {
+  normal(1),
+  large(1.25),
+  huge(1.5);
+
+  const TextSize(this.factor);
+
+  /// Multiplica el texto chico (los títulos crecen menos).
+  final double factor;
+
+  static TextSize fromName(Object? v, TextSize def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Fuente de lectura" (accesibilidad): la fuente del texto de lectura
+/// (tooltips, fichas, chat, menús). Títulos y botones siguen en Press
+/// Start 2P. Ver docs/specs/settings.md § 3.7.
+enum ReadingFont {
+  /// VT323 (por defecto, v0.5).
+  vt323,
+
+  /// CLÁSICA: Press Start 2P, como en v0.4.
+  classic;
+
+  static ReadingFont fromName(Object? v, ReadingFont def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
 /// Ajustes de pantalla y de juego (todo lo que no es audio). Se guardan
 /// en `game.json` junto al perfil. Ver docs/specs/settings.md.
 class GameSettings {
@@ -36,6 +67,9 @@ class GameSettings {
     this.crt = CrtLevel.normal,
     this.particles = ParticleLevel.high,
     this.fpsLimit = FpsLimit.fps60,
+    this.textSize = TextSize.normal,
+    this.readingFont = ReadingFont.vt323,
+    this.buildNotices = true,
   });
 
   /// Pantalla completa sin bordes (solo Windows; ver `WindowMode`).
@@ -63,6 +97,16 @@ class GameSettings {
   /// Tope de cuadros por segundo.
   final FpsLimit fpsLimit;
 
+  /// Tamaño del texto de la UI (accesibilidad).
+  final TextSize textSize;
+
+  /// Fuente del texto de lectura (accesibilidad).
+  final ReadingFont readingFont;
+
+  /// Avisos de avance del plan de build en el HUD y el chat
+  /// (docs/specs/build_planner.md § 5).
+  final bool buildNotices;
+
   GameSettings copyWith({
     bool? fullscreen,
     bool? screenShake,
@@ -73,6 +117,9 @@ class GameSettings {
     CrtLevel? crt,
     ParticleLevel? particles,
     FpsLimit? fpsLimit,
+    TextSize? textSize,
+    ReadingFont? readingFont,
+    bool? buildNotices,
   }) =>
       GameSettings(
         fullscreen: fullscreen ?? this.fullscreen,
@@ -84,6 +131,9 @@ class GameSettings {
         crt: crt ?? this.crt,
         particles: particles ?? this.particles,
         fpsLimit: fpsLimit ?? this.fpsLimit,
+        textSize: textSize ?? this.textSize,
+        readingFont: readingFont ?? this.readingFont,
+        buildNotices: buildNotices ?? this.buildNotices,
       );
 
   Map<String, Object?> toJson() => {
@@ -96,6 +146,9 @@ class GameSettings {
         'crt': crt.name,
         'particles': particles.name,
         'fpsLimit': fpsLimit.json,
+        'textSize': textSize.name,
+        'readingFont': readingFont.name,
+        'buildNotices': buildNotices,
       };
 
   /// Valores inválidos o ausentes caen al de por defecto. Claves viejas
@@ -114,6 +167,10 @@ class GameSettings {
       crt: CrtLevel.fromName(json['crt'], d.crt),
       particles: ParticleLevel.fromName(json['particles'], d.particles),
       fpsLimit: FpsLimit.fromJson(json['fpsLimit'], d.fpsLimit),
+      textSize: TextSize.fromName(json['textSize'], d.textSize),
+      readingFont:
+          ReadingFont.fromName(json['readingFont'], d.readingFont),
+      buildNotices: flag(json['buildNotices'], d.buildNotices),
     );
   }
 
@@ -128,11 +185,15 @@ class GameSettings {
       other.scale == scale &&
       other.crt == crt &&
       other.particles == particles &&
-      other.fpsLimit == fpsLimit;
+      other.fpsLimit == fpsLimit &&
+      other.textSize == textSize &&
+      other.readingFont == readingFont &&
+      other.buildNotices == buildNotices;
 
   @override
   int get hashCode => Object.hash(fullscreen, screenShake, flashes,
-      damageNumbers, confirmDrop, scale, crt, particles, fpsLimit);
+      damageNumbers, confirmDrop, scale, crt, particles, fpsLimit, textSize,
+      readingFont, buildNotices);
 
   @override
   String toString() => 'GameSettings(${toJson()})';

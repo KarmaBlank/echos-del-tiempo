@@ -4,6 +4,7 @@ import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_fx.da
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_layout.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_scene.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/ult_cinematic.dart';
+import 'package:echos_del_tiempo/game_engine/data/ascension_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/skills_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
@@ -83,8 +84,11 @@ Iterable<BattleFx> _of(List<BattleFx> fx, FxKind k) =>
 void main() {
   group('guiones', () {
     test('cada ULT tiene su guion con las fases y tiempos del spec', () {
-      expect(kUltScripts.keys.toSet(),
-          {for (final s in kAllUltimates.values) s.id});
+      // Más las ULT de las ascensiones (docs/specs/ascension.md § 4).
+      expect(kUltScripts.keys.toSet(), {
+        for (final s in kAllUltimates.values) s.id,
+        ...kAscensionUltimatesById.keys,
+      });
       for (final e in _expected.entries) {
         final sk = kAllUltimates[e.key]!;
         final s = ultScriptFor(sk.id);

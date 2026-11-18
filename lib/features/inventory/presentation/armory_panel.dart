@@ -39,7 +39,7 @@ class _ArmoryPanelState extends State<ArmoryPanel> {
     final close = view.mustAllocate ? null : controller.closePanel;
     return PanelFrame(
       title: 'ARMERÍA',
-      width: 1000,
+      width: 1200,
       fill: true,
       help: kShopHelp,
       onClose: close,

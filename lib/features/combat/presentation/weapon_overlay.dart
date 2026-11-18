@@ -12,7 +12,8 @@ import 'dart:ui';
 abstract final class WeaponOverlay {
   static final _fill = Paint()..isAntiAlias = false;
 
-  static void _rect(Canvas c, Color color, double x, double y, double w, double h) {
+  static void _rect(
+      Canvas c, Color color, double x, double y, double w, double h) {
     _fill.color = color;
     c.drawRect(Rect.fromLTWH(x, y, w, h), _fill);
   }
@@ -73,7 +74,11 @@ abstract final class WeaponOverlay {
       case WeaponArt.mace:
         _rect(c, const Color(0xFF8A5A2B), 6, -13, 1, 9);
         _dot(c, const Color(0xFFB2BEC3), 6.5, -15, 2.6);
-        for (final (px, py) in const [(4.0, -16.0), (8.0, -16.0), (6.0, -18.0)]) {
+        for (final (px, py) in const [
+          (4.0, -16.0),
+          (8.0, -16.0),
+          (6.0, -18.0)
+        ]) {
           _rect(c, const Color(0xFFDFE6E9), px, py, 1, 1);
         }
       case WeaponArt.gun:
@@ -122,4 +127,14 @@ abstract final class WeaponOverlay {
 }
 
 /// Dibujo del arma (uno por familia de tipos).
-enum WeaponArt { sword, staff, hammer, mace, gun, spear, daggers, wand, crossbow }
+enum WeaponArt {
+  sword,
+  staff,
+  hammer,
+  mace,
+  gun,
+  spear,
+  daggers,
+  wand,
+  crossbow
+}

@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/persistence/ecos_log.dart';
+import '../../../core/persistence/exit_guard.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/atlas_store.dart';
 import '../../../game_engine/models/attributes.dart';
@@ -27,6 +29,7 @@ import '../../../game_engine/rules/world_rules.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 import '../../../netcode/contracts/net_session.dart';
 import '../../../netcode/contracts/net_session_factory.dart';
+import '../../ascension/domain/ascension_text.dart';
 import 'local_player.dart';
 import 'session_view.dart';
 import 'world_text.dart';
@@ -207,9 +210,14 @@ class SessionController extends StateNotifier<SessionView?> {
   Future<void> start() async {
     if (_started) return;
     _started = true;
+    // Cerrar la ventana (o actualizar) a mitad de partida guarda antes.
+    ExitGuard.register(this, saveNow);
     final n = net;
     if (isClient) {
-      unawaited(_loadAtlas());
+      // Antes del primer snapshot: un Eco completado tiene que sumar al
+      // Atlas de la cuenta, no a uno vacío que lo pisaría.
+      await _loadAtlas();
+      if (!mounted) return;
       _netSub = n!.events.listen(_onNet);
       if (clock.autoStart) {
         _timer = Timer.periodic(clock.interval, (_) => _clientTick(clock.dt));
@@ -286,7 +294,10 @@ class SessionController extends StateNotifier<SessionView?> {
 
   void _setAtlas(AtlasProgress next, {bool emit = true}) {
     _atlas = next;
-    unawaited(atlasStore.save(next).catchError((Object _) {}));
+    unawaited(atlasStore.save(next).catchError((Object e) {
+      EcosLog.error('Guardado del Atlas', e);
+      _saveFailed(e);
+    }));
     // Local / anfitrión: la sala usa este Atlas (los clientes, el del host).
     final s = _s;
     if (!isClient && s != null) {
@@ -311,6 +322,7 @@ class SessionController extends StateNotifier<SessionView?> {
     _broadcastTimer?.cancel();
     unawaited(_netSub?.cancel());
     _save(force: true);
+    ExitGuard.unregister(this);
     unawaited(_events.close());
     unawaited(net?.disconnect());
     super.dispose();
@@ -435,8 +447,11 @@ class SessionController extends StateNotifier<SessionView?> {
     _lastSaved = p;
     try {
       await store.save(p);
-    } catch (_) {
-      // Sin disco: nada que hacer.
+      _saveOk(p);
+    } catch (e) {
+      // Queda marcado para reintentar; el HUD avisa.
+      if (identical(_lastSaved, p)) _lastSaved = null;
+      _saveFailed(e);
     }
   }
 
@@ -492,6 +507,10 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Frente al Portal del Eco del pueblo (ecos_atlas.md § 1).
   bool get nearPortal =>
       _s?.mode == SessionMode.lobby && WorldRules.nearPortal(local.x, local.y);
+
+  /// Frente a la Estatua del Tiempo (ascension.md § 1).
+  bool get nearStatue =>
+      _s?.mode == SessionMode.lobby && WorldRules.nearStatue(local.x, local.y);
 
   /// `nearSeal`: el sello sin activar más cercano a menos de 26 px.
   MissionItem? get nearSeal {
@@ -571,6 +590,8 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.armory);
       } else if (nearPortal) {
         openPanel(WorldPanel.ecoPortal);
+      } else if (nearStatue) {
+        openPanel(WorldPanel.ascension);
       } else if (nearEntrance case final e?) {
         enterZone(e);
       }
@@ -748,6 +769,32 @@ class SessionController extends StateNotifier<SessionView?> {
   /// `devTools`).
   bool devGrantEco(int tier) => _apply(DevGrantEcoAction(tier));
 
+  // ---- ascensión (docs/specs/ascension.md) ----
+
+  /// Proponer la Prueba del Tiempo [n] (cierra la estatua si se aceptó).
+  bool proposeTrial(int n) => _apply(ProposeTrialAction(n));
+
+  bool chooseAscension(String id) => _apply(ChooseAscensionAction(id));
+
+  bool takeAscensionNode(String nodeId) =>
+      _apply(TakeAscensionNodeAction(nodeId));
+
+  /// Reinicio gratis de los nodos; con [full] además vuelve a la clase base.
+  bool resetAscension({bool full = false}) =>
+      _apply(ResetAscensionAction(full: full));
+
+  /// La última Prueba completada en esta misión y si el jugador local
+  /// ganó sus puntos (para el resultado); `null` si no hubo.
+  (int, bool)? lastTrial;
+
+  /// Solo desarrollo: Pruebas 1..[n] superadas.
+  bool devGrantTrial(int n) => _apply(DevGrantTrialAction(n));
+
+  /// Abre el panel de la estatua en la pestaña ASCENSIÓN (botón del
+  /// resultado de una Prueba).
+  bool get canOpenAscension =>
+      _s?.mode == SessionMode.lobby || _s?.mode == SessionMode.prep;
+
   /// Enter en el campo de chat (`send({t:'chat'})`).
   bool sendChat(String text) => _apply(ChatAction(text));
 
@@ -785,8 +832,14 @@ class SessionController extends StateNotifier<SessionView?> {
           _messages.add(text);
           if (_messages.length > maxMessages) _messages.removeAt(0);
           _addChat(ChatLine.system(text));
-        case ChatMessageEvent(:final from, :final text):
-          _addChat(ChatLine(from, text));
+        case ChatMessageEvent(:final playerId, :final from, :final text):
+          // Título de la ascensión en el chat: "Ana, Cronomante" (§ 5).
+          final prof = _s!.players[playerId]?.profile;
+          _addChat(ChatLine(
+              prof == null
+                  ? from
+                  : heroTitle(from, prof.classId, prof.ascension.id),
+              text));
         // Pausa de grupo: aviso en el chat (jugando solo no hace falta).
         case PausedEvent(:final name) when net != null:
           _addChat(ChatLine.system('$name pausó el juego'));
@@ -800,8 +853,11 @@ class SessionController extends StateNotifier<SessionView?> {
         case MissionStartedEvent():
           _missionLoot.clear();
           _atlasGain = null;
+          lastTrial = null;
         case EcoCompletedEvent():
           _onEcoCompleted(e);
+        case TrialCompletedEvent(:final trial, :final playerIds):
+          lastTrial = (trial, playerIds.contains(localId));
         case LootDropEvent(:final playerId, :final drop)
             when playerId == localId:
           _missionLoot.add(drop);
@@ -827,6 +883,17 @@ class SessionController extends StateNotifier<SessionView?> {
     if (_chat.length > maxMessages) _chat.removeAt(0);
   }
 
+  /// Aviso de sistema **solo de este dispositivo** (no viaja por la red):
+  /// lo usan los avisos del plan de build (docs/specs/build_planner.md
+  /// § 5). Va al registro y al chat.
+  void addLocalNotice(String text) {
+    if (!mounted) return;
+    _messages.add(text);
+    if (_messages.length > maxMessages) _messages.removeAt(0);
+    _addChat(ChatLine.system(text));
+    _emit();
+  }
+
   void _save({bool force = false}) {
     final p = _s?.players[localId]?.profile;
     if (p == null || identical(p, _lastSaved)) return;
@@ -839,7 +906,27 @@ class SessionController extends StateNotifier<SessionView?> {
       return;
     }
     _sinceSave = 0;
-    unawaited(store.save(p).catchError((Object _) {}));
+    // `_lastSaved` ya es [p] (para no repetir mientras se escribe); si
+    // falla vuelve a `null` y el próximo intento (2 s) lo reintenta.
+    unawaited(store.save(p).then((_) => _saveOk(p), onError: (Object e) {
+      if (identical(_lastSaved, p)) _lastSaved = null;
+      _saveFailed(e);
+    }));
+  }
+
+  /// El progreso no llegó a disco (se reintenta solo). `null` = guardado.
+  String? _saveError;
+
+  void _saveOk(PlayerProfile p) {
+    if (_saveError == null || !identical(_lastSaved, p)) return;
+    _saveError = null;
+    _emit();
+  }
+
+  void _saveFailed(Object e) {
+    EcosLog.error('Guardado del personaje', e);
+    _saveError = 'No se pudo guardar';
+    _emit();
   }
 
   /// Reglas automáticas de paneles de `hud()` + avisos, y emite la vista.
@@ -876,7 +963,8 @@ class SessionController extends StateNotifier<SessionView?> {
     _lastMode = mode;
     if ((_panel == WorldPanel.missionBoard ||
             _panel == WorldPanel.armory ||
-            _panel == WorldPanel.ecoPortal) &&
+            _panel == WorldPanel.ecoPortal ||
+            _panel == WorldPanel.ascension) &&
         mode != SessionMode.lobby) {
       _panel = null;
     }
@@ -907,6 +995,7 @@ class SessionController extends StateNotifier<SessionView?> {
       missionLoot: List.unmodifiable(_missionLoot),
       atlas: _atlas,
       atlasGain: _atlasGain,
+      saveError: _saveError,
     );
   }
 
@@ -914,6 +1003,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (_panel != null) return (null, null);
     if (nearArmory) return (WorldPrompt.armory, null);
     if (nearPortal) return (WorldPrompt.ecoPortal, null);
+    if (nearStatue) return (WorldPrompt.statue, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
     if (nearStairs case final k?) {

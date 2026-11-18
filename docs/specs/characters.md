@@ -29,6 +29,9 @@ de antes (`%APPDATA%\EcosDelTiempo`, exploration.md § "Persistencia"):
   formato: la sesión y la red lo siguen viendo igual) + `id` estable
   (`c<n>`, del contador `seq`; nunca se reusa), fecha de creación y
   fecha de la última partida (`last`, `null` = nunca jugó).
+- `plan` (opcional, v0.5): el plan de build del personaje
+  (build_planner.md § 1). Una cuenta sin `plan` carga igual; guardar el
+  perfil desde la sesión lo conserva.
 - `sel`: el personaje elegido. Si no existe, se toma el primero.
 - `stash`: el alijo (§ 3).
 - Lectura tolerante: lo que falta toma su valor por defecto; una
@@ -61,6 +64,18 @@ Igual que el perfil: `account.json.tmp` + `rename`. Mover un objeto
 entre un personaje y el alijo es **un solo** guardado de la cuenta (el
 objeto nunca queda duplicado ni perdido si se corta a la mitad).
 
+Desde v0.5 (endurecido tras el bug de v0.4, § 1.4):
+- Leer, escribir la copia y renombrar se **reintentan** (100 / 300 /
+  800 ms) ante un `FileSystemException`: en Windows un antivirus o el
+  indexador pueden tener el archivo abierto un instante.
+- Si renombrar sigue fallando (Windows no deja reemplazar un archivo
+  abierto por otro proceso), **plan B**: se escribe el JSON directo sobre
+  `account.json`. La copia `.tmp` queda completa hasta que eso termina.
+- Al leer: si `account.json` falta o está dañado y hay un
+  `account.json.tmp` completo, se usa la copia (se cortó entre escribirla
+  y reemplazar). Si los dos son válidos y la copia es **más nueva**, gana
+  la copia (el reemplazo y el plan B fallaron).
+
 ### Migración desde `profile.json`
 
 Al leer la cuenta:
@@ -86,6 +101,76 @@ objeto):
   queda **solo en memoria** para esa ejecución (no se escribe nada, para
   no pisar el archivo) y el título lo avisa.
 
+### 1.4 Invariante: el progreso se mantiene juegues donde juegues
+
+> "No importa dónde juegues, el progreso del personaje se mantiene."
+
+- **Un solo personaje, un solo archivo.** Solo, anfitrión, cliente LAN o
+  cliente P2P leen y escriben **el mismo** personaje elegido del mismo
+  `account.json`, por el mismo `AccountRepository`
+  (`SelectedCharacterProfileStore`). Ningún flavor ni modo registra otro
+  `ProfileStore`: `registerSharedDependencies` es el único que lo hace y
+  los `register*Netcode` solo agregan la red. El cliente guarda el
+  perfil que le manda el host en cada snapshot (cada 2 s si cambió,
+  siempre al terminar la misión, al volver al pueblo y al salir).
+- El perfil que viaja al unirse (`hello`) y el que recibe la sesión salen
+  de la cuenta **en memoria** (`AccountRepository.current`), nunca de una
+  copia de la pantalla de título que pudiera haber quedado vieja.
+- **Nunca en silencio.** Una escritura fallida:
+  - no se da por guardada: la sesión vuelve a intentar a los 2 s y el
+    repositorio reintenta solo la cuenta entera (1, 2, 5, 10, 30 s…)
+    hasta que sale;
+  - se muestra: en el HUD, arriba al centro y en rojo,
+    `No se pudo guardar (ver ecos.log)` (`SessionView.saveError`) y en el
+    título el error del repositorio (`saveError`) junto al aviso de carga;
+    los dos se borran solos cuando un reintento sale bien;
+  - queda en `ecos.log` (§ 1.5).
+- **Al salir se guarda.** `ExitGuard` junta lo pendiente: la sesión en
+  curso (`saveNow`) y después la cuenta (`AccountRepository.flush`, que
+  reintenta una vez si quedó algo sin escribir), con un tope de 4 s. Lo
+  llaman: cerrar la ventana (`installExitOnClose`, `AppLifecycleListener
+  .onExitRequested`: Windows le pregunta al framework antes de cerrar),
+  SALIR DEL JUEGO y el auto-actualizador (antes de lanzar el instalador,
+  que puede cerrar el juego enseguida).
+- **Una sola ventana dueña de la cuenta.** Al cargar, la app toma un
+  candado exclusivo sobre `ecos.lock` (lo suelta el sistema al cerrarse
+  el proceso). Una segunda ventana (doble clic, el instalador que abre
+  el juego mientras ya estaba abierto, un proceso colgado) **no escribe
+  nada** y el título avisa: `Ecos del Tiempo ya está abierto en otra
+  ventana: esta no guarda nada para no pisar tu progreso…`. Sin esto,
+  cada ventana pisaba lo de la otra con su copia vieja de la cuenta.
+- Pruebas: `test/features/characters/progress_everywhere_test.dart`
+  (solo / host / cliente por loopback: XP, nivel, compras y materiales
+  siguen al reabrir desde disco; lo ganado solo viaja a la sala; el
+  cableado de LAN y P2P usa una sola cuenta),
+  `test/features/lobby/title_client_save_test.dart` (título → sala como
+  cliente → título → solo) y `save_hardening_test.dart`.
+
+**Bug de v0.4 ("a un amigo no se le guardaba el progreso").** Jugó como
+cliente en la sala del dueño; después, solo, el personaje no tenía lo
+jugado en grupo. El camino del cliente en sí guarda bien (las pruebas de
+arriba pasan contra el código de v0.4.0, que en esa parte no cambió);
+no hay forma de reproducirlo dentro del juego, así que las causas
+probables son lo que v0.4 no cubría: (1) dos ventanas del juego abiertas a la vez,
+cada una con su copia de la cuenta (la que se usó para jugar solo pisaba
+lo que había guardado la del grupo), (2) una carga fallida (archivo
+trabado) que dejaba esa ejecución sin guardar nada con solo un aviso en
+el título que en una partida en red nadie mira, y (3) escrituras
+fallidas tragadas en silencio sin reintento (`_lastSaved` se marcaba
+antes de escribir) más la ventana cerrada sin guardar lo pendiente.
+
+### 1.5 Registro `ecos.log`
+
+En la carpeta de datos (`%APPDATA%\EcosDelTiempo\ecos.log`): una línea
+por evento con fecha (`INFO` / `ERROR`): inicio del juego, cuenta
+cargada (cuántos personajes, si se migró), avisos de carga, otra ventana
+con la cuenta, cada guardado fallido (y cuándo se pudo de nuevo),
+guardados al salir que fallaron o se pasaron de tiempo. Pasados 256 KB
+el archivo pasa a `ecos.log.1` (se pisa el anterior) y se empieza otro.
+Nunca rompe el juego. Si un jugador dice que perdió progreso, pedirle
+`ecos.log`, `ecos.log.1`, `account.json` y cualquier
+`account.corrupt-*.json`.
+
 ## 2. Selección de personaje (pantalla de título)
 
 Reemplaza al editor de nombre + clase de un solo perfil; mismo estilo
@@ -97,7 +182,10 @@ Reemplaza al editor de nombre + clase de un solo perfil; mismo estilo
   sprite `idle` de su clase, nombre, `Clase · Nv N`, `Zona N` (la más
   alta desbloqueada) y `Jugado: DD/MM/AAAA` (o `Nunca jugado`). El
   elegido tiene borde dorado. Clic = elegirlo (se guarda); doble clic =
-  jugar. Si hay lugar, una tarjeta `+ NUEVO PERSONAJE`.
+  jugar. Si hay lugar, una tarjeta `+ NUEVO PERSONAJE`. Cada dato va en
+  **una línea** (se corta con "…", sin interlineado fijo): con texto
+  Grande / Muy grande la tarjeta no se parte en palabras sueltas; su
+  ancho crece con el texto hasta 300 px (siempre 4 por fila a 1280).
 - Botones: `> JUGAR` (con el elegido), `CREAR PERSONAJE`
   (deshabilitado con `Máximo 8 personajes` si está lleno), `RENOMBRAR`,
   `BORRAR` y `ALIJO`.

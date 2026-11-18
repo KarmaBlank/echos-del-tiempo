@@ -30,18 +30,31 @@ class PassiveNode {
   });
 }
 
-/// Un camino temático del árbol v2 (docs/specs/passive_tree_v2.md § 2).
+/// Un cluster temático del árbol (v3: docs/specs/passive_tree_v3.md § 2;
+/// en la v2 eran caminos rectos).
 class PassivePath {
   final String id;
   final String name;
   final String theme;
+
+  /// Clase dueña; en un puente, las dos (`guerrero+maga`); en un cluster
+  /// de grupo, `grupo`.
   final String classId;
+
+  /// `clase`, `puente` o `grupo` (v3).
+  final String kind;
+
+  /// Dónde va su etiqueta en el dibujo (unidades de árbol).
+  final double labelX, labelY;
 
   const PassivePath({
     required this.id,
     required this.name,
     required this.theme,
     required this.classId,
+    this.kind = 'clase',
+    this.labelX = 0,
+    this.labelY = 0,
   });
 }
 

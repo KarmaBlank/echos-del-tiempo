@@ -5,12 +5,12 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
+import '../../../app/widgets/menu_widgets.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../inventory/domain/item_text.dart';
-import '../../inventory/presentation/item_widgets.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
 import '../domain/endgame_text.dart';
@@ -18,14 +18,9 @@ import 'atlas_view.dart';
 
 /// Pestañas del Portal del Eco.
 enum EcoPortalTab {
-  ecos(
-      'ECOS',
-      'Elegí un Eco de tu inventario: ABRIR lo propone al grupo. '
-          'Los materiales cambian sus modificadores, rareza y tier.'),
-  atlas(
-      'ATLAS',
-      'Árbol de toda la cuenta: tomá nodos con los puntos que '
-          'ganás la primera vez que completás un tier, una zona o un jefe.');
+  ecos('ECOS', 'Elegí un Eco: ABRIR lo propone al grupo; los materiales lo mejoran.'),
+  atlas('ATLAS',
+      'Árbol de la cuenta: ganás puntos al completar algo por primera vez.');
 
   const EcoPortalTab(this.label, this.hint);
   final String label;
@@ -138,16 +133,14 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
             'No tenés Ecos. Caen de enemigos de nivel 45 o más (zonas 9 y '
             '10) y al completar otros Ecos.')),
       for (final e in ecos)
-        PanelListItem(
+        MenuRow(
+          wrap: true,
           key: ValueKey('eco-row-${e.uid}'),
           selected: e.uid == sel?.uid,
           onTap: () => setState(() => _sel = e.uid),
-          trailing:
-              ItemCell(rules: rules, content: CellContent.eco(e), size: 36),
-          child: ProtoText('${ecoNameMarkup(rules, e)}<br><small>'
-              '${protoEsc(rules.ecos.zoneOf(e)?.name ?? '?')} · '
-              '${protoEsc(rules.ecos.bossName(e))} · '
-              '${e.mods.length} mod${e.mods.length == 1 ? '' : 's'}</small>'),
+          label: ecoNameMarkup(rules, e),
+          value: protoColor(
+              ProtoColors.dim, protoEsc(rules.ecos.zoneOf(e)?.name ?? '?')),
         ),
       if (dev) ...[
         const SizedBox(height: 8),
@@ -160,18 +153,43 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
       ],
     ];
     final e = sel;
+    if (e != null) {
+      // Mejoras del Eco elegido, debajo de la lista (se ven sin bajar): una
+      // fila por material con el costo y, si no se puede, el motivo.
+      list.addAll([
+        const SizedBox(height: 8),
+        MenuHeader('MEJORAR ${protoColor(ProtoColors.dim, '· tienes '
+            'Esquirla ${p.material(CraftMaterial.esquirla)}'
+            ' · Cristal ${p.material(CraftMaterial.cristal)}'
+            ' · Prisma ${p.material(CraftMaterial.prisma)}'
+            ' · Ancla ${p.material(CraftMaterial.ancla)}')}'),
+        for (final op in EcoCraftOp.values)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Row(
+              children: [
+                Expanded(
+                  // Sin cortar: si no entra, pasa a 2 líneas.
+                  child: ProtoText(ecoCraftRowMarkup(e, op)),
+                ),
+                const SizedBox(width: 8),
+                PanelButton('USAR',
+                    key: ValueKey('eco-craft-${op.name}'),
+                    reason: ecoCraftBlocked(s, view.localId, p, e, op),
+                    onPressed: () => setState(() => c.ecoCraft(e.uid, op))),
+              ],
+            ),
+          ),
+      ]);
+    }
     return PanelSplit(
-      listWidth: 380,
+      listWidth: 440,
       list: list,
       detail: PanelDetail(
         footer: e == null
             ? const []
             : [
-                for (final op in EcoCraftOp.values)
-                  PanelButton(ecoCraftLabel(e, op),
-                      key: ValueKey('eco-craft-${op.name}'),
-                      reason: ecoCraftBlocked(s, view.localId, p, e, op),
-                      onPressed: () => setState(() => c.ecoCraft(e.uid, op))),
+                const KeyHints(confirm: 'Elegir', back: 'Cerrar'),
                 PanelButton('ABRIR ECO',
                     key: const ValueKey('eco-open'),
                     accent: ProtoColors.green,
@@ -189,13 +207,6 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
                     key: const ValueKey('eco-detail'),
                     ecoTooltipMarkup(rules, e,
                         atlas: atlasFx, players: s.players.length)),
-                const SizedBox(height: 8),
-                ProtoText(protoColor(
-                    ProtoColors.dim,
-                    'Materiales: Esquirla ${p.material(CraftMaterial.esquirla)}'
-                    ' · Cristal ${p.material(CraftMaterial.cristal)}'
-                    ' · Prisma ${p.material(CraftMaterial.prisma)}'
-                    ' · Ancla ${p.material(CraftMaterial.ancla)}')),
               ],
       ),
     );

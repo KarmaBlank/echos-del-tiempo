@@ -44,6 +44,38 @@ enum ProcTrigger {
 
   /// Condición siempre cierta (modificadores fijos de pasivas de arma).
   always,
+
+  // ---- ascensión (docs/specs/ascension.md § 3.1) ----
+
+  /// Un golpe primario tuyo retrasó a un enemigo.
+  onDelayApplied,
+
+  /// Usaste tu ULT (después de resolverla).
+  onUltimate,
+
+  /// Cualquier aliado quebró a un enemigo (el dueño está vivo).
+  onBreak,
+
+  /// Cayó un aliado (el dueño está vivo).
+  onAllyDown,
+
+  /// Saltó una trampa tuya.
+  onTrap,
+
+  /// Condición para TODO el grupo mientras el dueño esté en pie.
+  partyAura,
+
+  /// Condición que escala con la vida que le falta al dueño.
+  whileMissingHealth,
+
+  /// Condición: el objetivo tiene `minStacks`+ estados elementales
+  /// distintos (Quemadura, Congelación, Veneno).
+  vsElements,
+
+  // ---- árbol v3 (docs/specs/passive_tree_v3.md § 9) ----
+
+  /// Condición: el objetivo está quebrado.
+  vsBroken,
 }
 
 /// Filtro extra sobre la acción o el golpe que disparó la mecánica.
@@ -68,6 +100,12 @@ enum ProcFilter {
 
   /// Provocar, Protección o Escudo de Fe.
   guardSkill,
+
+  /// La vida del dueño está por debajo de `threshold`.
+  belowThreshold,
+
+  /// Habilidad o ULT con efecto de grupo (gritos, escudos, adelantos).
+  rallySkill,
 }
 
 /// Qué hace una mecánica. El motor tiene código por tipo de efecto, no
@@ -109,6 +147,24 @@ enum ProcEffectKind {
   /// Pasivas de arma: modificador de condición, +`value` (fracción) al
   /// llenado de la barra de quiebre.
   breakBonus,
+
+  // ---- ascensión (docs/specs/ascension.md § 3.1) ----
+  buffParty,
+  shieldParty,
+  shieldLowestAlly,
+  healParty,
+  advanceAlly,
+  advanceParty,
+  ultChargeParty,
+  drainUlt,
+  execute,
+  plantTrap,
+  burst,
+  spreadAll,
+  addElement,
+
+  /// Modificador: el primer golpe mortal deja en 1 HP (1 vez por batalla).
+  cheatDeath,
 }
 
 /// Stat que toca un efecto con duración o un modificador.
@@ -125,7 +181,30 @@ enum BuffStat {
   shield('escudo'),
 
   /// Aturdimiento extendido (Martillo Bendito).
-  stunLock('aturdido +1');
+  stunLock('aturdido +1'),
+
+  // ---- ascensión (docs/specs/ascension.md § 3.1) ----
+  lifeSteal('robo de vida'),
+
+  /// Daño recibido − (Estandarte, Bandera Firme).
+  guard('defensa'),
+  critMulti('multiplicador de crítico'),
+  delayPower('retraso'),
+  buffPower('poder de buffs'),
+  buffTurns('duración de buffs'),
+  trapPower('daño de trampas'),
+  trapTurns('turnos de trampas'),
+  shieldPower('escudos'),
+  shieldReflect('reflejo de escudo'),
+  holyPower('Sagrado'),
+  shareDamage('daño compartido'),
+
+  /// Trampa puesta en un enemigo (valor = daño).
+  trap('trampa'),
+
+  /// Disparo cargado de un jugador (valor = daño; `ownerId` = objetivo).
+  /// Cae al empezar su próximo turno (combat.md § "Variantes").
+  charge('disparo cargado');
 
   const BuffStat(this.label);
   final String label;
@@ -155,7 +234,11 @@ class ProcEffect {
         ProcEffectKind.holyDamage ||
         ProcEffectKind.shieldHealed ||
         ProcEffectKind.extraStacks ||
-        ProcEffectKind.inflict =>
+        ProcEffectKind.inflict ||
+        ProcEffectKind.execute ||
+        ProcEffectKind.plantTrap ||
+        ProcEffectKind.drainUlt ||
+        ProcEffectKind.addElement =>
           true,
         _ => false,
       };
@@ -201,7 +284,11 @@ class PassiveMechanic {
       trigger == ProcTrigger.whileLowHealth ||
       trigger == ProcTrigger.vsStatus ||
       trigger == ProcTrigger.vsMarked ||
-      trigger == ProcTrigger.always;
+      trigger == ProcTrigger.always ||
+      trigger == ProcTrigger.partyAura ||
+      trigger == ProcTrigger.whileMissingHealth ||
+      trigger == ProcTrigger.vsElements ||
+      trigger == ProcTrigger.vsBroken;
 }
 
 /// Un efecto con duración sobre un combatiente (buff, debuff, marca,

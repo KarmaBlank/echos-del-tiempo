@@ -266,6 +266,22 @@ abstract final class Sfx {
   static const anvil = 'proc.anvil';
   static const wind = 'proc.wind';
 
+  // ---- ascensión (docs/specs/ascension.md § 1.1 y § 5) ----
+  /// Cinemática: la luz que converge en el personaje.
+  static const ascBuild = 'asc.build';
+
+  /// Cinemática: el destello de la transformación.
+  static const ascReveal = 'asc.reveal';
+
+  /// Púas de la Prueba del Tiempo (sobre el jugador local).
+  static const trapSpike = 'trap.spike';
+
+  /// Pulso del Tiempo que devuelve al inicio del piso.
+  static const trapPulse = 'trap.pulse';
+
+  /// Trampa del Trampero que salta en batalla.
+  static const trapSpring = 'proc.trap';
+
   /// Eco Arcano: la firma de la habilidad [skillId] con eco.
   static String echo(String skillId) => 'echo.$skillId';
 
@@ -359,4 +375,5 @@ final Map<String, SfxDef> kSfxCatalog = {
   for (final e in kLegacyTones.entries)
     e.key: SfxDef(e.value, peak: _legacyPeak[e.key]),
   ...buildCombatSfx(),
+  ...buildAscensionSfx(),
 };

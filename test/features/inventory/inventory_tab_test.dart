@@ -108,6 +108,16 @@ void main() {
     expect(g.equip(lv1, 'e1'), 'Nivel 2');
     expect(ShopGuards(progression, SessionMode.field).equip(me(), 'e1'),
         ShopGuards.notShopping);
+    // Desarmar / vender / limpiar: también en la aventura, no en batalla.
+    final field = ShopGuards(progression, SessionMode.field);
+    expect(field.craft(me(), const CraftAction(CraftOp.salvage, 'c1')),
+        isNot(ShopGuards.notDiscarding));
+    expect(
+        ShopGuards(progression, SessionMode.battle)
+            .craft(me(), const CraftAction(CraftOp.salvage, 'c1')),
+        ShopGuards.notDiscarding);
+    expect(field.craft(me(), const CraftAction.reforge('c1', 'espada_ignea')),
+        ShopGuards.notShopping);
   });
 
   testWidgets('tirar: pide confirmación; dar: deshabilitado solo', (tester) async {

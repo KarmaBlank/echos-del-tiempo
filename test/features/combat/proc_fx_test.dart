@@ -468,7 +468,14 @@ void main() {
   });
 
   test('todos los nombres de las mecánicas con evento tienen cartel', () {
-    expect(kKeystoneMechanics, {'danza', 'almaHielo', 'cadena', 'egida'});
+    // Las 4 keystones con mecánica de la v2 + las 8 de la v3
+    // (passive_tree_v3.md § 6).
+    expect(kKeystoneMechanics, {
+      'danza', 'almaHielo', 'cadena', 'egida', //
+      'demoledor', 'caudillo', 'bucle', 'singularidad', 'diluvio',
+      'depredador', 'solInterior', 'inamovible',
+    });
+    expect(procTagColor('inamovible'), procKeystoneColor);
     expect(procName('corteCadena'), 'Corte en Cadena');
     expect(procTagColor('rebote'), procNotableColor);
     expect(procTagColor('danza'), procKeystoneColor);

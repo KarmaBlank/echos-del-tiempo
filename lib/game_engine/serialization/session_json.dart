@@ -1,6 +1,7 @@
 import 'dart:collection';
 
 import '../data/game_catalog.dart';
+import '../models/ascension.dart';
 import '../models/attributes.dart';
 import '../models/battle_state.dart';
 import '../models/eco.dart';
@@ -53,6 +54,8 @@ class SessionJson {
         if (s.eco != null) 'eco': s.eco!.toJson(),
         if (s.ecoOwner != null) 'ecoBy': s.ecoOwner,
         if (s.atlas.isNotEmpty) 'atlas': s.atlas,
+        // Ascensión v0.5 (ascension.md § 6): opcional.
+        if (s.trial != null) 'trial': s.trial,
       };
 
   GameSession fromJson(Json j) {
@@ -85,6 +88,7 @@ class SessionJson {
               (throw FormatException('JSON inválido: eco', j['eco'])),
       ecoOwner: j.strOrNull('ecoBy'),
       atlas: j['atlas'] == null ? null : j.strings('atlas'),
+      trial: j.intOrNull('trial'),
     );
   }
 
@@ -505,6 +509,8 @@ class SessionJson {
         if (c.regenPerTurn != 0) 'rgn': c.regenPerTurn,
         if (c.statusResist != 0) 'sres': c.statusResist,
         if (c.healReceived != 0) 'hrec': c.healReceived,
+        // Ascensión (opcional): mecánicas de 1 vez por batalla ya usadas.
+        if (c.once.isNotEmpty) 'once': c.once.toList(),
       };
 
   Json timedEffectToJson(TimedEffect e) => {
@@ -599,6 +605,7 @@ class SessionJson {
       regenPerTurn: j.dblOrNull('rgn') ?? 0,
       statusResist: j.intOrNull('sres') ?? 0,
       healReceived: j.dblOrNull('hrec') ?? 0,
+      once: j['once'] == null ? {} : j.strings('once').toSet(),
     );
   }
 
@@ -614,6 +621,7 @@ class SessionJson {
         'tree': b.passiveProgress.takenNodeIds,
         'bdef': b.bonusDefense,
         if (b.item != null) 'item': b.item!.toJson(),
+        if (!b.ascension.isEmpty) 'asc': b.ascension.toJson(),
       };
 
   PlayerBuild buildFromJson(Json j) {
@@ -644,6 +652,7 @@ class SessionJson {
           : ItemInstance.fromJson(j['item']) ??
               (throw FormatException('JSON inválido: arma', j['item'])),
       bonusDefense: j.integer('bdef'),
+      ascension: AscensionProgress.fromJson(j['asc']),
     );
   }
 }

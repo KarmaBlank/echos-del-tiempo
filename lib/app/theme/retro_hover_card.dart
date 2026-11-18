@@ -1,15 +1,29 @@
 import 'package:material_ui/material_ui.dart';
 
-import 'panel_frame.dart';
 import 'proto_colors.dart';
+import 'proto_markup.dart';
 import 'retro_theme.dart';
 
-/// Tooltip con widgets (no solo texto): la caja del `#tip`
-/// ([RetroTooltip]) con lo que arme [builder], al lado de [child] mientras
-/// el mouse está encima. Se pone a la derecha del objetivo (si no entra,
-/// a la izquierda) y se corre hacia adentro para no salirse nunca de la
-/// pantalla (margen [margin]). No toma el mouse. Ver docs/specs/panels.md
-/// § "Comparar armas".
+/// Dónde aparece la caja respecto de lo que se señala.
+enum RetroTipPlacement {
+  /// A la derecha (si no entra, a la izquierda), alineada arriba. Fichas
+  /// grandes (comparación de armas).
+  side,
+
+  /// Debajo y centrada (si no entra, arriba), como el `#tip` del
+  /// prototipo y el `Tooltip` de Flutter.
+  below,
+}
+
+/// Caja del `#tip` (docs/specs/ui_style.md § "Tooltips") con lo que arme
+/// [builder], al lado de [child] mientras el mouse está encima. No toma
+/// el mouse; un clic la esconde.
+///
+/// Nunca se sale de la pantalla (margen [margin]): se corre hacia adentro
+/// y, si es más alta que la pantalla, primero el texto se reparte en
+/// columnas ([RetroTipText]) y, como último recurso, se achica lo justo
+/// para entrar (sin recortar nada). Ver docs/specs/panels.md § "Comparar
+/// armas".
 class RetroHoverCard extends StatefulWidget {
   const RetroHoverCard({
     super.key,
@@ -17,6 +31,7 @@ class RetroHoverCard extends StatefulWidget {
     required this.child,
     this.gap = 8,
     this.margin = 8,
+    this.placement = RetroTipPlacement.side,
   });
 
   /// Contenido; se arma recién al mostrarse.
@@ -24,6 +39,22 @@ class RetroHoverCard extends StatefulWidget {
   final Widget child;
   final double gap;
   final double margin;
+  final RetroTipPlacement placement;
+
+  /// Texto del `#tip`: lectura ([RetroType.small], VT323) `#e8ecff`.
+  static TextStyle get textStyle => TextStyle(
+      fontFamily: RetroType.bodyFamily,
+      fontFamilyFallback: RetroType.bodyFallback,
+      fontSize: RetroType.small,
+      height: RetroType.line,
+      color: ProtoColors.ink);
+
+  /// Ancho máximo del texto de un tip en Normal (~45 letras de VT323);
+  /// crece con el tamaño del texto ([RetroType.width]).
+  static const textWidth = 360.0;
+
+  /// Padding interno de la caja (8 × 10 del `#tip`) + borde.
+  static const padding = EdgeInsets.symmetric(horizontal: 10, vertical: 8);
 
   @override
   State<RetroHoverCard> createState() => _RetroHoverCardState();
@@ -60,7 +91,8 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
         return Positioned.fill(
           child: IgnorePointer(
             child: CustomSingleChildLayout(
-              delegate: _HoverLayout(rect, widget.gap, widget.margin),
+              delegate: _HoverLayout(rect, widget.gap, widget.margin,
+                  widget.placement, MediaQuery.devicePixelRatioOf(ctx)),
               child: _box(ctx),
             ),
           ),
@@ -79,7 +111,7 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
   }
 
   Widget _box(BuildContext ctx) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: RetroHoverCard.padding,
         decoration: BoxDecoration(
           color: ProtoColors.bg.withValues(alpha: 0xF5 / 0xFF),
           border: Border.all(
@@ -91,24 +123,94 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
         ),
         // El overlay no hereda el estilo de texto del panel.
         child: DefaultTextStyle(
-          style: RetroTooltip.textStyle,
-          // Si no entrara en la pantalla se recorta (sin franjas de overflow).
-          child: SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
-            child: Builder(builder: widget.builder),
+          style: RetroHoverCard.textStyle,
+          child: LayoutBuilder(
+            builder: (context, c) => FittedBox(
+              // Último recurso: si ni en columnas entra, se achica.
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.topLeft,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: c.maxWidth),
+                child: RetroTipBounds(
+                  maxHeight: c.maxHeight,
+                  child: Builder(builder: widget.builder),
+                ),
+              ),
+            ),
           ),
         ),
       );
 }
 
-/// Al lado de [target] (derecha, si no entra izquierda), dentro de la
-/// pantalla con [margin].
+/// Alto disponible dentro de la caja de un tip (la pantalla menos los
+/// márgenes y el padding), para que el contenido se reparta en columnas.
+class RetroTipBounds extends InheritedWidget {
+  const RetroTipBounds(
+      {super.key, required this.maxHeight, required super.child});
+
+  final double maxHeight;
+
+  static double? maxHeightOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<RetroTipBounds>()?.maxHeight;
+
+  @override
+  bool updateShouldNotify(RetroTipBounds old) => old.maxHeight != maxHeight;
+}
+
+/// Texto de un tip (markup, `ProtoMarkup`) de ancho máximo [maxWidth]
+/// (ya agrandado por el tamaño del texto). Si no entra en el alto de la
+/// pantalla se reparte en columnas, cortando en los `<br>`.
+class RetroTipText extends StatelessWidget {
+  const RetroTipText(this.markup, {super.key, required this.maxWidth});
+
+  final String markup;
+  final double maxWidth;
+
+  /// Separación entre columnas.
+  static const columnGap = 16.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final maxH = RetroTipBounds.maxHeightOf(context);
+    final text = ProtoText(markup);
+    if (maxH == null || !maxH.isFinite) {
+      return ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth), child: text);
+    }
+    final lines = protoSplitLines(markup);
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxH),
+      child: Wrap(
+        direction: Axis.vertical,
+        runSpacing: columnGap,
+        children: [
+          for (final l in lines)
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: ProtoText(l),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Al lado de [target] ([RetroTipPlacement.side]: derecha, si no entra
+/// izquierda; [RetroTipPlacement.below]: debajo centrada, si no entra
+/// arriba), siempre dentro de la pantalla con [margin].
 class _HoverLayout extends SingleChildLayoutDelegate {
-  _HoverLayout(this.target, this.gap, this.margin);
+  _HoverLayout(this.target, this.gap, this.margin, this.placement, this.dpr);
 
   final Rect target;
   final double gap;
   final double margin;
+  final RetroTipPlacement placement;
+
+  /// Para caer en px físicos enteros: la fuente pixel se ve nítida solo
+  /// si el texto arranca en un píxel entero.
+  final double dpr;
+
+  double _px(double v) => (v * dpr).roundToDouble() / dpr;
 
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
@@ -119,18 +221,37 @@ class _HoverLayout extends SingleChildLayoutDelegate {
 
   @override
   Offset getPositionForChild(Size size, Size child) {
-    var x = target.right + gap;
-    if (x + child.width > size.width - margin) {
-      x = target.left - gap - child.width;
-    }
     final maxX =
         (size.width - margin - child.width).clamp(margin, double.infinity);
     final maxY =
         (size.height - margin - child.height).clamp(margin, double.infinity);
-    return Offset(x.clamp(margin, maxX), target.top.clamp(margin, maxY));
+    double x, y;
+    switch (placement) {
+      case RetroTipPlacement.side:
+        x = target.right + gap;
+        if (x + child.width > size.width - margin) {
+          x = target.left - gap - child.width;
+        }
+        y = target.top;
+      case RetroTipPlacement.below:
+        x = target.center.dx - child.width / 2;
+        y = target.bottom + gap;
+        if (y + child.height > size.height - margin) {
+          final above = target.top - gap - child.height;
+          // Arriba si entra; si no, del lado con más lugar (y se corre).
+          y = above >= margin || target.top > size.height - target.bottom
+              ? above
+              : y;
+        }
+    }
+    return Offset(_px(x.clamp(margin, maxX)), _px(y.clamp(margin, maxY)));
   }
 
   @override
   bool shouldRelayout(_HoverLayout old) =>
-      old.target != target || old.gap != gap || old.margin != margin;
+      old.target != target ||
+      old.gap != gap ||
+      old.margin != margin ||
+      old.placement != placement ||
+      old.dpr != dpr;
 }

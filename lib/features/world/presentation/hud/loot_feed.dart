@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/theme/retro_text.dart';
+import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/item.dart';
 import '../../../../game_engine/models/loot.dart';
 import '../../../../game_engine/models/loot_filter.dart';
@@ -288,8 +289,7 @@ class LootToasts extends StatefulWidget {
   State<LootToasts> createState() => _LootToastsState();
 }
 
-class _LootToastsState extends State<LootToasts>
-    with _FeedTicker<LootToasts> {
+class _LootToastsState extends State<LootToasts> with _FeedTicker<LootToasts> {
   @override
   LootFeed get feed => widget.feed;
 
@@ -368,7 +368,9 @@ class LootToastBox extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(retroText(toast.title),
                   style: TextStyle(
-                      fontSize: 8,
+                      fontFamily: RetroType.bodyFamily,
+                      fontFamilyFallback: RetroType.bodyFallback,
+                      fontSize: RetroType.small,
                       color: toast.legendary
                           ? const Color(0xFFFF8C28)
                           : const Color(0xFFDFE6E9))),

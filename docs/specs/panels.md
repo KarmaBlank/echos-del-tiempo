@@ -153,6 +153,19 @@ por misión (`MissionCard`, borde `panelBorder`):
   `ProposeMissionAction`, cierra el panel); deshabilitado con el motivo
   `Ya hay una votación`.
 
+**Lista + detalle (v0.5)**: el mostrador ya no apila tarjetas (con 10
+zonas había que bajar mucho). Izquierda (`PanelSplit`, 340 px): una fila
+de una línea por zona / misión (`mission-<id>`, `MenuRow`): rango en
+`amber`, `N · <zona>` (o el nombre de la misión) y a la derecha `Lv N`
+(verde, rojo si estás por debajo) o `Bloqueada` (fila en `dim`); las
+"Próximamente" siguen como línea gris (`zone-soon-<N>`). Por defecto la
+última zona abierta. Derecha: la `MissionCard` de la elegida
+(`mission-card-<id>`, sin botón) y abajo `Enter Elegir · Esc Cerrar` y
+el único `PROPONER` (`propose-<id>` de la elegida, con el motivo
+`Bloqueada` / `Ya hay una votación`). Línea: `Propón una zona: cuando
+todos votan SÍ, a prepararse.` (lo de las puertas del mapa pasó al
+`[?]`).
+
 **Desvío** (un propósito por pantalla): el cambio de clase sale del
 mostrador; queda en Personaje › Atributos.
 
@@ -225,18 +238,19 @@ instancias (`ItemInstance`, por `uid`) y ya no filtra por clase. Lo que
 sigue reemplaza a las subsecciones viejas de COMPRAR, FORJA y FUSIÓN
 donde difieren (esas quedan como referencia del prototipo).
 
-- **COMPRAR** (`Bases Comunes por nivel. Cualquier clase puede equiparlas
-  si cumple nivel y requisitos.`): filtro por familia arriba de la lista
-  (`buy-family-<familia>`: TODAS / una por clase; por defecto la tuya),
-  bases con precio > 0 ordenadas por nivel (`shop-row-<id>`): nombre,
-  `Nv L · tipo`, y a la derecha `TIENES`, o `OK` verde (cumple nivel y
-  requisitos) / `Req` rojo y el precio. Detalle: la ficha del arma Común
-  (§ "Ficha de objeto"), `Si la equipas:` ATQ / MAG / VEL / CRÍT / DEF
-  antes → después, `CostLine` y `COMPRAR $precio`.
-- **FORJA** (`Sube 1 nivel una estadística (máx 5 c/u) hasta el tope de
-  la rareza. Cada 2 niveles de forja, la pasiva del arma sube 1.`):
-  lista de tus armas (`forge-row-<uid>`) con el nombre en el color de la
-  rareza y `forja n/tope`. Detalle: nombre, `Forja n/tope` con
+- **COMPRAR** (`Armas base por nivel; cualquier clase las equipa si
+  cumple los requisitos.`): selector `Familia ‹ GUERRERO ›`
+  (`ChoiceCycler`, `buy-family-prev` / `-next` / `-value`: TODAS / una
+  por clase; por defecto la tuya), bases con precio > 0 ordenadas por
+  nivel (`shop-row-<id>`, `MenuRow` de una línea): nombre y tipo (`dim`)
+  y a la derecha `Nv L` y `TIENES`, o `Req` rojo (si no cumple) y el
+  precio. Detalle: primero `Si la equipas:` ATQ / MAG / VEL / CRÍT /
+  DEF antes → después, después la ficha del arma Común (§ "Ficha de
+  objeto"); abajo `CostLine` y `COMPRAR $precio`.
+- **FORJA** (`Sube una estadística del arma; cada 2 niveles sube su
+  pasiva.`): lista de tus armas (`forge-row-<uid>`, una línea) con el
+  nombre en el color de la rareza y a la derecha `forja n/tope` (o
+  `EQUIPADA`). Detalle: nombre, `Forja n/tope` con
   `LevelPips` (tantos cuadritos como el tope de la rareza: Común 3 …
   Legendario 10, `Rarity.forgeCap`), la pasiva actual y **cuándo sube**
   (`Sube a <nombre nivel> en la próxima mejora` / `en N mejoras`, o
@@ -390,6 +404,77 @@ queda en el paso 3 y confirma de nuevo.
   los mods nuevos (`craft-last`) y se queda en el paso 3.
 
 Tests: `test/features/inventory/craft_bench_test.dart`.
+
+### FUSIÓN (v0.5: sin bajar para elegir)
+
+Pedido del dueño: "mucho texto y tenés que bajar para ver qué habilidad
+elegir". Mismo asistente de 3 pasos y mismas reglas / motivos
+(`ShopGuards`); cambia la presentación (ui_style.md § "Menús: lista +
+detalle"). Donde difiere de la sección v0.2.0, manda esta:
+
+- **Arriba**: la línea de la pestaña (`Elige arma, acción y confirma: ves
+  el resultado antes de pagar.`) y en una fila las migas
+  (`StepCrumbs`, `bench-crumb-<0|1|2>`) con los materiales a la derecha
+  (`Esquirla x2 · Cristal x1 · Prisma x0 · Ancla x0`, `craft-materials`,
+  tooltip igual). Sin líneas `Paso N de 3`. El arma y la acción elegidas
+  (`bench-summary`) van arriba del detalle de los pasos 2 y 3.
+- **Paso 1**: filas de una línea (`bench-weapon-<uid>`): nombre en color
+  de rareza y a la derecha `EQUIPADA` o `<rareza> · Nv N`. Clic en otra
+  fila la elige; clic en la ya elegida (o `Enter` con la mesa enfocada, o
+  `ELEGIR ›` `bench-next`) pasa al paso 2.
+- **Tarjetas (v0.5, pedido del dueño: "separaciones bien bien de cada
+  acción")**. Piezas en `lib/app/widgets/`: `SectionPanel` (sección
+  enmarcada con franja de ícono + título + explicación), `ActionCard`
+  (tarjeta con ícono pixel, título, 1-2 líneas, pie y hueco `badge` para
+  el `BuildFitBadge` del Build Planner; mouse/foco = se levanta 2 px con
+  borde `sky` y muestra el efecto; elegida = borde `gold`; bloqueada =
+  atenuada con candado), `CostChip` (moneda y materiales con su ícono, en
+  verde si alcanza y rojo si no; `blocked` = candado + motivo completo),
+  `PixelIcon` (íconos 8×8 pintados: dado, +, gema, flecha, estrella,
+  tacho, yunque, candado, moneda, espada, esquirla, prisma, ancla, ✓),
+  `CardGrid` y `ConfirmButton`.
+- **Paso 1**: grilla de tarjetas de arma (`bench-weapon-<uid>`): franja
+  del color de la rareza con su letra, espada pixel del mismo color,
+  nombre, `<rareza> · Nv N · Mods n/max`, `EQUIPADA`. A la derecha la
+  ficha y `ELEGIR ›`.
+- **Paso 2** (todo el ancho, panel de 1200 px): una `SectionPanel` por
+  grupo (`bench-group-<grupo>`: MEJORAR — cambia los mods de esta arma
+  (con materiales) · TRASLADAR — trae algo de otra arma (esa arma se
+  destruye) · QUITAR — saca un mod para hacer lugar · CAMBIAR — cambia la
+  base del arma) y una `ActionCard` por acción (`bench-op-<op>`): ícono
+  (dado, +, gema, flecha, esquirla, estrella, tacho, yunque), nombre,
+  `CraftOpText.short`, con el mouse el efecto (`Mods 4/6 → 5/6`) y el
+  pie (`bench-op-why-<op>`): `CostChip` con el costo de la elección por
+  defecto, `Se puede · eliges en el paso 3`, o candado + motivo
+  completo. Columnas: 3 a 1280 en Normal (MEJORAR │ TRASLADAR │ QUITAR +
+  CAMBIAR, entran las 8 sin bajar), 2 en Grande, 1 si no entran (con
+  scroll). Flechas mueven el foco entre tarjetas, `Enter` elige, `Esc`
+  vuelve.
+- **Paso 3**: a la izquierda la línea "qué hace" (`dim`) y solo las
+  elecciones de esa acción, en filas de una línea:
+  - traer: `¿De qué arma? (se destruye)` (`craft-source-<uid>`, a la
+    derecha `<rareza> · Nv N`) y, **justo debajo de la elegida** y con
+    sangría, sus mods / habilidades (`craft-pick-<i>`); la pasiva no
+    tiene sub-elección;
+  - quitar: `¿Qué mod quitar?` (`craft-pick-<i>`);
+  - reforjar: `¿Qué base nueva?`, `Familia ‹ TODAS ›` (`ChoiceCycler`,
+    `bench-family-prev` / `-next` / `-value`) y las bases
+    (`bench-base-<id>`: nombre y tipo, a la derecha `Nv N OK/Req`);
+  - mejorar: `AHORA` con la ficha.
+  El detalle: `Gastas` (`craft-cost`) y `Pierdes` (`craft-lost`) arriba,
+  `No se puede` (`craft-error`) y una tabla **ANTES │ DESPUÉS** de dos
+  columnas: Arma (`craft-name`), Base (`craft-base`, al reforjar),
+  Rareza, Pasiva (`craft-passive`), Habilidades (`craft-skills`, la
+  nueva en verde con ▲), Mods (`craft-mods-title` con `[?]`
+  `craft-tier-help`; lista `craft-mods` con `(nuevo)` / `(se quita)`;
+  `=` si no cambia) y ATQ / MAG / VEL / CRÍT / DEF / HP con ▲ / ▼;
+  `PUEDE SALIR` (`craft-outcomes`) en las al azar. Abajo `‹ OTRA ACCIÓN`
+  y el `ConfirmButton` grande (`craft-confirm`: ✓ + verbo + chip de
+  costo; deshabilitado con candado y `No se puede: <motivo>` arriba).
+  `Enter Confirmar · Esc Volver` va debajo de la lista.
+- **Teclado**: con el foco en la mesa (se toma al tocar una fila o
+  cambiar de paso) `Esc` vuelve un paso (en el paso 1 cierra el panel) y
+  `Enter` avanza / confirma si se puede.
 
 ### CONSUMIBLES (`itemsHtml`)
 
@@ -584,7 +669,9 @@ puntos.`
 - Izquierda: una fila por atributo (`STATN`): nombre, valor, `+n` verde
   pendiente, `-` / `+` (el `+` deshabilitado sin puntos, el `-` sin
   reparto) y `STATD` en `dim`. Debajo `Clase:` (cambio de clase, solo
-  lobby; **agregado del puerto**) y el kit de Paladín.
+  lobby; **agregado del puerto**) y, para el Paladín, sus rasgos de clase
+  (`Rasgos de Paladín`: 3% de aturdir, débil a perforante y a estados; su
+  kit clásico ahora es del Guardián).
 - Derecha, **vista previa** (`previewOf`): `HP`, `MP`, `VEL` (un
   decimal, con la fórmula `(6 + AGI×0.5 + DES×0.1 - peso arma)`), `ATQ`,
   `MAG`, `DEF` (`(-N% daño)`) y `CRÍT` (`%`, `(daño crítico ×1.5)` o `×2`
@@ -612,35 +699,44 @@ Armería.`
   (`equip-<id>`) con los motivos de la tabla (`Solo en preparación`,
   `Confirma puntos`, `Requisitos`) o `Es tu arma equipada`.
 
-### Árbol (v2, passive_tree_v2.md § 7)
+### Árbol (v3, passive_tree_v3.md § 13)
 
 - `Puntos de árbol disponibles: N` (`treePts`) y `REINICIAR ÁRBOL
   (GRATIS)` (`ResetTreeAction`; se muestra en todo modo salvo batalla
-  mientras `freeRespec`). La ayuda (arrastrar para mover, rueda para
+  mientras `freeRespec`). La ayuda (arrastrar para mover, rueda o +/− para
   zoom, clic para tomar) va en la línea "qué hace" de la pestaña
   (`PassiveTreeView(showHelp: false)`; sola, la vista la dibuja ella).
+- Barra: buscador (`tree-search`, resalta con aro celeste los nodos cuyo
+  nombre, cluster, tema, efectos o mecánica contienen el texto, sin
+  tildes ni mayúsculas, desde 2 letras; dice `N coincidencias` o `Sin
+  coincidencias`; `Enter` centra el visor en la primera) y botones `−`,
+  `+` (zoom ×1.25 sobre el centro), `TODO` (el árbol entero) y `MI CLASE`
+  (tu zona).
 - Visor de hasta 420 px de alto (`PassiveTreeView.height`: el panel lo
-  ajusta al alto libre, mínimo 240; ancho flexible) con el lienzo de 680 × 680
-  (30 px por unidad, centro 340) dentro de un `InteractiveViewer`
-  (arrastre, rueda, zoom 0.5×–2.5×). Arranca a escala `min(ancho, alto) /
-  544` (entre 0.6 y 1.2) y, si el árbol no entra, centrado hacia la zona
-  de tu clase.
+  ajusta al alto libre, mínimo 240; ancho flexible) con el lienzo de
+  1080 × 1080 (30 px por unidad, centro 540) dentro de un
+  `InteractiveViewer` (arrastre, rueda, zoom 0.3×–2.5×). Arranca en `MI
+  CLASE`: centrado a 7.5 unidades del centro hacia tu clase, a escala
+  `min(ancho, alto) / 510` (entre 0.5 y 1.2).
 - Dibujo: aro tenue del anillo central; enlaces de 2 px (`green` si los
-  dos extremos están tomados, dorado de 3 px si son del camino bajo el
-  mouse, si no `panel`); nombre de cada camino más allá de su keystone
-  (dorado si está resaltado). Nodos: chico círculo r 6, inicio y notable
-  r 9, keystone hexágono r 12; notables y keystones con borde dorado.
-  Relleno por estado: inicio `gold`, tomado `green` (keystone tomada
-  roja), disponible `sky`, bloqueado `#3a4570` (incluye el excluido por
-  la keystone opuesta). El camino bajo el mouse y el nodo enfocado llevan
-  anillo dorado.
-- Pasar el mouse: tooltip junto al nodo (nombre, `NOTABLE` / `KEYSTONE`
-  / `INICIO DE CLASE`, `Camino X: tema`, efectos con el texto completo de
-  la mecánica y el estado). Clic: lo selecciona y, si se puede tomar,
-  manda `TakeNodeAction`.
+  dos extremos están tomados; dorado de 4 px si son del **camino que
+  falta** hasta el nodo enfocado; dorado tenue si son del cluster bajo el
+  mouse; si no `panel`); nombre de cada cluster más allá de su keystone
+  (puentes y grupos en celeste). Nodos: chico círculo r 5, notable r 8,
+  inicio r 9, keystone hexágono r 11; notables y keystones con borde
+  dorado. Relleno por estado: inicio `gold`, tomado `green` (keystone
+  tomada roja), disponible `sky`, bloqueado `#3a4570` (incluye el
+  excluido por la keystone opuesta). Camino y nodo enfocado con anillo
+  dorado; coincidencias de búsqueda con anillo celeste.
+- Pasar el mouse: tooltip en la esquina del visor opuesta al nodo
+  (nombre, `NOTABLE` / `KEYSTONE` / `INICIO DE CLASE`, `Cluster X: tema`
+  / `Puente X` / `Grupo X`, efectos con el texto completo de la mecánica
+  —las keystones con su contra—, `Costo: N puntos` si no lo tenés, y el
+  estado). Clic: lo selecciona y, si se puede tomar, manda
+  `TakeNodeAction`.
 - Panel lateral (352 px): el nodo elegido (o el del mouse) con nombre,
-  tipo, camino, efectos, estado o el botón `TOMAR NODO` deshabilitado con
-  el motivo de la tabla, y la leyenda.
+  tipo, cluster, efectos, costo, estado o el botón `TOMAR NODO`
+  deshabilitado con el motivo de la tabla, y la leyenda.
 - El motor permite tomar nodos en cualquier modo salvo batalla; el
   prototipo solo en lobby/preparación (`ed`). El puerto sigue al motor
   (**desvío**): se pueden tomar al subir de nivel en una misión.
@@ -670,6 +766,19 @@ pestañas ECOS y ATLAS. Spec: docs/specs/ecos_atlas.md.
   elegido con `TOMAR` (o el motivo), la leyenda y `REINICIAR (gratis)`.
   Solo se edita en el pueblo. Un cliente ve la nota `En grupo vale el
   Atlas del anfitrión...`.
+- **v0.5 (lista + detalle)**: líneas cortas (`Elegí un Eco: ABRIR lo
+  propone al grupo; los materiales lo mejoran.` / `Árbol de la cuenta:
+  ganás puntos al completar algo por primera vez.`). ECOS: filas de una
+  línea (`eco-row-<uid>`: nombre + `T<n>`, a la derecha la zona; sin la
+  casilla). Debajo de la lista, `MEJORAR · tienes Esquirla n · ...` y
+  una fila por crafteo: `Mods nuevos 1 Esquirla` (`+1 mod`, `Rareza`,
+  `+1 tier`; `ecoCraftRowMarkup`) con `USAR` (`eco-craft-<op>`) y el
+  motivo al lado: se ven sin bajar. El detalle queda para la ficha y
+  `ABRIR ECO` (con `Enter Elegir · Esc Cerrar`). ATLAS: el lateral
+  crece con el texto (hasta 45 % de la pantalla) y muestra primero el
+  nodo elegido, después `Puntos libres · ganados`, la nota de grupo y
+  `[? Leyenda]` (tooltip `atlas-legend` con primeras veces, la leyenda
+  y las ramas); abajo `REINICIAR` y `TOMAR`.
 - Inventario: los Ecos se ven en la grilla (ícono de portal y `T<n>`
   abajo a la derecha); la ficha es la misma. Acciones: MOVER, DAR A,
   TIRAR (sin COMPARAR, EQUIPAR, DESARMAR ni VENDER).
@@ -677,6 +786,16 @@ pestañas ECOS y ATLAS. Spec: docs/specs/ecos_atlas.md.
   (`MAESTRÍA MÁX`); el título del panel de personaje la suma junto al
   nivel. Resultado de un Eco: `Eco T<n> · zona · jefe · Piso` y la línea
   turquesa con los puntos de Atlas ganados.
+
+## Pendiente v0.5.1 (pasada de UX de menús)
+
+Hecho en v0.5: FUSIÓN, ARMERÍA (COMPRAR / FORJA), Portal del Eco +
+Atlas, Estatua (PRUEBAS / ASCENSIÓN / mini-árbol), Mostrador, tarjetas
+de personaje del título, línea del alijo y el `%` de los volúmenes.
+Falta aplicar ui_style.md § "Menús: lista + detalle" a: resultado de
+misión, preparación, creador de clase, ajustes (las ayudas debajo de
+cada fila), pestaña ATRIBUTOS del personaje y el detalle del
+inventario.
 
 ## Fuera de alcance
 

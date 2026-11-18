@@ -3,7 +3,8 @@ import '../../../game_engine/models/passive_tree.dart';
 import '../../../game_engine/rules/passive_tree_rules.dart';
 
 /// Texto de cada keystone (`KEYS` del prototipo, líneas 344-351, más las
-/// 4 nuevas del árbol v2: passive_tree_v2.md § 4).
+/// 4 nuevas del árbol v2: passive_tree_v2.md § 4). Las de la v3 usan el
+/// texto de su mecánica (passive_tree_v3.md § 6).
 const Map<String, String> kKeystoneText = {
   'imparable':
       'Golpe Imparable: tu ataque básico golpea a TODOS los enemigos al 60% del daño.',
@@ -29,7 +30,40 @@ const Map<String, String> kKeystoneText = {
       'Égida Eterna: al empezar tu turno ganás un escudo del 10% de tu vida máx. (1 turno, no acumula), pero −20% ATQ y −20% MAG.',
 };
 
-String _pct(num v) => '${(v * 100).round()}%';
+/// `0.04` → `4%`, `0.015` → `1.5%`.
+String _pct(num v) {
+  final p = (v * 1000).round() / 10;
+  return p == p.roundToDouble() ? '${p.round()}%' : '$p%';
+}
+
+String? _mechanicLine(PassiveNode n) {
+  final m = kMechanics[n.mechanicId];
+  return m == null ? null : '${n.name}: ${m.description}';
+}
+
+/// Texto plano para el buscador del árbol: nombre, cluster, tema, efectos
+/// y mecánica, en minúsculas y sin tildes (passive_tree_v3.md § 13).
+String passiveSearchText(PassiveTreeCatalog catalog, PassiveNode n) {
+  final path = catalog.paths[n.pathId];
+  return foldSearch([
+    n.name,
+    if (path != null) path.name,
+    if (path != null) path.theme,
+    ...passiveEffectsText(n),
+  ].join(' '));
+}
+
+/// Minúsculas y sin tildes (para buscar "danza" o "DAÑO" igual).
+String foldSearch(String s) {
+  const from = 'áéíóúüñÁÉÍÓÚÜÑ';
+  const to = 'aeiouunAEIOUUN';
+  final b = StringBuffer();
+  for (final ch in s.split('')) {
+    final i = from.indexOf(ch);
+    b.write(i < 0 ? ch : to[i]);
+  }
+  return b.toString().toLowerCase();
+}
 
 /// `fxTxt` (líneas 353-356): una línea por efecto, en el orden del
 /// prototipo. Sin emojis (la fuente no los tiene).
@@ -54,7 +88,8 @@ List<String> passiveEffectsText(PassiveNode node) {
     if (f('poi') case final v?) '+$v stack de Veneno que apliques',
     if (f('frz') case final v?) '+$v stack de Congelación que apliques',
     if (node.keystoneId case final k?)
-      kKeystoneText[k] ?? k
+      // Keystones v3: el texto de su mecánica, que ya trae la contra.
+      kKeystoneText[k] ?? _mechanicLine(node) ?? k
     else if (node.mechanicId case final m?)
       kMechanics[m]?.description ?? m,
   ];
