@@ -141,7 +141,8 @@ void main() {
       expect(a.nodes, hasLength(8), reason: a.id);
       expect(a.nodes.fold(0, (s, n) => s + n.cost), 10, reason: a.id);
       expect(a.node(a.rootId)!.cost, 0);
-      expect(a.skillIds, hasLength(2));
+      // El Guardián tiene 3: el kit clásico del Paladín (ascension.md § 4).
+      expect(a.skillIds, hasLength(a.id == 'guardian' ? 3 : 2), reason: a.id);
       expect(kAscensionUltimates[a.id]!.id, a.ultId);
       expect(a.spriteId, '${a.classId}_${a.id}');
       // Todos los nodos tienen mecánica salvo Sobrecarga (stats).
@@ -696,15 +697,18 @@ void main() {
       expect(_p(s2).hp, 50 + 14); // 48 de daño × 0.3
     });
 
-    test('Estandarte: grupo −25% de daño; Juramento: Protección', () {
+    test('Estandarte: grupo −25% de daño; Protección (Guardián): −20% propio',
+        () {
       final st = _cmd(_engine(), _battle([
         _hero(skills: ['estandarte']),
         _hero(id: 'p2', nextTurn: 50),
       ], [_foe('e0')]), const SkillCommand('estandarte', targetId: 'e0'));
       expect(_p(st, 'p2').effectTotal(BuffStat.guard), 0.25);
-      final j = _cmd(_engine(), _battle([_hero(skills: ['juramento'])], [_foe('e0')]),
-          const SkillCommand('juramento', targetId: 'e0'));
+      final j = _cmd(_engine(), _battle([_hero(skills: ['proteccion'])], [_foe('e0')]),
+          const SkillCommand('proteccion', targetId: 'e0'));
       expect(_p(j).protecting, isTrue);
+      expect(_p(j).effectTotal(BuffStat.guard), 0.20);
+      expect(_p(j).mp, 50 - 5);
     });
 
     test('Acelerón: aliados 40% antes', () {
@@ -738,17 +742,20 @@ void main() {
       expect(hit.events.whereType<DamageEvent>().first.critical, isTrue);
     });
 
-    test('Trampa de Púas: trampa en todos; Égida Grupal: escudos', () {
+    test('Trampa de Púas: trampa en todos; Fortaleza (Guardián): escudos', () {
       final st = _cmd(_engine(), _battle([_hero(skills: ['trampaPuas'])],
           [_foe('e0'), _foe('e1')]), const SkillCommand('trampaPuas', targetId: 'e0'));
       for (final f in st.state.enemies) {
         expect(f.effectFrom('trampaPuas', BuffStat.trap)!.value, 20);
       }
+      // Fortaleza sube la DEF (recalcula stats): necesita un build.
       final eg = _cmd(_engine(), _battle([
-        _hero(skills: ['egidaGrupal']),
+        _hero(skills: ['fortaleza'], classId: 'paladin', build: _build('paladin', 'guardian')),
         _hero(id: 'p2', nextTurn: 50),
-      ], [_foe('e0')]), const SkillCommand('egidaGrupal', targetId: 'e0'));
-      expect(_p(eg, 'p2').shield, 15);
+      ], [_foe('e0')]), const SkillCommand('fortaleza', targetId: 'e0'));
+      expect(_p(eg, 'p2').shield, (_p(eg).maxHp * 0.15).round());
+      expect(_p(eg, 'p2').effectTotal(BuffStat.guard), 0.10);
+      expect(_p(eg).bonusDefense, 2);
     });
 
     test('ULT del Guardián: escudos, defensa y Protección sin daño', () {

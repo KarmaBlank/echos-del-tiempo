@@ -24,12 +24,29 @@ Future<void> _tap(WidgetTester tester, String key) =>
 
 /// Paso 1 → [uid]; paso 2 → [op] (queda en el paso 3).
 Future<void> _choose(WidgetTester tester, String uid, CraftOp op) async {
-  await _tap(tester, 'bench-crumb-0');
-  await _tap(tester, 'bench-weapon-$uid');
-  await _tap(tester, 'bench-next');
+  await _pickWeapon(tester, uid);
   await _tap(tester, 'bench-op-${op.name}');
 }
 
+/// Paso 1 → [uid] → paso 2 (tocar la fila ya elegida también avanza).
+Future<void> _pickWeapon(WidgetTester tester, String uid) async {
+  await _tap(tester, 'bench-crumb-0');
+  await _tap(tester, 'bench-weapon-$uid');
+  if (find.byKey(const ValueKey('bench-next')).evaluate().isNotEmpty) {
+    await _tap(tester, 'bench-next');
+  }
+}
+
+/// Recorre el selector de familia de reforjar hasta [label].
+Future<void> _family(WidgetTester tester, String label) async {
+  for (var i = 0; i < 20 && plain(tester, 'bench-family-value') != label; i++) {
+    await _tap(tester, 'bench-family-next');
+  }
+  expect(plain(tester, 'bench-family-value'), label);
+}
+
+/// Valor de la fila del paso 2: costo corto o motivo corto (el completo
+/// va en el detalle).
 String _why(WidgetTester tester, CraftOp op) =>
     plain(tester, 'bench-op-why-${op.name}');
 
@@ -44,7 +61,7 @@ void main() {
     expect(plain(tester, 'craft-materials'), contains('Cristal x1'));
     await _tap(tester, 'bench-weapon-r1');
     await _tap(tester, 'bench-next');
-    // Paso 2: una fila por acción, agrupadas, con "se puede" o el motivo.
+    // Paso 2: una fila por acción, agrupadas, con el costo o el motivo.
     for (final op in [
       CraftOp.reroll,
       CraftOp.addAffix,
@@ -59,7 +76,7 @@ void main() {
     }
     expect(find.textContaining('MEJORAR'), findsWidgets);
     expect(find.textContaining('TRASLADAR'), findsWidgets);
-    expect(_why(tester, CraftOp.reroll), 'Se puede');
+    expect(_why(tester, CraftOp.reroll), contains('1 Esquirla'));
     expect(_why(tester, CraftOp.upgradeRarity), 'Falta Prisma Roto');
     expect(_why(tester, CraftOp.transferPassive), 'Solo a un arma Epica');
     expect(plain(tester, 'bench-summary'), contains('Eco Voraz'));
@@ -108,13 +125,9 @@ void main() {
     await _tap(tester, 'craft-source-l1');
     expect(button(tester, 'craft-confirm').reason, 'Pasiva única');
     // Reforjar: la equipada y los legendarios no.
-    await _tap(tester, 'bench-crumb-0');
-    await _tap(tester, 'bench-weapon-espada_bronce');
-    await _tap(tester, 'bench-next');
+    await _pickWeapon(tester, 'espada_bronce');
     expect(_why(tester, CraftOp.reforge), 'Está equipada');
-    await _tap(tester, 'bench-crumb-0');
-    await _tap(tester, 'bench-weapon-l1');
-    await _tap(tester, 'bench-next');
+    await _pickWeapon(tester, 'l1');
     expect(_why(tester, CraftOp.reforge), 'Un Legendario no cambia de base');
   });
 
@@ -177,7 +190,7 @@ void main() {
     await _choose(tester, 'e1', CraftOp.reforge);
     // Por defecto, las bases de tu familia; se cambia con el filtro.
     expect(find.byKey(const ValueKey('bench-base-hacha_rompe')), findsOneWidget);
-    await _tap(tester, 'bench-family-maga');
+    await _family(tester, 'MAGA');
     await _tap(tester, 'bench-base-baculo_fuego');
     expect(plain(tester, 'craft-base'), contains('Espada Ignea'));
     expect(plain(tester, 'craft-base'), contains('Báculo de Fuego'));

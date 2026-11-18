@@ -2,10 +2,12 @@ import 'package:material_ui/material_ui.dart';
 
 import 'proto_colors.dart';
 import 'retro_bar.dart';
+import 'retro_theme.dart';
 
 /// Caja de un jugador (`.pbox` del prototipo, docs/specs/ui_style.md §
 /// "Caja de jugador"): fondo `#121936`, borde 2 px `#2e3b6b` (`#ffd166`
-/// el jugador local), padding 6, texto de 8 px con interlineado 1.6 y
+/// el jugador local), padding 6, texto [RetroType.small] con interlineado
+/// 1.6, ancho [defaultWidth] agrandado con el tamaño del texto y
 /// opacidad 0.5 si está K.O. El contenido lo arma quien la usa (HUD del
 /// mapa o batalla).
 class PartyBox extends StatelessWidget {
@@ -14,15 +16,22 @@ class PartyBox extends StatelessWidget {
     required this.children,
     this.local = false,
     this.knockedOut = false,
-    this.width = PartyBox.defaultWidth,
+    this.width,
   });
 
-  /// 170 px en el HTML con texto de 7-8 px; acá el texto mínimo es 8.
-  static const defaultWidth = 200.0;
+  /// 170 px en el HTML con texto de 7-8 px; acá el texto mínimo es 10
+  /// (en Normal; crece con el tamaño del texto, ver [widthOf]).
+  static const defaultWidth = 230.0;
+
+  /// Ancho de una caja con el tamaño del texto de [context].
+  static double widthOf(BuildContext context) =>
+      RetroType.width(context, defaultWidth);
 
   final List<Widget> children;
   final bool local;
   final bool knockedOut;
+
+  /// Ancho fijo; `null` = [widthOf].
   final double? width;
 
   @override
@@ -30,7 +39,7 @@ class PartyBox extends StatelessWidget {
     return Opacity(
       opacity: knockedOut ? 0.5 : 1,
       child: Container(
-        width: width,
+        width: width ?? PartyBox.widthOf(context),
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: ProtoColors.panel,
@@ -40,8 +49,12 @@ class PartyBox extends StatelessWidget {
           ),
         ),
         child: DefaultTextStyle.merge(
-          style: const TextStyle(
-              fontSize: 8, height: 1.6, color: ProtoColors.ink),
+          style: TextStyle(
+              fontFamily: RetroType.bodyFamily,
+              fontFamilyFallback: RetroType.bodyFallback,
+              fontSize: RetroType.small,
+              height: RetroType.line,
+              color: ProtoColors.ink),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,

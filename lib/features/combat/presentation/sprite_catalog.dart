@@ -40,19 +40,22 @@ class SpriteCatalog {
   }
 
   /// Ids de clase con sprites (`characters:` del manifest).
-  Iterable<String> get characterIds => _section('characters').keys.cast<String>();
+  Iterable<String> get characterIds =>
+      _section('characters').keys.cast<String>();
 
   /// Ids de enemigo con sprites (`enemies:` del manifest).
   Iterable<String> get enemyIds => _section('enemies').keys.cast<String>();
 
   /// Animaciones disponibles de una clase (hoy solo `idle`).
   Iterable<String> characterAnimations(String classId) =>
-      (_section('characters')[classId] as YamlMap?)?.keys.cast<String>() ?? const [];
+      (_section('characters')[classId] as YamlMap?)?.keys.cast<String>() ??
+      const [];
 
   Future<Sprite> character(String classId, String animation) async {
     final path = characterPath(classId, animation);
     if (path == null) {
-      throw StateError('No hay sprite para $classId.$animation en sprite_manifest.yaml');
+      throw StateError(
+          'No hay sprite para $classId.$animation en sprite_manifest.yaml');
     }
     return _pixelSprite(await _loadImage('$spritesRoot$path'));
   }
@@ -60,7 +63,8 @@ class SpriteCatalog {
   Future<Sprite> enemy(String enemyId) async {
     final path = enemyPath(enemyId);
     if (path == null) {
-      throw StateError('No hay sprite para el enemigo $enemyId en sprite_manifest.yaml');
+      throw StateError(
+          'No hay sprite para el enemigo $enemyId en sprite_manifest.yaml');
     }
     return _pixelSprite(await _loadImage('$spritesRoot$path'));
   }
@@ -106,7 +110,8 @@ class SpriteCatalog {
 
   /// `Paint` para dibujar pixel art a mano (`canvas.drawImageRect`):
   /// vecino más cercano, sin suavizado.
-  static ui.Paint pixelPaint() => ui.Paint()..filterQuality = ui.FilterQuality.none;
+  static ui.Paint pixelPaint() =>
+      ui.Paint()..filterQuality = ui.FilterQuality.none;
 
   Sprite _pixelSprite(ui.Image image) =>
       Sprite(image)..paint.filterQuality = ui.FilterQuality.none;

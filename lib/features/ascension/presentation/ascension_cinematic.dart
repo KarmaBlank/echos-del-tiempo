@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/retro_text.dart';
+import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/data/ascension_catalog.dart';
 import '../../../game_engine/data/classes_catalog.dart';
 import '../../combat/presentation/game_sprites.dart';
@@ -142,12 +143,12 @@ class AscensionCinematicState extends State<AscensionCinematic>
               children: [
                 Text(retroText('ASCENSIÓN'),
                     style: const TextStyle(
-                        fontSize: 10, color: Color(0xFFFFD166), letterSpacing: 4)),
+                        fontFamily: RetroType.pixelFamily, fontSize: RetroType.label, color: Color(0xFFFFD166), letterSpacing: 4)),
                 const SizedBox(height: 10),
                 Text(retroText(name.toUpperCase()),
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 28,
+                      fontFamily: RetroType.pixelFamily, fontSize: 28,
                       color: col,
                       shadows: const [
                         Shadow(color: Color(0xFF000000), offset: Offset(3, 3)),
@@ -155,11 +156,11 @@ class AscensionCinematicState extends State<AscensionCinematic>
                     )),
                 const SizedBox(height: 10),
                 Text(retroText('${widget.playerName} · $cls'),
-                    style: const TextStyle(fontSize: 10, color: Color(0xFFE8ECFF))),
+                    style: const TextStyle(fontFamily: RetroType.pixelFamily, fontSize: RetroType.label, color: Color(0xFFE8ECFF))),
                 const SizedBox(height: 8),
                 Text(retroText(motto),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 8, color: Color(0xFF9FB4FF))),
+                    style: const TextStyle(fontFamily: RetroType.pixelFamily, fontSize: RetroType.label, color: Color(0xFF9FB4FF))),
               ],
             ),
           ),

@@ -71,6 +71,11 @@ enum ProcTrigger {
   /// Condición: el objetivo tiene `minStacks`+ estados elementales
   /// distintos (Quemadura, Congelación, Veneno).
   vsElements,
+
+  // ---- árbol v3 (docs/specs/passive_tree_v3.md § 9) ----
+
+  /// Condición: el objetivo está quebrado.
+  vsBroken,
 }
 
 /// Filtro extra sobre la acción o el golpe que disparó la mecánica.
@@ -195,7 +200,11 @@ enum BuffStat {
   shareDamage('daño compartido'),
 
   /// Trampa puesta en un enemigo (valor = daño).
-  trap('trampa');
+  trap('trampa'),
+
+  /// Disparo cargado de un jugador (valor = daño; `ownerId` = objetivo).
+  /// Cae al empezar su próximo turno (combat.md § "Variantes").
+  charge('disparo cargado');
 
   const BuffStat(this.label);
   final String label;
@@ -278,7 +287,8 @@ class PassiveMechanic {
       trigger == ProcTrigger.always ||
       trigger == ProcTrigger.partyAura ||
       trigger == ProcTrigger.whileMissingHealth ||
-      trigger == ProcTrigger.vsElements;
+      trigger == ProcTrigger.vsElements ||
+      trigger == ProcTrigger.vsBroken;
 }
 
 /// Un efecto con duración sobre un combatiente (buff, debuff, marca,

@@ -411,6 +411,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     if (_cleaning && mine) {
       return PanelSplit(
         listWidth: InventoryTab.gridWidth + 4,
+        scaleList: false,
         list: [left],
         detail: _cleaner(p),
       );
@@ -426,6 +427,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       onKeyEvent: _onKey,
       child: PanelSplit(
         listWidth: InventoryTab.gridWidth + 4,
+        scaleList: false,
         list: [left],
         detail: PanelDetail(
           footer: sel == null || !mine

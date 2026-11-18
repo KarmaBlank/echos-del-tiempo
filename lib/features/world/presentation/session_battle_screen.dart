@@ -1,24 +1,24 @@
-import 'dart:math' as math;
-
 import 'package:material_ui/material_ui.dart';
 
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/game_session.dart';
+import '../../../game_engine/rules/eco_rules.dart';
 import '../../../game_engine/rules/session_engine.dart';
+import '../../../game_engine/rules/trial_rules.dart';
 import '../../combat/presentation/battle_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
+import '../../combat/presentation/scene/arena/arena_painter.dart';
+import '../../combat/presentation/scene/arena/arena_spec.dart';
 import '../../combat/presentation/scene/battle_layout.dart';
 import '../../combat/presentation/scene/battle_scene.dart';
-import 'map/actor_painter.dart';
-import 'map/tile_painter.dart';
 import 'session_view.dart';
 
 /// La batalla de la sesión (`S.battle`): dibuja `session.battle.state`
-/// con [BattleView] sobre el mapa de la misión (en el lugar del enemigo
-/// que la empezó) y manda los comandos del jugador local como
-/// `BattleAction` cuando el host espera su turno. Ver
+/// con [BattleView] en una **arena temática** propia (por zona y por tipo
+/// de encuentro, nunca sobre el mapa) y manda los comandos del jugador
+/// local como `BattleAction` cuando el host espera su turno. Ver
 /// docs/specs/exploration.md § "Batalla" y
-/// docs/specs/battle_presentation.md.
+/// docs/specs/battle_presentation.md § "Arenas".
 class SessionBattleScreen extends StatefulWidget {
   const SessionBattleScreen({
     super.key,
@@ -44,12 +44,17 @@ class SessionBattleScreen extends StatefulWidget {
 }
 
 class _SessionBattleScreenState extends State<SessionBattleScreen> {
-  final _tiles = TilePainter();
-  ActorPainter? _actors;
+  final _arenas = ArenaPainter();
 
   /// Arena calculada una vez por batalla (`SessionBattle.id`).
   int? _arenaBattle;
   BattleArena? _arena;
+
+  @override
+  void dispose() {
+    _arenas.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +63,7 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
     if (b == null) return const SizedBox.shrink();
     if (_arenaBattle != b.id) {
       _arenaBattle = b.id;
-      _arena = _buildArena(view, b);
+      _arena = BattleArena.stage(kind: kindOf(b), paintWorld: _paintArena);
     }
     return BattleView(
       key: widget.battleKey,
@@ -80,84 +85,45 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
     );
   }
 
-  /// `startBattle`: la batalla se dibuja donde está el enemigo del campo;
-  /// el lado lo decide el jugador más cercano (el motor no guarda quién
-  /// lo tocó; las posiciones del campo no cambian durante la batalla).
-  BattleArena? _buildArena(SessionView view, SessionBattle b) {
+  /// Tipo de encuentro de la batalla de la sesión (las banderas de
+  /// `SessionBattle` y, si faltan, las del estado).
+  static EncounterKind kindOf(SessionBattle b) {
+    if (b.boss) return EncounterKind.boss;
+    final k = encounterKindOf(b.state);
+    if (k == EncounterKind.normal && b.elite) return EncounterKind.elite;
+    return k;
+  }
+
+  /// Arena de la batalla en curso según la zona, si es Eco / Prueba y el
+  /// tipo de encuentro (la fase del jefe puede cambiarla en la pelea).
+  static ArenaSpec specOf(SessionView view) {
     final s = view.session;
+    final b = s.battle;
     final mission = s.mission;
-    FieldEnemy? en;
-    for (final e in mission?.enemies ?? const <FieldEnemy>[]) {
-      if (e.id == b.fieldEnemyId) en = e;
-    }
-    if (en == null) return null;
-    final map = view.map;
-    const ts = TilePainter.ts;
-    final mw = map.width * ts, mh = map.height * ts;
-    SessionPlayer? trig;
-    var best = double.infinity;
-    for (final p in s.playerList) {
-      final d = math.sqrt(math.pow(p.x - en.x, 2) + math.pow(p.y - en.y, 2));
-      if (d < best) {
-        best = d;
-        trig = p;
-      }
-    }
-    final side = BattleArena.sideFor(
-        enemyX: en.x, triggerX: trig?.x, worldWidth: mw);
-    final me = s.players[view.localId];
-    final cx = en.x + side * 34, cy = en.y;
-    final battleEnemyId = en.id;
-    final sprites = widget.sprites;
-    if (sprites != null) _actors ??= ActorPainter(sprites);
+    final base = b == null
+        ? const ArenaSpec(theme: ArenaTheme.pueblo, kind: EncounterKind.normal)
+        : selectArena(
+            battle: b.state,
+            mapTheme: view.map.theme,
+            zone: mission?.zone ?? view.map.zone,
+            trial: mission?.missionId == TrialRules.missionId,
+            eco: mission?.missionId == EcoRules.missionId,
+          );
+    if (b == null) return base;
+    final kind = kindOf(b);
+    return kind == base.kind
+        ? base
+        : ArenaSpec(
+            theme: base.theme,
+            kind: kind,
+            bossType: base.bossType,
+            phase2: base.phase2,
+            eco: base.eco);
+  }
 
-    void paintWorld(Canvas c, Rect visible, double t) {
-      // `widget.view` es siempre el último snapshot de la sesión.
-      final cur = widget.view;
-      final m = cur.map;
-      final x0 = math.max(0, (visible.left / ts).floor());
-      final y0 = math.max(0, (visible.top / ts).floor());
-      final x1 = math.min(m.width - 1, (visible.right / ts).floor() + 1);
-      final y1 = math.min(m.height - 1, (visible.bottom / ts).floor() + 1);
-      for (var y = y0; y <= y1; y++) {
-        for (var x = x0; x <= x1; x++) {
-          _tiles.draw(c, m.tileAt(x, y), x * ts, y * ts, m.theme, x, y,
-              t: t, gateOpen: cur.session.gateOpen, lobby: m.lobby);
-        }
-      }
-      final actors = _actors;
-      if (actors == null) return;
-      final merchant = m.merchant;
-      if (merchant != null) {
-        actors.text(c, 'TIENDA', merchant.x, merchant.y - 34,
-            const Color(0xFFFFD166), 6);
-      }
-      // Enemigos del campo lejos de la batalla (> 130 px del centro).
-      for (final e in cur.session.mission?.enemies ?? const <FieldEnemy>[]) {
-        if (!e.alive || e.id == battleEnemyId) continue;
-        if (math.sqrt(math.pow(e.x - cx, 2) + math.pow(e.y - cy, 2)) < 130) {
-          continue;
-        }
-        actors.enemy(c,
-            type: e.group.first, x: e.x, y: e.y, dir: e.dir, t: t, elite: e.elite);
-        if (e.elite) {
-          actors.text(c, '★ÉLITE', e.x, e.y - 34, const Color(0xFFFFD166), 6);
-        }
-        if (e.boss) {
-          actors.text(c, 'JEFE', e.x, e.y - 48, const Color(0xFFFF4757), 7);
-        }
-      }
-    }
-
-    return BattleArena(
-      anchorX: en.x,
-      anchorY: en.y,
-      side: side,
-      worldWidth: mw,
-      worldHeight: mh,
-      fieldFocusX: me?.x,
-      fieldFocusY: me?.y,
-      paintWorld: paintWorld,
-    );
+  void _paintArena(Canvas c, Rect visible, double t) {
+    // `widget.view` es siempre el último snapshot de la sesión.
+    _arenas.paint(c, visible, t, specOf(widget.view),
+        density: widget.sceneOptions.particles);
   }
 }

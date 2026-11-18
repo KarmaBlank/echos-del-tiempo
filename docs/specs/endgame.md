@@ -145,7 +145,8 @@ Decisión del dueño: "sí, pero que se sienta eso". Al ascender:
   de la ascensión) y sonido propio.
 - **Cambio visual permanente**: sprite con paleta y detalles nuevos por
   ascensión (capa, aura, arma brillante), aura en batalla y en el mapa.
-- **ULT nueva o mejorada** por ascensión y 2 habilidades de kit propias.
+- **ULT nueva o mejorada** por ascensión y 2 habilidades de kit propias
+  (el Guardián 3: el kit clásico del Paladín, mejorado).
 - Los nodos del mini-árbol son de impacto (cambian cómo se juega, no
   +5%): p. ej. Cronomante "tus habilidades que retrasan también
   adelantan al aliado más lento"; Berserker "por debajo de 50% de vida

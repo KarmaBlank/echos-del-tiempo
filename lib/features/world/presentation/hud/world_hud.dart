@@ -80,10 +80,19 @@ class WorldHud extends StatelessWidget {
         : const <int, bool>{};
     final small = Theme.of(context).textTheme.bodySmall!;
     final players = s.playerList;
-    final partyWidth = players.length * (PartyBox.defaultWidth + 6);
+    final boxW = PartyBox.widthOf(context);
     return LayoutBuilder(builder: (context, box) {
-      final chatWidth =
-          (box.maxWidth - partyWidth - _gap * 3).clamp(240.0, 520.0);
+      // Con texto grande las cajas del grupo pasan a dos filas antes que
+      // pisar el chat (mínimo 240 px de chat).
+      final chatMin = RetroType.width(context, 240);
+      final partyRoom =
+          (box.maxWidth - chatMin - _gap * 3).clamp(boxW, double.infinity);
+      final perRow = ((partyRoom + 6) / (boxW + 6))
+          .floor()
+          .clamp(1, players.isEmpty ? 1 : players.length);
+      final partyWidth = perRow * (boxW + 6);
+      final chatWidth = (box.maxWidth - partyWidth - _gap * 3)
+          .clamp(chatMin, RetroType.width(context, 520));
       return DefaultTextStyle.merge(
         style: small,
         child: Stack(
@@ -204,19 +213,23 @@ class WorldHud extends StatelessWidget {
             Positioned(
               right: _gap,
               bottom: _gap,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  for (final (i, p) in players.indexed) ...[
-                    if (i > 0) const SizedBox(width: 6),
-                    _PlayerBox(
-                      player: p,
-                      local: p.id == view.localId,
-                      progression: controller.engine.progression,
-                    ),
+              child: SizedBox(
+                width: partyWidth,
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.end,
+                  verticalDirection: VerticalDirection.up,
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final p in players)
+                      _PlayerBox(
+                        player: p,
+                        local: p.id == view.localId,
+                        progression: controller.engine.progression,
+                      ),
                   ],
-                ],
+                ),
               ),
             ),
             Positioned(
@@ -242,7 +255,9 @@ class WorldHud extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 8),
                         child: _CanvasLabel(label,
                             key: const ValueKey('hud-prompt'),
-                            fontSize: label.startsWith('[E]') ? 16 : 10,
+                            fontSize: label.startsWith('[E]')
+                                ? RetroType.title
+                                : RetroType.small,
                             color: view.prompt == WorldPrompt.seal
                                 ? ProtoColors.violet
                                 : label.startsWith('[E]')
@@ -254,7 +269,7 @@ class WorldHud extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 8),
                         child: _CanvasLabel(text,
                             key: const ValueKey('hud-pickup-prompt'),
-                            fontSize: 16,
+                            fontSize: RetroType.title,
                             color: ProtoColors.gold),
                       ),
                   ],
@@ -295,8 +310,8 @@ class WorldHud extends StatelessWidget {
         (s.mode != SessionMode.field && s.mode != SessionMode.lobby)) {
       return const [];
     }
-    return visibleLoot(s, view.localId,
-        (d) => controller.engine.lootVerdict(me.profile, d),
+    return visibleLoot(
+        s, view.localId, (d) => controller.engine.lootVerdict(me.profile, d),
         showAll: MapGame.altHeld());
   }
 
@@ -304,8 +319,8 @@ class WorldHud extends StatelessWidget {
   /// interacción a mano; ver `MapGame.tryPickUp`).
   String? _pickPrompt(GameSession s) {
     if (view.panel != null) return null;
-    final l = nearestPickable(
-        _floor(s), controller.local.x, controller.local.y);
+    final l =
+        nearestPickable(_floor(s), controller.local.x, controller.local.y);
     if (l == null) return null;
     return '[E] Recoger ${MapGame.lootName(controller, l.ground.drop)}';
   }
@@ -421,7 +436,7 @@ class _MissionBar extends StatelessWidget {
 /// Texto dibujado en el canvas del prototipo sobre una caja `#000a`.
 class _CanvasLabel extends StatelessWidget {
   const _CanvasLabel(this.text,
-      {super.key, required this.color, this.fontSize = 8});
+      {super.key, required this.color, this.fontSize = RetroType.small});
 
   final String text;
   final Color color;
@@ -432,7 +447,7 @@ class _CanvasLabel extends StatelessWidget {
         color: const Color(0xAA000000),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Text(retroText(text),
-            style: TextStyle(fontSize: fontSize, color: color)),
+            style: RetroType.style(fontSize, color: color)),
       );
 }
 
@@ -461,9 +476,8 @@ class _Objectives extends StatelessWidget {
         );
     final floors = mission.floors > 1;
     final f = mission.floor;
-    final goal = floors && f < mission.floorGoals.length
-        ? mission.floorGoals[f]
-        : 0;
+    final goal =
+        floors && f < mission.floorGoals.length ? mission.floorGoals[f] : 0;
     final floorDone = floors && mission.floorKills(f) >= goal;
     // `drawObjectives`: caja `#000a` con borde `#5b74c9`.
     return Container(
@@ -480,8 +494,7 @@ class _Objectives extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                  retroText(
-                      '${floorLabelText(zoneName, f, mission.floors)}'
+                  retroText('${floorLabelText(zoneName, f, mission.floors)}'
                       '${floorLevel == null ? '' : ' · Lv $floorLevel'}'),
                   key: const ValueKey('hud-floor'),
                   style: const TextStyle(color: ProtoColors.gold)),
@@ -656,7 +669,10 @@ class _LevelUpBanner extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text('¡SUBIDA DE NIVEL!',
-                style: TextStyle(fontSize: 16, color: ProtoColors.gold)),
+                style: TextStyle(
+                    fontFamily: RetroType.pixelFamily,
+                    fontSize: 16,
+                    color: ProtoColors.gold)),
             const SizedBox(height: 8),
             Text(retroText('Esperando a: $waiting'),
                 style: const TextStyle(color: ProtoColors.white)),

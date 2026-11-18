@@ -1,6 +1,7 @@
 import '../models/skill.dart';
 import '../models/status.dart';
 import 'ascension_catalog.dart';
+import 'skill_variants_catalog.dart';
 
 // `SK`, `ULTS` y `DUALS` del prototipo, 1:1. El color (`col`) y el
 // elemento visual (`el`) son de la UI y no viven acá.
@@ -13,7 +14,7 @@ const _stun = StatusKind.stun;
 const _phys = SkillKind.physical;
 const _mag = SkillKind.magical;
 
-/// Habilidades que otorgan las armas y los kits de clase (`SK`).
+/// Habilidades que otorgan las armas (`SK`) y los kits de las ascensiones.
 const Map<String, SkillDef> kSkills = {
   'giro': SkillDef(id: 'giro', name: 'Corte Giratorio', mp: 4, kind: _phys, power: 1.0, allTargets: true),
   'embestida': SkillDef(id: 'embestida', name: 'Embestida', mp: 4, kind: _phys, power: 1.2, delay: 0.45),
@@ -50,9 +51,8 @@ const Map<String, SkillDef> kSkills = {
   'infierno': SkillDef(id: 'infierno', name: 'Infierno', mp: 12, kind: _mag, power: 1.4, allTargets: true, status: StatusApplication(_burn, 2)),
   'saeta': SkillDef(id: 'saeta', name: 'Saeta Glacial', mp: 4, kind: _phys, power: 1.5, status: StatusApplication(_frz, 2)),
   'metralla': SkillDef(id: 'metralla', name: 'Metralla Tóxica', mp: 6, kind: _phys, power: 0.9, allTargets: true, status: StatusApplication(_poi, 2)),
-  'aura': SkillDef(id: 'aura', name: 'Aura Restauradora', mp: 6, kind: SkillKind.regen, power: 0.6),
-  'fortaleza': SkillDef(id: 'fortaleza', name: 'Fortaleza', mp: 3, kind: SkillKind.defenseUp, amount: 2),
-  'proteccion': SkillDef(id: 'proteccion', name: 'Protección', mp: 5, kind: SkillKind.protect),
+  // 'aura', 'fortaleza' y 'proteccion' (el viejo kit del Paladín) son
+  // desde v0.5 el kit del Guardián: viven en `kAscensionSkills`.
   'estocada': SkillDef(id: 'estocada', name: 'Estocada Firme', mp: 2, kind: _phys, power: 1.4, critBonus: 0.15),
   'temblor': SkillDef(id: 'temblor', name: 'Temblor', mp: 6, kind: _phys, power: 0.9, allTargets: true, status: StatusApplication(_stun, 1, chance: 0.15)),
   'sanar': SkillDef(id: 'sanar', name: 'Sanación', mp: 4, kind: SkillKind.heal, power: 1.1, cleanse: 1),
@@ -80,6 +80,8 @@ const Map<String, SkillDef> kSkills = {
   'abanico': SkillDef(id: 'abanico', name: 'Abanico de Dagas', mp: 6, kind: _phys, power: 0.8, allTargets: true, status: StatusApplication(_poi, 2)),
   // ---- kit de las ascensiones (docs/specs/ascension.md § 4) ----
   ...kAscensionSkills,
+  // ---- variantes v0.5 (docs/specs/combat.md § "Variantes de habilidades") ----
+  ...kSkillVariants,
 };
 
 /// ULT por tipo de arma (`ULTS`). No cuestan MP: requieren 100 de carga.

@@ -68,7 +68,9 @@ hay nada que separar. Si se agregan, van como una cuarta fila aquí.
 
 | Ajuste | Opciones | Efecto |
 |---|---|---|
+| TAMAÑO DEL TEXTO | **NORMAL** / GRANDE / MUY GRANDE | accesibilidad: agranda el texto de toda la UI (tooltips, fichas, comparación, paneles, chat, HUD, menú y log de batalla, árbol) ×1 / ×1.25 / ×1.5 (los títulos crecen menos), siempre en la grilla nítida de cada fuente (§ 3.6). Se aplica en vivo. Primera fila de la pestaña |
 | MODO (solo Windows) | VENTANA / PANTALLA COMPLETA | pantalla completa sin bordes en el monitor de la ventana; al volver, la ventana recupera su estilo y su posición. Se aplica al arrancar si quedó guardada |
+| FUENTE DE LECTURA | **VT323** / CLÁSICA | accesibilidad: fuente del texto de lectura (fichas, chat, menús, batalla). CLÁSICA = Press Start 2P como en v0.4. Cada botón se escribe en su fuente (vista previa). Títulos y botones no cambian (§ 3.7) |
 | ESCALADO | PIXEL PERFECT / **AJUSTAR** | cómo se agranda el mundo pixelado (§ 3.1) |
 | FILTRO CRT | APAGADO / SUAVE / **NORMAL** / FUERTE | post-proceso retro sobre toda la pantalla (§ 3.2) |
 | PARTÍCULAS | BAJA / MEDIA / **ALTA** | cantidad de partículas: ×0.3 / ×0.6 / ×1 (§ 3.3) |
@@ -84,9 +86,10 @@ salir los restaura. `WindowMode` (`lib/core/settings/window_mode.dart`)
 es la puerta Dart; en otras plataformas (web, móvil, macOS, Linux) la
 fila no aparece.
 
-**Escala de la UI**: no se ofrece. La UI está armada para 1280×720 con
-la fuente pixel en múltiplos de 8; escalar a valores intermedios la
-desenfoca y los paneles de lista + detalle no entran. Queda pendiente.
+**Escala de la UI**: no se ofrece como tal. La UI está armada para
+1280×720 lógicos y no se agranda con la ventana (solo el mundo, § 3.1);
+lo que sí se ofrece es TAMAÑO DEL TEXTO (§ 3.6), que agranda el texto y
+las cajas que lo contienen.
 
 Las animaciones propias de las ULT (rayos, círculos, partículas) no son
 destellos de pantalla completa y no cambian.
@@ -134,7 +137,7 @@ paquetes nuevos.
 |---|---|---|---|---|---|
 | APAGADO | — | — | — | — | — |
 | SUAVE | 0.14 | 0.05 | 0.15 | 0.15 | 0 |
-| NORMAL | 0.24 | 0.09 | 0.25 | 0.25 | 0.02 |
+| NORMAL | 0.24 | 0.09 | 0.25 | 0.25 | 0 |
 | FUERTE | 0.38 | 0.16 | 0.40 | 0.40 | 0.05 |
 
 - Scanlines: una línea oscura cada `round(alto físico / 240)` px (≥ 2;
@@ -155,12 +158,15 @@ paquetes nuevos.
     curvatura ni bloom porque no puede leer la imagen).
   - Si el shader no carga (plataforma sin soporte, error), no hay
     filtro: el juego se ve igual que con APAGADO.
-- Legibilidad: la fuente pixel de 8 px se lee en SUAVE y NORMAL (la
-  scanline oscurece 1 de cada 3 filas físicas como mucho al 24%) y se
-  muestrea con vecino más cercano (nítida). FUERTE es para quien quiere
-  el look marcado: con curvatura 0.05 el vecino más cercano duplica y
-  saltea columnas de la fuente, así que muestrea bilineal (bordes rectos,
-  texto apenas más suave).
+- Legibilidad (v0.5, "hay fonts que se ven súper mal, como baja
+  resolución"): la curvatura remuestrea **toda** la UI (también el
+  texto): con vecino más cercano duplica y saltea columnas de la fuente
+  pixel, y con bilineal la desenfoca. Por eso **NORMAL ya no curva**
+  (curvatura 0, era 0.02): sin curva el shader lee cada píxel en su
+  lugar (vecino más cercano, identidad) y el texto queda igual de nítido
+  que sin filtro; scanlines, máscara, bloom (sin mezclar el píxel
+  central) y viñeta se mantienen. Solo FUERTE curva (0.05, bilineal):
+  es el look marcado, a pedido, con el texto apenas más suave.
 - Costo: ver § 3.5.
 
 ### 3.3 PARTÍCULAS (`ParticleLevel`)
@@ -233,6 +239,47 @@ Windows "GPU Engine 3D" del proceso). El motor usa **Impeller
   a batería.
 - Los números de `flutter test` no sirven para esto: ahí no hay
   Impeller y el filtro va por la capa de `crt_overlay.frag`.
+
+### 3.6 TAMAÑO DEL TEXTO (`TextSize`, `RetroTextScaler`)
+
+`TextSize.normal` (por defecto) / `large` / `huge` (factor 1 / 1.25 /
+1.5). Accesibilidad; ver también docs/specs/accessibility.md.
+
+- Un solo punto: `EcosApp` (`MaterialApp.builder`) envuelve todo en
+  `RetroTextScale(factor)`, que pone `RetroTextScaler` en el
+  `MediaQuery` (reemplaza la escala de texto del sistema). Llega a todo
+  el texto Flutter, overlays (tooltips) y los nombres del árbol de
+  pasivas incluidos; el texto pintado en los canvas del mundo no cambia.
+- **Tamaños**: el texto de lectura (VT323) va a 20 / 25 / 30 px en px
+  físicos enteros; Press Start 2P en múltiplos de 8 px físicos según la
+  escala de Windows (docs/specs/ui_style.md § "Tamaño del texto y
+  nitidez").
+- Las cajas con texto crecen con él (`RetroType.width` / `em`): ancho de
+  paneles (hasta la pantalla), lista de `PanelSplit` (hasta la mitad),
+  `PartyBox`, tooltips, comparación de armas (a 2 columnas con factor
+  ≥ 1.5), columna de etiquetas de los ajustes, cifras de la batalla. El
+  alto de los paneles no cambia: el contenido scrollea.
+- Nada se sale de 1280×720 en los tres tamaños, a 100 % y 150 % (tests
+  con las fuentes reales).
+
+### 3.7 FUENTE DE LECTURA (`ReadingFont`)
+
+`ReadingFont.vt323` (por defecto) / `classic`. `game.json`:
+`"readingFont": "vt323" | "classic"`; un archivo viejo sin la clave (o
+con un valor inválido) carga VT323.
+
+- `EcosApp` → `RetroTextScale(classic:)`: pone `RetroType.classic` (la
+  familia de `RetroType.bodyFamily` / `smallStyle`) y el escalador.
+  Al cambiar, la app se reconstruye entera sin perder estado
+  (`WidgetsBinding.reassembleApplication`), así todo estilo de lectura
+  toma la fuente nueva en vivo.
+- Tamaños: VT323 20 / 25 / 30 px (§ 3.6); CLÁSICA en la grilla de 8 de
+  Press Start 2P: 8 / 16 / 16 a 100 % (como v0.4).
+- Tests: `test/app/text_size_test.dart` (JSON y tamaños; desbordes a
+  1280×720 con las dos fuentes en los tres tamaños, VT323 también a
+  150 %), `test/features/settings_menu_test.dart` (vista previa y
+  guardado). Las fuentes reales en tests: `loadRealFonts()`
+  (`test/real_fonts.dart`, también en `pumpPanel`).
 
 ## 4. JUEGO
 
@@ -327,8 +374,12 @@ está abierto:
 - `game.json` (misma carpeta que el perfil, escritura atómica):
   `{"fullscreen":false,"shake":true,"flashes":"normal",
   "damageNumbers":true,"confirmDrop":true,"scale":"fit","crt":"normal",
-  "particles":"high","fpsLimit":60}` (`fpsLimit` 0 = sin límite).
+  "particles":"high","fpsLimit":60,"textSize":"normal",
+  "readingFont":"vt323"}` (`fpsLimit` 0 = sin límite; `textSize`
+  `normal` / `large` / `huge`; `readingFont` `vt323` / `classic`).
   Valores inválidos o ausentes = por defecto. Corrupto = por defecto.
+- **v0.5**: `textSize` es nuevo; un `game.json` sin la clave (o con un
+  valor inválido) carga en NORMAL.
 - **Migración v0.2.1 → v0.3**: la velocidad de animaciones de batalla se
   quitó (era solo visual y en co-op confundía: tu escena iba más rápido
   que los turnos de la sala). Un `game.json` viejo con `battleSpeed` carga
@@ -349,6 +400,8 @@ está abierto:
 - Mapa: `WorldScreen` pone `MapGame.scaleMode` y
   `MapGame.particleDensity` en cada build.
 - CRT: `EcosApp` (`MaterialApp.builder`) → `CrtFilter(level)`.
+- Tamaño del texto: `EcosApp` (`MaterialApp.builder`) →
+  `RetroTextScale(textSize.factor)` → `MediaQuery.textScaler`.
 - FPS: `GameSettingsController` → `FrameLimiter.shared.fps` →
   `EcosBinding` (los `main_*.dart` usan `EcosBinding.ensureInitialized()`).
 - Inventario: `InventoryTab` lee `confirmDrop` al tocar `TIRAR`.
@@ -366,7 +419,16 @@ está abierto:
 - `test/core/settings/crt_filter_test.dart`: CRT en NORMAL por defecto,
   APAGADO no envuelve nada, uniformes de cada nivel, corrección del
   hit-test con curvatura.
-- `test/features/settings_menu_test.dart`: cada pestaña aplica y guarda
+- `test/app/text_size_test.dart`: `textSize` por defecto, JSON (viejo
+  sin la clave, inválido), controlador; tabla de tamaños nítidos por DPR
+  (todo múltiplo de 8 físicos, Muy grande > Normal, títulos ≥ texto
+  chico); `protoSplitLines`; con la fuente real, a 1280×720 y DPR 1 y
+  1.5, en los tres tamaños: ficha de un Legendario (dentro de la
+  pantalla), comparación del inventario al pasar el mouse, panel de
+  personaje (atributos, inventario, filtro), menú de batalla con mis
+  datos y el grupo (y su tip), chat con líneas largas — sin desbordes.
+- `test/features/settings_menu_test.dart`: TAMAÑO DEL TEXTO se aplica
+  en vivo y se guarda; cada pestaña aplica y guarda
   (stores en memoria, ventana falsa), muestra de FX al mover el slider,
   pantalla completa oculta sin soporte, `CONFIGURACIÓN` del título,
   PANTALLA con ESCALADO / FILTRO CRT / PARTÍCULAS / LÍMITE DE FPS (y sin

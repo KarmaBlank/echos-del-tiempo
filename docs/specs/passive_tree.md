@@ -1,8 +1,9 @@
 # Spec: Árbol de pasivas (tipo Path of Exile)
 
-> **Versión vigente: v2** — docs/specs/passive_tree_v2.md (112 nodos,
-> anillo central compartido, 12 caminos con notables de mecánicas y
-> keystones). Las reglas de puntos de abajo siguen valiendo; la sección
+> **Versión vigente: v3** — docs/specs/passive_tree_v3.md (352 nodos:
+> anillo central, 20 clusters de clase con bifurcaciones, 4 puentes
+> híbridos y 4 clusters de grupo; 60 notables y 20 keystones). La v2
+> (docs/specs/passive_tree_v2.md, 112 nodos) queda como historia. Las reglas de puntos de abajo siguen valiendo; la sección
 > "Datos y UI" describe la v1 (40 nodos), que ya no está en el código:
 > los perfiles con árbol v1 se reinician gratis al cargarlos.
 

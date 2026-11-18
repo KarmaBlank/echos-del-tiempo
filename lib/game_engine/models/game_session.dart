@@ -583,6 +583,10 @@ class GameSession {
   /// Tienda, herrería, fusión y equipar (`canShop`).
   bool get canShop => mode == SessionMode.lobby || mode == SessionMode.prep;
 
+  /// Desarmar o vender (también en lote, "Limpiar inventario"): además
+  /// del pueblo, en la aventura fuera de batalla (loot.md § 21).
+  bool get canDiscard => canShop || mode == SessionMode.field;
+
   /// `mustAlloc`: la UI debe obligar a [playerId] a repartir sus puntos.
   bool mustAllocate(String playerId) {
     final p = players[playerId];

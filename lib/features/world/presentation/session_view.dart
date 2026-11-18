@@ -76,6 +76,7 @@ class SessionView {
     this.battleEventSeq = 0,
     this.roomCode,
     this.disconnected,
+    this.saveError,
     this.missionLoot = const [],
     this.promptText,
     this.atlas,
@@ -127,6 +128,10 @@ class SessionView {
   /// del juego vuelve al título y lo muestra.
   final String? disconnected;
 
+  /// El progreso no se pudo guardar (se sigue intentando): el HUD lo
+  /// avisa en rojo (docs/specs/characters.md § 1.4). `null` = guardado.
+  final String? saveError;
+
   SessionMode get mode => session.mode;
   SessionPlayer? get me => session.players[localId];
   bool get mustAllocate => session.mustAllocate(localId);
@@ -162,6 +167,7 @@ class SessionView {
         battleEventSeq: battleEventSeq ?? this.battleEventSeq,
         roomCode: roomCode,
         disconnected: disconnected,
+        saveError: saveError,
         missionLoot: missionLoot,
         promptText: prompt != null ? null : promptText,
         atlas: atlas,

@@ -23,6 +23,16 @@ abstract final class RarityColors {
   /// [FilterColor] → [Color].
   static Color filterColor(FilterColor c) => Color.fromARGB(c.a, c.r, c.g, c.b);
 
+  /// Letra de la rareza (C M R E L): la rareza no se dice solo con el
+  /// color (daltonismo; docs/specs/accessibility.md § 2).
+  static String letter(Rarity r) => switch (r) {
+        Rarity.comun => 'C',
+        Rarity.magico => 'M',
+        Rarity.raro => 'R',
+        Rarity.epico => 'E',
+        Rarity.legendario => 'L',
+      };
+
   /// Color de una pila (materiales: celeste, como el filtro por defecto).
   static const stack = Color(0xFF78E6DC);
 }
@@ -43,80 +53,183 @@ const _glass = Color(0xFFDDE6FF);
 /// `w` vidrio.
 const _icons = <String, List<String>>{
   'espada': [
-    '.......m', '......mm', '.....mm.', '.h..mm..',
-    '..hmm...', '...h....', '..h.h...', '.h......',
+    '.......m',
+    '......mm',
+    '.....mm.',
+    '.h..mm..',
+    '..hmm...',
+    '...h....',
+    '..h.h...',
+    '.h......',
   ],
   'hacha': [
-    '..mmm...', '.mmmmh..', '.mmmh...', '..mh....',
-    '...h....', '....h...', '.....h..', '......h.',
+    '..mmm...',
+    '.mmmmh..',
+    '.mmmh...',
+    '..mh....',
+    '...h....',
+    '....h...',
+    '.....h..',
+    '......h.',
   ],
   'lanza': [
-    '......mm', '......mm', '.....h..', '....h...',
-    '...h....', '..h.....', '.h......', 'h.......',
+    '......mm',
+    '......mm',
+    '.....h..',
+    '....h...',
+    '...h....',
+    '..h.....',
+    '.h......',
+    'h.......',
   ],
   'báculo': [
-    '.....gg.', '....gggg', '.....gg.', '....h...',
-    '...h....', '..h.....', '.h......', 'h.......',
+    '.....gg.',
+    '....gggg',
+    '.....gg.',
+    '....h...',
+    '...h....',
+    '..h.....',
+    '.h......',
+    'h.......',
   ],
   'tomo': [
-    '........', '.cccccc.', '.cppppc.', '.cpggpc.',
-    '.cppppc.', '.cppppc.', '.cccccc.', '........',
+    '........',
+    '.cccccc.',
+    '.cppppc.',
+    '.cpggpc.',
+    '.cppppc.',
+    '.cppppc.',
+    '.cccccc.',
+    '........',
   ],
   'varita': [
-    '......g.', '.....g.g', '......g.', '.....h..',
-    '....h...', '...h....', '..h.....', '........',
+    '......g.',
+    '.....g.g',
+    '......g.',
+    '.....h..',
+    '....h...',
+    '...h....',
+    '..h.....',
+    '........',
   ],
   'arco': [
-    '..hh....', '.h..s...', 'h....s..', 'h.....s.',
-    'h.....s.', 'h....s..', '.h..s...', '..hh....',
+    '..hh....',
+    '.h..s...',
+    'h....s..',
+    'h.....s.',
+    'h.....s.',
+    'h....s..',
+    '.h..s...',
+    '..hh....',
   ],
   'rifle': [
-    '........', '........', 'mmmmmmm.', 'hhhmm...',
-    'hh.h....', 'h.......', '........', '........',
+    '........',
+    '........',
+    'mmmmmmm.',
+    'hhhmm...',
+    'hh.h....',
+    'h.......',
+    '........',
+    '........',
   ],
   'ballesta': [
-    '...m....', '..mmm...', '.h.m.h..', 'h..m..h.',
-    '...m....', '...h....', '...h....', '........',
+    '...m....',
+    '..mmm...',
+    '.h.m.h..',
+    'h..m..h.',
+    '...m....',
+    '...h....',
+    '...h....',
+    '........',
   ],
   'dagas': [
-    'm......m', '.m....m.', '..m..m..', '...hh...',
-    '...hh...', '..h..h..', '.h....h.', '........',
+    'm......m',
+    '.m....m.',
+    '..m..m..',
+    '...hh...',
+    '...hh...',
+    '..h..h..',
+    '.h....h.',
+    '........',
   ],
   'escudo': [
-    '.mmmmmm.', '.mggggm.', '.mgmmgm.', '.mggggm.',
-    '.mggggm.', '..mggm..', '...mm...', '........',
+    '.mmmmmm.',
+    '.mggggm.',
+    '.mgmmgm.',
+    '.mggggm.',
+    '.mggggm.',
+    '..mggm..',
+    '...mm...',
+    '........',
   ],
   'pocion': [
-    '...hh...', '...ww...', '..gggg..', '.gggggg.',
-    '.gggggg.', '.gggggg.', '..gggg..', '........',
+    '...hh...',
+    '...ww...',
+    '..gggg..',
+    '.gggggg.',
+    '.gggggg.',
+    '.gggggg.',
+    '..gggg..',
+    '........',
   ],
   'esquirla': [
-    '....g...', '...gg...', '...ggg..', '..gggg..',
-    '..ggg...', '.ggg....', '.gg.....', '........',
+    '....g...',
+    '...gg...',
+    '...ggg..',
+    '..gggg..',
+    '..ggg...',
+    '.ggg....',
+    '.gg.....',
+    '........',
   ],
   'cristal': [
-    '...gg...', '..gggg..', '.gggggg.', 'gggwgggg',
-    '.gggggg.', '..gggg..', '...gg...', '........',
+    '...gg...',
+    '..gggg..',
+    '.gggggg.',
+    'gggwgggg',
+    '.gggggg.',
+    '..gggg..',
+    '...gg...',
+    '........',
   ],
   'prisma': [
-    '...g....', '...gg...', '..gggm..', '..ggmm..',
-    '.ggmmmh.', '.gmmmhh.', 'gggmmhhh', '........',
+    '...g....',
+    '...gg...',
+    '..gggm..',
+    '..ggmm..',
+    '.ggmmmh.',
+    '.gmmmhh.',
+    'gggmmhhh',
+    '........',
   ],
   // Eco: un portal con un reloj adentro (ecos_atlas.md § 2).
   'eco': [
-    '..gggg..', '.gwwwwg.', 'gww.mwwg', 'gww.mwwg',
-    'gwwmmwwg', 'gwwwwwwg', '.gwwwwg.', '..gggg..',
+    '..gggg..',
+    '.gwwwwg.',
+    'gww.mwwg',
+    'gww.mwwg',
+    'gwwmmwwg',
+    'gwwwwwwg',
+    '.gwwwwg.',
+    '..gggg..',
   ],
   // Ancla Temporal.
   'ancla': [
-    '...gg...', '...gg...', '.mmggmm.', '...gg...',
-    '...gg...', 'g..gg..g', '.g.gg.g.', '..gggg..',
+    '...gg...',
+    '...gg...',
+    '.mmggmm.',
+    '...gg...',
+    '...gg...',
+    'g..gg..g',
+    '.g.gg.g.',
+    '..gggg..',
   ],
 };
 
 /// Clave del ícono de un tipo de arma (`espada+escudo` → `escudo`).
-String iconKeyForType(String type) =>
-    type.contains('escudo') ? 'escudo' : (_icons.containsKey(type) ? type : 'espada');
+String iconKeyForType(String type) => type.contains('escudo')
+    ? 'escudo'
+    : (_icons.containsKey(type) ? type : 'espada');
 
 /// Clave y color de acento del ícono de una pila.
 (String, Color) iconForStack(StackKind k) => switch (k) {
@@ -130,7 +243,8 @@ String iconKeyForType(String type) =>
 
 /// Ícono pixel (8 × 8 escalado) sin difuminado.
 class PixelIcon extends StatelessWidget {
-  const PixelIcon(this.iconKey, {super.key, this.accent = ProtoColors.ice, this.size = 32});
+  const PixelIcon(this.iconKey,
+      {super.key, this.accent = ProtoColors.ice, this.size = 32});
 
   final String iconKey;
   final Color accent;
@@ -172,7 +286,8 @@ class _PixelPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_PixelPainter old) => old.rows != rows || old.accent != accent;
+  bool shouldRepaint(_PixelPainter old) =>
+      old.rows != rows || old.accent != accent;
 }
 
 // ---------------------------------------------------------------------
@@ -261,13 +376,31 @@ class ItemCell extends StatelessWidget {
       child: Stack(
         children: [
           if (icon != null) Center(child: icon),
+          // Letra de la rareza arriba a la izquierda (no solo el color).
+          if ((c?.item?.rarity ?? c?.eco?.rarity) case final r?)
+            Positioned(
+              left: 2,
+              top: 1,
+              child: Text(RarityColors.letter(r),
+                  key: const ValueKey('cell-rarity'),
+                  textScaler: RetroType.fixedScaler(context),
+                  style: TextStyle(
+                      fontFamily: RetroType.pixelFamily,
+                      fontSize: RetroType.label,
+                      height: 1,
+                      color: RarityColors.of(r),
+                      shadows: const [Shadow(offset: Offset(1, 1))])),
+            ),
           if (c?.eco case final e?)
             Positioned(
               right: 2,
               bottom: 0,
               child: Text('T${e.tier}',
+                  // Casilla de tamaño fijo: nítido pero sin agrandarse.
+                  textScaler: RetroType.fixedScaler(context),
                   style: const TextStyle(
-                      fontSize: 8,
+                      fontFamily: RetroType.pixelFamily,
+                      fontSize: RetroType.label,
                       color: kEcoColor,
                       shadows: [Shadow(offset: Offset(1, 1))])),
             ),
@@ -276,8 +409,10 @@ class ItemCell extends StatelessWidget {
               right: 2,
               bottom: 0,
               child: Text('${c!.count}',
+                  textScaler: RetroType.fixedScaler(context),
                   style: const TextStyle(
-                      fontSize: 8,
+                      fontFamily: RetroType.pixelFamily,
+                      fontSize: RetroType.label,
                       color: ProtoColors.ink,
                       shadows: [Shadow(offset: Offset(1, 1))])),
             ),
@@ -292,8 +427,8 @@ class ItemCell extends StatelessWidget {
 // ---------------------------------------------------------------------
 
 /// Etiqueta de un drop como se vería en el mapa con el estilo del filtro
-/// ([verdict]): color de texto, borde y fondo; tamaño 8 px (≥ 36 en el
-/// filtro: 16 px). Oculto: texto `dim` y `(oculto)`.
+/// ([verdict]): color de texto, borde y fondo; tamaño [RetroType.small]
+/// (≥ 36 en el filtro: [RetroType.title]). Oculto: texto `dim` y `(oculto)`.
 class LootLabel extends StatelessWidget {
   const LootLabel({
     super.key,
@@ -312,7 +447,9 @@ class LootLabel extends StatelessWidget {
 
   /// Tamaño de letra para un tamaño de filtro (18–45).
   static double fontSizeFor(int? size) =>
-      (size ?? FilterStyle.defaultSize) >= 36 ? 16 : 8;
+      (size ?? FilterStyle.defaultSize) >= 36
+          ? RetroType.title
+          : RetroType.small;
 
   @override
   Widget build(BuildContext context) {
@@ -337,6 +474,8 @@ class LootLabel extends StatelessWidget {
         ),
         child: Text(retroText(text),
             style: TextStyle(
+                fontFamilyFallback: RetroType.bodyFallback,
+                fontFamily: RetroType.familyFor(fontSizeFor(st.size)),
                 fontSize: fontSizeFor(st.size),
                 height: 1.4,
                 color: st.textColor == null

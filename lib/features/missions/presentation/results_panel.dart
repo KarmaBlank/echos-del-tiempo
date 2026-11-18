@@ -4,6 +4,7 @@ import '../../../app/theme/proto_colors.dart';
 
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/loot_filter.dart';
 import '../../inventory/presentation/item_widgets.dart';
@@ -123,7 +124,7 @@ class ResultsPanel extends StatelessWidget {
               child: Text(retroText(finalTitle),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 14,
+                      fontFamily: RetroType.pixelFamily, fontSize: 14,
                       color: ProtoColors.gold,
                       shadows: [
                         Shadow(
@@ -159,7 +160,7 @@ class ResultsPanel extends StatelessWidget {
               child: Text(retroText(u),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontSize: 12,
+                      fontFamily: RetroType.pixelFamily, fontSize: 12,
                       color: ProtoColors.gold,
                       shadows: [
                         Shadow(
@@ -171,7 +172,7 @@ class ResultsPanel extends StatelessWidget {
           // `.bigrank`: dorado con sombra dura `#a3471d`.
           Text(rankLabel(r.rank),
               style: const TextStyle(
-                  fontSize: 56,
+                  fontFamily: RetroType.pixelFamily, fontSize: 56,
                   height: 1.4,
                   color: ProtoColors.gold,
                   shadows: [

@@ -21,6 +21,9 @@ void main() {
         expect(b.curve, greaterThanOrEqualTo(a.curve));
       }
       expect(s.curve, 0, reason: 'SUAVE no curva');
+      // La curva remuestrea la UI y ensucia la fuente pixel: solo FUERTE.
+      expect(n.curve, 0, reason: 'NORMAL (por defecto) no curva');
+      expect(f.curve, greaterThan(0));
       // Legible: la scanline de NORMAL oscurece como mucho un 24%.
       expect(n.scan, lessThanOrEqualTo(0.25));
     });

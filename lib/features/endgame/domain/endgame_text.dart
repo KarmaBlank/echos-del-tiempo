@@ -49,6 +49,20 @@ String ecoCraftLabel(EcoItem e, EcoCraftOp op) {
   return c == null ? what : '$what (${c.$1.label} ×${c.$2})';
 }
 
+/// Fila de mejora del Portal: `<b>+1 Tier</b> 1 Ancla` (el costo en
+/// `dim`).
+String ecoCraftRowMarkup(EcoItem e, EcoCraftOp op) {
+  final c = EcoRules.cost(e, op);
+  final what = switch (op) {
+    EcoCraftOp.reroll => 'Mods nuevos',
+    EcoCraftOp.addMod => '+1 mod',
+    EcoCraftOp.rarity => 'Rareza',
+    EcoCraftOp.tier => '+1 tier',
+  };
+  return '<b>$what</b>'
+      '${c == null ? '' : ' <span style="color:#7d8bc4">${c.$2} ${c.$1.label.substring(0, 3)}.</span>'}';
+}
+
 /// Texto de la Maestría para la barra / el panel.
 String masteryText(PlayerProfile p) => p.mastery >= PlayerProfile.maxMastery
     ? 'MAESTRÍA MÁX'

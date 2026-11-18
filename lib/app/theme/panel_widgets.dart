@@ -9,7 +9,8 @@ import 'retro_theme.dart';
 /// docs/specs/ui_style.md § "Panel sobre el mapa" y docs/specs/panels.md
 /// § "Marco común".
 
-/// Línea "qué hace" de una pestaña o sección: 8 px `dim`, en markup.
+/// Línea "qué hace" de una pestaña o sección: [RetroType.small] `dim`, en
+/// markup.
 class PanelHint extends StatelessWidget {
   const PanelHint(this.markup, {super.key});
 
@@ -18,51 +19,67 @@ class PanelHint extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: ProtoText(markup,
-            style: const TextStyle(color: ProtoColors.dim)),
+        child:
+            ProtoText(markup, style: const TextStyle(color: ProtoColors.dim)),
       );
 }
 
 /// Lista compacta (izquierda, [listWidth] px) y detalle (el resto). La
 /// lista tiene su propio scroll; el detalle lo maneja [detail] (por lo
-/// general un [PanelDetail]).
+/// general un [PanelDetail]). Con texto más grande la lista se ensancha
+/// igual que el texto (sin pasar de la mitad del panel), salvo que
+/// [scaleList] sea `false` (listas de ancho fijo, como la grilla del
+/// inventario).
 class PanelSplit extends StatelessWidget {
   const PanelSplit({
     super.key,
     required this.list,
     required this.detail,
     this.listWidth = 360,
+    this.scaleList = true,
   });
 
   final List<Widget> list;
   final Widget detail;
   final double listWidth;
+  final bool scaleList;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          width: listWidth,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: list,
+    return LayoutBuilder(builder: (context, box) {
+      var w = listWidth;
+      if (scaleList) {
+        final scaled = RetroType.width(context, listWidth);
+        final cap = box.maxWidth.isFinite
+            ? (box.maxWidth * 0.5).clamp(listWidth, double.infinity)
+            : scaled;
+        w = scaled.clamp(listWidth, cap);
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: w,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: list,
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(child: detail),
-      ],
-    );
+          const SizedBox(width: 16),
+          Expanded(child: detail),
+        ],
+      );
+    });
   }
 }
 
 /// Caja del detalle / vista previa: borde `#2e3b6b`, contenido con
 /// scroll y [footer] fijo abajo a la derecha (el botón de la acción).
 class PanelDetail extends StatelessWidget {
-  const PanelDetail({super.key, required this.children, this.footer = const []});
+  const PanelDetail(
+      {super.key, required this.children, this.footer = const []});
 
   final List<Widget> children;
   final List<Widget> footer;
@@ -137,8 +154,8 @@ class _PanelListItemState extends State<PanelListItem> {
       onShowFocusHighlight: (v) => setState(() => _hot = v),
       onShowHoverHighlight: (v) => setState(() => _hot = v),
       actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(
-            onInvoke: (_) => widget.onTap()),
+        ActivateIntent:
+            CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onTap()),
       },
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -198,12 +215,14 @@ class StatChange extends StatelessWidget {
     return Text.rich(
       TextSpan(children: [
         TextSpan(text: retroText('$label ${f(before)}')),
+        // ▲ mejora / ▼ empeora: no solo el color (daltonismo).
         if (changed)
           TextSpan(
-              text: retroText(' → ${f(after)}'),
               style: TextStyle(
                   color: better ? ProtoColors.green : ProtoColors.red,
-                  fontWeight: FontWeight.bold)),
+                  fontWeight: FontWeight.bold),
+              children: symbolSpans(
+                  retroText(' → ${f(after)} ${better ? '▲' : '▼'}'))),
         if (suffix != null)
           TextSpan(
               text: retroText(' $suffix'),

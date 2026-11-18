@@ -5,7 +5,7 @@ import '../models/status.dart';
 import 'ascension_mechanics.dart';
 
 // Las 8 ascensiones (docs/specs/ascension.md § 2-4): mini-árbol de 8
-// nodos, 2 habilidades de kit y una ULT propia.
+// nodos, 2 habilidades de kit (el Guardián 3) y una ULT propia.
 
 const _burn = StatusKind.burn;
 const _poi = StatusKind.poison;
@@ -36,9 +36,11 @@ const Map<String, SkillDef> kAscensionSkills = {
   // Templario
   'castigo': SkillDef(id: 'castigo', name: 'Castigo Sagrado', mp: 4, kind: SkillKind.magical, power: 1.6, status: StatusApplication(_stun, 1, chance: 0.35), extraStatuses: [StatusApplication(_holy, 1)]),
   'luzCegadora': SkillDef(id: 'luzCegadora', name: 'Luz Cegadora', mp: 7, kind: SkillKind.magical, power: 0.9, allTargets: true, status: StatusApplication(_stun, 1, chance: 0.25)),
-  // Guardián
-  'egidaGrupal': SkillDef(id: 'egidaGrupal', name: 'Égida Grupal', mp: 5, kind: SkillKind.support, partyShield: 0.15, partyShieldTurns: 3),
-  'juramento': SkillDef(id: 'juramento', name: 'Juramento', mp: 6, kind: SkillKind.support, partyBuffs: [PartyBuff(BuffStat.guard, 0.30, 2)], protect: true),
+  // Guardián: el kit clásico del Paladín (hasta v0.4 era de la clase),
+  // mejorado. Fortaleza absorbe a la vieja Égida Grupal.
+  'proteccion': SkillDef(id: 'proteccion', name: 'Protección', mp: 5, kind: SkillKind.protect, selfBuff: PartyBuff(BuffStat.guard, 0.20, 1)),
+  'fortaleza': SkillDef(id: 'fortaleza', name: 'Fortaleza', mp: 6, kind: SkillKind.defenseUp, amount: 2, partyShield: 0.15, partyShieldTurns: 3, partyBuffs: [PartyBuff(BuffStat.guard, 0.10, 2)]),
+  'aura': SkillDef(id: 'aura', name: 'Aura Restauradora', mp: 6, kind: SkillKind.regen, power: 1.0),
 };
 
 /// ULT de cada ascensión, por id de ascensión (reemplaza la del arma).
@@ -110,7 +112,7 @@ final Map<String, AscensionDef> kAscensions = {
     AscensionDef(id: 'francotirador', classId: 'tirador', name: 'Francotirador', theme: 'críticos enormes a un objetivo', motto: 'Un disparo. Una baja.', color: 0xFFFF6B81, skillIds: const ['tiroCabeza', 'apuntar'], ultId: 'ult_francotirador', nodes: _tree('francotirador')),
     AscensionDef(id: 'trampero', classId: 'tirador', name: 'Trampero', theme: 'trampas y daño en área', motto: 'El campo de batalla ya es suyo.', color: 0xFF7BED9F, skillIds: const ['trampaPuas', 'redCaza'], ultId: 'ult_trampero', nodes: _tree('trampero')),
     AscensionDef(id: 'templario', classId: 'paladin', name: 'Templario', theme: 'daño sagrado y aturdir', motto: 'La luz juzga y no perdona.', color: 0xFFFFEAA7, skillIds: const ['castigo', 'luzCegadora'], ultId: 'ult_templario', nodes: _tree('templario')),
-    AscensionDef(id: 'guardian', classId: 'paladin', name: 'Guardián', theme: 'escudos y protección del grupo', motto: 'Nadie cae mientras él esté en pie.', color: 0xFF74B9FF, skillIds: const ['egidaGrupal', 'juramento'], ultId: 'ult_guardian', nodes: _tree('guardian')),
+    AscensionDef(id: 'guardian', classId: 'paladin', name: 'Guardián', theme: 'escudos y protección del grupo', motto: 'Nadie cae mientras él esté en pie.', color: 0xFF74B9FF, skillIds: const ['proteccion', 'fortaleza', 'aura'], ultId: 'ult_guardian', nodes: _tree('guardian')),
   ])
     a.id: a,
 };

@@ -47,11 +47,12 @@ cada id de `inv` → arma Común con sus mejoras y su fusión:
  "up":{"baculo_aprendiz":{"pow":2}},"fuse":{},"tree":["brasa_1"],"tv":2}
 ```
 
-`tv` es la versión del árbol (hoy 2, `kPassiveTreeVersion`). Un perfil
-sin `tv` o con una versión vieja que tenía nodos se carga con el árbol
-vacío y recuerda cuántos devolvió (`treeRefunded`, clave `tvRef` solo
+`tv` es la versión del árbol (hoy 3, `kPassiveTreeVersion`). Un perfil
+sin `tv` o con una versión vieja que tenía nodos se migra (v2 → v3: solo
+quedan el anillo y los inicios; v1: nada, passive_tree_v3.md § 11) y
+recuerda cuántos devolvió (`treeRefunded`, clave `tvRef` solo
 hasta normalizar); al entrar a la sala el sistema avisa una vez
-(passive_tree_v2.md § 6).
+(passive_tree_v3.md § 11).
 
 `fromJson` es tolerante (campos faltantes o de otro tipo toman su valor
 por defecto). Después `ProgressionRules.normalize` aplica la validación
@@ -144,8 +145,11 @@ solo en lobby / preparación.
 
 - `canEquip`: **cualquier clase** (loot.md § 0.2), nivel `≥` al de la
   base y cada atributo `≥` al requisito. La clase define atributos base,
-  kit, inicio del árbol y arma inicial; las habilidades y la ULT vienen
-  del arma.
+  rasgos (DEF base, aturdir, debilidades), inicio del árbol y arma
+  inicial; las habilidades y la ULT vienen del arma (y de la ascensión).
+  Desde v0.5 ninguna clase tiene kit fijo: el del Paladín (Aura
+  Restauradora, Fortaleza, Protección) es el kit del Guardián
+  (ascension.md § 4).
 - `equip`: debe tenerla (`uid` o base) y poder equiparla.
 - `buyWeapon`: cualquier base con precio `> 0` que no tenga, si le
   alcanzan los créditos y hay una casilla libre; llega Común. Se puede
@@ -178,8 +182,11 @@ consume. Requisitos: `a ≠ b`, ambas propias, `b` no es la equipada ni la
 última del arma inicial, `sk` es de `b` (de su base o trasladada) y le
 alcanzan los créditos (₵200 × rareza de `a`). Con los cupos llenos (1
 hasta Raro, 2 en Épico / Legendario) reemplaza a la más vieja.
-Habilidades de un arma en combate (`weaponSkills`): kit de clase +
-habilidades del arma + las trasladadas (si no estaban).
+Habilidades de un arma en combate (`weaponSkills`): kit de clase (vacío
+en todas desde v0.5) + habilidades del arma + las trasladadas (si no
+estaban). El kit de la ascensión lo suma el combate (`BattleEngine`).
+Un perfil v0.4 de Paladín no guarda su kit viejo (salía de la clase):
+carga igual y queda con las habilidades de su arma.
 
 ## Árbol de pasivas
 

@@ -249,84 +249,121 @@ orden (no cambia nada en la UI).
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | `espada_bronce` | Espada de Bronce | guerrero | espada | 1 | FUE 8 | 6.0 + 0.6·FUE + 0.2·DES | — | — | — | Corte Giratorio, Embestida | — | 0 |
 | `espada_ignea` | Espada Ígnea | guerrero | espada | 2 | FUE 14, DES 8 | 10.0 + 0.6·FUE + 0.3·DES | — | 0.3 | — | Golpe Ígneo, Corte Giratorio | — | 300 |
-| `hacha_rompe` | Hacha Rompeturnos | guerrero | hacha | 4 | FUE 18 | 16.0 + 0.85·FUE | — | 1.5 | — | Golpe Sísmico, Hendidura Tóxica | — | 650 |
-| `mandoble_eco` | Mandoble del Eco | guerrero | espada | 7 | FUE 22, DES 12 | 22.0 + 0.8·FUE + 0.4·DES | — | 1.0 | — | Tajo Temporal, Corte Giratorio, Embestida | — | 1400 |
-| `espada_carmesi` | Espada Carmesí | guerrero | espada | 4 | FUE 15, DES 12 | 13.0 + 0.55·FUE + 0.4·DES | — | — | — | Tajo Carmesí, Corte Giratorio | — | 660 |
-| `hacha_tormenta` | Hacha de la Tormenta | guerrero | hacha | 7 | FUE 21 | 21.0 + 0.85·FUE | — | 1.4 | — | Vendaval Helado, Golpe Sísmico | — | 1450 |
+| `hacha_rompe` | Hacha Rompeturnos | guerrero | hacha | 4 | FUE 18 | 16.0 + 0.85·FUE | — | 1.5 | — | Golpe Sísmico, Rompearmaduras | — | 650 |
+| `mandoble_eco` | Mandoble del Eco | guerrero | espada | 7 | FUE 22, DES 12 | 22.0 + 0.8·FUE + 0.4·DES | — | 1.0 | — | Tajo Temporal, Corte Giratorio, Reto Escudado | — | 1400 |
+| `espada_carmesi` | Espada Carmesí | guerrero | espada | 4 | FUE 15, DES 12 | 13.0 + 0.55·FUE + 0.4·DES | — | — | — | Tajo Carmesí, Sifón Vital | — | 660 |
+| `hacha_tormenta` | Hacha de la Tormenta | guerrero | hacha | 7 | FUE 21 | 21.0 + 0.85·FUE | — | 1.4 | — | Vendaval Helado, Rugido Intimidante | — | 1450 |
 | `mandoble_ocaso` | Mandoble del Ocaso | guerrero | espada | 7 | FUE 20, DES 14 | 22.0 + 0.7·FUE + 0.4·DES | — | 1.0 | — | Tajo del Ocaso, Embestida | — | 1500 |
 | `katana_escarcha` | Katana de Escarcha | guerrero | espada | 2 | FUE 12, DES 10 | 9.0 + 0.5·FUE + 0.4·DES | — | — | — | Corte Glacial, Embestida | — | 350 |
-| `hacha_volcanica` | Hacha Volcánica | guerrero | hacha | 4 | FUE 17, ESP 8 | 15.0 + 0.8·FUE | — | 1.3 | — | Erupción, Golpe Ígneo | — | 720 |
+| `hacha_volcanica` | Hacha Volcánica | guerrero | hacha | 4 | FUE 17, ESP 8 | 15.0 + 0.8·FUE | — | 1.3 | — | Erupción, Golpe Debilitante | — | 720 |
 | `baculo_aprendiz` | Báculo de Aprendiz | maga | báculo | 1 | ESP 8 | 3.0 + 0.4·FUE | 5.0 + 0.75·ESP | — | — | Chispa, Cura | — | 0 |
 | `baculo_fuego` | Báculo de Fuego | maga | báculo | 2 | ESP 14 | 4.0 + 0.4·FUE | 7.0 + 0.8·ESP | — | — | Bola de Fuego, Llamarada | — | 300 |
-| `baculo_escarcha` | Báculo de Escarcha | maga | báculo | 4 | ESP 16, AGI 9 | 4.0 + 0.4·FUE | 10.0 + 0.85·ESP | — | — | Lanza de Hielo, Ventisca | — | 650 |
-| `tomo_tiempo` | Tomo del Tiempo | maga | tomo | 7 | ESP 22 | 3.0 + 0.3·FUE | 14.0 + 1.0·ESP | 0.5 | — | Detener, Cura Mayor | — | 1400 |
-| `baculo_rayo` | Báculo del Rayo | maga | báculo | 4 | ESP 16, DES 10 | 3.0 + 0.4·FUE | 11.0 + 0.85·ESP | — | — | Descarga, Prisa (aliados) | — | 680 |
-| `tomo_plaga` | Tomo de la Plaga | maga | tomo | 4 | ESP 17 | 3.0 + 0.3·FUE | 10.0 + 0.85·ESP | 0.4 | — | Plaga, Dardo Tóxico | — | 700 |
-| `baculo_ponzona` | Báculo de Ponzoña | maga | báculo | 2 | ESP 12, DES 8 | 3.0 + 0.4·FUE | 7.0 + 0.8·ESP | — | — | Dardo Tóxico, Cura | — | 350 |
-| `tomo_infernal` | Tomo Infernal | maga | tomo | 7 | ESP 21 | 3.0 + 0.3·FUE | 14.0 + 1.0·ESP | 0.5 | — | Infierno, Bola de Fuego | — | 1500 |
+| `baculo_escarcha` | Báculo de Escarcha | maga | báculo | 4 | ESP 16, AGI 9 | 4.0 + 0.4·FUE | 10.0 + 0.85·ESP | — | — | Lanza de Hielo, Brotes de Vida | — | 650 |
+| `tomo_tiempo` | Tomo del Tiempo | maga | tomo | 7 | ESP 22 | 3.0 + 0.3·FUE | 14.0 + 1.0·ESP | 0.5 | — | Detener, Impulso Temporal | — | 1400 |
+| `baculo_rayo` | Báculo del Rayo | maga | báculo | 4 | ESP 16, DES 10 | 3.0 + 0.4·FUE | 11.0 + 0.85·ESP | — | — | Descarga, Semilla Vital | — | 680 |
+| `tomo_plaga` | Tomo de la Plaga | maga | tomo | 4 | ESP 17 | 3.0 + 0.3·FUE | 10.0 + 0.85·ESP | 0.4 | — | Plaga, Lentitud | — | 700 |
+| `baculo_ponzona` | Báculo de Ponzoña | maga | báculo | 2 | ESP 12, DES 8 | 3.0 + 0.4·FUE | 7.0 + 0.8·ESP | — | — | Drenar Vida, Rocío Sanador | — | 350 |
+| `tomo_infernal` | Tomo Infernal | maga | tomo | 7 | ESP 21 | 3.0 + 0.3·FUE | 14.0 + 1.0·ESP | 0.5 | — | Infierno, Maldición | — | 1500 |
 | `arco_corto` | Arco Corto | tirador | arco | 1 | DES 8 | 5.0 + 0.6·DES + 0.2·FUE | — | — | — | Flecha Venenosa, Ráfaga, Disparo Certero | — | 0 |
-| `rifle_aturdidor` | Rifle Aturdidor | tirador | rifle | 2 | DES 12, FUE 8 | 9.0 + 0.55·DES + 0.3·FUE | — | 0.5 | — | Disparo Aturdidor, Disparo Certero | — | 300 |
-| `arco_tormenta` | Arco Tormenta | tirador | arco | 4 | DES 16, AGI 12 | 12.0 + 0.7·DES + 0.2·AGI | — | — | — | Flecha Rayo, Lluvia de Flechas, Flecha Venenosa | — | 650 |
-| `rifle_ocaso` | Rifle del Ocaso | tirador | rifle | 7 | DES 22 | 20.0 + 0.85·DES | — | 0.8 | — | Tiro Perforante, Disparo Aturdidor, Ráfaga | — | 1400 |
-| `arco_sombra` | Arco de Sombra | tirador | arco | 4 | DES 16 | 12.0 + 0.65·DES | — | — | — | Flecha Sombría, Flecha Venenosa | — | 680 |
-| `rifle_glacial` | Rifle Glacial | tirador | rifle | 7 | DES 21, FUE 10 | 19.0 + 0.8·DES | — | 0.9 | — | Cero Absoluto, Disparo Aturdidor | — | 1450 |
-| `arco_solar` | Arco Solar | tirador | arco | 7 | DES 20, AGI 14 | 18.0 + 0.75·DES | — | — | — | Flecha Solar, Lluvia de Flechas | — | 1450 |
-| `ballesta_glacial` | Ballesta Glacial | tirador | arco | 2 | DES 12, AGI 10 | 9.0 + 0.6·DES | — | — | — | Saeta Glacial, Ráfaga | — | 350 |
-| `rifle_pestilente` | Rifle Pestilente | tirador | rifle | 4 | DES 15, FUE 9 | 12.0 + 0.6·DES + 0.2·FUE | — | 0.6 | — | Metralla Tóxica, Flecha Venenosa, Disparo Certero | — | 720 |
-| `espada_escudo_novato` | Espada y Escudo de Novicio | paladin | espada+escudo | 1 | FUE 5 | 2.0 + 0.15·FUE | 4.0 + 0.6·ESP | — | — | Estocada Firme, Golpe de Escudo | — | 0 |
+| `rifle_aturdidor` | Rifle Aturdidor | tirador | rifle | 2 | DES 12, FUE 8 | 9.0 + 0.55·DES + 0.3·FUE | — | 0.5 | — | Disparo Aturdidor, Ráfaga Triple | — | 300 |
+| `arco_tormenta` | Arco Tormenta | tirador | arco | 4 | DES 16, AGI 12 | 12.0 + 0.7·DES + 0.2·AGI | — | — | — | Flecha Rayo, Lluvia de Flechas, Flecha Marcadora | — | 650 |
+| `rifle_ocaso` | Rifle del Ocaso | tirador | rifle | 7 | DES 22 | 20.0 + 0.85·DES | — | 0.8 | — | Tiro Perforante, Bala Traspasante, Cadencia Letal | — | 1400 |
+| `arco_sombra` | Arco de Sombra | tirador | arco | 4 | DES 16 | 12.0 + 0.65·DES | — | — | — | Flecha Sombría, Flecha Sanadora | — | 680 |
+| `rifle_glacial` | Rifle Glacial | tirador | rifle | 7 | DES 21, FUE 10 | 19.0 + 0.8·DES | — | 0.9 | — | Cero Absoluto, Disparo Cargado | — | 1450 |
+| `arco_solar` | Arco Solar | tirador | arco | 7 | DES 20, AGI 14 | 18.0 + 0.75·DES | — | — | — | Flecha Solar, Ojo de Águila | — | 1450 |
+| `ballesta_glacial` | Ballesta Glacial | tirador | arco | 2 | DES 12, AGI 10 | 9.0 + 0.6·DES | — | — | — | Saeta Glacial, Flecha de Escarcha | — | 350 |
+| `rifle_pestilente` | Rifle Pestilente | tirador | rifle | 4 | DES 15, FUE 9 | 12.0 + 0.6·DES + 0.2·FUE | — | 0.6 | — | Metralla Tóxica, Bala Corrosiva, Disparo Certero | — | 720 |
+| `espada_escudo_novato` | Espada y Escudo de Novicio | paladin | espada+escudo | 1 | FUE 5 | 2.0 + 0.15·FUE | 4.0 + 0.6·ESP | — | — | Estocada Firme, Golpe de Escudo, Sanación ¹ | — | 0 |
 | `maza_escudo_roble` | Maza y Escudo de Roble | paladin | maza+escudo | 2 | FUE 7, VIT 16 | 2.0 + 0.15·FUE | 5.0 + 0.65·ESP | 0.4 | 3 | Golpe de Escudo, Sanación | — | 320 |
-| `martillo_escudo_hierro` | Martillo y Escudo de Hierro | paladin | martillo+escudo | 2 | FUE 10 | 6.0 + 0.4·FUE | 4.0 + 0.5·ESP | 1.0 | — | Aplastar, Temblor | — | 340 |
-| `espada_escudo_alba` | Espada y Escudo del Alba | paladin | espada+escudo | 4 | FUE 9, ESP 13 | 5.0 + 0.3·FUE | 8.0 + 0.8·ESP | — | 1 | Lanza de Luz, Consagrar | — | 680 |
+| `martillo_escudo_hierro` | Martillo y Escudo de Hierro | paladin | martillo+escudo | 2 | FUE 10 | 6.0 + 0.4·FUE | 4.0 + 0.5·ESP | 1.0 | — | Aplastar, Conmoción | — | 340 |
+| `espada_escudo_alba` | Espada y Escudo del Alba | paladin | espada+escudo | 4 | FUE 9, ESP 13 | 5.0 + 0.3·FUE | 8.0 + 0.8·ESP | — | 1 | Lanza de Luz, Égida Espinosa | — | 680 |
 | `maza_escudo_bastion` | Maza y Escudo Bastión | paladin | maza+escudo | 4 | VIT 20, ESP 11 | 3.0 + 0.2·FUE | 7.0 + 0.75·ESP | 0.6 | 5 | Provocar, Escudo de Fe | — | 700 |
-| `martillo_escudo_juicio` | Martillo y Escudo del Juicio | paladin | martillo+escudo | 7 | FUE 16, VIT 18 | 12.0 + 0.6·FUE | 6.0 + 0.6·ESP | 1.4 | — | Martillo del Juicio, Golpe Sagrado, Temblor | — | 1450 |
+| `martillo_escudo_juicio` | Martillo y Escudo del Juicio | paladin | martillo+escudo | 7 | FUE 16, VIT 18 | 12.0 + 0.6·FUE | 6.0 + 0.6·ESP | 1.4 | — | Martillo del Juicio, Golpe Sagrado, Golpe Debilitante | — | 1450 |
 | `lanza_hierro` | Lanza de Hierro | guerrero | lanza | 4 | FUE 12, AGI 7 | 10.0 + 0.64·FUE + 0.25·AGI | — | 0.5 | — | Lanza Perforante, Barrido de Lanza | +0.3 velocidad | 464 |
 | `lanza_escarcha` | Lanza de Escarcha | guerrero | lanza | 12 | FUE 21, AGI 11 | 17.0 + 0.72·FUE + 0.25·AGI | — | 0.5 | — | Corte Glacial, Barrido de Lanza, Lanza Perforante | +0.3 velocidad | 1776 |
-| `espada_templada` | Espada Templada | guerrero | espada | 14 | FUE 23, DES 12 | 19.0 + 0.74·FUE + 0.3·DES | — | — | — | Corte Giratorio, Tajo Carmesí | +3% crítico | 2184 |
-| `hacha_berserker` | Hacha Berserker | guerrero | hacha | 17 | FUE 27 | 24.0 + 0.92·FUE | — | 1.3 | — | Hendidura Tóxica, Golpe Sísmico | +6% ATQ | 2856 |
+| `espada_templada` | Espada Templada | guerrero | espada | 14 | FUE 23, DES 12 | 19.0 + 0.74·FUE + 0.3·DES | — | — | — | Corte Giratorio, Bastión Creciente | +3% crítico | 2184 |
+| `hacha_berserker` | Hacha Berserker | guerrero | hacha | 17 | FUE 27 | 24.0 + 0.92·FUE | — | 1.3 | — | Hendidura Tóxica, Sifón Vital | +6% ATQ | 2856 |
 | `lanza_dragon` | Lanza del Dragón | guerrero | lanza | 20 | FUE 29, AGI 15 | 25.0 + 0.8·FUE + 0.25·AGI | — | 0.5 | — | Empalar, Golpe Ígneo | +0.3 velocidad | 3600 |
-| `espada_runica` | Espada Rúnica | guerrero | espada | 24 | FUE 33, DES 17 | 29.0 + 0.84·FUE + 0.3·DES | — | — | — | Tajo Temporal, Embestida | +3% crítico | 4704 |
-| `hacha_glaciar` | Hacha del Glaciar | guerrero | hacha | 28 | FUE 39 | 36.0 + 1.03·FUE | — | 1.3 | — | Vendaval Helado, Hendidura Tóxica | +10% ATQ | 5936 |
-| `lanza_tormenta` | Lanza de la Tormenta | guerrero | lanza | 32 | FUE 42, AGI 21 | 36.0 + 0.92·FUE + 0.25·AGI | — | 0.5 | — | Empalar, Barrido de Lanza, Lanza Perforante | +0.5 velocidad | 7296 |
-| `mandoble_eras` | Mandoble de las Eras | guerrero | espada | 37 | FUE 47, DES 24 | 41.0 + 0.97·FUE + 0.3·DES | — | 0.3 | — | Tajo del Ocaso, Corte Giratorio, Embestida | +5% crítico | 9176 |
-| `hacha_cataclismo` | Hacha del Cataclismo | guerrero | hacha | 43 | FUE 56 | 52.0 + 1.18·FUE | — | 1.5 | — | Erupción, Golpe Sísmico | +10% ATQ | 11696 |
-| `espada_cronos` | Espada de Cronos | guerrero | espada | 50 | FUE 60, DES 30 | 54.0 + 1.1·FUE + 0.3·DES | — | 0.3 | — | Tajo Temporal, Tajo Carmesí, Corte Giratorio | +5% crítico | 15000 |
-| `varita_sauce` | Varita de Sauce | maga | varita | 2 | ESP 10, DES 6 | 3.0 + 0.3·FUE | 6.0 + 0.72·ESP | — | — | Misil Arcano, Chispa | +8 maná | 216 |
-| `varita_hielo` | Varita de Hielo | maga | varita | 8 | ESP 16, DES 9 | 4.0 + 0.3·FUE | 11.0 + 0.78·ESP | — | — | Escarcha Fugaz, Misil Arcano | +8 maná | 1056 |
-| `baculo_roble` | Báculo de Roble Antiguo | maga | báculo | 13 | ESP 22, AGI 12 | 4.0 + 0.4·FUE | 17.0 + 0.88·ESP | — | — | Bola de Fuego, Cura, Llamarada | +6% MAG | 1976 |
-| `tomo_escarcha` | Tomo de Escarcha | maga | tomo | 16 | ESP 26 | 5.0 + 0.3·FUE | 22.0 + 0.91·ESP | 0.4 | — | Lanza de Hielo, Ventisca | +8% carga de ULT | 2624 |
+| `espada_runica` | Espada Rúnica | guerrero | espada | 24 | FUE 33, DES 17 | 29.0 + 0.84·FUE + 0.3·DES | — | — | — | Tajo Temporal, Inspirar | +3% crítico | 4704 |
+| `hacha_glaciar` | Hacha del Glaciar | guerrero | hacha | 28 | FUE 39 | 36.0 + 1.03·FUE | — | 1.3 | — | Vendaval Helado, Rompearmaduras | +10% ATQ | 5936 |
+| `lanza_tormenta` | Lanza de la Tormenta | guerrero | lanza | 32 | FUE 42, AGI 21 | 36.0 + 0.92·FUE + 0.25·AGI | — | 0.5 | — | Empalar, Barrido de Lanza, Viento de Prisa | +0.5 velocidad | 7296 |
+| `mandoble_eras` | Mandoble de las Eras | guerrero | espada | 37 | FUE 47, DES 24 | 41.0 + 0.97·FUE + 0.3·DES | — | 0.3 | — | Tajo del Ocaso, Corte Giratorio, Reto Escudado | +5% crítico | 9176 |
+| `hacha_cataclismo` | Hacha del Cataclismo | guerrero | hacha | 43 | FUE 56 | 52.0 + 1.18·FUE | — | 1.5 | — | Erupción, Rugido Intimidante | +10% ATQ | 11696 |
+| `espada_cronos` | Espada de Cronos | guerrero | espada | 50 | FUE 60, DES 30 | 54.0 + 1.1·FUE + 0.3·DES | — | 0.3 | — | Tajo Temporal, Tajo Carmesí, Impulso Temporal | +5% crítico | 15000 |
+| `varita_sauce` | Varita de Sauce | maga | varita | 2 | ESP 10, DES 6 | 3.0 + 0.3·FUE | 6.0 + 0.72·ESP | — | — | Misil Arcano, Silencio | +8 maná | 216 |
+| `varita_hielo` | Varita de Hielo | maga | varita | 8 | ESP 16, DES 9 | 4.0 + 0.3·FUE | 11.0 + 0.78·ESP | — | — | Escarcha Fugaz, Escudo Arcano | +8 maná | 1056 |
+| `baculo_roble` | Báculo de Roble Antiguo | maga | báculo | 13 | ESP 22, AGI 12 | 4.0 + 0.4·FUE | 17.0 + 0.88·ESP | — | — | Bola de Fuego, Cura Focalizada, Llamarada | +6% MAG | 1976 |
+| `tomo_escarcha` | Tomo de Escarcha | maga | tomo | 16 | ESP 26 | 5.0 + 0.3·FUE | 22.0 + 0.91·ESP | 0.4 | — | Ventisca, Cúpula Arcana | +8% carga de ULT | 2624 |
 | `varita_rayo` | Varita del Rayo | maga | varita | 19 | ESP 28, DES 14 | 5.0 + 0.3·FUE | 21.0 + 0.89·ESP | — | — | Rayo Arcano, Prisa (aliados) | +8 maná | 3344 |
-| `baculo_ambar` | Báculo de Ámbar | maga | báculo | 23 | ESP 32, AGI 16 | 5.0 + 0.4·FUE | 27.0 + 0.98·ESP | — | — | Descarga, Cura Mayor | +6% MAG | 4416 |
+| `baculo_ambar` | Báculo de Ámbar | maga | báculo | 23 | ESP 32, AGI 16 | 5.0 + 0.4·FUE | 27.0 + 0.98·ESP | — | — | Purificación, Cura Mayor | +6% MAG | 4416 |
 | `tomo_cienaga` | Tomo de la Ciénaga | maga | tomo | 27 | ESP 38 | 6.0 + 0.3·FUE | 34.0 + 1.02·ESP | 0.4 | — | Niebla Tóxica, Dardo Tóxico | +12% carga de ULT | 5616 |
-| `varita_estelar` | Varita Estelar | maga | varita | 31 | ESP 41, DES 20 | 6.0 + 0.3·FUE | 31.0 + 1.01·ESP | — | — | Rayo Arcano, Misil Arcano, Escarcha Fugaz | +15 maná | 6944 |
-| `baculo_eclipse` | Báculo del Eclipse | maga | báculo | 35 | ESP 45, AGI 22 | 6.0 + 0.4·FUE | 38.0 + 1.1·ESP | — | — | Infierno, Lanza de Hielo | +10% MAG | 8400 |
-| `tomo_eternidad` | Tomo de la Eternidad | maga | tomo | 40 | ESP 52 | 7.0 + 0.3·FUE | 47.0 + 1.15·ESP | 0.5 | — | Detener, Cura Mayor, Plaga | +12% carga de ULT | 10400 |
-| `varita_vacio` | Varita del Vacío | maga | varita | 45 | ESP 55, DES 28 | 8.0 + 0.3·FUE | 43.0 + 1.15·ESP | — | — | Rayo Arcano, Niebla Tóxica | +15 maná | 12600 |
-| `baculo_origen` | Báculo del Origen | maga | báculo | 50 | ESP 60 | 8.0 + 0.4·FUE | 52.0 + 1.25·ESP | — | — | Infierno, Ventisca, Cura Mayor | +10% MAG | 15000 |
-| `dagas_cobre` | Dagas de Cobre | tirador | dagas | 2 | DES 10, AGI 6 | 7.0 + 0.57·DES + 0.35·AGI | — | — | — | Tajo Gemelo, Flecha Venenosa | +5% crítico | 216 |
-| `ballesta_pesada` | Ballesta Pesada | tirador | ballesta | 7 | DES 15, FUE 8 | 15.0 + 0.67·DES + 0.25·FUE | — | 1.1 | — | Virote Pesado, Disparo Aturdidor | +15% daño crítico | 896 |
-| `arco_compuesto` | Arco Compuesto | tirador | arco | 13 | DES 22, AGI 12 | 18.0 + 0.78·DES + 0.2·AGI | — | — | — | Ráfaga, Disparo Certero, Lluvia de Flechas | +3% crítico | 1976 |
-| `dagas_sombra` | Dagas Sombrías | tirador | dagas | 16 | DES 25, AGI 13 | 19.0 + 0.71·DES + 0.35·AGI | — | — | — | Abanico de Dagas, Flecha Sombría | +5% crítico | 2624 |
-| `rifle_precision` | Rifle de Precisión | tirador | rifle | 20 | DES 29, FUE 15 | 26.0 + 0.9·DES | — | 0.8 | — | Tiro Perforante, Disparo Certero | +10% daño crítico | 3600 |
-| `ballesta_ignea` | Ballesta Ígnea | tirador | ballesta | 24 | DES 33, FUE 17 | 33.0 + 0.84·DES + 0.25·FUE | — | 1.1 | — | Virote Ígneo, Virote Pesado | +15% daño crítico | 4704 |
-| `arco_viento` | Arco del Viento | tirador | arco | 28 | DES 37, AGI 19 | 33.0 + 0.93·DES + 0.2·AGI | — | — | — | Flecha Rayo, Lluvia de Flechas, Ráfaga | +5% crítico | 5936 |
-| `dagas_vibora` | Dagas de la Víbora | tirador | dagas | 32 | DES 42, AGI 21 | 33.0 + 0.87·DES + 0.35·AGI | — | — | — | Abanico de Dagas, Tajo Gemelo, Flecha Venenosa | +7% crítico | 7296 |
-| `rifle_cronal` | Rifle Cronal | tirador | rifle | 37 | DES 47, FUE 24 | 43.0 + 1.07·DES | — | 0.8 | — | Cero Absoluto, Disparo Aturdidor, Tiro Perforante | +15% daño crítico | 9176 |
-| `ballesta_asedio` | Ballesta de Asedio | tirador | ballesta | 43 | DES 53, FUE 26 | 54.0 + 1.03·DES + 0.25·FUE | — | 1.3 | — | Virote Pesado, Virote Ígneo, Disparo Aturdidor | +22% daño crítico | 11696 |
-| `arco_eterno` | Arco Eterno | tirador | arco | 50 | DES 60, AGI 30 | 54.0 + 1.15·DES + 0.2·AGI | — | — | — | Flecha Solar, Lluvia de Flechas, Flecha Sombría | +5% crítico | 15000 |
-| `espada_escudo_cruzado` | Espada y Escudo del Cruzado | paladin | espada+escudo | 13 | FUE 9, ESP 22 | 7.0 + 0.3·FUE | 14.0 + 0.8·ESP | — | 2 | Estocada Firme, Lanza de Luz | — | 1976 |
-| `maza_escudo_plata` | Maza y Escudo de Plata | paladin | maza+escudo | 15 | VIT 24, ESP 12 | 6.0 + 0.2·FUE | 14.0 + 0.8·ESP | 0.6 | 4 | Golpe de Escudo, Bendición | — | 2400 |
+| `varita_estelar` | Varita Estelar | maga | varita | 31 | ESP 41, DES 20 | 6.0 + 0.3·FUE | 31.0 + 1.01·ESP | — | — | Rayo Arcano, Misil Arcano, Ola de Retroceso | +15 maná | 6944 |
+| `baculo_eclipse` | Báculo del Eclipse | maga | báculo | 35 | ESP 45, AGI 22 | 6.0 + 0.4·FUE | 38.0 + 1.1·ESP | — | — | Infierno, Marea Vital | +10% MAG | 8400 |
+| `tomo_eternidad` | Tomo de la Eternidad | maga | tomo | 40 | ESP 52 | 7.0 + 0.3·FUE | 47.0 + 1.15·ESP | 0.5 | — | Peso del Tiempo, Resurrección, Plaga | +12% carga de ULT | 10400 |
+| `varita_vacio` | Varita del Vacío | maga | varita | 45 | ESP 55, DES 28 | 8.0 + 0.3·FUE | 43.0 + 1.15·ESP | — | — | Rayo Arcano, Silencio | +15 maná | 12600 |
+| `baculo_origen` | Báculo del Origen | maga | báculo | 50 | ESP 60 | 8.0 + 0.4·FUE | 52.0 + 1.25·ESP | — | — | Ventisca, Llama Fénix, Gracia Desbordante | +10% MAG | 15000 |
+| `dagas_cobre` | Dagas de Cobre | tirador | dagas | 2 | DES 10, AGI 6 | 7.0 + 0.57·DES + 0.35·AGI | — | — | — | Tajo Gemelo, Daga Saltarina | +5% crítico | 216 |
+| `ballesta_pesada` | Ballesta Pesada | tirador | ballesta | 7 | DES 15, FUE 8 | 15.0 + 0.67·DES + 0.25·FUE | — | 1.1 | — | Virote Pesado, Bala Corrosiva | +15% daño crítico | 896 |
+| `arco_compuesto` | Arco Compuesto | tirador | arco | 13 | DES 22, AGI 12 | 18.0 + 0.78·DES + 0.2·AGI | — | — | — | Flecha Perforante, Disparo Certero, Lluvia de Flechas | +3% crítico | 1976 |
+| `dagas_sombra` | Dagas Sombrías | tirador | dagas | 16 | DES 25, AGI 13 | 19.0 + 0.71·DES + 0.35·AGI | — | — | — | Abanico de Dagas, Señalar Presa | +5% crítico | 2624 |
+| `rifle_precision` | Rifle de Precisión | tirador | rifle | 20 | DES 29, FUE 15 | 26.0 + 0.9·DES | — | 0.8 | — | Tiro Perforante, Tiro Quebrantador | +10% daño crítico | 3600 |
+| `ballesta_ignea` | Ballesta Ígnea | tirador | ballesta | 24 | DES 33, FUE 17 | 33.0 + 0.84·DES + 0.25·FUE | — | 1.1 | — | Virote Ígneo, Flecha Incendiaria | +15% daño crítico | 4704 |
+| `arco_viento` | Arco del Viento | tirador | arco | 28 | DES 37, AGI 19 | 33.0 + 0.93·DES + 0.2·AGI | — | — | — | Flecha Rayo, Viento de Prisa, Tiro de Rebote | +5% crítico | 5936 |
+| `dagas_vibora` | Dagas de la Víbora | tirador | dagas | 32 | DES 42, AGI 21 | 33.0 + 0.87·DES + 0.35·AGI | — | — | — | Abanico de Dagas, Daga Saltarina, Flecha Venenosa | +7% crítico | 7296 |
+| `rifle_cronal` | Rifle Cronal | tirador | rifle | 37 | DES 47, FUE 24 | 43.0 + 1.07·DES | — | 0.8 | — | Cero Absoluto, Disparo Cargado, Cadencia Letal | +15% daño crítico | 9176 |
+| `ballesta_asedio` | Ballesta de Asedio | tirador | ballesta | 43 | DES 53, FUE 26 | 54.0 + 1.03·DES + 0.25·FUE | — | 1.3 | — | Virote de Asedio, Virote Ígneo, Disparo Aturdidor | +22% daño crítico | 11696 |
+| `arco_eterno` | Arco Eterno | tirador | arco | 50 | DES 60, AGI 30 | 54.0 + 1.15·DES + 0.2·AGI | — | — | — | Flecha Solar, Flecha Sanadora, Ojo de Águila | +5% crítico | 15000 |
+| `espada_escudo_cruzado` | Espada y Escudo del Cruzado | paladin | espada+escudo | 13 | FUE 9, ESP 22 | 7.0 + 0.3·FUE | 14.0 + 0.8·ESP | — | 2 | Estocada Firme, Lanza de Luz, Sanación ¹ | — | 1976 |
+| `maza_escudo_plata` | Maza y Escudo de Plata | paladin | maza+escudo | 15 | VIT 24, ESP 12 | 6.0 + 0.2·FUE | 14.0 + 0.8·ESP | 0.6 | 4 | Barrera, Bendición | — | 2400 |
 | `martillo_escudo_forja` | Martillo y Escudo de Forja | paladin | martillo+escudo | 17 | FUE 26, VIT 14 | 16.0 + 0.62·FUE | 11.0 + 0.55·ESP | 1.0 | 1 | Aplastar, Temblor | — | 2856 |
-| `espada_escudo_vigia` | Espada y Escudo del Vigía | paladin | espada+escudo | 20 | FUE 11, ESP 29 | 9.0 + 0.3·FUE | 19.0 + 0.86·ESP | — | 2 | Provocar, Consagrar | — | 3600 |
+| `espada_escudo_vigia` | Espada y Escudo del Vigía | paladin | espada+escudo | 20 | FUE 11, ESP 29 | 9.0 + 0.3·FUE | 19.0 + 0.86·ESP | — | 2 | Reto Escudado, Consagrar | — | 3600 |
 | `maza_escudo_sagrada` | Maza y Escudo Sagrados | paladin | maza+escudo | 23 | VIT 32, ESP 16 | 8.0 + 0.2·FUE | 20.0 + 0.86·ESP | 0.6 | 5 | Sanación, Escudo de Fe, Golpe de Escudo | — | 4416 |
-| `martillo_escudo_trueno` | Martillo y Escudo del Trueno | paladin | martillo+escudo | 26 | FUE 35, VIT 18 | 22.0 + 0.71·FUE | 14.0 + 0.55·ESP | 1.0 | 1 | Martillo del Juicio, Aplastar | — | 5304 |
-| `espada_escudo_aurora` | Espada y Escudo de la Aurora | paladin | espada+escudo | 29 | FUE 14, ESP 38 | 12.0 + 0.3·FUE | 26.0 + 0.93·ESP | — | 3 | Lanza de Luz, Consagrar, Estocada Firme | — | 6264 |
-| `maza_escudo_custodio` | Maza y Escudo del Custodio | paladin | maza+escudo | 32 | VIT 42, ESP 21 | 10.0 + 0.2·FUE | 26.0 + 0.94·ESP | 0.6 | 6 | Provocar, Bendición | — | 7296 |
+| `martillo_escudo_trueno` | Martillo y Escudo del Trueno | paladin | martillo+escudo | 26 | FUE 35, VIT 18 | 22.0 + 0.71·FUE | 14.0 + 0.55·ESP | 1.0 | 1 | Martillo del Juicio, Rompearmaduras | — | 5304 |
+| `espada_escudo_aurora` | Espada y Escudo de la Aurora | paladin | espada+escudo | 29 | FUE 14, ESP 38 | 12.0 + 0.3·FUE | 26.0 + 0.93·ESP | — | 3 | Lanza de Luz, Escudo Volátil, Estocada Firme | — | 6264 |
+| `maza_escudo_custodio` | Maza y Escudo del Custodio | paladin | maza+escudo | 32 | VIT 42, ESP 21 | 10.0 + 0.2·FUE | 26.0 + 0.94·ESP | 0.6 | 6 | Provocar, Muralla de Fe | — | 7296 |
 | `martillo_escudo_titan` | Martillo y Escudo del Titán | paladin | martillo+escudo | 35 | FUE 45, VIT 22 | 28.0 + 0.8·FUE | 18.0 + 0.55·ESP | 1.3 | 2 | Martillo del Juicio, Temblor, Golpe Sagrado | — | 8400 |
-| `espada_escudo_juramento` | Espada y Escudo del Juramento | paladin | espada+escudo | 39 | FUE 17, ESP 49 | 16.0 + 0.3·FUE | 33.0 + 1.01·ESP | — | 4 | Estocada Firme, Escudo de Fe, Lanza de Luz | — | 9984 |
-| `maza_escudo_bendita` | Maza y Escudo Benditos | paladin | maza+escudo | 42 | VIT 52, ESP 26 | 12.0 + 0.2·FUE | 33.0 + 1.02·ESP | 0.6 | 7 | Bendición, Golpe de Escudo, Consagrar | — | 11256 |
-| `martillo_escudo_ocaso` | Martillo y Escudo del Ocaso | paladin | martillo+escudo | 45 | FUE 55, VIT 28 | 36.0 + 0.9·FUE | 22.0 + 0.55·ESP | 1.3 | 3 | Aplastar, Martillo del Juicio, Temblor | — | 12600 |
-| `espada_escudo_alba_eterna` | Espada y Escudo del Alba Eterna | paladin | espada+escudo | 48 | FUE 19, ESP 58 | 19.0 + 0.3·FUE | 40.0 + 1.08·ESP | — | 5 | Lanza de Luz, Provocar, Golpe Sagrado | — | 14016 |
-| `maza_escudo_eterna` | Maza y Escudo de la Eternidad | paladin | maza+escudo | 50 | VIT 60, ESP 30 | 14.0 + 0.2·FUE | 39.0 + 1.08·ESP | 0.6 | 8 | Sanación, Bendición, Escudo de Fe | — | 15000 |
+| `espada_escudo_juramento` | Espada y Escudo del Juramento | paladin | espada+escudo | 39 | FUE 17, ESP 49 | 16.0 + 0.3·FUE | 33.0 + 1.01·ESP | — | 4 | Estocada Firme, Bastión Creciente, Lanza de Luz | — | 9984 |
+| `maza_escudo_bendita` | Maza y Escudo Benditos | paladin | maza+escudo | 42 | VIT 52, ESP 26 | 12.0 + 0.2·FUE | 33.0 + 1.02·ESP | 0.6 | 7 | Bendición, Resurrección, Sello Sagrado | — | 11256 |
+| `martillo_escudo_ocaso` | Martillo y Escudo del Ocaso | paladin | martillo+escudo | 45 | FUE 55, VIT 28 | 36.0 + 0.9·FUE | 22.0 + 0.55·ESP | 1.3 | 3 | Aplastar, Martillo del Juicio, Conmoción | — | 12600 |
+| `espada_escudo_alba_eterna` | Espada y Escudo del Alba Eterna | paladin | espada+escudo | 48 | FUE 19, ESP 58 | 19.0 + 0.3·FUE | 40.0 + 1.08·ESP | — | 5 | Lanza de Luz, Muralla de Fe, Golpe Sagrado | — | 14016 |
+| `maza_escudo_eterna` | Maza y Escudo de la Eternidad | paladin | maza+escudo | 50 | VIT 60, ESP 30 | 14.0 + 0.2·FUE | 39.0 + 1.08·ESP | 0.6 | 8 | Marea Vital, Bendición, Escudo de Fe | — | 15000 |
+
+¹ **v0.5 (rework del Paladín, ascension.md § 4):** el Paladín perdió su
+kit de clase fijo (Aura Restauradora, Fortaleza, Protección: ahora kit
+del Guardián) y juega con las habilidades del arma, como las demás
+clases. Para que el arma inicial y la línea espada+escudo no queden sin
+apoyo, **Sanación** (`sanar`) se sumó a `espada_escudo_novato` (nivel 1)
+y a `espada_escudo_cruzado` (nivel 13). Cobertura de apoyo/defensa del
+Paladín por base (con las variantes v0.5, ver ²): Sanación (Novicio 1,
+Roble 2, Cruzado 13, Sagrados 23), Resurrección (Benditos
+42), Marea Vital (Eternidad 50), Bendición (Plata 15, Benditos 42,
+Eternidad 50), Provocar (Bastión 4, Custodio 32), Reto Escudado (Vigía
+20), Escudo de Fe (Bastión 4, Sagrados 23, Eternidad 50), Barrera (Plata 15), Égida
+Espinosa (Alba 4), Escudo Volátil (Aurora 29), Muralla de Fe (Custodio
+32, Alba Eterna 48), Bastión Creciente (Juramento 39). La línea
+martillo+escudo queda de daño a propósito (sus variantes son de daño /
+debuff / control: Conmoción, Golpe Debilitante, Rompearmaduras).
+Ninguna base pasa de 3 habilidades.
+
+² **v0.5 (variantes de habilidades, combat.md § "Variantes de
+habilidades"):** las 48 variantes se repartieron cambiando habilidades
+repetidas de 61 bases, sin subir ninguna de su número de habilidades
+(siguen ≤ 3). Criterio: cada tipo de arma suma opciones de apoyo o
+defensa además de daño — arcos: flechas que curan (Flecha Sanadora),
+marcan (Flecha Marcadora), atraviesan y buffs de grupo (Ojo de Águila,
+Viento de Prisa); rifles: Ráfaga Triple, Bala Traspasante, Cadencia
+Letal, Disparo Cargado, Tiro Quebrantador, Bala Corrosiva; ballestas:
+Bala Corrosiva, Flecha Incendiaria, Virote de Asedio; dagas: Daga
+Saltarina, Señalar Presa; báculos: curas (Rocío, Brotes, Semilla, Cura
+Focalizada, Purificación, Marea, Fénix, Gracia Desbordante) y Drenar Vida;
+tomos: tiempo, buffs y debuffs (Impulso, Lentitud, Maldición, Cúpula,
+Peso del Tiempo, Resurrección); varitas: control (Silencio, Ola de
+Retroceso, Escudo Arcano); hachas: debuffs (Rompearmaduras, Rugido, Golpe
+Debilitante, Sifón); espadas: Inspirar, Reto Escudado, Bastión Creciente,
+Impulso; lanzas: Viento de Prisa. Las bases raras / de nivel alto llevan
+las variantes más vistosas (Fénix, Gracia Desbordante, Muralla de Fe,
+Virote de Asedio, Cadencia Letal). Las armas iniciales no cambian. Toda
+habilidad de `kSkills` la da al menos un arma o un kit de ascensión.
 
 Conteo por tipo y banda de nivel:
 
@@ -920,8 +957,11 @@ Pedido del dueño: "qué hacer con el loot que no sirve para mi
 personaje". Aprobado: **Desarmar en materiales**, **Vender por
 créditos** y **Reforjar base** (no "loot inteligente"). Todo vive en
 `CraftRules` (`rules/craft_rules.dart`) como operaciones nuevas de
-`CraftOp`, se manda con `CraftAction` (solo lobby / preparación, como la
-fusión) y devuelve `CraftResult` (vista previa = resultado). Ninguna se
+`CraftOp`, se manda con `CraftAction` y devuelve `CraftResult` (vista previa = resultado). **Dónde** (v0.5): Desarmar, Vender y
+Limpiar inventario (en lote) se pueden hacer en el pueblo, la
+preparación **y durante la aventura** fuera de batalla
+(`GameSession.canDiscard`); Reforjar base, como la fusión, sigue siendo
+solo lobby / preparación (`canShop`). Ninguna se
 puede hacer sobre la **equipada** (`Está equipada`) ni sobre la **última
 instancia del arma inicial** de la clase (`Arma inicial`). UI: panels.md
 § "Inventario" (DESARMAR, VENDER, LIMPIAR INVENTARIO) y § "FUSIÓN"

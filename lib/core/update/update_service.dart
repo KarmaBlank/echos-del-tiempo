@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import '../persistence/exit_guard.dart';
 import 'release_info.dart';
 import 'semver.dart';
 import 'sha256.dart';
@@ -86,12 +87,14 @@ class GitHubUpdateService implements UpdateService {
     Directory? downloadDir,
     this.requireChecksum = true,
     void Function(int code)? exitApp,
+    Future<void> Function()? beforeExit,
   })  : currentVersion =
             SemVer.tryParse(currentVersion) ?? const SemVer(0, 0, 0),
         endpoint = endpoint ?? defaultEndpoint,
         _httpClient = httpClient ?? HttpClient.new,
         _downloadDir = downloadDir,
-        _exit = exitApp ?? exit;
+        _exit = exitApp ?? exit,
+        _beforeExit = beforeExit ?? ExitGuard.flushAll;
 
   /// Repo público del juego.
   static final defaultEndpoint = Uri.parse(
@@ -121,6 +124,10 @@ class GitHubUpdateService implements UpdateService {
   final HttpClient Function() _httpClient;
   final Directory? _downloadDir;
   final void Function(int code) _exit;
+
+  /// Guarda la partida y la cuenta antes de cerrar (docs/specs/
+  /// characters.md § 1.4): se puede actualizar con una sesión abierta.
+  final Future<void> Function() _beforeExit;
 
   static const _userAgent = 'EcosDelTiempo-Updater';
 
@@ -307,6 +314,9 @@ class GitHubUpdateService implements UpdateService {
     }
     final log = '${installer.parent.path}${Platform.pathSeparator}'
         'install.log';
+    // Antes de lanzar el instalador: su Restart Manager puede cerrar el
+    // juego en cuanto arranca.
+    await _beforeExit();
     try {
       await Process.start(
         installer.path,

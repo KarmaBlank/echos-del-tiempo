@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'proto_colors.dart';
-import 'proto_markup.dart';
+import 'retro_hover_card.dart';
 import 'retro_panel.dart';
 import 'retro_text.dart';
 import 'retro_theme.dart';
@@ -77,7 +77,9 @@ class PanelFrame extends StatelessWidget {
                       Flexible(
                         child: Text(retroText(title),
                             style: const TextStyle(
-                                fontSize: 16, color: ProtoColors.gold)),
+                                fontFamily: RetroType.pixelFamily,
+                                fontSize: RetroType.title,
+                                color: ProtoColors.gold)),
                       ),
                       if (help != null) ...[
                         const SizedBox(width: 12),
@@ -121,7 +123,10 @@ class PanelFrame extends StatelessWidget {
         return Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: width.clamp(0, box.maxWidth - 32),
+              // Con texto más grande el panel se ensancha (hasta la
+              // pantalla); el alto queda igual y el contenido scrollea.
+              maxWidth:
+                  RetroType.width(context, width).clamp(0, box.maxWidth - 32),
               maxHeight: maxH,
             ),
             child: _PanelKeys(
@@ -131,7 +136,7 @@ class PanelFrame extends StatelessWidget {
                 child: RetroPanel(
                   // `.panel`: borde `#5b74c9`.
                   child: DefaultTextStyle.merge(
-                    style: small.copyWith(height: 1.8),
+                    style: small.copyWith(height: RetroType.line),
                     child: column,
                   ),
                 ),
@@ -163,7 +168,10 @@ class _HelpChip extends StatelessWidget {
               width: RetroTheme.thinBorderWidth),
         ),
         child: const Text('?',
-            style: TextStyle(fontSize: 8, color: ProtoColors.sky)),
+            style: TextStyle(
+                fontFamily: RetroType.pixelFamily,
+                fontSize: RetroType.label,
+                color: ProtoColors.sky)),
       ),
     );
   }
@@ -204,7 +212,8 @@ class _PanelKeysState extends State<_PanelKeys> {
     final focused = FocusManager.instance.primaryFocus;
     final ctx = focused?.context;
     // Escribiendo en un campo: las teclas son del campo.
-    if (ctx != null && ctx.findAncestorWidgetOfExactType<EditableText>() != null) {
+    if (ctx != null &&
+        ctx.findAncestorWidgetOfExactType<EditableText>() != null) {
       return KeyEventResult.ignored;
     }
     final k = e.logicalKey;
@@ -254,7 +263,7 @@ class _PanelKeysState extends State<_PanelKeys> {
   }
 }
 
-/// Botón compacto del tema (8 px). [onPressed] `null` = deshabilitado.
+/// Botón compacto del tema ([RetroType.small]). [onPressed] `null` = deshabilitado.
 ///
 /// Con [reason] el botón queda deshabilitado y el motivo se escribe en
 /// `dim` a su izquierda (docs/specs/panels.md § "Botones con motivo").
@@ -304,10 +313,14 @@ class PanelButton extends StatelessWidget {
       children: [
         // Sin `Flexible`: el botón suele ir en filas de ancho libre.
         ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 220),
+          constraints: BoxConstraints(maxWidth: RetroType.width(context, 220)),
           child: Text(retroText(reason!),
               textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 8, color: ProtoColors.dim)),
+              style: TextStyle(
+                  fontFamily: RetroType.bodyFamily,
+                  fontFamilyFallback: RetroType.bodyFallback,
+                  fontSize: RetroType.small,
+                  color: ProtoColors.dim)),
         ),
         const SizedBox(width: 8),
         button,
@@ -332,8 +345,8 @@ class ComingSoon extends StatelessWidget {
   }
 }
 
-/// Subtítulo de una sección de panel (`h2` de 10 px del prototipo, acá
-/// 8 px): `#ffd166`, margen de arriba.
+/// Subtítulo de una sección de panel (`h2` de 10 px del prototipo,
+/// [RetroType.small]): `#ffd166`, margen de arriba.
 class PanelSection extends StatelessWidget {
   const PanelSection(this.title, {super.key, required this.child});
 
@@ -391,39 +404,27 @@ class PanelRow extends StatelessWidget {
 }
 
 /// Tooltip `#tip` del prototipo: caja `#0b0e1a` (alfa `f5`) con borde
-/// `#ffd166` de 2 px, padding 8×10, texto de 8 px `#e8ecff` con
-/// interlineado 1.8, ancho máximo 360 y sombra. [message] es markup
-/// (`<b>` dorado, `class="k"` `#9fb4ff`, `<span style="color:...">`).
+/// `#ffd166` de 2 px, padding 8×10, texto [RetroType.small] `#e8ecff` con
+/// interlineado 1.6, ancho máximo [RetroHoverCard.textWidth] (crece con
+/// el tamaño del texto) y sombra. [message] es markup (`<b>` dorado,
+/// `class="k"` `#9fb4ff`, `<span style="color:...">`). Aparece debajo
+/// (o arriba) sin espera, nunca se sale de la pantalla y, si es más alto
+/// que ella, se reparte en columnas (docs/specs/ui_style.md § "Tooltips").
 class RetroTooltip extends StatelessWidget {
   const RetroTooltip({super.key, required this.message, required this.child});
 
   final String message;
   final Widget child;
 
-  static const textStyle = TextStyle(
-      fontFamily: RetroTheme.fontFamily,
-      fontSize: 8,
-      height: 1.8,
-      color: ProtoColors.ink);
+  static TextStyle get textStyle => RetroHoverCard.textStyle;
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      richMessage: protoSpan(message, boldColor: ProtoColors.gold),
-      waitDuration: Duration.zero,
-      exitDuration: Duration.zero,
-      constraints: const BoxConstraints(maxWidth: 360),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: ProtoColors.bg.withValues(alpha: 0xF5 / 0xFF),
-        border: Border.all(
-            color: ProtoColors.gold, width: RetroTheme.thinBorderWidth),
-        boxShadow: const [
-          BoxShadow(
-              color: Color(0xAA000000), offset: Offset(0, 4), blurRadius: 18),
-        ],
-      ),
-      textStyle: textStyle,
+    return RetroHoverCard(
+      placement: RetroTipPlacement.below,
+      gap: 4,
+      builder: (ctx) => RetroTipText(message,
+          maxWidth: RetroType.width(ctx, RetroHoverCard.textWidth)),
       child: child,
     );
   }

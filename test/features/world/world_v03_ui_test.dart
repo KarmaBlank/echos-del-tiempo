@@ -304,6 +304,8 @@ void main() {
         final key = ValueKey('mission-${zone.missionId}');
         await tester.ensureVisible(find.byKey(key));
         expect(find.byKey(key), findsOneWidget);
+        await tester.tap(find.byKey(key));
+        await tester.pump();
         expect(
             find.textContaining(
                 retroText('Zona $z · ${zone.name} · ${zone.levelText} · '
@@ -313,6 +315,10 @@ void main() {
             find.byKey(ValueKey('propose-${zone.missionId}')));
         expect(b.reason, z <= 8 ? isNull : 'Bloqueada', reason: 'zona $z');
       }
+      final z9 = ValueKey('mission-${_cat.zone(9)!.missionId}');
+      await tester.ensureVisible(find.byKey(z9));
+      await tester.tap(find.byKey(z9));
+      await tester.pump();
       expect(find.textContaining('Bloqueada: vencé a Espectro Coronado'),
           findsOneWidget);
     });

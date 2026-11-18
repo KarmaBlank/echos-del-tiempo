@@ -147,6 +147,10 @@ class BattleSceneController extends ChangeNotifier {
   /// Lo último que pidió dibujar el widget.
   SceneFrame? frame;
 
+  /// Hora (reloj de la escena) en que empezó esta batalla: la
+  /// transición mapa → arena (§ "Arenas" → "Transición").
+  double? enteredAt;
+
   int? _battleId;
   int? _seenSeq;
   int _batch = 0;
@@ -181,10 +185,12 @@ class BattleSceneController extends ChangeNotifier {
       if (_battleId != null) reset();
       _battleId = battleId;
       _seenSeq = eventSeq;
+      enteredAt = t;
       final boss = state.enemies.isEmpty ? null : state.enemies.first;
       if (state.boss && boss != null) {
         final d = kEnemies[boss.enemyType];
-        intro = BossIntro(boss.enemyType ?? '', boss.name, d?.title ?? 'Jefe', t);
+        intro =
+            BossIntro(boss.enemyType ?? '', boss.name, d?.title ?? 'Jefe', t);
       }
       return;
     }
@@ -376,7 +382,8 @@ class BattleSceneController extends ChangeNotifier {
             ];
     }
     return UltStage(
-      caster: u.fx.who == null ? Offset(u.fx.x, u.fx.y) : f.layout.of(u.fx.who!),
+      caster:
+          u.fx.who == null ? Offset(u.fx.x, u.fx.y) : f.layout.of(u.fx.who!),
       targets: [for (final id in ids) f.layout.of(id)],
       targetBoxes: [for (final id in ids) f.layout.boxOf(id)],
       party: [for (final p in b.party) f.layout.of(p.id)],
@@ -415,8 +422,12 @@ class BattleSceneController extends ChangeNotifier {
       return;
     }
     final arena = f.arena;
+    // En un escenario la cámara arranca ya encuadrada (la transición
+    // tapa el cambio); en un mapa, desde el jugador local.
     var cam = camera ??
-        (arena == null ? base : BattleLayout.fieldView(arena, base));
+        (arena == null || arena.stage
+            ? base
+            : BattleLayout.fieldView(arena, base));
     final k = 1 - math.pow(1 - 0.12, dt * 60).toDouble();
     var c = cam.center + (base.center - cam.center) * k;
     var z = cam.zoom + (base.zoom - cam.zoom) * k;

@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/di/service_locator.dart';
+import '../../../core/persistence/ecos_log.dart';
+import '../../../core/persistence/exit_guard.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/atlas_store.dart';
 import '../../../game_engine/models/attributes.dart';
@@ -208,9 +210,14 @@ class SessionController extends StateNotifier<SessionView?> {
   Future<void> start() async {
     if (_started) return;
     _started = true;
+    // Cerrar la ventana (o actualizar) a mitad de partida guarda antes.
+    ExitGuard.register(this, saveNow);
     final n = net;
     if (isClient) {
-      unawaited(_loadAtlas());
+      // Antes del primer snapshot: un Eco completado tiene que sumar al
+      // Atlas de la cuenta, no a uno vacío que lo pisaría.
+      await _loadAtlas();
+      if (!mounted) return;
       _netSub = n!.events.listen(_onNet);
       if (clock.autoStart) {
         _timer = Timer.periodic(clock.interval, (_) => _clientTick(clock.dt));
@@ -287,7 +294,10 @@ class SessionController extends StateNotifier<SessionView?> {
 
   void _setAtlas(AtlasProgress next, {bool emit = true}) {
     _atlas = next;
-    unawaited(atlasStore.save(next).catchError((Object _) {}));
+    unawaited(atlasStore.save(next).catchError((Object e) {
+      EcosLog.error('Guardado del Atlas', e);
+      _saveFailed(e);
+    }));
     // Local / anfitrión: la sala usa este Atlas (los clientes, el del host).
     final s = _s;
     if (!isClient && s != null) {
@@ -312,6 +322,7 @@ class SessionController extends StateNotifier<SessionView?> {
     _broadcastTimer?.cancel();
     unawaited(_netSub?.cancel());
     _save(force: true);
+    ExitGuard.unregister(this);
     unawaited(_events.close());
     unawaited(net?.disconnect());
     super.dispose();
@@ -436,8 +447,11 @@ class SessionController extends StateNotifier<SessionView?> {
     _lastSaved = p;
     try {
       await store.save(p);
-    } catch (_) {
-      // Sin disco: nada que hacer.
+      _saveOk(p);
+    } catch (e) {
+      // Queda marcado para reintentar; el HUD avisa.
+      if (identical(_lastSaved, p)) _lastSaved = null;
+      _saveFailed(e);
     }
   }
 
@@ -881,7 +895,27 @@ class SessionController extends StateNotifier<SessionView?> {
       return;
     }
     _sinceSave = 0;
-    unawaited(store.save(p).catchError((Object _) {}));
+    // `_lastSaved` ya es [p] (para no repetir mientras se escribe); si
+    // falla vuelve a `null` y el próximo intento (2 s) lo reintenta.
+    unawaited(store.save(p).then((_) => _saveOk(p), onError: (Object e) {
+      if (identical(_lastSaved, p)) _lastSaved = null;
+      _saveFailed(e);
+    }));
+  }
+
+  /// El progreso no llegó a disco (se reintenta solo). `null` = guardado.
+  String? _saveError;
+
+  void _saveOk(PlayerProfile p) {
+    if (_saveError == null || !identical(_lastSaved, p)) return;
+    _saveError = null;
+    _emit();
+  }
+
+  void _saveFailed(Object e) {
+    EcosLog.error('Guardado del personaje', e);
+    _saveError = 'No se pudo guardar';
+    _emit();
   }
 
   /// Reglas automáticas de paneles de `hud()` + avisos, y emite la vista.
@@ -950,6 +984,7 @@ class SessionController extends StateNotifier<SessionView?> {
       missionLoot: List.unmodifiable(_missionLoot),
       atlas: _atlas,
       atlasGain: _atlasGain,
+      saveError: _saveError,
     );
   }
 

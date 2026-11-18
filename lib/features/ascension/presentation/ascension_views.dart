@@ -27,9 +27,9 @@ String ascensionCardMarkup(AscensionDef a) {
   final root = a.node(a.rootId);
   return '<b style="color:$hex">${protoEsc(a.name.toUpperCase())}</b><br>'
       '${protoColor(ProtoColors.dim, protoEsc(a.theme))}<br>'
-      '${protoColor(ProtoColors.cream, protoEsc(a.motto))}<br><br>'
+      '${protoColor(ProtoColors.cream, protoEsc(a.motto))}<br>'
       '<b>Despertar:</b> ${protoEsc(root?.name ?? '')}<br>'
-      '${protoEsc(root?.text ?? '')}<br><br>'
+      '${protoEsc(root?.text ?? '')}<br>'
       '<b>Kit</b><br>'
       '${[
     for (final s in skills)
@@ -137,14 +137,23 @@ class AscensionChoiceView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(
-            child: AscendedHero(
-                sprites: sprites, classId: classId, ascensionId: a.id),
-          ),
-          const SizedBox(height: 8),
+          // Héroe al costado de la ficha (no arriba): el kit entra sin bajar.
           Expanded(
-            child: SingleChildScrollView(
-              child: ProtoText(ascensionCardMarkup(a)),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AscendedHero(
+                    sprites: sprites,
+                    classId: classId,
+                    ascensionId: a.id,
+                    scale: 3),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: ProtoText(ascensionCardMarkup(a)),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
@@ -253,9 +262,19 @@ class _AscensionTreeViewState extends State<AscensionTreeView> {
         ),
         const SizedBox(width: 16),
         SizedBox(
-          width: 340,
+          // Crece con el texto (sin pasar de 45 % de la pantalla).
+          width: RetroType.width(context, 340)
+              .clamp(340.0, MediaQuery.sizeOf(context).width * 0.45),
           child: PanelDetail(
             footer: [
+              PanelButton('REINICIAR',
+                  key: const ValueKey('asc-reset'),
+                  onPressed: widget.editBlocked != null || p.nodes.isEmpty
+                      ? null
+                      : widget.onReset),
+              PanelButton('CAMBIAR',
+                  key: const ValueKey('asc-change'),
+                  onPressed: widget.onChange),
               if (!taken)
                 PanelButton('TOMAR',
                     key: const ValueKey('asc-take'),
@@ -264,6 +283,20 @@ class _AscensionTreeViewState extends State<AscensionTreeView> {
                     onPressed: () => widget.onTake?.call(node.id)),
             ],
             children: [
+              // Primero el nodo elegido (lo que se decide).
+              ProtoText(
+                  key: const ValueKey('asc-node-detail'),
+                  '<b>${protoEsc(node.name)}</b>'
+                  '${node.major ? ' ${protoColor(ProtoColors.pink, '(mayor)')}' : ''} '
+                  '${node.root ? protoColor(ProtoColors.gold, 'Raíz') : protoColor(ProtoColors.dim, 'costo ${node.cost}')}<br>'
+                  '${protoEsc(node.text)}<br>'
+                  '${protoColor(ProtoColors.dim, protoEsc(_state(node)))}'),
+              const SizedBox(height: 6),
+              ProtoText(
+                  key: const ValueKey('asc-points'),
+                  'Puntos libres <b>${_rules.free(p)}</b> · ganados '
+                  '${p.earned}/${3 * AscensionProgress.pointsPerTrial}'),
+              const SizedBox(height: 6),
               Row(
                 children: [
                   AscendedHero(
@@ -280,21 +313,8 @@ class _AscensionTreeViewState extends State<AscensionTreeView> {
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              ProtoText(
-                  key: const ValueKey('asc-points'),
-                  'Puntos libres <b>${_rules.free(p)}</b> · ganados '
-                  '${p.earned}/${3 * AscensionProgress.pointsPerTrial}'),
-              const SizedBox(height: 8),
-              ProtoText(
-                  key: const ValueKey('asc-node-detail'),
-                  '<b>${protoEsc(node.name)}</b>'
-                  '${node.major ? ' ${protoColor(ProtoColors.pink, '(mayor)')}' : ''}<br>'
-                  '${node.root ? protoColor(ProtoColors.gold, 'Raíz') : 'costo ${node.cost}'}<br>'
-                  '${protoEsc(node.text)}<br>'
-                  '${protoColor(ProtoColors.dim, protoEsc(_state(node)))}'),
               if (node.root) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 for (final id in a.skillIds)
                   if (kSkills[id] case final s?)
                     ProtoText(describeSkillMarkup(s, null)),
@@ -302,17 +322,6 @@ class _AscensionTreeViewState extends State<AscensionTreeView> {
                   ProtoText(describeSkillMarkup(u, null,
                       ultimate: true, nameColor: '#e84393')),
               ],
-              const SizedBox(height: 10),
-              Wrap(spacing: 6, runSpacing: 6, children: [
-                PanelButton('REINICIAR (gratis)',
-                    key: const ValueKey('asc-reset'),
-                    onPressed: widget.editBlocked != null || p.nodes.isEmpty
-                        ? null
-                        : widget.onReset),
-                PanelButton('CAMBIAR ASCENSIÓN (gratis)',
-                    key: const ValueKey('asc-change'),
-                    onPressed: widget.onChange),
-              ]),
             ],
           ),
         ),
@@ -333,8 +342,11 @@ class _AscensionTreeViewState extends State<AscensionTreeView> {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
+            // Etiqueta del mini-árbol (lugar fijo): nítida, sin agrandarse.
+            textScaler: RetroType.fixedScaler(context),
             style: TextStyle(
-                fontSize: 7,
+                fontFamily: RetroType.bodyFamily,
+ fontFamilyFallback: RetroType.bodyFallback, fontSize: RetroType.small,
                 height: 1.3,
                 color: taken ? ProtoColors.white : ProtoColors.dim)),
       ),
@@ -375,7 +387,7 @@ class _AscensionTreeViewState extends State<AscensionTreeView> {
               alignment: Alignment.center,
               child: Text(
                 taken || n.root ? '' : '${n.cost}',
-                style: TextStyle(fontSize: 10, color: col),
+                style: TextStyle(fontFamily: RetroType.pixelFamily, fontSize: RetroType.label, color: col),
               ),
             ),
           ),

@@ -25,8 +25,11 @@ class CrtParams {
         CrtLevel.off => null,
         CrtLevel.soft => const CrtParams(
             scan: 0.14, mask: 0.05, bloom: 0.15, vignette: 0.15, curve: 0),
+        // Sin curvatura: la curva remuestrea toda la UI y la fuente pixel
+        // pierde nitidez (columnas duplicadas o salteadas). Solo FUERTE
+        // la tiene, a pedido (settings.md § 3.2).
         CrtLevel.normal => const CrtParams(
-            scan: 0.24, mask: 0.09, bloom: 0.25, vignette: 0.25, curve: 0.02),
+            scan: 0.24, mask: 0.09, bloom: 0.25, vignette: 0.25, curve: 0),
         CrtLevel.strong => const CrtParams(
             scan: 0.38, mask: 0.16, bloom: 0.40, vignette: 0.40, curve: 0.05),
       };

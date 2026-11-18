@@ -17,6 +17,7 @@ import '../../domain/turn_order.dart';
 import '../game_sprites.dart';
 import '../sprite_catalog.dart';
 import '../weapon_overlay.dart';
+import 'arena/arena_transition.dart';
 import 'battle_fx.dart';
 import 'battle_labels.dart';
 import 'battle_layout.dart';
@@ -189,8 +190,11 @@ class BattleScenePainter extends CustomPainter {
         final a = live.age(t);
         if (a < 0 || a >= BattleFx.timeStopMs) continue;
         final p = a / BattleFx.timeStopMs;
-        canvas.drawRect(area,
-            Paint()..color = ProcColors.timeStop.withValues(alpha: 0.3 * (1 - p) * fk));
+        canvas.drawRect(
+            area,
+            Paint()
+              ..color =
+                  ProcColors.timeStop.withValues(alpha: 0.3 * (1 - p) * fk));
         final bar = Paint()
           ..color = Color.fromRGBO(255, 255, 255, 0.5 * (1 - p) * fk);
         for (var k = 0; k < 2; k++) {
@@ -215,6 +219,12 @@ class BattleScenePainter extends CustomPainter {
     // 4. HUD de la escena.
     _hud(canvas, f, vp, shk);
     canvas.restore();
+
+    // 5. Transición mapa → arena (§ "Arenas" → "Transición").
+    final entered = scene.enteredAt;
+    if (entered != null) {
+      ArenaWipe.paintEnter(canvas, Offset.zero & size, t - entered, g.scale, fk);
+    }
   }
 
   @override
@@ -301,8 +311,8 @@ class BattleScenePainter extends CustomPainter {
     if (!dead && _lastStand(p)) {
       // Último Aliento: resplandor rojo que late a los pies.
       final k = 0.5 + 0.5 * math.sin(pt / 140);
-      _pen.oval(c, ProcColors.lastStand.withValues(alpha: 0.25 + 0.25 * k),
-          0, 1, 9, 3);
+      _pen.oval(c, ProcColors.lastStand.withValues(alpha: 0.25 + 0.25 * k), 0,
+          1, 9, 3);
       _pen.stroke
         ..color = ProcColors.lastStand.withValues(alpha: 0.15 + 0.3 * k)
         ..strokeWidth = 1;
@@ -376,8 +386,8 @@ class BattleScenePainter extends CustomPainter {
   /// Eco de la Hechicera (titila y se desdobla).
   static bool isEcho(Combatant e) =>
       !e.isPlayer &&
-      kBossMechanics.values.any((m) =>
-          m.kind == BossMechanicKind.echo && m.addType == e.enemyType);
+      kBossMechanics.values.any(
+          (m) => m.kind == BossMechanicKind.echo && m.addType == e.enemyType);
 
   /// Charcos de lava bajo el grupo (y salpicados alrededor) que burbujean.
   void _lavaPools(Canvas c, SceneFrame f, int turns) {
@@ -416,8 +426,13 @@ class BattleScenePainter extends CustomPainter {
     for (var k = 0; k < scaledCount(10, scene.particles.density); k++) {
       final q = ((t / 1400) + k * 0.1) % 1.0;
       final o = spots[k % spots.length].$1;
-      _pen.rect(c, const Color(0xFFFFB142).withValues(alpha: 0.8 * (1 - q)),
-          (o.dx + ((k * 5) % 15) - 7).roundToDouble(), (o.dy - 4 - q * 24).roundToDouble(), 1, 1);
+      _pen.rect(
+          c,
+          const Color(0xFFFFB142).withValues(alpha: 0.8 * (1 - q)),
+          (o.dx + ((k * 5) % 15) - 7).roundToDouble(),
+          (o.dy - 4 - q * 24).roundToDouble(),
+          1,
+          1);
     }
   }
 
@@ -425,8 +440,8 @@ class BattleScenePainter extends CustomPainter {
   /// columna tenue de luz del vacío.
   void _voidMark(Canvas c, Offset feet, double pt) {
     final k = 0.5 + 0.5 * math.sin(pt / 140);
-    _pen.rect(c, voidMarkColor.withValues(alpha: 0.10 + 0.08 * k),
-        feet.dx - 6, feet.dy - 40, 12, 40);
+    _pen.rect(c, voidMarkColor.withValues(alpha: 0.10 + 0.08 * k), feet.dx - 6,
+        feet.dy - 40, 12, 40);
     final o = feet.translate(0, -30);
     c.save();
     c.translate(o.dx.roundToDouble(), o.dy.roundToDouble());
@@ -455,7 +470,8 @@ class BattleScenePainter extends CustomPainter {
     const o = Offset(0, -9);
     for (var i = 0; i < 6; i++) {
       final a = i * math.pi / 3 + 0.3;
-      c.drawLine(o, o + Offset(math.cos(a) * 12, math.sin(a) * 12), _pen.stroke);
+      c.drawLine(
+          o, o + Offset(math.cos(a) * 12, math.sin(a) * 12), _pen.stroke);
     }
     _pen.stroke.color = webColor.withValues(alpha: 0.6);
     for (final r in [4.0, 8.0, 11.0]) {
@@ -489,10 +505,11 @@ class BattleScenePainter extends CustomPainter {
       final h1 = ((i * 73856093) & 0xffff) / 65536;
       final h2 = ((i * 19349663) & 0xffff) / 65536;
       final fall = (t / (2600 + 1400 * h2) + h1) % 1.0;
-      final x = vis.left + ((h1 * 977 + math.sin(t / 900 + i) * 0.02) % 1.0) * vis.width;
+      final x = vis.left +
+          ((h1 * 977 + math.sin(t / 900 + i) * 0.02) % 1.0) * vis.width;
       final y = vis.top + fall * vis.height;
-      _pen.rect(c, const Color(0xCCF4FDFF), x.roundToDouble(), y.roundToDouble(),
-          i % 3 == 0 ? 2 : 1, i % 3 == 0 ? 2 : 1);
+      _pen.rect(c, const Color(0xCCF4FDFF), x.roundToDouble(),
+          y.roundToDouble(), i % 3 == 0 ? 2 : 1, i % 3 == 0 ? 2 : 1);
     }
   }
 
@@ -523,8 +540,13 @@ class BattleScenePainter extends CustomPainter {
       for (var k = 0; k < 6; k++) {
         final q = ((t / 600) + k / 6) % 1.0;
         final p = Offset.lerp(to, from, q)!;
-        _pen.rect(c, col.withValues(alpha: 0.9 * math.sin(q * math.pi)),
-            p.dx.roundToDouble(), (p.dy + math.sin(q * 6 + t / 200) * 2).roundToDouble(), 2, 2);
+        _pen.rect(
+            c,
+            col.withValues(alpha: 0.9 * math.sin(q * math.pi)),
+            p.dx.roundToDouble(),
+            (p.dy + math.sin(q * 6 + t / 200) * 2).roundToDouble(),
+            2,
+            2);
       }
     }
   }
@@ -551,7 +573,8 @@ class BattleScenePainter extends CustomPainter {
     final type = f.sprites.enemySpriteId(e.enemyType ?? '', phase);
     final img = f.sprites?.enemy(type);
     final sc = (f.sprites?.enemyScale(type) ?? 1) * (e.elite ? 1.45 : 1);
-    final iw = (img?.width ?? 16).toDouble(), ih = (img?.height ?? 14).toDouble();
+    final iw = (img?.width ?? 16).toDouble(),
+        ih = (img?.height ?? 14).toDouble();
     final w = iw * sc, h = ih * sc;
     final x = pos.dx, y = pos.dy;
     final dir = f.layout.side;
@@ -590,8 +613,8 @@ class BattleScenePainter extends CustomPainter {
     }
     if (e.alive && isPassiveAdd(e)) {
       final k = 0.5 + 0.5 * math.sin(pt / 240 + x);
-      _pen.oval(c, frostColor.withValues(alpha: 0.18 + 0.2 * k), x, y - h / 2 + 1,
-          w * 0.8, h * 0.6);
+      _pen.oval(c, frostColor.withValues(alpha: 0.18 + 0.2 * k), x,
+          y - h / 2 + 1, w * 0.8, h * 0.6);
     }
     if (e.alive && e.lava > 0) {
       // La Bestia con la lava arriba: brilla desde abajo.
@@ -606,9 +629,13 @@ class BattleScenePainter extends CustomPainter {
           y - h / 2 + 2, w * 0.66 + 3 * k, h * 0.62 + 2 * k);
       for (var i = 0; i < 6; i++) {
         final q = ((pt / 900) + i / 6) % 1.0;
-        _pen.rect(c, const Color(0xFFFF7B29).withValues(alpha: 0.9 * (1 - q)),
+        _pen.rect(
+            c,
+            const Color(0xFFFF7B29).withValues(alpha: 0.9 * (1 - q)),
             (x + math.sin(i * 2.1 + pt / 400) * w * 0.4).roundToDouble(),
-            (y - q * h * 1.1).roundToDouble(), 2, 2);
+            (y - q * h * 1.1).roundToDouble(),
+            2,
+            2);
       }
     }
     final immune = immuneNow(f.battle, e);
@@ -627,7 +654,8 @@ class BattleScenePainter extends CustomPainter {
           _pen.stroke);
       for (var i = 0; i < 6; i++) {
         final a = pt / 700 + i * math.pi / 3;
-        final p = ctr + Offset(math.cos(a) * (w * 0.62 + 2), math.sin(a) * (h * 0.62 + 2));
+        final p = ctr +
+            Offset(math.cos(a) * (w * 0.62 + 2), math.sin(a) * (h * 0.62 + 2));
         _pen.rect(c, const Color(0xFFFFE9A8), p.dx.roundToDouble() - 1,
             p.dy.roundToDouble() - 1, 2, 2);
       }
@@ -640,7 +668,9 @@ class BattleScenePainter extends CustomPainter {
     // Preparación del golpe: se echa atrás y se enciende en rojo.
     final wind = e.alive ? scene.activeOn(FxKind.windup, e.id) : null;
     final wq = wind == null ? -1.0 : wind.age(scene.t) / BattleFx.windupMs;
-    final back = wq < 0 ? 0.0 : -3.0 * dir * math.sin(math.min(1.0, wq / 0.6) * math.pi / 2);
+    final back = wq < 0
+        ? 0.0
+        : -3.0 * dir * math.sin(math.min(1.0, wq / 0.6) * math.pi / 2);
     final lunge = e.alive && scene.lunging(e.id) ? 6 * dir : 0;
     c.save();
     c.translate((x + (lunge != 0 ? lunge : back)).roundToDouble(),
@@ -671,18 +701,20 @@ class BattleScenePainter extends CustomPainter {
             ..colorFilter = ColorFilter.mode(
                 echoColor.withValues(alpha: 0.35 * (1 - k * 0.5)),
                 BlendMode.srcIn);
-          c.drawImageRect(img, src, dst.shift(Offset(dx * (0.5 + k), 0)), ghost);
+          c.drawImageRect(
+              img, src, dst.shift(Offset(dx * (0.5 + k), 0)), ghost);
         }
         paint.color = Color.fromRGBO(255, 255, 255, 0.55 + 0.3 * k);
         c.drawImageRect(img, src, dst, paint);
         final band = dst.top + ((pt / 700 + x * 0.01) % 1.0) * dst.height;
-        _pen.rect(c, const Color(0x99E8FFFF), dst.left + 2, band.roundToDouble(),
-            dst.width - 4, 1);
+        _pen.rect(c, const Color(0x99E8FFFF), dst.left + 2,
+            band.roundToDouble(), dst.width - 4, 1);
       } else {
         c.drawImageRect(img, src, dst, paint);
       }
     } else {
-      _pen.rect(c, const Color(0xFFE43B44), dst.left, dst.top, dst.width, dst.height);
+      _pen.rect(
+          c, const Color(0xFFE43B44), dst.left, dst.top, dst.width, dst.height);
     }
     c.restore();
     if (e.alive && e.hasEffect(BuffStat.damageTaken)) {
@@ -779,16 +811,16 @@ class BattleScenePainter extends CustomPainter {
 
     for (final p in f.battle.party) {
       final box = f.layout.boxOf(p.id);
-      final anchor = vp.toScreen(Offset(box.center.dx, box.top)) -
-          Offset(0, 2 * u);
-      reqs.add(LabelRequest(p.id, anchor,
-          Size(m(p.name, 8 * u) + badges(p), 10 * u)));
+      final anchor =
+          vp.toScreen(Offset(box.center.dx, box.top)) - Offset(0, 2 * u);
+      reqs.add(LabelRequest(
+          p.id, anchor, Size(m(p.name, 8 * u) + badges(p), 10 * u)));
     }
     for (final e in f.battle.enemies) {
       if (!e.alive) continue;
       final box = f.layout.boxOf(e.id);
-      final anchor = vp.toScreen(Offset(box.center.dx, box.top)) -
-          Offset(0, 2 * u);
+      final anchor =
+          vp.toScreen(Offset(box.center.dx, box.top)) - Offset(0, 2 * u);
       final line = m('${e.hp}/${e.maxHp}', 8 * u) + badges(e);
       final bar = (e.boss || e.elite ? 48 : 28) * u;
       final chip = e.broken ? m(vulnerableText, 8 * u) + 8 * u : 0.0;
@@ -829,8 +861,14 @@ class BattleScenePainter extends CustomPainter {
         final r = rects[p.id];
         if (r == null) continue;
         final x = r.left.roundToDouble(), y = r.top.roundToDouble();
-        _pen.text(c, p.name, x, y + 8 * u,
-            p.id == f.localId ? const Color(0xFFFFD166) : const Color(0xFFFFFFFF),
+        _pen.text(
+            c,
+            p.name,
+            x,
+            y + 8 * u,
+            p.id == f.localId
+                ? const Color(0xFFFFD166)
+                : const Color(0xFFFFFFFF),
             8 * u,
             center: false);
         final nw = _pen.width(p.name, 8 * u);
@@ -873,8 +911,8 @@ class BattleScenePainter extends CustomPainter {
 
   /// Barra de quiebre (amarilla; parpadea quebrado), carga de ULT (roja;
   /// late con el aviso) y el chip `VULNERABLE`, desde `(x, y)`.
-  void _breakBars(Canvas c, Combatant e, double x, double y, double w,
-      double u, double t) {
+  void _breakBars(
+      Canvas c, Combatant e, double x, double y, double w, double u, double t) {
     var yy = y;
     if (e.hasBreak) {
       // Quiebre: barra amarilla de 3·u con brillo arriba.
@@ -937,9 +975,7 @@ class BattleScenePainter extends CustomPainter {
       switch (f.kind) {
         case FxKind.num when age < f.durationMs && scene.options.damageNumbers:
           final p = vp.toScreen(Offset(f.x, f.y));
-          final size = f.heavy
-              ? (f.big ? 32 : 24) * u
-              : (f.big ? 24 : 16) * u;
+          final size = f.heavy ? (f.big ? 32 : 24) * u : (f.big ? 24 : 16) * u;
           var y = p.dy - age / 40 * 1.5 * u;
           var k = 1.0;
           if (f.heavy) {
@@ -947,11 +983,13 @@ class BattleScenePainter extends CustomPainter {
             k = 1 + 0.6 * (1 - q);
             y -= (math.sin(age / 80)).abs() * 6 * u * math.exp(-age / 260);
           }
-          final alpha = age > f.durationMs - 200
-              ? (f.durationMs - age) / 200
-              : 1.0;
+          final alpha =
+              age > f.durationMs - 200 ? (f.durationMs - age) / 200 : 1.0;
           if (alpha < 1) {
-            c.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, alpha.clamp(0.0, 1.0)));
+            c.saveLayer(
+                null,
+                Paint()
+                  ..color = Color.fromRGBO(0, 0, 0, alpha.clamp(0.0, 1.0)));
           }
           if (k != 1) {
             c.save();
@@ -960,12 +998,14 @@ class BattleScenePainter extends CustomPainter {
             _pen.text(c, f.text ?? '', 0, 0, f.color, size, outline: f.heavy);
             c.restore();
           } else {
-            _pen.text(c, f.text ?? '', p.dx, y, f.color, size, outline: f.heavy);
+            _pen.text(c, f.text ?? '', p.dx, y, f.color, size,
+                outline: f.heavy);
           }
           if (alpha < 1) c.restore();
         case FxKind.txt when age < BattleFx.txtMs:
           final p = vp.toScreen(Offset(f.x, f.y));
-          _pen.text(c, f.text ?? '', p.dx, p.dy - age / 60 * 1.5 * u, f.color, 8 * u);
+          _pen.text(
+              c, f.text ?? '', p.dx, p.dy - age / 60 * 1.5 * u, f.color, 8 * u);
         case FxKind.tag when age < BattleFx.tagMs:
           _tag(c, vp, f, age, u, labels[f.who]);
         case FxKind.warn when age < BattleFx.warnMs:
@@ -1005,7 +1045,9 @@ class BattleScenePainter extends CustomPainter {
     _pen.rect(c, stripe, area.left, top + bh - 2 * u, area.width, 2 * u);
     // Franjas de peligro que corren.
     for (var i = 0; i < 24; i++) {
-      final lx = area.left + ((i * 64 * u + age * 0.12 * u) % (area.width + 64 * u)) - 32 * u;
+      final lx = area.left +
+          ((i * 64 * u + age * 0.12 * u) % (area.width + 64 * u)) -
+          32 * u;
       _pen.rect(c, enemyUltBarColor.withValues(alpha: 0.18), lx, top + 2 * u,
           10 * u, bh - 4 * u);
     }
@@ -1015,8 +1057,9 @@ class BattleScenePainter extends CustomPainter {
     for (final sx in [mid - tw / 2 - 18 * u, mid + tw / 2 + 8 * u]) {
       _warnSign(c, sx, top + bh / 2, u, on ? enemyUltBarColor : breakColor);
     }
-    _pen.text(c, s, mid, top + bh / 2 + size / 2, on ? fxWhite : breakColor,
-        size, outline: big);
+    _pen.text(
+        c, s, mid, top + bh / 2 + size / 2, on ? fxWhite : breakColor, size,
+        outline: big);
     c.restore();
     if (fade < 1) c.restore();
   }
@@ -1052,7 +1095,8 @@ class BattleScenePainter extends CustomPainter {
       final minY = area.top + size + 4 * u;
       if (y < minY) y = minY + f.slot * h;
       final half = _pen.width(s, size) / 2 + 5 * u;
-      x = x.clamp(area.left + half, math.max(area.left + half, area.right - half));
+      x = x.clamp(
+          area.left + half, math.max(area.left + half, area.right - half));
     }
     y = y.roundToDouble();
     final fade = age > BattleFx.tagMs - 250
@@ -1071,8 +1115,10 @@ class BattleScenePainter extends CustomPainter {
     } else {
       final w = _pen.width(s, size);
       final left = (x - w / 2).roundToDouble();
-      final box = Rect.fromLTWH(left - 5 * u, y - size - 2 * u, w + 8 * u, size + 4 * u);
-      _pen.rect(c, const Color(0xBF000000), box.left, box.top, box.width, box.height);
+      final box = Rect.fromLTWH(
+          left - 5 * u, y - size - 2 * u, w + 8 * u, size + 4 * u);
+      _pen.rect(
+          c, const Color(0xBF000000), box.left, box.top, box.width, box.height);
       _pen.rect(c, f.color, box.left, box.top, 2 * u, box.height);
       _pen.text(c, s, left, y, f.color, size, center: false);
     }
@@ -1174,8 +1220,8 @@ class BattleScenePainter extends CustomPainter {
               // Estocada: atraviesa de lado a lado y se afina.
               final len = 14 + 10 * a;
               _pen.stroke.strokeWidth = 3 - 2 * a;
-              c.drawLine(Offset(f.x - len, f.y), Offset(f.x + len, f.y),
-                  _pen.stroke);
+              c.drawLine(
+                  Offset(f.x - len, f.y), Offset(f.x + len, f.y), _pen.stroke);
               _pen.rect(c, fxWhite.withValues(alpha: (1 - a) * ga),
                   f.x + len - 2, f.y - 1, 3, 3);
             case SlashStyle.twin:
@@ -1184,7 +1230,8 @@ class BattleScenePainter extends CustomPainter {
                 final q = (a * 1.4 - k * 0.4).clamp(0.0, 1.0);
                 if (q <= 0) continue;
                 final o = (k * 6 - 3).toDouble();
-                c.drawLine(Offset(f.x - 9 + o, f.y - 9 - o),
+                c.drawLine(
+                    Offset(f.x - 9 + o, f.y - 9 - o),
                     Offset(f.x - 9 + o + 18 * q, f.y - 9 - o + 18 * q),
                     _pen.stroke);
               }
@@ -1193,17 +1240,19 @@ class BattleScenePainter extends CustomPainter {
           final col = Color.fromRGBO(255, 255, 255, 1 - age / BattleFx.poofMs);
           for (var i = 0; i < 8; i++) {
             final a = i / 8 * 6.28, r = age / 25;
-            _pen.rect(c, col, f.x + math.cos(a) * r - 1, f.y + math.sin(a) * r - 1, 3, 3);
+            _pen.rect(c, col, f.x + math.cos(a) * r - 1,
+                f.y + math.sin(a) * r - 1, 3, 3);
           }
         case FxKind.arc ||
-              FxKind.blast ||
-              FxKind.beam ||
-              FxKind.bubble ||
-              FxKind.crack ||
-              FxKind.pulse ||
-              FxKind.reticle ||
-              FxKind.arrow ||
-              FxKind.stream when age < f.durationMs:
+                FxKind.blast ||
+                FxKind.beam ||
+                FxKind.bubble ||
+                FxKind.crack ||
+                FxKind.pulse ||
+                FxKind.reticle ||
+                FxKind.arrow ||
+                FxKind.stream
+            when age < f.durationMs:
           _procFx(c, f, age);
         case FxKind.lavaBurst when age < BattleFx.lavaBurstMs:
           _lavaBurst(c, f, age);
@@ -1217,24 +1266,32 @@ class BattleScenePainter extends CustomPainter {
     }
   }
 
-
   /// Erupción de lava bajo un actor: columna que sube y cae en gotas.
   void _lavaBurst(Canvas c, BattleFx f, double age) {
     final p = (age / BattleFx.lavaBurstMs).clamp(0.0, 1.0);
     final o = Offset(f.x, f.y);
     final up = math.sin(math.min(1.0, p * 1.6) * math.pi / 2);
     final fade = 1.0 - math.max(0.0, (p - 0.6) / 0.4);
-    _pen.oval(c, const Color(0xFF3A1206).withValues(alpha: 0.8 * fade), o.dx, o.dy + 1, 14, 4);
-    _pen.oval(c, lavaColor.withValues(alpha: 0.9 * fade), o.dx, o.dy + 1, 11 * (0.6 + 0.4 * up), 3);
+    _pen.oval(c, const Color(0xFF3A1206).withValues(alpha: 0.8 * fade), o.dx,
+        o.dy + 1, 14, 4);
+    _pen.oval(c, lavaColor.withValues(alpha: 0.9 * fade), o.dx, o.dy + 1,
+        11 * (0.6 + 0.4 * up), 3);
     final hgt = 26 * up * (p < 0.6 ? 1 : fade);
-    _pen.rect(c, lavaColor.withValues(alpha: 0.85 * fade), o.dx - 3, o.dy - hgt, 6, hgt);
-    _pen.rect(c, lavaCoreColor.withValues(alpha: 0.9 * fade), o.dx - 1, o.dy - hgt, 2, hgt);
+    _pen.rect(c, lavaColor.withValues(alpha: 0.85 * fade), o.dx - 3, o.dy - hgt,
+        6, hgt);
+    _pen.rect(c, lavaCoreColor.withValues(alpha: 0.9 * fade), o.dx - 1,
+        o.dy - hgt, 2, hgt);
     for (var k = 0; k < 7; k++) {
       final a = -math.pi / 2 + (k - 3) * 0.35;
       final r = 6 + 22 * p;
       final d = Offset(math.cos(a) * r, math.sin(a) * r + 30 * p * p);
-      _pen.rect(c, (k.isEven ? lavaCoreColor : lavaColor).withValues(alpha: fade),
-          (o.dx + d.dx).roundToDouble(), (o.dy - hgt * 0.6 + d.dy).roundToDouble(), 2, 2);
+      _pen.rect(
+          c,
+          (k.isEven ? lavaCoreColor : lavaColor).withValues(alpha: fade),
+          (o.dx + d.dx).roundToDouble(),
+          (o.dy - hgt * 0.6 + d.dy).roundToDouble(),
+          2,
+          2);
     }
   }
 
@@ -1254,7 +1311,8 @@ class BattleScenePainter extends CustomPainter {
         _pen.stroke
           ..strokeWidth = 2
           ..color = f.color.withValues(alpha: 0.4 + 0.5 * q);
-        c.drawOval(Rect.fromCenter(center: o, width: r * 2, height: r * 1.2), _pen.stroke);
+        c.drawOval(Rect.fromCenter(center: o, width: r * 2, height: r * 1.2),
+            _pen.stroke);
       }
       // Rayos que convergen.
       for (var k = 0; k < 12; k++) {
@@ -1267,15 +1325,20 @@ class BattleScenePainter extends CustomPainter {
         c.drawLine(o + d * r1, o + d * (r1 + 8), _pen.stroke);
       }
     } else {
-      final q = ((age - flash) / (BattleFx.transformMs - flash)).clamp(0.0, 1.0);
+      final q =
+          ((age - flash) / (BattleFx.transformMs - flash)).clamp(0.0, 1.0);
       _pen.stroke
         ..strokeWidth = 3
         ..color = f.color.withValues(alpha: 1 - q);
-      c.drawOval(Rect.fromCenter(center: o, width: 30 + 160 * q, height: 18 + 80 * q), _pen.stroke);
+      c.drawOval(
+          Rect.fromCenter(center: o, width: 30 + 160 * q, height: 18 + 80 * q),
+          _pen.stroke);
       _pen.stroke
         ..strokeWidth = 1
         ..color = const Color(0xFFFFD166).withValues(alpha: 1 - q);
-      c.drawOval(Rect.fromCenter(center: o, width: 20 + 110 * q, height: 12 + 56 * q), _pen.stroke);
+      c.drawOval(
+          Rect.fromCenter(center: o, width: 20 + 110 * q, height: 12 + 56 * q),
+          _pen.stroke);
       // Grietas en el piso que se abren.
       final g = Offset(f.x, f.y);
       for (var k = 0; k < 8; k++) {
@@ -1283,7 +1346,9 @@ class BattleScenePainter extends CustomPainter {
         var p0 = g;
         for (var s = 1; s <= 4; s++) {
           final r = s * 8.0 * math.min(1.0, q * 2);
-          final p1 = g + Offset(math.cos(a + (s.isEven ? 0.2 : -0.2)) * r, math.sin(a) * r * 0.4);
+          final p1 = g +
+              Offset(math.cos(a + (s.isEven ? 0.2 : -0.2)) * r,
+                  math.sin(a) * r * 0.4);
           _pen.stroke
             ..strokeWidth = 1
             ..color = const Color(0xFFFF7B29).withValues(alpha: 0.9 * (1 - q));
@@ -1307,7 +1372,8 @@ class BattleScenePainter extends CustomPainter {
         final r = 6 + 18 * p;
         _pen.fill.color = f.color.withValues(alpha: 0.75 * (1 - p));
         c.drawCircle(o, r, _pen.fill);
-        _pen.fill.color = const Color(0xFFFFD166).withValues(alpha: 0.8 * (1 - p));
+        _pen.fill.color =
+            const Color(0xFFFFD166).withValues(alpha: 0.8 * (1 - p));
         c.drawCircle(o, r * 0.6, _pen.fill);
         if (p < 0.35) {
           _pen.fill.color = fxWhite.withValues(alpha: 1 - p / 0.35);
@@ -1316,16 +1382,15 @@ class BattleScenePainter extends CustomPainter {
         _pen.stroke
           ..color = const Color(0xFFFF9F43).withValues(alpha: 1 - p)
           ..strokeWidth = 3;
-        c.drawOval(
-            Rect.fromCenter(center: o, width: 140 * p, height: 70 * p),
+        c.drawOval(Rect.fromCenter(center: o, width: 140 * p, height: 70 * p),
             _pen.stroke);
       case FxKind.beam:
         final top = f.y - 160;
         final grow = math.min(1.0, age / 90);
         final bottom = top + (f.y - top) * grow;
         final w = 2 + 6 * (1 - p);
-        _pen.rect(c, f.color.withValues(alpha: 0.35 * (1 - p)), f.x - w,
-            top, w * 2, bottom - top);
+        _pen.rect(c, f.color.withValues(alpha: 0.35 * (1 - p)), f.x - w, top,
+            w * 2, bottom - top);
         _pen.rect(c, f.color.withValues(alpha: 0.85 * (1 - p)), f.x - w / 2,
             top, w, bottom - top);
         _pen.rect(c, fxWhite.withValues(alpha: 1 - p), f.x - 0.5, top, 1.5,
@@ -1375,7 +1440,8 @@ class BattleScenePainter extends CustomPainter {
           final q = (age - b) / 480;
           if (q < 0 || q >= 1) continue;
           final r = 8 + 12 * q;
-          final rect = Rect.fromCenter(center: o, width: r * 2, height: r * 1.7);
+          final rect =
+              Rect.fromCenter(center: o, width: r * 2, height: r * 1.7);
           _pen.fill.color = f.color.withValues(alpha: 0.25 * (1 - q));
           c.drawOval(rect, _pen.fill);
           _pen.stroke
@@ -1386,7 +1452,8 @@ class BattleScenePainter extends CustomPainter {
       case FxKind.reticle:
         final q = math.min(1.0, age / 300);
         final alpha = age < 300 ? 1.0 : 1 - (age - 300) / 200;
-        _reticle(c, o, 16 - 10 * q, f.color.withValues(alpha: alpha.clamp(0.0, 1.0)));
+        _reticle(c, o, 16 - 10 * q,
+            f.color.withValues(alpha: alpha.clamp(0.0, 1.0)));
       case FxKind.arrow:
         final s = f.up ? -1.0 : 1.0;
         final alpha = p > 0.75 ? (1 - p) / 0.25 : 1.0;
@@ -1394,16 +1461,23 @@ class BattleScenePainter extends CustomPainter {
         final cx = (f.x + 11).roundToDouble();
         final cy = (f.y - 6 + s * 6 * math.min(1.0, age / 300)).roundToDouble();
         // Sombra y flecha pixel (asta 2×5, punta 7×4).
-        for (final (dx, color) in [(1.0, Color.fromRGBO(0, 0, 0, alpha * 0.6)), (0.0, col)]) {
+        for (final (dx, color) in [
+          (1.0, Color.fromRGBO(0, 0, 0, alpha * 0.6)),
+          (0.0, col)
+        ]) {
           // Asta detrás de la punta: arriba (s = −1) va de cy−1 a cy+4.
-          _pen.rect(c, color, cx - 1 + dx, (s < 0 ? cy - 1 : cy - 4) + dx, 2, 5);
+          _pen.rect(
+              c, color, cx - 1 + dx, (s < 0 ? cy - 1 : cy - 4) + dx, 2, 5);
           final tip = Offset(cx + dx, cy + s * 5 + dx);
           _pen.tri(c, color, Offset(cx - 3.5 + dx, cy + s * 1 + dx),
               Offset(cx + 3.5 + dx, cy + s * 1 + dx), tip);
         }
       case FxKind.stream:
         const colors = [
-          Color(0xFF7BED9F), Color(0xFFBADC58), Color(0xFF55EFC4), Color(0xFF20BF6B),
+          Color(0xFF7BED9F),
+          Color(0xFFBADC58),
+          Color(0xFF55EFC4),
+          Color(0xFF20BF6B),
         ];
         final a = o, b = Offset(f.tx, f.ty);
         final ctrl = Offset((a.dx + b.dx) / 2, math.min(a.dy, b.dy) - 26);
@@ -1428,7 +1502,8 @@ class BattleScenePainter extends CustomPainter {
     final p = (age / BattleFx.shatterMs).clamp(0.0, 1.0);
     final o = Offset(f.x, f.y);
     if (age < 110) {
-      _pen.fill.color = breakFlashColor.withValues(alpha: 0.9 * (1 - age / 110));
+      _pen.fill.color =
+          breakFlashColor.withValues(alpha: 0.9 * (1 - age / 110));
       c.drawCircle(o, 16 - age / 110 * 6, _pen.fill);
     }
     // Grietas en zigzag.
@@ -1467,8 +1542,13 @@ class BattleScenePainter extends CustomPainter {
         for (var j = 0; j < 3; j++)
           ctr + Offset(math.cos(rot + j * 2.1), math.sin(rot + j * 2.1)) * sz,
       ];
-      _pen.tri(c, (k.isEven ? breakColor : fxWhite).withValues(alpha: (1 - p).clamp(0.0, 1.0)),
-          pts[0], pts[1], pts[2]);
+      _pen.tri(
+          c,
+          (k.isEven ? breakColor : fxWhite)
+              .withValues(alpha: (1 - p).clamp(0.0, 1.0)),
+          pts[0],
+          pts[1],
+          pts[2]);
     }
     _pen.stroke
       ..strokeWidth = 2
@@ -1543,7 +1623,12 @@ class BattleScenePainter extends CustomPainter {
       ..color = color
       ..strokeWidth = 1;
     c.drawCircle(o, r, _pen.stroke);
-    for (final d in const [Offset(0, -1), Offset(1, 0), Offset(0, 1), Offset(-1, 0)]) {
+    for (final d in const [
+      Offset(0, -1),
+      Offset(1, 0),
+      Offset(0, 1),
+      Offset(-1, 0)
+    ]) {
       c.drawLine(o + d * (r - 1.5), o + d * (r + 2.5), _pen.stroke);
     }
     _pen.rect(c, color, o.dx - 0.5, o.dy - 0.5, 1, 1);
@@ -1585,8 +1670,13 @@ class BattleScenePainter extends CustomPainter {
       final big = i == 0;
       final sz = big ? 28.0 : 22.0;
       final y = big ? 2.0 : 6.0;
-      _pen.rect(c, a.isPlayer ? const Color(0xFF1D2A5A) : const Color(0xFF4A1820),
-          x, y, sz, sz);
+      _pen.rect(
+          c,
+          a.isPlayer ? const Color(0xFF1D2A5A) : const Color(0xFF4A1820),
+          x,
+          y,
+          sz,
+          sz);
       _pen.stroke
         ..strokeWidth = big ? 2 : 1
         ..color = big
@@ -1597,11 +1687,13 @@ class BattleScenePainter extends CustomPainter {
                     : const Color(0xFF5B74C9))
                 : const Color(0xFFFF4757);
       final inset = big ? 1.0 : 0.5;
-      c.drawRect(Rect.fromLTWH(x + inset, y + inset, sz - inset * 2, sz - inset * 2),
+      c.drawRect(
+          Rect.fromLTWH(x + inset, y + inset, sz - inset * 2, sz - inset * 2),
           _pen.stroke);
       final img = a.isPlayer
           ? f.sprites?.heroFor(a.classId, a.ascensionId)
-          : f.sprites?.enemy(f.sprites.enemySpriteId(a.enemyType ?? '', a.phase));
+          : f.sprites
+              ?.enemy(f.sprites.enemySpriteId(a.enemyType ?? '', a.phase));
       if (img != null) {
         final k = math.min((sz - 4) / img.width, (sz - 4) / img.height);
         final w = img.width * k, h = img.height * k;
@@ -1620,8 +1712,12 @@ class BattleScenePainter extends CustomPainter {
       }
       if (big) {
         final bb = math.sin(t / 150) * 1.5;
-        _pen.tri(c, const Color(0xFFFFD166), Offset(x + sz / 2 - 4, y + sz + 3 + bb),
-            Offset(x + sz / 2 + 4, y + sz + 3 + bb), Offset(x + sz / 2, y + sz - 1 + bb));
+        _pen.tri(
+            c,
+            const Color(0xFFFFD166),
+            Offset(x + sz / 2 - 4, y + sz + 3 + bb),
+            Offset(x + sz / 2 + 4, y + sz + 3 + bb),
+            Offset(x + sz / 2, y + sz - 1 + bb));
       }
       x += sz + (big ? 8 : 4);
       if (big && i < order.length - 1) {
@@ -1668,8 +1764,7 @@ class BattleOverlayPainter extends CustomPainter {
       final bh = (area.height * 0.09 * d).roundToDouble();
       fill.color = const Color(0xFF000000);
       canvas.drawRect(Rect.fromLTWH(0, area.top, size.width, bh), fill);
-      canvas.drawRect(
-          Rect.fromLTWH(0, area.bottom - bh, size.width, bh), fill);
+      canvas.drawRect(Rect.fromLTWH(0, area.bottom - bh, size.width, bh), fill);
     }
 
     // Tarjeta del nombre (capa pixelada, unidad 2u).
@@ -1739,22 +1834,24 @@ class BattleOverlayPainter extends CustomPainter {
     _pen.stroke
       ..color = const Color(0xFFFFFFFF)
       ..strokeWidth = 2;
-    c.drawLine(Offset(right + 12, by - 19), Offset(right - 6, by + 17), _pen.stroke);
+    c.drawLine(
+        Offset(right + 12, by - 19), Offset(right - 6, by + 17), _pen.stroke);
 
     // Sprite grande del lanzador y textos (entran con la banda).
     final img = enemy
         ? f.sprites?.enemy(f.sprites.enemySpriteId(u.fx.ult?.enemyType ?? '',
             u.fx.who == null ? 0 : (f.battle.byId(u.fx.who!)?.phase ?? 0)))
-        : f.sprites
-            ?.heroFor(u.fx.ult?.casterClass, u.fx.ult?.casterAscension);
+        : f.sprites?.heroFor(u.fx.ult?.casterClass, u.fx.ult?.casterAscension);
     final x0 = math.min(right - 40, 18.0);
     if (img != null) {
       final k = enemy ? math.min(3.0, 40 / img.height) : 3.0;
-      final dst = Rect.fromLTWH(x0, by + 17 - img.height * k + 8,
-          img.width * k, img.height * k);
+      final dst = Rect.fromLTWH(
+          x0, by + 17 - img.height * k + 8, img.width * k, img.height * k);
       final shadow = SpriteCatalog.pixelPaint()
-        ..colorFilter = const ColorFilter.mode(Color(0xFF000000), BlendMode.srcIn);
-      final src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
+        ..colorFilter =
+            const ColorFilter.mode(Color(0xFF000000), BlendMode.srcIn);
+      final src =
+          Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
       c.drawImageRect(img, src, dst.shift(const Offset(2, 2)), shadow);
       c.drawImageRect(img, src, dst, SpriteCatalog.pixelPaint());
     }
@@ -1810,28 +1907,40 @@ class BattleOverlayPainter extends CustomPainter {
       // Polvo dorado que corre por la banda.
       for (var k = 0; k < 10; k++) {
         final lx = ((k * 131 + a * 0.12) % (wd + 40)) - 20;
-        _pen.rect(c, const Color(0x44FFD166), lx, cy - 22 + (k * 9) % 44, 18, 1);
+        _pen.rect(
+            c, const Color(0x44FFD166), lx, cy - 22 + (k * 9) % 44, 18, 1);
       }
       final img = f.sprites?.enemy(i.enemyType);
-      final slide = (1 - Curves.easeOutCubic.transform(((a - 200) / 400).clamp(0.0, 1.0))) * 60;
+      final slide = (1 -
+              Curves.easeOutCubic
+                  .transform(((a - 200) / 400).clamp(0.0, 1.0))) *
+          60;
       final mid = wd / 2;
       if (img != null) {
         final k = math.min(2.0, 50 / img.height);
-        final dst = Rect.fromLTWH((mid - 150 - img.width * k / 2 - slide).roundToDouble(),
-            cy + 26 - img.height * k, img.width * k, img.height * k);
-        final src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
+        final dst = Rect.fromLTWH(
+            (mid - 150 - img.width * k / 2 - slide).roundToDouble(),
+            cy + 26 - img.height * k,
+            img.width * k,
+            img.height * k);
+        final src =
+            Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
         final shadow = SpriteCatalog.pixelPaint()
-          ..colorFilter = const ColorFilter.mode(Color(0xFF000000), BlendMode.srcIn);
+          ..colorFilter =
+              const ColorFilter.mode(Color(0xFF000000), BlendMode.srcIn);
         c.drawImageRect(img, src, dst.shift(const Offset(2, 2)), shadow);
         c.drawImageRect(img, src, dst, SpriteCatalog.pixelPaint());
       }
       final tx = mid - 100 + slide;
       final blink = (a / 160).floor().isEven;
-      _pen.text(c, '! JEFE !', tx, cy - 12, blink ? const Color(0xFFFF4757) : gold, 8,
+      _pen.text(
+          c, '! JEFE !', tx, cy - 12, blink ? const Color(0xFFFF4757) : gold, 8,
           center: false);
-      _pen.text(c, i.name.toUpperCase(), tx, cy + 6, const Color(0xFFFFFFFF), 16,
+      _pen.text(
+          c, i.name.toUpperCase(), tx, cy + 6, const Color(0xFFFFFFFF), 16,
           center: false, outline: true);
-      _pen.text(c, i.title, tx, cy + 20, const Color(0xFFFFEAA7), 8, center: false);
+      _pen.text(c, i.title, tx, cy + 20, const Color(0xFFFFEAA7), 8,
+          center: false);
     }
     if (outP > 0) c.restore();
     final pic = rec.endRecording();

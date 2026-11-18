@@ -1,3 +1,4 @@
+import '../../game_engine/data/skill_variants_catalog.dart';
 import 'sfx_catalog.dart';
 
 // Recetas del diseño de sonido de combate (docs/specs/audio.md
@@ -136,6 +137,13 @@ List<SfxTone> _shieldRing([double p = 1]) => [
       _t(3790 * p, 0.2, w: _sin, v: 0.12),
     ];
 
+/// Cúpula de escudos del Guardián (la vieja Égida Grupal): Fortaleza y
+/// la firma de su ULT.
+List<SfxTone> _guardianDome() => [
+      ..._shieldRing(0.7),
+      for (final f in [523.0, 784.0, 1047.0]) _t(f, 0.45, w: _tri, at: 0.15, v: 0.2),
+    ];
+
 List<SfxTone> _wind([double p = 1, double l = 1]) => [
       _n(2500 * p, 0.6 * l, to: 5000 * p, lp: 3000 * p, a: 0.2 * l, v: 0.5, seed: 11),
     ];
@@ -183,7 +191,7 @@ const Map<String, String> kWeaponImpactSfx = {
 };
 
 /// Firma de cada habilidad de `kSkills` (sin el prefijo `skill.`).
-final Map<String, List<SfxTone>> kSkillVoices = {
+final Map<String, List<SfxTone>> _kBaseSkillVoices = {
   // ---- corte ----
   'giro': [..._swingBlade(1, 0.8), ..._x(_swingBlade(1.15, 0.8), dt: 0.1)],
   'embestida': [
@@ -292,10 +300,13 @@ final Map<String, List<SfxTone>> kSkillVoices = {
   // ---- mejora / escudo ----
   'prisa': _arp([523, 659, 784, 1047, 1319, 1568, 2093],
       step: 0.035, d: 0.06, w: _sq, v: 0.3),
+  // Fortaleza (kit del Guardián): el golpe de escudo de siempre y la
+  // cúpula de la vieja Égida Grupal, que absorbió.
   'fortaleza': [
     _t(196, 0.12, w: _sq, v: 0.4),
     _t(262, 0.18, w: _sq, v: 0.4, at: 0.1),
     ..._x(_shieldRing(), dt: 0.15),
+    ..._x(_guardianDome(), dt: 0.15, g: 0.8),
   ],
   'proteccion': [
     _t(300, 0.3, w: _tri, to: 900, v: 0.4),
@@ -418,16 +429,17 @@ final Map<String, List<SfxTone>> kSkillVoices = {
     ..._x(_holy(1.4, 1.2), dt: 0.12),
     _n(12000, 0.1, at: 0.3, v: 0.3, seed: 40),
   ],
-  // Guardián: cúpula de escudos y juramento.
-  'egidaGrupal': [
-    ..._shieldRing(0.7),
-    for (final f in [523.0, 784.0, 1047.0]) _t(f, 0.45, w: _tri, at: 0.15, v: 0.2),
-  ],
-  'juramento': [
-    _t(131, 0.5, w: _saw, a: 0.2, lp: 900, v: 0.4),
-    _t(196, 0.5, w: _saw, a: 0.2, lp: 900, v: 0.3),
-    ..._x(_shieldRing(1.4), dt: 0.3),
-  ],
+  // Guardián: su kit es Protección, Fortaleza y Aura Restauradora (arriba).
+};
+
+/// Firma de cada habilidad de `kSkills`: las propias y las variantes v0.5,
+/// que suenan como la habilidad a la que se parecen (`kSkillLooks`).
+final Map<String, List<SfxTone>> kSkillVoices = {
+  ..._kBaseSkillVoices,
+  // Cada variante con su tono (distinto de la original y de las demás).
+  for (final (i, e) in kSkillLooks.entries.indexed)
+    if (_kBaseSkillVoices[e.value] case final v?)
+      e.key: _x(v, p: 0.885 + 0.0125 * i),
 };
 
 /// Las partes del sonido propio de cada ULT de ascensión (ascension.md
@@ -458,7 +470,7 @@ final Map<String, UltVoices> kAscensionUltVoices = {
   'ult_francotirador': _ascUlt(kSkillVoices['tiroCabeza']!, 0.9, 72),
   'ult_trampero': _ascUlt(kSkillVoices['trampaPuas']!, 1.05, 75),
   'ult_templario': _ascUlt(kSkillVoices['castigo']!, 1.3, 78),
-  'ult_guardian': _ascUlt(kSkillVoices['egidaGrupal']!, 0.95, 81),
+  'ult_guardian': _ascUlt(_guardianDome(), 0.95, 81),
 };
 
 /// Ascensión y trampas de la Prueba (ascension.md § 1.1 y § 5).

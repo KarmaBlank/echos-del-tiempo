@@ -8,7 +8,7 @@ abstract final class ProtoColors {
   static const bg = Color(0xFF0B0E1A);
 
   /// Texto base de `body`.
-  static const ink = Color(0xFFE8ECFF);
+  static const ink = Color(0xFFB0BAE5);
 
   /// `.pbox`, `.panel`, `#menu`.
   static const panel = Color(0xFF121936);
@@ -27,19 +27,19 @@ abstract final class ProtoColors {
   static const inputBorder = Color(0xFF3A4A85);
 
   /// `<b>` del tip y del menú, créditos, jugador local, títulos.
-  static const gold = Color(0xFFFFD166);
+  static const gold = Color(0xFFD3AC4F);
 
   /// `.k` del tip, clase y nivel, DEF/VEL, `small`.
-  static const sky = Color(0xFF9FB4FF);
+  static const sky = Color(0xFF8FA1DF);
 
   /// `.help`, XP y créditos, "Turno en N".
-  static const dim = Color(0xFF7D8BC4);
+  static const dim = Color(0xFF929ABA);
 
   /// `#chatlog`.
   static const chat = Color(0xFFC8D2FF);
 
   /// `.sys`, `#mission`, curas, requisitos cumplidos, `TIENES`.
-  static const green = Color(0xFF7BED9F);
+  static const green = Color(0xFF5EB77A);
 
   /// Relleno de `.hp`.
   static const hp = Color(0xFF2ED573);
@@ -51,25 +51,25 @@ abstract final class ProtoColors {
   static const barBg = Color(0xFF222A48);
 
   /// MP de técnicas, DEF de escudo, éter, Congelación.
-  static const ice = Color(0xFF74B9FF);
+  static const ice = Color(0xFF77A7D7);
 
   /// `#err`, requisitos que faltan, `+% crít`, tiempo ≤ 10 s.
-  static const red = Color(0xFFFF6B81);
+  static const red = Color(0xFFDB828F);
 
   /// Timer ≤ 10 s del menú, golpe crítico recibido.
-  static const crimson = Color(0xFFFF4757);
+  static const crimson = Color(0xFFDB8289);
 
   /// Arma equipada, `(fusión)`, avisos.
-  static const orange = Color(0xFFFF9F43);
+  static const orange = Color(0xFFD1975F);
 
   /// Borde de `button.dual`.
   static const amber = Color(0xFFFF9F1C);
 
   /// ULT lista / nombre de la ULT en los tips.
-  static const pink = Color(0xFFE84393);
+  static const pink = Color(0xFFCF85A8);
 
   /// ULT cargando.
-  static const violet = Color(0xFFA29BFE);
+  static const violet = Color(0xFF9E99E0);
 
   /// Protege, aturdir del Paladín.
   static const cream = Color(0xFFFFEAA7);
@@ -102,8 +102,32 @@ abstract final class ProtoColors {
     final v = int.tryParse(h, radix: 16);
     if (v == null) return null;
     // CSS es RRGGBBAA; Flutter, AARRGGBB.
-    return Color(((v & 0xFF) << 24) | (v >> 8));
+    final c = Color(((v & 0xFF) << 24) | (v >> 8));
+    return legacy[c.toARGB32()] ?? c;
   }
+
+  /// Accesibilidad (v0.5, docs/specs/accessibility.md § 2): los colores
+  /// de texto del prototipo se veían "fosforescentes" o no llegaban a AA;
+  /// los tokens de arriba son la versión suavizada (≈ mitad de saturación,
+  /// ≥ 4.5:1 sobre `button`). El markup que todavía escribe el hex viejo
+  /// se pinta con el token nuevo.
+  static const legacy = <int, Color>{
+    // Hex del prototipo (y de la primera pasada AA) → token suavizado.
+    0xFFE8ECFF: ink,
+    0xFFFFD166: gold,
+    0xFF9FB4FF: sky,
+    0xFF7D8BC4: dim,
+    0xFF8D99CB: dim,
+    0xFF7BED9F: green,
+    0xFFFF6B81: red,
+    0xFFFF4757: crimson,
+    0xFFFF6B78: crimson,
+    0xFFFF9F43: orange,
+    0xFFA29BFE: violet,
+    0xFFE84393: pink,
+    0xFFEE70AD: pink,
+    0xFF74B9FF: ice,
+  };
 
   /// `#rrggbb` de [c] (para armar markup).
   static String hex(Color c) =>

@@ -106,8 +106,7 @@ class UltScript {
   int get totalMs => buildMs + releaseMs + returnMs;
 
   /// Impacto en el objetivo [i] (orden de los eventos).
-  int impactFor(int i) =>
-      impactMs + staggerMs * i.clamp(0, maxStaggered - 1);
+  int impactFor(int i) => impactMs + staggerMs * i.clamp(0, maxStaggered - 1);
 
   /// Impacto del último de [n] objetivos (el del hit-stop).
   int lastImpact(int n) => impactFor(math.max(0, n - 1));
@@ -519,8 +518,8 @@ CameraView ultCameraAt(
     case UltFocus.party:
       releaseView = CameraView(centroid(party.isEmpty ? [caster] : party), bz);
     case UltFocus.targets:
-      releaseView = CameraView(
-          targets.isEmpty ? base.center : centroid(targets), bz);
+      releaseView =
+          CameraView(targets.isEmpty ? base.center : centroid(targets), bz);
     case UltFocus.group:
       // Un paso más lejos: el grupo en columna entra entero entre las
       // barras de cine, con sus números arriba.

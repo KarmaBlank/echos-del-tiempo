@@ -189,7 +189,8 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
               : 'Juego en pausa'),
       key: const ValueKey('pause-status'),
       style: TextStyle(
-          fontSize: 8,
+          fontFamily: RetroType.bodyFamily,
+ fontFamilyFallback: RetroType.bodyFallback, fontSize: RetroType.small,
           color: running ? ProtoColors.orange : ProtoColors.green),
     );
   }
@@ -296,13 +297,15 @@ class _SettingRow extends StatelessWidget {
         children: [
           Row(
             children: [
-              SizedBox(width: 200, child: Text(retroText(label))),
+              SizedBox(
+                  width: RetroType.width(context, 200),
+                  child: Text(retroText(label))),
               Expanded(child: control),
             ],
           ),
           if (hint != null)
             Padding(
-              padding: const EdgeInsets.only(left: 200),
+              padding: EdgeInsets.only(left: RetroType.width(context, 200)),
               child: Text(retroText(hint!),
                   style: const TextStyle(color: ProtoColors.dim)),
             ),
@@ -338,6 +341,52 @@ class _Choice<T> extends StatelessWidget {
               selected: e.key == value,
               accent: e.key == value ? ProtoColors.gold : null,
               onPressed: () => onChanged(e.key)),
+      ],
+    );
+  }
+}
+
+/// FUENTE DE LECTURA: cada opción escrita en su propia fuente (vista
+/// previa), en su tamaño Normal y sin agrandarse.
+class _FontChoice extends StatelessWidget {
+  const _FontChoice({required this.value, required this.onChanged});
+
+  final ReadingFont value;
+  final ValueChanged<ReadingFont> onChanged;
+
+  static const _options = {
+    ReadingFont.vt323: ('VT323', RetroType.vt323Family, 20.0),
+    ReadingFont.classic: ('CLÁSICA', RetroType.pixelFamily, 8.0),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final e in _options.entries)
+          ElevatedButton(
+            key: ValueKey('display-font-${e.key.name}'),
+            style: RetroTheme.compactButton().copyWith(
+              side: e.key == value
+                  ? const WidgetStatePropertyAll(BorderSide(
+                      color: ProtoColors.gold,
+                      width: RetroTheme.thinBorderWidth))
+                  : null,
+              foregroundColor: e.key == value
+                  ? const WidgetStatePropertyAll(ProtoColors.gold)
+                  : null,
+            ),
+            onPressed: () => onChanged(e.key),
+            child: Text(retroText('${e.value.$1} · Ñandú ¿áé?'),
+                textScaler: TextScaler.noScaling,
+                style: TextStyle(
+                    fontFamily: e.value.$2,
+                    fontFamilyFallback: RetroType.bodyFallback,
+                    fontSize: e.value.$3,
+                    height: 1.2)),
+          ),
       ],
     );
   }
@@ -389,8 +438,10 @@ class _VolumeSlider extends StatelessWidget {
           ),
         ),
         SizedBox(
-          width: 48,
+          // "100%" en una línea con cualquier tamaño de texto.
+          width: RetroType.width(context, 48),
           child: Text('${(value * 100).round()}%',
+              maxLines: 1,
               textAlign: TextAlign.right, style: TextStyle(color: color)),
         ),
       ],
@@ -492,6 +543,31 @@ class _DisplayTab extends ConsumerWidget {
               onChanged: (v) => c.update(s.copyWith(fullscreen: v)),
             ),
           ),
+        // Accesibilidad: primero (docs/specs/settings.md § 3).
+        _SettingRow(
+          label: 'TAMAÑO DEL TEXTO',
+          hint: 'Letra de menús, fichas, chat y batalla. Se ajusta a la '
+              'grilla de la fuente para que se vea nítida.',
+          control: _Choice<TextSize>(
+            keyPrefix: 'display-text',
+            options: const {
+              TextSize.normal: 'NORMAL',
+              TextSize.large: 'GRANDE',
+              TextSize.huge: 'MUY GRANDE',
+            },
+            value: s.textSize,
+            onChanged: (v) => c.update(s.copyWith(textSize: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'FUENTE DE LECTURA',
+          hint: 'Fichas, chat, menús y batalla. Títulos y botones no '
+              'cambian.',
+          control: _FontChoice(
+            value: s.readingFont,
+            onChanged: (v) => c.update(s.copyWith(readingFont: v)),
+          ),
+        ),
         _SettingRow(
           label: 'ESCALADO',
           hint: s.scale == ScaleMode.pixelPerfect

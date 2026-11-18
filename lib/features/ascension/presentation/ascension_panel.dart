@@ -5,6 +5,7 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
+import '../../../app/widgets/menu_widgets.dart';
 import '../../../game_engine/data/trials_catalog.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -17,14 +18,11 @@ import 'ascension_views.dart';
 
 /// Pestañas de la Estatua del Tiempo.
 enum AscensionTab {
-  trials(
-      'PRUEBAS',
-      'Mazmorras con trampas y un jefe. Cada Prueba superada da 2 puntos de '
-          'ascensión a cada uno que la cumple.'),
-  ascension(
-      'ASCENSIÓN',
-      'Tu subclase: elegí 1 de 2 con la Prueba I y gastá los puntos en su '
-          'mini-árbol. Reiniciar y cambiar es gratis.');
+  trials('PRUEBAS',
+      'Mazmorras con trampas y jefe: cada una da 2 puntos de ascensión.'),
+  ascension('ASCENSIÓN',
+      'Elegí 1 de 2 subclases y gastá los puntos en su mini-árbol (gratis '
+          'cambiar).');
 
   const AscensionTab(this.label, this.hint);
   final String label;
@@ -35,7 +33,8 @@ enum AscensionTab {
 const kAscensionHelp = '<b>Estatua del Tiempo</b><br>'
     'PRUEBAS: niveles 30, 40 y 50, en orden. Púas: −vida cada segundo. '
     'Pulso del Tiempo (violeta): cuando brilla te devuelve al inicio del '
-    'piso.<br>ASCENSIÓN: 6 puntos en total (2 por Prueba), 10 de costo en '
+    'piso. La primera vez cada jugador del grupo gana sus 2 puntos.<br>'
+    'ASCENSIÓN: 6 puntos en total (2 por Prueba), 10 de costo en '
     'el árbol: elegí.';
 
 /// La Estatua del Tiempo (docs/specs/ascension.md § 1-3).
@@ -163,12 +162,19 @@ class _AscensionPanelState extends State<AscensionPanel> {
       listWidth: 380,
       list: [
         for (final t in kTrials)
-          PanelListItem(
+          MenuRow(
             key: ValueKey('trial-row-${t.number}'),
             selected: t.number == sel.number,
             onTap: () => setState(() => _sel = t.number),
-            child: ProtoText('<b>Prueba ${t.roman} · ${protoEsc(t.name)}</b>'
-                '<br><small>Nivel ${t.level} · ${state(t)}</small>'),
+            label: '<b>Prueba ${t.roman}</b> · ${protoEsc(t.name)}',
+            // Una palabra: el motivo largo va en el detalle.
+            value: p.ascension.trials.contains(t.number)
+                ? protoColor(ProtoColors.green, 'Superada')
+                : protoColor(
+                    rules.cannotPropose(p, t.number) == null
+                        ? ProtoColors.gold
+                        : ProtoColors.dim,
+                    'Nv ${t.level}'),
           ),
         if (dev) ...[
           const SizedBox(height: 8),
@@ -182,7 +188,8 @@ class _AscensionPanelState extends State<AscensionPanel> {
       ],
       detail: PanelDetail(
         footer: [
-          PanelButton('PROPONER PRUEBA',
+          const KeyHints(confirm: 'Elegir', back: 'Cerrar'),
+          PanelButton('PROPONER',
               key: const ValueKey('trial-propose'),
               accent: ProtoColors.violet,
               reason: why, onPressed: () {
@@ -190,26 +197,22 @@ class _AscensionPanelState extends State<AscensionPanel> {
           }),
         ],
         children: [
+          // Ficha corta: una línea por dato, las trampas en el tip "?".
           ProtoText(
               key: const ValueKey('trial-detail'),
-              '<b style="color:#a29bfe">${protoEsc(sel.fullName)}</b><br>'
-              '${state(sel)}<br><br>'
-              'Nivel pedido: <b>${sel.level}</b>'
+              '<b style="color:#a29bfe">${protoEsc(sel.fullName)}</b> '
+              '${state(sel)}<br>'
+              'Nivel <b>${sel.level}</b>'
               '${sel.number > 1 ? ' · requiere la Prueba ${kTrials[sel.number - 2].roman}' : ''}<br>'
-              'Mazmorra: ${protoEsc(zone)} · ${sel.floors} pisos · monstruos '
-              'nivel ${sel.monsterLevel}<br>'
-              'Jefe: <b>${protoEsc(boss)}</b><br><br>'
-              '<b>Trampas</b> (por piso)<br>'
-              '· ${sel.spikes} campos de púas: '
-              '${protoColor(ProtoColors.crimson, '−${(sel.spikeDamage * 100).round()}% de vida')} '
-              'por segundo encima (no matan)<br>'
-              '· ${sel.pulses} Pulsos del Tiempo: cargan 2 s y '
-              '${protoColor(ProtoColors.violet, 'te devuelven al inicio del piso')}'
-              ' si estás encima cuando brillan<br><br>'
-              '<b>Recompensa</b><br>'
-              '${protoColor(ProtoColors.gold, '+2 puntos de ascensión')} la primera '
-              'vez (cada jugador del grupo que la cumple gana los suyos)'
-              '${sel.number == 1 ? '<br>y desbloquea la elección de ascensión' : ''}'),
+              'Mazmorra: ${protoEsc(zone)} · ${sel.floors} pisos · '
+              'monstruos nivel ${sel.monsterLevel}<br>'
+              'Jefe: <b>${protoEsc(boss)}</b><br>'
+              'Trampas por piso: ${sel.spikes} púas '
+              '(${protoColor(ProtoColors.crimson, '−${(sel.spikeDamage * 100).round()}% de vida')}/s) · '
+              '${sel.pulses} ${protoColor(ProtoColors.violet, 'Pulsos')} '
+              '(te devuelven al inicio)<br>'
+              'Premio: ${protoColor(ProtoColors.gold, '+2 puntos de ascensión')}'
+              '${sel.number == 1 ? ' y elegir subclase' : ''}'),
         ],
       ),
     );

@@ -831,7 +831,7 @@ class _Op {
   }
 
   bool _craft(SessionPlayer p, CraftAction a) {
-    if (!s.canShop) return false;
+    if (!(a.op.destroys ? s.canDiscard : s.canShop)) return false;
     final before = p.profile;
     final r = rules.crafting.apply(before, a.op, a.targetUid,
         sourceUid: a.sourceUid,

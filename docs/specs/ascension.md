@@ -88,7 +88,8 @@ enemigos también: no los afectan).
 - `ChooseAscensionAction(id)`: con la Prueba I hecha, de su clase, sin
   ascensión elegida; en lobby, preparación o resultado. Da gratis el
   **nodo raíz** (su mecánica de identidad) y el **kit**: 2 habilidades
-  propias + su ULT (reemplaza la ULT del arma).
+  propias (el Guardián: 3, el kit clásico del Paladín mejorado, § 4) +
+  su ULT (reemplaza la ULT del arma).
 - Evento `AscensionChosenEvent(id, ascensión)` → cinemática (§ 5) para
   todos los de la sala, aviso `¡<nombre> ascendió: <Ascensión>!`.
 - **Reinicio (regla temporal del dueño: reiniciar es gratis siempre)**:
@@ -281,7 +282,29 @@ tu próximo turno), `protect` (Protección). `SkillKind.support`: sin daño.
 | Francotirador | **Tiro a la Cabeza** (`tiroCabeza`, 6 MP): físico 2.4, +35% crít, remata < 25% | **Apuntar** (`apuntar`, 3 MP): +100% crít 1 turno y tu turno llega 50% antes | **Bala del Juicio** (`ult_francotirador`): físico 4.5, crítico seguro, remata < 30% |
 | Trampero | **Trampa de Púas** (`trampaPuas`, 4 MP): trampa ATQ × 1.0 a todos | **Red de Caza** (`redCaza`, 4 MP): físico 1.1, retrasa 0.5, 2 Veneno | **Campo Minado** (`ult_trampero`): físico a todos 1.5 y trampa ATQ × 0.8 a todos |
 | Templario | **Castigo Sagrado** (`castigo`, 4 MP): mágico 1.6, 35% aturdir, +1 Sagrado | **Luz Cegadora** (`luzCegadora`, 7 MP): mágico a todos 0.9, 25% aturdir | **Juicio Final** (`ult_templario`): mágico a todos 2.0, aturde, +1 Sagrado |
-| Guardián | **Égida Grupal** (`egidaGrupal`, 5 MP): escudo 15% de tu vida máx. a todos (3 turnos) | **Juramento** (`juramento`, 6 MP): Protección y grupo −30% daño 2 turnos | **Fortaleza Inquebrantable** (`ult_guardian`): escudo 25% a todos, −25% daño 3 turnos y Protección |
+| Guardián | **Protección** (`proteccion`, 5 MP): Protección hasta tu próximo turno y −20% de daño recibido propio (1 turno) · **Fortaleza** (`fortaleza`, 6 MP): DEF +2 propia (tope 12), escudo 15% de tu vida máx. a todos (3 turnos) y grupo −10% daño (2 turnos) | **Aura Restauradora** (`aura`, 6 MP): cura `MAG × 1.0 + 4` a cada aliado + Regeneración 3 | **Fortaleza Inquebrantable** (`ult_guardian`): escudo 25% a todos, −25% daño 3 turnos y Protección |
+
+**Kit clásico del Paladín → Guardián (v0.5).** Hasta v0.4 el Paladín
+tenía un kit de clase fijo (Aura Restauradora, Fortaleza, Protección)
+que no se podía quitar ni buildear. Desde v0.5 el Paladín base juega
+como las demás clases (habilidades del arma + árbol + ascensión) y ese
+kit pasa, mejorado, al **Guardián** (3 habilidades en vez de 2):
+
+| Habilidad | Antes (clase Paladín) | Ahora (kit del Guardián) |
+|---|---|---|
+| Protección | 5 MP: Protección | 5 MP: Protección + `selfBuff` −20% daño recibido (1 turno) |
+| Fortaleza | 3 MP: DEF +2 propia | 6 MP: DEF +2 propia + escudo 15% de tu vida máx. a todos (3 turnos) + grupo −10% daño (2 turnos) — absorbe a la vieja **Égida Grupal** |
+| Aura Restauradora | 6 MP: `MAG × 0.6 + 4` + Regeneración | 6 MP: `MAG × 1.0 + 4` + Regeneración |
+
+Los ids (`proteccion`, `fortaleza`, `aura`) no cambian: viven ahora en
+`kAscensionSkills`. **Égida Grupal** (`egidaGrupal`) se fusionó en
+Fortaleza y **Juramento** (`juramento`, Protección + grupo −30%) se
+quitó: era redundante con Protección, la ULT y el nodo Juramento Eterno.
+Ningún perfil los guarda (el kit sale de la ascensión, no del perfil) y
+una habilidad trasladada nunca puede ser del kit de una ascensión
+(`ItemRules.sanitize` la descarta). Los rasgos de clase del Paladín
+(DEF base 6, VIT 15, 3% de aturdir al atacar, débil a perforante ×1.5 y
+a estados +1) no cambian.
 
 Las ULT de ascensión usan el guion y los colores de `kUltScripts` con su
 propio id (reusan un estilo visual y lo tiñen) y tienen sonido propio.
@@ -310,6 +333,29 @@ propio id (reusan un estilo visual y lo tiñen) y tienen sonido propio.
   del color de la ascensión con motas que suben.
 - **Título** en el HUD, el chat, los paneles de grupo (mapa y batalla) y
   las tarjetas del título: `Ana, Cronomante`.
+
+### 5.1 Panel de la Estatua (presentación v0.5)
+
+Lista + detalle (ui_style.md § "Menús: lista + detalle"). Líneas cortas:
+`Mazmorras con trampas y jefe: cada una da 2 puntos de ascensión.` /
+`Elegí 1 de 2 subclases y gastá los puntos en su mini-árbol (gratis
+cambiar).`
+
+- **PRUEBAS**: filas de una línea (`trial-row-<n>`): `Prueba I · El
+  Umbral` y a la derecha `Superada` (verde) o `Nv 30` (dorado si se
+  puede proponer, `dim` si no). Ficha corta (`trial-detail`): nombre y
+  estado; `Nivel N · requiere la Prueba X`; mazmorra, pisos y nivel;
+  `Jefe:`; `Trampas por piso: N púas (−P% de vida/s) · M Pulsos (te
+  devuelven al inicio)`; `Premio: +2 puntos de ascensión` (y `elegir
+  subclase` en la I). Abajo `PROPONER` (`trial-propose`) con el motivo.
+- **ASCENSIÓN sin elegir**: las 2 tarjetas lado a lado (comparar es la
+  decisión); el héroe a la izquierda de la ficha (no arriba) para que el
+  kit entre; `ELEGIR <NOMBRE>` abajo.
+- **Mini-árbol**: el lateral crece con el texto (hasta 45 % de la
+  pantalla); primero el nodo elegido (`asc-node-detail`), después
+  `Puntos libres · ganados`, el héroe con el nombre y, en la raíz, el
+  kit. Abajo `REINICIAR` · `CAMBIAR` (gratis, lo dice la línea) ·
+  `TOMAR` (con el motivo).
 
 ## 6. Red
 

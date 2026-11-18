@@ -419,7 +419,7 @@ void main() {
       final c2 = sj.combatantFromJson(asJson(jsonDecode(jsonEncode(cj))));
       expect(c2.ascensionId, 'guardian');
       expect(c2.once, {'guardian_b3'});
-      expect(c2.skillIds, containsAll(['egidaGrupal', 'juramento']));
+      expect(c2.skillIds, containsAll(['proteccion', 'fortaleza', 'aura']));
       expect(kProtocolVersion, 5);
     });
   });

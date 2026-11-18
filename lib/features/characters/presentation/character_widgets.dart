@@ -44,8 +44,9 @@ class RetroTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final bool autofocus;
 
-  static const _style = TextStyle(
-      fontFamily: RetroTheme.fontFamily, fontSize: 8, color: RetroPalette.ink);
+  static TextStyle get _style => TextStyle(
+      fontFamily: RetroType.bodyFamily,
+ fontFamilyFallback: RetroType.bodyFallback, fontSize: RetroType.small, color: RetroPalette.ink);
 
   @override
   Widget build(BuildContext context) => TextField(
@@ -83,6 +84,11 @@ class CharacterSlotCard extends StatelessWidget {
 
   static const width = 252.0;
 
+  /// Ancho con el texto actual: crece con el texto pero siempre entran 4
+  /// por fila a 1280 px.
+  static double widthOf(BuildContext context) =>
+      RetroType.width(context, width).clamp(width, 300.0);
+
   final CharacterSlot slot;
 
   /// El perfil ya normalizado (nivel y zona válidos).
@@ -97,14 +103,18 @@ class CharacterSlotCard extends StatelessWidget {
     // Ascendido: su sprite y su título (docs/specs/ascension.md § 5).
     final asc = ascensionFor(profile.classId, profile.ascension.id);
     final img = sprites?.heroFor(profile.classId, asc?.id);
-    const small = TextStyle(color: RetroPalette.muted, height: 1.8);
+    // Una línea por dato (se cortan con "…"): con texto grande la tarjeta
+    // crece en alto sin partir palabras.
+    const small = TextStyle(color: RetroPalette.muted);
+    Widget line(String t, {TextStyle? style, Key? key}) => Text(retroText(t),
+        key: key, maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
     return GestureDetector(
       key: ValueKey('char-slot-${slot.id}'),
       onTap: onTap,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: SizedBox(
-          width: width,
+          width: widthOf(context),
           child: RetroPanel(
             selected: selected,
             padding: const EdgeInsets.all(10),
@@ -123,24 +133,22 @@ class CharacterSlotCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(retroText(slot.displayName),
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              fontSize: 12,
+                              fontFamily: RetroType.pixelFamily,
+                              fontSize: RetroType.title,
                               color: selected
                                   ? RetroPalette.gold
                                   : RetroPalette.ink)),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       if (asc != null)
-                        Text(retroText(asc.name),
+                        line(asc.name,
                             key: ValueKey('char-asc-${slot.id}'),
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                height: 1.8, color: Color(asc.color))),
-                      Text(retroText('$className · Nv ${profile.level}'),
-                          style: const TextStyle(height: 1.8)),
-                      Text('Zona ${profile.unlockedZone}', style: small),
-                      Text(retroText(lastPlayedText(slot.lastPlayed)),
-                          style: small),
+                            style: TextStyle(color: Color(asc.color))),
+                      line('$className · Nv ${profile.level}'),
+                      line('Zona ${profile.unlockedZone}', style: small),
+                      line(lastPlayedText(slot.lastPlayed), style: small),
                     ],
                   ),
                 ),
@@ -163,12 +171,12 @@ class NewCharacterCard extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
         key: const ValueKey('char-new'),
         onTap: onTap,
-        child: const MouseRegion(
+        child: MouseRegion(
           cursor: SystemMouseCursors.click,
           child: SizedBox(
-            width: CharacterSlotCard.width,
+            width: CharacterSlotCard.widthOf(context),
             height: 90,
-            child: RetroPanel(
+            child: const RetroPanel(
               borderColor: ProtoColors.panelBorder,
               padding: EdgeInsets.all(10),
               child: Center(
@@ -202,7 +210,9 @@ class ClassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final img = sprites?.hero(def.id);
-    const small = TextStyle(color: RetroPalette.muted, height: 1.8);
+    const small = TextStyle(color: RetroPalette.muted);
+    // Alturas fijas (todas las tarjetas iguales) que crecen con el texto.
+    final k = RetroType.factorOf(context) < 1 ? 1.0 : RetroType.factorOf(context);
     return GestureDetector(
       key: ValueKey('class-card-${def.id}'),
       onTap: onTap,
@@ -224,13 +234,13 @@ class ClassCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(retroText(def.name),
                     style: TextStyle(
-                        fontSize: 16,
+                        fontFamily: RetroType.pixelFamily, fontSize: 16,
                         color:
                             selected ? RetroPalette.gold : RetroPalette.ink)),
                 const SizedBox(height: 8),
                 // Alturas fijas: todas las tarjetas miden lo mismo.
                 SizedBox(
-                  height: 48,
+                  height: 48 * k,
                   child: Text(retroText(def.description),
                       textAlign: TextAlign.center, style: small),
                 ),
@@ -245,7 +255,7 @@ class ClassCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 SizedBox(
-                  height: 32,
+                  height: 32 * k,
                   child: Text(retroText('Arma: $weaponName'),
                       textAlign: TextAlign.center, style: small),
                 ),

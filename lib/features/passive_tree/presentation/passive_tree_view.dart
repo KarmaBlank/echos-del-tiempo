@@ -11,10 +11,11 @@ import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/passive_tree_rules.dart';
 import '../domain/passive_text.dart';
 
-/// El árbol de pasivas v2 (docs/specs/passive_tree_v2.md § 7): lienzo con
-/// arrastre y zoom, caminos que se resaltan al pasar el mouse, tooltip
-/// con el efecto completo, info del nodo elegido y botones de tomar y
-/// reiniciar. Ver también docs/specs/panels.md § "Árbol".
+/// El árbol de pasivas v3 (docs/specs/passive_tree_v3.md § 13): lienzo con
+/// arrastre, rueda y botones de zoom, buscador que resalta nodos, camino
+/// hasta el nodo bajo el mouse con su costo, tooltip con el efecto
+/// completo, info del nodo elegido y botones de tomar y reiniciar. Ver
+/// también docs/specs/panels.md § "Árbol".
 class PassiveTreeView extends StatefulWidget {
   const PassiveTreeView({
     super.key,
@@ -48,22 +49,30 @@ class PassiveTreeView extends StatefulWidget {
   final bool showHelp;
 
   /// Lado del lienzo (mundo) y píxeles por unidad de árbol.
-  static const size = 680.0;
+  static const size = 1080.0;
   static const scale = 30.0;
+
+  /// Zoom mínimo y máximo del visor.
+  static const minZoom = 0.3;
+  static const maxZoom = 2.5;
 
   /// Alto del visor por defecto.
   static const viewportHeight = 420.0;
 
   /// Centro del nodo [n] en el lienzo (coordenadas del mundo).
-  static Offset nodeCenter(PassiveNode n) =>
-      Offset(size / 2 + n.x * scale, size / 2 + n.y * scale);
+  static Offset nodeCenter(PassiveNode n) => toCanvas(n.x, n.y);
 
-  /// Radio del nodo: keystone 12 (hexágono), notable e inicio 9, resto 6.
+  /// Punto del árbol (unidades) → lienzo.
+  static Offset toCanvas(double x, double y) =>
+      Offset(size / 2 + x * scale, size / 2 + y * scale);
+
+  /// Radio del nodo: keystone 11 (hexágono), inicio 9, notable 8, resto 5.
   static double nodeRadius(PassiveNode n, {required bool start}) =>
       switch (n.kind) {
-        'k' => 12,
-        'n' || 'st' => 9,
-        _ => start ? 9 : 6,
+        'k' => 11,
+        'st' => 9,
+        'n' => 8,
+        _ => start ? 9 : 5,
       };
 
   @override
@@ -72,15 +81,24 @@ class PassiveTreeView extends StatefulWidget {
 
 class _PassiveTreeViewState extends State<PassiveTreeView> {
   final _transform = TransformationController();
+  final _search = TextEditingController();
   String? _hover;
   String? _selected;
   Size? _fittedFor;
+  Size _view = Size.zero;
+  String _query = '';
+
+  /// Texto de búsqueda de cada nodo (se arma una vez por catálogo).
+  static final _searchIndex = Expando<Map<String, String>>();
 
   @override
   void dispose() {
     _transform.dispose();
+    _search.dispose();
     super.dispose();
   }
+
+  PassiveTreeCatalog get _cat => widget.rules.catalog;
 
   TreeNodeStatus _status(String id) => treeNodeStatus(
         widget.rules,
@@ -92,11 +110,22 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         inBattle: widget.inBattle,
       );
 
+  Set<String> _hits() {
+    final q = foldSearch(_query.trim());
+    if (q.length < 2) return const {};
+    final index = _searchIndex[_cat] ??= {
+      for (final n in _cat.nodes.values) n.id: passiveSearchText(_cat, n),
+    };
+    return {
+      for (final e in index.entries)
+        if (e.value.contains(q)) e.key,
+    };
+  }
+
   String? _hit(Offset pos) {
-    final cat = widget.rules.catalog;
     String? best;
     var bestD = double.infinity;
-    for (final n in cat.nodes.values) {
+    for (final n in _cat.nodes.values) {
       final d = (PassiveTreeView.nodeCenter(n) - pos).distance;
       final r = PassiveTreeView.nodeRadius(n, start: n.kind == 'st') + 4;
       if (d <= r && d < bestD) {
@@ -114,23 +143,75 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     if (_status(id).canTake) widget.onTake(id);
   }
 
-  /// Encuadre inicial: escala para ver casi todo el árbol, centrado en la
-  /// zona de tu clase.
+  /// Zoom actual (escala en x; la z queda en 1).
+  double get _zoom => _transform.value.storage[0];
+
+  /// Pone el visor con zoom [k] centrado en el punto [focus] del lienzo.
+  void _look(Offset focus, double k) {
+    final z = k.clamp(PassiveTreeView.minZoom, PassiveTreeView.maxZoom);
+    _transform.value = Matrix4.diagonal3Values(z, z, 1)
+      ..setTranslationRaw(
+          _view.width / 2 - focus.dx * z, _view.height / 2 - focus.dy * z, 0);
+  }
+
+  /// Centro del visor en coordenadas del lienzo.
+  Offset get _viewCenter => MatrixUtils.transformPoint(
+      Matrix4.inverted(_transform.value),
+      Offset(_view.width / 2, _view.height / 2));
+
+  void _zoomBy(double f) => setState(() => _look(_viewCenter, _zoom * f));
+
+  /// Todo el árbol en el visor.
+  void _fitAll() => setState(() => _look(
+      const Offset(PassiveTreeView.size / 2, PassiveTreeView.size / 2),
+      math.min(_view.width, _view.height) / (36 * PassiveTreeView.scale)));
+
+  /// La zona de tu clase (su ruta y sus clusters).
+  void _home({bool rebuild = true}) {
+    final start = _cat.nodes[_cat.startNodeByClass[widget.profile.classId]];
+    var focus = const Offset(PassiveTreeView.size / 2, PassiveTreeView.size / 2);
+    var z = 0.8;
+    if (start != null) {
+      // Caja de la zona: los nodos a ±40° de la dirección de la clase,
+      // del inicio a las keystones (sin los puentes).
+      final dir = math.atan2(start.y, start.x);
+      var box = Rect.fromCircle(center: Offset(start.x, start.y), radius: 1);
+      for (final n in _cat.nodes.values) {
+        final r = math.sqrt(n.x * n.x + n.y * n.y);
+        var da = (math.atan2(n.y, n.x) - dir).abs();
+        if (da > math.pi) da = 2 * math.pi - da;
+        if (r < 2.5 || r > 13.5 || da > 40 * math.pi / 180) continue;
+        box = box.expandToInclude(Rect.fromLTWH(n.x, n.y, 0, 0));
+      }
+      // Margen para las etiquetas de los clusters (1 unidad más allá).
+      box = box.inflate(1.6);
+      focus = PassiveTreeView.toCanvas(box.center.dx, box.center.dy);
+      z = math.min(_view.width / box.width, _view.height / box.height) /
+          PassiveTreeView.scale;
+    }
+    z = z.clamp(0.5, 1.2);
+    if (rebuild) {
+      setState(() => _look(focus, z));
+    } else {
+      _look(focus, z);
+    }
+  }
+
   void _fit(Size view) {
+    _view = view;
     if (_fittedFor == view) return;
     _fittedFor = view;
-    const s = PassiveTreeView.size;
-    final k = (math.min(view.width, view.height) / (s * 0.8)).clamp(0.6, 1.2);
-    final start = widget.rules.catalog
-        .nodes[widget.rules.catalog.startNodeByClass[widget.profile.classId]];
-    var focus = const Offset(s / 2, s / 2);
-    if (start != null && s * k > math.min(view.width, view.height)) {
-      final c = PassiveTreeView.nodeCenter(start);
-      focus = focus + (c - focus) * 1.6;
-    }
-    _transform.value = Matrix4.diagonal3Values(k, k, 1)
-      ..setTranslationRaw(
-          view.width / 2 - focus.dx * k, view.height / 2 - focus.dy * k, 0);
+    _home(rebuild: false);
+  }
+
+  void _goToFirstHit() {
+    final hits = _hits();
+    if (hits.isEmpty) return;
+    final n = _cat.nodes[hits.first]!;
+    setState(() {
+      _selected = n.id;
+      _look(PassiveTreeView.nodeCenter(n), math.max(_zoom, 1.0));
+    });
   }
 
   @override
@@ -139,10 +220,14 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     final p = widget.profile;
     final points = rules.pointsAvailable(p.treeLevel, p.passiveProgress);
     final states = {
-      for (final id in rules.catalog.nodes.keys) id: _status(id).state,
+      for (final id in _cat.nodes.keys) id: _status(id).state,
     };
-    final hoverPath =
-        _hover == null ? null : rules.catalog.nodes[_hover]?.pathId;
+    final hits = _hits();
+    final focusId = _hover ?? _selected;
+    final route = focusId == null
+        ? const <String>[]
+        : rules.pathTo(p.classId, p.passiveProgress, focusId) ?? const [];
+    final hoverPath = focusId == null ? null : _cat.nodes[focusId]?.pathId;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -170,9 +255,12 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         ),
         if (widget.showHelp) ...[
           const SizedBox(height: 4),
-          const Text('Arrastrá para mover, rueda para zoom. Clic: tomar nodo.',
+          const Text(
+              'Arrastrá para mover, rueda o +/− para zoom. Clic: tomar nodo.',
               style: TextStyle(color: ProtoColors.dim)),
         ],
+        const SizedBox(height: 8),
+        _toolbar(hits.length),
         const SizedBox(height: 8),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,21 +270,72 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                 height: widget.height,
                 child: LayoutBuilder(builder: (context, box) {
                   _fit(box.biggest);
-                  return _viewport(box.biggest, states, hoverPath);
+                  return _viewport(
+                      box.biggest, states, hoverPath, hits, route.toSet());
                 }),
               ),
             ),
             const SizedBox(width: 16),
-            SizedBox(width: 352, child: _info(_selected ?? _hover)),
+            // Mismo alto que el visor; si no entra, se desplaza.
+            SizedBox(
+              width: 352,
+              height: widget.height,
+              child: SingleChildScrollView(child: _info(focusId, route)),
+            ),
           ],
         ),
       ],
     );
   }
 
-  Widget _viewport(
-      Size view, Map<String, TreeNodeState> states, String? hoverPath) {
-    final rules = widget.rules;
+  /// Buscador y botones de zoom.
+  Widget _toolbar(int hitCount) => Wrap(
+        spacing: 4,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          SizedBox(
+            width: RetroType.width(context, 220),
+            child: TextField(
+              key: const ValueKey('tree-search'),
+              controller: _search,
+              style: RetroType.smallStyle,
+              decoration: const InputDecoration(
+                  hintText: 'Buscar nodo...',
+                  contentPadding: EdgeInsets.all(8),
+                  isDense: true),
+              onChanged: (v) => setState(() => _query = v),
+              onSubmitted: (_) => _goToFirstHit(),
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (_query.trim().length >= 2)
+            Text(
+                retroText(hitCount == 0
+                    ? 'Sin coincidencias'
+                    : '$hitCount coincidencia${hitCount == 1 ? '' : 's'}'),
+                key: const ValueKey('tree-search-count'),
+                style: TextStyle(
+                    color: hitCount == 0 ? ProtoColors.dim : ProtoColors.sky)),
+          const SizedBox(width: 16),
+          PanelButton('−',
+              key: const ValueKey('tree-zoom-out'),
+              onPressed: () => _zoomBy(1 / 1.25)),
+          const SizedBox(width: 4),
+          PanelButton('+',
+              key: const ValueKey('tree-zoom-in'),
+              onPressed: () => _zoomBy(1.25)),
+          const SizedBox(width: 4),
+          PanelButton('TODO',
+              key: const ValueKey('tree-fit'), onPressed: _fitAll),
+          const SizedBox(width: 4),
+          PanelButton('MI CLASE',
+              key: const ValueKey('tree-home'), onPressed: _home),
+        ],
+      );
+
+  Widget _viewport(Size view, Map<String, TreeNodeState> states,
+      String? hoverPath, Set<String> hits, Set<String> route) {
     return DecoratedBox(
       key: const ValueKey('tree-viewport'),
       decoration: BoxDecoration(
@@ -211,9 +350,9 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
               child: InteractiveViewer(
                 transformationController: _transform,
                 constrained: false,
-                minScale: 0.5,
-                maxScale: 2.5,
-                boundaryMargin: const EdgeInsets.all(500),
+                minScale: PassiveTreeView.minZoom,
+                maxScale: PassiveTreeView.maxZoom,
+                boundaryMargin: const EdgeInsets.all(600),
                 child: MouseRegion(
                   onHover: (e) {
                     final id = _hit(e.localPosition);
@@ -223,16 +362,39 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                   child: GestureDetector(
                     key: const ValueKey('tree-canvas'),
                     onTapUp: (d) => _tap(d.localPosition),
-                    child: CustomPaint(
-                      size: const Size.square(PassiveTreeView.size),
-                      painter: PassiveTreePainter(
-                        catalog: rules.catalog,
-                        startId: rules
-                            .catalog.startNodeByClass[widget.profile.classId],
-                        states: states,
-                        focus: _hover ?? _selected,
-                        highlightPath: hoverPath,
+                    child: RepaintBoundary(
+                      child: CustomPaint(
+                        size: const Size.square(PassiveTreeView.size),
+                        painter: PassiveTreePainter(
+                          catalog: _cat,
+                          startId:
+                              _cat.startNodeByClass[widget.profile.classId],
+                          states: states,
+                          focus: _hover ?? _selected,
+                          highlightPath: hoverPath,
+                          route: route,
+                          hits: hits,
+                        ),
                       ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Nombres de los clusters en px de pantalla: tamaño de lectura
+            // fijo (sigue al "Tamaño del texto") y ocultos con poco zoom.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _transform,
+                  builder: (context, _) => CustomPaint(
+                    key: const ValueKey('tree-labels'),
+                    painter: TreeLabelsPainter(
+                      catalog: _cat,
+                      transform: _transform.value.clone(),
+                      highlightPath: hoverPath,
+                      textScaler: MediaQuery.textScalerOf(context),
+                      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
                     ),
                   ),
                 ),
@@ -249,26 +411,45 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     );
   }
 
-  /// Tooltip junto al nodo bajo el mouse: nombre, tipo, camino, efectos
-  /// completos y estado.
+  String _kindText(PassiveNode n) => switch (n.kind) {
+        'k' => 'KEYSTONE',
+        'n' => 'NOTABLE',
+        'st' => 'INICIO DE CLASE',
+        _ => '',
+      };
+
+  String? _pathText(PassivePath? path) => path == null
+      ? null
+      : '${switch (path.kind) {
+          'puente' => 'Puente',
+          'grupo' => 'Grupo',
+          _ => 'Cluster',
+        }} ${path.name}: ${path.theme}';
+
+  /// Cuántos puntos cuesta llegar (y tomar) el nodo, si todavía no lo tiene.
+  String? _costText(String id) {
+    final p = widget.profile;
+    if (widget.rules.hasNode(p.classId, p.passiveProgress, id)) return null;
+    final route = widget.rules.pathTo(p.classId, p.passiveProgress, id);
+    if (route == null) return null;
+    final n = route.length;
+    return 'Costo: $n punto${n == 1 ? '' : 's'}';
+  }
+
+  /// Tooltip en la esquina del visor opuesta al nodo: nombre, tipo,
+  /// cluster, efectos completos, costo y estado.
   Widget _tooltip(Size view, String id) {
-    final cat = widget.rules.catalog;
-    final node = cat.nodes[id];
+    final node = _cat.nodes[id];
     if (node == null) return const SizedBox.shrink();
-    final at = MatrixUtils.transformPoint(
-        _transform.value, PassiveTreeView.nodeCenter(node));
-    // En la esquina del visor opuesta al nodo: no tapa su camino.
-    const w = 250.0;
+    final at =
+        MatrixUtils.transformPoint(_transform.value, PassiveTreeView.nodeCenter(node));
+    final w = RetroType.width(context, 300).clamp(0.0, view.width - 16);
     final left = at.dx > view.width / 2 ? 8.0 : view.width - w - 8;
     final onTop = at.dy > view.height / 2;
-    final path = cat.paths[node.pathId];
     final st = _status(id);
-    final kind = switch (node.kind) {
-      'k' => 'KEYSTONE',
-      'n' => 'NOTABLE',
-      'st' => 'INICIO DE CLASE',
-      _ => null,
-    };
+    final kind = _kindText(node);
+    final pathText = _pathText(_cat.paths[node.pathId]);
+    final cost = _costText(id);
     final (stateText, stateColor) = _stateText(st);
     return Positioned(
       left: math.max(4.0, left),
@@ -288,7 +469,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                 width: 2),
           ),
           child: DefaultTextStyle.merge(
-            style: const TextStyle(fontSize: 8, height: 1.8),
+            style: RetroType.smallStyle,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -296,17 +477,20 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                 Text(retroText(node.name),
                     style: const TextStyle(
                         color: ProtoColors.gold, fontWeight: FontWeight.bold)),
-                if (kind != null || path != null)
+                if (kind.isNotEmpty || pathText != null)
                   Text(
                       retroText([
-                        if (kind != null) kind,
-                        if (path != null) 'Camino ${path.name}: ${path.theme}',
+                        if (kind.isNotEmpty) kind,
+                        if (pathText != null) pathText,
                       ].join(' · ')),
                       style: const TextStyle(color: ProtoColors.dim)),
                 const SizedBox(height: 4),
                 for (final line in passiveEffectsText(node))
                   Text(retroText(line)),
                 const SizedBox(height: 4),
+                if (cost != null)
+                  Text(retroText(cost),
+                      style: const TextStyle(color: ProtoColors.gold)),
                 Text(retroText(stateText), style: TextStyle(color: stateColor)),
               ],
             ),
@@ -326,50 +510,66 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         TreeNodeState.locked => (st.reason ?? 'Bloqueado', RetroPalette.red),
       };
 
-  Widget _info(String? id) {
-    final legend = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        for (final (label, color) in const [
-          ('Inicio de tu clase', RetroPalette.gold),
-          ('Tomado', RetroPalette.green),
-          ('Keystone tomada', Color(0xFFFF6B6B)),
-          ('Disponible: clic para tomar', ProtoColors.sky),
-          ('Bloqueado', Color(0xFF3A4570)),
-        ])
+  Widget _legend() => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final (label, color) in const [
+            ('Inicio de tu clase', RetroPalette.gold),
+            ('Tomado', RetroPalette.green),
+            ('Keystone tomada', PassiveTreePainter.keyTaken),
+            ('Disponible: clic para tomar', ProtoColors.sky),
+            ('Bloqueado', PassiveTreePainter.locked),
+          ])
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(children: [
+                Container(width: 8, height: 8, color: color),
+                const SizedBox(width: 8),
+                Flexible(child: Text(retroText(label))),
+              ]),
+            ),
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Row(children: [
-              Container(width: 8, height: 8, color: color),
+              Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                      border: Border.all(
+                          color: PassiveTreePainter.searchColor, width: 2))),
               const SizedBox(width: 8),
-              Flexible(child: Text(retroText(label))),
+              Flexible(child: Text(retroText('Coincide con la búsqueda'))),
             ]),
           ),
-        const SizedBox(height: 4),
-        const Text(
-            'Borde dorado: notable (mecánica nueva). Hexágono: '
-            'keystone (efecto fuerte con contra).',
-            style: TextStyle(color: ProtoColors.dim)),
-      ],
-    );
-    final node = id == null ? null : widget.rules.catalog.nodes[id];
+          const SizedBox(height: 4),
+          const Text(
+              'Borde dorado: notable. Hexágono: keystone (fuerte, con '
+              'contra). Línea dorada: camino que falta hasta el nodo.',
+              style: TextStyle(color: ProtoColors.dim)),
+        ],
+      );
+
+  Widget _info(String? id, List<String> route) {
+    final node = id == null ? null : _cat.nodes[id];
     if (node == null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-              'Pasa el mouse o toca un nodo para ver qué da. Cada camino '
-              'lleva a 2 notables y una keystone; el anillo del centro '
-              'conecta con las otras clases.',
+              'Pasa el mouse o toca un nodo para ver qué da y cuánto cuesta. '
+              'Cada cluster se bifurca en 2 notables y termina en una '
+              'keystone; el anillo del centro, los puentes y los clusters '
+              'de grupo conectan con las otras clases.',
               style: TextStyle(color: RetroPalette.muted)),
           const SizedBox(height: 16),
-          legend,
+          _legend(),
         ],
       );
     }
     final st = _status(node.id);
     final (stateText, stateColor) = _stateText(st);
-    final path = widget.rules.catalog.paths[node.pathId];
+    final path = _cat.paths[node.pathId];
+    final cost = _costText(node.id);
     return Column(
       key: const ValueKey('tree-info'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,10 +578,10 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
             style: const TextStyle(
                 color: ProtoColors.gold, fontWeight: FontWeight.bold)),
         if (node.kind == 'k' || node.kind == 'n')
-          Text(node.kind == 'k' ? 'KEYSTONE' : 'NOTABLE',
+          Text(_kindText(node),
               style: const TextStyle(color: RetroPalette.muted)),
         if (path != null)
-          Text(retroText('Camino ${path.name}'),
+          Text(retroText(_pathText(path)!.split(':').first),
               style: const TextStyle(color: RetroPalette.muted)),
         const SizedBox(height: 8),
         for (final line in passiveEffectsText(node))
@@ -390,26 +590,35 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
             child: Text(retroText(line)),
           ),
         const SizedBox(height: 8),
+        if (cost != null)
+          Text(retroText(cost), style: const TextStyle(color: ProtoColors.gold)),
         // Bloqueado: el motivo ya va junto al botón de tomar.
         if (st.state != TreeNodeState.locked)
           Text(retroText(stateText), style: TextStyle(color: stateColor)),
         if (st.state != TreeNodeState.start &&
             st.state != TreeNodeState.taken) ...[
           const SizedBox(height: 8),
-          PanelButton('TOMAR NODO',
-              key: const ValueKey('tree-take'),
-              reason: st.reason,
-              onPressed: () => widget.onTake(node.id)),
+          // El motivo largo no desborda el panel: se achica si hace falta.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: PanelButton('TOMAR NODO',
+                key: const ValueKey('tree-take'),
+                reason: st.reason,
+                onPressed: () => widget.onTake(node.id)),
+          ),
         ],
         const SizedBox(height: 16),
-        legend,
+        _legend(),
       ],
     );
   }
 }
 
 /// Dibuja el anillo, los enlaces, los nodos (círculo, notable con borde
-/// dorado, keystone hexagonal) y el nombre de cada camino.
+/// dorado, keystone hexagonal), el camino hasta el nodo enfocado, los
+/// resultados de la búsqueda. Los nombres de los clusters van aparte, en
+/// px de pantalla ([TreeLabelsPainter]).
 class PassiveTreePainter extends CustomPainter {
   PassiveTreePainter({
     required this.catalog,
@@ -417,6 +626,8 @@ class PassiveTreePainter extends CustomPainter {
     required this.states,
     this.focus,
     this.highlightPath,
+    this.route = const {},
+    this.hits = const {},
   });
 
   final PassiveTreeCatalog catalog;
@@ -424,11 +635,18 @@ class PassiveTreePainter extends CustomPainter {
   final Map<String, TreeNodeState> states;
   final String? focus;
 
-  /// Camino resaltado (el del nodo bajo el mouse).
+  /// Cluster resaltado (el del nodo bajo el mouse).
   final String? highlightPath;
 
-  static const _locked = Color(0xFF3A4570);
-  static const _keyTaken = Color(0xFFFF6B6B);
+  /// Nodos que faltan para llegar al nodo enfocado.
+  final Set<String> route;
+
+  /// Nodos que coinciden con la búsqueda.
+  final Set<String> hits;
+
+  static const locked = Color(0xFF3A4570);
+  static const keyTaken = Color(0xFFFF6B6B);
+  static const searchColor = Color(0xFF81ECEC);
 
   bool _has(String id) {
     final s = states[id];
@@ -438,13 +656,17 @@ class PassiveTreePainter extends CustomPainter {
   bool _inPath(PassiveNode n) =>
       highlightPath != null && n.pathId == highlightPath;
 
+  bool _onRoute(String id) => route.contains(id) || (id == focus && route.isNotEmpty);
+
   @override
   void paint(Canvas canvas, Size size) {
     const center = Offset(PassiveTreeView.size / 2, PassiveTreeView.size / 2);
     // Anillo central compartido.
+    final ringR = math.sqrt(math.pow(catalog.nodes['p_gue']?.x ?? 0, 2) +
+        math.pow(catalog.nodes['p_gue']?.y ?? 2, 2));
     canvas.drawCircle(
         center,
-        1.5 * PassiveTreeView.scale,
+        ringR * PassiveTreeView.scale,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 8
@@ -458,14 +680,19 @@ class PassiveTreePainter extends CustomPainter {
         if (!seen.add(key)) continue;
         final b = catalog.nodes[l];
         if (b == null) continue;
-        final lit = _inPath(n) || _inPath(b);
+        final routeLink = (_onRoute(n.id) || _has(n.id)) &&
+            (_onRoute(l) || _has(l)) &&
+            (_onRoute(n.id) || _onRoute(l));
+        final lit = _inPath(n) && _inPath(b);
         link
           ..color = _has(n.id) && _has(l)
               ? ProtoColors.green
-              : lit
+              : routeLink
                   ? ProtoColors.gold
-                  : ProtoColors.panelBorder
-          ..strokeWidth = lit ? 3 : 2;
+                  : lit
+                      ? ProtoColors.gold.withValues(alpha: 0.5)
+                      : ProtoColors.panelBorder
+          ..strokeWidth = routeLink ? 4 : (lit ? 3 : 2);
         canvas.drawLine(
             PassiveTreeView.nodeCenter(n), PassiveTreeView.nodeCenter(b), link);
       }
@@ -477,15 +704,15 @@ class PassiveTreePainter extends CustomPainter {
       final state = states[n.id] ?? TreeNodeState.locked;
       final fill = switch (state) {
         TreeNodeState.start => ProtoColors.gold,
-        TreeNodeState.taken => n.kind == 'k' ? _keyTaken : ProtoColors.green,
+        TreeNodeState.taken => n.kind == 'k' ? keyTaken : ProtoColors.green,
         TreeNodeState.available => ProtoColors.sky,
-        TreeNodeState.locked => _locked,
+        TreeNodeState.locked => locked,
       };
+      final big = n.kind == 'n' || n.kind == 'k';
       final border = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = n.kind == 'n' || n.kind == 'k' ? 2.5 : 1.5
-        ..color =
-            n.kind == 'n' || n.kind == 'k' ? ProtoColors.gold : ProtoColors.bg;
+        ..strokeWidth = big ? 2.5 : 1.5
+        ..color = big ? ProtoColors.gold : ProtoColors.bg;
       if (n.kind == 'k') {
         final hex = _hexagon(c, r);
         canvas.drawPath(hex, Paint()..color = fill);
@@ -494,40 +721,27 @@ class PassiveTreePainter extends CustomPainter {
         canvas.drawCircle(c, r, Paint()..color = fill);
         canvas.drawCircle(c, r, border);
       }
-      if (_inPath(n) || n.id == focus) {
+      if (hits.contains(n.id)) {
+        canvas.drawCircle(
+            c,
+            r + 6,
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2.5
+              ..color = searchColor);
+      }
+      if (_onRoute(n.id) || n.id == focus || _inPath(n)) {
         canvas.drawCircle(
           c,
-          r + 4,
+          r + 3,
           Paint()
             ..style = PaintingStyle.stroke
-            ..strokeWidth = n.id == focus ? 2 : 1
+            ..strokeWidth = n.id == focus || _onRoute(n.id) ? 2 : 1
             ..color = ProtoColors.gold,
         );
       }
     }
 
-    // Nombre de cada camino, más allá de su keystone.
-    for (final path in catalog.paths.values) {
-      final k = catalog.nodes['${path.id}_k'];
-      if (k == null) continue;
-      final dir = Offset(k.x, k.y) / Offset(k.x, k.y).distance;
-      final tp = TextPainter(
-        text: TextSpan(
-          text: retroText(path.name.toUpperCase()),
-          style: TextStyle(
-            fontFamily: RetroTheme.fontFamily,
-            fontSize: 8,
-            color:
-                path.id == highlightPath ? ProtoColors.gold : ProtoColors.dim,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      final gap =
-          18 + dir.dx.abs() * tp.width / 2 + dir.dy.abs() * tp.height / 2;
-      final at = PassiveTreeView.nodeCenter(k) + dir * gap;
-      tp.paint(canvas, at - Offset(tp.width / 2, tp.height / 2));
-    }
   }
 
   static Path _hexagon(Offset c, double r) {
@@ -549,7 +763,12 @@ class PassiveTreePainter extends CustomPainter {
       old.focus != focus ||
       old.startId != startId ||
       old.highlightPath != highlightPath ||
+      !_sameSet(old.route, route) ||
+      !_sameSet(old.hits, hits) ||
       !_sameStates(old.states, states);
+
+  static bool _sameSet(Set<String> a, Set<String> b) =>
+      a.length == b.length && a.containsAll(b);
 
   static bool _sameStates(
       Map<String, TreeNodeState> a, Map<String, TreeNodeState> b) {
@@ -559,4 +778,84 @@ class PassiveTreePainter extends CustomPainter {
     }
     return true;
   }
+}
+
+/// Nombres de clusters, puentes y grupos del árbol, dibujados en px de
+/// pantalla sobre el visor (docs/specs/accessibility.md § 3): siempre en
+/// el tamaño de lectura (VT323, [RetroType.small] con el
+/// [textScaler] de la app, nítido), en un px entero, y ocultos cuando el
+/// zoom es menor que [minZoom] (ahí no se leerían ni entrarían). Si dos
+/// nombres se pisan, queda el primero (el resaltado va primero).
+class TreeLabelsPainter extends CustomPainter {
+  TreeLabelsPainter({
+    required this.catalog,
+    required this.transform,
+    required this.textScaler,
+    this.highlightPath,
+    this.devicePixelRatio = 1,
+  });
+
+  final PassiveTreeCatalog catalog;
+  final Matrix4 transform;
+  final TextScaler textScaler;
+  final String? highlightPath;
+  final double devicePixelRatio;
+
+  /// Zoom mínimo con nombres.
+  static const minZoom = 0.55;
+
+  static final _cache = <(String, bool, TextScaler), TextPainter>{};
+
+  double get zoom => transform.storage[0];
+
+  /// Si con este zoom se dibujan los nombres (tests).
+  bool get visible => zoom >= minZoom;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!visible) return;
+    final drawn = <Rect>[];
+    final paths = catalog.paths.values.toList()
+      ..sort((a, b) => (b.id == highlightPath ? 1 : 0)
+          .compareTo(a.id == highlightPath ? 1 : 0));
+    for (final path in paths) {
+      final lit = path.id == highlightPath;
+      final tp = _cache.putIfAbsent(
+          (path.name, lit, textScaler),
+          () => TextPainter(
+                text: TextSpan(
+                  text: retroText(path.name.toUpperCase()),
+                  style: RetroType.smallStyle.copyWith(
+                    color: lit
+                        ? ProtoColors.gold
+                        : path.kind == 'clase'
+                            ? ProtoColors.dim
+                            : ProtoColors.sky,
+                    shadows: const [
+                      Shadow(color: Color(0xFF000000), offset: Offset(1, 1)),
+                    ],
+                  ),
+                ),
+                textScaler: textScaler,
+                textDirection: TextDirection.ltr,
+              )..layout());
+      final at = MatrixUtils.transformPoint(
+          transform, PassiveTreeView.toCanvas(path.labelX, path.labelY));
+      double px(double v) =>
+          (v * devicePixelRatio).roundToDouble() / devicePixelRatio;
+      final o = Offset(px(at.dx - tp.width / 2), px(at.dy - tp.height / 2));
+      final r = o & tp.size;
+      if (!r.overlaps(Offset.zero & size)) continue;
+      if (drawn.any((d) => d.overlaps(r))) continue;
+      drawn.add(r);
+      tp.paint(canvas, o);
+    }
+  }
+
+  @override
+  bool shouldRepaint(TreeLabelsPainter old) =>
+      old.transform != transform ||
+      old.highlightPath != highlightPath ||
+      old.textScaler != textScaler ||
+      old.devicePixelRatio != devicePixelRatio;
 }

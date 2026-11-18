@@ -34,7 +34,7 @@ void main() {
     expect(p.tree, isEmpty);
   });
 
-  group('migración del árbol v1 → v2', () {
+  group('migración del árbol (v1 / v2 → v3)', () {
     final v1 = {
       'name': 'Ana',
       'cls': 'guerrero',
@@ -55,14 +55,46 @@ void main() {
       expect(p.toJson().containsKey('tvRef'), isFalse);
     });
 
-    test('un perfil v2 conserva su árbol', () {
+    test('un perfil v3 conserva su árbol', () {
       final p = PlayerProfile.fromJson({
         ...v1,
-        'tv': 2,
-        'tree': ['filo_1', 'filo_2'],
+        'tv': 3,
+        'tree': ['gue_r1', 'gue_r2'],
       });
-      expect(p.tree, ['filo_1', 'filo_2']);
+      expect(p.tree, ['gue_r1', 'gue_r2']);
       expect(p.treeRefunded, 0);
+    });
+
+    // passive_tree_v3.md § 11: de la v2 solo quedan el anillo y los
+    // inicios (mismo id y efecto), si siguen conectados; el resto vuelve.
+    test('un perfil v2 conserva anillo e inicios y recupera lo demás', () {
+      final raw = PlayerProfile.fromJson({
+        ...v1,
+        'lvl': 20,
+        'tv': 2,
+        'tree': [
+          'p_gue', 'sangre_1', 'sangre_2', 'r_gm1', 'r_gm2', 'p_mag', //
+          's_mag', 'brasa_1', 'brasa_2', 'id_que_no_existe', 'r_tp1',
+        ],
+      });
+      expect(raw.tree, ['p_gue', 'r_gm1', 'r_gm2', 'p_mag', 's_mag']);
+      expect(raw.treeRefunded, 6, reason: 'r_tp1 no conecta: también vuelve');
+      final p = progression.normalize(raw);
+      expect(p.tree, raw.tree);
+      expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 19 - 5);
+      expect(p.toJson()['tv'], 3);
+    });
+
+    test('v2 con una clase desconocida o ids basura no rompe', () {
+      final raw = PlayerProfile.fromJson({
+        'cls': 'nigromante',
+        'lvl': 5,
+        'tv': 2,
+        'tree': ['???', 's_gue', 'p_gue', 42],
+      });
+      expect(raw.tree, ['p_gue']);
+      expect(raw.treeRefunded, 2);
+      expect(progression.normalize(raw).tree, ['p_gue']);
     });
 
     test('v1 sin nodos: nada que devolver', () {

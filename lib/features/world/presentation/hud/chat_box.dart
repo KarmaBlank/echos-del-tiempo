@@ -98,37 +98,37 @@ class _ChatBoxState extends State<ChatBox> {
                 l.system
                     ? '<span class="sys">» ${protoEsc(l.text)}</span>'
                     : '<b>${protoEsc(l.from ?? '')}:</b> ${protoEsc(l.text)}',
-                style: const TextStyle(color: ProtoColors.chat, height: 1.6),
+                style: TextStyle(
+                    color: ProtoColors.chat, height: RetroType.line),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-          SizedBox(
-            height: 28,
-            child: TextField(
-              key: const ValueKey('chat-input'),
-              controller: _text,
-              focusNode: widget.focusNode,
-              maxLength: ChatAction.maxLength,
-              maxLengthEnforcement: MaxLengthEnforcement.enforced,
-              textInputAction: TextInputAction.send,
-              onSubmitted: _submit,
-              style: const TextStyle(
-                  fontFamily: RetroTheme.fontFamily,
-                  fontSize: 8,
-                  color: ProtoColors.white),
-              cursorColor: ProtoColors.gold,
-              decoration: const InputDecoration(
-                isDense: true,
-                counterText: '',
-                hintText: 'Enter para chatear…',
-                hintStyle: TextStyle(
-                    fontFamily: RetroTheme.fontFamily,
-                    fontSize: 8,
-                    color: ProtoColors.dim),
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
+          // Sin alto fijo: el campo crece con el tamaño del texto.
+          TextField(
+            key: const ValueKey('chat-input'),
+            controller: _text,
+            focusNode: widget.focusNode,
+            maxLength: ChatAction.maxLength,
+            maxLengthEnforcement: MaxLengthEnforcement.enforced,
+            textInputAction: TextInputAction.send,
+            onSubmitted: _submit,
+            style: TextStyle(
+                fontFamily: RetroType.bodyFamily,
+                fontFamilyFallback: RetroType.bodyFallback,
+                fontSize: RetroType.small,
+                color: ProtoColors.white),
+            cursorColor: ProtoColors.gold,
+            decoration: InputDecoration(
+              isDense: true,
+              counterText: '',
+              hintText: 'Enter para chatear…',
+              hintStyle: TextStyle(
+                  fontFamily: RetroType.bodyFamily,
+                  fontFamilyFallback: RetroType.bodyFallback,
+                  fontSize: RetroType.small,
+                  color: ProtoColors.dim),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             ),
           ),
         ],

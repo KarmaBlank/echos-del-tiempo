@@ -64,7 +64,7 @@ class MissionCard extends StatelessWidget {
             child: Text(m.rank,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    fontSize: 16,
+                    fontFamily: RetroType.pixelFamily, fontSize: 16,
                     color: ProtoColors.amber,
                     shadows: [
                       Shadow(

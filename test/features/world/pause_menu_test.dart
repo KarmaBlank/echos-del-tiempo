@@ -177,7 +177,9 @@ void main() {
 
     // Submenú de pociones abierto: Esc vuelve, no pausa.
     final battle = tester.state<BattleViewState>(find.byType(BattleView));
-    await tester.tap(find.textContaining('Poción de vida').first);
+    await tester.tap(find.byKey(const ValueKey('battle-cat-items')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('battle-act-potion')));
     await tester.pump();
     expect(battle.hasSubmenu, isTrue);
     await _esc(tester);

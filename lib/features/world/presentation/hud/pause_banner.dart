@@ -4,6 +4,7 @@ import '../../../../app/theme/panel_frame.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_text.dart';
+import '../../../../app/theme/retro_theme.dart';
 
 /// Cartel de la pausa de grupo, centrado y para todos los jugadores:
 /// `<nombre> pausó el juego` + REANUDAR (cualquiera reanuda), o
@@ -37,7 +38,11 @@ class PauseBanner extends StatelessWidget {
           child: RetroPanel(
             key: const ValueKey('pause-banner-resumed'),
             child: Text(retroText('$resumedBy reanudó el juego'),
-                style: const TextStyle(fontSize: 8, color: ProtoColors.green)),
+                style: TextStyle(
+                    fontFamily: RetroType.bodyFamily,
+                    fontFamilyFallback: RetroType.bodyFallback,
+                    fontSize: RetroType.small,
+                    color: ProtoColors.green)),
           ),
         ),
       );
@@ -52,10 +57,17 @@ class PauseBanner extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(retroText('$paused pausó el juego'),
-                  style: const TextStyle(fontSize: 16, color: ProtoColors.gold)),
+                  style: const TextStyle(
+                      fontFamily: RetroType.pixelFamily,
+                      fontSize: 16,
+                      color: ProtoColors.gold)),
               const SizedBox(height: 8),
-              const Text('Cualquier jugador puede reanudar.',
-                  style: TextStyle(fontSize: 8, color: ProtoColors.dim)),
+              Text('Cualquier jugador puede reanudar.',
+                  style: TextStyle(
+                      fontFamily: RetroType.bodyFamily,
+                      fontFamilyFallback: RetroType.bodyFallback,
+                      fontSize: RetroType.small,
+                      color: ProtoColors.dim)),
               const SizedBox(height: 16),
               PanelButton('REANUDAR',
                   key: const ValueKey('pause-banner-resume'),

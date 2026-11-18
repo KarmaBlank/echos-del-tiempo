@@ -10,7 +10,7 @@ class ClassDef {
   final List<String> allowedWeaponTypes;
   final String startWeaponId;
   final int baseDefense;
-  final List<String> kitSkillIds; // habilidades propias de la clase (ej. kit de Paladín)
+  final List<String> kitSkillIds; // habilidades fijas de la clase (ninguna la usa desde v0.5)
   final Map<Attribute, int> baseAttributes;
 
   /// Probabilidad de aturdir con el ataque básico (`stunAtk`, Paladín 3%).

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +19,7 @@ import '../../ascension/presentation/ascension_panel.dart';
 import '../../ascension/presentation/ascension_views.dart';
 import '../../combat/presentation/battle_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
+import '../../combat/presentation/scene/arena/arena_transition.dart';
 import '../../combat/presentation/scene/battle_scene.dart';
 import '../../endgame/domain/endgame_text.dart';
 import '../../endgame/presentation/eco_portal_panel.dart';
@@ -303,6 +303,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             ),
           ),
           ..._overlays(view, controller, sprites.requireValue),
+          // Vuelta de la arena al mapa: fundido de bloques
+          // (docs/specs/battle_presentation.md § "Arenas" → "Transición").
+          Positioned.fill(
+            child: BattleExitWipe(inBattle: view.mode == SessionMode.battle),
+          ),
           // Elegir ascensión desde el resultado de la Prueba I.
           if (_choosing && view.me != null)
             Positioned.fill(
@@ -336,6 +341,31 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 onDone: () {
                   if (mounted) setState(() => _cinematics.removeAt(0));
                 },
+              ),
+            ),
+          // El progreso no llegó a disco (se reintenta solo): aviso en
+          // rojo, nunca en silencio (docs/specs/characters.md § 1.4).
+          if (view.saveError case final err?)
+            Positioned(
+              top: 4,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Center(
+                  child: Container(
+                    key: const ValueKey('world-save-error'),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    color: const Color(0xCC0B0E1A),
+                    child: Text(
+                      '$err (ver ecos.log)',
+                      style: const TextStyle(
+                          fontFamily: RetroType.pixelFamily,
+                          fontSize: RetroType.label,
+                          color: RetroPalette.red),
+                    ),
+                  ),
+                ),
               ),
             ),
           // Pausa de grupo: cartel para todos (o `X reanudó` un momento).
@@ -404,8 +434,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 children: [
                   Positioned(
                     left: 8,
-                    bottom: math.min(BattleViewState.barHeight(box.maxHeight),
-                            box.maxHeight * 0.6) +
+                    bottom: BattleViewState.barHeight(
+                            box.maxHeight, RetroType.factorOf(context)) +
                         8,
                     child: PauseMenuButton(onPressed: _openPause),
                   ),

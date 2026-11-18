@@ -117,7 +117,7 @@ void main() {
 
     test('changeClass: árbol vacío, arma inicial y atributos de la clase nueva', () {
       var p = _warriorL3();
-      p = progression.takeNode(p, 'sangre_1')!;
+      p = progression.takeNode(p, 'gue_r1')!;
       final m = progression.changeClass(p, 'maga')!;
       expect(m.classId, 'maga');
       expect(m.tree, isEmpty);
@@ -283,20 +283,21 @@ void main() {
           isNull);
     });
 
-    test('weaponSkills incluye el kit de clase del Paladín', () {
+    test('weaponSkills del Paladín: solo las del arma (su kit es del Guardián)',
+        () {
       final pal = newProfile('P', 'paladin');
       expect(progression.weaponSkills(pal),
-          ['aura', 'fortaleza', 'proteccion', 'estocada', 'golpeEscudo']);
+          ['estocada', 'golpeEscudo', 'sanar']);
     });
   });
 
   group('árbol', () {
     test('takeNode necesita puntos y conexión', () {
-      expect(progression.takeNode(newProfile('A', 'guerrero'), 'filo_1'), isNull);
+      expect(progression.takeNode(newProfile('A', 'guerrero'), 'gue_r1'), isNull);
       final p = _warriorL3();
-      final t = progression.takeNode(p, 'filo_1')!;
-      expect(t.tree, ['filo_1']);
-      expect(progression.takeNode(p, 'brasa_1'), isNull);
+      final t = progression.takeNode(p, 'gue_r1')!;
+      expect(t.tree, ['gue_r1']);
+      expect(progression.takeNode(p, 'mag_r1'), isNull);
       expect(progression.resetTree(t).tree, isEmpty);
     });
 
@@ -327,8 +328,8 @@ void main() {
           'nada': {'pow': 1},
         },
         'fuse': {'espada_ignea': 'giro', 'nada': 'giro', 'espada_bronce': 'nope'},
-        'tv': 2,
-        'tree': ['filo_2', 'filo_1'],
+        'tv': 3,
+        'tree': ['gue_r2', 'gue_r1'],
       }));
       expect(p.name, 'NombreDema');
       expect(p.classId, 'guerrero');
@@ -352,12 +353,12 @@ void main() {
       final p = progression.normalize(PlayerProfile.fromJson({
         'cls': 'guerrero',
         'lvl': 4,
-        'tv': 2,
-        'tree': ['filo_2', 'filo_1', 'filo_2', 'brasa_1', 's_gue', 'p_gue', 'r_gm1'],
+        'tv': 3,
+        'tree': ['gue_r2', 'gue_r1', 'gue_r2', 'mag_r1', 's_gue', 'p_gue', 'r_gm1'],
       }));
-      // filo_2 no conecta todavía; filo_1 sí; después filo_2 ya conecta;
-      // brasa_1 no conecta; s_gue ya lo tiene; p_gue entra y no quedan puntos.
-      expect(p.tree, ['filo_1', 'filo_2', 'p_gue']);
+      // gue_r2 no conecta todavía; gue_r1 sí; después gue_r2 ya conecta;
+      // mag_r1 no conecta; s_gue ya lo tiene; p_gue entra y no quedan puntos.
+      expect(p.tree, ['gue_r1', 'gue_r2', 'p_gue']);
     });
 
     test('perfil nuevo: 3 pociones, 1 de maná y arma inicial', () {

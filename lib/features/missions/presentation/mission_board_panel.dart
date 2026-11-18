@@ -6,12 +6,14 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../game_engine/models/mission_def.dart';
 import '../../../game_engine/rules/zone_rules.dart';
+import '../../../app/widgets/menu_widgets.dart';
 import 'mission_card.dart';
 
-/// Mostrador de misiones (`board` del prototipo): una tarjeta por misión
-/// con objetivo y recompensas, y `PROPONER`. Ver docs/specs/panels.md §
-/// "Mostrador".
-class MissionBoardPanel extends StatelessWidget {
+/// Mostrador de misiones (`board` del prototipo) en lista + detalle: una
+/// fila por zona / misión (rango, nombre y, a la derecha, el nivel o
+/// "Bloqueada") y, a la derecha, la tarjeta de la elegida con objetivo,
+/// recompensas y `PROPONER`. Ver docs/specs/panels.md § "Mostrador".
+class MissionBoardPanel extends StatefulWidget {
   const MissionBoardPanel({
     super.key,
     required this.missions,
@@ -26,8 +28,8 @@ class MissionBoardPanel extends StatelessWidget {
 
   /// Las 10 zonas con su estado para el jugador local
   /// (`ZoneRules.zoneList`). Con zonas, el mostrador lista las zonas en
-  /// orden: tarjeta por cada zona con misión (bloqueadas con motivo) y una
-  /// fila gris por las "Próximamente". Sin zonas, una tarjeta por misión.
+  /// orden (las bloqueadas con su motivo en el detalle) y las
+  /// "Próximamente" en gris. Sin zonas, una fila por misión.
   final List<ZoneStatus>? zones;
 
   final List<MissionDef> missions;
@@ -51,68 +53,139 @@ class MissionBoardPanel extends StatelessWidget {
       'grupo.<br>'
       'Cuando <b>todos</b> votan SÍ pasan a la preparación (tienda, forja, '
       'equipo) y la misión empieza cuando todos marcan ¡LISTO!.<br>'
+      'Con zonas también se entra por las puertas del mapa del mundo.<br>'
       '<span class="k">Rango</span>: S si terminas a tiempo sin K.O.; más '
       'rango = más créditos y más chance de arma.';
 
-  Widget _card(MissionDef m, ZoneStatus? z) {
-    final locked = z != null && !z.open;
-    return MissionCard(
-      key: ValueKey('mission-${m.id}'),
-      mission: m,
-      tier: missions.indexOf(m) + 1,
-      bossName: bossName?.call(m),
-      playerLevel: playerLevel,
-      zone: z,
-      action: PanelButton('PROPONER',
-          key: ValueKey('propose-${m.id}'),
-          accent: ProtoColors.green,
-          reason: locked
-              ? 'Bloqueada'
-              : voteOpen
-                  ? 'Ya hay una votación'
-                  : null,
-          onPressed: () => onPropose(m.id)),
-    );
+  @override
+  State<MissionBoardPanel> createState() => _MissionBoardPanelState();
+}
+
+class _MissionBoardPanelState extends State<MissionBoardPanel> {
+  String? _sel;
+
+  /// (misión, zona) de cada fila elegible, en orden.
+  List<(MissionDef, ZoneStatus?)> get _entries {
+    final zs = widget.zones;
+    if (zs == null) return [for (final m in widget.missions) (m, null)];
+    return [
+      for (final z in zs)
+        if (z.mission case final m?) (m, z),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
+    final w = widget;
+    final entries = _entries;
+    // Por defecto la última zona abierta (la más avanzada).
+    final open = [
+      for (final e in entries)
+        if (e.$2 == null || e.$2!.open) e
+    ];
+    final sel = entries.where((e) => e.$1.id == _sel).firstOrNull ??
+        (w.zones == null ? entries.firstOrNull : open.lastOrNull) ??
+        entries.firstOrNull;
+    final list = <Widget>[];
+    if (w.zones case final zs?) {
+      for (final z in zs) {
+        final m = z.mission;
+        if (m == null) {
+          list.add(Padding(
+            key: ValueKey('zone-soon-${z.zone.index}'),
+            padding: const EdgeInsets.only(bottom: 2, left: 8),
+            child: ProtoText(protoColor(
+                ProtoColors.dim,
+                protoEsc('${z.zone.index} · ${z.zone.name} · ${z.label}')),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+          ));
+        } else {
+          list.add(_row(m, z, m.id == sel?.$1.id));
+        }
+      }
+    } else {
+      for (final m in w.missions) {
+        list.add(_row(m, null, m.id == sel?.$1.id));
+      }
+    }
     return PanelFrame(
       title: 'MOSTRADOR DE MISIONES',
-      width: 900,
-      help: help,
-      onClose: onClose,
+      width: 1000,
+      fill: true,
+      help: MissionBoardPanel.help,
+      onClose: w.onClose,
       actions: [
-        if (onCharacter != null)
-          PanelButton('PERSONAJE [C]', onPressed: onCharacter),
-        PanelButton('CERRAR [ESC]', onPressed: onClose),
+        if (w.onCharacter != null)
+          PanelButton('PERSONAJE [C]', onPressed: w.onCharacter),
+        PanelButton('CERRAR [ESC]', onPressed: w.onClose),
       ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          PanelHint(zones == null
-              ? 'Propón una misión: cuando todos votan SÍ pasan a la '
-                  'preparación.'
-              : 'Propón una zona: cuando todos votan SÍ pasan a la '
-                  'preparación. También podés entrar por las puertas del '
-                  'mapa del mundo.'),
-          if (zones case final zs?)
-            for (final z in zs)
-              if (z.mission case final m?)
-                _card(m, z)
-              else
-                Padding(
-                  key: ValueKey('zone-soon-${z.zone.index}'),
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: ProtoText(protoColor(
-                      ProtoColors.dim,
-                      protoEsc('Zona ${z.zone.index} · ${z.zone.name} · '
-                          '${z.zone.levelText} · ${z.label}'))),
-                )
-          else
-            for (final m in missions) _card(m, null),
+          PanelHint(w.zones == null
+              ? 'Propón una misión: cuando todos votan SÍ, a prepararse.'
+              : 'Propón una zona: cuando todos votan SÍ, a prepararse.'),
+          Expanded(
+            child: PanelSplit(
+              listWidth: 340,
+              list: list,
+              detail: sel == null
+                  ? const PanelDetail(children: [])
+                  : _detail(sel.$1, sel.$2),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  /// Fila de una línea: `C Pradera Esmeralda .... Lv 1`.
+  Widget _row(MissionDef m, ZoneStatus? z, bool selected) {
+    final locked = z != null && !z.open;
+    final low =
+        widget.playerLevel != null && widget.playerLevel! < m.recommendedLevel;
+    final name = z == null ? m.name : '${z.zone.index} · ${z.zone.name}';
+    return MenuRow(
+      key: ValueKey('mission-${m.id}'),
+      selected: selected,
+      dimmed: locked,
+      onTap: () => setState(() => _sel = m.id),
+      label: '<span style="color:#ff9f1c">${protoEsc(m.rank)}</span> '
+          '${protoEsc(name)}',
+      value: locked
+          ? protoColor(ProtoColors.dim, 'Bloqueada')
+          : protoColor(low ? ProtoColors.red : ProtoColors.green,
+              'Lv ${m.recommendedLevel}'),
+    );
+  }
+
+  Widget _detail(MissionDef m, ZoneStatus? z) {
+    final w = widget;
+    final locked = z != null && !z.open;
+    return PanelDetail(
+      footer: [
+        const KeyHints(confirm: 'Elegir', back: 'Cerrar'),
+        PanelButton('PROPONER',
+            key: ValueKey('propose-${m.id}'),
+            accent: ProtoColors.green,
+            reason: locked
+                ? 'Bloqueada'
+                : w.voteOpen
+                    ? 'Ya hay una votación'
+                    : null,
+            onPressed: () => w.onPropose(m.id)),
+      ],
+      children: [
+        MissionCard(
+          key: ValueKey('mission-card-${m.id}'),
+          mission: m,
+          tier: w.missions.indexOf(m) + 1,
+          bossName: w.bossName?.call(m),
+          playerLevel: w.playerLevel,
+          zone: z,
+        ),
+      ],
     );
   }
 }

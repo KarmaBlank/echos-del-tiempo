@@ -317,6 +317,9 @@ void main() {
           findsOneWidget);
       expect(find.textContaining('Derrota 4 grupos por piso (2 pisos)'),
           findsOneWidget);
+      // Lista + detalle: la zona 2 (bloqueada) muestra su motivo al elegirla.
+      await tester.tap(find.byKey(const ValueKey('mission-z2')));
+      await tester.pump();
       expect(find.textContaining('Bloqueada: vencé a Rey Limo en Pradera'),
           findsOneWidget);
       final z2 = tester.widget<PanelButton>(
@@ -327,7 +330,8 @@ void main() {
         expect(find.byKey(ValueKey('zone-soon-$i')), findsNothing);
       }
       expect(find.textContaining('Próximamente'), findsNothing);
-      await tester.ensureVisible(find.byKey(const ValueKey('propose-m1')));
+      await tester.tap(find.byKey(const ValueKey('mission-m1')));
+      await tester.pump();
       await tester.tap(find.byKey(const ValueKey('propose-m1')));
       expect(proposed, 'm1');
     });

@@ -84,6 +84,64 @@ class SkillDef {
   /// Pone Protección (como la habilidad Protección).
   final bool protect;
 
+  // ---- variantes (docs/specs/combat.md § "Variantes de habilidades") ----
+
+  /// Cura / Regeneración / escudo solo al aliado más herido (% de vida).
+  final bool lowestAlly;
+
+  /// Revive al primer aliado caído con esta fracción de su vida máx.
+  /// (si no hay caídos, cura normal).
+  final double revive;
+
+  /// Fracción de la cura que sobra (vida llena) que se vuelve escudo.
+  final double overheal;
+
+  /// Fracción del daño de la acción que cura al aliado más herido.
+  final double drainHeal;
+
+  /// Escudo al aliado más herido / a uno mismo: fracción de la vida máx.
+  /// del que la usa, por [shieldTurns] turnos.
+  final double allyShield;
+  final double selfShield;
+  final int shieldTurns;
+
+  /// Los escudos de esta habilidad devuelven esta fracción de lo que
+  /// absorben al enemigo que pega.
+  final double shieldReflect;
+
+  /// Los escudos de esta habilidad, al romperse, explotan: ATQ del dueño
+  /// × esto a todos los enemigos.
+  final double shieldBurst;
+
+  /// Los escudos de esta habilidad crecen esta fracción de lo que
+  /// absorben (tope: 50% de la vida máx. del que lo lleva).
+  final double shieldGrow;
+
+  /// Atraviesa: también golpea a los enemigos detrás del objetivo (los
+  /// siguientes de la formación) con esta fracción del daño.
+  final double pierce;
+
+  /// Rebota a N enemigos al azar (×0.7 por rebote; solo: al mismo).
+  final int bounces;
+
+  /// Golpes seguidos al objetivo (ráfaga), cada uno de `power`.
+  final int hits;
+
+  /// Disparo cargado: no pega ahora; al empezar tu próximo turno cae
+  /// ATQ × charge sobre el objetivo (o el primer enemigo en pie).
+  final double charge;
+
+  /// Debuffs a cada enemigo golpeado (o a los objetivos, si no hace
+  /// daño): Marca (`damageTaken`), Debilitar (`attack` < 0), Lentitud
+  /// (`speed` < 0).
+  final List<PartyBuff> debuffs;
+
+  /// +fracción de llenado de la barra de quiebre.
+  final double breakBonus;
+
+  /// Silencio: quita esta carga de ULT a cada enemigo golpeado.
+  final double ultDrain;
+
   const SkillDef({
     required this.id,
     required this.name,
@@ -109,6 +167,23 @@ class SkillDef {
     this.selfBuff,
     this.selfTurn = 1,
     this.protect = false,
+    this.lowestAlly = false,
+    this.revive = 0,
+    this.overheal = 0,
+    this.drainHeal = 0,
+    this.allyShield = 0,
+    this.selfShield = 0,
+    this.shieldTurns = 2,
+    this.shieldReflect = 0,
+    this.shieldBurst = 0,
+    this.shieldGrow = 0,
+    this.pierce = 0,
+    this.bounces = 0,
+    this.hits = 1,
+    this.charge = 0,
+    this.debuffs = const [],
+    this.breakBonus = 0,
+    this.ultDrain = 0,
   });
 
   bool get dealsDamage =>
@@ -117,6 +192,9 @@ class SkillDef {
   /// Tiene un efecto para el grupo (filtro `rallySkill`).
   bool get rally =>
       partyBuffs.isNotEmpty || partyShield > 0 || advanceAllies > 0;
+
+  /// Da algún escudo (a uno, a sí mismo o al grupo).
+  bool get shields => partyShield > 0 || allyShield > 0 || selfShield > 0;
 }
 
 /// Ataque combinado de dos clases (`DUALS`).

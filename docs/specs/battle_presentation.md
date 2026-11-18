@@ -35,16 +35,148 @@ Implementación Dart:
 | Disparadores del árbol: tiempos, nombres y colores (puro) | `lib/features/combat/presentation/scene/proc_fx.dart` |
 | Quiebre y ULT enemigas: colores (`breakColor`, `kEnemyUltColors`), guiones (`kEnemyUltScripts`) | `scene/fx_style.dart`, `scene/ult_cinematic.dart`, `scene/ult_fx.dart` |
 | Predicción de turnos (`predictTurns`, puro) | `lib/features/combat/domain/turn_order.dart` |
-| Mapa de fondo de la sesión | `lib/features/world/presentation/session_battle_screen.dart` |
+| Arena de la sesión (elige la arena y le pasa el pintor) | `lib/features/world/presentation/session_battle_screen.dart` |
+| Selección de arena (pura): zona, Eco, Prueba, tipo de encuentro | `lib/features/combat/presentation/scene/arena/arena_spec.dart` |
+| Dibujo de las arenas (capa estática cacheada + capa animada) | `lib/features/combat/presentation/scene/arena/arena_painter.dart` |
+| Transición mapa ↔ arena | `lib/features/combat/presentation/scene/arena/arena_transition.dart` |
 
 Tests: `test/features/combat/battle_fx_test.dart`,
 `test/features/combat/break_fx_test.dart`,
 `test/features/combat/proc_fx_test.dart`,
 `test/features/combat/ult_cinematic_test.dart`,
 `test/features/combat/battle_framing_test.dart`,
+`test/features/combat/battle_arena_test.dart`,
 `test/features/combat/turn_order_test.dart`,
 `test/features/combat/battle_screen_test.dart`,
 `test/game_engine/battle_engine_test.dart` (eventos `ActionEvent`).
+
+## Arenas
+
+Pedido del dueño (v0.5): que las peleas no sean "ahí mismo en el mapa"
+sino en una arena temática por zona y por tipo de enemigo (normal, élite
+o jefe), para que el posicionamiento de los personajes no se vea
+comprometido. Cada batalla de la sesión se dibuja en un **escenario
+propio**, independiente del terreno del mapa.
+
+### Escenario
+
+- `BattleArena.stage(kind, paintWorld)`: un mundo fijo de `960 × 540`
+  px del mundo (`ArenaStage`), centro `(480, 300)` (`300` = línea de
+  los pies), lado `s = 1` siempre (grupo a la derecha, mirando a la
+  izquierda). Mismo sistema de coordenadas que el resto de la escena:
+  cámara, clic sobre enemigos, números, ULT (`UltDirector.paintWorld`),
+  partículas y mecánicas de jefe no cambian.
+- La cámara usa el mismo encuadre (§ "Cámara y encuadre") con la caja
+  de la pelea agrandada por el aire del tipo de encuentro
+  (`ArenaStage.padFor`: normal `8 × 4`, élite `20 × 8`, jefe `44 × 16`
+  px del mundo): más escenario a la vista cuanto más importante. El
+  centro se lleva adentro del escenario; si la vista es más grande que
+  el escenario, afuera se pinta el cielo arriba y el piso oscuro abajo.
+  La arena se adapta a cualquier alto del área del mundo (la barra de
+  batalla puede crecer).
+- En un escenario la cámara arranca ya encuadrada (no hay deslizamiento
+  desde el jugador del campo: lo tapa la transición).
+
+### Formación
+
+`BattleLayout.compute` con un escenario, simétrica y sin superposición:
+- `gap` del centro al borde interno de cada bando: normal 40, élite 46,
+  jefe 52 (`ArenaStage.gapFor`).
+- Grupo: jugador `i` en `x = cx + gap + 10 + (i mod 2)·14`,
+  `y = 300 + (i − (n−1)/2)·24` (la columna escalonada de siempre).
+- Enemigos en columnas desde el centro hacia afuera: invocaciones
+  pasivas (cristales), comunes (de a 3 por columna, en orden) y el jefe
+  atrás. Cada columna se centra en el centro de las cajas del grupo
+  (`300 − 8.5`) con paso `max(alto máx + 4 + 4, 26)`; las filas impares
+  se corren 14 px hacia afuera (espejo del grupo); entre columnas 10 px.
+- Al final todo se corre en `x` para que la caja de la pelea quede
+  centrada en el escenario (`x = 480`).
+- Garantías (tests): sin cajas superpuestas con 1–4 jugadores y hasta 6
+  enemigos, jefe + 2 cristales / 2 siervos, Devorador fase 2 (≈ 90 × 90);
+  ≥ 60 px entre bandos; todo adentro del escenario y a la vista con
+  1280×418, 1280×300, 1280×220, 960×400 y 1920×780.
+
+### Selección (`selectArena`, pura)
+
+- Escenografía (`ArenaTheme`): la Prueba del Tiempo (`missionId ==
+  'trial'`) tiene la suya; si no, el tema del mapa (`GameMap.theme`; un
+  Eco usa el de su zona porque su mapa lleva ese tema); si no, la zona
+  (1–10); si no, `pueblo`.
+
+  | Arena | Tema / zona | Look |
+  |---|---|---|
+  | `pradera` | `pradera`, `mundo` · 1 | cielo, nubes, colinas, línea de árboles; pasto con flores; arbustos |
+  | `bosque` | `bosque` · 2 | troncos, copas y haces de luz; musgo con raíces; tocones |
+  | `ruinas` | `ruinas` · 3 | columnas rotas y un arco; losas partidas con arena |
+  | `cavernas` | `cavernas` · 4 | pared de hielo y carámbanos; baldosas heladas con brillo; cristales |
+  | `fortaleza` | `fortaleza` · 5 | muro de ladrillo con almenas y troneras; losas; armeros |
+  | `laberinto` | `laberinto` · 6 | muro con filetes de bronce y engranajes; losas con bronce |
+  | `grieta` | `grieta` · 7 | cielo rojo, agujas de basalto y cascadas de lava; vetas de lava |
+  | `cementerio` | `cementerio` · 8 | vacío violeta, luna, lápidas y árboles secos; tierra gris |
+  | `abismo` | `abismo` · 9 | vacío con estrellas e islotes; el piso es una isla flotante |
+  | `corazon` | `corazon` · 10 | vacío con cristales dorados; losas doradas |
+  | `prueba` | Prueba del Tiempo | muro violeta, pilares de plata con relojes de arena; damero |
+  | `pueblo` | `lobby` / sin datos | casas con ventanas encendidas; empedrado; faroles |
+
+- Tipo de encuentro (`encounterKindOf`): jefe si `BattleState.boss` o
+  algún enemigo es jefe; élite si `BattleState.elite` o algún enemigo es
+  élite; si no, normal (además, `SessionBattle.boss` / `.elite`). Son
+  datos que ya viajan por la red: **sin cambios de protocolo**.
+- Jefe: `bossType` = `enemyType` del primer enemigo jefe; `phase2` si
+  su `phase ≥ 2` (el Devorador cambia de arena al transformarse).
+- Eco: `missionId == 'eco'` → tinte espectral (cian `#48dbfb` 10% +
+  líneas cada 6 px) y motas cian que suben.
+
+### Tipos
+
+- **Normal**: el piso temático con un claro / desgaste elíptico bajo la
+  pelea (`300 × 104`); props a los costados.
+- **Élite**: tarima rectangular `356 × 124` con borde claro, sombra,
+  filete y esquineros dorados; 4 estandartes (color de la zona, ribete
+  dorado) en el fondo; 2 braseros con fuego animado en las esquinas de
+  atrás; luz de la zona que respira sobre la tarima; viñeta más fuerte.
+- **Jefe**: estrado elíptico `470 × 164` con 3 anillos rúnicos y 16
+  runas (se encienden de a 3 en ronda cada 160 ms), resplandor de fondo,
+  2 pilares con luz, viñeta fuerte y la luz del jefe
+  (`kBossArenaLight`). Set-piece por jefe: Rey Limo (chorreaduras y
+  charcos de limo), Matriarca (telarañas y sacos de huevos), Gólem Reloj
+  (reloj gigante), Sierpe (cristales enormes y cascada helada), Caballero
+  Hueco (trono vacío y estandartes rotos), Hechicera (espejos arcanos),
+  Bestia de Magma (4 cascadas de lava y foso de lava al frente), Espectro
+  Coronado (corona espectral y velas), Centinela (monolito con ojo),
+  **Devorador** (vórtice de anillos dorados/violetas con relojes
+  flotando y partículas que giran) y **Devorador fase 2** (todo carmesí
+  `#d63031`: vórtice rojo más rápido, grietas en el cielo, estrado
+  negro-rojo con 9 grietas incandescentes y núcleo que late).
+- Las mecánicas de jefe (Campo Helado, lava, cristales, ecos, siervos,
+  marca) se dibujan encima de la arena igual que antes sobre el mapa.
+
+### Dibujo y rendimiento
+
+- Todo procedural con `Canvas`, sin antialias y en píxeles enteros del
+  mundo (pixel art), con las paletas de tiles de cada zona copiadas en
+  `kArenaPalettes` (arte, no `RetroPalette`). Sin assets nuevos (no pasa
+  por `SpriteCatalog`).
+- **Capa estática** (fondo, piso, tarima/estrado, set-piece, props,
+  tinte de Eco, viñeta): se graba una vez por `ArenaSpec.cacheKey` y se
+  rasteriza a una imagen `960 × 540` (`toImageSync`); se guardan las 3
+  más recientes. Cada frame solo se copia la imagen.
+- **Capa animada** (barata): motas del ambiente (hojas, copos, brasas,
+  polvo, motas del vacío…; 8–26 + 8 en jefes) × el ajuste
+  "Partículas" (`scaledCount`), fuego de braseros, runas, vórtice del
+  Devorador y engranaje que gira (laberinto élite/jefe).
+
+### Transición
+
+- **Entrada** (escena de batalla): al empezar cada batalla
+  (`BattleSceneController.enteredAt`), destello blanco 120 ms (alfa
+  0.55 × ajuste "Destellos") y un fundido de bloques `#05060c` de
+  `round(8·s)` px (6–24) que se van en 420 ms (`easeOut`; umbral por
+  bloque: 65% ruido fijo + 35% barrido de izquierda a derecha), encima
+  de todo (franja, mundo y HUD).
+- **Vuelta al mapa** (`BattleExitWipe` en `WorldScreen`): cuando la
+  sesión sale de `SessionMode.battle`, los mismos bloques tapan la
+  pantalla y se van en 420 ms descubriendo el mapa. No toma clics.
 
 ## Arquitectura: `CustomPainter` + `Ticker` (no Flame)
 
@@ -114,6 +246,9 @@ Con `(bx, by)` = posición del enemigo del campo que empezó la batalla y
   `y = by + offs[i].y`. Miran a `s` (`dir = side`).
 - Sin mapa (tests, previsualización): `(bx, by) = (VW/2 − 34, 104)`,
   `s = 1`, fondo `#05060c`.
+- **En la sesión ya no se usa el mapa**: la batalla va en una arena
+  propia con su formación (§ "Arenas" → "Formación"). Las reglas de
+  arriba quedan para `BattleArena` sobre un mapa (tests, herramientas).
 - La cámara ya no es la del prototipo (`tx`/`ty` con la vista de
   480×288 a escala ≈ 1.2, que dejaba a los combatientes chiquitos en el
   medio de una escena de 1280×418): ver § "Cámara y encuadre".
@@ -794,6 +929,75 @@ barras de cine.
   pasos nuevos esperan en cola (§ "Ultimates" → "Nuevos pasos durante la
   cinemática").
 - Máximo 70 efectos vivos (como `B.fx`): se descartan los más viejos.
+
+## Barra de batalla (v0.5)
+
+Pedido del dueño (captura a Muy grande: "el layout de la UI de las
+habilidades como que no mucho") y bugs de jugadores de v0.4 ("se corta
+la letra", "el tooltip a veces se abre el de otra habilidad"). Estructura
+tomada de una referencia de JRPG (no su arte): ventana de comandos de 3
+columnas + barra del grupo. Reemplaza al panel "mis datos" de la
+izquierda, al menú numerado 1-9 en grilla de 2-3 columnas con "Más ▸" y
+a la lista compacta del grupo de la derecha.
+
+**Alto**: `BattleViewState.barHeight(h, factor)` = 42 % del alto (+8 %
+por cada punto de agrandamiento del texto, hasta 62 %); la escena usa
+el resto (los sprites son chicos). En 1280×720 Normal: 302 px.
+
+**Ventana de comandos** (`BattleCommandWindow`,
+`lib/features/combat/presentation/battle_command_window.dart`), solo en
+el turno propio (co-op: cada uno ve sus comandos):
+
+1. **Categorías**: `¡Tu turno! <nombre>` y ATACAR (Atacar + "Liberar a
+   X" si hay telaraña) · HABILIDADES (técnicas, con la cantidad) · DÚOS
+   (si hay) · ULTIMATE (gris hasta el 100 %, con el %) · OBJETOS (las dos
+   pociones; elegir una abre "¿A quién le das...?" con el grupo) ·
+   DEFENDER.
+2. **Acciones** de la categoría: una fila por acción — tecla (1-9), nombre,
+   la cifra principal (daño estimado, cura) y el costo a la derecha
+   (`4 MP`, `x2`, `45%`). El crítico y los efectos van a la descripción.
+   El nombre baja de línea antes que cortarse (nunca se recorta). Con más
+   de 9 acciones en una categoría se pagina (`battleMenuPage`, "Más ▸" /
+   "← Volver"); con las pociones en OBJETOS ningún kit actual pagina.
+3. **Descripción** de la acción elegida (`describeSkillMarkup` /
+   `variantEffectLines` de la técnica), el motivo si está deshabilitada,
+   `Objetivo: Limo 71/71 HP · Quiebre 0/59`, las mecánicas del jefe y las
+   teclas; arriba a la derecha `MP 22/22 · ULT 45%`.
+
+**Teclado**: 1-9 eligen la acción N de la lista que se ve; ↑/↓ mueven la
+elegida; ←/→ cambian de categoría; Enter/Espacio confirman; Q/Tab
+cambian de objetivo (y clic en el enemigo); Esc sale de "¿a quién?" o de
+una página > 1 (si no, abre la pausa). El mouse sobre una fila la elige.
+
+**Tooltip equivocado (bug de v0.4)**: las filas ya no tienen tooltip; la
+descripción sale de la acción elegida en el momento. Cada fila se arma
+con `ValueKey('battle-act-<id>')` (id estable: `skill-<id>`, `duo-<id>`,
+`attack`, `potion`, `give-<id>`...), así Flutter nunca reutiliza la fila
+de una técnica para otra, y el menú vuelve a ATACAR con la primera acción
+elegida en cada turno nuevo, al actuar o al perder el turno. Los
+tooltips (`RetroTooltip`) leen su mensaje del widget actual al dibujarse.
+
+**Barra del grupo** (`BattlePartyBar`, `battle_hud.dart`): una tarjeta
+por jugador, lado a lado: sprite, nombre y `Lv` (baja de línea, no se
+corta), turno corto (`▶ 25s` el que actúa, `T+3`, `K.O.`), HP y MP con
+números (ULT en la propia) y los chips de estado. Borde dorado la del
+turno. La propia (`my-panel-<id>`) tiene en su tooltip el detalle que
+antes ocupaba el panel izquierdo (arma, ATQ/MAG/DEF, crítico, VEL); las
+demás son `member-<id>`.
+
+**Objetivo** (`TargetBar`): arriba a la izquierda de la escena, nombre,
+HP con números y quiebre (`QB`, `¡ROTO!`), `¡ULT!` si la avisó.
+
+**Banda del log** (`TÚ 25s` y el log): queda en la escena con su tamaño
+(no crece con el ajuste: es parte del encuadre de 16 px virtuales). La
+franja de turnos del canvas no cambia.
+
+Tests: `test/features/combat/battle_screen_test.dart` (categorías, ←/→
+↑/↓ Enter, pociones a quién, la descripción nunca es la de otra técnica
+cuando el menú cambia bajo el mouse, tarjetas del grupo),
+`battle_menu_paging_test.dart` (paginado puro y Guardián de 8 técnicas
+sin paginar), `test/app/text_size_test.dart` (cada categoría, a quién y
+las técnicas de nombre más largo sin desbordes en los tres tamaños).
 
 ## Menú y ayudas
 

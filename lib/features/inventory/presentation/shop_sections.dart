@@ -21,6 +21,8 @@ import '../../world/presentation/session_view.dart';
 import '../domain/item_text.dart';
 import '../domain/shop_guards.dart';
 import '../domain/shop_preview.dart';
+import '../../../app/theme/retro_theme.dart';
+import '../../../app/widgets/menu_widgets.dart';
 import 'craft_bench.dart';
 
 /// Lo que comparten las pestañas de tienda e inventario: el jugador
@@ -66,18 +68,11 @@ class ShopContext {
 /// Pestañas de la tienda (armería del lobby y preparación). Ver
 /// docs/specs/panels.md § "Armería" (loot v2).
 enum ArmoryTab {
-  buy('COMPRAR',
-      'Bases Comunes por nivel. Cualquier clase puede equiparlas si cumple '
-          'nivel y requisitos.'),
-  forge('FORJA',
-      'Sube 1 nivel una estadística (máx 5 c/u) hasta el tope de la rareza. '
-          'Cada 2 niveles de forja, la pasiva del arma sube 1.'),
-  fuse('FUSIÓN',
-      'Mesa de fusión en 3 pasos: elige un arma, qué hacerle (mejorar, '
-          'traer de otra, quitar o reforjar) y mira el resultado antes de pagar.'),
+  buy('COMPRAR', 'Armas base por nivel; cualquier clase las equipa si cumple los requisitos.'),
+  forge('FORJA', 'Sube una estadística del arma; cada 2 niveles sube su pasiva.'),
+  fuse('FUSIÓN', 'Elige arma, acción y confirma: ves el resultado antes de pagar.'),
   items('CONSUMIBLES',
-      'Se usan en batalla desde el menú. Máximo ${ProgressionRules.maxItems} '
-          'de cada uno.');
+      'Se usan en batalla. Máximo ${ProgressionRules.maxItems} de cada uno.');
 
   const ArmoryTab(this.label, this.hint);
   final String label;
@@ -243,20 +238,15 @@ class _BuyTabState extends State<BuyTab> {
     final rules = shop.rules;
     final list = shop.forSale(_family);
     final families = rules.catalog.classes.values.toList();
-    final filter = Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        PanelButton('TODAS',
-            key: const ValueKey('buy-family-all'),
-            selected: _family == null,
-            onPressed: () => setState(() => _family = null)),
-        for (final c in families)
-          PanelButton(c.name.toUpperCase(),
-              key: ValueKey('buy-family-${c.id}'),
-              selected: _family == c.id,
-              onPressed: () => setState(() => _family = c.id)),
-      ],
+    final filter = ChoiceCycler<String?>(
+      label: 'Familia',
+      keyPrefix: 'buy-family-',
+      options: [null, for (final c in families) c.id],
+      value: _family,
+      display: (id) => id == null
+          ? 'TODAS'
+          : (rules.catalog.classes[id]?.name ?? id).toUpperCase(),
+      onChanged: (id) => setState(() => _family = id),
     );
     if (list.isEmpty) {
       return Column(children: [filter, const Text('No hay armas a la venta.')]);
@@ -272,20 +262,18 @@ class _BuyTabState extends State<BuyTab> {
         const SizedBox(height: 8),
         Expanded(
           child: PanelSplit(
+            listWidth: 420,
             list: [
               for (final x in list)
-                PanelListItem(
+                MenuRow(
+                  wrap: true,
                   key: ValueKey('shop-row-${x.id}'),
                   selected: x.id == w.id,
                   onTap: () => setState(() => _sel = x.id),
-                  trailing: p.items.any((i) => i.baseId == x.id)
-                      ? const Text('TIENES',
-                          style: TextStyle(color: ProtoColors.green))
-                      : ProtoText(
-                          '${rules.meetsRequirements(p, x) ? protoColor(ProtoColors.green, 'OK') : protoColor(ProtoColors.red, 'Req')} '
-                          '<b>₵${x.price}</b>'),
-                  child: ProtoText('${protoEsc(x.name)}<br>'
-                      '<small>Nv ${x.level} · ${x.type}</small>'),
+                  label: '${protoEsc(x.name)} '
+                      '${protoColor(ProtoColors.dim, protoEsc(x.type))}',
+                  value: 'Nv ${x.level}  '
+                      '${p.items.any((i) => i.baseId == x.id) ? protoColor(ProtoColors.green, 'TIENES') : '${rules.meetsRequirements(p, x) ? '' : '${protoColor(ProtoColors.red, 'Req')} '}<b>₵${x.price}</b>'}',
                 ),
             ],
             detail: PanelDetail(
@@ -302,12 +290,7 @@ class _BuyTabState extends State<BuyTab> {
                           onPressed: () => shop.controller.buyWeapon(w.id)),
                     ],
               children: [
-                ItemCard(
-                    rules: rules,
-                    item: sample,
-                    level: p.level,
-                    attributes: p.attributes,
-                    describe: true),
+                // Primero lo que cambia (antes → después), después la ficha.
                 StatsCompare(
                   title: 'Si la equipas (ahora: '
                       '${protoEsc(eq == null ? '-' : shop.itemName(eq))})'
@@ -315,6 +298,13 @@ class _BuyTabState extends State<BuyTab> {
                   before: shop.preview.current(p),
                   after: shop.preview.withBase(p, w),
                 ),
+                const SizedBox(height: 8),
+                ItemCard(
+                    rules: rules,
+                    item: sample,
+                    level: p.level,
+                    attributes: p.attributes,
+                    describe: true),
               ],
             ),
           ),
@@ -425,16 +415,16 @@ class _ForgeTabState extends State<ForgeTab> {
     return PanelSplit(
       list: [
         for (final x in list)
-          PanelListItem(
+          MenuRow(
+            wrap: true,
             key: ValueKey('forge-row-${x.uid}'),
             selected: x.uid == it.uid,
             onTap: () => setState(() => _sel = x.uid),
-            trailing: p.equippedUid == x.uid
-                ? const Text('EQUIPADA',
-                    style: TextStyle(color: ProtoColors.gold))
-                : null,
-            child: ProtoText('${itemNameMarkup(rules, x)}<br>'
-                '<small>${x.rarity.label} · forja ${x.forgeLevel}/${x.rarity.forgeCap}</small>'),
+            label: itemNameMarkup(rules, x),
+            value: p.equippedUid == x.uid
+                ? protoColor(ProtoColors.gold, 'EQUIPADA')
+                : protoColor(ProtoColors.dim,
+                    'forja ${x.forgeLevel}/${x.rarity.forgeCap}'),
           ),
       ],
       detail: PanelDetail(
@@ -530,7 +520,7 @@ class _UpgradeRow extends StatelessWidget {
           Row(
             children: [
               SizedBox(
-                width: 96,
+                width: RetroType.width(context, 110),
                 child: Text(retroText(stat.label),
                     style: const TextStyle(color: ProtoColors.sky)),
               ),

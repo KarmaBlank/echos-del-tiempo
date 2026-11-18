@@ -1,6 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'proto_colors.dart';
+import 'retro_type.dart';
+
+export 'retro_type.dart';
 
 /// Constantes de conveniencia para el chrome neutro, con los valores del
 /// prototipo (docs/specs/ui_style.md § "Paleta"). No es una regla: donde
@@ -20,7 +23,7 @@ abstract final class RetroPalette {
 /// esquinas rectas, botones `#22305a`/`#5b74c9`, sin sombras ni ripples.
 abstract final class RetroTheme {
   /// Familia declarada en `pubspec.yaml` (bloque `fonts:`).
-  static const fontFamily = 'PressStart2P';
+  static const fontFamily = RetroType.pixelFamily;
 
   /// Borde de `.panel` (3 px en el prototipo).
   static const borderWidth = 3.0;
@@ -29,7 +32,8 @@ abstract final class RetroTheme {
   static const _square = RoundedRectangleBorder();
 
   /// Botón compacto para paneles y HUD (docs/specs/ui_style.md §
-  /// "Botón compacto"): texto de 8 px, padding de 8 px y borde de 2 px.
+  /// "Botón compacto"): texto [RetroType.small], padding de 8 px y borde
+  /// de 2 px.
   /// Hereda colores y estados del tema; se pasa como `style:`.
   static ButtonStyle compactButton() => const ButtonStyle(
         // Cambio de color instantáneo (sin la animación de Material).
@@ -40,7 +44,7 @@ abstract final class RetroTheme {
         minimumSize: WidgetStatePropertyAll(Size(0, 32)),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         textStyle: WidgetStatePropertyAll(
-          TextStyle(fontFamily: fontFamily, fontSize: 8),
+          TextStyle(fontFamily: fontFamily, fontSize: RetroType.label),
         ),
       );
 
@@ -68,7 +72,7 @@ abstract final class RetroTheme {
       splashFactory: NoSplash.splashFactory,
       overlayColor: const WidgetStatePropertyAll(Colors.transparent),
       textStyle: const WidgetStatePropertyAll(
-        TextStyle(fontFamily: fontFamily, fontSize: 16),
+        TextStyle(fontFamily: fontFamily, fontSize: RetroType.title),
       ),
       // `button` / `button:hover` / `button:disabled` del prototipo.
       backgroundColor: WidgetStateProperty.resolveWith(
@@ -98,21 +102,23 @@ abstract final class RetroTheme {
       ),
     );
 
-    return ThemeData(
+    final theme = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       fontFamily: fontFamily,
       scaffoldBackgroundColor: RetroPalette.night,
       splashFactory: NoSplash.splashFactory,
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(fontSize: 32, height: 1.5),
-        headlineMedium: TextStyle(fontSize: 24, height: 1.5),
-        titleMedium: TextStyle(fontSize: 16, height: 1.5),
-        bodyLarge: TextStyle(fontSize: 16, height: 1.5),
-        bodyMedium: TextStyle(fontSize: 16, height: 1.5),
-        bodySmall: TextStyle(fontSize: 8, height: 1.5),
-        labelLarge: TextStyle(fontSize: 16, height: 1.5),
-        labelSmall: TextStyle(fontSize: 8, height: 1.5),
+      // Escala tipográfica: docs/specs/ui_style.md § "Tipografía".
+      textTheme: TextTheme(
+        displayLarge: const TextStyle(fontSize: RetroType.display, height: 1.5),
+        headlineMedium: const TextStyle(fontSize: RetroType.heading, height: 1.5),
+        titleMedium: const TextStyle(fontSize: RetroType.title, height: 1.5),
+        bodyLarge: const TextStyle(fontSize: RetroType.title, height: 1.5),
+        bodyMedium: const TextStyle(fontSize: RetroType.title, height: 1.5),
+        // Texto de lectura: VT323 (RetroType.bodyFamily).
+        bodySmall: RetroType.smallStyle,
+        labelLarge: const TextStyle(fontSize: RetroType.title, height: 1.5),
+        labelSmall: RetroType.smallStyle,
       ).apply(
         bodyColor: RetroPalette.ink,
         displayColor: RetroPalette.ink,
@@ -140,13 +146,13 @@ abstract final class RetroTheme {
         fillColor: ProtoColors.input,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.zero,
-          borderSide:
-              BorderSide(color: ProtoColors.inputBorder, width: thinBorderWidth),
+          borderSide: BorderSide(
+              color: ProtoColors.inputBorder, width: thinBorderWidth),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.zero,
-          borderSide:
-              BorderSide(color: ProtoColors.inputBorder, width: thinBorderWidth),
+          borderSide: BorderSide(
+              color: ProtoColors.inputBorder, width: thinBorderWidth),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.zero,
@@ -154,6 +160,16 @@ abstract final class RetroTheme {
               BorderSide(color: RetroPalette.gold, width: thinBorderWidth),
         ),
       ),
+    );
+    // `fontFamily` de ThemeData pisa la familia de todo el textTheme: el
+    // texto de lectura vuelve a VT323 después.
+    final t = theme.textTheme;
+    TextStyle body(TextStyle? s) => s!.copyWith(
+        fontFamily: RetroType.bodyFamily,
+        fontFamilyFallback: const [RetroType.pixelFamily]);
+    return theme.copyWith(
+      textTheme: t.copyWith(
+          bodySmall: body(t.bodySmall), labelSmall: body(t.labelSmall)),
     );
   }
 }

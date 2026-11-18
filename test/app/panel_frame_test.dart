@@ -27,11 +27,14 @@ void main() {
           help: 'Ayuda de la <b>prueba</b>',
           onClose: () => closed++,
           leading: [
-            PanelButton('A', key: const ValueKey('a'), onPressed: () => pressed.add('A')),
+            PanelButton('A',
+                key: const ValueKey('a'), onPressed: () => pressed.add('A')),
           ],
           actions: [
-            PanelButton('B', key: const ValueKey('b'), onPressed: () => pressed.add('B')),
-            PanelButton('C', key: const ValueKey('c'), onPressed: () => pressed.add('C')),
+            PanelButton('B',
+                key: const ValueKey('b'), onPressed: () => pressed.add('B')),
+            PanelButton('C',
+                key: const ValueKey('c'), onPressed: () => pressed.add('C')),
           ],
           child: const Text('contenido'),
         ));
@@ -64,8 +67,7 @@ void main() {
   });
 
   testWidgets('marco: sin onClose el Esc no se usa', (tester) async {
-    await pump(
-        tester, const PanelFrame(title: 'X', child: Text('contenido')));
+    await pump(tester, const PanelFrame(title: 'X', child: Text('contenido')));
     final handled = await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     expect(handled, isFalse);
   });

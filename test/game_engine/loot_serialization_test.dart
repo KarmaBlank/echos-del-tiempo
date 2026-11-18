@@ -68,8 +68,9 @@ void main() {
         expect(p.inventory, ['baculo_aprendiz', 'baculo_fuego']);
         expect(p.upgradesFor('baculo_fuego').pow, 4);
         expect(p.fused, {'baculo_fuego': 'cura'});
-        // Árbol: v1 se reinicia, v2 se conserva.
-        expect(raw.treeRefunded, tv == null ? 1 : 0);
+        // Árbol: v1 se reinicia; de la v2 solo quedan anillo e inicios
+        // (passive_tree_v3.md § 11), así que brasa_1 también vuelve.
+        expect(raw.treeRefunded, 1);
         // Más allá del tope de Común no se sigue forjando.
         expect(progression.upgrade(p.copyWith(credits: 9999), 'baculo_fuego',
             UpgradeStat.spd), isNull);

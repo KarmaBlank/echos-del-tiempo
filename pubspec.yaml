@@ -103,3 +103,8 @@ flutter:
     - family: PressStart2P
       fonts:
         - asset: assets/fonts/PressStart2P-Regular.ttf
+    # Texto de lectura (docs/specs/ui_style.md § "Tipografía"), OFL 1.1:
+    # assets/fonts/OFL-VT323.txt.
+    - family: VT323
+      fonts:
+        - asset: assets/fonts/VT323-Regular.ttf

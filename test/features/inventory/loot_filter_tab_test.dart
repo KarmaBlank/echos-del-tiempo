@@ -101,8 +101,8 @@ void main() {
   });
 
   test('etiqueta: tamaño de letra según el filtro', () {
-    expect(LootLabel.fontSizeFor(32), 8);
-    expect(LootLabel.fontSizeFor(42), 16);
+    expect(LootLabel.fontSizeFor(32), RetroType.small);
+    expect(LootLabel.fontSizeFor(42), RetroType.title);
     expect(RarityColors.of(Rarity.legendario), const Color(0xFFFF8C28));
   });
 }

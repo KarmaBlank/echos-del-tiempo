@@ -1,4 +1,5 @@
 import '../data/passive_tree_catalog.dart';
+import '../rules/passive_tree_migration.dart';
 import 'ascension.dart';
 import 'attributes.dart';
 import 'eco.dart';
@@ -450,12 +451,16 @@ class PlayerProfile {
         attrs[a] = _int(st[attributeKey(a)]);
       }
     }
-    // Árbol de otra versión: se reinicia gratis (passive_tree_v2.md § 6).
+    // Árbol de otra versión: se migra y lo que no sigue igual se devuelve
+    // gratis (passive_tree_v3.md § 11).
     var tree = _strings(json['tree']);
     var refunded = _int(json['tvRef']);
-    if (_int(json['tv'], 1) < treeVersion && tree.isNotEmpty) {
-      refunded += tree.length;
-      tree = const [];
+    final tv = _int(json['tv'], 1);
+    if (tv < treeVersion && tree.isNotEmpty) {
+      final kept = migrateTreeIds(
+          json['cls'] is String ? json['cls'] as String : 'guerrero', tree, tv);
+      refunded += tree.length - kept.length;
+      tree = kept;
     }
     final rawItems = json['items'];
     List<ItemInstance>? items;

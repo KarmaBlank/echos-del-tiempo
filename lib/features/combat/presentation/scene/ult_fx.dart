@@ -119,6 +119,7 @@ const _wisps = ElementFx([
   Color(0xFFE8F6FF),
   Color(0xFF6C7BA8),
 ], 10, 50, -40, 0.9, ParticleShape.square);
+
 /// Diluvio Ácido: la nube revienta sobre el grupo.
 const _acidCloudAt = 1150;
 Offset _acidCloud(UltStage st) =>
@@ -334,7 +335,8 @@ abstract final class UltDirector {
           if (once('breath$slot') && n > 0) {
             final g = st.targets[slot % n];
             final q = ((a - s.buildMs) / 420).clamp(0.0, 1.0);
-            final o = Offset.lerp(c.translate(st.dir * 14, -22), g.translate(0, -10), q)!;
+            final o = Offset.lerp(
+                c.translate(st.dir * 14, -22), g.translate(0, -10), q)!;
             p.burstWith(_frostBits, o.dx, o.dy, 0.5);
           }
         }
@@ -564,16 +566,19 @@ abstract final class UltDirector {
     c.drawCircle(o, r, _fill);
   }
 
-  static void _ring(Canvas c, Offset o, double rx, double ry, Color col, double w) {
+  static void _ring(
+      Canvas c, Offset o, double rx, double ry, Color col, double w) {
     _stroke
       ..color = col
       ..strokeWidth = w;
-    c.drawOval(Rect.fromCenter(center: o, width: rx * 2, height: ry * 2), _stroke);
+    c.drawOval(
+        Rect.fromCenter(center: o, width: rx * 2, height: ry * 2), _stroke);
   }
 
   static void _oval(Canvas c, Offset o, double rx, double ry, Color col) {
     _fill.color = col;
-    c.drawOval(Rect.fromCenter(center: o, width: rx * 2, height: ry * 2), _fill);
+    c.drawOval(
+        Rect.fromCenter(center: o, width: rx * 2, height: ry * 2), _fill);
   }
 
   static Color _a(Color c, double alpha) =>
@@ -609,7 +614,8 @@ abstract final class UltDirector {
     }
     final r = 12 + grow * 6 + math.sin(a / 55) * 2;
     _ring(c, o.translate(0, -8), r, r * 0.5 + 5, _a(col, 0.6), 2);
-    _ring(c, o.translate(0, -8), r * 0.6, r * 0.3 + 3, _a(const Color(0xFFFFFFFF), 0.4), 1);
+    _ring(c, o.translate(0, -8), r * 0.6, r * 0.3 + 3,
+        _a(const Color(0xFFFFFFFF), 0.4), 1);
   }
 
   /// Dibuja la parte del mundo de la cinemática. [visible] = rectángulo
@@ -675,8 +681,8 @@ abstract final class UltDirector {
 
   // ---------------- Tajo Final ----------------
 
-  static void _finalSlash(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, Color col) {
+  static void _finalSlash(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, Color col) {
     final s = u.script;
     final o = st.caster;
     const edge = Color(0xFF9FD8FF);
@@ -693,8 +699,10 @@ abstract final class UltDirector {
     if (a >= s.buildMs && a < s.buildMs + 260) {
       final q = _q(a, s.buildMs, 150);
       for (var k = 0; k < 5; k++) {
-        final p = Offset.lerp(o.translate(0, -8), g, (q - k * 0.12).clamp(0.0, 1.0))!;
-        _oval(c, p, 6, 9, _a(edge, 0.5 * (1 - k / 5) * (1 - _q(a, s.buildMs + 150, 110))));
+        final p =
+            Offset.lerp(o.translate(0, -8), g, (q - k * 0.12).clamp(0.0, 1.0))!;
+        _oval(c, p, 6, 9,
+            _a(edge, 0.5 * (1 - k / 5) * (1 - _q(a, s.buildMs + 150, 110))));
       }
       _line(c, o.translate(0, -8), Offset.lerp(o.translate(0, -8), g, q)!,
           _a(const Color(0xFFFFFFFF), 0.7), 2);
@@ -710,8 +718,10 @@ abstract final class UltDirector {
       final d = Offset(math.cos(ang), math.sin(ang));
       final len = span * math.min(1.0, q * 4);
       final w = 5 * (1 - q) + 1;
-      _line(c, g - d * len / 2, g + d * len / 2, _a(edge, 0.8 * (1 - q)), w + 3);
-      _line(c, g - d * len / 2, g + d * len / 2, _a(const Color(0xFFFFFFFF), 1 - q * 0.7), w);
+      _line(
+          c, g - d * len / 2, g + d * len / 2, _a(edge, 0.8 * (1 - q)), w + 3);
+      _line(c, g - d * len / 2, g + d * len / 2,
+          _a(const Color(0xFFFFFFFF), 1 - q * 0.7), w);
     }
     // La X final.
     final imp = s.impactMs;
@@ -722,7 +732,8 @@ abstract final class UltDirector {
       for (final sgn in [1.0, -1.0]) {
         final d = Offset(1, sgn);
         _line(c, g - d * r, g + d * r, _a(edge, 0.9 * (1 - q)), w + 4);
-        _line(c, g - d * r, g + d * r, _a(const Color(0xFFFFFFFF), 1 - q * 0.6), w);
+        _line(c, g - d * r, g + d * r, _a(const Color(0xFFFFFFFF), 1 - q * 0.6),
+            w);
       }
       _ring(c, g, 70 * q, 30 * q, _a(const Color(0xFFFFFFFF), 1 - q), 3);
     }
@@ -755,7 +766,8 @@ abstract final class UltDirector {
       final grow = _q(a, 100, s.buildMs - 100);
       for (var k = 0; k < 6; k++) {
         final ang = k * math.pi / 3 + 0.3;
-        final pts = _fissure(o, o + Offset(math.cos(ang) * 18, math.sin(ang) * 6) * grow, k + 50);
+        final pts = _fissure(o,
+            o + Offset(math.cos(ang) * 18, math.sin(ang) * 6) * grow, k + 50);
         for (var i = 1; i < pts.length; i++) {
           _line(c, pts[i - 1], pts[i], _a(dark, out), 2);
           _line(c, pts[i - 1], pts[i], _a(glow, g * out), 1);
@@ -771,21 +783,26 @@ abstract final class UltDirector {
       final upto = (reveal * (pts.length - 1));
       for (var k = 1; k < pts.length; k++) {
         if (k - 1 > upto) break;
-        final b = k <= upto ? pts[k] : Offset.lerp(pts[k - 1], pts[k], upto - (k - 1))!;
+        final b = k <= upto
+            ? pts[k]
+            : Offset.lerp(pts[k - 1], pts[k], upto - (k - 1))!;
         _line(c, pts[k - 1], b, _a(dark, out), 4);
-        _line(c, pts[k - 1], b, _a(glow, out * (0.6 + 0.4 * math.sin(a / 50 + k))), 1.5);
+        _line(c, pts[k - 1], b,
+            _a(glow, out * (0.6 + 0.4 * math.sin(a / 50 + k))), 1.5);
       }
       if (a >= imp) {
         final t = (a - imp) / 1000;
         // Resplandor de lava y rocas que saltan.
-        _oval(c, g, 22 * (1 - _q(a, imp, 700)) + 6, 7, _a(const Color(0xFFFF7B29), 0.6 * (1 - _q(a, imp, 700))));
+        _oval(c, g, 22 * (1 - _q(a, imp, 700)) + 6, 7,
+            _a(const Color(0xFFFF7B29), 0.6 * (1 - _q(a, imp, 700))));
         for (var k = 0; k < 7; k++) {
           if (t > 0.9) break;
           final vx = (k - 3) * 22.0 + (_h(i, k) - 0.5) * 10;
           final vy = -150.0 - 30 * _h(k, i);
           final p = g + Offset(vx * t, vy * t + 0.5 * 420 * t * t);
           final sz = 3 + (k % 3).toDouble();
-          _fill.color = k.isEven ? const Color(0xFF6D4C2F) : const Color(0xFF636E72);
+          _fill.color =
+              k.isEven ? const Color(0xFF6D4C2F) : const Color(0xFF636E72);
           c.drawRect(Rect.fromCenter(center: p, width: sz, height: sz), _fill);
         }
       }
@@ -794,8 +811,8 @@ abstract final class UltDirector {
 
   // ---------------- Meteoro ----------------
 
-  static void _meteor(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _meteor(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     const orange = Color(0xFFFF7B29);
@@ -809,7 +826,8 @@ abstract final class UltDirector {
       _ring(c, ctr, 16 * grow, 5.5 * grow, _a(hot, 0.7 * fade), 1);
       for (var k = 0; k < 8; k++) {
         final ang = a / 260 + k * math.pi / 4;
-        final p = ctr + Offset(math.cos(ang) * 20 * grow, math.sin(ang) * 6.5 * grow);
+        final p =
+            ctr + Offset(math.cos(ang) * 20 * grow, math.sin(ang) * 6.5 * grow);
         _fill.color = _a(k.isEven ? hot : orange, fade);
         c.drawRect(Rect.fromCenter(center: p, width: 3, height: 3), _fill);
       }
@@ -830,7 +848,8 @@ abstract final class UltDirector {
       final start = end + const Offset(90, -200);
       final p = Offset.lerp(start, end, q * q)!;
       for (var j = 0; j < 4; j++) {
-        _disc(c, p + Offset(j * 3.5, -j * 8.0), 3.5 - j * 0.7, _a(j < 1 ? hot : orange, 1 - j / 4));
+        _disc(c, p + Offset(j * 3.5, -j * 8.0), 3.5 - j * 0.7,
+            _a(j < 1 ? hot : orange, 1 - j / 4));
       }
     }
     for (var i = 0; i < st.targets.length; i++) {
@@ -843,18 +862,24 @@ abstract final class UltDirector {
         final p = Offset.lerp(start, end, q * q)!;
         final dirv = (end - start) / (end - start).distance;
         for (var k = 7; k >= 0; k--) {
-          _disc(c, p - dirv * (k * 6.0), 9 - k * 0.9,
-              _a(k < 2 ? hot : (k < 5 ? orange : const Color(0xFFD63031)), 1 - k / 8));
+          _disc(
+              c,
+              p - dirv * (k * 6.0),
+              9 - k * 0.9,
+              _a(k < 2 ? hot : (k < 5 ? orange : const Color(0xFFD63031)),
+                  1 - k / 8));
         }
         _disc(c, p, 4, const Color(0xFFFFFFFF));
       }
       if (a >= imp) {
         // Cráter y explosión.
-        _oval(c, g.translate(0, 1), 17, 5, _a(const Color(0xFF1A0D05), 0.85 * out));
+        _oval(c, g.translate(0, 1), 17, 5,
+            _a(const Color(0xFF1A0D05), 0.85 * out));
         _ring(c, g.translate(0, 1), 17, 5, _a(orange, 0.8 * out), 1);
         final e = _q(a, imp, 450);
         if (e < 1) {
-          _disc(c, g.translate(0, -10), 22 * (1 - e) * _ease(e * 4), _a(hot, 0.9 * (1 - e)));
+          _disc(c, g.translate(0, -10), 22 * (1 - e) * _ease(e * 4),
+              _a(hot, 0.9 * (1 - e)));
           _ring(c, g.translate(0, -2), 55 * e, 20 * e, _a(orange, 1 - e), 3);
         }
       }
@@ -870,7 +895,8 @@ abstract final class UltDirector {
     for (var k = 0; k < 12; k++) {
       final ang = k * math.pi / 6;
       final d = Offset(math.cos(ang), math.sin(ang));
-      _line(c, o + d * (r - 5), o + d * (r - 1), _a(const Color(0xFFFFFFFF), alpha), k % 3 == 0 ? 2 : 1);
+      _line(c, o + d * (r - 5), o + d * (r - 1),
+          _a(const Color(0xFFFFFFFF), alpha), k % 3 == 0 ? 2 : 1);
     }
     _line(c, o, o + Offset(math.cos(hand), math.sin(hand)) * (r * 0.8),
         _a(const Color(0xFFFFFFFF), alpha), 2);
@@ -878,8 +904,8 @@ abstract final class UltDirector {
         _a(col, alpha), 2);
   }
 
-  static void _paradox(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _paradox(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     const violet = Color(0xFFA29BFE);
@@ -887,7 +913,8 @@ abstract final class UltDirector {
     if (a < s.buildMs + 200) {
       final grow = _ease(_q(a, 0, 350));
       final fade = 1 - _q(a, s.buildMs, 200);
-      _clock(c, o.translate(0, -24), 20 * grow, -a / 70, -a / 420, violet, fade);
+      _clock(
+          c, o.translate(0, -24), 20 * grow, -a / 70, -a / 420, violet, fade);
     }
     // Rebobinado: franjas horizontales que se corren.
     final d = s.darkness(a);
@@ -896,14 +923,16 @@ abstract final class UltDirector {
         final y = vis.top + ((k * 41 + a * 0.35) % vis.height);
         final off = math.sin(a / 40 + k) * 10;
         _fill.color = _a(violet, 0.12 * d);
-        c.drawRect(Rect.fromLTWH(vis.left + off, y, vis.width, 2 + (k % 3)), _fill);
+        c.drawRect(
+            Rect.fromLTWH(vis.left + off, y, vis.width, 2 + (k % 3)), _fill);
       }
     }
     if (a < s.buildMs) return;
     final cen = st.centroid.translate(0, -26);
     final r = 52 * _ease(_q(a, s.buildMs, 260));
     final sweep = (a - s.buildMs) / s.releaseMs * math.pi * 2;
-    _clock(c, cen, r, -math.pi / 2 + sweep * 2, -math.pi / 2 - sweep, violet, 0.8 * out);
+    _clock(c, cen, r, -math.pi / 2 + sweep * 2, -math.pi / 2 - sweep, violet,
+        0.8 * out);
     for (var i = 0; i < st.targets.length; i++) {
       final g = st.targets[i];
       final imp = s.impactFor(i);
@@ -911,7 +940,8 @@ abstract final class UltDirector {
         // Ecos en el tiempo y cristales que crecen.
         for (var k = 1; k <= 2; k++) {
           final e = ((a / 300) + k * 0.5) % 1.0;
-          _ring(c, g.translate(0, -8), 18 * (1 - e) + 6, 10 * (1 - e) + 4, _a(violet, 0.5 * e), 1);
+          _ring(c, g.translate(0, -8), 18 * (1 - e) + 6, 10 * (1 - e) + 4,
+              _a(violet, 0.5 * e), 1);
         }
         final grow = _q(a, s.buildMs + 100, imp - s.buildMs - 100);
         for (var k = -3; k <= 3; k++) {
@@ -934,14 +964,15 @@ abstract final class UltDirector {
 
   // ---------------- Tormenta de Flechas ----------------
 
-  static void _arrow(Canvas c, Offset head, Offset dirv, double len, double alpha) {
+  static void _arrow(
+      Canvas c, Offset head, Offset dirv, double len, double alpha) {
     _line(c, head - dirv * len, head, _a(const Color(0xFFDFE6E9), alpha), 1);
     _fill.color = _a(const Color(0xFFFDCB6E), alpha);
     c.drawRect(Rect.fromCenter(center: head, width: 2, height: 2), _fill);
   }
 
-  static void _arrows(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _arrows(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     _gather(c, o, a, s.buildMs, u.fx.color);
@@ -958,7 +989,12 @@ abstract final class UltDirector {
     }
     if (a < s.buildMs) return;
     final cen = st.centroid;
-    final spread = math.max(70.0, st.targets.fold<double>(0, (m, t) => math.max(m, (t.dx - cen.dx).abs())) * 2 + 50);
+    final spread = math.max(
+        70.0,
+        st.targets.fold<double>(
+                    0, (m, t) => math.max(m, (t.dx - cen.dx).abs())) *
+                2 +
+            50);
     const fall = 240.0;
     final dirv = Offset(-st.dir * 0.35, 1) / Offset(-st.dir * 0.35, 1).distance;
     for (var k = 0; k < 44; k++) {
@@ -982,8 +1018,8 @@ abstract final class UltDirector {
       final e = _q(a, imp, 700);
       if (a >= imp && e < 1) {
         for (var k = 0; k < 4; k++) {
-          _ring(c, g.translate((k - 1.5) * 7, -6 - k * 2.0), 6 + 14 * e, 4 + 8 * e,
-              _a(const Color(0xFF7BED9F), 0.7 * (1 - e)), 1);
+          _ring(c, g.translate((k - 1.5) * 7, -6 - k * 2.0), 6 + 14 * e,
+              4 + 8 * e, _a(const Color(0xFF7BED9F), 0.7 * (1 - e)), 1);
         }
       }
     }
@@ -1003,14 +1039,17 @@ abstract final class UltDirector {
       _line(c, muzzle, g, _a(red, 0.25 + 0.6 * q), 3 - 2 * q);
       _disc(c, g, 2 + math.sin(a / 40).abs() * 2, _a(red, 0.9));
       _ring(c, g, 14 - 9 * q, 14 - 9 * q, _a(red, 0.8), 1);
-      _disc(c, muzzle, 1.5 + 3 * q + math.sin(a / 30), _a(const Color(0xFFFFE066), 0.9));
+      _disc(c, muzzle, 1.5 + 3 * q + math.sin(a / 30),
+          _a(const Color(0xFFFFE066), 0.9));
     }
     final fire = s.buildMs + 50;
     if (a >= fire && a < fire + 160) {
       final q = _q(a, fire, 160);
-      _star(c, muzzle, 26 * (1 - q) + 4, _a(const Color(0xFFFFFFFF), 1 - q * 0.5));
+      _star(c, muzzle, 26 * (1 - q) + 4,
+          _a(const Color(0xFFFFFFFF), 1 - q * 0.5));
       _star(c, muzzle, 12 * (1 - q) + 2, _a(const Color(0xFFFFE066), 1 - q));
-      _ring(c, muzzle, 20 * q + 4, 20 * q + 4, _a(const Color(0xFFFFFFFF), 1 - q), 2);
+      _ring(c, muzzle, 20 * q + 4, 20 * q + 4,
+          _a(const Color(0xFFFFFFFF), 1 - q), 2);
     }
     final imp = s.impactMs;
     if (a >= fire && a < imp) {
@@ -1023,7 +1062,8 @@ abstract final class UltDirector {
         if (kp > q) break;
         final e = ((q - kp) * 4).clamp(0.0, 1.0);
         final at = Offset.lerp(muzzle, g, kp)!;
-        _ring(c, at, 3 + 9 * e, 5 + 12 * e, _a(const Color(0xFFFFFFFF), 0.6 * (1 - e)), 1);
+        _ring(c, at, 3 + 9 * e, 5 + 12 * e,
+            _a(const Color(0xFFFFFFFF), 0.6 * (1 - e)), 1);
       }
       _fill.color = const Color(0xFFFFFFFF);
       c.drawRect(Rect.fromCenter(center: p, width: 5, height: 2), _fill);
@@ -1031,8 +1071,10 @@ abstract final class UltDirector {
     }
     if (a >= imp && a < imp + 500) {
       final q = _q(a, imp, 500);
-      _ring(c, g, 46 * _ease(q), 46 * _ease(q), _a(red, 1 - q), 4 * (1 - q) + 1);
-      _ring(c, g, 30 * _ease(q), 30 * _ease(q), _a(const Color(0xFFFFFFFF), 1 - q), 2);
+      _ring(
+          c, g, 46 * _ease(q), 46 * _ease(q), _a(red, 1 - q), 4 * (1 - q) + 1);
+      _ring(c, g, 30 * _ease(q), 30 * _ease(q),
+          _a(const Color(0xFFFFFFFF), 1 - q), 2);
       _star(c, g, 18 * (1 - q), _a(const Color(0xFFFFFFFF), 1 - q));
     }
   }
@@ -1090,8 +1132,8 @@ abstract final class UltDirector {
 
   // ---------------- Juicio Divino ----------------
 
-  static void _judgment(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _judgment(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     const gold = Color(0xFFFFEAA7);
@@ -1101,7 +1143,8 @@ abstract final class UltDirector {
       _ring(c, o.translate(0, -24), 9, 3, _a(const Color(0xFFFFF3B0), fade), 2);
       // Haces que barren el cielo.
       for (var k = 0; k < 3; k++) {
-        final x = vis.left + ((a * 0.25 + k * vis.width / 3) % (vis.width + 60)) - 30;
+        final x =
+            vis.left + ((a * 0.25 + k * vis.width / 3) % (vis.width + 60)) - 30;
         final path = Path()
           ..moveTo(x, vis.top)
           ..lineTo(x + 14, vis.top)
@@ -1118,14 +1161,19 @@ abstract final class UltDirector {
       final imp = s.impactFor(i);
       if (a < imp) {
         final q = _q(a, s.buildMs + 50, imp - s.buildMs - 50);
-        _line(c, Offset(g.dx, vis.top), Offset(g.dx, vis.top + (g.dy - vis.top) * q),
-            _a(const Color(0xFFFFF3B0), 0.4 + 0.4 * math.sin(a / 30).abs()), 1);
+        _line(
+            c,
+            Offset(g.dx, vis.top),
+            Offset(g.dx, vis.top + (g.dy - vis.top) * q),
+            _a(const Color(0xFFFFF3B0), 0.4 + 0.4 * math.sin(a / 30).abs()),
+            1);
         _ring(c, g, 12 * q, 4 * q, _a(gold, 0.6), 1);
       } else {
         final e = _q(a, imp, 650);
         final w = (14 + 12 * _ease(_q(a, imp, 120))) * (1 - e * 0.6);
         final al = (1 - e) * out;
-        final rect = Rect.fromLTRB(g.dx - w / 2, vis.top, g.dx + w / 2, g.dy + 2);
+        final rect =
+            Rect.fromLTRB(g.dx - w / 2, vis.top, g.dx + w / 2, g.dy + 2);
         final paint = Paint()
           ..isAntiAlias = false
           ..shader = ui.Gradient.linear(rect.topCenter, rect.bottomCenter, [
@@ -1134,7 +1182,8 @@ abstract final class UltDirector {
           ]);
         c.drawRect(rect, paint);
         _fill.color = _a(const Color(0xFFFFFFFF), al);
-        c.drawRect(Rect.fromLTRB(g.dx - w / 6, vis.top, g.dx + w / 6, g.dy + 2), _fill);
+        c.drawRect(Rect.fromLTRB(g.dx - w / 6, vis.top, g.dx + w / 6, g.dy + 2),
+            _fill);
         _ring(c, g.translate(0, 1), w + 30 * e, 5 + 8 * e, _a(gold, al), 2);
       }
     }
@@ -1144,8 +1193,8 @@ abstract final class UltDirector {
 
   static void _hammerShape(Canvas c, Offset bottom, double alpha) {
     const head = Size(44, 26);
-    final hr = Rect.fromLTWH(bottom.dx - head.width / 2, bottom.dy - head.height,
-        head.width, head.height);
+    final hr = Rect.fromLTWH(bottom.dx - head.width / 2,
+        bottom.dy - head.height, head.width, head.height);
     // Mango.
     _fill.color = _a(const Color(0xFF8A5A2B), alpha);
     c.drawRect(Rect.fromLTWH(bottom.dx - 3, hr.top - 34, 6, 34), _fill);
@@ -1164,8 +1213,8 @@ abstract final class UltDirector {
     c.drawRect(Rect.fromLTWH(hr.center.dx - 4, hr.center.dy - 4, 8, 8), _fill);
   }
 
-  static void _hammer(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _hammer(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     _gather(c, o, a, s.buildMs, const Color(0xFFFFD166));
@@ -1175,7 +1224,9 @@ abstract final class UltDirector {
       for (var k = 0; k < 3; k++) {
         var p = o + Offset((_h(slot, k) - 0.5) * 30, -6 - _h(k, slot) * 26);
         for (var j = 0; j < 3; j++) {
-          final q = p + Offset((_h(slot + j, k) - 0.5) * 10, (_h(k + j, slot) - 0.5) * 10);
+          final q = p +
+              Offset(
+                  (_h(slot + j, k) - 0.5) * 10, (_h(k + j, slot) - 0.5) * 10);
           _line(c, p, q, const Color(0xFFDFF9FB), 1);
           p = q;
         }
@@ -1187,7 +1238,8 @@ abstract final class UltDirector {
     // Sombra que crece.
     if (a < imp) {
       final q = _q(a, 200, imp - 200);
-      _oval(c, g.translate(0, 1), 8 + 18 * q, 3 + 4 * q, _a(const Color(0xFF000000), 0.5 * q));
+      _oval(c, g.translate(0, 1), 8 + 18 * q, 3 + 4 * q,
+          _a(const Color(0xFF000000), 0.5 * q));
     }
     final drop = s.buildMs + 100;
     if (a >= drop) {
@@ -1199,7 +1251,8 @@ abstract final class UltDirector {
         // Estela de la caída.
         for (var k = 1; k <= 3; k++) {
           _fill.color = _a(const Color(0xFFFFD166), 0.18 / k);
-          c.drawRect(Rect.fromLTWH(g.dx - 22, y - 26 - k * 14.0, 44, 14), _fill);
+          c.drawRect(
+              Rect.fromLTWH(g.dx - 22, y - 26 - k * 14.0, 44, 14), _fill);
         }
       }
       _hammerShape(c, Offset(g.dx, y), alpha);
@@ -1209,8 +1262,14 @@ abstract final class UltDirector {
         final e = _q(a, imp + k * 80, 450);
         if (e <= 0 || e >= 1) continue;
         final rx = 20 + 80 * _ease(e);
-        _ring(c, g.translate(0, 1), rx, rx * 0.3,
-            _a(k == 0 ? const Color(0xFFFFFFFF) : const Color(0xFFFFD166), 1 - e), 3 * (1 - e) + 1);
+        _ring(
+            c,
+            g.translate(0, 1),
+            rx,
+            rx * 0.3,
+            _a(k == 0 ? const Color(0xFFFFFFFF) : const Color(0xFFFFD166),
+                1 - e),
+            3 * (1 - e) + 1);
       }
     }
   }
@@ -1219,8 +1278,8 @@ abstract final class UltDirector {
 
   /// Diluvio Ácido (Rey Limo): se hincha, escupe una bola de ácido que
   /// revienta en una nube sobre el grupo y llueve ácido; charcos.
-  static void _acidFlood(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _acidFlood(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     const green = Color(0xFF7BED9F);
@@ -1255,20 +1314,31 @@ abstract final class UltDirector {
     if (a >= s.buildMs && a < _acidCloudAt) {
       final q = _q(a, s.buildMs, _acidCloudAt - s.buildMs);
       final from = o.translate(0, -24);
-      final p = Offset.lerp(from, cloud, q)!.translate(0, -math.sin(q * math.pi) * 40);
+      final p = Offset.lerp(from, cloud, q)!
+          .translate(0, -math.sin(q * math.pi) * 40);
       for (var k = 4; k >= 0; k--) {
-        _disc(c, p.translate(0, k * 4.0), 7 - k * 1.1, _a(k == 0 ? sick : dark, 1 - k / 5));
+        _disc(c, p.translate(0, k * 4.0), 7 - k * 1.1,
+            _a(k == 0 ? sick : dark, 1 - k / 5));
       }
       _disc(c, p.translate(-2, -2), 2, _a(const Color(0xFFFFFFFF), 0.8));
     }
     if (a < _acidCloudAt) return;
     // Nube que cubre al grupo.
-    final spread = math.max(60.0, st.targets.fold<double>(0, (m, t) => math.max(m, (t.dx - cloud.dx).abs())) * 2 + 40);
+    final spread = math.max(
+        60.0,
+        st.targets.fold<double>(
+                    0, (m, t) => math.max(m, (t.dx - cloud.dx).abs())) *
+                2 +
+            40);
     final grow = _ease(_q(a, _acidCloudAt, 200));
     for (var k = 0; k < 7; k++) {
       final x = cloud.dx + (k - 3) / 3 * spread / 2;
       final y = cloud.dy + math.sin(k * 1.7 + a / 300) * 3;
-      _oval(c, Offset(x, y), (14 + 6 * _h(k, 2)) * grow, (7 + 3 * _h(k, 5)) * grow,
+      _oval(
+          c,
+          Offset(x, y),
+          (14 + 6 * _h(k, 2)) * grow,
+          (7 + 3 * _h(k, 5)) * grow,
           _a(k.isEven ? const Color(0xFF145A32) : dark, 0.85 * out));
     }
     // Lluvia de ácido.
@@ -1281,7 +1351,8 @@ abstract final class UltDirector {
       final y = cloud.dy + 6 + (gy - cloud.dy - 6) * q;
       _line(c, Offset(x, y - 6), Offset(x, y), _a(sick, 0.9), 1.5);
       _fill.color = _a(green, 1);
-      c.drawRect(Rect.fromCenter(center: Offset(x, y), width: 2, height: 2), _fill);
+      c.drawRect(
+          Rect.fromCenter(center: Offset(x, y), width: 2, height: 2), _fill);
     }
     // Charcos y salpicaduras en cada objetivo.
     for (var i = 0; i < st.targets.length; i++) {
@@ -1289,8 +1360,10 @@ abstract final class UltDirector {
       final imp = s.impactFor(i);
       if (a < imp) continue;
       final e = _q(a, imp, 400);
-      _oval(c, g.translate(0, 1), 10 + 6 * _ease(e), 3 + 2 * _ease(e), _a(dark, 0.7 * out));
-      _ring(c, g.translate(0, 1), 10 + 6 * _ease(e), 3 + 2 * _ease(e), _a(sick, 0.9 * out), 1);
+      _oval(c, g.translate(0, 1), 10 + 6 * _ease(e), 3 + 2 * _ease(e),
+          _a(dark, 0.7 * out));
+      _ring(c, g.translate(0, 1), 10 + 6 * _ease(e), 3 + 2 * _ease(e),
+          _a(sick, 0.9 * out), 1);
       if (e < 1) {
         _ring(c, g.translate(0, -6), 26 * e, 12 * e, _a(green, 1 - e), 2);
       }
@@ -1322,7 +1395,8 @@ abstract final class UltDirector {
     _fill.color = _a(bronze, alpha);
     c.drawPath(path, _fill);
     _disc(c, o, r * 0.55, _a(const Color(0xFF8A6D1F), alpha));
-    _ring(c, o, r * 0.55, r * 0.55, _a(const Color(0xFFFFF3B0), alpha * 0.7), 1);
+    _ring(
+        c, o, r * 0.55, r * 0.55, _a(const Color(0xFFFFF3B0), alpha * 0.7), 1);
     for (var k = 0; k < 4; k++) {
       final aa = ang * 1.5 + k * math.pi / 2;
       _line(c, o, o + Offset(math.cos(aa), math.sin(aa)) * r * 0.5,
@@ -1355,10 +1429,12 @@ abstract final class UltDirector {
     final imp = s.impactMs;
     if (a < imp) {
       final q = _q(a, s.buildMs, imp - s.buildMs);
-      final p = Offset.lerp(home, g, q * q)!.translate(0, -math.sin(q * math.pi) * 30);
+      final p = Offset.lerp(home, g, q * q)!
+          .translate(0, -math.sin(q * math.pi) * 30);
       // Estela de hielo.
       for (var k = 1; k <= 4; k++) {
-        final pq = Offset.lerp(home, g, math.max(0, q - k * 0.06) * math.max(0, q - k * 0.06))!
+        final pq = Offset.lerp(
+                home, g, math.max(0, q - k * 0.06) * math.max(0, q - k * 0.06))!
             .translate(0, -math.sin(math.max(0, q - k * 0.06) * math.pi) * 30);
         _disc(c, pq, 18 - k * 3.0, _a(ice, 0.25 / k));
       }
@@ -1391,7 +1467,8 @@ abstract final class UltDirector {
         for (final q in st.party) {
           for (var k = 0; k < 2; k++) {
             final rr = (r + k * 0.3).clamp(0.0, 1.0);
-            _ring(c, q.translate(0, -8), 6 + 18 * rr, 3 + 9 * rr, _a(ice, 0.8 * (1 - rr)), 1);
+            _ring(c, q.translate(0, -8), 6 + 18 * rr, 3 + 9 * rr,
+                _a(ice, 0.8 * (1 - rr)), 1);
           }
         }
       }
@@ -1401,8 +1478,8 @@ abstract final class UltDirector {
   /// Fin de las Eras (Devorador): un vórtice traga la luz sobre el
   /// lanzador, viaja sobre el grupo, colapsa y estallan columnas de fuego;
   /// los buffs del grupo se rompen como cristal.
-  static void _endOfEras(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _endOfEras(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     const crimson = Color(0xFFD63031);
     const violet = Color(0xFF6C5CE7);
@@ -1417,7 +1494,8 @@ abstract final class UltDirector {
     final v = _vortexAt(u, a, st);
     if (a < imp) {
       final grow = _ease(_q(a, 0, s.buildMs));
-      final swell = a < s.buildMs ? 1.0 : 1 + 0.9 * _ease(_q(a, s.buildMs, 300));
+      final swell =
+          a < s.buildMs ? 1.0 : 1 + 0.9 * _ease(_q(a, s.buildMs, 300));
       final collapse = 1 - _ease(_q(a, imp - 120, 120));
       final r = (10 + 16 * grow) * swell * collapse;
       // Polvo y luz que caen en espiral hacia el vórtice.
@@ -1435,8 +1513,15 @@ abstract final class UltDirector {
         _stroke
           ..color = _a(k == 1 ? violet : crimson, 0.9)
           ..strokeWidth = 2;
-        c.drawArc(Rect.fromCenter(center: v, width: r * 2.2 + k * 6, height: (r * 2.2 + k * 6) * 0.6),
-            aa, 2.2, false, _stroke);
+        c.drawArc(
+            Rect.fromCenter(
+                center: v,
+                width: r * 2.2 + k * 6,
+                height: (r * 2.2 + k * 6) * 0.6),
+            aa,
+            2.2,
+            false,
+            _stroke);
       }
       _disc(c, v, r, const Color(0xFF0B0010));
       _ring(c, v, r, r, _a(crimson, 0.9), 1);
@@ -1444,7 +1529,8 @@ abstract final class UltDirector {
     if (a >= imp - 120 && a < imp + 120) {
       // Destello del colapso.
       final e = _q(a, imp - 120, 240);
-      _disc(c, v, 30 * math.sin(e * math.pi), _a(const Color(0xFFFFFFFF), 0.8 * (1 - e)));
+      _disc(c, v, 30 * math.sin(e * math.pi),
+          _a(const Color(0xFFFFFFFF), 0.8 * (1 - e)));
     }
     for (var i = 0; i < st.targets.length; i++) {
       final g = st.targets[i];
@@ -1453,7 +1539,8 @@ abstract final class UltDirector {
         if (a > s.buildMs + 200) {
           // Grieta incandescente bajo cada objetivo.
           final q = _q(a, s.buildMs + 200, ti - s.buildMs - 200);
-          _oval(c, g.translate(0, 1), 4 + 8 * q, 1.5 + 2 * q, _a(ember, 0.5 + 0.4 * math.sin(a / 40).abs()));
+          _oval(c, g.translate(0, 1), 4 + 8 * q, 1.5 + 2 * q,
+              _a(ember, 0.5 + 0.4 * math.sin(a / 40).abs()));
         }
         continue;
       }
@@ -1461,7 +1548,8 @@ abstract final class UltDirector {
       final h = 100 * _ease(_q(a, ti, 120)) * (1 - e * 0.4);
       final w = 16 * (1 - e * 0.5);
       final al = (1 - e) * out;
-      final rect = Rect.fromLTRB(g.dx - w / 2, g.dy - h, g.dx + w / 2, g.dy + 2);
+      final rect =
+          Rect.fromLTRB(g.dx - w / 2, g.dy - h, g.dx + w / 2, g.dy + 2);
       final paint = Paint()
         ..isAntiAlias = false
         ..shader = ui.Gradient.linear(rect.topCenter, rect.bottomCenter, [
@@ -1470,13 +1558,17 @@ abstract final class UltDirector {
         ]);
       c.drawRect(rect, paint);
       _fill.color = _a(const Color(0xFFFFF3B0), al);
-      c.drawRect(Rect.fromLTRB(g.dx - w / 6, g.dy - h * 0.7, g.dx + w / 6, g.dy + 2), _fill);
+      c.drawRect(
+          Rect.fromLTRB(g.dx - w / 6, g.dy - h * 0.7, g.dx + w / 6, g.dy + 2),
+          _fill);
       _ring(c, g.translate(0, 1), w + 26 * e, 4 + 6 * e, _a(crimson, al), 2);
       // Buffs que se rompen: astillas violetas que salen volando.
       for (var k = 0; k < 6; k++) {
         final t = e * 0.9;
         final ang = k * math.pi / 3 + 0.4;
-        final p = g.translate(0, -18) + Offset(math.cos(ang), math.sin(ang)) * (6 + 40 * t) + Offset(0, 60 * t * t);
+        final p = g.translate(0, -18) +
+            Offset(math.cos(ang), math.sin(ang)) * (6 + 40 * t) +
+            Offset(0, 60 * t * t);
         _fill.color = _a(violet, 1 - e);
         c.drawRect(Rect.fromCenter(center: p, width: 3, height: 2), _fill);
       }
@@ -1509,8 +1601,10 @@ abstract final class UltDirector {
       // Brillo en los ojos.
       if (a > 480) {
         final q = _q(a, 480, 220);
-        _star(c, o.translate(st.dir * 4, -18), 2 + 8 * math.sin(q * math.pi), _a(const Color(0xFFFFFFFF), 1));
-        _star(c, o.translate(st.dir * 4, -18), 1 + 4 * math.sin(q * math.pi), red);
+        _star(c, o.translate(st.dir * 4, -18), 2 + 8 * math.sin(q * math.pi),
+            _a(const Color(0xFFFFFFFF), 1));
+        _star(c, o.translate(st.dir * 4, -18), 1 + 4 * math.sin(q * math.pi),
+            red);
       }
     }
     if (st.targets.isEmpty) return;
@@ -1519,8 +1613,10 @@ abstract final class UltDirector {
     if (a >= s.buildMs && a < s.buildMs + 300) {
       final q = _q(a, s.buildMs, 220);
       for (var k = 0; k < 5; k++) {
-        final p = Offset.lerp(o.translate(0, -10), g, (q - k * 0.12).clamp(0.0, 1.0))!;
-        _oval(c, p, 9, 11, _a(red, 0.45 * (1 - k / 5) * (1 - _q(a, s.buildMs + 200, 100))));
+        final p = Offset.lerp(
+            o.translate(0, -10), g, (q - k * 0.12).clamp(0.0, 1.0))!;
+        _oval(c, p, 9, 11,
+            _a(red, 0.45 * (1 - k / 5) * (1 - _q(a, s.buildMs + 200, 100))));
       }
     }
     // Zarpazos: dos previos y el final, enorme.
@@ -1538,8 +1634,10 @@ abstract final class UltDirector {
       for (var j = -1; j <= 1; j++) {
         final off = n * (j * (last ? 9.0 : 6.0));
         final w = (last ? 6.0 : 3.0) * (1 - q) + 1;
-        _line(c, g + off - d * len / 2, g + off + d * len / 2, _a(red, 0.9 * (1 - q)), w + 2);
-        _line(c, g + off - d * len / 2, g + off + d * len / 2, _a(const Color(0xFFFFFFFF), 1 - q * 0.8), w * 0.5);
+        _line(c, g + off - d * len / 2, g + off + d * len / 2,
+            _a(red, 0.9 * (1 - q)), w + 2);
+        _line(c, g + off - d * len / 2, g + off + d * len / 2,
+            _a(const Color(0xFFFFFFFF), 1 - q * 0.8), w * 0.5);
       }
       if (last) {
         _ring(c, g, 60 * q, 30 * q, _a(red, 1 - q), 3);
@@ -1550,8 +1648,9 @@ abstract final class UltDirector {
   // ---------------- ULT de los jefes v0.2 ----------------
 
   /// Telaraña radial de radio [r] centrada en [o] (anillos + rayos).
-  static void _webDisc(Canvas c, Offset o, double r, double rot, Color col,
-      double alpha, {double squash = 1}) {
+  static void _webDisc(
+      Canvas c, Offset o, double r, double rot, Color col, double alpha,
+      {double squash = 1}) {
     if (r <= 1 || alpha <= 0) return;
     const spokes = 8;
     Offset pt(double ang, double rr) =>
@@ -1583,8 +1682,8 @@ abstract final class UltDirector {
   /// Nido Venenoso (Matriarca Araña): hilos que salen de ella y sacos de
   /// huevos que laten; escupe una red enorme que cae sobre todo el grupo
   /// y revienta en veneno.
-  static void _venomNest(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _venomNest(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     const silk = Color(0xFFEDEFF5);
@@ -1612,7 +1711,8 @@ abstract final class UltDirector {
         final r = (3 + 1.5 * math.sin(a / 90 + k)) * g;
         _disc(c, q, r + 1, _a(const Color(0xFF2E1834), 0.9));
         _disc(c, q, r, _a(green, 0.75));
-        _disc(c, q.translate(-1, -1), r * 0.35, _a(const Color(0xFFFFFFFF), 0.7));
+        _disc(
+            c, q.translate(-1, -1), r * 0.35, _a(const Color(0xFFFFFFFF), 0.7));
       }
     }
     if (st.targets.isEmpty) return;
@@ -1621,14 +1721,16 @@ abstract final class UltDirector {
     final over = Offset(st.centroid.dx, top - 34);
     final spread = math.max(
         44.0,
-        st.targets.fold<double>(0, (m, t) => math.max(m, (t.dy - st.centroid.dy).abs())) +
+        st.targets.fold<double>(
+                0, (m, t) => math.max(m, (t.dy - st.centroid.dy).abs())) +
             30);
     final land = s.impactMs - 40;
     if (a >= s.buildMs && a < land) {
       // La red vuela en arco, girando y abriéndose.
       final q = _q(a, s.buildMs, land - s.buildMs);
       final from = o.translate(0, -20);
-      final p = Offset.lerp(from, over, q)!.translate(0, -math.sin(q * math.pi) * 40);
+      final p =
+          Offset.lerp(from, over, q)!.translate(0, -math.sin(q * math.pi) * 40);
       _webDisc(c, p, 6 + (spread - 6) * _ease(q) * 0.7, a / 160, silk, 0.95,
           squash: 0.8);
     }
@@ -1645,7 +1747,8 @@ abstract final class UltDirector {
         final x = ctr.dx + (_h(k, 3) - 0.5) * spread * 1.6;
         final y = ctr.dy - spread * 0.4 + dq * spread;
         _fill.color = _a(green, 0.9 * (1 - dq));
-        c.drawRect(Rect.fromCenter(center: Offset(x, y), width: 2, height: 3), _fill);
+        c.drawRect(
+            Rect.fromCenter(center: Offset(x, y), width: 2, height: 3), _fill);
       }
     }
     for (var i = 0; i < st.targets.length; i++) {
@@ -1665,8 +1768,8 @@ abstract final class UltDirector {
   /// Aliento Glacial (Sierpe de Escarcha): la escarcha se junta en sus
   /// fauces, sopla un cono de hielo sobre todo el grupo y los encierra en
   /// cristales.
-  static void _glacialBreath(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _glacialBreath(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     const ice = Color(0xFF9FE3F0);
@@ -1675,7 +1778,8 @@ abstract final class UltDirector {
     final mouth = o.translate(st.dir * 16, -24);
     _gather(c, mouth.translate(0, 10), a, s.buildMs, ice);
     // Niebla fría que cubre la vista.
-    final tint = s.darkness(a) * (a < s.buildMs ? 0.18 * _q(a, 100, 700) : 0.18);
+    final tint =
+        s.darkness(a) * (a < s.buildMs ? 0.18 * _q(a, 100, 700) : 0.18);
     if (tint > 0) {
       _fill.color = Color.fromRGBO(160, 230, 255, tint);
       c.drawRect(vis, _fill);
@@ -1701,7 +1805,10 @@ abstract final class UltDirector {
       final fade = 1 - _q(a, s.impactMs + 300, 300);
       final far = st.centroid.translate(st.dir * 10, -10);
       final reach = Offset.lerp(mouth, far, grow)!;
-      final half = (st.targets.fold<double>(0, (m, t) => math.max(m, (t.dy - st.centroid.dy).abs())) + 18) * grow;
+      final half = (st.targets.fold<double>(
+                  0, (m, t) => math.max(m, (t.dy - st.centroid.dy).abs())) +
+              18) *
+          grow;
       final cone = Path()
         ..moveTo(mouth.dx, mouth.dy - 3)
         ..lineTo(reach.dx, reach.dy - half)
@@ -1716,7 +1823,8 @@ abstract final class UltDirector {
         final f = ((a / 200) + _h(k, 2)) % 1.0;
         final side = (_h(k, 7) - 0.5) * 2;
         final p0 = Offset.lerp(mouth, reach.translate(0, side * half), f)!;
-        final p1 = Offset.lerp(mouth, reach.translate(0, side * half), math.min(1, f + 0.12))!;
+        final p1 = Offset.lerp(
+            mouth, reach.translate(0, side * half), math.min(1, f + 0.12))!;
         _line(c, p0, p1, _a(pale, 0.9 * fade * out), 1);
       }
     }
@@ -1740,15 +1848,18 @@ abstract final class UltDirector {
             _a(pale, 0.8 * out), 1);
       }
       final e = _q(a, imp, 500);
-      if (e < 1) _ring(c, g.translate(0, -6), 30 * _ease(e), 14 * _ease(e), _a(pale, 1 - e), 2);
+      if (e < 1) {
+        _ring(c, g.translate(0, -6), 30 * _ease(e), 14 * _ease(e),
+            _a(pale, 1 - e), 2);
+      }
     }
   }
 
   /// Juicio Hueco (Caballero Hueco): sus ojos arden en cian, runas giran a
   /// su alrededor; una espada espectral gigante cae sobre el objetivo y
   /// estalla en una cruz de luz.
-  static void _hollowJudgment(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _hollowJudgment(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     const cyan = Color(0xFF6FF7FF);
@@ -1765,7 +1876,8 @@ abstract final class UltDirector {
       final g = _ease(_q(a, 0, 300));
       for (var k = 0; k < 6; k++) {
         final ang = a / 300 + k * math.pi / 3;
-        final p = o.translate(0, -16) + Offset(math.cos(ang) * 26, math.sin(ang) * 10) * g;
+        final p = o.translate(0, -16) +
+            Offset(math.cos(ang) * 26, math.sin(ang) * 10) * g;
         _fill.color = _a(cyan, 0.8 * g);
         c.drawRect(Rect.fromCenter(center: p, width: 4, height: 4), _fill);
         _fill.color = _a(dark, 0.9 * g);
@@ -1773,8 +1885,10 @@ abstract final class UltDirector {
       }
       if (a > 450) {
         final q = _q(a, 450, 300);
-        _star(c, o.translate(st.dir * 3, -26), 2 + 7 * math.sin(q * math.pi), _a(ghost, 1));
-        _star(c, o.translate(st.dir * 3, -26), 1 + 3 * math.sin(q * math.pi), cyan);
+        _star(c, o.translate(st.dir * 3, -26), 2 + 7 * math.sin(q * math.pi),
+            _a(ghost, 1));
+        _star(c, o.translate(st.dir * 3, -26), 1 + 3 * math.sin(q * math.pi),
+            cyan);
       }
     }
     if (st.targets.isEmpty) return;
@@ -1801,7 +1915,8 @@ abstract final class UltDirector {
         ..color = _a(ghost, 0.95 * alpha)
         ..strokeWidth = 1;
       c.drawPath(blade, _stroke);
-      _line(c, Offset(g.dx, tipY - 4), Offset(g.dx, tipY - len + 2), _a(ghost, alpha), 1);
+      _line(c, Offset(g.dx, tipY - 4), Offset(g.dx, tipY - len + 2),
+          _a(ghost, alpha), 1);
       // Guarda y empuñadura.
       _fill.color = _a(const Color(0xFFB8963E), alpha);
       c.drawRect(Rect.fromLTWH(g.dx - 12, tipY - len - 3, 24, 3), _fill);
@@ -1812,7 +1927,8 @@ abstract final class UltDirector {
       if (fall > 0 && a < imp) {
         for (var k = 1; k <= 3; k++) {
           _fill.color = _a(cyan, 0.2 / k * alpha);
-          c.drawRect(Rect.fromLTWH(g.dx - 5, tipY - len - k * 10, 10, len), _fill);
+          c.drawRect(
+              Rect.fromLTWH(g.dx - 5, tipY - len - k * 10, 10, len), _fill);
         }
       }
     }
@@ -1822,16 +1938,24 @@ abstract final class UltDirector {
       final w = 90 * _ease(e);
       final al = (1 - e) * out;
       _fill.color = _a(ghost, 0.9 * al);
-      c.drawRect(Rect.fromCenter(center: g.translate(0, -10), width: w, height: 3), _fill);
-      c.drawRect(Rect.fromCenter(center: g.translate(0, -10), width: 3, height: w * 0.8), _fill);
+      c.drawRect(
+          Rect.fromCenter(center: g.translate(0, -10), width: w, height: 3),
+          _fill);
+      c.drawRect(
+          Rect.fromCenter(
+              center: g.translate(0, -10), width: 3, height: w * 0.8),
+          _fill);
       _ring(c, g.translate(0, 1), 10 + 50 * e, 4 + 14 * e, _a(cyan, al), 2);
       // Grietas en el piso.
       for (var k = 0; k < 6; k++) {
         final ang = k * math.pi / 3 + 0.3;
         final r = 6 + 22 * _ease(_q(a, imp, 160));
-        _line(c, g.translate(0, 1),
+        _line(
+            c,
+            g.translate(0, 1),
             g.translate(math.cos(ang) * r, 1 + math.sin(ang) * r * 0.35),
-            _a(dark, out), 2);
+            _a(dark, out),
+            2);
       }
     }
   }
@@ -1839,9 +1963,11 @@ abstract final class UltDirector {
   // ---------------- Lluvia de Lanzas ----------------
 
   /// Una lanza con la punta en [tip] apuntando en [dirv].
-  static void _spear(Canvas c, Offset tip, Offset dirv, double len, double alpha) {
+  static void _spear(
+      Canvas c, Offset tip, Offset dirv, double len, double alpha) {
     final n = Offset(-dirv.dy, dirv.dx);
-    _line(c, tip - dirv * len, tip - dirv * 4, _a(const Color(0xFF8A5A2B), alpha), 2);
+    _line(c, tip - dirv * len, tip - dirv * 4,
+        _a(const Color(0xFF8A5A2B), alpha), 2);
     _fill.color = _a(const Color(0xFFDFE6E9), alpha);
     c.drawPath(
         Path()
@@ -1854,8 +1980,8 @@ abstract final class UltDirector {
         _a(const Color(0xFFD63031), alpha), 1);
   }
 
-  static void _spearRain(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _spearRain(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     const rose = Color(0xFFFF6B81);
@@ -1916,7 +2042,8 @@ abstract final class UltDirector {
       final e = _q(a, imp, 500);
       if (a >= imp && e < 1) {
         _ring(c, g.translate(0, 1), 30 * e + 6, 10 * e + 2, _a(rose, 1 - e), 2);
-        _disc(c, g.translate(0, -10), 14 * (1 - e), _a(const Color(0xFFFFFFFF), 0.8 * (1 - e)));
+        _disc(c, g.translate(0, -10), 14 * (1 - e),
+            _a(const Color(0xFFFFFFFF), 0.8 * (1 - e)));
       }
     }
   }
@@ -1938,8 +2065,8 @@ abstract final class UltDirector {
     }
   }
 
-  static void _arcaneStorm(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _arcaneStorm(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     const magenta = Color(0xFFE84393);
@@ -1953,7 +2080,8 @@ abstract final class UltDirector {
       _ring(c, ctr, 14 * grow, 4.5 * grow, _a(violet, 0.8 * fade), 1);
       for (var k = 0; k < 6; k++) {
         final ang = -a / 200 + k * math.pi / 3;
-        final p = ctr + Offset(math.cos(ang) * 18 * grow, math.sin(ang) * 6 * grow);
+        final p =
+            ctr + Offset(math.cos(ang) * 18 * grow, math.sin(ang) * 6 * grow);
         _fill.color = _a(k.isEven ? violet : magenta, fade);
         c.drawRect(Rect.fromCenter(center: p, width: 3, height: 3), _fill);
         final rise = ((a / 700 + k / 6) % 1.0);
@@ -1976,16 +2104,26 @@ abstract final class UltDirector {
     final form = _ease(_q(a, s.buildMs - 250, 400));
     if (form > 0) {
       final cloud = Offset(cen.dx, top);
-      final spread = math.max(60.0, st.targets.fold<double>(0, (m, t) => math.max(m, (t.dx - cen.dx).abs())) + 40);
-      _oval(c, cloud, spread * form, 12 * form, _a(const Color(0xFF2D1B4E), 0.85 * out));
+      final spread = math.max(
+          60.0,
+          st.targets.fold<double>(
+                  0, (m, t) => math.max(m, (t.dx - cen.dx).abs())) +
+              40);
+      _oval(c, cloud, spread * form, 12 * form,
+          _a(const Color(0xFF2D1B4E), 0.85 * out));
       for (var k = 0; k < 3; k++) {
         final r = (spread - k * 14) * form;
         final rot = a / (300 + k * 120) * (k.isEven ? 1 : -1);
         _stroke
           ..color = _a(k == 1 ? magenta : violet, 0.7 * out)
           ..strokeWidth = 1;
-        c.drawArc(Rect.fromCenter(center: cloud, width: r * 2, height: (10 - k * 2) * 2 * form),
-            rot, 2.2, false, _stroke);
+        c.drawArc(
+            Rect.fromCenter(
+                center: cloud, width: r * 2, height: (10 - k * 2) * 2 * form),
+            rot,
+            2.2,
+            false,
+            _stroke);
       }
     }
     if (a < s.buildMs) return;
@@ -1996,8 +2134,8 @@ abstract final class UltDirector {
       final age = a - k * 90;
       if (age < 0 || age > 120) continue;
       final g = _stormStrike(st, k);
-      _bolt(c, Offset(g.dx + (_h(k, 4) - 0.5) * 20, top + 6), g, k,
-          violet, 1 - age / 120, 1);
+      _bolt(c, Offset(g.dx + (_h(k, 4) - 0.5) * 20, top + 6), g, k, violet,
+          1 - age / 120, 1);
     }
     for (var i = 0; i < st.targets.length; i++) {
       final g = st.targets[i];
@@ -2006,7 +2144,8 @@ abstract final class UltDirector {
       if (a >= imp - 40 && e < 1) {
         _bolt(c, Offset(g.dx, top + 6), g.translate(0, -4), i + 77, magenta,
             1 - e, 2);
-        _ring(c, g.translate(0, -6), 26 * e + 4, 12 * e + 2, _a(magenta, 1 - e), 2);
+        _ring(c, g.translate(0, -6), 26 * e + 4, 12 * e + 2, _a(magenta, 1 - e),
+            2);
       }
     }
   }
@@ -2014,8 +2153,9 @@ abstract final class UltDirector {
   // ---------------- Andanada ----------------
 
   /// Un virote de [tip] en dirección [dirv].
-  static void _crossbowBolt(Canvas c, Offset tip, Offset dirv, double len,
-      double alpha, {double w = 2}) {
+  static void _crossbowBolt(
+      Canvas c, Offset tip, Offset dirv, double len, double alpha,
+      {double w = 2}) {
     final n = Offset(-dirv.dy, dirv.dx);
     _line(c, tip - dirv * len, tip, _a(const Color(0xFFDFE6E9), alpha), w);
     _disc(c, tip, w * 0.9, _a(const Color(0xFFFF9F43), alpha));
@@ -2025,8 +2165,8 @@ abstract final class UltDirector {
         _a(const Color(0xFFD63031), alpha), 1);
   }
 
-  static void _volley(Canvas c, UltCinematic u, double a, UltStage st,
-      double out) {
+  static void _volley(
+      Canvas c, UltCinematic u, double a, UltStage st, double out) {
     final s = u.script;
     final o = st.caster;
     const orange = Color(0xFFFF9F43);
@@ -2039,14 +2179,20 @@ abstract final class UltDirector {
       final q = _ease(_q(a, 250, s.buildMs - 300));
       final r = 26 - 14 * q;
       final col = _a(orange, 0.5 + 0.5 * q);
-      for (final (sx, sy) in const [(-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)]) {
+      for (final (sx, sy) in const [
+        (-1.0, -1.0),
+        (1.0, -1.0),
+        (-1.0, 1.0),
+        (1.0, 1.0)
+      ]) {
         final corner = g + Offset(sx * r, sy * r);
         _line(c, corner, corner - Offset(sx * 6, 0), col, 2);
         _line(c, corner, corner - Offset(0, sy * 6), col, 2);
       }
       _disc(c, g, 1.5 + q, _a(orange, 0.9));
       // Brillo en la punta del virote que se tensa.
-      _disc(c, muzzle, 1 + 3 * q + math.sin(a / 35), _a(const Color(0xFFFFE066), 0.9));
+      _disc(c, muzzle, 1 + 3 * q + math.sin(a / 35),
+          _a(const Color(0xFFFFE066), 0.9));
     }
     final dirv = (g - muzzle) / math.max(1, (g - muzzle).distance);
     final n = Offset(-dirv.dy, dirv.dx);
@@ -2068,14 +2214,16 @@ abstract final class UltDirector {
       _line(c, muzzle, p, _a(orange, 0.35), 3);
       for (var k = 1; k <= 3; k++) {
         final w = Offset.lerp(muzzle, p, k / 4)!;
-        _ring(c, w, 3 + 2.0 * k, 6 + 2.0 * k, _a(const Color(0xFFFFFFFF), 0.35), 1);
+        _ring(c, w, 3 + 2.0 * k, 6 + 2.0 * k, _a(const Color(0xFFFFFFFF), 0.35),
+            1);
       }
       _crossbowBolt(c, p, dirv, 18, 1, w: 3);
     }
     if (a >= s.impactMs) {
       final e = _q(a, s.impactMs, 420);
       if (e < 1) {
-        _disc(c, g, 20 * (1 - e) * _ease(e * 5), _a(const Color(0xFFFFF3B0), 0.9 * (1 - e)));
+        _disc(c, g, 20 * (1 - e) * _ease(e * 5),
+            _a(const Color(0xFFFFF3B0), 0.9 * (1 - e)));
         _ring(c, g, 50 * e, 24 * e, _a(orange, 1 - e), 3);
       }
       // Clavado y mareado: estrellitas que giran.
@@ -2101,14 +2249,17 @@ abstract final class UltDirector {
       for (var k = 0; k < 8; k++) {
         final ang = a / 90 + k * math.pi / 4;
         final p = o.translate(math.cos(ang) * 14, -10 + math.sin(ang) * 6);
-        final p2 = o.translate(math.cos(ang + 0.5) * 14, -10 + math.sin(ang + 0.5) * 6);
+        final p2 = o.translate(
+            math.cos(ang + 0.5) * 14, -10 + math.sin(ang + 0.5) * 6);
         _line(c, p, p2, _a(mint, 0.6 * grow), 1);
       }
       // Destello de las hojas al desenvainar.
       if (a > 420) {
         final q = _q(a, 420, 240);
-        _star(c, o.translate(st.dir * 7, -12), 2 + 8 * math.sin(q * math.pi), _a(const Color(0xFFFFFFFF), 1));
-        _star(c, o.translate(-st.dir * 8, -11), 1 + 5 * math.sin(q * math.pi), mint);
+        _star(c, o.translate(st.dir * 7, -12), 2 + 8 * math.sin(q * math.pi),
+            _a(const Color(0xFFFFFFFF), 1));
+        _star(c, o.translate(-st.dir * 8, -11), 1 + 5 * math.sin(q * math.pi),
+            mint);
       }
     }
     if (st.targets.isEmpty) return;
@@ -2117,8 +2268,10 @@ abstract final class UltDirector {
     if (a >= s.buildMs && a < s.buildMs + 260) {
       final q = _q(a, s.buildMs, 180);
       for (var k = 0; k < 6; k++) {
-        final p = Offset.lerp(o.translate(0, -8), g, (q - k * 0.1).clamp(0.0, 1.0))!;
-        _oval(c, p, 5, 9, _a(mint, 0.45 * (1 - k / 6) * (1 - _q(a, s.buildMs + 160, 100))));
+        final p =
+            Offset.lerp(o.translate(0, -8), g, (q - k * 0.1).clamp(0.0, 1.0))!;
+        _oval(c, p, 5, 9,
+            _a(mint, 0.45 * (1 - k / 6) * (1 - _q(a, s.buildMs + 160, 100))));
       }
     }
     // Cortes en todas direcciones (uno por golpe previo, más finos).
@@ -2130,8 +2283,10 @@ abstract final class UltDirector {
       final ang = _h(k, 11) * math.pi;
       final d = Offset(math.cos(ang), math.sin(ang));
       final len = 60.0 * math.min(1.0, q * 5);
-      _line(c, g - d * len / 2, g + d * len / 2, _a(mint, 0.85 * (1 - q)), 3 * (1 - q) + 1);
-      _line(c, g - d * len / 2, g + d * len / 2, _a(const Color(0xFFFFFFFF), 1 - q), 1);
+      _line(c, g - d * len / 2, g + d * len / 2, _a(mint, 0.85 * (1 - q)),
+          3 * (1 - q) + 1);
+      _line(c, g - d * len / 2, g + d * len / 2,
+          _a(const Color(0xFFFFFFFF), 1 - q), 1);
     }
     // Remolino de hojas verdes durante la ráfaga.
     if (a >= s.buildMs + 200 && a < s.impactMs + 300) {
@@ -2158,8 +2313,8 @@ abstract final class UltDirector {
         for (var k = 0; k < 8; k++) {
           final ang = k * math.pi / 4 + 0.2;
           final d = Offset(math.cos(ang), math.sin(ang));
-          _line(c, g + d * (6 + 10 * e), g + d * (18 + 34 * e),
-              _a(mint, 1 - e), 2);
+          _line(c, g + d * (6 + 10 * e), g + d * (18 + 34 * e), _a(mint, 1 - e),
+              2);
         }
         _ring(c, g, 55 * e, 28 * e, _a(const Color(0xFFFFFFFF), 1 - e), 2);
       }
@@ -2171,8 +2326,8 @@ abstract final class UltDirector {
   /// Coro de Ecos (Hechicera del Eco): siluetas de la Hechicera la rodean
   /// cantando; las ondas del coro cruzan el campo y resuenan en cada
   /// objetivo.
-  static void _echoChorus(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _echoChorus(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     const cyan = Color(0xFF7FF3FF);
@@ -2190,7 +2345,8 @@ abstract final class UltDirector {
       final fade = 1 - _q(a, s.buildMs, 200);
       for (var k = 0; k < 6; k++) {
         final ang = a / 500 + k * math.pi / 3;
-        final p = o.translate(math.cos(ang) * 30 * g, -14 + math.sin(ang) * 10 * g);
+        final p =
+            o.translate(math.cos(ang) * 30 * g, -14 + math.sin(ang) * 10 * g);
         final al = (0.35 + 0.35 * math.sin(a / 70 + k)) * g * fade;
         final path = Path()
           ..moveTo(p.dx, p.dy - 12)
@@ -2220,8 +2376,12 @@ abstract final class UltDirector {
         _stroke
           ..strokeWidth = 2
           ..color = _a(k.isEven ? cyan : lilac, (1 - q * 0.6) * out);
-        c.drawArc(Rect.fromCenter(center: ctr, width: r * 1.2, height: r * 2.2),
-            st.dir > 0 ? -math.pi / 3 : math.pi * 2 / 3, math.pi * 2 / 3, false, _stroke);
+        c.drawArc(
+            Rect.fromCenter(center: ctr, width: r * 1.2, height: r * 2.2),
+            st.dir > 0 ? -math.pi / 3 : math.pi * 2 / 3,
+            math.pi * 2 / 3,
+            false,
+            _stroke);
       }
     }
     // Resonancia en cada objetivo: anillos concéntricos y notas.
@@ -2247,16 +2407,15 @@ abstract final class UltDirector {
 
   /// Erupción Total (Bestia de Magma): el piso se agrieta y enrojece;
   /// columnas de lava revientan bajo cada objetivo y llueven rocas.
-  static void _totalEruption(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _totalEruption(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     const lava = Color(0xFFFF7B29);
     const core = Color(0xFFFFD166);
     const crust = Color(0xFF3A1206);
     _gather(c, o, a, s.buildMs, lava);
-    final tint =
-        s.darkness(a) * (a < s.buildMs ? 0.2 * _q(a, 100, 700) : 0.22);
+    final tint = s.darkness(a) * (a < s.buildMs ? 0.2 * _q(a, 100, 700) : 0.22);
     if (tint > 0) {
       _fill.color = Color.fromRGBO(120, 25, 0, tint);
       c.drawRect(vis, _fill);
@@ -2281,7 +2440,8 @@ abstract final class UltDirector {
       for (var k = 0; k < 8; k++) {
         final f = ((a / 300) + _h(k, 4)) % 1.0;
         final p = o.translate((_h(k, 8) - 0.5) * 30, -18 - f * 24 * g);
-        _disc(c, p, 2.5 * (1 - f) + 0.5, _a(k.isEven ? lava : core, (1 - f) * g));
+        _disc(
+            c, p, 2.5 * (1 - f) + 0.5, _a(k.isEven ? lava : core, (1 - f) * g));
       }
     }
     if (st.targets.isEmpty) return;
@@ -2295,9 +2455,12 @@ abstract final class UltDirector {
         final x = g.dx + (_h(k, 2) - 0.5) * 40;
         final y = vis.top + (g.dy - vis.top) * q;
         _fill.color = _a(const Color(0xFF4A3B35), out);
-        c.drawRect(Rect.fromCenter(center: Offset(x, y), width: 4, height: 4), _fill);
+        c.drawRect(
+            Rect.fromCenter(center: Offset(x, y), width: 4, height: 4), _fill);
         _fill.color = _a(lava, 0.8 * out);
-        c.drawRect(Rect.fromCenter(center: Offset(x, y - 3), width: 2, height: 3), _fill);
+        c.drawRect(
+            Rect.fromCenter(center: Offset(x, y - 3), width: 2, height: 3),
+            _fill);
       }
     }
     // Columnas de lava bajo cada objetivo.
@@ -2306,7 +2469,8 @@ abstract final class UltDirector {
       final imp = s.impactFor(i);
       if (a < imp - 160) continue;
       final pre = _q(a, imp - 160, 160);
-      _oval(c, g.translate(0, 1), 12 * pre + 2, 4 * pre + 1, _a(lava, 0.8 * out));
+      _oval(
+          c, g.translate(0, 1), 12 * pre + 2, 4 * pre + 1, _a(lava, 0.8 * out));
       if (a < imp) continue;
       final e = _q(a, imp, 600);
       final hgt = 50 *
@@ -2323,8 +2487,8 @@ abstract final class UltDirector {
   /// Lamento Eterno (Espectro Coronado): rostros que gimen giran en torno
   /// a su corona; una ola espectral barre al grupo y manos de escarcha los
   /// atrapan desde el piso.
-  static void _eternalLament(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _eternalLament(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     final o = st.caster;
     const ghost = Color(0xFFB8C6FF);
@@ -2341,13 +2505,15 @@ abstract final class UltDirector {
       // Corona que brilla.
       if (a > 300) {
         final q = _q(a, 300, 400);
-        _star(c, o.translate(0, -38), 2 + 6 * math.sin(q * math.pi), _a(gold, 1));
+        _star(
+            c, o.translate(0, -38), 2 + 6 * math.sin(q * math.pi), _a(gold, 1));
       }
       // Rostros que gimen (óvalos con ojos y boca) en espiral.
       for (var k = 0; k < 7; k++) {
         final ang = -a / 420 + k * math.pi * 2 / 7;
         final r = (36 - 10 * _q(a, 0, s.buildMs)) * g;
-        final p = o.translate(math.cos(ang) * r, -18 + math.sin(ang) * r * 0.45);
+        final p =
+            o.translate(math.cos(ang) * r, -18 + math.sin(ang) * r * 0.45);
         final al = 0.55 * g;
         _oval(c, p, 3.5, 4.5, _a(pale, al));
         _fill.color = _a(const Color(0xFF2B2D42), math.min(1.0, al * 1.4));
@@ -2410,8 +2576,8 @@ abstract final class UltDirector {
   /// Colapso del Vacío (Centinela): un agujero negro con disco violeta se
   /// forma sobre el Centinela, curva la luz hacia él, viaja sobre el grupo
   /// y colapsa; rayos del vacío y esquirlas en cada objetivo.
-  static void _voidCollapse(Canvas c, UltCinematic u, double a, UltStage st,
-      Rect vis, double out) {
+  static void _voidCollapse(
+      Canvas c, UltCinematic u, double a, UltStage st, Rect vis, double out) {
     final s = u.script;
     const violet = Color(0xFF9B59FF);
     const glow = Color(0xFFC7A6FF);
@@ -2432,7 +2598,8 @@ abstract final class UltDirector {
         final ang = k * math.pi / 8 + f * 1.2;
         final d = Offset(math.cos(ang), math.sin(ang) * 0.6);
         final r1 = r + 50 * (1 - f);
-        _line(c, hole + d * r1, hole + d * (r1 + 6), _a(glow, 0.7 * f * out), 1);
+        _line(
+            c, hole + d * r1, hole + d * (r1 + 6), _a(glow, 0.7 * f * out), 1);
       }
       // Disco de acreción.
       _stroke
@@ -2448,8 +2615,8 @@ abstract final class UltDirector {
     if (a >= s.impactMs - 40 && a < s.impactMs + 500) {
       final e = _q(a, s.impactMs - 40, 540);
       _ring(c, hole, 10 + 80 * e, 5 + 36 * e, _a(glow, 1 - e), 3);
-      _ring(c, hole, 6 + 50 * e, 3 + 22 * e,
-          _a(const Color(0xFFFFFFFF), 1 - e), 1);
+      _ring(c, hole, 6 + 50 * e, 3 + 22 * e, _a(const Color(0xFFFFFFFF), 1 - e),
+          1);
     }
     // Cada objetivo: rayo del vacío desde el agujero y esquirlas.
     for (var i = 0; i < st.targets.length; i++) {
@@ -2461,8 +2628,8 @@ abstract final class UltDirector {
       _line(c, hole, g.translate(0, -10), _a(glow, (1 - e) * out), 1);
       for (var k = 0; k < 6; k++) {
         final ang = k * math.pi / 3 + e * 2;
-        final p = g.translate(
-            math.cos(ang) * 18 * e, -10 + math.sin(ang) * 10 * e);
+        final p =
+            g.translate(math.cos(ang) * 18 * e, -10 + math.sin(ang) * 10 * e);
         final path = Path()
           ..moveTo(p.dx, p.dy - 3)
           ..lineTo(p.dx + 2, p.dy)

@@ -234,12 +234,12 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 ),
                 if (prof.classId == 'paladin')
                   const PanelSection(
-                    'Kit de Paladín',
+                    'Rasgos de Paladín',
                     child: Text(
-                      'Básico: 3% aturdir · Aura Restauradora (cura + regen 5% '
-                      'vida/maná × 3 turnos) · Fortaleza (+2 DEF por uso) · '
-                      'Protección (absorbes el daño de tus aliados)\n'
-                      'Débil a daño perforante (×1.5) y a estados (+1 stack)',
+                      'Básico: 3% aturdir · habilidades según el arma\n'
+                      'Débil a daño perforante (×1.5) y a estados (+1 stack)\n'
+                      'Aura Restauradora, Fortaleza y Protección: kit del '
+                      'Guardián (ascensión)',
                     ),
                   ),
               ],

@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/di/service_locator.dart';
+import '../../core/persistence/exit_on_close.dart';
 import '../../core/settings/frame_limiter.dart';
 import '../app.dart';
 import '../feature_flags.dart';
@@ -20,6 +21,8 @@ Future<void> main() async {
     devTools: true,
   );
   registerSharedDependencies();
+  // Cerrar la ventana guarda antes (docs/specs/characters.md § 1.4).
+  installExitOnClose();
   registerP2PNetcode(signaling: await resolveP2PSignaling());
   runApp(const EcosApp());
 }

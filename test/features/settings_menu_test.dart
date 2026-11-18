@@ -56,6 +56,13 @@ Future<
     ],
     child: MaterialApp(
       theme: RetroTheme.build(),
+      // Tamaño del texto en vivo, como `EcosApp`.
+      builder: (context, child) => Consumer(
+        builder: (context, ref, _) => RetroTextScale(
+            factor: ref.watch(
+                gameSettingsProvider.select((s) => s.textSize.factor)),
+            child: child!),
+      ),
       home: Scaffold(
         body: Builder(
           builder: (context) => Center(
@@ -173,6 +180,52 @@ void main() {
     expect(f.game.saved!.fpsLimit, FpsLimit.fps30);
     await _tap(tester, 'display-fps-SIN LÍMITE');
     expect(f.game.saved!.fpsLimit, FpsLimit.none);
+  });
+
+  testWidgets('PANTALLA: TAMAÑO DEL TEXTO se aplica en vivo y se guarda',
+      (tester) async {
+    final f = await _pumpMenu(tester);
+    await _tap(tester, 'tab-1');
+    expect(
+        tester
+            .widget<PanelButton>(
+                find.byKey(const ValueKey('display-text-NORMAL')))
+            .selected,
+        isTrue);
+    double scaleOf(String text) => MediaQuery.textScalerOf(
+            tester.element(find.text(text).first))
+        .scale(RetroType.small);
+    // VT323: 20 / 25 / 30 px.
+    expect(scaleOf('TAMAÑO DEL TEXTO'), 20, reason: 'Normal a 1x');
+    for (final (key, size, px) in const [
+      ('MUY GRANDE', TextSize.huge, 30.0),
+      ('GRANDE', TextSize.large, 25.0),
+      ('NORMAL', TextSize.normal, 20.0),
+    ]) {
+      await _tap(tester, 'display-text-$key');
+      expect(f.game.saved!.textSize, size);
+      expect(scaleOf('TAMAÑO DEL TEXTO'), px, reason: key);
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('PANTALLA: FUENTE DE LECTURA (vista previa) se guarda',
+      (tester) async {
+    final f = await _pumpMenu(tester);
+    await _tap(tester, 'tab-1');
+    // Cada opción escrita en su propia fuente.
+    String? family(String key) => tester
+        .widget<Text>(find.descendant(
+            of: find.byKey(ValueKey(key)), matching: find.byType(Text)))
+        .style
+        ?.fontFamily;
+    expect(family('display-font-vt323'), RetroType.vt323Family);
+    expect(family('display-font-classic'), RetroType.pixelFamily);
+    await _tap(tester, 'display-font-classic');
+    expect(f.game.saved!.readingFont, ReadingFont.classic);
+    await _tap(tester, 'display-font-vt323');
+    expect(f.game.saved!.readingFont, ReadingFont.vt323);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('PANTALLA: sin soporte de ventana no ofrece pantalla completa',
