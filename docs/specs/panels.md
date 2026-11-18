@@ -422,23 +422,34 @@ detalle"). Donde difiere de la sección v0.2.0, manda esta:
   de rareza y a la derecha `EQUIPADA` o `<rareza> · Nv N`. Clic en otra
   fila la elige; clic en la ya elegida (o `Enter` con la mesa enfocada, o
   `ELEGIR ›` `bench-next`) pasa al paso 2.
-- **Paso 2** (rehecho tras "se cortan las letras, no se entienden las
-  secciones"): **todo el ancho** del panel (la armería mide 1200 px), sin
-  ficha al costado. Cada grupo con un título de ancho completo y qué
-  hace: `MEJORAR — cambia los mods de esta arma (con materiales)`,
-  `TRASLADAR — trae algo de otra arma (esa arma se destruye)`,
-  `QUITAR — saca un mod para hacer lugar`, `CAMBIAR — cambia la base del
-  arma` (`Enter Confirmar · Esc Volver` a la derecha del primero). Cada
-  acción (`bench-op-<op>`, `MenuRow(wrap: true)`): nombre en negrita,
-  una explicación corta en `dim` (`CraftOpText.short`: `Nuevos valores
-  para cada mod`…) y a la derecha (`bench-op-why-<op>`) el costo con el
-  nombre del material (`₵50 + 1 Esquirla`, `Gratis`, o `Se puede` si
-  depende del paso 3) en verde, o el **motivo completo** en rojo. Nada
-  lleva "…": si no entra, pasa a otra línea. El arma elegida va al lado
-  de las migas (`bench-summary`). A 1280×720 entran las 8 en Normal; en
-  Grande la última pide un poco de scroll.
-- Pasos 1 y 3: lista de 480 px y filas `wrap` (los nombres largos pasan
-  a 2 líneas en vez de cortarse).
+- **Tarjetas (v0.5, pedido del dueño: "separaciones bien bien de cada
+  acción")**. Piezas en `lib/app/widgets/`: `SectionPanel` (sección
+  enmarcada con franja de ícono + título + explicación), `ActionCard`
+  (tarjeta con ícono pixel, título, 1-2 líneas, pie y hueco `badge` para
+  el `BuildFitBadge` del Build Planner; mouse/foco = se levanta 2 px con
+  borde `sky` y muestra el efecto; elegida = borde `gold`; bloqueada =
+  atenuada con candado), `CostChip` (moneda y materiales con su ícono, en
+  verde si alcanza y rojo si no; `blocked` = candado + motivo completo),
+  `PixelIcon` (íconos 8×8 pintados: dado, +, gema, flecha, estrella,
+  tacho, yunque, candado, moneda, espada, esquirla, prisma, ancla, ✓),
+  `CardGrid` y `ConfirmButton`.
+- **Paso 1**: grilla de tarjetas de arma (`bench-weapon-<uid>`): franja
+  del color de la rareza con su letra, espada pixel del mismo color,
+  nombre, `<rareza> · Nv N · Mods n/max`, `EQUIPADA`. A la derecha la
+  ficha y `ELEGIR ›`.
+- **Paso 2** (todo el ancho, panel de 1200 px): una `SectionPanel` por
+  grupo (`bench-group-<grupo>`: MEJORAR — cambia los mods de esta arma
+  (con materiales) · TRASLADAR — trae algo de otra arma (esa arma se
+  destruye) · QUITAR — saca un mod para hacer lugar · CAMBIAR — cambia la
+  base del arma) y una `ActionCard` por acción (`bench-op-<op>`): ícono
+  (dado, +, gema, flecha, esquirla, estrella, tacho, yunque), nombre,
+  `CraftOpText.short`, con el mouse el efecto (`Mods 4/6 → 5/6`) y el
+  pie (`bench-op-why-<op>`): `CostChip` con el costo de la elección por
+  defecto, `Se puede · eliges en el paso 3`, o candado + motivo
+  completo. Columnas: 3 a 1280 en Normal (MEJORAR │ TRASLADAR │ QUITAR +
+  CAMBIAR, entran las 8 sin bajar), 2 en Grande, 1 si no entran (con
+  scroll). Flechas mueven el foco entre tarjetas, `Enter` elige, `Esc`
+  vuelve.
 - **Paso 3**: a la izquierda la línea "qué hace" (`dim`) y solo las
   elecciones de esa acción, en filas de una línea:
   - traer: `¿De qué arma? (se destruye)` (`craft-source-<uid>`, a la
@@ -450,12 +461,17 @@ detalle"). Donde difiere de la sección v0.2.0, manda esta:
     `bench-family-prev` / `-next` / `-value`) y las bases
     (`bench-base-<id>`: nombre y tipo, a la derecha `Nv N OK/Req`);
   - mejorar: `AHORA` con la ficha.
-  El detalle, en este orden: `bench-summary`, `Gastas` (`craft-cost`) y
-  `Pierdes` (`craft-lost`) como líneas con la etiqueta en columna,
-  `No se puede` (`craft-error`), `ANTES → DESPUÉS` (nombre, base,
-  rareza, mods con `[¿T1–T5?]`, pasiva, habilidades), `PUEDE SALIR` y
-  `Tus stats si la equipas`. Abajo `Enter Confirmar · Esc Volver`,
-  `‹ OTRA ACCIÓN` y el primario con su motivo.
+  El detalle: `Gastas` (`craft-cost`) y `Pierdes` (`craft-lost`) arriba,
+  `No se puede` (`craft-error`) y una tabla **ANTES │ DESPUÉS** de dos
+  columnas: Arma (`craft-name`), Base (`craft-base`, al reforjar),
+  Rareza, Pasiva (`craft-passive`), Habilidades (`craft-skills`, la
+  nueva en verde con ▲), Mods (`craft-mods-title` con `[?]`
+  `craft-tier-help`; lista `craft-mods` con `(nuevo)` / `(se quita)`;
+  `=` si no cambia) y ATQ / MAG / VEL / CRÍT / DEF / HP con ▲ / ▼;
+  `PUEDE SALIR` (`craft-outcomes`) en las al azar. Abajo `‹ OTRA ACCIÓN`
+  y el `ConfirmButton` grande (`craft-confirm`: ✓ + verbo + chip de
+  costo; deshabilitado con candado y `No se puede: <motivo>` arriba).
+  `Enter Confirmar · Esc Volver` va debajo de la lista.
 - **Teclado**: con el foco en la mesa (se toma al tocar una fila o
   cambiar de paso) `Esc` vuelve un paso (en el paso 1 cierra el panel) y
   `Enter` avanza / confirma si se puede.

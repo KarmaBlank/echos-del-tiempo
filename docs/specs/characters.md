@@ -29,6 +29,9 @@ de antes (`%APPDATA%\EcosDelTiempo`, exploration.md § "Persistencia"):
   formato: la sesión y la red lo siguen viendo igual) + `id` estable
   (`c<n>`, del contador `seq`; nunca se reusa), fecha de creación y
   fecha de la última partida (`last`, `null` = nunca jugó).
+- `plan` (opcional, v0.5): el plan de build del personaje
+  (build_planner.md § 1). Una cuenta sin `plan` carga igual; guardar el
+  perfil desde la sesión lo conserva.
 - `sel`: el personaje elegido. Si no existe, se toma el primero.
 - `stash`: el alijo (§ 3).
 - Lectura tolerante: lo que falta toma su valor por defecto; una

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../build_planner/presentation/build_feed.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../core/settings/game_settings.dart';
 import '../../../core/settings/settings_providers.dart';
@@ -248,6 +249,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     _events ??= controller.events.listen(_onSessionEvent);
     // Sonido: escucha los eventos de la sesión mientras la pantalla vive.
     ref.watch(sessionSfxProvider);
+    // Avisos del plan de build: viven toda la sesión (no solo el HUD).
+    ref.watch(buildFeedProvider);
     // Música: el bucle y los jingles según el estado (session_music.dart).
     ref.watch(sessionMusicProvider);
 

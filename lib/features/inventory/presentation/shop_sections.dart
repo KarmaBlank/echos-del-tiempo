@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
@@ -13,8 +14,11 @@ import '../../../game_engine/models/player_state.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/models/weapon_passive.dart';
+import '../../../game_engine/rules/build_plan_rules.dart';
 import '../../../game_engine/rules/craft_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import '../../build_planner/presentation/build_fit_badge.dart';
+import '../../build_planner/presentation/build_plan_providers.dart';
 import '../../combat/domain/skill_text.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
@@ -68,9 +72,12 @@ class ShopContext {
 /// Pestañas de la tienda (armería del lobby y preparación). Ver
 /// docs/specs/panels.md § "Armería" (loot v2).
 enum ArmoryTab {
-  buy('COMPRAR', 'Armas base por nivel; cualquier clase las equipa si cumple los requisitos.'),
-  forge('FORJA', 'Sube una estadística del arma; cada 2 niveles sube su pasiva.'),
-  fuse('FUSIÓN', 'Elige arma, acción y confirma: ves el resultado antes de pagar.'),
+  buy('COMPRAR',
+      'Armas base por nivel; cualquier clase las equipa si cumple los requisitos.'),
+  forge(
+      'FORJA', 'Sube una estadística del arma; cada 2 niveles sube su pasiva.'),
+  fuse('FUSIÓN',
+      'Elige arma, acción y confirma: ves el resultado antes de pagar.'),
   items('CONSUMIBLES',
       'Se usan en batalla. Máximo ${ProgressionRules.maxItems} de cada uno.');
 
@@ -155,7 +162,8 @@ class ItemCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: ProtoText(describeSkillMarkup(cat.ultimates[w.type]!, null,
-                  ultimate: true, nameColor: ProtoColors.hex(ProtoColors.pink))),
+                  ultimate: true,
+                  nameColor: ProtoColors.hex(ProtoColors.pink))),
             ),
         ],
       ],
@@ -166,7 +174,10 @@ class ItemCard extends StatelessWidget {
 /// ATQ / MAG / VEL / CRÍT / DEF de [before] → [after].
 class StatsCompare extends StatelessWidget {
   const StatsCompare(
-      {super.key, required this.title, required this.before, required this.after});
+      {super.key,
+      required this.title,
+      required this.before,
+      required this.after});
 
   final String title;
   final DerivedStats before;
@@ -218,16 +229,16 @@ class ListHeader extends StatelessWidget {
 
 /// Bases Comunes a la venta (cualquier familia), por nivel, con filtro
 /// de familia y comparación con la equipada.
-class BuyTab extends StatefulWidget {
+class BuyTab extends ConsumerStatefulWidget {
   const BuyTab({super.key, required this.shop});
 
   final ShopContext shop;
 
   @override
-  State<BuyTab> createState() => _BuyTabState();
+  ConsumerState<BuyTab> createState() => _BuyTabState();
 }
 
-class _BuyTabState extends State<BuyTab> {
+class _BuyTabState extends ConsumerState<BuyTab> {
   String? _sel;
   late String? _family = widget.shop.profile.classId;
 
@@ -255,6 +266,13 @@ class _BuyTabState extends State<BuyTab> {
     final owned = p.items.any((i) => i.baseId == w.id);
     final sample = ItemInstance.common('_shop', w.id, itemLevel: w.level);
     final eq = shop.rules.equippedItem(p);
+    // ★ Tu build (build_planner.md § 4.1): qué metas cumple cada base.
+    final plan = ref.watch(buildPlanProvider).plan;
+    final fitRules = ref.watch(buildPlanRulesProvider);
+    ItemFit fitOf(String baseId) => plan.goalCount == 0
+        ? ItemFit.none
+        : fitRules.itemFit(plan, ItemInstance.common('_shop', baseId));
+    final fit = fitOf(w.id);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -270,7 +288,9 @@ class _BuyTabState extends State<BuyTab> {
                   key: ValueKey('shop-row-${x.id}'),
                   selected: x.id == w.id,
                   onTap: () => setState(() => _sel = x.id),
-                  label: '${protoEsc(x.name)} '
+                  label:
+                      '${fitOf(x.id).any ? '<span style="color:$kPlanHex">★</span> ' : ''}'
+                      '${protoEsc(x.name)} '
                       '${protoColor(ProtoColors.dim, protoEsc(x.type))}',
                   value: 'Nv ${x.level}  '
                       '${p.items.any((i) => i.baseId == x.id) ? protoColor(ProtoColors.green, 'TIENES') : '${rules.meetsRequirements(p, x) ? '' : '${protoColor(ProtoColors.red, 'Req')} '}<b>₵${x.price}</b>'}',
@@ -290,6 +310,9 @@ class _BuyTabState extends State<BuyTab> {
                           onPressed: () => shop.controller.buyWeapon(w.id)),
                     ],
               children: [
+                if (fit.any)
+                  ProtoText(buildFitMarkup(fit, lead: 'Sirve')!,
+                      key: const ValueKey('shop-build-fit')),
                 // Primero lo que cambia (antes → después), después la ficha.
                 StatsCompare(
                   title: 'Si la equipas (ahora: '
@@ -369,7 +392,8 @@ String upgradeValueText(UpgradeStat s, int level) {
 /// Cuándo sube la pasiva de [it] con la forja (texto en markup).
 String passiveForgeNote(ItemInstance it) {
   if (it.passiveId == null || !it.rarity.hasPassive) {
-    return protoColor(ProtoColors.dim, 'Sin pasiva (Épico y Legendario la traen)');
+    return protoColor(
+        ProtoColors.dim, 'Sin pasiva (Épico y Legendario la traen)');
   }
   final l = it.effectivePassiveLevel;
   if (l >= ItemInstance.maxPassiveLevel) {
@@ -460,7 +484,8 @@ class _ForgeTabState extends State<ForgeTab> {
           ProtoText(passiveForgeNote(it),
               key: const ValueKey('forge-passive-note')),
           const SizedBox(height: 4),
-          for (final s in rules.upgradeStatsFor(rules.catalog.weapons[it.baseId]!))
+          for (final s
+              in rules.upgradeStatsFor(rules.catalog.weapons[it.baseId]!))
             _UpgradeRow(shop: shop, item: it, stat: s),
         ],
       ),

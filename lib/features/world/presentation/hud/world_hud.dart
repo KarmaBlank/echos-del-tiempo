@@ -16,6 +16,7 @@ import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../../game_engine/rules/world_rules.dart';
 import '../../../../game_engine/data/trials_catalog.dart';
 import '../../../ascension/domain/ascension_text.dart';
+import '../../../build_planner/presentation/build_feed.dart';
 import '../../../endgame/domain/endgame_text.dart';
 import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
@@ -240,6 +241,11 @@ class WorldHud extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Avances del plan de build (build_planner.md § 5).
+                    Consumer(
+                      builder: (context, ref, _) =>
+                          BuildToasts(feed: ref.watch(buildFeedProvider)),
+                    ),
                     Consumer(
                       builder: (context, ref, _) =>
                           LootToasts(feed: ref.watch(lootFeedProvider)),

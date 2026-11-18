@@ -1,4 +1,5 @@
 import '../../../game_engine/models/atlas.dart';
+import '../../../game_engine/models/build_plan.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
@@ -12,11 +13,16 @@ class CharacterSlot {
     required this.profile,
     this.created,
     this.lastPlayed,
+    this.plan,
   });
 
   final String id;
   final PlayerProfile profile;
   final DateTime? created;
+
+  /// Plan de build (docs/specs/build_planner.md § 1; JSON `plan`,
+  /// opcional). Local: no viaja por la red.
+  final BuildPlan? plan;
 
   /// `null` = nunca jugó.
   final DateTime? lastPlayed;
@@ -25,12 +31,16 @@ class CharacterSlot {
   String get displayName =>
       profile.name.trim().isEmpty ? Account.defaultName : profile.name;
 
-  CharacterSlot copyWith({PlayerProfile? profile, DateTime? lastPlayed}) =>
+  CharacterSlot copyWith(
+          {PlayerProfile? profile,
+          DateTime? lastPlayed,
+          BuildPlan? Function()? plan}) =>
       CharacterSlot(
         id: id,
         profile: profile ?? this.profile,
         created: created,
         lastPlayed: lastPlayed ?? this.lastPlayed,
+        plan: plan != null ? plan() : this.plan,
       );
 
   Map<String, Object?> toJson() => {
@@ -38,6 +48,7 @@ class CharacterSlot {
         if (created != null) 'new': created!.toIso8601String(),
         if (lastPlayed != null) 'last': lastPlayed!.toIso8601String(),
         'p': profile.toJson(),
+        if (plan case final pl? when !pl.isEmpty) 'plan': pl.toJson(),
       };
 
   static CharacterSlot? fromJson(Object? raw) {
@@ -49,6 +60,7 @@ class CharacterSlot {
       profile: PlayerProfile.fromJson(Map<String, Object?>.from(p)),
       created: _date(raw['new']),
       lastPlayed: _date(raw['last']),
+      plan: BuildPlan.fromJson(raw['plan']),
     );
   }
 
@@ -160,6 +172,12 @@ class Account {
   Account touch(String id, DateTime when) => _copy(characters: [
         for (final c in characters)
           c.id == id ? c.copyWith(lastPlayed: when) : c,
+      ]);
+
+  /// Cambia (o borra, con `null`) el plan de build de un personaje.
+  Account withPlan(String id, BuildPlan? plan) => _copy(characters: [
+        for (final c in characters)
+          c.id == id ? c.copyWith(plan: () => plan) : c,
       ]);
 
   Account withStash(Stash stash) => _copy(stash: stash);

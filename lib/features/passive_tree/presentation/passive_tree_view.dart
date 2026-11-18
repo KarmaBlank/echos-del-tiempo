@@ -29,6 +29,8 @@ class PassiveTreeView extends StatefulWidget {
     this.resetLabel = 'REINICIAR ÁRBOL',
     this.height = PassiveTreeView.viewportHeight,
     this.showHelp = true,
+    this.planned = const {},
+    this.onPlan,
   });
 
   final PassiveTreeRules rules;
@@ -47,6 +49,15 @@ class PassiveTreeView extends StatefulWidget {
 
   /// Línea de ayuda propia (el panel de personaje ya pone la suya).
   final bool showHelp;
+
+  /// Nodos del plan de build: anillo violeta (build_planner.md § 4.2).
+  final Set<String> planned;
+
+  /// Modo PLANIFICAR: el clic marca o desmarca el nodo en el plan en vez
+  /// de tomarlo.
+  final ValueChanged<String>? onPlan;
+
+  bool get planning => onPlan != null;
 
   /// Lado del lienzo (mundo) y píxeles por unidad de árbol.
   static const size = 1080.0;
@@ -140,7 +151,11 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     final id = _hit(pos);
     if (id == null) return;
     setState(() => _selected = id);
-    if (_status(id).canTake) widget.onTake(id);
+    if (widget.onPlan case final plan?) {
+      plan(id);
+    } else if (_status(id).canTake) {
+      widget.onTake(id);
+    }
   }
 
   /// Zoom actual (escala en x; la z queda en 1).
@@ -374,6 +389,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                           highlightPath: hoverPath,
                           route: route,
                           hits: hits,
+                          planned: widget.planned,
                         ),
                       ),
                     ),
@@ -491,6 +507,10 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                 if (cost != null)
                   Text(retroText(cost),
                       style: const TextStyle(color: ProtoColors.gold)),
+                if (widget.planned.contains(id))
+                  Text(retroText('★ En tu build'),
+                      style:
+                          const TextStyle(color: PassiveTreePainter.planColor)),
                 Text(retroText(stateText), style: TextStyle(color: stateColor)),
               ],
             ),
@@ -526,6 +546,20 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                 Container(width: 8, height: 8, color: color),
                 const SizedBox(width: 8),
                 Flexible(child: Text(retroText(label))),
+              ]),
+            ),
+          if (widget.planned.isNotEmpty || widget.planning)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(children: [
+                Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                        border: Border.all(
+                            color: PassiveTreePainter.planColor, width: 2))),
+                const SizedBox(width: 8),
+                Flexible(child: Text(retroText('En tu plan de build'))),
               ]),
             ),
           Padding(
@@ -595,7 +629,19 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         // Bloqueado: el motivo ya va junto al botón de tomar.
         if (st.state != TreeNodeState.locked)
           Text(retroText(stateText), style: TextStyle(color: stateColor)),
-        if (st.state != TreeNodeState.start &&
+        if (widget.planned.contains(node.id))
+          Text(retroText('★ En tu build'),
+              style: const TextStyle(color: PassiveTreePainter.planColor)),
+        if (widget.onPlan case final plan?) ...[
+          const SizedBox(height: 8),
+          PanelButton(
+              widget.planned.contains(node.id)
+                  ? 'QUITAR DEL PLAN'
+                  : 'PLANIFICAR',
+              key: const ValueKey('tree-plan'),
+              accent: PassiveTreePainter.planColor,
+              onPressed: () => plan(node.id)),
+        ] else if (st.state != TreeNodeState.start &&
             st.state != TreeNodeState.taken) ...[
           const SizedBox(height: 8),
           // El motivo largo no desborda el panel: se achica si hace falta.
@@ -628,6 +674,7 @@ class PassiveTreePainter extends CustomPainter {
     this.highlightPath,
     this.route = const {},
     this.hits = const {},
+    this.planned = const {},
   });
 
   final PassiveTreeCatalog catalog;
@@ -644,9 +691,13 @@ class PassiveTreePainter extends CustomPainter {
   /// Nodos que coinciden con la búsqueda.
   final Set<String> hits;
 
+  /// Nodos del plan de build (anillo violeta).
+  final Set<String> planned;
+
   static const locked = Color(0xFF3A4570);
   static const keyTaken = Color(0xFFFF6B6B);
   static const searchColor = Color(0xFF81ECEC);
+  static const planColor = Color(0xFFC39BFF);
 
   bool _has(String id) {
     final s = states[id];
@@ -721,6 +772,15 @@ class PassiveTreePainter extends CustomPainter {
         canvas.drawCircle(c, r, Paint()..color = fill);
         canvas.drawCircle(c, r, border);
       }
+      if (planned.contains(n.id)) {
+        canvas.drawCircle(
+            c,
+            r + (hits.contains(n.id) ? 9 : 5),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2.5
+              ..color = planColor);
+      }
       if (hits.contains(n.id)) {
         canvas.drawCircle(
             c,
@@ -765,6 +825,7 @@ class PassiveTreePainter extends CustomPainter {
       old.highlightPath != highlightPath ||
       !_sameSet(old.route, route) ||
       !_sameSet(old.hits, hits) ||
+      !_sameSet(old.planned, planned) ||
       !_sameStates(old.states, states);
 
   static bool _sameSet(Set<String> a, Set<String> b) =>

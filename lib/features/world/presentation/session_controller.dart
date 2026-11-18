@@ -883,6 +883,17 @@ class SessionController extends StateNotifier<SessionView?> {
     if (_chat.length > maxMessages) _chat.removeAt(0);
   }
 
+  /// Aviso de sistema **solo de este dispositivo** (no viaja por la red):
+  /// lo usan los avisos del plan de build (docs/specs/build_planner.md
+  /// § 5). Va al registro y al chat.
+  void addLocalNotice(String text) {
+    if (!mounted) return;
+    _messages.add(text);
+    if (_messages.length > maxMessages) _messages.removeAt(0);
+    _addChat(ChatLine.system(text));
+    _emit();
+  }
+
   void _save({bool force = false}) {
     final p = _s?.players[localId]?.profile;
     if (p == null || identical(p, _lastSaved)) return;

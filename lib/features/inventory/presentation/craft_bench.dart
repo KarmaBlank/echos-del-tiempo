@@ -6,12 +6,18 @@ import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../app/theme/retro_theme.dart';
+import '../../../app/widgets/action_card.dart';
+import '../../../app/widgets/cost_chip.dart';
 import '../../../app/widgets/menu_widgets.dart';
+import '../../../app/widgets/pixel_icon.dart';
+import '../../../app/widgets/section_panel.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/craft_rules.dart';
+import '../../build_planner/presentation/build_fit_badge.dart';
 import '../domain/item_text.dart';
 import 'shop_sections.dart';
 
@@ -430,6 +436,72 @@ class _CraftBenchState extends State<CraftBench> {
   }
 
   // ------------------------------------------------------------------
+  // Piezas de las tarjetas
+  // ------------------------------------------------------------------
+
+  static PixelIconKind _matIcon(CraftMaterial m) => switch (m) {
+        CraftMaterial.esquirla => PixelIconKind.shard,
+        CraftMaterial.cristal => PixelIconKind.gem,
+        CraftMaterial.prisma => PixelIconKind.prism,
+        CraftMaterial.ancla => PixelIconKind.anchor,
+      };
+
+  static Color _matColor(CraftMaterial m) => switch (m) {
+        CraftMaterial.esquirla => ProtoColors.sky,
+        CraftMaterial.cristal => ProtoColors.violet,
+        CraftMaterial.prisma => ProtoColors.pink,
+        CraftMaterial.ancla => ProtoColors.gold,
+      };
+
+  static PixelIconKind _opIcon(CraftOp op) => switch (op) {
+        CraftOp.reroll => PixelIconKind.dice,
+        CraftOp.addAffix => PixelIconKind.plus,
+        CraftOp.upgradeRarity => PixelIconKind.gem,
+        CraftOp.transferAffix => PixelIconKind.arrowIn,
+        CraftOp.transferPassive => PixelIconKind.shard,
+        CraftOp.transferSkill => PixelIconKind.star,
+        CraftOp.removeAffix => PixelIconKind.trash,
+        _ => PixelIconKind.anvil,
+      };
+
+  static (PixelIconKind, Color) _groupIcon(BenchGroup g) => switch (g) {
+        BenchGroup.improve => (PixelIconKind.gem, ProtoColors.gold),
+        BenchGroup.transfer => (PixelIconKind.arrowIn, ProtoColors.sky),
+        BenchGroup.remove => (PixelIconKind.trash, ProtoColors.red),
+        BenchGroup.change => (PixelIconKind.anvil, ProtoColors.orange),
+      };
+
+  /// Chip de costo: moneda y cada material con su ícono, en verde lo que
+  /// alcanza y en rojo lo que falta.
+  CostChip _costChip(CraftResult r, PlayerProfile p) => CostChip([
+        if (r.credits > 0)
+          CostPart(PixelIconKind.coin, '${r.credits}',
+              ok: p.credits >= r.credits),
+        for (final e in r.materials.entries)
+          CostPart(_matIcon(e.key), '${e.value} ${e.key.label.split(' ').first}',
+              iconColor: _matColor(e.key), ok: p.material(e.key) >= e.value),
+      ]);
+
+  /// Efecto corto de [op] sobre [t] (se ve con el mouse sobre la tarjeta).
+  String _opPreview(ItemInstance t, CraftOp op) {
+    final n = t.modCount, max = t.rarity.maxMods;
+    final next = t.rarity.index + 1 < Rarity.values.length
+        ? Rarity.values[t.rarity.index + 1].label
+        : t.rarity.label;
+    return switch (op) {
+      CraftOp.reroll => 'Mods $n: valores nuevos al azar',
+      CraftOp.addAffix || CraftOp.transferAffix =>
+        'Mods $n/$max → ${n + 1}/$max',
+      CraftOp.upgradeRarity => 'Rareza ${t.rarity.label} → $next',
+      CraftOp.transferPassive => 'Pasiva → la de la otra arma',
+      CraftOp.transferSkill =>
+        'Habilidades traídas ${t.extraSkills.length} → ${t.extraSkills.length + 1}',
+      CraftOp.removeAffix => 'Mods $n/$max → ${n > 0 ? n - 1 : 0}/$max',
+      _ => 'Otro tipo de arma, misma rareza',
+    };
+  }
+
+  // ------------------------------------------------------------------
   // Paso 1: ¿qué arma?
   // ------------------------------------------------------------------
 
@@ -440,26 +512,43 @@ class _CraftBenchState extends State<CraftBench> {
     return PanelSplit(
       listWidth: 480,
       list: [
-        for (final it in items)
-          MenuRow(
-            wrap: true,
-            key: ValueKey('bench-weapon-${it.uid}'),
-            selected: it.uid == target.uid,
-            onTap: () {
-              if (it.uid == target.uid) return _go(1);
-              setState(() {
-                _target = it.uid;
-                _pick = 0;
-                _source = null;
-              });
-              _focus.requestFocus();
-            },
-            label: itemNameMarkup(rules, it),
-            value: it.uid == p.equippedUid
-                ? protoColor(ProtoColors.gold, 'EQUIPADA')
-                : protoColor(ProtoColors.dim,
-                    '${it.rarity.label} · Nv ${rules.items.baseOf(it)?.level ?? 1}'),
-          ),
+        CardGrid(
+          minWidth: 220,
+          children: [
+            for (final it in items)
+              () {
+                final color =
+                    ProtoColors.parse(rarityHex(it.rarity)) ?? ProtoColors.ink;
+                return ActionCard(
+                  key: ValueKey('bench-weapon-${it.uid}'),
+                  selected: it.uid == target.uid,
+                  band: color,
+                  bandLabel: it.rarity.label.substring(0, 1),
+                  icon: PixelIcon(PixelIconKind.sword,
+                      size: RetroType.width(context, 24), color: color),
+                  title: itemNameMarkup(rules, it),
+                  // ★ si el arma cumple algo de tu build.
+                  badge: BuildFitBadge(item: it),
+                  description: '${it.rarity.label} · Nv '
+                      '${rules.items.baseOf(it)?.level ?? 1} · Mods '
+                      '${it.modCount}/${it.rarity.maxMods}',
+                  footer: it.uid == p.equippedUid
+                      ? const Text('EQUIPADA',
+                          style: TextStyle(color: ProtoColors.gold))
+                      : null,
+                  onTap: () {
+                    if (it.uid == target.uid) return _go(1);
+                    setState(() {
+                      _target = it.uid;
+                      _pick = 0;
+                      _source = null;
+                    });
+                    _focus.requestFocus();
+                  },
+                );
+              }(),
+          ],
+        ),
       ],
       detail: PanelDetail(
         footer: [
@@ -492,58 +581,106 @@ class _CraftBenchState extends State<CraftBench> {
           _source = null;
           _base = null;
           _step = 2;
-            _lastBefore = null;
+          _lastBefore = null;
           _done = false;
           _focus.requestFocus();
         });
     _enter = () => choose(_op);
-    // Todo el ancho para la lista (sin ficha grande al costado): cada grupo
-    // con su título y qué hace; cada acción con su explicación y, a la
-    // derecha, el costo o el motivo completo. Nada se corta.
-    final rows = <Widget>[];
-    for (final g in BenchGroup.values) {
-      rows.add(Padding(
-        padding: EdgeInsets.only(top: g.index == 0 ? 0 : 4, bottom: 2),
-        child: Row(
-          children: [
-            Expanded(
-              child: ProtoText('<b>${g.label}</b> '
-                  '${protoColor(ProtoColors.sky, '— ${protoEsc(g.note)}')}'),
-            ),
-            if (g.index == 0) const KeyHints(),
-          ],
+    // Una sección enmarcada por grupo (ícono + título + qué hace) y una
+    // tarjeta por acción: ícono, nombre, explicación (con el mouse, el
+    // efecto) y el chip de costo o el motivo con candado.
+    Widget card(CraftOp op) {
+      final why = _quickReason(p, target, op);
+      // Costo con la elección por defecto; si esa no vale (p. ej. el mod
+      // depende del origen), se elige en el paso 3.
+      final pre = shop.guards.craftPreview(p, _action(p, target, op));
+      final (_, gColor) = _groupIcon(op.group);
+      return ActionCard(
+        key: ValueKey('bench-op-${op.name}'),
+        selected: op == _op,
+        disabled: why != null,
+        icon: PixelIcon(_opIcon(op),
+            size: RetroType.width(context, 24),
+            color: why == null ? gColor : ProtoColors.dim),
+        title: '<b>${protoEsc(op.title)}</b>',
+        description: protoEsc(op.short),
+        preview: why == null ? protoEsc(_opPreview(target, op)) : null,
+        // ★ si el resultado (vista previa) avanza una meta de tu build.
+        badge: why == null && pre.error == null && pre.after != null
+            ? BuildFitBadge(item: pre.after, before: target)
+            : null,
+        footer: KeyedSubtree(
+          key: ValueKey('bench-op-why-${op.name}'),
+          child: why != null
+              ? CostChip.blocked(why)
+              : pre.error == null
+                  ? _costChip(pre, p)
+                  : const CostChip.note('Se puede · eliges en el paso 3'),
         ),
-      ));
-      for (final op in CraftOpText.bench) {
-        if (op.group != g) continue;
-        final why = _quickReason(p, target, op);
-        // Costo con la elección por defecto; si esa no vale (p. ej. el mod
-        // depende del origen), solo "Se puede".
-        final pre = shop.guards.craftPreview(p, _action(p, target, op));
-        final cost = pre.error == null ? craftCostShort(pre) : 'Se puede';
-        rows.add(MenuRow(
-          wrap: true,
-          key: ValueKey('bench-op-${op.name}'),
-          selected: op == _op,
-          onTap: () => choose(op),
-          label: '<b>${protoEsc(op.title)}</b>',
-          description: protoEsc(op.short),
-          valueKey: ValueKey('bench-op-why-${op.name}'),
-          value: why == null
-              ? protoColor(ProtoColors.green, protoEsc(cost))
-              : protoColor(ProtoColors.red, protoEsc(why)),
-        ));
-      }
+        onTap: () => choose(op),
+      );
     }
+
+    Widget section(BenchGroup g) {
+      final (icon, color) = _groupIcon(g);
+      return SectionPanel(
+        key: ValueKey('bench-group-${g.name}'),
+        icon: icon,
+        color: color,
+        title: g.label,
+        subtitle: '— ${g.note}',
+        children: [
+          for (final op in CraftOpText.bench)
+            if (op.group == g) card(op),
+        ],
+      );
+    }
+
+    final s = [for (final g in BenchGroup.values) section(g)];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const Align(alignment: Alignment.centerRight, child: KeyHints()),
+        const SizedBox(height: 4),
         Expanded(
           child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: rows,
-            ),
+            child: LayoutBuilder(builder: (context, box) {
+              final col = RetroType.width(context, 340);
+              final w = box.maxWidth;
+              final cols = w >= 3 * col + 24
+                  ? 3
+                  : w >= 2 * col + 12
+                      ? 2
+                      : 1;
+              Widget column(List<Widget> c) => Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: c));
+              const gap = SizedBox(width: 12);
+              return switch (cols) {
+                3 => Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      column([s[0]]),
+                      gap,
+                      column([s[1]]),
+                      gap,
+                      column([s[2], s[3]]),
+                    ],
+                  ),
+                2 => Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      column([s[0], s[2]]),
+                      gap,
+                      column([s[1], s[3]]),
+                    ],
+                  ),
+                _ => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: s),
+              };
+            }),
           ),
         ),
       ],
@@ -675,46 +812,36 @@ class _CraftBenchState extends State<CraftBench> {
       }
     }
     if (list.length == 1) {
-      list.add(const SizedBox(height: 4));
-      list.add(const Text('AHORA', style: TextStyle(color: ProtoColors.gold)));
-      list.add(ItemCard(
-          rules: rules,
-          item: target,
-          level: p.level,
-          attributes: p.attributes,
-          equipped: target.uid == p.equippedUid));
+      list.add(dim('No hay nada que elegir: mira el resultado a la derecha.'));
     }
+    list.add(const SizedBox(height: 8));
+    list.add(const KeyHints());
 
     return PanelSplit(
-      listWidth: 480,
+      listWidth: 420,
       list: list,
       detail: PanelDetail(
         footer: [
-          const KeyHints(),
           PanelButton('‹ OTRA ACCIÓN',
               key: const ValueKey('bench-back'), onPressed: () => _go(1)),
-          PanelButton(op.verb,
+          ConfirmButton(op.verb,
               key: const ValueKey('craft-confirm'),
-              accent: ProtoColors.green,
               reason: reason,
+              cost: r.credits > 0 || r.materials.isNotEmpty
+                  ? _costChip(r, p)
+                  : null,
               onPressed: confirm),
         ],
-        children: [
-          ..._preview(p, target, op, r),
-        ],
+        children: _preview(p, target, op, r),
       ),
     );
   }
 
+  /// Vista previa: lo que gastás y perdés y una tabla ANTES | DESPUÉS.
   List<Widget> _preview(
       PlayerProfile p, ItemInstance target, CraftOp op, CraftResult r) {
     final rules = shop.rules;
     final after = r.after;
-    Widget title(String t) => Padding(
-          padding: const EdgeInsets.only(top: 6, bottom: 2),
-          child: Text(retroText(t),
-              style: const TextStyle(color: ProtoColors.gold)),
-        );
     final out = <Widget>[];
     final last = _lastBefore;
     if (_done && last != null && last.uid == target.uid) {
@@ -748,86 +875,142 @@ class _CraftBenchState extends State<CraftBench> {
           key: const ValueKey('craft-error'),
           protoColor(ProtoColors.red, 'No se puede: ${protoEsc(r.error!)}')));
     }
+    out.add(const SizedBox(height: 8));
 
-    // AHORA → DESPUÉS
-    out.add(title(after == null && op.isRandom
-        ? 'ANTES → DESPUÉS (al azar)'
-        : 'ANTES → DESPUÉS'));
-    final name = after == null ||
-            rules.items.displayName(after) == rules.items.displayName(target)
-        ? itemNameMarkup(rules, target)
-        : '${itemNameMarkup(rules, target)} → ${itemNameMarkup(rules, after)}';
-    out.add(ProtoText(name, key: const ValueKey('craft-name')));
+    // ANTES | DESPUÉS en dos columnas.
+    final labelW = RetroType.em(context, 14, size: RetroType.small);
+    Widget cmp(String label, String before, String after,
+            {Key? key, Widget? extra}) =>
+        Container(
+          key: key,
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          decoration: const BoxDecoration(
+              border: Border(
+                  bottom: BorderSide(color: ProtoColors.panelBorder))),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: labelW,
+                child: Row(
+                  children: [
+                    Flexible(
+                        child: Text(retroText(label),
+                            style: const TextStyle(color: ProtoColors.sky))),
+                    if (extra != null) ...[const SizedBox(width: 4), extra],
+                  ],
+                ),
+              ),
+              Expanded(child: ProtoText(before)),
+              const SizedBox(width: 10),
+              Expanded(child: ProtoText(after)),
+            ],
+          ),
+        );
+    final random = after == null && op.isRandom;
+    final shown = after ?? target;
+    final same = protoColor(ProtoColors.dim, '=');
+    out.add(cmp('', '<b style="color:#ffd166">ANTES</b>',
+        '<b style="color:#ffd166">DESPUÉS</b>${random ? ' ${protoColor(ProtoColors.sky, '(al azar)')}' : ''}'));
+    final n0 = rules.items.displayName(target);
+    out.add(cmp('Arma', itemNameMarkup(rules, target),
+        after == null || rules.items.displayName(after) == n0
+            ? same
+            : itemNameMarkup(rules, after),
+        key: const ValueKey('craft-name')));
     if (after != null && after.baseId != target.baseId) {
       final b0 = rules.items.baseOf(target), b1 = rules.items.baseOf(after);
-      out.add(ProtoText(
-          key: const ValueKey('craft-base'),
-          'Base: ${protoEsc(b0?.name ?? target.baseId)} '
-          '<small>(${protoEsc(b0?.type ?? '?')})</small> → '
+      out.add(cmp(
+          'Base',
+          '${protoEsc(b0?.name ?? target.baseId)} '
+              '${protoColor(ProtoColors.dim, protoEsc(b0?.type ?? '?'))}',
           '<b>${protoEsc(b1?.name ?? after.baseId)}</b> '
-          '<small>(${protoEsc(b1?.type ?? '?')}, Nv ${b1?.level ?? '?'})</small>'));
-      if (b1 != null) {
-        out.add(ProtoText(requirementsLineMarkup(b1, p.level, p.attributes)));
-      }
+              '${protoColor(ProtoColors.dim, '${protoEsc(b1?.type ?? '?')} · Nv ${b1?.level ?? '?'}')}'
+              '${b1 == null ? '' : '<br>${requirementsLineMarkup(b1, p.level, p.attributes)}'}',
+          key: const ValueKey('craft-base')));
     }
-    if (after != null && after.rarity != target.rarity) {
-      out.add(ProtoText('Rareza ${target.rarity.label} → '
-          '<b style="color:${rarityHex(after.rarity)}">${after.rarity.label}</b>'));
-    }
-    final shown = after ?? target;
-    out.add(Row(
-      children: [
-        Flexible(
-          child: ProtoText(
-              key: const ValueKey('craft-mods-title'),
-              '<span class="k">Mods ${shown.modCount}/${shown.rarity.maxMods}</span> '
-              '<small>(lugar de un ${shown.rarity.label})</small>'),
-        ),
-        const SizedBox(width: 6),
-        const RetroTooltip(
-          key: ValueKey('craft-tier-help'),
-          message: kTierHelp,
-          child: Text('[¿T1–T5?]', style: TextStyle(color: ProtoColors.sky)),
-        ),
-      ],
-    ));
-    out.add(ProtoText(
-        key: const ValueKey('craft-mods'),
-        after == null ? _modList(target) : _diffMods(target, after)));
+    out.add(cmp(
+        'Rareza',
+        '<span style="color:${rarityHex(target.rarity)}">${target.rarity.label}</span>',
+        after == null || after.rarity == target.rarity
+            ? same
+            : '<b style="color:${rarityHex(after.rarity)}">${after.rarity.label}</b> '
+                '${protoColor(ProtoColors.green, '▲')}'));
     final pBefore = rules.items.passiveText(target);
     final pAfter = after == null ? pBefore : rules.items.passiveText(after);
     if (pBefore != null || pAfter != null) {
-      out.add(ProtoText(
-          key: const ValueKey('craft-passive'),
+      out.add(cmp(
+          'Pasiva',
+          '<span style="color:$kPassiveHex">${protoEsc(pBefore ?? '—')}</span>',
           pBefore == pAfter
-              ? 'Pasiva: <span style="color:$kPassiveHex">${protoEsc(pBefore!)}</span>'
-              : 'Pasiva: ${protoColor(ProtoColors.dim, protoEsc(pBefore ?? '—'))} → '
-                  '<b style="color:$kPassiveHex">${protoEsc(pAfter ?? '—')}</b>'));
+              ? same
+              : '<b style="color:$kPassiveHex">${protoEsc(pAfter ?? '—')}</b>',
+          key: const ValueKey('craft-passive')));
     }
     final sBefore = rules.items.skillsOf(target);
     final sAfter = after == null ? sBefore : rules.items.skillsOf(after);
-    out.add(ProtoText(
-        key: const ValueKey('craft-skills'),
-        'Habilidades: ${[
+    out.add(cmp(
+        'Habilidades',
+        sBefore.map((id) => protoEsc(skillName(rules, id))).join('<br>'),
+        '${[
           for (final id in sAfter)
             sBefore.contains(id)
                 ? protoEsc(skillName(rules, id))
                 : protoColor(ProtoColors.green,
-                    '<b>${protoEsc(skillName(rules, id))}</b> (nueva)'),
-        ].join(' · ')} '
-        '<small>(traídas ${shown.extraSkills.length}/${shown.rarity.skillSlots})</small>'));
+                    '<b>${protoEsc(skillName(rules, id))}</b> (nueva) ▲'),
+        ].join('<br>')}<br>'
+            '${protoColor(ProtoColors.dim, 'traídas ${shown.extraSkills.length}/${shown.rarity.skillSlots}')}',
+        key: const ValueKey('craft-skills')));
+    out.add(cmp(
+        'Mods',
+        'Mods ${target.modCount}/${target.rarity.maxMods}',
+        'Mods ${shown.modCount}/${shown.rarity.maxMods} '
+            '${protoColor(ProtoColors.dim, '(lugar de un ${shown.rarity.label})')}',
+        key: const ValueKey('craft-mods-title'),
+        extra: const RetroTooltip(
+          key: ValueKey('craft-tier-help'),
+          message: kTierHelp,
+          child: Text('[?]', style: TextStyle(color: ProtoColors.sky)),
+        )));
+    out.add(cmp('', _modList(target),
+        after == null
+            ? protoColor(ProtoColors.sky,
+                random ? 'Se decide al confirmar' : '(sin cambios)')
+            : _sameMods(target, after)
+                ? same
+                : _diffMods(target, after),
+        key: const ValueKey('craft-mods')));
+    if (after != null && rules.catalog.weapons.containsKey(after.baseId)) {
+      final b = shop.preview.withItem(p, target);
+      final a = shop.preview.withItem(p, after);
+      String delta(num x0, num x1, String Function(num) f,
+          {bool higher = true}) {
+        if ((x1 - x0).abs() < 1e-6) return '${f(x1)} $same';
+        final up = (x1 > x0) == higher;
+        return '<b style="color:${up ? '#7bed9f' : '#ff6b81'}">${f(x1)} '
+            '${x1 > x0 ? '▲' : '▼'}</b>';
+      }
+
+      String i(num x) => '${x.round()}';
+      for (final (l, x0, x1, f) in [
+        ('ATQ', b.attack, a.attack, i),
+        ('MAG', b.magic, a.magic, i),
+        ('VEL', b.speed, a.speed, (num x) => x.toStringAsFixed(1)),
+        ('CRÍT', b.critChance, a.critChance,
+            (num x) => '${(x * 100).round()}%'),
+        ('DEF', b.defense, a.defense, i),
+        ('HP', b.maxHp, a.maxHp, i),
+      ]) {
+        out.add(cmp(l, f(x0), delta(x0, x1, f)));
+      }
+    }
     if (r.outcomes.isNotEmpty) {
-      out.add(title('PUEDE SALIR'));
+      out.add(const SizedBox(height: 6));
+      out.add(const Text('PUEDE SALIR',
+          style: TextStyle(color: ProtoColors.gold)));
       out.add(ProtoText(
           key: const ValueKey('craft-outcomes'),
           protoColor(ProtoColors.sky, protoEsc(r.outcomes.join(' · ')))));
-    }
-    if (after != null && rules.catalog.weapons.containsKey(after.baseId)) {
-      out.add(StatsCompare(
-        title: 'Tus stats si la equipas',
-        before: shop.preview.withItem(p, target),
-        after: shop.preview.withItem(p, after),
-      ));
     }
     return out;
   }
@@ -848,6 +1031,11 @@ class _CraftBenchState extends State<CraftBench> {
         ? protoColor(ProtoColors.green, 'Nada')
         : parts.join(' · ');
   }
+
+  bool _sameMods(ItemInstance a, ItemInstance b) =>
+      a.affixes.length == b.affixes.length &&
+      [for (var i = 0; i < a.affixes.length; i++) a.affixes[i] == b.affixes[i]]
+          .every((x) => x);
 
   String _modList(ItemInstance it) {
     final rules = shop.rules;

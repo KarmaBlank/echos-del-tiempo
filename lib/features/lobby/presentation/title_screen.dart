@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../build_planner/presentation/build_planner_screen.dart';
 import '../../../app/feature_flags.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_text.dart';
@@ -233,6 +234,14 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     });
   }
 
+  /// Plan de build del elegido (build_planner.md § 4).
+  Future<void> _openBuild() async {
+    final c = _account?.selected;
+    if (c == null || _busy) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => BuildPlannerScreen(characterId: c.id)));
+  }
+
   Future<void> _openStash() async {
     final c = _account?.selected;
     if (c == null || _busy) return;
@@ -405,6 +414,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             PanelButton('ALIJO',
                 key: const ValueKey('char-stash'),
                 onPressed: has ? _openStash : null),
+            PanelButton('BUILD',
+                key: const ValueKey('char-build'),
+                onPressed: has ? _openBuild : null),
           ],
         ),
       ],

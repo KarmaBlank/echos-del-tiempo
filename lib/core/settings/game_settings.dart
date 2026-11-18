@@ -69,6 +69,7 @@ class GameSettings {
     this.fpsLimit = FpsLimit.fps60,
     this.textSize = TextSize.normal,
     this.readingFont = ReadingFont.vt323,
+    this.buildNotices = true,
   });
 
   /// Pantalla completa sin bordes (solo Windows; ver `WindowMode`).
@@ -102,6 +103,10 @@ class GameSettings {
   /// Fuente del texto de lectura (accesibilidad).
   final ReadingFont readingFont;
 
+  /// Avisos de avance del plan de build en el HUD y el chat
+  /// (docs/specs/build_planner.md § 5).
+  final bool buildNotices;
+
   GameSettings copyWith({
     bool? fullscreen,
     bool? screenShake,
@@ -114,6 +119,7 @@ class GameSettings {
     FpsLimit? fpsLimit,
     TextSize? textSize,
     ReadingFont? readingFont,
+    bool? buildNotices,
   }) =>
       GameSettings(
         fullscreen: fullscreen ?? this.fullscreen,
@@ -127,6 +133,7 @@ class GameSettings {
         fpsLimit: fpsLimit ?? this.fpsLimit,
         textSize: textSize ?? this.textSize,
         readingFont: readingFont ?? this.readingFont,
+        buildNotices: buildNotices ?? this.buildNotices,
       );
 
   Map<String, Object?> toJson() => {
@@ -141,6 +148,7 @@ class GameSettings {
         'fpsLimit': fpsLimit.json,
         'textSize': textSize.name,
         'readingFont': readingFont.name,
+        'buildNotices': buildNotices,
       };
 
   /// Valores inválidos o ausentes caen al de por defecto. Claves viejas
@@ -162,6 +170,7 @@ class GameSettings {
       textSize: TextSize.fromName(json['textSize'], d.textSize),
       readingFont:
           ReadingFont.fromName(json['readingFont'], d.readingFont),
+      buildNotices: flag(json['buildNotices'], d.buildNotices),
     );
   }
 
@@ -178,11 +187,13 @@ class GameSettings {
       other.particles == particles &&
       other.fpsLimit == fpsLimit &&
       other.textSize == textSize &&
-      other.readingFont == readingFont;
+      other.readingFont == readingFont &&
+      other.buildNotices == buildNotices;
 
   @override
   int get hashCode => Object.hash(fullscreen, screenShake, flashes,
-      damageNumbers, confirmDrop, scale, crt, particles, fpsLimit, textSize, readingFont);
+      damageNumbers, confirmDrop, scale, crt, particles, fpsLimit, textSize,
+      readingFont, buildNotices);
 
   @override
   String toString() => 'GameSettings(${toJson()})';

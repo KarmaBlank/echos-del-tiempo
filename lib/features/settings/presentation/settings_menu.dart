@@ -687,6 +687,17 @@ class _GameTab extends ConsumerWidget {
             onChanged: (v) => c.update(s.copyWith(confirmDrop: v)),
           ),
         ),
+        _SettingRow(
+          label: 'AVISOS DE BUILD',
+          hint: 'Cartel y línea en el chat cuando avanza una meta de tu '
+              'plan de build (pestaña BUILD del personaje).',
+          control: _Choice<bool>(
+            keyPrefix: 'game-build-notices',
+            options: _yesNo,
+            value: s.buildNotices,
+            onChanged: (v) => c.update(s.copyWith(buildNotices: v)),
+          ),
+        ),
       ],
     );
   }

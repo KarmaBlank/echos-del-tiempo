@@ -330,11 +330,16 @@ class ItemCell extends StatelessWidget {
     this.selected = false,
     this.highlight = false,
     this.size = 44,
+    this.buildMatch = false,
   });
 
   final ProgressionRules rules;
   final CellContent? content;
   final bool selected;
+
+  /// El arma cumple metas del plan de build: ★ arriba a la derecha
+  /// (docs/specs/build_planner.md § 4.1).
+  final bool buildMatch;
 
   /// Destino posible de un arrastre o de MOVER.
   final bool highlight;
@@ -390,6 +395,20 @@ class ItemCell extends StatelessWidget {
                       height: 1,
                       color: RarityColors.of(r),
                       shadows: const [Shadow(offset: Offset(1, 1))])),
+            ),
+          if (buildMatch)
+            Positioned(
+              right: 2,
+              top: 1,
+              child: Text('★',
+                  key: const ValueKey('cell-build'),
+                  textScaler: RetroType.fixedScaler(context),
+                  style: const TextStyle(
+                      fontFamily: RetroType.pixelFamily,
+                      fontSize: RetroType.label,
+                      height: 1,
+                      color: Color(0xFFC39BFF),
+                      shadows: [Shadow(offset: Offset(1, 1))])),
             ),
           if (c?.eco case final e?)
             Positioned(

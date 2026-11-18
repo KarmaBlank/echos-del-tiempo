@@ -287,6 +287,7 @@ con un valor inválido) carga VT323.
 |---|---|---|
 | NÚMEROS FLOTANTES | SÍ / NO | dibujar o no los números flotantes de daño/cura (`FxKind.num`). Los textos (`¡CRÍTICO!`, estados) se mantienen |
 | CONFIRMAR AL TIRAR | SÍ / NO | con NO, `TIRAR` del inventario tira enseguida. `VENDER` y `DESARMAR` siempre confirman (destruyen el arma) |
+| AVISOS DE BUILD | SÍ / NO | con NO no hay carteles ni líneas de chat cuando avanza una meta del plan de build (build_planner.md § 5). La pestaña BUILD y las ★ siguen |
 
 **Auto-recoger loot**: no se ofrece. Levantar caminando encima lo decide
 el host (`SessionEngine.pickupRange`) igual para todos; no es un ajuste
@@ -375,7 +376,7 @@ está abierto:
   `{"fullscreen":false,"shake":true,"flashes":"normal",
   "damageNumbers":true,"confirmDrop":true,"scale":"fit","crt":"normal",
   "particles":"high","fpsLimit":60,"textSize":"normal",
-  "readingFont":"vt323"}` (`fpsLimit` 0 = sin límite; `textSize`
+  "readingFont":"vt323","buildNotices":true}` (`fpsLimit` 0 = sin límite; `textSize`
   `normal` / `large` / `huge`; `readingFont` `vt323` / `classic`).
   Valores inválidos o ausentes = por defecto. Corrupto = por defecto.
 - **v0.5**: `textSize` es nuevo; un `game.json` sin la clave (o con un
