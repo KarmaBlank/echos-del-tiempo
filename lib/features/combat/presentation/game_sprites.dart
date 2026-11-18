@@ -27,9 +27,18 @@ class GameSprites {
     final enemies = <String, Sprite>{};
     final scales = <String, double>{};
     final floats = <String>{};
+    // Los sprites de las ascensiones y sus auras son opcionales: si el
+    // archivo falla, se dibuja la clase base (docs/specs/ascension.md § 5).
+    Future<void> hero(String c) async {
+      try {
+        heroes[c] = await catalog.character(c, 'idle');
+      } catch (_) {
+        if (!c.contains('_')) rethrow;
+      }
+    }
+
     await Future.wait([
-      for (final c in catalog.characterIds)
-        catalog.character(c, 'idle').then((s) => heroes[c] = s),
+      for (final c in catalog.characterIds) hero(c),
       for (final e in catalog.enemyIds)
         catalog.enemy(e).then((s) => enemies[e] = s),
     ]);
@@ -42,6 +51,22 @@ class GameSprites {
 
   /// Frame `idle` de una clase, o `null` si el manifest no la tiene.
   ui.Image? hero(String classId) => _heroes[classId]?.image;
+
+  /// El héroe de [classId] con su ascensión: `<clase>_<ascensión>` si el
+  /// manifest lo tiene, si no la clase base (docs/specs/ascension.md § 5).
+  ui.Image? heroFor(String? classId, String? ascensionId) {
+    if (classId == null) return null;
+    if (ascensionId != null) {
+      final img = _heroes['${classId}_$ascensionId']?.image;
+      if (img != null) return img;
+    }
+    return _heroes[classId]?.image;
+  }
+
+  /// El aura de una ascensión (`aura_<ascensión>`, 24 × 26), o `null`
+  /// (quien dibuja usa entonces el aura pintada).
+  ui.Image? aura(String? ascensionId) =>
+      ascensionId == null ? null : _heroes['aura_$ascensionId']?.image;
 
   /// Frame `idle` de un tipo de enemigo, o `null`.
   ui.Image? enemy(String enemyType) => _enemies[enemyType]?.image;

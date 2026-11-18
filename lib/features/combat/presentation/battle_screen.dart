@@ -15,6 +15,7 @@ import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
+import '../../../game_engine/rules/battle_engine.dart' show ultimateOf;
 import '../../../game_engine/rules/js_math.dart';
 import '../domain/skill_text.dart';
 import '../domain/turn_order.dart';
@@ -253,6 +254,10 @@ class BattleViewState extends State<BattleView>
         return ' ${hexSpan('#ffeaa7', 'absorbe el daño de aliados')}';
       case SkillKind.bulwark:
         return ' ${hexSpan('#74b9ff', 'cura 30%, defensa y protección')}';
+      case SkillKind.support:
+        // Kit de ascensión: el primer efecto, corto.
+        final b = tk.partyBuffs.firstOrNull;
+        return ' ${hexSpan('#ffb142', b != null ? 'grupo ${b.stat.label} ${jsRound(b.value * 100)}%' : tk.partyShield > 0 ? 'escudo a todos' : tk.advanceAllies > 0 ? 'adelanta aliados' : tk.trap > 0 ? 'trampas' : tk.selfBuff != null ? 'crítico seguro' : 'apoyo')}';
       case SkillKind.physical || SkillKind.magical:
         final st = tk.status;
         return _est(p,
@@ -285,7 +290,7 @@ class BattleViewState extends State<BattleView>
       ];
     }
     final tg = target;
-    final ult = kAllUltimates[cur.weaponType];
+    final ult = ultimateOf(cur);
     final allies = b.party.where((q) => q.alive && q.id != cur.id);
     return [
       _Option(
@@ -306,7 +311,7 @@ class BattleViewState extends State<BattleView>
       if (ult != null)
         _Option(
           '★ ULTIMATE: ${ult.name} ${hexSpan('#ffd166', '[${cur.ult.floor()}%]')}'
-          '${ult.dealsDamage ? _est(cur, (ult.kind == SkillKind.magical ? cur.magic : cur.attack) * ult.power, all: ult.allTargets) : ' ${hexSpan('#74b9ff', 'cura 30%, defensa y protección')}'}',
+          '${ult.dealsDamage ? _est(cur, (ult.kind == SkillKind.magical ? cur.magic : cur.attack) * ult.power, all: ult.allTargets) : ' ${hexSpan('#74b9ff', ult.kind == SkillKind.support ? 'escudos, defensa y protección' : 'cura 30%, defensa y protección')}'}',
           cur.ult >= 100 ? () => _send(UltimateCommand(targetId: tg)) : null,
           tip: describeSkillMarkup(ult, cur, ultimate: true),
           dual: true,

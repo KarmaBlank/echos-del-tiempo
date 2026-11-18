@@ -182,6 +182,65 @@ void main() {
     });
   });
 
+  group('ascensiones v0.5', () {
+    test('cada ascensión mide como el héroe base (14×18) y usa todas sus letras', () {
+      expect(ascensionRows, hasLength(8));
+      for (final id in ascensionRows.keys) {
+        final s = ascensionSprite(id);
+        expect((s.width, s.height), (14, 18), reason: id);
+        final pal = ascensionPalettes[id]!;
+        for (final row in ascensionRows[id]!) {
+          for (final ch in row.split('')) {
+            if (ch != '.') expect(pal.containsKey(ch), isTrue, reason: '$id: $ch');
+          }
+        }
+      }
+    });
+
+    test('pies en la misma fila que el héroe base (no se rompe el ancla)', () {
+      for (final id in ascensionRows.keys) {
+        expect(ascensionRows[id]![14], contains('D'), reason: id);
+        expect(ascensionRows[id]![15], '............', reason: id);
+      }
+    });
+
+    test('ojos rojos del Berserker', () {
+      // Fila 3 "..HSESSESH..": celda (4,3) = E.
+      expect(ascensionSprite('guerrero_berserker').rgbaAt(5, 4), opaque('#ff2b2b'));
+    });
+
+    test('auras: 24×26, sin contorno, toda letra con color', () {
+      expect(auraRows.keys, [for (final a in ascensionRows.keys) 'aura_${ascensionName(a)}']);
+      for (final id in auraRows.keys) {
+        final rows = auraRows[id]!;
+        expect(rows, hasLength(auraHeight), reason: id);
+        final img = auraSprite(id);
+        expect((img.width, img.height), (auraWidth, auraHeight), reason: id);
+        for (final row in rows) {
+          expect(row.length, auraWidth, reason: id);
+          for (final ch in row.split('')) {
+            if (ch != '.') expect(auraPalettes[id]!.containsKey(ch), isTrue, reason: '$id: $ch');
+          }
+        }
+        var painted = 0;
+        for (var y = 0; y < img.height; y++) {
+          for (var x = 0; x < img.width; x++) {
+            final px = img.rgbaAt(x, y);
+            expect(px, isNot(opaque(outlineColor)), reason: '$id ($x,$y)');
+            if (px != 0) painted++;
+          }
+        }
+        expect(painted, greaterThan(10), reason: id);
+      }
+    });
+
+    test('rutas en la carpeta de la clase base', () {
+      final paths = buildAllSprites().keys;
+      expect(paths, containsAll(['characters/guerrero/berserker.png',
+          'characters/maga/aura_cronomante.png', 'characters/tirador/trampero.png']));
+    });
+  });
+
   group('PNG', () {
     test('CRC32 de referencia', () {
       expect(crc32('123456789'.codeUnits), 0xcbf43926);
@@ -195,10 +254,10 @@ void main() {
       expect(String.fromCharCodes(png.sublist(png.length - 8, png.length - 4)), 'IEND');
     });
 
-    test('exporta las 38 rutas del manifest', () {
+    test('exporta las 54 rutas del manifest', () {
       // No compara bytes con los archivos del repo a propósito: el arte
       // puede reemplazarse a mano (docs/specs/sprites.md).
-      expect(buildAllSprites().keys, hasLength(38));
+      expect(buildAllSprites().keys, hasLength(54));
       for (final path in buildAllSprites().keys) {
         expect(File('assets/sprites/$path').existsSync(), isTrue, reason: path);
       }

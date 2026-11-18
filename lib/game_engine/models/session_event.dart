@@ -1,3 +1,4 @@
+import 'ascension.dart' show TrapKind;
 import 'battle_command.dart';
 import 'battle_event.dart';
 import 'game_session.dart';
@@ -218,4 +219,30 @@ class MasteryUpEvent extends SessionEvent {
 class EcosUnlockedEvent extends SessionEvent {
   final String playerId;
   const EcosUnlockedEvent(this.playerId);
+}
+
+// ---------------- ascensión v0.5 (docs/specs/ascension.md) ----------------
+
+/// Se venció al jefe de la Prueba [trial]. [playerIds]: los que ganaron
+/// sus puntos de ascensión (la primera vez, con nivel y requisito).
+class TrialCompletedEvent extends SessionEvent {
+  final int trial;
+  final List<String> playerIds;
+  const TrialCompletedEvent(this.trial, this.playerIds);
+}
+
+/// [playerId] eligió la ascensión [ascensionId]: cinemática para todos.
+class AscensionChosenEvent extends SessionEvent {
+  final String playerId;
+  final String ascensionId;
+  const AscensionChosenEvent(this.playerId, this.ascensionId);
+}
+
+/// Saltó una trampa de la Prueba sobre [playerId] ([damage] = vida que
+/// perdió con las púas; 0 en el pulso).
+class TrapTriggeredEvent extends SessionEvent {
+  final String playerId;
+  final TrapKind kind;
+  final int damage;
+  const TrapTriggeredEvent(this.playerId, this.kind, this.damage);
 }

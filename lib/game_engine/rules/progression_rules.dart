@@ -13,6 +13,7 @@ import '../models/player_profile.dart';
 import '../models/player_state.dart';
 import '../models/upgrade_stat.dart';
 import '../models/weapon.dart';
+import 'ascension_rules.dart';
 import 'craft_rules.dart';
 import 'eco_rules.dart';
 import 'inventory_rules.dart';
@@ -21,6 +22,7 @@ import 'js_math.dart';
 import 'loot_rules.dart';
 import 'passive_tree_rules.dart';
 import 'stats_calculator.dart';
+import 'trial_rules.dart';
 
 /// Resultado de [ProgressionRules.gainXp].
 typedef XpGain = ({
@@ -58,6 +60,8 @@ class ProgressionRules {
   InventoryRules get inventory => InventoryRules(items: items);
   CraftRules get crafting => CraftRules(loot: loot);
   EcoRules get ecos => EcoRules(catalog: catalog);
+  AscensionRules get ascensions => const AscensionRules();
+  TrialRules get trials => TrialRules(catalog: catalog);
 
   static const pointsPerLevel = 3;
   static const upgradeMax = WeaponUpgradeLevels.upMax;
@@ -162,6 +166,7 @@ class ProgressionRules {
       weaponUpgrades: item?.forge ?? const WeaponUpgradeLevels(),
       passiveProgress: p.passiveProgress,
       item: item,
+      ascension: p.ascension,
     );
   }
 
@@ -183,6 +188,7 @@ class ProgressionRules {
       weaponUpgrades: it?.forge ?? const WeaponUpgradeLevels(),
       passiveProgress: p.passiveProgress,
       item: it,
+      ascension: p.ascension,
     ));
   }
 
@@ -292,6 +298,7 @@ class ProgressionRules {
       ecos: ecos,
       ecosUnlocked: raw.ecosUnlocked,
       mastery: mastery,
+      ascension: ascensions.sanitize(cls, level, raw.ascension),
     );
 
     final base = catalog.classes[cls]!.baseAttributes;
@@ -398,7 +405,11 @@ class ProgressionRules {
   PlayerProfile? changeClass(PlayerProfile p, String classId) {
     final c = catalog.classes[classId];
     if (c == null || classId == p.classId) return null;
-    final next = _withStartWeapon(p.copyWith(classId: classId, tree: const []));
+    // La ascensión es de la clase: se saca (las Pruebas hechas quedan).
+    final next = _withStartWeapon(p.copyWith(
+        classId: classId,
+        tree: const [],
+        ascension: ascensions.reset(p, full: true).ascension));
     return resetBuild(next.copyWith(equipped: c.startWeaponId));
   }
 

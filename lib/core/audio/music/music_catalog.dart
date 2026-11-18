@@ -33,6 +33,9 @@ abstract final class Music {
   static const levelUp = 'jingle.levelUp';
   static const zoneUnlocked = 'jingle.zoneUnlocked';
 
+  /// Cinemática de ascensión (docs/specs/ascension.md § 5).
+  static const ascension = 'jingle.ascension';
+
   static const zone1 = 'zone1';
 
   /// Zonas con pieza propia.
@@ -65,6 +68,7 @@ final Map<String, Song> kMusicCatalog = {
     defeatJingle(),
     levelUpJingle(),
     zoneUnlockedJingle(),
+    ascensionJingle(),
   ])
     s.id: s,
 };

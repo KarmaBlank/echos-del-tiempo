@@ -140,6 +140,68 @@ base `bat` o `ghost`: `bat`, `ghost`, `devorador`; en v0.2,
 con `enemies.<tipo>.float: true` (`SpriteCatalog.enemyFloats`). Los jefes reusan la forma base con su
 propio color: son PNG propios, no un tinte en runtime.
 
+## Ascensiones (v0.5)
+
+Arte propio (no está en el prototipo), mismo pipeline (`makeSprite`).
+Datos en `tool/export_sprites.dart`: `ascensionRows`, `ascensionPalettes`,
+`auraRows`, `auraPalettes`.
+
+### Sprite de la ascensión
+
+- Id lógico (sección `characters:` del manifest) = `<clase>_<ascensión>`,
+  el mismo id que usa el gameplay. Archivo en la carpeta de la clase base
+  (ya listada en `pubspec.yaml`): `characters/<clase>/<ascensión>.png`.
+- **Misma grilla 12×16 → PNG 14×18, mismo ancla `(-7, -17)`, misma
+  orientación (mira a la derecha) y mismos frames que el héroe base**: un
+  solo frame `idle`; bob, estocada, muerte, parpadeo y círculo de defensa
+  siguen siendo procedurales. Se reemplaza 1:1: donde se dibujaba
+  `hero(clase)` se dibuja `hero('<clase>_<ascensión>')`.
+- El arma sigue siendo el overlay en código (`WeaponOverlay`) del tipo de
+  arma / clase BASE: quien dibuje tiene que pasarle la clase base
+  (`guerrero`), no el id de la ascensión.
+- Filas 14 (botas) y 15 (vacía) iguales en espíritu al héroe: los pies
+  quedan en el mismo píxel.
+
+| Id | Archivo | Rasgos | Letras propias |
+|----|---------|--------|----------------|
+| `guerrero_berserker` | `characters/guerrero/berserker.png` | pelo rojo oscuro revuelto, ojos rojos brillantes, pintura de guerra, hombreras de hierro, correas negras cruzadas, capa negra desgarrada | E ojos `#ff2b2b`, K negro `#1f1520`, R rojo vivo `#ff4d3a`, C capa `#3a1c24`, M hierro `#5a5560` |
+| `guerrero_senorGuerra` | `characters/guerrero/senorGuerra.png` | yelmo dorado con penacho carmesí, hombreras de oro, peto carmesí con emblema, capa carmesí, cuerno de guerra al cinto | P penacho `#e63946`, G oro `#d4af37`, Y oro claro `#ffe27a`, C capa `#7d0f1f`, W cuerno `#f1e4c3` |
+| `maga_cronomante` | `characters/maga/cronomante.png` | capucha verde azulada con broche plateado, esfera de reloj en el pecho, cinto plata/oro, túnica larga hasta los pies con ribete | M plata `#cfd8dc`, W esfera `#f5fbff`, K agujas `#1b2b34`, G oro `#e1b12c` |
+| `maga_elementalista` | `characters/maga/elementalista.png` | pelo de fuego, túnica tricolor fuego/hielo/veneno, cinto con una gema por elemento | F pelo `#e8432b`, Y puntas `#ffd166`, Q fuego `#f07a1a`, I hielo `#3cc8ec`, V veneno `#38b24a`, K cinto `#2b2440` |
+| `tirador_francotirador` | `characters/tirador/francotirador.png` | capucha y capa verde oscuro, rifle largo a la espalda, mira con destello sobre el ojo, máscara y correa grises | G rifle `#5b646a`, K capucha `#24382b`, E lente `#9ff3ff`, W destello `#ffffff`, M gris `#6b7a80` |
+| `tirador_trampero` | `characters/tirador/trampero.png` | gorro de piel con cola, manto de piel, pelo ámbar, correas ámbar cruzadas, cepo abierto colgando atrás del cinto, polainas de piel | F piel `#8a5a32`, U piel oscura `#4f321b`, P puntas `#d9c3a0`, A ámbar `#f0a830`, T acero `#a4adb3` |
+| `paladin_templario` | `characters/paladin/templario.png` | pelo dorado claro con diadema y gema, tabardo blanco con sol, hombreras y cinto dorados, capa crema, grebas plateadas y botas de oro | Y oro `#f1c40f`, R gema `#ff6b3d`, Z núcleo del sol `#ff9f1a`, W tabardo `#fbf9f2`, G oro `#d4af37`, C capa `#efe6cf` |
+| `paladin_guardian` | `characters/paladin/guardian.png` | yelmo cerrado con cresta azul y visor de ojos cian, hombreras anchas (ocupan las 12 columnas), tabardo azul con emblema, brazos y escarpes de placa | M acero `#9aa5b1`, N azul `#2e5aac`, P plata `#dfe6e9`, K visor `#141a24`, E ojos `#6ff7ff`, W emblema `#ffffff` |
+
+Las letras base (`H`, `S`, `O`, `B`, `L`, `D`) conservan su rol con colores
+propios de cada ascensión (ver `ascensionPalettes`). Ninguna grilla usa `X`,
+así que no hay sombreado automático.
+
+### Aura de la ascensión (overlay opcional)
+
+- Id lógico `aura_<ascensión>` (también en `characters:`, para que
+  `GameSprites.hero('aura_<ascensión>')` lo devuelva sin cambiar código),
+  frame `idle`, archivo `characters/<clase>/aura_<ascensión>.png`.
+- PNG **24×26**, sin contorno ni sombreado (`auraSprite`), fondo
+  transparente, píxeles opacos.
+- **Ancla**: se dibuja DETRÁS del héroe en `(-12, -25)` respecto de
+  `(round(x), round(y))` (centrado en x, última fila a la altura de los
+  pies). Píxel del héroe `(px, py)` ↔ píxel del aura `(px + 5, py + 8)`.
+- Sugerido (no obligatorio): alfa pulsante `0.65 + 0.25 * sin(t / 220)`,
+  sin bob ni estocada (como la sombra); espejar con el héroe si `dir < 0`.
+  Ocultarla con el héroe muerto.
+
+| Id | Archivo | Dibujo |
+|----|---------|--------|
+| `aura_berserker` | `characters/guerrero/aura_berserker.png` | lenguas de fuego rojo/naranja por los costados y sobre la cabeza, brasas sueltas |
+| `aura_senorGuerra` | `characters/guerrero/aura_senorGuerra.png` | estandarte carmesí con corona dorada en un asta a la espalda + destellos dorados |
+| `aura_cronomante` | `characters/maga/aura_cronomante.png` | 12 marcas de reloj en anillo (las 4 cardinales blancas) y dos agujas flotando sobre la cabeza |
+| `aura_elementalista` | `characters/maga/aura_elementalista.png` | tres orbes con estela: fuego (atrás), hielo (sobre la cabeza), veneno (adelante, abajo) |
+| `aura_francotirador` | `characters/tirador/aura_francotirador.png` | cuatro esquineros de retícula verde, marca superior y destello cian frente a la mira |
+| `aura_trampero` | `characters/tirador/aura_trampero.png` | luciérnagas ámbar y dientes de cepo en el suelo a ambos lados |
+| `aura_templario` | `characters/paladin/aura_templario.png` | halo solar dorado detrás de la cabeza con 8 rayos |
+| `aura_guardian` | `characters/paladin/aura_guardian.png` | cúpula de escudo azul con remaches celestes que envuelve al guardián |
+
 ## Regenerar los PNG
 
 Desde la raíz del proyecto, con el `dart` del SDK de Flutter:
@@ -148,7 +210,8 @@ Desde la raíz del proyecto, con el `dart` del SDK de Flutter:
 dart run tool/export_sprites.dart
 ```
 
-Sobrescribe los 21 PNG listados arriba. El script no toca el manifest.
+Sobrescribe todos los PNG listados en este spec (54 desde v0.5: 4 héroes,
+34 enemigos, 8 ascensiones y 8 auras). El script no toca el manifest.
 
 ## Reemplazar el arte por PNG hechos a mano
 

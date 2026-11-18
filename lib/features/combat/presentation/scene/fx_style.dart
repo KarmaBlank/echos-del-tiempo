@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import '../../../../game_engine/data/ascension_catalog.dart';
 import '../../../../game_engine/data/skills_catalog.dart';
 import '../../../../game_engine/models/skill.dart';
 import '../../../../game_engine/models/status.dart';
@@ -121,6 +122,31 @@ const Map<String, Color> kSkillColors = {
   'ult_varita': Color(0xFFE84393),
   'ult_ballesta': Color(0xFFFF9F43),
   'ult_dagas': Color(0xFF55EFC4),
+  // ---- kit y ULT de las ascensiones (docs/specs/ascension.md § 4) ----
+  'sangria': Color(0xFFFF4757),
+  'torbellino': Color(0xFFD63031),
+  'gritoGuerra': Color(0xFFFFB142),
+  'estandarte': Color(0xFFFFD166),
+  'aceleron': Color(0xFFA29BFE),
+  'grietaTemporal': Color(0xFF6C5CE7),
+  'prismaElemental': Color(0xFFFF9F43),
+  'detonar': Color(0xFFE17055),
+  'tiroCabeza': Color(0xFFFF6B81),
+  'apuntar': Color(0xFFFFEAA7),
+  'trampaPuas': Color(0xFF7BED9F),
+  'redCaza': Color(0xFFBADC58),
+  'castigo': Color(0xFFFFEAA7),
+  'luzCegadora': Color(0xFFFFF3B0),
+  'egidaGrupal': Color(0xFF74B9FF),
+  'juramento': Color(0xFF81ECEC),
+  'ult_berserker': Color(0xFFFF4757),
+  'ult_senorGuerra': Color(0xFFFFB142),
+  'ult_cronomante': Color(0xFFA29BFE),
+  'ult_elementalista': Color(0xFFFF9F43),
+  'ult_francotirador': Color(0xFFFF6B81),
+  'ult_trampero': Color(0xFF7BED9F),
+  'ult_templario': Color(0xFFFFEAA7),
+  'ult_guardian': Color(0xFF74B9FF),
 };
 
 /// Habilidades con `el` propio en el prototipo (todas sagradas).
@@ -130,6 +156,9 @@ const Set<String> kHolySkills = {
   'juicio',
   'ult_maza_escudo',
   'ult_martillo_escudo',
+  'castigo',
+  'luzCegadora',
+  'ult_templario',
 };
 
 /// Color de los dúos (`DUALS[].col`) por `dualKey`.
@@ -165,6 +194,7 @@ FxElement skillElement(SkillDef sk) {
 final Map<String, SkillDef> kSkillsById = {
   for (final s in kSkills.values) s.id: s,
   for (final s in kAllUltimates.values) s.id: s,
+  ...kAscensionUltimatesById,
 };
 
 /// Tipos de arma a distancia (`ranged(p)`): sus golpes llevan proyectil.

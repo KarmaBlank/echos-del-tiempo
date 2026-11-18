@@ -60,7 +60,8 @@ const _v03Profile = <String, Object?>{
 };
 
 void main() {
-  test('protocolo 4', () => expect(kProtocolVersion, 4));
+  // v0.5 subió a 5 (ascension.md § 6); lo de los Ecos sigue igual.
+  test('protocolo 4 o más', () => expect(kProtocolVersion, greaterThanOrEqualTo(4)));
 
   group('Eco y drop', () {
     test('EcoItem: ida y vuelta y lectura tolerante', () {

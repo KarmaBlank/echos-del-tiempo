@@ -76,11 +76,21 @@ abstract final class Tile {
   /// Engranaje / reloj de los vaults del laberinto (sólido).
   static const gear = 'o';
 
+  // ---- ascensión (docs/specs/ascension.md § 1) ----
+  /// Estatua del Tiempo del pueblo (sólida): abre el panel ASCENSIÓN.
+  static const statue = 'S';
+
+  /// Púas de la Prueba del Tiempo (caminables: dañan).
+  static const spikes = 'x';
+
+  /// Pulso del Tiempo de la Prueba (caminable: activo, te devuelve).
+  static const pulse = 'p';
+
   /// Tiles sólidos fijos (sin la barrera, que depende de si está abierta,
   /// ni las entradas de zona).
   static const solidTiles = {
     wall, water, counter, armory, merchant, tree, rock, lava, tombstone, gear,
-    portal,
+    portal, statue,
   };
 
   /// Se puede pisar (el vacío cuenta: se pisa y se cae).

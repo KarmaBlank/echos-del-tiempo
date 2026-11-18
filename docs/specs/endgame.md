@@ -3,8 +3,11 @@
 > **Estado (v0.4.0):** implementados § 1 (Ecos), § 2 (Atlas del
 > Tiempo), § 4 primer punto (Maestría), § 5 (varios personajes) y las
 > reglas de § 7 que les tocan. Detalle con números:
-> docs/specs/ecos_atlas.md. Pendientes: § 3 (Jefes del Abismo), § 4
-> Ascensión y § 8, § 6 (Temporadas) y las Grietas del Atlas (nodos
+> docs/specs/ecos_atlas.md.
+> **v0.5.0:** § 4 Ascensión (Pruebas del Tiempo, 8 ascensiones,
+> mini-árboles, kit) y § 8 completos, con las reglas co-op de § 7 que les
+> tocan: detalle con números en docs/specs/ascension.md. Pendientes: § 3
+> (Jefes del Abismo), § 6 (Temporadas) y las Grietas del Atlas (nodos
 > bloqueados "Próximamente").
 
 Pregunta del dueño: "si llegaste a nivel 50, ¿qué más podrías hacer con el
@@ -83,6 +86,10 @@ probar otra build en otro personaje → nueva **Temporada**.
 | Tirador | Francotirador (críticos enormes a un objetivo) | Trampero (trampas y daño en área) |
 | Paladín | Templario (daño sagrado y aturdir) | Guardián (escudos y protección del grupo) |
 
+- **Implementado (v0.5.0)**: ascension.md § 1–4 (Pruebas en nivel 30 /
+  40 / 50 con púas y Pulsos del Tiempo, 2 puntos cada una = 6; mini-árbol
+  de 8 nodos con 10 de costo; 2 habilidades y una ULT por ascensión;
+  reiniciar y cambiar de ascensión gratis).
 - **Equipo**: la búsqueda de armas perfectas (mods de tier alto,
   legendarios, crafteo) es el motor del endgame, como en PoE.
 
@@ -126,6 +133,9 @@ co-op".
 - **Implementado para los Ecos (v0.4.0)**: escalado 1–4 de siempre,
   +10% de cantidad por jugador extra, Atlas del host, puntos para cada
   uno (ecos_atlas.md § 7). Pendiente: Jefes del Abismo.
+- **Implementado para la Ascensión (v0.5.0)**: cada jugador que supera
+  una Prueba gana sus propios puntos; Señor de la Guerra, Guardián y
+  Templario tienen auras y buffs de grupo (ascension.md § 1.2, § 3).
 
 ## 8. La ascensión tiene que **sentirse**
 
@@ -141,6 +151,10 @@ Decisión del dueño: "sí, pero que se sienta eso". Al ascender:
   adelantan al aliado más lento"; Berserker "por debajo de 50% de vida
   cada golpe te da otro turno parcial".
 - Título visible en el HUD y en el chat ("Ana, Cronomante").
+- **Implementado (v0.5.0)**: ascension.md § 5 (cinemática de 5.2 s con
+  sonido y jingle propios, sprite `<clase>_<ascensión>` con respaldo al de
+  la clase, aura en batalla y en el mapa, título en HUD, chat, paneles de
+  grupo y tarjetas del título).
 
 ## 9. Decisiones del dueño
 

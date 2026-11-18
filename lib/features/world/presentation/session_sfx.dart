@@ -8,6 +8,7 @@ import '../../../core/audio/sfx_recipes.dart';
 import '../../../core/audio/sfx_service.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../game_engine/data/skills_catalog.dart';
+import '../../../game_engine/models/ascension.dart' show TrapKind;
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/item.dart';
@@ -17,6 +18,7 @@ import '../../../game_engine/models/passive_mechanic.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
+import '../../../game_engine/rules/battle_engine.dart' show ultimateOf;
 import '../../../game_engine/rules/session_engine.dart';
 import '../../combat/presentation/scene/battle_fx.dart';
 import '../../combat/presentation/scene/fx_style.dart';
@@ -145,10 +147,37 @@ class SessionSfx {
         for (final c in lootSounds(e)) {
           service.play(c.id, delayMs: c.delayMs);
         }
+      // Ascensión (docs/specs/ascension.md § 1.1 y § 5).
+      case TrapTriggeredEvent(:final playerId, :final kind)
+          when playerId == localId:
+        service.play(kind == TrapKind.spikes ? Sfx.trapSpike : Sfx.trapPulse);
+      case AscensionChosenEvent():
+        for (final c in ascensionCues) {
+          service.play(c.id, delayMs: c.delayMs);
+        }
       default:
         break;
     }
   }
+
+  /// La cinemática de ascensión: la luz que converge y, en el destello,
+  /// la revelación.
+  static List<SfxCue> get ascensionCues => [
+        cue(Sfx.ascBuild, ascensionBuildMs),
+        cue(Sfx.ascReveal, ascensionRevealMs),
+      ];
+
+  /// Tiempos de la cinemática (docs/specs/ascension.md § 5).
+  static const ascensionBuildMs = 400;
+  static const ascensionRevealMs = 2200;
+
+  /// Orígenes de las trampas del Trampero (suena el resorte al saltar).
+  static const _trapSources = {
+    'trampero_r',
+    'trampero_b3',
+    'trampaPuas',
+    'ult_trampero',
+  };
 
   /// Sonidos del loot del jugador local (docs/specs/audio.md § "Loot"):
   /// al caer, el sonido que pide su filtro (y el haz si es Legendario);
@@ -277,6 +306,9 @@ class SessionSfx {
         case 'vientoFavor':
           once(Sfx.wind, b);
           pendingOffset = b;
+        case _ when a == null && _trapSources.contains(src):
+          once(Sfx.trapSpring, 0);
+          if (t != null) procAt[t] = 60;
         default:
           break;
       }
@@ -496,7 +528,8 @@ class SessionSfx {
   /// impactos van con cada golpe. Con arma desconocida, el `beep` del
   /// prototipo.
   List<SfxCue> ultimateCues(UltimateUsedEvent e) {
-    final sk = kAllUltimates[battle?.byId(e.actorId)?.weaponType];
+    final c = battle?.byId(e.actorId);
+    final sk = c == null ? null : ultimateOf(c);
     if (sk == null ||
         !service.catalog.containsKey(Sfx.ult(sk.id, Sfx.ultBuild))) {
       return [cue(Sfx.ultimate)];

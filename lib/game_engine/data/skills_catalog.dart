@@ -1,5 +1,6 @@
 import '../models/skill.dart';
 import '../models/status.dart';
+import 'ascension_catalog.dart';
 
 // `SK`, `ULTS` y `DUALS` del prototipo, 1:1. El color (`col`) y el
 // elemento visual (`el`) son de la UI y no viven acá.
@@ -77,6 +78,8 @@ const Map<String, SkillDef> kSkills = {
   'viroteIgneo': SkillDef(id: 'viroteIgneo', name: 'Virote Ígneo', mp: 5, kind: _phys, power: 1.8, status: StatusApplication(_burn, 2)),
   'tajoGemelo': SkillDef(id: 'tajoGemelo', name: 'Tajo Gemelo', mp: 3, kind: _phys, power: 1.3, critBonus: 0.3),
   'abanico': SkillDef(id: 'abanico', name: 'Abanico de Dagas', mp: 6, kind: _phys, power: 0.8, allTargets: true, status: StatusApplication(_poi, 2)),
+  // ---- kit de las ascensiones (docs/specs/ascension.md § 4) ----
+  ...kAscensionSkills,
 };
 
 /// ULT por tipo de arma (`ULTS`). No cuestan MP: requieren 100 de carga.

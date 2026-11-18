@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/feature_flags.dart';
+import '../../../ascension/domain/ascension_text.dart';
 import '../../../../app/theme/panel_frame.dart';
 import '../../../../app/theme/panel_widgets.dart';
 import '../../../../app/theme/proto_colors.dart';
@@ -130,7 +131,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
       fill: true,
       help: tab == CharacterTab.filter ? kFilterHelp : CharacterPanel.help,
       onClose: close,
-      titleTrailing: ProtoText('${protoEsc(prof.name)} · '
+      titleTrailing: ProtoText('${protoEsc(profileTitle(prof))} · '
           '<span class="k">$cls Lv${prof.level}</span>'
           '${prof.level >= ProgressionRules.maxLevel ? ' · <span style="color:#a29bfe">${protoEsc(masteryText(prof))}</span>' : ''} · Puntos: '
           '<b>$left</b>'),

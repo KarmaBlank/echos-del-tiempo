@@ -1,5 +1,6 @@
 import '../models/passive_mechanic.dart';
 import '../models/status.dart';
+import 'ascension_mechanics.dart';
 import 'weapon_passives.dart';
 
 // Notables y keystones v2 como datos: disparador + filtro + efectos.
@@ -14,7 +15,7 @@ final Map<String, PassiveMechanic> kMechanics = {
 /// Una mecánica por id: del árbol ([kMechanics]) o de una pasiva de arma
 /// (`wp:<pasiva>:<nivel>`, ver weapon_passives.dart).
 PassiveMechanic? mechanicById(String id) =>
-    kMechanics[id] ?? weaponPassiveMechanic(id);
+    kMechanics[id] ?? kAscensionMechanics[id] ?? weaponPassiveMechanic(id);
 
 const List<PassiveMechanic> _list = [
   // ---------------- Guerrero: Filo ----------------

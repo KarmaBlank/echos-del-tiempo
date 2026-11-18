@@ -24,6 +24,7 @@ void main() {
       Music.defeat,
       Music.levelUp,
       Music.zoneUnlocked,
+      Music.ascension,
     });
     for (final e in kMusicCatalog.entries) {
       expect(e.value.id, e.key);

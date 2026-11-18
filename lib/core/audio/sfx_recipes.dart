@@ -342,7 +342,164 @@ final Map<String, List<SfxTone>> kSkillVoices = {
     for (final at in [0.0, 0.04, 0.08, 0.12, 0.16]) ..._x(_whoosh(1.4, 0.4), dt: at),
     ..._x(_bubbles(1.3, 0.5), dt: 0.12),
   ],
+  // ---- kit de las ascensiones (docs/specs/ascension.md § 4) ----
+  // Berserker: corte con latido; torbellino rojo.
+  'sangria': [
+    _t(65, 0.12, w: _sin, to: 45, v: 0.7),
+    ..._x(_swingBlade(0.75, 1.1), dt: 0.08),
+    _t(220, 0.2, w: _saw, to: 110, crush: 4, v: 0.3, at: 0.1),
+  ],
+  'torbellino': [
+    for (final at in [0.0, 0.08, 0.16, 0.24]) ..._x(_swingHeavy(1.2, 0.6), dt: at),
+    _t(150, 0.4, w: _saw, to: 300, vr: 8, vd: 0.1, v: 0.25),
+  ],
+  // Señor de la Guerra: grito y estandarte.
+  'gritoGuerra': [
+    _t(180, 0.45, w: _saw, to: 260, vr: 9, vd: 0.06, a: 0.05, v: 0.5),
+    _t(360, 0.4, w: _sq, to: 520, vr: 9, vd: 0.05, a: 0.05, v: 0.2),
+    _n(3000, 0.3, lp: 2000, a: 0.05, v: 0.3, seed: 31),
+  ],
+  'estandarte': [
+    _t(392, 0.18, w: _sq, v: 0.35),
+    _t(523, 0.18, w: _sq, v: 0.35, at: 0.14),
+    _t(659, 0.35, w: _sq, v: 0.35, at: 0.28),
+    _n(2000, 0.3, to: 600, lp: 1500, v: 0.2, at: 0.05, seed: 32),
+  ],
+  // Cronomante: reloj que se acelera y grieta que tira para atrás.
+  'aceleron': [
+    for (var k = 0; k < 8; k++) _t(1800 + k * 120.0, 0.015, w: _sq, at: k * 0.045, v: 0.35),
+    _t(300, 0.4, w: _sin, to: 1800, a: 0.3, v: 0.3),
+  ],
+  'grietaTemporal': [
+    _t(1400, 0.45, w: _pu, to: 180, crush: 4, vr: 5, vd: 0.06, v: 0.35),
+    for (final at in [0.05, 0.2, 0.35]) _t(2400, 0.015, w: _sq, at: at, v: 0.3),
+  ],
+  // Elementalista: tres elementos en fila; estallido.
+  'prismaElemental': [
+    ..._x(_fire(1.3, 0.5, 33), g: 0.7),
+    ..._x(_ice(1.1, 0.5), dt: 0.1),
+    ..._x(_bubbles(1.2, 0.5), dt: 0.2),
+  ],
+  'detonar': [
+    _t(800, 0.15, w: _sq, to: 2400, v: 0.3),
+    _n(1200, 0.4, lp: 900, at: 0.12, v: 0.7, seed: 34),
+    _t(70, 0.4, w: _sin, to: 30, at: 0.12, v: 0.7),
+  ],
+  // Francotirador: estampido largo; respiración y mira.
+  'tiroCabeza': [
+    _n(20000, 0.03, v: 0.8, seed: 35),
+    _n(2500, 0.45, to: 600, lp: 2000, v: 0.55, seed: 36),
+    _t(2637, 0.3, w: _sin, to: 2600, at: 0.05, v: 0.2),
+  ],
+  'apuntar': [
+    _n(1500, 0.4, to: 800, lp: 900, a: 0.15, v: 0.3, seed: 37),
+    _t(3136, 0.02, w: _sq, at: 0.3, v: 0.4),
+    _t(3951, 0.12, w: _sin, at: 0.33, v: 0.3),
+  ],
+  // Trampero: resortes y red.
+  'trampaPuas': [
+    for (final at in [0.0, 0.07, 0.14]) _t(900, 0.05, w: _sq, to: 2200, at: at, v: 0.3),
+    _n(8000, 0.08, crush: 3, at: 0.2, v: 0.4, seed: 38),
+    _t(180, 0.15, w: _tri, to: 90, at: 0.2, v: 0.4),
+  ],
+  'redCaza': [
+    ..._whoosh(0.9, 1.2),
+    _n(6000, 0.25, to: 2000, lp: 3000, at: 0.1, v: 0.35, seed: 39),
+    ..._x(_bubbles(0.9, 0.6), dt: 0.15),
+  ],
+  // Templario: campanazo y luz que ciega.
+  'castigo': [
+    _t(784, 0.4, w: _sin, a: 0.003, vr: 5, vd: 0.004, v: 0.4),
+    _t(2093, 0.3, w: _sin, a: 0.003, v: 0.2),
+    _t(110, 0.25, w: _sin, to: 50, v: 0.5),
+  ],
+  'luzCegadora': [
+    _t(600, 0.35, w: _sin, to: 2400, v: 0.35),
+    ..._x(_holy(1.4, 1.2), dt: 0.12),
+    _n(12000, 0.1, at: 0.3, v: 0.3, seed: 40),
+  ],
+  // Guardián: cúpula de escudos y juramento.
+  'egidaGrupal': [
+    ..._shieldRing(0.7),
+    for (final f in [523.0, 784.0, 1047.0]) _t(f, 0.45, w: _tri, at: 0.15, v: 0.2),
+  ],
+  'juramento': [
+    _t(131, 0.5, w: _saw, a: 0.2, lp: 900, v: 0.4),
+    _t(196, 0.5, w: _saw, a: 0.2, lp: 900, v: 0.3),
+    ..._x(_shieldRing(1.4), dt: 0.3),
+  ],
 };
+
+/// Las partes del sonido propio de cada ULT de ascensión (ascension.md
+/// § 4): preparación con el timbre de la ascensión, descarga e impacto.
+UltVoices _ascUlt(List<SfxTone> sig, double p, int seed) => (
+      build: [
+        _t(55 * p, 0.85, w: _saw, to: 110 * p, a: 0.6, lp: 900, v: 0.45),
+        _n(2000 * p, 0.8, to: 6000 * p, lp: 4000, a: 0.6, v: 0.3, seed: seed),
+        ..._x(sig, dt: 0.4, g: 0.6),
+      ],
+      release: [
+        ..._x(sig, dt: 0.05, p: 1.1),
+        _n(4000 * p, 0.5, to: 1500 * p, lp: 3000, at: 0.1, v: 0.35, seed: seed + 1),
+      ],
+      impact: [
+        _t(70 * p, 0.6, w: _sin, to: 26, v: 0.8),
+        _n(1500 * p, 0.5, lp: 1100, v: 0.6, seed: seed + 2),
+        ..._x(sig, g: 0.5, p: 0.8),
+      ],
+    );
+
+/// Sonido de las ULT de las ascensiones por `SkillDef.id`.
+final Map<String, UltVoices> kAscensionUltVoices = {
+  'ult_berserker': _ascUlt(kSkillVoices['sangria']!, 0.8, 60),
+  'ult_senorGuerra': _ascUlt(kSkillVoices['gritoGuerra']!, 1.0, 63),
+  'ult_cronomante': _ascUlt(kSkillVoices['aceleron']!, 1.2, 66),
+  'ult_elementalista': _ascUlt(kSkillVoices['prismaElemental']!, 1.1, 69),
+  'ult_francotirador': _ascUlt(kSkillVoices['tiroCabeza']!, 0.9, 72),
+  'ult_trampero': _ascUlt(kSkillVoices['trampaPuas']!, 1.05, 75),
+  'ult_templario': _ascUlt(kSkillVoices['castigo']!, 1.3, 78),
+  'ult_guardian': _ascUlt(kSkillVoices['egidaGrupal']!, 0.95, 81),
+};
+
+/// Ascensión y trampas de la Prueba (ascension.md § 1.1 y § 5).
+Map<String, SfxDef> buildAscensionSfx() => {
+      // Cinemática: la luz que converge (sube y vibra) y la revelación.
+      Sfx.ascBuild: SfxDef([
+        _t(110, 1.6, w: _saw, to: 440, a: 1.2, lp: 1500, vr: 6, vd: 0.03, v: 0.4),
+        _t(165, 1.6, w: _saw, to: 660, a: 1.2, lp: 1500, v: 0.25),
+        _n(2000, 1.6, to: 9000, lp: 6000, a: 1.3, v: 0.3, seed: 90),
+      ], peak: SfxLevel.ultimate),
+      Sfx.ascReveal: SfxDef([
+        _n(16000, 0.12, v: 0.6, seed: 91),
+        _t(60, 0.9, w: _sin, to: 30, v: 0.7),
+        ..._arp([523, 659, 784, 1047, 1319, 1568],
+            step: 0.05, d: 0.5, w: _sin, v: 0.3, at: 0.05),
+        _t(2093, 0.9, w: _sin, at: 0.35, vr: 6, vd: 0.01, v: 0.25),
+      ], peak: SfxLevel.ultimate),
+      // Trampas.
+      Sfx.trapSpike: SfxDef([
+        _n(10000, 0.05, crush: 3, v: 0.5, seed: 92),
+        _t(700, 0.06, w: _sq, to: 300, v: 0.35),
+        _t(190, 0.12, w: _sq, to: 85, at: 0.04, v: 0.35),
+      ], peak: SfxLevel.status),
+      Sfx.trapPulse: SfxDef([
+        _t(1600, 0.4, w: _pu, to: 200, crush: 4, vr: 8, vd: 0.06, v: 0.4),
+        for (final at in [0.0, 0.1, 0.2]) _t(2600, 0.015, w: _sq, at: at, v: 0.35),
+      ], peak: SfxLevel.status),
+      Sfx.trapSpring: SfxDef([
+        _t(1200, 0.04, w: _sq, to: 3000, v: 0.35),
+        _n(7000, 0.08, crush: 3, at: 0.03, v: 0.45, seed: 93),
+        _t(150, 0.15, w: _tri, to: 70, at: 0.04, v: 0.45),
+      ], peak: SfxLevel.impact),
+      for (final e in kAscensionUltVoices.entries) ...{
+        Sfx.ult(e.key, Sfx.ultBuild):
+            SfxDef(e.value.build, peak: SfxLevel.ultBuild),
+        Sfx.ult(e.key, Sfx.ultRelease):
+            SfxDef(e.value.release, peak: SfxLevel.ultRelease),
+        Sfx.ult(e.key, Sfx.ultImpact):
+            SfxDef(e.value.impact, peak: SfxLevel.ultImpact),
+      },
+    };
 
 
 /// Inicio del golpe dentro de `enemy.<tipo>`: el "wind-up" suena antes

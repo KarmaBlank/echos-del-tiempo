@@ -83,6 +83,42 @@ Song levelUpJingle() {
   );
 }
 
+/// Jingle de ascensión (docs/specs/ascension.md § 5).
+///
+/// Revelación solemne: acordes que suben por Re menor → Si♭ → Do → Re
+/// mayor (tercera de picardía), la ocarina asciende hasta el La agudo y
+/// se queda; campanitas y redoble final. 104 bpm, 3 compases (≈ 6.9 s),
+/// sin bucle.
+Song ascensionJingle() {
+  const chords = 'Dm:8 Bb:8 C:8 D:24';
+  return Song(
+    id: 'jingle.ascension',
+    title: 'Ascensión',
+    bpm: 104,
+    loop: false,
+    tracks: [
+      Track('ocarina', Inst.ocarinaEcho,
+          join([
+            bar('D5:4 F5:4 Bb4:4 D5:4'),
+            bar('E5:4 G5:4 F#5:8'),
+            bar('A5:12 .:4'),
+          ])),
+      Track('colchón', Inst.pad.copyWith(volume: 0.08),
+          comp(chords, 'x:8', center: 62, count: 3)),
+      Track('campanitas', Inst.chime,
+          arp(chords, center: 86, count: 3, shape: const [0, 1, 2], rhythm: 'x:4')),
+      Track('bajo', Inst.bass, bassLine(chords, 'R:8')),
+      Track.drums('batería',
+          join([
+            bar('k:8 .:8', drums: true),
+            bar('k:8 s:2 s:2 s:2 s:2', drums: true),
+            bar('c+k:16', drums: true),
+          ]),
+          gain: 0.5),
+    ],
+  );
+}
+
 /// Jingle de zona desbloqueada.
 ///
 /// Revelación: la ocarina sube por Mi♭ con el La natural (cuarta

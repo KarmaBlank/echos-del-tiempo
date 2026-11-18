@@ -44,6 +44,10 @@ abstract final class MapGenerator {
         t[y][x] = Tile.water;
       }
     }
+    // Estatua del Tiempo (ascension.md § 1), debajo de la fuente derecha.
+    for (var x = 20; x <= 22; x++) {
+      t[10][x] = Tile.statue;
+    }
     for (var y = 3; y < h - 1; y++) {
       for (var x = 12; x <= 13; x++) {
         t[y][x] = Tile.path;

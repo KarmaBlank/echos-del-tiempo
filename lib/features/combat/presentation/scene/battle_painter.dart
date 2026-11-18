@@ -12,6 +12,7 @@ import '../../../../game_engine/models/battle_state.dart';
 import '../../../../game_engine/models/enemy_def.dart';
 import '../../../../game_engine/models/passive_mechanic.dart';
 import '../../../../game_engine/models/status.dart';
+import '../../../ascension/presentation/ascension_aura.dart';
 import '../../domain/turn_order.dart';
 import '../game_sprites.dart';
 import '../sprite_catalog.dart';
@@ -283,7 +284,7 @@ class BattleScenePainter extends CustomPainter {
     final x = pos.dx.roundToDouble(), y = pos.dy.roundToDouble();
     final dir = -f.layout.side;
     final dead = !p.alive;
-    final img = f.sprites?.hero(p.classId ?? '');
+    final img = f.sprites?.heroFor(p.classId, p.ascensionId);
 
     c.save();
     c.translate(x, y);
@@ -295,6 +296,8 @@ class BattleScenePainter extends CustomPainter {
     if (dir < 0) c.scale(-1, 1);
     _pen.oval(c, const Color(0x66000000), 0, 1, 6, 2);
     final pt = scene.poseT;
+    // Aura de la ascensión (docs/specs/ascension.md § 5).
+    if (!dead) paintAscensionAura(c, p.ascensionId, sprites: f.sprites, t: pt);
     if (!dead && _lastStand(p)) {
       // Último Aliento: resplandor rojo que late a los pies.
       final k = 0.5 + 0.5 * math.sin(pt / 140);
@@ -1597,7 +1600,7 @@ class BattleScenePainter extends CustomPainter {
       c.drawRect(Rect.fromLTWH(x + inset, y + inset, sz - inset * 2, sz - inset * 2),
           _pen.stroke);
       final img = a.isPlayer
-          ? f.sprites?.hero(a.classId ?? '')
+          ? f.sprites?.heroFor(a.classId, a.ascensionId)
           : f.sprites?.enemy(f.sprites.enemySpriteId(a.enemyType ?? '', a.phase));
       if (img != null) {
         final k = math.min((sz - 4) / img.width, (sz - 4) / img.height);
@@ -1742,7 +1745,8 @@ class BattleOverlayPainter extends CustomPainter {
     final img = enemy
         ? f.sprites?.enemy(f.sprites.enemySpriteId(u.fx.ult?.enemyType ?? '',
             u.fx.who == null ? 0 : (f.battle.byId(u.fx.who!)?.phase ?? 0)))
-        : f.sprites?.hero(u.fx.ult?.casterClass ?? '');
+        : f.sprites
+            ?.heroFor(u.fx.ult?.casterClass, u.fx.ult?.casterAscension);
     final x0 = math.min(right - 40, 18.0);
     if (img != null) {
       final k = enemy ? math.min(3.0, 40 / img.height) : 3.0;

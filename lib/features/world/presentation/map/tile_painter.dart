@@ -52,6 +52,7 @@ class TilePainter {
     TileAt? at,
     bool voidBackdrop = false,
     double density = 1,
+    double pulse = 0,
   }) {
     // El mapa del mundo: el pueblo con el estilo del lobby, el resto al
     // aire libre (worldgen.md § 7.6).
@@ -209,6 +210,50 @@ class TilePainter {
           _rect(c, const Color(0xCC0B0E1A), px, py - 8, ts, 8);
           _rect(c, glow, px + 6, py - 6 + (k * 2).round(), 4, 3);
         }
+      case Tile.statue:
+        // Estatua del Tiempo (ascension.md § 1): pedestal y, en el tile
+        // del medio, la figura con un reloj de arena que brilla.
+        floor();
+        _rect(c, const Color(0xFF3A3550), px, py + 6, ts, ts - 6);
+        _rect(c, const Color(0xFF6C5CE7), px, py + 6, ts, 2);
+        if (tx % 3 == 2) {
+          final k = 0.5 + 0.5 * math.sin(t / 300);
+          _rect(c, const Color(0xFFB8B3D9), px + 4, py - 14, 8, 20);
+          _rect(c, const Color(0xFF8E88B8), px + 5, py - 18, 6, 5);
+          _rect(c, const Color(0xFF8E88B8), px + 2, py - 8, 12, 3);
+          _rect(c, Color.fromRGBO(255, 209, 102, 0.6 + 0.4 * k), px + 6, py - 12,
+              4, 2);
+          _rect(c, Color.fromRGBO(255, 209, 102, 0.6 + 0.4 * k), px + 7, py - 10,
+              2, 2);
+          _rect(c, Color.fromRGBO(162, 155, 254, 0.25 + 0.25 * k), px - 2,
+              py - 20, ts + 4, 2);
+        }
+      case Tile.spikes:
+        // Púas de la Prueba: placa de metal y púas que suben y bajan.
+        floor();
+        _rect(c, const Color(0xFF3B3B48), px + 1, py + 1, ts - 2, ts - 2);
+        final up = ((t / 400 + tx + ty) % 2) < 1.4;
+        for (var i = 0; i < 3; i++) {
+          for (var j = 0; j < 3; j++) {
+            final sx = px + 2 + i * 5.0, sy = py + 3 + j * 5.0;
+            _rect(c, const Color(0xFF8395A7), sx, sy + (up ? 0 : 2), 2,
+                up ? 3 : 1);
+            if (up) _rect(c, const Color(0xFFDFE6E9), sx, sy, 1, 1);
+          }
+        }
+      case Tile.pulse:
+        // Pulso del Tiempo: glifo que carga (violeta) y estalla (blanco).
+        floor();
+        final active = pulse >= 1;
+        final a = active ? 0.85 : 0.18 + 0.4 * pulse;
+        _rect(c, Color.fromRGBO(108, 92, 231, a * 0.5), px, py, ts, ts);
+        _rect(c, Color.fromRGBO(162, 155, 254, a), px, py, ts, 1);
+        _rect(c, Color.fromRGBO(162, 155, 254, a), px, py, 1, ts);
+        if ((tx + ty).isEven) {
+          final r = 2 + 5 * (active ? 1.0 : pulse);
+          _rect(c, active ? const Color(0xFFFFFFFF) : const Color(0xFFA29BFE),
+              px + 8 - r / 2, py + 8 - r / 2, r, r);
+        }
       case Tile.counter:
         floor();
         _rect(c, const Color(0xFF6B4423), px, py + 3, ts, ts - 3);
@@ -291,6 +336,9 @@ class TilePainter {
         Tile.armory,
         Tile.counter,
         Tile.portal,
+        Tile.statue,
+        Tile.spikes,
+        Tile.pulse,
         Tile.grass,
         Tile.tree,
         Tile.rock,

@@ -88,6 +88,14 @@ abstract final class WorldRules {
   static bool nearPortal(double x, double y) =>
       y < 4.6 * tileSize && x > 2.5 * tileSize && x < 6.5 * tileSize;
 
+  /// Frente a la Estatua del Tiempo (tiles x 20–22, y 10; se usa desde
+  /// abajo). Ver docs/specs/ascension.md § 1.
+  static bool nearStatue(double x, double y) =>
+      y > 10.6 * tileSize &&
+      y < 12.9 * tileSize &&
+      x > 19.5 * tileSize &&
+      x < 23.5 * tileSize;
+
   /// Distancia a la que la UI ofrece activar un sello (`nearSeal`). El
   /// host acepta hasta `SessionEngine.sealRange`.
   static const sealPromptRange = 26.0;

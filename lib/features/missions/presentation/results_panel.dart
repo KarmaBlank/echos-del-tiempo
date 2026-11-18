@@ -35,7 +35,16 @@ class ResultsPanel extends StatelessWidget {
     this.othersUnlocked,
     this.finalVictory = false,
     this.ecoAtlas,
+    this.trial,
+    this.onAscend,
   });
+
+  /// Prueba del Tiempo superada: `+2 puntos de ascensión` (o que ya la
+  /// tenías). Ver docs/specs/ascension.md § 1.2.
+  final String? trial;
+
+  /// ELEGIR ASCENSIÓN (con la Prueba I y todavía sin ascensión).
+  final VoidCallback? onAscend;
 
   /// Eco: lo que ganó tu Atlas (`+3 puntos de Atlas: tier 5, zona, jefe`)
   /// o que no hubo primeras veces (docs/specs/ecos_atlas.md § 5.1).
@@ -48,7 +57,10 @@ class ResultsPanel extends StatelessWidget {
   /// Si [r] es la victoria final: misión ganada de la zona 10 (el motor
   /// no tiene otra señal; el jefe de la zona 10 es el Devorador).
   static bool isFinalVictory(MissionResult r) =>
-      r.success && r.zone == 10 && r.missionId != 'eco';
+      r.success &&
+      r.zone == 10 &&
+      r.missionId != 'eco' &&
+      r.missionId != 'trial';
 
   static const finalTitle = '¡Venciste al Devorador de Eras!';
   static const finalSubtitle = 'El tiempo vuelve a fluir. Gracias por jugar.';
@@ -89,6 +101,11 @@ class ResultsPanel extends StatelessWidget {
       width: 640,
       title: r.success ? 'MISIÓN COMPLETADA' : 'MISIÓN FALLIDA',
       actions: [
+        if (onAscend != null)
+          PanelButton('ELEGIR ASCENSIÓN',
+              key: const ValueKey('results-ascend'),
+              accent: ProtoColors.violet,
+              onPressed: onAscend),
         PanelButton('VOLVER AL LOBBY',
             key: const ValueKey('results-back'), onPressed: onBack),
       ],
@@ -128,6 +145,12 @@ class ResultsPanel extends StatelessWidget {
               key: const ValueKey('results-atlas'),
               padding: EdgeInsets.zero,
               child: line(a, color: const Color(0xFF5AE6D2)),
+            ),
+          if (trial case final t?)
+            Padding(
+              key: const ValueKey('results-trial'),
+              padding: EdgeInsets.zero,
+              child: line(t, color: ProtoColors.violet),
             ),
           if (unlocked case final u?)
             Padding(

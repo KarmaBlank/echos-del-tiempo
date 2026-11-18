@@ -8,7 +8,8 @@ import '../../../../game_engine/models/battle_state.dart';
 import '../../../../game_engine/models/passive_mechanic.dart';
 import '../../../../game_engine/models/skill.dart';
 import '../../../../game_engine/models/status.dart';
-import '../../../../game_engine/rules/battle_engine.dart' show stanceName;
+import '../../../../game_engine/rules/battle_engine.dart'
+    show stanceName, ultimateOf;
 import '../../../../game_engine/rules/js_math.dart';
 import 'fx_style.dart';
 import 'proc_fx.dart';
@@ -95,10 +96,14 @@ class UltFx {
     required this.bulwark,
     this.ultId,
     this.casterClass,
+    this.casterAscension,
     this.script = kDefaultUltScript,
     this.targets = const [],
     this.enemyType,
   });
+
+  /// Ascensión del lanzador (sprite ascendido de la tarjeta).
+  final String? casterAscension;
 
   final String name;
   final String casterName;
@@ -132,6 +137,7 @@ class UltFx {
       bulwark: bulwark,
       ultId: ultId,
       casterClass: casterClass,
+      casterAscension: casterAscension,
       script: script,
       targets: ids,
       enemyType: enemyType);
@@ -544,6 +550,14 @@ List<BattleFx> mapBattleEvents(
             }
           case SkillKind.heal || SkillKind.regen || SkillKind.bulwark:
             break; // los HealEvent traen números y auras
+          case SkillKind.support:
+            // Kit de ascensión: grito / escudo / adelanto para el grupo.
+            ring(here.dx, here.dy - 8, a.color, big: true);
+            if (sk.rally || sk.protect) {
+              for (final q in aliveParty()) {
+                aura(q.id, FxElement.level);
+              }
+            }
         }
       case BattleActionKind.dual:
         final partner = e.partnerId;
@@ -1268,7 +1282,7 @@ List<BattleFx> mapBattleEvents(
         startAction(e);
       case UltimateUsedEvent(:final actorId, :final name):
         final c = state.byId(actorId);
-        final sk = kAllUltimates[c?.weaponType];
+        final sk = c == null ? null : ultimateOf(c);
         final p = position(actorId);
         ultIndex = out.length;
         out.add(BattleFx(FxKind.ult,
@@ -1280,9 +1294,11 @@ List<BattleFx> mapBattleEvents(
             ult: UltFx(
               name: name,
               casterName: c?.name ?? '',
-              bulwark: sk?.kind == SkillKind.bulwark,
+              bulwark: sk?.kind == SkillKind.bulwark ||
+                  sk?.kind == SkillKind.support,
               ultId: sk?.id,
               casterClass: c?.classId,
+              casterAscension: c?.ascensionId,
               script: ultScriptFor(sk?.id),
             )));
       case DamageEvent():

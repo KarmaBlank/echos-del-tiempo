@@ -99,7 +99,9 @@ class Combatant {
     this.voidMarked = false,
     this.phase = 0,
     this.mechTurns = 0,
-  })  : statusBonus = statusBonus ?? {},
+    Set<String>? once,
+  })  : once = once ?? {},
+        statusBonus = statusBonus ?? {},
         keystones = keystones ?? {},
         mechanics = mechanics ?? {},
         effects = effects ?? [],
@@ -227,6 +229,13 @@ class Combatant {
   /// séquito): al llegar a `every` las vuelve a crear.
   int mechTurns;
 
+  /// Mecánicas de "1 vez por batalla" ya usadas (Inmortal, Mártir;
+  /// docs/specs/ascension.md § 3.1).
+  Set<String> once;
+
+  /// Ascensión del jugador (`null` = clase base o enemigo).
+  String? get ascensionId => build?.ascension.id;
+
   bool get hasBreak => breakBase > 0;
 
   /// Umbral actual: `base × min(2, 1 + 0.25 × quiebres)`.
@@ -332,6 +341,7 @@ class Combatant {
         voidMarked: voidMarked,
         phase: phase,
         mechTurns: mechTurns,
+        once: Set.of(once),
       );
 }
 

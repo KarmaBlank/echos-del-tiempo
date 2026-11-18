@@ -5,7 +5,11 @@ import '../../../app/theme/party_box.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../game_engine/data/ascension_catalog.dart';
+import '../../../game_engine/data/ascension_mechanics.dart';
 import '../../../game_engine/data/classes_catalog.dart';
+import '../../../game_engine/data/skills_catalog.dart';
+import '../../ascension/domain/ascension_text.dart';
 import '../../../game_engine/data/enemies_catalog.dart';
 import '../../../game_engine/models/enemy_def.dart';
 import '../../../game_engine/data/passive_mechanics.dart';
@@ -313,6 +317,9 @@ List<StatusChip> treeEffectChips(Combatant p) {
   final chips = <StatusChip>[];
   String src(TimedEffect e) =>
       kMechanics[e.sourceId]?.name ??
+      kAscensionMechanics[e.sourceId]?.name ??
+      kSkills[e.sourceId]?.name ??
+      kAscensionUltimatesById[e.sourceId]?.name ??
       kBossMechanics[e.sourceId]?.name ??
       (e.sourceId == 'vigilancia' ? 'Vigilante del Vacío' : null) ??
       e.sourceId;
@@ -373,8 +380,48 @@ List<StatusChip> treeEffectChips(Combatant p) {
             '<b style="color:#ffeaa7">Aturdimiento extendido</b> '
                 '<span class="k">($from)</span><br>'
                 'Su aturdimiento dura 1 turno más.'));
+      // ---- ascensión (docs/specs/ascension.md) ----
+      case BuffStat.guard:
+        chips.add(StatusChip(
+            '▼DAÑO',
+            'Defensa −$pct%',
+            ProtoColors.sky,
+            '<b style="color:#74b9ff">Defensa: −$pct% de daño recibido</b> '
+                '<span class="k">($from · ${turns(e)})</span>'));
       case BuffStat.crit:
-      case BuffStat.damage:
+        chips.add(StatusChip(
+            '▲CRÍT',
+            '▲CRÍT +$pct%',
+            ProtoColors.pink,
+            '<b style="color:#ff6b81">Crítico +$pct%</b> '
+                '<span class="k">($from · ${turns(e)})</span>'));
+      case BuffStat.critMulti:
+        chips.add(StatusChip(
+            '▲×CRÍT',
+            '▲×CRÍT +${fm(e.value)}',
+            ProtoColors.pink,
+            '<b style="color:#ff6b81">Multiplicador de crítico +${fm(e.value)}</b> '
+                '<span class="k">($from · ${turns(e)})</span>'));
+      case BuffStat.trap:
+        final n = e.value.round();
+        chips.add(StatusChip(
+            'Trampa',
+            'Trampa $n',
+            ProtoColors.green,
+            '<b style="color:#7bed9f">Trampa $n</b> '
+                '<span class="k">($from · ${turns(e)})</span><br>'
+                'Salta al empezar su turno: $n de daño.'));
+      case BuffStat.damage ||
+            BuffStat.lifeSteal ||
+            BuffStat.delayPower ||
+            BuffStat.buffPower ||
+            BuffStat.buffTurns ||
+            BuffStat.trapPower ||
+            BuffStat.trapTurns ||
+            BuffStat.shieldPower ||
+            BuffStat.shieldReflect ||
+            BuffStat.holyPower ||
+            BuffStat.shareDamage:
         break;
     }
   }
@@ -449,6 +496,13 @@ Widget _barRow(Widget bar, String value,
       ],
     );
 
+/// `<b>Ana</b>, Cronomante` con la ascensión en su color (ascension.md § 5).
+String heroNameMarkup(Combatant p) {
+  final a = ascensionFor(p.classId, p.ascensionId);
+  final n = '<b>${protoEsc(p.name)}</b>';
+  return a == null ? n : '$n, ${hexSpan(ascensionHex(a), protoEsc(a.name))}';
+}
+
 String _classLine(Combatant p) {
   final cls = kClasses[p.classId]?.name ?? p.classId ?? '';
   final lvl = p.build?.level;
@@ -504,7 +558,7 @@ class MyBattlePanel extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ProtoText(
-                '<b>${protoEsc(p.name)}</b> '
+                '${heroNameMarkup(p)} '
                 '<span class="k">${_classLine(p)}</span>',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -614,7 +668,7 @@ class _MemberRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = player;
-    final img = sprites?.hero(p.classId ?? '');
+    final img = sprites?.heroFor(p.classId, p.ascensionId);
     final chips = combatantChips(p);
     final turn = current
         ? hexSpan('#ffd166', '▶ SU TURNO')
@@ -658,7 +712,7 @@ class _MemberRow extends StatelessWidget {
                     children: [
                       Expanded(
                         child: ProtoText(
-                          '${protoEsc(p.name)} '
+                          '${heroNameMarkup(p)} '
                           '<span class="k">${_classLine(p)}</span>',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

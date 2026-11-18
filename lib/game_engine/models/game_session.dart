@@ -53,7 +53,12 @@ class SessionPlayer {
     this.moving = false,
     this.ult = 0,
     this.levelUpPending = false,
+    this.spikeReady = 0,
   });
+
+  /// Reloj de la sala desde el que las púas de la Prueba vuelven a dañar
+  /// a este jugador (ascension.md § 1.1). Solo lo usa el host.
+  double spikeReady;
 
   final String id;
 
@@ -100,6 +105,7 @@ class SessionPlayer {
         moving: moving,
         ult: ult,
         levelUpPending: levelUpPending,
+        spikeReady: spikeReady,
       );
 }
 
@@ -499,6 +505,7 @@ class GameSession {
     this.eco,
     this.ecoOwner,
     List<String>? atlas,
+    this.trial,
   })  : players = players ?? LinkedHashMap(),
         ground = ground ?? [],
         atlas = List.unmodifiable(atlas ?? const <String>[]);
@@ -549,6 +556,10 @@ class GameSession {
   /// Nodos del Atlas del anfitrión (§ 5.2): sus efectos valen para toda
   /// la sala.
   List<String> atlas;
+
+  /// La Prueba del Tiempo (1..3) que se vota, prepara o juega
+  /// (docs/specs/ascension.md § 1).
+  int? trial;
 
   /// Se vota, prepara o juega un Eco.
   bool get inEco => eco != null;
@@ -601,5 +612,6 @@ class GameSession {
         eco: eco,
         ecoOwner: ecoOwner,
         atlas: atlas,
+        trial: trial,
       );
 }

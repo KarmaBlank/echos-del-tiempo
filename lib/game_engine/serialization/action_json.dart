@@ -89,6 +89,12 @@ abstract final class ActionJson {
         ProposeEcoAction() => {'t': 'eco', 'u': a.uid},
         EcoCraftAction() => {'t': 'ecoCraft', 'u': a.uid, 'op': a.op.name},
         DevGrantEcoAction() => {'t': 'devEco', 'tier': a.tier},
+        // Ascensión v0.5 (ascension.md § 6).
+        ProposeTrialAction() => {'t': 'trial', 'n': a.trial},
+        ChooseAscensionAction() => {'t': 'ascChoose', 'id': a.ascensionId},
+        TakeAscensionNodeAction() => {'t': 'ascNode', 'id': a.nodeId},
+        ResetAscensionAction() => {'t': 'ascReset', if (a.full) 'full': true},
+        DevGrantTrialAction() => {'t': 'devTrial', 'n': a.trial},
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -170,6 +176,16 @@ abstract final class ActionJson {
         return EcoCraftAction(j.str('u'), j.enumByName('op', EcoCraftOp.values));
       case 'devEco':
         return DevGrantEcoAction(j.integer('tier'));
+      case 'trial':
+        return ProposeTrialAction(j.integer('n'));
+      case 'ascChoose':
+        return ChooseAscensionAction(j.str('id'));
+      case 'ascNode':
+        return TakeAscensionNodeAction(j.str('id'));
+      case 'ascReset':
+        return ResetAscensionAction(full: j.flag('full'));
+      case 'devTrial':
+        return DevGrantTrialAction(j.integer('n'));
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

@@ -125,6 +125,43 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
       l.add('Los próximos ${tk.amount} ataques enemigos van contra ti');
     case SkillKind.guard:
       l.add('Todo el equipo recibe ½ daño hasta su próximo turno');
+    case SkillKind.support:
+      break;
   }
+  l.addAll(kitEffectLines(tk));
   return l.join('<br>');
+}
+
+/// Las líneas de los efectos del kit de ascensión (ascension.md § 4).
+List<String> kitEffectLines(SkillDef tk) {
+  String pct(double v) => '${jsRound(v * 100)}%';
+  return [
+    if (tk.hpCost > 0) hexSpan('#ff4757', 'Cuesta ${pct(tk.hpCost)} de tu vida máx.'),
+    for (final x in tk.extraStatuses) statusApplicationMarkup(x),
+    if (tk.detonate > 0)
+      '+${pct(tk.detonate)} de daño por cada stack de Quemadura, '
+          'Congelación y Veneno del objetivo (los consume)',
+    if (tk.execute > 0)
+      'Remata (no jefes ni élites) si queda con menos de ${pct(tk.execute)} '
+          'de vida',
+    if (tk.lifeSteal > 0) 'Roba ${pct(tk.lifeSteal)} del daño que hace',
+    if (tk.trap > 0)
+      'Deja una trampa de ATQ × ${fm(tk.trap)} en '
+          '${tk.allTargets ? 'cada enemigo' : 'el objetivo'}: salta al '
+          'empezar su turno',
+    for (final b in tk.partyBuffs)
+      'Grupo: ${b.value < 0 ? '−' : '+'}${pct(b.value.abs())} ${b.stat.label} '
+          '(${b.turns} turno${b.turns == 1 ? '' : 's'})',
+    if (tk.partyShield > 0)
+      'Escudo del ${pct(tk.partyShield)} de tu vida máx. a cada aliado '
+          '(${tk.partyShieldTurns} turnos)',
+    if (tk.advanceAllies > 0)
+      'Adelanta a tus aliados ${pct(tk.advanceAllies)} de su espera (solo: '
+          'a vos)',
+    if (tk.selfBuff case final b?)
+      '+${pct(b.value)} ${b.stat.label} (${b.turns} turno${b.turns == 1 ? '' : 's'})',
+    if (tk.selfTurn < 1)
+      'Tu próximo turno llega ${pct(1 - tk.selfTurn)} antes',
+    if (tk.protect) 'Protección: recibís el daño dirigido a tus aliados',
+  ];
 }

@@ -236,3 +236,36 @@ class DevGrantEcoAction extends SessionAction {
   final int tier;
   const DevGrantEcoAction(this.tier);
 }
+
+// ---------------- ascensión v0.5 (docs/specs/ascension.md) ----------------
+
+/// Proponer la Prueba del Tiempo [trial] (1..3) en la Estatua.
+class ProposeTrialAction extends SessionAction {
+  final int trial;
+  const ProposeTrialAction(this.trial);
+}
+
+/// Elegir la ascensión [ascensionId] (con la Prueba I superada).
+class ChooseAscensionAction extends SessionAction {
+  final String ascensionId;
+  const ChooseAscensionAction(this.ascensionId);
+}
+
+/// Tomar un nodo del mini-árbol de la ascensión.
+class TakeAscensionNodeAction extends SessionAction {
+  final String nodeId;
+  const TakeAscensionNodeAction(this.nodeId);
+}
+
+/// Reinicio gratis de los nodos; con [full] además saca la ascensión.
+class ResetAscensionAction extends SessionAction {
+  final bool full;
+  const ResetAscensionAction({this.full = false});
+}
+
+/// Solo desarrollo (`FeatureFlags.devTools`): marca las Pruebas 1..[trial]
+/// como superadas (y sube al nivel de la Prueba si faltaba).
+class DevGrantTrialAction extends SessionAction {
+  final int trial;
+  const DevGrantTrialAction(this.trial);
+}

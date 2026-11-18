@@ -27,6 +27,7 @@ import '../../../game_engine/rules/world_rules.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 import '../../../netcode/contracts/net_session.dart';
 import '../../../netcode/contracts/net_session_factory.dart';
+import '../../ascension/domain/ascension_text.dart';
 import 'local_player.dart';
 import 'session_view.dart';
 import 'world_text.dart';
@@ -493,6 +494,10 @@ class SessionController extends StateNotifier<SessionView?> {
   bool get nearPortal =>
       _s?.mode == SessionMode.lobby && WorldRules.nearPortal(local.x, local.y);
 
+  /// Frente a la Estatua del Tiempo (ascension.md § 1).
+  bool get nearStatue =>
+      _s?.mode == SessionMode.lobby && WorldRules.nearStatue(local.x, local.y);
+
   /// `nearSeal`: el sello sin activar más cercano a menos de 26 px.
   MissionItem? get nearSeal {
     final s = _s;
@@ -571,6 +576,8 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.armory);
       } else if (nearPortal) {
         openPanel(WorldPanel.ecoPortal);
+      } else if (nearStatue) {
+        openPanel(WorldPanel.ascension);
       } else if (nearEntrance case final e?) {
         enterZone(e);
       }
@@ -748,6 +755,32 @@ class SessionController extends StateNotifier<SessionView?> {
   /// `devTools`).
   bool devGrantEco(int tier) => _apply(DevGrantEcoAction(tier));
 
+  // ---- ascensión (docs/specs/ascension.md) ----
+
+  /// Proponer la Prueba del Tiempo [n] (cierra la estatua si se aceptó).
+  bool proposeTrial(int n) => _apply(ProposeTrialAction(n));
+
+  bool chooseAscension(String id) => _apply(ChooseAscensionAction(id));
+
+  bool takeAscensionNode(String nodeId) =>
+      _apply(TakeAscensionNodeAction(nodeId));
+
+  /// Reinicio gratis de los nodos; con [full] además vuelve a la clase base.
+  bool resetAscension({bool full = false}) =>
+      _apply(ResetAscensionAction(full: full));
+
+  /// La última Prueba completada en esta misión y si el jugador local
+  /// ganó sus puntos (para el resultado); `null` si no hubo.
+  (int, bool)? lastTrial;
+
+  /// Solo desarrollo: Pruebas 1..[n] superadas.
+  bool devGrantTrial(int n) => _apply(DevGrantTrialAction(n));
+
+  /// Abre el panel de la estatua en la pestaña ASCENSIÓN (botón del
+  /// resultado de una Prueba).
+  bool get canOpenAscension =>
+      _s?.mode == SessionMode.lobby || _s?.mode == SessionMode.prep;
+
   /// Enter en el campo de chat (`send({t:'chat'})`).
   bool sendChat(String text) => _apply(ChatAction(text));
 
@@ -785,8 +818,14 @@ class SessionController extends StateNotifier<SessionView?> {
           _messages.add(text);
           if (_messages.length > maxMessages) _messages.removeAt(0);
           _addChat(ChatLine.system(text));
-        case ChatMessageEvent(:final from, :final text):
-          _addChat(ChatLine(from, text));
+        case ChatMessageEvent(:final playerId, :final from, :final text):
+          // Título de la ascensión en el chat: "Ana, Cronomante" (§ 5).
+          final prof = _s!.players[playerId]?.profile;
+          _addChat(ChatLine(
+              prof == null
+                  ? from
+                  : heroTitle(from, prof.classId, prof.ascension.id),
+              text));
         // Pausa de grupo: aviso en el chat (jugando solo no hace falta).
         case PausedEvent(:final name) when net != null:
           _addChat(ChatLine.system('$name pausó el juego'));
@@ -800,8 +839,11 @@ class SessionController extends StateNotifier<SessionView?> {
         case MissionStartedEvent():
           _missionLoot.clear();
           _atlasGain = null;
+          lastTrial = null;
         case EcoCompletedEvent():
           _onEcoCompleted(e);
+        case TrialCompletedEvent(:final trial, :final playerIds):
+          lastTrial = (trial, playerIds.contains(localId));
         case LootDropEvent(:final playerId, :final drop)
             when playerId == localId:
           _missionLoot.add(drop);
@@ -876,7 +918,8 @@ class SessionController extends StateNotifier<SessionView?> {
     _lastMode = mode;
     if ((_panel == WorldPanel.missionBoard ||
             _panel == WorldPanel.armory ||
-            _panel == WorldPanel.ecoPortal) &&
+            _panel == WorldPanel.ecoPortal ||
+            _panel == WorldPanel.ascension) &&
         mode != SessionMode.lobby) {
       _panel = null;
     }
@@ -914,6 +957,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (_panel != null) return (null, null);
     if (nearArmory) return (WorldPrompt.armory, null);
     if (nearPortal) return (WorldPrompt.ecoPortal, null);
+    if (nearStatue) return (WorldPrompt.statue, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
     if (nearStairs case final k?) {

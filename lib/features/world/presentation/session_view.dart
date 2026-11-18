@@ -11,7 +11,17 @@ import '../../../game_engine/rules/atlas_rules.dart';
 /// (tecla I).
 /// `ecoPortal`: el Portal del Eco del pueblo (ECOS y ATLAS,
 /// docs/specs/ecos_atlas.md).
-enum WorldPanel { missionBoard, armory, character, prep, inventory, ecoPortal }
+/// `ascension`: la Estatua del Tiempo (PRUEBAS y ASCENSIÓN,
+/// docs/specs/ascension.md).
+enum WorldPanel {
+  missionBoard,
+  armory,
+  character,
+  prep,
+  inventory,
+  ecoPortal,
+  ascension,
+}
 
 /// Una línea del chat (`addChat`): de un jugador o de sistema (`sys`).
 class ChatLine {
@@ -34,6 +44,9 @@ enum WorldPrompt {
 
   /// Frente al Portal del Eco del pueblo.
   ecoPortal('[E] Portal del Eco'),
+
+  /// Frente a la Estatua del Tiempo (ascension.md § 1).
+  statue('[E] Estatua del Tiempo'),
 
   /// Frente a la entrada de una zona (mapa del mundo). El texto real
   /// (`[E] Entrar: <zona>`, bloqueada, próximamente) va en

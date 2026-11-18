@@ -11,6 +11,7 @@ import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/class_def.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import '../../ascension/domain/ascension_text.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/pixel_sprite.dart';
 import '../domain/account.dart';
@@ -93,7 +94,9 @@ class CharacterSlotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final img = sprites?.hero(profile.classId);
+    // Ascendido: su sprite y su título (docs/specs/ascension.md § 5).
+    final asc = ascensionFor(profile.classId, profile.ascension.id);
+    final img = sprites?.heroFor(profile.classId, asc?.id);
     const small = TextStyle(color: RetroPalette.muted, height: 1.8);
     return GestureDetector(
       key: ValueKey('char-slot-${slot.id}'),
@@ -127,6 +130,12 @@ class CharacterSlotCard extends StatelessWidget {
                                   ? RetroPalette.gold
                                   : RetroPalette.ink)),
                       const SizedBox(height: 8),
+                      if (asc != null)
+                        Text(retroText(asc.name),
+                            key: ValueKey('char-asc-${slot.id}'),
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                height: 1.8, color: Color(asc.color))),
                       Text(retroText('$className · Nv ${profile.level}'),
                           style: const TextStyle(height: 1.8)),
                       Text('Zona ${profile.unlockedZone}', style: small),

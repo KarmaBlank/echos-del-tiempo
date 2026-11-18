@@ -14,6 +14,8 @@ import '../../../../game_engine/models/loot_filter.dart';
 import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../../game_engine/rules/world_rules.dart';
+import '../../../../game_engine/data/trials_catalog.dart';
+import '../../../ascension/domain/ascension_text.dart';
 import '../../../endgame/domain/endgame_text.dart';
 import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
@@ -275,6 +277,11 @@ class WorldHud extends StatelessWidget {
     final eco = s.eco;
     if (eco != null && m.missionId == 'eco') {
       return 'Eco T${eco.tier} · ${cat.zone(eco.zone)?.name ?? ''}';
+    }
+    // Prueba del Tiempo (docs/specs/ascension.md § 1).
+    final trial = trialDef(s.trial);
+    if (trial != null && m.missionId == 'trial') {
+      return 'Prueba del Tiempo ${trial.roman}';
     }
     return cat.zone(m.zone)?.name ??
         cat.mission(m.missionId)?.name ??
@@ -575,7 +582,13 @@ class _PlayerBox extends StatelessWidget {
       local: local,
       knockedOut: !p.alive,
       children: [
-        ProtoText('${protoEsc(p.name)} '
+        ProtoText(
+            key: ValueKey('hud-name-${p.id}'),
+            '${protoEsc(p.name)}'
+            '${switch (ascensionFor(prof.classId, prof.ascension.id)) {
+              final a? => ', ${protoColor(Color(a.color), protoEsc(a.name))}',
+              null => '',
+            }} '
             '<span class="k">$cls Lv${prof.level}</span>'),
         ProtoText(protoColor(
             ProtoColors.orange,

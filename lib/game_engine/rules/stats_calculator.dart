@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../data/affixes_catalog.dart';
+import '../data/ascension_catalog.dart';
 import '../data/weapon_passives.dart';
 import '../models/attributes.dart';
 import '../models/class_def.dart';
@@ -107,6 +108,18 @@ class StatsCalculator {
     var magic = jsRound((magBase + magFlat) * (1 + magPct) * powMult);
 
     final tree = treeRules.aggregate(build.classId, build.passiveProgress);
+    // Ascensión (docs/specs/ascension.md § 3): mecánicas y stats de sus
+    // nodos (la raíz siempre, si la eligió).
+    final ascMechanics = <String>{};
+    final asc = kAscensions[build.ascension.id];
+    if (asc != null && asc.classId == build.classId) {
+      for (final id in [asc.rootId, ...build.ascension.nodes]) {
+        final node = asc.node(id);
+        if (node == null) continue;
+        if (node.mechanicId case final m?) ascMechanics.add(m);
+        node.stats.forEach((k, v) => tree.add(k, v.toDouble()));
+      }
+    }
     maxHp = math.max(1, jsRound(maxHp * (1 + tree['hp'])));
     maxMp = jsRound(maxMp * (1 + tree['mp']));
     attack = math.max(1, jsRound(attack * (1 + tree['atk'])));
@@ -117,7 +130,7 @@ class StatsCalculator {
     final defenseTotal = math.max(0.0, defense + tree['def']);
 
     final item = build.item;
-    final mechanics = {...tree.mechanics};
+    final mechanics = {...tree.mechanics, ...ascMechanics};
     final passive = item?.passiveId;
     if (item != null && passive != null && item.rarity.hasPassive) {
       mechanics.addAll(
