@@ -27,7 +27,8 @@ Implementación Dart (feature `world` + piezas de `missions` y `combat`):
 | Tiles y temas | `lib/features/world/presentation/map/tile_painter.dart`, `map_themes.dart` |
 | Héroes, enemigos y objetos | `lib/features/world/presentation/map/actor_painter.dart` |
 | HUD (overlays Flutter) | `lib/features/world/presentation/hud/*.dart` |
-| Título (nombre, clase) | `lib/features/lobby/presentation/title_screen.dart` |
+| Título (selección de personaje) | `lib/features/lobby/presentation/title_screen.dart` |
+| Personajes y alijo (cuenta) | `lib/features/characters/` (characters.md) |
 | Chat | `lib/features/world/presentation/hud/chat_box.dart` |
 | Sonido (oyente de eventos) | `lib/features/world/presentation/session_sfx.dart` (docs/specs/audio.md) |
 | Personaje (atributos, armas, árbol) | `lib/features/world/presentation/panels/character_panel.dart` (docs/specs/panels.md) |
@@ -47,19 +48,22 @@ Tests: `test/features/world/session_flow_test.dart`,
 
 ## Título (`#title` y `title()`, HTML 70-83 y líneas 1471-1490)
 
-- `ECOS DEL TIEMPO` (32 px `gold`, sombra dura `red`), subtítulo y, si
-  el perfil guardado es de nivel > 1, `· Tu nivel guardado: N`.
-- `Nombre:` campo de 10 caracteres (`maxlength`), con el nombre guardado.
-- Una tarjeta por clase permitida (`FeatureFlags`): sprite del héroe
-  ×4, nombre, descripción (`ClassDef.description`, el `desc` del
-  prototipo), atributos base y arma inicial. La elegida tiene borde
-  `gold`. Elegir otra clase hace lo mismo que el prototipo:
-  `classId = k`, `equipped = arma inicial` y `resetBuild` (el árbol que
-  no sirva lo descarta `normalize` al entrar).
-- `> COMENZAR` (`prep()`): nombre recortado (vacío → `Héroe`, máx. 10),
-  guarda el perfil con `ProfileStore.save` y abre `WorldScreen`, que lo
-  carga. **Agregado del puerto**: el prototipo solo tiene "Crear sala" /
-  "Unirse".
+- `ECOS DEL TIEMPO` (32 px `gold`, sombra dura `red`) y subtítulo.
+- **Selección de personaje** (v0.3, docs/specs/characters.md § 2): la
+  cuenta tiene hasta 8 personajes; el título los lista (sprite, nombre,
+  clase, nivel, zona, última partida) con `> JUGAR`, `CREAR PERSONAJE`,
+  `RENOMBRAR`, `BORRAR` (con el nombre escrito como confirmación) y
+  `ALIJO`. Sin personajes abre el creador.
+- Creador (lo que antes era el título entero): `Nombre:` de 10
+  caracteres (`maxlength`, vacío → `Héroe`) y una tarjeta por clase
+  permitida (`FeatureFlags`): sprite del héroe ×4, nombre, descripción
+  (`ClassDef.description`, el `desc` del prototipo), atributos base y
+  arma inicial. La elegida tiene borde `gold`. `CREAR` arma el perfil
+  nuevo normalizado (clase, arma inicial, atributos base).
+- `> JUGAR`: anota la fecha en el personaje elegido, lo guarda con
+  `ProfileStore.save` (que en la app es el personaje elegido de la
+  cuenta) y abre `WorldScreen`, que lo carga. **Agregado del puerto**:
+  el prototipo solo tiene "Crear sala" / "Unirse".
 - `CREAR SALA`, el campo de código y `UNIRSE` dependen de la
   `NetSessionFactory` que registró el composition root (docs/specs/netcode.md):
   - sin fábrica (tests, builds sin red): deshabilitados con
@@ -68,8 +72,8 @@ Tests: `test/features/world/session_flow_test.dart`,
     motivo (`P2P por internet: falta configurar Firebase`);
   - disponible: el campo muestra `codeHint` (`IP:PUERTO` en LAN,
     `CODIGO` en P2P) y una etiqueta con `label` (`LAN` / `P2P`).
-    `CREAR SALA` guarda el perfil y conecta como host; `UNIRSE` exige un
-    código (`Escribe el código de la sala.`), guarda el perfil y conecta
+    `CREAR SALA` guarda el personaje elegido y conecta como host; `UNIRSE`
+    exige un código (`Escribe el código de la sala.`), lo guarda y conecta
     como cliente. Mientras conecta se muestra `Creando sala…` /
     `Conectando a X…` y los botones se deshabilitan; un error de
     conexión (`NetException`) se muestra en rojo debajo.
@@ -81,7 +85,7 @@ Tests: `test/features/world/session_flow_test.dart`,
 ## Flujo de pantallas
 
 ```
-Título ("> COMENZAR", guarda nombre y clase) ──push──> WorldScreen
+Título ("> JUGAR" con el personaje elegido) ──push──> WorldScreen
 WorldScreen según SessionMode:
   lobby / prep / field / levelUp → mapa Flame + HUD + paneles
   battle                          → SessionBattleScreen (encima del mapa)
@@ -739,7 +743,12 @@ Resumen:
 ## Persistencia
 
 `ProfileStore` (contrato en `game_engine/models/profile_store.dart`):
-- `JsonFileProfileStore`: `profile.json` (`PlayerProfile.toJson`) en la
+- **Desde v0.3** la app registra `SelectedCharacterProfileStore`: lee y
+  escribe el personaje elegido de la cuenta `account.json` (varios
+  personajes + alijo, escritura atómica, migración desde `profile.json`
+  y manejo de archivo corrupto: docs/specs/characters.md § 1).
+- `JsonFileProfileStore` (formato de antes, hoy solo se lee para migrar):
+  `profile.json` (`PlayerProfile.toJson`) en la
   carpeta de datos del usuario sin paquetes nuevos (`dart:io`):
   `%APPDATA%\EcosDelTiempo` en Windows,
   `~/Library/Application Support/EcosDelTiempo` en macOS,

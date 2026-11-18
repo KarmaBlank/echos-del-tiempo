@@ -1,39 +1,41 @@
 import 'dart:async';
 
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/feature_flags.dart';
 import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/retro_panel.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../core/audio/music/music_catalog.dart';
 import '../../../core/audio/presentation/audio_providers.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../core/update/presentation/update_banner.dart';
-import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/class_def.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../../netcode/contracts/net_session.dart';
 import '../../../netcode/contracts/net_session_factory.dart';
+import '../../characters/domain/account.dart';
+import '../../characters/presentation/character_widgets.dart';
+import '../../characters/presentation/characters_providers.dart';
+import '../../characters/presentation/stash_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
-import '../../combat/presentation/pixel_sprite.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../settings/presentation/settings_menu.dart';
 import '../../world/presentation/world_screen.dart';
 
 /// Pantalla de título (prototipo, HTML líneas 70-83 y `title()` desde la
-/// línea 1471): nombre, elección de clase y entrada al juego, solo o en
-/// una sala de red (`CREAR SALA` / código + `UNIRSE`, según la
-/// `NetSessionFactory` del flavor). Ver docs/specs/exploration.md
-/// § "Título" y docs/specs/netcode.md.
+/// línea 1471) con la **selección de personaje** de la cuenta: lista de
+/// personajes, crear (nombre + clase, el editor de antes), renombrar,
+/// borrar con confirmación escrita y el alijo compartido; después, la
+/// entrada al juego con el elegido, solo o en una sala de red (`CREAR
+/// SALA` / código + `UNIRSE`). Ver docs/specs/characters.md § 2,
+/// docs/specs/exploration.md § "Título" y docs/specs/netcode.md.
 class TitleScreen extends ConsumerStatefulWidget {
   const TitleScreen({super.key, this.onStart});
 
-  /// Qué hacer al comenzar, con el perfil ya guardado (por defecto,
+  /// Qué hacer al comenzar, con el personaje ya guardado (por defecto,
   /// abrir `WorldScreen`).
   final VoidCallback? onStart;
 
@@ -44,13 +46,30 @@ class TitleScreen extends ConsumerStatefulWidget {
 class _TitleScreenState extends ConsumerState<TitleScreen> {
   final _name = TextEditingController();
   final _code = TextEditingController();
-  PlayerProfile? _profile;
+  Account? _account;
   bool _busy = false;
   late final Future<void> _loading;
+  StreamSubscription<Account>? _changes;
 
-  /// Línea de estado de la red (`setErr` del prototipo) y si es un error.
+  /// Perfiles normalizados por `id` (con el crudo del que salieron, para
+  /// no normalizar de nuevo si no cambió).
+  final _normalized = <String, (PlayerProfile, PlayerProfile)>{};
+
+  /// Creador abierto y clase elegida en él.
+  bool _creating = false;
+  String _newClass = SessionController.defaultClass;
+
+  /// Aviso de la cuenta (archivo dañado) en rojo.
+  String? _notice;
+
+  /// Línea de estado (`setErr` del prototipo: red, errores de guardado) y
+  /// si es un error.
   String? _netStatus;
   bool _netError = false;
+
+  /// Doble clic en una tarjeta = jugar.
+  DateTime? _lastTap;
+  String? _lastTapId;
 
   ProgressionRules get _rules => ref.read(sessionEngineProvider).progression;
 
@@ -79,65 +98,163 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
 
   @override
   void dispose() {
+    unawaited(_changes?.cancel());
     _name.dispose();
     _code.dispose();
     super.dispose();
   }
 
-  /// `loadProfile` + `$('#iname').value = profile.name`.
   Future<void> _load() async {
-    PlayerProfile? p;
-    try {
-      p = await ref.read(profileStoreProvider).load();
-    } catch (_) {
-      p = null;
-    }
+    final repo = ref.read(accountRepositoryProvider);
+    // La sesión guarda el personaje elegido mientras se juega: la lista
+    // se refresca sola (nivel, zona, fecha).
+    _changes = repo.changes.listen((a) {
+      if (mounted) setState(() => _setAccount(a));
+    });
+    final a = await repo.load();
     if (!mounted) return;
-    final profile = _rules.normalize(p ??
-        PlayerProfile(classId: SessionController.defaultClass));
     setState(() {
-      _profile = profile;
-      _name.text = profile.name;
+      _notice = repo.notice;
+      _setAccount(a);
+      if (a.characters.isEmpty) _openCreator();
     });
   }
 
-  /// Clic en una tarjeta: `profile.cls = k; profile.eq = start;
-  /// resetBuild(profile)` (el árbol lo limpia `normalize` al entrar).
-  void _pickClass(ClassDef c) {
-    final p = _profile;
-    if (p == null || p.classId == c.id) return;
-    setState(() {
-      _profile = _rules.resetBuild(
-          p.copyWith(classId: c.id, equipped: c.startWeaponId));
-    });
+  void _setAccount(Account a) {
+    _account = a;
+    _normalized.removeWhere((id, _) => a.byId(id) == null);
   }
 
-  /// `prep()`: nombre recortado (vacío → "Héroe") y guardar. `null` si
-  /// la pantalla ya no está o el perfil no cargó.
-  Future<PlayerProfile?> _prepare() async {
-    // Se puede tocar antes de que termine de cargar el perfil.
-    await _loading;
-    final p = _profile;
-    if (p == null || !mounted) return null;
-    var name = _name.text.trim();
-    if (name.isEmpty) name = SessionController.defaultName;
-    if (name.length > ProgressionRules.maxNameLength) {
-      name = name.substring(0, ProgressionRules.maxNameLength);
+  /// Perfil normalizado de [c] (nivel, zona y clase válidos).
+  PlayerProfile _norm(CharacterSlot c) {
+    final cached = _normalized[c.id];
+    if (cached != null && identical(cached.$1, c.profile)) return cached.$2;
+    final n = _rules.normalize(c.profile);
+    _normalized[c.id] = (c.profile, n);
+    return n;
+  }
+
+  String _className(String id) => _rules.catalog.classes[id]?.name ?? id;
+
+  List<ClassDef> get _classes => _rules.catalog.classes.values
+      .where((c) => FeatureFlags.instance.isCharacterAllowed(c.id))
+      .toList();
+
+  void _openCreator() {
+    _creating = true;
+    _name.clear();
+    final allowed = _classes;
+    if (allowed.isNotEmpty && !allowed.any((c) => c.id == _newClass)) {
+      _newClass = allowed.first.id;
     }
-    final next = p.copyWith(name: name);
-    setState(() {
-      _busy = true;
-      _profile = next;
-    });
+  }
+
+  /// Aplica un cambio a la cuenta; un error de disco queda en la línea de
+  /// estado (la cuenta en memoria cambió igual).
+  Future<Account?> _update(Account Function(Account) change) async {
     try {
-      await ref.read(profileStoreProvider).save(next);
+      return await ref.read(accountRepositoryProvider).update(change);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _netStatus = 'No se pudo guardar la cuenta: $e';
+          _netError = true;
+        });
+      }
+      return ref.read(accountRepositoryProvider).current;
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Personajes
+  // ------------------------------------------------------------------
+
+  Future<void> _create() async {
+    await _loading;
+    final a = _account;
+    if (a == null || _busy) return;
+    if (a.isFull) {
+      setState(() {
+        _netStatus = 'Máximo ${Account.maxCharacters} personajes.';
+        _netError = true;
+      });
+      return;
+    }
+    final now = ref.read(accountRepositoryProvider).now();
+    await _update((a) =>
+        CharacterRules(_rules).create(a, _name.text, _newClass, now: now) ?? a);
+    if (!mounted) return;
+    setState(() {
+      _creating = false;
+      _netStatus = null;
+    });
+  }
+
+  void _tapSlot(String id) {
+    final now = DateTime.now();
+    final dbl = _lastTapId == id &&
+        _lastTap != null &&
+        now.difference(_lastTap!) < const Duration(milliseconds: 400);
+    _lastTap = dbl ? null : now;
+    _lastTapId = dbl ? null : id;
+    if (_account?.selectedId != id) unawaited(_update((a) => a.select(id)));
+    if (dbl) unawaited(_start());
+  }
+
+  Future<void> _rename() async {
+    final c = _account?.selected;
+    if (c == null || _busy) return;
+    final name = await showRenameDialog(context, c);
+    if (name == null || !mounted) return;
+    await _update((a) => CharacterRules(_rules).rename(a, c.id, name));
+  }
+
+  Future<void> _delete() async {
+    final c = _account?.selected;
+    if (c == null || _busy) return;
+    final ok = await showDeleteDialog(context, c, _className(_norm(c).classId));
+    if (!ok || !mounted) return;
+    final a = await _update((a) => a.remove(c.id));
+    if (!mounted) return;
+    setState(() {
+      _netStatus = '${c.displayName} fue borrado.';
+      _netError = false;
+      if (a != null && a.characters.isEmpty) _openCreator();
+    });
+  }
+
+  Future<void> _openStash() async {
+    final c = _account?.selected;
+    if (c == null || _busy) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => StashScreen(characterId: c.id)));
+  }
+
+  // ------------------------------------------------------------------
+  // Entrar al juego
+  // ------------------------------------------------------------------
+
+  /// Anota la partida en el elegido y lo pasa al `ProfileStore` de la
+  /// sesión. `null` si la pantalla ya no está o no hay personaje.
+  Future<PlayerProfile?> _prepare() async {
+    // Se puede tocar antes de que termine de cargar la cuenta.
+    await _loading;
+    final c = _account?.selected;
+    if (c == null || !mounted) return null;
+    setState(() => _busy = true);
+    final now = ref.read(accountRepositoryProvider).now();
+    await _update((a) => a.touch(c.id, now));
+    try {
+      // En la app es el mismo personaje de la cuenta (no cambia nada);
+      // con otro `ProfileStore` (tests, flavors) la sesión lo recibe igual.
+      await ref.read(profileStoreProvider).save(c.profile);
     } catch (_) {
       // Sin disco se juega igual (el controlador vuelve a intentar).
     }
-    return mounted ? next : null;
+    return mounted ? _norm(c) : null;
   }
 
-  /// `> COMENZAR`: un jugador, sin red.
+  /// `> JUGAR`: un jugador, sin red.
   Future<void> _start() async {
     if (_busy) return;
     final p = await _prepare();
@@ -212,16 +329,197 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     }
   }
 
+  // ------------------------------------------------------------------
+  // UI
+  // ------------------------------------------------------------------
+
+  Widget _selector(Account a, GameSprites? sprites) {
+    final sel = a.selected;
+    final has = sel != null && !_busy;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('PERSONAJES (${a.characters.length}/${Account.maxCharacters})',
+            style: const TextStyle(color: RetroPalette.muted)),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: 4 * CharacterSlotCard.width + 3 * 12,
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              for (final c in a.characters)
+                CharacterSlotCard(
+                  slot: c,
+                  profile: _norm(c),
+                  className: _className(_norm(c).classId),
+                  selected: c.id == a.selectedId,
+                  sprites: sprites,
+                  onTap: () => _tapSlot(c.id),
+                ),
+              if (!a.isFull)
+                NewCharacterCard(onTap: () => setState(_openCreator)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            ElevatedButton(
+              key: const ValueKey('title-start'),
+              onPressed: has ? _start : null,
+              child: const Text('> JUGAR'),
+            ),
+            PanelButton('CREAR PERSONAJE',
+                key: const ValueKey('char-create'),
+                reason: a.isFull
+                    ? 'Máximo ${Account.maxCharacters} personajes'
+                    : null,
+                onPressed: _busy ? null : () => setState(_openCreator)),
+            PanelButton('RENOMBRAR',
+                key: const ValueKey('char-rename'),
+                onPressed: has ? _rename : null),
+            PanelButton('BORRAR',
+                key: const ValueKey('char-delete'),
+                onPressed: has ? _delete : null),
+            PanelButton('ALIJO',
+                key: const ValueKey('char-stash'),
+                onPressed: has ? _openStash : null),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _creator(Account? a, GameSprites? sprites) {
+    final first = a == null || a.characters.isEmpty;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(first ? 'CREA TU PRIMER PERSONAJE' : 'CREAR PERSONAJE',
+            key: const ValueKey('char-creator'),
+            style: const TextStyle(fontSize: 12, color: RetroPalette.gold)),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Nombre:'),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 200,
+              child: RetroTextField(
+                key: const ValueKey('title-name'),
+                controller: _name,
+                maxLength: ProgressionRules.maxNameLength,
+                hint: Account.defaultName,
+                onSubmitted: (_) => _create(),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          alignment: WrapAlignment.center,
+          children: [
+            for (final c in _classes)
+              ClassCard(
+                def: c,
+                weaponName: _rules.catalog.weapons[c.startWeaponId]?.name ?? '',
+                selected: _newClass == c.id,
+                sprites: sprites,
+                onTap: () => setState(() => _newClass = c.id),
+              ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        Wrap(
+          spacing: 8,
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            if (!first)
+              PanelButton('CANCELAR',
+                  key: const ValueKey('char-create-cancel'),
+                  onPressed: () => setState(() => _creating = false)),
+            ElevatedButton(
+              key: const ValueKey('char-create-confirm'),
+              onPressed: _busy ? null : _create,
+              child: const Text('> CREAR'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _netRow(NetSessionFactory? factory) {
+    final netOk = factory != null &&
+        factory.available &&
+        !_busy &&
+        _account?.selected != null;
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        PanelButton('CREAR SALA',
+            key: const ValueKey('title-host'),
+            onPressed: netOk ? () => _connect(factory) : null),
+        const Text('o', style: TextStyle(color: RetroPalette.muted)),
+        SizedBox(
+          width: 170,
+          child: TextField(
+            key: const ValueKey('title-code'),
+            controller: _code,
+            enabled: netOk,
+            style: const TextStyle(
+                fontFamily: RetroTheme.fontFamily,
+                fontSize: 8,
+                color: RetroPalette.ink),
+            cursorColor: RetroPalette.gold,
+            onSubmitted: (_) {
+              if (netOk) _connect(factory, code: _code.text);
+            },
+            decoration: InputDecoration(
+              isDense: true,
+              hintText: factory?.codeHint ?? 'CODIGO',
+              hintStyle: const TextStyle(
+                  fontFamily: RetroTheme.fontFamily,
+                  fontSize: 8,
+                  color: RetroPalette.muted),
+              contentPadding: const EdgeInsets.all(8),
+            ),
+          ),
+        ),
+        PanelButton('UNIRSE',
+            key: const ValueKey('title-join'),
+            onPressed:
+                netOk ? () => _connect(factory, code: _code.text) : null),
+        Text(
+            retroText(factory == null
+                ? 'P2P: próximamente'
+                : factory.unavailableReason ?? 'Red: ${factory.label}'),
+            key: const ValueKey('title-p2p'),
+            style: const TextStyle(color: RetroPalette.muted)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final p = _profile;
-    final classes = _rules.catalog.classes.values
-        .where((c) => FeatureFlags.instance.isCharacterAllowed(c.id))
-        .toList();
+    final a = _account;
     final sprites = ref.watch(gameSpritesProvider).valueOrNull;
     final factory = ref.watch(netSessionFactoryProvider);
-    final netOk = factory != null && factory.available && !_busy;
+    final creating = _creating || (a != null && a.characters.isEmpty);
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -236,126 +534,36 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                     style: text.displayLarge?.copyWith(
                       color: RetroPalette.gold,
                       shadows: const [
-                        Shadow(
-                            color: RetroPalette.red, offset: Offset(4, 4)),
+                        Shadow(color: RetroPalette.red, offset: Offset(4, 4)),
                       ],
                     )),
                 const SizedBox(height: 16),
-                Text(
-                  retroText('Co-op JRPG táctico · 1-4 jugadores'
-                      '${p != null && p.level > 1 ? ' · Tu nivel guardado: ${p.level}' : ''}'),
-                  style: const TextStyle(color: RetroPalette.muted),
-                ),
+                Text(retroText('Co-op JRPG táctico · 1-4 jugadores'),
+                    style: const TextStyle(color: RetroPalette.muted)),
                 const SizedBox(height: 12),
                 // Aviso de versión nueva (docs/specs/distribution.md).
                 const UpdateBanner(),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('Nombre:'),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      width: 200,
-                      child: TextField(
-                        key: const ValueKey('title-name'),
-                        controller: _name,
-                        maxLength: ProgressionRules.maxNameLength,
-                        maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                        style: const TextStyle(
-                            fontFamily: RetroTheme.fontFamily,
-                            fontSize: 8,
-                            color: RetroPalette.ink),
-                        cursorColor: RetroPalette.gold,
-                        onSubmitted: (_) => _start(),
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          counterText: '',
-                          hintText: 'Héroe',
-                          hintStyle: TextStyle(
-                              fontFamily: RetroTheme.fontFamily,
-                              fontSize: 8,
-                              color: RetroPalette.muted),
-                          contentPadding: EdgeInsets.all(8),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    for (final c in classes)
-                      _ClassCard(
-                        def: c,
-                        weaponName:
-                            _rules.catalog.weapons[c.startWeaponId]?.name ?? '',
-                        selected: p?.classId == c.id,
-                        sprites: sprites,
-                        onTap: () => _pickClass(c),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  key: const ValueKey('title-start'),
-                  onPressed: _busy ? null : _start,
-                  child: const Text('> COMENZAR'),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    PanelButton('CREAR SALA',
-                        key: const ValueKey('title-host'),
-                        onPressed:
-                            netOk ? () => _connect(factory) : null),
-                    const Text('o', style: TextStyle(color: RetroPalette.muted)),
-                    SizedBox(
-                      width: 170,
-                      child: TextField(
-                        key: const ValueKey('title-code'),
-                        controller: _code,
-                        enabled: netOk,
-                        style: const TextStyle(
-                            fontFamily: RetroTheme.fontFamily,
-                            fontSize: 8,
-                            color: RetroPalette.ink),
-                        cursorColor: RetroPalette.gold,
-                        onSubmitted: (_) {
-                          if (netOk) _connect(factory, code: _code.text);
-                        },
-                        decoration: InputDecoration(
-                          isDense: true,
-                          hintText: factory?.codeHint ?? 'CODIGO',
-                          hintStyle: const TextStyle(
-                              fontFamily: RetroTheme.fontFamily,
-                              fontSize: 8,
-                              color: RetroPalette.muted),
-                          contentPadding: const EdgeInsets.all(8),
-                        ),
-                      ),
-                    ),
-                    PanelButton('UNIRSE',
-                        key: const ValueKey('title-join'),
-                        onPressed: netOk
-                            ? () => _connect(factory, code: _code.text)
-                            : null),
-                    Text(
-                        retroText(factory == null
-                            ? 'P2P: próximamente'
-                            : factory.unavailableReason ??
-                                'Red: ${factory.label}'),
-                        key: const ValueKey('title-p2p'),
-                        style: const TextStyle(color: RetroPalette.muted)),
-                  ],
-                ),
+                if (_notice case final n?) ...[
+                  const SizedBox(height: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 900),
+                    child: Text(retroText(n),
+                        key: const ValueKey('title-account-notice'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: RetroPalette.red)),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                if (a == null)
+                  const Text('Cargando...',
+                      style: TextStyle(color: RetroPalette.muted))
+                else if (creating)
+                  _creator(a, sprites)
+                else ...[
+                  _selector(a, sprites),
+                  const SizedBox(height: 16),
+                  _netRow(factory),
+                ],
                 const SizedBox(height: 16),
                 PanelButton('CONFIGURACIÓN',
                     key: const ValueKey('title-settings'),
@@ -370,88 +578,13 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                               ? RetroPalette.red
                               : RetroPalette.muted)),
                 ],
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 const Text(
                   'Mover: WASD/Flechas · Interactuar: E/Espacio · Combate por '
                   'turnos: 1-9 o clic · Cambiar objetivo: Q o clic en enemigo · '
                   'Chat: Enter',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: RetroPalette.muted),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Tarjeta de clase (`.card`): sprite, nombre, descripción, atributos
-/// base y arma inicial. Elegida = borde dorado.
-class _ClassCard extends StatelessWidget {
-  const _ClassCard({
-    required this.def,
-    required this.weaponName,
-    required this.selected,
-    required this.sprites,
-    required this.onTap,
-  });
-
-  final ClassDef def;
-  final String weaponName;
-  final bool selected;
-  final GameSprites? sprites;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final img = sprites?.hero(def.id);
-    const small = TextStyle(color: RetroPalette.muted, height: 1.8);
-    return GestureDetector(
-      key: ValueKey('class-card-${def.id}'),
-      onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: SizedBox(
-          width: 200,
-          child: RetroPanel(
-            selected: selected,
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              children: [
-                SizedBox(
-                  height: 72,
-                  child: img == null
-                      ? null
-                      : Center(child: PixelSprite(img, scale: 4)),
-                ),
-                const SizedBox(height: 8),
-                Text(retroText(def.name),
-                    style: TextStyle(
-                        fontSize: 16,
-                        color: selected ? RetroPalette.gold : RetroPalette.ink)),
-                const SizedBox(height: 8),
-                // Alturas fijas: todas las tarjetas miden lo mismo.
-                SizedBox(
-                  height: 48,
-                  child: Text(retroText(def.description),
-                      textAlign: TextAlign.center, style: small),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  Attribute.values
-                      .map((a) =>
-                          '${a.name.toUpperCase()} ${def.baseAttributes[a] ?? 0}')
-                      .join(' '),
-                  textAlign: TextAlign.center,
-                  style: small,
-                ),
-                const SizedBox(height: 4),
-                SizedBox(
-                  height: 32,
-                  child: Text(retroText('Arma: $weaponName'),
-                      textAlign: TextAlign.center, style: small),
                 ),
               ],
             ),

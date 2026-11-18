@@ -73,6 +73,12 @@ probar otra build en otro personaje → nueva **Temporada**.
 - El perfil pasa a tener **varios personajes** (slots) y un **alijo
   compartido** entre ellos (pestañas de inventario grande), para pasar
   objetos a un personaje nuevo y probar otras builds.
+- **Implementado** (spec propia: docs/specs/characters.md): cuenta
+  local `account.json` con hasta 8 personajes y el elegido; el título es
+  la selección de personaje (crear, renombrar, borrar con confirmación
+  escrita); alijo de 2 pestañas × 8 × 6 con armas y materiales (hasta
+  999 por tipo). Créditos y pociones siguen siendo de cada personaje.
+  El `profile.json` viejo se migra como personaje #1 y queda de copia.
 
 ## 6. Temporadas (opcional)
 

@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -5,6 +6,7 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
+import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/attributes.dart';
@@ -17,6 +19,7 @@ import '../../../game_engine/rules/inventory_rules.dart';
 import '../domain/item_text.dart';
 import 'item_widgets.dart';
 import 'shop_sections.dart';
+import 'weapon_compare_view.dart';
 
 /// Pestaña INVENTARIO del personaje (tecla I): grilla de 8 × 5 con la
 /// equipada aparte, mover arrastrando o con MOVER, ficha y comparación,
@@ -61,6 +64,92 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   bool _cleaning = false;
   CraftOp _cleanOp = CraftOp.salvageAll;
   Rarity _cleanRarity = Rarity.comun;
+
+  /// COMPARAR: arma A elegida (esperando B) y B (vista abierta).
+  WeaponRef? _cmpA;
+  WeaponRef? _cmpB;
+  bool get _picking => _cmpA != null && _cmpB == null;
+
+  /// Foco propio: `Esc` cancela "elige B" sin cerrar el panel.
+  final _keys = FocusNode(debugLabel: 'inventory');
+
+  @override
+  void dispose() {
+    _keys.dispose();
+    super.dispose();
+  }
+
+  void _startCompare(WeaponRef a) {
+    setState(() {
+      _cmpA = a;
+      _cmpB = null;
+      _moveFrom = null;
+      _confirmDrop = false;
+      _confirmCraft = null;
+      _cleaning = false;
+    });
+    _keys.requestFocus();
+  }
+
+  void _closeCompare() => setState(() {
+        _cmpA = null;
+        _cmpB = null;
+      });
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent e) {
+    if (_picking &&
+        e is KeyDownEvent &&
+        e.logicalKey == LogicalKeyboardKey.escape) {
+      _closeCompare();
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// Ficha del mouse: comparada con la equipada si es un arma que no
+  /// usás (§ "Comparar armas"); si no, la ficha simple.
+  Widget _withTip(SessionPlayer me, SessionPlayer owner, CellContent c,
+      PlayerAttributes attrs, Widget child,
+      {bool equipped = false}) {
+    final it = c.item;
+    final mine = owner.id == me.id;
+    final using = shop.rules.equippedItem(me.profile)?.uid;
+    if (it == null || (mine && it.uid == using)) {
+      return RetroTooltip(
+          message: it == null
+              ? _tooltip(me.profile, c, attrs)
+              : itemTooltipMarkup(shop.rules, it,
+                  level: me.profile.level,
+                  attributes: attrs,
+                  equipped: equipped),
+          child: child);
+    }
+    return RetroHoverCard(
+      builder: (_) => HoverCompareCard(
+          rules: shop.rules,
+          viewer: me.profile,
+          item: it,
+          attributes: attrs,
+          ownerName: mine ? null : owner.name),
+      child: child,
+    );
+  }
+
+  /// En "elige B": toma [token] como B si es un arma.
+  bool _pickB(String owner, String? token, CellContent? c) {
+    if (!_picking || token == null || c?.item == null) return false;
+    setState(() => _cmpB = WeaponRef(owner, token));
+    return true;
+  }
+
+  /// Nombre de A (en "elige B").
+  String _cmpAName() {
+    final a = _cmpA;
+    final it = a == null
+        ? null
+        : shop.view.session.players[a.owner]?.profile.itemByUid(a.uid);
+    return it == null ? '?' : itemNameMarkup(shop.rules, it);
+  }
 
   ShopContext get shop => widget.shop;
 
@@ -149,10 +238,9 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         selected: selected || _moveFrom == i,
         highlight: _moveFrom != null && _moveFrom != i,
       );
-      if (c != null) {
-        w = RetroTooltip(message: _tooltip(me.profile, c, attrs), child: w);
-      }
+      if (c != null) w = _withTip(me, owner, c, attrs, w);
       void tap() {
+        if (_pickB(owner.id, token, c)) return;
         final from = _moveFrom;
         if (mine && from != null) {
           setState(() => _moveFrom = null);
@@ -205,13 +293,16 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final eq = p.equippedItem;
     final eqCell = eq == null
         ? ItemCell(rules: shop.rules)
-        : RetroTooltip(
-            message: itemTooltipMarkup(shop.rules, eq,
-                level: me.profile.level, attributes: attrs, equipped: true),
-            child: ItemCell(
+        : _withTip(
+            me,
+            owner,
+            CellContent.item(eq),
+            attrs,
+            ItemCell(
                 rules: shop.rules,
                 content: CellContent.item(eq),
-                selected: _sel == eq.uid));
+                selected: _sel == eq.uid),
+            equipped: true);
     final left = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -222,19 +313,31 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             _CellButton(
                 key: const ValueKey('inv-equipped'),
                 onTap: () {
-                  if (eq != null) _select(eq.uid, null);
+                  if (eq == null) return;
+                  if (_pickB(owner.id, eq.uid, CellContent.item(eq))) return;
+                  _select(eq.uid, null);
                 },
                 child: eqCell),
             const SizedBox(width: 8),
             Expanded(
-              child: ProtoText(
-                  '<b style="color:#ffd166">EQUIPADA</b><br>'
+              child: ProtoText('<b style="color:#ffd166">EQUIPADA</b><br>'
                   '${eq == null ? '—' : itemNameMarkup(shop.rules, eq)}'),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        if (_moveFrom != null)
+        if (_picking)
+          Row(children: [
+            Expanded(
+                child: ProtoText(
+                    key: const ValueKey('inv-compare-pick'),
+                    protoColor(ProtoColors.sky,
+                        'Elige el arma B para comparar con ${_cmpAName()}'))),
+            PanelButton('CANCELAR',
+                key: const ValueKey('inv-compare-cancel'),
+                onPressed: _closeCompare),
+          ])
+        else if (_moveFrom != null)
           Row(children: [
             const Expanded(
                 child: Text('Elige la casilla destino',
@@ -278,6 +381,23 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       ],
     );
 
+    final cmpA = _cmpA, cmpB = _cmpB;
+    if (cmpA != null && cmpB != null) {
+      return WeaponCompareView(
+        key:
+            ValueKey('cmp-${cmpA.owner}-${cmpA.uid}-${cmpB.owner}-${cmpB.uid}'),
+        shop: shop,
+        a: cmpA,
+        b: cmpB,
+        pending: widget.pending,
+        onClose: _closeCompare,
+        onSwap: () => setState(() {
+          _cmpA = cmpB;
+          _cmpB = cmpA;
+        }),
+      );
+    }
+
     if (_cleaning && mine) {
       return PanelSplit(
         listWidth: InventoryTab.gridWidth + 4,
@@ -286,24 +406,40 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       );
     }
 
-    return PanelSplit(
-      listWidth: InventoryTab.gridWidth + 4,
-      list: [left],
-      detail: PanelDetail(
-        footer: sel == null || !mine
-            ? (mine
-                ? const []
-                : [
-                    const Text('Solo lectura',
-                        style: TextStyle(color: ProtoColors.dim))
-                  ])
-            : _actions(p, me, mates, sel),
-        children: sel == null
-            ? [
-                Text(retroText('Elige una casilla.'),
-                    style: const TextStyle(color: ProtoColors.dim)),
-              ]
-            : _detail(p, me.profile, sel, attrs, mine),
+    final compareButton = sel?.item == null || _picking
+        ? null
+        : PanelButton('COMPARAR',
+            key: const ValueKey('inv-compare'),
+            onPressed: () => _startCompare(WeaponRef(owner.id, _sel!)));
+    return Focus(
+      focusNode: _keys,
+      onKeyEvent: _onKey,
+      child: PanelSplit(
+        listWidth: InventoryTab.gridWidth + 4,
+        list: [left],
+        detail: PanelDetail(
+          footer: sel == null || !mine
+              ? (mine
+                  ? const []
+                  : [
+                      const Text('Solo lectura',
+                          style: TextStyle(color: ProtoColors.dim)),
+                      if (compareButton != null) compareButton,
+                    ])
+              : [
+                  if (compareButton != null &&
+                      _confirmCraft == null &&
+                      !_confirmDrop)
+                    compareButton,
+                  ..._actions(p, me, mates, sel),
+                ],
+          children: sel == null
+              ? [
+                  Text(retroText('Elige una casilla.'),
+                      style: const TextStyle(color: ProtoColors.dim)),
+                ]
+              : _detail(p, me.profile, sel, attrs, mine),
+        ),
       ),
     );
   }
@@ -318,7 +454,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final r = g.craftPreview(p, a);
     final targets = rules.crafting.batchTargets(p, _cleanRarity);
     final n = targets.length;
-    final what = '$n ${n == 1 ? _cleanRarity.label : rarityPlural(_cleanRarity)}';
+    final what =
+        '$n ${n == 1 ? _cleanRarity.label : rarityPlural(_cleanRarity)}';
     final summary = n == 0
         ? protoColor(ProtoColors.dim,
             'No tienes armas ${rarityPlural(_cleanRarity)} para ${sell ? 'vender' : 'desarmar'}.')
@@ -331,14 +468,13 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             onPressed: () => setState(() => _cleaning = false)),
         PanelButton(
             '${sell ? 'VENDER' : 'DESARMAR'} ${n == 0 ? '' : '$n '}'
-                '${rarityPlural(_cleanRarity).toUpperCase()}',
+            '${rarityPlural(_cleanRarity).toUpperCase()}',
             key: const ValueKey('inv-clean-confirm'),
             accent: ProtoColors.red,
-            reason: g.craft(p, a),
-            onPressed: () {
-              shop.controller.craft(a);
-              setState(() {});
-            }),
+            reason: g.craft(p, a), onPressed: () {
+          shop.controller.craft(a);
+          setState(() {});
+        }),
       ],
       children: [
         const Text('LIMPIAR INVENTARIO',
@@ -372,15 +508,18 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         const SizedBox(height: 8),
         ProtoText(summary, key: const ValueKey('inv-clean-summary')),
         if (r.lost.isNotEmpty)
-          ProtoText(protoColor(ProtoColors.orange,
-              'Se pierde: ${protoEsc(r.lost.join(', '))}')),
+          ProtoText(protoColor(
+              ProtoColors.orange, 'Se pierde: ${protoEsc(r.lost.join(', '))}')),
         if (n > 0) ...[
           const SizedBox(height: 6),
           ProtoText(
               key: const ValueKey('inv-clean-list'),
               '${protoColor(ProtoColors.red, 'Se destruyen:')}<br>'
-              '${[for (final it in targets) '• ${itemNameMarkup(rules, it)}'
-                  '${sell ? ' <small>₵${rules.crafting.sellPrice(it)}</small>' : ''}'].join('<br>')}'),
+              '${[
+                for (final it in targets)
+                  '• ${itemNameMarkup(rules, it)}'
+                      '${sell ? ' <small>₵${rules.crafting.sellPrice(it)}</small>' : ''}'
+              ].join('<br>')}'),
         ],
       ],
     );
@@ -441,11 +580,10 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         PanelButton(sell ? 'VENDER ₵${r.gainedCredits}' : 'DESARMAR',
             key: const ValueKey('inv-craft-confirm'),
             accent: ProtoColors.red,
-            reason: g.craft(p, a),
-            onPressed: () {
-              shop.controller.craft(a);
-              setState(() => _confirmCraft = null);
-            }),
+            reason: g.craft(p, a), onPressed: () {
+          shop.controller.craft(a);
+          setState(() => _confirmCraft = null);
+        }),
       ];
     }
     if (_confirmDrop) {
@@ -462,21 +600,23 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             accent: ProtoColors.red,
             reason: g.drop(p, token, count: count, alive: me.alive),
             onPressed: () {
-              shop.controller.dropItem(token, count: count);
-              setState(() => _confirmDrop = false);
-            }),
+          shop.controller.dropItem(token, count: count);
+          setState(() => _confirmDrop = false);
+        }),
       ];
     }
     return [
       if (it == null && c.count > 1) ...[
         PanelButton('-',
             key: const ValueKey('inv-count-dec'),
-            onPressed: count > 1 ? () => setState(() => _count = count - 1) : null),
+            onPressed:
+                count > 1 ? () => setState(() => _count = count - 1) : null),
         Text('x$count', key: const ValueKey('inv-count')),
         PanelButton('+',
             key: const ValueKey('inv-count-inc'),
-            onPressed:
-                count < c.count ? () => setState(() => _count = count + 1) : null),
+            onPressed: count < c.count
+                ? () => setState(() => _count = count + 1)
+                : null),
       ],
       if (_selCell != null)
         PanelButton('MOVER',
@@ -491,8 +631,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           PanelButton('DAR A ${m.name.toUpperCase()}',
               key: ValueKey('inv-give-${m.id}'),
               reason: g.give(p, token, m, count: count),
-              onPressed: () =>
-                  shop.controller.give(m.id, token, count: count)),
+              onPressed: () => shop.controller.give(m.id, token, count: count)),
       PanelButton('TIRAR',
           key: const ValueKey('inv-drop'),
           reason: g.drop(p, token, count: count, alive: me.alive),

@@ -1,6 +1,10 @@
 import 'dart:async';
 
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
+import 'package:echos_del_tiempo/features/characters/data/account_repository.dart';
+import 'package:echos_del_tiempo/features/characters/data/account_store.dart';
+import 'package:echos_del_tiempo/features/characters/domain/account.dart';
+import 'package:echos_del_tiempo/features/characters/presentation/characters_providers.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
 import 'package:echos_del_tiempo/features/lobby/presentation/title_screen.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
@@ -21,6 +25,10 @@ Future<void> _pump(WidgetTester tester, NetSessionFactory factory) async {
     overrides: [
       sessionEngineProvider.overrideWithValue(sessionEngine()),
       profileStoreProvider.overrideWithValue(InMemoryProfileStore()),
+      // Con un personaje: la sala se arma desde la lista.
+      accountRepositoryProvider.overrideWithValue(AccountRepository(
+          InMemoryAccountStore(
+              CharacterRules(progression).create(Account(), 'Ana', 'maga')))),
       gameSpritesProvider
           .overrideWith((ref) => Completer<GameSprites>().future),
       netSessionFactoryProvider.overrideWithValue(factory),
