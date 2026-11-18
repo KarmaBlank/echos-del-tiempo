@@ -1,4 +1,4 @@
-# Spec (BORRADOR, para aprobar): Elementos y reacciones — v0.7
+# Spec (APROBADA por el dueño): Elementos y reacciones — v0.7
 
 Pedido del dueño: "la siguiente evolución, tanto para el árbol como para
 la batalla, serían elementos. Si tirás fuego y agua no pasa nada; fuego
@@ -109,3 +109,22 @@ Hielo tenga identidad propia, distinta del aturdimiento:
 
 Aturdimiento, en cambio, sigue siendo el control "por probabilidad":
 corta un turno ya, sin preparación.
+
+## 8. Contrato para la implementación (v0.7)
+
+Nombres fijos para que motor, contenido y presentación trabajen en
+paralelo:
+
+- `enum Element { fisico, fuego, hielo, veneno, sagrado, agua, electro }`
+  en `lib/game_engine/models/elements.dart`; `elementOf(skillId)`
+  (tabla `kSkillElement` en el catálogo, como `kSkillDelivery`).
+- `StatusKind.wet` ("Mojado", 2 turnos, sin daño) y
+  `StatusKind.charged` ("Cargado", 1 turno, sin daño).
+- `enum ReactionKind { electrocucion, explosionToxica,
+  congelacionSubita, derretir, cortocircuito }`.
+- Evento `ReactionEvent(targetId, kind, amount, {sourceId,
+  consumedStacks, splash})`, serializado con clave `t: 'react'`.
+- Ids de sonido: `sfx.reaction.<kind>`; ids de ícono de estado:
+  `status_wet`, `status_charged`.
+- Familia/raza simétrica: `Combatant.family` vale para jugadores y
+  enemigos (jugadores: `null` hasta que existan razas).
