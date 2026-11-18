@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import 'ui_theme.dart';
+
 /// Escala tipográfica de la UI (docs/specs/ui_style.md § "Tipografía").
 ///
 /// Dos fuentes pixel:
@@ -70,7 +72,10 @@ abstract final class RetroType {
 
   /// Interlineado del texto de lectura (VT323: ascenso + descenso = 1 em;
   /// Press Start: 1.6).
-  static double get line => classic ? 1.6 : 1.0;
+  /// ESPACIADO AMPLIO (accessibility.md § 8.3): 1.25 / 1.9.
+  static double get line => UiTheme.wide
+      ? (classic ? 1.9 : 1.25)
+      : (classic ? 1.6 : 1.0);
 
   /// Interlineado compacto (chips).
   static double get lineTight => classic ? 1.3 : 1.0;

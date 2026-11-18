@@ -1,4 +1,4 @@
-# Spec: Accesibilidad (v0.5, v0.5.1)
+# Spec: Accesibilidad (v0.5, v0.5.1, v0.8.1)
 
 Pedido del dueño: "esto tiene problema de accesibilidad, muy pequeñas",
 "hay fonts que se ven súper mal, como baja resolución" y "trabajá la
@@ -73,8 +73,7 @@ El markup que todavía escribe el hex viejo se pinta con el token nuevo
 (`ProtoColors.legacy` en `ProtoColors.parse`). Excepciones: texto
 deshabilitado (opacidad baja, WCAG lo exime) y el arte del mundo
 (canvas, que usa sus propios hex). Test: `test/app/contrast_test.dart`.
-Pendiente: estilo de tooltip "PoE" (caja negra neutra, banda de rareza,
-separadores; hoja "2-E") si el dueño lo pide.
+Hecho en v0.8.1 como tema OSCURO + REDUCIDO + AMPLIO (§ 8).
 
 ## 3. Daltonismo: nunca solo el color
 
@@ -193,11 +192,133 @@ pueblo.
   etiquetas, sin pesos), auditoría de objetivos en
   `settings_menu_test.dart`.
 - `test/features/settings_menu_test.dart`: TAMAÑO DEL TEXTO en vivo.
+- `test/app/ui_theme_test.dart` (v0.8.1): ajustes y `game.json`; tokens
+  de cada tema; contraste de cada tema × colores × modo daltónico;
+  jerarquía título > cuerpo > atenuado; mapeo por roles del markup;
+  ESPACIADO AMPLIO (interlineado, párrafos, separadores, aire); la pestaña
+  ACCESIBILIDAD; sin desbordes en 3 temas × 2 espaciados × Normal / Muy
+  grande (ficha de un Legendario, FUSIÓN pasos 2 y 3, ATRIBUTOS, detalle
+  del bestiario, ventana de comandos de la batalla).
 
 ## 6. Batalla
 
 Rediseño de la barra de batalla para legibilidad: docs/specs/
 battle_presentation.md § "Barra de batalla (v0.5)".
+
+## 8. Temas y legibilidad (v0.8.1)
+
+Pedido del dueño: "el fondo y el morado no mucho: colores disonantes
+entre el fondo, y todos los menús están con mucho texto y los colores
+hacen que se lea como todo un texto unido"; y sobre un tooltip de
+keystone: "más contraste entre título y descripción: son escalas de
+grises, amarillo, naranja, se ven muy iguales. Agarrá una paleta de
+colores de design system. Los colores de estado alterado dejalos así,
+pero texto, título, descripción, que se vean bien. Usá blancos sobre
+negros."
+
+Tres ajustes nuevos en ACCESIBILIDAD (arriba de todo, con vista previa en
+vivo: un tip de keystone y dos filas de menú) que se guardan en
+`game.json` (claves aditivas `uiTheme`, `textColors`, `spacing`; una
+clave que falta o no se entiende toma el valor por defecto). Se aplican a
+toda la UI (menús, tooltips, HUD, batalla) con `UiThemeScope`
+(`lib/app/theme/ui_theme.dart`, en `MaterialApp.builder` como
+`ColorVisionScope`): al cambiar, la app se reconstruye sin perder estado.
+El arte (arenas, mapa, sprites, lienzo del árbol) no cambia.
+
+**Por defecto (decisión v0.8.1): OSCURO + REDUCIDO + NORMAL**, porque es
+lo que pidió el dueño. AZUL + COMPLETO es el aspecto de v0.8.0 y sigue a
+un clic. Los estáticos de `UiTheme` arrancan en AZUL + COMPLETO + NORMAL
+(lo que esperan los tests existentes, que no montan el scope); el valor
+del jugador sale de `GameSettings`.
+
+### 8.1 TEMA DE INTERFAZ: AZUL / OSCURO / ALTO CONTRASTE
+
+Los tokens de interfaz de `ProtoColors` (`bg`, `ink`, `title`, `panel`,
+`panelBorder`, `button*`, `input*`, `gold`, `sky`, `dim`, `chat`,
+`barBg`, `ice`, `orange`, `violet`, `pink`) son `ThemeColor` (const, como
+`VisionColor`: leen el tema activo al pintar). Tabla en
+`UiTheme.table`. Los de estados (`cream`, `holy`, `mint`, `burn`,
+`taunt`, `amber`) y los con significado (`VisionColor`) no cambian con el
+tema.
+
+| Rol / token | AZUL | OSCURO | ALTO CONTRASTE |
+|---|---|---|---|
+| fondo `bg` | `#0B0E1A` | `#0A0A0A` | `#000000` |
+| panel `panel` | `#121936` | `#141414` | `#000000` |
+| elevado `button` | `#22305A` | `#1F1F1F` | `#000000` |
+| hover `buttonHover` | `#2E4280` | `#2A2A2A` | `#262626` |
+| hundido `input` | `#0F1530` | `#0F0F0F` | `#000000` |
+| borde `panelBorder` | `#2E3B6B` | `#2E2E2E` | `#BDBDBD` |
+| borde de botón / caja | `#5B74C9` | `#525252` | `#FFFFFF` |
+| borde hover | `#9FB4FF` | `#8A8A8A` | `#FFE600` |
+| `text.title` (`title`) | dorado / `#E8ECFF` | `#F5F5F5` | `#FFFFFF` |
+| `text.body` (`ink`) | `#B0BAE5` | `#D4D4D4` | `#F0F0F0` |
+| `text.muted` (`dim`, `sky`) | `#929ABA` / `#8FA1DF` | `#A3A3A3` | `#C8C8C8` / `#E0E0E0` |
+| `text.accent` + foco (`gold`) | `#D3AC4F` | `#F5C451` | `#FFE600` |
+| `text.positive` / `negative` | `VisionSlot.good` / `bad` (igual en los tres) |||
+| chat | `#C8D2FF` | `#E5E5E5` | `#FFFFFF` |
+| `ice` / `orange` / `violet` / `pink` | suavizados § 2 | `#8DB4D9` / `#E0A262` / `#B4AEDD` / `#D696B5` | `#B8DCFF` / `#FFD0A0` / `#E2DDFF` / `#FFD1E6` |
+
+- OSCURO: escala neutra (tipo Tailwind *neutral*) + un acento ámbar; la
+  jerarquía va por brillo (título > cuerpo > atenuado), no por tono. El
+  dorado queda para selección, foco y valores; la caja de los tooltips y
+  de la ficha de enemigo usa el borde gris (`RetroHoverCard.borderColor`;
+  en AZUL sigue dorada).
+- ALTO CONTRASTE: negro / blanco, foco amarillo, bordes gruesos (paneles
+  4 px, botones y tooltips 3 px: `UiTheme.panelBorderWidth` /
+  `buttonBorderWidth`) y siempre los colores por roles (§ 8.2; el ajuste
+  COLORES DEL TEXTO queda fijo en REDUCIDO).
+- Contraste (test): todo token de texto ≥ 4.5:1 sobre `bg`, `panel`,
+  `input` y `button` en cada tema × colores × modo daltónico; rarezas ≥
+  4.5:1 sobre fondo / panel / campo y ≥ 3:1 sobre botón; dorado de foco ≥
+  3:1 contra panel y botón; en ALTO CONTRASTE bordes y foco ≥ 7:1.
+- El markup que arma `protoColor(token, …)` escribe el hex canónico (el
+  de AZUL; los `VisionColor`, el del modo apagado) y `ProtoColors.parse`
+  lo vuelve a leer como el token: sigue al tema, al modo daltónico y a
+  los roles al pintarse.
+
+### 8.2 COLORES DEL TEXTO: COMPLETO / REDUCIDO (por roles)
+
+COMPLETO: cada markup con sus colores (v0.8.0). REDUCIDO: el markup se
+pinta por **roles** en un solo lugar (`protoSpan` → `UiTheme.role`), sin
+tocar el markup de cada pantalla:
+
+| Lo que trae el markup | Rol |
+|---|---|
+| `<b>` (o dorado) que abre la línea (nombre de nodo, de habilidad, de enemigo, título de tarjeta) | `title` |
+| otro `<b>`, el dorado, avisos naranja (`EQUIPADA`, `(trasladada)`) | `accent` (`gold`) |
+| `class="k"`, `<small>`, `sky`, `dim` (tipo · nivel · cluster, etiquetas) | `muted` |
+| verde / rojo / carmesí (▲▼, alcanza / no alcanza, requisitos, "Necesita un nodo conectado") | `positive` / `negative` (sin cambio) |
+| rarezas (también Común `#DCDCDC`) | sin cambio |
+| estados y elementos (`statusHex`, `elementHex`, `reactionHex`, `ice`, `cream`…) | sin cambio |
+| el resto (violeta de pasivas, celeste de mods, turquesa de Ecos, rosa de ULT, `ink`) | `body` |
+
+`title` con COMPLETO es el dorado (AZUL se ve como siempre); por roles,
+casi blanco. Además de los markups, usan `ProtoColors.title`: título de
+`PanelFrame`, `PanelSection`, `SectionPanel`, `MenuHeader`, nombre del
+tooltip y de la ficha del árbol, nombre del que actúa en la ventana de
+comandos.
+
+### 8.3 ESPACIADO: NORMAL / AMPLIO
+
+AMPLIO:
+- interlineado del texto de lectura 1.0 → 1.25 (VT323) y 1.6 → 1.9
+  (CLÁSICA) (`RetroType.line`);
+- cada `<br>` de un `ProtoText` sin `maxLines` es un párrafo con 4 px
+  entre medio (`UiTheme.paragraphGap`);
+- tooltips (`RetroTipText`): un párrafo por línea y un separador de 1 px
+  (`panelBorder`) antes de cada sección (línea que empieza con
+  `<span class="k">`: Implícito, Mods, Habilidades…); siguen pasando a
+  columnas si no entran;
+- ×1.5 de aire (`UiTheme.space`) en `SectionPanel`, `PanelRow`,
+  `PanelSection` (con separador arriba), `MenuRow`, `ActionCard`,
+  `InfoLine`, el padding de los tooltips y del tooltip del árbol y las
+  filas de CONFIGURACIÓN.
+
+Sin desbordes a 1280×720 en Normal y Muy grande (los paneles scrollean).
+Arreglado de paso (ya pasaba en v0.8.0 con Muy grande): el botón
+`CONFIRMAR` del paso 3 de FUSIÓN y las partes del `CostChip` se cortan en
+dos líneas en vez de desbordar.
 
 ## 7. Próximo
 

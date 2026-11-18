@@ -22,6 +22,9 @@ enum WorldPanel {
   inventory,
   ecoPortal,
   ascension,
+
+  /// Mapa del piso en grande (tecla M, v0.8.1; exploration.md § "HUD").
+  map,
 }
 
 /// Una línea del chat (`addChat`): de un jugador o de sistema (`sys`).

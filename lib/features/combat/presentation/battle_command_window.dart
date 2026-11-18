@@ -213,7 +213,7 @@ class _Categories extends StatelessWidget {
         children: [
           Text(retroText(actorName),
               key: const ValueKey('battle-actor'),
-              style: RetroType.style(RetroType.label, color: ProtoColors.gold)),
+              style: RetroType.style(RetroType.label, color: ProtoColors.title)),
           const SizedBox(height: 6),
           for (final c in categories)
             _Row(

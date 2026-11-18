@@ -8,7 +8,10 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../app/theme/retro_hover_card.dart';
+import '../../../app/theme/ui_theme.dart';
 import '../../../app/theme/vision_palette.dart';
+import '../../../app/widgets/menu_widgets.dart';
 import '../../../core/audio/presentation/audio_providers.dart';
 import '../../../core/settings/game_settings.dart';
 import '../../../core/settings/settings_providers.dart';
@@ -18,7 +21,7 @@ enum SettingsTab {
   sound('SONIDO', 'Volumen general, de la música y de los efectos.'),
   display('PANTALLA', 'Ventana, gráficos y rendimiento.'),
   accessibility('ACCESIBILIDAD',
-      'Texto, colores para daltonismo, movimiento y destellos.'),
+      'Tema, texto, colores para daltonismo, movimiento y destellos.'),
   game('JUEGO', 'Números de daño, tiempo de turno y avisos.'),
   controls('CONTROLES', 'Todas las teclas del juego.');
 
@@ -122,68 +125,69 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
       index: _tab.index,
       onChanged: (i) => setState(() => _tab = SettingsTab.values[i]),
       child: Material(
-      type: MaterialType.transparency,
-      child: PanelFrame(
-        key: const ValueKey('settings-menu'),
-        title: widget.inGame ? 'PAUSA' : 'CONFIGURACIÓN',
-        width: 680,
-        help: _help,
-        onClose: _escape,
-        titleTrailing: widget.inGame ? _status() : null,
-        header: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            PanelTabs(
-              labels: [for (final t in SettingsTab.values) t.label],
-              index: _tab.index,
-              onChanged: (i) => setState(() => _tab = SettingsTab.values[i]),
-            ),
-            PanelHint(_tab.hint),
+        type: MaterialType.transparency,
+        child: PanelFrame(
+          key: const ValueKey('settings-menu'),
+          title: widget.inGame ? 'PAUSA' : 'CONFIGURACIÓN',
+          width: 680,
+          help: _help,
+          onClose: _escape,
+          titleTrailing: widget.inGame ? _status() : null,
+          header: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              PanelTabs(
+                labels: [for (final t in SettingsTab.values) t.label],
+                index: _tab.index,
+                onChanged: (i) => setState(() => _tab = SettingsTab.values[i]),
+              ),
+              PanelHint(_tab.hint),
+            ],
+          ),
+          leading: [
+            if (widget.inGame && confirm == null) ...[
+              PanelButton('SALIR AL TÍTULO',
+                  key: const ValueKey('pause-exit-title'),
+                  onPressed: widget.onExitToTitle == null
+                      ? null
+                      : () => setState(() => _confirm = _Exit.title)),
+              PanelButton('SALIR DEL JUEGO',
+                  key: const ValueKey('pause-quit'),
+                  onPressed: widget.onQuitGame == null
+                      ? null
+                      : () => setState(() => _confirm = _Exit.quit)),
+            ],
           ],
-        ),
-        leading: [
-          if (widget.inGame && confirm == null) ...[
-            PanelButton('SALIR AL TÍTULO',
-                key: const ValueKey('pause-exit-title'),
-                onPressed: widget.onExitToTitle == null
-                    ? null
-                    : () => setState(() => _confirm = _Exit.title)),
-            PanelButton('SALIR DEL JUEGO',
-                key: const ValueKey('pause-quit'),
-                onPressed: widget.onQuitGame == null
-                    ? null
-                    : () => setState(() => _confirm = _Exit.quit)),
-          ],
-        ],
-        actions: confirm != null
-            ? _confirmRow(confirm)
-            : [
-                if (widget.inGame && widget.onGroupPause != null)
+          actions: confirm != null
+              ? _confirmRow(confirm)
+              : [
+                  if (widget.inGame && widget.onGroupPause != null)
+                    PanelButton(
+                        widget.groupPaused
+                            ? 'REANUDAR AL GRUPO'
+                            : 'PAUSAR AL GRUPO',
+                        key: const ValueKey('pause-group'),
+                        selected: widget.groupPaused,
+                        onPressed: () =>
+                            widget.onGroupPause!(!widget.groupPaused)),
                   PanelButton(
-                      widget.groupPaused
-                          ? 'REANUDAR AL GRUPO'
-                          : 'PAUSAR AL GRUPO',
-                      key: const ValueKey('pause-group'),
-                      selected: widget.groupPaused,
-                      onPressed: () =>
-                          widget.onGroupPause!(!widget.groupPaused)),
-                PanelButton(widget.inGame ? 'CONTINUAR [ESC]' : 'CERRAR [ESC]',
-                    key: const ValueKey('settings-close'),
-                    accent: ProtoColors.green,
-                    onPressed: widget.onClose),
-              ],
-        child: Builder(builder: (ctx) {
-          _inside = ctx;
-          return switch (_tab) {
-            SettingsTab.sound => const _SoundTab(),
-            SettingsTab.display => const _DisplayTab(),
-            SettingsTab.accessibility => const _AccessibilityTab(),
-            SettingsTab.game => const _GameTab(),
-            SettingsTab.controls => const _ControlsTab(),
-          };
-        }),
+                      widget.inGame ? 'CONTINUAR [ESC]' : 'CERRAR [ESC]',
+                      key: const ValueKey('settings-close'),
+                      accent: ProtoColors.green,
+                      onPressed: widget.onClose),
+                ],
+          child: Builder(builder: (ctx) {
+            _inside = ctx;
+            return switch (_tab) {
+              SettingsTab.sound => const _SoundTab(),
+              SettingsTab.display => const _DisplayTab(),
+              SettingsTab.accessibility => const _AccessibilityTab(),
+              SettingsTab.game => const _GameTab(),
+              SettingsTab.controls => const _ControlsTab(),
+            };
+          }),
+        ),
       ),
-    ),
     );
   }
 
@@ -300,7 +304,7 @@ class _SettingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: EdgeInsets.symmetric(vertical: UiTheme.space(6)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -669,6 +673,66 @@ class _AccessibilityTab extends ConsumerWidget {
       key: const ValueKey('settings-accessibility'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Tema y legibilidad (accessibility.md § 8).
+        _SettingRow(
+          label: 'TEMA DE INTERFAZ',
+          hint: switch (s.uiTheme) {
+            InterfaceTheme.blue =>
+              'El de siempre: paneles azul marino y texto de colores.',
+            InterfaceTheme.dark => 'Paneles casi negros y neutros; el '
+                'dorado solo marca la selección y el foco.',
+            InterfaceTheme.highContrast => 'Fondo negro, texto blanco, foco '
+                'amarillo y bordes gruesos. Color solo donde significa algo.',
+          },
+          control: _Choice<InterfaceTheme>(
+            keyPrefix: 'a11y-theme',
+            options: const {
+              InterfaceTheme.blue: 'AZUL',
+              InterfaceTheme.dark: 'OSCURO',
+              InterfaceTheme.highContrast: 'ALTO CONTRASTE',
+            },
+            value: s.uiTheme,
+            onChanged: (v) => c.update(s.copyWith(uiTheme: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'COLORES DEL TEXTO',
+          hint: s.uiTheme == InterfaceTheme.highContrast
+              ? 'ALTO CONTRASTE usa siempre los colores por función.'
+              : s.textColors == TextColorMode.reduced
+                  ? 'Por función: nombres en blanco, descripción gris clara, '
+                      'datos atenuados, un acento para valores; verde / rojo, '
+                      'rarezas y estados siguen igual.'
+                  : 'Cada texto con sus colores (como en v0.8.0).',
+          control: _Choice<TextColorMode>(
+            keyPrefix: 'a11y-textcolors',
+            options: const {
+              TextColorMode.full: 'COMPLETO',
+              TextColorMode.reduced: 'REDUCIDO',
+            },
+            value: s.uiTheme == InterfaceTheme.highContrast
+                ? TextColorMode.reduced
+                : s.textColors,
+            onChanged: s.uiTheme == InterfaceTheme.highContrast
+                ? null
+                : (v) => c.update(s.copyWith(textColors: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'ESPACIADO',
+          hint: 'AMPLIO: más interlineado, aire entre líneas y filas y '
+              'separadores entre las secciones de las fichas.',
+          control: _Choice<UiSpacing>(
+            keyPrefix: 'a11y-spacing',
+            options: const {
+              UiSpacing.normal: 'NORMAL',
+              UiSpacing.wide: 'AMPLIO',
+            },
+            value: s.spacing,
+            onChanged: (v) => c.update(s.copyWith(spacing: v)),
+          ),
+        ),
+        const _ThemePreview(),
         _SettingRow(
           label: 'TAMAÑO DEL TEXTO',
           hint: 'Letra de menús, fichas, chat y batalla. Se ajusta a la '
@@ -819,6 +883,75 @@ class _VisionPreview extends StatelessWidget {
   }
 }
 
+/// Vista previa del tema, los colores del texto y el espaciado: un tip de
+/// nodo del árbol como los del juego y dos filas de menú.
+class _ThemePreview extends StatelessWidget {
+  const _ThemePreview();
+
+  static const tip = '<b>Paladín Creyente</b><br>'
+      '<span class="k">KEYSTONE · Cluster Fe: curación y regeneración</span><br>'
+      'Tus curas también otorgan <span style="color:#fff3b0">Sagrado</span> '
+      '2 turnos; −15% de daño físico.<br>'
+      '<span class="k">Costo:</span> <b>9 puntos</b><br>'
+      '<span style="color:#ff6b81">Necesita un nodo conectado</span>';
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: const ValueKey('a11y-theme-preview'),
+      padding: EdgeInsets.only(
+          left: RetroType.width(context, 200),
+          top: UiTheme.space(4),
+          bottom: UiTheme.space(8)),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.start,
+        children: [
+          Container(
+            padding: RetroHoverCard.padding,
+            decoration: BoxDecoration(
+              color: ProtoColors.bg,
+              border: Border.all(
+                  color: RetroHoverCard.borderColor,
+                  width: UiTheme.buttonBorderWidth),
+            ),
+            child: DefaultTextStyle(
+              style: RetroHoverCard.textStyle,
+              child: RetroTipText(tip, maxWidth: RetroType.width(context, 260)),
+            ),
+          ),
+          // Solo de muestra: sin foco ni clics (el teclado no se detiene).
+          SizedBox(
+            width: RetroType.width(context, 170),
+            child: ExcludeFocus(
+              child: IgnorePointer(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    MenuRow(
+                        label: '<b>Reforjar</b>',
+                        value: '<span style="color:#7bed9f">1 Esquirla</span>',
+                        selected: true,
+                        onTap: () {}),
+                    MenuRow(
+                        label: 'Subir rareza',
+                        value:
+                            '<span style="color:#ff6b81">Falta Prisma</span>',
+                        selected: false,
+                        dimmed: true,
+                        onTap: () {}),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _GameTab extends ConsumerWidget {
   const _GameTab();
 
@@ -876,6 +1009,34 @@ class _GameTab extends ConsumerWidget {
             onChanged: (v) => c.update(s.copyWith(buildNotices: v)),
           ),
         ),
+        // HUD v0.8.1 (exploration.md § "Chat").
+        _SettingRow(
+          label: 'CHAT',
+          hint: 'OCULTO: una píldora CHAT [ENTER] con los mensajes nuevos; '
+              'Enter o clic lo abre.',
+          control: _Choice<ChatVisibility>(
+            keyPrefix: 'game-chat',
+            options: const {
+              ChatVisibility.hidden: 'OCULTO',
+              ChatVisibility.always: 'SIEMPRE VISIBLE',
+            },
+            value: s.chat,
+            onChanged: (v) => c.update(s.copyWith(chat: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'AVISOS DEL CHAT',
+          hint: 'Con el chat oculto, los avisos importantes (misión '
+              'aceptada, piso despejado, subida de nivel) aparecen 4 s.',
+          control: _Choice<bool>(
+            keyPrefix: 'game-chat-notices',
+            options: _yesNo,
+            value: s.chatNotices,
+            onChanged: s.chat == ChatVisibility.always
+                ? null
+                : (v) => c.update(s.copyWith(chatNotices: v)),
+          ),
+        ),
       ],
     );
   }
@@ -894,6 +1055,9 @@ class _ControlsTab extends StatelessWidget {
         ('Alt (mantener)', 'Ver también el loot oculto por el filtro'),
         ('C', 'Personaje'),
         ('I', 'Inventario'),
+        ('J', 'Plegar / desplegar los objetivos'),
+        ('M', 'Mapa en grande (flechas / arrastrar: mover; + - / rueda: zoom)'),
+        ('Rueda sobre el minimapa', 'Zoom del minimapa'),
         ('Y / N', 'Votar la misión propuesta'),
       ]
     ),
@@ -913,8 +1077,8 @@ class _ControlsTab extends StatelessWidget {
     (
       'CHAT',
       [
-        ('Enter', 'Escribir / mandar'),
-        ('Esc', 'Salir sin mandar'),
+        ('Enter', 'Abrir el chat / mandar (vacío: cerrar)'),
+        ('Esc', 'Cerrar el chat sin mandar'),
       ]
     ),
   ];

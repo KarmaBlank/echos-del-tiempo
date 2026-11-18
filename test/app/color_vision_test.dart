@@ -141,7 +141,12 @@ void main() {
     expect(Paint()..color = c, isNotNull);
     expect(c.withValues(alpha: 0.5).toARGB32() & 0xFFFFFF,
         c.toARGB32() & 0xFFFFFF);
-    expect(ProtoColors.hex(c), '#6fa8e0');
+    // v0.8.1: el markup lleva el hex canónico (modo apagado) y al
+    // pintarse vuelve a ser el token del modo activo.
+    expect(ProtoColors.hex(c), '#5eb77a');
+    expect(ProtoColors.parse(ProtoColors.hex(c))!.toARGB32(),
+        VisionPalette.inMode(ColorVision.deuteranopia, VisionSlot.good)
+            .toARGB32());
   });
 
   test('markup y colores del filtro: el hex por defecto toma el del modo',

@@ -737,6 +737,10 @@ class SessionController extends StateNotifier<SessionView?> {
       toggleCharacter();
       return true;
     }
+    if (key == LogicalKeyboardKey.keyM && s.mode != SessionMode.battle) {
+      toggleMap();
+      return true;
+    }
     if (key == LogicalKeyboardKey.keyI && s.mode != SessionMode.battle) {
       toggleInventory();
       return true;
@@ -793,6 +797,28 @@ class SessionController extends StateNotifier<SessionView?> {
       closePanel();
     } else {
       openPanel(WorldPanel.character);
+    }
+  }
+
+  /// Hay mapa para abrir en grande (tecla M): en un piso de misión o en
+  /// el mapa del mundo (lo mismo que muestra el minimapa).
+  bool get mapAvailable {
+    final s = _s;
+    if (s == null) return false;
+    final m = engine.mapFor(s);
+    return switch (s.mode) {
+      SessionMode.field => !m.lobby && s.mission != null,
+      SessionMode.lobby => m.entrances.isNotEmpty,
+      _ => false,
+    };
+  }
+
+  /// Tecla M: abre / cierra el mapa en grande (v0.8.1).
+  void toggleMap() {
+    if (_panel == WorldPanel.map) {
+      closePanel();
+    } else if (_panel == null && mapAvailable) {
+      openPanel(WorldPanel.map);
     }
   }
 
@@ -1156,6 +1182,8 @@ class SessionController extends StateNotifier<SessionView?> {
       if (_panel == WorldPanel.character) _panel = null;
     }
     if (mode == SessionMode.battle || mode == SessionMode.result) _panel = null;
+    // El mapa en grande solo vale donde hay minimapa (campo / mundo).
+    if (_panel == WorldPanel.map && !mapAvailable) _panel = null;
 
     final (prompt, promptText) = _prompt();
     state = SessionView(

@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'proto_colors.dart';
 import 'proto_markup.dart';
 import 'retro_theme.dart';
+import 'ui_theme.dart';
 
 /// Dónde aparece la caja respecto de lo que se señala.
 enum RetroTipPlacement {
@@ -53,8 +54,17 @@ class RetroHoverCard extends StatefulWidget {
   /// crece con el tamaño del texto ([RetroType.width]).
   static const textWidth = 360.0;
 
-  /// Padding interno de la caja (8 × 10 del `#tip`) + borde.
-  static const padding = EdgeInsets.symmetric(horizontal: 10, vertical: 8);
+  /// Padding interno de la caja (8 × 10 del `#tip`; más en AMPLIO).
+  static EdgeInsets get padding => EdgeInsets.symmetric(
+      horizontal: UiTheme.space(10), vertical: UiTheme.space(8));
+
+  /// Borde de la caja: dorado en AZUL (como el prototipo); en OSCURO y
+  /// ALTO CONTRASTE un gris / blanco (el dorado queda para el foco).
+  static Color get borderColor => switch (UiTheme.kind) {
+        InterfaceTheme.blue => ProtoColors.gold,
+        InterfaceTheme.dark => ProtoColors.buttonBorder,
+        InterfaceTheme.highContrast => ProtoColors.buttonBorder,
+      };
 
   @override
   State<RetroHoverCard> createState() => _RetroHoverCardState();
@@ -126,7 +136,8 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
         decoration: BoxDecoration(
           color: ProtoColors.bg.withValues(alpha: 0xF5 / 0xFF),
           border: Border.all(
-              color: ProtoColors.gold, width: RetroTheme.thinBorderWidth),
+              color: RetroHoverCard.borderColor,
+              width: UiTheme.buttonBorderWidth),
           boxShadow: const [
             BoxShadow(
                 color: Color(0xAA000000), offset: Offset(0, 4), blurRadius: 18),
@@ -180,9 +191,17 @@ class RetroTipText extends StatelessWidget {
   /// Separación entre columnas.
   static const columnGap = 16.0;
 
+  /// Línea que abre una sección (`<span class="k">Mods…`): en AMPLIO
+  /// lleva un separador arriba.
+  static bool startsSection(String line) {
+    final t = line.trimLeft();
+    return t.startsWith('<span class="k">') || t.startsWith("<span class='k'>");
+  }
+
   @override
   Widget build(BuildContext context) {
     final maxH = RetroTipBounds.maxHeightOf(context);
+    if (UiTheme.wide) return _wide(maxH);
     final text = ProtoText(markup);
     if (maxH == null || !maxH.isFinite) {
       return ConstrainedBox(
@@ -201,6 +220,41 @@ class RetroTipText extends StatelessWidget {
               child: ProtoText(l),
             ),
         ],
+      ),
+    );
+  }
+}
+
+extension on RetroTipText {
+  /// ESPACIADO AMPLIO (accessibility.md § 8.3): una línea por párrafo con
+  /// aire entre medio y un separador antes de cada sección; si no entra
+  /// en el alto, en columnas como siempre.
+  Widget _wide(double? maxH) {
+    final lines = protoSplitLines(markup);
+    final children = <Widget>[
+      for (var i = 0; i < lines.length; i++) ...[
+        if (i > 0 && RetroTipText.startsSection(lines[i]))
+          Container(
+            key: ValueKey('tip-rule-$i'),
+            width: maxWidth,
+            height: 1,
+            margin: const EdgeInsets.symmetric(vertical: 3),
+            color: ProtoColors.panelBorder,
+          ),
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: ProtoText(lines[i]),
+        ),
+      ],
+    ];
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+          maxHeight: maxH != null && maxH.isFinite ? maxH : double.infinity),
+      child: Wrap(
+        direction: Axis.vertical,
+        spacing: UiTheme.paragraphGap,
+        runSpacing: RetroTipText.columnGap,
+        children: children,
       ),
     );
   }

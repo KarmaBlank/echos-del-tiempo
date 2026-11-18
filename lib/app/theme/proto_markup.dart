@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'proto_colors.dart';
 import 'retro_text.dart';
 import 'retro_type.dart';
+import 'ui_theme.dart';
 
 /// `esc` del prototipo: escapa un texto libre (nombres, chat) antes de
 /// meterlo en markup.
@@ -16,6 +17,9 @@ String protoEsc(String s) => s
 /// `<span style="color:#hex">texto</span>` (texto ya escapado o fijo).
 String protoColor(Color c, String text) =>
     '<span style="color:${ProtoColors.hex(c)}">$text</span>';
+
+/// Lo que no cuenta como "texto" al principio de una línea (viñetas).
+final _lead = RegExp(r'[\s•·]');
 
 final _tag = RegExp(r'<(/?)([a-zA-Z]+)([^>]*)>');
 final _colorAttr = RegExp(r'color:\s*(#[0-9a-fA-F]{3,8})');
@@ -36,11 +40,21 @@ TextSpan protoSpan(String markup, {TextStyle? style, Color? boldColor}) {
   final stack = <(String, List<InlineSpan>, TextStyle?)>[];
   var children = root;
   final buf = StringBuffer();
+  // Colores por roles (accessibility.md § 8.2): un `<b>` que abre la
+  // línea es un nombre / título.
+  final roles = UiTheme.roles;
+  var lineStart = true;
 
   void flush() {
     if (buf.isEmpty) return;
-    children.addAll(symbolSpans(retroText(_unescape(buf.toString()))));
+    final t = _unescape(buf.toString());
+    children.addAll(symbolSpans(retroText(t)));
     buf.clear();
+    final nl = t.lastIndexOf('\n');
+    if (nl >= 0) lineStart = true;
+    if (t.substring(nl + 1).replaceAll(_lead, '').isNotEmpty) {
+      lineStart = false;
+    }
   }
 
   void closeTop() {
@@ -81,13 +95,15 @@ TextSpan protoSpan(String markup, {TextStyle? style, Color? boldColor}) {
     if (c == null && cls.contains('k')) c = ProtoColors.sky;
     if (c == null && cls.contains('sys')) c = ProtoColors.green;
     if (name == 'small') c ??= ProtoColors.sky;
-    final TextStyle? st = name == 'b'
-        // Sin peso (las fuentes pixel se "engordan" con negrita
-        // sintética): `<b>` resalta solo con el color (ui_style.md).
-        ? TextStyle(color: c ?? boldColor ?? ProtoColors.gold)
-        : c == null
-            ? null
-            : TextStyle(color: c);
+    final bold = name == 'b';
+    if (bold) c ??= boldColor ?? ProtoColors.gold;
+    if (roles && c != null) {
+      final inBold = stack.any((e) => e.$1 == 'b');
+      c = UiTheme.role(c, bold: bold || inBold, lineStart: lineStart);
+    }
+    // Sin peso (las fuentes pixel se "engordan" con negrita sintética):
+    // `<b>` resalta solo con el color (ui_style.md).
+    final TextStyle? st = c == null ? null : TextStyle(color: c);
     final kids = <InlineSpan>[];
     stack.add((name, kids, st));
     children = kids;
@@ -195,10 +211,35 @@ class ProtoText extends StatelessWidget {
   final TextAlign? textAlign;
 
   @override
-  Widget build(BuildContext context) => Text.rich(
-        protoSpan(markup, style: style, boldColor: boldColor),
-        maxLines: maxLines,
-        overflow: overflow,
-        textAlign: textAlign,
+  Widget build(BuildContext context) {
+    // ESPACIADO AMPLIO (accessibility.md § 8.3): cada línea (`<br>`) es
+    // un párrafo con aire entre medio. Con [maxLines] queda en un bloque.
+    if (UiTheme.wide && maxLines == null && markup.contains('<br')) {
+      final lines = protoSplitLines(markup);
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: switch (textAlign) {
+          TextAlign.right || TextAlign.end => CrossAxisAlignment.end,
+          TextAlign.center => CrossAxisAlignment.center,
+          _ => CrossAxisAlignment.start,
+        },
+        children: [
+          for (var i = 0; i < lines.length; i++) ...[
+            if (i > 0) SizedBox(height: UiTheme.paragraphGap),
+            Text.rich(
+              protoSpan(lines[i], style: style, boldColor: boldColor),
+              overflow: overflow,
+              textAlign: textAlign,
+            ),
+          ],
+        ],
       );
+    }
+    return Text.rich(
+      protoSpan(markup, style: style, boldColor: boldColor),
+      maxLines: maxLines,
+      overflow: overflow,
+      textAlign: textAlign,
+    );
+  }
 }

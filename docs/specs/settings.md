@@ -74,6 +74,9 @@ botones no cambiaron (`display-text-*`, `display-font-*`,
 
 | Ajuste | Opciones | Efecto |
 |---|---|---|
+| TEMA DE INTERFAZ (ACCESIBILIDAD, v0.8.1) | AZUL / **OSCURO** / ALTO CONTRASTE | colores de paneles, botones, bordes y texto de toda la UI; el arte no cambia. `game.json`: `uiTheme` (accessibility.md § 8.1) |
+| COLORES DEL TEXTO (ACCESIBILIDAD, v0.8.1) | COMPLETO / **REDUCIDO** | REDUCIDO pinta el markup por roles (título, cuerpo, atenuado, acento, mejora / empeora; rarezas y estados igual). Fijo en REDUCIDO con ALTO CONTRASTE. `textColors` (§ 8.2) |
+| ESPACIADO (ACCESIBILIDAD, v0.8.1) | **NORMAL** / AMPLIO | más interlineado, párrafos y separadores en las fichas, más aire en filas y tarjetas. `spacing` (§ 8.3). Vista previa en vivo debajo |
 | TAMAÑO DEL TEXTO (ACCESIBILIDAD) | **NORMAL** / GRANDE / MUY GRANDE | accesibilidad: agranda el texto de toda la UI (tooltips, fichas, comparación, paneles, chat, HUD, menú y log de batalla, árbol, etiquetas de la escena) ×1 / ×1.25 / ×1.5 (los títulos crecen menos), siempre en la grilla nítida de cada fuente (§ 3.6). Se aplica en vivo |
 | MODO (solo Windows) | VENTANA / PANTALLA COMPLETA | pantalla completa sin bordes en el monitor de la ventana; al volver, la ventana recupera su estilo y su posición. Se aplica al arrancar si quedó guardada |
 | FUENTE DE LECTURA (ACCESIBILIDAD) | **VT323** / CLÁSICA | accesibilidad: fuente del texto de lectura (fichas, chat, menús, batalla). CLÁSICA = Press Start 2P como en v0.4. Cada botón se escribe en su fuente (vista previa). Títulos y botones no cambian (§ 3.7) |
@@ -373,6 +376,8 @@ con un valor inválido) carga VT323.
 | CONFIRMAR AL TIRAR | SÍ / NO | con NO, `TIRAR` del inventario tira enseguida. `VENDER` y `DESARMAR` siempre confirman (destruyen el arma) |
 | TIEMPO DE TURNO | **NORMAL (30 S)** / LARGO (60 S) / SIN LÍMITE | cuánto espera la batalla a que elija el jugador de turno antes de pasarlo solo (`TurnTimer`). Jugando solo vale este; en co-op, el del **anfitrión** (la sala lo lleva en `GameSession.turnTimer`; el del cliente no cuenta). En el pueblo y la preparación la barra de misión dice `Turnos: sin límite (anfitrión)` si no es el normal. Con SIN LÍMITE no hay reloj ni cuenta regresiva |
 | AVISOS DE BUILD | SÍ / NO | con NO no hay carteles ni líneas de chat cuando avanza una meta del plan de build (build_planner.md § 5). La pestaña BUILD y las ★ siguen |
+| CHAT (v0.8.1) | **OCULTO** / SIEMPRE VISIBLE | OCULTO: el chat queda plegado en la píldora `CHAT [ENTER]` con contador `+N`; Enter o clic lo abre (exploration.md § "Chat"). SIEMPRE VISIBLE: registro + campo como antes |
+| AVISOS DEL CHAT (v0.8.1) | **SÍ** / NO | con el chat plegado, las líneas de sistema importantes (misión aceptada, piso despejado, subida de nivel…) aparecen 4 s encima de la píldora. Sin efecto con SIEMPRE VISIBLE |
 
 **Auto-recoger loot**: no se ofrece. Levantar caminando encima lo decide
 el host (`SessionEngine.pickupRange`) igual para todos; no es un ajuste
@@ -381,7 +386,7 @@ del cliente.
 ## 5. CONTROLES
 
 Lista de solo lectura (exploration.md § "Teclado"): MAPA (WASD/flechas,
-E/Espacio, Alt, C, I, Y/N), BATALLA (1-9/clic, Q/Tab/clic, Esc del
+E/Espacio, Alt, C, I, J, M, rueda sobre el minimapa, Y/N), BATALLA (1-9/clic, Q/Tab/clic, Esc del
 submenú), MENÚS (Esc, Tab/flechas, Enter/Espacio) y CHAT (Enter, Esc).
 No se pueden reasignar (fuera de alcance).
 
@@ -466,6 +471,11 @@ está abierto:
   "perfCorner":"topRight"}` (`fpsLimit` 0 = sin límite; `textSize`
   `normal` / `large` / `huge`; `readingFont` `vt323` / `classic`).
   Valores inválidos o ausentes = por defecto. Corrupto = por defecto.
+- **v0.8.1 (HUD)**: `chat` (`hidden` / `always`, por defecto `hidden`),
+  `chatNotices` (por defecto `true`) y `objectivesCollapsed` (por
+  defecto `false`) son nuevos y aditivos: un `game.json` sin ellos carga
+  OCULTO / SÍ / desplegada. `minimapZoom` (entero 1..3, por defecto 3;
+  fuera de rango = 3) guarda el zoom del minimapa.
 - **v0.5.1**: `colorVision`, `reduceMotion`, `turnTimer`, `perfOverlay`
   y `perfCorner` son nuevos; un `game.json` sin ellos (o con valores
   inválidos) carga NO / NO / NORMAL / NO / ARRIBA DER. (`perfCorner`:

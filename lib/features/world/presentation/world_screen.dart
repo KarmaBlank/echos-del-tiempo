@@ -233,6 +233,13 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       }
       return KeyEventResult.handled;
     }
+    // J: pliega / despliega la caja de objetivos (campo, sin panel).
+    if (event.logicalKey == LogicalKeyboardKey.keyJ &&
+        view.mode == SessionMode.field &&
+        view.panel == null) {
+      toggleObjectives(ref);
+      return KeyEventResult.handled;
+    }
     final bool used;
     if (view.mode == SessionMode.battle) {
       used = _battleKey.currentState?.handleKey(event.logicalKey) ?? false;
@@ -608,6 +615,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         );
       case WorldPanel.armory:
         return ArmoryPanel(view: view, controller: controller);
+      case WorldPanel.map:
+        return fullMapPanel(view, controller);
       case WorldPanel.ecoPortal:
         return EcoPortalPanel(
             view: view,

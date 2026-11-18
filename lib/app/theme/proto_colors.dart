@@ -1,48 +1,56 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'ui_theme.dart';
 import 'vision_palette.dart';
 
 /// Paleta de la UI HTML del prototipo (`<style>` y los `color:` en línea
 /// de `hud()`, `descSkill`, `weaponTip`, `renderPanel`, ...). Ver
 /// docs/specs/ui_style.md § "Paleta".
 ///
+/// Los colores de interfaz (fondos, paneles, botones, bordes y texto) son
+/// [ThemeColor]: cambian con el TEMA DE INTERFAZ (accessibility.md § 8).
+///
 /// Los colores con significado (`green`, `red`, `crimson`, `hp`, `mp`)
 /// son [VisionColor]: siguen siendo `const` pero se pintan con la paleta
 /// del modo daltónico activo (docs/specs/accessibility.md § 3).
 abstract final class ProtoColors {
   /// Fondo de `body`; `#tip` con alfa `f5`.
-  static const bg = Color(0xFF0B0E1A);
+  static const bg = ThemeColor(UiSlot.bg);
 
   /// Texto base de `body`.
-  static const ink = Color(0xFFB0BAE5);
+  static const ink = ThemeColor(UiSlot.ink);
 
   /// `.pbox`, `.panel`, `#menu`.
-  static const panel = Color(0xFF121936);
+  static const panel = ThemeColor(UiSlot.panel);
 
   /// Borde de `.pbox`, `.mrow`, canvas.
-  static const panelBorder = Color(0xFF2E3B6B);
+  static const panelBorder = ThemeColor(UiSlot.panelBorder);
 
   /// `button`.
-  static const button = Color(0xFF22305A);
-  static const buttonBorder = Color(0xFF5B74C9);
-  static const buttonHover = Color(0xFF2E4280);
-  static const buttonHoverBorder = Color(0xFF9FB4FF);
+  static const button = ThemeColor(UiSlot.button);
+  static const buttonBorder = ThemeColor(UiSlot.buttonBorder);
+  static const buttonHover = ThemeColor(UiSlot.buttonHover);
+  static const buttonHoverBorder = ThemeColor(UiSlot.buttonHoverBorder);
 
   /// `input`.
-  static const input = Color(0xFF0F1530);
-  static const inputBorder = Color(0xFF3A4A85);
+  static const input = ThemeColor(UiSlot.input);
+  static const inputBorder = ThemeColor(UiSlot.inputBorder);
+
+  /// Nombres y títulos (rol `title`, accessibility.md § 8): con los
+  /// colores COMPLETOS es [gold]; por roles, casi blanco.
+  static const title = ThemeColor(UiSlot.title);
 
   /// `<b>` del tip y del menú, créditos, jugador local, títulos.
-  static const gold = Color(0xFFD3AC4F);
+  static const gold = ThemeColor(UiSlot.gold);
 
   /// `.k` del tip, clase y nivel, DEF/VEL, `small`.
-  static const sky = Color(0xFF8FA1DF);
+  static const sky = ThemeColor(UiSlot.sky);
 
   /// `.help`, XP y créditos, "Turno en N".
-  static const dim = Color(0xFF929ABA);
+  static const dim = ThemeColor(UiSlot.dim);
 
   /// `#chatlog`.
-  static const chat = Color(0xFFC8D2FF);
+  static const chat = ThemeColor(UiSlot.chat);
 
   /// `.sys`, `#mission`, curas, requisitos cumplidos, `TIENES`.
   static const green = VisionColor(VisionSlot.good);
@@ -54,10 +62,10 @@ abstract final class ProtoColors {
   static const mp = VisionColor(VisionSlot.mp);
 
   /// Fondo de `.bar`.
-  static const barBg = Color(0xFF222A48);
+  static const barBg = ThemeColor(UiSlot.barBg);
 
   /// MP de técnicas, DEF de escudo, éter, Congelación.
-  static const ice = Color(0xFF77A7D7);
+  static const ice = ThemeColor(UiSlot.ice);
 
   /// `#err`, requisitos que faltan, `+% crít`, tiempo ≤ 10 s.
   static const red = VisionColor(VisionSlot.bad);
@@ -66,16 +74,16 @@ abstract final class ProtoColors {
   static const crimson = VisionColor(VisionSlot.crimson);
 
   /// Arma equipada, `(fusión)`, avisos.
-  static const orange = Color(0xFFD1975F);
+  static const orange = ThemeColor(UiSlot.orange);
 
   /// Borde de `button.dual`.
   static const amber = Color(0xFFFF9F1C);
 
   /// ULT lista / nombre de la ULT en los tips.
-  static const pink = Color(0xFFCF85A8);
+  static const pink = ThemeColor(UiSlot.pink);
 
   /// ULT cargando.
-  static const violet = Color(0xFF9E99E0);
+  static const violet = ThemeColor(UiSlot.violet);
 
   /// Protege, aturdir del Paladín.
   static const cream = Color(0xFFFFEAA7);
@@ -111,7 +119,9 @@ abstract final class ProtoColors {
     final c = Color(((v & 0xFF) << 24) | (v >> 8));
     // Hex viejo → token suavizado; hex de un color con significado (o de
     // una rareza) → el del modo daltónico activo.
-    return legacy[c.toARGB32()] ?? VisionPalette.remap(c);
+    return legacy[c.toARGB32()] ??
+        _canonical[c.toARGB32()] ??
+        VisionPalette.remap(c);
   }
 
   /// Accesibilidad (v0.5, docs/specs/accessibility.md § 2): los colores
@@ -137,7 +147,32 @@ abstract final class ProtoColors {
     0xFF74B9FF: ice,
   };
 
-  /// `#rrggbb` de [c] (para armar markup).
-  static String hex(Color c) =>
-      '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+  /// Hex de AZUL de cada token de texto → el token (el markup que arma
+  /// [hex] vuelve a ser el token, y sigue al tema y a los roles).
+  static final Map<int, Color> _canonical = {
+    for (final s in const [
+      UiSlot.ink,
+      UiSlot.gold,
+      UiSlot.sky,
+      UiSlot.dim,
+      UiSlot.chat,
+      UiSlot.ice,
+      UiSlot.orange,
+      UiSlot.violet,
+      UiSlot.pink,
+    ])
+      UiTheme.inTheme(InterfaceTheme.blue, s).toARGB32(): ThemeColor(s),
+  };
+
+  /// `#rrggbb` de [c] (para armar markup). Un token escribe su valor
+  /// canónico (AZUL / modo daltónico apagado): [parse] lo vuelve a leer
+  /// como el token, en el tema y el modo que estén activos al pintar.
+  static String hex(Color c) {
+    final v = switch (c) {
+      ThemeColor() => c.base,
+      VisionColor() => VisionPalette.inMode(ColorVision.off, c.slot),
+      _ => c,
+    };
+    return '#${(v.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+  }
 }

@@ -204,7 +204,11 @@ panel de preparación en vez de cerrar.
 | WASD / flechas | lobby, campo | mover (se leen del estado del teclado cada frame) |
 | E / Espacio | lobby, frente al mostrador | abre el mostrador de misiones |
 | E / Espacio | lobby, frente a la armería | abre la armería |
-| Enter | fuera de batalla y resultado (con el chat visible) | enfoca el campo de chat |
+| Enter | fuera de batalla y resultado | despliega el chat (si está oculto) y enfoca el campo |
+| J | campo, sin panel | pliega / despliega la caja de objetivos (v0.8.1) |
+| M | campo o mapa del mundo (con o sin el mapa abierto) | abre / cierra el mapa en grande (v0.8.1) |
+| Flechas / WASD, `+` `-`, C | mapa en grande | mover, zoom, centrar en el jugador |
+| Rueda | sobre el minimapa | zoom del minimapa (1..3, se recuerda) |
 | Enter / Esc | escribiendo en el chat | manda el mensaje / sale sin mandar; el foco vuelve al juego |
 | E / Espacio | campo, a < 26 px de un sello | `ActivateSealAction` |
 | E / Espacio | lobby o campo, sin otro aviso a mano, a ≤ 24 px de loot dibujado | `PickUpAction` del más cercano (`MapGame.tryPickUp`, se lee del teclado en cada frame: solo el flanco de bajada) |
@@ -245,6 +249,28 @@ manejadas para que no muevan el foco entre botones.
   prototipo (`broadcast(m); addChat(m)`). El controlador guarda chat y
   sistema mezclados (máx. 50); `messages` sigue teniendo solo los de
   sistema.
+- **v0.8.1, chat oculto por defecto** (ajuste JUEGO › CHAT, settings.md
+  § 4). Con **OCULTO** el chat se muestra plegado: una píldora
+  `CHAT [ENTER]` (clave `chat-pill`) en la misma esquina, con el
+  contador `+N` en `gold` (clave `chat-unread`) de los mensajes de
+  **otros jugadores** llegados mientras estaba plegado (los de sistema
+  no suman: ya van al registro y, los importantes, como aviso; los
+  propios tampoco). Enter en el mapa o clic en la píldora lo despliega
+  (registro + campo) con el foco en el campo y el contador a 0; Esc,
+  Enter con el campo vacío o mandar un mensaje lo vuelven a plegar (el
+  foco vuelve al juego). Perder el foco del campo (clic en el mapa)
+  también lo pliega. El campo existe siempre (fuera de escena mientras
+  está plegado), así que la regla de foco de arriba no cambia.
+  - **Avisos del chat** (JUEGO › AVISOS DEL CHAT, SÍ por defecto): con
+    el chat plegado, cada línea de sistema **importante** aparece 4 s
+    encima de la píldora (claves `chat-toast-N`, máximo 3 a la vez; sin
+    animación). Importante = empieza con `¡` (misión aceptada, todos
+    listos, piso despejado, objetivos cumplidos, subida de nivel, Eco
+    completado, jefe vencido, ascensión, opcional cumplida…), empieza
+    con `Misión opcional` (fallida) o termina en `¡Voten!` (propuestas).
+    El resto (compras, mejoras, loot, sellos) solo queda en el registro.
+  - Con **SIEMPRE VISIBLE** se ve como antes de v0.8.1 (5 líneas +
+    campo) y no hay píldora ni avisos.
 - **Desvío / pendiente**: en batalla y en el resultado el chat no se
   muestra (la pantalla de batalla ocupa todo); el prototipo lo tiene
   siempre debajo del canvas.
@@ -416,9 +442,34 @@ Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
   `Lobby · Mostrador [E] · Armería [E] · Personaje [C]`; en `prep`
   `Preparación de misión`.
 - **Objetivos** (arriba a la izquierda, solo campo; `drawObjectives`):
-  una línea por objetivo `Etiqueta n/goal` (verde si está cumplido) y
-  la línea del jefe (`* ¡Ve por el JEFE!` / `Jefe: completa los
-  objetivos`).
+  una línea por objetivo `Etiqueta n/goal` y la línea del jefe
+  (`* ¡Ve por el JEFE!` / `Jefe: completa los objetivos`).
+  **v0.8.1, plegable y compacta** (`_Objectives` en `hud/world_hud.dart`):
+  - Cabecera (desplegada): nombre de la zona/misión (con pisos, `<zona> · Piso N/F ·
+    Lv L`, clave `hud-floor`) y a la derecha el botón `[-]` (desplegada)
+    / `[+]` (plegada), clave `hud-objectives-toggle`. Clic en la
+    cabecera o la tecla **J** (fuera de batalla, sin panel ni campo de
+    texto) pliega / despliega.
+  - **Plegada**: UNA sola fila: el resumen (clave
+    `hud-objectives-summary`; el nombre ya está en la barra de misión) y
+    `[+]`, ancho máximo `RetroType.width(context, 520)`, p. ej. `Piso 1/4 · Grupos 4/4 ·
+    Opcional 1/2`: piso (si hay pisos), grupos del piso (o el objetivo
+    de grupos), el resto de objetivos `Etiqueta n/goal` (primera
+    palabra), `Opcional hechas/total` (si el piso tiene opcionales) y
+    `★ JEFE` con la barrera abierta.
+  - **Desplegada**: las líneas con interlineado apretado (2 px entre
+    líneas), ancho máximo `RetroType.width(context, 380)` (crece con el
+    tamaño del texto) y texto que se parte en varias líneas en vez de
+    estirar la caja. Las misiones opcionales van bajo una sub-cabecera
+    `Opcional` (sin repetir el prefijo). Las líneas cumplidas se ven
+    atenuadas (`dim`) con la marca `>` en `green`; las pendientes llevan
+    `•`; una opcional fallida, `x` en `dim`.
+  - El estado se recuerda en `game.json` (`objectivesCollapsed`, por
+    defecto `false`: desplegada).
+  - Va a `16 + RetroType.width(context, 48)` px del borde de arriba
+    (debajo de la barra de misión, que crece con el texto). A 1280×720,
+    con cualquier tamaño de texto, no pisa el minimapa (arriba a la
+    derecha), la barra de misión, el chat ni las cajas del grupo.
 - **Minimapa** (arriba a la derecha, campo y subida de nivel, nunca en
   el lobby; `drawMinimap`): 1 tile = 2.5 px de pantalla (el doble del
   1.25 virtual del prototipo; los puntos también ×2); colores del
@@ -428,6 +479,33 @@ Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
   cofres `#ffd166`, jefe `*` que alterna `#e84393`/`#ffd166` cada 300 ms,
   jugador local blanco y aliados `#48dbfb`. Son colores de arte (como el
   mapa).
+  **v0.8.1, zoom** (`Minimap.cell` / `view` / `center`,
+  `hudMinimap` en `hud/world_hud.dart`): ajuste `minimapZoom` (1..3,
+  por defecto **3**, en `game.json`). Zoom 1 = el piso entero a 2.5 px
+  por tile (como antes). Zoom 2 y 3 = 5 y 7.5 px por tile en una ventana
+  de 300×210 px (a zoom 3, 40×28 tiles) centrada en el jugador local,
+  que se corre al caminar y se recorta a los bordes del piso
+  (`Minimap.viewRect`; un piso más chico que la ventana se ve entero).
+  Los puntos crecen con la raíz del zoom (no tapan el mapa). Rueda del
+  mouse sobre el minimapa o los botones `-` / `+` debajo cambian el zoom
+  (se recuerda). Las reglas de qué se ve no cambian: PdI solo
+  descubiertos (`minimapPois`, `poiSeen`), cofres de sala secreta solo
+  con la sala abierta, reliquia levantada sin punto.
+- **Mapa en grande** (v0.8.1, `hud/full_map.dart`, panel
+  `WorldPanel.map`): tecla **M** o el botón `MAPA [M]` debajo del
+  minimapa, donde hay minimapa (piso de misión o mapa del mundo; no en
+  batalla, preparación ni resultado). Panel centrado (`PanelFrame`
+  ancho 1100, del tema) `MAPA · <zona> · Piso N/F` (o `Mapa del mundo`)
+  con el mismo dibujo que el minimapa, ajustado para que el piso entre
+  entero; zoom ×1..×6 (rueda, `+` / `-` con teclado o botones, paso
+  ×1.5) y paneo (arrastrar, flechas o WASD, 4 tiles por tecla) siempre
+  dentro del piso; `CENTRAR [C]` vuelve al jugador. Leyenda: Tú,
+  Aliados, Escalera, Jefe, Cofre, Secreto, Santuario, Piedra de paso,
+  Enemigos (cuadros de color de arte que crecen con el texto). Esc, M o
+  `CERRAR [M]` lo cierran (Esc no abre la pausa). Como todo panel, el
+  jugador local no camina mientras está abierto y en co-op el mundo
+  sigue. **Pendiente**: viajar a una piedra de paso con clic desde el
+  mapa (no entra en v0.8.1).
 - **Grupo** (abajo a la derecha, `#party`): una fila de `.pbox`
   (`PartyBox`, docs/specs/ui_style.md § "Caja de jugador"), una por
   jugador, con los colores de `hud()` (línea 1195): nombre +

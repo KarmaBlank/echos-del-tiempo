@@ -7,6 +7,7 @@ import '../theme/retro_theme.dart';
 import 'cost_chip.dart';
 import 'menu_focus.dart';
 import 'pixel_icon.dart';
+import '../theme/ui_theme.dart';
 
 /// Tarjeta elegible de un menú (acciones de la fusión, armas…): ícono en
 /// una cajita, título en negrita, 1-2 líneas de explicación y un pie (el
@@ -135,7 +136,7 @@ class _ActionCardState extends State<ActionCard> {
                         color:
                             showPreview ? ProtoColors.sky : ProtoColors.dim)),
               if (footer != null) ...[
-                const SizedBox(height: 4),
+                SizedBox(height: UiTheme.space(4)),
                 footer,
               ],
             ],
@@ -161,7 +162,7 @@ class _ActionCardState extends State<ActionCard> {
           behavior: HitTestBehavior.opaque,
           onTap: w.onTap,
           child: Padding(
-            padding: const EdgeInsets.only(bottom: 6),
+            padding: EdgeInsets.only(bottom: UiTheme.space(6)),
             child: Transform.translate(
               offset: Offset(0, _hot ? -2 : 0),
               child: FocusRing(
@@ -206,7 +207,7 @@ class _ActionCardState extends State<ActionCard> {
                           ),
                         Expanded(
                           child: Padding(
-                            padding: const EdgeInsets.all(8),
+                            padding: EdgeInsets.all(UiTheme.space(8)),
                             child: body,
                           ),
                         ),
@@ -287,12 +288,19 @@ class ConfirmButton extends StatelessWidget {
               size: RetroType.width(context, 16),
               color: enabled ? ProtoColors.green : ProtoColors.dim),
           const SizedBox(width: 8),
-          Text(retroText(label),
-              style: TextStyle(
-                  fontFamily: RetroType.pixelFamily,
-                  fontSize: RetroType.title,
-                  color: enabled ? ProtoColors.green : ProtoColors.dim)),
-          if (cost != null) ...[const SizedBox(width: 10), cost!],
+          // Con texto Muy grande el verbo + el costo no entran en una
+          // línea: el verbo pasa a dos (v0.8.1).
+          Flexible(
+            child: Text(retroText(label),
+                style: TextStyle(
+                    fontFamily: RetroType.pixelFamily,
+                    fontSize: RetroType.title,
+                    color: enabled ? ProtoColors.green : ProtoColors.dim)),
+          ),
+          if (cost != null) ...[
+            const SizedBox(width: 10),
+            Flexible(child: cost!),
+          ],
         ],
       ),
     );

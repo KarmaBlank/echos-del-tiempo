@@ -70,11 +70,23 @@ Color? poiMinimapColor(MapPoi p, MissionRun m) {
   };
 }
 
+/// Los PdI que se marcan en el minimapa y el mapa en grande: solo los
+/// descubiertos (`MissionRun.poiSeen`), con su color (worldgen.md § 11.7).
+List<(MapPoi, Color)> minimapPois(MapFloor? floor, MissionRun m) => [
+      for (final poi in floor?.pois ?? const <MapPoi>[])
+        if (m.poiSeen.contains(poi.id))
+          if (poiMinimapColor(poi, m) case final c?) (poi, c),
+    ];
+
 /// Vacío en el minimapa (como el fondo fuera del mapa).
 const kMinimapVoid = Color(0xFF05060C);
 
 /// `drawMinimap` del prototipo como widget (docs/specs/exploration.md §
 /// "HUD"). Colores = arte del prototipo, igual que el mapa.
+///
+/// v0.8.1: con [view] muestra solo una ventana de `view` tiles (como
+/// mucho) centrada en [center] (por defecto, el jugador local) y recortada
+/// a los bordes del piso; [cell] es el zoom (px de pantalla por tile).
 class Minimap extends StatelessWidget {
   const Minimap({
     super.key,
@@ -87,6 +99,9 @@ class Minimap extends StatelessWidget {
     this.loot = const [],
     this.bounds,
     this.entranceOpen,
+    this.cell = baseCell,
+    this.view,
+    this.center,
   });
 
   /// Rectángulo del atlas a mostrar (el piso actual); `null` = todo.
@@ -96,12 +111,21 @@ class Minimap extends StatelessWidget {
   /// mundo; las cerradas van en gris).
   final bool Function(int zone)? entranceOpen;
 
-  /// Píxeles de pantalla por tile (el prototipo usa 1.25 px virtuales,
-  /// ×2 para la pantalla).
-  static const cell = 2.5;
+  /// Píxeles de pantalla por tile sin zoom (el prototipo usa 1.25 px
+  /// virtuales, ×2 para la pantalla).
+  static const baseCell = 2.5;
 
   /// Factor de los puntos respecto del prototipo.
-  static const dotScale = cell / 1.25;
+  static const dotScale = baseCell / 1.25;
+
+  /// Zoom: píxeles de pantalla por tile.
+  final double cell;
+
+  /// Ventana en tiles (`null` = el piso entero).
+  final Size? view;
+
+  /// Centro de la ventana en tiles (`null` = el jugador local).
+  final Offset? center;
 
   final GameMap map;
   final GameSession session;
@@ -114,13 +138,36 @@ class Minimap extends StatelessWidget {
   /// Loot del piso con ícono según el filtro del jugador local.
   final List<MinimapLoot> loot;
 
+  /// El rectángulo mostrado del piso (o el mapa).
+  TileRect get area => bounds ?? TileRect(0, 0, map.width, map.height);
+
+  /// La ventana visible en tiles: a lo sumo [view], centrada en [center]
+  /// (o en el jugador) y sin salirse de [area].
+  Rect get visible =>
+      viewRect(area, view, center ?? Offset(localX / 16, localY / 16));
+
+  /// Ventana de [view] tiles centrada en [c], recortada a [b] (si [b] es
+  /// más chico que la ventana, se ve [b] entero).
+  static Rect viewRect(TileRect b, Size? view, Offset c) {
+    if (view == null) {
+      return Rect.fromLTWH(
+          b.x.toDouble(), b.y.toDouble(), b.w.toDouble(), b.h.toDouble());
+    }
+    final w = math.min(view.width, b.w.toDouble());
+    final h = math.min(view.height, b.h.toDouble());
+    final x = (c.dx - w / 2).clamp(b.x.toDouble(), b.x + b.w - w);
+    final y = (c.dy - h / 2).clamp(b.y.toDouble(), b.y + b.h - h);
+    return Rect.fromLTWH(x, y, w, h);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final v = visible;
     return SizedBox(
-      width: (bounds?.w ?? map.width) * cell,
-      height: (bounds?.h ?? map.height) * cell,
+      width: v.width * cell,
+      height: v.height * cell,
       child: CustomPaint(
-        painter: _MinimapPainter(this),
+        painter: _MinimapPainter(this, v),
       ),
     );
   }
@@ -130,9 +177,12 @@ class Minimap extends StatelessWidget {
 final _baseCache = Expando<ui.Picture>('minimapa');
 
 class _MinimapPainter extends CustomPainter {
-  _MinimapPainter(this.w);
+  _MinimapPainter(this.w, this.v);
 
   final Minimap w;
+
+  /// Ventana visible (tiles).
+  final Rect v;
 
   static const _ts = 16.0;
 
@@ -147,8 +197,8 @@ class _MinimapPainter extends CustomPainter {
         final ch = map.tileAt(x, y);
         p.color = minimapTileColor(ch);
         c.drawRect(
-            Rect.fromLTWH(
-                x * Minimap.cell, y * Minimap.cell, Minimap.cell, Minimap.cell),
+            Rect.fromLTWH(x * Minimap.baseCell, y * Minimap.baseCell,
+                Minimap.baseCell, Minimap.baseCell),
             p);
       }
     }
@@ -159,27 +209,28 @@ class _MinimapPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final map = w.map;
     final s = w.session;
-    final b = w.bounds;
+    final b = w.area;
+    const cell = Minimap.baseCell;
+    // Zoom: se dibuja en unidades de 2.5 px por tile y se escala. Los
+    // puntos crecen menos que el mapa (raíz del zoom).
+    final k = w.cell / cell;
+    final dk = math.sqrt(k) / k;
     canvas.save();
     canvas.clipRect(Offset.zero & size);
-    if (b != null) {
-      canvas.translate(-b.x * Minimap.cell, -b.y * Minimap.cell);
-    }
-    final shown = b == null
-        ? Offset.zero &
-            Size(map.width * Minimap.cell, map.height * Minimap.cell)
-        : Rect.fromLTWH(b.x * Minimap.cell, b.y * Minimap.cell,
-            b.w * Minimap.cell, b.h * Minimap.cell);
+    canvas.scale(k);
+    canvas.translate(-v.left * cell, -v.top * cell);
+    final shown = Rect.fromLTWH(
+        v.left * cell, v.top * cell, v.width * cell, v.height * cell);
     canvas.saveLayer(
         shown, Paint()..color = const Color.fromRGBO(0, 0, 0, 0.85));
     canvas.drawPicture(_base(map));
     canvas.restore();
 
     final p = Paint()..isAntiAlias = false;
-    const cell = Minimap.cell;
-    final x0 = b?.x ?? 0, y0 = b?.y ?? 0;
-    final x1 = b == null ? map.width : b.x + b.w;
-    final y1 = b == null ? map.height : b.y + b.h;
+    final x0 = math.max(b.x, v.left.floor());
+    final y0 = math.max(b.y, v.top.floor());
+    final x1 = math.min(b.x + b.w, v.right.ceil());
+    final y1 = math.min(b.y + b.h, v.bottom.ceil());
     for (var y = y0; y < y1; y++) {
       for (var x = x0; x < x1; x++) {
         if (map.tileAt(x, y) != Tile.gate) continue;
@@ -189,7 +240,7 @@ class _MinimapPainter extends CustomPainter {
       }
     }
     void dot(double px, double py, Color c, double s2) {
-      final d = s2 * Minimap.dotScale;
+      final d = s2 * Minimap.dotScale * dk;
       p.color = c;
       canvas.drawRect(
           Rect.fromLTWH(px / _ts * cell - d / 2, py / _ts * cell - d / 2, d, d),
@@ -241,11 +292,7 @@ class _MinimapPainter extends CustomPainter {
         }
       }
       // Puntos de interés descubiertos (worldgen.md § 11.7).
-      final fl = map.floor(m.floor);
-      for (final poi in fl?.pois ?? const <MapPoi>[]) {
-        if (!m.poiSeen.contains(poi.id)) continue;
-        final c = poiMinimapColor(poi, m);
-        if (c == null) continue;
+      for (final (poi, c) in minimapPois(map.floor(m.floor), m)) {
         dot(poi.center.x, poi.center.y, c, 3);
       }
       for (final e in m.enemies) {
@@ -256,7 +303,7 @@ class _MinimapPainter extends CustomPainter {
             text: '★',
             style: TextStyle(
               fontFamily: RetroTheme.fontFamily,
-              fontSize: 8,
+              fontSize: 8 * dk,
               height: 1,
               color: blink ? const Color(0xFFE84393) : const Color(0xFFFFD166),
             ),
@@ -270,7 +317,7 @@ class _MinimapPainter extends CustomPainter {
       }
     }
     for (final l in w.loot) {
-      _lootIcon(canvas, p, l);
+      _lootIcon(canvas, p, l, dk);
     }
     final merchant = map.merchant;
     if (merchant != null) {
@@ -285,33 +332,33 @@ class _MinimapPainter extends CustomPainter {
   }
 
   /// Ícono de 5 px (de pantalla) con contorno negro.
-  void _lootIcon(Canvas canvas, Paint p, MinimapLoot l) {
-    const cell = Minimap.cell;
+  void _lootIcon(Canvas canvas, Paint p, MinimapLoot l, double dk) {
+    const cell = Minimap.baseCell;
     final o = Offset(l.x / _ts * cell, l.y / _ts * cell);
-    const r = 3.0;
+    final r = 3.0 * dk;
     final path = switch (l.icon.shape) {
       MapIconShape.circulo => Path()
         ..addOval(Rect.fromCircle(center: o, radius: r)),
       MapIconShape.cuadrado => Path()
-        ..addRect(Rect.fromCircle(center: o, radius: r - 0.5)),
+        ..addRect(Rect.fromCircle(center: o, radius: r - 0.5 * dk)),
       MapIconShape.triangulo => Path()
         ..moveTo(o.dx, o.dy - r)
         ..lineTo(o.dx + r, o.dy + r)
         ..lineTo(o.dx - r, o.dy + r)
         ..close(),
       MapIconShape.diamante => Path()
-        ..moveTo(o.dx, o.dy - r - 0.5)
+        ..moveTo(o.dx, o.dy - r - 0.5 * dk)
         ..lineTo(o.dx + r, o.dy)
-        ..lineTo(o.dx, o.dy + r + 0.5)
+        ..lineTo(o.dx, o.dy + r + 0.5 * dk)
         ..lineTo(o.dx - r, o.dy)
         ..close(),
-      MapIconShape.estrella => _star(o, r + 1),
+      MapIconShape.estrella => _star(o, r + dk),
     };
     canvas.drawPath(
         path,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
+          ..strokeWidth = 2 * dk
           ..color = const Color(0xFF000000));
     p.color = mapIconColor(l.icon.color);
     canvas.drawPath(path, p);

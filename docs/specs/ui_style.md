@@ -171,6 +171,13 @@ Interlineado: paneles, tooltips, `.pbox` y chat `RetroType.line`.
 
 ## Paleta (`ProtoColors`, `lib/app/theme/proto_colors.dart`)
 
+**v0.8.1:** los valores de abajo son los del tema AZUL. Los tokens de
+interfaz son `ThemeColor` y cambian con TEMA DE INTERFAZ (AZUL / OSCURO
+/ ALTO CONTRASTE); con COLORES DEL TEXTO REDUCIDO el markup se pinta por
+roles (`title`, `body`, `muted`, `accent`, `positive` / `negative`) y
+ESPACIADO AMPLIO suma aire y separadores. Tablas y reglas:
+docs/specs/accessibility.md § 8.
+
 Todos los hex que usa el prototipo en la UI HTML:
 
 | Constante | Hex | Dónde (prototipo) |

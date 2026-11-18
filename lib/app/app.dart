@@ -6,6 +6,7 @@ import '../core/settings/game_settings.dart';
 import '../core/settings/settings_providers.dart';
 import '../features/lobby/presentation/title_screen.dart';
 import 'theme/retro_theme.dart';
+import 'theme/ui_theme.dart';
 import 'theme/vision_palette.dart';
 import 'widgets/perf_overlay.dart';
 
@@ -46,10 +47,20 @@ class EcosApp extends StatelessWidget {
                   ref.watch(gameSettingsProvider.select((s) => s.colorVision)),
               // FPS y ping (§ 3.9): encima del CRT (no se curva) y sin
               // recibir clics.
-              child: PerfOverlay(
-                child: CrtFilter(
-                  level: ref.watch(gameSettingsProvider.select((s) => s.crt)),
-                  child: child ?? const SizedBox.shrink(),
+              // Tema, colores del texto y espaciado (accessibility.md § 8).
+              child: UiThemeScope(
+                theme:
+                    ref.watch(gameSettingsProvider.select((s) => s.uiTheme)),
+                textColors: ref
+                    .watch(gameSettingsProvider.select((s) => s.textColors)),
+                spacing:
+                    ref.watch(gameSettingsProvider.select((s) => s.spacing)),
+                child: PerfOverlay(
+                  child: CrtFilter(
+                    level:
+                        ref.watch(gameSettingsProvider.select((s) => s.crt)),
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 ),
               ),
             ),

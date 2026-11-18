@@ -76,6 +76,48 @@ enum ColorVision {
       values.firstWhere((m) => m.name == v, orElse: () => def);
 }
 
+/// "Tema de interfaz" (accesibilidad, docs/specs/accessibility.md § 8):
+/// los colores de paneles, botones, campos, bordes y texto de toda la UI
+/// (menús, tooltips, HUD, batalla). El arte (arenas, mapa, sprites) no
+/// cambia. Ver `UiTheme`.
+enum InterfaceTheme {
+  /// El de siempre: paneles azul marino.
+  blue,
+
+  /// Paneles casi negros (escala neutra), bordes grises apagados y dorado solo
+  /// para la selección y el foco.
+  dark,
+
+  /// Fondo negro, texto blanco, foco amarillo, bordes gruesos; color solo
+  /// donde significa algo.
+  highContrast;
+
+  static InterfaceTheme fromName(Object? v, InterfaceTheme def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Colores del texto" (accesibilidad, accessibility.md § 8): COMPLETO
+/// (cada markup con sus colores) o REDUCIDO (pocos colores con
+/// significado; el resto, texto base o atenuado).
+enum TextColorMode {
+  full,
+  reduced;
+
+  static TextColorMode fromName(Object? v, TextColorMode def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Espaciado" (accesibilidad, accessibility.md § 8): NORMAL o AMPLIO
+/// (más interlineado, separación entre líneas de las fichas, más aire en
+/// filas y tarjetas y separadores entre secciones de los tooltips).
+enum UiSpacing {
+  normal,
+  wide;
+
+  static UiSpacing fromName(Object? v, UiSpacing def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
 /// Esquina del indicador de FPS y ping (docs/specs/settings.md § 3.9).
 enum OverlayCorner {
   topRight,
@@ -87,6 +129,17 @@ enum OverlayCorner {
   bool get right => this == topRight || this == bottomRight;
 
   static OverlayCorner fromName(Object? v, OverlayCorner def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Chat" (JUEGO, v0.8.1): plegado en una píldora `CHAT [ENTER]` hasta
+/// que se abre, o siempre visible como antes. Ver
+/// docs/specs/exploration.md § "Chat".
+enum ChatVisibility {
+  hidden,
+  always;
+
+  static ChatVisibility fromName(Object? v, ChatVisibility def) =>
       values.firstWhere((m) => m.name == v, orElse: () => def);
 }
 
@@ -111,6 +164,13 @@ class GameSettings {
     this.turnTimer = TurnTimer.normal,
     this.perfOverlay = false,
     this.perfCorner = OverlayCorner.topRight,
+    this.uiTheme = InterfaceTheme.dark,
+    this.textColors = TextColorMode.reduced,
+    this.spacing = UiSpacing.normal,
+    this.chat = ChatVisibility.hidden,
+    this.chatNotices = true,
+    this.objectivesCollapsed = false,
+    this.minimapZoom = 3,
   });
 
   /// Pantalla completa sin bordes (solo Windows; ver `WindowMode`).
@@ -167,6 +227,31 @@ class GameSettings {
   /// En qué esquina va el indicador.
   final OverlayCorner perfCorner;
 
+  /// Tema de interfaz (accesibilidad, v0.8.1).
+  final InterfaceTheme uiTheme;
+
+  /// Colores del texto (accesibilidad, v0.8.1).
+  final TextColorMode textColors;
+
+  /// Espaciado de la UI (accesibilidad, v0.8.1).
+  final UiSpacing spacing;
+
+  /// Chat plegado o siempre visible (HUD, v0.8.1).
+  final ChatVisibility chat;
+
+  /// Con el chat plegado, las líneas de sistema importantes aparecen 4 s
+  /// encima de la píldora (v0.8.1).
+  final bool chatNotices;
+
+  /// Caja de objetivos plegada (se recuerda; tecla J, v0.8.1).
+  final bool objectivesCollapsed;
+
+  /// Zoom del minimapa del HUD: 1 = el piso entero (como antes de v0.8.1),
+  /// 2 y 3 = ventana centrada en el jugador (rueda del mouse / `+` `−`).
+  final int minimapZoom;
+
+  static const minimapZooms = 3;
+
   /// Sacudida efectiva (REDUCIR MOVIMIENTO la apaga).
   bool get shakeOn => screenShake && !reduceMotion;
 
@@ -196,6 +281,13 @@ class GameSettings {
     TurnTimer? turnTimer,
     bool? perfOverlay,
     OverlayCorner? perfCorner,
+    InterfaceTheme? uiTheme,
+    TextColorMode? textColors,
+    UiSpacing? spacing,
+    ChatVisibility? chat,
+    bool? chatNotices,
+    bool? objectivesCollapsed,
+    int? minimapZoom,
   }) =>
       GameSettings(
         fullscreen: fullscreen ?? this.fullscreen,
@@ -215,6 +307,13 @@ class GameSettings {
         turnTimer: turnTimer ?? this.turnTimer,
         perfOverlay: perfOverlay ?? this.perfOverlay,
         perfCorner: perfCorner ?? this.perfCorner,
+        uiTheme: uiTheme ?? this.uiTheme,
+        textColors: textColors ?? this.textColors,
+        spacing: spacing ?? this.spacing,
+        chat: chat ?? this.chat,
+        chatNotices: chatNotices ?? this.chatNotices,
+        objectivesCollapsed: objectivesCollapsed ?? this.objectivesCollapsed,
+        minimapZoom: (minimapZoom ?? this.minimapZoom).clamp(1, minimapZooms),
       );
 
   Map<String, Object?> toJson() => {
@@ -235,6 +334,13 @@ class GameSettings {
         'turnTimer': turnTimer.name,
         'perfOverlay': perfOverlay,
         'perfCorner': perfCorner.name,
+        'uiTheme': uiTheme.name,
+        'textColors': textColors.name,
+        'spacing': spacing.name,
+        'chat': chat.name,
+        'chatNotices': chatNotices,
+        'objectivesCollapsed': objectivesCollapsed,
+        'minimapZoom': minimapZoom,
       };
 
   /// Valores inválidos o ausentes caen al de por defecto. Claves viejas
@@ -262,6 +368,17 @@ class GameSettings {
       turnTimer: TurnTimer.fromName(json['turnTimer'], d.turnTimer),
       perfOverlay: flag(json['perfOverlay'], d.perfOverlay),
       perfCorner: OverlayCorner.fromName(json['perfCorner'], d.perfCorner),
+      uiTheme: InterfaceTheme.fromName(json['uiTheme'], d.uiTheme),
+      textColors: TextColorMode.fromName(json['textColors'], d.textColors),
+      spacing: UiSpacing.fromName(json['spacing'], d.spacing),
+      chat: ChatVisibility.fromName(json['chat'], d.chat),
+      chatNotices: flag(json['chatNotices'], d.chatNotices),
+      objectivesCollapsed:
+          flag(json['objectivesCollapsed'], d.objectivesCollapsed),
+      minimapZoom: switch (json['minimapZoom']) {
+        final int z when z >= 1 && z <= minimapZooms => z,
+        _ => d.minimapZoom,
+      },
     );
   }
 
@@ -284,13 +401,36 @@ class GameSettings {
       other.reduceMotion == reduceMotion &&
       other.turnTimer == turnTimer &&
       other.perfOverlay == perfOverlay &&
-      other.perfCorner == perfCorner;
+      other.perfCorner == perfCorner &&
+      other.uiTheme == uiTheme &&
+      other.textColors == textColors &&
+      other.spacing == spacing &&
+      other.chat == chat &&
+      other.chatNotices == chatNotices &&
+      other.objectivesCollapsed == objectivesCollapsed &&
+      other.minimapZoom == minimapZoom;
 
   @override
-  int get hashCode => Object.hash(fullscreen, screenShake, flashes,
-      damageNumbers, confirmDrop, scale, crt, particles, fpsLimit, textSize,
-      readingFont, buildNotices, colorVision, reduceMotion, turnTimer,
-      perfOverlay, perfCorner);
+  int get hashCode => Object.hash(
+      fullscreen,
+      screenShake,
+      flashes,
+      damageNumbers,
+      confirmDrop,
+      scale,
+      crt,
+      particles,
+      fpsLimit,
+      textSize,
+      readingFont,
+      buildNotices,
+      colorVision,
+      reduceMotion,
+      turnTimer,
+      perfOverlay,
+      perfCorner,
+      Object.hash(uiTheme, textColors, spacing, chat, chatNotices,
+          objectivesCollapsed, minimapZoom));
 
   @override
   String toString() => 'GameSettings(${toJson()})';

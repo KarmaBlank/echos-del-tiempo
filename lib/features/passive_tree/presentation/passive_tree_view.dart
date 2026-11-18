@@ -7,6 +7,7 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../app/theme/ui_theme.dart';
 import '../../../game_engine/models/passive_tree.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/passive_tree_rules.dart';
@@ -533,7 +534,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       child: IgnorePointer(
         child: Container(
           key: const ValueKey('tree-tooltip'),
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(UiTheme.space(8)),
           decoration: BoxDecoration(
             color: ProtoColors.bg.withValues(alpha: 0.96),
             border: Border.all(
@@ -548,9 +549,11 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Nombre (rol `title`), tipo · cluster (`muted`),
+                // efectos (`body`), costo (`accent`) y estado (accessibility.md
+                // § 8.2).
                 Text(retroText(node.name),
-                    style: const TextStyle(
-                        color: ProtoColors.gold)),
+                    style: const TextStyle(color: ProtoColors.title)),
                 if (kind.isNotEmpty || pathText != null)
                   Text(
                       retroText([
@@ -558,10 +561,10 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                         if (pathText != null) pathText,
                       ].join(' · ')),
                       style: const TextStyle(color: ProtoColors.dim)),
-                const SizedBox(height: 4),
+                SizedBox(height: UiTheme.space(4)),
                 for (final line in passiveEffectsText(node))
                   Text(retroText(line)),
-                const SizedBox(height: 4),
+                SizedBox(height: UiTheme.space(4)),
                 if (cost != null)
                   Text(retroText(cost),
                       style: const TextStyle(color: ProtoColors.gold)),
@@ -667,8 +670,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(retroText(node.name),
-            style: const TextStyle(
-                color: ProtoColors.gold)),
+            style: const TextStyle(color: ProtoColors.title)),
         if (node.kind == 'k' || node.kind == 'n')
           Text(_kindText(node),
               style: const TextStyle(color: RetroPalette.muted)),

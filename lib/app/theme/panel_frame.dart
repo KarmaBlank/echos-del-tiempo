@@ -7,6 +7,7 @@ import 'retro_hover_card.dart';
 import 'retro_panel.dart';
 import 'retro_text.dart';
 import 'retro_theme.dart';
+import 'ui_theme.dart';
 
 /// Marco común de los paneles sobre el mapa (`#board` del prototipo):
 /// `RetroPanel` centrado, título de 16 px con la ayuda `[?]`, contenido
@@ -80,7 +81,7 @@ class PanelFrame extends StatelessWidget {
                             style: const TextStyle(
                                 fontFamily: RetroType.pixelFamily,
                                 fontSize: RetroType.title,
-                                color: ProtoColors.gold)),
+                                color: ProtoColors.title)),
                       ),
                       if (help != null) ...[
                         const SizedBox(width: 12),
@@ -303,8 +304,8 @@ class PanelButton extends StatelessWidget {
     );
     if (selected) {
       style = style.copyWith(
-        side: const WidgetStatePropertyAll(BorderSide(
-            color: ProtoColors.gold, width: RetroTheme.thinBorderWidth)),
+        side: WidgetStatePropertyAll(BorderSide(
+            color: ProtoColors.gold, width: UiTheme.buttonBorderWidth)),
       );
     }
     final button = ElevatedButton(
@@ -361,13 +362,19 @@ class PanelSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 16),
+      padding: EdgeInsets.only(top: UiTheme.space(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // AMPLIO: un separador arriba de cada sección (§ 8.3).
+          if (UiTheme.wide)
+            Container(
+                height: 1,
+                margin: const EdgeInsets.only(bottom: 8),
+                color: ProtoColors.panelBorder),
           Text(retroText(title),
-              style: const TextStyle(color: ProtoColors.gold)),
-          const SizedBox(height: 8),
+              style: const TextStyle(color: ProtoColors.title)),
+          SizedBox(height: UiTheme.space(8)),
           child,
         ],
       ),
@@ -390,8 +397,8 @@ class PanelRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget row = Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.all(8),
+      margin: EdgeInsets.symmetric(vertical: UiTheme.space(6)),
+      padding: EdgeInsets.all(UiTheme.space(8)),
       decoration: BoxDecoration(
         border: Border.all(
             color: ProtoColors.panelBorder, width: RetroTheme.thinBorderWidth),

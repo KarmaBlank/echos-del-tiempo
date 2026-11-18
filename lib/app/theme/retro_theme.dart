@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'proto_colors.dart';
 import 'retro_type.dart';
+import 'ui_theme.dart';
 
 export 'retro_type.dart';
 
@@ -91,7 +92,8 @@ abstract final class RetroTheme {
       ),
       side: WidgetStateProperty.resolveWith(
         (s) => BorderSide(
-          width: thinBorderWidth,
+          // 3 px en ALTO CONTRASTE (accessibility.md § 8.1).
+          width: UiTheme.buttonBorderWidth,
           color: s.contains(WidgetState.disabled)
               ? ProtoColors.buttonBorder.withValues(alpha: 0.35)
               // Foco de teclado: el mismo dorado del aro de los menús
