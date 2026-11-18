@@ -409,8 +409,8 @@ del cliente.
 ## 5. CONTROLES
 
 Lista de solo lectura (exploration.md § "Teclado"): MAPA (WASD/flechas,
-E/Espacio, Alt, C, I, J, H (v0.8.2), M, rueda sobre el minimapa, Y/N), BATALLA (1-9/clic, Q/Tab/clic, Esc del
-submenú), MENÚS (Esc, Tab/flechas, Enter/Espacio) y CHAT (Enter, Esc).
+E/Espacio, Alt, C, I, J, H (v0.8.2), M, rueda sobre el minimapa, Y/N), BATALLA (1-9/clic, Q/Tab/clic, P pasar
+turno (v0.8.3), Esc del submenú), MENÚS (Esc, Tab/flechas, Enter/Espacio) y CHAT (Enter, Esc).
 No se pueden reasignar (fuera de alcance).
 
 ## 6. Pausa

@@ -39,3 +39,11 @@ class ItemCommand extends BattleCommand {
 class DefendCommand extends BattleCommand {
   const DefendCommand();
 }
+
+/// Pasar turno (v0.8.3, docs/specs/combat.md § "Pasar turno"): termina
+/// el turno sin actuar; el próximo llega en IV × 0.5. Sin carga de ULT ni
+/// defensa. En la red viaja como `def` + `ps: true` (un host v0.8.2 lo
+/// lee como Defender).
+class PassCommand extends BattleCommand {
+  const PassCommand();
+}

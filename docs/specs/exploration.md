@@ -219,6 +219,7 @@ panel de preparación en vez de cerrar.
 | Y / N | lobby, votación pendiente | `VoteMissionAction(true/false)` |
 | 1-9 | batalla, tu turno | el botón N del menú de comandos |
 | Q / Tab | batalla | `cycleTarget`: siguiente enemigo vivo |
+| P | batalla, tu turno (v0.8.3) | va a PASAR; con PASAR elegida, `PassCommand` (combat.md § "Pasar turno") |
 | Esc | batalla, submenú de poción | volver |
 | Esc | batalla, sin submenú | abre / cierra el menú de pausa |
 

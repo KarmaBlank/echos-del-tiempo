@@ -335,8 +335,9 @@ class BattleViewState extends State<BattleView>
 
   /// Teclas de batalla: 1-9 eligen la acción N de la lista que se ve,
   /// ↑/↓ mueven la elegida, ←/→ cambian de categoría, Enter/Espacio
-  /// confirman, Q/Tab cambian de objetivo y Esc sale del submenú (o
-  /// vuelve a la primera página). Devuelve si la tecla se usó.
+  /// confirman, Q/Tab cambian de objetivo, P va a PASAR (otra P: pasa el
+  /// turno) y Esc sale del submenú (o vuelve a la primera página).
+  /// Devuelve si la tecla se usó.
   bool handleKey(LogicalKeyboardKey key) {
     if (key == LogicalKeyboardKey.keyQ || key == LogicalKeyboardKey.tab) {
       cycleTarget();
@@ -358,6 +359,18 @@ class BattleViewState extends State<BattleView>
     }
     final cur = widget.battle.current;
     final acting = widget.canAct && cur != null && cur.isPlayer;
+    // P: va a PASAR; con PASAR ya elegido, pasa el turno (dos toques: no
+    // se pierde un turno por una tecla suelta).
+    if (key == LogicalKeyboardKey.keyP) {
+      if (acting) {
+        if (_potMode == null && _category == BattleCategory.pass) {
+          _send(const PassCommand());
+        } else {
+          selectCategory(BattleCategory.pass);
+        }
+      }
+      return true;
+    }
     if (key == LogicalKeyboardKey.arrowLeft ||
         key == LogicalKeyboardKey.arrowRight) {
       if (acting && _potMode == null) {
@@ -651,6 +664,20 @@ class BattleViewState extends State<BattleView>
         description: '<b>Defender</b><br>Recibes la mitad del daño hasta tu '
             'próximo turno, y tu siguiente turno llega 30% antes.',
         onSelect: () => _send(const DefendCommand()),
+      ),
+    ]));
+
+    // Pasar turno (v0.8.3, combat.md § "Pasar turno"). AUTO nunca pasa.
+    out.add(BattleCategoryEntry(BattleCategory.pass, [
+      BattleAction(
+        id: 'pass',
+        name: 'Pasar turno',
+        cost: hexSpan('#9fb4ff', 'próximo ×½'),
+        description: '<b>Pasar turno</b> <span class="k">P</span><br>'
+            'Terminás el turno sin actuar; tu próximo turno llega antes '
+            '(a la mitad del intervalo). Sin carga de ULT ni defensa: '
+            'sirve para esperar la reacción o el cebado de un aliado.',
+        onSelect: () => _send(const PassCommand()),
       ),
     ]));
     return out;

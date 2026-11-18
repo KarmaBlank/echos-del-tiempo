@@ -203,4 +203,45 @@ void main() {
     c.advance(SessionController.autoDelay + 0.1);
     expect(c.session!.battle?.state.currentId, isNot('local-c2'));
   });
+
+  testWidgets('batalla: el compañero manual puede PASAR (v0.8.3)',
+      (tester) async {
+    final repo =
+        AccountRepository(InMemoryAccountStore(_account(party: ['c2'])));
+    final c = await _pumpSession(
+        tester,
+        repo,
+        (view, c) => view.session.battle == null
+            ? const SizedBox.shrink()
+            : SessionBattleScreen(
+                view: view, onCommand: c.battleCommand, onAuto: c.setAuto));
+    expect(c.proposeMission('m1'), isTrue);
+    c.advance(0.1);
+    c.setReady(true);
+    c.advance(0.1);
+    startBattleWithFirstGroup(c);
+    for (var i = 0; i < 2000; i++) {
+      final b = c.session!.battle;
+      if (b == null) break;
+      if (b.waitingForPlayer && b.state.currentId == 'local-c2') break;
+      if (c.view!.myTurn) c.battleCommand(const DefendCommand());
+      c.advance(0.05);
+    }
+    await tester.pump();
+    expect(_hasText('Turno de Leo (compañero)'), isTrue);
+    final before = c.session!.battle!.state;
+    final leo = before.party.firstWhere((p) => p.id == 'local-c2');
+    // Sin buffs de velocidad ni Congelación: IV = 100 / velocidad.
+    final iv = 100 / leo.speed;
+    await tester.tap(find.byKey(const ValueKey('battle-cat-pass')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('battle-act-pass')));
+    await tester.pump();
+    final after = c.session!.battle!.state;
+    final leo2 = after.party.firstWhere((p) => p.id == 'local-c2');
+    expect(after.currentId, isNot('local-c2'));
+    expect(leo2.ult, leo.ult);
+    expect(leo2.defending, isFalse);
+    expect(leo2.nextTurn, closeTo(before.clock + iv * 0.5, 1e-6));
+  });
 }

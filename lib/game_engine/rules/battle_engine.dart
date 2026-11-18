@@ -118,6 +118,10 @@ class BattleEngine {
   /// Golpe esquivado por un común (Eco Sombrío): solo lo roza.
   static const evadeFactor = 0.3;
 
+  /// Pasar turno (v0.8.3, combat.md § "Pasar turno"): el próximo turno
+  /// llega en IV × esto (Defender: × 0.7; acción normal: × 1).
+  static const passTurnFactor = 0.5;
+
   // ---- ULT enemiga ----
   /// Carga por turno propio.
   static const enemyUltPerTurn = 25.0;
@@ -3767,6 +3771,16 @@ class _Turn {
         _act = null;
         tickEffects(p);
         p.nextTurn = state.clock + _iv(p) * 0.7;
+        endTurn();
+        return true;
+      case PassCommand():
+        // Sin acción: no carga ULT, no defiende, no dispara procs ni
+        // emite ActionEvent (los eventos siguen siendo los de v0.8.2).
+        state.log = '${p.name} pasa el turno (el próximo llega antes)';
+        _act = null;
+        _attacker = null;
+        tickEffects(p);
+        p.nextTurn = state.clock + _iv(p) * BattleEngine.passTurnFactor;
         endTurn();
         return true;
     }

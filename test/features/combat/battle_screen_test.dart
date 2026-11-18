@@ -152,6 +152,65 @@ void main() {
     expect((sent! as SkillCommand).skillId, cur.skillIds[1]);
   });
 
+  testWidgets('PASAR: última categoría, descripción y clic pasa el turno',
+      (tester) async {
+    BattleCommand? sent;
+    await pump(tester, canAct: true, onCommand: (c) {
+      sent = c;
+      return true;
+    });
+    final cat = find.byKey(const ValueKey('battle-cat-pass'));
+    expect(cat, findsOneWidget);
+    // Después de DEFENDER.
+    expect(tester.getTopLeft(cat).dy,
+        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('battle-cat-defend'))).dy));
+    await tester.tap(cat);
+    await tester.pump();
+    final menu = tester.state<BattleViewState>(find.byType(BattleView));
+    expect(menu.category, BattleCategory.pass);
+    expect(find.byKey(const ValueKey('battle-desc-pass')), findsOneWidget);
+    expect(
+        find.textContaining('Terminás el turno sin actuar', findRichText: true),
+        findsOneWidget);
+    await tester.tap(act('pass'));
+    await tester.pump();
+    expect(sent, isA<PassCommand>());
+  });
+
+  testWidgets('P va a PASAR y otra P pasa el turno', (tester) async {
+    BattleCommand? sent;
+    await pump(tester, canAct: true, onCommand: (c) {
+      sent = c;
+      return true;
+    });
+    final menu = tester.state<BattleViewState>(find.byType(BattleView));
+    expect(menu.handleKey(LogicalKeyboardKey.keyP), isTrue);
+    await tester.pump();
+    expect(menu.category, BattleCategory.pass);
+    expect(sent, isNull, reason: 'una P sola no pierde el turno');
+    expect(menu.handleKey(LogicalKeyboardKey.keyP), isTrue);
+    expect(sent, isA<PassCommand>());
+    // Enter también confirma desde PASAR.
+    sent = null;
+    menu.selectCategory(BattleCategory.pass);
+    await tester.pump();
+    menu.handleKey(LogicalKeyboardKey.enter);
+    expect(sent, isA<PassCommand>());
+  });
+
+  testWidgets('P sin turno no hace nada', (tester) async {
+    BattleCommand? sent;
+    await pump(tester, canAct: false, onCommand: (c) {
+      sent = c;
+      return true;
+    });
+    final menu = tester.state<BattleViewState>(find.byType(BattleView));
+    menu.handleKey(LogicalKeyboardKey.keyP);
+    menu.handleKey(LogicalKeyboardKey.keyP);
+    expect(sent, isNull);
+    expect(find.byKey(const ValueKey('battle-cat-pass')), findsNothing);
+  });
+
   testWidgets('poción: submenú para elegir a quién', (tester) async {
     BattleCommand? sent;
     await pump(tester, canAct: true, onCommand: (c) {

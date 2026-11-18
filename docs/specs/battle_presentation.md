@@ -983,11 +983,15 @@ el resto (los sprites son chicos). En 1280×720 Normal: 302 px.
 `lib/features/combat/presentation/battle_command_window.dart`), solo en
 el turno propio (co-op: cada uno ve sus comandos):
 
-1. **Categorías**: `¡Tu turno! <nombre>` y ATACAR (Atacar + "Liberar a
+1. **Categorías**: ATACAR (Atacar + "Liberar a
    X" si hay telaraña) · HABILIDADES (técnicas, con la cantidad) · DÚOS
    (si hay) · ULTIMATE (gris hasta el 100 %, con el %) · OBJETOS (las dos
    pociones; elegir una abre "¿A quién le das...?" con el grupo) ·
-   DEFENDER.
+   DEFENDER · PASAR (v0.8.3, siempre la última: una acción "Pasar turno"
+   con costo `próximo ×½` y la descripción "Terminás el turno sin actuar;
+   tu próximo turno llega antes..."; combat.md § "Pasar turno"). Vale
+   igual en el turno manual de un compañero (solo_party.md); el AUTO
+   nunca pasa.
 2. **Acciones** de la categoría: una fila por acción — tecla (1-9), nombre,
    la cifra principal (daño estimado, cura) y el costo a la derecha
    (`4 MP`, `x2`, `45%`). El crítico y los efectos van a la descripción.
@@ -997,12 +1001,21 @@ el turno propio (co-op: cada uno ve sus comandos):
 3. **Descripción** de la acción elegida (`describeSkillMarkup` /
    `variantEffectLines` de la técnica), el motivo si está deshabilitada,
    `Objetivo: Limo 71/71 HP · Quiebre 0/59`, las mecánicas del jefe y las
-   teclas; arriba a la derecha `MP 22/22 · ULT 45%`.
+   teclas; arriba, en una sola fila, quién actúa a la izquierda
+   (`¡Tu turno! <nombre>` / `Turno de <nombre> (compañero)`,
+   `ValueKey('battle-actor')`) y `MP 22/22 · ULT 45%` a la derecha. Desde
+   v0.8.3 el nombre ya no va arriba de las categorías: con PASAR son 7 y a
+   1280×720 Normal no entraban (un nombre de compañero en dos líneas
+   dejaba PASAR fuera de la vista).
 
 **Teclado**: 1-9 eligen la acción N de la lista que se ve; ↑/↓ mueven la
 elegida; ←/→ cambian de categoría; Enter/Espacio confirman; Q/Tab
-cambian de objetivo (y clic en el enemigo); Esc sale de "¿a quién?" o de
-una página > 1 (si no, abre la pausa). El mouse sobre una fila la elige.
+cambian de objetivo (y clic en el enemigo); **P** (v0.8.3) va a PASAR y,
+con PASAR ya elegida, otra P pasa el turno (dos toques: una tecla suelta
+no hace perder el turno; Retroceso no se usa porque cierra los avisos del
+HUD, y la P del panel PARTY solo vale fuera de batalla); Esc sale de "¿a
+quién?" o de una página > 1 (si no, abre la pausa). El mouse sobre una
+fila la elige. Las teclas de la descripción terminan en `· P: pasar`.
 
 **Tooltip equivocado (bug de v0.4)**: las filas ya no tienen tooltip; la
 descripción sale de la acción elegida en el momento. Cada fila se arma
@@ -1029,7 +1042,9 @@ franja de turnos del canvas no cambia.
 
 Tests: `test/features/combat/battle_screen_test.dart` (categorías, ←/→
 ↑/↓ Enter, pociones a quién, la descripción nunca es la de otra técnica
-cuando el menú cambia bajo el mouse, tarjetas del grupo),
+cuando el menú cambia bajo el mouse, tarjetas del grupo, PASAR: clic,
+P + P, Enter, sin turno no hace nada), `test/features/world/
+solo_party_ui_test.dart` (el compañero manual pasa: `IV × 0.5`, sin ULT),
 `battle_menu_paging_test.dart` (paginado puro y Guardián de 8 técnicas
 sin paginar), `test/app/text_size_test.dart` (cada categoría, a quién y
 las técnicas de nombre más largo sin desbordes en los tres tamaños).

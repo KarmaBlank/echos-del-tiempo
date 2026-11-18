@@ -55,6 +55,7 @@ final _allActions = <SessionAction>[
   const BattleAction(ItemCommand(BattleItem.potion, targetPlayerId: 'p1')),
   const BattleAction(ItemCommand(BattleItem.ether)),
   const BattleAction(DefendCommand()),
+  const BattleAction(PassCommand()),
 ];
 
 /// Todos los eventos de batalla, con todos sus campos.
@@ -171,6 +172,20 @@ void main() {
           {'t': 'cmd', 'a': 'tech', 'tk': 'x', 'tg': 'e1'});
       expect(ActionJson.toJson(const AllocateStatsAction({Attribute.agi: 3})),
           {'t': 'stats', 'add': {'AGI': 3}});
+    });
+
+    test('Pasar turno (v0.8.3): variante aditiva de `def`', () {
+      expect(ActionJson.toJson(const BattleAction(PassCommand())),
+          {'t': 'cmd', 'a': 'def', 'ps': true});
+      // Defender no cambia (lo que manda un v0.8.2).
+      expect(ActionJson.toJson(const BattleAction(DefendCommand())),
+          {'t': 'cmd', 'a': 'def'});
+      Object cmd(Json j) => (ActionJson.fromJson(j) as BattleAction).command;
+      expect(cmd({'t': 'cmd', 'a': 'def'}), isA<DefendCommand>());
+      expect(cmd({'t': 'cmd', 'a': 'def', 'ps': false}), isA<DefendCommand>());
+      expect(cmd({'t': 'cmd', 'a': 'def', 'ps': true}), isA<PassCommand>());
+      expect(() => ActionJson.fromJson({'t': 'cmd', 'a': 'def', 'ps': 'si'}),
+          throwsFormatException);
     });
 
     test('campos leídos', () {

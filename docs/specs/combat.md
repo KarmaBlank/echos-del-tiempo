@@ -88,9 +88,11 @@ siguiente batalla.
 - Luego se procesan sus estados (ver abajo). Si muere o pierde el turno,
   su próximo turno es `reloj + IV` y el turno termina.
 - Después de actuar, el próximo turno es `reloj + IV`.
-  Defender: `reloj + IV × 0.7` (actúa antes).
+  Defender: `reloj + IV × 0.7` (actúa antes). Pasar turno (v0.8.3):
+  `reloj + IV × 0.5` (§ "Pasar turno").
 - Si un jugador no actúa en 30 s, se defiende solo (`BattleEngine.timeout`)
-  y su próximo turno es `reloj + IV`.
+  y su próximo turno es `reloj + IV`. (El timeout **no** es un Pasar:
+  sigue defendiendo, sin el adelanto.)
 
 ## Daño
 
@@ -178,6 +180,41 @@ Objetivo: el enemigo vivo pedido, o el primero vivo.
 - **Poción de maná**: 50% del maná máx. Sin objetivo: el aliado vivo con
   menor % de maná.
 - **Defender**: ½ daño hasta su próximo turno, que llega antes (`IV × 0.7`).
+- **Pasar turno** (`PassCommand`, v0.8.3): ver abajo.
+
+### Pasar turno (v0.8.3)
+
+Pedido del dueño ("botón de saltar turno"). Termina el turno **sin
+actuar** para que el próximo llegue antes: sirve para esperar la reacción
+o el cebado de un aliado (p. ej. dejar que la Maga moje al enemigo y
+volver justo después a detonarlo) o para reordenar el timeline.
+
+| Qué | Valor |
+|---|---|
+| Próximo turno | `reloj + IV × 0.5` (`BattleEngine.passTurnFactor`; acción normal × 1, Defender × 0.7) |
+| Carga de ULT | ninguna (no hay daño ni acción) |
+| Defender | no (`defending` queda en `false`: recibe el daño completo) |
+| MP / pociones | no gasta |
+| Procs del árbol (`onSkill`, `onAttack`...) | ninguno |
+| Efectos con duración | bajan 1 turno (`tickEffects`), como cualquier turno terminado |
+| Eventos | ninguno de acción (no hay `ActionEvent` nuevo); solo el log `X pasa el turno (el próximo llega antes)` |
+
+Notas de balance:
+- Como el próximo turno llega antes, lo que se dispara "al empezar el
+  turno" (estados como Veneno/Quemadura, regeneración del arma,
+  `onTurnStart`) se procesa antes también: pasar seguido no es gratis.
+- Pasar dos veces seguidas = un turno entero sin actuar (`0.5 + 0.5`).
+- El AUTO de los compañeros (`CompanionAi`) **nunca** pasa.
+- `passTurnFactor` es una constante del motor (no está en la admin de
+  balance todavía).
+- Validación: como cualquier comando (`command` → `null` fuera de turno,
+  batalla terminada o actor caído). Sin enemigos vivos también `null`.
+
+Red (host-autoritativo, sin subir `kProtocolVersion`): viaja como
+`{"t":"cmd","a":"def","ps":true}`, una variante aditiva de Defender. Un
+host v0.8.2 ignora `ps` y lo resuelve como Defender (degrada sin romper);
+un host v0.8.3 lo resuelve como Pasar. Sin `ps` (o `ps: false`) sigue
+siendo Defender.
 
 ### Variantes de habilidades (v0.5)
 

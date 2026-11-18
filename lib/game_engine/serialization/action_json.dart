@@ -233,6 +233,9 @@ abstract final class ActionJson {
             if (c.targetPlayerId != null) 'to': c.targetPlayerId,
           },
         DefendCommand() => {'a': 'def'},
+        // Pasar turno (v0.8.3): variante de `def` (aditivo, sin subir
+        // kProtocolVersion; un host viejo lo toma como Defender).
+        PassCommand() => {'a': 'def', 'ps': true},
       };
 
   static BattleCommand commandFromJson(Json j) {
@@ -244,7 +247,7 @@ abstract final class ActionJson {
       'dual' => DualCommand(j.str('pt')),
       'item' => ItemCommand(itemFromKey(j.str('it')),
           targetPlayerId: j.strOrNull('to')),
-      'def' => const DefendCommand(),
+      'def' => j.flag('ps') ? const PassCommand() : const DefendCommand(),
       _ => throw FormatException('JSON inválido: comando de batalla', a),
     };
   }
