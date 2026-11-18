@@ -19,6 +19,15 @@ Pedido tal cual llegó, para convertirlo en specs antes de codificar.
 - Notificación visible pero no invasiva cuando hay puntos de árbol (y de
   atributos / ascensión) sin usar.
 
+## v0.7 — Elementos y reacciones
+- Borrador para aprobar: docs/specs/elemental_reactions.md (Agua +
+  Electro = Electrocución, Veneno + Fuego = Explosión tóxica, etc.).
+
+## Lore — pendiente del dueño
+- No hay historia aprobada. Los objetos de historia en los mapas quedan
+  desactivados hasta que el dueño pase el lore (decisión del dueño:
+  "sin historia por ahora"). Nada de texto narrativo inventado.
+
 ## 5. Integración con Discord — PRIORIDAD BAJA (roadmap, después de v0.6)
 - Rich Presence (zona, nivel, "en sala X/4").
 - Si alguien crea una sala, a sus amigos de Discord les aparece la

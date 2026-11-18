@@ -3,6 +3,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/feature_flags.dart';
 import '../../../ascension/domain/ascension_text.dart';
+import '../../../characters/domain/unused_points.dart';
+import '../../../bestiary/presentation/bestiary_view.dart';
+import '../../../combat/presentation/game_sprites.dart';
 import '../../../build_planner/presentation/build_fit_badge.dart';
 import '../../../build_planner/presentation/build_plan_providers.dart';
 import '../../../build_planner/presentation/build_planner_view.dart';
@@ -16,6 +19,7 @@ import '../../../../app/widgets/menu_focus.dart';
 import '../../../../app/widgets/pixel_icon.dart';
 import '../../../../app/widgets/section_panel.dart';
 import '../../../../game_engine/models/attributes.dart';
+import '../../../../game_engine/models/bestiary.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../endgame/domain/endgame_text.dart';
@@ -62,7 +66,11 @@ enum CharacterTab {
   build(
       'BUILD',
       'Tu plan: metas con progreso automático. ★ marca en tienda, '
-          'inventario y fusión lo que sirve; te avisa cuando avanzás.');
+          'inventario y fusión lo que sirve; te avisa cuando avanzás.'),
+  bestiary(
+      'BESTIARIO',
+      'Los enemigos que derrotaste (toda la cuenta): familia, debilidades, '
+          'resistencias y botín. Derrotá a los que faltan para descubrirlos.');
 
   const CharacterTab(this.label, this.hint);
   final String label;
@@ -136,6 +144,13 @@ class _CharacterPanelState extends State<CharacterPanel> {
       CharacterTab.tree => LayoutBuilder(
           builder: (context, box) => SingleChildScrollView(
               child: _tree((box.maxHeight - 44).clamp(240.0, 420.0)))),
+      // Bestiario de la cuenta (docs/specs/bestiary.md § 4).
+      CharacterTab.bestiary => Consumer(
+          builder: (context, ref, _) => BestiaryView(
+                key: const ValueKey('bestiary-view'),
+                bestiary: view.bestiary ?? BestiaryProgress.empty,
+                sprites: ref.watch(gameSpritesProvider).valueOrNull,
+              )),
     };
 
     final closeButton = view.mode == SessionMode.prep
@@ -161,6 +176,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
           help: switch (tab) {
             CharacterTab.filter => kFilterHelp,
             CharacterTab.build => BuildPlannerView.help,
+            CharacterTab.bestiary => BestiaryView.help,
             _ => CharacterPanel.help,
           },
           onClose: close,
@@ -175,6 +191,12 @@ class _CharacterPanelState extends State<CharacterPanel> {
                   index: tab.index,
                   onChanged: (i) =>
                       setState(() => _tab = CharacterTab.values[i]),
+                  // Puntos sin usar (passive_tree_v4.md § 7).
+                  badges: {
+                    CharacterTab.attributes.index: left,
+                    CharacterTab.tree.index:
+                        UnusedPoints.of(prof, rules).tree,
+                  },
                 ),
           leading: [
             if (isAttr && guards.showRespec)

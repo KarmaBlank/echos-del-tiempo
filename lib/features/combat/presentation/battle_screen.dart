@@ -13,10 +13,13 @@ import '../../../game_engine/data/skills_catalog.dart';
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
+import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart' show ultimateOf;
 import '../../../game_engine/rules/js_math.dart';
+import '../../bestiary/domain/bestiary_text.dart';
+import '../../bestiary/presentation/enemy_info_card.dart';
 import '../domain/skill_text.dart';
 import '../domain/turn_order.dart';
 import 'battle_command_window.dart';
@@ -54,7 +57,17 @@ class BattleView extends StatefulWidget {
     this.random,
     this.pendingPoints = const {},
     this.sceneOptions = const SceneOptions(),
+    this.bestiary,
+    this.enemyLevel,
   });
+
+  /// Bestiario de la cuenta (docs/specs/bestiary.md § 3): al pasar el
+  /// mouse sobre un enemigo se ve su ficha si ya se lo mató, o "???".
+  /// `null` = sin fichas (previsualización).
+  final BestiaryProgress? bestiary;
+
+  /// Nivel de los enemigos de esta pelea (`SessionBattle.level`).
+  final int? enemyLevel;
 
   final BattleState battle;
 
@@ -655,12 +668,51 @@ class BattleViewState extends State<BattleView>
         ));
   }
 
+  /// Enemigo bajo el puntero (ficha del bestiario) y dónde está el
+  /// puntero en la escena.
+  String? _hoverId;
+  Offset? _hoverAt;
+
+  /// Enemigo con la ficha abierta (tests).
+  String? get hoveredEnemy => _hoverId;
+
+  void _hoverScene(Offset local) {
+    final e = _foeAt(local);
+    if (e?.id == _hoverId && (e == null || _hoverAt == local)) return;
+    setState(() {
+      _hoverId = e?.id;
+      _hoverAt = e == null ? null : local;
+    });
+  }
+
+  /// La ficha del enemigo bajo el mouse (o `null`).
+  Widget? _hoverCard() {
+    final best = widget.bestiary, at = _hoverAt;
+    final hv = _foes.where((e) => e.id == _hoverId).firstOrNull;
+    if (best == null || at == null || hv == null) return null;
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: CustomSingleChildLayout(
+          delegate: PointerCardLayout(at),
+          child: EnemyInfoCard(
+              enemy: hv, bestiary: best, level: widget.enemyLevel),
+        ),
+      ),
+    );
+  }
+
   /// Clic en la escena: elige al enemigo vivo bajo el puntero.
   void _tapScene(Offset local) {
+    final e = _foeAt(local);
+    if (e != null) setState(() => _target = e.id);
+  }
+
+  /// El enemigo vivo bajo [local] (coordenadas de la escena), o `null`.
+  Combatant? _foeAt(Offset local) {
     final f = scene.frame;
-    if (f == null) return;
+    if (f == null) return null;
     final vp = SceneViewport(f.geometry.worldRect, scene.viewFor(f));
-    if (!vp.area.contains(local)) return;
+    if (!vp.area.contains(local)) return null;
     final w = vp.toWorld(local);
     final wx = w.dx, wy = w.dy;
     for (final e in _foes) {
@@ -672,10 +724,10 @@ class BattleViewState extends State<BattleView>
       if ((wx - p.dx).abs() <= w / 2 + 4 &&
           wy >= p.dy - h - 4 &&
           wy <= p.dy + 4) {
-        setState(() => _target = e.id);
-        return;
+        return e;
       }
     }
+    return null;
   }
 
   /// El jugador de este dispositivo: [BattleView.localId]; sin él
@@ -737,6 +789,10 @@ class BattleViewState extends State<BattleView>
                 ),
               ],
             ),
+            // Ficha del bestiario del enemigo bajo el mouse: sobre toda la
+            // pantalla (la escena está arriba, mismas coordenadas), así una
+            // ficha larga de jefe no se recorta.
+            if (_hoverCard() case final card?) card,
             // La parte de pantalla de la ULT, encima también de la barra.
             Positioned.fill(
               child: IgnorePointer(
@@ -793,10 +849,14 @@ class BattleViewState extends State<BattleView>
         child: Stack(
           children: [
             Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTapUp: (d) => _tapScene(d.localPosition),
-                child: CustomPaint(painter: BattleScenePainter(scene)),
+              child: MouseRegion(
+                onHover: (d) => _hoverScene(d.localPosition),
+                onExit: (_) => _hoverScene(const Offset(-1e6, -1e6)),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTapUp: (d) => _tapScene(d.localPosition),
+                  child: CustomPaint(painter: BattleScenePainter(scene)),
+                ),
               ),
             ),
             Positioned(
@@ -911,7 +971,9 @@ class BattleViewState extends State<BattleView>
         ? ''
         : 'Objetivo: <b style="color:#ff6b81">${protoEsc(tg.name)}</b> '
             '<span class="k">${tg.hp}/${tg.maxHp} HP</span>'
-            '${breakInfoMarkup(tg)}';
+            '${breakInfoMarkup(tg)}'
+            // Familia y debilidades, solo si ya se lo mató (bestiary.md).
+            '${widget.bestiary?.knows(tg.enemyType) ?? false ? ' · ${familyShortMarkup(tg.enemyType)}' : ''}';
     return BattleCommandWindow(
       actorName: '¡Tu turno! ${cur.name}',
       categories: entries,

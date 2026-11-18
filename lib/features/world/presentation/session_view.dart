@@ -1,4 +1,5 @@
 import '../../../game_engine/models/atlas.dart';
+import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/game_map.dart';
 import '../../../game_engine/models/game_session.dart';
@@ -54,7 +55,11 @@ enum WorldPrompt {
   entrance('[E] Entrar'),
 
   /// Sobre una escalera (`[E] Bajar al piso N` / `[E] Subir al piso N`).
-  stairs('[E] Escalera');
+  stairs('[E] Escalera'),
+
+  /// Frente a un punto de interés del piso (worldgen.md § 11.3). El texto
+  /// real va en [SessionView.promptText].
+  poi('[E] Usar');
 
   const WorldPrompt(this.label);
   final String label;
@@ -81,7 +86,12 @@ class SessionView {
     this.promptText,
     this.atlas,
     this.atlasGain,
+    this.bestiary,
   });
+
+  /// El bestiario de la cuenta de este dispositivo (`null` hasta
+  /// cargarlo; docs/specs/bestiary.md § 2).
+  final BestiaryProgress? bestiary;
 
   /// El Atlas de la cuenta de este dispositivo (`null` hasta cargarlo).
   final AtlasProgress? atlas;
@@ -172,5 +182,6 @@ class SessionView {
         promptText: prompt != null ? null : promptText,
         atlas: atlas,
         atlasGain: atlasGain,
+        bestiary: bestiary,
       );
 }

@@ -1,6 +1,7 @@
 import 'ascension.dart' show TrapKind;
 import 'battle_command.dart';
 import 'battle_event.dart';
+import 'game_map.dart' show PoiKind, QuestKind;
 import 'game_session.dart';
 import 'item.dart' show CraftOp;
 import 'loot.dart';
@@ -77,7 +78,11 @@ class ChestOpenedEvent extends SessionEvent {
   /// Poción que salió, si salió alguna.
   final BattleItem? item;
   final String? weaponId;
-  const ChestOpenedEvent(this.playerId, this.credits, {this.item, this.weaponId});
+
+  /// Calidad del cofre (v0.6, loot.md § 23).
+  final ChestTier tier;
+  const ChestOpenedEvent(this.playerId, this.credits,
+      {this.item, this.weaponId, this.tier = ChestTier.madera});
 }
 
 class BattleStartedEvent extends SessionEvent {
@@ -132,6 +137,29 @@ class FloorChangedEvent extends SessionEvent {
   final int floor;
   final bool down;
   const FloorChangedEvent(this.floor, {required this.down});
+}
+
+/// [playerId] usó el punto de interés [poiId] (worldgen.md § 11.3): abrió
+/// una sala secreta o un atajo, activó un santuario o una piedra de paso,
+/// encendió un brasero, levantó una reliquia o viajó ([toPoi]).
+class PoiUsedEvent extends SessionEvent {
+  final String playerId;
+  final int poiId;
+  final PoiKind kind;
+  final BlessingKind? blessing;
+
+  /// Viaje rápido: la piedra de destino.
+  final int? toPoi;
+  const PoiUsedEvent(this.playerId, this.poiId, this.kind,
+      {this.blessing, this.toPoi});
+}
+
+/// Se cumplió la misión opcional [questId] del piso [floor] (fanfarria).
+class QuestDoneEvent extends SessionEvent {
+  final int questId;
+  final int floor;
+  final QuestKind kind;
+  const QuestDoneEvent(this.questId, this.floor, this.kind);
 }
 
 /// Se despejó el piso [floor]: se abrió la barrera de su escalera.

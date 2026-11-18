@@ -33,11 +33,9 @@ PassiveTreePainter _painter(WidgetTester tester) => tester
         matching: find.byType(CustomPaint)))
     .painter! as PassiveTreePainter;
 
-const _cluster = [
-  'e1', 'e2', 'f', 'a1', 'a2', 'na', 'b1', 'b2', 'nb', 'j', 'k', //
-];
+const _cluster = ['n1', 'm1', 'm2', 'na', 'ma', 'nb', 'mb', 'nc', 'k'];
 
-List<String> _c(String id, [int upTo = 11]) =>
+List<String> _c(String id, [int upTo = 9]) =>
     [for (final s in _cluster.take(upTo)) '${id}_$s'];
 
 Future<dynamic> _pumpTree(WidgetTester tester, PlayerProfile profile) =>
@@ -59,8 +57,8 @@ void main() {
   test('fxTxt: efectos, notables y keystones (con su contra)', () {
     expect(passiveEffectsText(kPassiveTree.nodes['s_gue']!),
         ['+5% vida máx.', '+4% ATQ']);
-    expect(passiveEffectsText(kPassiveTree.nodes['viento_e1']!),
-        ['+0.15 velocidad']);
+    expect(passiveEffectsText(kPassiveTree.nodes['viento_m1']!),
+        ['+0.2 velocidad']);
     expect(passiveEffectsText(kPassiveTree.nodes['juicio_k']!).single,
         startsWith('Paladín Inherente:'));
     expect(passiveEffectsText(kPassiveTree.nodes['filo_na']!), [
@@ -84,20 +82,20 @@ void main() {
 
   testWidgets('árbol: Creyente/Inherente excluidos, bloqueos y reiniciar',
       (tester) async {
-    // Paladín Lv19 (18 puntos): ruta + Fe completo (Creyente) + Juicio
+    // Paladín Lv15 (14 puntos): ruta + Fe completo (Creyente) + Juicio
     // por el atajo hasta antes de Inherente: le queda 1 punto.
     final c = await _pumpTree(
         tester,
         PlayerProfile(
           name: 'Ana',
           classId: 'paladin',
-          level: 19,
+          level: 15,
           tree: [
-            'pal_r1', 'pal_r2', 'pal_f3', ..._c('fe'), //
-            'juicio_b2', 'juicio_nb', 'juicio_j',
+            'pal_r1', 'pal_f3', ..._c('fe'), //
+            'juicio_mb', 'juicio_nc',
           ],
         ));
-    expect(c.view!.me!.profile.tree, hasLength(17));
+    expect(c.view!.me!.profile.tree, hasLength(13));
     expect(
         find.textContaining('Puntos de árbol disponibles: 1'), findsOneWidget);
 
@@ -110,9 +108,9 @@ void main() {
     expect(take.reason, 'Excluye Paladín Creyente');
 
     // Un nodo sin conexión: bloqueado con su motivo.
-    await tapNode(tester, 'bastion_e2');
+    await tapNode(tester, 'bastion_m1');
     expect(find.text('Necesita un nodo conectado'), findsWidgets);
-    expect(c.view!.me!.profile.tree, isNot(contains('bastion_e2')));
+    expect(c.view!.me!.profile.tree, isNot(contains('bastion_m1')));
 
     // El umbral del anillo, conectado al inicio: se toma con un clic.
     await tapNode(tester, 'p_pal');
@@ -130,7 +128,7 @@ void main() {
     await tapVisible(tester, find.byKey(const ValueKey('tree-reset')));
     expect(c.view!.me!.profile.tree, isEmpty);
     expect(
-        find.textContaining('Puntos de árbol disponibles: 18'), findsOneWidget);
+        find.textContaining('Puntos de árbol disponibles: 14'), findsOneWidget);
     expect(
         tester
             .widget<PanelButton>(find.byKey(const ValueKey('tree-reset')))
@@ -145,8 +143,8 @@ void main() {
         PlayerProfile(
           name: 'Leo',
           classId: 'tirador',
-          level: 11,
-          tree: ['tir_r1', 'tir_r2', 'tir_f3', ..._c('precision', 5)],
+          level: 10,
+          tree: ['tir_r1', 'tir_f3', ..._c('precision', 5)],
         ));
     expect(
         find.textContaining('Puntos de árbol disponibles: 2'), findsOneWidget);
@@ -156,15 +154,14 @@ void main() {
     await mouse.moveTo(nodeOnScreen(tester, 'precision_k'));
     await tester.pump();
     final tip = find.byKey(const ValueKey('tree-tooltip'));
-    expect(find.descendant(of: tip, matching: find.text('Costo: 3 puntos')),
+    expect(find.descendant(of: tip, matching: find.text('Costo: 2 puntos')),
         findsOneWidget);
-    expect(_painter(tester).route,
-        {'precision_na', 'precision_j', 'precision_k'});
+    expect(_painter(tester).route, {'precision_nc', 'precision_k'});
 
-    // El notable: tooltip con nombre, cluster y la mecánica completa.
-    await mouse.moveTo(nodeOnScreen(tester, 'precision_na'));
+    // El notable de unión (v4): tooltip con nombre, cluster y la mecánica.
+    await mouse.moveTo(nodeOnScreen(tester, 'precision_nc'));
     await tester.pump();
-    expect(find.descendant(of: tip, matching: find.text('Marca del Cazador')),
+    expect(find.descendant(of: tip, matching: find.text('Grieta Expuesta')),
         findsOneWidget);
     expect(
         find.descendant(
@@ -173,7 +170,7 @@ void main() {
         findsOneWidget);
     expect(
         find.descendant(
-            of: tip, matching: find.textContaining('+15% de daño de todos')),
+            of: tip, matching: find.textContaining('barra de quiebre un 40%')),
         findsOneWidget);
     expect(find.descendant(of: tip, matching: find.text('Costo: 1 punto')),
         findsOneWidget);
@@ -183,9 +180,9 @@ void main() {
         findsOneWidget);
 
     // Clic: lo toma.
-    await tester.tapAt(nodeOnScreen(tester, 'precision_na'));
+    await tester.tapAt(nodeOnScreen(tester, 'precision_nc'));
     await tester.pump();
-    expect(c.view!.me!.profile.tree.last, 'precision_na');
+    expect(c.view!.me!.profile.tree.last, 'precision_nc');
     expect(
         find.textContaining('Puntos de árbol disponibles: 1'), findsOneWidget);
     expect(find.descendant(of: tip, matching: find.text('Tomado')),
@@ -221,7 +218,7 @@ void main() {
     await tester.ensureVisible(find.byKey(const ValueKey('tree-viewport')));
     await tester.pump();
     double gap() =>
-        (nodeOnScreen(tester, 'quiebre_e1') - nodeOnScreen(tester, 'quiebre_k'))
+        (nodeOnScreen(tester, 'quiebre_n1') - nodeOnScreen(tester, 'quiebre_k'))
             .distance;
     final g0 = gap();
     await tapVisible(tester, find.byKey(const ValueKey('tree-zoom-in')));

@@ -30,8 +30,12 @@ final _stats = StatsCalculator(
 
 BattleEngine _engine([List<double> rolls = const []]) {
   var i = 0;
+  // Sin familias (el Limo es débil al fuego): los números de las
+  // mecánicas solas (bestiary.md § 1 tiene sus tests).
   return BattleEngine(
-      stats: _stats, random: () => i < rolls.length ? rolls[i++] : 0.99);
+      stats: _stats,
+      random: () => i < rolls.length ? rolls[i++] : 0.99,
+      familiesEnabled: false);
 }
 
 Combatant _hero({
@@ -197,14 +201,14 @@ void main() {
             passiveProgress: PlayerPassiveProgress(tree),
           );
       const filo = [
-        'gue_r1', 'gue_r2', 'gue_f3', 'gue_f4', 'gue_f5', 'filo_e1', //
-        'filo_e2', 'filo_f', 'filo_a1', 'filo_a2', 'filo_na', 'filo_b1',
-        'filo_b2', 'filo_nb', 'filo_j',
+        'gue_r1', 'gue_f4', 'gue_f5', 'filo_n1', 'filo_m1', 'filo_m2', //
+        'filo_na', 'filo_nb', 'filo_ma', 'filo_mb', 'filo_nc',
       ];
       expect(_stats.calculate(build(filo)).critChance, greaterThan(0.4));
       final d = _stats.calculate(build([...filo, 'filo_k']));
       expect(d.critChance, 0.40);
-      expect(d.mechanics, {'frenesi', 'corteCadena', 'danza'});
+      expect(d.mechanics,
+          {'estocadaPrecisa', 'frenesi', 'corteCadena', 'desarme', 'danza'});
     });
   });
 

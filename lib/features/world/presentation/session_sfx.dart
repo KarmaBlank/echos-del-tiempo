@@ -7,6 +7,7 @@ import '../../../core/audio/sfx_catalog.dart';
 import '../../../core/audio/sfx_recipes.dart';
 import '../../../core/audio/sfx_service.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../game_engine/models/game_map.dart' show PoiKind;
 import '../../../game_engine/data/skills_catalog.dart';
 import '../../../game_engine/models/ascension.dart' show TrapKind;
 import '../../../game_engine/models/battle_event.dart';
@@ -152,6 +153,19 @@ class SessionSfx {
         for (final c in ascensionCues) {
           service.play(c.id, delayMs: c.delayMs);
         }
+      // Exploración v0.6 (worldgen.md § 11): fanfarria de misión opcional
+      // y sonidos de los puntos de interés (reusa los que ya hay).
+      case QuestDoneEvent():
+        service.play(Sfx.levelUp);
+      case PoiUsedEvent(:final kind):
+        service.play(switch (kind) {
+          PoiKind.secret || PoiKind.shortcut => Sfx.crystalBreak,
+          PoiKind.shrine => Sfx.healSparkle,
+          PoiKind.wind => Sfx.wind,
+          PoiKind.waystone => Sfx.ascReveal,
+          PoiKind.brazier => Sfx.flare,
+          PoiKind.relic => Sfx.lootPickup,
+        });
       default:
         break;
     }

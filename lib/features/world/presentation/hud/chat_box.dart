@@ -98,8 +98,8 @@ class _ChatBoxState extends State<ChatBox> {
                 l.system
                     ? '<span class="sys">» ${protoEsc(l.text)}</span>'
                     : '<b>${protoEsc(l.from ?? '')}:</b> ${protoEsc(l.text)}',
-                style: TextStyle(
-                    color: ProtoColors.chat, height: RetroType.line),
+                style:
+                    TextStyle(color: ProtoColors.chat, height: RetroType.line),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -128,7 +128,8 @@ class _ChatBoxState extends State<ChatBox> {
                   fontFamilyFallback: RetroType.bodyFallback,
                   fontSize: RetroType.small,
                   color: ProtoColors.dim),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             ),
           ),
         ],

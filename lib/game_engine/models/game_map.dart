@@ -86,11 +86,46 @@ abstract final class Tile {
   /// Pulso del Tiempo de la Prueba (caminable: activo, te devuelve).
   static const pulse = 'p';
 
+  // ---- exploración v0.6 (docs/specs/worldgen.md § 11) ----
+  /// Pared agrietada de una sala secreta (sólida hasta abrirla: `:`).
+  static const cracked = 'K';
+
+  /// Suelo de una sala secreta sin abrir: se ve y colisiona como muro
+  /// (al abrirla pasa a `:`).
+  static const secretFloor = 'k';
+
+  /// Santuario sin usar / usado (sólidos).
+  static const shrine = 'H';
+  static const shrineUsed = 'h';
+
+  /// Piedra de paso sin activar / activada (sólidas).
+  static const waystone = 'W';
+  static const waystoneOn = 'w';
+
+  /// Santuario del Viento del Eco (sólido, reusable).
+  static const wind = 'V';
+
+  /// Atajo cerrado (muro con palanca del lado lejano; abierto: `,`).
+  static const shortcut = 'J';
+
+  /// Brasero apagado / encendido (sólidos).
+  static const brazier = 'B';
+  static const brazierLit = 'b';
+
+  /// Tiles de los puntos de interés de v0.6 (todos sólidos).
+  static const poiTiles = {
+    cracked, secretFloor, shrine, shrineUsed, waystone, waystoneOn, wind,
+    shortcut,
+    brazier, brazierLit,
+  };
+
   /// Tiles sólidos fijos (sin la barrera, que depende de si está abierta,
   /// ni las entradas de zona).
   static const solidTiles = {
     wall, water, counter, armory, merchant, tree, rock, lava, tombstone, gear,
-    portal, statue,
+    portal, statue, cracked, secretFloor, shrine, shrineUsed, waystone,
+    waystoneOn, wind,
+    shortcut, brazier, brazierLit,
   };
 
   /// Se puede pisar (el vacío cuenta: se pisa y se cae).
@@ -107,6 +142,114 @@ abstract final class Tile {
     if (c < 48 || c > 57) return null;
     return c == 48 ? 10 : c - 48;
   }
+}
+
+/// Tipo de punto de interés (worldgen.md § 11.3).
+enum PoiKind {
+  /// Sala secreta: [MapPoi.tx]/[MapPoi.ty] es la pared agrietada.
+  secret,
+
+  /// Santuario de bendición ([MapPoi.variant] = `BlessingKind.index`).
+  shrine,
+
+  /// Piedra de paso (viaje rápido dentro del piso).
+  waystone,
+
+  /// Santuario del Viento del Eco (velocidad, reusable).
+  wind,
+
+  /// Atajo: muro que se abre desde el lado lejano ([MapPoi.side]).
+  shortcut,
+
+  /// Brasero de una misión opcional ([MapPoi.quest]).
+  brazier,
+
+  /// Reliquia perdida de una misión opcional (se levanta al tocarla; no
+  /// es un tile).
+  relic,
+}
+
+/// Un punto de interés de un piso. Coordenadas del atlas (tiles).
+class MapPoi {
+  const MapPoi({
+    required this.id,
+    required this.kind,
+    required this.tx,
+    required this.ty,
+    this.floor = 0,
+    this.variant = 0,
+    this.room,
+    this.chest,
+    this.side,
+    this.quest,
+  });
+
+  /// Único en el atlas: `piso × 100 + k`.
+  final int id;
+  final PoiKind kind;
+  final int tx, ty;
+  final int floor;
+
+  /// Bendición del santuario (índice de `BlessingKind`).
+  final int variant;
+
+  /// Interior de la sala secreta y su cofre.
+  final TileRect? room;
+  final (int, int)? chest;
+
+  /// Atajo: el tile del lado lejano (desde donde se abre).
+  final (int, int)? side;
+
+  /// Misión opcional a la que pertenece (braseros, reliquia).
+  final int? quest;
+
+  WorldPoint get center => WorldPoint(tx * 16 + 8.0, ty * 16 + 8.0);
+
+  /// Copia desplazada [ox] tiles en el atlas, en el piso [floorIndex].
+  MapPoi shifted(int ox, int floorIndex, int newId, {int? newQuest}) {
+    final r = room, c = chest, sd = side;
+    return MapPoi(
+      id: newId,
+      kind: kind,
+      tx: tx + ox,
+      ty: ty,
+      floor: floorIndex,
+      variant: variant,
+      room: r == null ? null : TileRect(r.x + ox, r.y, r.w, r.h),
+      chest: c == null ? null : (c.$1 + ox, c.$2),
+      side: sd == null ? null : (sd.$1 + ox, sd.$2),
+      quest: newQuest ?? quest,
+    );
+  }
+}
+
+/// Tipo de misión opcional de piso (worldgen.md § 11.8).
+enum QuestKind { braseros, guardian, reliquia, limpieza, secreto, cofres }
+
+/// Premio principal de una misión opcional (loot.md § 23.3).
+enum QuestReward { arma, eco, bendicion }
+
+/// Una misión opcional de un piso: parte del mapa (sale de la semilla).
+class FloorQuest {
+  const FloorQuest({
+    required this.id,
+    required this.kind,
+    required this.target,
+    required this.reward,
+    this.floor = 0,
+  });
+
+  /// Único en el atlas: `piso × 100 + 50 + k`.
+  final int id;
+  final QuestKind kind;
+
+  /// Cuánto hay que juntar (braseros, grupos, cofres…).
+  final int target;
+  final QuestReward reward;
+  final int floor;
+
+  FloorQuest shifted(int floorIndex, int newId) => FloorQuest(
+      id: newId, kind: kind, target: target, reward: reward, floor: floorIndex);
 }
 
 /// Tipo de escalera cerca del jugador.
@@ -142,7 +285,13 @@ class MapFloor {
     List<TileRect> vaults = const [],
     List<(int, int)> chestMarks = const [],
     List<(int, int)> eliteMarks = const [],
-  })  : spots = List.unmodifiable(spots),
+    List<MapPoi> pois = const [],
+    List<FloorQuest> quests = const [],
+    List<(int, int)> chestSpots = const [],
+  })  : pois = List.unmodifiable(pois),
+        quests = List.unmodifiable(quests),
+        chestSpots = List.unmodifiable(chestSpots),
+        spots = List.unmodifiable(spots),
         vaults = List.unmodifiable(vaults),
         chestMarks = List.unmodifiable(chestMarks),
         eliteMarks = List.unmodifiable(eliteMarks);
@@ -180,6 +329,22 @@ class MapFloor {
   /// Marcas `c` / `e` de los vaults (tiles).
   final List<(int, int)> chestMarks;
   final List<(int, int)> eliteMarks;
+
+  /// Puntos de interés del piso (worldgen.md § 11.3).
+  final List<MapPoi> pois;
+
+  /// Misiones opcionales del piso (worldgen.md § 11.8).
+  final List<FloorQuest> quests;
+
+  /// Lugares de cofre repartidos por densidad (worldgen.md § 11.2).
+  final List<(int, int)> chestSpots;
+
+  MapPoi? poi(int id) {
+    for (final p in pois) {
+      if (p.id == id) return p;
+    }
+    return null;
+  }
 
   bool containsTile(int tx, int ty) =>
       tx >= bounds.x &&

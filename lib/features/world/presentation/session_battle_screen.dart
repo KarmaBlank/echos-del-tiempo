@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../game_engine/models/battle_command.dart';
+import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/rules/eco_rules.dart';
 import '../../../game_engine/rules/trial_rules.dart';
@@ -84,6 +85,8 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
       },
       onCommand: widget.onCommand,
       sceneOptions: widget.sceneOptions,
+      bestiary: view.bestiary ?? BestiaryProgress.empty,
+      enemyLevel: b.level > 0 ? b.level : null,
     );
   }
 

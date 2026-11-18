@@ -3,22 +3,42 @@ import 'dart:math' as math;
 import '../models/passive_tree.dart';
 
 /// Versión del árbol que guarda el perfil (`tv`). Un perfil con una
-/// versión menor se migra al cargarlo (passive_tree_v3.md § 11).
-const kPassiveTreeVersion = 3;
+/// versión menor se migra al cargarlo (passive_tree_v4.md § 6).
+const kPassiveTreeVersion = 4;
 
-/// Árbol de pasivas v3: 4 inicios, anillo central de 12, rutas de clase,
-/// 20 clusters de clase con bifurcaciones, 4 puentes híbridos y 4
-/// clusters de grupo (352 nodos). Forma, coordenadas e ids exactos en
-/// docs/specs/passive_tree_v3.md; todo se genera desde las definiciones
-/// de abajo, con ids determinísticos.
+/// Árbol de pasivas v4: 4 inicios, anillo central de 12, rutas de clase,
+/// 20 clusters de clase con 4 notables cada uno, 4 puentes híbridos y 4
+/// clusters de grupo (308 nodos, 104 notables). Forma, coordenadas e ids
+/// exactos en docs/specs/passive_tree_v4.md (y passive_tree_v3.md para lo
+/// que no cambió); todo se genera desde las definiciones de abajo, con
+/// ids determinísticos.
 final PassiveTreeCatalog kPassiveTree = _build();
 
-/// Ids que existen igual en la v2 y la v3 (mismo id, nombre y efecto):
+/// Ids que existen igual en la v2 y la v4 (mismo id, nombre y efecto):
 /// el anillo central y los inicios. La migración desde la v2 conserva
 /// solo estos (passive_tree_v3.md § 11).
 final Set<String> kTreeIdsStableSinceV2 = {
   for (final (id, _, _, _) in _ring) id,
   for (final c in _classes) 's_${c.short}',
+};
+
+/// Ids que existen igual en la v3 y la v4 (mismo id, tipo, nombre, efectos
+/// y mecánica): anillo, inicios, `r1` y abanico de cada ruta, los 2
+/// notables y la keystone de cada cluster de clase, los puentes enteros y
+/// los clusters de grupo salvo su punta (passive_tree_v4.md § 6).
+final Set<String> kTreeIdsStableSinceV3 = {
+  ...kTreeIdsStableSinceV2,
+  for (final c in _classes) ...[
+    '${c.short}_r1',
+    for (var i = 1; i <= 5; i++) '${c.short}_f$i',
+    for (final cl in _clusters[c.id]!)
+      for (final s in ['na', 'nb', 'k']) '${cl.$1}_$s',
+  ],
+  for (final b in _bridges)
+    for (final (s, _, _, _) in _bridgeShape) '${b.$1}_$s',
+  for (final g in _groups)
+    for (final (s, _, _, kind) in _groupShape)
+      if (kind != 'nt') '${g.$1}_$s',
 };
 
 typedef _Fx = Map<String, num>;
@@ -34,24 +54,28 @@ typedef _K = (String name, String key, String? mech);
 
 class _ClassDef {
   const _ClassDef(this.id, this.short, this.angle, this.startName,
-      this.startFx, this.r1, this.r2, this.fan);
+      this.startFx, this.r1, this.fan);
   final String id, short;
   final double angle;
   final String startName;
   final _Fx startFx;
-  final _S r1, r2, fan;
+  final _S r1, fan;
 }
 
-/// Cluster de clase: id, nombre, tema, chico A, chico B, notable A,
-/// notable B y keystone (passive_tree_v3.md § 4).
+/// Cluster de clase v4: id, nombre, tema, chico de entrada (`_m1`, `_m2`),
+/// chico de rama (`_ma`, `_mb`), notable de entrada (`_n1`), notables A y
+/// B de la bifurcación (`_na`, `_nb`, los de la v3), notable de unión
+/// (`_nc`) y keystone (passive_tree_v4.md § 2-3).
 typedef _Cluster = (
   String id,
   String name,
   String theme,
   _S a,
   _S b,
+  _N n1,
   _N na,
   _N nb,
+  _N nc,
   _K k,
 );
 
@@ -69,22 +93,31 @@ typedef _Bridge = (
   _N nr,
 );
 
-/// Cluster de grupo: id, nombre, tema, chico A, chico B y 2 notables
-/// (passive_tree_v3.md § 8).
-typedef _Group = (String id, String name, String theme, _S a, _S b, _N na, _N nb);
+/// Cluster de grupo: id, nombre, tema, chico A, chico B, 2 notables y el
+/// notable de la punta (`_nt`, v4) (passive_tree_v3.md § 8 y v4 § 4).
+typedef _Group = (
+  String id,
+  String name,
+  String theme,
+  _S a,
+  _S b,
+  _N na,
+  _N nb,
+  _N nt,
+);
 
 const _classes = <_ClassDef>[
   _ClassDef('guerrero', 'gue', -90, 'Inicio: Guerrero', {'hp': 0.05, 'atk': 0.04},
-      ('Disciplina', {'atk': 0.03}), ('Temple', {'hp': 0.03}),
+      ('Disciplina', {'atk': 0.03}),
       ('Sendero del Acero', {'atk': 0.02, 'hp': 0.03})),
   _ClassDef('maga', 'mag', 0, 'Inicio: Maga', {'mp': 0.08, 'mag': 0.04},
-      ('Estudio', {'mag': 0.03}), ('Reserva Arcana', {'mp': 0.04}),
+      ('Estudio', {'mag': 0.03}),
       ('Sendero Arcano', {'mag': 0.02, 'mp': 0.04})),
   _ClassDef('tirador', 'tir', 90, 'Inicio: Tirador', {'crit': 0.03, 'spd': 0.3},
-      ('Ojo Atento', {'crit': 0.015}), ('Paso Ágil', {'spd': 0.15}),
+      ('Ojo Atento', {'crit': 0.015}),
       ('Sendero del Viento', {'crit': 0.01, 'atk': 0.02})),
   _ClassDef('paladin', 'pal', 180, 'Inicio: Paladín', {'hp': 0.06, 'def': 1},
-      ('Voto', {'def': 1}), ('Devoción', {'hp': 0.03}),
+      ('Voto', {'def': 1}),
       ('Sendero Sagrado', {'hp': 0.03, 'heal': 0.03})),
 ];
 
@@ -93,155 +126,195 @@ const Map<String, List<_Cluster>> _clusters = {
   'guerrero': [
     (
       'muralla', 'Muralla', 'defensa y contraataque',
-      ('Coraza', {'def': 1}), ('Aguante', {'hp': 0.03}),
+      ('Coraza', {'def': 2}), ('Aguante', {'hp': 0.04}),
+      ('Rompeolas', {'def': 1}, 'rompeolas'),
       ('Contraataque', {'def': 2}, 'contraataque'),
       ('Represalia', {'hp': 0.03}, 'represalia'),
+      ('Coraza de Espinas', {'hp': 0.03}, 'corazaEspinas'),
       ('Golpe Imparable', 'imparable', null),
     ),
     (
       'sangre', 'Sangre', 'robo de vida y poca vida',
-      ('Fuerza Bruta', {'atk': 0.03}), ('Vigor', {'hp': 0.03}),
+      ('Fuerza Bruta', {'atk': 0.05}), ('Vigor', {'hp': 0.04}),
+      ('Sangría', {'atk': 0.03}, 'sangriaVital'),
       ('Último Aliento', {'hp': 0.03}, 'ultimoAliento'),
       ('Sed de Sangre', {'atk': 0.03}, 'sedSangre'),
+      ('Frenesí Sangriento', {'atk': 0.03}, 'frenesiSangriento'),
       ('Furia de Sangre', 'furia', null),
     ),
     (
       'quiebre', 'Quiebre', 'quebrar enemigos',
-      ('Impacto', {'atk': 0.03}), ('Firmeza', {'hp': 0.03}),
+      ('Impacto', {'atk': 0.05}), ('Firmeza', {'hp': 0.04}),
+      ('Mazazo', {'atk': 0.03}, 'mazazo'),
       ('Rompeguardias', {'atk': 0.03}, 'rompeguardias'),
       ('Ensañamiento', {'atk': 0.03}, 'ensanamiento'),
+      ('Brecha', {'atk': 0.03}, 'brecha'),
       ('Demoledor', 'demoledor', 'demoledor'),
     ),
     (
       'gritos', 'Gritos', 'ULT y gritos de grupo',
-      ('Aliento', {'ult': 0.03}), ('Pulmones', {'hp': 0.03}),
+      ('Aliento', {'ult': 0.05}), ('Pulmones', {'hp': 0.04}),
+      ('Arenga', {'ult': 0.03}, 'arenga'),
       ('Clamor', {'atk': 0.03}, 'clamor'),
       ('Rugido', {'ult': 0.04}, 'rugido'),
+      ('Estruendo', {'ult': 0.03}, 'estruendo'),
       ('Caudillo', 'caudillo', 'caudillo'),
     ),
     (
       'filo', 'Filo', 'críticos y velocidad',
-      ('Filo Agudo', {'crit': 0.015}), ('Pies Ligeros', {'spd': 0.15}),
+      ('Filo Agudo', {'crit': 0.02}), ('Pies Ligeros', {'spd': 0.2}),
+      ('Estocada Precisa', {'crit': 0.015}, 'estocadaPrecisa'),
       ('Frenesí', {'crit': 0.015}, 'frenesi'),
       ('Corte en Cadena', {'atk': 0.03}, 'corteCadena'),
+      ('Desarme', {'spd': 0.15}, 'desarme'),
       ('Danza de Cuchillas', 'danza', 'danza'),
     ),
   ],
   'maga': [
     (
       'arcano', 'Arcano', 'maná, ULT y cadenas mágicas',
-      ('Concentración', {'mp': 0.04}), ('Afinidad', {'ult': 0.03}),
+      ('Concentración', {'mp': 0.06}), ('Afinidad', {'ult': 0.05}),
+      ('Canalizar', {'mp': 0.04}, 'canalizar'),
       ('Arco Voltaico', {'mag': 0.03}, 'arcoVoltaico'),
       ('Eco Arcano', {'mp': 0.04}, 'ecoArcano'),
+      ('Pulso Arcano', {'mag': 0.03}, 'pulsoArcano'),
       ('Mente sobre Materia', 'mente', null),
     ),
     (
       'brasa', 'Brasa', 'quemadura y explosiones',
-      ('Ascua', {'mag': 0.03}), ('Reserva', {'mp': 0.04}),
+      ('Ascua', {'mag': 0.045}), ('Reserva', {'mp': 0.06}),
+      ('Ascuas Vivas', {'mp': 0.04}, 'ascuasVivas'),
       ('Combustión', {'burn': 1}, 'combustion'),
       ('Choque Térmico', {'mag': 0.03}, 'choqueTermico'),
+      ('Pira', {'mp': 0.04}, 'pira'),
       ('Tormenta Arcana', 'tormenta', null),
     ),
     (
       'cronos', 'Cronos', 'retrasos y timeline',
-      ('Segundero', {'mag': 0.03}), ('Péndulo', {'spd': 0.15}),
+      ('Segundero', {'mag': 0.045}), ('Péndulo', {'spd': 0.2}),
+      ('Arena del Tiempo', {'spd': 0.15}, 'arenaTiempo'),
       ('Reloj Roto', {'spd': 0.15}, 'relojRoto'),
       ('Paso Compartido', {'spd': 0.15}, 'pasoCompartido'),
+      ('Ancla Temporal', {'spd': 0.15}, 'anclaTemporal'),
       ('Bucle Eterno', 'bucle', 'bucle'),
     ),
     (
       'escarcha', 'Escarcha', 'congelación y control del tiempo',
-      ('Escarcha', {'mag': 0.03}), ('Calma Helada', {'spd': 0.15}),
+      ('Escarcha', {'mag': 0.045}), ('Calma Helada', {'spd': 0.2}),
+      ('Frío Penetrante', {'mp': 0.04}, 'frioPenetrante'),
       ('Tiempo Gélido', {'frz': 1}, 'tiempoGelido'),
       ('Fractura', {'mag': 0.03}, 'fractura'),
+      ('Hielo Quebradizo', {'spd': 0.15}, 'hieloQuebradizo'),
       ('Alma de Hielo', 'almaHielo', 'almaHielo'),
     ),
     (
       'prisma', 'Prisma', 'elementos combinados',
-      ('Facetas', {'mag': 0.02, 'mp': 0.02}), ('Lente', {'hp': 0.03}),
+      ('Facetas', {'mag': 0.03, 'mp': 0.03}), ('Lente', {'hp': 0.04}),
+      ('Chispa Prismática', {'mag': 0.03}, 'chispaPrismatica'),
       ('Refracción', {'ult': 0.03}, 'refraccion'),
       ('Catalizador', {'ult': 0.03}, 'catalizador'),
+      ('Descomposición', {'ult': 0.03}, 'descomposicion'),
       ('Singularidad', 'singularidad', 'singularidad'),
     ),
   ],
   'tirador': [
     (
       'viento', 'Viento', 'velocidad y ataques extra',
-      ('Reflejos', {'spd': 0.15}), ('Ráfaga', {'atk': 0.03}),
+      ('Reflejos', {'spd': 0.2}), ('Ráfaga', {'atk': 0.05}),
+      ('Viento Cortante', {'spd': 0.15}, 'vientoCortante'),
       ('Viento a Favor', {'spd': 0.15}, 'vientoFavor'),
       ('Rebote', {'atk': 0.03}, 'rebote'),
+      ('Huracán', {'atk': 0.03}, 'huracan'),
       ('Cadena Infinita', 'cadena', 'cadena'),
     ),
     (
       'lluvia', 'Lluvia', 'habilidades a todos',
-      ('Carcaj', {'atk': 0.03}), ('Aljaba', {'ult': 0.03}),
+      ('Carcaj', {'atk': 0.05}), ('Aljaba', {'ult': 0.05}),
+      ('Lluvia Ácida', {'atk': 0.03}, 'lluviaAcida'),
       ('Aguacero', {'atk': 0.03}, 'aguacero'),
       ('Esquirlas', {'spd': 0.15}, 'esquirlas'),
+      ('Granizo', {'ult': 0.03}, 'granizo'),
       ('Diluvio', 'diluvio', 'diluvio'),
     ),
     (
       'precision', 'Precisión', 'críticos y objetivo marcado',
-      ('Puntería', {'crit': 0.015}), ('Tensión', {'atk': 0.03}),
+      ('Puntería', {'crit': 0.02}), ('Tensión', {'atk': 0.05}),
+      ('Tiro a la Cabeza', {'crit': 0.015}, 'tiroALaCabeza'),
       ('Marca del Cazador', {'crit': 0.015}, 'marcaCazador'),
       ('Punto Débil', {'atk': 0.03}, 'puntoDebil'),
+      ('Grieta Expuesta', {'atk': 0.03}, 'grietaExpuesta'),
       ('Ojo de Halcón', 'halcon', null),
     ),
     (
-      'acecho', 'Acecho', 'marcas y remate',
-      ('Rastro', {'crit': 0.01, 'spd': 0.1}), ('Sigilo', {'spd': 0.15}),
+      'acecho', 'Acecho', 'marcas, trampas y remate',
+      ('Rastro', {'crit': 0.015, 'spd': 0.15}), ('Sigilo', {'spd': 0.2}),
+      ('Trampa de Caza', {'atk': 0.03}, 'trampaCaza'),
       ('Presa Herida', {'crit': 0.015}, 'presaHerida'),
       ('Rematar', {'atk': 0.03}, 'rematar'),
+      ('Cacería', {'spd': 0.15}, 'caceria'),
       ('Depredador', 'depredador', 'depredador'),
     ),
     (
       'toxina', 'Toxina', 'veneno y debilitamiento',
-      ('Ponzoña', {'atk': 0.03}), ('Resistencia', {'hp': 0.03}),
+      ('Ponzoña', {'atk': 0.05}), ('Resistencia', {'hp': 0.04}),
+      ('Toxina Paralizante', {'atk': 0.03}, 'toxinaParalizante'),
       ('Debilitar', {'poi': 1}, 'debilitar'),
       ('Plaga Contagiosa', {'atk': 0.03}, 'plagaContagiosa'),
+      ('Nube Tóxica', {'hp': 0.03}, 'nubeToxica'),
       ('Toxicidad', 'toxicidad', null),
     ),
   ],
   'paladin': [
     (
       'luz', 'Luz', 'Sagrado',
-      ('Destello', {'mag': 0.02, 'heal': 0.02}), ('Calidez', {'heal': 0.04}),
+      ('Destello', {'mag': 0.03, 'heal': 0.03}), ('Calidez', {'heal': 0.06}),
+      ('Mano Luminosa', {'heal': 0.04}, 'manoLuminosa'),
       ('Llama Sagrada', {'mag': 0.03}, 'llamaSagrada'),
       ('Resplandor', {'heal': 0.04}, 'resplandor'),
+      ('Estallido Solar', {'heal': 0.04}, 'estallidoSolar'),
       ('Sol Interior', 'solInterior', 'solInterior'),
     ),
     (
       'juicio', 'Juicio', 'daño sagrado y aturdir',
-      ('Celo', {'atk': 0.03}), ('Rigor', {'crit': 0.015}),
+      ('Celo', {'atk': 0.05}), ('Rigor', {'crit': 0.02}),
+      ('Sentencia', {'atk': 0.03}, 'sentencia'),
       ('Martillo Bendito', {'atk': 0.03}, 'martilloBendito'),
       ('Castigo Divino', {'mag': 0.03}, 'castigoDivino'),
+      ('Veredicto', {'atk': 0.03}, 'veredicto'),
       ('Paladín Inherente', 'inherente', null),
     ),
     (
       'fe', 'Fe', 'curación y regeneración',
-      ('Gracia', {'heal': 0.04}), ('Fe', {'hp': 0.03}),
+      ('Gracia', {'heal': 0.06}), ('Fe', {'hp': 0.04}),
+      ('Comunión', {'heal': 0.04}, 'comunion'),
       ('Mano Sanadora', {'heal': 0.05}, 'manoSanadora'),
       ('Plegaria', {'hp': 0.03}, 'plegaria'),
+      ('Milagro', {'heal': 0.04}, 'milagro'),
       ('Paladín Creyente', 'creyente', null),
     ),
     (
       'vigilia', 'Vigilia', 'reducción de daño',
-      ('Centinela', {'def': 1}), ('Entereza', {'hp': 0.03}),
+      ('Centinela', {'def': 2}), ('Entereza', {'hp': 0.04}),
+      ('Represalia Sagrada', {'def': 1}, 'represaliaSagrada'),
       ('Guardia Alta', {'def': 1}, 'guardiaAlta'),
       ('Voto de Hierro', {'hp': 0.03}, 'votoHierro'),
+      ('Resiliencia', {'def': 1}, 'resiliencia'),
       ('Inamovible', 'inamovible', 'inamovible'),
     ),
     (
       'bastion', 'Bastión', 'escudos, protección y provocar',
-      ('Templanza', {'def': 1}), ('Firmeza', {'hp': 0.03}),
+      ('Templanza', {'def': 2}), ('Firmeza', {'hp': 0.04}),
+      ('Púas', {'def': 1}, 'puas'),
       ('Guardián', {'def': 2}, 'guardian'),
       ('Desafío', {'hp': 0.03}, 'desafio'),
+      ('Escudo Solidario', {'def': 1}, 'escudoSolidario'),
       ('Égida Eterna', 'egida', 'egida'),
     ),
   ],
 };
 
 /// Puentes, uno por par de clases vecinas (en el orden de [_classes]: el
-/// puente `i` une la clase `i` con la `i + 1`).
+/// puente `i` une la clase `i` con la `i + 1`). Sin cambios desde la v3.
 const List<_Bridge> _bridges = [
   (
     'hojaArcana', 'Hoja Arcana', 'híbrido Guerrero–Maga: acero y magia',
@@ -284,24 +357,28 @@ const List<_Group> _groups = [
     ('Asta', {'atk': 0.02, 'mag': 0.02}), ('Hermanos de Armas', {'hp': 0.03}),
     ('Bandera de Guerra', {'atk': 0.02}, 'banderaGuerra'),
     ('Carga Conjunta', {'hp': 0.03}, 'cargaConjunta'),
+    ('Estandarte Alzado', {'atk': 0.02, 'mag': 0.02}, 'estandarteAlzado'),
   ),
   (
     'sintonia', 'Sintonía', 'grupo: ULT y turnos compartidos',
     ('Compás', {'ult': 0.03}), ('Ritmo', {'spd': 0.15}),
     ('Relevo', {'ult': 0.03}, 'relevo'),
     ('A la Carga', {'spd': 0.15}, 'alaCarga'),
+    ('Resonancia', {'ult': 0.03}, 'resonanciaGrupal'),
   ),
   (
     'vinculo', 'Vínculo', 'grupo: curas y escudos',
     ('Lazo', {'heal': 0.03}), ('Cuidado', {'hp': 0.03}),
     ('Lazo Vital', {'heal': 0.03}, 'lazoVital'),
     ('Escudo Compartido', {'hp': 0.03}, 'escudoCompartido'),
+    ('Ángel Guardián', {'heal': 0.03}, 'angelGuardian'),
   ),
   (
     'refugio', 'Refugio', 'grupo: menos daño recibido',
     ('Trinchera', {'def': 1}), ('Abrigo', {'hp': 0.03}),
     ('Formación', {'def': 1}, 'formacion'),
     ('Hermandad', {'hp': 0.03}, 'hermandad'),
+    ('Muro de Escudos', {'def': 1}, 'muroEscudos'),
   ),
 ];
 
@@ -321,36 +398,39 @@ const _ring = <(String, double, String, _Fx)>[
   ('r_pg2', 240, 'Aguante', {'hp': 0.06}),
 ];
 
-// ---- Geometría (unidades de árbol, passive_tree_v3.md § 2) ----
+// ---- Geometría (unidades de árbol, passive_tree_v4.md § 2) ----
 
 const kRingRadius = 2.0;
 const kStartRadius = 3.1;
-const kRoadRadii = (4.0, 4.9);
+
+/// Radio del único nodo de ruta (`r1`), que reparte a `f2`, `f3` y `f4`.
+const kRoadRadius = 4.5;
 const kFanRadius = 6.0;
 const kClusterRadius = 7.0;
 
 /// Separación angular entre clusters de una clase.
 const kClusterSpread = 15.0;
 
-/// Plantilla de un cluster de clase: sufijo, (u, v), tipo de nodo
-/// (`a`/`b` = chico A/B, `na`/`nb` = notable, `k` = keystone).
+/// Distancia (u) de la keystone a la entrada de su cluster de clase.
+const kKeystoneOffset = 4.95;
+
+/// Plantilla de un cluster de clase v4: sufijo, (u, v), tipo de nodo
+/// (`a`/`b` = chico de entrada / de rama, `n1`/`na`/`nb`/`nc` = notables,
+/// `k` = keystone).
 const _clusterShape = <(String, double, double, String)>[
-  ('e1', 0, 0, 'a'),
-  ('e2', 0.8, 0, 'a'),
-  ('f', 1.6, 0, 'a'),
-  ('a1', 2.35, -0.65, 'a'),
-  ('a2', 3.15, -0.85, 'a'),
-  ('na', 3.95, -0.95, 'na'),
-  ('b1', 2.35, 0.65, 'b'),
-  ('b2', 3.15, 0.85, 'b'),
-  ('nb', 3.95, 0.95, 'nb'),
-  ('j', 4.65, 0, 'b'),
-  ('k', 5.55, 0, 'k'),
+  ('n1', 0, 0, 'n1'),
+  ('m1', 0.8, 0, 'a'),
+  ('m2', 1.6, 0, 'a'),
+  ('na', 2.4, -0.8, 'na'),
+  ('nb', 2.4, 0.8, 'nb'),
+  ('ma', 3.25, -0.9, 'b'),
+  ('mb', 3.25, 0.9, 'b'),
+  ('nc', 4.05, 0, 'nc'),
+  ('k', kKeystoneOffset, 0, 'k'),
 ];
 const _clusterLinks = [
-  ('e1', 'e2'), ('e2', 'f'), ('f', 'a1'), ('a1', 'a2'), ('a2', 'na'), //
-  ('f', 'b1'), ('b1', 'b2'), ('b2', 'nb'), ('na', 'j'), ('nb', 'j'),
-  ('j', 'k'),
+  ('n1', 'm1'), ('m1', 'm2'), ('m2', 'na'), ('m2', 'nb'), ('na', 'ma'), //
+  ('nb', 'mb'), ('ma', 'nc'), ('mb', 'nc'), ('nc', 'k'),
 ];
 
 /// Plantilla de un puente (`a`/`b` = chico lado A/B, `h` = híbrido).
@@ -374,7 +454,7 @@ const _bridgeLinks = [
   ('r2', 'nr'),
 ];
 
-/// Plantilla de un cluster de grupo.
+/// Plantilla de un cluster de grupo (v4: la punta es un notable).
 const _groupShape = <(String, double, double, String)>[
   ('e1', 2.9, 0, 'a'),
   ('e2', 3.7, 0, 'a'),
@@ -385,11 +465,11 @@ const _groupShape = <(String, double, double, String)>[
   ('b2', 5.25, 0.55, 'b'),
   ('nb', 6.05, 0.55, 'nb'),
   ('j', 6.75, 0, 'b'),
-  ('t', 7.55, 0, 'a'),
+  ('nt', 7.55, 0, 'nt'),
 ];
 const _groupLinks = [
   ('e1', 'e2'), ('e2', 'a1'), ('a1', 'a2'), ('a2', 'na'), ('e2', 'b1'), //
-  ('b1', 'b2'), ('b2', 'nb'), ('na', 'j'), ('nb', 'j'), ('j', 't'),
+  ('b1', 'b2'), ('b2', 'nb'), ('na', 'j'), ('nb', 'j'), ('j', 'nt'),
 ];
 
 (double, double) _polar(double r, double deg) {
@@ -422,6 +502,9 @@ PassiveTreeCatalog _build() {
     nodes[b]!.links.add(a);
   }
 
+  void notable(String id, (double, double) at, _N n, String pid) =>
+      add(id, at, n.$1, n.$2, 'n', path: pid, mech: n.$3);
+
   // Anillo central, en ciclo.
   for (final (id, deg, name, fx) in _ring) {
     add(id, _polar(kRingRadius, deg), name, fx, 's');
@@ -436,26 +519,26 @@ PassiveTreeCatalog _build() {
     add(sid, _polar(kStartRadius, th), c.startName, c.startFx, 'st');
     link(sid, 'p_${c.short}');
 
-    // Ruta de clase: r1 → r2 → abanico f1..f5.
-    final r1 = '${c.short}_r1', r2 = '${c.short}_r2';
-    add(r1, _polar(kRoadRadii.$1, th), c.r1.$1, c.r1.$2, 's');
-    add(r2, _polar(kRoadRadii.$2, th), c.r2.$1, c.r2.$2, 's');
+    // Ruta de clase: r1 → abanico f1..f5 (r1 llega a f2, f3 y f4).
+    final r1 = '${c.short}_r1';
+    add(r1, _polar(kRoadRadius, th), c.r1.$1, c.r1.$2, 's');
     link(sid, r1);
-    link(r1, r2);
     for (var i = 0; i < 5; i++) {
       final f = '${c.short}_f${i + 1}';
       add(f, _polar(kFanRadius, th + (i - 2) * kClusterSpread), c.fan.$1,
           c.fan.$2, 's');
       if (i > 0) link('${c.short}_f$i', f);
     }
-    link(r2, '${c.short}_f3');
+    for (final f in [2, 3, 4]) {
+      link(r1, '${c.short}_f$f');
+    }
 
     // Clusters de clase.
     final list = _clusters[c.id]!;
     for (var i = 0; i < list.length; i++) {
-      final (pid, pname, theme, a, b, na, nb, ks) = list[i];
+      final (pid, pname, theme, a, b, n1, na, nb, nc, ks) = list[i];
       final deg = th + (i - 2) * kClusterSpread;
-      final (lx, ly) = _local(kClusterRadius, deg, 5.55 + 1.0, 0);
+      final (lx, ly) = _local(kClusterRadius, deg, kKeystoneOffset + 1.0, 0);
       paths[pid] = PassivePath(
           id: pid,
           name: pname,
@@ -471,9 +554,14 @@ PassiveTreeCatalog _build() {
             add(id, at, a.$1, a.$2, 's', path: pid);
           case 'b':
             add(id, at, b.$1, b.$2, 's', path: pid);
-          case 'na' || 'nb':
-            final n = kind == 'na' ? na : nb;
-            add(id, at, n.$1, n.$2, 'n', path: pid, mech: n.$3);
+          case 'n1':
+            notable(id, at, n1, pid);
+          case 'na':
+            notable(id, at, na, pid);
+          case 'nb':
+            notable(id, at, nb, pid);
+          case 'nc':
+            notable(id, at, nc, pid);
           default:
             add(id, at, ks.$1, const {'key': 1}, 'k',
                 key: ks.$2, path: pid, mech: ks.$3);
@@ -482,9 +570,9 @@ PassiveTreeCatalog _build() {
       for (final (x, y) in _clusterLinks) {
         link('${pid}_$x', '${pid}_$y');
       }
-      link('${c.short}_f${i + 1}', '${pid}_e1');
+      link('${c.short}_f${i + 1}', '${pid}_n1');
       // Atajo con el cluster anterior de la misma clase.
-      if (i > 0) link('${list[i - 1].$1}_b2', '${pid}_a2');
+      if (i > 0) link('${list[i - 1].$1}_mb', '${pid}_ma');
     }
   }
 
@@ -514,8 +602,8 @@ PassiveTreeCatalog _build() {
         case 'h':
           add(id, at, h.$1, h.$2, 's', path: pid);
         default:
-          final n = switch (kind) { 'n1' => n1, 'nl' => nl, _ => nr };
-          add(id, at, n.$1, n.$2, 'n', path: pid, mech: n.$3);
+          notable(id, at, switch (kind) { 'n1' => n1, 'nl' => nl, _ => nr },
+              pid);
       }
     }
     for (final (x, y) in _bridgeLinks) {
@@ -527,7 +615,7 @@ PassiveTreeCatalog _build() {
 
   // Clusters de grupo: entre los dos nodos de anillo de su diagonal.
   for (var i = 0; i < _groups.length; i++) {
-    final (pid, pname, theme, a, b, na, nb) = _groups[i];
+    final (pid, pname, theme, a, b, na, nb, nt) = _groups[i];
     final deg = _classes[i].angle + 45;
     final (lx, ly) = _local(0, deg, 8.4, 0);
     paths[pid] = PassivePath(
@@ -547,8 +635,8 @@ PassiveTreeCatalog _build() {
         case 'b':
           add(id, at, b.$1, b.$2, 's', path: pid);
         default:
-          final n = kind == 'na' ? na : nb;
-          add(id, at, n.$1, n.$2, 'n', path: pid, mech: n.$3);
+          notable(id, at, switch (kind) { 'na' => na, 'nb' => nb, _ => nt },
+              pid);
       }
     }
     for (final (x, y) in _groupLinks) {

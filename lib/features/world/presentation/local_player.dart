@@ -27,14 +27,15 @@ class LocalPlayer {
   /// `updateMe`: un paso con la entrada [ix], [iy] (-1..1). Si [canMove]
   /// es falso (panel abierto, caído, fuera de lobby/campo) solo frena.
   void step(GameMap map, double ix, double iy, double dt,
-      {required bool canMove, required bool gateOpen}) {
+      {required bool canMove, required bool gateOpen, double speedMult = 1}) {
     if (!canMove) {
       moving = false;
       return;
     }
     moving = ix != 0 || iy != 0;
     if (!moving) return;
-    final p = WorldRules.stepPlayer(map, x, y, ix, iy, dt, gateOpen: gateOpen);
+    final p = WorldRules.stepPlayer(map, x, y, ix, iy, dt,
+        gateOpen: gateOpen, speedMult: speedMult);
     x = p.x;
     y = p.y;
     if (ix != 0) dir = ix > 0 ? 1 : -1;

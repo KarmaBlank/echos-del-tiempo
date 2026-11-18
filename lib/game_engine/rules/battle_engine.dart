@@ -12,6 +12,7 @@ import '../models/enemy_def.dart';
 import '../models/passive_mechanic.dart';
 import '../models/skill.dart';
 import '../models/status.dart';
+import 'family_rules.dart';
 import 'js_math.dart';
 import 'stats_calculator.dart';
 
@@ -57,6 +58,7 @@ class BattleEngine {
     RandomSource? random,
     this.breakEnabled = true,
     this.enemyUltsEnabled = true,
+    this.familiesEnabled = true,
   }) : _random = random ?? math.Random().nextDouble;
 
   final StatsCalculator stats;
@@ -69,6 +71,11 @@ class BattleEngine {
 
   /// ULT de jefes y élites (§ 2).
   final bool enemyUltsEnabled;
+
+  /// Familias de enemigos: debilidades, resistencias, inmunidades y curas
+  /// que dañan (docs/specs/bestiary.md § 1). Los tests de otras fórmulas
+  /// pueden apagarlas.
+  final bool familiesEnabled;
 
   // ---- quiebre: llenado por tipo de acción ----
   static const breakAttack = 1.0;
@@ -664,9 +671,13 @@ class _Turn {
     final holy = a.stacks(StatusKind.holy);
     if (holy > 0) {
       // Ira Divina (Templario): el Sagrado de los enemigos hace más.
+      // No muertos / espectros: el Sagrado arde más (bestiary.md § 1).
       final d = a.isPlayer
           ? 5 * holy
-          : jsRound(5 * holy * (1 + _aura(BuffStat.holyPower)));
+          : jsRound(5 *
+              holy *
+              (1 + _aura(BuffStat.holyPower)) *
+              (_fam(a)?.holyTick ?? 1));
       total += d;
       parts.add('Sagrado $d');
       a.holyTurns = (a.holyTurns == 0 ? 1 : a.holyTurns) - 1;
@@ -757,6 +768,15 @@ class _Turn {
       return false;
     }
     if (st.chance != null && _rand() >= st.chance!) return false;
+    // Familia (bestiary.md § 1): inmunidades y stacks de más / de menos.
+    final family = _fam(a);
+    if (family != null && family.immune.contains(st.kind)) {
+      if (_immuneShown.add('${a.id}|${st.kind.name}')) {
+        _notes.add('${a.name} es INMUNE a ${st.kind.label} '
+            '(${family.family.label})');
+      }
+      return false;
+    }
     final weak =
         a.isPlayer && a.statusWeakness > 0 && st.kind != StatusKind.regen
             ? a.statusWeakness
@@ -770,6 +790,7 @@ class _Turn {
             st.kind == StatusKind.freeze)) {
       n = math.max(1, n - a.statusResist);
     }
+    if (family != null) n = familyStacks(family, st.kind, n);
     a.statuses[st.kind] = math.min(st.kind.maxStacks, a.stacks(st.kind) + n);
     if (st.kind == StatusKind.holy) a.holyTurns = 3;
     if (st.kind == StatusKind.regen) a.statuses[StatusKind.regen] = 3;
@@ -1422,7 +1443,8 @@ class _Turn {
       bool single = false,
       int hitIndex = 0,
       String? chainFrom,
-      bool pierced = false}) {
+      bool pierced = false,
+      Set<DamageTag>? tags}) {
     final a = _attacker;
     final cm = _critMult(a);
     var chance = critChance;
@@ -1453,7 +1475,10 @@ class _Turn {
         mods.add('× 0.8 Cadena Infinita');
       }
     }
-    final taken = e.effectTotal(BuffStat.damageTaken);
+    final family = _fam(e);
+    var taken = e.effectTotal(BuffStat.damageTaken);
+    // Bestias: la Marca pega más (bestiary.md § 1).
+    if (taken > 0) taken *= family?.markMult ?? 1;
     if (taken != 0) {
       mult *= 1 + taken;
       mods.add('× ${fm(1 + taken)} Marca');
@@ -1468,6 +1493,11 @@ class _Turn {
       mult *= 1 - armor;
       mods.add('× ${fm(1 - armor)} armadura');
     }
+    // Familia: debilidades y resistencias por tipo de daño
+    // (bestiary.md § 1.3).
+    final affinity = _familyMods(family, tags ?? skillDamageTags(_act?.skill),
+        mods);
+    mult *= affinity;
     final res = primary ? _stanceResist(e) : 0.0;
     if (res > 0) {
       mult *= 1 - res;
@@ -1509,7 +1539,8 @@ class _Turn {
         vulnerable: vul,
         hitIndex: hitIndex,
         chainFrom: chainFrom,
-        pierced: pierced));
+        pierced: pierced,
+        affinity: affinity));
     if (!e.alive) _knockedOut(e);
     if (shift) _transform(e);
     _chargeUlt(e, lost);
@@ -1558,6 +1589,49 @@ class _Turn {
     _chargeUlt(e, lost);
     if (!shift) _addBreak(e, dmg * BattleEngine.breakSecondary);
     return dmg;
+  }
+
+  // ---------------- familias (docs/specs/bestiary.md § 1) ----------------
+
+  /// Reglas de la familia del enemigo [c] (`null`: jugador, sin familia o
+  /// familias apagadas).
+  FamilyRule? _fam(Combatant c) => !engine.familiesEnabled || c.isPlayer
+      ? null
+      : familyRuleOf(c.enemyType);
+
+  /// Factor de la familia [r] para un golpe con [tags]; agrega cada
+  /// factor a [mods] (`× 1.5 DÉBIL Sagrado`).
+  double _familyMods(FamilyRule? r, Set<DamageTag> tags, List<String> mods) {
+    var m = 1.0;
+    for (final f in familyFactors(r, tags)) {
+      m *= f.value;
+      mods.add('× ${fm(f.value)} ${f.weak ? 'DÉBIL' : 'RESISTE'} '
+          '${f.tag.label}');
+    }
+    return m;
+  }
+
+  /// Las curas de habilidad del grupo dañan a las familias con
+  /// `healHarm` (no muertos, espectros): cada enemigo vivo así recibe
+  /// [amount] × `healHarm` (más Marca y quiebre). Devuelve el texto del
+  /// log ("¡La cura quema al Esqueleto! 34") o vacío.
+  String _healHarm(Combatant p, int amount) {
+    final hit = <(Combatant, int)>[];
+    for (final e in state.enemies) {
+      if (!e.alive) continue;
+      final r = _fam(e);
+      if (r == null || r.healHarm <= 0) continue;
+      final d = math.max(1, jsRound(amount * r.healHarm));
+      hit.add((e, _procDamage(p, e, d, kHealHarmSourceId)));
+    }
+    if (hit.isEmpty) return '';
+    if (hit.length == 1) {
+      final (e, d) = hit.first;
+      final fem = engine.catalog.enemies[e.enemyType]?.feminine ?? false;
+      return ' · ¡La cura quema ${fem ? 'a la' : 'al'} ${e.name}! $d';
+    }
+    return ' · ¡La cura quema a los no muertos! '
+        '${hit.map((h) => '${h.$1.name} ${h.$2}').join(', ')}';
   }
 
   /// Un actor cae. Si es un enemigo: cuenta para `onKill` de la acción y
@@ -1937,7 +2011,9 @@ class _Turn {
       case ProcEffectKind.delayTarget:
         if (target == null || !target.alive) return;
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
-        target.nextTurn += _iv(target) * fx.value;
+        target.nextTurn += _iv(target) *
+            fx.value *
+            (_fam(target)?.delayMult ?? 1);
         events.add(DelayedEvent(target.id));
         _notes.add('${m.name}: ${target.name} se retrasa ${_pct(fx.value)}');
       case ProcEffectKind.repeatSkill:
@@ -2108,6 +2184,8 @@ class _Turn {
     if (e.isPlayer || !e.alive || !e.hasBreak || e.broken || amount <= 0) {
       return;
     }
+    // Familia (bestiary.md § 1): los constructos se quiebran antes.
+    amount *= _fam(e)?.breakMult ?? 1;
     final max = e.breakMax;
     e.breakGauge = math.min(max, _r1(e.breakGauge + amount));
     if (e.breakGauge >= max) {
@@ -3177,6 +3255,7 @@ class _Turn {
         var log = '${p.name} · ${tk.name}: +$a '
             '${tk.lowestAlly && regenTo.isNotEmpty ? 'a ${regenTo.first.name}' : 'a cada aliado'} '
             '(MAG ${p.magic} × ${fm(tk.power)} + 4) y Regeneración 5% vida y maná × 3 turnos';
+        log += _healHarm(p, a);
         if (p.branch == 'creyente') {
           final base = p.magic * 0.8;
           for (final e in foes) {
@@ -3254,7 +3333,8 @@ class _Turn {
                 : ' · quita 1 stack de cada estado';
         state.log = '${p.name} · ${tk.name}: +$a '
             '${tk.lowestAlly && healed.isNotEmpty ? 'a ${healed.first.name}' : 'a cada aliado'} = '
-            'MAG ${p.magic} × ${fm(tk.power)} + 6$cleanseText';
+            'MAG ${p.magic} × ${fm(tk.power)} + 6$cleanseText'
+            '${_healHarm(p, a)}';
         return 8;
 
       case SkillKind.taunt:
@@ -3373,7 +3453,10 @@ class _Turn {
                 bonus: p.statusBonus[x.kind] ?? 0, source: p, primary: true);
           }
           if (tk.delay > 0 && e.alive) {
-            e.nextTurn += _iv(e) * tk.delay * delayMult;
+            e.nextTurn += _iv(e) *
+                tk.delay *
+                delayMult *
+                (_fam(e)?.delayMult ?? 1);
             events.add(DelayedEvent(e.id));
             _fire(ProcTrigger.onDelayApplied, p, target: e);
           }

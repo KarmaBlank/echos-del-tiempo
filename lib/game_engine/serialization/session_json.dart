@@ -188,6 +188,13 @@ class SessionJson {
         if (m.floorGoals.isNotEmpty) 'fg': m.floorGoals,
         if (m.levels.isNotEmpty) 'lv': m.levels,
         if (m.opened.isNotEmpty) 'opened': (m.opened.toList()..sort()),
+        // v0.6 (protocolo 7; worldgen.md § 11.6): exploración.
+        if (m.poiUsed.isNotEmpty) 'pu': (m.poiUsed.toList()..sort()),
+        if (m.poiSeen.isNotEmpty) 'ps': (m.poiSeen.toList()..sort()),
+        if (m.questsDone.isNotEmpty) 'qd': (m.questsDone.toList()..sort()),
+        if (m.questsFailed.isNotEmpty) 'qf': (m.questsFailed.toList()..sort()),
+        if (m.blessing != null) 'bl': m.blessing!.name,
+        if (m.windUntil != 0) 'wind': m.windUntil,
       };
 
   static List<int> _ints(Json j, String k) {
@@ -231,6 +238,12 @@ class SessionJson {
         floorGoals: _ints(j, 'fg'),
         levels: _ints(j, 'lv'),
         opened: _ints(j, 'opened').toSet(),
+        poiUsed: _ints(j, 'pu').toSet(),
+        poiSeen: _ints(j, 'ps').toSet(),
+        questsDone: _ints(j, 'qd').toSet(),
+        questsFailed: _ints(j, 'qf').toSet(),
+        blessing: j.enumOrNull('bl', BlessingKind.values),
+        windUntil: j.dblOrNull('wind') ?? 0,
       );
 
   Json dropToJson(WeaponDrop d) => {
@@ -286,6 +299,9 @@ class SessionJson {
         'y': i.y,
         'done': i.done,
         if (i.floor != 0) 'f': i.floor,
+        if (i.tier != ChestTier.madera) 'tr': i.tier.name,
+        if (i.guard != null) 'gd': i.guard,
+        if (i.secret != null) 'sc': i.secret,
       };
 
   MissionItem itemFromJson(Json j) => MissionItem(
@@ -295,6 +311,9 @@ class SessionJson {
         y: j.dbl('y'),
         done: j.boolean('done'),
         floor: j.intOrNull('f') ?? 0,
+        tier: j.enumOrNull('tr', ChestTier.values) ?? ChestTier.madera,
+        guard: j.intOrNull('gd'),
+        secret: j.intOrNull('sc'),
       );
 
   // ------------------------------------------------------------------

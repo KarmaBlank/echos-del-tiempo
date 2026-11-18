@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../../core/persistence/ecos_log.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/atlas_store.dart';
+import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/profile_store.dart';
 import '../domain/account.dart';
@@ -214,5 +215,29 @@ class AccountAtlasStore implements AtlasStore {
   @override
   Future<void> save(AtlasProgress atlas) async {
     await repository.update((a) => a.withAtlas(atlas));
+  }
+}
+
+/// `BestiaryStore` sobre la cuenta: el bestiario es uno solo para todos
+/// los personajes (docs/specs/bestiary.md § 2). Suma las muertes sobre el
+/// que está en la cuenta (otra ventana / sesión no se pisa: se guarda el
+/// máximo de cada conteo).
+class AccountBestiaryStore implements BestiaryStore {
+  AccountBestiaryStore(this.repository);
+
+  final AccountRepository repository;
+
+  @override
+  Future<BestiaryProgress> load() async => (await repository.load()).bestiary;
+
+  @override
+  Future<void> save(BestiaryProgress bestiary) async {
+    await repository.update((a) {
+      final merged = {...a.bestiary.kills};
+      for (final e in bestiary.kills.entries) {
+        if (e.value > (merged[e.key] ?? 0)) merged[e.key] = e.value;
+      }
+      return a.withBestiary(BestiaryProgress(merged));
+    });
   }
 }

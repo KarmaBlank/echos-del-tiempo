@@ -1,4 +1,5 @@
 import '../../../game_engine/models/atlas.dart';
+import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/build_plan.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
@@ -77,10 +78,12 @@ class Account {
     this.seq = 0,
     Stash? stash,
     AtlasProgress? atlas,
+    BestiaryProgress? bestiary,
   })  : characters = List.unmodifiable(characters),
         selectedId = _pick(characters, selectedId),
         stash = stash ?? Stash.empty(),
-        atlas = atlas ?? AtlasProgress.empty;
+        atlas = atlas ?? AtlasProgress.empty,
+        bestiary = bestiary ?? BestiaryProgress.empty;
 
   static const maxCharacters = 8;
   static const formatVersion = 1;
@@ -98,6 +101,10 @@ class Account {
   /// Atlas del Tiempo, compartido por todos los personajes (JSON `atlas`,
   /// opcional; docs/specs/ecos_atlas.md § 5).
   final AtlasProgress atlas;
+
+  /// Bestiario, compartido por todos los personajes (JSON `best`,
+  /// opcional; docs/specs/bestiary.md § 2).
+  final BestiaryProgress bestiary;
 
   bool get isFull => characters.length >= maxCharacters;
 
@@ -121,6 +128,7 @@ class Account {
     int? seq,
     Stash? stash,
     AtlasProgress? atlas,
+    BestiaryProgress? bestiary,
   }) =>
       Account(
         characters: characters ?? this.characters,
@@ -128,6 +136,7 @@ class Account {
         seq: seq ?? this.seq,
         stash: stash ?? this.stash,
         atlas: atlas ?? this.atlas,
+        bestiary: bestiary ?? this.bestiary,
       );
 
   /// Agrega un personaje con un `id` nuevo y lo elige. `null` si está
@@ -158,6 +167,7 @@ class Account {
       seq: seq,
       stash: stash,
       atlas: atlas,
+      bestiary: bestiary,
     );
   }
 
@@ -184,6 +194,9 @@ class Account {
 
   Account withAtlas(AtlasProgress atlas) => _copy(atlas: atlas);
 
+  Account withBestiary(BestiaryProgress bestiary) =>
+      _copy(bestiary: bestiary);
+
   Map<String, Object?> toJson() => {
         'v': formatVersion,
         'sel': selectedId,
@@ -192,6 +205,7 @@ class Account {
         'stash': stash.toJson(),
         if (atlas.nodes.isNotEmpty || atlas.done.isNotEmpty)
           'atlas': atlas.toJson(),
+        if (!bestiary.isEmpty) 'best': bestiary.toJson(),
       };
 
   /// Lectura tolerante (lo que falta toma su valor por defecto; entradas
@@ -217,6 +231,8 @@ class Account {
       stash: Stash.fromJson(json['stash']),
       atlas: const AtlasRules()
           .sanitize(AtlasProgress.fromJson(json['atlas'])),
+      // Cuentas de antes de la v0.6: sin `best`, bestiario vacío.
+      bestiary: BestiaryProgress.fromJson(json['best']),
     );
   }
 }

@@ -1,5 +1,9 @@
 # Spec (aprobada): Árbol de pasivas v3 — red de ~350 nodos
 
+> **v0.6:** reemplazada en parte por `passive_tree_v4.md` (clusters con 4
+> notables, ruta sin `r2`, punta notable en los grupos, `tv` 4). Lo que
+> la v4 no nombra sigue valiendo como está acá.
+
 Pedido del dueño (v0.5.0): "el árbol normal es muy pequeño". Propuesta
 aprobada ("sí, dale"): ~350 nodos para que, con el máximo de puntos, un
 personaje cubra ~20% del árbol y tenga que **elegir** (como en PoE); los

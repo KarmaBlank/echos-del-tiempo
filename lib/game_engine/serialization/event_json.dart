@@ -1,5 +1,6 @@
 import '../models/ascension.dart' show TrapKind;
 import '../models/battle_event.dart';
+import '../models/game_map.dart' show PoiKind, QuestKind;
 import '../models/game_session.dart';
 import '../models/item.dart' show CraftOp;
 import '../models/loot.dart';
@@ -49,6 +50,7 @@ class EventJson {
             'cr': e.credits,
             if (e.item != null) 'it': ActionJson.itemKey(e.item!),
             if (e.weaponId != null) 'w': e.weaponId,
+            if (e.tier != ChestTier.madera) 'tr': e.tier.name,
           },
         BattleStartedEvent() => {
             't': 'battleStart',
@@ -76,6 +78,20 @@ class EventJson {
         ReturnedToLobbyEvent() => {'t': 'lobby'},
         FloorChangedEvent() => {'t': 'floor', 'f': e.floor, 'down': e.down},
         StairsOpenedEvent() => {'t': 'stairs', 'f': e.floor},
+        PoiUsedEvent() => {
+            't': 'poi',
+            'id': e.playerId,
+            'poi': e.poiId,
+            'k': e.kind.name,
+            if (e.blessing != null) 'bl': e.blessing!.name,
+            if (e.toPoi != null) 'to': e.toPoi,
+          },
+        QuestDoneEvent() => {
+            't': 'quest',
+            'q': e.questId,
+            'f': e.floor,
+            'k': e.kind.name,
+          },
         FellIntoVoidEvent() => {'t': 'fall', 'id': e.playerId, 'f': e.floor},
         ZoneUnlockedEvent() => {'t': 'zoneUnlocked', 'id': e.playerId, 'z': e.zone},
         LootDropEvent() => {
@@ -162,7 +178,8 @@ class EventJson {
         final it = j.strOrNull('it');
         return ChestOpenedEvent(j.str('id'), j.integer('cr'),
             item: it == null ? null : ActionJson.itemFromKey(it),
-            weaponId: j.strOrNull('w'));
+            weaponId: j.strOrNull('w'),
+            tier: j.enumOrNull('tr', ChestTier.values) ?? ChestTier.madera);
       case 'battleStart':
         return BattleStartedEvent(j.integer('bid'), j.integer('fe'),
             boss: j.boolean('boss'), elite: j.boolean('elite'));
@@ -184,6 +201,14 @@ class EventJson {
         return FloorChangedEvent(j.integer('f'), down: j.boolean('down'));
       case 'stairs':
         return StairsOpenedEvent(j.integer('f'));
+      case 'poi':
+        return PoiUsedEvent(
+            j.str('id'), j.integer('poi'), j.enumByName('k', PoiKind.values),
+            blessing: j.enumOrNull('bl', BlessingKind.values),
+            toPoi: j.intOrNull('to'));
+      case 'quest':
+        return QuestDoneEvent(j.integer('q'), j.integer('f'),
+            j.enumByName('k', QuestKind.values));
       case 'fall':
         return FellIntoVoidEvent(j.str('id'), j.integer('f'));
       case 'zoneUnlocked':
@@ -238,6 +263,7 @@ class EventJson {
             if (e.hitIndex != 0) 'hi': e.hitIndex,
             if (e.chainFrom != null) 'cf': e.chainFrom,
             if (e.pierced) 'pc': true,
+            if (e.affinity != 1) 'af': e.affinity,
           },
         ActionEvent() => {
             'k': 'act',
@@ -344,6 +370,7 @@ class EventJson {
           hitIndex: j.intOrNull('hi') ?? 0,
           chainFrom: j.strOrNull('cf'),
           pierced: j.flag('pc'),
+          affinity: j.dblOrNull('af') ?? 1,
         );
       case 'act':
         return ActionEvent(

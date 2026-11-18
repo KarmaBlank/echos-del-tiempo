@@ -122,6 +122,21 @@ del log; acá el log siempre muestra lo que realmente se aplicó:
 - Los stacks de estado mostrados incluyen el bonus del árbol.
 - Los textos no usan emojis (la fuente 8 bits no los tiene).
 
+### Familias de enemigos (v0.6)
+
+Cada enemigo tiene familia (docs/specs/bestiary.md § 1): el daño del
+grupo que pasa por `dmgEnemy` se multiplica por el factor de la familia
+según los tipos del golpe (físico / mágico y el elemento: fuego, hielo,
+Sagrado), después de la armadura y antes de la esquiva (`× 1.5 DÉBIL
+Sagrado`, `× 0.7 RESISTE físico`; `DamageEvent.affinity`). Las curas y
+regeneraciones de habilidad dañan a los no muertos (y a medias a los
+espectros) con el mismo número que curan (`¡La cura quema al
+Esqueleto! 36`). Las familias también dan inmunidades a estados (nota
+`INMUNE a Veneno (No muerto)`), stacks de más / de menos, y multiplican
+el llenado del quiebre, los retrasos, la Marca y el estado Sagrado. La
+tabla es data (`kFamilyRules`); `BattleEngine(familiesEnabled: false)` la
+apaga.
+
 ## Acciones del jugador (`BattleEngine.command`)
 
 Un comando solo se acepta si la batalla no terminó, es el turno de ese

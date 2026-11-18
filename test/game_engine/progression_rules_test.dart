@@ -330,8 +330,8 @@ void main() {
           'nada': {'pow': 1},
         },
         'fuse': {'espada_ignea': 'giro', 'nada': 'giro', 'espada_bronce': 'nope'},
-        'tv': 3,
-        'tree': ['gue_r2', 'gue_r1'],
+        'tv': 4,
+        'tree': ['gue_f3', 'gue_r1'],
       }));
       expect(p.name, 'NombreDema');
       expect(p.classId, 'guerrero');
@@ -355,12 +355,12 @@ void main() {
       final p = progression.normalize(PlayerProfile.fromJson({
         'cls': 'guerrero',
         'lvl': 4,
-        'tv': 3,
-        'tree': ['gue_r2', 'gue_r1', 'gue_r2', 'mag_r1', 's_gue', 'p_gue', 'r_gm1'],
+        'tv': 4,
+        'tree': ['gue_f3', 'gue_r1', 'gue_f3', 'mag_r1', 's_gue', 'p_gue', 'r_gm1'],
       }));
-      // gue_r2 no conecta todavía; gue_r1 sí; después gue_r2 ya conecta;
+      // gue_f3 no conecta todavía; gue_r1 sí; después gue_f3 ya conecta;
       // mag_r1 no conecta; s_gue ya lo tiene; p_gue entra y no quedan puntos.
-      expect(p.tree, ['gue_r1', 'gue_r2', 'p_gue']);
+      expect(p.tree, ['gue_r1', 'gue_f3', 'p_gue']);
     });
 
     test('perfil nuevo: 3 pociones, 1 de maná y arma inicial', () {

@@ -2,7 +2,9 @@ import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
 import 'package:echos_del_tiempo/game_engine/models/atlas_store.dart';
+import 'package:echos_del_tiempo/game_engine/models/bestiary.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
@@ -25,6 +27,8 @@ Future<SessionController> pumpPanel(
   required Widget Function(SessionView view, SessionController c) build,
   SessionEngine? engine,
   AtlasStore? atlas,
+  BestiaryStore? bestiary,
+  GameSprites? sprites,
   TextSize? textSize,
   ReadingFont readingFont = ReadingFont.vt323,
   double devicePixelRatio = 1,
@@ -44,6 +48,9 @@ Future<SessionController> pumpPanel(
       sessionEngineProvider.overrideWithValue(engine ?? sessionEngine()),
       profileStoreProvider.overrideWithValue(store),
       atlasStoreProvider.overrideWithValue(atlas ?? InMemoryAtlasStore()),
+      bestiaryStoreProvider
+          .overrideWithValue(bestiary ?? InMemoryBestiaryStore()),
+      if (sprites != null) gameSpritesProvider.overrideWith((ref) => sprites),
       sessionClockProvider
           .overrideWithValue(const SessionClock(autoStart: false)),
     ],

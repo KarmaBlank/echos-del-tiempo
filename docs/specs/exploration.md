@@ -634,6 +634,42 @@ estrella por hash.
 Vacío `#05060c` (como el fondo), puente `#a07a44`, lava `#ff5a1f`,
 lápida `#6c707a`, engranaje `#b08a3a` (`minimapTileColor`).
 
+### Exploración (v0.6, worldgen.md § 11)
+
+Tiles nuevos (todos sólidos; `TilePainter`, procedurales como el resto
+de los tiles: no son sprites del manifiesto):
+
+| Char | Constante | Cómo se ve |
+|---|---|---|
+| `K` | `Tile.cracked` | el muro del tema con grietas en zigzag y un halo violeta que late |
+| `k` | `Tile.secretFloor` | el muro del tema (sala secreta sin abrir; abierta pasa a `:`) |
+| `J` | `Tile.shortcut` | muro con reja de hierro y palanca roja (abierto: `,`) |
+| `H` / `h` | `Tile.shrine` / `shrineUsed` | pedestal con cristal turquesa que flota y brilla / apagado gris |
+| `W` / `w` | `Tile.waystone` / `waystoneOn` | menhir con runa apagada / runa dorada que late y halo |
+| `V` | `Tile.wind` | arco bajo con remolinos celestes |
+| `B` / `b` | `Tile.brazier` / `brazierLit` | brasero de piedra / con llama animada |
+
+- **Cofres** (`ActorPainter.item`): madera (marrón, como antes), reforzado
+  (azul acero con banda plateada) y dorado (oro con halo que late). Con el
+  guardián vivo: candado, sin destello ni rebote. El de una sala secreta no
+  se dibuja hasta abrirla.
+- **Reliquia** (`ActorPainter.relic`): rombo ámbar que flota con halo.
+- **Cartel de E** (`WorldPrompt.poi`, texto en `promptText`): `[E] Romper
+  la pared agrietada`, `[E] Abrir el atajo`, `[E] Santuario: <bendición>
+  (<efecto>)`, `[E] Activar la piedra de paso` / `[E] Viajar a la piedra
+  2/3`, `[E] Viento del Eco: +40% velocidad 60 s`, `[E] Encender el
+  brasero`. Prioridad: sello > PdI > escalera.
+- **Cartel de misión opcional cumplida**: `¡Misión opcional cumplida!` +
+  el texto de la misión, arriba al centro, 2.8 s (`MapGame.questToastMs`),
+  con la fanfarria.
+- **Caja de objetivos**: `Cofres a/b · Secretos c/d`, `♦ <bendición>`,
+  `» Viento del Eco N s` y `• Opcional: <misión> a/b` (cumplida `>` en
+  verde, fallida `x` en gris).
+- **Minimapa**: § 11.7 de worldgen.md (los PdI no se ven hasta
+  descubrirlos).
+- **Movimiento**: con el Viento del Eco activo el jugador local camina
+  ×1.4 (`LocalPlayer.step(speedMult:)`).
+
 ### Mapa del mundo
 
 Las entradas 6–10 usan el mismo arco; el estado (abierta / bloqueada)

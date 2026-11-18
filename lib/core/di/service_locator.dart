@@ -10,6 +10,7 @@ import '../../game_engine/balance/balance_patch.dart';
 import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/data/passive_tree_catalog.dart';
 import '../../game_engine/models/atlas_store.dart';
+import '../../game_engine/models/bestiary.dart';
 import '../../game_engine/models/profile_store.dart';
 import '../../game_engine/rules/battle_engine.dart';
 import '../../game_engine/rules/passive_tree_rules.dart';
@@ -118,6 +119,10 @@ void registerSharedDependencies(
   // Atlas del Tiempo: uno por cuenta (docs/specs/ecos_atlas.md § 5).
   sl.registerLazySingleton<AtlasStore>(
     () => AccountAtlasStore(sl<AccountRepository>()),
+  );
+  // Bestiario: uno por cuenta (docs/specs/bestiary.md § 2).
+  sl.registerLazySingleton<BestiaryStore>(
+    () => AccountBestiaryStore(sl<AccountRepository>()),
   );
   // Sonido real con audioplayers (docs/specs/audio.md § "Reproducción").
   // Los tests no pasan por acá: usan su propio reproductor o el no-op.

@@ -9,6 +9,7 @@ import '../../../../app/theme/retro_bar.dart';
 import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/loot_filter.dart';
 import '../../../../game_engine/models/player_profile.dart';
@@ -25,9 +26,13 @@ import '../../../missions/presentation/vote_panel.dart';
 import '../../../settings/presentation/settings_menu.dart';
 import '../map/loot_painter.dart';
 import '../map/map_game.dart';
+import '../../../../core/settings/settings_providers.dart';
+import '../../../characters/domain/unused_points.dart';
 import 'chat_box.dart';
+import 'exploration_lines.dart';
 import 'loot_feed.dart';
 import 'minimap.dart';
+import 'unused_points_notice.dart';
 
 /// `m:ss` con minutos de dos dígitos (`mm:ss` del HUD del prototipo).
 String clockText(double seconds) {
@@ -126,6 +131,19 @@ class WorldHud extends StatelessWidget {
                     const SizedBox(width: 8),
                   ],
                   if (onMenu != null) PauseMenuButton(onPressed: onMenu!),
+                  // Puntos sin usar: `PERSONAJE [C]` con `+N` (solo si hay;
+                  // passive_tree_v4.md § 7).
+                  if (_unused(s).any) ...[
+                    const SizedBox(width: 8),
+                    Consumer(
+                      builder: (context, ref, _) => UnusedPointsButton(
+                        points: _unused(s),
+                        reduceMotion: ref.watch(
+                            gameSettingsProvider.select((g) => g.reduceMotion)),
+                        onPressed: controller.toggleCharacter,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -157,7 +175,9 @@ class WorldHud extends StatelessWidget {
                 child: _Objectives(
                     mission: s.mission!,
                     zoneName: _missionName(s),
-                    floorLevel: MapGame.currentFloor(view)?.level),
+                    floorLevel: MapGame.currentFloor(view)?.level,
+                    floor: MapGame.currentFloor(view),
+                    time: s.time),
               ),
             if (showMinimap)
               Positioned(
@@ -250,6 +270,21 @@ class WorldHud extends StatelessWidget {
                       builder: (context, ref, _) =>
                           LootToasts(feed: ref.watch(lootFeedProvider)),
                     ),
+                    // Aviso al subir de nivel con puntos de árbol sin usar.
+                    Consumer(
+                      builder: (context, ref, _) => UnusedPointsToast(
+                        points: _unused(s),
+                        treeLevel:
+                            s.players[view.localId]?.profile.treeLevel ?? 0,
+                        ascensionEarned:
+                            s.players[view.localId]?.profile.ascension.earned ??
+                                0,
+                        blocked:
+                            s.mode == SessionMode.levelUp || view.panel != null,
+                        reduceMotion: ref.watch(
+                            gameSettingsProvider.select((g) => g.reduceMotion)),
+                      ),
+                    ),
                     for (final line in _banners(s))
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
@@ -287,6 +322,14 @@ class WorldHud extends StatelessWidget {
         ),
       );
     });
+  }
+
+  /// Puntos sin usar del jugador local (atributos, árbol, ascensión).
+  UnusedPoints _unused(GameSession s) {
+    final me = s.players[view.localId];
+    return me == null
+        ? UnusedPoints.none
+        : UnusedPoints.of(me.profile, controller.engine.progression);
   }
 
   /// Nombre de la misión en curso: la zona si es de zona.
@@ -489,9 +532,15 @@ class _Objectives extends StatelessWidget {
     required this.mission,
     this.zoneName = '',
     this.floorLevel,
+    this.floor,
+    this.time = 0,
   });
 
   final MissionRun mission;
+
+  /// Piso actual y reloj de la sala (exploración v0.6).
+  final MapFloor? floor;
+  final double time;
 
   /// Nombre de la zona (cabecera `<zona> · Piso N/F`).
   final String zoneName;
@@ -562,6 +611,7 @@ class _Objectives extends StatelessWidget {
                     ? '★ ¡Ve por el JEFE!'
                     : 'Jefe: completa los objetivos',
                 mission.open),
+          ...explorationLines(mission, floor, time),
         ],
       ),
     );

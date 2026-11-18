@@ -507,6 +507,14 @@ abstract final class MapGenerator {
         vaults: [for (final v in g.vaults) sh(v, ox)],
         chestMarks: [for (final c in g.chestMarks) (c.$1 + ox, c.$2)],
         eliteMarks: [for (final c in g.eliteMarks) (c.$1 + ox, c.$2)],
+        // v0.6 (worldgen.md § 11): ids únicos en el atlas.
+        pois: [
+          for (final p in g.pois)
+            p.shifted(ox, f, f * 100 + p.id,
+                newQuest: p.quest == null ? null : f * 100 + p.quest!),
+        ],
+        quests: [for (final q in g.quests) q.shifted(f, f * 100 + q.id)],
+        chestSpots: [for (final c in g.chestSpots) (c.$1 + ox, c.$2)],
       ));
       rooms.addAll([for (final r in g.rooms) sh(r, ox)]);
       spots.addAll(fspots);

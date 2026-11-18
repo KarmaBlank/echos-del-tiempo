@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../data/ascension_catalog.dart';
+import '../data/exploration_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/items_catalog.dart';
 import '../data/trials_catalog.dart';
@@ -24,6 +25,7 @@ import '../models/zone_def.dart';
 import 'atlas_rules.dart';
 import 'battle_engine.dart';
 import 'eco_rules.dart';
+import 'exploration_rules.dart';
 import 'inventory_rules.dart';
 import 'js_math.dart';
 import 'loot_filter_rules.dart';
@@ -203,6 +205,22 @@ class SessionEngine {
   /// una en curso (el atlas de pisos en misiones de zona), si no el mapa
   /// del mundo con el pueblo. Determinístico por semilla.
   GameMap mapFor(GameSession s) {
+    final base = _baseMapFor(s);
+    // v0.6: PdI usados (salas abiertas, atajos...; worldgen.md § 11.3).
+    final m = s.mode == SessionMode.lobby ? null : s.mission;
+    final st = ExplorationRules.stateKey(m);
+    if (st.isEmpty) return base;
+    final hit = _stated[base];
+    if (hit != null && hit.$1 == st) return hit.$2;
+    final out = ExplorationRules.withState(base, m);
+    _stated[base] = (st, out);
+    return out;
+  }
+
+  /// Último mapa con estado de cada mapa base (caché de [mapFor]).
+  final _stated = Expando<(String, GameMap)>('mapa con estado');
+
+  GameMap _baseMapFor(GameSession s) {
     final m = s.mission;
     if (m == null || s.mode == SessionMode.lobby) {
       return MapGenerator.overworld();
@@ -288,8 +306,10 @@ class SessionEngine {
 
   /// La entrada de un jugador al `BattleEngine` (vida en el campo
   /// redondeada hacia arriba, como la muestra el HUD).
-  BattlePartyMember partyMember(SessionPlayer p) {
-    final build = progression.buildOf(p.profile);
+  /// [blessing]: bendición de santuario activa (worldgen.md § 11.4).
+  BattlePartyMember partyMember(SessionPlayer p, {BlessingKind? blessing}) {
+    final build = ExplorationRules.blessedBuild(
+        progression.buildOf(p.profile), blessing);
     return BattlePartyMember(
       id: p.id,
       name: p.name,
@@ -386,7 +406,7 @@ class _Op {
     );
     final b = s.battle;
     if (s.mode == SessionMode.battle && b != null) {
-      b.state = e.battles.join(b.state, e.partyMember(p)).state;
+      b.state = e.battles.join(b.state, e.partyMember(p, blessing: s.mission?.blessing)).state;
     }
     s.players[id] = p;
     events.add(PlayerJoinedEvent(id));
@@ -626,6 +646,9 @@ class _Op {
 
       case UseStairsAction():
         return _useStairs(p, a.down);
+
+      case InteractPoiAction():
+        return _interactPoi(p, a.poiId);
 
       case ProposeEcoAction():
         return _proposeEco(p, a.uid);
@@ -1030,15 +1053,20 @@ class _Op {
         ? null
         : EcoRules.lootBonus(eco, atlas: atlas, players: s.players.length);
     final drops = <LootDrop>[];
-    final repeats =
+    var repeats =
         bonus == null ? 1 : EcoRules.rollRepeats(_rand, bonus.quantity);
+    // Bendición de Fortuna (worldgen.md § 11.4).
+    final fortune = s.mission?.blessing == BlessingKind.fortuna;
+    if (fortune && _rand() < kFortuneExtraRoll) repeats++;
     for (var i = 0; i < repeats; i++) {
       drops.addAll(rules.loot.rollDrops(_rand,
           zoneLevel: zone,
           source: src,
           family: p.profile.classId,
           chance: chance,
-          extraBonus: extraBonus + (bonus?.rarity ?? 0),
+          extraBonus: extraBonus +
+              (bonus?.rarity ?? 0) +
+              (fortune ? kFortuneRarity : 0),
           legendaryMult: eco == null ? 1 : 1 + atlas.legendary));
     }
     if (eco != null) drops.addAll(_ecoExtras(p, src, zone, bonus!, atlas));
@@ -1181,6 +1209,8 @@ class _Op {
       final whose = solo ? '' : ' de $p';
       say('$what$whose en el piso ${from + 1}.');
     }
+    // Misión opcional `guardian`: bajar con la élite viva la falla.
+    if (down) _guardianEscaped(from);
   }
 
   /// Por jugador (nombre): cuánto loot del piso actual que ve (suyo o
@@ -1531,12 +1561,12 @@ class _Op {
     }
     // Élites: uno opcional por piso (en la marca `e` de un vault si hay)
     // y otro en el último piso si salió el objetivo `elite`.
-    void elite(MapFloor fl, int mark) {
+    FieldEnemy elite(MapFloor fl, int mark) {
       final q = mark < fl.eliteMarks.length
           ? px(fl.eliteMarks[mark])
           : freeSpot(fl, 80);
       final groups = m.groupsFor(fl.index);
-      enemies.add(FieldEnemy(
+      final en = FieldEnemy(
         id: id++,
         x: q.x,
         y: q.y,
@@ -1545,35 +1575,96 @@ class _Op {
         group: res([m.elite, groups[pick(groups.length)].first]),
         elite: true,
         floor: fl.index,
-      ));
+      );
+      enemies.add(en);
+      return en;
     }
 
-    for (final fl in map.floors) {
-      elite(fl, 0);
-    }
+    final guards = [for (final fl in map.floors) elite(fl, 0)];
     if (extras.contains('elite')) {
       elite(last, 1);
       objectives.add(MissionObjective(ObjectiveKind.elite, 1));
     }
-    for (final fl in map.floors) {
-      for (final c in fl.chestMarks) {
-        final q = px(c);
-        items.add(MissionItem(
-            id: iid++,
-            kind: MissionItemKind.chest,
-            x: q.x,
-            y: q.y,
-            floor: fl.index));
+    // Cofres (worldgen.md § 11.2 y § 11.5, loot.md § 23): calidad con
+    // su propio azar para no mover las tiradas de siempre.
+    final cr = mulberry32(seed + 13);
+    ChestTier tierRoll() {
+      final total =
+          kChestTiers.values.fold(0.0, (a, d) => a + d.weight);
+      var x = cr() * total;
+      for (final d in kChestTiers.values) {
+        x -= d.weight;
+        if (x < 0) return d.tier;
       }
-      final n = 1 + pick(2) + extraChests;
-      for (var i = 0; i < n; i++) {
-        final q = freeSpot(fl, 70);
-        items.add(MissionItem(
-            id: iid++,
-            kind: MissionItemKind.chest,
-            x: q.x,
-            y: q.y,
-            floor: fl.index));
+      return ChestTier.madera;
+    }
+
+    void chest(MapFloor fl, WorldPoint q,
+        {ChestTier tier = ChestTier.madera, int? guard, int? secret}) {
+      items.add(MissionItem(
+          id: iid++,
+          kind: MissionItemKind.chest,
+          x: q.x,
+          y: q.y,
+          floor: fl.index,
+          tier: tier,
+          guard: guard,
+          secret: secret));
+    }
+
+    for (final fl in map.floors) {
+      final g = guards[fl.index];
+      final gt = (
+        (g.homeX / 16).floor(),
+        (g.homeY / 16).floor(),
+      );
+      final gv = fl.eliteMarks.isEmpty
+          ? null
+          : fl.vaults
+              .where((v) =>
+                  gt.$1 >= v.x &&
+                  gt.$2 >= v.y &&
+                  gt.$1 < v.x + v.w &&
+                  gt.$2 < v.y + v.h)
+              .firstOrNull;
+      var guarded = false;
+      for (final c in fl.chestMarks) {
+        final inGuardVault = gv != null &&
+            c.$1 >= gv.x &&
+            c.$2 >= gv.y &&
+            c.$1 < gv.x + gv.w &&
+            c.$2 < gv.y + gv.h;
+        guarded |= inGuardVault;
+        chest(fl, px(c),
+            tier: inGuardVault ? ChestTier.oro : ChestTier.plata,
+            guard: inGuardVault ? g.id : null);
+      }
+      if (!guarded) {
+        // Tesoro del guardián: un cofre dorado a 1–2 tiles de su lugar.
+        WorldPoint? at;
+        for (final (dx, dy) in const [
+          (1, 0), (-1, 0), (0, 1), (0, -1), (2, 0), (-2, 0), (0, 2), (0, -2),
+          (1, 1), (-1, 1), (1, -1), (-1, -1),
+        ]) {
+          final tx = gt.$1 + dx, ty = gt.$2 + dy;
+          if (solid(tx, ty) || !fl.containsTile(tx, ty)) continue;
+          at = px((tx, ty));
+          break;
+        }
+        if (at != null) chest(fl, at, tier: ChestTier.oro, guard: g.id);
+      }
+      for (final c in fl.chestSpots) {
+        chest(fl, px(c), tier: tierRoll());
+      }
+      for (var i = 0; i < extraChests; i++) {
+        chest(fl, freeSpot(fl, 70), tier: tierRoll());
+      }
+      for (final poi in fl.pois) {
+        final c = poi.chest;
+        if (poi.kind != PoiKind.secret || c == null) continue;
+        chest(fl, px(c),
+            tier: cr() < kSecretGoldChance ? ChestTier.oro : ChestTier.plata,
+            secret: poi.id);
       }
     }
 
@@ -1662,32 +1753,366 @@ class _Op {
 
   MissionDef get _missionDef => e.missionOf(s, s.mission!.missionId)!;
 
-  /// `openChest`: créditos y poción como el prototipo; el arma y los
-  /// materiales salen del loot v2 (fuente `chest`, solo para quien lo
-  /// abre).
+  /// `openChest` (v0.6, loot.md § 23): lo abre [p] y **cada jugador**
+  /// recibe su propia tirada según la calidad del cofre: créditos,
+  /// consumible a veces, armas (dorado: Rara o mejor segura, a veces de
+  /// una base temática de la zona), materiales y, en el endgame, Ecos.
   void openChest(SessionPlayer p, MissionItem chest) {
-    final tier = _missionDef.chestTier;
-    final cr = 20 + (_rand() * 31).floor() + tier * 10;
-    var prof = p.profile.copyWith(credits: p.profile.credits + cr);
-    var msg = '${p.name} abrió un cofre: +$cr créditos';
-    BattleItem? item;
-    if (_rand() < 0.5) {
-      prof = prof.copyWith(
-          potions: math.min(ProgressionRules.maxItems, prof.potions + 1));
-      item = BattleItem.potion;
-    } else if (_rand() < 0.6) {
-      prof = prof.copyWith(
-          ethers: math.min(ProgressionRules.maxItems, prof.ethers + 1));
-      item = BattleItem.ether;
+    final def = kChestTiers[chest.tier]!;
+    final zone = s.mission!.zoneLevel;
+    final mtier = _missionDef.chestTier;
+    say('${p.name} abrió ${def.name}.');
+    for (final q in players) {
+      final cr =
+          ((20 + (_rand() * 31).floor() + mtier * 10) * def.creditMult).round();
+      var prof = q.profile.copyWith(credits: q.profile.credits + cr);
+      var msg = '${q.name}: +$cr créditos';
+      BattleItem? item;
+      if (_rand() < def.consumableChance) {
+        if (_rand() < 0.6) {
+          prof = prof.copyWith(
+              potions: math.min(ProgressionRules.maxItems, prof.potions + 1));
+          item = BattleItem.potion;
+        } else {
+          prof = prof.copyWith(
+              ethers: math.min(ProgressionRules.maxItems, prof.ethers + 1));
+          item = BattleItem.ether;
+        }
+      }
+      if (item != null) msg += ' · +1 ${kItems[item]!.name}';
+      q.profile = InventoryRules.relayout(prof);
+      final drops = _chestDrops(q, def, zone);
+      if (q.id == p.id) {
+        final weapon = drops.where((d) => d.isItem).firstOrNull?.item;
+        events.add(ChestOpenedEvent(p.id, cr,
+            item: item, weaponId: weapon?.baseId, tier: chest.tier));
+      }
+      say(msg);
+      _deliver(q, drops, LootSource.chest, chest.x, chest.y);
     }
-    if (item != null) msg += ' · +1 ${kItems[item]!.name}';
-    p.profile = InventoryRules.relayout(prof);
-    final drops = _rollFor(p, LootSource.chest, s.mission!.zoneLevel);
-    final weapon = drops.where((d) => d.isItem).firstOrNull?.item;
-    events.add(
-        ChestOpenedEvent(p.id, cr, item: item, weaponId: weapon?.baseId));
-    say(msg);
-    _deliver(p, drops, LootSource.chest, chest.x, chest.y);
+  }
+
+  /// Las tiradas de un cofre de calidad [def] para [q].
+  List<LootDrop> _chestDrops(SessionPlayer q, ChestTierDef def, int zone) {
+    final drops = <LootDrop>[];
+    final il = LootRules.itemLevelFor(zone, LootSource.chest);
+    if (def.guaranteedRare) {
+      drops.add(LootDrop.item(_rareWeapon(q, il,
+          source: LootSource.chest,
+          extraBonus: def.rarityBonus,
+          themeChance: def.themeChance)));
+    } else if (def.themeChance > 0 && _rand() < def.themeChance * def.weaponChance) {
+      drops.add(LootDrop.item(_themed(q, il,
+          extraBonus: def.rarityBonus, source: LootSource.chest)));
+    }
+    drops.addAll(_rollFor(q, LootSource.chest, zone,
+        // Dorado: la segura + `weaponChance` de otra. Reforzado: la mitad
+        // de su chance va a la base temática (arriba) y la otra mitad acá.
+        chance: !def.guaranteedRare && def.themeChance > 0
+            ? def.weaponChance * (1 - def.themeChance)
+            : def.weaponChance,
+        extraBonus: def.rarityBonus));
+    final mats = <CraftMaterial, int>{};
+    for (var i = 0; i < def.extraMaterialRolls; i++) {
+      for (final e in rules.loot
+          .rollMaterials(_rand, zone, LootSource.chest)
+          .entries) {
+        mats[e.key] = (mats[e.key] ?? 0) + e.value;
+      }
+    }
+    if (def.esquirlas > 0) {
+      mats[CraftMaterial.esquirla] =
+          (mats[CraftMaterial.esquirla] ?? 0) + def.esquirlas;
+    }
+    for (final e in mats.entries) {
+      drops.add(LootDrop.stack(StackKind.of(e.key), e.value));
+    }
+    if (zone >= kChestEcoMinLevel && _ecoRand() < def.ecoChance) {
+      drops.add(LootDrop.eco(ecos.generate(_ecoRand,
+          tier: EcoRules.dropTier(_ecoRand, _eco),
+          source: LootSource.chest,
+          atlas: _eco == null ? AtlasEffects.none : _atlas)));
+    }
+    if (_eco != null && _ecoRand() < def.anchorChance) {
+      drops.add(const LootDrop.stack(StackKind.ancla, 1));
+    }
+    return drops;
+  }
+
+  /// Un arma de [q] a nivel [il] con base temática de la zona si hay
+  /// (worldgen.md § 11, `kThemeBaseWords`).
+  ItemInstance _themed(SessionPlayer q, int il,
+      {Rarity? rarity, double extraBonus = 0, LootSource source = LootSource.chest}) {
+    final r = rarity ??
+        rules.loot.rollRarity(_rand, il, source, extraBonus: extraBonus);
+    String? base;
+    if (r != Rarity.legendario) {
+      final gen = _zoneGen;
+      final words = gen == null ? const <String>[] : kThemeBaseWords[gen]!;
+      final pool = [
+        for (final w in catalog.weapons.values)
+          if (w.level <= il && words.any(w.id.contains)) w,
+      ];
+      base = LootRules.pickWeighted(
+              _rand,
+              pool,
+              (w) =>
+                  (w.level >= il - 10 ? 3.0 : 1.0) *
+                  (w.family == q.profile.classId ? 2.0 : 1.0))
+          ?.id;
+    }
+    return rules.loot.generate(_rand,
+        itemLevel: il,
+        rarity: r,
+        baseId: base,
+        family: q.profile.classId,
+        source: source,
+        extraBonus: extraBonus);
+  }
+
+  /// Un arma Rara o mejor (cofre dorado).
+  ItemInstance _rareWeapon(SessionPlayer q, int il,
+      {required LootSource source,
+      double extraBonus = 0,
+      double themeChance = 0}) {
+    var r = rules.loot.rollRarity(_rand, il, source, extraBonus: extraBonus);
+    if (r.index < Rarity.raro.index) r = Rarity.raro;
+    if (_rand() < themeChance) {
+      return _themed(q, il, rarity: r, source: source);
+    }
+    return rules.loot.generate(_rand,
+        itemLevel: il, rarity: r, family: q.profile.classId, source: source);
+  }
+
+  /// Generador de la zona de la misión (o del Eco / la Prueba).
+  ZoneGen? get _zoneGen {
+    final eco = _eco, trial = _trial, m = s.mission;
+    if (eco != null) return ecos.zoneDef(eco).gen;
+    if (trial != null) return e.trialRules.zoneDef(trial).gen;
+    return m == null ? null : catalog.zone(m.zone)?.gen;
+  }
+
+  // ---------------- exploración v0.6 (worldgen.md § 11) ----------------
+
+  /// `InteractPoiAction`: E frente a un punto de interés del piso.
+  bool _interactPoi(SessionPlayer p, int poiId) {
+    final m = s.mission;
+    if (s.mode != SessionMode.field || m == null || !p.alive) return false;
+    final f = e.mapFor(s).floor(m.floor);
+    final poi = f?.poi(poiId);
+    if (f == null || poi == null) return false;
+    if (!identical(ExplorationRules.usable(f, m, p.x, p.y), poi)) {
+      return false;
+    }
+    switch (poi.kind) {
+      case PoiKind.secret:
+        m.poiUsed.add(poi.id);
+        say('¡${p.name} encontró una sala secreta!');
+      case PoiKind.shortcut:
+        m.poiUsed.add(poi.id);
+        say('${p.name} abrió un atajo.');
+      case PoiKind.brazier:
+        m.poiUsed.add(poi.id);
+        final q = f.quests.where((q) => q.id == poi.quest).firstOrNull;
+        final (a, b) = q == null
+            ? (0, 0)
+            : ExplorationRules.questProgress(q, m, f);
+        say('${p.name} encendió un brasero ($a/$b).');
+      case PoiKind.shrine:
+        m.poiUsed.add(poi.id);
+        _bless(BlessingKind.values[poi.variant % BlessingKind.values.length],
+            by: p.name);
+      case PoiKind.wind:
+        m.windUntil = s.time + kWindSeconds;
+        say('${p.name} invocó el Viento del Eco: '
+            '+${((kWindSpeed - 1) * 100).round()}% de velocidad por '
+            '${kWindSeconds.round()} s.');
+      case PoiKind.waystone:
+        if (!m.poiUsed.contains(poi.id)) {
+          m.poiUsed.add(poi.id);
+          say('${p.name} activó una piedra de paso.');
+        } else {
+          final to = ExplorationRules.nextWaystone(f, m, poi);
+          if (to == null) return false;
+          // Viaje rápido: solo quien la usa (worldgen.md § 11.3).
+          final pos = _besideTile(e.mapFor(s), to.tx, to.ty);
+          p
+            ..x = pos.x
+            ..y = pos.y
+            ..epoch += 1
+            ..moving = false;
+          events.add(PoiUsedEvent(p.id, poi.id, poi.kind, toPoi: to.id));
+          return true;
+        }
+      case PoiKind.relic:
+        return false;
+    }
+    events.add(PoiUsedEvent(p.id, poi.id, poi.kind,
+        blessing: poi.kind == PoiKind.shrine ? m.blessing : null));
+    _checkQuests();
+    return true;
+  }
+
+  /// El centro de un tile caminable junto a ([tx], [ty]) (abajo primero).
+  WorldPoint _besideTile(GameMap map, int tx, int ty) {
+    for (final (dx, dy) in const [(0, 1), (1, 0), (-1, 0), (0, -1)]) {
+      final x = (tx + dx) * 16 + 8.0, y = (ty + dy) * 16 + 8.0;
+      if (!WorldRules.collides(map, x, y, blockVoid: true)) {
+        return WorldPoint(x, y);
+      }
+    }
+    return WorldPoint(tx * 16 + 8.0, (ty + 1) * 16 + 8.0);
+  }
+
+  /// Activa la bendición [k] para el grupo (reemplaza la anterior).
+  void _bless(BlessingKind k, {String? by}) {
+    final m = s.mission!;
+    m.blessing = k;
+    final def = kBlessings[k]!;
+    if (k == BlessingKind.vigor) {
+      for (final q in players) {
+        if (!q.alive) continue;
+        q
+          ..hp = q.maxHp.toDouble()
+          ..mp = q.maxMp.toDouble();
+      }
+    }
+    say(by == null
+        ? '${def.name}: ${def.effect} hasta el final de la misión.'
+        : '$by activó un santuario. ${def.name}: ${def.effect} '
+            'hasta el final de la misión.');
+  }
+
+  /// Cada tick de campo: descubrir PdI, levantar reliquias, cofres
+  /// custodiados y misiones opcionales.
+  void _explorationTick(GameMap map, MissionRun m) {
+    final f = map.floor(m.floor);
+    if (f == null) return;
+    for (final poi in f.pois) {
+      final c = poi.center;
+      if (!m.poiSeen.contains(poi.id) &&
+          _touching(c.x, c.y, ExplorationRules.discoverRange) != null) {
+        m.poiSeen.add(poi.id);
+      }
+      if (poi.kind == PoiKind.relic && !m.poiUsed.contains(poi.id)) {
+        final pl = _touching(c.x, c.y, ExplorationRules.relicRange);
+        if (pl != null) {
+          m.poiUsed.add(poi.id);
+          events.add(PoiUsedEvent(pl.id, poi.id, poi.kind));
+          say('${pl.name} encontró la reliquia perdida.');
+        }
+      }
+    }
+    _checkQuests();
+  }
+
+  /// Cumple las misiones opcionales del piso actual que llegaron a su
+  /// meta y entrega los premios (cada jugador el suyo).
+  void _checkQuests() {
+    final m = s.mission;
+    final f = m == null ? null : e.mapFor(s).floor(m.floor);
+    if (m == null || f == null) return;
+    for (final q in f.quests) {
+      if (m.questsDone.contains(q.id) || m.questsFailed.contains(q.id)) {
+        continue;
+      }
+      if (!ExplorationRules.questComplete(q, m, f)) continue;
+      m.questsDone.add(q.id);
+      events.add(QuestDoneEvent(q.id, f.index, q.kind));
+      say('¡Misión opcional cumplida: ${questText(q.kind)}!');
+      _questReward(q, f);
+    }
+  }
+
+  /// La misión `guardian` del piso [floor] falla si se baja con la élite
+  /// viva.
+  void _guardianEscaped(int floor) {
+    final m = s.mission!;
+    final f = e.mapFor(s).floor(floor);
+    if (f == null) return;
+    for (final q in f.quests) {
+      if (q.kind != QuestKind.guardian ||
+          m.questsDone.contains(q.id) ||
+          m.questsFailed.contains(q.id)) {
+        continue;
+      }
+      if (ExplorationRules.questComplete(q, m, f)) continue;
+      m.questsFailed.add(q.id);
+      say('Misión opcional fallida: ${questText(q.kind)}.');
+    }
+  }
+
+  /// Premio de una misión opcional (loot.md § 23.3): para cada jugador,
+  /// el premio principal (arma Rara/Épica sesgada a su plan de build, un
+  /// Eco o una bendición), un paquete de materiales y créditos.
+  void _questReward(FloorQuest q, MapFloor f) {
+    final m = s.mission!;
+    final level = f.level;
+    var reward = q.reward;
+    if (reward == QuestReward.eco && level < kQuestEcoMinLevel) {
+      reward = QuestReward.arma;
+    }
+    if (reward == QuestReward.bendicion) {
+      final others = [
+        for (final k in BlessingKind.values)
+          if (k != m.blessing) k,
+      ];
+      _bless(others[(_rand() * others.length).floor() % others.length]);
+    }
+    final il = LootRules.itemLevelFor(level, LootSource.elite);
+    for (final p in players) {
+      final drops = <LootDrop>[];
+      if (reward == QuestReward.arma || reward == QuestReward.bendicion) {
+        if (reward == QuestReward.arma) {
+          drops.add(LootDrop.item(_questWeapon(p, il)));
+        }
+      }
+      if (reward == QuestReward.eco) {
+        drops.add(LootDrop.eco(ecos.generate(_ecoRand,
+            tier: EcoRules.dropTier(_ecoRand, _eco),
+            source: LootSource.elite,
+            atlas: _eco == null ? AtlasEffects.none : _atlas)));
+      }
+      drops
+        ..add(const LootDrop.stack(StackKind.esquirla, kQuestEsquirlas))
+        ..add(const LootDrop.stack(StackKind.cristal, kQuestCristales));
+      if (level >= kQuestPrismaLevel) {
+        drops.add(const LootDrop.stack(StackKind.prisma, 1));
+      }
+      if (_eco != null) drops.add(const LootDrop.stack(StackKind.ancla, 1));
+      final cr = kQuestCreditsBase + kQuestCreditsPerLevel * level;
+      p.profile = p.profile.copyWith(credits: p.profile.credits + cr);
+      say('${p.name}: +$cr créditos (misión opcional)');
+      // Siempre al inventario: es un premio, no algo que se deja en el piso.
+      _deliver(p, drops, LootSource.mission, p.x, p.y);
+    }
+  }
+
+  /// Arma de premio: Rara (o Épica), con 60% de una base o tipo del plan
+  /// de build del jugador si tiene uno.
+  ItemInstance _questWeapon(SessionPlayer p, int il) {
+    final r = _rand() < kQuestEpicChance ? Rarity.epico : Rarity.raro;
+    final wants = p.buildWants;
+    String? base;
+    if (wants != null && _rand() < kQuestBuildChance) {
+      final pool = [
+        for (final w in catalog.weapons.values)
+          if (w.level <= il &&
+              (wants.weaponBases.contains(w.id) ||
+                  wants.weaponTypes.contains(w.type)))
+            w,
+      ];
+      base = LootRules.pickWeighted(
+              _rand, pool, (w) => wants.weaponBases.contains(w.id) ? 3.0 : 1.0)
+          ?.id;
+    }
+    if (base == null) return _themed(p, il, rarity: r, source: LootSource.elite);
+    return rules.loot.generate(_rand,
+        itemLevel: il,
+        rarity: r,
+        baseId: base,
+        family: p.profile.classId,
+        source: LootSource.elite);
   }
 
   /// `calmEnemies`.
@@ -1733,6 +2158,8 @@ class _Op {
       if (it.done || it.kind != MissionItemKind.chest || it.floor != m.floor) {
         continue;
       }
+      // Custodiado: no se abre mientras su guardián viva (§ 11.5).
+      if (it.guard case final g? when m.enemy(g)?.alive ?? false) continue;
       final pl = _touching(it.x, it.y, SessionEngine.pickupRange);
       if (pl == null) continue;
       it.done = true;
@@ -1741,6 +2168,7 @@ class _Op {
     _autoPickup();
 
     final map = e.mapFor(s);
+    _explorationTick(map, m);
     _voidFalls(map, m);
     if (_trial != null) _traps(map, m);
     // Escalera de bajada: tocarla baja a todo el grupo.
@@ -1752,9 +2180,11 @@ class _Op {
     }
     // Modificador `sequia` del Eco: sin regeneración en el campo.
     final regen = !(_eco != null && EcoRules.noRegen(_eco!));
+    // Bendición de Vigor: regeneración ×3 (worldgen.md § 11.4).
+    final rk = m.blessing == BlessingKind.vigor ? kVigorFieldRegen : 1.0;
     for (final p in regen ? players : const <SessionPlayer>[]) {
-      p.mp = math.min(p.maxMp.toDouble(), p.mp + dt * 0.4);
-      p.hp = math.min(p.maxHp.toDouble(), p.hp + p.maxHp * 0.008 * dt);
+      p.mp = math.min(p.maxMp.toDouble(), p.mp + dt * 0.4 * rk);
+      p.hp = math.min(p.maxHp.toDouble(), p.hp + p.maxHp * 0.008 * dt * rk);
     }
     for (final en in m.enemies) {
       if (!en.alive || en.floor != m.floor) continue;
@@ -1842,7 +2272,7 @@ class _Op {
   void startBattle(FieldEnemy en, SessionPlayer trigger) {
     s.seq++;
     final step = e.battles.start(
-      party: [for (final p in players) e.partyMember(p)],
+      party: [for (final p in players) e.partyMember(p, blessing: s.mission?.blessing)],
       enemyTypes: en.group,
       elite: en.elite,
       triggeredBy: trigger.id,

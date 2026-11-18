@@ -5,6 +5,7 @@ import '../models/game_map.dart';
 import '../models/zone_def.dart';
 import 'map_generator.dart';
 import 'mulberry32.dart';
+import 'poi_generator.dart';
 
 /// Un piso recién generado, en coordenadas locales del piso.
 class FloorGen {
@@ -18,6 +19,9 @@ class FloorGen {
     required this.vaults,
     required this.chestMarks,
     required this.eliteMarks,
+    this.pois = const [],
+    this.quests = const [],
+    this.chestSpots = const [],
     this.stairsDown,
     this.stairsUp,
   });
@@ -33,6 +37,11 @@ class FloorGen {
   final List<TileRect> vaults;
   final List<(int, int)> chestMarks;
   final List<(int, int)> eliteMarks;
+
+  /// Puntos de interés, misiones opcionales y lugares de cofre (v0.6).
+  final List<MapPoi> pois;
+  final List<FloorQuest> quests;
+  final List<(int, int)> chestSpots;
   final (int, int)? stairsDown;
   final (int, int)? stairsUp;
 
@@ -72,7 +81,8 @@ abstract final class ZoneGenerators {
       c != Tile.voidTile &&
       c != Tile.lava &&
       c != Tile.tombstone &&
-      c != Tile.gear;
+      c != Tile.gear &&
+      !Tile.poiTiles.contains(c);
 
   /// Genera el piso [floor] de [gen]. [last]: lleva el jefe; si no, la
   /// escalera de bajada. [hasUp]: escalera de subida junto al spawn.
@@ -123,6 +133,8 @@ abstract final class ZoneGenerators {
     _connectAll(g, spawn, forbid);
     _floodWall(g, spawn);
     final stairs = _placeStairs(g, ar, spawn, last: last, hasUp: hasUp);
+    final poi = _pois(g, ZoneGen.ruinas, seed, ar, vaults, spawn, stairs,
+        [...chests, ...elites], last);
     final spots = [
       for (final s in base.spots)
         if (g.at(s.$1, s.$2) == Tile.floor &&
@@ -141,8 +153,37 @@ abstract final class ZoneGenerators {
       eliteMarks: [for (final c in elites) if (g.at(c.$1, c.$2) == Tile.vaultFloor) c],
       stairsDown: stairs.$1,
       stairsUp: stairs.$2,
+      pois: poi.pois,
+      quests: poi.quests,
+      chestSpots: poi.chestSpots,
     );
   }
+
+  /// Puntos de interés del piso (worldgen.md § 11). Usa su propio azar.
+  static PoiLayout _pois(
+          _Grid g,
+          ZoneGen gen,
+          int seed,
+          TileRect ar,
+          List<TileRect> vaults,
+          (int, int) spawn,
+          ((int, int)?, (int, int)?) stairs,
+          List<(int, int)> marks,
+          bool last) =>
+      PoiGenerator.place(g.t,
+          seed: seed,
+          gen: gen,
+          arena: ar,
+          vaults: vaults,
+          spawn: spawn,
+          stairsDown: stairs.$1,
+          stairsUp: stairs.$2,
+          marks: [
+            for (final c in marks)
+              if (g.at(c.$1, c.$2) == Tile.vaultFloor) c,
+          ],
+          last: last,
+          passable: passable);
 
   // ------------------------------------------------------------------
   // Pradera / bosque, cavernas y fortaleza
@@ -153,8 +194,19 @@ abstract final class ZoneGenerators {
     final r = mulberry32(seed);
     int ri(int a, int b) => a + (r() * (b - a + 1)).floor();
 
-    final big = gen == ZoneGen.laberinto || gen == ZoneGen.corazon;
-    final w = big ? ri(70, 80) : ri(58, 70), h = big ? ri(50, 56) : ri(42, 50);
+    // v0.6 (worldgen.md § 11.1): el laberinto, único recorte de tamaño.
+    final maze = gen == ZoneGen.laberinto;
+    final big = gen == ZoneGen.corazon;
+    final w = maze
+        ? ri(64, 72)
+        : big
+            ? ri(70, 80)
+            : ri(58, 70);
+    final h = maze
+        ? ri(46, 52)
+        : big
+            ? ri(50, 56)
+            : ri(42, 50);
     final g = _Grid([for (var y = 0; y < h; y++) List.filled(w, Tile.wall)]);
     final abyss = gen.abyss;
     if (abyss) g.bridgeOver = const {Tile.voidTile, Tile.wall};
@@ -202,7 +254,7 @@ abstract final class ZoneGenerators {
       case ZoneGen.fortaleza:
         _maze(g, region, r, rooms);
       case ZoneGen.laberinto:
-        _maze(g, region, r, rooms, loops: 0.04, minRooms: 2, maxRooms: 3);
+        _maze(g, region, r, rooms, loops: 0.12, minRooms: 3, maxRooms: 4);
       case ZoneGen.abismo || ZoneGen.cementerio || ZoneGen.corazon:
         _islands(g, region, r);
       default:
@@ -331,12 +383,16 @@ abstract final class ZoneGenerators {
     if (gen == ZoneGen.cementerio) {
       _tombstones(g, r, spawn, [_expand(ar, 2), for (final v in vaults) _expand(v, 1)]);
     }
+    final poi = _pois(g, gen, seed, ar, vaults, spawn, stairs,
+        [...chests, ...elites], last);
     if (abyss) {
-      // Todo el muro (fuera de vaults y de los pilares de la arena) es vacío.
+      // Todo el muro (fuera de vaults, salas secretas y de los pilares de
+      // la arena) es vacío.
       for (var y = 0; y < g.h; y++) {
         for (var x = 0; x < g.w; x++) {
           if (g.at(x, y) != Tile.wall || _inRect(ar, x, y)) continue;
           if (vaults.any((v) => _inRect(v, x, y))) continue;
+          if (poi.reserved.any((v) => _inRect(v, x, y))) continue;
           g.set(x, y, Tile.voidTile);
         }
       }
@@ -369,6 +425,9 @@ abstract final class ZoneGenerators {
       eliteMarks: [for (final c in elites) if (g.at(c.$1, c.$2) == Tile.vaultFloor) c],
       stairsDown: stairs.$1,
       stairsUp: stairs.$2,
+      pois: poi.pois,
+      quests: poi.quests,
+      chestSpots: poi.chestSpots,
     );
   }
 

@@ -107,6 +107,8 @@ String procName(String id) => kMechanics[id]?.name ?? id;
       'combustion' => (const Color(0xFFFF7B29), FxElement.burn),
       'contraataque' => (fxWhite, FxElement.phys),
       'castigoDivino' => (const Color(0xFFFFD166), FxElement.holy),
+      // La cura que quema a un no muerto (bestiary.md § 1.1): luz.
+      'curaSagrada' => (const Color(0xFFFFF3B0), FxElement.holy),
       _ => null,
     };
 

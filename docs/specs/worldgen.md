@@ -563,3 +563,240 @@ grupos del último piso de la misión de esa zona y el grupo del jefe de
 la zona del jefe del Eco. `MissionRun.zone` = la zona del Eco (música y
 tema), pero un Eco **no** desbloquea zonas. Vencer la zona 10 activa el
 Portal del Eco (§ 1 del spec).
+
+## 11. Exploración v0.6 (densidad de interés, traversal y misiones opcionales)
+
+Pedido del dueño (backlog_v0.6.md § 1): "los mapas son muy grandes, por
+ejemplo el Laberinto del Tiempo. Me gustaría que en los mapas haya cosas,
+algo que te incentive a explorar; los cofres a veces dan cosas pero
+siempre solo dinero o pociones". Aclaraciones del dueño durante el
+diseño:
+- "Los mapas no necesariamente más chicos": el problema es el espacio
+  **vacío**, no el tamaño. Se mantienen los tamaños (único recorte
+  justificado: el Laberinto, § 11.1) y se reparte contenido.
+- "Pueden ser grandes, pero que haya algo que ayude al traversal, o que
+  el mapa esté más lleno de cosas, o quests opcionales, pero que sean
+  buenas para que el jugador sienta recompensa buena" → § 11.4 y § 11.8.
+- "Sin historia por ahora": **no hay lore**. Ningún texto de historia en
+  el código; las misiones y los PdI tienen descripciones solo
+  funcionales. *Pendiente: lore del dueño* (objetos de inscripción, se
+  agregan cuando haya textos aprobados).
+
+Implementación: números en `lib/game_engine/data/exploration_catalog.dart`;
+generación en `lib/game_engine/rules/poi_generator.dart`
+(`PoiGenerator.place`, lo llama `ZoneGenerators` en cada piso); reglas
+puras en `lib/game_engine/rules/exploration_rules.dart`
+(`ExplorationRules`); estado y premios en `SessionEngine`. Tests:
+`test/game_engine/exploration_test.dart` (densidad, PdI, determinismo,
+recorte del laberinto, Pruebas) y
+`test/game_engine/exploration_session_test.dart` (interacción, premios,
+guardianes, red).
+
+### 11.1 Tamaño de los pisos (medido) y único recorte
+
+Medido con 20 semillas por zona antes de v0.6 (BFS desde el spawn con la
+barrera abierta; jugador a 78 px/s ≈ 4.9 tiles/s):
+
+| Zona | Piso medio | Área caminable media (máx.) | Spawn → arena media (máx.) | Tile más lejano |
+|---|---|---|---|---|
+| 1 pradera | 64 × 46 | 1312 (1684) | 74 (96) | 89 |
+| 2 bosque | 64 × 46 | 1144 (1469) | 79 (108) | 94 |
+| 3 ruinas | 67 × 49 | 1052 (1208) | 75 (99) | 90 |
+| 4 cavernas | 63 × 45 | 1018 (1450) | 77 (97) | 91 |
+| 5 fortaleza | 64 × 46 | 1186 (1510) | 77 (135) | 95 |
+| 6 laberinto | 74 × 53 | 1630 (1931) | 97 (218) | **163** |
+| 7 grieta | 64 × 46 | 1056 (1367) | 81 (121) | 101 |
+| 8 cementerio | 65 × 46 | 775 (927) | 80 (109) | 95 |
+| 9 abismo | 64 × 45 | 684 (868) | 73 (111) | 90 |
+| 10 corazón | 74 × 53 | 1258 (1489) | 86 (206) | 144 |
+
+Todos los tamaños quedan igual **menos el Laberinto Temporal**, el único
+claramente sobredimensionado y vacío (tile más lejano a 163 pasos,
+callejones sin salida de 30+ tiles con 4% de bucles):
+- Tamaño 64–72 × 46–52 (antes 70–80 × 50–56): ~15% menos de área.
+- Bucles 12% (antes 4%) y 3–4 cámaras (antes 2–3): menos callejones; el
+  camino al jefe ya no da vueltas de 200 tiles (test: ≤ 160).
+- Las Pruebas I (laberinto) y III (corazón) siguen ubicando todas sus
+  trampas (test).
+
+### 11.2 Densidad de interés (objetivo medible)
+
+Un **punto de interés** (PdI) es lo que premia ir hasta ahí: un cofre
+(lugar de cofre o marca `c`), una sala secreta, un santuario, una piedra
+de paso, el Viento del Eco, un atajo, un brasero o la reliquia de una
+misión opcional, la marca `e` de un vault (élite guardián), la escalera
+o la barrera. Objetivos (test, 20 semillas por zona, todos los pisos):
+- Desde **cualquier tile caminable** hay un PdI a ≤ `kMaxPoiGap` = **18
+  pasos** (BFS, ~3.7 s caminando); en el laberinto ≤ `kMaxPoiGapMaze` =
+  **22** (pasillos de 2). Antes había rincones a 60+ pasos de todo.
+- ≥ 1 PdI cada 220 tiles caminables, ≥ 2 lugares de cofre y 1–2 misiones
+  opcionales por piso; más de medio piso con sala secreta en promedio.
+
+Medido después (promedio por piso): lugares de cofre 3–7 (más en los
+pisos grandes: fortaleza 6.8, laberinto 6.2, corazón 6.3; abismo 3),
+PdI del mapa 2.3–6.8, misiones 1–2, piedras de paso 0–2.4, salas
+secretas 0.8–1.8.
+
+Cómo se logra (todo en el generador del piso con su propio azar
+`mulberry32(semilla_f ^ 0x9E37)`: el mapa sigue saliendo de la semilla,
+no viaja nada por red):
+1. Salas secretas, atajo, santuario, piedras, viento y misiones (§ 11.3,
+   § 11.4, § 11.8) con cantidad según el área.
+2. **Lugares de cofre** (`MapFloor.chestSpots`) por muestreo del punto
+   más lejano: mientras el tile caminable más lejano (BFS) a todo PdI
+   esté a más del objetivo, se pone un lugar de cofre ahí (o en el tile
+   más cercano a él que sirva: suelo/camino fuera de arena y vaults con 3
+   de 4 vecinos libres). Mínimo 2, tope `área ÷ 100`.
+3. La sesión pone un cofre en cada lugar (reemplaza a los `1 + azar(0..1)`
+   cofres al azar de § 6.7; los extra del Atlas siguen al azar).
+
+### 11.3 Puntos de interés del mapa
+
+`MapFloor.pois` (`List<MapPoi>`): `id` (único en el atlas: `piso × 100 +
+k`), `kind` (`PoiKind`), `tx`, `ty` (tile del objeto), `floor`, `variant`
+(bendición), `room` y `chest` (sala secreta), `side` (atajo), `quest`
+(brasero / reliquia). Todos los objetos son tiles sólidos (no cortan
+caminos: un tile rodeado de suelo, ≥ 6 de otro objeto, ≥ 8 del spawn y
+≥ 4 de las escaleras), salvo la reliquia (se pisa).
+
+| PdI | Cantidad por piso | Tile |
+|---|---|---|
+| Sala secreta | 1 + 1 si el área ≥ 1100 (cada una 80%) | pared `K`, interior `k` (se ve y colisiona como muro) |
+| Atajo | 0–1 (no en abismo) | `J` (cerrado); abierto `,` |
+| Santuario de bendición | 0–1 (60%) | `H`; usado `h` |
+| Piedra de paso | 2 desde área 900, 3 desde 1300 | `W`; activada `w` |
+| Viento del Eco | 0–1 (70%) desde área 1000 | `V` |
+| Brasero / reliquia | los de su misión opcional (§ 11.8) | `B` / encendido `b`; reliquia sin tile |
+
+- **Sala secreta**: se prueban (en orden aleatorio) muros con un solo
+  vecino caminable (4 direcciones), a ≥ 6 del spawn y de las escaleras,
+  con la sala de 4 × 3 + 1 de margen entera sobre muro macizo `#` (en
+  abismo también vale el vacío: queda un bloque de roca flotante pegado a
+  la isla y no se vuelve vacío). Fuera de la arena (+2) y de los vaults
+  (+1). La pared es `K`; el interior `k` se dibuja como muro hasta abrirla
+  (no se delata); el cofre (reforzado 60% / dorado 40%) va en el centro y
+  no se dibuja hasta abrirla. Sin spots adentro (ni enemigos, ni trampas).
+- **Atajo**: el muro de 1 tile de grosor (vecinos opuestos caminables,
+  los otros dos muro) que más camino ahorra entre sus dos lados, si
+  ahorra ≥ `kShortcutMinSaving` = 40 pasos (en la práctica: fortaleza y
+  laberinto). Se abre con E **desde el lado lejano** (`MapPoi.side`, a
+  menos de 22 px de ese tile): un "atajo de vuelta" que conecta lo
+  explorado con el inicio.
+- **Usar** (E a menos de `ExplorationRules.poiRange = 26` px del centro
+  del tile): `InteractPoiAction(poiId)`. El host valida campo, piso
+  actual, jugador vivo y que sea el PdI usable más cercano.
+- **Mapa con estado** (`SessionEngine.mapFor`): mapa base de la semilla +
+  PdI usados (`K`/`k` → `:`, `J` → `,`, `H` → `h`, `W` → `w`, `B` → `b`),
+  con caché por mapa base y conjunto usado. Cliente y host colisionan y
+  dibujan sobre ese mapa, sin tocar `WorldRules`.
+
+### 11.4 Traversal: piedras de paso, Viento del Eco y atajos
+
+- **Piedras de paso**: la primera a ≤ 5 tiles del spawn, las otras por
+  punto más lejano (≥ 25 pasos entre ellas). E sobre una sin activar la
+  **activa** (para todos). E sobre una activada **viaja** a la siguiente
+  activada del piso (en orden; el cartel dice `[E] Viajar a la piedra
+  2/3`). **Solo viaja quien la usa** (decisión simple: no hay votación; en
+  co-op cada uno va y vuelve; el host lo pone al lado de la piedra de
+  destino, época +1). Evento `PoiUsedEvent(..., toPoi)`.
+- **Viento del Eco**: santuario reusable. E → todo el grupo camina un
+  **+40%** (`kWindSpeed = 1.4`) por **60 s** (`MissionRun.windUntil`, reloj
+  de la sala). Lo aplica el cliente al moverse
+  (`ExplorationRules.speedMult` → `WorldRules.stepPlayer(speedMult:)`); el
+  host ya confía en la posición. Usarlo de nuevo renueva los 60 s. HUD:
+  `» Viento del Eco 42 s`.
+- **Atajos**: § 11.3.
+- **Minimapa**: los PdI se marcan al **descubrirlos** (a menos de
+  `ExplorationRules.discoverRange = 80` px de un jugador vivo;
+  `MissionRun.poiSeen`), sin revelar el resto (§ 11.7).
+
+### 11.5 Bendiciones de santuario
+
+Una sola activa por misión (`MissionRun.blessing`): un santuario nuevo la
+reemplaza. Dura hasta el final de la misión. Todo el grupo.
+
+| `BlessingKind` | Nombre | Efecto |
+|---|---|---|
+| `fuerza` | Bendición de Fuerza | +10% ATQ y +10% MAG en batalla |
+| `vigor` | Bendición de Vigor | cura vida y maná del grupo al activarla; +3% de vida por turno en batalla y regeneración ×3 en el campo |
+| `fortuna` | Bendición de Fortuna | +0.5 al bonus de rareza del loot y 30% de una tirada extra por fuente |
+| `reloj` | Bendición del Reloj | +25% carga de ULT y +5% crítico en batalla |
+
+- En batalla, implícito extra del arma equipada
+  (`ExplorationRules.blessedBuild`, desde `SessionEngine.partyMember(p,
+  blessing:)`): sale en el desglose y no toca el motor de combate.
+- El tipo es parte del mapa (`MapPoi.variant`): el cartel
+  `[E] Santuario: Bendición de Fuerza (+10% ATQ y MAG)` lo dice antes.
+- HUD: `♦ Bendición de Fuerza` en la caja de objetivos.
+
+### 11.6 Élites guardianes
+
+- La élite opcional de cada piso (§ 6.7) **custodia un tesoro**: los
+  cofres del vault de su marca `e` quedan con `guard` = su id y pasan a
+  **dorados**. Si ningún cofre quedó custodiado, se agrega un cofre
+  dorado a 1–2 tiles de su lugar.
+- Un cofre custodiado no se abre mientras su guardián vive (se dibuja con
+  candado y sin destello); al vencerlo se abre tocándolo.
+
+### 11.7 Minimapa y HUD
+
+- El minimapa sigue mostrando el piso entero, pero los PdI **no** se ven
+  hasta descubrirlos: `K`/`k`/`J` se pintan como muro y los objetos como
+  suelo. Descubiertos (un punto): sala secreta violeta (gris abierta),
+  santuario turquesa (gris usado), piedra gris (dorada activada), viento
+  celeste, atajo naranja (gris abierto), brasero beige (naranja
+  encendido), reliquia ámbar. Cofres dorados: punto más grande; el de
+  una sala secreta, recién al abrirla.
+- Caja de objetivos (debajo de lo de siempre): resumen del piso
+  `Cofres 2/4 · Secretos 0/1` (cofres abiertos / cofres del piso fuera de
+  salas secretas; salas abiertas / salas del piso; sin salas, solo
+  `Cofres a/b`), la bendición, el Viento y las misiones opcionales
+  (§ 11.8). `ExplorationRules.floorSummary`.
+
+### 11.8 Misiones opcionales de piso
+
+1 por piso, 2 desde área 1000 (`kSecondQuestArea`). Las elige el
+generador del piso (sin repetir) entre las que el piso permite; su
+premio principal también sale de la semilla. Progreso **compartido**
+(se calcula del estado de la misión: `ExplorationRules.questProgress`);
+al cumplirse, **cada jugador** recibe su propio premio.
+
+| `QuestKind` | Texto (HUD) | Meta | Se puede si… |
+|---|---|---|---|
+| `braseros` | Encendé los braseros | 3 braseros (E) a ≥ 10 tiles entre sí | entran los 3 |
+| `reliquia` | Encontrá la reliquia perdida | tocar la reliquia (en el 20% de tiles más lejanos del spawn) | siempre |
+| `guardian` | Derrotá al guardián antes de bajar | vencer a la élite del piso; **falla** si el grupo baja con ella viva | no es el último piso |
+| `limpieza` | Derrotá a todos los grupos del piso | todos los grupos normales del piso | siempre |
+| `secreto` | Abrí la sala secreta | abrir las salas del piso | hay sala |
+| `cofres` | Abrí todos los cofres del piso | todos los cofres del piso (secretos incluidos) | siempre |
+
+- HUD: `• Opcional: Encendé los braseros 1/3`; cumplida en verde con `>`;
+  fallida en gris con `x`. Al cumplirse: `QuestDoneEvent(questId, floor,
+  kind)` → fanfarria (el jingle de subir de nivel) y cartel
+  `¡Misión opcional cumplida!` con el texto; en el chat
+  `¡Misión opcional cumplida: …!` y lo que recibió cada uno.
+- **Premio** (loot.md § 23.3), por jugador: el principal (`QuestReward`:
+  arma 55% / Eco 25% / bendición 20%; el Eco cae a arma bajo nivel 45) +
+  materiales + créditos. Siempre al inventario (fuente `mission`).
+- Las descripciones son funcionales (sin historia).
+
+### 11.9 Estado en la sesión y red (host autoritativo)
+
+- `MissionRun`: `poiUsed` (`Set<int>`, JSON `pu`), `poiSeen` (`ps`),
+  `questsDone` (`qd`), `questsFailed` (`qf`), `blessing` (`bl`),
+  `windUntil` (`wind`). Aditivos: sin las claves = nada usado.
+- `MissionItem`: `tier` (`ChestTier`, `tr`, se omite `madera`), `guard`
+  (`gd`), `secret` (id del PdI de su sala, `sc`).
+- Acción `InteractPoiAction(poiId)` → `{"t":"poi","id":101}`.
+- Eventos `PoiUsedEvent(playerId, poiId, kind, blessing?, toPoi?)` →
+  `{"t":"poi","id":"p1","poi":101,"k":"shrine","bl":"fuerza","to":3}` y
+  `QuestDoneEvent` → `{"t":"quest","q":150,"f":1,"k":"braseros"}`.
+  `ChestOpenedEvent` suma `tr`.
+- `kProtocolVersion` = **7** (`wire.dart`).
+- Sonidos (reusa los que hay): fanfarria `levelUp` al cumplir una misión;
+  romper pared / atajo `boss.crystal`, santuario `heal.sparkle`, viento
+  `proc.wind`, piedra `asc.reveal`, brasero `proc.flare`, reliquia
+  `loot.pickup`.
+- Pendiente (no v0.6): lore del dueño (inscripciones); atajos de un solo
+  sentido "de caída" entre pisos; exponer estos números en el admin de
+  balance (hoy viven en el catálogo).
