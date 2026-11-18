@@ -97,10 +97,16 @@ enlaces. Codificación de mensajes: `lib/netcode/protocol/wire.dart`.
 ### Apretón de manos
 
 ```
-cliente → host  {"t":"hello","v":1,"p":<PlayerProfile>}
+cliente → host  {"t":"hello","v":1,"p":<PlayerProfile>,"b":"base"|"b1-xxxxxxxx"}
 host → cliente  {"t":"welcome","v":1,"id":"p1","code":"ABCDE"}
-            o   {"t":"reject","why":"full"|"version"}  (y cierra)
+            o   {"t":"reject","why":"full"|"version"|"balance"}  (y cierra)
 ```
+
+- `b` (opcional, sin cambiar `kProtocolVersion`): hash del parche de
+  balance (`GameCatalog.balanceHash`, docs/specs/balance_admin.md § 4).
+  Distinto al del host → `reject balance`; un cliente sin `b` (anterior
+  a v0.5.x con balance por archivo) cuenta como `"base"` y, si el host
+  tiene parche, recibe `reject version`.
 
 - `p` es `PlayerProfile.toJson()` (las claves del prototipo: `name`,
   `cls`, `lvl`, `xp`, `cr`, `st`, `pts`, `inv`, `eq`, `pot`, `eter`,

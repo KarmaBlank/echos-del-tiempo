@@ -1,0 +1,610 @@
+import '../models/class_def.dart';
+import '../models/enemy_def.dart';
+import '../models/item.dart';
+import '../models/passive_mechanic.dart';
+import '../models/passive_tree.dart';
+import '../models/skill.dart';
+import '../models/weapon.dart';
+import 'balance_fields.dart';
+
+/// Tipos de entidad que un parche de balance puede tocar
+/// (docs/specs/balance_admin.md § 1.1). [jsonKey] es la clave en
+/// `overrides`.
+enum BalanceKind {
+  skill('skill', 'Habilidades', 'Habilidad', disable: true),
+  ultimate('ultimate', 'ULT', 'ULT'),
+  dual('dual', 'Duales', 'Dual'),
+  weapon('weapon', 'Armas', 'Arma'),
+  enemy('enemy', 'Enemigos', 'Enemigo'),
+  enemyUlt('enemyUlt', 'ULT enemigas', 'ULT enemiga'),
+  classDef('class', 'Clases', 'Clase'),
+  affix('affix', 'Afijos', 'Afijo', disable: true),
+  passiveNode('passiveNode', 'Nodos del árbol', 'Nodo', disable: true),
+  mechanic('mechanic', 'Mecánicas', 'Mecánica', disable: true);
+
+  const BalanceKind(this.jsonKey, this.plural, this.singular,
+      {this.disable = false});
+
+  final String jsonKey;
+  final String plural;
+  final String singular;
+
+  /// Admite `disabled` (§ 1.2).
+  final bool disable;
+
+  static BalanceKind? byJsonKey(String key) {
+    for (final k in values) {
+      if (k.jsonKey == key) return k;
+    }
+    return null;
+  }
+}
+
+/// Lector tipado de un mapa de campos ya validado (valores base +
+/// overrides).
+class BalanceFieldReader {
+  const BalanceFieldReader(this.values);
+  final Map<String, Object?> values;
+
+  int i(String k) => (values[k] as num).toInt();
+  double d(String k) => (values[k] as num).toDouble();
+  bool b(String k) => values[k] == true;
+  bool get disabled => values['disabled'] == true;
+}
+
+/// Cómo leer y reconstruir una entidad de un tipo. No es genérica a
+/// propósito: el admin trata todas las entidades igual (`Object`).
+class EntityCodec {
+  const EntityCodec({
+    required this.kind,
+    required this.fields,
+    required this.read,
+    required this.write,
+    required this.nameOf,
+  });
+
+  final BalanceKind kind;
+  final List<BalanceField> fields;
+
+  /// Valores actuales de la entidad, codificados (todos los [fields]).
+  final Map<String, Object?> Function(Object e) read;
+
+  /// La entidad con los valores de [f] (los no editables, de [base]).
+  final Object Function(Object base, BalanceFieldReader f) write;
+  final String Function(Object e) nameOf;
+
+  BalanceField? field(String key) {
+    for (final f in fields) {
+      if (f.key == key) return f;
+    }
+    return null;
+  }
+}
+
+const _int = BalanceFieldType.integer;
+const _dec = BalanceFieldType.decimal;
+const _frac = BalanceFieldType.fraction;
+const _flag = BalanceFieldType.flag;
+
+const _disabled = BalanceField('disabled', 'Desactivada', _flag);
+
+// ---------------------------------------------------------------------
+// Habilidades y ULT
+// ---------------------------------------------------------------------
+
+const _skillCombat = <BalanceField>[
+  BalanceField('power', 'Poder', _dec, max: 20, step: 0.05),
+  BalanceField('hits', 'Golpes', _int, min: 1, max: 10),
+  BalanceField('critBonus', 'Crítico extra', _frac, max: 1, step: 0.01),
+  BalanceField('delay', 'Retraso al objetivo', _dec, max: 3, step: 0.05),
+  BalanceField('allTargets', 'A todos los enemigos', _flag),
+  BalanceField('status', 'Estado', BalanceFieldType.status, nullable: true),
+  BalanceField('extraStatuses', 'Estados extra', BalanceFieldType.statusList),
+  BalanceField('debuffs', 'Debuffs', BalanceFieldType.buffList),
+  BalanceField('partyBuffs', 'Buffs de grupo', BalanceFieldType.buffList),
+  BalanceField('selfBuff', 'Buff propio', BalanceFieldType.buff, nullable: true),
+  BalanceField('cleanse', 'Limpia estados', _int, max: 10),
+  BalanceField('amount', 'Cantidad (turnos / DEF)', _int, max: 30),
+  BalanceField('hpCost', 'Costo de vida', _frac, max: 1, step: 0.01),
+  BalanceField('lifeSteal', 'Robo de vida', _frac, max: 2, step: 0.01),
+  BalanceField('detonate', 'Detonar (por stack)', _dec, max: 5, step: 0.05),
+  BalanceField('execute', 'Remate bajo', _frac, max: 1, step: 0.01),
+  BalanceField('trap', 'Trampa (× ATQ)', _dec, max: 10, step: 0.05),
+  BalanceField('partyShield', 'Escudo de grupo', _frac, max: 2, step: 0.01),
+  BalanceField('partyShieldTurns', 'Turnos del escudo de grupo', _int, max: 10),
+  BalanceField('advanceAllies', 'Adelanta aliados', _frac, max: 1, step: 0.01),
+  BalanceField('selfTurn', 'Factor del próximo turno', _dec, max: 2, step: 0.05),
+  BalanceField('protect', 'Pone Protección', _flag),
+  BalanceField('revive', 'Revive con', _frac, max: 1, step: 0.01),
+  BalanceField('overheal', 'Sobrecura a escudo', _frac, max: 2, step: 0.01),
+  BalanceField('drainHeal', 'Drenaje al más herido', _frac, max: 2, step: 0.01),
+  BalanceField('allyShield', 'Escudo al más herido', _frac, max: 2, step: 0.01),
+  BalanceField('selfShield', 'Escudo propio', _frac, max: 2, step: 0.01),
+  BalanceField('shieldTurns', 'Turnos de escudo', _int, max: 10),
+  BalanceField('shieldReflect', 'Reflejo del escudo', _frac, max: 2, step: 0.01),
+  BalanceField('shieldBurst', 'Explosión del escudo (× ATQ)', _dec, max: 10, step: 0.05),
+  BalanceField('shieldGrow', 'Crecimiento del escudo', _frac, max: 2, step: 0.01),
+  BalanceField('pierce', 'Atraviesa', _frac, max: 2, step: 0.01),
+  BalanceField('bounces', 'Rebotes', _int, max: 10),
+  BalanceField('charge', 'Disparo cargado (× ATQ)', _dec, max: 20, step: 0.05),
+  BalanceField('breakBonus', 'Quiebre extra', _frac, max: 5, step: 0.05),
+  BalanceField('ultDrain', 'Quita carga de ULT', _dec, max: 100, step: 1),
+];
+
+const _mpField = BalanceField('mp', 'MP', _int, max: 99);
+
+Map<String, Object?> _readSkill(Object o) {
+  final s = o as SkillDef;
+  return {
+    'mp': s.mp,
+    'power': s.power,
+    'hits': s.hits,
+    'critBonus': s.critBonus,
+    'delay': s.delay,
+    'allTargets': s.allTargets,
+    'status': encodeStatus(s.status),
+    'extraStatuses': encodeStatusList(s.extraStatuses),
+    'debuffs': encodeBuffList(s.debuffs),
+    'partyBuffs': encodeBuffList(s.partyBuffs),
+    'selfBuff': encodeBuff(s.selfBuff),
+    'cleanse': s.cleanse,
+    'amount': s.amount,
+    'hpCost': s.hpCost,
+    'lifeSteal': s.lifeSteal,
+    'detonate': s.detonate,
+    'execute': s.execute,
+    'trap': s.trap,
+    'partyShield': s.partyShield,
+    'partyShieldTurns': s.partyShieldTurns,
+    'advanceAllies': s.advanceAllies,
+    'selfTurn': s.selfTurn,
+    'protect': s.protect,
+    'revive': s.revive,
+    'overheal': s.overheal,
+    'drainHeal': s.drainHeal,
+    'allyShield': s.allyShield,
+    'selfShield': s.selfShield,
+    'shieldTurns': s.shieldTurns,
+    'shieldReflect': s.shieldReflect,
+    'shieldBurst': s.shieldBurst,
+    'shieldGrow': s.shieldGrow,
+    'pierce': s.pierce,
+    'bounces': s.bounces,
+    'charge': s.charge,
+    'breakBonus': s.breakBonus,
+    'ultDrain': s.ultDrain,
+    'disabled': false,
+  };
+}
+
+Object _writeSkill(Object o, BalanceFieldReader f) {
+  final b = o as SkillDef;
+  return SkillDef(
+    id: b.id,
+    name: b.name,
+    kind: b.kind,
+    mp: f.i('mp'),
+    power: f.d('power'),
+    allTargets: f.b('allTargets'),
+    delay: f.d('delay'),
+    status: decodeStatus(f.values['status']),
+    critBonus: f.d('critBonus'),
+    cleanse: f.i('cleanse'),
+    amount: f.i('amount'),
+    hpCost: f.d('hpCost'),
+    lifeSteal: f.d('lifeSteal'),
+    extraStatuses: decodeStatusList(f.values['extraStatuses']),
+    detonate: f.d('detonate'),
+    execute: f.d('execute'),
+    trap: f.d('trap'),
+    partyBuffs: decodeBuffList(f.values['partyBuffs']),
+    partyShield: f.d('partyShield'),
+    partyShieldTurns: f.i('partyShieldTurns'),
+    advanceAllies: f.d('advanceAllies'),
+    selfBuff: decodeBuff(f.values['selfBuff']),
+    selfTurn: f.d('selfTurn'),
+    protect: f.b('protect'),
+    lowestAlly: b.lowestAlly,
+    revive: f.d('revive'),
+    overheal: f.d('overheal'),
+    drainHeal: f.d('drainHeal'),
+    allyShield: f.d('allyShield'),
+    selfShield: f.d('selfShield'),
+    shieldTurns: f.i('shieldTurns'),
+    shieldReflect: f.d('shieldReflect'),
+    shieldBurst: f.d('shieldBurst'),
+    shieldGrow: f.d('shieldGrow'),
+    pierce: f.d('pierce'),
+    bounces: f.i('bounces'),
+    hits: f.i('hits'),
+    charge: f.d('charge'),
+    debuffs: decodeBuffList(f.values['debuffs']),
+    breakBonus: f.d('breakBonus'),
+    ultDrain: f.d('ultDrain'),
+  );
+}
+
+String _skillName(Object o) => (o as SkillDef).name;
+
+const skillCodec = EntityCodec(
+  kind: BalanceKind.skill,
+  fields: [_mpField, ..._skillCombat, _disabled],
+  read: _readSkill,
+  write: _writeSkill,
+  nameOf: _skillName,
+);
+
+final ultimateCodec = EntityCodec(
+  kind: BalanceKind.ultimate,
+  fields: _skillCombat,
+  read: (o) => _readSkill(o)..remove('disabled'),
+  write: _writeSkill,
+  nameOf: _skillName,
+);
+
+// ---------------------------------------------------------------------
+// Duales
+// ---------------------------------------------------------------------
+
+final dualCodec = EntityCodec(
+  kind: BalanceKind.dual,
+  fields: const [
+    BalanceField('power', 'Poder', _dec, max: 20, step: 0.05),
+    BalanceField('status', 'Estado', BalanceFieldType.status),
+  ],
+  read: (o) {
+    final d = o as DualDef;
+    return {'power': d.power, 'status': encodeStatus(d.status)};
+  },
+  write: (o, f) {
+    final d = o as DualDef;
+    return DualDef(d.name, decodeStatus(f.values['status'])!, f.d('power'));
+  },
+  nameOf: (o) => (o as DualDef).name,
+);
+
+// ---------------------------------------------------------------------
+// Armas
+// ---------------------------------------------------------------------
+
+final weaponCodec = EntityCodec(
+  kind: BalanceKind.weapon,
+  fields: const [
+    BalanceField('level', 'Nivel requerido', _int, min: 1, max: 60),
+    BalanceField('tier', 'Tier', _int, max: 10),
+    BalanceField('price', 'Precio', _int, max: 1000000, step: 50),
+    BalanceField('weight', 'Peso (−velocidad)', _dec, max: 10, step: 0.1),
+    BalanceField('shieldDefense', 'DEF del escudo', _int, max: 200),
+    BalanceField('requirements', 'Requisitos', BalanceFieldType.attributes),
+    BalanceField('atk', 'Fórmula de ATQ', BalanceFieldType.formula),
+    BalanceField('mag', 'Fórmula de MAG', BalanceFieldType.formula, nullable: true),
+    BalanceField('skillIds', 'Habilidades', BalanceFieldType.idList),
+  ],
+  read: (o) {
+    final w = o as WeaponDef;
+    return {
+      'level': w.level,
+      'tier': w.tier,
+      'price': w.price,
+      'weight': w.weight,
+      'shieldDefense': w.shieldDefense,
+      'requirements': encodeAttributes(w.requirements),
+      'atk': encodeFormula(w.atk),
+      'mag': encodeFormula(w.mag),
+      'skillIds': List<String>.from(w.skillIds),
+    };
+  },
+  write: (o, f) {
+    final w = o as WeaponDef;
+    return WeaponDef(
+      id: w.id,
+      name: w.name,
+      classId: w.classId,
+      type: w.type,
+      tier: f.i('tier'),
+      level: f.i('level'),
+      price: f.i('price'),
+      requirements: decodeAttributes(f.values['requirements']),
+      atk: decodeFormula(f.values['atk'])!,
+      mag: decodeFormula(f.values['mag']),
+      skillIds: List<String>.unmodifiable(f.values['skillIds'] as List),
+      weight: f.d('weight'),
+      shieldDefense: f.i('shieldDefense'),
+      implicit: w.implicit,
+    );
+  },
+  nameOf: (o) => (o as WeaponDef).name,
+);
+
+/// [w] con otras habilidades (habilidades desactivadas, § 1.2).
+WeaponDef weaponWithSkills(WeaponDef w, List<String> skillIds) => WeaponDef(
+      id: w.id,
+      name: w.name,
+      classId: w.classId,
+      type: w.type,
+      tier: w.tier,
+      level: w.level,
+      price: w.price,
+      requirements: w.requirements,
+      atk: w.atk,
+      mag: w.mag,
+      skillIds: List.unmodifiable(skillIds),
+      weight: w.weight,
+      shieldDefense: w.shieldDefense,
+      implicit: w.implicit,
+    );
+
+// ---------------------------------------------------------------------
+// Enemigos y ULT enemigas
+// ---------------------------------------------------------------------
+
+final enemyCodec = EntityCodec(
+  kind: BalanceKind.enemy,
+  fields: const [
+    BalanceField('hp', 'Vida', _int, min: 1, max: 100000, step: 5),
+    BalanceField('attack', 'ATQ', _int, max: 5000),
+    BalanceField('speed', 'Velocidad', _dec, min: 0.5, max: 50, step: 0.5),
+    BalanceField('xp', 'XP', _int, max: 100000, step: 5),
+    BalanceField('credits', 'Créditos', _int, max: 100000, step: 5),
+    BalanceField('breakMax', 'Umbral de quiebre', _int, max: 100000, step: 5),
+    BalanceField('armor', 'Armadura', _frac, max: 0.9, step: 0.01),
+    BalanceField('evasion', 'Evasión', _frac, max: 0.9, step: 0.01),
+    BalanceField('delayHit', 'Retraso por golpe', _dec, max: 2, step: 0.05),
+    BalanceField('markHit', 'Marca por golpe', _frac, max: 2, step: 0.01),
+    BalanceField('pierce', 'Perforante', _flag),
+    BalanceField('areaAttack', 'Ataque en área', _flag),
+    BalanceField('inflicts', 'Estado que aplica', BalanceFieldType.status, nullable: true),
+    BalanceField('inflictCycle', 'Estados en ciclo', BalanceFieldType.statusList),
+  ],
+  read: (o) {
+    final e = o as EnemyDef;
+    return {
+      'hp': e.hp,
+      'attack': e.attack,
+      'speed': e.speed,
+      'xp': e.xp,
+      'credits': e.credits,
+      'breakMax': e.breakMax,
+      'armor': e.armor,
+      'evasion': e.evasion,
+      'delayHit': e.delayHit,
+      'markHit': e.markHit,
+      'pierce': e.pierce,
+      'areaAttack': e.areaAttack,
+      'inflicts': encodeStatus(e.inflicts),
+      'inflictCycle': encodeStatusList(e.inflictCycle),
+    };
+  },
+  write: (o, f) {
+    final e = o as EnemyDef;
+    return EnemyDef(
+      id: e.id,
+      name: e.name,
+      hp: f.i('hp'),
+      attack: f.i('attack'),
+      speed: f.d('speed'),
+      xp: f.i('xp'),
+      credits: f.i('credits'),
+      inflicts: decodeStatus(f.values['inflicts']),
+      pierce: f.b('pierce'),
+      boss: e.boss,
+      areaAttack: f.b('areaAttack'),
+      breakMax: f.i('breakMax'),
+      ultId: e.ultId,
+      title: e.title,
+      mechanicId: e.mechanicId,
+      legendaryId: e.legendaryId,
+      armor: f.d('armor'),
+      passive: e.passive,
+      feminine: e.feminine,
+      evasion: f.d('evasion'),
+      delayHit: f.d('delayHit'),
+      markHit: f.d('markHit'),
+      inflictCycle: decodeStatusList(f.values['inflictCycle']),
+    );
+  },
+  nameOf: (o) => (o as EnemyDef).name,
+);
+
+final enemyUltCodec = EntityCodec(
+  kind: BalanceKind.enemyUlt,
+  fields: const [
+    BalanceField('power', 'Poder (× ATQ)', _dec, max: 20, step: 0.05),
+    BalanceField('allTargets', 'A todo el grupo', _flag),
+    BalanceField('status', 'Estado', BalanceFieldType.status, nullable: true),
+    BalanceField('delayAll', 'Retraso al grupo', _dec, max: 3, step: 0.05),
+    BalanceField('wipeBuffs', 'Borra buffs', _flag),
+    BalanceField('guaranteedCrit', 'Crítico garantizado', _flag),
+    BalanceField('perAdd', 'Poder por invocación', _dec, max: 5, step: 0.05),
+    BalanceField('turns', 'Turnos', _int, max: 10),
+  ],
+  read: (o) {
+    final u = o as EnemyUltDef;
+    return {
+      'power': u.power,
+      'allTargets': u.allTargets,
+      'status': encodeStatus(u.status),
+      'delayAll': u.delayAll,
+      'wipeBuffs': u.wipeBuffs,
+      'guaranteedCrit': u.guaranteedCrit,
+      'perAdd': u.perAdd,
+      'turns': u.turns,
+    };
+  },
+  write: (o, f) {
+    final u = o as EnemyUltDef;
+    return EnemyUltDef(
+      id: u.id,
+      name: u.name,
+      power: f.d('power'),
+      allTargets: f.b('allTargets'),
+      status: decodeStatus(f.values['status']),
+      delayAll: f.d('delayAll'),
+      wipeBuffs: f.b('wipeBuffs'),
+      guaranteedCrit: f.b('guaranteedCrit'),
+      extra: u.extra,
+      perAdd: f.d('perAdd'),
+      turns: f.i('turns'),
+    );
+  },
+  nameOf: (o) => (o as EnemyUltDef).name,
+);
+
+// ---------------------------------------------------------------------
+// Clases
+// ---------------------------------------------------------------------
+
+final classCodec = EntityCodec(
+  kind: BalanceKind.classDef,
+  fields: const [
+    BalanceField('baseDefense', 'DEF base', _int, max: 100),
+    BalanceField('baseAttributes', 'Atributos base', BalanceFieldType.attributes),
+    BalanceField('stunOnAttackChance', 'Aturdir con ataque', _frac, max: 1, step: 0.01),
+    BalanceField('pierceWeakness', 'Debilidad a perforantes (×)', _dec, max: 5, step: 0.05),
+    BalanceField('statusWeakness', 'Stacks extra recibidos', _int, max: 5),
+  ],
+  read: (o) {
+    final c = o as ClassDef;
+    return {
+      'baseDefense': c.baseDefense,
+      'baseAttributes': encodeAttributes(c.baseAttributes),
+      'stunOnAttackChance': c.stunOnAttackChance,
+      'pierceWeakness': c.pierceWeakness,
+      'statusWeakness': c.statusWeakness,
+    };
+  },
+  write: (o, f) {
+    final c = o as ClassDef;
+    return ClassDef(
+      id: c.id,
+      name: c.name,
+      description: c.description,
+      allowedWeaponTypes: c.allowedWeaponTypes,
+      startWeaponId: c.startWeaponId,
+      baseDefense: f.i('baseDefense'),
+      kitSkillIds: c.kitSkillIds,
+      baseAttributes: decodeAttributes(f.values['baseAttributes']),
+      stunOnAttackChance: f.d('stunOnAttackChance'),
+      pierceWeakness: f.d('pierceWeakness'),
+      statusWeakness: f.i('statusWeakness'),
+    );
+  },
+  nameOf: (o) => (o as ClassDef).name,
+);
+
+// ---------------------------------------------------------------------
+// Afijos, nodos del árbol, mecánicas
+// ---------------------------------------------------------------------
+
+final affixCodec = EntityCodec(
+  kind: BalanceKind.affix,
+  fields: const [
+    BalanceField('weight', 'Peso de aparición', _int, max: 100000, step: 50),
+    BalanceField('tiers', 'Tiers', BalanceFieldType.tiers),
+    BalanceField('disabled', 'Desactivado', _flag),
+  ],
+  read: (o) {
+    final a = o as AffixDef;
+    return {'weight': a.weight, 'tiers': encodeTiers(a.tiers), 'disabled': false};
+  },
+  write: (o, f) {
+    final a = o as AffixDef;
+    return AffixDef(
+      id: a.id,
+      name: a.name,
+      slot: a.slot,
+      stat: a.stat,
+      tiers: List.unmodifiable(decodeTiers(f.values['tiers'])),
+      weight: f.disabled ? 0 : f.i('weight'),
+      types: a.types,
+    );
+  },
+  nameOf: (o) => (o as AffixDef).name,
+);
+
+final passiveNodeCodec = EntityCodec(
+  kind: BalanceKind.passiveNode,
+  fields: const [
+    BalanceField('effects', 'Efectos', BalanceFieldType.numberMap),
+    BalanceField('disabled', 'Desactivado', _flag),
+  ],
+  read: (o) {
+    final n = o as PassiveNode;
+    return {'effects': Map<String, Object?>.from(n.effects), 'disabled': false};
+  },
+  write: (o, f) {
+    final n = o as PassiveNode;
+    return PassiveNode(
+      id: n.id,
+      x: n.x,
+      y: n.y,
+      name: n.name,
+      effects: f.disabled
+          ? const {}
+          : Map.unmodifiable(decodeNumberMap(f.values['effects'])),
+      kind: n.kind,
+      links: n.links,
+      keystoneId: n.keystoneId,
+      pathId: n.pathId,
+      mechanicId: n.mechanicId,
+    );
+  },
+  nameOf: (o) => (o as PassiveNode).name,
+);
+
+final mechanicCodec = EntityCodec(
+  kind: BalanceKind.mechanic,
+  fields: const [
+    BalanceField('chance', 'Probabilidad', _frac, max: 1, step: 0.01),
+    BalanceField('threshold', 'Umbral de vida', _frac, max: 1, step: 0.01),
+    BalanceField('minStacks', 'Stacks mínimos', _int, min: 1, max: 20),
+    BalanceField('status', 'Estado (filtro)', BalanceFieldType.statusKind, nullable: true),
+    BalanceField('effects', 'Efectos', BalanceFieldType.procEffects),
+    BalanceField('description', 'Descripción', BalanceFieldType.text),
+    _disabled,
+  ],
+  read: (o) {
+    final m = o as PassiveMechanic;
+    return {
+      'chance': m.chance,
+      'threshold': m.threshold,
+      'minStacks': m.minStacks,
+      'status': m.status?.name,
+      'effects': encodeProcEffects(m.effects),
+      'description': m.description,
+      'disabled': false,
+    };
+  },
+  write: (o, f) {
+    final m = o as PassiveMechanic;
+    return PassiveMechanic(
+      id: m.id,
+      name: m.name,
+      trigger: m.trigger,
+      effects: f.disabled
+          ? const []
+          : List.unmodifiable(decodeProcEffects(f.values['effects'])),
+      description: f.values['description'] as String,
+      filter: m.filter,
+      chance: f.d('chance'),
+      status: decodeStatusKind(f.values['status']),
+      minStacks: f.i('minStacks'),
+      threshold: f.d('threshold'),
+    );
+  },
+  nameOf: (o) => (o as PassiveMechanic).name,
+);
+
+/// El codec de cada tipo.
+EntityCodec codecOf(BalanceKind k) => switch (k) {
+      BalanceKind.skill => skillCodec,
+      BalanceKind.ultimate => ultimateCodec,
+      BalanceKind.dual => dualCodec,
+      BalanceKind.weapon => weaponCodec,
+      BalanceKind.enemy => enemyCodec,
+      BalanceKind.enemyUlt => enemyUltCodec,
+      BalanceKind.classDef => classCodec,
+      BalanceKind.affix => affixCodec,
+      BalanceKind.passiveNode => passiveNodeCodec,
+      BalanceKind.mechanic => mechanicCodec,
+    };

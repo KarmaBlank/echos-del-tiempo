@@ -49,6 +49,8 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sprites/sprite_manifest.yaml
+    # Parche de balance (docs/specs/balance_admin.md).
+    - assets/balance/balance.json
     # Los directorios de assets NO son recursivos: cada carpeta de
     # sprites va listada (docs/specs/sprites.md).
     - assets/sprites/characters/guerrero/
