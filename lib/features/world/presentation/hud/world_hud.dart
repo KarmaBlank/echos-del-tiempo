@@ -16,6 +16,7 @@ import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import '../../../missions/presentation/vote_panel.dart';
+import '../../../settings/presentation/settings_menu.dart';
 import '../map/loot_painter.dart';
 import '../map/map_game.dart';
 import 'chat_box.dart';
@@ -38,6 +39,7 @@ class WorldHud extends StatelessWidget {
     required this.view,
     required this.controller,
     this.onExit,
+    this.onMenu,
     this.chatFocus,
     this.onChatDone,
   });
@@ -47,6 +49,9 @@ class WorldHud extends StatelessWidget {
 
   /// Volver al título (solo en el lobby).
   final VoidCallback? onExit;
+
+  /// Abre el menú de pausa (`≡ MENÚ [ESC]`); sin él no hay botón.
+  final VoidCallback? onMenu;
 
   /// Foco del campo de chat (sin él no se muestra el campo).
   final FocusNode? chatFocus;
@@ -89,16 +94,26 @@ class WorldHud extends StatelessWidget {
                 ),
               ),
             ),
-            if (s.mode == SessionMode.lobby && onExit != null)
-              Positioned(
-                top: _gap,
-                left: _gap,
-                child: ElevatedButton(
-                  style: RetroTheme.compactButton(),
-                  onPressed: onExit,
-                  child: const Text('< TITULO'),
-                ),
+            // `< TITULO` (solo en el lobby) y `≡ MENÚ` (siempre): la pausa
+            // con sonido, pantalla, juego, controles y salidas.
+            Positioned(
+              top: _gap,
+              left: _gap,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (s.mode == SessionMode.lobby && onExit != null) ...[
+                    ElevatedButton(
+                      style: RetroTheme.compactButton(),
+                      onPressed: onExit,
+                      child: const Text('< TITULO'),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  if (onMenu != null) PauseMenuButton(onPressed: onMenu!),
+                ],
               ),
+            ),
             // `Sala: CODIGO [Copiar]` del prototipo (HTML línea 87).
             if (view.roomCode case final code?)
               Positioned(

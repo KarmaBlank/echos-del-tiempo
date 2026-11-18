@@ -26,6 +26,8 @@ class EventJson {
             'from': e.from,
             'txt': e.text,
           },
+        PausedEvent() => {'t': 'paused', 'id': e.playerId, 'name': e.name},
+        ResumedEvent() => {'t': 'resumed', 'id': e.playerId, 'name': e.name},
         PlayerJoinedEvent() => {'t': 'joined', 'id': e.playerId},
         PlayerLeftEvent() => {'t': 'left', 'id': e.playerId},
         MissionStartedEvent() => {
@@ -113,6 +115,10 @@ class EventJson {
         return SystemMessageEvent(j.str('txt'));
       case 'chat':
         return ChatMessageEvent(j.str('id'), j.str('from'), j.str('txt'));
+      case 'paused':
+        return PausedEvent(j.str('id'), j.str('name'));
+      case 'resumed':
+        return ResumedEvent(j.str('id'), j.str('name'));
       case 'joined':
         return PlayerJoinedEvent(j.str('id'));
       case 'left':

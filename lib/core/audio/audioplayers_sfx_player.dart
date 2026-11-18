@@ -33,7 +33,7 @@ class AudioplayersSfxPlayer implements SfxPlayer {
       }();
 
   @override
-  Future<void> play(Uint8List wav) async {
+  Future<void> play(Uint8List wav, {double volume = 1}) async {
     final path = await _fileFor(wav);
     // Primero uno libre (así un efecto largo, como la ULT, no se corta).
     var i = _next;
@@ -47,7 +47,7 @@ class AudioplayersSfxPlayer implements SfxPlayer {
     _next = (i + 1) % voices;
     final player = _players[i];
     await player.stop();
-    await player.play(DeviceFileSource(path));
+    await player.play(DeviceFileSource(path), volume: volume);
   }
 
   Future<void> dispose() async {

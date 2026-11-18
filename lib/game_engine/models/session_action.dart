@@ -25,6 +25,13 @@ class MoveAction extends SessionAction {
       {required this.epoch, this.dir = 1, this.moving = false});
 }
 
+/// Pausa de grupo (docs/specs/settings.md § "Pausa"): cualquier jugador
+/// pausa ([paused] `true`) o reanuda (`false`) la sala entera.
+class PauseAction extends SessionAction {
+  final bool paused;
+  const PauseAction(this.paused);
+}
+
 /// `propose`.
 class ProposeMissionAction extends SessionAction {
   final String missionId;

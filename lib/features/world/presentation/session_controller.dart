@@ -327,14 +327,40 @@ class SessionController extends StateNotifier<SessionView?> {
     final me = s?.players[localId];
     if (s == null || me == null) return;
     local.sync(me);
-    // Escribiendo en el chat las teclas son texto, no movimiento.
-    if (typing) ix = iy = 0;
+    // Escribiendo en el chat las teclas son texto, no movimiento; con el
+    // menú de pausa abierto tampoco se camina.
+    if (typing || menuOpen || s.paused) ix = iy = 0;
     local.step(engine.mapFor(s), ix, iy, dt,
         canMove: _canMove(s, me), gateOpen: s.gateOpen);
   }
 
   /// El campo de chat tiene el foco: no hay movimiento ni atajos.
   bool typing = false;
+
+  /// El menú de pausa está abierto: el jugador local no se mueve. Con
+  /// red el mundo sigue salvo que alguien pause al grupo
+  /// ([pauseGroup]). Ver docs/specs/settings.md § "Pausa".
+  bool menuOpen = false;
+
+  /// La sala está pausada (pausa de grupo; jugando solo, la del menú):
+  /// el host no avanza nada.
+  bool get paused => _s?.paused ?? false;
+
+  /// Pausa ([on]) o reanuda la sala entera (`PauseAction`). Cualquier
+  /// jugador puede hacer las dos cosas.
+  bool pauseGroup(bool on) => _apply(PauseAction(on));
+
+  /// Guarda el perfil ya (antes de cerrar la aplicación).
+  Future<void> saveNow() async {
+    final p = _s?.players[localId]?.profile;
+    if (p == null) return;
+    _lastSaved = p;
+    try {
+      await store.save(p);
+    } catch (_) {
+      // Sin disco: nada que hacer.
+    }
+  }
 
   bool _canMove(GameSession s, SessionPlayer me) =>
       (s.mode == SessionMode.lobby || s.mode == SessionMode.field) &&
@@ -665,6 +691,11 @@ class SessionController extends StateNotifier<SessionView?> {
           _addChat(ChatLine.system(text));
         case ChatMessageEvent(:final from, :final text):
           _addChat(ChatLine(from, text));
+        // Pausa de grupo: aviso en el chat (jugando solo no hace falta).
+        case PausedEvent(:final name) when net != null:
+          _addChat(ChatLine.system('$name pausó el juego'));
+        case ResumedEvent(:final name) when net != null:
+          _addChat(ChatLine.system('$name reanudó el juego'));
         case BattleStepEvent(:final events):
           (stepBattleEvents ??= []).addAll(events);
         case BattleStartedEvent():

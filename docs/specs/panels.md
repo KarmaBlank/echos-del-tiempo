@@ -125,6 +125,13 @@ Una línea "qué hace" de la pestaña o sección   (dim)
   anterior), `Enter` / `Espacio` activan el botón o la fila con foco.
   Con un campo de texto enfocado el panel no toca las teclas.
 
+### Menú de pausa
+
+No es un `WorldPanel`: es una capa aparte encima de todo (también de la
+batalla) que se abre con `Esc` sin panel ni campo de texto activos o con
+`≡ MENU [ESC]`. `Esc` con un panel abierto sigue cerrando el panel.
+Contenido, pausa de grupo y ajustes: docs/specs/settings.md.
+
 ## Mostrador (`board`, 1271-1276)
 
 Título `MOSTRADOR DE MISIONES` [?]; línea "qué hace": `Propón una

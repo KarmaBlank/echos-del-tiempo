@@ -212,6 +212,16 @@ caracteres (`ChatAction.maxLength`). No cambia el estado: emite
 `ChatMessageEvent(id, nombre, texto)` (el `broadcast` + `addChat` del
 prototipo). Test: `test/game_engine/session_chat_test.dart`.
 
+## Pausa de grupo (v0.2.1)
+
+`PauseAction(true/false)` de cualquier jugador pausa o reanuda la sala
+(`GameSession.pausedBy`, eventos `PausedEvent` / `ResumedEvent`). Con la
+sala pausada `tick` no avanza nada (reloj, `mission.elapsed`, gracia,
+campo, turnos, resultado) y `apply` solo acepta pausa, chat, filtro de
+loot y mover en el inventario. Si quien pausó se va, sigue pausada.
+Detalle: docs/specs/settings.md § 6. Test:
+`test/game_engine/session_pause_test.dart`.
+
 ## Red
 
 El transporte, el broadcast periódico del snapshot (66 ms) y la

@@ -234,5 +234,6 @@ class _RecordingPlayer implements SfxPlayer {
   final played = <Uint8List>[];
 
   @override
-  Future<void> play(Uint8List wav) async => played.add(wav);
+  Future<void> play(Uint8List wav, {double volume = 1}) async =>
+      played.add(wav);
 }

@@ -8,6 +8,7 @@ import '../../../game_engine/rules/session_engine.dart';
 import '../../combat/presentation/battle_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/scene/battle_layout.dart';
+import '../../combat/presentation/scene/battle_scene.dart';
 import 'map/actor_painter.dart';
 import 'map/tile_painter.dart';
 import 'session_view.dart';
@@ -25,6 +26,7 @@ class SessionBattleScreen extends StatefulWidget {
     required this.onCommand,
     this.sprites,
     this.battleKey,
+    this.sceneOptions = const SceneOptions(),
   });
 
   final SessionView view;
@@ -33,6 +35,9 @@ class SessionBattleScreen extends StatefulWidget {
 
   /// Para mandarle las teclas de batalla (1-9, Q/Tab, Esc).
   final GlobalKey<BattleViewState>? battleKey;
+
+  /// Ajustes del jugador para la escena (docs/specs/settings.md).
+  final SceneOptions sceneOptions;
 
   @override
   State<SessionBattleScreen> createState() => _SessionBattleScreenState();
@@ -71,6 +76,7 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
         for (final p in view.session.playerList) p.id: p.profile.points,
       },
       onCommand: widget.onCommand,
+      sceneOptions: widget.sceneOptions,
     );
   }
 

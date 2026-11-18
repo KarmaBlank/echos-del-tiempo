@@ -27,6 +27,20 @@ class ChatMessageEvent extends SessionEvent {
   const ChatMessageEvent(this.playerId, this.from, this.text);
 }
 
+/// [playerId] ([name]) pausó la sala (docs/specs/settings.md § "Pausa").
+class PausedEvent extends SessionEvent {
+  final String playerId;
+  final String name;
+  const PausedEvent(this.playerId, this.name);
+}
+
+/// [playerId] ([name]) reanudó la sala.
+class ResumedEvent extends SessionEvent {
+  final String playerId;
+  final String name;
+  const ResumedEvent(this.playerId, this.name);
+}
+
 class PlayerJoinedEvent extends SessionEvent {
   final String playerId;
   const PlayerJoinedEvent(this.playerId);

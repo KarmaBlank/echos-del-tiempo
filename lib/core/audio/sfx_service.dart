@@ -7,7 +7,8 @@ import 'wav_synth.dart';
 /// Reproduce un WAV en memoria. El juego registra
 /// `AudioplayersSfxPlayer` (docs/specs/audio.md § "Reproducción").
 abstract interface class SfxPlayer {
-  Future<void> play(Uint8List wav);
+  /// Toca [wav] a [volume] (0..1, el volumen de efectos de los ajustes).
+  Future<void> play(Uint8List wav, {double volume = 1});
 }
 
 /// No suena: para tests y plataformas sin audio.
@@ -15,7 +16,7 @@ class NoopSfxPlayer implements SfxPlayer {
   const NoopSfxPlayer();
 
   @override
-  Future<void> play(Uint8List wav) async {}
+  Future<void> play(Uint8List wav, {double volume = 1}) async {}
 }
 
 /// Un sonido programado: id del catálogo y retraso en ms desde que llega
@@ -40,6 +41,10 @@ class SfxService {
   /// Apagado: [play] no hace nada.
   bool muted = false;
 
+  /// Volumen de los efectos (0..1; 0 = no suena). Ver
+  /// docs/specs/music.md § 7.
+  double volume = 1;
+
   /// Los bytes WAV de [id] (sintetizados la primera vez). Un id que no
   /// está en el catálogo es un WAV vacío.
   Uint8List wav(String id) => _cache[id] ??=
@@ -47,7 +52,7 @@ class SfxService {
 
   /// Toca [id] ahora o dentro de [delayMs] milisegundos.
   void play(String id, {int delayMs = 0}) {
-    if (muted || !catalog.containsKey(id)) return;
+    if (muted || volume <= 0 || !catalog.containsKey(id)) return;
     if (delayMs <= 0) {
       _playNow(id);
     } else {
@@ -57,6 +62,6 @@ class SfxService {
     }
   }
 
-  void _playNow(String id) =>
-      unawaited(_player.play(wav(id)).catchError((Object _) {}));
+  void _playNow(String id) => unawaited(
+      _player.play(wav(id), volume: volume).catchError((Object _) {}));
 }

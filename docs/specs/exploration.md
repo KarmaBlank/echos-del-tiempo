@@ -200,10 +200,12 @@ panel de preparación en vez de cerrar.
 | Alt (mantener) | lobby o campo | muestra también el loot que el filtro oculta (etiqueta a media opacidad; se puede levantar con E) |
 | C | fuera de batalla | abre/cierra el panel de personaje |
 | Esc | con panel | cierra el panel (salvo las reglas de arriba) |
+| Esc | sin panel ni campo de texto (lobby, campo, subida de nivel, resultado) | abre / cierra el menú de pausa (docs/specs/settings.md § 6) |
 | Y / N | lobby, votación pendiente | `VoteMissionAction(true/false)` |
 | 1-9 | batalla, tu turno | el botón N del menú de comandos |
 | Q / Tab | batalla | `cycleTarget`: siguiente enemigo vivo |
 | Esc | batalla, submenú de poción | volver |
+| Esc | batalla, sin submenú | abre / cierra el menú de pausa |
 
 Zonas (`WorldRules`): mostrador `y < 4.6·TS` y `8.5·TS < x < 17.5·TS`;
 armería `y < 4.6·TS` y `18.5·TS < x < 24.5·TS`; sello a `< 26 px`
@@ -422,6 +424,12 @@ Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
   con `♥n` `#7bed9f` y `✦n` (`♦`) `#74b9ff`. El chat se achica para que
   la fila entre.
 - **Chat** (abajo a la izquierda): ver § "Chat".
+- **Menú** (arriba a la izquierda, junto a `< TITULO` en el lobby):
+  `≡ MENU [ESC]` abre la pausa / configuración (docs/specs/settings.md);
+  reemplaza al botón `SONIDO` de v0.2.0. En batalla el mismo botón va
+  arriba a la izquierda de la escena.
+- **Pausa de grupo**: con la sala pausada, el cartel centrado
+  `<nombre> pausó el juego` + `REANUDAR` (settings.md § 6 "Cartel").
 - **Aviso de interacción** (abajo al centro): `[E] Ver misiones`,
   `[E] Armería`, `[E] Activar sello`, `[E] Tienda y herrería`.
 - **Barrera abierta**: `La barrera se abrió > busca al JEFE (* en el

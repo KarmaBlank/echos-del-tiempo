@@ -45,6 +45,9 @@ class SessionJson {
         if (s.ground.isNotEmpty)
           'ground': [for (final g in s.ground) groundToJson(g)],
         if (s.groundSeq != 0) 'gseq': s.groundSeq,
+        // Opcional: solo con la sala pausada.
+        if (s.pausedBy != null)
+          'pause': {'id': s.pausedBy, 'name': s.pausedName ?? ''},
       };
 
   GameSession fromJson(Json j) {
@@ -69,6 +72,8 @@ class SessionJson {
           ? null
           : [for (final raw in j.list('ground')) groundFromJson(asJson(raw))],
       groundSeq: j.intOrNull('gseq') ?? 0,
+      pausedBy: j.objOrNull('pause')?.str('id'),
+      pausedName: j.objOrNull('pause')?.str('name'),
     );
   }
 

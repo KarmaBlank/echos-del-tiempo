@@ -60,6 +60,7 @@ abstract final class ActionJson {
         BuyWeaponAction() => {'t': 'buy', 'w': a.weaponId},
         BattleAction() => {'t': 'cmd', ...commandToJson(a.command)},
         ChatAction() => {'t': 'chat', 'txt': a.text},
+        PauseAction() => {'t': 'pause', 'on': a.paused},
         BackToLobbyAction() => {'t': 'back'},
         UseStairsAction() => {'t': 'stairs', 'down': a.down},
         CraftAction() => {
@@ -137,6 +138,8 @@ abstract final class ActionJson {
         return BattleAction(commandFromJson(j));
       case 'chat':
         return ChatAction(j.str('txt'));
+      case 'pause':
+        return PauseAction(j.boolean('on'));
       case 'back':
         return const BackToLobbyAction();
       case 'stairs':

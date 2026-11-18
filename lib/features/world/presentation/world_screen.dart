@@ -1,12 +1,19 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/retro_theme.dart';
+import '../../../core/settings/game_settings.dart';
+import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/game_session.dart';
+import '../../../game_engine/models/session_event.dart';
 import '../../combat/presentation/battle_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
+import '../../combat/presentation/scene/battle_scene.dart';
 import '../../inventory/domain/item_text.dart';
 import '../../inventory/presentation/armory_panel.dart';
 import '../../inventory/presentation/item_widgets.dart';
@@ -15,11 +22,14 @@ import '../../missions/domain/mission_text.dart';
 import '../../missions/presentation/mission_board_panel.dart';
 import '../../missions/presentation/prep_panel.dart';
 import '../../missions/presentation/results_panel.dart';
+import '../../settings/presentation/settings_menu.dart';
+import 'hud/pause_banner.dart';
 import 'hud/world_hud.dart';
 import 'map/map_game.dart';
 import 'panels/character_panel.dart';
 import 'session_battle_screen.dart';
 import 'session_controller.dart';
+import 'session_music.dart';
 import 'session_sfx.dart';
 import 'session_view.dart';
 
@@ -45,6 +55,69 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
   /// Ya se pidió volver al título por una desconexión.
   bool _leaving = false;
 
+  /// El menú de pausa está abierto (docs/specs/settings.md § "Pausa").
+  bool _pauseOpen = false;
+
+  /// Eventos de la sesión (para el aviso `X reanudó`).
+  StreamSubscription<SessionEvent>? _events;
+
+  /// Quién reanudó hace poco (aviso de unos segundos) y su temporizador.
+  String? _resumedBy;
+  Timer? _resumedTimer;
+
+  /// Abre la pausa: el jugador local deja de moverse. Jugando solo (sin
+  /// red) también pausa la partida de verdad; con red el mundo sigue
+  /// salvo que se use PAUSAR AL GRUPO.
+  void _openPause() {
+    if (_pauseOpen) return;
+    final c = ref.read(sessionControllerProvider.notifier);
+    if (c.mounted) {
+      c.menuOpen = true;
+      if (c.net == null && !c.paused) c.pauseGroup(true);
+    }
+    setState(() => _pauseOpen = true);
+  }
+
+  void _closePause() {
+    if (!_pauseOpen) return;
+    final c = ref.read(sessionControllerProvider.notifier);
+    if (c.mounted) {
+      c.menuOpen = false;
+      if (c.net == null && c.paused) c.pauseGroup(false);
+    }
+    setState(() => _pauseOpen = false);
+    _focus.requestFocus();
+  }
+
+  void _onSessionEvent(SessionEvent e) {
+    if (e is! ResumedEvent || !mounted) return;
+    final c = ref.read(sessionControllerProvider.notifier);
+    if (c.net == null) return; // solo: no hace falta avisar
+    _resumedTimer?.cancel();
+    _resumedTimer = Timer(PauseBanner.resumedFor, () {
+      if (mounted) setState(() => _resumedBy = null);
+    });
+    setState(() => _resumedBy = e.name);
+  }
+
+  /// SALIR AL TÍTULO: cierra la pantalla (el controlador guarda y deja
+  /// la sala al descartarse).
+  void _exitToTitle() {
+    _closePause();
+    Navigator.of(context).maybePop();
+  }
+
+  /// SALIR DEL JUEGO: guarda el perfil, deja la sala y cierra la app.
+  Future<void> _quitGame() async {
+    final c = ref.read(sessionControllerProvider.notifier);
+    final exit = ref.read(appExitProvider);
+    if (c.mounted) {
+      await c.saveNow();
+      await c.net?.disconnect();
+    }
+    await exit();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +130,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
 
   @override
   void dispose() {
+    unawaited(_events?.cancel());
+    _resumedTimer?.cancel();
     _chatFocus.dispose();
     _focus.dispose();
     super.dispose();
@@ -76,6 +151,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         focusCtx.findAncestorWidgetOfExactType<EditableText>() != null) {
       return KeyEventResult.ignored;
     }
+    // Con la pausa abierta, sus teclas las maneja el menú; nada llega al
+    // juego (ni atajos de batalla).
+    if (_pauseOpen) return KeyEventResult.ignored;
     if (event is KeyDownEvent &&
         (event.logicalKey == LogicalKeyboardKey.enter ||
             event.logicalKey == LogicalKeyboardKey.numpadEnter) &&
@@ -93,6 +171,22 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final view = ref.read(sessionControllerProvider);
     final controller = ref.read(sessionControllerProvider.notifier);
     if (view == null) return KeyEventResult.ignored;
+    // Esc: cierra el submenú de batalla o el panel abierto; si no hay
+    // nada que cerrar, abre la pausa (docs/specs/settings.md § "Pausa").
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      final battle = _battleKey.currentState;
+      final submenu = view.mode == SessionMode.battle &&
+          battle != null &&
+          battle.hasSubmenu;
+      if (submenu) {
+        battle.handleKey(event.logicalKey);
+      } else if (view.mode != SessionMode.battle && view.panel != null) {
+        controller.handleKey(event.logicalKey);
+      } else {
+        _openPause();
+      }
+      return KeyEventResult.handled;
+    }
     final bool used;
     if (view.mode == SessionMode.battle) {
       used = _battleKey.currentState?.handleKey(event.logicalKey) ?? false;
@@ -107,12 +201,20 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final view = ref.watch(sessionControllerProvider);
     final sprites = ref.watch(gameSpritesProvider);
     final controller = ref.read(sessionControllerProvider.notifier);
+    _events ??= controller.events.listen(_onSessionEvent);
     // Sonido: escucha los eventos de la sesión mientras la pantalla vive.
     ref.watch(sessionSfxProvider);
+    // Música: el bucle y los jingles según el estado (session_music.dart).
+    ref.watch(sessionMusicProvider);
 
     // Recupera el foco si un cambio de pantalla lo dejó sin dueño.
+    // No con un diálogo encima (p. ej. el panel de sonido).
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && !_focus.hasFocus) _focus.requestFocus();
+      if (mounted &&
+          !_focus.hasFocus &&
+          (ModalRoute.of(context)?.isCurrent ?? true)) {
+        _focus.requestFocus();
+      }
     });
 
     // Se perdió la sala (el host se fue): vuelve al título con el motivo.
@@ -152,6 +254,38 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             ),
           ),
           ..._overlays(view, controller, sprites.requireValue),
+          // Pausa de grupo: cartel para todos (o `X reanudó` un momento).
+          if (!_pauseOpen && (view.session.paused || _resumedBy != null))
+            Positioned.fill(
+              child: PauseBanner(
+                pausedBy: view.session.paused
+                    ? view.session.pausedName ?? '?'
+                    : null,
+                resumedBy: _resumedBy,
+                onResume: () => controller.pauseGroup(false),
+              ),
+            ),
+          if (_pauseOpen) ...[
+            // Tapa (y bloquea los clics a) lo de abajo; el mundo sigue
+            // dibujándose.
+            const Positioned.fill(
+              child: ColoredBox(color: Color(0x990B0E1A)),
+            ),
+            Positioned.fill(
+              child: SettingsMenu(
+                inGame: true,
+                multiplayer: controller.net != null,
+                groupPaused: view.session.paused,
+                onGroupPause: controller.net == null
+                    ? null
+                    : (on) => controller.pauseGroup(on),
+                inMission: view.session.mission != null,
+                onClose: _closePause,
+                onExitToTitle: _exitToTitle,
+                onQuitGame: _quitGame,
+              ),
+            ),
+          ],
         ],
       );
     }
@@ -175,6 +309,25 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               sprites: sprites,
               battleKey: _battleKey,
               onCommand: controller.battleCommand,
+              sceneOptions: _sceneOptions(ref.watch(gameSettingsProvider)),
+            ),
+          ),
+          // `≡ MENÚ`: la pausa también se abre con el mouse en batalla.
+          // Abajo a la izquierda de la escena, justo encima de la barra
+          // (arriba está la franja de turnos).
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, box) => Stack(
+                children: [
+                  Positioned(
+                    left: 8,
+                    bottom: math.min(BattleViewState.barHeight(box.maxHeight),
+                            box.maxHeight * 0.6) +
+                        8,
+                    child: PauseMenuButton(onPressed: _openPause),
+                  ),
+                ],
+              ),
             ),
           ),
         ];
@@ -224,6 +377,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               view: view,
               controller: controller,
               onExit: () => Navigator.of(context).maybePop(),
+              onMenu: _openPause,
               chatFocus: _chatFocus,
               onChatDone: _chatDone,
             ),
@@ -233,6 +387,14 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         ];
     }
   }
+
+  /// Lo que la escena de batalla toma de los ajustes del jugador.
+  static SceneOptions _sceneOptions(GameSettings s) => SceneOptions(
+        shake: s.screenShake,
+        flash: s.flashes.factor,
+        damageNumbers: s.damageNumbers,
+        speed: s.battleSpeed,
+      );
 
   /// `Zona 2 · Bosque Hondo · Piso 3/3` del resultado de una misión de
   /// zona (piso alcanzado; todos en una victoria).

@@ -7,6 +7,7 @@ import '../../../core/audio/sfx_catalog.dart';
 import '../../../core/audio/sfx_recipes.dart';
 import '../../../core/audio/sfx_service.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/data/skills_catalog.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
@@ -42,6 +43,10 @@ final sessionSfxProvider = Provider.autoDispose<SessionSfx>((ref) {
   // Mantiene vivo el registro de loot del HUD mientras la pantalla del
   // juego vive (también en batalla, cuando el HUD no está montado).
   ref.watch(lootFeedProvider);
+  // La velocidad de animación de batalla también adelanta sus sonidos
+  // (docs/specs/settings.md § "JUEGO").
+  ref.listen(gameSettingsProvider, (_, s) => sfx.animSpeed = s.battleSpeed,
+      fireImmediately: true);
   final sub = controller.events.listen(sfx.onEvent);
   final removeView = controller.addListener(sfx.onView);
   ref.onDispose(() {
@@ -124,6 +129,11 @@ class SessionSfx {
   String? _lastTurn;
   int? _lastTick;
 
+  /// Velocidad de las animaciones de batalla (ajuste del jugador): los
+  /// retrasos de los sonidos de un paso se dividen por ella para seguir
+  /// alineados con la escena.
+  double animSpeed = 1;
+
   /// Estado de la batalla de la última vista (armas, tipos de enemigo).
   /// Los eventos del controlador llegan después de la vista del mismo
   /// paso, así que es el estado DESPUÉS del paso, como en `battle_fx`.
@@ -133,8 +143,9 @@ class SessionSfx {
   void onEvent(SessionEvent e) {
     switch (e) {
       case BattleStepEvent(:final events):
+        final k = animSpeed > 0 ? animSpeed : 1;
         for (final c in battleSounds(events)) {
-          service.play(c.id, delayMs: c.delayMs);
+          service.play(c.id, delayMs: (c.delayMs / k).round());
         }
       case LevelUpEvent():
         service.play(Sfx.levelUp);

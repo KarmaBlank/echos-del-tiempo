@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/core/settings/settings_providers.dart';
 import 'package:echos_del_tiempo/features/inventory/domain/shop_guards.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
@@ -8,6 +9,7 @@ import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/rules/inventory_rules.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -184,5 +186,20 @@ void main() {
     expect(c.view!.panel, WorldPanel.inventory);
     c.handleKey(LogicalKeyboardKey.keyI);
     expect(c.view!.panel, isNull);
+  });
+
+  testWidgets('CONFIRMAR AL TIRAR en NO: TIRAR tira enseguida',
+      (tester) async {
+    final c = await _inventory(tester, lootWarrior());
+    PlayerProfile me() => c.view!.me!.profile;
+    final container = ProviderScope.containerOf(
+        tester.element(find.byType(CharacterPanel)));
+    final settings = container.read(gameSettingsProvider.notifier);
+    await settings.update(settings.state.copyWith(confirmDrop: false));
+    await _tap(tester, 'inv-cell-${cellOf(me(), 'm1')}');
+    await _tap(tester, 'inv-drop');
+    expect(find.byKey(const ValueKey('inv-drop-question')), findsNothing);
+    expect(me().itemByUid('m1'), isNull);
+    expect(c.session!.ground, hasLength(1));
   });
 }

@@ -161,7 +161,9 @@ class BattleScenePainter extends CustomPainter {
     world.dispose();
 
     // 3. Destellos de pantalla.
-    final hf = scene.particles.hurtFlash;
+    // Destellos × el ajuste del jugador (docs/specs/settings.md).
+    final fk = scene.options.flash.clamp(0.0, 1.0);
+    final hf = scene.particles.hurtFlash * fk;
     if (hf > 0) {
       final center = area.center;
       final r = area.width * 0.65;
@@ -183,9 +185,9 @@ class BattleScenePainter extends CustomPainter {
         if (a < 0 || a >= BattleFx.timeStopMs) continue;
         final p = a / BattleFx.timeStopMs;
         canvas.drawRect(area,
-            Paint()..color = ProcColors.timeStop.withValues(alpha: 0.3 * (1 - p)));
+            Paint()..color = ProcColors.timeStop.withValues(alpha: 0.3 * (1 - p) * fk));
         final bar = Paint()
-          ..color = Color.fromRGBO(255, 255, 255, 0.5 * (1 - p));
+          ..color = Color.fromRGBO(255, 255, 255, 0.5 * (1 - p) * fk);
         for (var k = 0; k < 2; k++) {
           final y = area.top + area.height * ((p * 1.6 + k * 0.5) % 1);
           canvas.drawRect(
@@ -197,12 +199,12 @@ class BattleScenePainter extends CustomPainter {
       }
       if (live.fx.kind != FxKind.flash) continue;
       final a = live.age(t);
-      if (a < 0 || a >= BattleFx.flashMs) continue;
+      if (a < 0 || a >= BattleFx.flashMs || fk <= 0) continue;
       canvas.drawRect(
           area,
           Paint()
             ..color = live.fx.color
-                .withValues(alpha: 0.35 * (1 - a / BattleFx.flashMs)));
+                .withValues(alpha: 0.35 * (1 - a / BattleFx.flashMs) * fk));
     }
 
     // 4. HUD de la escena.
@@ -757,7 +759,7 @@ class BattleScenePainter extends CustomPainter {
       final age = live.age(t);
       if (age < 0) continue;
       switch (f.kind) {
-        case FxKind.num when age < f.durationMs:
+        case FxKind.num when age < f.durationMs && scene.options.damageNumbers:
           final p = vp.toScreen(Offset(f.x, f.y));
           final size = f.heavy
               ? (f.big ? 32 : 24) * u
