@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../core/balance/balance_asset_loader.dart';
 import '../../core/di/service_locator.dart';
 import '../../core/persistence/exit_on_close.dart';
 import '../../core/settings/frame_limiter.dart';
@@ -13,7 +14,8 @@ import 'firebase_bootstrap.dart';
 Future<void> main() async {
   // Binding con límite de FPS (docs/specs/settings.md § 3.4).
   EcosBinding.ensureInitialized();
-  registerSharedDependencies();
+  // Parche de balance (docs/specs/balance_admin.md § 3).
+  registerSharedDependencies(balance: await BalanceAssetLoader.load());
   // Cerrar la ventana guarda antes (docs/specs/characters.md § 1.4).
   installExitOnClose();
   registerP2PNetcode(signaling: await resolveP2PSignaling());

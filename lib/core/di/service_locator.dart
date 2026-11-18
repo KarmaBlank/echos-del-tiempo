@@ -6,6 +6,7 @@ import '../../app/feature_flags.dart';
 import '../../features/characters/data/account_repository.dart';
 import '../../features/characters/data/account_store.dart';
 import '../../features/lobby/data/json_file_profile_store.dart';
+import '../../game_engine/balance/balance_patch.dart';
 import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/data/passive_tree_catalog.dart';
 import '../../game_engine/models/atlas_store.dart';
@@ -20,6 +21,7 @@ import '../../netcode/lan/lan_net_session.dart';
 import '../../netcode/p2p_webrtc/signaling_service.dart';
 import '../../netcode/p2p_webrtc/webrtc_net_session.dart';
 import '../audio/audio_settings.dart';
+import '../balance/balance_asset_loader.dart';
 import '../audio/audioplayers_music_player.dart';
 import '../audio/audioplayers_sfx_player.dart';
 import '../audio/music/music_service.dart';
@@ -40,7 +42,11 @@ final sl = GetIt.instance;
 /// [accountStore] reemplaza el `account.json` de la carpeta de datos
 /// (tests); todas las variantes (solo, host, LAN, P2P) usan la misma
 /// cuenta: no hay un store por modo (docs/specs/characters.md § 1.4).
-void registerSharedDependencies({AccountStore? accountStore}) {
+///
+/// [balance] es el `balance.json` ya leído (`BalanceAssetLoader.load`,
+/// docs/specs/balance_admin.md § 3); `null` = el catálogo del código.
+void registerSharedDependencies(
+    {AccountStore? accountStore, BalanceParseResult? balance}) {
   if (sl.isRegistered<PassiveTreeRules>()) return;
   // `ecos.log` junto a la cuenta (docs/specs/characters.md § 1.5).
   if (accountStore == null) {
@@ -55,7 +61,9 @@ void registerSharedDependencies({AccountStore? accountStore}) {
     }
   }
 
-  sl.registerLazySingleton<GameCatalog>(() => GameCatalog.standard);
+  // Parche de balance encima del código (registros globales incluidos).
+  final catalog = BalanceAssetLoader.install(balance);
+  sl.registerLazySingleton<GameCatalog>(() => catalog);
   sl.registerLazySingleton<PassiveTreeRules>(
     () => PassiveTreeRules(kPassiveTree),
   );

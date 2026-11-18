@@ -124,6 +124,13 @@ hace push a `origin main` y corre `gh release create vX.Y.Z <setup>
 <setup>.sha256 --target main --title … --notes …`. `-NotesFile` toma las
 notas de un archivo. `dist/` está en `.gitignore`.
 
+**Parches de balance**: el admin (`lib/app/flavors/main_admin.dart`,
+docs/specs/balance_admin.md) escribe `assets/balance/balance.json` y
+`docs/patch_notes/vX.Y.Z.md` y muestra los pasos (rama → PR → merge →
+`release.ps1 -Version X.Y.Z -NotesFile docs\patch_notes\vX.Y.Z.md`).
+Cada parche de balance es un release PATCH nuevo: el hash de balance va
+en el `hello` y una sala no mezcla parches distintos.
+
 ## Seguridad
 
 - **Sin firma de código**: Windows SmartScreen muestra "Windows protegió

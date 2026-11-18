@@ -32,7 +32,11 @@ abstract class ProtocolNetSession implements NetSession, LatencyProbe {
     Duration Function()? clock,
     this.pingInterval = defaultPingInterval,
   })  : codec = WireCodec(catalog),
+        balanceHash = catalog.balanceHash,
         _clock = clock ?? _monotonic;
+
+  /// Hash del parche de balance propio (docs/specs/balance_admin.md § 4).
+  final String balanceHash;
 
   final WireCodec codec;
 
@@ -263,9 +267,10 @@ abstract class ProtocolNetSession implements NetSession, LatencyProbe {
           timeout.cancel();
           final reject = msg.version != kProtocolVersion
               ? RejectReason.version
-              : _clients.length + 1 >= maxPlayers
-                  ? RejectReason.full
-                  : null;
+              : balanceReject(msg.balance, balanceHash) ??
+                  (_clients.length + 1 >= maxPlayers
+                      ? RejectReason.full
+                      : null);
           if (reject != null) {
             link.send(codec.encode(RejectMessage(reject)));
             // `setTimeout(()=>c.close(),300)`: que llegue el mensaje.
@@ -362,7 +367,8 @@ abstract class ProtocolNetSession implements NetSession, LatencyProbe {
       },
       cancelOnError: false,
     );
-    link.send(codec.encode(HelloMessage(config.profile)));
+    link.send(
+        codec.encode(HelloMessage(config.profile, balance: balanceHash)));
     try {
       await welcome.future.timeout(welcomeTimeout,
           onTimeout: () => throw const NetException(

@@ -37,7 +37,15 @@ class GameCatalog {
     this.enemyUlts = kEnemyUlts,
     this.missions = kMissions,
     this.zones = kZones,
+    this.balanceHash = baseBalanceHash,
   });
+
+  /// Hash del parche de balance aplicado (docs/specs/balance_admin.md
+  /// § 4); viaja en el `hello` para que host y clientes coincidan.
+  final String balanceHash;
+
+  /// [balanceHash] sin parche de balance.
+  static const baseBalanceHash = 'base';
 
   /// Las 10 zonas del mapa del mundo, en orden (worldgen.md § 6.1).
   final List<ZoneDef> zones;
