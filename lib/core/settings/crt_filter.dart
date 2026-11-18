@@ -16,9 +16,13 @@ class CrtParams {
     required this.bloom,
     required this.vignette,
     required this.curve,
+    this.bezel = 0,
   });
 
-  final double scan, mask, bloom, vignette, curve;
+  /// [curve]: curvatura de barril (remuestrea la imagen; hoy 0 en todos
+  /// los niveles). [bezel]: radio de las esquinas redondeadas del "tubo"
+  /// (fracción del lado menor), que oscurece sin mover píxeles.
+  final double scan, mask, bloom, vignette, curve, bezel;
 
   /// `null` = APAGADO.
   static CrtParams? of(CrtLevel level) => switch (level) {
@@ -26,12 +30,20 @@ class CrtParams {
         CrtLevel.soft => const CrtParams(
             scan: 0.14, mask: 0.05, bloom: 0.15, vignette: 0.15, curve: 0),
         // Sin curvatura: la curva remuestrea toda la UI y la fuente pixel
-        // pierde nitidez (columnas duplicadas o salteadas). Solo FUERTE
-        // la tiene, a pedido (settings.md § 3.2).
+        // pierde nitidez (columnas duplicadas o salteadas; settings.md §
+        // 3.2).
         CrtLevel.normal => const CrtParams(
             scan: 0.24, mask: 0.09, bloom: 0.25, vignette: 0.25, curve: 0),
+        // FUERTE (por defecto desde v0.8.2): el look marcado sin
+        // remuestrear; la "pantalla curva" la dan las esquinas
+        // redondeadas del bisel y la viñeta.
         CrtLevel.strong => const CrtParams(
-            scan: 0.38, mask: 0.16, bloom: 0.40, vignette: 0.40, curve: 0.05),
+            scan: 0.38,
+            mask: 0.16,
+            bloom: 0.40,
+            vignette: 0.40,
+            curve: 0,
+            bezel: 0.035),
       };
 
   /// Px físicos por scanline para una pantalla de [physicalHeight] px:
@@ -43,9 +55,10 @@ class CrtParams {
   static double maskWidthFor(double devicePixelRatio) =>
       math.max(1, devicePixelRatio.roundToDouble());
 
-  /// Los uniformes después de `uSize` (mismo orden en los dos shaders).
+  /// Los uniformes después de `uSize` (mismo orden en los dos shaders;
+  /// `uBezel` va al final).
   List<double> uniforms(double line, double maskW) =>
-      [scan, mask, bloom, vignette, curve, line, maskW];
+      [scan, mask, bloom, vignette, curve, line, maskW, bezel];
 }
 
 /// Punto del contenido que se ve en el punto [p] de la pantalla con la
@@ -159,7 +172,8 @@ class CrtFilterState extends State<CrtFilter> {
     _filterKey = key;
     try {
       // Con mucha curvatura, vecino más cercano duplica y saltea columnas
-      // de la fuente pixel: FUERTE muestrea bilineal (§ 3.2).
+      // de la fuente pixel: con curva se muestrea bilineal (§ 3.2). Sin
+      // curva (todos los niveles desde v0.8.2), vecino más cercano.
       return _imageFilter = ui.ImageFilter.shader(sh,
           filterQuality: p.curve >= 0.04 ? FilterQuality.low : FilterQuality.none);
     } catch (e) {

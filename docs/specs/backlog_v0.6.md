@@ -19,10 +19,11 @@ Pedido tal cual llegó, para convertirlo en specs antes de codificar.
 - Notificación visible pero no invasiva cuando hay puntos de árbol (y de
   atributos / ascensión) sin usar.
 
-## Próxima versión (después de v0.8.1)
+## SALIR DEL JUEGO en el título — hecho en v0.8.2
 - Botón **SALIR DEL JUEGO** en el menú principal (pantalla de título),
-  usando el mismo cierre seguro que la pausa (guarda antes de salir,
-  `ExitGuard` / `appExitProvider`).
+  con confirmación "¿Salir del juego?" y el mismo cierre seguro que la
+  pausa (`appExitProvider` → `ExitGuard.flushAll` antes de cerrar).
+  Ver settings.md § "Pausa" y docs/release_notes/v0.8.2.md.
 
 ## ULTs de rama — hecho en v0.8.1 (en armas)
 - Decisión del dueño: las ULTs nuevas van **en armas**, no en el árbol.

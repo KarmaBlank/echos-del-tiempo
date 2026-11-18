@@ -290,7 +290,11 @@ void main() {
       expect(g.state.objectivesCollapsed, isTrue);
       expect((g.store as InMemoryGameSettingsStore).saved?.objectivesCollapsed,
           isTrue);
-      expect(find.text('[+]'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byKey(const ValueKey('hud-objectives')),
+              matching: find.text('[+]')),
+          findsOneWidget);
       expect(find.textContaining('Grupos del piso'), findsNothing);
       final summary = tester
           .widget<Text>(find.byKey(const ValueKey('hud-objectives-summary')))
@@ -390,7 +394,11 @@ void main() {
       await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
       await tester.pump();
       expect(container.read(gameSettingsProvider).objectivesCollapsed, isTrue);
-      expect(find.text('[+]'), findsOneWidget);
+      expect(
+          find.descendant(
+              of: find.byKey(const ValueKey('hud-objectives')),
+              matching: find.text('[+]')),
+          findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
       await tester.pump();
       expect(container.read(gameSettingsProvider).objectivesCollapsed, isFalse);

@@ -71,7 +71,7 @@ enum UiSlot {
 /// Los valores por defecto de estos estáticos son los de AZUL + COMPLETO
 /// + NORMAL (el aspecto de v0.8.0, el que esperan los tests de siempre);
 /// el valor por defecto del JUGADOR está en `GameSettings` (OSCURO +
-/// REDUCIDO desde v0.8.1).
+/// REDUCIDO desde v0.8.1; ALTO CONTRASTE + REDUCIDO desde v0.8.2).
 abstract final class UiTheme {
   static InterfaceTheme kind = InterfaceTheme.blue;
   static TextColorMode textColors = TextColorMode.full;

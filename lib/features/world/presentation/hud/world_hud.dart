@@ -89,11 +89,32 @@ class WorldHud extends StatelessWidget {
             s.mission != null);
     final small = Theme.of(context).textTheme.bodySmall!;
     final players = s.playerList;
-    final boxW = PartyBox.widthOf(context);
+    // Cajas del grupo compactas por defecto; H o clic las despliega
+    // (v0.8.2, exploration.md § "HUD").
+    return Consumer(builder: (context, ref, _) {
+      final expanded =
+          ref.watch(gameSettingsProvider.select((g) => g.partyExpanded));
+      return _layout(context, s, players, expanded, small, field,
+          showMinimap: showMinimap);
+    });
+  }
+
+  Widget _layout(
+      BuildContext context,
+      GameSession s,
+      Iterable<SessionPlayer> players,
+      bool expanded,
+      TextStyle small,
+      bool field,
+      {required bool showMinimap}) {
+    final boxW =
+        expanded ? PartyBox.widthOf(context) : PartyBox.compactWidthOf(context);
     return LayoutBuilder(builder: (context, box) {
       // Con texto grande las cajas del grupo pasan a dos filas antes que
       // pisar el chat (mínimo 240 px de chat).
-      final chatMin = RetroType.width(context, 240);
+      // Compactas (v0.8.2): el chat cede un poco más (es una píldora por
+      // defecto), así con texto ENORME entran dos cajas por fila.
+      final chatMin = RetroType.width(context, expanded ? 240 : 200);
       final partyRoom =
           (box.maxWidth - chatMin - _gap * 3).clamp(boxW, double.infinity);
       final perRow = ((partyRoom + 6) / (boxW + 6))
@@ -206,8 +227,8 @@ class WorldHud extends StatelessWidget {
                 // Minimapa con zoom (rueda o `-` `+`, se recuerda) y
                 // `MAPA [M]` (v0.8.1).
                 child: Consumer(builder: (context, ref, _) {
-                  final zoom = ref.watch(
-                      gameSettingsProvider.select((g) => g.minimapZoom));
+                  final zoom = ref
+                      .watch(gameSettingsProvider.select((g) => g.minimapZoom));
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisSize: MainAxisSize.min,
@@ -311,11 +332,12 @@ class WorldHud extends StatelessWidget {
                 right: 0,
                 child: Center(child: vote),
               ),
-            // `#party`: una fila de `.pbox`.
+            // `#party`: una fila de `.pbox` (compactas por defecto).
             Positioned(
               right: _gap,
               bottom: _gap,
               child: SizedBox(
+                key: const ValueKey('hud-party-boxes'),
                 width: partyWidth,
                 child: Wrap(
                   alignment: WrapAlignment.end,
@@ -325,10 +347,23 @@ class WorldHud extends StatelessWidget {
                   runSpacing: 6,
                   children: [
                     for (final p in players)
-                      _PlayerBox(
-                        player: p,
-                        local: p.id == view.localId,
-                        progression: controller.engine.progression,
+                      Consumer(
+                        builder: (context, ref, _) => _Toggle(
+                          key: ValueKey('hud-party-${p.id}'),
+                          expanded: expanded,
+                          onTap: () => togglePartyBoxes(ref),
+                          child: expanded
+                              ? _PlayerBox(
+                                  player: p,
+                                  local: p.id == view.localId,
+                                  progression: controller.engine.progression,
+                                )
+                              : CompactPlayerBox(
+                                  player: p,
+                                  local: p.id == view.localId,
+                                  progression: controller.engine.progression,
+                                ),
+                        ),
                       ),
                   ],
                 ),
@@ -639,8 +674,8 @@ Minimap hudMinimap(SessionView view, SessionController controller,
 
 bool Function(int) _entranceOpen(
     SessionView view, SessionController controller) {
-  final world = view.session.mode == SessionMode.lobby &&
-      view.map.entrances.isNotEmpty;
+  final world =
+      view.session.mode == SessionMode.lobby && view.map.entrances.isNotEmpty;
   final zones = world
       ? {for (final z in controller.zones) z.zone.index: z.open}
       : const <int, bool>{};
@@ -687,6 +722,175 @@ Widget fullMapPanel(SessionView view, SessionController controller) {
     entranceOpen: _entranceOpen(view, controller),
     onClose: controller.closePanel,
   );
+}
+
+/// Despliega / compacta las cajas del grupo del HUD y lo guarda (tecla H
+/// o clic en una caja; docs/specs/exploration.md § "HUD").
+void togglePartyBoxes(WidgetRef ref) {
+  final s = ref.read(gameSettingsProvider);
+  unawaited(ref
+      .read(gameSettingsProvider.notifier)
+      .update(s.copyWith(partyExpanded: !s.partyExpanded)));
+}
+
+/// Una caja del grupo que se puede tocar para desplegar / compactar.
+class _Toggle extends StatelessWidget {
+  const _Toggle(
+      {super.key,
+      required this.expanded,
+      required this.onTap,
+      required this.child});
+
+  final bool expanded;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: expanded
+            ? 'Compactar las cajas del grupo [H]'
+            : 'Ver el detalle del grupo [H]',
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: child,
+          ),
+        ),
+      );
+}
+
+/// Caja compacta de un miembro del grupo (v0.8.2): `Nombre Clase LvN`
+/// con chips (K.O., `+N` puntos sin usar) y `[+]`, y debajo las barras
+/// finas de HP y MP con sus números. Dos líneas de alto.
+class CompactPlayerBox extends StatelessWidget {
+  const CompactPlayerBox({
+    super.key,
+    required this.player,
+    required this.local,
+    required this.progression,
+  });
+
+  final SessionPlayer player;
+  final bool local;
+  final ProgressionRules progression;
+
+  /// Barra fina + `n/max` a la derecha; el número toma a lo sumo el 65 %
+  /// (cifras grandes o texto ENORME: se recorta antes que desbordar).
+  Widget _barWithValue(Widget bar, String value, Key key) => LayoutBuilder(
+        builder: (context, c) => Row(
+          children: [
+            Expanded(child: bar),
+            const SizedBox(width: 3),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: c.maxWidth * 0.65),
+              child: Text(value,
+                  key: key,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.clip),
+            ),
+          ],
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final p = player;
+    final prof = p.profile;
+    final cls = progression.catalog.classes[prof.classId]?.name ?? prof.classId;
+    final tight = TextStyle(height: RetroType.lineTight);
+    final asc = ascensionFor(prof.classId, prof.ascension.id);
+    return PartyBox(
+      key: ValueKey('hud-compact-${p.id}'),
+      local: local,
+      knockedOut: !p.alive,
+      width: PartyBox.compactWidthOf(context),
+      padding: const EdgeInsets.fromLTRB(6, 3, 6, 3),
+      children: [
+        DefaultTextStyle.merge(
+          style: tight,
+          child: LayoutBuilder(builder: (context, c) {
+            final w = c.maxWidth;
+            return Row(
+              children: [
+                // Nombre (y ascensión) con elipsis; el nivel siempre se ve.
+                Expanded(
+                  child: KeyedSubtree(
+                    key: ValueKey('hud-name-${p.id}'),
+                    child: Text.rich(
+                      TextSpan(children: [
+                        TextSpan(
+                            text: retroText(p.name),
+                            style: const TextStyle(color: ProtoColors.title)),
+                        if (asc != null)
+                          TextSpan(
+                              text: retroText(', ${asc.name}'),
+                              style: TextStyle(color: Color(asc.color))),
+                        TextSpan(
+                            text: retroText(' $cls'),
+                            style: const TextStyle(color: ProtoColors.sky)),
+                      ]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
+                    ),
+                  ),
+                ),
+                // Nivel, chips y `[+]`: a lo sumo el 60 % (se recorta antes
+                // que desbordar con cifras o texto enormes).
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: w * 0.6),
+                  child: Text.rich(
+                    TextSpan(children: [
+                      TextSpan(
+                          text: ' Lv${prof.level}',
+                          style: const TextStyle(color: ProtoColors.sky)),
+                      // Chips de estado: texto de color (sin caja: no
+                      // agranda la línea).
+                      if (!p.alive)
+                        const TextSpan(
+                            text: ' K.O.',
+                            style: TextStyle(color: ProtoColors.crimson)),
+                      if (prof.points > 0)
+                        TextSpan(
+                            text: ' +${prof.points}',
+                            style: const TextStyle(color: ProtoColors.gold)),
+                      const TextSpan(
+                          text: ' [+]',
+                          style: TextStyle(color: ProtoColors.dim)),
+                    ]),
+                    key: ValueKey('hud-level-${p.id}'),
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.clip,
+                  ),
+                ),
+              ],
+            );
+          }),
+        ),
+        DefaultTextStyle.merge(
+          style: tight,
+          child: Row(
+            children: [
+              Expanded(
+                  child: _barWithValue(hpBar(p.hp, p.maxHp),
+                      '${p.hp.ceil()}/${p.maxHp}', ValueKey('hud-hp-${p.id}'))),
+              const SizedBox(width: 6),
+              Expanded(
+                  child: _barWithValue(
+                      mpBar(p.mp, p.maxMp),
+                      '${p.mp.floor()}/${p.maxMp}',
+                      ValueKey('hud-mp-${p.id}'))),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// Pliega / despliega la caja de objetivos y lo guarda (tecla J o clic en

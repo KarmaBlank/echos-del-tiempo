@@ -222,7 +222,7 @@ class GameSettings {
     this.damageNumbers = true,
     this.confirmDrop = true,
     this.scale = ScaleMode.fit,
-    this.crt = CrtLevel.normal,
+    this.crt = CrtLevel.strong,
     this.particles = ParticleLevel.high,
     this.fpsLimit = FpsLimit.fps60,
     this.textSize = TextSize.normal,
@@ -233,12 +233,13 @@ class GameSettings {
     this.turnTimer = TurnTimer.normal,
     this.perfOverlay = false,
     this.perfCorner = OverlayCorner.topRight,
-    this.uiTheme = InterfaceTheme.dark,
+    this.uiTheme = InterfaceTheme.highContrast,
     this.textColors = TextColorMode.reduced,
     this.spacing = UiSpacing.normal,
     this.chat = ChatVisibility.hidden,
     this.chatNotices = true,
     this.objectivesCollapsed = false,
+    this.partyExpanded = false,
     this.minimapZoom = 3,
     this.readingTitles = false,
     this.letterSpacing = LetterSpacing.normal,
@@ -263,7 +264,8 @@ class GameSettings {
   /// Escalado del mundo pixelado (mapa y batalla).
   final ScaleMode scale;
 
-  /// Filtro retro CRT sobre toda la pantalla.
+  /// Filtro retro CRT sobre toda la pantalla. FUERTE por defecto desde
+  /// v0.8.2 (antes NORMAL); un `game.json` con `crt` guardado lo conserva.
   final CrtLevel crt;
 
   /// Cantidad de partículas.
@@ -301,7 +303,8 @@ class GameSettings {
   /// En qué esquina va el indicador.
   final OverlayCorner perfCorner;
 
-  /// Tema de interfaz (accesibilidad, v0.8.1).
+  /// Tema de interfaz (accesibilidad, v0.8.1). ALTO CONTRASTE por defecto
+  /// desde v0.8.2 (antes OSCURO); un `game.json` con `uiTheme` lo conserva.
   final InterfaceTheme uiTheme;
 
   /// Colores del texto (accesibilidad, v0.8.1).
@@ -319,6 +322,11 @@ class GameSettings {
 
   /// Caja de objetivos plegada (se recuerda; tecla J, v0.8.1).
   final bool objectivesCollapsed;
+
+  /// Cajas del grupo del HUD del mapa desplegadas (arma, pts, XP, pociones)
+  /// en vez de compactas (una fila por miembro). Se recuerda; tecla H o
+  /// clic en una caja (v0.8.2, exploration.md § "HUD").
+  final bool partyExpanded;
 
   /// Zoom del minimapa del HUD: 1 = el piso entero (como antes de v0.8.1),
   /// 2 y 3 = ventana centrada en el jugador (rueda del mouse / `+` `−`).
@@ -377,6 +385,7 @@ class GameSettings {
     ChatVisibility? chat,
     bool? chatNotices,
     bool? objectivesCollapsed,
+    bool? partyExpanded,
     int? minimapZoom,
     bool? readingTitles,
     LetterSpacing? letterSpacing,
@@ -408,6 +417,7 @@ class GameSettings {
         chat: chat ?? this.chat,
         chatNotices: chatNotices ?? this.chatNotices,
         objectivesCollapsed: objectivesCollapsed ?? this.objectivesCollapsed,
+        partyExpanded: partyExpanded ?? this.partyExpanded,
         minimapZoom: (minimapZoom ?? this.minimapZoom).clamp(1, minimapZooms),
         readingTitles: readingTitles ?? this.readingTitles,
         letterSpacing: letterSpacing ?? this.letterSpacing,
@@ -440,6 +450,7 @@ class GameSettings {
         'chat': chat.name,
         'chatNotices': chatNotices,
         'objectivesCollapsed': objectivesCollapsed,
+        'partyExpanded': partyExpanded,
         'minimapZoom': minimapZoom,
         'readingTitles': readingTitles,
         'letterSpacing': letterSpacing.name,
@@ -480,6 +491,7 @@ class GameSettings {
       chatNotices: flag(json['chatNotices'], d.chatNotices),
       objectivesCollapsed:
           flag(json['objectivesCollapsed'], d.objectivesCollapsed),
+      partyExpanded: flag(json['partyExpanded'], d.partyExpanded),
       minimapZoom: switch (json['minimapZoom']) {
         final int z when z >= 1 && z <= minimapZooms => z,
         _ => d.minimapZoom,
@@ -521,6 +533,7 @@ class GameSettings {
       other.chat == chat &&
       other.chatNotices == chatNotices &&
       other.objectivesCollapsed == objectivesCollapsed &&
+      other.partyExpanded == partyExpanded &&
       other.minimapZoom == minimapZoom &&
       other.readingTitles == readingTitles &&
       other.letterSpacing == letterSpacing &&
@@ -550,7 +563,7 @@ class GameSettings {
       Object.hash(uiTheme, textColors, spacing, chat, chatNotices,
           objectivesCollapsed, minimapZoom),
       Object.hash(readingTitles, letterSpacing, noticeDuration,
-          mapLabelBackdrop, battleLog));
+          mapLabelBackdrop, battleLog, partyExpanded));
 
   @override
   String toString() => 'GameSettings(${toJson()})';
