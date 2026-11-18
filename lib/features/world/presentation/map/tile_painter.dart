@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/game_map.dart';
 import 'map_themes.dart';
 
@@ -314,7 +315,7 @@ class TilePainter {
   /// portal del color de la zona que late; bloqueada o próximamente:
   /// interior oscuro con candado.
   void entrance(Canvas c, int tx, int ty, int zone,
-      {required bool open, required double t}) {
+      {required bool open, required double t, double density = 1}) {
     const stone = Color(0xFF8A8E9A),
         stoneMid = Color(0xFF6B6F7A),
         stoneDark = Color(0xFF44474F);
@@ -341,7 +342,7 @@ class TilePainter {
       _rect(c, col.withValues(alpha: a), ix, iy, iw, ih);
       _rect(c, col.withValues(alpha: 0.35), ix + 3, iy + 3, iw - 6, ih - 6);
       // Chispas que suben.
-      for (var i = 0; i < 3; i++) {
+      for (var i = 0; i < scaledCount(3, density); i++) {
         final q = ((t / 900 + i / 3 + zone * 0.17) % 1.0);
         _rect(c, const Color(0xCCFFFFFF), ix + 2 + ((i * 5 + zone) % 10),
             iy + ih - 2 - q * (ih - 4), 1, 2);

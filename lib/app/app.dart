@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../core/settings/crt_filter.dart';
+import '../core/settings/settings_providers.dart';
 import '../features/lobby/presentation/title_screen.dart';
 import 'theme/retro_theme.dart';
 
@@ -26,6 +28,13 @@ class EcosApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: RetroTheme.build(),
         home: const TitleScreen(),
+        // Filtro CRT sobre toda la app (docs/specs/settings.md § 3.2).
+        builder: (context, child) => Consumer(
+          builder: (context, ref, _) => CrtFilter(
+            level: ref.watch(gameSettingsProvider.select((s) => s.crt)),
+            child: child ?? const SizedBox.shrink(),
+          ),
+        ),
       ),
     );
   }

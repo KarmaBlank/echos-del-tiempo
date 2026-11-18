@@ -87,7 +87,8 @@ class SceneOptions {
     this.shake = true,
     this.flash = 1,
     this.damageNumbers = true,
-    this.speed = 1,
+    this.pixelPerfect = false,
+    this.particles = 1,
   });
 
   /// Sacudida de pantalla.
@@ -99,15 +100,20 @@ class SceneOptions {
   /// Números de daño / cura flotantes (`num`).
   final bool damageNumbers;
 
-  /// Multiplicador del reloj de animación (1 = como el prototipo).
-  final double speed;
+  /// Escalado PIXEL PERFECT: el zoom del mundo siempre entero (también
+  /// en transiciones y cinemáticas).
+  final bool pixelPerfect;
+
+  /// Multiplicador de la cantidad de partículas (0.3 / 0.6 / 1).
+  final double particles;
 }
 
 class BattleSceneController extends ChangeNotifier {
   BattleSceneController({math.Random? random})
       : particles = ParticleSystem(random);
 
-  /// Ajustes del jugador (sacudida, destellos, números, velocidad).
+  /// Ajustes del jugador (sacudida, destellos, números, escalado,
+  /// partículas).
   SceneOptions options = const SceneOptions();
 
   /// Reloj de animación en ms (`performance.now()`); se detiene durante
@@ -255,7 +261,8 @@ class BattleSceneController extends ChangeNotifier {
   /// Avanza [dtMs] milisegundos de reloj real.
   void advance(double dtMs) {
     final f = frame;
-    var dt = dtMs * (options.speed > 0 ? options.speed : 1);
+    var dt = dtMs;
+    particles.density = options.particles;
     if (hitStop > 0) {
       final eat = math.min(hitStop, dt);
       hitStop -= eat;
@@ -415,8 +422,14 @@ class BattleSceneController extends ChangeNotifier {
     camera = cam;
   }
 
-  /// Cámara para dibujar este frame.
-  CameraView viewFor(SceneFrame f) => camera ?? baseView(f);
+  /// Cámara para dibujar este frame. Con PIXEL PERFECT el zoom se
+  /// redondea al entero más cercano (docs/specs/settings.md § 3.1).
+  CameraView viewFor(SceneFrame f) {
+    final v = camera ?? baseView(f);
+    if (!options.pixelPerfect) return v;
+    final z = math.max(1.0, v.zoom.roundToDouble());
+    return z == v.zoom ? v : CameraView(v.center, z);
+  }
 
   /// El actor [id] se está lanzando (`act` de edad < 260 ms).
   bool lunging(String id) => fx.any((e) =>

@@ -244,7 +244,9 @@ manejadas para que no muevan el foco entre botones.
   `PictureRecorder` y se rasteriza (`toImageSync`). Esa imagen se escala
   al tamaño del `GameWidget` con `FilterQuality.none` (vecino más
   cercano), manteniendo la proporción (`min(w/480, h/288)`) y centrada,
-  con bandas `#05060c`. Así el texto del mundo (nombres, `JEFE`) también
+  con bandas `#05060c`. Con el ajuste ESCALADO en PIXEL PERFECT el
+  factor es el mayor entero que entra (`mapViewRect`, settings.md
+  § 3.1). Así el texto del mundo (nombres, `JEFE`) también
   queda pixelado como en el canvas del prototipo.
 - Todo se dibuja en coordenadas enteras (`round`) dentro del lienzo
   virtual; los sprites con `SpriteCatalog.pixelPaint()`.

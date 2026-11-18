@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/item.dart';
 import '../../../../game_engine/models/loot.dart';
@@ -330,7 +331,9 @@ class LootPainter {
 
   /// Haz de luz vertical (Legendario en el piso o recién caído). [boost]
   /// 0..1 = estallido de los primeros instantes.
-  void drawBeam(Canvas c, double x, double y, double t, {double boost = 0}) {
+  /// [density]: ajuste PARTÍCULAS (motas que suben).
+  void drawBeam(Canvas c, double x, double y, double t,
+      {double boost = 0, double density = 1}) {
     const orange = Color(0xFFFF8C28);
     final k = 0.5 + 0.5 * math.sin(t / 180);
     final w = beamWidth + 6 * boost;
@@ -345,7 +348,7 @@ class LootPainter {
     _fill.color = const Color(0xFFFFF0C8).withValues(alpha: (0.7 + 0.25 * k + 0.3 * boost).clamp(0.0, 1.0));
     c.drawRect(Rect.fromLTWH(x - 1, top + h * 0.15, 3, h * 0.85), _fill);
     // Motas que suben.
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < scaledCount(4, density); i++) {
       final f = (t / 900 + i / 4) % 1.0;
       _fill.color = const Color(0xFFFFF3B0).withValues(alpha: 1 - f);
       c.drawRect(

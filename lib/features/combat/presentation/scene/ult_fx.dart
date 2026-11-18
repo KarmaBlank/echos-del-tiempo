@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'dart:ui';
 
+import '../../../../core/settings/graphics.dart';
 import 'battle_fx.dart';
 import 'fx_style.dart';
 import 'particles.dart';
@@ -147,6 +148,10 @@ int _volleyHit(UltScript s, int k) => s.buildMs + 230 + k * 60;
 /// Disparos (partículas, sacudidas, hit-stop) y dibujo en el mundo de
 /// cada ULT. Diseño en docs/specs/battle_presentation.md § "Ultimates".
 abstract final class UltDirector {
+  /// Multiplicador de las motas "de lluvia" que dibuja la cinemática
+  /// (ajuste PARTÍCULAS; lo pone el pintor de la escena en cada frame).
+  static double density = 1;
+
   /// Elemento de las partículas de cada estilo.
   static FxElement element(UltStyle s) => switch (s) {
         UltStyle.finalSlash => FxElement.phys,
@@ -1187,7 +1192,7 @@ abstract final class UltDirector {
           _a(k.isEven ? const Color(0xFF145A32) : dark, 0.85 * out));
     }
     // Lluvia de ácido.
-    for (var k = 0; k < 36; k++) {
+    for (var k = 0; k < scaledCount(36, density); k++) {
       final t0 = _acidCloudAt + 40 + (k * 29) % 520;
       final q = (a - t0) / 260;
       if (q < 0 || q > 1) continue;
@@ -1553,7 +1558,7 @@ abstract final class UltDirector {
       final ctr = Offset.lerp(over, st.centroid.translate(0, -12), q)!;
       _webDisc(c, ctr, spread * (0.7 + 0.3 * q), 0.4, silk, 0.9 * out,
           squash: 1.2);
-      for (var k = 0; k < 18; k++) {
+      for (var k = 0; k < scaledCount(18, density); k++) {
         final t0 = land + 60 + (k * 37) % 420;
         final dq = (a - t0) / 300;
         if (dq < 0 || dq > 1) continue;
@@ -1598,7 +1603,7 @@ abstract final class UltDirector {
     if (a < s.buildMs + 60) {
       // Copos que entran en espiral a las fauces y un núcleo que crece.
       final g = _ease(_q(a, 0, s.buildMs));
-      for (var k = 0; k < 18; k++) {
+      for (var k = 0; k < scaledCount(18, density); k++) {
         final f = ((a / 520) + _h(k, 5)) % 1.0;
         final ang = k * 0.7 + a / 260;
         final rr = 8 + 60 * (1 - f);

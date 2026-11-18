@@ -88,7 +88,8 @@ les pone hora de inicio y los dibuja según su edad.
   1. **mundo** (tiles, actores, efectos, partículas, cinemática) en
      píxeles del mundo, rasterizado a `ceil(ancho/zoom) × ceil(alto/zoom)`
      y escalado ×`zoom` con vecino más cercano (`zoom` entero fuera de
-     las cinemáticas: píxel perfecto);
+     las cinemáticas: píxel perfecto; con ESCALADO en PIXEL PERFECT
+     también en transiciones y cinemáticas, settings.md § 3.1);
   2. destellos de pantalla (`hurtFlash`, `flash`);
   3. **HUD de la escena** en píxeles de pantalla (texto nítido de la
      fuente en múltiplos de 8 px): nombres, vida, insignias, marcas de
@@ -346,7 +347,8 @@ velocidad `sp·(0.35 + azar·0.85)`, posición `x ± 9` (rayo/cruz) o
 `x ± 2.5`, `y ± 3`; `vx = cos·v`, `vy = sin·v·(g < 0 ? 0.4 : 1) −
 (g < 0 ? 8 : 0)`; vida `life·(0.6 + azar·0.6)`; tamaño `1 + azar·1.8`;
 color al azar de la lista. Máximo 600 partículas (se descartan las más
-viejas). Cada frame (`dt` ≤ 0.05 s): `vy += g·dt`, `x += vx·dt`,
+viejas). El ajuste PARTÍCULAS (settings.md § 3.3) multiplica `n` y el
+máximo por 0.3 / 0.6 / 1 (`ParticleSystem.density`, al menos 1). Cada frame (`dt` ≤ 0.05 s): `vy += g·dt`, `x += vx·dt`,
 `y += vy·dt`, `vx ×= 0.98`; alfa `min(1, vida/vida_máx·1.4)`.
 
 | Elemento | Colores | n | sp | g | vida | Forma |

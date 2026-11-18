@@ -6,6 +6,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/item.dart';
@@ -99,6 +100,16 @@ class MapGame extends Game {
 
   /// Reloj de animación en ms (`performance.now()` del prototipo).
   double t = 0;
+
+  /// Escalado del mundo (ajuste ESCALADO; lo pone `WorldScreen`).
+  ScaleMode scaleMode = ScaleMode.fit;
+
+  /// Multiplicador de las partículas del mapa (ajuste PARTÍCULAS).
+  double particleDensity = 1;
+
+  /// Dónde se dibuja el mundo virtual dentro de [screen].
+  Rect viewRect(Size screen) => mapViewRect(
+      screen, Size(vw.toDouble(), vh.toDouble()), scaleMode);
 
   /// Cámara (`cam`), esquina superior izquierda en px del mundo.
   double camX = 0, camY = 0;
@@ -292,11 +303,9 @@ class MapGame extends Game {
     final image = picture.toImageSync(vw, vh);
     picture.dispose();
 
-    // Escalado entero o no, siempre con vecino más cercano y centrado.
-    final s = math.min(size.x / vw, size.y / vh);
-    final w = vw * s, h = vh * s;
-    final dst = Rect.fromLTWH(((size.x - w) / 2).roundToDouble(),
-        ((size.y - h) / 2).roundToDouble(), w.roundToDouble(), h.roundToDouble());
+    // Entero (PIXEL PERFECT) o fraccional (AJUSTAR), siempre con vecino
+    // más cercano y centrado (docs/specs/settings.md § 3.1).
+    final dst = viewRect(Size(size.x, size.y));
     canvas.drawImageRect(
         image,
         Rect.fromLTWH(0, 0, vw.toDouble(), vh.toDouble()),
@@ -336,7 +345,8 @@ class MapGame extends Game {
       if (e.tx < x0 - 2 || e.tx > x1 + 2 || e.ty < y0 || e.ty > y1 + 3) {
         continue;
       }
-      tiles.entrance(c, e.tx, e.ty, e.zone, open: open(e.zone), t: t);
+      tiles.entrance(c, e.tx, e.ty, e.zone,
+          open: open(e.zone), t: t, density: particleDensity);
     }
     final merchant = map.merchant;
     if (merchant != null) {
@@ -458,13 +468,14 @@ class MapGame extends Game {
       if (!l.legendary || l.hidden) continue;
       final age = t - (_seen[l.ground.id] ?? t);
       loot.drawBeam(c, l.ground.x, l.ground.y, t,
-          boost: (1 - age / beamBurstMs).clamp(0.0, 1.0));
+          boost: (1 - age / beamBurstMs).clamp(0.0, 1.0),
+          density: particleDensity);
     }
     _beams.removeWhere((b) => t - b.t0 > inventoryBeamMs);
     for (final b in _beams) {
       final q = (t - b.t0) / inventoryBeamMs;
       loot.drawBeam(c, controller.local.x, controller.local.y, t,
-          boost: (1 - q * 2).clamp(0.0, 1.0));
+          boost: (1 - q * 2).clamp(0.0, 1.0), density: particleDensity);
     }
     for (final p in loot.placeLabels(floor,
         view: Rect.fromLTWH(camX, camY, vw.toDouble(), vh.toDouble()))) {

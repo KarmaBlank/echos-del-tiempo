@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../../../../core/settings/graphics.dart';
 import 'fx_style.dart';
 
 /// Una partícula de `burst` (solo visual, local).
@@ -43,6 +44,10 @@ class ParticleSystem {
 
   static const maxParticles = 600;
 
+  /// Multiplicador de la cantidad de partículas (ajuste PARTÍCULAS:
+  /// 0.3 / 0.6 / 1; docs/specs/settings.md § 3.3).
+  double density = 1;
+
   double random() => _rnd.nextDouble();
 
   /// `burst(x, y, el, mult)`.
@@ -52,7 +57,7 @@ class ParticleSystem {
   /// Como [burst] pero con una receta propia (escombros, chispas de las
   /// ULT).
   void burstWith(ElementFx d, double x, double y, [double mult = 1]) {
-    final n = (d.count * mult).round();
+    final n = scaledCount((d.count * mult).round(), density);
     final wide = d.shape == ParticleShape.ray || d.shape == ParticleShape.plus;
     for (var i = 0; i < n; i++) {
       final a = random() * math.pi * 2;
@@ -70,8 +75,9 @@ class ParticleSystem {
         size: 1 + random() * 1.8,
       ));
     }
-    if (particles.length > maxParticles) {
-      particles.removeRange(0, particles.length - maxParticles);
+    final cap = scaledCount(maxParticles, density);
+    if (particles.length > cap) {
+      particles.removeRange(0, particles.length - cap);
     }
   }
 

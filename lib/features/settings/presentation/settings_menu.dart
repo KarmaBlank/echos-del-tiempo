@@ -14,8 +14,8 @@ import '../../../core/settings/settings_providers.dart';
 /// Pestañas del menú (docs/specs/settings.md § "Estructura").
 enum SettingsTab {
   sound('SONIDO', 'Volumen general, de la música y de los efectos.'),
-  display('PANTALLA', 'Ventana y efectos de pantalla de la batalla.'),
-  game('JUEGO', 'Ritmo de las animaciones y avisos.'),
+  display('PANTALLA', 'Ventana, gráficos y efectos de la batalla.'),
+  game('JUEGO', 'Números de daño y avisos.'),
   controls('CONTROLES', 'Todas las teclas del juego.');
 
   const SettingsTab(this.label, this.hint);
@@ -493,6 +493,64 @@ class _DisplayTab extends ConsumerWidget {
             ),
           ),
         _SettingRow(
+          label: 'ESCALADO',
+          hint: s.scale == ScaleMode.pixelPerfect
+              ? 'Píxeles exactos (×2, ×3...) con barras negras.'
+              : 'Llena la ventana; algunos píxeles salen más anchos.',
+          control: _Choice<ScaleMode>(
+            keyPrefix: 'display-scale',
+            options: const {
+              ScaleMode.pixelPerfect: 'PIXEL PERFECT',
+              ScaleMode.fit: 'AJUSTAR',
+            },
+            value: s.scale,
+            onChanged: (v) => c.update(s.copyWith(scale: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'FILTRO CRT',
+          hint: 'Líneas, brillo y bordes de un televisor viejo.',
+          control: _Choice<CrtLevel>(
+            keyPrefix: 'display-crt',
+            options: const {
+              CrtLevel.off: 'APAGADO',
+              CrtLevel.soft: 'SUAVE',
+              CrtLevel.normal: 'NORMAL',
+              CrtLevel.strong: 'FUERTE',
+            },
+            value: s.crt,
+            onChanged: (v) => c.update(s.copyWith(crt: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'PARTÍCULAS',
+          hint: 'Chispas, nieve y destellos. BAJA si la PC sufre.',
+          control: _Choice<ParticleLevel>(
+            keyPrefix: 'display-particles',
+            options: const {
+              ParticleLevel.low: 'BAJA',
+              ParticleLevel.medium: 'MEDIA',
+              ParticleLevel.high: 'ALTA',
+            },
+            value: s.particles,
+            onChanged: (v) => c.update(s.copyWith(particles: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'LÍMITE DE FPS',
+          hint: 'Cuadros por segundo. Sin límite = lo que dé el monitor.',
+          control: _Choice<FpsLimit>(
+            keyPrefix: 'display-fps',
+            options: const {
+              FpsLimit.fps30: '30',
+              FpsLimit.fps60: '60',
+              FpsLimit.none: 'SIN LÍMITE',
+            },
+            value: s.fpsLimit,
+            onChanged: (v) => c.update(s.copyWith(fpsLimit: v)),
+          ),
+        ),
+        _SettingRow(
           label: 'SACUDIDA',
           hint: 'La escena de batalla tiembla con los golpes fuertes.',
           control: _Choice<bool>(
@@ -532,20 +590,6 @@ class _GameTab extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SettingRow(
-          label: 'ANIMACIONES DE BATALLA',
-          hint: 'Más rápidas solo en tu pantalla. Los turnos los marca la '
-              'sala: no se acortan.',
-          control: _Choice<double>(
-            keyPrefix: 'game-speed',
-            options: {
-              for (final v in GameSettings.battleSpeeds)
-                v: 'x${v == v.roundToDouble() ? v.round() : v}',
-            },
-            value: s.battleSpeed,
-            onChanged: (v) => c.update(s.copyWith(battleSpeed: v)),
-          ),
-        ),
         _SettingRow(
           label: 'NÚMEROS FLOTANTES',
           hint: 'Daño y curas flotando sobre cada personaje.',

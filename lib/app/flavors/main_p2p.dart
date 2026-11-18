@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/di/service_locator.dart';
+import '../../core/settings/frame_limiter.dart';
 import '../app.dart';
 import 'firebase_bootstrap.dart';
 
@@ -9,7 +10,8 @@ import 'firebase_bootstrap.dart';
 /// que falta configurarlo (docs/specs/netcode.md).
 /// `flutter run -d windows -t lib/app/flavors/main_p2p.dart`
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // Binding con límite de FPS (docs/specs/settings.md § 3.4).
+  EcosBinding.ensureInitialized();
   registerSharedDependencies();
   registerP2PNetcode(signaling: await resolveP2PSignaling());
   runApp(const EcosApp());

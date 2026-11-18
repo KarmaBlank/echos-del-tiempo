@@ -20,6 +20,7 @@ import '../audio/audioplayers_music_player.dart';
 import '../audio/audioplayers_sfx_player.dart';
 import '../audio/music/music_service.dart';
 import '../audio/sfx_service.dart';
+import '../settings/frame_limiter.dart';
 import '../settings/game_settings.dart';
 import '../settings/window_mode.dart';
 
@@ -115,6 +116,7 @@ void registerSharedDependencies() {
           ? InMemoryGameSettingsStore()
           : JsonFileGameSettingsStore.inDirectory(dir),
       window: sl<WindowMode>(),
+      frameLimiter: FrameLimiter.shared,
     );
     unawaited(c.load());
     return c;
