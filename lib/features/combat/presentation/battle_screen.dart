@@ -50,6 +50,7 @@ class BattleView extends StatefulWidget {
     this.localId,
     this.random,
     this.pendingPoints = const {},
+    this.sceneOptions = const SceneOptions(),
   });
 
   final BattleState battle;
@@ -86,6 +87,10 @@ class BattleView extends StatefulWidget {
 
   /// Puntos de atributo sin repartir por jugador (`+N pts` de la caja).
   final Map<String, int> pendingPoints;
+
+  /// Ajustes del jugador para la escena (sacudida, destellos, números,
+  /// velocidad; docs/specs/settings.md). Solo cambian cómo se ve.
+  final SceneOptions sceneOptions;
 
   @override
   State<BattleView> createState() => BattleViewState();
@@ -400,9 +405,14 @@ class BattleViewState extends State<BattleView>
   /// Alto de la barra de batalla para una pantalla de alto [h].
   static double barHeight(double h) => (h * 0.42).clamp(200.0, 300.0);
 
+  /// Si hay un submenú abierto (el de pociones): `Esc` lo cierra en vez
+  /// de abrir la pausa.
+  bool get hasSubmenu => _potMode != null;
+
   @override
   Widget build(BuildContext context) {
     final b = widget.battle;
+    scene.options = widget.sceneOptions;
     return ColoredBox(
       color: ProtoColors.bg,
       child: LayoutBuilder(builder: (context, cons) {

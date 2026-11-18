@@ -8,7 +8,6 @@ import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
-import '../../../../core/audio/presentation/audio_settings_panel.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/loot_filter.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
@@ -17,6 +16,7 @@ import '../../../missions/domain/mission_text.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import '../../../missions/presentation/vote_panel.dart';
+import '../../../settings/presentation/settings_menu.dart';
 import '../map/loot_painter.dart';
 import '../map/map_game.dart';
 import 'chat_box.dart';
@@ -39,6 +39,7 @@ class WorldHud extends StatelessWidget {
     required this.view,
     required this.controller,
     this.onExit,
+    this.onMenu,
     this.chatFocus,
     this.onChatDone,
   });
@@ -48,6 +49,9 @@ class WorldHud extends StatelessWidget {
 
   /// Volver al título (solo en el lobby).
   final VoidCallback? onExit;
+
+  /// Abre el menú de pausa (`≡ MENÚ [ESC]`); sin él no hay botón.
+  final VoidCallback? onMenu;
 
   /// Foco del campo de chat (sin él no se muestra el campo).
   final FocusNode? chatFocus;
@@ -90,7 +94,8 @@ class WorldHud extends StatelessWidget {
                 ),
               ),
             ),
-            // `< TITULO` (solo en el lobby) y `SONIDO` (siempre).
+            // `< TITULO` (solo en el lobby) y `≡ MENÚ` (siempre): la pausa
+            // con sonido, pantalla, juego, controles y salidas.
             Positioned(
               top: _gap,
               left: _gap,
@@ -105,7 +110,7 @@ class WorldHud extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                   ],
-                  const AudioSettingsButton(),
+                  if (onMenu != null) PauseMenuButton(onPressed: onMenu!),
                 ],
               ),
             ),

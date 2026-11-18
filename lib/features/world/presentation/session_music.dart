@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/music/music_catalog.dart';
 import '../../../core/audio/music/music_service.dart';
-import '../../../core/audio/presentation/audio_settings_panel.dart';
+import '../../../core/audio/presentation/audio_providers.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/rules/map_generator.dart';

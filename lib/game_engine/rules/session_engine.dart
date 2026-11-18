@@ -165,12 +165,23 @@ class SessionEngine {
   /// este momento (el estado no cambia).
   SessionStep? apply(GameSession session, String playerId, SessionAction action) {
     if (!session.players.containsKey(playerId)) return null;
+    // Pausada: solo reanudar, chatear y lo que no toca el mundo (filtro de
+    // loot, ordenar el inventario). Ver docs/specs/settings.md § "Pausa".
+    if (session.paused &&
+        action is! PauseAction &&
+        action is! ChatAction &&
+        action is! SetLootFilterAction &&
+        action is! MoveInventoryAction) {
+      return null;
+    }
     final op = _Op(this, session.copy());
     return op.apply(op.s.players[playerId]!, action) ? op.result : null;
   }
 
-  /// `hostTick`: avanza [dt] segundos.
+  /// `hostTick`: avanza [dt] segundos. Con la sala pausada no avanza
+  /// nada (ni reloj, ni misión, ni campo, ni turnos).
   SessionStep tick(GameSession session, double dt) {
+    if (session.paused) return SessionStep(session, const []);
     final op = _Op(this, session.copy());
     op.tick(dt);
     return op.result;
@@ -438,6 +449,20 @@ class _Op {
 
       case BattleAction():
         return _battleCommand(p, a.command);
+
+      case PauseAction():
+        // Pausa de grupo: cualquiera pausa, cualquiera reanuda.
+        if (a.paused == s.paused) return false;
+        if (a.paused) {
+          s.pausedBy = p.id;
+          s.pausedName = p.name;
+          events.add(PausedEvent(p.id, p.name));
+        } else {
+          s.pausedBy = null;
+          s.pausedName = null;
+          events.add(ResumedEvent(p.id, p.name));
+        }
+        return true;
 
       case ChatAction():
         // `case 'chat'`: en cualquier modo; el estado no cambia.

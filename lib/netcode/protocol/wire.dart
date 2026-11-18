@@ -11,7 +11,7 @@ import '../../game_engine/serialization/json_read.dart';
 import '../../game_engine/serialization/session_json.dart';
 
 /// Versión del protocolo (`v` del `hello` / `welcome`).
-const kProtocolVersion = 2;
+const kProtocolVersion = 3;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {

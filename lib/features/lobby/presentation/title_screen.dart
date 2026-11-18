@@ -10,7 +10,8 @@ import '../../../app/theme/retro_panel.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../core/audio/music/music_catalog.dart';
-import '../../../core/audio/presentation/audio_settings_panel.dart';
+import '../../../core/audio/presentation/audio_providers.dart';
+import '../../../core/settings/settings_providers.dart';
 import '../../../core/update/presentation/update_banner.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/class_def.dart';
@@ -21,6 +22,7 @@ import '../../../netcode/contracts/net_session_factory.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/pixel_sprite.dart';
 import '../../world/presentation/session_controller.dart';
+import '../../settings/presentation/settings_menu.dart';
 import '../../world/presentation/world_screen.dart';
 
 /// Pantalla de título (prototipo, HTML líneas 70-83 y `title()` desde la
@@ -60,6 +62,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     // segundo plano se preparan las piezas que suenan enseguida al jugar
     // (docs/specs/music.md § 6).
     ref.read(audioSettingsProvider);
+    // Ajustes de pantalla y de juego (cargan de `game.json`; si quedó en
+    // pantalla completa, la ventana vuelve a ella).
+    ref.read(gameSettingsProvider);
     final music = ref.read(musicServiceProvider)..playTrack(Music.title);
     unawaited(music.preload(const [
       Music.town,
@@ -352,7 +357,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                const AudioSettingsButton(),
+                PanelButton('CONFIGURACIÓN',
+                    key: const ValueKey('title-settings'),
+                    onPressed: () => showSettingsDialog(context)),
                 if (_netStatus case final status?) ...[
                   const SizedBox(height: 8),
                   Text(retroText(status),

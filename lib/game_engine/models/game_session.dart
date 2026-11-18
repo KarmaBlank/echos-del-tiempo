@@ -493,6 +493,8 @@ class GameSession {
     this.seq = 0,
     List<GroundLoot>? ground,
     this.groundSeq = 0,
+    this.pausedBy,
+    this.pausedName,
   })  : players = players ?? LinkedHashMap(),
         ground = ground ?? [];
 
@@ -523,6 +525,16 @@ class GameSession {
 
   /// Contador para ids de [ground].
   int groundSeq;
+
+  /// Quién pausó la sala (`null` = corriendo). Mientras está pausada el
+  /// host no avanza nada (docs/specs/settings.md § "Pausa"). Si ese
+  /// jugador se va, sigue pausada: cualquiera reanuda.
+  String? pausedBy;
+
+  /// Su nombre cuando pausó (para el cartel aunque ya no esté).
+  String? pausedName;
+
+  bool get paused => pausedBy != null;
 
   /// El loot del piso que ve [playerId] (el suyo y el compartido).
   Iterable<GroundLoot> groundFor(String playerId) =>
@@ -565,5 +577,7 @@ class GameSession {
         seq: seq,
         ground: [...ground],
         groundSeq: groundSeq,
+        pausedBy: pausedBy,
+        pausedName: pausedName,
       );
 }

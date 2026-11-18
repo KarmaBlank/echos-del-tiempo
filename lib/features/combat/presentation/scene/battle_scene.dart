@@ -80,9 +80,35 @@ class LiveFx {
 /// partículas, cinemática de ULT, muertes vistas y cámara. No decide
 /// nada del juego: se alimenta de los eventos y el estado que recibe.
 /// Ver docs/specs/battle_presentation.md.
+/// Ajustes del jugador que la escena respeta (docs/specs/settings.md):
+/// solo cambian cómo se ve, nunca el estado de la batalla.
+class SceneOptions {
+  const SceneOptions({
+    this.shake = true,
+    this.flash = 1,
+    this.damageNumbers = true,
+    this.speed = 1,
+  });
+
+  /// Sacudida de pantalla.
+  final bool shake;
+
+  /// Multiplicador del alfa de los destellos de pantalla completa (0..1).
+  final double flash;
+
+  /// Números de daño / cura flotantes (`num`).
+  final bool damageNumbers;
+
+  /// Multiplicador del reloj de animación (1 = como el prototipo).
+  final double speed;
+}
+
 class BattleSceneController extends ChangeNotifier {
   BattleSceneController({math.Random? random})
       : particles = ParticleSystem(random);
+
+  /// Ajustes del jugador (sacudida, destellos, números, velocidad).
+  SceneOptions options = const SceneOptions();
 
   /// Reloj de animación en ms (`performance.now()`); se detiene durante
   /// el hit-stop.
@@ -229,7 +255,7 @@ class BattleSceneController extends ChangeNotifier {
   /// Avanza [dtMs] milisegundos de reloj real.
   void advance(double dtMs) {
     final f = frame;
-    var dt = dtMs;
+    var dt = dtMs * (options.speed > 0 ? options.speed : 1);
     if (hitStop > 0) {
       final eat = math.min(hitStop, dt);
       hitStop -= eat;
@@ -238,6 +264,7 @@ class BattleSceneController extends ChangeNotifier {
     t += dt;
     if (!frozen) poseT += dt;
     particles.update(dt / 1000);
+    if (!options.shake) particles.shake = 0;
     if (f != null) {
       _trackDeaths(f.battle);
     }

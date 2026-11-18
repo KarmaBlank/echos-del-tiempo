@@ -5,41 +5,61 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'music/music_service.dart';
+import 'sfx_catalog.dart';
 import 'sfx_service.dart';
 
-/// Volúmenes y silencio (docs/specs/music.md § 7).
+/// Volúmenes y silencio (docs/specs/music.md § 7 y
+/// docs/specs/settings.md § "SONIDO").
 class AudioSettings {
   const AudioSettings({
+    this.masterVolume = defaultMaster,
     this.musicVolume = defaultMusic,
     this.sfxVolume = defaultSfx,
     this.muted = false,
   });
 
+  static const defaultMaster = 1.0;
   static const defaultMusic = 0.6;
   static const defaultSfx = 0.8;
 
-  /// 0..1.
+  /// 0..1. El general multiplica a los otros dos.
+  final double masterVolume;
   final double musicVolume;
   final double sfxVolume;
 
   /// Silencia música y efectos.
   final bool muted;
 
-  AudioSettings copyWith({double? musicVolume, double? sfxVolume, bool? muted}) =>
+  /// Lo que de verdad suena (general × propio).
+  double get effectiveMusic => masterVolume * musicVolume;
+  double get effectiveSfx => masterVolume * sfxVolume;
+
+  AudioSettings copyWith(
+          {double? masterVolume,
+          double? musicVolume,
+          double? sfxVolume,
+          bool? muted}) =>
       AudioSettings(
+        masterVolume: (masterVolume ?? this.masterVolume).clamp(0.0, 1.0),
         musicVolume: (musicVolume ?? this.musicVolume).clamp(0.0, 1.0),
         sfxVolume: (sfxVolume ?? this.sfxVolume).clamp(0.0, 1.0),
         muted: muted ?? this.muted,
       );
 
-  Map<String, Object?> toJson() =>
-      {'music': musicVolume, 'sfx': sfxVolume, 'muted': muted};
+  Map<String, Object?> toJson() => {
+        'master': masterVolume,
+        'music': musicVolume,
+        'sfx': sfxVolume,
+        'muted': muted,
+      };
 
-  /// Valores inválidos o ausentes caen al de por defecto.
+  /// Valores inválidos o ausentes caen al de por defecto (un `audio.json`
+  /// de antes del volumen general no tiene `master`: queda al 100%).
   factory AudioSettings.fromJson(Map<String, Object?> json) {
     double vol(Object? v, double d) =>
         v is num && v.isFinite ? v.toDouble().clamp(0.0, 1.0) : d;
     return AudioSettings(
+      masterVolume: vol(json['master'], defaultMaster),
       musicVolume: vol(json['music'], defaultMusic),
       sfxVolume: vol(json['sfx'], defaultSfx),
       muted: json['muted'] == true,
@@ -49,16 +69,17 @@ class AudioSettings {
   @override
   bool operator ==(Object other) =>
       other is AudioSettings &&
+      other.masterVolume == masterVolume &&
       other.musicVolume == musicVolume &&
       other.sfxVolume == sfxVolume &&
       other.muted == muted;
 
   @override
-  int get hashCode => Object.hash(musicVolume, sfxVolume, muted);
+  int get hashCode => Object.hash(masterVolume, musicVolume, sfxVolume, muted);
 
   @override
-  String toString() =>
-      'AudioSettings(music: $musicVolume, sfx: $sfxVolume, muted: $muted)';
+  String toString() => 'AudioSettings(master: $masterVolume, '
+      'music: $musicVolume, sfx: $sfxVolume, muted: $muted)';
 }
 
 /// Dónde se guardan los ajustes.
@@ -145,8 +166,25 @@ class AudioSettingsController extends StateNotifier<AudioSettings> {
     _apply(s);
   }
 
+  void setMaster(double v) => set(state.copyWith(masterVolume: v));
   void setMusic(double v) => set(state.copyWith(musicVolume: v));
   void setSfx(double v) => set(state.copyWith(sfxVolume: v));
+
+  /// Sonido de muestra al mover el volumen de efectos o el general.
+  static const previewSfx = Sfx.hit;
+
+  /// Separación mínima entre muestras al arrastrar.
+  static const previewGap = Duration(milliseconds: 120);
+  Stopwatch? _sincePreview;
+
+  /// Toca [previewSfx] con el volumen actual (como mucho uno cada
+  /// [previewGap] mientras se arrastra; [force] lo toca igual).
+  void preview({bool force = false}) {
+    final w = _sincePreview;
+    if (!force && w != null && w.elapsed < previewGap) return;
+    _sincePreview = Stopwatch()..start();
+    sfx.play(previewSfx);
+  }
 
   /// Silencio sí/no (se guarda enseguida).
   Future<void> toggleMute() {
@@ -165,10 +203,10 @@ class AudioSettingsController extends StateNotifier<AudioSettings> {
 
   void _apply(AudioSettings s) {
     music
-      ..volume = s.musicVolume
+      ..volume = s.effectiveMusic
       ..muted = s.muted;
     sfx
-      ..volume = s.sfxVolume
+      ..volume = s.effectiveSfx
       ..muted = s.muted;
   }
 }

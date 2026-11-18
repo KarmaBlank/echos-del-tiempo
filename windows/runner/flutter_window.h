@@ -3,6 +3,8 @@
 
 #include <flutter/dart_project.h>
 #include <flutter/flutter_view_controller.h>
+#include <flutter/method_channel.h>
+#include <flutter/encodable_value.h>
 
 #include <memory>
 
@@ -28,6 +30,18 @@ class FlutterWindow : public Win32Window {
 
   // The Flutter instance hosted by this window.
   std::unique_ptr<flutter::FlutterViewController> flutter_controller_;
+
+  // Canal `ecos/window`: pantalla completa sin bordes (docs/specs/settings.md).
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      window_channel_;
+
+  // Pantalla completa: estilo y posición de la ventana para volver.
+  bool fullscreen_ = false;
+  LONG saved_style_ = 0;
+  WINDOWPLACEMENT saved_placement_{sizeof(WINDOWPLACEMENT)};
+
+  // Pone o saca la pantalla completa (el monitor de la ventana entero).
+  void SetFullscreen(bool on);
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_

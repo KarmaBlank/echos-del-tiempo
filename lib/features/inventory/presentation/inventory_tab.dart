@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
@@ -5,6 +6,7 @@ import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/item.dart';
@@ -20,7 +22,7 @@ import 'shop_sections.dart';
 /// equipada aparte, mover arrastrando o con MOVER, ficha y comparación,
 /// EQUIPAR / TIRAR / DAR A y los inventarios de los compañeros en solo
 /// lectura. Ver docs/specs/panels.md § "Inventario".
-class InventoryTab extends StatefulWidget {
+class InventoryTab extends ConsumerStatefulWidget {
   const InventoryTab({super.key, required this.shop, this.pending = const {}});
 
   final ShopContext shop;
@@ -34,10 +36,10 @@ class InventoryTab extends StatefulWidget {
       InventoryRules.columns * cell + (InventoryRules.columns - 1) * gap;
 
   @override
-  State<InventoryTab> createState() => _InventoryTabState();
+  ConsumerState<InventoryTab> createState() => _InventoryTabState();
 }
 
-class _InventoryTabState extends State<InventoryTab> {
+class _InventoryTabState extends ConsumerState<InventoryTab> {
   /// Dueño del inventario que se ve (`null` = el local).
   String? _owner;
 
@@ -494,7 +496,10 @@ class _InventoryTabState extends State<InventoryTab> {
       PanelButton('TIRAR',
           key: const ValueKey('inv-drop'),
           reason: g.drop(p, token, count: count, alive: me.alive),
-          onPressed: () => setState(() => _confirmDrop = true)),
+          // Ajuste CONFIRMAR AL TIRAR (docs/specs/settings.md § "JUEGO").
+          onPressed: () => ref.read(gameSettingsProvider).confirmDrop
+              ? setState(() => _confirmDrop = true)
+              : shop.controller.dropItem(token, count: count)),
       if (it != null) ...[
         PanelButton('DESARMAR',
             key: const ValueKey('inv-salvage'),

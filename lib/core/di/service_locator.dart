@@ -20,6 +20,8 @@ import '../audio/audioplayers_music_player.dart';
 import '../audio/audioplayers_sfx_player.dart';
 import '../audio/music/music_service.dart';
 import '../audio/sfx_service.dart';
+import '../settings/game_settings.dart';
+import '../settings/window_mode.dart';
 
 final sl = GetIt.instance;
 
@@ -94,6 +96,25 @@ void registerSharedDependencies() {
           : JsonFileAudioSettingsStore.inDirectory(dir),
       music: sl<MusicService>(),
       sfx: sl<SfxService>(),
+    );
+    unawaited(c.load());
+    return c;
+  });
+  // Ajustes de pantalla y de juego: `game.json` en la misma carpeta
+  // (docs/specs/settings.md). Pantalla completa por el runner de Windows.
+  sl.registerLazySingleton<WindowMode>(WindowMode.forPlatform);
+  sl.registerLazySingleton<GameSettingsController>(() {
+    String? dir;
+    try {
+      dir = JsonFileProfileStore.dataDirectory();
+    } on UnsupportedError {
+      dir = null; // web
+    }
+    final c = GameSettingsController(
+      store: dir == null
+          ? InMemoryGameSettingsStore()
+          : JsonFileGameSettingsStore.inDirectory(dir),
+      window: sl<WindowMode>(),
     );
     unawaited(c.load());
     return c;

@@ -245,4 +245,33 @@ void main() {
     expect(identical(ana.session, before), isTrue);
     expect(ana.view!.session.vote, isNull);
   });
+
+  test('pausa de grupo: un cliente pausa, todos la ven, otro reanuda',
+      () async {
+    final t0 = host.session!.time;
+    expect(bea.pauseGroup(true), isTrue); // enviada
+    await net();
+    for (final c in [host, ana, bea]) {
+      expect(c.view!.session.paused, isTrue);
+      expect(c.view!.session.pausedName, 'Bea');
+    }
+    expect(ana.view!.chat.last.text, 'Bea pausó el juego');
+    // El host no avanza mientras tanto.
+    await net(2);
+    expect(host.session!.time, t0);
+    // Bea se va: sigue pausada para el resto.
+    bea.dispose();
+    await pumpEventQueue();
+    await net(1);
+    expect(host.session!.players.keys, ['h', 'p1']);
+    expect(ana.view!.session.paused, isTrue);
+    expect(host.session!.time, t0);
+    // Ana reanuda.
+    ana.pauseGroup(false);
+    await net(0.5);
+    expect(host.session!.paused, isFalse);
+    expect(ana.view!.session.paused, isFalse);
+    expect(host.session!.time, greaterThan(t0));
+    expect(host.view!.chat.last.text, 'Ana reanudó el juego');
+  });
 }

@@ -77,7 +77,11 @@ root registra para que el título sepa si hay red: `label` (`LAN`, `P2P`),
 `P2P por internet: falta configurar Firebase`) y `create()` (una
 `NetSession` nueva por sala).
 
-## Protocolo (versión 1)
+## Protocolo (versión 3)
+
+`kProtocolVersion` (`wire.dart`) = 3 desde la pausa de grupo (v0.2.1):
+un cliente de antes no entiende `pause` ni el estado pausado y recibe
+`reject version`. Los ejemplos de abajo muestran `"v":1` por historia.
 
 Cada mensaje es **un texto JSON** con la clave `t` (como los objetos que
 manda PeerJS en el prototipo). Lo implementa una sola vez
@@ -129,6 +133,7 @@ Las claves de `onMsg` del prototipo (`lib/game_engine/serialization/action_json.
 | `ChatAction` | `{"t":"chat","txt":"hola"}` |
 | `BackToLobbyAction` | `{"t":"back"}` |
 | `UseStairsAction` | `{"t":"stairs","down":true}` (worldgen.md § 6.7) |
+| `PauseAction` | `{"t":"pause","on":true}` (pausa de grupo, settings.md § 6) |
 | `BattleAction` | `{"t":"cmd","a":...}` (abajo) |
 
 `BattleCommand` dentro de `cmd` (las claves de `battleCmd`):
@@ -203,6 +208,16 @@ después.
 (≈ 150-450 KB/s por cliente a 15 Hz), igual que el prototipo, que
 también mandaba `S` entero. Si hiciera falta, la optimización natural es
 mandar deltas; no está hecha.
+
+### Pausa de grupo (v0.2.1)
+
+- Snapshot: clave opcional `"pause":{"id":"p1","name":"Ana"}` solo con la
+  sala pausada (`GameSession.pausedBy` / `pausedName`).
+- Eventos: `{"t":"paused","id","name"}` y `{"t":"resumed","id","name"}`.
+- Con la sala pausada el host no avanza (`tick` sin cambios) y rechaza
+  todo salvo `pause`, `chat`, el filtro de loot y mover en el inventario
+  (los `pos` se ignoran). Sigue difundiendo el snapshot. Reglas:
+  docs/specs/settings.md § 6.
 
 ### Loot instanciado (loot v2)
 
