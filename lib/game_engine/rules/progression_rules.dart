@@ -442,7 +442,6 @@ class ProgressionRules {
     final def = kItems[item]!;
     final have = item == BattleItem.potion ? p.potions : p.ethers;
     if (have >= maxItems || p.credits < def.price) return null;
-    if (have == 0 && InventoryRules.freeCells(p) <= 0) return null;
     return InventoryRules.relayout(p.copyWith(
       credits: p.credits - def.price,
       potions: item == BattleItem.potion ? have + 1 : null,
@@ -458,7 +457,8 @@ class ProgressionRules {
   }
 
   /// `fuse` (compatibilidad): [baseId] hereda [skillId] de [sacrificeId],
-  /// que se consume (`CraftRules.transferSkill`).
+  /// que se consume (`CraftRules.transferSkill`). No elige reemplazo: con
+  /// los cupos llenos falla (loot.md § 16.2).
   PlayerProfile? fuse(
       PlayerProfile p, String baseId, String sacrificeId, String skillId) {
     final a = p.item(baseId), b = p.item(sacrificeId);

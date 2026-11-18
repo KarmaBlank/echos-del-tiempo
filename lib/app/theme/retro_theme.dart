@@ -94,10 +94,13 @@ abstract final class RetroTheme {
           width: thinBorderWidth,
           color: s.contains(WidgetState.disabled)
               ? ProtoColors.buttonBorder.withValues(alpha: 0.35)
-              : s.contains(WidgetState.focused) ||
-                      s.contains(WidgetState.hovered)
-                  ? ProtoColors.buttonHoverBorder
-                  : ProtoColors.buttonBorder,
+              // Foco de teclado: el mismo dorado del aro de los menús
+              // (`FocusRing`, lib/app/widgets/menu_focus.dart).
+              : s.contains(WidgetState.focused)
+                  ? ProtoColors.gold
+                  : s.contains(WidgetState.hovered)
+                      ? ProtoColors.buttonHoverBorder
+                      : ProtoColors.buttonBorder,
         ),
       ),
     );
@@ -111,7 +114,8 @@ abstract final class RetroTheme {
       // Escala tipográfica: docs/specs/ui_style.md § "Tipografía".
       textTheme: TextTheme(
         displayLarge: const TextStyle(fontSize: RetroType.display, height: 1.5),
-        headlineMedium: const TextStyle(fontSize: RetroType.heading, height: 1.5),
+        headlineMedium:
+            const TextStyle(fontSize: RetroType.heading, height: 1.5),
         titleMedium: const TextStyle(fontSize: RetroType.title, height: 1.5),
         bodyLarge: const TextStyle(fontSize: RetroType.title, height: 1.5),
         bodyMedium: const TextStyle(fontSize: RetroType.title, height: 1.5),

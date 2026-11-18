@@ -1,5 +1,7 @@
 import 'dart:ui';
 
+import '../../../../app/theme/vision_palette.dart';
+
 import '../../../../game_engine/data/ascension_catalog.dart';
 import '../../../../game_engine/data/skill_variants_catalog.dart';
 import '../../../../game_engine/data/skills_catalog.dart';
@@ -354,14 +356,15 @@ ElementFx elementFx(FxElement el) =>
 // (docs/specs/battle_presentation.md § "Quiebre" y § "ULT enemigas").
 
 /// Amarillo de la barra de quiebre, `¡QUIEBRE!` y los golpes a un
-/// enemigo quebrado.
-const breakColor = Color(0xFFFFE14D);
+/// enemigo quebrado (celeste con el modo daltónico).
+const breakColor = VisionColor(VisionSlot.breakBar);
 
 /// Destello de pantalla del quiebre.
 const breakFlashColor = Color(0xFFFFF7C2);
 
-/// Rojo de la carga de ULT enemiga y del aviso.
-const enemyUltBarColor = Color(0xFFFF3355);
+/// Rojo de la carga de ULT enemiga y del aviso (violeta con el modo
+/// daltónico).
+const enemyUltBarColor = VisionColor(VisionSlot.enemyUlt);
 
 /// Astillas de cristal del quiebre.
 const kBreakShardFx = ElementFx([

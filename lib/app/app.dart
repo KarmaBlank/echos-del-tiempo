@@ -6,6 +6,8 @@ import '../core/settings/game_settings.dart';
 import '../core/settings/settings_providers.dart';
 import '../features/lobby/presentation/title_screen.dart';
 import 'theme/retro_theme.dart';
+import 'theme/vision_palette.dart';
+import 'widgets/perf_overlay.dart';
 
 /// Shell de la app. Todas las pantallas reales (lobby, personaje,
 /// batalla con Flame, etc.) se agregan en `features/*/presentation` y
@@ -33,14 +35,23 @@ class EcosApp extends StatelessWidget {
         // y filtro CRT (§ 3.2) sobre toda la app, overlays incluidos.
         builder: (context, child) => Consumer(
           builder: (context, ref, _) => RetroTextScale(
-            factor: ref.watch(
-                gameSettingsProvider.select((s) => s.textSize.factor)),
+            factor: ref
+                .watch(gameSettingsProvider.select((s) => s.textSize.factor)),
             // Fuente de lectura (settings.md § 3.7).
             classic: ref.watch(gameSettingsProvider
                 .select((s) => s.readingFont == ReadingFont.classic)),
-            child: CrtFilter(
-              level: ref.watch(gameSettingsProvider.select((s) => s.crt)),
-              child: child ?? const SizedBox.shrink(),
+            // Modo daltónico (accessibility.md § 3).
+            child: ColorVisionScope(
+              mode:
+                  ref.watch(gameSettingsProvider.select((s) => s.colorVision)),
+              // FPS y ping (§ 3.9): encima del CRT (no se curva) y sin
+              // recibir clics.
+              child: PerfOverlay(
+                child: CrtFilter(
+                  level: ref.watch(gameSettingsProvider.select((s) => s.crt)),
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
             ),
           ),
         ),

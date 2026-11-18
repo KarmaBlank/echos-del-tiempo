@@ -14,6 +14,7 @@ import '../../../game_engine/rules/progression_rules.dart';
 import '../domain/item_text.dart';
 import '../domain/weapon_compare.dart';
 import 'shop_sections.dart';
+import 'skill_chip.dart';
 
 /// Comparar armas en el inventario: la comparación (stats + qué cambia),
 /// la ficha doble del mouse y la vista COMPARAR A vs B. Ver
@@ -125,7 +126,7 @@ class _StatDeltaText extends StatelessWidget {
     return Text.rich(TextSpan(children: [
       TextSpan(text: retroText('${s.label} ${s.format(s.before)}')),
       TextSpan(
-          style: TextStyle(color: c, fontWeight: FontWeight.bold),
+          style: TextStyle(color: c),
           children: symbolSpans(retroText(
               ' → ${s.format(s.after)} ${s.diffText} ${s.better ? '▲' : '▼'}'))),
     ]));
@@ -390,8 +391,17 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
               const SizedBox(height: 4),
               Expanded(
                 child: SingleChildScrollView(
-                  child: ProtoText(itemTooltipMarkup(rules, it,
-                      level: viewer.level, attributes: attrs)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ProtoText(itemTooltipMarkup(rules, it,
+                          level: viewer.level,
+                          attributes: attrs,
+                          skills: false)),
+                      // Cada habilidad con su ficha (mouse / foco).
+                      SkillChips(rules: rules, item: it),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 6),

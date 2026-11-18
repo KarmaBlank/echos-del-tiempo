@@ -15,6 +15,11 @@ class PowerFormula {
   }
 }
 
+/// Categoría de un tipo de arma (loot.md § 16.1): qué habilidades
+/// trasladadas puede recibir. Los `caster` no golpean ni disparan: solo
+/// reciben habilidades [SkillDelivery.any] (`models/skill.dart`).
+enum WeaponCategory { melee, ranged, caster }
+
 /// Una base de arma (loot.md § 1). Cualquier clase la equipa si cumple
 /// el nivel y los requisitos de atributos; [classId] es solo la
 /// "familia" (para la tienda, el sesgo de drops y la UI).

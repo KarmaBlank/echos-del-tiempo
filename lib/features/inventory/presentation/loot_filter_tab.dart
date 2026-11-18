@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
@@ -8,12 +9,16 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../game_engine/models/build_wants.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/loot_filter.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/loot_filter_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import '../../build_planner/presentation/build_fit_badge.dart' show kPlanColor;
+import '../../build_planner/presentation/build_plan_providers.dart';
+import '../domain/filter_build_snippets.dart';
 import '../domain/item_text.dart';
 import '../domain/shop_guards.dart';
 import 'item_widgets.dart';
@@ -26,7 +31,9 @@ const kFilterGrammar = '<b>Mostrar</b> u <b>Ocultar</b> [# nombre] y debajo, '
     'Legendario · Tipo espada lanza… · Base id · Clase guerrero · '
     'NivelObjeto &lt; 10 · NivelRelativo &lt;= -6 · Mods &gt;= 3 · TieneMod '
     'feroz &lt;= 2 · Pasiva [Si/No] · Material esquirla/cristal/prisma · '
-    'Objeto Arma/Material/Pocion · Utilizable [Si/No].<br>'
+    'Objeto Arma/Material/Pocion · Utilizable [Si/No] · '
+    'Build [Base/Mod/Pasiva/Habilidad] o Build No (coincide con tu plan de '
+    'build, ★).<br>'
     '<span class="k">op</span>: = != &lt; &lt;= &gt; &gt;=<br>'
     '<span class="k">Acciones</span>: Color R G B [A] · Borde R G B · Fondo R G '
     'B [A] · Tamaño 18–45 · Sonido alerta/campana/gema/legendario/material/'
@@ -92,21 +99,30 @@ List<LootDrop> filterSamples(int level) {
 /// validación por línea, vista previa sobre objetos de muestra, guardar y
 /// restaurar. El editor visual queda para la próxima versión. Ver
 /// docs/specs/panels.md § "Filtro de loot".
-class LootFilterTab extends StatefulWidget {
+class LootFilterTab extends ConsumerStatefulWidget {
   const LootFilterTab({super.key, required this.shop});
 
   final ShopContext shop;
 
   @override
-  State<LootFilterTab> createState() => _LootFilterTabState();
+  ConsumerState<LootFilterTab> createState() => _LootFilterTabState();
 }
 
-class _LootFilterTabState extends State<LootFilterTab> {
+class _LootFilterTabState extends ConsumerState<LootFilterTab> {
   late final _text = TextEditingController(text: _savedText);
   final _focus = FocusNode(debugLabel: 'loot-filter');
 
   PlayerProfile get _p => widget.shop.profile;
   String get _savedText => _p.lootFilter ?? LootFilterRules.defaultText;
+
+  /// Qué partes del plan pide la condición `Build` que se agrega (vacío =
+  /// cualquier meta).
+  final _buildKinds = <BuildMatch>{};
+
+  void _setText((String, int) r) {
+    _text.value = TextEditingValue(
+        text: r.$1, selection: TextSelection.collapsed(offset: r.$2));
+  }
 
   @override
   void initState() {
@@ -151,8 +167,11 @@ class _LootFilterTabState extends State<LootFilterTab> {
             expands: true,
             keyboardType: TextInputType.multiline,
             textAlignVertical: TextAlignVertical.top,
-            style: TextStyle(fontFamily: RetroType.bodyFamily,
- fontFamilyFallback: RetroType.bodyFallback, fontSize: RetroType.small, height: 1.8),
+            style: TextStyle(
+                fontFamily: RetroType.bodyFamily,
+                fontFamilyFallback: RetroType.bodyFallback,
+                fontSize: RetroType.small,
+                height: 1.8),
             decoration: const InputDecoration(
                 contentPadding: EdgeInsets.all(8), isDense: true),
           ),
@@ -177,20 +196,24 @@ class _LootFilterTabState extends State<LootFilterTab> {
             PanelButton('GUARDAR',
                 key: const ValueKey('filter-save'),
                 accent: ProtoColors.green,
-                reason: reason,
-                onPressed: () {
-                  final t = _text.text;
-                  shop.controller.setLootFilter(
-                      t == LootFilterRules.defaultText ? null : t);
-                  setState(() {});
-                }),
+                reason: reason, onPressed: () {
+              final t = _text.text;
+              shop.controller
+                  .setLootFilter(t == LootFilterRules.defaultText ? null : t);
+              setState(() {});
+            }),
           ],
         ),
       ],
     );
 
+    // El plan local: la vista previa evalúa `Build` igual que el host.
+    final wants = BuildWants.fromPlan(ref.watch(buildPlanProvider).plan);
     final ctx = FilterContext(
-        level: p.level, attributes: p.attributes, classId: p.classId);
+        level: p.level,
+        attributes: p.attributes,
+        classId: p.classId,
+        wants: wants);
     final f = parsed.filter;
     final side = PanelDetail(
       children: [
@@ -200,13 +223,14 @@ class _LootFilterTabState extends State<LootFilterTab> {
           parsed.ok
               ? protoColor(ProtoColors.green,
                   'Sin errores · ${f.rules.length} regla${f.rules.length == 1 ? '' : 's'}')
-              : protoColor(
-                  ProtoColors.red,
+              : protoColor(ProtoColors.red,
                   [for (final e in parsed.errors) protoEsc(e)].join('<br>')),
         ),
         if (p.lootFilter == null)
           Text(retroText('Usas el filtro por defecto.'),
               style: const TextStyle(color: ProtoColors.dim)),
+        const SizedBox(height: 8),
+        ..._buildSection(wants),
         const SizedBox(height: 8),
         const Text('VISTA PREVIA', style: TextStyle(color: ProtoColors.gold)),
         Text(retroText('Así se verían en el mapa (tu nivel ${p.level}):'),
@@ -231,6 +255,82 @@ class _LootFilterTabState extends State<LootFilterTab> {
     );
   }
 
+  /// Sección "Coincide con mi build" (condición `Build`, loot.md § 13):
+  /// elegir qué parte del plan y agregarla a la regla del cursor o como
+  /// una regla nueva que resalta / oculta.
+  List<Widget> _buildSection(BuildWants wants) {
+    String count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
+    final summary = wants.isEmpty
+        ? 'No tenés plan de build: la condición no coincide con nada hasta '
+            'que armes uno en la pestaña BUILD.'
+        : 'Tu plan busca: ${[
+            if (wants.weaponTypes.length + wants.weaponBases.length > 0)
+              count(wants.weaponTypes.length + wants.weaponBases.length,
+                  'base o tipo', 'bases o tipos'),
+            if (wants.mods.isNotEmpty) count(wants.mods.length, 'mod', 'mods'),
+            if (wants.weaponPassive != null) 'una pasiva',
+            if (wants.skills.isNotEmpty)
+              count(wants.skills.length, 'habilidad', 'habilidades'),
+          ].join(' · ')}.';
+    Widget kind(String label, BuildMatch? k) {
+      final on = k == null ? _buildKinds.isEmpty : _buildKinds.contains(k);
+      return PanelButton(label,
+          key: ValueKey('filter-build-kind-${k?.name ?? 'any'}'),
+          selected: on,
+          accent: kPlanColor,
+          onPressed: () => setState(() {
+                if (k == null) {
+                  _buildKinds.clear();
+                } else if (!_buildKinds.remove(k)) {
+                  _buildKinds.add(k);
+                }
+              }));
+    }
+
+    final cond = FilterBuildSnippets.condition(_buildKinds).text;
+    return [
+      Text(retroText('★ COINCIDE CON MI BUILD'),
+          key: const ValueKey('filter-build-title'),
+          style: const TextStyle(color: kPlanColor)),
+      Text(
+          retroText('Condición para tus reglas: el arma cumple algo de tu '
+              'plan de build. En el mapa lleva ★. Elegí qué tiene que cumplir:'),
+          style: const TextStyle(color: ProtoColors.dim)),
+      const SizedBox(height: 4),
+      Wrap(spacing: 6, runSpacing: 6, children: [
+        kind('CUALQUIER META', null),
+        kind('BASE O TIPO', BuildMatch.base),
+        kind('MOD', BuildMatch.mod),
+        kind('PASIVA', BuildMatch.pasiva),
+        kind('HABILIDAD', BuildMatch.habilidad),
+      ]),
+      const SizedBox(height: 4),
+      Text(retroText('Línea: $cond'),
+          key: const ValueKey('filter-build-line'),
+          style: const TextStyle(color: ProtoColors.ink)),
+      const SizedBox(height: 4),
+      Wrap(spacing: 6, runSpacing: 6, children: [
+        PanelButton('+ A LA REGLA DEL CURSOR',
+            key: const ValueKey('filter-build-insert'),
+            onPressed: () => _setText(FilterBuildSnippets.insertCondition(
+                _text.text, _text.selection.baseOffset, _buildKinds))),
+        PanelButton('+ REGLA: RESALTAR',
+            key: const ValueKey('filter-build-highlight'),
+            accent: kPlanColor,
+            onPressed: () => _setText(FilterBuildSnippets.prependRule(
+                _text.text, FilterBuildSnippets.highlightRule(_buildKinds)))),
+        PanelButton('+ REGLA: OCULTAR COMUNES FUERA DEL PLAN',
+            key: const ValueKey('filter-build-hide'),
+            onPressed: () => _setText(FilterBuildSnippets.prependRule(
+                _text.text, FilterBuildSnippets.hideRule))),
+      ]),
+      const SizedBox(height: 4),
+      Text(retroText(summary),
+          key: const ValueKey('filter-build-plan'),
+          style: const TextStyle(color: ProtoColors.dim)),
+    ];
+  }
+
   Widget _sample(ProgressionRules rules, LootFilterRules fr, LootFilter f,
       LootDrop d, FilterContext ctx, int i) {
     final v = fr.evaluate(f, d, ctx);
@@ -239,6 +339,8 @@ class _LootFilterTabState extends State<LootFilterTab> {
         : f.rules[v.ruleIndex!].name ?? 'regla ${v.ruleIndex! + 1}';
     final st = v.style;
     final extra = [
+      if (v.buildMatch)
+        '★ tu build: ${[for (final k in v.build) k.label].join(', ')}',
       if (v.visible && st.sound != null) 'sonido ${st.sound}',
       if (v.visible && st.icon != null)
         'ícono ${st.icon!.shape.name} ${st.icon!.color.name}',
@@ -259,7 +361,8 @@ class _LootFilterTabState extends State<LootFilterTab> {
                     level: ctx.level, attributes: ctx.attributes),
           ),
           Text(
-              retroText('${it == null ? 'Material' : '${it.rarity.label} · nv ${it.itemLevel}'}'
+              retroText(
+                  '${it == null ? 'Material' : '${it.rarity.label} · nv ${it.itemLevel}'}'
                   ' · $rule${extra.isEmpty ? '' : ' · ${extra.join(' · ')}'}'),
               style: const TextStyle(color: ProtoColors.dim)),
         ],

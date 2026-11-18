@@ -4,6 +4,8 @@ import '../theme/proto_colors.dart';
 import '../theme/proto_markup.dart';
 import '../theme/retro_text.dart';
 import '../theme/retro_theme.dart';
+import 'cost_chip.dart';
+import 'menu_focus.dart';
 import 'pixel_icon.dart';
 
 /// Tarjeta elegible de un menú (acciones de la fusión, armas…): ícono en
@@ -15,7 +17,9 @@ import 'pixel_icon.dart';
 /// color a la izquierda con [bandLabel] (p. ej. la rareza). [badge] es un
 /// hueco arriba a la derecha (p. ej. `BuildFitBadge`). Clic / `Enter` /
 /// `Espacio` = [onTap]; las flechas mueven el foco entre tarjetas
-/// (`PanelFrame`).
+/// (`PanelFrame`) y el foco de teclado dibuja el aro dorado ([FocusRing]).
+/// Con [reason] queda bloqueada y, si no hay [footer], el pie es el
+/// candado con el motivo completo ([CostChip.blocked]).
 class ActionCard extends StatefulWidget {
   const ActionCard({
     super.key,
@@ -30,7 +34,15 @@ class ActionCard extends StatefulWidget {
     this.band,
     this.bandLabel,
     this.badge,
+    this.reason,
+    this.autofocus = false,
+    this.focusNode,
   });
+
+  /// Por qué no se puede (bloquea la tarjeta y se lee entero en el pie).
+  final String? reason;
+  final bool autofocus;
+  final FocusNode? focusNode;
 
   /// Markup.
   final String title;
@@ -66,7 +78,10 @@ class _ActionCardState extends State<ActionCard> {
         : _hot
             ? ProtoColors.sky
             : ProtoColors.panelBorder;
-    final fade = w.disabled ? 0.55 : 1.0;
+    final disabled = w.disabled || w.reason != null;
+    final footer =
+        w.footer ?? (w.reason == null ? null : CostChip.blocked(w.reason!));
+    final fade = disabled ? 0.55 : 1.0;
     final showPreview = _hot && w.preview != null;
     final text = showPreview ? w.preview : w.description;
     final iconBox = RetroType.width(context, 36);
@@ -104,7 +119,7 @@ class _ActionCardState extends State<ActionCard> {
                       child: ProtoText(w.title),
                     ),
                   ),
-                  if (w.disabled)
+                  if (disabled)
                     Padding(
                       padding: const EdgeInsets.only(left: 4, top: 2),
                       child: PixelIcon(PixelIconKind.lock,
@@ -119,9 +134,9 @@ class _ActionCardState extends State<ActionCard> {
                     style: TextStyle(
                         color:
                             showPreview ? ProtoColors.sky : ProtoColors.dim)),
-              if (w.footer != null) ...[
+              if (footer != null) ...[
                 const SizedBox(height: 4),
-                w.footer!,
+                footer,
               ],
             ],
           ),
@@ -129,6 +144,8 @@ class _ActionCardState extends State<ActionCard> {
       ],
     );
     return FocusableActionDetector(
+      autofocus: w.autofocus,
+      focusNode: w.focusNode,
       mouseCursor: SystemMouseCursors.click,
       onShowFocusHighlight: (v) => setState(() => _focus = v),
       actions: {
@@ -143,49 +160,60 @@ class _ActionCardState extends State<ActionCard> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: w.onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 90),
-            transform: Matrix4.translationValues(0, _hot ? -2 : 0, 0),
-            margin: const EdgeInsets.only(bottom: 6),
-            decoration: BoxDecoration(
-              color: w.selected
-                  ? ProtoColors.button.withValues(alpha: 0.75)
-                  : _hot
-                      ? ProtoColors.buttonHover.withValues(alpha: 0.5)
-                      : ProtoColors.panel,
-              border: Border.all(
-                  color: border,
-                  width: w.selected || _hot ? 3 : RetroTheme.thinBorderWidth),
-              boxShadow: _hot
-                  ? const [
-                      BoxShadow(color: Color(0xAA000000), offset: Offset(0, 3))
-                    ]
-                  : null,
-            ),
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (w.band != null)
-                    Container(
-                      width: RetroType.width(context, 18),
-                      color: w.band,
-                      alignment: Alignment.center,
-                      child: w.bandLabel == null
-                          ? null
-                          : Text(retroText(w.bandLabel!),
-                              style: const TextStyle(
-                                  fontFamily: RetroType.pixelFamily,
-                                  fontSize: RetroType.label,
-                                  color: ProtoColors.bg)),
-                    ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: body,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Transform.translate(
+              offset: Offset(0, _hot ? -2 : 0),
+              child: FocusRing(
+                focused: _focus,
+                pointer: false,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 90),
+                  decoration: BoxDecoration(
+                    color: w.selected
+                        ? ProtoColors.button.withValues(alpha: 0.75)
+                        : _hot
+                            ? ProtoColors.buttonHover.withValues(alpha: 0.5)
+                            : ProtoColors.panel,
+                    border: Border.all(
+                        color: border,
+                        width: w.selected || _hot
+                            ? 3
+                            : RetroTheme.thinBorderWidth),
+                    boxShadow: _hot
+                        ? const [
+                            BoxShadow(
+                                color: Color(0xAA000000), offset: Offset(0, 3))
+                          ]
+                        : null,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (w.band != null)
+                          Container(
+                            width: RetroType.width(context, 18),
+                            color: w.band,
+                            alignment: Alignment.center,
+                            child: w.bandLabel == null
+                                ? null
+                                : Text(retroText(w.bandLabel!),
+                                    style: const TextStyle(
+                                        fontFamily: RetroType.pixelFamily,
+                                        fontSize: RetroType.label,
+                                        color: ProtoColors.bg)),
+                          ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: body,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
           ),

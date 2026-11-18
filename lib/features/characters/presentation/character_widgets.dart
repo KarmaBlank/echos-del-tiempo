@@ -7,6 +7,7 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_panel.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../app/widgets/menu_focus.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/class_def.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -46,7 +47,9 @@ class RetroTextField extends StatelessWidget {
 
   static TextStyle get _style => TextStyle(
       fontFamily: RetroType.bodyFamily,
- fontFamilyFallback: RetroType.bodyFallback, fontSize: RetroType.small, color: RetroPalette.ink);
+      fontFamilyFallback: RetroType.bodyFallback,
+      fontSize: RetroType.small,
+      color: RetroPalette.ink);
 
   @override
   Widget build(BuildContext context) => TextField(
@@ -80,9 +83,14 @@ class CharacterSlotCard extends StatelessWidget {
     required this.selected,
     required this.sprites,
     required this.onTap,
+    this.onKeyActivate,
   });
 
   static const width = 252.0;
+
+  /// `Enter` sobre la tarjeta (el título: elegir o, si ya está elegida,
+  /// jugar).
+  final VoidCallback? onKeyActivate;
 
   /// Ancho con el texto actual: crece con el texto pero siempre entran 4
   /// por fila a 1280 px.
@@ -108,52 +116,51 @@ class CharacterSlotCard extends StatelessWidget {
     const small = TextStyle(color: RetroPalette.muted);
     Widget line(String t, {TextStyle? style, Key? key}) => Text(retroText(t),
         key: key, maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
-    return GestureDetector(
+    return MenuFocusable(
       key: ValueKey('char-slot-${slot.id}'),
       onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: SizedBox(
-          width: widthOf(context),
-          child: RetroPanel(
-            selected: selected,
-            padding: const EdgeInsets.all(10),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: 56,
-                  height: 56,
-                  child: img == null
-                      ? null
-                      : Center(child: PixelSprite(img, scale: 3)),
+      onKeyActivate: onKeyActivate,
+      builder: (context, hot) => SizedBox(
+        width: widthOf(context),
+        child: RetroPanel(
+          selected: selected,
+          borderColor: selected || !hot ? null : ProtoColors.sky,
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 56,
+                height: 56,
+                child: img == null
+                    ? null
+                    : Center(child: PixelSprite(img, scale: 3)),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(retroText(slot.displayName),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontFamily: RetroType.pixelFamily,
+                            fontSize: RetroType.title,
+                            color: selected
+                                ? RetroPalette.gold
+                                : RetroPalette.ink)),
+                    const SizedBox(height: 4),
+                    if (asc != null)
+                      line(asc.name,
+                          key: ValueKey('char-asc-${slot.id}'),
+                          style: TextStyle(color: Color(asc.color))),
+                    line('$className · Nv ${profile.level}'),
+                    line('Zona ${profile.unlockedZone}', style: small),
+                    line(lastPlayedText(slot.lastPlayed), style: small),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(retroText(slot.displayName),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontFamily: RetroType.pixelFamily,
-                              fontSize: RetroType.title,
-                              color: selected
-                                  ? RetroPalette.gold
-                                  : RetroPalette.ink)),
-                      const SizedBox(height: 4),
-                      if (asc != null)
-                        line(asc.name,
-                            key: ValueKey('char-asc-${slot.id}'),
-                            style: TextStyle(color: Color(asc.color))),
-                      line('$className · Nv ${profile.level}'),
-                      line('Zona ${profile.unlockedZone}', style: small),
-                      line(lastPlayedText(slot.lastPlayed), style: small),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -168,29 +175,27 @@ class NewCharacterCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => MenuFocusable(
         key: const ValueKey('char-new'),
         onTap: onTap,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: SizedBox(
-            width: CharacterSlotCard.widthOf(context),
-            height: 90,
-            child: const RetroPanel(
-              borderColor: ProtoColors.panelBorder,
-              padding: EdgeInsets.all(10),
-              child: Center(
-                child: Text('+ NUEVO PERSONAJE',
-                    style: TextStyle(color: RetroPalette.muted)),
-              ),
+        builder: (context, hot) => SizedBox(
+          width: CharacterSlotCard.widthOf(context),
+          height: RetroType.width(context, 90),
+          child: RetroPanel(
+            borderColor: hot ? ProtoColors.sky : ProtoColors.panelBorder,
+            padding: const EdgeInsets.all(10),
+            child: const Center(
+              child: Text('+ NUEVO PERSONAJE',
+                  style: TextStyle(color: RetroPalette.muted)),
             ),
           ),
         ),
       );
 }
 
-/// Tarjeta de clase (`.card`): sprite, nombre, descripción, atributos
-/// base y arma inicial. Elegida = borde dorado.
+/// Tarjeta de clase del creador: sprite, nombre y arma inicial (el
+/// detalle completo va al costado, `ClassDetail`). Elegida = borde
+/// dorado; con el cursor del teclado (flechas) se elige sola.
 class ClassCard extends StatelessWidget {
   const ClassCard({
     super.key,
@@ -199,6 +204,7 @@ class ClassCard extends StatelessWidget {
     required this.selected,
     required this.sprites,
     required this.onTap,
+    this.index,
   });
 
   final ClassDef def;
@@ -207,63 +213,125 @@ class ClassCard extends StatelessWidget {
   final GameSprites? sprites;
   final VoidCallback onTap;
 
+  /// Atajo de teclado (`1`..`9`) que se muestra en la esquina.
+  final int? index;
+
+  static const width = 210.0;
+
   @override
   Widget build(BuildContext context) {
     final img = sprites?.hero(def.id);
-    const small = TextStyle(color: RetroPalette.muted);
-    // Alturas fijas (todas las tarjetas iguales) que crecen con el texto.
-    final k = RetroType.factorOf(context) < 1 ? 1.0 : RetroType.factorOf(context);
-    return GestureDetector(
+    return MenuFocusable(
       key: ValueKey('class-card-${def.id}'),
       onTap: onTap,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: SizedBox(
-          width: 200,
-          child: RetroPanel(
-            selected: selected,
-            padding: const EdgeInsets.all(12),
-            child: Column(
+      onFocus: onTap,
+      builder: (context, hot) => SizedBox(
+        width: RetroType.width(context, width),
+        child: RetroPanel(
+          selected: selected,
+          borderColor: selected || !hot ? null : ProtoColors.sky,
+          padding: const EdgeInsets.all(8),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 56,
+                height: 56,
+                child: img == null
+                    ? null
+                    : Center(child: PixelSprite(img, scale: 3)),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(retroText(def.name),
+                        style: TextStyle(
+                            fontFamily: RetroType.pixelFamily,
+                            fontSize: RetroType.label,
+                            height: RetroType.pixelLine,
+                            color: selected
+                                ? RetroPalette.gold
+                                : RetroPalette.ink)),
+                    Text(retroText(weaponName),
+                        style: const TextStyle(color: RetroPalette.muted)),
+                    if (index != null)
+                      Text('[$index]',
+                          style: const TextStyle(color: ProtoColors.dim)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Detalle de la clase elegida en el creador: descripción entera,
+/// atributos base en barras y el arma inicial con sus habilidades.
+class ClassDetail extends StatelessWidget {
+  const ClassDetail({
+    super.key,
+    required this.def,
+    required this.weaponName,
+    this.skills,
+  });
+
+  final ClassDef def;
+  final String weaponName;
+
+  /// Las habilidades del arma inicial (chips con su ficha).
+  final Widget? skills;
+
+  @override
+  Widget build(BuildContext context) {
+    final top = Attribute.values
+        .map((a) => def.baseAttributes[a] ?? 0)
+        .fold(1, (m, v) => v > m ? v : m);
+    return Column(
+      key: const ValueKey('class-detail'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(retroText(def.name.toUpperCase()),
+            style: const TextStyle(
+                fontFamily: RetroType.pixelFamily,
+                fontSize: RetroType.title,
+                color: RetroPalette.gold)),
+        const SizedBox(height: 6),
+        Text(retroText(def.description)),
+        const SizedBox(height: 10),
+        const Text('ATRIBUTOS BASE', style: TextStyle(color: ProtoColors.sky)),
+        for (final a in Attribute.values)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Row(
               children: [
                 SizedBox(
-                  height: 72,
-                  child: img == null
-                      ? null
-                      : Center(child: PixelSprite(img, scale: 4)),
+                  width: RetroType.em(context, 5, size: RetroType.small),
+                  child: Text(a.name.toUpperCase()),
                 ),
-                const SizedBox(height: 8),
-                Text(retroText(def.name),
-                    style: TextStyle(
-                        fontFamily: RetroType.pixelFamily, fontSize: 16,
-                        color:
-                            selected ? RetroPalette.gold : RetroPalette.ink)),
-                const SizedBox(height: 8),
-                // Alturas fijas: todas las tarjetas miden lo mismo.
                 SizedBox(
-                  height: 48 * k,
-                  child: Text(retroText(def.description),
-                      textAlign: TextAlign.center, style: small),
+                  width: RetroType.em(context, 4, size: RetroType.small),
+                  child: Text('${def.baseAttributes[a] ?? 0}',
+                      style: const TextStyle(color: ProtoColors.gold)),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  Attribute.values
-                      .map((a) =>
-                          '${a.name.toUpperCase()} ${def.baseAttributes[a] ?? 0}')
-                      .join(' '),
-                  textAlign: TextAlign.center,
-                  style: small,
-                ),
-                const SizedBox(height: 4),
-                SizedBox(
-                  height: 32 * k,
-                  child: Text(retroText('Arma: $weaponName'),
-                      textAlign: TextAlign.center, style: small),
+                Expanded(
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: (def.baseAttributes[a] ?? 0) / top,
+                    child: Container(height: 8, color: ProtoColors.gold),
+                  ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
+        const SizedBox(height: 10),
+        ProtoText('<span class="k">Arma inicial:</span> '
+            '<b>${protoEsc(weaponName)}</b>'),
+        if (skills != null) ...[const SizedBox(height: 4), skills!],
+      ],
     );
   }
 }

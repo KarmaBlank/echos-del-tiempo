@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../app/theme/vision_palette.dart';
 import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/data/enemies_catalog.dart';
 import '../../../../game_engine/data/passive_mechanics.dart';
@@ -19,6 +20,7 @@ import '../sprite_catalog.dart';
 import '../weapon_overlay.dart';
 import 'arena/arena_transition.dart';
 import 'battle_fx.dart';
+import 'chain_fx.dart';
 import 'battle_labels.dart';
 import 'battle_layout.dart';
 import 'battle_scene.dart';
@@ -197,7 +199,8 @@ class BattleScenePainter extends CustomPainter {
                   ProcColors.timeStop.withValues(alpha: 0.3 * (1 - p) * fk));
         final bar = Paint()
           ..color = Color.fromRGBO(255, 255, 255, 0.5 * (1 - p) * fk);
-        for (var k = 0; k < 2; k++) {
+        // Franjas que corren: no con REDUCIR MOVIMIENTO.
+        for (var k = 0; k < (scene.options.reduceMotion ? 0 : 2); k++) {
           final y = area.top + area.height * ((p * 1.6 + k * 0.5) % 1);
           canvas.drawRect(
               Rect.fromLTWH(area.left, y.roundToDouble(), area.width,
@@ -223,7 +226,8 @@ class BattleScenePainter extends CustomPainter {
     // 5. Transición mapa → arena (§ "Arenas" → "Transición").
     final entered = scene.enteredAt;
     if (entered != null) {
-      ArenaWipe.paintEnter(canvas, Offset.zero & size, t - entered, g.scale, fk);
+      ArenaWipe.paintEnter(canvas, Offset.zero & size, t - entered, g.scale, fk,
+          fade: scene.options.reduceMotion);
     }
   }
 
@@ -238,7 +242,9 @@ class BattleScenePainter extends CustomPainter {
     final t = scene.t;
     _pen.rect(c, const Color(0xFF05060C), visible.left, visible.top,
         visible.width, visible.height);
-    f.arena?.paintWorld?.call(c, visible, t);
+    // REDUCIR MOVIMIENTO: la arena queda quieta (sin motas, llamas ni
+    // runas que giran).
+    f.arena?.paintWorld?.call(c, visible, scene.options.reduceMotion ? 0 : t);
     final frost = frostLevel(f.battle);
     if (frost > 0) {
       // Campo Helado: el mapa se tiñe de celeste (más cuanto más lento).
@@ -797,7 +803,7 @@ class BattleScenePainter extends CustomPainter {
   /// (px de pantalla, sin la sacudida). Las usa también el test.
   static Map<String, Rect> labelRects(SceneFrame f, SceneViewport vp,
       {double Function(String text, double size)? measure}) {
-    final u = f.geometry.hudUnit.toDouble();
+    final u = f.geometry.labelUnit.toDouble();
     final m = measure ?? _pen.width;
     final reqs = <LabelRequest>[];
     double badges(Combatant a) {
@@ -844,7 +850,7 @@ class BattleScenePainter extends CustomPainter {
       u;
 
   void _hud(Canvas c, SceneFrame f, SceneViewport vp, Offset shake) {
-    final u = f.geometry.hudUnit.toDouble();
+    final u = f.geometry.labelUnit.toDouble();
     final pt = scene.poseT;
     final u0 = scene.ult;
     final labelAlpha =
@@ -873,7 +879,7 @@ class BattleScenePainter extends CustomPainter {
             center: false);
         final nw = _pen.width(p.name, 8 * u);
         _badges(c, p, x + nw + 3 * u, y - u, u);
-        if (cur == p.id) _marker(c, r, math.sin(pt / 130) * 2 * u, u);
+        if (cur == p.id) _marker(c, r, _bob(pt / 130) * 2 * u, u);
       }
       for (final e in f.battle.enemies) {
         final r = rects[e.id];
@@ -886,21 +892,23 @@ class BattleScenePainter extends CustomPainter {
         final bw = (e.boss || e.elite ? 48 : 28) * u;
         final bx = (r.center.dx - bw / 2).roundToDouble();
         final by = y + 11 * u;
+        // Vida: barra lisa (la de quiebre va rayada y con su rombo, la de
+        // ULT en 5 bloques: se distinguen sin color; accessibility.md § 3).
         _pen.rect(c, const Color(0xAA000000), bx, by, bw, 3 * u);
         _pen.rect(
             c,
             e.boss
-                ? const Color(0xFFFF4757)
+                ? const VisionColor(VisionSlot.enemyHpBoss)
                 : e.elite
-                    ? const Color(0xFFFFD166)
-                    : const Color(0xFFFF9F43),
+                    ? const VisionColor(VisionSlot.enemyHpElite)
+                    : const VisionColor(VisionSlot.enemyHp),
             bx,
             by,
             (bw * (e.hp / e.maxHp).clamp(0.0, 1.0)).roundToDouble(),
             3 * u);
         _breakBars(c, e, bx, by + 4 * u, bw, u, pt);
         if (e.alive && f.targetId == e.id) {
-          _marker(c, r, math.sin(pt / 120) * 2 * u, u);
+          _marker(c, r, _bob(pt / 120) * 2 * u, u);
         }
       }
       if (labelAlpha < 1) c.restore();
@@ -914,15 +922,20 @@ class BattleScenePainter extends CustomPainter {
   void _breakBars(
       Canvas c, Combatant e, double x, double y, double w, double u, double t) {
     var yy = y;
+    final still = scene.options.reduceMotion;
     if (e.hasBreak) {
-      // Quiebre: barra amarilla de 3·u con brillo arriba.
+      // Quiebre: barra amarilla de 3·u con brillo arriba, RAYADA (un
+      // corte cada 3·u) y un rombo a la izquierda: no se confunde con la
+      // vida (lisa) aunque no se distingan los colores.
       final max = e.breakMax;
       final frac = max <= 0 ? 0.0 : (e.breakGauge / max).clamp(0.0, 1.0);
       _pen.rect(c, const Color(0xCC000000), x, yy, w, 3 * u);
-      final blink = e.broken && (t / 110).floor().isEven;
+      final blink = e.broken && !still && (t / 110).floor().isEven;
       final fw = (w * (e.broken ? 1 : frac)).roundToDouble();
       _pen.rect(c, blink ? fxWhite : breakColor, x, yy, fw, 3 * u);
       _pen.rect(c, blink ? breakColor : const Color(0xFFFFF7C2), x, yy, fw, u);
+      breakStripes(c, x, yy, fw, u);
+      breakDiamond(c, x - 4 * u, yy + 1.5 * u, u, breakColor);
       yy += 4 * u;
     }
     if (e.ultId != null) {
@@ -930,7 +943,7 @@ class BattleScenePainter extends CustomPainter {
       const segs = 5;
       final gap = u;
       final sw = ((w - gap * (segs - 1)) / segs).floorToDouble();
-      final hot = e.ultPending && (t / 150).floor().isEven;
+      final hot = e.ultPending && (still || (t / 150).floor().isEven);
       final charge = (e.ult / 100).clamp(0.0, 1.0) * segs;
       for (var k = 0; k < segs; k++) {
         final sx = x + k * (sw + gap);
@@ -947,7 +960,7 @@ class BattleScenePainter extends CustomPainter {
       final tw = _pen.width(vulnerableText, 8 * u);
       final cw = tw + 6 * u;
       final cx = (x + w / 2 - cw / 2).roundToDouble();
-      final on = (t / 220).floor().isEven;
+      final on = still || (t / 220).floor().isEven;
       _pen.rect(c, const Color(0xE6000000), cx, yy + u, cw, 10 * u);
       _pen.rect(c, breakColor, cx, yy + u, cw, u);
       _pen.rect(c, breakColor, cx, yy + 10 * u, cw, u);
@@ -956,6 +969,29 @@ class BattleScenePainter extends CustomPainter {
           center: false, shadow: false);
     }
   }
+
+  /// Cortes oscuros de 1·u cada 3·u sobre la barra de quiebre
+  /// (`x..x+w`, alto 3·u): el patrón que la separa de la vida (lisa).
+  static void breakStripes(Canvas c, double x, double y, double w, double u) {
+    for (var sx = x + 2 * u; sx < x + w - u / 2; sx += 3 * u) {
+      _pen.rect(
+          c, const Color(0x99000000), sx.roundToDouble(), y + u, u, 2 * u);
+    }
+  }
+
+  /// Rombo de cristal (3·u, con borde negro) centrado en `(cx, cy)`:
+  /// marca la barra de quiebre.
+  static void breakDiamond(
+      Canvas c, double cx, double cy, double u, Color color) {
+    final x = cx.roundToDouble(), y = cy.roundToDouble();
+    _pen.rect(c, const Color(0xCC000000), x - 2 * u, y - u, 4 * u, 2 * u);
+    _pen.rect(c, const Color(0xCC000000), x - u, y - 2 * u, 2 * u, 4 * u);
+    _pen.rect(c, color, x - u, y - u / 2, 2 * u, u);
+    _pen.rect(c, color, x - u / 2, y - u, u, 2 * u);
+  }
+
+  /// Flotación de los marcadores (quieta con REDUCIR MOVIMIENTO).
+  double _bob(double phase) => scene.options.reduceMotion ? 0 : math.sin(phase);
 
   /// Triángulo dorado arriba de la etiqueta [r].
   void _marker(Canvas c, Rect r, double b, double u) {
@@ -1043,15 +1079,17 @@ class BattleScenePainter extends CustomPainter {
     final stripe = Color.lerp(f.color, enemyUltBarColor, 0.6)!;
     _pen.rect(c, stripe, area.left, top, area.width, 2 * u);
     _pen.rect(c, stripe, area.left, top + bh - 2 * u, area.width, 2 * u);
-    // Franjas de peligro que corren.
+    // Franjas de peligro que corren (quietas con REDUCIR MOVIMIENTO).
+    final still = scene.options.reduceMotion;
     for (var i = 0; i < 24; i++) {
       final lx = area.left +
-          ((i * 64 * u + age * 0.12 * u) % (area.width + 64 * u)) -
+          ((i * 64 * u + (still ? 0 : age) * 0.12 * u) %
+              (area.width + 64 * u)) -
           32 * u;
       _pen.rect(c, enemyUltBarColor.withValues(alpha: 0.18), lx, top + 2 * u,
           10 * u, bh - 4 * u);
     }
-    final on = (age / 200).floor().isEven;
+    final on = still || (age / 200).floor().isEven;
     final tw = _pen.width(s, size);
     final mid = area.center.dx;
     for (final sx in [mid - tw / 2 - 18 * u, mid + tw / 2 + 8 * u]) {
@@ -1256,6 +1294,10 @@ class BattleScenePainter extends CustomPainter {
           _procFx(c, f, age);
         case FxKind.lavaBurst when age < BattleFx.lavaBurstMs:
           _lavaBurst(c, f, age);
+        case FxKind.hop || FxKind.streak:
+          ChainFxPainter.paint(c, f, age,
+              still: scene.options.reduceMotion,
+              density: scene.particles.density);
         case FxKind.transform when age < BattleFx.transformMs:
           _transform(c, f, age);
         case FxKind.shatter when age < BattleFx.shatterMs:
@@ -1646,18 +1688,21 @@ class BattleScenePainter extends CustomPainter {
     final cur = b.current;
     final left = f.turnTimeLeft;
     if (cur != null && cur.isPlayer && left != null) {
-      final l = left.clamp(0.0, 30.0);
+      final full = f.turnLimit <= 0 ? 30.0 : f.turnLimit;
+      final l = left.clamp(0.0, full);
       _pen.rect(c, const Color(0xAA000000), 0, 33, vw, 4);
+      // <= 10 s: parpadea (fijo con REDUCIR MOVIMIENTO).
+      final odd = !scene.options.reduceMotion && (t / 250).floor().isOdd;
       _pen.rect(
           c,
           l <= 10
-              ? ((t / 250).floor().isOdd
-                  ? const Color(0xFFFF4757)
-                  : const Color(0xFFFF6B81))
+              ? (odd
+                  ? const VisionColor(VisionSlot.critHurt)
+                  : const VisionColor(VisionSlot.hurt))
               : const Color(0xFFFFD166),
           0,
           33,
-          vw * l / 30,
+          vw * l / full,
           4);
     }
     _pen.text(c, 'TURNOS', 26, 19, const Color(0xFF9FB4FF), 6);
@@ -1773,8 +1818,10 @@ class BattleOverlayPainter extends CustomPainter {
     // Destello blanco en el impacto principal.
     final n = math.max(1, u.fx.ult?.targets.length ?? 1);
     final imp = s.lastImpact(n);
-    if (!u.skipped && a > imp - 20 && a < imp + 140) {
-      final k = (1 - (a - imp + 20) / 160).clamp(0.0, 1.0);
+    // × el ajuste DESTELLOS (y REDUCIR MOVIMIENTO).
+    final fk = scene.options.flash.clamp(0.0, 1.0);
+    if (!u.skipped && fk > 0 && a > imp - 20 && a < imp + 140) {
+      final k = (1 - (a - imp + 20) / 160).clamp(0.0, 1.0) * fk;
       fill.color = s.style == UltStyle.bulwark
           ? Color.fromRGBO(255, 234, 167, 0.35 * k)
           : (u.fx.ult?.enemy ?? false)
@@ -1932,7 +1979,7 @@ class BattleOverlayPainter extends CustomPainter {
         c.drawImageRect(img, src, dst, SpriteCatalog.pixelPaint());
       }
       final tx = mid - 100 + slide;
-      final blink = (a / 160).floor().isEven;
+      final blink = !scene.options.reduceMotion && (a / 160).floor().isEven;
       _pen.text(
           c, '! JEFE !', tx, cy - 12, blink ? const Color(0xFFFF4757) : gold, 8,
           center: false);

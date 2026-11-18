@@ -235,6 +235,9 @@ class EventJson {
             'src': e.statusSource?.name,
             if (e.sourceId != null) 'proc': e.sourceId,
             if (e.vulnerable) 'vul': true,
+            if (e.hitIndex != 0) 'hi': e.hitIndex,
+            if (e.chainFrom != null) 'cf': e.chainFrom,
+            if (e.pierced) 'pc': true,
           },
         ActionEvent() => {
             'k': 'act',
@@ -338,6 +341,9 @@ class EventJson {
           statusSource: j.enumOrNull('src', StatusKind.values),
           sourceId: j.strOrNull('proc'),
           vulnerable: j.flag('vul'),
+          hitIndex: j.intOrNull('hi') ?? 0,
+          chainFrom: j.strOrNull('cf'),
+          pierced: j.flag('pc'),
         );
       case 'act':
         return ActionEvent(

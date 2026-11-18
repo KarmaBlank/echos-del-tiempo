@@ -3,10 +3,12 @@ import 'package:material_ui/material_ui.dart';
 import '../theme/proto_colors.dart';
 import '../theme/retro_text.dart';
 import '../theme/retro_theme.dart';
+import 'menu_focus.dart';
 import 'pixel_icon.dart';
 
 /// Sección enmarcada de un menú: franja de encabezado (ícono + título +
 /// una línea de explicación) y el contenido debajo, separada de las demás.
+/// Es una [NavSection]: `Tab` salta de una sección a la siguiente.
 class SectionPanel extends StatelessWidget {
   const SectionPanel({
     super.key,
@@ -16,7 +18,11 @@ class SectionPanel extends StatelessWidget {
     this.subtitle,
     this.color = ProtoColors.gold,
     this.trailing,
+    this.titleKey,
   });
+
+  /// Clave del título (pruebas).
+  final Key? titleKey;
 
   final PixelIconKind icon;
   final String title;
@@ -29,7 +35,8 @@ class SectionPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return NavSection(
+        child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         color: ProtoColors.bg.withValues(alpha: 0.35),
@@ -52,19 +59,21 @@ class SectionPanel extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text.rich(TextSpan(children: [
-                    TextSpan(
-                        text: retroText(title),
-                        style: TextStyle(
-                            fontFamily: RetroType.pixelFamily,
-                            fontSize: RetroType.label,
-                            height: RetroType.pixelLine,
-                            color: color)),
-                    if (subtitle != null)
-                      TextSpan(
-                          text: retroText('  $subtitle'),
-                          style: const TextStyle(color: ProtoColors.sky)),
-                  ])),
+                  child: Text.rich(
+                      key: titleKey,
+                      TextSpan(children: [
+                        TextSpan(
+                            text: retroText(title),
+                            style: TextStyle(
+                                fontFamily: RetroType.pixelFamily,
+                                fontSize: RetroType.label,
+                                height: RetroType.pixelLine,
+                                color: color)),
+                        if (subtitle != null)
+                          TextSpan(
+                              text: retroText('  $subtitle'),
+                              style: const TextStyle(color: ProtoColors.sky)),
+                      ])),
                 ),
                 if (trailing != null) ...[const SizedBox(width: 8), trailing!],
               ],
@@ -79,6 +88,6 @@ class SectionPanel extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 }

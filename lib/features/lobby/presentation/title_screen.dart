@@ -8,6 +8,12 @@ import '../../../app/feature_flags.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../app/widgets/menu_focus.dart';
+import '../../../app/widgets/menu_widgets.dart';
+import '../../../app/widgets/section_panel.dart';
+import '../../../app/widgets/pixel_icon.dart';
+import '../../../game_engine/models/item.dart';
+import '../../inventory/presentation/skill_chip.dart';
 import '../../../core/audio/music/music_catalog.dart';
 import '../../../core/audio/presentation/audio_providers.dart';
 import '../../../core/settings/settings_providers.dart';
@@ -266,8 +272,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     // Siempre el de la cuenta en memoria, nunca la copia de esta pantalla
     // (si hubiera quedado vieja, la sala — también como cliente — y el
     // guardado pisarían lo jugado). docs/specs/characters.md § 1.4.
-    final slot =
-        ref.read(accountRepositoryProvider).current?.byId(c.id) ?? c;
+    final slot = ref.read(accountRepositoryProvider).current?.byId(c.id) ?? c;
     try {
       // En la app es el mismo personaje de la cuenta (no cambia nada);
       // con otro `ProfileStore` (tests, flavors) la sesión lo recibe igual.
@@ -381,6 +386,10 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                   selected: c.id == a.selectedId,
                   sprites: sprites,
                   onTap: () => _tapSlot(c.id),
+                  // Enter: elige; sobre la ya elegida, juega.
+                  onKeyActivate: () => c.id == a.selectedId
+                      ? unawaited(_start())
+                      : _tapSlot(c.id),
                 ),
               if (!a.isFull)
                 NewCharacterCard(onTap: () => setState(_openCreator)),
@@ -423,67 +432,147 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     );
   }
 
+  /// Creador: tarjetas de clase (flechas / `1`..`9` eligen) │ detalle de
+  /// la elegida con el arma inicial y sus habilidades, el nombre y CREAR.
   Widget _creator(Account? a, GameSprites? sprites) {
     final first = a == null || a.characters.isEmpty;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(first ? 'CREA TU PRIMER PERSONAJE' : 'CREAR PERSONAJE',
-            key: const ValueKey('char-creator'),
-            style: const TextStyle(fontFamily: RetroType.pixelFamily, fontSize: 12, color: RetroPalette.gold)),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Nombre:'),
-            const SizedBox(width: 8),
-            SizedBox(
-              width: 200,
-              child: RetroTextField(
-                key: const ValueKey('title-name'),
-                controller: _name,
-                maxLength: ProgressionRules.maxNameLength,
-                hint: Account.defaultName,
-                onSubmitted: (_) => _create(),
+    final classes = _classes;
+    final sel = classes.where((c) => c.id == _newClass).firstOrNull ??
+        classes.firstOrNull;
+    final weapon =
+        sel == null ? null : _rules.catalog.weapons[sel.startWeaponId];
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: RetroType.width(context, 1100)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(first ? 'CREA TU PRIMER PERSONAJE' : 'CREAR PERSONAJE',
+              key: const ValueKey('char-creator'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  fontFamily: RetroType.pixelFamily,
+                  fontSize: RetroType.title,
+                  color: RetroPalette.gold)),
+          const SizedBox(height: 4),
+          Text(
+              retroText(
+                  'Elige la clase (flechas o 1-9), escribe el nombre y CREA.'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: RetroPalette.muted)),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 5,
+                child: SectionPanel(
+                  icon: PixelIconKind.sword,
+                  title: '1 · CLASE',
+                  subtitle: 'cualquier clase equipa cualquier arma',
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (var i = 0; i < classes.length; i++)
+                          ClassCard(
+                            def: classes[i],
+                            index: i < 9 ? i + 1 : null,
+                            weaponName: _rules.catalog
+                                    .weapons[classes[i].startWeaponId]?.name ??
+                                '',
+                            selected: sel?.id == classes[i].id,
+                            sprites: sprites,
+                            onTap: () =>
+                                setState(() => _newClass = classes[i].id),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          alignment: WrapAlignment.center,
-          children: [
-            for (final c in _classes)
-              ClassCard(
-                def: c,
-                weaponName: _rules.catalog.weapons[c.startWeaponId]?.name ?? '',
-                selected: _newClass == c.id,
-                sprites: sprites,
-                onTap: () => setState(() => _newClass = c.id),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (sel != null)
+                      SectionPanel(
+                        icon: PixelIconKind.star,
+                        title: 'DETALLE',
+                        children: [
+                          ClassDetail(
+                            def: sel,
+                            weaponName: weapon?.name ?? '',
+                            skills: weapon == null
+                                ? null
+                                : SkillChips(
+                                    rules: _rules,
+                                    item: ItemInstance.common('_new', weapon.id,
+                                        itemLevel: weapon.level)),
+                          ),
+                        ],
+                      ),
+                    SectionPanel(
+                      icon: PixelIconKind.check,
+                      title: '2 · NOMBRE',
+                      children: [
+                        RetroTextField(
+                          key: const ValueKey('title-name'),
+                          controller: _name,
+                          maxLength: ProgressionRules.maxNameLength,
+                          hint: Account.defaultName,
+                          onSubmitted: (_) => _create(),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          alignment: WrapAlignment.end,
+                          spacing: 8,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            KeyHints(
+                                confirm: 'Crear',
+                                back: first ? null : 'Cancelar'),
+                            if (!first)
+                              PanelButton('CANCELAR',
+                                  key: const ValueKey('char-create-cancel'),
+                                  onPressed: () =>
+                                      setState(() => _creating = false)),
+                            ElevatedButton(
+                              key: const ValueKey('char-create-confirm'),
+                              onPressed: _busy ? null : _create,
+                              child: const Text('> CREAR'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Wrap(
-          spacing: 8,
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            if (!first)
-              PanelButton('CANCELAR',
-                  key: const ValueKey('char-create-cancel'),
-                  onPressed: () => setState(() => _creating = false)),
-            ElevatedButton(
-              key: const ValueKey('char-create-confirm'),
-              onPressed: _busy ? null : _create,
-              child: const Text('> CREAR'),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
+  }
+
+  /// `1`..`9`: en el creador, la clase N; en la selección, el personaje N.
+  bool _digit(int n) {
+    final a = _account;
+    if (a == null) return false;
+    if (_creating || a.characters.isEmpty) {
+      final cs = _classes;
+      if (n > cs.length) return false;
+      setState(() => _newClass = cs[n - 1].id);
+      return true;
+    }
+    if (n > a.characters.length) return false;
+    _tapSlot(a.characters[n - 1].id);
+    return true;
   }
 
   Widget _netRow(NetSessionFactory? factory) {
@@ -508,7 +597,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             controller: _code,
             enabled: netOk,
             style: const TextStyle(
-                                fontFamily: RetroType.pixelFamily, fontSize: RetroType.label,
+                fontFamily: RetroType.pixelFamily,
+                fontSize: RetroType.label,
                 color: RetroPalette.ink),
             cursorColor: RetroPalette.gold,
             onSubmitted: (_) {
@@ -518,7 +608,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
               isDense: true,
               hintText: factory?.codeHint ?? 'CODIGO',
               hintStyle: const TextStyle(
-                                    fontFamily: RetroType.pixelFamily, fontSize: RetroType.label,
+                  fontFamily: RetroType.pixelFamily,
+                  fontSize: RetroType.label,
                   color: RetroPalette.muted),
               contentPadding: const EdgeInsets.all(8),
             ),
@@ -545,74 +636,90 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     final sprites = ref.watch(gameSpritesProvider).valueOrNull;
     final factory = ref.watch(netSessionFactoryProvider);
     final creating = _creating || (a != null && a.characters.isEmpty);
+    // Teclado (menu_focus.dart): flechas / Tab / Enter, Esc cancela el
+    // creador y 1-9 eligen personaje o clase.
     return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: DefaultTextStyle.merge(
-            style: text.bodySmall,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('ECOS DEL TIEMPO',
-                    textAlign: TextAlign.center,
-                    style: text.displayLarge?.copyWith(
-                      color: RetroPalette.gold,
-                      shadows: const [
-                        Shadow(color: RetroPalette.red, offset: Offset(4, 4)),
-                      ],
-                    )),
-                const SizedBox(height: 16),
-                Text(retroText('Co-op JRPG táctico · 1-4 jugadores'),
-                    style: const TextStyle(color: RetroPalette.muted)),
-                const SizedBox(height: 12),
-                // Aviso de versión nueva (docs/specs/distribution.md).
-                const UpdateBanner(),
-                if ([_notice, _saveError].nonNulls.join('\n')
-                    case final n when n.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 900),
-                    child: Text(retroText(n),
-                        key: const ValueKey('title-account-notice'),
+      body: MenuKeyScope(
+        onBack: creating && a != null && a.characters.isNotEmpty
+            ? () => setState(() => _creating = false)
+            : null,
+        onDigit: _digit,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: DefaultTextStyle.merge(
+              style: text.bodySmall,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('ECOS DEL TIEMPO',
+                      textAlign: TextAlign.center,
+                      style: text.displayLarge?.copyWith(
+                        color: RetroPalette.gold,
+                        shadows: const [
+                          Shadow(color: RetroPalette.red, offset: Offset(4, 4)),
+                        ],
+                      )),
+                  const SizedBox(height: 16),
+                  Text(retroText('Co-op JRPG táctico · 1-4 jugadores'),
+                      style: const TextStyle(color: RetroPalette.muted)),
+                  const SizedBox(height: 12),
+                  // Aviso de versión nueva (docs/specs/distribution.md).
+                  const UpdateBanner(),
+                  if ([_notice, _saveError].nonNulls.join('\n') case final n
+                      when n.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      child: Text(retroText(n),
+                          key: const ValueKey('title-account-notice'),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: RetroPalette.red)),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  if (a == null)
+                    const Text('Cargando...',
+                        style: TextStyle(color: RetroPalette.muted))
+                  else if (creating)
+                    _creator(a, sprites)
+                  else ...[
+                    _selector(a, sprites),
+                    const SizedBox(height: 16),
+                    _netRow(factory),
+                  ],
+                  const SizedBox(height: 16),
+                  PanelButton('CONFIGURACIÓN',
+                      key: const ValueKey('title-settings'),
+                      onPressed: () => showSettingsDialog(context)),
+                  if (_netStatus case final status?) ...[
+                    const SizedBox(height: 8),
+                    Text(retroText(status),
+                        key: const ValueKey('title-net-status'),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: RetroPalette.red)),
+                        style: TextStyle(
+                            color: _netError
+                                ? RetroPalette.red
+                                : RetroPalette.muted)),
+                  ],
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Mover: WASD/Flechas · Interactuar: E/Espacio · Combate por '
+                    'turnos: 1-9 o clic · Cambiar objetivo: Q o clic en enemigo · '
+                    'Chat: Enter',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: RetroPalette.muted),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Menús: flechas mueven · Enter elige (otra vez sobre tu '
+                    'personaje: jugar) · 1-9 eligen · Esc vuelve',
+                    key: ValueKey('title-menu-keys'),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: RetroPalette.muted),
                   ),
                 ],
-                const SizedBox(height: 20),
-                if (a == null)
-                  const Text('Cargando...',
-                      style: TextStyle(color: RetroPalette.muted))
-                else if (creating)
-                  _creator(a, sprites)
-                else ...[
-                  _selector(a, sprites),
-                  const SizedBox(height: 16),
-                  _netRow(factory),
-                ],
-                const SizedBox(height: 16),
-                PanelButton('CONFIGURACIÓN',
-                    key: const ValueKey('title-settings'),
-                    onPressed: () => showSettingsDialog(context)),
-                if (_netStatus case final status?) ...[
-                  const SizedBox(height: 8),
-                  Text(retroText(status),
-                      key: const ValueKey('title-net-status'),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: _netError
-                              ? RetroPalette.red
-                              : RetroPalette.muted)),
-                ],
-                const SizedBox(height: 20),
-                const Text(
-                  'Mover: WASD/Flechas · Interactuar: E/Espacio · Combate por '
-                  'turnos: 1-9 o clic · Cambiar objetivo: Q o clic en enemigo · '
-                  'Chat: Enter',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: RetroPalette.muted),
-                ),
-              ],
+              ),
             ),
           ),
         ),

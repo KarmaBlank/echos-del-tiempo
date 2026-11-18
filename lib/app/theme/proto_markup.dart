@@ -24,7 +24,8 @@ final _classAttr = RegExp('class=["\']([^"\']*)["\']');
 /// El subconjunto de HTML que arma el prototipo → [TextSpan]. Ver
 /// docs/specs/ui_style.md § "Texto rico".
 ///
-/// Etiquetas: `b` (negrita; [boldColor] si no trae color propio),
+/// Etiquetas: `b` (resaltado SOLO con color, sin peso: [boldColor] o
+/// `gold` si no trae color propio),
 /// `span`/`b` con `style="color:#hex"`, `class="k"` (`sky`),
 /// `class="sys"` (`green`), `small` (`sky`), `br`.
 /// Entidades `&nbsp; &amp; &lt; &gt; &quot; &#39;`. Cada trozo de texto
@@ -81,7 +82,9 @@ TextSpan protoSpan(String markup, {TextStyle? style, Color? boldColor}) {
     if (c == null && cls.contains('sys')) c = ProtoColors.green;
     if (name == 'small') c ??= ProtoColors.sky;
     final TextStyle? st = name == 'b'
-        ? TextStyle(fontWeight: FontWeight.bold, color: c ?? boldColor)
+        // Sin peso (las fuentes pixel se "engordan" con negrita
+        // sintética): `<b>` resalta solo con el color (ui_style.md).
+        ? TextStyle(color: c ?? boldColor ?? ProtoColors.gold)
         : c == null
             ? null
             : TextStyle(color: c);

@@ -275,9 +275,12 @@ void main() {
       final f = frameOf(s);
       final vp = SceneViewport(f.geometry.worldRect, f.layout.frame(f.geometry, null));
       final rects = BattleScenePainter.labelRects(f, vp, measure: measure);
-      expect(rects['e0']!.height, BattleScenePainter.enemyLabelHeight(s.enemies[0], 1));
-      expect(rects['e0']!.height, (15 + 4 + 3 + 12).toDouble());
-      expect(rects['e1']!.height, 19);
+      // Las etiquetas van a 8·u (u = `labelUnit`: 2 a 1280×720 Normal).
+      final u = f.geometry.labelUnit.toDouble();
+      expect(u, 2);
+      expect(rects['e0']!.height, BattleScenePainter.enemyLabelHeight(s.enemies[0], u));
+      expect(rects['e0']!.height, (15 + 4 + 3 + 12) * u);
+      expect(rects['e1']!.height, 19 * u);
       final list = rects.entries.toList();
       for (var i = 0; i < list.length; i++) {
         for (var j = i + 1; j < list.length; j++) {

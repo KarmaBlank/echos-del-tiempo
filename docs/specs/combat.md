@@ -257,6 +257,29 @@ Se procesan al empezar el turno del afectado (`statusTick`), en este orden:
 La curación de Regeneración se aplica antes que el daño de los demás estados.
 El Paladín recibe +1 stack de cualquier estado que no sea Regeneración.
 
+### Aturdido y Congelación ×5: un controlado nunca actúa (v0.5.1)
+
+- El control se evalúa con los estados que tenía **al empezar** el
+  turno. Si el daño de los estados de ese mismo `statusTick` lo cambia
+  (el Devorador cruza el 50%, se transforma y la fase 2 limpia los
+  estados), el aturdido / congelado ×5 igual pierde ese turno; el
+  Martillo Bendito no extiende un aturdimiento que la transformación
+  quitó.
+- Un aturdimiento que entra **durante la acción** del propio afectado
+  (hoy ningún proc lo hace: Represalia / Penitencia / Égida devuelven
+  daño, que puede quebrar) no corta esa acción: cuenta desde su
+  **próximo** turno. Lo mismo el Quiebre.
+- El log informa el **resultado**, no la probabilidad: una habilidad con
+  probabilidad escribe `+1 Aturdido (30%)` si entró, `Aturdido: falla
+  (30%)` si no, y a todos `+1 Aturdido a 1 de 3 (15%)`. Sin probabilidad,
+  `+1 Aturdido` solo si entró en alguno (a un jefe con séquito el log
+  dice INMUNE y no lo nombra). El `¡aturde!` del ataque del Paladín, el
+  "queda aturdido" de Choque Térmico y las notas de stacks extra / estados
+  que pasan solo aparecen si `addStatus` aplicó el estado (mismo criterio
+  que `StatusAppliedEvent`).
+- La Congelación por debajo de 5 stacks solo frena (−12% velocidad por
+  stack): no hace perder el turno.
+
 ## Fin de batalla
 
 - Victoria: todos los enemigos caídos. Cada jugador recibe la suma de XP

@@ -19,7 +19,9 @@ import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/craft_rules.dart';
 import '../../build_planner/presentation/build_fit_badge.dart';
 import '../domain/item_text.dart';
+import '../domain/skill_tip.dart';
 import 'shop_sections.dart';
+import 'skill_chip.dart';
 
 /// Grupos de la mesa (paso 2), en orden.
 enum BenchGroup {
@@ -49,7 +51,9 @@ extension CraftOpText on CraftOp {
   ];
 
   BenchGroup get group => switch (this) {
-        CraftOp.reroll || CraftOp.addAffix || CraftOp.upgradeRarity =>
+        CraftOp.reroll ||
+        CraftOp.addAffix ||
+        CraftOp.upgradeRarity =>
           BenchGroup.improve,
         CraftOp.transferAffix ||
         CraftOp.transferPassive ||
@@ -72,6 +76,8 @@ extension CraftOpText on CraftOp {
         CraftOp.sell => 'Vender',
         CraftOp.salvageAll => 'Desarmar todas',
         CraftOp.sellAll => 'Vender todas',
+        CraftOp.salvageSelected => 'Desarmar elegidas',
+        CraftOp.sellSelected => 'Vender elegidas',
       };
 
   /// Explicación de 3-6 palabras para la fila del paso 2.
@@ -109,11 +115,12 @@ extension CraftOpText on CraftOp {
         CraftOp.reforge =>
           'Cambia el tipo de arma (p. ej. arco → báculo) y conserva rareza, '
               'mods y forja.',
-        CraftOp.salvage =>
-          'Destruye el arma y te da materiales de fusión.',
+        CraftOp.salvage => 'Destruye el arma y te da materiales de fusión.',
         CraftOp.sell => 'Destruye el arma y te da créditos.',
         CraftOp.salvageAll => 'Desarma todas las armas de una rareza.',
         CraftOp.sellAll => 'Vende todas las armas de una rareza.',
+        CraftOp.salvageSelected => 'Desarma las armas que elegiste.',
+        CraftOp.sellSelected => 'Vende las armas que elegiste.',
       };
 
   /// Texto del botón de confirmar.
@@ -126,8 +133,11 @@ extension CraftOpText on CraftOp {
         CraftOp.transferSkill => 'TRAER HABILIDAD',
         CraftOp.removeAffix => 'QUITAR MOD',
         CraftOp.reforge => 'REFORJAR',
-        CraftOp.salvage || CraftOp.salvageAll => 'DESARMAR',
-        CraftOp.sell || CraftOp.sellAll => 'VENDER',
+        CraftOp.salvage ||
+        CraftOp.salvageAll ||
+        CraftOp.salvageSelected =>
+          'DESARMAR',
+        CraftOp.sell || CraftOp.sellAll || CraftOp.sellSelected => 'VENDER',
       };
 
   bool get needsSource =>
@@ -195,6 +205,9 @@ class _CraftBenchState extends State<CraftBench> {
   String? _target, _source, _base;
   int _pick = 0;
 
+  /// Traer habilidad con los cupos llenos: cuál de las trasladadas se
+  /// reemplaza (vale solo para [_replaceFor] = `destino|habilidad`).
+  String? _replace, _replaceFor;
 
   /// Familia del filtro de bases al reforjar (`null` = todas).
   late String? _family = widget.shop.profile.classId;
@@ -272,9 +285,9 @@ class _CraftBenchState extends State<CraftBench> {
     var pick = _pick;
     if (op.needsSource) {
       final list = _sources(p, target, op);
-      source = (list.where((i) => i.uid == _source).firstOrNull ??
-              list.firstOrNull)
-          ?.uid;
+      source =
+          (list.where((i) => i.uid == _source).firstOrNull ?? list.firstOrNull)
+              ?.uid;
     }
     if (op == CraftOp.reforge) {
       final list = _bases(target);
@@ -295,8 +308,18 @@ class _CraftBenchState extends State<CraftBench> {
     if (op == CraftOp.reforge) {
       return CraftAction(op, target.uid, sourceUid: base);
     }
+    String? replace;
+    if (skill != null &&
+        _replaceFor == '${target.uid}|$skill' &&
+        shop.rules.items.needsReplaceChoice(target, skill) &&
+        shop.rules.items.replaceableSkills(target).contains(_replace)) {
+      replace = _replace;
+    }
     return CraftAction(op, target.uid,
-        sourceUid: source, index: pick, skillId: skill);
+        sourceUid: source,
+        index: pick,
+        skillId: skill,
+        replaceSkillId: replace);
   }
 
   /// Elementos elegibles (mods o habilidades) en markup.
@@ -478,7 +501,8 @@ class _CraftBenchState extends State<CraftBench> {
           CostPart(PixelIconKind.coin, '${r.credits}',
               ok: p.credits >= r.credits),
         for (final e in r.materials.entries)
-          CostPart(_matIcon(e.key), '${e.value} ${e.key.label.split(' ').first}',
+          CostPart(
+              _matIcon(e.key), '${e.value} ${e.key.label.split(' ').first}',
               iconColor: _matColor(e.key), ok: p.material(e.key) >= e.value),
       ]);
 
@@ -490,7 +514,8 @@ class _CraftBenchState extends State<CraftBench> {
         : t.rarity.label;
     return switch (op) {
       CraftOp.reroll => 'Mods $n: valores nuevos al azar',
-      CraftOp.addAffix || CraftOp.transferAffix =>
+      CraftOp.addAffix ||
+      CraftOp.transferAffix =>
         'Mods $n/$max → ${n + 1}/$max',
       CraftOp.upgradeRarity => 'Rareza ${t.rarity.label} → $next',
       CraftOp.transferPassive => 'Pasiva → la de la otra arma',
@@ -532,10 +557,20 @@ class _CraftBenchState extends State<CraftBench> {
                   description: '${it.rarity.label} · Nv '
                       '${rules.items.baseOf(it)?.level ?? 1} · Mods '
                       '${it.modCount}/${it.rarity.maxMods}',
-                  footer: it.uid == p.equippedUid
-                      ? const Text('EQUIPADA',
-                          style: TextStyle(color: ProtoColors.gold))
-                      : null,
+                  // Las habilidades con su ficha (mouse / foco = tooltip).
+                  footer: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (it.uid == p.equippedUid)
+                        const Text('EQUIPADA',
+                            style: TextStyle(color: ProtoColors.gold)),
+                      SkillChips(
+                          rules: rules,
+                          item: it,
+                          label: null,
+                          stats: shop.preview.withItem(p, it)),
+                    ],
+                  ),
                   onTap: () {
                     if (it.uid == target.uid) return _go(1);
                     setState(() {
@@ -713,12 +748,13 @@ class _CraftBenchState extends State<CraftBench> {
     if (reason == null) _enter = confirm;
 
     Widget row(String key, String label, bool sel, VoidCallback onTap,
-            {String? value, double indent = 0}) =>
+            {String? value, double indent = 0, bool dimmed = false}) =>
         MenuRow(
           wrap: true,
           key: ValueKey(key),
           selected: sel,
           indent: indent,
+          dimmed: dimmed,
           onTap: () {
             setState(() {
               onTap();
@@ -738,10 +774,53 @@ class _CraftBenchState extends State<CraftBench> {
 
     final picks =
         _picks(p, target, op, op.needsSource ? action.sourceUid : null);
+    // Traer habilidad: cada fila con la ficha de la habilidad (tooltip) y,
+    // debajo de la elegida, qué hace (se lee sin mouse).
+    final srcItem = op == CraftOp.transferSkill && action.sourceUid != null
+        ? p.itemByUid(action.sourceUid!)
+        : null;
+    final srcSkills =
+        srcItem == null ? const <String>[] : rules.items.skillsOf(srcItem);
+    final tipStats = shop.preview.withItem(p, target);
     List<Widget> pickRows({double indent = 0}) => [
           for (var i = 0; i < picks.length; i++)
-            row('craft-pick-$i', picks[i], i == action.index,
-                () => _pick = i, indent: indent),
+            if (rules.catalog.skills[srcSkills.elementAtOrNull(i)]
+                case final sk?) ...[
+              RetroTooltip(
+                message: skillTipMarkup(sk, stats: tipStats),
+                child: Builder(builder: (_) {
+                  // Físicas: cuerpo a cuerpo / a distancia según el arma.
+                  final why = rules.items.canReceiveSkill(target, sk.id);
+                  return row(
+                      'craft-pick-$i',
+                      '${picks[i]} '
+                          '${protoColor(ProtoColors.dim, '(${sk.mp} MP · ${skillKindLabel(sk)})')}',
+                      i == action.index,
+                      () => _pick = i,
+                      indent: indent,
+                      dimmed: why != null,
+                      value: why == null
+                          ? null
+                          : protoColor(ProtoColors.red, protoEsc(why)));
+                }),
+              ),
+              if (i == action.index)
+                Container(
+                  key: const ValueKey('craft-pick-desc'),
+                  margin: EdgeInsets.only(left: indent + 12, bottom: 6),
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: ProtoColors.bg.withValues(alpha: 0.6),
+                    border: const Border(
+                        left: BorderSide(
+                            color: ProtoColors.sky,
+                            width: RetroTheme.thinBorderWidth)),
+                  ),
+                  child: ProtoText(skillTipMarkup(sk, stats: tipStats)),
+                ),
+            ] else
+              row('craft-pick-$i', picks[i], i == action.index, () => _pick = i,
+                  indent: indent),
         ];
 
     final list = <Widget>[dim(op.line)];
@@ -754,14 +833,11 @@ class _CraftBenchState extends State<CraftBench> {
       }
       for (final it in sources) {
         final sel = it.uid == action.sourceUid;
-        list.add(row(
-            'craft-source-${it.uid}',
-            itemNameMarkup(rules, it),
-            sel,
+        list.add(row('craft-source-${it.uid}', itemNameMarkup(rules, it), sel,
             () {
-              _source = it.uid;
-              _pick = 0;
-            },
+          _source = it.uid;
+          _pick = 0;
+        },
             value: protoColor(ProtoColors.dim,
                 '${it.rarity.label} · Nv ${rules.items.baseOf(it)?.level ?? 1}')));
         // Las elecciones de esa arma, justo debajo (sin bajar a buscarlas).
@@ -776,6 +852,48 @@ class _CraftBenchState extends State<CraftBench> {
           list.addAll(pickRows(indent: 24));
         }
       }
+    }
+    // Cupos llenos: elegir cuál de las trasladadas se reemplaza (las de
+    // la base no se tocan).
+    final newSkill = action.skillId;
+    if (op == CraftOp.transferSkill &&
+        newSkill != null &&
+        rules.items.needsReplaceChoice(target, newSkill)) {
+      final replaceable = rules.items.replaceableSkills(target);
+      list.add(const MenuHeader('¿Qué habilidad reemplazas?'));
+      list.add(CardGrid(
+        key: const ValueKey('craft-replace'),
+        minWidth: 170,
+        children: [
+          for (final id in rules.items.skillsOf(target))
+            if (rules.catalog.skills[id] case final sk?)
+              RetroTooltip(
+                message: skillTipMarkup(sk, stats: tipStats),
+                child: ActionCard(
+                  key: ValueKey('craft-replace-$id'),
+                  title: '<b>${protoEsc(sk.name)}</b>',
+                  description: '${sk.mp} MP · ${skillKindLabel(sk)}',
+                  selected: id == action.replaceSkillId,
+                  reason: replaceable.contains(id) ? null : 'Habilidad base',
+                  footer: replaceable.contains(id)
+                      ? CostChip.note(id == action.replaceSkillId
+                          ? 'Se reemplaza'
+                          : 'Trasladada')
+                      : null,
+                  onTap: () {
+                    if (!replaceable.contains(id)) return;
+                    setState(() {
+                      _replace = id;
+                      _replaceFor = '${target.uid}|$newSkill';
+                      _lastBefore = null;
+                      _done = false;
+                    });
+                    _focus.requestFocus();
+                  },
+                ),
+              ),
+        ],
+      ));
     }
     if (op == CraftOp.removeAffix) {
       list.add(const MenuHeader('¿Qué mod quitar?'));
@@ -885,8 +1003,8 @@ class _CraftBenchState extends State<CraftBench> {
           key: key,
           padding: const EdgeInsets.symmetric(vertical: 3),
           decoration: const BoxDecoration(
-              border: Border(
-                  bottom: BorderSide(color: ProtoColors.panelBorder))),
+              border:
+                  Border(bottom: BorderSide(color: ProtoColors.panelBorder))),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -913,7 +1031,9 @@ class _CraftBenchState extends State<CraftBench> {
     out.add(cmp('', '<b style="color:#ffd166">ANTES</b>',
         '<b style="color:#ffd166">DESPUÉS</b>${random ? ' ${protoColor(ProtoColors.sky, '(al azar)')}' : ''}'));
     final n0 = rules.items.displayName(target);
-    out.add(cmp('Arma', itemNameMarkup(rules, target),
+    out.add(cmp(
+        'Arma',
+        itemNameMarkup(rules, target),
         after == null || rules.items.displayName(after) == n0
             ? same
             : itemNameMarkup(rules, after),
@@ -961,6 +1081,17 @@ class _CraftBenchState extends State<CraftBench> {
         ].join('<br>')}<br>'
             '${protoColor(ProtoColors.dim, 'traídas ${shown.extraSkills.length}/${shown.rarity.skillSlots}')}',
         key: const ValueKey('craft-skills')));
+    // Las de DESPUÉS con su ficha (mouse / foco = tooltip).
+    out.add(Padding(
+      key: const ValueKey('craft-skills-tips'),
+      padding: EdgeInsets.only(left: labelW, top: 2, bottom: 4),
+      child: SkillChips(
+          rules: rules,
+          item: shown,
+          label: 'Qué hacen:',
+          stats: shop.preview.withItem(p, shown),
+          isNew: (id) => !sBefore.contains(id)),
+    ));
     out.add(cmp(
         'Mods',
         'Mods ${target.modCount}/${target.rarity.maxMods}',
@@ -972,7 +1103,9 @@ class _CraftBenchState extends State<CraftBench> {
           message: kTierHelp,
           child: Text('[?]', style: TextStyle(color: ProtoColors.sky)),
         )));
-    out.add(cmp('', _modList(target),
+    out.add(cmp(
+        '',
+        _modList(target),
         after == null
             ? protoColor(ProtoColors.sky,
                 random ? 'Se decide al confirmar' : '(sin cambios)')
@@ -996,8 +1129,12 @@ class _CraftBenchState extends State<CraftBench> {
         ('ATQ', b.attack, a.attack, i),
         ('MAG', b.magic, a.magic, i),
         ('VEL', b.speed, a.speed, (num x) => x.toStringAsFixed(1)),
-        ('CRÍT', b.critChance, a.critChance,
-            (num x) => '${(x * 100).round()}%'),
+        (
+          'CRÍT',
+          b.critChance,
+          a.critChance,
+          (num x) => '${(x * 100).round()}%'
+        ),
         ('DEF', b.defense, a.defense, i),
         ('HP', b.maxHp, a.maxHp, i),
       ]) {
@@ -1006,8 +1143,8 @@ class _CraftBenchState extends State<CraftBench> {
     }
     if (r.outcomes.isNotEmpty) {
       out.add(const SizedBox(height: 6));
-      out.add(const Text('PUEDE SALIR',
-          style: TextStyle(color: ProtoColors.gold)));
+      out.add(
+          const Text('PUEDE SALIR', style: TextStyle(color: ProtoColors.gold)));
       out.add(ProtoText(
           key: const ValueKey('craft-outcomes'),
           protoColor(ProtoColors.sky, protoEsc(r.outcomes.join(' · ')))));
@@ -1017,8 +1154,7 @@ class _CraftBenchState extends State<CraftBench> {
 
   /// `₵N (tienes M) · 1 Cristal de Era (tienes K)`, en rojo lo que falta.
   String _spendMarkup(CraftResult r, PlayerProfile p) {
-    String part(bool ok, String t) =>
-        ok ? t : protoColor(ProtoColors.red, t);
+    String part(bool ok, String t) => ok ? t : protoColor(ProtoColors.red, t);
     final parts = [
       if (r.credits > 0)
         part(p.credits >= r.credits,

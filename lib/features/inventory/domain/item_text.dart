@@ -10,6 +10,7 @@ import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/eco_rules.dart';
 import '../../../game_engine/rules/loot_filter_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import 'skill_tip.dart';
 import 'weapon_text.dart';
 
 /// Textos de objetos del loot v2 (ficha / tooltip, requisitos, mods) en
@@ -41,10 +42,8 @@ String rarityHex(Rarity r) {
 /// `<span style="color:#hex">`.
 String _c(String hex, String text) => '<span style="color:$hex">$text</span>';
 
-String _esc(String s) => s
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+String _esc(String s) =>
+    s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 
 /// Requisitos que faltan con [a], p. ej. `FUE 14 DES 8`.
 String missingRequirements(WeaponDef w, PlayerAttributes a) => [
@@ -90,6 +89,23 @@ String itemSkillsMarkup(ProgressionRules rules, ItemInstance it) {
   ].join(' · ');
 }
 
+/// Una línea por habilidad (`• Nombre (8 MP · Físico): efecto · ...`, las
+/// trasladadas con `(trasladada)`) y la de la ULT (`ULT: ...`).
+List<String> itemSkillLinesMarkup(ProgressionRules rules, ItemInstance it,
+    {DerivedStats? stats}) {
+  final cat = rules.catalog;
+  final w = cat.weapons[it.baseId];
+  final ult = w == null ? null : cat.ultimates[w.type];
+  return [
+    for (final id in rules.items.skillsOf(it))
+      if (cat.skills[id] case final s?)
+        '• ${skillOneLineMarkup(s, stats: stats)}'
+            '${(w?.skillIds.contains(id) ?? false) ? '' : ' ${_c(_orange, '(trasladada)')}'}',
+    if (ult != null)
+      '• ${skillOneLineMarkup(ult, stats: stats, ultimate: true)}',
+  ];
+}
+
 /// `Forja +3/8 (Poder 2, Crítico 1)`.
 String forgeText(ItemInstance it) {
   final f = it.forge;
@@ -111,6 +127,8 @@ String itemTooltipMarkup(
   required PlayerAttributes attributes,
   DerivedStats? stats,
   bool equipped = false,
+  bool skills = true,
+  bool skillDetails = false,
 }) {
   final items = rules.items;
   final w = items.baseOf(it);
@@ -143,7 +161,15 @@ String itemTooltipMarkup(
         '${_c(kPassiveHex, _esc(passive))}');
   }
   if (it.forgeLevel > 0 || it.rarity.forgeCap > 0) l.add(forgeText(it));
-  l.add('<span class="k">Habilidades:</span> ${itemSkillsMarkup(rules, it)}');
+  // [skillDetails]: qué hace cada una (el texto de la batalla, en una
+  // línea; tooltips de la grilla). [skills] `false`: las dibuja el que
+  // llama (fichas con `SkillChips`).
+  if (skills && skillDetails) {
+    l.add('<span class="k">Habilidades:</span>');
+    l.addAll(itemSkillLinesMarkup(rules, it, stats: stats));
+  } else if (skills) {
+    l.add('<span class="k">Habilidades:</span> ${itemSkillsMarkup(rules, it)}');
+  }
   if (w != null && w.weight > 0) {
     l.add(_c(_dim, 'Peso ${fmtNum(w.weight)} (−${fmtNum(w.weight)} vel.)'));
   }
@@ -201,7 +227,8 @@ String skillName(ProgressionRules rules, String id) =>
     rules.catalog.skills[id]?.name ?? id;
 
 /// La pasiva de [it] como quedaría con [forgeLevels] niveles de forja.
-String? passiveAtMarkup(ProgressionRules rules, ItemInstance it, int forgeLevels) {
+String? passiveAtMarkup(
+    ProgressionRules rules, ItemInstance it, int forgeLevels) {
   final t = rules.crafting.passiveAt(it, forgeLevels);
   return t == null ? null : _c(kPassiveHex, _esc(t));
 }
@@ -246,7 +273,9 @@ String ecoTooltipMarkup(ProgressionRules rules, EcoItem e,
   l.add('Botín: ${_c(_green, '+${(b.quantity * 100).round()}% cantidad')} · '
       '${_c(_green, '+${(b.rarity * 100).round()}% rareza')}'
       '${players > 1 ? ' ${_c(_dim, '(con el grupo)')}' : ''}');
-  l.add(_c(_dim, 'Se abre en el Portal del Eco (pueblo). Se consume al '
+  l.add(_c(
+      _dim,
+      'Se abre en el Portal del Eco (pueblo). Se consume al '
       'entrar, se complete o no.'));
   return l.join('<br>');
 }

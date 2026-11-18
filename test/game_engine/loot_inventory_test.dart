@@ -25,15 +25,16 @@ LootDrop _sword([int il = 1]) => LootDrop.item(
 
 void main() {
   group('grilla', () {
-    test('8×5, la equipada no ocupa, pilas en 1 casilla', () {
+    test('8×5, la equipada no ocupa, las pilas tampoco (v0.5.1)', () {
       final p = _withItems('A', extra: 2,
           mats: const {CraftMaterial.esquirla: 5});
       final l = InventoryRules.layout(p);
       expect(l.cells, hasLength(40));
-      // 2 Ígneas + pociones + maná + Esquirlas (la de Bronce está equipada).
+      // 2 Ígneas (la de Bronce está equipada); pociones, maná y Esquirlas
+      // van en sus secciones.
       expect(l.cells.whereType<String>().toList(),
-          ['espada_ignea', 'espada_ignea#2', 'pot', 'eter', 'mat:esquirla']);
-      expect(InventoryRules.freeCells(p), 35);
+          ['espada_ignea', 'espada_ignea#2']);
+      expect(InventoryRules.freeCells(p), 38);
       expect(l.overflow, isEmpty);
     });
 
@@ -50,15 +51,16 @@ void main() {
       expect(InventoryRules.move(p, 39, 2), isNull, reason: 'casilla vacía');
     });
 
-    test('lleno: no recibe armas ni pilas nuevas; apila hasta el tope', () {
-      var p = _withItems('A', extra: 37);
+    test('lleno: no recibe armas; las pilas no usan casilla, solo el tope', () {
+      var p = _withItems('A', extra: 39);
       expect(InventoryRules.freeCells(p), 1);
       p = InventoryRules.receive(p, const LootDrop.stack(StackKind.cristal, 2))!;
+      expect(InventoryRules.freeCells(p), 1, reason: 'la pila no ocupa');
+      p = InventoryRules.receive(p, _sword())!;
       expect(InventoryRules.freeCells(p), 0);
       expect(InventoryRules.cannotReceive(p, _sword()), 'Inventario lleno');
       expect(InventoryRules.cannotReceive(p, const LootDrop.stack(StackKind.prisma, 1)),
-          'Inventario lleno');
-      // Una pila que ya existe no necesita casilla.
+          isNull, reason: 'pila nueva con la grilla llena');
       p = InventoryRules.receive(p, const LootDrop.stack(StackKind.cristal, 97))!;
       expect(p.material(CraftMaterial.cristal), 99);
       expect(InventoryRules.cannotReceive(p, const LootDrop.stack(StackKind.cristal, 1)),
@@ -119,7 +121,7 @@ void main() {
       expect(e.apply(s, 'p0', const GiveItemAction('nadie', 'espada_ignea')), isNull);
       expect(e.apply(s, 'p0', const GiveItemAction('p1', 'mat:esquirla', count: 9)),
           isNull);
-      final (e2, full) = room(b: _withItems('B', extra: 38));
+      final (e2, full) = room(b: _withItems('B', extra: 40));
       expect(e2.apply(full, 'p0', const GiveItemAction('p1', 'espada_ignea')),
           isNull, reason: 'el otro no tiene lugar');
       expect(full.players['p0']!.profile.itemByUid('espada_ignea'), isNotNull,

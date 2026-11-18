@@ -69,7 +69,12 @@ class _LoopLink implements PeerLink {
 /// la misma codificación JSON que los transportes reales, para probar
 /// host + clientes en un solo proceso. Ver docs/specs/netcode.md.
 class LoopbackNetSession extends ProtocolNetSession {
-  LoopbackNetSession(this.hub, {super.catalog = GameCatalog.standard});
+  LoopbackNetSession(
+    this.hub, {
+    super.catalog = GameCatalog.standard,
+    super.clock,
+    super.pingInterval,
+  });
 
   final LoopbackHub hub;
   String? _code;

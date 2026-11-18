@@ -141,6 +141,30 @@ void main() {
       rec.endRecording().dispose();
     });
 
+    test('al cambiar de piso no queda ninguna etiqueta del piso anterior '
+        '(ni ícono del minimapa, ni objetivo de E); al volver, sí', () {
+      final e = sessionEngine(zones: true);
+      final f = inField(e, 'm1');
+      final p = f.players['p0']!;
+      f.ground.addAll([
+        GroundLoot(id: 1, drop: _item('a', Rarity.raro, name: 'Mandoble del Eco Veloz'),
+            x: p.x, y: p.y, ownerId: 'p0'),
+        GroundLoot(id: 2, drop: _item('b', Rarity.raro), x: p.x, y: p.y, floor: 1),
+      ]);
+      final painter = LootPainter(nameOf: (d) => d.item?.name ?? '?', weaponTypeOf: (_) => 'lanza');
+      List<int> drawn() => [
+            for (final l in painter.placeLabels(visibleLoot(f, 'p0', _verdict))) l.loot.ground.id
+          ];
+      expect(drawn(), [1]);
+      f.mission!.floor = 1;
+      expect(drawn(), [2]);
+      expect(visibleLoot(f, 'p0', _verdict, showAll: true).map((l) => l.ground.id), [2]);
+      // Parado sobre las coordenadas viejas: E no apunta a lo del piso 1.
+      expect(nearestPickable(visibleLoot(f, 'p0', _verdict), p.x, p.y)!.ground.id, 2);
+      f.mission!.floor = 0;
+      expect(drawn(), [1]);
+    });
+
     test('minimapa: un ícono por objeto que el filtro marca', () {
       final icons = [
         for (final l in visibleLoot(s, 'me', _verdict))

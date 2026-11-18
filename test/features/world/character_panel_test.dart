@@ -1,4 +1,5 @@
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
+import 'package:echos_del_tiempo/app/widgets/action_card.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
@@ -87,7 +88,7 @@ void main() {
     // Comparación con la equipada antes de equipar.
     expect(find.textContaining('Comparada con Espada de Bronce'), findsOneWidget);
     expect(tester
-        .widget<PanelButton>(find.byKey(const ValueKey('inv-equip')))
+        .widget<ActionCard>(find.byKey(const ValueKey('inv-equip')))
         .reason, 'Requisitos: FUE 14 DES 8');
 
     // Con el reparto pendiente cumpliría: "Confirma puntos".
@@ -98,7 +99,7 @@ void main() {
     await tapVisible(tester, find.byKey(const ValueKey('inc-des')));
     await armas();
     expect(tester
-        .widget<PanelButton>(find.byKey(const ValueKey('inv-equip')))
+        .widget<ActionCard>(find.byKey(const ValueKey('inv-equip')))
         .reason, 'Confirma puntos');
     await tapVisible(tester, find.byKey(const ValueKey('tab-0')));
     await tapVisible(tester, find.byKey(const ValueKey('confirm-points')));

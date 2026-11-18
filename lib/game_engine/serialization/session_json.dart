@@ -56,6 +56,9 @@ class SessionJson {
         if (s.atlas.isNotEmpty) 'atlas': s.atlas,
         // Ascensión v0.5 (ascension.md § 6): opcional.
         if (s.trial != null) 'trial': s.trial,
+        // Tiempo de turno v0.5.1 (accessibility.md § 7): opcional, solo
+        // si no es el normal (un cliente viejo lo ignora).
+        if (s.turnTimer != TurnTimer.normal) 'tt': s.turnTimer.name,
       };
 
   GameSession fromJson(Json j) {
@@ -89,6 +92,7 @@ class SessionJson {
       ecoOwner: j.strOrNull('ecoBy'),
       atlas: j['atlas'] == null ? null : j.strings('atlas'),
       trial: j.intOrNull('trial'),
+      turnTimer: TurnTimer.fromName(j['tt']),
     );
   }
 
@@ -103,6 +107,8 @@ class SessionJson {
         'x': g.x,
         'y': g.y,
         if (g.ownerId != null) 'own': g.ownerId,
+        // v0.5.1: piso de la misión donde cayó (opcional; 0 si falta).
+        if (g.floor != 0) 'f': g.floor,
       };
 
   GroundLoot groundFromJson(Json j) => GroundLoot(
@@ -112,6 +118,7 @@ class SessionJson {
         x: j.dbl('x'),
         y: j.dbl('y'),
         ownerId: j.strOrNull('own'),
+        floor: j.intOrNull('f') ?? 0,
       );
 
   static T? _opt<T>(Json? j, T Function(Json) f) => j == null ? null : f(j);

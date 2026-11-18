@@ -1,8 +1,14 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'vision_palette.dart';
+
 /// Paleta de la UI HTML del prototipo (`<style>` y los `color:` en línea
 /// de `hud()`, `descSkill`, `weaponTip`, `renderPanel`, ...). Ver
 /// docs/specs/ui_style.md § "Paleta".
+///
+/// Los colores con significado (`green`, `red`, `crimson`, `hp`, `mp`)
+/// son [VisionColor]: siguen siendo `const` pero se pintan con la paleta
+/// del modo daltónico activo (docs/specs/accessibility.md § 3).
 abstract final class ProtoColors {
   /// Fondo de `body`; `#tip` con alfa `f5`.
   static const bg = Color(0xFF0B0E1A);
@@ -39,13 +45,13 @@ abstract final class ProtoColors {
   static const chat = Color(0xFFC8D2FF);
 
   /// `.sys`, `#mission`, curas, requisitos cumplidos, `TIENES`.
-  static const green = Color(0xFF5EB77A);
+  static const green = VisionColor(VisionSlot.good);
 
   /// Relleno de `.hp`.
-  static const hp = Color(0xFF2ED573);
+  static const hp = VisionColor(VisionSlot.hp);
 
   /// Relleno de `.mp`.
-  static const mp = Color(0xFF1E90FF);
+  static const mp = VisionColor(VisionSlot.mp);
 
   /// Fondo de `.bar`.
   static const barBg = Color(0xFF222A48);
@@ -54,10 +60,10 @@ abstract final class ProtoColors {
   static const ice = Color(0xFF77A7D7);
 
   /// `#err`, requisitos que faltan, `+% crít`, tiempo ≤ 10 s.
-  static const red = Color(0xFFDB828F);
+  static const red = VisionColor(VisionSlot.bad);
 
   /// Timer ≤ 10 s del menú, golpe crítico recibido.
-  static const crimson = Color(0xFFDB8289);
+  static const crimson = VisionColor(VisionSlot.crimson);
 
   /// Arma equipada, `(fusión)`, avisos.
   static const orange = Color(0xFFD1975F);
@@ -103,7 +109,9 @@ abstract final class ProtoColors {
     if (v == null) return null;
     // CSS es RRGGBBAA; Flutter, AARRGGBB.
     final c = Color(((v & 0xFF) << 24) | (v >> 8));
-    return legacy[c.toARGB32()] ?? c;
+    // Hex viejo → token suavizado; hex de un color con significado (o de
+    // una rareza) → el del modo daltónico activo.
+    return legacy[c.toARGB32()] ?? VisionPalette.remap(c);
   }
 
   /// Accesibilidad (v0.5, docs/specs/accessibility.md § 2): los colores

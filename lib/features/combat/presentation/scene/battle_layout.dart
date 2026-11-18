@@ -85,6 +85,7 @@ class SceneGeometry {
     required this.virtualWidth,
     required this.sceneHeight,
     this.size = const Size(480, 342),
+    this.textFactor = 1,
   });
 
   /// Ancho y alto nominales del prototipo (`VW`, `VH`).
@@ -113,10 +114,21 @@ class SceneGeometry {
   Rect get worldRect => Rect.fromLTWH(
       0, stripPx, size.width, math.max(1.0, size.height - stripPx));
 
-  /// Unidad del HUD de la escena (1 con 1280×720, 2 con 1920×1080).
+  /// Unidad de las tarjetas de cinemática (ULT, jefe): 1 si la escena va
+  /// a menos de ×2, si no 2.
   int get hudUnit => scale < 2 ? 1 : 2;
 
-  factory SceneGeometry.fit(Size size) {
+  /// Factor del texto (ajuste × ventana; `RetroType.factorOf`).
+  final double textFactor;
+
+  /// Unidad de las etiquetas de la escena (nombres, vida, estados,
+  /// números flotantes, barras): Press Start a 8·u px de pantalla. Crece
+  /// con el texto y con la ventana (2 a 1280×720 Normal → 16 px; 3 a
+  /// 1920×1080 → 24 px; docs/specs/accessibility.md § 1).
+  int get labelUnit =>
+      math.max(hudUnit, (2 * textFactor).round()).clamp(1, 6);
+
+  factory SceneGeometry.fit(Size size, {double textFactor = 1}) {
     if (size.width <= 0 || size.height <= 0) {
       return const SceneGeometry(
           scale: 1, virtualWidth: baseWidth, sceneHeight: baseSceneHeight);
@@ -129,6 +141,7 @@ class SceneGeometry {
       sceneHeight:
           math.max(baseSceneHeight, (size.height / s).floor() - stripHeight),
       size: size,
+      textFactor: textFactor,
     );
   }
 

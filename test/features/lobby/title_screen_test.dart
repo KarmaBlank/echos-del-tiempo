@@ -273,22 +273,14 @@ void main() {
     expect(saved.stash.cells[2]!.item!.name, 'Filo del Alba');
     expect(find.text('3/96'), findsOneWidget);
 
-    // Las pociones no van.
-    final potCell =
-        InventoryRules.layout(progression.normalize(saved.byId('c2')!.profile))
-            .cells
-            .indexOf('pot');
-    await _tap(tester, 'stash-char-$potCell');
+    // Las pociones no van (v0.5.1: pilas en su sección, no en la grilla).
+    await _tap(tester, 'inv-stack-pot');
     expect(find.text('Las pociones no van al alijo'), findsOneWidget);
 
     // Los cristales se guardan con doble clic.
-    final matCell =
-        InventoryRules.layout(progression.normalize(saved.byId('c2')!.profile))
-            .cells
-            .indexOf('mat:cristal');
-    await tester.tap(find.byKey(ValueKey('stash-char-$matCell')));
+    await tester.tap(find.byKey(const ValueKey('inv-stack-mat:cristal')));
     await tester.pump(const Duration(milliseconds: 50));
-    await tester.tap(find.byKey(ValueKey('stash-char-$matCell')));
+    await tester.tap(find.byKey(const ValueKey('inv-stack-mat:cristal')));
     await tester.pump();
     await tester.pump();
     saved = (await mem.load()).account;

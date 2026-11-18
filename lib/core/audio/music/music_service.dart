@@ -94,6 +94,9 @@ class MusicService {
   /// Fundidos (s).
   static const crossfadeSeconds = 1.2;
   static const battleFadeSeconds = 0.4;
+
+  /// Corte de la pieza de batalla al terminar la pelea (≤ 200 ms).
+  static const battleCutSeconds = 0.15;
   static const jingleDuckSeconds = 0.25;
   static const jingleReturnSeconds = 1.0;
   static const ultDuckSeconds = 0.15;
@@ -101,6 +104,10 @@ class MusicService {
 
   /// Nivel de la música bajo una ULT.
   static const ultDuckLevel = 0.3;
+
+  /// Nivel del bucle "de fondo" mientras suena un jingle o mientras la
+  /// pantalla de resultados / subida de nivel lo retiene ([bedHeld]).
+  static const jingleBedLevel = 0.3;
 
   /// Margen después del largo de la partitura de un jingle.
   static const jingleTailSeconds = 0.3;
@@ -118,8 +125,10 @@ class MusicService {
   double _volume = 0.6;
   bool _muted = false;
 
-  /// Duck de jingle (0 mientras suena uno) y de ULT.
+  /// Duck de jingle ([jingleBedLevel] mientras suena uno o mientras está
+  /// retenido) y de ULT.
   double _jingleDuck = 1, _jingleTarget = 1, _jingleRate = 1;
+  bool _bedHeld = false;
   double _ultDuck = 1, _ultTarget = 1, _ultRate = 1;
   double _ultLeft = 0;
 
@@ -142,6 +151,19 @@ class MusicService {
 
   double get volume => _volume;
   bool get muted => _muted;
+
+  /// Retiene el bucle en [jingleBedLevel] aunque no suene ningún jingle
+  /// (pantallas de fin de batalla, subida de nivel y resultados). Al
+  /// soltarlo, y sin jingle, vuelve a 1 en [jingleReturnSeconds].
+  bool get bedHeld => _bedHeld;
+  set bedHeld(bool held) {
+    if (held == _bedHeld) return;
+    _bedHeld = held;
+    _retargetBed();
+  }
+
+  /// Factor actual del duck de jingle / retención (tests).
+  double get bedLevel => _jingleDuck;
 
   /// Volumen de la música (0..1).
   set volume(double v) {
@@ -175,19 +197,24 @@ class MusicService {
   static Future<Uint8List> _renderInline(Song song) async =>
       const MusicRenderer().renderWav(song);
 
-  /// Pide el bucle [id] (`null` = silencio) con un fundido de [fade] s.
-  void playTrack(String? id, {double fade = crossfadeSeconds}) {
+  /// Pide el bucle [id] (`null` = silencio) con un fundido de entrada de
+  /// [fade] s; la pieza que sale se va en [fadeOut] s (por defecto, lo
+  /// mismo que [fade]; [battleCutSeconds] al cortar la batalla).
+  void playTrack(String? id,
+      {double fade = crossfadeSeconds, double? fadeOut}) {
     if (id != null && !catalog.containsKey(id)) id = null;
     final active = _decks[_active];
     final other = _decks[1 - _active];
     final rate = 1 / (fade <= 0 ? 0.001 : fade);
+    final out = fadeOut ?? fade;
+    final outRate = 1 / (out <= 0 ? 0.001 : out);
     if (id == null) {
       active
         ..target = 0
-        ..rate = rate;
+        ..rate = outRate;
       other
         ..target = 0
-        ..rate = rate;
+        ..rate = outRate;
       _kick();
       return;
     }
@@ -198,7 +225,7 @@ class MusicService {
           ..rate = rate;
         other
           ..target = 0
-          ..rate = rate;
+          ..rate = outRate;
         _kick();
       }
       return;
@@ -216,22 +243,24 @@ class MusicService {
         ..target = 1
         ..rate = rate
         ..sent = 0;
-      unawaited(_safe(_player.play(other.index, source(id),
-          loop: true, volume: 0)));
+      unawaited(
+          _safe(_player.play(other.index, source(id), loop: true, volume: 0)));
     }
     active
       ..target = 0
-      ..rate = rate;
+      ..rate = outRate;
     _active = other.index;
     _kick();
     _apply();
   }
 
   /// Toca el jingle [id] (en cola si ya suena otro). Los bucles bajan a
-  /// 0 mientras suena.
-  void playJingle(String id) {
+  /// [jingleBedLevel] mientras suena. Con [interrupt] corta el jingle que
+  /// suena (la cola sigue después). Cambiar de bucle nunca corta un
+  /// jingle: solo otro jingle con [interrupt], silenciar o [dispose].
+  void playJingle(String id, {bool interrupt = false}) {
     if (!catalog.containsKey(id) || _muted) return;
-    if (_jingle == null) {
+    if (_jingle == null || interrupt) {
       _startJingle(id);
     } else {
       _jingles.add(id);
@@ -241,11 +270,24 @@ class MusicService {
   void _startJingle(String id) {
     _jingle = id;
     _jingleLeft = catalog[id]!.seconds + jingleTailSeconds;
-    _jingleTarget = 0;
-    _jingleRate = 1 / jingleDuckSeconds;
     _jingleSent = _master;
-    unawaited(_safe(_player.play(jingleDeck, source(id),
-        loop: false, volume: _master)));
+    unawaited(_safe(
+        _player.play(jingleDeck, source(id), loop: false, volume: _master)));
+    _retargetBed();
+  }
+
+  /// El bucle baja a [jingleBedLevel] (en [jingleDuckSeconds]) mientras
+  /// suena un jingle o está retenido; si no, vuelve a 1 (en
+  /// [jingleReturnSeconds]).
+  void _retargetBed() {
+    const span = 1 - jingleBedLevel;
+    if (_jingle != null || _bedHeld) {
+      _jingleTarget = jingleBedLevel;
+      _jingleRate = span / jingleDuckSeconds;
+    } else {
+      _jingleTarget = 1;
+      _jingleRate = span / jingleReturnSeconds;
+    }
     _kick();
   }
 
@@ -294,8 +336,7 @@ class MusicService {
           _startJingle(_jingles.removeAt(0));
         } else {
           unawaited(_safe(_player.stop(jingleDeck)));
-          _jingleTarget = 1;
-          _jingleRate = 1 / jingleReturnSeconds;
+          _retargetBed();
         }
       }
     }
@@ -355,8 +396,7 @@ class MusicService {
     return x;
   }
 
-  static Future<void> _safe(Future<void> f) =>
-      f.catchError((Object _) {});
+  static Future<void> _safe(Future<void> f) => f.catchError((Object _) {});
 
   void dispose() {
     _stopTimer();

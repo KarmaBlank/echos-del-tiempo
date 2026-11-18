@@ -324,7 +324,8 @@ Pista según el estado (función pura `MusicSelector.trackFor`):
 | `field` / `levelUp` en una misión sin zona: por tema del mapa | `pradera`→1, `bosque`→2, `ruinas`→3, `cavernas`→4, `fortaleza`→5, `laberinto`→6, `grieta`→7, `cementerio`→8, `abismo`→9, `corazon`→10, otro → 3 |
 | `battle` de jefe contra el Devorador (el enemigo jefe tiene `enemyType == 'devorador'`, `MusicSelector.finalBossId`; `MusicSelector.bossIdOf`) | `bossFinal` |
 | `battle` | `boss` si `SessionBattle.boss`, si no `battle` |
-| `result` | `town` (después del jingle) |
+| `battle` con desenlace (`battle.state.outcome`, la pausa final de ~2 s) | la pieza de la zona, como en `field` (§ 5.1) |
+| `result` | `town` (de fondo bajo el jingle, § 5.1) |
 
 Histéresis del pueblo: se entra al pueblo con `tx < 26 && ty < 14` y se
 sale recién con `tx ≥ 28 || ty ≥ 16` (no alterna en el borde).
@@ -333,17 +334,56 @@ Jingles (todo derivado de las vistas, así funciona igual en host y
 cliente):
 
 - La batalla termina (`battle.state.outcome` aparece, una vez por
-  batalla): `jingle.victory` o `jingle.defeat`.
+  batalla): `jingle.victory` o `jingle.defeat` (§ 5.1).
 - Aparece un resultado nuevo (`session.result.id`): si el último jingle
   de batalla no era el mismo desenlace (p. ej. misión ganada sin batalla
   final), `jingle.victory` / `jingle.defeat`; si el jugador local
   desbloqueó una zona (`result.unlocked[localId]`), después
   `jingle.zoneUnlocked`.
-- El nivel del jugador local sube: `jingle.levelUp`.
+- El nivel (o la maestría) del jugador local sube: `jingle.levelUp`.
+  Si sube en una batalla (el XP se reparte con el desenlace), el jingle
+  **espera** a que se cierre la batalla: si aparece la pantalla de
+  subida de nivel (`SessionMode.levelUp`) **corta** el jingle de
+  victoria y suena enseguida; si se vuelve al campo / resultado sin
+  pantalla (maestría, nivel sin puntos que repartir) va en cola detrás.
+- Alguien de la sala asciende: `jingle.ascension` (en cola).
 
-Los jingles van en cola (uno detrás del otro); mientras suenan, la
-música de bucle baja a 0 en 0.25 s y vuelve en 1 s al terminar (la pista
-nueva ya se fundió debajo).
+Los jingles van en cola (uno detrás del otro) y siempre suenan enteros:
+cambiar de bucle o de modo (resultado → campo, campo → lobby…) nunca
+los corta. Solo los corta otro jingle pedido con `interrupt` (hoy, solo
+el de subida de nivel al abrirse su pantalla), silenciar la música o
+cerrar la sesión. Mientras suena un jingle el bucle queda **de fondo**
+a `jingleBedLevel` = 0.3 (baja en 0.25 s) y vuelve a 1 en 1 s cuando no
+queda jingle ni retención.
+
+### 5.1 Fin de batalla, subida de nivel y resultados
+
+Pedido del dueño (v0.5.1): "la música a veces no da chance a que suene
+la música de victoria ni la de subida de nivel". Antes el bucle bajaba a
+0 bajo el jingle, la pieza de batalla seguía (tapada) hasta el cambio de
+modo y el jingle de nivel quedaba en cola detrás de la victoria
+(arrancaba ~5 s después, con la pantalla de nivel ya abierta o cerrada).
+Ahora:
+
+1. **Desenlace** (aparece `battle.state.outcome`, todavía en `battle`):
+   la pieza de batalla / jefe / jefe final se **corta** en
+   `battleCutSeconds` = 0.15 s; suena `jingle.victory` o
+   `jingle.defeat` **entero**; la pieza de la zona actual entra ya
+   (fundido de 1.2 s) **de fondo** a 0.3.
+2. **Pantalla de subida de nivel** (`levelUp`): si el jugador local
+   subió, `jingle.levelUp` corta la victoria y suena entero. La zona
+   sigue de fondo.
+3. **Resultados** (`result`): la pieza pasa a `town` (crossfade normal),
+   también de fondo. `jingle.zoneUnlocked` (y el de Atlas del Eco) van en
+   cola detrás de lo que suene.
+4. La música vuelve a 1 (en 1 s) recién cuando **no suena ningún jingle
+   y no hay pantalla** de fin de batalla, subida de nivel ni resultados:
+   `MusicService.bedHeld` = `battle con desenlace || levelUp || result`.
+
+Derrota: igual que la victoria (corte, jingle entero, zona de fondo,
+después `town` de fondo en el resultado hasta volver al lobby).
+Ascensión y zona desbloqueada: nunca cortan ni se cortan por el estado,
+van en cola; la música de fondo queda a 0.3 mientras suenan.
 
 ULT (propia o enemiga): al llegar un paso de batalla nuevo
 (`battleEventSeq`) con una acción `ultimate` o un `EnemyUltEvent`, la
@@ -361,9 +401,16 @@ música baja a 0.3 durante `UltScript.totalMs` de esa ULT y vuelve en
   reiniciar. Si no, la pista empieza en el deck libre a volumen 0 y se
   funden: entrada y salida en 1.2 s (0.4 s al entrar a una batalla).
   `null` = fundido a silencio. Un deck que llega a 0 se detiene.
-- Volumen efectivo de un deck = `fundido × duck(ULT) × duck(jingle) ×
-  volumenMúsica` (0 si silenciado). Se manda al reproductor solo si
-  cambió (> 0.004).
+- `playTrack(id, fade:, fadeOut:)`: `fadeOut` es el fundido de la
+  pieza que sale (por defecto igual a `fade`); `SessionMusic` usa
+  `battleCutSeconds` = 0.15 s al salir de una pieza de batalla.
+- `playJingle(id, interrupt:)`: en cola, o cortando el que suena con
+  `interrupt` (la cola sigue después). `bedHeld` retiene el bucle a
+  `jingleBedLevel` (0.3) sin jingle; al soltarlo (y sin jingle) vuelve a
+  1 en `jingleReturnSeconds` = 1 s.
+- Volumen efectivo de un deck = `fundido × duck(ULT) × duck(jingle /
+  retención) × volumenMúsica` (0 si silenciado). Se manda al reproductor
+  solo si cambió (> 0.004).
 - Reloj: `tick(dt)` (Dart puro, testeable). En el juego un
   `Timer.periodic` de 40 ms corre solo mientras hay algo animándose; con
   el reproductor no-op no se crea ningún timer (los tests de widgets no

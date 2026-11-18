@@ -1,3 +1,4 @@
+import 'build_wants.dart';
 import 'item.dart';
 
 // Filtros de loot (docs/specs/loot.md § 13): reglas en orden, gana la
@@ -204,6 +205,20 @@ class TierCondition extends FilterCondition {
   String get args => '${op.symbol} $tier';
 }
 
+/// `Build` / `Build Mod Pasiva` / `Build No` ("Coincide con mi build"):
+/// el arma cumple algo del plan de build de quien la mira (con [kinds],
+/// alguna de esas clases; vacío = cualquiera). Con [has] `false`, no
+/// cumple nada del plan. Solo armas. Docs/specs/loot.md § 13.
+class BuildCondition extends FilterCondition {
+  const BuildCondition({this.kinds = const [], this.has = true});
+  final List<BuildMatch> kinds;
+  final bool has;
+  @override
+  String get keyword => 'Build';
+  @override
+  String get args => has ? [for (final k in kinds) k.word].join(' ') : 'No';
+}
+
 /// Color RGBA (0–255).
 class FilterColor {
   const FilterColor(this.r, this.g, this.b, [this.a = 255]);
@@ -354,8 +369,15 @@ class LootFilter {
 
 /// Resultado de evaluar un drop.
 class FilterVerdict {
-  const FilterVerdict(this.visible, this.style, [this.ruleIndex]);
+  const FilterVerdict(this.visible, this.style,
+      [this.ruleIndex, this.build = const {}]);
   final bool visible;
+
+  /// Qué cumple del plan de build de quien lo mira (vacío = nada o sin
+  /// plan). La UI le pone ★ a la etiqueta (build_planner.md § 6).
+  final Set<BuildMatch> build;
+
+  bool get buildMatch => build.isNotEmpty;
 
   /// Estilo final (la regla sobre el estilo por defecto de la rareza).
   final FilterStyle style;

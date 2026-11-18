@@ -5,6 +5,7 @@ import '../theme/proto_colors.dart';
 import '../theme/proto_markup.dart';
 import '../theme/retro_text.dart';
 import '../theme/retro_theme.dart';
+import 'menu_focus.dart';
 
 /// Piezas de los menús "lista + detalle" compactos (docs/specs/ui_style.md
 /// § "Menús: lista + detalle"): filas de una línea con el valor alineado
@@ -30,7 +31,17 @@ class MenuRow extends StatefulWidget {
     this.indent = 0,
     this.description,
     this.wrap = false,
+    this.autofocus = false,
+    this.onFocus,
   });
+
+  /// El cursor del teclado llegó a la fila (las flechas): para que el
+  /// detalle siga al cursor sin tener que apretar `Enter`.
+  final VoidCallback? onFocus;
+
+  /// Toma el foco al aparecer (la fila elegida de una lista recién
+  /// abierta).
+  final bool autofocus;
 
   final String label;
 
@@ -60,12 +71,18 @@ class MenuRow extends StatefulWidget {
 }
 
 class _MenuRowState extends State<MenuRow> {
-  bool _hot = false;
+  bool _hover = false, _focus = false;
 
-  void _setHot(bool v) {
-    if (v == _hot) return;
-    setState(() => _hot = v);
-    widget.onHover?.call(v);
+  bool get _hot => _hover || _focus;
+
+  void _set({bool? hover, bool? focus}) {
+    final was = _hot;
+    setState(() {
+      _hover = hover ?? _hover;
+      _focus = focus ?? _focus;
+    });
+    if (_hot != was) widget.onHover?.call(_hot);
+    if (focus == true) widget.onFocus?.call();
   }
 
   @override
@@ -75,13 +92,15 @@ class _MenuRowState extends State<MenuRow> {
         : _hot
             ? ProtoColors.sky
             : ProtoColors.panelBorder;
-    final style = widget.dimmed ? const TextStyle(color: ProtoColors.dim) : null;
+    final style =
+        widget.dimmed ? const TextStyle(color: ProtoColors.dim) : null;
     return Padding(
       padding: EdgeInsets.only(left: widget.indent, bottom: 2),
       child: FocusableActionDetector(
+        autofocus: widget.autofocus,
         mouseCursor: SystemMouseCursors.click,
-        onShowFocusHighlight: _setHot,
-        onShowHoverHighlight: _setHot,
+        onShowFocusHighlight: (v) => _set(focus: v),
+        onShowHoverHighlight: (v) => _set(hover: v),
         actions: {
           ActivateIntent:
               CallbackAction<ActivateIntent>(onInvoke: (_) => widget.onTap()),
@@ -89,16 +108,19 @@ class _MenuRowState extends State<MenuRow> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: widget.selected
-                  ? ProtoColors.button.withValues(alpha: 0.5)
-                  : null,
-              border: Border.all(
-                  color: border, width: RetroTheme.thinBorderWidth),
+          child: FocusRing(
+            focused: _focus,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: widget.selected
+                    ? ProtoColors.button.withValues(alpha: 0.5)
+                    : null,
+                border: Border.all(
+                    color: border, width: RetroTheme.thinBorderWidth),
+              ),
+              child: widget.wrap ? _wrapped(style) : _oneLine(style),
             ),
-            child: widget.wrap ? _wrapped(style) : _oneLine(style),
           ),
         ),
       ),
@@ -146,8 +168,8 @@ class _MenuRowState extends State<MenuRow> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ConstrainedBox(
-                constraints: BoxConstraints(
-                    maxWidth: hasDesc ? w * 0.4 : w * 0.55),
+                constraints:
+                    BoxConstraints(maxWidth: hasDesc ? w * 0.4 : w * 0.55),
                 child: ProtoText(widget.label, style: style),
               ),
               const SizedBox(width: 12),

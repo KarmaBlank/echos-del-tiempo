@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../app/theme/vision_palette.dart';
 import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/eco.dart';
 import '../../../../game_engine/models/game_session.dart';
@@ -18,10 +19,13 @@ import '../../../../game_engine/rules/session_engine.dart';
 /// o material con brillo de rareza, etiqueta con el estilo del filtro del
 /// jugador local y haz de luz en los Legendarios.
 
-/// `FilterColor` → `Color`.
-Color filterColor(FilterColor c) => Color.fromARGB(c.a, c.r, c.g, c.b);
+/// `FilterColor` → `Color`. Los colores de rareza por defecto siguen al
+/// modo daltónico (`VisionPalette.remap`; accessibility.md § 3).
+Color filterColor(FilterColor c) =>
+    VisionPalette.remap(Color.fromARGB(c.a, c.r, c.g, c.b));
 
-/// Color de rareza (el del filtro por defecto).
+/// Color de rareza (el del filtro por defecto; con el modo daltónico, el
+/// de su paleta).
 Color rarityColor(Rarity r) => filterColor(LootFilterRules.rarityColor(r));
 
 /// Color "de rareza" de un drop: el de su rareza, o el de los materiales.
@@ -87,7 +91,8 @@ LootOnFloor? nearestPickable(List<LootOnFloor> loot, double x, double y) {
   LootOnFloor? best;
   var bd = SessionEngine.pickReach;
   for (final l in loot) {
-    final d = math.sqrt(math.pow(l.ground.x - x, 2) + math.pow(l.ground.y - y, 2));
+    final d =
+        math.sqrt(math.pow(l.ground.x - x, 2) + math.pow(l.ground.y - y, 2));
     if (d <= bd) {
       bd = d;
       best = l;
@@ -202,9 +207,11 @@ class LootPainter {
       Rarity.legendario => 0.5,
     };
     _fill.color = col.withValues(alpha: (strength + 0.12 * k) * alpha);
-    c.drawOval(Rect.fromCenter(center: Offset(x, y + 1), width: 16, height: 6), _fill);
+    c.drawOval(
+        Rect.fromCenter(center: Offset(x, y + 1), width: 16, height: 6), _fill);
     _fill.color = const Color(0x55000000);
-    c.drawOval(Rect.fromCenter(center: Offset(x, y + 1), width: 9, height: 3), _fill);
+    c.drawOval(
+        Rect.fromCenter(center: Offset(x, y + 1), width: 9, height: 3), _fill);
     c.save();
     c.translate(x, y);
     if (alpha < 1) {
@@ -314,8 +321,9 @@ class LootPainter {
   void _stackIcon(Canvas c, StackKind k) {
     switch (k) {
       case StackKind.potion || StackKind.ether:
-        final liquid =
-            k == StackKind.potion ? const Color(0xFFFF4757) : const Color(0xFF74B9FF);
+        final liquid = k == StackKind.potion
+            ? const Color(0xFFFF4757)
+            : const Color(0xFF74B9FF);
         _rect(c, const Color(0xFFDFE6E9), -1, -7, 2, 2);
         _rect(c, liquid, -2, -5, 4, 4);
         _rect(c, const Color(0xFFFFFFFF), -1, -4, 1, 1);
@@ -368,10 +376,13 @@ class LootPainter {
     // Columna con degradé (sin antialias: tres franjas).
     for (var i = 0; i < 6; i++) {
       final f = i / 6;
-      _fill.color = orange.withValues(alpha: (0.65 + 0.15 * k + 0.3 * boost).clamp(0.0, 1.0) * (0.2 + 0.8 * f));
+      _fill.color = orange.withValues(
+          alpha: (0.65 + 0.15 * k + 0.3 * boost).clamp(0.0, 1.0) *
+              (0.2 + 0.8 * f));
       c.drawRect(Rect.fromLTWH(x - w / 2, y - h * (1 - f), w, h / 6), _fill);
     }
-    _fill.color = const Color(0xFFFFF0C8).withValues(alpha: (0.7 + 0.25 * k + 0.3 * boost).clamp(0.0, 1.0));
+    _fill.color = const Color(0xFFFFF0C8)
+        .withValues(alpha: (0.7 + 0.25 * k + 0.3 * boost).clamp(0.0, 1.0));
     c.drawRect(Rect.fromLTWH(x - 1, top + h * 0.15, 3, h * 0.85), _fill);
     // Motas que suben.
     for (var i = 0; i < scaledCount(4, density); i++) {
@@ -386,12 +397,20 @@ class LootPainter {
       _stroke.color = orange.withValues(alpha: boost);
       c.drawOval(
           Rect.fromCenter(
-              center: Offset(x, y), width: 40 * (1 - boost) + 10, height: 14 * (1 - boost) + 4),
+              center: Offset(x, y),
+              width: 40 * (1 - boost) + 10,
+              height: 14 * (1 - boost) + 4),
           _stroke);
     }
   }
 
   // --------------------------------------------------------- etiquetas
+
+  /// Texto de la etiqueta: el nombre, con ★ si cumple tu plan de build
+  /// (build_planner.md § 6).
+  String labelText(LootOnFloor l) => l.verdict.buildMatch
+      ? '★ ${nameOf(l.ground.drop)}'
+      : nameOf(l.ground.drop);
 
   /// Ubica las etiquetas encima de cada objeto, apilándolas hacia arriba
   /// para que no se pisen (como los filtros del género) y, con [view]
@@ -404,11 +423,12 @@ class LootPainter {
     final placed = <PlacedLabel>[];
     for (final l in sorted) {
       final size = labelPx(l.style.size);
-      final tp = layout(nameOf(l.ground.drop), Colors.white, size);
+      final tp = layout(labelText(l), Colors.white, size);
       final w = tp.width + 6, h = size + 4;
       var left = l.ground.x - w / 2;
       if (view != null) {
-        left = left.clamp(view.left + 2, math.max(view.left + 2, view.right - w - 2));
+        left = left.clamp(
+            view.left + 2, math.max(view.left + 2, view.right - w - 2));
       }
       var r = Rect.fromLTWH(
           left.roundToDouble(), (l.ground.y - 12 - h).roundToDouble(), w, h);
@@ -434,7 +454,7 @@ class LootPainter {
       _stroke.color = b;
       c.drawRect(p.rect.deflate(0.5), _stroke);
     }
-    final tp = layout(nameOf(l.ground.drop), col.text, labelPx(l.style.size));
+    final tp = layout(labelText(l), col.text, labelPx(l.style.size));
     tp.paint(c, Offset(p.rect.left + 3, p.rect.top + 2));
   }
 }

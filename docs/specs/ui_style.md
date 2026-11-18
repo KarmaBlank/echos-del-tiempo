@@ -232,6 +232,29 @@ arma el prototipo en `TextSpan`, para copiar los textos tal cual:
 `TextSpan`. Lo usan tooltips, menú de batalla, cajas del grupo, chat y
 paneles.
 
+## Sin pesos (v0.5.1)
+
+Nada va en negrita: las fuentes pixel no tienen negrita y la sintética
+las "engorda". `<b>` del markup resalta **solo con color** (el
+`boldColor` del widget o `gold`); ningún `TextStyle` pide `FontWeight`
+mayor que 400. Por si alguno se escapa, el pubspec registra el peso 700
+de las dos familias con el mismo archivo regular (sin negrita sintética).
+Test: `test/app/label_scale_test.dart`.
+
+## Etiquetas en el mundo (v0.5.1)
+
+Nombres sobre los personajes, carteles del pueblo (`MOSTRADOR DE
+MISIONES`, `ARMERÍA`, `PORTAL`, `ESTATUA DEL TIEMPO`, `TIENDA`), puertas
+de zona, `★ÉLITE` / `JEFE` / `!`, avisos (`floor`, caída) y las
+etiquetas del loot del piso: se anotan al dibujar el mundo
+(`ActorPainter.labelSink`, `MapLabel`) y se dibujan después en px de
+**pantalla** con `PixelLabelPen` (`lib/app/theme/pixel_label.dart`): Press
+Start 2P a 8·u (u = 1 hasta ×2 del mundo, 2 desde ahí; 16·u los de 8 px
+o más), sombra negra de 1 px (2 desde 16 px), posición redondeada. Es el
+mismo estilo de los nombres de la batalla. Nunca en el lienzo virtual
+que se agranda (eso las hacía gordas y borrosas). La caja del loot se
+arma alrededor del texto nítido, centrada donde la ubicó el mundo.
+
 ## Texto y la fuente
 
 Press Start 2P tiene `★ → ← ♥ ▶ ♦ • — … · × ½` pero no emojis, `✦ ⚔ ⏱
@@ -264,7 +287,7 @@ prototipo).
 
 ## Caja (`RetroPanel`)
 
-`.panel` del prototipo: fondo `panel` con alfa `ee`, borde 3 px
+`.panel` del prototipo: fondo `panel` **opaco** (v0.5.1; el prototipo usa alfa `ee` y se leía el mapa detrás), borde 3 px
 `#5B74C9` (dorado `#FFD166` si está seleccionada / es el menú de
 batalla). Padding interno de 16 px por defecto.
 

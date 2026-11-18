@@ -4,6 +4,7 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../app/theme/vision_palette.dart';
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
@@ -18,10 +19,13 @@ import '../../../game_engine/rules/progression_rules.dart';
 /// Colores de rareza: los mismos del filtro en el mapa
 /// (`LootFilterRules.rarityColor`).
 abstract final class RarityColors {
+  /// Con el modo daltónico, el de su paleta (`VisionPalette`).
   static Color of(Rarity r) => filterColor(LootFilterRules.rarityColor(r));
 
-  /// [FilterColor] → [Color].
-  static Color filterColor(FilterColor c) => Color.fromARGB(c.a, c.r, c.g, c.b);
+  /// [FilterColor] → [Color] (los de rareza por defecto, con el modo
+  /// daltónico).
+  static Color filterColor(FilterColor c) =>
+      VisionPalette.remap(Color.fromARGB(c.a, c.r, c.g, c.b));
 
   /// Letra de la rareza (C M R E L): la rareza no se dice solo con el
   /// color (daltonismo; docs/specs/accessibility.md § 2).
@@ -473,6 +477,8 @@ class LootLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final st = verdict.style;
+    // ★ = cumple tu plan de build (build_planner.md § 6).
+    final text = verdict.buildMatch ? '★ ${this.text}' : this.text;
     Widget label;
     if (!verdict.visible) {
       label = Text(retroText('$text $hiddenNote'),

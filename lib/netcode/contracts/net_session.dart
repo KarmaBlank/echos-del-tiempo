@@ -5,6 +5,7 @@ import '../../game_engine/models/session_event.dart';
 import 'net_event.dart';
 
 export 'net_event.dart';
+export 'net_latency.dart';
 
 /// Configuración para crear o unirse a una sala.
 class SessionConfig {

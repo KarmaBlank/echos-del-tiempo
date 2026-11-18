@@ -8,10 +8,18 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../app/theme/retro_theme.dart';
+import '../../../app/widgets/action_card.dart';
+import '../../../app/widgets/cost_chip.dart';
+import '../../../app/widgets/menu_focus.dart';
+import '../../../app/widgets/menu_widgets.dart';
+import '../../../app/widgets/pixel_icon.dart';
+import '../../../app/widgets/section_panel.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/game_session.dart';
+import '../../../game_engine/models/inventory_sort.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -22,7 +30,10 @@ import '../../../game_engine/rules/build_plan_rules.dart';
 import '../../build_planner/presentation/build_fit_badge.dart';
 import '../../build_planner/presentation/build_plan_providers.dart';
 import '../domain/item_text.dart';
-import 'item_widgets.dart';
+import 'clean_selection.dart';
+import 'consumables_bar.dart';
+import 'inventory_sort_button.dart';
+import 'item_widgets.dart' hide PixelIcon;
 import 'shop_sections.dart';
 import 'weapon_compare_view.dart';
 
@@ -69,6 +80,14 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   bool _cleaning = false;
   CraftOp _cleanOp = CraftOp.salvageAll;
   Rarity _cleanRarity = Rarity.comun;
+
+  /// LIMPIAR › ELEGIR A MANO (v0.5.1): la grilla marca armas.
+  bool _cleanPick = false;
+  bool _cleanSell = false;
+  List<String> _picked = const [];
+
+  /// Última clave de ORDENAR (borde dorado en el menú).
+  InventorySortKey? _lastSort;
 
   /// COMPARAR: arma A elegida (esperando B) y B (vista abierta).
   WeaponRef? _cmpA;
@@ -139,6 +158,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           message: it == null
               ? _tooltip(me.profile, c, attrs)
               : itemTooltipMarkup(shop.rules, it,
+                      skillDetails: true,
                       level: me.profile.level,
                       attributes: attrs,
                       equipped: equipped) +
@@ -212,7 +232,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final it = c.item;
     if (it != null) {
       return itemTooltipMarkup(shop.rules, it,
-          level: viewer.level, attributes: attrs);
+          skillDetails: true, level: viewer.level, attributes: attrs);
     }
     final eco = c.eco;
     if (eco != null) return _ecoTip(eco);
@@ -251,6 +271,13 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       _confirmCraft = null;
     }
     final sel = _content(p, _sel);
+    // ELEGIR A MANO: la grilla marca armas en vez de elegir.
+    final pickMode = _cleaning && _cleanPick && mine;
+    if (pickMode) _picked = prunePicked(shop.rules, p, _picked);
+    void togglePick(String? token) {
+      if (token == null || p.itemByUid(token) == null) return;
+      setState(() => _picked = togglePicked(shop.rules, p, _picked, token));
+    }
 
     final owners = Wrap(
       spacing: 6,
@@ -287,8 +314,17 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         highlight: _moveFrom != null && _moveFrom != i,
         buildMatch: c?.item != null && _fit(c!.item!).any,
       );
+      if (pickMode && token != null) {
+        final picked = _picked.contains(token);
+        w = CleanCellMark(
+            picked: picked,
+            locked: !picked &&
+                cleanLockReason(shop.rules, p, token, _picked) != null,
+            child: w);
+      }
       if (c != null) w = _withTip(me, owner, c, attrs, w);
       void tap() {
+        if (pickMode) return togglePick(token);
         if (_pickB(owner.id, token, c)) return;
         final from = _moveFrom;
         if (mine && from != null) {
@@ -302,8 +338,9 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         if (token != null) _select(token, i);
       }
 
-      w = _CellButton(onTap: tap, child: w);
-      if (mine) {
+      w = GestureDetector(
+          behavior: HitTestBehavior.opaque, onTap: tap, child: w);
+      if (mine && !pickMode) {
         if (c != null) {
           w = Draggable<int>(
             data: i,
@@ -353,10 +390,25 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                 selected: _sel == eq.uid,
                 buildMatch: _fit(eq).any),
             equipped: true);
-    final left = Column(
+    final left = NavSection(
+        child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        owners,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: owners),
+            if (mine) ...[
+              const SizedBox(width: 6),
+              InventorySortButton(
+                  current: _lastSort,
+                  onSort: (k) {
+                    setState(() => _lastSort = k);
+                    shop.controller.sortInventory(k);
+                  }),
+            ],
+          ],
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -402,13 +454,52 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         const SizedBox(height: 4),
         SizedBox(
           width: InventoryTab.gridWidth,
-          child: Wrap(
+          // Flechas: el cursor recorre la grilla y elige la casilla;
+          // Enter otra vez sobre un arma la equipa (menu_focus.dart).
+          child: InitialFocus(
+              child: FocusGrid(
+            count: InventoryRules.cells,
+            columns: InventoryRules.columns,
             spacing: InventoryTab.gap,
-            runSpacing: InventoryTab.gap,
-            children: [
-              for (var i = 0; i < InventoryRules.cells; i++) cellAt(i),
-            ],
-          ),
+            keyPrefix: 'inv-focus-',
+            cell: (_, i, __) => cellAt(i),
+            onFocusCell: (i) {
+              final t = layout.cells[i];
+              if (pickMode) return;
+              if (_moveFrom == null && !_picking && t != null) _select(t, i);
+            },
+            // ELEGIR A MANO: Enter / Espacio marcan o desmarcan.
+            onActivate: (i) => pickMode
+                ? togglePick(layout.cells[i])
+                : _activateCell(
+                p, layout.cells[i], i, mine, owner.id, cellTap: () {
+              final c = _content(p, layout.cells[i]);
+              if (_pickB(owner.id, layout.cells[i], c)) return;
+              final from = _moveFrom;
+              if (mine && from != null) {
+                setState(() => _moveFrom = null);
+                if (from != i) {
+                  shop.controller.moveInventory(from, i);
+                  _selCell = i;
+                }
+                return;
+              }
+              if (layout.cells[i] case final t?) _select(t, i);
+            }),
+          )),
+        ),
+        const SizedBox(height: 8),
+        // CONSUMIBLES / MATERIALES (v0.5.1): pilas fuera de la grilla; las
+        // flechas bajan desde la grilla y Enter las elige.
+        InventoryStacksBar(
+          rules: shop.rules,
+          profile: p,
+          cell: InventoryTab.cell,
+          gap: InventoryTab.gap,
+          selected: _sel,
+          onSelect: pickMode || _picking || _moveFrom != null
+              ? null
+              : (t) => _select(t, null),
         ),
         const SizedBox(height: 6),
         ProtoText(
@@ -423,13 +514,14 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
               selected: _cleaning,
               onPressed: () => setState(() {
                     _cleaning = !_cleaning;
+                    _picked = const [];
                     _confirmDrop = false;
                     _confirmCraft = null;
                     _moveFrom = null;
                   })),
         ],
       ],
-    );
+    ));
 
     final cmpA = _cmpA, cmpB = _cmpB;
     if (cmpA != null && cmpB != null) {
@@ -470,27 +562,22 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         scaleList: false,
         list: [left],
         detail: PanelDetail(
-          footer: sel == null || !mine
-              ? (mine
-                  ? const []
-                  : [
-                      const Text('Solo lectura',
-                          style: TextStyle(color: ProtoColors.dim)),
-                      if (compareButton != null) compareButton,
-                    ])
-              : [
-                  if (compareButton != null &&
-                      _confirmCraft == null &&
-                      !_confirmDrop)
-                    compareButton,
-                  ..._actions(p, me, mates, sel),
-                ],
+          footer: [
+            const KeyHints(confirm: 'Elegir / equipar', back: 'Cerrar'),
+            if (!mine) ...[
+              const Text('Solo lectura',
+                  style: TextStyle(color: ProtoColors.dim)),
+              if (compareButton != null) compareButton,
+            ],
+          ],
           children: sel == null
               ? [
                   Text(retroText('Elige una casilla.'),
                       style: const TextStyle(color: ProtoColors.dim)),
                 ]
-              : _detail(p, me.profile, sel, attrs, mine),
+              : _withActions(_detail(p, me.profile, sel, attrs, mine),
+                  mine ? _actionsSection(p, me, mates, sel) : null,
+                  item: sel.item != null),
         ),
       ),
     );
@@ -501,6 +588,26 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   Widget _cleaner(PlayerProfile p) {
     final rules = shop.rules;
     final g = shop.guards;
+    void mode(bool pick) => setState(() => _cleanPick = pick);
+    if (_cleanPick) {
+      return CleanSelectionPanel(
+        rules: rules,
+        guards: g,
+        profile: p,
+        picked: _picked,
+        sell: _cleanSell,
+        onMode: mode,
+        onSell: (v) => setState(() => _cleanSell = v),
+        onAdd: (r) =>
+            setState(() => _picked = addRarityPicked(rules, p, _picked, r)),
+        onClear: () => setState(() => _picked = const []),
+        onConfirm: (a) {
+          shop.controller.craft(a);
+          setState(() => _picked = const []);
+        },
+        onCancel: () => setState(() => _cleaning = false),
+      );
+    }
     final sell = _cleanOp == CraftOp.sellAll;
     final a = CraftAction.batch(_cleanOp, _cleanRarity);
     final r = g.craftPreview(p, a);
@@ -532,6 +639,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         const Text('LIMPIAR INVENTARIO',
             style: TextStyle(color: ProtoColors.gold)),
         const SizedBox(height: 4),
+        CleanModeToggle(pick: false, onChanged: mode),
+        const SizedBox(height: 6),
         ProtoText(protoColor(
             ProtoColors.dim,
             'Desarma o vende de una vez todas las armas de una rareza. Nunca '
@@ -577,41 +686,137 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     );
   }
 
+  /// Las acciones van antes de la ficha (se ven sin bajar).
+  List<Widget> _withActions(List<Widget> detail, Widget? actions,
+      {required bool item}) {
+    if (actions == null) return detail;
+    if (!item || detail.isEmpty) return [...detail, actions];
+    return [...detail.take(detail.length - 1), actions, detail.last];
+  }
+
+  /// Enter sobre una casilla de la grilla: en MOVER / "elige B" es el
+  /// clic; sobre el arma ya elegida la equipa si se puede; si no, la
+  /// elige.
+  void _activateCell(
+      PlayerProfile p, String? token, int i, bool mine, String owner,
+      {required VoidCallback cellTap}) {
+    final it = token == null ? null : p.itemByUid(token);
+    if (mine &&
+        _moveFrom == null &&
+        !_picking &&
+        it != null &&
+        token == _sel &&
+        it.uid != p.equippedUid &&
+        shop.guards.equip(p, it.uid, pending: widget.pending) == null) {
+      shop.controller.equip(it.uid);
+      return;
+    }
+    cellTap();
+  }
+
   List<Widget> _detail(PlayerProfile p, PlayerProfile viewer, CellContent c,
       PlayerAttributes attrs, bool mine) {
     final it = c.item;
     final eco = c.eco;
     if (eco != null) {
-      return [ProtoText(key: const ValueKey('inv-eco-detail'), _ecoTip(eco))];
+      return [
+        SectionPanel(
+          icon: PixelIconKind.gem,
+          title: 'ECO',
+          subtitle: 'ábrelo en el Portal del Eco',
+          children: [
+            ProtoText(key: const ValueKey('inv-eco-detail'), _ecoTip(eco)),
+          ],
+        ),
+      ];
     }
     if (it == null) {
-      return [ProtoText(stackTooltipMarkup(c.stack!, c.count))];
+      return [
+        SectionPanel(
+          icon: PixelIconKind.shard,
+          title: 'OBJETO',
+          children: [ProtoText(stackTooltipMarkup(c.stack!, c.count))],
+        ),
+      ];
     }
     final equipped = it.uid == p.equippedUid;
     final rules = shop.rules;
     final eq = rules.equippedItem(viewer);
     return [
-      ItemCard(
-        rules: rules,
-        item: it,
-        level: viewer.level,
-        attributes: attrs,
-        stats: shop.preview.withItem(viewer, it, attributes: attrs),
-        equipped: equipped,
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ProtoText(
+                key: const ValueKey('inv-detail-title'),
+                '${itemNameMarkup(rules, it)}'
+                '${equipped ? ' ${protoColor(ProtoColors.gold, 'EQUIPADA')}' : ''}'),
+          ),
+          BuildFitBadge(item: it, compact: false),
+        ],
       ),
-      if (buildFitMarkup(_fit(it)) case final fit?)
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: ProtoText(fit, key: const ValueKey('inv-build-fit')),
-        ),
+      const SizedBox(height: 4),
       if (!equipped || !mine)
-        StatsCompare(
-          title: 'Comparada con '
-              '${eq == null ? '-' : protoEsc(rules.items.displayName(eq))}',
-          before: shop.preview.current(viewer, attributes: attrs),
-          after: shop.preview.withItem(viewer, it, attributes: attrs),
+        SectionPanel(
+          icon: PixelIconKind.arrowIn,
+          title: 'SI LA EQUIPAS',
+          children: [
+            StatsCompare(
+              title: 'Comparada con '
+                  '${eq == null ? '-' : protoEsc(rules.items.displayName(eq))}',
+              before: shop.preview.current(viewer, attributes: attrs),
+              after: shop.preview.withItem(viewer, it, attributes: attrs),
+            ),
+          ],
         ),
+      SectionPanel(
+        icon: PixelIconKind.sword,
+        title: 'FICHA',
+        children: [
+          ItemCard(
+            rules: rules,
+            item: it,
+            level: viewer.level,
+            attributes: attrs,
+            stats: shop.preview.withItem(viewer, it, attributes: attrs),
+            equipped: equipped,
+          ),
+          if (buildFitMarkup(_fit(it)) case final fit?)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: ProtoText(fit, key: const ValueKey('inv-build-fit')),
+            ),
+        ],
+      ),
     ];
+  }
+
+  /// Sección ACCIONES del detalle: una tarjeta por acción (con su costo o
+  /// lo que recibes, o el motivo completo si no se puede) o, si hay una
+  /// confirmación abierta, la pregunta con CANCELAR y el botón rojo.
+  Widget _actionsSection(PlayerProfile p, SessionPlayer me,
+      List<SessionPlayer> mates, CellContent c) {
+    final confirming =
+        _confirmDrop || (_confirmCraft != null && c.item != null);
+    final list = _actions(p, me, mates, c);
+    return SectionPanel(
+      icon: confirming ? PixelIconKind.lock : PixelIconKind.check,
+      color: confirming ? ProtoColors.red : ProtoColors.gold,
+      title: confirming ? 'CONFIRMAR' : 'ACCIONES',
+      subtitle: confirming ? null : 'clic o Enter',
+      children: confirming
+          ? [
+              list.first,
+              const SizedBox(height: 6),
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
+                children: list.skip(1).toList(),
+              ),
+            ]
+          : list,
+    );
   }
 
   List<Widget> _actions(PlayerProfile p, SessionPlayer me,
@@ -668,57 +873,141 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         }),
       ];
     }
-    return [
-      if (it == null && c.eco == null && c.count > 1) ...[
-        PanelButton('-',
-            key: const ValueKey('inv-count-dec'),
-            onPressed:
-                count > 1 ? () => setState(() => _count = count - 1) : null),
-        Text('x$count', key: const ValueKey('inv-count')),
-        PanelButton('+',
-            key: const ValueKey('inv-count-inc'),
-            onPressed: count < c.count
-                ? () => setState(() => _count = count + 1)
-                : null),
-      ],
+    final cards = <Widget>[
+      if (it != null && it.uid != p.equippedUid)
+        ActionCard(
+          key: const ValueKey('inv-equip'),
+          icon: _icon(PixelIconKind.check, ProtoColors.green),
+          title: '<b>EQUIPAR</b>',
+          description: 'Pasa a ser tu arma (fuera de las misiones).',
+          reason: g.equip(p, it.uid, pending: widget.pending),
+          footer: g.equip(p, it.uid, pending: widget.pending) == null
+              ? const CostChip([])
+              : null,
+          onTap: () {
+            if (g.equip(p, it.uid, pending: widget.pending) == null) {
+              shop.controller.equip(it.uid);
+            }
+          },
+        ),
+      if (it != null && !_picking)
+        ActionCard(
+          key: const ValueKey('inv-compare'),
+          icon: _icon(PixelIconKind.arrowIn, ProtoColors.sky),
+          title: '<b>COMPARAR</b>',
+          description: 'Elige otra arma y mira las dos lado a lado.',
+          onTap: () => _startCompare(WeaponRef(me.id, token)),
+        ),
       if (_selCell != null)
-        PanelButton('MOVER',
-            key: const ValueKey('inv-move'),
-            onPressed: () => setState(() => _moveFrom = _selCell)),
+        ActionCard(
+          key: const ValueKey('inv-move'),
+          icon: _icon(PixelIconKind.arrowIn, ProtoColors.gold),
+          title: '<b>MOVER</b>',
+          description: 'Después elige la casilla destino (o arrastra).',
+          onTap: () => setState(() => _moveFrom = _selCell),
+        ),
       if (mates.isEmpty)
-        PanelButton('DAR A...',
-            key: const ValueKey('inv-give'),
-            reason: g.give(p, token, null, count: count))
+        ActionCard(
+          key: const ValueKey('inv-give'),
+          icon: _icon(PixelIconKind.plus, ProtoColors.sky),
+          title: '<b>DAR A...</b>',
+          description: 'Pásalo a un compañero de la sala.',
+          reason: g.give(p, token, null, count: count) ?? 'Sin compañeros',
+          onTap: () {},
+        )
       else
         for (final m in mates)
-          PanelButton('DAR A ${m.name.toUpperCase()}',
-              key: ValueKey('inv-give-${m.id}'),
-              reason: g.give(p, token, m, count: count),
-              onPressed: () => shop.controller.give(m.id, token, count: count)),
-      PanelButton('TIRAR',
-          key: const ValueKey('inv-drop'),
-          reason: g.drop(p, token, count: count, alive: me.alive),
-          // Ajuste CONFIRMAR AL TIRAR (docs/specs/settings.md § "JUEGO").
-          onPressed: () => ref.read(gameSettingsProvider).confirmDrop
+          ActionCard(
+            key: ValueKey('inv-give-${m.id}'),
+            icon: _icon(PixelIconKind.plus, ProtoColors.sky),
+            title: '<b>DAR A ${protoEsc(m.name.toUpperCase())}</b>',
+            description: 'Lo recibe en su inventario.',
+            reason: g.give(p, token, m, count: count),
+            onTap: () {
+              if (g.give(p, token, m, count: count) == null) {
+                shop.controller.give(m.id, token, count: count);
+              }
+            },
+          ),
+      ActionCard(
+        key: const ValueKey('inv-drop'),
+        icon: _icon(PixelIconKind.trash, ProtoColors.orange),
+        title: '<b>TIRAR</b>',
+        description: 'Queda en el piso: lo puede levantar cualquiera.',
+        reason: g.drop(p, token, count: count, alive: me.alive),
+        // Ajuste CONFIRMAR AL TIRAR (docs/specs/settings.md § "JUEGO").
+        onTap: () {
+          if (g.drop(p, token, count: count, alive: me.alive) != null) return;
+          ref.read(gameSettingsProvider).confirmDrop
               ? setState(() => _confirmDrop = true)
-              : shop.controller.dropItem(token, count: count)),
+              : shop.controller.dropItem(token, count: count);
+        },
+      ),
       if (it != null) ...[
-        PanelButton('DESARMAR',
-            key: const ValueKey('inv-salvage'),
-            reason: g.craft(p, CraftAction(CraftOp.salvage, it.uid)),
-            onPressed: () => setState(() => _confirmCraft = CraftOp.salvage)),
-        PanelButton('VENDER ₵${shop.rules.crafting.sellPrice(it)}',
-            key: const ValueKey('inv-sell'),
-            reason: g.craft(p, CraftAction(CraftOp.sell, it.uid)),
-            onPressed: () => setState(() => _confirmCraft = CraftOp.sell)),
+        _craftCard(p, it, CraftOp.salvage),
+        _craftCard(p, it, CraftOp.sell),
       ],
-      if (it != null && it.uid != p.equippedUid)
-        PanelButton('EQUIPAR',
-            key: const ValueKey('inv-equip'),
-            accent: ProtoColors.green,
-            reason: g.equip(p, it.uid, pending: widget.pending),
-            onPressed: () => shop.controller.equip(it.uid)),
     ];
+    return [
+      if (it == null && c.eco == null && c.count > 1)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 6),
+          child: Row(
+            children: [
+              Text(retroText('Cantidad'),
+                  style: const TextStyle(color: ProtoColors.sky)),
+              const SizedBox(width: 8),
+              PanelButton('-',
+                  key: const ValueKey('inv-count-dec'),
+                  onPressed: count > 1
+                      ? () => setState(() => _count = count - 1)
+                      : null),
+              const SizedBox(width: 6),
+              Text('x$count', key: const ValueKey('inv-count')),
+              const SizedBox(width: 6),
+              PanelButton('+',
+                  key: const ValueKey('inv-count-inc'),
+                  onPressed: count < c.count
+                      ? () => setState(() => _count = count + 1)
+                      : null),
+            ],
+          ),
+        ),
+      CardGrid(minWidth: 200, children: cards),
+    ];
+  }
+
+  Widget _icon(PixelIconKind k, Color color) => Builder(
+      builder: (context) =>
+          PixelIcon(k, size: RetroType.width(context, 20), color: color));
+
+  /// DESARMAR / VENDER: lo que recibes en el pie (o el motivo).
+  Widget _craftCard(PlayerProfile p, ItemInstance it, CraftOp op) {
+    final g = shop.guards;
+    final a = CraftAction(op, it.uid);
+    final reason = g.craft(p, a);
+    final sell = op == CraftOp.sell;
+    final r = g.craftPreview(p, a);
+    final gains = gainsText(
+        credits: r.gainedCredits,
+        materials: r.gainedMaterials,
+        chances: r.outcomes);
+    return ActionCard(
+      key: ValueKey(sell ? 'inv-sell' : 'inv-salvage'),
+      icon: _icon(sell ? PixelIconKind.coin : PixelIconKind.anvil,
+          sell ? ProtoColors.gold : ProtoColors.sky),
+      title: sell
+          ? '<b>VENDER ₵${shop.rules.crafting.sellPrice(it)}</b>'
+          : '<b>DESARMAR</b>',
+      description: sell
+          ? 'El arma se destruye y recibes créditos.'
+          : 'El arma se destruye y recibes materiales.',
+      reason: reason,
+      footer: reason == null ? CostChip.note('Recibes $gains') : null,
+      onTap: () {
+        if (reason == null) setState(() => _confirmCraft = op);
+      },
+    );
   }
 }
 

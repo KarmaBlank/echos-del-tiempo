@@ -4,7 +4,7 @@ import 'proto_colors.dart';
 import 'retro_theme.dart';
 
 /// Caja `.panel` del prototipo (ver docs/specs/ui_style.md § "Caja"):
-/// fondo `#121936` con alfa `ee`, borde de 3 px `#5b74c9` (dorado
+/// fondo `#121936` opaco (el prototipo usa alfa `ee`), borde de 3 px `#5b74c9` (dorado
 /// `#ffd166` si está seleccionada), esquinas rectas.
 class RetroPanel extends StatelessWidget {
   const RetroPanel({
@@ -31,7 +31,9 @@ class RetroPanel extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: ProtoColors.panel.withValues(alpha: 0xEE / 0xFF),
+        // Opaco (v0.5.1): con el alfa `ee` del prototipo se leía el texto
+        // del mapa detrás de los menús.
+        color: ProtoColors.panel,
         border: Border.all(
           color: borderColor ??
               (selected ? ProtoColors.gold : ProtoColors.buttonBorder),

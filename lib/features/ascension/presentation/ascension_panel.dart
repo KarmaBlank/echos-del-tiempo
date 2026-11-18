@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/feature_flags.dart';
 import '../../../app/theme/panel_frame.dart';
+import '../../../app/widgets/menu_focus.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
@@ -20,7 +21,8 @@ import 'ascension_views.dart';
 enum AscensionTab {
   trials('PRUEBAS',
       'Mazmorras con trampas y jefe: cada una da 2 puntos de ascensión.'),
-  ascension('ASCENSIÓN',
+  ascension(
+      'ASCENSIÓN',
       'Elegí 1 de 2 subclases y gastá los puntos en su mini-árbol (gratis '
           'cambiar).');
 
@@ -70,47 +72,53 @@ class _AscensionPanelState extends State<AscensionPanel> {
   Widget build(BuildContext context) {
     final p = view.me!.profile;
     final a = const AscensionRules().of(p);
-    return PanelFrame(
-      title: 'ESTATUA DEL TIEMPO',
-      width: 1040,
-      fill: true,
-      help: kAscensionHelp,
-      onClose: c.closePanel,
-      titleTrailing: ProtoText(
-          key: const ValueKey('asc-title-points'),
-          protoEsc(trialsSummary(p.ascension))),
-      header: PanelTabs(
-        labels: [for (final t in AscensionTab.values) t.label],
-        index: _tab.index,
-        onChanged: (i) => setState(() => _tab = AscensionTab.values[i]),
-      ),
-      actions: [PanelButton('CERRAR [ESC]', onPressed: c.closePanel)],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          PanelHint(_tab.hint),
-          Expanded(
-            child: switch (_tab) {
-              AscensionTab.trials => _trials(p),
-              AscensionTab.ascension => a == null
-                  ? _choice(p)
-                  : AscensionTreeView(
-                      key: const ValueKey('asc-tree'),
-                      def: a,
-                      progress: p.ascension,
-                      sprites: widget.sprites,
-                      editBlocked: view.session.mode == SessionMode.battle
-                          ? 'No en batalla'
-                          : null,
-                      onTake: (id) => setState(() => c.takeAscensionNode(id)),
-                      onReset: () => setState(() => c.resetAscension()),
-                      onChange: view.session.canShop
-                          ? () => setState(() => c.resetAscension(full: true))
-                          : null,
-                    ),
-            },
-          ),
-        ],
+    // Q / E, Ctrl+Tab y 1-9 cambian de pestaña (menu_focus.dart).
+    return MenuTabKeys(
+      count: AscensionTab.values.length,
+      index: _tab.index,
+      onChanged: (i) => setState(() => _tab = AscensionTab.values[i]),
+      child: PanelFrame(
+        title: 'ESTATUA DEL TIEMPO',
+        width: 1040,
+        fill: true,
+        help: kAscensionHelp,
+        onClose: c.closePanel,
+        titleTrailing: ProtoText(
+            key: const ValueKey('asc-title-points'),
+            protoEsc(trialsSummary(p.ascension))),
+        header: PanelTabs(
+          labels: [for (final t in AscensionTab.values) t.label],
+          index: _tab.index,
+          onChanged: (i) => setState(() => _tab = AscensionTab.values[i]),
+        ),
+        actions: [PanelButton('CERRAR [ESC]', onPressed: c.closePanel)],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            PanelHint(_tab.hint),
+            Expanded(
+              child: switch (_tab) {
+                AscensionTab.trials => _trials(p),
+                AscensionTab.ascension => a == null
+                    ? _choice(p)
+                    : AscensionTreeView(
+                        key: const ValueKey('asc-tree'),
+                        def: a,
+                        progress: p.ascension,
+                        sprites: widget.sprites,
+                        editBlocked: view.session.mode == SessionMode.battle
+                            ? 'No en batalla'
+                            : null,
+                        onTake: (id) => setState(() => c.takeAscensionNode(id)),
+                        onReset: () => setState(() => c.resetAscension()),
+                        onChange: view.session.canShop
+                            ? () => setState(() => c.resetAscension(full: true))
+                            : null,
+                      ),
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

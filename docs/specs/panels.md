@@ -511,8 +511,8 @@ casilla y como ficha en los detalles:
 
 Reemplaza a la pestaña ARMAS (equipar y comparar están acá). Línea "qué
 hace": `Arrastra para mover · clic para ver · EQUIPAR, DAR A, TIRAR,
-DESARMAR (materiales) o VENDER (créditos). LIMPIAR INVENTARIO: por
-rareza.`
+DESARMAR (materiales) o VENDER (créditos). ORDENAR · LIMPIAR
+INVENTARIO: por rareza o elegidas a mano.` (v0.5.1)
 
 - Arriba de la grilla, pestañas de dueño (`inv-owner-<id>`): `TÚ` y una
   por compañero de sala (solo lectura: `Inventario de <nombre> (solo
@@ -523,7 +523,26 @@ rareza.`
   de la rareza, o la pila (poción, éter, materiales) con su cantidad.
   Pasar el mouse muestra la ficha (tooltip; en las armas, comparada con
   la equipada: § "Comparar armas"). Debajo: `Casillas N/40 ·
-  $créditos` y lo que desborda.
+  $créditos` y lo que desborda (N = armas y Ecos).
+- **Secciones de pilas** (v0.5.1, loot.md § 17.1; `consumables_bar.dart`,
+  `inv-stacks`): debajo de la grilla, dos filas de casillas fijas de
+  44 px con rótulo: `CONSUMIBLES` (Poción de vida, Poción de maná) y
+  `MATERIALES` (Esquirla, Cristal, Prisma, Ancla), cada una con su
+  cantidad (en 0: atenuada, no se elige). Clave `inv-stack-<token>`
+  (`inv-stack-pot`, `inv-stack-mat:cristal`). Clic, o el cursor con las
+  flechas, la elige y el detalle muestra la ficha y las acciones de
+  siempre (cantidad, DAR A, TIRAR); `Enter` / `Espacio` también la
+  eligen. Las flechas pasan de la grilla a las secciones (abajo) y entre
+  las dos filas. No se mueven ni se ordenan (lugar fijo). En el alijo
+  (`stash_screen.dart`) la misma fila de MATERIALES está debajo de la
+  grilla del personaje para guardarlos.
+- **ORDENAR ▼** (v0.5.1, loot.md § 17.2; `inventory_sort_button.dart`,
+  `inv-sort`, en la fila de arriba de la grilla, solo el tuyo): abre un
+  menú con `Rareza`, `Nivel de objeto`, `Tipo de arma`, `Nombre` y
+  `Recientes` (`inv-sort-<clave>`); elegir una manda
+  `SortInventoryAction` y cierra el menú (`Esc` o clic afuera lo
+  cierran sin ordenar; flechas y `Enter` recorren las opciones). La
+  equipada sigue en su casilla EQUIPADA (siempre primero).
 - **Mover**: arrastrar una casilla sobre otra (`MoveInventoryAction`,
   intercambia), o elegirla, `MOVER` (`inv-move`) y clic en la casilla
   destino (la línea de ayuda dice `Elige la casilla destino`;
@@ -560,6 +579,24 @@ rareza.`
   COMUNES` (`inv-clean-confirm`, `CraftAction.batch`) con el motivo
   (`No hay armas de rareza Común`, `canShop`). Tests:
   `test/features/inventory/loot_sinks_ui_test.dart`.
+- **ELEGIR A MANO** (v0.5.1, loot.md § 21.5; `clean_selection.dart`):
+  en el limpiador, el modo `POR RAREZA` / `ELEGIR A MANO`
+  (`inv-clean-mode-rarity` / `inv-clean-mode-pick`). En ELEGIR A MANO la
+  grilla pasa a modo selección: clic o `Espacio` / `Enter` sobre un arma
+  la marca o desmarca (casilla con el ícono pixel de check verde y borde verde,
+  `clean-check`); las protegidas (equipada, última inicial; también la
+  segunda inicial si ya elegiste la otra) muestran un candado
+  (`clean-lock`) y no se marcan. Los Ecos no se marcan. Atajos
+  `+ COMUNES (n)` / `+ MÁGICOS (n)` / `+ RAROS (n)` / `+ ÉPICOS (n)`
+  (`inv-clean-add-<rareza>`: "seleccionar todo de esta rareza", suma a
+  lo elegido) y `NINGUNA` (`inv-clean-none`). El detalle muestra
+  `Elegidas: N` (`inv-clean-count`), el resumen con lo que recibes
+  (`inv-clean-summary`, misma vista previa que el motor) y la lista
+  `Se destruyen:`; abajo `CANCELAR` y el rojo `DESARMAR N SELECCIONADAS`
+  / `VENDER N SELECCIONADAS` (`inv-clean-confirm`,
+  `CraftAction.selected`) con el motivo (`Elige armas`). Al confirmar
+  se vacía la elección. Tests:
+  `test/features/inventory/inventory_v051_ui_test.dart`.
 
 ### Comparar armas (v0.3.0)
 
@@ -637,6 +674,14 @@ visual** (lista de reglas con ▲▼, agregar, duplicar, borrar; loot.md
   etiquetas del mapa con el estilo del filtro (texto, borde, fondo,
   tamaño; `(oculto)` en dim, la regla que coincidió, sonido e ícono); y
   la gramática corta (también en el `[?]`).
+- Derecha, entre VALIDACIÓN y VISTA PREVIA (v0.5.1): `★ COINCIDE CON MI
+  BUILD` (condición `Build`; build_planner.md § 6.4): botones de qué
+  tiene que cumplir (`filter-build-kind-any/base/mod/pasiva/habilidad`),
+  la línea resultante (`filter-build-line`), los atajos
+  `+ A LA REGLA DEL CURSOR` (`filter-build-insert`), `+ REGLA: RESALTAR`
+  (`filter-build-highlight`) y `+ REGLA: OCULTAR COMUNES FUERA DEL PLAN`
+  (`filter-build-hide`), y qué busca tu plan (`filter-build-plan`). La
+  vista previa usa tu plan: ★ y "★ tu build: mod" en la muestra.
 - Botones: `RESTAURAR POR DEFECTO` (`filter-default`, abajo a la
   izquierda: pone el texto por defecto en el editor, sin guardar),
   `DESHACER` (`filter-revert`: vuelve al guardado) y el primario
@@ -787,15 +832,153 @@ pestañas ECOS y ATLAS. Spec: docs/specs/ecos_atlas.md.
   nivel. Resultado de un Eco: `Eco T<n> · zona · jefe · Piso` y la línea
   turquesa con los puntos de Atlas ganados.
 
-## Pendiente v0.5.1 (pasada de UX de menús)
+## Pasada de UX de menús (v0.5.1)
 
-Hecho en v0.5: FUSIÓN, ARMERÍA (COMPRAR / FORJA), Portal del Eco +
-Atlas, Estatua (PRUEBAS / ASCENSIÓN / mini-árbol), Mostrador, tarjetas
-de personaje del título, línea del alijo y el `%` de los volúmenes.
-Falta aplicar ui_style.md § "Menús: lista + detalle" a: resultado de
-misión, preparación, creador de clase, ajustes (las ayudas debajo de
-cada fila), pestaña ATRIBUTOS del personaje y el detalle del
-inventario.
+Pedido del dueño: tarjetas con "separaciones bien bien de cada acción"
+(la FUSIÓN de v0.5 es la referencia), nada de listas densas con texto
+cortado, y todo usable con teclado. Piezas en `lib/app/widgets/`
+(`SectionPanel` ahora es también una `NavSection`, `ActionCard` con
+`reason` = candado + motivo entero en el pie, `CostChip`, `MenuRow` con
+`onFocus` / `autofocus`).
+
+- **COMPRAR**: filas de la lista enteras (`wrap`, sin "…"). Detalle:
+  encabezado (`shop-title`: nombre, tipo, Nv, Común) con `BuildFitBadge`
+  ("★ TU BUILD", tooltip con lo que cumple), y secciones `SI LA EQUIPAS`
+  (antes → después; aviso si no cumplís requisitos), `COSTO` (`CostLine`
+  o "Ya tienes una") y `FICHA` (ficha + chips de habilidades + "QUÉ
+  HACEN" con la ficha completa de cada habilidad y la ULT, con tus stats
+  si la equiparas). Abajo `Enter Elegir · Esc Cerrar` y el
+  `ConfirmButton` `COMPRAR` (`buy-<id>`) con el chip de costo; sin
+  créditos, `No se puede: Faltan $N` arriba.
+- **FORJA**: encabezado con `BuildFitBadge` y las habilidades del arma
+  (chips); sección `FORJA` (`forge-cap`, pasiva, `forge-passive-note`) y
+  una `ActionCard` por estadística (`up-<uid>-<stat>`, dentro de
+  `forge-stat-<stat>`): ícono (espada / estrella / flecha / ancla),
+  nombre, qué hace, cuadritos n/5, `Bono` y el stat antes → después, la
+  línea violeta si sube la pasiva y el pie `CostChip` `+1 · $N` (o `MAX`,
+  o candado + motivo, p. ej. `Tope de forja (3)`). Clic / `Enter` = +1.
+  Grilla de 3 columnas a 1280 en Normal.
+- **Inventario (detalle)**: título (`inv-detail-title`) con `EQUIPADA` y
+  `BuildFitBadge`; secciones `SI LA EQUIPAS`, **`ACCIONES`** (antes de la
+  ficha: se ven sin bajar) y `FICHA` (con los chips de habilidades). Cada
+  acción es una `ActionCard` con su clave de siempre (`inv-equip`,
+  `inv-compare`, `inv-move`, `inv-give[-<id>]`, `inv-drop`,
+  `inv-salvage`, `inv-sell`): qué hace en una línea y el pie con
+  `Gratis`, `Recibes +2 Cristal de Era...` / `Recibes +$N`, o el motivo
+  entero. Las pilas: `Cantidad - xN +`. Las confirmaciones (tirar,
+  desarmar, vender) reemplazan la sección por `CONFIRMAR` en rojo con la
+  pregunta, `CANCELAR` y el botón rojo. Ecos y pilas: sección `ECO` /
+  `OBJETO`. La grilla y LIMPIAR INVENTARIO no cambian (salvo el teclado).
+- **ATRIBUTOS**: sección `ATRIBUTOS · Puntos libres: N` con una tarjeta
+  por atributo (`attr-row-<attr>`: sigla, nombre, valor `+n`, `★ n/meta`
+  del plan, `-` / `+` y qué hace, entero, debajo; borde verde si tiene
+  reparto pendiente), `★ Según tu build: ...` arriba; secciones `CLASE`
+  (botones + motivo en el subtítulo) y `RASGOS DE PALADÍN`. Derecha:
+  `VISTA PREVIA` (cómo cambian tus stats) y `PENDIENTE`.
+- **Preparación › MISIÓN**: sección `MISIÓN` (la tarjeta) y a la derecha
+  `GRUPO · n/m listos` (una fila enmarcada por jugador, verde si está
+  listo), `TU EQUIPO` (`Arma`, `Consumibles`, `Créditos` en columna) y
+  `AVISO` (naranja).
+- **Resultado**: 900 px. Nombre y zona arriba; `RANGO` (letra grande
+  `display`, tiempo y K.O.) │ `RECOMPENSAS` (XP, créditos, bonus en
+  columna); `PROGRESO` (zona desbloqueada, Prueba, Atlas) y `BOTÍN`
+  (obtuviste, drops del grupo, élites, TUS DROPS). Abre con el foco en
+  `VOLVER AL LOBBY` (`Enter` vuelve). Sin tamaños a mano (`title` /
+  `display`).
+- **Creador de clase (título)**: `1 · CLASE` (tarjetas: sprite, nombre,
+  arma inicial y su atajo `[n]`; flechas o `1`..`9` la eligen) │
+  `DETALLE` (descripción entera, atributos base en barras, arma inicial
+  con los chips de sus habilidades) y `2 · NOMBRE` (campo, `Enter
+  Crear · Esc Cancelar`, `CANCELAR`, `> CREAR`). Tarjetas de personaje y
+  `+ NUEVO PERSONAJE` con foco y aro.
+- **Paneles opacos**: `RetroPanel` sin el alfa `ee` del prototipo (se
+  leía el texto del mapa detrás de las tablas).
+
+### Teclado en los menús (v0.5.1)
+
+Sistema común (`lib/app/widgets/menu_focus.dart`; la tabla `kMenuKeys`
+es la de CONTROLES › MENÚS):
+
+| Tecla | Qué hace |
+|---|---|
+| Flechas | Mueven el foco en esa dirección (o al siguiente / anterior). En listas, el detalle **sigue al cursor** (`MenuRow.onFocus`). Al abrir, el foco ya está en la primera fila / tarjeta (`InitialFocus`) |
+| `Tab` / `Shift+Tab` | Saltan a la **sección** siguiente / anterior (`NavSection`: lista, cada `SectionPanel`, los chips de habilidades; los botones sueltos cuentan como una) en orden de lectura |
+| `Enter` / `Espacio` | Activan lo que tiene el foco (fila, tarjeta, botón) |
+| `Esc` | Vuelve un paso (fusión, comparar, "elige B", creador) o cierra el panel; sin panel, la pausa |
+| `Q` / `E`, `RePág` / `AvPág` | Pestaña anterior / siguiente (en círculo) |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Pestaña siguiente / anterior |
+| `1`..`9` | Pestaña N; en el mostrador la zona N; en el título el personaje N o (en el creador) la clase N |
+
+- **Foco visible**: aro dorado de 2 px por fuera del elemento
+  (`FocusRing`, no cambia el tamaño) y, en filas, el cursor ▶ a la
+  izquierda; los botones con foco, borde dorado. Solo con el teclado
+  (con el mouse, el resaltado de siempre). Un tooltip (`RetroHoverCard`)
+  también aparece mientras su objetivo tiene el foco de teclado.
+- **Dónde**: título y creador (`MenuKeyScope`), pausa / configuración
+  (pestañas), mostrador, preparación, armería (COMPRAR / FORJA / FUSIÓN /
+  CONSUMIBLES; la fusión conserva su `Enter` avanza / `Esc` vuelve un
+  paso), Portal del Eco, Estatua, personaje (pestañas bloqueadas mientras
+  hay que repartir), inventario y alijo.
+- **Grillas** (`FocusGrid`: inventario `inv-focus-<i>`, alijo): las
+  flechas mueven el cursor casilla por casilla (en el borde salen de la
+  grilla) y en el inventario **eligen** la casilla (su ficha); `Enter`
+  sobre el arma ya elegida la **equipa** si se puede (si no, la elige);
+  en MOVER / "elige B" `Enter` es el clic. Clic también mueve el cursor.
+- Con un campo de texto enfocado nada de esto toca las teclas (en el
+  título, `Esc` sale del campo). La batalla tiene su propio teclado
+  (sin cambios).
+
+### Ficha de habilidad (v0.5.1)
+
+Pedido del dueño: "que haya tooltip de qué es la habilidad, porque no sé
+qué hace la habilidad solo por el nombre". Fuera de la batalla, cada
+nombre de habilidad / ULT es un **chip** (`SkillChip` / `SkillChips`,
+`lib/features/inventory/presentation/skill_chip.dart`; borde fino, `?`
+celeste) con su ficha en un `RetroTooltip` (mouse o foco de teclado):
+`skillTipMarkup` (`lib/features/inventory/domain/skill_tip.dart`) = el
+mismo texto de la batalla (`describeSkillMarkup`: MP, daño con tus stats
+`= N` y crítico, objetivos, estados, escudos, marcas, carga, efectos de
+kit y variantes) + la línea `Tipo · a <objetivo> · crítico N%`
+(Físico / Mágico / Curación / Apoyo). Dónde: FICHA de COMPRAR (más "QUÉ
+HACEN" en línea), FORJA, detalle del inventario, COMPARAR, tarjetas del
+paso 1 de la fusión, `Qué hacen:` debajo de Habilidades en ANTES │
+DESPUÉS (la nueva en verde), y el creador. Los tooltips de las casillas
+(inventario y alijo) usan `itemTooltipMarkup(skillDetails: true)`: una
+línea por habilidad `• Nombre (N MP · Tipo): efecto · ...` y la ULT.
+En el paso 3 de la fusión (traer habilidad) cada fila lleva `(N MP ·
+Tipo)`, tooltip con la ficha y, debajo de la elegida, la ficha entera
+(`craft-pick-desc`), así se lee sin mouse.
+
+**Reemplazo y restricciones (traer habilidad)**: las habilidades del
+origen que el arma no puede recibir (`ItemRules.canReceiveSkill`: físicas
+cuerpo a cuerpo / a distancia) se ven atenuadas con el motivo en rojo
+(`Solo armas a distancia`); con los cupos de trasladadas llenos
+(`needsReplaceChoice`) aparece `¿Qué habilidad reemplazas?`
+(`craft-replace`): una `ActionCard` por habilidad del arma
+(`craft-replace-<id>`, con su ficha en el tooltip): las trasladadas se
+eligen (`Trasladada` / `Se reemplaza`), las de la base bloqueadas
+(`Habilidad base`). La acción lleva `replaceSkillId`; ANTES │ DESPUÉS
+muestra el resultado con esa elección y el botón queda bloqueado con el
+motivo del motor (`Elegí qué habilidad reemplazar`) hasta elegir.
+
+### En batalla (v0.5.1)
+
+Pedido del dueño: ver qué cambia en la pelea al forjar o repartir, no
+solo un número. `battleImpactLines` / `battleImpactMarkup`
+(`lib/features/inventory/domain/battle_impact.dart`) compara dos
+`DerivedStats` con el código de la batalla y escribe solo lo que cambia,
+con tus números: turno (`BattleEngine.interval`: `Tu turno llega cada
+10.4 → 9.9 de tiempo (≈5% más seguido; +1 turno cada ~19)`), daño
+(`Atacar 19 → 21 · Corte Giratorio 19 → 21 c/u`, las mágicas y curas
+con MAG), crítico (`15% → 17% de chance (daño ×1.5)`), defensa
+(`Daño recibido −9% → −12%: un golpe de 20 te saca 18 → 18`), vida y
+maná (usos de la primera habilidad con MP). Dónde: cada tarjeta de FORJA
+(`forge-impact-<stat>`, en línea, "si la equipas" para otra arma) y el
+tooltip de cada atributo en ATRIBUTOS (`attr-row-<attr>`: `+1 Agilidad:
+... En batalla: ...`, también con el foco en `-` / `+`).
+
+Tests: `test/app/menu_keyboard_test.dart`,
+`test/features/inventory/skill_tips_test.dart`.
 
 ## Fuera de alcance
 

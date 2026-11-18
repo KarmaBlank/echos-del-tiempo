@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
-import 'package:material_ui/material_ui.dart';
+import 'package:material_ui/material_ui.dart';import 'map_labels.dart';
+
 
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
@@ -44,8 +45,18 @@ class ActorPainter {
   // Texto (`txt`)
   // ------------------------------------------------------------------
 
+  /// Si está, [text] no dibuja en el lienzo virtual: anota la etiqueta
+  /// para dibujarla nítida en px de pantalla (`MapGame.render`,
+  /// `paintMapLabels`).
+  List<MapLabel>? labelSink;
+
   /// Texto centrado en x con la línea base en [y] y sombra negra +1/+1.
   void text(Canvas c, String s, double x, double y, Color color, double size) {
+    final sink = labelSink;
+    if (sink != null) {
+      sink.add(MapTextLabel(c.getTransform(), s, x, y, color, size));
+      return;
+    }
     final shadow = _layout(s, Colors.black, size);
     final fg = _layout(s, color, size);
     final left = x - fg.width / 2;

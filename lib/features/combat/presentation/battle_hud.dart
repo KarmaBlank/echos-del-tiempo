@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
@@ -7,6 +9,7 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_bar.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../app/theme/vision_palette.dart';
 import '../../../game_engine/data/ascension_catalog.dart';
 import '../../../game_engine/data/ascension_mechanics.dart';
 import '../../../game_engine/data/classes_catalog.dart';
@@ -606,29 +609,47 @@ class BattlePartyBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final order = predictTurns(battle, 10);
-    return Row(
-      key: const ValueKey('party-bar'),
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        for (final (i, p) in battle.party.indexed) ...[
-          if (i > 0) const SizedBox(width: 6),
-          Expanded(
-            child: _PartyCard(
-              key: ValueKey(
-                  p.id == localId ? 'my-panel-${p.id}' : 'member-${p.id}'),
-              player: p,
-              local: p.id == localId,
-              current: battle.currentId == p.id,
-              turnIndex: order.indexOf(p.id),
-              sprites: sprites,
-              turnTimeLeft: battle.currentId == p.id ? turnTimeLeft : null,
-              points: p.id == localId ? points : 0,
+    // Siempre 4 lugares de 1/4 del ancho, desde la izquierda (los vacíos
+    // quedan vacíos): una tarjeta sola no se estira a toda la pantalla y
+    // los números quedan junto a sus barras.
+    final party = battle.party;
+    final slots = math.max(slotCount, party.length);
+    // Una fila, todas arriba y del mismo alto (el de la más alta: la
+    // local con ULT o la que tiene estados).
+    return IntrinsicHeight(
+      child: Row(
+        key: const ValueKey('party-bar'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < slots; i++) ...[
+            if (i > 0) const SizedBox(width: gap),
+            Expanded(
+              child: i >= party.length
+                  ? const SizedBox.shrink()
+                  : _card(party[i], order),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
+
+  /// Lugares de la barra (el máximo del grupo).
+  static const slotCount = 4;
+
+  /// Separación entre tarjetas.
+  static const gap = 6.0;
+
+  Widget _card(Combatant p, List<String> order) => _PartyCard(
+        key: ValueKey(p.id == localId ? 'my-panel-${p.id}' : 'member-${p.id}'),
+        player: p,
+        local: p.id == localId,
+        current: battle.currentId == p.id,
+        turnIndex: order.indexOf(p.id),
+        sprites: sprites,
+        turnTimeLeft: battle.currentId == p.id ? turnTimeLeft : null,
+        points: p.id == localId ? points : 0,
+      );
 }
 
 class _PartyCard extends StatelessWidget {
@@ -753,7 +774,8 @@ class TargetBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = enemy;
-    const breakColor = Color(0xFFFFE14D);
+    // Sigue al modo daltónico (accessibility.md § 3).
+    const breakColor = VisionColor(VisionSlot.breakBar);
     return Container(
       key: const ValueKey('target-bar'),
       width: RetroType.width(context, 200),

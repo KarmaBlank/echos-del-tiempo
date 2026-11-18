@@ -35,6 +35,8 @@ class AscensionCinematic extends StatefulWidget {
     this.sprites,
     this.onDone,
     this.at,
+    this.flash = 1,
+    this.reduceMotion = false,
   });
 
   final String playerName;
@@ -43,6 +45,13 @@ class AscensionCinematic extends StatefulWidget {
   final GameSprites? sprites;
   final VoidCallback? onDone;
   final int? at;
+
+  /// Alfa del destello blanco (ajuste DESTELLOS; 0 = sin destello).
+  final double flash;
+
+  /// REDUCIR MOVIMIENTO: el héroe no tiembla mientras se carga de luz
+  /// (accessibility.md § 4).
+  final bool reduceMotion;
 
   @override
   State<AscensionCinematic> createState() => AscensionCinematicState();
@@ -80,8 +89,8 @@ class AscensionCinematicState extends State<AscensionCinematic>
     return true;
   }
 
-  double get _ms => widget.at?.toDouble() ??
-      _c.value * AscensionCinematicTiming.totalMs;
+  double get _ms =>
+      widget.at?.toDouble() ?? _c.value * AscensionCinematicTiming.totalMs;
 
   @override
   void dispose() {
@@ -113,6 +122,8 @@ class AscensionCinematicState extends State<AscensionCinematic>
               hero: revealed ? (asc ?? base) : base,
               aura: revealed ? aura : null,
               tint: revealed && asc == base,
+              flash: widget.flash,
+              shake: !widget.reduceMotion,
             ),
             child: _banner(ms, a.name, Color(a.color), a.motto),
           );
@@ -122,9 +133,13 @@ class AscensionCinematicState extends State<AscensionCinematic>
   }
 
   Widget _banner(double ms, String name, Color col, String motto) {
-    if (ms < AscensionCinematicTiming.flashEndMs) return const SizedBox.expand();
-    final inT = ((ms - AscensionCinematicTiming.flashEndMs) / 300).clamp(0.0, 1.0);
-    final outT = ((ms - AscensionCinematicTiming.bannerOutMs) / 600).clamp(0.0, 1.0);
+    if (ms < AscensionCinematicTiming.flashEndMs) {
+      return const SizedBox.expand();
+    }
+    final inT =
+        ((ms - AscensionCinematicTiming.flashEndMs) / 300).clamp(0.0, 1.0);
+    final outT =
+        ((ms - AscensionCinematicTiming.bannerOutMs) / 600).clamp(0.0, 1.0);
     final o = (inT * (1 - outT)).clamp(0.0, 1.0);
     final cls = kClasses[widget.classId]?.name ?? widget.classId;
     return Opacity(
@@ -143,12 +158,16 @@ class AscensionCinematicState extends State<AscensionCinematic>
               children: [
                 Text(retroText('ASCENSIÓN'),
                     style: const TextStyle(
-                        fontFamily: RetroType.pixelFamily, fontSize: RetroType.label, color: Color(0xFFFFD166), letterSpacing: 4)),
+                        fontFamily: RetroType.pixelFamily,
+                        fontSize: RetroType.label,
+                        color: Color(0xFFFFD166),
+                        letterSpacing: 4)),
                 const SizedBox(height: 10),
                 Text(retroText(name.toUpperCase()),
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontFamily: RetroType.pixelFamily, fontSize: 28,
+                      fontFamily: RetroType.pixelFamily,
+                      fontSize: 28,
                       color: col,
                       shadows: const [
                         Shadow(color: Color(0xFF000000), offset: Offset(3, 3)),
@@ -156,11 +175,17 @@ class AscensionCinematicState extends State<AscensionCinematic>
                     )),
                 const SizedBox(height: 10),
                 Text(retroText('${widget.playerName} · $cls'),
-                    style: const TextStyle(fontFamily: RetroType.pixelFamily, fontSize: RetroType.label, color: Color(0xFFE8ECFF))),
+                    style: const TextStyle(
+                        fontFamily: RetroType.pixelFamily,
+                        fontSize: RetroType.label,
+                        color: Color(0xFFE8ECFF))),
                 const SizedBox(height: 8),
                 Text(retroText(motto),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontFamily: RetroType.pixelFamily, fontSize: RetroType.label, color: Color(0xFF9FB4FF))),
+                    style: const TextStyle(
+                        fontFamily: RetroType.pixelFamily,
+                        fontSize: RetroType.label,
+                        color: Color(0xFF9FB4FF))),
               ],
             ),
           ),
@@ -177,9 +202,13 @@ class _CinematicPainter extends CustomPainter {
     required this.hero,
     required this.aura,
     required this.tint,
+    this.flash = 1,
+    this.shake = true,
   });
 
   final double ms;
+  final double flash;
+  final bool shake;
   final Color color;
   final ui.Image? hero;
   final ui.Image? aura;
@@ -204,7 +233,8 @@ class _CinematicPainter extends CustomPainter {
     final cx = size.width / 2;
     final feet = size.height * 0.5;
     final build = _s((ms - AscensionCinematicTiming.freezeMs) /
-        (AscensionCinematicTiming.revealMs - AscensionCinematicTiming.freezeMs));
+        (AscensionCinematicTiming.revealMs -
+            AscensionCinematicTiming.freezeMs));
     final revealed = ms >= AscensionCinematicTiming.revealMs;
     final alive = 1 - fadeOut;
 
@@ -235,11 +265,12 @@ class _CinematicPainter extends CustomPainter {
       p.color = (i.isEven ? color : const Color(0xFFFFFFFF))
           .withValues(alpha: (revealed ? 0.8 * (1 - fadeOut) : q) * alive);
       final s = (i % 3 + 1) * scale / 2;
-      canvas.drawRect(Rect.fromLTWH(x.roundToDouble(), y.roundToDouble(), s, s), p);
+      canvas.drawRect(
+          Rect.fromLTWH(x.roundToDouble(), y.roundToDouble(), s, s), p);
     }
 
     // Aura y héroe (sacudida que crece hasta el destello).
-    final shake = revealed ? 0.0 : build * scale * 0.6;
+    final shake = revealed || !this.shake ? 0.0 : build * scale * 0.6;
     final dx = math.sin(ms / 23) * shake, dy = math.cos(ms / 31) * shake;
     canvas.save();
     canvas.translate(cx + dx, feet + dy);
@@ -254,8 +285,8 @@ class _CinematicPainter extends CustomPainter {
           au,
           const Offset(-12, -25),
           SpriteCatalog.pixelPaint()
-            ..color = Color.fromRGBO(255, 255, 255,
-                (0.65 + 0.25 * math.sin(ms / 220)) * alive));
+            ..color = Color.fromRGBO(
+                255, 255, 255, (0.65 + 0.25 * math.sin(ms / 220)) * alive));
     }
     final h = hero;
     if (h != null) {
@@ -266,8 +297,8 @@ class _CinematicPainter extends CustomPainter {
         paint.colorFilter = ColorFilter.mode(
             color.withValues(alpha: (build - 0.6) * 1.6), BlendMode.srcATop);
       } else if (tint) {
-        paint.colorFilter = ColorFilter.mode(
-            color.withValues(alpha: 0.35), BlendMode.srcATop);
+        paint.colorFilter =
+            ColorFilter.mode(color.withValues(alpha: 0.35), BlendMode.srcATop);
       }
       canvas.drawImage(h, Offset(-h.width / 2, -h.height.toDouble()), paint);
     }
@@ -281,7 +312,8 @@ class _CinematicPainter extends CustomPainter {
         Rect.fromLTWH(0, size.height - bar, size.width, bar), barPaint);
 
     // Destello blanco.
-    if (ms >= AscensionCinematicTiming.revealMs &&
+    if (flash > 0 &&
+        ms >= AscensionCinematicTiming.revealMs &&
         ms < AscensionCinematicTiming.flashEndMs + 200) {
       final k = 1 -
           ((ms - AscensionCinematicTiming.revealMs) /
@@ -289,11 +321,15 @@ class _CinematicPainter extends CustomPainter {
                       200 -
                       AscensionCinematicTiming.revealMs))
               .clamp(0.0, 1.0);
-      canvas.drawRect(Offset.zero & size,
-          Paint()..color = Color.fromRGBO(255, 255, 255, 0.9 * k));
+      canvas.drawRect(
+          Offset.zero & size,
+          Paint()
+            ..color = Color.fromRGBO(
+                255, 255, 255, (0.9 * k * flash).clamp(0.0, 1.0)));
     }
   }
 
   @override
-  bool shouldRepaint(_CinematicPainter old) => old.ms != ms || old.hero != hero;
+  bool shouldRepaint(_CinematicPainter old) =>
+      old.ms != ms || old.hero != hero || old.flash != flash;
 }

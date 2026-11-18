@@ -27,6 +27,7 @@ class CraftResult {
     this.materials = const {},
     this.consumed = const [],
     this.replaced,
+    this.replacedSkillId,
     this.outcomes = const [],
     this.gainedCredits = 0,
     this.gainedMaterials = const {},
@@ -42,6 +43,7 @@ class CraftResult {
         materials = const {},
         consumed = const [],
         replaced = null,
+        replacedSkillId = null,
         outcomes = const [],
         gainedCredits = 0,
         gainedMaterials = const {},
@@ -80,6 +82,10 @@ class CraftResult {
 
   /// Texto de lo que se reemplaza (habilidad o pasiva vieja).
   final String? replaced;
+
+  /// Trasladar habilidad: id de la trasladada que se pierde (loot.md
+  /// § 16.2), o `null`.
+  final String? replacedSkillId;
 
   /// Vista previa de una operación aleatoria: qué puede salir.
   final List<String> outcomes;
@@ -351,8 +357,11 @@ class CraftRules {
         replaced: old == null || old.id == sp.id ? null : old.name);
   }
 
+  /// Trasladar [skillId] de [sourceUid] (que se consume) a [targetUid]
+  /// (loot.md § 16, 16.1–16.2). Con los cupos llenos hay que elegir
+  /// [replaceSkillId], una de las trasladadas del destino.
   CraftResult transferSkill(PlayerProfile p, String targetUid,
-      String sourceUid, String skillId) {
+      String sourceUid, String skillId, {String? replaceSkillId}) {
     final t = p.itemByUid(targetUid);
     if (t == null) return const CraftResult.fail('No la tienes');
     final err = _sacrificeError(p, targetUid, sourceUid);
@@ -362,17 +371,34 @@ class CraftRules {
         !catalog.skills.containsKey(skillId)) {
       return const CraftResult.fail('Elige una habilidad');
     }
-    // Lleno: la nueva reemplaza a la más vieja (como la fusión vieja).
-    final skills = [for (final x in t.extraSkills) if (x != skillId) x];
+    final reject = items.canReceiveSkill(t, skillId);
+    if (reject != null) return CraftResult.fail(reject);
     String? replaced;
-    while (skills.length >= t.rarity.skillSlots) {
-      replaced = skills.removeAt(0);
+    if (replaceSkillId != null) {
+      if (!t.extraSkills.contains(replaceSkillId)) {
+        return CraftResult.fail(
+            (items.baseOf(t)?.skillIds.contains(replaceSkillId) ?? false)
+                ? 'Las habilidades base no se reemplazan'
+                : 'No tiene esa habilidad');
+      }
+      if (replaceSkillId != skillId) replaced = replaceSkillId;
+    } else if (items.needsReplaceChoice(t, skillId)) {
+      return const CraftResult.fail('Elegí qué habilidad reemplazar');
+    }
+    final skills = [
+      for (final x in t.extraSkills)
+        if (x != skillId && x != replaced) x,
+    ];
+    if (skills.length >= t.rarity.skillSlots) {
+      // Solo con un perfil fuera de cupo (no pasa tras `sanitize`).
+      return const CraftResult.fail('Elegí qué habilidad reemplazar');
     }
     final after = t.copyWith(extraSkills: [...skills, skillId]);
     return _done(p, t, after,
         credits: transferSkillCost(t.rarity),
         consumed: [sourceUid],
-        replaced: replaced == null ? null : catalog.skills[replaced]?.name);
+        replaced: replaced == null ? null : catalog.skills[replaced]?.name,
+        replacedSkillId: replaced);
   }
 
   CraftResult removeAffix(PlayerProfile p, String uid, int index) {
@@ -508,6 +534,75 @@ class CraftRules {
     return _salvageMany(p, list, random);
   }
 
+  /// Tope de armas elegidas en una sola operación (el inventario entero).
+  static const maxSelected = InventoryRules.maxItems;
+
+  /// Por qué [uid] no se puede elegir para desarmar / vender si ya están
+  /// elegidas [others] (`null` = se puede). Con dos armas iniciales se
+  /// puede elegir una sola: la otra queda como "Arma inicial".
+  String? selectionBlock(PlayerProfile p, String uid,
+      {Iterable<String> others = const []}) {
+    if (p.itemByUid(uid) == null) return 'No la tienes';
+    if (uid == p.equippedUid) return 'Está equipada';
+    final rest = {...others}..remove(uid);
+    final q = rest.isEmpty
+        ? p
+        : p.copyWith(items: [
+            for (final i in p.items)
+              if (!rest.contains(i.uid)) i,
+          ]);
+    if (inventory.isProtected(q, uid)) return 'Arma inicial';
+    return null;
+  }
+
+  /// Las armas [uids] (en ese orden, sin repetir) si todas se pueden
+  /// destruir juntas; si no, el motivo de la primera que no.
+  ({List<ItemInstance> list, String? error}) selectedTargets(
+      PlayerProfile p, List<String> uids) {
+    final seen = <String>{};
+    final list = <ItemInstance>[];
+    var q = p;
+    for (final uid in uids) {
+      if (!seen.add(uid)) continue;
+      final it = q.itemByUid(uid);
+      final why = it == null
+          ? 'No la tienes'
+          : uid == q.equippedUid
+              ? 'Está equipada'
+              : inventory.isProtected(q, uid)
+                  ? 'Arma inicial'
+                  : null;
+      if (why != null) return (list: const [], error: why);
+      list.add(it!);
+      q = q.copyWith(items: [for (final x in q.items) if (x.uid != uid) x]);
+    }
+    if (list.isEmpty) return (list: const [], error: 'Elige armas');
+    if (list.length > maxSelected) {
+      return (list: const [], error: 'Máximo $maxSelected armas');
+    }
+    return (list: list, error: null);
+  }
+
+  /// Desarmar las armas elegidas a mano (todas o ninguna).
+  CraftResult salvageSelected(PlayerProfile p, List<String> uids,
+      {RandomSource? random}) {
+    final t = selectedTargets(p, uids);
+    if (t.error != null) return CraftResult.fail(t.error!);
+    return _salvageMany(p, t.list, random);
+  }
+
+  /// Vender las armas elegidas a mano (todas o ninguna).
+  CraftResult sellSelected(PlayerProfile p, List<String> uids) {
+    final t = selectedTargets(p, uids);
+    if (t.error != null) return CraftResult.fail(t.error!);
+    return _sellMany(p, t.list);
+  }
+
+  CraftResult _sellMany(PlayerProfile p, List<ItemInstance> list) =>
+      _done(p, null, null,
+          consumed: [for (final it in list) it.uid],
+          gainCredits: list.fold(0, (a, it) => a + sellPrice(it)));
+
   CraftResult _salvageMany(
       PlayerProfile p, List<ItemInstance> list, RandomSource? random) {
     final gained = <CraftMaterial, int>{};
@@ -555,9 +650,7 @@ class CraftRules {
   CraftResult sellAll(PlayerProfile p, Rarity r) {
     final list = batchTargets(p, r);
     if (list.isEmpty) return CraftResult.fail('No hay armas de rareza ${r.label}');
-    return _done(p, null, null,
-        consumed: [for (final it in list) it.uid],
-        gainCredits: list.fold(0, (a, it) => a + sellPrice(it)));
+    return _sellMany(p, list);
   }
 
   /// Bases a las que se puede reforjar [i]: cualquier tipo, de nivel ≤
@@ -630,9 +723,14 @@ class CraftRules {
     String? sourceUid,
     int index = 0,
     String? skillId,
+    String? replaceSkillId,
+    List<String> uids = const [],
     RandomSource? random,
   }) =>
       switch (op) {
+        CraftOp.salvageSelected =>
+          salvageSelected(p, uids, random: random),
+        CraftOp.sellSelected => sellSelected(p, uids),
         CraftOp.transferAffix => sourceUid == null
             ? const CraftResult.fail('Elige un arma a sacrificar')
             : transferAffix(p, targetUid, sourceUid, index),
@@ -641,7 +739,8 @@ class CraftRules {
             : transferPassive(p, targetUid, sourceUid),
         CraftOp.transferSkill => sourceUid == null || skillId == null
             ? const CraftResult.fail('Elige un arma a sacrificar')
-            : transferSkill(p, targetUid, sourceUid, skillId),
+            : transferSkill(p, targetUid, sourceUid, skillId,
+                replaceSkillId: replaceSkillId),
         CraftOp.removeAffix => removeAffix(p, targetUid, index),
         CraftOp.addAffix => addAffix(p, targetUid, random: random),
         CraftOp.reroll => reroll(p, targetUid, random: random),
@@ -710,6 +809,7 @@ class CraftRules {
     Map<CraftMaterial, int> materials = const {},
     List<String> consumed = const [],
     String? replaced,
+    String? replacedSkillId,
     int gainCredits = 0,
     Map<CraftMaterial, int> gainMaterials = const {},
     List<MaterialChance> chances = const [],
@@ -741,6 +841,7 @@ class CraftRules {
       materials: materials,
       consumed: consumed,
       replaced: replaced,
+      replacedSkillId: replacedSkillId,
       gainedCredits: gainCredits,
       gainedMaterials: _capped(p, gainMaterials),
       chances: chances,

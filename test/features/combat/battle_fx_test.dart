@@ -180,7 +180,8 @@ void main() {
     final n = _of(fx, FxKind.num).single;
     expect(n.hurt, isTrue);
     expect(n.big, isTrue);
-    expect(n.color, const Color(0xFFFF4757));
+    // Sigue al modo daltónico (apagado: el rojo del prototipo).
+    expect(n.color.toARGB32(), 0xFFFF4757);
     expect(n.y, 200 - 18);
     // El limo envenena: tajo con elemento veneno.
     expect(_of(fx, FxKind.slash).single.el, FxElement.poison);

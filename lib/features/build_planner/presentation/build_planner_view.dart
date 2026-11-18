@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/theme/min_hit_target.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
@@ -248,9 +249,11 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
             InkWell(
               key: ValueKey('build-remove-${g.key}'),
               onTap: onRemove,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4),
-                child: Text('×', style: TextStyle(color: ProtoColors.red)),
+              child: const MinHitTarget(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child: Text('×', style: TextStyle(color: ProtoColors.red)),
+                ),
               ),
             ),
         ],
@@ -289,15 +292,19 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
       InkWell(
           key: ValueKey('build-dec-${g.ref}'),
           onTap: () => bump(-5),
-          child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Text('−5', style: TextStyle(color: ProtoColors.sky)))),
+          child: const MinHitTarget(
+              child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child:
+                      Text('−5', style: TextStyle(color: ProtoColors.sky))))),
       InkWell(
           key: ValueKey('build-inc-${g.ref}'),
           onTap: () => bump(5),
-          child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Text('+5', style: TextStyle(color: ProtoColors.sky)))),
+          child: const MinHitTarget(
+              child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  child:
+                      Text('+5', style: TextStyle(color: ProtoColors.sky))))),
     ]);
   }
 

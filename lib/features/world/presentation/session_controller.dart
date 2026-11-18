@@ -9,14 +9,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/persistence/ecos_log.dart';
 import '../../../core/persistence/exit_guard.dart';
+import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/atlas_store.dart';
 import '../../../game_engine/models/attributes.dart';
+import '../../../game_engine/models/build_wants.dart';
+import '../../../game_engine/models/loot_filter.dart' show FilterVerdict;
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/game_map.dart';
 import '../../../game_engine/models/game_session.dart';
+import '../../../game_engine/models/inventory_sort.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/profile_store.dart';
 import '../../../game_engine/models/loot.dart';
@@ -56,14 +60,16 @@ class SessionClock {
 final sessionEngineProvider =
     Provider<SessionEngine>((ref) => sl<SessionEngine>());
 
-final profileStoreProvider = Provider<ProfileStore>((ref) => sl<ProfileStore>());
+final profileStoreProvider =
+    Provider<ProfileStore>((ref) => sl<ProfileStore>());
 
 /// El Atlas de la cuenta (docs/specs/ecos_atlas.md § 5); sin registro
 /// (tests), uno en memoria.
 final atlasStoreProvider = Provider<AtlasStore>((ref) =>
     sl.isRegistered<AtlasStore>() ? sl<AtlasStore>() : InMemoryAtlasStore());
 
-final sessionClockProvider = Provider<SessionClock>((ref) => const SessionClock());
+final sessionClockProvider =
+    Provider<SessionClock>((ref) => const SessionClock());
 
 /// La sala de red con la que se abre `WorldScreen` (la llena el título
 /// al crear o unirse; `null` = sesión local de un jugador).
@@ -85,7 +91,12 @@ final sessionControllerProvider =
     atlasStore: ref.watch(atlasStoreProvider),
     clock: ref.watch(sessionClockProvider),
     net: ref.read(activeNetSessionProvider),
+    turnTimer: ref.read(gameSettingsProvider).turnTimer,
   );
+  // Tiempo de turno (accessibility.md § 7): el ajuste local manda en la
+  // sala si este dispositivo corre el motor (solo o anfitrión).
+  ref.listen(gameSettingsProvider.select((s) => s.turnTimer),
+      (_, t) => c.setTurnTimer(t));
   unawaited(c.start());
   return c;
 });
@@ -117,7 +128,9 @@ class SessionController extends StateNotifier<SessionView?> {
     this.net,
     String localId = 'local',
     AtlasStore? atlasStore,
+    TurnTimer turnTimer = TurnTimer.normal,
   })  : localId = net?.localId ?? localId,
+        _turnTimer = turnTimer,
         atlasStore = atlasStore ?? InMemoryAtlasStore(),
         super(null);
 
@@ -126,6 +139,22 @@ class SessionController extends StateNotifier<SessionView?> {
   AtlasProgress? _atlas;
   AtlasGain? _atlasGain;
   static const _atlasRules = AtlasRules();
+
+  /// Tiempo de turno local (ajuste JUEGO → TIEMPO DE TURNO). Solo vale
+  /// en la sala si este dispositivo corre el motor; un cliente ve el del
+  /// anfitrión en `session.turnTimer`.
+  TurnTimer _turnTimer;
+  TurnTimer get turnTimer => _turnTimer;
+
+  /// Cambia el tiempo de turno local; jugando solo o como anfitrión, lo
+  /// aplica a la sala (docs/specs/accessibility.md § 7).
+  void setTurnTimer(TurnTimer t) {
+    _turnTimer = t;
+    final s = _s;
+    if (isClient || s == null || !mounted) return;
+    _s = engine.setTurnTimer(s, t).state;
+    _emit();
+  }
 
   /// El Atlas local (vacío hasta cargarlo).
   AtlasProgress get atlas => _atlas ?? AtlasProgress.empty;
@@ -235,8 +264,10 @@ class SessionController extends StateNotifier<SessionView?> {
     await _loadAtlas();
     if (!mounted) return;
     // El Atlas del anfitrión vale para toda la sala (ecos_atlas.md § 5.2).
-    var step = engine.addPlayer(
-        engine.setAtlas(engine.create(), atlas.nodes).state, localId, profile)!;
+    // Y su tiempo de turno (accessibility.md § 7).
+    final room = engine.setTurnTimer(
+        engine.setAtlas(engine.create(), atlas.nodes).state, _turnTimer);
+    var step = engine.addPlayer(room.state, localId, profile)!;
     final code = n?.roomCode;
     if (code != null) {
       // `sysChat('Sala creada. Comparte el código ...')` del prototipo.
@@ -248,6 +279,7 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     _lastSaved = null;
     _step(step);
+    _syncWants();
     _save(force: true);
     // Recién con la sala creada: los que se unieron mientras cargaba el
     // perfil quedaron guardados en el stream de la red.
@@ -310,8 +342,8 @@ class SessionController extends StateNotifier<SessionView?> {
   /// el Atlas de SU cuenta (§ 5.1).
   void _onEcoCompleted(EcoCompletedEvent e) {
     if (!e.playerIds.contains(localId)) return;
-    final g = _atlasRules.complete(atlas,
-        tier: e.tier, zone: e.zone, boss: e.boss);
+    final g =
+        _atlasRules.complete(atlas, tier: e.tier, zone: e.zone, boss: e.boss);
     _atlasGain = g;
     if (g.points > 0) _setAtlas(g.progress, emit: false);
   }
@@ -369,7 +401,10 @@ class SessionController extends StateNotifier<SessionView?> {
     final s = _s;
     switch (e) {
       case SnapshotEvent(:final session, :final events):
-        if (isClient) _step(SessionStep(session, events));
+        if (isClient) {
+          _step(SessionStep(session, events));
+          _syncWants();
+        }
       case PeerJoinedEvent(:final peerId, :final profile):
         if (s == null || isClient) return;
         final step = engine.addPlayer(s, peerId, profile);
@@ -747,11 +782,50 @@ class SessionController extends StateNotifier<SessionView?> {
   bool pickUp(int groundId) => _apply(PickUpAction(groundId));
 
   /// Intercambiar dos casillas del inventario.
-  bool moveInventory(int from, int to) =>
-      _apply(MoveInventoryAction(from, to));
+  bool moveInventory(int from, int to) => _apply(MoveInventoryAction(from, to));
+
+  /// ORDENAR el inventario (v0.5.1, loot.md § 17.2).
+  bool sortInventory(InventorySortKey key) =>
+      _apply(SortInventoryAction(key));
 
   /// Guardar el filtro de loot (`null` = el por defecto).
   bool setLootFilter(String? text) => _apply(SetLootFilterAction(text));
+
+  // ---- plan de build → filtro de loot (build_planner.md § 6) ----
+
+  BuildWants? _localWants;
+  bool _wantsSynced = true;
+
+  /// Resumen del plan de build local (`null` = sin plan). Para evaluar
+  /// el filtro del jugador local en la UI; nunca el de un compañero.
+  BuildWants? get localWants => _localWants;
+
+  /// Cambia el plan local: se manda al host (o se aplica, si somos el
+  /// host) al entrar a la sala y cada vez que cambia.
+  void setBuildWants(BuildWants? wants) {
+    final next = wants == null || wants.isEmpty ? null : wants;
+    if (next == _localWants) return;
+    _localWants = next;
+    _wantsSynced = false;
+    _syncWants();
+  }
+
+  /// Manda el resumen pendiente cuando ya hay sala (cliente: tras el
+  /// primer snapshot).
+  void _syncWants() {
+    if (_wantsSynced || _s == null || !mounted) return;
+    _wantsSynced = true;
+    _apply(SetBuildWantsAction(_localWants));
+  }
+
+  /// Cómo ve el jugador [playerId] un drop: con el plan local solo si es
+  /// el jugador local (un compañero se evalúa sin plan: no lo conocemos).
+  FilterVerdict? lootVerdictFor(String playerId, LootDrop d) {
+    final p = _s?.players[playerId]?.profile;
+    if (p == null) return null;
+    return engine.lootVerdict(p, d,
+        wants: playerId == localId ? _localWants : null);
+  }
 
   bool takeNode(String nodeId) => _apply(TakeNodeAction(nodeId));
 
