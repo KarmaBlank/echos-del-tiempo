@@ -2,6 +2,7 @@ import '../models/passive_mechanic.dart' show BuffStat;
 import '../models/skill.dart';
 import '../models/status.dart';
 import 'elemental_skills_catalog.dart';
+import 'summoner_catalog.dart';
 
 // Variantes de habilidades v0.5 (docs/specs/combat.md § "Variantes de
 // habilidades"): familias de curación, escudos, disparos, debuffs,
@@ -189,4 +190,5 @@ const Map<String, String> kSkillLooks = {
   'ojoAguila': 'apuntar',
   // Agua y Electro v0.7: también se parecen a una existente.
   ...kElementalSkillLooks,
+  ...kSummonerSkillLooks,
 };

@@ -25,6 +25,10 @@ enum WorldPanel {
 
   /// Mapa del piso en grande (tecla M, v0.8.1; exploration.md § "HUD").
   map,
+
+  /// La party jugando solo (tecla P, solo en el pueblo;
+  /// docs/specs/solo_party.md § 2.3).
+  party,
 }
 
 /// Una línea del chat (`addChat`): de un jugador o de sistema (`sys`).
@@ -90,7 +94,24 @@ class SessionView {
     this.atlas,
     this.atlasGain,
     this.bestiary,
+    this.companions = const [],
+    this.auto = const {},
   });
+
+  /// Compañeros de la party de este dispositivo (ids de jugador, en
+  /// orden; docs/specs/solo_party.md). Vacío con red.
+  final List<String> companions;
+
+  /// Compañeros con AUTO prendido.
+  final Set<String> auto;
+
+  /// [playerId] es un compañero de este dispositivo.
+  bool isCompanion(String? playerId) => companions.contains(playerId);
+
+  /// Este dispositivo elige las acciones de [playerId] (el local o un
+  /// compañero).
+  bool controls(String? playerId) =>
+      playerId == localId || isCompanion(playerId);
 
   /// El bestiario de la cuenta de este dispositivo (`null` hasta
   /// cargarlo; docs/specs/bestiary.md § 2).
@@ -149,13 +170,16 @@ class SessionView {
   SessionPlayer? get me => session.players[localId];
   bool get mustAllocate => session.mustAllocate(localId);
 
-  /// Le toca al jugador local y el host espera su comando.
+  /// Le toca al jugador local (o a un compañero suyo sin AUTO) y el host
+  /// espera su comando.
   bool get myTurn {
     final b = session.battle;
+    final cur = b?.state.currentId;
     return b != null &&
         b.waitingForPlayer &&
-        b.state.currentId == localId &&
-        (me?.alive ?? false);
+        controls(cur) &&
+        !auto.contains(cur) &&
+        (session.players[cur]?.alive ?? false);
   }
 
   SessionView copyWith({
@@ -186,5 +210,7 @@ class SessionView {
         atlas: atlas,
         atlasGain: atlasGain,
         bestiary: bestiary,
+        companions: companions,
+        auto: auto,
       );
 }

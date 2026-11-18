@@ -192,7 +192,7 @@ class PerfReadout extends ConsumerWidget {
     return Container(
       key: const ValueKey('perf-overlay'),
       padding: const EdgeInsets.symmetric(horizontal: 4),
-      color: const Color(0xC00B0E1A),
+      color: ProtoColors.scrim(0.75),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

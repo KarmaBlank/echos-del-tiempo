@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 bool _loaded = false;
 
-/// Carga las fuentes reales del juego (Press Start 2P y VT323) para que
+/// Carga las fuentes reales del juego (Press Start 2P, VT323 y Atkinson) para que
 /// los tests y las capturas midan y dibujen con los glifos de verdad (sin
 /// esto `flutter test` usa una fuente de prueba de cuadrados). Una vez por
 /// proceso. Dentro de un `testWidgets`, pasar [tester] (corre fuera del
@@ -17,6 +17,10 @@ Future<void> loadRealFonts([WidgetTester? tester]) async {
         .load();
     await (FontLoader(RetroType.vt323Family)
           ..addFont(rootBundle.load('assets/fonts/VT323-Regular.ttf')))
+        .load();
+    await (FontLoader(RetroType.atkinsonFamily)
+          ..addFont(rootBundle
+              .load('assets/fonts/AtkinsonHyperlegible-Regular.ttf')))
         .load();
   }
 

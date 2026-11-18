@@ -3,6 +3,7 @@ import '../models/status.dart';
 import 'ascension_catalog.dart';
 import 'elemental_skills_catalog.dart';
 import 'skill_variants_catalog.dart';
+import 'summoner_catalog.dart';
 
 // `SK`, `ULTS` y `DUALS` del prototipo, 1:1. El color (`col`) y el
 // elemento visual (`el`) son de la UI y no viven acá.
@@ -85,6 +86,8 @@ const Map<String, SkillDef> kSkills = {
   ...kSkillVariants,
   // ---- Agua y Electro v0.7 (docs/specs/elemental_reactions.md) ----
   ...kElementalSkills,
+  // ---- Invocador v0.8.1 (docs/specs/summoner.md) ----
+  ...kSummonerSkills,
 };
 
 const _melee = SkillDelivery.melee;
@@ -207,6 +210,8 @@ const Map<String, SkillDelivery> kSkillDelivery = {
   'ojoAguila': _any, // Ojo de Águila
   // Agua y Electro v0.7.
   ...kElementalSkillDelivery,
+  // Invocador v0.8.1.
+  ...kSummonerSkillDelivery,
 };
 
 /// ULT por tipo de arma (`ULTS`). No cuestan MP: requieren 100 de carga.

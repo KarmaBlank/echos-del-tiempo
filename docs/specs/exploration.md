@@ -906,3 +906,16 @@ Resumen:
 - Chat sin mostrarse en batalla ni en el resultado (ver § "Chat").
 - Sonido sintetizado pero mudo hasta agregar un plugin de audio
   (docs/specs/audio.md).
+
+
+## Party jugando solo (v0.8.1, solo_party.md)
+
+- HUD del pueblo (solo, sin votación): botón `PARTY (N) [P]`; la tecla
+  **P** abre / cierra el panel PARTY (`WorldPanel.party`): agregar o sacar
+  compañeros y su AUTO. Se cierra solo fuera del pueblo.
+- Mapa: solo el líder camina; los compañeros lo siguen en fila por su
+  rastro (18 px de camino entre cada uno; el host los mueve). Se dibujan
+  como los demás jugadores.
+- Interacciones (E, objetos, cofres, escaleras, PdI) son del líder; un
+  enemigo que choca a un compañero sí arranca la batalla.
+- Preparación: los compañeros figuran como listos.

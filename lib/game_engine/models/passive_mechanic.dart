@@ -211,6 +211,10 @@ enum ProcEffectKind {
   /// Modificador: +`value` (fracción) al daño de tus curas a las
   /// familias que las curas dañan.
   healHarmBonus,
+
+  /// Modificador de invocaciones (docs/specs/summoner.md § 5): solo lo
+  /// lee el motor de invocaciones, según la mecánica.
+  summon,
 }
 
 /// Stat que toca un efecto con duración o un modificador.

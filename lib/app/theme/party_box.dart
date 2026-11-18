@@ -51,6 +51,7 @@ class PartyBox extends StatelessWidget {
         child: DefaultTextStyle.merge(
           style: TextStyle(
               fontFamily: RetroType.bodyFamily,
+              letterSpacing: RetroType.letterSpacing,
               fontFamilyFallback: RetroType.bodyFallback,
               fontSize: RetroType.small,
               height: RetroType.line,

@@ -3,6 +3,8 @@ import 'dart:ui';
 import '../../../../app/theme/vision_palette.dart';
 
 import '../../../../game_engine/data/ascension_catalog.dart';
+import '../../../../game_engine/data/branch_ults_catalog.dart'
+    show kBranchUltLooks, kWeaponUltSkills;
 import '../../../../game_engine/data/skill_variants_catalog.dart';
 import '../../../../game_engine/data/skills_catalog.dart';
 import '../../../../game_engine/models/skill.dart';
@@ -198,7 +200,10 @@ const fxWhite = Color(0xFFFFFFFF);
 /// Color de una habilidad (blanco si no está en la tabla). Las variantes
 /// usan el de la habilidad a la que se parecen (`kSkillLooks`).
 Color skillColor(String? id) =>
-    kSkillColors[id] ?? kSkillColors[kSkillLooks[id]] ?? fxWhite;
+    kSkillColors[id] ??
+    kSkillColors[kSkillLooks[id]] ??
+    kSkillColors[kBranchUltLooks[id]] ??
+    fxWhite;
 
 /// `skEl(tk)`: `el` propio, si no el estado que aplica, si no `arc`
 /// (mágica) o `phys`. Curas y escudos de las variantes: `heal` / `holy`.
@@ -221,6 +226,7 @@ final Map<String, SkillDef> kSkillsById = {
   for (final s in kSkills.values) s.id: s,
   for (final s in kAllUltimates.values) s.id: s,
   ...kAscensionUltimatesById,
+  ...kWeaponUltSkills,
 };
 
 /// Tipos de arma a distancia (`ranged(p)`): sus golpes llevan proyectil.

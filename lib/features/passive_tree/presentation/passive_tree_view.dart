@@ -1040,7 +1040,7 @@ class TreeLabelsPainter extends CustomPainter {
                             ? ProtoColors.dim
                             : ProtoColors.sky,
                     shadows: const [
-                      Shadow(color: Color(0xFF000000), offset: Offset(1, 1)),
+                      Shadow(color: ProtoColors.shadow, offset: Offset(1, 1)),
                     ],
                   ),
                 ),

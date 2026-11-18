@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import '../data/branch_ults_catalog.dart';
+
 import '../data/affixes_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/uniques_catalog.dart';
@@ -263,7 +265,25 @@ class LootRules {
     if (r == Rarity.epico) {
       item = item.copyWith(passiveId: rollPassiveId(rng, w.type));
     }
+    if (rollUltMod(rng, r, w.type) case final u?) {
+      item = item.copyWith(ultId: u);
+    }
     return item;
+  }
+
+  /// Mod especial "ULT: <nombre>" (docs/specs/branch_ults.md): Raro 8%,
+  /// Épico 20%; una ULT de camino al azar entre las compatibles con
+  /// [type]. `null` = no sale.
+  String? rollUltMod(RandomSource rng, Rarity r, String type) {
+    final chance = switch (r) {
+      Rarity.raro => kBranchUltChanceRare,
+      Rarity.epico => kBranchUltChanceEpic,
+      _ => 0.0,
+    };
+    if (chance <= 0 || rng() >= chance) return null;
+    final pool = branchUltsForType(type);
+    if (pool.isEmpty) return null;
+    return pool[(rng() * pool.length).floor().clamp(0, pool.length - 1)];
   }
 
   /// Un legendario: mods fijos con su rango + 1–2 aleatorios + pasiva

@@ -67,9 +67,9 @@ class SectionPanel extends StatelessWidget {
                         TextSpan(
                             text: retroText(title),
                             style: TextStyle(
-                                fontFamily: RetroType.pixelFamily,
+                                fontFamily: RetroType.titleFamily,
                                 fontSize: RetroType.label,
-                                height: RetroType.pixelLine,
+                                height: RetroType.titleLine,
                                 color: color)),
                         if (subtitle != null)
                           TextSpan(

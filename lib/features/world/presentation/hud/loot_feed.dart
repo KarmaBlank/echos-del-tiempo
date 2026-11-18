@@ -3,8 +3,13 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../app/theme/vision_palette.dart';
+import '../../../../app/widgets/notice_close.dart';
+import '../../../../core/settings/notices.dart';
+import '../../../../core/settings/settings_providers.dart';
 import '../../../../game_engine/models/item.dart';
 import '../../../../game_engine/models/loot.dart';
 import '../../../../game_engine/models/loot_filter.dart';
@@ -92,22 +97,58 @@ class LootFeed extends ChangeNotifier {
   final _lines = <LootLine>[];
   final _toasts = <LootToast>[];
 
+  /// DURACIÓN DE LOS AVISOS (accessibility.md § 9.5): multiplica
+  /// [lineS] y la duración de cada aviso; infinito = hasta cerrarlos.
+  double durationFactor = 1;
+
+  /// Los avisos quedan hasta cerrarlos.
+  bool get persistent => durationFactor.isInfinite;
+
   double get now => _clock();
+
+  /// Cuánto se ve una línea del registro (s).
+  double get lineShownS => lineS * durationFactor;
+
+  /// Cuánto se ve [x] (s).
+  double shownS(LootToast x) => x.durationS * durationFactor;
 
   /// Las líneas vigentes (la más nueva al final).
   List<LootLine> get lines {
     final t = now;
-    return _lines.where((l) => t - l.at < lineS).toList();
+    return _lines.where((l) => t - l.at < lineShownS).toList();
   }
 
   /// Los avisos vigentes (el más nuevo al final).
   List<LootToast> get toasts {
     final t = now;
-    return _toasts.where((x) => t - x.at < x.durationS).toList();
+    return _toasts.where((x) => t - x.at < shownS(x)).toList();
   }
 
   /// Hay algo a la vista (para seguir refrescando).
   bool get hasLive => lines.isNotEmpty || toasts.isNotEmpty;
+
+  /// Hay que refrescar (algo vence solo).
+  bool get needsTick => hasLive && !persistent;
+
+  /// Cierra [x] (su ×).
+  void dismiss(LootToast x) {
+    if (_toasts.remove(x)) notifyListeners();
+  }
+
+  /// Cierra todos los avisos y vacía el registro (`Retroceso`).
+  void dismissAll() {
+    if (_toasts.isEmpty && _lines.isEmpty) return;
+    _toasts.clear();
+    _lines.clear();
+    notifyListeners();
+  }
+
+  /// Cambia la duración (el ajuste) y vuelve a dibujar.
+  void setDurationFactor(double f) {
+    if (f == durationFactor) return;
+    durationFactor = f;
+    notifyListeners();
+  }
 
   /// Nombre del objeto, con ★ si cumple el plan de build del jugador
   /// local (build_planner.md § 6; los compañeros nunca la llevan).
@@ -175,8 +216,15 @@ final lootFeedProvider = Provider.autoDispose<LootFeed>((ref) {
     verdictFor: c.lootVerdictFor,
   );
   final sub = c.events.listen(feed.onEvent);
+  // Duración de los avisos y "cerrar todos" (accessibility.md § 9.5).
+  feed.durationFactor = ref.read(gameSettingsProvider).noticeDuration.factor;
+  ref.listen(gameSettingsProvider.select((s) => s.noticeDuration),
+      (_, n) => feed.setDurationFactor(n.factor));
+  final bus = ref.watch(noticeDismissProvider);
+  bus.addListener(feed.dismissAll);
   ref.onDispose(() {
     unawaited(sub.cancel());
+    bus.removeListener(feed.dismissAll);
     feed.dispose();
   });
   return feed;
@@ -190,10 +238,11 @@ mixin _FeedTicker<T extends StatefulWidget> on State<T> {
   void _changed() {
     if (!mounted) return;
     setState(() {});
+    if (!feed.needsTick) return;
     _timer ??= Timer.periodic(const Duration(milliseconds: 250), (_) {
       if (!mounted) return;
       setState(() {});
-      if (!feed.hasLive) {
+      if (!feed.needsTick) {
         _timer?.cancel();
         _timer = null;
       }
@@ -252,7 +301,7 @@ class _LootLogState extends State<LootLog> with _FeedTicker<LootLog> {
     return Container(
       key: const ValueKey('loot-log'),
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 2),
-      color: const Color(0x99000000),
+      color: ProtoColors.scrim(0.6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -260,14 +309,14 @@ class _LootLogState extends State<LootLog> with _FeedTicker<LootLog> {
           for (final l in lines)
             Opacity(
               // Se desvanece el último segundo.
-              opacity: ((LootFeed.lineS - (t - l.at)).clamp(0.0, 1.0)),
+              opacity: ((widget.feed.lineShownS - (t - l.at)).clamp(0.0, 1.0)),
               child: Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text.rich(
                   TextSpan(children: [
                     TextSpan(
                         text: retroText(l.prefix),
-                        style: const TextStyle(color: Color(0xFFDFE6E9))),
+                        style: const TextStyle(color: ProtoColors.ink)),
                     TextSpan(
                         text: retroText(l.item),
                         style: TextStyle(color: l.color)),
@@ -324,8 +373,13 @@ class _LootToastsState extends State<LootToasts> with _FeedTicker<LootToasts> {
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Opacity(
-              opacity: ((x.durationS - (t - x.at)) / 0.5).clamp(0.0, 1.0),
-              child: LootToastBox(toast: x),
+              opacity: ((widget.feed.shownS(x) - (t - x.at)) / 0.5)
+                  .clamp(0.0, 1.0),
+              child: LootToastBox(
+                  toast: x,
+                  onDismiss: widget.feed.persistent
+                      ? () => widget.feed.dismiss(x)
+                      : null),
             ),
           ),
       ],
@@ -339,9 +393,12 @@ double toastFontSize(int? size) =>
 
 /// Un aviso con el estilo del filtro: fondo, borde y color del texto.
 class LootToastBox extends StatelessWidget {
-  const LootToastBox({super.key, required this.toast});
+  const LootToastBox({super.key, required this.toast, this.onDismiss});
 
   final LootToast toast;
+
+  /// HASTA CERRAR: la × del aviso.
+  final VoidCallback? onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -351,7 +408,7 @@ class LootToastBox extends StatelessWidget {
     final border = st.borderColor != null
         ? filterColor(st.borderColor!)
         : toast.legendary
-            ? const Color(0xFFFF8C28)
+            ? _legendary
             : null;
     return Container(
       key: ValueKey('loot-toast-${toast.name}'),
@@ -359,12 +416,15 @@ class LootToastBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: st.backgroundColor != null
             ? filterColor(st.backgroundColor!)
-            : const Color(0xCC000000),
+            : ProtoColors.scrim(0.8),
         border: border == null
             ? null
             : Border.all(color: border, width: toast.legendary ? 3 : 2),
       ),
-      child: Column(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (toast.title != '+')
@@ -373,18 +433,30 @@ class LootToastBox extends StatelessWidget {
               child: Text(retroText(toast.title),
                   style: TextStyle(
                       fontFamily: RetroType.bodyFamily,
+                      letterSpacing: RetroType.letterSpacing,
                       fontFamilyFallback: RetroType.bodyFallback,
                       fontSize: RetroType.small,
                       color: toast.legendary
-                          ? const Color(0xFFFF8C28)
-                          : const Color(0xFFDFE6E9))),
+                          ? _legendary
+                          : ProtoColors.ink)),
             ),
           Text(
             retroText(toast.title == '+' ? '+ ${toast.name}' : toast.name),
             style: TextStyle(fontSize: toastFontSize(st.size), color: text),
           ),
         ],
+          ),
+          if (onDismiss case final close?) ...[
+            const SizedBox(width: 8),
+            NoticeClose(
+                key: ValueKey('loot-toast-close-${toast.name}'),
+                onPressed: close),
+          ],
+        ],
       ),
     );
   }
 }
+
+/// Naranja del Legendario (la rareza: sigue al modo daltónico).
+const _legendary = VisionColor(VisionSlot.legendary);

@@ -40,6 +40,7 @@ class PauseBanner extends StatelessWidget {
             child: Text(retroText('$resumedBy reanudó el juego'),
                 style: TextStyle(
                     fontFamily: RetroType.bodyFamily,
+                    letterSpacing: RetroType.letterSpacing,
                     fontFamilyFallback: RetroType.bodyFallback,
                     fontSize: RetroType.small,
                     color: ProtoColors.green)),
@@ -48,7 +49,7 @@ class PauseBanner extends StatelessWidget {
       );
     }
     return ColoredBox(
-      color: const Color(0x660B0E1A),
+      color: ProtoColors.scrim(0.4),
       child: Center(
         child: RetroPanel(
           key: const ValueKey('pause-banner'),
@@ -57,14 +58,15 @@ class PauseBanner extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(retroText('$paused pausó el juego'),
-                  style: const TextStyle(
-                      fontFamily: RetroType.pixelFamily,
+                  style: TextStyle(
+                      fontFamily: RetroType.titleFamily,
                       fontSize: 16,
                       color: ProtoColors.gold)),
               const SizedBox(height: 8),
               Text('Cualquier jugador puede reanudar.',
                   style: TextStyle(
                       fontFamily: RetroType.bodyFamily,
+                      letterSpacing: RetroType.letterSpacing,
                       fontFamilyFallback: RetroType.bodyFallback,
                       fontSize: RetroType.small,
                       color: ProtoColors.dim)),

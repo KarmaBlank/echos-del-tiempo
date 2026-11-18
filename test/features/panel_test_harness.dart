@@ -31,12 +31,17 @@ Future<SessionController> pumpPanel(
   GameSprites? sprites,
   TextSize? textSize,
   ReadingFont readingFont = ReadingFont.vt323,
+  bool readingTitles = false,
+  bool wideLetters = false,
   double devicePixelRatio = 1,
 }) async {
   // Fuentes reales: el desborde depende del ancho de los glifos.
   await loadRealFonts(tester);
-  RetroType.classic = readingFont == ReadingFont.classic;
-  addTearDown(() => RetroType.classic = false);
+  // El tema lee los estáticos al armarse.
+  RetroType.font = readingFont;
+  RetroType.readingTitles = readingTitles;
+  RetroType.wideLetters = wideLetters;
+  addTearDown(RetroType.reset);
   tester.view.physicalSize =
       Size(1280 * devicePixelRatio, 720 * devicePixelRatio);
   tester.view.devicePixelRatio = devicePixelRatio;
@@ -55,12 +60,15 @@ Future<SessionController> pumpPanel(
           .overrideWithValue(const SessionClock(autoStart: false)),
     ],
     child: MaterialApp(
+      debugShowCheckedModeBanner: false,
       theme: RetroTheme.build(),
       builder: textSize == null
           ? null
           : (context, child) => RetroTextScale(
               factor: textSize.factor,
-              classic: readingFont == ReadingFont.classic,
+              font: readingFont,
+              readingTitles: readingTitles,
+              wideLetters: wideLetters,
               child: child!),
       home: Scaffold(
         body: Consumer(builder: (context, ref, _) {

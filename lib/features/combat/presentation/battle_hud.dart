@@ -32,6 +32,7 @@ import '../domain/turn_order.dart';
 import 'game_sprites.dart';
 import 'pixel_sprite.dart';
 import 'status_icons.dart';
+import 'summons_row.dart';
 
 /// Piezas de la barra de batalla (docs/specs/exploration.md § "Batalla"):
 /// el panel "Mis datos" del jugador local, la lista compacta del resto
@@ -66,6 +67,7 @@ class BattleBarPanel extends StatelessWidget {
       child: DefaultTextStyle.merge(
         style: TextStyle(
             fontFamily: RetroType.bodyFamily,
+            letterSpacing: RetroType.letterSpacing,
             fontFamilyFallback: RetroType.bodyFallback,
             fontSize: RetroType.small,
             height: RetroType.line,
@@ -162,12 +164,12 @@ List<StatusChip> combatantChips(Combatant p) {
   final ice = p.stacks(StatusKind.freeze);
   if (ice > 0) {
     final pct = jsRound(BattleEngine.freezeSlowPerStack * ice * 100);
-    chips.add(StatusChip('▼VEL', '▼VEL −$pct%', ProtoColors.ice,
-        freezeSlowTip(ice)));
+    chips.add(
+        StatusChip('▼VEL', '▼VEL −$pct%', ProtoColors.ice, freezeSlowTip(ice)));
   }
   if (p.brittle && ice > 0 && p.alive) {
-    chips.add(StatusChip('Quebr.', 'Quebradizo', const Color(0xFF81ECEC),
-        brittleTip()));
+    chips.add(StatusChip(
+        'Quebr.', 'Quebradizo', const Color(0xFF81ECEC), brittleTip()));
   }
   if (p.freezeResist > 0 && p.alive) {
     chips.add(StatusChip('▲HIELO', 'Resiste hielo ${p.freezeResist}',
@@ -371,8 +373,8 @@ List<StatusChip> abyssChips(BattleState b, Combatant e, BossMechanicDef m) {
       StatusChip('PRÓX: ${next.label}', 'PRÓXIMO: ${next.label}', violet, tip),
     if (e.abyssSeal > 0)
       () {
-        final r = ReactionKind.values[
-            (e.abyssSeal - 1).clamp(0, ReactionKind.values.length - 1)];
+        final r = ReactionKind
+            .values[(e.abyssSeal - 1).clamp(0, ReactionKind.values.length - 1)];
         final need = solo ? 'cualquier reacción' : r.label;
         return StatusChip('SELLO ${e.abyssSealTurns}',
             'SELLO ${e.abyssSealTurns}t · rompelo con $need', violet, tip);
@@ -391,8 +393,11 @@ List<StatusChip> abyssChips(BattleState b, Combatant e, BossMechanicDef m) {
           enrage <= 5 ? ProtoColors.crimson : ProtoColors.dim,
           tip),
     if (d.healHurts > 0)
-      StatusChip('Curas lo dañan', 'Las curas lo dañan (${jsRound(d.healHurts * 100)}%)',
-          ProtoColors.green, tip),
+      StatusChip(
+          'Curas lo dañan',
+          'Las curas lo dañan (${jsRound(d.healHurts * 100)}%)',
+          ProtoColors.green,
+          tip),
     if (e.abyssFeast > 0)
       StatusChip('Comió ${e.abyssFeast}', 'Buffs comidos: ${e.abyssFeast}',
           ProtoColors.orange, tip),
@@ -580,6 +585,7 @@ class StatusChipView extends StatelessWidget {
             retroText(long ? chip.long : chip.short),
             style: TextStyle(
                 fontFamily: RetroType.bodyFamily,
+                letterSpacing: RetroType.letterSpacing,
                 fontFamilyFallback: RetroType.bodyFallback,
                 fontSize: RetroType.small,
                 height: RetroType.lineTight,
@@ -623,29 +629,63 @@ class _BarRow extends StatelessWidget {
   /// Ancho de la etiqueta (`ULT`) en caracteres.
   static const labelChars = 3.5;
 
+  /// Con TAMAÑO DEL TEXTO ENORME (o más) la etiqueta y las cifras no
+  /// dejan lugar a la barra: van arriba y la barra debajo. Por el factor
+  /// del ajuste (sin la ventana) y no por el ancho: la tarjeta mide su
+  /// alto intrínseco (sin `LayoutBuilder`).
+  static bool stacked(BuildContext context) =>
+      RetroType.settingFactor(context) >= 1.9; // ENORME
+
   @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) {
+    final labelW = label == null ? 0.0 : RetroType.em(context, labelChars);
+    final valueW = RetroType.em(context, valueChars);
+    final style = RetroType.style(RetroType.label, color: color);
+    if (stacked(context)) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (label != null)
-            SizedBox(
-                width: RetroType.em(context, labelChars),
-                child: Text(label!,
+          Row(
+            children: [
+              if (label != null)
+                Text(label!, maxLines: 1, softWrap: false, style: style),
+              const Spacer(),
+              Flexible(
+                flex: 100,
+                child: Text(value,
                     maxLines: 1,
                     softWrap: false,
-                    style: RetroType.style(RetroType.label, color: color))),
-          Expanded(child: bar),
-          SizedBox(
-            width: RetroType.em(context, valueChars),
-            child: Text(value,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.fade,
-                textAlign: TextAlign.right,
-                // Cifras de las barras: Press Start 2P (monoespaciada).
-                style: RetroType.style(RetroType.label, color: color)),
+                    overflow: TextOverflow.fade,
+                    textAlign: TextAlign.right,
+                    style: style),
+              ),
+            ],
           ),
+          bar,
         ],
       );
+    }
+    return Row(
+      children: [
+        if (label != null)
+          SizedBox(
+              width: labelW,
+              child: Text(label!, maxLines: 1, softWrap: false, style: style)),
+        Expanded(child: bar),
+        SizedBox(
+          width: valueW,
+          child: Text(value,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.fade,
+              textAlign: TextAlign.right,
+              // Cifras de las barras: Press Start 2P (monoespaciada).
+              style: style),
+        ),
+      ],
+    );
+  }
 }
 
 /// `<b>Ana</b>, Cronomante` con la ascensión en su color (ascension.md § 5).
@@ -695,6 +735,9 @@ class BattlePartyBar extends StatelessWidget {
     this.sprites,
     this.turnTimeLeft,
     this.points = 0,
+    this.companions = const {},
+    this.auto = const {},
+    this.onAuto,
   });
 
   final BattleState battle;
@@ -702,6 +745,12 @@ class BattlePartyBar extends StatelessWidget {
   final GameSprites? sprites;
   final double? turnTimeLeft;
   final int points;
+
+  /// Compañeros de la party de este dispositivo (docs/specs/
+  /// solo_party.md § 4): su tarjeta muestra la ULT y el botón AUTO.
+  final Set<String> companions;
+  final Set<String> auto;
+  final void Function(String id, bool on)? onAuto;
 
   @override
   Widget build(BuildContext context) {
@@ -746,6 +795,15 @@ class BattlePartyBar extends StatelessWidget {
         sprites: sprites,
         turnTimeLeft: battle.currentId == p.id ? turnTimeLeft : null,
         points: p.id == localId ? points : 0,
+        companion: companions.contains(p.id),
+        auto: auto.contains(p.id),
+        onAuto: companions.contains(p.id) && onAuto != null
+            ? (on) => onAuto!(p.id, on)
+            : null,
+        summons: [
+          for (final s in battle.summons)
+            if (s.summonOwner == p.id) s,
+        ],
       );
 }
 
@@ -759,7 +817,19 @@ class _PartyCard extends StatelessWidget {
     this.sprites,
     this.turnTimeLeft,
     this.points = 0,
+    this.companion = false,
+    this.auto = false,
+    this.onAuto,
+    this.summons = const [],
   });
+
+  /// Invocaciones de este jugador (summoner.md § 8).
+  final List<Combatant> summons;
+
+  /// Compañero de la party: ULT a la vista y botón AUTO.
+  final bool companion;
+  final bool auto;
+  final ValueChanged<bool>? onAuto;
 
   final Combatant player;
   final bool local;
@@ -840,10 +910,26 @@ class _PartyCard extends StatelessWidget {
                         label: 'HP', valueChars: 9),
                     _BarRow(mpBar(p.mp, p.maxMp), '${p.mp.floor()}/${p.maxMp}',
                         label: 'MP', valueChars: 9),
-                    if (local)
+                    if (local || companion)
                       _BarRow(ultBar(p.ult),
                           p.ult >= 100 ? '¡LISTA!' : '${p.ult.floor()}%',
                           label: 'ULT', color: ultColor, valueChars: 9),
+                    if (summons.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      SummonsRow(summons: summons),
+                    ],
+                    if (onAuto case final toggle?) ...[
+                      const SizedBox(height: 2),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: PanelButton(
+                          'AUTO: ${auto ? 'SÍ' : 'NO'}',
+                          key: ValueKey('auto-toggle-${p.id}'),
+                          selected: auto,
+                          onPressed: () => toggle(!auto),
+                        ),
+                      ),
+                    ],
                     if (chips.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       _chips(chips),
@@ -874,9 +960,8 @@ class TargetBar extends StatelessWidget {
     // Sigue al modo daltónico (accessibility.md § 3).
     const breakColor = VisionColor(VisionSlot.breakBar);
     final hpText = '${e.hp}/${e.maxHp}';
-    final breakText = e.broken
-        ? '¡ROTO!'
-        : '${e.breakGauge.floor()}/${e.breakMax.round()}';
+    final breakText =
+        e.broken ? '¡ROTO!' : '${e.breakGauge.floor()}/${e.breakMax.round()}';
     // Jefes del Abismo: 5 cifras ("3300/10000") — la columna crece.
     final chars =
         math.max(9, math.max(hpText.length, breakText.length)).toDouble();

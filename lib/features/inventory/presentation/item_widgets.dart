@@ -5,6 +5,7 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/theme/vision_palette.dart';
+import '../../build_planner/presentation/build_fit_badge.dart' show kPlanColor;
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
@@ -439,7 +440,7 @@ class ItemCell extends StatelessWidget {
                       fontFamily: RetroType.pixelFamily,
                       fontSize: RetroType.label,
                       height: 1,
-                      color: Color(0xFFC39BFF),
+                      color: kPlanColor,
                       shadows: [Shadow(offset: Offset(1, 1))])),
             ),
           if (c?.eco case final e?)
@@ -519,7 +520,7 @@ class LootLabel extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
         decoration: BoxDecoration(
           color: bg == null
-              ? const Color(0xCC000000)
+              ? ProtoColors.scrim(0.8)
               : RarityColors.filterColor(bg),
           border: bd == null
               ? null

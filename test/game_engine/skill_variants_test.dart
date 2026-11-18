@@ -16,6 +16,7 @@ import 'package:echos_del_tiempo/game_engine/models/status.dart';
 import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
+import 'package:echos_del_tiempo/game_engine/data/summoner_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Variantes de habilidades v0.5 (docs/specs/combat.md § "Variantes de
@@ -134,7 +135,7 @@ void main() {
       expect(kSkillVariantFamily.keys.toSet(), kSkillVariants.keys.toSet());
       // v0.7: también las de Agua y Electro tienen look.
       expect(kSkillLooks.keys.toSet(),
-          {...kSkillVariants.keys, ...kElementalSkills.keys});
+          {...kSkillVariants.keys, ...kElementalSkills.keys, ...kSummonerSkills.keys});
       expect(all.length, greaterThanOrEqualTo(120));
     });
 

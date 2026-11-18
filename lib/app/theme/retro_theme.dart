@@ -23,7 +23,9 @@ abstract final class RetroPalette {
 /// Tema global pixel art con los estilos del prototipo: fuente pixel,
 /// esquinas rectas, botones `#22305a`/`#5b74c9`, sin sombras ni ripples.
 abstract final class RetroTheme {
-  /// Familia declarada en `pubspec.yaml` (bloque `fonts:`).
+  /// Press Start 2P (`pubspec.yaml`, bloque `fonts:`): la de las
+  /// etiquetas pintadas en los lienzos (mundo, escena). La de títulos y
+  /// botones de la UI es [RetroType.titleFamily] (puede ser la de lectura).
   static const fontFamily = RetroType.pixelFamily;
 
   /// Borde de `.panel` (3 px en el prototipo).
@@ -36,16 +38,16 @@ abstract final class RetroTheme {
   /// "Botón compacto"): texto [RetroType.small], padding de 8 px y borde
   /// de 2 px.
   /// Hereda colores y estados del tema; se pasa como `style:`.
-  static ButtonStyle compactButton() => const ButtonStyle(
+  static ButtonStyle compactButton() => ButtonStyle(
         // Cambio de color instantáneo (sin la animación de Material).
         animationDuration: Duration.zero,
-        padding: WidgetStatePropertyAll(
+        padding: const WidgetStatePropertyAll(
           EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         ),
-        minimumSize: WidgetStatePropertyAll(Size(0, 32)),
+        minimumSize: const WidgetStatePropertyAll(Size(0, 32)),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         textStyle: WidgetStatePropertyAll(
-          TextStyle(fontFamily: fontFamily, fontSize: RetroType.label),
+          RetroType.titleStyle(RetroType.label),
         ),
       );
 
@@ -72,8 +74,8 @@ abstract final class RetroTheme {
       ),
       splashFactory: NoSplash.splashFactory,
       overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-      textStyle: const WidgetStatePropertyAll(
-        TextStyle(fontFamily: fontFamily, fontSize: RetroType.title),
+      textStyle: WidgetStatePropertyAll(
+        RetroType.titleStyle(RetroType.title),
       ),
       // `button` / `button:hover` / `button:disabled` del prototipo.
       backgroundColor: WidgetStateProperty.resolveWith(
@@ -107,23 +109,27 @@ abstract final class RetroTheme {
       ),
     );
 
+    // Interlineado de los títulos (Press Start 1.5; menos con "Títulos con
+    // la fuente de lectura").
+    final tl = RetroType.titleLine;
     final theme = ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      fontFamily: fontFamily,
+      fontFamily: RetroType.titleFamily,
+      fontFamilyFallback:
+          RetroType.titlesInReading ? RetroType.bodyFallback : null,
       scaffoldBackgroundColor: RetroPalette.night,
       splashFactory: NoSplash.splashFactory,
       // Escala tipográfica: docs/specs/ui_style.md § "Tipografía".
       textTheme: TextTheme(
-        displayLarge: const TextStyle(fontSize: RetroType.display, height: 1.5),
-        headlineMedium:
-            const TextStyle(fontSize: RetroType.heading, height: 1.5),
-        titleMedium: const TextStyle(fontSize: RetroType.title, height: 1.5),
-        bodyLarge: const TextStyle(fontSize: RetroType.title, height: 1.5),
-        bodyMedium: const TextStyle(fontSize: RetroType.title, height: 1.5),
+        displayLarge: TextStyle(fontSize: RetroType.display, height: tl),
+        headlineMedium: TextStyle(fontSize: RetroType.heading, height: tl),
+        titleMedium: TextStyle(fontSize: RetroType.title, height: tl),
+        bodyLarge: TextStyle(fontSize: RetroType.title, height: tl),
+        bodyMedium: TextStyle(fontSize: RetroType.title, height: tl),
         // Texto de lectura: VT323 (RetroType.bodyFamily).
         bodySmall: RetroType.smallStyle,
-        labelLarge: const TextStyle(fontSize: RetroType.title, height: 1.5),
+        labelLarge: TextStyle(fontSize: RetroType.title, height: tl),
         labelSmall: RetroType.smallStyle,
       ).apply(
         bodyColor: RetroPalette.ink,
@@ -172,7 +178,8 @@ abstract final class RetroTheme {
     final t = theme.textTheme;
     TextStyle body(TextStyle? s) => s!.copyWith(
         fontFamily: RetroType.bodyFamily,
-        fontFamilyFallback: const [RetroType.pixelFamily]);
+        fontFamilyFallback: const [RetroType.pixelFamily],
+        letterSpacing: RetroType.letterSpacing);
     return theme.copyWith(
       textTheme: t.copyWith(
           bodySmall: body(t.bodySmall), labelSmall: body(t.labelSmall)),

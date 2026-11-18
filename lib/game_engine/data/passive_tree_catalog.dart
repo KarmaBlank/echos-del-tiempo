@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../models/passive_tree.dart';
 import 'passive_tree_v6.dart';
+import 'summoner_catalog.dart';
 
 /// Versión del árbol que guarda el perfil (`tv`). Un perfil con una
 /// versión menor se migra al cargarlo (passive_tree_v4.md § 6). El árbol
@@ -669,10 +670,35 @@ PassiveTreeCatalog _build() {
 
   _buildV6(add, link, paths);
 
+  // Cluster Invocador de la Maga (v0.8.1, docs/specs/summoner.md § 5):
+  // en el hueco entre Alquimia y el puente Galvánica. 
+  paths['invocador'] = const PassivePath(
+      id: 'invocador',
+      name: 'Invocador',
+      theme: 'invocaciones elementales, Gólem y Espíritu',
+      classId: 'maga',
+      labelX: 18.6,
+      labelY: 13.9);
+  final names = {for (final m in kSummonerTreeMechanics) m.id: m.name};
+  for (final (id, x, y, kind, mech) in kSummonerTreeNodes) {
+    add(id, (x, y), names[mech]!, kind == 'k' ? const {'key': 1} : const {},
+        kind,
+        key: kind == 'k' ? mech : null, path: 'invocador', mech: mech);
+  }
+  for (final (a, b) in kSummonerTreeLinks) {
+    link(a, b);
+  }
+
   return PassiveTreeCatalog(
     nodes: {for (final n in nodes.values) n.id: n.freeze()},
     startNodeByClass: {for (final c in _classes) c.id: 's_${c.short}'},
-    exclusions: const {'fe_k': 'juicio_k', 'juicio_k': 'fe_k'},
+    exclusions: const {
+      'fe_k': 'juicio_k',
+      'juicio_k': 'fe_k',
+      // Legión o Pacto Eterno (summoner.md § 5).
+      'invocador_kl': 'invocador_kp',
+      'invocador_kp': 'invocador_kl',
+    },
     paths: paths,
   );
 }

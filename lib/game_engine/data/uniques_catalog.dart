@@ -11,6 +11,7 @@ const List<UniqueDef> _list = [
   // ---------------- Guerrero ----------------
   UniqueDef(
     id: 'juramentoAlba',
+    ultId: 'ult_cortePerfecto',
     name: 'Juramento del Alba',
     baseId: 'espada_templada',
     fixed: [UniqueMod('feroz', 20, 30), UniqueMod('certero', 5, 8)],
@@ -19,6 +20,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'segadoraEras',
+    ultId: 'ult_guillotina',
     name: 'Segadora de Eras',
     baseId: 'mandoble_eras',
     fixed: [UniqueMod('feroz', 35, 45), UniqueMod('del_vampiro', 3, 5)],
@@ -27,6 +29,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'fauceVolcan',
+    ultId: 'ult_forjaDivina',
     name: 'Fauce del Volcán',
     baseId: 'hacha_volcanica',
     fixed: [UniqueMod('afilado', 4, 7), UniqueMod('abrasador', 1, 1)],
@@ -35,6 +38,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'rompemundos',
+    ultId: 'ult_terremoto',
     name: 'Rompemundos',
     baseId: 'hacha_cataclismo',
     fixed: [
@@ -47,6 +51,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'lanzaHorizonte',
+    ultId: 'ult_ojoTormenta',
     name: 'Lanza del Horizonte',
     baseId: 'lanza_tormenta',
     fixed: [UniqueMod('veloz', 5, 8), UniqueMod('certero', 6, 10)],
@@ -56,6 +61,7 @@ const List<UniqueDef> _list = [
   // ---------------- Maga ----------------
   UniqueDef(
     id: 'corazonAscua',
+    ultId: 'ult_infierno',
     name: 'Corazón de Ascua',
     baseId: 'baculo_fuego',
     fixed: [UniqueMod('arcano', 15, 25), UniqueMod('abrasador', 1, 1)],
@@ -64,6 +70,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'inviernoPerpetuo',
+    ultId: 'ult_ceroAbsoluto',
     name: 'Invierno Perpetuo',
     baseId: 'baculo_ambar',
     fixed: [
@@ -76,6 +83,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'codiceUltimoDia',
+    ultId: 'ult_eraDetenida',
     name: 'Códice del Último Día',
     baseId: 'tomo_eternidad',
     fixed: [UniqueMod('arcano', 35, 45), UniqueMod('impetuoso', 15, 22)],
@@ -84,6 +92,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'relampagoDormido',
+    ultId: 'ult_tormentaRayos',
     name: 'Relámpago Dormido',
     baseId: 'varita_rayo',
     fixed: [UniqueMod('arcano', 20, 30), UniqueMod('letal', 20, 30)],
@@ -93,6 +102,7 @@ const List<UniqueDef> _list = [
   // ---------------- Tirador ----------------
   UniqueDef(
     id: 'susurroVibora',
+    ultId: 'ult_venenoLetal',
     name: 'Susurro de la Víbora',
     baseId: 'dagas_vibora',
     fixed: [UniqueMod('ponzonoso', 1, 2), UniqueMod('certero', 6, 10)],
@@ -101,6 +111,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'ojoHalconSolar',
+    ultId: 'ult_diluvioFlechas',
     name: 'Ojo del Halcón Solar',
     baseId: 'arco_solar',
     fixed: [UniqueMod('feroz', 20, 30), UniqueMod('letal', 20, 30)],
@@ -109,6 +120,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'truenoBronce',
+    ultId: 'ult_disparoRelampago',
     name: 'Trueno de Bronce',
     baseId: 'rifle_precision',
     fixed: [UniqueMod('feroz', 25, 35), UniqueMod('afilado', 6, 10)],
@@ -117,6 +129,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'ballestaJuicio',
+    ultId: 'ult_granCaceria',
     name: 'Ballesta del Juicio Final',
     baseId: 'ballesta_asedio',
     fixed: [UniqueMod('feroz', 35, 40), UniqueMod('letal', 26, 40)],
@@ -138,6 +151,7 @@ const List<UniqueDef> _list = [
   // ---------------- Paladín ----------------
   UniqueDef(
     id: 'egidaPrimerRey',
+    ultId: 'ult_murallaEterna',
     name: 'Égida del Primer Rey',
     baseId: 'espada_escudo_cruzado',
     fixed: [UniqueMod('del_baluarte', 3, 5), UniqueMod('de_la_vida', 30, 50)],
@@ -146,6 +160,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'martilloOcasoSagrado',
+    ultId: 'ult_sentenciaDivina',
     name: 'Martillo del Ocaso Sagrado',
     baseId: 'martillo_escudo_titan',
     fixed: [UniqueMod('feroz', 25, 35), UniqueMod('runico', 7, 12)],
@@ -154,6 +169,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'relicarioMisericordia',
+    ultId: 'ult_milagro',
     name: 'Relicario de la Misericordia',
     baseId: 'maza_escudo_sagrada',
     fixed: [UniqueMod('de_la_fe', 15, 25), UniqueMod('del_sabio', 8, 12)],
@@ -162,6 +178,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'bastionMilEras',
+    ultId: 'ult_bastionAbsoluto',
     name: 'Bastión de las Mil Eras',
     baseId: 'maza_escudo_eterna',
     fixed: [

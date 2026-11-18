@@ -324,19 +324,21 @@ class _Description extends StatelessWidget {
         color: ProtoColors.bg,
         border: Border.all(color: ProtoColors.panelBorder, width: 2),
       ),
+      // Todo scrollea (también los recursos: con texto ENORME ocupan
+      // varias líneas).
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child:
-                ProtoText(resources, key: const ValueKey('battle-resources')),
-          ),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ProtoText(resources,
+                        key: const ValueKey('battle-resources')),
+                  ),
                   if (a != null)
                     ProtoText(a.description,
                         key: ValueKey('battle-desc-${a.id}')),

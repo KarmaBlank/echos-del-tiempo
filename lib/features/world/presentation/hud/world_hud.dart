@@ -30,6 +30,7 @@ import '../../../settings/presentation/settings_menu.dart';
 import '../map/loot_painter.dart';
 import '../map/map_game.dart';
 import '../../../../core/settings/game_settings.dart';
+import '../../../../core/settings/notices.dart';
 import '../../../../core/settings/settings_providers.dart';
 import '../../../characters/domain/unused_points.dart';
 import 'chat_box.dart';
@@ -133,6 +134,16 @@ class WorldHud extends StatelessWidget {
                     const SizedBox(width: 8),
                   ],
                   if (onMenu != null) PauseMenuButton(onPressed: onMenu!),
+                  // Party jugando solo, en el pueblo (solo_party.md § 2.3).
+                  if (controller.canEditParty) ...[
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      key: const ValueKey('hud-party'),
+                      style: RetroTheme.compactButton(),
+                      onPressed: controller.toggleParty,
+                      child: Text('PARTY (${view.companions.length + 1}) [P]'),
+                    ),
+                  ],
                   // Puntos sin usar: `PERSONAJE [C]` con `+N` (solo si hay;
                   // passive_tree_v4.md § 7).
                   if (_unused(s).any) ...[
@@ -269,8 +280,9 @@ class WorldHud extends StatelessWidget {
                       ? _MessageLog(messages: view.messages)
                       // CHAT: OCULTO / SIEMPRE VISIBLE (v0.8.1).
                       : Consumer(builder: (context, ref, _) {
-                          final (chat, notices) = ref.watch(gameSettingsProvider
-                              .select((g) => (g.chat, g.chatNotices)));
+                          final (chat, notices, duration) = ref.watch(
+                              gameSettingsProvider.select((g) =>
+                                  (g.chat, g.chatNotices, g.noticeDuration)));
                           final me = s.players[view.localId];
                           return ChatBox(
                             lines: view.chat,
@@ -279,6 +291,10 @@ class WorldHud extends StatelessWidget {
                             onDone: onChatDone ?? () {},
                             collapsible: chat == ChatVisibility.hidden,
                             notices: notices,
+                            // DURACIÓN DE LOS AVISOS (accessibility.md § 9.5).
+                            noticeDuration:
+                                duration.scale(ChatBox.toastDuration),
+                            dismissSignal: ref.watch(noticeDismissProvider),
                             localName: me == null
                                 ? null
                                 : heroTitle(me.name, me.profile.classId,
@@ -348,6 +364,11 @@ class WorldHud extends StatelessWidget {
                             s.mode == SessionMode.levelUp || view.panel != null,
                         reduceMotion: ref.watch(
                             gameSettingsProvider.select((g) => g.reduceMotion)),
+                        duration: ref
+                            .watch(gameSettingsProvider
+                                .select((g) => g.noticeDuration))
+                            .scale(UnusedPointsToast.shown),
+                        dismissSignal: ref.watch(noticeDismissProvider),
                       ),
                     ),
                     for (final line in _banners(s))
@@ -572,7 +593,7 @@ class _CanvasLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        color: const Color(0xAA000000),
+        color: ProtoColors.scrim(),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Text(retroText(text),
             style: RetroType.style(fontSize, color: color)),
@@ -587,9 +608,10 @@ void setMinimapZoom(WidgetRef ref, int zoom) {
       .update(s.copyWith(minimapZoom: zoom)));
 }
 
-/// Tamaño (px) de la ventana del minimapa con zoom 2 y 3: a zoom 3 son
-/// 40×28 tiles alrededor del jugador.
-const kMinimapWindow = Size(300, 210);
+/// Tamaño (px) de la ventana del minimapa con zoom 2 y 3 (como el
+/// minimapa de antes de v0.8.1): a zoom 3 son ~27×19 tiles alrededor
+/// del jugador. Para ver más está el mapa grande (M).
+const kMinimapWindow = Size(200, 140);
 
 /// El minimapa del HUD con el zoom [zoom]: 1 = el piso entero; 2 y 3 =
 /// ventana de [kMinimapWindow] centrada en el jugador (exploration.md §
@@ -784,7 +806,7 @@ class _Objectives extends StatelessWidget {
               context, collapsed ? collapsedMaxWidth : maxWidth)),
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
       decoration: BoxDecoration(
-        color: const Color(0xAA000000),
+        color: ProtoColors.scrim(),
         border: Border.all(color: ProtoColors.buttonBorder),
       ),
       child: Column(
@@ -955,14 +977,14 @@ class _LevelUpBanner extends StatelessWidget {
       top: 96,
       // Franja `#000c` a todo el ancho, como el canvas del prototipo.
       child: Container(
-        color: const Color(0xCC000000),
+        color: ProtoColors.scrim(0.8),
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('¡SUBIDA DE NIVEL!',
+            Text('¡SUBIDA DE NIVEL!',
                 style: TextStyle(
-                    fontFamily: RetroType.pixelFamily,
+                    fontFamily: RetroType.titleFamily,
                     fontSize: 16,
                     color: ProtoColors.gold)),
             const SizedBox(height: 8),

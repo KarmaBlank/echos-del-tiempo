@@ -4,7 +4,9 @@ import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import '../../../game_engine/data/summoner_catalog.dart';
 import '../../combat/domain/skill_text.dart';
+import '../../combat/domain/summon_text.dart';
 
 /// Textos de armas de los paneles — puerto de `reqHtml`, `wPowTxt`,
 /// `skHtml` (líneas 1262-1266) y `weaponTip` (1122-1131) en el markup
@@ -64,7 +66,7 @@ String skillListMarkup(GameCatalog catalog, WeaponDef w, {String? fusedId}) {
         '${st != null ? ' ${hexSpan(statusHex(st.kind), statusLetterOf(st.kind))}' : ''}'
         '${id == fusedId ? ' (fusión)' : ''}';
   }).join(' · ');
-  final ult = catalog.ultimates[w.type]?.name ?? '—';
+  final ult = weaponBaseUlt(w, catalog.ultimates)?.name ?? '—';
   return '${names.isEmpty ? '—' : names} · ${hexSpan(_pink, 'ULT: $ult')}'
       '${w.shieldDefense > 0 ? ' · ${hexSpan(_ice, 'DEF +${w.shieldDefense}')}' : ''}';
 }
@@ -107,7 +109,8 @@ String weaponTooltip(ProgressionRules rules, PlayerProfile p, WeaponDef w) {
     l.add(describeSkillMarkup(s, null) +
         (id == fused ? ' ${hexSpan(_orange, '(fusión)')}' : ''));
   }
-  if (cat.ultimates[w.type] case final u?) {
+  l.addAll(summonWeaponLines(w));
+  if (weaponBaseUlt(w, cat.ultimates) case final u?) {
     l.add('<br>${describeSkillMarkup(u, null, ultimate: true, nameColor: _pink)}');
   }
   l.add('<br><span class="k">Herrería: subí Poder, Crítico o Velocidad por '

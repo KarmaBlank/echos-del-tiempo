@@ -48,7 +48,7 @@ class EnemyInfoCard extends StatelessWidget {
             width: RetroTheme.thinBorderWidth),
         boxShadow: const [
           BoxShadow(
-              color: Color(0xAA000000), offset: Offset(0, 4), blurRadius: 18),
+              color: ProtoColors.shadow, offset: Offset(0, 4), blurRadius: 18),
         ],
       ),
       child: DefaultTextStyle.merge(

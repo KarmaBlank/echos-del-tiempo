@@ -30,7 +30,12 @@ enum ModStat {
   regen('% de vida por turno', 0.01),
   statusResist('stacks de estados recibidos', 1),
   lifeSteal('% de robo de vida', 0.01),
-  healPower('% curación', 0.01);
+  healPower('% curación', 0.01),
+
+  /// Invocador (docs/specs/summoner.md § 2): daño y duración de las
+  /// invocaciones. Solo tomos.
+  summonDamage('% daño de invocaciones', 0.01),
+  summonTurns('turno de duración de invocaciones', 1);
 
   const ModStat(this.label, this.scale);
 
@@ -48,7 +53,8 @@ enum ModStat {
         ModStat.critMulti ||
         ModStat.ultCharge ||
         ModStat.healReceived ||
-        ModStat.healPower =>
+        ModStat.healPower ||
+        ModStat.summonDamage =>
           '+$value$label',
         ModStat.speed => '+${(value / 10).toStringAsFixed(1)} $label',
         ModStat.burnStacks ||
@@ -317,7 +323,12 @@ class UniqueDef {
     this.randomMax = 2,
     this.flavor = '',
     this.exclusive = false,
+    this.ultId,
   });
+
+  /// ULT propia fija del legendario (`kBranchUltSkills`), reemplaza la del
+  /// tipo de arma (docs/specs/branch_ults.md). `null` = la del tipo.
+  final String? ultId;
 
   /// Exclusivo de un Jefe del Abismo (v0.8): nunca sale del pool normal
   /// (docs/specs/abyss_bosses.md § 3).
@@ -386,6 +397,7 @@ class ItemInstance {
     this.extraSkills = const [],
     this.uniqueId,
     this.name,
+    this.ultId,
   });
 
   /// Común sin nada: lo que era un id de arma en el inventario viejo.
@@ -424,6 +436,11 @@ class ItemInstance {
   /// Nombre generado (raros y épicos).
   final String? name;
 
+  /// Mod especial "ULT: <nombre>" (docs/specs/branch_ults.md): una ULT de
+  /// camino (`kBranchUltSkills`) que reemplaza la del tipo de arma. Es
+  /// del objeto: no se traslada por fusión.
+  final String? ultId;
+
   static const maxPassiveLevel = 5;
 
   int get forgeLevel => forge.total;
@@ -445,6 +462,8 @@ class ItemInstance {
     WeaponUpgradeLevels? forge,
     List<String>? extraSkills,
     String? name,
+    String? ultId,
+    bool clearUlt = false,
   }) =>
       ItemInstance(
         uid: uid ?? this.uid,
@@ -458,6 +477,7 @@ class ItemInstance {
         extraSkills: extraSkills ?? this.extraSkills,
         uniqueId: uniqueId,
         name: name ?? this.name,
+        ultId: clearUlt ? null : ultId ?? this.ultId,
       );
 
   // ------------------------------------------------------------------
@@ -476,6 +496,7 @@ class ItemInstance {
         if (extraSkills.isNotEmpty) 's': extraSkills,
         if (uniqueId != null) 'q': uniqueId,
         if (name != null) 'n': name,
+        if (ultId != null) 'ul': ultId,
       };
 
   /// Lectura tolerante: `null` si falta lo esencial (uid y base). No
@@ -514,6 +535,7 @@ class ItemInstance {
       extraSkills: s is List ? [for (final x in s) if (x is String) x] : const [],
       uniqueId: raw['q'] is String ? raw['q'] as String : null,
       name: raw['n'] is String ? raw['n'] as String : null,
+      ultId: raw['ul'] is String ? raw['ul'] as String : null,
     );
   }
 
@@ -533,7 +555,8 @@ class ItemInstance {
       other.forge.def == forge.def &&
       _listEq(other.extraSkills, extraSkills) &&
       other.uniqueId == uniqueId &&
-      other.name == name;
+      other.name == name &&
+      other.ultId == ultId;
 
   @override
   int get hashCode => Object.hash(uid, baseId, rarity, itemLevel,

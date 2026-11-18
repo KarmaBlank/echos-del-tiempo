@@ -12,6 +12,10 @@ import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/ui_theme.dart';
 import '../../../app/theme/vision_palette.dart';
 import '../../../app/widgets/menu_widgets.dart';
+import '../../../app/widgets/notice_close.dart';
+import '../../combat/presentation/battle_screen.dart' show BattleLogHistory;
+import '../../world/presentation/map/map_labels.dart'
+    show MapLabelSamplePainter;
 import '../../../core/audio/presentation/audio_providers.dart';
 import '../../../core/settings/game_settings.dart';
 import '../../../core/settings/settings_providers.dart';
@@ -204,6 +208,7 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
       key: const ValueKey('pause-status'),
       style: TextStyle(
           fontFamily: RetroType.bodyFamily,
+          letterSpacing: RetroType.letterSpacing,
           fontFamilyFallback: RetroType.bodyFallback,
           fontSize: RetroType.small,
           color: running ? ProtoColors.orange : ProtoColors.green),
@@ -243,7 +248,7 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
 /// del título.
 Future<void> showSettingsDialog(BuildContext context) => showDialog<void>(
       context: context,
-      barrierColor: const Color(0x990B0E1A),
+      barrierColor: ProtoColors.scrim(0.6),
       builder: (ctx) =>
           SettingsMenu(onClose: () => Navigator.of(ctx).maybePop()),
     );
@@ -373,6 +378,7 @@ class _FontChoice extends StatelessWidget {
   static const _options = {
     ReadingFont.vt323: ('VT323', RetroType.vt323Family, 20.0),
     ReadingFont.classic: ('CLÁSICA', RetroType.pixelFamily, 8.0),
+    ReadingFont.atkinson: ('ATKINSON', RetroType.atkinsonFamily, 18.0),
   };
 
   @override
@@ -733,16 +739,22 @@ class _AccessibilityTab extends ConsumerWidget {
           ),
         ),
         const _ThemePreview(),
+        // Texto (accessibility.md § 9).
+        const _SectionHeader('TEXTO', key: ValueKey('a11y-section-text')),
         _SettingRow(
           label: 'TAMAÑO DEL TEXTO',
-          hint: 'Letra de menús, fichas, chat y batalla. Se ajusta a la '
-              'grilla de la fuente para que se vea nítida.',
+          hint: s.textSize == TextSize.enormous
+              ? 'ENORME: el doble que NORMAL. Los paneles scrollean y las '
+                  'fichas largas pasan a columnas.'
+              : 'Letra de menús, fichas, chat y batalla. Se ajusta a la '
+                  'grilla de la fuente para que se vea nítida.',
           control: _Choice<TextSize>(
             keyPrefix: 'display-text',
             options: const {
               TextSize.normal: 'NORMAL',
               TextSize.large: 'GRANDE',
               TextSize.huge: 'MUY GRANDE',
+              TextSize.enormous: 'ENORME',
             },
             value: s.textSize,
             onChanged: (v) => c.update(s.copyWith(textSize: v)),
@@ -750,13 +762,97 @@ class _AccessibilityTab extends ConsumerWidget {
         ),
         _SettingRow(
           label: 'FUENTE DE LECTURA',
-          hint: 'Fichas, chat, menús y batalla. Títulos y botones no '
-              'cambian.',
+          hint: s.readingFont == ReadingFont.atkinson
+              ? 'Atkinson Hyperlegible: diseñada para baja visión, letras '
+                  'que no se confunden (I l 1, O 0). No es pixel.'
+              : 'Fichas, chat, menús y batalla. Los títulos y botones '
+                  'cambian solo con la opción de abajo.',
           control: _FontChoice(
             value: s.readingFont,
             onChanged: (v) => c.update(s.copyWith(readingFont: v)),
           ),
         ),
+        _SettingRow(
+          label: 'TÍTULOS CON LA FUENTE DE LECTURA',
+          hint: s.readingFont == ReadingFont.classic
+              ? 'Con CLÁSICA los títulos ya usan la misma fuente.'
+              : 'Títulos, botones y pestañas en la fuente de lectura en vez '
+                  'de las mayúsculas pixel.',
+          control: _Choice<bool>(
+            keyPrefix: 'a11y-titles',
+            options: _yesNo,
+            value: s.readingTitles,
+            onChanged: (v) => c.update(s.copyWith(readingTitles: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'ESPACIADO ENTRE LETRAS',
+          hint: 'AMPLIO: un poco más de aire entre las letras del texto de '
+              'lectura.',
+          control: _Choice<LetterSpacing>(
+            keyPrefix: 'a11y-letters',
+            options: const {
+              LetterSpacing.normal: 'NORMAL',
+              LetterSpacing.wide: 'AMPLIO',
+            },
+            value: s.letterSpacing,
+            onChanged: (v) => c.update(s.copyWith(letterSpacing: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'DURACIÓN DE LOS AVISOS',
+          hint: switch (s.noticeDuration) {
+            NoticeDuration.normal =>
+              'Avisos de loot, build, chat, puntos y misiones: unos segundos.',
+            NoticeDuration.long => 'Los avisos se ven el doble de tiempo.',
+            NoticeDuration.untilDismissed => 'Quedan hasta cerrarlos con su × '
+                'o con Retroceso (cierra todos).',
+          },
+          control: _Choice<NoticeDuration>(
+            keyPrefix: 'a11y-notices',
+            options: const {
+              NoticeDuration.normal: 'NORMAL',
+              NoticeDuration.long: 'LARGA',
+              NoticeDuration.untilDismissed: 'HASTA CERRAR',
+            },
+            value: s.noticeDuration,
+            onChanged: (v) => c.update(s.copyWith(noticeDuration: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'FONDO DEL TEXTO EN EL MAPA',
+          hint: 'Detrás de nombres, carteles, avisos y loot del piso, para '
+              'leerlos sobre tiles cargados.',
+          control: _Choice<MapLabelBackdrop>(
+            keyPrefix: 'a11y-maplabels',
+            options: const {
+              MapLabelBackdrop.none: 'NINGUNO',
+              MapLabelBackdrop.shaded: 'SOMBREADO',
+              MapLabelBackdrop.box: 'CAJA OPACA',
+            },
+            value: s.mapLabelBackdrop,
+            onChanged: (v) => c.update(s.copyWith(mapLabelBackdrop: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'REGISTRO DE BATALLA',
+          hint: s.battleLog == BattleLogMode.extended
+              ? 'EXTENDIDO: las 3 últimas líneas arriba de la escena; cada '
+                  'una queda más tiempo.'
+              : 'Una línea arriba de la escena que se reemplaza con cada '
+                  'acción.',
+          control: _Choice<BattleLogMode>(
+            keyPrefix: 'a11y-battlelog',
+            options: const {
+              BattleLogMode.normal: 'NORMAL',
+              BattleLogMode.extended: 'EXTENDIDO',
+            },
+            value: s.battleLog,
+            onChanged: (v) => c.update(s.copyWith(battleLog: v)),
+          ),
+        ),
+        _TextPreview(settings: s),
+        const _SectionHeader('COLOR Y MOVIMIENTO'),
         _SettingRow(
           label: 'MODO DALTÓNICO',
           hint: _visionHint(s.colorVision),
@@ -842,6 +938,154 @@ class _AccessibilityTab extends ConsumerWidget {
       };
 }
 
+/// Encabezado de un grupo de ajustes (`TEXTO`, `COLOR Y MOVIMIENTO`): en
+/// la fuente de títulos, con una línea del borde del tema debajo.
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(top: UiTheme.space(10), bottom: 2),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(retroText(text),
+                style: RetroType.titleStyle(RetroType.label,
+                    color: ProtoColors.title)),
+            const SizedBox(height: 4),
+            Container(height: 1, color: ProtoColors.panelBorder),
+          ],
+        ),
+      );
+}
+
+/// Vista previa en vivo de la sección TEXTO (accessibility.md § 9): un
+/// tip con título y lectura (fuente, títulos, tamaño, espaciado), un
+/// botón, una etiqueta del mapa sobre tiles cargados con su fondo, un
+/// aviso (con su × en HASTA CERRAR) y, en EXTENDIDO, el registro de
+/// batalla. Sin foco ni clics.
+class _TextPreview extends StatelessWidget {
+  const _TextPreview({required this.settings});
+
+  final GameSettings settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = settings;
+    // Como un nombre del mapa a la escala de 1280×720 (16 px).
+    const labelSize = 16.0;
+    return Padding(
+      key: const ValueKey('a11y-text-preview'),
+      padding: EdgeInsets.only(
+          left: RetroType.width(context, 200),
+          top: UiTheme.space(4),
+          bottom: UiTheme.space(8)),
+      child: ExcludeFocus(
+        child: IgnorePointer(
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.start,
+            children: [
+              Container(
+                padding: RetroHoverCard.padding,
+                decoration: BoxDecoration(
+                  color: ProtoColors.bg,
+                  border: Border.all(
+                      color: RetroHoverCard.borderColor,
+                      width: UiTheme.buttonBorderWidth),
+                ),
+                constraints:
+                    BoxConstraints(maxWidth: RetroType.width(context, 260)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(retroText('ESPADA DEL ALBA'),
+                        key: const ValueKey('a11y-text-preview-title'),
+                        style: RetroType.style(RetroType.label,
+                            color: ProtoColors.title)),
+                    const SizedBox(height: 4),
+                    DefaultTextStyle(
+                      style: RetroHoverCard.textStyle,
+                      child: RetroTipText(
+                          'Tus curas otorgan <b>Sagrado</b> 2 turnos.<br>'
+                          '<span class="k">Il1 · O0 · rn m</span>',
+                          maxWidth: RetroType.width(context, 240)),
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton(
+                    style: RetroTheme.compactButton(),
+                    onPressed: () {},
+                    child: const Text('EQUIPAR'),
+                  ),
+                  const SizedBox(height: 8),
+                  // Etiqueta del mapa sobre tiles: el fondo elegido.
+                  CustomPaint(
+                    key: ValueKey(
+                        'a11y-maplabel-preview-${s.mapLabelBackdrop.name}'),
+                    size: Size(RetroType.width(context, 210), labelSize * 3),
+                    painter: MapLabelSamplePainter(
+                        backdrop: s.mapLabelBackdrop, size: labelSize),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    key: const ValueKey('a11y-notice-preview'),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: ProtoColors.bg.withValues(alpha: 0.85),
+                      border:
+                          Border.all(color: ProtoColors.panelBorder, width: 2),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(retroText(switch (s.noticeDuration) {
+                          NoticeDuration.normal => '+ Poción · 3 s',
+                          NoticeDuration.long => '+ Poción · 6 s',
+                          NoticeDuration.untilDismissed => '+ Poción',
+                        })),
+                        if (s.noticeDuration.persistent) ...[
+                          const SizedBox(width: 8),
+                          NoticeClose(onPressed: () {}),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (s.battleLog == BattleLogMode.extended) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: RetroType.width(context, 220),
+                      child: const BattleLogHistory(lines: [
+                        'Ana usa Corte: 24 de daño',
+                        'Slime ataca a Ana: 6',
+                      ]),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Muestra de la paleta activa: mejora / empeora, HP / MP, las cinco
 /// rarezas con su letra y la vida / quiebre de un enemigo.
 class _VisionPreview extends StatelessWidget {
@@ -858,7 +1102,7 @@ class _VisionPreview extends StatelessWidget {
           child: Text(retroText(text), style: TextStyle(color: ink ?? color)),
         );
     const rarities = [
-      ('C', Color(0xFFDCDCDC)),
+      ('C', ProtoColors.common),
       ('M', VisionColor(VisionSlot.magic)),
       ('R', VisionColor(VisionSlot.rare)),
       ('E', VisionColor(VisionSlot.epic)),
@@ -1056,6 +1300,7 @@ class _ControlsTab extends StatelessWidget {
         ('C', 'Personaje'),
         ('I', 'Inventario'),
         ('J', 'Plegar / desplegar los objetivos'),
+        ('Retroceso', 'Cerrar todos los avisos del HUD'),
         ('M', 'Mapa en grande (flechas / arrastrar: mover; + - / rueda: zoom)'),
         ('Rueda sobre el minimapa', 'Zoom del minimapa'),
         ('Y / N', 'Votar la misión propuesta'),

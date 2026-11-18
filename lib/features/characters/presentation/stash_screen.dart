@@ -272,8 +272,8 @@ class _StashScreenState extends ConsumerState<StashScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(retroText('${p.name} · $cls · Nv ${p.level}'),
-              style: const TextStyle(
-                  fontFamily: RetroType.pixelFamily,
+              style: TextStyle(
+                  fontFamily: RetroType.titleFamily,
                   fontSize: RetroType.title,
                   color: ProtoColors.ink)),
           const SizedBox(height: 8),
@@ -340,9 +340,9 @@ class _StashScreenState extends ConsumerState<StashScreen> {
       children: [
         Row(
           children: [
-            const Text('ALIJO',
+            Text('ALIJO',
                 style: TextStyle(
-                    fontFamily: RetroType.pixelFamily,
+                    fontFamily: RetroType.titleFamily,
                     fontSize: RetroType.title,
                     color: ProtoColors.ink)),
             const SizedBox(width: 12),

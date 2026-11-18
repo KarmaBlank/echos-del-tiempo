@@ -31,7 +31,11 @@ enum FlashLevel {
 enum TextSize {
   normal(1),
   large(1.25),
-  huge(1.5);
+  huge(1.5),
+
+  /// ENORME (v0.8.1, accessibility.md § 9.3): ×2 sobre Normal. Los
+  /// paneles scrollean y los tooltips pasan a columnas.
+  enormous(2);
 
   const TextSize(this.factor);
 
@@ -44,13 +48,18 @@ enum TextSize {
 
 /// "Fuente de lectura" (accesibilidad): la fuente del texto de lectura
 /// (tooltips, fichas, chat, menús). Títulos y botones siguen en Press
-/// Start 2P. Ver docs/specs/settings.md § 3.7.
+/// Start 2P (salvo [GameSettings.readingTitles]). Ver
+/// docs/specs/settings.md § 3.7 y accessibility.md § 9.1.
 enum ReadingFont {
   /// VT323 (por defecto, v0.5).
   vt323,
 
   /// CLÁSICA: Press Start 2P, como en v0.4.
-  classic;
+  classic,
+
+  /// ATKINSON (v0.8.1): Atkinson Hyperlegible, hecha para baja visión.
+  /// No es pixel: px enteros sin grilla.
+  atkinson;
 
   static ReadingFont fromName(Object? v, ReadingFont def) =>
       values.firstWhere((m) => m.name == v, orElse: () => def);
@@ -118,6 +127,66 @@ enum UiSpacing {
       values.firstWhere((m) => m.name == v, orElse: () => def);
 }
 
+/// "Espaciado entre letras" (accessibility.md § 9.4): NORMAL o AMPLIO
+/// (+0.08 em en el texto de lectura).
+enum LetterSpacing {
+  normal,
+  wide;
+
+  static LetterSpacing fromName(Object? v, LetterSpacing def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Duración de los avisos" (accessibility.md § 9.5): cuánto se ven los
+/// avisos del HUD (loot, build, chat plegado, puntos sin usar, misión
+/// opcional). HASTA CERRAR: quedan hasta tocar su × o `Retroceso`.
+enum NoticeDuration {
+  normal(1),
+  long(2),
+  untilDismissed(double.infinity);
+
+  const NoticeDuration(this.factor);
+
+  /// Multiplica la duración de cada aviso (infinito = hasta cerrarlo).
+  final double factor;
+
+  bool get persistent => factor.isInfinite;
+
+  /// [base] con esta duración (`null` = hasta cerrarlo).
+  Duration? scale(Duration base) => persistent
+      ? null
+      : Duration(microseconds: (base.inMicroseconds * factor).round());
+
+  static NoticeDuration fromName(Object? v, NoticeDuration def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Fondo del texto en el mapa" (accessibility.md § 9.6): detrás de los
+/// nombres, carteles, avisos y etiquetas de loot del mapa.
+enum MapLabelBackdrop {
+  /// Como siempre: sombra de 1 px.
+  none,
+
+  /// Franja oscura translúcida detrás del texto.
+  shaded,
+
+  /// Caja opaca con borde.
+  box;
+
+  static MapLabelBackdrop fromName(Object? v, MapLabelBackdrop def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Registro de batalla" (accessibility.md § 9.7): NORMAL (una línea que
+/// se reemplaza) o EXTENDIDO (las 3 últimas, cada una más tiempo).
+enum BattleLogMode {
+  normal,
+  extended;
+
+  static BattleLogMode fromName(Object? v, BattleLogMode def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
 /// Esquina del indicador de FPS y ping (docs/specs/settings.md § 3.9).
 enum OverlayCorner {
   topRight,
@@ -171,6 +240,11 @@ class GameSettings {
     this.chatNotices = true,
     this.objectivesCollapsed = false,
     this.minimapZoom = 3,
+    this.readingTitles = false,
+    this.letterSpacing = LetterSpacing.normal,
+    this.noticeDuration = NoticeDuration.normal,
+    this.mapLabelBackdrop = MapLabelBackdrop.none,
+    this.battleLog = BattleLogMode.normal,
   });
 
   /// Pantalla completa sin bordes (solo Windows; ver `WindowMode`).
@@ -252,6 +326,22 @@ class GameSettings {
 
   static const minimapZooms = 3;
 
+  /// "Títulos con la fuente de lectura" (accesibilidad, v0.8.1): títulos,
+  /// botones y pestañas en la fuente de lectura en vez de Press Start 2P.
+  final bool readingTitles;
+
+  /// Espaciado entre letras del texto de lectura (v0.8.1).
+  final LetterSpacing letterSpacing;
+
+  /// Cuánto duran los avisos del HUD (v0.8.1).
+  final NoticeDuration noticeDuration;
+
+  /// Fondo detrás de las etiquetas del mapa (v0.8.1).
+  final MapLabelBackdrop mapLabelBackdrop;
+
+  /// Banda del log de batalla: una línea o las 3 últimas (v0.8.1).
+  final BattleLogMode battleLog;
+
   /// Sacudida efectiva (REDUCIR MOVIMIENTO la apaga).
   bool get shakeOn => screenShake && !reduceMotion;
 
@@ -288,6 +378,11 @@ class GameSettings {
     bool? chatNotices,
     bool? objectivesCollapsed,
     int? minimapZoom,
+    bool? readingTitles,
+    LetterSpacing? letterSpacing,
+    NoticeDuration? noticeDuration,
+    MapLabelBackdrop? mapLabelBackdrop,
+    BattleLogMode? battleLog,
   }) =>
       GameSettings(
         fullscreen: fullscreen ?? this.fullscreen,
@@ -314,6 +409,11 @@ class GameSettings {
         chatNotices: chatNotices ?? this.chatNotices,
         objectivesCollapsed: objectivesCollapsed ?? this.objectivesCollapsed,
         minimapZoom: (minimapZoom ?? this.minimapZoom).clamp(1, minimapZooms),
+        readingTitles: readingTitles ?? this.readingTitles,
+        letterSpacing: letterSpacing ?? this.letterSpacing,
+        noticeDuration: noticeDuration ?? this.noticeDuration,
+        mapLabelBackdrop: mapLabelBackdrop ?? this.mapLabelBackdrop,
+        battleLog: battleLog ?? this.battleLog,
       );
 
   Map<String, Object?> toJson() => {
@@ -341,6 +441,11 @@ class GameSettings {
         'chatNotices': chatNotices,
         'objectivesCollapsed': objectivesCollapsed,
         'minimapZoom': minimapZoom,
+        'readingTitles': readingTitles,
+        'letterSpacing': letterSpacing.name,
+        'noticeDuration': noticeDuration.name,
+        'mapLabelBackdrop': mapLabelBackdrop.name,
+        'battleLog': battleLog.name,
       };
 
   /// Valores inválidos o ausentes caen al de por defecto. Claves viejas
@@ -379,6 +484,14 @@ class GameSettings {
         final int z when z >= 1 && z <= minimapZooms => z,
         _ => d.minimapZoom,
       },
+      readingTitles: flag(json['readingTitles'], d.readingTitles),
+      letterSpacing:
+          LetterSpacing.fromName(json['letterSpacing'], d.letterSpacing),
+      noticeDuration: NoticeDuration.fromName(
+          json['noticeDuration'], d.noticeDuration),
+      mapLabelBackdrop: MapLabelBackdrop.fromName(
+          json['mapLabelBackdrop'], d.mapLabelBackdrop),
+      battleLog: BattleLogMode.fromName(json['battleLog'], d.battleLog),
     );
   }
 
@@ -408,7 +521,12 @@ class GameSettings {
       other.chat == chat &&
       other.chatNotices == chatNotices &&
       other.objectivesCollapsed == objectivesCollapsed &&
-      other.minimapZoom == minimapZoom;
+      other.minimapZoom == minimapZoom &&
+      other.readingTitles == readingTitles &&
+      other.letterSpacing == letterSpacing &&
+      other.noticeDuration == noticeDuration &&
+      other.mapLabelBackdrop == mapLabelBackdrop &&
+      other.battleLog == battleLog;
 
   @override
   int get hashCode => Object.hash(
@@ -430,7 +548,9 @@ class GameSettings {
       perfOverlay,
       perfCorner,
       Object.hash(uiTheme, textColors, spacing, chat, chatNotices,
-          objectivesCollapsed, minimapZoom));
+          objectivesCollapsed, minimapZoom),
+      Object.hash(readingTitles, letterSpacing, noticeDuration,
+          mapLabelBackdrop, battleLog));
 
   @override
   String toString() => 'GameSettings(${toJson()})';

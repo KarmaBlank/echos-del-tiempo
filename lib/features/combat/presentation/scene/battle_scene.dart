@@ -96,6 +96,7 @@ class SceneOptions {
     this.pixelPerfect = false,
     this.particles = 1,
     this.reduceMotion = false,
+    this.extendedLog = false,
   });
 
   /// Sacudida de pantalla.
@@ -120,7 +121,18 @@ class SceneOptions {
   /// la arena es un fundido corto sin destello. La sacudida y los
   /// destellos ya llegan apagados / suaves en [shake] y [flash].
   final bool reduceMotion;
+
+  /// REGISTRO DE BATALLA EXTENDIDO (accessibility.md § 9.7): debajo de la
+  /// banda del log se ven las 2 líneas anteriores, cada una
+  /// [kBattleLogHistoryS] segundos. Solo cambia la UI.
+  final bool extendedLog;
 }
+
+/// Cuánto queda cada línea anterior del log con el REGISTRO EXTENDIDO (s).
+const kBattleLogHistoryS = 10.0;
+
+/// Líneas que se ven con el REGISTRO EXTENDIDO (la actual + 2).
+const kBattleLogLines = 3;
 
 class BattleSceneController extends ChangeNotifier {
   BattleSceneController({math.Random? random})

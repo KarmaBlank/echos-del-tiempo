@@ -24,6 +24,7 @@ import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/event_json.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
 import 'package:echos_del_tiempo/netcode/protocol/wire.dart';
+import 'package:echos_del_tiempo/game_engine/data/summoner_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Elementos y reacciones v0.7 (docs/specs/elemental_reactions.md). Los
@@ -142,6 +143,7 @@ void main() {
         ...kSkills.keys,
         for (final u in kAllUltimates.values) u.id,
         for (final u in kAscensionUltimates.values) u.id,
+        for (final u in kSummonerUltimates.values) u.id,
       };
       for (final id in ids) {
         expect(kSkillElement, contains(id), reason: id);

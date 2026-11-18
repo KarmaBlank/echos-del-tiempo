@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/data/ascension_catalog.dart';
@@ -152,40 +153,40 @@ class AscensionCinematicState extends State<AscensionCinematic>
             key: const ValueKey('asc-banner'),
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
-            color: const Color(0xCC05060D),
+            color: ProtoColors.scrim(0.8),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(retroText('ASCENSIÓN'),
-                    style: const TextStyle(
-                        fontFamily: RetroType.pixelFamily,
+                    style: TextStyle(
+                        fontFamily: RetroType.titleFamily,
                         fontSize: RetroType.label,
-                        color: Color(0xFFFFD166),
+                        color: ProtoColors.gold,
                         letterSpacing: 4)),
                 const SizedBox(height: 10),
                 Text(retroText(name.toUpperCase()),
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontFamily: RetroType.pixelFamily,
+                      fontFamily: RetroType.titleFamily,
                       fontSize: 28,
                       color: col,
                       shadows: const [
-                        Shadow(color: Color(0xFF000000), offset: Offset(3, 3)),
+                        Shadow(color: ProtoColors.shadow, offset: Offset(3, 3)),
                       ],
                     )),
                 const SizedBox(height: 10),
                 Text(retroText('${widget.playerName} · $cls'),
-                    style: const TextStyle(
-                        fontFamily: RetroType.pixelFamily,
+                    style: TextStyle(
+                        fontFamily: RetroType.titleFamily,
                         fontSize: RetroType.label,
-                        color: Color(0xFFE8ECFF))),
+                        color: ProtoColors.title)),
                 const SizedBox(height: 8),
                 Text(retroText(motto),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        fontFamily: RetroType.pixelFamily,
+                    style: TextStyle(
+                        fontFamily: RetroType.titleFamily,
                         fontSize: RetroType.label,
-                        color: Color(0xFF9FB4FF))),
+                        color: ProtoColors.sky)),
               ],
             ),
           ),
@@ -227,7 +228,7 @@ class _CinematicPainter extends CustomPainter {
     final fadeOut = _s((ms - (t - 600)) / 600);
     final dark = _s(ms / AscensionCinematicTiming.freezeMs) * (1 - fadeOut);
     canvas.drawRect(Offset.zero & size,
-        Paint()..color = Color.fromRGBO(5, 6, 13, 0.88 * dark));
+        Paint()..color = ProtoColors.scrim(0.88 * dark));
 
     final scale = (size.height / 90).floorToDouble().clamp(2.0, 10.0);
     final cx = size.width / 2;

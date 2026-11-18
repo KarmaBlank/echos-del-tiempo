@@ -230,9 +230,9 @@ class MenuGroup extends StatelessWidget {
               padding: const EdgeInsets.only(top: 6, right: 6),
               child: Text(retroText(label),
                   style: TextStyle(
-                      fontFamily: RetroType.pixelFamily,
+                      fontFamily: RetroType.titleFamily,
                       fontSize: RetroType.label,
-                      height: RetroType.pixelLine,
+                      height: RetroType.titleLine,
                       color: color)),
             ),
           ),

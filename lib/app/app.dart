@@ -39,8 +39,12 @@ class EcosApp extends StatelessWidget {
             factor: ref
                 .watch(gameSettingsProvider.select((s) => s.textSize.factor)),
             // Fuente de lectura (settings.md § 3.7).
-            classic: ref.watch(gameSettingsProvider
-                .select((s) => s.readingFont == ReadingFont.classic)),
+            font: ref.watch(gameSettingsProvider.select((s) => s.readingFont)),
+            // Títulos y espaciado entre letras (accessibility.md § 9).
+            readingTitles: ref
+                .watch(gameSettingsProvider.select((s) => s.readingTitles)),
+            wideLetters: ref.watch(gameSettingsProvider
+                .select((s) => s.letterSpacing == LetterSpacing.wide)),
             // Modo daltónico (accessibility.md § 3).
             child: ColorVisionScope(
               mode:

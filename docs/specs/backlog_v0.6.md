@@ -19,6 +19,27 @@ Pedido tal cual llegó, para convertirlo en specs antes de codificar.
 - Notificación visible pero no invasiva cuando hay puntos de árbol (y de
   atributos / ascensión) sin usar.
 
+## Próxima versión (después de v0.8.1)
+- Botón **SALIR DEL JUEGO** en el menú principal (pantalla de título),
+  usando el mismo cierre seguro que la pausa (guarda antes de salir,
+  `ExitGuard` / `appExitProvider`).
+
+## ULTs de rama — hecho en v0.8.1 (en armas)
+- Decisión del dueño: las ULTs nuevas van **en armas**, no en el árbol.
+  144 ULTs (3 por camino) como mod "ULT: X" en armas Raras/Épicas del
+  tipo compatible y fijas en 17 legendarios: docs/specs/branch_ults.md.
+
+## Invocador (Maga) — pedido del dueño, arranca después de la party en solitario
+- Línea de **Invocador** en el árbol de la Maga (clusters nuevos) y
+  **tomos** con habilidades de invocación; **máximo 4 invocaciones**
+  activas. "Hacé magia con eso, que sea divertido": invocaciones con
+  identidad (elementales, golem, espíritus), sinergias con reacciones,
+  sacrificar/detonar invocaciones, notables que las potencian.
+- Reusa la infraestructura de aliados controlados por IA de la party
+  en solitario (AUTO).
+- **Hecho en v0.8.1**: docs/specs/summoner.md (6 invocaciones, 9
+  habilidades, 5 tomos con 3 ULT propias, cluster Invocador de 13 nodos).
+
 ## v0.7 — Elementos y reacciones
 - Borrador para aprobar: docs/specs/elemental_reactions.md (Agua +
   Electro = Electrocución, Veneno + Fuego = Explosión tóxica, etc.).

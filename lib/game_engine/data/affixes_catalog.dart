@@ -118,4 +118,13 @@ final List<AffixDef> _list = [
       id: 'de_la_fe', name: 'de la Fe', slot: _s, stat: ModStat.healPower, weight: 600,
       types: kMagicWeaponTypes,
       tiers: _five([(25, 30), (19, 24), (14, 18), (9, 13), (5, 8)])),
+  // ---- Invocador v0.8.1 (docs/specs/summoner.md § 2): solo tomos ----
+  AffixDef(
+      id: 'evocador', name: 'Evocador', slot: _p, stat: ModStat.summonDamage, weight: 400,
+      types: const {'tomo'},
+      tiers: _five([(21, 25), (16, 20), (11, 15), (7, 10), (3, 6)])),
+  const AffixDef(
+      id: 'del_pacto', name: 'del Pacto', slot: _s, stat: ModStat.summonTurns, weight: 300,
+      types: {'tomo'},
+      tiers: [AffixTier(1, 20, 1, 1, 100)]),
 ];

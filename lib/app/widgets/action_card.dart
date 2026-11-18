@@ -184,7 +184,7 @@ class _ActionCardState extends State<ActionCard> {
                     boxShadow: _hot
                         ? const [
                             BoxShadow(
-                                color: Color(0xAA000000), offset: Offset(0, 3))
+                                color: ProtoColors.shadow, offset: Offset(0, 3))
                           ]
                         : null,
                   ),
@@ -200,8 +200,8 @@ class _ActionCardState extends State<ActionCard> {
                             child: w.bandLabel == null
                                 ? null
                                 : Text(retroText(w.bandLabel!),
-                                    style: const TextStyle(
-                                        fontFamily: RetroType.pixelFamily,
+                                    style: TextStyle(
+                                        fontFamily: RetroType.titleFamily,
                                         fontSize: RetroType.label,
                                         color: ProtoColors.bg)),
                           ),
@@ -293,7 +293,7 @@ class ConfirmButton extends StatelessWidget {
           Flexible(
             child: Text(retroText(label),
                 style: TextStyle(
-                    fontFamily: RetroType.pixelFamily,
+                    fontFamily: RetroType.titleFamily,
                     fontSize: RetroType.title,
                     color: enabled ? ProtoColors.green : ProtoColors.dim)),
           ),

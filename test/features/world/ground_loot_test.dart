@@ -278,6 +278,44 @@ void main() {
       expect(feed.lines, hasLength(1));
     });
 
+    test('DURACIÓN DE LOS AVISOS: LARGA ×2; HASTA CERRAR queda hasta su × '
+        'o cerrar todos', () {
+      feed.setDurationFactor(2);
+      feed.onEvent(LootDropEvent('me', _item('r', Rarity.raro, name: 'Hoja'),
+          LootSource.battle));
+      now = LootFeed.toastS + 0.5;
+      expect(feed.toasts, hasLength(1));
+      now = LootFeed.toastS * 2 + 0.1;
+      expect(feed.toasts, isEmpty);
+      expect(feed.lines, hasLength(1)); // el registro: 28 s
+      feed.setDurationFactor(double.infinity);
+      feed.onEvent(LootDropEvent('me', _item('r', Rarity.raro, name: 'Punta'),
+          LootSource.battle));
+      now = 1e6;
+      expect(feed.toasts.map((t) => t.name), ['Hoja', 'Punta']);
+      expect(feed.needsTick, isFalse);
+      feed.dismiss(feed.toasts.first);
+      expect(feed.toasts.single.name, 'Punta');
+      feed.dismissAll();
+      expect(feed.toasts, isEmpty);
+      expect(feed.lines, isEmpty);
+    });
+
+    testWidgets('HASTA CERRAR: la × del aviso lo cierra', (tester) async {
+      feed.setDurationFactor(double.infinity);
+      feed.onEvent(LootDropEvent('me', _item('r', Rarity.raro, name: 'Punta Feroz'),
+          LootSource.battle));
+      await tester.pumpWidget(MaterialApp(
+          home: Scaffold(body: Center(child: LootToasts(feed: feed)))));
+      final close = find.byKey(const ValueKey('loot-toast-close-Punta Feroz'));
+      expect(close, findsOneWidget);
+      expect(tester.getSize(close).width, greaterThanOrEqualTo(24));
+      await tester.tap(close);
+      await tester.pump();
+      expect(find.byKey(const ValueKey('loot-toast-Punta Feroz')), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    });
+
     test('lo oculto por el filtro no aparece; lo de otro sí (sin aviso)', () {
       feed.onEvent(LootDropEvent('me', _item('c', Rarity.comun), LootSource.battle));
       expect(feed.lines, isEmpty);

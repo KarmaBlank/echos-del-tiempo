@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../build_planner/presentation/build_feed.dart';
+import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../core/settings/game_settings.dart';
+import '../../../core/settings/notices.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/data/uniques_catalog.dart';
 import '../../../game_engine/models/game_session.dart';
@@ -38,6 +40,7 @@ import 'hud/pause_banner.dart';
 import 'hud/world_hud.dart';
 import 'map/map_game.dart';
 import 'panels/character_panel.dart';
+import 'panels/party_panel.dart';
 import 'session_battle_screen.dart';
 import 'session_controller.dart';
 import 'session_music.dart';
@@ -233,6 +236,14 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       }
       return KeyEventResult.handled;
     }
+    // Retroceso: cierra todos los avisos del HUD (DURACIÓN DE LOS AVISOS
+    // = HASTA CERRAR, accessibility.md § 9.5; con otra duración también
+    // los despeja).
+    if (event.logicalKey == LogicalKeyboardKey.backspace) {
+      ref.read(noticeDismissProvider).dismissAll();
+      _game?.dismissNotices();
+      return KeyEventResult.handled;
+    }
     // J: pliega / despliega la caja de objetivos (campo, sin panel).
     if (event.logicalKey == LogicalKeyboardKey.keyJ &&
         view.mode == SessionMode.field &&
@@ -303,7 +314,10 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       final gfx = ref.watch(gameSettingsProvider);
       game
         ..scaleMode = gfx.scale
-        ..particleDensity = gfx.particles.factor;
+        ..particleDensity = gfx.particles.factor
+        // Texto del mapa (accessibility.md § 9.5 y 9.6).
+        ..noticeFactor = gfx.noticeDuration.factor
+        ..labelBackdrop = gfx.mapLabelBackdrop;
       body = Stack(
         children: [
           // El GameWidget se queda con todas las teclas si tiene el foco:
@@ -326,7 +340,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           if (_choosing && view.me != null)
             Positioned.fill(
               child: ColoredBox(
-                color: const Color(0xCC0B0E1A),
+                color: ProtoColors.scrim(0.8),
                 child: PanelFrame(
                   title: 'ELEGÍ TU ASCENSIÓN',
                   width: 1040,
@@ -375,11 +389,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                     key: const ValueKey('world-save-error'),
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    color: const Color(0xCC0B0E1A),
+                    color: ProtoColors.scrim(0.8),
                     child: Text(
                       '$err (ver ecos.log)',
-                      style: const TextStyle(
-                          fontFamily: RetroType.pixelFamily,
+                      style: TextStyle(
+                          fontFamily: RetroType.titleFamily,
                           fontSize: RetroType.label,
                           color: RetroPalette.red),
                     ),
@@ -400,8 +414,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           if (_pauseOpen) ...[
             // Tapa (y bloquea los clics a) lo de abajo; el mundo sigue
             // dibujándose.
-            const Positioned.fill(
-              child: ColoredBox(color: Color(0x990B0E1A)),
+            Positioned.fill(
+              child: ColoredBox(color: ProtoColors.scrim(0.6)),
             ),
             Positioned.fill(
               child: SettingsMenu(
@@ -441,6 +455,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               sprites: sprites,
               battleKey: _battleKey,
               onCommand: controller.battleCommand,
+              onAuto: controller.setAuto,
               sceneOptions: _sceneOptions(ref.watch(gameSettingsProvider)),
             ),
           ),
@@ -468,8 +483,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         if (r == null) return const [];
         final weapons = controller.engine.catalog.weapons;
         return [
-          const Positioned.fill(
-            child: ColoredBox(color: Color(0xCC0F0F1B)),
+          Positioned.fill(
+            child: ColoredBox(color: ProtoColors.scrim(0.8)),
           ),
           Positioned.fill(
             child: ResultsPanel(
@@ -558,6 +573,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         damageNumbers: s.damageNumbers,
         pixelPerfect: s.scale == ScaleMode.pixelPerfect,
         particles: s.particles.factor,
+        extendedLog: s.battleLog == BattleLogMode.extended,
       );
 
   /// `Zona 2 · Bosque Hondo · Piso 3/3` del resultado de una misión de
@@ -615,6 +631,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         );
       case WorldPanel.armory:
         return ArmoryPanel(view: view, controller: controller);
+      case WorldPanel.party:
+        return PartyPanel(view: view, controller: controller);
       case WorldPanel.map:
         return fullMapPanel(view, controller);
       case WorldPanel.ecoPortal:
@@ -652,7 +670,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 profileTitle(p.profile),
                 catalog.classes[p.profile.classId]?.name ?? p.profile.classId,
                 p.profile.level,
-                ready: prep.ready[p.id] ?? false,
+                // Los compañeros siguen al líder (solo_party.md § 3.3).
+                ready: p.isCompanion || (prep.ready[p.id] ?? false),
                 isLocal: p.id == view.localId,
               ),
           ],

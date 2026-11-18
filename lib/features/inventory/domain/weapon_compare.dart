@@ -1,3 +1,4 @@
+import '../../../game_engine/data/branch_ults_catalog.dart' show itemUlt;
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -130,7 +131,7 @@ WeaponComparison compareWeapons(
 
   String? ult(ItemInstance? i) {
     final w = i == null ? null : items.baseOf(i);
-    return w == null ? null : cat.ultimates[w.type]?.name;
+    return w == null ? null : (itemUlt(i!) ?? cat.ultimates[w.type])?.name;
   }
 
   final wB = items.baseOf(to);

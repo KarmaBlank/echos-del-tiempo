@@ -78,8 +78,8 @@ class PanelFrame extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(retroText(title),
-                            style: const TextStyle(
-                                fontFamily: RetroType.pixelFamily,
+                            style: TextStyle(
+                                fontFamily: RetroType.titleFamily,
                                 fontSize: RetroType.title,
                                 color: ProtoColors.title)),
                       ),
@@ -169,9 +169,9 @@ class _HelpChip extends StatelessWidget {
               color: ProtoColors.buttonBorder,
               width: RetroTheme.thinBorderWidth),
         ),
-        child: const Text('?',
+        child: Text('?',
             style: TextStyle(
-                fontFamily: RetroType.pixelFamily,
+                fontFamily: RetroType.titleFamily,
                 fontSize: RetroType.label,
                 color: ProtoColors.sky)),
       ),
@@ -314,8 +314,13 @@ class PanelButton extends StatelessWidget {
       child: Text(retroText(label)),
     );
     if (reason == null) return button;
-    return Row(
+    // Con texto ENORME el motivo va arriba del botón (al lado no entra).
+    final big = RetroType.settingFactor(context) >= 1.9;
+    return Flex(
+      direction: big ? Axis.vertical : Axis.horizontal,
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment:
+          big ? CrossAxisAlignment.end : CrossAxisAlignment.center,
       children: [
         // Sin `Flexible`: el botón suele ir en filas de ancho libre.
         ConstrainedBox(
@@ -324,11 +329,12 @@ class PanelButton extends StatelessWidget {
               textAlign: TextAlign.right,
               style: TextStyle(
                   fontFamily: RetroType.bodyFamily,
+                  letterSpacing: RetroType.letterSpacing,
                   fontFamilyFallback: RetroType.bodyFallback,
                   fontSize: RetroType.small,
                   color: ProtoColors.dim)),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 8, height: 4),
         button,
       ],
     );

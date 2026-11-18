@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/theme/map_palette.dart';
 import '../../../../app/theme/panel_frame.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_text.dart';
@@ -53,18 +54,23 @@ class FullMap extends StatefulWidget {
   /// Tiles por flecha.
   static const panStep = 4.0;
 
-  /// Íconos de la leyenda (colores = arte del minimapa).
-  static const legend = <(String, Color)>[
-    ('Tú', Color(0xFFFFFFFF)),
-    ('Aliados', Color(0xFF48DBFB)),
-    ('Escalera', Color(0xFFFFD166)),
-    ('Jefe', Color(0xFFE84393)),
-    ('Cofre', Color(0xFFFFD166)),
-    ('Secreto', Color(0xFFBE6EFF)),
-    ('Santuario', Color(0xFF5AE6D2)),
-    ('Piedra de paso', Color(0xFFB0B6C8)),
-    ('Enemigos', Color(0xFFFF4757)),
+  /// Íconos de la leyenda (las marcas del minimapa del tema activo).
+  static const legendMarks = <(String, MapMark)>[
+    ('Tú', MapMark.me),
+    ('Aliados', MapMark.ally),
+    ('Escalera', MapMark.stairs),
+    ('Jefe', MapMark.boss),
+    ('Cofre', MapMark.chest),
+    ('Secreto', MapMark.secret),
+    ('Santuario', MapMark.shrine),
+    ('Piedra de paso', MapMark.waystone),
+    ('Enemigos', MapMark.enemy),
   ];
+
+  /// La leyenda con los colores del tema activo.
+  static List<(String, Color)> get legend => [
+        for (final (l, m) in legendMarks) (l, MapPalette.mark(m)),
+      ];
 
   @override
   State<FullMap> createState() => FullMapState();
@@ -223,7 +229,10 @@ class FullMapState extends State<FullMap> {
                     Container(
                         width: RetroType.width(context, 8),
                         height: RetroType.width(context, 8),
-                        color: color),
+                        decoration: BoxDecoration(
+                            color: color,
+                            border: Border.all(
+                                color: ProtoColors.panelBorder, width: 1))),
                     const SizedBox(width: 6),
                     Text(retroText(label)),
                   ],

@@ -11,6 +11,7 @@ import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/data/passive_tree_catalog.dart';
 import '../../game_engine/models/atlas_store.dart';
 import '../../game_engine/models/bestiary.dart';
+import '../../game_engine/models/party_store.dart';
 import '../../game_engine/models/profile_store.dart';
 import '../../game_engine/rules/battle_engine.dart';
 import '../../game_engine/rules/passive_tree_rules.dart';
@@ -115,6 +116,11 @@ void registerSharedDependencies(
   });
   sl.registerLazySingleton<ProfileStore>(
     () => SelectedCharacterProfileStore(sl<AccountRepository>()),
+  );
+  // Party jugando solo: las otras ranuras de la misma cuenta
+  // (docs/specs/solo_party.md § 5).
+  sl.registerLazySingleton<PartyStore>(
+    () => AccountPartyStore(sl<AccountRepository>()),
   );
   // Atlas del Tiempo: uno por cuenta (docs/specs/ecos_atlas.md § 5).
   sl.registerLazySingleton<AtlasStore>(

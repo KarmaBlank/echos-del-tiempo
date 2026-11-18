@@ -20,6 +20,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:echos_del_tiempo/app/widgets/notice_close.dart';
+
 import '../app/hit_target_audit.dart';
 import '../core/settings/fake_window_mode.dart';
 import '../game_engine/session_test_helpers.dart';
@@ -252,6 +254,94 @@ void main() {
     await _tap(tester, 'display-font-vt323');
     expect(f.game.saved!.readingFont, ReadingFont.vt323);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ACCESIBILIDAD › TEXTO: cada opción se guarda y la vista previa '
+      'cambia', (tester) async {
+    final f = await _pumpMenu(tester);
+    await _tap(tester, 'tab-2');
+    expect(find.byKey(const ValueKey('a11y-section-text')), findsOneWidget);
+    expect(find.byKey(const ValueKey('a11y-text-preview')), findsOneWidget);
+    // ATKINSON, escrita en su fuente.
+    expect(
+        tester
+            .widget<Text>(find.descendant(
+                of: find.byKey(const ValueKey('display-font-atkinson')),
+                matching: find.byType(Text)))
+            .style
+            ?.fontFamily,
+        RetroType.atkinsonFamily);
+    await _tap(tester, 'display-font-atkinson');
+    expect(f.game.saved!.readingFont, ReadingFont.atkinson);
+    await _tap(tester, 'display-text-ENORME');
+    expect(f.game.saved!.textSize, TextSize.enormous);
+    expect(tester.takeException(), isNull, reason: 'ENORME');
+    await _tap(tester, 'display-text-NORMAL');
+    await _tap(tester, 'a11y-titles-SÍ');
+    expect(f.game.saved!.readingTitles, isTrue);
+    await _tap(tester, 'a11y-letters-AMPLIO');
+    expect(f.game.saved!.letterSpacing, LetterSpacing.wide);
+    // Avisos: la muestra suma la × en HASTA CERRAR.
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('a11y-notice-preview')),
+            matching: find.byType(NoticeClose)),
+        findsNothing);
+    await _tap(tester, 'a11y-notices-HASTA CERRAR');
+    expect(f.game.saved!.noticeDuration, NoticeDuration.untilDismissed);
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('a11y-notice-preview')),
+            matching: find.byType(NoticeClose)),
+        findsOneWidget);
+    await _tap(tester, 'a11y-notices-LARGA');
+    expect(f.game.saved!.noticeDuration, NoticeDuration.long);
+    // Fondo del mapa: la muestra se redibuja con el elegido.
+    expect(find.byKey(const ValueKey('a11y-maplabel-preview-none')),
+        findsOneWidget);
+    await _tap(tester, 'a11y-maplabels-CAJA OPACA');
+    expect(f.game.saved!.mapLabelBackdrop, MapLabelBackdrop.box);
+    expect(find.byKey(const ValueKey('a11y-maplabel-preview-box')),
+        findsOneWidget);
+    await _tap(tester, 'a11y-maplabels-SOMBREADO');
+    expect(f.game.saved!.mapLabelBackdrop, MapLabelBackdrop.shaded);
+    // Registro de batalla: la muestra aparece en EXTENDIDO.
+    expect(find.byKey(const ValueKey('battle-log-history')), findsNothing);
+    await _tap(tester, 'a11y-battlelog-EXTENDIDO');
+    expect(f.game.saved!.battleLog, BattleLogMode.extended);
+    expect(find.byKey(const ValueKey('battle-log-history')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('ACCESIBILIDAD › TEXTO: se llega y se elige con el teclado',
+      (tester) async {
+    final f = await _pumpMenu(tester);
+    await _tap(tester, 'tab-2');
+    // Tab recorre los botones hasta TÍTULOS CON LA FUENTE DE LECTURA: SÍ.
+    Key? focused() => FocusManager.instance.primaryFocus?.context
+        ?.findAncestorWidgetOfExactType<PanelButton>()
+        ?.key;
+    var found = false;
+    for (var i = 0; i < 120 && !found; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      found = focused() == const ValueKey('a11y-titles-SÍ');
+    }
+    expect(found, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(f.game.saved!.readingTitles, isTrue);
+    // Y sigue hasta REGISTRO DE BATALLA: EXTENDIDO.
+    found = false;
+    for (var i = 0; i < 60 && !found; i++) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      found = focused() == const ValueKey('a11y-battlelog-EXTENDIDO');
+    }
+    expect(found, isTrue);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pumpAndSettle();
+    expect(f.game.saved!.battleLog, BattleLogMode.extended);
   });
 
   testWidgets('PANTALLA: sin soporte de ventana no ofrece pantalla completa',

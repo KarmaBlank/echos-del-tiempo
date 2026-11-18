@@ -105,6 +105,19 @@ abstract final class ProtoColors {
 
   static const white = Color(0xFFFFFFFF);
 
+  /// Rareza Común (significado: no cambia con el tema).
+  static const common = Color(0xFFDCDCDC);
+
+  /// Sombra de cajas flotantes (tooltips, fichas, tarjetas): negro al
+  /// 67 % en todos los temas.
+  static const shadow = Color(0xAA000000);
+
+  /// Fondo translúcido del HUD (cajas de avisos, objetivos, registro de
+  /// loot, velos detrás de paneles): el fondo del tema activo con [alpha].
+  /// Accessibility.md § 8.4: toda caja de la UI sigue al tema.
+  static Color scrim([double alpha = 0.67]) =>
+      UiTheme.of(UiSlot.bg).withValues(alpha: alpha);
+
   /// `#rgb`, `#rrggbb` o `#rrggbbaa` (orden CSS) → [Color]; `null` si no
   /// se entiende.
   static Color? parse(String hex) {

@@ -7,6 +7,7 @@ import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../app/widgets/notice_close.dart';
 import '../../../../game_engine/models/session_action.dart';
 import '../session_view.dart';
 
@@ -40,6 +41,8 @@ class ChatBox extends StatefulWidget {
     this.collapsible = false,
     this.notices = true,
     this.localName,
+    this.noticeDuration = toastDuration,
+    this.dismissSignal,
   });
 
   final List<ChatLine> lines;
@@ -61,6 +64,13 @@ class ChatBox extends StatefulWidget {
   /// contador.
   final String? localName;
 
+  /// Cuánto dura cada aviso (DURACIÓN DE LOS AVISOS, accessibility.md
+  /// § 9.5); `null` = hasta cerrarlo (su × o `Retroceso`).
+  final Duration? noticeDuration;
+
+  /// "Cerrar todos los avisos" (`noticeDismissProvider`).
+  final Listenable? dismissSignal;
+
   static const visibleLines = 5;
   static const toastDuration = Duration(seconds: 4);
   static const maxToasts = 3;
@@ -72,7 +82,9 @@ class ChatBox extends StatefulWidget {
 class _Toast {
   _Toast(this.line, this.timer);
   final ChatLine line;
-  final Timer timer;
+
+  /// `null`: hasta cerrarlo.
+  final Timer? timer;
 }
 
 class _ChatBoxState extends State<ChatBox> {
@@ -90,7 +102,18 @@ class _ChatBoxState extends State<ChatBox> {
     super.initState();
     widget.focusNode.onKeyEvent = _onKey;
     widget.focusNode.addListener(_onFocus);
+    widget.dismissSignal?.addListener(_dismissAll);
     _seen = widget.lines.isEmpty ? null : widget.lines.last;
+  }
+
+  void _dismissAll() {
+    if (!mounted || _toasts.isEmpty) return;
+    setState(_clearToasts);
+  }
+
+  void _dismiss(_Toast t) {
+    t.timer?.cancel();
+    setState(() => _toasts.remove(t));
   }
 
   @override
@@ -101,6 +124,10 @@ class _ChatBoxState extends State<ChatBox> {
       widget.focusNode.onKeyEvent = _onKey;
       widget.focusNode.addListener(_onFocus);
     }
+    if (old.dismissSignal != widget.dismissSignal) {
+      old.dismissSignal?.removeListener(_dismissAll);
+      widget.dismissSignal?.addListener(_dismissAll);
+    }
     if (!widget.collapsible || !widget.notices) _clearToasts();
     _absorb(widget.lines);
   }
@@ -108,6 +135,7 @@ class _ChatBoxState extends State<ChatBox> {
   @override
   void dispose() {
     widget.focusNode.removeListener(_onFocus);
+    widget.dismissSignal?.removeListener(_dismissAll);
     _clearToasts();
     _text.dispose();
     super.dispose();
@@ -126,7 +154,7 @@ class _ChatBoxState extends State<ChatBox> {
 
   void _clearToasts() {
     for (final t in _toasts) {
-      t.timer.cancel();
+      t.timer?.cancel();
     }
     _toasts.clear();
   }
@@ -153,14 +181,17 @@ class _ChatBoxState extends State<ChatBox> {
 
   void _addToast(ChatLine l) {
     late final _Toast toast;
+    final d = widget.noticeDuration;
     toast = _Toast(
         l,
-        Timer(ChatBox.toastDuration, () {
-          if (mounted) setState(() => _toasts.remove(toast));
-        }));
+        d == null
+            ? null
+            : Timer(d, () {
+                if (mounted) setState(() => _toasts.remove(toast));
+              }));
     _toasts.add(toast);
     while (_toasts.length > ChatBox.maxToasts) {
-      _toasts.removeAt(0).timer.cancel();
+      _toasts.removeAt(0).timer?.cancel();
     }
   }
 
@@ -219,6 +250,7 @@ class _ChatBoxState extends State<ChatBox> {
             onSubmitted: _submit,
             style: TextStyle(
                 fontFamily: RetroType.bodyFamily,
+                letterSpacing: RetroType.letterSpacing,
                 fontFamilyFallback: RetroType.bodyFallback,
                 fontSize: RetroType.small,
                 color: ProtoColors.white),
@@ -229,6 +261,7 @@ class _ChatBoxState extends State<ChatBox> {
               hintText: 'Enter para chatear…',
               hintStyle: TextStyle(
                   fontFamily: RetroType.bodyFamily,
+                  letterSpacing: RetroType.letterSpacing,
                   fontFamilyFallback: RetroType.bodyFallback,
                   fontSize: RetroType.small,
                   color: ProtoColors.dim),
@@ -252,10 +285,23 @@ class _ChatBoxState extends State<ChatBox> {
               padding: const EdgeInsets.only(bottom: 4),
               child: RetroPanel(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: ProtoText(_markup(t.line),
-                    style: lineStyle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: ProtoText(_markup(t.line),
+                          style: lineStyle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    if (t.timer == null) ...[
+                      const SizedBox(width: 8),
+                      NoticeClose(
+                          key: ValueKey('chat-toast-close-$i'),
+                          onPressed: () => _dismiss(t)),
+                    ],
+                  ],
+                ),
               ),
             ),
           // La píldora no toma el foco: el teclado sigue en el juego.

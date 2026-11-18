@@ -78,13 +78,11 @@ Future<void> _view(WidgetTester tester, double dpr) async {
 }
 
 Widget _app(TextSize t, Widget home) {
-  RetroType.classic = _font == ReadingFont.classic;
+  RetroType.font = _font;
   return MaterialApp(
     theme: RetroTheme.build(),
-    builder: (context, child) => RetroTextScale(
-        factor: t.factor,
-        classic: _font == ReadingFont.classic,
-        child: child!),
+    builder: (context, child) =>
+        RetroTextScale(factor: t.factor, font: _font, child: child!),
     home: Scaffold(body: home),
   );
 }
@@ -130,7 +128,7 @@ void main() {
     expect([
       for (final t in TextSize.values)
         RetroTextScaler(t.factor, classicReading: true).scale(RetroType.small)
-    ], [8, 16, 16]);
+    ], [8, 16, 16, 24]);
   });
 
   group('ajuste', () {
@@ -144,7 +142,7 @@ void main() {
           TextSize.normal);
       expect(GameSettings.fromJson(const {'textSize': 'gigante'}).textSize,
           TextSize.normal);
-      expect([for (final t in TextSize.values) t.factor], [1, 1.25, 1.5]);
+      expect([for (final t in TextSize.values) t.factor], [1, 1.25, 1.5, 2]);
     });
 
     test('el controlador guarda el cambio', () async {
@@ -161,9 +159,9 @@ void main() {
             .scale(RetroType.small);
 
     test('VT323: 20 / 25 / 30 px en px físicos enteros', () {
-      expect([for (final t in TextSize.values) body(t, 1)], [20, 25, 30]);
+      expect([for (final t in TextSize.values) body(t, 1)], [20, 25, 30, 40]);
       expect([for (final t in TextSize.values) body(t, 1.5)],
-          [20, closeTo(25.333, 0.001), 30]); // 38 físicos
+          [20, closeTo(25.333, 0.001), 30, 40]); // 38 físicos
       expect(body(TextSize.large, 1.25), closeTo(24.8, 1e-9)); // 31 físicos
       expect(const RetroTextScaler(1).scale(RetroType.body),
           const RetroTextScaler(1).scale(RetroType.small));
@@ -243,7 +241,7 @@ void main() {
     final (size, dpr, font) = c;
     group(_name(c), () {
       setUp(() => _font = font);
-      tearDown(() => RetroType.classic = false);
+      tearDown(RetroType.reset);
       testWidgets('ficha de un Legendario: dentro de la pantalla',
           (tester) async {
         await _view(tester, dpr);

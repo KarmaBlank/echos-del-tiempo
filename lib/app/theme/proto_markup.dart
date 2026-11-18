@@ -122,7 +122,7 @@ TextSpan protoSpan(String markup, {TextStyle? style, Color? boldColor}) {
 final _symbols = RegExp('[←→★♥▶▲▼½♦◀▸▾]');
 
 const _symbolStyle = TextStyle(
-    fontFamily: RetroType.pixelFamily, fontSize: RetroType.label, height: 1);
+    fontFamily: RetroType.pixelFamily, fontSize: RetroType.glyph, height: 1);
 
 /// [text] en trozos: los símbolos de [_symbols] con su estilo propio.
 List<InlineSpan> symbolSpans(String text) {

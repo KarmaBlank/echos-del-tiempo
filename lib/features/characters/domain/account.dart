@@ -79,13 +79,20 @@ class Account {
     Stash? stash,
     AtlasProgress? atlas,
     BestiaryProgress? bestiary,
+    List<String> party = const [],
+    Set<String> partyAuto = const {},
   })  : characters = List.unmodifiable(characters),
         selectedId = _pick(characters, selectedId),
+        party = List.unmodifiable(party),
+        partyAuto = Set.unmodifiable(partyAuto),
         stash = stash ?? Stash.empty(),
         atlas = atlas ?? AtlasProgress.empty,
         bestiary = bestiary ?? BestiaryProgress.empty;
 
   static const maxCharacters = 8;
+
+  /// Compañeros de la party jugando solo (docs/specs/solo_party.md § 2).
+  static const maxCompanions = 3;
   static const formatVersion = 1;
   static const defaultName = 'Héroe';
 
@@ -105,6 +112,36 @@ class Account {
   /// Bestiario, compartido por todos los personajes (JSON `best`,
   /// opcional; docs/specs/bestiary.md § 2).
   final BestiaryProgress bestiary;
+
+  /// Party jugando solo (JSON `party.c`, opcional; solo_party.md § 2.1):
+  /// ids de ranura tal como se guardaron. Usar [companions].
+  final List<String> party;
+
+  /// Compañeros con AUTO prendido (JSON `party.auto`).
+  final Set<String> partyAuto;
+
+  /// La party saneada: ranuras que existen, sin repetir, nunca el
+  /// elegido, hasta [maxCompanions].
+  List<String> get companions => sanitizeParty(party);
+
+  /// [ids] saneados como [companions].
+  List<String> sanitizeParty(Iterable<String> ids) {
+    final out = <String>[];
+    for (final id in ids) {
+      if (id == selectedId || out.contains(id) || byId(id) == null) continue;
+      out.add(id);
+      if (out.length >= maxCompanions) break;
+    }
+    return out;
+  }
+
+  /// Cambia la party (se guarda saneada).
+  Account withParty(Iterable<String> ids) =>
+      _copy(party: sanitizeParty(ids));
+
+  /// Prende o apaga el AUTO de un compañero.
+  Account withAuto(String id, bool on) => _copy(
+      partyAuto: on ? {...partyAuto, id} : ({...partyAuto}..remove(id)));
 
   bool get isFull => characters.length >= maxCharacters;
 
@@ -129,6 +166,8 @@ class Account {
     Stash? stash,
     AtlasProgress? atlas,
     BestiaryProgress? bestiary,
+    List<String>? party,
+    Set<String>? partyAuto,
   }) =>
       Account(
         characters: characters ?? this.characters,
@@ -137,6 +176,8 @@ class Account {
         stash: stash ?? this.stash,
         atlas: atlas ?? this.atlas,
         bestiary: bestiary ?? this.bestiary,
+        party: party ?? this.party,
+        partyAuto: partyAuto ?? this.partyAuto,
       );
 
   /// Agrega un personaje con un `id` nuevo y lo elige. `null` si está
@@ -153,7 +194,18 @@ class Account {
         characters: [...characters, slot], selectedId: slot.id, seq: n);
   }
 
-  Account select(String id) => byId(id) == null ? this : _copy(selectedId: id);
+  /// Elige a [id]; si estaba en la party, sale de ella (un personaje no
+  /// es líder y compañero a la vez).
+  Account select(String id) => byId(id) == null
+      ? this
+      : _copy(
+          selectedId: id,
+          party: party.contains(id)
+              ? [
+                  for (final c in party)
+                    if (c != id) c
+                ]
+              : null);
 
   /// Borra un personaje; si era el elegido, pasa al primero que quede.
   Account remove(String id) {
@@ -168,6 +220,11 @@ class Account {
       stash: stash,
       atlas: atlas,
       bestiary: bestiary,
+      party: [
+        for (final c in party)
+          if (c != id) c
+      ],
+      partyAuto: {...partyAuto}..remove(id),
     );
   }
 
@@ -206,6 +263,8 @@ class Account {
         if (atlas.nodes.isNotEmpty || atlas.done.isNotEmpty)
           'atlas': atlas.toJson(),
         if (!bestiary.isEmpty) 'best': bestiary.toJson(),
+        if (party.isNotEmpty || partyAuto.isNotEmpty)
+          'party': {'c': party, 'auto': partyAuto.toList()},
       };
 
   /// Lectura tolerante (lo que falta toma su valor por defecto; entradas
@@ -224,7 +283,12 @@ class Account {
       }
     }
     final seq = json['seq'];
+    final party = json['party'];
+    List<String> strings(Object? v) =>
+        v is List ? [for (final x in v) if (x is String) x] : const [];
     return Account(
+      party: party is Map ? strings(party['c']) : const [],
+      partyAuto: party is Map ? strings(party['auto']).toSet() : const {},
       characters: chars,
       selectedId: json['sel'] is String ? json['sel'] as String : null,
       seq: seq is num ? seq.toInt() : 0,

@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 
 import '../data/ascension_catalog.dart';
+import '../data/branch_ults_catalog.dart';
 import '../data/elements_catalog.dart';
 import '../data/enemies_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/passive_mechanics.dart' show mechanicById;
 import '../data/skills_catalog.dart';
+import '../data/summoner_catalog.dart';
 import '../models/battle_command.dart';
 import '../models/battle_event.dart';
 import '../models/battle_state.dart';
@@ -18,15 +20,18 @@ import 'abyss_rules.dart';
 import 'family_rules.dart';
 import 'js_math.dart';
 import 'stats_calculator.dart';
+import 'summon_rules.dart';
 
 part 'battle_engine_abyss.dart';
+part 'battle_engine_summons.dart';
 
 /// Fuente de azar: devuelve un número en [0, 1), igual que `Math.random`.
 /// Los tests inyectan una secuencia fija para que todo sea reproducible.
 typedef RandomSource = double Function();
 
 /// La ULT de [c]: la de su ascensión si ascendió (docs/specs/ascension.md
-/// § 4), si no la de su tipo de arma.
+/// § 4); si no, la propia de su arma (tomos del Invocador,
+/// docs/specs/summoner.md § 7) o la de su tipo de arma.
 SkillDef? ultimateOf(Combatant c,
     [GameCatalog catalog = GameCatalog.standard]) {
   final asc = kAscensions[c.ascensionId];
@@ -34,6 +39,9 @@ SkillDef? ultimateOf(Combatant c,
     final u = kAscensionUltimates[asc.id];
     if (u != null) return u;
   }
+  // Mod "ULT: <nombre>" / legendario (branch_ults.md) o base propia.
+  final own = ownWeaponUlt(c.build?.equippedWeapon.id, c.build?.item);
+  if (own != null) return own;
   return catalog.ultimates[c.weaponType];
 }
 
@@ -259,7 +267,11 @@ class BattleEngine {
     if (state.ended || cur == null || cur.isPlayer) return null;
     final t = _Turn(this, state.copy());
     final e = t.state.current!;
-    if (e.alive) {
+    if (e.alive && e.isSummon) {
+      // Invocación (summoner.md § 3): su IA y su próxima espera.
+      t._summonTurn(e);
+      e.nextTurn = t.state.clock + interval(e);
+    } else if (e.alive) {
       final before = e.nextTurn;
       t.enemyAct(e);
       t.tickEffects(e);
@@ -557,7 +569,7 @@ class _Turn {
   void nextTurn() {
     if (state.ended) return;
     Combatant? best;
-    for (final c in [...state.party, ...state.enemies]) {
+    for (final c in [...state.party, ...state.enemies, ...state.summons]) {
       if (c.alive &&
           !_passive(c) &&
           (best == null || c.nextTurn < best.nextTurn)) {
@@ -569,6 +581,10 @@ class _Turn {
     state.clock = math.max(state.clock, best.nextTurn);
     state.currentId = best.id;
     events.add(TurnStartedEvent(best.id));
+    if (best.isSummon) {
+      state.log = 'Turno de ${best.name}';
+      return;
+    }
     if (best.isPlayer) {
       best.defending = false;
       best.protecting = false;
@@ -617,6 +633,7 @@ class _Turn {
       _notes.add('${best.name} regenera $h HP (arma)');
     }
     if (best.alive) _fire(ProcTrigger.onTurnStart, best);
+    if (best.alive && best.isPlayer) _summonPactTick(best);
     if ((!best.alive || skip) && best.isPlayer) _tickVulnerable();
     _flush();
     if (!best.alive || skip || cleared) {
@@ -1729,6 +1746,8 @@ class _Turn {
     } else if (shatter) {
       _shatter(e);
     }
+    // Avatar del Pacto (summoner.md § 7): los estados de lo absorbido.
+    if (primary && a != null) _avatarHit(a, e);
     // La transformación vacía la barra: el golpe que la causa no llena.
     if (!shift) {
       _addBreak(
@@ -2517,6 +2536,7 @@ class _Turn {
             '+${_pct(fx.value)} ${fx.stat!.label} ${_turns(fx.turns)}');
       case ProcEffectKind.reactionBonus:
       case ProcEffectKind.healHarmBonus:
+      case ProcEffectKind.summon:
         break; // modificadores: los aplican `_damageEnemy` y `_healHarm`
 
       case ProcEffectKind.buffSelf:
@@ -2967,6 +2987,8 @@ class _Turn {
 
   /// Ataque normal, Golpe Brutal o Colapso Temporal de [e].
   void _basicAttack(Combatant e, BossMechanicDef? mech, List<Combatant> alive) {
+    // Invocaciones del grupo: el Gólem provoca (summoner.md § 3).
+    if (_summonIntercept(e)) return;
     final taunter = alive.where((p) => p.taunt > 0).firstOrNull;
     final pick0 = taunter ?? alive[(_rand() * alive.length).floor()];
     if (taunter != null) taunter.taunt--;
@@ -3852,6 +3874,8 @@ class _Turn {
 
     switch (tk.kind) {
       case SkillKind.support:
+        // Invocador (summoner.md): invocar, sacrificar, comandar, Portal.
+        if (_summonSkill(p, tk, foes)) return ultimate ? 0 : 6;
         // Kit de ascensión: los efectos los pone `_skillExtras`; las
         // trampas sin daño, acá.
         if (tk.trap > 0) {

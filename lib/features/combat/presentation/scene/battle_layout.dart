@@ -230,7 +230,26 @@ class BattleLayout {
       boxes[e.id] = Rect.fromLTWH(
           p.dx - sz.width / 2, p.dy - sz.height, sz.width, sz.height + 4);
     }
+    _placeSummons(state, pos, boxes, s);
     return BattleLayout._(pos, boxes, s, bx + s * 34, by);
+  }
+
+  /// Invocaciones (summoner.md § 8): delante de su invocador, hacia los
+  /// enemigos, en una columna corta (de a 2 por fila).
+  static void _placeSummons(BattleState state, Map<String, Offset> pos,
+      Map<String, Rect> boxes, int side) {
+    final byOwner = <String, int>{};
+    for (final c in state.summons) {
+      final owner = pos[c.summonOwner];
+      if (owner == null) continue;
+      final j = byOwner[c.summonOwner!] = (byOwner[c.summonOwner!] ?? -1) + 1;
+      final p = Offset(
+          (owner.dx - side * (20 + (j ~/ 2) * 16 + (j.isOdd ? 8 : 0)))
+              .roundToDouble(),
+          (owner.dy + (j.isOdd ? 10 : -6)).roundToDouble());
+      pos[c.id] = p;
+      boxes[c.id] = Rect.fromLTWH(p.dx - 6, p.dy - 14, 12, 15);
+    }
   }
 
   /// Tamaño por defecto de un enemigo sin sprites.
@@ -326,6 +345,7 @@ class BattleLayout {
       pos.updateAll((_, p) => p.translate(shift, 0));
       boxes.updateAll((_, b) => b.shift(Offset(shift, 0)));
     }
+    _placeSummons(state, pos, boxes, 1);
     return BattleLayout._(pos, boxes, 1, cx, by);
   }
 

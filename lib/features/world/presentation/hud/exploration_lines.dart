@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/theme/map_palette.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../game_engine/data/exploration_catalog.dart';
@@ -42,13 +43,13 @@ List<Widget> explorationLines(MissionRun m, MapFloor? f, double time) {
   if (b != null) {
     out.add(objectiveLine('✦ ${kBlessings[b]!.name}',
         mark: '',
-        color: const Color(0xFF5AE6D2),
+        color: MapPalette.mark(MapMark.shrine),
         key: const ValueKey('hud-blessing')));
   }
   if (time < m.windUntil) {
     out.add(objectiveLine('» Viento del Eco ${(m.windUntil - time).ceil()} s',
         mark: '',
-        color: const Color(0xFFBFEFFF),
+        color: MapPalette.mark(MapMark.wind),
         key: const ValueKey('hud-wind')));
   }
   if (f.quests.isNotEmpty) {

@@ -4,6 +4,7 @@ import '../models/status.dart';
 import 'enemy_families.dart' show EnemyFamily;
 import 'ascension_mechanics.dart';
 import 'passive_tree_v6.dart';
+import 'summoner_catalog.dart';
 import 'weapon_passives.dart';
 
 // Notables y keystones v2 como datos: disparador + filtro + efectos.
@@ -17,6 +18,8 @@ final Map<String, PassiveMechanic> kMechanics = {
   // chico por cada nodo chico nuevo (con el id del nodo).
   for (final m in kTreeV6Mechanics) m.id: m,
   for (final m in kTreeV6SmallMechanics) m.id: m,
+  // Cluster Invocador v0.8.1 (docs/specs/summoner.md § 5).
+  for (final m in kSummonerTreeMechanics) m.id: m,
 };
 
 /// Una mecánica por id: del árbol ([kMechanics]) o de una pasiva de arma

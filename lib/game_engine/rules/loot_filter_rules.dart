@@ -1,3 +1,4 @@
+import '../data/branch_ults_catalog.dart' show itemUlt;
 import '../data/affixes_catalog.dart';
 import '../data/game_catalog.dart';
 import '../models/attributes.dart';
@@ -216,6 +217,10 @@ Ocultar # Mágicos de nivel bajo
               (op == null || tier == null || op.test(a.fixed ? 1 : a.tier, tier))),
       PassiveCondition(:final has) =>
         (it.passiveId != null && it.rarity.hasPassive) == has,
+      UltCondition(:final name, :final has) => switch (itemUlt(it)) {
+          final u? => has && (name.isEmpty || _fold(u.name) == _fold(name)),
+          null => !has,
+        },
       UsableCondition(:final usable) =>
         (ctx.level >= w.level && w.meetsRequirements(ctx.attributes)) ==
             usable,
@@ -418,6 +423,11 @@ Ocultar # Mágicos de nivel bajo
               conds.add(HasModCondition(a.first, op: op, tier: t));
             }
           }
+        case 'ult':
+          final no = a.length == 1 && _fold(a.first) == 'no';
+          conds.add(no
+              ? const UltCondition(has: false)
+              : UltCondition(name: a.join(' ')));
         case 'pasiva' || 'utilizable':
           final yes = _yesNo(a);
           if (yes == null) {

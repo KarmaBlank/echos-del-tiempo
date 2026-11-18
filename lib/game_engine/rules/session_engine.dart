@@ -187,6 +187,21 @@ class SessionEngine {
 
   // ---- constantes del prototipo ----
   static const maxPlayers = 4;
+
+  /// Compañeros de un jugador solo (docs/specs/solo_party.md § 2).
+  static const maxCompanions = 3;
+
+  /// Fila detrás del líder: px de camino entre cada miembro, cada cuánto
+  /// se anota un punto del rastro y cuántos se guardan (§ 3.5).
+  static const followGap = 18.0;
+  static const trailStep = 4.0;
+  static const trailMax = 96;
+
+  /// Lo único que un compañero puede hacer por sí mismo (§ 3.2).
+  static bool companionAction(SessionAction a) =>
+      a is BattleAction ||
+      a is SetBuildWantsAction ||
+      a is SetLootFilterAction;
   static const missionStartGrace = 2.5;
   static const battleGrace = 3.5; // GRACE_MS
   static const leash = 110.0; // LEASH
@@ -297,6 +312,55 @@ class SessionEngine {
     return op.result;
   }
 
+  /// La party de un jugador solo se arma o cambia solo en el pueblo, sin
+  /// votación ni preparación (solo_party.md § 2.3).
+  static bool canChangeParty(GameSession s) =>
+      s.mode == SessionMode.lobby && s.vote == null && s.prep == null;
+
+  /// Entra [id] como compañero de [leaderId] (solo_party.md § 3.1).
+  /// `null` si la sala está llena, el id existe, el líder no está (o es
+  /// un compañero) o no se puede cambiar la party ahora.
+  SessionStep? addCompanion(
+      GameSession session, String id, PlayerProfile profile,
+      {required String leaderId}) {
+    final leader = session.players[leaderId];
+    if (leader == null ||
+        leader.isCompanion ||
+        !canChangeParty(session) ||
+        session.players.length >= maxPlayers ||
+        session.players.containsKey(id) ||
+        session.playerList.where((p) => p.leaderId == leaderId).length >=
+            maxCompanions) {
+      return null;
+    }
+    final op = _Op(this, session.copy());
+    op.addPlayer(id, profile, leaderId: leaderId);
+    return op.result;
+  }
+
+  /// Saca al compañero [id] (mismo control que [addCompanion]).
+  SessionStep? removeCompanion(GameSession session, String id) {
+    final p = session.players[id];
+    if (p == null || !p.isCompanion || !canChangeParty(session)) return null;
+    final op = _Op(this, session.copy());
+    op.removePlayer(id);
+    return op.result;
+  }
+
+  /// [senderId] actúa como [actorId]: él mismo o un compañero suyo
+  /// (solo_party.md § 3.2). `null` si no lo controla o no es válida.
+  SessionStep? applyFor(GameSession session, String senderId, String actorId,
+      SessionAction action) {
+    if (actorId == senderId) return apply(session, senderId, action);
+    final a = session.players[actorId];
+    if (a == null ||
+        a.leaderId != senderId ||
+        !session.players.containsKey(senderId)) {
+      return null;
+    }
+    return apply(session, actorId, action);
+  }
+
   /// Un jugador se va de la sala. `null` si no estaba.
   SessionStep? removePlayer(GameSession session, String id) {
     if (!session.players.containsKey(id)) return null;
@@ -308,7 +372,10 @@ class SessionEngine {
   /// `onMsg`: aplica la acción de [playerId]. `null` si no es válida en
   /// este momento (el estado no cambia).
   SessionStep? apply(GameSession session, String playerId, SessionAction action) {
-    if (!session.players.containsKey(playerId)) return null;
+    final actor = session.players[playerId];
+    if (actor == null) return null;
+    // Un compañero solo pelea y ajusta su loot; el resto es del líder.
+    if (actor.isCompanion && !companionAction(action)) return null;
     // Pausada: solo reanudar, chatear y lo que no toca el mundo (filtro de
     // loot, ordenar el inventario). Ver docs/specs/settings.md § "Pausa".
     if (session.paused &&
@@ -387,6 +454,10 @@ class _Op {
   AtlasEffects get _atlas => e.atlasOf(s);
   Iterable<SessionPlayer> get players => s.players.values;
 
+  /// Los humanos (sin compañeros): votan, se preparan y reparten puntos
+  /// (solo_party.md § 3.3).
+  Iterable<SessionPlayer> get humans => players.where((p) => !p.isCompanion);
+
   void say(String text) => events.add(SystemMessageEvent(text));
 
   static double _dist(double ax, double ay, double bx, double by) =>
@@ -424,7 +495,7 @@ class _Op {
     p.mp = p.maxMp.toDouble();
   }
 
-  void addPlayer(String id, PlayerProfile raw) {
+  void addPlayer(String id, PlayerProfile raw, {String? leaderId}) {
     var profile = rules.normalize(raw);
     if (profile.name.isEmpty) profile = profile.copyWith(name: 'Héroe');
     final d = rules.derivedStats(profile);
@@ -438,6 +509,7 @@ class _Op {
       mp: d.maxMp.toDouble(),
       maxHp: d.maxHp,
       maxMp: d.maxMp,
+      leaderId: leaderId,
     );
     final b = s.battle;
     if (s.mode == SessionMode.battle && b != null) {
@@ -445,7 +517,9 @@ class _Op {
     }
     s.players[id] = p;
     events.add(PlayerJoinedEvent(id));
-    say('${profile.name} se unió a la sala.');
+    say(leaderId == null
+        ? '${profile.name} se unió a la sala.'
+        : '${profile.name} se unió a la party.');
     if (raw.treeRefunded > 0) {
       // Migración del árbol (passive_tree_v2.md § 6): aviso único.
       say('${profile.name}: el árbol de pasivas cambió; se reinició gratis '
@@ -459,7 +533,9 @@ class _Op {
     final b = s.battle;
     if (b != null) b.state = e.battles.leave(b.state, id).state;
     events.add(PlayerLeftEvent(id));
-    say('${p.name} salió de la sala.');
+    say(p.isCompanion
+        ? '${p.name} dejó la party.'
+        : '${p.name} salió de la sala.');
     // Se fue quien abrió el Eco antes de empezar: se cancela (no se
     // consumió nada).
     if (s.ecoOwner == id && s.mission == null) {
@@ -1173,7 +1249,9 @@ class _Op {
       final visible = mission ||
           e.lootVerdict(p.profile, d, wants: p.buildWants).visible;
       if (visible) shown.add(d);
-      if ((!e.groundLoot || mission) && visible) {
+      // Un compañero no camina el piso: lo suyo va directo al inventario
+      // (solo_party.md § 3.6).
+      if ((!e.groundLoot || mission || p.isCompanion) && visible) {
         final next = rules.grant(p.profile, d);
         if (next != null) {
           p.profile = next;
@@ -1307,9 +1385,14 @@ class _Op {
     if (s.ground.isEmpty) return;
     for (final g in [...s.groundHere]) {
       final owner = g.ownerId == null ? null : s.players[g.ownerId];
+      // Lo de un compañero lo levanta también su líder al pasar.
+      final lead = owner?.leaderId == null ? null : s.players[owner!.leaderId];
       if (owner == null ||
           !owner.alive ||
-          _dist(owner.x, owner.y, g.x, g.y) >= SessionEngine.pickupRange ||
+          (_dist(owner.x, owner.y, g.x, g.y) >= SessionEngine.pickupRange &&
+              (lead == null ||
+                  _dist(lead.x, lead.y, g.x, g.y) >=
+                      SessionEngine.pickupRange)) ||
           !e.lootVerdict(owner.profile, g.drop, wants: owner.buildWants)
               .visible) {
         continue;
@@ -1453,9 +1536,10 @@ class _Op {
         if (r.timeLeft <= 0) toLobby();
       case SessionMode.lobby:
         final v = s.vote;
+        _followLeaders();
         if (v != null &&
-            s.players.isNotEmpty &&
-            players.every((p) => v.yes.contains(p.id))) {
+            humans.isNotEmpty &&
+            humans.every((p) => v.yes.contains(p.id))) {
           s.prep = MissionPrep(v.missionId);
           s.vote = null;
           s.mode = SessionMode.prep;
@@ -1464,13 +1548,14 @@ class _Op {
         }
       case SessionMode.prep:
         final prep = s.prep!;
-        if (s.players.isNotEmpty &&
-            players.every((p) => prep.ready[p.id] ?? false)) {
+        if (humans.isNotEmpty &&
+            humans.every((p) => prep.ready[p.id] ?? false)) {
           s.prep = null;
           startMission(prep.missionId);
         }
       case SessionMode.levelUp:
-        if (players.every((p) => !p.levelUpPending || p.profile.points <= 0)) {
+        if (humans
+            .every((p) => !p.levelUpPending || p.profile.points <= 0)) {
           for (final p in players) {
             p.levelUpPending = false;
           }
@@ -2316,12 +2401,78 @@ class _Op {
 
   // ---------------- campo (`fieldTick`) ----------------
 
-  SessionPlayer? _touching(double x, double y, double range) => players
-      .where((p) => p.alive && _dist(p.x, p.y, x, y) < range)
-      .firstOrNull;
+  /// El primer jugador vivo a menos de [range]. Las interacciones
+  /// (objetos, escaleras, PdI) son del líder: los compañeros no cuentan
+  /// salvo con [any] (contacto con enemigos; solo_party.md § 3.5).
+  SessionPlayer? _touching(double x, double y, double range,
+          {bool any = false}) =>
+      players
+          .where((p) =>
+              p.alive &&
+              (any || !p.isCompanion) &&
+              _dist(p.x, p.y, x, y) < range)
+          .firstOrNull;
+
+  /// Fila detrás del líder (solo_party.md § 3.5): el host anota el rastro
+  /// del líder y pone a cada compañero k a `k × followGap` px de camino.
+  void _followLeaders() {
+    for (final l in players) {
+      if (l.isCompanion) continue;
+      final crew = [
+        for (final c in players)
+          if (c.leaderId == l.id) c
+      ];
+      if (crew.isEmpty) continue;
+      if (l.trailEpoch != l.epoch) {
+        l
+          ..trail = const []
+          ..trailEpoch = l.epoch;
+      }
+      final head = l.trail.firstOrNull;
+      if (head == null ||
+          _dist(head.x, head.y, l.x, l.y) >= SessionEngine.trailStep) {
+        l.trail = List.unmodifiable([
+          WorldPoint(l.x, l.y),
+          ...l.trail.take(SessionEngine.trailMax - 1),
+        ]);
+      }
+      for (var k = 0; k < crew.length; k++) {
+        final c = crew[k];
+        final at = _alongTrail(l, (k + 1) * SessionEngine.followGap);
+        if (at == null) {
+          c.moving = false;
+          continue;
+        }
+        final dx = at.x - c.x, dy = at.y - c.y;
+        c.moving = dx.abs() > 0.01 || dy.abs() > 0.01;
+        if (dx.abs() > 0.5) c.dir = dx > 0 ? 1 : -1;
+        c
+          ..x = at.x
+          ..y = at.y;
+      }
+    }
+  }
+
+  /// El punto a [d] px de camino detrás de [l] por su rastro (`null` si
+  /// el rastro es más corto).
+  static WorldPoint? _alongTrail(SessionPlayer l, double d) {
+    var px = l.x, py = l.y, left = d;
+    for (final q in l.trail) {
+      final seg = _dist(px, py, q.x, q.y);
+      if (seg > 0 && seg >= left) {
+        final t = left / seg;
+        return WorldPoint(px + (q.x - px) * t, py + (q.y - py) * t);
+      }
+      left -= seg;
+      px = q.x;
+      py = q.y;
+    }
+    return null;
+  }
 
   void fieldTick(double dt) {
     final m = s.mission!;
+    _followLeaders();
     for (final it in m.items) {
       if (it.done ||
           it.kind != MissionItemKind.fragment ||
@@ -2373,7 +2524,7 @@ class _Op {
       if (s.time > s.graceUntil) {
         final range =
             en.boss ? SessionEngine.bossContactRange : SessionEngine.contactRange;
-        final p = _touching(en.x, en.y, range);
+        final p = _touching(en.x, en.y, range, any: true);
         if (p != null) {
           startBattle(en, p);
           return;
@@ -2671,8 +2822,9 @@ class _Op {
     }
     s.battle = null;
 
-    final pending =
-        players.where((p) => p.levelUpPending && p.profile.points > 0).toList();
+    final pending = humans
+        .where((p) => p.levelUpPending && p.profile.points > 0)
+        .toList();
     if (pending.isNotEmpty) {
       s.mode = SessionMode.levelUp;
       s.afterLevelUp = b.boss ? AfterLevelUp.result : AfterLevelUp.field;

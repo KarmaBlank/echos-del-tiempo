@@ -1,4 +1,5 @@
 import '../../game_engine/data/skill_variants_catalog.dart';
+import '../../game_engine/data/branch_ults_catalog.dart' show kBranchUltLooks;
 import 'sfx_catalog.dart';
 
 // Recetas del diseño de sonido de combate (docs/specs/audio.md
@@ -1328,6 +1329,16 @@ Map<String, SfxDef> buildCombatSfx() {
       Sfx.ult(e.key, Sfx.ultImpact):
           SfxDef(e.value.impact, peak: SfxLevel.ultImpact),
     },
+    // ULT de camino (branch_ults.md): suenan como la ULT a la que se
+    // parecen.
+    for (final e in kBranchUltLooks.entries)
+      if (kUltVoices[e.value] case final v?) ...{
+        Sfx.ult(e.key, Sfx.ultBuild): SfxDef(v.build, peak: SfxLevel.ultBuild),
+        Sfx.ult(e.key, Sfx.ultRelease):
+            SfxDef(v.release, peak: SfxLevel.ultRelease),
+        Sfx.ult(e.key, Sfx.ultImpact):
+            SfxDef(v.impact, peak: SfxLevel.ultImpact),
+      },
   };
 }
 

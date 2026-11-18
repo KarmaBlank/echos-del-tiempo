@@ -45,6 +45,7 @@ class RetroHoverCard extends StatefulWidget {
   /// Texto del `#tip`: lectura ([RetroType.small], VT323) `#e8ecff`.
   static TextStyle get textStyle => TextStyle(
       fontFamily: RetroType.bodyFamily,
+      letterSpacing: RetroType.letterSpacing,
       fontFamilyFallback: RetroType.bodyFallback,
       fontSize: RetroType.small,
       height: RetroType.line,
@@ -140,7 +141,7 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
               width: UiTheme.buttonBorderWidth),
           boxShadow: const [
             BoxShadow(
-                color: Color(0xAA000000), offset: Offset(0, 4), blurRadius: 18),
+                color: ProtoColors.shadow, offset: Offset(0, 4), blurRadius: 18),
           ],
         ),
         // El overlay no hereda el estilo de texto del panel.

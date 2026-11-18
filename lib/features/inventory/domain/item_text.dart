@@ -1,3 +1,4 @@
+import '../../../game_engine/data/branch_ults_catalog.dart' show itemUlt;
 import '../../../game_engine/data/eco_catalog.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/attributes.dart';
@@ -82,7 +83,7 @@ String itemSkillsMarkup(ProgressionRules rules, ItemInstance it) {
             ? _esc(s.name)
             : '${_esc(s.name)} ${_c(_orange, '(trasladada)')}',
   ];
-  final ult = w == null ? null : cat.ultimates[w.type]?.name;
+  final ult = itemUlt(it)?.name ?? (w == null ? null : cat.ultimates[w.type]?.name);
   return [
     names.isEmpty ? '—' : names.join(' · '),
     if (ult != null) _c(_pink, 'ULT: ${_esc(ult)}'),
@@ -95,7 +96,7 @@ List<String> itemSkillLinesMarkup(ProgressionRules rules, ItemInstance it,
     {DerivedStats? stats}) {
   final cat = rules.catalog;
   final w = cat.weapons[it.baseId];
-  final ult = w == null ? null : cat.ultimates[w.type];
+  final ult = itemUlt(it) ?? (w == null ? null : cat.ultimates[w.type]);
   return [
     for (final id in rules.items.skillsOf(it))
       if (cat.skills[id] case final s?)
@@ -154,6 +155,10 @@ String itemTooltipMarkup(
     for (final a in it.affixes) {
       l.add('• ${affixMarkup(rules, a)}');
     }
+  }
+  // Mod especial "ULT: <nombre>" (branch_ults.md): reemplaza la del tipo.
+  if (itemUlt(it) case final u?) {
+    l.add('• ${_c(_pink, 'ULT: ${_esc(u.name)}')}');
   }
   final passive = items.passiveText(it);
   if (passive != null) {

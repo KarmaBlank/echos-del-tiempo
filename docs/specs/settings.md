@@ -77,9 +77,14 @@ botones no cambiaron (`display-text-*`, `display-font-*`,
 | TEMA DE INTERFAZ (ACCESIBILIDAD, v0.8.1) | AZUL / **OSCURO** / ALTO CONTRASTE | colores de paneles, botones, bordes y texto de toda la UI; el arte no cambia. `game.json`: `uiTheme` (accessibility.md § 8.1) |
 | COLORES DEL TEXTO (ACCESIBILIDAD, v0.8.1) | COMPLETO / **REDUCIDO** | REDUCIDO pinta el markup por roles (título, cuerpo, atenuado, acento, mejora / empeora; rarezas y estados igual). Fijo en REDUCIDO con ALTO CONTRASTE. `textColors` (§ 8.2) |
 | ESPACIADO (ACCESIBILIDAD, v0.8.1) | **NORMAL** / AMPLIO | más interlineado, párrafos y separadores en las fichas, más aire en filas y tarjetas. `spacing` (§ 8.3). Vista previa en vivo debajo |
-| TAMAÑO DEL TEXTO (ACCESIBILIDAD) | **NORMAL** / GRANDE / MUY GRANDE | accesibilidad: agranda el texto de toda la UI (tooltips, fichas, comparación, paneles, chat, HUD, menú y log de batalla, árbol, etiquetas de la escena) ×1 / ×1.25 / ×1.5 (los títulos crecen menos), siempre en la grilla nítida de cada fuente (§ 3.6). Se aplica en vivo |
+| TAMAÑO DEL TEXTO (ACCESIBILIDAD › TEXTO) | **NORMAL** / GRANDE / MUY GRANDE / ENORME | accesibilidad: agranda el texto de toda la UI (tooltips, fichas, comparación, paneles, chat, HUD, menú y log de batalla, árbol, etiquetas de la escena) ×1 / ×1.25 / ×1.5 / ×2 (los títulos crecen menos; ENORME v0.8.1, accessibility.md § 9.3), siempre en la grilla nítida de cada fuente (§ 3.6). Se aplica en vivo |
 | MODO (solo Windows) | VENTANA / PANTALLA COMPLETA | pantalla completa sin bordes en el monitor de la ventana; al volver, la ventana recupera su estilo y su posición. Se aplica al arrancar si quedó guardada |
-| FUENTE DE LECTURA (ACCESIBILIDAD) | **VT323** / CLÁSICA | accesibilidad: fuente del texto de lectura (fichas, chat, menús, batalla). CLÁSICA = Press Start 2P como en v0.4. Cada botón se escribe en su fuente (vista previa). Títulos y botones no cambian (§ 3.7) |
+| FUENTE DE LECTURA (ACCESIBILIDAD › TEXTO) | **VT323** / CLÁSICA / ATKINSON | accesibilidad: fuente del texto de lectura (fichas, chat, menús, batalla). CLÁSICA = Press Start 2P como en v0.4; ATKINSON = Atkinson Hyperlegible (v0.8.1, baja visión, no pixel). Cada botón se escribe en su fuente (vista previa). Títulos y botones no cambian salvo con la fila de abajo (§ 3.7) |
+| TÍTULOS CON LA FUENTE DE LECTURA (ACCESIBILIDAD › TEXTO, v0.8.1) | SÍ / **NO** | títulos, botones y pestañas en la fuente de lectura en vez de Press Start 2P. `readingTitles` (accessibility.md § 9.2) |
+| ESPACIADO ENTRE LETRAS (ACCESIBILIDAD › TEXTO, v0.8.1) | **NORMAL** / AMPLIO | +0.08 em en el texto de lectura. `letterSpacing` (§ 9.4) |
+| DURACIÓN DE LOS AVISOS (ACCESIBILIDAD › TEXTO, v0.8.1) | **NORMAL** / LARGA / HASTA CERRAR | avisos de loot, build, chat plegado, puntos sin usar y misión opcional ×1 / ×2 / hasta cerrarlos (× en cada uno, Retroceso cierra todos). `noticeDuration` (§ 9.5) |
+| FONDO DEL TEXTO EN EL MAPA (ACCESIBILIDAD › TEXTO, v0.8.1) | **NINGUNO** / SOMBREADO / CAJA OPACA | detrás de nombres, carteles, avisos y loot del mapa. `mapLabelBackdrop` (§ 9.6) |
+| REGISTRO DE BATALLA (ACCESIBILIDAD › TEXTO, v0.8.1) | **NORMAL** / EXTENDIDO | EXTENDIDO: las 3 últimas líneas del log arriba de la escena, 10 s cada una. `battleLog` (§ 9.7) |
 | ESCALADO | PIXEL PERFECT / **AJUSTAR** | cómo se agranda el mundo pixelado (§ 3.1) |
 | FILTRO CRT | APAGADO / SUAVE / **NORMAL** / FUERTE | post-proceso retro sobre toda la pantalla (§ 3.2) |
 | PARTÍCULAS | BAJA / MEDIA / **ALTA** | cantidad de partículas: ×0.3 / ×0.6 / ×1 (§ 3.3) |
@@ -258,8 +263,8 @@ Windows "GPU Engine 3D" del proceso). El motor usa **Impeller
 
 ### 3.6 TAMAÑO DEL TEXTO (`TextSize`, `RetroTextScaler`)
 
-`TextSize.normal` (por defecto) / `large` / `huge` (factor 1 / 1.25 /
-1.5). Accesibilidad; ver también docs/specs/accessibility.md.
+`TextSize.normal` (por defecto) / `large` / `huge` / `enormous` (factor
+1 / 1.25 / 1.5 / 2; ENORME desde v0.8.1, accessibility.md § 9.3). Accesibilidad; ver también docs/specs/accessibility.md.
 
 - Un solo punto: `EcosApp` (`MaterialApp.builder`) envuelve todo en
   `RetroTextScale(factor)`, que pone `RetroTextScaler` en el
@@ -351,8 +356,9 @@ defecto, con la esquina aparte.
 
 ### 3.7 FUENTE DE LECTURA (`ReadingFont`)
 
-`ReadingFont.vt323` (por defecto) / `classic`. `game.json`:
-`"readingFont": "vt323" | "classic"`; un archivo viejo sin la clave (o
+`ReadingFont.vt323` (por defecto) / `classic` / `atkinson` (v0.8.1,
+accessibility.md § 9.1). `game.json`:
+`"readingFont": "vt323" | "classic" | "atkinson"`; un archivo viejo sin la clave (o
 con un valor inválido) carga VT323.
 
 - `EcosApp` → `RetroTextScale(classic:)`: pone `RetroType.classic` (la
@@ -471,6 +477,12 @@ está abierto:
   "perfCorner":"topRight"}` (`fpsLimit` 0 = sin límite; `textSize`
   `normal` / `large` / `huge`; `readingFont` `vt323` / `classic`).
   Valores inválidos o ausentes = por defecto. Corrupto = por defecto.
+- **v0.8.1 (TEXTO)**: `readingTitles` (por defecto `false`),
+  `letterSpacing` (`normal` / `wide`), `noticeDuration` (`normal` /
+  `long` / `untilDismissed`), `mapLabelBackdrop` (`none` / `shaded` /
+  `box`) y `battleLog` (`normal` / `extended`) son aditivos; también los
+  valores nuevos `textSize: "enormous"` y `readingFont: "atkinson"`. Un
+  `game.json` sin ellos (o con basura) se ve como antes.
 - **v0.8.1 (HUD)**: `chat` (`hidden` / `always`, por defecto `hidden`),
   `chatNotices` (por defecto `true`) y `objectivesCollapsed` (por
   defecto `false`) son nuevos y aditivos: un `game.json` sin ellos carga
@@ -501,7 +513,14 @@ está abierto:
   `BattleSceneController.options` (leído por `advance`, `viewFor` y
   `BattleScenePainter`). Solo cambia el dibujo.
 - Mapa: `WorldScreen` pone `MapGame.scaleMode` y
-  `MapGame.particleDensity` en cada build.
+  `MapGame.particleDensity` en cada build (y desde v0.8.1
+  `MapGame.noticeFactor` y `MapGame.labelBackdrop`).
+- Texto (v0.8.1): `EcosApp` → `RetroTextScale(font:, readingTitles:,
+  wideLetters:)` (estáticos de `RetroType`; al cambiar, la app se
+  vuelve a armar). Avisos: `noticeDuration` lo leen `lootFeedProvider`,
+  `buildFeedProvider`, `ChatBox` y `UnusedPointsToast` (HUD);
+  `Retroceso` en `WorldScreen` → `noticeDismissProvider`. Registro de
+  batalla: `SceneOptions.extendedLog`.
 - CRT: `EcosApp` (`MaterialApp.builder`) → `CrtFilter(level)`.
 - Tamaño del texto: `EcosApp` (`MaterialApp.builder`) →
   `RetroTextScale(textSize.factor)` → `MediaQuery.textScaler`.

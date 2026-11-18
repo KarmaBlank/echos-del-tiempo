@@ -320,6 +320,152 @@ Arreglado de paso (ya pasaba en v0.8.0 con Muy grande): el botón
 `CONFIRMAR` del paso 3 de FUSIÓN y las partes del `CostChip` se cortan en
 dos líneas en vez de desbordar.
 
+### 8.4 Toda la UI sigue al tema (v0.8.1)
+
+Pedido del dueño: "¿por qué no todas las pantallas, todo el HUD, siguen
+la paleta de colores?" y "el minimapa y el mapa se ven con los colores
+antiguos".
+
+- Cajas, velos, bordes, texto, etiquetas e insignias de toda la UI usan
+  tokens: `ProtoColors.*` (`ThemeColor`), `ProtoColors.scrim(alfa)` (el
+  `bg` del tema translúcido: cajas del HUD, registro de loot, avisos,
+  objetivos, carteles, velos detrás de paneles y diálogos, indicador de
+  FPS), `ProtoColors.shadow` (sombras de tooltips y fichas) y
+  `MapPalette`. Los colores con significado no cambian: rarezas
+  (`VisionColor`, Común `ProtoColors.common`), estados y elementos,
+  HP / MP / quiebre, mejora / empeora, chips de mecánicas de jefe, color
+  del plan de build y del Eco.
+- El arte se queda como está: tiles, actores y loot del piso
+  (`world/presentation/map/`), arenas, FX y escena de batalla
+  (`combat/presentation/scene/`), armas sobre los sprites, íconos de
+  estado y de objetos, lienzo del árbol, rayos y partículas de la
+  cinemática.
+- **Minimapa y mapa en grande** (`lib/app/theme/map_palette.dart`):
+  `MapPalette.terrain(MapTerrain)` y `MapPalette.mark(MapMark)` por tema.
+  AZUL = el arte del prototipo (el cofre pasa a ámbar `#FFB142` para no
+  ser igual a la escalera); OSCURO = piso, muros, vacío, caminos, pasto,
+  árboles y rocas en grises neutros y el acento dorado solo para el
+  jugador; ALTO CONTRASTE = muros / vacío negros, piso gris oscuro e
+  íconos brillantes. Rejas y sellos cumplidos usan `VisionColor`
+  (mejora / empeora, modo daltónico). La base grabada del minimapa se
+  vuelve a grabar al cambiar de tema o de modo daltónico
+  (`MapPalette.version`). El jugador va un poco más grande que los
+  aliados y el jefe es una ★ (forma además del color); la leyenda usa
+  los mismos colores (`FullMap.legend`) con borde del tema. Los colores
+  de ícono del filtro de loot los elige el jugador y no cambian.
+- Test de guardia (`test/app/theme_colors_guard_test.dart`): ningún
+  `Color(0x…)` / `Color.fromARGB` / `fromRGBO` en los archivos de UI
+  (`lib/app/**`, toda `presentation/`), salvo las carpetas de arte y una
+  lista de permitidos con motivo y cuenta máxima (arte, significado,
+  tokens). Test de paleta (`test/app/map_palette_test.dart`): la leyenda
+  se distingue en cada tema y se ve sobre el piso (≥ 1.8:1); en OSCURO
+  el terreno es gris y el acento es solo del jugador.
+
+## 9. Texto (v0.8.1)
+
+Pedido del dueño: "da más opciones de accesibilidad de texto". En
+ACCESIBILIDAD, bajo el encabezado **TEXTO** (con **COLOR Y MOVIMIENTO**
+para el resto), con vista previa en vivo (`_TextPreview`: tip con título
+y lectura, un botón, un nombre sobre tiles con el fondo elegido, un aviso
+con su × en HASTA CERRAR y, en EXTENDIDO, el registro de batalla). Todo
+se guarda en `game.json` con claves aditivas; una clave que falta o no
+se entiende = el comportamiento de antes. Teclado: los botones nuevos
+están en el mismo recorrido de Tab / flechas y Enter / Espacio eligen.
+
+### 9.1 FUENTE DE LECTURA: ATKINSON
+
+`ReadingFont.atkinson` (`"readingFont": "atkinson"`): Atkinson
+Hyperlegible Regular (Braille Institute, OFL 1.1,
+`assets/fonts/AtkinsonHyperlegible-Regular.ttf`,
+`assets/fonts/OFL-AtkinsonHyperlegible.txt`; familia
+`AtkinsonHyperlegible`, el peso 700 apunta al mismo archivo). Diseñada
+para baja visión. No es pixel: sin grilla, solo px físicos enteros.
+Base 18 px a Normal (mayúsculas de 12 px, ≈ 8 px por letra en texto
+corrido: entra en las mismas cajas que VT323 a 20): 18 / 23 / 27 / 36 en
+los cuatro tamaños. Interlineado 1.2 (AMPLIO 1.45); avance medio 0.45 em
+(`RetroType.bodyAdvance`). Lo que le falta (★ ▶ …) sale de Press Start.
+
+### 9.2 TÍTULOS CON LA FUENTE DE LECTURA (SÍ / **NO**)
+
+`readingTitles`. Títulos de panel, botones, pestañas, encabezados y
+cifras (todo lo que usa `RetroType.titleFamily`: el `fontFamily` del
+tema, `RetroTheme.compactButton`, `RetroType.style` de tamaños no de
+lectura, `titleStyle`) pasan a la fuente de lectura. Tamaño = el buscado
+de Press Start × `RetroTextScaler.titleRatio` (VT323 ×1.6 las etiquetas
+/ ×1.5 los títulos; Atkinson ×1.3 / ×1.25), en px enteros sin la grilla
+de 8; interlineado `RetroType.titleLine` (1.0 / 1.15). Siguen en Press
+Start: los símbolos dentro del texto (`RetroType.glyph`, `symbolSpans`),
+las etiquetas pintadas en los lienzos (mundo, escena; `RetroTheme
+.fontFamily`), la banda del log de batalla y su reloj y las cifras de
+casillas fijas (`RetroType.fixedScaler`). Con CLÁSICA no cambia nada.
+
+### 9.3 TAMAÑO DEL TEXTO: ENORME
+
+`TextSize.enormous` (factor 2): VT323 a 40 px, títulos +8 (16 → 24).
+Paneles scrollean y los tooltips pasan a columnas como siempre. Con
+`RetroType.settingFactor ≥ 2` (el ajuste sin la escala de la ventana)
+algunas filas se apilan: atributos (el valor y la meta del plan bajan a
+una segunda línea), barras de la ventana de comandos (etiqueta y cifras
+arriba, barra debajo), `PanelButton` con motivo (el motivo arriba),
+encabezado de FUSIÓN (migas, lo elegido y los materiales en columna);
+las teclas del paso 2 y los recursos de la ventana de comandos
+scrollean con el resto.
+
+### 9.4 ESPACIADO ENTRE LETRAS: **NORMAL** / AMPLIO
+
+`letterSpacing` (`"normal"` / `"wide"`). AMPLIO: +0.08 em en el texto de
+lectura (`RetroType.letterSpacing`: 0.08 × el tamaño real, en px físicos
+enteros, mínimo 1; VT323 Normal 2 px, Atkinson 1 px). Va en
+`smallStyle`, `RetroType.style` de lectura, el `bodySmall` / `labelSmall`
+del tema y los estilos de lectura sueltos (tooltip, chat, motivos…). Los
+títulos no.
+
+### 9.5 DURACIÓN DE LOS AVISOS: **NORMAL** / LARGA / HASTA CERRAR
+
+`noticeDuration` (`normal` / `long` / `untilDismissed`): ×1 / ×2 /
+infinito sobre la duración de cada aviso: avisos y registro de loot
+(`LootFeed.durationFactor`), carteles de build (`BuildFeed`), avisos del
+chat plegado (`ChatBox.noticeDuration`), aviso de puntos sin usar
+(`UnusedPointsToast.duration`) y cartel de misión opcional del mapa
+(`MapGame.noticeFactor`). HASTA CERRAR: cada aviso del HUD lleva una ×
+(`NoticeClose`, área de clic ≥ 24 px, no toma el foco) y **Retroceso**
+cierra todos (`noticeDismissProvider` + `MapGame.dismissNotices`; con
+las otras duraciones también los despeja). Con avisos que no vencen los
+feeds dejan de refrescar cada 250 ms.
+
+### 9.6 FONDO DEL TEXTO EN EL MAPA: **NINGUNO** / SOMBREADO / CAJA OPACA
+
+`mapLabelBackdrop` (`none` / `shaded` / `box`). Detrás de cada etiqueta
+del mapa en px de pantalla (`paintMapLabels(backdrop:)`: nombres,
+carteles, avisos y carteles de caída / misión): NINGUNO = la sombra de
+1 px de siempre; SOMBREADO = franja del `bg` del tema al 60 %; CAJA
+OPACA = caja del `bg` del tema con borde `panelBorder` de 1 u (sin
+sombra). La caja rodea el texto con 3 u a los lados y 2 u arriba y abajo
+(`mapLabelBackdropRect`). Las etiquetas de loot ya tienen su caja: con
+CAJA OPACA, su fondo pierde la transparencia. Los avisos `[E]` y
+carteles del HUD ya van sobre una caja (`ProtoColors.scrim`).
+
+### 9.7 REGISTRO DE BATALLA: **NORMAL** / EXTENDIDO
+
+`battleLog` (`normal` / `extended`) → `SceneOptions.extendedLog`.
+EXTENDIDO: debajo de la banda del log, centradas en la mitad del ancho
+(sin tapar la barra del objetivo), las 2 líneas anteriores
+(`BattleLogHistory`; la más nueva más clara), cada una
+`kBattleLogHistoryS` = 10 s; otra batalla las borra. Texto de lectura
+(sigue tamaño, fuente y espaciado).
+
+### 9.8 Tests
+
+`test/app/text_access_test.dart` (claves y valores por defecto, tamaños
+de ATKINSON y ENORME, títulos de lectura, espaciado, duraciones con ×
+y cerrar todos, fondo del mapa por píxel, registro extendido; sin
+desbordes a 1280×720 en VT323 / ATKINSON × títulos × NORMAL / ENORME en
+ficha de un Legendario, FUSIÓN 2 y 3, ATRIBUTOS, detalle del bestiario
+y ventana de comandos), `test/app/text_size_test.dart` (las tres fuentes
+en los cuatro tamaños), `test/features/settings_menu_test.dart`
+(sección TEXTO, vista previa, teclado), `test/features/world/
+ground_loot_test.dart` (avisos de loot).
+
 ## 7. Próximo
 
 Hecho en v0.5.1: paletas para daltonismo, REDUCIR MOVIMIENTO, tiempo de
