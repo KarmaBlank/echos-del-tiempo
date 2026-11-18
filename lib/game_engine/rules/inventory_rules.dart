@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../data/game_catalog.dart';
 import '../data/items_catalog.dart';
 import '../models/eco.dart';
+import '../models/inventory_sort.dart';
 import '../models/item.dart';
 import '../models/loot.dart';
 import '../models/player_profile.dart';
@@ -50,14 +51,22 @@ class InventoryRules {
   // Casillas
   // ------------------------------------------------------------------
 
-  /// Tokens que ocupan casilla, en orden natural (armas no equipadas,
-  /// después pociones y materiales).
+  /// Pilas de la sección CONSUMIBLES (v0.5.1): no ocupan casilla.
+  static const consumables = [StackKind.potion, StackKind.ether];
+
+  /// Pilas de la sección MATERIALES (v0.5.1): no ocupan casilla.
+  static final materials = [
+    for (final k in StackKind.values)
+      if (k.material != null) k,
+  ];
+
+  /// Tokens que ocupan casilla, en orden natural: armas no equipadas y
+  /// Ecos. Desde v0.5.1 las pilas (pociones, éter, materiales) van en sus
+  /// secciones fijas y no ocupan casilla (loot.md § 17).
   static List<String> tokens(PlayerProfile p) => [
         for (final i in p.items)
           if (i.uid != p.equippedUid) i.uid,
         for (final e in p.ecos) e.uid,
-        for (final k in StackKind.values)
-          if (stackCount(p, k) > 0) k.token,
       ];
 
   static int cellsUsed(PlayerProfile p) => tokens(p).length;
@@ -67,6 +76,8 @@ class InventoryRules {
   /// La grilla: respeta las posiciones guardadas (`grid`) de lo que sigue
   /// existiendo y pone lo nuevo en las primeras casillas libres. Lo que no
   /// entra queda en [overflow] (perfiles viejos con más de 40 armas).
+  /// Migración v0.5.1: los tokens de pila guardados (`pot`, `mat:...`)
+  /// ya no son tokens de casilla, así que su casilla queda libre.
   static ({List<String?> cells, List<String> overflow}) layout(
       PlayerProfile p) {
     final present = tokens(p);
@@ -114,6 +125,121 @@ class InventoryRules {
   }
 
   // ------------------------------------------------------------------
+  // Ordenar (v0.5.1, loot.md § 17.2)
+  // ------------------------------------------------------------------
+
+  /// Orden total de las armas y Ecos de [p] según [key], con la
+  /// **equipada siempre primero** (vive en su casilla EQUIPADA, antes de
+  /// la grilla). Determinístico: el último desempate es el `uid`.
+  /// Salvo en [InventorySortKey.recent], primero las armas y después los
+  /// Ecos (rareza, tier, más nuevo).
+  List<String> sortOrder(PlayerProfile p, InventorySortKey key) {
+    final index = {for (var i = 0; i < p.items.length; i++) p.items[i].uid: i};
+    final eqUid = p.equippedItem?.uid;
+    final weapons = [
+      for (final i in p.items)
+        if (i.uid != eqUid) i,
+    ];
+    final names = {for (final i in weapons) i.uid: _fold(items.displayName(i))};
+    String type(ItemInstance i) => catalog.weapons[i.baseId]?.type ?? '';
+    int byRarity(ItemInstance a, ItemInstance b) =>
+        b.rarity.index.compareTo(a.rarity.index);
+    int byLevel(ItemInstance a, ItemInstance b) =>
+        b.itemLevel.compareTo(a.itemLevel);
+    int byName(ItemInstance a, ItemInstance b) =>
+        names[a.uid]!.compareTo(names[b.uid]!);
+    int byRecent(String a, String b) {
+      final s = _seq(b).compareTo(_seq(a));
+      if (s != 0) return s;
+      return (index[b] ?? -1).compareTo(index[a] ?? -1);
+    }
+
+    int chain(List<int Function()> cmps, String ua, String ub) {
+      for (final c in cmps) {
+        final r = c();
+        if (r != 0) return r;
+      }
+      return ua.compareTo(ub);
+    }
+
+    weapons.sort((a, b) => chain(
+        switch (key) {
+          InventorySortKey.rarity => [
+              () => byRarity(a, b),
+              () => byLevel(a, b),
+              () => byName(a, b),
+            ],
+          InventorySortKey.itemLevel => [
+              () => byLevel(a, b),
+              () => byRarity(a, b),
+              () => byName(a, b),
+            ],
+          InventorySortKey.weaponType => [
+              () => type(a).compareTo(type(b)),
+              () => byRarity(a, b),
+              () => byLevel(a, b),
+              () => byName(a, b),
+            ],
+          InventorySortKey.name => [
+              () => byName(a, b),
+              () => byRarity(a, b),
+              () => byLevel(a, b),
+            ],
+          InventorySortKey.recent => [() => byRecent(a.uid, b.uid)],
+        },
+        a.uid,
+        b.uid));
+    final ecos = [...p.ecos]..sort((a, b) => chain([
+          () => b.rarity.index.compareTo(a.rarity.index),
+          () => b.tier.compareTo(a.tier),
+          () => byRecent(a.uid, b.uid),
+        ], a.uid, b.uid));
+    final rest = key == InventorySortKey.recent
+        ? ([
+            for (final w in weapons) w.uid,
+            for (final e in ecos) e.uid,
+          ]..sort((a, b) => chain([() => byRecent(a, b)], a, b)))
+        : [
+            for (final w in weapons) w.uid,
+            for (final e in ecos) e.uid,
+          ];
+    return [if (eqUid != null) eqUid, ...rest];
+  }
+
+  /// `SortInventoryAction`: la grilla queda en el orden de [sortOrder]
+  /// desde la casilla 0 (sin la equipada, que no ocupa casilla).
+  PlayerProfile sort(PlayerProfile p, InventorySortKey key) {
+    final eqUid = p.equippedItem?.uid;
+    final order = [
+      for (final t in sortOrder(p, key))
+        if (t != eqUid) t,
+    ];
+    return relayout(
+        p.copyWith(grid: order.length > cells ? order.sublist(0, cells) : order));
+  }
+
+  /// Número de `i<n>` / `eco<n>` (más alto = más nuevo); -1 si no tiene
+  /// (armas iniciales y migradas).
+  static int _seq(String uid) {
+    final m = _seqRe.firstMatch(uid);
+    return m == null ? -1 : int.parse(m.group(1)!);
+  }
+
+  static final _seqRe = RegExp(r'^(?:i|eco)(\d+)$');
+
+  /// Minúsculas sin tildes, para ordenar por nombre.
+  static String _fold(String s) {
+    const from = 'áéíóúüñàèìòù';
+    const to = 'aeiouunaeiou';
+    final b = StringBuffer();
+    for (final ch in s.toLowerCase().split('')) {
+      final i = from.indexOf(ch);
+      b.write(i < 0 ? ch : to[i]);
+    }
+    return b.toString();
+  }
+
+  // ------------------------------------------------------------------
   // Recibir / quitar
   // ------------------------------------------------------------------
 
@@ -121,9 +247,9 @@ class InventoryRules {
   static String? cannotReceive(PlayerProfile p, LootDrop d) {
     final st = d.stack;
     if (st != null) {
+      // Las pilas tienen su sección: solo cuenta el tope.
       final have = stackCount(p, st);
       if (have + d.count > stackMax(st)) return 'Máximo ${stackMax(st)}';
-      if (have == 0 && freeCells(p) <= 0) return 'Inventario lleno';
       return null;
     }
     if (d.eco != null) return freeCells(p) <= 0 ? 'Inventario lleno' : null;

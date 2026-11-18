@@ -91,7 +91,7 @@ void main() {
   });
 
   group('jingles', () {
-    test('tapan el bucle y lo devuelven al terminar, en cola', () {
+    test('bajan el bucle de fondo y lo devuelven al terminar, en cola', () {
       music.playTrack(Music.zone(2));
       run(2);
       music.playJingle(Music.victory);
@@ -100,13 +100,14 @@ void main() {
       expect(music.jingle, Music.victory);
       expect(music.queuedJingles, [Music.levelUp]);
       run(MusicService.jingleDuckSeconds + 0.05);
-      expect(player.volume[1], 0, reason: 'bucle tapado');
+      expect(player.volume[1], closeTo(MusicService.jingleBedLevel, 1e-9),
+          reason: 'bucle de fondo');
       final victory = kMusicCatalog[Music.victory]!.seconds +
           MusicService.jingleTailSeconds;
       run(victory);
       expect(music.jingle, Music.levelUp);
       expect(player.calls.last, 'play 2 jingle.levelUp');
-      expect(player.volume[1], 0);
+      expect(player.volume[1], closeTo(MusicService.jingleBedLevel, 1e-9));
       run(kMusicCatalog[Music.levelUp]!.seconds +
           MusicService.jingleTailSeconds);
       expect(music.jingle, isNull);
@@ -121,10 +122,63 @@ void main() {
       music.playJingle(Music.victory);
       music.playTrack(Music.zone(1));
       run(2);
-      expect(music.deckVolume(0), 0); // tapada mientras suena
+      // De fondo mientras suena.
+      expect(music.deckVolume(0), closeTo(MusicService.jingleBedLevel, 1e-9));
       expect(music.deckTrack(1), isNull, reason: 'la batalla ya salió');
       run(5);
       expect(music.deckVolume(0), 1);
+    });
+
+    test('interrupt corta el jingle que suena; la cola sigue', () {
+      music.playJingle(Music.victory);
+      music.playJingle(Music.zoneUnlocked);
+      run(1);
+      music.playJingle(Music.levelUp, interrupt: true);
+      expect(music.jingle, Music.levelUp);
+      expect(player.calls.last, 'play 2 jingle.levelUp');
+      expect(music.queuedJingles, [Music.zoneUnlocked]);
+      run(kMusicCatalog[Music.levelUp]!.seconds +
+          MusicService.jingleTailSeconds);
+      expect(music.jingle, Music.zoneUnlocked);
+    });
+
+    test('cambiar de bucle no corta el jingle', () {
+      music.playTrack(Music.battle);
+      run(2);
+      music.playJingle(Music.victory);
+      music.playTrack(Music.zone(1));
+      music.playTrack(Music.town);
+      music.playTrack(null);
+      run(1);
+      expect(music.jingle, Music.victory);
+      expect(player.calls.where((c) => c == 'stop 2'), isEmpty);
+    });
+
+    test('bedHeld retiene el bucle de fondo sin jingle', () {
+      music.playTrack(Music.town);
+      run(2);
+      music.bedHeld = true;
+      run(MusicService.jingleDuckSeconds + 0.05);
+      expect(player.volume[1], closeTo(MusicService.jingleBedLevel, 1e-9));
+      run(3);
+      expect(player.volume[1], closeTo(MusicService.jingleBedLevel, 1e-9));
+      expect(music.animating, isFalse, reason: 'sin timer mientras espera');
+      music.bedHeld = false;
+      run(MusicService.jingleReturnSeconds / 2);
+      expect(player.volume[1], inExclusiveRange(0.5, 0.8));
+      run(MusicService.jingleReturnSeconds / 2 + 0.05);
+      expect(player.volume[1], 1);
+    });
+
+    test('fadeOut: la pieza que sale se corta rápido', () {
+      music.playTrack(Music.battle);
+      run(2);
+      music.playTrack(Music.zone(1), fadeOut: MusicService.battleCutSeconds);
+      run(MusicService.battleCutSeconds + 0.04);
+      expect(music.deckTrack(1), isNull);
+      expect(player.track[1], isNull);
+      expect(music.deckVolume(0), lessThan(0.3),
+          reason: 'la zona recién entra');
     });
 
     test('silenciado no suenan jingles', () {

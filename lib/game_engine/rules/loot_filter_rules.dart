@@ -1,6 +1,7 @@
 import '../data/affixes_catalog.dart';
 import '../data/game_catalog.dart';
 import '../models/attributes.dart';
+import '../models/build_wants.dart';
 import '../models/item.dart';
 import '../models/loot.dart';
 import '../models/loot_filter.dart';
@@ -11,10 +12,15 @@ class FilterContext {
     required this.level,
     required this.attributes,
     this.classId = '',
+    this.wants,
   });
   final int level;
   final PlayerAttributes attributes;
   final String classId;
+
+  /// Lo que pide el plan de build de quien mira (condición `Build`);
+  /// `null` = sin plan (o un compañero: nunca se ve el plan de otro).
+  final BuildWants? wants;
 }
 
 /// Resultado de leer un filtro de texto: el filtro (con las líneas que
@@ -56,6 +62,14 @@ Mostrar # Legendarios
   Tamaño 42
   Sonido legendario
   Icono estrella naranja
+Mostrar # Tu build
+  Build
+  Rareza >= Mágico
+  Borde 195 155 255
+  Fondo 30 12 50 220
+  Tamaño 36
+  Sonido campana
+  Icono estrella violeta
 Mostrar # Épicos
   Rareza Épico
   Color 190 110 255
@@ -122,13 +136,23 @@ Ocultar # Mágicos de nivel bajo
   /// estilo por defecto.
   FilterVerdict evaluate(LootFilter f, LootDrop d, FilterContext ctx) {
     final base = defaultStyle(d);
+    final build = buildMatches(d, ctx);
     for (var i = 0; i < f.rules.length; i++) {
       final r = f.rules[i];
       if (r.conditions.every((c) => matches(c, d, ctx))) {
-        return FilterVerdict(r.show, r.style.over(base), i);
+        return FilterVerdict(r.show, r.style.over(base), i, build);
       }
     }
-    return FilterVerdict(true, base);
+    return FilterVerdict(true, base, null, build);
+  }
+
+  /// Qué cumple [d] del plan de quien mira (`ctx.wants`); vacío si no es
+  /// un arma o no hay plan.
+  Set<BuildMatch> buildMatches(LootDrop d, FilterContext ctx) {
+    final it = d.item;
+    final wants = ctx.wants;
+    if (it == null || wants == null || wants.isEmpty) return const {};
+    return wants.matches(it, catalog.weapons[it.baseId]);
   }
 
   bool matches(FilterCondition c, LootDrop d, FilterContext ctx) {
@@ -136,6 +160,15 @@ Ocultar # Mágicos de nivel bajo
     final eco = d.eco;
     final w = it == null ? null : catalog.weapons[it.baseId];
     switch (c) {
+      case BuildCondition(:final kinds, :final has):
+        // Sin plan (o no es un arma) no coincide nunca, ni `Build No`:
+        // una regla de build no hace nada hasta que armes un plan.
+        if (it == null || (ctx.wants?.isEmpty ?? true)) return false;
+        final got = buildMatches(d, ctx);
+        final hit = kinds.isEmpty
+            ? got.isNotEmpty
+            : kinds.any(got.contains);
+        return hit == has;
       case KindCondition(:final kinds):
         final k = it != null
             ? LootKind.arma
@@ -186,7 +219,11 @@ Ocultar # Mágicos de nivel bajo
       UsableCondition(:final usable) =>
         (ctx.level >= w.level && w.meetsRequirements(ctx.attributes)) ==
             usable,
-      KindCondition() || MaterialCondition() || TierCondition() => false,
+      KindCondition() ||
+      MaterialCondition() ||
+      TierCondition() ||
+      BuildCondition() =>
+        false,
     };
   }
 
@@ -212,6 +249,15 @@ Ocultar # Mágicos de nivel bajo
         'raro' || 'rara' => Rarity.raro,
         'epico' || 'epica' => Rarity.epico,
         'legendario' || 'legendaria' || 'unico' || 'unica' => Rarity.legendario,
+        _ => null,
+      };
+
+  /// Clase de coincidencia de `Build` (`Tipo` y `Arma` = `Base`).
+  static BuildMatch? _buildMatch(String s) => switch (_fold(s)) {
+        'base' || 'tipo' || 'arma' => BuildMatch.base,
+        'mod' || 'mods' => BuildMatch.mod,
+        'pasiva' => BuildMatch.pasiva,
+        'habilidad' || 'habilidades' => BuildMatch.habilidad,
         _ => null,
       };
 
@@ -398,6 +444,26 @@ Ocultar # Mágicos de nivel bajo
             err('se esperaba Arma, Material, Pocion o Eco');
           } else {
             conds.add(KindCondition([for (final k in ks) k!]));
+          }
+        case 'build' || 'mibuild':
+          if (a.length == 1 && _yesNo(a) == false) {
+            conds.add(const BuildCondition(has: false));
+            break;
+          }
+          final ks = <BuildMatch>[];
+          final bad = <String>[];
+          for (final k in a) {
+            final m = _buildMatch(k);
+            if (m == null) {
+              bad.add(k);
+            } else if (!ks.contains(m)) {
+              ks.add(m);
+            }
+          }
+          if (bad.isNotEmpty) {
+            err('se esperaba "Build [Base Mod Pasiva Habilidad]" o "Build No"');
+          } else {
+            conds.add(BuildCondition(kinds: List.unmodifiable(ks)));
           }
         case 'color' || 'borde' || 'fondo':
           final c = _color(a);

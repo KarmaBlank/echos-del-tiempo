@@ -42,14 +42,14 @@ void main() {
     for (var i = 0; i < InventoryRules.cells; i++) {
       expect(find.byKey(ValueKey('inv-cell-$i')), findsOneWidget);
     }
-    // 5 armas + pociones, éteres, esquirlas y cristal.
-    expect(plain(tester, 'inv-summary'), contains('Casillas 9/40'));
+    // 5 armas (v0.5.1: las pilas van en CONSUMIBLES / MATERIALES).
+    expect(plain(tester, 'inv-summary'), contains('Casillas 5/40'));
     // Elegir el Épico muestra su ficha y la comparación.
     await _tap(tester, 'inv-cell-${cellOf(p, 'e1')}');
     expect(find.textContaining('Filo del Alba'), findsWidgets);
     expect(find.textContaining('Comparada con Espada de Bronce'), findsOneWidget);
     // Una pila: cantidad en la casilla y en la ficha.
-    await _tap(tester, 'inv-cell-${cellOf(p, 'mat:esquirla')}');
+    await _tap(tester, 'inv-stack-mat:esquirla');
     expect(find.textContaining('Esquirla del Eco x2'), findsOneWidget);
   });
 
@@ -136,7 +136,7 @@ void main() {
     await _tap(tester, 'inv-equipped');
     expect(button(tester, 'inv-drop').reason, 'Equipada');
     // Pilas: elegir cuántas.
-    await _tap(tester, 'inv-cell-${cellOf(me(), 'mat:esquirla')}');
+    await _tap(tester, 'inv-stack-mat:esquirla');
     await _tap(tester, 'inv-count-inc');
     expect(find.text('x2'), findsOneWidget);
     await _tap(tester, 'inv-drop');

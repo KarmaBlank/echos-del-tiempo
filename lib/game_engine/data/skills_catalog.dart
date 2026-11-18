@@ -84,6 +84,126 @@ const Map<String, SkillDef> kSkills = {
   ...kSkillVariants,
 };
 
+const _melee = SkillDelivery.melee;
+const _ranged = SkillDelivery.ranged;
+const _any = SkillDelivery.any;
+
+/// Forma de entrega de cada habilidad de arma trasladable (loot.md
+/// § 16.1). Explícita, sin adivinar por el nombre: `ranged` = físicas de
+/// arco / ballesta / rifle (flechas, disparos, balas, virotes); `melee`
+/// = las demás físicas; `any` = todo lo que no es un golpe con el arma.
+/// Cubre todo [kSkills] menos el kit de ascensión (nunca se traslada;
+/// test).
+const Map<String, SkillDelivery> kSkillDelivery = {
+  'giro': _melee, // Corte Giratorio
+  'embestida': _melee, // Embestida
+  'ignea': _melee, // Golpe Ígneo
+  'sismo': _melee, // Golpe Sísmico
+  'hendir': _melee, // Hendidura Tóxica
+  'tajoT': _melee, // Tajo Temporal
+  'chispa': _any, // Chispa
+  'cura': _any, // Cura
+  'bola': _any, // Bola de Fuego
+  'llamarada': _any, // Llamarada
+  'lanzaH': _any, // Lanza de Hielo
+  'ventisca': _any, // Ventisca
+  'prisa': _any, // Prisa (aliados)
+  'detener': _any, // Detener
+  'curaM': _any, // Cura Mayor
+  'rafaga': _ranged, // Ráfaga
+  'venenosa': _ranged, // Flecha Venenosa
+  'certero': _ranged, // Disparo Certero
+  'aturdir': _ranged, // Disparo Aturdidor
+  'rayoF': _ranged, // Flecha Rayo
+  'lluvia': _ranged, // Lluvia de Flechas
+  'sagrado': _melee, // Golpe Sagrado
+  'provocar': _any, // Provocar
+  'escudoFe': _any, // Escudo de Fe
+  'bendicion': _any, // Bendición
+  'lanzaLuz': _any, // Lanza de Luz
+  'consagrar': _any, // Consagrar
+  'juicio': _melee, // Martillo del Juicio
+  'corteGlacial': _melee, // Corte Glacial
+  'erupcion': _melee, // Erupción
+  'dardo': _any, // Dardo Tóxico
+  'niebla': _any, // Niebla Tóxica
+  'infierno': _any, // Infierno
+  'saeta': _ranged, // Saeta Glacial
+  'metralla': _ranged, // Metralla Tóxica
+  'estocada': _melee, // Estocada Firme
+  'temblor': _melee, // Temblor
+  'sanar': _any, // Sanación
+  'golpeEscudo': _melee, // Golpe de Escudo
+  'aplastar': _melee, // Aplastar
+  'tajoCarmesi': _melee, // Tajo Carmesí
+  'vendaval': _melee, // Vendaval Helado
+  'tajoOcaso': _melee, // Tajo del Ocaso
+  'descarga': _any, // Descarga
+  'plaga': _any, // Plaga
+  'sombra': _ranged, // Flecha Sombría
+  'ceroAbs': _ranged, // Cero Absoluto
+  'flechaSolar': _ranged, // Flecha Solar
+  'perfora': _ranged, // Tiro Perforante
+  'perforar': _melee, // Lanza Perforante
+  'barrido': _melee, // Barrido de Lanza
+  'empalar': _melee, // Empalar
+  'misil': _any, // Misil Arcano
+  'escarchaFugaz': _any, // Escarcha Fugaz
+  'rayoArcano': _any, // Rayo Arcano
+  'virote': _ranged, // Virote Pesado
+  'viroteIgneo': _ranged, // Virote Ígneo
+  'tajoGemelo': _melee, // Tajo Gemelo
+  'abanico': _melee, // Abanico de Dagas
+  'curaFocal': _any, // Cura Focalizada
+  'rocio': _any, // Rocío Sanador
+  'brotes': _any, // Brotes de Vida
+  'semilla': _any, // Semilla Vital
+  'purificar': _any, // Purificación
+  'resurreccion': _any, // Resurrección
+  'fenix': _any, // Llama Fénix
+  'graciaDesbordante': _any, // Gracia Desbordante
+  'marea': _any, // Marea Vital
+  'flechaSanadora': _ranged, // Flecha Sanadora
+  'drenar': _any, // Drenar Vida
+  'sifon': _melee, // Sifón Vital
+  'escudoArcano': _any, // Escudo Arcano
+  'barrera': _any, // Barrera
+  'egidaEspinosa': _any, // Égida Espinosa
+  'escudoVolatil': _any, // Escudo Volátil
+  'bastionCreciente': _any, // Bastión Creciente
+  'retoEscudado': _any, // Reto Escudado
+  'murallaFe': _any, // Muralla de Fe
+  'cupula': _any, // Cúpula Arcana
+  'flechaPerforante': _ranged, // Flecha Perforante
+  'balaTraspasante': _ranged, // Bala Traspasante
+  'tiroRebote': _ranged, // Tiro de Rebote
+  'dagaSaltarina': _melee, // Daga Saltarina
+  'disparoCargado': _ranged, // Disparo Cargado
+  'viroteAsedio': _ranged, // Virote de Asedio
+  'rafagaTriple': _ranged, // Ráfaga Triple
+  'cadencia': _ranged, // Cadencia Letal
+  'flechaMarcadora': _ranged, // Flecha Marcadora
+  'senalar': _any, // Señalar Presa
+  'flechaIncendiaria': _ranged, // Flecha Incendiaria
+  'flechaEscarcha': _ranged, // Flecha de Escarcha
+  'balaCorrosiva': _ranged, // Bala Corrosiva
+  'tiroQuebrantador': _ranged, // Tiro Quebrantador
+  'rompearmaduras': _melee, // Rompearmaduras
+  'rugidoIntimidante': _any, // Rugido Intimidante
+  'golpeDebilitante': _melee, // Golpe Debilitante
+  'lentitud': _any, // Lentitud
+  'maldicion': _any, // Maldición
+  'pesoTiempo': _any, // Peso del Tiempo
+  'golpeConmocion': _melee, // Conmoción
+  'silencio': _any, // Silencio
+  'selloSagrado': _any, // Sello Sagrado
+  'retroceso': _any, // Ola de Retroceso
+  'inspirar': _any, // Inspirar
+  'vientoPrisa': _any, // Viento de Prisa
+  'impulso': _any, // Impulso Temporal
+  'ojoAguila': _any, // Ojo de Águila
+};
+
 /// ULT por tipo de arma (`ULTS`). No cuestan MP: requieren 100 de carga.
 const Map<String, SkillDef> kUltimates = {
   'espada': SkillDef(id: 'ult_espada', name: 'Tajo Final', kind: _phys, power: 3.0, critBonus: 0.3),

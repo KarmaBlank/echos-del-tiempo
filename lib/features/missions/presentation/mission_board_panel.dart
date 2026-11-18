@@ -6,6 +6,7 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../game_engine/models/mission_def.dart';
 import '../../../game_engine/rules/zone_rules.dart';
+import '../../../app/widgets/menu_focus.dart';
 import '../../../app/widgets/menu_widgets.dart';
 import 'mission_card.dart';
 
@@ -94,9 +95,9 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
           list.add(Padding(
             key: ValueKey('zone-soon-${z.zone.index}'),
             padding: const EdgeInsets.only(bottom: 2, left: 8),
-            child: ProtoText(protoColor(
-                ProtoColors.dim,
-                protoEsc('${z.zone.index} · ${z.zone.name} · ${z.label}')),
+            child: ProtoText(
+                protoColor(ProtoColors.dim,
+                    protoEsc('${z.zone.index} · ${z.zone.name} · ${z.label}')),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis),
           ));
@@ -109,35 +110,47 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         list.add(_row(m, null, m.id == sel?.$1.id));
       }
     }
-    return PanelFrame(
-      title: 'MOSTRADOR DE MISIONES',
-      width: 1000,
-      fill: true,
-      help: MissionBoardPanel.help,
-      onClose: w.onClose,
-      actions: [
-        if (w.onCharacter != null)
-          PanelButton('PERSONAJE [C]', onPressed: w.onCharacter),
-        PanelButton('CERRAR [ESC]', onPressed: w.onClose),
-      ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          PanelHint(w.zones == null
-              ? 'Propón una misión: cuando todos votan SÍ, a prepararse.'
-              : 'Propón una zona: cuando todos votan SÍ, a prepararse.'),
-          Expanded(
-            child: PanelSplit(
-              listWidth: 340,
-              list: list,
-              detail: sel == null
-                  ? const PanelDetail(children: [])
-                  : _detail(sel.$1, sel.$2),
-            ),
+    // 1-9 eligen la zona N; Q / E la anterior / siguiente.
+    final idx =
+        sel == null ? 0 : entries.indexWhere((e) => e.$1.id == sel.$1.id);
+    return MenuTabKeys(
+        count: entries.length,
+        index: idx < 0 ? 0 : idx,
+        onChanged: (i) => setState(() => _sel = entries[i].$1.id),
+        child: PanelFrame(
+          title: 'MOSTRADOR DE MISIONES',
+          width: 1000,
+          fill: true,
+          help: MissionBoardPanel.help,
+          onClose: w.onClose,
+          actions: [
+            if (w.onCharacter != null)
+              PanelButton('PERSONAJE [C]', onPressed: w.onCharacter),
+            PanelButton('CERRAR [ESC]', onPressed: w.onClose),
+          ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              PanelHint(w.zones == null
+                  ? 'Propón una misión: cuando todos votan SÍ, a prepararse.'
+                  : 'Propón una zona: cuando todos votan SÍ, a prepararse.'),
+              Expanded(
+                child: PanelSplit(
+                  listWidth: 340,
+                  list: [
+                    NavSection(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: list)),
+                  ],
+                  detail: sel == null
+                      ? const PanelDetail(children: [])
+                      : _detail(sel.$1, sel.$2),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        ));
   }
 
   /// Fila de una línea: `C Pradera Esmeralda .... Lv 1`.
@@ -151,6 +164,9 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
       selected: selected,
       dimmed: locked,
       onTap: () => setState(() => _sel = m.id),
+      // El detalle sigue al cursor del teclado.
+      onFocus: () => setState(() => _sel = m.id),
+      autofocus: selected,
       label: '<span style="color:#ff9f1c">${protoEsc(m.rank)}</span> '
           '${protoEsc(name)}',
       value: locked

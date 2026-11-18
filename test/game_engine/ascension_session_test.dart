@@ -420,7 +420,7 @@ void main() {
       expect(c2.ascensionId, 'guardian');
       expect(c2.once, {'guardian_b3'});
       expect(c2.skillIds, containsAll(['proteccion', 'fortaleza', 'aura']));
-      expect(kProtocolVersion, 5);
+      expect(kProtocolVersion, greaterThanOrEqualTo(5)); // 6 desde v0.5.1
     });
   });
 

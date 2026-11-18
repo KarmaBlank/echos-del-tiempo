@@ -24,7 +24,7 @@ teclado común).
 
 ```
 PAUSA [?]                              Juego en pausa | El juego sigue corriendo en multijugador | Grupo en pausa
-[SONIDO] [PANTALLA] [JUEGO] [CONTROLES]
+[SONIDO] [PANTALLA] [ACCESIBILIDAD] [JUEGO] [CONTROLES]
 Una línea "qué hace" de la pestaña                                    (dim)
 NOMBRE DEL AJUSTE        [control]
                          qué hace, en una línea                       (dim)
@@ -64,19 +64,29 @@ guarda al tocarlo (`AudioSettingsController`).
 interfaz (todos los efectos son de batalla, loot y jingles), así que no
 hay nada que separar. Si se agregan, van como una cuarta fila aquí.
 
-## 3. PANTALLA
+## 3. PANTALLA y ACCESIBILIDAD
+
+Desde v0.5.1 la accesibilidad tiene su pestaña (ACCESIBILIDAD, entre
+PANTALLA y JUEGO): TAMAÑO DEL TEXTO, FUENTE DE LECTURA, MODO DALTÓNICO,
+REDUCIR MOVIMIENTO, SACUDIDA y DESTELLOS (§ 3.8). Las claves de los
+botones no cambiaron (`display-text-*`, `display-font-*`,
+`display-shake-*`, `display-flashes-*`).
 
 | Ajuste | Opciones | Efecto |
 |---|---|---|
-| TAMAÑO DEL TEXTO | **NORMAL** / GRANDE / MUY GRANDE | accesibilidad: agranda el texto de toda la UI (tooltips, fichas, comparación, paneles, chat, HUD, menú y log de batalla, árbol) ×1 / ×1.25 / ×1.5 (los títulos crecen menos), siempre en la grilla nítida de cada fuente (§ 3.6). Se aplica en vivo. Primera fila de la pestaña |
+| TAMAÑO DEL TEXTO (ACCESIBILIDAD) | **NORMAL** / GRANDE / MUY GRANDE | accesibilidad: agranda el texto de toda la UI (tooltips, fichas, comparación, paneles, chat, HUD, menú y log de batalla, árbol, etiquetas de la escena) ×1 / ×1.25 / ×1.5 (los títulos crecen menos), siempre en la grilla nítida de cada fuente (§ 3.6). Se aplica en vivo |
 | MODO (solo Windows) | VENTANA / PANTALLA COMPLETA | pantalla completa sin bordes en el monitor de la ventana; al volver, la ventana recupera su estilo y su posición. Se aplica al arrancar si quedó guardada |
-| FUENTE DE LECTURA | **VT323** / CLÁSICA | accesibilidad: fuente del texto de lectura (fichas, chat, menús, batalla). CLÁSICA = Press Start 2P como en v0.4. Cada botón se escribe en su fuente (vista previa). Títulos y botones no cambian (§ 3.7) |
+| FUENTE DE LECTURA (ACCESIBILIDAD) | **VT323** / CLÁSICA | accesibilidad: fuente del texto de lectura (fichas, chat, menús, batalla). CLÁSICA = Press Start 2P como en v0.4. Cada botón se escribe en su fuente (vista previa). Títulos y botones no cambian (§ 3.7) |
 | ESCALADO | PIXEL PERFECT / **AJUSTAR** | cómo se agranda el mundo pixelado (§ 3.1) |
 | FILTRO CRT | APAGADO / SUAVE / **NORMAL** / FUERTE | post-proceso retro sobre toda la pantalla (§ 3.2) |
 | PARTÍCULAS | BAJA / MEDIA / **ALTA** | cantidad de partículas: ×0.3 / ×0.6 / ×1 (§ 3.3) |
 | LÍMITE DE FPS | 30 / **60** / SIN LÍMITE | tope de cuadros por segundo de toda la app (§ 3.4) |
-| SACUDIDA | SÍ / NO | la escena de batalla tiembla con los golpes fuertes (`ParticleSystem.shake`). Con NO la escena la anula en cada frame |
-| DESTELLOS | NORMALES / SUAVES / NO | multiplica el alfa de los destellos de pantalla completa de la batalla por 1 / 0.35 / 0: el rojo de "te pegaron fuerte" (`hurtFlash`), los blancos de golpe brutal y quiebre (`FxKind.flash`) y el tinte de "tiempo detenido" (`timeStop`). Accesibilidad |
+| FPS Y PING (v0.5.1) | SÍ / **NO** | indicador chico en una esquina con los cuadros por segundo y, en una sala, el ping (§ 3.9) |
+| ESQUINA (v0.5.1) | **ARRIBA DER.** / ARRIBA IZQ. / ABAJO DER. / ABAJO IZQ. | dónde va el indicador; deshabilitada con FPS Y PING en NO (§ 3.9) |
+| MODO DALTÓNICO (ACCESIBILIDAD) | **NO** / DEUTERANOPÍA / PROTANOPÍA / TRITANOPÍA | paleta de los colores con significado (§ 3.8) |
+| REDUCIR MOVIMIENTO (ACCESIBILIDAD) | SÍ / **NO** | sin sacudida, destellos a lo sumo SUAVES, sin parpadeos ni zoom de cámara (§ 3.8) |
+| SACUDIDA (ACCESIBILIDAD) | SÍ / NO | la escena de batalla tiembla con los golpes fuertes (`ParticleSystem.shake`). Con NO la escena la anula en cada frame. Con REDUCIR MOVIMIENTO se ve en NO y deshabilitada (el valor propio se guarda igual) |
+| DESTELLOS (ACCESIBILIDAD) | NORMALES / SUAVES / NO | multiplica el alfa de los destellos de pantalla completa de la batalla por 1 / 0.35 / 0: el rojo de "te pegaron fuerte" (`hurtFlash`), los blancos de golpe brutal y quiebre (`FxKind.flash`), el tinte de "tiempo detenido" (`timeStop`), el blanco del impacto de una ULT, el de la entrada a la arena y el de la cinemática de ascensión. Con REDUCIR MOVIMIENTO, NORMALES vale como SUAVES |
 
 Pantalla completa sin paquetes nuevos: el runner de Windows
 (`windows/runner/flutter_window.cpp`) atiende el canal `ecos/window`
@@ -86,10 +96,13 @@ salir los restaura. `WindowMode` (`lib/core/settings/window_mode.dart`)
 es la puerta Dart; en otras plataformas (web, móvil, macOS, Linux) la
 fila no aparece.
 
-**Escala de la UI**: no se ofrece como tal. La UI está armada para
-1280×720 lógicos y no se agranda con la ventana (solo el mundo, § 3.1);
-lo que sí se ofrece es TAMAÑO DEL TEXTO (§ 3.6), que agranda el texto y
-las cajas que lo contienen.
+**Escala de la UI** (v0.5.1): no es un ajuste. La UI está armada para
+1280×720 lógicos; en una ventana más grande en las dos direcciones el
+texto (y las cajas que usan `RetroType.width` / `em`) crece en la misma
+proporción, de a 0.25 y hasta ×2 (`RetroTextScale.windowFactor`:
+1600×900 → ×1.25, 1920×1080 → ×1.5, 2560×1440 → ×2), multiplicado por
+TAMAÑO DEL TEXTO. Así 1920×1080 se arma igual que 1280×720 y no queda
+diminuto (accessibility.md § 1).
 
 Las animaciones propias de las ULT (rayos, círculos, partículas) no son
 destellos de pantalla completa y no cambian.
@@ -262,6 +275,77 @@ Windows "GPU Engine 3D" del proceso). El motor usa **Impeller
 - Nada se sale de 1280×720 en los tres tamaños, a 100 % y 150 % (tests
   con las fuentes reales).
 
+### 3.8 MODO DALTÓNICO y REDUCIR MOVIMIENTO (v0.5.1)
+
+**MODO DALTÓNICO** (`ColorVision.off` / `deuteranopia` / `protanopia` /
+`tritanopia`; `game.json` `"colorVision"`). `EcosApp` →
+`ColorVisionScope(mode)` pone `VisionPalette.mode`; los tokens con
+significado (`ProtoColors.green/red/crimson/hp/mp`, rarezas, barras y
+números de la batalla) son `VisionColor` y se pintan con la paleta del
+modo. Al cambiar, la app se reconstruye sin perder estado y el texto se
+vuelve a medir. Detalle y paletas: accessibility.md § 3.
+
+**REDUCIR MOVIMIENTO** (`reduceMotion`, `game.json` `"reduceMotion"`).
+Un solo interruptor que unifica los de movimiento: no pisa SACUDIDA ni
+DESTELLOS (se guardan igual), pero los efectivos son
+`GameSettings.shakeOn` (= SACUDIDA y no REDUCIR) y
+`GameSettings.flashFactor` (a lo sumo SUAVES). Además:
+`SceneOptions.reduceMotion` → la cámara de batalla siempre en el
+encuadre base (sin zoom/paneo de ULT ni de entrada), la arena quieta (se
+pinta con `t = 0`), nada parpadea (quiebre, VULNERABLE, carga de ULT,
+aviso de ULT enemiga, `! JEFE !`, reloj ≤ 10 s, marcadores que flotan),
+las franjas del tiempo detenido y del aviso no corren, y la entrada /
+salida de la arena es un fundido de 200 ms (`ArenaWipe.fadeMs`) en vez
+del barrido de bloques y su destello. La cinemática de ascensión no
+tiembla y su destello va × DESTELLOS. Las cinemáticas siguen siendo
+cortas y se saltan como antes.
+
+### 3.9 FPS Y PING (v0.5.1, `PerfOverlay`)
+
+Pedido del dueño: "en las opciones de pantalla, que te permita activar
+que te salga en alguna esquina los FPS y el ping". Pestaña PANTALLA
+(pausa y CONFIGURACIÓN del título: es el mismo menú), apagado por
+defecto, con la esquina aparte.
+
+- **Dónde**: `EcosApp` (`MaterialApp.builder`) lo pone sobre toda la
+  app (título, mapa, batalla, menús), por encima del filtro CRT (no se
+  curva ni se oscurece con la viñeta) y dentro de TAMAÑO DEL TEXTO y
+  MODO DALTÓNICO. `IgnorePointer`: nunca tapa un clic.
+- **Una sola línea, pegada al borde** (`PerfOverlay.edge` = 1 px,
+  `side` = 8 px): `▮▮▮ 60 FPS (máx 60)  ▮▮▮ ping 23 ms (máx 41)` en la
+  letra de los botones (`RetroType.label`, Press Start 2P, crece con
+  TAMAÑO DEL TEXTO, sin negrita ni subrayado) sobre una franja oscura
+  translúcida de 14 px de alto. Así entra en la franja libre de 16 px
+  que deja el HUD del mapa arriba (`≡ MENU [ESC]`, `Sala: CODIGO
+  [COPIAR]`, minimapa, objetivos) y abajo (chat, ficha): no tapa nada.
+  En batalla, arriba a la derecha queda sobre la parte vacía de la
+  franja de turnos; arriba a la izquierda pisa los primeros retratos de
+  TURNOS y abajo, con 4 jugadores, el borde inferior de la última
+  tarjeta del grupo (por eso el valor por defecto es ARRIBA DER.). Con
+  GRANDE / MUY GRANDE la línea crece y puede rozar el HUD.
+- **FPS**: cuadros dibujados de verdad (`SchedulerBinding.addTimingsCallback`,
+  hora de vsync de cada `FrameTiming`; los cuadros que salta el
+  `FrameLimiter` no cuentan). `FpsMeter` (puro,
+  `lib/core/perf/fps_meter.dart`): ventana de ~1 s hacia atrás desde el
+  último cuadro; FPS = cantidad de intervalos ÷ su suma, contando solo
+  intervalos < 100 ms (una pausa sin cuadros —un menú quieto— no baja
+  el número: Flutter no redibuja lo que no cambia). Sin cuadros
+  medidos: `-- FPS`. Con LÍMITE DE FPS en 30 / 60 se agrega el tope:
+  `60 FPS (máx 60)`.
+- **Ping**: solo en una sala (`activeNetSessionProvider` con un
+  `LatencyProbe`, netcode.md § "Ping"); jugando solo la línea no
+  aparece. Cliente: `ping 23 ms` (ida y vuelta al host). Host: el
+  promedio de sus clientes y el peor, `ping 23 ms (máx 41)` (con un
+  solo cliente, sin el máximo); sin clientes, `ping --`. Siempre `ms`
+  abreviado; menos de 1 ms se ve `<1 ms` (LAN). Antes de la primera medición, `ping --`.
+- **Color + barras** (no depende solo del color): cada dato lleva 3
+  barritas tipo señal. Ping < 80 ms: verde, 3 barras; < 150 ms: dorado,
+  2; ≥ 150 ms: rojo, 1. FPS ≥ 90 % del objetivo (el tope, o 60 sin
+  tope): verde, 3; ≥ 50 %: dorado, 2; menos: rojo, 1. Verde y rojo son
+  los de `VisionPalette` (cambian con MODO DALTÓNICO).
+- El indicador solo existe con el ajuste en SÍ: apagado no se escuchan
+  los `FrameTiming` ni se manda ningún `ping`.
+
 ### 3.7 FUENTE DE LECTURA (`ReadingFont`)
 
 `ReadingFont.vt323` (por defecto) / `classic`. `game.json`:
@@ -287,6 +371,7 @@ con un valor inválido) carga VT323.
 |---|---|---|
 | NÚMEROS FLOTANTES | SÍ / NO | dibujar o no los números flotantes de daño/cura (`FxKind.num`). Los textos (`¡CRÍTICO!`, estados) se mantienen |
 | CONFIRMAR AL TIRAR | SÍ / NO | con NO, `TIRAR` del inventario tira enseguida. `VENDER` y `DESARMAR` siempre confirman (destruyen el arma) |
+| TIEMPO DE TURNO | **NORMAL (30 S)** / LARGO (60 S) / SIN LÍMITE | cuánto espera la batalla a que elija el jugador de turno antes de pasarlo solo (`TurnTimer`). Jugando solo vale este; en co-op, el del **anfitrión** (la sala lo lleva en `GameSession.turnTimer`; el del cliente no cuenta). En el pueblo y la preparación la barra de misión dice `Turnos: sin límite (anfitrión)` si no es el normal. Con SIN LÍMITE no hay reloj ni cuenta regresiva |
 | AVISOS DE BUILD | SÍ / NO | con NO no hay carteles ni líneas de chat cuando avanza una meta del plan de build (build_planner.md § 5). La pestaña BUILD y las ★ siguen |
 
 **Auto-recoger loot**: no se ofrece. Levantar caminando encima lo decide
@@ -376,9 +461,15 @@ está abierto:
   `{"fullscreen":false,"shake":true,"flashes":"normal",
   "damageNumbers":true,"confirmDrop":true,"scale":"fit","crt":"normal",
   "particles":"high","fpsLimit":60,"textSize":"normal",
-  "readingFont":"vt323","buildNotices":true}` (`fpsLimit` 0 = sin límite; `textSize`
+  "readingFont":"vt323","buildNotices":true,"colorVision":"off",
+  "reduceMotion":false,"turnTimer":"normal","perfOverlay":false,
+  "perfCorner":"topRight"}` (`fpsLimit` 0 = sin límite; `textSize`
   `normal` / `large` / `huge`; `readingFont` `vt323` / `classic`).
   Valores inválidos o ausentes = por defecto. Corrupto = por defecto.
+- **v0.5.1**: `colorVision`, `reduceMotion`, `turnTimer`, `perfOverlay`
+  y `perfCorner` son nuevos; un `game.json` sin ellos (o con valores
+  inválidos) carga NO / NO / NORMAL / NO / ARRIBA DER. (`perfCorner`:
+  `topRight` / `topLeft` / `bottomRight` / `bottomLeft`).
 - **v0.5**: `textSize` es nuevo; un `game.json` sin la clave (o con un
   valor inválido) carga en NORMAL.
 - **Migración v0.2.1 → v0.3**: la velocidad de animaciones de batalla se
@@ -393,8 +484,9 @@ está abierto:
 
 ## 9. Cómo llegan los ajustes al juego
 
-- Batalla: `WorldScreen` arma `SceneOptions(shake, flash, damageNumbers,
-  pixelPerfect, particles)` de `gameSettingsProvider` →
+- Batalla: `WorldScreen` arma `SceneOptions(shake: shakeOn, flash:
+  flashFactor, damageNumbers, pixelPerfect, particles, reduceMotion)` de
+  `gameSettingsProvider` →
   `SessionBattleScreen` → `BattleView.sceneOptions` →
   `BattleSceneController.options` (leído por `advance`, `viewFor` y
   `BattleScenePainter`). Solo cambia el dibujo.
@@ -406,9 +498,33 @@ está abierto:
 - FPS: `GameSettingsController` → `FrameLimiter.shared.fps` →
   `EcosBinding` (los `main_*.dart` usan `EcosBinding.ensureInitialized()`).
 - Inventario: `InventoryTab` lee `confirmDrop` al tocar `TIRAR`.
+- Modo daltónico: `EcosApp` → `ColorVisionScope(colorVision)` →
+  `VisionPalette.mode`.
+- FPS y ping: `EcosApp` → `PerfOverlay(perfOverlay, perfCorner)`; lee
+  `frameRateProvider` (FPS) y `activeNetSessionProvider` (ping).
+- REDUCIR MOVIMIENTO fuera de la escena: `BattleExitWipe(fade:)` y
+  `AscensionCinematic(flash:, reduceMotion:)` en `WorldScreen`.
+- Tiempo de turno: `sessionControllerProvider` crea el controlador con
+  `turnTimer` y escucha el ajuste (`SessionController.setTurnTimer`); solo
+  o anfitrión → `SessionEngine.setTurnTimer` (la sala); cliente → nada.
 
 ## 10. Tests
 
+- v0.5.1 FPS y ping: `test/core/perf/fps_meter_test.dart` (ventana de
+  1 s, pausas ignoradas, sin datos), `test/app/perf_overlay_test.dart`
+  (oculto por defecto, aparece y se ubica en cada esquina, `máx 60`,
+  ping solo en sala, host con promedio y máximo, barras),
+  `test/core/settings/game_settings_test.dart` (claves nuevas, `game.json`
+  viejo), `test/netcode/loopback_ping_test.dart` (ida y vuelta con reloj
+  falso, host agrega, sin oyentes no hay ping, no son acciones),
+  `test/features/settings_menu_test.dart` (FPS Y PING y ESQUINA).
+- v0.5.1: `test/app/color_vision_test.dart` (paletas simuladas,
+  markup y rarezas), `test/app/contrast_test.dart` (AA en cada modo),
+  `test/features/combat/reduce_motion_test.dart` (fundido, sin destello,
+  sin sacudida, barras sin color, tarjetas del grupo a 1/4),
+  `test/game_engine/turn_timer_test.dart` (30 / 60 / sin límite, cambio a
+  mitad de turno, JSON `tt`, solo y co-op con el anfitrión),
+  `test/app/label_scale_test.dart`, `test/app/hit_target_audit.dart`.
 - `test/core/settings/game_settings_test.dart`: JSON, controlador
   (guardar, ventana, cargar en pantalla completa, límite de FPS),
   `game.json` (incluido uno viejo con `battleSpeed`), `audio.json`

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 /// Escala tipográfica de la UI (docs/specs/ui_style.md § "Tipografía").
@@ -223,6 +225,19 @@ class RetroTextScale extends StatefulWidget {
   final bool classic;
   final Widget child;
 
+  /// La UI está pensada para 1280×720 lógicos: en una ventana más grande
+  /// (en las dos direcciones) todo el texto crece en la misma proporción,
+  /// de a 0.25 y hasta ×2 (1920×1080 → ×1.5: VT323 a 30 px). Así a
+  /// 1080p se ve como a 720p, no diminuto (docs/specs/accessibility.md
+  /// § 1, "Ventanas grandes"). Los anchos que usan `RetroType.width` /
+  /// `em` crecen igual, así que el armado es el mismo que a 1280×720.
+  static double windowFactor(Size logical) {
+    if (logical.width <= 0 || logical.height <= 0) return 1;
+    final k = math.min(logical.width / 1280, logical.height / 720);
+    if (k <= 1) return 1;
+    return math.min(2.0, (k * 4).floor() / 4);
+  }
+
   @override
   State<RetroTextScale> createState() => _RetroTextScaleState();
 }
@@ -247,7 +262,8 @@ class _RetroTextScaleState extends State<RetroTextScale> {
     final mq = MediaQuery.of(context);
     return MediaQuery(
       data: mq.copyWith(
-          textScaler: RetroTextScaler(widget.factor,
+          textScaler: RetroTextScaler(
+              widget.factor * RetroTextScale.windowFactor(mq.size),
               devicePixelRatio: mq.devicePixelRatio,
               classicReading: widget.classic)),
       child: widget.child,

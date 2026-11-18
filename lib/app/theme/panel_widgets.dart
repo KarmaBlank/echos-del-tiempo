@@ -219,8 +219,7 @@ class StatChange extends StatelessWidget {
         if (changed)
           TextSpan(
               style: TextStyle(
-                  color: better ? ProtoColors.green : ProtoColors.red,
-                  fontWeight: FontWeight.bold),
+                  color: better ? ProtoColors.green : ProtoColors.red),
               children: symbolSpans(
                   retroText(' → ${f(after)} ${better ? '▲' : '▼'}'))),
         if (suffix != null)

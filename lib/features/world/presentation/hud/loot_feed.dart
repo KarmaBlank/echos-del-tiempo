@@ -109,14 +109,19 @@ class LootFeed extends ChangeNotifier {
   /// Hay algo a la vista (para seguir refrescando).
   bool get hasLive => lines.isNotEmpty || toasts.isNotEmpty;
 
-  void _line(String prefix, LootDrop d) {
-    _lines.add(LootLine(prefix, itemName(d), dropColor(d), now));
+  /// Nombre del objeto, con ★ si cumple el plan de build del jugador
+  /// local (build_planner.md § 6; los compañeros nunca la llevan).
+  String _name(LootDrop d, FilterVerdict? v) =>
+      (v?.buildMatch ?? false) ? '★ ${itemName(d)}' : itemName(d);
+
+  void _line(String prefix, LootDrop d, [FilterVerdict? v]) {
+    _lines.add(LootLine(prefix, _name(d, v), dropColor(d), now));
     if (_lines.length > maxLines) _lines.removeAt(0);
   }
 
   void _toast(String title, LootDrop d, FilterStyle style,
-      {bool legendary = false}) {
-    _toasts.add(LootToast(title, itemName(d), style, dropColor(d), now,
+      {bool legendary = false, FilterVerdict? verdict}) {
+    _toasts.add(LootToast(title, _name(d, verdict), style, dropColor(d), now,
         legendary: legendary));
     if (_toasts.length > maxToasts) _toasts.removeAt(0);
   }
@@ -126,27 +131,29 @@ class LootFeed extends ChangeNotifier {
       case LootDropEvent(:final playerId, :final drop, :final groundId):
         final v = verdictFor(playerId, drop);
         if (v != null && !v.visible) return;
-        _line('${playerName(playerId)} encontró: ', drop);
+        _line('${playerName(playerId)} encontró: ', drop, v);
         if (playerId == localId) {
           final legendary = drop.item?.rarity == Rarity.legendario;
           final style = v?.style ?? LootFilterRules.defaultStyle(drop);
           if (legendary) {
-            _toast('¡LEGENDARIO!', drop, style, legendary: true);
+            _toast('¡LEGENDARIO!', drop, style, legendary: true, verdict: v);
           } else if (groundId == null) {
             // Sin loot en el piso: entró directo al inventario.
-            _toast('+', drop, style);
+            _toast('+', drop, style, verdict: v);
           }
         }
       case LootPickedEvent(:final playerId, :final drop)
           when playerId == localId:
         final v = verdictFor(playerId, drop);
-        _toast('+', drop, v?.style ?? LootFilterRules.defaultStyle(drop));
+        _toast('+', drop, v?.style ?? LootFilterRules.defaultStyle(drop),
+            verdict: v);
       case ItemGivenEvent(:final fromId, :final toId, :final drop):
         _line('${playerName(fromId)} le dio a ${playerName(toId)}: ', drop);
         if (toId == localId) {
           final v = verdictFor(toId, drop);
           _toast('Te dio ${playerName(fromId)}:', drop,
-              v?.style ?? LootFilterRules.defaultStyle(drop));
+              v?.style ?? LootFilterRules.defaultStyle(drop),
+              verdict: v);
         }
       default:
         return;
@@ -165,10 +172,7 @@ final lootFeedProvider = Provider.autoDispose<LootFeed>((ref) {
     playerName: (id) => c.session?.players[id]?.name ?? id,
     itemName: (d) => lootDropName(c.engine.progression.items.displayName, d,
         ecoName: c.engine.progression.ecos.fullName),
-    verdictFor: (id, d) {
-      final p = c.session?.players[id]?.profile;
-      return p == null ? null : c.engine.lootVerdict(p, d);
-    },
+    verdictFor: c.lootVerdictFor,
   );
   final sub = c.events.listen(feed.onEvent);
   ref.onDispose(() {

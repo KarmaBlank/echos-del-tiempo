@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/proto_colors.dart';
@@ -122,6 +124,25 @@ class BattleCommandWindow extends StatelessWidget {
     final sel =
         selected >= 0 && selected < visible.length ? visible[selected] : null;
     final catW = RetroType.width(context, 170);
+    // En pantallas anchas la ventana no se estira: tope de ancho,
+    // centrada.
+    return LayoutBuilder(builder: (context, box) {
+      final w = math.min(box.maxWidth, RetroType.width(context, maxWidth));
+      return Align(
+        alignment: Alignment.topCenter,
+        child: SizedBox(
+          width: w,
+          height: box.maxHeight,
+          child: _window(context, catW, sel),
+        ),
+      );
+    });
+  }
+
+  /// Tope de ancho de la ventana a texto Normal (px lógicos).
+  static const maxWidth = 1240.0;
+
+  Widget _window(BuildContext context, double catW, BattleAction? sel) {
     return Container(
       key: const ValueKey('battle-menu'),
       padding: const EdgeInsets.all(6),
@@ -202,9 +223,10 @@ class _Categories extends StatelessWidget {
               onTap: () => onCategory(c.category),
               child: Row(
                 children: [
+                  // Texto de lectura (como las filas de acciones): crece
+                  // con el ajuste y no queda diminuto en pantallas anchas.
                   Expanded(
-                    child: Text(retroText(c.category.label),
-                        style: RetroType.style(RetroType.label)),
+                    child: Text(retroText(c.category.label)),
                   ),
                   if (c.badge != null) ProtoText(c.badge!),
                 ],
@@ -380,23 +402,26 @@ class _RowState extends State<_Row> {
             : _hover
                 ? ProtoColors.buttonHoverBorder
                 : ProtoColors.panelBorder;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 3),
-      child: MouseRegion(
-        cursor: widget.onTap != null
-            ? SystemMouseCursors.click
-            : SystemMouseCursors.basic,
-        onEnter: (_) {
-          setState(() => _hover = true);
-          widget.onHover?.call();
-        },
-        onExit: (_) => setState(() => _hover = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
+    // El clic toma también el hueco de abajo: la fila mide ≥ 24 px de
+    // alto a texto Normal (accessibility.md § "Objetivos clicables").
+    return MouseRegion(
+      cursor: widget.onTap != null
+          ? SystemMouseCursors.click
+          : SystemMouseCursors.basic,
+      onEnter: (_) {
+        setState(() => _hover = true);
+        widget.onHover?.call();
+      },
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 3),
           child: Opacity(
             opacity: widget.enabled ? 1 : 0.45,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
               decoration: BoxDecoration(
                 color: hot ? ProtoColors.buttonHover : ProtoColors.button,
                 border: Border.all(color: border, width: 2),

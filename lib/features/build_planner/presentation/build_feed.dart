@@ -7,6 +7,7 @@ import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../core/settings/settings_providers.dart';
+import '../../../game_engine/models/build_wants.dart';
 import '../../world/presentation/session_controller.dart';
 import '../domain/build_tracker.dart';
 import 'build_fit_badge.dart';
@@ -70,9 +71,23 @@ final buildFeedProvider = Provider.autoDispose<BuildFeed>((ref) {
     scheduleMicrotask(() => texts.forEach(c.addLocalNotice));
   }
 
+  // El resumen del plan va al host para la condición `Build` del filtro
+  // de loot (§ 6): al entrar a la sala y con cada cambio del plan.
+  var disposed = false;
+  void syncWants() {
+    if (disposed || !c.mounted) return;
+    c.setBuildWants(BuildWants.fromPlan(ref.read(buildPlanProvider).plan));
+  }
+
+  // Fuera de la construcción del provider (aplicarlo emite una vista).
+  scheduleMicrotask(syncWants);
   final remove = c.addListener((_) => check());
-  ref.listen(buildPlanProvider, (_, __) => check());
+  ref.listen(buildPlanProvider, (_, __) {
+    check();
+    syncWants();
+  });
   ref.onDispose(() {
+    disposed = true;
     remove();
     feed.dispose();
   });

@@ -310,6 +310,11 @@ cuando el id existe.
   posición, igual que con la barrera del jefe: la barrera la frena).
 - Solo el piso actual tiene IA, contacto, fragmentos y cofres; los
   enemigos de otros pisos esperan quietos.
+- **Loot del suelo por piso** (v0.5.1, loot.md § 14.1): cada objeto
+  queda en el piso donde cayó (`GroundLoot.floor`); solo el del piso
+  actual se ve y se levanta, y reaparece al volver. Al cambiar de piso,
+  aviso en el chat con lo que cada uno dejó atrás y su filtro muestra
+  (`Quedan N objetos en el piso K.`).
 - Rango S/A/B con el `sTime` de la zona; si el grupo cae, misión fallida
   (rango D) como hoy.
 

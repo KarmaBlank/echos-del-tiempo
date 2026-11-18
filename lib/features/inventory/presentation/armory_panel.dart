@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_markup.dart';
+import '../../../app/widgets/menu_focus.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
 import 'shop_sections.dart';
@@ -37,32 +38,38 @@ class _ArmoryPanelState extends State<ArmoryPanel> {
     final shop = ShopContext(view, controller);
     final p = shop.profile;
     final close = view.mustAllocate ? null : controller.closePanel;
-    return PanelFrame(
-      title: 'ARMERÍA',
-      width: 1200,
-      fill: true,
-      help: kShopHelp,
-      onClose: close,
-      titleTrailing: ProtoText('Créditos <b>₵${p.credits}</b> · '
-          '<span class="k">${protoEsc(shop.className())}</span>'),
-      header: PanelTabs(
-        labels: [for (final t in ArmoryTab.values) t.label],
+    // Q / E, Ctrl+Tab y 1-4 cambian de pestaña (menu_focus.dart).
+    return MenuTabKeys(
+        count: ArmoryTab.values.length,
         index: _tab.index,
         onChanged: (i) => setState(() => _tab = ArmoryTab.values[i]),
-      ),
-      actions: [
-        PanelButton('PERSONAJE [C]',
-            onPressed: () => controller.openPanel(WorldPanel.character)),
-        PanelButton('CERRAR [ESC]', onPressed: close),
-      ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          PanelHint(_tab.hint),
-          Expanded(child: KeyedSubtree(
-              key: ValueKey(_tab), child: _tab.build(shop))),
-        ],
-      ),
-    );
+        child: PanelFrame(
+          title: 'ARMERÍA',
+          width: 1200,
+          fill: true,
+          help: kShopHelp,
+          onClose: close,
+          titleTrailing: ProtoText('Créditos <b>₵${p.credits}</b> · '
+              '<span class="k">${protoEsc(shop.className())}</span>'),
+          header: PanelTabs(
+            labels: [for (final t in ArmoryTab.values) t.label],
+            index: _tab.index,
+            onChanged: (i) => setState(() => _tab = ArmoryTab.values[i]),
+          ),
+          actions: [
+            PanelButton('PERSONAJE [C]',
+                onPressed: () => controller.openPanel(WorldPanel.character)),
+            PanelButton('CERRAR [ESC]', onPressed: close),
+          ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              PanelHint(_tab.hint),
+              Expanded(
+                  child: KeyedSubtree(
+                      key: ValueKey(_tab), child: _tab.build(shop))),
+            ],
+          ),
+        ));
   }
 }

@@ -2,11 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
+import '../../../app/widgets/menu_focus.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../app/theme/vision_palette.dart';
 import '../../../core/audio/presentation/audio_providers.dart';
 import '../../../core/settings/game_settings.dart';
 import '../../../core/settings/settings_providers.dart';
@@ -14,8 +16,10 @@ import '../../../core/settings/settings_providers.dart';
 /// Pestañas del menú (docs/specs/settings.md § "Estructura").
 enum SettingsTab {
   sound('SONIDO', 'Volumen general, de la música y de los efectos.'),
-  display('PANTALLA', 'Ventana, gráficos y efectos de la batalla.'),
-  game('JUEGO', 'Números de daño y avisos.'),
+  display('PANTALLA', 'Ventana, gráficos y rendimiento.'),
+  accessibility('ACCESIBILIDAD',
+      'Texto, colores para daltonismo, movimiento y destellos.'),
+  game('JUEGO', 'Números de daño, tiempo de turno y avisos.'),
   controls('CONTROLES', 'Todas las teclas del juego.');
 
   const SettingsTab(this.label, this.hint);
@@ -112,7 +116,12 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
   @override
   Widget build(BuildContext context) {
     final confirm = _confirm;
-    return Material(
+    // Q / E, Ctrl+Tab y 1-9 cambian de pestaña (menu_focus.dart).
+    return MenuTabKeys(
+      count: SettingsTab.values.length,
+      index: _tab.index,
+      onChanged: (i) => setState(() => _tab = SettingsTab.values[i]),
+      child: Material(
       type: MaterialType.transparency,
       child: PanelFrame(
         key: const ValueKey('settings-menu'),
@@ -158,8 +167,7 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
                       selected: widget.groupPaused,
                       onPressed: () =>
                           widget.onGroupPause!(!widget.groupPaused)),
-                PanelButton(
-                    widget.inGame ? 'CONTINUAR [ESC]' : 'CERRAR [ESC]',
+                PanelButton(widget.inGame ? 'CONTINUAR [ESC]' : 'CERRAR [ESC]',
                     key: const ValueKey('settings-close'),
                     accent: ProtoColors.green,
                     onPressed: widget.onClose),
@@ -169,11 +177,13 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
           return switch (_tab) {
             SettingsTab.sound => const _SoundTab(),
             SettingsTab.display => const _DisplayTab(),
+            SettingsTab.accessibility => const _AccessibilityTab(),
             SettingsTab.game => const _GameTab(),
             SettingsTab.controls => const _ControlsTab(),
           };
         }),
       ),
+    ),
     );
   }
 
@@ -190,7 +200,8 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
       key: const ValueKey('pause-status'),
       style: TextStyle(
           fontFamily: RetroType.bodyFamily,
- fontFamilyFallback: RetroType.bodyFallback, fontSize: RetroType.small,
+          fontFamilyFallback: RetroType.bodyFallback,
+          fontSize: RetroType.small,
           color: running ? ProtoColors.orange : ProtoColors.green),
     );
   }
@@ -216,11 +227,10 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
           onPressed: () => setState(() => _confirm = null)),
       PanelButton(quit ? 'SALIR DEL JUEGO' : 'SALIR AL TÍTULO',
           key: const ValueKey('pause-confirm-yes'),
-          accent: ProtoColors.red,
-          onPressed: () {
-            setState(() => _confirm = null);
-            (quit ? widget.onQuitGame : widget.onExitToTitle)?.call();
-          }),
+          accent: ProtoColors.red, onPressed: () {
+        setState(() => _confirm = null);
+        (quit ? widget.onQuitGame : widget.onExitToTitle)?.call();
+      }),
     ];
   }
 }
@@ -281,8 +291,7 @@ class _MenuGlyph extends StatelessWidget {
 /// Una fila de ajuste: nombre a la izquierda, control a la derecha y una
 /// línea `dim` debajo que dice qué hace.
 class _SettingRow extends StatelessWidget {
-  const _SettingRow(
-      {required this.label, required this.control, this.hint});
+  const _SettingRow({required this.label, required this.control, this.hint});
 
   final String label;
   final Widget control;
@@ -327,10 +336,13 @@ class _Choice<T> extends StatelessWidget {
   final String keyPrefix;
   final Map<T, String> options;
   final T value;
-  final ValueChanged<T> onChanged;
+
+  /// `null`: deshabilitado (la opción la fija otro ajuste).
+  final ValueChanged<T>? onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final on = onChanged;
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -340,7 +352,7 @@ class _Choice<T> extends StatelessWidget {
               key: ValueKey('$keyPrefix-${e.value}'),
               selected: e.key == value,
               accent: e.key == value ? ProtoColors.gold : null,
-              onPressed: () => onChanged(e.key)),
+              onPressed: on == null ? null : () => on(e.key)),
       ],
     );
   }
@@ -428,12 +440,17 @@ class _VolumeSlider extends StatelessWidget {
                   enabledThumbRadius: 6, elevation: 0, pressedElevation: 0),
               trackShape: const RectangularSliderTrackShape(),
             ),
-            child: Slider(
-              key: sliderKey,
-              value: value,
-              divisions: 20,
-              onChanged: onChanged,
-              onChangeEnd: onChangeEnd,
+            // 28 px de alto: se agarra en toda la franja, no solo en los
+            // 12 px del pulgar (objetivos ≥ 24 px; accessibility.md).
+            child: SizedBox(
+              height: 28,
+              child: Slider(
+                key: sliderKey,
+                value: value,
+                divisions: 20,
+                onChanged: onChanged,
+                onChangeEnd: onChangeEnd,
+              ),
             ),
           ),
         ),
@@ -442,7 +459,8 @@ class _VolumeSlider extends StatelessWidget {
           width: RetroType.width(context, 48),
           child: Text('${(value * 100).round()}%',
               maxLines: 1,
-              textAlign: TextAlign.right, style: TextStyle(color: color)),
+              textAlign: TextAlign.right,
+              style: TextStyle(color: color)),
         ),
       ],
     );
@@ -543,31 +561,6 @@ class _DisplayTab extends ConsumerWidget {
               onChanged: (v) => c.update(s.copyWith(fullscreen: v)),
             ),
           ),
-        // Accesibilidad: primero (docs/specs/settings.md § 3).
-        _SettingRow(
-          label: 'TAMAÑO DEL TEXTO',
-          hint: 'Letra de menús, fichas, chat y batalla. Se ajusta a la '
-              'grilla de la fuente para que se vea nítida.',
-          control: _Choice<TextSize>(
-            keyPrefix: 'display-text',
-            options: const {
-              TextSize.normal: 'NORMAL',
-              TextSize.large: 'GRANDE',
-              TextSize.huge: 'MUY GRANDE',
-            },
-            value: s.textSize,
-            onChanged: (v) => c.update(s.copyWith(textSize: v)),
-          ),
-        ),
-        _SettingRow(
-          label: 'FUENTE DE LECTURA',
-          hint: 'Fichas, chat, menús y batalla. Títulos y botones no '
-              'cambian.',
-          control: _FontChoice(
-            value: s.readingFont,
-            onChanged: (v) => c.update(s.copyWith(readingFont: v)),
-          ),
-        ),
         _SettingRow(
           label: 'ESCALADO',
           hint: s.scale == ScaleMode.pixelPerfect
@@ -626,20 +619,135 @@ class _DisplayTab extends ConsumerWidget {
             onChanged: (v) => c.update(s.copyWith(fpsLimit: v)),
           ),
         ),
+        // FPS Y PING (settings.md § 3.9).
+        _SettingRow(
+          label: 'FPS Y PING',
+          hint: 'Muestra en una esquina los cuadros por segundo y, en una '
+              'sala, el ping.',
+          control: _Choice<bool>(
+            keyPrefix: 'display-perf',
+            options: _yesNo,
+            value: s.perfOverlay,
+            onChanged: (v) => c.update(s.copyWith(perfOverlay: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'ESQUINA',
+          hint: s.perfOverlay
+              ? 'Dónde va el indicador de FPS y ping.'
+              : 'Activá FPS Y PING para elegir la esquina.',
+          control: _Choice<OverlayCorner>(
+            keyPrefix: 'display-perf-corner',
+            options: const {
+              OverlayCorner.topRight: 'ARRIBA DER.',
+              OverlayCorner.topLeft: 'ARRIBA IZQ.',
+              OverlayCorner.bottomRight: 'ABAJO DER.',
+              OverlayCorner.bottomLeft: 'ABAJO IZQ.',
+            },
+            value: s.perfCorner,
+            onChanged: s.perfOverlay
+                ? (v) => c.update(s.copyWith(perfCorner: v))
+                : null,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// ACCESIBILIDAD (docs/specs/accessibility.md, settings.md § 3.8): texto,
+/// colores para daltonismo, movimiento y destellos en un solo lugar.
+class _AccessibilityTab extends ConsumerWidget {
+  const _AccessibilityTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(gameSettingsProvider);
+    final c = ref.read(gameSettingsProvider.notifier);
+    final still = s.reduceMotion;
+    return Column(
+      key: const ValueKey('settings-accessibility'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SettingRow(
+          label: 'TAMAÑO DEL TEXTO',
+          hint: 'Letra de menús, fichas, chat y batalla. Se ajusta a la '
+              'grilla de la fuente para que se vea nítida.',
+          control: _Choice<TextSize>(
+            keyPrefix: 'display-text',
+            options: const {
+              TextSize.normal: 'NORMAL',
+              TextSize.large: 'GRANDE',
+              TextSize.huge: 'MUY GRANDE',
+            },
+            value: s.textSize,
+            onChanged: (v) => c.update(s.copyWith(textSize: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'FUENTE DE LECTURA',
+          hint: 'Fichas, chat, menús y batalla. Títulos y botones no '
+              'cambian.',
+          control: _FontChoice(
+            value: s.readingFont,
+            onChanged: (v) => c.update(s.copyWith(readingFont: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'MODO DALTÓNICO',
+          hint: _visionHint(s.colorVision),
+          control: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Choice<ColorVision>(
+                keyPrefix: 'a11y-vision',
+                options: const {
+                  ColorVision.off: 'NO',
+                  ColorVision.deuteranopia: 'DEUTERANOPÍA',
+                  ColorVision.protanopia: 'PROTANOPÍA',
+                  ColorVision.tritanopia: 'TRITANOPÍA',
+                },
+                value: s.colorVision,
+                onChanged: (v) => c.update(s.copyWith(colorVision: v)),
+              ),
+              const SizedBox(height: 8),
+              const _VisionPreview(),
+            ],
+          ),
+        ),
+        _SettingRow(
+          label: 'REDUCIR MOVIMIENTO',
+          hint: still
+              ? 'Sin sacudida, sin parpadeos, sin zoom de cámara en las '
+                  'ULT, arena quieta y fundido corto al entrar y salir de '
+                  'la batalla. Destellos a lo sumo SUAVES.'
+              : 'Apaga la sacudida, los parpadeos y el zoom de las ULT, '
+                  'y suaviza los destellos y las transiciones.',
+          control: _Choice<bool>(
+            keyPrefix: 'a11y-motion',
+            options: _yesNo,
+            value: s.reduceMotion,
+            onChanged: (v) => c.update(s.copyWith(reduceMotion: v)),
+          ),
+        ),
         _SettingRow(
           label: 'SACUDIDA',
-          hint: 'La escena de batalla tiembla con los golpes fuertes.',
+          hint: still
+              ? 'Apagada por REDUCIR MOVIMIENTO.'
+              : 'La escena de batalla tiembla con los golpes fuertes.',
           control: _Choice<bool>(
             keyPrefix: 'display-shake',
             options: _yesNo,
-            value: s.screenShake,
-            onChanged: (v) => c.update(s.copyWith(screenShake: v)),
+            value: s.shakeOn,
+            onChanged:
+                still ? null : (v) => c.update(s.copyWith(screenShake: v)),
           ),
         ),
         _SettingRow(
           label: 'DESTELLOS',
           hint: 'Destellos de pantalla completa (rojo al recibir un golpe '
-              'fuerte, blanco en golpes brutales). SUAVES o NO si molestan.',
+              'fuerte, blanco en golpes brutales, ULT y ascensión). '
+              '${still ? 'Con REDUCIR MOVIMIENTO, a lo sumo SUAVES.' : 'SUAVES o NO si molestan.'}',
           control: _Choice<FlashLevel>(
             keyPrefix: 'display-flashes',
             options: const {
@@ -647,10 +755,65 @@ class _DisplayTab extends ConsumerWidget {
               FlashLevel.reduced: 'SUAVES',
               FlashLevel.off: 'NO',
             },
-            value: s.flashes,
+            value: still && s.flashes == FlashLevel.normal
+                ? FlashLevel.reduced
+                : s.flashes,
             onChanged: (v) => c.update(s.copyWith(flashes: v)),
           ),
         ),
+      ],
+    );
+  }
+
+  static String _visionHint(ColorVision v) => switch (v) {
+        ColorVision.off => 'Colores para verde / rojo (deuteranopía, '
+            'protanopía) o azul / amarillo (tritanopía). Las flechas ▲ ▼ y '
+            'las letras de rareza siguen siempre.',
+        ColorVision.deuteranopia => 'Verde / rojo: mejora en azul y '
+            'empeora en ámbar; HP azul y MP amarillo; quiebre celeste.',
+        ColorVision.protanopia => 'Rojo: como deuteranopía, sin rojos '
+            '(se ven oscuros): lo malo en ámbar claro.',
+        ColorVision.tritanopia => 'Azul / amarillo: mejora en turquesa y '
+            'empeora en rojo; HP turquesa y MP magenta; Raro rosado.',
+      };
+}
+
+/// Muestra de la paleta activa: mejora / empeora, HP / MP, las cinco
+/// rarezas con su letra y la vida / quiebre de un enemigo.
+class _VisionPreview extends StatelessWidget {
+  const _VisionPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget swatch(String text, Color color, {Color? ink}) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            color: ink == null ? null : color,
+            border: Border.all(color: color, width: 2),
+          ),
+          child: Text(retroText(text), style: TextStyle(color: ink ?? color)),
+        );
+    const rarities = [
+      ('C', Color(0xFFDCDCDC)),
+      ('M', VisionColor(VisionSlot.magic)),
+      ('R', VisionColor(VisionSlot.rare)),
+      ('E', VisionColor(VisionSlot.epic)),
+      ('L', VisionColor(VisionSlot.legendary)),
+    ];
+    return Wrap(
+      key: const ValueKey('a11y-vision-preview'),
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        swatch('▲ mejora', ProtoColors.green),
+        swatch('▼ empeora', ProtoColors.red),
+        swatch('HP', ProtoColors.hp, ink: ProtoColors.bg),
+        swatch('MP', ProtoColors.mp, ink: ProtoColors.bg),
+        for (final (l, col) in rarities) swatch(l, col),
+        swatch('VIDA', const VisionColor(VisionSlot.enemyHp),
+            ink: ProtoColors.bg),
+        swatch('◆ QUIEBRE', const VisionColor(VisionSlot.breakBar),
+            ink: ProtoColors.bg),
       ],
     );
   }
@@ -674,6 +837,21 @@ class _GameTab extends ConsumerWidget {
             options: _yesNo,
             value: s.damageNumbers,
             onChanged: (v) => c.update(s.copyWith(damageNumbers: v)),
+          ),
+        ),
+        _SettingRow(
+          label: 'TIEMPO DE TURNO',
+          hint: 'Cuánto espera la batalla a que elijas. En multijugador '
+              'vale el del anfitrión de la sala.',
+          control: _Choice<TurnTimer>(
+            keyPrefix: 'game-turn',
+            options: const {
+              TurnTimer.normal: 'NORMAL (30 S)',
+              TurnTimer.long: 'LARGO (60 S)',
+              TurnTimer.unlimited: 'SIN LÍMITE',
+            },
+            value: s.turnTimer,
+            onChanged: (v) => c.update(s.copyWith(turnTimer: v)),
           ),
         ),
         _SettingRow(
@@ -708,28 +886,37 @@ class _ControlsTab extends StatelessWidget {
   const _ControlsTab();
 
   static const sections = <(String, List<(String, String)>)>[
-    ('MAPA', [
-      ('WASD / Flechas', 'Moverse'),
-      ('E / Espacio', 'Interactuar, levantar loot'),
-      ('Alt (mantener)', 'Ver también el loot oculto por el filtro'),
-      ('C', 'Personaje'),
-      ('I', 'Inventario'),
-      ('Y / N', 'Votar la misión propuesta'),
-    ]),
-    ('BATALLA', [
-      ('1 - 9 / clic', 'Elegir la acción N del menú'),
-      ('Q / Tab / clic', 'Cambiar de objetivo'),
-      ('Esc', 'Volver del submenú de pociones'),
-    ]),
-    ('MENÚS', [
-      ('Esc', 'Cerrar el panel; sin panel abre esta pausa'),
-      ('Tab / Flechas', 'Mover el foco'),
-      ('Enter / Espacio', 'Elegir'),
-    ]),
-    ('CHAT', [
-      ('Enter', 'Escribir / mandar'),
-      ('Esc', 'Salir sin mandar'),
-    ]),
+    (
+      'MAPA',
+      [
+        ('WASD / Flechas', 'Moverse'),
+        ('E / Espacio', 'Interactuar, levantar loot'),
+        ('Alt (mantener)', 'Ver también el loot oculto por el filtro'),
+        ('C', 'Personaje'),
+        ('I', 'Inventario'),
+        ('Y / N', 'Votar la misión propuesta'),
+      ]
+    ),
+    (
+      'BATALLA',
+      [
+        ('1 - 9 / clic', 'Elegir la acción N del menú'),
+        ('Q / Tab / clic', 'Cambiar de objetivo'),
+        ('Esc', 'Volver del submenú de pociones'),
+      ]
+    ),
+    (
+      'MENÚS',
+      // Mapa de teclas de los menús (lib/app/widgets/menu_focus.dart).
+      kMenuKeys
+    ),
+    (
+      'CHAT',
+      [
+        ('Enter', 'Escribir / mandar'),
+        ('Esc', 'Salir sin mandar'),
+      ]
+    ),
   ];
 
   @override

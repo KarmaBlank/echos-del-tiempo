@@ -185,15 +185,20 @@ void main() {
       expect(_craft.transferPassive(p, 'f', 'b').error, 'No tiene pasiva');
     });
 
-    test('trasladar habilidad: cupos por rareza, reemplaza la más vieja', () {
+    test('trasladar habilidad: cupos por rareza, el jugador elige el reemplazo',
+        () {
       final p = _rich();
       final r = _craft.transferSkill(p, 'c', 'b', 'sismo');
       expect(r.after!.extraSkills, ['sismo']);
       expect(r.credits, 200, reason: 'Común: la fusión vieja');
       final q = r.profile!;
-      final r2 = _craft.transferSkill(q, 'c', 'a', 'ignea');
+      expect(_craft.transferSkill(q, 'c', 'a', 'ignea').error,
+          'Elegí qué habilidad reemplazar');
+      final r2 =
+          _craft.transferSkill(q, 'c', 'a', 'ignea', replaceSkillId: 'sismo');
       expect(r2.after!.extraSkills, ['ignea']);
       expect(r2.replaced, 'Golpe Sísmico');
+      expect(r2.replacedSkillId, 'sismo');
       // Épico: 2 cupos.
       final e1 = _craft.transferSkill(p, 'f', 'b', 'sismo').profile!;
       final e2 = _craft.transferSkill(e1, 'f', 'a', 'ignea');

@@ -19,15 +19,22 @@ import '../../../game_engine/rules/craft_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../build_planner/presentation/build_fit_badge.dart';
 import '../../build_planner/presentation/build_plan_providers.dart';
-import '../../combat/domain/skill_text.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
 import '../domain/item_text.dart';
 import '../domain/shop_guards.dart';
 import '../domain/shop_preview.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../app/widgets/action_card.dart';
+import '../../../app/widgets/cost_chip.dart';
+import '../../../app/widgets/menu_focus.dart';
 import '../../../app/widgets/menu_widgets.dart';
+import '../../../app/widgets/pixel_icon.dart';
+import '../../../app/widgets/section_panel.dart';
+import '../domain/battle_impact.dart';
+import '../domain/skill_tip.dart';
 import 'craft_bench.dart';
+import 'skill_chip.dart';
 
 /// Lo que comparten las pestañas de tienda e inventario: el jugador
 /// local, las reglas, los motivos de bloqueo del modo actual y las
@@ -148,22 +155,28 @@ class ItemCard extends StatelessWidget {
             level: level,
             attributes: attributes,
             stats: stats,
-            equipped: equipped)),
+            equipped: equipped,
+            skills: false)),
+        // Cada habilidad con su ficha (mouse o foco = tooltip, el mismo
+        // texto que en batalla, con tus stats).
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: SkillChips(rules: rules, item: item, stats: stats),
+        ),
         if (describe) ...[
           const SizedBox(height: 8),
-          const Text('HABILIDADES', style: TextStyle(color: ProtoColors.sky)),
+          const Text('QUÉ HACEN', style: TextStyle(color: ProtoColors.sky)),
           for (final id in rules.items.skillsOf(item))
             if (cat.skills[id] case final s?)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: ProtoText(describeSkillMarkup(s, null)),
+                child: ProtoText(skillTipMarkup(s, stats: stats)),
               ),
           if (w != null && cat.ultimates[w.type] != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: ProtoText(describeSkillMarkup(cat.ultimates[w.type]!, null,
-                  ultimate: true,
-                  nameColor: ProtoColors.hex(ProtoColors.pink))),
+              child: ProtoText(skillTipMarkup(cat.ultimates[w.type]!,
+                  stats: stats, ultimate: true)),
             ),
         ],
       ],
@@ -282,52 +295,106 @@ class _BuyTabState extends ConsumerState<BuyTab> {
           child: PanelSplit(
             listWidth: 420,
             list: [
-              for (final x in list)
-                MenuRow(
-                  wrap: true,
-                  key: ValueKey('shop-row-${x.id}'),
-                  selected: x.id == w.id,
-                  onTap: () => setState(() => _sel = x.id),
-                  label:
-                      '${fitOf(x.id).any ? '<span style="color:$kPlanHex">★</span> ' : ''}'
-                      '${protoEsc(x.name)} '
-                      '${protoColor(ProtoColors.dim, protoEsc(x.type))}',
-                  value: 'Nv ${x.level}  '
-                      '${p.items.any((i) => i.baseId == x.id) ? protoColor(ProtoColors.green, 'TIENES') : '${rules.meetsRequirements(p, x) ? '' : '${protoColor(ProtoColors.red, 'Req')} '}<b>₵${x.price}</b>'}',
+              NavSection(
+                child: InitialFocus(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final x in list)
+                        MenuRow(
+                          wrap: true,
+                          key: ValueKey('shop-row-${x.id}'),
+                          selected: x.id == w.id,
+                          onTap: () => setState(() => _sel = x.id),
+                          onFocus: () => setState(() => _sel = x.id),
+                          label:
+                              '${fitOf(x.id).any ? '<span style="color:$kPlanHex">★</span> ' : ''}'
+                              '${protoEsc(x.name)} '
+                              '${protoColor(ProtoColors.dim, protoEsc(x.type))}',
+                          value: 'Nv ${x.level}  '
+                              '${p.items.any((i) => i.baseId == x.id) ? protoColor(ProtoColors.green, 'TIENES') : '${rules.meetsRequirements(p, x) ? '' : '${protoColor(ProtoColors.red, 'Req')} '}<b>₵${x.price}</b>'}',
+                        ),
+                    ],
+                  ),
                 ),
+              ),
             ],
             detail: PanelDetail(
-              footer: owned
-                  ? const [
-                      Text('TIENES', style: TextStyle(color: ProtoColors.green))
-                    ]
-                  : [
-                      CostLine(cost: w.price, credits: p.credits),
-                      PanelButton('COMPRAR \$${w.price}',
-                          key: ValueKey('buy-${w.id}'),
-                          accent: ProtoColors.green,
-                          reason: shop.guards.buyWeapon(p, w.id),
-                          onPressed: () => shop.controller.buyWeapon(w.id)),
-                    ],
+              footer: [
+                const KeyHints(confirm: 'Elegir', back: 'Cerrar'),
+                if (owned)
+                  const Text('YA LA TIENES',
+                      style: TextStyle(color: ProtoColors.green))
+                else
+                  ConfirmButton('COMPRAR',
+                      key: ValueKey('buy-${w.id}'),
+                      reason: shop.guards.buyWeapon(p, w.id),
+                      cost: CostChip([
+                        CostPart(PixelIconKind.coin, '₵${w.price}',
+                            ok: p.credits >= w.price),
+                      ]),
+                      onPressed: () => shop.controller.buyWeapon(w.id)),
+              ],
               children: [
+                // Encabezado: nombre, tipo y nivel, con la ★ de tu build.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: ProtoText(
+                          key: const ValueKey('shop-title'),
+                          '<b style="color:#e8ecff">${protoEsc(w.name)}</b> '
+                          '${protoColor(ProtoColors.dim, '${protoEsc(w.type)} · Nv ${w.level} · Común')}'),
+                    ),
+                    BuildFitBadge(item: sample, compact: false),
+                  ],
+                ),
                 if (fit.any)
                   ProtoText(buildFitMarkup(fit, lead: 'Sirve')!,
                       key: const ValueKey('shop-build-fit')),
-                // Primero lo que cambia (antes → después), después la ficha.
-                StatsCompare(
-                  title: 'Si la equipas (ahora: '
-                      '${protoEsc(eq == null ? '-' : shop.itemName(eq))})'
-                      '${rules.meetsRequirements(p, w) ? '' : ' · ${protoColor(ProtoColors.red, 'no cumples nivel o requisitos')}'}',
-                  before: shop.preview.current(p),
-                  after: shop.preview.withBase(p, w),
+                const SizedBox(height: 6),
+                // Primero lo que cambia (antes → después), después el
+                // costo y la ficha.
+                SectionPanel(
+                  icon: PixelIconKind.arrowIn,
+                  title: 'SI LA EQUIPAS',
+                  subtitle: rules.meetsRequirements(p, w)
+                      ? null
+                      : 'no cumples nivel o requisitos: puedes comprarla igual',
+                  children: [
+                    StatsCompare(
+                      title: 'Si la equipas (ahora: '
+                          '${protoEsc(eq == null ? '-' : shop.itemName(eq))})',
+                      before: shop.preview.current(p),
+                      after: shop.preview.withBase(p, w),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                ItemCard(
-                    rules: rules,
-                    item: sample,
-                    level: p.level,
-                    attributes: p.attributes,
-                    describe: true),
+                SectionPanel(
+                  icon: PixelIconKind.coin,
+                  title: 'COSTO',
+                  children: [
+                    if (owned)
+                      ProtoText(protoColor(ProtoColors.green,
+                          'Ya tienes una. Mejórala en FORJA o FUSIÓN.'))
+                    else
+                      CostLine(cost: w.price, credits: p.credits),
+                  ],
+                ),
+                SectionPanel(
+                  icon: PixelIconKind.sword,
+                  title: 'FICHA',
+                  subtitle: 'habilidades y ULT del arma',
+                  children: [
+                    ItemCard(
+                        rules: rules,
+                        item: sample,
+                        level: p.level,
+                        attributes: p.attributes,
+                        stats: shop.preview.withBase(p, w),
+                        describe: true),
+                  ],
+                ),
               ],
             ),
           ),
@@ -438,21 +505,32 @@ class _ForgeTabState extends State<ForgeTab> {
     final passive = rules.items.passiveText(it);
     return PanelSplit(
       list: [
-        for (final x in list)
-          MenuRow(
-            wrap: true,
-            key: ValueKey('forge-row-${x.uid}'),
-            selected: x.uid == it.uid,
-            onTap: () => setState(() => _sel = x.uid),
-            label: itemNameMarkup(rules, x),
-            value: p.equippedUid == x.uid
-                ? protoColor(ProtoColors.gold, 'EQUIPADA')
-                : protoColor(ProtoColors.dim,
-                    'forja ${x.forgeLevel}/${x.rarity.forgeCap}'),
+        NavSection(
+          child: InitialFocus(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final x in list)
+                  MenuRow(
+                    wrap: true,
+                    key: ValueKey('forge-row-${x.uid}'),
+                    selected: x.uid == it.uid,
+                    onTap: () => setState(() => _sel = x.uid),
+                    onFocus: () => setState(() => _sel = x.uid),
+                    label: itemNameMarkup(rules, x),
+                    value: p.equippedUid == x.uid
+                        ? protoColor(ProtoColors.gold, 'EQUIPADA')
+                        : protoColor(ProtoColors.dim,
+                            'forja ${x.forgeLevel}/${x.rarity.forgeCap}'),
+                  ),
+              ],
+            ),
           ),
+        ),
       ],
       detail: PanelDetail(
         footer: [
+          const KeyHints(confirm: 'Forjar', back: 'Cerrar'),
           if (equipped)
             const Text('EQUIPADA', style: TextStyle(color: ProtoColors.gold))
           else
@@ -462,39 +540,79 @@ class _ForgeTabState extends State<ForgeTab> {
                 onPressed: () => shop.controller.equip(it.uid)),
         ],
         children: [
-          ProtoText('${itemNameMarkup(rules, it)} '
-              '<span class="k">${it.rarity.label}</span>'
-              '${equipped ? '' : ' <small>(efecto si la equipas)</small>'}'),
-          const SizedBox(height: 4),
           Row(
-            key: const ValueKey('forge-cap'),
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(retroText('Forja ${it.forgeLevel}/$cap  ')),
-              LevelPips(it.forgeLevel.clamp(0, cap), cap),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(retroText('(tope de ${it.rarity.label})'),
-                    style: const TextStyle(color: ProtoColors.dim)),
+              Expanded(
+                child: ProtoText('${itemNameMarkup(rules, it)} '
+                    '<span class="k">${it.rarity.label}</span>'
+                    '${equipped ? '' : ' <small>(efecto si la equipas)</small>'}'),
+              ),
+              BuildFitBadge(item: it),
+            ],
+          ),
+          SkillChips(
+              rules: rules, item: it, stats: shop.preview.withItem(p, it)),
+          const SizedBox(height: 4),
+          SectionPanel(
+            icon: PixelIconKind.anvil,
+            title: 'FORJA',
+            subtitle: 'cada mejora sube 1 nivel una estadística (máx 5)',
+            children: [
+              Row(
+                key: const ValueKey('forge-cap'),
+                children: [
+                  Text(retroText('Forja ${it.forgeLevel}/$cap  ')),
+                  LevelPips(it.forgeLevel.clamp(0, cap), cap),
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(retroText('(tope de ${it.rarity.label})'),
+                        style: const TextStyle(color: ProtoColors.dim)),
+                  ),
+                ],
+              ),
+              if (passive != null)
+                ProtoText('Pasiva: <span style="color:$kPassiveHex">'
+                    '${protoEsc(passive)}</span>'),
+              ProtoText(passiveForgeNote(it),
+                  key: const ValueKey('forge-passive-note')),
+              const SizedBox(height: 6),
+              CardGrid(
+                minWidth: 220,
+                children: [
+                  for (final s in rules
+                      .upgradeStatsFor(rules.catalog.weapons[it.baseId]!))
+                    _UpgradeCard(shop: shop, item: it, stat: s),
+                ],
               ),
             ],
           ),
-          if (passive != null)
-            ProtoText('Pasiva: <span style="color:$kPassiveHex">'
-                '${protoEsc(passive)}</span>'),
-          ProtoText(passiveForgeNote(it),
-              key: const ValueKey('forge-passive-note')),
-          const SizedBox(height: 4),
-          for (final s
-              in rules.upgradeStatsFor(rules.catalog.weapons[it.baseId]!))
-            _UpgradeRow(shop: shop, item: it, stat: s),
         ],
       ),
     );
   }
 }
 
-class _UpgradeRow extends StatelessWidget {
-  const _UpgradeRow(
+/// Qué hace cada estadística de forja (una línea).
+const _forgeWhat = {
+  UpgradeStat.pow: 'Más ATQ (o MAG) con esta arma.',
+  UpgradeStat.crit: 'Más probabilidad de golpe crítico.',
+  UpgradeStat.spd: 'Más velocidad: turnos más seguidos.',
+  UpgradeStat.def: 'Más defensa: menos daño recibido.',
+};
+
+const _forgeIcon = {
+  UpgradeStat.pow: PixelIconKind.sword,
+  UpgradeStat.crit: PixelIconKind.star,
+  UpgradeStat.spd: PixelIconKind.arrowIn,
+  UpgradeStat.def: PixelIconKind.anchor,
+};
+
+/// Una estadística de forja como tarjeta: nivel en cuadritos, bono y
+/// efecto antes → después, si sube la pasiva, y el costo (o el motivo
+/// completo). Clic / `Enter` = +1.
+class _UpgradeCard extends StatelessWidget {
+  const _UpgradeCard(
       {required this.shop, required this.item, required this.stat});
 
   final ShopContext shop;
@@ -529,49 +647,66 @@ class _UpgradeRow extends StatelessWidget {
         item.passiveId != null;
     final def = rules.items.passiveOf(item);
     final cost = CraftRules.forgeCost(w, item.rarity, l);
-    return PanelRow(
+    final reason = atMax ? null : shop.guards.upgrade(p, item.uid, stat);
+    return KeyedSubtree(
       key: ValueKey('forge-stat-${stat.key}'),
-      trailing: atMax
-          ? const Text('MAX', style: TextStyle(color: ProtoColors.green))
-          : PanelButton(
-              '+1 \$$cost',
-              key: ValueKey('up-${item.uid}-${stat.key}'),
-              reason: shop.guards.upgrade(p, item.uid, stat),
-              onPressed: () => shop.controller.upgrade(item.uid, stat),
+      child: ActionCard(
+        key: ValueKey('up-${item.uid}-${stat.key}'),
+        icon: PixelIcon(_forgeIcon[stat]!,
+            size: RetroType.width(context, 20),
+            color: atMax ? ProtoColors.green : ProtoColors.gold),
+        title: '<b>${protoEsc(stat.label)}</b>',
+        description: _forgeWhat[stat],
+        disabled: atMax,
+        reason: reason,
+        onTap: () {
+          if (!atMax && reason == null) {
+            shop.controller.upgrade(item.uid, stat);
+          }
+        },
+        footer: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                LevelPips(l, max),
+                const SizedBox(width: 8),
+                Text('$l/$max'),
+              ],
             ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              SizedBox(
-                width: RetroType.width(context, 110),
-                child: Text(retroText(stat.label),
-                    style: const TextStyle(color: ProtoColors.sky)),
+            StatChange('Bono', l, atMax ? l : l + 1,
+                format: (x) => upgradeValueText(stat, x.toInt())),
+            effect,
+            if (passiveUp && def != null)
+              ProtoText(
+                key: ValueKey('forge-passive-up-${stat.key}'),
+                '<b style="color:$kPassiveHex">¡La pasiva sube!</b> '
+                '<span style="color:$kPassiveHex">${protoEsc(def.name)} '
+                '${WeaponPassiveDef.roman(item.effectivePassiveLevel)} → '
+                '${WeaponPassiveDef.roman(r.after!.effectivePassiveLevel)}: '
+                '${protoEsc(def.descriptionAt(r.after!.effectivePassiveLevel))}</span>',
               ),
-              LevelPips(l, max),
-              const SizedBox(width: 8),
-              Text('$l/$max'),
-            ],
-          ),
-          Wrap(
-            spacing: 16,
-            children: [
-              StatChange('Bono', l, atMax ? l : l + 1,
-                  format: (x) => upgradeValueText(stat, x.toInt())),
-              effect,
-            ],
-          ),
-          if (passiveUp && def != null)
-            ProtoText(
-              key: ValueKey('forge-passive-up-${stat.key}'),
-              '<b style="color:$kPassiveHex">¡La pasiva sube!</b> '
-              '<span style="color:$kPassiveHex">${protoEsc(def.name)} '
-              '${WeaponPassiveDef.roman(item.effectivePassiveLevel)} → '
-              '${WeaponPassiveDef.roman(r.after!.effectivePassiveLevel)}: '
-              '${protoEsc(def.descriptionAt(r.after!.effectivePassiveLevel))}</span>',
-            ),
-        ],
+            // Qué cambia en batalla, con tus números (battle_impact.dart).
+            if (!atMax)
+              if (battleImpactMarkup(rules, b, a, weapon: after)
+                  case final impact?)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: ProtoText(impact,
+                      key: ValueKey('forge-impact-${stat.key}')),
+                ),
+            const SizedBox(height: 4),
+            if (atMax)
+              const CostChip.note('MAX')
+            else if (reason != null)
+              CostChip.blocked(reason)
+            else
+              CostChip([
+                CostPart(PixelIconKind.coin, '+1 · ₵$cost',
+                    ok: p.credits >= cost),
+              ]),
+          ],
+        ),
       ),
     );
   }

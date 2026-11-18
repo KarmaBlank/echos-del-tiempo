@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/rules/eco_rules.dart';
-import '../../../game_engine/rules/session_engine.dart';
 import '../../../game_engine/rules/trial_rules.dart';
 import '../../combat/presentation/battle_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
@@ -72,8 +71,11 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
       eventSeq: view.battleEventSeq,
       battleId: b.id,
       canAct: view.myTurn,
-      turnTimeLeft:
-          b.waitingForPlayer ? SessionEngine.turnLimit - b.turnTime : null,
+      // Sin límite (tiempo de turno de la sala): sin reloj.
+      turnTimeLeft: b.waitingForPlayer && view.session.turnLimit != null
+          ? view.session.turnLimit! - b.turnTime
+          : null,
+      turnLimit: view.session.turnLimit ?? 30,
       sprites: widget.sprites,
       arena: _arena,
       localId: view.localId,

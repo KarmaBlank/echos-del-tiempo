@@ -31,7 +31,8 @@ abstract final class ArenaWipe {
       threshold(col, row, cols) >= p;
 
   /// Lado del bloque en px de pantalla para una escala [scale].
-  static double blockPx(double scale) => (8 * scale).roundToDouble().clamp(6.0, 24.0);
+  static double blockPx(double scale) =>
+      (8 * scale).roundToDouble().clamp(6.0, 24.0);
 
   /// Tapa [area] con los bloques que siguen cubiertos con progreso [p].
   static void paint(Canvas canvas, Rect area, double p, double scale) {
@@ -45,17 +46,34 @@ abstract final class ArenaWipe {
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < cols; c++) {
         if (covered(p, c, r, cols)) {
-          path.addRect(Rect.fromLTWH(area.left + c * b, area.top + r * b, b, b));
+          path.addRect(
+              Rect.fromLTWH(area.left + c * b, area.top + r * b, b, b));
         }
       }
     }
     canvas.drawPath(path, paint);
   }
 
+  /// REDUCIR MOVIMIENTO: fundido corto desde negro en vez de bloques.
+  static const fadeMs = 200.0;
+
+  /// Fundido de [area] con progreso [p] (0 = negro, 1 = nada).
+  static void paintFade(Canvas canvas, Rect area, double p) {
+    if (p >= 1) return;
+    canvas.drawRect(area,
+        Paint()..color = color.withValues(alpha: (1 - p).clamp(0.0, 1.0)));
+  }
+
   /// Entrada a la arena a [age] ms del comienzo de la batalla: destello
-  /// (× [flash]) y los bloques que se van.
+  /// (× [flash]) y los bloques que se van; con [fade] (REDUCIR
+  /// MOVIMIENTO), solo un fundido corto sin destello.
   static void paintEnter(
-      Canvas canvas, Rect area, double age, double scale, double flash) {
+      Canvas canvas, Rect area, double age, double scale, double flash,
+      {bool fade = false}) {
+    if (fade) {
+      if (age >= 0 && age < fadeMs) paintFade(canvas, area, age / fadeMs);
+      return;
+    }
     if (age < 0 || age >= ms) return;
     if (age < flashMs && flash > 0) {
       canvas.drawRect(
@@ -71,9 +89,13 @@ abstract final class ArenaWipe {
 /// Vuelta al mapa: cuando [inBattle] pasa de `true` a `false`, tapa la
 /// pantalla con bloques que se van en [ArenaWipe.ms]. No toma clics.
 class BattleExitWipe extends StatefulWidget {
-  const BattleExitWipe({super.key, required this.inBattle});
+  const BattleExitWipe({super.key, required this.inBattle, this.fade = false});
 
   final bool inBattle;
+
+  /// REDUCIR MOVIMIENTO: fundido corto ([ArenaWipe.fadeMs]) en vez de
+  /// los bloques.
+  final bool fade;
 
   @override
   State<BattleExitWipe> createState() => _BattleExitWipeState();
@@ -88,7 +110,12 @@ class _BattleExitWipeState extends State<BattleExitWipe>
   @override
   void didUpdateWidget(BattleExitWipe old) {
     super.didUpdateWidget(old);
-    if (old.inBattle && !widget.inBattle) _anim.forward(from: 0);
+    if (old.inBattle && !widget.inBattle) {
+      _anim.duration = Duration(
+          milliseconds:
+              (widget.fade ? ArenaWipe.fadeMs : ArenaWipe.ms).round());
+      _anim.forward(from: 0);
+    }
   }
 
   @override
@@ -106,7 +133,8 @@ class _BattleExitWipeState extends State<BattleExitWipe>
             ? const SizedBox.shrink()
             : CustomPaint(
                 size: Size.infinite,
-                painter: _WipePainter(Curves.easeOut.transform(_anim.value)),
+                painter: _WipePainter(Curves.easeOut.transform(_anim.value),
+                    fade: widget.fade),
               ),
       ),
     );
@@ -114,15 +142,20 @@ class _BattleExitWipeState extends State<BattleExitWipe>
 }
 
 class _WipePainter extends CustomPainter {
-  _WipePainter(this.p);
+  _WipePainter(this.p, {this.fade = false});
   final double p;
+  final bool fade;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (fade) {
+      ArenaWipe.paintFade(canvas, Offset.zero & size, p);
+      return;
+    }
     final s = (size.width / 480).clamp(1.0, 4.0);
     ArenaWipe.paint(canvas, Offset.zero & size, p, s);
   }
 
   @override
-  bool shouldRepaint(_WipePainter old) => old.p != p;
+  bool shouldRepaint(_WipePainter old) => old.p != p || old.fade != fade;
 }

@@ -47,6 +47,7 @@ class BattleView extends StatefulWidget {
     this.battleId = 0,
     this.canAct = false,
     this.turnTimeLeft,
+    this.turnLimit = 30,
     this.sprites,
     this.arena,
     this.localId,
@@ -71,6 +72,9 @@ class BattleView extends StatefulWidget {
 
   /// Segundos que le quedan al jugador de turno (`TURN_LIMIT − turnT`).
   final double? turnTimeLeft;
+
+  /// Segundos de un turno entero (tiempo de turno de la sala).
+  final double turnLimit;
 
   /// Manda un comando del actor de turno. Devuelve si fue aceptado.
   final bool Function(BattleCommand command) onCommand;
@@ -755,7 +759,9 @@ class BattleViewState extends State<BattleView>
 
   Widget _scene(BattleState b) {
     return LayoutBuilder(builder: (context, cons) {
-      final g = SceneGeometry.fit(cons.biggest);
+      // Las etiquetas crecen con el texto y la ventana (accessibility.md).
+      final g = SceneGeometry.fit(cons.biggest,
+          textFactor: RetroType.factorOf(context));
       final sprites = widget.sprites;
       final layout = BattleLayout.compute(b, widget.arena, vw: g.virtualWidth,
           enemySize: (e) {
@@ -773,6 +779,7 @@ class BattleViewState extends State<BattleView>
         localId: widget.localId,
         targetId: widget.canAct ? target : null,
         turnTimeLeft: widget.turnTimeLeft,
+        turnLimit: widget.turnLimit,
       );
       scene.sync(
         battleId: widget.battleId,
@@ -964,14 +971,23 @@ class _LogBand extends StatelessWidget {
       child: LayoutBuilder(builder: (context, box) {
         final log = retroText(battle.log);
         // La caja del reloj crece si el texto no entra (tamaño del texto).
-        final timerW = math.max(82 * scale, RetroType.em(context, 7) + 8);
+        // Press Start al múltiplo de 8 que entra en la banda (el reloj y,
+        // si cabe en una línea, el log).
+        final bandPx = math.max(
+            8.0, ((box.maxHeight - 2) / 1.25 / 8).floor() * 8.0);
+        final timerPx = math.max(RetroType.em(context, 1), bandPx);
+        final timerW = math.max(82 * scale, 7 * timerPx + 8);
         final labelW = showTimer ? timerW + 2 * scale : 0.0;
-        // 6 px virtuales del prototipo (5 si el log es largo), redondeado a
-        // la grilla de la fuente: 16 si entra en una línea, si no 8.
-        final big = 6 * scale >= 12 &&
-            log.length <= 52 &&
-            RetroType.em(context, log.length, size: RetroType.title) <=
-                box.maxWidth - labelW - 16;
+        // Press Start al múltiplo de 8 más grande que entra en el alto de
+        // la banda (16 px virtuales × la escala de la escena: 16 a
+        // 1280×720, 24 a 1920×1080) y en una línea; si no entra, el texto
+        // de lectura.
+        final room = box.maxWidth - labelW - 16;
+        var px = bandPx;
+        while (px >= 16 && px * log.length > room) {
+          px -= 8;
+        }
+        final big = px >= 16 && log.length <= 52;
         return Row(
           children: [
             Expanded(
@@ -983,11 +999,13 @@ class _LogBand extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
+                    textScaler: big ? TextScaler.noScaling : null,
                     style: TextStyle(
                         fontFamilyFallback: RetroType.bodyFallback,
-                        fontFamily: RetroType.familyFor(
-                            big ? RetroType.title : RetroType.small),
-                        fontSize: big ? RetroType.title : RetroType.small,
+                        fontFamily: big
+                            ? RetroType.pixelFamily
+                            : RetroType.familyFor(RetroType.small),
+                        fontSize: big ? px : RetroType.small,
                         height: 1.25,
                         color: ProtoColors.white),
                   ),
@@ -1003,9 +1021,10 @@ class _LogBand extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   retroText('$who ${left.ceil().clamp(0, 99)}s'),
+                  textScaler: TextScaler.noScaling,
                   style: TextStyle(
                     fontFamily: RetroType.pixelFamily,
-                    fontSize: RetroType.label,
+                    fontSize: timerPx,
                     color: left <= 10 ? ProtoColors.red : ProtoColors.gold,
                   ),
                 ),

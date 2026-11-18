@@ -12,8 +12,10 @@ mirando el perfil, lo muestra en la pestaña **BUILD**, marca con
 **★ Tu build** lo que sirve en la tienda, el inventario y la fusión, y
 avisa con un cartel cuando una meta avanza.
 
-Es **local**: no viaja por la red, no cambia el protocolo ni el
-`PlayerProfile`. Los compañeros no ven tu plan (quizás más adelante).
+Es **local**: el plan no viaja por la red ni va en el `PlayerProfile`.
+Desde v0.5.1 solo viaja al anfitrión un **resumen** con lo que pide de
+un arma, para la condición `Build` del filtro de loot (§ 6). Los
+compañeros no ven tu plan.
 
 Código:
 - Modelo y reglas puras: `lib/game_engine/models/build_plan.dart`,
@@ -188,9 +190,80 @@ Se calcula en el cliente con el perfil local (sirve igual como host o
 como cliente). Ajuste **Avisos de build** (JUEGO, `game.json`
 `buildNotices`, por defecto sí) los apaga.
 
-## 6. Fuera de alcance (v0.5)
+## 6. Filtro de loot: "Coincide con mi build" (v0.5.1)
 
-- Condición del filtro de loot "coincide con mi build": el filtro lo
-  evalúa también el anfitrión, que no conoce tu plan (haría falta
-  cambiar el protocolo). Queda para más adelante.
-- Compartir el plan con el grupo.
+Pedido del dueño: poder filtrar y resaltar el loot que sirve a tu plan.
+El filtro lo evalúa el **anfitrión** (decide qué se auto-levanta y qué
+queda oculto), así que el anfitrión tiene que conocer lo que pide el plan
+de cada jugador.
+
+### 6.1 Resumen del plan (`BuildWants`)
+
+`lib/game_engine/models/build_wants.dart`, puro. `BuildWants.fromPlan(plan)`
+toma **solo** lo que mira `BuildPlanRules.itemFit`: tipos y bases de arma,
+mods con tier mínimo, pasiva de arma y habilidades. Nada de nombre,
+notas, checklist, atributos, árbol, ascensión, nivel ni maestría. JSON con
+las mismas claves que el plan (`types`, `bases`, `mods`, `wp`, `skills`).
+Lectura acotada (viene de la red): como mucho 24 por lista, ids de hasta
+48 caracteres, tier de mod 1..5; lo que no es del tipo esperado se ignora.
+
+`BuildWants.matches(item, base) → Set<BuildMatch>` con la **misma regla**
+que `itemFit` (un test lo compara caso por caso):
+- `base`: la base está en el plan o su tipo está en el plan;
+- `mod`: tiene un afijo del plan con tier ≤ el mínimo (los fijos de un
+  legendario, tier 0, siempre cumplen);
+- `pasiva`: es la pasiva del plan;
+- `habilidad`: la base o una habilidad fusionada es una del plan.
+"Casi" (mod con peor tier) **no** cuenta.
+
+### 6.2 Viaje al anfitrión
+
+- Acción `SetBuildWantsAction(BuildWants?)` (`{"t":"wants","w":{...}}`;
+  sin `w` = sin plan). Protocolo **6** (netcode.md § "Build y filtro").
+- El cliente la manda **al entrar** (después del primer snapshot) y
+  **cada vez que cambia el plan** (`SessionController.setBuildWants`; la
+  conecta `buildFeedProvider`, que vive mientras dura `WorldScreen`). Si el
+  resumen no cambió, no se manda nada.
+- Solo / anfitrión: la misma acción se aplica en el motor local.
+- El host la acepta siempre (también con la sala pausada) y la guarda en
+  `SessionPlayer.buildWants`: **no** va en el snapshot (`SessionJson` no
+  la escribe), no se guarda en disco, se pierde si el jugador sale.
+
+### 6.3 Evaluación
+
+`FilterContext.wants`: el motor del anfitrión evalúa el filtro de cada
+jugador con **su** resumen (`_deliver` y el auto-levantar usan
+`SessionPlayer.buildWants`). En la UI de cada dispositivo se usa el plan
+local y **solo para el jugador local** (`SessionController.lootVerdictFor`;
+un compañero se evalúa sin plan, así el anfitrión tampoco muestra el
+plan de otro). `FilterVerdict.build` dice qué cumple (vacío = nada).
+
+Condición `Build` (loot.md § 13): sin plan no coincide nunca (ni
+`Build No`), así una regla de build no hace nada hasta que armes uno.
+
+### 6.4 Lo que se ve
+
+- Etiquetas del piso (mapa), vista previa del filtro, resultado de la
+  misión y registro / avisos de loot del HUD: **★** delante del nombre
+  cuando el arma cumple algo del plan (aunque ninguna regla la use).
+- Filtro por defecto: regla **Tu build** después de Ecos y Legendarios:
+  `Build` + `Rareza >= Mágico` → borde violeta (`195 155 255`, el del
+  planificador), fondo violeta oscuro, tamaño 36, sonido `campana`, ícono
+  estrella violeta en el minimapa; el color del texto sigue siendo el de
+  la rareza. Sin plan no coincide (el filtro se comporta como antes). Los
+  Comunes que cumplen solo llevan la ★ (no se resaltan: un tipo de arma
+  del plan haría resaltar demasiados). Sin haz de luz: el haz sigue
+  siendo solo de los Legendarios.
+- Editor del filtro (pestaña FILTRO): sección **★ COINCIDE CON MI
+  BUILD** con qué tiene que cumplir (CUALQUIER META / BASE O TIPO / MOD /
+  PASIVA / HABILIDAD), la línea que se agrega y tres atajos: **+ A LA
+  REGLA DEL CURSOR** (línea nueva debajo del cursor; fuera de una regla,
+  agrega la de resaltar), **+ REGLA: RESALTAR** y **+ REGLA: OCULTAR
+  COMUNES FUERA DEL PLAN** (al principio: gana la primera). Dice qué
+  busca tu plan ("Tu plan busca: 1 base o tipo · 2 mods") o que no tenés
+  plan. La vista previa usa tu plan.
+
+## 7. Fuera de alcance
+
+- Compartir el plan con el grupo (los compañeros nunca lo ven).
+- Condición por meta concreta (`Build feroz`): hoy es por clase de meta.

@@ -10,8 +10,10 @@ import '../../game_engine/serialization/event_json.dart';
 import '../../game_engine/serialization/json_read.dart';
 import '../../game_engine/serialization/session_json.dart';
 
-/// Versión del protocolo (`v` del `hello` / `welcome`).
-const kProtocolVersion = 5;
+/// Versión del protocolo (`v` del `hello` / `welcome`). 6 desde v0.5.1:
+/// acción `wants` (resumen del plan de build para la condición `Build`
+/// del filtro de loot; docs/specs/netcode.md § "Build y filtro").
+const kProtocolVersion = 6;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {
@@ -78,6 +80,21 @@ class StateMessage extends WireMessage {
   final List<SessionEvent> events;
 }
 
+/// Cualquiera de los dos lados: `{"t":"ping","ts":123456}`. [ts] son
+/// microsegundos del reloj de quien lo manda; el otro lo devuelve igual
+/// en un [PongMessage] (docs/specs/netcode.md § "Ping"). No es una
+/// acción: nunca toca el estado de la sala.
+class PingMessage extends WireMessage {
+  const PingMessage(this.ts);
+  final int ts;
+}
+
+/// Respuesta a un [PingMessage]: `{"t":"pong","ts":123456}`.
+class PongMessage extends WireMessage {
+  const PongMessage(this.ts);
+  final int ts;
+}
+
 /// Codifica / decodifica mensajes del protocolo como texto JSON.
 class WireCodec {
   WireCodec([GameCatalog catalog = GameCatalog.standard])
@@ -101,6 +118,8 @@ class WireCodec {
             'code': m.code,
           },
         RejectMessage() => {'t': 'reject', 'why': m.reason.name},
+        PingMessage() => {'t': 'ping', 'ts': m.ts},
+        PongMessage() => {'t': 'pong', 'ts': m.ts},
         ActionMessage() => ActionJson.toJson(m.action),
         StateMessage() => {
             't': 'state',
@@ -123,6 +142,10 @@ class WireCodec {
               version: j.integer('v'));
         case 'reject':
           return RejectMessage(j.enumByName('why', RejectReason.values));
+        case 'ping':
+          return PingMessage(j.integer('ts'));
+        case 'pong':
+          return PongMessage(j.integer('ts'));
         case 'state':
           return StateMessage(
             session.fromJson(j.obj('s')),

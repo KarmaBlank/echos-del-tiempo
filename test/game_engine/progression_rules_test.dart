@@ -272,9 +272,11 @@ void main() {
       final p = base();
       expect(progression.fuse(p, 'espada_ignea', 'espada_bronce', 'giro'), isNull,
           reason: 'no se sacrifica la inicial');
-      expect(progression.fuse(p, 'hacha_rompe', 'espada_ignea', 'ignea'), isNotNull);
+      expect(progression.fuse(p, 'espada_bronce', 'espada_ignea', 'ignea'), isNotNull);
+      expect(progression.fuse(p, 'hacha_rompe', 'espada_ignea', 'ignea'), isNull,
+          reason: 'cupo lleno: la fusión vieja no elige qué reemplazar (v0.5.1)');
       final eq = p.copyWith(equipped: 'espada_ignea');
-      expect(progression.fuse(eq, 'hacha_rompe', 'espada_ignea', 'ignea'), isNull,
+      expect(progression.fuse(eq, 'espada_bronce', 'espada_ignea', 'ignea'), isNull,
           reason: 'no se sacrifica la equipada');
       expect(progression.fuse(p, 'espada_ignea', 'hacha_rompe', 'ignea'), isNull,
           reason: 'la habilidad debe ser propia del arma sacrificada');

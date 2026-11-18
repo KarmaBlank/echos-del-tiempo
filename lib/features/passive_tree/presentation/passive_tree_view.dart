@@ -77,6 +77,9 @@ class PassiveTreeView extends StatefulWidget {
   static Offset toCanvas(double x, double y) =>
       Offset(size / 2 + x * scale, size / 2 + y * scale);
 
+  /// Radio mínimo del área de clic de un nodo, en px de pantalla.
+  static const minHitRadius = 12.0;
+
   /// Radio del nodo: keystone 11 (hexágono), inicio 9, notable 8, resto 5.
   static double nodeRadius(PassiveNode n, {required bool start}) =>
       switch (n.kind) {
@@ -136,9 +139,16 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   String? _hit(Offset pos) {
     String? best;
     var bestD = double.infinity;
+    // El área de clic es más grande que el nodo dibujado: por lo menos
+    // 12 px de pantalla de radio (24 de diámetro) con cualquier zoom; si
+    // dos se pisan, gana el más cercano (accessibility.md § "Objetivos
+    // clicables").
+    final zoom = _transform.value.getMaxScaleOnAxis();
+    final minR = PassiveTreeView.minHitRadius / (zoom <= 0 ? 1 : zoom);
     for (final n in _cat.nodes.values) {
       final d = (PassiveTreeView.nodeCenter(n) - pos).distance;
-      final r = PassiveTreeView.nodeRadius(n, start: n.kind == 'st') + 4;
+      final r = math.max(
+          PassiveTreeView.nodeRadius(n, start: n.kind == 'st') + 4, minR);
       if (d <= r && d < bestD) {
         best = n.id;
         bestD = d;
@@ -184,7 +194,8 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   /// La zona de tu clase (su ruta y sus clusters).
   void _home({bool rebuild = true}) {
     final start = _cat.nodes[_cat.startNodeByClass[widget.profile.classId]];
-    var focus = const Offset(PassiveTreeView.size / 2, PassiveTreeView.size / 2);
+    var focus =
+        const Offset(PassiveTreeView.size / 2, PassiveTreeView.size / 2);
     var z = 0.8;
     if (start != null) {
       // Caja de la zona: los nodos a ±40° de la dirección de la clase,
@@ -258,8 +269,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                   TextSpan(
                       text: '$points',
                       style: const TextStyle(
-                          color: ProtoColors.gold,
-                          fontWeight: FontWeight.bold)),
+                          color: ProtoColors.gold)),
                 ])),
             if (widget.showReset)
               PanelButton(widget.resetLabel,
@@ -457,8 +467,8 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   Widget _tooltip(Size view, String id) {
     final node = _cat.nodes[id];
     if (node == null) return const SizedBox.shrink();
-    final at =
-        MatrixUtils.transformPoint(_transform.value, PassiveTreeView.nodeCenter(node));
+    final at = MatrixUtils.transformPoint(
+        _transform.value, PassiveTreeView.nodeCenter(node));
     final w = RetroType.width(context, 300).clamp(0.0, view.width - 16);
     final left = at.dx > view.width / 2 ? 8.0 : view.width - w - 8;
     final onTop = at.dy > view.height / 2;
@@ -492,7 +502,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
               children: [
                 Text(retroText(node.name),
                     style: const TextStyle(
-                        color: ProtoColors.gold, fontWeight: FontWeight.bold)),
+                        color: ProtoColors.gold)),
                 if (kind.isNotEmpty || pathText != null)
                   Text(
                       retroText([
@@ -610,7 +620,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       children: [
         Text(retroText(node.name),
             style: const TextStyle(
-                color: ProtoColors.gold, fontWeight: FontWeight.bold)),
+                color: ProtoColors.gold)),
         if (node.kind == 'k' || node.kind == 'n')
           Text(_kindText(node),
               style: const TextStyle(color: RetroPalette.muted)),
@@ -625,7 +635,8 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
           ),
         const SizedBox(height: 8),
         if (cost != null)
-          Text(retroText(cost), style: const TextStyle(color: ProtoColors.gold)),
+          Text(retroText(cost),
+              style: const TextStyle(color: ProtoColors.gold)),
         // Bloqueado: el motivo ya va junto al botón de tomar.
         if (st.state != TreeNodeState.locked)
           Text(retroText(stateText), style: TextStyle(color: stateColor)),
@@ -707,7 +718,8 @@ class PassiveTreePainter extends CustomPainter {
   bool _inPath(PassiveNode n) =>
       highlightPath != null && n.pathId == highlightPath;
 
-  bool _onRoute(String id) => route.contains(id) || (id == focus && route.isNotEmpty);
+  bool _onRoute(String id) =>
+      route.contains(id) || (id == focus && route.isNotEmpty);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -801,7 +813,6 @@ class PassiveTreePainter extends CustomPainter {
         );
       }
     }
-
   }
 
   static Path _hexagon(Offset c, double r) {

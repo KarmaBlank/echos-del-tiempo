@@ -38,6 +38,16 @@ class DamageEvent extends BattleEvent {
   /// El objetivo estaba quebrado: el golpe lleva el +50% del quiebre.
   final bool vulnerable;
 
+  /// Ráfaga (`SkillDef.hits`): número de golpe al mismo objetivo (0 = el
+  /// primero). Ver docs/specs/battle_presentation.md § "Saltos".
+  final int hitIndex;
+
+  /// Rebote (`SkillDef.bounces`): de quién salta a este objetivo.
+  final String? chainFrom;
+
+  /// Atraviesa (`SkillDef.pierce`): golpe al de atrás del objetivo.
+  final bool pierced;
+
   const DamageEvent(
     this.targetId,
     this.amount, {
@@ -48,6 +58,9 @@ class DamageEvent extends BattleEvent {
     this.statusSource,
     this.sourceId,
     this.vulnerable = false,
+    this.hitIndex = 0,
+    this.chainFrom,
+    this.pierced = false,
   });
 }
 

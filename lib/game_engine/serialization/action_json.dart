@@ -1,6 +1,8 @@
 import '../models/attributes.dart';
 import '../models/battle_command.dart';
+import '../models/build_wants.dart';
 import '../models/eco.dart' show EcoCraftOp;
+import '../models/inventory_sort.dart';
 import '../models/item.dart' show CraftOp;
 
 import '../models/player_profile.dart';
@@ -71,6 +73,9 @@ abstract final class ActionJson {
             if (a.sourceUid != null) 'src': a.sourceUid,
             if (a.index != 0) 'i': a.index,
             if (a.skillId != null) 'sk': a.skillId,
+            if (a.replaceSkillId != null) 'rep': a.replaceSkillId,
+            // v0.5.1 (protocolo 6): elección manual de LIMPIAR INVENTARIO.
+            if (a.uids.isNotEmpty) 'us': a.uids,
           },
         GiveItemAction() => {
             't': 'give',
@@ -85,7 +90,12 @@ abstract final class ActionJson {
           },
         PickUpAction() => {'t': 'pick', 'id': a.groundId},
         MoveInventoryAction() => {'t': 'invMove', 'a': a.from, 'b': a.to},
+        SortInventoryAction() => {'t': 'invSort', 'k': a.key.name},
         SetLootFilterAction() => {'t': 'filter', 'txt': a.text},
+        SetBuildWantsAction(:final wants) => {
+            't': 'wants',
+            if (wants != null && !wants.isEmpty) 'w': wants.toJson(),
+          },
         ProposeEcoAction() => {'t': 'eco', 'u': a.uid},
         EcoCraftAction() => {'t': 'ecoCraft', 'u': a.uid, 'op': a.op.name},
         DevGrantEcoAction() => {'t': 'devEco', 'tier': a.tier},
@@ -158,7 +168,9 @@ abstract final class ActionJson {
         return CraftAction(j.enumByName('op', CraftOp.values), j.str('w'),
             sourceUid: j.strOrNull('src'),
             index: j.intOrNull('i') ?? 0,
-            skillId: j.strOrNull('sk'));
+            skillId: j.strOrNull('sk'),
+            replaceSkillId: j.strOrNull('rep'),
+            uids: j['us'] == null ? const [] : List.unmodifiable(j.strings('us')));
       case 'give':
         return GiveItemAction(j.str('to'), j.str('tok'),
             count: j.intOrNull('n') ?? 1);
@@ -168,8 +180,13 @@ abstract final class ActionJson {
         return PickUpAction(j.integer('id'));
       case 'invMove':
         return MoveInventoryAction(j.integer('a'), j.integer('b'));
+      case 'invSort':
+        return SortInventoryAction(j.enumByName('k', InventorySortKey.values));
       case 'filter':
         return SetLootFilterAction(j.strOrNull('txt'));
+      case 'wants':
+        final w = BuildWants.fromJson(j['w']);
+        return SetBuildWantsAction(w.isEmpty ? null : w);
       case 'eco':
         return ProposeEcoAction(j.str('u'));
       case 'ecoCraft':

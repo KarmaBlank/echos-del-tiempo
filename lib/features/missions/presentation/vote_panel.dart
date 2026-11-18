@@ -47,16 +47,15 @@ class VotePanel extends StatelessWidget {
           Text.rich(
             TextSpan(children: [
               const TextSpan(
-                  text: 'Votación',
-                  style: TextStyle(
-                      color: ProtoColors.gold, fontWeight: FontWeight.bold)),
+                  text: 'Votación', style: TextStyle(color: ProtoColors.gold)),
               TextSpan(text: retroText(' · $proposedBy propone ')),
               TextSpan(
                   text: retroText(missionName),
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                  style: const TextStyle(color: ProtoColors.ink)),
               TextSpan(text: ' (rango $rank) · '),
               TextSpan(
-                  text: '${players.where((p) => p.yes).length}/${players.length} sí',
+                  text:
+                      '${players.where((p) => p.yes).length}/${players.length} sí',
                   style: const TextStyle(color: ProtoColors.green)),
             ]),
             textAlign: TextAlign.center,

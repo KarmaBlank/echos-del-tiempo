@@ -19,7 +19,6 @@ import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart' show ultimateOf;
-import '../../../game_engine/rules/session_engine.dart';
 import '../../combat/presentation/scene/battle_fx.dart';
 import '../../combat/presentation/scene/fx_style.dart';
 import '../../combat/presentation/scene/proc_fx.dart';
@@ -29,18 +28,16 @@ import 'session_controller.dart';
 import 'session_view.dart';
 
 /// El servicio de sonido (el del service locator; en tests, uno mudo).
-final sfxServiceProvider = Provider<SfxService>((ref) =>
-    sl.isRegistered<SfxService>() ? sl<SfxService>() : SfxService());
+final sfxServiceProvider = Provider<SfxService>(
+    (ref) => sl.isRegistered<SfxService>() ? sl<SfxService>() : SfxService());
 
 /// Conecta la sesión local con el sonido mientras `WorldScreen` está
 /// montada.
 final sessionSfxProvider = Provider.autoDispose<SessionSfx>((ref) {
   final controller = ref.watch(sessionControllerProvider.notifier);
   final sfx = SessionSfx(ref.watch(sfxServiceProvider),
-      localId: controller.localId, lootVerdict: (d) {
-    final p = controller.session?.players[controller.localId]?.profile;
-    return p == null ? null : controller.engine.lootVerdict(p, d);
-  });
+      localId: controller.localId,
+      lootVerdict: (d) => controller.lootVerdictFor(controller.localId, d));
   // Mantiene vivo el registro de loot del HUD mientras la pantalla del
   // juego vive (también en batalla, cuando el HUD no está montado).
   ref.watch(lootFeedProvider);
@@ -184,8 +181,7 @@ class SessionSfx {
   /// al levantar, el de levantar.
   List<SfxCue> lootSounds(SessionEvent e) {
     switch (e) {
-      case LootDropEvent(:final playerId, :final drop)
-          when playerId == localId:
+      case LootDropEvent(:final playerId, :final drop) when playerId == localId:
         final v = lootVerdict?.call(drop);
         if (v != null && !v.visible) return const [];
         final out = <SfxCue>[];
@@ -227,7 +223,9 @@ class SessionSfx {
     int base() {
       final a = action;
       return ProcTiming.base(
-          inAction: a != null, hitMs: a == null ? 0 : _hitDelay(a), ult: a?.ult);
+          inAction: a != null,
+          hitMs: a == null ? 0 : _hitDelay(a),
+          ult: a?.ult);
     }
 
     int lateBase() {
@@ -400,7 +398,9 @@ class SessionSfx {
           final script = ultScriptFor(b.ultId);
           action = _Act(
               ActionEvent(b.actorId, BattleActionKind.enemyAttack,
-                  skillId: b.ultId, targetId: b.targetId, allTargets: b.allTargets),
+                  skillId: b.ultId,
+                  targetId: b.targetId,
+                  allTargets: b.allTargets),
               battle?.byId(b.actorId),
               null,
               enemyUlt: script);
@@ -431,8 +431,7 @@ class SessionSfx {
           final at = base();
           procAt[targetId] = switch (sourceId) {
             'combustion' => ProcTiming.blastHitAt(at, blastIdx++),
-            'ecoArcano' =>
-              ProcTiming.echoAt(at, echoIdx++) + BattleFx.projMs,
+            'ecoArcano' => ProcTiming.echoAt(at, echoIdx++) + BattleFx.projMs,
             _ => procAt[targetId] ?? at,
           };
         case DamageEvent():
@@ -458,7 +457,8 @@ class SessionSfx {
                 (p ?? _impactTime(a, targetId)) + statusAfterMs));
           }
         case TurnSkippedEvent(:final cause):
-          out.add(cue(cause == StatusKind.freeze ? Sfx.skipFreeze : Sfx.skipStun));
+          out.add(
+              cue(cause == StatusKind.freeze ? Sfx.skipFreeze : Sfx.skipStun));
         case DelayedEvent(:final targetId):
           final a = action;
           if (a == null) {
@@ -466,8 +466,8 @@ class SessionSfx {
           } else if (!a.delayed) {
             a.delayed = true;
             final p = procAt[targetId];
-            out.add(cue(Sfx.delay,
-                (p ?? _impactTime(a, targetId)) + statusAfterMs));
+            out.add(cue(
+                Sfx.delay, (p ?? _impactTime(a, targetId)) + statusAfterMs));
           }
         case KnockedOutEvent(:final targetId):
           final a = action;
@@ -734,9 +734,8 @@ class SessionSfx {
       return a.heals++ == 0 ? [cue(_ultImpact(a), ult.impactFor(0))] : const [];
     }
     if (a.heals >= maxImpacts) return const [];
-    final base = a.event.kind == BattleActionKind.potion
-        ? potionHealMs
-        : healAfterMs;
+    final base =
+        a.event.kind == BattleActionKind.potion ? potionHealMs : healAfterMs;
     return [cue(Sfx.healSparkle, base + staggerMs * a.heals++)];
   }
 
@@ -762,11 +761,13 @@ class SessionSfx {
       _lastTick = null;
       service.play(Sfx.myTurn);
     }
-    final left = (SessionEngine.turnLimit - b.turnTime).ceil();
+    // Sin límite (tiempo de turno de la sala): sin cuenta regresiva.
+    final limit = view.session.turnLimit;
+    if (limit == null) return;
+    final left = (limit - b.turnTime).ceil();
     if (left <= 5 && left != _lastTick) {
       _lastTick = left;
       service.play(Sfx.turnTick);
     }
   }
 }
-

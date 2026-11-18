@@ -14,6 +14,24 @@ const _agi = Attribute.agi;
 const _fue = Attribute.fue;
 const _des = Attribute.des;
 
+/// Categoría de cada tipo de arma (loot.md § 16.1). Todo `type` de
+/// [kWeapons] tiene que estar acá (test).
+const Map<String, WeaponCategory> kWeaponTypeCategory = {
+  'espada': WeaponCategory.melee,
+  'hacha': WeaponCategory.melee,
+  'lanza': WeaponCategory.melee,
+  'dagas': WeaponCategory.melee,
+  'espada+escudo': WeaponCategory.melee,
+  'maza+escudo': WeaponCategory.melee,
+  'martillo+escudo': WeaponCategory.melee,
+  'arco': WeaponCategory.ranged,
+  'ballesta': WeaponCategory.ranged,
+  'rifle': WeaponCategory.ranged,
+  'báculo': WeaponCategory.caster,
+  'varita': WeaponCategory.caster,
+  'tomo': WeaponCategory.caster,
+};
+
 const Map<String, WeaponDef> kWeapons = {
   // ---- Guerrero ----
   'espada_bronce': WeaponDef(id: 'espada_bronce', name: 'Espada de Bronce', classId: 'guerrero', type: 'espada', tier: 0, level: 1, price: 0,

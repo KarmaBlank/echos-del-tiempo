@@ -11,6 +11,8 @@ import '../../../../game_engine/models/status.dart';
 import '../../../../game_engine/rules/battle_engine.dart'
     show stanceName, ultimateOf;
 import '../../../../game_engine/rules/js_math.dart';
+import '../../../../app/theme/vision_palette.dart';
+import 'chain_fx.dart';
 import 'fx_style.dart';
 import 'proc_fx.dart';
 import 'ult_cinematic.dart';
@@ -86,6 +88,12 @@ enum FxKind {
 
   /// Erupción de lava bajo un actor (Bestia de Magma).
   lavaBurst,
+
+  /// Salto de un rebote de habilidad, de `(x, y)` a `(tx, ty)` (chain_fx).
+  hop,
+
+  /// Estela de atraviesa por la fila (chain_fx).
+  streak,
 }
 
 /// Datos de la cinemática de una ultimate (`addFx({k:'ult'})`).
@@ -235,6 +243,7 @@ class BattleFx {
         FxKind.windup => windupMs,
         FxKind.transform => transformMs,
         FxKind.lavaBurst => lavaBurstMs,
+        FxKind.hop || FxKind.streak => chainFxMs(kind),
       };
 
   static const numMs = 1100;
@@ -316,9 +325,11 @@ class BattleFx {
 
 // Colores fijos del prototipo (arte).
 const _gold = Color(0xFFFFD166);
-const _hurtRed = Color(0xFFFF6B81);
-const _critRed = Color(0xFFFF4757);
-const _healGreen = Color(0xFF7BED9F);
+// Daño recibido, crítico recibido y curas: siguen al modo daltónico
+// (accessibility.md § 3). Las curas llevan además el `+`.
+const _hurtRed = VisionColor(VisionSlot.hurt);
+const _critRed = VisionColor(VisionSlot.critHurt);
+const _healGreen = VisionColor(VisionSlot.heal);
 const _regenGreen = Color(0xFF55EFC4);
 const _manaBlue = Color(0xFF74B9FF);
 const _orange = Color(0xFFFF9F43);
@@ -352,6 +363,9 @@ class _Action {
 
   /// ULT de un enemigo (sus golpes caen en los impactos del guion).
   bool enemyUlt = false;
+
+  /// Rebote / atraviesa / ráfaga de la habilidad, en fila (chain_fx).
+  late final chain = ChainPlanner(hits: skill?.hits ?? 1);
 }
 
 /// Traduce los [BattleEvent] de un paso a efectos (los `addFx` que el
@@ -950,6 +964,7 @@ List<BattleFx> mapBattleEvents(
     var color = a?.color ?? fxWhite;
     var el = a?.el ?? FxElement.phys;
     var dl = 0;
+    var chainDy = 0.0;
     if (a != null) {
       if (a.event.kind == BattleActionKind.skill &&
           a.skill?.kind == SkillKind.regen) {
@@ -957,14 +972,20 @@ List<BattleFx> mapBattleEvents(
         color = _holyLight;
         el = FxElement.holy;
       } else {
-        dl = hitDelay(a, id);
+        final ch = a.chain.place(e, position,
+            color: color, el: el, weapon: a.actor?.weaponType);
+        dl = ch?.delayMs ?? hitDelay(a, id);
+        if (ch == null) a.chain.primaryHit(id, dl);
+        chainDy = ch?.dy ?? 0;
+        out.addAll(ch?.fx ?? const []);
+        a.dl.putIfAbsent(id, () => dl);
       }
       a.lastTarget = id;
     }
     final p = position(id);
     final heavy = a?.ult != null;
     // Quebrado: el número y el tajo en el amarillo del quiebre.
-    num(id, -20, '${e.amount}',
+    num(id, -20 + chainDy, '${e.amount}',
         e.critical ? _gold : (e.vulnerable ? breakColor : fxWhite),
         big: e.critical || e.vulnerable, heavy: heavy, dl: dl);
     if (e.critical) {

@@ -12,10 +12,14 @@ import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../app/widgets/menu_focus.dart';
+import '../../../../app/widgets/pixel_icon.dart';
+import '../../../../app/widgets/section_panel.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../endgame/domain/endgame_text.dart';
+import '../../../inventory/domain/battle_impact.dart';
 import '../../../inventory/presentation/inventory_tab.dart';
 import '../../../inventory/presentation/loot_filter_tab.dart';
 import '../../../inventory/presentation/shop_sections.dart';
@@ -45,7 +49,8 @@ enum CharacterTab {
   inventory(
       'INVENTARIO',
       'Arrastra para mover · clic para ver · EQUIPAR, DAR A, TIRAR, DESARMAR '
-          '(materiales) o VENDER (créditos). LIMPIAR INVENTARIO: por rareza.'),
+          '(materiales) o VENDER (créditos). ORDENAR · LIMPIAR INVENTARIO: '
+          'por rareza o elegidas a mano.'),
   tree(
       'ÁRBOL',
       'Pasivas de clase: 1 punto por nivel. Arrastra para mover, rueda para '
@@ -140,61 +145,70 @@ class _CharacterPanelState extends State<CharacterPanel> {
             reason: must ? 'Reparte tus puntos' : null, onPressed: close);
     final isAttr = tab == CharacterTab.attributes;
 
-    return PanelFrame(
-      title: must
-          ? '¡SUBISTE A NIVEL ${prof.level}! Reparte tus puntos'
-          : 'PERSONAJE',
-      width: 1000,
-      fill: true,
-      help: switch (tab) {
-        CharacterTab.filter => kFilterHelp,
-        CharacterTab.build => BuildPlannerView.help,
-        _ => CharacterPanel.help,
-      },
-      onClose: close,
-      titleTrailing: ProtoText('${protoEsc(profileTitle(prof))} · '
-          '<span class="k">$cls Lv${prof.level}</span>'
-          '${prof.level >= ProgressionRules.maxLevel ? ' · <span style="color:#a29bfe">${protoEsc(masteryText(prof))}</span>' : ''} · Puntos: '
-          '<b>$left</b>'),
-      header: must
-          ? null
-          : PanelTabs(
-              labels: [for (final t in CharacterTab.values) t.label],
-              index: tab.index,
-              onChanged: (i) => setState(() => _tab = CharacterTab.values[i]),
-            ),
-      leading: [
-        if (isAttr && guards.showRespec)
-          PanelButton(
-              ProgressionRules.freeRespec
-                  ? 'REINICIAR PUNTOS (GRATIS)'
-                  : 'REINICIAR PUNTOS',
-              key: const ValueKey('respec'),
-              reason: guards.respec(), onPressed: () {
-            if (c.respec()) setState(_alloc.clear);
-          }),
-      ],
-      actions: [
-        if (isAttr)
-          PanelButton('DESHACER',
-              key: const ValueKey('undo-points'),
-              onPressed: _allocSum == 0 ? null : () => setState(_alloc.clear)),
-        closeButton,
-        if (isAttr)
-          PanelButton('CONFIRMAR PUNTOS',
-              key: const ValueKey('confirm-points'),
-              accent: ProtoColors.green,
-              reason: guards.allocate(prof, _alloc),
-              onPressed: _confirm),
-      ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          PanelHint(tab.hint),
-          Expanded(child: body),
-        ],
-      ),
-    );
+    // Q / E, Ctrl+Tab y 1-5 cambian de pestaña (menu_focus.dart); no
+    // mientras hay que repartir.
+    return MenuTabKeys(
+        count: CharacterTab.values.length,
+        index: tab.index,
+        enabled: !must,
+        onChanged: (i) => setState(() => _tab = CharacterTab.values[i]),
+        child: PanelFrame(
+          title: must
+              ? '¡SUBISTE A NIVEL ${prof.level}! Reparte tus puntos'
+              : 'PERSONAJE',
+          width: 1000,
+          fill: true,
+          help: switch (tab) {
+            CharacterTab.filter => kFilterHelp,
+            CharacterTab.build => BuildPlannerView.help,
+            _ => CharacterPanel.help,
+          },
+          onClose: close,
+          titleTrailing: ProtoText('${protoEsc(profileTitle(prof))} · '
+              '<span class="k">$cls Lv${prof.level}</span>'
+              '${prof.level >= ProgressionRules.maxLevel ? ' · <span style="color:#a29bfe">${protoEsc(masteryText(prof))}</span>' : ''} · Puntos: '
+              '<b>$left</b>'),
+          header: must
+              ? null
+              : PanelTabs(
+                  labels: [for (final t in CharacterTab.values) t.label],
+                  index: tab.index,
+                  onChanged: (i) =>
+                      setState(() => _tab = CharacterTab.values[i]),
+                ),
+          leading: [
+            if (isAttr && guards.showRespec)
+              PanelButton(
+                  ProgressionRules.freeRespec
+                      ? 'REINICIAR PUNTOS (GRATIS)'
+                      : 'REINICIAR PUNTOS',
+                  key: const ValueKey('respec'),
+                  reason: guards.respec(), onPressed: () {
+                if (c.respec()) setState(_alloc.clear);
+              }),
+          ],
+          actions: [
+            if (isAttr)
+              PanelButton('DESHACER',
+                  key: const ValueKey('undo-points'),
+                  onPressed:
+                      _allocSum == 0 ? null : () => setState(_alloc.clear)),
+            closeButton,
+            if (isAttr)
+              PanelButton('CONFIRMAR PUNTOS',
+                  key: const ValueKey('confirm-points'),
+                  accent: ProtoColors.green,
+                  reason: guards.allocate(prof, _alloc),
+                  onPressed: _confirm),
+          ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              PanelHint(tab.hint),
+              Expanded(child: body),
+            ],
+          ),
+        ));
   }
 
   // ---------------- atributos ----------------
@@ -213,7 +227,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
         Expanded(
           child: SingleChildScrollView(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Con plan de build: el objetivo de cada atributo y a cuál
                 // le faltan puntos (build_planner.md § 4.1).
@@ -224,75 +238,89 @@ class _CharacterPanelState extends State<CharacterPanel> {
                       if ((plan.attributes[a] ?? 0) > prof.attributes[a])
                         kAttributeInfo[a]!.$1,
                   ];
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  return SectionPanel(
+                    icon: PixelIconKind.plus,
+                    title: 'ATRIBUTOS',
+                    subtitle:
+                        left > 0 ? 'Puntos libres: $left' : 'Sin puntos libres',
                     children: [
                       if (want.isNotEmpty && prof.points > 0)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.only(bottom: 6),
                           child: Text(
                               retroText('★ Según tu build: ${want.join(', ')}'),
                               key: const ValueKey('build-attr-hint'),
                               style: const TextStyle(color: kPlanColor)),
                         ),
-                      for (final a in Attribute.values)
-                        _attrRow(a, prof.attributes[a], left,
-                            target: plan.attributes[a]),
+                      InitialFocus(
+                        enabled: left > 0,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            for (final a in Attribute.values)
+                              _attrRow(a, prof.attributes[a], left,
+                                  target: plan.attributes[a]),
+                          ],
+                        ),
+                      ),
                     ],
                   );
                 }),
-                if (view.mustAllocate) ...[
-                  const SizedBox(height: 8),
-                  const Text(
-                      'El equipo sigue cuando todos los que subieron de nivel '
-                      'confirmen sus puntos.',
-                      style: TextStyle(color: ProtoColors.orange)),
-                ],
-                PanelSection(
-                  'Clase',
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      for (final cl in rules.catalog.classes.values)
-                        if (FeatureFlags.instance.isCharacterAllowed(cl.id))
-                          PanelButton(cl.name,
-                              key: ValueKey('class-${cl.id}'),
-                              selected: cl.id == prof.classId,
-                              onPressed: cl.id == prof.classId ||
-                                      guards.changeClass(prof, cl.id) != null
-                                  ? null
-                                  : () {
-                                      if (c.changeClass(cl.id)) {
-                                        setState(_alloc.clear);
-                                      }
-                                    }),
-                      Text(
-                        retroText(view.mode == SessionMode.lobby
-                            ? 'Cambiar de clase reinicia atributos y árbol.'
-                            : 'Solo en el lobby'),
-                        style: const TextStyle(color: ProtoColors.dim),
-                      ),
-                    ],
+                if (view.mustAllocate)
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 10),
+                    child: Text(
+                        'El equipo sigue cuando todos los que subieron de nivel '
+                        'confirmen sus puntos.',
+                        style: TextStyle(color: ProtoColors.orange)),
                   ),
+                SectionPanel(
+                  icon: PixelIconKind.sword,
+                  title: 'CLASE',
+                  subtitle: view.mode == SessionMode.lobby
+                      ? 'Cambiar de clase reinicia atributos y árbol.'
+                      : 'Solo en el lobby',
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        for (final cl in rules.catalog.classes.values)
+                          if (FeatureFlags.instance.isCharacterAllowed(cl.id))
+                            PanelButton(cl.name,
+                                key: ValueKey('class-${cl.id}'),
+                                selected: cl.id == prof.classId,
+                                onPressed: cl.id == prof.classId ||
+                                        guards.changeClass(prof, cl.id) != null
+                                    ? null
+                                    : () {
+                                        if (c.changeClass(cl.id)) {
+                                          setState(_alloc.clear);
+                                        }
+                                      }),
+                      ],
+                    ),
+                  ],
                 ),
                 if (prof.classId == 'paladin')
-                  const PanelSection(
-                    'Rasgos de Paladín',
-                    child: Text(
-                      'Básico: 3% aturdir · habilidades según el arma\n'
-                      'Débil a daño perforante (×1.5) y a estados (+1 stack)\n'
-                      'Aura Restauradora, Fortaleza y Protección: kit del '
-                      'Guardián (ascensión)',
-                    ),
+                  const SectionPanel(
+                    icon: PixelIconKind.star,
+                    title: 'RASGOS DE PALADÍN',
+                    children: [
+                      Text(
+                        'Básico: 3% aturdir · habilidades según el arma\n'
+                        'Débil a daño perforante (×1.5) y a estados (+1 stack)\n'
+                        'Aura Restauradora, Fortaleza y Protección: kit del '
+                        'Guardián (ascensión)',
+                      ),
+                    ],
                   ),
               ],
             ),
           ),
         ),
         const SizedBox(width: 16),
-        SizedBox(width: 380, child: _preview()),
+        SizedBox(width: RetroType.width(context, 380), child: _preview()),
       ],
     );
   }
@@ -309,86 +337,131 @@ class _CharacterPanelState extends State<CharacterPanel> {
         if ((_alloc[a] ?? 0) > 0) '+${_alloc[a]} ${kAttributeInfo[a]!.$1}',
     ];
     String pct(num x) => '${(x * 100).round()}%';
-    return PanelDetail(
-      children: [
-        const Text('VISTA PREVIA', style: TextStyle(color: ProtoColors.gold)),
-        const SizedBox(height: 4),
-        StatChange('HP', now.maxHp, next.maxHp, key: const ValueKey('stat-HP')),
-        StatChange('MP', now.maxMp, next.maxMp, key: const ValueKey('stat-MP')),
-        StatChange('VEL', now.speed, next.speed,
-            key: const ValueKey('stat-VEL'),
-            format: (x) => x.toStringAsFixed(1)),
-        Text(
-            retroText('  6 + AGI×0.5 + DES×0.1 − peso arma '
-                '${w.weight.toStringAsFixed(1)}'),
-            style: const TextStyle(color: ProtoColors.dim)),
-        StatChange('ATQ', now.attack, next.attack,
-            key: const ValueKey('stat-ATQ')),
-        StatChange('MAG', now.magic, next.magic,
-            key: const ValueKey('stat-MAG')),
-        StatChange('DEF', now.defense, next.defense,
-            key: const ValueKey('stat-DEF'),
-            suffix: '(-${(next.defensePercent * 100).round()}% daño)'),
-        StatChange('CRÍT', now.critChance, next.critChance,
-            key: const ValueKey('stat-CRIT'),
-            format: pct,
-            suffix: '(daño ×${now.critMultiplier == 2 ? '2' : '1.5'})'),
-        const SizedBox(height: 12),
-        ProtoText(
-          pending.isEmpty
-              ? protoColor(ProtoColors.dim, 'Sin cambios pendientes')
-              : 'Pendiente: ${protoColor(ProtoColors.green, pending.join(' '))}',
-          key: const ValueKey('pending-points'),
-        ),
-      ],
-    );
-  }
-
-  Widget _attrRow(Attribute a, int value, int left, {int? target}) {
-    final (short, name, desc) = kAttributeInfo[a]!;
-    final add = _alloc[a] ?? 0;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: 150,
-            child: ProtoText('<b style="color:#e8ecff">$short</b> '
-                '<span class="k">${retroText(name)}</span>'),
+          SectionPanel(
+            icon: PixelIconKind.arrowIn,
+            title: 'VISTA PREVIA',
+            subtitle: 'cómo cambian tus stats',
+            children: [
+              StatChange('HP', now.maxHp, next.maxHp,
+                  key: const ValueKey('stat-HP')),
+              StatChange('MP', now.maxMp, next.maxMp,
+                  key: const ValueKey('stat-MP')),
+              StatChange('VEL', now.speed, next.speed,
+                  key: const ValueKey('stat-VEL'),
+                  format: (x) => x.toStringAsFixed(1)),
+              Text(
+                  retroText('  6 + AGI×0.5 + DES×0.1 − peso arma '
+                      '${w.weight.toStringAsFixed(1)}'),
+                  style: const TextStyle(color: ProtoColors.dim)),
+              StatChange('ATQ', now.attack, next.attack,
+                  key: const ValueKey('stat-ATQ')),
+              StatChange('MAG', now.magic, next.magic,
+                  key: const ValueKey('stat-MAG')),
+              StatChange('DEF', now.defense, next.defense,
+                  key: const ValueKey('stat-DEF'),
+                  suffix: '(-${(next.defensePercent * 100).round()}% daño)'),
+              StatChange('CRÍT', now.critChance, next.critChance,
+                  key: const ValueKey('stat-CRIT'),
+                  format: pct,
+                  suffix: '(daño ×${now.critMultiplier == 2 ? '2' : '1.5'})'),
+            ],
           ),
-          SizedBox(
-            width: 64,
-            child: ProtoText('$value'
-                '${add > 0 ? ' ${protoColor(ProtoColors.green, '+$add')}' : ''}'),
-          ),
-          if (target != null)
-            SizedBox(
-              width: RetroType.width(context, 100),
-              child: Text('★ ${value + add}/$target',
-                  key: ValueKey('build-attr-${a.name}'),
-                  style: TextStyle(
-                      color: value + add >= target
-                          ? ProtoColors.green
-                          : kPlanColor)),
-            ),
-          PanelButton('-',
-              key: ValueKey('dec-${a.name}'),
-              onPressed:
-                  add > 0 ? () => setState(() => _alloc[a] = add - 1) : null),
-          const SizedBox(width: 8),
-          PanelButton('+',
-              key: ValueKey('inc-${a.name}'),
-              onPressed:
-                  left > 0 ? () => setState(() => _alloc[a] = add + 1) : null),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(retroText(desc),
-                style: const TextStyle(color: ProtoColors.dim)),
+          SectionPanel(
+            icon: PixelIconKind.check,
+            title: 'PENDIENTE',
+            children: [
+              ProtoText(
+                pending.isEmpty
+                    ? protoColor(ProtoColors.dim, 'Sin cambios pendientes')
+                    : 'Pendiente: ${protoColor(ProtoColors.green, pending.join(' '))}',
+                key: const ValueKey('pending-points'),
+              ),
+              Text(retroText('Nada cambia hasta CONFIRMAR PUNTOS.'),
+                  style: const TextStyle(color: ProtoColors.dim)),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  /// Un atributo como tarjeta: nombre, valor (+ reparto pendiente), meta
+  /// del plan (★), `-` / `+` y qué hace, entero (en otra línea si no
+  /// entra).
+  Widget _attrRow(Attribute a, int value, int left, {int? target}) {
+    final (short, name, desc) = kAttributeInfo[a]!;
+    final add = _alloc[a] ?? 0;
+    // Tooltip (mouse o foco en - / +): qué cambia en batalla con 1 punto
+    // más (battle_impact.dart, tus números reales).
+    final prof = widget.view.me!.profile;
+    final rules = widget.controller.engine.progression;
+    final now = _allocSum == 0
+        ? rules.derivedStats(prof)
+        : rules.previewAllocation(prof, _alloc);
+    final next = rules.previewAllocation(prof, {..._alloc, a: add + 1});
+    final impact =
+        battleImpactMarkup(rules, now, next, weapon: rules.equippedItem(prof));
+    return RetroTooltip(
+        message: '<b>+1 ${retroText(name)}</b>: ${retroText(desc)}'
+            '${impact == null ? '' : '<br>$impact'}',
+        child: Container(
+          key: ValueKey('attr-row-${a.name}'),
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: add > 0 ? ProtoColors.button.withValues(alpha: 0.4) : null,
+            border: Border.all(
+                color: add > 0 ? ProtoColors.green : ProtoColors.panelBorder,
+                width: RetroTheme.thinBorderWidth),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  SizedBox(
+                    width: RetroType.em(context, 15, size: RetroType.small),
+                    child: ProtoText('<b style="color:#e8ecff">$short</b> '
+                        '<span class="k">${retroText(name)}</span>'),
+                  ),
+                  SizedBox(
+                    width: RetroType.em(context, 7, size: RetroType.small),
+                    child: ProtoText('<b>$value</b>'
+                        '${add > 0 ? ' ${protoColor(ProtoColors.green, '+$add')}' : ''}'),
+                  ),
+                  if (target != null)
+                    SizedBox(
+                      width: RetroType.em(context, 9, size: RetroType.small),
+                      child: Text('★ ${value + add}/$target',
+                          key: ValueKey('build-attr-${a.name}'),
+                          style: TextStyle(
+                              color: value + add >= target
+                                  ? ProtoColors.green
+                                  : kPlanColor)),
+                    ),
+                  const Spacer(),
+                  PanelButton('-',
+                      key: ValueKey('dec-${a.name}'),
+                      onPressed: add > 0
+                          ? () => setState(() => _alloc[a] = add - 1)
+                          : null),
+                  const SizedBox(width: 8),
+                  PanelButton('+',
+                      key: ValueKey('inc-${a.name}'),
+                      onPressed: left > 0
+                          ? () => setState(() => _alloc[a] = add + 1)
+                          : null),
+                ],
+              ),
+              Text(retroText(desc),
+                  style: const TextStyle(color: ProtoColors.dim)),
+            ],
+          ),
+        ));
   }
 
   void _confirm() {

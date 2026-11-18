@@ -74,7 +74,12 @@ abstract final class ProcTiming {
 }
 
 /// Ids de las mecánicas que rebotan (el `sourceId` del daño del salto).
-const Set<String> kChainMechanics = {'rebote', 'corteCadena', 'arcoVoltaico'};
+const Set<String> kChainMechanics = {
+  'rebote',
+  'corteCadena',
+  'arcoVoltaico',
+  'arcoDormido',
+};
 
 /// Mecánicas de keystones (cartel rojo); el resto son notables (dorado).
 final Set<String> kKeystoneMechanics = {
@@ -98,6 +103,7 @@ String procName(String id) => kMechanics[id]?.name ?? id;
       'rebote' => (const Color(0xFF81ECEC), FxElement.phys),
       'corteCadena' => (const Color(0xFFFF6B81), FxElement.phys),
       'arcoVoltaico' => (const Color(0xFF74B9FF), FxElement.mana),
+      'arcoDormido' => (const Color(0xFFA29BFE), FxElement.arcane),
       'combustion' => (const Color(0xFFFF7B29), FxElement.burn),
       'contraataque' => (fxWhite, FxElement.phys),
       'castigoDivino' => (const Color(0xFFFFD166), FxElement.holy),

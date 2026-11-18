@@ -1,6 +1,8 @@
 import 'attributes.dart';
 import 'battle_command.dart';
+import 'build_wants.dart';
 import 'eco.dart' show EcoCraftOp;
+import 'inventory_sort.dart';
 import 'item.dart' show CraftOp, Rarity;
 import 'upgrade_stat.dart';
 
@@ -163,8 +165,26 @@ class CraftAction extends SessionAction {
   final String? sourceUid;
   final int index;
   final String? skillId;
+
+  /// Trasladar habilidad: cuál de las trasladadas del destino se
+  /// reemplaza (obligatoria con los cupos llenos; loot.md § 16.2).
+  final String? replaceSkillId;
+
+  /// Armas elegidas a mano ([CraftOp.salvageSelected] /
+  /// [CraftOp.sellSelected], v0.5.1); vacía en las demás operaciones.
+  final List<String> uids;
   const CraftAction(this.op, this.targetUid,
-      {this.sourceUid, this.index = 0, this.skillId});
+      {this.sourceUid,
+      this.index = 0,
+      this.skillId,
+      this.replaceSkillId,
+      this.uids = const []});
+
+  /// Desarmar ([CraftOp.salvageSelected]) o vender
+  /// ([CraftOp.sellSelected]) las armas [uids] elegidas en LIMPIAR
+  /// INVENTARIO (loot.md § 21.5).
+  CraftAction.selected(CraftOp op, List<String> uids)
+      : this(op, '*', uids: List.unmodifiable(uids));
 
   /// Reforjar [uid] a la base [baseId] (loot.md § 21.3).
   const CraftAction.reforge(String uid, String baseId)
@@ -206,6 +226,13 @@ class MoveInventoryAction extends SessionAction {
   const MoveInventoryAction(this.from, this.to);
 }
 
+/// `invSort` (v0.5.1): ordenar la grilla del inventario por [key]
+/// (`InventoryRules.sort`; la equipada sigue en su casilla).
+class SortInventoryAction extends SessionAction {
+  final InventorySortKey key;
+  const SortInventoryAction(this.key);
+}
+
 /// `filter`: guardar el filtro de loot (texto; `null` = el por defecto).
 class SetLootFilterAction extends SessionAction {
   final String? text;
@@ -213,6 +240,15 @@ class SetLootFilterAction extends SessionAction {
 
   /// Tope de largo del texto.
   static const maxLength = 8000;
+}
+
+/// `wants` (v0.5.1, protocolo 6): el resumen del plan de build del
+/// jugador ([BuildWants]; `null` = sin plan) para la condición `Build`
+/// del filtro de loot. El host lo guarda en la sesión solo para evaluar
+/// los drops de ese jugador; no se difunde. Docs/specs/build_planner.md § 6.
+class SetBuildWantsAction extends SessionAction {
+  final BuildWants? wants;
+  const SetBuildWantsAction(this.wants);
 }
 
 // ---------------- endgame v0.4 (docs/specs/ecos_atlas.md) ----------------

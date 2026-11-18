@@ -4,7 +4,7 @@ description: >
   Feature-First, netcode agnóstico (P2P hoy, servidor dedicado / rollback
   a futuro vía la interfaz en lib/netcode/contracts).
 publish_to: "none"
-version: 0.5.0+7
+version: 0.5.1+8
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -105,8 +105,14 @@ flutter:
     - family: PressStart2P
       fonts:
         - asset: assets/fonts/PressStart2P-Regular.ttf
+        # Sin negrita sintética (se ve gorda): un `bold` que se escape usa
+        # la misma fuente regular (ui_style.md § "Sin pesos").
+        - asset: assets/fonts/PressStart2P-Regular.ttf
+          weight: 700
     # Texto de lectura (docs/specs/ui_style.md § "Tipografía"), OFL 1.1:
     # assets/fonts/OFL-VT323.txt.
     - family: VT323
       fonts:
         - asset: assets/fonts/VT323-Regular.ttf
+        - asset: assets/fonts/VT323-Regular.ttf
+          weight: 700
