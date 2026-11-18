@@ -75,6 +75,7 @@ class EventJson {
         ReturnedToLobbyEvent() => {'t': 'lobby'},
         FloorChangedEvent() => {'t': 'floor', 'f': e.floor, 'down': e.down},
         StairsOpenedEvent() => {'t': 'stairs', 'f': e.floor},
+        FellIntoVoidEvent() => {'t': 'fall', 'id': e.playerId, 'f': e.floor},
         ZoneUnlockedEvent() => {'t': 'zoneUnlocked', 'id': e.playerId, 'z': e.zone},
         LootDropEvent() => {
             't': 'loot',
@@ -156,6 +157,8 @@ class EventJson {
         return FloorChangedEvent(j.integer('f'), down: j.boolean('down'));
       case 'stairs':
         return StairsOpenedEvent(j.integer('f'));
+      case 'fall':
+        return FellIntoVoidEvent(j.str('id'), j.integer('f'));
       case 'zoneUnlocked':
         return ZoneUnlockedEvent(j.str('id'), j.integer('z'));
       case 'loot':

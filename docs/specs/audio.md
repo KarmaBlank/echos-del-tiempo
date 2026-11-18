@@ -554,3 +554,50 @@ ULT nuevas (`kEnemyUltVoices`, tres partes en los tiempos de su guion):
 | Nido Venenoso | latidos graves + patas que corretean + siseo que crece | red que vuela (ruido 7 k→2.5 k) + hilo que vibra | salpicón de veneno + burbujas + chasquido |
 | Aliento Glacial | inhalación helada que crece + campanitas | ventisca (ruido 4 k→9 k) + rugido grave | golpe sine 70→28 + estallido de hielo + cristales |
 | Juicio Hueco | coro hueco (sawtooth 147/175/220) + dron 37 Hz | campana que baja + espada que cae (ruido que sube) | golpe enorme + campanas metálicas + mareo |
+
+## Mecánicas de jefe v0.3
+
+(docs/specs/bosses.md § "v0.3".) Enemigos nuevos con wind-up, voz e
+impacto propios (`kEnemyWindups`, `_enemyBodies`, `kEnemyHitVoices`):
+Eco Sombrío (susurro que se desdobla / corte sombrío con eco), Guardián
+del Reloj (cuerda del reloj / engranaje que golpea), Salamandra (siseo
+con chispas / mordisco ardiente), Gólem de Magma (roca que cruje /
+puñetazo de roca fundida), Necrófago (jadeo / mordida podrida), Alma
+Errante (suspiro frío / toque helado), Vigilante del Vacío (zumbido que
+carga / lanzazo del vacío), Ojo del Abismo (parpadeo húmedo / mirada que
+aturde), Heraldo de las Eras (arena y campana / golpe del estandarte),
+Fragmento del Tiempo (arena que se arremolina / corte de arena),
+Hechicera (acorde mágico / rayo arcano con campanas), Eco de la
+Hechicera (el acorde hueco y desafinado / rayo débil y doble), Bestia de
+Magma (bramido con fuego / zarpazo de magma), Espectro Coronado (coro de
+lamentos / garra espectral), Siervo Espectral (gemido / roce), Centinela
+(placas de obsidiana + carga del vacío / mazazo de obsidiana). Los
+cuatro jefes nuevos suenan a `SfxLevel.enemyBoss`.
+
+| Sonido | Receta | Cuándo |
+|---|---|---|
+| `boss.echo` | dos arpegios 523-1047 desafinados ½ tono + ruido que baja | `echoSummon` (una vez por paso; tras la ULT si la hay) |
+| `boss.echoHit` | sine 1480 con vibrato + triangle 740 (tintineo hueco) | `echoResist`, con el golpe |
+| `boss.lavaRise` | retumbo + burbujeo grave + ruido que sube | `lavaRise`, `enemyStrikeMs + 220` o tras la ULT |
+| `boss.lavaBurn` | siseo 5 k→9 k + fuego + chisporroteo | `lavaBurn` (una vez por paso) |
+| `boss.lavaFade` | vapor que baja | `lavaFade` |
+| `boss.summon` | campana fúnebre 196 + lamento que sube | `summon` (una vez por paso) |
+| `boss.immune` | rebote square 1319→988 + campanita 2637 | `immune`, 90 ms después del golpe |
+| `boss.mark` | zumbido sawtooth 110→220 + 3 "bips" de mira 1760 + 2637 | `markCast` |
+| `boss.markHit` | implosión sine 40→18 + ruido + pulse 880→110 | `markHit`, con el golpe |
+| `boss.markGuard` | escudo + arpegio 784/1047/1319 | `markGuarded`, con el golpe |
+| `boss.phase` | vacío que traga (sine 30→60 con ataque largo) + rugido y quiebre a 0.9 s | `phaseShift`, 120 ms después del golpe |
+| `enemy.evade` | silbido que pasa de largo | `evaded`, con el golpe |
+
+ULT nuevas (`kEnemyUltVoices`, tres partes en los tiempos de su guion):
+
+| ULT | Preparación | Descarga | Impacto |
+|---|---|---|---|
+| Coro de Ecos | coro que se multiplica (sine 523-988 + triangles desafinados) | 5 notas que caen + ruido que sube | golpe + dos campanas desafinadas 1568/1661 |
+| Erupción Total | retumbo largo + burbujeo + ruido que sube | estallido 2.5 k→600 + rugido grave + rocas (square crush) | golpe sine 45→20 + fuego + chisporroteo |
+| Lamento Eterno | cuatro lamentos que bajan con vibrato | ventisca + lamento 660→220 | golpe + hielo + gemido |
+| Colapso del Vacío | sine 28→55 que crece + ruido + agudo que baja | succión + pulse 880→55 + golpe sordo | implosión 35→18 + vidrios + ruido que baja |
+
+Muestras: `v03_enemy_<id>.wav`, `v03_hit_<id>.wav`, `v03_boss_*.wav` y
+`enemy_ult_<id>.wav` (test de `sfx_catalog_test.dart` con
+`SFX_SAMPLES_DIR`).

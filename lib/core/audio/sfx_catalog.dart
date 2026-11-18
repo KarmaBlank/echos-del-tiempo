@@ -207,6 +207,20 @@ abstract final class Sfx {
   static const stanceShift = 'boss.stance';
   static const stanceBlock = 'boss.block';
 
+  // ---- mecánicas de jefe v0.3 ----
+  static const echoSummon = 'boss.echo';
+  static const echoResist = 'boss.echoHit';
+  static const lavaRise = 'boss.lavaRise';
+  static const lavaBurn = 'boss.lavaBurn';
+  static const lavaFade = 'boss.lavaFade';
+  static const summon = 'boss.summon';
+  static const immune = 'boss.immune';
+  static const markCast = 'boss.mark';
+  static const markHit = 'boss.markHit';
+  static const markGuard = 'boss.markGuard';
+  static const phaseShift = 'boss.phase';
+  static const evade = 'enemy.evade';
+
   // ---- loot en el mapa (docs/specs/audio.md § "Loot") ----
   /// Sonido de un filtro de loot (`FilterStyle.sound`, uno por nombre
   /// de `kLootFilterSounds`).

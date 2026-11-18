@@ -54,22 +54,31 @@ abstract final class ZoneGenerators {
   static String vaultType(ZoneGen g) => switch (g) {
         ZoneGen.pradera || ZoneGen.bosque => 'bosque',
         ZoneGen.cavernas => 'cavernas',
-        ZoneGen.fortaleza || ZoneGen.laberinto => 'fortaleza',
-        ZoneGen.ruinas || ZoneGen.abismo => 'ruinas',
+        ZoneGen.fortaleza => 'fortaleza',
+        ZoneGen.ruinas => 'ruinas',
+        ZoneGen.laberinto => 'laberinto',
+        ZoneGen.grieta => 'grieta',
+        ZoneGen.abismo || ZoneGen.corazon => 'abismo',
+        ZoneGen.cementerio => 'cementerio',
       };
 
+  /// Caminable sin caerse (el vacío no cuenta).
   static bool passable(String c) =>
       c != Tile.wall &&
       c != Tile.water &&
       c != Tile.tree &&
       c != Tile.rock &&
-      c != Tile.merchant;
+      c != Tile.merchant &&
+      c != Tile.voidTile &&
+      c != Tile.lava &&
+      c != Tile.tombstone &&
+      c != Tile.gear;
 
   /// Genera el piso [floor] de [gen]. [last]: lleva el jefe; si no, la
   /// escalera de bajada. [hasUp]: escalera de subida junto al spawn.
   static FloorGen floor(ZoneGen gen, int seed,
       {required bool last, required bool hasUp}) {
-    if (gen == ZoneGen.ruinas || gen == ZoneGen.abismo) {
+    if (gen == ZoneGen.ruinas) {
       return _ruins(seed, last: last, hasUp: hasUp, vaultType: vaultType(gen));
     }
     return _organic(gen, seed, last: last, hasUp: hasUp);
@@ -144,42 +153,67 @@ abstract final class ZoneGenerators {
     final r = mulberry32(seed);
     int ri(int a, int b) => a + (r() * (b - a + 1)).floor();
 
-    final w = ri(58, 70), h = ri(42, 50);
+    final big = gen == ZoneGen.laberinto || gen == ZoneGen.corazon;
+    final w = big ? ri(70, 80) : ri(58, 70), h = big ? ri(50, 56) : ri(42, 50);
     final g = _Grid([for (var y = 0; y < h; y++) List.filled(w, Tile.wall)]);
+    final abyss = gen.abyss;
+    if (abyss) g.bridgeOver = const {Tile.voidTile, Tile.wall};
+    if (gen == ZoneGen.grieta) g.bridgeOver = const {Tile.lava};
 
-    // Franja de la arena, como el genMap.
+    // Franja de la arena, como el genMap (corazón: arena en el centro).
     final side = const ['E', 'W', 'N', 'S'][ri(0, 3)];
     var rx0 = 2, ry0 = 2, rx1 = w - 3, ry1 = h - 3;
     final int arX, arY;
-    switch (side) {
-      case 'E':
-        rx1 = w - 3 - _arenaStrip;
-        arX = w - 2 - _arenaW;
-        arY = ri(3, h - 3 - _arenaH);
-      case 'W':
-        rx0 = 2 + _arenaStrip;
-        arX = 2;
-        arY = ri(3, h - 3 - _arenaH);
-      case 'N':
-        ry0 = 2 + _arenaStrip;
-        arX = ri(3, w - 3 - _arenaW);
-        arY = 2;
-      default:
-        ry1 = h - 3 - _arenaStrip;
-        arX = ri(3, w - 3 - _arenaW);
-        arY = h - 2 - _arenaH;
+    if (gen == ZoneGen.corazon) {
+      arX = (w - _arenaW) ~/ 2;
+      arY = (h - _arenaH) ~/ 2;
+    } else {
+      switch (side) {
+        case 'E':
+          rx1 = w - 3 - _arenaStrip;
+          arX = w - 2 - _arenaW;
+          arY = ri(3, h - 3 - _arenaH);
+        case 'W':
+          rx0 = 2 + _arenaStrip;
+          arX = 2;
+          arY = ri(3, h - 3 - _arenaH);
+        case 'N':
+          ry0 = 2 + _arenaStrip;
+          arX = ri(3, w - 3 - _arenaW);
+          arY = 2;
+        default:
+          ry1 = h - 3 - _arenaStrip;
+          arX = ri(3, w - 3 - _arenaW);
+          arY = h - 2 - _arenaH;
+      }
     }
     final ar = TileRect(arX, arY, _arenaW, _arenaH);
     final region = TileRect(rx0, ry0, rx1 - rx0, ry1 - ry0);
+    // Corazón: la arena (y un anillo de 2) queda fuera de la región.
+    final reserved = gen == ZoneGen.corazon ? _expand(ar, 2) : null;
 
     final rooms = <TileRect>[];
     switch (gen) {
       case ZoneGen.cavernas:
         _caves(g, region, r);
-      case ZoneGen.fortaleza || ZoneGen.laberinto:
+      case ZoneGen.grieta:
+        _caves(g, region, r, puddle: Tile.lava);
+        _lavaRivers(g, region, r);
+      case ZoneGen.fortaleza:
         _maze(g, region, r, rooms);
+      case ZoneGen.laberinto:
+        _maze(g, region, r, rooms, loops: 0.04, minRooms: 2, maxRooms: 3);
+      case ZoneGen.abismo || ZoneGen.cementerio || ZoneGen.corazon:
+        _islands(g, region, r);
       default:
         _forest(g, region, r, gen == ZoneGen.pradera);
+    }
+    if (reserved != null) {
+      for (var y = reserved.y; y < reserved.y + reserved.h; y++) {
+        for (var x = reserved.x; x < reserved.x + reserved.w; x++) {
+          g.set(x, y, Tile.wall);
+        }
+      }
     }
 
     // Vaults.
@@ -195,6 +229,7 @@ abstract final class ZoneGenerators {
         final y = ri(region.y + 1, region.y + region.h - 1 - v.height);
         final rect = TileRect(x, y, v.width, v.height);
         if (vaults.any((o) => _overlap(o, rect, 2))) continue;
+        if (reserved != null && _overlap(reserved, rect, 2)) continue;
         _stamp(g, v, x, y, chests, elites);
         vaults.add(rect);
         break;
@@ -289,9 +324,23 @@ abstract final class ZoneGenerators {
     }
     _connectFrom(g, front, _bfs(g, spawn), forbid);
     _connectAll(g, spawn, forbid);
+    if (abyss) _widenBridges(g, forbid);
     _floodWall(g, spawn);
 
     final stairs = _placeStairs(g, ar, spawn, last: last, hasUp: hasUp);
+    if (gen == ZoneGen.cementerio) {
+      _tombstones(g, r, spawn, [_expand(ar, 2), for (final v in vaults) _expand(v, 1)]);
+    }
+    if (abyss) {
+      // Todo el muro (fuera de vaults y de los pilares de la arena) es vacío.
+      for (var y = 0; y < g.h; y++) {
+        for (var x = 0; x < g.w; x++) {
+          if (g.at(x, y) != Tile.wall || _inRect(ar, x, y)) continue;
+          if (vaults.any((v) => _inRect(v, x, y))) continue;
+          g.set(x, y, Tile.voidTile);
+        }
+      }
+    }
 
     final spots = <(int, int)>[];
     final noSpot = _expand(ar, 2);
@@ -362,7 +411,8 @@ abstract final class ZoneGenerators {
     }
   }
 
-  static void _caves(_Grid g, TileRect reg, double Function() r) {
+  static void _caves(_Grid g, TileRect reg, double Function() r,
+      {String puddle = Tile.water}) {
     bool inReg(int x, int y) =>
         x >= reg.x && y >= reg.y && x < reg.x + reg.w && y < reg.y + reg.h;
     for (var y = reg.y; y < reg.y + reg.h; y++) {
@@ -408,14 +458,168 @@ abstract final class ZoneGenerators {
       if (!ok) continue;
       for (var yy = y; yy <= y + 1; yy++) {
         for (var xx = x; xx <= x + 2; xx++) {
-          g.set(xx, yy, Tile.water);
+          g.set(xx, yy, puddle);
         }
       }
     }
   }
 
+  /// Grieta: 1–2 ríos de lava de 2 de ancho que cruzan la región de lado
+  /// a lado con un recorrido serpenteante (los puentes los pone la
+  /// conectividad).
+  static void _lavaRivers(_Grid g, TileRect reg, double Function() r) {
+    int ri(int a, int b) => a + (r() * (b - a + 1)).floor();
+    final n = ri(1, 2);
+    final first = r() < 0.5;
+    for (var k = 0; k < n; k++) {
+      // El segundo río cruza al primero.
+      final vertical = k == 0 ? first : !first;
+      final len = vertical ? reg.h : reg.w;
+      final span = vertical ? reg.w : reg.h;
+      final lo = vertical ? reg.x : reg.y;
+      var c = lo + ri(span ~/ 4, span * 3 ~/ 4);
+      for (var i = 0; i < len; i++) {
+        final roll = r();
+        if (roll < 0.25) {
+          c--;
+        } else if (roll > 0.75) {
+          c++;
+        }
+        c = c.clamp(lo + 2, lo + span - 4);
+        for (var d = 0; d < 2; d++) {
+          if (vertical) {
+            g.set(c + d, reg.y + i, Tile.lava);
+          } else {
+            g.set(reg.x + i, c + d, Tile.lava);
+          }
+        }
+      }
+    }
+  }
+
+  /// Abismo: islas irregulares (una por celda de una grilla de ~13 × 11)
+  /// sobre vacío, unidas por puentes de 2 de ancho (árbol mínimo).
+  static void _islands(_Grid g, TileRect reg, double Function() r) {
+    int ri(int a, int b) => a + (r() * (b - a + 1)).floor();
+    for (var y = reg.y; y < reg.y + reg.h; y++) {
+      for (var x = reg.x; x < reg.x + reg.w; x++) {
+        g.set(x, y, Tile.voidTile);
+      }
+    }
+    final nx = math.max(1, reg.w ~/ 13), ny = math.max(1, reg.h ~/ 11);
+    final cw = reg.w / nx, chh = reg.h / ny;
+    final centers = <(int, int)>[];
+    for (var j = 0; j < ny; j++) {
+      for (var i = 0; i < nx; i++) {
+        final skip = r() < 0.10;
+        if (skip && centers.length >= 3) continue;
+        final x0 = reg.x + (i * cw).floor(), x1 = reg.x + ((i + 1) * cw).floor() - 1;
+        final y0 = reg.y + (j * chh).floor(), y1 = reg.y + ((j + 1) * chh).floor() - 1;
+        final rx = ri(4, math.max(4, (x1 - x0) ~/ 2 - 1));
+        final ry = ri(3, math.max(3, (y1 - y0) ~/ 2 - 1));
+        int pick(int a, int b) => a > b ? (a + b) ~/ 2 : ri(a, b);
+        final cx = pick(x0 + rx, x1 - rx), cy = pick(y0 + ry, y1 - ry);
+        for (var dy = -ry; dy <= ry; dy++) {
+          for (var dx = -rx; dx <= rx; dx++) {
+            final e = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry);
+            final edge = 1 + (r() - 0.5) * 0.4;
+            if (e <= edge && _inRect(reg, cx + dx, cy + dy)) {
+              g.set(cx + dx, cy + dy, Tile.floor);
+            }
+          }
+        }
+        centers.add((cx, cy));
+      }
+    }
+    // Puentes: árbol mínimo (Prim) por distancia Manhattan.
+    void carve(int x, int y) {
+      if (_inRect(reg, x, y) && g.at(x, y) == Tile.voidTile) {
+        g.set(x, y, Tile.bridge);
+      }
+    }
+
+    void link((int, int) a, (int, int) b, bool hFirst) {
+      void hs(int y, int x1, int x2) {
+        for (var x = math.min(x1, x2); x <= math.max(x1, x2) + 1; x++) {
+          carve(x, y);
+          carve(x, y + 1);
+        }
+      }
+
+      void vs(int x, int y1, int y2) {
+        for (var y = math.min(y1, y2); y <= math.max(y1, y2) + 1; y++) {
+          carve(x, y);
+          carve(x + 1, y);
+        }
+      }
+
+      if (hFirst) {
+        hs(a.$2, a.$1, b.$1);
+        vs(b.$1, a.$2, b.$2);
+      } else {
+        vs(a.$1, a.$2, b.$2);
+        hs(b.$2, a.$1, b.$1);
+      }
+    }
+
+    final inTree = <int>[0];
+    while (inTree.length < centers.length) {
+      int? bi, bj, bd;
+      for (final i in inTree) {
+        for (var j = 0; j < centers.length; j++) {
+          if (inTree.contains(j)) continue;
+          final d = (centers[i].$1 - centers[j].$1).abs() +
+              (centers[i].$2 - centers[j].$2).abs();
+          if (bd == null || d < bd) {
+            bi = i;
+            bj = j;
+            bd = d;
+          }
+        }
+      }
+      inTree.add(bj!);
+      link(centers[bi!], centers[bj], r() < 0.5);
+    }
+  }
+
+  /// Ensancha a 2 los puentes de 1 que abrió la conectividad (abismo).
+  static void _widenBridges(_Grid g, TileRect forbid) {
+    for (final (x, y) in List.of(g.carved)) {
+      for (final (dx, dy) in const [(1, 0), (0, 1)]) {
+        final nx = x + dx, ny = y + dy;
+        if (nx < 1 || ny < 1 || nx >= g.w - 1 || ny >= g.h - 1) continue;
+        if (_inRect(forbid, nx, ny)) continue;
+        final c = g.at(nx, ny);
+        if (c == Tile.voidTile || c == Tile.wall) g.set(nx, ny, Tile.bridge);
+      }
+    }
+  }
+
+  /// Cementerio: lápidas sueltas sobre suelo con sus 8 vecinos libres
+  /// (nunca dos juntas, así no cortan ningún camino).
+  static void _tombstones(_Grid g, double Function() r, (int, int) spawn,
+      List<TileRect> avoid) {
+    for (var y = 1; y < g.h - 1; y++) {
+      for (var x = 1; x < g.w - 1; x++) {
+        if (g.at(x, y) != Tile.floor) continue;
+        if (r() >= 0.06) continue;
+        if ((x - spawn.$1).abs() <= 2 && (y - spawn.$2).abs() <= 2) continue;
+        if (avoid.any((a) => _inRect(a, x, y))) continue;
+        var ok = true;
+        for (var dy = -1; dy <= 1 && ok; dy++) {
+          for (var dx = -1; dx <= 1 && ok; dx++) {
+            final c = g.at(x + dx, y + dy);
+            if (c != Tile.floor && c != Tile.path) ok = false;
+          }
+        }
+        if (ok) g.set(x, y, Tile.tombstone);
+      }
+    }
+  }
+
   static void _maze(
-      _Grid g, TileRect reg, double Function() r, List<TileRect> rooms) {
+      _Grid g, TileRect reg, double Function() r, List<TileRect> rooms,
+      {double loops = 0.10, int minRooms = 5, int maxRooms = 7}) {
     int ri(int a, int b) => a + (r() * (b - a + 1)).floor();
     final cols = (reg.w - 1) ~/ 3, rws = (reg.h - 1) ~/ 3;
     int cx(int i) => reg.x + 1 + 3 * i;
@@ -474,12 +678,12 @@ abstract final class ZoneGenerators {
         for (final right in const [true, false]) {
           if (right ? i + 1 >= cols : j + 1 >= rws) continue;
           if (linked.contains((j * cols + i) * 2 + (right ? 1 : 0))) continue;
-          if (r() < 0.10) link(i, j, right);
+          if (r() < loops) link(i, j, right);
         }
       }
     }
     // Salas.
-    final nRooms = ri(5, 7);
+    final nRooms = ri(minRooms, maxRooms);
     for (var k = 0; k < nRooms; k++) {
       final rw = ri(5, 8), rh = ri(4, 7);
       final x = ri(reg.x + 1, reg.x + reg.w - 1 - rw);
@@ -633,7 +837,15 @@ abstract final class ZoneGenerators {
     var k = prev[hit]!;
     while (k != -1) {
       final x = k % g.w, y = k ~/ g.w;
-      if (!passable(g.at(x, y))) g.set(x, y, Tile.path);
+      final c = g.at(x, y);
+      if (!passable(c)) {
+        if (g.bridgeOver.contains(c)) {
+          g.set(x, y, Tile.bridge);
+          g.carved.add((x, y));
+        } else {
+          g.set(x, y, Tile.path);
+        }
+      }
       k = prev[k]!;
     }
   }
@@ -722,6 +934,13 @@ class _Grid {
         w = t.first.length;
   final List<List<String>> t;
   final int w, h;
+
+  /// Tiles que los túneles de conexión cruzan con un puente `=` (abismo:
+  /// vacío y muro; grieta: lava). El resto se abre como camino `,`.
+  Set<String> bridgeOver = const {};
+
+  /// Puentes abiertos por los túneles (para ensancharlos).
+  final carved = <(int, int)>[];
 
   bool contains(int x, int y) => x >= 0 && y >= 0 && x < w && y < h;
   String at(int x, int y) => contains(x, y) ? t[y][x] : Tile.wall;

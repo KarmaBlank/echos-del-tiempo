@@ -95,6 +95,10 @@ class Combatant {
     this.webbed = false,
     this.stance = 0,
     this.stanceTurns = 0,
+    this.lava = 0,
+    this.voidMarked = false,
+    this.phase = 0,
+    this.mechTurns = 0,
   })  : statusBonus = statusBonus ?? {},
         keystones = keystones ?? {},
         mechanics = mechanics ?? {},
@@ -208,6 +212,21 @@ class Combatant {
   /// próximo turno).
   int stanceTurns;
 
+  // ---- mecánicas de jefe v0.3 (docs/specs/bosses.md § "v0.3") ----
+
+  /// Bestia de Magma: turnos propios de lava que quedan (0 = sin lava).
+  int lava;
+
+  /// Jugador con la Marca del Vacío del Centinela.
+  bool voidMarked;
+
+  /// Fase del jefe (Devorador): 0/1 = primera, 2 = transformado.
+  int phase;
+
+  /// Turnos propios del jefe con sus invocaciones incompletas (ecos,
+  /// séquito): al llegar a `every` las vuelve a crear.
+  int mechTurns;
+
   bool get hasBreak => breakBase > 0;
 
   /// Umbral actual: `base × min(2, 1 + 0.25 × quiebres)`.
@@ -309,6 +328,10 @@ class Combatant {
         webbed: webbed,
         stance: stance,
         stanceTurns: stanceTurns,
+        lava: lava,
+        voidMarked: voidMarked,
+        phase: phase,
+        mechTurns: mechTurns,
       );
 }
 

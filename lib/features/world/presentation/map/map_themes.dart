@@ -58,14 +58,17 @@ const Map<String, MapTheme> kMapThemes = {
     path2: Color(0xFF776D5A),
     water: Color(0xFF1E6091),
   ),
+  // Zona 9 (v0.3): islas de roca flotante sobre vacío azul profundo.
   'abismo': MapTheme(
-    ground: Color(0xFF2C1F45),
-    ground2: Color(0xFF3A2A5A),
-    wall: Color(0xFF120A22),
-    wall2: Color(0xFF9B59FF),
-    path: Color(0xFF4E3478),
-    path2: Color(0xFF432C68),
-    water: Color(0xFF6C2BD9),
+    ground: Color(0xFF4A5372),
+    ground2: Color(0xFF5A6488),
+    wall: Color(0xFF262B40),
+    wall2: Color(0xFF8A96C0),
+    path: Color(0xFF5E6890),
+    path2: Color(0xFF50597C),
+    water: Color(0xFF2A4AA0),
+    rock: Color(0xFF323954),
+    rock2: Color(0xFF6A76A0),
   ),
   'lobby': MapTheme(
     ground: Color(0xFF2D3A55),
@@ -121,7 +124,64 @@ const Map<String, MapTheme> kMapThemes = {
     path2: Color(0xFF403C4A),
     water: Color(0xFF2A4A6A),
   ),
+  // Zona 6: piedra azul pizarra, bronce, pasillos de losa.
+  'laberinto': MapTheme(
+    ground: Color(0xFF3B4A63),
+    ground2: Color(0xFF46577A),
+    wall: Color(0xFF222C3F),
+    wall2: Color(0xFFB08A3A),
+    path: Color(0xFF56647E),
+    path2: Color(0xFF4A5770),
+    water: Color(0xFF2A4A6A),
+  ),
+  // Zona 7: basalto oscuro, suelo de ceniza, lava.
+  'grieta': MapTheme(
+    ground: Color(0xFF2F2A2C),
+    ground2: Color(0xFF3D3537),
+    wall: Color(0xFF1A1618),
+    wall2: Color(0xFFFF7B29),
+    path: Color(0xFF4A3E3A),
+    path2: Color(0xFF3E3431),
+    water: Color(0xFFC0391B),
+    rock: Color(0xFF241F21),
+    rock2: Color(0xFF3A3335),
+  ),
+  // Zona 8: islas de tierra gris con pasto seco sobre vacío violeta.
+  'cementerio': MapTheme(
+    ground: Color(0xFF5A5D5A),
+    ground2: Color(0xFF6C706A),
+    wall: Color(0xFF2E2C35),
+    wall2: Color(0xFF7E8A5A),
+    path: Color(0xFF6E6A5E),
+    path2: Color(0xFF5E5A50),
+    water: Color(0xFF3A2A5A),
+    rock: Color(0xFF3A3842),
+    rock2: Color(0xFF5E5C68),
+  ),
+  // Zona 10: cristal dorado / blanco sobre vacío, arena rúnica.
+  'corazon': MapTheme(
+    ground: Color(0xFFD9C58A),
+    ground2: Color(0xFFEFE2B0),
+    wall: Color(0xFF6B5A2A),
+    wall2: Color(0xFFFFF3C4),
+    path: Color(0xFFC9B06A),
+    path2: Color(0xFFB89C56),
+    water: Color(0xFF6C4AD9),
+    rock: Color(0xFF8A7440),
+    rock2: Color(0xFFB8A060),
+  ),
 };
+
+/// Temas con islas sobre vacío (el `#` es roca flotante; worldgen.md § 9.1).
+const kAbyssThemes = {'abismo', 'cementerio', 'corazon'};
+
+/// Fondo del vacío por tema: arriba y abajo del degradado
+/// (exploration.md § "Fondo del vacío").
+(Color, Color) voidGradient(String themeId) => switch (themeId) {
+      'cementerio' => (const Color(0xFF0A0614), const Color(0xFF22123A)),
+      'corazon' => (const Color(0xFF0A0818), const Color(0xFF2A1C3A)),
+      _ => (const Color(0xFF04061A), const Color(0xFF0C1838)),
+    };
 
 /// Tema de un mapa (pradera si el id no existe).
 MapTheme mapTheme(String id) => kMapThemes[id] ?? kMapThemes['pradera']!;

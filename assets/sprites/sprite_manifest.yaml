@@ -70,3 +70,53 @@ enemies:
   caballeroHueco:
     idle: enemies/caballeroHueco/idle.png
     scale: 1.7
+  # v0.3 — zonas 6–10 (tool/export_sprites.dart, misma tubería).
+  ecoSombra:
+    idle: enemies/ecoSombra/idle.png
+    float: true
+  guardianReloj:
+    idle: enemies/guardianReloj/idle.png
+  hechicera:
+    idle: enemies/hechicera/idle.png
+    scale: 1.7
+  ecoHechicera:
+    idle: enemies/ecoHechicera/idle.png
+    scale: 1.4
+  salamandra:
+    idle: enemies/salamandra/idle.png
+  golemMagma:
+    idle: enemies/golemMagma/idle.png
+  bestiaMagma:
+    idle: enemies/bestiaMagma/idle.png
+    scale: 1.9
+  necrofago:
+    idle: enemies/necrofago/idle.png
+  almaErrante:
+    idle: enemies/almaErrante/idle.png
+    float: true
+  espectroCoronado:
+    idle: enemies/espectroCoronado/idle.png
+    scale: 1.8
+    float: true
+  siervoEspectral:
+    idle: enemies/siervoEspectral/idle.png
+    float: true
+  vigilanteVacio:
+    idle: enemies/vigilanteVacio/idle.png
+  ojoAbismo:
+    idle: enemies/ojoAbismo/idle.png
+    float: true
+  centinela:
+    idle: enemies/centinela/idle.png
+    scale: 1.9
+  heraldoEras:
+    idle: enemies/heraldoEras/idle.png
+    scale: 1.2
+  fragmentoTiempo:
+    idle: enemies/fragmentoTiempo/idle.png
+    float: true
+  # Devorador transformado (fase 2): la escena lo usa con `phase == 2`.
+  devoradorFase2:
+    idle: enemies/devoradorFase2/idle.png
+    scale: 2.8
+    float: true

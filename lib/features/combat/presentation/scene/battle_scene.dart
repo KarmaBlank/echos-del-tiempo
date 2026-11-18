@@ -344,6 +344,14 @@ class BattleSceneController extends ChangeNotifier {
           particles.burstWith(kBreakShardFx, f.x, f.y, 2.2);
           particles.addShake(7);
           hitStop = math.max(hitStop, breakHitStopMs.toDouble());
+        // v0.3: erupción de lava y transformación del Devorador.
+        case FxKind.lavaBurst:
+          particles.burstWith(kLavaFx, f.x, f.y - 2, 1.2);
+          particles.addShake(3);
+        case FxKind.transform:
+          particles.burst(f.x, f.y - 20, FxElement.burn, 3);
+          particles.burst(f.x, f.y - 20, FxElement.arcane, 2);
+          particles.addShake(10);
         default:
           break;
       }
@@ -437,6 +445,13 @@ class BattleSceneController extends ChangeNotifier {
       e.fx.who == id &&
       e.age(t) >= 0 &&
       e.age(t) < BattleFx.actMs);
+
+  /// El jefe [id] todavía no terminó de transformarse (antes del
+  /// destello de su cinemática): se dibuja con el sprite de la fase 1.
+  bool transforming(String id) => fx.any((e) =>
+      e.fx.kind == FxKind.transform &&
+      e.fx.who == id &&
+      e.age(t) < BattleFx.transformFlashMs);
 
   /// El efecto [kind] activo sobre [id] (edad en [0, duración)), o
   /// `null` (estelas de Frenesí).

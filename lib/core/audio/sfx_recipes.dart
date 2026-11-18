@@ -353,6 +353,92 @@ const double kEnemyBodyAt = 0.11;
 /// "Wind-up" de cada tipo: lo que se oye mientras el enemigo se echa
 /// atrás (~0.14 s, sube hacia el golpe).
 final Map<String, List<SfxTone>> kEnemyWindups = {
+  // ---- v0.3 (docs/specs/audio.md § "Mecánicas de jefe v0.3") ----
+  // Eco Sombrío: susurro que se desdobla.
+  'ecoSombra': [
+    _n(3000, 0.15, to: 6000, lp: 4000, a: 0.12, v: 0.35, seed: 401),
+    _t(440, 0.15, w: _sin, to: 466, a: 0.1, vr: 11, vd: 0.03, v: 0.2),
+    _t(220, 0.15, w: _sin, to: 233, a: 0.1, vr: 9, vd: 0.03, v: 0.2),
+  ],
+  // Guardián del Reloj: cuerda del reloj (tics que se aceleran).
+  'guardianReloj': [
+    for (final at in [0.0, 0.06, 0.1, 0.13]) _t(2794, 0.012, w: _sq, v: 0.35, at: at),
+    _n(500, 0.16, to: 1300, lp: 700, a: 0.12, v: 0.4, seed: 403),
+  ],
+  // Hechicera: acorde mágico que sube.
+  'hechicera': [
+    _t(523, 0.16, w: _sin, to: 784, a: 0.12, vr: 6, vd: 0.02, v: 0.3),
+    _t(659, 0.16, w: _tri, to: 988, a: 0.12, v: 0.2),
+    _n(6000, 0.15, to: 10000, lp: 8000, a: 0.12, v: 0.2, seed: 405),
+  ],
+  // Eco de la Hechicera: el mismo acorde, hueco y desafinado.
+  'ecoHechicera': [
+    _t(554, 0.15, w: _sin, to: 740, a: 0.12, vr: 13, vd: 0.04, v: 0.25),
+    _n(8000, 0.14, to: 12000, lp: 9000, a: 0.1, v: 0.15, seed: 407),
+  ],
+  // Salamandra: siseo con chispas.
+  'salamandra': [
+    _n(4500, 0.15, to: 8000, lp: 6000, a: 0.1, v: 0.4, seed: 409),
+    ..._crackle(0.6),
+  ],
+  // Gólem de Magma: roca que cruje y burbujea.
+  'golemMagma': [
+    _n(350, 0.17, to: 800, lp: 500, a: 0.13, v: 0.55, seed: 411),
+    _t(60, 0.17, w: _saw, to: 90, a: 0.12, lp: 400, v: 0.35),
+    _t(300, 0.06, w: _sq, to: 150, at: 0.08, v: 0.2),
+  ],
+  // Bestia de Magma: bramido que sube con fuego.
+  'bestiaMagma': [
+    _t(45, 0.17, w: _saw, to: 85, a: 0.14, vr: 12, vd: 0.12, lp: 600, v: 0.55),
+    _n(1200, 0.17, to: 4000, lp: 3000, a: 0.14, v: 0.45, seed: 413),
+  ],
+  // Necrófago: jadeo gutural.
+  'necrofago': [
+    _n(900, 0.15, to: 1800, lp: 1200, a: 0.1, v: 0.45, seed: 415),
+    _t(120, 0.15, w: _saw, to: 160, a: 0.1, vr: 25, vd: 0.2, lp: 700, v: 0.3),
+  ],
+  // Alma Errante: suspiro frío.
+  'almaErrante': [
+    _n(2000, 0.16, to: 5000, lp: 3500, a: 0.14, v: 0.35, seed: 417),
+    _t(880, 0.15, w: _sin, to: 1175, a: 0.12, vr: 7, vd: 0.02, v: 0.2),
+  ],
+  // Espectro Coronado: coro de lamentos que crece.
+  'espectroCoronado': [
+    _t(294, 0.17, w: _sin, to: 392, a: 0.14, vr: 6, vd: 0.03, v: 0.3),
+    _t(349, 0.17, w: _tri, to: 466, a: 0.14, vr: 5, vd: 0.03, v: 0.2),
+    _n(1500, 0.17, to: 4000, lp: 2500, a: 0.14, v: 0.35, seed: 419),
+  ],
+  // Siervo Espectral: gemido corto.
+  'siervoEspectral': [
+    _t(392, 0.14, w: _sin, to: 587, a: 0.1, vr: 8, vd: 0.04, v: 0.3),
+    _n(3000, 0.12, lp: 2000, a: 0.1, v: 0.15, seed: 421),
+  ],
+  // Vigilante del Vacío: zumbido de energía que carga.
+  'vigilanteVacio': [
+    _t(110, 0.16, w: _sq, to: 220, a: 0.12, lp: 900, v: 0.3),
+    _t(1760, 0.14, w: _sin, to: 2637, a: 0.1, v: 0.15),
+  ],
+  // Ojo del Abismo: parpadeo húmedo y tentáculos.
+  'ojoAbismo': [
+    _n(1800, 0.06, lp: 900, v: 0.4, seed: 423),
+    _t(200, 0.15, w: _tri, to: 330, a: 0.1, vr: 16, vd: 0.1, v: 0.35),
+  ],
+  // Centinela: placas de obsidiana que se abren + carga del vacío.
+  'centinela': [
+    _n(700, 0.17, to: 2000, lp: 1200, a: 0.12, v: 0.5, seed: 425),
+    _t(55, 0.17, w: _sq, to: 110, a: 0.14, lp: 500, v: 0.35),
+    _t(1319, 0.16, w: _sin, to: 1976, a: 0.13, v: 0.2),
+  ],
+  // Heraldo de las Eras: arena que cae + campana lejana.
+  'heraldoEras': [
+    _n(7000, 0.16, lp: 5000, a: 0.08, v: 0.3, seed: 427),
+    _t(1047, 0.15, w: _sin, a: 0.1, vr: 5, vd: 0.01, v: 0.2),
+  ],
+  // Fragmento del Tiempo: arena que se arremolina rápido.
+  'fragmentoTiempo': [
+    _n(5000, 0.12, to: 11000, lp: 8000, a: 0.08, v: 0.35, seed: 429),
+    _t(2349, 0.1, w: _tri, to: 3136, a: 0.06, v: 0.15),
+  ],
   // ---- v0.2 ----
   // Araña: patitas que corretean (clics secos) + siseo.
   'arana': [
@@ -448,6 +534,77 @@ final Map<String, List<SfxTone>> kEnemyVoices = {
 
 /// La voz del ataque de cada tipo (lo que era `enemy.<tipo>`).
 final Map<String, List<SfxTone>> _enemyBodies = {
+  // ---- v0.3 ----
+  'ecoSombra': [
+    ..._swingBlade(0.7, 0.9),
+    _t(330, 0.2, w: _sin, to: 220, vr: 10, vd: 0.05, v: 0.3, at: 0.02),
+  ],
+  'guardianReloj': [
+    ..._golem(),
+    _t(1661, 0.3, w: _sin, a: 0.002, at: 0.05, v: 0.25),
+  ],
+  'hechicera': [
+    _t(784, 0.3, w: _sin, to: 1568, a: 0.01, vr: 8, vd: 0.03, v: 0.35),
+    ..._x(_zap(1.2), dt: 0.05),
+    ..._x(_ice(1.1, 0.6), dt: 0.08, g: 0.6),
+  ],
+  'ecoHechicera': [
+    _t(830, 0.25, w: _sin, to: 1480, vr: 14, vd: 0.05, v: 0.3),
+    _t(415, 0.25, w: _tri, to: 740, at: 0.03, v: 0.15),
+  ],
+  'salamandra': [
+    ..._fire(1.3, 0.6, 31),
+    _t(700, 0.08, w: _sq, to: 350, v: 0.2),
+  ],
+  'golemMagma': [
+    _t(65, 0.35, w: _sin, to: 35, v: 0.6),
+    ..._fire(0.7, 0.8, 33),
+    ..._x(_bubbles(0.6, 0.8, 2), dt: 0.1),
+  ],
+  'bestiaMagma': [
+    _t(70, 0.5, w: _saw, to: 40, vr: 9, vd: 0.12, lp: 900, v: 0.5),
+    ..._fire(0.8, 1.2, 35),
+    ..._crackle(1, 0.1),
+  ],
+  'necrofago': [
+    _n(5000, 0.12, to: 1500, lp: 4000, v: 0.45, seed: 431),
+    ..._x(_bubbles(0.9, 0.7, 3), dt: 0.05),
+  ],
+  'almaErrante': [
+    _t(660, 0.4, w: _sin, to: 440, a: 0.05, vr: 6, vd: 0.03, v: 0.4),
+    ..._x(_ice(1.3, 0.6), dt: 0.08, g: 0.6),
+  ],
+  'espectroCoronado': [
+    _t(392, 0.55, w: _sin, to: 262, a: 0.05, vr: 6, vd: 0.03, v: 0.45),
+    _t(466, 0.55, w: _tri, to: 311, a: 0.05, vr: 6, vd: 0.03, v: 0.2),
+    _n(1200, 0.4, lp: 800, a: 0.05, v: 0.35, seed: 433),
+  ],
+  'siervoEspectral': [
+    _t(587, 0.3, w: _sin, to: 392, a: 0.03, vr: 7, vd: 0.03, v: 0.35),
+    _n(4000, 0.1, lp: 2500, v: 0.2, seed: 435),
+  ],
+  'vigilanteVacio': [
+    ..._swingHeavy(1.1, 0.9),
+    _t(1760, 0.2, w: _sq, to: 880, vr: 30, vd: 0.1, v: 0.15),
+  ],
+  'ojoAbismo': [
+    _t(1200, 0.15, w: _sin, to: 300, v: 0.4),
+    ..._zap(0.8),
+  ],
+  'centinela': [
+    ..._swingHeavy(0.6, 1.4),
+    _t(55, 0.45, w: _sin, to: 30, v: 0.55),
+    _t(1976, 0.35, w: _sin, to: 988, a: 0.01, at: 0.05, v: 0.2),
+  ],
+  'heraldoEras': [
+    ..._swingHeavy(0.9, 1.1),
+    _t(784, 0.4, w: _sin, a: 0.002, at: 0.06, vr: 5, vd: 0.01, v: 0.25),
+    _n(6000, 0.25, lp: 4000, at: 0.1, v: 0.2, seed: 437),
+  ],
+  'fragmentoTiempo': [
+    ..._swingBlade(1.3, 0.7),
+    _t(3136, 0.15, w: _tri, to: 2093, at: 0.03, v: 0.2),
+  ],
   'arana': [
     _n(6000, 0.08, to: 2000, lp: 5000, v: 0.45, seed: 241),
     _t(900, 0.06, w: _sq, to: 400, v: 0.25, at: 0.02),
@@ -521,6 +678,109 @@ final Map<String, List<SfxTone>> _enemyBodies = {
 /// Impacto propio de cada tipo de enemigo sobre un jugador
 /// (`enemy.hit.<tipo>`), en vez de `impact.hurt`.
 final Map<String, List<SfxTone>> kEnemyHitVoices = {
+  // ---- v0.3 ----
+  // Corte sombrío con eco.
+  'ecoSombra': [
+    _n(9000, 0.06, to: 3000, v: 0.55, seed: 441),
+    _t(180, 0.15, w: _sin, to: 70, v: 0.55),
+    _n(9000, 0.05, to: 3000, v: 0.25, at: 0.09, seed: 443),
+  ],
+  // Engranaje que golpea y tic que se detiene.
+  'guardianReloj': [
+    _t(100, 0.28, w: _sin, to: 35, v: 0.8),
+    _t(2217, 0.18, w: _sin, a: 0.002, v: 0.3),
+    _t(2794, 0.015, w: _sq, at: 0.12, v: 0.3),
+    _n(2500, 0.1, lp: 1200, v: 0.45, seed: 445),
+  ],
+  // Rayo arcano con campanas.
+  'hechicera': [
+    _n(16000, 0.06, v: 0.55, seed: 447),
+    _t(120, 0.3, w: _sin, to: 40, v: 0.75),
+    _t(1568, 0.35, w: _sin, a: 0.002, v: 0.3),
+    _t(2349, 0.3, w: _sin, a: 0.002, at: 0.03, v: 0.2),
+  ],
+  // Eco: el mismo rayo, más débil y doble.
+  'ecoHechicera': [
+    _n(14000, 0.05, v: 0.45, seed: 449),
+    _t(1480, 0.2, w: _sin, a: 0.002, v: 0.3),
+    _t(1480, 0.15, w: _sin, a: 0.002, at: 0.08, v: 0.15),
+    _t(150, 0.15, w: _sin, to: 70, v: 0.5),
+  ],
+  // Mordisco ardiente chico.
+  'salamandra': [
+    _n(9000, 0.05, v: 0.55, seed: 451),
+    _t(220, 0.12, w: _sin, to: 80, v: 0.55),
+    ..._crackle(0.5, 0.03),
+  ],
+  // Puñetazo de roca fundida.
+  'golemMagma': [
+    _t(80, 0.35, w: _sin, to: 28, v: 0.85),
+    _n(1400, 0.2, lp: 800, v: 0.6, seed: 453),
+    _n(9000, 0.12, crush: 3, at: 0.04, v: 0.3, seed: 455),
+  ],
+  // Zarpazo de magma enorme.
+  'bestiaMagma': [
+    _n(10000, 0.1, to: 2000, lp: 8000, v: 0.6, seed: 457),
+    _t(60, 0.45, w: _sin, to: 22, v: 0.9),
+    ..._fire(0.6, 0.6, 459),
+  ],
+  // Mordida podrida.
+  'necrofago': [
+    _n(7000, 0.05, to: 2000, v: 0.6, seed: 461),
+    _t(160, 0.15, w: _sin, to: 60, v: 0.6),
+    ..._x(_bubbles(0.8, 0.6, 2), dt: 0.05),
+  ],
+  // Toque helado.
+  'almaErrante': [
+    _t(3520, 0.2, w: _tri, v: 0.35),
+    _t(2637, 0.2, w: _tri, at: 0.03, v: 0.3),
+    _t(250, 0.2, w: _sin, to: 120, v: 0.45),
+    _n(15000, 0.04, v: 0.35, seed: 463),
+  ],
+  // Garra espectral real.
+  'espectroCoronado': [
+    _n(11000, 0.08, to: 3000, v: 0.6, seed: 465),
+    _t(90, 0.35, w: _sin, to: 30, v: 0.8),
+    _t(2093, 0.3, w: _tri, at: 0.02, v: 0.3),
+    _t(1568, 0.3, w: _tri, at: 0.05, v: 0.25),
+  ],
+  // Roce espectral.
+  'siervoEspectral': [
+    _t(1976, 0.15, w: _tri, v: 0.35),
+    _t(260, 0.15, w: _sin, to: 130, v: 0.45),
+    _n(10000, 0.04, v: 0.35, seed: 467),
+  ],
+  // Lanzazo del vacío.
+  'vigilanteVacio': [
+    _n(12000, 0.06, to: 4000, v: 0.55, seed: 469),
+    _t(140, 0.2, w: _sin, to: 50, v: 0.7),
+    _t(880, 0.25, w: _sq, to: 440, vr: 20, vd: 0.05, v: 0.15),
+  ],
+  // Mirada que aturde: zumbido + golpe.
+  'ojoAbismo': [
+    _t(1000, 0.3, w: _tri, vr: 12, vd: 0.15, v: 0.35),
+    _t(170, 0.18, w: _sin, to: 60, v: 0.6),
+    _n(6000, 0.05, v: 0.4, seed: 471),
+  ],
+  // Mazazo de obsidiana.
+  'centinela': [
+    _t(55, 0.5, w: _sin, to: 20, v: 0.9),
+    _n(3000, 0.15, lp: 1500, v: 0.6, seed: 473),
+    _t(988, 0.4, w: _sin, a: 0.002, v: 0.3),
+    _t(1319, 0.3, w: _sin, a: 0.002, at: 0.02, v: 0.2),
+  ],
+  // Golpe del estandarte: campana y arena.
+  'heraldoEras': [
+    _t(85, 0.35, w: _sin, to: 30, v: 0.8),
+    _t(523, 0.5, w: _sin, a: 0.002, v: 0.3),
+    _n(7000, 0.2, lp: 5000, at: 0.03, v: 0.35, seed: 475),
+  ],
+  // Corte de arena rápido.
+  'fragmentoTiempo': [
+    _n(13000, 0.05, to: 5000, v: 0.55, seed: 477),
+    _t(3136, 0.1, w: _tri, v: 0.3),
+    _t(200, 0.1, w: _sin, to: 90, v: 0.5),
+  ],
   // ---- v0.2 ----
   // Picadura venenosa.
   'arana': [
@@ -635,7 +895,8 @@ final Map<String, List<SfxTone>> kEnemyHitVoices = {
 
 const _kBossTypes = {
   'reyLimo', 'golemReloj', 'devorador', //
-  'matriarca', 'sierpe', 'caballeroHueco',
+  'matriarca', 'sierpe', 'caballeroHueco', //
+  'hechicera', 'bestiaMagma', 'espectroCoronado', 'centinela',
 };
 
 List<SfxTone> _slime() => [
@@ -1364,6 +1625,78 @@ Map<String, SfxDef> buildBreakSfx() => {
 /// Mecánicas de los jefes v0.2 (docs/specs/audio.md § "Mecánicas de
 /// jefe").
 Map<String, SfxDef> buildBossMechanicSfx() => {
+      // ---- v0.3 (docs/specs/audio.md § "Mecánicas de jefe v0.3") ----
+      // Eco que aparece: acorde que se desdobla (dos voces desafinadas).
+      Sfx.echoSummon: SfxDef([
+        ..._arp([523, 659, 784, 1047], step: 0.05, d: 0.2, w: _sin, v: 0.3),
+        ..._arp([554, 698, 831, 1109], step: 0.05, d: 0.2, w: _sin, at: 0.08, v: 0.2),
+        _n(8000, 0.4, to: 3000, lp: 6000, a: 0.2, v: 0.2, seed: 501),
+      ], peak: SfxLevel.status),
+      // Golpe a un eco: tintineo hueco (el daño se va al vacío).
+      Sfx.echoResist: SfxDef([
+        _t(1480, 0.18, w: _sin, vr: 14, vd: 0.05, v: 0.35),
+        _t(740, 0.18, w: _tri, at: 0.02, v: 0.2),
+      ], peak: SfxLevel.status),
+      // La lava sube: rugido de tierra + burbujeo grave.
+      Sfx.lavaRise: SfxDef([
+        ..._rumble(0.8, 1.4),
+        ..._x(_bubbles(0.5, 1.4, 5), dt: 0.15),
+        _n(1500, 0.6, to: 4000, lp: 2500, a: 0.3, v: 0.35, seed: 503),
+      ], peak: SfxLevel.heavy),
+      // La lava quema al que se defiende: chisporroteo + siseo.
+      Sfx.lavaBurn: SfxDef([
+        _n(5000, 0.35, to: 9000, lp: 7000, a: 0.02, v: 0.5, seed: 505),
+        ..._fire(1.1, 0.7, 507),
+        ..._crackle(0.8, 0.05),
+      ], peak: SfxLevel.impact),
+      // La lava se enfría: vapor que baja.
+      Sfx.lavaFade: SfxDef([
+        _n(6000, 0.5, to: 1500, lp: 4000, a: 0.05, v: 0.35, seed: 509),
+        _t(300, 0.3, w: _sin, to: 150, at: 0.1, v: 0.2),
+      ], peak: SfxLevel.status),
+      // Invocación del séquito: campana fúnebre + lamento que sube.
+      Sfx.summon: SfxDef([
+        _t(196, 0.8, w: _sin, a: 0.002, vr: 4, vd: 0.01, v: 0.45),
+        _t(392, 0.6, w: _tri, a: 0.002, v: 0.2),
+        _t(330, 0.5, w: _sin, to: 660, a: 0.2, at: 0.1, vr: 7, vd: 0.03, v: 0.25),
+      ], peak: SfxLevel.status),
+      // Inmune: estado que rebota contra el escudo del séquito.
+      Sfx.immune: SfxDef([
+        _t(1319, 0.08, w: _sq, to: 988, v: 0.3),
+        _t(2637, 0.25, w: _sin, a: 0.002, at: 0.02, v: 0.3),
+        _n(10000, 0.05, v: 0.25, seed: 511),
+      ], peak: SfxLevel.status),
+      // Marca del Vacío: zumbido que fija el objetivo + "bip" de mira.
+      Sfx.markCast: SfxDef([
+        _t(110, 0.5, w: _saw, to: 220, a: 0.2, lp: 900, vr: 6, vd: 0.05, v: 0.35),
+        for (final at in [0.2, 0.32, 0.44]) _t(1760, 0.05, w: _sq, at: at, v: 0.25),
+        _t(2637, 0.2, w: _sin, at: 0.5, v: 0.3),
+      ], peak: SfxLevel.status),
+      // Golpe al marcado: implosión del vacío encima del impacto.
+      Sfx.markHit: SfxDef([
+        _t(40, 0.5, w: _sin, to: 18, v: 0.9),
+        _n(2000, 0.2, to: 400, lp: 1500, v: 0.55, seed: 513),
+        _t(880, 0.3, w: _sq, to: 110, crush: 3, v: 0.2),
+      ], peak: SfxLevel.heavy),
+      // Marca contrarrestada: escudo que la disipa.
+      Sfx.markGuard: SfxDef([
+        ..._shieldRing(1.1),
+        ..._arp([784, 1047, 1319], step: 0.05, d: 0.15, w: _sin, at: 0.08, v: 0.3),
+      ], peak: SfxLevel.status),
+      // Transformación del Devorador: el mundo se quiebra (golpe sordo,
+      // vacío que traga y rugido que sube).
+      Sfx.phaseShift: SfxDef([
+        _t(30, 1.6, w: _sin, to: 60, a: 0.6, v: 0.7),
+        _n(400, 1.4, to: 200, lp: 400, a: 0.8, v: 0.5, seed: 515),
+        _t(55, 0.6, w: _saw, to: 110, at: 0.9, vr: 10, vd: 0.12, lp: 900, v: 0.5),
+        _t(220, 0.7, w: _sin, to: 40, at: 0.9, v: 0.55),
+        _n(16000, 0.15, at: 0.9, v: 0.5, seed: 517),
+      ], peak: SfxLevel.enemyUltWarn),
+      // Esquiva de un común: silbido que pasa de largo.
+      Sfx.evade: SfxDef([
+        ..._whoosh(1.3, 0.8),
+        _t(1200, 0.06, w: _sin, to: 1800, at: 0.04, v: 0.2),
+      ], peak: SfxLevel.status),
       // Cartel de entrada: golpe grave + acorde menor de metales.
       Sfx.bossIntro: SfxDef([
         _t(55, 0.9, w: _sin, to: 40, v: 0.7),
@@ -1429,6 +1762,89 @@ Map<String, SfxDef> buildBossMechanicSfx() => {
 
 /// Las tres partes de cada ULT enemiga por `EnemyUltDef.id`.
 final Map<String, UltVoices> kEnemyUltVoices = {
+  // ---- v0.3 ----
+  // Coro de Ecos: coro que se multiplica; ondas del canto; resonancia.
+  'eult_coro': (
+    build: [
+      for (var k = 0; k < 4; k++)
+        _t(const [523.0, 659.0, 784.0, 988.0][k], 0.95 - k * 0.15,
+            w: _sin, a: 0.2, at: k * 0.15, vr: 6, vd: 0.02, v: 0.25),
+      for (var k = 0; k < 3; k++)
+        _t(const [554.0, 698.0, 831.0][k], 0.6, w: _tri, a: 0.2, at: 0.25 + k * 0.12, vr: 9, vd: 0.03, v: 0.15),
+      _n(6000, 0.9, to: 10000, lp: 8000, a: 0.7, v: 0.2, seed: 521),
+    ],
+    release: [
+      for (var k = 0; k < 5; k++)
+        _t(1047 + k * 131.0, 0.25, w: _sin, to: 523, at: k * 0.07, v: 0.3),
+      _n(3000, 0.6, to: 8000, lp: 6000, a: 0.1, v: 0.3, seed: 523),
+    ],
+    impact: [
+      _t(110, 0.4, w: _sin, to: 40, v: 0.75),
+      _t(1568, 0.6, w: _sin, a: 0.002, vr: 6, vd: 0.02, v: 0.3),
+      _t(1661, 0.6, w: _sin, a: 0.002, vr: 7, vd: 0.02, v: 0.25),
+      _n(12000, 0.08, v: 0.45, seed: 525),
+    ],
+  ),
+  // Erupción Total: la tierra ruge y se agrieta; géiseres y rocas; lava
+  // que revienta.
+  'eult_erupcion': (
+    build: [
+      ..._rumble(0.7, 2.0),
+      ..._x(_bubbles(0.45, 2.0, 6), dt: 0.1),
+      _n(1000, 0.95, to: 3500, lp: 2500, a: 0.8, v: 0.4, seed: 527),
+    ],
+    release: [
+      _n(2500, 0.9, to: 600, lp: 3000, a: 0.03, v: 0.6, seed: 529),
+      _t(50, 0.9, w: _saw, to: 35, vr: 7, vd: 0.1, lp: 500, v: 0.45),
+      for (var k = 0; k < 6; k++) _t(120 - k * 8.0, 0.08, w: _sq, at: 0.15 + k * 0.1, crush: 3, v: 0.25),
+    ],
+    impact: [
+      _t(45, 0.6, w: _sin, to: 20, v: 0.9),
+      ..._fire(0.7, 1.4, 531),
+      ..._crackle(1.4, 0.05),
+      _n(14000, 0.08, v: 0.5, seed: 533),
+    ],
+  ),
+  // Lamento Eterno: coro de lamentos que gira; ola espectral; manos
+  // heladas que atrapan.
+  'eult_lamento': (
+    build: [
+      for (var k = 0; k < 4; k++)
+        _t(const [294.0, 349.0, 440.0, 523.0][k], 0.95, w: _sin, to: const [262.0, 311.0, 392.0, 466.0][k],
+            a: 0.3, at: k * 0.05, vr: 5 + k.toDouble(), vd: 0.03, v: 0.2),
+      _n(1500, 0.95, to: 3000, lp: 2000, a: 0.6, v: 0.3, seed: 535),
+    ],
+    release: [
+      ..._wind(0.9, 1.5),
+      _t(660, 0.8, w: _sin, to: 220, a: 0.05, vr: 8, vd: 0.05, v: 0.35),
+    ],
+    impact: [
+      _t(70, 0.4, w: _sin, to: 28, v: 0.8),
+      ..._x(_ice(0.9, 1.2), dt: 0.02),
+      _t(392, 0.5, w: _sin, to: 196, vr: 9, vd: 0.05, at: 0.08, v: 0.25),
+    ],
+  ),
+  // Colapso del Vacío: el agujero negro se forma y traga la luz; viaja y
+  // colapsa; implosión y esquirlas del vacío.
+  'eult_colapsoVacio': (
+    build: [
+      _t(28, 1.05, w: _sin, to: 55, a: 0.8, v: 0.7),
+      _n(300, 1.05, to: 1200, lp: 800, a: 0.9, v: 0.45, seed: 537),
+      _t(3520, 0.9, w: _sin, to: 880, a: 0.4, v: 0.15),
+    ],
+    release: [
+      _n(1200, 0.5, to: 300, lp: 1000, a: 0.05, v: 0.5, seed: 539),
+      _t(880, 0.45, w: _sq, to: 55, crush: 2, v: 0.25),
+      _t(40, 0.6, w: _sin, at: 0.35, v: 0.6),
+    ],
+    impact: [
+      _t(35, 0.6, w: _sin, to: 18, v: 0.95),
+      _n(16000, 0.1, v: 0.6, seed: 541),
+      for (var k = 0; k < 4; k++)
+        _t(const [1976.0, 2637.0, 1480.0, 3136.0][k], 0.12, w: _tri, at: 0.02 + k * 0.03, v: 0.25),
+      _n(2000, 0.3, to: 500, lp: 1500, at: 0.05, v: 0.4, seed: 543),
+    ],
+  ),
   // Nido Venenoso: sacos que laten y patas; red que vuela; red que cae
   // y revienta en veneno.
   'eult_nido': (

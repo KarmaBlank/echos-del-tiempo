@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:get_it/get_it.dart';
 
+import '../../features/characters/data/account_repository.dart';
+import '../../features/characters/data/account_store.dart';
 import '../../features/lobby/data/json_file_profile_store.dart';
 import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/data/passive_tree_catalog.dart';
@@ -66,10 +68,16 @@ void registerSharedDependencies() {
       groundLoot: true,
     ),
   );
-  // Perfil en disco en escritorio; en memoria donde todavía no hay una
-  // carpeta conocida (docs/specs/exploration.md § "Persistencia").
+  // Cuenta con varios personajes y alijo (`account.json`, migra el
+  // `profile.json` viejo); en memoria donde todavía no hay una carpeta
+  // conocida. La sesión ve solo el personaje elegido
+  // (docs/specs/characters.md § 1).
+  sl.registerLazySingleton<AccountRepository>(
+    () => AccountRepository(
+        JsonFileAccountStore.forPlatform() ?? InMemoryAccountStore()),
+  );
   sl.registerLazySingleton<ProfileStore>(
-    () => JsonFileProfileStore.forPlatform() ?? InMemoryProfileStore(),
+    () => SelectedCharacterProfileStore(sl<AccountRepository>()),
   );
   // Sonido real con audioplayers (docs/specs/audio.md § "Reproducción").
   // Los tests no pasan por acá: usan su propio reproductor o el no-op.

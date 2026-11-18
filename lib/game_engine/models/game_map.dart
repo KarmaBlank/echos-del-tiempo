@@ -56,6 +56,33 @@ abstract final class Tile {
   /// Suelo de vault (caminable, decorativo).
   static const vaultFloor = ':';
 
+  // ---- zonas 6–10 (worldgen.md § 9.1) ----
+  /// Vacío de las zonas de abismo: el jugador puede pisarlo y se cae
+  /// (vuelve al spawn del piso); para los enemigos es sólido.
+  static const voidTile = '_';
+
+  /// Puente sobre el vacío o la lava (caminable).
+  static const bridge = '=';
+
+  /// Lava de la Grieta Ígnea (sólida).
+  static const lava = '%';
+
+  /// Lápida del Cementerio de Eras (sólida).
+  static const tombstone = 't';
+
+  /// Engranaje / reloj de los vaults del laberinto (sólido).
+  static const gear = 'o';
+
+  /// Tiles sólidos fijos (sin la barrera, que depende de si está abierta,
+  /// ni las entradas de zona).
+  static const solidTiles = {
+    wall, water, counter, armory, merchant, tree, rock, lava, tombstone, gear,
+  };
+
+  /// Se puede pisar (el vacío cuenta: se pisa y se cae).
+  static bool isWalkable(String c) =>
+      !solidTiles.contains(c) && entranceZone(c) == null && c != gate;
+
   /// Entrada de la zona [zone] (1..10) en el mapa del mundo: `'1'..'9'`
   /// y `'0'` para la 10. Sólida.
   static String entrance(int zone) => '${zone % 10}';

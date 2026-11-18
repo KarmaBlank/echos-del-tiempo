@@ -1,4 +1,4 @@
-# Spec (aprobada; los jefes de las zonas 1-5 están implementados en la v0.2): 10 jefes
+# Spec (aprobada; los 10 jefes implementados: zonas 1-5 en la v0.2, 6-10 en la v0.3): 10 jefes
 
 Pedido del dueño: "que haya más bosses, unos 10". Hoy hay 3 (Rey Limo,
 Gólem Reloj, Devorador de Eras). Se agregan 7 para tener **uno por zona**
@@ -165,3 +165,171 @@ mirando a la izquierda:
   reloj de arena rojo en el abdomen, muchos ojos), Sierpe (serpiente de
   escarcha enroscada en anillos, crin de hielo), Caballero Hueco (yelmo
   vacío con ojos cian, espada y escudo, capa, ribetes de oro gastado).
+
+## v0.3: Hechicera, Bestia de Magma, Espectro Coronado, Centinela y Devorador final (implementado)
+
+Zonas 6–10 (worldgen.md § 8). Mismos patrones que la v0.2: la mecánica
+es dato (`BossMechanicDef` en `kBossMechanics`, con los campos nuevos
+`turns`, `power` y `soloPower`), el motor tiene código por tipo
+(`echo`, `lava`, `summon`, `mark`, `phases`), cada fase emite un
+`BossMechanicEvent`, las que piden coordinación tienen variante en solo,
+cada jefe tiene cartel de entrada (`title`), chip con tooltip de cómo
+contrarrestarla (`counter`), ULT propia con cinemática y sonido de 3
+partes, y legendario (`legendaryId`). Tests:
+`test/game_engine/boss_mechanics_v03_test.dart`,
+`test/features/combat/boss_mechanics_v03_fx_test.dart`.
+
+### Stats (nivel nativo; la sesión escala con `kEnemyBaseLevel`)
+
+Comunes al mínimo de su zona, jefes al máximo. Calibrados escalando los
+de la zona 5 con `ZoneRules.hpScale` / `atkScale` (vida ×1.19 / ATQ
+×1.15 de nivel 21 a 26, etc.) más un escalón de jefe a jefe. Quiebre
+≈ 0.8 × vida (comunes) y ≈ 0.35 × vida (jefes). La XP de los comunes
+quedó ~20% por debajo de su escalón para que el ritmo de worldgen.md
+(≈ nivel 50 al terminar la zona 10, test "ritmo" de
+`zones_v03_test.dart`) se cumpla.
+
+| Id | Nombre | Zona | Nivel | Vida | ATQ | VEL | XP | ₵ | Quiebre | Otros |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `ecoSombra` | Eco Sombrío | 6 | 26 | 120 | 32 | 15 | 12 | 13 | 96 | esquiva 25% (golpe primario ×0.3, `ESQUIVA`), flota |
+| `guardianReloj` | Guardián del Reloj | 6 | 26 | 190 | 30 | 6 | 16 | 18 | 152 | armadura −15%, sus golpes retrasan 30% de un turno |
+| `hechicera` | Hechicera del Eco | 6 | 30 | 1350 | 42 | 10 | 230 | 280 | 470 | jefa, +1 Congelación, ULT `eult_coro`, mecánica `ecos` |
+| `ecoHechicera` | Eco de la Hechicera | 6 | 30 | 140 | 21 | 10 | 0 | 0 | — | invocación de la Hechicera (actúa; recibe ×0.5) |
+| `salamandra` | Salamandra | 7 | 31 | 150 | 37 | 12 | 12 | 14 | 120 | +2 Quemadura |
+| `golemMagma` | Gólem de Magma | 7 | 31 | 260 | 36 | 5 | 17 | 20 | 208 | +1 Quemadura, armadura −25% |
+| `bestiaMagma` | Bestia de Magma | 7 | 35 | 1700 | 48 | 7 | 260 | 320 | 600 | jefa, +2 Quemadura, ULT `eult_erupcion`, mecánica `lava` |
+| `necrofago` | Necrófago | 8 | 36 | 190 | 41 | 11 | 13 | 15 | 152 | +2 Veneno, perforante |
+| `almaErrante` | Alma Errante | 8 | 36 | 165 | 40 | 13 | 13 | 15 | 132 | +1 Congelación, flota |
+| `espectroCoronado` | Espectro Coronado | 8 | 40 | 1800 | 53 | 11 | 290 | 360 | 630 | jefe, +1 Congelación, ULT `eult_lamento`, mecánica `sequito` |
+| `siervoEspectral` | Siervo Espectral | 8 | 40 | 150 | 30 | 12 | 0 | 0 | — | invocación del Espectro (actúa, +1 Congelación) |
+| `vigilanteVacio` | Vigilante del Vacío | 9 | 41 | 210 | 43 | 10 | 15 | 17 | 168 | sus golpes marcan: +20% daño recibido 2 turnos |
+| `ojoAbismo` | Ojo del Abismo | 9 | 41 | 170 | 44 | 12 | 14 | 16 | 136 | 30% Aturdido, flota |
+| `centinela` | Centinela del Vacío | 9 | 45 | 2100 | 59 | 9 | 320 | 400 | 735 | jefe, perforante, ULT `eult_colapsoVacio`, mecánica `marca` |
+| `heraldoEras` | Heraldo de las Eras | 10 | 46 | 330 | 50 | 9 | 20 | 24 | 264 | élite natural: ULT Furia Élite; estados en ciclo Quemadura → Veneno → Congelación |
+| `fragmentoTiempo` | Fragmento del Tiempo | 10 | 46 | 160 | 45 | 17 | 14 | 16 | 128 | rápido, sus golpes retrasan 25% |
+| `devorador` | Devorador de Eras | 10 | 50 | 2600 | 64 | 10 | 400 | 500 | 910 | jefe final, +2 Quemadura, ULT `eult_finEras`, mecánica `fases` |
+
+- El **Devorador** se rebalancea a nivel 50 (`kEnemyBaseLevel`
+  `devorador: 50`, lo cambia el mundo). Solo lo usa la zona 10 (la
+  misión `m3` del prototipo queda para los tests de paridad del mapa).
+- Campos nuevos de `EnemyDef` (comunes): `evasion` (probabilidad de que
+  un golpe primario del grupo "roce": ×0.3 y `BossMechanicEvent(evaded)`;
+  solo tira el dado si el enemigo la tiene), `delayHit` (cada golpe que
+  conecta retrasa al jugador `IV × delayHit`, `DelayedEvent`), `markHit`
+  (`TimedEffect(sourceId: 'vigilancia', stat: damageTaken, 0.2, 2
+  turnos)` sobre el jugador golpeado; el daño enemigo a un jugador ahora
+  multiplica `1 + damageTaken`), `inflictCycle` (estado de cada acción
+  en ciclo; reemplaza a `inflicts`).
+- `heraldoEras` tiene `ultId: eult_furia` aunque no sea élite (empieza
+  con 40 de carga como los élites).
+- **Invocaciones que actúan** (`ecoHechicera`, `siervoEspectral`): tienen
+  turno (entran en la línea de tiempo, primer turno a `IV × (0.6 +
+  0.2·k)`), no tienen barra de quiebre ni ULT, no dan XP ni créditos y
+  caen con su jefe. Las que vuelven a mitad de pelea reviven los ids
+  caídos (vida llena, sin estados, turno en `reloj + IV × 0.5`); si falta
+  alguno (entró un jugador) se agrega uno nuevo con vida y ATQ del
+  catálogo × la razón jefe actual / jefe del catálogo (así escalan con el
+  piso sin depender del mundo).
+- Legendarios: Hechicera → Trueno de Bronce (`truenoBronce`), Bestia →
+  Fauce del Volcán (`fauceVolcan`), Espectro → Arco de la Primavera Rota
+  (`primaveraRota`), Centinela → Rompemundos (`rompemundos`), Devorador →
+  Segadora de Eras (`segadoraEras`).
+- Títulos: Hechicera "Voz múltiple del Laberinto Temporal", Bestia
+  "Furia viva de la Grieta Ígnea", Espectro "Rey sin reino del
+  Cementerio de Eras", Centinela "Guardián del borde del Abismo",
+  Devorador (sin cambio) "El hambre al final del tiempo".
+
+### Hechicera del Eco — Ecos (`ecos`, tipo `echo`)
+
+- Empieza con **2 Ecos de la Hechicera** (1 en solo). Los ecos actúan
+  (golpe débil) y **reciben ×0.5 de todo el daño** (`× 0.5 ECO` en el
+  log, `BossMechanicEvent(echoResist)` una vez por paso y eco): con poca
+  vida caen en pocos golpes. La Hechicera recibe daño completo.
+- Si la Hechicera pasa **3 turnos suyos con ecos caídos**, al empezar el
+  tercero los vuelve a crear (`echoSummon` por eco).
+- **Quebrarla disipa un eco** (`shatter`, como el cristal de la Sierpe).
+- **ULT Coro de Ecos** (`eult_coro`): `ATQ × (1.0 + 0.3 por eco vivo)` a
+  todos y retrasa a todos `IV × 0.3`; después **rehace los ecos**
+  caídos (`echoSummon`).
+- Solo: 1 eco.
+
+### Bestia de Magma — Charcos de lava (`lava`, tipo `lava`)
+
+- Cada **3 acciones** suyas, después de atacar, el piso hace erupción:
+  **lava 2 turnos suyos** (`Combatant.lava`, `lavaRise` con los turnos).
+- Al empezar cada turno suyo con lava, **todo jugador que esté
+  Defendiendo** se quema: `ATQ × 0.4` de daño de fuego (Defender no lo
+  reduce; la DEF sí) + **2 Quemadura** (`lavaBurn` por jugador). Después
+  baja 1 turno; al llegar a 0, `lavaFade`.
+- Contrarrestar: no defenderse mientras hay lava; Guardia de todo el
+  grupo quema a todos.
+- **Solo**: `ATQ × 0.25` + 1 Quemadura.
+- **ULT Erupción Total** (`eult_erupcion`): `ATQ × 1.3` a todos + 2
+  Quemadura y la lava sube 3 turnos (`lavaRise`).
+
+### Espectro Coronado — Séquito (`sequito`, tipo `summon`)
+
+- Empieza con **2 Siervos Espectrales** (1 en solo), que actúan.
+- **Mientras viva algún siervo, el Espectro es inmune a los estados**:
+  no entran (tampoco el +15 de quiebre por estado) y el log dice
+  `INMUNE` (`immune`, uno por paso).
+- Si pasa **3 turnos suyos** con el séquito incompleto, al empezar el
+  tercero invoca hasta completarlo (`summon` por siervo).
+- **ULT Lamento Eterno** (`eult_lamento`): `ATQ × 1.25` a todos + 2
+  Congelación y **completa el séquito**.
+- Solo: 1 siervo.
+
+### Centinela del Vacío — Marca del Vacío (`marca`, tipo `mark`)
+
+- Cada **3 acciones** suyas, en vez de atacar, **marca a un jugador**
+  (`Combatant.voidMarked`, `markCast`; el provocador si hay, si no al
+  azar).
+- Su **próxima acción** va contra el marcado (ignora la provocación) y
+  pega **×2** (`markHit`). Si **otro aliado lo Protege** (Protección /
+  Baluarte), el protector recibe un golpe normal y la marca se consume
+  (`markGuarded`, actor = protector).
+- **Solo**: además, **Defender** contrarresta la marca: golpe normal
+  (con el ½ de defender) y se consume (`markGuarded`, actor = el mismo).
+- Si el marcado cae, la marca se pierde.
+- **ULT Colapso del Vacío** (`eult_colapsoVacio`): `ATQ × 1.3` a todos;
+  el marcado sin proteger recibe ×2; después marca al de más vida.
+
+### Devorador de Eras — Fases (`fases`, tipo `phases`)
+
+- **Fase 1**: como siempre (Colapso Temporal cada 3 acciones, Golpe
+  Brutal cada 4).
+- Al llegar al **50% de la vida** se transforma: el golpe que lo baja de
+  la mitad se queda en la mitad (la transformación absorbe el resto, así
+  la fase 2 es siempre media barra). `phaseShift` (valor 2),
+  `Combatant.phase = 2`: pierde sus estados, la barra de quiebre vuelve
+  a 0 (si no está quebrado), **ATQ × 1.15**, sus acciones vuelven a 0 y
+  **Colapso Temporal cada 2 acciones**. Fin de las Eras no cambia.
+- Escena: cinemática de transformación (oscurece, vórtice, destello) y
+  el sprite `devoradorFase2` (escala 2.8).
+
+### Red
+
+`Combatant` serializa (opcionales) `lava`, `vmk` (marcado), `phase`,
+`mchN` (turnos sin invocaciones). Fases nuevas de `BossMechanicEvent`:
+`echoSummon`, `echoResist`, `lavaRise`, `lavaBurn`, `lavaFade`,
+`summon`, `immune`, `markCast`, `markHit`, `markGuarded`, `phaseShift`,
+`evaded`.
+
+### Sprites
+
+`tool/export_sprites.dart`, mismo pipeline, todos mirando a la izquierda:
+Eco Sombrío (silueta violeta oscura con ojos blancos y estela), Guardián
+del Reloj (constructo de bronce con esfera de reloj), Salamandra (lagarto
+naranja con lomo de brasas), Gólem de Magma (roca negra con grietas de
+lava), Necrófago (carroñero gris verdoso encorvado con garras), Alma
+Errante (llama azul pálida con cara), Vigilante del Vacío (centinela
+violeta con ojo único y lanza), Ojo del Abismo (ojo flotante con
+tentáculos), Heraldo de las Eras (encapuchado con estandarte y reloj de
+arena), Fragmento del Tiempo (cristal de arena dorado). Jefes: Hechicera
+(túnica violeta, sombrero alto, bastón con orbe cian; el eco es la misma
+figura en cian pálido), Bestia de Magma (cuadrúpedo de roca con melena de
+fuego), Espectro Coronado (corona de oro y manto rasgado; siervos:
+espectros chicos encapuchados), Centinela (coloso de obsidiana con ojo
+del vacío), Devorador fase 2 (fauces, cuernos, núcleo carmesí). Escalas:
+Hechicera 1.7, su eco 1.4, Heraldo 1.2, Bestia 1.9, Espectro 1.8, Centinela 1.9, Devorador
+fase 2 2.8.

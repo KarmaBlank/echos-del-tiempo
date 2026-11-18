@@ -106,7 +106,7 @@ void main() {
           .state
           .enemies
           .single;
-      expect([boss.breakBase, boss.ultId], [280, 'eult_finEras']);
+      expect([boss.breakBase, boss.ultId], [910, 'eult_finEras']);
       expect(s.party.every((p) => !p.hasBreak), isTrue);
     });
 
@@ -353,6 +353,9 @@ void main() {
       final engine = _engine([0.0]);
       final turn = _enemyTurn(engine, 'devorador');
       final p = turn.party.single
+        // El Devorador es de nivel 50 (v0.3): que aguante el golpe.
+        ..maxHp = 9999
+        ..hp = 9999
         ..bonusDefense = 4
         ..effects = [
           const TimedEffect(sourceId: 'represalia', stat: BuffStat.attack, value: 0.3, turns: 2),

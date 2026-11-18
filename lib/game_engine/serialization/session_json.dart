@@ -484,6 +484,11 @@ class SessionJson {
         if (c.webbed) 'web': true,
         if (c.stance != 0) 'stc': c.stance,
         if (c.stanceTurns != 0) 'stcN': c.stanceTurns,
+        // Mecánicas de jefe v0.3 (opcionales).
+        if (c.lava != 0) 'lava': c.lava,
+        if (c.voidMarked) 'vmk': true,
+        if (c.phase != 0) 'phase': c.phase,
+        if (c.mechTurns != 0) 'mchN': c.mechTurns,
         // Afijos del arma (loot v2, opcionales).
         if (c.lifeSteal != 0) 'ls': c.lifeSteal,
         if (c.regenPerTurn != 0) 'rgn': c.regenPerTurn,
@@ -575,6 +580,10 @@ class SessionJson {
       webbed: j.flag('web'),
       stance: j.intOrNull('stc') ?? 0,
       stanceTurns: j.intOrNull('stcN') ?? 0,
+      lava: j.intOrNull('lava') ?? 0,
+      voidMarked: j.flag('vmk'),
+      phase: j.intOrNull('phase') ?? 0,
+      mechTurns: j.intOrNull('mchN') ?? 0,
       lifeSteal: j.dblOrNull('ls') ?? 0,
       regenPerTurn: j.dblOrNull('rgn') ?? 0,
       statusResist: j.intOrNull('sres') ?? 0,

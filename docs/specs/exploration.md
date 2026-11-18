@@ -27,7 +27,8 @@ Implementación Dart (feature `world` + piezas de `missions` y `combat`):
 | Tiles y temas | `lib/features/world/presentation/map/tile_painter.dart`, `map_themes.dart` |
 | Héroes, enemigos y objetos | `lib/features/world/presentation/map/actor_painter.dart` |
 | HUD (overlays Flutter) | `lib/features/world/presentation/hud/*.dart` |
-| Título (nombre, clase) | `lib/features/lobby/presentation/title_screen.dart` |
+| Título (selección de personaje) | `lib/features/lobby/presentation/title_screen.dart` |
+| Personajes y alijo (cuenta) | `lib/features/characters/` (characters.md) |
 | Chat | `lib/features/world/presentation/hud/chat_box.dart` |
 | Sonido (oyente de eventos) | `lib/features/world/presentation/session_sfx.dart` (docs/specs/audio.md) |
 | Personaje (atributos, armas, árbol) | `lib/features/world/presentation/panels/character_panel.dart` (docs/specs/panels.md) |
@@ -47,19 +48,22 @@ Tests: `test/features/world/session_flow_test.dart`,
 
 ## Título (`#title` y `title()`, HTML 70-83 y líneas 1471-1490)
 
-- `ECOS DEL TIEMPO` (32 px `gold`, sombra dura `red`), subtítulo y, si
-  el perfil guardado es de nivel > 1, `· Tu nivel guardado: N`.
-- `Nombre:` campo de 10 caracteres (`maxlength`), con el nombre guardado.
-- Una tarjeta por clase permitida (`FeatureFlags`): sprite del héroe
-  ×4, nombre, descripción (`ClassDef.description`, el `desc` del
-  prototipo), atributos base y arma inicial. La elegida tiene borde
-  `gold`. Elegir otra clase hace lo mismo que el prototipo:
-  `classId = k`, `equipped = arma inicial` y `resetBuild` (el árbol que
-  no sirva lo descarta `normalize` al entrar).
-- `> COMENZAR` (`prep()`): nombre recortado (vacío → `Héroe`, máx. 10),
-  guarda el perfil con `ProfileStore.save` y abre `WorldScreen`, que lo
-  carga. **Agregado del puerto**: el prototipo solo tiene "Crear sala" /
-  "Unirse".
+- `ECOS DEL TIEMPO` (32 px `gold`, sombra dura `red`) y subtítulo.
+- **Selección de personaje** (v0.3, docs/specs/characters.md § 2): la
+  cuenta tiene hasta 8 personajes; el título los lista (sprite, nombre,
+  clase, nivel, zona, última partida) con `> JUGAR`, `CREAR PERSONAJE`,
+  `RENOMBRAR`, `BORRAR` (con el nombre escrito como confirmación) y
+  `ALIJO`. Sin personajes abre el creador.
+- Creador (lo que antes era el título entero): `Nombre:` de 10
+  caracteres (`maxlength`, vacío → `Héroe`) y una tarjeta por clase
+  permitida (`FeatureFlags`): sprite del héroe ×4, nombre, descripción
+  (`ClassDef.description`, el `desc` del prototipo), atributos base y
+  arma inicial. La elegida tiene borde `gold`. `CREAR` arma el perfil
+  nuevo normalizado (clase, arma inicial, atributos base).
+- `> JUGAR`: anota la fecha en el personaje elegido, lo guarda con
+  `ProfileStore.save` (que en la app es el personaje elegido de la
+  cuenta) y abre `WorldScreen`, que lo carga. **Agregado del puerto**:
+  el prototipo solo tiene "Crear sala" / "Unirse".
 - `CREAR SALA`, el campo de código y `UNIRSE` dependen de la
   `NetSessionFactory` que registró el composition root (docs/specs/netcode.md):
   - sin fábrica (tests, builds sin red): deshabilitados con
@@ -68,8 +72,8 @@ Tests: `test/features/world/session_flow_test.dart`,
     motivo (`P2P por internet: falta configurar Firebase`);
   - disponible: el campo muestra `codeHint` (`IP:PUERTO` en LAN,
     `CODIGO` en P2P) y una etiqueta con `label` (`LAN` / `P2P`).
-    `CREAR SALA` guarda el perfil y conecta como host; `UNIRSE` exige un
-    código (`Escribe el código de la sala.`), guarda el perfil y conecta
+    `CREAR SALA` guarda el personaje elegido y conecta como host; `UNIRSE`
+    exige un código (`Escribe el código de la sala.`), lo guarda y conecta
     como cliente. Mientras conecta se muestra `Creando sala…` /
     `Conectando a X…` y los botones se deshabilitan; un error de
     conexión (`NetException`) se muestra en rojo debajo.
@@ -81,7 +85,7 @@ Tests: `test/features/world/session_flow_test.dart`,
 ## Flujo de pantallas
 
 ```
-Título ("> COMENZAR", guarda nombre y clase) ──push──> WorldScreen
+Título ("> JUGAR" con el personaje elegido) ──push──> WorldScreen
 WorldScreen según SessionMode:
   lobby / prep / field / levelUp → mapa Flame + HUD + paneles
   battle                          → SessionBattleScreen (encima del mapa)
@@ -550,6 +554,85 @@ resto al aire libre (`lobby = false`).
   en los demás: `La escalera se abrió → bajá al piso N` mientras el
   jugador está a más de 140 px de la `>`.
 
+## Zonas 6–10 (v0.3.0, worldgen.md § 8 y § 9)
+
+Implementación: `map/tile_painter.dart` (tiles y vecinos),
+`map/void_painter.dart` (fondo del vacío), `map/map_themes.dart`,
+`map/map_game.dart` (caída), `hud/minimap.dart`. Tests:
+`test/features/world/world_v03_ui_test.dart`.
+
+### Temas nuevos
+
+| Tema | g | g2 | w | w2 | path | p2 | `#` |
+|---|---|---|---|---|---|---|---|
+| laberinto | #3b4a63 | #46577a | #222c3f | #b08a3a | #56647e | #4a5770 | sillar pizarra con remaches y ribete de bronce |
+| grieta | #2f2a2c | #3d3537 | #1a1618 | #ff7b29 | #4a3e3a | #3e3431 | columna de basalto con grietas que brillan (`0.5 + 0.35·sin`) |
+| cementerio | #5a5d5a | #6c706a | #2e2c35 | #7e8a5a | #6e6a5e | #5e5a50 | roca flotante gris |
+| abismo | #4a5372 | #5a6488 | #262b40 | #8a96c0 | #5e6890 | #50597c | roca flotante azul |
+| corazon | #d9c58a | #efe2b0 | #6b5a2a | #fff3c4 | #c9b06a | #b89c56 | cristal dorado con brillo |
+
+Suelos: laberinto losas con junta y marca de engranaje (`h%11`);
+grieta ceniza con brasas que laten (`h%7`); cementerio tierra gris con
+pasto seco y musgo (`h%5`, `h%9`) y **niebla** (bandas `#ffffff`
+α ≤ 0.10 que derivan en x con `sin(t/1800 + ty·0.7)`); abismo roca con
+vetas; corazón cristal con faceta diagonal clara (`h%4==1`), reloj
+tallado dorado (aro de 7 px con dos agujas, `h%10`) y destello.
+
+### Tiles nuevos (v0.3)
+
+`TilePainter.draw` recibe además `at(tx, ty)` (tile vecino; `null` =
+fuera del mapa) para bordes y orientación. Sin vecinos se dibuja igual.
+
+| Char | Dibujo |
+|---|---|
+| `_` vacío | fondo del vacío (abajo) + **canto de la isla**: si el tile de arriba no es vacío, roca que cuelga 4–8 px (por hash, borde dentado de a 2 px) en el tono `w` con una franja `rock` de 3 px arriba, línea `g2` de 1 px y sombra `#00000066` de 4 px debajo; bajo un puente, una viga de 2 px; si a izquierda/derecha hay isla, sombra lateral de 2 px |
+| `=` puente | abismo/cementerio: tablones de madera `#8a6a3a`/`#6e5230` con juntas y **barandas de cuerda** `#c8a86a` con postes en el lado que da al vacío/lava; corazón: losas de piedra rúnica `#cfc6a8` con runa `#ffd166` que late; grieta: basalto enfriado `#3a3436` con vetas naranjas tenues. La dirección sale de los vecinos: vacío/lava arriba o abajo → puente horizontal (tablones verticales); a los lados → vertical |
+| `%` lava | base `#c0391b`, corriente `#ff6b1f` (bandas que se desplazan con `t/180`), brillo `#ffd166` que late; **burbujas** que crecen y revientan, en los tiles con `h%3==0` (ALTA), `h%5==0` (MEDIA) o `h%9==0` (BAJA); borde de costra oscura `#4a1a10` contra suelo |
+| `t` lápida | suelo + sombra + lápida gris `#8a8e96`/`#5e626a` de tapa redonda con cruz o `RIP` (por hash) y musgo `#6b8a4a` |
+| `o` engranaje | suelo + engranaje de bronce `#b08a3a`/`#7a5a22` de 8 dientes que gira lento (`t/1600` rad; 4 en zigzag por paridad de tx+ty) con eje oscuro |
+| `#` en abismo/cementerio/corazón | pilar de roca flotante (o cristal en corazón) sobre el vacío con su canto |
+
+Los bordes de isla en los tiles caminables (suelo/camino/vault junto al
+vacío) llevan un reborde claro de 1 px y pixeles desmoronados (por hash)
+del lado del vacío: así las islas se ven flotando.
+
+### Fondo del vacío (`VoidPainter`)
+
+Si el piso tiene vacío, `MapGame` pinta antes de los tiles un fondo en
+pantalla (no por tile): degradado vertical por tema (abismo `#04061a →
+#0c1838`, cementerio `#0a0614 → #22123a`, corazón `#0a0818 → #2a1c3a`),
+estrellas por hash en una grilla de 24 px con **paralaje** 0.35 de la
+cámara y titileo `sin(t/400 + h)`, y motas de tiempo que derivan
+(`scaledCount(14, PARTÍCULAS)`). Los tiles `_` sobre ese fondo solo
+dibujan el canto. Sin fondo (tests), el `_` pinta el degradado plano y 1
+estrella por hash.
+
+### Caída al vacío
+
+- Con `FellIntoVoidEvent(id, floor)` el mapa anima la caída de **ese**
+  jugador: 450 ms en el lugar donde estaba (el sprite se achica a 0.2 y
+  se desvanece, con un remolino de motas) y después 450 ms de aparición
+  en el punto de llegada (`MapFloor.spawn`: anillo dorado que se cierra
+  y el sprite que pasa de α 0 a 1). `MapGame.fallMs = 900`.
+- Mientras el jugador local se achica, la cámara se queda en el lugar de
+  la caída; después salta a la llegada.
+- Jugador local: además, el cartel `¡Caíste al vacío!` (8 px, `#a29bfe`)
+  sobre el mapa durante la animación; la línea del registro es el mensaje
+  de sistema `<nombre> cayó al vacío.` del host (en el chat de todos).
+- Los demás jugadores ven el mensaje de sistema en el chat y la misma
+  animación sobre ese héroe.
+
+### Minimapa (v0.3)
+
+Vacío `#05060c` (como el fondo), puente `#a07a44`, lava `#ff5a1f`,
+lápida `#6c707a`, engranaje `#b08a3a` (`minimapTileColor`).
+
+### Mapa del mundo
+
+Las entradas 6–10 usan el mismo arco; el estado (abierta / bloqueada)
+sale de `ZoneRules.zoneList` como en la v0.2 (ya no hay
+"Próximamente").
+
 ## Paneles
 
 El contenido y las reglas de cada panel (mostrador, votación,
@@ -660,7 +743,12 @@ Resumen:
 ## Persistencia
 
 `ProfileStore` (contrato en `game_engine/models/profile_store.dart`):
-- `JsonFileProfileStore`: `profile.json` (`PlayerProfile.toJson`) en la
+- **Desde v0.3** la app registra `SelectedCharacterProfileStore`: lee y
+  escribe el personaje elegido de la cuenta `account.json` (varios
+  personajes + alijo, escritura atómica, migración desde `profile.json`
+  y manejo de archivo corrupto: docs/specs/characters.md § 1).
+- `JsonFileProfileStore` (formato de antes, hoy solo se lee para migrar):
+  `profile.json` (`PlayerProfile.toJson`) en la
   carpeta de datos del usuario sin paquetes nuevos (`dart:io`):
   `%APPDATA%\EcosDelTiempo` en Windows,
   `~/Library/Application Support/EcosDelTiempo` en macOS,

@@ -75,6 +75,13 @@ de `addPlayer`:
   `resetBuild`. Siempre tiene el arma inicial de su clase.
 - Arma equipada que no existe o no puede equipar → la inicial.
 
+Desde v0.3 cada `PlayerProfile` es **un personaje** de la cuenta
+(`account.json`, hasta 8, docs/specs/characters.md): la sesión carga y
+guarda el personaje elegido. Créditos, pociones, nivel, árbol y filtro
+de loot son de cada personaje; las armas y los materiales se pueden
+pasar entre personajes por el **alijo compartido** (los créditos no:
+cada personaje hace su propia economía).
+
 La persistencia es una interfaz (`ProfileStore`: `load` / `save`); la
 implementación con disco o `shared_preferences` vive fuera de
 `game_engine`. `InMemoryProfileStore` sirve para tests.

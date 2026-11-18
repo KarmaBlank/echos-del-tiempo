@@ -20,7 +20,7 @@ void main() {
   const cat = GameCatalog.standard;
 
   group('catálogo de zonas', () {
-    test('10 zonas en orden; jugables las 1–5 con su misión', () {
+    test('10 zonas en orden, todas jugables con su misión', () {
       expect(cat.zones, hasLength(10));
       for (var i = 0; i < 10; i++) {
         final z = cat.zones[i];
@@ -28,12 +28,13 @@ void main() {
         expect(z.id, 'z${i + 1}');
         expect(z.minLevel, i * 5 + 1);
         expect(z.maxLevel, i * 5 + 5);
-        expect(z.playable, i < 5);
+        expect(z.playable, isTrue);
         expect(cat.zone(i + 1), same(z));
       }
       expect(cat.zones.map((z) => z.floors).take(5), [2, 3, 3, 3, 4]);
       expect(cat.zone(1)!.levelText, 'Lv 1-5');
-      expect(cat.missions.map((m) => m.id), ['m1', 'z2', 'm2', 'z4', 'z5']);
+      expect(cat.missions.map((m) => m.id),
+          ['m1', 'z2', 'm2', 'z4', 'z5', 'z6', 'z7', 'z8', 'z9', 'z10']);
       for (final m in cat.missions) {
         final z = cat.zoneOfMission(m.id)!;
         expect(z.missionId, m.id);
@@ -43,7 +44,7 @@ void main() {
         expect(m.recommendedLevel, z.minLevel);
         expect(m.boss.first, z.bossId);
       }
-      expect(cat.mission('m3'), isNull, reason: 'el abismo vuelve con la zona 9');
+      expect(cat.mission('m3'), isNull, reason: 'el abismo es la misión z9');
     });
 
     test('ids de enemigos: existen o tienen reemplazo provisorio', () {
@@ -154,9 +155,10 @@ void main() {
       expect(list[0].label, '');
       expect(list[1].open, isFalse);
       expect(list[1].label, 'Bloqueada: vencé a Rey Limo en Pradera Esmeralda');
-      expect(list[5].playable, isFalse);
-      expect(ZoneRules.zoneList(cat, p5)[5].label, 'Próximamente');
-      expect(ZoneRules.zoneList(cat, p5)[5].open, isFalse);
+      expect(list[5].playable, isTrue);
+      expect(ZoneRules.zoneList(cat, p5)[5].label, '');
+      expect(ZoneRules.zoneList(cat, p5)[9].open, isTrue);
+      expect(ZoneRules.canPropose(cat, p5, 'z10'), isTrue);
     });
 
     test('JSON: zu ida y vuelta; migración de perfiles viejos por nivel', () {

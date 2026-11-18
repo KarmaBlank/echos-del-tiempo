@@ -79,6 +79,12 @@ enum FxKind {
 
   /// Preparación del golpe de un enemigo (se echa atrás y brilla).
   windup,
+
+  /// Transformación del Devorador (fase 2): oscurece, vórtice y destello.
+  transform,
+
+  /// Erupción de lava bajo un actor (Bestia de Magma).
+  lavaBurst,
 }
 
 /// Datos de la cinemática de una ultimate (`addFx({k:'ult'})`).
@@ -221,6 +227,8 @@ class BattleFx {
         FxKind.shatter => shatterMs,
         FxKind.warn => warnMs,
         FxKind.windup => windupMs,
+        FxKind.transform => transformMs,
+        FxKind.lavaBurst => lavaBurstMs,
       };
 
   static const numMs = 1100;
@@ -247,6 +255,13 @@ class BattleFx {
   static const afterimageMs = 650;
   static const shatterMs = 650;
   static const warnMs = 2000;
+
+  /// Transformación del Devorador y erupción de lava (v0.3).
+  static const transformMs = 1800;
+  static const lavaBurstMs = 700;
+
+  /// Destello de la transformación (desde que empieza).
+  static const transformFlashMs = 900;
 
   /// Golpe de un enemigo: se echa atrás [windupMs], se lanza en
   /// [enemyLungeMs] y el golpe (número, tajo, sonido de impacto) cae en
@@ -1056,6 +1071,15 @@ List<BattleFx> mapBattleEvents(
     if (e.wipedBuffs) wipe = e;
   }
 
+  /// Después del último impacto de la ULT en curso (o [plain] sin ULT).
+  int afterUlt(int plain) {
+    final a = action;
+    final u = a?.ult;
+    if (a == null || u == null) return a == null ? 0 : plain;
+    return u.lastImpact(math.max(1, a.dl.length)) + 200;
+  }
+
+
   /// Mecánica de un jefe (docs/specs/battle_presentation.md § "Mecánicas
   /// de jefe").
   void bossMech(BossMechanicEvent e) {
@@ -1128,6 +1152,101 @@ List<BattleFx> mapBattleEvents(
         final dl = a == null ? 0 : hitDelay(a, e.actorId);
         txt(e.actorId, -54, 'BLOQUEA −${jsRound(e.value * 100)}%',
             const Color(0xFFB2BEC3), dl: dl);
+
+      // ---- v0.3 (docs/specs/battle_presentation.md § "Mecánicas de jefe
+      // v0.3") ----
+      case BossMechanicPhase.echoSummon || BossMechanicPhase.summon:
+        if (tg == null) return;
+        final echo = e.phase == BossMechanicPhase.echoSummon;
+        final col = echo ? echoColor : immuneColor;
+        final dl = afterUlt(160);
+        at(FxKind.arc, e.actorId,
+            dy: -14, to: tg, color: col, el: FxElement.arcane, dl: dl);
+        at(FxKind.poof, tg, dy: -10, dl: dl + 120);
+        at(FxKind.ring, tg, dy: -8, color: col, dl: dl + 120);
+        txt(tg, -34, echo ? '¡ECO!' : '¡SIERVO!', col, dl: dl + 160);
+      case BossMechanicPhase.echoResist:
+        final a = action;
+        final dl = a == null ? 0 : hitDelay(a, e.actorId);
+        txt(e.actorId, -54, 'ECO ×${fm(e.value)}', echoColor, dl: dl);
+      case BossMechanicPhase.lavaRise:
+        final a = action;
+        final dl = a?.ult != null
+            ? afterUlt(120)
+            : a == null
+                ? 0
+                : BattleFx.enemyStrikeMs + 220;
+        for (final q in aliveParty()) {
+          at(FxKind.lavaBurst, q.id,
+              dy: 0, color: lavaColor, el: FxElement.burn, dl: dl);
+        }
+        final p = position(e.actorId);
+        out.add(BattleFx(FxKind.tag,
+            x: p.dx,
+            y: p.dy - 10,
+            text: '¡LAVA ${e.value.round()} TURNOS!',
+            color: lavaColor,
+            big: true,
+            delayMs: dl + 80,
+            who: e.actorId));
+      case BossMechanicPhase.lavaBurn:
+        if (tg == null) return;
+        at(FxKind.lavaBurst, tg,
+            dy: 0, color: lavaColor, el: FxElement.burn);
+        aura(tg, FxElement.burn, dl: 120);
+        txt(tg, -44, '¡LAVA! Q+${e.value.round()}', lavaColor, dl: 80);
+      case BossMechanicPhase.lavaFade:
+        txt(e.actorId, -40, 'LA LAVA SE ENFRÍA', _gray,
+            dl: action == null ? 0 : lateBase());
+      case BossMechanicPhase.immune:
+        final a = action;
+        final dl = a == null ? 0 : hitDelay(a, e.actorId) + 90;
+        at(FxKind.pulse, e.actorId, dy: -14, color: immuneColor, dl: dl);
+        txt(e.actorId, -60, 'INMUNE', immuneColor, dl: dl);
+      case BossMechanicPhase.markCast:
+        if (tg == null) return;
+        final dl = action?.ult != null ? afterUlt(160) : 120;
+        at(FxKind.arc, e.actorId,
+            dy: -14, to: tg, color: voidMarkColor, el: FxElement.arcane, dl: dl);
+        at(FxKind.reticle, tg, dy: -10, color: voidMarkColor, dl: dl + 200);
+        txt(tg, -46, '¡MARCADO!', voidMarkColor, dl: dl + 200);
+      case BossMechanicPhase.markHit:
+        if (tg == null) return;
+        final a = action;
+        final dl = a == null ? 0 : hitDelay(a, tg);
+        at(FxKind.shatter, tg, dy: -10, color: voidMarkColor, dl: dl);
+        txt(tg, -56, 'MARCA ×${fm(e.value)}', voidMarkColor, dl: dl);
+      case BossMechanicPhase.markGuarded:
+        final a = action;
+        final dl = a == null ? 0 : hitDelay(a, e.actorId);
+        at(FxKind.ring, e.actorId, dy: -8, color: _healGreen, dl: dl);
+        txt(e.actorId, -56,
+            tg == e.actorId ? 'MARCA ANULADA' : '¡PROTEGE LA MARCA!', _healGreen,
+            dl: dl);
+      case BossMechanicPhase.phaseShift:
+        final dl = (procDl[e.actorId] ?? action?.dl[e.actorId] ?? 0) + 120;
+        final p = position(e.actorId);
+        out.add(BattleFx(FxKind.transform,
+            x: p.dx,
+            y: p.dy,
+            color: phaseColor,
+            el: FxElement.burn,
+            delayMs: dl,
+            who: e.actorId));
+        out.add(BattleFx(FxKind.flash,
+            color: phaseColor, delayMs: dl + BattleFx.transformFlashMs));
+        out.add(BattleFx(FxKind.tag,
+            x: p.dx,
+            y: p.dy - 10,
+            text: 'FASE 2',
+            color: phaseColor,
+            big: true,
+            delayMs: dl + BattleFx.transformFlashMs + 60,
+            who: e.actorId));
+      case BossMechanicPhase.evaded:
+        final a = action;
+        final dl = a == null ? 0 : hitDelay(a, e.actorId);
+        txt(e.actorId, -54, '¡ESQUIVA!', const Color(0xFFB2BEC3), dl: dl);
     }
   }
 

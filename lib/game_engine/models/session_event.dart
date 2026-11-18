@@ -139,6 +139,14 @@ class StairsOpenedEvent extends SessionEvent {
   const StairsOpenedEvent(this.floor);
 }
 
+/// [playerId] pisó el vacío en el piso [floor] y volvió al spawn del piso
+/// (sin daño; worldgen.md § 9.3).
+class FellIntoVoidEvent extends SessionEvent {
+  final String playerId;
+  final int floor;
+  const FellIntoVoidEvent(this.playerId, this.floor);
+}
+
 /// [playerId] desbloqueó la zona [zone] (1..10).
 class ZoneUnlockedEvent extends SessionEvent {
   final String playerId;

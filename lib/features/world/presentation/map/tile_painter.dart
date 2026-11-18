@@ -5,6 +5,9 @@ import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/game_map.dart';
 import 'map_themes.dart';
 
+/// Tile vecino (tx, ty) del mapa; `null` fuera del mapa.
+typedef TileAt = String? Function(int tx, int ty);
+
 /// `drawTile` del prototipo (líneas 964-988). Dibuja un tile de 16 px en
 /// (px, py) del lienzo virtual. Ver docs/specs/exploration.md § "Tiles".
 class TilePainter {
@@ -46,6 +49,9 @@ class TilePainter {
     required double t,
     required bool gateOpen,
     required bool lobby,
+    TileAt? at,
+    bool voidBackdrop = false,
+    double density = 1,
   }) {
     // El mapa del mundo: el pueblo con el estilo del lobby, el resto al
     // aire libre (worldgen.md § 7.6).
@@ -76,6 +82,7 @@ class TilePainter {
         _rect(c, const Color(0xFF8A6A32), px + jsShiftMod(h, 6, 12).abs() + 2,
             py + jsShiftMod(h, 10, 12).abs() + 2, 2, 1);
       }
+      _floorDetail(c, th, themeId, px, py, tx, ty, h, t);
     }
 
     switch (ch) {
@@ -89,10 +96,10 @@ class TilePainter {
         }
         if (lobby) _rect(c, const Color(0x33FFD166), px, py, ts, 1);
         // Fortaleza: losas con junta.
-        if (themeId == 'fortaleza') {
+        if (themeId == 'fortaleza' || themeId == 'laberinto') {
           _rect(c, const Color(0x33000000), px, py + ts - 1, ts, 1);
-          _rect(c, const Color(0x33000000),
-              px + ((tx + ty).isEven ? 7 : 0), py, 1, ts);
+          _rect(c, const Color(0x33000000), px + ((tx + ty).isEven ? 7 : 0), py,
+              1, ts);
         }
       case Tile.wall:
         if (lobby) {
@@ -117,6 +124,12 @@ class TilePainter {
             _iceWall(c, th, px, py, h);
           case 'fortaleza':
             _brickWall(c, th, px, py, ty, h);
+          case 'laberinto':
+            _clockWall(c, th, px, py, ty, h);
+          case 'grieta':
+            _basaltWall(c, th, px, py, h, t);
+          case 'abismo' || 'cementerio' || 'corazon':
+            _floatingRock(c, th, themeId, px, py, h, t);
           case 'ruinas':
             _rect(c, th.wall, px + 1, py + 1, ts - 2, ts - 1);
             _rect(c, th.wall2, px + 1, py + 1, ts - 2, 3);
@@ -138,8 +151,8 @@ class TilePainter {
       case Tile.water:
         _rect(c, th.water, px, py, ts, ts);
         final o = (t / 250 + tx).floor() % 4;
-        _rect(c, const Color(0x40FFFFFF), px + o * 3, py + 4 + (ty % 2) * 6,
-            5, 1);
+        _rect(c, const Color(0x40FFFFFF), px + o * 3, py + 4 + (ty % 2) * 6, 5,
+            1);
         // Hielo: placas brillantes quietas sobre el agua cian.
         if (themeId == 'cavernas' && h % 3 == 0) {
           _rect(c, const Color(0x55DFF9FF), px + jsShiftMod(h, 5, 9).abs() + 1,
@@ -210,6 +223,19 @@ class TilePainter {
         if (h % 7 == 0) {
           _rect(c, const Color(0x66FFD166), px + 7, py + 7, 2, 2);
         }
+      case Tile.voidTile:
+        _void(c, th, themeId, px, py, tx, ty, h, t,
+            at: at, backdrop: voidBackdrop);
+      case Tile.bridge:
+        _bridge(c, themeId, px, py, tx, ty, h, t, at);
+      case Tile.lava:
+        _lava(c, px, py, tx, ty, h, t, at, density);
+      case Tile.tombstone:
+        floor();
+        _tombstone(c, px, py, h);
+      case Tile.gear:
+        floor();
+        _gear(c, px, py, tx, ty, t);
       default:
         final zone = Tile.entranceZone(ch);
         if (zone != null) {
@@ -221,6 +247,18 @@ class TilePainter {
           // Tile desconocido: magenta, para que se note en las pruebas.
           _rect(c, const Color(0xFFFF00FF), px, py, ts, ts);
         }
+    }
+    // Islas: reborde y canto desmoronado del lado del vacío.
+    if (at != null &&
+        kAbyssThemes.contains(themeId) &&
+        ch != Tile.voidTile &&
+        ch != Tile.wall &&
+        ch != Tile.bridge) {
+      _islandRim(c, th, px, py, tx, ty, h, at);
+    }
+    // Cementerio: niebla que deriva sobre todo lo que no es vacío.
+    if (themeId == 'cementerio' && ch != Tile.voidTile) {
+      _fog(c, px, py, tx, ty, t);
     }
   }
 
@@ -242,6 +280,11 @@ class TilePainter {
         Tile.stairsDown,
         Tile.stairsUp,
         Tile.vaultFloor,
+        Tile.voidTile,
+        Tile.bridge,
+        Tile.lava,
+        Tile.tombstone,
+        Tile.gear,
       }.contains(ch) ||
       Tile.entranceZone(ch) != null;
 
@@ -264,9 +307,13 @@ class TilePainter {
           py + jsShiftMod(h, 15, 13).abs(), 2, 2);
     }
     if (h % 17 == 0) {
-      _rect(c, h % 2 == 0 ? const Color(0xFFFFD166) : const Color(0xFFFF8FA3),
+      _rect(
+          c,
+          h % 2 == 0 ? const Color(0xFFFFD166) : const Color(0xFFFF8FA3),
           px + jsShiftMod(h, 5, 12).abs() + 2,
-          py + jsShiftMod(h, 13, 12).abs() + 2, 2, 2);
+          py + jsShiftMod(h, 13, 12).abs() + 2,
+          2,
+          2);
     }
   }
 
@@ -421,8 +468,7 @@ class TilePainter {
   }
 
   /// Fortaleza: ladrillo oscuro con juntas desfasadas por fila.
-  void _brickWall(
-      Canvas c, MapTheme th, double px, double py, int ty, int h) {
+  void _brickWall(Canvas c, MapTheme th, double px, double py, int ty, int h) {
     _rect(c, th.wall, px, py, ts, ts);
     const mortar = Color(0xFF15121A);
     final top = th.wall2.withValues(alpha: 0.35);
@@ -468,5 +514,432 @@ class TilePainter {
     }
     _rect(c, th.wall2, px + 1, py + 1, 1, 14);
     _rect(c, th.wall2, px + 14, py + 1, 1, 14);
+  }
+
+  // ------------------------------------------------------------------
+  // Zonas 6–10 (v0.3.0, exploration.md § "Zonas 6–10")
+  // ------------------------------------------------------------------
+
+  /// Hueco (vacío o lava) para bordes y orientación de puentes.
+  static bool _gap(String? c) => c == Tile.voidTile || c == Tile.lava;
+
+  /// Detalle del suelo de los temas nuevos.
+  void _floorDetail(Canvas c, MapTheme th, String themeId, double px, double py,
+      int tx, int ty, int h, double t) {
+    switch (themeId) {
+      case 'laberinto':
+        // Losas con junta y alguna marca de engranaje.
+        _rect(c, const Color(0x40000000), px, py + ts - 1, ts, 1);
+        _rect(c, const Color(0x40000000), px + (ty.isEven ? 0 : 8), py, 1,
+            ts - 1);
+        _rect(c, const Color(0x14FFFFFF), px, py, ts, 1);
+        if (h % 11 == 0) {
+          const b = Color(0x88B08A3A);
+          _rect(c, b, px + 6, py + 6, 3, 3);
+          _rect(c, b, px + 7, py + 5, 1, 5);
+          _rect(c, b, px + 5, py + 7, 5, 1);
+          _rect(c, th.ground, px + 7, py + 7, 1, 1);
+        }
+      case 'grieta':
+        // Ceniza con brasas que laten.
+        if (h % 7 == 0) {
+          final a = 0.45 + 0.35 * math.sin(t / 300 + h % 13);
+          _rect(
+              c,
+              Color.fromRGBO(255, 123, 41, a.clamp(0.0, 1.0)),
+              px + jsShiftMod(h, 4, 13).abs() + 1,
+              py + jsShiftMod(h, 8, 13).abs() + 1,
+              1,
+              1);
+        }
+        if (h % 4 == 1) {
+          _rect(c, const Color(0xFF26211F), px + jsShiftMod(h, 6, 12).abs(),
+              py + jsShiftMod(h, 12, 12).abs() + 2, 3, 1);
+        }
+      case 'cementerio':
+        // Pasto seco y musgo.
+        if (h % 5 == 0) {
+          final x = px + jsShiftMod(h, 3, 11).abs() + 2,
+              y = py + jsShiftMod(h, 7, 10).abs() + 3;
+          const dry = Color(0xFF8E8C5E);
+          _rect(c, dry, x, y, 1, 3);
+          _rect(c, dry, x + 2, y - 1, 1, 4);
+        }
+        if (h % 9 == 0) {
+          _rect(c, const Color(0xFF5E7A44), px + jsShiftMod(h, 9, 10).abs(),
+              py + jsShiftMod(h, 13, 10).abs() + 4, 4, 2);
+        }
+      case 'abismo':
+        // Vetas de la roca.
+        if (h % 4 == 0) {
+          final x = px + jsShiftMod(h, 5, 10).abs() + 2,
+              y = py + jsShiftMod(h, 9, 10).abs() + 2;
+          _rect(c, th.rock, x, y, 4, 1);
+          _rect(c, th.rock, x + 3, y + 1, 3, 1);
+        }
+      case 'corazon':
+        // Cristal: faceta clara y, a veces, un reloj tallado.
+        _rect(c, const Color(0x22FFFFFF), px, py, ts, 1);
+        _rect(c, const Color(0x18000000), px + ts - 1, py, 1, ts);
+        if (h % 4 == 1) {
+          // Faceta diagonal del cristal.
+          for (var i = 0; i < 6; i++) {
+            _rect(c, const Color(0x30FFFFFF), px + 3 + i, py + 9 - i, 1, 1);
+          }
+        }
+        if (h % 10 == 0) {
+          // Reloj tallado: aro de 7 px con dos agujas.
+          const g = Color(0xFFB8902A);
+          final x = px + 4, y = py + 4;
+          _rect(c, g, x + 2, y, 3, 1);
+          _rect(c, g, x + 2, y + 6, 3, 1);
+          _rect(c, g, x, y + 2, 1, 3);
+          _rect(c, g, x + 6, y + 2, 1, 3);
+          _rect(c, g, x + 1, y + 1, 1, 1);
+          _rect(c, g, x + 5, y + 1, 1, 1);
+          _rect(c, g, x + 1, y + 5, 1, 1);
+          _rect(c, g, x + 5, y + 5, 1, 1);
+          _rect(c, g, x + 3, y + 2, 1, 2);
+          _rect(c, g, x + 3, y + 3, 2, 1);
+        }
+        final tw = math.sin(t / 500 + h % 23);
+        if (h % 5 == 1 && tw > 0.6) {
+          final x = px + jsShiftMod(h, 7, 12).abs() + 2,
+              y = py + jsShiftMod(h, 11, 12).abs() + 2;
+          _rect(c, const Color(0xFFFFFFFF), x, y - 1, 1, 3);
+          _rect(c, const Color(0xFFFFFFFF), x - 1, y, 3, 1);
+        }
+    }
+  }
+
+  /// Laberinto: sillar de pizarra con ribete de bronce y remaches.
+  void _clockWall(Canvas c, MapTheme th, double px, double py, int ty, int h) {
+    _rect(c, th.wall, px, py, ts, ts);
+    const mortar = Color(0xFF151B28);
+    _rect(c, const Color(0xFF2C3850), px, py + 2, ts, 6);
+    _rect(c, mortar, px, py + 8, ts, 1);
+    _rect(c, mortar, px + (ty.isEven ? 7 : 3), py + 2, 1, 6);
+    _rect(c, mortar, px + (ty.isEven ? 3 : 11), py + 9, 1, 7);
+    // Ribete y remaches de bronce.
+    _rect(c, th.wall2, px, py, ts, 2);
+    _rect(c, const Color(0xFF7A5A22), px, py + 1, ts, 1);
+    _rect(c, const Color(0xFFE0B860), px + 2, py + 4, 1, 1);
+    _rect(c, const Color(0xFFE0B860), px + 13, py + 4, 1, 1);
+    if (h % 6 == 0) {
+      // Engranaje incrustado.
+      const b = Color(0xFF8A6A2A);
+      _rect(c, b, px + 6, py + 10, 4, 4);
+      _rect(c, b, px + 7, py + 9, 2, 6);
+      _rect(c, b, px + 5, py + 11, 6, 2);
+      _rect(c, mortar, px + 7, py + 11, 2, 2);
+    }
+  }
+
+  /// Grieta: columna de basalto con grietas que brillan.
+  void _basaltWall(
+      Canvas c, MapTheme th, double px, double py, int h, double t) {
+    _rect(c, th.wall, px, py, ts, ts);
+    _rect(c, const Color(0xFF2A2426), px, py, ts, 3);
+    _rect(c, const Color(0xFF0F0C0D), px + 5, py + 3, 1, 13);
+    _rect(c, const Color(0xFF0F0C0D), px + 11, py + 3, 1, 13);
+    _rect(c, const Color(0xFF242022), px + 1, py + 3, 3, 13);
+    if (h % 3 == 0) {
+      final a = (0.5 + 0.35 * math.sin(t / 300 + h % 10)).clamp(0.0, 1.0);
+      final glow = Color.fromRGBO(255, 123, 41, a);
+      final x = px + 6 + jsShiftMod(h, 4, 4).abs();
+      _rect(c, glow, x, py + 4, 1, 3);
+      _rect(c, glow, x + 1, py + 7, 1, 3);
+      _rect(c, glow, x, py + 10, 1, 4);
+      _rect(c, Color.fromRGBO(255, 209, 102, a * 0.8), x + 1, py + 8, 1, 1);
+    }
+  }
+
+  /// Abismo / cementerio / corazón: pilar de roca (o cristal) flotante.
+  void _floatingRock(Canvas c, MapTheme th, String themeId, double px,
+      double py, int h, double t) {
+    _rect(c, th.wall, px, py, ts, ts);
+    _rect(c, th.rock2, px, py, ts, 4);
+    _rect(c, th.rock, px, py + 4, ts, 1);
+    _rect(c, th.rock, px + jsShiftMod(h, 3, 9).abs() + 2, py + 7, 4, 1);
+    _rect(c, th.rock, px + jsShiftMod(h, 7, 7).abs() + 5, py + 11, 3, 1);
+    if (themeId == 'corazon') {
+      // Cristal dorado con destello.
+      _paint.color = th.wall2;
+      final x = px + 4 + (h % 6);
+      c.drawPath(
+          Path()
+            ..moveTo(x, py + 1)
+            ..lineTo(x + 3, py + 9)
+            ..lineTo(x - 3, py + 9)
+            ..close(),
+          _paint);
+      if (math.sin(t / 400 + h % 17) > 0.5) {
+        _rect(c, const Color(0xFFFFFFFF), x - 1, py + 4, 1, 2);
+      }
+    } else if (themeId == 'cementerio' && h % 3 == 0) {
+      _rect(c, const Color(0xFF6B8A4A), px + 2, py, 5, 2);
+    }
+  }
+
+  /// `_`: vacío. Con [backdrop] el fondo ya lo pintó `VoidPainter`; solo
+  /// se dibuja el canto de las islas vecinas.
+  void _void(Canvas c, MapTheme th, String themeId, double px, double py,
+      int tx, int ty, int h, double t,
+      {required TileAt? at, required bool backdrop}) {
+    if (!backdrop) {
+      final (top, bottom) = voidGradient(themeId);
+      _rect(c, Color.lerp(top, bottom, (ty % 8) / 8)!, px, py, ts, ts);
+      if (h % 5 == 0) {
+        final a = (0.5 + 0.4 * math.sin(t / 400 + h % 17)).clamp(0.0, 1.0);
+        _rect(
+            c,
+            Color.fromRGBO(255, 255, 255, a),
+            px + jsShiftMod(h, 3, 14).abs(),
+            py + jsShiftMod(h, 7, 14).abs(),
+            1,
+            1);
+      }
+    }
+    if (at == null) return;
+    final up = at(tx, ty - 1);
+    final left = at(tx - 1, ty), right = at(tx + 1, ty);
+    // Sombras laterales de las islas.
+    if (left != null && left != Tile.voidTile) {
+      _rect(c, const Color(0x55000000), px, py, 2, ts);
+    }
+    if (right != null && right != Tile.voidTile) {
+      _rect(c, const Color(0x55000000), px + ts - 2, py, 2, ts);
+    }
+    if (up == null || up == Tile.voidTile) return;
+    if (up == Tile.bridge) {
+      // Viga bajo el puente.
+      _rect(c, const Color(0xFF3A2A18), px, py, ts, 2);
+      _rect(c, const Color(0x66000000), px, py + 2, ts, 2);
+      return;
+    }
+    // Canto de roca que cuelga, dentado por hash.
+    final face = th.wall, band = th.rock;
+    for (var x = 0; x < 16; x += 2) {
+      final d = 5 + ((h >> (x + 1)) & 3) + (x == 0 || x == 14 ? -1 : 0);
+      _rect(c, const Color(0x66000000), px + x, py + d, 2, 4);
+      _rect(c, face, px + x, py, 2, d.toDouble());
+      _rect(c, band, px + x, py, 2, 3);
+      if (((h >> x) & 7) == 0) {
+        _rect(c, band, px + x, py + d - 2, 1, 1);
+      }
+    }
+    _rect(c, th.ground2, px, py, ts, 1);
+    if (themeId == 'corazon' && h % 4 == 0) {
+      _rect(c, const Color(0xFFFFF3C4), px + 5 + (h % 5), py + 2, 1, 2);
+    }
+  }
+
+  /// Reborde y desmoronado de un tile de isla junto al vacío.
+  void _islandRim(Canvas c, MapTheme th, double px, double py, int tx, int ty,
+      int h, TileAt at) {
+    const crumb = Color(0xFF05060C);
+    final rim = th.ground2;
+    if (at(tx, ty - 1) == Tile.voidTile) {
+      _rect(c, rim, px, py, ts, 1);
+      _rect(c, crumb, px + jsShiftMod(h, 3, 14).abs(), py, 2, 1);
+    }
+    if (at(tx, ty + 1) == Tile.voidTile) {
+      _rect(c, th.rock, px, py + ts - 2, ts, 2);
+      _rect(c, crumb, px + jsShiftMod(h, 5, 14).abs(), py + ts - 1, 2, 1);
+      _rect(c, crumb, px + jsShiftMod(h, 9, 13).abs() + 2, py + ts - 1, 1, 1);
+    }
+    if (at(tx - 1, ty) == Tile.voidTile) {
+      _rect(c, rim, px, py, 1, ts);
+      _rect(c, crumb, px, py + jsShiftMod(h, 7, 14).abs(), 1, 2);
+    }
+    if (at(tx + 1, ty) == Tile.voidTile) {
+      _rect(c, th.rock, px + ts - 1, py, 1, ts);
+      _rect(c, crumb, px + ts - 1, py + jsShiftMod(h, 11, 14).abs(), 1, 2);
+    }
+  }
+
+  /// Niebla del cementerio: dos bandas por tile que derivan.
+  void _fog(Canvas c, double px, double py, int tx, int ty, double t) {
+    for (var i = 0; i < 2; i++) {
+      final a = math.sin(tx * 0.35 + t / 1800 + (ty * 2 + i) * 0.7) * 0.10;
+      if (a <= 0.01) continue;
+      _rect(c, Color.fromRGBO(220, 225, 235, a), px, py + i * 8, ts, 8);
+    }
+  }
+
+  /// `=`: puente. La dirección y las barandas salen de los vecinos.
+  void _bridge(Canvas c, String themeId, double px, double py, int tx, int ty,
+      int h, double t, TileAt? at) {
+    final up = _gap(at?.call(tx, ty - 1)), down = _gap(at?.call(tx, ty + 1));
+    final left = _gap(at?.call(tx - 1, ty)), right = _gap(at?.call(tx + 1, ty));
+    final horizontal = up || down || !(left || right);
+    final (Color base, Color plank, Color rail, Color post) = switch (themeId) {
+      'corazon' => (
+          const Color(0xFFA89E80),
+          const Color(0xFFCFC6A8),
+          const Color(0xFFFFD166),
+          const Color(0xFFB8902A)
+        ),
+      'grieta' => (
+          const Color(0xFF231E20),
+          const Color(0xFF3A3436),
+          const Color(0xFF5A5050),
+          const Color(0xFF2A2426)
+        ),
+      _ => (
+          const Color(0xFF4E3820),
+          const Color(0xFF8A6A3A),
+          const Color(0xFFC8A86A),
+          const Color(0xFF5A4026)
+        ),
+    };
+    _rect(c, base, px, py, ts, ts);
+    final stone = themeId == 'corazon' || themeId == 'grieta';
+    for (var i = 0; i < 4; i++) {
+      final shade = (h >> i) & 1 == 0 ? plank : Color.lerp(plank, base, 0.25)!;
+      if (horizontal) {
+        _rect(c, shade, px + i * 4, py, stone ? 4 : 3, ts);
+      } else {
+        _rect(c, shade, px, py + i * 4, ts, stone ? 4 : 3);
+      }
+    }
+    if (stone) {
+      // Juntas de las losas.
+      if (horizontal) {
+        _rect(c, base, px + ((tx.isEven) ? 7 : 15), py, 1, ts);
+      } else {
+        _rect(c, base, px, py + ((ty.isEven) ? 7 : 15), ts, 1);
+      }
+    } else if (h % 3 == 0) {
+      // Clavos.
+      _rect(c, const Color(0xFF2A1E10), px + 1, py + 2, 1, 1);
+      _rect(c, const Color(0xFF2A1E10), px + 9, py + 12, 1, 1);
+    }
+    if (themeId == 'grieta') {
+      final a = (0.25 + 0.2 * math.sin(t / 350 + tx)).clamp(0.0, 1.0);
+      _rect(c, Color.fromRGBO(255, 123, 41, a), px + (h % 9) + 3,
+          py + (horizontal ? 0 : 7), horizontal ? 1 : 6, horizontal ? 6 : 1);
+    }
+    if (themeId == 'corazon' && h % 4 == 0) {
+      final a = (0.5 + 0.4 * math.sin(t / 300 + h % 7)).clamp(0.0, 1.0);
+      final r = Color.fromRGBO(255, 209, 102, a);
+      _rect(c, r, px + 6, py + 5, 4, 1);
+      _rect(c, r, px + 7, py + 5, 1, 6);
+      _rect(c, r, px + 6, py + 10, 4, 1);
+    }
+    // Barandas del lado del hueco.
+    void railH(double y) {
+      _rect(c, rail, px, y, ts, 1);
+      _rect(c, post, px + 1, y - 1, 2, 3);
+      _rect(c, post, px + 9, y - 1, 2, 3);
+    }
+
+    void railV(double x) {
+      _rect(c, rail, x, py, 1, ts);
+      _rect(c, post, x - 1, py + 1, 3, 2);
+      _rect(c, post, x - 1, py + 9, 3, 2);
+    }
+
+    if (up) railH(py + 1);
+    if (down) {
+      railH(py + ts - 2);
+      _rect(c, const Color(0x66000000), px, py + ts - 1, ts, 1);
+    }
+    if (left) railV(px + 1);
+    if (right) railV(px + ts - 2);
+  }
+
+  /// `%`: lava animada con corriente, brillo y burbujas (según PARTÍCULAS).
+  void _lava(Canvas c, double px, double py, int tx, int ty, int h, double t,
+      TileAt? at, double density) {
+    _rect(c, const Color(0xFFC0391B), px, py, ts, ts);
+    // Corriente: bandas que se desplazan.
+    for (var i = 0; i < 3; i++) {
+      final y = ((i * 6 + t / 180 + tx * 3 + ty * 5) % 16).floorToDouble();
+      final x = ((i * 5 + ty * 3 + (t / 260).floor()) % 6).toDouble();
+      _rect(c, const Color(0xFFFF6B1F), px + x, py + y, 9, y > 14 ? 1 : 2);
+    }
+    final glow = (0.35 + 0.3 * math.sin(t / 260 + h % 11)).clamp(0.0, 1.0);
+    _rect(
+        c,
+        Color.fromRGBO(255, 209, 102, glow),
+        px + jsShiftMod(h, 3, 12).abs() + 2,
+        py + jsShiftMod(h, 7, 12).abs() + 2,
+        2,
+        1);
+    // Burbujas: menos tiles con menos partículas.
+    final every = density >= 1 ? 3 : (density >= 0.6 ? 5 : 9);
+    if (h % every == 0 && scaledCount(1, density) > 0) {
+      final q = (t / 1400 + (h % 100) / 100) % 1.0;
+      final bx = px + jsShiftMod(h, 9, 10).abs() + 3,
+          by = py + jsShiftMod(h, 13, 10).abs() + 3;
+      if (q < 0.8) {
+        final r = 1 + (q * 2.5).floor().toDouble();
+        _rect(c, const Color(0xFFFFB347), bx, by, r, r);
+        _rect(c, const Color(0xFFFFE08A), bx, by, 1, 1);
+      } else {
+        const pop = Color(0xFFFFD166);
+        _rect(c, pop, bx - 1, by, 1, 1);
+        _rect(c, pop, bx + 2, by, 1, 1);
+        _rect(c, pop, bx, by - 2, 1, 1);
+      }
+    }
+    // Costra contra la orilla.
+    if (at != null) {
+      const crust = Color(0xFF4A1A10);
+      bool shore(String? n) => n != null && n != Tile.lava && n != Tile.bridge;
+      if (shore(at(tx, ty - 1))) _rect(c, crust, px, py, ts, 2);
+      if (shore(at(tx, ty + 1))) _rect(c, crust, px, py + ts - 1, ts, 1);
+      if (shore(at(tx - 1, ty))) _rect(c, crust, px, py, 1, ts);
+      if (shore(at(tx + 1, ty))) _rect(c, crust, px + ts - 1, py, 1, ts);
+    }
+  }
+
+  /// `t`: lápida gris con cruz o RIP y musgo.
+  void _tombstone(Canvas c, double px, double py, int h) {
+    const stone = Color(0xFF8A8E96),
+        dark = Color(0xFF5E626A),
+        light = Color(0xFFA8ACB4);
+    _rect(c, const Color(0x55000000), px + 3, py + 13, 11, 2);
+    _rect(c, dark, px + 4, py + 4, 9, 11);
+    _rect(c, stone, px + 4, py + 4, 8, 10);
+    _rect(c, stone, px + 5, py + 3, 6, 1);
+    _rect(c, stone, px + 6, py + 2, 4, 1);
+    _rect(c, light, px + 5, py + 4, 1, 8);
+    if (h % 2 == 0) {
+      _rect(c, dark, px + 7, py + 5, 2, 7);
+      _rect(c, dark, px + 5, py + 7, 6, 2);
+    } else {
+      _rect(c, dark, px + 5, py + 7, 6, 1);
+      _rect(c, dark, px + 5, py + 9, 6, 1);
+      _rect(c, dark, px + 5, py + 11, 4, 1);
+    }
+    if (h % 3 == 0) _rect(c, const Color(0xFF6B8A4A), px + 4, py + 12, 4, 2);
+    _rect(c, const Color(0xFF4A4E56), px + 3, py + 14, 10, 1);
+  }
+
+  /// `o`: engranaje de bronce que gira lento (en zigzag).
+  void _gear(Canvas c, double px, double py, int tx, int ty, double t) {
+    const bronze = Color(0xFFB08A3A),
+        dark = Color(0xFF7A5A22),
+        hub = Color(0xFF2A1E10);
+    final dir = (tx + ty).isEven ? 1.0 : -1.0;
+    final a0 = dir * t / 1600 + tx * 0.7;
+    final cx = px + 8, cy = py + 8;
+    _rect(c, const Color(0x55000000), px + 3, py + 13, 11, 2);
+    for (var k = 0; k < 8; k++) {
+      final a = a0 + k * math.pi / 4;
+      final x = (cx + math.cos(a) * 6 - 1).roundToDouble();
+      final y = (cy + math.sin(a) * 6 - 1).roundToDouble();
+      _rect(c, dark, x, y, 2, 2);
+    }
+    _circle(c, dark, cx, cy, 5);
+    _circle(c, bronze, cx - 0.5, cy - 0.5, 4.5);
+    _circle(c, dark, cx, cy, 2.5);
+    _rect(c, hub, cx - 1, cy - 1, 2, 2);
+    // Rayo que marca el giro.
+    final x = (cx + math.cos(a0) * 3).roundToDouble(),
+        y = (cy + math.sin(a0) * 3).roundToDouble();
+    _rect(c, const Color(0xFFE0B860), x, y, 1, 1);
   }
 }

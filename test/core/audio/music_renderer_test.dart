@@ -2,9 +2,16 @@ import 'dart:typed_data';
 
 import 'package:echos_del_tiempo/core/audio/music/music_renderer.dart';
 import 'package:echos_del_tiempo/core/audio/music/music_score.dart';
+import 'package:echos_del_tiempo/core/audio/music/music_catalog.dart';
 import 'package:echos_del_tiempo/core/audio/music/tracks/overworld_theme.dart';
 import 'package:echos_del_tiempo/core/audio/music/tracks/title_theme.dart';
+import 'package:echos_del_tiempo/core/audio/music/tracks/final_boss_theme.dart';
+import 'package:echos_del_tiempo/core/audio/music/tracks/zone10_corazon.dart';
 import 'package:echos_del_tiempo/core/audio/music/tracks/zone2_bosque.dart';
+import 'package:echos_del_tiempo/core/audio/music/tracks/zone6_laberinto.dart';
+import 'package:echos_del_tiempo/core/audio/music/tracks/zone7_grieta.dart';
+import 'package:echos_del_tiempo/core/audio/music/tracks/zone8_cementerio.dart';
+import 'package:echos_del_tiempo/core/audio/music/tracks/zone9_abismo.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Seno limpio: ataque y release cortos, sin decaimiento.
@@ -128,6 +135,12 @@ void main() {
         titleTheme(),
         overworldTheme(), // charango rasgueado y zampoña con eco
         zone2Bosque(), // ocarina con eco
+        // v0.3.0: zonas 6–10 y jefe final (canon con eco, bordón, eco
+        // largo, colchón de release largo).
+        for (final id in [
+          'zone6', 'zone7', 'zone8', 'zone9', 'zone10', Music.bossFinal, //
+        ])
+          kMusicCatalog[id]!,
       ]) {
         final loop = r.mix(song);
         final twice = r.mix(song, cycles: 2, fold: false);
@@ -160,6 +173,18 @@ void main() {
       final a = r.renderWav(titleTheme());
       final b = r.renderWav(titleTheme());
       expect(a, b);
+    });
+
+    test('determinista también en las piezas de la v0.3.0', () {
+      // Cada partitura armada dos veces: misma firma, mismos bytes.
+      for (final make in [
+        zone6Laberinto, zone7Grieta, zone8Cementerio, zone9Abismo,
+        zone10Corazon, finalBossTheme, //
+      ]) {
+        final a = make(), b = make();
+        expect(a.hash, b.hash, reason: a.id);
+        expect(r.renderWav(a), r.renderWav(b), reason: a.id);
+      }
     });
 
     test('normaliza al pico de la pieza sin recortar', () {

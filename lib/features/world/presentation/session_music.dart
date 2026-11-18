@@ -4,6 +4,7 @@ import '../../../core/audio/music/music_catalog.dart';
 import '../../../core/audio/music/music_service.dart';
 import '../../../core/audio/presentation/audio_providers.dart';
 import '../../../game_engine/models/battle_event.dart';
+import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/rules/map_generator.dart';
 import '../../combat/presentation/scene/ult_cinematic.dart';
@@ -47,8 +48,25 @@ abstract final class MusicSelector {
         'ruinas' => 3,
         'cavernas' => 4,
         'fortaleza' => 5,
+        'laberinto' => 6,
+        'grieta' => 7,
+        'cementerio' => 8,
+        'abismo' => 9,
+        'corazon' => 10,
         _ => 3,
       };
+
+  /// Id del jefe final (bosses.md): su batalla usa [Music.bossFinal].
+  static const finalBossId = 'devorador';
+
+  /// Id (`enemyType`) del jefe de una batalla, si hay uno.
+  static String? bossIdOf(BattleState? state) {
+    if (state == null) return null;
+    for (final e in state.enemies) {
+      if (e.boss) return e.enemyType;
+    }
+    return null;
+  }
 
   /// La pieza de bucle del estado.
   static String trackFor({
@@ -57,6 +75,7 @@ abstract final class MusicSelector {
     int zone = 0,
     String? theme,
     bool boss = false,
+    String? bossId,
   }) {
     switch (mode) {
       case SessionMode.lobby:
@@ -65,7 +84,8 @@ abstract final class MusicSelector {
       case SessionMode.result:
         return Music.town;
       case SessionMode.battle:
-        return boss ? Music.boss : Music.battle;
+        if (!boss) return Music.battle;
+        return bossId == finalBossId ? Music.bossFinal : Music.boss;
       case SessionMode.field:
       case SessionMode.levelUp:
         final z = Music.zones.contains(zone) ? zone : zoneForTheme(theme);
@@ -152,6 +172,7 @@ class SessionMusic {
       zone: m?.zone ?? 0,
       theme: m == null ? null : themeOf?.call(m.missionId),
       boss: s.battle?.boss ?? false,
+      bossId: MusicSelector.bossIdOf(s.battle?.state),
     );
     if (t != _track) {
       _track = t;

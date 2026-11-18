@@ -269,6 +269,46 @@ enum BossMechanicPhase {
 
   /// La postura bloqueó parte del golpe: `value` = fracción bloqueada.
   resisted,
+
+  // ---- v0.3 (docs/specs/bosses.md § "v0.3") ----
+
+  /// La Hechicera crea (o rehace) el eco `targetId`.
+  echoSummon,
+
+  /// Un eco recibe daño reducido: `value` = fracción que recibe (0.5).
+  echoResist,
+
+  /// La lava sube: `value` = turnos.
+  lavaRise,
+
+  /// La lava quema a `targetId`, que se estaba defendiendo: `value` =
+  /// stacks de Quemadura.
+  lavaBurn,
+
+  /// La lava se enfría.
+  lavaFade,
+
+  /// El Espectro invoca (o revive) al siervo `targetId`.
+  summon,
+
+  /// El jefe es inmune a los estados (séquito vivo).
+  immune,
+
+  /// El Centinela marca a `targetId`.
+  markCast,
+
+  /// El golpe al marcado `targetId` pega × `value`.
+  markHit,
+
+  /// [BossMechanicEvent.actorId] (protector, o el marcado defendiéndose en
+  /// solo) contrarresta la marca de `targetId`.
+  markGuarded,
+
+  /// El jefe se transforma: `value` = fase nueva (2).
+  phaseShift,
+
+  /// Un común esquiva (el golpe solo lo roza): `actorId` = el enemigo.
+  evaded,
 }
 
 /// Una mecánica de jefe. [actorId]: el jefe (o el jugador que libera).

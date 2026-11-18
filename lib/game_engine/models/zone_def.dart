@@ -1,5 +1,20 @@
 /// Generador de los pisos de una zona (worldgen.md § 2 y § 6.6).
-enum ZoneGen { pradera, bosque, ruinas, cavernas, fortaleza, laberinto, abismo }
+/// `grieta`, `cementerio` y `corazon` llegan con la v0.3.0 (§ 8.1).
+enum ZoneGen {
+  pradera,
+  bosque,
+  ruinas,
+  cavernas,
+  fortaleza,
+  laberinto,
+  abismo,
+  grieta,
+  cementerio,
+  corazon;
+
+  /// Pisos de islas sobre vacío (se puede caer).
+  bool get abyss => this == abismo || this == cementerio || this == corazon;
+}
 
 /// Una zona del mapa del mundo (worldgen.md § 6.1).
 class ZoneDef {

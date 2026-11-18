@@ -52,9 +52,16 @@ abstract final class ZoneRules {
     }
   }
 
-  /// Bonus de XP del mundo nuevo (sube de 1 a 1.75 entre el nivel 5 y 15).
+  /// Bonus de XP del mundo nuevo: sube de 1 a 1.75 entre el nivel 5 y 15
+  /// y, desde el 30, baja hasta [lateBonus] en el 50 (v0.3.0, § 8.1: así
+  /// el nivel 50 llega con el Corazón del Tiempo y no antes).
   static double worldBonus(int level) =>
-      1 + 0.75 * ((level - 5) / 10).clamp(0.0, 1.0);
+      1 +
+      0.75 * ((level - 5) / 10).clamp(0.0, 1.0) -
+      (1.75 - lateBonus) * ((level - 30) / 20).clamp(0.0, 1.0);
+
+  /// Bonus de XP en el nivel 50.
+  static const lateBonus = 1.3;
 
   /// Multiplicador de la XP de una batalla de nivel [level] (0 = 1).
   static double xpMult(int level) => level <= 0

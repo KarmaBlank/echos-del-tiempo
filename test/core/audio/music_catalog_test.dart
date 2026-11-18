@@ -19,6 +19,7 @@ void main() {
       for (final z in Music.zones) Music.zone(z),
       Music.battle,
       Music.boss,
+      Music.bossFinal,
       Music.victory,
       Music.defeat,
       Music.levelUp,
@@ -29,21 +30,22 @@ void main() {
     }
   });
 
-  test('bucles de 30–60 s, jingles cortos sin bucle; la ocarina canta', () {
+  test('bucles de 30–75 s, jingles cortos sin bucle; la ocarina canta', () {
     for (final s in kMusicCatalog.values) {
       if (s.id.startsWith('jingle.')) {
         expect(s.loop, isFalse, reason: s.id);
         expect(s.seconds, inInclusiveRange(1.5, 7), reason: s.id);
       } else {
         expect(s.loop, isTrue, reason: s.id);
-        expect(s.seconds, inInclusiveRange(30, 60), reason: s.id);
+        expect(s.seconds, inInclusiveRange(30, 75), reason: s.id);
         expect(s.steps % s.stepsPerBar, 0, reason: '${s.id}: compases enteros');
       }
       expect(s.tracks.first.instrument.voice, Voice.ocarina, reason: s.id);
     }
   });
 
-  test('cada pieza renderiza sin recortar, sin NaN y con costura limpia', () {
+  test('cada pieza renderiza sin recortar, sin NaN, con costura limpia y '
+      'RMS entre −22 y −14 dBFS', () {
     final dir = Platform.environment['MUSIC_SAMPLES_DIR'];
     for (final song in kMusicCatalog.values) {
       final sw = Stopwatch()..start();
@@ -60,6 +62,8 @@ void main() {
       final peak = MusicRenderer.peakOf(s);
       expect(peak, closeTo(song.peak, 1e-9), reason: song.id);
       expect(peak, lessThan(1));
+      final rmsDb = 20 * math.log(MusicRenderer.rmsOf(s)) / math.ln10;
+      expect(rmsDb, inInclusiveRange(-22, -14), reason: '${song.id}: RMS');
       if (song.loop) {
         expect((s.last - s.first).abs(), lessThanOrEqualTo(maxStep),
             reason: '${song.id}: costura');

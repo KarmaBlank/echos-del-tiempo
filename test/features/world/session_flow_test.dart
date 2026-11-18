@@ -1,4 +1,8 @@
 import 'package:echos_del_tiempo/app/app.dart';
+import 'package:echos_del_tiempo/features/characters/data/account_repository.dart';
+import 'package:echos_del_tiempo/features/characters/data/account_store.dart';
+import 'package:echos_del_tiempo/features/characters/domain/account.dart';
+import 'package:echos_del_tiempo/features/characters/presentation/characters_providers.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/battle_screen.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/sprite_catalog.dart';
@@ -9,7 +13,6 @@ import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
 import 'package:echos_del_tiempo/features/world/presentation/world_screen.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
-import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,16 +34,22 @@ void main() {
     await tester.runAsync(() async {
       sprites = await GameSprites.load(await SpriteCatalog.load());
     });
-    final store = InMemoryProfileStore();
+    // La cuenta con un personaje; la sesión juega con el elegido
+    // (docs/specs/characters.md § 1).
+    final accounts = AccountRepository(InMemoryAccountStore(
+        CharacterRules(progression).create(Account(), '', 'guerrero')));
+    final store = SelectedCharacterProfileStore(accounts);
 
     await tester.pumpWidget(EcosApp(overrides: [
       sessionEngineProvider.overrideWithValue(sessionEngine()),
       profileStoreProvider.overrideWithValue(store),
+      accountRepositoryProvider.overrideWithValue(accounts),
       gameSpritesProvider.overrideWith((ref) => sprites),
     ]));
 
     // ---- título → lobby ----
-    await tester.tap(find.text('> COMENZAR'));
+    await tester.pump(); // carga la cuenta
+    await tester.tap(find.text('> JUGAR'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byType(WorldScreen), findsOneWidget);
@@ -146,8 +155,10 @@ void main() {
     await tester.tap(find.text('< TITULO'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('> COMENZAR'), findsOneWidget);
+    expect(find.text('> JUGAR'), findsOneWidget);
     final saved = await store.load();
     expect(saved!.level, greaterThan(1));
+    // La lista del título se refrescó con el progreso guardado.
+    expect(find.text('Guerrero · Nv ${saved.level}'), findsOneWidget);
   });
 }

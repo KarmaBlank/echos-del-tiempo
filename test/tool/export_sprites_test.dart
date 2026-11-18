@@ -139,6 +139,49 @@ void main() {
     });
   });
 
+  group('enemigos v0.3', () {
+    test('tamaños de PNG (grilla + 1 px de contorno por lado)', () {
+      const sizes = {
+        'ecoSombra': (18, 16),
+        'guardianReloj': (18, 17),
+        'hechicera': (22, 23),
+        'ecoHechicera': (22, 23),
+        'salamandra': (20, 9),
+        'golemMagma': (18, 17),
+        'bestiaMagma': (30, 19),
+        'necrofago': (18, 15),
+        'almaErrante': (16, 17),
+        'espectroCoronado': (24, 23),
+        'siervoEspectral': (14, 15),
+        'vigilanteVacio': (18, 17),
+        'ojoAbismo': (16, 15),
+        'centinela': (28, 23),
+        'heraldoEras': (18, 20),
+        'fragmentoTiempo': (14, 15),
+        'devoradorFase2': (24, 22),
+      };
+      for (final e in sizes.entries) {
+        final s = enemySprite(e.key);
+        expect((s.width, s.height), e.value, reason: e.key);
+      }
+    });
+
+    test('el eco usa la grilla de la Hechicera con su propia paleta', () {
+      final real = enemySprite('hechicera'), echo = enemySprite('ecoHechicera');
+      expect((echo.width, echo.height), (real.width, real.height));
+      // Fila 7 "CWCC...SESSEAAA.....": celda (8,7) = E (ojo).
+      expect(real.rgbaAt(9, 8), opaque('#6ff7ff'));
+      expect(echo.rgbaAt(9, 8), opaque('#ffffff'));
+    });
+
+    test('el Devorador transformado es más grande que el de fase 1', () {
+      final p1 = enemySprite('devorador'), p2 = enemySprite('devoradorFase2');
+      expect(p2.width * p2.height, greaterThan(p1.width * p1.height));
+      // Núcleo Y en el centro de las fauces (fila 10, celda 10).
+      expect(p2.rgbaAt(11, 11), opaque('#fff3b0'));
+    });
+  });
+
   group('PNG', () {
     test('CRC32 de referencia', () {
       expect(crc32('123456789'.codeUnits), 0xcbf43926);
@@ -152,10 +195,10 @@ void main() {
       expect(String.fromCharCodes(png.sublist(png.length - 8, png.length - 4)), 'IEND');
     });
 
-    test('exporta las 21 rutas del manifest', () {
+    test('exporta las 38 rutas del manifest', () {
       // No compara bytes con los archivos del repo a propósito: el arte
       // puede reemplazarse a mano (docs/specs/sprites.md).
-      expect(buildAllSprites().keys, hasLength(21));
+      expect(buildAllSprites().keys, hasLength(38));
       for (final path in buildAllSprites().keys) {
         expect(File('assets/sprites/$path').existsSync(), isTrue, reason: path);
       }

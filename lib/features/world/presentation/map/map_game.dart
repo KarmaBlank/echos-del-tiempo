@@ -23,6 +23,7 @@ import 'actor_painter.dart';
 import 'loot_painter.dart';
 import 'map_themes.dart';
 import 'tile_painter.dart';
+import 'void_painter.dart';
 
 /// Lee la entrada de movimiento (-1..1 en cada eje). Por defecto, el
 /// estado del teclado físico (WASD / flechas).
@@ -37,6 +38,15 @@ typedef KeyReader = bool Function();
 class _Beam {
   _Beam(this.t0);
   final double t0;
+}
+
+/// Caída al vacío de un jugador (exploration.md § "Caída al vacío").
+class _Fall {
+  _Fall(this.t0, this.x, this.y);
+  final double t0;
+
+  /// Dónde estaba al caer (px del mundo).
+  final double x, y;
 }
 
 /// Posición suavizada (`disp[key]` de `lerpPos`).
@@ -72,6 +82,7 @@ class MapGame extends Game {
   final MoveInputReader _input;
   final ActorPainter actors;
   final tiles = TilePainter();
+  final voidBg = VoidPainter();
   late final LootPainter loot;
   final KeyReader _showAll;
   final KeyReader _pickKey;
@@ -108,8 +119,8 @@ class MapGame extends Game {
   double particleDensity = 1;
 
   /// Dónde se dibuja el mundo virtual dentro de [screen].
-  Rect viewRect(Size screen) => mapViewRect(
-      screen, Size(vw.toDouble(), vh.toDouble()), scaleMode);
+  Rect viewRect(Size screen) =>
+      mapViewRect(screen, Size(vw.toDouble(), vh.toDouble()), scaleMode);
 
   /// Cámara (`cam`), esquina superior izquierda en px del mundo.
   double camX = 0, camY = 0;
@@ -178,8 +189,54 @@ class MapGame extends Game {
   /// Hay un fundido de cambio de piso en curso (tests).
   bool get fading => _fadeT0 != null && t - _fadeT0! < fadeMs;
 
+  /// Duración de la animación de caída (achicarse + aparecer) en ms.
+  static const fallMs = 900.0;
+
+  /// Cuánto dura el cartel `¡Caíste al vacío!` del jugador local (ms).
+  static const fallToastMs = 2000.0;
+
+  /// Texto del cartel de caída del jugador local.
+  static const fallToastText = '¡Caíste al vacío!';
+
+  /// Caídas en curso por jugador.
+  final _falls = <String, _Fall>{};
+
+  /// Última posición dibujada de cada jugador (de dónde cayó).
+  final _lastDrawn = <String, (double, double)>{};
+
+  /// Cuándo cayó el jugador local por última vez (cartel).
+  double? _myFallT0;
+
+  /// Progreso 0..1 de la caída de [playerId] (`null` si no está cayendo).
+  double? fallProgress(String playerId) {
+    final f = _falls[playerId];
+    if (f == null) return null;
+    final q = (t - f.t0) / fallMs;
+    return q >= 1 ? null : q;
+  }
+
+  /// Se ve el cartel `¡Caíste al vacío!` (tests).
+  bool get showingFallToast =>
+      _myFallT0 != null && t - _myFallT0! < fallToastMs;
+
+  /// Dónde empezó la caída de [playerId] (tests).
+  (double, double)? fallOrigin(String playerId) => _falls[playerId] == null
+      ? null
+      : (_falls[playerId]!.x, _falls[playerId]!.y);
+
+  /// Arranca la animación de caída de [playerId] (con
+  /// `FellIntoVoidEvent`).
+  void startFall(String playerId) {
+    final from = _lastDrawn[playerId];
+    final p = controller.session?.players[playerId];
+    _falls[playerId] = _Fall(t, from?.$1 ?? p?.x ?? 0, from?.$2 ?? p?.y ?? 0);
+    _disp.remove('p$playerId');
+    if (playerId == controller.localId) _myFallT0 = t;
+  }
+
   void _onEvent(SessionEvent e) {
     if (e is FloorChangedEvent) _fadeT0 = t;
+    if (e case FellIntoVoidEvent(:final playerId)) startFall(playerId);
     if (e case LootDropEvent(:final playerId, :final drop, :final groundId)
         when playerId == controller.localId &&
             groundId == null &&
@@ -208,16 +265,16 @@ class MapGame extends Game {
         s.players[controller.localId] == null) {
       return null;
     }
-    final target = nearestPickable(
-        _visible(s), controller.local.x, controller.local.y);
+    final target =
+        nearestPickable(_visible(s), controller.local.x, controller.local.y);
     if (target == null) return null;
     controller.pickUp(target.ground.id);
     return target.ground.id;
   }
 
-  List<LootOnFloor> _visible(GameSession s) => visibleLoot(
-      s, controller.localId, (d) => _verdictOf(d, s),
-      showAll: _showAll());
+  List<LootOnFloor> _visible(GameSession s) =>
+      visibleLoot(s, controller.localId, (d) => _verdictOf(d, s),
+          showAll: _showAll());
 
   FilterVerdict _verdictOf(LootDrop d, GameSession s) {
     for (final g in s.ground) {
@@ -259,13 +316,18 @@ class MapGame extends Game {
     final f = currentFloor(view)?.bounds;
     final bx = (f?.x ?? 0) * ts, by = (f?.y ?? 0) * ts;
     final mw = (f?.w ?? map.width) * ts, mh = (f?.h ?? map.height) * ts;
-    final fx = controller.local.x, fy = controller.local.y;
-    final tx = mw < vw
-        ? bx + (mw - vw) / 2
-        : (fx - vw / 2).clamp(bx, bx + mw - vw);
-    final ty = mh < vh
-        ? by + (mh - vh) / 2
-        : (fy - vh / 2).clamp(by, by + mh - vh);
+    var fx = controller.local.x, fy = controller.local.y;
+    // Mientras el jugador local se achica, la cámara se queda donde cayó.
+    final fall = _falls[controller.localId];
+    final fq = fallProgress(controller.localId);
+    if (fall != null && fq != null && fq < 0.5) {
+      fx = fall.x;
+      fy = fall.y;
+    }
+    final tx =
+        mw < vw ? bx + (mw - vw) / 2 : (fx - vw / 2).clamp(bx, bx + mw - vw);
+    final ty =
+        mh < vh ? by + (mh - vh) / 2 : (fy - vh / 2).clamp(by, by + mh - vh);
     final k = smoothing(0.25, dt);
     camX += (tx - camX) * k;
     camY += (ty - camY) * k;
@@ -278,7 +340,8 @@ class MapGame extends Game {
   /// `lerpPos`: suaviza la posición de otros actores.
   _Disp _lerpPos(String key, double x, double y) {
     final d = _disp[key];
-    if (d == null || math.sqrt(math.pow(d.x - x, 2) + math.pow(d.y - y, 2)) > 60) {
+    if (d == null ||
+        math.sqrt(math.pow(d.x - x, 2) + math.pow(d.y - y, 2)) > 60) {
       return _disp[key] = _Disp(x, y);
     }
     final k = smoothing(0.35, _frameDt);
@@ -296,8 +359,8 @@ class MapGame extends Game {
     if (view == null) return;
 
     final recorder = ui.PictureRecorder();
-    final c = Canvas(recorder,
-        Rect.fromLTWH(0, 0, vw.toDouble(), vh.toDouble()));
+    final c =
+        Canvas(recorder, Rect.fromLTWH(0, 0, vw.toDouble(), vh.toDouble()));
     drawWorld(c, view);
     final picture = recorder.endRecording();
     final image = picture.toImageSync(vw, vh);
@@ -320,6 +383,12 @@ class MapGame extends Game {
     final map = view.map;
     c.drawRect(Rect.fromLTWH(0, 0, vw.toDouble(), vh.toDouble()),
         Paint()..color = kMapBackground);
+    // Vacío de las zonas de abismo: fondo con paralaje bajo los tiles.
+    final abyss = kAbyssThemes.contains(map.theme);
+    if (abyss) {
+      voidBg.draw(c, map.theme, vw.toDouble(), vh.toDouble(),
+          camX: camX, camY: camY, t: t, density: particleDensity);
+    }
     c.save();
     c.translate(-camX.roundToDouble(), -camY.roundToDouble());
 
@@ -334,10 +403,16 @@ class MapGame extends Game {
     final y0 = math.max(0, (camY / ts).floor());
     final x1 = math.min(map.width - 1, x0 + vw ~/ ts + 1);
     final y1 = math.min(map.height - 1, y0 + vh ~/ ts + 1);
+    String? at(int x, int y) => map.contains(x, y) ? map.tileAt(x, y) : null;
     for (var y = y0; y <= y1; y++) {
       for (var x = x0; x <= x1; x++) {
         tiles.draw(c, map.tileAt(x, y), x * ts, y * ts, map.theme, x, y,
-            t: t, gateOpen: s.gateOpen, lobby: map.lobby);
+            t: t,
+            gateOpen: s.gateOpen,
+            lobby: map.lobby,
+            at: at,
+            voidBackdrop: abyss,
+            density: particleDensity);
       }
     }
     // Arcos de las entradas de zona (sobresalen de su tile).
@@ -350,8 +425,8 @@ class MapGame extends Game {
     }
     final merchant = map.merchant;
     if (merchant != null) {
-      actors.text(c, 'TIENDA', merchant.x, merchant.y - 34,
-          const Color(0xFFFFD166), 6);
+      actors.text(
+          c, 'TIENDA', merchant.x, merchant.y - 34, const Color(0xFFFFD166), 6);
     }
     if (map.lobby) {
       actors.text(c, 'MOSTRADOR DE MISIONES', 13 * ts, ts + 10,
@@ -374,7 +449,8 @@ class MapGame extends Game {
 
     // Entidades ordenadas por y (desempate: orden de llegada).
     final ents = <(double, int, void Function())>[];
-    void add(double y, void Function() draw) => ents.add((y, ents.length, draw));
+    void add(double y, void Function() draw) =>
+        ents.add((y, ents.length, draw));
 
     final grace = s.mode == SessionMode.field &&
         s.graceLeft > 0 &&
@@ -391,17 +467,32 @@ class MapGame extends Game {
         py = d.y;
       }
       final weapon = controller.engine.catalog.weapons[p.profile.equipped];
+      final fall = _falls[p.id];
+      final fq = fallProgress(p.id);
+      if (fall != null && fq == null) _falls.remove(p.id);
+      void hero(double x, double y) => actors.hero(c,
+          classId: p.profile.classId,
+          weaponType: weapon?.type,
+          x: x,
+          y: y,
+          t: t,
+          dir: mine ? controller.local.dir : p.dir,
+          moving: mine ? controller.local.moving : p.moving,
+          dead: p.hp <= 0,
+          blink: grace && p.hp > 0);
+      if (fall != null && fq != null) {
+        if (fq < 0.5) {
+          // Se achica y se desvanece donde cayó.
+          add(fall.y, () => _drawFalling(c, fall, fq * 2, hero));
+        } else {
+          // Aparece en el punto de llegada.
+          add(py, () => _drawArriving(c, px, py, (fq - 0.5) * 2, hero));
+        }
+        continue;
+      }
+      _lastDrawn[p.id] = (px, py);
       add(py, () {
-        actors.hero(c,
-            classId: p.profile.classId,
-            weaponType: weapon?.type,
-            x: px,
-            y: py,
-            t: t,
-            dir: mine ? controller.local.dir : p.dir,
-            moving: mine ? controller.local.moving : p.moving,
-            dead: p.hp <= 0,
-            blink: grace && p.hp > 0);
+        hero(px, py);
         actors.text(c, p.name, px, py - 22,
             mine ? const Color(0xFFFFD166) : const Color(0xFFFFFFFF), 6);
       });
@@ -428,8 +519,7 @@ class MapGame extends Game {
               t: t,
               elite: e.elite);
           if (e.elite) {
-            actors.text(
-                c, '★ÉLITE', d.x, d.y - 34, const Color(0xFFFFD166), 6);
+            actors.text(c, '★ÉLITE', d.x, d.y - 34, const Color(0xFFFFD166), 6);
           }
           if (e.aggro) {
             actors.text(c, '!', d.x, d.y - 22 + math.sin(t / 90) * 1.5,
@@ -482,7 +572,61 @@ class MapGame extends Game {
       loot.drawLabel(c, p);
     }
     c.restore();
+    if (showingFallToast) {
+      final q = (t - _myFallT0!) / fallToastMs;
+      final a = q < 0.8 ? 1.0 : (1 - q) / 0.2;
+      actors.text(c, fallToastText, vw / 2, 56,
+          const Color(0xFFA29BFE).withValues(alpha: a.clamp(0.0, 1.0)), 8);
+    }
     _drawFade(c, view);
+  }
+
+  /// Primera mitad de la caída: el héroe se achica (a 0.2) y se desvanece
+  /// con un remolino de motas.
+  void _drawFalling(
+      Canvas c, _Fall f, double q, void Function(double, double) hero) {
+    final s = 1 - 0.8 * q;
+    final cx = f.x, cy = f.y - 8;
+    c.saveLayer(null,
+        Paint()..color = Color.fromRGBO(0, 0, 0, (1 - q).clamp(0.0, 1.0)));
+    c.translate(cx, cy);
+    c.scale(s, s);
+    c.translate(-cx, -cy);
+    hero(f.x, f.y);
+    c.restore();
+    final mote = Paint()
+      ..isAntiAlias = false
+      ..color = const Color(0xFFA29BFE).withValues(alpha: 1 - q);
+    final n = scaledCount(6, particleDensity);
+    for (var i = 0; i < n; i++) {
+      final a = t / 120 + i * math.pi * 2 / n;
+      final r = 12 * (1 - q) + 2;
+      c.drawRect(
+          Rect.fromLTWH((cx + math.cos(a) * r).roundToDouble(),
+              (cy + 4 + math.sin(a) * r * 0.5).roundToDouble(), 1, 1),
+          mote);
+    }
+  }
+
+  /// Segunda mitad: anillo dorado que se cierra y el héroe que aparece.
+  void _drawArriving(Canvas c, double x, double y, double q,
+      void Function(double, double) hero) {
+    final ring = Paint()
+      ..isAntiAlias = false
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = const Color(0xFFFFD166).withValues(alpha: 1 - q * 0.6);
+    final r = 14 - 10 * q;
+    c.drawOval(
+        Rect.fromCenter(
+            center: Offset(x.roundToDouble(), y.roundToDouble() + 2),
+            width: r * 2,
+            height: r),
+        ring);
+    c.saveLayer(
+        null, Paint()..color = Color.fromRGBO(0, 0, 0, q.clamp(0.0, 1.0)));
+    hero(x, y);
+    c.restore();
   }
 
   /// Fundido a negro al cambiar de piso con el cartel `<zona> · Piso N/F`.

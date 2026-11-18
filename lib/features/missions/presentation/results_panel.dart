@@ -33,7 +33,19 @@ class ResultsPanel extends StatelessWidget {
     this.zoneProgress,
     this.unlocked,
     this.othersUnlocked,
+    this.finalVictory = false,
   });
+
+  /// Se venció al jefe final (zona 10): cartel `¡Venciste al Devorador de
+  /// Eras!` (panels.md § "Final (v0.3.0)").
+  final bool finalVictory;
+
+  /// Si [r] es la victoria final: misión ganada de la zona 10 (el motor
+  /// no tiene otra señal; el jefe de la zona 10 es el Devorador).
+  static bool isFinalVictory(MissionResult r) => r.success && r.zone == 10;
+
+  static const finalTitle = '¡Venciste al Devorador de Eras!';
+  static const finalSubtitle = 'El tiempo vuelve a fluir. Gracias por jugar.';
 
   /// `Zona 2 · Bosque Hondo · Piso 3/3` (misiones de zona).
   final String? zoneProgress;
@@ -76,6 +88,28 @@ class ResultsPanel extends StatelessWidget {
       ],
       child: Column(
         children: [
+          if (finalVictory) ...[
+            Container(
+              key: const ValueKey('results-final'),
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A0F2A),
+                border: Border.all(color: ProtoColors.gold, width: 3),
+              ),
+              child: Text(retroText(finalTitle),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 14,
+                      color: ProtoColors.gold,
+                      shadows: [
+                        Shadow(
+                            color: ProtoColors.titleShadow,
+                            offset: Offset(2, 2)),
+                      ])),
+            ),
+            line(finalSubtitle, color: ProtoColors.sky),
+          ],
           line(r.missionName, color: ProtoColors.sky),
           if (zoneProgress case final z?)
             Padding(
@@ -106,7 +140,8 @@ class ResultsPanel extends StatelessWidget {
                   height: 1.4,
                   color: ProtoColors.gold,
                   shadows: [
-                    Shadow(color: ProtoColors.titleShadow, offset: Offset(4, 4)),
+                    Shadow(
+                        color: ProtoColors.titleShadow, offset: Offset(4, 4)),
                   ])),
           line('Tiempo $time · K.O. ${r.kos}'),
           line('XP total +${r.xp} · Créditos de peleas ₵${r.credits}'),

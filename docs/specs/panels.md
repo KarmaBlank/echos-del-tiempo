@@ -176,6 +176,18 @@ jugador local desbloqueó una zona (`MissionResult.unlocked[local]`):
 `¡Zona M desbloqueada! <nombre>` en dorado (`results-unlocked`), y una
 línea por los demás jugadores que también desbloquearon.
 
+**Zonas 6–10 (v0.3.0)**: las tarjetas `z6`..`z10` son iguales a las de
+la v0.2 (línea de zona en el color de la zona, objetivo por pisos,
+bloqueo con motivo). El desbloqueo llega hasta la zona 10
+(`¡Zona 10 desbloqueada! Corazón del Tiempo`).
+
+**Final (v0.3.0)**: si la misión ganada es la de la zona 10 (el jefe es
+el Devorador de Eras; `MissionResult.zone == 10 && success` — el motor
+no tiene una señal aparte), el resultado muestra arriba el cartel
+`¡Venciste al Devorador de Eras!` (`results-final`, 14 px dorado con
+sombra dura y borde de 3 px dorado sobre `#1a0f2a`) y debajo `El tiempo
+vuelve a fluir. Gracias por jugar.` en `sky`.
+
 ## Votación (`renderVote`, 1364-1375)
 
 Caja arriba al centro (debajo de la barra de misión) en el lobby
@@ -424,7 +436,8 @@ rareza.`
   grilla de 8 × 5 (`InventoryRules.layout`), casillas de 44 px
   (`inv-cell-<i>`): ícono pixel del tipo de arma con el borde del color
   de la rareza, o la pila (poción, éter, materiales) con su cantidad.
-  Pasar el mouse muestra la ficha (tooltip). Debajo: `Casillas N/40 ·
+  Pasar el mouse muestra la ficha (tooltip; en las armas, comparada con
+  la equipada: § "Comparar armas"). Debajo: `Casillas N/40 ·
   $créditos` y lo que desborda.
 - **Mover**: arrastrar una casilla sobre otra (`MoveInventoryAction`,
   intercambia), o elegirla, `MOVER` (`inv-move`) y clic en la casilla
@@ -462,6 +475,65 @@ rareza.`
   COMUNES` (`inv-clean-confirm`, `CraftAction.batch`) con el motivo
   (`No hay armas de rareza Común`, `canShop`). Tests:
   `test/features/inventory/loot_sinks_ui_test.dart`.
+
+### Comparar armas (v0.3.0)
+
+Pedido del dueño: "agregar lo de comparar armas en el inventario". Dos
+formas, las dos con los mismos números del motor (nada de reglas en la
+UI):
+
+- **Comparación** (`compareWeapons`, `domain/weapon_compare.dart`):
+  dada el arma de partida A (la equipada, o cualquiera) y la candidata
+  B, para el **jugador local** y su reparto pendiente:
+  - stats finales si usara A y si usara B (`ShopPreview.withItem`: el
+    `StatsCalculator` sobre una build hipotética, como
+    `ProgressionRules.previewEquip`; con A = la equipada que realmente
+    usa, `ShopPreview.current` = `derivedStats`). Se muestran en este
+    orden: `ATQ`, `MAG`, `Crítico` (%), `VEL` (1 decimal), `Vida`,
+    `Maná`, `DEF`, como `ATQ 21 → 30 +9` con el después y la diferencia
+    en verde si mejora y en rojo si empeora (sin cambio: `ATQ 21` en
+    dim, sin flecha);
+  - qué cambia, solo las líneas que no están vacías: `+ Habilidad:` /
+    `- Habilidad:` (`ItemRules.skillsOf`, el kit de clase no cambia),
+    `+ Mod:` / `- Mod:` con su tier (`ItemRules.affixText`, multiconjunto
+    por texto: el mismo mod con otro valor cuenta como perdido y ganado),
+    `+ Pasiva:` / `- Pasiva:` (`passiveText`, nivel efectivo con la
+    forja), `ULT: X → Y` si cambia el tipo de ULT;
+  - requisitos de B (`Requiere:` en verde/rojo) y, si no los cumple,
+    `No cumples los requisitos: hoy no podrías equiparla.` en rojo.
+  - Mismo objeto en A y B → `Es la misma arma.` sin diferencias.
+- **Ficha comparada al pasar el mouse** (`inv-cmp-tip`, tooltip de
+  widgets `RetroHoverCard` en `lib/app/theme/`): sobre un arma de la
+  grilla (tuya o de un compañero) que no sea la que usás, la ficha del
+  objeto a la izquierda y la de la equipada a la derecha con el rótulo
+  `EQUIPADA` (fichas de 296 px), y debajo `Si la equipas:` con la
+  comparación (A = equipada, B = la del mouse). Aparece al lado de la
+  casilla (a la derecha; si no entra, a la izquierda) y nunca se sale de
+  la pantalla (se corre hacia adentro, margen 8 px). Sobre la equipada o
+  una pila: la ficha simple de siempre. La armería (COMPRAR / FORJA /
+  FUSIÓN) sigue con su `Si la equipas:` del detalle.
+- **COMPARAR** (`inv-compare`, en el detalle de cualquier arma, también
+  en la pestaña de un compañero): esa arma queda como **A** y la línea
+  de ayuda dice `Elige el arma B para comparar con <A>`
+  (`inv-compare-pick`, con `CANCELAR`, `inv-compare-cancel`; se puede
+  cambiar de pestaña de dueño). El clic en otra arma (o en la equipada)
+  la toma como **B** y abre la **vista COMPARAR** (`cmp-view`), que
+  reemplaza lista + detalle:
+  - título `COMPARAR` y `Si equiparas B en vez de A`;
+  - dos columnas (`cmp-card-a` / `cmp-card-b`) con la letra, el dueño si
+    no es tuya (`de <nombre>`), `EQUIPADA` si la usás, la ficha y, solo
+    en las tuyas, `EQUIPAR` (`cmp-equip-a/b`, motivo de `ShopGuards`),
+    `DESARMAR` (`cmp-salvage-a/b`) y `VENDER $N` (`cmp-sell-a/b`); las
+    ajenas dicen `Solo lectura`;
+  - debajo, la comparación de A → B (`cmp-delta`);
+  - abajo `INTERCAMBIAR A/B` (`cmp-swap`) y `CERRAR COMPARACIÓN [ESC]`
+    (`cmp-close`). DESARMAR / VENDER piden la misma confirmación que
+    el detalle (`cmp-craft-question`, `cmp-craft-cancel`,
+    `cmp-craft-confirm` rojo); si el arma deja de existir (vendida,
+    desarmada, dada) la vista se cierra y vuelve al inventario.
+  - `Esc` (o `CERRAR COMPARACIÓN`) vuelve al inventario sin cerrar el
+    panel; `Esc` en el modo "elige B" lo cancela.
+  Tests: `test/features/inventory/weapon_compare_test.dart`.
 
 ## Filtro de loot (pestaña FILTRO del personaje)
 
