@@ -148,6 +148,21 @@ List<AdminEntry> buildAdminIndex(BalanceBase base) {
         name: m.name,
         detail: '${m.trigger.name} · ${m.description}'));
   }
+  // Elementos v0.7 (elemental_reactions.md).
+  for (final r in c.reactions.values) {
+    out.add(AdminEntry(
+        kind: BalanceKind.reaction,
+        id: r.id,
+        name: r.name,
+        detail: '${r.kind.primer.label} + ${r.kind.detonator.label}'));
+  }
+  for (final e in c.elementStatuses.values) {
+    out.add(AdminEntry(
+        kind: BalanceKind.elementStatus,
+        id: e.id,
+        name: e.name,
+        detail: 'turnos ${e.turns}'));
+  }
   for (final a in kAscensions.values) {
     out.add(AdminEntry(
       kind: null,

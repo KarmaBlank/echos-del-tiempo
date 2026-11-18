@@ -1,8 +1,10 @@
+import '../../../game_engine/data/elements_catalog.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/passive_mechanic.dart' show BuffStat;
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/js_math.dart';
+import 'element_text.dart';
 
 /// Textos de estados y habilidades en el markup del prototipo (el HTML
 /// chico que entiende `ProtoMarkup`, docs/specs/ui_style.md § "Texto
@@ -17,6 +19,8 @@ String statusHex(StatusKind k) => switch (k) {
       StatusKind.stun => '#ffeaa7',
       StatusKind.holy => '#fff3b0',
       StatusKind.regen => '#55efc4',
+      StatusKind.wet => '#3fa9f5',
+      StatusKind.charged => '#c77dff',
     };
 
 /// `STLET[k]`: letra del estado (los emojis del prototipo no están en la
@@ -28,6 +32,8 @@ String statusLetterOf(StatusKind k) => switch (k) {
       StatusKind.stun => 'A',
       StatusKind.holy => 'S',
       StatusKind.regen => 'R',
+      StatusKind.wet => 'M',
+      StatusKind.charged => 'E',
     };
 
 /// `STATUS[k].desc`.
@@ -38,9 +44,10 @@ String statusDescriptionOf(StatusKind k) => switch (k) {
       StatusKind.poison =>
         'Stacks sin límite. Al inicio de su turno: 3% vida máx. por stack '
             '(máx 5 por stack). Pierde 1 stack por turno.',
-      StatusKind.freeze =>
-        '-12% velocidad por stack. Con 5 stacks: CONGELADO, pierde su turno '
-            'y se descongela. Pierde 1 stack por turno.',
+      StatusKind.freeze ||
+      StatusKind.wet ||
+      StatusKind.charged =>
+        elementalStatusDescription(k)!,
       StatusKind.stun => 'Pierde su próximo turno.',
       StatusKind.holy =>
         '5 de daño por stack al inicio de su turno, dura 3 turnos (se renueva '
@@ -74,13 +81,18 @@ String statusApplicationMarkup(StatusApplication? st, {int bonus = 0}) {
 /// `descSkill(tk, p, isUlt)`: líneas en markup unidas con `<br>`. Con
 /// [user] muestra los números calculados en `<b>`. [nameColor] pinta el
 /// nombre (el `weaponTip` pinta la ULT de `#e84393`).
+///
+/// Con [element] (por defecto) suma la línea del elemento y sus
+/// reacciones (elemental_reactions.md § 3) si no es Físico.
 String describeSkillMarkup(SkillDef tk, Combatant? user,
-    {bool ultimate = false, String? nameColor}) {
+    {bool ultimate = false, String? nameColor, bool element = true}) {
   final p = user;
+  final el = elementOf(tk.id);
   final l = <String>[
     '<b${nameColor == null ? '' : ' style="color:$nameColor"'}>'
         '${ultimate ? '★ ULTIMATE: ' : ''}${tk.name}</b> '
         '<span class="k">${ultimate ? '(barra ULT al 100%)' : '${tk.mp} MP'}</span>',
+    if (element && el != GameElement.fisico) elementReactionMarkup(el),
   ];
   final mag = tk.kind == SkillKind.magical;
   switch (tk.kind) {
@@ -171,6 +183,10 @@ List<String> kitEffectLines(SkillDef tk) {
     if (tk.detonate > 0)
       '+${pct(tk.detonate)} de daño por cada stack de Quemadura, '
           'Congelación y Veneno del objetivo (los consume)',
+    if (tk.catalyst > 0)
+      'Catalizador: detona lo que tenga el objetivo (Mojado, Veneno, '
+          'Congelación o Cargado) con el elemento justo y hace '
+          '×${fm(1 + tk.catalyst)} si reacciona',
     if (tk.execute > 0)
       'Remata (no jefes ni élites) si queda con menos de ${pct(tk.execute)} '
           'de vida',

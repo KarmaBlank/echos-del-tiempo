@@ -41,8 +41,10 @@ const Map<String, EnemyDef> kEnemies = {
       xp: 10, credits: 9, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 64),
   'elementalEscarcha': EnemyDef(id: 'elementalEscarcha', name: 'Elemental de Escarcha', hp: 170, attack: 23, speed: 5,
       xp: 16, credits: 15, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 136, armor: 0.15),
+  // v0.7: su mordida moja (Agua) y su Aliento Glacial (Hielo) congela al
+  // instante a los mojados (Congelación súbita; bestiary.md § 4).
   'sierpe': EnemyDef(id: 'sierpe', name: 'Sierpe de Escarcha', hp: 1050, attack: 33, speed: 8, xp: 150, credits: 190,
-      boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 370, ultId: 'eult_aliento',
+      boss: true, inflicts: StatusApplication(StatusKind.wet, 1), breakMax: 370, ultId: 'eult_aliento',
       title: 'Aliento de las Cavernas Heladas', mechanicId: 'escarcha', legendaryId: 'inviernoPerpetuo',
       feminine: true),
   // Cristal de la Sierpe (invocación, nivel 20): no actúa.
@@ -95,12 +97,14 @@ const Map<String, EnemyDef> kEnemies = {
       credits: 0, inflicts: StatusApplication(StatusKind.freeze, 1)),
 
   // Zona 9 · Abismo del Tiempo (comunes nivel 41, jefe nivel 45).
+  // v0.7: el Vigilante moja (Agua) y el Ojo electrocuta (Electro).
   'vigilanteVacio': EnemyDef(id: 'vigilanteVacio', name: 'Vigilante del Vacío', hp: 210, attack: 43, speed: 10, xp: 15,
-      credits: 17, breakMax: 168, markHit: 0.2),
+      credits: 17, breakMax: 168, markHit: 0.2, inflicts: StatusApplication(StatusKind.wet, 1)),
   'ojoAbismo': EnemyDef(id: 'ojoAbismo', name: 'Ojo del Abismo', hp: 170, attack: 44, speed: 12, xp: 14, credits: 16,
       inflicts: StatusApplication(StatusKind.stun, 1, chance: 0.3), breakMax: 136),
+  // v0.7: golpes de Electro que dejan Cargado; su ULT inunda (Agua).
   'centinela': EnemyDef(id: 'centinela', name: 'Centinela del Vacío', hp: 2100, attack: 59, speed: 9, xp: 320, credits: 400,
-      boss: true, pierce: true, breakMax: 735, ultId: 'eult_colapsoVacio',
+      boss: true, pierce: true, inflicts: StatusApplication(StatusKind.charged, 1), breakMax: 735, ultId: 'eult_colapsoVacio',
       title: 'Guardián del borde del Abismo', mechanicId: 'marca', legendaryId: 'rompemundos'),
 
   // Zona 10 · Corazón del Tiempo (comunes nivel 46; jefe: el Devorador).
@@ -313,6 +317,9 @@ const Map<String, EnemyUltDef> kEnemyUlts = {
     name: 'Colapso del Vacío',
     power: 1.3,
     allTargets: true,
+    // v0.7: inunda al grupo (Agua): Cortocircuito sobre los Cargados y
+    // Mojado para que sus golpes de Electro electrocuten.
+    status: StatusApplication(StatusKind.wet, 1),
     extra: EnemyUltExtra.voidMark,
   ),
   kEliteUltId: EnemyUltDef(

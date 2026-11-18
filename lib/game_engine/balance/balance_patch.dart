@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import '../data/game_catalog.dart';
 import '../models/class_def.dart';
+import '../models/elements.dart';
 import '../models/enemy_def.dart';
 import '../models/skill.dart';
 import '../models/weapon.dart';
@@ -321,6 +322,9 @@ class BalancePatch {
       missions: catalog.missions,
       zones: catalog.zones,
       balanceHash: hash,
+      reactions: patched<ReactionDef>(BalanceKind.reaction, catalog.reactions),
+      elementStatuses: patched<ElementStatusDef>(
+          BalanceKind.elementStatus, catalog.elementStatuses),
     );
   }
 

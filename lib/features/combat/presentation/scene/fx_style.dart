@@ -35,6 +35,8 @@ FxElement elementOfStatus(StatusKind k) => switch (k) {
       StatusKind.stun => FxElement.stun,
       StatusKind.holy => FxElement.holy,
       StatusKind.regen => FxElement.heal,
+      StatusKind.wet => FxElement.mana,
+      StatusKind.charged => FxElement.stun,
     };
 
 /// `STATUS[k].col`.
@@ -45,6 +47,8 @@ Color statusColor(StatusKind k) => switch (k) {
       StatusKind.stun => const Color(0xFFFFEAA7),
       StatusKind.holy => const Color(0xFFFFF3B0),
       StatusKind.regen => const Color(0xFF55EFC4),
+      StatusKind.wet => const Color(0xFF3FA9F5),
+      StatusKind.charged => const Color(0xFFC77DFF),
     };
 
 /// `STLET[k]`: letra de la insignia.
@@ -55,6 +59,8 @@ String statusLetter(StatusKind k) => switch (k) {
       StatusKind.stun => 'A',
       StatusKind.holy => 'S',
       StatusKind.regen => 'R',
+      StatusKind.wet => 'M',
+      StatusKind.charged => 'E',
     };
 
 /// Color (`col`) de cada habilidad y ULT por `SkillDef.id`.

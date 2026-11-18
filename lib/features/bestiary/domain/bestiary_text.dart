@@ -9,6 +9,7 @@ import '../../../game_engine/data/zones_catalog.dart';
 import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/enemy_def.dart';
 import '../../../game_engine/rules/family_rules.dart';
+import '../../combat/domain/element_text.dart';
 
 /// Color de cada familia (ícono, nombre, borde de la ficha).
 Color familyColor(EnemyFamily f) => switch (f) {
@@ -185,6 +186,9 @@ String enemyInfoMarkup(EnemyDef def, BestiaryProgress bestiary,
     if (description && (kEnemyDescriptions[def.id] ?? '').isNotEmpty)
       protoColor(ProtoColors.dim, protoEsc(kEnemyDescriptions[def.id]!)),
     if (r != null) familyTraitsMarkup(r),
+    if (r != null && blockedReactionsLine(r.immune).isNotEmpty)
+      '${protoColor(ProtoColors.red, 'Sin reacción:')} '
+          '${protoEsc(blockedReactionsLine(r.immune))}',
     if (bossMechanicOf(def) case final m?)
       '${protoColor(ProtoColors.pink, 'Mecánica: ${protoEsc(m.name)}')} — ${m.counter}',
     protoColor(ProtoColors.sky, 'Derrotados: ${bestiary.killsOf(def.id)}'),

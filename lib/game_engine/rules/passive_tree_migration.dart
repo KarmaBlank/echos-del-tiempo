@@ -9,6 +9,8 @@ import 'passive_tree_rules.dart';
 /// descartan.
 ///
 /// - Versión actual (o futura): sin cambios (los valida `normalize`).
+/// - v4: todo salvo los nodos que cambiaron de notable en la v5
+///   ([kTreeIdsChangedInV5], passive_tree_v4.md § 8.3).
 /// - v3: los ids que existen igual en la v4 ([kTreeIdsStableSinceV3]:
 ///   anillo, inicios, `r1` y abanico, notables A/B y keystones de los
 ///   clusters de clase, puentes y grupos salvo la punta), si siguen
@@ -19,9 +21,12 @@ List<String> migrateTreeIds(String classId, List<String> ids, int fromVersion,
     {PassiveTreeCatalog? catalog}) {
   if (fromVersion >= kPassiveTreeVersion) return ids;
   if (fromVersion < 2) return const [];
-  final stable =
-      fromVersion == 2 ? kTreeIdsStableSinceV2 : kTreeIdsStableSinceV3;
   final tree = catalog ?? kPassiveTree;
+  final stable = switch (fromVersion) {
+    2 => kTreeIdsStableSinceV2,
+    3 => kTreeIdsStableSinceV3,
+    _ => tree.nodes.keys.toSet().difference(kTreeIdsChangedInV5),
+  };
   final cls = tree.startNodeByClass.containsKey(classId) ? classId : 'guerrero';
   final rules = PassiveTreeRules(tree);
   final kept = <String>[];

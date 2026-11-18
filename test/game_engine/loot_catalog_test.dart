@@ -11,10 +11,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Datos de loot v2 (docs/specs/loot.md § 8–11).
 void main() {
-  test('80 bases: 20 por familia, niveles 1–50 y las 32 del prototipo', () {
-    expect(kWeapons, hasLength(80));
+  test('89 bases (80 + 9 de Agua y Electro v0.7), niveles 1–50 y las 32 del '
+      'prototipo', () {
+    expect(kWeapons, hasLength(89));
+    const perFamily = {'guerrero': 23, 'maga': 24, 'tirador': 22, 'paladin': 20};
     for (final cls in kClasses.keys) {
-      expect(kWeapons.values.where((w) => w.classId == cls), hasLength(20),
+      expect(kWeapons.values.where((w) => w.classId == cls),
+          hasLength(perFamily[cls]),
           reason: cls);
     }
     expect(kWeapons.values.map((w) => w.level).reduce((a, b) => a < b ? a : b),

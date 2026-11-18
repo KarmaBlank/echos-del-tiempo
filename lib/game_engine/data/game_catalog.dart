@@ -2,9 +2,11 @@ import '../models/class_def.dart';
 import '../models/enemy_def.dart';
 import '../models/mission_def.dart';
 import '../models/skill.dart';
+import '../models/status.dart';
 import '../models/weapon.dart';
 import '../models/zone_def.dart';
 import 'classes_catalog.dart';
+import 'elements_catalog.dart';
 import 'enemies_catalog.dart';
 import 'missions_catalog.dart';
 import 'skills_catalog.dart';
@@ -38,7 +40,24 @@ class GameCatalog {
     this.missions = kMissions,
     this.zones = kZones,
     this.balanceHash = baseBalanceHash,
+    this.reactions = kReactions,
+    this.elementStatuses = kElementStatuses,
   });
+
+  /// Números de las reacciones elementales por `ReactionKind.name`
+  /// (docs/specs/elemental_reactions.md § 2).
+  final Map<String, ReactionDef> reactions;
+
+  /// Reglas de Mojado, Cargado y Congelación por `StatusKind.name` (§ 7).
+  final Map<String, ElementStatusDef> elementStatuses;
+
+  /// La reacción [k] (siempre hay: si falta, la del código).
+  ReactionDef reaction(ReactionKind k) =>
+      reactions[k.name] ?? kReactions[k.name]!;
+
+  /// Reglas del estado elemental [k] (wet, charged, freeze).
+  ElementStatusDef elementStatus(StatusKind k) =>
+      elementStatuses[k.name] ?? kElementStatuses[k.name]!;
 
   /// Hash del parche de balance aplicado (docs/specs/balance_admin.md
   /// § 4); viaja en el `hello` para que host y clientes coincidan.

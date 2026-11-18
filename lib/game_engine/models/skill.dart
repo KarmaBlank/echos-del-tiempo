@@ -64,6 +64,11 @@ class SkillDef {
   /// +daño por cada stack elemental del objetivo (los consume).
   final double detonate;
 
+  /// Catalizador (Elementalista v0.7, ascension.md § 4.1): el golpe toma
+  /// el elemento que reacciona con lo que tenga el objetivo y, si
+  /// detona, hace × (1 + catalyst). 0 = apagado.
+  final double catalyst;
+
   /// Remata (no jefes ni élites) si el objetivo queda por debajo de esto.
   final double execute;
 
@@ -164,6 +169,7 @@ class SkillDef {
     this.lifeSteal = 0,
     this.extraStatuses = const [],
     this.detonate = 0,
+    this.catalyst = 0,
     this.execute = 0,
     this.trap = 0,
     this.partyBuffs = const [],

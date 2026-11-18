@@ -29,22 +29,24 @@ enum EnemyFamily {
   final String code;
 }
 
-/// Tipo de daño de un golpe del grupo, para las familias. Físico / mágico
-/// sale de `SkillDef.kind`; los elementos, del estado que aplica la
-/// habilidad (Quemadura = fuego, Congelación = hielo, Sagrado) o de
-/// [kHolySkillIds].
+/// Tipo de daño de un golpe, para las familias. Físico / mágico sale de
+/// `SkillDef.kind`; los elementos, del estado que aplica la habilidad
+/// (Quemadura = fuego, Congelación = hielo, Sagrado), de [kHolySkillIds]
+/// y, desde v0.7, del elemento del golpe (`elementOf`, Agua y Electro
+/// incluidos; también los golpes enemigos a jugadores con raza).
 enum DamageTag {
   physical('físico'),
   magical('mágico'),
   fire('fuego'),
   ice('hielo'),
-  holy('Sagrado');
+  holy('Sagrado'),
+  water('agua'),
+  electric('electro');
 
   const DamageTag(this.label);
   final String label;
 
-  bool get isElement =>
-      this == fire || this == ice || this == holy;
+  bool get isElement => this != physical && this != magical;
 }
 
 /// Reglas de una familia. Todos los factores son multiplicadores (1 =
@@ -145,13 +147,13 @@ const Map<EnemyFamily, FamilyRule> kFamilyRules = {
   ),
   EnemyFamily.construct: FamilyRule(
     family: EnemyFamily.construct,
-    damage: {DamageTag.magical: 0.8},
+    damage: {DamageTag.magical: 0.8, DamageTag.electric: 1.25},
     immune: {StatusKind.poison},
     breakMult: 1.5,
   ),
   EnemyFamily.fireElemental: FamilyRule(
     family: EnemyFamily.fireElemental,
-    damage: {DamageTag.ice: 1.5, DamageTag.fire: 0.5},
+    damage: {DamageTag.ice: 1.5, DamageTag.water: 1.5, DamageTag.fire: 0.5},
     immune: {StatusKind.burn},
     stacks: {StatusKind.freeze: 1},
   ),

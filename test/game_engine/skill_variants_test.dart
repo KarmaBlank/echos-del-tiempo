@@ -1,4 +1,5 @@
 import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/elemental_skills_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/enemies_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/game_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_mechanics.dart';
@@ -131,7 +132,9 @@ void main() {
         expect(all, contains(kSkillLooks[e.key]), reason: 'look de ${e.key}');
       }
       expect(kSkillVariantFamily.keys.toSet(), kSkillVariants.keys.toSet());
-      expect(kSkillLooks.keys.toSet(), kSkillVariants.keys.toSet());
+      // v0.7: también las de Agua y Electro tienen look.
+      expect(kSkillLooks.keys.toSet(),
+          {...kSkillVariants.keys, ...kElementalSkills.keys});
       expect(all.length, greaterThanOrEqualTo(120));
     });
 

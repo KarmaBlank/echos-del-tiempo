@@ -359,16 +359,6 @@ void main() {
       expect(_p(st).shield, 8);
     });
 
-    test('Hechizo Afilado: mágica a uno → +1 Quemadura', () {
-      final st = _cmd(_engine(), _battle([
-        _hero(mech: {'hechizoAfilado'}, skills: ['chispa']),
-      ], [_foe('e0')]), _sk('chispa'));
-      expect(_e(st).stacks(StatusKind.burn), 2);
-      final atk = _cmd(_engine(),
-          _battle([_hero(mech: {'hechizoAfilado'})], [_foe('e0')]), _atk);
-      expect(_e(atk).stacks(StatusKind.burn), 0, reason: 'solo mágicas');
-    });
-
     test('Ojo Arcano: +15% crítico en habilidades mágicas', () {
       SkillCommand c = _sk('chispa');
       final yes = _cmd(_engine([0.1]),
@@ -379,13 +369,12 @@ void main() {
       expect(atk.events.whereType<DamageEvent>().first.critical, isFalse);
     });
 
-    test('Sobrecarga, Disparo Rúnico y Saeta Sagrada: al critear', () {
+    test('Sobrecarga y Saeta Sagrada: al critear', () {
       final a = _cmd(_engine(), _battle([_hero(crit: 1)], [_foe('e0', hp: 999)]), _atk);
       final b = _cmd(_engine(), _battle([
-        _hero(mech: {'sobrecarga', 'disparoRunico', 'saetaSagrada'}, crit: 1),
+        _hero(mech: {'sobrecarga', 'saetaSagrada'}, crit: 1),
       ], [_foe('e0', hp: 999)]), _atk);
       expect(_p(b).ult - _p(a).ult, closeTo(8, 1e-9));
-      expect(_e(b).effectFrom('disparoRunico', BuffStat.damageTaken)!.value, 0.10);
       expect(_e(b).stacks(StatusKind.holy), 1);
     });
 

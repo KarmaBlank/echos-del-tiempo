@@ -23,10 +23,12 @@ import '../../../game_engine/models/passive_mechanic.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart';
 import '../../../game_engine/rules/js_math.dart';
+import '../domain/element_text.dart';
 import '../domain/skill_text.dart';
 import '../domain/turn_order.dart';
 import 'game_sprites.dart';
 import 'pixel_sprite.dart';
+import 'status_icons.dart';
 
 /// Piezas de la barra de batalla (docs/specs/exploration.md § "Batalla"):
 /// el panel "Mis datos" del jugador local, la lista compacta del resto
@@ -74,12 +76,15 @@ class BattleBarPanel extends StatelessWidget {
 /// Un chip de estado o buff/debuff: [short] para la lista del grupo,
 /// [long] para mis datos; [tip] en markup.
 class StatusChip {
-  const StatusChip(this.short, this.long, this.color, this.tip);
+  const StatusChip(this.short, this.long, this.color, this.tip, {this.icon});
 
   final String short;
   final String long;
   final Color color;
   final String tip;
+
+  /// Ícono pixel art delante del texto (`status_wet`, `status_charged`).
+  final String? icon;
 }
 
 Color _hex(String hex) =>
@@ -103,13 +108,18 @@ List<StatusChip> combatantChips(Combatant p) {
     final n = p.stacks(k);
     if (n <= 0) continue;
     final hex = statusHex(k);
+    // Mojado / Cargado: el valor son turnos que quedan, no stacks.
+    final count = k.timed
+        ? '$n ${n == 1 ? 'turno' : 'turnos'}'
+        : '×$n${k == StatusKind.holy && p.holyTurns > 0 ? ' · ${p.holyTurns} turnos' : ''}';
     chips.add(StatusChip(
       '${statusLetterOf(k)}$n',
       '${k.label} $n',
       _hex(hex),
       '<b style="color:$hex">${k.label}</b> '
-          '<span class="k">×$n${k == StatusKind.holy && p.holyTurns > 0 ? ' · ${p.holyTurns} turnos' : ''}</span>'
+          '<span class="k">$count</span>'
           '<br>${statusDescriptionOf(k)}',
+      icon: statusIconOf(k),
     ));
   }
   if (p.defending) {
@@ -149,13 +159,16 @@ List<StatusChip> combatantChips(Combatant p) {
   final ice = p.stacks(StatusKind.freeze);
   if (ice > 0) {
     final pct = jsRound(BattleEngine.freezeSlowPerStack * ice * 100);
-    chips.add(StatusChip(
-        '▼VEL',
-        '▼VEL −$pct%',
-        ProtoColors.ice,
-        '<b style="color:#74b9ff">▼ Velocidad −$pct%</b> '
-            '<span class="k">(Congelación ×$ice)</span><br>'
-            '−12% velocidad por stack: su turno llega más tarde.'));
+    chips.add(StatusChip('▼VEL', '▼VEL −$pct%', ProtoColors.ice,
+        freezeSlowTip(ice)));
+  }
+  if (p.brittle && ice > 0 && p.alive) {
+    chips.add(StatusChip('Quebr.', 'Quebradizo', const Color(0xFF81ECEC),
+        brittleTip()));
+  }
+  if (p.freezeResist > 0 && p.alive) {
+    chips.add(StatusChip('▲HIELO', 'Resiste hielo ${p.freezeResist}',
+        ProtoColors.ice, freezeResistTip(p.freezeResist)));
   }
   if (p.webbed && p.alive) {
     chips.add(const StatusChip(
@@ -490,17 +503,30 @@ class StatusChipView extends StatelessWidget {
           color: ProtoColors.bg,
           border: Border.all(color: chip.color),
         ),
-        child: Text(
-          retroText(long ? chip.long : chip.short),
-          style: TextStyle(
-              fontFamily: RetroType.bodyFamily,
-              fontFamilyFallback: RetroType.bodyFallback,
-              fontSize: RetroType.small,
-              height: RetroType.lineTight,
-              color: chip.color),
+        child: _withIcon(
+          chip.icon,
+          Text(
+            retroText(long ? chip.long : chip.short),
+            style: TextStyle(
+                fontFamily: RetroType.bodyFamily,
+                fontFamilyFallback: RetroType.bodyFallback,
+                fontSize: RetroType.small,
+                height: RetroType.lineTight,
+                color: chip.color),
+          ),
         ),
       ),
     );
+  }
+
+  /// [text] con el ícono pixel art delante (si hay).
+  static Widget _withIcon(String? icon, Widget text) {
+    if (icon == null) return text;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      StatusIcon(icon),
+      const SizedBox(width: 2),
+      text,
+    ]);
   }
 }
 

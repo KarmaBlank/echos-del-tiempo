@@ -1,5 +1,6 @@
 import '../models/ascension.dart' show TrapKind;
 import '../models/battle_event.dart';
+import '../models/elements.dart';
 import '../models/game_map.dart' show PoiKind, QuestKind;
 import '../models/game_session.dart';
 import '../models/item.dart' show CraftOp;
@@ -348,6 +349,17 @@ class EventJson {
             if (e.targetId != null) 'tg': e.targetId,
             if (e.value != 0) 'v': e.value,
           },
+        // Reacciones v0.7 (elemental_reactions.md § 8).
+        ReactionEvent() => {
+            'k': 'react',
+            'id': e.targetId,
+            'rk': e.kind.name,
+            'n': e.amount,
+            if (e.sourceId != null) 'src': e.sourceId,
+            if (e.consumedStacks != 0) 'cs': e.consumedStacks,
+            if (e.splash.isNotEmpty) 'sp': e.splash,
+          },
+        IceEvent() => {'k': 'ice', 'id': e.targetId, 'ph': e.phase.name},
         _ => throw ArgumentError('Evento de batalla sin JSON: $e'),
       };
 
@@ -429,6 +441,17 @@ class EventJson {
         return BossMechanicEvent(
             j.str('id'), j.enumByName('ph', BossMechanicPhase.values),
             targetId: j.strOrNull('tg'), value: j.dblOrNull('v') ?? 0);
+      case 'react':
+        final sp = j.objOrNull('sp');
+        return ReactionEvent(j.str('id'),
+            j.enumByName('rk', ReactionKind.values), j.integer('n'),
+            sourceId: j.strOrNull('src'),
+            consumedStacks: j.intOrNull('cs') ?? 0,
+            splash: sp == null
+                ? const {}
+                : {for (final e in sp.entries) e.key: (e.value as num).toInt()});
+      case 'ice':
+        return IceEvent(j.str('id'), j.enumByName('ph', IcePhase.values));
     }
     throw FormatException('JSON inválido: evento de batalla desconocido', k);
   }

@@ -439,6 +439,23 @@ class SessionSfx {
               : null;
           action = _Act(b, battle?.byId(b.actorId), sk);
           out.addAll(_actionStart(action));
+        // Reacciones elementales (audio.md § "Reacciones elementales"):
+        // una vez por tipo y paso, con el golpe que la detona; su daño
+        // extra no suena aparte.
+        case ReactionEvent(:final targetId, :final kind):
+          once(kind.sfxId, hitAt(targetId));
+        case DamageEvent(:final sourceId)
+            when sourceId != null && sourceId.startsWith('reaction.'):
+          break;
+        case IceEvent(:final targetId, :final phase):
+          switch (phase) {
+            case IcePhase.brittle:
+              out.add(cue(Sfx.frost));
+            case IcePhase.shattered:
+              once(Sfx.crystalBreak, hitAt(targetId));
+            case IcePhase.thawed || IcePhase.resisted:
+              break;
+          }
         case DamageEvent(:final sourceId, :final targetId)
             when sourceId != null && !b.fromStatus && !_isPlayer(targetId):
           // Daño secundario: suena el proc, no el impacto normal.

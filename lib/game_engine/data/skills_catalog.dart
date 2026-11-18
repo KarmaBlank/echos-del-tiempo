@@ -1,6 +1,7 @@
 import '../models/skill.dart';
 import '../models/status.dart';
 import 'ascension_catalog.dart';
+import 'elemental_skills_catalog.dart';
 import 'skill_variants_catalog.dart';
 
 // `SK`, `ULTS` y `DUALS` del prototipo, 1:1. El color (`col`) y el
@@ -82,6 +83,8 @@ const Map<String, SkillDef> kSkills = {
   ...kAscensionSkills,
   // ---- variantes v0.5 (docs/specs/combat.md § "Variantes de habilidades") ----
   ...kSkillVariants,
+  // ---- Agua y Electro v0.7 (docs/specs/elemental_reactions.md) ----
+  ...kElementalSkills,
 };
 
 const _melee = SkillDelivery.melee;
@@ -202,6 +205,8 @@ const Map<String, SkillDelivery> kSkillDelivery = {
   'vientoPrisa': _any, // Viento de Prisa
   'impulso': _any, // Impulso Temporal
   'ojoAguila': _any, // Ojo de Águila
+  // Agua y Electro v0.7.
+  ...kElementalSkillDelivery,
 };
 
 /// ULT por tipo de arma (`ULTS`). No cuestan MP: requieren 100 de carga.

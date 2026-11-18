@@ -115,6 +115,8 @@ class BalanceBase {
         BalanceKind.affix => affixes,
         BalanceKind.passiveNode => nodes,
         BalanceKind.mechanic => mechanics,
+        BalanceKind.reaction => catalog.reactions,
+        BalanceKind.elementStatus => catalog.elementStatuses,
       };
 
   late final BalanceContext context = BalanceContext(

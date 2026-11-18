@@ -68,6 +68,12 @@ Corazón, físico o sagrado contra el Abismo, quiebre contra los gólems.
   (Golpe Sagrado, Lanza de Luz, Consagrar, Martillo del Juicio, Castigo
   Sagrado, Luz Cegadora, Sello Sagrado, Juicio Divino, Martillo
   Celestial). No hacen falta tags nuevos en `SkillDef`.
+- v0.7: también el elemento de la habilidad (`elementOf`): Agua →
+  **agua**, Electro → **electro** (y fuego / hielo / Sagrado). Los
+  golpes enemigos a un jugador con raza: físico + su elemento.
+- v0.7: **Constructo** débil a electro ×1.25; **Elemental ígneo** débil a
+  agua ×1.5. Las familias valen igual para los jugadores
+  (`Combatant.family`; razas más adelante, elemental_reactions.md § 5.4).
 
 ### 1.3 Factor de daño (`familyFactors`)
 
@@ -168,7 +174,26 @@ Con el turno propio, la línea "Objetivo:" del menú suma la familia y
 (El mapa no tiene hover sobre los enemigos del campo: queda para más
 adelante.)
 
-## 4. Pestaña BESTIARIO
+## 4. Elementos de los enemigos (v0.7)
+
+Elemento de cada golpe enemigo: `kEnemyElement` (abajo) o, si no está, el
+del estado que aplica ese golpe (Quemadura = fuego, Congelación = hielo,
+Veneno = veneno...), si no físico. ULT: `kEnemyUltElement` o su estado.
+Así los enemigos mojan, cargan y detonan los estados de los jugadores
+(elemental_reactions.md § 5.3):
+
+| Enemigo | Golpe | ULT | Combo |
+|---|---|---|---|
+| Sierpe de Escarcha (zona 4) | **Agua**, deja Mojado (antes Congelación 1) | Aliento Glacial: Hielo | el Aliento congela al instante a los mojados (Congelación súbita): limpiá el Mojado o quebrala |
+| Comunes de hielo (zonas 4, 8) | Hielo (Congelación) | — | derriten / congelan como siempre |
+| Salamandra, Gólem de Magma, Bestia de Magma (zona 7) | Fuego (Quemadura) | Erupción Total: Fuego | detonan el Veneno de los jugadores (Explosión tóxica) y derriten |
+| Vigilante del Vacío (zona 9) | **Agua**, deja Mojado (nuevo) | — | prepara al Ojo |
+| Ojo del Abismo (zona 9) | **Electro** (sigue con 30% de Aturdido) | — | electrocuta a los mojados |
+| Centinela del Vacío (zona 9) | **Electro**, deja Cargado (nuevo) | Colapso del Vacío: **Agua**, deja Mojado (nuevo) | la ULT hace Cortocircuito sobre los Cargados y moja; sus golpes siguientes electrocutan |
+| Heraldo de las Eras (zona 10) | el elemento del estado del ciclo (fuego, veneno, hielo) | Furia Élite | su fuego detona el Veneno que dejó antes |
+| Devorador (zona 10) | Fuego | Fin de las Eras: Fuego | detona Veneno |
+
+## 5. Pestaña BESTIARIO
 
 **Descripciones: pendiente del dueño.** `lib/game_engine/data/
 enemy_descriptions.dart` (`kEnemyDescriptions`, id → texto) está vacío a

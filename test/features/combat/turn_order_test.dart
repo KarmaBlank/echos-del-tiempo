@@ -47,6 +47,7 @@ void main() {
     final s = _state();
     expect(predictTurns(s, 3), hasLength(3));
     expect(s.party.first.nextTurn, 5);
-    expect(turnInterval(s.enemies[1]), closeTo(100 / 8.8, 1e-9));
+    // Congelación ×1: −6% de velocidad (v0.7, elemental_reactions.md § 7).
+    expect(turnInterval(s.enemies[1]), closeTo(100 / 9.4, 1e-9));
   });
 }

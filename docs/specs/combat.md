@@ -267,7 +267,9 @@ Se procesan al empezar el turno del afectado (`statusTick`), en este orden:
 | Sagrado | `5 × stacks`; dura 3 turnos (se renueva al aplicar) | 9 |
 | Regeneración | cura 5% de vida y maná máx.; pierde 1 stack (aplicar la deja en 3) | 3 |
 | Aturdido | pierde el turno y se quita | 1 |
-| Congelación | −12% velocidad por stack. Con 5: pierde el turno y vuelve a 0. Si no, pierde 1 stack | 5 |
+| Congelación | −6% velocidad y +10% quiebre recibido por stack. Con 5: pierde el turno y queda **Quebradizo** (el próximo golpe físico ×1.5 y se descongela; si nadie lo rompe, se descongela al turno siguiente) y después resiste la Congelación 2 turnos. Si no, pierde 1 stack (v0.7) | 5 |
+| Mojado (v0.7) | sin daño; dura 2 turnos propios (se renueva, no acumula). Lo detonan Electro y Hielo | 2 |
+| Cargado (v0.7) | sin daño; dura 1 turno propio. Lo detona Agua | 1 |
 
 La curación de Regeneración se aplica antes que el daño de los demás estados.
 El Paladín recibe +1 stack de cualquier estado que no sea Regeneración.
@@ -292,8 +294,49 @@ El Paladín recibe +1 stack de cualquier estado que no sea Regeneración.
   "queda aturdido" de Choque Térmico y las notas de stacks extra / estados
   que pasan solo aparecen si `addStatus` aplicó el estado (mismo criterio
   que `StatusAppliedEvent`).
-- La Congelación por debajo de 5 stacks solo frena (−12% velocidad por
-  stack): no hace perder el turno.
+- La Congelación por debajo de 5 stacks solo frena (−6% velocidad por
+  stack desde v0.7): no hace perder el turno.
+
+### Elementos y reacciones (v0.7)
+
+Spec: docs/specs/elemental_reactions.md (§ 9: cómo quedó en el motor).
+Cada golpe tiene un elemento (`elementOf`; enemigos `enemyAttackElement`
+/ `enemyUltElement`). Si el objetivo tiene el estado que ese elemento
+detona, hay **una** reacción: Mojado + Electro = Electrocución (×1.5,
+Aturdido 1), Veneno + Fuego = Explosión tóxica (golpe × stacks, 50% al
+resto de su bando, tope 25% de vida en jefes), Mojado + Hielo =
+Congelación súbita, Congelación + Fuego = Derretir (×1.5), Cargado + Agua
+= Cortocircuito (50% salta al siguiente). Simétrico: los enemigos
+también detonan los estados de los jugadores.
+
+Elemento por familia de habilidad (tabla completa en `kSkillElement`):
+
+| Elemento | Habilidades |
+|---|---|
+| Fuego | las que aplican Quemadura (Chispa, Bola de Fuego, Llamarada, Infierno, Golpe Ígneo, Erupción, Tajo Carmesí, Flecha Solar / Incendiaria, Virote Ígneo, Meteoro), Prisma Elemental, Trinidad |
+| Hielo | las que aplican Congelación (Lanza de Hielo, Ventisca, Escarcha Fugaz, Tajo Temporal, Corte Glacial, Vendaval, Saeta, Cero Absoluto, Flecha de Escarcha, Paradoja) |
+| Veneno | las que aplican Veneno (dardos, nieblas, flechas y dagas tóxicas, Plaga, Red de Caza, Tormenta de Flechas) |
+| Sagrado | curas y regeneraciones, `kHolySkillIds`, Juicio Final |
+| Agua | Marea Vital y las 10 nuevas (Chorro, Oleada, Géiser, Torrente, Bruma Densa, Escudo de Agua, Tajo de Marea, Remolino, Lanza de las Mareas, Flecha Acuática) |
+| Electro | Flecha Rayo, Descarga y las 10 nuevas (Chispazo, Cadena de Rayos, Tormenta Eléctrica, Descarga Estática, Campo Estático, Corriente, Golpe de Trueno, Puñalada Eléctrica, Flecha Voltaica, Relámpago) |
+| Físico (neutro) | el resto (ataques, arcanas, apoyo, control) |
+
+Habilidades nuevas (v0.7, `kElementalSkills`): Chorro de Agua (3 MP,
+mágico ×1.5, Mojado), Oleada (8, ×1.0 a todos, Mojado), Géiser (5, ×1.8,
+retrasa 0.3, Mojado), Torrente (7, ×2.3: detonador de Cargado), Bruma
+Densa (6, ×0.5 a todos, Mojado, −10% velocidad 2 turnos), Escudo de Agua
+(5, escudo 20% al aliado más herido 2 turnos), Tajo de Marea (4, físico
+×1.6, Mojado), Remolino (6, físico ×0.9 a todos, Mojado), Lanza de las
+Mareas (5, físico ×1.5, atraviesa 50%, Mojado), Flecha Acuática (3,
+físico ×1.3, Mojado); Chispazo (3, mágico ×1.5, Cargado), Cadena de Rayos
+(7, ×1.3, 2 rebotes, Cargado), Tormenta Eléctrica (10, ×1.1 a todos,
+Cargado), Descarga Estática (5, ×1.2, Cargado + 20% Aturdido), Campo
+Estático (6, ×0.5 a todos, Cargado, Marca +10% 2 turnos), Corriente (5,
+adelanta 35% a los aliados), Golpe de Trueno (5, físico ×1.8, +30%
+quiebre, Cargado), Puñalada Eléctrica (3, físico ×1.3, +20% crít.,
+Cargado), Flecha Voltaica (4, físico ×1.5, Cargado), Relámpago (6, físico
+×2.3, +15% crít.: detonador de Mojado). Cada una se ve y suena como una
+existente (`kSkillLooks`).
 
 ## Fin de batalla
 

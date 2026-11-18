@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../../../../game_engine/data/elements_catalog.dart'
+    show ReactionKind, kElementStatuses;
 import '../../../../game_engine/data/passive_mechanics.dart';
 import '../../../../game_engine/data/skills_catalog.dart';
 import '../../../../game_engine/models/battle_event.dart';
@@ -15,6 +17,7 @@ import '../../../../app/theme/vision_palette.dart';
 import 'chain_fx.dart';
 import 'fx_style.dart';
 import 'proc_fx.dart';
+import 'reaction_fx.dart';
 import 'ult_cinematic.dart';
 
 /// Tipo de efecto (`k` de `addFx` en el prototipo, más los de los
@@ -94,6 +97,10 @@ enum FxKind {
 
   /// Estela de atraviesa por la fila (chain_fx).
   streak,
+
+  /// Pieza de una reacción elemental: cartel, anillo o rayo
+  /// (reaction_fx, `BattleFx.reaction`).
+  reaction,
 }
 
 /// Datos de la cinemática de una ultimate (`addFx({k:'ult'})`).
@@ -174,6 +181,7 @@ class BattleFx {
     this.up = false,
     this.slot = 0,
     this.weapon,
+    this.reaction,
   });
 
   final FxKind kind;
@@ -214,6 +222,9 @@ class BattleFx {
   /// dibujo: `projStyleFor` / `slashStyleFor`); `null` = el del prototipo.
   final String? weapon;
 
+  /// `reaction`: qué pieza y cómo se ve.
+  final ReactionFx? reaction;
+
   /// Duración visible (ms), contada desde que empieza.
   int get durationMs => switch (kind) {
         FxKind.num => heavy ? heavyNumMs : numMs,
@@ -244,6 +255,7 @@ class BattleFx {
         FxKind.transform => transformMs,
         FxKind.lavaBurst => lavaBurstMs,
         FxKind.hop || FxKind.streak => chainFxMs(kind),
+        FxKind.reaction => reaction?.durationMs ?? 0,
       };
 
   static const numMs = 1100;
@@ -316,12 +328,21 @@ class BattleFx {
       ult: ult ?? this.ult,
       ghost: ghost,
       up: up,
-      slot: slot);
+      slot: slot,
+      weapon: weapon,
+      reaction: reaction);
 
   @override
   String toString() => 'BattleFx($kind, ($x, $y), text: $text, '
       'color: $color, big: $big, dl: $delayMs, who: $who)';
 }
+
+/// `DamageEvent.sourceId` del daño extra de una reacción
+/// (`reactionSourceId`).
+const _reactionPrefix = 'reaction.';
+
+/// Quebradizo / se rompe (Congelado listo para el golpe físico).
+const kBrittleColor = Color(0xFF81ECEC);
 
 // Colores fijos del prototipo (arte).
 const _gold = Color(0xFFFFD166);
@@ -399,6 +420,12 @@ List<BattleFx> mapBattleEvents(
   String? lastKo;
   String? blastCenter;
   var blastIdx = 0, echoIdx = 0;
+
+  /// Hora del último golpe a cada actor en el paso (de ahí sale su
+  /// reacción) y la del daño extra de cada reacción.
+  final hitDl = <String, int>{};
+  final reactDl = <String, int>{};
+  final melted = <String>{};
 
   /// Escudos que absorbieron un golpe en este paso.
   final shieldHit = <String>{};
@@ -827,6 +854,7 @@ List<BattleFx> mapBattleEvents(
         dl = procDl[id] ?? base;
     }
     procDl[id] = dl;
+    hitDl[id] = dl;
     final p = position(id);
     num(id, -20, '${e.amount}', color, dl: dl);
     out.add(BattleFx(FxKind.slash,
@@ -917,11 +945,101 @@ List<BattleFx> mapBattleEvents(
     segStart = null;
   }
 
+  // ------------------------------------------------ reacciones (v0.7)
+
+  /// Cartel, anillo y rayo de la reacción, con el golpe que la detonó
+  /// (docs/specs/battle_presentation.md § "Reacciones elementales").
+  void reaction(ReactionEvent e) {
+    final id = e.targetId;
+    final at = (hitDl[id] ?? procDl[id] ?? action?.dl[id] ?? 0) +
+        ReactionTiming.afterHitMs;
+    final others = e.splash.keys.toList();
+    final short = e.kind == ReactionKind.cortocircuito;
+    final plan = planReactionFx(e.kind,
+        target: position(id),
+        at: at,
+        splash: short ? const [] : [for (final o in others) position(o)],
+        jumpTo: short && others.isNotEmpty ? position(others.first) : null);
+    for (final f in plan) {
+      out.add(BattleFx(FxKind.reaction,
+          x: f.x,
+          y: f.y,
+          tx: f.tx,
+          ty: f.ty,
+          color: f.look.color,
+          el: f.look.el,
+          big: f.big,
+          delayMs: f.delayMs,
+          who: id,
+          reaction: f));
+    }
+    reactDl[id] = at;
+    for (var i = 0; i < others.length; i++) {
+      reactDl[others[i]] = short
+          ? ReactionTiming.shortCircuitHitAt(at)
+          : ReactionTiming.splashAt(at, i);
+    }
+    if (e.kind == ReactionKind.derretir) melted.add(id);
+  }
+
+  /// Daño extra de una reacción (`sourceId` `reaction.<kind>`): número
+  /// del color de la reacción, al costado del número del golpe.
+  void reactionDamage(DamageEvent e, String src) {
+    final id = e.targetId;
+    final kind = ReactionKind.values
+        .where((k) => src == '$_reactionPrefix${k.name}')
+        .firstOrNull;
+    final look = kind == null ? null : reactionLook(kind);
+    final dl = reactDl[id] ?? hitDl[id] ?? 0;
+    hitDl[id] = dl;
+    final p = position(id);
+    // Al costado del número del golpe (que sube) y debajo del cartel.
+    out.add(BattleFx(FxKind.num,
+        x: p.dx + 14,
+        y: p.dy - 8,
+        text: '${e.amount}',
+        color: look?.color ?? fxWhite,
+        hurt: isPlayer(id),
+        delayMs: dl));
+    out.add(BattleFx(FxKind.slash,
+        x: p.dx,
+        y: p.dy - 8,
+        color: look?.color ?? fxWhite,
+        el: look?.el ?? FxElement.phys,
+        delayMs: dl,
+        who: id));
+  }
+
+  /// Hielo v0.7 (elemental_reactions.md § 7).
+  void ice(IceEvent e) {
+    final id = e.targetId;
+    final dl = hitDl[id] ?? procDl[id] ?? 0;
+    switch (e.phase) {
+      case IcePhase.brittle:
+        txt(id, -46, '¡QUEBRADIZO!', kBrittleColor);
+      case IcePhase.shattered:
+        at(FxKind.shatter, id, dy: -10, color: kBrittleColor, dl: dl);
+        final m = kElementStatuses['freeze']!.brittleMult;
+        txt(id, -44, '¡SE ROMPE! ×${fm(m)}', kBrittleColor, dl: dl);
+      case IcePhase.thawed:
+        // Derretir ya tiene su cartel.
+        if (!melted.contains(id)) {
+          txt(id, -40, 'DESCONGELADO', _manaBlue, dl: dl);
+        }
+      case IcePhase.resisted:
+        txt(id, -54, 'RESISTE HIELO', _gray, dl: dl);
+    }
+  }
+
   // ------------------------------------------------ golpes y curas
 
   void damage(DamageEvent e) {
     final id = e.targetId;
     final src = e.sourceId;
+    if (src != null && src.startsWith(_reactionPrefix)) {
+      reactionDamage(e, src);
+      return;
+    }
     if (src != null && !e.fromStatus && !isPlayer(id)) {
       procDamage(e, src);
       return;
@@ -943,6 +1061,7 @@ List<BattleFx> mapBattleEvents(
         // tajo ni sacudida).
         return;
       }
+      hitDl[id] = dl;
       final heavy = a?.enemyUlt ?? false;
       num(id, -18, '${e.amount}', e.critical ? _critRed : _hurtRed,
           big: e.critical, hurt: true, heavy: heavy, dl: dl);
@@ -985,6 +1104,7 @@ List<BattleFx> mapBattleEvents(
       }
       a.lastTarget = id;
     }
+    hitDl[id] = dl;
     final p = position(id);
     final heavy = a?.ult != null;
     // Quebrado: el número y el tajo en el amarillo del quiebre.
@@ -1344,6 +1464,10 @@ List<BattleFx> mapBattleEvents(
             )));
       case DamageEvent():
         damage(e);
+      case ReactionEvent():
+        reaction(e);
+      case IceEvent():
+        ice(e);
       case HealEvent():
         heal(e);
       case StatusAppliedEvent(:final targetId, :final kind, :final stacks):

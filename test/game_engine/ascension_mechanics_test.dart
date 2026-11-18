@@ -7,6 +7,7 @@ import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
+import 'package:echos_del_tiempo/game_engine/models/elements.dart';
 import 'package:echos_del_tiempo/game_engine/models/passive_mechanic.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_state.dart';
 import 'package:echos_del_tiempo/game_engine/models/status.dart';
@@ -367,24 +368,36 @@ void main() {
     });
   });
 
+  // v0.7: kit y mini-árbol de reacciones (ascension.md § 3 y § 4.1).
   group('Elementalista', () {
     Combatant mage(Set<String> mech, {List<String> skills = const []}) =>
         _hero(mech: mech, skills: skills, classId: 'maga');
+    const wet = {StatusKind.wet: 2};
+    int lost(BattleStep s, [int i = 0]) => 100 - s.state.enemies[i].hp;
 
-    test('Reacción Elemental: +30% contra 2+ estados distintos', () {
-      final st = _cmd(_engine(), _battle([mage({'elementalista_r'})], [
-        _foe('e0', st: {StatusKind.burn: 1, StatusKind.poison: 1}),
-      ]), _atk);
-      expect(st.state.enemies.first.hp, 100 - 26);
+    test('Catalizadora: tus reacciones pegan +25%', () {
+      BattleStep run(Set<String> mech) => _cmd(_engine(), _battle(
+          [mage(mech, skills: ['chispazo'])], [_foe('e0', st: wet)]),
+          const SkillCommand('chispazo', targetId: 'e0'));
+      final base = lost(run({}));
+      expect(lost(run({'elementalista_r'})), closeTo(base * 1.25, 1));
+      // Sin reacción no cambia.
+      final plain = _cmd(_engine(), _battle(
+          [mage({'elementalista_r'}, skills: ['chispazo'])], [_foe('e0')]),
+          const SkillCommand('chispazo', targetId: 'e0'));
+      final ctrl = _cmd(_engine(), _battle(
+          [mage({}, skills: ['chispazo'])], [_foe('e0')]),
+          const SkillCommand('chispazo', targetId: 'e0'));
+      expect(lost(plain), lost(ctrl));
     });
 
-    test('Contagio Elemental: congelar suma 1 Quemadura', () {
+    test('Conductora: mojar también deja Cargado', () {
       final st = _cmd(_engine(), _battle(
-          [mage({'elementalista_a1'}, skills: ['lanzaH'])], [_foe('e0')]),
-          const SkillCommand('lanzaH', targetId: 'e0'));
+          [mage({'elementalista_a1'}, skills: ['chorro'])], [_foe('e0')]),
+          const SkillCommand('chorro', targetId: 'e0'));
       final f = st.state.enemies.first;
-      expect(f.stacks(StatusKind.freeze), 2);
-      expect(f.stacks(StatusKind.burn), 1);
+      expect(f.stacks(StatusKind.wet), greaterThan(0));
+      expect(f.stacks(StatusKind.charged), greaterThan(0));
     });
 
     test('Sobrecarga: +1 stack a los 3 elementos (stats)', () {
@@ -396,29 +409,49 @@ void main() {
       expect(d.mechanics, containsAll(['elementalista_r', 'elementalista_a1']));
     });
 
-    test('Detonación: los estados del muerto pasan a la mitad a los vivos', () {
-      final st = _cmd(_engine(), _battle([mage({'elementalista_a3'})], [
-        _foe('e0', hp: 10, st: {StatusKind.burn: 4, StatusKind.poison: 3}),
-        _foe('e1'),
-      ]), _atk);
-      final e1 = st.state.enemies[1];
-      expect(e1.stacks(StatusKind.burn), 2);
-      expect(e1.stacks(StatusKind.poison), 2);
+    test('Detonación en Cadena: detonar → 40% del golpe a los demás', () {
+      final st = _cmd(_engine(), _battle(
+          [mage({'elementalista_a3'}, skills: ['chispazo'])],
+          [_foe('e0', st: wet), _foe('e1')]),
+          const SkillCommand('chispazo', targetId: 'e0'));
+      expect(lost(st, 1), (lost(st) * 0.4).round());
+      expect(_proc(st, 'elementalista_a3'), isTrue);
     });
 
-    test('Estallido Glacial: 3+ Congelación → 60% del golpe a los demás', () {
-      final st = _cmd(_engine(), _battle([mage({'elementalista_b1'})], [
-        _foe('e0', st: {StatusKind.freeze: 3}),
-        _foe('e1'),
-      ]), _atk);
-      expect(st.state.enemies[1].hp, 88);
+    test('Chispa Compartida: un aliado detona lo que preparaste → +12 ULT', () {
+      double ult(Set<String> mech) => _p(_cmd(_engine(), _battle([
+            mage(mech),
+            _hero(id: 'p2', skills: ['chispazo'], nextTurn: 5),
+          ], [
+            Combatant(
+              id: 'e0',
+              name: 'Limo',
+              isPlayer: false,
+              hp: 100,
+              maxHp: 100,
+              speed: 5,
+              attack: 10,
+              critChance: 0,
+              enemyType: 'slime',
+              statuses: {...wet},
+              primedBy: {StatusKind.wet: 'p1'},
+              nextTurn: 50,
+            ),
+          ], current: 'p2'), const SkillCommand('chispazo', targetId: 'e0'),
+              'p2'))
+          .ult;
+      expect(ult({'elementalista_b1'}) - ult({}), closeTo(12, 1e-9));
     });
 
-    test('Fiebre: +25% de crítico contra quemados', () {
+    test('Estática: +25% de crítico contra Cargados', () {
       final hit = _cmd(_engine([0.2]), _battle([mage({'elementalista_b2'})], [
-        _foe('e0', st: {StatusKind.burn: 1}),
+        _foe('e0', st: {StatusKind.charged: 1}),
       ]), _atk);
       expect(hit.events.whereType<DamageEvent>().first.critical, isTrue);
+      final no = _cmd(_engine([0.2]), _battle([mage({'elementalista_b2'})], [
+        _foe('e0'),
+      ]), _atk);
+      expect(no.events.whereType<DamageEvent>().first.critical, isFalse);
     });
 
     test('Eco Elemental: 35% de repetir una habilidad mágica', () {
@@ -428,15 +461,13 @@ void main() {
       expect(_proc(st, 'elementalista_b3'), isTrue);
     });
 
-    test('Tormenta Perfecta: con los 3 estados +50% de daño', () {
-      final st = _cmd(_engine(), _battle([mage({'elementalista_k'})], [
-        _foe('e0', st: {
-          StatusKind.burn: 1,
-          StatusKind.poison: 1,
-          StatusKind.freeze: 1,
-        }),
-      ]), _atk);
-      expect(st.state.enemies.first.hp, 70);
+    test('Tormenta Perfecta: detonar da 50% de turno extra', () {
+      BattleStep run(List<double> rolls) => _cmd(_engine(rolls), _battle(
+          [mage({'elementalista_k'}, skills: ['chispazo'])],
+          [_foe('e0', hp: 999, st: wet)]),
+          const SkillCommand('chispazo', targetId: 'e0'));
+      expect(_proc(run([0.99, 0.1]), 'elementalista_k'), isTrue);
+      expect(_proc(run([0.99, 0.9]), 'elementalista_k'), isFalse);
     });
   });
 
@@ -719,14 +750,71 @@ void main() {
       expect(_p(st, 'p2').nextTurn, closeTo(46, 1e-9));
     });
 
-    test('Detonar: +30% por stack elemental y los consume', () {
-      final st = _cmd(_engine(), _battle([_hero(skills: ['detonar'])], [
-        _foe('e0', st: {StatusKind.burn: 2, StatusKind.poison: 1}),
-      ]), const SkillCommand('detonar', targetId: 'e0'));
+    // Elementalista v0.7 (ascension.md § 4.1): Prisma prepara, Detonar y
+    // Trinidad son catalizadores.
+    test('Prisma Elemental: deja Mojado y Cargado sin detonar', () {
+      final st = _cmd(_engine(), _battle([_hero(skills: ['prismaElemental'])], [
+        _foe('e0', st: {StatusKind.charged: 1}),
+      ]), const SkillCommand('prismaElemental', targetId: 'e0'));
       final f = st.state.enemies.first;
-      expect(f.hp, 100 - 46); // 20 × 1.2 × 1.9
-      expect(f.stacks(StatusKind.burn), 0);
-      expect(f.stacks(StatusKind.poison), 0);
+      expect(st.events.whereType<ReactionEvent>(), isEmpty);
+      expect(f.stacks(StatusKind.wet), greaterThan(0));
+      expect(f.stacks(StatusKind.charged), greaterThan(0));
+      expect(f.hp, 100 - 26); // 20 × 1.3
+    });
+
+    test('Detonar: detona lo que haya con el elemento justo, ×1.3', () {
+      BattleStep run(Map<StatusKind, int>? st) => _cmd(_engine(),
+          _battle([_hero(skills: ['detonar'])], [_foe('e0', hp: 999, st: st)]),
+          const SkillCommand('detonar', targetId: 'e0'));
+      // Sin nada: golpe neutro 20 × 1.5.
+      final plain = run(null);
+      expect(plain.events.whereType<ReactionEvent>(), isEmpty);
+      expect(999 - plain.state.enemies.first.hp, 30);
+      // Mojado → Electro: Electrocución ×1.5 × 1.3 y aturde.
+      final wet = run({StatusKind.wet: 2});
+      expect(wet.events.whereType<ReactionEvent>().single.kind,
+          ReactionKind.electrocucion);
+      expect(999 - wet.state.enemies.first.hp, 59); // 30 × 1.5 × 1.3
+      expect(wet.state.enemies.first.stacks(StatusKind.stun), 1);
+      // Veneno → Fuego: Explosión tóxica.
+      final poi = run({StatusKind.poison: 2});
+      expect(poi.events.whereType<ReactionEvent>().single.kind,
+          ReactionKind.explosionToxica);
+      // Congelación → Fuego (Derretir); Cargado → Agua (Cortocircuito).
+      expect(
+          run({StatusKind.freeze: 2})
+              .events
+              .whereType<ReactionEvent>()
+              .single
+              .kind,
+          ReactionKind.derretir);
+      expect(
+          run({StatusKind.charged: 1})
+              .events
+              .whereType<ReactionEvent>()
+              .single
+              .kind,
+          ReactionKind.cortocircuito);
+    });
+
+    test('Trinidad: detona lo que haya y deja Mojado, Cargado y 2 Veneno', () {
+      final st = _cmd(_engine(), _battle([
+        _hero(
+            classId: 'maga',
+            build: _build('maga', 'elementalista'),
+            ult: 100),
+      ], [
+        _foe('e0', hp: 999, st: {StatusKind.wet: 2}),
+        _foe('e1', hp: 999),
+      ]), const UltimateCommand(targetId: 'e0'));
+      expect(st.events.whereType<ReactionEvent>().single.kind,
+          ReactionKind.electrocucion);
+      for (final f in st.state.enemies) {
+        expect(f.stacks(StatusKind.wet), greaterThan(0), reason: f.id);
+        expect(f.stacks(StatusKind.charged), greaterThan(0), reason: f.id);
+        expect(f.stacks(StatusKind.poison), 2, reason: f.id);
+      }
     });
 
     test('Tiro a la Cabeza remata; Apuntar da crítico seguro', () {

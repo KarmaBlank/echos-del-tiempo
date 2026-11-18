@@ -1,4 +1,5 @@
 import '../models/class_def.dart';
+import '../models/elements.dart';
 import '../models/enemy_def.dart';
 import '../models/item.dart';
 import '../models/passive_mechanic.dart';
@@ -20,7 +21,13 @@ enum BalanceKind {
   classDef('class', 'Clases', 'Clase'),
   affix('affix', 'Afijos', 'Afijo', disable: true),
   passiveNode('passiveNode', 'Nodos del árbol', 'Nodo', disable: true),
-  mechanic('mechanic', 'Mecánicas', 'Mecánica', disable: true);
+  mechanic('mechanic', 'Mecánicas', 'Mecánica', disable: true),
+
+  /// Reacciones elementales v0.7 (elemental_reactions.md § 2).
+  reaction('reaction', 'Reacciones', 'Reacción'),
+
+  /// Mojado, Cargado y Congelación (elemental_reactions.md § 1 y § 7).
+  elementStatus('elementStatus', 'Estados elementales', 'Estado elemental');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -108,6 +115,7 @@ const _skillCombat = <BalanceField>[
   BalanceField('hpCost', 'Costo de vida', _frac, max: 1, step: 0.01),
   BalanceField('lifeSteal', 'Robo de vida', _frac, max: 2, step: 0.01),
   BalanceField('detonate', 'Detonar (por stack)', _dec, max: 5, step: 0.05),
+  BalanceField('catalyst', 'Catalizador (× al detonar)', _dec, max: 5, step: 0.05),
   BalanceField('execute', 'Remate bajo', _frac, max: 1, step: 0.01),
   BalanceField('trap', 'Trampa (× ATQ)', _dec, max: 10, step: 0.05),
   BalanceField('partyShield', 'Escudo de grupo', _frac, max: 2, step: 0.01),
@@ -152,6 +160,7 @@ Map<String, Object?> _readSkill(Object o) {
     'hpCost': s.hpCost,
     'lifeSteal': s.lifeSteal,
     'detonate': s.detonate,
+    'catalyst': s.catalyst,
     'execute': s.execute,
     'trap': s.trap,
     'partyShield': s.partyShield,
@@ -195,6 +204,7 @@ Object _writeSkill(Object o, BalanceFieldReader f) {
     lifeSteal: f.d('lifeSteal'),
     extraStatuses: decodeStatusList(f.values['extraStatuses']),
     detonate: f.d('detonate'),
+    catalyst: f.d('catalyst'),
     execute: f.d('execute'),
     trap: f.d('trap'),
     partyBuffs: decodeBuffList(f.values['partyBuffs']),
@@ -590,9 +600,78 @@ final mechanicCodec = EntityCodec(
       status: decodeStatusKind(f.values['status']),
       minStacks: f.i('minStacks'),
       threshold: f.d('threshold'),
+      reaction: m.reaction,
+      family: m.family,
     );
   },
   nameOf: (o) => (o as PassiveMechanic).name,
+);
+
+// ---------------------------------------------------------------------
+// Elementos v0.7: reacciones y estados elementales
+// ---------------------------------------------------------------------
+
+final reactionCodec = EntityCodec(
+  kind: BalanceKind.reaction,
+  fields: const [
+    BalanceField('damageMult', 'Multiplicador del golpe', _dec, min: 1, max: 5, step: 0.05),
+    BalanceField('perStack', 'Daño extra por stack (× golpe)', _dec, max: 5, step: 0.05),
+    BalanceField('splash', 'Salpicadura / salto', _frac, max: 2, step: 0.05),
+    BalanceField('bossCap', 'Tope contra jefes (vida máx.)', _frac, max: 1, step: 0.01),
+    BalanceField('stunTurns', 'Turnos de Aturdido', _int, max: 5),
+  ],
+  read: (o) {
+    final r = o as ReactionDef;
+    return {
+      'damageMult': r.damageMult,
+      'perStack': r.perStack,
+      'splash': r.splash,
+      'bossCap': r.bossCap,
+      'stunTurns': r.stunTurns,
+    };
+  },
+  write: (o, f) {
+    final r = o as ReactionDef;
+    return ReactionDef(
+      kind: r.kind,
+      damageMult: f.d('damageMult'),
+      perStack: f.d('perStack'),
+      splash: f.d('splash'),
+      bossCap: f.d('bossCap'),
+      stunTurns: f.i('stunTurns'),
+    );
+  },
+  nameOf: (o) => (o as ReactionDef).name,
+);
+
+final elementStatusCodec = EntityCodec(
+  kind: BalanceKind.elementStatus,
+  fields: const [
+    BalanceField('turns', 'Turnos (Congelación: resistencia)', _int, max: 10),
+    BalanceField('slowPerStack', '−Velocidad por stack', _frac, max: 0.5, step: 0.01),
+    BalanceField('breakPerStack', '+Quiebre por stack', _frac, max: 1, step: 0.01),
+    BalanceField('brittleMult', 'Golpe a Quebradizo (×)', _dec, min: 1, max: 5, step: 0.05),
+  ],
+  read: (o) {
+    final e = o as ElementStatusDef;
+    return {
+      'turns': e.turns,
+      'slowPerStack': e.slowPerStack,
+      'breakPerStack': e.breakPerStack,
+      'brittleMult': e.brittleMult,
+    };
+  },
+  write: (o, f) {
+    final e = o as ElementStatusDef;
+    return ElementStatusDef(
+      kind: e.kind,
+      turns: f.i('turns'),
+      slowPerStack: f.d('slowPerStack'),
+      breakPerStack: f.d('breakPerStack'),
+      brittleMult: f.d('brittleMult'),
+    );
+  },
+  nameOf: (o) => (o as ElementStatusDef).name,
 );
 
 /// El codec de cada tipo.
@@ -607,4 +686,6 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.affix => affixCodec,
       BalanceKind.passiveNode => passiveNodeCodec,
       BalanceKind.mechanic => mechanicCodec,
+      BalanceKind.reaction => reactionCodec,
+      BalanceKind.elementStatus => elementStatusCodec,
     };

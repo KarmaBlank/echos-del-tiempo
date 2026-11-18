@@ -66,7 +66,7 @@ Tests: `test/game_engine/balance_test.dart`,
 
 | Tipo (`overrides.`) | Origen | Campos |
 |---|---|---|
-| `skill` | `GameCatalog.skills` (armas, kit de ascensión, variantes) | `mp`, `power`, `delay`, `critBonus`, `allTargets`, `cleanse`, `amount`, `hits`, `status`, `extraStatuses`, `debuffs`, `partyBuffs`, `selfBuff`, `hpCost`, `lifeSteal`, `detonate`, `execute`, `trap`, `partyShield`, `partyShieldTurns`, `advanceAllies`, `selfTurn`, `protect`, `revive`, `overheal`, `drainHeal`, `allyShield`, `selfShield`, `shieldTurns`, `shieldReflect`, `shieldBurst`, `shieldGrow`, `pierce`, `bounces`, `charge`, `breakBonus`, `ultDrain`, `disabled` |
+| `skill` | `GameCatalog.skills` (armas, kit de ascensión, variantes) | `mp`, `power`, `delay`, `critBonus`, `allTargets`, `cleanse`, `amount`, `hits`, `status`, `extraStatuses`, `debuffs`, `partyBuffs`, `selfBuff`, `hpCost`, `lifeSteal`, `detonate`, `catalyst` (v0.7), `execute`, `trap`, `partyShield`, `partyShieldTurns`, `advanceAllies`, `selfTurn`, `protect`, `revive`, `overheal`, `drainHeal`, `allyShield`, `selfShield`, `shieldTurns`, `shieldReflect`, `shieldBurst`, `shieldGrow`, `pierce`, `bounces`, `charge`, `breakBonus`, `ultDrain`, `disabled` |
 | `ultimate` | `GameCatalog.ultimates` (clave = tipo de arma) | los mismos de `skill` salvo `mp` y `disabled` |
 | `dual` | `GameCatalog.duals` | `power`, `status` |
 | `weapon` | `GameCatalog.weapons` | `tier`, `level`, `price`, `weight`, `shieldDefense`, `requirements`, `atk`, `mag`, `skillIds` |
@@ -76,6 +76,8 @@ Tests: `test/game_engine/balance_test.dart`,
 | `affix` | `kAffixes` | `weight`, `tiers`, `disabled` |
 | `passiveNode` | `kPassiveTree.nodes` | `effects`, `disabled` |
 | `mechanic` | `kMechanics` + `kAscensionMechanics` | `chance`, `threshold`, `minStacks`, `status`, `effects`, `description`, `disabled` |
+| `reaction` (v0.7) | `kReactions` (`GameCatalog.reactions`) | `damageMult`, `perStack`, `splash`, `bossCap`, `stunTurns` |
+| `elementStatus` (v0.7) | `kElementStatuses` (wet, charged, freeze) | `turns`, `slowPerStack`, `breakPerStack`, `brittleMult` |
 
 Codificación de valores compuestos:
 

@@ -1,3 +1,4 @@
+import 'reaction_sfx.dart';
 import 'sfx_recipes.dart';
 
 /// Forma de onda de una voz (`OscillatorNode.type` del prototipo, más
@@ -282,6 +283,11 @@ abstract final class Sfx {
   /// Trampa del Trampero que salta en batalla.
   static const trapSpring = 'proc.trap';
 
+  /// Reacción elemental (`ReactionKind.name`), docs/specs/
+  /// elemental_reactions.md § 8: `sfx.reaction.electrocucion` (el mismo
+  /// que `ReactionKind.sfxId`).
+  static String reaction(String kind) => 'sfx.reaction.$kind';
+
   /// Eco Arcano: la firma de la habilidad [skillId] con eco.
   static String echo(String skillId) => 'echo.$skillId';
 
@@ -376,4 +382,5 @@ final Map<String, SfxDef> kSfxCatalog = {
     e.key: SfxDef(e.value, peak: _legacyPeak[e.key]),
   ...buildCombatSfx(),
   ...buildAscensionSfx(),
+  ...buildReactionSfx(),
 };

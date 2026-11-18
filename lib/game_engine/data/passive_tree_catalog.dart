@@ -4,9 +4,10 @@ import '../models/passive_tree.dart';
 
 /// Versión del árbol que guarda el perfil (`tv`). Un perfil con una
 /// versión menor se migra al cargarlo (passive_tree_v4.md § 6).
-const kPassiveTreeVersion = 4;
+const kPassiveTreeVersion = 5;
 
-/// Árbol de pasivas v4: 4 inicios, anillo central de 12, rutas de clase,
+/// Árbol de pasivas v4 (v5 desde v0.7: 15 notables de reacción, mismos
+/// nodos; passive_tree_v4.md § 8): 4 inicios, anillo central de 12, rutas de clase,
 /// 20 clusters de clase con 4 notables cada uno, 4 puentes híbridos y 4
 /// clusters de grupo (308 nodos, 104 notables). Forma, coordenadas e ids
 /// exactos en docs/specs/passive_tree_v4.md (y passive_tree_v3.md para lo
@@ -22,10 +23,20 @@ final Set<String> kTreeIdsStableSinceV2 = {
   for (final c in _classes) 's_${c.short}',
 };
 
-/// Ids que existen igual en la v3 y la v4 (mismo id, tipo, nombre, efectos
-/// y mecánica): anillo, inicios, `r1` y abanico de cada ruta, los 2
-/// notables y la keystone de cada cluster de clase, los puentes enteros y
-/// los clusters de grupo salvo su punta (passive_tree_v4.md § 6).
+/// Nodos que cambiaron de notable en el árbol v5 (v0.7, notables de
+/// reacción: passive_tree_v4.md § 8): mismo id y posición, otra mecánica.
+/// Al migrar desde la v4 se devuelven gratis.
+const Set<String> kTreeIdsChangedInV5 = {
+  'arcano_n1', 'brasa_n1', 'brasa_nc', 'escarcha_nc', 'prisma_n1', //
+  'prisma_nc', 'cronos_nc', 'toxina_nc', 'lluvia_nc', 'runas_nr',
+  'hojaArcana_nl', 'estandarte_nt', 'sintonia_nt', 'luz_nc', 'acecho_nc',
+};
+
+/// Ids que existen igual en la v3 y la actual (mismo id, tipo, nombre,
+/// efectos y mecánica): anillo, inicios, `r1` y abanico de cada ruta, los
+/// 2 notables y la keystone de cada cluster de clase, los puentes enteros
+/// y los clusters de grupo salvo su punta (passive_tree_v4.md § 6), menos
+/// lo que cambió en la v5 (§ 8).
 final Set<String> kTreeIdsStableSinceV3 = {
   ...kTreeIdsStableSinceV2,
   for (final c in _classes) ...[
@@ -39,7 +50,7 @@ final Set<String> kTreeIdsStableSinceV3 = {
   for (final g in _groups)
     for (final (s, _, _, kind) in _groupShape)
       if (kind != 'nt') '${g.$1}_$s',
-};
+}.difference(kTreeIdsChangedInV5);
 
 typedef _Fx = Map<String, num>;
 
@@ -174,7 +185,7 @@ const Map<String, List<_Cluster>> _clusters = {
     (
       'arcano', 'Arcano', 'maná, ULT y cadenas mágicas',
       ('Concentración', {'mp': 0.06}), ('Afinidad', {'ult': 0.05}),
-      ('Canalizar', {'mp': 0.04}, 'canalizar'),
+      ('Salto Voltaico', {'mp': 0.04}, 'saltoVoltaico'),
       ('Arco Voltaico', {'mag': 0.03}, 'arcoVoltaico'),
       ('Eco Arcano', {'mp': 0.04}, 'ecoArcano'),
       ('Pulso Arcano', {'mag': 0.03}, 'pulsoArcano'),
@@ -183,10 +194,10 @@ const Map<String, List<_Cluster>> _clusters = {
     (
       'brasa', 'Brasa', 'quemadura y explosiones',
       ('Ascua', {'mag': 0.045}), ('Reserva', {'mp': 0.06}),
-      ('Ascuas Vivas', {'mp': 0.04}, 'ascuasVivas'),
+      ('Fundición', {'mp': 0.04}, 'fundicion'),
       ('Combustión', {'burn': 1}, 'combustion'),
       ('Choque Térmico', {'mag': 0.03}, 'choqueTermico'),
-      ('Pira', {'mp': 0.04}, 'pira'),
+      ('Mecha Corta', {'mp': 0.04}, 'mechaCorta'),
       ('Tormenta Arcana', 'tormenta', null),
     ),
     (
@@ -195,7 +206,7 @@ const Map<String, List<_Cluster>> _clusters = {
       ('Arena del Tiempo', {'spd': 0.15}, 'arenaTiempo'),
       ('Reloj Roto', {'spd': 0.15}, 'relojRoto'),
       ('Paso Compartido', {'spd': 0.15}, 'pasoCompartido'),
-      ('Ancla Temporal', {'spd': 0.15}, 'anclaTemporal'),
+      ('Estasis', {'spd': 0.15}, 'estasis'),
       ('Bucle Eterno', 'bucle', 'bucle'),
     ),
     (
@@ -204,16 +215,16 @@ const Map<String, List<_Cluster>> _clusters = {
       ('Frío Penetrante', {'mp': 0.04}, 'frioPenetrante'),
       ('Tiempo Gélido', {'frz': 1}, 'tiempoGelido'),
       ('Fractura', {'mag': 0.03}, 'fractura'),
-      ('Hielo Quebradizo', {'spd': 0.15}, 'hieloQuebradizo'),
+      ('Cristalizar', {'spd': 0.15}, 'cristalizar'),
       ('Alma de Hielo', 'almaHielo', 'almaHielo'),
     ),
     (
       'prisma', 'Prisma', 'elementos combinados',
       ('Facetas', {'mag': 0.03, 'mp': 0.03}), ('Lente', {'hp': 0.04}),
-      ('Chispa Prismática', {'mag': 0.03}, 'chispaPrismatica'),
+      ('Rocío Arcano', {'mag': 0.03}, 'rocioArcano'),
       ('Refracción', {'ult': 0.03}, 'refraccion'),
       ('Catalizador', {'ult': 0.03}, 'catalizador'),
-      ('Descomposición', {'ult': 0.03}, 'descomposicion'),
+      ('Alto Voltaje', {'ult': 0.03}, 'altoVoltaje'),
       ('Singularidad', 'singularidad', 'singularidad'),
     ),
   ],
@@ -233,7 +244,7 @@ const Map<String, List<_Cluster>> _clusters = {
       ('Lluvia Ácida', {'atk': 0.03}, 'lluviaAcida'),
       ('Aguacero', {'atk': 0.03}, 'aguacero'),
       ('Esquirlas', {'spd': 0.15}, 'esquirlas'),
-      ('Granizo', {'ult': 0.03}, 'granizo'),
+      ('Chaparrón', {'ult': 0.03}, 'chaparron'),
       ('Diluvio', 'diluvio', 'diluvio'),
     ),
     (
@@ -251,7 +262,7 @@ const Map<String, List<_Cluster>> _clusters = {
       ('Trampa de Caza', {'atk': 0.03}, 'trampaCaza'),
       ('Presa Herida', {'crit': 0.015}, 'presaHerida'),
       ('Rematar', {'atk': 0.03}, 'rematar'),
-      ('Cacería', {'spd': 0.15}, 'caceria'),
+      ('Cazador de Bestias', {'spd': 0.15}, 'cazadorBestias'),
       ('Depredador', 'depredador', 'depredador'),
     ),
     (
@@ -260,7 +271,7 @@ const Map<String, List<_Cluster>> _clusters = {
       ('Toxina Paralizante', {'atk': 0.03}, 'toxinaParalizante'),
       ('Debilitar', {'poi': 1}, 'debilitar'),
       ('Plaga Contagiosa', {'atk': 0.03}, 'plagaContagiosa'),
-      ('Nube Tóxica', {'hp': 0.03}, 'nubeToxica'),
+      ('Reguero de Pólvora', {'hp': 0.03}, 'reguero'),
       ('Toxicidad', 'toxicidad', null),
     ),
   ],
@@ -271,7 +282,7 @@ const Map<String, List<_Cluster>> _clusters = {
       ('Mano Luminosa', {'heal': 0.04}, 'manoLuminosa'),
       ('Llama Sagrada', {'mag': 0.03}, 'llamaSagrada'),
       ('Resplandor', {'heal': 0.04}, 'resplandor'),
-      ('Estallido Solar', {'heal': 0.04}, 'estallidoSolar'),
+      ('Luz Purificadora', {'heal': 0.04}, 'luzPurificadora'),
       ('Sol Interior', 'solInterior', 'solInterior'),
     ),
     (
@@ -321,7 +332,7 @@ const List<_Bridge> _bridges = [
     ('Temple Rúnico', {'atk': 0.03}), ('Runa de Filo', {'mag': 0.02, 'ult': 0.02}),
     ('Acero Arcano', {'atk': 0.02, 'mag': 0.02}),
     ('Filo Rúnico', {'atk': 0.02, 'mag': 0.02}, 'filoRunico'),
-    ('Hechizo Afilado', {'atk': 0.03}, 'hechizoAfilado'),
+    ('Hoja de Marea', {'atk': 0.03}, 'hojaMarea'),
     ('Égida Rúnica', {'mag': 0.03}, 'egidaRunica'),
   ),
   (
@@ -330,7 +341,7 @@ const List<_Bridge> _bridges = [
     ('Runa Certera', {'mag': 0.02, 'crit': 0.01}),
     ('Ojo Arcano', {'crit': 0.015}, 'ojoArcano'),
     ('Sobrecarga', {'ult': 0.03}, 'sobrecarga'),
-    ('Disparo Rúnico', {'crit': 0.015}, 'disparoRunico'),
+    ('Pulso Rúnico', {'crit': 0.015}, 'pulsoRunico'),
   ),
   (
     'centinela', 'Centinela', 'híbrido Tirador–Paladín: marcas y luz',
@@ -357,14 +368,14 @@ const List<_Group> _groups = [
     ('Asta', {'atk': 0.02, 'mag': 0.02}), ('Hermanos de Armas', {'hp': 0.03}),
     ('Bandera de Guerra', {'atk': 0.02}, 'banderaGuerra'),
     ('Carga Conjunta', {'hp': 0.03}, 'cargaConjunta'),
-    ('Estandarte Alzado', {'atk': 0.02, 'mag': 0.02}, 'estandarteAlzado'),
+    ('Combo de Equipo', {'atk': 0.02, 'mag': 0.02}, 'comboEquipo'),
   ),
   (
     'sintonia', 'Sintonía', 'grupo: ULT y turnos compartidos',
     ('Compás', {'ult': 0.03}), ('Ritmo', {'spd': 0.15}),
     ('Relevo', {'ult': 0.03}, 'relevo'),
     ('A la Carga', {'spd': 0.15}, 'alaCarga'),
-    ('Resonancia', {'ult': 0.03}, 'resonanciaGrupal'),
+    ('Sincronía Elemental', {'ult': 0.03}, 'sincroniaElemental'),
   ),
   (
     'vinculo', 'Vínculo', 'grupo: curas y escudos',

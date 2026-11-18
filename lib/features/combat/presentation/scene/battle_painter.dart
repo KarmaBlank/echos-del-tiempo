@@ -17,6 +17,7 @@ import '../../../ascension/presentation/ascension_aura.dart';
 import '../../domain/turn_order.dart';
 import '../game_sprites.dart';
 import '../sprite_catalog.dart';
+import '../status_icons.dart';
 import '../weapon_overlay.dart';
 import 'arena/arena_transition.dart';
 import 'battle_fx.dart';
@@ -26,6 +27,7 @@ import 'battle_layout.dart';
 import 'battle_scene.dart';
 import 'fx_style.dart';
 import 'proc_fx.dart';
+import 'reaction_fx.dart';
 import 'ult_cinematic.dart';
 import 'ult_fx.dart';
 
@@ -791,12 +793,26 @@ class BattleScenePainter extends CustomPainter {
       final s = '${statusLetter(k)}${a.stacks(k)}';
       final tw = _pen.width(s, 8 * u);
       final col = statusColor(k);
-      _pen.rect(c, const Color(0xCC000000), x, y, tw + 6 * u, 10 * u);
+      final icon = statusIconOf(k);
+      final iw = icon == null ? 0.0 : badgeIconWidth(u);
+      _pen.rect(c, const Color(0xCC000000), x, y, tw + iw + 6 * u, 10 * u);
       _pen.rect(c, col, x, y, 2 * u, 10 * u);
-      _pen.text(c, s, x + 4 * u, y + 9 * u, col, 8 * u,
+      // Mojado / Cargado: gota / rayo delante de la letra.
+      if (icon != null) paintStatusIcon(c, icon, x + 3 * u, y + u, u);
+      _pen.text(c, s, x + 4 * u + iw, y + 9 * u, col, 8 * u,
           center: false, shadow: false);
-      x += tw + 7 * u;
+      x += tw + iw + 7 * u;
     }
+  }
+
+  /// Ancho extra de una insignia con ícono.
+  static double badgeIconWidth(double u) => (kStatusIconCells + 1) * u;
+
+  /// Ancho de la insignia de [k] con [n] (texto + ícono + márgenes).
+  static double _badgeWidth(StatusKind k, int n, double u,
+      double Function(String text, double size) m) {
+    final icon = statusIconOf(k) == null ? 0.0 : badgeIconWidth(u);
+    return m('${statusLetter(k)}$n', 8 * u) + icon + 7 * u;
   }
 
   /// Etiquetas de todos los actores, ya ubicadas sin superposición
@@ -810,7 +826,7 @@ class BattleScenePainter extends CustomPainter {
       var w = 0.0;
       for (final k in StatusKind.values) {
         if (a.stacks(k) <= 0) continue;
-        w += m('${statusLetter(k)}${a.stacks(k)}', 8 * u) + 7 * u;
+        w += _badgeWidth(k, a.stacks(k), u, m);
       }
       return w == 0 ? 0 : w + 2 * u;
     }
@@ -1050,7 +1066,27 @@ class BattleScenePainter extends CustomPainter {
           break;
       }
     }
+    // Carteles de reacción encima de los números (se leen siempre).
+    for (final live in scene.fx) {
+      final f = live.fx;
+      final age = live.age(t);
+      if (f.kind != FxKind.reaction ||
+          f.reaction?.part != ReactionPart.banner ||
+          age < 0 ||
+          age >= f.durationMs) {
+        continue;
+      }
+      ReactionFxPainter.paintBanner(
+          c, f.reaction!, vp.toScreen(Offset(f.x, f.y)), age, u,
+          o: _reactionOpts);
+    }
   }
+
+  /// REDUCIR MOVIMIENTO, DESTELLOS y PARTÍCULAS para las reacciones.
+  ReactionFxOptions get _reactionOpts => ReactionFxOptions(
+      still: scene.options.reduceMotion,
+      flash: scene.options.flash,
+      density: scene.particles.density);
 
   /// Cartel del aviso de ULT enemiga: banda negra con franjas rojas que
   /// entra desde la izquierda, signos `!` que titilan a los costados y el
@@ -1294,6 +1330,8 @@ class BattleScenePainter extends CustomPainter {
           _procFx(c, f, age);
         case FxKind.lavaBurst when age < BattleFx.lavaBurstMs:
           _lavaBurst(c, f, age);
+        case FxKind.reaction when f.reaction != null:
+          ReactionFxPainter.paintWorld(c, f.reaction!, age, o: _reactionOpts);
         case FxKind.hop || FxKind.streak:
           ChainFxPainter.paint(c, f, age,
               still: scene.options.reduceMotion,

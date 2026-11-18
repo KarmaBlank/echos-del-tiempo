@@ -1,3 +1,5 @@
+import '../data/enemy_families.dart' show EnemyFamily;
+import 'elements.dart' show ReactionKind;
 import 'status.dart';
 
 /// Cuándo se evalúa una mecánica del árbol (notable o keystone v2). Ver
@@ -76,6 +78,22 @@ enum ProcTrigger {
 
   /// Condición: el objetivo está quebrado.
   vsBroken,
+
+  // ---- reacciones v0.7 (docs/specs/passive_tree_v4.md § 8) ----
+
+  /// Un golpe tuyo detonó una reacción ([PassiveMechanic.reaction]
+  /// filtra el tipo).
+  onReaction,
+
+  /// Una reacción (de cualquiera del grupo, vos incluido) consumió un
+  /// estado que preparaste vos.
+  onPrimedReaction,
+
+  /// Vos o un aliado detonaron una reacción (el dueño está vivo).
+  onPartyReaction,
+
+  /// Condición: el objetivo es de la familia [PassiveMechanic.family].
+  vsFamily,
 }
 
 /// Filtro extra sobre la acción o el golpe que disparó la mecánica.
@@ -165,6 +183,34 @@ enum ProcEffectKind {
 
   /// Modificador: el primer golpe mortal deja en 1 HP (1 vez por batalla).
   cheatDeath,
+
+  // ---- reacciones v0.7 (docs/specs/passive_tree_v4.md § 8) ----
+
+  /// Cortocircuito: salta a `value` enemigos más (mismo daño del salto).
+  extraJump,
+
+  /// Devuelve el MP de la habilidad de la acción (no la ULT).
+  refundMp,
+
+  /// Aplica [ProcEffect.status] × ⌈stacks consumidos × `value`⌉ al
+  /// objetivo de la reacción.
+  reactionStatus,
+
+  /// Los demás enemigos con Congelación quedan Quebradizos.
+  brittleAll,
+
+  /// El objetivo aturdido sigue aturdido 1 turno más (no jefes).
+  lockStun,
+
+  /// Buff a vos y a quien detonó la reacción ([ProcEffect.stat]).
+  buffDuo,
+
+  /// Modificador: +`value` (fracción) al golpe que detona una reacción.
+  reactionBonus,
+
+  /// Modificador: +`value` (fracción) al daño de tus curas a las
+  /// familias que las curas dañan.
+  healHarmBonus,
 }
 
 /// Stat que toca un efecto con duración o un modificador.
@@ -238,7 +284,9 @@ class ProcEffect {
         ProcEffectKind.execute ||
         ProcEffectKind.plantTrap ||
         ProcEffectKind.drainUlt ||
-        ProcEffectKind.addElement =>
+        ProcEffectKind.addElement ||
+        ProcEffectKind.reactionStatus ||
+        ProcEffectKind.lockStun =>
           true,
         _ => false,
       };
@@ -258,6 +306,8 @@ class PassiveMechanic {
     this.status,
     this.minStacks = 1,
     this.threshold = 0,
+    this.reaction,
+    this.family,
   });
 
   final String id;
@@ -275,6 +325,13 @@ class PassiveMechanic {
 
   /// Umbral de vida de `whileLowHealth` (0.3 = 30%).
   final double threshold;
+
+  /// Reacción que filtra `onReaction` / `onPrimedReaction` /
+  /// `onPartyReaction` (`null` = cualquiera).
+  final ReactionKind? reaction;
+
+  /// Familia de `vsFamily`.
+  final EnemyFamily? family;
   final List<ProcEffect> effects;
 
   /// Texto completo para el tooltip del árbol.
@@ -288,7 +345,8 @@ class PassiveMechanic {
       trigger == ProcTrigger.partyAura ||
       trigger == ProcTrigger.whileMissingHealth ||
       trigger == ProcTrigger.vsElements ||
-      trigger == ProcTrigger.vsBroken;
+      trigger == ProcTrigger.vsBroken ||
+      trigger == ProcTrigger.vsFamily;
 }
 
 /// Un efecto con duración sobre un combatiente (buff, debuff, marca,

@@ -94,9 +94,14 @@ root registra para que el título sepa si hay red: `label` (`LAN`, `P2P`),
 `P2P por internet: falta configurar Firebase`) y `create()` (una
 `NetSession` nueva por sala).
 
-## Protocolo (versión 7)
+## Protocolo (versión 8)
 
-`kProtocolVersion` (`wire.dart`) = 7 desde v0.6.0 (exploración: acción
+`kProtocolVersion` (`wire.dart`) = 8 desde v0.7.0 (elementos y
+reacciones: estados `wet` y `charged` en `sts`, eventos de batalla
+`{"k":"react","id","rk","n","src"?,"cs"?,"sp"?}` (`ReactionEvent`) y
+`{"k":"ice","id","ph"}` (`IceEvent`), combatiente `fam` (raza / familia
+si no es la de su tipo), `brit` (Quebradizo) y `frzR` (resistencia a la
+Congelación); docs/specs/elemental_reactions.md). Antes: 7 desde v0.6.0 (exploración: acción
 `poi`, eventos `poi` y `quest`, campos de misión `pu` `ps` `qd` `qf` `bl`
 `wind` y de cofre `tr` `gd` `sc`, `ChestOpenedEvent.tr`;
 § "Exploración"). Antes: 6 desde v0.5.1 (acción `wants`:
