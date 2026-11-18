@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/feature_flags.dart';
 import '../../../app/theme/panel_frame.dart';
+import '../../../app/widgets/menu_focus.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
@@ -18,7 +19,8 @@ import 'atlas_view.dart';
 
 /// Pestañas del Portal del Eco.
 enum EcoPortalTab {
-  ecos('ECOS', 'Elegí un Eco: ABRIR lo propone al grupo; los materiales lo mejoran.'),
+  ecos('ECOS',
+      'Elegí un Eco: ABRIR lo propone al grupo; los materiales lo mejoran.'),
   atlas('ATLAS',
       'Árbol de la cuenta: ganás puntos al completar algo por primera vez.');
 
@@ -58,40 +60,46 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
     final p = me.profile;
     final atlas = view.atlas ?? c.atlas;
     final free = c.engine.atlasRules.free(atlas);
-    return PanelFrame(
-      title: 'PORTAL DEL ECO',
-      width: 1040,
-      fill: true,
-      help: kEcoPortalHelp,
-      onClose: c.closePanel,
-      titleTrailing: ProtoText(
-          key: const ValueKey('portal-points'),
-          'Atlas: <b>$free</b> punto${free == 1 ? '' : 's'} libre'
-          '${free == 1 ? '' : 's'}'),
-      header: PanelTabs(
-        labels: [for (final t in EcoPortalTab.values) t.label],
-        index: _tab.index,
-        onChanged: (i) => setState(() => _tab = EcoPortalTab.values[i]),
-      ),
-      actions: [
-        PanelButton('CERRAR [ESC]', onPressed: c.closePanel),
-      ],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (!p.ecosUnlocked)
-            PanelHint(protoColor(
-                ProtoColors.orange,
-                'Portal apagado: vencé al Devorador de Eras (Corazón del '
-                'Tiempo) para activarlo. Los Ecos que caigan se guardan.')),
-          PanelHint(_tab.hint),
-          Expanded(
-            child: switch (_tab) {
-              EcoPortalTab.ecos => _ecos(p),
-              EcoPortalTab.atlas => _atlas(atlas),
-            },
-          ),
+    // Q / E, Ctrl+Tab y 1-9 cambian de pestaña (menu_focus.dart).
+    return MenuTabKeys(
+      count: EcoPortalTab.values.length,
+      index: _tab.index,
+      onChanged: (i) => setState(() => _tab = EcoPortalTab.values[i]),
+      child: PanelFrame(
+        title: 'PORTAL DEL ECO',
+        width: 1040,
+        fill: true,
+        help: kEcoPortalHelp,
+        onClose: c.closePanel,
+        titleTrailing: ProtoText(
+            key: const ValueKey('portal-points'),
+            'Atlas: <b>$free</b> punto${free == 1 ? '' : 's'} libre'
+            '${free == 1 ? '' : 's'}'),
+        header: PanelTabs(
+          labels: [for (final t in EcoPortalTab.values) t.label],
+          index: _tab.index,
+          onChanged: (i) => setState(() => _tab = EcoPortalTab.values[i]),
+        ),
+        actions: [
+          PanelButton('CERRAR [ESC]', onPressed: c.closePanel),
         ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (!p.ecosUnlocked)
+              PanelHint(protoColor(
+                  ProtoColors.orange,
+                  'Portal apagado: vencé al Devorador de Eras (Corazón del '
+                  'Tiempo) para activarlo. Los Ecos que caigan se guardan.')),
+            PanelHint(_tab.hint),
+            Expanded(
+              child: switch (_tab) {
+                EcoPortalTab.ecos => _ecos(p),
+                EcoPortalTab.atlas => _atlas(atlas),
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

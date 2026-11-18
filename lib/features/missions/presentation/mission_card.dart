@@ -64,7 +64,8 @@ class MissionCard extends StatelessWidget {
             child: Text(m.rank,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    fontFamily: RetroType.pixelFamily, fontSize: 16,
+                    fontFamily: RetroType.pixelFamily,
+                    fontSize: RetroType.title,
                     color: ProtoColors.amber,
                     shadows: [
                       Shadow(
@@ -88,8 +89,8 @@ class MissionCard extends StatelessWidget {
                 ProtoText('<b style="color:#e8ecff">${protoEsc(m.name)}</b> · '
                     '<span class="k">${protoEsc(m.type)}</span> · '
                     '${low ? protoColor(ProtoColors.red, lv) : protoColor(ProtoColors.green, lv)}'),
-                ProtoText(row('Objetivo:',
-                    missionObjectiveText(m, bossName: bossName))),
+                ProtoText(row(
+                    'Objetivo:', missionObjectiveText(m, bossName: bossName))),
                 ProtoText(row('Rango S:', missionSRankText(m))),
                 ProtoText(row('Recompensas:', missionRewardText(m, tier)),
                     key: ValueKey('mission-rewards-${m.id}')),

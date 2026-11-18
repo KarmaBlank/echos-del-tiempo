@@ -89,7 +89,9 @@ class LootDrop {
 
 /// Un drop en el piso del mapa. [ownerId] = jugador dueño (loot
 /// instanciado: solo él lo ve y lo levanta); `null` = soltado por un
-/// jugador, compartido (lo levanta cualquiera). Ver loot.md § 4.
+/// jugador, compartido (lo levanta cualquiera). [floor] = piso de la
+/// misión donde cayó (0 en el pueblo y en mapas de un solo piso): solo
+/// se ve y se levanta estando en ese piso. Ver loot.md § 4.
 class GroundLoot {
   const GroundLoot({
     required this.id,
@@ -97,12 +99,14 @@ class GroundLoot {
     required this.x,
     required this.y,
     this.ownerId,
+    this.floor = 0,
   });
 
   final int id;
   final LootDrop drop;
   final double x, y;
   final String? ownerId;
+  final int floor;
 
   bool visibleTo(String playerId) => ownerId == null || ownerId == playerId;
 }

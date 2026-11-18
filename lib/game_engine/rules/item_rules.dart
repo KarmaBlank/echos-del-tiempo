@@ -1,9 +1,12 @@
 import '../data/affixes_catalog.dart';
 import '../data/ascension_catalog.dart';
 import '../data/game_catalog.dart';
+import '../data/skills_catalog.dart' show kSkillDelivery;
 import '../data/uniques_catalog.dart';
 import '../data/weapon_passives.dart';
+import '../data/weapons_catalog.dart' show kWeaponTypeCategory;
 import '../models/item.dart';
+import '../models/skill.dart' show SkillDelivery;
 import '../models/upgrade_stat.dart';
 import '../models/weapon.dart';
 import '../models/weapon_passive.dart';
@@ -76,6 +79,45 @@ class ItemRules {
     }
     return out;
   }
+
+  // ---- traslado de habilidades (loot.md § 16.1–16.2) ----
+
+  /// Forma de entrega de [skillId]; `null` si no es una habilidad de arma
+  /// trasladable (desconocida o del kit de una ascensión).
+  SkillDelivery? skillCategory(String skillId) =>
+      catalog.skills.containsKey(skillId) ? kSkillDelivery[skillId] : null;
+
+  /// Categoría del tipo de arma de [i] (`null` si la base no existe).
+  WeaponCategory? weaponCategoryOf(ItemInstance i) {
+    final w = baseOf(i);
+    return w == null ? null : kWeaponTypeCategory[w.type];
+  }
+
+  /// Motivo por el que [weapon] no puede recibir [skillId] trasladada, o
+  /// `null` si puede. Solo valida la forma de entrega (no cupos ni costo).
+  String? canReceiveSkill(ItemInstance weapon, String skillId) {
+    final d = skillCategory(skillId);
+    if (d == null) return 'Elige una habilidad';
+    final c = weaponCategoryOf(weapon);
+    if (c == null) return 'No la tienes';
+    return switch (d) {
+      SkillDelivery.any => null,
+      SkillDelivery.melee =>
+        c == WeaponCategory.melee ? null : 'Solo armas cuerpo a cuerpo',
+      SkillDelivery.ranged =>
+        c == WeaponCategory.ranged ? null : 'Solo armas a distancia',
+    };
+  }
+
+  /// Habilidades que se pueden elegir para reemplazar: las trasladadas
+  /// (las base del arma nunca).
+  List<String> replaceableSkills(ItemInstance i) => [...i.extraSkills];
+
+  /// Si trasladar [skillId] a [target] obliga a elegir cuál reemplazar
+  /// (cupos llenos y no la tiene ya trasladada).
+  bool needsReplaceChoice(ItemInstance target, String skillId) =>
+      !target.extraSkills.contains(skillId) &&
+      target.extraSkills.length >= target.rarity.skillSlots;
 
   /// Nombre para mostrar: Común = base; Mágico = base + prefijo + sufijo;
   /// Raro / Épico = nombre generado; Legendario = nombre único. Con forja,
@@ -189,7 +231,9 @@ class ItemRules {
     final skills = <String>[];
     for (final s in raw.extraSkills) {
       // Solo habilidades de arma: el kit de una ascensión (p. ej. el viejo
-      // kit del Paladín, hoy del Guardián) nunca se traslada.
+      // kit del Paladín, hoy del Guardián) nunca se traslada. La forma de
+      // entrega (§ 16.1) NO se valida acá: las trasladadas antes de
+      // v0.5.1 que hoy no se podrían traer se conservan.
       if (catalog.skills.containsKey(s) &&
           !kAscensionSkills.containsKey(s) &&
           !skills.contains(s)) {

@@ -317,7 +317,10 @@ class WorldHud extends StatelessWidget {
       return const [];
     }
     return visibleLoot(
-        s, view.localId, (d) => controller.engine.lootVerdict(me.profile, d),
+        s,
+        view.localId,
+        (d) => controller.engine
+            .lootVerdict(me.profile, d, wants: controller.localWants),
         showAll: MapGame.altHeld());
   }
 
@@ -337,7 +340,8 @@ class WorldHud extends StatelessWidget {
     if (me == null) return const [];
     return [
       for (final g in s.groundFor(view.localId))
-        if (controller.engine.lootVerdict(me.profile, g.drop)
+        if (controller.engine
+                .lootVerdict(me.profile, g.drop, wants: controller.localWants)
             case FilterVerdict(visible: true, :final style)
             when style.icon != null)
           MinimapLoot(g.x, g.y, style.icon!),
@@ -398,6 +402,17 @@ class WorldHud extends StatelessWidget {
   }
 }
 
+/// `Turnos: sin límite (anfitrión)`: el tiempo de turno de la sala en el
+/// pueblo y la preparación, si no es el normal; `null` si no hay que
+/// decir nada.
+String? turnTimerNote(SessionView view) {
+  final s = view.session;
+  if (s.turnTimer == TurnTimer.normal) return null;
+  if (s.mode != SessionMode.lobby && s.mode != SessionMode.prep) return null;
+  final host = view.roomCode != null ? ' (anfitrión)' : '';
+  return 'Turnos: ${s.turnTimer.label}$host';
+}
+
 class _MissionBar extends StatelessWidget {
   const _MissionBar({required this.view, required this.missionName});
 
@@ -430,11 +445,23 @@ class _MissionBar extends StatelessWidget {
     } else {
       text = 'Lobby · Mostrador [E] · Armería [E] · Personaje [C]';
     }
+    // Tiempo de turno de la sala si no es el normal (en co-op lo fija el
+    // anfitrión; accessibility.md § 7).
+    final turns = turnTimerNote(view);
     // `#mission`: verde `#7bed9f`.
     return RetroPanel(
       padding: const EdgeInsets.all(8),
-      child: Text(retroText(text),
-          style: const TextStyle(color: ProtoColors.green)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(retroText(text),
+              style: const TextStyle(color: ProtoColors.green)),
+          if (turns != null)
+            Text(retroText(turns),
+                key: const ValueKey('hud-turn-timer'),
+                style: const TextStyle(color: ProtoColors.sky)),
+        ],
+      ),
     );
   }
 }

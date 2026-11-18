@@ -7,7 +7,11 @@ import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/loot_filter.dart';
-import '../../inventory/presentation/item_widgets.dart';
+import '../../../app/widgets/menu_focus.dart';
+import '../../../app/widgets/menu_widgets.dart';
+import '../../../app/widgets/pixel_icon.dart';
+import '../../../app/widgets/section_panel.dart';
+import '../../inventory/presentation/item_widgets.dart' hide PixelIcon;
 
 /// Un drop propio de la misión con el veredicto de tu filtro.
 class ResultDrop {
@@ -93,13 +97,72 @@ class ResultsPanel extends StatelessWidget {
     final el = r.time.floor();
     final time = '${el ~/ 60}:${(el % 60).toString().padLeft(2, '0')}';
     final mine = r.drops[localId];
-    Widget line(String s, {Color? color}) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Text(retroText(s),
-              textAlign: TextAlign.center, style: TextStyle(color: color)),
+    Widget line(String s, {Color? color, Key? key}) => Padding(
+          key: key,
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(retroText(s), style: TextStyle(color: color)),
         );
+    const shadow = [
+      Shadow(color: ProtoColors.titleShadow, offset: Offset(2, 2)),
+    ];
+    final progress = <Widget>[
+      if (unlocked case final u?)
+        Padding(
+          key: const ValueKey('results-unlocked'),
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(retroText(u),
+              style: const TextStyle(
+                  fontFamily: RetroType.pixelFamily,
+                  fontSize: RetroType.title,
+                  color: ProtoColors.gold,
+                  shadows: shadow)),
+        ),
+      if (othersUnlocked case final o?) line(o, color: ProtoColors.gold),
+      if (trial case final t?)
+        line(t,
+            color: ProtoColors.violet, key: const ValueKey('results-trial')),
+      if (ecoAtlas case final a?)
+        line(a,
+            color: const Color(0xFF5AE6D2),
+            key: const ValueKey('results-atlas')),
+    ];
+    final loot = <Widget>[
+      if (mine != null)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(retroText('¡Obtuviste: ${weaponName(mine)}!'),
+              style: const TextStyle(color: ProtoColors.orange)),
+        ),
+      if (r.drops.isNotEmpty)
+        line(
+            r.drops.entries
+                .map((e) => '${playerName(e.key)}: ${weaponName(e.value)}')
+                .join(' · '),
+            color: ProtoColors.dim),
+      if (r.eliteDrops.isNotEmpty)
+        line(
+            'Élites derrotados: ${r.elites} · '
+            '${r.eliteDrops.map((d) => '${playerName(d.playerId)}: ${weaponName(d.weaponId)}').join(' · ')}',
+            color: ProtoColors.gold),
+      if (this.loot.isNotEmpty) ...[
+        line('TUS DROPS (${this.loot.length})', color: ProtoColors.gold),
+        Wrap(
+          key: const ValueKey('results-loot'),
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final d in this.loot)
+              LootLabel(
+                  text: d.text,
+                  verdict: d.verdict,
+                  hiddenNote: '(oculto por tu filtro)',
+                  tooltip: d.tooltip),
+          ],
+        ),
+      ],
+    ];
     return PanelFrame(
-      width: 640,
+      width: 900,
       title: r.success ? 'MISIÓN COMPLETADA' : 'MISIÓN FALLIDA',
       actions: [
         if (onAscend != null)
@@ -107,10 +170,14 @@ class ResultsPanel extends StatelessWidget {
               key: const ValueKey('results-ascend'),
               accent: ProtoColors.violet,
               onPressed: onAscend),
-        PanelButton('VOLVER AL LOBBY',
-            key: const ValueKey('results-back'), onPressed: onBack),
+        // Abre con el foco en el primario: Enter = volver.
+        InitialFocus(
+          child: PanelButton('VOLVER AL LOBBY',
+              key: const ValueKey('results-back'), onPressed: onBack),
+        ),
       ],
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (finalVictory) ...[
             Container(
@@ -124,104 +191,90 @@ class ResultsPanel extends StatelessWidget {
               child: Text(retroText(finalTitle),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
-                      fontFamily: RetroType.pixelFamily, fontSize: 14,
+                      fontFamily: RetroType.pixelFamily,
+                      fontSize: RetroType.title,
                       color: ProtoColors.gold,
-                      shadows: [
-                        Shadow(
-                            color: ProtoColors.titleShadow,
-                            offset: Offset(2, 2)),
-                      ])),
+                      shadows: shadow)),
             ),
-            line(finalSubtitle, color: ProtoColors.sky),
-          ],
-          line(r.missionName, color: ProtoColors.sky),
-          if (zoneProgress case final z?)
-            Padding(
-              key: const ValueKey('results-zone'),
-              padding: EdgeInsets.zero,
-              child: line(z, color: ProtoColors.dim),
-            ),
-          if (ecoAtlas case final a?)
-            Padding(
-              key: const ValueKey('results-atlas'),
-              padding: EdgeInsets.zero,
-              child: line(a, color: const Color(0xFF5AE6D2)),
-            ),
-          if (trial case final t?)
-            Padding(
-              key: const ValueKey('results-trial'),
-              padding: EdgeInsets.zero,
-              child: line(t, color: ProtoColors.violet),
-            ),
-          if (unlocked case final u?)
-            Padding(
-              key: const ValueKey('results-unlocked'),
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(retroText(u),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontFamily: RetroType.pixelFamily, fontSize: 12,
-                      color: ProtoColors.gold,
-                      shadows: [
-                        Shadow(
-                            color: ProtoColors.titleShadow,
-                            offset: Offset(2, 2)),
-                      ])),
-            ),
-          if (othersUnlocked case final o?) line(o, color: ProtoColors.gold),
-          // `.bigrank`: dorado con sombra dura `#a3471d`.
-          Text(rankLabel(r.rank),
-              style: const TextStyle(
-                  fontFamily: RetroType.pixelFamily, fontSize: 56,
-                  height: 1.4,
-                  color: ProtoColors.gold,
-                  shadows: [
-                    Shadow(
-                        color: ProtoColors.titleShadow, offset: Offset(4, 4)),
-                  ])),
-          line('Tiempo $time · K.O. ${r.kos}'),
-          line('XP total +${r.xp} · Créditos de peleas ₵${r.credits}'),
-          line('Bonus de rango ${rankLabel(r.rank)}: +₵${r.bonus} '
-              '(${(r.bonusPercent * 100).round()}%)'),
-          if (r.eliteDrops.isNotEmpty)
-            line(
-                'Élites derrotados: ${r.elites} · '
-                '${r.eliteDrops.map((d) => '${playerName(d.playerId)}: ${weaponName(d.weaponId)}').join(' · ')}',
-                color: ProtoColors.gold),
-          if (mine != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(retroText('¡Obtuviste: ${weaponName(mine)}!'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: ProtoColors.orange, fontWeight: FontWeight.bold)),
-            ),
-          if (r.drops.isNotEmpty)
-            line(
-                r.drops.entries
-                    .map((e) => '${playerName(e.key)}: ${weaponName(e.value)}')
-                    .join(' · '),
-                color: ProtoColors.dim),
-          if (loot.isNotEmpty) ...[
-            line('TUS DROPS (${loot.length})', color: ProtoColors.gold),
-            Wrap(
-              key: const ValueKey('results-loot'),
-              alignment: WrapAlignment.center,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final d in loot)
-                  LootLabel(
-                      text: d.text,
-                      verdict: d.verdict,
-                      hiddenNote: '(oculto por tu filtro)',
-                      tooltip: d.tooltip),
-              ],
-            ),
+            Text(retroText(finalSubtitle),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: ProtoColors.sky)),
             const SizedBox(height: 8),
           ],
-          line('Regreso automático en ${r.timeLeft.ceil()}s',
-              color: ProtoColors.dim),
+          // Qué misión: nombre y zona / piso.
+          Text(retroText(r.missionName),
+              style: const TextStyle(color: ProtoColors.sky)),
+          if (zoneProgress case final z?)
+            line(z,
+                color: ProtoColors.dim, key: const ValueKey('results-zone')),
+          const SizedBox(height: 6),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: RetroType.width(context, 260),
+                  child: SectionPanel(
+                    icon: PixelIconKind.star,
+                    title: 'RANGO',
+                    children: [
+                      Center(
+                        child: Text(rankLabel(r.rank),
+                            key: const ValueKey('results-rank'),
+                            style: const TextStyle(
+                                fontFamily: RetroType.pixelFamily,
+                                fontSize: RetroType.display,
+                                height: 1.4,
+                                color: ProtoColors.gold,
+                                shadows: [
+                                  Shadow(
+                                      color: ProtoColors.titleShadow,
+                                      offset: Offset(4, 4)),
+                                ])),
+                      ),
+                      InfoLine('Tiempo', time, labelEms: 8),
+                      InfoLine('K.O.', '${r.kos}', labelEms: 8),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: SectionPanel(
+                    icon: PixelIconKind.coin,
+                    title: 'RECOMPENSAS',
+                    children: [
+                      InfoLine('XP total', '<b>+${r.xp}</b>', labelEms: 21),
+                      InfoLine('Créditos de peleas', '<b>₵${r.credits}</b>',
+                          labelEms: 21),
+                      InfoLine(
+                          'Bonus de rango ${rankLabel(r.rank)}',
+                          '<b>+₵${r.bonus}</b> '
+                              '<span class="k">(${(r.bonusPercent * 100).round()}%)</span>',
+                          labelEms: 21),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (progress.isNotEmpty)
+            SectionPanel(
+                icon: PixelIconKind.arrowIn,
+                title: 'PROGRESO',
+                children: progress),
+          if (loot.isNotEmpty)
+            SectionPanel(
+                icon: PixelIconKind.gem, title: 'BOTÍN', children: loot),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                    retroText('Regreso automático en ${r.timeLeft.ceil()}s'),
+                    style: const TextStyle(color: ProtoColors.dim)),
+              ),
+              const KeyHints(confirm: 'Volver al lobby', back: null),
+            ],
+          ),
         ],
       ),
     );

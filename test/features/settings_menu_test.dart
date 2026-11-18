@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
+import 'package:echos_del_tiempo/app/theme/proto_colors.dart';
+import 'package:echos_del_tiempo/app/theme/vision_palette.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/core/audio/audio_settings.dart';
 import 'package:echos_del_tiempo/core/audio/music/music_service.dart';
@@ -18,6 +20,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../app/hit_target_audit.dart';
 import '../core/settings/fake_window_mode.dart';
 import '../game_engine/session_test_helpers.dart';
 
@@ -61,7 +64,10 @@ Future<
         builder: (context, ref, _) => RetroTextScale(
             factor: ref.watch(
                 gameSettingsProvider.select((s) => s.textSize.factor)),
-            child: child!),
+            child: ColorVisionScope(
+                mode: ref.watch(
+                    gameSettingsProvider.select((s) => s.colorVision)),
+                child: child!)),
       ),
       home: Scaffold(
         body: Builder(
@@ -133,7 +139,7 @@ void main() {
     expect(find.byKey(const ValueKey('settings-menu')), findsNothing);
   });
 
-  testWidgets('PANTALLA: ventana, sacudida y destellos se guardan',
+  testWidgets('PANTALLA / ACCESIBILIDAD: ventana, sacudida y destellos',
       (tester) async {
     final f = await _pumpMenu(tester);
     await _tap(tester, 'tab-1');
@@ -141,10 +147,12 @@ void main() {
     await _tap(tester, 'display-fullscreen-PANTALLA COMPLETA');
     expect(f.window.calls, [true]);
     expect(f.game.saved!.fullscreen, isTrue);
+    await _tap(tester, 'tab-2');
     await _tap(tester, 'display-shake-NO');
     expect(f.game.saved!.screenShake, isFalse);
     await _tap(tester, 'display-flashes-SUAVES');
     expect(f.game.saved!.flashes, FlashLevel.reduced);
+    await _tap(tester, 'tab-1');
     await _tap(tester, 'display-fullscreen-VENTANA');
     expect(f.window.calls, [true, false]);
   });
@@ -182,10 +190,28 @@ void main() {
     expect(f.game.saved!.fpsLimit, FpsLimit.none);
   });
 
-  testWidgets('PANTALLA: TAMAÑO DEL TEXTO se aplica en vivo y se guarda',
-      (tester) async {
+  testWidgets('PANTALLA: FPS Y PING (apagado) y su ESQUINA', (tester) async {
     final f = await _pumpMenu(tester);
     await _tap(tester, 'tab-1');
+    expect(find.text('FPS Y PING'), findsOneWidget);
+    PanelButton btn(String k) =>
+        tester.widget<PanelButton>(find.byKey(ValueKey(k)));
+    expect(btn('display-perf-NO').selected, isTrue);
+    expect(btn('display-perf-corner-ARRIBA DER.').selected, isTrue);
+    // Apagado: la esquina no se elige.
+    expect(btn('display-perf-corner-ABAJO IZQ.').onPressed, isNull);
+    await _tap(tester, 'display-perf-SÍ');
+    expect(f.game.saved!.perfOverlay, isTrue);
+    await _tap(tester, 'display-perf-corner-ABAJO IZQ.');
+    expect(f.game.saved!.perfCorner, OverlayCorner.bottomLeft);
+    await _tap(tester, 'display-perf-corner-ARRIBA IZQ.');
+    expect(f.game.saved!.perfCorner, OverlayCorner.topLeft);
+  });
+
+  testWidgets('ACCESIBILIDAD: TAMAÑO DEL TEXTO se aplica en vivo y se guarda',
+      (tester) async {
+    final f = await _pumpMenu(tester);
+    await _tap(tester, 'tab-2');
     expect(
         tester
             .widget<PanelButton>(
@@ -209,10 +235,10 @@ void main() {
     }
   });
 
-  testWidgets('PANTALLA: FUENTE DE LECTURA (vista previa) se guarda',
+  testWidgets('ACCESIBILIDAD: FUENTE DE LECTURA (vista previa) se guarda',
       (tester) async {
     final f = await _pumpMenu(tester);
-    await _tap(tester, 'tab-1');
+    await _tap(tester, 'tab-2');
     // Cada opción escrita en su propia fuente.
     String? family(String key) => tester
         .widget<Text>(find.descendant(
@@ -233,13 +259,13 @@ void main() {
     await _pumpMenu(tester, windowSupported: false);
     await _tap(tester, 'tab-1');
     expect(find.text('PANTALLA COMPLETA'), findsNothing);
-    expect(find.byKey(const ValueKey('display-shake-SÍ')), findsOneWidget);
+    expect(find.byKey(const ValueKey('display-scale-AJUSTAR')), findsOneWidget);
   });
 
   testWidgets('JUEGO: números de daño y confirmar al tirar',
       (tester) async {
     final f = await _pumpMenu(tester);
-    await _tap(tester, 'tab-2');
+    await _tap(tester, 'tab-3');
     expect(find.byKey(const ValueKey('game-speed-x2')), findsNothing,
         reason: 'la velocidad de animaciones ya no existe');
     await _tap(tester, 'game-numbers-NO');
@@ -248,9 +274,85 @@ void main() {
     expect(f.game.saved!.confirmDrop, isFalse);
   });
 
+  testWidgets('ACCESIBILIDAD: modo daltónico se aplica y se guarda',
+      (tester) async {
+    addTearDown(() => VisionPalette.mode = ColorVision.off);
+    final f = await _pumpMenu(tester);
+    await _tap(tester, 'tab-2');
+    expect(find.byKey(const ValueKey('a11y-vision-preview')), findsOneWidget);
+    expect(
+        tester
+            .widget<PanelButton>(find.byKey(const ValueKey('a11y-vision-NO')))
+            .selected,
+        isTrue);
+    for (final (key, mode) in const [
+      ('DEUTERANOPÍA', ColorVision.deuteranopia),
+      ('PROTANOPÍA', ColorVision.protanopia),
+      ('TRITANOPÍA', ColorVision.tritanopia),
+      ('NO', ColorVision.off),
+    ]) {
+      await _tap(tester, 'a11y-vision-$key');
+      expect(f.game.saved!.colorVision, mode);
+      expect(VisionPalette.mode, mode, reason: 'se aplica en vivo');
+      expect(ProtoColors.green.toARGB32(),
+          VisionPalette.inMode(mode, VisionSlot.good).toARGB32());
+      expect(tester.takeException(), isNull);
+    }
+  });
+
+  testWidgets('ACCESIBILIDAD: REDUCIR MOVIMIENTO apaga la sacudida y suaviza',
+      (tester) async {
+    final f = await _pumpMenu(tester);
+    await _tap(tester, 'tab-2');
+    await _tap(tester, 'a11y-motion-SÍ');
+    final s = f.game.saved!;
+    expect(s.reduceMotion, isTrue);
+    expect(s.screenShake, isTrue, reason: 'el ajuste propio no se pisa');
+    expect(s.shakeOn, isFalse);
+    expect(s.flashFactor, FlashLevel.reduced.factor);
+    // SACUDIDA se ve en NO y deshabilitada; DESTELLOS en SUAVES.
+    final shake =
+        tester.widget<PanelButton>(find.byKey(const ValueKey('display-shake-NO')));
+    expect(shake.selected, isTrue);
+    expect(shake.onPressed, isNull);
+    expect(
+        tester
+            .widget<PanelButton>(
+                find.byKey(const ValueKey('display-flashes-SUAVES')))
+            .selected,
+        isTrue);
+    expect(find.text('Apagada por REDUCIR MOVIMIENTO.'), findsOneWidget);
+    await _tap(tester, 'a11y-motion-NO');
+    expect(f.game.saved!.shakeOn, isTrue);
+  });
+
+  testWidgets('JUEGO: TIEMPO DE TURNO se guarda', (tester) async {
+    final f = await _pumpMenu(tester);
+    await _tap(tester, 'tab-3');
+    expect(
+        tester
+            .widget<PanelButton>(
+                find.byKey(const ValueKey('game-turn-NORMAL (30 S)')))
+            .selected,
+        isTrue);
+    await _tap(tester, 'game-turn-SIN LÍMITE');
+    expect(f.game.saved!.turnTimer, TurnTimer.unlimited);
+    await _tap(tester, 'game-turn-LARGO (60 S)');
+    expect(f.game.saved!.turnTimer, TurnTimer.long);
+  });
+
+  testWidgets('objetivos clicables ≥ 24 px en todas las pestañas',
+      (tester) async {
+    await _pumpMenu(tester);
+    for (var i = 0; i < SettingsTab.values.length; i++) {
+      await _tap(tester, 'tab-$i');
+      expect(smallHitTargets(tester), isEmpty, reason: 'pestaña $i');
+    }
+  });
+
   testWidgets('CONTROLES: lista de teclas; Esc cierra', (tester) async {
     await _pumpMenu(tester);
-    await _tap(tester, 'tab-3');
+    await _tap(tester, 'tab-4');
     expect(find.byKey(const ValueKey('settings-controls')), findsOneWidget);
     for (final t in ['MAPA', 'BATALLA', 'MENUS', 'CHAT']) {
       expect(find.text(t), findsOneWidget, reason: t);

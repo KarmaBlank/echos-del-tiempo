@@ -1,6 +1,12 @@
 import 'passive_mechanic.dart' show BuffStat;
 import 'status.dart';
 
+/// Forma de entrega de una habilidad de arma, para trasladarla en la
+/// fusión (loot.md § 16.1): las físicas de golpe solo van a armas cuerpo
+/// a cuerpo, las de disparo solo a armas a distancia; el resto (mágicas,
+/// curas, escudos, buffs y debuffs sin golpe) a cualquiera.
+enum SkillDelivery { melee, ranged, any }
+
 /// Tipos de habilidad del prototipo (`kind` en `SK` / `ULTS`).
 enum SkillKind {
   physical, // 'phys': daño con ATQ

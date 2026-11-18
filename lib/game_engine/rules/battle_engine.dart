@@ -639,6 +639,12 @@ class _Turn {
   (bool, String?) _statusTick(Combatant a) {
     final parts = <String>[];
     var total = 0;
+    // El control se mira como estaba al EMPEZAR el turno: si el daño de
+    // los estados transforma al Devorador (fase 2 limpia los estados), el
+    // aturdimiento / congelación ya ganado igual le cuesta este turno.
+    final stunnedAtStart = a.stacks(StatusKind.stun) > 0;
+    final frozenAtStart =
+        a.stacks(StatusKind.freeze) >= StatusKind.freeze.maxStacks;
 
     final burn = a.stacks(StatusKind.burn);
     if (burn > 0) {
@@ -698,20 +704,20 @@ class _Turn {
     var skip = false;
     var stunned = false;
     var locked = false;
-    if (a.stacks(StatusKind.stun) > 0 && a.alive) {
+    if (stunnedAtStart && a.alive) {
       skip = true;
       stunned = true;
-      // Martillo Bendito: el aturdimiento dura un turno más.
-      locked = a.hasEffect(BuffStat.stunLock);
-      if (locked) {
+      // Martillo Bendito: el aturdimiento dura un turno más (salvo que la
+      // transformación se lo haya quitado).
+      locked = a.hasEffect(BuffStat.stunLock) &&
+          a.stacks(StatusKind.stun) > 0;
+      if (a.hasEffect(BuffStat.stunLock)) {
         a.effects =
             a.effects.where((e) => e.stat != BuffStat.stunLock).toList();
-      } else {
-        a.statuses[StatusKind.stun] = 0;
       }
+      if (!locked) a.statuses[StatusKind.stun] = 0;
       events.add(TurnSkippedEvent(a.id, StatusKind.stun));
-    } else if (a.stacks(StatusKind.freeze) >= StatusKind.freeze.maxStacks &&
-        a.alive) {
+    } else if (frozenAtStart && a.alive) {
       skip = true;
       a.statuses[StatusKind.freeze] = 0;
       events.add(TurnSkippedEvent(a.id, StatusKind.freeze));
@@ -1215,9 +1221,10 @@ class _Turn {
   void _pierceAndBounce(Combatant p, SkillDef tk, Combatant target,
       double base, StatusApplication? st, int bonus,
       {bool blocked = false}) {
-    void extra(Combatant e, double dmg, List<String> parts) {
+    void extra(Combatant e, double dmg, List<String> parts,
+        {String? from, bool pierced = false}) {
       final h = _damageEnemy(e, dmg, p.critChance + tk.critBonus,
-          primary: false);
+          primary: false, chainFrom: from, pierced: pierced);
       parts.add('${h.damage} a ${e.name}');
       if (st != null && !blocked) _addStatus(e, st, bonus: bonus, source: p);
       _variantOnHit(p, e, tk);
@@ -1231,7 +1238,7 @@ class _Turn {
       ];
       final parts = <String>[];
       for (final e in behind) {
-        extra(e, base * tk.pierce, parts);
+        extra(e, base * tk.pierce, parts, pierced: true);
       }
       if (parts.isNotEmpty) _notes.add('atraviesa: ${parts.join(', ')}');
     }
@@ -1249,7 +1256,7 @@ class _Turn {
             ? (last.alive ? last : null)
             : others[math.min(others.length - 1, (_rand() * others.length).floor())];
         if (pick == null) break;
-        extra(pick, base * f, parts);
+        extra(pick, base * f, parts, from: last.id);
         last = pick;
       }
       if (parts.isNotEmpty) _notes.add('rebota: ${parts.join(', ')}');
@@ -1411,7 +1418,11 @@ class _Turn {
   /// `dmgEnemy`: jugador → enemigo. Con [primary] (golpe de la acción,
   /// no de una mecánica) dispara `onHit` / `onCrit`.
   _Hit _damageEnemy(Combatant e, double base, double critChance,
-      {bool primary = true, bool single = false}) {
+      {bool primary = true,
+      bool single = false,
+      int hitIndex = 0,
+      String? chainFrom,
+      bool pierced = false}) {
     final a = _attacker;
     final cm = _critMult(a);
     var chance = critChance;
@@ -1493,7 +1504,12 @@ class _Turn {
     _dealt += lost;
     _dealtMaxHp = math.max(_dealtMaxHp, e.maxHp);
     events.add(DamageEvent(e.id, dmg,
-        critical: crit, critMultiplier: cm, vulnerable: vul));
+        critical: crit,
+        critMultiplier: cm,
+        vulnerable: vul,
+        hitIndex: hitIndex,
+        chainFrom: chainFrom,
+        pierced: pierced));
     if (!e.alive) _knockedOut(e);
     if (shift) _transform(e);
     _chargeUlt(e, lost);
@@ -1599,6 +1615,29 @@ class _Turn {
 
   String _statusText(StatusApplication? st, {int bonus = 0}) =>
       st == null ? '' : ' · +${st.stacks + bonus} ${st.kind.label}';
+
+  /// Texto del estado principal de una acción del grupo según lo que
+  /// PASÓ: intentado en [tried] objetivos vivos, entró en [landed]. Nunca
+  /// dice que un estado entró si no entró (falló la probabilidad o el
+  /// objetivo es inmune: "un enemigo aturdido igual me atacó", v0.5.1).
+  String _statusOutcome(
+      StatusApplication st, int bonus, int tried, int landed) {
+    final n = st.stacks + bonus;
+    final chance = st.chance;
+    final pct = chance == null ? '' : ' (${jsRound(chance * 100)}%)';
+    if (tried == 0) {
+      // Los objetivos cayeron con el golpe: nada que informar.
+      return chance == null ? _statusText(st, bonus: bonus) : '';
+    }
+    if (landed == 0) {
+      // Inmune (el aviso de INMUNE ya va en el log) o falló la tirada.
+      return chance == null ? '' : ' · ${st.kind.label}: falla$pct';
+    }
+    if (tried == 1 || (landed == tried && chance == null)) {
+      return ' · +$n ${st.kind.label}$pct';
+    }
+    return ' · +$n ${st.kind.label} a $landed de $tried$pct';
+  }
 
   // ---------------- disparadores del árbol ----------------
 
@@ -1889,10 +1928,12 @@ class _Turn {
         }
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
         target.statuses[StatusKind.freeze] = 0;
-        _notes.add('${m.name}: ${target.name} pierde la Congelación y queda '
-            'aturdido');
-        _addStatus(target, const StatusApplication(StatusKind.stun, 1),
+        // El log solo dice "aturdido" si el estado entró.
+        final stunned = _addStatus(
+            target, const StatusApplication(StatusKind.stun, 1),
             source: owner);
+        _notes.add('${m.name}: ${target.name} pierde la Congelación'
+            '${stunned ? ' y queda aturdido' : ''}');
       case ProcEffectKind.delayTarget:
         if (target == null || !target.alive) return;
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
@@ -1914,8 +1955,9 @@ class _Turn {
         }
         if (n <= 0 || dest == null) return;
         events.add(ProcEvent(owner.id, m.id, targetId: dest.id));
-        _addStatus(dest, StatusApplication(st, n), source: owner);
-        _notes.add('${m.name}: $n ${st.label} pasan a ${dest.name}');
+        if (_addStatus(dest, StatusApplication(st, n), source: owner)) {
+          _notes.add('${m.name}: $n ${st.label} pasan a ${dest.name}');
+        }
       case ProcEffectKind.freeAttack:
         if (act == null || act.freeAttack != null) return;
         act.freeAttack = m;
@@ -1941,8 +1983,9 @@ class _Turn {
         final n = fx.value.round();
         if (n <= 0) return;
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
-        _addStatus(target, StatusApplication(st, n), source: owner);
-        _notes.add('${m.name}: +$n ${st.label} a ${target.name}');
+        if (_addStatus(target, StatusApplication(st, n), source: owner)) {
+          _notes.add('${m.name}: +$n ${st.label} a ${target.name}');
+        }
       case ProcEffectKind.inflict:
         final st = fx.status;
         if (target == null || !target.alive || st == null) return;
@@ -3062,9 +3105,12 @@ class _Turn {
         '${p.name} ataca → ${target.name}', _atkText(p), atk, 1, [hit],
         all: false);
     final stunChance = p.stunOnAttackChance;
-    if (stunChance > 0 && target.alive && _rand() < stunChance) {
-      _addStatus(target, const StatusApplication(StatusKind.stun, 1),
-          source: p, primary: true);
+    if (stunChance > 0 &&
+        target.alive &&
+        _rand() < stunChance &&
+        // Solo si entró (un jefe con séquito es inmune).
+        _addStatus(target, const StatusApplication(StatusKind.stun, 1),
+            source: p, primary: true)) {
       log += ' · ¡aturde! (${jsRound(stunChance * 100)}%)';
     }
     if (p.branch == 'creyente' && _rand() < 0.25) {
@@ -3073,9 +3119,11 @@ class _Turn {
       }
       log += ' · Fe: cura 2% a todos';
     }
-    if (p.branch == 'inherente' && target.alive && _rand() < 0.25) {
-      _addStatus(target, const StatusApplication(StatusKind.holy, 1),
-          source: p, primary: true);
+    if (p.branch == 'inherente' &&
+        target.alive &&
+        _rand() < 0.25 &&
+        _addStatus(target, const StatusApplication(StatusKind.holy, 1),
+            source: p, primary: true)) {
       log += ' · Sagrado (5/turno, 3 turnos)';
     }
     state.log = log;
@@ -3277,6 +3325,9 @@ class _Turn {
         final hits = <_Hit>[];
         final delayMult = 1 + _conditionBonus(p, BuffStat.delayPower);
         var detonated = 0;
+        // Estado principal: a cuántos se intentó aplicar y en cuántos entró
+        // (el log informa el resultado, no la probabilidad).
+        var tried = 0, landed = 0;
         for (final e in tk.allTargets ? foes : [target]) {
           // Detonar: +daño por cada stack elemental, que se consumen.
           var b = base;
@@ -3301,7 +3352,7 @@ class _Turn {
             final more = <int>[hit.damage];
             for (var h = 1; h < tk.hits && e.alive; h++) {
               more.add(_damageEnemy(e, b, p.critChance + tk.critBonus,
-                      single: !tk.allTargets)
+                      single: !tk.allTargets, hitIndex: h)
                   .damage);
             }
             _notes.add('${more.length} golpes: ${more.join(' + ')} = '
@@ -3309,7 +3360,10 @@ class _Turn {
           }
           _variantOnHit(p, e, tk);
           if (st != null && !burnBlocked) {
-            _addStatus(e, st, bonus: bonus, source: p, primary: true);
+            if (e.alive) tried++;
+            if (_addStatus(e, st, bonus: bonus, source: p, primary: true)) {
+              landed++;
+            }
           }
           for (final x in tk.extraStatuses) {
             if (x.kind == StatusKind.burn && p.keystones.contains('almaHielo')) {
@@ -3344,9 +3398,7 @@ class _Turn {
         if (burnBlocked) {
           log += ' · sin Quemadura (Alma de Hielo)';
         } else if (st != null) {
-          log += st.chance != null
-              ? ' · ${jsRound(st.chance! * 100)}% ${st.stacks + bonus} ${st.kind.label}'
-              : _statusText(st, bonus: bonus);
+          log += _statusOutcome(st, bonus, tried, landed);
         }
         state.log = log;
         return 0;
@@ -3376,15 +3428,19 @@ class _Turn {
     final qv = math.max(_atk(q), q.magic);
     final bonus = p.statusBonus[du.status.kind] ?? 0;
     final hits = <_Hit>[];
+    var tried = 0, landed = 0;
     for (final e in foes) {
       hits.add(_damageEnemy(
           e, (pv + qv) * du.power, (p.critChance + q.critChance) / 2));
-      _addStatus(e, du.status, bonus: bonus, source: p, primary: true);
+      if (e.alive) tried++;
+      if (_addStatus(e, du.status, bonus: bonus, source: p, primary: true)) {
+        landed++;
+      }
     }
     state.log = _damageLog('${p.name} + ${q.name} · ${du.name} (todos)',
             '($pv + $qv)', pv + qv, du.power, hits,
             all: true) +
-        _statusText(du.status, bonus: bonus);
+        _statusOutcome(du.status, bonus, tried, landed);
     return true;
   }
 

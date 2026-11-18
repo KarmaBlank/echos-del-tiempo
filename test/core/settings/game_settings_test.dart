@@ -49,6 +49,71 @@ void main() {
       expect(s.toJson()['fpsLimit'], 0, reason: 'sin límite = 0');
     });
 
+    test('accesibilidad v0.5.1: daltónico, reducir movimiento, tiempo de turno',
+        () {
+      const d = GameSettings();
+      expect(d.colorVision, ColorVision.off);
+      expect(d.reduceMotion, isFalse);
+      expect(d.turnTimer, TurnTimer.normal);
+      const s = GameSettings(
+          colorVision: ColorVision.tritanopia,
+          reduceMotion: true,
+          turnTimer: TurnTimer.unlimited);
+      final j = s.toJson();
+      expect(j['colorVision'], 'tritanopia');
+      expect(j['reduceMotion'], true);
+      expect(j['turnTimer'], 'unlimited');
+      expect(GameSettings.fromJson(j), s);
+      // Inválidos o ausentes (game.json de v0.5.0): por defecto.
+      expect(
+          GameSettings.fromJson(
+              {'colorVision': 'acromático', 'reduceMotion': 'sí', 'turnTimer': 9}),
+          d);
+      // Efectivos: REDUCIR MOVIMIENTO apaga la sacudida y deja los
+      // destellos a lo sumo SUAVES (NO sigue en NO).
+      expect(d.shakeOn, isTrue);
+      expect(d.flashFactor, FlashLevel.normal.factor);
+      expect(s.shakeOn, isFalse);
+      expect(s.flashFactor, FlashLevel.reduced.factor);
+      expect(s.copyWith(flashes: FlashLevel.off).flashFactor, 0);
+      expect(const GameSettings(screenShake: false).shakeOn, isFalse);
+    });
+
+    test('FPS y ping v0.5.1: apagado arriba a la derecha; JSON y game.json viejo',
+        () async {
+      const d = GameSettings();
+      expect(d.perfOverlay, isFalse);
+      expect(d.perfCorner, OverlayCorner.topRight);
+      const s = GameSettings(
+          perfOverlay: true, perfCorner: OverlayCorner.bottomLeft);
+      final j = s.toJson();
+      expect(j['perfOverlay'], true);
+      expect(j['perfCorner'], 'bottomLeft');
+      expect(GameSettings.fromJson(j), s);
+      expect(s, isNot(d));
+      expect(s.copyWith(perfCorner: OverlayCorner.topLeft).perfCorner,
+          OverlayCorner.topLeft);
+      // game.json de antes (sin las claves) o con valores inválidos.
+      final old = Map<String, Object?>.of(d.toJson())
+        ..remove('perfOverlay')
+        ..remove('perfCorner');
+      expect(GameSettings.fromJson(old), d);
+      expect(
+          GameSettings.fromJson(const {'perfOverlay': 1, 'perfCorner': 'x'}),
+          d);
+      // El controlador guarda el cambio; game.json en disco.
+      final store = InMemoryGameSettingsStore();
+      final c = GameSettingsController(store: store);
+      addTearDown(c.dispose);
+      await c.update(d.copyWith(perfOverlay: true));
+      expect(store.saved?.perfOverlay, isTrue);
+      final dir = await Directory.systemTemp.createTemp('ecos_perf_test_');
+      addTearDown(() => dir.delete(recursive: true));
+      final file = JsonFileGameSettingsStore.inDirectory(dir.path);
+      await file.save(s);
+      expect(await file.load(), s);
+    });
+
     test('por defecto: CRT NORMAL, partículas ALTA, 60 FPS, AJUSTAR', () {
       const d = GameSettings();
       expect(d.crt, CrtLevel.normal);

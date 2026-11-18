@@ -1,4 +1,4 @@
-# Spec: Accesibilidad (v0.5)
+# Spec: Accesibilidad (v0.5, v0.5.1)
 
 Pedido del dueño: "esto tiene problema de accesibilidad, muy pequeñas",
 "hay fonts que se ven súper mal, como baja resolución" y "trabajá la
@@ -20,6 +20,23 @@ accesibilidad más que todo". Prioridad de v0.5; lo que no entra queda en
   px físicos enteros.
 - **"Tamaño del texto"** (Pausa / CONFIGURACIÓN → PANTALLA): Normal /
   Grande / Muy grande; settings.md § 3.6.
+- **Ventanas grandes** (v0.5.1): la UI crece con la ventana
+  (`RetroTextScale.windowFactor`, de a 0.25 hasta ×2: 1920×1080 → ×1.5,
+  VT323 a 30 px) × TAMAÑO DEL TEXTO; settings.md § 3.
+- **Etiquetas de la escena de batalla** (nombres, vida, estados,
+  números flotantes, barras): Press Start a 8·u px de pantalla con
+  `u = SceneGeometry.labelUnit` = máx(unidad de la escena, 2 × factor del
+  texto): 16 px a 1280×720 Normal, 24 a 1920×1080; crecen con TAMAÑO DEL
+  TEXTO. El log de arriba ("Turno de X") y su reloj van al múltiplo de 8
+  más grande que entra en la banda.
+- **Etiquetas del mundo** (v0.5.1): nombres sobre los personajes,
+  carteles del pueblo, puertas de zona, avisos y loot del piso se dibujan
+  en px de pantalla con `PixelLabelPen` (el estilo de los nombres de la
+  batalla: fino, sombra de 1 px), no en el lienzo virtual agrandado
+  (ui_style.md § "Etiquetas en el mundo").
+- **Sin negritas**: las fuentes pixel no tienen negrita y la sintética
+  las engorda; `<b>` resalta solo con color y una negrita que se escape
+  usa la misma fuente (pubspec: peso 700 = el archivo regular).
 - **Filtro CRT**: NORMAL (por defecto) sin curvatura; la curva remuestrea
   la UI y ensucia la fuente (settings.md § 3.2).
 - **Tooltips** que nunca se salen de la pantalla: columnas si son más
@@ -61,6 +78,49 @@ separadores; hoja "2-E") si el dueño lo pide.
 
 ## 3. Daltonismo: nunca solo el color
 
+### MODO DALTÓNICO (v0.5.1)
+
+ACCESIBILIDAD → MODO DALTÓNICO: NO / DEUTERANOPÍA / PROTANOPÍA /
+TRITANOPÍA (`ColorVision`, settings.md § 3.8). Cambia por tokens
+(`VisionPalette`, `lib/app/theme/vision_palette.dart`) los colores que
+dicen algo, en toda la app:
+
+| Slot (`VisionSlot`) | Dónde | NO | Deuter. | Protan. | Tritan. |
+|---|---|---|---|---|---|
+| `good` (`ProtoColors.green`) | mejora, cura, requisito, sistema | `#5EB77A` | `#6FA8E0` | `#6FA8E0` | `#4FBFB8` |
+| `bad` / `crimson` (`red`, `crimson`) | empeora, error, falta | `#DB828F` | `#D9A24A` | `#D9A24A` | `#DB7F8A` |
+| `hp` / `mp` | barras del grupo | `#2ED573` / `#1E90FF` | `#3D9BF0` / `#E0C341` | igual | `#2EC4B0` / `#E65FA8` |
+| `heal` / `hurt` / `critHurt` | números flotantes | `#7BED9F` / `#FF6B81` / `#FF4757` | `#7CC4FF` / `#FFA94D` / `#FFD23C` | `#7CC4FF` / `#FFB347` / `#FFE14A` | `#5FE3D8` / `#FF6B81` / `#FF3D3D` |
+| `enemyHp*` | vida de enemigos (normal, élite, jefe) | naranja / dorado / rojo | naranjas | ámbar | rojos |
+| `breakBar` | barra y textos de QUIEBRE | `#FFE14D` | `#8FD8FF` | `#8FD8FF` | `#9FF0F0` |
+| `enemyUlt` | carga y aviso de ULT enemiga | `#FF3355` | `#D040FF` | `#D040FF` | `#D040FF` |
+| `magic` / `rare` / `epic` / `legendary` | rarezas (bordes, mapa, markup) | `#7896FF` / `#FFD23C` / `#BE6EFF` / `#FF8C28` | `#5C9AFF` / `#FFE14A` / `#F0B8FF` / `#E8782E` | … / `#D08A3A` | `#2FB8D8` / `#FFA0B4` / `#C77DFF` / `#FF6A4A` |
+
+- `VisionColor` es `const` (los `const TextStyle(color: ProtoColors.red)`
+  siguen compilando) y lee sus canales del modo activo al pintar. El
+  markup y los colores de datos (rarezas del filtro de loot) que traen el
+  hex por defecto pasan por `VisionPalette.remap` (en `ProtoColors.parse`,
+  `RarityColors.filterColor` y `filterColor` del mapa). Un color propio
+  del filtro del jugador no cambia.
+- Cómo se eligieron: cada par que se tiene que distinguir (bien/mal,
+  HP/MP, cura/daño, vida/quiebre, quiebre/ULT, las rarezas entre sí) tiene
+  ΔE ≥ 20 con la simulación de Machado 2009 (severidad 1) de ese tipo de
+  visión, y también con visión normal. La paleta normal no llega (p. ej.
+  Mágico/Épico ΔE 1 en deuteranopía): por eso existe el modo. Los tokens
+  de texto siguen en AA en todos los modos.
+- Siguen siempre las señales que no son color: ▲/▼, letras de rareza,
+  letras de estado, `+` en las curas, etiquetas `HP` / `QB`.
+- Estados (Quemadura, Veneno…) no cambian de color: van con su letra.
+
+### Barras de los enemigos sin color (v0.5.1)
+
+En la escena, debajo del nombre: la **vida** es una barra lisa; la de
+**quiebre** va rayada (un corte oscuro cada 3·u) y con un rombo de
+cristal a la izquierda; la **carga de ULT** son 5 bloques separados. La
+tarjeta del objetivo dice `HP` y `QB`.
+
+### Señales que ya había (v0.5)
+
 - **Mejora / empeora**: `StatChange` y la comparación de armas agregan
   ▲ (mejora) / ▼ (empeora) además del verde/rojo; la diferencia lleva
   su signo (`+9`, `-1.3`).
@@ -73,13 +133,47 @@ separadores; hoja "2-E") si el dueño lo pide.
 - **Requisitos**: el texto dice qué falta (`No cumples los requisitos`),
   no solo el rojo.
 
-## 4. Movimiento y destellos (ya existentes)
+## 4. Movimiento y destellos
 
-SACUDIDA (sí/no) y DESTELLOS (normales/suaves/no) en PANTALLA
-(settings.md § 3). Cubren la sacudida de golpes fuertes, el rojo de
-"te pegaron fuerte", los blancos de golpe brutal y quiebre y el tinte
-de "tiempo detenido". El CRT ya no curva en NORMAL y no parpadea (las
-scanlines son fijas).
+SACUDIDA (sí/no) y DESTELLOS (normales/suaves/no), ahora en
+ACCESIBILIDAD (settings.md § 3). Cubren la sacudida de golpes fuertes,
+el rojo de "te pegaron fuerte", los blancos de golpe brutal y quiebre,
+el tinte de "tiempo detenido" y (v0.5.1) el blanco del impacto de una
+ULT, el de la entrada a la arena y el de la ascensión. El CRT ya no curva
+en NORMAL y no parpadea (las scanlines son fijas).
+
+**REDUCIR MOVIMIENTO** (v0.5.1, settings.md § 3.8): apaga la sacudida,
+deja los destellos a lo sumo SUAVES, saca parpadeos y zoom/paneo de
+cámara, deja la arena quieta y cambia el barrido de bloques por un
+fundido corto. El paso adelante (6 px) del que actúa se mantiene: dice
+quién actúa. Los mapas del mundo (pulsos suaves de tiles y loot) no
+cambian.
+
+## 4.1 Tiempo de turno (v0.5.1)
+
+JUEGO → TIEMPO DE TURNO: NORMAL (30 s) / LARGO (60 s) / SIN LÍMITE
+(`TurnTimer`, `lib/game_engine/models/turn_timer.dart`). Lo aplica el
+motor que corre la sala (`SessionEngine.battleTick` usa
+`GameSession.turnLimit`; `null` = nunca pasa el turno por tiempo). Solo:
+el ajuste local. Co-op: el del anfitrión (`SessionEngine.setTurnTimer` al
+crear la sala y al cambiar el ajuste); viaja en el snapshot como `tt`
+(opcional, solo si no es `normal`; un cliente viejo lo ignora). La barra
+de tiempo de la batalla se llena con el límite de la sala; sin límite no
+hay reloj ni tic-tac. Pueblo y preparación: `Turnos: sin límite
+(anfitrión)`.
+
+## 4.2 Objetivos clicables (v0.5.1)
+
+Mínimo **24 × 24 px lógicos** a texto Normal (`MinHitTarget`,
+`lib/app/theme/min_hit_target.dart`; auditoría en tests:
+`smallHitTargets` de `test/app/hit_target_audit.dart`). Arreglados:
+filas de la ventana de comandos de la batalla (20 → 25 px: el clic toma
+también el hueco), sliders de volumen (12 → 28 px), `×` / `−5` / `+5` del
+planificador de build (16×20 → 24×24), nodos del árbol de pasivas (el
+área de clic es de ≥ 12 px de radio en pantalla con cualquier zoom; gana
+el más cercano). Ya cumplían: botones (32 px), pestañas, casillas del
+inventario, nodos del Atlas y del mini-árbol de ascensión, tarjetas del
+pueblo.
 
 ## 5. Tests
 
@@ -90,7 +184,14 @@ scanlines son fijas).
   los tres tamaños: ficha de un Legendario, comparación del inventario,
   panel de personaje (atributos, inventario, árbol, filtro), menú de
   batalla y su tip, chat — sin desbordes y dentro de la pantalla.
-- `test/app/contrast_test.dart`: AA de los tokens de texto.
+- `test/app/contrast_test.dart`: AA de los tokens de texto y de las
+  rarezas en cada modo daltónico.
+- `test/app/color_vision_test.dart`: pares distinguibles con la
+  simulación de cada tipo de daltonismo, `VisionColor`, markup / rarezas.
+- `test/features/combat/reduce_motion_test.dart`, `test/game_engine/
+  turn_timer_test.dart`, `test/app/label_scale_test.dart` (ventana,
+  etiquetas, sin pesos), auditoría de objetivos en
+  `settings_menu_test.dart`.
 - `test/features/settings_menu_test.dart`: TAMAÑO DEL TEXTO en vivo.
 
 ## 6. Batalla
@@ -98,16 +199,16 @@ scanlines son fijas).
 Rediseño de la barra de batalla para legibilidad: docs/specs/
 battle_presentation.md § "Barra de batalla (v0.5)".
 
-## 7. Próximo (v0.5.1)
+## 7. Próximo
 
-- Paletas para daltonismo (deuteranopía / protanopía / tritanopía) por
-  tokens.
-- Navegación por teclado completa de título, pausa y paneles (hoy:
-  `Tab` / flechas / `Enter` en los paneles con `PanelFrame`).
-- "Reducir movimiento": cinemáticas de ULT y de ascensión, zoom de
-  cámara de las ULT.
-- Opción de tiempo de turno (más largo / sin tiempo en solo; en co-op,
-  el de la sala).
-- Auditoría de tamaño mínimo de los objetivos clicables.
-- Barras de vida y de quiebre de enemigos distinguibles sin color
-  (patrón), etiquetas de loot en el mapa con letra de rareza.
+Hecho en v0.5.1: paletas para daltonismo, REDUCIR MOVIMIENTO, tiempo de
+turno, auditoría de objetivos clicables, barras de enemigos sin color,
+etiquetas del mundo nítidas, UI que crece con la ventana.
+
+- Navegación por teclado completa (otra parte de v0.5.1).
+- Etiquetas de loot en el mapa con letra de rareza.
+- Colores de estado (Quemadura / Veneno / Regeneración) por paleta
+  daltónica (hoy van con su letra).
+- La franja de turnos (`TURNOS`) se dibuja en el lienzo virtual: pasarla
+  a px de pantalla como las etiquetas.
+- REDUCIR MOVIMIENTO en el mapa (pulsos de tiles y loot).

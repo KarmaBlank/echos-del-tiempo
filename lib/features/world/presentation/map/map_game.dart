@@ -6,7 +6,9 @@ import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/theme/pixel_label.dart';
 import '../../../../core/settings/graphics.dart';
+import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/item.dart';
@@ -24,6 +26,7 @@ import '../session_controller.dart';
 import '../session_view.dart';
 import 'actor_painter.dart';
 import 'loot_painter.dart';
+import 'map_labels.dart';
 import 'map_themes.dart';
 import 'tile_painter.dart';
 import 'void_painter.dart';
@@ -99,7 +102,7 @@ class MapGame extends Game {
 
   /// Veredicto del filtro por objeto del piso (se recalcula si cambia
   /// el filtro o el nivel del jugador).
-  final _verdicts = <int, (String?, int, FilterVerdict)>{};
+  final _verdicts = <int, (String?, int, FilterVerdict, BuildWants?)>{};
 
   /// Duración del estallido del haz al caer (ms).
   static const beamBurstMs = 1500.0;
@@ -176,11 +179,15 @@ class MapGame extends Game {
     if (me == null) return const FilterVerdict(true, FilterStyle.empty);
     final p = me.profile;
     final cached = _verdicts[g.id];
-    if (cached != null && cached.$1 == p.lootFilter && cached.$2 == p.level) {
+    final wants = controller.localWants;
+    if (cached != null &&
+        cached.$1 == p.lootFilter &&
+        cached.$2 == p.level &&
+        identical(cached.$4, wants)) {
       return cached.$3;
     }
-    final v = controller.engine.lootVerdict(p, g.drop);
-    _verdicts[g.id] = (p.lootFilter, p.level, v);
+    final v = controller.engine.lootVerdict(p, g.drop, wants: wants);
+    _verdicts[g.id] = (p.lootFilter, p.level, v, wants);
     return v;
   }
 
@@ -285,7 +292,7 @@ class MapGame extends Game {
       if (identical(g.drop, d)) return verdictFor(g);
     }
     final p = s.players[controller.localId]!.profile;
-    return controller.engine.lootVerdict(p, d);
+    return controller.engine.lootVerdict(p, d, wants: controller.localWants);
   }
 
   @override
@@ -379,10 +386,28 @@ class MapGame extends Game {
         dst,
         SpriteCatalog.pixelPaint());
     image.dispose();
+    // Nombres, carteles y loot: en px de pantalla, nítidos y finos (el
+    // estilo de los nombres de la batalla; ui_style.md § "Etiquetas en
+    // el mundo").
+    canvas.save();
+    canvas.clipRect(dst);
+    paintMapLabels(canvas, labels, dst, vw.toDouble(), labelPen);
+    canvas.restore();
   }
+
+  /// `false`: las etiquetas se dibujan como antes de v0.5.1, en el lienzo
+  /// virtual que después se agranda (solo para comparar en capturas).
+  @visibleForTesting
+  bool screenLabels = true;
+
+  /// Etiquetas del último [drawWorld] (se dibujan en [render]).
+  final labels = <MapLabel>[];
+  final labelPen = PixelLabelPen();
 
   /// Todas las capas del mapa en el lienzo virtual (orden del spec).
   void drawWorld(Canvas c, SessionView view) {
+    labels.clear();
+    actors.labelSink = screenLabels ? labels : null;
     final s = view.session;
     final map = view.map;
     c.drawRect(Rect.fromLTWH(0, 0, vw.toDouble(), vh.toDouble()),
@@ -440,8 +465,7 @@ class MapGame extends Game {
           const Color(0xFF48DBFB), 7);
       actors.text(c, 'ARMERÍA', 21.5 * ts, ts + 10, const Color(0xFFFF9F43), 7);
       // Portal del Eco (docs/specs/ecos_atlas.md § 1).
-      actors.text(c, 'PORTAL', 4.5 * ts, ts + 10,
-          const Color(0xFF5AE6D2), 7);
+      actors.text(c, 'PORTAL', 4.5 * ts, ts + 10, const Color(0xFF5AE6D2), 7);
       // Estatua del Tiempo (docs/specs/ascension.md § 1).
       actors.text(c, 'ESTATUA DEL TIEMPO', 21.5 * ts, 9 * ts - 12,
           const Color(0xFFA29BFE), 6);
@@ -583,7 +607,17 @@ class MapGame extends Game {
     }
     for (final p in loot.placeLabels(floor,
         view: Rect.fromLTWH(camX, camY, vw.toDouble(), vh.toDouble()))) {
-      loot.drawLabel(c, p);
+      // Nítidas en px de pantalla (como el resto de las etiquetas).
+      if (!screenLabels) {
+        loot.drawLabel(c, p);
+        continue;
+      }
+      final col = labelColors(p.loot);
+      labels.add(MapBoxLabel(c.getTransform(), p.rect, loot.labelText(p.loot),
+          textColor: col.text,
+          background: col.background,
+          border: col.border,
+          worldSize: labelPx(p.loot.style.size)));
     }
     c.restore();
     if (showingFallToast) {

@@ -253,14 +253,30 @@ enum CraftOp {
   salvageAll,
 
   /// Vender todas las armas de una rareza (`index` = `Rarity.index`).
-  sellAll;
+  sellAll,
+
+  /// Desarmar las armas elegidas a mano (`CraftAction.uids`, v0.5.1).
+  salvageSelected,
+
+  /// Vender las armas elegidas a mano (`CraftAction.uids`, v0.5.1).
+  sellSelected;
 
   /// Destruye el arma (o las armas) en vez de cambiarla.
   bool get destroys =>
-      this == salvage || this == sell || this == salvageAll || this == sellAll;
+      this == salvage ||
+      this == sell ||
+      this == salvageAll ||
+      this == sellAll ||
+      isSelection;
 
   /// Opera sobre varias armas a la vez (`targetUid` se ignora).
-  bool get isBatch => this == salvageAll || this == sellAll;
+  bool get isBatch => this == salvageAll || this == sellAll || isSelection;
+
+  /// Opera sobre la lista de `uid` elegidos (`CraftAction.uids`).
+  bool get isSelection => this == salvageSelected || this == sellSelected;
+
+  /// Da créditos (vender) en vez de materiales.
+  bool get sells => this == sell || this == sellAll || this == sellSelected;
 }
 
 /// Mod fijo de un legendario: afijo del pool con un rango propio.

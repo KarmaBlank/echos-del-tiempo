@@ -60,6 +60,23 @@ composition root (`lib/app/flavors/main_*.dart`).
 
 `SessionConfig(profile, roomCode)`: el perfil viaja en el `hello`.
 
+**Latencia (v0.5.1, capacidad opcional)**: `LatencyProbe`
+(`contracts/net_latency.dart`) es una interfaz aparte de `NetSession`
+para no obligar a cada implementación (ni a las falsas de los tests) a
+medir ping. Quien la usa pregunta `net is LatencyProbe`. La implementa
+`ProtocolNetSession`, así que la tienen loopback, LAN y P2P.
+
+| Miembro | Qué hace |
+|---|---|
+| `latency` | La última medición (`NetLatency?`; `null` = todavía nada). |
+| `latencyChanges` | `Stream<NetLatency>` **broadcast**. Mientras alguien escucha se manda un `ping` enseguida y después cada `pingInterval` (2 s); sin oyentes no se manda nada. |
+
+`NetLatency`: `rtt` (cliente: ida y vuelta al host; host: el promedio
+de sus clientes), `max` (host: el peor cliente; cliente: igual a `rtt`),
+`peers` (cuántas mediciones entran: el host, sus clientes con ping; el
+cliente, 1) e `isHost`. Host sin clientes medidos = `rtt == null`.
+`NetLatency.aggregate(isHost, rtts)` arma el resumen (función pura).
+
 `NetEvent` (sellado):
 
 | Evento | Lo recibe | Cuándo |
@@ -77,9 +94,11 @@ root registra para que el título sepa si hay red: `label` (`LAN`, `P2P`),
 `P2P por internet: falta configurar Firebase`) y `create()` (una
 `NetSession` nueva por sala).
 
-## Protocolo (versión 5)
+## Protocolo (versión 6)
 
-`kProtocolVersion` (`wire.dart`) = 5 desde la Ascensión v0.5.0
+`kProtocolVersion` (`wire.dart`) = 6 desde v0.5.1 (acción `wants`:
+resumen del plan de build para la condición `Build` del filtro de loot;
+§ "Build y filtro"). Antes: 5 desde la Ascensión v0.5.0
 (acciones `trial`, `ascChoose`, `ascNode`, `ascReset`, `devTrial`;
 eventos `trialDone`, `ascChosen`, `trap`; sesión `trial`; perfil y
 build `asc`; combatiente `once`; docs/specs/ascension.md § 6). Antes: 4
@@ -139,6 +158,7 @@ Las claves de `onMsg` del prototipo (`lib/game_engine/serialization/action_json.
 | `BackToLobbyAction` | `{"t":"back"}` |
 | `UseStairsAction` | `{"t":"stairs","down":true}` (worldgen.md § 6.7) |
 | `PauseAction` | `{"t":"pause","on":true}` (pausa de grupo, settings.md § 6) |
+| `SetBuildWantsAction` | `{"t":"wants","w":{...}}` (v0.5.1, § "Build y filtro") |
 | `BattleAction` | `{"t":"cmd","a":...}` (abajo) |
 
 `BattleCommand` dentro de `cmd` (las claves de `battleCmd`):
@@ -184,7 +204,7 @@ Claves principales:
 | `SessionBattle` | `id`, `st` (`BattleState`), `fe`, `boss`, `elite`, `wait`, `turn`, `end`, `lv`? (nivel de los enemigos) |
 | `BattleState` | `party`, `enemies`, `clock`, `cur`, `log`, `out` (`{win, xp, cr}`), `boss`, `elite` |
 | `Combatant` | todos los campos (stats, estados, cooldowns, ULT, pociones...; loot v2: `ls`, `rgn`, `sres`, `hrec` opcionales); `build` como `{cls, lvl, st, w, up, tree, bdef, item?}` (la base por id y la instancia equipada) |
-| `GroundLoot` | `id`, `d` (`{it: <arma>}` o `{st: <token>, n}`), `x`, `y`, `own`? (dueño; sin `own` = compartido) |
+| `GroundLoot` | `id`, `d` (`{it: <arma>}` o `{st: <token>, n}`), `x`, `y`, `own`? (dueño; sin `own` = compartido), `f`? (piso de la misión, v0.5.1; sin `f` = 0) |
 | Perfil (`p`) | perfil v3 (loot.md § 15): `items` (`{u, b, r?, il?, a?, p?, pl?, f?, s?, q?, n?}`), `eq` (`uid`), `mats`, `grid`, `lf`, `seq`, `pv`, `zu` (zona desbloqueada) |
 | `MissionResult` | `id`, `m`, `name`, `ok`, `rank`, `time`, `xp`, `cr`, `bonus`, `bonusPct`, `kos`, `elites`, `eliteDrops`, `drops`, `left`, `zone`?, `unl`? (jugador → zona desbloqueada) |
 
@@ -229,7 +249,8 @@ mandar deltas; no está hecha.
 Decisión: **un solo snapshot para todos**, como hasta ahora (sin tocar
 `NetSession` ni hacer proyecciones por cliente). El loot del piso viaja
 completo en `GameSession.ground`, cada objeto con su dueño (`own`); el
-cliente dibuja solo el suyo y el compartido (`GameSession.groundFor`).
+cliente dibuja solo el suyo y el compartido del piso actual
+(`GameSession.groundFor`; cada objeto lleva su piso `f`, loot.md § 14.1).
 No es un secreto (co-op entre amigos): es una regla de presentación, y
 el host igual valida que solo el dueño lo levante. Los inventarios viajan
 dentro de los perfiles (los de los compañeros se ven en solo lectura).
@@ -239,9 +260,11 @@ inventario lleno suman ~20–30 KB más por snapshot, y el piso tiene tope
 de 80 objetos. Si pesa, la optimización natural (no hecha) es mandar el
 perfil solo cuando cambia (hash por jugador) y deltas del piso.
 
-Acciones nuevas (cliente → host): `craft` (`{op, w, src?, i?, sk?}`),
+Acciones nuevas (cliente → host): `craft` (`{op, w, src?, i?, sk?, rep?, us?}`; `rep` desde v0.5.1 = habilidad a reemplazar, loot.md § 16.2; `us` desde v0.5.1 = lista de `uid` de `salvageSelected` / `sellSelected`, loot.md § 21.5),
 `give` (`{to, tok, n?}`), `drop` (`{tok, n?}`), `pick` (`{id}`),
-`invMove` (`{a, b}`), `filter` (`{txt}`). Todas las valida el host.
+`invMove` (`{a, b}`), `invSort` (`{k}`, v0.5.1: `rarity` / `itemLevel` /
+`weaponType` / `name` / `recent`, loot.md § 17.2), `filter` (`{txt}`).
+Todas las valida el host.
 
 ### Endgame (v0.4.0, protocolo 4)
 
@@ -260,6 +283,48 @@ Docs/specs/ecos_atlas.md. Todo aditivo y opcional en el JSON:
 - Drops (`LootDrop`): `{eco: {...}}` además de `{it}` y `{st, n}`.
 - Perfil (`hello` y snapshot): `ecos`, `eco` (portal activado), `ms`
   (Maestría).
+
+### Build y filtro (v0.5.1, protocolo 6)
+
+Docs/specs/build_planner.md § 6. El filtro de loot de cada jugador lo
+evalúa el host, que necesita saber qué pide el plan de build de cada uno
+para la condición `Build`. Aditivo: una acción nueva, sin tocar
+`NetSession`, el `hello` ni el snapshot.
+
+- Acción `SetBuildWantsAction` → `{"t":"wants","w":{"types":["hacha"],
+  "bases":["hacha_berserker"],"mods":[["feroz",3]],"wp":"sedDelArma",
+  "skills":["hendir"]}}` (claves vacías se omiten; sin `w` = sin plan).
+  Solo lo que hace falta para `itemFit` (nada de notas ni checklist).
+  El host la lee acotada (`BuildWants.fromJson`: 24 por lista, ids ≤ 48).
+- El cliente la manda tras el **primer snapshot** (ya está en la sala) y
+  cada vez que cambia su plan (`SessionController.setBuildWants`). Si se
+  pierde la conexión y vuelve a entrar, se manda de nuevo con el primer
+  snapshot de la sala nueva.
+- El host la guarda en `SessionPlayer.buildWants` (memoria): no viaja en
+  el snapshot ni se persiste; los demás nunca ven el plan de otro.
+- Se acepta con la sala pausada (no toca el mundo).
+
+### Ping (v0.5.1, protocolo 6)
+
+Para el indicador de FPS y ping (docs/specs/settings.md § 3.9). Aditivo
+dentro del protocolo 6 (v0.5.1 aún no salió): dos mensajes de control
+que **no son acciones** (nunca llegan a `PeerActionEvent`, no tocan el
+estado autoritativo ni la pausa) y se ignoran antes del `hello` /
+`welcome`.
+
+- `{"t":"ping","ts":123456}` → el otro extremo responde enseguida
+  `{"t":"pong","ts":123456}` con el mismo `ts`.
+- `ts` = microsegundos del reloj **de quien manda el ping**
+  (monótono, `Stopwatch`; los tests inyectan uno falso). Al llegar el
+  `pong`, `rtt = ahora − ts`: no hace falta sincronizar relojes. Un
+  `ts` del futuro o de hace más de 60 s se descarta.
+- Mide cada extremo para sí: el cliente hace ping al host; el host a
+  cada cliente unido (`rtt` por id; al irse un cliente se borra). Los dos
+  responden siempre los `ping` del otro, midan o no.
+- Solo se manda mientras hay un oyente de `latencyChanges` (el
+  indicador prendido): con el indicador apagado no viaja nada.
+- Un `t` desconocido (cliente viejo) se sigue ignorando: el `ping` no
+  rompe a nadie, pero todos tienen que tener el protocolo 6 igual.
 
 ### Desconexiones
 

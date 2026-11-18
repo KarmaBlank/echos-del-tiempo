@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
+import '../../../app/widgets/menu_focus.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
@@ -12,6 +13,7 @@ import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/inventory_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../inventory/domain/item_text.dart';
+import '../../inventory/presentation/consumables_bar.dart';
 import '../../inventory/presentation/item_widgets.dart';
 import '../../world/presentation/session_controller.dart';
 import '../domain/stash.dart';
@@ -211,7 +213,10 @@ class _StashScreenState extends ConsumerState<StashScreen> {
     final it = c.item;
     if (it != null) {
       return itemTooltipMarkup(_rules, it,
-          level: p.level, attributes: p.attributes, equipped: equipped);
+          skillDetails: true,
+          level: p.level,
+          attributes: p.attributes,
+          equipped: equipped);
     }
     if (c.eco case final eco?) return ecoTooltipMarkup(_rules, eco);
     return stackTooltipMarkup(c.stack!, c.count);
@@ -243,13 +248,17 @@ class _StashScreenState extends ConsumerState<StashScreen> {
   static double _gridWidth(int columns) =>
       columns * StashScreen.cell + (columns - 1) * StashScreen.gap;
 
-  Widget _grid(int columns, int count, Widget Function(int) build) => SizedBox(
+  /// Grilla con cursor de teclado (flechas; Enter = clic en la casilla).
+  Widget _grid(int columns, int count, Widget Function(int) build,
+          {required ValueChanged<int> onActivate, String? keyPrefix}) =>
+      FocusGrid(
+        count: count,
+        columns: columns,
+        spacing: StashScreen.gap,
         width: _gridWidth(columns),
-        child: Wrap(
-          spacing: StashScreen.gap,
-          runSpacing: StashScreen.gap,
-          children: [for (var i = 0; i < count; i++) build(i)],
-        ),
+        keyPrefix: keyPrefix,
+        cell: (_, i, __) => build(i),
+        onActivate: onActivate,
       );
 
   Widget _characterSide(PlayerProfile p) {
@@ -263,7 +272,10 @@ class _StashScreenState extends ConsumerState<StashScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(retroText('${p.name} · $cls · Nv ${p.level}'),
-              style: const TextStyle(fontFamily: RetroType.pixelFamily, fontSize: 12, color: ProtoColors.ink)),
+              style: const TextStyle(
+                  fontFamily: RetroType.pixelFamily,
+                  fontSize: RetroType.title,
+                  color: ProtoColors.ink)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -303,7 +315,19 @@ class _StashScreenState extends ConsumerState<StashScreen> {
               tooltip: c == null ? null : _tooltip(p, c),
               onTap: () => _tapCharacter(t, i),
             );
-          }),
+          }, onActivate: (i) => _tapCharacter(cells[i], i)),
+          // v0.5.1: los materiales no ocupan casilla (loot.md § 17.1);
+          // se eligen acá para guardarlos (las pociones se ven pero no van
+          // al alijo: elegirlas dice por qué).
+          const SizedBox(height: 8),
+          InventoryStacksBar(
+            rules: _rules,
+            profile: p,
+            cell: StashScreen.cell,
+            gap: StashScreen.gap,
+            selected: _side == _Side.character ? _selToken : null,
+            onSelect: (t) => _tapCharacter(t, null),
+          ),
         ],
       ),
     );
@@ -317,7 +341,10 @@ class _StashScreenState extends ConsumerState<StashScreen> {
         Row(
           children: [
             const Text('ALIJO',
-                style: TextStyle(fontFamily: RetroType.pixelFamily, fontSize: 12, color: ProtoColors.ink)),
+                style: TextStyle(
+                    fontFamily: RetroType.pixelFamily,
+                    fontSize: RetroType.title,
+                    color: ProtoColors.ink)),
             const SizedBox(width: 12),
             Text('${s.used}/${Stash.size}',
                 key: const ValueKey('stash-used'),
@@ -346,7 +373,7 @@ class _StashScreenState extends ConsumerState<StashScreen> {
                     : _tooltip(_p!, c!),
             onTap: () => _tapStash(i),
           );
-        }),
+        }, onActivate: (k) => _tapStash(base + k)),
       ],
     );
   }
@@ -431,20 +458,26 @@ class _StashScreenState extends ConsumerState<StashScreen> {
         ],
       );
     }
+    // Q / E (o 1-4) cambian la pestaña del alijo (menu_focus.dart).
     return Scaffold(
-      body: PanelFrame(
-        key: const ValueKey('stash-screen'),
-        title: 'ALIJO COMPARTIDO',
-        width: 960,
-        onClose: () => Navigator.of(context).maybePop(),
-        help: 'Clic en una casilla para elegirla y el botón de abajo (o '
-            'doble clic) para pasarla al otro lado. Con algo elegido, clic '
-            'en una casilla vacía de su lado lo cambia de lugar.<br>'
-            'No se guardan la <b>equipada</b>, la última <b>arma inicial</b> '
-            'ni las pociones. Los materiales se apilan hasta '
-            '${Stash.maxMaterialStack} en el alijo.',
-        actions: actions,
-        child: body,
+      body: MenuTabKeys(
+        count: Stash.tabs,
+        index: _tab,
+        onChanged: (t) => setState(() => _tab = t),
+        child: PanelFrame(
+          key: const ValueKey('stash-screen'),
+          title: 'ALIJO COMPARTIDO',
+          width: 960,
+          onClose: () => Navigator.of(context).maybePop(),
+          help: 'Clic en una casilla para elegirla y el botón de abajo (o '
+              'doble clic) para pasarla al otro lado. Con algo elegido, clic '
+              'en una casilla vacía de su lado lo cambia de lugar.<br>'
+              'No se guardan la <b>equipada</b>, la última <b>arma inicial</b> '
+              'ni las pociones. Los materiales se apilan hasta '
+              '${Stash.maxMaterialStack} en el alijo.',
+          actions: actions,
+          child: body,
+        ),
       ),
     );
   }

@@ -25,6 +25,7 @@ class SceneFrame {
     this.localId,
     this.targetId,
     this.turnTimeLeft,
+    this.turnLimit = 30,
   });
 
   final BattleState battle;
@@ -41,6 +42,10 @@ class SceneFrame {
 
   /// Segundos del turno del jugador (barra de tiempo); `null` si no espera.
   final double? turnTimeLeft;
+
+  /// Segundos de un turno entero (la barra llena): el tiempo de turno de
+  /// la sala (30 / 60; accessibility.md § 7).
+  final double turnLimit;
 }
 
 /// Cartel de entrada de un jefe (docs/specs/battle_presentation.md
@@ -89,6 +94,7 @@ class SceneOptions {
     this.damageNumbers = true,
     this.pixelPerfect = false,
     this.particles = 1,
+    this.reduceMotion = false,
   });
 
   /// Sacudida de pantalla.
@@ -106,6 +112,13 @@ class SceneOptions {
 
   /// Multiplicador de la cantidad de partículas (0.3 / 0.6 / 1).
   final double particles;
+
+  /// REDUCIR MOVIMIENTO (docs/specs/accessibility.md § 4): la cámara no
+  /// hace zoom ni paneos (ULT, entrada), la arena queda quieta, nada
+  /// parpadea (quiebre, VULNERABLE, avisos, marcadores) y la entrada a
+  /// la arena es un fundido corto sin destello. La sacudida y los
+  /// destellos ya llegan apagados / suaves en [shake] y [flash].
+  final bool reduceMotion;
 }
 
 class BattleSceneController extends ChangeNotifier {
@@ -411,6 +424,11 @@ class BattleSceneController extends ChangeNotifier {
 
   void _updateCamera(SceneFrame f, double dt) {
     final base = baseView(f);
+    if (options.reduceMotion) {
+      // Sin zoom de ULT ni paneo de entrada: siempre el encuadre base.
+      camera = base;
+      return;
+    }
     final u = ult;
     final stage = ultStage(f);
     if (u != null && stage != null) {

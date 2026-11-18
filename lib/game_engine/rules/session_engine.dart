@@ -9,6 +9,7 @@ import '../models/battle_command.dart';
 import '../models/battle_event.dart';
 import '../models/atlas.dart';
 import '../models/battle_state.dart';
+import '../models/build_wants.dart';
 import '../models/eco.dart';
 import '../models/game_map.dart';
 import '../models/game_session.dart';
@@ -115,6 +116,16 @@ class SessionEngine {
     return SessionStep(s, const []);
   }
 
+  /// El anfitrión (o el jugador solo) fija el tiempo de turno de la sala
+  /// (docs/specs/accessibility.md § 7): al crearla y cada vez que lo
+  /// cambia en CONFIGURACIÓN. Un turno en curso sigue con lo que lleva;
+  /// con [TurnTimer.unlimited] nunca se pasa por tiempo.
+  SessionStep setTurnTimer(GameSession session, TurnTimer timer) {
+    if (session.turnTimer == timer) return SessionStep(session, const []);
+    final s = session.copy()..turnTimer = timer;
+    return SessionStep(s, const []);
+  }
+
   final BattleEngine battles;
   final ProgressionRules progression;
   final RandomSource _random;
@@ -136,10 +147,16 @@ class SessionEngine {
       p.lootFilter, () => const LootFilterRules().fromProfileText(p.lootFilter));
 
   /// Cómo ve [p] un drop según su filtro (para la UI y el auto-levantar).
-  FilterVerdict lootVerdict(PlayerProfile p, LootDrop d) =>
+  /// [wants]: el resumen del plan de build de ese jugador (condición
+  /// `Build` y la ★); el host usa `SessionPlayer.buildWants`, la UI el
+  /// plan local y solo para el jugador local (build_planner.md § 6).
+  FilterVerdict lootVerdict(PlayerProfile p, LootDrop d, {BuildWants? wants}) =>
       LootFilterRules(catalog: catalog).evaluate(filterOf(p), d,
           FilterContext(
-              level: p.level, attributes: p.attributes, classId: p.classId));
+              level: p.level,
+              attributes: p.attributes,
+              classId: p.classId,
+              wants: wants));
 
   // ---- constantes del prototipo ----
   static const maxPlayers = 4;
@@ -159,6 +176,8 @@ class SessionEngine {
   static const bossLegendaryChance = 0.10;
   static const sealRange = 30.0;
   static const calmRange = 120.0;
+  /// `TURN_LIMIT` del prototipo: el tiempo de turno NORMAL. El de la
+  /// sala es `GameSession.turnLimit` ([TurnTimer]).
   static const turnLimit = 30.0; // TURN_LIMIT
   static const resultSeconds = 25.0;
 
@@ -249,7 +268,9 @@ class SessionEngine {
         action is! PauseAction &&
         action is! ChatAction &&
         action is! SetLootFilterAction &&
-        action is! MoveInventoryAction) {
+        action is! SetBuildWantsAction &&
+        action is! MoveInventoryAction &&
+        action is! SortInventoryAction) {
       return null;
     }
     final op = _Op(this, session.copy());
@@ -542,12 +563,19 @@ class _Op {
         return _profileChange(
             p, InventoryRules.move(p.profile, a.from, a.to));
 
+      case SortInventoryAction():
+        return _profileChange(p, rules.inventory.sort(p.profile, a.key));
+
       case SetLootFilterAction():
         final t = a.text;
         if (t != null && t.length > SetLootFilterAction.maxLength) {
           return false;
         }
         p.profile = p.profile.copyWith(lootFilter: t, clearLootFilter: t == null);
+        return true;
+
+      case SetBuildWantsAction(:final wants):
+        p.buildWants = wants == null || wants.isEmpty ? null : wants;
         return true;
 
       case BuyItemAction():
@@ -837,6 +865,8 @@ class _Op {
         sourceUid: a.sourceUid,
         index: a.index,
         skillId: a.skillId,
+        replaceSkillId: a.replaceSkillId,
+        uids: a.uids,
         random: _rand);
     if (!_profileChange(p, r.profile)) return false;
     events.add(CraftedEvent(p.id, a.op, a.targetUid));
@@ -893,10 +923,11 @@ class _Op {
     return true;
   }
 
-  /// `PickUpAction` (E): propio o compartido, cerca y con lugar.
+  /// `PickUpAction` (E): propio o compartido, del piso actual, cerca y
+  /// con lugar.
   bool _pickUp(SessionPlayer p, int groundId) {
     if (!_onMap || !p.alive) return false;
-    final g = s.ground.where((x) => x.id == groundId).firstOrNull;
+    final g = s.groundHere.where((x) => x.id == groundId).firstOrNull;
     if (g == null ||
         !g.visibleTo(p.id) ||
         _dist(p.x, p.y, g.x, g.y) > SessionEngine.pickReach) {
@@ -914,7 +945,8 @@ class _Op {
     return true;
   }
 
-  /// Deja [d] en el piso cerca de ([x], [y]); [owner] = loot instanciado.
+  /// Deja [d] en el piso actual cerca de ([x], [y]); [owner] = loot
+  /// instanciado.
   GroundLoot _toGround(LootDrop d, double x, double y, {String? owner}) {
     final id = ++s.groundSeq;
     // Desparramado en espiral, sin azar (determinístico).
@@ -926,6 +958,7 @@ class _Op {
       x: x + math.cos(ang) * r,
       y: y + math.sin(ang) * r,
       ownerId: owner,
+      floor: s.groundFloor,
     );
     s.ground.add(g);
     if (s.ground.length > SessionEngine.maxGround) s.ground.removeAt(0);
@@ -944,7 +977,8 @@ class _Op {
     final shown = <LootDrop>[];
     for (final d in drops) {
       final mission = src == LootSource.mission;
-      final visible = mission || e.lootVerdict(p.profile, d).visible;
+      final visible = mission ||
+          e.lootVerdict(p.profile, d, wants: p.buildWants).visible;
       if (visible) shown.add(d);
       if ((!e.groundLoot || mission) && visible) {
         final next = rules.grant(p.profile, d);
@@ -1064,15 +1098,17 @@ class _Op {
   }
 
   /// Auto-levantar: cada jugador levanta su loot (no el compartido) al
-  /// pasar encima, si su filtro lo muestra y tiene lugar.
+  /// pasar encima, si su filtro lo muestra y tiene lugar (solo el del
+  /// piso actual).
   void _autoPickup() {
     if (s.ground.isEmpty) return;
-    for (final g in [...s.ground]) {
+    for (final g in [...s.groundHere]) {
       final owner = g.ownerId == null ? null : s.players[g.ownerId];
       if (owner == null ||
           !owner.alive ||
           _dist(owner.x, owner.y, g.x, g.y) >= SessionEngine.pickupRange ||
-          !e.lootVerdict(owner.profile, g.drop).visible) {
+          !e.lootVerdict(owner.profile, g.drop, wants: owner.buildWants)
+              .visible) {
         continue;
       }
       _take(owner, g);
@@ -1117,6 +1153,8 @@ class _Op {
     final m = s.mission!;
     final f = e.mapFor(s).floor(to);
     if (f == null) return;
+    final from = m.floor;
+    final left = _unclaimedHere();
     m.floor = to;
     if (to < m.levels.length) m.zoneLevel = m.levels[to];
     final base = down ? f.spawn : (f.returnPoint ?? f.spawn);
@@ -1135,6 +1173,30 @@ class _Op {
     final verb = down ? 'Bajaron' : 'Subieron';
     final boss = to == m.floors - 1 ? ' El jefe espera tras la barrera.' : '';
     say('$verb al piso ${to + 1}/${m.floors}.$boss');
+    // El loot no viaja: queda en su piso (loot.md § 14.1). Aviso por
+    // jugador de lo que su filtro muestra y dejó atrás.
+    final solo = s.players.length == 1;
+    for (final MapEntry(key: p, value: n) in left.entries) {
+      final what = n == 1 ? 'Queda 1 objeto' : 'Quedan $n objetos';
+      final whose = solo ? '' : ' de $p';
+      say('$what$whose en el piso ${from + 1}.');
+    }
+  }
+
+  /// Por jugador (nombre): cuánto loot del piso actual que ve (suyo o
+  /// compartido) muestra su filtro. Solo los que tienen algo.
+  Map<String, int> _unclaimedHere() {
+    final out = <String, int>{};
+    if (s.ground.isEmpty) return out;
+    for (final p in players) {
+      final n = s
+          .groundFor(p.id)
+          .where((g) =>
+              e.lootVerdict(p.profile, g.drop, wants: p.buildWants).visible)
+          .length;
+      if (n > 0) out[p.name] = n;
+    }
+    return out;
   }
 
   /// Nivel de los enemigos de [en] (0 = misión sin zona).
@@ -1948,7 +2010,8 @@ class _Op {
     }
 
     b.turnTime += dt;
-    if (b.turnTime > SessionEngine.turnLimit) {
+    final limit = s.turnLimit;
+    if (limit != null && b.turnTime > limit) {
       final step = e.battles.timeout(b.state);
       if (step != null) _applyBattleStep(b, step);
       if (b.endTimer == null) b.wait = 0.8;

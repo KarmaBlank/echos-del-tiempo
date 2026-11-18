@@ -1,10 +1,14 @@
 import 'dart:collection';
 
 import 'battle_state.dart';
+import 'build_wants.dart';
 import 'eco.dart';
 import 'item.dart';
 import 'loot.dart';
 import 'player_profile.dart';
+import 'turn_timer.dart';
+
+export 'turn_timer.dart';
 
 /// Modo de la sesión (`S.mode` del prototipo).
 enum SessionMode { lobby, prep, field, battle, levelUp, result }
@@ -54,7 +58,13 @@ class SessionPlayer {
     this.ult = 0,
     this.levelUpPending = false,
     this.spikeReady = 0,
+    this.buildWants,
   });
+
+  /// Resumen del plan de build del jugador (`SetBuildWantsAction`) para la
+  /// condición `Build` de su filtro de loot. Solo lo usa el host: **no**
+  /// viaja en el snapshot ni se guarda (build_planner.md § 6).
+  BuildWants? buildWants;
 
   /// Reloj de la sala desde el que las púas de la Prueba vuelven a dañar
   /// a este jugador (ascension.md § 1.1). Solo lo usa el host.
@@ -106,6 +116,7 @@ class SessionPlayer {
         ult: ult,
         levelUpPending: levelUpPending,
         spikeReady: spikeReady,
+        buildWants: buildWants,
       );
 }
 
@@ -506,6 +517,7 @@ class GameSession {
     this.ecoOwner,
     List<String>? atlas,
     this.trial,
+    this.turnTimer = TurnTimer.normal,
   })  : players = players ?? LinkedHashMap(),
         ground = ground ?? [],
         atlas = List.unmodifiable(atlas ?? const <String>[]);
@@ -530,9 +542,12 @@ class GameSession {
   /// Contador para ids de batallas y resultados.
   int seq;
 
-  /// Loot en el piso del mapa actual (instanciado por dueño, o
-  /// compartido si lo soltó un jugador). Se vacía al cambiar de mapa.
-  /// Ver loot.md § 4 y netcode.md § "Loot instanciado".
+  /// Loot en el suelo del mapa actual (instanciado por dueño, o
+  /// compartido si lo soltó un jugador), de todos los pisos de la
+  /// misión: cada uno queda en el piso donde cayó ([GroundLoot.floor]) y
+  /// solo se ve y se levanta ahí ([groundFor]). Se vacía al cambiar de
+  /// mapa (empezar misión / volver al pueblo). Ver loot.md § 4 y
+  /// netcode.md § "Loot instanciado".
   final List<GroundLoot> ground;
 
   /// Contador para ids de [ground].
@@ -561,14 +576,31 @@ class GameSession {
   /// (docs/specs/ascension.md § 1).
   int? trial;
 
+  /// Tiempo de turno de la sala: el ajuste del anfitrión (o el local
+  /// jugando solo). Ver [TurnTimer].
+  TurnTimer turnTimer;
+
+  /// Segundos del turno de un jugador; `null` = sin límite.
+  double? get turnLimit => turnTimer.seconds;
+
   /// Se vota, prepara o juega un Eco.
   bool get inEco => eco != null;
 
   bool get paused => pausedBy != null;
 
-  /// El loot del piso que ve [playerId] (el suyo y el compartido).
+  /// Piso en el que está el grupo (0 sin misión o en mapas de un piso).
+  int get groundFloor => mission?.floor ?? 0;
+
+  /// El loot del piso actual ([groundFloor]): el de otros pisos sigue
+  /// guardado pero no se ve ni se levanta hasta volver ahí.
+  Iterable<GroundLoot> get groundHere {
+    final f = groundFloor;
+    return ground.where((g) => g.floor == f);
+  }
+
+  /// El loot del piso actual que ve [playerId] (el suyo y el compartido).
   Iterable<GroundLoot> groundFor(String playerId) =>
-      ground.where((g) => g.visibleTo(playerId));
+      groundHere.where((g) => g.visibleTo(playerId));
 
   Iterable<SessionPlayer> get playerList => players.values;
 
@@ -617,5 +649,6 @@ class GameSession {
         ecoOwner: ecoOwner,
         atlas: atlas,
         trial: trial,
+        turnTimer: turnTimer,
       );
 }

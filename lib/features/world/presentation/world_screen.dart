@@ -309,7 +309,10 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           // Vuelta de la arena al mapa: fundido de bloques
           // (docs/specs/battle_presentation.md § "Arenas" → "Transición").
           Positioned.fill(
-            child: BattleExitWipe(inBattle: view.mode == SessionMode.battle),
+            child: BattleExitWipe(
+                inBattle: view.mode == SessionMode.battle,
+                fade: ref
+                    .watch(gameSettingsProvider.select((s) => s.reduceMotion))),
           ),
           // Elegir ascensión desde el resultado de la Prueba I.
           if (_choosing && view.me != null)
@@ -341,6 +344,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 classId: _cinematics.first.$2,
                 ascensionId: _cinematics.first.$3,
                 sprites: sprites.requireValue,
+                // DESTELLOS y REDUCIR MOVIMIENTO (accessibility.md § 4).
+                flash: ref
+                    .watch(gameSettingsProvider.select((s) => s.flashFactor)),
+                reduceMotion: ref
+                    .watch(gameSettingsProvider.select((s) => s.reduceMotion)),
                 onDone: () {
                   if (mounted) setState(() => _cinematics.removeAt(0));
                 },
@@ -479,7 +487,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 _ => null,
               },
               onAscend: r.success &&
-                      (view.me?.profile.ascension.trials.contains(1) ?? false) &&
+                      (view.me?.profile.ascension.trials.contains(1) ??
+                          false) &&
                       view.me?.profile.ascension.id == null
                   ? () => setState(() => _choosing = true)
                   : null,
@@ -488,7 +497,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   if (view.me case final me?)
                     ResultDrop(
                       dropLabelText(controller.engine.progression, d),
-                      controller.engine.lootVerdict(me.profile, d),
+                      controller.engine.lootVerdict(me.profile, d,
+                          wants: controller.localWants),
                       tooltip: d.eco != null
                           ? ecoTooltipMarkup(
                               controller.engine.progression, d.eco!)
@@ -523,8 +533,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
 
   /// Lo que la escena de batalla toma de los ajustes del jugador.
   static SceneOptions _sceneOptions(GameSettings s) => SceneOptions(
-        shake: s.screenShake,
-        flash: s.flashes.factor,
+        // REDUCIR MOVIMIENTO apaga la sacudida y deja los destellos a lo
+        // sumo SUAVES (accessibility.md § 4).
+        shake: s.shakeOn,
+        flash: s.flashFactor,
+        reduceMotion: s.reduceMotion,
         damageNumbers: s.damageNumbers,
         pixelPerfect: s.scale == ScaleMode.pixelPerfect,
         particles: s.particles.factor,
@@ -633,6 +646,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           onReady: controller.setReady,
           onCancel: controller.cancelPrep,
           onCharacter: () => controller.openPanel(WorldPanel.character),
+          turnTimer: s.turnTimer,
           // Las pestañas de la armería (en `prep` la del lobby no se abre).
           shopTabs: [
             for (final t in ArmoryTab.values)

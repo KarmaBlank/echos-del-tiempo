@@ -1,4 +1,5 @@
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
+import 'package:echos_del_tiempo/app/widgets/action_card.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
@@ -103,8 +104,20 @@ PlayerProfile lootWarrior({
       materials: materials,
     ));
 
-PanelButton button(WidgetTester tester, String key) =>
-    tester.widget<PanelButton>(find.byKey(ValueKey(key)));
+/// Un botón o una tarjeta de acción y su motivo de bloqueo (`null` = se
+/// puede): `PanelButton`, `ConfirmButton` o `ActionCard`.
+class ActionRef {
+  const ActionRef(this.reason);
+  final String? reason;
+}
+
+ActionRef button(WidgetTester tester, String key) =>
+    switch (tester.widget(find.byKey(ValueKey(key)))) {
+      PanelButton b => ActionRef(b.reason),
+      ConfirmButton b => ActionRef(b.reason),
+      ActionCard c => ActionRef(c.reason),
+      final w => throw StateError('$key no es un botón: ${w.runtimeType}'),
+    };
 
 /// Texto plano de los `Text` / `ProtoText` debajo de [key].
 String plain(WidgetTester tester, String key) => tester

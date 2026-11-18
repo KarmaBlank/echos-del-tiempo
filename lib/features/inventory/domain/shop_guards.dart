@@ -55,9 +55,6 @@ class ShopGuards {
     }
     final price = kItems[item]!.price;
     if (p.credits < price) return _missing(price, p.credits);
-    if (have == 0 && InventoryRules.freeCells(p) <= 0) {
-      return 'Inventario lleno';
-    }
     return null;
   }
 
@@ -94,7 +91,11 @@ class ShopGuards {
   /// aleatorias solo dicen costo y qué puede salir).
   CraftResult craftPreview(PlayerProfile p, CraftAction a) =>
       rules.crafting.apply(p, a.op, a.targetUid,
-          sourceUid: a.sourceUid, index: a.index, skillId: a.skillId);
+          sourceUid: a.sourceUid,
+          index: a.index,
+          skillId: a.skillId,
+          replaceSkillId: a.replaceSkillId,
+          uids: a.uids);
 
   /// `CraftAction`.
   String? craft(PlayerProfile p, CraftAction a) {

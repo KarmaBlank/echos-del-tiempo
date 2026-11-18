@@ -3,10 +3,12 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../game_engine/models/turn_timer.dart';
 import 'frame_limiter.dart';
 import 'graphics.dart';
 import 'window_mode.dart';
 
+export '../../game_engine/models/turn_timer.dart';
 export 'graphics.dart';
 
 /// Destellos de pantalla completa en batalla (accesibilidad): el rojo de
@@ -54,6 +56,40 @@ enum ReadingFont {
       values.firstWhere((m) => m.name == v, orElse: () => def);
 }
 
+/// "Modo daltónico" (accesibilidad, docs/specs/accessibility.md § 3):
+/// cambia los colores con significado (mejora / empeora, HP / MP,
+/// rarezas, barras de los enemigos, números de daño y cura) por una
+/// paleta que se distingue con ese tipo de visión. Ver `VisionPalette`.
+enum ColorVision {
+  off,
+
+  /// Verde / rojo (la más común).
+  deuteranopia,
+
+  /// Rojo (el rojo se ve oscuro).
+  protanopia,
+
+  /// Azul / amarillo.
+  tritanopia;
+
+  static ColorVision fromName(Object? v, ColorVision def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// Esquina del indicador de FPS y ping (docs/specs/settings.md § 3.9).
+enum OverlayCorner {
+  topRight,
+  topLeft,
+  bottomRight,
+  bottomLeft;
+
+  bool get top => this == topRight || this == topLeft;
+  bool get right => this == topRight || this == bottomRight;
+
+  static OverlayCorner fromName(Object? v, OverlayCorner def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
 /// Ajustes de pantalla y de juego (todo lo que no es audio). Se guardan
 /// en `game.json` junto al perfil. Ver docs/specs/settings.md.
 class GameSettings {
@@ -70,6 +106,11 @@ class GameSettings {
     this.textSize = TextSize.normal,
     this.readingFont = ReadingFont.vt323,
     this.buildNotices = true,
+    this.colorVision = ColorVision.off,
+    this.reduceMotion = false,
+    this.turnTimer = TurnTimer.normal,
+    this.perfOverlay = false,
+    this.perfCorner = OverlayCorner.topRight,
   });
 
   /// Pantalla completa sin bordes (solo Windows; ver `WindowMode`).
@@ -107,6 +148,36 @@ class GameSettings {
   /// (docs/specs/build_planner.md § 5).
   final bool buildNotices;
 
+  /// Paleta para daltonismo (accesibilidad).
+  final ColorVision colorVision;
+
+  /// "Reducir movimiento" (accesibilidad): sin sacudida, destellos a lo
+  /// sumo SUAVES, sin parpadeos, sin zoom de cámara de las ULT, arena
+  /// quieta y fundido corto en vez del barrido de bloques. Ver
+  /// docs/specs/accessibility.md § 4.
+  final bool reduceMotion;
+
+  /// Tiempo de turno en batalla. Jugando solo vale este; en co-op, el
+  /// del anfitrión de la sala.
+  final TurnTimer turnTimer;
+
+  /// "FPS Y PING": indicador en una esquina (settings.md § 3.9).
+  final bool perfOverlay;
+
+  /// En qué esquina va el indicador.
+  final OverlayCorner perfCorner;
+
+  /// Sacudida efectiva (REDUCIR MOVIMIENTO la apaga).
+  bool get shakeOn => screenShake && !reduceMotion;
+
+  /// Alfa efectivo de los destellos: REDUCIR MOVIMIENTO los deja a lo
+  /// sumo en SUAVES.
+  double get flashFactor => reduceMotion
+      ? (flashes.factor < FlashLevel.reduced.factor
+          ? flashes.factor
+          : FlashLevel.reduced.factor)
+      : flashes.factor;
+
   GameSettings copyWith({
     bool? fullscreen,
     bool? screenShake,
@@ -120,6 +191,11 @@ class GameSettings {
     TextSize? textSize,
     ReadingFont? readingFont,
     bool? buildNotices,
+    ColorVision? colorVision,
+    bool? reduceMotion,
+    TurnTimer? turnTimer,
+    bool? perfOverlay,
+    OverlayCorner? perfCorner,
   }) =>
       GameSettings(
         fullscreen: fullscreen ?? this.fullscreen,
@@ -134,6 +210,11 @@ class GameSettings {
         textSize: textSize ?? this.textSize,
         readingFont: readingFont ?? this.readingFont,
         buildNotices: buildNotices ?? this.buildNotices,
+        colorVision: colorVision ?? this.colorVision,
+        reduceMotion: reduceMotion ?? this.reduceMotion,
+        turnTimer: turnTimer ?? this.turnTimer,
+        perfOverlay: perfOverlay ?? this.perfOverlay,
+        perfCorner: perfCorner ?? this.perfCorner,
       );
 
   Map<String, Object?> toJson() => {
@@ -149,6 +230,11 @@ class GameSettings {
         'textSize': textSize.name,
         'readingFont': readingFont.name,
         'buildNotices': buildNotices,
+        'colorVision': colorVision.name,
+        'reduceMotion': reduceMotion,
+        'turnTimer': turnTimer.name,
+        'perfOverlay': perfOverlay,
+        'perfCorner': perfCorner.name,
       };
 
   /// Valores inválidos o ausentes caen al de por defecto. Claves viejas
@@ -171,6 +257,11 @@ class GameSettings {
       readingFont:
           ReadingFont.fromName(json['readingFont'], d.readingFont),
       buildNotices: flag(json['buildNotices'], d.buildNotices),
+      colorVision: ColorVision.fromName(json['colorVision'], d.colorVision),
+      reduceMotion: flag(json['reduceMotion'], d.reduceMotion),
+      turnTimer: TurnTimer.fromName(json['turnTimer'], d.turnTimer),
+      perfOverlay: flag(json['perfOverlay'], d.perfOverlay),
+      perfCorner: OverlayCorner.fromName(json['perfCorner'], d.perfCorner),
     );
   }
 
@@ -188,12 +279,18 @@ class GameSettings {
       other.fpsLimit == fpsLimit &&
       other.textSize == textSize &&
       other.readingFont == readingFont &&
-      other.buildNotices == buildNotices;
+      other.buildNotices == buildNotices &&
+      other.colorVision == colorVision &&
+      other.reduceMotion == reduceMotion &&
+      other.turnTimer == turnTimer &&
+      other.perfOverlay == perfOverlay &&
+      other.perfCorner == perfCorner;
 
   @override
   int get hashCode => Object.hash(fullscreen, screenShake, flashes,
       damageNumbers, confirmDrop, scale, crt, particles, fpsLimit, textSize,
-      readingFont, buildNotices);
+      readingFont, buildNotices, colorVision, reduceMotion, turnTimer,
+      perfOverlay, perfCorner);
 
   @override
   String toString() => 'GameSettings(${toJson()})';

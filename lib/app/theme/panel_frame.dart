@@ -226,6 +226,10 @@ class _PanelKeysState extends State<_PanelKeys> {
     }
     final inside = focused != null && focused != _scope;
     if (k == LogicalKeyboardKey.tab) {
+      // Ctrl+Tab cambia de pestaña (`MenuTabKeys`, afuera del marco).
+      if (HardwareKeyboard.instance.isControlPressed) {
+        return KeyEventResult.ignored;
+      }
       final back = HardwareKeyboard.instance.isShiftPressed;
       final from = inside ? focused : _scope;
       back ? from.previousFocus() : from.nextFocus();

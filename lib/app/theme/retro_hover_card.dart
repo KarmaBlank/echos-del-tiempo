@@ -98,13 +98,24 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
           ),
         );
       },
-      child: MouseRegion(
-        onEnter: (_) => _show(),
-        onExit: (_) => _hide(),
-        // Como el Tooltip: un clic o un arrastre lo esconde.
-        child: Listener(
-          onPointerDown: (_) => _hide(),
-          child: widget.child,
+      // Con el teclado: aparece mientras el foco está en el objetivo (o
+      // adentro), como con el mouse (docs/specs/panels.md § "Teclado").
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (f) => f &&
+                FocusManager.instance.highlightMode ==
+                    FocusHighlightMode.traditional
+            ? _show()
+            : _hide(),
+        child: MouseRegion(
+          onEnter: (_) => _show(),
+          onExit: (_) => _hide(),
+          // Como el Tooltip: un clic o un arrastre lo esconde.
+          child: Listener(
+            onPointerDown: (_) => _hide(),
+            child: widget.child,
+          ),
         ),
       ),
     );

@@ -330,13 +330,20 @@ void main() {
         final vp = SceneViewport(g.worldRect, scene.viewFor(scene.frame!));
         // Píxeles de muestra: una esquina del mundo y el pie del héroe p0.
         final corner = g.worldRect.topLeft + const Offset(6, 6);
-        final foot = vp.toScreen(l.of('p0') + const Offset(13, 1));
         int at(Offset o) {
           final i = (o.dy.floor() * 1280 + o.dx.floor()) * 4;
           return data!.getUint32(i); // RGBA
         }
 
-        return [at(corner), at(foot)];
+        // El pie de cada héroe (el más "naranja"): las etiquetas de los
+        // nombres, a 16 px, pueden tapar el pie de alguno.
+        var foot = 0;
+        for (final p in s.party) {
+          final px = at(vp.toScreen(l.of(p.id) + const Offset(13, 1)));
+          int score(int v) => ((v >> 24) & 0xFF) - ((v >> 8) & 0xFF);
+          if (p == s.party.first || score(px) > score(foot)) foot = px;
+        }
+        return [at(corner), foot];
       }
 
       int red(int rgba) => (rgba >> 24) & 0xFF;

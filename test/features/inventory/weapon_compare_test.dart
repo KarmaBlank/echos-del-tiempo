@@ -158,7 +158,7 @@ void main() {
     expect(plain(tester, 'inv-compare-pick'),
         contains('Elige el arma B para comparar con Eco Voraz'));
     // Una pila no sirve como B.
-    await _tap(tester, 'inv-cell-${_cell(me(), 'mat:esquirla')}');
+    await _tap(tester, 'inv-stack-mat:esquirla');
     expect(find.byKey(const ValueKey('cmp-view')), findsNothing);
     await _tap(tester, 'inv-cell-${_cell(me(), 'e1')}');
     expect(find.byKey(const ValueKey('cmp-view')), findsOneWidget);

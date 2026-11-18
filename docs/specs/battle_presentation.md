@@ -513,6 +513,41 @@ Martillo Celestial son `holy`. El daño de "Luz" (Aura Restauradora con
 Dúo: el estado del dúo y su color. Enemigo: el estado que inflige o
 `phys`.
 
+## Saltos (rebote, atraviesa, ráfaga)
+
+Pedido del dueño (v0.5.1): que se vea que las habilidades saltan de un
+enemigo a otro, golpe por golpe, rápido pero notorio. Código:
+`lib/features/combat/presentation/scene/chain_fx.dart` (`ChainPlanner`
+puro + `ChainFxPainter`); tests `test/features/combat/chain_fx_test.dart`.
+
+- **Eventos** (aditivo, sin cambiar `kProtocolVersion`): el
+  `DamageEvent` lleva `hitIndex` (golpe `i` de una ráfaga `SkillDef.hits`,
+  0 = el primero; JSON `hi`), `chainFrom` (rebote `SkillDef.bounces`: de
+  quién salta; JSON `cf`) y `pierced` (atraviesa `SkillDef.pierce`; JSON
+  `pc`). Solo viajan si no son el valor por defecto; un cliente viejo
+  los ignora. El motor ya emitía los golpes en orden: primario, ráfaga,
+  atraviesa (fila de atrás) y rebotes.
+- **Rebote**: cada salto es un `hop` de `ChainTiming.hopMs = 140` ms que
+  sale del enemigo anterior cuando le llega el golpe y vuela en arco
+  (alto 14–28 px) con estela del color de la habilidad: daga que gira
+  (dagas y otras armas físicas), flecha (arco, ballesta, rifle) o rayo de
+  energía (magia). Al llegar: número, tajo y contador `×2`, `×3`… dorado
+  (`y − 40`). Con "Reducir movimiento" la daga no gira y el rayo no late.
+- **Atraviesa**: `streak` (línea blanca con halo, 90 ms de avance,
+  visible 220 ms) del objetivo al de atrás y de ahí al siguiente; el
+  número de cada uno cae al llegar la estela, con su `×N`.
+- **Ráfaga**: los golpes `i ≥ 1` al mismo objetivo caen cada
+  `min(90, 600 / (hits − 1))` ms y cada número sale 7 px más arriba que
+  el anterior (no se pisan).
+- Todo lo encadenado termina a más tardar `ChainTiming.maxMs = 600` ms
+  después del golpe primario. Los rebotados ya no reciben un proyectil
+  propio desde el lanzador. La estela respeta "Partículas"
+  (`scaledCount(8)`).
+- Los rebotes del árbol (`rebote`, `corteCadena`, `arcoVoltaico`) ya
+  saltaban con `arc` (§ "Disparadores del árbol"); **Arco Dormido**
+  (pasiva única de la varita) se suma a `kChainMechanics` (violeta
+  `#a29bfe`, arcano).
+
 ## Disparadores del árbol (procs)
 
 Pedido del dueño: que las notables y keystones del árbol v2 "se sientan

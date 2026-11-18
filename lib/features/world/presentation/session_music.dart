@@ -68,6 +68,10 @@ abstract final class MusicSelector {
     return null;
   }
 
+  /// Piezas de batalla (se cortan rápido al terminar la pelea).
+  static bool isBattleTrack(String id) =>
+      id == Music.battle || id == Music.boss || id == Music.bossFinal;
+
   /// La pieza de bucle del estado.
   static String trackFor({
     required SessionMode mode,
@@ -114,6 +118,14 @@ abstract final class MusicSelector {
 /// Traduce las vistas de la sesión a música: el bucle según el modo,
 /// jingles (victoria / derrota / nivel / zona) y el duck de las ULT. Todo
 /// sale de las vistas, así suena igual en el host y en los clientes.
+///
+/// Fin de batalla (docs/specs/music.md § 5.1): la pieza de batalla se
+/// corta en [MusicService.battleCutSeconds], suena el jingle entero y la
+/// pieza de la zona vuelve de fondo, retenida en
+/// [MusicService.jingleBedLevel] hasta que no quede jingle y se cierren
+/// el fin de batalla, la subida de nivel y los resultados. El jingle de
+/// nivel espera a que aparezca la pantalla de subida de nivel y ahí corta
+/// el de victoria.
 class SessionMusic {
   SessionMusic(this.music, {required this.localId, this.themeOf});
 
@@ -130,6 +142,10 @@ class SessionMusic {
   int? _level;
   int? _mastery;
   int _battleSeq = 0;
+
+  /// El jugador local subió de nivel (o de maestría) en una batalla que
+  /// todavía se muestra: su jingle espera a que se cierre.
+  bool _levelUpPending = false;
 
   /// Desenlace del último jingle de batalla todavía "vigente" (se olvida
   /// al volver al campo o al lobby).
@@ -169,9 +185,13 @@ class SessionMusic {
       }
     }
 
+    // La batalla ya tiene desenlace (la pausa final antes de volver): de
+    // fondo suena la pieza de la zona, no la de batalla.
+    final ended =
+        s.mode == SessionMode.battle && (s.battle?.state.ended ?? false);
     final m = s.mission;
     final t = MusicSelector.trackFor(
-      mode: s.mode,
+      mode: ended ? SessionMode.field : s.mode,
       inTown: _inTown,
       zone: m?.zone ?? 0,
       theme: m == null ? null : themeOf?.call(m.missionId),
@@ -179,12 +199,20 @@ class SessionMusic {
       bossId: MusicSelector.bossIdOf(s.battle?.state),
     );
     if (t != _track) {
+      final leavingBattle =
+          _track != null && MusicSelector.isBattleTrack(_track!);
       _track = t;
+      final intoBattle = MusicSelector.isBattleTrack(t);
       music.playTrack(t,
-          fade: s.mode == SessionMode.battle
+          fade: intoBattle
               ? MusicService.battleFadeSeconds
-              : MusicService.crossfadeSeconds);
+              : MusicService.crossfadeSeconds,
+          fadeOut: leavingBattle && !intoBattle
+              ? MusicService.battleCutSeconds
+              : null);
     }
+    music.bedHeld =
+        ended || s.mode == SessionMode.levelUp || s.mode == SessionMode.result;
   }
 
   void _jingles(SessionView view) {
@@ -217,16 +245,23 @@ class SessionMusic {
     final level = view.me?.profile.level;
     final last = _level;
     if (level != null && last != null && level > last) {
-      music.playJingle(Music.levelUp);
+      _levelUpPending = true;
     }
     if (level != null) _level = level;
     // Maestría (§ 6): el mismo jingle que subir de nivel.
     final mastery = view.me?.profile.mastery;
     final lastM = _mastery;
     if (mastery != null && lastM != null && mastery > lastM) {
-      music.playJingle(Music.levelUp);
+      _levelUpPending = true;
     }
     if (mastery != null) _mastery = mastery;
+    // Suena al cerrarse la batalla: si aparece la pantalla de subida de
+    // nivel, corta el jingle de victoria; si no (maestría, nivel sin
+    // pausa), va en cola detrás.
+    if (_levelUpPending && s.mode != SessionMode.battle) {
+      _levelUpPending = false;
+      music.playJingle(Music.levelUp, interrupt: s.mode == SessionMode.levelUp);
+    }
     // Ascensión de cualquiera de la sala (docs/specs/ascension.md § 5).
     var ascended = false;
     for (final p in s.playerList) {
