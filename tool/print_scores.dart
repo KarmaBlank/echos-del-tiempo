@@ -46,10 +46,13 @@ void main() {
       for (var b = 0; b < cells.length; b += perBar)
         cells.sublist(b, (b + perBar).clamp(0, cells.length)).join(' '),
     ];
-    final meter = song.stepsPerBeat == 3
+    // Compás compuesto (6/8) si el pulso se divide en 3, 6, …
+    final compound = song.stepsPerBeat % 3 == 0;
+    final meter = compound
         ? '${song.beatsPerBar * 3}/8'
         : '${song.beatsPerBar}/4';
-    final unitDiv = song.stepsPerBeat == 3 ? 8 * 3 ~/ 3 : 4 * song.stepsPerBeat;
+    final unitDiv =
+        compound ? 8 * song.stepsPerBeat ~/ 3 : 4 * song.stepsPerBeat;
     final unit = '1/${unitDiv ~/ g}';
 
     out

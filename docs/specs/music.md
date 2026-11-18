@@ -133,7 +133,7 @@ Tiempos y tamaños (medidos, ver § 8): 1.4–2.5 MB por bucle de 33–59 s,
 |---|---|---|---|---|---|
 | `title` | Título · "Ecos del Tiempo" | épico-pastoral andino (yaraví → heroico) | Re dórico | 80, 3/4 (fusas) | 26 compases |
 | `town` | Pueblo | cálido, vals | Sol mayor | 132, 3/4 | 24 compases |
-| `overworld` | Mapa del mundo | salir de viaje, huayno a paso de caminata | Sol mixolidio / Mi menor pentatónica | 104, 2/4 (fusas) | 44 compases |
+| `overworld` | Mapa del mundo | campo tranquilo, cálido, sin apuro | Sol mayor (jónico) | 72 (negra con punto), 6/8 (semicorcheas) | 34 compases |
 | `zone1` | Pradera Esmeralda | luminoso, pastoral | Fa mayor | 76 (negra con punto), 6/8 | 32 compases |
 | `zone2` | Bosque Hondo | misterioso, neblina, eco | Mi menor (bII frigio) | 92, 4/4 | 16 compases |
 | `zone3` | Ruinas Cronales | antiguo, de reloj (tic-tac) | La menor armónica | 104, 4/4 | 20 compases |
@@ -178,23 +178,39 @@ Pistas: ocarina, zampoña, arpa (`Inst.arp`), charango, metal
 (`Inst.brass`), colchón, bajo (triángulo), bombo (`b`/`a`/`c`),
 chajchas (`h`).
 
-**`overworld` · Mapa del mundo** — Sol mixolidio (Fa mayor = VII: la
-cadencia Fa → Sol le da el aire épico) que pasa a su relativa Mi menor
-pentatónica en la B, a la manera andina; 104 bpm, 2/4, grilla de fusas,
-44 compases = 50.8 s. Paso de caminata con balanceo de huayno
-(semicorchea + corchea con punto en la melodía; rasgueo "ta-taka"
-`x:4 x:2 x:2` del charango; bombo `b a a b a`), esperanzado y con
-sensación de distancia (zampoña lejana con eco).
+**`overworld` · Mapa del mundo** — pedido del dueño (segunda vuelta):
+la versión huayno de 104 bpm era "muy animada"; tiene que tener el
+**clima** de "Concerning Hobbits" (Howard Shore): campo tranquilo,
+cálido, pastoral, la alegría sin apuro de estar en casa. Solo se toma
+el clima: **la melodía, el ritmo y la armonía son originales y no citan
+ni parafrasean ese tema** (está en Re mayor y abre subiendo desde la
+tónica; esta pieza está en Sol, abre bajando por grados desde el Re, y
+su cifrado y forma son propios).
+
+Sol mayor (jónico), 72 bpm (negra con punto), 6/8 con balanceo suave
+(negra–corchea), grilla de semicorcheas (`stepsPerBeat = 6`) para
+adornos leves de una semicorchea, 34 compases = 56.7 s. La ocarina
+canta como un silbato de lata: por grados conjuntos, cantable, sin
+corridas. Armonía simple I–IV–V–vi con cadencias suaves. Lo andino
+queda en toques: charango **punteado** (arpegio de una cuerda por vez,
+sin rasgueo) y una zampoña que contesta al final de A y de B. Sin bombo
+ni platillos: a lo sumo un pandero (tambor de marco, tom grave `t`)
+liviano.
 
 | Parte | Compases | Cifrado | Qué pasa |
 |---|---|---|---|
-| intro | 1–4 | G F G G | charango, bombo y la llamada de una zampoña lejana con eco; el bajo entra en el 3 |
-| A | 5–20 | G G C G F F G D · G G C Em C F G G | tema de viaje en dos frases de 8 (semicadencia en Re; cierre Fa → Sol), adornos de quena |
-| B | 21–28 | Em D Em D C G D Em | Mi menor pentatónica: la ocarina canta un compás y la zampoña le contesta el siguiente (hoquetus de sikus); entran arpa y chajchas; patrón de bombo más cortado |
-| A' | 29–44 | como A | el tema otra vez, más grande: sikus doblándolo 8va abajo, arpa, rasgueo lleno, platillo al entrar |
+| intro | 1–2 | G G | arpa y colchón |
+| A | 3–10 | G C G D G C D G | el tema baja por grados desde el Re y vuelve al Sol (semicadencia en Re en el 6); ocarina, arpa en corcheas, colchón, bajo en negras con punto; la zampoña contesta en el último compás y lleva al Re |
+| A' | 11–18 | G C G D Em C D G | empieza igual, después sube y cierra en el Sol agudo; entran cuerdas tibias (nota de arriba del acorde, tenida) y el pandero |
+| B | 19–26 | Em C G D C G Am D | casera y suave, más grave, por Mi menor y La menor; charango punteado; pandero solo en el 1; semicadencia en Re con la respuesta de la zampoña |
+| A'' | 27–34 | como A' | el tema de A' con todo: cuerdas, charango punteado, pandero |
 
-Pistas: ocarina, zampoña (con eco), sikus, charango, arpa, colchón,
-bajo, bombo, chajchas.
+Pistas: ocarina, zampoña, arpa (`Inst.arp`), colchón, cuerdas (pulso
+25 % con ataque lento, propio de la pieza), charango (`Inst.charango`
+con `strum: 0`), bajo, pandero (`t`).
+
+`tool/print_scores.dart` escribe 6/8 para cualquier pulso divisible por
+3 (`stepsPerBeat` 3, 6, …).
 
 Las zonas 6–10 (todavía "Próximamente") no tienen pieza propia: usan la
 de su tema más cercano (§ 5). Una variante del jefe final queda para
@@ -302,7 +318,7 @@ Medición (VM de debug, Windows):
 |---|---|---|---|---|---|
 | title | 58.5 s | 456 ms | 2519 KB | −6.0 dBFS | −18.8 dBFS |
 | town | 32.7 s | 126 ms | 1409 KB | −6.0 | −15.9 |
-| overworld | 50.8 s | 387 ms | 2186 KB | −6.0 | −18.3 |
+| overworld | 56.7 s | 302 ms | 2441 KB | −6.0 | −17.3 |
 | zone1 | 50.5 s | 211 ms | 2176 KB | −6.0 | −17.2 |
 | zone2 | 41.7 s | 188 ms | 1798 KB | −6.0 | −17.2 |
 | zone3 | 46.1 s | 164 ms | 1988 KB | −6.0 | −16.7 |

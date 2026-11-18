@@ -4,122 +4,137 @@ import '../music_score.dart';
 
 /// Mapa del mundo.
 ///
-/// Clima: salir de viaje. Paso de caminata con el balanceo del huayno
-/// (semicorchea + corchea con punto, "ta-taka" del charango y del
-/// bombo), esperanzado y con sensación de distancia: zampoñas que
-/// llaman y responden con eco a lo lejos. Sol mixolidio (el Fa mayor,
-/// VII grado, le da el aire épico de leyenda y la cadencia Fa → Sol)
-/// que se va a su relativa Mi menor pentatónica en la B, como en la
-/// música andina. 104 bpm, 2/4, 44 compases (50.8 s). Grilla de fusas
-/// (8 pasos por negra) para los adornos de quena.
+/// Clima: campo tranquilo, cálido y sin apuro; la alegría tranquila de
+/// salir a caminar por los prados de casa. La ocarina canta como un
+/// silbato de lata, por grados conjuntos y con adornos leves, sobre un
+/// arpa en corcheas y un colchón tibio. Sol mayor (jónico), 72 bpm
+/// (negra con punto), 6/8, grilla de semicorcheas (6 pasos por pulso),
+/// 34 compases (56.7 s). Lo andino queda en toques: un charango que
+/// puntea (no rasguea) en la B y la A'' y una zampoña que contesta al
+/// final de las frases.
 ///
-/// Forma: intro (1–4) charango, bombo y la llamada de una zampoña
-/// lejana; A (5–20) tema de viaje de la ocarina en dos frases de 8
-/// (semicadencia en Re, cierre Fa → Sol); B (21–28) Mi menor, la
-/// ocarina canta un compás y la zampoña le contesta el siguiente
-/// (hoquetus de sikus), con arpa y chajchas; A' (29–44) el tema otra
-/// vez, más grande: sikus doblándolo una octava abajo, arpa y rasgueo
-/// lleno.
+/// Forma: intro (1–2) arpa y colchón; A (3–10) tema que baja por grados
+/// desde el Re y vuelve al Sol; A' (11–18) igual al empezar, después
+/// sube y cierra en el Sol agudo, con cuerdas; B (19–26) casera y suave,
+/// más grave, por Mi menor y La menor, semicadencia en Re con la
+/// respuesta de la zampoña; A'' (27–34) el tema de A' con todo (cuerdas,
+/// charango punteado, pandero).
 ///
-/// Original: no cita ni imita de cerca ninguna melodía existente.
+/// Original: no cita ni parafrasea ninguna melodía, ritmo ni armonía
+/// existentes (en particular, nada de "Concerning Hobbits" de Howard
+/// Shore: solo se toma el clima).
 Song overworldTheme() {
-  const intro = 'G F G G';
-  const a = 'G G C G F F G D G G C Em C F G G';
-  const b = 'Em D Em D C G D Em';
-  final chI = ch(intro, 16);
-  final chA = ch(a, 16);
-  final chB = ch(b, 16);
+  const intro = 'G G';
+  const a = 'G C G D G C D G';
+  const a2 = 'G C G D Em C D G';
+  const b = 'Em C G D C G Am D';
+  final chI = ch(intro, 12);
+  final chA = ch(a, 12);
+  final chA2 = ch(a2, 12);
+  final chB = ch(b, 12);
+  final chords = '$chI $chA $chA2 $chB $chA2';
 
-  // Compás de 2/4 = 16 pasos (negra 8, corchea 4, semicorchea 2).
-  String m(String s) => bar(s);
+  // Compás de 6/8 = 12 pasos (corchea 2, negra 4, negra con punto 6).
+  String m(String s) => bar(s, steps: 12);
+  final head = [
+    m('D5:4 C5:2 B4:4 A4:2'),
+    m('E5:4 D5:2 C5:4 E5:2'),
+    m('D5:6 B4:4 G4:2'),
+    m('B4:1 A4:11'), // adorno leve
+  ];
   final themeA = join([
-    m('D5:2 G5:6 A5:4 B5:4'),
-    m('A5:2 G5:6 D5:8'),
-    m('E5:4 G5:4 A5:2 C6:6'),
-    m('B5:1 A5:1 G5:14'), // grupeto de quena
-    m('F5:2 A5:6 C6:4 A5:4'), // Fa natural: mixolidio
-    m('G5:2 F5:6 D5:8'),
-    m('D5:2 G5:6 B5:4 A5:4'),
-    m('A5:1 G5:1 A5:14'),
-    m('D5:2 G5:6 A5:4 B5:4'),
-    m('A5:2 G5:6 D5:8'),
-    m('E5:4 G5:4 A5:2 C6:6'),
-    m('D6:1 B5:7 G5:4 E5:4'),
-    m('G5:2 E5:6 D5:4 E5:4'),
-    m('F5:2 A5:6 C6:8'),
-    m('A5:2 B5:6 D6:4 B5:4'),
-    m('C6:1 B5:1 A5:2 G5:12'),
+    ...head,
+    m('D5:4 C5:2 B4:4 A4:2'),
+    m('E5:4 G5:2 E5:4 C5:2'),
+    m('A4:4 B4:2 C5:4 A4:2'),
+    m('A4:1 G4:11'),
   ]);
-  // B: la ocarina pregunta, la zampoña contesta (hoquetus).
+  final themeA2 = join([
+    ...head,
+    m('G5:4 F#5:2 E5:4 B4:2'),
+    m('C5:4 D5:2 E5:4 G5:2'),
+    m('F#5:4 E5:2 D5:6'),
+    m('A5:1 G5:11'),
+  ]);
   final themeB = join([
-    m('B5:2 A5:2 G5:4 E5:8'),
-    m('.:16'),
-    m('G5:2 A5:2 B5:4 D6:2 B5:6'),
-    m('.:16'),
-    m('G5:2 E5:6 G5:2 A5:6'),
-    m('B5:2 A5:2 G5:2 D5:2 G5:8'),
-    m('A5:2 B5:2 A5:2 F#5:2 D5:8'),
-    m('F#5:1 E5:15'),
+    m('B4:4 C5:2 B4:4 G4:2'),
+    m('C5:4 B4:2 A4:6'),
+    m('B4:4 C5:2 D5:6'),
+    m('E5:4 D5:2 A4:6'),
+    m('G5:6 E5:4 C5:2'),
+    m('B4:4 D5:2 G5:6'),
+    m('C5:1 B4:3 A4:2 C5:4 E5:2'),
+    m('D5:6 .:6'),
   ]);
-  final melody = join(['.:64', themeA, themeB, themeA]);
+  final melody = join(['.:24', themeA, themeA2, themeB, themeA2]);
 
-  final call = join([
-    // Intro: la llamada lejana.
-    m('D5:2 G5:14'),
-    m('.:8 F5:2 C5:6'),
-    m('D5:2 G5:6 B5:2 A5:6'),
-    m('G5:8 .:8'),
-    '.:256',
-    // B: respuestas.
-    m('.:16'),
-    m('D5:2 E5:2 D5:4 A4:8'),
-    m('.:16'),
-    m('F#5:2 E5:2 D5:4 B4:4 A4:4'),
-    '.:64',
-    '.:256',
+  // Zampoña: solo contesta al final de A y de B (lleva al Re del tema).
+  final zampona = join([
+    '.:24',
+    '.:84',
+    m('.:6 D5:2 E5:2 F#5:2'),
+    '.:96',
+    '.:84',
+    m('.:6 A4:2 B4:2 C5:2'),
+    '.:96',
   ]);
-  final sikus = join(['.:64', '.:256', '.:128', shift(themeA, -12)]);
 
-  const huayno = 'x:4 x:2 x:2 x:4 x:2 x:2';
+  // Cuerdas tibias (pulso con ataque lento): la nota de arriba del
+  // acorde, tenida, en A' y A''.
+  const strings = Instrument(
+    voice: Voice.pulse25,
+    volume: 0.06,
+    attack: 0.3,
+    decay: 0.4,
+    sustain: 0.75,
+    release: 0.4,
+    gate: 0.97,
+    lowpass: 1500,
+    vibratoRate: 4.5,
+    vibratoDepth: 0.004,
+    vibratoDelay: 0.3,
+  );
+  final cuerdas = join([
+    '.:120',
+    comp(chA2, 'x:12', center: 69, count: 1),
+    '.:96',
+    comp(chA2, 'x:12', center: 69, count: 1),
+  ]);
+
+  // Charango punteado (una cuerda por vez, sin rasgueo) en B y A''.
+  final charango = join([
+    '.:216',
+    arp('$chB $chA2', center: 76, count: 3, shape: const [0, 1, 2, 1],
+        rhythm: 'x:2 .:1 x:1 x:2 x:2 .:2 x:2'),
+  ]);
+
+  // Pandero (tambor de marco) liviano: nada en la intro y la A.
   final drums = join([
-    rep(bar('b:4 a:2 a:2 b:4 a:4', drums: true), 4),
-    rep(bar('b:4 a:2 a:2 b:4 a:4', drums: true), 15),
-    bar('b:4 a:2 a:2 b:2 b:2 b:2 b:2', drums: true),
-    rep(bar('b:6 a:2 b:4 a:2 a:2', drums: true), 7),
-    bar('b:2 b:2 b:2 b:2 a:2 a:2 b:4', drums: true),
-    bar('b+c:4 a:2 a:2 b:4 a:4', drums: true),
-    rep(bar('b:4 a:2 a:2 b:4 a:4', drums: true), 14),
-    bar('b:4 a:2 a:2 b:2 b:2 a:2 a:2', drums: true),
-  ]);
-  final rattle = join([
-    '.:320',
-    rep(bar('h:4 h:2 h:2 h:4 h:2 h:2', drums: true), 24),
+    '.:120',
+    rep(bar('t:6 t:4 t:2', steps: 12, drums: true), 8),
+    rep(bar('t:12', steps: 12, drums: true), 8),
+    rep(bar('t:6 t:4 t:2', steps: 12, drums: true), 8),
   ]);
 
   return Song(
     id: 'overworld',
     title: 'Mapa del mundo',
-    bpm: 104,
-    stepsPerBeat: 8,
+    bpm: 72,
+    stepsPerBeat: 6,
     beatsPerBar: 2,
     tracks: [
       Track('ocarina', Inst.ocarina, melody),
-      Track('zampoña', Inst.zamponaEcho, call),
-      Track('sikus', Inst.zampona, sikus, gain: 0.9),
-      Track('charango', Inst.charango,
-          '${comp(chI, huayno, center: 71, count: 4)} '
-          '${comp('$chA $chB $chA', huayno, center: 71, count: 4)}'),
+      Track('zampoña', Inst.zampona, zampona, gain: 0.8),
       Track('arpa', Inst.arp,
-          '.:320 '
-          '${arp('$chB $chA', center: 64, count: 4, shape: const [0, 1, 2, 3, 4, 3, 2, 1], rhythm: 'x:2')}',
-          gain: 0.8),
-      Track('colchón', Inst.pad,
-          '.:64 ${comp('$chA $chB $chA', 'x:16', center: 60, count: 3)}'),
-      Track('bajo', Inst.bass.copyWith(volume: 0.19),
-          '.:32 ${bassLine(ch('G G', 16), 'R:6 5:2 8:4 5:4')} '
-          '${bassLine('$chA $chB $chA', 'R:6 5:2 8:4 5:4')}'),
-      Track.drums('bombo', drums, gain: 0.55),
-      Track.drums('chajchas', rattle, gain: 0.9),
+          arp(chords, center: 62, count: 4, shape: const [0, 1, 2, 3, 2, 1],
+              rhythm: 'x:2')),
+      Track('colchón', Inst.pad, comp(chords, 'x:12', center: 60, count: 3)),
+      Track('cuerdas', strings, cuerdas),
+      Track('charango', Inst.charango.copyWith(strum: 0, volume: 0.06),
+          charango),
+      Track('bajo', Inst.bass.copyWith(volume: 0.2),
+          bassLine(chords, 'R:6 5:6')),
+      Track.drums('pandero', drums, gain: 0.35),
     ],
   );
 }
