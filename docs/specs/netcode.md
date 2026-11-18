@@ -597,3 +597,12 @@ combatiente `abT` `abE` `abS` `abSN` `abA` `abK` `abF` `abC`; fases de
 `mat:fragReloj` `mat:fragEco` `mat:fragCorona` `mat:fragEras`
 `mat:esencia`; forja `essence`. El cliente suma los vencidos de su
 cuenta al perfil antes del `hello` (`AbyssRules.withAccount`).
+
+
+## Party jugando solo (v0.8.1)
+
+Solo sin red: al crear o unirse a una sala no se cargan compañeros (un
+personaje por humano). `SessionPlayer.leaderId` y el rastro del líder son
+**solo del host** y no viajan en el snapshot; `SessionEngine.applyFor`
+(actuar por un compañero) nunca se usa con red. Sin cambio de protocolo.
+Ver solo_party.md § 1.

@@ -31,7 +31,11 @@ enum FlashLevel {
 enum TextSize {
   normal(1),
   large(1.25),
-  huge(1.5);
+  huge(1.5),
+
+  /// ENORME (v0.8.1, accessibility.md § 9.3): ×2 sobre Normal. Los
+  /// paneles scrollean y los tooltips pasan a columnas.
+  enormous(2);
 
   const TextSize(this.factor);
 
@@ -44,13 +48,18 @@ enum TextSize {
 
 /// "Fuente de lectura" (accesibilidad): la fuente del texto de lectura
 /// (tooltips, fichas, chat, menús). Títulos y botones siguen en Press
-/// Start 2P. Ver docs/specs/settings.md § 3.7.
+/// Start 2P (salvo [GameSettings.readingTitles]). Ver
+/// docs/specs/settings.md § 3.7 y accessibility.md § 9.1.
 enum ReadingFont {
   /// VT323 (por defecto, v0.5).
   vt323,
 
   /// CLÁSICA: Press Start 2P, como en v0.4.
-  classic;
+  classic,
+
+  /// ATKINSON (v0.8.1): Atkinson Hyperlegible, hecha para baja visión.
+  /// No es pixel: px enteros sin grilla.
+  atkinson;
 
   static ReadingFont fromName(Object? v, ReadingFont def) =>
       values.firstWhere((m) => m.name == v, orElse: () => def);
@@ -76,6 +85,108 @@ enum ColorVision {
       values.firstWhere((m) => m.name == v, orElse: () => def);
 }
 
+/// "Tema de interfaz" (accesibilidad, docs/specs/accessibility.md § 8):
+/// los colores de paneles, botones, campos, bordes y texto de toda la UI
+/// (menús, tooltips, HUD, batalla). El arte (arenas, mapa, sprites) no
+/// cambia. Ver `UiTheme`.
+enum InterfaceTheme {
+  /// El de siempre: paneles azul marino.
+  blue,
+
+  /// Paneles casi negros (escala neutra), bordes grises apagados y dorado solo
+  /// para la selección y el foco.
+  dark,
+
+  /// Fondo negro, texto blanco, foco amarillo, bordes gruesos; color solo
+  /// donde significa algo.
+  highContrast;
+
+  static InterfaceTheme fromName(Object? v, InterfaceTheme def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Colores del texto" (accesibilidad, accessibility.md § 8): COMPLETO
+/// (cada markup con sus colores) o REDUCIDO (pocos colores con
+/// significado; el resto, texto base o atenuado).
+enum TextColorMode {
+  full,
+  reduced;
+
+  static TextColorMode fromName(Object? v, TextColorMode def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Espaciado" (accesibilidad, accessibility.md § 8): NORMAL o AMPLIO
+/// (más interlineado, separación entre líneas de las fichas, más aire en
+/// filas y tarjetas y separadores entre secciones de los tooltips).
+enum UiSpacing {
+  normal,
+  wide;
+
+  static UiSpacing fromName(Object? v, UiSpacing def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Espaciado entre letras" (accessibility.md § 9.4): NORMAL o AMPLIO
+/// (+0.08 em en el texto de lectura).
+enum LetterSpacing {
+  normal,
+  wide;
+
+  static LetterSpacing fromName(Object? v, LetterSpacing def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Duración de los avisos" (accessibility.md § 9.5): cuánto se ven los
+/// avisos del HUD (loot, build, chat plegado, puntos sin usar, misión
+/// opcional). HASTA CERRAR: quedan hasta tocar su × o `Retroceso`.
+enum NoticeDuration {
+  normal(1),
+  long(2),
+  untilDismissed(double.infinity);
+
+  const NoticeDuration(this.factor);
+
+  /// Multiplica la duración de cada aviso (infinito = hasta cerrarlo).
+  final double factor;
+
+  bool get persistent => factor.isInfinite;
+
+  /// [base] con esta duración (`null` = hasta cerrarlo).
+  Duration? scale(Duration base) => persistent
+      ? null
+      : Duration(microseconds: (base.inMicroseconds * factor).round());
+
+  static NoticeDuration fromName(Object? v, NoticeDuration def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Fondo del texto en el mapa" (accessibility.md § 9.6): detrás de los
+/// nombres, carteles, avisos y etiquetas de loot del mapa.
+enum MapLabelBackdrop {
+  /// Como siempre: sombra de 1 px.
+  none,
+
+  /// Franja oscura translúcida detrás del texto.
+  shaded,
+
+  /// Caja opaca con borde.
+  box;
+
+  static MapLabelBackdrop fromName(Object? v, MapLabelBackdrop def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Registro de batalla" (accessibility.md § 9.7): NORMAL (una línea que
+/// se reemplaza) o EXTENDIDO (las 3 últimas, cada una más tiempo).
+enum BattleLogMode {
+  normal,
+  extended;
+
+  static BattleLogMode fromName(Object? v, BattleLogMode def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
 /// Esquina del indicador de FPS y ping (docs/specs/settings.md § 3.9).
 enum OverlayCorner {
   topRight,
@@ -87,6 +198,17 @@ enum OverlayCorner {
   bool get right => this == topRight || this == bottomRight;
 
   static OverlayCorner fromName(Object? v, OverlayCorner def) =>
+      values.firstWhere((m) => m.name == v, orElse: () => def);
+}
+
+/// "Chat" (JUEGO, v0.8.1): plegado en una píldora `CHAT [ENTER]` hasta
+/// que se abre, o siempre visible como antes. Ver
+/// docs/specs/exploration.md § "Chat".
+enum ChatVisibility {
+  hidden,
+  always;
+
+  static ChatVisibility fromName(Object? v, ChatVisibility def) =>
       values.firstWhere((m) => m.name == v, orElse: () => def);
 }
 
@@ -111,6 +233,18 @@ class GameSettings {
     this.turnTimer = TurnTimer.normal,
     this.perfOverlay = false,
     this.perfCorner = OverlayCorner.topRight,
+    this.uiTheme = InterfaceTheme.dark,
+    this.textColors = TextColorMode.reduced,
+    this.spacing = UiSpacing.normal,
+    this.chat = ChatVisibility.hidden,
+    this.chatNotices = true,
+    this.objectivesCollapsed = false,
+    this.minimapZoom = 3,
+    this.readingTitles = false,
+    this.letterSpacing = LetterSpacing.normal,
+    this.noticeDuration = NoticeDuration.normal,
+    this.mapLabelBackdrop = MapLabelBackdrop.none,
+    this.battleLog = BattleLogMode.normal,
   });
 
   /// Pantalla completa sin bordes (solo Windows; ver `WindowMode`).
@@ -167,6 +301,47 @@ class GameSettings {
   /// En qué esquina va el indicador.
   final OverlayCorner perfCorner;
 
+  /// Tema de interfaz (accesibilidad, v0.8.1).
+  final InterfaceTheme uiTheme;
+
+  /// Colores del texto (accesibilidad, v0.8.1).
+  final TextColorMode textColors;
+
+  /// Espaciado de la UI (accesibilidad, v0.8.1).
+  final UiSpacing spacing;
+
+  /// Chat plegado o siempre visible (HUD, v0.8.1).
+  final ChatVisibility chat;
+
+  /// Con el chat plegado, las líneas de sistema importantes aparecen 4 s
+  /// encima de la píldora (v0.8.1).
+  final bool chatNotices;
+
+  /// Caja de objetivos plegada (se recuerda; tecla J, v0.8.1).
+  final bool objectivesCollapsed;
+
+  /// Zoom del minimapa del HUD: 1 = el piso entero (como antes de v0.8.1),
+  /// 2 y 3 = ventana centrada en el jugador (rueda del mouse / `+` `−`).
+  final int minimapZoom;
+
+  static const minimapZooms = 3;
+
+  /// "Títulos con la fuente de lectura" (accesibilidad, v0.8.1): títulos,
+  /// botones y pestañas en la fuente de lectura en vez de Press Start 2P.
+  final bool readingTitles;
+
+  /// Espaciado entre letras del texto de lectura (v0.8.1).
+  final LetterSpacing letterSpacing;
+
+  /// Cuánto duran los avisos del HUD (v0.8.1).
+  final NoticeDuration noticeDuration;
+
+  /// Fondo detrás de las etiquetas del mapa (v0.8.1).
+  final MapLabelBackdrop mapLabelBackdrop;
+
+  /// Banda del log de batalla: una línea o las 3 últimas (v0.8.1).
+  final BattleLogMode battleLog;
+
   /// Sacudida efectiva (REDUCIR MOVIMIENTO la apaga).
   bool get shakeOn => screenShake && !reduceMotion;
 
@@ -196,6 +371,18 @@ class GameSettings {
     TurnTimer? turnTimer,
     bool? perfOverlay,
     OverlayCorner? perfCorner,
+    InterfaceTheme? uiTheme,
+    TextColorMode? textColors,
+    UiSpacing? spacing,
+    ChatVisibility? chat,
+    bool? chatNotices,
+    bool? objectivesCollapsed,
+    int? minimapZoom,
+    bool? readingTitles,
+    LetterSpacing? letterSpacing,
+    NoticeDuration? noticeDuration,
+    MapLabelBackdrop? mapLabelBackdrop,
+    BattleLogMode? battleLog,
   }) =>
       GameSettings(
         fullscreen: fullscreen ?? this.fullscreen,
@@ -215,6 +402,18 @@ class GameSettings {
         turnTimer: turnTimer ?? this.turnTimer,
         perfOverlay: perfOverlay ?? this.perfOverlay,
         perfCorner: perfCorner ?? this.perfCorner,
+        uiTheme: uiTheme ?? this.uiTheme,
+        textColors: textColors ?? this.textColors,
+        spacing: spacing ?? this.spacing,
+        chat: chat ?? this.chat,
+        chatNotices: chatNotices ?? this.chatNotices,
+        objectivesCollapsed: objectivesCollapsed ?? this.objectivesCollapsed,
+        minimapZoom: (minimapZoom ?? this.minimapZoom).clamp(1, minimapZooms),
+        readingTitles: readingTitles ?? this.readingTitles,
+        letterSpacing: letterSpacing ?? this.letterSpacing,
+        noticeDuration: noticeDuration ?? this.noticeDuration,
+        mapLabelBackdrop: mapLabelBackdrop ?? this.mapLabelBackdrop,
+        battleLog: battleLog ?? this.battleLog,
       );
 
   Map<String, Object?> toJson() => {
@@ -235,6 +434,18 @@ class GameSettings {
         'turnTimer': turnTimer.name,
         'perfOverlay': perfOverlay,
         'perfCorner': perfCorner.name,
+        'uiTheme': uiTheme.name,
+        'textColors': textColors.name,
+        'spacing': spacing.name,
+        'chat': chat.name,
+        'chatNotices': chatNotices,
+        'objectivesCollapsed': objectivesCollapsed,
+        'minimapZoom': minimapZoom,
+        'readingTitles': readingTitles,
+        'letterSpacing': letterSpacing.name,
+        'noticeDuration': noticeDuration.name,
+        'mapLabelBackdrop': mapLabelBackdrop.name,
+        'battleLog': battleLog.name,
       };
 
   /// Valores inválidos o ausentes caen al de por defecto. Claves viejas
@@ -262,6 +473,25 @@ class GameSettings {
       turnTimer: TurnTimer.fromName(json['turnTimer'], d.turnTimer),
       perfOverlay: flag(json['perfOverlay'], d.perfOverlay),
       perfCorner: OverlayCorner.fromName(json['perfCorner'], d.perfCorner),
+      uiTheme: InterfaceTheme.fromName(json['uiTheme'], d.uiTheme),
+      textColors: TextColorMode.fromName(json['textColors'], d.textColors),
+      spacing: UiSpacing.fromName(json['spacing'], d.spacing),
+      chat: ChatVisibility.fromName(json['chat'], d.chat),
+      chatNotices: flag(json['chatNotices'], d.chatNotices),
+      objectivesCollapsed:
+          flag(json['objectivesCollapsed'], d.objectivesCollapsed),
+      minimapZoom: switch (json['minimapZoom']) {
+        final int z when z >= 1 && z <= minimapZooms => z,
+        _ => d.minimapZoom,
+      },
+      readingTitles: flag(json['readingTitles'], d.readingTitles),
+      letterSpacing:
+          LetterSpacing.fromName(json['letterSpacing'], d.letterSpacing),
+      noticeDuration: NoticeDuration.fromName(
+          json['noticeDuration'], d.noticeDuration),
+      mapLabelBackdrop: MapLabelBackdrop.fromName(
+          json['mapLabelBackdrop'], d.mapLabelBackdrop),
+      battleLog: BattleLogMode.fromName(json['battleLog'], d.battleLog),
     );
   }
 
@@ -284,13 +514,43 @@ class GameSettings {
       other.reduceMotion == reduceMotion &&
       other.turnTimer == turnTimer &&
       other.perfOverlay == perfOverlay &&
-      other.perfCorner == perfCorner;
+      other.perfCorner == perfCorner &&
+      other.uiTheme == uiTheme &&
+      other.textColors == textColors &&
+      other.spacing == spacing &&
+      other.chat == chat &&
+      other.chatNotices == chatNotices &&
+      other.objectivesCollapsed == objectivesCollapsed &&
+      other.minimapZoom == minimapZoom &&
+      other.readingTitles == readingTitles &&
+      other.letterSpacing == letterSpacing &&
+      other.noticeDuration == noticeDuration &&
+      other.mapLabelBackdrop == mapLabelBackdrop &&
+      other.battleLog == battleLog;
 
   @override
-  int get hashCode => Object.hash(fullscreen, screenShake, flashes,
-      damageNumbers, confirmDrop, scale, crt, particles, fpsLimit, textSize,
-      readingFont, buildNotices, colorVision, reduceMotion, turnTimer,
-      perfOverlay, perfCorner);
+  int get hashCode => Object.hash(
+      fullscreen,
+      screenShake,
+      flashes,
+      damageNumbers,
+      confirmDrop,
+      scale,
+      crt,
+      particles,
+      fpsLimit,
+      textSize,
+      readingFont,
+      buildNotices,
+      colorVision,
+      reduceMotion,
+      turnTimer,
+      perfOverlay,
+      perfCorner,
+      Object.hash(uiTheme, textColors, spacing, chat, chatNotices,
+          objectivesCollapsed, minimapZoom),
+      Object.hash(readingTitles, letterSpacing, noticeDuration,
+          mapLabelBackdrop, battleLog));
 
   @override
   String toString() => 'GameSettings(${toJson()})';

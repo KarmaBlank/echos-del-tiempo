@@ -6,6 +6,7 @@ import 'package:echos_del_tiempo/game_engine/data/passive_mechanics.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_v6.dart';
 import 'package:echos_del_tiempo/game_engine/data/skills_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/summoner_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/passive_tree.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,16 +40,20 @@ void main() {
   final tree = kPassiveTree;
   final rules = PassiveTreeRules(tree);
 
-  test('584 nodos: 200 notables, 36 keystones (passive_tree_v6.md § 1)', () {
-    expect(tree.nodes, hasLength(584));
+  test('597 nodos: 207 notables, 38 keystones (v6 + Invocador)', () {
+    // v6 (584) + cluster Invocador v0.8.1 (summoner.md § 5): 4 chicos, 7
+    // notables y 2 keystones.
+    expect(tree.nodes, hasLength(597));
     final kinds = <String, int>{};
     for (final n in tree.nodes.values) {
       kinds[n.kind] = (kinds[n.kind] ?? 0) + 1;
     }
-    expect(kinds, {'st': 4, 's': 584 - 4 - 200 - 36, 'n': 200, 'k': 36});
-    expect(tree.paths, hasLength(48));
+    expect(kinds,
+        {'st': 4, 's': 597 - 4 - 207 - 38, 'n': 207, 'k': 38});
+    expect(tree.paths, hasLength(49));
     for (final cls in tree.startNodeByClass.keys) {
-      expect(tree.paths.values.where((p) => p.classId == cls), hasLength(8),
+      expect(tree.paths.values.where((p) => p.classId == cls),
+          hasLength(cls == 'maga' ? 9 : 8),
           reason: cls);
     }
     expect(tree.paths.values.where((p) => p.kind == 'puente'), hasLength(8));
@@ -112,7 +117,11 @@ void main() {
         expect(v5.nodes.containsKey(l), isFalse, reason: '${b.id} → $l');
       }
     }
-    expect(tree.exclusions, v5.exclusions);
+    expect(tree.exclusions, {
+      ...v5.exclusions,
+      'invocador_kl': 'invocador_kp',
+      'invocador_kp': 'invocador_kl',
+    });
     expect(tree.startNodeByClass, v5.startNodeByClass);
   });
 
@@ -341,7 +350,13 @@ void main() {
     }
     // 200 notables + 12 + 16 keystones con mecánica propia + un efecto
     // por cada nodo chico nuevo (v6).
-    expect(mechs, hasLength(200 + 12 + 16 + kTreeV6SmallMechanics.length));
+    expect(
+        mechs,
+        hasLength(200 +
+            12 +
+            16 +
+            kTreeV6SmallMechanics.length +
+            kSummonerTreeMechanics.length));
     expect(kTreeV6SmallMechanics, hasLength(164));
     // Ninguna mecánica nueva pisa una de ascensión (mechanicById mira el
     // árbol primero).
@@ -360,6 +375,7 @@ void main() {
       'depredador', 'solInterior', 'inamovible',
       // v6 (passive_tree_v6.md § 6).
       for (final (k, _, _) in kTreeV6Drawbacks) k,
+      'legion', 'pacto', // Invocador v0.8.1.
     });
     expect(kTreeV6Drawbacks, hasLength(16));
   });

@@ -213,7 +213,7 @@ class _Categories extends StatelessWidget {
         children: [
           Text(retroText(actorName),
               key: const ValueKey('battle-actor'),
-              style: RetroType.style(RetroType.label, color: ProtoColors.gold)),
+              style: RetroType.style(RetroType.label, color: ProtoColors.title)),
           const SizedBox(height: 6),
           for (final c in categories)
             _Row(
@@ -324,19 +324,21 @@ class _Description extends StatelessWidget {
         color: ProtoColors.bg,
         border: Border.all(color: ProtoColors.panelBorder, width: 2),
       ),
+      // Todo scrollea (también los recursos: con texto ENORME ocupan
+      // varias líneas).
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child:
-                ProtoText(resources, key: const ValueKey('battle-resources')),
-          ),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ProtoText(resources,
+                        key: const ValueKey('battle-resources')),
+                  ),
                   if (a != null)
                     ProtoText(a.description,
                         key: ValueKey('battle-desc-${a.id}')),

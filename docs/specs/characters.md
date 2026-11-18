@@ -279,3 +279,22 @@ Atlas vacío y no lo escribe hasta tener algo) guarda el Atlas del Tiempo
 compartido por todos los personajes: nodos tomados y primeras veces.
 Al leer pasa por `AtlasRules.sanitize`. La sesión lo usa a través de
 `AtlasStore` (`AccountAtlasStore`); ver docs/specs/ecos_atlas.md § 5.
+
+
+## 6. Party jugando solo (v0.8.1)
+
+Spec completo: `solo_party.md`. Resumen de lo que toca a la cuenta:
+- Clave opcional `party` en `account.json`: `{"c": ["c2","c4"], "auto":
+  ["c4"]}` (compañeros en orden y los que tienen AUTO). Una cuenta sin
+  ella carga igual (sin party). `Account.companions` la sanea: ranuras que
+  existen, sin repetir, **nunca el elegido**, hasta 3. Elegir como líder
+  a un compañero lo saca de la party; borrar un personaje también.
+- Título: debajo de los botones, `PARTY: tú + N` con un botón por cada
+  otro personaje (`Nombre · Clase · Nv X`); se guarda al tocar.
+- Guardado (invariante § 1.4 para **cada** miembro): `AccountPartyStore`
+  (`PartyStore`) sobre el mismo `AccountRepository`; cada compañero se
+  escribe en **su** ranura (`replace(slotId, …)` + `last`), nunca en la
+  del elegido, con las mismas reglas que el líder (cada 2 s si cambió, fin
+  de misión, pueblo, al sacarlo de la party, `saveNow` al salir, error
+  visible y reintento). Pruebas:
+  `test/features/characters/party_persistence_test.dart`.

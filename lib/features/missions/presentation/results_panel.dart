@@ -121,8 +121,8 @@ class ResultsPanel extends StatelessWidget {
           key: const ValueKey('results-unlocked'),
           padding: const EdgeInsets.only(bottom: 4),
           child: Text(retroText(u),
-              style: const TextStyle(
-                  fontFamily: RetroType.pixelFamily,
+              style: TextStyle(
+                  fontFamily: RetroType.titleFamily,
                   fontSize: RetroType.title,
                   color: ProtoColors.gold,
                   shadows: shadow)),
@@ -133,11 +133,11 @@ class ResultsPanel extends StatelessWidget {
             color: ProtoColors.violet, key: const ValueKey('results-trial')),
       if (ecoAtlas case final a?)
         line(a,
-            color: const Color(0xFF5AE6D2),
+            color: kEcoColor,
             key: const ValueKey('results-atlas')),
       if (abyss case final a?)
         line(a,
-            color: const Color(0xFFC39BFF),
+            color: ProtoColors.violet,
             key: const ValueKey('results-abyss')),
     ];
     final exclusive = [for (final d in this.loot) if (d.exclusive) d];
@@ -165,15 +165,15 @@ class ResultsPanel extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 6),
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A0F2A),
+            color: ProtoColors.input,
             border: Border.all(color: ProtoColors.gold, width: 3),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(retroText('EXCLUSIVO DEL ABISMO'),
-                  style: const TextStyle(
-                      fontFamily: RetroType.pixelFamily,
+                  style: TextStyle(
+                      fontFamily: RetroType.titleFamily,
                       fontSize: RetroType.title,
                       color: ProtoColors.gold,
                       shadows: shadow)),
@@ -230,13 +230,13 @@ class ResultsPanel extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFF1A0F2A),
+                color: ProtoColors.input,
                 border: Border.all(color: ProtoColors.gold, width: 3),
               ),
               child: Text(retroText(finalTitle),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontFamily: RetroType.pixelFamily,
+                  style: TextStyle(
+                      fontFamily: RetroType.titleFamily,
                       fontSize: RetroType.title,
                       color: ProtoColors.gold,
                       shadows: shadow)),
@@ -266,12 +266,12 @@ class ResultsPanel extends StatelessWidget {
                       Center(
                         child: Text(rankLabel(r.rank),
                             key: const ValueKey('results-rank'),
-                            style: const TextStyle(
-                                fontFamily: RetroType.pixelFamily,
+                            style: TextStyle(
+                                fontFamily: RetroType.titleFamily,
                                 fontSize: RetroType.display,
                                 height: 1.4,
                                 color: ProtoColors.gold,
-                                shadows: [
+                                shadows: const [
                                   Shadow(
                                       color: ProtoColors.titleShadow,
                                       offset: Offset(4, 4)),

@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/feature_flags.dart';
 import '../../../ascension/domain/ascension_text.dart';
 import '../../../characters/domain/unused_points.dart';
+import '../../../characters/presentation/grimoire_section.dart';
 import '../../../bestiary/presentation/bestiary_view.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../build_planner/presentation/build_fit_badge.dart';
@@ -326,6 +327,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
                     ),
                   ],
                 ),
+                // Invocador (summoner.md § 8).
+                GrimoireSection(rules: rules, profile: prof),
                 if (prof.classId == 'paladin')
                   const SectionPanel(
                     icon: PixelIconKind.star,
@@ -429,6 +432,17 @@ class _CharacterPanelState extends State<CharacterPanel> {
     final next = rules.previewAllocation(prof, {..._alloc, a: add + 1});
     final impact =
         battleImpactMarkup(rules, now, next, weapon: rules.equippedItem(prof));
+    final big = RetroType.settingFactor(context) >= 1.9;
+    final nameText = ProtoText('<b style="color:#e8ecff">$short</b> '
+        '<span class="k">${retroText(name)}</span>');
+    final valueText = ProtoText('<b>$value</b>'
+        '${add > 0 ? ' ${protoColor(ProtoColors.green, '+$add')}' : ''}');
+    final targetText = target == null
+        ? null
+        : Text('★ ${value + add}/$target',
+            key: ValueKey('build-attr-${a.name}'),
+            style: TextStyle(
+                color: value + add >= target ? ProtoColors.green : kPlanColor));
     return RetroTooltip(
         message: '<b>+1 ${retroText(name)}</b>: ${retroText(desc)}'
             '${impact == null ? '' : '<br>$impact'}',
@@ -447,27 +461,25 @@ class _CharacterPanelState extends State<CharacterPanel> {
             children: [
               Row(
                 children: [
-                  SizedBox(
-                    width: RetroType.em(context, 15, size: RetroType.small),
-                    child: ProtoText('<b style="color:#e8ecff">$short</b> '
-                        '<span class="k">${retroText(name)}</span>'),
-                  ),
-                  SizedBox(
-                    width: RetroType.em(context, 7, size: RetroType.small),
-                    child: ProtoText('<b>$value</b>'
-                        '${add > 0 ? ' ${protoColor(ProtoColors.green, '+$add')}' : ''}'),
-                  ),
-                  if (target != null)
+                  // Con texto ENORME el nombre cede lugar y el valor va en
+                  // la línea de abajo (si no, no entra).
+                  if (big)
+                    Expanded(child: nameText)
+                  else
                     SizedBox(
-                      width: RetroType.em(context, 9, size: RetroType.small),
-                      child: Text('★ ${value + add}/$target',
-                          key: ValueKey('build-attr-${a.name}'),
-                          style: TextStyle(
-                              color: value + add >= target
-                                  ? ProtoColors.green
-                                  : kPlanColor)),
-                    ),
-                  const Spacer(),
+                        width: RetroType.em(context, 15, size: RetroType.small),
+                        child: nameText),
+                  if (!big) ...[
+                    SizedBox(
+                        width: RetroType.em(context, 7, size: RetroType.small),
+                        child: valueText),
+                    if (targetText != null)
+                      SizedBox(
+                          width:
+                              RetroType.em(context, 9, size: RetroType.small),
+                          child: targetText),
+                    const Spacer(),
+                  ],
                   PanelButton('-',
                       key: ValueKey('dec-${a.name}'),
                       onPressed: add > 0
@@ -481,6 +493,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
                           : null),
                 ],
               ),
+              if (big)
+                Wrap(spacing: 12, children: [
+                  valueText,
+                  if (targetText != null) targetText,
+                ]),
               Text(retroText(desc),
                   style: const TextStyle(color: ProtoColors.dim)),
             ],

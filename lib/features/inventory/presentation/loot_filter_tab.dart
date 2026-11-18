@@ -169,6 +169,7 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
             textAlignVertical: TextAlignVertical.top,
             style: TextStyle(
                 fontFamily: RetroType.bodyFamily,
+                letterSpacing: RetroType.letterSpacing,
                 fontFamilyFallback: RetroType.bodyFallback,
                 fontSize: RetroType.small,
                 height: 1.8),

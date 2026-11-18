@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'proto_colors.dart';
-import 'retro_theme.dart';
+import 'ui_theme.dart';
 
 /// Caja `.panel` del prototipo (ver docs/specs/ui_style.md § "Caja"):
 /// fondo `#121936` opaco (el prototipo usa alfa `ee`), borde de 3 px `#5b74c9` (dorado
@@ -13,7 +13,7 @@ class RetroPanel extends StatelessWidget {
     this.selected = false,
     this.padding = const EdgeInsets.all(16),
     this.borderColor,
-    this.borderWidth = RetroTheme.borderWidth,
+    this.borderWidth,
   });
 
   final Widget child;
@@ -24,7 +24,8 @@ class RetroPanel extends StatelessWidget {
 
   /// Borde propio (gana sobre [selected]).
   final Color? borderColor;
-  final double borderWidth;
+  /// `null`: el del tema (3 px; 4 en ALTO CONTRASTE).
+  final double? borderWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +38,7 @@ class RetroPanel extends StatelessWidget {
         border: Border.all(
           color: borderColor ??
               (selected ? ProtoColors.gold : ProtoColors.buttonBorder),
-          width: borderWidth,
+          width: borderWidth ?? UiTheme.panelBorderWidth,
         ),
       ),
       child: child,

@@ -23,6 +23,7 @@ import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/game_map.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/inventory_sort.dart';
+import '../../../game_engine/models/party_store.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/profile_store.dart';
 import '../../../game_engine/models/loot.dart';
@@ -31,6 +32,7 @@ import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
 import '../../../game_engine/rules/abyss_rules.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
+import '../../../game_engine/rules/companion_ai.dart';
 import '../../../game_engine/rules/exploration_rules.dart';
 import '../../../game_engine/rules/session_engine.dart';
 import '../../../game_engine/rules/world_rules.dart';
@@ -38,6 +40,8 @@ import '../../../game_engine/rules/zone_rules.dart';
 import '../../../netcode/contracts/net_session.dart';
 import '../../../netcode/contracts/net_session_factory.dart';
 import '../../ascension/domain/ascension_text.dart';
+import '../../characters/data/account_repository.dart';
+import '../../characters/presentation/characters_providers.dart';
 import 'local_player.dart';
 import 'session_view.dart';
 import 'world_text.dart';
@@ -79,6 +83,14 @@ final bestiaryStoreProvider = Provider<BestiaryStore>((ref) =>
         ? sl<BestiaryStore>()
         : InMemoryBestiaryStore());
 
+/// Los compañeros de la party jugando solo (docs/specs/solo_party.md
+/// § 5); sin registro (tests), sobre la cuenta de
+/// [accountRepositoryProvider].
+final partyStoreProvider = Provider<PartyStore>((ref) =>
+    sl.isRegistered<PartyStore>()
+        ? sl<PartyStore>()
+        : AccountPartyStore(ref.watch(accountRepositoryProvider)));
+
 final sessionClockProvider =
     Provider<SessionClock>((ref) => const SessionClock());
 
@@ -104,6 +116,7 @@ final sessionControllerProvider =
     clock: ref.watch(sessionClockProvider),
     net: ref.read(activeNetSessionProvider),
     turnTimer: ref.read(gameSettingsProvider).turnTimer,
+    party: ref.read(partyStoreProvider),
   );
   // Tiempo de turno (accessibility.md § 7): el ajuste local manda en la
   // sala si este dispositivo corre el motor (solo o anfitrión).
@@ -142,11 +155,146 @@ class SessionController extends StateNotifier<SessionView?> {
     AtlasStore? atlasStore,
     BestiaryStore? bestiaryStore,
     TurnTimer turnTimer = TurnTimer.normal,
+    this.party,
   })  : localId = net?.localId ?? localId,
         _turnTimer = turnTimer,
         atlasStore = atlasStore ?? InMemoryAtlasStore(),
         bestiaryStore = bestiaryStore ?? InMemoryBestiaryStore(),
         super(null);
+
+  /// Compañeros de la party jugando solo (docs/specs/solo_party.md);
+  /// `null` = sin party. Con red no se usa (en salas no hay compañeros).
+  final PartyStore? party;
+
+  /// Compañeros en la sala: id de jugador → ranura de la cuenta, en orden.
+  final _companions = <String, String>{};
+
+  /// Compañeros con AUTO prendido (ids de jugador).
+  final _auto = <String>{};
+
+  /// Plan de build de cada compañero (para ver su filtro en la UI).
+  final _companionWants = <String, BuildWants?>{};
+
+  /// El último perfil de cada compañero mandado a guardar.
+  final _companionSaved = <String, PlayerProfile>{};
+
+  static const _ai = CompanionAi();
+
+  /// Segundos de juego que espera un compañero con AUTO antes de actuar.
+  static const autoDelay = 0.5;
+
+  /// Id de jugador del compañero de la ranura [slotId] (`local-c2`).
+  String companionIdFor(String slotId) => '$localId-$slotId';
+
+  /// Los compañeros en la sala, en orden (ids de jugador).
+  List<String> get companionIds => List.unmodifiable(_companions.keys);
+
+  /// La ranura de la cuenta del compañero [playerId] (o `null`).
+  String? slotOf(String playerId) => _companions[playerId];
+
+  /// Este dispositivo actúa como [playerId]: el local o un compañero.
+  bool controls(String? playerId) =>
+      playerId == localId || _companions.containsKey(playerId);
+
+  bool isAuto(String playerId) => _auto.contains(playerId);
+
+  /// Prende / apaga el AUTO de un compañero (se recuerda en la cuenta).
+  void setAuto(String playerId, bool on) {
+    final slot = _companions[playerId];
+    if (slot == null || isAuto(playerId) == on) return;
+    on ? _auto.add(playerId) : _auto.remove(playerId);
+    final ps = party;
+    if (ps != null) {
+      unawaited(ps.setAuto(slot, on).catchError((Object e) {
+        EcosLog.error('Guardado de la party', e);
+      }));
+    }
+    _emit();
+  }
+
+  /// Se puede cambiar la party ahora: solo, en el pueblo, sin votación
+  /// ni preparación (solo_party.md § 2.3).
+  bool get canEditParty {
+    final s = _s;
+    return net == null &&
+        party != null &&
+        s != null &&
+        SessionEngine.canChangeParty(s);
+  }
+
+  /// Carga la party de la cuenta (al empezar, jugando solo).
+  Future<void> _loadParty() async {
+    final ps = party;
+    if (ps == null || net != null) return;
+    List<CompanionSlot> list;
+    try {
+      list = await ps.load();
+    } catch (e) {
+      EcosLog.error('Carga de la party', e);
+      return;
+    }
+    if (!mounted) return;
+    for (final c in list) {
+      _addCompanion(c);
+    }
+    _save(force: true);
+  }
+
+  bool _addCompanion(CompanionSlot c) {
+    final s = _s;
+    if (s == null) return false;
+    final id = companionIdFor(c.slotId);
+    // Jefes del Abismo vencidos por la cuenta, como el líder.
+    final step = engine.addCompanion(
+        s, id, AbyssRules.withAccount(c.profile, atlas),
+        leaderId: localId);
+    if (step == null) return false;
+    _companions[id] = c.slotId;
+    if (c.auto) _auto.add(id);
+    _companionWants[id] = c.wants;
+    _step(step);
+    if (c.wants case final w?) _applyFor(id, SetBuildWantsAction(w));
+    return true;
+  }
+
+  /// Cambia la party en el pueblo (ids de ranura, en orden, hasta 3):
+  /// los que salen se guardan y dejan la sala, los que entran cargan su
+  /// perfil de la cuenta. Devuelve si se pudo.
+  Future<bool> setParty(List<String> slotIds) async {
+    final ps = party;
+    if (ps == null || !canEditParty) return false;
+    for (final id in [..._companions.keys]) {
+      if (slotIds.contains(_companions[id])) continue;
+      await _saveCompanionNow(id);
+      final s = _s;
+      final step = s == null ? null : engine.removeCompanion(s, id);
+      if (step == null) continue;
+      _companions.remove(id);
+      _auto.remove(id);
+      _companionWants.remove(id);
+      _companionSaved.remove(id);
+      _step(step);
+    }
+    try {
+      await ps.setCompanions(slotIds);
+    } catch (e) {
+      _saveFailed(e);
+    }
+    List<CompanionSlot> list;
+    try {
+      list = await ps.load();
+    } catch (e) {
+      EcosLog.error('Carga de la party', e);
+      list = const [];
+    }
+    if (!mounted) return false;
+    for (final c in list) {
+      if (!_companions.containsValue(c.slotId)) _addCompanion(c);
+    }
+    _save(force: true);
+    _emit();
+    return true;
+  }
 
   /// El bestiario de la cuenta de este dispositivo (bestiary.md § 2): se
   /// actualiza solo con lo que este jugador ve ganar (eventos y estado de
@@ -313,6 +461,9 @@ class SessionController extends StateNotifier<SessionView?> {
     _step(step);
     _syncWants();
     _save(force: true);
+    // Party jugando solo (solo_party.md § 2): las otras ranuras elegidas.
+    await _loadParty();
+    if (!mounted) return;
     // Recién con la sala creada: los que se unieron mientras cargaba el
     // perfil quedaron guardados en el stream de la red.
     if (n != null) _netSub = n.events.listen(_onNet);
@@ -498,7 +649,23 @@ class SessionController extends StateNotifier<SessionView?> {
     _sendPosition();
     _sinceSave += dt;
     _step(engine.tick(_s!, dt));
+    _autoTurn();
     _save();
+  }
+
+  /// Turno de un compañero con AUTO (solo_party.md § 4.1).
+  void _autoTurn() {
+    final s = _s;
+    final b = s?.battle;
+    if (s == null || b == null || s.paused || !b.waitingForPlayer) return;
+    final cur = b.state.currentId;
+    if (cur == null || !_auto.contains(cur) || b.turnTime < autoDelay) {
+      return;
+    }
+    final pick = _ai.choose(b.state, cur);
+    for (final c in [if (pick != null) pick, ...CompanionAi.fallbacks]) {
+      if (_applyFor(cur, BattleAction(c))) return;
+    }
   }
 
   // ------------------------------------------------------------------
@@ -542,6 +709,9 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Guarda el perfil ya (antes de cerrar la aplicación).
   Future<void> saveNow() async {
+    for (final id in [..._companions.keys]) {
+      await _saveCompanionNow(id);
+    }
     final p = _s?.players[localId]?.profile;
     if (p == null) return;
     _lastSaved = p;
@@ -737,8 +907,16 @@ class SessionController extends StateNotifier<SessionView?> {
       toggleCharacter();
       return true;
     }
+    if (key == LogicalKeyboardKey.keyM && s.mode != SessionMode.battle) {
+      toggleMap();
+      return true;
+    }
     if (key == LogicalKeyboardKey.keyI && s.mode != SessionMode.battle) {
       toggleInventory();
+      return true;
+    }
+    if (key == LogicalKeyboardKey.keyP && canEditParty) {
+      toggleParty();
       return true;
     }
     final v = s.vote;
@@ -796,6 +974,37 @@ class SessionController extends StateNotifier<SessionView?> {
     }
   }
 
+  /// Hay mapa para abrir en grande (tecla M): en un piso de misión o en
+  /// el mapa del mundo (lo mismo que muestra el minimapa).
+  bool get mapAvailable {
+    final s = _s;
+    if (s == null) return false;
+    final m = engine.mapFor(s);
+    return switch (s.mode) {
+      SessionMode.field => !m.lobby && s.mission != null,
+      SessionMode.lobby => m.entrances.isNotEmpty,
+      _ => false,
+    };
+  }
+
+  /// Tecla M: abre / cierra el mapa en grande (v0.8.1).
+  void toggleMap() {
+    if (_panel == WorldPanel.map) {
+      closePanel();
+    } else if (_panel == null && mapAvailable) {
+      openPanel(WorldPanel.map);
+    }
+  }
+
+  /// Tecla P / botón `PARTY`: el panel de la party (solo, en el pueblo).
+  void toggleParty() {
+    if (_panel == WorldPanel.party) {
+      closePanel();
+    } else if (_panel == null && canEditParty) {
+      openPanel(WorldPanel.party);
+    }
+  }
+
   /// Tecla I: el personaje en la pestaña INVENTARIO.
   void toggleInventory() {
     if (_panel == WorldPanel.inventory) {
@@ -825,7 +1034,17 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool allocate(Map<Attribute, int> add) => _apply(AllocateStatsAction(add));
 
-  bool battleCommand(BattleCommand command) => _apply(BattleAction(command));
+  /// El comando de quien tiene el turno si lo controla este dispositivo
+  /// (el local o un compañero; solo_party.md § 4); si no, del local.
+  bool battleCommand(BattleCommand command) {
+    final cur = _s?.battle?.state.currentId;
+    return _applyFor(
+        _companions.containsKey(cur) ? cur! : localId, BattleAction(command));
+  }
+
+  /// Comando de batalla de [actorId] (el local o un compañero).
+  bool battleCommandFor(String actorId, BattleCommand command) =>
+      _applyFor(actorId, BattleAction(command));
 
   bool backToLobby() => _apply(const BackToLobbyAction());
 
@@ -904,7 +1123,9 @@ class SessionController extends StateNotifier<SessionView?> {
     final p = _s?.players[playerId]?.profile;
     if (p == null) return null;
     return engine.lootVerdict(p, d,
-        wants: playerId == localId ? _localWants : null);
+        wants: playerId == localId
+            ? _localWants
+            : _companionWants[playerId]);
   }
 
   bool takeNode(String nodeId) => _apply(TakeNodeAction(nodeId));
@@ -982,6 +1203,18 @@ class SessionController extends StateNotifier<SessionView?> {
       return true;
     }
     final step = engine.apply(s, localId, action);
+    if (step == null) return false;
+    _step(step);
+    return true;
+  }
+
+  /// Como [_apply] pero actuando como [actorId] (un compañero; el motor
+  /// valida que este dispositivo lo controle).
+  bool _applyFor(String actorId, SessionAction action) {
+    if (actorId == localId) return _apply(action);
+    final s = _s;
+    if (s == null || isClient) return false;
+    final step = engine.applyFor(s, localId, actorId, action);
     if (step == null) return false;
     _step(step);
     return true;
@@ -1073,10 +1306,67 @@ class SessionController extends StateNotifier<SessionView?> {
     _emit();
   }
 
+  /// Guarda a cada miembro que cambió (el local y sus compañeros, cada
+  /// uno en su ranura): cada [saveEvery] s o ya con [force].
   void _save({bool force = false}) {
+    if (!force && _sinceSave < saveEvery) return;
+    for (final id in _companions.keys) {
+      if (_saveCompanion(id)) _sinceSave = 0;
+    }
+    _saveLocal();
+  }
+
+  /// El compañero [id] si cambió; devuelve si mandó a escribir.
+  bool _saveCompanion(String id) {
+    final slot = _companions[id], ps = party;
+    final p = _s?.players[id]?.profile;
+    final last = _companionSaved[id];
+    if (slot == null || ps == null || p == null || identical(p, last)) {
+      return false;
+    }
+    _companionSaved[id] = p;
+    if (last != null && jsonEncode(last.toJson()) == jsonEncode(p.toJson())) {
+      return false;
+    }
+    // Igual que el local: si falla no queda como guardado y se reintenta.
+    unawaited(ps.save(slot, p).then((_) => _companionSaveOk(id, p),
+        onError: (Object e) {
+      if (identical(_companionSaved[id], p)) _companionSaved.remove(id);
+      _saveFailed(e);
+    }));
+    return true;
+  }
+
+  /// Guarda ya al compañero [id] (al sacarlo de la party, al salir).
+  Future<void> _saveCompanionNow(String id) async {
+    final slot = _companions[id], ps = party;
+    final p = _s?.players[id]?.profile;
+    if (slot == null || ps == null || p == null) return;
+    _companionSaved[id] = p;
+    try {
+      await ps.save(slot, p);
+      _companionSaveOk(id, p);
+    } catch (e) {
+      if (identical(_companionSaved[id], p)) _companionSaved.remove(id);
+      _saveFailed(e);
+    }
+  }
+
+  void _companionSaveOk(String id, PlayerProfile p) {
+    // El aviso se va solo si el local tampoco tiene nada pendiente.
+    if (_saveError == null ||
+        !identical(_companionSaved[id], p) ||
+        _lastSaved == null) {
+      return;
+    }
+    if (_companions.keys.any((c) => !_companionSaved.containsKey(c))) return;
+    _saveError = null;
+    _emit();
+  }
+
+  void _saveLocal() {
     final p = _s?.players[localId]?.profile;
     if (p == null || identical(p, _lastSaved)) return;
-    if (!force && _sinceSave < saveEvery) return;
     final last = _lastSaved;
     _lastSaved = p;
     // El cliente recibe un perfil nuevo (otro objeto) en cada snapshot:
@@ -1147,6 +1437,7 @@ class SessionController extends StateNotifier<SessionView?> {
         mode != SessionMode.lobby) {
       _panel = null;
     }
+    if (_panel == WorldPanel.party && !canEditParty) _panel = null;
     if (must && _panel != WorldPanel.character) {
       _panel = WorldPanel.character;
       _autoChar = true;
@@ -1156,6 +1447,8 @@ class SessionController extends StateNotifier<SessionView?> {
       if (_panel == WorldPanel.character) _panel = null;
     }
     if (mode == SessionMode.battle || mode == SessionMode.result) _panel = null;
+    // El mapa en grande solo vale donde hay minimapa (campo / mundo).
+    if (_panel == WorldPanel.map && !mapAvailable) _panel = null;
 
     final (prompt, promptText) = _prompt();
     state = SessionView(
@@ -1176,6 +1469,8 @@ class SessionController extends StateNotifier<SessionView?> {
       atlasGain: _atlasGain,
       bestiary: _bestiary,
       saveError: _saveError,
+      companions: List.unmodifiable(_companions.keys),
+      auto: Set.unmodifiable(_auto),
     );
   }
 

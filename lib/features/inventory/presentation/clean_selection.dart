@@ -102,7 +102,7 @@ class CleanCellMark extends StatelessWidget {
               child: Container(
                 key: const ValueKey('clean-check'),
                 decoration: BoxDecoration(
-                  color: const Color(0x3348C774),
+                  color: ProtoColors.green.withValues(alpha: 0.2),
                   border: Border.all(color: ProtoColors.green, width: 3),
                 ),
                 alignment: Alignment.bottomLeft,

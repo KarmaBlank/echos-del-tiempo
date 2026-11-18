@@ -172,7 +172,7 @@ class _AbyssViewState extends State<AbyssView> {
         ? s
         : ColorFiltered(
             colorFilter:
-                const ColorFilter.mode(Color(0xFF2A1F4A), BlendMode.srcIn),
+                const ColorFilter.mode(ProtoColors.barBg, BlendMode.srcIn),
             child: s);
   }
 }

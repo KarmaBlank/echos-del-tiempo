@@ -5,6 +5,7 @@ import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/js_math.dart';
 import 'element_text.dart';
+import 'summon_text.dart';
 
 /// Textos de estados y habilidades en el markup del prototipo (el HTML
 /// chico que entiende `ProtoMarkup`, docs/specs/ui_style.md § "Texto
@@ -168,6 +169,8 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
     case SkillKind.guard:
       l.add('Todo el equipo recibe ½ daño hasta su próximo turno');
     case SkillKind.support:
+      // Invocador (summoner.md § 8).
+      l.addAll(summonSkillLines(tk, p));
       break;
   }
   l.addAll(kitEffectLines(tk));

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/scheduler.dart';
@@ -59,7 +60,21 @@ class BattleView extends StatefulWidget {
     this.sceneOptions = const SceneOptions(),
     this.bestiary,
     this.enemyLevel,
+    this.companions = const {},
+    this.auto = const {},
+    this.onAuto,
   });
+
+  /// Compañeros de la party de este dispositivo (docs/specs/
+  /// solo_party.md § 4): su turno abre la ventana de comandos (sin AUTO)
+  /// y su tarjeta muestra la ULT y el botón AUTO.
+  final Set<String> companions;
+
+  /// Compañeros con AUTO prendido.
+  final Set<String> auto;
+
+  /// Prende / apaga el AUTO de un compañero; `null` = sin botón.
+  final void Function(String id, bool on)? onAuto;
 
   /// Bestiario de la cuenta (docs/specs/bestiary.md § 3): al pasar el
   /// mouse sobre un enemigo se ve su ficha si ya se lo mató, o "???".
@@ -197,6 +212,39 @@ class BattleViewState extends State<BattleView>
   /// Margen y separación de la barra de abajo (px de pantalla).
   static const _margin = 6.0;
 
+  /// Líneas anteriores del log (la más vieja primero) para el REGISTRO
+  /// EXTENDIDO (accessibility.md § 9.7); cada una vence sola.
+  final _logHistory = <String>[];
+  final _logTimers = <Timer>[];
+
+  /// Líneas anteriores del log que se ven (tests).
+  List<String> get logHistory => List.unmodifiable(_logHistory);
+
+  void _clearLogHistory() {
+    for (final t in _logTimers) {
+      t.cancel();
+    }
+    _logTimers.clear();
+    _logHistory.clear();
+  }
+
+  void _pushLog(String line) {
+    if (line.isEmpty) return;
+    _logHistory.add(line);
+    late final Timer timer;
+    timer = Timer(
+        Duration(milliseconds: (kBattleLogHistoryS * 1000).round()), () {
+      _logTimers.remove(timer);
+      if (!mounted) return;
+      setState(() => _logHistory.remove(line));
+    });
+    _logTimers.add(timer);
+    while (_logHistory.length > kBattleLogLines - 1) {
+      _logHistory.removeAt(0);
+      _logTimers.removeAt(0).cancel();
+    }
+  }
+
   List<Combatant> get _foes =>
       widget.battle.enemies.where((e) => e.alive).toList();
 
@@ -221,6 +269,7 @@ class BattleViewState extends State<BattleView>
 
   @override
   void dispose() {
+    _clearLogHistory();
     _ticker.dispose();
     scene.dispose();
     super.dispose();
@@ -236,6 +285,13 @@ class BattleViewState extends State<BattleView>
   @override
   void didUpdateWidget(BattleView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // REGISTRO EXTENDIDO: la línea que se reemplaza pasa al historial.
+    if (oldWidget.battleId != widget.battleId ||
+        !widget.sceneOptions.extendedLog) {
+      _clearLogHistory();
+    } else if (oldWidget.battle.log != widget.battle.log) {
+      _pushLog(oldWidget.battle.log);
+    }
     // Turno nuevo (u otro actor) o sin poder actuar: el menú vuelve al
     // principio (nunca queda elegida una acción del turno anterior).
     if (!widget.canAct ||
@@ -871,6 +927,16 @@ class BattleViewState extends State<BattleView>
                 scale: s,
               ),
             ),
+            // REGISTRO EXTENDIDO: las líneas anteriores, debajo de la
+            // banda y centradas (no tapan la barra del objetivo).
+            if (widget.sceneOptions.extendedLog && _logHistory.isNotEmpty)
+              Positioned(
+                top: (54 * s).roundToDouble(),
+                left: g.virtualWidth * s * 0.25,
+                width: g.virtualWidth * s * 0.5,
+                child: IgnorePointer(
+                    child: BattleLogHistory(lines: _logHistory)),
+              ),
             // El objetivo: nombre, vida y quiebre (arriba a la izquierda).
             if (_foes.where((e) => e.id == target).firstOrNull case final tg?)
               Positioned(
@@ -898,6 +964,9 @@ class BattleViewState extends State<BattleView>
           sprites: widget.sprites,
           turnTimeLeft: widget.turnTimeLeft,
           points: me == null ? 0 : widget.pendingPoints[me.id] ?? 0,
+          companions: widget.companions,
+          auto: widget.auto,
+          onAuto: widget.onAuto,
         ),
       ],
     );
@@ -911,6 +980,10 @@ class BattleViewState extends State<BattleView>
       who = hexSpan('#7d8bc4', '…');
     } else if (cur.id == me?.id) {
       who = '<b>Tu turno</b>';
+    } else if (widget.companions.contains(cur.id)) {
+      // Compañero con AUTO (sin AUTO se abre la ventana de comandos).
+      who = 'Turno de ${protoEsc(cur.name)} '
+          '(${widget.auto.contains(cur.id) ? 'AUTO' : 'compañero'})';
     } else if (cur.isPlayer) {
       who = '<b>Turno de ${protoEsc(cur.name)}</b>';
     } else {
@@ -975,7 +1048,9 @@ class BattleViewState extends State<BattleView>
             // Familia y debilidades, solo si ya se lo mató (bestiary.md).
             '${widget.bestiary?.knows(tg.enemyType) ?? false ? ' · ${familyShortMarkup(tg.enemyType)}' : ''}';
     return BattleCommandWindow(
-      actorName: '¡Tu turno! ${cur.name}',
+      actorName: widget.companions.contains(cur.id)
+          ? 'Turno de ${cur.name} (compañero)'
+          : '¡Tu turno! ${cur.name}',
       categories: entries,
       category: _category,
       visible: visible,
@@ -1079,7 +1154,7 @@ class _LogBand extends StatelessWidget {
                 width: timerW,
                 margin: EdgeInsets.only(
                     right: 2 * scale, top: scale, bottom: 2 * scale),
-                color: const Color(0xFF000000),
+                color: ProtoColors.bg,
                 alignment: Alignment.center,
                 child: Text(
                   retroText('$who ${left.ceil().clamp(0, 99)}s'),
@@ -1094,6 +1169,40 @@ class _LogBand extends StatelessWidget {
           ],
         );
       }),
+    );
+  }
+}
+
+/// Las líneas anteriores del log de batalla (REGISTRO EXTENDIDO,
+/// accessibility.md § 9.7): caja del fondo del tema, la más nueva abajo
+/// y más clara; texto de lectura (sigue el tamaño y la fuente).
+class BattleLogHistory extends StatelessWidget {
+  const BattleLogHistory({super.key, required this.lines});
+
+  /// La más vieja primero.
+  final List<String> lines;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('battle-log-history'),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      color: ProtoColors.bg.withValues(alpha: 0.8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final (i, l) in lines.indexed)
+            Text(retroText(l),
+                key: ValueKey('battle-log-line-$i'),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: RetroType.style(RetroType.small,
+                    color: i == lines.length - 1
+                        ? ProtoColors.ink
+                        : ProtoColors.dim)),
+        ],
+      ),
     );
   }
 }

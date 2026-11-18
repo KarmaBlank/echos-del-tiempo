@@ -215,9 +215,24 @@ class MapGame extends Game {
   double? _questT0;
   String _questText = '';
 
+  /// DURACIÓN DE LOS AVISOS (accessibility.md § 9.5): multiplica
+  /// [questToastMs]; infinito = hasta [dismissNotices] (lo pone
+  /// `WorldScreen`).
+  double noticeFactor = 1;
+
+  /// Duración efectiva del cartel de misión opcional (ms).
+  double get questToastShownMs => questToastMs * noticeFactor;
+
+  /// Cierra el cartel de misión opcional (Retroceso con HASTA CERRAR).
+  void dismissNotices() => _questT0 = null;
+
+  /// FONDO DEL TEXTO EN EL MAPA (accessibility.md § 9.6; lo pone
+  /// `WorldScreen`).
+  MapLabelBackdrop labelBackdrop = MapLabelBackdrop.none;
+
   /// Se ve el cartel de misión opcional cumplida (tests).
   bool get showingQuestToast =>
-      _questT0 != null && t - _questT0! < questToastMs;
+      _questT0 != null && t - _questT0! < questToastShownMs;
 
   /// Caídas en curso por jugador.
   final _falls = <String, _Fall>{};
@@ -405,7 +420,8 @@ class MapGame extends Game {
     // el mundo").
     canvas.save();
     canvas.clipRect(dst);
-    paintMapLabels(canvas, labels, dst, vw.toDouble(), labelPen);
+    paintMapLabels(canvas, labels, dst, vw.toDouble(), labelPen,
+        backdrop: labelBackdrop);
     canvas.restore();
   }
 
@@ -651,7 +667,9 @@ class MapGame extends Game {
           const Color(0xFFA29BFE).withValues(alpha: a.clamp(0.0, 1.0)), 8);
     }
     if (showingQuestToast) {
-      final q = (t - _questT0!) / questToastMs;
+      final q = noticeFactor.isInfinite
+          ? 0.2
+          : (t - _questT0!) / questToastShownMs;
       final a = (q < 0.85 ? 1.0 : (1 - q) / 0.15).clamp(0.0, 1.0);
       final y = 44.0 + (q < 0.1 ? (0.1 - q) * 80 : 0.0);
       c.drawRect(Rect.fromLTWH(vw / 2 - 110, y - 12, 220, 28),

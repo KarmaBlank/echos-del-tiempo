@@ -22,7 +22,7 @@ class PointsBadge extends StatefulWidget {
   final bool reduceMotion;
 
   /// Color del texto (oscuro sobre dorado: contraste alto).
-  static const ink = Color(0xFF14172B);
+  static const ink = ProtoColors.bg;
 
   @override
   State<PointsBadge> createState() => _PointsBadgeState();
@@ -66,9 +66,9 @@ class _PointsBadgeState extends State<PointsBadge>
   Widget _box(double t) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: Color.lerp(ProtoColors.gold, const Color(0xFFFFE08A), t)!,
+          color: Color.lerp(ProtoColors.gold, ProtoColors.white, 0.45 * t)!,
           border: Border.all(
-              color: Color.lerp(const Color(0xFFE8ECFF), ProtoColors.white, t)!,
+              color: Color.lerp(ProtoColors.title, ProtoColors.white, t)!,
               width: widget.reduceMotion ? 2 : 1),
         ),
         child: Text('+${widget.count}',

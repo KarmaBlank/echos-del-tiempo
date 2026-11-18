@@ -124,3 +124,12 @@ flutter:
         - asset: assets/fonts/VT323-Regular.ttf
         - asset: assets/fonts/VT323-Regular.ttf
           weight: 700
+    # FUENTE DE LECTURA ATKINSON (docs/specs/accessibility.md § 9):
+    # Atkinson Hyperlegible (Braille Institute), OFL 1.1:
+    # assets/fonts/OFL-AtkinsonHyperlegible.txt. Solo la regular; la
+    # misma para 700 (sin negrita sintética, como las otras).
+    - family: AtkinsonHyperlegible
+      fonts:
+        - asset: assets/fonts/AtkinsonHyperlegible-Regular.ttf
+        - asset: assets/fonts/AtkinsonHyperlegible-Regular.ttf
+          weight: 700

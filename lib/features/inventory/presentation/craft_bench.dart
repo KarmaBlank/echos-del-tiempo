@@ -435,14 +435,36 @@ class _CraftBenchState extends State<CraftBench> {
             (m != CraftMaterial.esencia || p.material(m) > 0))
           '${m.label.split(' ').first} <b>x${p.material(m)}</b>',
     ].join(' · ');
+    final crumbs = StepCrumbs(
+      steps: const ['ARMA', 'ACCIÓN', 'CONFIRMAR'],
+      current: _step,
+      keyPrefix: 'bench-crumb-',
+      onStep: _go,
+    );
+    final materials = RetroTooltip(
+      message: materialsHelp(),
+      child: ProtoText(mats,
+          key: const ValueKey('craft-materials'), textAlign: TextAlign.right),
+    );
+    // Con texto ENORME las migas, lo elegido y los materiales no entran
+    // en una fila: van una debajo de la otra.
+    if (RetroType.settingFactor(context) >= 1.9) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          crumbs,
+          if (_step > 0)
+            ProtoText(
+                key: const ValueKey('bench-summary'),
+                '${itemNameMarkup(shop.rules, target)}'
+                '${_step == 2 ? ' · <span class="k">${protoEsc(_op.title)}</span>' : ''}'),
+          Align(alignment: Alignment.centerRight, child: materials),
+        ],
+      );
+    }
     return Row(
       children: [
-        StepCrumbs(
-          steps: const ['ARMA', 'ACCIÓN', 'CONFIRMAR'],
-          current: _step,
-          keyPrefix: 'bench-crumb-',
-          onStep: _go,
-        ),
+        crumbs,
         const SizedBox(width: 12),
         // Lo elegido en los pasos anteriores, al lado de las migas.
         if (_step > 0)
@@ -456,15 +478,7 @@ class _CraftBenchState extends State<CraftBench> {
         const SizedBox(width: 12),
         Flexible(
           flex: 0,
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: RetroTooltip(
-              message: materialsHelp(),
-              child: ProtoText(mats,
-                  key: const ValueKey('craft-materials'),
-                  textAlign: TextAlign.right),
-            ),
-          ),
+          child: Align(alignment: Alignment.centerRight, child: materials),
         ),
       ],
     );
@@ -697,14 +711,15 @@ class _CraftBenchState extends State<CraftBench> {
     }
 
     final s = [for (final g in BenchGroup.values) section(g)];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Align(alignment: Alignment.centerRight, child: KeyHints()),
-        const SizedBox(height: 4),
-        Expanded(
-          child: SingleChildScrollView(
-            child: LayoutBuilder(builder: (context, box) {
+    // Las teclas scrollean con las tarjetas (con texto ENORME no queda
+    // alto fijo para ellas).
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Align(alignment: Alignment.centerRight, child: KeyHints()),
+          const SizedBox(height: 4),
+          LayoutBuilder(builder: (context, box) {
               final col = RetroType.width(context, 340);
               final w = box.maxWidth;
               final cols = w >= 3 * col + 24
@@ -741,9 +756,8 @@ class _CraftBenchState extends State<CraftBench> {
                     children: s),
               };
             }),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

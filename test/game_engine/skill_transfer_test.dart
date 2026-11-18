@@ -55,7 +55,10 @@ void main() {
     test('no físicas = any; físicas = melee o ranged', () {
       for (final e in kSkillDelivery.entries) {
         final phys = kSkills[e.key]!.kind == SkillKind.physical;
-        expect(e.value == SkillDelivery.any, !phys, reason: e.key);
+        expect(
+            e.value == SkillDelivery.any || e.value == SkillDelivery.caster,
+            !phys,
+            reason: e.key);
       }
     });
 

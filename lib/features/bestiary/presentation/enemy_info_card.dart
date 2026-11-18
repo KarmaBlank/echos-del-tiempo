@@ -44,10 +44,11 @@ class EnemyInfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: ProtoColors.bg.withValues(alpha: 0xF5 / 0xFF),
         border: Border.all(
-            color: ProtoColors.gold, width: RetroTheme.thinBorderWidth),
+            color: RetroHoverCard.borderColor,
+            width: RetroTheme.thinBorderWidth),
         boxShadow: const [
           BoxShadow(
-              color: Color(0xAA000000), offset: Offset(0, 4), blurRadius: 18),
+              color: ProtoColors.shadow, offset: Offset(0, 4), blurRadius: 18),
         ],
       ),
       child: DefaultTextStyle.merge(

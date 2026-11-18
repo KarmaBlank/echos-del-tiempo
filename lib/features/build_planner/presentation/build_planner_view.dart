@@ -777,7 +777,7 @@ class PickOption<T> {
 Future<T?> _dialog<T>(BuildContext context, WidgetBuilder builder) =>
     showDialog<T>(
       context: context,
-      barrierColor: const Color(0x990B0E1A),
+      barrierColor: ProtoColors.scrim(0.6),
       builder: (ctx) =>
           Material(type: MaterialType.transparency, child: builder(ctx)),
     );

@@ -50,7 +50,7 @@ class MissionCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: locked ? const Color(0x22000000) : null,
+        color: locked ? ProtoColors.scrim(0.25) : null,
         border: Border.all(
             color: locked ? ProtoColors.barBg : ProtoColors.panelBorder,
             width: RetroTheme.thinBorderWidth),
@@ -63,11 +63,11 @@ class MissionCard extends StatelessWidget {
             // `.mrow .rk`: 16 px `#ff9f1c`.
             child: Text(m.rank,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontFamily: RetroType.pixelFamily,
+                style: TextStyle(
+                    fontFamily: RetroType.titleFamily,
                     fontSize: RetroType.title,
                     color: ProtoColors.amber,
-                    shadows: [
+                    shadows: const [
                       Shadow(
                           color: ProtoColors.titleShadow, offset: Offset(2, 2))
                     ])),

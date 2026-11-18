@@ -316,7 +316,8 @@ void main() {
   });
 
   group('red (protocolo 9)', () {
-    test('versión 9', () => expect(kProtocolVersion, 9));
+    // v0.8.1 sube a 10 (Invocador, summoner.md § 6).
+    test('versión 9 o más', () => expect(kProtocolVersion, greaterThanOrEqualTo(9)));
 
     test('acciones, evento, sesión, perfil y materiales hacen ida y vuelta', () {
       for (final a in const [ProposeAbyssAction(3), DevAbyssAction('kills')]) {

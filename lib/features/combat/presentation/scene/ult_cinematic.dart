@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui';
+import '../../../../game_engine/data/branch_ults_catalog.dart' show kBranchUltLooks;
 
 /// Estilo visual de cada ULT (uno por `SkillDef.id` de `kAllUltimates`).
 enum UltStyle {
@@ -510,7 +511,11 @@ const Map<String, UltScript> kEnemyUltScripts = {
 bool isEnemyUlt(String? ultId) => kEnemyUltScripts.containsKey(ultId);
 
 UltScript ultScriptFor(String? ultId) =>
-    kUltScripts[ultId] ?? kEnemyUltScripts[ultId] ?? kDefaultUltScript;
+    kUltScripts[ultId] ??
+    kEnemyUltScripts[ultId] ??
+    // ULT de camino (branch_ults.md): el guion de la ULT a la que se parece.
+    kUltScripts[kBranchUltLooks[ultId]] ??
+    kDefaultUltScript;
 
 /// Una vista de cámara: centro (px del mundo) y zoom (px de pantalla
 /// por px del mundo).

@@ -477,6 +477,7 @@ void main() {
       'depredador', 'solInterior', 'inamovible',
       // Las 16 del árbol v6 (passive_tree_v6.md § 6).
       for (final (k, _, _) in kTreeV6Drawbacks) k,
+      'legion', 'pacto', // Invocador v0.8.1 (summoner.md § 5).
     });
     expect(procTagColor('inamovible'), procKeystoneColor);
     expect(procName('corteCadena'), 'Corte en Cadena');

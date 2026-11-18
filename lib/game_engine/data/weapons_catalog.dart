@@ -1,6 +1,7 @@
 import '../models/attributes.dart';
 import '../models/item.dart';
 import '../models/weapon.dart';
+import 'summoner_catalog.dart';
 
 // Bases de arma (docs/specs/loot.md § 8). Las 32 primeras son `WEAPONS`
 // del prototipo, 1:1 (`wt` → weight, `def` → shieldDefense, `req` →
@@ -302,4 +303,6 @@ const Map<String, WeaponDef> kWeapons = {
   'tomo_mareas': WeaponDef(id: 'tomo_mareas', name: 'Tomo de las Mareas Profundas', classId: 'maga', type: 'tomo', tier: 3, level: 41, price: 10824, weight: 0.5,
       requirements: {_esp: 51}, atk: PowerFormula(base: 7, coefficients: {_fue: 0.3}), mag: PowerFormula(base: 48, coefficients: {_esp: 1.16}),
       skillIds: ['torrente', 'bruma', 'geiser'], implicit: [ItemMod(ModStat.ultCharge, 12)]),
+  // Invocador v0.8.1 (docs/specs/summoner.md § 4).
+  ...kSummonerWeapons,
 };

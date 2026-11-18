@@ -6,6 +6,7 @@ import '../theme/proto_markup.dart';
 import '../theme/retro_text.dart';
 import '../theme/retro_theme.dart';
 import 'menu_focus.dart';
+import '../theme/ui_theme.dart';
 
 /// Piezas de los menús "lista + detalle" compactos (docs/specs/ui_style.md
 /// § "Menús: lista + detalle"): filas de una línea con el valor alineado
@@ -95,7 +96,8 @@ class _MenuRowState extends State<MenuRow> {
     final style =
         widget.dimmed ? const TextStyle(color: ProtoColors.dim) : null;
     return Padding(
-      padding: EdgeInsets.only(left: widget.indent, bottom: 2),
+      padding: EdgeInsets.only(
+          left: widget.indent, bottom: UiTheme.wide ? 4 : 2),
       child: FocusableActionDetector(
         autofocus: widget.autofocus,
         mouseCursor: SystemMouseCursors.click,
@@ -111,7 +113,8 @@ class _MenuRowState extends State<MenuRow> {
           child: FocusRing(
             focused: _focus,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: EdgeInsets.symmetric(
+                  horizontal: UiTheme.space(8), vertical: UiTheme.wide ? 6 : 3),
               decoration: BoxDecoration(
                 color: widget.selected
                     ? ProtoColors.button.withValues(alpha: 0.5)
@@ -227,9 +230,9 @@ class MenuGroup extends StatelessWidget {
               padding: const EdgeInsets.only(top: 6, right: 6),
               child: Text(retroText(label),
                   style: TextStyle(
-                      fontFamily: RetroType.pixelFamily,
+                      fontFamily: RetroType.titleFamily,
                       fontSize: RetroType.label,
-                      height: RetroType.pixelLine,
+                      height: RetroType.titleLine,
                       color: color)),
             ),
           ),
@@ -254,7 +257,7 @@ class MenuHeader extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 2, bottom: 2),
         child: ProtoText(text,
-            style: const TextStyle(color: ProtoColors.gold),
+            style: const TextStyle(color: ProtoColors.title),
             maxLines: 1,
             overflow: TextOverflow.ellipsis),
       );
@@ -383,7 +386,7 @@ class InfoLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 2),
+      padding: EdgeInsets.only(top: UiTheme.wide ? 4 : 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

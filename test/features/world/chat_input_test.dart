@@ -65,7 +65,12 @@ void main() {
     final last = c.view!.chat.last;
     expect(last.from, SessionController.defaultName);
     expect(last.text, 'hola equipo');
-    expect(find.textContaining('hola equipo'), findsOneWidget);
+    // Chat oculto por defecto (v0.8.1): mandar lo pliega; la línea queda
+    // en el registro (fuera de escena) y el propio mensaje no suma `+N`.
+    expect(find.textContaining('hola equipo', skipOffstage: false),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('chat-pill')), findsOneWidget);
+    expect(find.byKey(const ValueKey('chat-unread')), findsNothing);
     expect(c.typing, isFalse);
 
     // Sin foco en el chat, las flechas vuelven a mover.

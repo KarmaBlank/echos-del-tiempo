@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -26,10 +29,13 @@ import '../../../missions/presentation/vote_panel.dart';
 import '../../../settings/presentation/settings_menu.dart';
 import '../map/loot_painter.dart';
 import '../map/map_game.dart';
+import '../../../../core/settings/game_settings.dart';
+import '../../../../core/settings/notices.dart';
 import '../../../../core/settings/settings_providers.dart';
 import '../../../characters/domain/unused_points.dart';
 import 'chat_box.dart';
 import 'exploration_lines.dart';
+import 'full_map.dart';
 import 'loot_feed.dart';
 import 'minimap.dart';
 import 'unused_points_notice.dart';
@@ -81,9 +87,6 @@ class WorldHud extends StatelessWidget {
         ((field || s.mode == SessionMode.levelUp) &&
             !view.map.lobby &&
             s.mission != null);
-    final zones = world
-        ? {for (final z in controller.zones) z.zone.index: z.open}
-        : const <int, bool>{};
     final small = Theme.of(context).textTheme.bodySmall!;
     final players = s.playerList;
     final boxW = PartyBox.widthOf(context);
@@ -131,6 +134,16 @@ class WorldHud extends StatelessWidget {
                     const SizedBox(width: 8),
                   ],
                   if (onMenu != null) PauseMenuButton(onPressed: onMenu!),
+                  // Party jugando solo, en el pueblo (solo_party.md § 2.3).
+                  if (controller.canEditParty) ...[
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      key: const ValueKey('hud-party'),
+                      style: RetroTheme.compactButton(),
+                      onPressed: controller.toggleParty,
+                      child: Text('PARTY (${view.companions.length + 1}) [P]'),
+                    ),
+                  ],
                   // Puntos sin usar: `PERSONAJE [C]` con `+N` (solo si hay;
                   // passive_tree_v4.md § 7).
                   if (_unused(s).any) ...[
@@ -170,33 +183,84 @@ class WorldHud extends StatelessWidget {
               ),
             if (field && s.mission != null)
               Positioned(
-                top: _gap + 48,
+                // Debajo de la barra de misión, que crece con el texto.
+                top: _gap + RetroType.width(context, 48),
                 left: _gap,
-                child: _Objectives(
-                    mission: s.mission!,
-                    zoneName: _missionName(s),
-                    floorLevel: MapGame.currentFloor(view)?.level,
-                    floor: MapGame.currentFloor(view),
-                    time: s.time),
+                // Plegable (J o clic en la cabecera); el estado se guarda.
+                child: Consumer(
+                  builder: (context, ref, _) => _Objectives(
+                      mission: s.mission!,
+                      zoneName: _missionName(s),
+                      floorLevel: MapGame.currentFloor(view)?.level,
+                      floor: MapGame.currentFloor(view),
+                      time: s.time,
+                      collapsed: ref.watch(gameSettingsProvider
+                          .select((g) => g.objectivesCollapsed)),
+                      onToggle: () => toggleObjectives(ref)),
+                ),
               ),
             if (showMinimap)
               Positioned(
                 top: _gap + 48,
                 right: _gap,
-                child: RetroPanel(
-                  padding: const EdgeInsets.all(4),
-                  child: Minimap(
-                    map: view.map,
-                    session: s,
-                    localId: view.localId,
-                    localX: controller.local.x,
-                    localY: controller.local.y,
-                    time: s.time,
-                    loot: _minimapLoot(s),
-                    bounds: MapGame.currentFloor(view)?.bounds,
-                    entranceOpen: (z) => zones[z] ?? false,
-                  ),
-                ),
+                // Minimapa con zoom (rueda o `-` `+`, se recuerda) y
+                // `MAPA [M]` (v0.8.1).
+                child: Consumer(builder: (context, ref, _) {
+                  final zoom = ref.watch(
+                      gameSettingsProvider.select((g) => g.minimapZoom));
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      RetroPanel(
+                        padding: const EdgeInsets.all(4),
+                        child: Listener(
+                          onPointerSignal: (e) {
+                            if (e is PointerScrollEvent) {
+                              setMinimapZoom(
+                                  ref, zoom + (e.scrollDelta.dy < 0 ? 1 : -1));
+                            }
+                          },
+                          child: hudMinimap(view, controller, zoom: zoom),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // Los botones no toman el foco (el teclado sigue en
+                      // el juego).
+                      ExcludeFocus(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ElevatedButton(
+                              key: const ValueKey('minimap-zoom-out'),
+                              style: RetroTheme.compactButton(),
+                              onPressed: zoom > 1
+                                  ? () => setMinimapZoom(ref, zoom - 1)
+                                  : null,
+                              child: const Text('-'),
+                            ),
+                            const SizedBox(width: 4),
+                            ElevatedButton(
+                              key: const ValueKey('minimap-zoom-in'),
+                              style: RetroTheme.compactButton(),
+                              onPressed: zoom < GameSettings.minimapZooms
+                                  ? () => setMinimapZoom(ref, zoom + 1)
+                                  : null,
+                              child: const Text('+'),
+                            ),
+                            const SizedBox(width: 4),
+                            ElevatedButton(
+                              key: const ValueKey('minimap-open-map'),
+                              style: RetroTheme.compactButton(),
+                              onPressed: controller.toggleMap,
+                              child: const Text('MAPA [M]'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }),
               ),
             Positioned(
               left: _gap,
@@ -214,12 +278,29 @@ class WorldHud extends StatelessWidget {
                   const SizedBox(height: 6),
                   chatFocus == null
                       ? _MessageLog(messages: view.messages)
-                      : ChatBox(
-                          lines: view.chat,
-                          focusNode: chatFocus!,
-                          onSend: controller.sendChat,
-                          onDone: onChatDone ?? () {},
-                        ),
+                      // CHAT: OCULTO / SIEMPRE VISIBLE (v0.8.1).
+                      : Consumer(builder: (context, ref, _) {
+                          final (chat, notices, duration) = ref.watch(
+                              gameSettingsProvider.select((g) =>
+                                  (g.chat, g.chatNotices, g.noticeDuration)));
+                          final me = s.players[view.localId];
+                          return ChatBox(
+                            lines: view.chat,
+                            focusNode: chatFocus!,
+                            onSend: controller.sendChat,
+                            onDone: onChatDone ?? () {},
+                            collapsible: chat == ChatVisibility.hidden,
+                            notices: notices,
+                            // DURACIÓN DE LOS AVISOS (accessibility.md § 9.5).
+                            noticeDuration:
+                                duration.scale(ChatBox.toastDuration),
+                            dismissSignal: ref.watch(noticeDismissProvider),
+                            localName: me == null
+                                ? null
+                                : heroTitle(me.name, me.profile.classId,
+                                    me.profile.ascension.id),
+                          );
+                        }),
                 ],
               ),
             ),
@@ -283,6 +364,11 @@ class WorldHud extends StatelessWidget {
                             s.mode == SessionMode.levelUp || view.panel != null,
                         reduceMotion: ref.watch(
                             gameSettingsProvider.select((g) => g.reduceMotion)),
+                        duration: ref
+                            .watch(gameSettingsProvider
+                                .select((g) => g.noticeDuration))
+                            .scale(UnusedPointsToast.shown),
+                        dismissSignal: ref.watch(noticeDismissProvider),
                       ),
                     ),
                     for (final line in _banners(s))
@@ -375,20 +461,6 @@ class WorldHud extends StatelessWidget {
         nearestPickable(_floor(s), controller.local.x, controller.local.y);
     if (l == null) return null;
     return '[E] Recoger ${MapGame.lootName(controller, l.ground.drop)}';
-  }
-
-  /// Íconos de minimapa que pide el filtro (`Icono`), de lo visible.
-  List<MinimapLoot> _minimapLoot(GameSession s) {
-    final me = s.players[view.localId];
-    if (me == null) return const [];
-    return [
-      for (final g in s.groundFor(view.localId))
-        if (controller.engine
-                .lootVerdict(me.profile, g.drop, wants: controller.localWants)
-            case FilterVerdict(visible: true, :final style)
-            when style.icon != null)
-          MinimapLoot(g.x, g.y, style.icon!),
-    ];
   }
 
   /// Votación en curso (`renderVote`), solo en el lobby.
@@ -493,6 +565,7 @@ class _MissionBar extends StatelessWidget {
     final turns = turnTimerNote(view);
     // `#mission`: verde `#7bed9f`.
     return RetroPanel(
+      key: const ValueKey('hud-mission-bar'),
       padding: const EdgeInsets.all(8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -520,13 +593,134 @@ class _CanvasLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        color: const Color(0xAA000000),
+        color: ProtoColors.scrim(),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Text(retroText(text),
             style: RetroType.style(fontSize, color: color)),
       );
 }
 
+/// Zoom del minimapa del HUD (1..3) guardado en los ajustes.
+void setMinimapZoom(WidgetRef ref, int zoom) {
+  final s = ref.read(gameSettingsProvider);
+  unawaited(ref
+      .read(gameSettingsProvider.notifier)
+      .update(s.copyWith(minimapZoom: zoom)));
+}
+
+/// Tamaño (px) de la ventana del minimapa con zoom 2 y 3 (como el
+/// minimapa de antes de v0.8.1): a zoom 3 son ~27×19 tiles alrededor
+/// del jugador. Para ver más está el mapa grande (M).
+const kMinimapWindow = Size(200, 140);
+
+/// El minimapa del HUD con el zoom [zoom]: 1 = el piso entero; 2 y 3 =
+/// ventana de [kMinimapWindow] centrada en el jugador (exploration.md §
+/// "HUD").
+Minimap hudMinimap(SessionView view, SessionController controller,
+    {int zoom = 1}) {
+  final cell = Minimap.baseCell * zoom;
+  return Minimap(
+    key: const ValueKey('hud-minimap'),
+    map: view.map,
+    session: view.session,
+    localId: view.localId,
+    localX: controller.local.x,
+    localY: controller.local.y,
+    time: view.session.time,
+    loot: minimapLootFor(view, controller),
+    bounds: MapGame.currentFloor(view)?.bounds,
+    entranceOpen: _entranceOpen(view, controller),
+    cell: cell,
+    view: zoom <= 1
+        ? null
+        : Size(kMinimapWindow.width / cell, kMinimapWindow.height / cell),
+  );
+}
+
+bool Function(int) _entranceOpen(
+    SessionView view, SessionController controller) {
+  final world = view.session.mode == SessionMode.lobby &&
+      view.map.entrances.isNotEmpty;
+  final zones = world
+      ? {for (final z in controller.zones) z.zone.index: z.open}
+      : const <int, bool>{};
+  return (z) => zones[z] ?? false;
+}
+
+/// Íconos de minimapa que pide el filtro (`Icono`), de lo visible.
+List<MinimapLoot> minimapLootFor(
+    SessionView view, SessionController controller) {
+  final s = view.session;
+  final me = s.players[view.localId];
+  if (me == null) return const [];
+  return [
+    for (final g in s.groundFor(view.localId))
+      if (controller.engine
+              .lootVerdict(me.profile, g.drop, wants: controller.localWants)
+          case FilterVerdict(visible: true, :final style)
+          when style.icon != null)
+        MinimapLoot(g.x, g.y, style.icon!),
+  ];
+}
+
+/// El mapa en grande (tecla M; panel `WorldPanel.map`).
+Widget fullMapPanel(SessionView view, SessionController controller) {
+  final s = view.session;
+  final m = s.mission;
+  final name = WorldHud(view: view, controller: controller)._missionName(s);
+  final title = m == null || s.mode == SessionMode.lobby
+      ? 'Mapa del mundo'
+      : m.floors > 1
+          ? floorLabelText(name, m.floor, m.floors)
+          : name;
+  return FullMap(
+    key: const ValueKey('panel-map'),
+    title: title,
+    map: view.map,
+    session: s,
+    localId: view.localId,
+    localX: controller.local.x,
+    localY: controller.local.y,
+    time: s.time,
+    loot: minimapLootFor(view, controller),
+    bounds: MapGame.currentFloor(view)?.bounds,
+    entranceOpen: _entranceOpen(view, controller),
+    onClose: controller.closePanel,
+  );
+}
+
+/// Pliega / despliega la caja de objetivos y lo guarda (tecla J o clic en
+/// la cabecera; docs/specs/exploration.md § "HUD").
+void toggleObjectives(WidgetRef ref) {
+  final s = ref.read(gameSettingsProvider);
+  unawaited(ref
+      .read(gameSettingsProvider.notifier)
+      .update(s.copyWith(objectivesCollapsed: !s.objectivesCollapsed)));
+}
+
+/// Resumen de una línea de la caja plegada: `Piso 1/4 · Grupos 4/4 ·
+/// Opcional 1/2` (y `★ JEFE` con la barrera abierta).
+String objectivesSummaryText(MissionRun m, MapFloor? floor) {
+  final floors = m.floors > 1;
+  final f = m.floor;
+  final parts = <String>[];
+  if (floors) {
+    final goal = f < m.floorGoals.length ? m.floorGoals[f] : 0;
+    parts
+      ..add('Piso ${f + 1}/${m.floors}')
+      ..add('Grupos ${m.floorKills(f).clamp(0, goal)}/$goal');
+  }
+  for (final o in m.objectives) {
+    if (floors && o.kind == ObjectiveKind.kills) continue;
+    parts.add('${o.kind.label.split(' ').first} '
+        '${o.count.clamp(0, o.goal)}/${o.goal}');
+  }
+  if (optionalSummary(m, floor) case final opt?) parts.add(opt);
+  if (m.open && (!floors || m.isLastFloor)) parts.add('★ JEFE');
+  return parts.join(' · ');
+}
+
+/// Caja de objetivos (`drawObjectives`), plegable y compacta (v0.8.1).
 class _Objectives extends StatelessWidget {
   const _Objectives({
     required this.mission,
@@ -534,6 +728,8 @@ class _Objectives extends StatelessWidget {
     this.floorLevel,
     this.floor,
     this.time = 0,
+    this.collapsed = false,
+    this.onToggle,
   });
 
   final MissionRun mission;
@@ -548,70 +744,105 @@ class _Objectives extends StatelessWidget {
   /// Nivel de los enemigos del piso actual.
   final int? floorLevel;
 
+  /// Plegada: una sola fila con el resumen y `[+]`.
+  final bool collapsed;
+  final VoidCallback? onToggle;
+
+  /// Ancho máximo (base, crece con el tamaño del texto).
+  static const maxWidth = 380.0;
+
+  /// Plegada: más ancha, para que el resumen entre en una línea.
+  static const collapsedMaxWidth = 520.0;
+
   @override
   Widget build(BuildContext context) {
-    Widget line(String text, bool ok) => Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Text(retroText(text),
-              style:
-                  TextStyle(color: ok ? ProtoColors.green : ProtoColors.ink)),
-        );
     final floors = mission.floors > 1;
     final f = mission.floor;
     final goal =
         floors && f < mission.floorGoals.length ? mission.floorGoals[f] : 0;
     final floorDone = floors && mission.floorKills(f) >= goal;
+    final title = floors
+        ? '${floorLabelText(zoneName, f, mission.floors)}'
+            '${floorLevel == null ? '' : ' · Lv $floorLevel'}'
+        : zoneName;
+    final header = MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        key: const ValueKey('hud-objectives-header'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onToggle,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: kObjectiveLineGap),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Plegada, la cabecera ES el resumen (el nombre ya está en
+              // la barra de misión).
+              Flexible(
+                child: collapsed
+                    ? Text(retroText(objectivesSummaryText(mission, floor)),
+                        key: const ValueKey('hud-objectives-summary'),
+                        style: const TextStyle(color: ProtoColors.ink))
+                    : Text(retroText(title),
+                        key: ValueKey(
+                            floors ? 'hud-floor' : 'hud-objectives-title'),
+                        style: const TextStyle(color: ProtoColors.gold)),
+              ),
+              const SizedBox(width: 8),
+              Text(collapsed ? '[+]' : '[-]',
+                  key: const ValueKey('hud-objectives-toggle'),
+                  style: const TextStyle(color: ProtoColors.sky)),
+            ],
+          ),
+        ),
+      ),
+    );
     // `drawObjectives`: caja `#000a` con borde `#5b74c9`.
     return Container(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+      key: const ValueKey('hud-objectives'),
+      constraints: BoxConstraints(
+          maxWidth: RetroType.width(
+              context, collapsed ? collapsedMaxWidth : maxWidth)),
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
       decoration: BoxDecoration(
-        color: const Color(0xAA000000),
+        color: ProtoColors.scrim(),
         border: Border.all(color: ProtoColors.buttonBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (floors) ...[
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(
-                  retroText('${floorLabelText(zoneName, f, mission.floors)}'
-                      '${floorLevel == null ? '' : ' · Lv $floorLevel'}'),
-                  key: const ValueKey('hud-floor'),
-                  style: const TextStyle(color: ProtoColors.gold)),
-            ),
-            if (mission.isLastFloor)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(retroText('¡Piso del JEFE!'),
-                    key: const ValueKey('hud-boss-floor'),
-                    style: const TextStyle(color: ProtoColors.crimson)),
-              ),
-            line(
-                '${floorDone ? '> ' : '· '}Grupos del piso '
-                '${mission.floorKills(f).clamp(0, goal)}/$goal',
-                floorDone),
-            if (!mission.isLastFloor)
-              line(
-                  mission.floorOpen(f)
-                      ? '> Escalera abierta: bajá [E]'
-                      : 'Escalera: despejá el piso',
-                  mission.floorOpen(f)),
+          header,
+          if (!collapsed) ...[
+            if (floors) ...[
+              if (mission.isLastFloor)
+                objectiveLine('¡Piso del JEFE!',
+                    mark: '',
+                    color: ProtoColors.crimson,
+                    key: const ValueKey('hud-boss-floor')),
+              objectiveLine(
+                  'Grupos del piso '
+                  '${mission.floorKills(f).clamp(0, goal)}/$goal',
+                  done: floorDone),
+              if (!mission.isLastFloor)
+                mission.floorOpen(f)
+                    ? objectiveLine('Escalera abierta: bajá [E]',
+                        mark: '>', color: ProtoColors.green)
+                    : objectiveLine('Escalera: despejá el piso'),
+            ],
+            for (final o in mission.objectives)
+              if (!floors || o.kind != ObjectiveKind.kills)
+                objectiveLine(
+                    '${o.kind.label} ${o.count.clamp(0, o.goal)}/${o.goal}',
+                    done: o.done),
+            if (!floors || mission.isLastFloor)
+              mission.open
+                  ? objectiveLine('¡Ve por el JEFE!',
+                      mark: '★', color: ProtoColors.gold)
+                  : objectiveLine('Jefe: completa los objetivos'),
+            ...explorationLines(mission, floor, time),
           ],
-          for (final o in mission.objectives)
-            if (!floors || o.kind != ObjectiveKind.kills)
-              line(
-                  '${o.done ? '> ' : '· '}${o.kind.label} '
-                  '${o.count.clamp(0, o.goal)}/${o.goal}',
-                  o.done),
-          if (!floors || mission.isLastFloor)
-            line(
-                mission.open
-                    ? '★ ¡Ve por el JEFE!'
-                    : 'Jefe: completa los objetivos',
-                mission.open),
-          ...explorationLines(mission, floor, time),
         ],
       ),
     );
@@ -746,14 +977,14 @@ class _LevelUpBanner extends StatelessWidget {
       top: 96,
       // Franja `#000c` a todo el ancho, como el canvas del prototipo.
       child: Container(
-        color: const Color(0xCC000000),
+        color: ProtoColors.scrim(0.8),
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('¡SUBIDA DE NIVEL!',
+            Text('¡SUBIDA DE NIVEL!',
                 style: TextStyle(
-                    fontFamily: RetroType.pixelFamily,
+                    fontFamily: RetroType.titleFamily,
                     fontSize: 16,
                     color: ProtoColors.gold)),
             const SizedBox(height: 8),

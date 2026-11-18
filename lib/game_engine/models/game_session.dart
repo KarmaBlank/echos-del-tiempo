@@ -4,6 +4,7 @@ import 'battle_state.dart';
 import 'build_wants.dart';
 import 'eco.dart';
 import 'exploration.dart';
+import 'game_map.dart' show WorldPoint;
 import 'item.dart';
 import 'loot.dart';
 import 'player_profile.dart';
@@ -61,7 +62,26 @@ class SessionPlayer {
     this.levelUpPending = false,
     this.spikeReady = 0,
     this.buildWants,
-  });
+    this.leaderId,
+    List<WorldPoint>? trail,
+    this.trailEpoch = 0,
+  }) : trail = trail ?? const [];
+
+  /// Compañero de la party de un jugador solo (docs/specs/solo_party.md
+  /// § 3): el id del líder que lo controla; `null` = un humano. Solo lo
+  /// usa el host: **no** viaja en el snapshot (en una sala no hay
+  /// compañeros).
+  final String? leaderId;
+
+  /// Es un compañero ([leaderId] no es `null`).
+  bool get isCompanion => leaderId != null;
+
+  /// Rastro del líder (el más nuevo primero) que siguen sus compañeros
+  /// en fila (solo_party.md § 3.5). Solo host.
+  List<WorldPoint> trail;
+
+  /// `epoch` del líder cuando se armó [trail] (otro = se teletransportó).
+  int trailEpoch;
 
   /// Resumen del plan de build del jugador (`SetBuildWantsAction`) para la
   /// condición `Build` de su filtro de loot. Solo lo usa el host: **no**
@@ -119,6 +139,9 @@ class SessionPlayer {
         levelUpPending: levelUpPending,
         spikeReady: spikeReady,
         buildWants: buildWants,
+        leaderId: leaderId,
+        trail: trail,
+        trailEpoch: trailEpoch,
       );
 }
 

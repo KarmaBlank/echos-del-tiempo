@@ -113,6 +113,10 @@ class Combatant {
     this.abyssTaken = 0,
     this.abyssFeast = 0,
     this.abyssCopy,
+    this.summonOwner,
+    this.summonKind,
+    this.summonTurns = 0,
+    this.summonKills = 0,
   })  : primedBy = primedBy ?? {},
         family = family ??
             (isPlayer || enemyType == null ? null : kEnemyFamily[enemyType]),
@@ -295,6 +299,22 @@ class Combatant {
   /// Última habilidad del grupo que copia (Reflejo).
   String? abyssCopy;
 
+  // ---- Invocador v0.8.1 (docs/specs/summoner.md § 3) ----
+
+  /// Id del jugador que la invocó (`null` = no es una invocación).
+  final String? summonOwner;
+
+  /// `SummonKind.name` de la invocación.
+  final String? summonKind;
+
+  /// Turnos propios que le quedan (99 = Pacto Eterno).
+  int summonTurns;
+
+  /// Enemigos que mató (Festín Arcano).
+  int summonKills;
+
+  bool get isSummon => summonOwner != null;
+
   /// Ascensión del jugador (`null` = clase base o enemigo).
   String? get ascensionId => build?.ascension.id;
 
@@ -416,6 +436,10 @@ class Combatant {
         abyssTaken: abyssTaken,
         abyssFeast: abyssFeast,
         abyssCopy: abyssCopy,
+        summonOwner: summonOwner,
+        summonKind: summonKind,
+        summonTurns: summonTurns,
+        summonKills: summonKills,
       );
 }
 
@@ -434,16 +458,21 @@ class BattleState {
   BattleState({
     required this.party,
     required this.enemies,
+    List<Combatant>? summons,
     this.clock = 0,
     this.currentId,
     this.log = '',
     this.outcome,
     this.boss = false,
     this.elite = false,
-  });
+  }) : summons = summons ?? [];
 
   final List<Combatant> party;
   final List<Combatant> enemies;
+
+  /// Invocaciones vivas del grupo (docs/specs/summoner.md § 3): actúan
+  /// en la línea de tiempo con IA; no cuentan para ganar ni perder.
+  final List<Combatant> summons;
   double clock;
 
   /// Id del actor que tiene el turno, o `null` si hay que llamar a
@@ -465,6 +494,9 @@ class BattleState {
     for (final c in enemies) {
       if (c.id == id) return c;
     }
+    for (final c in summons) {
+      if (c.id == id) return c;
+    }
     return null;
   }
 
@@ -473,6 +505,7 @@ class BattleState {
   BattleState copy() => BattleState(
         party: [for (final c in party) c.copy()],
         enemies: [for (final c in enemies) c.copy()],
+        summons: [for (final c in summons) c.copy()],
         clock: clock,
         currentId: currentId,
         log: log,

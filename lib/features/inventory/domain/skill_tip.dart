@@ -49,6 +49,9 @@ Combatant? tipUser(DerivedStats? s) => s == null
         critChance: s.critChance,
         critMultiplier: s.critMultiplier,
         defense: s.defense,
+        // Invocador: los nodos del árbol que tocan a las invocaciones.
+        mechanics: s.mechanics,
+        keystones: s.keystones,
         statusBonus: s.statusBonus,
       );
 

@@ -229,7 +229,7 @@ class _BestiaryViewState extends State<BestiaryView> {
             // Silueta: el sprite pintado de un solo color.
             : ColorFiltered(
                 colorFilter: const ColorFilter.mode(
-                    Color(0xFF2A3360), BlendMode.srcIn),
+                    ProtoColors.barBg, BlendMode.srcIn),
                 child: s),
       ),
     );

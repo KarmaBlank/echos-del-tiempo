@@ -10,7 +10,9 @@ import '../../game_engine/serialization/event_json.dart';
 import '../../game_engine/serialization/json_read.dart';
 import '../../game_engine/serialization/session_json.dart';
 
-/// Versión del protocolo (`v` del `hello` / `welcome`). 9 desde v0.8.0
+/// Versión del protocolo (`v` del `hello` / `welcome`). 10 desde v0.8.1
+/// (Invocador: batalla `sum`, combatiente `smO` `smK` `smT` `smN`;
+/// docs/specs/summoner.md § 6). 9 desde v0.8.0
 /// (Jefes del Abismo: acciones `abyss` y `devAbyss`, evento `abyssDone`,
 /// sesión `abyss` `abyssBy`, perfil `aby`, combatiente `abT` `abE` `abS`
 /// `abSN` `abA` `abK` `abF` `abC`, materiales `mat:frag*` y
@@ -24,7 +26,7 @@ import '../../game_engine/serialization/session_json.dart';
 /// docs/specs/worldgen.md § 11.6). 6 desde v0.5.1:
 /// acción `wants` (resumen del plan de build para la condición `Build`
 /// del filtro de loot; docs/specs/netcode.md § "Build y filtro").
-const kProtocolVersion = 9;
+const kProtocolVersion = 10;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {

@@ -47,6 +47,7 @@ class RetroTextField extends StatelessWidget {
 
   static TextStyle get _style => TextStyle(
       fontFamily: RetroType.bodyFamily,
+      letterSpacing: RetroType.letterSpacing,
       fontFamilyFallback: RetroType.bodyFallback,
       fontSize: RetroType.small,
       color: RetroPalette.ink);
@@ -144,7 +145,7 @@ class CharacterSlotCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontFamily: RetroType.pixelFamily,
+                            fontFamily: RetroType.titleFamily,
                             fontSize: RetroType.title,
                             color: selected
                                 ? RetroPalette.gold
@@ -247,9 +248,9 @@ class ClassCard extends StatelessWidget {
                   children: [
                     Text(retroText(def.name),
                         style: TextStyle(
-                            fontFamily: RetroType.pixelFamily,
+                            fontFamily: RetroType.titleFamily,
                             fontSize: RetroType.label,
-                            height: RetroType.pixelLine,
+                            height: RetroType.titleLine,
                             color: selected
                                 ? RetroPalette.gold
                                 : RetroPalette.ink)),
@@ -295,8 +296,8 @@ class ClassDetail extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(retroText(def.name.toUpperCase()),
-            style: const TextStyle(
-                fontFamily: RetroType.pixelFamily,
+            style: TextStyle(
+                fontFamily: RetroType.titleFamily,
                 fontSize: RetroType.title,
                 color: RetroPalette.gold)),
         const SizedBox(height: 6),
@@ -339,7 +340,7 @@ class ClassDetail extends StatelessWidget {
 Future<T?> _panelDialog<T>(BuildContext context, WidgetBuilder builder) =>
     showDialog<T>(
       context: context,
-      barrierColor: const Color(0x990B0E1A),
+      barrierColor: ProtoColors.scrim(0.6),
       builder: (ctx) =>
           Material(type: MaterialType.transparency, child: builder(ctx)),
     );

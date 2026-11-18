@@ -6,6 +6,7 @@ import '../../../../app/theme/panel_frame.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../app/widgets/notice_close.dart';
 import '../../../../app/widgets/points_badge.dart';
 import '../../../characters/domain/unused_points.dart';
 
@@ -65,6 +66,8 @@ class UnusedPointsToast extends StatefulWidget {
     required this.ascensionEarned,
     this.blocked = false,
     this.reduceMotion = false,
+    this.duration = shown,
+    this.dismissSignal,
   });
 
   final UnusedPoints points;
@@ -76,6 +79,12 @@ class UnusedPointsToast extends StatefulWidget {
   final int ascensionEarned;
   final bool blocked;
   final bool reduceMotion;
+
+  /// Cuánto se ve (DURACIÓN DE LOS AVISOS); `null` = hasta cerrarlo.
+  final Duration? duration;
+
+  /// "Cerrar todos los avisos" (`noticeDismissProvider`).
+  final Listenable? dismissSignal;
 
   static const shown = Duration(seconds: 6);
 
@@ -96,11 +105,21 @@ class _UnusedPointsToastState extends State<UnusedPointsToast> {
     // Lo que ya tenía al aparecer no se avisa (lo muestra la insignia).
     _level = widget.treeLevel;
     _asc = widget.ascensionEarned;
+    widget.dismissSignal?.addListener(_close);
+  }
+
+  void _close() {
+    _timer?.cancel();
+    if (mounted && _text != null) setState(() => _text = null);
   }
 
   @override
   void didUpdateWidget(UnusedPointsToast old) {
     super.didUpdateWidget(old);
+    if (old.dismissSignal != widget.dismissSignal) {
+      old.dismissSignal?.removeListener(_close);
+      widget.dismissSignal?.addListener(_close);
+    }
     if (widget.treeLevel > _level || widget.ascensionEarned > _asc) {
       _pending = true;
     }
@@ -116,15 +135,18 @@ class _UnusedPointsToastState extends State<UnusedPointsToast> {
       if (text != null) {
         _text = text;
         _timer?.cancel();
-        _timer = Timer(UnusedPointsToast.shown, () {
-          if (mounted) setState(() => _text = null);
-        });
+        if (widget.duration case final d?) {
+          _timer = Timer(d, () {
+            if (mounted) setState(() => _text = null);
+          });
+        }
       }
     }
   }
 
   @override
   void dispose() {
+    widget.dismissSignal?.removeListener(_close);
     _timer?.cancel();
     super.dispose();
   }
@@ -143,7 +165,7 @@ class _UnusedPointsToastState extends State<UnusedPointsToast> {
               margin: const EdgeInsets.only(top: 6),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xCC000000),
+                color: ProtoColors.scrim(0.8),
                 border: Border.all(color: ProtoColors.gold, width: 2),
               ),
               child: Row(
@@ -156,6 +178,12 @@ class _UnusedPointsToastState extends State<UnusedPointsToast> {
                   Text(retroText(text),
                       style: RetroType.style(RetroType.small,
                           color: ProtoColors.white)),
+                  if (widget.duration == null) ...[
+                    const SizedBox(width: 8),
+                    NoticeClose(
+                        key: const ValueKey('hud-points-toast-close'),
+                        onPressed: _close),
+                  ],
                 ],
               ),
             ),

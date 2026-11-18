@@ -180,6 +180,7 @@ void main() {
       if (_loot.pickBase(rng, 50, family: 'maga').classId == 'maga') mine++;
     }
     // 2× de peso → ~40% (contra 25% sin sesgo).
-    expect(mine / n, inInclusiveRange(0.33, 0.47));
+    // v0.8.1: la Maga tiene 4 tomos más (Invocador), sube un poco.
+    expect(mine / n, inInclusiveRange(0.33, 0.52));
   });
 }

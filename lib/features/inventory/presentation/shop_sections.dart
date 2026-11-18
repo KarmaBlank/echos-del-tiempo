@@ -6,6 +6,7 @@ import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../game_engine/data/branch_ults_catalog.dart';
 import '../../../game_engine/data/items_catalog.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/item.dart';
@@ -172,11 +173,15 @@ class ItemCard extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 4),
                 child: ProtoText(skillTipMarkup(s, stats: stats)),
               ),
-          if (w != null && cat.ultimates[w.type] != null)
+          // ULT propia de la base (tomos del Invocador) o la del tipo.
+          if (w != null &&
+              (ownWeaponUlt(w.id, null) ?? cat.ultimates[w.type]) != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: ProtoText(skillTipMarkup(cat.ultimates[w.type]!,
-                  stats: stats, ultimate: true)),
+              child: ProtoText(skillTipMarkup(
+                  (ownWeaponUlt(w.id, null) ?? cat.ultimates[w.type])!,
+                  stats: stats,
+                  ultimate: true)),
             ),
         ],
       ],

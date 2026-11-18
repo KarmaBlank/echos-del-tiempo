@@ -346,6 +346,7 @@ class _AscensionTreeViewState extends State<AscensionTreeView> {
             textScaler: RetroType.fixedScaler(context),
             style: TextStyle(
                 fontFamily: RetroType.bodyFamily,
+                letterSpacing: RetroType.letterSpacing,
  fontFamilyFallback: RetroType.bodyFallback, fontSize: RetroType.small,
                 height: 1.3,
                 color: taken ? ProtoColors.white : ProtoColors.dim)),
@@ -387,7 +388,7 @@ class _AscensionTreeViewState extends State<AscensionTreeView> {
               alignment: Alignment.center,
               child: Text(
                 taken || n.root ? '' : '${n.cost}',
-                style: TextStyle(fontFamily: RetroType.pixelFamily, fontSize: RetroType.label, color: col),
+                style: TextStyle(fontFamily: RetroType.titleFamily, fontSize: RetroType.label, color: col),
               ),
             ),
           ),

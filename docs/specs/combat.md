@@ -461,3 +461,15 @@ que tocan el combate general: `AttackCommand` con un aliado atrapado como
 objetivo lo libera (medio turno); los enemigos `passive` (cristales) no
 entran a la línea de tiempo y mueren con su jefe; `EnemyDef.armor` y la
 postura multiplican el daño de los golpes primarios del grupo.
+
+
+## Compañeros de la party (v0.8.1, solo_party.md § 4)
+
+- Un compañero es un miembro más de `BattleState.party` (mismo motor,
+  mismo escalado `0.55 + 0.45 × n`). En su turno sin AUTO la ventana de
+  comandos dice `Turno de Leo (compañero)`; con AUTO la barra dice `Turno
+  de Leo (AUTO)` y a los 0.5 s actúa `CompanionAi` (curar a quien esté
+  bajo el 40 % con una habilidad de cura o una poción, ULT al 100 % al
+  más débil, si no atacar al más débil). El tiempo de turno de la sala
+  vale para cada turno.
+- Su tarjeta del grupo muestra la ULT y el botón `AUTO: SÍ / NO`.

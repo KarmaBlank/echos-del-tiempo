@@ -28,6 +28,7 @@ import 'battle_scene.dart';
 import 'fx_style.dart';
 import 'proc_fx.dart';
 import 'reaction_fx.dart';
+import 'summon_sprite.dart';
 import 'ult_cinematic.dart';
 import 'ult_fx.dart';
 
@@ -269,6 +270,12 @@ class BattleScenePainter extends CustomPainter {
     for (final p in b.party) {
       final pos = f.layout.of(p.id);
       ents.add((pos.dy, ents.length, () => _hero(c, f, p, pos)));
+    }
+    // Invocaciones del grupo (summoner.md § 8).
+    for (final s in b.summons) {
+      final pos = f.layout.of(s.id);
+      ents.add((pos.dy, ents.length, () => paintSummon(c, s, pos, t,
+          (txt, x, y, col, size) => _pen.text(c, txt, x, y, col, size))));
     }
     for (final e in b.enemies) {
       final alpha = e.alive ? 1.0 : scene.deathAlpha(e.id);

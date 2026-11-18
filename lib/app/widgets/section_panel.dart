@@ -5,6 +5,7 @@ import '../theme/retro_text.dart';
 import '../theme/retro_theme.dart';
 import 'menu_focus.dart';
 import 'pixel_icon.dart';
+import '../theme/ui_theme.dart';
 
 /// Sección enmarcada de un menú: franja de encabezado (ícono + título +
 /// una línea de explicación) y el contenido debajo, separada de las demás.
@@ -16,7 +17,7 @@ class SectionPanel extends StatelessWidget {
     required this.title,
     required this.children,
     this.subtitle,
-    this.color = ProtoColors.gold,
+    this.color = ProtoColors.title,
     this.trailing,
     this.titleKey,
   });
@@ -37,7 +38,7 @@ class SectionPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return NavSection(
         child: Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.only(bottom: UiTheme.space(10)),
       decoration: BoxDecoration(
         color: ProtoColors.bg.withValues(alpha: 0.35),
         border: Border.all(
@@ -47,7 +48,8 @@ class SectionPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            padding: EdgeInsets.symmetric(
+                horizontal: UiTheme.space(8), vertical: UiTheme.space(4)),
             color: ProtoColors.button.withValues(alpha: 0.7),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,9 +67,9 @@ class SectionPanel extends StatelessWidget {
                         TextSpan(
                             text: retroText(title),
                             style: TextStyle(
-                                fontFamily: RetroType.pixelFamily,
+                                fontFamily: RetroType.titleFamily,
                                 fontSize: RetroType.label,
-                                height: RetroType.pixelLine,
+                                height: RetroType.titleLine,
                                 color: color)),
                         if (subtitle != null)
                           TextSpan(
@@ -80,7 +82,7 @@ class SectionPanel extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(6),
+            padding: EdgeInsets.all(UiTheme.space(6)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: children,

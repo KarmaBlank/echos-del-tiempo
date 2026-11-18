@@ -4,6 +4,8 @@ import '../../../core/persistence/ecos_log.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/atlas_store.dart';
 import '../../../game_engine/models/bestiary.dart';
+import '../../../game_engine/models/build_wants.dart';
+import '../../../game_engine/models/party_store.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/profile_store.dart';
 import '../domain/account.dart';
@@ -199,6 +201,52 @@ class SelectedCharacterProfileStore implements ProfileStore {
       final added = a.add(profile, now: when);
       return added == null ? a : added.touch(added.selectedId!, when);
     });
+  }
+}
+
+/// `PartyStore` sobre la cuenta (docs/specs/solo_party.md § 5): los
+/// compañeros son las otras ranuras de la misma cuenta y cada uno se
+/// guarda en **la suya** (nunca en la del elegido), por el mismo
+/// [AccountRepository] que el líder.
+class AccountPartyStore implements PartyStore {
+  AccountPartyStore(this.repository);
+
+  final AccountRepository repository;
+
+  @override
+  Future<List<CompanionSlot>> load() async {
+    final a = await repository.load();
+    return [
+      for (final id in a.companions)
+        if (a.byId(id) case final c?)
+          CompanionSlot(
+            slotId: id,
+            profile: c.profile,
+            auto: a.partyAuto.contains(id),
+            wants: c.plan == null ? null : BuildWants.fromPlan(c.plan!),
+          ),
+    ];
+  }
+
+  @override
+  Future<void> save(String slotId, PlayerProfile profile) async {
+    final when = repository.now();
+    await repository.update((a) {
+      // Una ranura borrada (o que pasó a ser el elegido) no se recrea ni
+      // pisa al líder.
+      if (a.byId(slotId) == null || slotId == a.selectedId) return a;
+      return a.replace(slotId, profile, lastPlayed: when);
+    });
+  }
+
+  @override
+  Future<void> setCompanions(List<String> slotIds) async {
+    await repository.update((a) => a.withParty(slotIds));
+  }
+
+  @override
+  Future<void> setAuto(String slotId, bool auto) async {
+    await repository.update((a) => a.withAuto(slotId, auto));
   }
 }
 

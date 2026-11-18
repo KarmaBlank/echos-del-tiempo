@@ -163,6 +163,19 @@ class PassiveCondition extends FilterCondition {
   String get args => has ? '' : 'No';
 }
 
+/// `ULT` / `ULT <nombre>` / `ULT No`: el arma trae su propia ULT (mod
+/// "ULT: <nombre>" o legendario; docs/specs/branch_ults.md). [name]
+/// vacío = cualquiera.
+class UltCondition extends FilterCondition {
+  const UltCondition({this.name = '', this.has = true});
+  final String name;
+  final bool has;
+  @override
+  String get keyword => 'ULT';
+  @override
+  String get args => has ? name : 'No';
+}
+
 /// `Material esquirla prisma`.
 class MaterialCondition extends FilterCondition {
   const MaterialCondition(this.materials);

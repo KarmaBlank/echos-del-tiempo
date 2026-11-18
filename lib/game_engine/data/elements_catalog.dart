@@ -2,6 +2,8 @@ import '../models/elements.dart';
 import '../models/enemy_def.dart';
 import '../models/skill.dart';
 import '../models/status.dart';
+import 'branch_ults_catalog.dart' show kBranchUltElement;
+import 'summoner_catalog.dart';
 
 export '../models/elements.dart';
 
@@ -196,11 +198,15 @@ const Map<String, GameElement> kSkillElement = {
   'dagaElectrica': _electro, // Puñalada Eléctrica
   'flechaVoltaica': _electro, // Flecha Voltaica
   'relampago': _electro, // Relámpago
+  // Invocador v0.8.1 (docs/specs/summoner.md).
+  ...kSummonerSkillElement,
 };
 
 /// Elemento de la habilidad o ULT [skillId] (`fisico` si no tiene).
-GameElement elementOf(String? skillId) =>
-    skillId == null ? GameElement.fisico : kSkillElement[skillId] ?? GameElement.fisico;
+/// Las ULT de camino (branch_ults.md) llevan el suyo en `kBranchUltElement`.
+GameElement elementOf(String? skillId) => skillId == null
+    ? GameElement.fisico
+    : kSkillElement[skillId] ?? kBranchUltElement[skillId] ?? GameElement.fisico;
 
 /// Elemento de un ataque combinado: el de su estado.
 GameElement elementOfDual(DualDef d) => statusElement(d.status.kind) ?? GameElement.fisico;

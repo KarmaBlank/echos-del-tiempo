@@ -7,6 +7,7 @@ import '../../bestiary/presentation/bestiary_screen.dart';
 import '../../build_planner/presentation/build_planner_screen.dart';
 import '../../../app/feature_flags.dart';
 import '../../../app/theme/panel_frame.dart';
+import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/menu_focus.dart';
@@ -28,6 +29,7 @@ import '../../../netcode/contracts/net_session_factory.dart';
 import '../../characters/domain/account.dart';
 import '../../characters/presentation/character_widgets.dart';
 import '../../characters/presentation/characters_providers.dart';
+import '../../characters/presentation/party_picker.dart';
 import '../../characters/presentation/stash_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../world/presentation/session_controller.dart';
@@ -446,6 +448,45 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                 onPressed: _busy ? null : _openBestiary),
           ],
         ),
+        if (sel != null) ...[
+          const SizedBox(height: 16),
+          _party(a, sel),
+        ],
+      ],
+    );
+  }
+
+  /// Party jugando solo (docs/specs/solo_party.md § 2.2): los demás
+  /// personajes de la cuenta; se guarda en la cuenta al tocar.
+  Widget _party(Account a, CharacterSlot leader) {
+    final party = a.companions;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PartyPicker(
+          candidates: [
+            for (final c in a.characters)
+              if (c.id != leader.id)
+                PartyCandidate(
+                  id: c.id,
+                  name: c.displayName,
+                  className: _className(_norm(c).classId),
+                  level: _norm(c).level,
+                ),
+          ],
+          selected: party,
+          enabled: !_busy,
+          onChanged: (ids) => unawaited(_update((a) => a.withParty(ids))),
+        ),
+        if (party.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+              retroText('La party es para JUGAR solo: en una sala va un '
+                  'personaje por jugador.'),
+              key: const ValueKey('party-solo-note'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: ProtoColors.dim)),
+        ],
       ],
     );
   }
@@ -468,8 +509,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
           Text(first ? 'CREA TU PRIMER PERSONAJE' : 'CREAR PERSONAJE',
               key: const ValueKey('char-creator'),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontFamily: RetroType.pixelFamily,
+              style: TextStyle(
+                  fontFamily: RetroType.titleFamily,
                   fontSize: RetroType.title,
                   color: RetroPalette.gold)),
           const SizedBox(height: 4),
@@ -614,8 +655,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             key: const ValueKey('title-code'),
             controller: _code,
             enabled: netOk,
-            style: const TextStyle(
-                fontFamily: RetroType.pixelFamily,
+            style: TextStyle(
+                fontFamily: RetroType.titleFamily,
                 fontSize: RetroType.label,
                 color: RetroPalette.ink),
             cursorColor: RetroPalette.gold,
@@ -625,8 +666,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             decoration: InputDecoration(
               isDense: true,
               hintText: factory?.codeHint ?? 'CODIGO',
-              hintStyle: const TextStyle(
-                  fontFamily: RetroType.pixelFamily,
+              hintStyle: TextStyle(
+                  fontFamily: RetroType.titleFamily,
                   fontSize: RetroType.label,
                   color: RetroPalette.muted),
               contentPadding: const EdgeInsets.all(8),

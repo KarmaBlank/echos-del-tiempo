@@ -430,6 +430,9 @@ class SessionJson {
   Json battleStateToJson(BattleState s) => {
         'party': [for (final c in s.party) combatantToJson(c)],
         'enemies': [for (final c in s.enemies) combatantToJson(c)],
+        // Invocaciones v0.8.1 (opcional; summoner.md § 6).
+        if (s.summons.isNotEmpty)
+          'sum': [for (final c in s.summons) combatantToJson(c)],
         'clock': s.clock,
         'cur': s.currentId,
         'log': s.log,
@@ -451,6 +454,9 @@ class SessionJson {
       enemies: [
         for (final raw in j.list('enemies')) combatantFromJson(asJson(raw)),
       ],
+      summons: j['sum'] == null
+          ? null
+          : [for (final raw in j.list('sum')) combatantFromJson(asJson(raw))],
       clock: j.dbl('clock'),
       currentId: j.strOrNull('cur'),
       log: j.str('log'),
@@ -561,6 +567,11 @@ class SessionJson {
         if (c.abyssTaken != 0) 'abK': c.abyssTaken,
         if (c.abyssFeast != 0) 'abF': c.abyssFeast,
         if (c.abyssCopy != null) 'abC': c.abyssCopy,
+        // Invocador v0.8.1 (opcionales).
+        if (c.summonOwner != null) 'smO': c.summonOwner,
+        if (c.summonKind != null) 'smK': c.summonKind,
+        if (c.summonTurns != 0) 'smT': c.summonTurns,
+        if (c.summonKills != 0) 'smN': c.summonKills,
       };
 
   Json timedEffectToJson(TimedEffect e) => {
@@ -673,6 +684,10 @@ class SessionJson {
       abyssTaken: j.intOrNull('abK') ?? 0,
       abyssFeast: j.intOrNull('abF') ?? 0,
       abyssCopy: j.strOrNull('abC'),
+      summonOwner: j.strOrNull('smO'),
+      summonKind: j.strOrNull('smK'),
+      summonTurns: j.intOrNull('smT') ?? 0,
+      summonKills: j.intOrNull('smN') ?? 0,
     );
   }
 

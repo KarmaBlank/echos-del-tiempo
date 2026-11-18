@@ -1,5 +1,6 @@
 import '../data/affixes_catalog.dart';
 import '../data/ascension_catalog.dart';
+import '../data/branch_ults_catalog.dart' show kBranchUltWeaponTypes;
 import '../data/game_catalog.dart';
 import '../data/skills_catalog.dart' show kSkillDelivery;
 import '../data/uniques_catalog.dart';
@@ -104,6 +105,8 @@ class ItemRules {
       SkillDelivery.any => null,
       SkillDelivery.melee =>
         c == WeaponCategory.melee ? null : 'Solo armas cuerpo a cuerpo',
+      SkillDelivery.caster =>
+        c == WeaponCategory.caster ? null : 'Solo armas de lanzador',
       SkillDelivery.ranged =>
         c == WeaponCategory.ranged ? null : 'Solo armas a distancia',
     };
@@ -174,6 +177,14 @@ class ItemRules {
     return '${p.nameAt(l)}: ${p.descriptionAt(l)}';
   }
 
+  /// El mod "ULT: <nombre>" [ultId] puede estar en un arma [rarity] de
+  /// tipo [type] (docs/specs/branch_ults.md): solo Raro / Épico y una ULT
+  /// de camino compatible con el tipo (los legendarios traen la suya).
+  static bool ultModAllowed(Rarity rarity, String type, String? ultId) =>
+      ultId != null &&
+      (rarity == Rarity.raro || rarity == Rarity.epico) &&
+      (kBranchUltWeaponTypes[ultId]?.contains(type) ?? false);
+
   /// Deja una instancia leída de disco o de la red en un estado válido.
   /// `null` si la base no existe. Lo inválido se corrige o se descarta:
   /// afijos desconocidos, de otro tipo, repetidos o fuera de cupo; valores
@@ -196,6 +207,7 @@ class ItemRules {
       itemLevel: raw.itemLevel.clamp(1, maxItemLevel),
       name: raw.name,
       uniqueId: rarity == Rarity.legendario ? raw.uniqueId : null,
+      ultId: ultModAllowed(rarity, w.type, raw.ultId) ? raw.ultId : null,
     );
     final kept = <AffixRoll>[];
     for (final a in raw.affixes) {

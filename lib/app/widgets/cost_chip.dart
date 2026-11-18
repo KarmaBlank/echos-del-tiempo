@@ -79,9 +79,11 @@ class CostChip extends StatelessWidget {
               children: [
                 PixelIcon(p.icon, size: icon, color: p.iconColor),
                 const SizedBox(width: 4),
-                Text(retroText(p.text),
-                    style: TextStyle(
-                        color: p.ok ? ProtoColors.green : ProtoColors.red)),
+                Flexible(
+                  child: Text(retroText(p.text),
+                      style: TextStyle(
+                          color: p.ok ? ProtoColors.green : ProtoColors.red)),
+                ),
               ],
             ),
         ],

@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/pixel_icon.dart';
+import '../../../app/widgets/notice_close.dart';
+import '../../../core/settings/notices.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/build_wants.dart';
 import '../../world/presentation/session_controller.dart';
@@ -40,12 +43,40 @@ class BuildFeed extends ChangeNotifier {
 
   double get now => _clock();
 
+  /// DURACIÓN DE LOS AVISOS (accessibility.md § 9.5): multiplica
+  /// [toastS]; infinito = hasta cerrarlos.
+  double durationFactor = 1;
+
+  bool get persistent => durationFactor.isInfinite;
+
+  /// Cuánto se ve un cartel (s).
+  double get shownS => toastS * durationFactor;
+
   List<BuildToast> get toasts {
     final t = now;
-    return _toasts.where((x) => t - x.at < toastS).toList();
+    return _toasts.where((x) => t - x.at < shownS).toList();
   }
 
   bool get hasLive => toasts.isNotEmpty;
+
+  /// Hay que refrescar (algo vence solo).
+  bool get needsTick => hasLive && !persistent;
+
+  void dismiss(BuildToast x) {
+    if (_toasts.remove(x)) notifyListeners();
+  }
+
+  void dismissAll() {
+    if (_toasts.isEmpty) return;
+    _toasts.clear();
+    notifyListeners();
+  }
+
+  void setDurationFactor(double f) {
+    if (f == durationFactor) return;
+    durationFactor = f;
+    notifyListeners();
+  }
 
   void push(String text) {
     _toasts.add(BuildToast(text, now));
@@ -61,7 +92,12 @@ class BuildFeed extends ChangeNotifier {
 final buildFeedProvider = Provider.autoDispose<BuildFeed>((ref) {
   final c = ref.watch(sessionControllerProvider.notifier);
   final tracker = BuildTracker(ref.watch(buildPlanRulesProvider));
-  final feed = BuildFeed();
+  final feed = BuildFeed()
+    ..durationFactor = ref.read(gameSettingsProvider).noticeDuration.factor;
+  ref.listen(gameSettingsProvider.select((s) => s.noticeDuration),
+      (_, n) => feed.setDurationFactor(n.factor));
+  final bus = ref.watch(noticeDismissProvider);
+  bus.addListener(feed.dismissAll);
   void check() {
     final plan = ref.read(buildPlanProvider).plan;
     final texts = tracker.observe(plan, c.view?.me?.profile, feed.now);
@@ -88,6 +124,7 @@ final buildFeedProvider = Provider.autoDispose<BuildFeed>((ref) {
   });
   ref.onDispose(() {
     disposed = true;
+    bus.removeListener(feed.dismissAll);
     remove();
     feed.dispose();
   });
@@ -110,10 +147,11 @@ class _BuildToastsState extends State<BuildToasts> {
   void _changed() {
     if (!mounted) return;
     setState(() {});
+    if (!widget.feed.needsTick) return;
     _timer ??= Timer.periodic(const Duration(milliseconds: 250), (_) {
       if (!mounted) return;
       setState(() {});
-      if (!widget.feed.hasLive) {
+      if (!widget.feed.needsTick) {
         _timer?.cancel();
         _timer = null;
       }
@@ -154,8 +192,13 @@ class _BuildToastsState extends State<BuildToasts> {
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Opacity(
-              opacity: ((BuildFeed.toastS - (t - x.at)) / 0.5).clamp(0.0, 1.0),
-              child: BuildToastBox(toast: x),
+              opacity:
+                  ((widget.feed.shownS - (t - x.at)) / 0.5).clamp(0.0, 1.0),
+              child: BuildToastBox(
+                  toast: x,
+                  onDismiss: widget.feed.persistent
+                      ? () => widget.feed.dismiss(x)
+                      : null),
             ),
           ),
       ],
@@ -165,18 +208,21 @@ class _BuildToastsState extends State<BuildToasts> {
 
 /// Un cartel: fondo oscuro, borde violeta (verde si completó algo).
 class BuildToastBox extends StatelessWidget {
-  const BuildToastBox({super.key, required this.toast});
+  const BuildToastBox({super.key, required this.toast, this.onDismiss});
 
   final BuildToast toast;
 
+  /// HASTA CERRAR: la × del cartel.
+  final VoidCallback? onDismiss;
+
   @override
   Widget build(BuildContext context) {
-    final color = toast.done ? const Color(0xFF7BED9F) : kPlanColor;
+    final color = toast.done ? ProtoColors.green : kPlanColor;
     return Container(
       key: const ValueKey('build-toast'),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xE6101426),
+        color: ProtoColors.scrim(0.9),
         border: Border.all(color: kPlanColor, width: 2),
       ),
       child: Row(
@@ -187,6 +233,10 @@ class BuildToastBox extends StatelessWidget {
           const SizedBox(width: 8),
           // Tamaño de lectura (VT323) como el resto de los avisos.
           Text(retroText(toast.text), style: TextStyle(color: color)),
+          if (onDismiss case final close?) ...[
+            const SizedBox(width: 8),
+            NoticeClose(key: const ValueKey('build-toast-close'), onPressed: close),
+          ],
         ],
       ),
     );

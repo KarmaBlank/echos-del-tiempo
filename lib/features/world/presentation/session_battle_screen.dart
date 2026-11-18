@@ -27,7 +27,11 @@ class SessionBattleScreen extends StatefulWidget {
     this.sprites,
     this.battleKey,
     this.sceneOptions = const SceneOptions(),
+    this.onAuto,
   });
+
+  /// Prende / apaga el AUTO de un compañero (docs/specs/solo_party.md § 4).
+  final void Function(String id, bool on)? onAuto;
 
   final SessionView view;
   final bool Function(BattleCommand command) onCommand;
@@ -87,6 +91,9 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
       sceneOptions: widget.sceneOptions,
       bestiary: view.bestiary ?? BestiaryProgress.empty,
       enemyLevel: b.level > 0 ? b.level : null,
+      companions: view.companions.toSet(),
+      auto: view.auto,
+      onAuto: widget.onAuto,
     );
   }
 

@@ -5,7 +5,9 @@ import 'status.dart';
 /// fusión (loot.md § 16.1): las físicas de golpe solo van a armas cuerpo
 /// a cuerpo, las de disparo solo a armas a distancia; el resto (mágicas,
 /// curas, escudos, buffs y debuffs sin golpe) a cualquiera.
-enum SkillDelivery { melee, ranged, any }
+/// [caster]: solo armas de lanzador (báculo, varita, tomo): las
+/// invocaciones (docs/specs/summoner.md § 4).
+enum SkillDelivery { melee, ranged, any, caster }
 
 /// Tipos de habilidad del prototipo (`kind` en `SK` / `ULTS`).
 enum SkillKind {
