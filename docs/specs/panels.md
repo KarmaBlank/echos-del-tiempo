@@ -176,6 +176,18 @@ jugador local desbloqueó una zona (`MissionResult.unlocked[local]`):
 `¡Zona M desbloqueada! <nombre>` en dorado (`results-unlocked`), y una
 línea por los demás jugadores que también desbloquearon.
 
+**Zonas 6–10 (v0.3.0)**: las tarjetas `z6`..`z10` son iguales a las de
+la v0.2 (línea de zona en el color de la zona, objetivo por pisos,
+bloqueo con motivo). El desbloqueo llega hasta la zona 10
+(`¡Zona 10 desbloqueada! Corazón del Tiempo`).
+
+**Final (v0.3.0)**: si la misión ganada es la de la zona 10 (el jefe es
+el Devorador de Eras; `MissionResult.zone == 10 && success` — el motor
+no tiene una señal aparte), el resultado muestra arriba el cartel
+`¡Venciste al Devorador de Eras!` (`results-final`, 14 px dorado con
+sombra dura y borde de 3 px dorado sobre `#1a0f2a`) y debajo `El tiempo
+vuelve a fluir. Gracias por jugar.` en `sky`.
+
 ## Votación (`renderVote`, 1364-1375)
 
 Caja arriba al centro (debajo de la barra de misión) en el lobby

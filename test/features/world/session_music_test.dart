@@ -8,6 +8,7 @@ import 'package:echos_del_tiempo/features/world/presentation/session_music.dart'
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
+import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:echos_del_tiempo/game_engine/rules/map_generator.dart';
@@ -30,22 +31,38 @@ void main() {
     });
 
     test('cada zona en el campo (y en la pausa de nivel)', () {
-      for (final z in [1, 2, 3, 4, 5]) {
+      for (var z = 1; z <= 10; z++) {
         expect(MusicSelector.trackFor(mode: SessionMode.field, zone: z),
             'zone$z');
         expect(MusicSelector.trackFor(mode: SessionMode.levelUp, zone: z),
             'zone$z');
+        expect(kMusicCatalog.containsKey(Music.zone(z)), isTrue, reason: '$z');
       }
     });
 
-    test('misiones sin zona (o zonas 6–10) por el tema del mapa', () {
+    test('las zonas 6–10 tienen pieza propia (no prestada)', () {
+      expect(
+          [
+            for (var z = 6; z <= 10; z++)
+              MusicSelector.trackFor(
+                  mode: SessionMode.field, zone: z, theme: 'abismo'),
+          ],
+          ['zone6', 'zone7', 'zone8', 'zone9', 'zone10']);
+    });
+
+    test('misiones sin zona por el tema del mapa', () {
       for (final (theme, z) in [
         ('pradera', 1),
         ('bosque', 2),
         ('ruinas', 3),
         ('cavernas', 4),
         ('fortaleza', 5),
-        ('abismo', 3),
+        ('laberinto', 6),
+        ('grieta', 7),
+        ('cementerio', 8),
+        ('abismo', 9),
+        ('corazon', 10),
+        ('otro', 3),
         (null, 3),
       ]) {
         expect(
@@ -54,10 +71,6 @@ void main() {
             Music.zone(z),
             reason: '$theme');
       }
-      expect(
-          MusicSelector.trackFor(
-              mode: SessionMode.field, zone: 9, theme: 'abismo'),
-          Music.zone(3));
     });
 
     test('batalla y jefe', () {
@@ -67,6 +80,51 @@ void main() {
           MusicSelector.trackFor(
               mode: SessionMode.battle, zone: 2, boss: true),
           Music.boss);
+      expect(
+          MusicSelector.trackFor(
+              mode: SessionMode.battle, zone: 7, boss: true,
+              bossId: 'bestiaMagma'),
+          Music.boss);
+    });
+
+    test('jefe final: el Devorador tiene su variante', () {
+      expect(
+          MusicSelector.trackFor(
+              mode: SessionMode.battle, zone: 10, boss: true,
+              bossId: MusicSelector.finalBossId),
+          Music.bossFinal);
+      expect(MusicSelector.finalBossId, 'devorador');
+      expect(kMusicCatalog.containsKey(Music.bossFinal), isTrue);
+      // Sin jefe (un común del Corazón del Tiempo) es la de batalla.
+      expect(
+          MusicSelector.trackFor(
+              mode: SessionMode.battle, zone: 10, bossId: 'devorador'),
+          Music.battle);
+    });
+
+    test('el id del jefe sale del enemigo marcado como jefe', () {
+      Combatant enemy(String type, {bool boss = false}) => Combatant(
+          id: type,
+          name: type,
+          isPlayer: false,
+          hp: 10,
+          maxHp: 10,
+          speed: 1,
+          attack: 1,
+          critChance: 0,
+          enemyType: type,
+          boss: boss);
+      expect(MusicSelector.bossIdOf(null), isNull);
+      expect(
+          MusicSelector.bossIdOf(BattleState(
+              party: [], enemies: [enemy('heraldoEras')])),
+          isNull);
+      expect(
+          MusicSelector.bossIdOf(BattleState(party: [], enemies: [
+            enemy('fragmentoTiempo'),
+            enemy('devorador', boss: true),
+          ])),
+          'devorador');
     });
 
     test('pueblo con histéresis en el borde', () {

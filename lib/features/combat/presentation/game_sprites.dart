@@ -51,3 +51,15 @@ class GameSprites {
 
   bool enemyFloats(String enemyType) => _floats.contains(enemyType);
 }
+
+/// Sprite de un enemigo según su fase (docs/specs/bosses.md § "v0.3"): el
+/// Devorador transformado usa `<tipo>Fase2` si el manifest lo tiene.
+extension EnemySpriteId on GameSprites? {
+  String enemySpriteId(String enemyType, int phase) {
+    final s = this;
+    if (phase >= 2 && s != null && s.enemy('${enemyType}Fase2') != null) {
+      return '${enemyType}Fase2';
+    }
+    return enemyType;
+  }
+}

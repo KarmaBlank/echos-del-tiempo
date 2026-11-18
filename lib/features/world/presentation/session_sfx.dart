@@ -336,6 +336,32 @@ class SessionSfx {
               out.add(cue(Sfx.stanceShift, ult == null ? 0 : afterUlt + 80));
             case BossMechanicPhase.resisted:
               out.add(cue(Sfx.stanceBlock, hitAt(actorId)));
+            // v0.3 (docs/specs/audio.md § "Mecánicas de jefe v0.3").
+            case BossMechanicPhase.echoSummon:
+              once(Sfx.echoSummon, ult != null ? afterUlt + 80 : 120);
+            case BossMechanicPhase.summon:
+              once(Sfx.summon, ult != null ? afterUlt + 80 : 120);
+            case BossMechanicPhase.echoResist:
+              out.add(cue(Sfx.echoResist, hitAt(actorId)));
+            case BossMechanicPhase.lavaRise:
+              out.add(cue(Sfx.lavaRise,
+                  ult != null ? afterUlt : BattleFx.enemyStrikeMs + 220));
+            case BossMechanicPhase.lavaBurn:
+              once(Sfx.lavaBurn, 0);
+            case BossMechanicPhase.lavaFade:
+              out.add(cue(Sfx.lavaFade, action == null ? 0 : base() + 120));
+            case BossMechanicPhase.immune:
+              once(Sfx.immune, hitAt(actorId) + 90);
+            case BossMechanicPhase.markCast:
+              out.add(cue(Sfx.markCast, ult != null ? afterUlt : 120));
+            case BossMechanicPhase.markHit:
+              out.add(cue(Sfx.markHit, hitAt(b.targetId ?? actorId)));
+            case BossMechanicPhase.markGuarded:
+              out.add(cue(Sfx.markGuard, hitAt(actorId)));
+            case BossMechanicPhase.phaseShift:
+              out.add(cue(Sfx.phaseShift, hitAt(actorId) + 120));
+            case BossMechanicPhase.evaded:
+              out.add(cue(Sfx.evade, hitAt(actorId)));
           }
         case EnemyUltEvent():
           closeSegment();

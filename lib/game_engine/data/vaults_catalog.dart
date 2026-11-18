@@ -14,7 +14,8 @@ class VaultDef {
 }
 
 /// Vaults por tipo: `bosque` (pradera y bosque), `ruinas`, `cavernas`,
-/// `fortaleza` (fortaleza y laberinto).
+/// `fortaleza`, `laberinto`, `grieta`, `abismo` (abismo y corazón) y
+/// `cementerio`.
 const Map<String, List<VaultDef>> kVaults = {
   'bosque': [
     VaultDef('claro_cofres', [
@@ -146,6 +147,140 @@ const Map<String, List<VaultDef>> kVaults = {
       '#:e:#',
       '#:c:#',
       '#####',
+    ]),
+  ],
+  // ---- v0.3.0 (worldgen.md § 8.1): `o` engranaje, `%` lava, `=` puente,
+  // `_` vacío, `t` lápida. El borde puede ser `#`, `+` o `_`.
+  'laberinto': [
+    VaultDef('relojeria', [
+      '###+###',
+      '#o:::o#',
+      '#::c::#',
+      '+::e::+',
+      '#o:::o#',
+      '#######',
+    ]),
+    VaultDef('engranajes', [
+      '#########',
+      '#:o:::o:#',
+      '#:::e:::#',
+      '+:o:c:o:+',
+      '#:::::::#',
+      '####+####',
+    ]),
+    VaultDef('campanario', [
+      '#####+#####',
+      '#:::::::::#',
+      '#:o:::::o:#',
+      '#:::oeo:::#',
+      '#:c:::::c:#',
+      '###########',
+    ]),
+    VaultDef('pendulo', [
+      '##+##',
+      '#:::#',
+      '#:o:#',
+      '#:e:#',
+      '#:c:#',
+      '##+##',
+    ]),
+  ],
+  'grieta': [
+    VaultDef('forja', [
+      '#########',
+      '#:::%:::#',
+      '#:c:=:e:#',
+      '+:::%:::+',
+      '#########',
+    ]),
+    VaultDef('isla_magma', [
+      '####+####',
+      '#:::::::#',
+      '#:%%=%%:#',
+      '#:%:c:%:#',
+      '#:%:e:%:#',
+      '#:%%%%%:#',
+      '#:::::::#',
+      '#########',
+    ]),
+    VaultDef('respiradero', [
+      '#######',
+      '#c:%:c#',
+      '#::%::#',
+      '#::=::#',
+      '#:e%::#',
+      '#+#####',
+    ]),
+    VaultDef('brasero', [
+      '##+##',
+      '#:::#',
+      '#%c%#',
+      '#:e:#',
+      '##+##',
+    ]),
+  ],
+  'abismo': [
+    VaultDef('islote', [
+      '___+___',
+      '_:::::_',
+      '+:c:e:+',
+      '_:::::_',
+      '___+___',
+    ]),
+    VaultDef('santuario', [
+      '____+____',
+      '_:::::::_',
+      '_:#:::#:_',
+      '+:::e:::+',
+      '_:#:c:#:_',
+      '_:::::::_',
+      '_________',
+    ]),
+    VaultDef('gemelas', [
+      '_________',
+      '_:::_:::_',
+      '+:c:=:e:+',
+      '_:::_:::_',
+      '_________',
+    ]),
+    VaultDef('mirador', [
+      '__+__',
+      '_:::_',
+      '_:c:_',
+      '_:e:_',
+      '_:::_',
+      '__+__',
+    ]),
+  ],
+  'cementerio': [
+    VaultDef('mausoleo', [
+      '####+####',
+      '#:t:::t:#',
+      '#:::e:::#',
+      '#:t:c:t:#',
+      '#########',
+    ]),
+    VaultDef('fosa', [
+      '_______',
+      '_t:::t_',
+      '+::c::+',
+      '_t:e:t_',
+      '_______',
+    ]),
+    VaultDef('cripta_eras', [
+      '#######',
+      '#c:t:c#',
+      '#:::::#',
+      '#t:e:t#',
+      '###+###',
+    ]),
+    VaultDef('panteon', [
+      '___+___',
+      '_t:::t_',
+      '_:t:t:_',
+      '_::e::_',
+      '_:c:c:_',
+      '_______',
     ]),
   ],
 };

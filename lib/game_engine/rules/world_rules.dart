@@ -16,27 +16,32 @@ abstract final class WorldRules {
   static const _probes = [(-5, -3), (5, -3), (-5, 4), (5, 4)];
 
   /// `solidT`.
-  static bool isSolid(GameMap map, int tx, int ty, {bool gateOpen = false}) {
+  /// [blockVoid]: el vacío cuenta como sólido (enemigos; worldgen.md § 9.3).
+  static bool isSolid(GameMap map, int tx, int ty,
+      {bool gateOpen = false, bool blockVoid = false}) {
     if (!map.contains(tx, ty)) return true;
     final c = map.tileAt(tx, ty);
-    return c == Tile.wall ||
-        c == Tile.water ||
-        c == Tile.counter ||
-        c == Tile.armory ||
-        c == Tile.merchant ||
-        c == Tile.tree ||
-        c == Tile.rock ||
+    return Tile.solidTiles.contains(c) ||
         Tile.entranceZone(c) != null ||
+        (blockVoid && c == Tile.voidTile) ||
         (c == Tile.gate && !gateOpen);
   }
 
+  /// El tile ([tx], [ty]) es vacío.
+  static bool isVoid(GameMap map, int tx, int ty) =>
+      map.contains(tx, ty) && map.tileAt(tx, ty) == Tile.voidTile;
+
+  /// El centro del personaje en (x, y) px está sobre el vacío (se cae).
+  static bool overVoid(GameMap map, double x, double y) =>
+      isVoid(map, (x / tileSize).floor(), (y / tileSize).floor());
+
   /// `hit`: la caja del personaje en (x, y) toca algo sólido.
   static bool collides(GameMap map, double x, double y,
-      {bool gateOpen = false}) {
+      {bool gateOpen = false, bool blockVoid = false}) {
     for (final (ox, oy) in _probes) {
       if (isSolid(map, ((x + ox) / tileSize).floor(),
           ((y + oy) / tileSize).floor(),
-          gateOpen: gateOpen)) {
+          gateOpen: gateOpen, blockVoid: blockVoid)) {
         return true;
       }
     }
@@ -46,11 +51,11 @@ abstract final class WorldRules {
   /// `moveEnt`: mueve primero en X y después en Y, cada eje por separado
   /// (así se desliza contra las paredes). Devuelve la posición nueva.
   static WorldPoint move(GameMap map, double x, double y, double dx, double dy,
-      {bool gateOpen = false}) {
+      {bool gateOpen = false, bool blockVoid = false}) {
     final nx = x + dx;
-    if (!collides(map, nx, y, gateOpen: gateOpen)) x = nx;
+    if (!collides(map, nx, y, gateOpen: gateOpen, blockVoid: blockVoid)) x = nx;
     final ny = y + dy;
-    if (!collides(map, x, ny, gateOpen: gateOpen)) y = ny;
+    if (!collides(map, x, ny, gateOpen: gateOpen, blockVoid: blockVoid)) y = ny;
     return WorldPoint(x, y);
   }
 

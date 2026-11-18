@@ -6,11 +6,14 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../core/settings/graphics.dart';
+import '../../../../game_engine/data/enemies_catalog.dart';
 import '../../../../game_engine/data/passive_mechanics.dart';
 import '../../../../game_engine/models/battle_state.dart';
+import '../../../../game_engine/models/enemy_def.dart';
 import '../../../../game_engine/models/passive_mechanic.dart';
 import '../../../../game_engine/models/status.dart';
 import '../../domain/turn_order.dart';
+import '../game_sprites.dart';
 import '../sprite_catalog.dart';
 import '../weapon_overlay.dart';
 import 'battle_fx.dart';
@@ -237,6 +240,10 @@ class BattleScenePainter extends CustomPainter {
           visible.width, visible.height);
     }
 
+    // Charcos de lava (Bestia de Magma): en el piso, debajo de todos.
+    final lava = lavaTurns(f.battle);
+    if (lava > 0) _lavaPools(c, f, lava);
+
     // Actores ordenados por y.
     final b = f.battle;
     final ents = <(double, int, void Function())>[];
@@ -340,6 +347,98 @@ class BattleScenePainter extends CustomPainter {
     if (p.webbed && !dead) _web(c, pt);
     if (dead) c.restore();
     c.restore();
+    if (p.voidMarked && !dead) _voidMark(c, Offset(x, y), pt);
+  }
+
+  // ---------------- mecánicas de jefe v0.3 ----------------
+
+  /// Turnos de lava de la Bestia viva (0 = sin lava).
+  static int lavaTurns(BattleState b) {
+    var n = 0;
+    for (final e in b.enemies) {
+      if (e.alive && e.lava > n) n = e.lava;
+    }
+    return n;
+  }
+
+  /// El jefe tiene séquito vivo: inmune a los estados.
+  static bool immuneNow(BattleState b, Combatant e) {
+    if (!e.alive || e.isPlayer) return false;
+    final m = bossMechanicOf(kEnemies[e.enemyType]);
+    return m != null &&
+        m.kind == BossMechanicKind.summon &&
+        b.enemies.any((c) => c.alive && c.enemyType == m.addType);
+  }
+
+  /// Eco de la Hechicera (titila y se desdobla).
+  static bool isEcho(Combatant e) =>
+      !e.isPlayer &&
+      kBossMechanics.values.any((m) =>
+          m.kind == BossMechanicKind.echo && m.addType == e.enemyType);
+
+  /// Charcos de lava bajo el grupo (y salpicados alrededor) que burbujean.
+  void _lavaPools(Canvas c, SceneFrame f, int turns) {
+    final t = scene.poseT;
+    final spots = <(Offset, double)>[
+      for (final p in f.battle.party) (f.layout.of(p.id).translate(0, 1), 1.0),
+    ];
+    // Charcos chicos entre el grupo y el jefe.
+    final boss = f.battle.enemies.where((e) => e.lava > 0).firstOrNull;
+    if (boss != null && spots.isNotEmpty) {
+      final from = f.layout.of(boss.id);
+      final to = spots.first.$1;
+      for (var k = 1; k <= 3; k++) {
+        final q = Offset.lerp(from, to, k / 4)!;
+        spots.add((q.translate(0, (k.isEven ? 10 : -12).toDouble()), 0.55));
+      }
+    }
+    final glow = 0.5 + 0.5 * math.sin(t / 260);
+    for (var i = 0; i < spots.length; i++) {
+      final (o, s) = spots[i];
+      final w = 15.0 * s, h = 4.5 * s;
+      _pen.oval(c, const Color(0xCC3A1206), o.dx, o.dy, w + 2, h + 1.5);
+      _pen.oval(c, lavaColor.withValues(alpha: 0.85), o.dx, o.dy, w, h);
+      _pen.oval(c, lavaCoreColor.withValues(alpha: 0.35 + 0.35 * glow),
+          o.dx - 1, o.dy - 0.5, w * 0.55, h * 0.5);
+      // Burbujas que revientan.
+      for (var k = 0; k < 3; k++) {
+        final q = ((t / (520 + k * 90)) + i * 0.37 + k * 0.33) % 1.0;
+        final bx = o.dx + (((i * 7 + k * 11) % 13) - 6) * s;
+        final r = q < 0.7 ? 1.0 + q * 1.5 : 2.0 * (1 - (q - 0.7) / 0.3) + 0.5;
+        _pen.rect(c, lavaCoreColor.withValues(alpha: 0.9 * (1 - q)),
+            bx.roundToDouble(), (o.dy - 1 - q * 3).roundToDouble(), r, r);
+      }
+    }
+    // Brillo rojizo en el aire.
+    for (var k = 0; k < scaledCount(10, scene.particles.density); k++) {
+      final q = ((t / 1400) + k * 0.1) % 1.0;
+      final o = spots[k % spots.length].$1;
+      _pen.rect(c, const Color(0xFFFFB142).withValues(alpha: 0.8 * (1 - q)),
+          (o.dx + ((k * 5) % 15) - 7).roundToDouble(), (o.dy - 4 - q * 24).roundToDouble(), 1, 1);
+    }
+  }
+
+  /// Marca del Vacío sobre un héroe: retícula violeta que gira y una
+  /// columna tenue de luz del vacío.
+  void _voidMark(Canvas c, Offset feet, double pt) {
+    final k = 0.5 + 0.5 * math.sin(pt / 140);
+    _pen.rect(c, voidMarkColor.withValues(alpha: 0.10 + 0.08 * k),
+        feet.dx - 6, feet.dy - 40, 12, 40);
+    final o = feet.translate(0, -30);
+    c.save();
+    c.translate(o.dx.roundToDouble(), o.dy.roundToDouble());
+    c.rotate(pt / 600);
+    _pen.stroke
+      ..strokeWidth = 1
+      ..color = voidMarkColor.withValues(alpha: 0.7 + 0.3 * k);
+    c.drawCircle(Offset.zero, 6 + k, _pen.stroke);
+    for (var i = 0; i < 4; i++) {
+      final a = i * math.pi / 2;
+      final d = Offset(math.cos(a), math.sin(a));
+      c.drawLine(d * 3, d * (9 + k), _pen.stroke);
+    }
+    c.restore();
+    _pen.rect(c, fxWhite, o.dx - 0.5, o.dy - 0.5, 1, 1);
   }
 
   /// Telaraña sobre el héroe atrapado (coordenadas del héroe): hilos
@@ -402,13 +501,26 @@ class BattleScenePainter extends CustomPainter {
     if (!boss.alive) return;
     final t = scene.poseT;
     final from = f.layout.of(boss.id).translate(0, -14);
+    final summon = bossMechanicOf(kEnemies[boss.enemyType]);
     for (final e in b.enemies) {
-      if (!e.alive || !isPassiveAdd(e)) continue;
+      if (!e.alive) continue;
+      // Cristales (escarcha) y siervos del séquito (la inmunidad que le
+      // dan al jefe, en dorado pálido).
+      final Color col;
+      if (isPassiveAdd(e)) {
+        col = frostColor;
+      } else if (summon != null &&
+          summon.kind == BossMechanicKind.summon &&
+          e.enemyType == summon.addType) {
+        col = immuneColor;
+      } else {
+        continue;
+      }
       final to = f.layout.of(e.id).translate(0, -7);
       for (var k = 0; k < 6; k++) {
         final q = ((t / 600) + k / 6) % 1.0;
         final p = Offset.lerp(to, from, q)!;
-        _pen.rect(c, frostColor.withValues(alpha: 0.9 * math.sin(q * math.pi)),
+        _pen.rect(c, col.withValues(alpha: 0.9 * math.sin(q * math.pi)),
             p.dx.roundToDouble(), (p.dy + math.sin(q * 6 + t / 200) * 2).roundToDouble(), 2, 2);
       }
     }
@@ -432,7 +544,8 @@ class BattleScenePainter extends CustomPainter {
 
   void _enemy(Canvas c, SceneFrame f, Combatant e, Offset pos, double alpha) {
     final pt = scene.poseT;
-    final type = e.enemyType ?? '';
+    final phase = scene.transforming(e.id) ? 0 : e.phase;
+    final type = f.sprites.enemySpriteId(e.enemyType ?? '', phase);
     final img = f.sprites?.enemy(type);
     final sc = (f.sprites?.enemyScale(type) ?? 1) * (e.elite ? 1.45 : 1);
     final iw = (img?.width ?? 16).toDouble(), ih = (img?.height ?? 14).toDouble();
@@ -477,6 +590,45 @@ class BattleScenePainter extends CustomPainter {
       _pen.oval(c, frostColor.withValues(alpha: 0.18 + 0.2 * k), x, y - h / 2 + 1,
           w * 0.8, h * 0.6);
     }
+    if (e.alive && e.lava > 0) {
+      // La Bestia con la lava arriba: brilla desde abajo.
+      final k = 0.5 + 0.5 * math.sin(pt / 180);
+      _pen.oval(c, lavaColor.withValues(alpha: 0.2 + 0.18 * k), x, y - 2,
+          w * 0.6, 6 + 2 * k);
+    }
+    if (e.alive && phase >= 2) {
+      // Devorador transformado: aura carmesí que late y brasas que suben.
+      final k = 0.5 + 0.5 * math.sin(pt / 150);
+      _pen.oval(c, phaseColor.withValues(alpha: 0.08 + 0.1 * k), x,
+          y - h / 2 + 2, w * 0.66 + 3 * k, h * 0.62 + 2 * k);
+      for (var i = 0; i < 6; i++) {
+        final q = ((pt / 900) + i / 6) % 1.0;
+        _pen.rect(c, const Color(0xFFFF7B29).withValues(alpha: 0.9 * (1 - q)),
+            (x + math.sin(i * 2.1 + pt / 400) * w * 0.4).roundToDouble(),
+            (y - q * h * 1.1).roundToDouble(), 2, 2);
+      }
+    }
+    final immune = immuneNow(f.battle, e);
+    if (immune) {
+      // Séquito vivo: escudo de inmunidad (óvalo que titila y runas).
+      final k = 0.5 + 0.5 * math.sin(pt / 200);
+      final ctr = Offset(x, y + fl - h / 2 + 1);
+      _pen.oval(c, immuneColor.withValues(alpha: 0.08 + 0.06 * k), ctr.dx,
+          ctr.dy, w * 0.62 + 2, h * 0.62 + 2);
+      _pen.stroke
+        ..strokeWidth = 1
+        ..color = immuneColor.withValues(alpha: 0.45 + 0.35 * k);
+      c.drawOval(
+          Rect.fromCenter(
+              center: ctr, width: w * 1.24 + 4, height: h * 1.24 + 4),
+          _pen.stroke);
+      for (var i = 0; i < 6; i++) {
+        final a = pt / 700 + i * math.pi / 3;
+        final p = ctr + Offset(math.cos(a) * (w * 0.62 + 2), math.sin(a) * (h * 0.62 + 2));
+        _pen.rect(c, const Color(0xFFFFE9A8), p.dx.roundToDouble() - 1,
+            p.dy.roundToDouble() - 1, 2, 2);
+      }
+    }
     if (e.elite) {
       final a = (0.35 + 0.2 * math.sin(pt / 180)).clamp(0.0, 1.0);
       _pen.oval(c, const Color(0xFFFFD166).withValues(alpha: a), x,
@@ -506,7 +658,26 @@ class BattleScenePainter extends CustomPainter {
             enemyUltBarColor.withValues(alpha: 0.12 + 0.18 * k),
             BlendMode.srcATop);
       }
-      c.drawImageRect(img, Rect.fromLTWH(0, 0, iw, ih), dst, paint);
+      final src = Rect.fromLTWH(0, 0, iw, ih);
+      if (e.alive && isEcho(e)) {
+        // Eco de la Hechicera: se desdobla (dos copias corridas) y titila
+        // translúcido, con una franja de luz que lo recorre.
+        final k = 0.5 + 0.5 * math.sin(pt / 90 + x);
+        for (final dx in [-2.0, 2.0]) {
+          final ghost = SpriteCatalog.pixelPaint()
+            ..colorFilter = ColorFilter.mode(
+                echoColor.withValues(alpha: 0.35 * (1 - k * 0.5)),
+                BlendMode.srcIn);
+          c.drawImageRect(img, src, dst.shift(Offset(dx * (0.5 + k), 0)), ghost);
+        }
+        paint.color = Color.fromRGBO(255, 255, 255, 0.55 + 0.3 * k);
+        c.drawImageRect(img, src, dst, paint);
+        final band = dst.top + ((pt / 700 + x * 0.01) % 1.0) * dst.height;
+        _pen.rect(c, const Color(0x99E8FFFF), dst.left + 2, band.roundToDouble(),
+            dst.width - 4, 1);
+      } else {
+        c.drawImageRect(img, src, dst, paint);
+      }
     } else {
       _pen.rect(c, const Color(0xFFE43B44), dst.left, dst.top, dst.width, dst.height);
     }
@@ -1031,6 +1202,10 @@ class BattleScenePainter extends CustomPainter {
               FxKind.arrow ||
               FxKind.stream when age < f.durationMs:
           _procFx(c, f, age);
+        case FxKind.lavaBurst when age < BattleFx.lavaBurstMs:
+          _lavaBurst(c, f, age);
+        case FxKind.transform when age < BattleFx.transformMs:
+          _transform(c, f, age);
         case FxKind.shatter when age < BattleFx.shatterMs:
           _shatter(c, f, age);
         default:
@@ -1039,6 +1214,82 @@ class BattleScenePainter extends CustomPainter {
     }
   }
 
+
+  /// Erupción de lava bajo un actor: columna que sube y cae en gotas.
+  void _lavaBurst(Canvas c, BattleFx f, double age) {
+    final p = (age / BattleFx.lavaBurstMs).clamp(0.0, 1.0);
+    final o = Offset(f.x, f.y);
+    final up = math.sin(math.min(1.0, p * 1.6) * math.pi / 2);
+    final fade = 1.0 - math.max(0.0, (p - 0.6) / 0.4);
+    _pen.oval(c, const Color(0xFF3A1206).withValues(alpha: 0.8 * fade), o.dx, o.dy + 1, 14, 4);
+    _pen.oval(c, lavaColor.withValues(alpha: 0.9 * fade), o.dx, o.dy + 1, 11 * (0.6 + 0.4 * up), 3);
+    final hgt = 26 * up * (p < 0.6 ? 1 : fade);
+    _pen.rect(c, lavaColor.withValues(alpha: 0.85 * fade), o.dx - 3, o.dy - hgt, 6, hgt);
+    _pen.rect(c, lavaCoreColor.withValues(alpha: 0.9 * fade), o.dx - 1, o.dy - hgt, 2, hgt);
+    for (var k = 0; k < 7; k++) {
+      final a = -math.pi / 2 + (k - 3) * 0.35;
+      final r = 6 + 22 * p;
+      final d = Offset(math.cos(a) * r, math.sin(a) * r + 30 * p * p);
+      _pen.rect(c, (k.isEven ? lavaCoreColor : lavaColor).withValues(alpha: fade),
+          (o.dx + d.dx).roundToDouble(), (o.dy - hgt * 0.6 + d.dy).roundToDouble(), 2, 2);
+    }
+  }
+
+  /// Transformación del Devorador: una esfera de vacío lo traga mientras
+  /// anillos carmesí se cierran; destello y onda que se abre con grietas.
+  void _transform(Canvas c, BattleFx f, double age) {
+    final o = Offset(f.x, f.y - 22);
+    const flash = BattleFx.transformFlashMs;
+    if (age < flash) {
+      final q = age / flash;
+      // Esfera oscura que crece.
+      _pen.fill.color = const Color(0xFF14050B).withValues(alpha: 0.75 * q);
+      c.drawCircle(o, 10 + 26 * q, _pen.fill);
+      // Anillos que se cierran.
+      for (var k = 0; k < 3; k++) {
+        final r = ((1 - q) * 70 + k * 14) % 70 + 6;
+        _pen.stroke
+          ..strokeWidth = 2
+          ..color = f.color.withValues(alpha: 0.4 + 0.5 * q);
+        c.drawOval(Rect.fromCenter(center: o, width: r * 2, height: r * 1.2), _pen.stroke);
+      }
+      // Rayos que convergen.
+      for (var k = 0; k < 12; k++) {
+        final a = k * math.pi / 6 + age / 300;
+        final r1 = 80 * (1 - ((age / 380 + k / 12) % 1.0)) + 8;
+        final d = Offset(math.cos(a), math.sin(a) * 0.7);
+        _pen.stroke
+          ..strokeWidth = 1
+          ..color = const Color(0xFFFF7B29).withValues(alpha: 0.7);
+        c.drawLine(o + d * r1, o + d * (r1 + 8), _pen.stroke);
+      }
+    } else {
+      final q = ((age - flash) / (BattleFx.transformMs - flash)).clamp(0.0, 1.0);
+      _pen.stroke
+        ..strokeWidth = 3
+        ..color = f.color.withValues(alpha: 1 - q);
+      c.drawOval(Rect.fromCenter(center: o, width: 30 + 160 * q, height: 18 + 80 * q), _pen.stroke);
+      _pen.stroke
+        ..strokeWidth = 1
+        ..color = const Color(0xFFFFD166).withValues(alpha: 1 - q);
+      c.drawOval(Rect.fromCenter(center: o, width: 20 + 110 * q, height: 12 + 56 * q), _pen.stroke);
+      // Grietas en el piso que se abren.
+      final g = Offset(f.x, f.y);
+      for (var k = 0; k < 8; k++) {
+        final a = k * math.pi / 4 + 0.3;
+        var p0 = g;
+        for (var s = 1; s <= 4; s++) {
+          final r = s * 8.0 * math.min(1.0, q * 2);
+          final p1 = g + Offset(math.cos(a + (s.isEven ? 0.2 : -0.2)) * r, math.sin(a) * r * 0.4);
+          _pen.stroke
+            ..strokeWidth = 1
+            ..color = const Color(0xFFFF7B29).withValues(alpha: 0.9 * (1 - q));
+          c.drawLine(p0, p1, _pen.stroke);
+          p0 = p1;
+        }
+      }
+    }
+  }
   // ---------------- procs del árbol (efectos del mundo) ----------------
 
   /// Dibujo de los efectos de procs (docs/specs/battle_presentation.md
@@ -1347,7 +1598,7 @@ class BattleScenePainter extends CustomPainter {
           _pen.stroke);
       final img = a.isPlayer
           ? f.sprites?.hero(a.classId ?? '')
-          : f.sprites?.enemy(a.enemyType ?? '');
+          : f.sprites?.enemy(f.sprites.enemySpriteId(a.enemyType ?? '', a.phase));
       if (img != null) {
         final k = math.min((sz - 4) / img.width, (sz - 4) / img.height);
         final w = img.width * k, h = img.height * k;
@@ -1489,7 +1740,8 @@ class BattleOverlayPainter extends CustomPainter {
 
     // Sprite grande del lanzador y textos (entran con la banda).
     final img = enemy
-        ? f.sprites?.enemy(u.fx.ult?.enemyType ?? '')
+        ? f.sprites?.enemy(f.sprites.enemySpriteId(u.fx.ult?.enemyType ?? '',
+            u.fx.who == null ? 0 : (f.battle.byId(u.fx.who!)?.phase ?? 0)))
         : f.sprites?.hero(u.fx.ult?.casterClass ?? '');
     final x0 = math.min(right - 40, 18.0);
     if (img != null) {

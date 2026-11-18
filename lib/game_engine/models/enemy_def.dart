@@ -46,6 +46,21 @@ class EnemyDef {
   /// Nombre femenino ("la Matriarca Araña") para los textos.
   final bool feminine;
 
+  // ---- comunes v0.3 (docs/specs/bosses.md § "v0.3") ----
+
+  /// Probabilidad de que un golpe primario del grupo solo lo roce (×0.3).
+  final double evasion;
+
+  /// Cada golpe que conecta retrasa al jugador `IV × delayHit`.
+  final double delayHit;
+
+  /// Cada golpe que conecta marca al jugador: +[markHit] de daño recibido
+  /// 2 turnos (`TimedEffect` de origen `vigilancia`).
+  final double markHit;
+
+  /// Estados en ciclo, uno por acción (reemplaza a [inflicts]).
+  final List<StatusApplication> inflictCycle;
+
   const EnemyDef({
     required this.id,
     required this.name,
@@ -66,6 +81,10 @@ class EnemyDef {
     this.armor = 0,
     this.passive = false,
     this.feminine = false,
+    this.evasion = 0,
+    this.delayHit = 0,
+    this.markHit = 0,
+    this.inflictCycle = const [],
   });
 
   /// "el Rey Limo" / "la Matriarca Araña".
@@ -85,6 +104,27 @@ enum BossMechanicKind {
 
   /// Postura: alterna escudo (−daño físico) y espada (−daño mágico).
   stance,
+
+  // ---- v0.3 (docs/specs/bosses.md § "v0.3") ----
+
+  /// Ecos: copias que actúan y reciben daño reducido; vuelven si el jefe
+  /// pasa `every` turnos con alguno caído.
+  echo,
+
+  /// Lava: cada `every` acciones el piso hace erupción `turns` turnos; el
+  /// que se defiende con lava se quema.
+  lava,
+
+  /// Séquito: invocaciones que actúan; mientras viva alguna el jefe es
+  /// inmune a los estados.
+  summon,
+
+  /// Marca del Vacío: marca a un jugador cada `every` acciones; su
+  /// próximo golpe al marcado pega × `value` salvo que lo protejan.
+  mark,
+
+  /// Fases: al bajar del `value` de la vida se transforma (fase 2).
+  phases,
 }
 
 /// Mecánica propia de un jefe, como datos.
@@ -101,6 +141,9 @@ class BossMechanicDef {
     this.addType,
     this.adds = 0,
     this.soloAdds = 0,
+    this.turns = 0,
+    this.power = 0,
+    this.soloPower = 0,
   });
 
   final String id;
@@ -129,6 +172,14 @@ class BossMechanicDef {
   final String? addType;
   final int adds;
   final int soloAdds;
+
+  /// Duración en turnos propios (lava).
+  final int turns;
+
+  /// Multiplicador de ATQ con grupo / en solo (lava: daño de la lava;
+  /// fases: ATQ de la fase 2).
+  final double power;
+  final double soloPower;
 }
 
 /// ULT de un enemigo (jefes y élites). Ver
@@ -159,6 +210,12 @@ class EnemyUltDef {
   /// Efecto extra de la mecánica del jefe (telaraña, cristales, postura).
   final EnemyUltExtra extra;
 
+  /// Coro de Ecos: poder extra por invocación viva.
+  final double perAdd;
+
+  /// Erupción Total: turnos de lava.
+  final int turns;
+
   const EnemyUltDef({
     required this.id,
     required this.name,
@@ -169,6 +226,8 @@ class EnemyUltDef {
     this.wipeBuffs = false,
     this.guaranteedCrit = false,
     this.extra = EnemyUltExtra.none,
+    this.perAdd = 0,
+    this.turns = 0,
   });
 }
 
@@ -184,4 +243,20 @@ enum EnemyUltExtra {
 
   /// Juicio Hueco: cambia de postura al terminar.
   stanceShift,
+
+  // ---- v0.3 ----
+
+  /// Coro de Ecos: +[EnemyUltDef.perAdd] de poder por eco vivo y rehace
+  /// los ecos.
+  echoChorus,
+
+  /// Erupción Total: la lava sube `EnemyUltDef.turns` turnos.
+  lavaFlood,
+
+  /// Lamento Eterno: completa el séquito.
+  summonAll,
+
+  /// Colapso del Vacío: el marcado sin proteger recibe ×2 y después
+  /// marca al de más vida.
+  voidMark,
 }

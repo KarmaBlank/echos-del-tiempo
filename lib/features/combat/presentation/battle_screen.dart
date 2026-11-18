@@ -372,7 +372,7 @@ class BattleViewState extends State<BattleView>
     final wx = w.dx, wy = w.dy;
     for (final e in _foes) {
       final p = f.layout.of(e.id);
-      final type = e.enemyType ?? '';
+      final type = widget.sprites.enemySpriteId(e.enemyType ?? '', e.phase);
       final img = widget.sprites?.enemy(type);
       final sc = (widget.sprites?.enemyScale(type) ?? 1) * (e.elite ? 1.45 : 1);
       final w = (img?.width ?? 16) * sc, h = (img?.height ?? 14) * sc;
@@ -463,7 +463,7 @@ class BattleViewState extends State<BattleView>
       final layout = BattleLayout.compute(b, widget.arena,
           vw: g.virtualWidth,
           enemySize: (e) {
-            final type = e.enemyType ?? '';
+            final type = sprites.enemySpriteId(e.enemyType ?? '', e.phase);
             final img = sprites?.enemy(type);
             final sc = (sprites?.enemyScale(type) ?? 1) * (e.elite ? 1.45 : 1);
             return Size((img?.width ?? 16) * sc, (img?.height ?? 14) * sc);

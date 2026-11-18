@@ -901,3 +901,80 @@ actual. Al pasar el mouse por una técnica o la ULT se muestra su
   alrededor del Caballero y destello en los ojos. Descarga — una espada
   espectral se forma sobre el objetivo y cae; cruz de luz, onda y grietas
   en el piso.
+
+## Mecánicas de jefe v0.3
+
+(docs/specs/bosses.md § "v0.3".) Tests:
+`test/features/combat/boss_mechanics_v03_fx_test.dart`.
+
+- **Ecos** (Hechicera): cada `Eco de la Hechicera` se dibuja
+  translúcido (alfa `0.55 + 0.3·sin`), con dos copias cian corridas ±2 px
+  que se abren y cierran (se desdobla) y una franja de luz que lo
+  recorre de arriba abajo. `echoSummon` → arco cian del jefe al eco,
+  `poof`, anillo y `¡ECO!`; `echoResist` → `ECO ×0.5` cian con el golpe.
+  Quebrarla: `shatter` sobre el eco (como el cristal).
+- **Lava** (Bestia): con `Combatant.lava > 0`, charcos de lava (corteza
+  oscura, borde naranja `#ff7b29`, centro amarillo que late) bajo cada
+  aliado y tres chicos entre el jefe y el grupo, con burbujas que
+  revientan y brasas que suben; brillo de lava bajo la Bestia.
+  `lavaRise` → `lavaBurst` (columna de lava que sube y cae en gotas, 700
+  ms, partículas de escoria y sacudida 3) bajo cada aliado después del
+  golpe (`enemyStrikeMs + 220`; en Erupción Total, después del último
+  impacto) y cartel grande `¡LAVA N TURNOS!`; `lavaBurn` → `lavaBurst`
+  en el que se defendía, aura de fuego y `¡LAVA! Q+2`; `lavaFade` → `LA
+  LAVA SE ENFRÍA` gris.
+- **Séquito** (Espectro Coronado): mientras viva un siervo, el Espectro
+  lleva un escudo de inmunidad (óvalo `#b8c6ff` que titila y 6 runas
+  doradas que giran) y de cada siervo sube un hilo de motas doradas
+  pálidas al jefe (como los cristales). `summon` → arco, `poof`, anillo y
+  `¡SIERVO!`; `immune` → pulso y `INMUNE` sobre el jefe con el golpe.
+- **Marca del Vacío** (Centinela): el héroe marcado lleva una columna
+  violeta tenue y una retícula `#b57bff` que gira sobre la cabeza.
+  `markCast` → arco violeta del Centinela, `reticle` y `¡MARCADO!`;
+  `markHit` → estallido violeta (`shatter`) y `MARCA ×2` con el golpe;
+  `markGuarded` → anillo verde y `¡PROTEGE LA MARCA!` (o `MARCA ANULADA`
+  en solo) sobre quien la contrarresta.
+- **Fases** (Devorador): `phaseShift` → cinemática `transform` (1800
+  ms, en el mundo) 120 ms después del golpe: una esfera de vacío crece
+  sobre el jefe con 3 anillos carmesí que se cierran y rayos que
+  convergen; a los 900 ms destello de pantalla `#d63031`, onda doble que
+  se abre y 8 grietas incandescentes en el piso; cartel grande `FASE 2`.
+  Partículas de fuego y arcanas, sacudida 10. Hasta el destello se
+  dibuja el sprite de la fase 1; después `devoradorFase2` (escala 2.8)
+  con aura carmesí suave que late y brasas que suben. La tarjeta de su
+  ULT usa el sprite de su fase.
+- **Comunes**: `evaded` → `¡ESQUIVA!` gris con el golpe.
+- **HUD**: chips `Ecos: N vivos (×0.5 daño) · vuelven en N turnos`,
+  `LAVA N turnos · ¡no te defiendas!` / `Charcos de Lava: sube en N
+  acciones`, `Séquito N · INMUNE a estados` / `Séquito 0 · los estados
+  entran`, `Marca del Vacío: X ×2 · ¡protegelo!` / `marca en N acciones`,
+  `FASE 1 · se transforma al 50%` / `FASE 2 · Colapso Temporal cada 2 (en
+  N)`; cada uno con su `counter`. Chip `Marcado ×2` en el marcado y
+  `Marca +20%` (Vigilante del Vacío) en los golpeados por el Vigilante.
+  Los ecos y siervos tienen turno: aparecen en la franja de turnos.
+
+### ULT de los jefes v0.3
+
+| ULT | Prep. | Descarga | Total | Impacto `i` | Hit-stop | Sacudida | Cámara |
+|---|---|---|---|---|---|---|---|
+| Coro de Ecos | 1000 | 1100 | 2500 | 1450 + 80·i | 110 | 11 | `group` |
+| Erupción Total | 1000 | 1100 | 2500 | 1400 + 70·i | 130 | 15 | `group` |
+| Lamento Eterno | 1000 | 1100 | 2500 | 1450 + 70·i | 120 | 12 | `group` |
+| Colapso del Vacío | 1000 | 1100 | 2500 | 1500 + 60·i | 150 | 15 | `group` |
+
+- **Coro de Ecos** (cian `#7ff3ff` / lila): preparación — seis siluetas
+  de la Hechicera giran a su alrededor titilando y ondas del canto salen
+  de ella. Descarga — arcos de onda en abanico viajan al grupo; en cada
+  impacto, tres anillos de resonancia y notas que suben.
+- **Erupción Total** (naranja `#ff7b29`): preparación — grietas
+  incandescentes avanzan de la Bestia a cada objetivo, la melena de fuego
+  crece, el cielo enrojece y tiembla. Descarga — llueven rocas; bajo cada
+  objetivo se abre un charco y revienta una columna de lava con anillo.
+- **Lamento Eterno** (azul pálido `#b8c6ff`): preparación — siete
+  rostros que gimen giran en espiral hacia el Espectro y su corona
+  destella. Descarga — una ola espectral barre de él al grupo; en cada
+  impacto, manos de escarcha suben del piso y anillo.
+- **Colapso del Vacío** (violeta `#9b59ff`): preparación — un agujero
+  negro con disco de acreción crece sobre el Centinela y curva la luz
+  hacia él. Descarga — viaja sobre el grupo y colapsa (onda doble); un
+  rayo del vacío baja a cada objetivo y saltan esquirlas violetas/negras.

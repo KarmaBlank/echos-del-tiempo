@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../data/game_catalog.dart';
 import '../data/items_catalog.dart';
+import '../data/uniques_catalog.dart';
 import '../models/battle_command.dart';
 import '../models/battle_event.dart';
 import '../models/battle_state.dart';
@@ -96,6 +97,10 @@ class SessionEngine {
   static const contactRange = 14.0;
   static const bossContactRange = 26.0;
   static const pickupRange = 14.0;
+
+  /// Probabilidad (por jugador) de que el jefe suelte además su legendario
+  /// propio (`EnemyDef.legendaryId`; worldgen.md § 8.1).
+  static const bossLegendaryChance = 0.10;
   static const sealRange = 30.0;
   static const calmRange = 120.0;
   static const turnLimit = 30.0; // TURN_LIMIT
@@ -658,6 +663,21 @@ class _Op {
     return firsts;
   }
 
+  /// El legendario propio del jefe de [b] (si tiene): a cada jugador con
+  /// `SessionEngine.bossLegendaryChance`, al nivel de la batalla.
+  void _bossLegendary(SessionBattle b, double x, double y, int? level) {
+    final type = b.state.enemies.firstOrNull?.enemyType;
+    final id = type == null ? null : catalog.enemies[type]?.legendaryId;
+    final u = id == null ? null : kUniques[id];
+    if (u == null || !catalog.weapons.containsKey(u.baseId)) return;
+    final il = level ?? s.mission?.zoneLevel ?? 1;
+    for (final p in players) {
+      if (_rand() >= SessionEngine.bossLegendaryChance) continue;
+      final item = rules.loot.generateUnique(_rand, u, il);
+      _deliver(p, [LootDrop.item(item)], LootSource.boss, x, y);
+    }
+  }
+
   /// Auto-levantar: cada jugador levanta su loot (no el compartido) al
   /// pasar encima, si su filtro lo muestra y tiene lugar.
   void _autoPickup() {
@@ -943,7 +963,8 @@ class _Op {
     final map = e._missionMap(m, seed);
     final r = mulberry32(seed + 7);
     int pick(int n) => (r() * n).floor();
-    bool solid(int tx, int ty) => WorldRules.isSolid(map, tx, ty);
+    bool solid(int tx, int ty) =>
+        WorldRules.isSolid(map, tx, ty, blockVoid: true);
     List<String> res(List<String> g) => ZoneRules.resolveGroup(g, catalog);
     WorldPoint px((int, int) t) => WorldPoint(t.$1 * 16 + 8.0, t.$2 * 16 + 8.0);
 
@@ -1235,6 +1256,7 @@ class _Op {
     _autoPickup();
 
     final map = e.mapFor(s);
+    _voidFalls(map, m);
     // Escalera de bajada: tocarla baja a todo el grupo.
     final down = map.floor(m.floor)?.stairsDown;
     if (down != null &&
@@ -1258,6 +1280,25 @@ class _Op {
           return;
         }
       }
+    }
+  }
+
+  /// Abismo (worldgen.md § 9.3): quien pisa el vacío vuelve al spawn del
+  /// piso actual, sin daño.
+  void _voidFalls(GameMap map, MissionRun m) {
+    final f = map.floor(m.floor);
+    if (f == null) return;
+    var i = 0;
+    for (final p in players) {
+      if (!p.alive || !WorldRules.overVoid(map, p.x, p.y)) continue;
+      final pos = _around(f.spawn, i++);
+      p
+        ..x = pos.x
+        ..y = pos.y
+        ..epoch += 1
+        ..moving = false;
+      events.add(FellIntoVoidEvent(p.id, m.floor));
+      say('${p.name} cayó al vacío.');
     }
   }
 
@@ -1300,7 +1341,8 @@ class _Op {
         }
       }
     }
-    final pos = WorldRules.move(map, en.x, en.y, en.vx * dt, en.vy * dt);
+    final pos = WorldRules.move(map, en.x, en.y, en.vx * dt, en.vy * dt,
+        blockVoid: true);
     en
       ..x = pos.x
       ..y = pos.y;
@@ -1497,6 +1539,7 @@ class _Op {
       }
     } else if (b.boss) {
       _lootAll(LootSource.boss, lx, ly, level: lootLevel);
+      _bossLegendary(b, lx, ly, lootLevel);
     } else {
       m.kills++;
       final k = m.objective(ObjectiveKind.kills);

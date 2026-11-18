@@ -28,6 +28,29 @@ Color mapIconColor(MapIconColor c) => switch (c) {
       MapIconColor.celeste => const Color(0xFF48DBFB),
     };
 
+/// Color de un tile en el minimapa (exploration.md § "HUD" y § "Minimapa
+/// (v0.3)"). Colores = arte del prototipo.
+Color minimapTileColor(String ch) => switch (ch) {
+      Tile.wall || Tile.gate => const Color(0xFF0B0E1A),
+      Tile.tree => const Color(0xFF1D3B26),
+      Tile.rock => const Color(0xFF3A3D48),
+      Tile.water => const Color(0xFF2E86DE),
+      Tile.merchant => const Color(0xFFFFD166),
+      Tile.path => const Color(0xFF6C7A9C),
+      Tile.grass => const Color(0xFF3E6B48),
+      Tile.stairsDown || Tile.stairsUp => const Color(0xFFFFD166),
+      Tile.voidTile => kMinimapVoid,
+      Tile.bridge => const Color(0xFFA07A44),
+      Tile.lava => const Color(0xFFFF5A1F),
+      Tile.tombstone => const Color(0xFF6C707A),
+      Tile.gear => const Color(0xFFB08A3A),
+      _ when Tile.entranceZone(ch) != null => const Color(0xFF3E6B48),
+      _ => const Color(0xFF4B5878),
+    };
+
+/// Vacío en el minimapa (como el fondo fuera del mapa).
+const kMinimapVoid = Color(0xFF05060C);
+
 /// `drawMinimap` del prototipo como widget (docs/specs/exploration.md §
 /// "HUD"). Colores = arte del prototipo, igual que el mapa.
 class Minimap extends StatelessWidget {
@@ -100,21 +123,10 @@ class _MinimapPainter extends CustomPainter {
     for (var y = 0; y < map.height; y++) {
       for (var x = 0; x < map.width; x++) {
         final ch = map.tileAt(x, y);
-        p.color = switch (ch) {
-          Tile.wall || Tile.gate => const Color(0xFF0B0E1A),
-          Tile.tree => const Color(0xFF1D3B26),
-          Tile.rock => const Color(0xFF3A3D48),
-          Tile.water => const Color(0xFF2E86DE),
-          Tile.merchant => const Color(0xFFFFD166),
-          Tile.path => const Color(0xFF6C7A9C),
-          Tile.grass => const Color(0xFF3E6B48),
-          Tile.stairsDown || Tile.stairsUp => const Color(0xFFFFD166),
-          _ when Tile.entranceZone(ch) != null => const Color(0xFF3E6B48),
-          _ => const Color(0xFF4B5878),
-        };
+        p.color = minimapTileColor(ch);
         c.drawRect(
-            Rect.fromLTWH(x * Minimap.cell, y * Minimap.cell, Minimap.cell,
-                Minimap.cell),
+            Rect.fromLTWH(
+                x * Minimap.cell, y * Minimap.cell, Minimap.cell, Minimap.cell),
             p);
       }
     }
@@ -132,7 +144,8 @@ class _MinimapPainter extends CustomPainter {
       canvas.translate(-b.x * Minimap.cell, -b.y * Minimap.cell);
     }
     final shown = b == null
-        ? Offset.zero & Size(map.width * Minimap.cell, map.height * Minimap.cell)
+        ? Offset.zero &
+            Size(map.width * Minimap.cell, map.height * Minimap.cell)
         : Rect.fromLTWH(b.x * Minimap.cell, b.y * Minimap.cell,
             b.w * Minimap.cell, b.h * Minimap.cell);
     canvas.saveLayer(
@@ -171,8 +184,8 @@ class _MinimapPainter extends CustomPainter {
           p);
       p.color = open ? zoneColor(e.zone) : kLockedZoneColor;
       canvas.drawRect(
-          Rect.fromLTWH((e.tx - 1) * cell, (e.ty - 1) * cell, cell * 3,
-              cell * 3),
+          Rect.fromLTWH(
+              (e.tx - 1) * cell, (e.ty - 1) * cell, cell * 3, cell * 3),
           p);
     }
 
@@ -181,7 +194,9 @@ class _MinimapPainter extends CustomPainter {
       for (final e in m.enemies) {
         if (e.floor != m.floor) continue;
         if (e.alive && !e.boss) {
-          dot(e.x, e.y,
+          dot(
+              e.x,
+              e.y,
               e.elite ? const Color(0xFFFFD166) : const Color(0xFFFF4757),
               e.elite ? 3 : 2);
         }

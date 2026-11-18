@@ -123,7 +123,7 @@ de semilla fija, sin `Random`), mono, 22050 Hz, PCM 16 bits (el mismo
 5. Jingles (sin bucle): cola completa, se recorta el silencio final y
    se aplica un fundido de 20 ms.
 
-Tiempos y tamaños (medidos, ver § 8): 1.4–2.5 MB por bucle de 33–59 s,
+Tiempos y tamaños (medidos, ver § 8): 1.4–2.7 MB por bucle de 33–63 s,
 0.1–0.35 MB por jingle; render de 125–460 ms por bucle en el VM de debug
 (JIT), siempre en un isolate.
 
@@ -139,8 +139,14 @@ Tiempos y tamaños (medidos, ver § 8): 1.4–2.5 MB por bucle de 33–59 s,
 | `zone3` | Ruinas Cronales | antiguo, de reloj (tic-tac) | La menor armónica | 104, 4/4 | 20 compases |
 | `zone4` | Cavernas Heladas | frío, escaso, campanitas y eco | Si menor | 72, 4/4 | 12 compases |
 | `zone5` | Fortaleza Caída | sombrío, marcial (redobles) | Do menor | 96, 4/4 | 16 compases |
+| `zone6` | Laberinto Temporal | desorientador, de reloj, canon con eco | Sol menor + tonos enteros | 116, 4/4 | 20 compases |
+| `zone7` | Grieta Ígnea | caliente, pesado, bordón y ostinato, bombo | Mi frigio (dominante) | 88, 4/4 | 16 compases |
+| `zone8` | Cementerio de Eras | melancólico, escaso, campanas | Fa menor (eólico) | 66, 3/4 | 20 compases |
+| `zone9` | Abismo del Tiempo | inmenso, flotando, ecos largos, suspendido | La lidio | 76, 4/4 | 16 compases |
+| `zone10` | Corazón del Tiempo | solemne, ominoso, crece; cita el título | Re menor (Mi♭ napolitano) | 76, 4/4 | 20 compases |
 | `battle` | Batalla | enérgico, ostinato | Mi menor | 152, 4/4 | 32 compases |
 | `boss` | Jefe | intenso, frigio y cromático | Re menor | 168, 4/4 | 32 compases |
+| `bossFinal` | Jefe final · Devorador de Eras | épico → desatado (2 fases); el título transformado | Re menor → frigio | 160, 4/4 | 32 compases |
 | `jingle.victory` | Victoria | fanfarria | Do mayor | 140 | 3 compases, sin bucle |
 | `jingle.defeat` | Derrota | descendente, suspendido | La menor | 76 | 2 compases, sin bucle |
 | `jingle.levelUp` | Subida de nivel | arpegio que sube | Re mayor | 160 | 24 pasos, sin bucle |
@@ -212,9 +218,97 @@ con `strum: 0`), bajo, pandero (`t`).
 `tool/print_scores.dart` escribe 6/8 para cualquier pulso divisible por
 3 (`stepsPerBeat` 3, 6, …).
 
-Las zonas 6–10 (todavía "Próximamente") no tienen pieza propia: usan la
-de su tema más cercano (§ 5). Una variante del jefe final queda para
-cuando exista la zona 10.
+### 4.2 Zonas 6–10 y jefe final (v0.3.0)
+
+Las cinco zonas nuevas (worldgen.md § 8) y el Devorador de Eras tienen
+pieza propia. Mismas reglas: la ocarina lleva siempre la melodía,
+melodías **originales** (la zona 10 y el jefe final solo citan el tema
+del propio juego, `title`), bucles de 30–75 s con costura exacta, pico
+−6 dBFS. Lo andino queda donde va (zampoña, bombo legüero, charango);
+las zonas del abismo son más "de cine" que folclóricas.
+
+**`zone6` · Laberinto Temporal** — desorientador y mecánico. Sol menor
+con toques de tonos enteros, 116 bpm, 4/4, 20 compases = 41.4 s.
+
+| Parte | Compases | Cifrado | Qué pasa |
+|---|---|---|---|
+| A | 1–8 | (Sol m · Mi♭ aum Re7) × 4 | la ocarina en Sol menor; el Si natural del Mi♭ aumentado contra el Si♭; una zampoña con eco la imita **en canon** 2 compases después y una 8va abajo (canon circular: como la armonía se repite cada 2 compases, la imitación cae siempre sobre el mismo acorde) |
+| B | 9–16 | (Do aum · Re aum) × 4 | **escala de tonos enteros** (Do Re Mi Fa# Sol# La#): sin tónica, el laberinto; mismo canon circular |
+| C | 17–20 | Do m Re7 Mi♭ aum Re7 | vuelve el Si♭; la zampoña solo contesta; Re7 → Sol m |
+
+Reloj en 3+3+2 (`r`/`q` con bombo) contra el 4/4, engranajes de pulso
+12.5 % de a 3 notas sobre semicorcheas (nunca coinciden con el compás),
+bajo staccato en 3+3+2 con semitono de aproximación. Pistas: ocarina,
+eco (`Inst.zamponaEcho`), engranajes, colchón, bajo, reloj.
+
+**`zone7` · Grieta Ígnea** — caliente y pesado. Mi frigio con la
+tercera mayor en la tónica (frigio dominante), 88 bpm, 4/4, 16
+compases = 43.6 s.
+
+| Parte | Compases | Cifrado | Qué pasa |
+|---|---|---|---|
+| A | 1–8 | Mi Mi Fa Mi Re m Fa Mi Mi | bordón Mi + Si (cuadrada filtrada a 900 Hz) que no se mueve nunca; ostinato de bajo que machaca Mi con el Fa frigio; bombo legüero + bombo + aro; golpes secos de "metal" |
+| B | 9–16 | La m Fa Sol Fa Re m Fa Mi Mi | la ocarina sube (hasta Mi6); zampoña en octavas abajo; toms; redoble y platillo para volver |
+
+Pistas: ocarina, zampoña, bordón, metales, bajo, bombo.
+
+**`zone8` · Cementerio de Eras** — melancólico y escaso. Fa menor
+natural (eólico; la dominante es Do m, salvo el Do mayor de la cadencia
+de B), 66 bpm, 3/4, 20 compases = 54.5 s.
+
+| Parte | Compases | Cifrado | Qué pasa |
+|---|---|---|---|
+| A | 1–8 | Fa m Re♭ Si♭m Do m Fa m La♭ Mi♭ Fa m | vals lento: frases cortas de la ocarina que se apagan; campanitas sueltas (2 por compás, con eco) |
+| B | 9–16 | Re♭ La♭ Si♭m Fa m Re♭ Mi♭ Do sus4 Do | sube al La♭ agudo; cadencia con el Mi natural |
+| coda | 17–20 | Fa m Re♭ Si♭m Do m | baja y queda en Do |
+
+Una zampoña con eco contesta en los silencios de los compases 8, 16 y
+20; bombo legüero lejano cada 2 compases (campana de duelo). Pistas:
+ocarina, zampoña (`Inst.zamponaEcho`), campanas (`Inst.chime`),
+colchón, bajo, campana de duelo.
+
+**`zone9` · Abismo del Tiempo** — inmenso y flotando. La lidio (el Si
+mayor sobre el pedal de La, II/I), 76 bpm, 4/4, 16 compases = 50.5 s.
+
+| Parte | Compases | Cifrado | Qué pasa |
+|---|---|---|---|
+| A | 1–8 | La sus2 Si/La La maj7 Si/La Do#m7 Si Mi sus4 Mi | ocarina en notas largas con eco largo (6 pasos, g = 0.45: casi una reverberación), colchón de ataque 0.9 s y release 1.2 s |
+| B | 9–16 | Fa#m7 Mi sus2 La maj7 Si/La Fa#m7 Do#m7 Si sus4 Si | sube al Mi6; el II mayor del final vuelve al La sus2 sin cadencia (nunca "aterriza") |
+
+Sin batería: un platillo suave cada 4 compases (respira). Pistas:
+ocarina (`Inst.ocarinaEcho` con eco largo), colchón, cuerdas (pulso
+25 % de ataque lento, nota de arriba), estrellas (campanitas con eco),
+bajo (redondas; pedal de La en Si/La), aire.
+
+**`zone10` · Corazón del Tiempo** — solemne y ominoso, la tensión crece
+en tres capas. Re menor (con Mi♭ napolitano y La mayor de dominante),
+76 bpm, 4/4, 20 compases = 63.2 s. **Autocita del título**: la cabeza
+Re–Mi–Fa en corta–larga, el giro Mi–Do–Re, el grupeto de quena y la
+corta–larga hacia la sensible, ahora con Si♭ y Mi♭: el tema de la
+leyenda, amenazado.
+
+| Parte | Compases | Cifrado | Qué pasa |
+|---|---|---|---|
+| A | 1–8 | Re m Si♭ Sol m La Re m Mi♭ Sol m La | el tema del título, solemne; latido (lub-dub de bombo legüero) por compás, bajo en redondas, órgano |
+| B | 9–16 | Re m Si♭ Sol m Mi♭ Re m Si♭ Mi♭ La | sube; zampoña una 8va abajo; el latido se duplica, entra el reloj en negras, bajo en negras |
+| C | 17–20 | Sol m Mi♭ La7(♭9) La | clímax: la cabeza una 8va arriba y transformada (Mi♭–Do–Re en lugar de Mi–Do–Re), arpegio en semicorcheas, quintas de metal, bajo y reloj en corcheas, redoble; queda en La |
+
+Pistas: ocarina, zampoña, órgano, arpa, metal, bajo, latido, reloj.
+
+**`bossFinal` · Devorador de Eras** — variante del tema de jefe (misma
+plantilla: ocarina + doble 8va abajo + riff de pulso + bajo staccato +
+batería) con el **tema del título transformado** encima. Re menor
+(eólico → frigio), 160 bpm, 4/4, 32 compases = 48 s. Dos secciones con
+sensación de fase:
+
+| Parte | Compases | Cifrado | Qué pasa |
+|---|---|---|---|
+| Fase 1 | 1–16 | Re m Si♭ Do Re m · Re m Si♭ Sol m La · Re m Fa Do Sol m · Si♭ Do La La | épica: la cabeza del título como himno de batalla (después una 8va arriba), charango rasgueado en corcheas, bombo legüero + kit a medio tiempo, quintas de metal, bajo galopando; semicadencia en La |
+| Fase 2 | 17–32 | Re m Mi♭ Re m Mi♭ Si♭ La Si♭ La · Sol m Mi♭ La7(♭9) Re m Sol m Mi♭ La La | desatada: el tema en **disminución** (mitad de largo) que **muta** (Re–Mi–Fa → Re–Mi♭–Fa, frigio); riff martillado en semicorcheas, doble bombo, el charango calla; termina en La para volver a la fase 1 |
+
+Es un solo bucle (fase 1 → fase 2 → fase 1…). La fase 2 del Devorador
+**no** salta a la sección B: el reproductor no busca posiciones y el
+motor todavía no expone la fase (opcional, para más adelante).
 
 ## 5. Qué suena (`SessionMusic` + título)
 
@@ -226,8 +320,9 @@ Pista según el estado (función pura `MusicSelector.trackFor`):
 | `lobby` dentro del pueblo (tiles `0..25 × 0..13`, `inTown`) | `town` |
 | `lobby` en el mapa del mundo | `overworld` |
 | `prep` | `town` |
-| `field` / `levelUp` en una misión de zona `z` (1–5) | `zone<z>` |
-| `field` / `levelUp` en una misión sin zona: por tema del mapa | `pradera`→1, `bosque`→2, `ruinas`→3, `cavernas`→4, `fortaleza`→5, otro → 3 |
+| `field` / `levelUp` en una misión de zona `z` (1–10) | `zone<z>` |
+| `field` / `levelUp` en una misión sin zona: por tema del mapa | `pradera`→1, `bosque`→2, `ruinas`→3, `cavernas`→4, `fortaleza`→5, `laberinto`→6, `grieta`→7, `cementerio`→8, `abismo`→9, `corazon`→10, otro → 3 |
+| `battle` de jefe contra el Devorador (el enemigo jefe tiene `enemyType == 'devorador'`, `MusicSelector.finalBossId`; `MusicSelector.bossIdOf`) | `bossFinal` |
 | `battle` | `boss` si `SessionBattle.boss`, si no `battle` |
 | `result` | `town` (después del jingle) |
 
@@ -326,10 +421,18 @@ Medición (VM de debug, Windows):
 | zone5 | 40.0 s | 165 ms | 1723 KB | −6.0 | −19.0 |
 | battle | 50.5 s | 226 ms | 2176 KB | −6.0 | −18.5 |
 | boss | 45.7 s | 225 ms | 1969 KB | −6.0 | −17.6 |
+| zone6 | 41.4 s | 270 ms | 1782 KB | −6.0 | −17.7 |
+| zone7 | 43.6 s | 292 ms | 1880 KB | −6.0 | −18.9 |
+| zone8 | 54.5 s | 302 ms | 2349 KB | −6.0 | −16.0 |
+| zone9 | 50.5 s | 271 ms | 2176 KB | −6.0 | −17.1 |
+| zone10 | 63.2 s | 381 ms | 2720 KB | −6.0 | −18.7 |
+| bossFinal | 48.0 s | 330 ms | 2067 KB | −6.0 | −19.1 |
 | jingle.victory | 5.1 s | 31 ms | 221 KB | −6.0 | −17.5 |
 | jingle.defeat | 8.1 s (con la cola del eco) | 33 ms | 350 KB | −6.0 | −17.3 |
 | jingle.levelUp | 2.3 s | 8 ms | 97 KB | −6.0 | −15.7 |
 | jingle.zoneUnlocked | 6.7 s (con la cola del eco) | 31 ms | 291 KB | −6.0 | −17.9 |
+
+Los tests piden RMS entre −22 y −14 dBFS en todas las piezas.
 
 Tests de la costura: el bucle plegado es idéntico (diferencia < 1e-9) a
 la segunda vuelta de un render de dos vueltas seguidas, y el salto

@@ -29,6 +29,12 @@ enum UltStyle {
   venomNest,
   glacialBreath,
   hollowJudgment,
+
+  // Jefes de la v0.3 (docs/specs/bosses.md § "v0.3").
+  echoChorus,
+  totalEruption,
+  eternalLament,
+  voidCollapse,
 }
 
 /// Fase de la cinemática.
@@ -321,6 +327,47 @@ const Map<String, UltScript> kEnemyUltScripts = {
     hitStopMs: 160,
     shake: 15,
     focus: UltFocus.single,
+  ),
+  // v0.3 (docs/specs/battle_presentation.md § "ULT de los jefes v0.3").
+  'eult_coro': UltScript(
+    style: UltStyle.echoChorus,
+    buildMs: 1000,
+    releaseMs: 1100,
+    impactMs: 1450,
+    staggerMs: 80,
+    hitStopMs: 110,
+    shake: 11,
+    focus: UltFocus.group,
+  ),
+  'eult_erupcion': UltScript(
+    style: UltStyle.totalEruption,
+    buildMs: 1000,
+    releaseMs: 1100,
+    impactMs: 1400,
+    staggerMs: 70,
+    hitStopMs: 130,
+    shake: 15,
+    focus: UltFocus.group,
+  ),
+  'eult_lamento': UltScript(
+    style: UltStyle.eternalLament,
+    buildMs: 1000,
+    releaseMs: 1100,
+    impactMs: 1450,
+    staggerMs: 70,
+    hitStopMs: 120,
+    shake: 12,
+    focus: UltFocus.group,
+  ),
+  'eult_colapsoVacio': UltScript(
+    style: UltStyle.voidCollapse,
+    buildMs: 1000,
+    releaseMs: 1100,
+    impactMs: 1500,
+    staggerMs: 60,
+    hitStopMs: 150,
+    shake: 15,
+    focus: UltFocus.group,
   ),
   'eult_furia': UltScript(
     style: UltStyle.eliteFury,

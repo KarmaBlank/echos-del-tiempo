@@ -116,13 +116,13 @@ Tests: `test/game_engine/worldgen_test.dart`,
 | 3 | z3 | Ruinas Cronales | `ruinas` | 11–15 | 3 | golemReloj | `m2` | `ruinas` |
 | 4 | z4 | Cavernas Heladas | `cavernas` | 16–20 | 3 | sierpe | `z4` | `cavernas` |
 | 5 | z5 | Fortaleza Caída | `fortaleza` | 21–25 | 4 | caballeroHueco | `z5` | `fortaleza` |
-| 6 | z6 | Laberinto Temporal | `laberinto` | 26–30 | 4 | hechicera | — | `laberinto` |
-| 7 | z7 | Grieta Ígnea | `cavernas` | 31–35 | 4 | bestiaMagma | — | `grieta` |
-| 8 | z8 | Cementerio de Eras | `abismo` | 36–40 | 4 | espectroCoronado | — | `cementerio` |
-| 9 | z9 | Abismo del Tiempo | `abismo` | 41–45 | 5 | centinela | — | `abismo` |
-| 10 | z10 | Corazón del Tiempo | `abismo` | 46–50 | 5 | devorador | — | `corazon` |
+| 6 | z6 | Laberinto Temporal | `laberinto` | 26–30 | 4 | hechicera | `z6` | `laberinto` |
+| 7 | z7 | Grieta Ígnea | `grieta` | 31–35 | 4 | bestiaMagma | `z7` | `grieta` |
+| 8 | z8 | Cementerio de Eras | `cementerio` | 36–40 | 4 | espectroCoronado | `z8` | `cementerio` |
+| 9 | z9 | Abismo del Tiempo | `abismo` | 41–45 | 5 | centinela | `z9` | `abismo` |
+| 10 | z10 | Corazón del Tiempo | `corazon` | 46–50 | 5 | devorador | `z10` | `corazon` |
 
-- Las zonas sin misión (6–10) son "Próximamente": se ven en el mapa del
+- (v0.2.0; desde la v0.3.0 las 10 son jugables, § 8.1) Las zonas sin misión (6–10) son "Próximamente": se ven en el mapa del
   mundo con nombre y niveles y no se pueden proponer.
 - Ids de misión: `m1` y `m2` conservan el id del prototipo (Pradera
   Esmeralda y Ruinas Cronales); las nuevas usan el id de la zona. La
@@ -409,3 +409,140 @@ estilo lobby), `bosque` (verde oscuro, árboles densos), `cavernas`
 (hielo: suelo azul grisáceo, muros de roca helada, agua cian),
 `fortaleza` (piedra oscura, caminos de losa). Los de zonas 6–10
 (`laberinto`, `grieta`, `cementerio`, `corazon`) todavía no se usan.
+
+## 8. Alcance de la v0.3.0 (zonas 6–10)
+
+Completa el mundo: las zonas 6–10 pasan a jugables y el Devorador de
+Eras queda como jefe final (2 fases).
+
+| # | Zona | Tipo / generador | Niveles | Pisos | Jefe (id) |
+|---|---|---|---|---|---|
+| 6 | Laberinto Temporal | laberinto (backtracker con salas) | 26–30 | 4 | Hechicera del Eco (`hechicera`) |
+| 7 | Grieta Ígnea | cavernas de lava (autómata + ríos de lava) | 31–35 | 4 | Bestia de Magma (`bestiaMagma`) |
+| 8 | Cementerio de Eras | abismo (islas + puentes) con lápidas | 36–40 | 4 | Espectro Coronado (`espectroCoronado`) |
+| 9 | Abismo del Tiempo | abismo (islas flotantes, caídas) | 41–45 | 5 | Centinela del Vacío (`centinela`) |
+| 10 | Corazón del Tiempo | abismo final (islas + arena central) | 46–50 | 5 | Devorador de Eras (`devorador`, 2 fases) |
+
+Enemigos comunes nuevos (ids fijos; stats a nivel mínimo de su zona,
+jefes a nivel máximo):
+- Zona 6: `ecoSombra` (copia sombría, esquiva), `guardianReloj`
+  (constructo, retrasa).
+- Zona 7: `salamandra` (Quemadura), `golemMagma` (tanque, Quemadura).
+- Zona 8: `necrofago` (Veneno, perforante), `almaErrante` (Congelación,
+  flota).
+- Zona 9: `vigilanteVacio` (marca objetivos), `ojoAbismo` (flota,
+  aturde).
+- Zona 10: `heraldoEras` (élite natural, mezcla de estados) y
+  `fragmentoTiempo` (rápido, retrasa).
+
+Caer al vacío en las zonas de abismo devuelve al punto de llegada del
+piso (sin daño en esta versión). Cada zona tiene música propia y el
+jefe final su variante del tema de jefe.
+
+### 8.1 Diseño detallado de la v0.3.0 (implementación)
+
+- **Generadores** (`ZoneGen`, se agregan `grieta`, `cementerio`,
+  `corazon`; los demás no cambian y la v0.2 sigue generando los mismos
+  mapas con la misma semilla):
+
+  | Zona | `gen` | Tamaño de piso | Qué hace |
+  |---|---|---|---|
+  | 6 | `laberinto` | 70–80 × 50–56 | backtracker de celdas de 3 (pasillos `,` de 2), solo 4% de bucles y 2–3 cámaras `.`; vaults de relojería |
+  | 7 | `grieta` | 58–70 × 42–50 | autómata celular de cavernas; charcos de **lava** `%` en vez de agua y 1–2 **ríos de lava** de 2 de ancho que cruzan la región; los cruza un **puente** `=` (los túneles de conexión sobre lava son puentes) |
+  | 8 | `cementerio` | 58–70 × 42–50 | abismo (como 9) + **lápidas** `t` sueltas en las islas (nunca dos juntas: no cortan caminos) |
+  | 9 | `abismo` | 58–70 × 42–50 | **islas** (elipses irregulares, una por celda de una grilla ~13 × 11) sobre **vacío** `_`, unidas por **puentes** `=` de 2 de ancho (árbol mínimo entre centros) |
+  | 10 | `corazon` | 70–80 × 50–56 | abismo con la **arena en el centro** del piso (isla de 13 × 13 rodeada de vacío; barrera hacia un lado al azar); en el último piso, el Devorador |
+
+- En los pisos de abismo (`abismo`, `cementerio`, `corazon`) todo el muro
+  `#` fuera de vaults y de los pilares de la arena se vuelve vacío `_`: la
+  arena es una isla rodeada de vacío con la única entrada por la barrera.
+  Los túneles de conexión del § 6.6 son puentes `=` (de 2 de ancho).
+- **Conectividad** igual que § 6.6, contando el vacío y la lava como no
+  caminables: desde el spawn se llega a todo suelo/puente sin pisar vacío.
+- **Caída** (§ 8): pisar el vacío (el tile bajo el centro del personaje es
+  `_`) devuelve a ese jugador al **spawn del piso actual** (`MapFloor.spawn`,
+  la llegada bajando), sin daño. Lo resuelve el host en cada tick de campo.
+  Los enemigos nunca entran al vacío (para ellos es sólido).
+- **Vaults nuevos** (`kVaults`): `laberinto` (relojería: engranajes `o`),
+  `grieta` (lava `%` y puentes `=`), `abismo` (islotes; también para
+  `corazon`) y `cementerio` (lápidas `t`). Caracteres extra en vaults: `_`
+  vacío, `=` puente, `%` lava, `t` lápida, `o` engranaje; el borde de un
+  vault puede ser `#`, `+` o `_`.
+- **Misiones** `z6`..`z10` (id = zona; la `m3` del prototipo no vuelve:
+  el Abismo del Tiempo es `z9`). Rango A, `floorGoal` 4, `extra` 2, `sTime`
+  1320 / 1380 / 1440 / 1680 / 1800 s. Grupos por piso con los comunes `A`/`B`
+  de la zona (z6 ecoSombra/guardianReloj, z7 salamandra/golemMagma, z8
+  necrofago/almaErrante, z9 ojoAbismo/vigilanteVacio, z10
+  fragmentoTiempo/heraldoEras): piso 1 `[A,A] [B] [A,B]`; piso 2 además
+  `[B,B]`; piso 3 además `[A,A,A]`; piso 4 además `[B,A,A] [B,B,A]`; piso 5
+  además `[B,B,B]`. Élite: guardianReloj, golemMagma, necrofago,
+  vigilanteVacio, heraldoEras. Jefe + 2 comunes (hechicera + 2 ecoSombra,
+  bestiaMagma + 2 salamandra, espectroCoronado + 2 almaErrante,
+  centinela + 2 ojoAbismo, devorador + 2 fragmentoTiempo).
+- **Niveles nativos** (`kEnemyBaseLevel`): comunes 26 / 31 / 36 / 41 / 46,
+  jefes 30 / 35 / 40 / 45 / 50 (el Devorador pasa de 9 a 50: sus stats del
+  catálogo ahora son de nivel 50). Invocaciones de jefe `ecoHechicera` 30 y
+  `siervoEspectral` 40 (nunca en el campo). `kEnemyFallback` cubre los ids
+  nuevos por si un catálogo reducido no los tiene.
+- **XP**: el bonus del mundo (§ 6.3) baja desde el nivel 30 hasta 1.3 en el
+  50: `worldBonus(L) = 1 + 0.75 × clamp((L − 5)/10) − 0.45 × clamp((L − 30)/20)`.
+  Simulación (`zones_v03_test`: 2 pasadas por zona, 5 grupos por piso con
+  la XP del catálogo, media élite por piso ×3 y el jefe con su grupo):
+  niveles al terminar cada pasada 5, 6 · 8, 10 · 13, 15 · 17, 20 · 23, 26 ·
+  29, 32 · 34, 37 · 39, 41 · 43, 46 · 48, **50** → el 50 llega con la segunda
+  pasada del Corazón del Tiempo (~20 misiones).
+- **Legendario del jefe**: al vencer a un jefe con `EnemyDef.legendaryId`,
+  cada jugador tiene `SessionEngine.bossLegendaryChance = 0.10` de recibir
+  además ese único (nivel de la batalla; `LootDropEvent` con fuente
+  `boss`), aparte del botín normal del jefe.
+
+## 9. API v0.3 para la UI
+
+Nombres estables (la UI puede programar contra esto ya).
+
+### 9.1 Tiles nuevos (`Tile`)
+
+| Char | Constante | Dónde | Sólido | Cómo se ve |
+|---|---|---|---|---|
+| `_` | `Tile.voidTile` | abismo, cementerio, corazón | **no** (se cae) | vacío: negro azulado con estrellas / motas de tiempo que derivan; borde de las islas con canto de roca que cuelga |
+| `=` | `Tile.bridge` | abismo* y grieta | no | puente: tablones con cuerdas (abismo, cementerio), piedra rúnica (corazón), basalto enfriado (grieta) |
+| `%` | `Tile.lava` | grieta | sí | lava animada naranja/roja con brillo (ríos y charcos) |
+| `t` | `Tile.tombstone` | cementerio (pisos y vaults) | sí | lápida gris con musgo / cruz |
+| `o` | `Tile.gear` | vaults del laberinto | sí | engranaje / reloj de pie de bronce |
+
+- `Tile.solidTiles` (`Set<String>`) y `Tile.isWalkable(c)`; el vacío es
+  caminable para el jugador y sólido para los enemigos.
+- En los temas de abismo el `#` que queda es pilar / muro de vault /
+  pilares de la arena: dibujarlo como roca flotante.
+
+### 9.2 Temas (`GameMap.theme`)
+
+`laberinto` (piedra azul pizarra, bronce, pasillos de losa), `grieta`
+(basalto oscuro, suelo de ceniza, lava), `cementerio` (islas de tierra
+gris con pasto seco sobre vacío violeta), `abismo` (islas de roca
+flotante sobre vacío azul profundo), `corazon` (cristal dorado / blanco
+sobre vacío, arena central con círculo rúnico). Sin color propio, la UI
+puede usar el de `fortaleza` (laberinto), `cavernas` (grieta) o `abismo`.
+
+### 9.3 Vacío y caída
+
+- `WorldRules.isVoid(map, tx, ty)` y `WorldRules.overVoid(map, x, y)`
+  (px; el tile bajo el centro es `_`): para animar la caída en el cliente
+  si se quiere. `WorldRules.stepPlayer` deja caminar sobre el vacío (no
+  hay que cambiar el movimiento del cliente).
+- `WorldRules.isSolid/collides/move(..., blockVoid: true)`: el vacío
+  como sólido (lo usan los enemigos y los tests).
+- El host, al ver a un jugador vivo en campo sobre el vacío, lo lleva al
+  spawn del piso actual (época +1, como al cambiar de piso: el cliente
+  adopta la posición nueva) y emite
+  **`FellIntoVoidEvent(playerId, floor)`** (JSON
+  `{'t':'fall','id':…,'f':…}`) + mensaje de sistema
+  `"<nombre> cayó al vacío."`. Sin daño. Sugerido: sonido de caída y
+  fundido corto.
+
+### 9.4 Zonas
+
+- Las 10 zonas son jugables (`ZoneDef.playable`); el mostrador lista
+  `m1, z2, m2, z4, z5, z6, z7, z8, z9, z10`. Desbloqueo igual que § 6.4
+  hasta la zona 10. `ZoneDef.gen` de 7–10: `grieta`, `cementerio`,
+  `abismo`, `corazon`.

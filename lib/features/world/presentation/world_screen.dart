@@ -358,6 +358,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 null => null,
               },
               othersUnlocked: _othersUnlocked(s, r, view.localId),
+              finalVictory: ResultsPanel.isFinalVictory(r),
               loot: [
                 for (final d in view.missionLoot)
                   if (view.me case final me?)

@@ -44,7 +44,7 @@ compensan la ULT): no endurece las peleas, les da ritmo.
 
 - Cada enemigo tiene `breakGauge` 0..`breakMax`. Umbral base
   (`EnemyDef.breakMax`): Limo 25, Murciélago 20, Gólem 50, Espectro 40,
-  Rey Limo 80, Gólem Reloj 150, Devorador 280; × `0.55 + 0.45 ×
+  Rey Limo 80, Gólem Reloj 150, Devorador 910 (v0.3, nivel 50); × `0.55 + 0.45 ×
   jugadores`; élite × 1.5 (`Combatant.breakBase`).
 - **Se llena** con cada golpe del grupo a un enemigo vivo y no quebrado:
   `daño × factor`, redondeado a 0.1:
@@ -100,8 +100,14 @@ compensan la ULT): no endurece las peleas, les da ritmo.
 | Matriarca Araña | `eult_nido` | Nido Venenoso | ATQ × 1.1 a todos + 3 Veneno; con 2+ vivos atrapa en telaraña al de más vida (`EnemyUltExtra.web`) |
 | Sierpe de Escarcha | `eult_aliento` | Aliento Glacial | ATQ × 1.2 a todos + 2 Congelación; rearma los cristales rotos (`reformCrystals`) |
 | Caballero Hueco | `eult_juicio` | Juicio Hueco | ATQ × 1.9 al objetivo + 1 Aturdido; cambia de postura (`stanceShift`) |
+| Hechicera del Eco | `eult_coro` | Coro de Ecos | ATQ × (1.0 + 0.3 por eco vivo) a todos; retrasa a todos `IV × 0.3`; rehace los ecos (`echoChorus`) |
+| Bestia de Magma | `eult_erupcion` | Erupción Total | ATQ × 1.3 a todos + 2 Quemadura; la lava sube 3 turnos (`lavaFlood`) |
+| Espectro Coronado | `eult_lamento` | Lamento Eterno | ATQ × 1.25 a todos + 2 Congelación; completa el séquito (`summonAll`) |
+| Centinela del Vacío | `eult_colapsoVacio` | Colapso del Vacío | ATQ × 1.3 a todos, el marcado sin proteger × 2; marca al de más vida (`voidMark`) |
 
-Mecánicas de cada jefe nuevo: docs/specs/bosses.md § "v0.2".
+Mecánicas de cada jefe nuevo: docs/specs/bosses.md § "v0.2" y § "v0.3".
+El Heraldo de las Eras (común de la zona 10) tiene Furia Élite aunque no
+sea élite. El Devorador de Eras se rebalanceó a nivel 50 (umbral 910).
 
 - Objetivo (a uno): como un golpe normal (Provocar primero, si no al
   azar). Defender reduce a la mitad, Protección desvía cada golpe al
@@ -128,8 +134,8 @@ impacto). Tope de 12 sonidos por paso como siempre.
 
 `Combatant` serializa (opcionales) `brkB`, `brk`, `brkN`, `vul`, `brkS`,
 `eult`, `ultP`; la carga va en `ult` como la de los jugadores. Mecánicas
-de jefe v0.2 (opcionales): `web` (atrapado), `stc` (postura), `stcN`
-(turnos para cambiarla); evento `boss` (`BossMechanicEvent`: `id`, `ph`,
+de jefe v0.2 y v0.3 (opcionales): `web` (atrapado), `stc` (postura), `stcN`
+(turnos para cambiarla), `lava`, `vmk`, `phase`, `mchN`; evento `boss` (`BossMechanicEvent`: `id`, `ph`,
 `tg`, `v`). Eventos:
 `brk` (`BreakEvent`), `eultWarn`, `eult`; `DamageEvent.vulnerable` →
 `vul`. Un estado o evento viejo sin esas claves se lee con los valores

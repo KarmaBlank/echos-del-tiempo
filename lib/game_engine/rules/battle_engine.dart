@@ -79,6 +79,9 @@ class BattleEngine {
   /// Élite: umbral × 1.5.
   static const eliteBreak = 1.5;
 
+  /// Golpe esquivado por un común (Eco Sombrío): solo lo roza.
+  static const evadeFactor = 0.3;
+
   // ---- ULT enemiga ----
   /// Carga por turno propio.
   static const enemyUltPerTurn = 25.0;
@@ -141,9 +144,7 @@ class BattleEngine {
         areaAttack: d.areaAttack,
         pierce: d.pierce,
         inflicts: d.inflicts,
-        breakBase: breakEnabled
-            ? d.breakMax * mult * (el ? eliteBreak : 1)
-            : 0,
+        breakBase: breakEnabled ? d.breakMax * mult * (el ? eliteBreak : 1) : 0,
         ultId: enemyUltsEnabled && catalog.enemyUlts.containsKey(ultId)
             ? ultId
             : null,
@@ -168,18 +169,11 @@ class BattleEngine {
       if (add != null) {
         final n = party.length == 1 ? mech.soloAdds : mech.adds;
         for (var k = 0; k < n; k++) {
-          final hp = jsRound(add.hp * mult);
-          enemies.add(Combatant(
-            id: 'e${enemies.length}',
-            name: add.name,
-            isPlayer: false,
-            hp: hp,
-            maxHp: hp,
-            speed: add.speed,
-            attack: add.attack,
-            critChance: 0,
-            enemyType: add.id,
-          ));
+          final c = addCombatant(add, 'e${enemies.length}', mult, 1);
+          // Las invocaciones que actúan (ecos, séquito) entran a la línea
+          // de tiempo sin tirar dados (docs/specs/bosses.md § "v0.3").
+          if (!add.passive) c.nextTurn = (100 / add.speed) * (0.6 + 0.2 * k);
+          enemies.add(c);
         }
       }
     }
@@ -280,6 +274,26 @@ class BattleEngine {
     s.party.removeWhere((c) => c.id == playerId);
     if (s.currentId == playerId) s.currentId = null;
     return BattleStep(s, const []);
+  }
+
+  /// Una invocación de jefe (cristal, eco, siervo) de tipo [add]: vida ×
+  /// [hpMult], ATQ × [atkMult], sin crítico, quiebre ni ULT.
+  Combatant addCombatant(
+      EnemyDef add, String id, double hpMult, double atkMult) {
+    final hp = math.max(1, jsRound(add.hp * hpMult));
+    return Combatant(
+      id: id,
+      name: add.name,
+      isPlayer: false,
+      hp: hp,
+      maxHp: hp,
+      speed: add.speed,
+      attack: jsRound(add.attack * atkMult),
+      critChance: 0,
+      enemyType: add.id,
+      pierce: add.pierce,
+      inflicts: add.inflicts,
+    );
   }
 
   // ------------------------------------------------------------------
@@ -435,8 +449,12 @@ class _Turn {
   /// contar en el próximo turno del grupo).
   final _brokenNow = <String>{};
 
-  /// Enemigos cuya postura ya bloqueó en este paso (un evento por paso).
+  /// Enemigos cuya postura ya bloqueó en este paso (un evento por paso;
+  /// también los ecos que recibieron daño reducido).
   final _resisted = <String>{};
+
+  /// Jefes cuya inmunidad ya se avisó en este paso.
+  final _immuneShown = <String>{};
 
   BattleStep get result => BattleStep(state, List.unmodifiable(events));
 
@@ -504,7 +522,9 @@ class _Turn {
     }
     if (text != null) state.log = text;
     // Regeneración del arma (afijo `del Renacer`, loot.md § 12).
-    if (best.alive && best.isPlayer && best.regenPerTurn > 0 &&
+    if (best.alive &&
+        best.isPlayer &&
+        best.regenPerTurn > 0 &&
         best.hp < best.maxHp) {
       final h = math.max(1, jsRound(best.maxHp * best.regenPerTurn));
       _heal(best, h);
@@ -623,6 +643,7 @@ class _Turn {
     if (total > 0) {
       _chargeUlt(a, math.min(total, a.hp));
       a.hp = math.max(0, a.hp - total);
+      final shift = !a.isPlayer && _gatePhase(a);
       events.add(DamageEvent(a.id, total,
           fromStatus: true,
           statusSource: burn > 0
@@ -631,6 +652,7 @@ class _Turn {
                   ? StatusKind.poison
                   : StatusKind.holy));
       if (!a.alive) _knockedOut(a);
+      if (shift) _transform(a);
     }
 
     var skip = false;
@@ -674,6 +696,14 @@ class _Turn {
   bool _addStatus(Combatant a, StatusApplication st,
       {int bonus = 0, Combatant? source, bool primary = false}) {
     if (!a.alive) return false;
+    // Séquito del Espectro Coronado: inmune a los estados.
+    if (!a.isPlayer && _immune(a)) {
+      if (_immuneShown.add(a.id)) {
+        events.add(BossMechanicEvent(a.id, BossMechanicPhase.immune));
+        _notes.add('${a.name} es INMUNE a los estados (séquito vivo)');
+      }
+      return false;
+    }
     // Alma de Hielo: no puede aplicar Quemadura.
     if (st.kind == StatusKind.burn &&
         source != null &&
@@ -753,10 +783,13 @@ class _Turn {
     final crit = _rand() < critChance;
     final pmul = pierce ? p.pierceWeakness : 1.0;
     final defp = p.defensePercent;
+    // Marca del Vigilante del Vacío: +daño recibido.
+    final marked = 1 + p.effectTotal(BuffStat.damageTaken);
     final dmg = math.max(
       1,
       jsRound(base *
           (crit ? BattleEngine.enemyCritMultiplier : 1) *
+          marked *
           pmul *
           (p.defending ? 0.5 : 1) *
           (1 - defp)),
@@ -772,7 +805,10 @@ class _Turn {
         critical: crit,
         critMultiplier: BattleEngine.enemyCritMultiplier,
         pierceMultiplier: pmul));
-    if (!p.alive) events.add(KnockedOutEvent(p.id));
+    if (!p.alive) {
+      events.add(KnockedOutEvent(p.id));
+      p.voidMarked = false;
+    }
     if (from != null && p.alive) {
       _fire(ProcTrigger.onHitTaken, p, target: from, amount: dmg);
     }
@@ -909,25 +945,48 @@ class _Turn {
             BossMechanicEvent(e.id, BossMechanicPhase.resisted, value: res));
       }
     }
+    // Ecos de la Hechicera: reciben daño reducido.
+    final echo = _echoFactor(e);
+    if (echo < 1) {
+      mult *= echo;
+      mods.add('× ${fm(echo)} ECO');
+      if (_resisted.add(e.id)) {
+        events.add(
+            BossMechanicEvent(e.id, BossMechanicPhase.echoResist, value: echo));
+      }
+    }
+    // Esquiva de los comunes (solo tira el dado si la tiene).
+    final ev = engine.catalog.enemies[e.enemyType]?.evasion ?? 0;
+    if (primary && ev > 0 && _rand() < ev) {
+      mult *= BattleEngine.evadeFactor;
+      mods.add('× ${fm(BattleEngine.evadeFactor)} ESQUIVA');
+      events.add(BossMechanicEvent(e.id, BossMechanicPhase.evaded));
+    }
     final crit = _rand() < chance;
     final dmg = math.max(1, jsRound(base * (crit ? cm : 1) * mult));
     final breakBonus = a == null ? 0.0 : _breakBonus(a, e);
-    final lost = math.min(dmg, e.hp);
+    final before = e.hp;
+    e.hp = math.max(0, e.hp - dmg);
+    final shift = _gatePhase(e);
+    final lost = before - e.hp;
     _dealt += lost;
     _dealtMaxHp = math.max(_dealtMaxHp, e.maxHp);
-    e.hp = math.max(0, e.hp - dmg);
     events.add(DamageEvent(e.id, dmg,
         critical: crit, critMultiplier: cm, vulnerable: vul));
     if (!e.alive) _knockedOut(e);
+    if (shift) _transform(e);
     _chargeUlt(e, lost);
-    _addBreak(
-        e,
-        dmg *
-            (primary
-                ? (_act?.breakFactor ?? BattleEngine.breakAttack)
-                : BattleEngine.breakSecondary) *
-            (crit ? BattleEngine.breakCrit : 1) *
-            (1 + breakBonus));
+    // La transformación vacía la barra: el golpe que la causa no llena.
+    if (!shift) {
+      _addBreak(
+          e,
+          dmg *
+              (primary
+                  ? (_act?.breakFactor ?? BattleEngine.breakAttack)
+                  : BattleEngine.breakSecondary) *
+              (crit ? BattleEngine.breakCrit : 1) *
+              (1 + breakBonus));
+    }
     final hit = _Hit(dmg, crit, e, mods);
     if (primary && a != null && _act != null) {
       _fire(ProcTrigger.onHit, a, target: e, amount: dmg);
@@ -946,17 +1005,21 @@ class _Turn {
         1,
         jsRound(amount *
             (1 + taken) *
+            _echoFactor(e) *
             (vul ? 1 + BattleEngine.vulnerableBonus : 1)));
-    final lost = math.min(dmg, e.hp);
+    final before = e.hp;
+    e.hp = math.max(0, e.hp - dmg);
+    final shift = _gatePhase(e);
+    final lost = before - e.hp;
     if (owner == _attacker) {
       _dealt += lost;
       _dealtMaxHp = math.max(_dealtMaxHp, e.maxHp);
     }
-    e.hp = math.max(0, e.hp - dmg);
     events.add(DamageEvent(e.id, dmg, sourceId: sourceId, vulnerable: vul));
     if (!e.alive) _knockedOut(e);
+    if (shift) _transform(e);
     _chargeUlt(e, lost);
-    _addBreak(e, dmg * BattleEngine.breakSecondary);
+    if (!shift) _addBreak(e, dmg * BattleEngine.breakSecondary);
     return dmg;
   }
 
@@ -1384,14 +1447,17 @@ class _Turn {
       ..ultPending = false;
     if (e.ultId != null) e.ult = 0;
     _brokenNow.add(e.id);
-    events.add(BreakEvent(e.id, BreakPhase.broken, max, max,
-        cancelledUlt: cancelled));
+    events.add(
+        BreakEvent(e.id, BreakPhase.broken, max, max, cancelledUlt: cancelled));
     final ult = engine.catalog.enemyUlts[e.ultId];
     _notes.add('¡QUIEBRE! ${e.name}: pierde su turno, +50% de daño'
         '${cancelled && ult != null ? ' · ${ult.name} cancelada' : ''}');
-    // Sierpe: el quiebre rompe uno de sus cristales.
+    // Sierpe: el quiebre rompe uno de sus cristales (Hechicera: disipa un
+    // eco).
     final m = _mechanicOf(e);
-    if (m != null && m.addType != null) {
+    if (m != null &&
+        m.addType != null &&
+        (m.kind == BossMechanicKind.frost || m.kind == BossMechanicKind.echo)) {
       final crystal =
           state.enemies.where((c) => c.alive && c.enemyType == m.addType);
       if (crystal.isNotEmpty) {
@@ -1399,7 +1465,9 @@ class _Turn {
         c.hp = 0;
         events.add(
             BossMechanicEvent(e.id, BossMechanicPhase.shatter, targetId: c.id));
-        _notes.add('el quiebre rompe un ${c.name}');
+        _notes.add(m.kind == BossMechanicKind.echo
+            ? 'el quiebre disipa un ${c.name}'
+            : 'el quiebre rompe un ${c.name}');
         _knockedOut(c);
       }
     }
@@ -1443,10 +1511,12 @@ class _Turn {
   /// `enemyAct`. Con ULT (jefes y élites): con la carga llena avisa (pierde
   /// la acción) y en su siguiente turno la lanza.
   void enemyAct(Combatant e) {
-    final alive = _aliveParty.toList();
-    if (alive.isEmpty) return;
+    if (_aliveParty.isEmpty) return;
     final mech = _mechanicOf(e);
     if (mech != null) _mechanicTurn(e, mech);
+    // La lava puede tumbar a alguien al empezar el turno.
+    final alive = _aliveParty.toList();
+    if (alive.isEmpty) return;
     final ult = engine.catalog.enemyUlts[e.ultId];
     if (ult != null) {
       if (e.ultPending) {
@@ -1470,7 +1540,66 @@ class _Turn {
         _castWeb(e, mech, alive)) {
       return;
     }
+    if (mech != null && mech.kind == BossMechanicKind.mark) {
+      // Marca del Vacío: el golpe al marcado, o marcar a alguien.
+      final marked = alive.where((p) => p.voidMarked).firstOrNull;
+      if (marked != null) {
+        _markStrike(e, mech, marked, alive);
+        return;
+      }
+      if (e.actions % mech.every == 0) {
+        _castMark(e, mech, alive);
+        return;
+      }
+    }
+    _basicAttack(e, mech, alive);
+    if (mech != null &&
+        mech.kind == BossMechanicKind.lava &&
+        e.lava <= 0 &&
+        e.actions % mech.every == 0) {
+      _lavaRise(e, mech.turns);
+    }
+  }
 
+  /// Estado que aplica el golpe de [e] (en ciclo si su tipo lo tiene).
+  StatusApplication? _inflictsOf(Combatant e) {
+    final cyc = engine.catalog.enemies[e.enemyType]?.inflictCycle ?? const [];
+    if (cyc.isEmpty) return e.inflicts;
+    return cyc[math.max(0, e.actions - 1) % cyc.length];
+  }
+
+  /// Efectos de los comunes v0.3 sobre el jugador que golpean: retraso
+  /// (Guardián del Reloj, Fragmento) y marca (Vigilante). Texto del log.
+  String _onHitExtras(Combatant e, Combatant p) {
+    final d = engine.catalog.enemies[e.enemyType];
+    if (d == null || !p.alive) return '';
+    var log = '';
+    if (d.delayHit > 0) {
+      p.nextTurn += _iv(p) * d.delayHit;
+      events.add(DelayedEvent(p.id));
+      log += ' · retrasa ${_pct(d.delayHit)}';
+    }
+    if (d.markHit > 0) {
+      const src = 'vigilancia';
+      p.effects = [
+        for (final fx in p.effects)
+          if (!(fx.sourceId == src && fx.stat == BuffStat.damageTaken)) fx,
+        TimedEffect(
+            sourceId: src,
+            stat: BuffStat.damageTaken,
+            value: d.markHit,
+            turns: 2,
+            ownerId: e.id),
+      ];
+      events
+          .add(BuffAppliedEvent(p.id, src, BuffStat.damageTaken, d.markHit, 2));
+      log += ' · marcado +${_pct(d.markHit)} daño recibido (2 turnos)';
+    }
+    return log;
+  }
+
+  /// Ataque normal, Golpe Brutal o Colapso Temporal de [e].
+  void _basicAttack(Combatant e, BossMechanicDef? mech, List<Combatant> alive) {
     final taunter = alive.where((p) => p.taunt > 0).firstOrNull;
     final pick0 = taunter ?? alive[(_rand() * alive.length).floor()];
     if (taunter != null) taunter.taunt--;
@@ -1481,8 +1610,13 @@ class _Turn {
     final protText = protector != null && pick0 != protector
         ? ' (Protección: ${protector.name} recibe el golpe dirigido a ${pick0.name})'
         : '';
-    final inf = e.inflicts;
-    final area = e.areaAttack && e.actions % 3 == 0;
+    final inf = _inflictsOf(e);
+    // Devorador en fase 2: Colapso Temporal cada `every` acciones.
+    final areaEvery =
+        mech != null && mech.kind == BossMechanicKind.phases && e.phase >= 2
+            ? mech.every
+            : 3;
+    final area = e.areaAttack && e.actions % areaEvery == 0;
     events.add(ActionEvent(
       e.id,
       area
@@ -1505,6 +1639,7 @@ class _Turn {
         '${h.critical ? ' × ${fm(BattleEngine.enemyCritMultiplier)} CRÍTICO' : ''}'
         '${h.pierce > 1 ? ' × ${fm(h.pierce)} perforante' : ''}'
         '${p.defending ? ' × ½ defender' : ''}'
+        '${p.effectTotal(BuffStat.damageTaken) > 0 ? ' × ${fm(1 + p.effectTotal(BuffStat.damageTaken))} marca' : ''}'
         '${h.defensePercent > 0 ? ' − ${jsRound(h.defensePercent * 100)}% DEF' : ''}';
     String infText(Combatant p) => p.alive && inf != null
         ? _statusText(inf,
@@ -1539,7 +1674,7 @@ class _Turn {
       guarded(pick, pick0);
       final got = inf != null && _addStatus(pick, inf);
       state.log = '${e.name} · Golpe Brutal → ${pick.name}: ${h.damage} = '
-          '${detail(h, 1.6, pick)}${got ? infText(pick) : ''}$tauntText$protText';
+          '${detail(h, 1.6, pick)}${got ? infText(pick) : ''}$tauntText$protText${_onHitExtras(e, pick)}';
     } else {
       final h = _hurt(pick, atk.toDouble(), e.critChance, e.pierce, from: e);
       guarded(pick, pick0);
@@ -1548,10 +1683,11 @@ class _Turn {
           pick.defending ||
           h.pierce > 1 ||
           h.defensePercent > 0 ||
+          pick.effectTotal(BuffStat.damageTaken) > 0 ||
           atkMod != 0;
       state.log = '${e.name} → ${pick.name}: ${h.damage}'
           '${explain ? ' = ${detail(h, 1, pick)}' : ''}'
-          '${got ? infText(pick) : ''}$tauntText$protText';
+          '${got ? infText(pick) : ''}$tauntText$protText${_onHitExtras(e, pick)}';
     }
   }
 
@@ -1580,6 +1716,16 @@ class _Turn {
         atkMod == 0 ? e.attack : math.max(1, jsRound(e.attack * (1 + atkMod)));
     final atkText = atkMod == 0 ? 'ATQ ${e.attack}' : 'ATQ $atk (debilitado)';
     final crit = ult.guaranteedCrit ? 1.0 : e.critChance;
+    final mech = _mechanicOf(e);
+    // Coro de Ecos: más poder por cada eco vivo.
+    var power = ult.power;
+    if (ult.extra == EnemyUltExtra.echoChorus && mech?.addType != null) {
+      power += ult.perAdd *
+          state.enemies
+              .where((c) => c.alive && c.enemyType == mech!.addType)
+              .length;
+    }
+    final solo = alive.length == 1;
     final parts = <String>[];
     void strike(Combatant p0) {
       final p = victim(p0);
@@ -1587,12 +1733,24 @@ class _Turn {
         parts.add('${p0.name} 0');
         return;
       }
-      final h = _hurt(p, atk * ult.power, crit, e.pierce, from: e);
+      // Colapso del Vacío: el marcado sin proteger recibe × value.
+      var mult = 1.0;
+      if (ult.extra == EnemyUltExtra.voidMark &&
+          mech != null &&
+          p0.voidMarked &&
+          p == p0 &&
+          !(solo && p0.defending)) {
+        mult = solo ? mech.soloValue : mech.value;
+        events.add(BossMechanicEvent(e.id, BossMechanicPhase.markHit,
+            targetId: p0.id, value: mult));
+      }
+      final h = _hurt(p, atk * power * mult, crit, e.pierce, from: e);
       if (p != p0 && p.alive) _fire(ProcTrigger.onProtectHit, p, target: e);
       final st = ult.status;
       if (st != null) _addStatus(p, st);
       final who = p != p0 ? '${p.name} (por ${p0.name})' : p.name;
-      parts.add('$who ${h.damage}${h.critical ? '!' : ''}');
+      parts.add('$who ${h.damage}${h.critical ? '!' : ''}'
+          '${mult != 1 ? ' (MARCA ×${fm(mult)})' : ''}');
     }
 
     if (ult.allTargets) {
@@ -1610,7 +1768,10 @@ class _Turn {
       for (final p in state.party) {
         p.effects = [
           for (final fx in p.effects)
-            if (fx.value <= 0 || fx.stat == BuffStat.stunLock) fx,
+            if (fx.value <= 0 ||
+                fx.stat == BuffStat.stunLock ||
+                fx.stat == BuffStat.damageTaken)
+              fx,
         ];
         if (p.bonusDefense > 0) {
           p.bonusDefense = 0;
@@ -1621,7 +1782,7 @@ class _Turn {
     final extra = _ultExtra(e, ult);
     final st = ult.status;
     state.log = '${e.name} · ULT ${ult.name} '
-        '(${ult.allTargets ? 'todos, ' : ''}$atkText × ${fm(ult.power)}'
+        '(${ult.allTargets ? 'todos, ' : ''}$atkText × ${fm(power)}'
         '${ult.guaranteedCrit ? ' × ${fm(BattleEngine.enemyCritMultiplier)} CRÍTICO' : ''}): '
         '${parts.join(', ')}'
         '${st != null ? _statusText(st) : ''}'
@@ -1666,9 +1827,241 @@ class _Turn {
       case BossMechanicKind.stance:
         e.stanceTurns--;
         if (e.stanceTurns <= 0) _shiftStance(e, m);
-      case BossMechanicKind.web:
+      case BossMechanicKind.echo || BossMechanicKind.summon:
+        _refillTurn(e, m);
+      case BossMechanicKind.lava:
+        _lavaTick(e, m);
+      case BossMechanicKind.web ||
+            BossMechanicKind.mark ||
+            BossMechanicKind.phases:
         break;
     }
+  }
+
+  // ---------------- mecánicas de jefe v0.3 (docs/specs/bosses.md § "v0.3")
+
+  /// Fracción del daño que recibe cada tipo de eco (`ecoHechicera` 0.5).
+  static final Map<String, double> _echoAdds = {
+    for (final m in kBossMechanics.values)
+      if (m.kind == BossMechanicKind.echo && m.addType != null)
+        m.addType!: m.value,
+  };
+
+  /// Fracción del daño que recibe [e] (1 salvo los ecos).
+  double _echoFactor(Combatant e) =>
+      e.isPlayer ? 1 : (_echoAdds[e.enemyType] ?? 1);
+
+  /// Séquito vivo: el jefe es inmune a los estados.
+  bool _immune(Combatant e) {
+    final m = _mechanicOf(e);
+    return m != null &&
+        m.kind == BossMechanicKind.summon &&
+        m.addType != null &&
+        _addsAlive(m.addType!);
+  }
+
+  /// Invocaciones que tiene que tener [m] (con grupo / solo).
+  int _addsMax(BossMechanicDef m) =>
+      state.party.length == 1 ? m.soloAdds : m.adds;
+
+  /// Al empezar su turno: si le faltan invocaciones, cuenta; al llegar a
+  /// `every` turnos, las vuelve a crear.
+  void _refillTurn(Combatant e, BossMechanicDef m) {
+    final type = m.addType;
+    if (type == null) return;
+    final n = state.enemies.where((c) => c.alive && c.enemyType == type).length;
+    if (n >= _addsMax(m)) {
+      e.mechTurns = 0;
+      return;
+    }
+    e.mechTurns++;
+    if (e.mechTurns < m.every) return;
+    e.mechTurns = 0;
+    final k = _summonAdds(e, m);
+    if (k > 0) {
+      _notes.add(m.kind == BossMechanicKind.echo
+          ? '${m.name}: ${e.name} se desdobla en $k eco${k == 1 ? '' : 's'}'
+          : '${m.name}: ${e.name} invoca $k siervo${k == 1 ? '' : 's'}'
+              ' (inmune a estados mientras vivan)');
+    }
+  }
+
+  /// Completa las invocaciones de [boss]: revive las caídas y, si faltan,
+  /// agrega nuevas escaladas como el jefe. Devuelve cuántas volvieron.
+  int _summonAdds(Combatant boss, BossMechanicDef m) {
+    final add = engine.catalog.enemies[m.addType];
+    if (add == null) return 0;
+    final phase = m.kind == BossMechanicKind.echo
+        ? BossMechanicPhase.echoSummon
+        : BossMechanicPhase.summon;
+    final max = _addsMax(m);
+    var alive =
+        state.enemies.where((c) => c.alive && c.enemyType == add.id).length;
+    var n = 0;
+    void entered(Combatant c) {
+      c.nextTurn = state.clock + _iv(c) * 0.5;
+      alive++;
+      n++;
+      events.add(BossMechanicEvent(boss.id, phase, targetId: c.id));
+    }
+
+    for (final c in state.enemies) {
+      if (alive >= max) break;
+      if (c.alive || c.enemyType != add.id) continue;
+      c
+        ..hp = c.maxHp
+        ..statuses = {}
+        ..holyTurns = 0
+        ..effects = []
+        ..actions = 0;
+      entered(c);
+    }
+    final bd = engine.catalog.enemies[boss.enemyType];
+    while (alive < max && bd != null) {
+      final c = engine.addCombatant(add, 'e${state.enemies.length}',
+          boss.maxHp / bd.hp, boss.attack / math.max(1, bd.attack));
+      state.enemies.add(c);
+      entered(c);
+    }
+    return n;
+  }
+
+  /// Al empezar el turno de la Bestia con lava: quema a los que se
+  /// defienden; baja 1 turno.
+  void _lavaTick(Combatant e, BossMechanicDef m) {
+    if (e.lava <= 0) return;
+    final party = _aliveParty.toList();
+    final solo = party.length == 1;
+    final power = solo ? m.soloPower : m.power;
+    final stacks = (solo ? m.soloValue : m.value).round();
+    final atkMod = e.effectTotal(BuffStat.attack);
+    final atk =
+        atkMod == 0 ? e.attack : math.max(1, jsRound(e.attack * (1 + atkMod)));
+    final parts = <String>[];
+    for (final p in party) {
+      if (!p.defending) continue;
+      events.add(BossMechanicEvent(e.id, BossMechanicPhase.lavaBurn,
+          targetId: p.id, value: stacks.toDouble()));
+      // Defender no lo reduce (es el piso); la DEF sí.
+      final dmg = math.max(1, jsRound(atk * power * (1 - p.defensePercent)));
+      final taken = dmg - _absorb(p, dmg);
+      if (taken > 0) {
+        p.ult = math.min(
+            100, p.ult + taken / p.maxHp * 110 * (1 + p.ultChargeBonus));
+      }
+      p.hp = math.max(0, p.hp - taken);
+      events.add(DamageEvent(p.id, taken));
+      if (!p.alive) {
+        events.add(KnockedOutEvent(p.id));
+        p.voidMarked = false;
+      } else {
+        _addStatus(p, StatusApplication(StatusKind.burn, stacks));
+      }
+      parts.add('${p.name} $taken');
+    }
+    if (parts.isNotEmpty) {
+      _notes.add('${m.name}: se queman por defenderse (ATQ $atk × '
+          '${fm(power)} + $stacks Quemadura): ${parts.join(', ')}');
+    }
+    e.lava--;
+    if (e.lava <= 0) {
+      e.lava = 0;
+      events.add(BossMechanicEvent(e.id, BossMechanicPhase.lavaFade));
+      _notes.add('la lava se enfría');
+    }
+  }
+
+  /// La lava sube [turns] turnos de [e].
+  void _lavaRise(Combatant e, int turns) {
+    if (turns <= 0) return;
+    e.lava = math.max(e.lava, turns);
+    events.add(BossMechanicEvent(e.id, BossMechanicPhase.lavaRise,
+        value: e.lava.toDouble()));
+    _notes.add('¡la lava sube ${e.lava} turnos! No te defiendas sobre ella');
+  }
+
+  /// El Centinela marca a un jugador (el provocador si hay).
+  void _castMark(Combatant e, BossMechanicDef m, List<Combatant> alive) {
+    final taunter = alive.where((p) => p.taunt > 0).firstOrNull;
+    final p = taunter ?? alive[(_rand() * alive.length).floor()];
+    if (taunter != null) taunter.taunt--;
+    p.voidMarked = true;
+    events.add(
+        BossMechanicEvent(e.id, BossMechanicPhase.markCast, targetId: p.id));
+    final solo = alive.length == 1;
+    state.log = '${e.name} · ${m.name} → ${p.name}: su próximo golpe pega '
+        '×${fm(solo ? m.soloValue : m.value)} · '
+        '${solo ? 'defendete para contrarrestarla' : 'que un aliado lo proteja'}';
+  }
+
+  /// El golpe al marcado: × value, salvo que otro lo proteja (o, en solo,
+  /// que se esté defendiendo).
+  void _markStrike(
+      Combatant e, BossMechanicDef m, Combatant marked, List<Combatant> alive) {
+    final protector =
+        alive.where((q) => q.protecting && q != marked).firstOrNull;
+    final solo = alive.length == 1;
+    final guarded = protector != null || (solo && marked.defending);
+    final victim = protector ?? marked;
+    final mult = guarded ? 1.0 : (solo ? m.soloValue : m.value);
+    marked.voidMarked = false;
+    events.add(ActionEvent(e.id,
+        guarded ? BattleActionKind.enemyAttack : BattleActionKind.enemyHeavy,
+        targetId: victim.id));
+    events.add(guarded
+        ? BossMechanicEvent(victim.id, BossMechanicPhase.markGuarded,
+            targetId: marked.id)
+        : BossMechanicEvent(e.id, BossMechanicPhase.markHit,
+            targetId: marked.id, value: mult));
+    final atkMod = e.effectTotal(BuffStat.attack);
+    final atk =
+        atkMod == 0 ? e.attack : math.max(1, jsRound(e.attack * (1 + atkMod)));
+    final h = _hurt(victim, atk * mult, e.critChance, e.pierce, from: e);
+    if (protector != null && victim.alive) {
+      _fire(ProcTrigger.onProtectHit, victim, target: e);
+    }
+    final inf = _inflictsOf(e);
+    final got = inf != null && _addStatus(victim, inf);
+    state.log = guarded
+        ? '${e.name} · ${m.name} → ${marked.name}: '
+            '${protector != null ? '${protector.name} lo protege' : 'se defiende'}'
+            ' y la marca se disipa: ${h.damage}'
+            '${got ? _statusText(inf) : ''}'
+        : '${e.name} · ${m.name} → ${marked.name}: ${h.damage} = ATQ $atk × '
+            '${fm(mult)} (MARCA)'
+            '${h.critical ? ' × ${fm(BattleEngine.enemyCritMultiplier)} CRÍTICO' : ''}'
+            '${marked.defending ? ' × ½ defender' : ''}'
+            '${got ? _statusText(inf) : ''}';
+  }
+
+  /// Fases (Devorador): si [e] llegó al umbral, la vida queda en él y
+  /// pasa a la fase 2. `true` si hay que llamar a [_transform] (después
+  /// del `DamageEvent`).
+  bool _gatePhase(Combatant e) {
+    if (e.isPlayer || e.phase >= 2) return false;
+    final m = _mechanicOf(e);
+    if (m == null || m.kind != BossMechanicKind.phases) return false;
+    final gate = (e.maxHp * m.value).ceil();
+    if (e.hp > gate) return false;
+    e
+      ..hp = gate
+      ..phase = 2;
+    return true;
+  }
+
+  /// Transformación: fuera estados y barra, ATQ × power, acciones a 0.
+  void _transform(Combatant e) {
+    final m = _mechanicOf(e);
+    if (m == null) return;
+    e
+      ..statuses = {}
+      ..holyTurns = 0
+      ..attack = jsRound(e.attack * (m.power > 0 ? m.power : 1))
+      ..actions = 0;
+    if (!e.broken) e.breakGauge = 0;
+    events.add(BossMechanicEvent(e.id, BossMechanicPhase.phaseShift, value: 2));
+    _notes.add('¡${e.name} se transforma! FASE 2: pierde sus estados, ATQ '
+        '+${_pct(m.power - 1)} y Colapso Temporal cada ${m.every} acciones');
   }
 
   void _shiftStance(Combatant e, BossMechanicDef m) {
@@ -1722,6 +2115,15 @@ class _Turn {
   /// última invocación, se termina su efecto.
   void _mechanicDeath(Combatant c) {
     final m = _mechanicOf(c);
+    if (m != null && m.kind == BossMechanicKind.mark) {
+      for (final p in state.party) {
+        p.voidMarked = false;
+      }
+    }
+    if (m != null && c.lava > 0) {
+      c.lava = 0;
+      events.add(BossMechanicEvent(c.id, BossMechanicPhase.lavaFade));
+    }
     if (m != null && m.addType != null) {
       for (final a in state.enemies) {
         if (a.alive && a.enemyType == m.addType) {
@@ -1778,8 +2180,8 @@ class _Turn {
     _act = null;
     _attacker = null;
     events.add(ActionEvent(p.id, BattleActionKind.attack, targetId: ally.id));
-    events.add(BossMechanicEvent(p.id, BossMechanicPhase.webFreed,
-        targetId: ally.id));
+    events.add(
+        BossMechanicEvent(p.id, BossMechanicPhase.webFreed, targetId: ally.id));
     state.log = '${p.name} corta la telaraña: ¡${ally.name} queda libre! '
         '(medio turno)';
     tickEffects(p);
@@ -1817,6 +2219,31 @@ class _Turn {
         if (m == null || e.stance == 0) return '';
         _shiftStance(e, m);
         return '';
+      case EnemyUltExtra.echoChorus:
+        if (m == null) return '';
+        e.mechTurns = 0;
+        final n = _summonAdds(e, m);
+        return n == 0 ? '' : ' · vuelven $n eco${n == 1 ? '' : 's'}';
+      case EnemyUltExtra.summonAll:
+        if (m == null) return '';
+        e.mechTurns = 0;
+        final n = _summonAdds(e, m);
+        return n == 0 ? '' : ' · invoca $n siervo${n == 1 ? '' : 's'}';
+      case EnemyUltExtra.lavaFlood:
+        e.lava = math.max(e.lava, ult.turns);
+        events.add(BossMechanicEvent(e.id, BossMechanicPhase.lavaRise,
+            value: e.lava.toDouble()));
+        return ' · ¡la lava sube ${e.lava} turnos!';
+      case EnemyUltExtra.voidMark:
+        for (final p in state.party) {
+          p.voidMarked = false;
+        }
+        final p = _lowest(_aliveParty, (c) => -c.hp.toDouble());
+        if (p == null || m == null) return '';
+        p.voidMarked = true;
+        events.add(BossMechanicEvent(e.id, BossMechanicPhase.markCast,
+            targetId: p.id));
+        return ' · marca a ${p.name}';
     }
   }
 
@@ -1828,8 +2255,7 @@ class _Turn {
     if (foes.isEmpty) return false;
     if (cmd is AttackCommand) {
       // Atacar a un aliado atrapado = liberarlo de la telaraña.
-      final ally =
-          state.party.where((q) => q.id == cmd.targetId).firstOrNull;
+      final ally = state.party.where((q) => q.id == cmd.targetId).firstOrNull;
       if (ally != null) return _freeAlly(p, ally);
     }
     final targetId = switch (cmd) {
@@ -2227,5 +2653,8 @@ class _Turn {
 }
 
 /// Nombre de la postura del Caballero Hueco (`Combatant.stance`).
-String stanceName(int stance) =>
-    stance == 1 ? 'ESCUDO' : stance == 2 ? 'ESPADA' : '—';
+String stanceName(int stance) => stance == 1
+    ? 'ESCUDO'
+    : stance == 2
+        ? 'ESPADA'
+        : '—';

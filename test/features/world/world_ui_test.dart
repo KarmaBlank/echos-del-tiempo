@@ -154,10 +154,22 @@ void main() {
       expect(c.view!.session.vote, isNull);
       expect(c.view!.mode, SessionMode.lobby);
 
-      _toEntrance(c, 6);
-      expect(c.view!.promptLabel, contains('Próximamente'));
+      // v0.3.0: ya no hay "Próximamente"; la 10 también se bloquea.
+      _toEntrance(c, 10);
+      expect(c.view!.promptLabel,
+          contains('Bloqueada: vencé a Centinela del Vacío'));
       c.handleKey(LogicalKeyboardKey.keyE);
       expect(c.view!.session.vote, isNull);
+    });
+
+    test('con todo desbloqueado, la entrada 10 propone z10', () async {
+      c = await _controller(unlockedZone: 10);
+      _toEntrance(c, 10);
+      expect(c.view!.promptLabel,
+          '[E] Entrar: Corazón del Tiempo (Lv 46-50)');
+      c.handleKey(LogicalKeyboardKey.keyE);
+      final s = c.view!.session;
+      expect(s.vote?.missionId ?? s.prep?.missionId, 'z10');
     });
 
     test('con la zona desbloqueada, la entrada 2 propone z2', () async {
@@ -286,7 +298,7 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('zonas: línea de zona, bloqueadas con motivo, próximamente',
+    testWidgets('zonas: línea de zona y bloqueadas con motivo',
         (tester) async {
       final zones = ZoneRules.zoneList(
           _cat, PlayerProfile(name: 'A', classId: 'guerrero'));
@@ -310,11 +322,11 @@ void main() {
       final z2 = tester.widget<PanelButton>(
           find.byKey(const ValueKey('propose-z2')));
       expect(z2.reason, 'Bloqueada');
+      // v0.3.0: las 10 zonas tienen tarjeta (worldgen.md § 9.4).
       for (var i = 6; i <= 10; i++) {
-        await tester.ensureVisible(find.byKey(ValueKey('zone-soon-$i')));
-        expect(find.byKey(ValueKey('zone-soon-$i')), findsOneWidget);
+        expect(find.byKey(ValueKey('zone-soon-$i')), findsNothing);
       }
-      expect(find.textContaining('Próximamente'), findsNWidgets(5));
+      expect(find.textContaining('Próximamente'), findsNothing);
       await tester.ensureVisible(find.byKey(const ValueKey('propose-m1')));
       await tester.tap(find.byKey(const ValueKey('propose-m1')));
       expect(proposed, 'm1');

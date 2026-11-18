@@ -72,6 +72,23 @@ flutter:
     - assets/sprites/enemies/matriarca/
     - assets/sprites/enemies/sierpe/
     - assets/sprites/enemies/caballeroHueco/
+    - assets/sprites/enemies/ecoSombra/
+    - assets/sprites/enemies/guardianReloj/
+    - assets/sprites/enemies/hechicera/
+    - assets/sprites/enemies/ecoHechicera/
+    - assets/sprites/enemies/salamandra/
+    - assets/sprites/enemies/golemMagma/
+    - assets/sprites/enemies/bestiaMagma/
+    - assets/sprites/enemies/necrofago/
+    - assets/sprites/enemies/almaErrante/
+    - assets/sprites/enemies/espectroCoronado/
+    - assets/sprites/enemies/siervoEspectral/
+    - assets/sprites/enemies/vigilanteVacio/
+    - assets/sprites/enemies/ojoAbismo/
+    - assets/sprites/enemies/centinela/
+    - assets/sprites/enemies/heraldoEras/
+    - assets/sprites/enemies/fragmentoTiempo/
+    - assets/sprites/enemies/devoradorFase2/
     - assets/sprites/effects/
     - assets/sprites/tiles/
 

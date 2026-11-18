@@ -295,6 +295,10 @@ const Map<String, Color> kEnemyUltColors = {
   'eult_nido': Color(0xFF9B59B6),
   'eult_aliento': Color(0xFF9FF3FF),
   'eult_juicio': Color(0xFF6FF7FF),
+  'eult_coro': Color(0xFF7FF3FF),
+  'eult_erupcion': Color(0xFFFF7B29),
+  'eult_lamento': Color(0xFFB8C6FF),
+  'eult_colapsoVacio': Color(0xFF9B59FF),
 };
 
 Color enemyUltColor(String? id) => kEnemyUltColors[id] ?? enemyUltBarColor;
@@ -307,6 +311,10 @@ FxElement enemyUltElement(String? id) => switch (id) {
       'eult_nido' => FxElement.poison,
       'eult_aliento' => FxElement.freeze,
       'eult_juicio' => FxElement.arcane,
+      'eult_coro' => FxElement.arcane,
+      'eult_erupcion' => FxElement.burn,
+      'eult_lamento' => FxElement.freeze,
+      'eult_colapsoVacio' => FxElement.arcane,
       _ => FxElement.phys,
     };
 
@@ -325,3 +333,26 @@ const stanceSwordColor = Color(0xFFFF6B6B);
 
 Color stanceColor(int stance) =>
     stance == 1 ? stanceShieldColor : stanceSwordColor;
+
+// ---- v0.3 (docs/specs/bosses.md § "v0.3") ----
+
+/// Brillo de los ecos de la Hechicera.
+const echoColor = Color(0xFF7FF3FF);
+
+/// Lava de la Bestia de Magma (borde / centro).
+const lavaColor = Color(0xFFFF7B29);
+const lavaCoreColor = Color(0xFFFFD166);
+
+/// Aura de inmunidad del Espectro Coronado con su séquito.
+const immuneColor = Color(0xFFB8C6FF);
+
+/// Marca del Vacío del Centinela.
+const voidMarkColor = Color(0xFFB57BFF);
+
+/// Fase 2 del Devorador.
+const phaseColor = Color(0xFFD63031);
+
+/// Escoria y brasas de la lava.
+const kLavaFx = ElementFx(
+    [Color(0xFFFF7B29), Color(0xFFFFD166), Color(0xFFFF4500), Color(0xFF3B3B3B)],
+    12, 80, 160, 0.6, ParticleShape.square);

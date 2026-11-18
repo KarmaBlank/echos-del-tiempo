@@ -154,6 +154,16 @@ List<StatusChip> combatantChips(Combatant p) {
         'libere usando <b>Atacar</b> sobre él (opción "Liberar" del menú). '
         '<span class="k">Solo: forcejea y pierde medio turno.</span>'));
   }
+  if (p.voidMarked && p.alive) {
+    chips.add(const StatusChip(
+        'Marcado ×2',
+        'Marca del Vacío ×2',
+        Color(0xFFB57BFF),
+        '<b style="color:#b57bff">Marca del Vacío</b><br>El próximo golpe del '
+        'Centinela va contra él y pega <b>×2</b>, salvo que otro aliado lo '
+        '<b>Proteja</b>. <span class="k">Solo: Defender también la '
+        'contrarresta.</span>'));
+  }
   chips.addAll(treeEffectChips(p));
   return chips;
 }
@@ -209,6 +219,75 @@ List<StatusChip> bossMechanicChips(BattleState b) {
                     : const Color(0xFFFF6B6B),
             '<b style="color:$hex">Postura de ${shield ? 'escudo' : 'espada'}</b> '
             '<span class="k">($when)</span><br>${m.counter}'));
+
+      // ---- v0.3 (docs/specs/bosses.md § "v0.3") ----
+      case BossMechanicKind.echo || BossMechanicKind.summon:
+        final echo = m.kind == BossMechanicKind.echo;
+        final n = b.enemies.where((c) => c.alive && c.enemyType == m.addType).length;
+        final max = b.party.length == 1 ? m.soloAdds : m.adds;
+        final back = m.every - e.mechTurns;
+        final when = n >= max
+            ? ''
+            : ' · vuelven en $back turno${back == 1 ? '' : 's'}';
+        final (String short, String long, Color col, String hex) = echo
+            ? (
+                'Ecos $n',
+                'Ecos: $n vivo${n == 1 ? '' : 's'} (×${fm(m.value)} daño)$when',
+                const Color(0xFF7FF3FF),
+                '#7ff3ff'
+              )
+            : n > 0
+                ? (
+                    'INMUNE ($n)',
+                    'Séquito $n · INMUNE a estados$when',
+                    const Color(0xFFB8C6FF),
+                    '#b8c6ff'
+                  )
+                : (
+                    'Séquito 0',
+                    'Séquito 0 · los estados entran$when',
+                    ProtoColors.green,
+                    '#7bed9f'
+                  );
+        chips.add(StatusChip(short, long, col,
+            '<b style="color:$hex">${m.name}</b> '
+            '<span class="k">(${protoEsc(e.name)} · $n/$max)</span><br>${m.counter}'));
+      case BossMechanicKind.lava:
+        final up = e.lava > 0;
+        final next = m.every - e.actions % m.every;
+        chips.add(StatusChip(
+            up ? 'LAVA ${e.lava}' : 'Lava en $next',
+            up
+                ? 'LAVA ${e.lava} turno${e.lava == 1 ? '' : 's'} · ¡no te defiendas!'
+                : '${m.name}: sube en $next acci${next == 1 ? 'ón' : 'ones'}',
+            up ? const Color(0xFFFF7B29) : const Color(0xFFFFB142),
+            '<b style="color:#ff7b29">${m.name}</b> '
+            '<span class="k">(${up ? 'activa ${e.lava} turnos' : 'sube en $next acciones'})</span>'
+            '<br>${m.counter}'));
+      case BossMechanicKind.mark:
+        final marked = b.party.where((p) => p.alive && p.voidMarked).firstOrNull;
+        final next = m.every - e.actions % m.every;
+        final x = fm(b.party.length == 1 ? m.soloValue : m.value);
+        chips.add(StatusChip(
+            marked == null ? 'Marca en $next' : 'MARCA ×$x',
+            marked == null
+                ? '${m.name}: marca en $next acci${next == 1 ? 'ón' : 'ones'}'
+                : '${m.name}: ${marked.name} ×$x · ¡protegelo!',
+            const Color(0xFFB57BFF),
+            '<b style="color:#b57bff">${m.name}</b> '
+            '<span class="k">(${marked == null ? 'nadie marcado' : 'marcado: ${protoEsc(marked.name)}'})</span>'
+            '<br>${m.counter}'));
+      case BossMechanicKind.phases:
+        final two = e.phase >= 2;
+        final next = m.every - e.actions % m.every;
+        chips.add(StatusChip(
+            two ? 'FASE 2' : 'FASE 1',
+            two
+                ? 'FASE 2 · Colapso Temporal cada ${m.every} (en $next)'
+                : 'FASE 1 · se transforma al ${jsRound(m.value * 100)}%',
+            two ? const Color(0xFFD63031) : const Color(0xFFE84393),
+            '<b style="color:#d63031">${m.name}</b> '
+            '<span class="k">(${two ? 'fase 2' : 'fase 1'})</span><br>${m.counter}'));
     }
   }
   return chips;
@@ -235,6 +314,7 @@ List<StatusChip> treeEffectChips(Combatant p) {
   String src(TimedEffect e) =>
       kMechanics[e.sourceId]?.name ??
       kBossMechanics[e.sourceId]?.name ??
+      (e.sourceId == 'vigilancia' ? 'Vigilante del Vacío' : null) ??
       e.sourceId;
   String turns(TimedEffect e) => '${e.turns} turno${e.turns == 1 ? '' : 's'}';
   for (final e in p.effects) {

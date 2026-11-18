@@ -102,6 +102,23 @@ const _voidFx = ElementFx([
   Color(0xFFFF7B29),
 ], 14, 60, 0, 0.6, ParticleShape.square);
 
+// v0.3.
+const _echoBits = ElementFx([
+  Color(0xFF7FF3FF),
+  Color(0xFFE8FFFF),
+  Color(0xFFB48CFF),
+], 10, 70, -20, 0.7, ParticleShape.square);
+const _magma = ElementFx([
+  Color(0xFFFF7B29),
+  Color(0xFFFFD166),
+  Color(0xFFFF4500),
+  Color(0xFF3B3B3B),
+], 14, 110, 260, 0.7, ParticleShape.square);
+const _wisps = ElementFx([
+  Color(0xFFB8C6FF),
+  Color(0xFFE8F6FF),
+  Color(0xFF6C7BA8),
+], 10, 50, -40, 0.9, ParticleShape.square);
 /// Diluvio Ácido: la nube revienta sobre el grupo.
 const _acidCloudAt = 1150;
 Offset _acidCloud(UltStage st) =>
@@ -170,6 +187,10 @@ abstract final class UltDirector {
         UltStyle.venomNest => FxElement.poison,
         UltStyle.glacialBreath => FxElement.freeze,
         UltStyle.hollowJudgment => FxElement.arcane,
+        UltStyle.echoChorus => FxElement.arcane,
+        UltStyle.totalEruption => FxElement.burn,
+        UltStyle.eternalLament => FxElement.freeze,
+        UltStyle.voidCollapse => FxElement.arcane,
         UltStyle.spearRain => FxElement.phys,
         UltStyle.arcaneStorm => FxElement.arcane,
         UltStyle.volley => FxElement.phys,
@@ -317,6 +338,43 @@ abstract final class UltDirector {
             p.burstWith(_frostBits, o.dx, o.dy, 0.5);
           }
         }
+      case UltStyle.echoChorus:
+        // Cada eco canta: ondas que salen del lanzador.
+        if (a < s.buildMs) {
+          final slot = (a / 200).floor();
+          if (once('note$slot')) {
+            p.burstWith(_echoBits, c.dx + st.dir * 10, c.dy - 22, 0.5);
+            if (!u.skipped) p.addShake(0.8);
+          }
+        }
+      case UltStyle.totalEruption:
+        if (a < s.buildMs) {
+          final slot = (a / 120).floor();
+          if (once('rumble$slot')) {
+            p.burstWith(_magma, c.dx + (slot.isEven ? -16 : 16), c.dy, 0.4);
+            if (!u.skipped) p.addShake(1 + a / s.buildMs * 2);
+          }
+        }
+      case UltStyle.eternalLament:
+        if (a < s.buildMs) {
+          final slot = (a / 140).floor();
+          if (once('wail$slot')) {
+            p.burstWith(_wisps, c.dx, c.dy - 24, 0.5);
+            if (!u.skipped) p.addShake(0.6);
+          }
+        }
+      case UltStyle.voidCollapse:
+        if (a < s.buildMs) {
+          final slot = (a / 130).floor();
+          if (once('pull$slot')) {
+            final v = _voidHole(u, a, st);
+            p.burstWith(_voidFx, v.dx, v.dy, 0.5);
+            if (!u.skipped) p.addShake(1 + a / s.buildMs * 2);
+          }
+        }
+        if (a >= s.impactMs - 40 && once('collapse') && !u.skipped) {
+          p.addShake(6);
+        }
       case UltStyle.hollowJudgment:
         // La espada fantasma aparece sobre el objetivo.
         if (a >= s.buildMs + 120 && once('summon') && n > 0) {
@@ -428,6 +486,20 @@ abstract final class UltDirector {
           p.burst(g.dx, g.dy - 10, FxElement.freeze, 4);
           p.burstWith(_frostBits, g.dx, g.dy - 8, 1.6);
           p.burstWith(_sparks, g.dx, g.dy - 10, 0.8);
+        case UltStyle.echoChorus:
+          p.burst(g.dx, g.dy - 10, FxElement.arcane, 3.5);
+          p.burstWith(_echoBits, g.dx, g.dy - 12, 1.6);
+        case UltStyle.totalEruption:
+          p.burst(g.dx, g.dy - 6, FxElement.burn, 4);
+          p.burstWith(_magma, g.dx, g.dy - 4, 2);
+          p.burstWith(_debris, g.dx, g.dy - 2, 0.8);
+        case UltStyle.eternalLament:
+          p.burst(g.dx, g.dy - 10, FxElement.freeze, 3.5);
+          p.burstWith(_wisps, g.dx, g.dy - 8, 1.6);
+        case UltStyle.voidCollapse:
+          p.burstWith(_voidFx, g.dx, g.dy - 12, 2);
+          p.burst(g.dx, g.dy - 10, FxElement.arcane, 3);
+          p.burstWith(_sparks, g.dx, g.dy - 10, 1.2);
         case UltStyle.hollowJudgment:
           p.burst(g.dx, g.dy - 10, FxElement.arcane, 4);
           p.burst(g.dx, g.dy - 6, FxElement.phys, 3);
@@ -582,6 +654,14 @@ abstract final class UltDirector {
         _glacialBreath(c, u, a, st, visible, out);
       case UltStyle.hollowJudgment:
         _hollowJudgment(c, u, a, st, visible, out);
+      case UltStyle.echoChorus:
+        _echoChorus(c, u, a, st, visible, out);
+      case UltStyle.totalEruption:
+        _totalEruption(c, u, a, st, visible, out);
+      case UltStyle.eternalLament:
+        _eternalLament(c, u, a, st, visible, out);
+      case UltStyle.voidCollapse:
+        _voidCollapse(c, u, a, st, visible, out);
       case UltStyle.spearRain:
         _spearRain(c, u, a, st, visible, out);
       case UltStyle.arcaneStorm:
@@ -2082,6 +2162,315 @@ abstract final class UltDirector {
               _a(mint, 1 - e), 2);
         }
         _ring(c, g, 55 * e, 28 * e, _a(const Color(0xFFFFFFFF), 1 - e), 2);
+      }
+    }
+  }
+
+  // ---------------- ULT de los jefes v0.3 ----------------
+
+  /// Coro de Ecos (Hechicera del Eco): siluetas de la Hechicera la rodean
+  /// cantando; las ondas del coro cruzan el campo y resuenan en cada
+  /// objetivo.
+  static void _echoChorus(Canvas c, UltCinematic u, double a, UltStage st,
+      Rect vis, double out) {
+    final s = u.script;
+    final o = st.caster;
+    const cyan = Color(0xFF7FF3FF);
+    const lilac = Color(0xFFB48CFF);
+    const pale = Color(0xFFE8FFFF);
+    _gather(c, o, a, s.buildMs, cyan);
+    final tint = s.darkness(a) * 0.14;
+    if (tint > 0) {
+      _fill.color = Color.fromRGBO(40, 20, 80, tint);
+      c.drawRect(vis, _fill);
+    }
+    if (a < s.buildMs + 200) {
+      // Siluetas de eco (cabeza + túnica) en círculo, que titilan.
+      final g = _ease(_q(a, 0, 400));
+      final fade = 1 - _q(a, s.buildMs, 200);
+      for (var k = 0; k < 6; k++) {
+        final ang = a / 500 + k * math.pi / 3;
+        final p = o.translate(math.cos(ang) * 30 * g, -14 + math.sin(ang) * 10 * g);
+        final al = (0.35 + 0.35 * math.sin(a / 70 + k)) * g * fade;
+        final path = Path()
+          ..moveTo(p.dx, p.dy - 12)
+          ..lineTo(p.dx - 5, p.dy + 6)
+          ..lineTo(p.dx + 5, p.dy + 6)
+          ..close();
+        _fill.color = _a(k.isEven ? cyan : lilac, al);
+        c.drawPath(path, _fill);
+        _disc(c, p.translate(0, -12), 2.5, _a(pale, al));
+      }
+      // Ondas del canto que salen de la Hechicera.
+      for (var k = 0; k < 3; k++) {
+        final q = ((a / 450) + k / 3) % 1.0;
+        _ring(c, o.translate(0, -16), 10 + 40 * q, 6 + 20 * q,
+            _a(cyan, (1 - q) * 0.7 * fade), 1);
+      }
+    }
+    if (st.targets.isEmpty) return;
+    // Ondas que viajan al grupo (arcos en abanico).
+    if (a >= s.buildMs && a < s.returnAt) {
+      final from = o.translate(st.dir * 10, -16);
+      for (var k = 0; k < 5; k++) {
+        final q = _q(a, s.buildMs + k * 70, 420);
+        if (q <= 0 || q >= 1) continue;
+        final ctr = Offset.lerp(from, st.centroid.translate(0, -12), q)!;
+        final r = 8 + 26 * q;
+        _stroke
+          ..strokeWidth = 2
+          ..color = _a(k.isEven ? cyan : lilac, (1 - q * 0.6) * out);
+        c.drawArc(Rect.fromCenter(center: ctr, width: r * 1.2, height: r * 2.2),
+            st.dir > 0 ? -math.pi / 3 : math.pi * 2 / 3, math.pi * 2 / 3, false, _stroke);
+      }
+    }
+    // Resonancia en cada objetivo: anillos concéntricos y notas.
+    for (var i = 0; i < st.targets.length; i++) {
+      final g = st.targets[i];
+      final imp = s.impactFor(i);
+      if (a < imp) continue;
+      final e = _q(a, imp, 520);
+      if (e >= 1) continue;
+      for (var k = 0; k < 3; k++) {
+        final q = (e * 1.4 - k * 0.2).clamp(0.0, 1.0);
+        _ring(c, g.translate(0, -10), 6 + 24 * q, 4 + 12 * q,
+            _a(k == 1 ? lilac : cyan, (1 - q) * out), 2);
+      }
+      for (var k = 0; k < 3; k++) {
+        final n = g.translate((k - 1) * 9.0, -26 - 16 * e - k * 3);
+        _fill.color = _a(pale, (1 - e) * out);
+        c.drawRect(Rect.fromLTWH(n.dx, n.dy, 2, 2), _fill);
+        c.drawRect(Rect.fromLTWH(n.dx + 1, n.dy - 5, 1, 5), _fill);
+      }
+    }
+  }
+
+  /// Erupción Total (Bestia de Magma): el piso se agrieta y enrojece;
+  /// columnas de lava revientan bajo cada objetivo y llueven rocas.
+  static void _totalEruption(Canvas c, UltCinematic u, double a, UltStage st,
+      Rect vis, double out) {
+    final s = u.script;
+    final o = st.caster;
+    const lava = Color(0xFFFF7B29);
+    const core = Color(0xFFFFD166);
+    const crust = Color(0xFF3A1206);
+    _gather(c, o, a, s.buildMs, lava);
+    final tint =
+        s.darkness(a) * (a < s.buildMs ? 0.2 * _q(a, 100, 700) : 0.22);
+    if (tint > 0) {
+      _fill.color = Color.fromRGBO(120, 25, 0, tint);
+      c.drawRect(vis, _fill);
+    }
+    // Grietas incandescentes de la Bestia hacia el grupo.
+    if (st.targets.isNotEmpty) {
+      final grow = _ease(_q(a, 150, s.buildMs - 150));
+      for (var i = 0; i < st.targets.length; i++) {
+        final g = st.targets[i];
+        final pts = _fissure(o, g, 31 + i);
+        final n = (pts.length * grow).floor();
+        for (var k = 1; k < n; k++) {
+          _line(c, pts[k - 1], pts[k], _a(crust, 0.9 * out), 3);
+          _line(c, pts[k - 1], pts[k],
+              _a(lava, (0.6 + 0.4 * math.sin(a / 60 + k)) * out), 1);
+        }
+      }
+    }
+    if (a < s.buildMs) {
+      // La melena de fuego crece.
+      final g = _ease(_q(a, 0, s.buildMs));
+      for (var k = 0; k < 8; k++) {
+        final f = ((a / 300) + _h(k, 4)) % 1.0;
+        final p = o.translate((_h(k, 8) - 0.5) * 30, -18 - f * 24 * g);
+        _disc(c, p, 2.5 * (1 - f) + 0.5, _a(k.isEven ? lava : core, (1 - f) * g));
+      }
+    }
+    if (st.targets.isEmpty) return;
+    // Rocas que caen.
+    if (a >= s.buildMs && a < s.returnAt) {
+      for (var k = 0; k < scaledCount(12, density); k++) {
+        final t0 = s.buildMs + (k * 61) % 700;
+        final q = (a - t0) / 380;
+        if (q < 0 || q > 1) continue;
+        final g = st.targets[k % st.targets.length];
+        final x = g.dx + (_h(k, 2) - 0.5) * 40;
+        final y = vis.top + (g.dy - vis.top) * q;
+        _fill.color = _a(const Color(0xFF4A3B35), out);
+        c.drawRect(Rect.fromCenter(center: Offset(x, y), width: 4, height: 4), _fill);
+        _fill.color = _a(lava, 0.8 * out);
+        c.drawRect(Rect.fromCenter(center: Offset(x, y - 3), width: 2, height: 3), _fill);
+      }
+    }
+    // Columnas de lava bajo cada objetivo.
+    for (var i = 0; i < st.targets.length; i++) {
+      final g = st.targets[i];
+      final imp = s.impactFor(i);
+      if (a < imp - 160) continue;
+      final pre = _q(a, imp - 160, 160);
+      _oval(c, g.translate(0, 1), 12 * pre + 2, 4 * pre + 1, _a(lava, 0.8 * out));
+      if (a < imp) continue;
+      final e = _q(a, imp, 600);
+      final hgt = 50 *
+          math.sin(math.min(1.0, e * 2) * math.pi / 2) *
+          (1 - _q(a, imp + 380, 220));
+      _fill.color = _a(lava, 0.9 * out);
+      c.drawRect(Rect.fromLTWH(g.dx - 6, g.dy - hgt, 12, hgt), _fill);
+      _fill.color = _a(core, 0.95 * out);
+      c.drawRect(Rect.fromLTWH(g.dx - 2, g.dy - hgt, 4, hgt), _fill);
+      if (e < 1) _ring(c, g, 30 * _ease(e), 10 * _ease(e), _a(core, 1 - e), 2);
+    }
+  }
+
+  /// Lamento Eterno (Espectro Coronado): rostros que gimen giran en torno
+  /// a su corona; una ola espectral barre al grupo y manos de escarcha los
+  /// atrapan desde el piso.
+  static void _eternalLament(Canvas c, UltCinematic u, double a, UltStage st,
+      Rect vis, double out) {
+    final s = u.script;
+    final o = st.caster;
+    const ghost = Color(0xFFB8C6FF);
+    const pale = Color(0xFFE8F6FF);
+    const gold = Color(0xFFE1B12C);
+    _gather(c, o, a, s.buildMs, ghost);
+    final tint = s.darkness(a) * 0.18;
+    if (tint > 0) {
+      _fill.color = Color.fromRGBO(20, 30, 60, tint);
+      c.drawRect(vis, _fill);
+    }
+    if (a < s.buildMs + 100) {
+      final g = _ease(_q(a, 0, 350));
+      // Corona que brilla.
+      if (a > 300) {
+        final q = _q(a, 300, 400);
+        _star(c, o.translate(0, -38), 2 + 6 * math.sin(q * math.pi), _a(gold, 1));
+      }
+      // Rostros que gimen (óvalos con ojos y boca) en espiral.
+      for (var k = 0; k < 7; k++) {
+        final ang = -a / 420 + k * math.pi * 2 / 7;
+        final r = (36 - 10 * _q(a, 0, s.buildMs)) * g;
+        final p = o.translate(math.cos(ang) * r, -18 + math.sin(ang) * r * 0.45);
+        final al = 0.55 * g;
+        _oval(c, p, 3.5, 4.5, _a(pale, al));
+        _fill.color = _a(const Color(0xFF2B2D42), math.min(1.0, al * 1.4));
+        c.drawRect(Rect.fromLTWH(p.dx - 2, p.dy - 2, 1, 1), _fill);
+        c.drawRect(Rect.fromLTWH(p.dx + 1, p.dy - 2, 1, 1), _fill);
+        c.drawRect(Rect.fromLTWH(p.dx - 1, p.dy + 1, 2, 2), _fill);
+      }
+    }
+    if (st.targets.isEmpty) return;
+    // Ola espectral que barre hacia el grupo.
+    if (a >= s.buildMs && a < s.impactMs + 200) {
+      final q = _ease(_q(a, s.buildMs, s.impactMs - s.buildMs));
+      final x = o.dx + (st.centroid.dx - o.dx) * q;
+      final half = st.targets.fold<double>(
+              0, (m, t) => math.max(m, (t.dy - st.centroid.dy).abs())) +
+          24;
+      for (var k = 0; k < 14; k++) {
+        final y = st.centroid.dy - half + k * half * 2 / 13;
+        final wob = math.sin(a / 80 + k) * 4;
+        _fill.color = _a(k.isEven ? ghost : pale, 0.55 * out);
+        c.drawRect(Rect.fromLTWH(x + wob - st.dir * 10, y - 6, 8, 10), _fill);
+        _line(c, Offset(x + wob - st.dir * 10, y),
+            Offset(x + wob - st.dir * 30, y + 2), _a(ghost, 0.3 * out), 1);
+      }
+    }
+    // Manos de escarcha que suben bajo cada objetivo.
+    for (var i = 0; i < st.targets.length; i++) {
+      final g = st.targets[i];
+      final imp = s.impactFor(i);
+      if (a < imp) continue;
+      final e = _q(a, imp, 600);
+      final up = _ease(_q(a, imp, 160)) * (1 - _q(a, imp + 420, 180)) * out;
+      for (final side in [-1.0, 1.0]) {
+        final base = g.translate(side * 6, 2);
+        final top = base.translate(side * 1, -16 * up);
+        _line(c, base, top, _a(ghost, 0.9 * up), 3);
+        for (var f = -1; f <= 1; f++) {
+          _line(c, top, top.translate(f * 2.0 - side, -4 * up),
+              _a(pale, 0.9 * up), 1);
+        }
+      }
+      if (e < 1) {
+        _ring(c, g.translate(0, -6), 26 * _ease(e), 12 * _ease(e),
+            _a(pale, 1 - e), 2);
+      }
+    }
+  }
+
+  /// Colapso del Vacío: dónde está el agujero negro (sobre el lanzador en
+  /// la preparación, viaja sobre el grupo en la descarga).
+  static Offset _voidHole(UltCinematic u, double a, UltStage st) {
+    final s = u.script;
+    final home = st.caster.translate(0, -44);
+    final over =
+        Offset(st.centroid.dx, _topOf(st.targets, st.centroid.dy) - 34);
+    final q = _ease(_q(a, s.buildMs, 360));
+    return Offset.lerp(home, over, q)!;
+  }
+
+  /// Colapso del Vacío (Centinela): un agujero negro con disco violeta se
+  /// forma sobre el Centinela, curva la luz hacia él, viaja sobre el grupo
+  /// y colapsa; rayos del vacío y esquirlas en cada objetivo.
+  static void _voidCollapse(Canvas c, UltCinematic u, double a, UltStage st,
+      Rect vis, double out) {
+    final s = u.script;
+    const violet = Color(0xFF9B59FF);
+    const glow = Color(0xFFC7A6FF);
+    const black = Color(0xFF07040E);
+    final hole = _voidHole(u, a, st);
+    final tint = s.darkness(a) * 0.24;
+    if (tint > 0) {
+      _fill.color = Color.fromRGBO(15, 5, 35, tint);
+      c.drawRect(vis, _fill);
+    }
+    final grow = _ease(_q(a, 0, s.buildMs));
+    final collapse = _q(a, s.impactMs - 120, 160);
+    final r = (4 + 14 * grow) * (1 - collapse);
+    if (r > 0.5 && a < s.impactMs + 60) {
+      // Luz que se curva hacia el agujero.
+      for (var k = 0; k < 16; k++) {
+        final f = ((a / 360) + _h(k, 5)) % 1.0;
+        final ang = k * math.pi / 8 + f * 1.2;
+        final d = Offset(math.cos(ang), math.sin(ang) * 0.6);
+        final r1 = r + 50 * (1 - f);
+        _line(c, hole + d * r1, hole + d * (r1 + 6), _a(glow, 0.7 * f * out), 1);
+      }
+      // Disco de acreción.
+      _stroke
+        ..strokeWidth = 3
+        ..color = _a(violet, 0.8 * out);
+      c.drawOval(Rect.fromCenter(center: hole, width: r * 3.6, height: r * 1.1),
+          _stroke);
+      _disc(c, hole, r + 1.5, _a(glow, 0.8 * out));
+      _disc(c, hole, r, _a(black, out));
+    }
+    if (st.targets.isEmpty) return;
+    // Colapso: onda que se abre.
+    if (a >= s.impactMs - 40 && a < s.impactMs + 500) {
+      final e = _q(a, s.impactMs - 40, 540);
+      _ring(c, hole, 10 + 80 * e, 5 + 36 * e, _a(glow, 1 - e), 3);
+      _ring(c, hole, 6 + 50 * e, 3 + 22 * e,
+          _a(const Color(0xFFFFFFFF), 1 - e), 1);
+    }
+    // Cada objetivo: rayo del vacío desde el agujero y esquirlas.
+    for (var i = 0; i < st.targets.length; i++) {
+      final g = st.targets[i];
+      final imp = s.impactFor(i);
+      if (a < imp - 80 || a > imp + 420) continue;
+      final e = _q(a, imp - 80, 500);
+      _line(c, hole, g.translate(0, -10), _a(violet, (1 - e) * out), 3);
+      _line(c, hole, g.translate(0, -10), _a(glow, (1 - e) * out), 1);
+      for (var k = 0; k < 6; k++) {
+        final ang = k * math.pi / 3 + e * 2;
+        final p = g.translate(
+            math.cos(ang) * 18 * e, -10 + math.sin(ang) * 10 * e);
+        final path = Path()
+          ..moveTo(p.dx, p.dy - 3)
+          ..lineTo(p.dx + 2, p.dy)
+          ..lineTo(p.dx, p.dy + 3)
+          ..lineTo(p.dx - 2, p.dy)
+          ..close();
+        _fill.color = _a(k.isEven ? violet : black, (1 - e) * out);
+        c.drawPath(path, _fill);
       }
     }
   }

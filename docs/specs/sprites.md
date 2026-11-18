@@ -29,7 +29,15 @@ carga real desde el bundle).
     `bat`, `golem`, `ghost`, `reyLimo`, `golemReloj`, `devorador` (del
     prototipo) y, desde v0.2, `arana`, `lobo`, `murcielagoHielo`,
     `elementalEscarcha`, `esqueleto`, `caballeroCaido`, `cristalHielo`,
-    `matriarca`, `sierpe`, `caballeroHueco` (arte propio, mismo pipeline).
+    `matriarca`, `sierpe`, `caballeroHueco` (arte propio, mismo pipeline);
+    desde v0.3, `ecoSombra`, `guardianReloj`, `hechicera`, `ecoHechicera`
+    (misma grilla que la Hechicera, paleta cian), `salamandra`,
+    `golemMagma`, `bestiaMagma`, `necrofago`, `almaErrante`,
+    `espectroCoronado`, `siervoEspectral`, `vigilanteVacio`, `ojoAbismo`,
+    `centinela`, `heraldoEras`, `fragmentoTiempo` y `devoradorFase2` (el
+    Devorador transformado: no es un tipo de enemigo, la escena lo usa con
+    `Combatant.phase == 2` vía `enemySpriteId`). Grillas, paletas y
+    escalas: docs/specs/bosses.md § "v0.3" › "Sprites".
 - Cada carpeta nueva bajo `assets/sprites/` tiene que figurar en
   `flutter: assets:` de `pubspec.yaml` (los directorios de assets de
   Flutter NO son recursivos).
@@ -127,7 +135,8 @@ Colores extra v0.2 (`enemyExtraPalettes`):
 La escala vive en el manifest (`enemies.<tipo>.scale`, por defecto 1) y se
 lee con `SpriteCatalog.enemyScale`. Si el enemigo flota (los de forma
 base `bat` o `ghost`: `bat`, `ghost`, `devorador`; en v0.2,
-`murcielagoHielo`) el manifest lo marca
+`murcielagoHielo`; en v0.3, `ecoSombra`, `almaErrante`, `espectroCoronado`,
+`siervoEspectral`, `ojoAbismo`, `fragmentoTiempo`, `devoradorFase2`) el manifest lo marca
 con `enemies.<tipo>.float: true` (`SpriteCatalog.enemyFloats`). Los jefes reusan la forma base con su
 propio color: son PNG propios, no un tinte en runtime.
 

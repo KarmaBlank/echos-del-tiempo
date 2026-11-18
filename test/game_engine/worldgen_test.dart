@@ -16,7 +16,10 @@ Set<(int, int)> _reach(GameMap m, int sx, int sy, {required bool gateOpen}) {
     final (x, y) = stack.removeLast();
     for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
       final n = (x + dx, y + dy);
-      if (WorldRules.isSolid(m, n.$1, n.$2, gateOpen: gateOpen)) continue;
+      // Sin pisar el vacío (caminar sin caerse).
+      if (WorldRules.isSolid(m, n.$1, n.$2, gateOpen: gateOpen, blockVoid: true)) {
+        continue;
+      }
       if (seen.add(n)) stack.add(n);
     }
   }
@@ -96,17 +99,23 @@ void main() {
 
   group('vaults', () {
     test('3–4 por tipo, filas parejas, borde de muro o abertura, con cofre', () {
-      for (final type in ['bosque', 'ruinas', 'cavernas', 'fortaleza']) {
+      const old = ['bosque', 'ruinas', 'cavernas', 'fortaleza'];
+      for (final type in [...old, 'laberinto', 'grieta', 'abismo', 'cementerio']) {
         final list = kVaults[type]!;
+        final v3 = !old.contains(type);
         expect(list.length, inInclusiveRange(3, 4), reason: type);
         for (final v in list) {
           expect(v.rows.every((r) => r.length == v.width), isTrue, reason: v.id);
           for (var y = 0; y < v.height; y++) {
             for (var x = 0; x < v.width; x++) {
               final c = v.rows[y][x];
-              expect('#:,~+ce'.contains(c), isTrue, reason: '${v.id} "$c"');
+              expect((v3 ? '#:,~+ce_=%to' : '#:,~+ce').contains(c), isTrue,
+                  reason: '${v.id} "$c"');
               final edge = x == 0 || y == 0 || x == v.width - 1 || y == v.height - 1;
-              if (edge) expect('#+'.contains(c), isTrue, reason: '${v.id} borde');
+              if (edge) {
+                expect((v3 ? '#+_' : '#+').contains(c), isTrue,
+                    reason: '${v.id} borde');
+              }
             }
           }
           expect(v.rows.join().contains('c'), isTrue, reason: v.id);
@@ -121,6 +130,11 @@ void main() {
       expect(ZoneGenerators.vaultType(ZoneGen.ruinas), 'ruinas');
       expect(ZoneGenerators.vaultType(ZoneGen.cavernas), 'cavernas');
       expect(ZoneGenerators.vaultType(ZoneGen.fortaleza), 'fortaleza');
+      expect(ZoneGenerators.vaultType(ZoneGen.laberinto), 'laberinto');
+      expect(ZoneGenerators.vaultType(ZoneGen.grieta), 'grieta');
+      expect(ZoneGenerators.vaultType(ZoneGen.abismo), 'abismo');
+      expect(ZoneGenerators.vaultType(ZoneGen.corazon), 'abismo');
+      expect(ZoneGenerators.vaultType(ZoneGen.cementerio), 'cementerio');
     });
   });
 
@@ -150,7 +164,7 @@ void main() {
             // Todo lo caminable del piso se alcanza (con la barrera abierta).
             for (var y = f.bounds.y; y < f.bounds.y + f.bounds.h; y++) {
               for (var x = f.bounds.x; x < f.bounds.x + f.bounds.w; x++) {
-                if (!WorldRules.isSolid(m, x, y, gateOpen: true)) {
+                if (!WorldRules.isSolid(m, x, y, gateOpen: true, blockVoid: true)) {
                   expect(open.contains((x, y)), isTrue,
                       reason: '$why: ($x,$y) aislado');
                 }
@@ -227,6 +241,96 @@ void main() {
         expect(f.arena!.y, g.arena!.y);
         expect(f.spawn, WorldPoint(g.spawn.x + ox * 16, g.spawn.y));
         ox += g.width + MapGenerator.floorGap;
+      }
+    });
+
+    test('v0.3: tiles de cada generador y vacío/lava donde corresponde', () {
+      const v2 = {'#', '.', ',', '~', 'G', '>', '<', ':'};
+      final want = <int, Set<String>>{
+        6: {...v2, 'o'},
+        7: {...v2, '%', '='},
+        8: {...v2, '_', '=', 't'},
+        9: {...v2, '_', '='},
+        10: {...v2, '_', '='},
+      };
+      for (final zi in [6, 7, 8, 9, 10]) {
+        final z = kZones[zi - 1];
+        final seen = <String>{};
+        for (final seed in _seeds.take(12)) {
+          final m = MapGenerator.zone(z, seed);
+          for (final f in m.floors) {
+            for (var y = f.bounds.y; y < f.bounds.y + f.bounds.h; y++) {
+              seen.addAll(m.rows[y]
+                  .substring(f.bounds.x, f.bounds.x + f.bounds.w)
+                  .split(''));
+            }
+          }
+        }
+        expect(want[zi]!.containsAll(seen), isTrue,
+            reason: 'zona $zi: ${seen.difference(want[zi]!)}');
+      }
+      // Lo característico aparece.
+      String all(int zi) => [
+            for (final s in _seeds.take(6)) ...MapGenerator.zone(kZones[zi - 1], s).rows,
+          ].join();
+      expect(all(7).contains(Tile.lava), isTrue);
+      expect(all(7).contains(Tile.bridge), isTrue);
+      expect(all(8).contains(Tile.tombstone), isTrue);
+      for (final zi in [8, 9, 10]) {
+        expect(all(zi).contains(Tile.voidTile), isTrue, reason: 'zona $zi');
+        expect(all(zi).contains(Tile.bridge), isTrue, reason: 'zona $zi');
+      }
+      expect(all(6).contains(Tile.voidTile), isFalse);
+      expect(all(7).contains(Tile.voidTile), isFalse);
+    });
+
+    test('abismo: la arena es una isla (vacío alrededor) y el vacío se pisa', () {
+      for (final zi in [8, 9, 10]) {
+        final m = MapGenerator.zone(kZones[zi - 1], 4242);
+        for (final f in m.floors) {
+          final ar = f.arena!;
+          // Fuera de la barrera y el tramo de entrada, el anillo es vacío.
+          var voids = 0, ring = 0;
+          for (var x = ar.x - 1; x <= ar.x + ar.w; x++) {
+            for (final y in [ar.y - 1, ar.y + ar.h]) {
+              ring++;
+              if (m.tileAt(x, y) == Tile.voidTile) voids++;
+            }
+          }
+          expect(voids, greaterThan(ring ~/ 2), reason: 'zona $zi piso ${f.index}');
+          final sp = _tile(f.spawn);
+          expect(m.tileAt(sp.$1, sp.$2), isNot(Tile.voidTile));
+        }
+        // Vacío: caminable para el jugador, sólido para enemigos.
+        final f0 = m.floors.first;
+        (int, int)? v;
+        for (var y = f0.bounds.y; y < f0.bounds.h && v == null; y++) {
+          final x = m.rows[y].indexOf(Tile.voidTile);
+          if (x >= 0 && x < f0.bounds.w) v = (x, y);
+        }
+        expect(v, isNotNull);
+        expect(WorldRules.isSolid(m, v!.$1, v.$2), isFalse);
+        expect(WorldRules.isSolid(m, v.$1, v.$2, blockVoid: true), isTrue);
+        expect(WorldRules.isVoid(m, v.$1, v.$2), isTrue);
+        expect(WorldRules.overVoid(m, v.$1 * 16 + 8.0, v.$2 * 16 + 8.0), isTrue);
+        expect(WorldRules.overVoid(m, f0.spawn.x, f0.spawn.y), isFalse);
+      }
+    });
+
+    test('corazón: la arena está en el centro del piso', () {
+      final m = MapGenerator.zone(kZones[9], 99);
+      for (final f in m.floors) {
+        final ar = f.arena!;
+        expect((ar.cx - (f.bounds.x + f.bounds.w ~/ 2)).abs(), lessThanOrEqualTo(1));
+        expect((ar.cy - f.bounds.h ~/ 2).abs(), lessThanOrEqualTo(1));
+      }
+    });
+
+    test('laberinto: más grande que la fortaleza', () {
+      final lab = MapGenerator.zone(kZones[5], 7);
+      for (final f in lab.floors) {
+        expect(f.bounds.w, greaterThanOrEqualTo(70));
+        expect(f.bounds.h, greaterThanOrEqualTo(50));
       }
     });
 
