@@ -208,8 +208,11 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
       ],
     );
 
-    // El plan local: la vista previa evalúa `Build` igual que el host.
-    final wants = BuildWants.fromPlan(ref.watch(buildPlanProvider).plan);
+    // El plan del miembro activo: la vista previa evalúa `Build` igual
+    // que el host.
+    final wants = BuildWants.fromPlan(ref
+        .watch(buildPlanProvider)
+        .planFor(shop.controller.slotOf(shop.view.actorId)));
     final ctx = FilterContext(
         level: p.level,
         attributes: p.attributes,

@@ -11,6 +11,7 @@ import 'elements_catalog.dart';
 import 'enemies_catalog.dart';
 import 'missions_catalog.dart';
 import 'skills_catalog.dart';
+import 'weapon_duals_catalog.dart';
 import 'weapons_catalog.dart';
 import 'zones_catalog.dart';
 
@@ -21,7 +22,9 @@ class GameCatalog {
   final Map<String, WeaponDef> weapons;
   final Map<String, SkillDef> skills;
   final Map<String, SkillDef> ultimates; // por tipo de arma
-  final Map<String, DualDef> duals; // por dualKey(claseA, claseB)
+  /// Dúos: los de clase por `dualKey(claseA, claseB)` y los de armas
+  /// por su id `w_...` (weapon_duals_catalog.dart).
+  final Map<String, DualDef> duals;
   final Map<String, EnemyDef> enemies;
 
   /// ULT enemigas por id (jefes y élites).
@@ -103,7 +106,7 @@ class GameCatalog {
     weapons: kWeapons,
     skills: kSkills,
     ultimates: kAllUltimates,
-    duals: kDuals,
+    duals: kAllDuals,
     enemies: kEnemies,
   );
 

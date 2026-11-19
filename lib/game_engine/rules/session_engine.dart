@@ -197,11 +197,39 @@ class SessionEngine {
   static const trailStep = 4.0;
   static const trailMax = 96;
 
-  /// Lo único que un compañero puede hacer por sí mismo (§ 3.2).
-  static bool companionAction(SessionAction a) =>
-      a is BattleAction ||
-      a is SetBuildWantsAction ||
-      a is SetLootFilterAction;
+  /// Lo que un compañero puede hacer (solo_party.md § 3.2): pelear, su
+  /// loot y, desde v0.8.3, todo lo de **su personaje** (puntos, árbol,
+  /// ascensión, inventario, tiendas). Cada acción pasa por las mismas
+  /// reglas que para el líder. Lo de grupo (moverse, votar, proponer,
+  /// interactuar, levantar, pausa, chat, dev) sigue siendo del líder.
+  static bool companionAction(SessionAction a) => switch (a) {
+        BattleAction() ||
+        SetBuildWantsAction() ||
+        SetLootFilterAction() ||
+        // Personaje.
+        AllocateStatsAction() ||
+        RespecAction() ||
+        ChangeClassAction() ||
+        TakeNodeAction() ||
+        ResetTreeAction() ||
+        ChooseAscensionAction() ||
+        TakeAscensionNodeAction() ||
+        ResetAscensionAction() ||
+        // Inventario y tiendas.
+        EquipAction() ||
+        MoveInventoryAction() ||
+        SortInventoryAction() ||
+        CraftAction() ||
+        FuseAction() ||
+        UpgradeAction() ||
+        BuyWeaponAction() ||
+        BuyItemAction() ||
+        EcoCraftAction() ||
+        GiveItemAction() ||
+        DropItemAction() =>
+          true,
+        _ => false,
+      };
   static const missionStartGrace = 2.5;
   static const battleGrace = 3.5; // GRACE_MS
   static const leash = 110.0; // LEASH
@@ -218,6 +246,7 @@ class SessionEngine {
   static const bossLegendaryChance = 0.10;
   static const sealRange = 30.0;
   static const calmRange = 120.0;
+
   /// `TURN_LIMIT` del prototipo: el tiempo de turno NORMAL. El de la
   /// sala es `GameSession.turnLimit` ([TurnTimer]).
   static const turnLimit = 30.0; // TURN_LIMIT
@@ -374,7 +403,7 @@ class SessionEngine {
   SessionStep? apply(GameSession session, String playerId, SessionAction action) {
     final actor = session.players[playerId];
     if (actor == null) return null;
-    // Un compañero solo pelea y ajusta su loot; el resto es del líder.
+    // Un compañero solo pelea y maneja su personaje; el resto es del líder.
     if (actor.isCompanion && !companionAction(action)) return null;
     // Pausada: solo reanudar, chatear y lo que no toca el mundo (filtro de
     // loot, ordenar el inventario). Ver docs/specs/settings.md § "Pausa".
@@ -2643,7 +2672,15 @@ class _Op {
     final step = e.battles.command(b.state, p.id, cmd);
     if (step == null) return false;
     _applyBattleStep(b, step);
-    if (b.endTimer == null) b.wait = cmd is UltimateCommand ? 2.3 : 0.8;
+    // Dúo (v0.8.3): su cinemática dura ~1.6 s (battle_presentation.md
+    // § "Dúos"); el próximo paso espera a que termine la descarga.
+    if (b.endTimer == null) {
+      b.wait = cmd is UltimateCommand
+          ? 2.3
+          : cmd is DualCommand
+              ? 1.5
+              : 0.8;
+    }
     return true;
   }
 

@@ -40,6 +40,7 @@ import 'hud/pause_banner.dart';
 import 'hud/world_hud.dart';
 import 'map/map_game.dart';
 import 'panels/character_panel.dart';
+import 'panels/party_member_bar.dart';
 import 'panels/party_panel.dart';
 import 'session_battle_screen.dart';
 import 'session_controller.dart';
@@ -670,38 +671,49 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             ? null
             : controller.engine.missionOf(s, prep.missionId);
         if (prep == null || mission == null) return const SizedBox.shrink();
-        return PrepPanel(
-          mission: mission,
-          players: [
-            for (final p in s.playerList)
-              PrepEntry(
-                profileTitle(p.profile),
-                catalog.classes[p.profile.classId]?.name ?? p.profile.classId,
-                p.profile.level,
-                // Los compañeros siguen al líder (solo_party.md § 3.3).
-                ready: p.isCompanion || (prep.ready[p.id] ?? false),
-                isLocal: p.id == view.localId,
-              ),
-          ],
-          ready: prep.ready[view.localId] ?? false,
-          credits: me.profile.credits,
-          potions: me.profile.potions,
-          ethers: me.profile.ethers,
-          tier: s.eco?.tier ?? missionTier(catalog, mission),
-          bossName: missionBossName(catalog, mission),
-          weaponName: me.profile.equippedUid == null
-              ? '-'
-              : rules.weaponDisplayName(me.profile, me.profile.equippedUid!),
-          onReady: controller.setReady,
-          onCancel: controller.cancelPrep,
-          onCharacter: () => controller.openPanel(WorldPanel.character),
-          turnTimer: s.turnTimer,
-          // Las pestañas de la armería (en `prep` la del lobby no se abre).
-          shopTabs: [
-            for (final t in ArmoryTab.values)
-              t.spec(() => ShopContext(view, controller)),
-          ],
-        );
+        // Créditos, consumibles y arma: del miembro activo (las pestañas de
+        // tienda actúan sobre él; solo_party.md § 6.2).
+        final actor = view.actor ?? me;
+        return PartyMemberKeys(
+            view: view,
+            controller: controller,
+            child: PrepPanel(
+              members: PartyMemberBar.shows(view)
+                  ? PartyMemberBar(view: view, controller: controller)
+                  : null,
+              mission: mission,
+              players: [
+                for (final p in s.playerList)
+                  PrepEntry(
+                    profileTitle(p.profile),
+                    catalog.classes[p.profile.classId]?.name ??
+                        p.profile.classId,
+                    p.profile.level,
+                    // Los compañeros siguen al líder (solo_party.md § 3.3).
+                    ready: p.isCompanion || (prep.ready[p.id] ?? false),
+                    isLocal: p.id == view.localId,
+                  ),
+              ],
+              ready: prep.ready[view.localId] ?? false,
+              credits: actor.profile.credits,
+              potions: actor.profile.potions,
+              ethers: actor.profile.ethers,
+              tier: s.eco?.tier ?? missionTier(catalog, mission),
+              bossName: missionBossName(catalog, mission),
+              weaponName: actor.profile.equippedUid == null
+                  ? '-'
+                  : rules.weaponDisplayName(
+                      actor.profile, actor.profile.equippedUid!),
+              onReady: controller.setReady,
+              onCancel: controller.cancelPrep,
+              onCharacter: () => controller.openPanel(WorldPanel.character),
+              turnTimer: s.turnTimer,
+              // Las pestañas de la armería (en `prep` la del lobby no se abre).
+              shopTabs: [
+                for (final t in ArmoryTab.values)
+                  t.spec(() => ShopContext(view, controller)),
+              ],
+            ));
     }
   }
 }

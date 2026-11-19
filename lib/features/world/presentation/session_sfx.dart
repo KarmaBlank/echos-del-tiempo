@@ -8,7 +8,6 @@ import '../../../core/audio/sfx_recipes.dart';
 import '../../../core/audio/sfx_service.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../game_engine/models/game_map.dart' show PoiKind;
-import '../../../game_engine/data/skills_catalog.dart';
 import '../../../game_engine/models/ascension.dart' show TrapKind;
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
@@ -23,6 +22,7 @@ import '../../../game_engine/rules/battle_engine.dart' show ultimateOf;
 import '../../combat/presentation/scene/battle_fx.dart';
 import '../../combat/presentation/scene/fx_style.dart';
 import '../../combat/presentation/scene/proc_fx.dart';
+import '../../combat/presentation/scene/duo_cinematic.dart';
 import '../../combat/presentation/scene/ult_cinematic.dart';
 import 'hud/loot_feed.dart';
 import 'session_controller.dart';
@@ -619,7 +619,14 @@ class SessionSfx {
       case BattleActionKind.ultimate:
         return const []; // lo cubre UltimateUsedEvent (ultimateCues)
       case BattleActionKind.dual:
-        return [cue(Sfx.flash), cue(Sfx.dualCast)];
+        // v0.8.3 (audio.md § "Dúos"): subida de los dos al empezar, el
+        // acorde + destello al descargar y el choque doble en el impacto.
+        return [
+          cue(Sfx.dualRise),
+          cue(Sfx.flash, kDuoScript.buildMs),
+          cue(Sfx.dualCast, kDuoScript.buildMs),
+          cue(Sfx.dualClash, kDuoScript.impactMs),
+        ];
       case BattleActionKind.potion:
         return [cue(Sfx.potion)];
       case BattleActionKind.ether:
@@ -664,7 +671,7 @@ class SessionSfx {
             ? BattleFx.projMs
             : 0;
       case BattleActionKind.dual:
-        return BattleFx.dualDelayMs;
+        return kDuoScript.impactMs;
       case BattleActionKind.enemyAttack ||
             BattleActionKind.enemyHeavy ||
             BattleActionKind.enemyArea:
@@ -686,6 +693,8 @@ class SessionSfx {
     final ult = a.ult;
     // ULT: el impacto de su guion en ese objetivo (ya escalonado).
     if (ult != null) return ult.impactFor(i);
+    // Dúo: el de su cinemática (duo_cinematic.dart).
+    if (a.event.kind == BattleActionKind.dual) return kDuoScript.impactFor(i);
     final dl = _hitDelay(a);
     final melee = dl == 0;
     return dl + (melee ? meleeImpactMs : 0) + i * staggerMs;
@@ -756,9 +765,7 @@ class SessionSfx {
         }
       case BattleActionKind.dual:
         final partner = e.partnerId == null ? null : battle?.byId(e.partnerId!);
-        final d = a.actor == null || partner == null
-            ? null
-            : kDuals[dualKey(a.actor!.classId ?? '', partner.classId ?? '')];
+        final d = dualOfEvent(e.skillId, a.actor, partner)?.def;
         el = d == null ? FxElement.arcane : elementOfStatus(d.status.kind);
       default:
         el = FxElement.phys;

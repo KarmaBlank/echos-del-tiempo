@@ -358,6 +358,52 @@ void main() {
     expect(act('attack'), findsOneWidget);
   });
 
+  testWidgets('DÚOS lista los de clase y los de armas, con los dos nombres '
+      'y el par (v0.8.3)', (tester) async {
+    state = engine
+        .start(
+          party: [member('tirador'), member('maga'), member('guerrero')],
+          enemyTypes: const ['slime'],
+          triggeredBy: 'tirador',
+        )
+        .state
+      ..currentId = 'tirador';
+    BattleCommand? sent;
+    await pump(tester, canAct: true, localId: 'tirador', onCommand: (c) {
+      sent = c;
+      return true;
+    });
+    final bv = tester.state<BattleViewState>(find.byType(BattleView));
+    bv.selectCategory(BattleCategory.duos);
+    await tester.pump();
+    // tirador (arco) + maga (báculo): Lluvia Estelar (clase) y Flecha
+    // Arcana Gemela (armas); tirador + guerrero (espada): Cruz Tormenta.
+    expect(act('duo-maga'), findsOneWidget);
+    expect(act('duo-maga-w_flechaArcana'), findsOneWidget);
+    expect(act('duo-guerrero'), findsOneWidget);
+    String rowText(String id) => tester
+        .widgetList<RichText>(
+            find.descendant(of: act(id), matching: find.byType(RichText)))
+        .map((t) => t.text.toPlainText())
+        .join(' ');
+    expect(rowText('duo-maga'), contains('Lluvia Estelar'));
+    expect(rowText('duo-maga'), contains('Tirador + Maga'));
+    expect(rowText('duo-maga-w_flechaArcana'), contains('Flecha Arcana Gemela'));
+    expect(rowText('duo-maga-w_flechaArcana'), contains('arco + báculo'));
+    expect(rowText('duo-maga-w_flechaArcana'), contains('Maga'));
+    await tester.tap(act('duo-maga-w_flechaArcana'));
+    await tester.pump();
+    expect(sent, isA<DualCommand>());
+    expect((sent! as DualCommand).dualId, 'w_flechaArcana');
+    expect((sent! as DualCommand).partnerId, 'maga');
+    bv.selectCategory(BattleCategory.duos);
+    await tester.pump();
+    await tester.tap(act('duo-maga'));
+    await tester.pump();
+    expect((sent! as DualCommand).dualId, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('un paso nuevo (eventSeq) crea los efectos una sola vez',
       (tester) async {
     tester.view.physicalSize = const Size(1280, 720);

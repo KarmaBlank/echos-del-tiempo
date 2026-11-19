@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/perf/fps_meter.dart';
+import '../../core/perf/perf_log.dart';
 import '../../core/settings/settings_providers.dart';
 import '../../features/world/presentation/session_controller.dart'
     show activeNetSessionProvider;
@@ -73,6 +74,14 @@ class TimingsFrameRate extends ChangeNotifier
     }
   }
 }
+
+/// Registro de rendimiento en `ecos.log` (exploration.md § "Rendimiento"):
+/// vive mientras el indicador FPS Y PING está prendido.
+final perfLogProvider = Provider.autoDispose<PerfLog>((ref) {
+  final l = PerfLog()..start();
+  ref.onDispose(l.stop);
+  return l;
+});
 
 /// Bueno / regular / malo: color + cantidad de barras (no depende solo
 /// del color; docs/specs/settings.md § 3.9).
@@ -189,6 +198,8 @@ class PerfReadout extends ConsumerWidget {
     final limit = ref.watch(gameSettingsProvider.select((s) => s.fpsLimit.fps));
     final net = ref.watch(activeNetSessionProvider);
     final fps = ref.watch(frameRateProvider);
+    // Percentiles de build / raster a ecos.log cada 10 s.
+    ref.watch(perfLogProvider);
     return Container(
       key: const ValueKey('perf-overlay'),
       padding: const EdgeInsets.symmetric(horizontal: 4),

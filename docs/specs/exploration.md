@@ -315,7 +315,9 @@ enemigos del campo (el jugador local se dibuja en su posición exacta).
 1. Fondo `#05060c` en todo el lienzo virtual.
 2. Traslado `−round(cam)`.
 3. Tiles visibles: `x0 = max(0, floor(cam.x/TS))`,
-   `x1 = min(w−1, x0 + VW/TS + 1)` (ídem `y`), con `drawTile`.
+   `x1 = min(w−1, x0 + VW/TS + 1)` (ídem `y`), con `drawTile`. Desde
+   v0.8.3 los estáticos salen de la caché por bloques (ver
+   § "Rendimiento"); el resultado es el mismo.
 4. Carteles del lobby: `MOSTRADOR DE MISIONES` en `(13·TS, TS+10)`
    `#48dbfb` 7 px y `ARMERÍA` en `(21.5·TS, TS+10)` `#ff9f43` 7 px.
 5. Entidades ordenadas por `y` (pies), de arriba hacia abajo:
@@ -910,6 +912,86 @@ Resumen:
 - En otras plataformas (Android, iOS, web) `InMemoryProfileStore`
   hasta que se agregue `path_provider`/`shared_preferences` como
   dependencia directa.
+
+## Rendimiento (v0.8.3)
+
+Caso reportado: 60 FPS quieto, ~40 caminando y ~30 al entrar a una parte
+del mapa que no estaba en pantalla, con o sin CRT. Causas y arreglos
+(sin cambiar lo que se ve):
+
+- **Tiles dibujados uno por uno en cada cuadro.** ~600 tiles a la vista,
+  cada uno de 3 a 20 rectángulos, y los muros de bosque, las rocas, los
+  árboles y los cristales son `Path`s / círculos que el motor tesela de
+  nuevo en cada cuadro (por eso las zonas con mucho bosque o montaña
+  caían más). **`TileLayerCache`** (`map/tile_cache.dart`):
+  - Los tiles **estáticos** (`TilePainter.animated` = `false`) se graban
+    una vez en **bloques de 16×16 tiles** (256 px) con `toImageSync`; en
+    cada cuadro se dibujan 2–6 imágenes. LRU de 64 bloques (~16 MB).
+  - Los **animados** (agua, lava, barrera, portal, estatua, púas, Pulso,
+    engranajes, PdI, brasas de la grieta, destellos del corazón, puentes
+    de grieta / corazón, vacío sin fondo, todo lo del cementerio por la
+    niebla) se repintan encima en cada cuadro: el tramo de la fila (celda
+    + lo que sobresale, `TilePainter.overflow`) se borra en una capa
+    propia (`saveLayer` + `BlendMode.clear`) y se vuelve a pintar con
+    **todos** los tiles que lo tocan, en el orden de siempre. Fuera de
+    esos tramos solo hay estáticos: el resultado es idéntico al dibujo
+    directo (salvo algún píxel del borde de un círculo sin suavizado,
+    que ya cambiaba al mover la cámara).
+  - Con más de **40 %** de animados a la vista (un mar de lava, el
+    cementerio) dibuja directo como antes.
+  - Un PdI que cambia el mapa (sala abierta, brasero encendido) solo tira
+    los bloques que tocan el tile cambiado (y sus vecinos: bordes,
+    orillas, puentes). Otro mapa (otra zona) empieza de cero.
+  - **Sin tirones al caminar**: en cada `update` se graba de antemano UN
+    bloque que falte a un bloque de distancia de la vista, así al llegar
+    a una zona nueva ya está listo.
+  - Lo que sobresale cada tile (las motas del suelo usan el `%` con signo
+    de JS: hasta 12 px a la izquierda y arriba; portal 14, estatua 20) y
+    qué es estático lo verifica `tile_cache_test.dart` dibujando cada
+    tile × tema con relojes y estados distintos.
+- **HUD reconstruido entero 20 veces por segundo.** El controlador emite
+  una `SessionView` nueva en cada tick (cambia el reloj) y `WorldHud` se
+  armaba completo (cajas del grupo, chat, botones, avisos: ~370 widgets
+  por tick). Ahora:
+  - **`Memo`** (`app/widgets/memo.dart`) devuelve el MISMO widget mientras
+    sus `deps` no cambien (y se rearma si cambia algo heredado o se
+    reensambla la app). Cada caja del grupo depende solo de lo que
+    muestra (HP, MP, nivel, puntos...), el chat de sus líneas, la barra de
+    misión de su texto, los botones de arriba del modo / puntos sin usar,
+    los avisos de sus datos; los `Consumer` de adentro siguen escuchando
+    sus providers.
+  - `SessionController` reutiliza las listas de la vista anterior
+    (`messages`, `chat`, `missionLoot`, `companions`, `auto`) si no
+    cambiaron, para poder compararlas por identidad.
+  - Resultado: ~123 → ~28 reconstrucciones por cuadro en promedio (el
+    minimapa, los objetivos y los avisos de una línea sí siguen al
+    jugador).
+- **Etiquetas del mapa** (`PixelLabelPen`): ya guardaba los párrafos
+  medidos por (texto, color, tamaño en pantalla); al pasar de 300 los
+  tiraba TODOS (un aviso que se desvanece crea un color por cuadro) y
+  había que volver a medir cada nombre y cartel. Ahora es un LRU.
+- **Markup del HUD** (`protoSpan`): se guarda el `TextSpan` interpretado
+  (LRU de 256) por markup, estilo, color de `<b>` y tema / colores del
+  texto / modo daltónico (cambiar cualquiera no reutiliza lo anterior).
+- **CRT y limitador**: el CRT no era la causa (el dueño probó con NORMAL
+  y APAGADO). El tope por defecto es 60 (`FpsLimit.fps60`) y con un
+  monitor de 60 Hz el limitador no saltea cuadros (el tope ≥ 95 % de la
+  frecuencia medida no limita).
+
+**Medir.** `flutter test test/perf/overworld_perf_test.dart` arma la
+`WorldScreen` real dentro de `EcosApp` (ajustes por defecto: ALTO
+CONTRASTE, CRT FUERTE, partículas ALTAS), party de 4 en la zona 1 con
+loot en el piso, e imprime para quieto y caminando, sin y con caché:
+percentiles del `render` del mapa, del cuadro entero (`pump`) y
+reconstrucciones por cuadro (CPU en modo JIT: sirve para comparar, no
+como número absoluto). El mismo archivo comprueba que el HUD no
+reconstruye las cajas, el chat ni los botones en ticks sin cambios.
+
+**En el juego real**: con **FPS Y PING** prendido, cada 10 s se escribe
+en `ecos.log` una línea `Rendimiento: N cuadros (X fps) · build p50 …
+· raster p50 … · total … · mapa: tiles en caché (B bloques, G grabados)
+· etiquetas …` (`PerfLog`, `core/perf/perf_log.dart`). `build` es el hilo
+de la UI (Dart), `raster` la GPU.
 
 ## Desvíos respecto del prototipo
 

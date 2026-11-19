@@ -17,6 +17,7 @@ import '../models/skill.dart';
 import '../models/status.dart';
 import '../data/abyss_catalog.dart';
 import 'abyss_rules.dart';
+import 'dual_rules.dart';
 import 'family_rules.dart';
 import 'js_math.dart';
 import 'stats_calculator.dart';
@@ -3754,11 +3755,11 @@ class _Turn {
         _skillExtras(p, sk);
         _fire(ProcTrigger.onSkill, p);
         _fire(ProcTrigger.onUltimate, p);
-      case DualCommand(:final partnerId):
+      case DualCommand(:final partnerId, :final dualId):
         act
           ..breakFactor = BattleEngine.breakDual
           ..dual = true;
-        if (!_dual(p, partnerId, foes)) return false;
+        if (!_dual(p, partnerId, dualId, foes)) return false;
       case ItemCommand(:final item, :final targetPlayerId):
         final ok = item == BattleItem.ether
             ? _ether(p, targetPlayerId)
@@ -4158,7 +4159,8 @@ class _Turn {
     }
   }
 
-  bool _dual(Combatant p, String partnerId, List<Combatant> foes) {
+  bool _dual(
+      Combatant p, String partnerId, String? dualId, List<Combatant> foes) {
     final q = state.party.where((c) => c.id == partnerId).firstOrNull;
     if (q == null ||
         q == p ||
@@ -4167,11 +4169,14 @@ class _Turn {
         q.mp < BattleEngine.dualMpCost) {
       return false;
     }
-    final du = engine.catalog.duals[dualKey(p.classId!, q.classId!)];
-    if (du == null) return false;
+    // Sin id: el dúo de clase del par (v0.8.2). Con id: ese dúo, si el
+    // par lo puede hacer (clase o tipos de arma, dual_rules.dart).
+    final id = dualId ?? dualKey(p.classId ?? '', q.classId ?? '');
+    final du = engine.catalog.duals[id];
+    if (du == null || !dualFits(id, du, p, q)) return false;
 
     events.add(ActionEvent(p.id, BattleActionKind.dual,
-        partnerId: q.id, allTargets: true));
+        skillId: id, partnerId: q.id, allTargets: true));
     q.defending = false;
     p.mp -= BattleEngine.dualMpCost;
     q.mp -= BattleEngine.dualMpCost;

@@ -120,7 +120,10 @@ class _UnusedPointsToastState extends State<UnusedPointsToast> {
       old.dismissSignal?.removeListener(_close);
       widget.dismissSignal?.addListener(_close);
     }
-    if (widget.treeLevel > _level || widget.ascensionEarned > _asc) {
+    if (widget.treeLevel > _level ||
+        widget.ascensionEarned > _asc ||
+        // Un compañero ganó puntos (solo_party.md § 6.3).
+        widget.points.companionTotal > old.points.companionTotal) {
       _pending = true;
     }
     // Bajar (cambio de personaje, reinicio de Maestría): solo se anota.
@@ -129,8 +132,11 @@ class _UnusedPointsToastState extends State<UnusedPointsToast> {
     if (_pending && !widget.blocked) {
       _pending = false;
       // Solo árbol y ascensión: los atributos ya los pide la subida.
+      // Los compañeros guardan sus puntos (también de atributos).
       final p = UnusedPoints(
-          tree: widget.points.tree, ascension: widget.points.ascension);
+          tree: widget.points.tree,
+          ascension: widget.points.ascension,
+          companions: widget.points.companions);
       final text = p.toastText;
       if (text != null) {
         _text = text;

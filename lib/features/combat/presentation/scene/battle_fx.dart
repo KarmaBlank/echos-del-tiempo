@@ -5,7 +5,6 @@ import '../../../../game_engine/data/elements_catalog.dart'
     show GameElement, ReactionKind, kElementStatuses;
 import '../../../../game_engine/models/abyss.dart' show AbyssMoveKind;
 import '../../../../game_engine/data/passive_mechanics.dart';
-import '../../../../game_engine/data/skills_catalog.dart';
 import '../../../../game_engine/models/battle_event.dart';
 import '../../../../game_engine/models/battle_state.dart';
 import '../../../../game_engine/models/passive_mechanic.dart';
@@ -19,6 +18,7 @@ import 'chain_fx.dart';
 import 'fx_style.dart';
 import 'proc_fx.dart';
 import 'reaction_fx.dart';
+import 'duo_cinematic.dart';
 import 'ult_cinematic.dart';
 
 /// Tipo de efecto (`k` de `addFx` en el prototipo, más los de los
@@ -116,7 +116,25 @@ class UltFx {
     this.script = kDefaultUltScript,
     this.targets = const [],
     this.enemyType,
+    this.partnerId,
+    this.partnerName,
+    this.partnerClass,
+    this.partnerAscension,
+    this.casterWeapon,
+    this.partnerWeapon,
   });
+
+  /// Dúo (v0.8.3): el compañero (sprite y nombre de la mitad derecha de
+  /// la tarjeta, origen de la segunda estela). `null` = ULT.
+  final String? partnerId;
+  final String? partnerName;
+  final String? partnerClass;
+  final String? partnerAscension;
+
+  /// Dúo: tipos de arma de los dos (se ven en la tarjeta).
+  final String? casterWeapon, partnerWeapon;
+
+  bool get duo => partnerId != null;
 
   /// Ascensión del lanzador (sprite ascendido de la tarjeta).
   final String? casterAscension;
@@ -156,7 +174,13 @@ class UltFx {
       casterAscension: casterAscension,
       script: script,
       targets: ids,
-      enemyType: enemyType);
+      enemyType: enemyType,
+      partnerId: partnerId,
+      partnerName: partnerName,
+      partnerClass: partnerClass,
+      partnerAscension: partnerAscension,
+      casterWeapon: casterWeapon,
+      partnerWeapon: partnerWeapon);
 }
 
 /// Un efecto de batalla: el objeto de `addFx` del prototipo, en
@@ -532,9 +556,9 @@ List<BattleFx> mapBattleEvents(
           dl = proj(actorId, targetId, a.color, a.el);
         }
       case BattleActionKind.dual:
-        proj(actorId, targetId, a.color, a.el);
-        if (e.partnerId != null) proj(e.partnerId!, targetId, a.color, a.el);
-        dl = BattleFx.dualDelayMs;
+        // v0.8.3: las estelas las dibuja la cinemática (UltStyle.duo); el
+        // golpe cae en el impacto de su guion.
+        return ultDelay(a, targetId);
       default:
         break;
     }
@@ -605,24 +629,53 @@ List<BattleFx> mapBattleEvents(
             }
         }
       case BattleActionKind.dual:
+        // v0.8.3 (§ "Dúos"): cinemática de dúo por la tubería de las ULT.
         final partner = e.partnerId;
         final q = partner == null ? null : state.byId(partner);
-        final st = actor == null || q == null
-            ? null
-            : kDuals[dualKey(actor.classId ?? '', q.classId ?? '')];
+        final du = dualOfEvent(e.skillId, actor, q);
         a
-          ..color = actor == null || q == null
-              ? fxWhite
-              : kDualColors[dualKey(actor.classId ?? '', q.classId ?? '')] ??
-                  fxWhite
-          ..el =
-              st == null ? FxElement.arcane : elementOfStatus(st.status.kind);
-        act(e.actorId);
-        if (partner != null) act(partner);
-        out.add(BattleFx(FxKind.flash, color: a.color));
+          ..color = du == null ? fxWhite : dualColor(du.id, du.def)
+          ..el = du == null
+              ? FxElement.arcane
+              : elementOfStatus(du.def.status.kind)
+          ..ult = kDuoScript;
+        ultAction = a;
+        ultIndex = out.length;
+        out.add(BattleFx(FxKind.ult,
+            x: here.dx,
+            y: here.dy,
+            color: a.color,
+            el: a.el,
+            who: e.actorId,
+            ult: UltFx(
+              name: du?.def.name ?? 'Dúo',
+              casterName: actor?.name ?? '',
+              bulwark: false,
+              ultId: du?.id,
+              casterClass: actor?.classId,
+              casterAscension: actor?.ascensionId,
+              script: kDuoScript,
+              partnerId: partner ?? '',
+              partnerName: q?.name ?? '',
+              partnerClass: q?.classId,
+              partnerAscension: q?.ascensionId,
+              casterWeapon: actor?.weaponType,
+              partnerWeapon: q?.weaponType,
+            )));
+        // Los dos se lanzan al descargar.
+        out.add(BattleFx(FxKind.act,
+            who: e.actorId, delayMs: kDuoScript.buildMs));
+        if (partner != null) {
+          out.add(BattleFx(FxKind.act,
+              who: partner, delayMs: kDuoScript.buildMs + 40));
+        }
         final pq = partner == null ? here : position(partner);
-        ring((here.dx + pq.dx) / 2, (here.dy + pq.dy) / 2 - 8, a.color,
-            big: true);
+        out.add(BattleFx(FxKind.ring,
+            x: (here.dx + pq.dx) / 2,
+            y: (here.dy + pq.dy) / 2 - 8,
+            color: a.color,
+            big: true,
+            delayMs: kDuoScript.buildMs));
       case BattleActionKind.enemyAttack || BattleActionKind.enemyHeavy:
         windup(e.actorId);
         a.el = actor?.inflicts == null
@@ -1115,6 +1168,10 @@ List<BattleFx> mapBattleEvents(
     if (e.critical) {
       txt(id, -34, '¡CRÍTICO ×${fm(e.critMultiplier)}!', _gold, dl: dl);
       if (heavy) out.add(BattleFx(FxKind.flash, color: fxWhite, delayMs: dl));
+    }
+    // Dúo (v0.8.3): la etiqueta de combo `×2 DÚO` sobre cada golpeado.
+    if (a != null && a.event.kind == BattleActionKind.dual) {
+      txt(id, e.critical ? -46 : -34, '×2 DÚO', a.color, dl: dl);
     }
     if (e.vulnerable && vulnShown.add(id)) {
       txt(id, -44, 'QUIEBRE ×1.5', breakColor, dl: dl);

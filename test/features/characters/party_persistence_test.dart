@@ -274,6 +274,47 @@ void main() {
     expect(c.view!.saveError, isNull);
   });
 
+  test('v0.8.3: lo que el líder le hace a un compañero se guarda en SU '
+      'ranura', () async {
+    var a = Account();
+    a = a.add(newProfile('Ana', 'guerrero'))!;
+    a = a.add(progression.normalize(
+        newProfile('Leo', 'guerrero').copyWith(level: 5, credits: 5000)))!;
+    await JsonFileAccountStore(dir).save(a.select('c1').withParty(['c2']));
+    final repo = openApp();
+    final c = make(repo);
+    await c.start();
+    final ana0 = jsonEncode(c.session!.players['local']!.profile.toJson());
+    expect(c.setActing('local-c2'), isTrue);
+    expect(c.view!.actorId, 'local-c2');
+    final pts = c.session!.players['local-c2']!.profile.points;
+    expect(pts, greaterThan(0), reason: 'Leo tiene puntos de nivel');
+    expect(c.allocate({Attribute.vit: 1}), isTrue);
+    final node = progression.treeRules.catalog.nodes.keys.firstWhere((id) =>
+        progression.takeNode(c.session!.players['local-c2']!.profile, id) !=
+        null);
+    expect(c.takeNode(node), isTrue);
+    expect(c.buyItem(BattleItem.potion), isTrue);
+    final leo = c.session!.players['local-c2']!.profile;
+    expect(leo.points, pts - 1);
+    expect(leo.tree, [node]);
+    expect(jsonEncode(c.session!.players['local']!.profile.toJson()), ana0,
+        reason: 'Ana no cambió');
+    c.dispose();
+    await pumpEventQueue();
+    await repo.flush();
+
+    String j(PlayerProfile p) => jsonEncode(p.toJson());
+    final b = await openApp().load();
+    expect(j(b.byId('c2')!.profile), j(leo));
+    expect(j(b.byId('c1')!.profile), ana0);
+    // Reabrir: Leo vuelve con sus puntos gastados, su árbol y su poción.
+    final again = make(openApp());
+    await again.start();
+    expect(j(again.session!.players['local-c2']!.profile), j(leo));
+    expect(again.view!.actorId, 'local', reason: 'arranca con el líder');
+  });
+
   test('en una sala (anfitrión) no hay compañeros', () async {
     final party = InMemoryPartyStore(
         slots: {'c2': newProfile('Leo', 'maga')}, party: ['c2']);

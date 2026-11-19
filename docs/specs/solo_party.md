@@ -89,9 +89,27 @@ cambios.
 - `applyFor(session, senderId, actorId, action)`: el remitente
   `senderId` actúa como `actorId` solo si es él mismo o si
   `players[actorId].leaderId == senderId`. Si no, `null`.
-- Un compañero solo acepta: `BattleAction` (su turno),
-  `SetBuildWantsAction` y `SetLootFilterAction`. Moverse, votar,
-  interactuar, comprar, etc. son del líder.
+- Un compañero acepta (`SessionEngine.companionAction`, v0.8.3):
+  - batalla y loot: `BattleAction` (su turno), `SetBuildWantsAction`,
+    `SetLootFilterAction`;
+  - **su personaje** (lo manda el cliente del líder desde el selector de
+    miembro, § 6): `AllocateStatsAction`, `RespecAction`,
+    `ChangeClassAction`, `TakeNodeAction`, `ResetTreeAction`,
+    `ChooseAscensionAction`, `TakeAscensionNodeAction`,
+    `ResetAscensionAction`;
+  - **su inventario y tiendas**: `EquipAction`, `MoveInventoryAction`,
+    `SortInventoryAction`, `CraftAction` (desarmar / vender / limpiar
+    donde se puede descartar; forja y fusión solo en el pueblo),
+    `FuseAction`, `UpgradeAction`, `BuyWeaponAction`, `BuyItemAction`,
+    `EcoCraftAction`, `GiveItemAction` (a cualquiera de la sala: el
+    líder u otro compañero) y `DropItemAction`.
+  - Cada una con **las mismas reglas que para el líder** (modo, pueblo,
+    batalla, pausa: el motor no distingue). Moverse, votar, interactuar,
+    levantar del piso, proponer misiones / Ecos / Pruebas / Abismo,
+    preparación, pausa, chat y las de desarrollo siguen siendo del líder.
+  - Nunca vía `apply` directo con el id del compañero desde la red: un
+    `PeerActionEvent` usa el id del par, que en una sala nunca es líder
+    de nadie (`applyFor` rechaza ids que no son suyos).
 - La red sigue igual: un `PeerActionEvent` aplica con el id del par, que
   nunca es líder de nadie (en una sala no hay compañeros).
 
@@ -101,7 +119,7 @@ Solo esperan a los **humanos** (`leaderId == null`): proponer una misión
 solo con compañeros la acepta enseguida; la preparación arranca cuando
 el líder está listo; la pausa de subida de nivel espera solo a los
 humanos (el compañero guarda sus puntos sin repartir: se reparten
-jugándolo como líder). El panel de preparación muestra a los compañeros
+desde el selector de miembro, § 6). El panel de preparación muestra a los compañeros
 como listos.
 
 ### 3.4 Escalado
@@ -141,7 +159,8 @@ piso. Igual que en co-op.
 - Cofres, legendario de jefe, recompensas de fin de misión, Ecos,
   Fragmentos del Abismo: las mismas reglas por jugador.
 - Dar objetos (`GiveItemAction`) del líder a un compañero funciona como
-  entre jugadores.
+  entre jugadores; desde v0.8.3 también de un compañero al líder o a
+  otro compañero (selector de miembro, § 6).
 
 ## 4. Batalla
 
@@ -188,8 +207,66 @@ se prueba Atacar y después Defender.
 - Cada compañero guarda en **su** ranura (`replace(slotId, …)`), nunca en
   la del líder, y anota `last`.
 
-## 6. Pendiente
+## 6. Elegir a qué personaje manejás (v0.8.3)
 
-- Repartir los puntos de un compañero (atributos, árbol, ascensión),
-  equiparlo o comprarle se hace jugándolo como líder.
+Pedido del dueño: "si estoy solo, que me dé a elegir qué personaje voy"
+(subirle puntos, el árbol, equiparlo, comprarle).
+
+### 6.1 Miembro activo
+
+- El controlador guarda el **miembro activo** (`SessionController.
+  actingId`, por defecto el líder; `SessionView.actorId` / `actor`).
+  Solo existe con compañeros: sin party (o con red) es siempre el
+  jugador local.
+- Todas las acciones de personaje del controlador (`allocate`, `respec`,
+  `changeClass`, `takeNode`, `resetTree`, `equip`, `moveInventory`,
+  `sortInventory`, `craft`, `give`, `dropItem`, `setLootFilter`,
+  `buyWeapon`, `buyItem`, `upgrade`, `fuse`, `ecoCraft`,
+  `chooseAscension`, `takeAscensionNode`, `resetAscension`) van como
+  `applyFor(local, actingId)`. Las de grupo (votar, proponer, listo,
+  levantar, pausa, chat, dev) siguen siendo del líder.
+- Vuelve al líder cuando: hay que repartir la subida de nivel del líder
+  (`mustAllocate`), el compañero activo deja la party o se cierra la
+  sesión. Si no, se recuerda entre paneles (abrir la armería después del
+  personaje sigue con Leo).
+
+### 6.2 Selector (`PartyMemberBar`)
+
+- Fila arriba de las pestañas en: personaje (todas sus pestañas),
+  armería, preparación (sus pestañas de tienda), Portal del Eco y
+  Estatua del Tiempo. Solo jugando solo con compañeros.
+- Un botón por miembro en orden de la sala: `Ana (vos)`, `Leo`, `Mia`,
+  `Cid`; el activo con borde dorado. Al lado de cada uno, la insignia
+  `+N` con sus puntos sin usar (atributos + árbol + ascensión,
+  `UnusedPoints`). Clic / Enter lo elige.
+- Teclado: **`Ctrl+←` / `Ctrl+→`** miembro anterior / siguiente (en
+  círculo). Los números ya cambian de pestaña (`MenuTabKeys`), por eso
+  no se usan para esto. `PanelFrame` y `FocusGrid` dejan pasar las
+  flechas con `Ctrl`. Está en CONTROLES (`kMenuKeys`).
+- El panel entero muestra y actúa sobre el miembro activo: título
+  (`nombre · clase · Puntos`), reparto de atributos (el pendiente se
+  borra al cambiar de miembro), clase, árbol, inventario (`DAR A`
+  lista a los demás de la sala, también el líder), filtro, BUILD (el plan
+  de **su** ranura; al guardarlo se manda su `SetBuildWantsAction`),
+  créditos y tiendas, ascensión.
+- Excepciones del líder: el Portal del Eco abre Ecos solo con el líder
+  (`ABRIR ECO` con el motivo `Los Ecos los abre el líder`; DAR A le pasa
+  el Eco), la pestaña ABISMO y la pestaña PRUEBAS de la Estatua usan
+  siempre al líder (son propuestas de grupo).
+
+### 6.3 Puntos sin usar en el HUD
+
+- La insignia `PERSONAJE [C] +N` suma los puntos de todos los miembros;
+  el tooltip los separa (`Leo: 3 puntos de atributos`).
+- El aviso al subir de nivel agrega una parte por compañero con puntos:
+  `Leo tiene 3 puntos sin usar`. Sale también si solo subieron los
+  puntos de un compañero.
+
+### 6.4 Guardado
+
+Sin cambios de formato: lo que cambia en el compañero se guarda en
+**su** ranura con las reglas de § 5 (cada 2 s si cambió, etc.).
+
+## 7. Pendiente
+
 - AUTO no usa dúos ni objetos de maná.

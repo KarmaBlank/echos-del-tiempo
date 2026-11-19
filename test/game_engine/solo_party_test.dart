@@ -1,4 +1,11 @@
+import 'package:echos_del_tiempo/game_engine/models/ascension.dart';
+import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
+import 'package:echos_del_tiempo/game_engine/models/eco.dart';
+import 'package:echos_del_tiempo/game_engine/models/inventory_sort.dart';
+import 'package:echos_del_tiempo/game_engine/models/item.dart';
+import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
+import 'package:echos_del_tiempo/game_engine/models/upgrade_stat.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_event.dart';
@@ -116,8 +123,7 @@ void main() {
       expect(
           e.applyFor(s, 'local', 'local-c2', const ProposeMissionAction('m1')),
           isNull);
-      expect(e.apply(s, 'local-c2', const BuyItemAction(BattleItem.potion)),
-          isNull);
+      expect(e.apply(s, 'local-c2', const PauseAction(true)), isNull);
     });
 
     test('en batalla: cada uno en su turno; un id no controlado se rechaza',
@@ -150,6 +156,179 @@ void main() {
       expect(e.applyFor(s, 'local', other, cmd), isNull,
           reason: 'no es su turno');
       expect(e.applyFor(s, 'local', cur, cmd), isNotNull);
+    });
+  });
+
+  // v0.8.3: el líder maneja el personaje de sus compañeros (§ 3.2, § 6).
+  group('compañero: su personaje desde el líder', () {
+    /// Ana (líder) con Leo de compañero, rico y con puntos, en el pueblo;
+    /// y otro humano `p1` (no es líder de nadie).
+    GameSession rich(SessionEngine e) {
+      var s = e.addPlayer(e.create(), 'local', newProfile('Ana', 'guerrero'))!
+          .state;
+      final leo = progression.normalize(newProfile('Leo', 'guerrero').copyWith(
+          level: 30,
+          credits: 50000,
+          points: 6,
+          potions: 0,
+          ascension: const AscensionProgress(trials: {1})));
+      s = e.addCompanion(s, 'local-c2', leo, leaderId: 'local')!.state;
+      return e.addPlayer(s, 'p1', newProfile('Otro', 'maga'))!.state;
+    }
+
+    PlayerProfile prof(GameSession s, String id) => s.players[id]!.profile;
+
+    /// Aplica como líder por Leo: cambia Leo, nunca Ana; `p1` no puede.
+    GameSession forLeo(SessionEngine e, GameSession s, SessionAction a) {
+      final ana = prof(s, 'local').toJson().toString();
+      expect(e.applyFor(s, 'p1', 'local-c2', a), isNull,
+          reason: 'p1 no controla a Leo: $a');
+      final step = e.applyFor(s, 'local', 'local-c2', a);
+      expect(step, isNotNull, reason: 'rechazada: $a');
+      expect(prof(step!.state, 'local').toJson().toString(), ana,
+          reason: '$a no toca al líder');
+      return step.state;
+    }
+
+    test('la lista de acciones de un compañero', () {
+      for (final a in <SessionAction>[
+        const AllocateStatsAction({Attribute.vit: 1}),
+        const RespecAction(),
+        const ChangeClassAction('maga'),
+        const TakeNodeAction('x'),
+        const ResetTreeAction(),
+        const ChooseAscensionAction('berserker'),
+        const TakeAscensionNodeAction('x'),
+        const ResetAscensionAction(),
+        const EquipAction('x'),
+        const MoveInventoryAction(0, 1),
+        const SortInventoryAction(InventorySortKey.rarity),
+        const CraftAction(CraftOp.addAffix, 'x'),
+        const FuseAction('a', 'b', 'c'),
+        const UpgradeAction('a', UpgradeStat.pow),
+        const BuyWeaponAction('x'),
+        const BuyItemAction(BattleItem.potion),
+        const EcoCraftAction('x', EcoCraftOp.tier),
+        const GiveItemAction('local', 'x'),
+        const DropItemAction('x'),
+        const BattleAction(AttackCommand()),
+        const SetLootFilterAction('x'),
+      ]) {
+        expect(SessionEngine.companionAction(a), isTrue, reason: '$a');
+      }
+      for (final a in <SessionAction>[
+        const ProposeMissionAction('m1'),
+        const VoteMissionAction(true),
+        const ReadyAction(true),
+        const CancelPrepAction(),
+        const PickUpAction(1),
+        const PauseAction(true),
+        const ChatAction('hola'),
+        const ProposeEcoAction('x'),
+        const ProposeTrialAction(1),
+        const ProposeAbyssAction(1),
+        const DevGrantEcoAction(1),
+        const UseStairsAction(down: true),
+        const BackToLobbyAction(),
+      ]) {
+        expect(SessionEngine.companionAction(a), isFalse, reason: '$a');
+      }
+    });
+
+    test('atributos, árbol y reinicios: van a Leo, no a Ana', () {
+      final e = sessionEngine();
+      var s = rich(e);
+      final pts = prof(s, 'local-c2').points;
+      expect(pts, greaterThanOrEqualTo(2));
+      s = forLeo(e, s, const AllocateStatsAction({Attribute.vit: 2}));
+      expect(prof(s, 'local-c2').points, pts - 2);
+      final node = progression.treeRules.catalog.nodes.keys.firstWhere(
+          (id) => progression.takeNode(prof(s, 'local-c2'), id) != null);
+      s = forLeo(e, s, TakeNodeAction(node));
+      expect(prof(s, 'local-c2').tree, contains(node));
+      expect(prof(s, 'local').tree, isNot(contains(node)));
+      s = forLeo(e, s, const ResetTreeAction());
+      expect(prof(s, 'local-c2').tree, isEmpty);
+      s = forLeo(e, s, const RespecAction());
+      expect(prof(s, 'local-c2').points, pts);
+    });
+
+    test('ascensión: elegir y volver a la clase base por Leo (pueblo)', () {
+      final e = sessionEngine();
+      var s = rich(e);
+      s = forLeo(e, s, const ChooseAscensionAction('berserker'));
+      expect(prof(s, 'local-c2').ascension.id, 'berserker');
+      expect(prof(s, 'local').ascension.id, isNull);
+      s = forLeo(e, s, const ResetAscensionAction(full: true));
+      expect(prof(s, 'local-c2').ascension.id, isNull);
+    });
+
+    test('tienda, equipar, inventario, dar y vender: por Leo', () {
+      final e = sessionEngine();
+      var s = rich(e);
+      final leo0 = prof(s, 'local-c2');
+      final w = progression.catalog.weapons.values.firstWhere((w) =>
+          w.classId == 'guerrero' && progression.buyWeapon(leo0, w.id) != null);
+      s = forLeo(e, s, BuyWeaponAction(w.id));
+      final bought = prof(s, 'local-c2').items.last;
+      expect(bought.baseId, w.id);
+      expect(prof(s, 'local-c2').credits, 50000 - w.price);
+      s = forLeo(e, s, const BuyItemAction(BattleItem.potion));
+      expect(prof(s, 'local-c2').potions, 1);
+      if (progression.equip(prof(s, 'local-c2'), bought.uid) != null) {
+        s = forLeo(e, s, EquipAction(bought.uid));
+        expect(prof(s, 'local-c2').equippedUid, bought.uid);
+      }
+      s = forLeo(e, s, const SortInventoryAction(InventorySortKey.rarity));
+      // Vender (LIMPIAR) por Leo un arma suya que no tenga equipada.
+      final spare = prof(s, 'local-c2')
+          .items
+          .where((i) => i.uid != prof(s, 'local-c2').equippedUid)
+          .firstOrNull;
+      if (spare != null) {
+        final credits = prof(s, 'local-c2').credits;
+        s = forLeo(
+            e, s, CraftAction.selected(CraftOp.sellSelected, [spare.uid]));
+        expect(prof(s, 'local-c2').itemByUid(spare.uid), isNull);
+        expect(prof(s, 'local-c2').credits, greaterThan(credits));
+      }
+      // Dar al líder: la poción pasa de Leo a Ana.
+      final anaPotions = prof(s, 'local').potions;
+      final give = e.applyFor(
+          s, 'local', 'local-c2', const GiveItemAction('local', 'pot'))!;
+      s = give.state;
+      expect(prof(s, 'local').potions, anaPotions + 1);
+      expect(prof(s, 'local-c2').potions, 0);
+    });
+
+    test('mismas reglas que el líder: modo y pueblo; ids ajenos no', () {
+      final e = sessionEngine(fieldFallback: 0.0);
+      var s = rich(e);
+      s = e.removePlayer(s, 'p1')!.state;
+      s = _inField(e, s, 'm1');
+      // En el campo no se compra ni se elige ascensión (como el líder).
+      expect(
+          e.applyFor(
+              s, 'local', 'local-c2', const BuyItemAction(BattleItem.potion)),
+          isNull);
+      expect(
+          e.applyFor(s, 'local', 'local-c2',
+              const ChooseAscensionAction('berserker')),
+          isNull);
+      // Repartir puntos sí (fuera de batalla), también en el campo.
+      expect(
+          e.applyFor(s, 'local', 'local-c2',
+              const AllocateStatsAction({Attribute.fue: 1})),
+          isNotNull);
+      // Un compañero no maneja al líder ni a un id que no existe.
+      expect(
+          e.applyFor(s, 'local-c2', 'local',
+              const AllocateStatsAction({Attribute.fue: 1})),
+          isNull);
+      expect(
+          e.applyFor(s, 'local', 'local-c9',
+              const AllocateStatsAction({Attribute.fue: 1})),
+          isNull);
     });
   });
 

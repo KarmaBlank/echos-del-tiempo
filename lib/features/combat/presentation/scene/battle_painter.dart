@@ -25,6 +25,7 @@ import 'chain_fx.dart';
 import 'battle_labels.dart';
 import 'battle_layout.dart';
 import 'battle_scene.dart';
+import 'duo_cinematic.dart';
 import 'fx_style.dart';
 import 'proc_fx.dart';
 import 'reaction_fx.dart';
@@ -1857,8 +1858,13 @@ class BattleOverlayPainter extends CustomPainter {
       canvas.drawRect(Rect.fromLTWH(0, area.bottom - bh, size.width, bh), fill);
     }
 
-    // Tarjeta del nombre (capa pixelada, unidad 2u).
-    if (a < s.buildMs + 60) _card(canvas, f, u, a, size, area);
+    // Tarjeta del nombre (capa pixelada, unidad 2u). Dúo: tarjeta
+    // partida (battle_presentation.md § "Dúos").
+    if (u.fx.ult?.duo ?? false) {
+      _duoCard(canvas, f, u, a, size, area);
+    } else if (a < s.buildMs + 60) {
+      _card(canvas, f, u, a, size, area);
+    }
 
     // Destello blanco en el impacto principal.
     final n = math.max(1, u.fx.ult?.targets.length ?? 1);
@@ -1869,6 +1875,9 @@ class BattleOverlayPainter extends CustomPainter {
       final k = (1 - (a - imp + 20) / 160).clamp(0.0, 1.0) * fk;
       fill.color = s.style == UltStyle.bulwark
           ? Color.fromRGBO(255, 234, 167, 0.35 * k)
+          : s.style == UltStyle.duo
+              ? Color.lerp(const Color(0xFFFFFFFF), u.fx.color, 0.35)!
+                  .withValues(alpha: 0.6 * k)
           : (u.fx.ult?.enemy ?? false)
               ? Color.fromRGBO(255, 70, 80, 0.55 * k)
               : Color.fromRGBO(255, 255, 255, 0.7 * k);
@@ -1963,6 +1972,136 @@ class BattleOverlayPainter extends CustomPainter {
         const Color(0xFFFFFFFF), 16,
         center: false, outline: true);
     if (outP > 0) c.restore();
+    final pic = rec.endRecording();
+    final img2 = pic.toImageSync(w, h);
+    pic.dispose();
+    _blit(canvas, img2, Rect.fromLTWH(0, 0, w * pu, h * pu));
+    img2.dispose();
+  }
+
+  /// Tarjeta partida del dúo (v0.8.3): arriba la banda de quien lo hace
+  /// (entra desde la izquierda, su sprite y su arma), abajo la del
+  /// compañero (desde la derecha) y, entre las dos, el cartel
+  /// `DÚO · <nombre>`. Con REDUCIR MOVIMIENTO no se desliza (fundido).
+  void _duoCard(Canvas canvas, SceneFrame f, UltCinematic u, double a,
+      Size size, Rect area) {
+    final pose = duoCardPose(a, reduceMotion: scene.options.reduceMotion);
+    if (pose.hidden) return;
+    final ult = u.fx.ult!;
+    final pu = 2.0 * f.geometry.hudUnit;
+    final w = (size.width / pu).ceil(), h = (size.height / pu).ceil();
+    final wd = w.toDouble();
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec, Rect.fromLTWH(0, 0, wd, h.toDouble()));
+    if (pose.alpha < 1) {
+      c.saveLayer(
+          null, Paint()..color = Color.fromRGBO(0, 0, 0, pose.alpha));
+    }
+    final col = u.fx.color;
+    final top = ((area.top + area.height * 0.09) / pu + 8).roundToDouble();
+    const bh = 30.0, gap = 16.0;
+    final y1 = top, y2 = top + bh + gap;
+
+    void band(double y, bool fromLeft, double k, String? cls, String? asc,
+        String name, String? weapon) {
+      if (k <= 0) return;
+      final shift = ((1 - k) * (wd + 40)).roundToDouble();
+      c.save();
+      c.translate(fromLeft ? -shift : shift, 0);
+      final path = fromLeft
+          ? (Path()
+            ..moveTo(0, y)
+            ..lineTo(wd * 0.78 + 14, y)
+            ..lineTo(wd * 0.78 - 8, y + bh)
+            ..lineTo(0, y + bh)
+            ..close())
+          : (Path()
+            ..moveTo(wd * 0.22 + 8, y)
+            ..lineTo(wd, y)
+            ..lineTo(wd, y + bh)
+            ..lineTo(wd * 0.22 - 14, y + bh)
+            ..close());
+      _pen.fill.color = const Color(0xE6000000);
+      c.drawPath(path.shift(const Offset(0, 3)), _pen.fill);
+      _pen.fill.color = Color.lerp(col, const Color(0xFF000000), 0.45)!
+          .withValues(alpha: 0.94);
+      c.drawPath(path, _pen.fill);
+      c.save();
+      c.clipPath(path);
+      _pen.rect(c, col.withValues(alpha: 0.9), 0, y, wd, 2);
+      _pen.rect(c, const Color(0xFF000000), 0, y + bh - 2, wd, 2);
+      if (pose.speedLines) {
+        for (var i = 0; i < 10; i++) {
+          final ly = y + 4 + ((i * 7) % (bh - 8));
+          final run = (i * 97 + a * 0.9) % (wd + 80);
+          final lx = fromLeft ? run - 80 : wd - run;
+          _pen.rect(c, const Color(0x55FFFFFF), lx, ly, 36 + (i % 3) * 12, 1);
+        }
+      }
+      c.restore();
+      // Sprite grande (a la izquierda arriba, a la derecha abajo).
+      final img = f.sprites?.heroFor(cls, asc);
+      final sx = fromLeft ? 14.0 : wd - 14;
+      var textX = fromLeft ? 14.0 : wd - 14;
+      if (img != null) {
+        const k = 2.5;
+        final iw = img.width * k, ih = img.height * k;
+        final dst = Rect.fromLTWH(
+            fromLeft ? sx : sx - iw, y + bh - ih + 6, iw, ih);
+        final src =
+            Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
+        final shadow = SpriteCatalog.pixelPaint()
+          ..colorFilter =
+              const ColorFilter.mode(Color(0xFF000000), BlendMode.srcIn);
+        c.save();
+        if (!fromLeft) {
+          // El compañero mira hacia el centro.
+          c.translate(dst.center.dx * 2, 0);
+          c.scale(-1, 1);
+        }
+        c.drawImageRect(img, src, dst.shift(const Offset(2, 2)), shadow);
+        c.drawImageRect(img, src, dst, SpriteCatalog.pixelPaint());
+        c.restore();
+        textX = fromLeft ? sx + iw + 8 : sx - iw - 8;
+      }
+      final label = name.toUpperCase();
+      final sub = weapon == null ? '' : weapon.toUpperCase();
+      double wOf(String s, double sz) =>
+          _pen._layout(s, const Color(0xFFFFFFFF), sz).width;
+      _pen.text(c, label, fromLeft ? textX : textX - wOf(label, 12),
+          y + 14, const Color(0xFFFFFFFF), 12,
+          center: false, outline: true);
+      if (sub.isNotEmpty) {
+        _pen.text(c, sub, fromLeft ? textX : textX - wOf(sub, 8), y + 25,
+            Color.lerp(col, const Color(0xFFFFFFFF), 0.5)!, 8,
+            center: false);
+      }
+      c.restore();
+    }
+
+    band(y1, true, pose.left, ult.casterClass, ult.casterAscension,
+        ult.casterName, ult.casterWeapon);
+    band(y2, false, pose.right, ult.partnerClass, ult.partnerAscension,
+        ult.partnerName ?? '', ult.partnerWeapon);
+
+    // Cartel central entre las dos bandas.
+    if (pose.banner > 0) {
+      final title = 'DÚO · ${ult.name.toUpperCase()}';
+      final by = y1 + bh + gap / 2 + 6;
+      final tw = _pen._layout(title, const Color(0xFFFFFFFF), 16).width;
+      if (pose.banner < 1) {
+        c.saveLayer(
+            null, Paint()..color = Color.fromRGBO(0, 0, 0, pose.banner));
+      }
+      _pen.rect(c, const Color(0xF0000000), wd / 2 - tw / 2 - 10, by - 16,
+          tw + 20, 22);
+      _pen.rect(c, col, wd / 2 - tw / 2 - 10, by - 16, tw + 20, 2);
+      _pen.rect(c, col, wd / 2 - tw / 2 - 10, by + 4, tw + 20, 2);
+      _pen.text(c, title, wd / 2, by, const Color(0xFFFFE08A), 16,
+          outline: true);
+      if (pose.banner < 1) c.restore();
+    }
+    if (pose.alpha < 1) c.restore();
     final pic = rec.endRecording();
     final img2 = pic.toImageSync(w, h);
     pic.dispose();

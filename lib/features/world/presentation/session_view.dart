@@ -96,7 +96,27 @@ class SessionView {
     this.bestiary,
     this.companions = const [],
     this.auto = const {},
+    this.actingId,
   });
+
+  /// El miembro activo de la party (solo_party.md § 6): sobre quién
+  /// actúan los paneles de personaje, inventario y tiendas. `null` = el
+  /// jugador local.
+  final String? actingId;
+
+  /// Id del miembro activo (el local si no hay otro elegido o ya no está).
+  String get actorId {
+    final a = actingId;
+    return a != null && isCompanion(a) && session.players.containsKey(a)
+        ? a
+        : localId;
+  }
+
+  /// El jugador que muestran los paneles de personaje (ver [actorId]).
+  SessionPlayer? get actor => session.players[actorId];
+
+  /// El miembro activo es un compañero (no el jugador local).
+  bool get actingCompanion => actorId != localId;
 
   /// Compañeros de la party de este dispositivo (ids de jugador, en
   /// orden; docs/specs/solo_party.md). Vacío con red.
@@ -212,5 +232,6 @@ class SessionView {
         bestiary: bestiary,
         companions: companions,
         auto: auto,
+        actingId: actingId,
       );
 }

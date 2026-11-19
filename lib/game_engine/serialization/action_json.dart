@@ -217,7 +217,7 @@ abstract final class ActionJson {
     throw FormatException('JSON inválido: acción desconocida', t);
   }
 
-  /// Las claves de `battleCmd` (`a`, `tg`, `tk`, `pt`, `it`, `to`).
+  /// Las claves de `battleCmd` (`a`, `tg`, `tk`, `pt`, `du`, `it`, `to`).
   static Json commandToJson(BattleCommand c) => switch (c) {
         AttackCommand() => {'a': 'atk', if (c.targetId != null) 'tg': c.targetId},
         SkillCommand() => {
@@ -226,7 +226,13 @@ abstract final class ActionJson {
             if (c.targetId != null) 'tg': c.targetId,
           },
         UltimateCommand() => {'a': 'ult', if (c.targetId != null) 'tg': c.targetId},
-        DualCommand() => {'a': 'dual', 'pt': c.partnerId},
+        // `du` (v0.8.3, aditivo, sin subir kProtocolVersion): qué dúo. Un
+        // host viejo lo ignora y hace el dúo de clase del par.
+        DualCommand() => {
+            'a': 'dual',
+            'pt': c.partnerId,
+            if (c.dualId != null) 'du': c.dualId,
+          },
         ItemCommand() => {
             'a': 'item',
             'it': itemKey(c.item),
@@ -244,7 +250,7 @@ abstract final class ActionJson {
       'atk' => AttackCommand(targetId: j.strOrNull('tg')),
       'tech' => SkillCommand(j.str('tk'), targetId: j.strOrNull('tg')),
       'ult' => UltimateCommand(targetId: j.strOrNull('tg')),
-      'dual' => DualCommand(j.str('pt')),
+      'dual' => DualCommand(j.str('pt'), dualId: j.strOrNull('du')),
       'item' => ItemCommand(itemFromKey(j.str('it')),
           targetPlayerId: j.strOrNull('to')),
       'def' => j.flag('ps') ? const PassCommand() : const DefendCommand(),

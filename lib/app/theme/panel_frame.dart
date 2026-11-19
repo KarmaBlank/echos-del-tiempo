@@ -238,6 +238,11 @@ class _PanelKeysState extends State<_PanelKeys> {
       return KeyEventResult.handled;
     }
     if (_dirs[k] case final dir?) {
+      // Ctrl+←/→ cambia de miembro de la party (`PartyMemberKeys`, afuera
+      // del marco; solo_party.md § 6.2).
+      if (HardwareKeyboard.instance.isControlPressed) {
+        return KeyEventResult.ignored;
+      }
       if (!inside) {
         _scope.nextFocus();
       } else if (!focused.focusInDirection(dir)) {

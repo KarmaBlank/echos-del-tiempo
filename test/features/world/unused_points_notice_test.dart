@@ -60,6 +60,23 @@ void main() {
           'ascensión: Estatua del Tiempo');
       expect(UnusedPoints.none.toastText, isNull);
     });
+
+    test('v0.8.3: cuenta a los compañeros (solo_party.md § 6.3)', () {
+      final u = const UnusedPoints(tree: 2)
+          .withCompanions([('Leo', 3), ('Mia', 0)]);
+      expect(u.total, 5);
+      expect(u.own, 2);
+      expect(u.companionTotal, 3);
+      expect(u.companions, [('Leo', 3)], reason: 'Mia no tiene puntos');
+      expect(u.parts, ['2 puntos de árbol', 'Leo: 3 puntos']);
+      expect(u.toastText,
+          'Tenés 2 puntos de árbol sin usar · Leo tiene 3 puntos sin usar · [C]');
+      expect(UnusedPoints.none.withCompanions([('Leo', 1)]).toastText,
+          'Leo tiene 1 punto sin usar · [C]');
+      expect(UnusedPoints.none.withCompanions([('Leo', 1)]).any, isTrue);
+      expect(u, const UnusedPoints(tree: 2).withCompanions([('Leo', 3)]));
+      expect(u == const UnusedPoints(tree: 2), isFalse);
+    });
   });
 
   group('insignia del HUD', () {
@@ -118,6 +135,15 @@ void main() {
       await tester.pumpWidget(_app(_toast(UnusedPoints.none, level: 7)));
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.byKey(const ValueKey('hud-points-toast')), findsNothing);
+    });
+
+    testWidgets('v0.8.3: avisa cuando un compañero gana puntos',
+        (tester) async {
+      await tester.pumpWidget(_app(_toast(UnusedPoints.none)));
+      await tester.pumpWidget(_app(
+          _toast(UnusedPoints.none.withCompanions([('Leo', 3)]))));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Leo tiene 3 puntos sin usar · [C]'), findsOneWidget);
     });
 
     testWidgets('espera a que termine el reparto (bloqueado)', (tester) async {

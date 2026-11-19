@@ -200,7 +200,9 @@ largo, para que se reconozca:
 | `item.potion` | sine 300→520 0.07, 280→500 @0.09 (tragos) + burbuja | poción |
 | `item.ether` | sine 900→1800 0.22 vibrato + triangle 2400 @0.12 | éter |
 | `defend` | square 220 0.05 + ruido 8 k 0.05 + triangle 1500 0.22 (anillo) | defender |
-| `dual.cast` | acorde square 392/494/587 → una 8va arriba, 0.35 | dúo (junto al `flash`) |
+| `dual.cast` | acorde square 392/494/587 → una 8va arriba, 0.35 | dúo (junto al `flash`, en la descarga) |
+| `dual.rise` | dos sierras que se cruzan (196→784 y 1568→392, 0.55, lowpass 2400) + soplido de ruido que sube | dúo, al empezar (v0.8.3) |
+| `dual.clash` | dos golpes casi juntos (ruido + seno grave 110→45 y 98→40, el segundo a +60 ms) + acorde triangular 523/659/784/1047 | dúo, en el impacto (v0.8.3) |
 | `status.burn` | ruido 9 k 0.22 crush 3 + sawtooth 220→330 0.12 | aplica Quemadura |
 | `status.poison` | 3 burbujas square descendentes | aplica Veneno |
 | `status.freeze` | triangle 2637, 3520 @0.03, 4186 @0.06 | aplica Congelación |
@@ -389,7 +391,8 @@ motor no cambia. Cada sonido de batalla es un `SfxCue(id, delayMs)`:
 
 - Retraso del impacto en un objetivo (`hitDelay`): proyectil 280 ms
   (ataque normal a distancia a un objetivo; habilidad que hace daño y es
-  mágica o de un arma a distancia), dúo 300 ms, ULT `impactFor(i)` de
+  mágica o de un arma a distancia), dúo `kDuoScript.impactFor(i)`
+  (v0.8.3: 1000 ms + 50 por objetivo), ULT `impactFor(i)` de
   su guion (docs/specs/battle_presentation.md § "Ultimates"; ya incluye
   la separación por objetivo), si no 0.
 - Cuerpo a cuerpo (sin proyectil): el impacto suena 50 ms después del
@@ -416,7 +419,9 @@ motor no cambia. Cada sonido de batalla es un `SfxCue(id, delayMs)`:
     `skill.<id>`;
   - `ultimate`: **nada** (lo cubre `UltimateUsedEvent` →
     `ultimateCues`);
-  - `dual`: `flash` (prototipo) + `dual.cast`;
+  - `dual` (v0.8.3): `dual.rise` @0, `flash` + `dual.cast` al terminar
+    la preparación (650 ms) y `dual.clash` en el impacto (1000 ms); los
+    impactos por objetivo, con el sonido del elemento del dúo;
   - `potion` → `item.potion`; `ether` → `item.ether`; `defend` →
     `defend`;
   - `enemyAttack`: `enemy.<tipo>`; `enemyHeavy`: `enemy.<tipo>` +

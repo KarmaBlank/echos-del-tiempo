@@ -422,7 +422,8 @@ paso se interpretan dentro de él.
 el arma es a distancia (`arco`, `rifle`, `báculo`, `tomo`) y lleva un
 `proj`; en una ultimate, el impacto de su guion en ese objetivo
 (`impactFor(i)`, § "Ultimates"; `i` = orden de aparición del objetivo
-en los eventos de la acción); 300 en un dúo; 0 si no.
+en los eventos de la acción); en un dúo, el impacto de su guion
+(`kDuoScript.impactFor(i)`, § "Dúos"); 0 si no.
 
 | Evento | Efectos (`addFx` del prototipo) |
 |---|---|
@@ -433,7 +434,8 @@ en los eventos de la acción); 300 en un dúo; 0 si no.
 | `DamageEvent` en una ULT | como un golpe a enemigo, con el `dl` del impacto, `num` **pesado** (`heavy`: grande y con rebote); crítico: además `flash` blanco con el mismo `dl` |
 | `HealEvent` en una ULT (Baluarte) | `num` `+n` pesado y `aura` sagrada con el `dl` del impacto en ese aliado |
 | `KnockedOutEvent` de enemigo en una ULT | `poof` con el `dl` del impacto en él |
-| `ActionEvent` dúo | `act` de ambos, `flash` del color del dúo, `ring` grande en el punto medio, `proj` de cada uno a cada enemigo |
+| `ActionEvent` dúo | v0.8.3: `ult` (cinemática de dúo, § "Dúos") con nombre, color y elemento del dúo, compañero y armas; `act` de los dos al descargar (el compañero +40 ms); `ring` grande en el punto medio al descargar. Sin `proj`: las estelas son de la cinemática |
+| `DamageEvent` en un dúo | como en una ULT (`num` pesado en el impacto del guion) + `txt` `×2 DÚO` del color del dúo sobre cada golpeado |
 | `ActionEvent` Fortaleza | `txt` `DEF +n` `#74b9ff` en `y−30`, `aura` maná |
 | `ActionEvent` Protección | `ring` grande `#ffeaa7`, `aura` sagrada en los otros aliados vivos |
 | `ActionEvent` Provocar | `txt` `¡PROVOCA!` `#ff7675` en `y−30`, `ring` grande `#ff7675` |
@@ -852,6 +854,82 @@ los efectos pendientes de la ULT (números, etc.) arrancan ya. Otra
 batalla limpia todo. El cartel de victoria/derrota espera a que termine
 la cinemática.
 
+## Dúos (v0.8.3)
+
+Todos los dúos (de clase y de armas, combat.md § "Dúos") tienen una
+cinemática corta que usa la tubería de las ULT (`FxKind.ult`,
+`UltCinematic`, cámara, oscurecido, hit-stop, cola de pasos) con el
+estilo `UltStyle.duo` y su guion (`duo_cinematic.dart`):
+
+| Guion `kDuoScript` | ms |
+|---|---|
+| Preparación (`buildMs`): entran los dos retratos y el cartel | 0–650 |
+| Descarga (`releaseMs`): dos estelas convergen | 650–1300 |
+| Impacto en el objetivo `i` (`impactFor(i)`) | 1000 + 50·i |
+| Hit-stop en el último impacto | 90 |
+| Sacudida (`shake`) | 9 (×0.6 en los demás) |
+| Regreso (`returnMs`) | 1300–1600 |
+| Total | 1600 |
+
+**Tarjeta partida** (`BattleOverlayPainter._duoCard`, capa pixelada
+2u, `duoCardPose(a, reduceMotion)`): banda de arriba con quien hace el
+dúo (entra desde la izquierda en 260 ms, sprite ×2.5, nombre y tipo de
+arma), banda de abajo con el compañero (desde la derecha, 60 ms más
+tarde, sprite espejado mirando al centro) y, entre las dos, el cartel
+`DÚO · <NOMBRE>` (fondo negro, filetes del color del dúo, texto dorado
+16, aparece de 180 a 360 ms). La tarjeta se va con un fundido de 200 ms
+y desaparece a los 800 ms.
+
+**Mundo** (`UltDirector._duo`): carga (`_gather`) en los dos; desde la
+descarga, dos estelas (curvas cuadráticas: la de quien lo hace arquea
+hacia arriba, la del compañero hacia abajo) con cabeza blanca + estrella
+del color del dúo, que avanzan con `duoTrailProgress` (aceleran) y
+llegan al centro de los objetivos en el impacto; ahí, cruz de luz (un
+brazo blanco y otro del color), anillos que crecen 360 ms y estrella en
+cada objetivo; después, un óvalo del color del elemento bajo cada
+objetivo que se apaga hasta el fin del regreso. Partículas del elemento
+del dúo (las de su estado) en las cargas y en cada impacto.
+
+**Pantalla**: barras de cine y oscurecido como una ULT; destello del
+impacto blanco teñido 35 % del color del dúo (× DESTELLOS). Números de
+daño pesados + `×2 DÚO`.
+
+**Ajustes**: REDUCIR MOVIMIENTO → la tarjeta no se desliza (las dos
+mitades ya están en su lugar, fundido de 150 ms, sin líneas de
+velocidad) y la cámara no hace zoom (como en las ULT). SACUDIDA apagada
+→ sin sacudida; DESTELLOS escala el destello; PARTÍCULAS escala las
+motas.
+
+**Saltear**: un clic / toque en la escena durante la preparación o la
+descarga la saltea (`BattleSceneController.skipDuo`: salta al regreso,
+los golpes pendientes caen ya, sin hit-stop). Con 2 pasos en cola se
+adelanta sola (§ "Nuevos pasos durante la cinemática").
+
+**Sonido**: `dual.rise` al empezar, `flash` + `dual.cast` al descargar,
+`dual.clash` en el impacto (audio.md).
+
+**Menú DÚOS**: una fila por dúo disponible (por aliado vivo: el de clase
+si lo hay y los de armas de su par): `★ <dúo> (+<aliado>)`, la etiqueta
+del par (`[Guerrero + Maga]` azul para los de clase, `[arco + báculo]`
+dorada para los de armas), daño estimado a todos y el estado; costo
+`4 MP c/u`. La descripción dice si es de clase o de armas, los dos
+nombres, el par, el elemento, la fórmula y el estado. Ids:
+`duo-<aliado>` el de clase (como antes) y `duo-<aliado>-<id>` los de
+armas.
+
+| Dúos de armas | Armas | Elemento |
+|---|---|---|
+| Flecha Arcana Gemela | arco + báculo | Electro |
+| Bastión Rúnico | espada+escudo + tomo | Sagrado |
+| Fuego Cruzado Letal | dagas + rifle | Fuego |
+| Terremoto Doble | hacha + martillo+escudo | Físico |
+| Saeta Voltaica | varita + ballesta | Electro |
+| Juicio Perforante | lanza + maza+escudo | Sagrado |
+| Filo Ígneo Arcano | espada + varita | Fuego |
+| Hoja Maldita | tomo + dagas | Veneno |
+| Tajo Glaciar | hacha + báculo | Hielo |
+| Diluvio de Astas | lanza + arco | Agua |
+
 ## Ataque enemigo (wind-up)
 
 Pedido del dueño: ataques enemigos con más peso. Cada `ActionEvent`
@@ -1019,7 +1097,8 @@ fila la elige. Las teclas de la descripción terminan en `· P: pasar`.
 
 **Tooltip equivocado (bug de v0.4)**: las filas ya no tienen tooltip; la
 descripción sale de la acción elegida en el momento. Cada fila se arma
-con `ValueKey('battle-act-<id>')` (id estable: `skill-<id>`, `duo-<id>`,
+con `ValueKey('battle-act-<id>')` (id estable: `skill-<id>`, `duo-<aliado>`
+y `duo-<aliado>-<dúo de armas>` (v0.8.3),
 `attack`, `potion`, `give-<id>`...), así Flutter nunca reutiliza la fila
 de una técnica para otra, y el menú vuelve a ATACAR con la primera acción
 elegida en cada turno nuevo, al actuar o al perder el turno. Los

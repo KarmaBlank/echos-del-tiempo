@@ -13,6 +13,7 @@ import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/ascension_rules.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../../world/presentation/session_controller.dart';
+import '../../world/presentation/panels/party_member_bar.dart';
 import '../../world/presentation/session_view.dart';
 import '../domain/ascension_text.dart';
 import 'ascension_views.dart';
@@ -60,7 +61,7 @@ class AscensionPanel extends StatefulWidget {
 
 class _AscensionPanelState extends State<AscensionPanel> {
   late var _tab = widget.initialTab ??
-      (widget.view.me!.profile.ascension.trials.isEmpty
+      (widget.view.actor!.profile.ascension.trials.isEmpty
           ? AscensionTab.trials
           : AscensionTab.ascension);
   int? _sel;
@@ -70,54 +71,65 @@ class _AscensionPanelState extends State<AscensionPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final p = view.me!.profile;
+    // El miembro activo (solo_party.md § 6): su ascensión. Las Pruebas
+    // son propuestas de grupo: siempre las del líder.
+    final p = view.actor!.profile;
     final a = const AscensionRules().of(p);
     // Q / E, Ctrl+Tab y 1-9 cambian de pestaña (menu_focus.dart).
-    return MenuTabKeys(
-      count: AscensionTab.values.length,
-      index: _tab.index,
-      onChanged: (i) => setState(() => _tab = AscensionTab.values[i]),
-      child: PanelFrame(
-        title: 'ESTATUA DEL TIEMPO',
-        width: 1040,
-        fill: true,
-        help: kAscensionHelp,
-        onClose: c.closePanel,
-        titleTrailing: ProtoText(
-            key: const ValueKey('asc-title-points'),
-            protoEsc(trialsSummary(p.ascension))),
-        header: PanelTabs(
-          labels: [for (final t in AscensionTab.values) t.label],
-          index: _tab.index,
-          onChanged: (i) => setState(() => _tab = AscensionTab.values[i]),
-        ),
-        actions: [PanelButton('CERRAR [ESC]', onPressed: c.closePanel)],
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            PanelHint(_tab.hint),
-            Expanded(
-              child: switch (_tab) {
-                AscensionTab.trials => _trials(p),
-                AscensionTab.ascension => a == null
-                    ? _choice(p)
-                    : AscensionTreeView(
-                        key: const ValueKey('asc-tree'),
-                        def: a,
-                        progress: p.ascension,
-                        sprites: widget.sprites,
-                        editBlocked: view.session.mode == SessionMode.battle
-                            ? 'No en batalla'
-                            : null,
-                        onTake: (id) => setState(() => c.takeAscensionNode(id)),
-                        onReset: () => setState(() => c.resetAscension()),
-                        onChange: view.session.canShop
-                            ? () => setState(() => c.resetAscension(full: true))
-                            : null,
-                      ),
-              },
-            ),
-          ],
+    return PartyMemberKeys(
+      view: view,
+      controller: c,
+      child: MenuTabKeys(
+        count: AscensionTab.values.length,
+        index: _tab.index,
+        onChanged: (i) => setState(() => _tab = AscensionTab.values[i]),
+        child: PanelFrame(
+          title: 'ESTATUA DEL TIEMPO',
+          width: 1040,
+          fill: true,
+          help: kAscensionHelp,
+          onClose: c.closePanel,
+          titleTrailing: ProtoText(
+              key: const ValueKey('asc-title-points'),
+              protoEsc(trialsSummary(p.ascension))),
+          header: PartyMemberBar.header(
+              view,
+              c,
+              PanelTabs(
+                labels: [for (final t in AscensionTab.values) t.label],
+                index: _tab.index,
+                onChanged: (i) => setState(() => _tab = AscensionTab.values[i]),
+              )),
+          actions: [PanelButton('CERRAR [ESC]', onPressed: c.closePanel)],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              PanelHint(_tab.hint),
+              Expanded(
+                child: switch (_tab) {
+                  AscensionTab.trials => _trials(view.me!.profile),
+                  AscensionTab.ascension => a == null
+                      ? _choice(p)
+                      : AscensionTreeView(
+                          key: const ValueKey('asc-tree'),
+                          def: a,
+                          progress: p.ascension,
+                          sprites: widget.sprites,
+                          editBlocked: view.session.mode == SessionMode.battle
+                              ? 'No en batalla'
+                              : null,
+                          onTake: (id) =>
+                              setState(() => c.takeAscensionNode(id)),
+                          onReset: () => setState(() => c.resetAscension()),
+                          onChange: view.session.canShop
+                              ? () =>
+                                  setState(() => c.resetAscension(full: true))
+                              : null,
+                        ),
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

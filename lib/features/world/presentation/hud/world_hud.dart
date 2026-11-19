@@ -12,6 +12,7 @@ import '../../../../app/theme/retro_bar.dart';
 import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../app/widgets/memo.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/loot_filter.dart';
@@ -132,9 +133,15 @@ class WorldHud extends StatelessWidget {
               left: 0,
               right: 0,
               child: Center(
-                child: _MissionBar(
-                  view: view,
-                  missionName: _missionName(s),
+                child: Memo(
+                  deps: [
+                    _MissionBar.textFor(view, _missionName(s)),
+                    turnTimerNote(view),
+                  ],
+                  builder: (_) => _MissionBar(
+                    view: view,
+                    missionName: _missionName(s),
+                  ),
                 ),
               ),
             ),
@@ -143,42 +150,53 @@ class WorldHud extends StatelessWidget {
             Positioned(
               top: _gap,
               left: _gap,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (s.mode == SessionMode.lobby && onExit != null) ...[
-                    ElevatedButton(
-                      style: RetroTheme.compactButton(),
-                      onPressed: onExit,
-                      child: const Text('< TITULO'),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  if (onMenu != null) PauseMenuButton(onPressed: onMenu!),
-                  // Party jugando solo, en el pueblo (solo_party.md § 2.3).
-                  if (controller.canEditParty) ...[
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      key: const ValueKey('hud-party'),
-                      style: RetroTheme.compactButton(),
-                      onPressed: controller.toggleParty,
-                      child: Text('PARTY (${view.companions.length + 1}) [P]'),
-                    ),
-                  ],
-                  // Puntos sin usar: `PERSONAJE [C]` con `+N` (solo si hay;
-                  // passive_tree_v4.md § 7).
-                  if (_unused(s).any) ...[
-                    const SizedBox(width: 8),
-                    Consumer(
-                      builder: (context, ref, _) => UnusedPointsButton(
-                        points: _unused(s),
-                        reduceMotion: ref.watch(
-                            gameSettingsProvider.select((g) => g.reduceMotion)),
-                        onPressed: controller.toggleCharacter,
-                      ),
-                    ),
-                  ],
+              child: Memo(
+                deps: [
+                  s.mode == SessionMode.lobby,
+                  onExit != null,
+                  onMenu != null,
+                  controller.canEditParty,
+                  view.companions.length,
+                  _unusedKey(_unused(s)),
                 ],
+                builder: (_) => Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (s.mode == SessionMode.lobby && onExit != null) ...[
+                      ElevatedButton(
+                        style: RetroTheme.compactButton(),
+                        onPressed: onExit,
+                        child: const Text('< TITULO'),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    if (onMenu != null) PauseMenuButton(onPressed: onMenu!),
+                    // Party jugando solo, en el pueblo (solo_party.md § 2.3).
+                    if (controller.canEditParty) ...[
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        key: const ValueKey('hud-party'),
+                        style: RetroTheme.compactButton(),
+                        onPressed: controller.toggleParty,
+                        child:
+                            Text('PARTY (${view.companions.length + 1}) [P]'),
+                      ),
+                    ],
+                    // Puntos sin usar: `PERSONAJE [C]` con `+N` (solo si hay;
+                    // passive_tree_v4.md § 7).
+                    if (_unused(s).any) ...[
+                      const SizedBox(width: 8),
+                      Consumer(
+                        builder: (context, ref, _) => UnusedPointsButton(
+                          points: _unused(s),
+                          reduceMotion: ref.watch(gameSettingsProvider
+                              .select((g) => g.reduceMotion)),
+                          onPressed: controller.toggleCharacter,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
             // `Sala: CODIGO [Copiar]` del prototipo (HTML línea 87).
@@ -248,35 +266,38 @@ class WorldHud extends StatelessWidget {
                       const SizedBox(height: 4),
                       // Los botones no toman el foco (el teclado sigue en
                       // el juego).
-                      ExcludeFocus(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ElevatedButton(
-                              key: const ValueKey('minimap-zoom-out'),
-                              style: RetroTheme.compactButton(),
-                              onPressed: zoom > 1
-                                  ? () => setMinimapZoom(ref, zoom - 1)
-                                  : null,
-                              child: const Text('-'),
-                            ),
-                            const SizedBox(width: 4),
-                            ElevatedButton(
-                              key: const ValueKey('minimap-zoom-in'),
-                              style: RetroTheme.compactButton(),
-                              onPressed: zoom < GameSettings.minimapZooms
-                                  ? () => setMinimapZoom(ref, zoom + 1)
-                                  : null,
-                              child: const Text('+'),
-                            ),
-                            const SizedBox(width: 4),
-                            ElevatedButton(
-                              key: const ValueKey('minimap-open-map'),
-                              style: RetroTheme.compactButton(),
-                              onPressed: controller.toggleMap,
-                              child: const Text('MAPA [M]'),
-                            ),
-                          ],
+                      Memo(
+                        deps: [zoom],
+                        builder: (_) => ExcludeFocus(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ElevatedButton(
+                                key: const ValueKey('minimap-zoom-out'),
+                                style: RetroTheme.compactButton(),
+                                onPressed: zoom > 1
+                                    ? () => setMinimapZoom(ref, zoom - 1)
+                                    : null,
+                                child: const Text('-'),
+                              ),
+                              const SizedBox(width: 4),
+                              ElevatedButton(
+                                key: const ValueKey('minimap-zoom-in'),
+                                style: RetroTheme.compactButton(),
+                                onPressed: zoom < GameSettings.minimapZooms
+                                    ? () => setMinimapZoom(ref, zoom + 1)
+                                    : null,
+                                child: const Text('+'),
+                              ),
+                              const SizedBox(width: 4),
+                              ElevatedButton(
+                                key: const ValueKey('minimap-open-map'),
+                                style: RetroTheme.compactButton(),
+                                onPressed: controller.toggleMap,
+                                child: const Text('MAPA [M]'),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -287,42 +308,50 @@ class WorldHud extends StatelessWidget {
               left: _gap,
               bottom: _gap,
               width: chatWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Registro de loot (`Ana encontró: ...`) encima del chat.
-                  Consumer(
-                    builder: (context, ref, _) =>
-                        LootLog(feed: ref.watch(lootFeedProvider)),
-                  ),
-                  const SizedBox(height: 6),
-                  chatFocus == null
-                      ? _MessageLog(messages: view.messages)
-                      // CHAT: OCULTO / SIEMPRE VISIBLE (v0.8.1).
-                      : Consumer(builder: (context, ref, _) {
-                          final (chat, notices, duration) = ref.watch(
-                              gameSettingsProvider.select((g) =>
-                                  (g.chat, g.chatNotices, g.noticeDuration)));
-                          final me = s.players[view.localId];
-                          return ChatBox(
-                            lines: view.chat,
-                            focusNode: chatFocus!,
-                            onSend: controller.sendChat,
-                            onDone: onChatDone ?? () {},
-                            collapsible: chat == ChatVisibility.hidden,
-                            notices: notices,
-                            // DURACIÓN DE LOS AVISOS (accessibility.md § 9.5).
-                            noticeDuration:
-                                duration.scale(ChatBox.toastDuration),
-                            dismissSignal: ref.watch(noticeDismissProvider),
-                            localName: me == null
-                                ? null
-                                : heroTitle(me.name, me.profile.classId,
-                                    me.profile.ascension.id),
-                          );
-                        }),
+              child: Memo(
+                deps: [
+                  view.chat,
+                  view.messages,
+                  chatFocus,
+                  _localNameOf(s),
                 ],
+                builder: (_) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Registro de loot (`Ana encontró: ...`) encima del chat.
+                    Consumer(
+                      builder: (context, ref, _) =>
+                          LootLog(feed: ref.watch(lootFeedProvider)),
+                    ),
+                    const SizedBox(height: 6),
+                    chatFocus == null
+                        ? _MessageLog(messages: view.messages)
+                        // CHAT: OCULTO / SIEMPRE VISIBLE (v0.8.1).
+                        : Consumer(builder: (context, ref, _) {
+                            final (chat, notices, duration) = ref.watch(
+                                gameSettingsProvider.select((g) =>
+                                    (g.chat, g.chatNotices, g.noticeDuration)));
+                            final me = s.players[view.localId];
+                            return ChatBox(
+                              lines: view.chat,
+                              focusNode: chatFocus!,
+                              onSend: controller.sendChat,
+                              onDone: onChatDone ?? () {},
+                              collapsible: chat == ChatVisibility.hidden,
+                              notices: notices,
+                              // DURACIÓN DE LOS AVISOS (accessibility.md § 9.5).
+                              noticeDuration:
+                                  duration.scale(ChatBox.toastDuration),
+                              dismissSignal: ref.watch(noticeDismissProvider),
+                              localName: me == null
+                                  ? null
+                                  : heroTitle(me.name, me.profile.classId,
+                                      me.profile.ascension.id),
+                            );
+                          }),
+                  ],
+                ),
               ),
             ),
             if (_voteBox(s) case final vote?)
@@ -346,23 +375,28 @@ class WorldHud extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
+                    // Cada caja se arma solo si cambió lo que muestra.
                     for (final p in players)
-                      Consumer(
-                        builder: (context, ref, _) => _Toggle(
-                          key: ValueKey('hud-party-${p.id}'),
-                          expanded: expanded,
-                          onTap: () => togglePartyBoxes(ref),
-                          child: expanded
-                              ? _PlayerBox(
-                                  player: p,
-                                  local: p.id == view.localId,
-                                  progression: controller.engine.progression,
-                                )
-                              : CompactPlayerBox(
-                                  player: p,
-                                  local: p.id == view.localId,
-                                  progression: controller.engine.progression,
-                                ),
+                      Memo(
+                        key: ValueKey('hud-party-memo-${p.id}'),
+                        deps: [_boxKey(p, expanded)],
+                        builder: (_) => Consumer(
+                          builder: (context, ref, _) => _Toggle(
+                            key: ValueKey('hud-party-${p.id}'),
+                            expanded: expanded,
+                            onTap: () => togglePartyBoxes(ref),
+                            child: expanded
+                                ? _PlayerBox(
+                                    player: p,
+                                    local: p.id == view.localId,
+                                    progression: controller.engine.progression,
+                                  )
+                                : CompactPlayerBox(
+                                    player: p,
+                                    local: p.id == view.localId,
+                                    progression: controller.engine.progression,
+                                  ),
+                          ),
                         ),
                       ),
                   ],
@@ -378,32 +412,46 @@ class WorldHud extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Avances del plan de build (build_planner.md § 5).
-                    Consumer(
-                      builder: (context, ref, _) =>
-                          BuildToasts(feed: ref.watch(buildFeedProvider)),
+                    Memo(
+                      deps: const [],
+                      builder: (_) => Consumer(
+                        builder: (context, ref, _) =>
+                            BuildToasts(feed: ref.watch(buildFeedProvider)),
+                      ),
                     ),
-                    Consumer(
-                      builder: (context, ref, _) =>
-                          LootToasts(feed: ref.watch(lootFeedProvider)),
+                    Memo(
+                      deps: const [],
+                      builder: (_) => Consumer(
+                        builder: (context, ref, _) =>
+                            LootToasts(feed: ref.watch(lootFeedProvider)),
+                      ),
                     ),
                     // Aviso al subir de nivel con puntos de árbol sin usar.
-                    Consumer(
-                      builder: (context, ref, _) => UnusedPointsToast(
-                        points: _unused(s),
-                        treeLevel:
-                            s.players[view.localId]?.profile.treeLevel ?? 0,
-                        ascensionEarned:
-                            s.players[view.localId]?.profile.ascension.earned ??
-                                0,
-                        blocked:
-                            s.mode == SessionMode.levelUp || view.panel != null,
-                        reduceMotion: ref.watch(
-                            gameSettingsProvider.select((g) => g.reduceMotion)),
-                        duration: ref
-                            .watch(gameSettingsProvider
-                                .select((g) => g.noticeDuration))
-                            .scale(UnusedPointsToast.shown),
-                        dismissSignal: ref.watch(noticeDismissProvider),
+                    Memo(
+                      deps: [
+                        _unusedKey(_unused(s)),
+                        s.players[view.localId]?.profile.treeLevel,
+                        s.players[view.localId]?.profile.ascension.earned,
+                        s.mode == SessionMode.levelUp || view.panel != null,
+                      ],
+                      builder: (_) => Consumer(
+                        builder: (context, ref, _) => UnusedPointsToast(
+                          points: _unused(s),
+                          treeLevel:
+                              s.players[view.localId]?.profile.treeLevel ?? 0,
+                          ascensionEarned: s.players[view.localId]?.profile
+                                  .ascension.earned ??
+                              0,
+                          blocked: s.mode == SessionMode.levelUp ||
+                              view.panel != null,
+                          reduceMotion: ref.watch(gameSettingsProvider
+                              .select((g) => g.reduceMotion)),
+                          duration: ref
+                              .watch(gameSettingsProvider
+                                  .select((g) => g.noticeDuration))
+                              .scale(UnusedPointsToast.shown),
+                          dismissSignal: ref.watch(noticeDismissProvider),
+                        ),
                       ),
                     ),
                     for (final line in _banners(s))
@@ -445,12 +493,65 @@ class WorldHud extends StatelessWidget {
     });
   }
 
-  /// Puntos sin usar del jugador local (atributos, árbol, ascensión).
-  UnusedPoints _unused(GameSession s) {
+  /// [UnusedPoints] comparable (para [Memo]).
+  static (int, int, int, int) _unusedKey(UnusedPoints u) =>
+      (u.attributes, u.tree, u.ascension, u.companionTotal);
+
+  /// Lo que el chat muestra del jugador local (su nombre en las burbujas).
+  (String, String, String?)? _localNameOf(GameSession s) {
     final me = s.players[view.localId];
     return me == null
-        ? UnusedPoints.none
-        : UnusedPoints.of(me.profile, controller.engine.progression);
+        ? null
+        : (me.name, me.profile.classId, me.profile.ascension.id);
+  }
+
+  /// Todo lo que muestra la caja de [p] (compacta o desplegada): si no
+  /// cambió, la caja no se reconstruye.
+  Object _boxKey(SessionPlayer p, bool expanded) {
+    final prof = p.profile;
+    return (
+      p.id,
+      p.id == view.localId,
+      p.name,
+      p.alive,
+      p.hp,
+      p.maxHp,
+      p.mp,
+      p.maxMp,
+      prof.classId,
+      prof.ascension.id,
+      prof.level,
+      prof.points,
+      expanded
+          ? (
+              prof.equipped == null
+                  ? null
+                  : controller.engine.progression
+                      .weaponDisplayName(prof, prof.equipped!),
+              prof.xp,
+              prof.credits,
+              prof.potions,
+              prof.ethers,
+              prof.mastery,
+            )
+          : null,
+    );
+  }
+
+  /// Puntos sin usar del jugador local (atributos, árbol, ascensión).
+  /// Con party jugando solo, más los de cada compañero (solo_party.md
+  /// § 6.3).
+  UnusedPoints _unused(GameSession s) {
+    final me = s.players[view.localId];
+    if (me == null) return UnusedPoints.none;
+    final rules = controller.engine.progression;
+    final own = UnusedPoints.of(me.profile, rules);
+    if (view.companions.isEmpty) return own;
+    return own.withCompanions([
+      for (final id in view.companions)
+        if (s.players[id] case final p?)
+          (p.name, UnusedPoints.of(p.profile, rules).total),
+    ]);
   }
 
   /// Nombre de la misión en curso: la zona si es de zona.
@@ -569,8 +670,8 @@ class _MissionBar extends StatelessWidget {
   final SessionView view;
   final String missionName;
 
-  @override
-  Widget build(BuildContext context) {
+  /// El texto de la barra (también es la clave de su [Memo]).
+  static String textFor(SessionView view, String missionName) {
     final s = view.session;
     final m = s.mission;
     final String text;
@@ -595,6 +696,12 @@ class _MissionBar extends StatelessWidget {
     } else {
       text = 'Lobby · Mostrador [E] · Armería [E] · Personaje [C]';
     }
+    return text;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final text = textFor(view, missionName);
     // Tiempo de turno de la sala si no es el normal (en co-op lo fija el
     // anfitrión; accessibility.md § 7).
     final turns = turnTimerNote(view);

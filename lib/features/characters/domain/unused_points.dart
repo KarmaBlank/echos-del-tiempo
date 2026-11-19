@@ -6,7 +6,24 @@ import '../../../game_engine/rules/progression_rules.dart';
 /// (docs/specs/passive_tree_v4.md § 7). Puro: lo usan el aviso del HUD,
 /// las pestañas del panel de personaje y el aviso al subir de nivel.
 class UnusedPoints {
-  const UnusedPoints({this.attributes = 0, this.tree = 0, this.ascension = 0});
+  const UnusedPoints({
+    this.attributes = 0,
+    this.tree = 0,
+    this.ascension = 0,
+    this.companions = const [],
+  });
+
+  /// Los mismos puntos más los de los compañeros de la party jugando solo
+  /// (nombre, total; solo los que tienen; solo_party.md § 6.3).
+  UnusedPoints withCompanions(List<(String, int)> list) => UnusedPoints(
+        attributes: attributes,
+        tree: tree,
+        ascension: ascension,
+        companions: [
+          for (final c in list)
+            if (c.$2 > 0) c
+        ],
+      );
 
   /// Del perfil, con las reglas reales (árbol: `treeLevel`, con Maestría).
   factory UnusedPoints.of(PlayerProfile p, ProgressionRules rules) =>
@@ -24,14 +41,30 @@ class UnusedPoints {
   final int tree;
   final int ascension;
 
-  int get total => attributes + tree + ascension;
+  /// Compañeros con puntos sin usar: (nombre, total).
+  final List<(String, int)> companions;
+
+  /// Los de los compañeros, sumados.
+  int get companionTotal => companions.fold(0, (a, c) => a + c.$2);
+
+  /// Los del personaje (sin los compañeros).
+  int get own => attributes + tree + ascension;
+
+  int get total => own + companionTotal;
   bool get any => total > 0;
 
   static String _n(int n, String what) =>
       '$n punto${n == 1 ? '' : 's'} de $what';
 
-  /// Desglose para el tooltip del HUD (`3 de atributos · 2 de árbol`).
+  /// Desglose para el tooltip del HUD (`3 de atributos · 2 de árbol`;
+  /// los compañeros: `Leo: 3 puntos`).
   List<String> get parts => [
+        ..._ownParts,
+        for (final (name, n) in companions)
+          '$name: $n punto${n == 1 ? '' : 's'}',
+      ];
+
+  List<String> get _ownParts => [
         if (attributes > 0) _n(attributes, 'atributos'),
         if (tree > 0) _n(tree, 'árbol'),
         if (ascension > 0) _n(ascension, 'ascensión'),
@@ -40,16 +73,27 @@ class UnusedPoints {
   /// Texto del aviso al subir de nivel (o al ganar puntos de ascensión):
   /// `Tenés 2 puntos de árbol sin usar · [C]`; `null` si no hay nada que
   /// avisar.
+  ///
+  /// Con compañeros, una parte por cada uno: `Leo tiene 3 puntos sin usar`.
   String? get toastText {
-    final p = parts;
-    if (p.isEmpty) return null;
-    final where = attributes > 0 || tree > 0
+    final p = _ownParts;
+    final mates = [
+      for (final (name, n) in companions)
+        '$name tiene $n punto${n == 1 ? '' : 's'} sin usar',
+    ];
+    if (p.isEmpty && mates.isEmpty) return null;
+    if (p.isEmpty) return '${mates.join(' · ')} · [C]';
+    final where = attributes > 0 || tree > 0 || mates.isNotEmpty
         ? '[C]${ascension > 0 ? ' · ascensión: Estatua del Tiempo' : ''}'
         : 'Estatua del Tiempo';
     final list = p.length == 1
         ? p.single
         : '${p.sublist(0, p.length - 1).join(', ')} y ${p.last}';
-    return 'Tenés $list sin usar · $where';
+    return [
+      'Tenés $list sin usar',
+      ...mates,
+      where,
+    ].join(' · ');
   }
 
   @override
@@ -57,11 +101,22 @@ class UnusedPoints {
       other is UnusedPoints &&
       other.attributes == attributes &&
       other.tree == tree &&
-      other.ascension == ascension;
+      other.ascension == ascension &&
+      _sameList(other.companions, companions);
+
+  static bool _sameList(List<(String, int)> a, List<(String, int)> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 
   @override
-  int get hashCode => Object.hash(attributes, tree, ascension);
+  int get hashCode =>
+      Object.hash(attributes, tree, ascension, Object.hashAll(companions));
 
   @override
-  String toString() => 'UnusedPoints($attributes, $tree, $ascension)';
+  String toString() =>
+      'UnusedPoints($attributes, $tree, $ascension, $companions)';
 }

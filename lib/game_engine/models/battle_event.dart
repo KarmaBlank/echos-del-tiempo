@@ -98,6 +98,8 @@ class ActionEvent extends BattleEvent {
   final BattleActionKind kind;
 
   /// `SkillDef.id` de la habilidad o ULT usada (`kind` skill/ultimate).
+  /// En un dúo (v0.8.3): la clave del dúo en `GameCatalog.duals`
+  /// (`claseA+claseB` o `w_...`); `null` de un host v0.8.2 = el de clase.
   final String? skillId;
 
   /// Aliado del dúo (`kind` dual).

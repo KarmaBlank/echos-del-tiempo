@@ -424,7 +424,23 @@ class BattleSceneController extends ChangeNotifier {
       targets: [for (final id in ids) f.layout.of(id)],
       targetBoxes: [for (final id in ids) f.layout.boxOf(id)],
       party: [for (final p in b.party) f.layout.of(p.id)],
+      partner: switch (u.fx.ult?.partnerId) {
+        final id? when id.isNotEmpty => f.layout.of(id),
+        _ => null,
+      },
     );
+  }
+
+  /// Saltear la cinemática de DÚO en curso (clic / toque en la escena,
+  /// battle_presentation.md § "Dúos"): salta al regreso, los golpes
+  /// pendientes caen ya, sin hit-stop. `false` si no había nada que
+  /// saltear (ninguna cinemática de dúo en preparación o descarga).
+  bool skipDuo() {
+    final u = ult;
+    if (u == null || !(u.fx.ult?.duo ?? false)) return false;
+    if (t - u.t0 >= u.script.returnAt) return false;
+    fastForward();
+    return true;
   }
 
   void _updateUlt(SceneFrame f) {

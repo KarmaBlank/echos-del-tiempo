@@ -88,7 +88,9 @@ List<AdminEntry> buildAdminIndex(BalanceBase base) {
         kind: BalanceKind.dual,
         id: e.key,
         name: e.value.name,
-        detail: '${e.key} · poder ${trimNum(e.value.power)}'));
+        detail: '${e.value.weapons?.join(' & ') ?? e.key}'
+            '${e.value.byWeapon ? ' (armas)' : ''}'
+            ' · poder ${trimNum(e.value.power)}'));
   }
   for (final w in c.weapons.values) {
     out.add(AdminEntry(

@@ -707,6 +707,16 @@ INVENTARIO, `WorldPanel.inventory`; ver § "Inventario" y § "Filtro de
 loot"). Antes eran tres pestañas (**desvío**: el prototipo apila todo en una
 columna con scroll; a 1280×720 con fuente de 8 px no entra).
 
+**Selector de miembro (v0.8.3, solo_party.md § 6).** Jugando solo con
+compañeros, arriba de las pestañas va la fila `PartyMemberBar`
+(`Ana (vos) · Leo · Mia · Cid`, cada uno con su insignia `+N` de puntos
+sin usar; `member-<id>`). El elegido es el **miembro activo**: todo el
+panel (título, atributos, clase, inventario, árbol, filtro, BUILD) lo
+muestra y actúa sobre él. `Ctrl+←` / `Ctrl+→` cambian de miembro. La
+misma fila está en la armería, la preparación, el Portal del Eco y la
+Estatua del Tiempo. Durante el reparto obligatorio de la subida de
+nivel no aparece (es siempre el líder).
+
 ### Atributos
 
 `Reparte puntos con + y -; nada cambia hasta CONFIRMAR. Cada nivel da 3
@@ -909,6 +919,7 @@ es la de CONTROLES › MENÚS):
 | `Q` / `E`, `RePág` / `AvPág` | Pestaña anterior / siguiente (en círculo) |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Pestaña siguiente / anterior |
 | `1`..`9` | Pestaña N; en el mostrador la zona N; en el título el personaje N o (en el creador) la clase N |
+| `Ctrl+←` / `Ctrl+→` | Party jugando solo (v0.8.3): miembro anterior / siguiente en los paneles con selector de miembro (solo_party.md § 6.2). `PanelFrame` y `FocusGrid` no usan las flechas con `Ctrl` |
 
 - **Foco visible**: aro dorado de 2 px por fuera del elemento
   (`FocusRing`, no cambia el tamaño) y, en filas, el cursor ▶ a la

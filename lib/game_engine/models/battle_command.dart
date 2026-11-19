@@ -23,7 +23,12 @@ class UltimateCommand extends BattleCommand {
 
 class DualCommand extends BattleCommand {
   final String partnerId;
-  const DualCommand(this.partnerId);
+
+  /// Qué dúo (v0.8.3): la clave de `GameCatalog.duals` (`claseA+claseB`
+  /// o `w_...` de un dúo de armas). `null` = el dúo de clase del par
+  /// (como en v0.8.2).
+  final String? dualId;
+  const DualCommand(this.partnerId, {this.dualId});
 }
 
 enum BattleItem { potion, ether }

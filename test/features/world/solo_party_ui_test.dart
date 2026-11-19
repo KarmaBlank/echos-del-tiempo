@@ -7,10 +7,12 @@ import 'package:echos_del_tiempo/features/characters/domain/account.dart';
 import 'package:echos_del_tiempo/features/characters/presentation/characters_providers.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
 import 'package:echos_del_tiempo/features/lobby/presentation/title_screen.dart';
+import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/party_panel.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_battle_screen.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
+import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:flutter/services.dart';
@@ -161,6 +163,87 @@ void main() {
     c.closePanel();
     expect(c.proposeMission('m1'), isTrue);
     expect(c.handleKey(LogicalKeyboardKey.keyP), isFalse);
+  });
+
+  // v0.8.3: el selector de miembro (solo_party.md § 6).
+  testWidgets('personaje: el selector elige a quién se le reparten los '
+      'puntos; Ctrl+←/→ cambia', (tester) async {
+    var a = Account();
+    a = a.add(newProfile('Ana', 'guerrero'))!;
+    a = a.add(progression
+        .normalize(newProfile('Leo', 'maga').copyWith(level: 5)))!;
+    a = a.add(newProfile('Mia', 'tirador'))!;
+    final repo = AccountRepository(
+        InMemoryAccountStore(a.select('c1').withParty(['c2', 'c3'])));
+    final c = await _pumpSession(
+        tester,
+        repo,
+        (view, c) => view.panel == WorldPanel.character
+            ? CharacterPanel(view: view, controller: c)
+            : const SizedBox.shrink());
+    c.openPanel(WorldPanel.character);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('party-member-bar')), findsOneWidget);
+    expect(find.text('Ana (vos)'), findsOneWidget);
+    expect(find.byKey(const ValueKey('member-local-c2')), findsOneWidget);
+    expect(find.byKey(const ValueKey('member-local-c3')), findsOneWidget);
+    // Leo tiene puntos: su insignia +N; Ana y Mia no.
+    expect(find.byKey(const ValueKey('member-points-local-c2')), findsOneWidget);
+    expect(find.byKey(const ValueKey('member-points-local')), findsNothing);
+    expect(c.view!.actorId, 'local');
+
+    await tester.tap(find.byKey(const ValueKey('member-local-c2')));
+    await tester.pump();
+    expect(c.view!.actorId, 'local-c2');
+    expect(_hasText('Leo'), isTrue);
+    final leo0 = c.session!.players['local-c2']!.profile;
+    final ana0 = c.session!.players['local']!.profile;
+    await tester.tap(find.byKey(const ValueKey('inc-vit')));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('confirm-points')));
+    await tester.pump();
+    final leo = c.session!.players['local-c2']!.profile;
+    expect(leo.attributes[Attribute.vit], leo0.attributes[Attribute.vit] + 1);
+    expect(leo.points, leo0.points - 1);
+    final ana = c.session!.players['local']!.profile;
+    expect(ana.attributes[Attribute.vit], ana0.attributes[Attribute.vit],
+        reason: 'el punto fue para Leo, no para Ana');
+    expect(ana.points, ana0.points);
+
+    // Teclado: Ctrl+→ siguiente (Mia), Ctrl+← anterior (en círculo).
+    Future<void> ctrl(LogicalKeyboardKey k) async {
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(k);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pump();
+    }
+
+    await ctrl(LogicalKeyboardKey.arrowRight);
+    expect(c.view!.actorId, 'local-c3');
+    await ctrl(LogicalKeyboardKey.arrowRight);
+    expect(c.view!.actorId, 'local', reason: 'en círculo');
+    await ctrl(LogicalKeyboardKey.arrowLeft);
+    expect(c.view!.actorId, 'local-c3');
+    // Las pestañas siguen con Q / E.
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('party-member-bar')), findsOneWidget);
+    expect(c.view!.actorId, 'local-c3');
+  });
+
+  testWidgets('sin compañeros no hay selector', (tester) async {
+    final repo = AccountRepository(InMemoryAccountStore(_account()));
+    final c = await _pumpSession(
+        tester,
+        repo,
+        (view, c) => view.panel == WorldPanel.character
+            ? CharacterPanel(view: view, controller: c)
+            : const SizedBox.shrink());
+    c.openPanel(WorldPanel.character);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('party-member-bar')), findsNothing);
+    expect(c.setActing('local-c2'), isFalse);
+    expect(c.view!.actorId, 'local');
   });
 
   testWidgets('batalla: turno del compañero y su AUTO', (tester) async {

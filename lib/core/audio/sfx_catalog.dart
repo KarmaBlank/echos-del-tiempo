@@ -172,6 +172,10 @@ abstract final class Sfx {
   static const defend = 'defend';
   static const dualCast = 'dual.cast';
 
+  /// Dúos v0.8.3: subida de los dos (preparación) y choque doble (impacto).
+  static const dualRise = 'dual.rise';
+  static const dualClash = 'dual.clash';
+
   // ---- estados y otros ----
   static const skipFreeze = 'skip.freeze';
   static const skipStun = 'skip.stun';

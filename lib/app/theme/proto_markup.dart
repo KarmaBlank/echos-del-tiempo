@@ -4,6 +4,7 @@ import 'proto_colors.dart';
 import 'retro_text.dart';
 import 'retro_type.dart';
 import 'ui_theme.dart';
+import 'vision_palette.dart';
 
 /// `esc` del prototipo: escapa un texto libre (nombres, chat) antes de
 /// meterlo en markup.
@@ -34,7 +35,63 @@ final _classAttr = RegExp('class=["\']([^"\']*)["\']');
 /// `class="sys"` (`green`), `small` (`sky`), `br`.
 /// Entidades `&nbsp; &amp; &lt; &gt; &quot; &#39;`. Cada trozo de texto
 /// pasa por [retroText]. Lo que no entiende lo deja como texto.
-TextSpan protoSpan(String markup, {TextStyle? style, Color? boldColor}) {
+///
+/// El resultado se guarda (LRU de [ProtoSpanCache.max]) por markup, estilo,
+/// color de `<b>` y el estado de tema / colores del texto / modo
+/// daltónico: el HUD lo vuelve a pedir en cada reconstrucción
+/// (docs/specs/exploration.md § "Rendimiento").
+TextSpan protoSpan(String markup, {TextStyle? style, Color? boldColor}) =>
+    ProtoSpanCache.get(markup, style, boldColor);
+
+/// Caché de [protoSpan] (ver ahí).
+abstract final class ProtoSpanCache {
+  static const max = 256;
+
+  /// Lo interpretado con el tema [_themeOf]. Un mapa por tema: los
+  /// `ThemeColor` de los estilos cambian su `hashCode` con el tema, así
+  /// que nunca se mezclan claves de temas distintos.
+  static var _spans = <(String, TextStyle?, int?), TextSpan>{};
+  static Object? _themeOf;
+
+  /// Aciertos y markups interpretados (tests).
+  static int hits = 0, misses = 0;
+
+  /// Lo que cambia los colores del resultado.
+  static Object get _theme => (
+        UiTheme.kind,
+        UiTheme.textColors,
+        VisionPalette.mode,
+      );
+
+  static TextSpan get(String markup, TextStyle? style, Color? boldColor) {
+    final theme = _theme;
+    if (theme != _themeOf) {
+      _spans = {};
+      _themeOf = theme;
+    }
+    final key = (markup, style, boldColor?.toARGB32());
+    final hit = _spans.remove(key);
+    if (hit != null) {
+      hits++;
+      return _spans[key] = hit;
+    }
+    misses++;
+    if (_spans.length >= max) {
+      // El menos usado; si algo raro impide sacarlo, se vacía.
+      if (_spans.remove(_spans.keys.first) == null) _spans.clear();
+    }
+    return _spans[key] =
+        _parseProtoSpan(markup, style: style, boldColor: boldColor);
+  }
+
+  static void clear() {
+    _spans = {};
+    _themeOf = null;
+  }
+}
+
+TextSpan _parseProtoSpan(String markup,
+    {TextStyle? style, Color? boldColor}) {
   final root = <InlineSpan>[];
   // (etiqueta, hijos, estilo)
   final stack = <(String, List<InlineSpan>, TextStyle?)>[];
