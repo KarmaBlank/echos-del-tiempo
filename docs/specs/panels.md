@@ -1073,7 +1073,9 @@ origen que el arma no puede recibir (`ItemRules.canReceiveSkill`: físicas
 cuerpo a cuerpo / a distancia) se ven atenuadas con el motivo en rojo
 (`Solo armas a distancia`); con los cupos de trasladadas llenos
 (`needsReplaceChoice`) aparece `¿Qué habilidad reemplazas?`
-(`craft-replace`): una `ActionCard` por habilidad del arma
+(`craft-replace-title`, en rojo hasta elegir) **justo debajo de la
+habilidad elegida y antes de su ficha** (v0.8.6; antes iba al final de la
+lista y no se veía sin bajar), con `craft-replace`: una `ActionCard` por habilidad del arma
 (`craft-replace-<id>`, con su ficha en el tooltip): las trasladadas se
 eligen (`Trasladada` / `Se reemplaza`), las de la base bloqueadas
 (`Habilidad base`). La acción lleva `replaceSkillId`; ANTES │ DESPUÉS

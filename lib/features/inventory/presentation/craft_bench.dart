@@ -843,7 +843,9 @@ class _CraftBenchState extends State<CraftBench> {
     final srcSkills =
         srcItem == null ? const <String>[] : rules.items.skillsOf(srcItem);
     final tipStats = shop.preview.withItem(p, target);
-    List<Widget> pickRows({double indent = 0}) => [
+    List<Widget> pickRows(
+            {double indent = 0, List<Widget> afterSelected = const []}) =>
+        [
           for (var i = 0; i < picks.length; i++)
             if (rules.catalog.skills[srcSkills.elementAtOrNull(i)]
                 case final sk?) ...[
@@ -865,6 +867,7 @@ class _CraftBenchState extends State<CraftBench> {
                           : protoColor(ProtoColors.red, protoEsc(why)));
                 }),
               ),
+              if (i == action.index) ...afterSelected,
               if (i == action.index)
                 Container(
                   key: const ValueKey('craft-pick-desc'),
@@ -883,6 +886,71 @@ class _CraftBenchState extends State<CraftBench> {
               row('craft-pick-$i', picks[i], i == action.index, () => _pick = i,
                   indent: indent),
         ];
+
+    // Cupos llenos: elegir cuál de las trasladadas se reemplaza (las de
+    // la base no se tocan).
+    List<Widget> replaceRows() {
+      final newSkill = action.skillId;
+      if (op != CraftOp.transferSkill ||
+          newSkill == null ||
+          !rules.items.needsReplaceChoice(target, newSkill)) {
+        return const [];
+      }
+      final replaceable = rules.items.replaceableSkills(target);
+      return [
+        Padding(
+          padding: const EdgeInsets.only(left: 24),
+          child: Text(
+              retroText('¿Qué habilidad reemplazas? (el arma no tiene más '
+                  'lugar: elegí una de las traídas)'),
+              key: const ValueKey('craft-replace-title'),
+              style: TextStyle(
+                  color: action.replaceSkillId == null
+                      ? ProtoColors.red
+                      : ProtoColors.gold)),
+        ),
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.only(left: 24, bottom: 8),
+          child: CardGrid(
+            key: const ValueKey('craft-replace'),
+            minWidth: 170,
+            children: [
+              for (final id in rules.items.skillsOf(target))
+                if (rules.catalog.skills[id] case final sk?)
+                  RetroTooltip(
+                    key: ValueKey('craft-replace-tip-$id'),
+                    message: '${CraftHelp.replaceLine(replaceable: replaceable.contains(id), chosen: id == action.replaceSkillId)}'
+                        '<br>${skillTipMarkup(sk, stats: tipStats)}',
+                    child: ActionCard(
+                      key: ValueKey('craft-replace-$id'),
+                      title: '<b>${protoEsc(sk.name)}</b>',
+                      description: '${sk.mp} MP · ${skillKindLabel(sk)}',
+                      selected: id == action.replaceSkillId,
+                      reason:
+                          replaceable.contains(id) ? null : 'Habilidad base',
+                      footer: replaceable.contains(id)
+                          ? CostChip.note(id == action.replaceSkillId
+                              ? 'Se reemplaza'
+                              : 'Trasladada')
+                          : null,
+                      onTap: () {
+                        if (!replaceable.contains(id)) return;
+                        setState(() {
+                          _replace = id;
+                          _replaceFor = '${target.uid}|$newSkill';
+                          _lastBefore = null;
+                          _done = false;
+                        });
+                        _focus.requestFocus();
+                      },
+                    ),
+                  ),
+            ],
+          ),
+        ),
+      ];
+    }
 
     final list = <Widget>[dim(op.line)];
     if (op.needsSource) {
@@ -913,53 +981,12 @@ class _CraftBenchState extends State<CraftBench> {
                     ? '(sin habilidades)'
                     : '(no tiene mods)')));
           }
-          list.addAll(pickRows(indent: 24));
+          // Cupos llenos: el "¿qué reemplazas?" va justo debajo de la
+          // habilidad elegida, antes de su ficha (antes quedaba al final
+          // de la lista y había que bajar para encontrarlo).
+          list.addAll(pickRows(indent: 24, afterSelected: replaceRows()));
         }
       }
-    }
-    // Cupos llenos: elegir cuál de las trasladadas se reemplaza (las de
-    // la base no se tocan).
-    final newSkill = action.skillId;
-    if (op == CraftOp.transferSkill &&
-        newSkill != null &&
-        rules.items.needsReplaceChoice(target, newSkill)) {
-      final replaceable = rules.items.replaceableSkills(target);
-      list.add(const MenuHeader('¿Qué habilidad reemplazas?'));
-      list.add(CardGrid(
-        key: const ValueKey('craft-replace'),
-        minWidth: 170,
-        children: [
-          for (final id in rules.items.skillsOf(target))
-            if (rules.catalog.skills[id] case final sk?)
-              RetroTooltip(
-                key: ValueKey('craft-replace-tip-$id'),
-                message: '${CraftHelp.replaceLine(replaceable: replaceable.contains(id), chosen: id == action.replaceSkillId)}'
-                    '<br>${skillTipMarkup(sk, stats: tipStats)}',
-                child: ActionCard(
-                  key: ValueKey('craft-replace-$id'),
-                  title: '<b>${protoEsc(sk.name)}</b>',
-                  description: '${sk.mp} MP · ${skillKindLabel(sk)}',
-                  selected: id == action.replaceSkillId,
-                  reason: replaceable.contains(id) ? null : 'Habilidad base',
-                  footer: replaceable.contains(id)
-                      ? CostChip.note(id == action.replaceSkillId
-                          ? 'Se reemplaza'
-                          : 'Trasladada')
-                      : null,
-                  onTap: () {
-                    if (!replaceable.contains(id)) return;
-                    setState(() {
-                      _replace = id;
-                      _replaceFor = '${target.uid}|$newSkill';
-                      _lastBefore = null;
-                      _done = false;
-                    });
-                    _focus.requestFocus();
-                  },
-                ),
-              ),
-        ],
-      ));
     }
     if (op == CraftOp.removeAffix) {
       list.add(const MenuHeader('¿Qué mod quitar?'));
