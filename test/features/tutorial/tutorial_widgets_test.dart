@@ -99,7 +99,7 @@ void main() {
         TutorialOverlay(
           battle: const SizedBox.expand(key: ValueKey('arena')),
           banner: const TutorialBanner('TE TOCA: usar Bola de Fuego',
-              yourTurn: true, stage: 'Etapa 3/10 · Afinidades'),
+              yourTurn: true, stage: 'Etapa 3/9 · Afinidades'),
           card: const TutorialCard(
               ['Golpe a la debilidad: DÉBIL ×1.5 (35 de daño).'],
               arrow: TutorialArrow.hp,
@@ -110,7 +110,7 @@ void main() {
           onNext: () => next++,
           onControl: (o) => op = o,
         ));
-    expect(find.text('Etapa 3/10 · Afinidades'), findsOneWidget);
+    expect(find.text('Etapa 3/9 · Afinidades'), findsOneWidget);
     expect(find.text('Esperando: Beto'), findsOneWidget);
     expect(find.text('Intento 2: esta vez quebrás vos.'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('tutorial-next')));
@@ -124,6 +124,43 @@ void main() {
     expect(op, TutorialControl.repeatStage);
   });
 
+  testWidgets('panel lateral: votación de roles y narrador de ENTRENAR',
+      (tester) async {
+    String? picked;
+    await _pump(
+        tester,
+        TutorialOverlay(
+          battle: const SizedBox.expand(),
+          banner: const TutorialBanner('Cada uno elige el rol que quiere probar.',
+              stage: 'Repetir con otros roles'),
+          card: null,
+          rules: const TutorialRules(),
+          onNext: () {},
+          onControl: (_) {},
+          options: const [('role:quiebra', 'QUIEBRA'), ('role:detona', 'DETONA')],
+          pickLines: const ['Ana: QUIEBRA', 'Beto: eligiendo…'],
+          myPick: 'role:quiebra',
+          onPick: (c) => picked = c,
+        ));
+    expect(find.text('VOTACIÓN'), findsOneWidget);
+    expect(find.text('Beto: eligiendo…'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('tutorial-pick-role:detona')));
+    expect(picked, 'role:detona');
+    await _pump(
+        tester,
+        TutorialOverlay(
+          battle: const SizedBox.expand(),
+          banner: const TutorialBanner('ENTRENAR: probá', stage: 'ENTRENAR'),
+          card: null,
+          rules: const TutorialRules(),
+          onNext: () {},
+          onControl: (_) {},
+          narration: const ['Ana: Golpe a la debilidad (×1.5, 40 de daño).'],
+        ));
+    expect(find.text('LO QUE PASA'), findsOneWidget);
+    expect(find.byKey(const ValueKey('tutorial-narration')), findsOneWidget);
+  });
+
   testWidgets('panel lateral: sin cartel muestra AHORA; ya votado, '
       'SIGUIENTE desactivado', (tester) async {
     await _pump(
@@ -131,7 +168,7 @@ void main() {
         TutorialOverlay(
           battle: const SizedBox.expand(),
           banner: const TutorialBanner('MIRÁ: Beto va a defender',
-              stage: 'Etapa 1/10 · Línea de tiempo'),
+              stage: 'Etapa 1/9 · Línea de tiempo'),
           card: null,
           last: const TutorialCard(['Defender: mitad del daño.'],
               effect: true),
@@ -192,7 +229,7 @@ void main() {
             battle: BattleView(
                 battle: b, localId: 'p1', canAct: true, onCommand: (_) => true),
             banner: const TutorialBanner('TE TOCA: usar Bola de Fuego',
-                yourTurn: true, stage: 'Etapa 2/10 · MP y Pulso'),
+                yourTurn: true, stage: 'Etapa 2/9 · MP y Pulso'),
             card: const TutorialCard(['Ana: −3 MP (quedan 37).'],
                 arrow: TutorialArrow.mp, effect: true),
             waitingText: 'Esperando: Beto',

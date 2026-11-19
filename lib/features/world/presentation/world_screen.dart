@@ -42,6 +42,7 @@ import 'map/map_game.dart';
 import 'panels/character_panel.dart';
 import 'panels/party_member_bar.dart';
 import 'panels/party_panel.dart';
+import '../../../game_engine/models/tutorial.dart' show TutorialPhase;
 import '../../tutorial/presentation/tutorial_widgets.dart';
 import 'session_battle_screen.dart';
 import 'session_controller.dart';
@@ -532,6 +533,14 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                         humans.first.id == view.localId,
                     onNext: () => controller.ackTutorial(),
                     onControl: (op) => controller.tutorialControl(op),
+                    options: rules.options(tut),
+                    pickLines: rules.pickLines(s),
+                    myPick: tut.picks[view.localId],
+                    onPick: (c) => controller.tutorialPick(c),
+                    narration: tut.phase == TutorialPhase.train ||
+                            tut.phase == TutorialPhase.trainOver
+                        ? tut.narration
+                        : const [],
                   ),
           ),          // `≡ MENÚ`: la pausa también se abre con el mouse en batalla.
           // Abajo a la izquierda de la escena, justo encima de la barra

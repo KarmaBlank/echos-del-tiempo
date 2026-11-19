@@ -358,6 +358,13 @@ enum TutorialControl {
   exit,
 }
 
+/// Voto en las votaciones del final del TUTORIAL (§ 4.4): `roles`,
+/// `train`, `exit`, `restart` o `role:<rol>`.
+class TutorialChoiceAction extends SessionAction {
+  final String choice;
+  const TutorialChoiceAction(this.choice);
+}
+
 class TutorialControlAction extends SessionAction {
   final TutorialControl op;
   const TutorialControlAction(this.op);

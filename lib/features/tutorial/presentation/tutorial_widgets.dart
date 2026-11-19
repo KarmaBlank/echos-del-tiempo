@@ -142,6 +142,10 @@ class _TutorialSealDetailState extends State<TutorialSealDetail> {
                       for (final s in w.rules.stages)
                         Text('${s.number}. ${s.title}: ${s.teaches}',
                             style: _body(ProtoColors.dim)),
+                      Text(
+                          'Después: repetir con otros roles o ENTRENAR '
+                          '(libre, con un kit para probar todo).',
+                          style: _body(ProtoColors.dim)),
                     ],
                   ),
           ),
@@ -213,7 +217,25 @@ class TutorialOverlay extends StatefulWidget {
     this.hud = const {},
     this.attemptText,
     this.canControl = true,
+    this.options = const [],
+    this.pickLines = const [],
+    this.myPick,
+    this.onPick,
+    this.narration = const [],
   });
+
+  /// Votación abierta del final (§ 4.4): (id, rótulo) de cada opción.
+  final List<(String, String)> options;
+
+  /// "Ana: QUIEBRA", "Beto: eligiendo…" y el motivo si no hay acuerdo.
+  final List<String> pickLines;
+
+  /// Lo que eligió este jugador.
+  final String? myPick;
+  final void Function(String choice)? onPick;
+
+  /// ENTRENAR: lo que narra el panel (lo último abajo).
+  final List<String> narration;
 
   /// La escena de batalla (va a la izquierda del panel).
   final Widget battle;
@@ -303,8 +325,59 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (card != null)
-                    _section(card.effect ? 'LO QUE PASÓ' : 'EN ESTA ETAPA', [
+                  if (w.options.isNotEmpty)
+                    _section('VOTACIÓN', [
+                      if (b != null && b.text.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(retroText(b.text),
+                              style: _body(ProtoColors.gold)),
+                        ),
+                      for (final (id, label) in w.options)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: PanelButton(label,
+                              key: ValueKey('tutorial-pick-$id'),
+                              selected: w.myPick == id,
+                              accent: w.myPick == id
+                                  ? ProtoColors.green
+                                  : null,
+                              onPressed: () => w.onPick?.call(id)),
+                        ),
+                      for (final l in w.pickLines)
+                        Text(retroText(l),
+                            style: _body(l.startsWith('Hay ') ||
+                                    l.startsWith('Falta ')
+                                ? ProtoColors.orange
+                                : ProtoColors.ink)),
+                      Text('Hace falta que voten todos.',
+                          style: _body(ProtoColors.dim, RetroType.label)),
+                    ])
+                  else if (w.narration.isNotEmpty && card == null) ...[
+                    if (b != null && b.text.isNotEmpty)
+                      _section('AHORA', [
+                        Text(retroText(b.text),
+                            key: const ValueKey('tutorial-now'),
+                            style: _body(b.yourTurn
+                                ? ProtoColors.gold
+                                : ProtoColors.sky)),
+                      ]),
+                    _section('LO QUE PASA', [
+                      for (final (i, l) in w.narration.indexed)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(retroText(l),
+                              key: const ValueKey('tutorial-narration'),
+                              style: _body(i == w.narration.length - 1
+                                  ? ProtoColors.ink
+                                  : ProtoColors.dim)),
+                        ),
+                    ]),
+                  ] else if (card != null)
+                    _section(
+                        card.heading ??
+                            (card.effect ? 'LO QUE PASÓ' : 'EN ESTA ETAPA'),
+                        [
                       for (final l in card.lines)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 3),

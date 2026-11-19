@@ -37,7 +37,8 @@ GameSession _room(SessionEngine e,
 
 /// Lo que pasó al correr el guion entero.
 class _Run {
-  _Run(this.state, this.events, this.humanActions, this.rejected);
+  _Run(this.state, this.events, this.humanActions, this.rejected,
+      this.actedIn);
   final GameSession state;
   final List<SessionEvent> events;
 
@@ -46,17 +47,35 @@ class _Run {
 
   /// Comandos fuera de paso que el host rechazó.
   final int rejected;
+
+  /// Etapas (número) en las que actuó cada humano.
+  final Map<String, Set<int>> actedIn;
 }
 
 /// Juega el tutorial como lo harían los jugadores: cada humano hace lo que
 /// dice su cartel y cierra los carteles; además, en cada turno de un
-/// humano, prueba primero algo fuera de paso (tiene que rechazarse).
-_Run _play(SessionEngine e, GameSession s, {int maxTicks = 40000}) {
+/// humano, prueba primero algo fuera de paso (tiene que rechazarse). Al
+/// terminar el guion todos votan [atEnd] (`exit` por defecto; `null` =
+/// se queda en la votación).
+_Run _play(SessionEngine e, GameSession s,
+    {int maxTicks = 40000, String? atEnd = 'exit'}) {
   final rules = e.tutorials;
   final events = <SessionEvent>[];
   final acts = <String, int>{};
+  final actedIn = <String, Set<int>>{};
   var rejected = 0;
   for (var i = 0; i < maxTicks && s.tutorial != null; i++) {
+    if (s.tutorial!.phase == TutorialPhase.menu) {
+      if (atEnd == null) break;
+      for (final p in rules.voters(s)) {
+        final r = e.apply(s, p.id, TutorialChoiceAction(atEnd));
+        if (r != null) {
+          s = r.state;
+          events.addAll(r.events);
+        }
+      }
+      continue;
+    }
     final step = e.tick(s, 0.05);
     s = step.state;
     events.addAll(step.events);
@@ -82,8 +101,6 @@ _Run _play(SessionEngine e, GameSession s, {int maxTicks = 40000}) {
         rejected++;
       }
       cmd = rules.scripted(st, cur);
-    } else if (st is TutorialFreeStep) {
-      cmd = const DefendCommand();
     }
     if (cmd == null) continue;
     final r = e.apply(s, cur.id, BattleAction(cmd));
@@ -91,9 +108,12 @@ _Run _play(SessionEngine e, GameSession s, {int maxTicks = 40000}) {
       s = r.state;
       events.addAll(r.events);
       acts[cur.id] = (acts[cur.id] ?? 0) + 1;
+      actedIn
+          .putIfAbsent(cur.id, () => {})
+          .add(rules.currentStage(t)?.number ?? 0);
     }
   }
-  return _Run(s, events, acts, rejected);
+  return _Run(s, events, acts, rejected, actedIn);
 }
 
 /// SIGUIENTE de cada humano de la sala que todavía no votó.
@@ -117,7 +137,8 @@ void main() {
     expect(kTutorialVersion,
         kTutorialStages.map((s) => s.desde).reduce((a, b) => a > b ? a : b));
     expect(kTutorialStages.map((s) => s.number),
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(kTutorialVersion, 2, reason: 'v0.9.6: etapas rehechas');
   });
 
   group('guion completo: todos terminan con tutV', () {
@@ -138,8 +159,10 @@ void main() {
         expect(done.version, kTutorialVersion);
         for (final p in run.state.playerList.where((p) => !p.isCompanion)) {
           expect(p.tutorialVersion, kTutorialVersion);
-          // Con varios humanos, cada uno hizo su parte.
+          // Nadie se queda mirando: cada humano actúa en cada etapa.
           expect(run.humanActions[p.id], greaterThan(0), reason: p.id);
+          expect(run.actedIn[p.id], {for (final st in kTutorialStages) st.number},
+              reason: p.id);
         }
         expect(e.tutorials.lockText(run.state), isNull,
             reason: 'el sello se desbloquea');
@@ -185,15 +208,16 @@ void main() {
               s = _voteAll(e, s);
               continue;
             }
-            final st = rules.currentStep(t);
-            if (st is TutorialFreeStep && b.waitingForPlayer) {
-              final cur = b.state.currentId!;
-              if (s.players[cur]?.isCompanion == false) {
-                final r = e.apply(s, cur, const BattleAction(DefendCommand()));
+            if (t.phase == TutorialPhase.menu) {
+              s = act(e, s, 'h', const TutorialChoiceAction('exit'));
+              for (final p in rules.voters(s)) {
+                if (s.tutorial == null) break;
+                final r = e.apply(s, p.id, const TutorialChoiceAction('exit'));
                 if (r != null) s = r.state;
               }
               continue;
             }
+            final st = rules.currentStep(t);
             if (st is! TutorialPlayerStep || !t.prepared) continue;
             final id = rules.actorOf(t, st.role, present)!;
             if (b.state.currentId != id) continue;
@@ -389,16 +413,18 @@ void main() {
     final st = e.tutorials.currentStep(t) as TutorialPlayerStep;
     final cur = s.battle!.state.currentId!;
     final other = cur == 'h' ? 'p1' : 'h';
-    expect(st.move, TutorialMove.defend, reason: 'etapa 1: Defender');
+    expect(st.move, TutorialMove.attack, reason: 'etapa 1: Atacar');
     // Otra acción del que tiene el turno, o la correcta de otro jugador.
     expect(e.apply(s, cur, const BattleAction(PassCommand())), isNull);
-    expect(e.apply(s, cur, const BattleAction(AttackCommand())), isNull);
-    expect(e.apply(s, other, const BattleAction(DefendCommand())), isNull);
+    expect(e.apply(s, cur, const BattleAction(DefendCommand())), isNull);
+    expect(e.apply(s, other, const BattleAction(AttackCommand(targetId: 'e0'))),
+        isNull);
     // El botón dice por qué.
-    expect(e.tutorials.gate(t, s.battle!.state, cur, 'attack'),
+    expect(e.tutorials.gate(t, s.battle!.state, cur, 'defend'),
         startsWith('Ahora no: el paso es'));
-    expect(e.tutorials.gate(t, s.battle!.state, cur, 'defend'), isNull);
-    expect(e.apply(s, cur, const BattleAction(DefendCommand())), isNotNull);
+    expect(e.tutorials.gate(t, s.battle!.state, cur, 'attack'), isNull);
+    expect(e.apply(s, cur, const BattleAction(AttackCommand(targetId: 'e0'))),
+        isNotNull);
   });
 
   test('cartel del paso: TE TOCA para quien actúa, MIRÁ para el resto', () {
@@ -418,7 +444,7 @@ void main() {
     expect(e.tutorials.banner(s, {other})!.text, startsWith('MIRÁ: '));
   });
 
-  test('versión de cambios: solo las etapas nuevas y la libre', () {
+  test('versión de cambios: solo las etapas nuevas', () {
     const stages = [
       TutorialStage(
           number: 1,
@@ -432,17 +458,11 @@ void main() {
           teaches: 'y',
           desde: 2,
           steps: [TutorialPlayerStep(TutorialRole.acumula, TutorialMove.pass)]),
-      TutorialStage(
-          number: 3,
-          title: 'Libre',
-          teaches: 'z',
-          desde: 1,
-          steps: [TutorialFreeStep(1)]),
     ];
     const rules = TutorialRules(stages: stages, version: 2);
-    expect(rules.stagesFor(0), [1, 2, 3], reason: 'cuenta nueva: completo');
-    expect(rules.stagesFor(1), [2, 3], reason: 'tutV viejo: cambios + libre');
-    expect(rules.stagesFor(2), [1, 2, 3], reason: 'Repetir: completo');
+    expect(rules.stagesFor(0), [1, 2], reason: 'cuenta nueva: completo');
+    expect(rules.stagesFor(1), [2], reason: 'tutV viejo: solo los cambios');
+    expect(rules.stagesFor(2), [1, 2], reason: 'Repetir: completo');
     final e = SessionEngine(
       battles: BattleEngine(stats: statsCalc),
       progression: progression,
@@ -454,7 +474,7 @@ void main() {
     s = e.addPlayer(s, 'p1', newProfile('Beto', 'maga'), tutorialVersion: 2)!
         .state;
     s = _start(e, s);
-    expect(s.tutorial!.stages, [2, 3]);
+    expect(s.tutorial!.stages, [2]);
     expect(s.tutorial!.card!.lines.first,
         startsWith('Ya hiciste el tutorial. Esta pelea de prueba muestra lo '
             'que cambió en v2: Nueva'));
