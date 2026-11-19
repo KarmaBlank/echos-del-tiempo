@@ -421,5 +421,39 @@ void main() {
       expect(step.state.battle!.state.currentId, isNull);
       expect(step.state.battle!.wait, closeTo(0.8, 1e-9));
     });
+
+    // Pulso, precondiciones e Instante (combo_balance.md § 5.2).
+    test('el host rechaza Quebrar sin objetivo Fisurado', () {
+      final e = sessionEngine(fieldFallback: 0.0);
+      var s = _afterGrace(e, inField(e, 'm1'));
+      s = _touch(e, s, 0);
+      s = runBattle(e, s, until: (x) => x.battle!.waitingForPlayer);
+      expect(
+          e.apply(s, 'p0',
+              const BattleAction(SkillCommand('quebrar', targetId: 'e0'))),
+          isNull);
+    });
+
+    test('Instante: el turno sigue y el reloj de 30 s cuenta el turno entero',
+        () {
+      final e = sessionEngine(fieldFallback: 0.0);
+      var s = _afterGrace(e, inField(e, 'm1'));
+      s = _touch(e, s, 0);
+      s = runBattle(e, s, until: (x) => x.battle!.waitingForPlayer);
+      s = wait(e, s, 10);
+      final before = s.battle!.turnTime;
+      final step = e.apply(s, 'p0',
+          const BattleAction(SkillCommand('brasaEco', targetId: 'e0')))!;
+      s = step.state;
+      expect(s.battle!.state.currentId, 'p0');
+      expect(s.battle!.state.byId('p0')!.chained, isTrue);
+      // Después de la pausa de la animación, sigue el mismo turno.
+      s = wait(e, s, 1);
+      expect(s.battle!.waitingForPlayer, isTrue);
+      expect(s.battle!.turnTime, greaterThanOrEqualTo(before));
+      // 30 s del turno entero (no 30 desde la Instante).
+      s = wait(e, s, 30 - s.battle!.turnTime + 0.1);
+      expect(s.battle!.state.log, contains('Tiempo agotado'));
+    });
   });
 }

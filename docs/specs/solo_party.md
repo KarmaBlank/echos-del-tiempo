@@ -185,7 +185,19 @@ En orden:
    - si no, si tiene Poción de vida → poción al aliado con menos % de vida
      (caído = 0 %).
 2. ULT al 100 % (y con ULT) → ULT al enemigo vivo con **menos vida**.
-3. Atacar al enemigo vivo con menos vida (empate: el primero).
+3. Combos (v0.9, combo_balance.md § 5.2; `ComboPlanner`, la misma IA que
+   el simulador de balance), solo con habilidades que pasan MP, Pulso y
+   precondiciones (`SkillRequirements`):
+   - un enemigo **Fisurado** → su habilidad con Quebrar sobre él;
+   - un enemigo con **5+ stacks** de Quemadura o Veneno → la habilidad
+     que detona esa Convergencia (Veneno: golpe de Fuego; Quemadura: golpe
+     de Veneno); entre iguales, la que tiene precondición (el detonador de
+     su clase);
+   - si todavía no encadenó en este turno → una habilidad **Instante** que
+     prepara (Quemadura o Veneno donde ya hay más del mismo, sin tocar a
+     un enemigo con stacks del otro, que los detonaría con pocos; si no,
+     Marca a uno sin Marca). El turno sigue y vuelve a elegir.
+4. Atacar al enemigo vivo con menos vida (empate: el primero).
 
 Si el motor rechaza el comando elegido (p. ej. una mecánica de jefe),
 se prueba Atacar y después Defender.

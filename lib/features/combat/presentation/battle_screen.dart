@@ -24,6 +24,7 @@ import '../../../game_engine/rules/battle_engine.dart'
     show BattleEngine, ultimateOf;
 import '../../../game_engine/rules/dual_rules.dart';
 import '../../../game_engine/rules/js_math.dart';
+import '../../../game_engine/rules/skill_requirements.dart';
 import '../../bestiary/domain/bestiary_text.dart';
 import '../../bestiary/presentation/enemy_info_card.dart';
 import '../domain/skill_text.dart';
@@ -550,6 +551,29 @@ class BattleViewState extends State<BattleView>
     );
   }
 
+  /// Una fila de HABILIDADES: costo en MP y Pulso, Instante, y el motivo
+  /// si falta algo ([missing]).
+  BattleAction _skillAction(
+      SkillDef sk, Combatant cur, String? tg, List<String> missing) {
+    final ok = missing.isEmpty;
+    // Instante: ya encadenaste una en este turno, esta lo termina.
+    final instant = sk.instant && !cur.chained;
+    return BattleAction(
+      id: 'skill-${sk.id}',
+      name: '${sk.name}${sk.delay > 0 ? ' ⏳' : ''}',
+      value: '${instant ? '${hexSpan('#9fe8ff', 'Instante')} ' : ''}'
+              '${_skillInfo(sk, cur, crit: false)}'
+          .trim(),
+      cost: [
+        if (sk.mp > 0 || sk.pulse == 0) hexSpan('#74b9ff', '${sk.mp} MP'),
+        if (sk.pulse > 0) hexSpan('#ffb142', 'Pulso ${sk.pulse}'),
+      ].join(' '),
+      description: describeSkillMarkup(sk, cur),
+      reason: SkillRequirements.needsText(missing),
+      onSelect: ok ? () => _send(SkillCommand(sk.id, targetId: tg)) : null,
+    );
+  }
+
   /// Las categorías del menú de [cur] con sus acciones (las vacías no
   /// están). Cada acción con su id estable.
   List<BattleCategoryEntry> _entries(Combatant cur) {
@@ -581,20 +605,15 @@ class BattleViewState extends State<BattleView>
           ),
     ]));
 
+    // MP, Pulso y precondiciones (combo_balance.md § 5.2): si falta algo,
+    // el botón sale desactivado con "Necesita: …".
+    final foes = _foes;
+    final tgC = foes.where((e) => e.id == tg).firstOrNull;
     final skills = [
       for (final id in cur.skillIds)
         if (kSkills[id] case final sk?)
-          BattleAction(
-            id: 'skill-$id',
-            name: '${sk.name}${sk.delay > 0 ? ' ⏳' : ''}',
-            value: _skillInfo(sk, cur, crit: false).trim(),
-            cost: hexSpan('#74b9ff', '${sk.mp} MP'),
-            description: describeSkillMarkup(sk, cur),
-            reason: cur.mp >= sk.mp ? null : 'Falta maná (${sk.mp} MP).',
-            onSelect: cur.mp >= sk.mp
-                ? () => _send(SkillCommand(id, targetId: tg))
-                : null,
-          ),
+          _skillAction(sk, cur, tg,
+              SkillRequirements.missing(sk, cur, tgC, foes: foes)),
     ];
     if (skills.isNotEmpty) {
       out.add(BattleCategoryEntry(BattleCategory.skills, skills,
@@ -693,17 +712,30 @@ class BattleViewState extends State<BattleView>
     ]));
 
     // Pasar turno (v0.8.3, combat.md § "Pasar turno"). AUTO nunca pasa.
+    // Después de una Instante, la misma tecla termina el turno sin el
+    // adelanto (combat.md § "Pulso e Instante").
     out.add(BattleCategoryEntry(BattleCategory.pass, [
-      BattleAction(
-        id: 'pass',
-        name: 'Pasar turno',
-        cost: hexSpan('#9fb4ff', 'próximo ×½'),
-        description: '<b>Pasar turno</b> <span class="k">P</span><br>'
-            'Terminás el turno sin actuar; tu próximo turno llega antes '
-            '(a la mitad del intervalo). Sin carga de ULT ni defensa: '
-            'sirve para esperar la reacción o el cebado de un aliado.',
-        onSelect: () => _send(const PassCommand()),
-      ),
+      if (cur.chained)
+        BattleAction(
+          id: 'pass',
+          name: 'Terminar turno',
+          cost: hexSpan('#9fb4ff', 'próximo ×1'),
+          description: '<b>Terminar turno</b> <span class="k">P</span><br>'
+              'Ya usaste una habilidad Instante: terminás el turno sin la '
+              'acción que te queda. El próximo turno llega como siempre.',
+          onSelect: () => _send(const PassCommand()),
+        )
+      else
+        BattleAction(
+          id: 'pass',
+          name: 'Pasar turno',
+          cost: hexSpan('#9fb4ff', 'próximo ×½'),
+          description: '<b>Pasar turno</b> <span class="k">P</span><br>'
+              'Terminás el turno sin actuar; tu próximo turno llega antes '
+              '(a la mitad del intervalo). Sin carga de ULT ni defensa: '
+              'sirve para esperar la reacción o el cebado de un aliado.',
+          onSelect: () => _send(const PassCommand()),
+        ),
     ]));
     return out;
   }

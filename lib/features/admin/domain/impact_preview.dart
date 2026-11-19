@@ -1,35 +1,32 @@
 import 'dart:math' as math;
 
 import '../../../game_engine/data/ascension_catalog.dart';
-import '../../../game_engine/data/elements_catalog.dart' show elementOf;
 import '../../../game_engine/data/game_catalog.dart';
 import '../../../game_engine/data/passive_tree_catalog.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
-import '../../../game_engine/models/elements.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/passive_tree.dart';
 import '../../../game_engine/models/player_state.dart';
-import '../../../game_engine/models/skill.dart';
-import '../../../game_engine/models/status.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/battle_engine.dart';
+import '../../../game_engine/rules/combo_planner.dart';
 import '../../../game_engine/rules/mulberry32.dart';
 import '../../../game_engine/rules/passive_tree_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../../game_engine/rules/stats_calculator.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 
-/// Daño de un uso contra un muñeco (docs/specs/balance_admin.md § 5).
+/// DaÃ±o de un uso contra un muÃ±eco (docs/specs/balance_admin.md Â§ 5).
 class HitPreview {
   const HitPreview({required this.normal, required this.crit, this.mp = 0});
 
-  /// Sin crítico ni efectos con probabilidad.
+  /// Sin crÃ­tico ni efectos con probabilidad.
   final int normal;
 
-  /// Con crítico y todos los efectos con probabilidad.
+  /// Con crÃ­tico y todos los efectos con probabilidad.
   final int crit;
   final int mp;
 }
@@ -48,21 +45,25 @@ class BattleSimResult {
     this.bossRuns = 0,
     this.avgFoeHpLeftOnLoss = 0,
     this.avgActionsOnLoss = 0,
+    this.avgConvergences = 0,
   });
 
-  /// En las derrotas: vida que le quedaba al bando enemigo (fracción de su
-  /// vida máxima total) y acciones propias hasta caer (promedios).
+  /// En las derrotas: vida que le quedaba al bando enemigo (fracciÃ³n de su
+  /// vida mÃ¡xima total) y acciones propias hasta caer (promedios).
   final double avgFoeHpLeftOnLoss, avgActionsOnLoss;
 
-  /// Quiebres por batalla (combo_balance.md § 5), promedio.
+  /// Quiebres por batalla (combo_balance.md Â§ 5), promedio.
   final double avgBreaks;
 
-  /// Batallas en las que un jefe se quebró antes de su primera ULT, sobre
+  /// Convergencias por batalla (combo_balance.md § 4, medición del paso 7).
+  final double avgConvergences;
+
+  /// Batallas en las que un jefe se quebrÃ³ antes de su primera ULT, sobre
   /// [bossRuns] (batallas con jefe con ULT).
   final int bossEarlyBreaks;
   final int bossRuns;
 
-  /// Fracción de batallas con jefe quebrado antes de su primera ULT.
+  /// FracciÃ³n de batallas con jefe quebrado antes de su primera ULT.
   double get bossEarlyBreakRate =>
       bossRuns == 0 ? 0 : bossEarlyBreaks / bossRuns;
 
@@ -72,20 +73,20 @@ class BattleSimResult {
   /// Acciones propias hasta ganar (TTK), promedio de las victorias.
   final double avgActions;
 
-  /// Vida que queda al ganar (fracción), promedio de las victorias.
+  /// Vida que queda al ganar (fracciÃ³n), promedio de las victorias.
   final double avgHpLeft;
 
-  /// Daño directo hecho por acción propia.
+  /// DaÃ±o directo hecho por acciÃ³n propia.
   final double avgDamagePerAction;
 
-  /// Golpe directo más grande de cada batalla, como fracción de la vida
-  /// máxima del blanco (promedio). Sirve para ver el tope por golpe.
+  /// Golpe directo mÃ¡s grande de cada batalla, como fracciÃ³n de la vida
+  /// mÃ¡xima del blanco (promedio). Sirve para ver el tope por golpe.
   final double avgBestHit;
 
   double get winRate => runs == 0 ? 0 : wins / runs;
 }
 
-/// Qué usa el personaje típico en la simulación.
+/// QuÃ© usa el personaje tÃ­pico en la simulaciÃ³n.
 class SimLoadout {
   const SimLoadout({
     required this.classId,
@@ -108,20 +109,20 @@ class SimLoadout {
   /// Habilidad que usa cuando le alcanza el MP (`null` = solo ataca).
   final String? skillId;
 
-  /// Habilidad agregada por fusión (variantes y kits sin arma).
+  /// Habilidad agregada por fusiÃ³n (variantes y kits sin arma).
   final String? fusedSkillId;
 
-  /// Nodos del árbol tomados (vista previa de nodos y mecánicas).
+  /// Nodos del Ã¡rbol tomados (vista previa de nodos y mecÃ¡nicas).
   final List<String> takenNodes;
 
-  /// Arma concreta (afijos, forja, legendaria). Si está, su base manda
-  /// sobre [weaponId] (combo_balance.md § 7: medir con loot).
+  /// Arma concreta (afijos, forja, legendaria). Si estÃ¡, su base manda
+  /// sobre [weaponId] (combo_balance.md Â§ 7: medir con loot).
   final ItemInstance? item;
 }
 
 /// Vista previa de impacto con el motor real (Dart puro). Usa el
-/// [catalog] que le pasen (código + parche) y los registros globales tal
-/// como estén instalados: quien llama instala el parche antes.
+/// [catalog] que le pasen (cÃ³digo + parche) y los registros globales tal
+/// como estÃ©n instalados: quien llama instala el parche antes.
 class ImpactSimulator {
   ImpactSimulator(this.catalog)
       : stats = StatsCalculator(
@@ -131,8 +132,8 @@ class ImpactSimulator {
   final GameCatalog catalog;
   final StatsCalculator stats;
 
-  /// Atributos típicos: base de la clase + `(nivel−1)·3` puntos, ⅔ al
-  /// atributo principal del arma y ⅓ a VIT (§ 5).
+  /// Atributos tÃ­picos: base de la clase + `(nivelâˆ’1)Â·3` puntos, â…” al
+  /// atributo principal del arma y â…“ a VIT (Â§ 5).
   PlayerAttributes typicalAttributes(String classId, int level, WeaponDef w) {
     final cls = catalog.classes[classId]!;
     final points = (level - 1) * ProgressionRules.pointsPerLevel;
@@ -192,7 +193,7 @@ class ImpactSimulator {
     return null;
   }
 
-  /// La clase dueña de una habilidad de kit de ascensión, si es de una.
+  /// La clase dueÃ±a de una habilidad de kit de ascensiÃ³n, si es de una.
   String? ascensionClassOf(String skillId) {
     for (final a in kAscensions.values) {
       if (a.skillIds.contains(skillId)) return a.classId;
@@ -200,7 +201,7 @@ class ImpactSimulator {
     return null;
   }
 
-  /// Daño de un uso de [skillId] (o ataque básico si es `null`, o la ULT
+  /// DaÃ±o de un uso de [skillId] (o ataque bÃ¡sico si es `null`, o la ULT
   /// del arma si [ultimate]) contra [enemyId] con vida infinita.
   HitPreview? hit(SimLoadout l,
       {required String enemyId, String? skillId, bool ultimate = false}) {
@@ -246,17 +247,17 @@ class ImpactSimulator {
         mp: skillId == null ? 0 : catalog.skills[skillId]?.mp ?? 0);
   }
 
-  /// [runs] batallas de un personaje típico contra [enemies] escalados a
+  /// [runs] batallas de un personaje tÃ­pico contra [enemies] escalados a
   /// [enemyLevel] (semillas fijas: el mismo resultado cada vez). Con
   /// [party], un grupo de esos personajes (uno por jugador) en vez de
   /// [partySize] copias de [l].
   ///
   /// IA simple: con menos de [potionAt] de vida y pociones, toma una; si
   /// hay un enemigo Fisurado, lo quiebra (ULT cargada o la habilidad con
-  /// Quebrar de su kit); si un enemigo avisó su ULT y tiene menos de
+  /// Quebrar de su kit); si un enemigo avisÃ³ su ULT y tiene menos de
   /// [defendBelow] de vida, se defiende (una vez por aviso); si no,
-  /// ULT si está cargada, si no su habilidad si alcanza el MP, si no
-  /// ataque; al primer enemigo vivo (combo_balance.md § 7, paso 5).
+  /// ULT si estÃ¡ cargada, si no su habilidad si alcanza el MP, si no
+  /// ataque; al primer enemigo vivo (combo_balance.md Â§ 7, paso 5).
   BattleSimResult simulate(SimLoadout l,
       {required List<String> enemies,
       required int enemyLevel,
@@ -278,6 +279,7 @@ class ImpactSimulator {
     var actionsAll = 0;
     var bestSum = 0.0;
     var breaks = 0;
+    var convergences = 0;
     var bossRuns = 0;
     var bossEarly = 0;
     var foeLeftSum = 0.0;
@@ -295,7 +297,7 @@ class ImpactSimulator {
           .state;
       ZoneRules.scaleBattle(s, enemyLevel, curve: catalog.curve);
       // Jefes con ULT: si se quiebran antes de lanzarla (combo_balance.md
-      // § 5, meta < 10% con un grupo al azar).
+      // Â§ 5, meta < 10% con un grupo al azar).
       final bossIds = {
         for (final e in s.enemies)
           if (e.boss && e.ultId != null) e.id,
@@ -320,40 +322,26 @@ class ImpactSimulator {
           final alive = s.enemies.where((e) => e.alive);
           final fissured = alive.where((e) => e.fissured).firstOrNull;
           final target = (fissured ?? alive.firstOrNull)?.id;
-          SkillDef? quebrar;
-          if (fissured != null) {
-            for (final id in p.skillIds) {
-              final q = catalog.skills[id];
-              if (q != null && q.breaks && p.mp >= q.mp) {
-                quebrar = q;
-                break;
-              }
-            }
-          }
+          // Quebrar: la que pase MP, Pulso y precondiciÃ³n (Â§ 5.2).
+          final planner = ComboPlanner(catalog);
+          final quebrar = fissured == null
+              ? null
+              : planner.quebrar(p, alive.toList());
           final warned = alive.any((e) => e.ultPending);
           final hpFrac = p.maxHp > 0 ? p.hp / p.maxHp : 1.0;
           final low = hpFrac < potionAt;
-          // Con [combos]: detona una Convergencia si el objetivo tiene 5+
-          // stacks de su preparación; si no, prepara (Quemadura / Veneno).
-          SkillDef? combo;
+          // Con [combos] (Â§ 5.2, `ComboPlanner`, la misma IA que los
+          // compaÃ±eros): detona una Convergencia si un enemigo tiene 5+
+          // stacks; si no, prepara (Instante primero, que no gasta el
+          // turno; despuÃ©s una normal si no encadenÃ³ ya).
+          SkillCommand? combo;
           if (combos && fissured == null) {
-            final t = alive.firstOrNull;
-            SkillDef? prep;
-            for (final id in p.skillIds) {
-              final q = catalog.skills[id];
-              if (q == null || p.mp < q.mp || t == null) continue;
-              final el = elementOf(id);
-              for (final st in const [StatusKind.burn, StatusKind.poison]) {
-                final rk = reactionOf(st, el);
-                if (rk != null && rk.convergence && t.stacks(st) >= 5) {
-                  combo = q;
-                }
-              }
-              final applies = [if (q.status != null) q.status!, ...q.extraStatuses]
-                  .any((a) => a.kind == StatusKind.burn || a.kind == StatusKind.poison);
-              if (applies) prep ??= q;
-            }
-            combo ??= prep;
+            final foes = alive.toList();
+            combo = planner.detonate(p, foes) ??
+                (p.chained
+                    ? null
+                    : planner.prepare(p, foes, instantOnly: true) ??
+                        planner.prepare(p, foes));
           }
           step = (low && p.potions > 0
                   ? engine.command(
@@ -364,16 +352,11 @@ class ImpactSimulator {
                   : warned && !p.defending && hpFrac < defendBelow
                       ? engine.command(s, p.id, const DefendCommand())
                       : null) ??
-              (combo != null
-                  ? engine.command(s, p.id, SkillCommand(combo.id, targetId: target))
-                  : null) ??
+              (combo != null ? engine.command(s, p.id, combo) : null) ??
               (p.ult >= 100
                   ? engine.command(s, p.id, UltimateCommand(targetId: target))
                   : null) ??
-              (quebrar != null
-                  ? engine.command(
-                      s, p.id, SkillCommand(quebrar.id, targetId: target))
-                  : null) ??
+              (quebrar != null ? engine.command(s, p.id, quebrar) : null) ??
               (sk != null && p.mp >= sk.mp
                   ? engine.command(s, p.id, SkillCommand(sk.id, targetId: target))
                   : null) ??
@@ -398,6 +381,7 @@ class ImpactSimulator {
         if (step == null) break;
         for (final ev in step.events) {
           if (ev is EnemyUltEvent) ulted.add(ev.actorId);
+          if (ev is ReactionEvent && ev.kind.convergence) convergences++;
           if (ev is BreakEvent && ev.phase == BreakPhase.broken) {
             breaks++;
             if (bossIds.contains(ev.targetId) && !ulted.contains(ev.targetId)) {
@@ -433,6 +417,7 @@ class ImpactSimulator {
       avgDamagePerAction: actionsAll == 0 ? 0 : dmgSum / actionsAll,
       avgBestHit: runs == 0 ? 0 : bestSum / runs,
       avgBreaks: runs == 0 ? 0 : breaks / runs,
+      avgConvergences: runs == 0 ? 0 : convergences / runs,
       bossEarlyBreaks: bossEarly,
       bossRuns: bossRuns,
       avgFoeHpLeftOnLoss: wins == runs ? 0 : foeLeftSum / (runs - wins),

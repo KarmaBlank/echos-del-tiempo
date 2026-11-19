@@ -192,11 +192,13 @@ void main() {
       expect(step.state.enemies.single.breakGauge, 10);
     });
 
-    test('la Quebrar base casi no llena: 1', () {
+    test('la Quebrar base pide objetivo Fisurado (paso 7, § 5.2)', () {
       final engine = _engine();
-      final step = engine.command(
-          _myTurn(engine, ['devorador']), 'p1', const SkillCommand('quebrar'))!;
-      expect(step.state.enemies.single.breakGauge, 1);
+      // Sin Fisurado, el host la rechaza (antes sumaba 1 punto).
+      expect(
+          engine.command(
+              _myTurn(engine, ['devorador']), 'p1', const SkillCommand('quebrar')),
+          isNull);
     });
 
     test('daño secundario de notables (rebote): 0', () {
@@ -280,14 +282,11 @@ void main() {
       expect(step.state.enemies.single.fissured, isTrue);
     });
 
-    test('Quebrar sobre un no Fisurado no quiebra (solo suma su punto)', () {
+    test('Quebrar sobre un no Fisurado: rechazada, no suma nada', () {
       final engine = _engine();
       final turn = _myTurn(engine, ['golem']);
       turn.enemies.single.breakGauge = 2;
-      final step = engine.command(turn, 'p1', const SkillCommand('quebrar'))!;
-      expect(_breaks(step).single.phase, BreakPhase.fill);
-      expect(step.state.enemies.single.broken, isFalse);
-      expect(step.state.enemies.single.breakGauge, 3);
+      expect(engine.command(turn, 'p1', const SkillCommand('quebrar')), isNull);
     });
 
     test('la ULT que llena la barra no quiebra en el mismo golpe', () {

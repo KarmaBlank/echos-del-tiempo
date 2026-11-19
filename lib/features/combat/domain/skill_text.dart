@@ -260,7 +260,18 @@ List<String> variantEffectLines(SkillDef tk) {
       hexSpan('#ffe14d', 'Quiebre: +${pct(tk.breakBonus)} de puntos de quiebre'),
     if (tk.breaks)
       hexSpan('#ffe14d', 'Quebrar: quiebra a un enemigo FISURADO (barra '
-          'llena). Si no está Fisurado, no quiebra'),
+          'llena)'),
+    // Pulso, Instante y precondiciones (combo_balance.md § 5.2).
+    if (tk.pulse > 0)
+      hexSpan('#ffb142', 'Cuesta ${tk.pulse} de Pulso (+1 al empezar tu '
+          'turno, por ataque básico, por golpe a una debilidad o reacción y '
+          'al defender; máx. 5)'),
+    if (tk.instant)
+      hexSpan('#9fe8ff', 'Instante: no termina el turno; después podés hacer '
+          'una acción más (una Instante por turno)'),
+    if (tk.requires.isNotEmpty)
+      hexSpan('#ff9f43',
+          'Necesita: ${tk.requires.map((r) => r.label).join(' · ')}'),
     if (tk.ultDrain > 0)
       hexSpan('#a29bfe', 'Silencio: le quita ${jsRound(tk.ultDrain)} de '
           'carga de ULT'),

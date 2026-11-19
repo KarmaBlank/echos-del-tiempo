@@ -92,7 +92,11 @@ siguiente batalla.
   `reloj + IV × 0.5` (§ "Pasar turno").
 - Si un jugador no actúa en 30 s, se defiende solo (`BattleEngine.timeout`)
   y su próximo turno es `reloj + IV`. (El timeout **no** es un Pasar:
-  sigue defendiendo, sin el adelanto.)
+  sigue defendiendo, sin el adelanto.) Los 30 s son del **turno entero**:
+  una habilidad Instante no reinicia el reloj (§ "Pulso, precondiciones e
+  Instante").
+- Pulso (v0.9): +1 al empezar el turno de un jugador (aunque lo pierda
+  por un estado). Ver § "Pulso, precondiciones e Instante".
 
 ## Daño
 
@@ -149,7 +153,10 @@ Objetivo: el enemigo vivo pedido, o el primero vivo.
   a todos. Paladín: 3% de aturdir. Rama `creyente`: 25% de curar 2% de
   vida máx. a todos los aliados. Rama `inherente`: 25% de aplicar 1 Sagrado.
 - **Habilidad** (`SK`): debe estar en `kit de clase + habilidades del arma
-  (+ habilidad fusionada) + kit de la ascensión` y alcanzar el MP. Desde
+  (+ habilidad fusionada) + kit de la ascensión` (+ combo de clase y
+  Quebrar base, que agrega el motor), alcanzar el MP y el **Pulso** y
+  cumplir sus **precondiciones** (v0.9, § "Pulso, precondiciones e
+  Instante"; si no, `command` devuelve `null`). Desde
   v0.5 ninguna clase tiene kit de clase (el del Paladín pasó al Guardián,
   ascension.md § 4); `ClassDef.kitSkillIds` queda vacío. Base `ATQ` (físicas) o
   `MAG` (mágicas) × poder. Con `tormenta`: × 1.25 si es a todos, × 0.85
@@ -277,6 +284,82 @@ Red (host-autoritativo, sin subir `kProtocolVersion`): viaja como
 host v0.8.2 ignora `ps` y lo resuelve como Defender (degrada sin romper);
 un host v0.8.3 lo resuelve como Pasar. Sin `ps` (o `ps: false`) sigue
 siendo Defender.
+
+### Pulso, precondiciones e Instante (v0.9)
+
+combo_balance.md § 5.2 (paso 7). Todo en `BattleEngine` (Dart puro),
+`SkillRequirements` (`rules/skill_requirements.dart`, la usan host, UI e
+IA) y el catálogo (`SkillDef.pulse`, `instant`, `requires`).
+
+**Pulso** (`Combatant.pulse`, solo jugadores; enemigos e invocaciones 0):
+
+| Qué | Pulso |
+|---|---|
+| Inicio de la pelea (y al entrar a mitad de batalla) | 1 (`pulseStart`) |
+| Empezar su turno (`nextTurn`) | +1 |
+| Ataque básico | +1 (no al liberar a un aliado de la telaraña) |
+| Golpe primario a una debilidad o que reacciona (incluye Convergencia) | +1, una vez por acción (una habilidad a todos que reacciona en 3 enemigos da +1) |
+| Defender (también la defensa automática del tiempo agotado) | +1 |
+| Pasar, pociones, dúos, ULT | 0 (salvo lo que el golpe gane por debilidad o reacción) |
+| Tope | 5 (`pulseMax`) |
+
+- La habilidad cobra su Pulso y su MP al usarse, antes del golpe; lo que
+  gane el golpe (debilidad, reacción) entra después. La ULT y los dúos
+  no usan Pulso.
+- No se guarda entre batallas (cada pelea arranca en 1).
+
+**Precondiciones** (`SkillDef.requires`, lista de `SkillReq`; todas se
+tienen que cumplir):
+
+| `SkillReqKind` | Texto ("Necesita: …") |
+|---|---|
+| `targetStacks(estado, n)` | `objetivo con 5+ de Veneno` |
+| `targetFissured` | `objetivo Fisurado` |
+| `targetMarked` (`BuffStat.damageTaken` > 0) | `objetivo con Marca` |
+| `selfHpBelow(f)` | `tu vida bajo el 50%` |
+
+- El objetivo es el del comando (o el primer enemigo vivo). En una
+  habilidad a todos, una precondición de objetivo vale si la cumple
+  **algún** enemigo vivo.
+- `SkillRequirements.missing(sk, actor, objetivo)` devuelve lo que falta,
+  en orden: `N MP`, `Pulso N`, cada precondición. El host rechaza el
+  comando si no está vacío; la UI muestra el botón desactivado con
+  `Necesita: 3 MP · Pulso 2 · objetivo con 5+ de Veneno`.
+
+**Instante** (`SkillDef.instant`):
+- La habilidad se resuelve entera (daño, estados, procs `onSkill`, carga
+  de ULT) pero **no termina el turno**: `currentId` sigue siendo el
+  jugador, su `nextTurn` no se mueve, sus efectos con duración no bajan y
+  la vulnerabilidad del quebrado no descuenta. `Combatant.chained = true`
+  y el log suma `Instante: una acción más`.
+- Una por turno: con `chained`, otra Instante se resuelve como una acción
+  normal (termina el turno). Después de una Instante se puede hacer
+  **cualquier** acción (atacar, otra habilidad, ULT, dúo, poción,
+  Defender).
+- `chained` vuelve a `false` al empezar su próximo turno.
+- **Pasar** con `chained` = "Terminar turno": termina sin el adelanto
+  (`reloj + IV`, × 1, log `X termina el turno`). Sin `chained`, Pasar es
+  como siempre (× 0.5). Decisión del paso 7 (fuera del spec): si no,
+  Instante + Pasar era actuar y además adelantar el próximo turno.
+- **Tiempo agotado**: el reloj de 30 s (`SessionBattle.turnTime`) se
+  reinicia solo cuando empieza otro turno, así que cuenta el turno entero;
+  si se agota después de una Instante, defiende y termina.
+- Si la Instante gana la batalla, termina como cualquier acción.
+- Sesión: después de una Instante el host espera la pausa normal (0.8 s)
+  y vuelve a esperar al mismo jugador (`waitingForPlayer`); el AUTO de los
+  compañeros elige de nuevo (solo_party.md § 4.1).
+
+**Red**: los comandos no cambian (la habilidad viaja por id). En el
+estado, `Combatant` suma `pls` (Pulso) y `chn` (encadenó), opcionales:
+sin ellos se lee 0 y `false`. Van dentro de `kProtocolVersion` 13 (v0.9,
+todavía sin publicar).
+
+**UI**: la tarjeta de cada jugador muestra 5 pips de Pulso (oro llenos,
+borde celeste si encadenó); el tooltip dice `Pulso n/5` y `+1 acción
+(Instante)`. En HABILIDADES el costo es `N MP` y `Pulso N`, la fila de
+una Instante dice `Instante` (no, si ya encadenaste) y el botón se
+desactiva con el `Necesita: …`. Después de una Instante, PASAR dice
+`Terminar turno`.
 
 ### Variantes de habilidades (v0.5)
 
@@ -570,6 +653,7 @@ postura multiplican el daño de los golpes primarios del grupo.
   comandos dice `Turno de Leo (compañero)`; con AUTO la barra dice `Turno
   de Leo (AUTO)` y a los 0.5 s actúa `CompanionAi` (curar a quien esté
   bajo el 40 % con una habilidad de cura o una poción, ULT al 100 % al
-  más débil, si no atacar al más débil). El tiempo de turno de la sala
+  más débil, combos con Pulso y precondiciones desde v0.9, si no atacar
+  al más débil; solo_party.md § 4.1). El tiempo de turno de la sala
   vale para cada turno.
 - Su tarjeta del grupo muestra la ULT y el botón `AUTO: SÍ / NO`.

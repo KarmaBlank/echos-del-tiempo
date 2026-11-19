@@ -41,6 +41,8 @@ Combatant _hero(String id,
       id: id,
       name: 'H$id',
       isPlayer: true,
+      // Pulso lleno: las pruebas de mecánicas no miden el Pulso.
+      pulse: BattleEngine.pulseMax,
       hp: hp,
       maxHp: 100,
       speed: 10,

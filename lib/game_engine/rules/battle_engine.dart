@@ -22,6 +22,7 @@ import 'abyss_rules.dart';
 import 'dual_rules.dart';
 import 'family_rules.dart';
 import 'js_math.dart';
+import 'skill_requirements.dart';
 import 'stats_calculator.dart';
 import 'summon_rules.dart';
 
@@ -111,6 +112,13 @@ class BattleEngine {
   /// Pasar turno (v0.8.3, combat.md § "Pasar turno"): el próximo turno
   /// llega en IV × esto (Defender: × 0.7; acción normal: × 1).
   static const passTurnFactor = 0.5;
+
+  // ---- Pulso (combo_balance.md § 5.2) ----
+  /// Tope de Pulso por jugador.
+  static const pulseMax = 5;
+
+  /// Pulso con el que arranca la pelea.
+  static const pulseStart = 1;
 
   // ---- ULT enemiga ----
   /// Carga por turno propio.
@@ -326,6 +334,7 @@ class BattleEngine {
     final p = t.state.current!;
     t.events.add(ActionEvent(p.id, BattleActionKind.defend));
     p.defending = true;
+    t._gainPulse(p);
     t.tickEffects(p);
     p.nextTurn = t.state.clock + interval(p);
     t.state.log = 'Tiempo agotado: ${p.name} se defiende automáticamente';
@@ -402,7 +411,13 @@ class BattleEngine {
         }
       }
     }
-    // Quebrar base del arma (combo_balance.md § 5.1), al final de todo.
+    // Combo de clase (combo_balance.md § 5.2) y Quebrar base del arma
+    // (§ 5.1), al final de todo.
+    for (final combo in kClassComboSkill[cls.id] ?? const <String>[]) {
+      if (catalog.skills.containsKey(combo) && !skills.contains(combo)) {
+        skills.add(combo);
+      }
+    }
     final quebrar = quebrarSkillFor(w.type);
     if (catalog.skills.containsKey(quebrar) && !skills.contains(quebrar)) {
       skills.add(quebrar);
@@ -430,6 +445,7 @@ class BattleEngine {
     _refreshStats(c);
     c.hp = math.min(m.hp ?? c.maxHp, c.maxHp);
     c.mp = math.min(m.mp ?? c.maxMp.toDouble(), c.maxMp.toDouble());
+    c.pulse = pulseStart;
     return c;
   }
 
@@ -521,6 +537,9 @@ class _Action {
 
   /// Dúo (la postura del Caballero Hueco no lo bloquea).
   bool dual = false;
+
+  /// Ya ganó el +1 de Pulso por debilidad o reacción (una vez por acción).
+  bool pulsed = false;
 }
 
 /// Contexto de una reacción para las mecánicas del árbol (§ 8 de
@@ -626,6 +645,9 @@ class _Turn {
       best.defending = false;
       best.protecting = false;
       best.extraTurn = best.extraTurn == 1 ? 2 : 0;
+      // Pulso (combo_balance.md § 5.2): +1 al empezar su turno.
+      best.chained = false;
+      _gainPulse(best);
       state.log = 'Turno de ${best.name}';
     } else {
       _decayBreak(best);
@@ -682,6 +704,12 @@ class _Turn {
       state.currentId = null;
       _checkEnd();
     }
+  }
+
+  /// +[n] de Pulso a un jugador, con tope (combo_balance.md § 5.2).
+  void _gainPulse(Combatant p, [int n = 1]) {
+    if (!p.isPlayer || p.isSummon) return;
+    p.pulse = math.min(BattleEngine.pulseMax, p.pulse + n);
   }
 
   void endTurn() {
@@ -1880,6 +1908,16 @@ class _Turn {
           _act!.breakHit.add(e.id)) {
         _addBreak(e, _breakPoints(a, e, weak: weakHit));
       }
+    }
+    // Pulso: +1 por golpe a una debilidad o reacción, una vez por acción.
+    if (primary &&
+        a != null &&
+        a.isPlayer &&
+        _act != null &&
+        !_act!.pulsed &&
+        (weakHit || reaction != null)) {
+      _act!.pulsed = true;
+      _gainPulse(a);
     }
     final hit = _Hit(dmg, crit, e, mods);
     if (primary && a != null && _act != null) {
@@ -4019,9 +4057,14 @@ class _Turn {
             targetId: target.id,
             allTargets: p.keystones.contains('imparable')));
         _attack(p, foes, target);
+        _gainPulse(p);
       case SkillCommand(:final skillId):
         final sk = engine.catalog.skills[skillId];
-        if (sk == null || !p.skillIds.contains(skillId) || p.mp < sk.mp) {
+        // MP, Pulso y precondiciones (combo_balance.md § 5.2): el host
+        // rechaza la acción si falta algo.
+        if (sk == null ||
+            !p.skillIds.contains(skillId) ||
+            SkillRequirements.missing(sk, p, target, foes: foes).isNotEmpty) {
           return false;
         }
         final combo = engine.catalog.combo;
@@ -4033,6 +4076,7 @@ class _Turn {
                   : combo.breakMagical
           ..canBreak = sk.breaks;
         p.mp -= sk.mp;
+        p.pulse -= sk.pulse;
         // Sangría: cuesta vida (nunca deja en menos de 1).
         if (sk.hpCost > 0) {
           final cost = math.min(p.hp - 1, jsRound(p.maxHp * sk.hpCost));
@@ -4088,6 +4132,7 @@ class _Turn {
       case DefendCommand():
         events.add(ActionEvent(p.id, BattleActionKind.defend));
         p.defending = true;
+        _gainPulse(p);
         state.log = '${p.name} se defiende (actúa antes)';
         _act = null;
         tickEffects(p);
@@ -4097,11 +4142,17 @@ class _Turn {
       case PassCommand():
         // Sin acción: no carga ULT, no defiende, no dispara procs ni
         // emite ActionEvent (los eventos siguen siendo los de v0.8.2).
-        state.log = '${p.name} pasa el turno (el próximo llega antes)';
+        // Después de una Instante ya actuó: termina el turno sin el
+        // adelanto de Pasar (combat.md § "Pulso e Instante").
+        final acted = p.chained;
+        state.log = acted
+            ? '${p.name} termina el turno'
+            : '${p.name} pasa el turno (el próximo llega antes)';
         _act = null;
         _attacker = null;
         tickEffects(p);
-        p.nextTurn = state.clock + _iv(p) * BattleEngine.passTurnFactor;
+        p.nextTurn = state.clock +
+            _iv(p) * (acted ? 1 : BattleEngine.passTurnFactor);
         endTurn();
         return true;
     }
@@ -4138,6 +4189,17 @@ class _Turn {
     }
     _attacker = null;
     _act = null;
+    // Instante (combo_balance.md § 5.2): no termina el turno; una por
+    // turno, y después una acción más.
+    final instant = cmd is SkillCommand && (act.skill?.instant ?? false);
+    if (instant && !p.chained && p.alive) {
+      p.chained = true;
+      _notes.add('Instante: una acción más');
+      _flush();
+      _checkEnd();
+      if (state.ended) state.currentId = null;
+      return true;
+    }
     tickEffects(p);
     if (act.extraTurn) {
       // Danza de Cuchillas: el próximo turno es ahora.

@@ -74,7 +74,15 @@ BattleState _start(BattleEngine e, List<String> types, List<String> classes) {
   return s;
 }
 
-BattleState _turnOf(BattleState s, String id) => s.copy()..currentId = id;
+/// El turno de [id] sin pasar por `nextTurn` (Pulso lleno: estas pruebas
+/// no miden el Pulso, combo_balance.md § 5.2).
+BattleState _turnOf(BattleState s, String id) {
+  final c = s.copy()..currentId = id;
+  for (final p in c.party) {
+    p.pulse = BattleEngine.pulseMax;
+  }
+  return c;
+}
 
 Iterable<BossMechanicEvent> _mech(BattleStep s, [BossMechanicPhase? ph]) =>
     s.events.whereType<BossMechanicEvent>().where((e) => ph == null || e.phase == ph);

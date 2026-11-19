@@ -66,7 +66,7 @@ void main() {
       expect(zoneProgression.weaponSkills(p), kWeapons['espada_escudo_novato']!.skillIds);
       final c = _combatant(p);
       // + la Quebrar base del arma (combo_balance.md § 5.1), al final.
-      expect(c.skillIds, ['estocada', 'golpeEscudo', 'sanar', 'quebrar']);
+      expect(c.skillIds, ['estocada', 'golpeEscudo', 'sanar', 'selloInstante', 'quebrar']);
       for (final id in _classicKit) {
         expect(c.skillIds, isNot(contains(id)), reason: id);
       }
@@ -77,13 +77,13 @@ void main() {
 
     test('con otra arma, otras habilidades (se puede buildear)', () {
       final c = _combatant(_paladin(weapon: 'maza_escudo_bastion'));
-      expect(c.skillIds, ['provocar', 'escudoFe', 'quebrar']);
+      expect(c.skillIds, ['provocar', 'escudoFe', 'selloInstante', 'quebrar']);
     });
 
     test('Templario: armas + su kit, sin el kit clásico', () {
       final c = _combatant(_paladin(asc: 'templario'));
       expect(c.skillIds,
-          ['estocada', 'golpeEscudo', 'sanar', 'castigo', 'luzCegadora', 'quebrar']);
+          ['estocada', 'golpeEscudo', 'sanar', 'castigo', 'luzCegadora', 'selloInstante', 'quebrar']);
     });
 
     test('las armas de Paladín cubren apoyo y defensa sin el kit', () {
@@ -116,7 +116,7 @@ void main() {
       expect(kAscensions['guardian']!.skillIds, _classicKit);
       final c = _combatant(_paladin(asc: 'guardian'));
       expect(c.skillIds,
-          ['estocada', 'golpeEscudo', 'sanar', ..._classicKit, 'quebrar']);
+          ['estocada', 'golpeEscudo', 'sanar', ..._classicKit, 'selloInstante', 'quebrar']);
       // Égida Grupal y Juramento ya no existen.
       expect(kSkills.containsKey('egidaGrupal'), isFalse);
       expect(kSkills.containsKey('juramento'), isFalse);

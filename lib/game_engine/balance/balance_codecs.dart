@@ -160,6 +160,11 @@ const _skillCombat = <BalanceField>[
 
 const _mpField = BalanceField('mp', 'MP', _int, max: 99);
 
+// Pulso e Instante (combo_balance.md § 5.2). Las precondiciones no se
+// editan en el admin: se conservan las del catálogo.
+const _pulseField = BalanceField('pulse', 'Pulso', _int, max: 5);
+const _instantField = BalanceField('instant', 'Instante (no termina el turno)', _flag);
+
 Map<String, Object?> _readSkill(Object o) {
   final s = o as SkillDef;
   return {
@@ -202,6 +207,8 @@ Map<String, Object?> _readSkill(Object o) {
     'breakBonus': s.breakBonus,
     'ultDrain': s.ultDrain,
     'breaks': s.breaks,
+    'pulse': s.pulse,
+    'instant': s.instant,
     'disabled': false,
   };
 }
@@ -252,6 +259,9 @@ Object _writeSkill(Object o, BalanceFieldReader f) {
     breakBonus: f.d('breakBonus'),
     ultDrain: f.d('ultDrain'),
     breaks: f.b('breaks'),
+    pulse: f.values.containsKey('pulse') ? f.i('pulse') : b.pulse,
+    instant: f.values.containsKey('instant') ? f.b('instant') : b.instant,
+    requires: b.requires,
   );
 }
 
@@ -259,7 +269,7 @@ String _skillName(Object o) => (o as SkillDef).name;
 
 const skillCodec = EntityCodec(
   kind: BalanceKind.skill,
-  fields: [_mpField, ..._skillCombat, _disabled],
+  fields: [_mpField, _pulseField, _instantField, ..._skillCombat, _disabled],
   read: _readSkill,
   write: _writeSkill,
   nameOf: _skillName,

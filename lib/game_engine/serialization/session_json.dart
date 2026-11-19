@@ -580,6 +580,9 @@ class SessionJson {
         if (c.summonKind != null) 'smK': c.summonKind,
         if (c.summonTurns != 0) 'smT': c.summonTurns,
         if (c.summonKills != 0) 'smN': c.summonKills,
+        // Pulso e Instante v0.9 (opcionales; combo_balance.md § 5.2).
+        if (c.pulse != 0) 'pls': c.pulse,
+        if (c.chained) 'chn': true,
       };
 
   Json timedEffectToJson(TimedEffect e) => {
@@ -699,6 +702,8 @@ class SessionJson {
       summonKind: j.strOrNull('smK'),
       summonTurns: j.intOrNull('smT') ?? 0,
       summonKills: j.intOrNull('smN') ?? 0,
+      pulse: j.intOrNull('pls') ?? 0,
+      chained: j.flag('chn'),
     );
   }
 

@@ -31,6 +31,13 @@ const Map<String, GameElement> kSkillElement = {
   // ---- Quebrar base (combo_balance.md § 5.1) ----
   'quebrar': _fisico,
   'quebrarArcano': _fisico,
+  // ---- Combo de clase (combo_balance.md § 5.2) ----
+  'brasaEco': _fuego, // Brasa Fugaz (prepara Quemadura)
+  'selloInstante': _fisico, // Sello del Instante (Marca)
+  'ascuaEco': _fuego, // Ascua Fugaz (prepara Quemadura)
+  'puaEco': _veneno, // Púa Fugaz (prepara Veneno)
+  'ignicionEco': _fuego, // Ignición Convergente (detona Veneno)
+  'ponzonaEco': _veneno, // Ponzoña Convergente (detona Quemadura)
   // ---- Habilidades de arma y ULT por tipo de arma ----
   'giro': _fisico, // Corte Giratorio
   'embestida': _fisico, // Embestida

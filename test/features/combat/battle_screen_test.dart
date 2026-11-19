@@ -178,6 +178,55 @@ void main() {
     expect(sent, isA<PassCommand>());
   });
 
+  // Pulso, precondiciones e Instante (combo_balance.md § 5.2).
+  testWidgets('Quebrar sin Fisurado: desactivada con "Necesita: …"',
+      (tester) async {
+    BattleCommand? sent;
+    await pump(tester, canAct: true, onCommand: (c) {
+      sent = c;
+      return true;
+    });
+    final menu = tester.state<BattleViewState>(find.byType(BattleView));
+    menu.selectCategory(BattleCategory.skills);
+    await tester.pump();
+    // Seleccionarla muestra el motivo y no manda nada.
+    final ids = state.current!.skillIds;
+    for (var i = 0; i < ids.indexOf('quebrar'); i++) {
+      menu.handleKey(LogicalKeyboardKey.arrowDown);
+    }
+    await tester.pump();
+    menu.handleKey(LogicalKeyboardKey.enter);
+    expect(sent, isNull);
+    expect(
+        find.textContaining('Necesita: objetivo Fisurado', findRichText: true),
+        findsWidgets);
+  });
+
+  testWidgets('pips de Pulso en cada tarjeta; Terminar turno tras Instante',
+      (tester) async {
+    // El guerrero usa su Instante (Brasa Fugaz): el turno sigue.
+    state = engine
+        .command(state, 'guerrero', const SkillCommand('brasaEco'))!
+        .state;
+    expect(state.currentId, 'guerrero');
+    BattleCommand? sent;
+    await pump(tester, canAct: true, onCommand: (c) {
+      sent = c;
+      return true;
+    });
+    for (final id in ['guerrero', 'maga', 'tirador', 'paladin']) {
+      expect(find.byKey(ValueKey('pulse-$id')), findsOneWidget, reason: id);
+    }
+    final menu = tester.state<BattleViewState>(find.byType(BattleView));
+    menu.selectCategory(BattleCategory.pass);
+    await tester.pump();
+    expect(find.textContaining('Terminar turno', findRichText: true),
+        findsWidgets);
+    await tester.tap(act('pass'));
+    await tester.pump();
+    expect(sent, isA<PassCommand>());
+  });
+
   testWidgets('P va a PASAR y otra P pasa el turno', (tester) async {
     BattleCommand? sent;
     await pump(tester, canAct: true, onCommand: (c) {

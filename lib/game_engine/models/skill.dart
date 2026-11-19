@@ -35,6 +35,62 @@ class PartyBuff {
   final int turns;
 }
 
+/// Tipo de precondición de una habilidad (combo_balance.md § 5.2).
+enum SkillReqKind {
+  /// El objetivo tiene `amount` o más stacks de `status`.
+  targetStacks,
+
+  /// El objetivo está Fisurado (barra de quiebre llena).
+  targetFissured,
+
+  /// El objetivo tiene Marca (`BuffStat.damageTaken` > 0).
+  targetMarked,
+
+  /// La vida propia está por debajo de `fraction` de la máxima.
+  selfHpBelow,
+}
+
+/// Precondición declarativa de una habilidad (combo_balance.md § 5.2):
+/// si no se cumple, el botón sale desactivado ("Necesita: …") y el host
+/// rechaza la acción. La evalúa `SkillRequirements` (rules).
+class SkillReq {
+  const SkillReq.targetStacks(StatusKind this.status, this.amount)
+      : kind = SkillReqKind.targetStacks,
+        fraction = 0;
+  const SkillReq.targetFissured()
+      : kind = SkillReqKind.targetFissured,
+        status = null,
+        amount = 0,
+        fraction = 0;
+  const SkillReq.targetMarked()
+      : kind = SkillReqKind.targetMarked,
+        status = null,
+        amount = 0,
+        fraction = 0;
+  const SkillReq.selfHpBelow(this.fraction)
+      : kind = SkillReqKind.selfHpBelow,
+        status = null,
+        amount = 0;
+
+  final SkillReqKind kind;
+  final StatusKind? status;
+  final int amount;
+  final double fraction;
+
+  /// Lo que falta, para el tooltip ("Necesita: objetivo Fisurado").
+  String get label => switch (kind) {
+        SkillReqKind.targetStacks =>
+          'objetivo con $amount+ de ${status!.label}',
+        SkillReqKind.targetFissured => 'objetivo Fisurado',
+        SkillReqKind.targetMarked => 'objetivo con Marca',
+        SkillReqKind.selfHpBelow =>
+          'tu vida bajo el ${(fraction * 100).round()}%',
+      };
+
+  /// Pide algo del objetivo (no de quien la usa).
+  bool get onTarget => kind != SkillReqKind.selfHpBelow;
+}
+
 /// Una habilidad (o ULT). Puerto 1:1 de las entradas de `SK` / `ULTS`,
 /// más los efectos opcionales del kit de ascensión (ascension.md § 4).
 class SkillDef {
@@ -160,6 +216,19 @@ class SkillDef {
   /// tienen siempre.
   final bool breaks;
 
+  // ---- Pulso, precondiciones e Instante (combo_balance.md § 5.2) ----
+
+  /// Pulso que cuesta (además del MP): preparar 0-1, detonar y Quebrar
+  /// 2-3. Las ULT no usan Pulso.
+  final int pulse;
+
+  /// Instante: no termina el turno (una por turno; después, una acción
+  /// más). Ver combat.md § "Pulso e Instante".
+  final bool instant;
+
+  /// Precondiciones (todas tienen que cumplirse).
+  final List<SkillReq> requires;
+
   const SkillDef({
     required this.id,
     required this.name,
@@ -204,6 +273,9 @@ class SkillDef {
     this.breakBonus = 0,
     this.ultDrain = 0,
     this.breaks = false,
+    this.pulse = 0,
+    this.instant = false,
+    this.requires = const [],
   });
 
   bool get dealsDamage =>

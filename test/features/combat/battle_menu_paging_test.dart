@@ -154,23 +154,22 @@ void main() {
     }
 
     testWidgets(
-        'Guardián con 13 opciones: categorías, todas sus técnicas sin '
-        'paginar, teclas 1-9 dentro de la categoría', (tester) async {
+        'Guardián con 14 opciones: categorías, sus técnicas en dos páginas '
+        '(Más), teclas 1-9 dentro de la categoría', (tester) async {
       final skills = state.party.single.skillIds;
-      // 8 + la Quebrar base del arma (combo_balance.md § 5.1): entra justo
-      // en las 9 teclas.
-      expect(skills, hasLength(9));
+      // 8 + el combo de clase (combo_balance.md § 5.2) + la Quebrar base
+      // del arma (§ 5.1): 10, pasa de las 9 teclas y pagina.
+      expect(skills, hasLength(10));
       BattleCommand? sent;
       final menu = await pump(tester, (c) => sent = c);
       expect(menu.hasSubmenu, isFalse);
-      // Las pociones van juntas en OBJETOS: Habilidades entra sin "Más".
       menu.selectCategory(BattleCategory.skills);
       await tester.pump();
-      for (final id in skills) {
+      for (final id in skills.take(8)) {
         expect(find.byKey(ValueKey('battle-act-skill-$id')), findsOneWidget,
             reason: id);
       }
-      expect(find.byKey(const ValueKey('battle-act-more')), findsNothing);
+      expect(find.byKey(const ValueKey('battle-act-more')), findsOneWidget);
       expect(menu.menuPage, 0);
       // 7 = la séptima técnica de la lista.
       menu.handleKey(LogicalKeyboardKey.digit7);

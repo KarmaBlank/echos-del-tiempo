@@ -127,6 +127,13 @@ void main() {
       ('tirador', 'arco'),
       ('paladin', 'espada+escudo'),
     ];
+    // Paso 7: el grupo mixto lleva la columna de Convergencias por pelea.
+    final mixedRows = <String>[
+      '| Zona | Clase | Loot | Jug. | Pelea | Victorias | Acciones | '
+          'Acc./jug. | Daño/acción | Mayor golpe | Quiebres | Jefe quebrado '
+          'antes de su ULT | Vida al ganar | Convergencias |',
+      '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+    ];
     for (final (zi, tag, level) in zones) {
       final z = catalog.zone(zi)!;
       final m = catalog.mission(z.missionId!)!;
@@ -169,19 +176,22 @@ void main() {
             runs: 32,
             combos: combos);
         final n = party.length;
-        rows.add('| ${z.name} ($tag, nv $level) | Mixto${combos ? ' + combos' : ''} | Raro +2 | $n '
+        mixedRows.add('| ${z.name} ($tag, nv $level) | Mixto${combos ? ' + combos' : ''} | Raro +2 | $n '
             '| $fight | ${r.wins}/${r.runs} '
             '| ${r.avgActions.toStringAsFixed(1)} '
             '| ${(r.avgActions / n).toStringAsFixed(1)} '
             '| ${r.avgDamagePerAction.toStringAsFixed(0)} '
             '| ${(r.avgBestHit * 100).toStringAsFixed(0)}% '
             '| ${r.avgBreaks.toStringAsFixed(1)} | ${_early(r)} '
-            '| ${(r.avgHpLeft * 100).toStringAsFixed(0)}% |');
+            '| ${(r.avgHpLeft * 100).toStringAsFixed(0)}% '
+            '| ${r.avgConvergences.toStringAsFixed(1)} |');
        }
       }
     }
     // ignore: avoid_print
     print(rows.join('\n'));
+    // ignore: avoid_print
+    print(mixedRows.join('\n'));
   }, timeout: const Timeout(Duration(minutes: 10)));
 }
 

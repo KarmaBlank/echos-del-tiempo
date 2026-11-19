@@ -120,6 +120,8 @@ class Combatant {
     this.summonKind,
     this.summonTurns = 0,
     this.summonKills = 0,
+    this.pulse = 0,
+    this.chained = false,
   })  : primedBy = primedBy ?? {},
         family = family ??
             (isPlayer || enemyType == null ? null : kEnemyFamily[enemyType]),
@@ -330,6 +332,16 @@ class Combatant {
   /// Enemigos que mató (Festín Arcano).
   int summonKills;
 
+  // ---- Pulso e Instante v0.9 (combo_balance.md § 5.2) ----
+
+  /// Pulso del jugador (0..`BattleEngine.pulseMax`; arranca en
+  /// `pulseStart`). Enemigos e invocaciones: 0.
+  int pulse;
+
+  /// Ya usó una habilidad Instante en este turno: el turno sigue para
+  /// una acción más, pero no otra Instante encadenada.
+  bool chained;
+
   bool get isSummon => summonOwner != null;
 
   /// Ascensión del jugador (`null` = clase base o enemigo).
@@ -460,6 +472,8 @@ class Combatant {
         summonKind: summonKind,
         summonTurns: summonTurns,
         summonKills: summonKills,
+        pulse: pulse,
+        chained: chained,
       );
 }
 

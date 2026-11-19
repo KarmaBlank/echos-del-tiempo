@@ -45,7 +45,7 @@ void main() {
       final expected = {
         for (final id in kSkills.keys)
           if (!kAscensionSkills.containsKey(id) &&
-              !kBaseQuebrarIds.contains(id))
+              !kEngineSkillIds.contains(id))
             id,
       };
       expect(kSkillDelivery.keys.toSet(), expected);

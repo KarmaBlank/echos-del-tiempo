@@ -28,7 +28,7 @@ const Map<String, SkillDef> kAscensionSkills = {
   // Elementalista (v0.7, ascension.md § 4.1): Prisma prepara, Detonar
   // detona (catalizador).
   'prismaElemental': SkillDef(id: 'prismaElemental', name: 'Prisma Elemental', mp: 4, kind: SkillKind.magical, power: 1.3, status: StatusApplication(_wet, 1), extraStatuses: [StatusApplication(_chg, 1)]),
-  'detonar': SkillDef(id: 'detonar', name: 'Detonar', mp: 5, kind: SkillKind.magical, power: 1.5, catalyst: 0.30),
+  'detonar': SkillDef(id: 'detonar', name: 'Detonar', mp: 5, kind: SkillKind.magical, power: 1.5, catalyst: 0.30, pulse: 2),
   // Francotirador
   'tiroCabeza': SkillDef(id: 'tiroCabeza', name: 'Tiro a la Cabeza', mp: 6, kind: SkillKind.physical, power: 2.4, critBonus: 0.35, execute: 0.25),
   'apuntar': SkillDef(id: 'apuntar', name: 'Apuntar', mp: 3, kind: SkillKind.support, selfBuff: PartyBuff(BuffStat.crit, 1.0, 1), selfTurn: 0.5),

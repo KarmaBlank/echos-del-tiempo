@@ -76,8 +76,13 @@ BattleState _start(BattleEngine e, String boss, List<String> classes, {bool toug
 }
 
 /// Le da el turno a [id] (sin pasar por la línea de tiempo).
+/// El turno de [id] sin pasar por `nextTurn` (Pulso lleno: estas pruebas
+/// no miden el Pulso, combo_balance.md § 5.2).
 BattleState _turnOf(BattleState s, String id) {
   final c = s.copy()..currentId = id;
+  for (final p in c.party) {
+    p.pulse = BattleEngine.pulseMax;
+  }
   return c;
 }
 

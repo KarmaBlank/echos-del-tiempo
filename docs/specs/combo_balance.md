@@ -342,14 +342,16 @@ del jefe y un golpe grande quiebra solo.
 - Un golpe primario de una acción con **Quebrar** (`SkillDef.breaks`,
   toda ULT, todo dúo, toda Convergencia) sobre un Fisurado de **antes de
   este paso** lo quiebra. Si el mismo golpe lo fisuró, no (dos pasos).
-  Quebrar sobre un no Fisurado solo suma sus puntos (el tooltip lo dice).
+  Desde el paso 7, Quebrar base pide objetivo Fisurado (§ 5.2): sobre
+  uno que no lo está, el host la rechaza.
 - Si llega a su turno Fisurado: la barra vuelve a la mitad
   (`steadyGauge`, evento `BreakPhase.steadied`, texto `SE RECOMPONE`).
   La baja del 10% por turno sigue para la barra a medio llenar.
 - **Quebrar base** (`quebrar`, física; `quebrarArcano`, mágica para
   báculo, varita y tomo): la agrega el motor al final del kit de toda
-  arma (no está en `WeaponDef.skillIds`, no se traslada por fusión). Por
-  ahora cuesta 2 de MP; el Pulso y la precondición llegan en el paso 7.
+  arma (no está en `WeaponDef.skillIds`, no se traslada por fusión).
+  Desde el paso 7 cuesta **2 de Pulso y 0 MP** y pide objetivo Fisurado
+  (antes 2 MP y sin precondición).
   El "mod de habilidad que agrega Quebrar" queda para después.
 - **Hook del árbol:** los notables de quiebre usan el efecto
   `breakBonus` que ya existe (`_breakBonus`, con sus condiciones
@@ -359,7 +361,7 @@ del jefe y un golpe grande quiebra solo.
   uno de Tirador "+20% de quiebre a Marcados"; y uno de grupo "Quebrar
   da +10 de ULT al que lo usa".
 
-## 5.2 Pulso y precondiciones (PROPUESTA, falta OK del dueño)
+## 5.2 Pulso y precondiciones (nombres aprobados: Pulso, Instante, encadenar)
 
 Punto medio entre los puntos de acción de Expedition 33 y la energía por
 turno de Slay the Spire, sin tirar el timeline actual (cada actor sigue
@@ -390,6 +392,77 @@ teniendo **un** turno según su velocidad).
   "preparar + detonar" si juntaste Pulso, como una mano corta de Slay
   the Spire.
 - Compañeros (IA): usan las mismas reglas.
+
+**Implementado (v0.9, paso 7).** Reglas detalladas en combat.md
+§ "Pulso, precondiciones e Instante".
+- `Combatant.pulse` (0..5, `BattleEngine.pulseMax`; arranca en 1,
+  `pulseStart`) y `Combatant.chained` (ya encadenó una Instante en este
+  turno). JSON `pls` / `chn`, opcionales, dentro del protocolo 13.
+- Ganancias: +1 al empezar el turno, +1 por ataque básico, +1 por golpe
+  primario a una debilidad o que reacciona (una vez por acción), +1 al
+  defender (también el automático del tiempo agotado). Pasar no da.
+- `SkillDef.pulse`, `instant` y `requires` (`SkillReq`: `targetStacks`,
+  `targetFissured`, `targetMarked`, `selfHpBelow`). `SkillRequirements`
+  (rules) evalúa MP + Pulso + precondiciones para el host, la UI
+  (`Necesita: …`) y la IA. En el admin de balance se editan `pulse` e
+  `instant` (las precondiciones se conservan del catálogo).
+- Instante: no termina el turno (ni mueve el `nextTurn`, ni baja efectos);
+  una por turno; después, cualquier acción. Pasar después de una Instante
+  = "Terminar turno" (× 1, sin el adelanto de Pasar: **fuera del spec**,
+  si no Instante + Pasar era gratis). El reloj de 30 s cuenta el turno
+  entero.
+- **Combos de clase** (6 habilidades nuevas, **propuesta**, falta OK del
+  dueño): el motor agrega una o dos por clase al final del kit, antes de
+  Quebrar, con cualquier arma (`kClassComboSkill`; no están en
+  `WeaponDef.skillIds`, no se trasladan). Así cada clase prepara algo con
+  cualquier arma (con los kits base, en T3 la Maga y el Tirador del grupo
+  mixto no tenían ninguna habilidad de Quemadura ni Veneno). Nombres
+  mecánicos, temáticos de tiempo y ecos, sin lore.
+- IA: `ComboPlanner` (rules), compartido por `CompanionAi` y el simulador
+  (`combos`): Quebrar a un Fisurado → detonar una Convergencia con 5+
+  stacks → preparar con una Instante (sin detonar antes de tiempo) →
+  atacar. El simulador con `combos` además prepara con una habilidad
+  normal si no tiene Instante.
+
+### 5.2.1 Tabla de kits (paso 7)
+
+Costos nuevos: todo lo que no figura acá cuesta 0 de Pulso, no es
+Instante y no tiene precondición.
+
+| Clase | Habilidad | Origen | MP | Pulso | Instante | Precondición | Rol |
+|---|---|---|---|---|---|---|---|
+| Todas | Quebrar / Quebrar arcano | base de toda arma | 0 (antes 2) | 2 | no | objetivo Fisurado | cierra el quiebre |
+| Guerrero | **Brasa Fugaz** (`brasaEco`, nueva) | combo de clase | 2 | 0 | sí | — | prepara: físico ×0.7, Fuego, +3 Quemadura |
+| Guerrero | Golpe Ígneo, Tajo Carmesí, Erupción / Hendidura Tóxica, Tajo del Ocaso | armas | = | 0 | no | — | preparan Quemadura / Veneno (el golpe de Veneno detona Combustión) |
+| Guerrero, Paladín | Rompearmaduras | armas | 5 | 1 | no | — | llena el quiebre y Marca |
+| Maga | **Ascua Fugaz** (`ascuaEco`, nueva) | combo de clase | 2 | 0 | sí | — | prepara: mágico ×0.6, Fuego, +2 Quemadura |
+| Maga | **Ignición Convergente** (`ignicionEco`, nueva) | combo de clase | 3 | 2 | no | objetivo con 5+ de Veneno | detona: mágico ×1.2, Fuego → Explosión tóxica |
+| Maga | Chispa | báculo inicial | 3 | 0 | sí | — | prepara Quemadura 1 (Fuego: detona Veneno) |
+| Maga | Dardo Tóxico | tomo | 4 | 1 | sí | — | prepara Veneno 3 |
+| Maga (Elementalista) | Detonar | kit de ascensión | 5 | 2 | no | — | detona lo que haya (catalizador) |
+| Tirador | **Púa Fugaz** (`puaEco`, nueva) | combo de clase | 2 | 0 | sí | — | prepara: físico ×0.6, Veneno, +3 Veneno |
+| Tirador | **Ponzoña Convergente** (`ponzonaEco`, nueva) | combo de clase | 3 | 2 | no | objetivo con 5+ de Quemadura | detona: físico ×1.2, Veneno → Combustión |
+| Tirador | Flecha Venenosa | arco inicial | 3 | 0 | sí | — | prepara Veneno 3 |
+| Tirador | Flecha Marcadora | arco | 3 | 0 | sí | — | prepara Marca +25% |
+| Tirador | Tiro Quebrantador | rifle | 5 | 1 | no | — | llena el quiebre (+100%) |
+| Paladín | **Sello del Instante** (`selloInstante`, nueva) | combo de clase | 2 | 0 | sí | — | prepara: Marca +20% (2 turnos) |
+
+Cómo combina el grupo base (una de cada clase): Guerrero (Brasa) y Maga
+(Ascua, Chispa) juntan Quemadura y el Tirador la detona con Ponzoña del
+Eco (Combustión); el Tirador (Púa, Flecha Venenosa) junta Veneno y la
+Maga lo detona con Ignición Convergente (Explosión tóxica); el Paladín Marca
+y cualquiera cierra el quiebre con Quebrar. Ojo: cada preparación es
+también el detonador de la otra (un golpe de Fuego detona el Veneno), así
+que preparar sobre un enemigo con stacks del otro estado los gasta con
+pocos; la IA lo evita. Con Pulso 2 al empezar el
+segundo turno, "preparar (Instante) + detonar" entra en un turno si el
+enemigo ya tenía stacks.
+
+Las precondiciones `targetMarked` y `selfHpBelow` quedan implementadas y
+probadas pero sin habilidad en el catálogo todavía (candidatas: Tiro a la
+Cabeza con Marca, Sangría con vida baja; cambian el balance de las
+ascensiones, se dejan para el OK del dueño). Juicio (§ 4) puede usar
+`targetMarked` como precondición en vez de volver la Marca un estado.
 
 ## 6. Mini tutorial
 
@@ -444,7 +517,7 @@ cambia se devuelve gratis). Se aplica igual:
 4. Quiebre (§ 5). **Hecho.**
 5. Curva por tramos y grupo (§ 1, § 3.3). **Hecho.**
 6. Loot atado a la zona (§ 2). **Hecho.**
-7. Pulso, precondiciones y encadenar (§ 5.2).
+7. Pulso, precondiciones y encadenar (§ 5.2). **Hecho.**
 8. Migración de personajes (§ 6b).
 9. Tutorial de combate (combat_tutorial.md). Reemplaza al mini tutorial
    de § 6, que queda solo como avisos opcionales en partida.
@@ -1048,4 +1121,61 @@ Cambios (todos editables en el admin):
 - Solo el tramo 1 queda en 100% (arriba del 60-80%) porque el ajuste de
   ATQ ×0.8 hace falta para el Caballero Hueco; si se quiere 60-80% en el
   tramo 1, habría que separar el ajuste de solitario por tramo.
+
+### Después del paso 7 (Pulso, precondiciones e Instante)
+
+Mismo simulador y mismas semillas. Cambios que mueven números: Quebrar
+cuesta Pulso 2 y pide Fisurado (antes 2 MP), Chispa y Flecha Venenosa son
+Instante, y cada clase suma sus combos de clase. "+ combos" usa ahora
+`ComboPlanner` (la IA de los compañeros): Quebrar a un Fisurado, detonar
+con 5+ stacks, preparar con una Instante (o una normal si no tiene) sin
+detonar antes de tiempo. *Acciones* cuenta cada comando (una Instante
+y la acción que sigue son 2). Columna nueva *Convergencias* por pelea.
+
+| Zona | Clase | Loot | Jug. | Pelea | Victorias | Acciones | Acc./jug. | Daño/acción | Mayor golpe | Quiebres | Jefe quebrado antes de su ULT | Vida al ganar | Convergencias |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Pradera Esmeralda (T1 A, nv 1) | Mixto | Raro +2 | 4 | comunes | 32/32 | 5.6 | 1.4 | 22 | 94% | 0.1 | — | 94% | 0.5 |
+| Pradera Esmeralda (T1 A, nv 1) | Mixto + combos | Raro +2 | 4 | comunes | 32/32 | 5.7 | 1.4 | 21 | 98% | 0.0 | — | 95% | 1.0 |
+| Pradera Esmeralda (T1 A, nv 1) | Mixto | Raro +2 | 4 | élite | 32/32 | 4.0 | 1.0 | 27 | 50% | 0.0 | — | 97% | 0.9 |
+| Pradera Esmeralda (T1 A, nv 1) | Mixto + combos | Raro +2 | 4 | élite | 32/32 | 5.0 | 1.2 | 21 | 40% | 0.0 | — | 98% | 1.0 |
+| Pradera Esmeralda (T1 A, nv 1) | Mixto | Raro +2 | 4 | jefe | 32/32 | 12.1 | 3.0 | 47 | 62% | 0.0 | 0/32 (0%) | 82% | 2.8 |
+| Pradera Esmeralda (T1 A, nv 1) | Mixto + combos | Raro +2 | 4 | jefe | 32/32 | 14.9 | 3.7 | 36 | 65% | 0.0 | 0/32 (0%) | 87% | 3.0 |
+| Bosque Hondo (T1 C, nv 10) | Mixto | Raro +2 | 4 | comunes | 32/32 | 2.0 | 0.5 | 86 | 86% | 0.0 | — | 94% | 0.0 |
+| Bosque Hondo (T1 C, nv 10) | Mixto + combos | Raro +2 | 4 | comunes | 32/32 | 2.5 | 0.6 | 86 | 117% | 0.0 | — | 94% | 0.8 |
+| Bosque Hondo (T1 C, nv 10) | Mixto | Raro +2 | 4 | élite | 32/32 | 4.8 | 1.2 | 88 | 43% | 0.0 | — | 93% | 0.0 |
+| Bosque Hondo (T1 C, nv 10) | Mixto + combos | Raro +2 | 4 | élite | 32/32 | 5.6 | 1.4 | 75 | 49% | 0.0 | — | 92% | 0.8 |
+| Bosque Hondo (T1 C, nv 10) | Mixto | Raro +2 | 4 | jefe | 32/32 | 15.8 | 4.0 | 82 | 91% | 0.1 | 0/32 (0%) | 69% | 0.2 |
+| Bosque Hondo (T1 C, nv 10) | Mixto + combos | Raro +2 | 4 | jefe | 32/32 | 16.3 | 4.1 | 80 | 58% | 0.0 | 0/32 (0%) | 73% | 1.1 |
+| Fortaleza Caída (T3 A, nv 21) | Mixto | Raro +2 | 4 | comunes | 32/32 | 6.1 | 1.5 | 66 | 32% | 0.3 | — | 100% | 0.0 |
+| Fortaleza Caída (T3 A, nv 21) | Mixto + combos | Raro +2 | 4 | comunes | 32/32 | 6.9 | 1.7 | 61 | 36% | 0.9 | — | 99% | 0.1 |
+| Fortaleza Caída (T3 A, nv 21) | Mixto | Raro +2 | 4 | élite | 32/32 | 15.4 | 3.8 | 64 | 15% | 0.8 | — | 100% | 0.0 |
+| Fortaleza Caída (T3 A, nv 21) | Mixto + combos | Raro +2 | 4 | élite | 32/32 | 14.2 | 3.5 | 68 | 16% | 0.9 | — | 98% | 0.8 |
+| Fortaleza Caída (T3 A, nv 21) | Mixto | Raro +2 | 4 | jefe | 31/32 | 43.2 | 10.8 | 65 | 37% | 0.0 | 0/32 (0%) | 71% | 0.1 |
+| Fortaleza Caída (T3 A, nv 21) | Mixto + combos | Raro +2 | 4 | jefe | 32/32 | 31.6 | 7.9 | 88 | 41% | 0.3 | 0/32 (0%) | 80% | 2.5 |
+| Laberinto Temporal (T3 C, nv 30) | Mixto | Raro +2 | 4 | comunes | 32/32 | 3.4 | 0.9 | 153 | 73% | 0.1 | — | 99% | 0.0 |
+| Laberinto Temporal (T3 C, nv 30) | Mixto + combos | Raro +2 | 4 | comunes | 32/32 | 4.9 | 1.2 | 104 | 69% | 0.6 | — | 96% | 0.1 |
+| Laberinto Temporal (T3 C, nv 30) | Mixto | Raro +2 | 4 | élite | 32/32 | 7.6 | 1.9 | 155 | 31% | 0.8 | — | 100% | 0.0 |
+| Laberinto Temporal (T3 C, nv 30) | Mixto + combos | Raro +2 | 4 | élite | 32/32 | 9.8 | 2.4 | 121 | 33% | 1.0 | — | 98% | 0.8 |
+| Laberinto Temporal (T3 C, nv 30) | Mixto | Raro +2 | 4 | jefe | 21/32 | 24.8 | 6.2 | 134 | 53% | 0.1 | 1/32 (3%) | 59% | 0.2 |
+| Laberinto Temporal (T3 C, nv 30) | Mixto + combos | Raro +2 | 4 | jefe | 29/32 | 22.9 | 5.7 | 148 | 80% | 0.0 | 0/32 (0%) | 69% | 2.1 |
+
+Guerrero y maga (1 y 4 copias): igual que en el ajuste de cierre salvo la
+maga del tramo 1 A (Chispa Instante): solo vs comunes 2.0 acciones con
+91% de vida (antes 71%), vs jefe 4.0 (79%, antes 4.1 y 56%); a 4 vs jefe
+14.1 acciones (antes 15.3).
+
+#### Lectura
+
+- Con combos el grupo mixto detona **0.8-3.0 Convergencias por pelea**
+  contra élites y jefes (antes 0.0-0.2: no había pares
+  preparar/detonar). Contra comunes casi no: mueren en 1-2 acciones por
+  jugador, antes de que se junten 5 stacks (0.0-1.0).
+- Donde pesa es en los jefes de T3: Laberinto 21/32 → **29/32** con 69%
+  de vida; Fortaleza 31/32 → 32/32 en 31.6 acciones (sin combos 43.2).
+  Es la meta de § 1 ("a 4 jugadores, lo eficiente es combinar").
+- Ningún jefe se quiebra antes de su ULT (0/32 con y sin combos): Quebrar
+  ahora pide Pulso 2 y la IA lo usa solo si el enemigo está Fisurado. Meta
+  de § 5 (< 10% al azar) sigue cumplida.
+- Sin combos, el grupo mixto queda igual que antes salvo el tramo 1 A
+  (Chispa y Flecha Venenosa Instante: el grupo actúa más seguido).
 

@@ -1,3 +1,4 @@
+import '../models/passive_mechanic.dart' show BuffStat;
 import '../models/skill.dart';
 import '../models/status.dart';
 import 'ascension_catalog.dart';
@@ -29,19 +30,48 @@ String quebrarSkillFor(String? weaponType) =>
         ? kQuebrarArcanoId
         : kQuebrarId;
 
+/// Habilidades de combo de cada clase (combo_balance.md § 5.2.1,
+/// propuesta del paso 7): el motor las agrega al kit, antes de Quebrar,
+/// con cualquier arma. Como Quebrar, no están en `WeaponDef.skillIds` ni
+/// se trasladan. Cada clase prepara algo; Maga y Tirador además detonan
+/// la Convergencia que prepara el otro.
+const Map<String, List<String>> kClassComboSkill = {
+  'guerrero': ['brasaEco'],
+  'maga': ['ascuaEco', 'ignicionEco'],
+  'tirador': ['puaEco', 'ponzonaEco'],
+  'paladin': ['selloInstante'],
+};
+
+/// Habilidades que agrega el motor (Quebrar base y las de combo de
+/// clase): no vienen de un arma ni se trasladan por fusión.
+final Set<String> kEngineSkillIds = {
+  ...kBaseQuebrarIds,
+  for (final l in kClassComboSkill.values) ...l,
+};
+
 /// Habilidades que otorgan las armas (`SK`) y los kits de las ascensiones.
 const Map<String, SkillDef> kSkills = {
   // Quebrar base (combo_balance.md § 5.1): toda arma la trae en su kit.
   // Pega poco (×0.6) y casi no llena la barra: cierra el quiebre.
-  kQuebrarId: SkillDef(id: kQuebrarId, name: 'Quebrar', mp: 2, kind: _phys, power: 0.6, breaks: true),
-  kQuebrarArcanoId: SkillDef(id: kQuebrarArcanoId, name: 'Quebrar arcano', mp: 2, kind: _mag, power: 0.6, breaks: true),
+  // Paso 7 (§ 5.2): cuesta 2 de Pulso (sin MP) y pide objetivo Fisurado.
+  kQuebrarId: SkillDef(id: kQuebrarId, name: 'Quebrar', kind: _phys, power: 0.6, breaks: true, pulse: 2, requires: [SkillReq.targetFissured()]),
+  kQuebrarArcanoId: SkillDef(id: kQuebrarArcanoId, name: 'Quebrar arcano', kind: _mag, power: 0.6, breaks: true, pulse: 2, requires: [SkillReq.targetFissured()]),
+  // Combo de clase (combo_balance.md § 5.2, propuesta del paso 7).
+  // Guerrero y Maga preparan Quemadura, Tirador Veneno, Paladín Marca;
+  // Maga detona el Veneno y Tirador la Quemadura.
+  'brasaEco': SkillDef(id: 'brasaEco', name: 'Brasa Fugaz', mp: 2, kind: _phys, power: 0.7, status: StatusApplication(_burn, 3), instant: true),
+  'ascuaEco': SkillDef(id: 'ascuaEco', name: 'Ascua Fugaz', mp: 2, kind: _mag, power: 0.6, status: StatusApplication(_burn, 2), instant: true),
+  'puaEco': SkillDef(id: 'puaEco', name: 'Púa Fugaz', mp: 2, kind: _phys, power: 0.6, status: StatusApplication(_poi, 3), instant: true),
+  'selloInstante': SkillDef(id: 'selloInstante', name: 'Sello del Instante', mp: 2, kind: SkillKind.support, debuffs: [PartyBuff(BuffStat.damageTaken, 0.20, 2)], instant: true),
+  'ignicionEco': SkillDef(id: 'ignicionEco', name: 'Ignición Convergente', mp: 3, kind: _mag, power: 1.2, pulse: 2, requires: [SkillReq.targetStacks(_poi, 5)]),
+  'ponzonaEco': SkillDef(id: 'ponzonaEco', name: 'Ponzoña Convergente', mp: 3, kind: _phys, power: 1.2, pulse: 2, requires: [SkillReq.targetStacks(_burn, 5)]),
   'giro': SkillDef(id: 'giro', name: 'Corte Giratorio', mp: 4, kind: _phys, power: 1.0, allTargets: true),
   'embestida': SkillDef(id: 'embestida', name: 'Embestida', mp: 4, kind: _phys, power: 1.2, delay: 0.45),
   'ignea': SkillDef(id: 'ignea', name: 'Golpe Ígneo', mp: 4, kind: _phys, power: 1.8, status: StatusApplication(_burn, 2)),
   'sismo': SkillDef(id: 'sismo', name: 'Golpe Sísmico', mp: 6, kind: _phys, power: 1.2, allTargets: true, delay: 0.3),
   'hendir': SkillDef(id: 'hendir', name: 'Hendidura Tóxica', mp: 5, kind: _phys, power: 2.0, status: StatusApplication(_poi, 2)),
   'tajoT': SkillDef(id: 'tajoT', name: 'Tajo Temporal', mp: 7, kind: _phys, power: 2.4, delay: 0.6, status: StatusApplication(_frz, 1)),
-  'chispa': SkillDef(id: 'chispa', name: 'Chispa', mp: 3, kind: _mag, power: 1.6, status: StatusApplication(_burn, 1)),
+  'chispa': SkillDef(id: 'chispa', name: 'Chispa', mp: 3, kind: _mag, power: 1.6, status: StatusApplication(_burn, 1), instant: true),
   'cura': SkillDef(id: 'cura', name: 'Cura', mp: 5, kind: SkillKind.heal, power: 1.5, cleanse: 1),
   'bola': SkillDef(id: 'bola', name: 'Bola de Fuego', mp: 4, kind: _mag, power: 1.8, status: StatusApplication(_burn, 2)),
   'llamarada': SkillDef(id: 'llamarada', name: 'Llamarada', mp: 9, kind: _mag, power: 1.2, allTargets: true, status: StatusApplication(_burn, 1)),
@@ -51,7 +81,7 @@ const Map<String, SkillDef> kSkills = {
   'detener': SkillDef(id: 'detener', name: 'Detener', mp: 6, kind: _mag, power: 0.7, delay: 1.0),
   'curaM': SkillDef(id: 'curaM', name: 'Cura Mayor', mp: 9, kind: SkillKind.heal, power: 2.4, cleanse: 5),
   'rafaga': SkillDef(id: 'rafaga', name: 'Ráfaga', mp: 4, kind: _phys, power: 0.9, allTargets: true),
-  'venenosa': SkillDef(id: 'venenosa', name: 'Flecha Venenosa', mp: 3, kind: _phys, power: 0.7, status: StatusApplication(_poi, 3)),
+  'venenosa': SkillDef(id: 'venenosa', name: 'Flecha Venenosa', mp: 3, kind: _phys, power: 0.7, status: StatusApplication(_poi, 3), instant: true),
   'certero': SkillDef(id: 'certero', name: 'Disparo Certero', mp: 3, kind: _phys, power: 1.6, critBonus: 0.4),
   'aturdir': SkillDef(id: 'aturdir', name: 'Disparo Aturdidor', mp: 4, kind: _phys, power: 0.8, delay: 0.7),
   'rayoF': SkillDef(id: 'rayoF', name: 'Flecha Rayo', mp: 4, kind: _phys, power: 1.9),
@@ -65,7 +95,7 @@ const Map<String, SkillDef> kSkills = {
   'juicio': SkillDef(id: 'juicio', name: 'Martillo del Juicio', mp: 7, kind: _phys, power: 2.3, delay: 0.8),
   'corteGlacial': SkillDef(id: 'corteGlacial', name: 'Corte Glacial', mp: 4, kind: _phys, power: 1.6, status: StatusApplication(_frz, 2)),
   'erupcion': SkillDef(id: 'erupcion', name: 'Erupción', mp: 7, kind: _phys, power: 1.1, allTargets: true, status: StatusApplication(_burn, 2)),
-  'dardo': SkillDef(id: 'dardo', name: 'Dardo Tóxico', mp: 4, kind: _mag, power: 1.4, status: StatusApplication(_poi, 3)),
+  'dardo': SkillDef(id: 'dardo', name: 'Dardo Tóxico', mp: 4, kind: _mag, power: 1.4, status: StatusApplication(_poi, 3), pulse: 1, instant: true),
   'niebla': SkillDef(id: 'niebla', name: 'Niebla Tóxica', mp: 8, kind: _mag, power: 0.8, allTargets: true, status: StatusApplication(_poi, 2)),
   'infierno': SkillDef(id: 'infierno', name: 'Infierno', mp: 12, kind: _mag, power: 1.4, allTargets: true, status: StatusApplication(_burn, 2)),
   'saeta': SkillDef(id: 'saeta', name: 'Saeta Glacial', mp: 4, kind: _phys, power: 1.5, status: StatusApplication(_frz, 2)),
