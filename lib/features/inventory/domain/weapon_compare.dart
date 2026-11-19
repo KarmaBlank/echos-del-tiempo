@@ -197,3 +197,38 @@ List<String> _minus(List<String> a, List<String> b) {
       if (!left.remove(x)) x,
   ];
 }
+
+/// Stats de la franja de cambios (panels.md § "Inventario", v0.9.13), en
+/// orden ATQ, MAG, CRÍT, VEL, Vida, Maná, DEF, Peso con rótulos cortos:
+/// usar [to] en vez de la equipada, o sin [to] los valores actuales
+/// (`before == after`).
+List<StatDelta> stripStats(ProgressionRules rules, PlayerProfile viewer,
+    {ItemInstance? to, PlayerAttributes? attributes}) {
+  final List<StatDelta> base;
+  if (to != null) {
+    base = compareWeapons(rules, viewer, to: to, attributes: attributes).stats;
+  } else {
+    final eq = rules.equippedItem(viewer);
+    final now = ShopPreview(rules).current(viewer, attributes: attributes);
+    final w = eq == null ? 0.0 : rules.items.baseOf(eq)?.weight ?? 0.0;
+    base = [
+      StatDelta('ATQ', now.attack, now.attack),
+      StatDelta('MAG', now.magic, now.magic),
+      StatDelta('Crítico', now.critChance, now.critChance,
+          kind: StatFormat.percent),
+      StatDelta('VEL', now.speed, now.speed, kind: StatFormat.decimal),
+      StatDelta('Peso', w, w, kind: StatFormat.decimal, higherIsBetter: false),
+      StatDelta('Vida', now.maxHp, now.maxHp),
+      StatDelta('Maná', now.maxMp, now.maxMp),
+      StatDelta('DEF', now.defense, now.defense),
+    ];
+  }
+  const order = ['ATQ', 'MAG', 'Crítico', 'VEL', 'Vida', 'Maná', 'DEF', 'Peso'];
+  final by = {for (final s in base) s.label: s};
+  return [
+    for (final l in order)
+      if (by[l] case final s?)
+        StatDelta(l == 'Crítico' ? 'CRÍT' : l, s.before, s.after,
+            kind: s.kind, higherIsBetter: s.higherIsBetter),
+  ];
+}

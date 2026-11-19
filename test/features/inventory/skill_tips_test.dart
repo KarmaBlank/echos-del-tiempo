@@ -130,6 +130,10 @@ void main() {
     // Tooltip corto (v0.9.7): las habilidades van plegadas; al
     // desplegarlas, una línea cada una: `Nombre (8 MP) Daño...` (v0.9.11).
     expect(_count(' MP)'), 0);
+    // Clic: fija la caja (v0.9.13) para poder abrir los ▸.
+    await tester.tap(find.byKey(const ValueKey('inv-equipped')),
+        kind: PointerDeviceKind.mouse);
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('tip-fold-Habilidades')));
     await tester.pump();
     expect(_count(' MP)'), greaterThan(0));
@@ -147,6 +151,9 @@ void main() {
     final cell = InventoryRules.layout(p).cells.indexOf('e1');
     await _hover(tester, find.byKey(ValueKey('inv-cell-$cell')));
     expect(_count(' MP)'), 0);
+    await tester.tap(find.byKey(ValueKey('inv-cell-$cell')),
+        kind: PointerDeviceKind.mouse);
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('tip-fold-Habilidades')).first);
     await tester.pump();
     expect(_count(' MP)'), greaterThan(0));

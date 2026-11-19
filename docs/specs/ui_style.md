@@ -179,6 +179,21 @@ usa). Test: `test/app/retro_hover_card_test.dart`.
 
 ### Tooltips cortos con detalle desplegable (v0.9.7)
 
+- v0.9.13 (inventario, `RetroHoverCard(pinOnClick: true, hint: ...)`):
+  - Atravesable: por defecto la caja no toma el mouse (`IgnorePointer`);
+    pasar a otra casilla, aunque la caja la tape, cambia al instante al
+    ítem nuevo. Se pega a la casilla del lado con más lugar y nunca la
+    tapa (si no entra a ningún costado, va debajo o arriba).
+  - Mantener Alt despliega todos los ▸ mientras se mantiene
+    (`RetroHoverCard.altHeld`). Clic izquierdo sobre la casilla fija la
+    caja (ahí sí toma el mouse: scroll y ▸); Esc, otro clic sobre la
+    casilla o un clic afuera la sueltan. Una caja fijada no se reemplaza
+    al pasar por otras casillas.
+  - Línea de ayuda chiquita al pie (`dim`): `Alt: detalle · Shift:
+    comparar · clic: fijar` (fijada: `Fijado · Esc o clic afuera:
+    soltar`).
+  - El resto de los tooltips (`interactive` sin `pinOnClick`) no cambia.
+
 Pedido del dueño: "hay demasiado texto". Por defecto un tooltip muestra
 **lo esencial** (nombre, números clave) y las explicaciones largas van
 **plegadas** en líneas `▸ Título` (`sky`; `▼` abierta) que se despliegan

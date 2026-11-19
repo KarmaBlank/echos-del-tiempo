@@ -131,6 +131,10 @@ void main() {
     expect(tip, findsOneWidget);
     final text = plain(tester, 'inv-cmp-tip');
     expect(text, contains('Filo del Alba'));
+    // v0.9.13: una columna; la equipada aparece con Shift.
+    expect(find.byKey(const ValueKey('inv-cmp-tip-equipped')), findsNothing);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.pump();
     expect(plain(tester, 'inv-cmp-tip-equipped'), contains('EQUIPADA'));
     expect(plain(tester, 'inv-cmp-tip-equipped'), contains('Espada de Bronce'));
     var delta = plain(tester, 'inv-cmp-tip-delta');
@@ -163,6 +167,10 @@ void main() {
         tester.getSize(find.byKey(const ValueKey('inv-cmp-tip-delta'))).height,
         lessThanOrEqualTo(lineH * 10 + 1));
     expect(plain(tester, 'inv-cmp-tip'), isNot(contains('Tu turno llega')));
+    await tester.tap(find.byKey(ValueKey('inv-cell-${_cell(p, 'e1')}')),
+        kind: PointerDeviceKind.mouse);
+    await tester.pump();
+    expect(RetroHoverCard.pinned, isTrue);
     await tester.tap(find.byKey(const ValueKey('tip-fold-Cambios')));
     await tester.pump();
     delta = plain(tester, 'inv-cmp-tip-delta');
@@ -174,6 +182,9 @@ void main() {
     expect(r.left, greaterThanOrEqualTo(0));
     expect(r.right, lessThanOrEqualTo(1280));
     expect(r.bottom, lessThanOrEqualTo(720));
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
 
     // Sobre la equipada: la ficha simple.
     await mouse

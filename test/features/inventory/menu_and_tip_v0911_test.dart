@@ -133,10 +133,10 @@ void main() {
     final w0 = scale() /
         tester.getSize(find.byKey(const ValueKey('inv-cmp-tip'))).width;
     // Fijar en la caja y desplegar todo (también los sub-plegables).
-    await mouse.moveTo(
-        tester.getTopLeft(find.byKey(const ValueKey('inv-cmp-tip'))) +
-            const Offset(4, 4));
-    await tester.pump(const Duration(milliseconds: 300));
+    // v0.9.13: se fija con clic sobre la casilla.
+    await mouse.down(tester.getCenter(cell));
+    await mouse.up();
+    await tester.pump();
     for (var round = 0; round < 3; round++) {
       final heads = find.byWidgetPredicate((w) =>
           w is GestureDetector &&

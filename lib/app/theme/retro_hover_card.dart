@@ -39,7 +39,34 @@ class RetroHoverCard extends StatefulWidget {
     this.placement = RetroTipPlacement.side,
     this.interactive = false,
     this.keyboardFocus = false,
+    this.pinOnClick = false,
+    this.hint,
   });
+
+  /// Tooltip atravesable (v0.9.13, ui_style.md § "Tooltips cortos"): no
+  /// toma el mouse (pasar a otra casilla, aunque la caja la tape, cambia
+  /// al instante) y se pega a la casilla del lado con más lugar sin
+  /// taparla. Un clic izquierdo sobre el objetivo la fija (ahí sí toma
+  /// el mouse: scroll y ▸); Esc o un clic afuera la sueltan.
+  final bool pinOnClick;
+
+  /// Línea de ayuda chiquita al pie (p. ej. `Alt: detalle · ...`).
+  final String? hint;
+
+  /// Teclas que se mantienen apretadas mientras hay una caja: Alt
+  /// despliega todos los ▸ y Shift compara con la equipada.
+  static final altHeld = ValueNotifier<bool>(false);
+  static final shiftHeld = ValueNotifier<bool>(false);
+
+  /// Lee Alt / Shift del teclado (también al abrir una caja).
+  static void syncModifiers() {
+    final k = HardwareKeyboard.instance;
+    altHeld.value = k.isAltPressed;
+    shiftHeld.value = k.isShiftPressed;
+  }
+
+  /// ¿La caja abierta está fijada con clic? (tests).
+  static bool get pinned => _active?._pinned ?? false;
 
   /// El objetivo tiene el cursor de teclado aunque el foco esté en un
   /// ancestro (casilla de una grilla): con el teclado se muestra igual
@@ -111,6 +138,9 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
   bool _overTarget = false;
   bool _overBox = false;
 
+  /// Fijada con clic ([RetroHoverCard.pinOnClick]).
+  bool _pinned = false;
+
   /// Abierta por [RetroHoverCard.keyboardFocus] (no por el mouse).
   bool _byKeyboard = false;
 
@@ -149,7 +179,10 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
     _closer?.cancel();
     if (!mounted || !_routeCurrent || RetroHoverCard.suppressed) return;
     final other = RetroHoverCard._active;
+    // Una caja fijada no se reemplaza al pasar por otra casilla.
+    if (other != null && other != this && other._pinned) return;
     if (other != null && other != this) other._hide();
+    RetroHoverCard.syncModifiers();
     RetroHoverCard._active = this;
     if (!_portal.isShowing) _portal.show();
     _listen(true);
@@ -181,10 +214,20 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
       final r = box.localToGlobal(Offset.zero) & box.size;
       if (r.contains(e.position)) return;
     }
+    // Clic sobre el objetivo de una caja que se fija: lo maneja el
+    // objetivo (fija o suelta).
+    if (widget.pinOnClick) {
+      final t = context.findRenderObject();
+      if (t is RenderBox && t.hasSize) {
+        final r = t.localToGlobal(Offset.zero) & t.size;
+        if (r.contains(e.position)) return;
+      }
+    }
     _hide();
   }
 
   bool _onKey(KeyEvent e) {
+    RetroHoverCard.syncModifiers();
     // Abierta por el cursor de teclado: Esc sigue siendo del panel.
     if (_byKeyboard || !_portal.isShowing) return false;
     if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape) {
@@ -200,6 +243,7 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
     _closer?.cancel();
     _overTarget = false;
     _overBox = false;
+    _pinned = false;
     if (RetroHoverCard._active == this) RetroHoverCard._active = null;
     if (_portal.isShowing) _portal.hide();
   }
@@ -207,7 +251,8 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
   /// Salida del objetivo o de la caja: en una caja [interactive] espera
   /// un poco por si el mouse va hacia la caja.
   void _leave() {
-    if (!widget.interactive) return _hide();
+    if (_pinned) return;
+    if (widget.pinOnClick || !widget.interactive) return _hide();
     _closer?.cancel();
     _closer = Timer(RetroHoverCard.pinDelay, () {
       if (!_overTarget && !_overBox) _hide();
@@ -234,6 +279,7 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
     _listen(false);
     _overTarget = false;
     _overBox = false;
+    _pinned = false;
     if (RetroHoverCard._active == this) RetroHoverCard._active = null;
     if (_portal.isShowing) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -284,7 +330,7 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
       overlayChildBuilder: (ctx) {
         final rect = _targetRect(ctx);
         if (rect == null) return const SizedBox.shrink();
-        final box = widget.interactive
+        final box = widget.interactive && !widget.pinOnClick
             ? MouseRegion(
                 key: const ValueKey('retro-tip-pinned'),
                 onEnter: (_) {
@@ -298,7 +344,9 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
                 child: _box(ctx),
               )
             : _box(ctx);
-        final child = widget.interactive && !_byKeyboard
+        final takesMouse =
+            widget.pinOnClick ? _pinned : widget.interactive && !_byKeyboard;
+        final child = takesMouse
             ? box
             // Abierta por el cursor de teclado: no toma el mouse (no
             // tapa botones que estén debajo).
@@ -308,7 +356,8 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
           return Positioned.fill(
             child: CustomSingleChildLayout(
               delegate: _HoverLayout(rect, widget.gap, widget.margin,
-                  widget.placement, MediaQuery.devicePixelRatioOf(ctx)),
+                  widget.placement, MediaQuery.devicePixelRatioOf(ctx),
+                  beside: widget.pinOnClick),
               child: child,
             ),
           );
@@ -325,7 +374,8 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
                   widget.gap,
                   widget.margin,
                   widget.placement,
-                  MediaQuery.devicePixelRatioOf(ctx)),
+                  MediaQuery.devicePixelRatioOf(ctx),
+                  beside: widget.pinOnClick),
               child: child,
             ),
           ),
@@ -353,7 +403,18 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
           },
           // Como el Tooltip: un clic o un arrastre lo esconde.
           child: Listener(
-            onPointerDown: (_) => _hide(),
+            onPointerDown: (e) {
+              if (!widget.pinOnClick || e.buttons != kPrimaryButton) {
+                return _hide();
+              }
+              // Clic izquierdo: fija (o suelta si ya estaba fijada).
+              if (_pinned) return _hide();
+              _byKeyboard = false;
+              _show();
+              if (RetroHoverCard._active == this) {
+                setState(() => _pinned = true);
+              }
+            },
             child: widget.child,
           ),
         ),
@@ -394,7 +455,24 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
                   constraints: BoxConstraints(maxWidth: c.maxWidth),
                   child: RetroTipBounds(
                     maxHeight: c.maxHeight,
-                    child: Builder(builder: widget.builder),
+                    child: widget.hint == null
+                        ? Builder(builder: widget.builder)
+                        : Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Builder(builder: widget.builder),
+                              const SizedBox(height: 4),
+                              Text(
+                                  _pinned
+                                      ? 'Fijado · Esc o clic afuera: soltar'
+                                      : widget.hint!,
+                                  key: const ValueKey('retro-tip-hint'),
+                                  style: RetroHoverCard.textStyle.copyWith(
+                                      fontSize: RetroType.small * 0.85,
+                                      color: ProtoColors.dim)),
+                            ],
+                          ),
                   ),
                 ),
               ),
@@ -518,7 +596,11 @@ class RetroTipArea extends InheritedWidget {
 /// izquierda; [RetroTipPlacement.below]: debajo centrada, si no entra
 /// arriba), siempre dentro de la pantalla con [margin].
 class _HoverLayout extends SingleChildLayoutDelegate {
-  _HoverLayout(this.target, this.gap, this.margin, this.placement, this.dpr);
+  _HoverLayout(this.target, this.gap, this.margin, this.placement, this.dpr,
+      {this.beside = false});
+
+  /// Pegada al lado con más lugar, sin tapar nunca [target].
+  final bool beside;
 
   final Rect target;
   final double gap;
@@ -556,6 +638,30 @@ class _HoverLayout extends SingleChildLayoutDelegate {
     final maxY =
         (size.height - margin - child.height).clamp(margin, double.infinity);
     double x, y;
+    if (beside) {
+      final right = target.right + gap;
+      final left = target.left - gap - child.width;
+      final roomR = size.width - margin - right;
+      final roomL = target.left - gap - margin;
+      final fitsR = child.width <= roomR, fitsL = child.width <= roomL;
+      if (fitsR || fitsL) {
+        x = (fitsR && (roomR >= roomL || !fitsL)) ? right : left;
+        return Offset(_px(x), _px(target.top.clamp(margin, maxY)));
+      }
+      // No entra a ningún costado: debajo o arriba, sin tapar la casilla.
+      x = (target.center.dx - child.width / 2).clamp(margin, maxX);
+      final below = target.bottom + gap;
+      final above = target.top - gap - child.height;
+      y = below + child.height <= size.height - margin
+          ? below
+          : above >= margin
+              ? above
+              : (size.height - margin - below >= target.top - gap - margin
+                      ? below
+                      : above)
+                  .clamp(margin, maxY);
+      return Offset(_px(x), _px(y));
+    }
     switch (placement) {
       case RetroTipPlacement.side:
         x = target.right + gap;
@@ -581,7 +687,8 @@ class _HoverLayout extends SingleChildLayoutDelegate {
       old.gap != gap ||
       old.margin != margin ||
       old.placement != placement ||
-      old.dpr != dpr;
+      old.dpr != dpr ||
+      old.beside != beside;
 }
 
 /// Sección plegable de un tip (ui_style.md § "Tooltips cortos"): una
@@ -639,7 +746,11 @@ class _RetroTipFoldState extends State<RetroTipFold> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+      valueListenable: RetroHoverCard.altHeld,
+      builder: (context, alt, _) => _build(context, _open || alt));
+
+  Widget _build(BuildContext context, bool open) {
     final head = FocusableActionDetector(
       mouseCursor: SystemMouseCursors.click,
       actions: {
@@ -651,9 +762,9 @@ class _RetroTipFoldState extends State<RetroTipFold> {
         behavior: HitTestBehavior.opaque,
         onTap: () => setState(() => _open = !_open),
         child: ProtoText(widget.titleIsMarkup
-            ? '${protoColor(ProtoColors.sky, _open ? '▼' : '▸')} ${widget.title}'
+            ? '${protoColor(ProtoColors.sky, open ? '▼' : '▸')} ${widget.title}'
             : protoColor(ProtoColors.sky,
-                '${_open ? '▼' : '▸'} ${protoEsc(widget.title)}')),
+                '${open ? '▼' : '▸'} ${protoEsc(widget.title)}')),
       ),
     );
     final w = widget.maxWidth;
@@ -662,7 +773,7 @@ class _RetroTipFoldState extends State<RetroTipFold> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         head,
-        if (_open)
+        if (open)
           Padding(
             key: ValueKey('tip-fold-body-${widget.title}'),
             padding: const EdgeInsets.only(left: 12),
