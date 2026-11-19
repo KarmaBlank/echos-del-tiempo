@@ -11,6 +11,8 @@ import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/eco_rules.dart';
 import '../../../game_engine/rules/loot_filter_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import '../../../game_engine/rules/weapon_weight.dart';
+import 'battle_impact.dart';
 import 'skill_tip.dart';
 import 'weapon_text.dart';
 
@@ -145,6 +147,8 @@ String itemTooltipMarkup(
     l.add('ATQ <b>${stats.attack}</b> · MAG <b>${stats.magic}</b>'
         '${_c(_dim, ' (con tus atributos)')}');
   }
+  // Peso: siempre, también las ligeras (panels.md § "Peso del arma").
+  if (w != null) l.addAll(weightLinesMarkup(rules, w, stats: stats));
   final implicit = w == null ? const <ItemMod>[] : items.implicitMods(w);
   if (implicit.isNotEmpty) {
     l.add('<span class="k">Implícito:</span> '
@@ -175,12 +179,51 @@ String itemTooltipMarkup(
   } else if (skills) {
     l.add('<span class="k">Habilidades:</span> ${itemSkillsMarkup(rules, it)}');
   }
-  if (w != null && w.weight > 0) {
-    l.add(_c(_dim, 'Peso ${fmtNum(w.weight)} (−${fmtNum(w.weight)} vel.)'));
-  }
   final flavor = items.uniqueOf(it)?.flavor;
   if (flavor != null && flavor.isNotEmpty) l.add(_c(_dim, _esc(flavor)));
   return l.join('<br>');
+}
+
+// ---------------------------------------------------------------------
+// Peso (docs/specs/loot.md § 1.1, panels.md § "Peso del arma")
+// ---------------------------------------------------------------------
+
+/// Color de cada categoría de peso: Ligera verde, Media amarilla,
+/// Pesada naranja.
+String weightClassHex(WeightClass c) => switch (c) {
+      WeightClass.ligera => _green,
+      WeightClass.media => '#ffd166',
+      WeightClass.pesada => _orange,
+    };
+
+/// Etiqueta corta en su color (`Pesada`), para filas de listas.
+String weightTagMarkup(WeaponDef w) {
+  final c = weightClassOf(w);
+  return _c(weightClassHex(c), c.label);
+}
+
+/// Qué cambia por la categoría (sin el nombre): `sin penalización de
+/// velocidad` / `−0.5 vel. · algo más lenta a cambio de poder` /
+/// `−1.3 vel. · suele dar más ATQ`.
+String weightTradeoffText(WeaponDef w) => switch (weightClassOf(w)) {
+      WeightClass.ligera => 'sin penalización de velocidad',
+      WeightClass.media =>
+        '−${fmtNum(w.weight)} vel. · algo más lenta a cambio de poder',
+      WeightClass.pesada => '−${fmtNum(w.weight)} vel. · suele dar más ATQ',
+    };
+
+/// Líneas del peso de la ficha: `Ligera · sin penalización de velocidad`
+/// o `Pesada: −1.3 vel. · suele dar más ATQ`, y con [stats] (los de quien
+/// mira **con** esta arma) lo que le cuesta en turnos.
+List<String> weightLinesMarkup(ProgressionRules rules, WeaponDef w,
+    {DerivedStats? stats}) {
+  final c = weightClassOf(w);
+  final tag = '<b style="color:${weightClassHex(c)}">${c.label}</b>';
+  final head = c == WeightClass.ligera
+      ? '$tag ${_c(_dim, '· ${weightTradeoffText(w)}')}'
+      : '$tag: ${_c(_dim, weightTradeoffText(w))}';
+  final turn = stats == null ? null : weightTurnLine(rules, stats, w.weight);
+  return [head, if (turn != null) _c(_dim, turn)];
 }
 
 /// Ficha de una pila (pociones, éteres, materiales).

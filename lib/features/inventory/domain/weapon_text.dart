@@ -7,6 +7,7 @@ import '../../../game_engine/rules/progression_rules.dart';
 import '../../../game_engine/data/summoner_catalog.dart';
 import '../../combat/domain/skill_text.dart';
 import '../../combat/domain/summon_text.dart';
+import 'item_text.dart' show weightLinesMarkup;
 
 /// Textos de armas de los paneles — puerto de `reqHtml`, `wPowTxt`,
 /// `skHtml` (líneas 1262-1266) y `weaponTip` (1122-1131) en el markup
@@ -96,9 +97,7 @@ String weaponTooltip(ProgressionRules rules, PlayerProfile p, WeaponDef w) {
     l.add('Mejoras: ${UpgradeStat.values.where((s) => up.level(s) > 0).map((s) => '${s.label} +${up.level(s)}').join(', ')}');
   }
   if (w.shieldDefense > 0) l.add(hexSpan(_ice, 'DEF +${w.shieldDefense}'));
-  if (w.weight > 0) {
-    l.add('Peso ${fmtNum(w.weight)} (−${fmtNum(w.weight)} velocidad)');
-  }
+  l.add(weightLinesMarkup(rules, w).first);
   l.add('<br><span class="k">HABILIDADES</span>');
   final fused = owned ? p.fused[w.id] : null;
   final ids = [...w.skillIds];

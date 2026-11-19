@@ -1,5 +1,6 @@
 import 'build_wants.dart';
 import 'item.dart';
+import '../rules/weapon_weight.dart';
 
 // Filtros de loot (docs/specs/loot.md § 13): reglas en orden, gana la
 // primera que coincide. El texto (importar / exportar / guardar en el
@@ -151,6 +152,17 @@ class HasModCondition extends FilterCondition {
   @override
   String get args =>
       op == null || tier == null ? affixId : '$affixId ${op!.symbol} $tier';
+}
+
+/// `Peso Ligera Media` (categoría de peso de la base, cualquiera de
+/// esas; loot.md § 1.1).
+class WeightCondition extends FilterCondition {
+  const WeightCondition(this.classes);
+  final List<WeightClass> classes;
+  @override
+  String get keyword => 'Peso';
+  @override
+  String get args => [for (final c in classes) c.label].join(' ');
 }
 
 /// `Pasiva` / `Pasiva No`: tiene pasiva de arma.

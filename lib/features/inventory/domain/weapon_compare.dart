@@ -4,6 +4,7 @@ import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/player_state.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import '../../../game_engine/rules/weapon_weight.dart';
 import 'shop_preview.dart';
 
 /// Comparación de dos armas para el jugador local: stats finales con A y
@@ -14,16 +15,19 @@ import 'shop_preview.dart';
 /// Un stat derivado antes (con A) y después (con B).
 class StatDelta {
   const StatDelta(this.label, this.before, this.after,
-      {this.kind = StatFormat.integer});
+      {this.kind = StatFormat.integer, this.higherIsBetter = true});
 
   final String label;
   final num before;
   final num after;
   final StatFormat kind;
 
+  /// `false` en el peso: menos es mejor (▲ verde si baja).
+  final bool higherIsBetter;
+
   num get diff => after - before;
   bool get changed => diff.abs() > 1e-6;
-  bool get better => diff > 0;
+  bool get better => higherIsBetter ? diff > 0 : diff < 0;
 
   String format(num x) => switch (kind) {
         StatFormat.integer => '${x.round()}',
@@ -62,6 +66,8 @@ class WeaponComparison {
     required this.ultBefore,
     required this.ultAfter,
     required this.meetsRequirements,
+    this.weightBefore,
+    this.weightAfter,
   });
 
   /// Arma de partida (A) y candidata (B).
@@ -72,7 +78,7 @@ class WeaponComparison {
   final DerivedStats before;
   final DerivedStats after;
 
-  /// ATQ, MAG, Crítico, VEL, Vida, Maná, DEF.
+  /// ATQ, MAG, Crítico, VEL, Peso, Vida, Maná, DEF.
   final List<StatDelta> stats;
 
   /// Nombres de habilidades (del arma) que B trae y A no, y al revés.
@@ -93,6 +99,15 @@ class WeaponComparison {
 
   /// Si el jugador cumple nivel y requisitos de B.
   final bool meetsRequirements;
+
+  /// Peso de la base de A y de B (`null` sin arma / base desconocida).
+  final double? weightBefore;
+  final double? weightAfter;
+
+  /// Categoría de peso de A y de B (sin arma: Ligera).
+  WeightClass get weightClassBefore => weightClassFor(weightBefore ?? 0);
+  WeightClass get weightClassAfter => weightClassFor(weightAfter ?? 0);
+  bool get weightClassChanged => weightClassBefore != weightClassAfter;
 
   bool get same => identical(from, to) || from == to;
   bool get passiveChanged => passiveBefore != passiveAfter;
@@ -134,6 +149,7 @@ WeaponComparison compareWeapons(
     return w == null ? null : (itemUlt(i!) ?? cat.ultimates[w.type])?.name;
   }
 
+  final wA = a == null ? null : items.baseOf(a);
   final wB = items.baseOf(to);
   return WeaponComparison(
     from: a,
@@ -146,6 +162,8 @@ WeaponComparison compareWeapons(
       StatDelta('Crítico', before.critChance, after.critChance,
           kind: StatFormat.percent),
       StatDelta('VEL', before.speed, after.speed, kind: StatFormat.decimal),
+      StatDelta('Peso', wA?.weight ?? 0, wB?.weight ?? 0,
+          kind: StatFormat.decimal, higherIsBetter: false),
       StatDelta('Vida', before.maxHp, after.maxHp),
       StatDelta('Maná', before.maxMp, after.maxMp),
       StatDelta('DEF', before.defense, after.defense),
@@ -166,6 +184,8 @@ WeaponComparison compareWeapons(
     ultAfter: ult(to),
     meetsRequirements: wB != null &&
         rules.meetsRequirements(viewer, wB, attributes: attributes),
+    weightBefore: wA?.weight,
+    weightAfter: wB?.weight,
   );
 }
 

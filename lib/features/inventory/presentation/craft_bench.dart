@@ -19,9 +19,11 @@ import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/craft_rules.dart';
 import '../../build_planner/presentation/build_fit_badge.dart';
+import '../domain/battle_impact.dart';
 import '../domain/craft_help.dart';
 import '../domain/item_text.dart';
 import '../domain/skill_tip.dart';
+import '../domain/weapon_text.dart' show fmtNum;
 import 'shop_sections.dart';
 import 'skill_chip.dart';
 
@@ -986,7 +988,8 @@ class _CraftBenchState extends State<CraftBench> {
       for (final w in bases) {
         list.add(row(
             'bench-base-${w.id}',
-            '${protoEsc(w.name)} ${protoColor(ProtoColors.dim, protoEsc(w.type))}',
+            '${protoEsc(w.name)} ${protoColor(ProtoColors.dim, protoEsc(w.type))} '
+                '${weightTagMarkup(w)}',
             w.id == action.sourceUid,
             () => _base = w.id,
             value: 'Nv ${w.level} '
@@ -1112,6 +1115,22 @@ class _CraftBenchState extends State<CraftBench> {
               '${protoColor(ProtoColors.dim, '${protoEsc(b1?.type ?? '?')} · Nv ${b1?.level ?? '?'}')}'
               '${b1 == null ? '' : '<br>${requirementsLineMarkup(b1, p.level, p.attributes)}'}',
           key: const ValueKey('craft-base')));
+      // Peso (panels.md § "Peso del arma"): la categoría y qué le cuesta
+      // en turnos con la base nueva.
+      if (b0 != null && b1 != null) {
+        final turn = weightTurnLine(
+            rules, shop.preview.withItem(p, after), b1.weight);
+        out.add(cmp(
+            'Peso',
+            '${weightTagMarkup(b0)} ${protoColor(ProtoColors.dim, fmtNum(b0.weight))}',
+            b0.weight == b1.weight
+                ? '${weightTagMarkup(b1)} $same'
+                : '${weightTagMarkup(b1)} ${protoColor(ProtoColors.dim, fmtNum(b1.weight))} '
+                    '${b1.weight < b0.weight ? protoColor(ProtoColors.green, '▲') : protoColor(ProtoColors.red, '▼')}'
+                    '<br>${protoColor(ProtoColors.dim, weightTradeoffText(b1))}'
+                    '${turn == null ? '' : '<br>${protoColor(ProtoColors.dim, turn)}'}',
+            key: const ValueKey('craft-weight')));
+      }
     }
     out.add(cmp(
         'Rareza',

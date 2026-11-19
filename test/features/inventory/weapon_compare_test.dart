@@ -53,7 +53,7 @@ void main() {
       final then = progression.previewEquip(p, 'e1');
       expect(cmp.from!.uid, 'espada_bronce');
       expect([for (final s in cmp.stats) s.label],
-          ['ATQ', 'MAG', 'Crítico', 'VEL', 'Vida', 'Maná', 'DEF']);
+          ['ATQ', 'MAG', 'Crítico', 'VEL', 'Peso', 'Vida', 'Maná', 'DEF']);
       final byLabel = {for (final s in cmp.stats) s.label: s};
       expect(byLabel['ATQ']!.before, now.attack);
       expect(byLabel['ATQ']!.after, then.attack);

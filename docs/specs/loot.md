@@ -77,6 +77,31 @@ tanta restricción, como en PoE".
   lista de ids a lista de instancias (el perfil viejo se migra: cada id
   → instancia Común).
 
+### 1.1 Peso y categorías de peso (v0.8.4)
+
+- `WeaponDef.weight` resta velocidad 1:1: `VEL = 6 + AGI×0.5 + DES×0.1 −
+  peso` (+ forja, afijos y árbol; `StatsCalculator`). Menos VEL = el turno
+  llega más tarde (`BattleEngine.interval` = 100 / VEL). Se edita en el
+  balance (`Peso (−velocidad)`, 0–10, paso 0.1).
+- **Categoría** (`WeightClass`, `weightClassOf(weapon)` en
+  `game_engine/rules/weapon_weight.dart`), derivada del peso, nunca
+  guardada ni enviada por red (un cambio de balance la mueve sola):
+
+  | Categoría | Peso | Trade-off (ficha) |
+  |---|---|---|
+  | **Ligera** | 0 | `sin penalización de velocidad` |
+  | **Media** | 0 < peso < 0.8 | `−N vel. · algo más lenta a cambio de poder` |
+  | **Pesada** | ≥ 0.8 (`kHeavyWeightFrom`) | `−N vel. · suele dar más ATQ` |
+
+- Cortes elegidos sobre el catálogo v0.8.4 (94 bases): 42 con peso 0
+  (espadas cortas, báculos, arcos, varitas, dagas, espada+escudo); 30
+  entre 0.3 y 0.6 (Espada Ígnea, tomos 0.4–0.5, lanzas 0.5, maza+escudo
+  0.4–0.6, rifles 0.5–0.6); 22 de 0.8 a 1.5 (rifles 0.8–0.9, mandobles
+  1.0, martillo+escudo 1.0–1.4, ballestas 1.1–1.3, hachas 1.3–1.5). No hay
+  bases entre 0.6 y 0.8: el corte cae en ese hueco.
+- Dónde se ve: panels.md § "Peso del arma (v0.8.4)". Filtro de loot:
+  condición `Peso Ligera|Media|Pesada` (§ 13).
+
 ## 2. Rarezas
 
 Ver § 0.4 (5 rarezas).
@@ -617,6 +642,7 @@ Palabras clave sin distinguir mayúsculas ni tildes. Condiciones:
 | `Material <material>...` | `Material prisma` | esquirla, cristal, prisma |
 | `Objeto <clase>...` | `Objeto Material` | Arma, Material, Pocion |
 | `Utilizable [Si/No]` | `Utilizable` | cumplís nivel y requisitos ahora |
+| `Peso <categoría>...` | `Peso Media Pesada` | categoría de peso de la base (§ 1.1): Ligera, Media, Pesada; cualquiera de esas (v0.8.4) |
 | `Build [Base/Mod/Pasiva/Habilidad...]` | `Build Mod Pasiva` | "Coincide con mi build" (v0.5.1): el arma cumple algo de tu plan de build; con clases, alguna de esas (`Base` = base o tipo; también `Tipo`/`Arma`); sin clases, cualquiera. `MiBuild` es sinónimo |
 | `Build No` | `Build No` | el arma no cumple nada de tu plan |
 

@@ -11,6 +11,8 @@ import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import '../../../game_engine/rules/weapon_weight.dart';
+import '../domain/battle_impact.dart';
 import '../domain/item_text.dart';
 import '../domain/weapon_compare.dart';
 import 'shop_sections.dart';
@@ -42,6 +44,8 @@ String _minus(String label, String text) =>
 String _mods(List<String> l) => l
     .map((m) => '<span style="color:$kModHex">${protoEsc(m)}</span>')
     .join(', ');
+String _weightTag(WeightClass c) =>
+    '<b style="color:${weightClassHex(c)}">${c.label}</b>';
 String _passive(String t) =>
     '<span style="color:$kPassiveHex">${protoEsc(t)}</span>';
 
@@ -81,6 +85,15 @@ class ComparisonDelta extends StatelessWidget {
         protoColor(ProtoColors.pink,
             'ULT: ${protoEsc(cmp.ultBefore ?? '—')} → ${protoEsc(cmp.ultAfter ?? '—')}'),
     ];
+    // Peso (panels.md § "Peso del arma"): la categoría si cambia y lo que
+    // cambia el turno, con el mismo cálculo que la batalla.
+    final speedChanged = (cmp.before.speed - cmp.after.speed).abs() > 1e-6;
+    final weightLines = <String>[
+      if (cmp.weightClassChanged)
+        'Peso: ${_weightTag(cmp.weightClassBefore)} → '
+            '${_weightTag(cmp.weightClassAfter)}',
+      if (speedChanged) turnIntervalLine(rules, cmp.before, cmp.after.speed),
+    ];
     final w = rules.items.baseOf(cmp.to);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -95,6 +108,9 @@ class ComparisonDelta extends StatelessWidget {
             children: [for (final s in cmp.stats) _StatDeltaText(s)],
           ),
           const SizedBox(height: 4),
+          if (weightLines.isNotEmpty)
+            ProtoText(weightLines.join('<br>'),
+                key: const ValueKey('cmp-weight')),
           ProtoText(lines.isEmpty
               ? protoColor(
                   ProtoColors.dim, 'Mismas habilidades, mods y pasiva.')
