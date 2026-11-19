@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:echos_del_tiempo/app/theme/retro_hover_card.dart';
 import 'package:echos_del_tiempo/features/inventory/domain/inventory_menu.dart';
+import 'package:echos_del_tiempo/features/inventory/domain/weapon_compare.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/inventory_tab.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
@@ -223,9 +224,13 @@ void main() {
       expect(
           (Offset.zero & screen).inflate(1).contains(tip.bottomRight), isTrue,
           reason: '$uid: $tip');
-      for (final s in ['Vida', 'Maná', 'VEL', 'ATQ', 'MAG', 'DEF', 'Crítico']) {
-        expect(find.byKey(ValueKey('cmp-stat-$s')), findsOneWidget,
-            reason: '$uid: $s');
+      // Solo las que cambian (v0.9.11).
+      final p = c.view!.me!.profile;
+      final cmp = compareWeapons(progression, p, to: p.itemByUid(uid)!);
+      for (final s in cmp.stats) {
+        expect(find.byKey(ValueKey('cmp-stat-${s.label}')),
+            s.changed ? findsOneWidget : anything,
+            reason: '$uid: ${s.label}');
       }
     }
     await mouse.removePointer();

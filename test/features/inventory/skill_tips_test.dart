@@ -125,14 +125,14 @@ void main() {
             view: v, controller: c, initialTab: CharacterTab.inventory));
     // La equipada: ficha simple (las demás armas, la comparada).
     expect(InventoryRules.layout(p).cells, isNotEmpty);
-    expect(_count('MP · '), 0);
+    expect(_count(' MP)'), 0);
     await _hover(tester, find.byKey(const ValueKey('inv-equipped')));
     // Tooltip corto (v0.9.7): las habilidades van plegadas; al
-    // desplegarlas, `Nombre (8 MP · Mágico): Daño mágico...`.
-    expect(_count('MP · '), 0);
+    // desplegarlas, una línea cada una: `Nombre (8 MP) Daño...` (v0.9.11).
+    expect(_count(' MP)'), 0);
     await tester.tap(find.byKey(const ValueKey('tip-fold-Habilidades')));
     await tester.pump();
-    expect(_count('MP · '), greaterThan(0));
+    expect(_count(' MP)'), greaterThan(0));
   });
 
   testWidgets('tooltip de un arma no equipada: sus habilidades, plegadas',
@@ -146,10 +146,10 @@ void main() {
             view: v, controller: c, initialTab: CharacterTab.inventory));
     final cell = InventoryRules.layout(p).cells.indexOf('e1');
     await _hover(tester, find.byKey(ValueKey('inv-cell-$cell')));
-    expect(_count('MP · '), 0);
+    expect(_count(' MP)'), 0);
     await tester.tap(find.byKey(const ValueKey('tip-fold-Habilidades')).first);
     await tester.pump();
-    expect(_count('MP · '), greaterThan(0));
+    expect(_count(' MP)'), greaterThan(0));
   });
 
   testWidgets('forja: VEL dice cada cuánto llega tu turno (motor de batalla)',

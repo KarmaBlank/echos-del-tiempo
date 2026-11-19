@@ -185,8 +185,7 @@ void main() {
       final bad = rules.parse('Mostrar\n  Peso liviana');
       expect(bad.errors.single, contains('Ligera, Media o Pesada'));
       // Materiales: no es un arma, no coincide.
-      expect(
-          rules.matches(c, const LootDrop.stack(StackKind.potion, 1), ctx),
+      expect(rules.matches(c, const LootDrop.stack(StackKind.potion, 1), ctx),
           isFalse);
     });
   });

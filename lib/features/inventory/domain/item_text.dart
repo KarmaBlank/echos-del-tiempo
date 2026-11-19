@@ -86,7 +86,8 @@ String itemSkillsMarkup(ProgressionRules rules, ItemInstance it) {
             ? _esc(s.name)
             : '${_esc(s.name)} ${_c(_orange, '(trasladada)')}',
   ];
-  final ult = itemUlt(it)?.name ?? (w == null ? null : cat.ultimates[w.type]?.name);
+  final ult =
+      itemUlt(it)?.name ?? (w == null ? null : cat.ultimates[w.type]?.name);
   return [
     names.isEmpty ? '—' : names.join(' · '),
     if (ult != null) _c(_pink, 'ULT: ${_esc(ult)}'),
@@ -107,6 +108,34 @@ List<String> itemSkillLinesMarkup(ProgressionRules rules, ItemInstance it,
             '${(w?.skillIds.contains(id) ?? false) ? '' : ' ${_c(_orange, '(trasladada)')}'}',
     if (ult != null)
       '• ${skillOneLineMarkup(ult, stats: stats, ultimate: true)}',
+  ];
+}
+
+/// Línea plegable dentro de una sección de tip: `head` a la vista y
+/// `detail` en su propio ▸ (lo dibuja `RetroTipFold`). Separadores
+/// U+0001 (cabeza / detalle) y U+0002 (saltos del detalle).
+String tipSubFold(String head, String detail) =>
+    '$head\u0001${detail.replaceAll('<br>', '\u0002')}';
+
+/// Habilidades del tooltip plegado: una línea cada una y el detalle en
+/// su propio ▸ (ui_style.md § "Tooltips cortos").
+List<String> _skillFolds(
+    ProgressionRules rules, ItemInstance it, DerivedStats? stats) {
+  final cat = rules.catalog;
+  final w = cat.weapons[it.baseId];
+  final ult = itemUlt(it) ?? (w == null ? null : cat.ultimates[w.type]);
+  String one((String, String) p, [String tail = '']) =>
+      p.$2.isEmpty ? '• ${p.$1}$tail' : tipSubFold('${p.$1}$tail', p.$2);
+  return [
+    for (final id in rules.items.skillsOf(it))
+      if (cat.skills[id] case final s?)
+        one(
+            skillShortLineMarkup(s, stats: stats),
+            (w?.skillIds.contains(id) ?? false)
+                ? ''
+                : ' ${_c(_orange, '(trasladada)')}'),
+    if (ult != null)
+      one(skillShortLineMarkup(ult, stats: stats, ultimate: true)),
   ];
 }
 
@@ -243,9 +272,10 @@ String itemTooltipMarkup(
     sections: [
       ('Mods', mods.join('<br>')),
       if (passive != null) ('Pasiva', _c(kPassiveHex, _esc(passive))),
-      ('Habilidades', skills.join('<br>')),
+      ('Habilidades', _skillFolds(rules, it, stats).join('<br>')),
       ('Peso y forja', weight.join('<br>')),
-      if (flavor != null && flavor.isNotEmpty) ('Historia', _c(_dim, _esc(flavor))),
+      if (flavor != null && flavor.isNotEmpty)
+        ('Historia', _c(_dim, _esc(flavor))),
     ],
   );
 }
@@ -332,7 +362,12 @@ String gainsText(
     if (credits > 0) '+₵$credits',
     for (final e in materials.entries) '+${e.value} ${e.key.label}',
   ];
-  final sure = parts.isEmpty ? 'nada seguro' : parts.join(' · ');
+  if (parts.isEmpty) {
+    return chances.isEmpty
+        ? 'sin materiales'
+        : 'puede salir: ${chances.join(', ')}';
+  }
+  final sure = parts.join(' · ');
   return chances.isEmpty ? sure : '$sure (puede salir: ${chances.join(', ')})';
 }
 

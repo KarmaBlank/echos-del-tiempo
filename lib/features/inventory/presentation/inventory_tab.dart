@@ -1084,6 +1084,15 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   /// Comparar, Mover, Dar a..., Tirar, Desarmar, Vender. Las que no se
   /// pueden, en gris con el motivo en una línea (`inventoryReasonLine`).
   /// La misma lista va en el detalle y en el menú del clic derecho.
+  /// Nombre del compañero; si se repite, con clase y nivel
+  /// (`Héroe (Maga, Nv 6)`).
+  String _mateLabel(SessionPlayer m, List<SessionPlayer> mates) {
+    if (mates.where((o) => o.name == m.name).length < 2) return m.name;
+    final p = m.profile;
+    final cls = shop.rules.catalog.classes[p.classId]?.name ?? p.classId;
+    return '${m.name} ($cls, Nv ${p.level})';
+  }
+
   List<InventoryMenuEntry> _menuEntries(PlayerProfile p, SessionPlayer me,
       List<SessionPlayer> mates, CellContent c) {
     final g = shop.guards;
@@ -1108,7 +1117,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         id: sell ? 'sell' : 'salvage',
         shortReason: short(ma, why2),
         label: sell ? 'Vender ₵${shop.rules.crafting.sellPrice(it)}' : ma.label,
-        note: 'Recibís $gains',
+        note: sell ? null : gains,
         color: ProtoColors.orange,
         reason: why(ma, why2),
         onTap: () => setState(() => _confirmCraft = op),
@@ -1168,7 +1177,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         for (final m in mates)
           InventoryMenuEntry(
             id: 'give-${m.id}',
-            label: 'Dar a ${m.name}',
+            label: 'Dar a ${_mateLabel(m, mates)}',
             color: ProtoColors.sky,
             reason: why(
                 InventoryMenuAction.give, g.give(p, token, m, count: count)),

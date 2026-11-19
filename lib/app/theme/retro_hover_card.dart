@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'proto_colors.dart';
@@ -150,9 +152,50 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
     if (other != null && other != this) other._hide();
     RetroHoverCard._active = this;
     if (!_portal.isShowing) _portal.show();
+    _listen(true);
+  }
+
+  final _boxKey = GlobalKey();
+  final _scroll = ScrollController();
+  bool _listening = false;
+
+  /// Mientras está abierta: Esc y un clic fuera de la caja la cierran
+  /// (ui_style.md § "Tooltips cortos"; nunca queda pegada).
+  void _listen(bool on) {
+    if (on == _listening) return;
+    _listening = on;
+    final router = GestureBinding.instance.pointerRouter;
+    if (on) {
+      router.addGlobalRoute(_onPointer);
+      HardwareKeyboard.instance.addHandler(_onKey);
+    } else {
+      router.removeGlobalRoute(_onPointer);
+      HardwareKeyboard.instance.removeHandler(_onKey);
+    }
+  }
+
+  void _onPointer(PointerEvent e) {
+    if (e is! PointerDownEvent || !_portal.isShowing) return;
+    final box = _boxKey.currentContext?.findRenderObject();
+    if (box is RenderBox && box.hasSize) {
+      final r = box.localToGlobal(Offset.zero) & box.size;
+      if (r.contains(e.position)) return;
+    }
+    _hide();
+  }
+
+  bool _onKey(KeyEvent e) {
+    // Abierta por el cursor de teclado: Esc sigue siendo del panel.
+    if (_byKeyboard || !_portal.isShowing) return false;
+    if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape) {
+      _hide();
+      return true;
+    }
+    return false;
   }
 
   void _hide() {
+    _listen(false);
     _byKeyboard = false;
     _closer?.cancel();
     _overTarget = false;
@@ -188,6 +231,7 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
     // El portal se va con el elemento; si vuelve (se movió), se cierra
     // después del cuadro (no se puede ocultar en medio del build).
     _closer?.cancel();
+    _listen(false);
     _overTarget = false;
     _overBox = false;
     if (RetroHoverCard._active == this) RetroHoverCard._active = null;
@@ -201,6 +245,8 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
 
   @override
   void dispose() {
+    _scroll.dispose();
+    _listen(false);
     _closer?.cancel();
     if (RetroHoverCard._active == this) RetroHoverCard._active = null;
     super.dispose();
@@ -274,8 +320,11 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
           child: MediaQuery(
             data: MediaQuery.of(ctx).copyWith(size: area.size),
             child: CustomSingleChildLayout(
-              delegate: _HoverLayout(rect.shift(-area.topLeft), widget.gap,
-                  widget.margin, widget.placement,
+              delegate: _HoverLayout(
+                  rect.shift(-area.topLeft),
+                  widget.gap,
+                  widget.margin,
+                  widget.placement,
                   MediaQuery.devicePixelRatioOf(ctx)),
               child: child,
             ),
@@ -313,6 +362,7 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
   }
 
   Widget _box(BuildContext ctx) => Container(
+        key: _boxKey,
         padding: RetroHoverCard.padding,
         decoration: BoxDecoration(
           color: ProtoColors.bg.withValues(alpha: 0xF5 / 0xFF),
@@ -321,22 +371,31 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
               width: UiTheme.buttonBorderWidth),
           boxShadow: const [
             BoxShadow(
-                color: ProtoColors.shadow, offset: Offset(0, 4), blurRadius: 18),
+                color: ProtoColors.shadow,
+                offset: Offset(0, 4),
+                blurRadius: 18),
           ],
         ),
         // El overlay no hereda el estilo de texto del panel.
         child: DefaultTextStyle(
           style: RetroHoverCard.textStyle,
+          // La letra nunca se achica: si no entra en el alto máximo, la
+          // caja scrollea con la rueda (ui_style.md § "Tooltips cortos").
           child: LayoutBuilder(
-            builder: (context, c) => FittedBox(
-              // Último recurso: si ni en columnas entra, se achica.
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.topLeft,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: c.maxWidth),
-                child: RetroTipBounds(
-                  maxHeight: c.maxHeight,
-                  child: Builder(builder: widget.builder),
+            builder: (context, c) => RawScrollbar(
+              key: const ValueKey('retro-tip-scroll'),
+              controller: _scroll,
+              thumbVisibility: true,
+              thumbColor: ProtoColors.buttonBorder,
+              thickness: 4,
+              child: SingleChildScrollView(
+                controller: _scroll,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: c.maxWidth),
+                  child: RetroTipBounds(
+                    maxHeight: c.maxHeight,
+                    child: Builder(builder: widget.builder),
+                  ),
                 ),
               ),
             ),
@@ -472,6 +531,17 @@ class _HoverLayout extends SingleChildLayoutDelegate {
 
   double _px(double v) => (v * dpr).roundToDouble() / dpr;
 
+  /// Debajo; si no entra, arriba si entra; si no, del lado con más lugar
+  /// (y se corre).
+  double _vertical(Size size, Size child) {
+    final below = target.bottom + gap;
+    if (below + child.height <= size.height - margin) return below;
+    final above = target.top - gap - child.height;
+    return above >= margin || target.top > size.height - target.bottom
+        ? above
+        : below;
+  }
+
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
       BoxConstraints.loose(Size(
@@ -493,16 +563,14 @@ class _HoverLayout extends SingleChildLayoutDelegate {
           x = target.left - gap - child.width;
         }
         y = target.top;
+        if (x < margin) {
+          // No entra a ningún costado: debajo (o arriba) de la casilla.
+          x = target.center.dx - child.width / 2;
+          y = _vertical(size, child);
+        }
       case RetroTipPlacement.below:
         x = target.center.dx - child.width / 2;
-        y = target.bottom + gap;
-        if (y + child.height > size.height - margin) {
-          final above = target.top - gap - child.height;
-          // Arriba si entra; si no, del lado con más lugar (y se corre).
-          y = above >= margin || target.top > size.height - target.bottom
-              ? above
-              : y;
-        }
+        y = _vertical(size, child);
     }
     return Offset(_px(x.clamp(margin, maxX)), _px(y.clamp(margin, maxY)));
   }
@@ -527,7 +595,11 @@ class RetroTipFold extends StatefulWidget {
     required this.body,
     this.maxWidth,
     this.initiallyOpen = false,
+    this.titleIsMarkup = false,
   });
+
+  /// [title] ya es markup (sub-plegables de habilidades).
+  final bool titleIsMarkup;
 
   final String title;
   final String body;
@@ -541,6 +613,31 @@ class RetroTipFold extends StatefulWidget {
 class _RetroTipFoldState extends State<RetroTipFold> {
   late bool _open = widget.initiallyOpen;
 
+  /// El cuerpo; las líneas `cabeza\u0001detalle` (`tipSubFold`) van
+  /// como sub-plegables.
+  Widget _body(double? w) {
+    final body = widget.body;
+    if (!body.contains('\u0001')) return ProtoText(body);
+    final lines = body.split('<br>');
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final (i, l) in lines.indexed)
+          if (l.contains('\u0001'))
+            RetroTipFold(
+              key: ValueKey('tip-subfold-${widget.title}-$i'),
+              title: l.split('\u0001').first,
+              titleIsMarkup: true,
+              body: l.split('\u0001').last.replaceAll('\u0002', '<br>'),
+              maxWidth: w,
+            )
+          else
+            ProtoText(l),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final head = FocusableActionDetector(
@@ -550,11 +647,13 @@ class _RetroTipFoldState extends State<RetroTipFold> {
             onInvoke: (_) => setState(() => _open = !_open)),
       },
       child: GestureDetector(
-        key: ValueKey('tip-fold-${widget.title}'),
+        key: widget.titleIsMarkup ? null : ValueKey('tip-fold-${widget.title}'),
         behavior: HitTestBehavior.opaque,
         onTap: () => setState(() => _open = !_open),
-        child: ProtoText(protoColor(
-            ProtoColors.sky, '${_open ? '▼' : '▸'} ${protoEsc(widget.title)}')),
+        child: ProtoText(widget.titleIsMarkup
+            ? '${protoColor(ProtoColors.sky, _open ? '▼' : '▸')} ${widget.title}'
+            : protoColor(ProtoColors.sky,
+                '${_open ? '▼' : '▸'} ${protoEsc(widget.title)}')),
       ),
     );
     final w = widget.maxWidth;
@@ -568,10 +667,10 @@ class _RetroTipFoldState extends State<RetroTipFold> {
             key: ValueKey('tip-fold-body-${widget.title}'),
             padding: const EdgeInsets.only(left: 12),
             child: w == null
-                ? ProtoText(widget.body)
+                ? _body(null)
                 : ConstrainedBox(
                     constraints: BoxConstraints(maxWidth: w - 12),
-                    child: ProtoText(widget.body)),
+                    child: _body(w - 12)),
           ),
       ],
     );
