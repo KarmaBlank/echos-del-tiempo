@@ -739,8 +739,8 @@ class PulsePips extends StatelessWidget {
 
   final Combatant player;
 
-  static const size = 6.0;
-  static const gap = 2.0;
+  static const size = 9.0;
+  static const gap = 3.0;
 
   @override
   Widget build(BuildContext context) {
@@ -761,6 +761,45 @@ class PulsePips extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Fila `PULSO ■■□□□ 2/5` de la tarjeta: siempre una línea; los pips se
+/// achican si la tarjeta es angosta.
+class _PulseRow extends StatelessWidget {
+  const _PulseRow(this.player);
+
+  final Combatant player;
+
+  @override
+  Widget build(BuildContext context) {
+    // Con texto ENORME la tarjeta no tiene alto para otra línea: solo los
+    // pips (el número va en el tooltip).
+    if (_BarRow.stacked(context)) {
+      return Align(
+          alignment: Alignment.centerLeft,
+          child: PulsePips(player, key: ValueKey('pulse-${player.id}')));
+    }
+    final style = RetroType.style(RetroType.label, color: ProtoColors.gold);
+    final n = player.pulse.clamp(0, BattleEngine.pulseMax);
+    return Row(
+      children: [
+        Text('PULSO', maxLines: 1, softWrap: false, style: style),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: PulsePips(player, key: ValueKey('pulse-${player.id}')),
+            ),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text('$n/${BattleEngine.pulseMax}',
+            maxLines: 1, softWrap: false, style: style),
       ],
     );
   }
@@ -999,17 +1038,15 @@ class _PartyCard extends StatelessWidget {
                       _BarRow(ultBar(p.ult),
                           p.ult >= 100 ? '¡LISTA!' : '${p.ult.floor()}%',
                           label: 'ULT', color: ultColor, valueChars: 9),
-                    // Pulso (combo_balance.md § 5.2): pips llenos y vacíos,
-                    // de alto fijo (no crece con el tamaño del texto).
-                    if (p.alive) ...[
-                      const SizedBox(height: 2),
+                    // Pulso (combo_balance.md § 5.2): una fila con nombre y
+                    // cifras como HP y MP, con los pips en lugar de barra
+                    // (pedido del dueño: "que se vea que tenés Pulso").
+                    if (p.alive)
                       HudHighlight.wrap(
                           context,
                           HudHighlight.pulse,
                           ValueKey('hl-pulse-${p.id}'),
-                          PulsePips(p, key: ValueKey('pulse-${p.id}')),
-                          tight: true),
-                    ],
+                          _PulseRow(p)),
                     if (summons.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       SummonsRow(summons: summons),
