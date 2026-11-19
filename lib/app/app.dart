@@ -18,10 +18,14 @@ import 'widgets/perf_overlay.dart';
 /// (lobby, misión, batalla y resultado los decide la sesión;
 /// docs/specs/exploration.md).
 class EcosApp extends StatelessWidget {
-  const EcosApp({super.key, this.overrides = const []});
+  const EcosApp({super.key, this.overrides = const [], this.home});
 
   /// Overrides de Riverpod (tests: motor determinístico, store en memoria).
   final List<Override> overrides;
+
+  /// Pantalla inicial (por defecto el título; el arnés de rendimiento
+  /// arranca directo en `WorldScreen`).
+  final Widget? home;
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +35,7 @@ class EcosApp extends StatelessWidget {
         title: 'Ecos del Tiempo',
         debugShowCheckedModeBanner: false,
         theme: RetroTheme.build(),
-        home: const TitleScreen(),
+        home: home ?? const TitleScreen(),
         // Tamaño del texto (accesibilidad, docs/specs/settings.md § 3)
         // y filtro CRT (§ 3.2) sobre toda la app, overlays incluidos.
         builder: (context, child) => Consumer(

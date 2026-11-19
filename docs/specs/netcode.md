@@ -182,7 +182,7 @@ Las claves de `onMsg` del prototipo (`lib/game_engine/serialization/action_json.
 | `AttackCommand` | `{"t":"cmd","a":"atk","tg":"e1"}` |
 | `SkillCommand` | `{"t":"cmd","a":"tech","tk":"corte","tg":"e1"}` |
 | `UltimateCommand` | `{"t":"cmd","a":"ult","tg":"e1"}` |
-| `DualCommand` | `{"t":"cmd","a":"dual","pt":"p2"}` |
+| `DualCommand` | `{"t":"cmd","a":"dual","pt":"p2"}`; dúo de armas (v0.8.3, aditivo): `"du":"w_flechaArcana"` |
 | `ItemCommand` | `{"t":"cmd","a":"item","it":"pot"\|"eter","to":"p2"}` |
 | `DefendCommand` | `{"t":"cmd","a":"def"}` |
 

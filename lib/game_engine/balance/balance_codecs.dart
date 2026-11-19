@@ -275,7 +275,8 @@ final dualCodec = EntityCodec(
   },
   write: (o, f) {
     final d = o as DualDef;
-    return DualDef(d.name, decodeStatus(f.values['status'])!, f.d('power'));
+    return DualDef(d.name, decodeStatus(f.values['status'])!, f.d('power'),
+        weapons: d.weapons);
   },
   nameOf: (o) => (o as DualDef).name,
 );

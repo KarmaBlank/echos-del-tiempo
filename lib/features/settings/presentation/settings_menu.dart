@@ -1347,6 +1347,7 @@ class _ControlsTab extends StatelessWidget {
       [
         ('1 - 9 / clic', 'Elegir la acción N del menú'),
         ('Q / Tab / clic', 'Cambiar de objetivo'),
+        ('P', 'Ir a PASAR (otra P: pasar el turno; el próximo llega antes)'),
         ('Esc', 'Volver del submenú de pociones'),
       ]
     ),

@@ -13,6 +13,7 @@ import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../inventory/domain/item_text.dart';
 import '../../world/presentation/session_controller.dart';
+import '../../world/presentation/panels/party_member_bar.dart';
 import '../../world/presentation/session_view.dart';
 import '../../combat/presentation/game_sprites.dart';
 import '../domain/endgame_text.dart';
@@ -64,54 +65,62 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final me = view.me!;
-    final p = me.profile;
+    // El miembro activo (solo_party.md § 6): sus Ecos y materiales. El
+    // Abismo y abrir Ecos son del líder (propuestas de grupo).
+    final p = view.actor!.profile;
     final atlas = view.atlas ?? c.atlas;
     final free = c.engine.atlasRules.free(atlas);
     // Q / E, Ctrl+Tab y 1-9 cambian de pestaña (menu_focus.dart).
-    return MenuTabKeys(
-      count: EcoPortalTab.values.length,
-      index: _tab.index,
-      onChanged: (i) => setState(() => _tab = EcoPortalTab.values[i]),
-      child: PanelFrame(
-        title: 'PORTAL DEL ECO',
-        width: 1040,
-        fill: true,
-        help: _tab == EcoPortalTab.abismo ? kAbyssHelp : kEcoPortalHelp,
-        onClose: c.closePanel,
-        titleTrailing: ProtoText(
-            key: const ValueKey('portal-points'),
-            'Atlas: <b>$free</b> punto${free == 1 ? '' : 's'} libre'
-            '${free == 1 ? '' : 's'}'),
-        header: PanelTabs(
-          labels: [for (final t in EcoPortalTab.values) t.label],
-          index: _tab.index,
-          onChanged: (i) => setState(() => _tab = EcoPortalTab.values[i]),
-        ),
-        actions: [
-          PanelButton('CERRAR [ESC]', onPressed: c.closePanel),
-        ],
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (!p.ecosUnlocked)
-              PanelHint(protoColor(
-                  ProtoColors.orange,
-                  'Portal apagado: vencé al Devorador de Eras (Corazón del '
-                  'Tiempo) para activarlo. Los Ecos que caigan se guardan.')),
-            PanelHint(_tab.hint),
-            Expanded(
-              child: switch (_tab) {
-                EcoPortalTab.ecos => _ecos(p),
-                EcoPortalTab.atlas => _atlas(atlas),
-                EcoPortalTab.abismo => AbyssView(
-                    key: const ValueKey('abyss-view'),
-                    view: view,
-                    controller: c,
-                    sprites: widget.sprites),
-              },
-            ),
+    return PartyMemberKeys(
+      view: view,
+      controller: c,
+      child: MenuTabKeys(
+        count: EcoPortalTab.values.length,
+        index: _tab.index,
+        onChanged: (i) => setState(() => _tab = EcoPortalTab.values[i]),
+        child: PanelFrame(
+          title: 'PORTAL DEL ECO',
+          width: 1040,
+          fill: true,
+          help: _tab == EcoPortalTab.abismo ? kAbyssHelp : kEcoPortalHelp,
+          onClose: c.closePanel,
+          titleTrailing: ProtoText(
+              key: const ValueKey('portal-points'),
+              'Atlas: <b>$free</b> punto${free == 1 ? '' : 's'} libre'
+              '${free == 1 ? '' : 's'}'),
+          header: PartyMemberBar.header(
+              view,
+              c,
+              PanelTabs(
+                labels: [for (final t in EcoPortalTab.values) t.label],
+                index: _tab.index,
+                onChanged: (i) => setState(() => _tab = EcoPortalTab.values[i]),
+              )),
+          actions: [
+            PanelButton('CERRAR [ESC]', onPressed: c.closePanel),
           ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!p.ecosUnlocked)
+                PanelHint(protoColor(
+                    ProtoColors.orange,
+                    'Portal apagado: vencé al Devorador de Eras (Corazón del '
+                    'Tiempo) para activarlo. Los Ecos que caigan se guardan.')),
+              PanelHint(_tab.hint),
+              Expanded(
+                child: switch (_tab) {
+                  EcoPortalTab.ecos => _ecos(p),
+                  EcoPortalTab.atlas => _atlas(atlas),
+                  EcoPortalTab.abismo => AbyssView(
+                      key: const ValueKey('abyss-view'),
+                      view: view,
+                      controller: c,
+                      sprites: widget.sprites),
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -196,7 +205,7 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
                 const SizedBox(width: 8),
                 PanelButton('USAR',
                     key: ValueKey('eco-craft-${op.name}'),
-                    reason: ecoCraftBlocked(s, view.localId, p, e, op),
+                    reason: ecoCraftBlocked(s, view.actorId, p, e, op),
                     onPressed: () => setState(() => c.ecoCraft(e.uid, op))),
               ],
             ),
@@ -214,7 +223,9 @@ class _EcoPortalPanelState extends State<EcoPortalPanel> {
                 PanelButton('ABRIR ECO',
                     key: const ValueKey('eco-open'),
                     accent: ProtoColors.green,
-                    reason: ecoOpenBlocked(s, p, e), onPressed: () {
+                    reason: view.actingCompanion
+                        ? 'Los Ecos los abre el líder'
+                        : ecoOpenBlocked(s, p, e), onPressed: () {
                   if (c.proposeEco(e.uid)) c.closePanel();
                 }),
               ],

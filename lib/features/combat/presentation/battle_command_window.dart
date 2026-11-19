@@ -10,8 +10,8 @@ import '../../../app/theme/retro_theme.dart';
 /// Ventana de comandos de la batalla v0.5 (docs/specs/
 /// battle_presentation.md § "Barra de batalla (v0.5)"): tres columnas
 /// — categorías, acciones de la categoría (una línea cada una, costo a la
-/// derecha) y la descripción de la acción elegida con el objetivo y las
-/// teclas. No tiene estado propio: lo que está elegido lo decide
+/// derecha) y la descripción de la acción elegida con quién actúa (arriba,
+/// desde v0.8.3), el objetivo y las teclas. No tiene estado propio: lo que está elegido lo decide
 /// `BattleViewState` (así las teclas y el mouse andan igual).
 
 /// Categorías del menú.
@@ -21,7 +21,10 @@ enum BattleCategory {
   duos('DÚOS'),
   ultimate('ULTIMATE'),
   items('OBJETOS'),
-  defend('DEFENDER');
+  defend('DEFENDER'),
+
+  /// Pasar turno (v0.8.3): siempre la última.
+  pass('PASAR');
 
   const BattleCategory(this.label);
   final String label;
@@ -93,7 +96,8 @@ class BattleCommandWindow extends StatelessWidget {
     this.header,
     this.extra,
     this.hints =
-        'Enter: confirmar · Esc: volver · Flechas: elegir · Q/Tab: objetivo',
+        'Enter: confirmar · Esc: volver · Flechas: elegir · Q/Tab: objetivo'
+            ' · P: pasar',
   });
 
   final String actorName;
@@ -158,7 +162,6 @@ class BattleCommandWindow extends StatelessWidget {
             SizedBox(
               width: catW,
               child: _Categories(
-                actorName: actorName,
                 categories: categories,
                 category: category,
                 onCategory: onCategory,
@@ -178,6 +181,7 @@ class BattleCommandWindow extends StatelessWidget {
             Expanded(
               flex: 4,
               child: _Description(
+                actorName: actorName,
                 action: sel,
                 target: target,
                 resources: resources,
@@ -194,13 +198,11 @@ class BattleCommandWindow extends StatelessWidget {
 
 class _Categories extends StatelessWidget {
   const _Categories({
-    required this.actorName,
     required this.categories,
     required this.category,
     required this.onCategory,
   });
 
-  final String actorName;
   final List<BattleCategoryEntry> categories;
   final BattleCategory category;
   final ValueChanged<BattleCategory> onCategory;
@@ -211,10 +213,8 @@ class _Categories extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(retroText(actorName),
-              key: const ValueKey('battle-actor'),
-              style: RetroType.style(RetroType.label, color: ProtoColors.title)),
-          const SizedBox(height: 6),
+          // Quién actúa va arriba de la descripción (v0.8.3): así las 7
+          // categorías (con PASAR) entran sin scroll a texto Normal.
           for (final c in categories)
             _Row(
               key: ValueKey('battle-cat-${c.category.name}'),
@@ -301,6 +301,7 @@ class _Actions extends StatelessWidget {
 
 class _Description extends StatelessWidget {
   const _Description({
+    required this.actorName,
     required this.action,
     required this.target,
     required this.resources,
@@ -308,6 +309,7 @@ class _Description extends StatelessWidget {
     this.extra,
   });
 
+  final String actorName;
   final Widget? extra;
   final BattleAction? action;
   final String target;
@@ -334,10 +336,24 @@ class _Description extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ProtoText(resources,
-                        key: const ValueKey('battle-resources')),
+                  // Quién actúa (izquierda) y sus recursos (derecha).
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(retroText(actorName),
+                            key: const ValueKey('battle-actor'),
+                            style: RetroType.style(RetroType.label,
+                                color: ProtoColors.title)),
+                      ),
+                      const SizedBox(width: 8),
+                      // Con texto ENORME baja de línea en vez de desbordar.
+                      Flexible(
+                        child: ProtoText(resources,
+                            key: const ValueKey('battle-resources'),
+                            textAlign: TextAlign.right),
+                      ),
+                    ],
                   ),
                   if (a != null)
                     ProtoText(a.description,

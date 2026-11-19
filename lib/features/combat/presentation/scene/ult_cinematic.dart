@@ -36,6 +36,10 @@ enum UltStyle {
   totalEruption,
   eternalLament,
   voidCollapse,
+
+  /// Dúos (v0.8.3, `duo_cinematic.dart`): todos comparten guion; el
+  /// color y el elemento son los del dúo.
+  duo,
 }
 
 /// Fase de la cinemática.

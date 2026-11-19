@@ -8,6 +8,7 @@ import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/rules/map_generator.dart';
+import '../../combat/presentation/scene/duo_cinematic.dart';
 import '../../combat/presentation/scene/ult_cinematic.dart';
 import 'session_controller.dart';
 import 'session_view.dart';
@@ -120,6 +121,8 @@ abstract final class MusicSelector {
             when kind == BattleActionKind.ultimate =>
           ultScriptFor(skillId).totalMs,
         EnemyUltEvent(:final ultId) => ultScriptFor(ultId).totalMs,
+        ActionEvent(:final kind) when kind == BattleActionKind.dual =>
+          kDuoScript.totalMs,
         _ => null,
       };
       if (t != null && t > ms) ms = t;

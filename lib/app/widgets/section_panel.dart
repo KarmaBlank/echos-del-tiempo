@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../theme/panel_frame.dart';
 import '../theme/proto_colors.dart';
 import '../theme/retro_text.dart';
 import '../theme/retro_theme.dart';
@@ -20,7 +21,11 @@ class SectionPanel extends StatelessWidget {
     this.color = ProtoColors.title,
     this.trailing,
     this.titleKey,
+    this.tooltip,
   });
+
+  /// Tooltip (markup) de la franja del encabezado (mouse / foco adentro).
+  final String? tooltip;
 
   /// Clave del título (pruebas).
   final Key? titleKey;
@@ -47,7 +52,7 @@ class SectionPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
+          _withTip(Container(
             padding: EdgeInsets.symmetric(
                 horizontal: UiTheme.space(8), vertical: UiTheme.space(4)),
             color: ProtoColors.button.withValues(alpha: 0.7),
@@ -80,7 +85,7 @@ class SectionPanel extends StatelessWidget {
                 if (trailing != null) ...[const SizedBox(width: 8), trailing!],
               ],
             ),
-          ),
+          )),
           Padding(
             padding: EdgeInsets.all(UiTheme.space(6)),
             child: Column(
@@ -92,4 +97,8 @@ class SectionPanel extends StatelessWidget {
       ),
     ));
   }
+
+  Widget _withTip(Widget header) => tooltip == null
+      ? header
+      : RetroTooltip(message: tooltip!, child: header);
 }

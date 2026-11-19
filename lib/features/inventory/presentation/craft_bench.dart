@@ -5,6 +5,7 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
+import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/action_card.dart';
@@ -18,6 +19,7 @@ import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/craft_rules.dart';
 import '../../build_planner/presentation/build_fit_badge.dart';
+import '../domain/craft_help.dart';
 import '../domain/item_text.dart';
 import '../domain/skill_tip.dart';
 import 'shop_sections.dart';
@@ -33,6 +35,9 @@ enum BenchGroup {
   const BenchGroup(this.label, this.note);
   final String label;
   final String note;
+
+  /// Tooltip del encabezado (una línea, `CraftHelp.groups`).
+  String get help => CraftHelp.groups[name]!;
 }
 
 /// Textos de cada operación de la mesa en palabras simples (sin "slot"
@@ -168,14 +173,6 @@ const kTierHelp = '<b>Tiers de los mods</b><br>'
     '<span class="k">(único)</span> = mod fijo de un legendario.<br>'
     'Cada rareza tiene lugar para N mods: la mitad ofensivos (prefijos) y '
     'la mitad de atributos o defensa (sufijos).';
-
-/// Ayuda de los materiales (tooltip del contador).
-String materialsHelp() => [
-      '<b>Materiales de fusión</b>',
-      for (final m in CraftMaterial.values)
-        '<span class="k">${m.label}</span>: ${protoEsc(m.description)}',
-      'Caen como loot o salen de <b>desarmar</b> armas (Inventario).',
-    ].join('<br>');
 
 /// Costo de una operación para la columna derecha del paso 2:
 /// `₵300 + 1 Cristal` (`Gratis` si no gasta nada).
@@ -429,22 +426,35 @@ class _CraftBenchState extends State<CraftBench> {
   /// Migas (pasos, se puede volver) y contador de materiales.
   Widget _header(PlayerProfile p, ItemInstance target) {
     // Los Fragmentos no se usan en la forja (abren Jefes del Abismo).
+    final help = CraftHelp(shop.rules.crafting);
     final mats = [
       for (final m in CraftMaterial.values)
         if (!m.isFragment &&
             (m != CraftMaterial.esencia || p.material(m) > 0))
-          '${m.label.split(' ').first} <b>x${p.material(m)}</b>',
-    ].join(' · ');
+          m,
+    ];
     final crumbs = StepCrumbs(
       steps: const ['ARMA', 'ACCIÓN', 'CONFIRMAR'],
+      tips: CraftHelp.steps,
       current: _step,
       keyPrefix: 'bench-crumb-',
       onStep: _go,
     );
-    final materials = RetroTooltip(
-      message: materialsHelp(),
-      child: ProtoText(mats,
-          key: const ValueKey('craft-materials'), textAlign: TextAlign.right),
+    // Un tooltip por material: para qué sirve y dónde se consigue.
+    final materials = Wrap(
+      key: const ValueKey('craft-materials'),
+      alignment: WrapAlignment.end,
+      children: [
+        for (var i = 0; i < mats.length; i++) ...[
+          if (i > 0) const Text(' · '),
+          RetroTooltip(
+            key: ValueKey('craft-mat-${mats[i].name}'),
+            message: help.material(mats[i], p),
+            child: ProtoText(
+                '${mats[i].label.split(' ').first} <b>x${p.material(mats[i])}</b>'),
+          ),
+        ],
+      ],
     );
     // Con texto ENORME las migas, lo elegido y los materiales no entran
     // en una fila: van una debajo de la otra.
@@ -669,7 +679,16 @@ class _CraftBenchState extends State<CraftBench> {
       // depende del origen), se elige en el paso 3.
       final pre = shop.guards.craftPreview(p, _action(p, target, op));
       final (_, gColor) = _groupIcon(op.group);
-      return ActionCard(
+      final tip = CraftHelp(shop.rules.crafting)
+          .op(p, target, op, preview: pre, blocked: why)
+          .markup(op.title);
+      // Tooltip con mouse o foco de teclado: qué hace, qué cambia en esta
+      // arma, qué cuesta, qué pierdes, por qué está bloqueada y un ejemplo.
+      return RetroHoverCard(
+        builder: (ctx) => RetroTipText(tip,
+            key: ValueKey('bench-op-tip-${op.name}'),
+            maxWidth: RetroType.width(ctx, RetroHoverCard.textWidth)),
+        child: ActionCard(
         key: ValueKey('bench-op-${op.name}'),
         selected: op == _op,
         disabled: why != null,
@@ -692,7 +711,7 @@ class _CraftBenchState extends State<CraftBench> {
                   : const CostChip.note('Se puede · eliges en el paso 3'),
         ),
         onTap: () => choose(op),
-      );
+      ));
     }
 
     Widget section(BenchGroup g) {
@@ -703,6 +722,7 @@ class _CraftBenchState extends State<CraftBench> {
         color: color,
         title: g.label,
         subtitle: '— ${g.note}',
+        tooltip: g.help,
         children: [
           for (final op in CraftOpText.bench)
             if (op.group == g) card(op),
@@ -872,13 +892,16 @@ class _CraftBenchState extends State<CraftBench> {
       }
       for (final it in sources) {
         final sel = it.uid == action.sourceUid;
-        list.add(row('craft-source-${it.uid}', itemNameMarkup(rules, it), sel,
-            () {
-          _source = it.uid;
-          _pick = 0;
-        },
-            value: protoColor(ProtoColors.dim,
-                '${it.rarity.label} · Nv ${rules.items.baseOf(it)?.level ?? 1}')));
+        list.add(RetroTooltip(
+            key: ValueKey('craft-source-tip-${it.uid}'),
+            message: CraftHelp(rules.crafting).source(it, op),
+            child: row('craft-source-${it.uid}', itemNameMarkup(rules, it),
+                sel, () {
+              _source = it.uid;
+              _pick = 0;
+            },
+                value: protoColor(ProtoColors.dim,
+                    '${it.rarity.label} · Nv ${rules.items.baseOf(it)?.level ?? 1}'))));
         // Las elecciones de esa arma, justo debajo (sin bajar a buscarlas).
         if (sel && op != CraftOp.transferPassive) {
           if (picks.isEmpty) {
@@ -907,7 +930,9 @@ class _CraftBenchState extends State<CraftBench> {
           for (final id in rules.items.skillsOf(target))
             if (rules.catalog.skills[id] case final sk?)
               RetroTooltip(
-                message: skillTipMarkup(sk, stats: tipStats),
+                key: ValueKey('craft-replace-tip-$id'),
+                message: '${CraftHelp.replaceLine(replaceable: replaceable.contains(id), chosen: id == action.replaceSkillId)}'
+                    '<br>${skillTipMarkup(sk, stats: tipStats)}',
                 child: ActionCard(
                   key: ValueKey('craft-replace-$id'),
                   title: '<b>${protoEsc(sk.name)}</b>',

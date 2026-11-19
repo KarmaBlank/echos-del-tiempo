@@ -21,7 +21,10 @@ import '../../../../app/widgets/pixel_icon.dart';
 import '../../../../app/widgets/section_panel.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/bestiary.dart';
+import '../../../../game_engine/models/build_plan.dart';
+import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/models/game_session.dart';
+import '../../../../game_engine/rules/attribute_advisor.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../endgame/domain/endgame_text.dart';
 import '../../../inventory/domain/battle_impact.dart';
@@ -31,6 +34,7 @@ import '../../../inventory/presentation/shop_sections.dart';
 import '../../../passive_tree/presentation/passive_tree_view.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
+import 'party_member_bar.dart';
 
 /// Nombre y efecto de cada atributo (`STATN`, `STATD` del prototipo).
 const kAttributeInfo = {
@@ -113,11 +117,22 @@ class _CharacterPanelState extends State<CharacterPanel> {
 
   int get _allocSum => _alloc.values.fold(0, (a, b) => a + b);
 
+  /// La ranura de la cuenta del miembro activo (`null` = el elegido): su
+  /// plan de build (solo_party.md § 6.2).
+  String? get _slot => widget.controller.slotOf(widget.view.actorId);
+
+  @override
+  void didUpdateWidget(CharacterPanel old) {
+    super.didUpdateWidget(old);
+    // Otro miembro: el reparto pendiente era del anterior.
+    if (old.view.actorId != widget.view.actorId) _alloc.clear();
+  }
+
   @override
   Widget build(BuildContext context) {
     final view = widget.view;
     final c = widget.controller;
-    final prof = view.me!.profile;
+    final prof = view.actor!.profile;
     final rules = c.engine.progression;
     final guards = ShopContext(view, c).guards;
     final must = view.mustAllocate;
@@ -137,8 +152,18 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 key: const ValueKey('build-planner'),
                 rules: ref.watch(buildPlanRulesProvider),
                 profile: prof,
-                plan: ref.watch(buildPlanProvider).plan,
-                onChanged: (p) => ref.read(buildPlanProvider.notifier).save(p),
+                plan: ref.watch(buildPlanProvider).planFor(_slot),
+                onChanged: (p) {
+                  final slot = _slot;
+                  ref
+                      .read(buildPlanProvider.notifier)
+                      .save(p, characterId: slot);
+                  // El del líder lo manda `build_feed`; el de un compañero,
+                  // acá (su condición `Build` del filtro).
+                  if (slot != null) {
+                    c.setMemberWants(view.actorId, BuildWants.fromPlan(p));
+                  }
+                },
               )),
       // El visor del árbol ocupa todo el alto que queda debajo de su fila
       // de arriba (puntos, reinicio, buscador y zoom); con muy poco alto,
@@ -165,7 +190,10 @@ class _CharacterPanelState extends State<CharacterPanel> {
 
     // Q / E, Ctrl+Tab y 1-5 cambian de pestaña (menu_focus.dart); no
     // mientras hay que repartir.
-    return MenuTabKeys(
+    return PartyMemberKeys(
+      view: view,
+      controller: c,
+      child: MenuTabKeys(
         count: CharacterTab.values.length,
         index: tab.index,
         enabled: !must,
@@ -189,18 +217,21 @@ class _CharacterPanelState extends State<CharacterPanel> {
               '<b>$left</b>'),
           header: must
               ? null
-              : PanelTabs(
-                  labels: [for (final t in CharacterTab.values) t.label],
-                  index: tab.index,
-                  onChanged: (i) =>
-                      setState(() => _tab = CharacterTab.values[i]),
-                  // Puntos sin usar (passive_tree_v4.md § 7).
-                  badges: {
-                    CharacterTab.attributes.index: left,
-                    CharacterTab.tree.index:
-                        UnusedPoints.of(prof, rules).tree,
-                  },
-                ),
+              : PartyMemberBar.header(
+                  view,
+                  c,
+                  PanelTabs(
+                    labels: [for (final t in CharacterTab.values) t.label],
+                    index: tab.index,
+                    onChanged: (i) =>
+                        setState(() => _tab = CharacterTab.values[i]),
+                    // Puntos sin usar (passive_tree_v4.md § 7).
+                    badges: {
+                      CharacterTab.attributes.index: left,
+                      CharacterTab.tree.index:
+                          UnusedPoints.of(prof, rules).tree,
+                    },
+                  )),
           leading: [
             if (isAttr && guards.showRespec)
               PanelButton(
@@ -233,14 +264,16 @@ class _CharacterPanelState extends State<CharacterPanel> {
               Expanded(child: body),
             ],
           ),
-        ));
+        ),
+      ),
+    );
   }
 
   // ---------------- atributos ----------------
 
   Widget _attributes() {
     final view = widget.view;
-    final prof = view.me!.profile;
+    final prof = view.actor!.profile;
     final c = widget.controller;
     final rules = c.engine.progression;
     final guards = ShopContext(view, c).guards;
@@ -257,7 +290,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 // Con plan de build: el objetivo de cada atributo y a cuál
                 // le faltan puntos (build_planner.md § 4.1).
                 Consumer(builder: (context, ref, _) {
-                  final plan = ref.watch(buildPlanProvider).plan;
+                  final plan = ref.watch(buildPlanProvider).planFor(_slot);
                   final want = [
                     for (final a in Attribute.values)
                       if ((plan.attributes[a] ?? 0) > prof.attributes[a])
@@ -291,6 +324,10 @@ class _CharacterPanelState extends State<CharacterPanel> {
                     ],
                   );
                 }),
+                // Qué subir según el arma y el árbol (build_planner.md § 8).
+                Consumer(
+                    builder: (context, ref, _) => _advice(
+                        ref.watch(buildPlanProvider).planFor(_slot))),
                 if (view.mustAllocate)
                   const Padding(
                     padding: EdgeInsets.only(bottom: 10),
@@ -354,7 +391,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
 
   /// `previewOf`: stats con el reparto pendiente.
   Widget _preview() {
-    final prof = widget.view.me!.profile;
+    final prof = widget.view.actor!.profile;
     final rules = widget.controller.engine.progression;
     final now = rules.derivedStats(prof);
     final next = _allocSum == 0 ? now : rules.previewAllocation(prof, _alloc);
@@ -424,7 +461,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
     final add = _alloc[a] ?? 0;
     // Tooltip (mouse o foco en - / +): qué cambia en batalla con 1 punto
     // más (battle_impact.dart, tus números reales).
-    final prof = widget.view.me!.profile;
+    final prof = widget.view.actor!.profile;
     final rules = widget.controller.engine.progression;
     final now = _allocSum == 0
         ? rules.derivedStats(prof)
@@ -505,6 +542,61 @@ class _CharacterPanelState extends State<CharacterPanel> {
         ));
   }
 
+  /// Tarjeta SUGERENCIA: el reparto del asesor para los puntos libres del
+  /// miembro activo, con sus razones y APLICAR SUGERENCIA (pide
+  /// confirmar; descarta el reparto pendiente).
+  Widget _advice(BuildPlan plan) {
+    final view = widget.view;
+    final c = widget.controller;
+    final prof = view.actor!.profile;
+    final s = AttributeAdvisor(c.engine.progression).recommend(prof, plan);
+    if (s.isEmpty) return const SizedBox.shrink();
+    final add = AttributeAdvisor.allocation(s);
+    final split = AttributeAdvisor.split(s);
+    final reason = ShopContext(view, c).guards.allocate(prof, add);
+    Future<void> apply() async {
+      final ok = await showBuildPicker<bool>(context, '¿APLICAR SUGERENCIA?', [
+        PickOption(true, 'Sí, repartir: $split',
+            'Se gastan ${prof.points} puntos de ${prof.name}'
+            '${_allocSum > 0 ? '; se descarta el reparto pendiente' : ''}.',
+            key: 'advice-yes'),
+        const PickOption(false, 'No', null, key: 'advice-no'),
+      ]);
+      if (ok != true || !mounted) return;
+      if (c.allocate(add)) setState(_alloc.clear);
+    }
+
+    return SectionPanel(
+      key: const ValueKey('attr-advice'),
+      icon: PixelIconKind.star,
+      color: kPlanColor,
+      title: 'SUGERENCIA',
+      subtitle: plan.isEmpty ? 'según tu arma y tu árbol' : 'según tu build',
+      children: [
+        Text(retroText('Sugerencia: $split'),
+            key: const ValueKey('attr-advice-split'),
+            style: const TextStyle(color: ProtoColors.gold)),
+        for (final x in s)
+          Padding(
+            key: ValueKey('attr-advice-${x.attribute.name}'),
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+                retroText('${x.short} +${x.points}: ${x.reasons.join(' · ')}'),
+                style: const TextStyle(color: ProtoColors.dim)),
+          ),
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: PanelButton('APLICAR SUGERENCIA',
+              key: const ValueKey('apply-advice'),
+              accent: kPlanColor,
+              reason: reason,
+              onPressed: apply),
+        ),
+      ],
+    );
+  }
+
   void _confirm() {
     final add = {
       for (final e in _alloc.entries)
@@ -518,11 +610,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
   Widget _tree(double? height) {
     final view = widget.view;
     final c = widget.controller;
-    final p = view.me!.profile;
+    final p = view.actor!.profile;
     final guards = ShopContext(view, c).guards;
     return Consumer(
       builder: (context, ref, _) => PassiveTreeView(
-        planned: ref.watch(buildPlanProvider).plan.treeNodes.toSet(),
+        planned: ref.watch(buildPlanProvider).planFor(_slot).treeNodes.toSet(),
         rules: c.engine.progression.treeRules,
         profile: p,
         inBattle: view.mode == SessionMode.battle,

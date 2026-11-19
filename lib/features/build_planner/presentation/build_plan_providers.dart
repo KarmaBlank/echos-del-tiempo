@@ -10,12 +10,22 @@ import '../../characters/presentation/characters_providers.dart';
 
 /// El plan de build del personaje elegido (`null` = sin personaje).
 class BuildPlanState {
-  const BuildPlanState(this.characterId, this.plan);
+  const BuildPlanState(this.characterId, this.plan, [this.slots = const {}]);
 
   static const none = BuildPlanState(null, BuildPlan.empty);
 
   final String? characterId;
   final BuildPlan plan;
+
+  /// Los planes de las demás ranuras de la cuenta (los compañeros de la
+  /// party jugando solo; solo_party.md § 6.2).
+  final Map<String, BuildPlan> slots;
+
+  /// El plan de la ranura [characterId] (`null` o la elegida = [plan]).
+  BuildPlan planFor(String? characterId) =>
+      characterId == null || characterId == this.characterId
+          ? plan
+          : slots[characterId] ?? BuildPlan.empty;
 }
 
 /// Dueño del plan del personaje **elegido** en la cuenta
@@ -36,12 +46,23 @@ class BuildPlanController extends StateNotifier<BuildPlanState> {
 
   void _sync(Account a) {
     final sel = a.selected;
-    final next = BuildPlanState(sel?.id, sel?.plan ?? BuildPlan.empty);
-    if (next.characterId == state.characterId && next.plan == state.plan) {
+    final slots = {
+      for (final c in a.characters)
+        if (c.id != sel?.id && c.plan != null) c.id: c.plan!,
+    };
+    final next = BuildPlanState(sel?.id, sel?.plan ?? BuildPlan.empty, slots);
+    if (next.characterId == state.characterId &&
+        next.plan == state.plan &&
+        _sameSlots(next.slots, state.slots)) {
       return;
     }
     state = next;
   }
+
+  static bool _sameSlots(Map<String, BuildPlan> a, Map<String, BuildPlan> b) =>
+      a.length == b.length &&
+      a.entries
+          .every((e) => identical(b[e.key], e.value) || b[e.key] == e.value);
 
   /// Plan de otro personaje de la cuenta (pantalla del título).
   BuildPlan planOf(String characterId) =>
@@ -55,7 +76,14 @@ class BuildPlanController extends StateNotifier<BuildPlanState> {
       state = BuildPlanState(null, plan);
       return;
     }
-    if (id == state.characterId) state = BuildPlanState(id, plan);
+    if (id == state.characterId) {
+      state = BuildPlanState(id, plan, state.slots);
+    } else {
+      state = BuildPlanState(state.characterId, state.plan, {
+        ...state.slots,
+        id: plan,
+      });
+    }
     try {
       await repository
           .update((a) => a.withPlan(id, plan.isEmpty ? null : plan));

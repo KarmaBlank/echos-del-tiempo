@@ -16,6 +16,7 @@ import '../../../game_engine/data/weapon_passives.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/build_plan.dart';
 import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/rules/attribute_advisor.dart';
 import '../../../game_engine/rules/build_plan_rules.dart';
 import '../../passive_tree/presentation/passive_tree_view.dart';
 import 'build_fit_badge.dart';
@@ -267,6 +268,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
       PixelIconKind.plus,
       progress,
       [
+        if (_advice() case final w?) w,
         for (final g in progress.section(BuildSection.attributes))
           _row(g,
               trailing: _editable ? _stepper(g) : null,
@@ -278,6 +280,42 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
       onAdd: _addAttribute,
       empty: 'Ej.: FUE 40. Al subir de nivel te recuerda dónde poner '
           'los puntos.',
+    );
+  }
+
+  /// "Atributos sugeridos" (build_planner.md § 8.5): el reparto del
+  /// asesor para tus puntos libres + los de los próximos 5 niveles, y
+  /// AGREGAR COMO META.
+  Widget? _advice() {
+    final pts = AttributeAdvisor.horizonPoints(_p);
+    final s = AttributeAdvisor(_rules.progression).recommend(_p, _plan, pts);
+    if (s.isEmpty) return null;
+    final goals = AttributeAdvisor.addAsGoals(_plan, _p, s);
+    final why = s.first.reasons.isEmpty ? '' : s.first.reasons.first;
+    return Padding(
+      key: const ValueKey('build-attr-advice'),
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+              retroText('Atributos sugeridos ($pts puntos: libres y '
+                  'próximos niveles): ${AttributeAdvisor.split(s)}'),
+              key: const ValueKey('build-attr-advice-split'),
+              style: const TextStyle(color: ProtoColors.gold)),
+          if (why.isNotEmpty)
+            Text(retroText(why),
+                style: const TextStyle(color: ProtoColors.dim)),
+          if (_editable)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: PanelButton('AGREGAR COMO META',
+                  key: const ValueKey('build-advice-goals'),
+                  reason: goals == _plan ? 'Ya están en tus metas' : null,
+                  onPressed: () => _set(goals)),
+            ),
+        ],
+      ),
     );
   }
 

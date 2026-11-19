@@ -5,6 +5,7 @@ import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
 import 'package:echos_del_tiempo/game_engine/models/atlas_store.dart';
 import 'package:echos_del_tiempo/game_engine/models/bestiary.dart';
+import 'package:echos_del_tiempo/game_engine/models/party_store.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
@@ -29,6 +30,7 @@ Future<SessionController> pumpPanel(
   AtlasStore? atlas,
   BestiaryStore? bestiary,
   GameSprites? sprites,
+  PartyStore? party,
   TextSize? textSize,
   ReadingFont readingFont = ReadingFont.vt323,
   bool readingTitles = false,
@@ -56,6 +58,8 @@ Future<SessionController> pumpPanel(
       bestiaryStoreProvider
           .overrideWithValue(bestiary ?? InMemoryBestiaryStore()),
       if (sprites != null) gameSpritesProvider.overrideWith((ref) => sprites),
+      // Party jugando solo (solo_party.md): los compañeros cargan async.
+      if (party != null) partyStoreProvider.overrideWithValue(party),
       sessionClockProvider
           .overrideWithValue(const SessionClock(autoStart: false)),
     ],

@@ -241,6 +241,31 @@ void main() {
       expect(p.nextTurn, closeTo(turn.clock + 100 / 9.6 * 0.7, 1e-9));
     });
 
+    test('Pasar turno: termina el turno, el próximo en IV × 0.5, sin ULT ni '
+        'defensa', () {
+      final engine = _engine();
+      final turn = _warriorTurn(engine, ['slime']);
+      final before = turn.party.first;
+      final step = engine.command(turn, 'p1', const PassCommand())!;
+      final p = step.state.party.first;
+      expect(BattleEngine.passTurnFactor, 0.5);
+      expect(step.state.currentId, isNull, reason: 'el turno terminó');
+      expect(p.nextTurn, closeTo(turn.clock + 100 / 9.6 * 0.5, 1e-9));
+      expect(p.ult, before.ult, reason: 'pasar no carga ULT');
+      expect(p.mp, before.mp);
+      expect(p.defending, isFalse);
+      expect(step.state.enemies.first.hp, turn.enemies.first.hp);
+      expect(step.events.whereType<ActionEvent>(), isEmpty);
+      expect(step.state.log, 'Guerrero pasa el turno (el próximo llega antes)');
+      // Llega antes que defendiendo y que actuando.
+      final def = engine.command(turn, 'p1', const DefendCommand())!;
+      final atk = engine.command(turn, 'p1', const AttackCommand())!;
+      expect(p.nextTurn, lessThan(def.state.party.first.nextTurn));
+      expect(p.nextTurn, lessThan(atk.state.party.first.nextTurn));
+      // Fuera de turno no vale.
+      expect(engine.command(step.state, 'p1', const PassCommand()), isNull);
+    });
+
     test('Poción de vida revive al aliado caído', () {
       final engine = _engine();
       final start = engine.start(

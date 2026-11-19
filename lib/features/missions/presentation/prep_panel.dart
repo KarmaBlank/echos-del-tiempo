@@ -45,7 +45,12 @@ class PrepPanel extends StatefulWidget {
     this.ethers = 0,
     this.shopTabs = const [],
     this.turnTimer = TurnTimer.normal,
+    this.members,
   });
+
+  /// Selector de miembro de la party jugando solo, arriba de las pestañas
+  /// (solo_party.md § 6.2); `null` = sin selector.
+  final Widget? members;
 
   /// Tiempo de turno de la sala (lo elige el anfitrión).
   final TurnTimer turnTimer;
@@ -81,6 +86,17 @@ class PrepPanel extends StatefulWidget {
 }
 
 class _PrepPanelState extends State<PrepPanel> {
+  Widget _header(Widget tabs) {
+    final m = widget.members;
+    return m == null
+        ? tabs
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [m, tabs],
+          );
+  }
+
   int _tab = 0;
 
   @override
@@ -108,11 +124,11 @@ class _PrepPanelState extends State<PrepPanel> {
           help: PrepPanel.help,
           titleTrailing: ProtoText('Créditos <b>₵${w.credits}</b> · '
               '${protoColor(nReady == w.players.length ? ProtoColors.green : ProtoColors.dim, '$nReady/${w.players.length} listos')}'),
-          header: PanelTabs(
+          header: _header(PanelTabs(
             labels: [for (final t in tabs) t.label],
             index: _tab,
             onChanged: (i) => setState(() => _tab = i),
-          ),
+          )),
           leading: [
             PanelButton('CANCELAR MISIÓN',
                 key: const ValueKey('prep-cancel'), onPressed: w.onCancel),

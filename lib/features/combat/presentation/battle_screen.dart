@@ -10,14 +10,19 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_panel.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../../../game_engine/data/classes_catalog.dart';
+import '../../../game_engine/data/elements_catalog.dart' show elementOfDual;
 import '../../../game_engine/data/skills_catalog.dart';
+import '../../../game_engine/data/weapon_duals_catalog.dart';
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
-import '../../../game_engine/rules/battle_engine.dart' show ultimateOf;
+import '../../../game_engine/rules/battle_engine.dart'
+    show BattleEngine, ultimateOf;
+import '../../../game_engine/rules/dual_rules.dart';
 import '../../../game_engine/rules/js_math.dart';
 import '../../bestiary/domain/bestiary_text.dart';
 import '../../bestiary/presentation/enemy_info_card.dart';
@@ -335,8 +340,9 @@ class BattleViewState extends State<BattleView>
 
   /// Teclas de batalla: 1-9 eligen la acción N de la lista que se ve,
   /// ↑/↓ mueven la elegida, ←/→ cambian de categoría, Enter/Espacio
-  /// confirman, Q/Tab cambian de objetivo y Esc sale del submenú (o
-  /// vuelve a la primera página). Devuelve si la tecla se usó.
+  /// confirman, Q/Tab cambian de objetivo, P va a PASAR (otra P: pasa el
+  /// turno) y Esc sale del submenú (o vuelve a la primera página).
+  /// Devuelve si la tecla se usó.
   bool handleKey(LogicalKeyboardKey key) {
     if (key == LogicalKeyboardKey.keyQ || key == LogicalKeyboardKey.tab) {
       cycleTarget();
@@ -358,6 +364,18 @@ class BattleViewState extends State<BattleView>
     }
     final cur = widget.battle.current;
     final acting = widget.canAct && cur != null && cur.isPlayer;
+    // P: va a PASAR; con PASAR ya elegido, pasa el turno (dos toques: no
+    // se pierde un turno por una tecla suelta).
+    if (key == LogicalKeyboardKey.keyP) {
+      if (acting) {
+        if (_potMode == null && _category == BattleCategory.pass) {
+          _send(const PassCommand());
+        } else {
+          selectCategory(BattleCategory.pass);
+        }
+      }
+      return true;
+    }
     if (key == LogicalKeyboardKey.arrowLeft ||
         key == LogicalKeyboardKey.arrowRight) {
       if (acting && _potMode == null) {
@@ -495,6 +513,43 @@ class BattleViewState extends State<BattleView>
       '${cur.stunOnAttackChance > 0 ? '<br>${hexSpan('#ffeaa7', '${jsRound(cur.stunOnAttackChance * 100)}% de aturdir')}' : ''}'
       '${cur.branch == 'creyente' ? '<br>${hexSpan('#7bed9f', '25%: cura 2% al grupo')}' : cur.branch == 'inherente' ? '<br>${hexSpan('#fff3b0', '25%: aplica Sagrado')}' : ''}';
 
+  /// Una fila de DÚOS: [cur] con [q] haciendo el dúo [id]. Id estable:
+  /// `duo-<aliado>` el de clase (como en v0.8.2) y `duo-<aliado>-<id>`
+  /// los de armas.
+  BattleAction _duoAction(Combatant cur, Combatant q, String id, DualDef du) {
+    const mp = BattleEngine.dualMpCost;
+    final ok = cur.mp >= mp && q.mp >= mp;
+    final sum = (math.max(cur.attack, cur.magic) + math.max(q.attack, q.magic)) *
+        du.power;
+    final el = elementOfDual(du);
+    final w = du.weapons;
+    final pair = w == null
+        ? '${protoEsc(kClasses[cur.classId]?.name ?? cur.classId ?? '?')} + '
+            '${protoEsc(kClasses[q.classId]?.name ?? q.classId ?? '?')}'
+        : '${protoEsc(cur.weaponType ?? '?')} + ${protoEsc(q.weaponType ?? '?')}';
+    return BattleAction(
+      id: w == null ? 'duo-${q.id}' : 'duo-${q.id}-$id',
+      name: '★ ${du.name} (+${protoEsc(q.name)})',
+      value: '${hexSpan(w == null ? '#9fb4ff' : '#ffd166', '[$pair]')} '
+          '${_est(cur, sum, all: true, crit: false)} ${_stTag(du.status)}',
+      cost: hexSpan('#74b9ff', '$mp MP c/u'),
+      dual: true,
+      description: '<b>★ ${du.name}</b> <span class="k">dúo '
+          '${w == null ? 'de clase' : 'de armas'}: ${protoEsc(cur.name)} + '
+          '${protoEsc(q.name)}</span><br>'
+          '${w == null ? 'Clases' : 'Armas'}: $pair · elemento '
+          '${el.label}<br>'
+          '(máx(ATQ, MAG) tuyo + suyo) × ${fm(du.power)} = <b>'
+          '${jsRound(sum)}</b> a TODOS los enemigos<br>'
+          '${statusApplicationMarkup(du.status)}<br>'
+          '$mp MP cada uno · ${protoEsc(q.name)} pierde su próximo turno',
+      reason: ok ? null : 'Hace falta $mp MP cada uno.',
+      onSelect: ok
+          ? () => _send(DualCommand(q.id, dualId: w == null ? null : id))
+          : null,
+    );
+  }
+
   /// Las categorías del menú de [cur] con sus acciones (las vacías no
   /// están). Cada acción con su id estable.
   List<BattleCategoryEntry> _entries(Combatant cur) {
@@ -546,29 +601,12 @@ class BattleViewState extends State<BattleView>
           badge: hexSpan('#9fb4ff', '${skills.length}')));
     }
 
+    // Dúos (v0.8.3, combat.md § "Dúos"): por cada aliado vivo, el de
+    // clase (si el par tiene) y los de armas de sus tipos de arma.
     final duos = [
       for (final q in allies)
-        if (kDuals[dualKey(cur.classId ?? '', q.classId ?? '')] case final du?)
-          BattleAction(
-            id: 'duo-${q.id}',
-            name: '★ ${du.name} (+${protoEsc(q.name)})',
-            value:
-                '${_est(cur, (math.max(cur.attack, cur.magic) + math.max(q.attack, q.magic)) * du.power, all: true, crit: false)} ${_stTag(du.status)}',
-            cost: hexSpan('#74b9ff', '4 MP c/u'),
-            dual: true,
-            description: '<b>★ ${du.name}</b> <span class="k">dúo con '
-                '${protoEsc(q.name)}</span><br>'
-                '(máx(ATQ, MAG) tuyo + suyo) × ${fm(du.power)} = <b>'
-                '${jsRound((math.max(cur.attack, cur.magic) + math.max(q.attack, q.magic)) * du.power)}</b>'
-                ' a TODOS los enemigos<br>'
-                '${statusApplicationMarkup(du.status)}<br>'
-                '4 MP cada uno · ${protoEsc(q.name)} pierde su próximo turno',
-            reason:
-                cur.mp >= 4 && q.mp >= 4 ? null : 'Hace falta 4 MP cada uno.',
-            onSelect: cur.mp >= 4 && q.mp >= 4
-                ? () => _send(DualCommand(q.id))
-                : null,
-          ),
+        for (final id in dualIdsFor(kAllDuals, cur, q))
+          if (kAllDuals[id] case final du?) _duoAction(cur, q, id, du),
     ];
     if (duos.isNotEmpty) {
       out.add(BattleCategoryEntry(BattleCategory.duos, duos,
@@ -651,6 +689,20 @@ class BattleViewState extends State<BattleView>
         description: '<b>Defender</b><br>Recibes la mitad del daño hasta tu '
             'próximo turno, y tu siguiente turno llega 30% antes.',
         onSelect: () => _send(const DefendCommand()),
+      ),
+    ]));
+
+    // Pasar turno (v0.8.3, combat.md § "Pasar turno"). AUTO nunca pasa.
+    out.add(BattleCategoryEntry(BattleCategory.pass, [
+      BattleAction(
+        id: 'pass',
+        name: 'Pasar turno',
+        cost: hexSpan('#9fb4ff', 'próximo ×½'),
+        description: '<b>Pasar turno</b> <span class="k">P</span><br>'
+            'Terminás el turno sin actuar; tu próximo turno llega antes '
+            '(a la mitad del intervalo). Sin carga de ULT ni defensa: '
+            'sirve para esperar la reacción o el cebado de un aliado.',
+        onSelect: () => _send(const PassCommand()),
       ),
     ]));
     return out;
@@ -759,6 +811,8 @@ class BattleViewState extends State<BattleView>
 
   /// Clic en la escena: elige al enemigo vivo bajo el puntero.
   void _tapScene(Offset local) {
+    // Un toque durante la cinemática de un dúo la saltea (v0.8.3).
+    if (scene.skipDuo()) return;
     final e = _foeAt(local);
     if (e != null) setState(() => _target = e.id);
   }

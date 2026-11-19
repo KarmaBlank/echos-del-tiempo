@@ -3,6 +3,7 @@ import 'package:echos_del_tiempo/core/audio/sfx_service.dart';
 import 'package:echos_del_tiempo/game_engine/data/skills_catalog.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_fx.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/proc_fx.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/scene/duo_cinematic.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/ult_cinematic.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_sfx.dart';
@@ -306,10 +307,14 @@ void main() {
           cue(Sfx.ult('ult_espada', Sfx.ultImpact), tajo.impactMs),
           cue(Sfx.critClink, tajo.impactMs),
           cue(Sfx.koEnemy, tajo.impactMs + SessionSfx.koAfterMs),
-          cue(Sfx.flash),
-          cue(Sfx.dualCast),
+          // v0.8.3: subida, acorde + destello al descargar, choque en el
+          // impacto de la cinemática de dúo.
+          cue(Sfx.dualRise),
+          cue(Sfx.flash, kDuoScript.buildMs),
+          cue(Sfx.dualCast, kDuoScript.buildMs),
+          cue(Sfx.dualClash, kDuoScript.impactMs),
           // guerrero+maga = Espada Llameante (Quemadura).
-          cue(Sfx.impactFire, BattleFx.dualDelayMs),
+          cue(Sfx.impactFire, kDuoScript.impactMs),
         ]);
   });
 

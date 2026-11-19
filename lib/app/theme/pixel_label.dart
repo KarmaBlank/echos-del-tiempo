@@ -13,7 +13,29 @@ import 'retro_theme.dart';
 /// lienzo virtual que después se agranda (eso las hace gordas y
 /// borrosas). Ver docs/specs/ui_style.md § "Etiquetas en el mundo".
 class PixelLabelPen {
+  /// Párrafos ya medidos por (texto, color, tamaño), del menos al más
+  /// usado (LRU): se dibujan cientos por segundo y medir un texto es caro
+  /// (docs/specs/exploration.md § "Rendimiento").
   final _texts = <(String, int, double), TextPainter>{};
+
+  /// Párrafos guardados como mucho. Al pasarse se tira el menos usado
+  /// (antes se vaciaba todo: un aviso que se desvanece, con un color por
+  /// cuadro, obligaba a volver a medir todas las etiquetas).
+  static const maxCached = 300;
+
+  /// Aciertos y textos medidos (tests y diagnóstico).
+  int hits = 0, misses = 0;
+
+  /// Párrafos guardados (tests).
+  int get cached => _texts.length;
+
+  /// Tira todo lo medido (cambió la fuente).
+  void clear() {
+    for (final t in _texts.values) {
+      t.dispose();
+    }
+    _texts.clear();
+  }
 
   /// La grilla de Press Start 2P: tamaños nítidos.
   static const grid = 8.0;
@@ -30,8 +52,19 @@ class PixelLabelPen {
       (worldSize >= 8 ? 2 : 1) * grid * unitFor(k);
 
   TextPainter layout(String s, Color color, double size) {
-    if (_texts.length > 300) _texts.clear();
-    return _texts.putIfAbsent((s, color.toARGB32(), size), () {
+    final key = (s, color.toARGB32(), size);
+    final hit = _texts.remove(key);
+    if (hit != null) {
+      hits++;
+      return _texts[key] = hit;
+    }
+    misses++;
+    if (_texts.length >= maxCached) {
+      // El menos usado. Sin dispose: quien lo pidió recién puede estar
+      // por pintarlo.
+      if (_texts.remove(_texts.keys.first) == null) _texts.clear();
+    }
+    return _texts[key] = () {
       return TextPainter(
         text: TextSpan(
           text: retroText(s),
@@ -44,7 +77,7 @@ class PixelLabelPen {
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-    });
+    }();
   }
 
   /// Ancho de [s] en [size] px.

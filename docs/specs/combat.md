@@ -88,9 +88,11 @@ siguiente batalla.
 - Luego se procesan sus estados (ver abajo). Si muere o pierde el turno,
   su próximo turno es `reloj + IV` y el turno termina.
 - Después de actuar, el próximo turno es `reloj + IV`.
-  Defender: `reloj + IV × 0.7` (actúa antes).
+  Defender: `reloj + IV × 0.7` (actúa antes). Pasar turno (v0.8.3):
+  `reloj + IV × 0.5` (§ "Pasar turno").
 - Si un jugador no actúa en 30 s, se defiende solo (`BattleEngine.timeout`)
-  y su próximo turno es `reloj + IV`.
+  y su próximo turno es `reloj + IV`. (El timeout **no** es un Pasar:
+  sigue defendiendo, sin el adelanto.)
 
 ## Daño
 
@@ -172,12 +174,109 @@ Objetivo: el enemigo vivo pedido, o el primero vivo.
 - **Dúo**: con un aliado vivo; ambos pagan 4 MP. Daño a todos:
   `(max(ATQ,MAG) + max(ATQ,MAG)_aliado) × poder`, crítico promedio de
   ambos. El aliado gasta su próximo turno (`max(su turno, reloj) + IV`).
+  De clase o de armas (v0.8.3): ver § "Dúos".
 - **Poción de vida**: cura 45% de la vida máx., revive y quita Quemadura
   y Veneno. Sin objetivo: el aliado con menor % de vida (puede estar caído).
   Si revive, su próximo turno es `reloj + IV`.
 - **Poción de maná**: 50% del maná máx. Sin objetivo: el aliado vivo con
   menor % de maná.
 - **Defender**: ½ daño hasta su próximo turno, que llega antes (`IV × 0.7`).
+- **Pasar turno** (`PassCommand`, v0.8.3): ver abajo.
+
+### Dúos (v0.8.3)
+
+Hay dos familias de dúos, todas en `GameCatalog.duals` (`kAllDuals`):
+
+- **De clase** (`kDuals`, `skills_catalog.dart`, del prototipo): clave
+  `dualKey(claseA, claseB)` = las dos clases en orden alfabético unidas
+  por `+` (`guerrero+maga`).
+- **De armas** (`kWeaponDuals`, `weapon_duals_catalog.dart`, nuevos en
+  v0.8.3): clave `w_<nombre>` (sin `+`), con `DualDef.weapons` = el par
+  de tipos de arma (`WeaponDef.type`) que lo habilita, en cualquier
+  orden y sin importar la clase.
+
+Disponibilidad (`dual_rules.dart`, puro, lo usan motor y UI):
+`dualFits(id, dúo, p, q)` — de clase si `id == dualKey(clase p, clase
+q)`; de armas si `{arma p, arma q}` es su par. `dualIdsFor(duals, p, q)`
+= primero el de clase (si el par tiene), después los de armas en el
+orden del catálogo. Además: el aliado vivo y 4 MP cada uno (igual que
+antes; no hay regla de "turnos cercanos": cualquier aliado vivo sirve,
+y pierde su próximo turno). Si un par habilita varios dúos, se ofrecen
+**todos** (DÚOS lista cada uno). Vale igual para co-op y para los
+compañeros de la party en solitario (su turno manual usa el mismo menú).
+
+Comando: `DualCommand(partnerId, dualId?)`. `dualId == null` = el dúo de
+clase del par (exactamente v0.8.2); si no, ese dúo, y el comando se
+rechaza si el par no lo puede hacer (`dualFits`). `ActionEvent` del dúo:
+`skillId` = la clave del dúo (`guerrero+maga` o `w_...`).
+
+Elemento: el de su estado (`elementOfDual` = `statusElement(status)`,
+físico si es Aturdido). Todos los golpes del dúo llevan ese elemento:
+**ceban y detonan reacciones** como cualquier golpe elemental (§
+"Elementos y reacciones").
+
+Balance: los dúos de armas son entidades `dual` del parche de balance
+como los de clase (poder y estado editables; `weapons` no se edita).
+
+Ritmo (sesión): después de un dúo el host espera 1.5 s antes del
+próximo paso (la cinemática de dúo dura 1.6 s; ULT 2.3 s, resto 0.8 s).
+
+| Id | Armas | Nombre | Estado | Elemento | Poder |
+|---|---|---|---|---|---|
+| `w_flechaArcana` | arco + báculo | Flecha Arcana Gemela | Cargado 1 | Electro | 1.45 |
+| `w_bastionRunico` | espada+escudo + tomo | Bastión Rúnico | Sagrado 2 | Sagrado | 1.45 |
+| `w_fuegoCruzado` | dagas + rifle | Fuego Cruzado Letal | Quemadura 2 | Fuego | 1.45 |
+| `w_terremotoDoble` | hacha + martillo+escudo | Terremoto Doble | Aturdido 1 (40%) | Físico | 1.45 |
+| `w_saetaVoltaica` | varita + ballesta | Saeta Voltaica | Cargado 1 | Electro | 1.45 |
+| `w_juicioPerforante` | lanza + maza+escudo | Juicio Perforante | Sagrado 2 | Sagrado | 1.45 |
+| `w_filoIgneo` | espada + varita | Filo Ígneo Arcano | Quemadura 2 | Fuego | 1.45 |
+| `w_hojaMaldita` | tomo + dagas | Hoja Maldita | Veneno 2 | Veneno | 1.45 |
+| `w_tajoGlaciar` | hacha + báculo | Tajo Glaciar | Congelación 1 | Hielo | 1.45 |
+| `w_diluvioAstas` | lanza + arco | Diluvio de Astas | Mojado 1 | Agua | 1.45 |
+
+Los 13 tipos de arma aparecen en al menos un dúo. "Fuego Cruzado" ya era
+el dúo `tirador+tirador`: el de dagas + rifle se llama "Fuego Cruzado
+Letal" para no repetir nombre. Los 10 de clase siguen igual
+(`guerrero+maga` Espada Llameante ... `tirador+tirador` Fuego Cruzado).
+
+Red: `du` en el JSON del comando (aditivo, sin subir `kProtocolVersion`).
+Un host v0.8.2 lo ignora y hace el dúo de clase del par (o rechaza el
+comando si el par no tiene dúo de clase): para usar los dúos de armas el
+**anfitrión** tiene que tener v0.8.3.
+
+### Pasar turno (v0.8.3)
+
+Pedido del dueño ("botón de saltar turno"). Termina el turno **sin
+actuar** para que el próximo llegue antes: sirve para esperar la reacción
+o el cebado de un aliado (p. ej. dejar que la Maga moje al enemigo y
+volver justo después a detonarlo) o para reordenar el timeline.
+
+| Qué | Valor |
+|---|---|
+| Próximo turno | `reloj + IV × 0.5` (`BattleEngine.passTurnFactor`; acción normal × 1, Defender × 0.7) |
+| Carga de ULT | ninguna (no hay daño ni acción) |
+| Defender | no (`defending` queda en `false`: recibe el daño completo) |
+| MP / pociones | no gasta |
+| Procs del árbol (`onSkill`, `onAttack`...) | ninguno |
+| Efectos con duración | bajan 1 turno (`tickEffects`), como cualquier turno terminado |
+| Eventos | ninguno de acción (no hay `ActionEvent` nuevo); solo el log `X pasa el turno (el próximo llega antes)` |
+
+Notas de balance:
+- Como el próximo turno llega antes, lo que se dispara "al empezar el
+  turno" (estados como Veneno/Quemadura, regeneración del arma,
+  `onTurnStart`) se procesa antes también: pasar seguido no es gratis.
+- Pasar dos veces seguidas = un turno entero sin actuar (`0.5 + 0.5`).
+- El AUTO de los compañeros (`CompanionAi`) **nunca** pasa.
+- `passTurnFactor` es una constante del motor (no está en la admin de
+  balance todavía).
+- Validación: como cualquier comando (`command` → `null` fuera de turno,
+  batalla terminada o actor caído). Sin enemigos vivos también `null`.
+
+Red (host-autoritativo, sin subir `kProtocolVersion`): viaja como
+`{"t":"cmd","a":"def","ps":true}`, una variante aditiva de Defender. Un
+host v0.8.2 ignora `ps` y lo resuelve como Defender (degrada sin romper);
+un host v0.8.3 lo resuelve como Pasar. Sin `ps` (o `ps: false`) sigue
+siendo Defender.
 
 ### Variantes de habilidades (v0.5)
 
@@ -388,7 +487,8 @@ estaba quebrado (lleva el +50%). `BattleEvent` no es `sealed`: un
 - `attack` (con `targetId`; `allTargets` con la keystone `imparable`),
   `skill` / `ultimate` (con `skillId` = `SkillDef.id`, p. ej. `giro` o
   `ult_espada`; `targetId` solo si es de daño a un enemigo), `dual`
-  (`partnerId`, siempre `allTargets`), `potion` / `ether` (`targetId` =
+  (`partnerId`, siempre `allTargets`; `skillId` = clave del dúo desde
+  v0.8.3), `potion` / `ether` (`targetId` =
   el aliado que la recibe), `defend` (también al agotarse el tiempo);
 - enemigos: `enemyAttack` y `enemyHeavy` (Golpe Brutal), con
   `targetId` = la víctima elegida (antes de la Protección),

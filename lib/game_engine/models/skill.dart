@@ -211,11 +211,19 @@ class SkillDef {
   bool get shields => partyShield > 0 || allyShield > 0 || selfShield > 0;
 }
 
-/// Ataque combinado de dos clases (`DUALS`).
+/// Ataque combinado (`DUALS`): de dos clases (clave `dualKey`) o, desde
+/// v0.8.3, de dos TIPOS DE ARMA ([weapons], docs/specs/combat.md § "Dúos").
 class DualDef {
   final String name;
   final StatusApplication status;
   final double power;
 
-  const DualDef(this.name, this.status, this.power);
+  /// Dúo de armas: los dos tipos de arma (`WeaponDef.type`) que lo
+  /// habilitan, en cualquier orden. `null` = dúo de clase.
+  final List<String>? weapons;
+
+  const DualDef(this.name, this.status, this.power, {this.weapons});
+
+  /// Dúo de armas (v0.8.3).
+  bool get byWeapon => weapons != null;
 }

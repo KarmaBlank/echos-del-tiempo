@@ -198,6 +198,47 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool isAuto(String playerId) => _auto.contains(playerId);
 
+  /// Miembro activo elegido en el selector (solo_party.md § 6); `null` =
+  /// el jugador local.
+  String? _acting;
+
+  /// Sobre quién actúan las acciones de personaje, inventario y tiendas:
+  /// el compañero elegido si sigue en la sala, si no el jugador local.
+  String get actingId {
+    final a = _acting;
+    return a != null &&
+            _companions.containsKey(a) &&
+            (_s?.players.containsKey(a) ?? false)
+        ? a
+        : localId;
+  }
+
+  /// Los miembros de la party de este dispositivo en orden: el local y
+  /// sus compañeros.
+  List<String> get members => [localId, ..._companions.keys];
+
+  /// Elige el miembro activo (el local o uno de sus compañeros). No se
+  /// puede mientras el líder reparte su subida de nivel.
+  bool setActing(String playerId) {
+    final s = _s;
+    if (s == null || !controls(playerId) || s.mustAllocate(localId)) {
+      return false;
+    }
+    final next = playerId == localId ? null : playerId;
+    if (next == _acting) return true;
+    _acting = next;
+    _emit();
+    return true;
+  }
+
+  /// Miembro anterior (`-1`) / siguiente (`+1`), en círculo (`Ctrl+←/→`).
+  bool cycleActing(int delta) {
+    final list = members;
+    if (list.length < 2) return false;
+    final i = list.indexOf(actingId);
+    return setActing(list[(i + delta) % list.length]);
+  }
+
   /// Prende / apaga el AUTO de un compañero (se recuerda en la cuenta).
   void setAuto(String playerId, bool on) {
     final slot = _companions[playerId];
@@ -270,6 +311,7 @@ class SessionController extends StateNotifier<SessionView?> {
       final step = s == null ? null : engine.removeCompanion(s, id);
       if (step == null) continue;
       _companions.remove(id);
+      if (_acting == id) _acting = null;
       _auto.remove(id);
       _companionWants.remove(id);
       _companionSaved.remove(id);
@@ -1030,9 +1072,11 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool cancelPrep() => _apply(const CancelPrepAction());
 
-  bool changeClass(String classId) => _apply(ChangeClassAction(classId));
+  bool changeClass(String classId) =>
+      _applyFor(actingId, ChangeClassAction(classId));
 
-  bool allocate(Map<Attribute, int> add) => _apply(AllocateStatsAction(add));
+  bool allocate(Map<Attribute, int> add) =>
+      _applyFor(actingId, AllocateStatsAction(add));
 
   /// El comando de quien tiene el turno si lo controla este dispositivo
   /// (el local o un compañero; solo_party.md § 4); si no, del local.
@@ -1049,46 +1093,49 @@ class SessionController extends StateNotifier<SessionView?> {
   bool backToLobby() => _apply(const BackToLobbyAction());
 
   /// "Reiniciar puntos".
-  bool respec() => _apply(const RespecAction());
+  bool respec() => _applyFor(actingId, const RespecAction());
 
-  bool equip(String weaponId) => _apply(EquipAction(weaponId));
+  bool equip(String weaponId) => _applyFor(actingId, EquipAction(weaponId));
 
-  bool buyWeapon(String weaponId) => _apply(BuyWeaponAction(weaponId));
+  bool buyWeapon(String weaponId) =>
+      _applyFor(actingId, BuyWeaponAction(weaponId));
 
-  bool buyItem(BattleItem item) => _apply(BuyItemAction(item));
+  bool buyItem(BattleItem item) => _applyFor(actingId, BuyItemAction(item));
 
   bool upgrade(String weaponId, UpgradeStat stat) =>
-      _apply(UpgradeAction(weaponId, stat));
+      _applyFor(actingId, UpgradeAction(weaponId, stat));
 
   bool fuse(String baseWeaponId, String sacrificeWeaponId, String skillId) =>
-      _apply(FuseAction(baseWeaponId, sacrificeWeaponId, skillId));
+      _applyFor(actingId, FuseAction(baseWeaponId, sacrificeWeaponId, skillId));
 
   // ---- loot v2 (loot.md § 19): el host valida todo ----
 
   /// Forja y fusión libre (solo lobby / preparación).
-  bool craft(CraftAction a) => _apply(a);
+  bool craft(CraftAction a) => _applyFor(actingId, a);
 
   /// Dar [count] de [token] (`uid`, `pot`, `eter`, `mat:<material>`) a
   /// otro jugador de la sala.
   bool give(String toPlayerId, String token, {int count = 1}) =>
-      _apply(GiveItemAction(toPlayerId, token, count: count));
+      _applyFor(actingId, GiveItemAction(toPlayerId, token, count: count));
 
   /// Soltar al piso (compartido).
   bool dropItem(String token, {int count = 1}) =>
-      _apply(DropItemAction(token, count: count));
+      _applyFor(actingId, DropItemAction(token, count: count));
 
   /// Levantar del piso (E).
   bool pickUp(int groundId) => _apply(PickUpAction(groundId));
 
   /// Intercambiar dos casillas del inventario.
-  bool moveInventory(int from, int to) => _apply(MoveInventoryAction(from, to));
+  bool moveInventory(int from, int to) =>
+      _applyFor(actingId, MoveInventoryAction(from, to));
 
   /// ORDENAR el inventario (v0.5.1, loot.md § 17.2).
   bool sortInventory(InventorySortKey key) =>
-      _apply(SortInventoryAction(key));
+      _applyFor(actingId, SortInventoryAction(key));
 
   /// Guardar el filtro de loot (`null` = el por defecto).
-  bool setLootFilter(String? text) => _apply(SetLootFilterAction(text));
+  bool setLootFilter(String? text) =>
+      _applyFor(actingId, SetLootFilterAction(text));
 
   // ---- plan de build → filtro de loot (build_planner.md § 6) ----
 
@@ -1117,6 +1164,17 @@ class SessionController extends StateNotifier<SessionView?> {
     _apply(SetBuildWantsAction(_localWants));
   }
 
+  /// Cambia el plan de build de [playerId] (el local o un compañero; la
+  /// pestaña BUILD con el selector de miembro, solo_party.md § 6.2).
+  void setMemberWants(String playerId, BuildWants? wants) {
+    if (playerId == localId) return setBuildWants(wants);
+    if (!_companions.containsKey(playerId)) return;
+    final next = wants == null || wants.isEmpty ? null : wants;
+    if (next == _companionWants[playerId]) return;
+    _companionWants[playerId] = next;
+    _applyFor(playerId, SetBuildWantsAction(next));
+  }
+
   /// Cómo ve el jugador [playerId] un drop: con el plan local solo si es
   /// el jugador local (un compañero se evalúa sin plan: no lo conocemos).
   FilterVerdict? lootVerdictFor(String playerId, LootDrop d) {
@@ -1128,9 +1186,9 @@ class SessionController extends StateNotifier<SessionView?> {
             : _companionWants[playerId]);
   }
 
-  bool takeNode(String nodeId) => _apply(TakeNodeAction(nodeId));
+  bool takeNode(String nodeId) => _applyFor(actingId, TakeNodeAction(nodeId));
 
-  bool resetTree() => _apply(const ResetTreeAction());
+  bool resetTree() => _applyFor(actingId, const ResetTreeAction());
 
   // ---- endgame (docs/specs/ecos_atlas.md) ----
 
@@ -1157,7 +1215,8 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   /// Craftear un Eco del inventario.
-  bool ecoCraft(String uid, EcoCraftOp op) => _apply(EcoCraftAction(uid, op));
+  bool ecoCraft(String uid, EcoCraftOp op) =>
+      _applyFor(actingId, EcoCraftAction(uid, op));
 
   /// Solo desarrollo: un Eco Raro de [tier] (el motor la rechaza sin
   /// `devTools`).
@@ -1168,14 +1227,15 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Proponer la Prueba del Tiempo [n] (cierra la estatua si se aceptó).
   bool proposeTrial(int n) => _apply(ProposeTrialAction(n));
 
-  bool chooseAscension(String id) => _apply(ChooseAscensionAction(id));
+  bool chooseAscension(String id) =>
+      _applyFor(actingId, ChooseAscensionAction(id));
 
   bool takeAscensionNode(String nodeId) =>
-      _apply(TakeAscensionNodeAction(nodeId));
+      _applyFor(actingId, TakeAscensionNodeAction(nodeId));
 
   /// Reinicio gratis de los nodos; con [full] además vuelve a la clase base.
   bool resetAscension({bool full = false}) =>
-      _apply(ResetAscensionAction(full: full));
+      _applyFor(actingId, ResetAscensionAction(full: full));
 
   /// La última Prueba completada en esta misión y si el jugador local
   /// ganó sus puntos (para el resultado); `null` si no hubo.
@@ -1417,6 +1477,8 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     final mode = s.mode;
     final must = s.mustAllocate(localId);
+    // El reparto de la subida de nivel es del líder (solo_party.md § 6.1).
+    if (must || !_companions.containsKey(_acting)) _acting = null;
     if (mode == SessionMode.prep &&
         (_panel == null ||
             _panel == WorldPanel.missionBoard ||
@@ -1451,6 +1513,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (_panel == WorldPanel.map && !mapAvailable) _panel = null;
 
     final (prompt, promptText) = _prompt();
+    final prev = state;
     state = SessionView(
       session: s,
       localId: localId,
@@ -1458,20 +1521,38 @@ class SessionController extends StateNotifier<SessionView?> {
       panel: _panel,
       prompt: prompt,
       promptText: promptText,
-      messages: List.unmodifiable(_messages),
-      chat: List.unmodifiable(_chat),
+      // Mismas listas si no cambiaron: el HUD compara por identidad y no
+      // reconstruye el chat (exploration.md § "Rendimiento").
+      messages: _keep(prev?.messages, _messages),
+      chat: _keep(prev?.chat, _chat),
       battleEvents: _battleEvents,
       battleEventSeq: _battleSeq,
       roomCode: net?.roomCode,
       disconnected: _disconnected,
-      missionLoot: List.unmodifiable(_missionLoot),
+      missionLoot: _keep(prev?.missionLoot, _missionLoot),
       atlas: _atlas,
       atlasGain: _atlasGain,
       bestiary: _bestiary,
       saveError: _saveError,
-      companions: List.unmodifiable(_companions.keys),
-      auto: Set.unmodifiable(_auto),
+      companions: _keep(prev?.companions, [..._companions.keys]),
+      auto: prev != null && setEquals(prev.auto, _auto)
+          ? prev.auto
+          : Set.unmodifiable(_auto),
+      actingId: _acting,
     );
+  }
+
+  /// [prev] si tiene los mismos elementos que [now] (idénticos o `==`);
+  /// si no, una copia inmodificable de [now].
+  static List<T> _keep<T>(List<T>? prev, List<T> now) {
+    if (prev != null && prev.length == now.length) {
+      var same = true;
+      for (var i = 0; i < now.length && same; i++) {
+        same = identical(prev[i], now[i]) || prev[i] == now[i];
+      }
+      if (same) return prev;
+    }
+    return List.unmodifiable(now);
   }
 
   (WorldPrompt?, String?) _prompt() {

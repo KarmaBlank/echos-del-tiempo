@@ -1252,6 +1252,21 @@ Map<String, SfxDef> buildCombatSfx() {
       for (final f in [392.0, 494.0, 587.0])
         _t(f, 0.35, w: _sq, to: f * 2, v: 0.2),
     ]),
+    // Dúos v0.8.3: dos barridos que se cruzan (uno sube, otro baja) con
+    // un soplido, y el choque: dos golpes casi juntos + acorde brillante.
+    Sfx.dualRise: act([
+      _t(196, 0.55, w: _saw, to: 784, v: 0.16, lp: 2400),
+      _t(1568, 0.55, w: _saw, to: 392, v: 0.12, lp: 2400),
+      _n(5000, 0.5, to: 12000, v: 0.12, a: 0.3, seed: 31),
+    ]),
+    Sfx.dualClash: SfxDef([
+      _n(9000, 0.18, v: 0.5, seed: 33),
+      _t(110, 0.22, w: _sin, to: 45, v: 0.7),
+      _n(7000, 0.16, v: 0.45, at: 0.06, seed: 34),
+      _t(98, 0.2, w: _sin, to: 40, v: 0.6, at: 0.06),
+      for (final f in [523.0, 659.0, 784.0, 1047.0])
+        _t(f, 0.5, w: _tri, v: 0.14, at: 0.08),
+    ], peak: SfxLevel.crit),
     // ---- estados ----
     Sfx.status('burn'): st([
       _n(9000, 0.22, crush: 3, v: 0.4, seed: 7),

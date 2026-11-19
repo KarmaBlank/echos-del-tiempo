@@ -32,6 +32,8 @@ const kMenuKeys = <(String, String)>[
   ('Q / E', 'Pestaña anterior / siguiente'),
   ('Ctrl+Tab', 'Pestaña siguiente (Ctrl+Shift+Tab: anterior)'),
   ('1 - 9', 'Ir a la pestaña N (o al personaje / clase N en el título)'),
+  ('Ctrl+← / Ctrl+→',
+      'Party jugando solo: personaje anterior / siguiente (personaje, tiendas, Portal, Estatua)'),
   ('Inventario', 'Flechas mueven la casilla; Enter otra vez equipa el arma'),
 ];
 
@@ -463,6 +465,12 @@ class FocusGridState extends State<FocusGrid> {
     }
     final k = e.logicalKey;
     final cols = widget.columns;
+    // Ctrl+flechas: del panel (miembro de la party, solo_party.md § 6.2).
+    if (HardwareKeyboard.instance.isControlPressed &&
+        (k == LogicalKeyboardKey.arrowLeft ||
+            k == LogicalKeyboardKey.arrowRight)) {
+      return KeyEventResult.ignored;
+    }
     int? to;
     if (k == LogicalKeyboardKey.arrowLeft && i % cols > 0) to = i - 1;
     if (k == LogicalKeyboardKey.arrowRight &&

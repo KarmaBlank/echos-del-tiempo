@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/theme/pixel_label.dart';
+import '../../../../core/perf/perf_log.dart';
 import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/models/game_map.dart';
@@ -29,6 +30,7 @@ import 'actor_painter.dart';
 import 'loot_painter.dart';
 import 'map_labels.dart';
 import 'map_themes.dart';
+import 'tile_cache.dart';
 import 'tile_painter.dart';
 import 'void_painter.dart';
 
@@ -82,14 +84,28 @@ class MapGame extends Game {
       weaponTypeOf: (id) => controller.engine.catalog.weapons[id]?.type,
     );
     _events = controller.events.listen(_onEvent);
+    // Para la línea de rendimiento de ecos.log (FPS Y PING prendido).
+    PerfLog.probes['mapa'] = _perfProbe;
   }
+
+  String _perfProbe() =>
+      '${tileLayer.direct ? 'tiles directo' : 'tiles en caché'}'
+      ' (${tileLayer.cachedChunks} bloques, ${tileLayer.built} grabados)'
+      ' · etiquetas ${labelPen.cached} medidas'
+      ' (${labelPen.misses} de ${labelPen.hits + labelPen.misses})';
 
   final SessionController controller;
   final GameSprites sprites;
   final MoveInputReader _input;
   final ActorPainter actors;
   final tiles = TilePainter();
+  late final tileLayer = TileLayerCache(tiles);
   final voidBg = VoidPainter();
+
+  /// Lo último dibujado: en [update] se graba de antemano un bloque de la
+  /// capa estática que falte cerca (uno por cuadro).
+  GameMap? _prefetchMap;
+  Rect? _prefetchView;
   late final LootPainter loot;
   final KeyReader _showAll;
   final KeyReader _pickKey;
@@ -287,6 +303,8 @@ class MapGame extends Game {
 
   @override
   void onRemove() {
+    tileLayer.dispose();
+    if (PerfLog.probes['mapa'] == _perfProbe) PerfLog.probes.remove('mapa');
     unawaited(_events.cancel());
     super.onRemove();
   }
@@ -340,6 +358,8 @@ class MapGame extends Game {
     if (_pickEdge.poll(_pickKey())) tryPickUp();
     final view = controller.view;
     if (view != null) _updateCamera(view, dt);
+    final pm = _prefetchMap, pv = _prefetchView;
+    if (pm != null && pv != null) tileLayer.prefetch(pm, pv);
   }
 
   /// El piso actual de la misión dentro del atlas (o `null`).
@@ -391,8 +411,20 @@ class MapGame extends Game {
     return d;
   }
 
+  /// Arnés de rendimiento (tests): recibe los µs de cada [render].
+  @visibleForTesting
+  static void Function(int micros)? debugRenderTiming;
+
   @override
   void render(Canvas canvas) {
+    final timing = debugRenderTiming;
+    if (timing == null) return _render(canvas);
+    final sw = Stopwatch()..start();
+    _render(canvas);
+    timing(sw.elapsedMicroseconds);
+  }
+
+  void _render(Canvas canvas) {
     final view = controller.view;
     final full = Offset.zero & Size(size.x, size.y);
     canvas.drawRect(full, Paint()..color = kMapBackground);
@@ -462,21 +494,21 @@ class MapGame extends Game {
     final y0 = math.max(0, (camY / ts).floor());
     final x1 = math.min(map.width - 1, x0 + vw ~/ ts + 1);
     final y1 = math.min(map.height - 1, y0 + vh ~/ ts + 1);
-    String? at(int x, int y) => map.contains(x, y) ? map.tileAt(x, y) : null;
     // Pulso del Tiempo: con el reloj de la sala (el mismo que usa el host).
     final pulse = TrialRules.pulseCharge(s.time);
-    for (var y = y0; y <= y1; y++) {
-      for (var x = x0; x <= x1; x++) {
-        tiles.draw(c, map.tileAt(x, y), x * ts, y * ts, map.theme, x, y,
-            t: t,
-            gateOpen: s.gateOpen,
-            lobby: map.lobby,
-            at: at,
-            voidBackdrop: abyss,
-            density: particleDensity,
-            pulse: pulse);
-      }
-    }
+    // Capa estática por bloques + tiles animados encima (exploration.md §
+    // "Rendimiento").
+    final worldView = Rect.fromLTWH(camX.roundToDouble(), camY.roundToDouble(),
+        vw.toDouble(), vh.toDouble());
+    tileLayer.draw(c, map, worldView,
+        theme: map.theme,
+        backdrop: abyss,
+        t: t,
+        gateOpen: s.gateOpen,
+        density: particleDensity,
+        pulse: pulse);
+    _prefetchMap = map;
+    _prefetchView = worldView;
     // Arcos de las entradas de zona (sobresalen de su tile).
     for (final e in map.entrances) {
       if (e.tx < x0 - 2 || e.tx > x1 + 2 || e.ty < y0 || e.ty > y1 + 3) {
@@ -573,8 +605,10 @@ class MapGame extends Game {
       for (final it in mission.items) {
         if (it.floor != mission.floor) continue;
         // El cofre de una sala secreta no se ve hasta abrirla.
-        final hidden = it.secret != null && !mission.poiUsed.contains(it.secret);
-        final visible = !hidden && (it.kind == MissionItemKind.seal || !it.done);
+        final hidden =
+            it.secret != null && !mission.poiUsed.contains(it.secret);
+        final visible =
+            !hidden && (it.kind == MissionItemKind.seal || !it.done);
         final g = it.guard;
         final locked = g != null && (mission.enemy(g)?.alive ?? false);
         if (visible) add(it.y, () => actors.item(c, it, t, locked: locked));
@@ -667,9 +701,8 @@ class MapGame extends Game {
           const Color(0xFFA29BFE).withValues(alpha: a.clamp(0.0, 1.0)), 8);
     }
     if (showingQuestToast) {
-      final q = noticeFactor.isInfinite
-          ? 0.2
-          : (t - _questT0!) / questToastShownMs;
+      final q =
+          noticeFactor.isInfinite ? 0.2 : (t - _questT0!) / questToastShownMs;
       final a = (q < 0.85 ? 1.0 : (1 - q) / 0.15).clamp(0.0, 1.0);
       final y = 44.0 + (q < 0.1 ? (0.1 - q) * 80 : 0.0);
       c.drawRect(Rect.fromLTWH(vw / 2 - 110, y - 12, 220, 28),

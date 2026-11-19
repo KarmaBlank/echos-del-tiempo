@@ -142,9 +142,47 @@ Lo que quedó en el código (el resto del spec sigue mandando):
   estado. Enemigos: `kEnemyElement[tipo]`, si no el elemento del estado
   que aplica ese golpe, si no físico; ULT enemigas igual
   (`kEnemyUltElement`). El daño de las mecánicas (rebotes del árbol,
-  Combustión, trampas, Eco Arcano) y los ticks de estados **no**
-  reaccionan; los rebotes / atraviesa de las variantes sí (son golpes de
-  la habilidad).
+  Combustión, trampas) y los ticks de estados **no** reaccionan; los
+  rebotes / atraviesa de las variantes sí (son golpes de la habilidad).
+- **Regla general (arreglo v0.8.3, pedido del dueño): todo golpe con daño
+  que LLEVA un elemento puede detonar** — habilidad, ULT, dúo,
+  invocación y también un estado elemental que el golpe deja por el
+  arma o el árbol. Si el elemento propio del golpe no reacciona con el
+  objetivo, se prueban, en orden, los elementos de los estados que lleva
+  el golpe (`_carriedReaction`):
+  - el estado y los `extraStatuses` de la habilidad / ULT (Electrólisis
+    y Ojo de la Tormenta son Agua pero llevan Cargado: sobre un Mojado,
+    Electrocución);
+  - el `hitStatus` del dúo / la invocación;
+  - los estados del **Avatar del Pacto** (cada golpe en Avatar lleva los
+    elementos absorbidos);
+  - los estados que dejan los `onHit` / `onCrit` de tipo `inflict` del
+    árbol y de las pasivas de arma (Dios del Trueno, Señora de las
+    Mareas, Martillo Trueno, Descarga en Cadena, Flecha Imantada, Hoja
+    de Marea, Chaparrón...). Esos se tiran **después** del daño (tienen
+    probabilidad), así que la reacción se resuelve en el proc
+    (`_procHitReact`): lo que falta del ×1.5 entra como daño de la
+    reacción (`reaction.<kind>`) y después se aplica el estado. Por eso
+    **un ataque básico con Dios del Trueno sobre un Mojado electrocuta**
+    (era el reporte: "quedan Mojado y Cargado").
+  - Golpes enemigos: el estado que inflige el golpe, igual.
+
+  Sigue siendo **una reacción por golpe** (si el golpe ya reaccionó, el
+  proc solo aplica su estado) y siempre **antes** del estado del golpe.
+  **No** detonan: los ticks de estados; los procs sin golpe (`onBreak`,
+  `onHitTaken`, `onStatusApplied`, `onReaction`: Galerna, Pararrayos,
+  Conductora, Solvente...); las mecánicas "contra un X" (`status` en la
+  mecánica: Aguanieve sobre Mojados suma Congelación sin detonar); el
+  daño de mecánicas sin estado (rebote del árbol, Combustión, ráfaga), y
+  **Prisma Elemental** (`kPrimeOnlySkills`: golpe neutro que solo
+  prepara, ascension.md § 4.1). El **Eco Arcano** y el **Disparo
+  cargado** (variantes con `charge`) sí: repiten / difieren un golpe de
+  la habilidad y llevan su elemento (`_skillProcDamage`).
+- **Detonar (`SkillDef.detonate`: Supernova, Marea Alta...)**
+  consume los stacks elementales para su bonus, pero **no** el estado
+  que el propio golpe detona: ese lo consume la reacción (Supernova
+  sobre Veneno → Explosión tóxica; antes se comía el Veneno y no
+  reaccionaba).
 - **Cuándo.** La reacción se decide antes de calcular el golpe (el ×1.5
   entra en el golpe, log `× 1.5 ELECTROCUCIÓN`), se resuelve después de
   su `DamageEvent` y **antes** de que el golpe aplique su propio estado

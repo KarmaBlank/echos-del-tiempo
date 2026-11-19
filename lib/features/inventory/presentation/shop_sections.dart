@@ -52,7 +52,9 @@ class ShopContext {
   final ShopGuards guards;
   final ShopPreview preview;
 
-  PlayerProfile get profile => view.me!.profile;
+  /// El perfil del miembro activo (el local o el compañero elegido en el
+  /// selector; solo_party.md § 6).
+  PlayerProfile get profile => view.actor!.profile;
 
   /// Bases a la venta (cualquier familia: loot v2), por nivel.
   List<WeaponDef> forSale([String? family]) => [
@@ -285,7 +287,9 @@ class _BuyTabState extends ConsumerState<BuyTab> {
     final sample = ItemInstance.common('_shop', w.id, itemLevel: w.level);
     final eq = shop.rules.equippedItem(p);
     // ★ Tu build (build_planner.md § 4.1): qué metas cumple cada base.
-    final plan = ref.watch(buildPlanProvider).plan;
+    final plan = ref
+        .watch(buildPlanProvider)
+        .planFor(shop.controller.slotOf(shop.view.actorId));
     final fitRules = ref.watch(buildPlanRulesProvider);
     ItemFit fitOf(String baseId) => plan.goalCount == 0
         ? ItemFit.none

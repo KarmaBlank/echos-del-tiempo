@@ -267,3 +267,88 @@ Condición `Build` (loot.md § 13): sin plan no coincide nunca (ni
 
 - Compartir el plan con el grupo (los compañeros nunca lo ven).
 - Condición por meta concreta (`Build feroz`): hoy es por clase de meta.
+
+## 8. Recomendación de atributos (v0.8.3)
+
+Pedido del dueño: "que el builder te recomiende qué atributos subir según
+el arma y el árbol que elegiste".
+
+`AttributeAdvisor(progression).recommend(profile, [plan], [points])` →
+`List<AttrSuggestion>` (`lib/game_engine/rules/attribute_advisor.dart`,
+puro y determinista). Reparte los puntos libres del perfil (o `points`,
+para proyectar). Sin puntos devuelve vacío. Cada sugerencia: atributo,
+puntos, clase (`requirement` / `survival` / `scaling`, la más urgente
+que lo puso) y razones legibles. Orden: por clase, después más puntos.
+`AttributeAdvisor.split` da "FUE +2, DES +1"; `summary`, esa línea con
+la razón principal; `allocation`, el mapa para `AllocateStatsAction`.
+
+El reparto se arma en tres pasos, en este orden:
+
+### 8.1 Requisitos de las armas del plan (prioridad dura)
+
+Por cada base del plan (`weaponBases`, en orden) con nivel ≤ tu nivel +
+3: lo que falta de cada requisito va primero. Razón: "Te faltan 6 FUE
+para equipar Hacha Rompeturnos" (con " (nivel 4)" si todavía no tenés
+el nivel y " (después quedan N)" si no alcanzan los puntos). Las bases
+más lejanas no son requisito duro (solo pesan en 8.3).
+
+### 8.2 Piso de supervivencia
+
+Si tu vida máxima (con lo ya asignado en 8.1) está por debajo de
+`30 + 4 × nivel`, VIT hasta llegar, como mucho la mitad de los puntos
+(mínimo 1). Razón: "Tu vida (64) está baja para nivel 10 (mínimo
+sugerido 70): +4 HP por punto".
+
+### 8.3 Lo que más rinde (arma y árbol)
+
+Puntaje por atributo = Σ por stat de `peso(stat) × ganancia por punto /
+valor actual del stat`. La ganancia se mide con `previewAllocation`
+(+10 puntos / 10: incluye fórmulas de arma, forja, afijos, árbol y el
+tope de crítico). Stats: ATQ, MAG, HP, MP, VEL y crítico (este como
+daño esperado: `Δcrit × (multi − 1) / (1 + crit × (multi − 1))`).
+
+Pesos:
+- el stat de daño del arma equipada vale 1 (MAG si es báculo / varita /
+  tomo, si no ATQ); un arma no-caster con fórmula de MAG suma 0.3 a MAG;
+- base: HP 0.15, MP 0.10 (+0.10 si es caster), crítico 0.30, VEL 0.15;
+- **árbol** (nodos tomados + planificados, sin el inicio): efectos `atk`,
+  `mag`, `heal` (las curas escalan con MAG) y `hp` × 5; `mp` × 4; `crit`
+  × 8; `spd` × 0.6; `def` × 0.05 a HP. Cada mecánica suma 0.1: al hacer
+  crítico, bonos de crítico / multiplicador → crítico; bonos de ATQ →
+  ATQ; velocidad, adelantar turno y turno extra → VEL; invocaciones y
+  daño Sagrado → MAG; escudos, curas de mecánica (% de vida), reflejo,
+  robo de vida, defensa y disparadores de vida baja / golpe recibido →
+  HP (× 0.8);
+- **armas del plan** sin equipar (bases, y por cada tipo sin base la de
+  mayor nivel ≤ tu nivel + 5): `0.6 ×` promedio de `coef / valor de su
+  fórmula` (MAG si es caster, si no ATQ).
+
+Entran al reparto los atributos con puntaje ≥ 40% del mejor (como mucho
+3), proporcional al puntaje con resto mayor (empates: el de más
+puntaje, después el orden VIT, ESP, AGI, FUE, DES). Razones: las dos
+partes más fuertes, p. ej. "+0.6 ATQ por punto con tu Espada de Bronce
+(escala FUE×0.6)", "+1.2% crítico por punto; tu árbol: Frenesí, Ojo
+Certero +2", "Hacha Berserker del plan escala FUE×0.9 (ATQ)".
+
+Las metas de atributo del plan **no** entran en el cálculo (son la
+salida de AGREGAR COMO META).
+
+### 8.4 ATRIBUTOS: tarjeta SUGERENCIA
+
+Debajo de los atributos, si el miembro activo tiene puntos libres:
+"Sugerencia: FUE +2, DES +1", una línea por atributo con sus razones y
+**APLICAR SUGERENCIA**. Pide confirmar ("Sí, repartir: …"; avisa si
+descarta el reparto pendiente) y manda un `AllocateStatsAction` con el
+reparto para el **miembro activo** (el líder o el compañero elegido en
+el selector de la party). Usa el plan de ese miembro.
+
+### 8.5 BUILD: "Atributos sugeridos"
+
+Arriba de la tarjeta Atributos: la sugerencia para tus puntos libres +
+los de los próximos 5 niveles (`horizonPoints`, sin pasar del 50) y su
+razón principal. **AGREGAR COMO META** pone cada atributo sugerido con
+objetivo `actual + puntos` (si ya había una meta mayor, queda la mayor;
+`AttributeAdvisor.addAsGoals`).
+
+Tests: `test/game_engine/attribute_advisor_test.dart`,
+`test/features/world/attribute_advice_ui_test.dart`.

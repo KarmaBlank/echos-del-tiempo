@@ -221,14 +221,27 @@ extension _SummonTurn on _Turn {
   /// Golpe de un jugador en Avatar: deja los estados de lo absorbido
   /// (gancho de `_damageEnemy`).
   void _avatarHit(Combatant a, Combatant e) {
-    if (!a.isPlayer || !e.alive) return;
-    if (a.effectFrom(kAvatarUltimate.id, BuffStat.damage) == null) return;
-    for (final k in a.once) {
-      if (!k.startsWith('avatar:')) continue;
-      final kind = SummonKind.values.asNameMap()[k.substring(7)];
-      final st = kSummons[kind]?.status;
-      if (st != null && e.alive) _addStatus(e, st, source: a);
+    if (!e.alive) return;
+    for (final st in _avatarStatuses(a)) {
+      if (e.alive) _addStatus(e, st, source: a);
     }
+  }
+
+  /// Estados que deja cada golpe de [a] en Avatar (vacío si no lo está).
+  /// El golpe los "lleva": también detonan reacciones
+  /// (elemental_reactions.md § 9).
+  List<StatusApplication> _avatarStatuses(Combatant a) {
+    if (!a.isPlayer || a.once.isEmpty) return const [];
+    if (a.effectFrom(kAvatarUltimate.id, BuffStat.damage) == null) {
+      return const [];
+    }
+    return [
+      for (final k in a.once)
+        if (k.startsWith('avatar:'))
+          if (kSummons[SummonKind.values.asNameMap()[k.substring(7)]]?.status
+              case final st?)
+            st,
+    ];
   }
 
   /// Sacrificio: la invocación más vieja detona su elemento en todos.

@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import '../../../../core/settings/graphics.dart';
 import 'battle_fx.dart';
+import 'duo_cinematic.dart';
 import 'fx_style.dart';
 import 'particles.dart';
 import 'ult_cinematic.dart';
@@ -37,7 +38,11 @@ class UltStage {
     required this.targets,
     this.targetBoxes = const [],
     this.party = const [],
+    this.partner,
   });
+
+  /// Dúo: pies del compañero (origen de la segunda estela).
+  final Offset? partner;
 
   final Offset caster;
   final List<Offset> targets;
@@ -196,7 +201,13 @@ abstract final class UltDirector {
         UltStyle.arcaneStorm => FxElement.arcane,
         UltStyle.volley => FxElement.phys,
         UltStyle.thousandCuts => FxElement.phys,
+        // El del dúo sale de su estado (`u.fx.el`, ver [elementOf]).
+        UltStyle.duo => FxElement.arcane,
       };
+
+  /// Elemento de las partículas de [u]: el del estilo, o el del dúo.
+  static FxElement elementOf(UltCinematic u) =>
+      u.style == UltStyle.duo ? u.fx.el : element(u.style);
 
   /// Oscurecido del fondo del mundo (0.85 en la preparación, 0.62 en la
   /// descarga, baja en el regreso).
@@ -213,9 +224,18 @@ abstract final class UltDirector {
   static void tick(UltCinematic u, double a, UltStage st, ParticleSystem p,
       void Function(int ms) hitStop) {
     final s = u.script;
-    final el = element(s.style);
+    final el = elementOf(u);
     bool once(String k) => u.done.add(k);
     final c = st.caster;
+    // Dúo: el compañero también se carga.
+    final pc = st.partner;
+    if (pc != null && a < s.buildMs) {
+      final slot = (a / 120).floor();
+      if (once('paura$slot')) {
+        final side = slot.isEven ? 13.0 : -13.0;
+        p.burst(pc.dx + side, pc.dy - 4, el == FxElement.phys ? FxElement.level : el, 0.15);
+      }
+    }
 
     // Carga en el lanzador (cada 120 ms de la preparación).
     if (a < s.buildMs) {
@@ -524,6 +544,11 @@ abstract final class UltDirector {
           p.burst(g.dx, g.dy - 10, FxElement.phys, 4);
           p.burstWith(_sparks, g.dx, g.dy - 10, 2.5);
           p.burst(g.dx, g.dy - 10, FxElement.level, 0.8);
+        case UltStyle.duo:
+          // Golpe doble: el elemento del dúo + chispas blancas.
+          p.burst(g.dx, g.dy - 10, el, 3.5);
+          p.burstWith(_sparks, g.dx, g.dy - 10, 1.6);
+          p.burst(g.dx, g.dy - 10, FxElement.level, 0.8);
       }
       if (!u.skipped) {
         p.addShake(i == n - 1 ? s.shake : s.shake * 0.6);
@@ -676,6 +701,75 @@ abstract final class UltDirector {
         _volley(c, u, a, st, out);
       case UltStyle.thousandCuts:
         _thousandCuts(c, u, a, st, visible);
+      case UltStyle.duo:
+        _duo(c, u, a, st, out);
+    }
+  }
+
+  // ---------------- Dúo (v0.8.3) ----------------
+
+  /// Carga en los dos, dos estelas que salen de cada uno y convergen en
+  /// los objetivos (una por arriba, otra por abajo), estallido en cruz
+  /// en el impacto y un anillo del color del dúo que se apaga.
+  static void _duo(
+      Canvas c, UltCinematic u, double a, UltStage st, double out) {
+    final s = u.script;
+    final col = u.fx.color;
+    const white = Color(0xFFFFFFFF);
+    final o1 = st.caster.translate(0, -10);
+    final o2 = (st.partner ?? st.caster).translate(0, -10);
+    _gather(c, st.caster, a, s.buildMs, col);
+    if (st.partner != null) _gather(c, st.partner!, a, s.buildMs, col);
+    final tg = st.centroid.translate(0, -10);
+    // Estelas: curvas cuadráticas, la del lanzador arquea hacia arriba y
+    // la del compañero hacia abajo; se dibuja el tramo hasta la cabeza.
+    final k = duoTrailProgress(a, s);
+    if (a >= s.buildMs && a < s.impactMs + 80) {
+      for (final (i, o) in [(0, o1), (1, o2)]) {
+        final mid = Offset((o.dx + tg.dx) / 2, (o.dy + tg.dy) / 2 + (i == 0 ? -34 : 26));
+        Offset at(double t) {
+          final m = 1 - t;
+          return o * (m * m) + mid * (2 * m * t) + tg * (t * t);
+        }
+
+        const seg = 12;
+        final tail = math.max(0.0, k - 0.45);
+        for (var j = 0; j < seg; j++) {
+          final t0 = tail + (k - tail) * j / seg;
+          final t1 = tail + (k - tail) * (j + 1) / seg;
+          final f = (j + 1) / seg;
+          _line(c, at(t0), at(t1), _a(col, 0.25 + 0.7 * f), 1 + 3 * f);
+        }
+        final head = at(k);
+        _disc(c, head, 4, _a(white, 0.95));
+        _star(c, head, 7, _a(col, 0.9));
+      }
+    }
+    // Impacto: cruz de luz + anillos.
+    final imp = s.impactMs.toDouble();
+    if (a >= imp) {
+      final q = _q(a, imp, 360);
+      final fade = (1 - q) * out;
+      if (fade > 0) {
+        final r = 10 + 40 * _ease(q);
+        _ring(c, tg, r, r * 0.55, _a(col, 0.85 * fade), 3);
+        _ring(c, tg, r * 0.6, r * 0.33, _a(white, 0.7 * fade), 2);
+        final arm = 26 + 30 * _ease(q);
+        _line(c, tg.translate(-arm, -arm * 0.6), tg.translate(arm, arm * 0.6),
+            _a(white, 0.9 * fade), 3);
+        _line(c, tg.translate(-arm, arm * 0.6), tg.translate(arm, -arm * 0.6),
+            _a(col, 0.9 * fade), 3);
+        for (final g in st.targets) {
+          _star(c, g.translate(0, -10), 10 * (1 - q) + 2, _a(white, fade));
+        }
+      }
+      // Remate del color del elemento (se apaga en el regreso).
+      final glow = (1 - _q(a, imp, s.returnAt + s.returnMs - imp)) * out;
+      if (glow > 0) {
+        for (final g in st.targets) {
+          _oval(c, g.translate(0, -2), 18, 6, _a(col, 0.35 * glow));
+        }
+      }
     }
   }
 

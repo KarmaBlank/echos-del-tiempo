@@ -221,10 +221,10 @@ class TilePainter {
           _rect(c, const Color(0xFFB8B3D9), px + 4, py - 14, 8, 20);
           _rect(c, const Color(0xFF8E88B8), px + 5, py - 18, 6, 5);
           _rect(c, const Color(0xFF8E88B8), px + 2, py - 8, 12, 3);
-          _rect(c, Color.fromRGBO(255, 209, 102, 0.6 + 0.4 * k), px + 6, py - 12,
-              4, 2);
-          _rect(c, Color.fromRGBO(255, 209, 102, 0.6 + 0.4 * k), px + 7, py - 10,
-              2, 2);
+          _rect(c, Color.fromRGBO(255, 209, 102, 0.6 + 0.4 * k), px + 6,
+              py - 12, 4, 2);
+          _rect(c, Color.fromRGBO(255, 209, 102, 0.6 + 0.4 * k), px + 7,
+              py - 10, 2, 2);
           _rect(c, Color.fromRGBO(162, 155, 254, 0.25 + 0.25 * k), px - 2,
               py - 20, ts + 4, 2);
         }
@@ -301,15 +301,25 @@ class TilePainter {
       case Tile.secretFloor:
         // Sala secreta sin abrir: muro del tema (no se delata).
         draw(c, Tile.wall, px, py, themeId, tx, ty,
-            t: t, gateOpen: gateOpen, lobby: lobby, at: at,
-            voidBackdrop: voidBackdrop, density: density, pulse: pulse);
+            t: t,
+            gateOpen: gateOpen,
+            lobby: lobby,
+            at: at,
+            voidBackdrop: voidBackdrop,
+            density: density,
+            pulse: pulse);
         return;
       case Tile.cracked || Tile.shortcut:
         // El muro del tema con grietas (sala secreta) o con una reja y su
         // palanca (atajo).
         draw(c, Tile.wall, px, py, themeId, tx, ty,
-            t: t, gateOpen: gateOpen, lobby: lobby, at: at,
-            voidBackdrop: voidBackdrop, density: density, pulse: pulse);
+            t: t,
+            gateOpen: gateOpen,
+            lobby: lobby,
+            at: at,
+            voidBackdrop: voidBackdrop,
+            density: density,
+            pulse: pulse);
         if (ch == Tile.cracked) {
           _cracks(c, px, py, t);
         } else {
@@ -354,6 +364,102 @@ class TilePainter {
     }
   }
 
+  // ------------------------------------------------------------------
+  // Rendimiento (exploration.md § "Rendimiento"): qué tiles se pueden
+  // grabar una vez (capa estática por bloques) y cuánto sobresalen.
+  // ------------------------------------------------------------------
+
+  /// `true` si el dibujo del tile [ch] en ([tx], [ty]) depende del reloj
+  /// (`t`), la barrera, el Pulso o las PARTÍCULAS: se dibuja en cada
+  /// cuadro. `false`: siempre igual mientras el mapa no cambie (va a la
+  /// capa estática). Conservador: ante la duda, animado. Lo verifica
+  /// `tile_cache_test.dart` dibujando cada tile con relojes distintos.
+  static bool animated(String ch, String themeId, int tx, int ty,
+      {required bool lobby, required bool voidBackdrop}) {
+    if (themeId == 'mundo') {
+      lobby = inTown(tx, ty);
+      if (lobby) themeId = 'lobby';
+    }
+    // Niebla del cementerio: sobre todo lo que no es vacío.
+    if (themeId == 'cementerio' && ch != Tile.voidTile) return true;
+    final h = tileHash(tx, ty);
+    // Brasas de la grieta y destellos del corazón en el suelo.
+    final floorAnim = !lobby &&
+        ((themeId == 'grieta' && h % 7 == 0) ||
+            (themeId == 'corazon' && h % 5 == 1));
+    bool wall() {
+      if (lobby) return false;
+      return floorAnim ||
+          (themeId == 'grieta' && h % 3 == 0) ||
+          themeId == 'corazon';
+    }
+
+    switch (ch) {
+      case Tile.path || Tile.grass || Tile.tree || Tile.rock:
+        return false;
+      case Tile.floor ||
+            Tile.merchant ||
+            Tile.armory ||
+            Tile.counter ||
+            Tile.stairsDown ||
+            Tile.stairsUp ||
+            Tile.vaultFloor ||
+            Tile.tombstone:
+        return floorAnim;
+      case Tile.wall || Tile.secretFloor || Tile.shortcut:
+        return wall();
+      case Tile.voidTile:
+        return !voidBackdrop;
+      case Tile.bridge:
+        return themeId == 'grieta' || themeId == 'corazon';
+      case Tile.water ||
+            Tile.gate ||
+            Tile.portal ||
+            Tile.statue ||
+            Tile.spikes ||
+            Tile.pulse ||
+            Tile.lava ||
+            Tile.gear ||
+            Tile.cracked ||
+            Tile.shrine ||
+            Tile.shrineUsed ||
+            Tile.waystone ||
+            Tile.waystoneOn ||
+            Tile.wind ||
+            Tile.brazier ||
+            Tile.brazierLit:
+        return true;
+      default:
+        // Base de una entrada de zona (el arco va aparte) o desconocido.
+        return false;
+    }
+  }
+
+  /// Cuánto sobresale el dibujo del tile [ch] de su celda de 16 px:
+  /// (izquierda, arriba, derecha, abajo). Las motas del suelo usan el
+  /// `(h >> n) % m` de JS, que puede ser negativo: el suelo (y todo lo que
+  /// lo dibuja debajo) sobresale hasta 12 px a la izquierda y arriba.
+  /// Ningún tile sobresale hacia abajo. Lo verifica `tile_cache_test.dart`.
+  static (int, int, int, int) overflow(String ch) => switch (ch) {
+        Tile.portal => (12, 14, 6, 0),
+        Tile.statue => (12, 20, 2, 0),
+        Tile.water ||
+        Tile.grass ||
+        Tile.rock ||
+        Tile.voidTile ||
+        Tile.bridge ||
+        Tile.lava =>
+          (0, 0, 0, 0),
+        Tile.tree => (0, 1, 0, 0),
+        _ when Tile.entranceZone(ch) != null => (0, 0, 0, 0),
+        _ when !handles(ch) => (0, 0, 0, 0),
+        // Suelo y todo lo que se apoya en él (muros, PdI, mostradores...).
+        _ => (12, 12, 0, 0),
+      };
+
+  /// Lo máximo que sobresale cualquier tile (izq, arriba, der, abajo).
+  static const maxOverflow = (12, 20, 6, 0);
+
   /// Todos los códigos que [draw] sabe dibujar (los de entrada `0`..`9`
   /// incluidos). Ver worldgen.md § 7.6.
   static bool handles(String ch) =>
@@ -397,9 +503,27 @@ class TilePainter {
     // Halo violeta tenue: algo hay detrás.
     _rect(c, Color.fromRGBO(190, 110, 255, 0.12 + 0.1 * k), px, py, ts, ts);
     for (final (x, y) in const [
-      (7, 0), (8, 1), (7, 2), (6, 3), (7, 4), (8, 5), (9, 6), (8, 7),
-      (7, 8), (6, 9), (7, 10), (8, 11), (8, 12), (9, 13), (5, 5), (4, 6),
-      (3, 7), (10, 8), (11, 9), (12, 10), (13, 11),
+      (7, 0),
+      (8, 1),
+      (7, 2),
+      (6, 3),
+      (7, 4),
+      (8, 5),
+      (9, 6),
+      (8, 7),
+      (7, 8),
+      (6, 9),
+      (7, 10),
+      (8, 11),
+      (8, 12),
+      (9, 13),
+      (5, 5),
+      (4, 6),
+      (3, 7),
+      (10, 8),
+      (11, 9),
+      (12, 10),
+      (13, 11),
     ]) {
       _rect(c, dark, px + x, py + y, 2, 1);
     }
@@ -427,8 +551,8 @@ class TilePainter {
     final bob = used ? 0.0 : (math.sin(t / 260) * 1.5).roundToDouble();
     final gem = used ? const Color(0xFF6C707A) : const Color(0xFF5AE6D2);
     _rect(c, gem, px + 6, py - 2 + bob, 4, 8);
-    _rect(c, used ? const Color(0xFF8A8E99) : const Color(0xFFDFFFFA),
-        px + 7, py - 1 + bob, 1, 3);
+    _rect(c, used ? const Color(0xFF8A8E99) : const Color(0xFFDFFFFA), px + 7,
+        py - 1 + bob, 1, 3);
     if (!used) {
       final k = 0.25 + 0.2 * math.sin(t / 200);
       _rect(c, Color.fromRGBO(90, 230, 210, k), px + 3, py - 4 + bob, 10, 12);
@@ -442,9 +566,8 @@ class TilePainter {
     _rect(c, const Color(0xFF6B7388), px + 4, py - 6, 2, 20);
     _rect(c, const Color(0xFF4E5568), px + 5, py - 8, 6, 2);
     final k = 0.6 + 0.4 * math.sin(t / 300);
-    final rune = on
-        ? Color.fromRGBO(255, 209, 102, k)
-        : const Color(0xFF2A2F3D);
+    final rune =
+        on ? Color.fromRGBO(255, 209, 102, k) : const Color(0xFF2A2F3D);
     _rect(c, rune, px + 7, py - 3, 2, 8);
     _rect(c, rune, px + 6, py, 4, 1);
     if (on) {

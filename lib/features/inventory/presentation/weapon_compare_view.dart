@@ -353,7 +353,7 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
     final shop = widget.shop;
     final rules = shop.rules;
     final session = shop.view.session;
-    final me = shop.view.me!;
+    final me = shop.view.actor!;
     final viewer = me.profile;
     final attrs = viewer.attributes.add(widget.pending);
     ItemInstance? find(WeaponRef r) =>

@@ -251,12 +251,14 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   @override
   Widget build(BuildContext context) {
     final view = shop.view;
-    final me = view.me!;
+    // El miembro activo (el local o el compañero elegido; solo_party.md
+    // § 6): DAR A lista a los demás, también al líder.
+    final me = view.actor!;
     final mates = [
       for (final pl in view.session.playerList)
-        if (pl.id != view.localId) pl,
+        if (pl.id != me.id) pl,
     ];
-    _plan = ref.watch(buildPlanProvider).plan;
+    _plan = ref.watch(buildPlanProvider).planFor(shop.controller.slotOf(me.id));
     _fitRules = ref.watch(buildPlanRulesProvider);
     final owner = view.session.players[_owner] ?? me;
     final mine = owner.id == me.id;
@@ -283,7 +285,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       spacing: 6,
       runSpacing: 6,
       children: [
-        PanelButton('TÚ',
+        PanelButton(view.actingCompanion ? me.name.toUpperCase() : 'TÚ',
             key: ValueKey('inv-owner-${me.id}'),
             selected: mine,
             onPressed: () => setState(() {

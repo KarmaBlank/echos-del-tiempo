@@ -7,6 +7,8 @@ import '../../../../game_engine/data/branch_ults_catalog.dart'
     show kBranchUltLooks, kWeaponUltSkills;
 import '../../../../game_engine/data/skill_variants_catalog.dart';
 import '../../../../game_engine/data/skills_catalog.dart';
+import '../../../../game_engine/data/weapon_duals_catalog.dart';
+import '../../../../game_engine/models/battle_state.dart';
 import '../../../../game_engine/models/skill.dart';
 import '../../../../game_engine/models/status.dart';
 
@@ -193,7 +195,34 @@ const Map<String, Color> kDualColors = {
   'paladin+tirador': Color(0xFFFFEAA7),
   'paladin+paladin': Color(0xFFDFE6E9),
   'tirador+tirador': Color(0xFFFDCB6E),
+  // Dúos de armas (v0.8.3): el color de su elemento, con matices.
+  'w_flechaArcana': Color(0xFFC77DFF),
+  'w_bastionRunico': Color(0xFFFFF3B0),
+  'w_fuegoCruzado': Color(0xFFFF7B29),
+  'w_terremotoDoble': Color(0xFFE0B080),
+  'w_saetaVoltaica': Color(0xFFB98CFF),
+  'w_juicioPerforante': Color(0xFFFFE08A),
+  'w_filoIgneo': Color(0xFFFF9F43),
+  'w_hojaMaldita': Color(0xFF7BED9F),
+  'w_diluvioAstas': Color(0xFF3FA9F5),
+  'w_tajoGlaciar': Color(0xFF74B9FF),
 };
+
+/// El dúo de un `ActionEvent` dual: por su `skillId` (v0.8.3) o, si no
+/// viene (host v0.8.2), el de clase del par.
+({String id, DualDef def})? dualOfEvent(
+    String? skillId, Combatant? actor, Combatant? partner) {
+  final id = skillId ??
+      (actor == null || partner == null
+          ? null
+          : dualKey(actor.classId ?? '', partner.classId ?? ''));
+  final d = id == null ? null : kAllDuals[id];
+  return d == null ? null : (id: id!, def: d);
+}
+
+/// Color de un dúo: el de la tabla, o el de su estado.
+Color dualColor(String id, DualDef d) =>
+    kDualColors[id] ?? statusColor(d.status.kind);
 
 const fxWhite = Color(0xFFFFFFFF);
 
