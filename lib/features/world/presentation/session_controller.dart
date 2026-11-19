@@ -381,33 +381,16 @@ class SessionController extends StateNotifier<SessionView?> {
   bool startTutorial({bool companions = true}) =>
       _apply(StartTutorialAction(companions: companions));
 
-  /// Cierra el cartel del tutorial (ESPACIO, clic). Si no actuaste, solo
-  /// se cierra en tu pantalla.
-  bool ackTutorial() {
-    if (_apply(const TutorialAckAction())) return true;
-    final card = _s?.tutorial?.card;
-    if (card == null) return false;
-    _hiddenCard = card;
-    _emit();
-    return true;
-  }
+  /// SIGUIENTE ("Leí y entendí", ESPACIO / Enter): el voto de este
+  /// jugador para cerrar el cartel del tutorial. El host avanza cuando
+  /// votaron todos los humanos de la sala.
+  bool ackTutorial() => _apply(const TutorialAckAction());
 
-  /// El cartel que este jugador ya cerró en su pantalla (el paso sigue
-  /// esperando al que actuó).
-  TutorialCard? _hiddenCard;
+  /// El cartel del tutorial abierto (espera la votación).
+  TutorialCard? get tutorialCard => _s?.tutorial?.card;
 
-  /// El cartel del tutorial que se ve en esta pantalla.
-  TutorialCard? get tutorialCard {
-    final c = _s?.tutorial?.card;
-    return c == null || identical(c, _hiddenCard) ||
-            (_hiddenCard != null && _sameCard(c, _hiddenCard!))
-        ? null
-        : c;
-  }
-
-  static bool _sameCard(TutorialCard a, TutorialCard b) =>
-      a.actorId == b.actorId && a.lines.join('\n') == b.lines.join('\n');
-
+  /// Este jugador ya votó SIGUIENTE en el cartel abierto.
+  bool get tutorialVoted => _s?.tutorial?.votes.contains(localId) ?? false;
   /// Menú de pausa del tutorial: Repetir, Repetir etapa, Salir.
   bool tutorialControl(TutorialControl op) =>
       _apply(TutorialControlAction(op));

@@ -36,8 +36,8 @@ void main() {
     });
   });
 
-  test('el hello lleva tv (protocolo 15)', () {
-    expect(kProtocolVersion, 15);
+  test('el hello lleva tv (protocolo 16)', () {
+    expect(kProtocolVersion, 16);
     final codec = WireCodec();
     final p = PlayerProfile(name: 'Ana', classId: 'guerrero');
     final msg = codec.decode(
@@ -88,10 +88,8 @@ void main() {
         if (t == null || b == null) continue;
         final card = t.card;
         if (card != null) {
-          if (card.actorId == c.localId ||
-              (card.actorId == null && c == host)) {
-            c.ackTutorial();
-          }
+          // SIGUIENTE: votan todos; el host cierra con el último voto.
+          if (!t.votes.contains(c.localId)) c.ackTutorial();
           continue;
         }
         final cur = b.state.current;

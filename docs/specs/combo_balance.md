@@ -458,8 +458,7 @@ teniendo **un** turno según su velocidad).
 - **Encadenar:** las habilidades marcadas **Instante** (preparaciones
   baratas) no terminan el turno. Después de una habilidad Instante podés hacer una
   acción más, máximo una habilidad Instante por turno. Así, en un turno se puede
-  "preparar + detonar" si juntaste Pulso, como una mano corta de Slay
-  the Spire.
+  "preparar + detonar" si juntaste Pulso.
 - Compañeros (IA): usan las mismas reglas.
 
 **Implementado (v0.9, paso 7).** Reglas detalladas en combat.md

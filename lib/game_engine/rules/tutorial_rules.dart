@@ -78,8 +78,8 @@ const List<TutorialStage> kTutorialStages = [
   ),
   TutorialStage(
     number: 2,
-    title: 'Maná y Pulso',
-    teaches: 'qué es cada recurso y cómo se recupera',
+    title: 'MP y Pulso',
+    teaches: 'MP (de la expedición) y Pulso (de la pelea)',
     desde: 1,
     steps: [
       TutorialPlayerStep(_r0, TutorialMove.attack),
@@ -111,8 +111,8 @@ const List<TutorialStage> kTutorialStages = [
   ),
   TutorialStage(
     number: 5,
-    title: 'Precondición y encadenar',
-    teaches: 'precondiciones, Instante y encadenar',
+    title: 'Precondición e Instante',
+    teaches: 'precondiciones y habilidades Instante',
     desde: 1,
     setup: TutorialSetup.poisonPrimed,
     steps: [
@@ -215,8 +215,6 @@ class TutorialRules {
   static const missionId = 'tutorial';
   static const name = 'TUTORIAL: Ecos de práctica';
 
-  /// El cartel de efecto se cierra solo (§ 4.1).
-  static const cardSeconds = 6.0;
 
   /// Lo que espera un compañero (IA) antes de hacer su rol.
   static const companionDelay = 0.8;
@@ -232,6 +230,49 @@ class TutorialRules {
   // ---------------------------------------------------------------
 
   bool upToDate(int tutV) => tutV >= version;
+
+  // ---------------------------------------------------------------
+  // Votación SIGUIENTE (§ 4.1)
+  // ---------------------------------------------------------------
+
+  /// Los que votan: los humanos de la sala (los compañeros IA no votan;
+  /// quien se desconecta sale de la sala y deja de contarse).
+  List<SessionPlayer> voters(GameSession s) =>
+      [for (final p in s.playerList) if (!p.isCompanion) p];
+
+  /// Los humanos que todavía no tocaron SIGUIENTE en el cartel abierto.
+  List<SessionPlayer> waiting(GameSession s) {
+    final t = s.tutorial;
+    if (t == null || t.card == null) return const [];
+    return [
+      for (final p in voters(s))
+        if (!t.votes.contains(p.id)) p
+    ];
+  }
+
+  /// "Esperando: Beto", o `null` si no hay cartel abierto.
+  String? waitingText(GameSession s) {
+    if (s.tutorial?.card == null) return null;
+    final w = waiting(s);
+    if (w.isEmpty) return null;
+    return 'Esperando: ${w.map((p) => p.name).join(', ')}';
+  }
+
+  /// Qué resaltar en el HUD del grupo (§ 4.1): la barra de MP y los pips
+  /// de Pulso en la etapa que los explica y cuando la acción los cambió.
+  Set<TutorialArrow> hudFocus(TutorialState t) {
+    final out = <TutorialArrow>{};
+    final a = t.card?.arrow;
+    if (a == TutorialArrow.mp || a == TutorialArrow.pulse) out.add(a!);
+    for (final l in t.card?.lines ?? const <String>[]) {
+      if (l.contains('MP')) out.add(TutorialArrow.mp);
+      if (l.contains('Pulso')) out.add(TutorialArrow.pulse);
+    }
+    final st = currentStage(t);
+    if (st?.number == 2) out.addAll({TutorialArrow.mp, TutorialArrow.pulse});
+    if (st?.number == 5 || st?.number == 7) out.add(TutorialArrow.pulse);
+    return out;
+  }
 
   /// Los humanos de la sala sin el tutorial vigente.
   List<SessionPlayer> missing(GameSession s) => [
@@ -663,9 +704,81 @@ class TutorialRules {
       }
       lines.add('Intento ${t.attempt}: roles rotados (${parts.join(', ')}).');
     }
-    lines.add('Etapa $idx/${t.stages.length}: ${st.title}.');
-    lines.add('Enseña: ${st.teaches}.');
-    return TutorialCard(lines, arrow: TutorialArrow.timeline);
+    lines.addAll(stageIntro(st.number));
+    return TutorialCard(lines, arrow: _introArrow(st.number));
+  }
+
+  TutorialArrow? _introArrow(int stage) => switch (stage) {
+        1 => TutorialArrow.timeline,
+        2 => TutorialArrow.mp,
+        5 => TutorialArrow.timeline,
+        7 => TutorialArrow.breakBar,
+        8 => TutorialArrow.ult,
+        _ => null,
+      };
+
+  String _skillName(String id) => catalog.skills[id]?.name ?? id;
+
+  /// Lo que explica el cartel de inicio de cada etapa (§ 4.2): corto, sin
+  /// repetir el título (el panel ya lo muestra) y con los números de los
+  /// datos.
+  List<String> stageIntro(int stage) {
+    final quebrar = catalog.skills[kQuebrarId];
+    final det = catalog.skills[_detonaVeneno];
+    final req = _requiredStacks(_detonaVeneno, StatusKind.poison);
+    return switch (stage) {
+      1 => [
+          'La barra de turnos (arriba) muestra quién sigue: con más '
+              'velocidad, turnos más seguidos.',
+          'Defender y Pasar adelantan tu próximo turno.',
+        ],
+      2 => [
+          'MP (barra azul): es de la expedición. Lo gastan casi todas las '
+              'habilidades y no vuelve por turno: se recupera con pociones '
+              'o descansando.',
+          'Pulso (pips dorados, 0-${BattleEngine.pulseMax}): es de esta '
+              'pelea. Sube al empezar tu turno, con el ataque básico, al '
+              'pegarle a una debilidad y al defender.',
+          'Lo piden las habilidades fuertes. Una puede pedir los dos: '
+              '${det?.name ?? 'Ignición'} cuesta ${det?.mp ?? 0} MP y '
+              '${det?.pulse ?? 0} de Pulso; Quebrar, ${quebrar?.pulse ?? 0} '
+              'de Pulso.',
+        ],
+      3 => [
+          'El autómata resiste lo físico y es débil al Fuego: mirá el '
+              'número de daño de cada golpe.',
+        ],
+      4 => [
+          'Los estados se acumulan (stacks) y le hacen daño al empezar su '
+              'turno.',
+        ],
+      5 => [
+          'Instante no es un recurso: es un tipo de habilidad que no '
+              'termina tu turno. Después hacés otra acción (una Instante '
+              'por turno).',
+          '${det?.name ?? 'Detonar'} sale desactivada: necesita $req de '
+              'Veneno. ${_skillName(_instante)} (Instante) pone lo que falta '
+              'y en el mismo turno detonás.',
+        ],
+      6 => [
+          'Uno pone Quemadura y otro la detona con un golpe de Veneno: '
+              'cuantos más stacks, más daño.',
+        ],
+      7 => [
+          'Los golpes llenan la barra de quiebre; llena, queda Fisurado. '
+              'Ahí Quebrar (pide Pulso) lo quiebra.',
+        ],
+      8 => [
+          'Los jefes avisan su ULT un turno antes. Quebrarlos la cancela; '
+              'Defender baja el daño.',
+        ],
+      9 => [
+          'Un área pone estados a todos; la Convergencia salpica a los '
+              'demás.',
+        ],
+      10 => ['Sin guion: probá lo que quieras.'],
+      _ => const [],
+    };
   }
 
   /// "Intento 2: esta vez quebrás vos" para [id].
@@ -680,7 +793,7 @@ class TutorialRules {
   /// [after] con [events], con la flecha a lo que cambió.
   TutorialCard effectCard(BattleState before, BattleState after,
       List<BattleEvent> events, String? actorId,
-      {BattleCommand? cmd}) {
+      {BattleCommand? cmd, Set<String>? said}) {
     final lines = <String>[];
     TutorialArrow? arrow;
     String? target;
@@ -746,7 +859,7 @@ class TutorialRules {
       } else if (e.breakGauge > o.breakGauge + 0.01) {
         add(
             'La barra de quiebre subió ${_fmt(e.breakGauge - o.breakGauge)} '
-            '(${_fmt(e.breakGauge)}/${_fmt(e.breakMax)}).',
+            '(${e.breakGauge.round()}/${e.breakMax.round()}).',
             TutorialArrow.breakBar,
             e.id);
       }
@@ -782,41 +895,62 @@ class TutorialRules {
       }
     }
 
+    // La primera vez se explica el concepto; después, solo el dato.
+    bool first(String key) => said?.add(key) ?? true;
+
     for (final e in after.enemies) {
       final o = before.byId(e.id);
       for (final k in StatusKind.values) {
         final d = e.stacks(k) - (o?.stacks(k) ?? 0);
         if (d > 0) {
-          add('${k.label} +$d (tiene ${e.stacks(k)}): ${statusHint(k)}',
-              TutorialArrow.status, e.id);
+          add(
+              '${k.label} +$d (tiene ${e.stacks(k)})'
+              '${first('st-${k.name}') ? ': ${statusHint(k)}' : '.'}',
+              TutorialArrow.status,
+              e.id);
         }
       }
     }
 
     if (actor != null && was != null) {
       if (actor.chained && !was.chained) {
-        add('Instante: no termina el turno, te queda una acción.',
-            TutorialArrow.timeline, actor.id);
+        add(
+            first('instant')
+                ? 'Instante: no terminó tu turno, hacés otra acción.'
+                : 'Instante: otra acción.',
+            TutorialArrow.timeline,
+            actor.id);
       }
       final dp = actor.pulse - was.pulse;
       if (dp > 0) {
-        add('${actor.name} ganó $dp de Pulso (${actor.pulse}/${BattleEngine.pulseMax}).',
-            TutorialArrow.pulse, actor.id);
+        add(
+            '${actor.name}: Pulso +$dp (${actor.pulse}/${BattleEngine.pulseMax})'
+            '${first('pulse+') ? ', se gana jugando.' : '.'}',
+            TutorialArrow.pulse,
+            actor.id);
       } else if (dp < 0) {
-        add('${actor.name} gastó ${-dp} de Pulso (le queda ${actor.pulse}).',
-            TutorialArrow.pulse, actor.id);
+        add(
+            '${actor.name}: Pulso −${-dp} (le queda ${actor.pulse})'
+            '${first('pulse-') ? '; lo piden las habilidades fuertes.' : '.'}',
+            TutorialArrow.pulse,
+            actor.id);
       }
       final dm = (was.mp - actor.mp).round();
       if (dm > 0) {
-        add('${actor.name} gastó $dm MP (le quedan ${actor.mp.floor()}).',
-            TutorialArrow.mp, actor.id);
+        add(
+            '${actor.name}: −$dm MP (quedan ${actor.mp.floor()})'
+            '${first('mp-') ? '; no vuelve por turno.' : '.'}',
+            TutorialArrow.mp,
+            actor.id);
       }
     }
 
     if (cmd is DefendCommand) {
       add(
-          'Defender: recibís la mitad del daño hasta tu próximo turno, que '
-          'llega antes en la barra de turnos.',
+          first('defend')
+              ? 'Defender: mitad del daño hasta tu próximo turno, que llega '
+                  'antes.'
+              : 'Defender: mitad del daño.',
           TutorialArrow.timeline,
           actorId);
     } else if (cmd is PassCommand) {
@@ -827,7 +961,6 @@ class TutorialRules {
           TutorialArrow.timeline,
           actorId);
     }
-
     if (lines.isEmpty) lines.add(after.log.isEmpty ? 'Listo.' : after.log);
     return TutorialCard(lines.take(3).toList(),
         arrow: arrow, targetId: target, actorId: actorId, effect: true);
@@ -895,17 +1028,20 @@ class TutorialRules {
               '×${_fmt(BattleEngine.passTurnFactor)} del intervalo.'),
       const GlossaryEntry(
           'MP',
-          'MP',
-          'Las habilidades gastan MP. Se repone con la Poción de maná y, '
-              'fuera de batalla, con el tiempo.'),
+          'MP (maná)',
+          'Recurso de la expedición: lo gastan casi todas las habilidades. '
+              'No vuelve por turno: se recupera con pociones (Poción de '
+              'maná) o descansando.'),
       GlossaryEntry(
           'PU',
           'Pulso',
-          'Arrancás la pelea con ${BattleEngine.pulseStart} y sumás 1 al '
-              'empezar cada turno (tope ${BattleEngine.pulseMax}). Lo gastan '
-              'Quebrar (${quebrar?.pulse ?? 0}) y las habilidades que '
-              'detonan.'),
-      GlossaryEntry(
+          'Puntos de esta pelea (pips 0-${BattleEngine.pulseMax}; arrancás '
+              'con ${BattleEngine.pulseStart}). Suben al empezar tu turno, '
+              'con el ataque básico, al pegarle a una debilidad y al '
+              'defender. Lo piden las habilidades fuertes: Quebrar '
+              '(${quebrar?.pulse ?? 0}) y las Convergencias. Una habilidad '
+              'puede pedir MP y Pulso a la vez (${detona?.name ?? '-'}: '
+              '${detona?.mp ?? 0} MP y ${detona?.pulse ?? 0} de Pulso).'),      GlossaryEntry(
           'PR',
           'Precondición',
           'Algunas habilidades piden algo del objetivo; si falta, el botón '
@@ -916,10 +1052,10 @@ class TutorialRules {
                       ]) ?? '-'}.'),
       GlossaryEntry(
           'IN',
-          'Instante y encadenar',
-          'Una habilidad Instante (por ejemplo ${instant?.name ?? '-'}) no '
-              'termina el turno: te queda una acción más, pero no otra '
-              'Instante.'),
+          'Instante',
+          'No es un recurso: es un tipo de habilidad (por ejemplo '
+              '${instant?.name ?? '-'}). No termina tu turno: después hacés '
+              'otra acción, pero no otra Instante (una por turno).'),
       GlossaryEntry(
           'AF',
           'Afinidades',

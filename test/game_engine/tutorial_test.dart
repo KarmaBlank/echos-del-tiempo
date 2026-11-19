@@ -63,16 +63,8 @@ _Run _play(SessionEngine e, GameSession s, {int maxTicks = 40000}) {
     final t = s.tutorial;
     final b = s.battle;
     if (t == null || b == null) break;
-    final card = t.card;
-    if (card != null) {
-      var by = card.actorId ?? s.playerList.first.id;
-      by = s.players[by]?.leaderId ?? by;
-      if (!s.players.containsKey(by)) by = s.playerList.first.id;
-      final ack = e.apply(s, by, const TutorialAckAction());
-      if (ack != null) {
-        s = ack.state;
-        events.addAll(ack.events);
-      }
+    if (t.card != null) {
+      s = _voteAll(e, s, events);
       continue;
     }
     if (!b.waitingForPlayer) continue;
@@ -102,6 +94,18 @@ _Run _play(SessionEngine e, GameSession s, {int maxTicks = 40000}) {
     }
   }
   return _Run(s, events, acts, rejected);
+}
+
+/// SIGUIENTE de cada humano de la sala que todavía no votó.
+GameSession _voteAll(SessionEngine e, GameSession s,
+    [List<SessionEvent>? events]) {
+  for (final p in e.tutorials.waiting(s)) {
+    final r = e.apply(s, p.id, const TutorialAckAction());
+    if (r == null) continue;
+    s = r.state;
+    events?.addAll(r.events);
+  }
+  return s;
 }
 
 GameSession _start(SessionEngine e, GameSession s,
@@ -178,11 +182,7 @@ void main() {
             final b = s.battle;
             if (t == null || b == null) break;
             if (t.card != null) {
-              var by = t.card!.actorId ?? 'h';
-              by = s.players[by]?.leaderId ?? by;
-              if (!s.players.containsKey(by)) by = 'h';
-              final ack = e.apply(s, by, const TutorialAckAction());
-              if (ack != null) s = ack.state;
+              s = _voteAll(e, s);
               continue;
             }
             final st = rules.currentStep(t);
@@ -379,9 +379,8 @@ void main() {
     // Avanza hasta el primer turno de un humano.
     for (var i = 0; i < 400; i++) {
       s = e.tick(s, 0.05).state;
-      final card = s.tutorial!.card;
-      if (card != null) {
-        s = e.apply(s, 'h', const TutorialAckAction())?.state ?? s;
+      if (s.tutorial!.card != null) {
+        s = _voteAll(e, s);
         continue;
       }
       if (s.battle!.waitingForPlayer && s.tutorial!.prepared) break;
@@ -408,7 +407,7 @@ void main() {
     for (var i = 0; i < 400; i++) {
       s = e.tick(s, 0.05).state;
       if (s.tutorial!.card != null) {
-        s = e.apply(s, 'h', const TutorialAckAction())?.state ?? s;
+        s = _voteAll(e, s);
         continue;
       }
       if (s.battle!.waitingForPlayer && s.tutorial!.prepared) break;
@@ -481,10 +480,10 @@ void main() {
     final titles = g.map((x) => x.title).toList();
     for (final t in [
       'Línea de tiempo',
-      'MP',
+      'MP (maná)',
       'Pulso',
       'Precondición',
-      'Instante y encadenar',
+      'Instante',
       'Afinidades',
       'Quemadura',
       'Veneno',
@@ -503,6 +502,116 @@ void main() {
       expect(titles, contains(t));
     }
     final pulso = g.firstWhere((x) => x.title == 'Pulso').text;
-    expect(pulso, contains('tope ${BattleEngine.pulseMax}'));
+    expect(pulso, contains('pips 0-${BattleEngine.pulseMax}'));
+    expect(pulso, contains('MP y Pulso a la vez'));
+    final mp = g.firstWhere((x) => x.title == 'MP (maná)').text;
+    expect(mp, contains('No vuelve por turno'));
+    final inst = g.firstWhere((x) => x.title == 'Instante').text;
+    expect(inst, startsWith('No es un recurso'));
+  });
+
+  // § 4.1: cada cartel espera el SIGUIENTE de todos los humanos.
+  group('votación SIGUIENTE', () {
+    for (final humans in [1, 2, 4]) {
+      test('$humans humano(s): se cierra con el último voto', () {
+        final e = sessionEngine();
+        var s = _start(e, _room(e, humans: humans));
+        final card = s.tutorial!.card;
+        expect(card, isNotNull, reason: 'cartel de inicio de etapa');
+        final ids = [for (final p in s.playerList) p.id];
+        for (var i = 0; i < ids.length; i++) {
+          expect(s.tutorial!.card, same(card), reason: 'faltan votos');
+          final names = [for (final id in ids.skip(i)) s.players[id]!.name];
+          expect(e.tutorials.waitingText(s), 'Esperando: ${names.join(', ')}');
+          s = act(e, s, ids[i], const TutorialAckAction());
+          if (i < ids.length - 1) {
+            expect(e.apply(s, ids[i], const TutorialAckAction()), isNull,
+                reason: 'votar dos veces no cuenta');
+          }
+        }
+        expect(s.tutorial!.card, isNull);
+        expect(s.tutorial!.votes, isEmpty);
+      });
+    }
+
+    test('los compañeros IA no votan', () {
+      final e = sessionEngine();
+      var s = _start(e, _room(e, companions: 3));
+      expect(e.apply(s, 'h-c0', const TutorialAckAction()), isNull);
+      expect(e.tutorials.waitingText(s), 'Esperando: J0');
+      s = act(e, s, 'h', const TutorialAckAction());
+      expect(s.tutorial!.card, isNull);
+    });
+
+    test('si alguien se desconecta deja de contarse', () {
+      final e = sessionEngine();
+      var s = _start(e, _room(e, humans: 3));
+      s = act(e, s, 'h', const TutorialAckAction());
+      s = act(e, s, 'p1', const TutorialAckAction());
+      expect(e.tutorials.waitingText(s), 'Esperando: J2');
+      s = e.removePlayer(s, 'p2')!.state;
+      s = e.tick(s, 0.05).state;
+      expect(s.tutorial!.card, isNull);
+    });
+
+    test('no hay avance por tiempo', () {
+      final e = sessionEngine();
+      var s = _start(e, _room(e, humans: 2));
+      final card = s.tutorial!.card;
+      final stage = s.tutorial!.stage;
+      for (var i = 0; i < 600; i++) {
+        s = e.tick(s, 1).state;
+      }
+      expect(s.tutorial!.card?.lines, card!.lines,
+          reason: '10 minutos después sigue el mismo cartel');
+      expect([s.tutorial!.stage, s.tutorial!.step], [stage, 0]);
+      // Lo mismo con el cartel de efecto.
+      s = _voteAll(e, s);
+      for (var i = 0; i < 400 && s.tutorial!.card == null; i++) {
+        s = e.tick(s, 0.05).state;
+        final b = s.battle!;
+        final st = e.tutorials.currentStep(s.tutorial!);
+        if (st is TutorialPlayerStep &&
+            s.tutorial!.prepared &&
+            b.waitingForPlayer) {
+          final cur = b.state.current!;
+          s = act(e, s, cur.id,
+              BattleAction(e.tutorials.scripted(st, cur)!));
+        }
+      }
+      final effect = s.tutorial!.card!;
+      expect(effect.effect, isTrue);
+      for (var i = 0; i < 600; i++) {
+        s = e.tick(s, 1).state;
+      }
+      expect(s.tutorial!.card?.lines, effect.lines);
+    });
+
+    test('textos: la etapa no repite su título y el efecto explica una vez',
+        () {
+      const r = TutorialRules();
+      for (final st in kTutorialStages) {
+        final intro = r.stageIntro(st.number);
+        expect(intro, isNotEmpty, reason: 'etapa ${st.number}');
+        for (final l in intro) {
+          expect(l.contains('Etapa'), isFalse);
+        }
+      }
+      final two = r.stageIntro(2).join(' ');
+      expect(two, contains('no vuelve por turno'));
+      expect(two, contains('Pulso'));
+      expect(r.stageIntro(5).first, startsWith('Instante no es un recurso'));
+      // Defender: la explicación sale la primera vez, después solo el dato.
+      final e = sessionEngine();
+      final s = _start(e, _room(e));
+      final b = s.battle!.state;
+      final said = <String>{};
+      final a = r.effectCard(b, b, const [], 'h',
+          cmd: const DefendCommand(), said: said);
+      final again = r.effectCard(b, b, const [], 'h',
+          cmd: const DefendCommand(), said: said);
+      expect(a.lines.single, contains('próximo turno'));
+      expect(again.lines.single, 'Defender: mitad del daño.');
+    });
   });
 }

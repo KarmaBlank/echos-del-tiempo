@@ -39,7 +39,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// `tutOk`, `tutCtl` y evento `tutDone` (combat_tutorial.md § 6).
 /// 15 desde v0.9.1: armas con `nq` (Quebrar reemplazado, loot.md
 /// § 16.3), afijo `quebrantador` y habilidades con "Puede quebrar".
-const kProtocolVersion = 15;
+/// 16 desde v0.9.2: TUTORIAL con votación SIGUIENTE (`tutOk` = voto de
+/// cada humano); `tut` lleva `v` (votos), `la` (último cartel) y `sd`
+/// (conceptos explicados), sin `cl` (combat_tutorial.md § 4.1).
+const kProtocolVersion = 16;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {

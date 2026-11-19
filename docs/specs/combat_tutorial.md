@@ -1,4 +1,4 @@
-# Spec: Tutorial de combate — v0.9 (implementado, ver § 8; falta OK del dueño)
+# Spec: Tutorial de combate — v0.9.2 (implementado, ver § 8; falta OK del dueño)
 
 Pedido del dueño: un tutorial de verdad en el overworld, junto a la
 armería, con un jefe de práctica. Tiene que explicar todo **en base a lo
@@ -115,16 +115,43 @@ Convergencias).
 - Nunca hay un "me toca, pero no me sale nada": si es tu turno, el
   cartel dice qué hacer.
 - **Sin límite de 30 s** durante el tutorial.
-- Después de cada acción, un **cartel de efecto** de 2-3 líneas que
-  señala lo que pasó en pantalla (con una flecha a la barra o al estado):
-  - "Ignición dejó 6 de **Quemadura** ↓ (cada turno le hace daño; si se
-    acumula, se puede detonar)";
-  - "La barra de **quiebre** subió 9 ↑ (golpe a la debilidad: +50%)";
-  - "Ana ganó 1 de **Pulso** (golpe a la debilidad)".
-- El cartel se cierra con ESPACIO, clic o al pasar 6 s. En grupo, el
-  paso avanza cuando el que actuó termina; los demás pueden cerrarlo
-  antes.
-
+- Tests (v0.9.2): votación con 1, 2 y 4 humanos, con IA y con una
+  desconexión; sin avance por tiempo (10 minutos de ticks con el cartel
+  abierto); el panel no se superpone con la escena, el HUD ni el menú
+  (rects, a 900×600, 1280×720 y 1920×1080).
+- **Panel lateral fijo (v0.9.2, pedido del dueño: "los carteles tapan la
+  pelea").** Nada del tutorial se dibuja encima de la escena. En el
+  tutorial la arena se achica y el panel ocupa una columna a la derecha
+  (`TutorialOverlay.panelWidth`: 24% del ancho, entre 180 y 320), así
+  nunca se superpone con personajes, enemigos, números de daño, el HUD
+  del grupo ni el menú. Muestra, de arriba abajo:
+  - "Etapa N/10 · título" y el botón ≡ (menú del tutorial);
+  - el cartel abierto: el de inicio de etapa ("EN ESTA ETAPA") o el de
+    efecto ("LO QUE PASÓ"), con el rótulo de lo que señala ("→ barra de
+    quiebre");
+  - sin cartel: "AHORA" (quién actúa: TE TOCA / MIRÁ) y "ÚLTIMA ACCIÓN"
+    (el último cartel de efecto, atenuado);
+  - la votación: "Esperando: Beto", SIGUIENTE y "ESPACIO o Enter: leí y
+    entendí" (o "Ya votaste SIGUIENTE.").
+- El panel **resalta en el HUD** (borde naranja, sin negritas) la barra
+  de MP y los pips de Pulso en la etapa 2, los pips en la 5 y la 7, y
+  cuando el cartel abierto habla de MP o de Pulso (`hudFocus`).
+- Después de cada acción, un **cartel de efecto** de hasta 3 líneas con lo
+  nuevo de esa acción: Convergencia con el cálculo, quiebre, afinidad,
+  tick de estados, estados que subieron, Instante, Pulso, MP,
+  Defender/Pasar. Cada concepto se explica **una sola vez** por intento
+  (`TutorialState.said`); las veces siguientes va solo el dato
+  ("Quemadura +2 (tiene 4)." en vez de repetir qué hace la Quemadura).
+- **Avanza por votación, no por tiempo (v0.9.2).** Cada cartel (de etapa
+  o de efecto) espera a que **todos los humanos de la sala** toquen
+  SIGUIENTE ("Leí y entendí"; ESPACIO / Enter). Solo = solo vos; los
+  compañeros IA no votan. El voto es `tutOk` (uno por jugador; votar dos
+  veces no cuenta): el host lo anota en `TutorialState.votes` y cierra el
+  cartel con el último voto. Si alguien se desconecta deja de contarse
+  (el host lo revisa en cada tick). No hay cierre a los 6 s ni ningún
+  otro avance por tiempo en los carteles.
+- En la etapa libre no hay cartel que votar: el efecto queda en "ÚLTIMA
+  ACCIÓN".
 ### 4.2 Etapas
 
 Cada etapa es una "escena" corta. Con un jugador, él hace todos los
@@ -134,10 +161,10 @@ anuncia.
 | # | Etapa | Qué pasa | Qué enseña |
 |---|---|---|---|
 | 1 | Línea de tiempo | Se ilumina la barra de turnos; el que es más rápido actúa antes; Defender y Pasar adelantan tu próximo turno | turnos, velocidad, Defender/Pasar |
-| 2 | Maná y Pulso | Ataque básico (+1 Pulso), después una habilidad que gasta MP | qué es cada recurso y cómo se recupera |
+| 2 | MP y Pulso | Ataque básico (+1 Pulso), después una habilidad que gasta MP | MP: de la expedición, lo gastan casi todas las habilidades, se recupera con pociones o descanso (no por turno). Pulso: de esa pelea (0-5), sube jugando (turno, ataque básico, debilidad, defender), lo piden las habilidades fuertes (Quebrar, Convergencias); una habilidad puede pedir los dos |
 | 3 | Afinidades | Golpe físico (RESISTE ×0.5) y golpe de Fuego (DÉBIL ×1.5); muestra el tope sin debilidad | debilidad, resistencia, tope |
 | 4 | Estados | Dos Quemaduras se suman (un Veneno acá detonaría la Combustión; el Veneno se ve en la 5); se ve el tick al empezar el turno del autómata | estados, stacks, duración |
-| 5 | Precondición y encadenar | "Detonar" aparece desactivado ("Necesita: 5 de Veneno"); una Instante que pone Veneno no termina el turno y en el mismo turno se detona | precondiciones, Instante, encadenar |
+| 5 | Precondición e Instante | "Detonar" aparece desactivado ("Necesita: 5 de Veneno"); una Instante que pone Veneno no termina el turno y en el mismo turno se detona | precondiciones; Instante **no es un recurso**: es un tipo de habilidad que no termina tu turno (después hacés otra acción, máx. una Instante por turno) |
 | 6 | Convergencia en equipo | Uno acumula Quemadura y **otro** la detona con Veneno; el cartel muestra el cálculo (`20 × 2.5% = 50%`) y los dos ganan Pulso | combos entre jugadores |
 | 7 | Quiebre | Los demás llenan la barra (debilidad, Golpe pesado, aturdir); el autómata queda **Fisurado** y el último usa **Quebrar** | puntos de quiebre, Fisurado, Quebrar, +50% de daño |
 | 8 | ULT enemiga | El autómata avisa su ULT; si se quiebra a tiempo se cancela, y si no, se ve cómo Defender reduce el daño | aviso, cancelar, defender |
@@ -161,10 +188,10 @@ anuncia.
 Una página del panel del entrenamiento y del menú de pausa en batalla,
 con una entrada corta por concepto y un ícono:
 - Línea de tiempo;
-- MP;
-- Pulso;
+- MP (maná): de la expedición, no vuelve por turno;
+- Pulso: de la pelea, pips 0-5, con ejemplo de habilidad que pide MP y Pulso;
 - Precondición;
-- Instante y encadenar;
+- Instante (no es un recurso: es un tipo de habilidad);
 - Afinidades (débil, resistente, inmune) y tope sin debilidad;
 - cada estado (Quemadura, Veneno, Congelación, Aturdido, Sagrado,
   Mojado, Cargado, Marca);
@@ -259,16 +286,18 @@ no decía):
   bestiario). Todos los combatientes del tutorial son "de práctica": la
   vida no baja de 1 (el log dice "el autómata se recompone"); la ULT de
   práctica es Diluvio Ácido con ATQ bajo.
-- **Cartel de efecto.** Hasta 3 líneas generadas de los eventos y del
-  estado antes/después (Convergencia con el cálculo, quiebre, afinidad,
-  estados, Instante, Pulso, MP, Defender/Pasar). La flecha es un rótulo
-  ("→ barra de quiebre"); falta dibujarla sobre la escena (pendiente). El
-  cartel de efecto lo cierra quien actuó (o su líder si es un compañero)
-  o se cierra solo a los 6 s; los demás lo cierran solo en su pantalla.
-  El cartel de inicio de etapa lo cierra cualquiera.
+- **Carteles (v0.9.2).** El de inicio de etapa sale de
+  `TutorialRules.stageIntro` (1-3 líneas cortas, con los números de los
+  datos, sin repetir el título que ya está en el panel); el de efecto, de
+  `effectCard` (hasta 3 líneas, cada concepto explicado una vez). La
+  flecha es un rótulo en el panel ("→ barra de quiebre"); el resaltado
+  sobre el HUD existe para MP y Pulso (`HudHighlight`), el resto queda
+  pendiente. Los dos se cierran solo por votación (§ 4.1). Protocolo 16:
+  `tut` lleva `v` (votos), `la` (último cartel) y `sd` (conceptos ya
+  explicados); se fue `cl` (segundos del cartel).
 - **Pausa.** Repetir etapa, Repetir, Glosario y Salir están en el botón
-  "TUTORIAL ≡" de la batalla (no en el menú de pausa general). En grupo
-  solo el host repite o sale.
+  ≡ del panel lateral (no en el menú de pausa general). En grupo solo el
+  host repite o sale.
 - **Salir / host se va.** Salir vuelve al pueblo sin completar; si el
   host se va, la sala se cierra y nadie lo completa. Nada del tutorial se
   copia al perfil: vida y MP se llenan al volver, pociones, XP y loot no

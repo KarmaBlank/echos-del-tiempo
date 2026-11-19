@@ -98,26 +98,27 @@ extension _TutorialOp on _Op {
     if (first is TutorialFreeStep) t.freeLeft = first.actions;
     // El turno vuelve a acomodarse desde cero.
     b.state.currentId = null;
-    t
-      ..card = _tut.stageCard(t, st,
-          names: {for (final q in players) q.id: q.name},
-          present: {for (final c in b.state.party) c.id})
-      ..cardLeft = TutorialRules.cardSeconds;
+    _openCard(t, _tut.stageCard(t, st,
+        names: {for (final q in players) q.id: q.name},
+        present: {for (final c in b.state.party) c.id}));
   }
 
-  /// `TutorialAckAction`: cierra el cartel. El de efecto lo cierra quien
-  /// actuó (o su líder si es un compañero); el de etapa, cualquiera.
+  /// Abre [card]: el guion espera la votación (§ 4.1).
+  void _openCard(TutorialState t, TutorialCard card) {
+    t
+      ..card = card
+      ..votes.clear();
+    if (card.effect) t.last = card;
+  }
+
+  /// `TutorialAckAction` = el voto SIGUIENTE ("Leí y entendí") de [p].
+  /// El cartel se cierra cuando votaron todos los humanos de la sala; los
+  /// compañeros IA no votan.
   bool ackTutorial(SessionPlayer p) {
-    final card = s.tutorial?.card;
-    if (card == null) return false;
-    final by = card.actorId;
-    if (by != null && by != p.id && s.players[by]?.leaderId != p.id) {
-      // Un humano que no actuó solo lo cierra en su pantalla.
-      if (s.players.containsKey(by) && s.players[by]?.isCompanion != true) {
-        return false;
-      }
-    }
-    _closeCard();
+    final t = s.tutorial;
+    if (t == null || t.card == null || p.isCompanion) return false;
+    if (!t.votes.add(p.id)) return false;
+    if (_tut.waiting(s).isEmpty) _closeCard();
     return true;
   }
 
@@ -126,7 +127,7 @@ extension _TutorialOp on _Op {
     final card = t.card;
     t
       ..card = null
-      ..cardLeft = 0;
+      ..votes.clear();
     if (card != null && card.effect) _advanceStep();
   }
 
@@ -199,10 +200,17 @@ extension _TutorialOp on _Op {
       BattleState before, List<BattleEvent> evs) {
     final t = s.tutorial!;
     final b = s.battle!;
-    if (_tut.currentStep(t) is TutorialFreeStep) t.freeLeft--;
-    t
-      ..card = _tut.effectCard(before, b.state, evs, p.id, cmd: cmd)
-      ..cardLeft = TutorialRules.cardSeconds;
+    final card = _tut.effectCard(before, b.state, evs, p.id,
+        cmd: cmd, said: t.said);
+    if (_tut.currentStep(t) is TutorialFreeStep) {
+      // Etapa libre: sin votación; el panel muestra lo que pasó.
+      t
+        ..freeLeft -= 1
+        ..last = card;
+      _advanceStep();
+      return;
+    }
+    _openCard(t, card);
   }
 
   /// Guarda un paso del motor sin XP, K.O. de misión ni fin de batalla.
@@ -217,8 +225,9 @@ extension _TutorialOp on _Op {
     final b = s.battle!;
     final t = s.tutorial!;
     if (t.card != null) {
-      t.cardLeft -= dt;
-      if (t.cardLeft <= 0) _closeCard();
+      // Sin cierre por tiempo: solo la votación. Si el que faltaba se
+      // desconectó, deja de contarse.
+      if (_tut.waiting(s).isEmpty) _closeCard();
       return;
     }
     if (b.wait > 0) {
@@ -304,9 +313,7 @@ extension _TutorialOp on _Op {
       }
     }
     b.wait = evs.any((ev) => ev is EnemyUltEvent) ? 2.3 : 0.8;
-    t
-      ..card = _tut.effectCard(before, b.state, evs, null)
-      ..cardLeft = TutorialRules.cardSeconds;
+    _openCard(t, _tut.effectCard(before, b.state, evs, null, said: t.said));
   }
 
   /// La etapa libre: la línea de tiempo real, sin guion.
