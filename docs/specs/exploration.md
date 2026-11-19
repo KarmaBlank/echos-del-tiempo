@@ -992,6 +992,19 @@ del mapa que no estaba en pantalla, con o sin CRT. Causas y arreglos
   monitor de 60 Hz el limitador no saltea cuadros (el tope ≥ 95 % de la
   frecuencia medida no limita).
 
+**Minimapa (v0.9.11).** La base (un color por tile) se reproducía en cada
+cuadro como un rectángulo por tile dentro de un `saveLayer` al 85 %.
+Ahora se graba una vez por mapa y tema como una imagen de 1 px por tile
+y se dibuja con un solo `drawImageRect` sin suavizado (cada tile sigue
+siendo un bloque nítido) con el 85 % de opacidad en el `Paint`; la
+estrella del jefe se mide una vez por (parpadeo, tamaño). Se ve igual.
+Rasterizado del cuadro entero quieto en el campo (test `overworld:
+rasterizado del cuadro entero`, CPU, ajustes por defecto con CRT FUERTE):
+p50 158 → 136 ms (por software: solo para comparar; el resto es casi
+todo el CRT emulado por CPU). Lo demás del mapa (tiles en bloques,
+nombres y carteles con `TextPainter` en LRU, HUD con `Memo`) ya estaba
+cacheado desde v0.8.3; se revisó y no hay `TextPainter`s, `Path`s ni
+sombras / blur creados por cuadro.
 **Medir.** `flutter test test/perf/overworld_perf_test.dart` arma la
 `WorldScreen` real dentro de `EcosApp` (ajustes por defecto: ALTO
 CONTRASTE, CRT FUERTE, partículas ALTAS), party de 4 en la zona 1 con
