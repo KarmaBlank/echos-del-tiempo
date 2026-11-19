@@ -4,6 +4,7 @@ import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_event.dart';
 import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
+import 'package:echos_del_tiempo/game_engine/rules/skill_requirements.dart';
 import 'package:echos_del_tiempo/game_engine/rules/tutorial_rules.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -142,6 +143,98 @@ void main() {
             reason: 'las acciones fuera de paso se rechazan');
       });
     }
+  });
+
+  // § 3: kit de práctica en reemplazo total de la build.
+  group('kit de práctica', () {
+    for (final (humans, companions) in [(1, 0), (2, 0), (4, 0), (1, 3)]) {
+      for (final attempt in [1, 2, 3, 4]) {
+        test('$humans humano(s) + $companions IA, intento $attempt: cada '
+            'paso tiene su habilidad en el kit y habilitada', () {
+          final e = sessionEngine();
+          final rules = e.tutorials;
+          var s = _room(e, humans: humans, companions: companions);
+          s.tutorialRuns = attempt - 1;
+          s = _start(e, s);
+          final t0 = s.tutorial!;
+          expect(t0.attempt, attempt);
+          final present = t0.order.toSet();
+          // Kit: stats y arma fijas, solo las habilidades de sus roles.
+          for (final c in s.battle!.state.party) {
+            expect(c.build, isNull, reason: 'sin build en el tutorial');
+            expect([c.maxHp, c.maxMp, c.attack, c.magic, c.weaponType], [
+              kTutorialKit.hp,
+              kTutorialKit.mp,
+              kTutorialKit.attack,
+              kTutorialKit.magic,
+              kTutorialKit.weaponType
+            ]);
+            expect(c.skillIds, rules.kitSkills(t0, c.id, present));
+          }
+          final checked = <String>{};
+          for (var i = 0; i < 40000 && s.tutorial != null; i++) {
+            s = e.tick(s, 0.05).state;
+            final t = s.tutorial;
+            final b = s.battle;
+            if (t == null || b == null) break;
+            if (t.card != null) {
+              var by = t.card!.actorId ?? 'h';
+              by = s.players[by]?.leaderId ?? by;
+              if (!s.players.containsKey(by)) by = 'h';
+              final ack = e.apply(s, by, const TutorialAckAction());
+              if (ack != null) s = ack.state;
+              continue;
+            }
+            final st = rules.currentStep(t);
+            if (st is TutorialFreeStep && b.waitingForPlayer) {
+              final cur = b.state.currentId!;
+              if (s.players[cur]?.isCompanion == false) {
+                final r = e.apply(s, cur, const BattleAction(DefendCommand()));
+                if (r != null) s = r.state;
+              }
+              continue;
+            }
+            if (st is! TutorialPlayerStep || !t.prepared) continue;
+            final id = rules.actorOf(t, st.role, present)!;
+            if (b.state.currentId != id) continue;
+            final actor = b.state.byId(id)!;
+            final key = '${t.stage}/${t.step}/${t.reps}';
+            if (st.move == TutorialMove.skill && checked.add(key)) {
+              final sk = rules.skillFor(st, actor)!;
+              expect(actor.skillIds, contains(sk), reason: '$key $id');
+              final def = e.catalog.skills[sk]!;
+              expect(
+                  SkillRequirements.missing(
+                      def, actor, b.state.byId(TutorialRules.bossId),
+                      foes: b.state.enemies),
+                  isEmpty,
+                  reason: '$key $id ${def.name}');
+              if (s.players[id]?.isCompanion != true) {
+                expect(rules.banner(s, {id})!.text,
+                    startsWith('TE TOCA: usar ${def.name}'));
+              }
+            }
+            if (s.players[id]?.isCompanion == true) continue;
+            final r = e.apply(s, id, BattleAction(rules.scripted(st, actor)!));
+            expect(r, isNotNull, reason: 'el paso $key de $id se rechazó');
+            s = r!.state;
+          }
+          expect(s.tutorial, isNull, reason: 'terminó el guion');
+          expect(checked, isNotEmpty);
+        });
+      }
+    }
+
+    test('al salir la build vuelve intacta', () {
+      final e = sessionEngine();
+      final s = _room(e, companions: 1);
+      final before = {for (final p in s.playerList) p.id: p.profile.toJson()};
+      var t = _start(e, s);
+      t = act(e, t, 'h', const TutorialControlAction(TutorialControl.exit));
+      for (final p in t.playerList) {
+        expect(p.profile.toJson(), before[p.id]);
+      }
+    });
   });
 
   test('solo sin compañeros: la party no entra', () {

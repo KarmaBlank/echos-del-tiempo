@@ -563,8 +563,9 @@ class _Op {
     final b = s.battle;
     if (s.mode == SessionMode.battle && b != null) {
       b.state = e.battles.join(b.state, e.partyMember(p, blessing: s.mission?.blessing)).state;
-      // En la pelea de práctica nadie cae (combat_tutorial.md § 3).
-      if (s.tutorial != null) b.state.byId(id)?.practice = true;
+      // En la pelea de práctica nadie cae y nadie trae su build: kit de
+      // práctica (combat_tutorial.md § 3).
+      if (s.tutorial case final t?) e.tutorials.applyKit(b.state, t, id);
     }
     s.players[id] = p;
     events.add(PlayerJoinedEvent(id));

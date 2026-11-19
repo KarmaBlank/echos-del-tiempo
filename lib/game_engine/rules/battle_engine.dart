@@ -451,7 +451,10 @@ class BattleEngine {
 
   /// `stats(p)` dentro de la batalla: recalcula con el bonus de DEF actual.
   void _refreshStats(Combatant c) {
-    final d = stats.calculate(c.build!.withBonusDefense(c.bonusDefense));
+    // Sin build (kit del TUTORIAL): stats fijas.
+    final build = c.build;
+    if (build == null) return;
+    final d = stats.calculate(build.withBonusDefense(c.bonusDefense));
     c
       ..maxHp = d.maxHp
       ..maxMp = d.maxMp

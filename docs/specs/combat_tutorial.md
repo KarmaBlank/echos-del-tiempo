@@ -1,4 +1,4 @@
-﻿# Spec: Tutorial de combate — v0.9 (implementado, ver § 8; falta OK del dueño)
+# Spec: Tutorial de combate — v0.9 (implementado, ver § 8; falta OK del dueño)
 
 Pedido del dueño: un tutorial de verdad en el overworld, junto a la
 armería, con un jefe de práctica. Tiene que explicar todo **en base a lo
@@ -64,12 +64,37 @@ Convergencias).
 - Afinidades fijas para enseñar: débil al Fuego, resistente a lo físico.
   Al lado tiene 2 **Autómatas chicos** para mostrar las habilidades de
   área; se reponen solos.
-- El grupo usa sus personajes reales con su equipo, pero el tutorial le
-  **presta** las habilidades del guion:
-  - una "carta" de práctica por rol, por ejemplo Ignición (Fuego,
-    Quemadura), Toxina (Veneno), Golpe pesado (mucho quiebre) y Quebrar;
-  - así funciona con cualquier clase y arma;
-  - las habilidades prestadas desaparecen al salir.
+- **Dentro del tutorial la build del jugador no existe** (v0.9, pedido del
+  dueño). Cada personaje, humano o compañero IA, recibe un **kit de
+  práctica** que *reemplaza* todo: clase, arma, árbol, equipo y ascensión
+  (`TutorialRules.kitOf`, `kTutorialKit`):
+  - stats iguales para todos: 150 de vida, 40 de MP, VEL 10, ATQ 18, MAG 18
+    y DEF 4, sin crítico;
+  - arma `espada` (física: su Quebrar es la física). Las afinidades las
+    ponen las habilidades;
+  - las habilidades son **exactamente** las de sus roles en el guion, en el
+    orden del guion (tabla de abajo). Con menos de 4 personajes, uno hace
+    varios roles y suma sus kits. Los roles rotan con cada intento (§ 4.3)
+    y el kit se arma de nuevo;
+  - de la persona solo quedan el nombre y el dibujo de su clase;
+  - quien se une con la pelea empezada recibe el kit básico (Bola de
+    Fuego y Embestida) para la etapa libre;
+  - al salir, la batalla se descarta y la build vuelve intacta: el kit
+    vive solo en `BattleState`.
+
+  | Rol | Habilidades del kit | Etapas |
+  |---|---|---|
+  | Acumula (`acumula`) | Bola de Fuego, Llamarada | 3, 4, 6, 7, 9 |
+  | Detona (`detona`) | Embestida, Púa Fugaz, Ignición Convergente, Ponzoña Convergente | 2, 5, 6, 9 |
+  | Barra (`barra`) | Embestida, Bola de Fuego | 3, 4, 7 |
+  | Quiebra (`quiebra`) | Quebrar | 7 |
+
+  Atacar, Defender y Pasar (etapas 1, 2 y 8) los tienen todos. Antes de
+  cada paso, el host repone el MP y el Pulso que pide y cumple la
+  precondición (`prepare`). Un test recorre el guion completo con 1, 2 y 4
+  humanos o con 3 compañeros IA, en 4 intentos con los roles rotados.
+  Verifica que en cada paso la habilidad del cartel está en el kit de
+  quien actúa y está habilitada.
 - No da XP ni loot, no consume pociones y la vida y el MP vuelven a como
   estaban al salir.
 

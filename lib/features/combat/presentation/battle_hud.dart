@@ -675,13 +675,18 @@ class _BarRow extends StatelessWidget {
         Expanded(child: bar),
         SizedBox(
           width: valueW,
-          child: Text(value,
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.fade,
-              textAlign: TextAlign.right,
-              // Cifras de las barras: Press Start 2P (monoespaciada).
-              style: style),
+          // Si las cifras no entran ("1200/1200"), se achican en vez de
+          // cortarse; las que entran quedan igual.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(value,
+                maxLines: 1,
+                softWrap: false,
+                textAlign: TextAlign.right,
+                // Cifras de las barras: Press Start 2P (monoespaciada).
+                style: style),
+          ),
         ),
       ],
     );
@@ -938,7 +943,7 @@ class _PartyCard extends StatelessWidget {
                         Expanded(
                           child: ProtoText('<b$nameColor>${protoEsc(p.name)}'
                               '</b> <span class="k">'
-                              'Lv${p.build?.level ?? '?'}</span>'),
+                              'Lv${p.build?.level ?? (p.level > 0 ? p.level : '?')}</span>'),
                         ),
                         if (turn.isNotEmpty) ProtoText(turn),
                       ],

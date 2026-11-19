@@ -1249,16 +1249,33 @@ class _LogBand extends StatelessWidget {
                 child: Center(
                   child: Text(
                     log,
-                    maxLines: 2,
+                    // Una línea y al alto de la banda (16 px virtuales):
+                    // si no entra a lo ancho, termina en "…".
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    textScaler: big ? TextScaler.noScaling : null,
+                    textScaler: TextScaler.noScaling,
+                    // Los glifos de respaldo (→) no agrandan la línea.
+                    strutStyle: StrutStyle(
+                        fontSize: big
+                            ? px
+                            : math.min(
+                                RetroType.fixedScaler(context)
+                                    .scale(RetroType.small),
+                                (box.maxHeight - 2) / 1.25),
+                        height: 1.25,
+                        forceStrutHeight: true),
                     style: TextStyle(
                         fontFamilyFallback: RetroType.bodyFallback,
                         fontFamily: big
                             ? RetroType.pixelFamily
                             : RetroType.familyFor(RetroType.small),
-                        fontSize: big ? px : RetroType.small,
+                        fontSize: big
+                            ? px
+                            : math.min(
+                                RetroType.fixedScaler(context)
+                                    .scale(RetroType.small),
+                                (box.maxHeight - 2) / 1.25),
                         height: 1.25,
                         color: ProtoColors.white),
                   ),

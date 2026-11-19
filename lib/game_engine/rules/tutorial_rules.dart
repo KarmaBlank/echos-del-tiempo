@@ -30,6 +30,40 @@ const _detonaVeneno = 'ignicionEco'; // Ignición Convergente (pide Veneno)
 const _detonaQuemadura = 'ponzonaEco'; // Ponzoña Convergente (pide Quemadura)
 const _area = 'llamarada'; // Llamarada: a todos + Quemadura
 
+/// Stats y arma del kit de práctica (§ 3): iguales para todos, sea cual
+/// sea la clase, el arma, el árbol o el equipo del personaje.
+class TutorialKit {
+  const TutorialKit({
+    required this.hp,
+    required this.mp,
+    required this.speed,
+    required this.attack,
+    required this.magic,
+    required this.defense,
+    required this.weaponType,
+  });
+
+  final int hp;
+  final int mp;
+  final double speed;
+  final int attack;
+  final int magic;
+  final int defense;
+
+  /// Tipo de arma (física: la Quebrar es la física).
+  final String weaponType;
+}
+
+const kTutorialKit = TutorialKit(
+  hp: 150,
+  mp: 40,
+  speed: 10,
+  attack: 18,
+  magic: 18,
+  defense: 4,
+  weaponType: 'espada',
+);
+
 /// Las 10 etapas del § 4.2.
 const List<TutorialStage> kTutorialStages = [
   TutorialStage(
@@ -295,20 +329,60 @@ class TutorialRules {
     return out;
   }
 
+  /// El kit de práctica de [id] (§ 3): exactamente las habilidades de sus
+  /// roles, en el orden del guion (Quebrar para quien quiebra). Sin
+  /// roles (se unió con la pelea empezada): lo básico para la etapa libre.
+  List<String> kitSkills(TutorialState t, String id, Set<String> present) {
+    final out = lentSkills(t, id, present);
+    if (rolesOf(t, id, present).contains(_r3)) {
+      out.add(quebrarSkillFor(kTutorialKit.weaponType));
+    }
+    return out.isEmpty ? [_fuego, _fisico] : out;
+  }
+
+  /// Cambia a [c] por su kit de práctica (§ 3): la build del jugador
+  /// (clase, arma, árbol, equipo, ascensión) no existe en el tutorial.
+  /// Solo se conserva quién es y su dibujo. La build real no se toca:
+  /// la batalla se descarta al salir.
+  Combatant kitOf(Combatant c, TutorialState t, Set<String> present) {
+    const k = kTutorialKit;
+    return Combatant(
+      id: c.id,
+      name: c.name,
+      isPlayer: true,
+      hp: k.hp,
+      maxHp: k.hp,
+      mp: k.mp.toDouble(),
+      maxMp: k.mp,
+      speed: k.speed,
+      attack: k.attack,
+      magic: k.magic,
+      defense: k.defense,
+      critChance: 0,
+      classId: c.classId, // solo el dibujo
+      level: c.build?.level ?? c.level, // solo el cartel
+      weaponType: k.weaponType,
+      skillIds: kitSkills(t, c.id, present),
+      nextTurn: c.nextTurn,
+      pulse: BattleEngine.pulseStart,
+      practice: true,
+    );
+  }
+
+  /// Pone el kit a [id] dentro de [b] (al armar la pelea o si alguien se
+  /// une a la mitad).
+  void applyKit(BattleState b, TutorialState t, String id) {
+    final present = {for (final c in b.party) c.id};
+    final i = b.party.indexWhere((c) => c.id == id);
+    if (i >= 0) b.party[i] = kitOf(b.party[i], t, present);
+  }
+
   /// Arma la pelea de práctica sobre [started] (`BattleEngine.start` con
-  /// el grupo): cambia los enemigos por el Autómata de entrenamiento,
-  /// presta las habilidades y marca a todos como de práctica.
+  /// el grupo): cambia los enemigos por el Autómata de entrenamiento y a
+  /// cada personaje (humano o compañero) por su kit de práctica.
   void setUpBattle(BattleState started, TutorialState t) {
-    final present = {for (final c in started.party) c.id};
-    for (final c in started.party) {
-      final lent = lentSkills(t, c.id, present);
-      c
-        ..practice = true
-        ..skillIds = [
-          for (final id in lent)
-            if (!c.skillIds.contains(id)) id,
-          ...c.skillIds,
-        ];
+    for (final id in [for (final c in started.party) c.id]) {
+      applyKit(started, t, id);
     }
     final n = math.max(1, started.party.length);
     started.enemies

@@ -5,6 +5,8 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_panel.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_type.dart';
+import '../../combat/presentation/battle_screen.dart' show BattleViewState;
+import '../../combat/presentation/scene/battle_layout.dart' show SceneGeometry;
 import '../../../game_engine/models/session_action.dart' show TutorialControl;
 import '../../../game_engine/rules/tutorial_rules.dart';
 
@@ -233,11 +235,19 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
     final w = widget;
     final b = w.banner;
     final card = w.card;
+    return LayoutBuilder(builder: (context, box) {
+    // Misma geometría que BattleView: el cartel del paso va debajo de la
+    // banda del log y el de efecto sobre la escena, justo encima del menú.
+    final barH = BattleViewState.barHeight(
+        box.maxHeight, RetroType.factorOf(context));
+    final g = SceneGeometry.fit(Size(box.maxWidth, box.maxHeight - barH),
+        textFactor: RetroType.factorOf(context));
+    final belowLog = (54 * g.scale).roundToDouble() + 4;
     return Stack(
       children: [
         if (b != null)
           Positioned(
-            top: 46,
+            top: belowLog,
             left: 0,
             right: 0,
             child: IgnorePointer(
@@ -268,7 +278,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
           Positioned(
             left: 0,
             right: 0,
-            bottom: 150,
+            bottom: barH + 8,
             child: Center(
               child: GestureDetector(
                 onTap: w.onCloseCard,
@@ -299,7 +309,7 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
           ),
         Positioned(
           right: 8,
-          top: 46,
+          top: belowLog,
           child: PanelButton('TUTORIAL ≡',
               key: const ValueKey('tutorial-menu'),
               onPressed: () => setState(() {
@@ -369,5 +379,6 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
           ),
       ],
     );
+    });
   }
 }
