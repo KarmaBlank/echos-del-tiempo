@@ -143,7 +143,7 @@ void main() {
           uid: 'x', baseId: 'baculo_fuego', extraSkills: ['giro']);
       expect(_items.sanitize(legacy)!.extraSkills, ['giro']);
       expect(_items.skillsOf(_items.sanitize(legacy)!),
-          ['bola', 'llamarada', 'giro']);
+          ['bola', 'llamarada', 'giro', 'quebrarArcano']);
     });
   });
 
@@ -151,7 +151,7 @@ void main() {
     test('cupos llenos: sin elegir falla; elegido reemplaza ese', () {
       final p = _p(meleeExtras: ['bola']);
       final m = p.itemByUid('m')!;
-      expect(_items.replaceableSkills(m), ['bola']);
+      expect(_items.replaceableSkills(m), ['bola', 'quebrar']);
       expect(_items.needsReplaceChoice(m, 'tajoGemelo'), isTrue);
       expect(_items.needsReplaceChoice(m, 'bola'), isFalse,
           reason: 'volver a traer la misma no ocupa cupo');

@@ -22,7 +22,7 @@ const Map<String, SkillDef> kElementalSkills = {
   'chorro': SkillDef(id: 'chorro', name: 'Chorro de Agua', mp: 3, kind: _mag, power: 1.5, status: _wet),
   'oleada': SkillDef(id: 'oleada', name: 'Oleada', mp: 8, kind: _mag, power: 1.0, allTargets: true, status: _wet),
   'geiser': SkillDef(id: 'geiser', name: 'Géiser', mp: 5, kind: _mag, power: 1.8, delay: 0.3, status: _wet),
-  'torrente': SkillDef(id: 'torrente', name: 'Torrente', mp: 7, kind: _mag, power: 2.3),
+  'torrente': SkillDef(id: 'torrente', name: 'Torrente', mp: 7, kind: _mag, power: 2.3, breaks: true),
   'bruma': SkillDef(id: 'bruma', name: 'Bruma Densa', mp: 6, kind: _mag, power: 0.5, allTargets: true, status: _wet, debuffs: [PartyBuff(BuffStat.speed, -0.10, 2)]),
   'escudoAgua': SkillDef(id: 'escudoAgua', name: 'Escudo de Agua', mp: 5, kind: _sup, allyShield: 0.20, shieldTurns: 2),
   'tajoMarea': SkillDef(id: 'tajoMarea', name: 'Tajo de Marea', mp: 4, kind: _phys, power: 1.6, status: _wet),

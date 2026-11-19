@@ -360,8 +360,9 @@ class CraftRules {
   }
 
   /// Trasladar [skillId] de [sourceUid] (que se consume) a [targetUid]
-  /// (loot.md § 16, 16.1–16.2). Con los cupos llenos hay que elegir
-  /// [replaceSkillId], una de las trasladadas del destino.
+  /// (loot.md § 16, 16.1–16.3). Con los cupos llenos hay que elegir
+  /// [replaceSkillId], una de las trasladadas del destino o su Quebrar
+  /// base ([ItemRules.replaceableSkills]).
   CraftResult transferSkill(PlayerProfile p, String targetUid,
       String sourceUid, String skillId, {String? replaceSkillId}) {
     final t = p.itemByUid(targetUid);
@@ -376,6 +377,21 @@ class CraftRules {
     final reject = items.canReceiveSkill(t, skillId);
     if (reject != null) return CraftResult.fail(reject);
     String? replaced;
+    // Quebrar de la ranura base (loot.md § 16.3): la trasladada ocupa su
+    // ranura y el arma deja de tener Quebrar.
+    final quebrar = items.quebrarOf(t);
+    if (quebrar != null && replaceSkillId == quebrar) {
+      if (t.extraSkills.contains(skillId)) {
+        return const CraftResult.fail('Ya la tiene');
+      }
+      final after = t.copyWith(
+          quebrarReplaced: true, extraSkills: [...t.extraSkills, skillId]);
+      return _done(p, t, after,
+          credits: transferSkillCost(t.rarity),
+          consumed: [sourceUid],
+          replaced: catalog.skills[quebrar]?.name,
+          replacedSkillId: quebrar);
+    }
     if (replaceSkillId != null) {
       if (!t.extraSkills.contains(replaceSkillId)) {
         return CraftResult.fail(
@@ -391,7 +407,7 @@ class CraftRules {
       for (final x in t.extraSkills)
         if (x != skillId && x != replaced) x,
     ];
-    if (skills.length >= t.rarity.skillSlots) {
+    if (skills.length >= t.skillCapacity) {
       // Solo con un perfil fuera de cupo (no pasa tras `sanitize`).
       return const CraftResult.fail('Elegí qué habilidad reemplazar');
     }

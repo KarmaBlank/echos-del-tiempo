@@ -94,9 +94,11 @@ root registra para que el título sepa si hay red: `label` (`LAN`, `P2P`),
 `P2P por internet: falta configurar Firebase`) y `create()` (una
 `NetSession` nueva por sala).
 
-## Protocolo (versión 14)
+## Protocolo (versión 15)
 
-`kProtocolVersion` (`wire.dart`) = 14 desde v0.9 (TUTORIAL:
+`kProtocolVersion` (`wire.dart`) = 15 desde v0.9.1 (armas con `nq`,
+Quebrar reemplazado, loot.md § 16.3; afijo `quebrantador`; habilidades
+que pueden quebrar, combo_balance.md § 5.3). 14 desde v0.9 (TUTORIAL:
 `hello` con `tv` = `tutV` de la cuenta, sesión `tut` (`TutorialState`) y
 `tutN`, jugador `tv`, combatiente `prac`, acciones `tut` `tutOk` `tutCtl`
 y evento `tutDone`; docs/specs/combat_tutorial.md § 6; las versiones

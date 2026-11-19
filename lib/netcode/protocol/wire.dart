@@ -37,7 +37,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 14 desde v0.9: `hello` con `tv` (`tutV` de la cuenta) y sesión con
 /// `tut` / `tutN`, jugador `tv`, combatiente `prac`, acciones `tut`,
 /// `tutOk`, `tutCtl` y evento `tutDone` (combat_tutorial.md § 6).
-const kProtocolVersion = 14;
+/// 15 desde v0.9.1: armas con `nq` (Quebrar reemplazado, loot.md
+/// § 16.3), afijo `quebrantador` y habilidades con "Puede quebrar".
+const kProtocolVersion = 15;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {

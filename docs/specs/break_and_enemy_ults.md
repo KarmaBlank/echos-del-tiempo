@@ -73,10 +73,14 @@ turno, +50% de daño 2 turnos del grupo, umbral +25% por quiebre con tope
   golpe que lo fisura no lo quiebra.
 - **Se recompone:** si llega a su turno Fisurado, la barra baja a la
   mitad (`BreakEvent(steadied)`, texto `SE RECOMPONE`).
-- **Quebrar base:** toda arma trae al final de su kit `Quebrar` (física,
-  ATQ × 0.6) o `Quebrar arcano` (báculo, varita y tomo, MAG × 0.6), 2 de
-  MP; casi no llena (1 punto). Tooltip: "Quebrar: quiebra a un enemigo
-  FISURADO (barra llena). Si no está Fisurado, no quiebra".
+- **Quebrar base:** toda arma trae al final de su kit `Quebrar` (física)
+  o `Quebrar arcano` (báculo, varita y tomo). **v0.9.1: no hace daño**
+  (power 0, antes × 0.6), 2 de Pulso, pide objetivo Fisurado y está en
+  una ranura base que el jugador puede reemplazar por fusión (loot.md
+  § 16.3). Además hay habilidades de arma que "Pueden quebrar" y el
+  afijo Quebrantador (combo_balance.md § 5.3). Tooltip: "Quebrar: no
+  hace daño; quiebra a un enemigo FISURADO (barra llena). Se puede
+  reemplazar por fusión".
 - **Sin traba de jefe.** Meta medida (combo_balance.md, tabla de los
   pasos 3-4): grupo mixto, jefe quebrado antes de su primera ULT 0-9%.
 - Red: el protocolo ya estaba en 13 en esta rama (sin publicar); viajan

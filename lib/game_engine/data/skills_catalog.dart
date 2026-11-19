@@ -52,10 +52,11 @@ final Set<String> kEngineSkillIds = {
 /// Habilidades que otorgan las armas (`SK`) y los kits de las ascensiones.
 const Map<String, SkillDef> kSkills = {
   // Quebrar base (combo_balance.md § 5.1): toda arma la trae en su kit.
-  // Pega poco (×0.6) y casi no llena la barra: cierra el quiebre.
+  // v0.9.1: no hace daño (power 0); solo cierra el quiebre. Es la ranura
+  // base de Quebrar del arma (loot.md § 16.3): se puede reemplazar.
   // Paso 7 (§ 5.2): cuesta 2 de Pulso (sin MP) y pide objetivo Fisurado.
-  kQuebrarId: SkillDef(id: kQuebrarId, name: 'Quebrar', kind: _phys, power: 0.6, breaks: true, pulse: 2, requires: [SkillReq.targetFissured()]),
-  kQuebrarArcanoId: SkillDef(id: kQuebrarArcanoId, name: 'Quebrar arcano', kind: _mag, power: 0.6, breaks: true, pulse: 2, requires: [SkillReq.targetFissured()]),
+  kQuebrarId: SkillDef(id: kQuebrarId, name: 'Quebrar', kind: _phys, power: 0, breaks: true, pulse: 2, requires: [SkillReq.targetFissured()]),
+  kQuebrarArcanoId: SkillDef(id: kQuebrarArcanoId, name: 'Quebrar arcano', kind: _mag, power: 0, breaks: true, pulse: 2, requires: [SkillReq.targetFissured()]),
   // Combo de clase (combo_balance.md § 5.2, propuesta del paso 7).
   // Guerrero y Maga preparan Quemadura, Tirador Veneno, Paladín Marca;
   // Maga detona el Veneno y Tirador la Quemadura.
@@ -69,8 +70,8 @@ const Map<String, SkillDef> kSkills = {
   'embestida': SkillDef(id: 'embestida', name: 'Embestida', mp: 4, kind: _phys, power: 1.2, delay: 0.45),
   'ignea': SkillDef(id: 'ignea', name: 'Golpe Ígneo', mp: 4, kind: _phys, power: 1.8, status: StatusApplication(_burn, 2)),
   'sismo': SkillDef(id: 'sismo', name: 'Golpe Sísmico', mp: 6, kind: _phys, power: 1.2, allTargets: true, delay: 0.3),
-  'hendir': SkillDef(id: 'hendir', name: 'Hendidura Tóxica', mp: 5, kind: _phys, power: 2.0, status: StatusApplication(_poi, 2)),
-  'tajoT': SkillDef(id: 'tajoT', name: 'Tajo Temporal', mp: 7, kind: _phys, power: 2.4, delay: 0.6, status: StatusApplication(_frz, 1)),
+  'hendir': SkillDef(id: 'hendir', name: 'Hendidura Tóxica', mp: 5, kind: _phys, power: 2.0, status: StatusApplication(_poi, 2), breaks: true),
+  'tajoT': SkillDef(id: 'tajoT', name: 'Tajo Temporal', mp: 7, kind: _phys, power: 2.4, delay: 0.6, status: StatusApplication(_frz, 1), breaks: true),
   'chispa': SkillDef(id: 'chispa', name: 'Chispa', mp: 3, kind: _mag, power: 1.6, status: StatusApplication(_burn, 1), instant: true),
   'cura': SkillDef(id: 'cura', name: 'Cura', mp: 5, kind: SkillKind.heal, power: 1.5, cleanse: 1),
   'bola': SkillDef(id: 'bola', name: 'Bola de Fuego', mp: 4, kind: _mag, power: 1.8, status: StatusApplication(_burn, 2)),
@@ -84,7 +85,7 @@ const Map<String, SkillDef> kSkills = {
   'venenosa': SkillDef(id: 'venenosa', name: 'Flecha Venenosa', mp: 3, kind: _phys, power: 0.7, status: StatusApplication(_poi, 3), instant: true),
   'certero': SkillDef(id: 'certero', name: 'Disparo Certero', mp: 3, kind: _phys, power: 1.6, critBonus: 0.4),
   'aturdir': SkillDef(id: 'aturdir', name: 'Disparo Aturdidor', mp: 4, kind: _phys, power: 0.8, delay: 0.7),
-  'rayoF': SkillDef(id: 'rayoF', name: 'Flecha Rayo', mp: 4, kind: _phys, power: 1.9),
+  'rayoF': SkillDef(id: 'rayoF', name: 'Flecha Rayo', mp: 4, kind: _phys, power: 1.9, breaks: true),
   'lluvia': SkillDef(id: 'lluvia', name: 'Lluvia de Flechas', mp: 6, kind: _phys, power: 1.1, allTargets: true),
   'sagrado': SkillDef(id: 'sagrado', name: 'Golpe Sagrado', mp: 3, kind: _phys, power: 1.5),
   'provocar': SkillDef(id: 'provocar', name: 'Provocar', mp: 3, kind: SkillKind.taunt, amount: 3),
@@ -92,7 +93,7 @@ const Map<String, SkillDef> kSkills = {
   'bendicion': SkillDef(id: 'bendicion', name: 'Bendición', mp: 6, kind: SkillKind.heal, power: 1.0, cleanse: 5),
   'lanzaLuz': SkillDef(id: 'lanzaLuz', name: 'Lanza de Luz', mp: 4, kind: _mag, power: 1.7, delay: 0.3),
   'consagrar': SkillDef(id: 'consagrar', name: 'Consagrar', mp: 6, kind: _mag, power: 1.0, allTargets: true, status: StatusApplication(_burn, 1)),
-  'juicio': SkillDef(id: 'juicio', name: 'Martillo del Juicio', mp: 7, kind: _phys, power: 2.3, delay: 0.8),
+  'juicio': SkillDef(id: 'juicio', name: 'Martillo del Juicio', mp: 7, kind: _phys, power: 2.3, delay: 0.8, breaks: true),
   'corteGlacial': SkillDef(id: 'corteGlacial', name: 'Corte Glacial', mp: 4, kind: _phys, power: 1.6, status: StatusApplication(_frz, 2)),
   'erupcion': SkillDef(id: 'erupcion', name: 'Erupción', mp: 7, kind: _phys, power: 1.1, allTargets: true, status: StatusApplication(_burn, 2)),
   'dardo': SkillDef(id: 'dardo', name: 'Dardo Tóxico', mp: 4, kind: _mag, power: 1.4, status: StatusApplication(_poi, 3), pulse: 1, instant: true),
@@ -102,30 +103,30 @@ const Map<String, SkillDef> kSkills = {
   'metralla': SkillDef(id: 'metralla', name: 'Metralla Tóxica', mp: 6, kind: _phys, power: 0.9, allTargets: true, status: StatusApplication(_poi, 2)),
   // 'aura', 'fortaleza' y 'proteccion' (el viejo kit del Paladín) son
   // desde v0.5 el kit del Guardián: viven en `kAscensionSkills`.
-  'estocada': SkillDef(id: 'estocada', name: 'Estocada Firme', mp: 2, kind: _phys, power: 1.4, critBonus: 0.15),
+  'estocada': SkillDef(id: 'estocada', name: 'Estocada Firme', mp: 2, kind: _phys, power: 1.4, critBonus: 0.15, breaks: true),
   'temblor': SkillDef(id: 'temblor', name: 'Temblor', mp: 6, kind: _phys, power: 0.9, allTargets: true, status: StatusApplication(_stun, 1, chance: 0.15)),
   'sanar': SkillDef(id: 'sanar', name: 'Sanación', mp: 4, kind: SkillKind.heal, power: 1.1, cleanse: 1),
-  'golpeEscudo': SkillDef(id: 'golpeEscudo', name: 'Golpe de Escudo', mp: 3, kind: _phys, power: 1.3, status: StatusApplication(_stun, 1, chance: 0.3)),
-  'aplastar': SkillDef(id: 'aplastar', name: 'Aplastar', mp: 4, kind: _phys, power: 1.9, status: StatusApplication(_stun, 1, chance: 0.25)),
+  'golpeEscudo': SkillDef(id: 'golpeEscudo', name: 'Golpe de Escudo', mp: 3, kind: _phys, power: 1.3, status: StatusApplication(_stun, 1, chance: 0.3), breaks: true),
+  'aplastar': SkillDef(id: 'aplastar', name: 'Aplastar', mp: 4, kind: _phys, power: 1.9, status: StatusApplication(_stun, 1, chance: 0.25), breaks: true),
   'tajoCarmesi': SkillDef(id: 'tajoCarmesi', name: 'Tajo Carmesí', mp: 5, kind: _phys, power: 1.9, critBonus: 0.2, status: StatusApplication(_burn, 2)),
   'vendaval': SkillDef(id: 'vendaval', name: 'Vendaval Helado', mp: 8, kind: _phys, power: 1.2, allTargets: true, status: StatusApplication(_frz, 2)),
   'tajoOcaso': SkillDef(id: 'tajoOcaso', name: 'Tajo del Ocaso', mp: 6, kind: _phys, power: 2.2, status: StatusApplication(_poi, 3)),
-  'descarga': SkillDef(id: 'descarga', name: 'Descarga', mp: 6, kind: _mag, power: 2.1),
+  'descarga': SkillDef(id: 'descarga', name: 'Descarga', mp: 6, kind: _mag, power: 2.1, breaks: true),
   'plaga': SkillDef(id: 'plaga', name: 'Plaga', mp: 10, kind: _mag, power: 1.0, allTargets: true, status: StatusApplication(_poi, 3)),
   'sombra': SkillDef(id: 'sombra', name: 'Flecha Sombría', mp: 4, kind: _phys, power: 1.4, critBonus: 0.25, status: StatusApplication(_poi, 2)),
   'ceroAbs': SkillDef(id: 'ceroAbs', name: 'Cero Absoluto', mp: 6, kind: _phys, power: 1.8, status: StatusApplication(_frz, 3)),
   'flechaSolar': SkillDef(id: 'flechaSolar', name: 'Flecha Solar', mp: 5, kind: _phys, power: 1.7, status: StatusApplication(_burn, 2)),
-  'perfora': SkillDef(id: 'perfora', name: 'Tiro Perforante', mp: 6, kind: _phys, power: 2.6, critBonus: 0.35),
+  'perfora': SkillDef(id: 'perfora', name: 'Tiro Perforante', mp: 6, kind: _phys, power: 2.6, critBonus: 0.35, breaks: true),
   // ---- loot v2: tipos nuevos (lanza, varita, ballesta, dagas) ----
   'perforar': SkillDef(id: 'perforar', name: 'Lanza Perforante', mp: 4, kind: _phys, power: 1.7, critBonus: 0.2),
   'barrido': SkillDef(id: 'barrido', name: 'Barrido de Lanza', mp: 5, kind: _phys, power: 1.0, allTargets: true, delay: 0.2),
-  'empalar': SkillDef(id: 'empalar', name: 'Empalar', mp: 6, kind: _phys, power: 2.1, status: StatusApplication(_stun, 1, chance: 0.25)),
+  'empalar': SkillDef(id: 'empalar', name: 'Empalar', mp: 6, kind: _phys, power: 2.1, status: StatusApplication(_stun, 1, chance: 0.25), breaks: true),
   'misil': SkillDef(id: 'misil', name: 'Misil Arcano', mp: 2, kind: _mag, power: 1.4, critBonus: 0.15),
   'escarchaFugaz': SkillDef(id: 'escarchaFugaz', name: 'Escarcha Fugaz', mp: 4, kind: _mag, power: 1.2, delay: 0.2, status: StatusApplication(_frz, 1)),
-  'rayoArcano': SkillDef(id: 'rayoArcano', name: 'Rayo Arcano', mp: 6, kind: _mag, power: 2.2),
-  'virote': SkillDef(id: 'virote', name: 'Virote Pesado', mp: 5, kind: _phys, power: 2.2, delay: 0.4),
+  'rayoArcano': SkillDef(id: 'rayoArcano', name: 'Rayo Arcano', mp: 6, kind: _mag, power: 2.2, breaks: true),
+  'virote': SkillDef(id: 'virote', name: 'Virote Pesado', mp: 5, kind: _phys, power: 2.2, delay: 0.4, breaks: true),
   'viroteIgneo': SkillDef(id: 'viroteIgneo', name: 'Virote Ígneo', mp: 5, kind: _phys, power: 1.8, status: StatusApplication(_burn, 2)),
-  'tajoGemelo': SkillDef(id: 'tajoGemelo', name: 'Tajo Gemelo', mp: 3, kind: _phys, power: 1.3, critBonus: 0.3),
+  'tajoGemelo': SkillDef(id: 'tajoGemelo', name: 'Tajo Gemelo', mp: 3, kind: _phys, power: 1.3, critBonus: 0.3, breaks: true),
   'abanico': SkillDef(id: 'abanico', name: 'Abanico de Dagas', mp: 6, kind: _phys, power: 0.8, allTargets: true, status: StatusApplication(_poi, 2)),
   // ---- kit de las ascensiones (docs/specs/ascension.md § 4) ----
   ...kAscensionSkills,

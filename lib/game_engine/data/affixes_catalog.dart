@@ -75,6 +75,13 @@ final List<AffixDef> _list = [
   AffixDef(
       id: 'rompedor', name: 'Rompedor', slot: _p, stat: ModStat.breakPower, weight: 400,
       tiers: _five([(26, 30), (21, 25), (16, 20), (13, 15), (10, 12)])),
+  // Quebrantador v0.9.1 (combo_balance.md § 5.3): la habilidad principal
+  // del arma "Puede quebrar". Un solo tier desde nivel 10, poco frecuente.
+  // No sale en maza+escudo (varias bases sin habilidad de daño).
+  const AffixDef(
+      id: 'quebrantador', name: 'Quebrantador', slot: _p, stat: ModStat.breakSkill, weight: 150,
+      types: {'espada', 'hacha', 'lanza', 'espada+escudo', 'martillo+escudo', 'arco', 'ballesta', 'rifle', 'dagas', 'báculo', 'varita', 'tomo'},
+      tiers: [AffixTier(1, 10, 1, 1, 100)]),
   // ---------------- sufijos ----------------
   AffixDef(
       id: 'del_oso', name: 'del Oso', slot: _s, stat: ModStat.vit, weight: 900,

@@ -65,8 +65,9 @@ void main() {
   });
 
   test('afijos: tiers bien formados y restricciones por tipo', () {
-    // + Evocador y del Pacto (v0.8.1), + Rompedor (v0.9).
-    expect(kAffixes.length, 27);
+    // + Evocador y del Pacto (v0.8.1), + Rompedor (v0.9), + Quebrantador
+    // (v0.9.1).
+    expect(kAffixes.length, 28);
     for (final a in kAffixes.values) {
       expect(a.tiers, isNotEmpty, reason: a.id);
       for (final t in a.tiers) {
