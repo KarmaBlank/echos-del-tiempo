@@ -1,4 +1,4 @@
-# Spec (BORRADOR, falta OK del dueño): Rebalance por combos — v0.9
+# Spec (APROBADA por el dueño): Rebalance por combos — v0.9
 
 Pedido del dueño (v0.8.6):
 - Estar **al nivel de la zona** tiene que costar. Ir sobrenivelado y
@@ -411,8 +411,9 @@ teniendo **un** turno según su velocidad).
   = "Terminar turno" (× 1, sin el adelanto de Pasar: **fuera del spec**,
   si no Instante + Pasar era gratis). El reloj de 30 s cuenta el turno
   entero.
-- **Combos de clase** (6 habilidades nuevas, **propuesta**, falta OK del
-  dueño): el motor agrega una o dos por clase al final del kit, antes de
+- **Combos de clase** (6 habilidades nuevas, **aprobadas por el dueño**
+  con estos nombres: Brasa Fugaz, Ascua Fugaz, Púa Fugaz, Ignición
+  Convergente, Ponzoña Convergente, Sello del Instante): el motor agrega una o dos por clase al final del kit, antes de
   Quebrar, con cualquier arma (`kClassComboSkill`; no están en
   `WeaponDef.skillIds`, no se trasladan). Así cada clase prepara algo con
   cualquier arma (con los kits base, en T3 la Maga y el Tirador del grupo
