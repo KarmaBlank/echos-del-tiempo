@@ -693,6 +693,44 @@ class _BarRow extends StatelessWidget {
   }
 }
 
+/// Qué parte del HUD del grupo resalta el panel del TUTORIAL
+/// (combat_tutorial.md § 4.1): la barra de MP y/o los pips de Pulso. El
+/// resaltado es un borde naranja (énfasis por color, sin negritas).
+class HudHighlight extends InheritedWidget {
+  const HudHighlight({super.key, required this.parts, required super.child});
+
+  static const mp = 'mp';
+  static const pulse = 'pulse';
+
+  /// [mp], [pulse].
+  final Set<String> parts;
+
+  static bool on(BuildContext context, String part) =>
+      context
+          .dependOnInheritedWidgetOfExactType<HudHighlight>()
+          ?.parts
+          .contains(part) ??
+      false;
+
+  /// [child] con borde si [part] está resaltado (la key va solo entonces).
+  static Widget wrap(
+      BuildContext context, String part, Key key, Widget child,
+      {bool tight = false}) {
+    if (!on(context, part)) return child;
+    final box = Container(
+      key: key,
+      foregroundDecoration: BoxDecoration(
+          border: Border.all(color: ProtoColors.orange, width: 1)),
+      child: child,
+    );
+    return tight ? Align(alignment: Alignment.centerLeft, child: box) : box;
+  }
+
+  @override
+  bool updateShouldNotify(HudHighlight old) =>
+      old.parts.length != parts.length || !old.parts.containsAll(parts);
+}
+
 /// Pulso de [p] como pips (combo_balance.md § 5.2): llenos en oro, vacíos
 /// en el borde del panel; con borde celeste si encadenó una Instante (le
 /// queda una acción). El número va en el tooltip de la tarjeta.
@@ -950,8 +988,13 @@ class _PartyCard extends StatelessWidget {
                     ),
                     _BarRow(hpBar(p.hp, p.maxHp), '${p.hp}/${p.maxHp}',
                         label: 'HP', valueChars: 9),
-                    _BarRow(mpBar(p.mp, p.maxMp), '${p.mp.floor()}/${p.maxMp}',
-                        label: 'MP', valueChars: 9),
+                    HudHighlight.wrap(
+                        context,
+                        HudHighlight.mp,
+                        ValueKey('hl-mp-${p.id}'),
+                        _BarRow(mpBar(p.mp, p.maxMp),
+                            '${p.mp.floor()}/${p.maxMp}',
+                            label: 'MP', valueChars: 9)),
                     if (local || companion)
                       _BarRow(ultBar(p.ult),
                           p.ult >= 100 ? '¡LISTA!' : '${p.ult.floor()}%',
@@ -960,7 +1003,12 @@ class _PartyCard extends StatelessWidget {
                     // de alto fijo (no crece con el tamaño del texto).
                     if (p.alive) ...[
                       const SizedBox(height: 2),
-                      PulsePips(p, key: ValueKey('pulse-${p.id}')),
+                      HudHighlight.wrap(
+                          context,
+                          HudHighlight.pulse,
+                          ValueKey('hl-pulse-${p.id}'),
+                          PulsePips(p, key: ValueKey('pulse-${p.id}')),
+                          tight: true),
                     ],
                     if (summons.isNotEmpty) ...[
                       const SizedBox(height: 2),

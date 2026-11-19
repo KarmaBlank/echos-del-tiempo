@@ -107,8 +107,8 @@ class TutorialCard {
   /// A quién apunta la flecha (combatiente).
   final String? targetId;
 
-  /// Quién actuó: el paso avanza cuando él lo cierra (o a los 6 s). `null`
-  /// = cualquiera de la sala.
+  /// Quién actuó (`null` = el autómata o un cartel de etapa). El cartel
+  /// se cierra por votación de todos los humanos, no por quien actuó.
   final String? actorId;
 
   Map<String, Object?> toJson() => {
@@ -139,11 +139,15 @@ class TutorialState {
     this.reps = 0,
     this.freeLeft = 0,
     this.card,
-    this.cardLeft = 0,
+    this.last,
+    Set<String>? votes,
+    Set<String>? said,
     this.fromVersion = 0,
     this.prepared = false,
   })  : stages = List.unmodifiable(stages),
-        order = List.unmodifiable(order);
+        order = List.unmodifiable(order),
+        votes = votes ?? <String>{},
+        said = said ?? <String>{};
 
   /// Intento (1, 2...): rota los roles (§ 4.3).
   final int attempt;
@@ -166,11 +170,20 @@ class TutorialState {
   /// Acciones que quedan en la etapa libre.
   int freeLeft;
 
-  /// Cartel abierto (el paso no avanza hasta que se cierra).
+  /// Cartel abierto (el paso no avanza hasta que todos los humanos de la
+  /// sala tocan SIGUIENTE, § 4.1). No se cierra por tiempo.
   TutorialCard? card;
 
-  /// Segundos que le quedan al cartel (se cierra solo a los 6 s).
-  double cardLeft;
+  /// El último cartel de efecto (el panel lo sigue mostrando como "lo que
+  /// pasó" después de cerrarse).
+  TutorialCard? last;
+
+  /// Humanos que ya tocaron SIGUIENTE en el cartel abierto.
+  final Set<String> votes;
+
+  /// Conceptos que el cartel de efecto ya explicó en este intento (la
+  /// segunda vez dice solo el dato, sin la explicación).
+  final Set<String> said;
 
   /// La menor `tutV` del grupo al empezar: > 0 = tutorial de cambios.
   final int fromVersion;
@@ -190,7 +203,9 @@ class TutorialState {
         reps: reps,
         freeLeft: freeLeft,
         card: card,
-        cardLeft: cardLeft,
+        last: last,
+        votes: {...votes},
+        said: {...said},
         fromVersion: fromVersion,
         prepared: prepared,
       );
@@ -204,7 +219,9 @@ class TutorialState {
         if (reps != 0) 'r': reps,
         if (freeLeft != 0) 'f': freeLeft,
         if (card != null) 'c': card!.toJson(),
-        if (cardLeft != 0) 'cl': cardLeft,
+        if (last != null) 'la': last!.toJson(),
+        if (votes.isNotEmpty) 'v': votes.toList(),
+        if (said.isNotEmpty) 'sd': said.toList(),
         if (fromVersion != 0) 'fv': fromVersion,
         if (prepared) 'p': true,
       };
@@ -222,7 +239,11 @@ class TutorialState {
         card: j['c'] is Map
             ? TutorialCard.fromJson(Map<String, Object?>.from(j['c'] as Map))
             : null,
-        cardLeft: (j['cl'] as num?)?.toDouble() ?? 0,
+        last: j['la'] is Map
+            ? TutorialCard.fromJson(Map<String, Object?>.from(j['la'] as Map))
+            : null,
+        votes: {for (final x in (j['v'] as List? ?? const [])) '$x'},
+        said: {for (final x in (j['sd'] as List? ?? const [])) '$x'},
         fromVersion: (j['fv'] as num?)?.toInt() ?? 0,
         prepared: j['p'] == true,
       );

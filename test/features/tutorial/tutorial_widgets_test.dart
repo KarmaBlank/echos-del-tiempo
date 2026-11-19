@@ -1,5 +1,10 @@
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/battle_command_window.dart'
+    show BattleCommandWindow;
+import 'package:echos_del_tiempo/features/combat/presentation/battle_hud.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/battle_screen.dart';
+import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
 import 'package:echos_del_tiempo/features/missions/presentation/mission_board_panel.dart';
 import 'package:echos_del_tiempo/features/tutorial/presentation/tutorial_widgets.dart';
 import 'package:echos_del_tiempo/game_engine/data/game_catalog.dart';
@@ -85,28 +90,31 @@ void main() {
     expect(b.reason, 'Lo inicia el host');
   });
 
-  testWidgets('batalla: cartel del paso, cartel de efecto y menú',
+  testWidgets('panel lateral: SIGUIENTE, "Esperando" y menú',
       (tester) async {
-    var closed = 0;
+    var next = 0;
     TutorialControl? op;
     await _pump(
         tester,
         TutorialOverlay(
+          battle: const SizedBox.expand(key: ValueKey('arena')),
           banner: const TutorialBanner('TE TOCA: usar Bola de Fuego',
               yourTurn: true, stage: 'Etapa 3/10 · Afinidades'),
           card: const TutorialCard(
               ['Golpe a la debilidad: DÉBIL ×1.5 (35 de daño).'],
               arrow: TutorialArrow.hp,
               effect: true),
+          waitingText: 'Esperando: Beto',
           rules: const TutorialRules(),
           attemptText: 'Intento 2: esta vez quebrás vos.',
-          onCloseCard: () => closed++,
+          onNext: () => next++,
           onControl: (o) => op = o,
         ));
-    expect(find.text('TE TOCA: usar Bola de Fuego'), findsOneWidget);
+    expect(find.text('Etapa 3/10 · Afinidades'), findsOneWidget);
+    expect(find.text('Esperando: Beto'), findsOneWidget);
     expect(find.text('Intento 2: esta vez quebrás vos.'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('tutorial-card')));
-    expect(closed, 1);
+    await tester.tap(find.byKey(const ValueKey('tutorial-next')));
+    expect(next, 1);
     await tester.tap(find.byKey(const ValueKey('tutorial-menu')));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('tutorial-menu-glossary')));
@@ -115,4 +123,108 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('tutorial-repeatStage')));
     expect(op, TutorialControl.repeatStage);
   });
+
+  testWidgets('panel lateral: sin cartel muestra AHORA; ya votado, '
+      'SIGUIENTE desactivado', (tester) async {
+    await _pump(
+        tester,
+        TutorialOverlay(
+          battle: const SizedBox.expand(),
+          banner: const TutorialBanner('MIRÁ: Beto va a defender',
+              stage: 'Etapa 1/10 · Línea de tiempo'),
+          card: null,
+          last: const TutorialCard(['Defender: mitad del daño.'],
+              effect: true),
+          rules: const TutorialRules(),
+          onNext: () {},
+          onControl: (_) {},
+        ));
+    expect(find.textContaining('Beto va a defender'), findsOneWidget);
+    expect(find.textContaining('mitad del da'), findsOneWidget);
+    expect(find.byKey(const ValueKey('tutorial-next')), findsNothing);
+    await _pump(
+        tester,
+        TutorialOverlay(
+          battle: const SizedBox.expand(),
+          banner: null,
+          card: const TutorialCard(['x']),
+          voted: true,
+          rules: const TutorialRules(),
+          onNext: () {},
+          onControl: (_) {},
+        ));
+    expect(find.byKey(const ValueKey('tutorial-next')), findsNothing);
+    expect(find.byKey(const ValueKey('tutorial-voted')), findsOneWidget);
+
+  });
+
+  for (final size in const [Size(1280, 720), Size(1920, 1080), Size(900, 600)]) {
+    testWidgets('el panel no se superpone con la escena, el HUD ni el menú '
+        '($size)', (tester) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      Combatant hero(String id, String cls) => Combatant(
+          id: id,
+          name: id,
+          isPlayer: true,
+          hp: 150,
+          maxHp: 150,
+          mp: 40,
+          maxMp: 40,
+          speed: 10,
+          attack: 18,
+          critChance: 0,
+          classId: cls);
+      final b = BattleState(party: [
+        hero('p1', 'guerrero'),
+        hero('p2', 'maga'),
+        hero('p3', 'tirador'),
+        hero('p4', 'paladin'),
+      ], enemies: [
+        const TutorialRules().automaton(4)
+      ])
+        ..currentId = 'p1';
+      await tester.pumpWidget(MaterialApp(
+        theme: RetroTheme.build(),
+        home: Scaffold(
+          body: TutorialOverlay(
+            battle: BattleView(
+                battle: b, localId: 'p1', canAct: true, onCommand: (_) => true),
+            banner: const TutorialBanner('TE TOCA: usar Bola de Fuego',
+                yourTurn: true, stage: 'Etapa 2/10 · MP y Pulso'),
+            card: const TutorialCard(['Ana: −3 MP (quedan 37).'],
+                arrow: TutorialArrow.mp, effect: true),
+            waitingText: 'Esperando: Beto',
+            voted: true,
+            hud: const {HudHighlight.mp, HudHighlight.pulse},
+            rules: const TutorialRules(),
+            onNext: () {},
+            onControl: (_) {},
+          ),
+        ),
+      ));
+      await tester.pump();
+      final panel = tester.getRect(find.byKey(const ValueKey('tutorial-panel')));
+      final scene = tester.getRect(find.byType(BattleView));
+      expect(panel.overlaps(scene), isFalse, reason: '$panel vs $scene');
+      expect(panel.right, closeTo(size.width, 0.5));
+      // Todo lo de la pelea (combatientes, HUD, menú) cae dentro de la
+      // escena, a la izquierda del panel.
+      for (final f in [
+        find.byKey(const ValueKey('pulse-p1')),
+        find.byKey(const ValueKey('pulse-p4')),
+        find.byType(BattleCommandWindow),
+      ]) {
+        for (final e in f.evaluate()) {
+          final r = tester.getRect(find.byWidget(e.widget));
+          expect(r.overlaps(panel), isFalse, reason: '$r vs $panel');
+        }
+      }
+      // El HUD resalta la barra de MP y los pips de Pulso.
+      expect(find.byKey(const ValueKey('hl-mp-p1')), findsOneWidget);
+      expect(find.byKey(const ValueKey('hl-pulse-p1')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
 }

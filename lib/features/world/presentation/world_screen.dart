@@ -199,11 +199,13 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       }
       return KeyEventResult.handled;
     }
-    // TUTORIAL: ESPACIO cierra el cartel de efecto (combat_tutorial.md
-    // § 4.1).
+    // TUTORIAL: ESPACIO / Enter = SIGUIENTE, el voto para cerrar el
+    // cartel (combat_tutorial.md § 4.1).
     final tc = ref.read(sessionControllerProvider.notifier);
     if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.space &&
+        (event.logicalKey == LogicalKeyboardKey.space ||
+            event.logicalKey == LogicalKeyboardKey.enter ||
+            event.logicalKey == LogicalKeyboardKey.numpadEnter) &&
         tc.tutorialCard != null) {
       tc.ackTutorial();
       return KeyEventResult.handled;
@@ -500,36 +502,38 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         final rules = controller.tutorialRules;
         final present = {...?tb?.party.map((c) => c.id)};
         final humans = s.playerList.where((p) => !p.isCompanion).toList();
+        final battle = SessionBattleScreen(
+          view: view,
+          sprites: sprites,
+          battleKey: _battleKey,
+          onCommand: controller.battleCommand,
+          onAuto: controller.setAuto,
+          sceneOptions: _sceneOptions(ref.watch(gameSettingsProvider)),
+          actionGate: tut == null || tb == null
+              ? null
+              : (id) => rules.gate(tut, tb, tb.currentId ?? view.localId, id),
+        );
         return [
           Positioned.fill(
-            child: SessionBattleScreen(
-              view: view,
-              sprites: sprites,
-              battleKey: _battleKey,
-              onCommand: controller.battleCommand,
-              onAuto: controller.setAuto,
-              sceneOptions: _sceneOptions(ref.watch(gameSettingsProvider)),
-              actionGate: tut == null || tb == null
-                  ? null
-                  : (id) => rules.gate(
-                      tut, tb, tb.currentId ?? view.localId, id),
-            ),
-          ),
-          if (tut != null)
-            Positioned.fill(
-              child: TutorialOverlay(
-                key: const ValueKey('tutorial-overlay'),
-                banner: rules.banner(s, controller.members.toSet()),
-                card: controller.tutorialCard,
-                rules: rules,
-                attemptText: rules.attemptText(tut, view.localId, present),
-                canControl: humans.length <= 1 ||
-                    humans.first.id == view.localId,
-                onCloseCard: () => controller.ackTutorial(),
-                onControl: (op) => controller.tutorialControl(op),
-              ),
-            ),
-          // `≡ MENÚ`: la pausa también se abre con el mouse en batalla.
+            child: tut == null
+                ? battle
+                : TutorialOverlay(
+                    key: const ValueKey('tutorial-overlay'),
+                    battle: battle,
+                    banner: rules.banner(s, controller.members.toSet()),
+                    card: controller.tutorialCard,
+                    last: tut.last,
+                    waitingText: rules.waitingText(s),
+                    voted: controller.tutorialVoted,
+                    hud: tutorialHudParts(rules.hudFocus(tut)),
+                    rules: rules,
+                    attemptText: rules.attemptText(tut, view.localId, present),
+                    canControl: humans.length <= 1 ||
+                        humans.first.id == view.localId,
+                    onNext: () => controller.ackTutorial(),
+                    onControl: (op) => controller.tutorialControl(op),
+                  ),
+          ),          // `≡ MENÚ`: la pausa también se abre con el mouse en batalla.
           // Abajo a la izquierda de la escena, justo encima de la barra
           // (arriba está la franja de turnos).
           Positioned.fill(

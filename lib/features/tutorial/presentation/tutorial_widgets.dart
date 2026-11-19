@@ -5,8 +5,7 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_panel.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_type.dart';
-import '../../combat/presentation/battle_screen.dart' show BattleViewState;
-import '../../combat/presentation/scene/battle_layout.dart' show SceneGeometry;
+import '../../combat/presentation/battle_hud.dart' show HudHighlight;
 import '../../../game_engine/models/session_action.dart' show TutorialControl;
 import '../../../game_engine/rules/tutorial_rules.dart';
 
@@ -193,25 +192,53 @@ String tutorialArrowText(TutorialArrow? a) => switch (a) {
       null => '',
     };
 
-/// El cartel del paso arriba, el de efecto abajo y el menú del
-/// tutorial (Repetir etapa, Repetir, Glosario, Salir) en la batalla.
+/// La pelea del TUTORIAL con su panel lateral fijo (§ 4.1): la arena se
+/// achica y el panel ocupa una columna a la derecha, así nunca tapa
+/// personajes, enemigos, números de daño ni el menú. El panel dice la
+/// etapa, quién actúa, lo que pasó en la última acción y la votación
+/// SIGUIENTE. El menú del tutorial (Repetir etapa, Repetir, Glosario,
+/// Salir) se abre encima de todo.
 class TutorialOverlay extends StatefulWidget {
   const TutorialOverlay({
     super.key,
+    required this.battle,
     required this.banner,
     required this.card,
     required this.rules,
-    required this.onCloseCard,
+    required this.onNext,
     required this.onControl,
+    this.last,
+    this.waitingText,
+    this.voted = false,
+    this.hud = const {},
     this.attemptText,
     this.canControl = true,
   });
 
+  /// La escena de batalla (va a la izquierda del panel).
+  final Widget battle;
+
   final TutorialBanner? banner;
+
+  /// El cartel abierto (espera la votación).
   final TutorialCard? card;
+
+  /// El último cartel de efecto, ya cerrado.
+  final TutorialCard? last;
   final TutorialRules rules;
-  final VoidCallback onCloseCard;
+
+  /// SIGUIENTE: el voto de este jugador.
+  final VoidCallback onNext;
   final void Function(TutorialControl op) onControl;
+
+  /// "Esperando: Beto".
+  final String? waitingText;
+
+  /// Este jugador ya votó.
+  final bool voted;
+
+  /// Qué resaltar en el HUD (`HudHighlight.mp` / `.pulse`).
+  final Set<String> hud;
 
   /// "Intento 2: esta vez quebrás vos".
   final String? attemptText;
@@ -219,8 +246,9 @@ class TutorialOverlay extends StatefulWidget {
   /// En grupo, solo el host repite o sale.
   final bool canControl;
 
-  /// Segundos que se ve el cartel de efecto (§ 4.1).
-  static const cardSeconds = TutorialRules.cardSeconds;
+  /// Ancho de la columna del panel para un área de [width].
+  static double panelWidth(double width) =>
+      (width * 0.24).clamp(180.0, 320.0).roundToDouble();
 
   @override
   State<TutorialOverlay> createState() => _TutorialOverlayState();
@@ -230,155 +258,198 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
   bool _menu = false;
   bool _glossary = false;
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _section(String label, List<Widget> children) => Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(label, style: _body(ProtoColors.dim, RetroType.label)),
+            const SizedBox(height: 2),
+            ...children,
+          ],
+        ),
+      );
+
+  Widget _panel() {
     final w = widget;
     final b = w.banner;
     final card = w.card;
-    return LayoutBuilder(builder: (context, box) {
-    // Misma geometría que BattleView: el cartel del paso va debajo de la
-    // banda del log y el de efecto sobre la escena, justo encima del menú.
-    final barH = BattleViewState.barHeight(
-        box.maxHeight, RetroType.factorOf(context));
-    final g = SceneGeometry.fit(Size(box.maxWidth, box.maxHeight - barH),
-        textFactor: RetroType.factorOf(context));
-    final belowLog = (54 * g.scale).roundToDouble() + 4;
-    return Stack(
-      children: [
-        if (b != null)
-          Positioned(
-            top: belowLog,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: Center(
-                child: RetroPanel(
-                  key: const ValueKey('tutorial-banner'),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  borderColor:
-                      b.yourTurn ? ProtoColors.gold : ProtoColors.panelBorder,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (b.stage.isNotEmpty)
-                        Text(retroText(b.stage), style: _body(ProtoColors.dim)),
-                      Text(retroText(b.text),
-                          style: _body(
-                              b.yourTurn ? ProtoColors.gold : ProtoColors.sky)),
-                      if (w.attemptText case final a?)
-                        Text(retroText(a), style: _body(ProtoColors.violet)),
-                    ],
-                  ),
-                ),
+    final last = w.last;
+    final head = b?.stage ?? '';
+    return RetroPanel(
+      key: const ValueKey('tutorial-panel'),
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(head.isEmpty ? 'TUTORIAL' : retroText(head),
+                    style: _body(ProtoColors.gold)),
               ),
-            ),
+              PanelButton('≡',
+                  key: const ValueKey('tutorial-menu'),
+                  onPressed: () => setState(() {
+                        _menu = !_menu;
+                        _glossary = false;
+                      })),
+            ],
           ),
-        if (card != null && !_menu)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: barH + 8,
-            child: Center(
-              child: GestureDetector(
-                onTap: w.onCloseCard,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 560),
-                  child: RetroPanel(
-                    key: const ValueKey('tutorial-card'),
-                    selected: true,
-                    padding: const EdgeInsets.all(10),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        for (final l in card.lines)
-                          Text(retroText(l), style: _body(ProtoColors.ink)),
-                        if (tutorialArrowText(card.arrow) case final a
-                            when a.isNotEmpty)
-                          Text(a, style: _body(ProtoColors.orange)),
-                        Text('ESPACIO o clic para seguir',
-                            textAlign: TextAlign.end,
-                            style: _body(ProtoColors.dim, RetroType.label)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        Positioned(
-          right: 8,
-          top: belowLog,
-          child: PanelButton('TUTORIAL ≡',
-              key: const ValueKey('tutorial-menu'),
-              onPressed: () => setState(() {
-                    _menu = !_menu;
-                    _glossary = false;
-                  })),
-        ),
-        if (_menu)
-          Positioned.fill(
-            child: ColoredBox(
-              color: ProtoColors.scrim(0.6),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints:
-                      const BoxConstraints(maxWidth: 620, maxHeight: 460),
-                  child: RetroPanel(
-                    key: const ValueKey('tutorial-menu-panel'),
-                    selected: true,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(TutorialRules.name,
-                            style: _title(ProtoColors.gold)),
-                        const SizedBox(height: 8),
-                        if (_glossary)
-                          Flexible(
-                            child: SingleChildScrollView(
-                              child: GlossaryView(entries: w.rules.glossary()),
-                            ),
-                          ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          alignment: WrapAlignment.center,
-                          children: [
-                            PanelButton('SEGUIR',
-                                accent: ProtoColors.green,
-                                onPressed: () => setState(() => _menu = false)),
-                            PanelButton(
-                                _glossary ? 'OCULTAR GLOSARIO' : 'GLOSARIO',
-                                key: const ValueKey('tutorial-menu-glossary'),
-                                onPressed: () =>
-                                    setState(() => _glossary = !_glossary)),
-                            for (final (op, label) in const [
-                              (TutorialControl.repeatStage, 'REPETIR ETAPA'),
-                              (TutorialControl.repeat, 'REPETIR'),
-                              (TutorialControl.exit, 'SALIR'),
-                            ])
-                              PanelButton(label,
-                                  key: ValueKey('tutorial-${op.name}'),
-                                  reason: w.canControl
-                                      ? null
-                                      : 'Lo decide el host', onPressed: () {
-                                setState(() => _menu = false);
-                                w.onControl(op);
-                              }),
-                          ],
+          if (w.attemptText case final a?)
+            Text(retroText(a), style: _body(ProtoColors.violet)),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (card != null)
+                    _section(card.effect ? 'LO QUE PASÓ' : 'EN ESTA ETAPA', [
+                      for (final l in card.lines)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 3),
+                          child: Text(retroText(l),
+                              key: const ValueKey('tutorial-card-line'),
+                              style: _body(ProtoColors.ink)),
                         ),
-                      ],
+                      if (tutorialArrowText(card.arrow) case final a
+                          when a.isNotEmpty)
+                        Text(a, style: _body(ProtoColors.orange)),
+                    ])
+                  else ...[
+                    if (b != null && b.text.isNotEmpty)
+                      _section('AHORA', [
+                        Text(retroText(b.text),
+                            key: const ValueKey('tutorial-now'),
+                            style: _body(b.yourTurn
+                                ? ProtoColors.gold
+                                : ProtoColors.sky)),
+                      ]),
+                    if (last != null)
+                      _section('ÚLTIMA ACCIÓN', [
+                        for (final l in last.lines)
+                          Text(retroText(l), style: _body(ProtoColors.dim)),
+                      ]),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (card != null) ...[
+            const SizedBox(height: 6),
+            if (w.waitingText case final t?)
+              Text(retroText(t),
+                  key: const ValueKey('tutorial-waiting'),
+                  style: _body(ProtoColors.orange)),
+            const SizedBox(height: 4),
+            if (w.voted)
+              Text('Ya votaste SIGUIENTE.',
+                  key: const ValueKey('tutorial-voted'),
+                  style: _body(ProtoColors.green))
+            else
+              PanelButton('SIGUIENTE',
+                  key: const ValueKey('tutorial-next'),
+                  accent: ProtoColors.green,
+                  onPressed: w.onNext),
+            Text('ESPACIO o Enter: leí y entendí',
+                style: _body(ProtoColors.dim, RetroType.label)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget;
+    return LayoutBuilder(builder: (context, box) {
+      final pw = TutorialOverlay.panelWidth(box.maxWidth);
+      return Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            right: pw,
+            child: HudHighlight(parts: w.hud, child: w.battle),
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            width: pw,
+            child: _panel(),
+          ),
+          if (_menu)
+            Positioned.fill(
+              child: ColoredBox(
+                color: ProtoColors.scrim(0.6),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints:
+                        const BoxConstraints(maxWidth: 620, maxHeight: 460),
+                    child: RetroPanel(
+                      key: const ValueKey('tutorial-menu-panel'),
+                      selected: true,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(TutorialRules.name,
+                              style: _title(ProtoColors.gold)),
+                          const SizedBox(height: 8),
+                          if (_glossary)
+                            Flexible(
+                              child: SingleChildScrollView(
+                                child:
+                                    GlossaryView(entries: w.rules.glossary()),
+                              ),
+                            ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              PanelButton('SEGUIR',
+                                  accent: ProtoColors.green,
+                                  onPressed: () =>
+                                      setState(() => _menu = false)),
+                              PanelButton(
+                                  _glossary ? 'OCULTAR GLOSARIO' : 'GLOSARIO',
+                                  key: const ValueKey('tutorial-menu-glossary'),
+                                  onPressed: () =>
+                                      setState(() => _glossary = !_glossary)),
+                              for (final (op, label) in const [
+                                (TutorialControl.repeatStage, 'REPETIR ETAPA'),
+                                (TutorialControl.repeat, 'REPETIR'),
+                                (TutorialControl.exit, 'SALIR'),
+                              ])
+                                PanelButton(label,
+                                    key: ValueKey('tutorial-${op.name}'),
+                                    reason: w.canControl
+                                        ? null
+                                        : 'Lo decide el host', onPressed: () {
+                                  setState(() => _menu = false);
+                                  w.onControl(op);
+                                }),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-      ],
-    );
+        ],
+      );
     });
   }
 }
+
+/// `HudHighlight` de las flechas de [hud] (MP y Pulso).
+Set<String> tutorialHudParts(Set<TutorialArrow> hud) => {
+      if (hud.contains(TutorialArrow.mp)) HudHighlight.mp,
+      if (hud.contains(TutorialArrow.pulse)) HudHighlight.pulse,
+    };
