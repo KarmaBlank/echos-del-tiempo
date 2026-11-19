@@ -202,6 +202,11 @@ const Map<String, GameElement> kSkillElement = {
   ...kSummonerSkillElement,
 };
 
+/// Habilidades que solo PREPARAN: sus estados no cuentan como elemento
+/// del golpe (elemental_reactions.md § 9; Prisma Elemental es "golpe
+/// neutro: no detona", ascension.md § 4.1).
+const Set<String> kPrimeOnlySkills = {'prismaElemental'};
+
 /// Elemento de la habilidad o ULT [skillId] (`fisico` si no tiene).
 /// Las ULT de camino (branch_ults.md) llevan el suyo en `kBranchUltElement`.
 GameElement elementOf(String? skillId) => skillId == null

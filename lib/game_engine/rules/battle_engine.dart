@@ -554,6 +554,12 @@ class _Turn {
   /// (passive_tree_v4.md § 8).
   _Rx? _rx;
 
+  /// Golpe de jugador cuyos `onHit` / `onCrit` se están disparando: si
+  /// todavía no reaccionó, un estado elemental que el golpe deja por el
+  /// árbol o el arma (Dios del Trueno...) lo detona
+  /// (elemental_reactions.md § 9).
+  ({Combatant target, int damage, bool reacted})? _hitNow;
+
   BattleStep get result => BattleStep(state, List.unmodifiable(events));
 
   double _rand() => engine._random();
@@ -975,7 +981,9 @@ class _Turn {
     final crit = _rand() < critChance;
     // Reacción (una por golpe) o golpe a un Quebradizo (los golpes
     // enemigos cuentan como físicos).
-    final reaction = _reactionFor(p, element);
+    // El estado que deja el golpe también cuenta como su elemento (§ 9).
+    final reaction = _reactionFor(p, element) ??
+        _carriedReaction(p, [if (inflicted != null) inflicted]);
     var react = _reactionMult(reaction);
     if (reaction == null && _isBrittle(p)) react = _frz.brittleMult;
     // Familia / raza del jugador (null hasta que existan las razas).
@@ -1439,7 +1447,8 @@ class _Turn {
       final t = foes.where((e) => e.id == c.ownerId).firstOrNull ?? foes.first;
       final sk = engine.catalog.skills[c.sourceId];
       events.add(ProcEvent(p.id, c.sourceId, targetId: t.id));
-      final d = _procDamage(p, t, math.max(1, c.value.round()), c.sourceId);
+      final d = _skillProcDamage(
+          p, t, math.max(1, c.value.round()), c.sourceId, sk);
       var note = '¡${sk?.name ?? 'Disparo cargado'} de ${p.name}! $d a ${t.name}';
       final st = sk?.status;
       if (st != null && t.alive && _addStatus(t, st, source: p)) {
@@ -1672,8 +1681,21 @@ class _Turn {
         mods);
     mult *= affinity;
     // Reacción elemental (una por golpe) o golpe físico a un Quebradizo
-    // (elemental_reactions.md § 2 y § 7).
-    final reaction = _reactionFor(e, el);
+    // (elemental_reactions.md § 2 y § 7). Si el elemento propio del golpe
+    // no reacciona, cuentan los estados que el golpe lleva (§ 9): los
+    // extra de la habilidad (Electrólisis: Agua + Cargado) y los del
+    // Avatar del Pacto.
+    final carried = <StatusApplication>[
+      if (hitStatus != null) hitStatus,
+      if (element == null &&
+          sk0 != null &&
+          !kPrimeOnlySkills.contains(sk0.id)) ...[
+        if (sk0.status != null) sk0.status!,
+        ...sk0.extraStatuses,
+      ],
+      if (a != null) ..._avatarStatuses(a),
+    ];
+    final reaction = _reactionFor(e, el) ?? _carriedReaction(e, carried);
     var shatter = false;
     if (reaction != null) {
       final rm = _reactionMult(reaction);
@@ -1766,8 +1788,11 @@ class _Turn {
     }
     final hit = _Hit(dmg, crit, e, mods);
     if (primary && a != null && _act != null) {
+      final prevHit = _hitNow;
+      _hitNow = (target: e, damage: dmg, reacted: reaction != null);
       _fire(ProcTrigger.onHit, a, target: e, amount: dmg);
       if (crit) _fire(ProcTrigger.onCrit, a, target: e, amount: dmg);
+      _hitNow = prevHit;
     }
     return hit;
   }
@@ -1830,6 +1855,79 @@ class _Turn {
       return r.kind;
     }
     return null;
+  }
+
+  /// La reacción que detona algún estado que lleva el golpe ([carried],
+  /// en orden), o `null` (§ 9: el golpe cuenta como de ese elemento).
+  ReactionKind? _carriedReaction(
+      Combatant t, Iterable<StatusApplication> carried) {
+    for (final s in carried) {
+      final el = statusElement(s.kind);
+      if (el == null) continue;
+      final r = _reactionFor(t, el);
+      if (r != null) return r;
+    }
+    return null;
+  }
+
+  /// La reacción que detonaría un golpe de la habilidad [tk] sobre [t]
+  /// (como la calcula `_damageEnemy`), o `null`.
+  ReactionKind? _skillReaction(Combatant t, SkillDef tk) {
+    final el = (tk.catalyst > 0 ? _catalystElement(t) : null) ??
+        elementOf(tk.id);
+    final prime = kPrimeOnlySkills.contains(tk.id);
+    return _reactionFor(t, el) ??
+        _carriedReaction(t, [
+          if (!prime && tk.status != null) tk.status!,
+          if (!prime) ...tk.extraStatuses,
+          if (_attacker case final a?) ..._avatarStatuses(a),
+        ]);
+  }
+
+  /// Daño de mecánica que repite / difiere un golpe de la habilidad [sk]
+  /// (Eco Arcano, Disparo cargado): lleva su elemento, así que detona
+  /// como el golpe original (§ 9). Devuelve el daño hecho.
+  int _skillProcDamage(Combatant owner, Combatant e, int amount,
+      String sourceId, SkillDef? sk) {
+    final k = sk == null || !e.alive ? null : _skillReaction(e, sk);
+    final d = _procDamage(
+        owner,
+        e,
+        k == null ? amount : math.max(1, jsRound(amount * _reactionMult(k))),
+        sourceId);
+    if (k != null) _react(owner, e, k, d, hitStatus: sk!.status);
+    return d;
+  }
+
+  /// Un estado elemental [st] que [owner] deja con el golpe en curso
+  /// (`onHit` / `onCrit` del árbol o del arma: Dios del Trueno, Señora
+  /// de las Mareas...) detona la reacción si el golpe no reaccionó ya
+  /// (§ 9). Lo que falta del ×1.5 entra como daño de la reacción. Se
+  /// resuelve ANTES de aplicar [st].
+  void _procHitReact(Combatant owner, Combatant target, PassiveMechanic m,
+      StatusApplication st) {
+    final h = _hitNow;
+    // Las mecánicas "contra un X" (`status`: Aguanieve sobre Mojados)
+    // trabajan SOBRE el estado preparado: no lo detonan.
+    if (h == null ||
+        h.reacted ||
+        h.target != target ||
+        m.status != null ||
+        (m.trigger != ProcTrigger.onHit && m.trigger != ProcTrigger.onCrit)) {
+      return;
+    }
+    final el = statusElement(st.kind);
+    if (el == null) return;
+    final k = _reactionFor(target, el);
+    if (k == null) return;
+    _hitNow = (target: h.target, damage: h.damage, reacted: true);
+    final rb = _modTotal(owner, ProcEffectKind.reactionBonus);
+    final mult = _reactionMult(k) * (1 + rb);
+    final total = math.max(h.damage, jsRound(h.damage * mult));
+    if (total > h.damage) {
+      _rawDamage(owner, target, total - h.damage, reactionSourceId(k));
+    }
+    _react(owner, target, k, total, hitStatus: st);
   }
 
   /// Elemento con el que un golpe catalizador detona lo que tiene [t]
@@ -2679,6 +2777,9 @@ class _Turn {
         if (target == null || !target.alive || st == null) return;
         final n = math.max(1, fx.value.round());
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
+        // El golpe lleva este estado: primero la reacción (§ 9).
+        _procHitReact(owner, target, m, StatusApplication(st, n));
+        if (!target.alive) return;
         if (_addStatus(target, StatusApplication(st, n), source: owner)) {
           _notes.add('${m.name}: ${target.name} +$n ${st.label}');
         }
@@ -2756,7 +2857,7 @@ class _Turn {
         final d = math.max(1, jsRound(act.skillBase * frac));
         final parts = <String>[];
         for (final e in targets) {
-          parts.add('${_procDamage(p, e, d, m.id)} a ${e.name}');
+          parts.add('${_skillProcDamage(p, e, d, m.id, sk)} a ${e.name}');
           final st = sk.status;
           if (st != null && e.alive) {
             _addStatus(e, st, bonus: act.skillStatusBonus, source: p);
@@ -4085,10 +4186,14 @@ class _Turn {
             final n = kElementalStatuses.fold(0, (s, k) => s + e.stacks(k));
             b = base * (1 + tk.detonate * n);
             detonated += n;
+            // El estado que el golpe detona (Supernova sobre Veneno →
+            // Explosión tóxica) queda para la reacción, que lo consume
+            // (elemental_reactions.md § 9).
+            final keep = _skillReaction(e, tk)?.primer;
             for (final k in kElementalStatuses) {
-              e.statuses[k] = 0;
+              if (k != keep) e.statuses[k] = 0;
             }
-            e.brittle = false;
+            if (keep != StatusKind.freeze) e.brittle = false;
           }
           final hit = _damageEnemy(e, b, p.critChance + tk.critBonus,
               single: !tk.allTargets);
