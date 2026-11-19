@@ -161,7 +161,7 @@ anuncia.
 | # | Etapa | Qué pasa | Qué enseña |
 |---|---|---|---|
 | 1 | Línea de tiempo | Se ilumina la barra de turnos; el que es más rápido actúa antes; Defender y Pasar adelantan tu próximo turno | turnos, velocidad, Defender/Pasar |
-| 2 | MP y Pulso | Ataque básico (+1 Pulso), después una habilidad que gasta MP | MP: de la expedición, lo gastan casi todas las habilidades, se recupera con pociones o descanso (no por turno). Pulso: de esa pelea (0-5), sube jugando (turno, ataque básico, debilidad, defender), lo piden las habilidades fuertes (Quebrar, Convergencias); una habilidad puede pedir los dos |
+| 2 | MP y Pulso | Ataque básico (+1 Pulso), después una habilidad que gasta MP | MP: dura toda la misión, lo gastan casi todas las habilidades, se recupera con pociones o al volver al lobby (no vuelve solo entre peleas). Pulso: de esa pelea (0-5), sube jugando (turno, ataque básico, debilidad, defender), lo piden las habilidades fuertes (Quebrar, Convergencias); una habilidad puede pedir los dos |
 | 3 | Afinidades | Golpe físico (RESISTE ×0.5) y golpe de Fuego (DÉBIL ×1.5); muestra el tope sin debilidad | debilidad, resistencia, tope |
 | 4 | Estados | Dos Quemaduras se suman (un Veneno acá detonaría la Combustión; el Veneno se ve en la 5); se ve el tick al empezar el turno del autómata | estados, stacks, duración |
 | 5 | Precondición e Instante | "Detonar" aparece desactivado ("Necesita: 5 de Veneno"); una Instante que pone Veneno no termina el turno y en el mismo turno se detona | precondiciones; Instante **no es un recurso**: es un tipo de habilidad que no termina tu turno (después hacés otra acción, máx. una Instante por turno) |
@@ -188,7 +188,7 @@ anuncia.
 Una página del panel del entrenamiento y del menú de pausa en batalla,
 con una entrada corta por concepto y un ícono:
 - Línea de tiempo;
-- MP (maná): de la expedición, no vuelve por turno;
+- MP (maná): dura toda la misión, no vuelve solo entre peleas;
 - Pulso: de la pelea, pips 0-5, con ejemplo de habilidad que pide MP y Pulso;
 - Precondición;
 - Instante (no es un recurso: es un tipo de habilidad);
