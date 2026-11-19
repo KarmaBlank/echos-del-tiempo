@@ -102,9 +102,9 @@ quedan editables en `assets/balance/balance.json`.
   nivel 10 con +20-30% ATQ, cuando lo mejor aleatorio era +9%). Ahora
   `ItemRules.fixedRangeAt(mod, nivel)`: el rango del catálogo es el de
   nivel alto (T1) y se multiplica por `máx(T(n−1)) / máx(T1)`, donde `Tn`
-  es el mejor tier aleatorio que sale a ese nivel: **un tier por encima
-  de los aleatorios** (`legendaryTierBonus = 1`). Feroz 20-30 → 8-12 a
-  nivel 1-9, 12-18 a 10-19, 16-24 a 20-29, completo desde 30. Nunca baja
+  es el mejor tier aleatorio que sale a ese nivel: **dos tiers por encima
+  de los aleatorios** (`legendaryTierBonus = 2`, ajuste de cierre; con 1
+  daba Feroz 20-30 → 8-12 a nivel 1-9 y completo desde 30). Nunca baja
   de 1 (Abrasador 1 sigue en 1). Lo usan la generación y la Esquirla;
   la Esencia sigue sin bajar nunca el valor. `sanitize` acepta del piso
   escalado al techo del catálogo: los legendarios viejos no se recortan
@@ -113,7 +113,7 @@ quedan editables en `assets/balance/balance.json`.
   2 + nivel / 5)` (función pura, para reutilizar en la migración).
   `CraftRules.forge` lo usa ("Tope de forja (N)") y la UI de forja lo
   muestra (`Forja +1/4`). Las armas ya forjadas por encima no se tocan
-  todavía (paso 8).
+  al forjar; las viejas las baja la migración (§ 6b).
 
 ## 3. Afinidades
 
@@ -508,6 +508,53 @@ cambia se devuelve gratis). Se aplica igual:
 - Tests con perfiles reales de v0.8.6 como fixtures (copias inventadas,
   nunca los datos de `%APPDATA%`).
 
+**Implementado (v0.9, paso 8):**
+- **Versión de balance de la cuenta:** `bv` en `account.json`
+  (`kBalanceVersion = 1`, lib/game_engine/rules/balance_migration.dart).
+  Sin `bv` = cuenta de antes; `Account.toJson` siempre escribe la actual,
+  así que la migración corre **una vez**. Es por cuenta (no por perfil):
+  los perfiles que viajan por red no se migran.
+- `JsonFileAccountStore.load`: si `bv` es viejo, copia el archivo leído a
+  `account.pre-bv1-<fecha>.json` (nunca se borra; si la copia falla, tira
+  y no se pisa nada), migra (`migrateAccountBalance`), guarda y suma el
+  aviso a `AccountLoad.notice` (uno solo, junto al de archivo dañado si lo
+  hubo). Vale también para la copia `.tmp` recuperada y para la migración
+  desde `profile.json` (ese archivo queda como copia).
+- **Árbol: no cambió.** En los pasos 1-7 no se tocó ningún nodo
+  (`passive_tree_catalog.dart` igual); los nodos de quiebre siguen
+  siendo `breakBonus` "+X% de quiebre" y ahora multiplican puntos en vez
+  de daño (misma lectura), y no hay nodos de área ni de reacciones
+  nuevos. `tv` sigue en 5 y no se devuelven puntos. Los notables de
+  quiebre de § 5 todavía no existen: si se agregan, ahí sube `tv`.
+- **Armas** (`BalanceMigration.migrateItem`, personajes y alijo):
+  - mods fijos de legendaria con valor por encima del techo de
+    `fixedRangeAt` a su nivel bajan a ese techo (nunca suben);
+  - forja total por encima de `forgeCapOf`: se sacan niveles de la
+    estadística más alta (empate: la última del orden pow/crit/spd/def),
+    del último nivel para abajo, y se devuelve su costo real
+    (`CraftRules.forgeCost`). La forja solo cuesta créditos: lo devuelto
+    son créditos, no materiales.
+- **Fusiones inválidas:** habilidad trasladada desconocida, de un kit de
+  ascensión, del motor (`kEngineSkillIds`: Quebrar y combos de clase),
+  repetida o de más para la rareza: se saca y se devuelve
+  `transferSkillCost` de la rareza. Las de forma de entrega vieja
+  (§ 16.1 de loot.md) se conservan, como antes.
+- Lo devuelto por armas de un personaje va a ese personaje; lo del
+  alijo, al elegido.
+- Costos de Pulso, Instante y precondiciones no se guardan en el perfil:
+  salen del catálogo, no hay nada que migrar.
+- **Misión en curso:** no se persiste (la cuenta no guarda estado de
+  misión ni sesión; los Ecos sellados son objetos). No hay nada que
+  cerrar.
+- Aviso: `Rebalance v0.9: te devolvimos lo que cambió. N mods fijos de
+  legendarias ajustados al nivel del arma; N niveles de forja por encima
+  del tope nuevo; N habilidades trasladadas que ya no valen (ranura
+  vaciada); ₵N devueltos.` (solo las partes que aplican).
+- Tests: test/features/characters/balance_migration_test.dart (cuenta
+  "v0.8.6" inventada en un directorio temporal: legendaria de nivel 5 con
+  mods altos y forja +10, fusiones inválidas, alijo; copia de seguridad,
+  aviso e idempotencia).
+
 ## 7. Orden de implementación
 
 1. Simulador: medir el estado actual (al nivel de la zona, con loot
@@ -518,7 +565,7 @@ cambia se devuelve gratis). Se aplica igual:
 5. Curva por tramos y grupo (§ 1, § 3.3). **Hecho.**
 6. Loot atado a la zona (§ 2). **Hecho.**
 7. Pulso, precondiciones y encadenar (§ 5.2). **Hecho.**
-8. Migración de personajes (§ 6b).
+8. Migración de personajes (§ 6b). **Hecho.**
 9. Tutorial de combate (combat_tutorial.md). Reemplaza al mini tutorial
    de § 6, que queda solo como avisos opcionales en partida.
 
