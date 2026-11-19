@@ -724,6 +724,23 @@ emitiendo `WeaponDropEvent` (élite y fin de misión) y
 `ChestOpenedEvent.weaponId` con la base, y `MissionResult.drops` /
 `eliteDrops` guardan la base de la primera arma.
 
+### 14.2 Materiales al tope (v0.8.5)
+
+Bug corregido: con una pila de material en 99 (las Esquirlas se llenan
+rápido), cada material nuevo quedaba en el piso porque "no entraba", y
+nunca se podía levantar. Se acumulaban hasta el tope de 80 objetos del
+piso y todo eso viajaba en cada snapshot (más ping).
+
+- El loot **propio** de un material con la pila llena se toma igual:
+  llena hasta 99 y lo que sobra se descarta. Nunca cae al piso, ni al
+  entregarse ni al levantarlo (`SessionEngine._grantLoot`).
+- Mensaje: `X obtuvo: … (Esquirla del Eco al tope de 99: lo que sobra se
+  descarta)`. Si el filtro lo ocultaba, se descarta sin mensaje.
+- Lo **compartido** (lo que alguien soltó) no se descarta: si no entra,
+  queda en el piso para otro. Dar materiales (`give`) sigue rechazándose
+  si el otro no tiene lugar.
+- Pociones y éter no cambian.
+
 ### 14.1 Loot por piso (v0.5.1)
 
 Bug corregido: al bajar de piso, las etiquetas del loot del piso

@@ -245,8 +245,8 @@ después.
 
 **Tamaño:** el snapshot completo pesa del orden de 10-30 KB en una misión
 (≈ 150-450 KB/s por cliente a 15 Hz), igual que el prototipo, que
-también mandaba `S` entero. Si hiciera falta, la optimización natural es
-mandar deltas; no está hecha.
+también mandaba `S` entero. Desde v0.8.5 los perfiles viajan solo cuando
+cambian (§ "Perfiles solo cuando cambian"); el resto sigue entero.
 
 ### Pausa de grupo (v0.2.1)
 
@@ -271,8 +271,35 @@ dentro de los perfiles (los de los compañeros se ven en solo lectura).
 
 Costo: un arma pesa ~60–200 bytes en JSON compacto; 4 jugadores con el
 inventario lleno suman ~20–30 KB más por snapshot, y el piso tiene tope
-de 80 objetos. Si pesa, la optimización natural (no hecha) es mandar el
-perfil solo cuando cambia (hash por jugador) y deltas del piso.
+de 80 objetos. Desde v0.8.5 los perfiles van aparte y solo cuando
+cambian (sección siguiente); los deltas del piso siguen sin hacer.
+
+### Perfiles solo cuando cambian (protocolo 11, v0.8.5)
+
+Problema: el host mandaba a cada cliente el snapshot entero, con el
+perfil (inventario incluido) de todos, 15 veces por segundo. Cada jugador
+que entra suma su perfil a lo que reciben todos y un envío más a la
+subida del host; con la subida llena, el `pong` espera detrás de los
+`state` (canal ordenado) y el ping de todos sube.
+
+- El `state` lleva los jugadores **sin** `p` y, aparte, `"pp":{id:perfil}`
+  solo con los perfiles que ese cliente todavía no tiene en su versión
+  actual: `{"t":"state","s":{...},"ev":[...],"pp":{"p1":{...}}}`.
+- Host (`ProtocolNetSession.broadcast`): versión por perfil (sube si
+  cambia su JSON; se recodifica solo si cambió el objeto, `PlayerProfile`
+  es inmutable) y, por cliente, qué versión tiene. El cuerpo y los
+  eventos se codifican una vez; cada cliente recibe además sus `pp`.
+  Cliente nuevo = recibe todos. Respaldo: cada **10 s** se reenvían todos
+  a cada cliente.
+- Cliente: guarda los perfiles recibidos por id y completa con ellos a
+  los jugadores sin `p`. Si falta uno, el `state` se descarta (no se
+  adopta un estado incompleto).
+- Medición (test `profile_delta_test.dart`, 3 jugadores con 40 armas):
+  lobby 10.5 KB → 0.5 KB por envío (3.8 KB cuando cambia un perfil);
+  misión 15 KB → 4.9 KB.
+- Con FPS Y PING prendido, el host anota en la línea `Rendimiento:` de
+  `ecos.log` el tamaño del último `state` (`red: state X KB a N
+  clientes`).
 
 Acciones nuevas (cliente → host): `craft` (`{op, w, src?, i?, sk?, rep?, us?}`; `rep` desde v0.5.1 = habilidad a reemplazar, loot.md § 16.2; `us` desde v0.5.1 = lista de `uid` de `salvageSelected` / `sellSelected`, loot.md § 21.5),
 `give` (`{to, tok, n?}`), `drop` (`{tok, n?}`), `pick` (`{id}`),
@@ -368,7 +395,10 @@ estado.
   como el `gone()` del prototipo.
 - **Host que se va:** el cliente recibe `ConnectionLostEvent` y la
   pantalla del juego vuelve al título con `Se perdió la conexión con el
-  host.` (el prototipo mostraba ese mismo mensaje).
+  host.` (el prototipo mostraba ese mismo mensaje). Antes cierra todo lo
+  que haya encima de la partida (pausa, diálogos); si por algo no puede
+  salir sola, la pantalla DESCONECTADO muestra el motivo y un botón
+  **VOLVER AL TÍTULO** (v0.8.5).
 - Salir al título (host o cliente) llama a `disconnect()`.
 
 ## Cómo la sesión usa la red (`SessionController`)

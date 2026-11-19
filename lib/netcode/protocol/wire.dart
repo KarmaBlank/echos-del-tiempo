@@ -26,7 +26,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// docs/specs/worldgen.md § 11.6). 6 desde v0.5.1:
 /// acción `wants` (resumen del plan de build para la condición `Build`
 /// del filtro de loot; docs/specs/netcode.md § "Build y filtro").
-const kProtocolVersion = 10;
+/// 11 desde v0.8.5: el `state` lleva los perfiles aparte (`pp`) y solo
+/// cuando cambian (netcode.md § "Perfiles solo cuando cambian").
+const kProtocolVersion = 11;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {
@@ -141,9 +143,48 @@ class WireCodec {
           },
       });
 
+  /// El `state` que manda el host desde el protocolo 11: los jugadores
+  /// sin su perfil y, aparte en `pp`, solo los perfiles de [profiles]
+  /// (id → perfil ya en JSON) que este cliente todavía no tiene. [body] y
+  /// [events] se codifican una vez con [stateBody] / [stateEvents] y se
+  /// reusan para todos los clientes.
+  static String stateText(
+      String body, String events, Map<String, String> profiles) {
+    final b = StringBuffer('{"t":"state","s":')
+      ..write(body)
+      ..write(',"ev":')
+      ..write(events);
+    if (profiles.isNotEmpty) {
+      b.write(',"pp":{');
+      var first = true;
+      for (final e in profiles.entries) {
+        if (!first) b.write(',');
+        first = false;
+        b
+          ..write(jsonEncode(e.key))
+          ..write(':')
+          ..write(e.value);
+      }
+      b.write('}');
+    }
+    b.write('}');
+    return b.toString();
+  }
+
+  /// La sesión sin los perfiles de los jugadores, ya en texto.
+  String stateBody(GameSession s) => jsonEncode(session.toJson(s, profiles: false));
+
+  /// Los eventos del `state`, ya en texto.
+  String stateEvents(List<SessionEvent> ev) =>
+      jsonEncode([for (final e in ev) events.toJson(e)]);
+
   /// `null` si el texto no es un mensaje válido (se ignora, como hace el
   /// `switch` de `onMsg` con un `t` desconocido).
-  WireMessage? decode(String text) {
+  ///
+  /// [profiles]: el cache de perfiles del cliente (id → perfil en JSON).
+  /// Un `state` suma ahí los de su `pp`, y un jugador que viene sin `p`
+  /// toma el del cache; si no está, el mensaje es inválido (`null`).
+  WireMessage? decode(String text, {Map<String, Object?>? profiles}) {
     try {
       final j = asJson(jsonDecode(text));
       switch (j.str('t')) {
@@ -160,8 +201,19 @@ class WireCodec {
         case 'pong':
           return PongMessage(j.integer('ts'));
         case 'state':
+          final s = j.obj('s');
+          final known = profiles ?? <String, Object?>{};
+          final pp = j.objOrNull('pp');
+          if (pp != null) known.addAll(pp);
+          for (final raw in s.list('players')) {
+            final p = asJson(raw);
+            if (p['p'] != null) continue;
+            final cached = known[p.str('id')];
+            if (cached == null) return null;
+            p['p'] = cached;
+          }
           return StateMessage(
-            session.fromJson(j.obj('s')),
+            session.fromJson(s),
             List.unmodifiable([
               for (final raw in j.list('ev')) events.fromJson(asJson(raw)),
             ]),

@@ -1,5 +1,6 @@
 import 'package:echos_del_tiempo/features/characters/domain/stash.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
+import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/inventory_sort.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/loot.dart';
@@ -111,6 +112,61 @@ void main() {
           y: p1.y));
       final s3 = e.apply(s2, 'p1', const PickUpAction(7))!.state;
       expect(s3.players['p1']!.profile.material(CraftMaterial.esquirla), 2);
+    });
+
+    test('material al tope (99): no queda en el piso (loot.md § 14.2)', () {
+      final e = sessionEngine();
+      final capped = lootWarrior(materials: const {CraftMaterial.esquirla: 99});
+      var s = e.addPlayer(e.create(), 'p0', capped)!.state;
+      s = e.addPlayer(s, 'p1', lootWarrior(materials: const {}))!.state;
+      final p0 = s.players['p0']!;
+      // Propio: se toma igual y lo que sobra se descarta.
+      s.ground.add(GroundLoot(
+          id: 7,
+          drop: const LootDrop.stack(StackKind.esquirla, 3),
+          x: p0.x,
+          y: p0.y,
+          ownerId: 'p0'));
+      // Compartido (lo soltó otro): si no entra, queda para otro.
+      s.ground.add(GroundLoot(
+          id: 8,
+          drop: const LootDrop.stack(StackKind.esquirla, 3),
+          x: p0.x,
+          y: p0.y));
+      s = e.apply(s, 'p0', const PickUpAction(7))!.state;
+      expect(s.ground.map((g) => g.id), [8]);
+      expect(s.players['p0']!.profile.material(CraftMaterial.esquirla), 99);
+      expect(e.apply(s, 'p0', const PickUpAction(8)), isNull);
+      // Con lugar a medias: llena hasta 99.
+      final p = InventoryRules.withStack(
+          s.players['p0']!.profile, StackKind.esquirla, 98);
+      s.players['p0']!.profile = p;
+      s.ground.add(GroundLoot(
+          id: 9,
+          drop: const LootDrop.stack(StackKind.esquirla, 3),
+          x: p0.x,
+          y: p0.y,
+          ownerId: 'p0'));
+      s = e.apply(s, 'p0', const PickUpAction(9))!.state;
+      expect(s.players['p0']!.profile.material(CraftMaterial.esquirla), 99);
+    });
+
+    test('material al tope en batalla: el drop no cae al piso', () {
+      // Todas las tiradas de material salen (0.0).
+      final e = sessionEngine(fieldFallback: 0.0);
+      final full = <CraftMaterial, int>{
+        for (final m in CraftMaterial.values) m: CraftMaterial.maxStack,
+      };
+      var s = inField(e, 'm1', profiles: [lootWarrior(materials: full)]);
+      s.ground.clear();
+      s = wait(e, s, 2.6);
+      final en = s.mission!.enemy(0)!;
+      s = moveTo(e, s, 'p0', en.x, en.y);
+      s = e.tick(s, 0.05).state;
+      expect(s.mode, SessionMode.battle);
+      s = runBattle(e, s);
+      expect(s.ground.where((g) => g.drop.stack?.material != null), isEmpty);
+      expect(s.players['p0']!.profile.material(CraftMaterial.esquirla), 99);
     });
 
     test('alijo: materiales salen con la grilla llena; armas no', () {

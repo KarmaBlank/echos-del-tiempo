@@ -33,9 +33,14 @@ class SessionJson {
   // GameSession
   // ------------------------------------------------------------------
 
-  Json toJson(GameSession s) => {
+  /// [profiles] `false`: los jugadores van sin su perfil `p` (el snapshot
+  /// de red los manda aparte, solo cuando cambian; netcode.md § "Perfiles
+  /// solo cuando cambian").
+  Json toJson(GameSession s, {bool profiles = true}) => {
         'mode': s.mode.name,
-        'players': [for (final p in s.playerList) playerToJson(p)],
+        'players': [
+          for (final p in s.playerList) playerToJson(p, profile: profiles),
+        ],
         'mission': s.mission == null ? null : missionToJson(s.mission!),
         'battle': s.battle == null ? null : battleToJson(s.battle!),
         'vote': s.vote == null ? null : voteToJson(s.vote!),
@@ -133,9 +138,9 @@ class SessionJson {
   // Jugadores
   // ------------------------------------------------------------------
 
-  Json playerToJson(SessionPlayer p) => {
+  Json playerToJson(SessionPlayer p, {bool profile = true}) => {
         'id': p.id,
-        'p': p.profile.toJson(),
+        if (profile) 'p': p.profile.toJson(),
         'x': p.x,
         'y': p.y,
         'dir': p.dir,

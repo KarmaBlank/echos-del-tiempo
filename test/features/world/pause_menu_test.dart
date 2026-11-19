@@ -270,6 +270,35 @@ void main() {
     expect(find.byKey(const ValueKey('pause-banner')), findsNothing);
   });
 
+  testWidgets('el host se va con un diálogo abierto: vuelve al título',
+      (tester) async {
+    final hub = LoopbackHub();
+    final hn = LoopbackNetSession(hub);
+    final cn = LoopbackNetSession(hub);
+    await tester.runAsync(() async {
+      await hn.connect(SessionConfig(profile: newProfile('Host', 'guerrero')));
+      await cn.connect(SessionConfig(
+          profile: newProfile('Ana', 'maga'), roomCode: hn.roomCode));
+    });
+    final w = await _pumpWorld(tester, net: cn);
+    // Algo abierto encima de la partida (como la pausa).
+    showDialog<void>(
+        context: w.nav.currentContext!,
+        builder: (_) => const Text('DIALOGO-ENCIMA'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('DIALOGO-ENCIMA'), findsOneWidget);
+
+    await tester.runAsync(() async {
+      await hn.disconnect();
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    });
+    await tester.pumpAndSettle();
+    expect(find.byType(WorldScreen), findsNothing,
+        reason: 'no queda trabado en DESCONECTADO');
+    expect(find.text('TITULO-BASE'), findsOneWidget);
+  });
+
   testWidgets('multijugador: el menú no pausa; PAUSAR AL GRUPO sí',
       (tester) async {
     final hn = LoopbackNetSession(LoopbackHub());

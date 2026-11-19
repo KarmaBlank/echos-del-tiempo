@@ -20,6 +20,7 @@ import '../../../../game_engine/data/exploration_catalog.dart';
 import '../../../../game_engine/rules/eco_rules.dart';
 import '../../../../game_engine/rules/trial_rules.dart';
 import '../../../../game_engine/rules/zone_rules.dart';
+import '../../../../netcode/contracts/net_traffic.dart';
 import '../../../ascension/domain/ascension_text.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
@@ -92,7 +93,15 @@ class MapGame extends Game {
       '${tileLayer.direct ? 'tiles directo' : 'tiles en caché'}'
       ' (${tileLayer.cachedChunks} bloques, ${tileLayer.built} grabados)'
       ' · etiquetas ${labelPen.cached} medidas'
-      ' (${labelPen.misses} de ${labelPen.hits + labelPen.misses})';
+      ' (${labelPen.misses} de ${labelPen.hits + labelPen.misses})'
+      // Host: cuánto pesa el último `state` (netcode.md § "Perfiles solo
+      // cuando cambian").
+      '${switch (controller.net) {
+        final NetTraffic n when n.clientCount > 0 =>
+          ' · red: state ${(n.lastStateBytes / 1024).toStringAsFixed(1)} KB'
+              ' a ${n.clientCount} clientes',
+        _ => '',
+      }}';
 
   final SessionController controller;
   final GameSprites sprites;
