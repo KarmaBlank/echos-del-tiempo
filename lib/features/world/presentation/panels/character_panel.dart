@@ -21,8 +21,10 @@ import '../../../../app/widgets/pixel_icon.dart';
 import '../../../../app/widgets/section_panel.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/bestiary.dart';
+import '../../../../game_engine/models/build_plan.dart';
 import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/models/game_session.dart';
+import '../../../../game_engine/rules/attribute_advisor.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../endgame/domain/endgame_text.dart';
 import '../../../inventory/domain/battle_impact.dart';
@@ -322,6 +324,10 @@ class _CharacterPanelState extends State<CharacterPanel> {
                     ],
                   );
                 }),
+                // Qué subir según el arma y el árbol (build_planner.md § 8).
+                Consumer(
+                    builder: (context, ref, _) => _advice(
+                        ref.watch(buildPlanProvider).planFor(_slot))),
                 if (view.mustAllocate)
                   const Padding(
                     padding: EdgeInsets.only(bottom: 10),
@@ -534,6 +540,61 @@ class _CharacterPanelState extends State<CharacterPanel> {
             ],
           ),
         ));
+  }
+
+  /// Tarjeta SUGERENCIA: el reparto del asesor para los puntos libres del
+  /// miembro activo, con sus razones y APLICAR SUGERENCIA (pide
+  /// confirmar; descarta el reparto pendiente).
+  Widget _advice(BuildPlan plan) {
+    final view = widget.view;
+    final c = widget.controller;
+    final prof = view.actor!.profile;
+    final s = AttributeAdvisor(c.engine.progression).recommend(prof, plan);
+    if (s.isEmpty) return const SizedBox.shrink();
+    final add = AttributeAdvisor.allocation(s);
+    final split = AttributeAdvisor.split(s);
+    final reason = ShopContext(view, c).guards.allocate(prof, add);
+    Future<void> apply() async {
+      final ok = await showBuildPicker<bool>(context, '¿APLICAR SUGERENCIA?', [
+        PickOption(true, 'Sí, repartir: $split',
+            'Se gastan ${prof.points} puntos de ${prof.name}'
+            '${_allocSum > 0 ? '; se descarta el reparto pendiente' : ''}.',
+            key: 'advice-yes'),
+        const PickOption(false, 'No', null, key: 'advice-no'),
+      ]);
+      if (ok != true || !mounted) return;
+      if (c.allocate(add)) setState(_alloc.clear);
+    }
+
+    return SectionPanel(
+      key: const ValueKey('attr-advice'),
+      icon: PixelIconKind.star,
+      color: kPlanColor,
+      title: 'SUGERENCIA',
+      subtitle: plan.isEmpty ? 'según tu arma y tu árbol' : 'según tu build',
+      children: [
+        Text(retroText('Sugerencia: $split'),
+            key: const ValueKey('attr-advice-split'),
+            style: const TextStyle(color: ProtoColors.gold)),
+        for (final x in s)
+          Padding(
+            key: ValueKey('attr-advice-${x.attribute.name}'),
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+                retroText('${x.short} +${x.points}: ${x.reasons.join(' · ')}'),
+                style: const TextStyle(color: ProtoColors.dim)),
+          ),
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: PanelButton('APLICAR SUGERENCIA',
+              key: const ValueKey('apply-advice'),
+              accent: kPlanColor,
+              reason: reason,
+              onPressed: apply),
+        ),
+      ],
+    );
   }
 
   void _confirm() {
