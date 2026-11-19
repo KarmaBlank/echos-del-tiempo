@@ -38,7 +38,11 @@ enum ModStat {
   summonTurns('turno de duración de invocaciones', 1),
 
   /// Afijo Rompedor (combo_balance.md § 5): +% de puntos de quiebre.
-  breakPower('% de quiebre', 0.01);
+  breakPower('% de quiebre', 0.01),
+
+  /// Afijo Quebrantador (combo_balance.md § 5.3): la habilidad principal
+  /// del arma (`BreakRules.modSkillOf`) puede quebrar. Valor fijo 1.
+  breakSkill('puede quebrar', 1);
 
   const ModStat(this.label, this.scale);
 
@@ -68,6 +72,7 @@ enum ModStat {
         ModStat.regen => 'Regenera $value$label',
         ModStat.statusResist => '−$value $label',
         ModStat.lifeSteal => '$value$label',
+        ModStat.breakSkill => 'Habilidad principal: $label',
         _ => '+$value $label',
       };
 
@@ -399,6 +404,7 @@ class ItemInstance {
     this.passiveLevel = 1,
     this.forge = const WeaponUpgradeLevels(),
     this.extraSkills = const [],
+    this.quebrarReplaced = false,
     this.uniqueId,
     this.name,
     this.ultId,
@@ -434,6 +440,16 @@ class ItemInstance {
   /// Habilidades trasladadas por fusión (además de las de la base).
   final List<String> extraSkills;
 
+  /// Ranura base de Quebrar (loot.md § 16.3): `false` = el arma trae
+  /// Quebrar (o Quebrar arcano); `true` = el jugador la reemplazó por una
+  /// habilidad trasladada, que ocupa esa ranura (un cupo más en
+  /// [extraSkills]). JSON `nq`; sin el campo, el arma tiene Quebrar.
+  final bool quebrarReplaced;
+
+  /// Cupo de habilidades trasladadas: el de la rareza, +1 si la ranura de
+  /// Quebrar quedó ocupada por una trasladada.
+  int get skillCapacity => rarity.skillSlots + (quebrarReplaced ? 1 : 0);
+
   /// Legendario: id de `kUniques`.
   final String? uniqueId;
 
@@ -465,6 +481,7 @@ class ItemInstance {
     int? passiveLevel,
     WeaponUpgradeLevels? forge,
     List<String>? extraSkills,
+    bool? quebrarReplaced,
     String? name,
     String? ultId,
     bool clearUlt = false,
@@ -479,6 +496,7 @@ class ItemInstance {
         passiveLevel: passiveLevel ?? this.passiveLevel,
         forge: forge ?? this.forge,
         extraSkills: extraSkills ?? this.extraSkills,
+        quebrarReplaced: quebrarReplaced ?? this.quebrarReplaced,
         uniqueId: uniqueId,
         name: name ?? this.name,
         ultId: clearUlt ? null : ultId ?? this.ultId,
@@ -498,6 +516,7 @@ class ItemInstance {
         if (passiveId != null && passiveLevel != 1) 'pl': passiveLevel,
         if (forge.total > 0) 'f': forge.toJson(),
         if (extraSkills.isNotEmpty) 's': extraSkills,
+        if (quebrarReplaced) 'nq': 1,
         if (uniqueId != null) 'q': uniqueId,
         if (name != null) 'n': name,
         if (ultId != null) 'ul': ultId,
@@ -537,6 +556,7 @@ class ItemInstance {
       passiveLevel: pl is num ? pl.toInt() : 1,
       forge: forge,
       extraSkills: s is List ? [for (final x in s) if (x is String) x] : const [],
+      quebrarReplaced: raw['nq'] == 1 || raw['nq'] == true,
       uniqueId: raw['q'] is String ? raw['q'] as String : null,
       name: raw['n'] is String ? raw['n'] as String : null,
       ultId: raw['ul'] is String ? raw['ul'] as String : null,
@@ -558,6 +578,7 @@ class ItemInstance {
       other.forge.spd == forge.spd &&
       other.forge.def == forge.def &&
       _listEq(other.extraSkills, extraSkills) &&
+      other.quebrarReplaced == quebrarReplaced &&
       other.uniqueId == uniqueId &&
       other.name == name &&
       other.ultId == ultId;

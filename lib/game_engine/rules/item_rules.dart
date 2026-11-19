@@ -2,7 +2,7 @@ import '../data/affixes_catalog.dart';
 import '../data/ascension_catalog.dart';
 import '../data/branch_ults_catalog.dart' show kBranchUltWeaponTypes;
 import '../data/game_catalog.dart';
-import '../data/skills_catalog.dart' show kSkillDelivery;
+import '../data/skills_catalog.dart' show kBaseQuebrarIds, kSkillDelivery, quebrarSkillFor;
 import '../data/uniques_catalog.dart';
 import '../data/weapon_passives.dart';
 import '../data/weapons_catalog.dart' show kWeaponTypeCategory;
@@ -71,13 +71,25 @@ class ItemRules {
     ];
   }
 
-  /// Habilidades del arma: las de la base + las trasladadas.
+  /// La Quebrar de la ranura base de [i] (loot.md § 16.3), o `null` si
+  /// el jugador la reemplazó (o la base no existe).
+  String? quebrarOf(ItemInstance i) {
+    final w = baseOf(i);
+    if (w == null || i.quebrarReplaced) return null;
+    return quebrarSkillFor(w.type);
+  }
+
+  /// Habilidades del arma: las de la base, las trasladadas y Quebrar (si
+  /// sigue en su ranura).
   List<String> skillsOf(ItemInstance i) {
     final w = baseOf(i);
     final out = [...?w?.skillIds];
     for (final s in i.extraSkills) {
       if (!out.contains(s)) out.add(s);
     }
+    // Al final, como en el kit de batalla.
+    final q = quebrarOf(i);
+    if (q != null && !out.contains(q)) out.add(q);
     return out;
   }
 
@@ -97,6 +109,9 @@ class ItemRules {
   /// Motivo por el que [weapon] no puede recibir [skillId] trasladada, o
   /// `null` si puede. Solo valida la forma de entrega (no cupos ni costo).
   String? canReceiveSkill(ItemInstance weapon, String skillId) {
+    if (kBaseQuebrarIds.contains(skillId)) {
+      return 'Quebrar no se trae: cada arma trae la suya';
+    }
     final d = skillCategory(skillId);
     if (d == null) return 'Elige una habilidad';
     final c = weaponCategoryOf(weapon);
@@ -112,15 +127,17 @@ class ItemRules {
     };
   }
 
-  /// Habilidades que se pueden elegir para reemplazar: las trasladadas
-  /// (las base del arma nunca).
-  List<String> replaceableSkills(ItemInstance i) => [...i.extraSkills];
+  /// Habilidades que se pueden elegir para reemplazar: las trasladadas y
+  /// Quebrar de la ranura base (loot.md § 16.3); las otras de la base
+  /// nunca.
+  List<String> replaceableSkills(ItemInstance i) =>
+      [...i.extraSkills, if (quebrarOf(i) case final q?) q];
 
   /// Si trasladar [skillId] a [target] obliga a elegir cuál reemplazar
   /// (cupos llenos y no la tiene ya trasladada).
   bool needsReplaceChoice(ItemInstance target, String skillId) =>
       !target.extraSkills.contains(skillId) &&
-      target.extraSkills.length >= target.rarity.skillSlots;
+      target.extraSkills.length >= target.skillCapacity;
 
   /// Nombre para mostrar: Común = base; Mágico = base + prefijo + sufijo;
   /// Raro / Épico = nombre generado; Legendario = nombre único. Con forja,
@@ -248,6 +265,7 @@ class ItemRules {
       name: raw.name,
       uniqueId: rarity == Rarity.legendario ? raw.uniqueId : null,
       ultId: ultModAllowed(rarity, w.type, raw.ultId) ? raw.ultId : null,
+      quebrarReplaced: raw.quebrarReplaced,
     );
     final kept = <AffixRoll>[];
     for (final a in raw.affixes) {
@@ -291,6 +309,7 @@ class ItemRules {
       // v0.5.1 que hoy no se podrían traer se conservan.
       if (catalog.skills.containsKey(s) &&
           !kAscensionSkills.containsKey(s) &&
+          !kBaseQuebrarIds.contains(s) &&
           !skills.contains(s)) {
         skills.add(s);
       }
@@ -301,8 +320,8 @@ class ItemRules {
       clearPassive: passive == null,
       passiveLevel: raw.passiveLevel.clamp(1, ItemInstance.maxPassiveLevel),
       forge: forge,
-      extraSkills: skills.length > rarity.skillSlots
-          ? skills.sublist(skills.length - rarity.skillSlots)
+      extraSkills: skills.length > item.skillCapacity
+          ? skills.sublist(skills.length - item.skillCapacity)
           : skills,
     );
     return item;

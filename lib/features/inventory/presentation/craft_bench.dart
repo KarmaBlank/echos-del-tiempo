@@ -13,6 +13,7 @@ import '../../../app/widgets/cost_chip.dart';
 import '../../../app/widgets/menu_widgets.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../app/widgets/section_panel.dart';
+import '../../../game_engine/data/skills_catalog.dart' show kBaseQuebrarIds;
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/session_action.dart';
@@ -902,7 +903,7 @@ class _CraftBenchState extends State<CraftBench> {
           padding: const EdgeInsets.only(left: 24),
           child: Text(
               retroText('¿Qué habilidad reemplazas? (el arma no tiene más '
-                  'lugar: elegí una de las traídas)'),
+                  'lugar: elegí una de las traídas o Quebrar)'),
               key: const ValueKey('craft-replace-title'),
               style: TextStyle(
                   color: action.replaceSkillId == null
@@ -932,7 +933,9 @@ class _CraftBenchState extends State<CraftBench> {
                       footer: replaceable.contains(id)
                           ? CostChip.note(id == action.replaceSkillId
                               ? 'Se reemplaza'
-                              : 'Trasladada')
+                              : kBaseQuebrarIds.contains(id)
+                                  ? 'Ranura de Quebrar'
+                                  : 'Trasladada')
                           : null,
                       onTap: () {
                         if (!replaceable.contains(id)) return;

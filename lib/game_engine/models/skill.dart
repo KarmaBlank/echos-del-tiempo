@@ -212,8 +212,8 @@ class SkillDef {
   final double ultDrain;
 
   /// Quebrar (combo_balance.md § 5): un golpe de esta habilidad quiebra
-  /// a un enemigo Fisurado. Las ULT, los dúos y las Convergencias lo
-  /// tienen siempre.
+  /// a un enemigo Fisurado ("Puede quebrar"; si no está Fisurado pega
+  /// normal). Las ULT, los dúos y las Convergencias lo tienen siempre.
   final bool breaks;
 
   // ---- Pulso, precondiciones e Instante (combo_balance.md § 5.2) ----
@@ -280,6 +280,10 @@ class SkillDef {
 
   bool get dealsDamage =>
       kind == SkillKind.physical || kind == SkillKind.magical;
+
+  /// Quebrar puro (Quebrar base, combo_balance.md § 5.1): no hace daño,
+  /// solo quiebra a un Fisurado.
+  bool get pureBreak => breaks && dealsDamage && power <= 0 && charge <= 0;
 
   /// Tiene un efecto para el grupo (filtro `rallySkill`).
   bool get rally =>

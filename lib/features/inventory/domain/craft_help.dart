@@ -374,11 +374,11 @@ class CraftHelp {
           what: 'Esta arma aprende una habilidad de otra arma tuya, que se '
               'destruye.',
           change: 'Habilidades traídas ${t.extraSkills.length}/'
-              '${r.skillSlots}'
-              '${t.extraSkills.length >= r.skillSlots ? ' (lleno: eliges cuál reemplazar)' : ' → ${t.extraSkills.length + 1}/${r.skillSlots}'}.',
+              '${t.skillCapacity}'
+              '${t.extraSkills.length >= t.skillCapacity ? ' (lleno: eliges cuál reemplazar, también Quebrar)' : ' → ${t.extraSkills.length + 1}/${t.skillCapacity}'}.',
           cost: cost(CraftRules.transferSkillCost(r), const {}),
-          lose: t.extraSkills.length >= r.skillSlots
-              ? '$sourceLost Y una habilidad traída (la que elijas).'
+          lose: t.extraSkills.length >= t.skillCapacity
+              ? '$sourceLost Y una habilidad traída o Quebrar (la que elijas).'
               : sourceLost,
           blocked: blocked,
           example: 'un hacha aprende una habilidad de un hacha vieja; las '

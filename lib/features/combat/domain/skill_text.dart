@@ -258,9 +258,12 @@ List<String> variantEffectLines(SkillDef tk) {
           }),
     if (tk.breakBonus > 0)
       hexSpan('#ffe14d', 'Quiebre: +${pct(tk.breakBonus)} de puntos de quiebre'),
-    if (tk.breaks)
-      hexSpan('#ffe14d', 'Quebrar: quiebra a un enemigo FISURADO (barra '
-          'llena)'),
+    if (tk.pureBreak)
+      hexSpan('#ffe14d', 'Quebrar: no hace daño; quiebra a un enemigo '
+          'FISURADO (barra llena). Se puede reemplazar por fusión')
+    else if (tk.breaks)
+      hexSpan('#ffe14d', 'Puede quebrar: si el objetivo está FISURADO, lo '
+          'quiebra; si no, pega normal'),
     // Pulso, Instante y precondiciones (combo_balance.md § 5.2).
     if (tk.pulse > 0)
       hexSpan('#ffb142', 'Cuesta ${tk.pulse} de Pulso (+1 al empezar tu '
@@ -304,7 +307,10 @@ String variantTagMarkup(SkillDef tk) {
             _ => d.stat.label,
           }),
     if (tk.breakBonus > 0) hexSpan('#ffe14d', 'quiebre+'),
-    if (tk.breaks) hexSpan('#ffe14d', 'quebrar'),
+    if (tk.pureBreak)
+      hexSpan('#ffe14d', 'quebrar')
+    else if (tk.breaks)
+      hexSpan('#ffe14d', 'puede quebrar'),
     if (tk.ultDrain > 0) hexSpan('#a29bfe', 'silencio'),
   ];
   return tags.isEmpty ? '' : ' ${tags.join(' ')}';

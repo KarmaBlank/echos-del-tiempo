@@ -300,6 +300,10 @@ del jefe y un golpe grande quiebra solo.
   - los dúos;
   - al menos 1 habilidad de **cada** arma, garantizada en su kit base.
     Además, un mod de habilidad lo puede agregar a otra.
+  - **v0.9.1 (pedido del dueño, como en Expedition 33 no hay forma
+    garantizada de quebrar):** Quebrar base sigue viniendo en toda arma
+    pero **se puede quitar** con la fusión (loot.md § 16.3). Si un grupo
+    se queda sin nada que quiebre, es decisión del jugador. Ver § 5.3.
 - **Sin traba para los jefes** (corrección del dueño): no hay regla de
   "primero muestra su ULT". Los números se calibran para que quebrar a un
   jefe antes de su primera ULT pase **solo** si los 4 encadenan bien sus
@@ -313,8 +317,10 @@ del jefe y un golpe grande quiebra solo.
 
 ### 5.1 La habilidad base de Quebrar
 
-- Hace **poco daño** (×0.6 del ATQ/MAG) y casi ningún punto de quiebre
-  propio: su trabajo es **cerrar** el quiebre, no llenarlo.
+- **v0.9.1: no hace daño** (`power: 0`, `SkillDef.pureBreak`; antes
+  ×0.6 del ATQ/MAG): no sale número de daño ni suma puntos de quiebre.
+  Sobre un Fisurado de antes de este paso lo quiebra; su trabajo es
+  **cerrar** el quiebre, no llenarlo. Igual Quebrar arcano.
 - Pide que el objetivo esté **Fisurado** (precondición, § 5.2) y
   cuesta 2 de Pulso.
 
@@ -348,11 +354,15 @@ del jefe y un golpe grande quiebra solo.
   (`steadyGauge`, evento `BreakPhase.steadied`, texto `SE RECOMPONE`).
   La baja del 10% por turno sigue para la barra a medio llenar.
 - **Quebrar base** (`quebrar`, física; `quebrarArcano`, mágica para
-  báculo, varita y tomo): la agrega el motor al final del kit de toda
-  arma (no está en `WeaponDef.skillIds`, no se traslada por fusión).
+  báculo, varita y tomo): va al final del kit de toda arma, en su
+  **ranura base de Quebrar** (v0.9.1, loot.md § 16.3): no está en
+  `WeaponDef.skillIds` ni se trae por fusión, pero se **puede
+  reemplazar** por una habilidad trasladada
+  (`ItemInstance.quebrarReplaced`).
   Desde el paso 7 cuesta **2 de Pulso y 0 MP** y pide objetivo Fisurado
   (antes 2 MP y sin precondición).
-  El "mod de habilidad que agrega Quebrar" queda para después.
+  El "mod de habilidad que agrega Quebrar" es desde v0.9.1 el afijo
+  Quebrantador (§ 5.3).
 - **Hook del árbol:** los notables de quiebre usan el efecto
   `breakBonus` que ya existe (`_breakBonus`, con sus condiciones
   `vsStatus`, `vsMarked`, `vsBroken`...). Nodos que se agregarían (sin
@@ -360,6 +370,67 @@ del jefe y un golpe grande quiebra solo.
   de martillo / hacha; uno de Paladín "+20% de quiebre a aturdidos";
   uno de Tirador "+20% de quiebre a Marcados"; y uno de grupo "Quebrar
   da +10 de ULT al que lo usa".
+
+### 5.3 Puede quebrar y Quebrantador (v0.9.1)
+
+**Habilidades que pueden quebrar** (`SkillDef.breaks` en habilidades de
+daño, sin precondición): pegan su daño normal y, si el objetivo está
+Fisurado de antes de este paso, lo quiebran; si no, se comportan normal.
+Tooltip `Puede quebrar: si el objetivo está FISURADO, lo quiebra; si no,
+pega normal` y etiqueta `puede quebrar` en el menú de batalla (color de
+quiebre `#ffe14d`, el mismo de Quebrar). Elegidas por ser golpes
+fuertes, de apertura o perforantes, sin `breakBonus` (las que llenan la
+barra no la cierran también). Las cargadas (`charge`) quedan afuera:
+caen el turno siguiente, cuando el Fisurado ya se recompuso.
+
+**Aprobada por el dueño (v0.9.1):**
+
+| Tipo de arma | Habilidades con "Puede quebrar" |
+|---|---|
+| Espada | Tajo Temporal (`tajoT`) |
+| Hacha | Hendidura Tóxica (`hendir`) |
+| Lanza | Empalar (`empalar`) |
+| Espada+escudo | Estocada Firme (`estocada`) |
+| Martillo+escudo | Martillo del Juicio (`juicio`), Aplastar (`aplastar`) |
+| Maza+escudo | Golpe de Escudo (`golpeEscudo`) |
+| Arco | Flecha Rayo (`rayoF`), Flecha Perforante (`flechaPerforante`) |
+| Ballesta | Virote Pesado (`virote`) |
+| Rifle | Tiro Perforante (`perfora`) |
+| Dagas | Tajo Gemelo (`tajoGemelo`) |
+| Báculo | Descarga (`descarga`) |
+| Varita | Rayo Arcano (`rayoArcano`) |
+| Tomo | Torrente (`torrente`) |
+
+Como cualquier habilidad de arma, se trasladan por fusión con su
+"Puede quebrar".
+
+**Afijo Quebrantador** (`quebrantador`, prefijo, `ModStat.breakSkill`,
+texto `Habilidad principal: puede quebrar`): la habilidad principal del
+arma (`BreakRules.modSkillOf`: la primera de daño a un objetivo de la
+base que todavía no quiebra; si no hay, la primera de daño que no
+quiebra) puede quebrar. Un solo tier (valor fijo 1) desde nivel de
+objeto 10, peso 150 (poco frecuente; Rompedor 400), en todos los tipos
+menos maza+escudo (varias bases sin habilidad de daño). Se agrega,
+quita y traslada como cualquier afijo (mismos costos). No se modeló como
+"mod por habilidad" porque los afijos viven en el arma, no en cada
+habilidad; las variantes (`kSkillVariants`) son habilidades aparte.
+
+**Quién puede quebrar** (`BreakRules.canBreak`): `breaks` o la
+habilidad principal con Quebrantador; ULT, dúos y Convergencias siguen
+quebrando siempre.
+
+**IA** (`ComboPlanner.quebrar`, que usan los compañeros, el simulador y
+la vista previa del admin): sobre un Fisurado elige, entre todas las que
+pueden quebrar y pasan MP, Pulso y precondición, la de **más daño**
+(ATQ o MAG × poder × golpes); Quebrar base (sin daño) queda última.
+`prepare` ya no salta las que pueden quebrar (solo Quebrar base).
+
+**Medición (balance_measure_test, mismas semillas, antes → después):**
+jefe quebrado antes de su ULT 1/704 → 1/704 en total; grupo mixto al
+azar 0/32, 0/32 y 1/32 (3%) → igual; mixto + combos 0/32 → 0/32. Sigue
+por debajo de la meta (<10%). Suben un poco los quiebres por pelea de
+los grupos de 4 Guerreros (p. ej. Fortaleza Caída Raro 0.7 → 1.0) porque
+las que pueden quebrar se usan como ataque normal.
 
 ## 5.2 Pulso y precondiciones (nombres aprobados: Pulso, Instante, encadenar)
 
@@ -432,7 +503,7 @@ Instante y no tiene precondición.
 
 | Clase | Habilidad | Origen | MP | Pulso | Instante | Precondición | Rol |
 |---|---|---|---|---|---|---|---|
-| Todas | Quebrar / Quebrar arcano | base de toda arma | 0 (antes 2) | 2 | no | objetivo Fisurado | cierra el quiebre |
+| Todas | Quebrar / Quebrar arcano | ranura base de toda arma (quitable, v0.9.1) | 0 (antes 2) | 2 | no | objetivo Fisurado | cierra el quiebre, sin daño (v0.9.1) |
 | Guerrero | **Brasa Fugaz** (`brasaEco`, nueva) | combo de clase | 2 | 0 | sí | — | prepara: físico ×0.7, Fuego, +3 Quemadura |
 | Guerrero | Golpe Ígneo, Tajo Carmesí, Erupción / Hendidura Tóxica, Tajo del Ocaso | armas | = | 0 | no | — | preparan Quemadura / Veneno (el golpe de Veneno detona Combustión) |
 | Guerrero, Paladín | Rompearmaduras | armas | 5 | 1 | no | — | llena el quiebre y Marca |
@@ -536,7 +607,8 @@ cambia se devuelve gratis). Se aplica igual:
     (`CraftRules.forgeCost`). La forja solo cuesta créditos: lo devuelto
     son créditos, no materiales.
 - **Fusiones inválidas:** habilidad trasladada desconocida, de un kit de
-  ascensión, del motor (`kEngineSkillIds`: Quebrar y combos de clase),
+  ascensión, del motor (`kEngineSkillIds`: Quebrar y combos de clase;
+  Quebrar no ocupa cupo trasladado: tiene su ranura base, loot.md § 16.3),
   repetida o de más para la rareza: se saca y se devuelve
   `transferSkillCost` de la rareza. Las de forma de entrega vieja
   (§ 16.1 de loot.md) se conservan, como antes.

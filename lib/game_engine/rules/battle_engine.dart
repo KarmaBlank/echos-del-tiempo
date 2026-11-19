@@ -25,6 +25,7 @@ import 'js_math.dart';
 import 'skill_requirements.dart';
 import 'stats_calculator.dart';
 import 'summon_rules.dart';
+import 'break_rules.dart';
 
 part 'battle_engine_abyss.dart';
 part 'battle_engine_summons.dart';
@@ -411,15 +412,18 @@ class BattleEngine {
         }
       }
     }
-    // Combo de clase (combo_balance.md § 5.2) y Quebrar base del arma
-    // (§ 5.1), al final de todo.
+    // Combo de clase (combo_balance.md § 5.2) y Quebrar de la ranura base
+    // del arma (§ 5.1, loot.md § 16.3), al final de todo. Si el jugador la
+    // reemplazó por fusión (`quebrarReplaced`), el arma no la trae.
     for (final combo in kClassComboSkill[cls.id] ?? const <String>[]) {
       if (catalog.skills.containsKey(combo) && !skills.contains(combo)) {
         skills.add(combo);
       }
     }
     final quebrar = quebrarSkillFor(w.type);
-    if (catalog.skills.containsKey(quebrar) && !skills.contains(quebrar)) {
+    if (!(m.build.item?.quebrarReplaced ?? false) &&
+        catalog.skills.containsKey(quebrar) &&
+        !skills.contains(quebrar)) {
       skills.add(quebrar);
     }
     final c = Combatant(
@@ -4087,7 +4091,7 @@ class _Turn {
               : sk.kind == SkillKind.physical
                   ? combo.breakPhysical
                   : combo.breakMagical
-          ..canBreak = sk.breaks;
+          ..canBreak = BreakRules.canBreak(sk, p, engine.catalog.skills);
         p.mp -= sk.mp;
         p.pulse -= sk.pulse;
         // Sangría: cuesta vida (nunca deja en menos de 1).
@@ -4454,6 +4458,17 @@ class _Turn {
               '(${_atkText(p)} × ${fm(tk.charge)}) · cae al empezar su '
               'próximo turno';
           return 6;
+        }
+        if (tk.pureBreak) {
+          // Quebrar base (combo_balance.md § 5.1, v0.9.1): sin daño, solo
+          // quiebra a un Fisurado de antes de este paso.
+          final ok = target.alive &&
+              target.fissured &&
+              !_fissuredNow.contains(target.id);
+          if (ok) _break(target);
+          state.log = '${p.name} · ${tk.name} → ${target.name}'
+              '${ok ? ': QUEBRADO' : ': no está Fisurado'}';
+          return 0;
         }
         final tormenta = p.keystones.contains('tormenta')
             ? (tk.allTargets ? 1.25 : 0.85)

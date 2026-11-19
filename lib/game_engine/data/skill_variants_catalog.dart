@@ -51,7 +51,7 @@ const Map<String, SkillDef> kSkillVariants = {
   'murallaFe': SkillDef(id: 'murallaFe', name: 'Muralla de Fe', mp: 9, kind: _sup, partyShield: 0.18, partyShieldTurns: 2, shieldReflect: 0.3),
   'cupula': SkillDef(id: 'cupula', name: 'Cúpula Arcana', mp: 8, kind: _sup, partyShield: 0.10, partyShieldTurns: 2, partyBuffs: [PartyBuff(BuffStat.guard, 0.10, 2)]),
   // ---- disparos ----
-  'flechaPerforante': SkillDef(id: 'flechaPerforante', name: 'Flecha Perforante', mp: 4, kind: _phys, power: 1.4, pierce: 0.7),
+  'flechaPerforante': SkillDef(id: 'flechaPerforante', name: 'Flecha Perforante', mp: 4, kind: _phys, power: 1.4, pierce: 0.7, breaks: true),
   'balaTraspasante': SkillDef(id: 'balaTraspasante', name: 'Bala Traspasante', mp: 6, kind: _phys, power: 1.9, pierce: 0.8, critBonus: 0.15),
   'tiroRebote': SkillDef(id: 'tiroRebote', name: 'Tiro de Rebote', mp: 4, kind: _phys, power: 1.2, bounces: 2),
   'dagaSaltarina': SkillDef(id: 'dagaSaltarina', name: 'Daga Saltarina', mp: 5, kind: _phys, power: 1.0, bounces: 3, status: StatusApplication(_poi, 1)),

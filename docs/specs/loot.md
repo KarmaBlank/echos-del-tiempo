@@ -911,6 +911,30 @@ trasladada no ocupa cupo. La vista previa dice lo que se pierde en
 `CraftResult.replaced` (nombre) y `replacedSkillId`. La fusión vieja
 (`FuseAction`) no elige: con los cupos llenos falla.
 
+### 16.3 Ranura base de Quebrar (v0.9.1)
+
+Pedido del dueño: Quebrar viene de base pero se puede quitar.
+- Toda arma tiene una **ranura base de Quebrar** (Quebrar o Quebrar
+  arcano según el tipo, `quebrarSkillFor`). `ItemRules.skillsOf` la
+  lista al final (base, trasladadas, Quebrar), igual que el kit de
+  batalla.
+- `ItemRules.replaceableSkills` = trasladadas + Quebrar (si sigue). Al
+  traer una habilidad con el arma llena, Quebrar se puede elegir
+  (`replaceSkillId: 'quebrar'`): la trasladada **ocupa la ranura de
+  Quebrar** y el arma queda sin Quebrar (`ItemInstance.quebrarReplaced`,
+  JSON `nq: 1`). El cupo de trasladadas pasa a ser
+  `skillCapacity = rarity.skillSlots + 1`. Mismo costo que un traslado.
+- Quebrar **no se trae** de otra arma (`canReceiveSkill`: "Quebrar no se
+  trae: cada arma trae la suya"); para volver a tenerla, otra arma.
+- `sanitize` conserva `nq` y nunca deja Quebrar en `extraSkills`.
+- **Migración versionada:** `kBalanceVersion` 1 → 2. Sin `nq` el arma
+  tiene Quebrar, así que las armas viejas quedan con Quebrar en su
+  ranura y no pierden nada; la migración solo sube `bv` (con su copia
+  `account.pre-bv2-*.json`).
+- En la mesa de fusión la tarjeta de Quebrar dice `Ranura de Quebrar` y
+  el título `elegí una de las traídas o Quebrar`.
+- Red: protocolo 15.
+
 ## 17. Inventario y acciones
 
 Grilla de 8 × 5 casillas por personaje (`InventoryRules.layout`): cada

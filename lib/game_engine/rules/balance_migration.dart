@@ -7,9 +7,13 @@ import 'craft_rules.dart';
 import 'item_rules.dart';
 
 /// Versión del balance con la que se guardó la cuenta (JSON `bv` de la
-/// cuenta). 1 = rebalance por combos v0.9 (combo_balance.md § 6b). Las
-/// cuentas sin `bv` son de antes (v0.8.x) y se migran una vez.
-const kBalanceVersion = 1;
+/// cuenta). 1 = rebalance por combos v0.9 (combo_balance.md § 6b).
+/// 2 = v0.9.1, Quebrar pasa a la ranura base quitable del arma (loot.md
+/// § 16.3): las armas guardadas sin `nq` conservan Quebrar en su ranura
+/// y no pierden nada (la migración de 1 → 2 no cambia ningún arma, solo
+/// sube `bv`). Las cuentas sin `bv` son de antes (v0.8.x) y se migran
+/// una vez.
+const kBalanceVersion = 2;
 
 /// Lo que la migración cambió y devolvió, para el aviso único al cargar.
 class BalanceRefund {
@@ -122,7 +126,7 @@ class BalanceMigration {
           !kAscensionSkills.containsKey(s) &&
           !kEngineSkillIds.contains(s) &&
           !kept.contains(s) &&
-          kept.length < i.rarity.skillSlots;
+          kept.length < i.skillCapacity;
       if (ok) {
         kept.add(s);
       } else {

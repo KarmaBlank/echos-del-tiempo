@@ -1077,7 +1077,8 @@ cuerpo a cuerpo / a distancia) se ven atenuadas con el motivo en rojo
 habilidad elegida y antes de su ficha** (v0.8.6; antes iba al final de la
 lista y no se veía sin bajar), con `craft-replace`: una `ActionCard` por habilidad del arma
 (`craft-replace-<id>`, con su ficha en el tooltip): las trasladadas se
-eligen (`Trasladada` / `Se reemplaza`), las de la base bloqueadas
+eligen (`Trasladada` / `Se reemplaza`; Quebrar desde v0.9.1 también,
+como `Ranura de Quebrar`, loot.md § 16.3), las de la base bloqueadas
 (`Habilidad base`). La acción lleva `replaceSkillId`; ANTES │ DESPUÉS
 muestra el resultado con esa elección y el botón queda bloqueado con el
 motivo del motor (`Elegí qué habilidad reemplazar`) hasta elegir.

@@ -5,6 +5,7 @@ import '../models/battle_state.dart';
 import '../models/passive_mechanic.dart' show BuffStat;
 import '../models/skill.dart';
 import '../models/status.dart';
+import 'break_rules.dart';
 import 'skill_requirements.dart';
 
 /// Elecciones de combo compartidas por la IA de compañeros
@@ -46,15 +47,37 @@ class ComboPlanner {
     return null;
   }
 
-  /// Una habilidad con Quebrar sobre un enemigo Fisurado.
+  /// Daño esperado aproximado de [sk] en manos de [me] (para elegir
+  /// entre varias que quiebran). Quebrar base: 0.
+  double _damageScore(SkillDef sk, Combatant me) {
+    if (!sk.dealsDamage || sk.pureBreak) return 0;
+    final src = sk.kind == SkillKind.magical ? me.magic : me.attack;
+    return src * sk.power * (sk.hits > 1 ? sk.hits : 1);
+  }
+
+  /// Una habilidad que puede quebrar (`breaks`, Quebrar base o el afijo
+  /// Quebrantador, combo_balance.md § 5.3) sobre un enemigo Fisurado; entre
+  /// varias, la de más daño (Quebrar base, sin daño, queda última).
   SkillCommand? quebrar(Combatant me, List<Combatant> foes) {
     for (final t in foes) {
       if (!t.alive || !t.fissured) continue;
+      SkillDef? best;
+      var top = -1.0;
       for (final sk in _usable(me)) {
-        if (sk.breaks && _ok(sk, me, t, foes)) {
-          return SkillCommand(sk.id, targetId: t.id);
+        // Las cargadas caen en el turno siguiente (el Fisurado ya se
+        // recompuso): no sirven para cerrar.
+        if (sk.charge > 0) continue;
+        if (!BreakRules.canBreak(sk, me, catalog.skills) ||
+            !_ok(sk, me, t, foes)) {
+          continue;
+        }
+        final score = _damageScore(sk, me);
+        if (score > top) {
+          top = score;
+          best = sk;
         }
       }
+      if (best != null) return SkillCommand(best.id, targetId: t.id);
     }
     return null;
   }
@@ -88,7 +111,7 @@ class ComboPlanner {
     SkillCommand? mark;
     for (final sk in _usable(me)) {
       if (instantOnly && !sk.instant) continue;
-      if (sk.allTargets || sk.breaks) continue;
+      if (sk.allTargets || sk.pureBreak) continue;
       final adds = [if (sk.status != null) sk.status!, ...sk.extraStatuses]
           .where((a) => _primers.contains(a.kind) && a.chance == null)
           .map((a) => a.kind)
