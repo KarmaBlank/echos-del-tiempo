@@ -9,8 +9,6 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
-import '../../../app/widgets/action_card.dart';
-import '../../../app/widgets/cost_chip.dart';
 import '../../../app/widgets/menu_focus.dart';
 import '../../../app/widgets/menu_widgets.dart';
 import '../../../app/widgets/pixel_icon.dart';
@@ -29,9 +27,11 @@ import '../../../game_engine/models/build_plan.dart';
 import '../../../game_engine/rules/build_plan_rules.dart';
 import '../../build_planner/presentation/build_fit_badge.dart';
 import '../../build_planner/presentation/build_plan_providers.dart';
+import '../domain/inventory_menu.dart';
 import '../domain/item_text.dart';
 import 'clean_selection.dart';
 import 'consumables_bar.dart';
+import 'inventory_action_menu.dart';
 import 'inventory_sort_button.dart';
 import 'item_widgets.dart' hide PixelIcon;
 import 'shop_sections.dart';
@@ -112,11 +112,33 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   /// Foco propio: `Esc` cancela "elige B" sin cerrar el panel.
   final _keys = FocusNode(debugLabel: 'inventory');
 
+  /// Buscador (v0.9.7): nombre, tipo, rareza, mod, pasiva, habilidad.
+  final _search = TextEditingController();
+  String _query = '';
+
+  /// Menú de LIMPIAR INVENTARIO abierto debajo del botón.
+  bool _cleanMenu = false;
+
+  /// Marcas NUEVO ya mandadas a sacar (no repetir mientras llega).
+  final _seenSent = <String>{};
+
   @override
   void dispose() {
+    InventoryContextMenu.close();
     _keys.dispose();
+    _search.dispose();
     super.dispose();
   }
+
+  /// Saca la marca NUEVO de [uid] al pasar el mouse (loot.md § 17.4).
+  void _seen(PlayerProfile p, String uid) {
+    if (!p.fresh.contains(uid) || !_seenSent.add(uid)) return;
+    shop.controller.markSeen([uid]);
+  }
+
+  bool _matches(CellContent c) => _query.trim().isEmpty ||
+      inventoryMatches(shop.rules, _query,
+          item: c.item, eco: c.eco, label: c.stack?.label);
 
   void _startCompare(WeaponRef a) {
     setState(() {
@@ -153,17 +175,25 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final it = c.item;
     final mine = owner.id == me.id;
     final using = shop.rules.equippedItem(me.profile)?.uid;
-    if (it == null || (mine && it.uid == using)) {
-      return RetroTooltip(
-          message: it == null
-              ? _tooltip(me.profile, c, attrs)
-              : itemTooltipMarkup(shop.rules, it,
-                      skillDetails: true,
-                      level: me.profile.level,
-                      attributes: attrs,
-                      equipped: equipped) +
-                  _fitLine(it),
-          child: child);
+    if (it == null) {
+      return RetroTooltip(message: _tooltip(me.profile, c, attrs), child: child);
+    }
+    if (mine && it.uid == using) {
+      // La equipada: resumen + secciones plegables (ui_style.md §
+      // "Tooltips cortos").
+      final parts = itemTipParts(shop.rules, it,
+          level: me.profile.level, attributes: attrs, equipped: equipped);
+      return RetroHoverCard(
+        placement: RetroTipPlacement.below,
+        gap: 4,
+        interactive: true,
+        builder: (ctx) => RetroTipFolds(
+            key: const ValueKey('inv-tip-folds'),
+            summary: parts.summary + _fitLine(it),
+            sections: parts.sections,
+            maxWidth: RetroType.width(ctx, RetroHoverCard.textWidth)),
+        child: child,
+      );
     }
     final fit = buildFitMarkup(_fit(it));
     final card = HoverCompareCard(
@@ -173,6 +203,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         attributes: attrs,
         ownerName: mine ? null : owner.name);
     return RetroHoverCard(
+      interactive: true,
       builder: (_) => fit == null
           ? card
           : Column(
@@ -324,7 +355,27 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                 cleanLockReason(shop.rules, p, token, _picked) != null,
             child: w);
       }
-      if (c != null) w = _withTip(me, owner, c, attrs, w);
+      if (c != null) {
+        final fresh = mine && token != null && p.fresh.contains(token);
+        final match = _matches(c);
+        if (fresh || !match) {
+          w = Stack(children: [
+            Opacity(opacity: match ? 1 : 0.25, child: w),
+            if (fresh)
+              Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: IgnorePointer(
+                      child: NewItemTag(key: ValueKey('inv-new-$i')))),
+          ]);
+        }
+        w = _withTip(me, owner, c, attrs, w);
+        if (fresh) {
+          final inner = w;
+          w = MouseRegion(onEnter: (_) => _seen(p, token), child: inner);
+        }
+      }
       void tap() {
         if (pickMode) return togglePick(token);
         if (_pickB(owner.id, token, c)) return;
@@ -341,7 +392,13 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       }
 
       w = GestureDetector(
-          behavior: HitTestBehavior.opaque, onTap: tap, child: w);
+          behavior: HitTestBehavior.opaque,
+          onTap: tap,
+          // Clic derecho: el menú de acciones (v0.9.7).
+          onSecondaryTapUp: mine && !pickMode && token != null && c != null
+              ? (d) => _openMenu(p, me, mates, token, i, d.globalPosition)
+              : null,
+          child: w);
       if (mine && !pickMode) {
         if (c != null) {
           w = Draggable<int>(
@@ -416,6 +473,9 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           children: [
             _CellButton(
                 key: const ValueKey('inv-equipped'),
+                onSecondaryTap: mine && eq != null && !pickMode
+                    ? (at) => _openMenu(p, me, mates, eq.uid, null, at)
+                    : null,
                 onTap: () {
                   if (eq == null) return;
                   if (_pickB(owner.id, eq.uid, CellContent.item(eq))) return;
@@ -453,6 +513,34 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         else if (!mine)
           ProtoText(protoColor(ProtoColors.dim,
               'Inventario de ${protoEsc(owner.name)} (solo lectura)')),
+        const SizedBox(height: 4),
+        SizedBox(
+          width: InventoryTab.gridWidth,
+          child: TextField(
+            key: const ValueKey('inv-search'),
+            controller: _search,
+            style: RetroType.smallStyle,
+            decoration: InputDecoration(
+              isDense: true,
+              hintText: 'Buscar: nombre, tipo, mod...',
+              hintStyle: RetroType.smallStyle.copyWith(color: ProtoColors.dim),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              suffix: _query.isEmpty
+                  ? null
+                  : GestureDetector(
+                      key: const ValueKey('inv-search-clear'),
+                      onTap: () => setState(() {
+                            _search.clear();
+                            _query = '';
+                          }),
+                      child: Text('x',
+                          style: RetroType.smallStyle
+                              .copyWith(color: ProtoColors.dim))),
+            ),
+            onChanged: (v) => setState(() => _query = v),
+          ),
+        ),
         const SizedBox(height: 4),
         SizedBox(
           width: InventoryTab.gridWidth,
@@ -516,11 +604,16 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
               selected: _cleaning,
               onPressed: () => setState(() {
                     _cleaning = !_cleaning;
+                    _cleanMenu = _cleaning;
                     _picked = const [];
                     _confirmDrop = false;
                     _confirmCraft = null;
                     _moveFrom = null;
                   })),
+          if (_cleaning && _cleanMenu) ...[
+            const SizedBox(height: 4),
+            _cleanMenuBox(p),
+          ],
         ],
       ],
     ));
@@ -585,6 +678,54 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     );
   }
 
+  /// Menú de LIMPIAR INVENTARIO (v0.9.7), debajo del botón: elegir a
+  /// mano o desarmar / vender todos los Comunes, Mágicos o Raros. Elegir
+  /// una opción la deja lista en el detalle para confirmar.
+  Widget _cleanMenuBox(PlayerProfile p) {
+    final rules = shop.rules;
+    InventoryMenuEntry batch(CraftOp op, Rarity r) {
+      final n = rules.crafting.batchTargets(p, r).length;
+      final sell = op == CraftOp.sellAll;
+      return InventoryMenuEntry(
+        id: 'clean-menu-${sell ? 'sell' : 'salvage'}-${r.name}',
+        label: '${sell ? 'Vender' : 'Desarmar'} todos los '
+            '${rarityPlural(r)} ($n)',
+        color: sell ? ProtoColors.gold : ProtoColors.sky,
+        reason: n == 0
+            ? 'No tenés ${rarityPlural(r).toLowerCase()} para '
+                '${sell ? 'vender' : 'desarmar'}'
+            : null,
+        onTap: () => setState(() {
+          _cleanPick = false;
+          _cleanOp = op;
+          _cleanRarity = r;
+        }),
+      );
+    }
+
+    const rs = [Rarity.comun, Rarity.magico, Rarity.raro];
+    return Container(
+      key: const ValueKey('inv-clean-menu'),
+      width: InventoryTab.gridWidth,
+      decoration: BoxDecoration(
+        color: ProtoColors.bg,
+        border: Border.all(
+            color: ProtoColors.buttonBorder,
+            width: RetroTheme.thinBorderWidth),
+      ),
+      child: InventoryActionList(keyPrefix: 'inv-', entries: [
+        InventoryMenuEntry(
+          id: 'clean-menu-pick',
+          label: 'Elegir a mano',
+          note: 'marcá armas en la grilla',
+          onTap: () => setState(() => _cleanPick = true),
+        ),
+        for (final r in rs) batch(CraftOp.salvageAll, r),
+        for (final r in rs) batch(CraftOp.sellAll, r),
+      ]),
+    );
+  }
+
   /// LIMPIAR INVENTARIO: desarmar o vender de una vez todas las armas de
   /// una rareza, con el resumen antes de confirmar.
   Widget _cleaner(PlayerProfile p) {
@@ -643,10 +784,13 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         const SizedBox(height: 4),
         CleanModeToggle(pick: false, onChanged: mode),
         const SizedBox(height: 6),
-        ProtoText(protoColor(
-            ProtoColors.dim,
-            'Desarma o vende de una vez todas las armas de una rareza. Nunca '
-            'toca la equipada ni tu última arma inicial.')),
+        RetroTipFold(
+            key: const ValueKey('inv-clean-help'),
+            title: 'Cómo funciona',
+            body: protoColor(
+                ProtoColors.dim,
+                'Desarma o vende de una vez todas las armas de una rareza. '
+                'Nunca toca la equipada ni tu última arma inicial.')),
         const SizedBox(height: 8),
         Wrap(spacing: 6, runSpacing: 6, children: [
           PanelButton('DESARMAR (materiales)',
@@ -805,7 +949,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       icon: confirming ? PixelIconKind.lock : PixelIconKind.check,
       color: confirming ? ProtoColors.red : ProtoColors.gold,
       title: confirming ? 'CONFIRMAR' : 'ACCIONES',
-      subtitle: confirming ? null : 'clic o Enter',
+      subtitle: confirming ? null : 'o clic derecho en la casilla',
       children: confirming
           ? [
               list.first,
@@ -875,81 +1019,6 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         }),
       ];
     }
-    final cards = <Widget>[
-      if (it != null && it.uid != p.equippedUid)
-        ActionCard(
-          key: const ValueKey('inv-equip'),
-          icon: _icon(PixelIconKind.check, ProtoColors.green),
-          title: '<b>EQUIPAR</b>',
-          description: 'Pasa a ser tu arma (fuera de las misiones).',
-          reason: g.equip(p, it.uid, pending: widget.pending),
-          footer: g.equip(p, it.uid, pending: widget.pending) == null
-              ? const CostChip([])
-              : null,
-          onTap: () {
-            if (g.equip(p, it.uid, pending: widget.pending) == null) {
-              shop.controller.equip(it.uid);
-            }
-          },
-        ),
-      if (it != null && !_picking)
-        ActionCard(
-          key: const ValueKey('inv-compare'),
-          icon: _icon(PixelIconKind.arrowIn, ProtoColors.sky),
-          title: '<b>COMPARAR</b>',
-          description: 'Elige otra arma y mira las dos lado a lado.',
-          onTap: () => _startCompare(WeaponRef(me.id, token)),
-        ),
-      if (_selCell != null)
-        ActionCard(
-          key: const ValueKey('inv-move'),
-          icon: _icon(PixelIconKind.arrowIn, ProtoColors.gold),
-          title: '<b>MOVER</b>',
-          description: 'Después elige la casilla destino (o arrastra).',
-          onTap: () => setState(() => _moveFrom = _selCell),
-        ),
-      if (mates.isEmpty)
-        ActionCard(
-          key: const ValueKey('inv-give'),
-          icon: _icon(PixelIconKind.plus, ProtoColors.sky),
-          title: '<b>DAR A...</b>',
-          description: 'Pásalo a un compañero de la sala.',
-          reason: g.give(p, token, null, count: count) ?? 'Sin compañeros',
-          onTap: () {},
-        )
-      else
-        for (final m in mates)
-          ActionCard(
-            key: ValueKey('inv-give-${m.id}'),
-            icon: _icon(PixelIconKind.plus, ProtoColors.sky),
-            title: '<b>DAR A ${protoEsc(m.name.toUpperCase())}</b>',
-            description: 'Lo recibe en su inventario.',
-            reason: g.give(p, token, m, count: count),
-            onTap: () {
-              if (g.give(p, token, m, count: count) == null) {
-                shop.controller.give(m.id, token, count: count);
-              }
-            },
-          ),
-      ActionCard(
-        key: const ValueKey('inv-drop'),
-        icon: _icon(PixelIconKind.trash, ProtoColors.orange),
-        title: '<b>TIRAR</b>',
-        description: 'Queda en el piso: lo puede levantar cualquiera.',
-        reason: g.drop(p, token, count: count, alive: me.alive),
-        // Ajuste CONFIRMAR AL TIRAR (docs/specs/settings.md § "JUEGO").
-        onTap: () {
-          if (g.drop(p, token, count: count, alive: me.alive) != null) return;
-          ref.read(gameSettingsProvider).confirmDrop
-              ? setState(() => _confirmDrop = true)
-              : shop.controller.dropItem(token, count: count);
-        },
-      ),
-      if (it != null) ...[
-        _craftCard(p, it, CraftOp.salvage),
-        _craftCard(p, it, CraftOp.sell),
-      ],
-    ];
     return [
       if (it == null && c.eco == null && c.count > 1)
         Padding(
@@ -975,49 +1044,136 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             ],
           ),
         ),
-      CardGrid(minWidth: 200, children: cards),
+      InventoryActionList(
+          key: const ValueKey('inv-actions'),
+          entries: _menuEntries(p, me, mates, c)),
     ];
   }
 
-  Widget _icon(PixelIconKind k, Color color) => Builder(
-      builder: (context) =>
-          PixelIcon(k, size: RetroType.width(context, 20), color: color));
-
-  /// DESARMAR / VENDER: lo que recibes en el pie (o el motivo).
-  Widget _craftCard(PlayerProfile p, ItemInstance it, CraftOp op) {
+  /// Acciones del token elegido como filas de menú (v0.9.7): Equipar,
+  /// Comparar, Mover, Dar a..., Tirar, Desarmar, Vender. Las que no se
+  /// pueden, en gris con el motivo en una línea (`inventoryReasonLine`).
+  /// La misma lista va en el detalle y en el menú del clic derecho.
+  List<InventoryMenuEntry> _menuEntries(PlayerProfile p, SessionPlayer me,
+      List<SessionPlayer> mates, CellContent c) {
     final g = shop.guards;
-    final a = CraftAction(op, it.uid);
-    final reason = g.craft(p, a);
-    final sell = op == CraftOp.sell;
-    final r = g.craftPreview(p, a);
-    final gains = gainsText(
-        credits: r.gainedCredits,
-        materials: r.gainedMaterials,
-        chances: r.outcomes);
-    return ActionCard(
-      key: ValueKey(sell ? 'inv-sell' : 'inv-salvage'),
-      icon: _icon(sell ? PixelIconKind.coin : PixelIconKind.anvil,
-          sell ? ProtoColors.gold : ProtoColors.sky),
-      title: sell
-          ? '<b>VENDER ₵${shop.rules.crafting.sellPrice(it)}</b>'
-          : '<b>DESARMAR</b>',
-      description: sell
-          ? 'El arma se destruye y recibes créditos.'
-          : 'El arma se destruye y recibes materiales.',
-      reason: reason,
-      footer: reason == null ? CostChip.note('Recibes $gains') : null,
-      onTap: () {
-        if (reason == null) setState(() => _confirmCraft = op);
-      },
-    );
+    final token = _sel!;
+    final it = c.item;
+    final count = it == null ? _count.clamp(1, c.count) : 1;
+    String? why(InventoryMenuAction a, String? r) =>
+        r == null ? null : inventoryReasonLine(a, r);
+    InventoryMenuEntry craft(ItemInstance it, CraftOp op) {
+      final act = CraftAction(op, it.uid);
+      final sell = op == CraftOp.sell;
+      final r = g.craftPreview(p, act);
+      final ma = sell ? InventoryMenuAction.sell : InventoryMenuAction.salvage;
+      final gains = gainsText(
+          credits: r.gainedCredits,
+          materials: r.gainedMaterials,
+          chances: r.outcomes);
+      return InventoryMenuEntry(
+        id: sell ? 'sell' : 'salvage',
+        label: sell
+            ? 'Vender ₵${shop.rules.crafting.sellPrice(it)}'
+            : ma.label,
+        note: 'Recibís $gains',
+        color: ProtoColors.orange,
+        reason: why(ma, g.craft(p, act)),
+        onTap: () => setState(() => _confirmCraft = op),
+      );
+    }
+
+    final eqReason = it == null
+        ? null
+        : g.equip(p, it.uid, pending: widget.pending);
+    return [
+      if (it != null)
+        InventoryMenuEntry(
+          id: 'equip',
+          label: InventoryMenuAction.equip.label,
+          color: ProtoColors.green,
+          reason: why(InventoryMenuAction.equip, eqReason),
+          onTap: () => shop.controller.equip(it.uid),
+        ),
+      if (it != null && !_picking)
+        InventoryMenuEntry(
+          id: 'compare',
+          label: InventoryMenuAction.compare.label,
+          color: ProtoColors.sky,
+          onTap: () => _startCompare(WeaponRef(me.id, token)),
+        ),
+      if (it != null || c.eco != null)
+      InventoryMenuEntry(
+        id: 'move',
+        label: InventoryMenuAction.move.label,
+        note: 'elegí la casilla destino (o arrastrá)',
+        reason: _selCell == null
+            ? (it != null && it.uid == p.equippedUid
+                ? 'Está en su ranura de equipada'
+                : 'Va en su sección fija')
+            : null,
+        onTap: () => setState(() => _moveFrom = _selCell),
+      ),
+      if (mates.isEmpty)
+        InventoryMenuEntry(
+          id: 'give',
+          label: InventoryMenuAction.give.label,
+          reason: why(InventoryMenuAction.give,
+              g.give(p, token, null, count: count) ?? 'No hay compañeros en la sala'),
+        )
+      else
+        for (final m in mates)
+          InventoryMenuEntry(
+            id: 'give-${m.id}',
+            label: 'Dar a ${m.name}',
+            color: ProtoColors.sky,
+            reason: why(InventoryMenuAction.give,
+                g.give(p, token, m, count: count)),
+            onTap: () => shop.controller.give(m.id, token, count: count),
+          ),
+      InventoryMenuEntry(
+        id: 'drop',
+        label: InventoryMenuAction.drop.label,
+        note: 'queda en el piso',
+        color: ProtoColors.orange,
+        reason: why(InventoryMenuAction.drop,
+            g.drop(p, token, count: count, alive: me.alive)),
+        // Ajuste CONFIRMAR AL TIRAR (docs/specs/settings.md § "JUEGO").
+        onTap: () => ref.read(gameSettingsProvider).confirmDrop
+            ? setState(() => _confirmDrop = true)
+            : shop.controller.dropItem(token, count: count),
+      ),
+      if (it != null) ...[
+        craft(it, CraftOp.salvage),
+        craft(it, CraftOp.sell),
+      ],
+    ];
+  }
+
+  /// Clic derecho sobre una casilla: la elige y abre el menú de acciones
+  /// donde está el mouse.
+  void _openMenu(PlayerProfile p, SessionPlayer me, List<SessionPlayer> mates,
+      String token, int? cell, Offset at) {
+    _select(token, cell);
+    final c = _content(p, token);
+    if (c == null) return;
+    final title = c.item != null
+        ? itemNameMarkup(shop.rules, c.item!)
+        : c.eco != null
+            ? protoEsc(shop.rules.ecos.fullName(c.eco!))
+            : protoEsc(c.stack!.label);
+    InventoryContextMenu.show(context, at,
+        title: title, entries: _menuEntries(p, me, mates, c));
   }
 }
 
 /// Casilla clicable con foco de teclado (Enter / Espacio la activan).
 class _CellButton extends StatelessWidget {
-  const _CellButton({super.key, required this.onTap, required this.child});
+  const _CellButton(
+      {super.key, required this.onTap, required this.child, this.onSecondaryTap});
 
   final VoidCallback onTap;
+  final ValueChanged<Offset>? onSecondaryTap;
   final Widget child;
 
   @override
@@ -1028,6 +1184,36 @@ class _CellButton extends StatelessWidget {
               CallbackAction<ActivateIntent>(onInvoke: (_) => onTap()),
         },
         child: GestureDetector(
-            behavior: HitTestBehavior.opaque, onTap: onTap, child: child),
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            onSecondaryTapUp: onSecondaryTap == null
+                ? null
+                : (d) => onSecondaryTap!(d.globalPosition),
+            child: child),
+      );
+}
+
+/// Marca NUEVO de una casilla (loot.md § 17.4): franja `gold` abajo.
+class NewItemTag extends StatelessWidget {
+  const NewItemTag({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        color: ProtoColors.bg.withValues(alpha: 0.85),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+        // Siempre en una línea dentro de la casilla (44 px).
+        child: const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('NUEVO',
+              maxLines: 1,
+              softWrap: false,
+              textScaler: TextScaler.noScaling,
+              style: TextStyle(
+                  fontFamily: RetroType.pixelFamily,
+                  fontSize: 8,
+                  height: 1,
+                  color: ProtoColors.gold)),
+        ),
       );
 }

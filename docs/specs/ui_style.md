@@ -167,6 +167,43 @@ máximo del texto: `RetroHoverCard.textWidth` (400 en Normal) agrandado
 con el texto. La comparación del inventario, con factor ≥ 1.5, pasa a
 dos columnas (arma | qué cambia, con el nombre de la equipada).
 
+**Uno solo a la vez (v0.9.7).** Había un bug: si cambiaba la pantalla
+con el mouse quieto (termina una pelea y aparece otra pantalla) quedaba
+la caja vieja y al mover el mouse aparecía otra: se veían dos. Ahora
+`RetroHoverCard` guarda la caja visible (`_active`): abrir una cierra la
+anterior; una caja se cierra cuando su widget sale del árbol
+(`deactivate`) y cuando su ruta deja de ser la de arriba
+(`ModalRoute.isCurrent`, no se abre en una ruta tapada).
+`RetroHoverCard.dismissAll()` la cierra a mano (el menú contextual lo
+usa). Test: `test/app/retro_hover_card_test.dart`.
+
+### Tooltips cortos con detalle desplegable (v0.9.7)
+
+Pedido del dueño: "hay demasiado texto". Por defecto un tooltip muestra
+**lo esencial** (nombre, números clave) y las explicaciones largas van
+**plegadas** en líneas `▸ Título` (`sky`; `▼` abierta) que se despliegan
+de a una, como los plegables de misiones, chat y tarjetas. Nada se borra:
+se pliega.
+- `RetroTipFold` (una sección) y `RetroTipFolds` (resumen + secciones;
+  las vacías no se dibujan), en `retro_hover_card.dart`. Clic, `Enter` o
+  `Espacio` (enfocables) despliegan.
+- **Caja fija**: para poder hacer clic, una caja con plegables es
+  `interactive`: toma el mouse y, al salir del objetivo, espera
+  `RetroHoverCard.pinDelay` (220 ms) por si el mouse va a la caja;
+  mientras el mouse está encima queda fija. Se cierra al salir de las
+  dos. Las cajas sin plegables siguen sin tomar el mouse.
+- `RetroTooltip(foldAfter: n, foldTitle: ...)`: las primeras `n` líneas
+  (`<br>`) a la vista y el resto en `▸ Más detalle`.
+- Dónde (primero donde más pesa): ficha de arma del inventario
+  (`itemTipParts`: nombre, rareza · tipo · nivel, requisitos, ATQ / MAG
+  y la línea `Mods 2/4 · Pasiva · 3 habilidades · Pesada`; plegadas
+  `Mods`, `Pasiva`, `Habilidades`, `Peso y forja`, `Historia`), las dos
+  fichas de la comparación del mouse (la diferencia `Si la equipas:`
+  queda a la vista), chips de habilidad (`foldAfter: 3`: nombre, tipo y
+  el primer efecto) y estados de batalla (`foldAfter: 1`, `▸ Qué hace`).
+- Las líneas de ayuda de los paneles (`PanelHint`) largas (≥ 160 letras)
+  muestran la primera oración y el resto en `▸ Más`.
+
 Interlineado: paneles, tooltips, `.pbox` y chat `RetroType.line`.
 
 ## Paleta (`ProtoColors`, `lib/app/theme/proto_colors.dart`)
@@ -291,6 +328,21 @@ padding 16. Botón compacto (`RetroTheme.compactButton`, paneles y HUD):
 texto `small`, padding 8, alto mínimo 32. `PanelButton` acepta un color de
 acento (p. ej. `green` para "¡LISTO!", como el borde/texto verde del
 prototipo).
+
+### Padding de botones (regla mínima, v0.9.7)
+
+Pedido del dueño: "los textos pegan al borde". Todo botón deja **al
+menos 8 px libres entre el borde y el texto**, en los cuatro lados
+(`RetroTheme.minButtonInset`). Material pinta el borde encima del
+padding, así que el padding real es `RetroTheme.buttonPadding(inset)` =
+`max(inset, 8) + UiTheme.buttonBorderWidth` (2 px; 3 en ALTO CONTRASTE).
+Valores: compacto 8 libres (10 / 11 px de padding), grande 14 libres,
+`ConfirmButton` 10 libres. Un botón nuevo con estilo propio usa
+`buttonPadding`, nunca un `EdgeInsets` suelto menor. Los menús de
+acciones (`InventoryActionList`) usan el mismo aire a los lados.
+Verificado con `test/app/text_size_test.dart` en los cuatro tamaños de
+texto (la vista CASILLAS del filtro de loot pasa a scroll cuando el alto
+no alcanza).
 
 ## Caja (`RetroPanel`)
 

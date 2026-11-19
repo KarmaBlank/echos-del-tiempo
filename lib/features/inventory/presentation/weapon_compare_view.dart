@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
+import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/attributes.dart';
@@ -171,8 +172,16 @@ class _LabeledCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (label != null) ProtoText(label!),
-          ProtoText(itemTooltipMarkup(rules, item,
-              level: level, attributes: attributes)),
+          // Resumen + secciones plegables (ui_style.md § "Tooltips
+          // cortos").
+          LayoutBuilder(builder: (context, c) {
+            final parts = itemTipParts(rules, item,
+                level: level, attributes: attributes);
+            return RetroTipFolds(
+                summary: parts.summary,
+                sections: parts.sections,
+                maxWidth: c.maxWidth.isFinite ? c.maxWidth : 340);
+          }),
         ],
       );
 }

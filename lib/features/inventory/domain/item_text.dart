@@ -185,6 +185,71 @@ String itemTooltipMarkup(
   return l.join('<br>');
 }
 
+/// Ficha corta de un arma (tooltips v0.9.7, ui_style.md § "Tooltips
+/// cortos"): [summary] con lo esencial (nombre, rareza · tipo · nivel,
+/// requisitos, ATQ / MAG y una línea `Mods 2/4 · Pasiva · 3 habilidades`)
+/// y [sections] plegables (`Mods`, `Pasiva`, `Habilidades`, `Peso y
+/// forja`, `Historia`) con el **mismo** texto que [itemTooltipMarkup]:
+/// nada se pierde, solo se pliega.
+({String summary, List<(String, String)> sections}) itemTipParts(
+  ProgressionRules rules,
+  ItemInstance it, {
+  required int level,
+  required PlayerAttributes attributes,
+  DerivedStats? stats,
+  bool equipped = false,
+}) {
+  final items = rules.items;
+  final w = items.baseOf(it);
+  final base = w?.name ?? it.baseId;
+  final generated = it.rarity.index >= Rarity.raro.index;
+  final head = <String>[
+    itemNameMarkup(rules, it),
+    '<span class="k">${it.rarity.label} · ${w?.type ?? '?'} · '
+        'nivel de objeto ${it.itemLevel}</span>'
+        '${generated ? ' ${_c(_dim, _esc(base))}' : ''}'
+        '${equipped ? ' ${_c(_orange, 'EQUIPADA')}' : ''}',
+    if (w != null) requirementsLineMarkup(w, level, attributes),
+    if (stats != null)
+      'ATQ <b>${stats.attack}</b> · MAG <b>${stats.magic}</b>'
+          '${_c(_dim, ' (con tus atributos)')}',
+  ];
+  // Mods (implícito, afijos y ULT especial).
+  final implicit = w == null ? const <ItemMod>[] : items.implicitMods(w);
+  final mods = <String>[
+    if (implicit.isNotEmpty)
+      '<span class="k">Implícito:</span> '
+          '${implicit.map((m) => _esc(m.text)).join(', ')}',
+    for (final a in it.affixes) '• ${affixMarkup(rules, a)}',
+    if (itemUlt(it) case final u?) '• ${_c(_pink, 'ULT: ${_esc(u.name)}')}',
+  ];
+  final passive = items.passiveText(it);
+  final skills = itemSkillLinesMarkup(rules, it, stats: stats);
+  final weight = <String>[
+    if (w != null) ...weightLinesMarkup(rules, w, stats: stats),
+    if (it.forgeLevel > 0 || ItemRules.forgeCapOf(it) > 0) forgeText(it),
+  ];
+  final flavor = items.uniqueOf(it)?.flavor;
+  final hasMods = it.rarity.maxMods > 0 || it.affixes.isNotEmpty;
+  final counts = [
+    if (hasMods) 'Mods ${it.modCount}/${it.rarity.maxMods}',
+    if (passive != null) _c(kPassiveHex, 'Pasiva'),
+    '${skills.length} ${skills.length == 1 ? 'habilidad' : 'habilidades'}',
+    if (w != null) weightClassOf(w).label,
+  ];
+  head.add(_c(_sky, counts.join(' · ')));
+  return (
+    summary: head.join('<br>'),
+    sections: [
+      ('Mods', mods.join('<br>')),
+      if (passive != null) ('Pasiva', _c(kPassiveHex, _esc(passive))),
+      ('Habilidades', skills.join('<br>')),
+      ('Peso y forja', weight.join('<br>')),
+      if (flavor != null && flavor.isNotEmpty) ('Historia', _c(_dim, _esc(flavor))),
+    ],
+  );
+}
+
 // ---------------------------------------------------------------------
 // Peso (docs/specs/loot.md § 1.1, panels.md § "Peso del arma")
 // ---------------------------------------------------------------------

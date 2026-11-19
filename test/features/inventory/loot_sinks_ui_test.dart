@@ -37,7 +37,7 @@ void main() {
     PlayerProfile me() => c.view!.me!.profile;
     final price = c.engine.progression.crafting.sellPrice(rareAxe);
     await _tap(tester, 'inv-cell-${_cell(me(), 'r1')}');
-    expect(find.text('VENDER \$$price'), findsOneWidget);
+    expect(plain(tester, 'inv-sell'), contains('Vender \$$price'));
     await _tap(tester, 'inv-sell');
     expect(plain(tester, 'inv-craft-question'), contains('¿Vender'));
     expect(plain(tester, 'inv-craft-question'), contains('+\$$price'));
@@ -53,8 +53,9 @@ void main() {
     PlayerProfile me() => c.view!.me!.profile;
     // La equipada: deshabilitado con el motivo.
     await _tap(tester, 'inv-equipped');
-    expect(button(tester, 'inv-salvage').reason, 'Está equipada');
-    expect(button(tester, 'inv-sell').reason, 'Está equipada');
+    expect(button(tester, 'inv-salvage').reason,
+        'No podés desarmar el arma equipada');
+    expect(button(tester, 'inv-sell').reason, 'No podés vender el arma equipada');
     // El Épico: 2 Cristales seguros y chance de Prisma.
     await _tap(tester, 'inv-cell-${_cell(me(), 'e1')}');
     await _tap(tester, 'inv-salvage');

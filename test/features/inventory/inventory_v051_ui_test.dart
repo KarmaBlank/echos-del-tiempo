@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/theme/retro_text.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/inventory/domain/shop_guards.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/clean_selection.dart';
@@ -95,7 +96,7 @@ void main() {
       await tester.pump();
       expect(_k('inv-sort-menu'), findsOneWidget);
       for (final k in InventorySortKey.values) {
-        expect(find.text(k.label), findsOneWidget);
+        expect(find.text(retroText(k.label)), findsOneWidget);
       }
       await tester.tap(_k('inv-sort-name'));
       await tester.pump();

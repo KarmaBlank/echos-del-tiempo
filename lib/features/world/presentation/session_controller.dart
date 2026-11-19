@@ -1201,6 +1201,10 @@ class SessionController extends StateNotifier<SessionView?> {
   bool sortInventory(InventorySortKey key) =>
       _applyFor(actingId, SortInventoryAction(key));
 
+  /// Sacar la marca NUEVO (v0.9.7, loot.md § 17.4).
+  bool markSeen(List<String> uids) =>
+      _applyFor(actingId, SeenItemsAction(uids));
+
   /// Guardar el filtro de loot (`null` = el por defecto).
   bool setLootFilter(String? text) =>
       _applyFor(actingId, SetLootFilterAction(text));

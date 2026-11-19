@@ -979,7 +979,7 @@ desde la casilla 0 (`InventoryRules.sort`). Claves
 | `itemLevel` Nivel de objeto | nivel ↓, rareza ↓, nombre |
 | `weaponType` Tipo de arma | tipo (alfabético), rareza ↓, nivel ↓, nombre |
 | `name` Nombre | nombre, rareza ↓, nivel ↓ |
-| `recent` Recientes | número del `uid` (`i<n>` / `eco<n>`) ↓; sin número, el orden de llegada al revés |
+| `recent` Últimos levantados | número del `uid` (`i<n>` / `eco<n>`) ↓; sin número, el orden de llegada al revés |
 
 - **La equipada siempre primero**: `sortOrder` la devuelve en la
   posición 0; como no ocupa casilla (va en EQUIPADA, antes de la
@@ -993,6 +993,29 @@ desde la casilla 0 (`InventoryRules.sort`). Claves
 - El host la aplica como `MoveInventoryAction`: en cualquier modo y
   también con la sala en pausa (no toca el mundo).
 
+### 17.3 La equipada no ocupa casilla
+
+La equipada vive en su ranura EQUIPADA, fuera de la grilla: `tokens`,
+`cellsUsed`, `freeCells` y `cannotReceive` no la cuentan (40 casillas
+libres para lo demás). El tope de armas guardadas (80) sí la incluye.
+Cambiar de arma intercambia: la que se deja entra en la grilla (si no
+hay lugar, queda en `overflow` hasta liberar una casilla). Sin cambio
+de formato (ya era así desde v0.5.1; v0.9.7 lo documenta y lo testea).
+
+### 17.4 Marca NUEVO (v0.9.7)
+
+- Perfil **v4** (`pv: 4`): `fresh` (JSON `nw`, opcional, lista ordenada
+  de `uid`) = armas y Ecos recién levantados sin mirar. Un perfil v3 se
+  lee igual (sin marcas): no hace falta migrar.
+- `InventoryRules.receive` marca lo que entra (armas y Ecos; no las
+  pilas). El alijo (`stash.dart`) recibe con `markNew: false`.
+- `SeenItemsAction(uids)` (red: `{t: 'seen', u: [...]}`): saca la marca;
+  la UI la manda al pasar el mouse por la casilla. Se aplica en
+  cualquier modo y con la sala en pausa, como ordenar.
+- `relayout` borra las marcas de lo que ya no está; `normalize` solo
+  deja las de `uid` existentes.
+- Protocolo **18** (`kProtocolVersion`, netcode.md).
+
 Acciones nuevas (el host valida todo):
 - `GiveItemAction(a, token, count)`: fuera de batalla, a otro jugador
   de la sala con lugar; token = `uid`, `pot`, `eter` o `mat:<material>`.
@@ -1001,6 +1024,7 @@ Acciones nuevas (el host valida todo):
 - `PickUpAction(id)`: levantar del piso (propio o compartido, ≤ 24 px).
 - `MoveInventoryAction(de, a)`: intercambiar casillas.
 - `SortInventoryAction(clave)`: ordenar la grilla (§ 17.2).
+- `SeenItemsAction(uids)`: sacar la marca NUEVO (§ 17.4).
 - `CraftAction(op, uid, …)`: forja / fusión (§ 16).
 - `SetLootFilterAction(texto | null)`: guardar el filtro (máx. 8000
   caracteres).

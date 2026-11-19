@@ -76,7 +76,7 @@ void main() {
             UpgradeStat.spd), isNull);
         // Se guarda en v3 y vuelve igual.
         final j = p.toJson();
-        expect(j['pv'], 3);
+        expect(j['pv'], 4);
         expect(j.containsKey('inv'), isFalse);
         final back = progression.normalize(PlayerProfile.fromJson(
             asJson(jsonDecode(jsonEncode(j)))));

@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../widgets/points_badge.dart';
 import 'proto_colors.dart';
+import 'proto_markup.dart';
 import 'retro_hover_card.dart';
 import 'retro_panel.dart';
 import 'retro_text.dart';
@@ -433,21 +434,49 @@ class PanelRow extends StatelessWidget {
 /// `class="k"` `#9fb4ff`, `<span style="color:...">`). Aparece debajo
 /// (o arriba) sin espera, nunca se sale de la pantalla y, si es más alto
 /// que ella, se reparte en columnas (docs/specs/ui_style.md § "Tooltips").
+///
+/// Tooltips cortos (v0.9.7, ui_style.md § "Tooltips cortos"): con
+/// [foldAfter] solo se ven las primeras líneas y el resto queda plegado
+/// en "▸ Más detalle" ([foldTitle]); la caja se fija al pasar el mouse
+/// encima para poder desplegarlo.
 class RetroTooltip extends StatelessWidget {
-  const RetroTooltip({super.key, required this.message, required this.child});
+  const RetroTooltip(
+      {super.key,
+      required this.message,
+      required this.child,
+      this.foldAfter,
+      this.foldTitle = 'Más detalle'});
 
   final String message;
   final Widget child;
+  final int? foldAfter;
+  final String foldTitle;
 
   static TextStyle get textStyle => RetroHoverCard.textStyle;
 
+  /// (resumen, resto) de [message] cortado en la línea [n] (`<br>`);
+  /// resto vacío si no hay más líneas.
+  static (String, String) splitAt(String message, int n) {
+    final lines = protoSplitLines(message);
+    if (lines.length <= n) return (message, '');
+    return (lines.take(n).join('<br>'), lines.skip(n).join('<br>'));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final n = foldAfter;
+    final parts = n == null ? null : splitAt(message, n);
+    final fold = parts != null && parts.$2.isNotEmpty;
     return RetroHoverCard(
       placement: RetroTipPlacement.below,
       gap: 4,
-      builder: (ctx) => RetroTipText(message,
-          maxWidth: RetroType.width(ctx, RetroHoverCard.textWidth)),
+      interactive: fold,
+      builder: (ctx) {
+        final w = RetroType.width(ctx, RetroHoverCard.textWidth);
+        if (!fold) return RetroTipText(message, maxWidth: w);
+        return RetroTipFolds(
+            summary: parts.$1, sections: [(foldTitle, parts.$2)], maxWidth: w);
+      },
       child: child,
     );
   }

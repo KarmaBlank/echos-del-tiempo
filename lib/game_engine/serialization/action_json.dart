@@ -92,6 +92,7 @@ abstract final class ActionJson {
         PickUpAction() => {'t': 'pick', 'id': a.groundId},
         MoveInventoryAction() => {'t': 'invMove', 'a': a.from, 'b': a.to},
         SortInventoryAction() => {'t': 'invSort', 'k': a.key.name},
+        SeenItemsAction() => {'t': 'seen', 'u': a.uids},
         SetLootFilterAction() => {'t': 'filter', 'txt': a.text},
         SetBuildWantsAction(:final wants) => {
             't': 'wants',
@@ -192,6 +193,10 @@ abstract final class ActionJson {
         return PickUpAction(j.integer('id'));
       case 'invMove':
         return MoveInventoryAction(j.integer('a'), j.integer('b'));
+      case 'seen':
+        final u = j['u'];
+        return SeenItemsAction(
+            u is List ? [for (final e in u) if (e is String) e] : const []);
       case 'invSort':
         return SortInventoryAction(j.enumByName('k', InventorySortKey.values));
       case 'filter':

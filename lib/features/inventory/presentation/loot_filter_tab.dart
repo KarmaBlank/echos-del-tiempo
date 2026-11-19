@@ -164,7 +164,10 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
         defaultText: LootFilterRules.defaultText);
 
     final doc = FilterDoc.parse(_text.text, _options, catalog: rules.catalog);
-    final editor = Column(
+    // Con poco alto (texto ENORME + el padding mínimo de los botones) el
+    // editor no entra: la lista pasa a alto fijo y todo scrollea.
+    Widget editorFor(bool tight) => Column(
+      mainAxisSize: tight ? MainAxisSize.min : MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Wrap(
@@ -183,10 +186,14 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
           ],
         ),
         const SizedBox(height: 8),
-        if (!_textView) Expanded(child: _checksView(doc)),
+        if (!_textView)
+          tight
+              ? SizedBox(height: 260, child: _checksView(doc))
+              : Expanded(child: _checksView(doc)),
         if (_textView)
-          Expanded(
-            child: TextField(
+          _flex(
+            tight,
+            TextField(
               key: const ValueKey('filter-text'),
               controller: _text,
               focusNode: _focus,
@@ -234,6 +241,10 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
         ),
       ],
     );
+    final editor = LayoutBuilder(
+        builder: (context, c) => c.maxHeight < RetroType.width(context, 260)
+            ? SingleChildScrollView(child: editorFor(true))
+            : editorFor(false));
 
     // El plan del miembro activo: la vista previa evalúa `Build` igual
     // que el host.
@@ -285,6 +296,9 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
       ],
     );
   }
+
+  Widget _flex(bool tight, Widget child) =>
+      tight ? SizedBox(height: 260, child: child) : Expanded(child: child);
 
   /// Vista CASILLAS: OCULTAR RÁPIDO (casillas que agregan / sacan reglas
   /// `# rápido: …`) y TUS REGLAS (cada regla con prender / apagar y ✕).

@@ -579,10 +579,18 @@ INVENTARIO: por rareza o elegidas a mano.` (v0.5.1)
   las dos filas. No se mueven ni se ordenan (lugar fijo). En el alijo
   (`stash_screen.dart`) la misma fila de MATERIALES está debajo de la
   grilla del personaje para guardarlos.
+- **Buscador** (v0.9.7, `inv-search`, arriba de la grilla): filtra por
+  texto (nombre, base, tipo, rareza, mods, pasiva, habilidades; sin
+  tildes ni mayúsculas, todas las palabras). Lo que no coincide queda
+  atenuado (25 %) en su casilla: la grilla no se reordena.
+  `inventoryMatches` (`domain/inventory_menu.dart`).
+- **NUEVO** (v0.9.7, loot.md § 17.4): las armas y los Ecos recién
+  levantados llevan una franja `NUEVO` (`gold`) abajo de la casilla
+  (`inv-new-<i>`); pasar el mouse la saca (`SeenItemsAction`).
 - **ORDENAR ▼** (v0.5.1, loot.md § 17.2; `inventory_sort_button.dart`,
   `inv-sort`, en la fila de arriba de la grilla, solo el tuyo): abre un
   menú con `Rareza`, `Nivel de objeto`, `Tipo de arma`, `Nombre` y
-  `Recientes` (`inv-sort-<clave>`); elegir una manda
+  `Últimos levantados` (`inv-sort-<clave>`); elegir una manda
   `SortInventoryAction` y cierra el menú (`Esc` o clic afuera lo
   cierran sin ordenar; flechas y `Enter` recorren las opciones). La
   equipada sigue en su casilla EQUIPADA (siempre primero).
@@ -590,9 +598,24 @@ INVENTARIO: por rareza o elegidas a mano.` (v0.5.1)
   intercambia), o elegirla, `MOVER` (`inv-move`) y clic en la casilla
   destino (la línea de ayuda dice `Elige la casilla destino`;
   `CANCELAR` lo anula).
+- **Acciones (v0.9.7)**: ya no hay tarjetas gigantes. Clic derecho en
+  una casilla (o en la EQUIPADA) la elige y abre un **menú contextual**
+  donde está el mouse (`inv-ctx-menu`, filas `inv-ctx-<acción>`; `Esc`
+  o clic afuera lo cierran). Con clic izquierdo, la misma lista va en la
+  sección ACCIONES del detalle (`inv-actions`, filas `inv-<acción>`).
+  Orden: Equipar, Comparar, Mover, Dar a <nombre> (una por compañero;
+  sin compañeros `Dar a...`), Tirar, Desarmar, Vender ₵N (con
+  `Recibís ...`). Una línea por acción; las que no se pueden, en gris
+  con el motivo en una línea (`inventoryReasonLine`): `No podés
+  desarmar el arma equipada`, `No podés dársela a otro jugador: está
+  equipada`, `No podés tirar tu última arma inicial`, `No podés
+  equiparla. Requisitos: ESP 14`; los motivos de contexto (`No en
+  batalla`, `No hay compañeros en la sala`) van como vienen. Las pilas
+  no tienen Mover (lugar fijo). Las confirmaciones (tirar, desarmar,
+  vender) siguen en el detalle como abajo. `inventory_action_menu.dart`.
 - **Detalle** (derecha): ficha del objeto y, si es un arma propia no
   equipada, `Comparada con <equipada>` (ATQ / MAG / VEL / CRÍT / DEF,
-  `StatChange`). Botones: `EQUIPAR` (`inv-equip`, motivos de la tabla),
+  `StatChange`). Acciones: `EQUIPAR` (`inv-equip`, motivos de la tabla),
   `TIRAR` (`inv-drop`) que pide confirmación (`inv-drop-confirm`:
   `¿Tirar X al piso? Lo puede levantar cualquiera.`), y `DAR A <nombre>`
   (`inv-give-<id>`) por compañero, o `DAR A...` deshabilitado con el
@@ -608,9 +631,14 @@ INVENTARIO: por rareza o elegidas a mano.` (v0.5.1)
   (`Solo en el lobby o la preparación`, `Está equipada`, `Arma
   inicial`).
 - **LIMPIAR INVENTARIO...** (`inv-clean`, debajo de la grilla, solo el
-  tuyo): reemplaza el detalle por el limpiador (un propósito): línea
-  `Desarma o vende de una vez todas las armas de una rareza. Nunca toca
-  la equipada ni tu última arma inicial.`, verbo `DESARMAR (materiales)`
+  tuyo): abre debajo del botón un **menú** (v0.9.7, `inv-clean-menu`):
+  `Elegir a mano` (`inv-clean-menu-pick`), `Desarmar todos los Comunes
+  / Mágicos / Raros (n)` y `Vender todos los ... (n)`
+  (`inv-clean-menu-<salvage|sell>-<rareza>`; en gris `No tenés comunes
+  para vender` si no hay). Elegir una opción deja el limpiador del
+  detalle listo para confirmar. El limpiador: la ayuda plegada en
+  `▸ Cómo funciona` (`Desarma o vende de una vez todas las armas de una
+  rareza. Nunca toca la equipada ni tu última arma inicial.`), verbo `DESARMAR (materiales)`
   / `VENDER (créditos)` (`inv-clean-salvage` / `inv-clean-sell`, por
   defecto desarmar), rareza `COMUNES (n) · MÁGICOS (n) · RAROS (n)`
   (`inv-clean-rarity-<rareza>`, con cuántas hay; Épicos y Legendarios
@@ -640,6 +668,11 @@ INVENTARIO: por rareza o elegidas a mano.` (v0.5.1)
   `CraftAction.selected`) con el motivo (`Elige armas`). Al confirmar
   se vacía la elección. Tests:
   `test/features/inventory/inventory_v051_ui_test.dart`.
+
+La **equipada no ocupa casilla**: va en su ranura EQUIPADA y `Casillas
+N/40` no la cuenta (`InventoryRules.tokens` la saca desde v0.5.1; loot
+§ 17). Tests de todo lo de v0.9.7:
+`test/features/inventory/inventory_ux_test.dart`.
 
 ### Comparar armas (v0.3.0)
 
@@ -1063,10 +1096,13 @@ HACEN" en línea), FORJA, detalle del inventario, COMPARAR, tarjetas del
 paso 1 de la fusión, `Qué hacen:` debajo de Habilidades en ANTES │
 DESPUÉS (la nueva en verde), y el creador. Los tooltips de las casillas
 (inventario y alijo) usan `itemTooltipMarkup(skillDetails: true)`: una
-línea por habilidad `• Nombre (N MP · Tipo): efecto · ...` y la ULT.
+línea por habilidad `• Nombre (N MP · Tipo): efecto · ...` y la ULT
+(v0.9.7: en el inventario, plegadas en `▸ Habilidades`; ui_style.md §
+"Tooltips cortos").
 En el paso 3 de la fusión (traer habilidad) cada fila lleva `(N MP ·
-Tipo)`, tooltip con la ficha y, debajo de la elegida, la ficha entera
-(`craft-pick-desc`), así se lee sin mouse.
+Tipo)` y, debajo de la elegida, la ficha entera (`craft-pick-desc`), así
+se lee sin mouse. v0.9.7: sin tooltip en esas filas (repetía la ficha
+de abajo).
 
 **Reemplazo y restricciones (traer habilidad)**: las habilidades del
 origen que el arma no puede recibir (`ItemRules.canReceiveSkill`: físicas

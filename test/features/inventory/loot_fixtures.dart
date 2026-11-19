@@ -1,5 +1,6 @@
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/widgets/action_card.dart';
+import 'package:echos_del_tiempo/features/inventory/presentation/inventory_action_menu.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
@@ -116,6 +117,7 @@ ActionRef button(WidgetTester tester, String key) =>
       PanelButton b => ActionRef(b.reason),
       ConfirmButton b => ActionRef(b.reason),
       ActionCard c => ActionRef(c.reason),
+      InventoryActionRow r => ActionRef(r.entry.reason),
       final w => throw StateError('$key no es un botón: ${w.runtimeType}'),
     };
 

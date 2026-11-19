@@ -304,6 +304,11 @@ class ProgressionRules {
         for (final n in raw.abyssKills)
           if (n >= 1 && n <= 5) n
       },
+      // Marca NUEVO (perfil v4): solo de lo que existe.
+      fresh: {
+        for (final u in raw.fresh)
+          if (uids.contains(u)) u
+      },
     );
 
     final base = catalog.classes[cls]!.baseAttributes;

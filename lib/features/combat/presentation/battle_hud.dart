@@ -573,6 +573,9 @@ class StatusChipView extends StatelessWidget {
   Widget build(BuildContext context) {
     return RetroTooltip(
       message: chip.tip,
+      // Tooltip corto: nombre y turnos; la explicación, plegada.
+      foldAfter: 1,
+      foldTitle: 'Qué hace',
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
         decoration: BoxDecoration(

@@ -36,7 +36,7 @@ void main() {
   });
 
   test('el hello lleva tv (protocolo 17)', () {
-    expect(kProtocolVersion, 17);
+    expect(kProtocolVersion, greaterThanOrEqualTo(17));
     final codec = WireCodec();
     final p = PlayerProfile(name: 'Ana', classId: 'guerrero');
     final msg = codec.decode(

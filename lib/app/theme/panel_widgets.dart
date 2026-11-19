@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'proto_colors.dart';
 import 'proto_markup.dart';
+import 'retro_hover_card.dart';
 import 'retro_text.dart';
 import 'retro_theme.dart';
 
@@ -16,12 +17,54 @@ class PanelHint extends StatelessWidget {
 
   final String markup;
 
+  /// Desde este largo (texto plano) la ayuda se pliega: queda la primera
+  /// oración y el resto va en "▸ Más" (v0.9.7, ui_style.md § "Tooltips
+  /// cortos" — no se borra nada, se pliega).
+  static const foldFrom = 160;
+
+  /// (primera oración, resto) si [markup] es largo y se puede cortar en
+  /// un ". " fuera de etiquetas; `null` si no.
+  static (String, String)? split(String markup) {
+    final plainLen = markup.replaceAll(RegExp(r'<[^>]*>'), '').length;
+    if (plainLen < foldFrom) return null;
+    var depth = 0;
+    for (var i = 0; i < markup.length - 1; i++) {
+      final ch = markup[i];
+      if (ch == '<') {
+        final close = markup.startsWith('</', i);
+        final selfClose = markup.startsWith('<br', i);
+        if (!selfClose) depth += close ? -1 : 1;
+      } else if (depth == 0 && ch == '.' && markup[i + 1] == ' ') {
+        final head = markup.substring(0, i + 1);
+        final rest = markup.substring(i + 2).trim();
+        if (rest.isEmpty || head.length < 20) continue;
+        return (head, rest);
+      }
+    }
+    return null;
+  }
+
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child:
-            ProtoText(markup, style: const TextStyle(color: ProtoColors.dim)),
-      );
+  Widget build(BuildContext context) {
+    final parts = split(markup);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: parts == null
+          ? ProtoText(markup, style: const TextStyle(color: ProtoColors.dim))
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ProtoText(parts.$1,
+                    style: const TextStyle(color: ProtoColors.dim)),
+                RetroTipFold(
+                    key: const ValueKey('panel-hint-more'),
+                    title: 'Más',
+                    body: protoColor(ProtoColors.dim, parts.$2)),
+              ],
+            ),
+    );
+  }
 }
 
 /// Lista compacta (izquierda, [listWidth] px) y detalle (el resto). La
