@@ -1,4 +1,4 @@
-# Spec: Tutorial de combate — v0.9.2 (implementado, ver § 8; falta OK del dueño)
+# Spec: Tutorial de combate — v0.9.6 (implementado, ver § 8; falta OK del dueño)
 
 Pedido del dueño: un tutorial de verdad en el overworld, junto a la
 armería, con un jefe de práctica. Tiene que explicar todo **en base a lo
@@ -57,8 +57,9 @@ Convergencias).
 
 ## 3. La pelea de práctica
 
-- **Autómata de entrenamiento** (jefe dummy): mucha vida y su vida nunca baja
-  de 1 (no muere, el log dice "el autómata se recompone"). Tiene barra de
+- **Autómata de entrenamiento** (jefe dummy): mucha vida y, en las etapas
+  con guion, su vida nunca baja de 1 (no muere, el log dice "el autómata
+  se recompone"). En ENTRENAR (§ 4.4) sí puede caer. Tiene barra de
   quiebre y una ULT de práctica que pega poco y nunca mata (deja en 1 de
   vida).
 - Afinidades fijas para enseñar: débil al Fuego, resistente a lo físico.
@@ -78,18 +79,21 @@ Convergencias).
     y el kit se arma de nuevo;
   - de la persona solo quedan el nombre y el dibujo de su clase;
   - quien se une con la pelea empezada recibe el kit básico (Bola de
-    Fuego y Embestida) para la etapa libre;
+    Fuego y Embestida);
+  - en ENTRENAR el kit de rol se cambia por un **kit de entrenamiento**
+    (§ 4.4);
   - al salir, la batalla se descarta y la build vuelve intacta: el kit
     vive solo en `BattleState`.
 
   | Rol | Habilidades del kit | Etapas |
   |---|---|---|
-  | Acumula (`acumula`) | Bola de Fuego, Llamarada | 3, 4, 6, 7, 9 |
-  | Detona (`detona`) | Embestida, Púa Fugaz, Ignición Convergente, Ponzoña Convergente | 2, 5, 6, 9 |
-  | Barra (`barra`) | Embestida, Bola de Fuego | 3, 4, 7 |
-  | Quiebra (`quiebra`) | Quebrar | 7 |
+  | Acumula (`acumula`) | Bola de Fuego, Llamarada | todas (clave en 3, 4, 6, 9) |
+  | Detona (`detona`) | Embestida, Púa Fugaz, Ignición Convergente, Ponzoña Convergente | todas (clave en 1, 2, 5, 6, 9) |
+  | Barra (`barra`) | Embestida, Bola de Fuego | todas (clave en 7) |
+  | Quiebra (`quiebra`) | Quebrar | todas (clave en 7) |
 
-  Atacar, Defender y Pasar (etapas 1, 2 y 8) los tienen todos. Antes de
+  Atacar, Defender y Pasar los tienen todos: son las acciones de apoyo
+  con las que cada rol actúa en las etapas que no son la suya (§ 4.2). Antes de
   cada paso, el host repone el MP y el Pulso que pide y cumple la
   precondición (`prepare`). Un test recorre el guion completo con 1, 2 y 4
   humanos o con 3 compañeros IA, en 4 intentos con los roles rotados.
@@ -125,7 +129,7 @@ Convergencias).
   (`TutorialOverlay.panelWidth`: 24% del ancho, entre 180 y 320), así
   nunca se superpone con personajes, enemigos, números de daño, el HUD
   del grupo ni el menú. Muestra, de arriba abajo:
-  - "Etapa N/10 · título" y el botón ≡ (menú del tutorial);
+  - "Etapa N/9 · título" y el botón ≡ (menú del tutorial);
   - el cartel abierto: el de inicio de etapa ("EN ESTA ETAPA") o el de
     efecto ("LO QUE PASÓ"), con el rótulo de lo que señala ("→ barra de
     quiebre");
@@ -150,38 +154,105 @@ Convergencias).
   cartel con el último voto. Si alguien se desconecta deja de contarse
   (el host lo revisa en cada tick). No hay cierre a los 6 s ni ningún
   otro avance por tiempo en los carteles.
-- En la etapa libre no hay cartel que votar: el efecto queda en "ÚLTIMA
-  ACCIÓN".
+- **El autómata espera (v0.9.6).** Antes de que actúe (ataque, tick de
+  estados, aviso o ULT de práctica), el panel abre un cartel "ATENCIÓN"
+  que anuncia lo que va a hacer y espera el SIGUIENTE de todos; recién
+  ahí actúa, y el cartel de efecto explica lo que hizo.
+- En ENTRENAR no hay cartel que votar: el narrador cuenta lo que pasa
+  (§ 4.4).
 ### 4.2 Etapas
 
 Cada etapa es una "escena" corta. Con un jugador, él hace todos los
 roles; con compañeros, la IA hace los roles que no son tuyos y lo
 anuncia.
 
-| # | Etapa | Qué pasa | Qué enseña |
-|---|---|---|---|
-| 1 | Línea de tiempo | Se ilumina la barra de turnos; el que es más rápido actúa antes; Defender y Pasar adelantan tu próximo turno | turnos, velocidad, Defender/Pasar |
-| 2 | MP y Pulso | Ataque básico (+1 Pulso), después una habilidad que gasta MP | MP: dura toda la misión, lo gastan casi todas las habilidades, se recupera con pociones o al volver al lobby (no vuelve solo entre peleas). Pulso: de esa pelea (0-5), sube jugando (turno, ataque básico, debilidad, defender), lo piden las habilidades fuertes (Quebrar, Convergencias); una habilidad puede pedir los dos |
-| 3 | Afinidades | Golpe físico (RESISTE ×0.5) y golpe de Fuego (DÉBIL ×1.5); muestra el tope sin debilidad | debilidad, resistencia, tope |
-| 4 | Estados | Dos Quemaduras se suman (un Veneno acá detonaría la Combustión; el Veneno se ve en la 5); se ve el tick al empezar el turno del autómata | estados, stacks, duración |
-| 5 | Precondición e Instante | "Detonar" aparece desactivado ("Necesita: 5 de Veneno"); una Instante que pone Veneno no termina el turno y en el mismo turno se detona | precondiciones; Instante **no es un recurso**: es un tipo de habilidad que no termina tu turno (después hacés otra acción, máx. una Instante por turno) |
-| 6 | Convergencia en equipo | Uno acumula Quemadura y **otro** la detona con Veneno; el cartel muestra el cálculo (`20 × 2.5% = 50%`) y los dos ganan Pulso | combos entre jugadores |
-| 7 | Quiebre | Los demás llenan la barra (debilidad, Golpe pesado, aturdir); el autómata queda **Fisurado** y el último usa **Quebrar** | puntos de quiebre, Fisurado, Quebrar, +50% de daño |
-| 8 | ULT enemiga | El autómata avisa su ULT; si se quiebra a tiempo se cancela, y si no, se ve cómo Defender reduce el daño | aviso, cancelar, defender |
-| 9 | Área | Aparecen los Autómatas chicos: un área deja estados a todos y una Convergencia salpica | área para preparar, salpicadura |
-| 10 | Libre | 3 turnos sin guion para probar; después, "¡Entrenamiento completo!" | — |
+**Nadie se queda mirando (v0.9.6, pedido del dueño).** Cada etapa tiene un
+paso para cada uno de los 4 roles, así cada humano (y cada compañero)
+actúa en cada etapa: los roles que no son los de la etapa hacen una
+acción de apoyo (ataque básico, Defender, Pasar) con el porqué en el
+cartel ("TE TOCA: atacar al autómata · el ataque básico no gasta MP y da
++1 Pulso"), y el rol de la etapa hace la acción clave al final.
 
-### 4.3 Repetir con roles rotados
+**Cada etapa arranca limpia (v0.9.6).** Al entrar a una etapa el host
+resetea el autómata (vida, barra de quiebre, Fisurado, estados, ULT), la
+línea de tiempo (todos vuelven a su primer intervalo) y los recursos de
+todos (vida y MP llenos, Pulso al inicial, sin estados ni ULT); después
+pone lo propio de la etapa (Veneno de la 5, ULT cargada de la 8,
+Autómatas chicos de la 9, que solo están en esa etapa).
+
+| # | Etapa | Qué pasa (apoyo → clave) | Qué enseña |
+|---|---|---|---|
+| 1 | Línea de tiempo | Barra ataca, Quiebra defiende, Acumula pasa → Detona defiende y mira cómo se adelanta su turno | turnos, velocidad, Defender/Pasar |
+| 2 | MP y Pulso | Quiebra ataca (+1 Pulso), Barra defiende (+1 Pulso), Acumula usa Bola de Fuego (MP) → Detona usa Embestida (MP) | MP: dura toda la misión, lo gastan casi todas las habilidades, se recupera con pociones o al volver al lobby. Pulso: de esa pelea (0-5), sube jugando (turno, ataque básico, debilidad o reacción, defender); se gasta en todas las habilidades del catálogo que lo piden (lista leída de los datos: Quebrar, las Convergentes, Dardo Tóxico, Rompearmaduras, Tiro Quebrantador…); una puede pedir los dos ("3 MP  P2") |
+| 3 | Afinidades | Quiebra ataca y Detona usa Embestida (RESISTE ×0.5), Barra defiende → Acumula usa Bola de Fuego (DÉBIL ×1.5) | debilidad, resistencia, tope |
+| 4 | Estados | Quiebra ataca (lo físico no detona), Detona defiende (el autómata va a pegar), Barra pone Quemadura → Acumula suma otra; anuncio y turno del autómata (tick) | estados, stacks, duración |
+| 5 | Precondición e Instante | Barra y Quiebra atacan, Acumula defiende → Detona usa la Instante con Veneno y detona en el mismo turno | precondiciones; Instante **no es un recurso** |
+| 6 | Convergencia en equipo | Quiebra ataca, Barra defiende, Acumula pone Quemadura → **otro** (Detona) la detona con Veneno; el cartel muestra el cálculo | combos entre jugadores |
+| 7 | Quiebre | Acumula (debilidad) y Detona (Embestida) llenan la barra, Barra repite Embestida hasta Fisurado → Quiebra usa **Quebrar** | puntos de quiebre, Fisurado, Quebrar, +50% |
+| 8 | ULT enemiga | Anuncio y aviso del autómata; los 4 Defienden (cada uno con el porqué); anuncio y ULT de práctica | aviso, cancelar, defender |
+| 9 | Área | Quiebra ataca, Barra defiende, Acumula usa Llamarada (a todos) → Detona detona y salpica | área para preparar, salpicadura |
+
+Después de la 9 viene la votación del § 4.4 (ya no hay "etapa libre"
+de 3 acciones: la reemplaza ENTRENAR).
+
+### 4.3 Repetir con roles rotados (o elegidos)
 
 - Al terminar o con **Repetir** en el menú de pausa, el intento siguiente
   rota los roles: el que quebró ahora acumula, el que acumuló ahora
   detona, etc. El cartel inicial lo dice: "Intento 2: esta vez quebrás
   vos".
-- **Repetir etapa** (pausa) vuelve al principio de la etapa actual.
+- **Repetir etapa** (pausa) vuelve al principio de la etapa actual (en
+  ENTRENAR, reinicia ENTRENAR).
+- "Repetir con otros roles" (§ 4.4) usa los roles elegidos por votación en
+  vez de rotarlos.
 - Si alguien se equivoca de objetivo o de habilidad, no puede, porque
   solo está habilitado lo del paso. Si pasa algo imprevisto (por
   ejemplo, un crítico que llena la barra antes), el guion lo acepta y
   avanza.
+
+### 4.4 Fin del guion: votación y ENTRENAR (v0.9.6)
+
+- Al terminar la última etapa con guion, cada cuenta que sigue en la
+  pelea **completa** el tutorial (`tutV = kTutorialVersion`,
+  `TutorialDoneEvent`) y, sin salir de la misión, el panel abre una
+  votación: **Repetir con otros roles**, **Ir a ENTRENAR** o **Salir**.
+- **Regla de las votaciones (la más simple):** cada humano de la sala
+  elige (puede cambiar su voto); se hace lo elegido cuando **todos** los
+  humanos eligieron **lo mismo**. Los compañeros IA no votan; quien se
+  desconecta deja de contarse. El panel muestra lo que eligió cada uno
+  ("Ana: IR A ENTRENAR", "Beto: eligiendo…") y, si todos votaron pero
+  distinto, "Falta acuerdo".
+- **Repetir con otros roles:** cada humano elige el rol que quiere
+  probar (ACUMULA, DETONA, LLENA LA BARRA, QUIEBRA); se ve la elección de
+  todos. Vale cuando todos eligieron y **sin roles repetidos entre
+  humanos** ("Hay un rol repetido"). Los roles que nadie eligió van
+  primero a quien no tiene rol (compañeros) y después, en orden, a todos.
+  Se repite el guion completo (intento + 1) con esos roles y sus kits.
+- **ENTRENAR (libre):** se resetea todo (vida, MP, Pulso, estados, línea de
+  tiempo, autómata) y cada uno recibe un **kit de entrenamiento** (no de
+  rol). Son 4 kits (`kTrainingKits`); el jugador i de n suma los kits j
+  con j mod n = i, así entre todos (o uno solo) está todo:
+
+  | Kit | Habilidades | Para probar |
+  |---|---|---|
+  | 1 | Bola de Fuego, Llamarada | Quemadura, área |
+  | 2 | Púa Fugaz, Ignición Convergente | Instante, Veneno, Explosión tóxica |
+  | 3 | Lanza de Hielo, Embestida y ULT cargada | Congelación, quiebre, ULT |
+  | 4 | Ponzoña Convergente, Quebrar | Combustión, Quebrar |
+
+  Con 2 o más, Quemadura y Veneno quedan en jugadores distintos
+  (Combustión y Explosión tóxica entre jugadores). Los compañeros IA
+  juegan con su IA. El autómata **puede caer**; al caer, votación
+  **Reiniciar** o **Salir**. Los jugadores siguen sin caer (práctica).
+- **Narrador de ENTRENAR:** el panel muestra "LO QUE PASA" (las últimas 8
+  líneas), generado desde los eventos reales del combate, con el porqué
+  corto: "¡Combustión! (Beto puso 6 de Quemadura y Ana detonó con Veneno:
+  6 × 2.5% de la vida = N de daño)", "Fisurado → Quebraste: pierde el
+  turno y recibe +50%", "Golpe a la debilidad (×1.5)", "ULT: Ana usó …",
+  "Encadenaste un Instante", "+1 Pulso (golpe a la debilidad)" / "(ataque
+  básico)" / "(defender)", "−2 Pulso (Quebrar)", "Quemadura +2 (tiene 4)",
+  el tick de estados y "¡Autómata de entrenamiento cayó!". Para nombrar
+  a quien puso el estado, el host anota quién lo subió por última vez.
 
 ## 5. Glosario (siempre a mano)
 
@@ -189,7 +260,10 @@ Una página del panel del entrenamiento y del menú de pausa en batalla,
 con una entrada corta por concepto y un ícono:
 - Línea de tiempo;
 - MP (maná): dura toda la misión, no vuelve solo entre peleas;
-- Pulso: de la pelea, pips 0-5, con ejemplo de habilidad que pide MP y Pulso;
+- Pulso: de la pelea, pips 0-5, cómo se gana (turno, ataque básico,
+  debilidad o reacción, defender) y **todos sus usos leídos del catálogo**
+  (cada habilidad con costo de Pulso, `TutorialRules.pulseSkills`), con
+  ejemplo de habilidad que pide MP y Pulso ("3 MP  P2");
 - Precondición;
 - Instante (no es un recurso: es un tipo de habilidad);
 - Afinidades (débil, resistente, inmune) y tope sin debilidad;
@@ -203,6 +277,11 @@ con una entrada corta por concepto y un ícono:
 
 Los textos salen de los mismos datos que usa el combate: no se escriben
 números a mano.
+
+**Costo en el menú (v0.9.6).** En HABILIDADES el Pulso se ve igual que el
+MP pero en dorado: "4 MP", "P2" o "3 MP  P2" en cada fila que lo pida; en
+el detalle/tooltip, "3 MP · 2 Pulso" (`skillCostMarkup`,
+`skillCostLongMarkup`).
 
 ## 6. Red
 
@@ -239,8 +318,10 @@ Decisiones tomadas al implementar (el spec manda; esto completa lo que
 no decía):
 
 - **Bandera.** `tutV` vive en `account.json` junto a `bv` (se escribe solo
-  si es > 0; nunca baja). `kTutorialVersion = 1` (todas las etapas tienen
-  `desde: 1`). El motor recibe la `tutV` de cada jugador en
+  si es > 0; nunca baja). `kTutorialVersion = 2` desde v0.9.6: las 9
+  etapas se rehicieron (todos actúan, reinicio por etapa) y tienen
+  `desde: 2`, así quien ya tenía `tutV = 1` vuelve a ver el tutorial
+  entero como tutorial de cambios. El motor recibe la `tutV` de cada jugador en
   `addPlayer(..., tutorialVersion)`; quien no la pasa (tests,
   herramientas, `SessionConfig` sin el dato) cuenta como vigente para no
   bloquear el sello por error. Los compañeros no cuentan para el bloqueo
@@ -274,13 +355,22 @@ no decía):
   precondición del paso no se cumple (por ejemplo, Quebrar sin Fisurado),
   la cumple: nunca hay "me toca y no me sale". "Hasta Fisurado" repite
   el Golpe pesado hasta 3 veces y sigue igual.
-- **ULT enemiga (etapa 8).** El autómata arranca con la ULT cargada,
-  avisa, todos Defienden y la lanza. La rama "quebrarlo a tiempo la
+- **ULT enemiga (etapa 8).** El autómata arranca con la ULT cargada; el
+  cartel "ATENCIÓN" lo anuncia y espera la votación; avisa, los 4
+  Defienden, otro "ATENCIÓN" y la lanza. La rama "quebrarlo a tiempo la
   cancela" no se juega: la explica el cartel (pendiente: una variante con
   quiebre).
 - **Área (etapa 9).** Los Autómatas chicos aparecen y no actúan.
-- **Libre.** 3 acciones de jugadores con la línea de tiempo real; los
-  compañeros actúan con su IA.
+- **Fin del guion y ENTRENAR (v0.9.6).** `TutorialState.phase`
+  (`script`, `menu`, `roles`, `train`, `trainOver`), `picks` (votos de la
+  votación abierta), `assign` (roles elegidos), `narration` y `primers`.
+  Acción `TutorialChoiceAction` (`tutPick`, `c`: `roles`, `train`,
+  `exit`, `restart` o `role:<rol>`). Protocolo 17: `tut` lleva `ph`,
+  `pk`, `as`, `nr`, `pr`; el cartel, `h` (rótulo "ATENCIÓN"); se fue `f`.
+  Panel: sección "VOTACIÓN" con un botón por opción (el propio voto
+  queda seleccionado) y quién eligió qué; en ENTRENAR, "AHORA" y "LO QUE
+  PASA". Tests: `test/game_engine/tutorial_v096_test.dart`. Capturas:
+  `tool/shots/v096_shots_test.dart` → `docs/release_shots/v0.9.6/`.
 - **Autómata.** Usa el dibujo del Gólem, familia nueva "Autómata de
   práctica" (débil Fuego ×1.5, resiste físico ×0.5; oculta en el
   bestiario). Todos los combatientes del tutorial son "de práctica": la

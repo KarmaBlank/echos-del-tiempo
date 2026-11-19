@@ -926,6 +926,8 @@ class _Op {
         return ackTutorial(p);
       case TutorialControlAction():
         return controlTutorial(p, a.op);
+      case TutorialChoiceAction():
+        return pickTutorial(p, a.choice);
 
       case DevAbyssAction():
         if (!e.devTools || !s.canShop) return false;

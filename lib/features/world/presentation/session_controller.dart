@@ -394,6 +394,10 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Menú de pausa del tutorial: Repetir, Repetir etapa, Salir.
   bool tutorialControl(TutorialControl op) =>
       _apply(TutorialControlAction(op));
+
+  /// Voto en las votaciones del final del tutorial (Repetir con otros
+  /// roles / ENTRENAR / Salir, el rol elegido, Reiniciar).
+  bool tutorialPick(String choice) => _apply(TutorialChoiceAction(choice));
   BestiaryProgress? _bestiary;
 
   /// La última batalla vista (para saber a quiénes se venció cuando

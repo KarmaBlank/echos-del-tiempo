@@ -57,6 +57,24 @@ String statusDescriptionOf(StatusKind k) => switch (k) {
         'Recupera 5% de vida y maná máx. al inicio de su turno (3 turnos).',
     };
 
+/// Color del MP (azul) y del Pulso (dorado) en los costos.
+const kMpHex = '#74b9ff';
+const kPulseHex = '#ffb142';
+
+/// Costo de una habilidad para la fila del menú (combat_tutorial.md § 3,
+/// pedido del dueño v0.9.6): el Pulso se ve igual que el MP pero en
+/// dorado, "4 MP", "P2" o "3 MP  P2".
+String skillCostMarkup(SkillDef sk) => [
+      if (sk.mp > 0 || sk.pulse == 0) hexSpan(kMpHex, '${sk.mp} MP'),
+      if (sk.pulse > 0) hexSpan(kPulseHex, 'P${sk.pulse}'),
+    ].join('  ');
+
+/// Costo en el detalle/tooltip: "3 MP · 2 Pulso".
+String skillCostLongMarkup(SkillDef sk) => [
+      if (sk.mp > 0 || sk.pulse == 0) hexSpan(kMpHex, '${sk.mp} MP'),
+      if (sk.pulse > 0) hexSpan(kPulseHex, '${sk.pulse} Pulso'),
+    ].join(' · ');
+
 /// `<span style="color:#hex">texto</span>`.
 String hexSpan(String hex, String text) =>
     '<span style="color:$hex">$text</span>';
@@ -92,7 +110,7 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
   final l = <String>[
     '<b${nameColor == null ? '' : ' style="color:$nameColor"'}>'
         '${ultimate ? '★ ULTIMATE: ' : ''}${tk.name}</b> '
-        '<span class="k">${ultimate ? '(barra ULT al 100%)' : '${tk.mp} MP'}</span>',
+        '${ultimate ? '<span class="k">(barra ULT al 100%)</span>' : skillCostLongMarkup(tk)}',
     if (element && el != GameElement.fisico) elementReactionMarkup(el),
   ];
   final mag = tk.kind == SkillKind.magical;

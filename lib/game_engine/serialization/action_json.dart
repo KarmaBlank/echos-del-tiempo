@@ -112,6 +112,8 @@ abstract final class ActionJson {
         StartTutorialAction() => {'t': 'tut', 'cmp': a.companions},
         TutorialAckAction() => {'t': 'tutOk'},
         TutorialControlAction() => {'t': 'tutCtl', 'op': a.op.name},
+        // v0.9.6 (combat_tutorial.md § 4.4).
+        TutorialChoiceAction() => {'t': 'tutPick', 'c': a.choice},
         DevAbyssAction() => {'t': 'devAbyss', 'k': a.kind},
       };
 
@@ -222,6 +224,8 @@ abstract final class ActionJson {
       case 'tutCtl':
         return TutorialControlAction(
             j.enumByName('op', TutorialControl.values));
+      case 'tutPick':
+        return TutorialChoiceAction(j.str('c'));
       case 'devAbyss':
         return DevAbyssAction(j.str('k'));
     }

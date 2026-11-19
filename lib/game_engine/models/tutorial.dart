@@ -7,8 +7,28 @@
 
 /// Versión vigente del tutorial: el máximo de las `desde` de
 /// `kTutorialStages` (combat_tutorial.md § 2). Solo se sube cuando cambia
-/// el combate básico (un ajuste de números no la cambia).
-const kTutorialVersion = 1;
+/// el combate básico (un ajuste de números no la cambia). 2 desde v0.9.6:
+/// etapas rehechas (todos actúan en cada etapa, reinicio por etapa).
+const kTutorialVersion = 2;
+
+/// En qué parte del tutorial está la sala (§ 4.4).
+enum TutorialPhase {
+  /// Etapas con guion.
+  script,
+
+  /// Terminó el guion: votación "Repetir con otros roles" / "ENTRENAR" /
+  /// "Salir".
+  menu,
+
+  /// Cada humano elige el rol que quiere probar.
+  roles,
+
+  /// ENTRENAR: libre, kit de entrenamiento, el autómata puede caer.
+  train,
+
+  /// El autómata cayó en ENTRENAR: votación "Reiniciar" / "Salir".
+  trainOver,
+}
 
 /// Qué se puede hacer en un paso del guion (§ 4.2).
 enum TutorialMove { attack, skill, defend, pass }
@@ -38,9 +58,16 @@ sealed class TutorialStep {
 /// habilitado.
 class TutorialPlayerStep extends TutorialStep {
   const TutorialPlayerStep(this.role, this.move,
-      {this.skillId, this.untilFissured = false, this.maxReps = 1});
+      {this.skillId,
+      this.untilFissured = false,
+      this.maxReps = 1,
+      this.why});
   final TutorialRole role;
   final TutorialMove move;
+
+  /// Para qué sirve el paso ("el ataque básico da +1 Pulso"): todos
+  /// actúan en cada etapa y cada uno sabe por qué (§ 4.2).
+  final String? why;
 
   /// Con [TutorialMove.skill]: la habilidad. [kTutorialQuebrar] = la
   /// Quebrar base del arma del que actúa.
@@ -54,13 +81,6 @@ class TutorialPlayerStep extends TutorialStep {
 /// Actúa el autómata (tick de estados, aviso o ULT).
 class TutorialEnemyStep extends TutorialStep {
   const TutorialEnemyStep();
-}
-
-/// Turnos libres, sin guion: termina después de [actions] acciones de
-/// jugadores.
-class TutorialFreeStep extends TutorialStep {
-  const TutorialFreeStep(this.actions);
-  final int actions;
 }
 
 /// Id de paso que pide "la Quebrar base del arma del que actúa".
@@ -95,7 +115,15 @@ class TutorialStage {
 /// El cartel de efecto (2-3 líneas) o el de inicio de etapa.
 class TutorialCard {
   const TutorialCard(this.lines,
-      {this.arrow, this.targetId, this.actorId, this.effect = false});
+      {this.arrow,
+      this.targetId,
+      this.actorId,
+      this.effect = false,
+      this.heading});
+
+  /// Rótulo del cartel en el panel ("ATENCIÓN" antes de que actúe el
+  /// autómata); `null` = el de siempre.
+  final String? heading;
 
   /// Cartel de efecto (al cerrarse avanza el paso); `false` = cartel de
   /// inicio de etapa.
@@ -117,6 +145,7 @@ class TutorialCard {
         if (targetId != null) 'tg': targetId,
         if (actorId != null) 'by': actorId,
         if (effect) 'e': true,
+        if (heading != null) 'h': heading,
       };
 
   static TutorialCard fromJson(Map<String, Object?> j) => TutorialCard(
@@ -125,6 +154,7 @@ class TutorialCard {
         targetId: j['tg'] as String?,
         actorId: j['by'] as String?,
         effect: j['e'] == true,
+        heading: j['h'] as String?,
       );
 }
 
@@ -137,17 +167,25 @@ class TutorialState {
     this.stage = 0,
     this.step = 0,
     this.reps = 0,
-    this.freeLeft = 0,
+    this.phase = TutorialPhase.script,
     this.card,
     this.last,
     Set<String>? votes,
     Set<String>? said,
     this.fromVersion = 0,
     this.prepared = false,
+    Map<String, String>? picks,
+    Map<TutorialRole, String>? assign,
+    List<String>? narration,
+    Map<String, String>? primers,
   })  : stages = List.unmodifiable(stages),
         order = List.unmodifiable(order),
         votes = votes ?? <String>{},
-        said = said ?? <String>{};
+        said = said ?? <String>{},
+        picks = picks ?? <String, String>{},
+        assign = Map.unmodifiable(assign ?? const <TutorialRole, String>{}),
+        narration = narration ?? <String>[],
+        primers = primers ?? <String, String>{};
 
   /// Intento (1, 2...): rota los roles (§ 4.3).
   final int attempt;
@@ -167,8 +205,23 @@ class TutorialState {
   /// Veces que se repitió el paso actual (`untilFissured`).
   int reps;
 
-  /// Acciones que quedan en la etapa libre.
-  int freeLeft;
+  /// Guion, votaciones del final o ENTRENAR (§ 4.4).
+  TutorialPhase phase;
+
+  /// Lo que eligió cada humano en la votación abierta (`roles`, `train`,
+  /// `exit`, `restart` o `role:<rol>`).
+  final Map<String, String> picks;
+
+  /// Roles elegidos por votación ("Repetir con otros roles"): si está
+  /// vacío, los roles salen del intento (rotan).
+  final Map<TutorialRole, String> assign;
+
+  /// ENTRENAR: lo que narra el panel (las últimas líneas).
+  final List<String> narration;
+
+  /// ENTRENAR: quién puso por última vez cada estado (por nombre del
+  /// estado), para narrar las Convergencias entre jugadores.
+  final Map<String, String> primers;
 
   /// Cartel abierto (el paso no avanza hasta que todos los humanos de la
   /// sala tocan SIGUIENTE, § 4.1). No se cierra por tiempo.
@@ -192,7 +245,7 @@ class TutorialState {
   bool prepared;
 
   /// Seguimos en la etapa [stage] (`false` = terminó todo).
-  bool get running => stage < stages.length;
+  bool get running => phase == TutorialPhase.script && stage < stages.length;
 
   TutorialState copy() => TutorialState(
         attempt: attempt,
@@ -201,13 +254,17 @@ class TutorialState {
         stage: stage,
         step: step,
         reps: reps,
-        freeLeft: freeLeft,
+        phase: phase,
         card: card,
         last: last,
         votes: {...votes},
         said: {...said},
         fromVersion: fromVersion,
         prepared: prepared,
+        picks: {...picks},
+        assign: assign,
+        narration: [...narration],
+        primers: {...primers},
       );
 
   Map<String, Object?> toJson() => {
@@ -217,7 +274,11 @@ class TutorialState {
         'i': stage,
         's': step,
         if (reps != 0) 'r': reps,
-        if (freeLeft != 0) 'f': freeLeft,
+        if (phase != TutorialPhase.script) 'ph': phase.name,
+        if (picks.isNotEmpty) 'pk': picks,
+        if (assign.isNotEmpty) 'as': {for (final e in assign.entries) e.key.name: e.value},
+        if (narration.isNotEmpty) 'nr': narration,
+        if (primers.isNotEmpty) 'pr': primers,
         if (card != null) 'c': card!.toJson(),
         if (last != null) 'la': last!.toJson(),
         if (votes.isNotEmpty) 'v': votes.toList(),
@@ -235,7 +296,14 @@ class TutorialState {
         stage: (j['i'] as num?)?.toInt() ?? 0,
         step: (j['s'] as num?)?.toInt() ?? 0,
         reps: (j['r'] as num?)?.toInt() ?? 0,
-        freeLeft: (j['f'] as num?)?.toInt() ?? 0,
+        phase: _enum(j['ph'], TutorialPhase.values) ?? TutorialPhase.script,
+        picks: _strMap(j['pk']),
+        assign: {
+          for (final e in _strMap(j['as']).entries)
+            if (_enum(e.key, TutorialRole.values) case final r?) r: e.value,
+        },
+        narration: [for (final x in (j['nr'] as List? ?? const [])) '$x'],
+        primers: _strMap(j['pr']),
         card: j['c'] is Map
             ? TutorialCard.fromJson(Map<String, Object?>.from(j['c'] as Map))
             : null,
@@ -248,6 +316,10 @@ class TutorialState {
         prepared: j['p'] == true,
       );
 }
+
+Map<String, String> _strMap(Object? m) => m is Map
+    ? {for (final e in m.entries) '${e.key}': '${e.value}'}
+    : <String, String>{};
 
 T? _enum<T extends Enum>(Object? name, List<T> values) {
   for (final v in values) {

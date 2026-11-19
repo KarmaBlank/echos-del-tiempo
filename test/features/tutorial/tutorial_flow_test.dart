@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:echos_del_tiempo/features/characters/domain/account.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
-import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
@@ -36,8 +35,8 @@ void main() {
     });
   });
 
-  test('el hello lleva tv (protocolo 16)', () {
-    expect(kProtocolVersion, 16);
+  test('el hello lleva tv (protocolo 17)', () {
+    expect(kProtocolVersion, 17);
     final codec = WireCodec();
     final p = PlayerProfile(name: 'Ana', classId: 'guerrero');
     final msg = codec.decode(
@@ -86,6 +85,11 @@ void main() {
         final t = s?.tutorial;
         final b = s?.battle;
         if (t == null || b == null) continue;
+        if (t.phase == TutorialPhase.menu) {
+          // Fin del guion: todos votan Salir.
+          if (t.picks[c.localId] != 'exit') c.tutorialPick('exit');
+          continue;
+        }
         final card = t.card;
         if (card != null) {
           // SIGUIENTE: votan todos; el host cierra con el último voto.
@@ -99,8 +103,6 @@ void main() {
         final step = c.tutorialRules.currentStep(t);
         if (step is TutorialPlayerStep && t.prepared) {
           c.battleCommand(c.tutorialRules.scripted(step, cur)!);
-        } else if (step is TutorialFreeStep) {
-          c.battleCommand(const DefendCommand());
         }
       }
     }

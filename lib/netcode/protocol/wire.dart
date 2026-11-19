@@ -42,7 +42,11 @@ import '../../game_engine/serialization/session_json.dart';
 /// 16 desde v0.9.2: TUTORIAL con votación SIGUIENTE (`tutOk` = voto de
 /// cada humano); `tut` lleva `v` (votos), `la` (último cartel) y `sd`
 /// (conceptos explicados), sin `cl` (combat_tutorial.md § 4.1).
-const kProtocolVersion = 16;
+/// 17 desde v0.9.6: TUTORIAL rehecho: `tut` lleva `ph` (fase), `pk`
+/// (votos de la votación abierta), `as` (roles elegidos), `nr`
+/// (narrador de ENTRENAR) y `pr`; cartel con `h`; acción `tutPick`; sin
+/// `f` (combat_tutorial.md § 4.4).
+const kProtocolVersion = 17;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {

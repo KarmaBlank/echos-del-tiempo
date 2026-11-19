@@ -570,10 +570,7 @@ class BattleViewState extends State<BattleView>
       value: '${instant ? '${hexSpan('#9fe8ff', 'Instante')} ' : ''}'
               '${_skillInfo(sk, cur, crit: false)}'
           .trim(),
-      cost: [
-        if (sk.mp > 0 || sk.pulse == 0) hexSpan('#74b9ff', '${sk.mp} MP'),
-        if (sk.pulse > 0) hexSpan('#ffb142', 'Pulso ${sk.pulse}'),
-      ].join(' '),
+      cost: skillCostMarkup(sk),
       description: describeSkillMarkup(sk, cur),
       reason: SkillRequirements.needsText(missing),
       onSelect: ok ? () => _send(SkillCommand(sk.id, targetId: tg)) : null,
