@@ -172,9 +172,9 @@ String familyTraitsMarkup(FamilyRule r) {
 
 /// "Débil a curas, Sagrado, fuego" en una línea corta (objetivo en el
 /// menú de batalla), o vacío.
-String familyShortMarkup(String? enemyType) {
-  final f = familyOf(enemyType);
-  final r = familyRuleOf(enemyType);
+String familyShortMarkup(String? enemyType, {EnemyFamily? family}) {
+  final f = family ?? familyOf(enemyType);
+  final r = family != null ? kFamilyRules[family] : familyRuleOf(enemyType);
   if (f == null || r == null) return '';
   final weak = familyWeakSummary(r);
   return '${familyNameMarkup(f)}'

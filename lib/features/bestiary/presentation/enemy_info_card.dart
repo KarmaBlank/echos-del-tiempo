@@ -5,6 +5,7 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/data/enemies_catalog.dart';
+import '../../../game_engine/data/enemy_families.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/bestiary.dart';
 import '../domain/bestiary_text.dart';
@@ -27,6 +28,17 @@ class EnemyInfoCard extends StatelessWidget {
   /// El markup que muestra (tests).
   static String markupFor(Combatant enemy, BestiaryProgress bestiary,
       {int? level}) {
+    // El autómata del TUTORIAL usa el dibujo del Gólem, pero su ficha es la
+    // suya: su nombre y las afinidades de la familia de práctica.
+    if (enemy.practice) {
+      final r = kFamilyRules[EnemyFamily.training]!;
+      return [
+        protoColor(ProtoColors.gold, protoEsc(enemy.name)),
+        familyNameMarkup(EnemyFamily.training),
+        familyTraitsMarkup(r),
+        protoColor(ProtoColors.dim, 'De práctica: se recompone, no muere.'),
+      ].where((l) => l.isNotEmpty).join('<br>');
+    }
     final def = kEnemies[enemy.enemyType];
     if (def == null) return protoEsc(enemy.name);
     return enemyInfoMarkup(def, bestiary, level: level, elite: enemy.elite);
@@ -34,7 +46,7 @@ class EnemyInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final known = bestiary.knows(enemy.enemyType);
+    final known = enemy.practice || bestiary.knows(enemy.enemyType);
     return Container(
       key: ValueKey(known ? 'enemy-info-known' : 'enemy-info-unknown'),
       padding: RetroHoverCard.padding,

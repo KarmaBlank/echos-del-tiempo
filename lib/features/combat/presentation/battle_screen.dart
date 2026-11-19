@@ -12,6 +12,7 @@ import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/data/classes_catalog.dart';
 import '../../../game_engine/data/elements_catalog.dart' show elementOfDual;
+import '../../../game_engine/data/enemy_families.dart' show EnemyFamily;
 import '../../../game_engine/data/skills_catalog.dart';
 import '../../../game_engine/data/weapon_duals_catalog.dart';
 import '../../../game_engine/models/battle_command.dart';
@@ -1162,7 +1163,7 @@ class BattleViewState extends State<BattleView>
             '<span class="k">${tg.hp}/${tg.maxHp} HP</span>'
             '${breakInfoMarkup(tg)}'
             // Familia y debilidades, solo si ya se lo mató (bestiary.md).
-            '${widget.bestiary?.knows(tg.enemyType) ?? false ? ' · ${familyShortMarkup(tg.enemyType)}' : ''}';
+            '${tg.practice ? ' · ${familyShortMarkup(null, family: EnemyFamily.training)}' : widget.bestiary?.knows(tg.enemyType) ?? false ? ' · ${familyShortMarkup(tg.enemyType)}' : ''}';
     return BattleCommandWindow(
       actorName: widget.companions.contains(cur.id)
           ? 'Turno de ${cur.name} (compañero)'
