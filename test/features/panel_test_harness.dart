@@ -1,5 +1,7 @@
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
+import 'package:echos_del_tiempo/features/inventory/presentation/inventory_action_menu.dart';
+import 'package:echos_del_tiempo/features/inventory/presentation/item_widgets.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
@@ -9,6 +11,7 @@ import 'package:echos_del_tiempo/game_engine/models/party_store.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -91,8 +94,36 @@ Future<SessionController> pumpPanel(
 
 /// Hace visible y toca [finder].
 Future<void> tapVisible(WidgetTester tester, Finder finder) async {
+  // Las acciones del inventario viven en el menú (v0.9.9): si no está a
+  // la vista, se abre con "Acciones ▾".
+  final menu = find.byKey(const ValueKey('inv-ctx-menu'));
+  if (finder.evaluate().isEmpty) {
+    await openInventoryActions(tester);
+  } else if (menu.evaluate().isNotEmpty &&
+      find.descendant(of: menu, matching: finder).evaluate().isEmpty) {
+    // Un clic afuera del menú lo cierra (y no llega a la casilla).
+    InventoryContextMenu.close();
+    await tester.pump();
+  }
   await tester.ensureVisible(finder);
   await tester.pump();
   await tester.tap(finder);
+  await tester.pump();
+}
+
+/// Abre el menú de acciones del inventario (v0.9.9: ya no hay lista en
+/// el panel derecho) con clic derecho sobre la casilla elegida, si no
+/// está abierto ya.
+Future<void> openInventoryActions(WidgetTester tester) async {
+  if (find.byKey(const ValueKey('inv-ctx-menu')).evaluate().isNotEmpty) {
+    return;
+  }
+  final sel = find.byWidgetPredicate((w) => w is ItemCell && w.selected);
+  if (sel.evaluate().isEmpty) return;
+  final f = sel.first;
+  await tester.ensureVisible(f);
+  await tester.pump();
+  await tester.tap(f, buttons: kSecondaryButton);
+  await tester.pump();
   await tester.pump();
 }

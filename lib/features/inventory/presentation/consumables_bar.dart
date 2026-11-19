@@ -26,6 +26,7 @@ class InventoryStacksBar extends StatelessWidget {
     required this.profile,
     this.selected,
     this.onSelect,
+    this.onMenu,
     this.consumables = true,
     this.materials = true,
     this.cell = 44,
@@ -38,6 +39,10 @@ class InventoryStacksBar extends StatelessWidget {
   /// Token elegido (`pot`, `mat:cristal`...), para el borde dorado.
   final String? selected;
   final ValueChanged<String>? onSelect;
+
+  /// Menú de acciones (v0.9.9): clic derecho sobre la pila ([at] = el
+  /// cursor) o `Enter` sobre la ya elegida ([at] = `null`).
+  final void Function(String token, Offset? at)? onMenu;
 
   /// Qué secciones se muestran (el alijo solo usa MATERIALES).
   final bool consumables;
@@ -66,6 +71,9 @@ class InventoryStacksBar extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onSelect == null ? null : () => _pick(k),
+        onSecondaryTapUp: onMenu == null || n == 0
+            ? null
+            : (d) => onMenu!(k.token, d.globalPosition),
         child: w,
       ),
     );
@@ -87,7 +95,13 @@ class InventoryStacksBar extends StatelessWidget {
             keyPrefix: 'inv-stack-focus-$id-',
             cell: (_, i, __) => _cell(kinds[i]),
             onFocusCell: onSelect == null ? null : (i) => _pick(kinds[i]),
-            onActivate: onSelect == null ? null : (i) => _pick(kinds[i]),
+            onActivate: onSelect == null
+                ? null
+                : (i) => onMenu != null &&
+                        selected == kinds[i].token &&
+                        _count(kinds[i]) > 0
+                    ? onMenu!(kinds[i].token, null)
+                    : _pick(kinds[i]),
           ),
         ],
       );

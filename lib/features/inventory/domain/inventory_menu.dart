@@ -51,6 +51,23 @@ String inventoryReasonLine(InventoryMenuAction a, String reason) {
   return r;
 }
 
+/// Motivo corto para la misma línea del menú (v0.9.9): "equipada",
+/// "arma inicial", "sin compañeros"... El completo
+/// ([inventoryReasonLine]) va en el tooltip de la fila.
+String inventoryReasonShort(InventoryMenuAction a, String reason) {
+  final r = reason.trim();
+  if (r == 'Equipada' || r == 'Está equipada') {
+    return a == InventoryMenuAction.equip ? 'ya equipada' : 'equipada';
+  }
+  if (r == 'Arma inicial') return 'arma inicial';
+  if (r == 'No hay compañeros en la sala') return 'sin compañeros';
+  if (r == 'No en batalla') return 'en batalla';
+  if (r.length <= 24) return r;
+  final cut = r.indexOf(RegExp(r'[:.]'));
+  final head = cut > 0 ? r.substring(0, cut) : r;
+  return head.length <= 24 ? head : '${head.substring(0, 22).trimRight()}…';
+}
+
 /// Minúsculas sin tildes (para buscar).
 String foldSearch(String s) {
   const from = 'áéíóúüñ';

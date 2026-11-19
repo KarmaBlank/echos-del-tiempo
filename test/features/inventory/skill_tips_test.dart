@@ -135,23 +135,21 @@ void main() {
     expect(_count('MP · '), greaterThan(0));
   });
 
-  testWidgets('detalle: cada habilidad es un chip con su ficha',
+  testWidgets('tooltip de un arma no equipada: sus habilidades, plegadas',
       (tester) async {
+    // v0.9.9: sin ficha a la derecha; lo que daban los chips con "?"
+    // está en el tooltip de la casilla (sección plegada).
     final p = lootWarrior();
     await pumpPanel(tester,
         profile: p,
         build: (v, c) => CharacterPanel(
             view: v, controller: c, initialTab: CharacterTab.inventory));
-    final chip = find.byKey(const ValueKey('skill-chips'));
-    expect(chip, findsWidgets);
-    final first = find.descendant(
-        of: chip.first,
-        matching: find.byWidgetPredicate((w) =>
-            w.key is ValueKey<String> &&
-            (w.key! as ValueKey<String>).value.startsWith('skill-chip-')));
-    final before = _count(' · a ');
-    await _hover(tester, first.first);
-    expect(_count(' · a '), greaterThan(before));
+    final cell = InventoryRules.layout(p).cells.indexOf('e1');
+    await _hover(tester, find.byKey(ValueKey('inv-cell-$cell')));
+    expect(_count('MP · '), 0);
+    await tester.tap(find.byKey(const ValueKey('tip-fold-Habilidades')).first);
+    await tester.pump();
+    expect(_count('MP · '), greaterThan(0));
   });
 
   testWidgets('forja: VEL dice cada cuánto llega tu turno (motor de batalla)',

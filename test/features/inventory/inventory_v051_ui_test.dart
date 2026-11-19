@@ -149,6 +149,7 @@ void main() {
       expect(InventoryRules.layout(p).cells, isNot(contains('pot')));
       expect(_k('inv-stacks'), findsOneWidget);
       await tap(tester, 'inv-stack-pot');
+      await openInventoryActions(tester);
       expect(_k('inv-drop'), findsOneWidget);
       expect(_k('inv-move'), findsNothing, reason: 'lugar fijo');
       await tap(tester, 'inv-drop');

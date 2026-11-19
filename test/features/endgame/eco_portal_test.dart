@@ -18,6 +18,7 @@ import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:echos_del_tiempo/game_engine/rules/inventory_rules.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -141,9 +142,18 @@ void main() {
     final uid = p.ecos.single.uid;
     final cell = InventoryRules.layout(p).cells.indexOf(uid);
     await tapVisible(tester, find.byKey(ValueKey('inv-cell-$cell')));
-    expect(plain(tester, 'inv-eco-detail'), contains('Jefe: Gólem Reloj'));
+    // v0.9.9: la ficha del Eco es el tooltip de la casilla.
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse
+        .moveTo(tester.getCenter(find.byKey(ValueKey('inv-cell-$cell'))));
+    await tester.pump();
+    expect(find.textContaining('Jefe: Gólem Reloj'), findsWidgets);
+    await mouse.removePointer();
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.byKey(const ValueKey('inv-compare')), findsNothing);
     expect(find.byKey(const ValueKey('inv-equip')), findsNothing);
+    await openInventoryActions(tester);
     expect(find.byKey(const ValueKey('inv-drop')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

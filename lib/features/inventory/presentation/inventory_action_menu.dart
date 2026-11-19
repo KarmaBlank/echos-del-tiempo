@@ -1,6 +1,9 @@
+import 'dart:math' as math;
+
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_hover_card.dart';
@@ -13,18 +16,22 @@ class InventoryMenuEntry {
     required this.id,
     required this.label,
     this.reason,
+    this.shortReason,
     this.note,
     this.color,
     this.onTap,
   });
 
-  /// Sufijo de la clave (`inv-<id>` en el menú fijo del detalle,
-  /// `inv-ctx-<id>` en el del clic derecho).
+  /// Sufijo de la clave (`inv-<id>`).
   final String id;
   final String label;
 
-  /// Motivo en una línea si está desactivada (gris).
+  /// Motivo completo si está desactivada (gris); va en el tooltip.
   final String? reason;
+
+  /// Motivo corto en la misma línea ("equipada", "sin compañeros"); si
+  /// falta, se usa [reason].
+  final String? shortReason;
 
   /// Lo que se recibe o cuesta (p. ej. `Recibís ₵12`), en `dim`.
   final String? note;
@@ -34,16 +41,16 @@ class InventoryMenuEntry {
   bool get enabled => reason == null && onTap != null;
 }
 
-/// Lista compacta de acciones: una línea por acción, las desactivadas en
-/// gris con el motivo debajo (docs/specs/panels.md § "Inventario ›
-/// Acciones"). La misma lista va en el detalle y en el menú del clic
-/// derecho ([InventoryContextMenu]).
+/// Lista compacta de acciones: una línea por acción; las desactivadas en
+/// gris con el motivo corto en la misma línea y el completo en el
+/// tooltip (docs/specs/panels.md § "Inventario › Acciones").
 class InventoryActionList extends StatelessWidget {
   const InventoryActionList(
       {super.key,
       required this.entries,
       this.keyPrefix = 'inv-',
-      this.onDone});
+      this.onDone,
+      this.autofocusFirst = false});
 
   final List<InventoryMenuEntry> entries;
   final String keyPrefix;
@@ -51,25 +58,34 @@ class InventoryActionList extends StatelessWidget {
   /// Después de elegir (cierra el menú flotante).
   final VoidCallback? onDone;
 
+  /// El cursor de teclado arranca en la primera acción disponible.
+  final bool autofocusFirst;
+
   @override
-  Widget build(BuildContext context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final e in entries)
-            InventoryActionRow(
-                key: ValueKey('$keyPrefix${e.id}'),
-                entry: e,
-                onDone: onDone),
-        ],
-      );
+  Widget build(BuildContext context) {
+    final first = autofocusFirst ? entries.indexWhere((e) => e.enabled) : -1;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < entries.length; i++)
+          InventoryActionRow(
+              key: ValueKey('$keyPrefix${entries[i].id}'),
+              entry: entries[i],
+              autofocus: i == first,
+              onDone: onDone),
+      ],
+    );
+  }
 }
 
 class InventoryActionRow extends StatefulWidget {
-  const InventoryActionRow({super.key, required this.entry, this.onDone});
+  const InventoryActionRow(
+      {super.key, required this.entry, this.onDone, this.autofocus = false});
 
   final InventoryMenuEntry entry;
   final VoidCallback? onDone;
+  final bool autofocus;
 
   @override
   State<InventoryActionRow> createState() => _RowState();
@@ -92,14 +108,13 @@ class _RowState extends State<InventoryActionRow> {
     final label = protoColor(
         on ? (e.color ?? ProtoColors.ink) : ProtoColors.dim,
         protoEsc(e.label));
-    final note = e.note == null || !on
-        ? ''
-        : ' ${protoColor(ProtoColors.dim, protoEsc(e.note!))}';
-    final reason = on
-        ? ''
-        : '<br>${protoColor(ProtoColors.dim, protoEsc(e.reason ?? ''))}';
-    return FocusableActionDetector(
+    final tail = on ? e.note : (e.shortReason ?? e.reason);
+    final line = tail == null
+        ? label
+        : '$label ${protoColor(ProtoColors.dim, '· ${protoEsc(tail)}')}';
+    Widget row = FocusableActionDetector(
       enabled: on,
+      autofocus: widget.autofocus,
       mouseCursor: on ? SystemMouseCursors.click : SystemMouseCursors.basic,
       onShowHoverHighlight: (h) => setState(() => _hover = h),
       onShowFocusHighlight: (h) => setState(() => _hover = h),
@@ -120,16 +135,22 @@ class _RowState extends State<InventoryActionRow> {
                     color: _hover && on ? ProtoColors.gold : Colors.transparent,
                     width: RetroTheme.thinBorderWidth)),
           ),
-          child: ProtoText('$label$note$reason'),
+          child: ProtoText(line),
         ),
       ),
     );
+    final full = e.reason;
+    if (!on && full != null && full != tail) {
+      row = RetroTooltip(message: protoEsc(full), child: row);
+    }
+    return row;
   }
 }
 
-/// Menú flotante (clic derecho o botón ACCIONES): la misma lista en una
-/// caja sobre todo, en [at] (coordenadas globales), que se cierra al
-/// elegir, con `Esc` o con un clic afuera.
+/// Menú flotante (clic derecho o Enter sobre la casilla elegida): una línea
+/// por acción, ancho ajustado al contenido, junto a [at] (coordenadas
+/// globales) sin salirse de la pantalla. Se cierra al elegir, con `Esc`
+/// o con un clic afuera.
 class InventoryContextMenu {
   InventoryContextMenu._();
 
@@ -138,26 +159,35 @@ class InventoryContextMenu {
   static bool get isOpen => _entry != null;
 
   static void close() {
+    RetroHoverCard.suppressed = false;
     _entry?.remove();
     _entry = null;
   }
 
   static void show(BuildContext context, Offset at,
-      {required List<InventoryMenuEntry> entries, String? title}) {
+      {required List<InventoryMenuEntry> entries,
+      String? title,
+      Rect? avoid}) {
     close();
     RetroHoverCard.dismissAll();
+    RetroHoverCard.suppressed = true;
     final overlay = Overlay.of(context);
     _entry = OverlayEntry(
-      builder: (ctx) => _MenuLayer(at: at, entries: entries, title: title),
+      builder: (ctx) =>
+          _MenuLayer(at: at, entries: entries, title: title, avoid: avoid),
     );
     overlay.insert(_entry!);
   }
 }
 
 class _MenuLayer extends StatelessWidget {
-  const _MenuLayer({required this.at, required this.entries, this.title});
+  const _MenuLayer(
+      {required this.at, required this.entries, this.title, this.avoid});
 
   final Offset at;
+
+  /// Rect global que el menú no tapa si puede (el buscador).
+  final Rect? avoid;
   final List<InventoryMenuEntry> entries;
   final String? title;
 
@@ -174,9 +204,8 @@ class _MenuLayer extends StatelessWidget {
         ),
       ),
       CustomSingleChildLayout(
-        delegate: _MenuLayout(at, size),
+        delegate: _MenuLayout(at, size, avoid),
         child: Focus(
-          autofocus: true,
           onKeyEvent: (_, e) {
             if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape) {
               InventoryContextMenu.close();
@@ -184,38 +213,46 @@ class _MenuLayer extends StatelessWidget {
             }
             return KeyEventResult.ignored;
           },
-          child: Container(
-            key: const ValueKey('inv-ctx-menu'),
-            constraints: const BoxConstraints(minWidth: 180, maxWidth: 340),
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            decoration: BoxDecoration(
-              color: ProtoColors.bg,
-              border: Border.all(
-                  color: ProtoColors.buttonBorder,
-                  width: UiTheme.buttonBorderWidth),
-              boxShadow: const [
-                BoxShadow(
-                    color: ProtoColors.shadow,
-                    offset: Offset(0, 4),
-                    blurRadius: 18),
-              ],
-            ),
-            child: DefaultTextStyle(
-              style: RetroHoverCard.textStyle,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (title != null)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 2, 8, 4),
-                      child: ProtoText(title!),
-                    ),
-                  InventoryActionList(
-                      entries: entries,
-                      keyPrefix: 'inv-ctx-',
-                      onDone: InventoryContextMenu.close),
-                ],
+          child: FocusScope(
+            autofocus: true,
+            child: IntrinsicWidth(
+              child: Container(
+                key: const ValueKey('inv-ctx-menu'),
+                padding: EdgeInsets.symmetric(vertical: UiTheme.space(4)),
+                decoration: BoxDecoration(
+                  color: ProtoColors.bg,
+                  border: Border.all(
+                      color: ProtoColors.buttonBorder,
+                      width: UiTheme.buttonBorderWidth),
+                  boxShadow: const [
+                    BoxShadow(
+                        color: ProtoColors.shadow,
+                        offset: Offset(0, 4),
+                        blurRadius: 18),
+                  ],
+                ),
+                child: DefaultTextStyle(
+                  style: RetroHoverCard.textStyle,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (title != null)
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                              RetroTheme.minButtonInset,
+                              2,
+                              RetroTheme.minButtonInset,
+                              4),
+                          child: ProtoText(title!),
+                        ),
+                      InventoryActionList(
+                          entries: entries,
+                          autofocusFirst: true,
+                          onDone: InventoryContextMenu.close),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -226,22 +263,45 @@ class _MenuLayer extends StatelessWidget {
 }
 
 class _MenuLayout extends SingleChildLayoutDelegate {
-  _MenuLayout(this.at, this.screen);
+  _MenuLayout(this.at, this.screen, [this.avoid]);
 
   final Offset at;
   final Size screen;
+  final Rect? avoid;
 
   @override
-  BoxConstraints getConstraintsForChild(BoxConstraints c) =>
-      BoxConstraints.loose(Size(c.maxWidth - 16, c.maxHeight - 16));
+  BoxConstraints getConstraintsForChild(BoxConstraints c) => BoxConstraints.loose(
+      Size(math.min(c.maxWidth - 16, 360), c.maxHeight - 16));
 
   @override
   Offset getPositionForChild(Size size, Size child) {
-    final x = at.dx.clamp(8.0, (size.width - 8 - child.width).clamp(8.0, double.infinity));
-    final y = at.dy.clamp(8.0, (size.height - 8 - child.height).clamp(8.0, double.infinity));
+    // Junto al cursor; si no entra abajo se abre hacia arriba (y si no
+    // entra a la derecha, hacia la izquierda) en vez de taparlo.
+    var ax = at.dx + 2, ay = at.dy + 2;
+    if (ay + child.height > size.height - 8 && at.dy - child.height >= 8) {
+      ay = at.dy - child.height;
+    }
+    if (ax + child.width > size.width - 8 && at.dx - child.width >= 8) {
+      ax = at.dx - child.width;
+    }
+    // Si tapa [avoid] (el buscador), se corre:
+    final av = avoid;
+    if (av != null &&
+        (Offset(ax, ay) & child).overlaps(av)) {
+      // Debajo del buscador (sobre la grilla, sin tapar ESTADÍSTICAS);
+      // si ahí no entra, a su derecha.
+      if (av.bottom + 4 + child.height <= size.height - 8) {
+        ay = av.bottom + 4;
+      } else {
+        ax = av.right + 4;
+      }
+    }
+    final x = ax.clamp(8.0, (size.width - 8 - child.width).clamp(8.0, double.infinity));
+    final y = ay.clamp(8.0, (size.height - 8 - child.height).clamp(8.0, double.infinity));
     return Offset(x, y);
   }
 
   @override
-  bool shouldRelayout(_MenuLayout old) => old.at != at || old.screen != screen;
+  bool shouldRelayout(_MenuLayout old) =>
+      old.at != at || old.screen != screen || old.avoid != avoid;
 }

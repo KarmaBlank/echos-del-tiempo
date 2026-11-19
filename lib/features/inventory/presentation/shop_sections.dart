@@ -231,6 +231,62 @@ class StatsCompare extends StatelessWidget {
   }
 }
 
+/// Filas de stats del personaje [now] → [next] (HP, MP, VEL con el peso
+/// del arma, ATQ, MAG, DEF, CRÍT): la misma lista en ATRIBUTOS › VISTA
+/// PREVIA y en INVENTARIO › ESTADÍSTICAS (v0.9.9). Cada fila muestra
+/// la diferencia en verde si sube y en rojo si baja.
+class CharacterStatRows extends StatelessWidget {
+  const CharacterStatRows(
+      {super.key,
+      required this.now,
+      required this.next,
+      required this.weight,
+      double? nextWeight})
+      : nextWeight = nextWeight ?? weight;
+
+  final DerivedStats now;
+  final DerivedStats next;
+
+  /// Peso del arma equipada y del arma con la que se compara.
+  final double weight;
+  final double nextWeight;
+
+  @override
+  Widget build(BuildContext context) {
+    String pct(num x) => '${(x * 100).round()}%';
+    final w = weight.toStringAsFixed(1);
+    final w2 = nextWeight.toStringAsFixed(1);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        StatChange('HP', now.maxHp, next.maxHp,
+            key: const ValueKey('stat-HP')),
+        StatChange('MP', now.maxMp, next.maxMp,
+            key: const ValueKey('stat-MP')),
+        StatChange('VEL', now.speed, next.speed,
+            key: const ValueKey('stat-VEL'),
+            format: (x) => x.toStringAsFixed(1)),
+        Text(
+            retroText('  6 + AGI×0.5 + DES×0.1 − peso arma '
+                '${w == w2 ? w : '$w → $w2'}'),
+            key: const ValueKey('stat-weight'),
+            style: const TextStyle(color: ProtoColors.dim)),
+        StatChange('ATQ', now.attack, next.attack,
+            key: const ValueKey('stat-ATQ')),
+        StatChange('MAG', now.magic, next.magic,
+            key: const ValueKey('stat-MAG')),
+        StatChange('DEF', now.defense, next.defense,
+            key: const ValueKey('stat-DEF'),
+            suffix: '(-${(next.defensePercent * 100).round()}% daño)'),
+        StatChange('CRÍT', now.critChance, next.critChance,
+            key: const ValueKey('stat-CRIT'),
+            format: pct,
+            suffix: '(daño ×${next.critMultiplier == 2 ? '2' : '1.5'})'),
+      ],
+    );
+  }
+}
+
 /// Encabezado de grupo dentro de una lista.
 class ListHeader extends StatelessWidget {
   const ListHeader(this.text, {super.key});

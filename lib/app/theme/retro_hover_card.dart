@@ -36,7 +36,13 @@ class RetroHoverCard extends StatefulWidget {
     this.margin = 8,
     this.placement = RetroTipPlacement.side,
     this.interactive = false,
+    this.keyboardFocus = false,
   });
+
+  /// El objetivo tiene el cursor de teclado aunque el foco esté en un
+  /// ancestro (casilla de una grilla): con el teclado se muestra igual
+  /// que con el mouse (v0.9.9, panels.md § "Teclado").
+  final bool keyboardFocus;
 
   /// Con secciones plegables ([RetroTipFold]): la caja toma el mouse y
   /// se **fija** mientras el mouse está encima: se puede pasar de la
@@ -56,6 +62,10 @@ class RetroHoverCard extends StatefulWidget {
 
   /// Cierra la caja abierta, si hay (cambio de pantalla, menú contextual).
   static void dismissAll() => _active?._hide();
+
+  /// Mientras hay un menú contextual abierto no se abre ninguna caja
+  /// (nunca tooltip y menú a la vez; ui_style.md § "Tooltips").
+  static bool suppressed = false;
 
   /// Contenido; se arma recién al mostrarse.
   final WidgetBuilder builder;
@@ -99,13 +109,43 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
   bool _overTarget = false;
   bool _overBox = false;
 
+  /// Abierta por [RetroHoverCard.keyboardFocus] (no por el mouse).
+  bool _byKeyboard = false;
+
   /// Solo si su pantalla es la de arriba: una caja de una ruta tapada no
   /// se abre (ni queda abierta).
   bool get _routeCurrent => ModalRoute.of(context)?.isCurrent ?? true;
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.keyboardFocus) _syncKeyboard();
+  }
+
+  @override
+  void didUpdateWidget(RetroHoverCard old) {
+    super.didUpdateWidget(old);
+    if (widget.keyboardFocus != old.keyboardFocus) _syncKeyboard();
+  }
+
+  void _syncKeyboard() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.keyboardFocus) {
+        if (FocusManager.instance.highlightMode ==
+            FocusHighlightMode.traditional) {
+          _byKeyboard = true;
+          _show();
+        }
+      } else if (!_overTarget && RetroHoverCard._active == this) {
+        _hide();
+      }
+    });
+  }
+
   void _show() {
     _closer?.cancel();
-    if (!mounted || !_routeCurrent) return;
+    if (!mounted || !_routeCurrent || RetroHoverCard.suppressed) return;
     final other = RetroHoverCard._active;
     if (other != null && other != this) other._hide();
     RetroHoverCard._active = this;
@@ -113,6 +153,7 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
   }
 
   void _hide() {
+    _byKeyboard = false;
     _closer?.cancel();
     _overTarget = false;
     _overBox = false;
@@ -165,6 +206,21 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
     super.dispose();
   }
 
+  /// Zona permitida de [RetroTipArea] en coordenadas del overlay.
+  Rect? _areaRect() {
+    final scope = context.getInheritedWidgetOfExactType<RetroTipArea>();
+    final overlay = Overlay.maybeOf(context)?.context.findRenderObject();
+    if (scope == null || overlay is! RenderBox || !overlay.hasSize) {
+      return null;
+    }
+    final g = scope.bounds();
+    if (g == null) return null;
+    final o = overlay.localToGlobal(Offset.zero);
+    final all = Offset.zero & overlay.size;
+    final r = g.shift(-o).intersect(all);
+    return r.width <= 0 || r.height <= 0 ? null : r;
+  }
+
   Rect? _targetRect(BuildContext overlayContext) {
     final box = context.findRenderObject();
     final overlay = Overlay.maybeOf(context)?.context.findRenderObject();
@@ -196,11 +252,33 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
                 child: _box(ctx),
               )
             : _box(ctx);
-        return Positioned.fill(
-          child: CustomSingleChildLayout(
-            delegate: _HoverLayout(rect, widget.gap, widget.margin,
-                widget.placement, MediaQuery.devicePixelRatioOf(ctx)),
-            child: widget.interactive ? box : IgnorePointer(child: box),
+        final child = widget.interactive && !_byKeyboard
+            ? box
+            // Abierta por el cursor de teclado: no toma el mouse (no
+            // tapa botones que estén debajo).
+            : IgnorePointer(child: box);
+        final area = _areaRect();
+        if (area == null) {
+          return Positioned.fill(
+            child: CustomSingleChildLayout(
+              delegate: _HoverLayout(rect, widget.gap, widget.margin,
+                  widget.placement, MediaQuery.devicePixelRatioOf(ctx)),
+              child: child,
+            ),
+          );
+        }
+        // Dentro de la zona de [RetroTipArea]: la caja (y lo que mide el
+        // ancho con MediaQuery, p. ej. la ficha comparada) no sale de ahí.
+        return Positioned.fromRect(
+          rect: area,
+          child: MediaQuery(
+            data: MediaQuery.of(ctx).copyWith(size: area.size),
+            child: CustomSingleChildLayout(
+              delegate: _HoverLayout(rect.shift(-area.topLeft), widget.gap,
+                  widget.margin, widget.placement,
+                  MediaQuery.devicePixelRatioOf(ctx)),
+              child: child,
+            ),
           ),
         );
       },
@@ -217,6 +295,7 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
         child: MouseRegion(
           onEnter: (_) {
             _overTarget = true;
+            _byKeyboard = false;
             _show();
           },
           onExit: (_) {
@@ -360,6 +439,20 @@ extension on RetroTipText {
       ),
     );
   }
+}
+
+/// Zona de la pantalla donde se abren los tooltips de los descendientes
+/// (v0.9.9): en el INVENTARIO, todo lo que está a la izquierda de
+/// ESTADÍSTICAS, para no tapar el panel que se quiere mirar.
+/// [bounds] devuelve el rectángulo en coordenadas globales (`null` = sin
+/// límite).
+class RetroTipArea extends InheritedWidget {
+  const RetroTipArea({super.key, required this.bounds, required super.child});
+
+  final Rect? Function() bounds;
+
+  @override
+  bool updateShouldNotify(RetroTipArea old) => false;
 }
 
 /// Al lado de [target] ([RetroTipPlacement.side]: derecha, si no entra

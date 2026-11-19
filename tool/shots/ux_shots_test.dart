@@ -1,5 +1,5 @@
-// Capturas de la pasada de UX del inventario v0.9.7
-// (docs/release_shots/ux). NO es parte de la suite: vive fuera de test/.
+// Capturas del inventario (v0.9.9: menú compacto, ESTADÍSTICAS a la
+// derecha; docs/release_shots/v0.9.9). NO es parte de la suite: vive fuera de test/.
 // Correr con
 //   flutter test tool/shots/ux_shots_test.dart
 //
@@ -18,7 +18,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../test/features/inventory/loot_fixtures.dart';
 import '../../test/features/panel_test_harness.dart';
 
-const _out = 'docs/release_shots/ux';
+const _out = 'docs/release_shots/v0.9.9';
 const _size = Size(1280, 720);
 const _dpr = 1.5;
 
@@ -77,6 +77,18 @@ void main() {
     await mouse.up();
     await tester.pump();
     await _shot(tester, '03_tooltip_plegable.png');
+    await mouse.removePointer();
+    await tester.pump(const Duration(milliseconds: 300));
+  });
+
+  testWidgets('05 ESTADÍSTICAS con el mouse sobre un arma', (tester) async {
+    final p = lootWarrior();
+    await _open(tester, p);
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(_cell(tester, p, 'e1'));
+    await tester.pump();
+    await _shot(tester, '05_estadisticas_hover.png');
     await mouse.removePointer();
     await tester.pump(const Duration(milliseconds: 300));
   });

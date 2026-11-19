@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:echos_del_tiempo/app/theme/retro_hover_card.dart';
 import 'package:echos_del_tiempo/features/inventory/domain/inventory_menu.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
@@ -11,6 +12,7 @@ import 'package:echos_del_tiempo/game_engine/rules/inventory_rules.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/action_json.dart';
 import 'package:echos_del_tiempo/netcode/protocol/wire.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -45,6 +47,15 @@ void main() {
           'No podés tirar tu última arma inicial');
       expect(inventoryReasonLine(InventoryMenuAction.give, 'No en batalla'),
           'No en batalla');
+      // Corto, para la misma línea del menú (v0.9.9).
+      expect(inventoryReasonShort(InventoryMenuAction.drop, 'Equipada'),
+          'equipada');
+      expect(
+          inventoryReasonShort(
+              InventoryMenuAction.give, 'No hay compañeros en la sala'),
+          'sin compañeros');
+      expect(inventoryReasonShort(InventoryMenuAction.sell, 'Arma inicial'),
+          'arma inicial');
     });
 
     test('buscador: nombre, tipo, rareza y mod, sin tildes', () {
@@ -125,26 +136,130 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   });
 
-  testWidgets('clic derecho: menú con la acción desactivada y su motivo',
+  testWidgets('clic derecho: menú compacto, motivo corto en la línea',
       (tester) async {
     final c = await _inventory(tester, lootWarrior());
+    // v0.9.9: sin panel de ACCIONES ni FICHA a la derecha.
+    expect(find.text('ACCIONES'), findsNothing);
+    expect(find.text('FICHA'), findsNothing);
+    expect(find.byKey(const ValueKey('inv-ctx-menu')), findsNothing);
+    expect(find.byKey(const ValueKey('inv-equip')), findsNothing);
     // La equipada: no se desarma.
     await tester.tap(find.byKey(const ValueKey('inv-equipped')),
         buttons: kSecondaryButton);
     await tester.pump();
     expect(find.byKey(const ValueKey('inv-ctx-menu')), findsOneWidget);
-    expect(button(tester, 'inv-ctx-salvage').reason,
+    expect(button(tester, 'inv-salvage').reason,
         'No podés desarmar el arma equipada');
-    expect(plain(tester, 'inv-ctx-salvage'),
-        contains('No podés desarmar el arma equipada'));
+    // Una línea por acción: el motivo corto al lado, sin salto.
+    final line = plain(tester, 'inv-salvage');
+    expect(line, contains('Desarmar · equipada'));
+    expect(line, isNot(contains('\n')));
+    expect(plain(tester, 'inv-give'), contains('Dar a... · sin compañeros'));
+    final rowH = tester.getSize(find.byKey(const ValueKey('inv-equip'))).height;
+    expect(tester.getSize(find.byKey(const ValueKey('inv-salvage'))).height,
+        rowH, reason: 'la desactivada ocupa una línea, como las demás');
+    // Ancho ajustado al contenido, no medio panel.
+    expect(tester.getSize(find.byKey(const ValueKey('inv-ctx-menu'))).width,
+        lessThan(361));
     // Una desactivada no hace nada; una activa cierra el menú.
-    await tester.tap(find.byKey(const ValueKey('inv-ctx-salvage')));
+    await tester.tap(find.byKey(const ValueKey('inv-salvage')));
     await tester.pump();
     expect(find.byKey(const ValueKey('inv-ctx-menu')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('inv-ctx-compare')));
+    await tester.tap(find.byKey(const ValueKey('inv-compare')));
     await tester.pump();
     expect(find.byKey(const ValueKey('inv-ctx-menu')), findsNothing);
     expect(c.view!.me!.profile.items, hasLength(6));
+  });
+
+  testWidgets('teclado: Enter sobre la casilla elegida abre el menú',
+      (tester) async {
+    final c = await _inventory(tester, lootWarrior());
+    final i = _cell(c.view!.me!.profile, 'e1');
+    await _tap(tester, 'inv-cell-$i');
+    expect(find.byKey(const ValueKey('inv-ctx-menu')), findsNothing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(const ValueKey('inv-ctx-menu')), findsOneWidget);
+    // El cursor arranca en Equipar: Enter otra vez equipa.
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(c.view!.me!.profile.equippedUid, 'e1');
+    expect(find.byKey(const ValueKey('inv-ctx-menu')), findsNothing);
+  });
+
+  testWidgets('ESTADÍSTICAS: siempre a la vista; el mouse sobre un arma '
+      'muestra cómo cambian', (tester) async {
+    final c = await _inventory(tester, lootWarrior());
+    expect(find.byKey(const ValueKey('inv-stats')), findsOneWidget);
+    expect(find.byKey(const ValueKey('stat-ATQ')), findsOneWidget);
+    expect(find.textContaining('si equipas'), findsNothing);
+    final i = _cell(c.view!.me!.profile, 'e1');
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(find.byKey(ValueKey('inv-cell-$i'))));
+    await tester.pump();
+    expect(find.textContaining('si equipas Filo del Alba'), findsOneWidget);
+    await mouse.moveTo(Offset.zero);
+    await tester.pump();
+    expect(find.textContaining('si equipas'), findsNothing);
+    await mouse.removePointer();
+    await tester.pump(const Duration(milliseconds: 300));
+  });
+
+  testWidgets('el tooltip de un arma no tapa ESTADÍSTICAS', (tester) async {
+    final c = await _inventory(tester, lootWarrior());
+    final stats = tester.getRect(find.byKey(const ValueKey('inv-stats')));
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    for (final uid in ['e1', 'l1', 'c1']) {
+      final i = _cell(c.view!.me!.profile, uid);
+      await mouse.moveTo(tester.getCenter(find.byKey(ValueKey('inv-cell-$i'))));
+      await tester.pump();
+      final tip = tester.getRect(find.byKey(const ValueKey('inv-cmp-tip')));
+      expect(tip.overlaps(stats), isFalse, reason: '$uid: $tip vs $stats');
+    }
+    // La equipada (tooltip plegable) tampoco.
+    await mouse.moveTo(
+        tester.getCenter(find.byKey(const ValueKey('inv-equipped'))));
+    await tester.pump();
+    final folds = tester.getRect(find.byKey(const ValueKey('inv-tip-folds')));
+    expect(folds.overlaps(stats), isFalse);
+    await mouse.removePointer();
+    await tester.pump(const Duration(milliseconds: 300));
+  });
+
+  testWidgets('el menú de la EQUIPADA no tapa el buscador', (tester) async {
+    await _inventory(tester, lootWarrior());
+    await tester.tap(find.byKey(const ValueKey('inv-equipped')),
+        buttons: kSecondaryButton);
+    await tester.pump();
+    final menu = tester.getRect(find.byKey(const ValueKey('inv-ctx-menu')));
+    final search = tester.getRect(find.byKey(const ValueKey('inv-search')));
+    expect(menu.overlaps(search), isFalse, reason: '$menu vs $search');
+    final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+    expect((Offset.zero & screen).contains(menu.bottomRight - const Offset(1, 1)),
+        isTrue);
+  });
+
+  testWidgets('menú y tooltip nunca a la vez', (tester) async {
+    await _inventory(tester, lootWarrior());
+    final eq = find.byKey(const ValueKey('inv-equipped'));
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(tester.getCenter(eq));
+    await tester.pump();
+    expect(RetroHoverCard.anyShowing, isTrue);
+    await tester.tap(eq, buttons: kSecondaryButton);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('inv-ctx-menu')), findsOneWidget);
+    expect(RetroHoverCard.anyShowing, isFalse);
+    await mouse.moveTo(tester.getCenter(eq) + const Offset(1, 1));
+    await tester.pump();
+    expect(RetroHoverCard.anyShowing, isFalse);
+    await mouse.removePointer();
+    await tester.pump(const Duration(milliseconds: 300));
   });
 
   testWidgets('LIMPIAR: menú con elegir a mano y lotes por rareza',
