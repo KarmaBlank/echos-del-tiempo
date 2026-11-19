@@ -79,7 +79,7 @@ const List<TutorialStage> kTutorialStages = [
   TutorialStage(
     number: 2,
     title: 'MP y Pulso',
-    teaches: 'MP (de la expedición) y Pulso (de la pelea)',
+    teaches: 'MP (de toda la misión) y Pulso (de cada pelea)',
     desde: 1,
     steps: [
       TutorialPlayerStep(_r0, TutorialMove.attack),
@@ -733,9 +733,9 @@ class TutorialRules {
           'Defender y Pasar adelantan tu próximo turno.',
         ],
       2 => [
-          'MP (barra azul): es de la expedición. Lo gastan casi todas las '
-              'habilidades y no vuelve por turno: se recupera con pociones '
-              'o descansando.',
+          'MP (barra azul): dura toda la misión. Lo gastan casi todas las '
+              'habilidades y no vuelve solo entre peleas: se recupera con '
+              'pociones o al volver al lobby.',
           'Pulso (pips dorados, 0-${BattleEngine.pulseMax}): es de esta '
               'pelea. Sube al empezar tu turno, con el ataque básico, al '
               'pegarle a una debilidad y al defender.',
@@ -1029,9 +1029,10 @@ class TutorialRules {
       const GlossaryEntry(
           'MP',
           'MP (maná)',
-          'Recurso de la expedición: lo gastan casi todas las habilidades. '
-              'No vuelve por turno: se recupera con pociones (Poción de '
-              'maná) o descansando.'),
+          'Dura toda la misión: lo gastan casi todas las habilidades. '
+              'No vuelve solo entre peleas: se recupera con pociones (Poción '
+              'de maná) o al volver al lobby. El Pulso, en cambio, es de cada '
+              'pelea.'),
       GlossaryEntry(
           'PU',
           'Pulso',

@@ -505,7 +505,7 @@ void main() {
     expect(pulso, contains('pips 0-${BattleEngine.pulseMax}'));
     expect(pulso, contains('MP y Pulso a la vez'));
     final mp = g.firstWhere((x) => x.title == 'MP (maná)').text;
-    expect(mp, contains('No vuelve por turno'));
+    expect(mp, contains('Dura toda la misión'));
     final inst = g.firstWhere((x) => x.title == 'Instante').text;
     expect(inst, startsWith('No es un recurso'));
   });
@@ -598,7 +598,8 @@ void main() {
         }
       }
       final two = r.stageIntro(2).join(' ');
-      expect(two, contains('no vuelve por turno'));
+      expect(two, contains('dura toda la misión'));
+      expect(two, isNot(contains('expedición')));
       expect(two, contains('Pulso'));
       expect(r.stageIntro(5).first, startsWith('Instante no es un recurso'));
       // Defender: la explicación sale la primera vez, después solo el dato.
