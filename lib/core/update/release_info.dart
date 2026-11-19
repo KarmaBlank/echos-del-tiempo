@@ -83,7 +83,7 @@ class ReleaseInfo {
     return ReleaseInfo(
       tag: tag,
       version: version,
-      notes: body is String ? body.trim() : '',
+      notes: body is String ? stripScreenshots(body) : '',
       installer: installer,
       checksum: pickChecksum(assets, installer),
       pageUrl: html is String ? Uri.tryParse(html) : null,
@@ -104,6 +104,16 @@ class ReleaseInfo {
   }
 
   /// `<nombre del instalador>.sha256`.
+  /// Marca que tool/release.ps1 pone antes de la sección de capturas de
+  /// las notas (docs/specs/distribution.md § "Capturas en el release").
+  static const screenshotsMarker = '<!-- capturas -->';
+
+  /// Las notas sin la sección de capturas: en el juego no se ven imágenes.
+  static String stripScreenshots(String body) {
+    final i = body.indexOf(screenshotsMarker);
+    return (i < 0 ? body : body.substring(0, i)).trim();
+  }
+
   static ReleaseAsset? pickChecksum(
       List<ReleaseAsset> assets, ReleaseAsset installer) {
     final want = '${installer.name}.sha256'.toLowerCase();
