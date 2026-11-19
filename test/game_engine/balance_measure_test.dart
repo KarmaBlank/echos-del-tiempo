@@ -15,6 +15,8 @@ import 'package:echos_del_tiempo/game_engine/data/game_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/uniques_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/weapon.dart';
+import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
+import 'package:echos_del_tiempo/game_engine/rules/item_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/loot_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/mulberry32.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -75,14 +77,16 @@ void main() {
           }
           if (u == null || b.level > catalog.weapons[u.baseId]!.level) u = x;
         }
-        final legend = u == null
-            ? null
-            : loot
-                .generateUnique(rng, u, level)
-                .copyWith(forge: const WeaponUpgradeLevels(pow: 5, crit: 5));
+        // Paso 6: forja hasta el tope por nivel de objeto
+        // (`min(tope de rareza, 2 + nivel/5)`), mitad POT y mitad CRÍT.
+        final legend0 = u == null ? null : loot.generateUnique(rng, u, level);
+        final legend = legend0?.copyWith(
+            forge: WeaponUpgradeLevels(
+                pow: (ItemRules.forgeCapOf(legend0) + 1) ~/ 2,
+                crit: ItemRules.forgeCapOf(legend0) ~/ 2));
         final items = [
           ('Raro +2', normal),
-          if (legend != null) ('Leg. +10', legend),
+          if (legend != null) ('Leg. +${legend.forgeLevel}', legend),
         ];
         for (final (lootName, item) in items) {
           final w = catalog.weapons[item.baseId]!;
@@ -92,6 +96,7 @@ void main() {
             weaponId: w.id,
             skillId: w.skillIds.isEmpty ? null : w.skillIds.first,
             item: item,
+            potions: PlayerProfile.defaultPotions,
           );
           for (final n in const [1, 4]) {
             for (final (fight, enemies, elite) in fights) {
@@ -145,6 +150,7 @@ void main() {
           weaponId: base.id,
           skillId: base.skillIds.isEmpty ? null : base.skillIds.first,
           item: item,
+          potions: PlayerProfile.defaultPotions,
         ));
       }
       final fights = <(String, List<String>, bool)>[

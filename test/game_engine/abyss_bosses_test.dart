@@ -162,12 +162,14 @@ void main() {
       expect(_start(e, 'ecoPrimordial').enemies.first.abyssAspect, GameElement.fuego.index + 1);
     });
 
-    test('solo vs 4 jugadores: vida × (0.55 + 0.45 n), quiebre × (0.6 + 0.3 n)', () {
+    test('solo vs 4 jugadores: vida × (0.6 + 0.3 n) (solo, × jefe en '
+        'solitario), quiebre × (0.6 + 0.3 n)', () {
       final e = _engine();
       final one = _start(e, 'devoradorAbismo', 1).enemies.first;
       final four = _start(e, 'devoradorAbismo', 4).enemies.first;
-      expect(one.maxHp, 8400);
-      expect(four.maxHp, (8400 * 2.35).round());
+      // combo_balance.md § 3.3: 0.9 solo × 1.2 (jefe en solitario).
+      expect(one.maxHp, (8400 * 0.9 * 1.2).round());
+      expect(four.maxHp, (8400 * 1.8).round());
       expect(four.breakBase / one.breakBase, closeTo(1.8 / 0.9, 0.001));
     });
   });

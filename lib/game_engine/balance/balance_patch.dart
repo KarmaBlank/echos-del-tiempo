@@ -1,4 +1,5 @@
 import '../data/enemy_families.dart' show ComboRulesDef, HitCapDef;
+import '../data/zone_curve.dart';
 import 'dart:convert';
 
 import '../data/game_catalog.dart';
@@ -338,6 +339,7 @@ class BalancePatch {
       hitCaps: patched<HitCapDef>(BalanceKind.hitCap, catalog.hitCaps),
       comboRules:
           patched<ComboRulesDef>(BalanceKind.combo, catalog.comboRules),
+      curves: patched<CurveDef>(BalanceKind.curve, catalog.curves),
     );
   }
 

@@ -124,6 +124,7 @@ class BalanceBase {
         BalanceKind.fragmentDrop => catalog.fragmentDrops,
         BalanceKind.hitCap => catalog.hitCaps,
         BalanceKind.combo => catalog.comboRules,
+        BalanceKind.curve => catalog.curves,
       };
 
   late final BalanceContext context = BalanceContext(

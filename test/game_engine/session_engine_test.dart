@@ -357,10 +357,11 @@ void main() {
       final r = s.result!;
       expect(r.success, isTrue);
       expect(r.rank, MissionRank.s);
-      expect(r.credits, 90); // 80 + 5 + 5
-      expect(r.bonus, 45);
+      // Solo, el jefe pelea sin escolta (combo_balance.md § 3.3): 80.
+      expect(r.credits, 80);
+      expect(r.bonus, 40);
       expect(r.drops, {'p0': 'espada_bronce'});
-      expect(s.players['p0']!.profile.credits, 90 + 45);
+      expect(s.players['p0']!.profile.credits, 80 + 40);
       // Jefe: 2 armas + materiales ×5 (+1 Esquirla); fin de misión: 1 arma
       // + materiales ×2. Todo al inventario.
       final p = s.players['p0']!.profile;
@@ -383,7 +384,7 @@ void main() {
       s = _touch(e, s, s.mission!.enemies.firstWhere((x) => x.boss).id);
       s = runBattle(e, s);
       expect(s.result!.rank, MissionRank.a);
-      expect(s.result!.bonus, 23); // round(90 × 0.25)
+      expect(s.result!.bonus, 20); // round(80 × 0.25), jefe sin escolta
     });
 
     test('a los 30 s sin actuar el jugador se defiende solo', () {

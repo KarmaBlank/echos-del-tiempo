@@ -98,8 +98,8 @@ void main() {
             of: find.byKey(const ValueKey('battle-target')),
             matching: find.textContaining('Limo', findRichText: true)),
         findsOneWidget);
-    // 4 jugadores → vida ×2.35: Limo 30 × 2.35 = 70.5 → 71
-    expect(state.enemies[0].maxHp, 71);
+    // 4 jugadores → vida ×1.8 (combo_balance.md § 3.3): Limo 30 × 1.8 = 54
+    expect(state.enemies[0].maxHp, 54);
 
     await tester.tap(act('attack'));
     await tester.pump();
@@ -108,7 +108,8 @@ void main() {
     expect((sent! as AttackCommand).targetId, 'e0');
 
     final after = engine.command(state, 'guerrero', sent!)!.state;
-    expect(after.enemies[0].hp, 71 - 15);
+    // ATQ 15 × 0.76 (mitigación de grupo, 4 jugadores) = 11.4 → 11.
+    expect(after.enemies[0].hp, 54 - 11);
   });
 
   testWidgets('Q cambia de objetivo y 1 ataca al elegido', (tester) async {

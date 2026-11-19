@@ -51,15 +51,18 @@ class LootRules {
     return math.max(base, party).clamp(1, maxLevel);
   }
 
-  /// Nivel de objeto: el de la zona, +1 élites y fin de misión, +2 jefes.
-  static int itemLevelFor(int zoneLevel, LootSource source) =>
-      (zoneLevel +
-              switch (source) {
-                LootSource.elite || LootSource.mission => 1,
-                LootSource.boss => 2,
-                _ => 0,
-              })
-          .clamp(1, maxLevel);
+  /// Nivel de objeto: el de la zona, +1 élites y fin de misión, +2 jefes,
+  /// nunca por encima de [cap], el nivel tope de la zona
+  /// (combo_balance.md § 2: el loot no se adelanta a la zona).
+  static int itemLevelFor(int zoneLevel, LootSource source, {int? cap}) {
+    final il = zoneLevel +
+        switch (source) {
+          LootSource.elite || LootSource.mission => 1,
+          LootSource.boss => 2,
+          _ => 0,
+        };
+    return (cap == null ? il : math.min(il, cap)).clamp(1, maxLevel);
+  }
 
   // ------------------------------------------------------------------
   // Rareza
@@ -298,11 +301,14 @@ class LootRules {
       itemLevel: math.max(itemLevel, w.level).clamp(1, maxLevel),
       uniqueId: u.id,
       passiveId: u.passiveId,
-      affixes: [
-        for (final f in u.fixed)
-          AffixRoll(f.affixId, 0, rollValue(rng, f.min, f.max)),
-      ],
+      affixes: const [],
     );
+    // Mods fijos al nivel del objeto (combo_balance.md § 2).
+    item = item.copyWith(affixes: [
+      for (final f in u.fixed)
+        if (ItemRules.fixedRangeAt(f, item.itemLevel) case (final lo, final hi))
+          AffixRoll(f.affixId, 0, rollValue(rng, lo, hi)),
+    ]);
     final n = u.randomMin +
         (rng() * (u.randomMax - u.randomMin + 1))
             .floor()
@@ -383,8 +389,9 @@ class LootRules {
     double? chance,
     double extraBonus = 0,
     double legendaryMult = 1,
+    int? levelCap,
   }) {
-    final il = itemLevelFor(zoneLevel, source);
+    final il = itemLevelFor(zoneLevel, source, cap: levelCap);
     final out = <LootDrop>[];
     ItemInstance gen() => generate(rng,
         itemLevel: il,

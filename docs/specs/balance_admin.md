@@ -330,4 +330,15 @@ armas pesadas, × del umbral del élite, fórmula del grupo
 (ase + por jugador × jugadores) y a cuánto baja la barra de un
 Fisurado que llega a su turno. Los números propios de cada Convergencia
 (% por stack, salpicadura, topes común / élite / jefe) están en
-eaction. Las habilidades tienen el campo nuevo reaks (Quebrar).
+
+eaction. Las habilidades tienen el campo nuevo reaks (Quebrar).
+
+## v0.9: Curva y grupo
+
+Tipo nuevo `curve` (una entrada `curva`, combo_balance.md § 1 y § 3.3):
+niveles por tramo y dónde terminan A y B, pendiente de vida por nivel en
+A/B y en C, ATQ por nivel, +ATQ de los comunes en C, 1 élite cada N
+grupos en C, vida en grupo (base + por jugador), mitigación de grupo por
+jugador extra y la de zona C, y los ajustes del jefe en solitario (vida
+×, ATQ ×, escolta máxima). La vista previa de un enemigo ("A nivel N, 1
+jugador") usa la curva y la vida solo (× 0.9) del borrador.

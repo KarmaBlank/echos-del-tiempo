@@ -168,8 +168,9 @@ void main() {
     });
 
     test('sin tope: jugador 5 o más niveles sobre el enemigo', () {
-      expect(_dmg(_hit(_foe('lobo', level: 10), hero: _hero(level: 15))), 20);
-      expect(_dmg(_hit(_foe('lobo', level: 11), hero: _hero(level: 15))), 18);
+      // Niveles de la parte A del tramo (sin la mitigación de zona C).
+      expect(_dmg(_hit(_foe('lobo', level: 11), hero: _hero(level: 16))), 20);
+      expect(_dmg(_hit(_foe('lobo', level: 12), hero: _hero(level: 16))), 18);
     });
 
     test('el tope sale del catálogo (editable por balance)', () {

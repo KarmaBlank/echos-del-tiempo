@@ -201,6 +201,14 @@ List<AdminEntry> buildAdminIndex(BalanceBase base) {
         detail: 'stacks ${r.stackCap} · área ×${trimNum(r.areaMult)} · '
             'quiebre ULT ${trimNum(r.breakUltimate)}'));
   }
+  for (final cv in c.curves.values) {
+    out.add(AdminEntry(
+        kind: BalanceKind.curve,
+        id: cv.id,
+        name: cv.name,
+        detail: 'vida A/B +${trimNum(cv.hpSlopeAB)} · C +${trimNum(cv.hpSlopeC)} · '
+            'grupo −${trimNum(cv.groupMitigation)}/jug.'));
+  }
   for (final a in kAscensions.values) {
     out.add(AdminEntry(
       kind: null,

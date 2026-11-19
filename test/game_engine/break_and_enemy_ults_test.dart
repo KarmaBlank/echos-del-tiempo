@@ -234,7 +234,8 @@ void main() {
       final turn = _myTurn(engine, ['reyLimo']);
       expect(turn.enemies.single.ult, BattleEngine.enemyUltStart);
       final step = engine.command(turn, 'p1', const AttackCommand())!;
-      expect(step.state.enemies.single.ult, closeTo(40 + 15 / 230 * 100, 1e-9));
+      // Rey Limo solo: 230 × 0.9 × 1.2 (jefe en solitario) = 248.
+      expect(step.state.enemies.single.ult, closeTo(40 + 15 / 248 * 100, 1e-9));
       // Los comunes no tienen ULT.
       final slime = engine
           .command(_myTurn(engine, ['slime']), 'p1', const AttackCommand())!

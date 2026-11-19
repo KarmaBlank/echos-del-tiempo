@@ -316,4 +316,29 @@ void main() {
       expect(e.apply(s, 'p0', const ProposeMissionAction('z10')), isNotNull);
     });
   });
+
+  group('curva por tramos (combo_balance.md § 1)', () {
+    test('pisos C: 1 élite cada 3 grupos; pisos A/B como antes', () {
+      var cPisos = 0;
+      for (final id in const ['z5', 'z6']) {
+        final e = sessionEngine(zones: true);
+        final s = inField(e, id, profiles: [strong('Ana', zone: 10)]);
+        final z = cat.zoneOfMission(id)!;
+        final m = s.mission!;
+        for (final f in m.enemies.map((x) => x.floor).toSet()) {
+          final here = m.enemies.where((x) => x.floor == f && !x.boss);
+          final elites = here.where((x) => x.elite).length;
+          final commons = here.length - elites;
+          if (ZoneRules.isZoneC(ZoneRules.floorLevel(z, f))) {
+            cPisos++;
+            expect(elites, greaterThanOrEqualTo((commons / 2).ceil()),
+                reason: '$id piso $f: $elites élites, $commons comunes');
+          } else {
+            expect(elites, lessThanOrEqualTo(2), reason: '$id piso $f');
+          }
+        }
+      }
+      expect(cPisos, greaterThan(0));
+    });
+  });
 }

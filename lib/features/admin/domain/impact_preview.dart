@@ -43,7 +43,13 @@ class BattleSimResult {
     this.avgBreaks = 0,
     this.bossEarlyBreaks = 0,
     this.bossRuns = 0,
+    this.avgFoeHpLeftOnLoss = 0,
+    this.avgActionsOnLoss = 0,
   });
+
+  /// En las derrotas: vida que le quedaba al bando enemigo (fracción de su
+  /// vida máxima total) y acciones propias hasta caer (promedios).
+  final double avgFoeHpLeftOnLoss, avgActionsOnLoss;
 
   /// Quiebres por batalla (combo_balance.md § 5), promedio.
   final double avgBreaks;
@@ -86,7 +92,11 @@ class SimLoadout {
     this.fusedSkillId,
     this.takenNodes = const [],
     this.item,
+    this.potions = 0,
   });
+
+  /// Pociones de vida con las que entra (el perfil nuevo trae 3).
+  final int potions;
 
   final String classId;
   final int level;
@@ -159,6 +169,7 @@ class ImpactSimulator {
         name: catalog.classes[l.classId]!.name,
         build: typicalBuild(l),
         ult: ult,
+        potions: l.potions,
         fusedSkillId: l.fusedSkillId,
       );
 
@@ -237,9 +248,12 @@ class ImpactSimulator {
   /// [party], un grupo de esos personajes (uno por jugador) en vez de
   /// [partySize] copias de [l].
   ///
-  /// IA simple: si hay un enemigo Fisurado, lo quiebra (ULT cargada o la
-  /// habilidad con Quebrar de su kit); si no, ULT si está cargada, si no
-  /// su habilidad si alcanza el MP, si no ataque; al primer enemigo vivo.
+  /// IA simple: con menos de [potionAt] de vida y pociones, toma una; si
+  /// hay un enemigo Fisurado, lo quiebra (ULT cargada o la habilidad con
+  /// Quebrar de su kit); si un enemigo avisó su ULT y tiene menos de
+  /// [defendBelow] de vida, se defiende (una vez por aviso); si no,
+  /// ULT si está cargada, si no su habilidad si alcanza el MP, si no
+  /// ataque; al primer enemigo vivo (combo_balance.md § 7, paso 5).
   BattleSimResult simulate(SimLoadout l,
       {required List<String> enemies,
       required int enemyLevel,
@@ -247,7 +261,9 @@ class ImpactSimulator {
       int seed = 1,
       bool elite = false,
       int partySize = 1,
-      List<SimLoadout>? party}) {
+      List<SimLoadout>? party,
+      double potionAt = 0.4,
+      double defendBelow = 0.5}) {
     final loadouts = party == null || party.isEmpty
         ? [for (var k = 0; k < partySize.clamp(1, 4); k++) l]
         : party.take(4).toList();
@@ -260,6 +276,8 @@ class ImpactSimulator {
     var breaks = 0;
     var bossRuns = 0;
     var bossEarly = 0;
+    var foeLeftSum = 0.0;
+    var lossActions = 0;
     for (var r = 0; r < runs; r++) {
       final engine = BattleEngine(
           stats: stats,
@@ -271,7 +289,7 @@ class ImpactSimulator {
               _member(loadouts[k], id: 'p${k + 1}'),
           ], enemyTypes: enemies, elite: elite)
           .state;
-      ZoneRules.scaleBattle(s, enemyLevel);
+      ZoneRules.scaleBattle(s, enemyLevel, curve: catalog.curve);
       // Jefes con ULT: si se quiebran antes de lanzarla (combo_balance.md
       // § 5, meta < 10% con un grupo al azar).
       final bossIds = {
@@ -308,7 +326,19 @@ class ImpactSimulator {
               }
             }
           }
-          step = (p.ult >= 100
+          final warned = alive.any((e) => e.ultPending);
+          final hpFrac = p.maxHp > 0 ? p.hp / p.maxHp : 1.0;
+          final low = hpFrac < potionAt;
+          step = (low && p.potions > 0
+                  ? engine.command(
+                      s, p.id, ItemCommand(BattleItem.potion, targetPlayerId: p.id))
+                  : null) ??
+              (fissured != null && (p.ult >= 100 || quebrar != null)
+                  ? null
+                  : warned && !p.defending && hpFrac < defendBelow
+                      ? engine.command(s, p.id, const DefendCommand())
+                      : null) ??
+              (p.ult >= 100
                   ? engine.command(s, p.id, UltimateCommand(targetId: target))
                   : null) ??
               (quebrar != null
@@ -359,6 +389,11 @@ class ImpactSimulator {
         actionsSum += actions;
         final p = s.party.first;
         hpSum += p.maxHp == 0 ? 0 : math.max(0, p.hp) / p.maxHp;
+      } else {
+        lossActions += actions;
+        final max = s.enemies.fold<int>(0, (n, e) => n + e.maxHp);
+        final left = s.enemies.fold<int>(0, (n, e) => n + math.max(0, e.hp));
+        foeLeftSum += max == 0 ? 0 : left / max;
       }
     }
     return BattleSimResult(
@@ -371,6 +406,8 @@ class ImpactSimulator {
       avgBreaks: runs == 0 ? 0 : breaks / runs,
       bossEarlyBreaks: bossEarly,
       bossRuns: bossRuns,
+      avgFoeHpLeftOnLoss: wins == runs ? 0 : foeLeftSum / (runs - wins),
+      avgActionsOnLoss: wins == runs ? 0 : lossActions / (runs - wins),
     );
   }
 }

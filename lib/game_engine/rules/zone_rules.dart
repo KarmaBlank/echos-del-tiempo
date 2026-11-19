@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../data/game_catalog.dart';
+import '../data/zone_curve.dart';
 import '../data/zones_catalog.dart';
 import '../models/battle_state.dart';
 import '../models/mission_def.dart';
@@ -8,6 +9,8 @@ import '../models/player_profile.dart';
 import '../models/zone_def.dart';
 import 'js_math.dart';
 import 'progression_rules.dart';
+
+export '../data/zone_curve.dart' show CurveDef, TramoPart;
 
 /// Reglas del mundo por zonas: nivel de piso, escalado de enemigos, XP y
 /// desbloqueo por perfil. Ver docs/specs/worldgen.md § 6.3 y § 6.4.
@@ -29,21 +32,37 @@ abstract final class ZoneRules {
 
   // ---------------- escalado ----------------
 
-  static double hpScale(int level) => 1 + 0.15 * (level - 1);
-  static double atkScale(int level) => 1 + 0.08 * (level - 1);
+  /// Vida por nivel: curva por tramos (serrucho, combo_balance.md § 1).
+  /// Antes, +15% parejo por nivel.
+  static double hpScale(int level, [CurveDef curve = const CurveDef()]) =>
+      curve.hpScale(level);
+  static double atkScale(int level, [CurveDef curve = const CurveDef()]) =>
+      curve.atkScale(level);
+
+  /// Parte del tramo (A, B o C) del nivel [level].
+  static TramoPart tramoPart(int level, [CurveDef curve = const CurveDef()]) =>
+      curve.partOf(level);
+
+  /// Nivel en la parte C de su tramo (los niveles que cuestan).
+  static bool isZoneC(int level, [CurveDef curve = const CurveDef()]) =>
+      curve.isZoneC(level);
 
   /// Nivel nativo de los stats del catálogo de [enemyId].
   static int baseLevel(String enemyId) => kEnemyBaseLevel[enemyId] ?? 1;
 
   /// Escala la vida y el ATQ (el quiebre va en puntos y no escala,
   /// combo_balance.md § 5) de los enemigos de una batalla
-  /// recién creada a nivel [level] (0 = sin escalar). Muta [state].
-  static void scaleBattle(BattleState state, int level) {
+  /// recién creada a nivel [level] (0 = sin escalar). En la parte C del
+  /// tramo, los comunes pegan `commonAtkC` más (§ 1). Muta [state].
+  static void scaleBattle(BattleState state, int level,
+      {CurveDef curve = const CurveDef()}) {
     if (level <= 0) return;
+    final zoneC = curve.isZoneC(level);
     for (final e in state.enemies) {
       final base = baseLevel(e.enemyType ?? '');
-      final hf = math.max(1.0, hpScale(level) / hpScale(base));
-      final af = math.max(1.0, atkScale(level) / atkScale(base));
+      final hf = math.max(1.0, hpScale(level, curve) / hpScale(base, curve));
+      var af = math.max(1.0, atkScale(level, curve) / atkScale(base, curve));
+      if (zoneC && !e.boss && !e.elite) af *= 1 + curve.commonAtkC;
       final hp = jsRound(e.maxHp * hf);
       e
         ..maxHp = hp

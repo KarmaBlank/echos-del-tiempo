@@ -15,6 +15,7 @@ import 'missions_catalog.dart';
 import 'skills_catalog.dart';
 import 'weapon_duals_catalog.dart';
 import 'weapons_catalog.dart';
+import 'zone_curve.dart';
 import 'zones_catalog.dart';
 
 /// Todos los datos de juego juntos, para inyectarlos en el motor. Los
@@ -52,6 +53,7 @@ class GameCatalog {
     this.fragmentDrops = kFragmentDrops,
     this.hitCaps = kHitCaps,
     this.comboRules = kComboRules,
+    this.curves = kCurves,
   });
 
   /// Jefes del Abismo por número (docs/specs/abyss_bosses.md § 2).
@@ -69,6 +71,12 @@ class GameCatalog {
   final Map<String, ComboRulesDef> comboRules;
 
   ComboRulesDef get combo => comboRules['combos'] ?? const ComboRulesDef();
+
+  /// Curva por tramos y reglas de grupo (combo_balance.md § 1 y § 3.3),
+  /// una entrada.
+  final Map<String, CurveDef> curves;
+
+  CurveDef get curve => curves['curva'] ?? const CurveDef();
 
   FragmentDropDef get fragmentDrop =>
       fragmentDrops['fragmentos'] ?? const FragmentDropDef();

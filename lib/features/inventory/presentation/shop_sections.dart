@@ -17,6 +17,7 @@ import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/models/weapon_passive.dart';
 import '../../../game_engine/rules/build_plan_rules.dart';
 import '../../../game_engine/rules/craft_rules.dart';
+import '../../../game_engine/rules/item_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../build_planner/presentation/build_fit_badge.dart';
 import '../../build_planner/presentation/build_plan_providers.dart';
@@ -477,7 +478,7 @@ String passiveForgeNote(ItemInstance it) {
   if (l >= ItemInstance.maxPassiveLevel) {
     return protoColor(ProtoColors.green, 'Pasiva al máximo (V)');
   }
-  final left = it.rarity.forgeCap - it.forgeLevel;
+  final left = ItemRules.forgeCapOf(it) - it.forgeLevel;
   final need = 2 - it.forgeLevel % 2;
   if (need > left) {
     return protoColor(ProtoColors.dim,
@@ -512,7 +513,7 @@ class _ForgeTabState extends State<ForgeTab> {
     if (list.isEmpty) return const Text('No tienes armas.');
     final it = list.firstWhere((i) => i.uid == _sel, orElse: () => list.first);
     final equipped = p.equippedUid == it.uid;
-    final cap = it.rarity.forgeCap;
+    final cap = ItemRules.forgeCapOf(it);
     final passive = rules.items.passiveText(it);
     return PanelSplit(
       list: [
@@ -532,7 +533,7 @@ class _ForgeTabState extends State<ForgeTab> {
                     value: p.equippedUid == x.uid
                         ? protoColor(ProtoColors.gold, 'EQUIPADA')
                         : protoColor(ProtoColors.dim,
-                            'forja ${x.forgeLevel}/${x.rarity.forgeCap}'),
+                            'forja ${x.forgeLevel}/${ItemRules.forgeCapOf(x)}'),
                   ),
               ],
             ),

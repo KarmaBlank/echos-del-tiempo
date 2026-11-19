@@ -144,6 +144,43 @@ class ItemRules {
     return '$name${t > 0 ? ' +$t' : ''}';
   }
 
+  /// Tiers de ventaja de los mods fijos de una legendaria sobre los
+  /// aleatorios del mismo nivel (combo_balance.md § 2).
+  static const legendaryTierBonus = 1;
+
+  /// Rango de un mod fijo de legendaria a nivel de objeto [itemLevel]
+  /// (combo_balance.md § 2): escala como los aleatorios. El rango del
+  /// catálogo es el de nivel alto (T1); a un nivel donde lo mejor que sale
+  /// es el tier `Tn`, el rango se multiplica por `máx(T(n−1)) / máx(T1)`
+  /// ([legendaryTierBonus] tier por encima). Nunca baja de 1.
+  static (int, int) fixedRangeAt(UniqueMod f, int itemLevel) {
+    final def = kAffixes[f.affixId];
+    if (def == null || def.tiers.isEmpty) return (f.min, f.max);
+    final top = def.tier(1) ?? def.tiers.first;
+    if (top.max <= 0) return (f.min, f.max);
+    final open = def.tiersFor(itemLevel);
+    final best = open.isEmpty
+        ? def.tiers.map((t) => t.tier).reduce((a, b) => a > b ? a : b)
+        : open.map((t) => t.tier).reduce((a, b) => a < b ? a : b);
+    final boosted = best - legendaryTierBonus < 1 ? 1 : best - legendaryTierBonus;
+    final ref = def.tier(boosted) ?? top;
+    final ratio = ref.max / top.max;
+    if (ratio >= 1) return (f.min, f.max);
+    final lo = (f.min * ratio).round().clamp(1, f.min);
+    final hi = (f.max * ratio).round().clamp(lo, f.max);
+    return (lo, hi);
+  }
+
+  /// Tope de forja de [i] (combo_balance.md § 2): el de su rareza, pero
+  /// no más que `2 + nivel de objeto / 5` (una legendaria de nivel 5
+  /// llega a +3, no a +10).
+  static int forgeCapOf(ItemInstance i) => forgeCapAt(i.rarity, i.itemLevel);
+
+  static int forgeCapAt(Rarity r, int itemLevel) {
+    final byLevel = 2 + itemLevel ~/ 5;
+    return byLevel < r.forgeCap ? byLevel : r.forgeCap;
+  }
+
   /// Texto de un afijo con su tier: `+12% ATQ (T3)`.
   String affixText(AffixRoll r) {
     final m = modOf(r);
@@ -151,11 +188,14 @@ class ItemRules {
     return '${m.text} (${r.fixed ? 'único' : 'T${r.tier}'})';
   }
 
-  /// Rango del valor de [r] (su tier, o el del mod fijo del único).
-  (int, int)? rangeOf(ItemInstance i, AffixRoll r) {
+  /// Rango del valor de [r] (su tier, o el del mod fijo del único al
+  /// nivel del objeto; con [scaled] en `false`, el rango de diseño).
+  (int, int)? rangeOf(ItemInstance i, AffixRoll r, {bool scaled = true}) {
     if (r.fixed) {
       for (final f in uniqueOf(i)?.fixed ?? const <UniqueMod>[]) {
-        if (f.affixId == r.affixId) return (f.min, f.max);
+        if (f.affixId == r.affixId) {
+          return scaled ? fixedRangeAt(f, i.itemLevel) : (f.min, f.max);
+        }
       }
       return null;
     }
@@ -217,9 +257,12 @@ class ItemRules {
       if (!hasRoomFor(probe, def)) continue;
       if (a.fixed) {
         if (rarity != Rarity.legendario) continue;
-        final r = rangeOf(item, a);
-        if (r == null) continue;
-        kept.add(a.withValue(a.value.clamp(r.$1, r.$2)));
+        // Del piso escalado al techo de diseño: lo nuevo sale escalado y
+        // bajar los viejos es la migración (combo_balance.md § 6b).
+        final d = rangeOf(item, a, scaled: false);
+        final sc = rangeOf(item, a);
+        if (d == null || sc == null) continue;
+        kept.add(a.withValue(a.value.clamp(sc.$1, d.$2)));
       } else {
         final t = def.tier(a.tier);
         if (t == null) continue;

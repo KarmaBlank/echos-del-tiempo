@@ -429,7 +429,8 @@ void main() {
           ], [_foe('e0')], current: 'p2'),
           'p2',
           _atk)!;
-      expect(_e(ally).hp, 79);
+      // 21 × 0.92 (mitigación de grupo, 2 jugadores) = 19.3 → 19.
+      expect(_e(ally).hp, 81);
     });
 
     test('Carga Conjunta: al quebrar, grupo +10% ATQ', () {

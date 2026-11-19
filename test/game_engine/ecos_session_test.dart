@@ -297,7 +297,8 @@ void main() {
       expect(s.battle!.level, 52);
       final first = s.battle!.state.enemies.first;
       final base = zoneProgression.catalog.enemies[first.enemyType]!.hp;
-      expect(first.maxHp, greaterThan(base * 10),
+      // Solo: vida × 0.9 (combo_balance.md § 3.3).
+      expect(first.maxHp, greaterThan(base * 9),
           reason: 'nivel 52 y +30% de vida');
     });
 

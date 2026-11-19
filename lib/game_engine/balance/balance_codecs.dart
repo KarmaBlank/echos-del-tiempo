@@ -1,4 +1,5 @@
 import '../data/enemy_families.dart' show ComboRulesDef, HitCapDef;
+import '../data/zone_curve.dart';
 import '../models/abyss.dart';
 import '../models/class_def.dart';
 import '../models/elements.dart';
@@ -41,7 +42,10 @@ enum BalanceKind {
   hitCap('hitCap', 'Tope por golpe', 'Tope por golpe'),
 
   /// Convergencias, área y quiebre (combo_balance.md § 4-5).
-  combo('combo', 'Combos y quiebre', 'Reglas de combos');
+  combo('combo', 'Combos y quiebre', 'Reglas de combos'),
+
+  /// Curva por tramos y grupo (combo_balance.md § 1 y § 3.3).
+  curve('curve', 'Curva y grupo', 'Curva y grupo');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -909,12 +913,72 @@ final comboCodec = EntityCodec(
   nameOf: (o) => (o as ComboRulesDef).name,
 );
 
+final curveCodec = EntityCodec(
+  kind: BalanceKind.curve,
+  fields: const [
+    BalanceField('tramoSize', 'Niveles por tramo', _int, min: 1, max: 50),
+    BalanceField('aEnd', 'Fin de A (posición en el tramo)', _int, min: 0, max: 50),
+    BalanceField('bEnd', 'Fin de B (posición en el tramo)', _int, min: 0, max: 50),
+    BalanceField('hpSlopeAB', 'Vida: + por nivel en A y B', _frac, max: 2, step: 0.01),
+    BalanceField('hpSlopeC', 'Vida: + por nivel en C', _frac, max: 2, step: 0.01),
+    BalanceField('atkSlope', 'ATQ: + por nivel', _frac, max: 2, step: 0.01),
+    BalanceField('commonAtkC', 'Comunes en C: + ATQ', _frac, max: 2, step: 0.01),
+    BalanceField('eliteEveryC', 'Zonas C: 1 élite cada N grupos', _int, min: 1, max: 20),
+    BalanceField('groupHpBase', 'Vida en grupo: base', _dec, max: 3, step: 0.05),
+    BalanceField('groupHpPer', 'Vida en grupo: + por jugador', _dec, max: 3, step: 0.05),
+    BalanceField('groupMitigation', 'Mitigación: − por jugador extra', _frac, max: 0.3, step: 0.01),
+    BalanceField('zoneCMitigation', 'Mitigación: − en zonas C', _frac, max: 0.5, step: 0.01),
+    BalanceField('soloBossHp', 'Jefe en solitario: vida (×)', _dec, min: 0.1, max: 3, step: 0.05),
+    BalanceField('soloBossAtk', 'Jefe en solitario: ATQ (×)', _dec, min: 0.1, max: 3, step: 0.05),
+    BalanceField('soloEscorts', 'Jefe en solitario: escolta (máx.)', _int, max: 10),
+  ],
+  read: (o) {
+    final c = o as CurveDef;
+    return {
+      'tramoSize': c.tramoSize,
+      'aEnd': c.aEnd,
+      'bEnd': c.bEnd,
+      'hpSlopeAB': c.hpSlopeAB,
+      'hpSlopeC': c.hpSlopeC,
+      'atkSlope': c.atkSlope,
+      'commonAtkC': c.commonAtkC,
+      'eliteEveryC': c.eliteEveryC,
+      'groupHpBase': c.groupHpBase,
+      'groupHpPer': c.groupHpPer,
+      'groupMitigation': c.groupMitigation,
+      'zoneCMitigation': c.zoneCMitigation,
+      'soloBossHp': c.soloBossHp,
+      'soloBossAtk': c.soloBossAtk,
+      'soloEscorts': c.soloEscorts,
+    };
+  },
+  write: (o, f) => CurveDef(
+    tramoSize: f.i('tramoSize'),
+    aEnd: f.i('aEnd'),
+    bEnd: f.i('bEnd'),
+    hpSlopeAB: f.d('hpSlopeAB'),
+    hpSlopeC: f.d('hpSlopeC'),
+    atkSlope: f.d('atkSlope'),
+    commonAtkC: f.d('commonAtkC'),
+    eliteEveryC: f.i('eliteEveryC'),
+    groupHpBase: f.d('groupHpBase'),
+    groupHpPer: f.d('groupHpPer'),
+    groupMitigation: f.d('groupMitigation'),
+    zoneCMitigation: f.d('zoneCMitigation'),
+    soloBossHp: f.d('soloBossHp'),
+    soloBossAtk: f.d('soloBossAtk'),
+    soloEscorts: f.i('soloEscorts'),
+  ),
+  nameOf: (o) => (o as CurveDef).name,
+);
+
 /// El codec de cada tipo.
 EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.abyssBoss => abyssBossCodec,
       BalanceKind.fragmentDrop => fragmentDropCodec,
       BalanceKind.hitCap => hitCapCodec,
       BalanceKind.combo => comboCodec,
+      BalanceKind.curve => curveCodec,
       BalanceKind.skill => skillCodec,
       BalanceKind.ultimate => ultimateCodec,
       BalanceKind.dual => dualCodec,

@@ -117,7 +117,8 @@ void main() {
 
   test('upgrade al máximo: MAX', () {
     // Loot v2: el tope total de forja depende de la rareza (Común 3); una
-    // Épica (8) llega al tope de 5 por estadística.
+    // Épica (8) llega al tope de 5 por estadística. v0.9: y del nivel de
+    // objeto (2 + nivel/5), por eso nivel 30.
     final p = progression.normalize(PlayerProfile(
         name: 'A',
         classId: 'guerrero',
@@ -126,7 +127,8 @@ void main() {
           ItemInstance(
               uid: 'espada_bronce',
               baseId: 'espada_bronce',
-              rarity: Rarity.epico),
+              rarity: Rarity.epico,
+              itemLevel: 30),
         ]));
     var q = p;
     for (var i = 0; i < 5; i++) {

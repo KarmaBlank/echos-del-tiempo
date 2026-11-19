@@ -157,14 +157,27 @@ class BattleEngine {
     bool elite = false,
     String? triggeredBy,
   }) {
-    final mult = 0.55 + 0.45 * party.length;
+    // Vida en cooperativo (combo_balance.md § 3.3): 0.6 + 0.3 × jugadores
+    // (antes 0.55 + 0.45 × jugadores).
+    final curve = catalog.curve;
+    final mult = curve.groupHp(party.length);
+    final solo = party.length == 1;
     final first = catalog.enemies[enemyTypes.first]!;
+    // Jefe en solitario: escolta recortada (§ 3.3, ajuste del paso 5).
+    final types = solo && first.boss
+        ? enemyTypes.take(1 + math.max(0, curve.soloEscorts)).toList()
+        : enemyTypes;
 
     final enemies = <Combatant>[];
-    for (var i = 0; i < enemyTypes.length; i++) {
-      final d = catalog.enemies[enemyTypes[i]]!;
+    for (var i = 0; i < types.length; i++) {
+      final d = catalog.enemies[types[i]]!;
       final el = elite && i == 0;
-      final hp = jsRound(d.hp * mult * (el ? 2.6 : 1));
+      // Jefe en solitario (§ 3.3, ajuste del paso 5).
+      final soloBoss = solo && d.boss;
+      final hp = jsRound(d.hp *
+          mult *
+          (el ? 2.6 : 1) *
+          (soloBoss ? curve.soloBossHp : 1));
       final ultId = el ? kEliteUltId : d.ultId;
       enemies.add(Combatant(
         id: 'e$i',
@@ -173,7 +186,8 @@ class BattleEngine {
         hp: hp,
         maxHp: hp,
         speed: d.speed * (el ? 1.1 : 1),
-        attack: jsRound(d.attack * (el ? 1.35 : 1)),
+        attack: jsRound(
+            d.attack * (el ? 1.35 : 1) * (soloBoss ? curve.soloBossAtk : 1)),
         critChance: el ? 0.15 : (d.boss ? 0.12 : 0.08),
         enemyType: d.id,
         elite: el,
@@ -1787,6 +1801,26 @@ class _Turn {
       mods.add('× ${fm(BattleEngine.evadeFactor)} ESQUIVA');
       events.add(BossMechanicEvent(e.id, BossMechanicPhase.evaded));
     }
+    // Mitigación de grupo (combo_balance.md § 3.3): todo el daño directo
+    // al enemigo, incluido el plano, salvo los golpes que detonan una
+    // reacción (y las Convergencias, que no pasan por acá).
+    var mitigation = 1.0;
+    if (a != null && !e.isPlayer && reaction == null) {
+      final curve = engine.catalog.curve;
+      final n = state.party.length;
+      final gm = curve.groupMitigationMult(n);
+      if (gm != 1) {
+        mult *= gm;
+        mitigation *= gm;
+        mods.add('× ${fm(gm)} grupo ($n jug.)');
+      }
+      final zc = curve.zoneCMult(e.level);
+      if (zc != 1) {
+        mult *= zc;
+        mitigation *= zc;
+        mods.add('× ${fm(zc)} zona C');
+      }
+    }
     final crit = _rand() < chance;
     var dmg = abyss == 0 || affinity == 0
         ? 0
@@ -1823,7 +1857,8 @@ class _Turn {
         affinity: affinity));
     if (!e.alive) _knockedOut(e);
     if (shift) _transform(e);
-    _chargeUlt(e, lost);
+    // La mitigación no atrasa la ULT enemiga: carga como sin mitigar.
+    _chargeUlt(e, lost, scale: mitigation > 0 ? 1 / mitigation : 1);
     if (reaction != null) {
       _react(a, e, reaction, dmg, hitStatus: hitStatus ?? _act?.skill?.status);
     } else if (shatter) {
@@ -3138,11 +3173,13 @@ class _Turn {
   }
 
   /// Carga de ULT enemiga por vida perdida: +1 cada 2%.
-  void _chargeUlt(Combatant e, int lost) {
+  /// [scale] compensa la mitigación de grupo (combo_balance.md § 3.3).
+  void _chargeUlt(Combatant e, int lost, {double scale = 1}) {
     // Rebobinar (Jefes del Abismo): lo recibido desde su acción anterior.
     if (lost > 0 && _abyssDef(e) != null) e.abyssTaken += lost;
     if (e.isPlayer || e.ultId == null || e.ultPending || lost <= 0) return;
-    e.ult = math.min(100, e.ult + lost / e.maxHp * BattleEngine.enemyUltPerHp);
+    e.ult = math.min(
+        100, e.ult + lost * scale / e.maxHp * BattleEngine.enemyUltPerHp);
   }
 
   // ---------------- enemigos ----------------

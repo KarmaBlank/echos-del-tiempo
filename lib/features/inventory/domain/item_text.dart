@@ -9,6 +9,7 @@ import '../../../game_engine/models/player_state.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/eco_rules.dart';
+import '../../../game_engine/rules/item_rules.dart';
 import '../../../game_engine/rules/loot_filter_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../../game_engine/rules/weapon_weight.dart';
@@ -116,7 +117,7 @@ String forgeText(ItemInstance it) {
     for (final s in UpgradeStat.values)
       if (f.level(s) > 0) '${s.label} ${f.level(s)}',
   ];
-  return 'Forja +${it.forgeLevel}/${it.rarity.forgeCap}'
+  return 'Forja +${it.forgeLevel}/${ItemRules.forgeCapOf(it)}'
       '${parts.isEmpty ? '' : ' (${parts.join(', ')})'}';
 }
 
@@ -169,7 +170,7 @@ String itemTooltipMarkup(
     l.add('${_c(kPassiveHex, '<b style="color:$kPassiveHex">Pasiva</b>')} '
         '${_c(kPassiveHex, _esc(passive))}');
   }
-  if (it.forgeLevel > 0 || it.rarity.forgeCap > 0) l.add(forgeText(it));
+  if (it.forgeLevel > 0 || ItemRules.forgeCapOf(it) > 0) l.add(forgeText(it));
   // [skillDetails]: qué hace cada una (el texto de la batalla, en una
   // línea; tooltips de la grilla). [skills] `false`: las dibuja el que
   // llama (fichas con `SkillChips`).

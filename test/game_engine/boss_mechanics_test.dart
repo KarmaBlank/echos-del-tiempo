@@ -292,14 +292,15 @@ void main() {
       final boss = s.enemies[0];
       expect([boss.stance, boss.stanceTurns], [1, 2]);
       final atk = s.party[0].attack;
-      expect(attackDamage(e, s, const AttackCommand()), jsRound(atk * 0.3));
+      // × 0.92: mitigación de grupo con 2 jugadores (combo_balance.md § 3.3).
+      expect(attackDamage(e, s, const AttackCommand()), jsRound(atk * 0.3 * 0.92));
       final st = e.command(_turnOf(s, 'p1'), 'p1', const AttackCommand())!;
       final res = _mech(st).single;
       expect([res.phase, res.value], [BossMechanicPhase.resisted, 0.7]);
       expect(st.state.log, contains('POSTURA'));
       // Espada: el físico entra completo.
       s.enemies[0].stance = 2;
-      expect(attackDamage(e, s, const AttackCommand()), atk);
+      expect(attackDamage(e, s, const AttackCommand()), jsRound(atk * 0.92));
     });
 
     test('solo: la postura bloquea 50%', () {
@@ -312,7 +313,8 @@ void main() {
       final e = _engine();
       final s = _start(e, 'caballeroHueco', ['guerrero', 'maga']);
       s.enemies[0].vulnerable = 2;
-      expect(attackDamage(e, s, const AttackCommand()), jsRound(s.party[0].attack * 1.5));
+      expect(attackDamage(e, s, const AttackCommand()),
+          jsRound(s.party[0].attack * 1.5 * 0.92));
     });
 
     test('cambia cada 2 turnos suyos y avisa 1 antes', () {

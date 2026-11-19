@@ -197,8 +197,8 @@ void main() {
       expect(s.players['p0']!.profile.material(CraftMaterial.fragEco), 2);
       expect(s.battle!.level, 86);
       expect(s.battle!.state.enemies.first.enemyType, 'hechiceraAbismo');
-      // Vida a nivel 86 sin escalar de más: 6600 × (0.55 + 0.45 × 2).
-      expect(s.battle!.state.enemies.first.maxHp, (6600 * 1.45).round());
+      // Vida a nivel 86 sin escalar de más: 6600 × (0.6 + 0.3 × 2).
+      expect(s.battle!.state.enemies.first.maxHp, (6600 * 1.2).round());
       expect(log.whereType<MissionStartedEvent>(), hasLength(1));
       expect(log.whereType<BattleStartedEvent>(), hasLength(1));
       // El mapa existe (1 piso, tema de su zona base).

@@ -598,7 +598,8 @@ void main() {
         _hero(mech: {'templario_b1'}, nextTurn: 30),
         _hero(id: 'p2'),
       ], [_foe('e0')], current: 'p2'), _atk, 'p2');
-      expect(st.state.enemies.first.hp, 78);
+      // 22 × 0.92 (mitigación de grupo, 2 jugadores) = 20.24 → 20.
+      expect(st.state.enemies.first.hp, 80);
     });
 
     test('Penitencia: el atacante recibe 2 Sagrado', () {

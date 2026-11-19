@@ -178,7 +178,9 @@ void main() {
       final real = e.command(_turnOf(s, 'p1'), 'p1', const AttackCommand(targetId: 'e0'))!;
       final echo = e.command(_turnOf(s, 'p1'), 'p1', const AttackCommand(targetId: 'e1'))!;
       final full = _dmgTo(real, 'e0');
-      expect(_dmgTo(echo, 'e1'), jsRound(full * 0.5));
+      // Los dos con la mitigación de grupo (2 jugadores, × 0.92).
+      expect(full, jsRound(s.party[0].attack * 0.92));
+      expect(_dmgTo(echo, 'e1'), jsRound(s.party[0].attack * 0.5 * 0.92));
       expect(_mech(real), isEmpty);
       final res = _mech(echo, BossMechanicPhase.echoResist).single;
       expect([res.actorId, res.value], ['e1', 0.5]);
