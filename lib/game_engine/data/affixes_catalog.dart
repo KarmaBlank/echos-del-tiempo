@@ -71,6 +71,10 @@ final List<AffixDef> _list = [
   AffixDef(
       id: 'impetuoso', name: 'Impetuoso', slot: _p, stat: ModStat.ultCharge, weight: 500,
       tiers: _five([(18, 22), (14, 17), (10, 13), (7, 9), (4, 6)])),
+  // Quiebre v0.9 (combo_balance.md § 5): +10% a +30% de puntos.
+  AffixDef(
+      id: 'rompedor', name: 'Rompedor', slot: _p, stat: ModStat.breakPower, weight: 400,
+      tiers: _five([(26, 30), (21, 25), (16, 20), (13, 15), (10, 12)])),
   // ---------------- sufijos ----------------
   AffixDef(
       id: 'del_oso', name: 'del Oso', slot: _s, stat: ModStat.vit, weight: 900,

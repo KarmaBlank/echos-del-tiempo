@@ -41,6 +41,8 @@ Combatant _hero(String id,
       id: id,
       name: 'H$id',
       isPlayer: true,
+      // Pulso lleno: las pruebas de mecánicas no miden el Pulso.
+      pulse: BattleEngine.pulseMax,
       hp: hp,
       maxHp: 100,
       speed: 10,
@@ -206,7 +208,8 @@ void main() {
       final b = _B([_hero('p1', skill: 'drenar'), _hero('p2', hp: 20)], [_foe('e0')]);
       b.use('drenar');
       final dmg = 200 - b['e0'].hp;
-      expect(dmg, (20 * 1.4).round());
+      // × 0.92: mitigación de grupo con 2 jugadores (combo_balance.md § 3.3).
+      expect(dmg, (20 * 1.4 * 0.92).round());
       expect(b['p2'].hp, 20 + (dmg * 0.6).round());
     });
   });

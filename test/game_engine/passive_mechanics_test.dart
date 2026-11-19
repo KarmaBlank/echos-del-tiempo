@@ -55,6 +55,8 @@ Combatant _hero({
       id: id,
       name: name,
       isPlayer: true,
+      // Pulso lleno: las pruebas de mecánicas no miden el Pulso.
+      pulse: BattleEngine.pulseMax,
       hp: hp,
       maxHp: 100,
       speed: 10,
@@ -321,7 +323,8 @@ void main() {
           ], burning(3)),
           const SkillCommand('llamarada'));
       expect(_procs(area, 'combustion'), hasLength(1));
-      expect(area.state.enemies.map((e) => e.hp), [76, 64, 64]);
+      // Área × 0.6 (combo_balance.md § 4).
+      expect(area.state.enemies.map((e) => e.hp), [86, 79, 79]);
     });
 
     test('Choque Térmico: quemar a un congelado lo aturde', () {
@@ -505,7 +508,9 @@ void main() {
           ]),
           const SkillCommand('venenosa', targetId: 'e0'));
       expect(step.state.enemies.single.effectTotal(BuffStat.attack), -0.15);
-      var s = e.nextTurn(step.state).state;
+      // Flecha Venenosa es Instante (§ 5.2): termina el turno a mano.
+      final done = e.command(step.state, 'p1', const PassCommand())!;
+      var s = e.nextTurn(done.state).state;
       expect(s.currentId, 'e0');
       final hit = e.enemyTurn(s)!;
       expect(hit.state.party.single.hp, 91); // round(10 × 0.85)
@@ -579,7 +584,8 @@ void main() {
             _hero(mech: {'rebote'}, skills: ['giro'])
           ], _foes()),
           const SkillCommand('giro'));
-      expect(area.state.enemies.map((e) => e.hp), [80, 80, 80]);
+      // Área × 0.6 (combo_balance.md § 4).
+      expect(area.state.enemies.map((e) => e.hp), [88, 88, 88]);
     });
 
     test('Viento a Favor: habilidad a todos → ataque gratis al más débil', () {
@@ -589,7 +595,8 @@ void main() {
             _hero(mech: {'vientoFavor'}, skills: ['rafaga'])
           ], _foes(hp: [100, 30, 100])),
           const SkillCommand('rafaga'));
-      expect(s.state.enemies.map((e) => e.hp), [82, 0, 82]);
+      // Área × 0.6 (combo_balance.md § 4).
+      expect(s.state.enemies.map((e) => e.hp), [89, 0, 89]);
       expect(
           s.state.log, contains('Viento a Favor: ataque gratis → Limo B: 20'));
       expect(s.events.whereType<ActionEvent>().map((a) => a.kind).toList(),
@@ -757,9 +764,12 @@ void main() {
             stun: 0.3),
       ], enemies: [
         for (var i = 0; i < 4; i++)
+          // 1500 de vida desde v0.9: con las Instante (Chispa, Flecha
+          // Venenosa) el grupo actúa dos veces por turno y con 300 la
+          // pelea terminaba antes de que nada rebotara.
           _foe('e$i', 'Limo $i', nextTurn: 2.0 + i)
-            ..hp = 300
-            ..maxHp = 300,
+            ..hp = 1500
+            ..maxHp = 1500,
       ]);
       final trace = <String>[];
       for (var i = 0; i < 3000 && !s.ended; i++) {
@@ -790,11 +800,17 @@ void main() {
     }
 
     test('sin bucles infinitos y determinístico con el mismo azar', () {
-      // Semilla 9 desde v0.8 (con el árbol v6 la 8 ya no pasa por un
-      // rebote de Cadena Infinita; es solo suerte del azar).
-      final a = run(9);
-      expect(a.any((l) => l.contains('Rebote (Cadena Infinita)')), isTrue);
-      expect(run(9), a);
+      // La primera semilla que pasa por un rebote de Cadena Infinita (es
+      // solo suerte del azar: cambió con el árbol v6 y con las Instante de
+      // v0.9, que no terminan el turno).
+      // ignore: avoid_print
+      bool rebote(List<String> t) =>
+          t.any((l) => l.contains('Rebote (Cadena Infinita)'));
+      final seed = [for (var k = 1; k <= 40; k++) k]
+          .firstWhere((k) => rebote(run(k)), orElse: () => -1);
+      expect(seed, isNot(-1), reason: 'ninguna semilla rebota');
+      final a = run(seed);
+      expect(run(seed), a);
     });
 
     test('Combatant con mecánicas, efectos y turno extra: ida y vuelta JSON',

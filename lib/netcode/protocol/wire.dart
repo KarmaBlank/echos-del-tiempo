@@ -5,6 +5,7 @@ import '../../game_engine/models/game_session.dart';
 import '../../game_engine/models/player_profile.dart';
 import '../../game_engine/models/session_action.dart';
 import '../../game_engine/models/session_event.dart';
+import '../../game_engine/models/tutorial.dart' show kTutorialVersion;
 import '../../game_engine/serialization/action_json.dart';
 import '../../game_engine/serialization/event_json.dart';
 import '../../game_engine/serialization/json_read.dart';
@@ -31,7 +32,12 @@ import '../../game_engine/serialization/session_json.dart';
 /// 12 desde v0.8.6: el `state` lleva su número (`q`) y el cliente lo
 /// confirma con `ack`; el host no manda más si hay muchos sin confirmar
 /// (netcode.md § "Control de flujo").
-const kProtocolVersion = 12;
+/// 13 desde v0.9: combatiente `lv` (nivel del enemigo, para el tope por
+/// golpe sin debilidad; combo_balance.md § 3.2).
+/// 14 desde v0.9: `hello` con `tv` (`tutV` de la cuenta) y sesión con
+/// `tut` / `tutN`, jugador `tv`, combatiente `prac`, acciones `tut`,
+/// `tutOk`, `tutCtl` y evento `tutDone` (combat_tutorial.md § 6).
+const kProtocolVersion = 14;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {
@@ -41,7 +47,9 @@ sealed class WireMessage {
 /// cliente → host: `{"t":"hello","v":1,"p":<perfil>,"b":<hash>}`.
 class HelloMessage extends WireMessage {
   const HelloMessage(this.profile,
-      {this.version = kProtocolVersion, this.balance});
+      {this.version = kProtocolVersion,
+      this.balance,
+      this.tutorialVersion = kTutorialVersion});
   final PlayerProfile profile;
   final int version;
 
@@ -49,6 +57,9 @@ class HelloMessage extends WireMessage {
   /// docs/specs/balance_admin.md § 4). `null` = cliente anterior al
   /// balance por archivo (equivale a sin parche).
   final String? balance;
+
+  /// `tv`: la `tutV` de la cuenta (docs/specs/combat_tutorial.md § 2).
+  final int tutorialVersion;
 }
 
 /// host → cliente: `{"t":"welcome","v":1,"id":"p1","code":"ABCDE"}`.
@@ -138,6 +149,7 @@ class WireCodec {
             'v': m.version,
             'p': m.profile.toJson(),
             if (m.balance != null) 'b': m.balance,
+            'tv': m.tutorialVersion,
           },
         WelcomeMessage() => {
             't': 'welcome',
@@ -208,7 +220,9 @@ class WireCodec {
       switch (j.str('t')) {
         case 'hello':
           return HelloMessage(PlayerProfile.fromJson(j.obj('p')),
-              version: j.integer('v'), balance: j.strOrNull('b'));
+              version: j.integer('v'),
+              balance: j.strOrNull('b'),
+              tutorialVersion: j.intOrNull('tv') ?? 0);
         case 'welcome':
           return WelcomeMessage(j.str('id'), j.str('code'),
               version: j.integer('v'));

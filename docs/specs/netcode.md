@@ -94,9 +94,13 @@ root registra para que el título sepa si hay red: `label` (`LAN`, `P2P`),
 `P2P por internet: falta configurar Firebase`) y `create()` (una
 `NetSession` nueva por sala).
 
-## Protocolo (versión 8)
+## Protocolo (versión 14)
 
-`kProtocolVersion` (`wire.dart`) = 8 desde v0.7.0 (elementos y
+`kProtocolVersion` (`wire.dart`) = 14 desde v0.9 (TUTORIAL:
+`hello` con `tv` = `tutV` de la cuenta, sesión `tut` (`TutorialState`) y
+`tutN`, jugador `tv`, combatiente `prac`, acciones `tut` `tutOk` `tutCtl`
+y evento `tutDone`; docs/specs/combat_tutorial.md § 6; las versiones
+9-13 están en `wire.dart`). Antes: 8 desde v0.7.0 (elementos y
 reacciones: estados `wet` y `charged` en `sts`, eventos de batalla
 `{"k":"react","id","rk","n","src"?,"cs"?,"sp"?}` (`ReactionEvent`) y
 `{"k":"ice","id","ph"}` (`IceEvent`), combatiente `fam` (raza / familia
@@ -124,11 +128,14 @@ enlaces. Codificación de mensajes: `lib/netcode/protocol/wire.dart`.
 ### Apretón de manos
 
 ```
-cliente → host  {"t":"hello","v":1,"p":<PlayerProfile>,"b":"base"|"b1-xxxxxxxx"}
+cliente → host  {"t":"hello","v":1,"p":<PlayerProfile>,"b":"base"|"b1-xxxxxxxx","tv":1}
 host → cliente  {"t":"welcome","v":1,"id":"p1","code":"ABCDE"}
             o   {"t":"reject","why":"full"|"version"|"balance"}  (y cierra)
 ```
 
+- `tv` (v14): la última versión del TUTORIAL que completó la cuenta
+  (`tutV`, 0 = nunca). El sello del host la usa para bloquear las
+  misiones (combat_tutorial.md § 2). Si falta, 0.
 - `b` (opcional, sin cambiar `kProtocolVersion`): hash del parche de
   balance (`GameCatalog.balanceHash`, docs/specs/balance_admin.md § 4).
   Distinto al del host → `reject balance`; un cliente sin `b` (anterior

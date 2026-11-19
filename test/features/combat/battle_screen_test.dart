@@ -98,8 +98,8 @@ void main() {
             of: find.byKey(const ValueKey('battle-target')),
             matching: find.textContaining('Limo', findRichText: true)),
         findsOneWidget);
-    // 4 jugadores → vida ×2.35: Limo 30 × 2.35 = 70.5 → 71
-    expect(state.enemies[0].maxHp, 71);
+    // 4 jugadores → vida ×1.8 (combo_balance.md § 3.3): Limo 30 × 1.8 = 54
+    expect(state.enemies[0].maxHp, 54);
 
     await tester.tap(act('attack'));
     await tester.pump();
@@ -108,7 +108,8 @@ void main() {
     expect((sent! as AttackCommand).targetId, 'e0');
 
     final after = engine.command(state, 'guerrero', sent!)!.state;
-    expect(after.enemies[0].hp, 71 - 15);
+    // ATQ 15 × 0.76 (mitigación de grupo, 4 jugadores) = 11.4 → 11.
+    expect(after.enemies[0].hp, 54 - 11);
   });
 
   testWidgets('Q cambia de objetivo y 1 ataca al elegido', (tester) async {
@@ -172,6 +173,55 @@ void main() {
     expect(
         find.textContaining('Terminás el turno sin actuar', findRichText: true),
         findsOneWidget);
+    await tester.tap(act('pass'));
+    await tester.pump();
+    expect(sent, isA<PassCommand>());
+  });
+
+  // Pulso, precondiciones e Instante (combo_balance.md § 5.2).
+  testWidgets('Quebrar sin Fisurado: desactivada con "Necesita: …"',
+      (tester) async {
+    BattleCommand? sent;
+    await pump(tester, canAct: true, onCommand: (c) {
+      sent = c;
+      return true;
+    });
+    final menu = tester.state<BattleViewState>(find.byType(BattleView));
+    menu.selectCategory(BattleCategory.skills);
+    await tester.pump();
+    // Seleccionarla muestra el motivo y no manda nada.
+    final ids = state.current!.skillIds;
+    for (var i = 0; i < ids.indexOf('quebrar'); i++) {
+      menu.handleKey(LogicalKeyboardKey.arrowDown);
+    }
+    await tester.pump();
+    menu.handleKey(LogicalKeyboardKey.enter);
+    expect(sent, isNull);
+    expect(
+        find.textContaining('Necesita: objetivo Fisurado', findRichText: true),
+        findsWidgets);
+  });
+
+  testWidgets('pips de Pulso en cada tarjeta; Terminar turno tras Instante',
+      (tester) async {
+    // El guerrero usa su Instante (Brasa Fugaz): el turno sigue.
+    state = engine
+        .command(state, 'guerrero', const SkillCommand('brasaEco'))!
+        .state;
+    expect(state.currentId, 'guerrero');
+    BattleCommand? sent;
+    await pump(tester, canAct: true, onCommand: (c) {
+      sent = c;
+      return true;
+    });
+    for (final id in ['guerrero', 'maga', 'tirador', 'paladin']) {
+      expect(find.byKey(ValueKey('pulse-$id')), findsOneWidget, reason: id);
+    }
+    final menu = tester.state<BattleViewState>(find.byType(BattleView));
+    menu.selectCategory(BattleCategory.pass);
+    await tester.pump();
+    expect(find.textContaining('Terminar turno', findRichText: true),
+        findsWidgets);
     await tester.tap(act('pass'));
     await tester.pump();
     expect(sent, isA<PassCommand>());

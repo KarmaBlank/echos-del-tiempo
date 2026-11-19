@@ -34,8 +34,13 @@ void main() {
     for (final k in ReactionKind.values) {
       expect(reactionDescription(k), isNotEmpty, reason: k.name);
     }
+    // Convergencias (combo_balance.md § 4): % de vida máx. por stack.
     expect(reactionDescription(ReactionKind.explosionToxica),
-        allOf(contains('50%'), contains('25%')));
+        allOf(contains('2.5%'), contains('40% jefe'), contains('30%'),
+            contains('Quebrar')));
+    expect(reactionDescription(ReactionKind.combustion),
+        allOf(contains('Veneno sobre Quemadura'), contains('Convergencia')));
+    expect(reactionBanner(ReactionKind.combustion), '¡COMBUSTIÓN!');
     // Un parche de balance cambia el texto.
     final patched = {
       'electrocucion': const ReactionDef(
@@ -51,9 +56,10 @@ void main() {
         'Elemento: Agua · reacciona con Electro (Electrocución, '
         'Cortocircuito) y Hielo (Congelación súbita)');
     expect(elementReactionLine(GameElement.fuego),
-        'Elemento: Fuego · reacciona con Veneno (Explosión tóxica) y Hielo (Derretir)');
+        'Elemento: Fuego · reacciona con Veneno (Explosión tóxica, Combustión) '
+        'y Hielo (Derretir)');
     expect(elementReactionLine(GameElement.veneno),
-        'Elemento: Veneno · reacciona con Fuego (Explosión tóxica)');
+        'Elemento: Veneno · reacciona con Fuego (Explosión tóxica, Combustión)');
     expect(elementReactionLine(GameElement.sagrado),
         'Elemento: Sagrado · sin reacciones');
     // Fuego + Agua, Fuego + Electro, Hielo + Electro: nada.
@@ -100,7 +106,9 @@ void main() {
       ReactionKind.congelacionSubita,
       ReactionKind.derretir,
     ]);
-    expect(blockedReactionsLine({StatusKind.burn}), isEmpty);
+    // Inmune a Quemadura: sin Combustión (v0.9).
+    expect(blockedReactionsLine({StatusKind.burn}),
+        'Combustión (inmune a Quemadura)');
     // Ficha del enemigo / bestiario de un no muerto (inmune a Veneno).
     final info = enemyInfoMarkup(
         kEnemies['esqueleto']!, BestiaryProgress({'esqueleto': 1}));

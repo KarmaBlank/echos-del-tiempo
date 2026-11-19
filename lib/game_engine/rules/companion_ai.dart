@@ -3,6 +3,8 @@ import '../models/battle_command.dart';
 import '../models/battle_state.dart';
 import '../models/skill.dart';
 import 'battle_engine.dart' show ultimateOf;
+import 'combo_planner.dart';
+import 'skill_requirements.dart';
 
 /// AUTO de un compañero de la party (docs/specs/solo_party.md § 4.1).
 /// Determinística: el mismo estado elige siempre lo mismo.
@@ -39,7 +41,9 @@ class CompanionAi {
     if (hurt != null) {
       for (final id in me.skillIds) {
         final sk = catalog.skills[id];
-        if (sk != null && sk.kind == SkillKind.heal && me.mp >= sk.mp) {
+        if (sk != null &&
+            sk.kind == SkillKind.heal &&
+            SkillRequirements.missing(sk, me, null).isEmpty) {
           return SkillCommand(id);
         }
       }
@@ -53,7 +57,16 @@ class CompanionAi {
       return UltimateCommand(targetId: weakest.id);
     }
 
-    // 3. Atacar al enemigo con menos vida.
+    // 3. Combos (combo_balance.md § 5.2): quebrar a un Fisurado, detonar
+    // una Convergencia preparada (5+ stacks) o, si todavía no encadenó,
+    // preparar con una Instante (no gasta el turno).
+    final plan = ComboPlanner(catalog);
+    final combo = plan.quebrar(me, foes) ??
+        plan.detonate(me, foes) ??
+        (me.chained ? null : plan.prepare(me, foes, instantOnly: true));
+    if (combo != null) return combo;
+
+    // 4. Atacar al enemigo con menos vida.
     return AttackCommand(targetId: weakest.id);
   }
 

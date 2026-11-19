@@ -3,25 +3,25 @@ import '../models/status.dart';
 
 /// `EN` del prototipo, 1:1. El sprite, color y escala de cada enemigo
 /// son arte y se resuelven por id en `assets/sprites/sprite_manifest.yaml`.
-/// `breakMax` y `ultId`: docs/specs/break_and_enemy_ults.md.
+/// `breakMax` y `ultId`: docs/specs/break_and_enemy_ults.md. Quiebre en puntos (combo_balance.md § 5): comunes 12, jefes 65-95 (calibrado).
 const Map<String, EnemyDef> kEnemies = {
   'slime': EnemyDef(id: 'slime', name: 'Limo', hp: 30, attack: 7, speed: 7, xp: 6, credits: 5,
-      inflicts: StatusApplication(StatusKind.poison, 1), breakMax: 25),
+      inflicts: StatusApplication(StatusKind.poison, 1), breakMax: 12),
   'bat': EnemyDef(id: 'bat', name: 'Murciélago', hp: 22, attack: 9, speed: 13, xp: 7, credits: 6,
-      pierce: true, breakMax: 20),
+      pierce: true, breakMax: 12),
   'golem': EnemyDef(id: 'golem', name: 'Gólem', hp: 70, attack: 12, speed: 5, xp: 14, credits: 12,
-      breakMax: 50),
+      breakMax: 12),
   'ghost': EnemyDef(id: 'ghost', name: 'Espectro', hp: 55, attack: 15, speed: 11, xp: 16, credits: 14,
-      pierce: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 40),
+      pierce: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 12),
   'reyLimo': EnemyDef(id: 'reyLimo', name: 'Rey Limo', hp: 230, attack: 13, speed: 8, xp: 60, credits: 80,
-      boss: true, inflicts: StatusApplication(StatusKind.poison, 2), breakMax: 80, ultId: 'eult_diluvio',
+      boss: true, inflicts: StatusApplication(StatusKind.poison, 2), breakMax: 65, ultId: 'eult_diluvio',
       title: 'Soberano de la Pradera'),
   'golemReloj': EnemyDef(id: 'golemReloj', name: 'Gólem Reloj', hp: 430, attack: 18, speed: 7, xp: 120, credits: 150,
-      boss: true, inflicts: StatusApplication(StatusKind.freeze, 2), breakMax: 150, ultId: 'eult_engranaje',
+      boss: true, inflicts: StatusApplication(StatusKind.freeze, 2), breakMax: 70, ultId: 'eult_engranaje',
       title: 'Guardián de las Ruinas Cronales'),
   // Jefe final (zona 10, nivel 50; v0.3 rebalanceado y con 2 fases).
   'devorador': EnemyDef(id: 'devorador', name: 'Devorador de Eras', hp: 2600, attack: 64, speed: 10, xp: 400, credits: 500,
-      boss: true, areaAttack: true, inflicts: StatusApplication(StatusKind.burn, 2), breakMax: 910, ultId: 'eult_finEras',
+      boss: true, areaAttack: true, inflicts: StatusApplication(StatusKind.burn, 2), breakMax: 95, ultId: 'eult_finEras',
       title: 'El hambre al final del tiempo', mechanicId: 'fases', legendaryId: 'segadoraEras'),
 
   // ---- v0.2.0 (docs/specs/bosses.md § "v0.2"): stats al nivel nativo de
@@ -29,22 +29,22 @@ const Map<String, EnemyDef> kEnemies = {
 
   // Zona 2 · Bosque Hondo (comunes nivel 6, jefe nivel 10).
   'arana': EnemyDef(id: 'arana', name: 'Araña', hp: 52, attack: 11, speed: 10, xp: 8, credits: 7,
-      inflicts: StatusApplication(StatusKind.poison, 1), breakMax: 42, feminine: true),
+      inflicts: StatusApplication(StatusKind.poison, 1), breakMax: 12, feminine: true),
   'lobo': EnemyDef(id: 'lobo', name: 'Lobo', hp: 50, attack: 12, speed: 14, xp: 8, credits: 7,
-      pierce: true, breakMax: 40),
+      pierce: true, breakMax: 12),
   'matriarca': EnemyDef(id: 'matriarca', name: 'Matriarca Araña', hp: 480, attack: 21, speed: 9, xp: 90, credits: 110,
-      boss: true, inflicts: StatusApplication(StatusKind.poison, 1), breakMax: 170, ultId: 'eult_nido',
+      boss: true, inflicts: StatusApplication(StatusKind.poison, 1), breakMax: 68, ultId: 'eult_nido',
       title: 'Reina del Bosque Hondo', mechanicId: 'telarana', legendaryId: 'susurroVibora', feminine: true),
 
   // Zona 4 · Cavernas Heladas (comunes nivel 16, jefe nivel 20).
   'murcielagoHielo': EnemyDef(id: 'murcielagoHielo', name: 'Murciélago de Hielo', hp: 80, attack: 22, speed: 14,
-      xp: 10, credits: 9, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 64),
+      xp: 10, credits: 9, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 12),
   'elementalEscarcha': EnemyDef(id: 'elementalEscarcha', name: 'Elemental de Escarcha', hp: 170, attack: 23, speed: 5,
-      xp: 16, credits: 15, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 136, armor: 0.15),
+      xp: 16, credits: 15, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 12, armor: 0.15),
   // v0.7: su mordida moja (Agua) y su Aliento Glacial (Hielo) congela al
   // instante a los mojados (Congelación súbita; bestiary.md § 4).
   'sierpe': EnemyDef(id: 'sierpe', name: 'Sierpe de Escarcha', hp: 1050, attack: 33, speed: 8, xp: 150, credits: 190,
-      boss: true, inflicts: StatusApplication(StatusKind.wet, 1), breakMax: 370, ultId: 'eult_aliento',
+      boss: true, inflicts: StatusApplication(StatusKind.wet, 1), breakMax: 74, ultId: 'eult_aliento',
       title: 'Aliento de las Cavernas Heladas', mechanicId: 'escarcha', legendaryId: 'inviernoPerpetuo',
       feminine: true),
   // Cristal de la Sierpe (invocación, nivel 20): no actúa.
@@ -53,22 +53,22 @@ const Map<String, EnemyDef> kEnemies = {
 
   // Zona 5 · Fortaleza Caída (comunes nivel 21, jefe nivel 25).
   'esqueleto': EnemyDef(id: 'esqueleto', name: 'Esqueleto', hp: 125, attack: 27, speed: 10, xp: 12, credits: 11,
-      pierce: true, breakMax: 100),
+      pierce: true, breakMax: 12),
   'caballeroCaido': EnemyDef(id: 'caballeroCaido', name: 'Caballero Caído', hp: 200, attack: 28, speed: 7, xp: 18, credits: 16,
-      inflicts: StatusApplication(StatusKind.stun, 1, chance: 0.25), breakMax: 160, armor: 0.2),
+      inflicts: StatusApplication(StatusKind.stun, 1, chance: 0.25), breakMax: 12, armor: 0.2),
   'caballeroHueco': EnemyDef(id: 'caballeroHueco', name: 'Caballero Hueco', hp: 1250, attack: 38, speed: 9, xp: 200, credits: 240,
-      boss: true, breakMax: 440, ultId: 'eult_juicio',
+      boss: true, breakMax: 77, ultId: 'eult_juicio',
       title: 'Juramento sin alma de la Fortaleza Caída', mechanicId: 'postura', legendaryId: 'egidaPrimerRey'),
 
   // ---- v0.3 (docs/specs/bosses.md § "v0.3"): zonas 6–10. ----
 
   // Zona 6 · Laberinto Temporal (comunes nivel 26, jefa nivel 30).
   'ecoSombra': EnemyDef(id: 'ecoSombra', name: 'Eco Sombrío', hp: 120, attack: 32, speed: 15, xp: 12, credits: 13,
-      breakMax: 96, evasion: 0.25),
+      breakMax: 12, evasion: 0.25),
   'guardianReloj': EnemyDef(id: 'guardianReloj', name: 'Guardián del Reloj', hp: 190, attack: 30, speed: 6, xp: 16,
-      credits: 18, breakMax: 152, armor: 0.15, delayHit: 0.3),
+      credits: 18, breakMax: 12, armor: 0.15, delayHit: 0.3),
   'hechicera': EnemyDef(id: 'hechicera', name: 'Hechicera del Eco', hp: 1350, attack: 42, speed: 10, xp: 230, credits: 280,
-      boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 470, ultId: 'eult_coro',
+      boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 80, ultId: 'eult_coro',
       title: 'Voz múltiple del Laberinto Temporal', mechanicId: 'ecos', legendaryId: 'truenoBronce', feminine: true),
   // Eco de la Hechicera (invocación que actúa, nivel 30).
   'ecoHechicera': EnemyDef(id: 'ecoHechicera', name: 'Eco de la Hechicera', hp: 140, attack: 21, speed: 10, xp: 0,
@@ -76,20 +76,20 @@ const Map<String, EnemyDef> kEnemies = {
 
   // Zona 7 · Grieta Ígnea (comunes nivel 31, jefa nivel 35).
   'salamandra': EnemyDef(id: 'salamandra', name: 'Salamandra', hp: 150, attack: 37, speed: 12, xp: 12, credits: 14,
-      inflicts: StatusApplication(StatusKind.burn, 2), breakMax: 120, feminine: true),
+      inflicts: StatusApplication(StatusKind.burn, 2), breakMax: 12, feminine: true),
   'golemMagma': EnemyDef(id: 'golemMagma', name: 'Gólem de Magma', hp: 260, attack: 36, speed: 5, xp: 17, credits: 20,
-      inflicts: StatusApplication(StatusKind.burn, 1), breakMax: 208, armor: 0.25),
+      inflicts: StatusApplication(StatusKind.burn, 1), breakMax: 12, armor: 0.25),
   'bestiaMagma': EnemyDef(id: 'bestiaMagma', name: 'Bestia de Magma', hp: 1700, attack: 48, speed: 7, xp: 260, credits: 320,
-      boss: true, inflicts: StatusApplication(StatusKind.burn, 2), breakMax: 600, ultId: 'eult_erupcion',
+      boss: true, inflicts: StatusApplication(StatusKind.burn, 2), breakMax: 83, ultId: 'eult_erupcion',
       title: 'Furia viva de la Grieta Ígnea', mechanicId: 'lava', legendaryId: 'fauceVolcan', feminine: true),
 
   // Zona 8 · Cementerio de Eras (comunes nivel 36, jefe nivel 40).
   'necrofago': EnemyDef(id: 'necrofago', name: 'Necrófago', hp: 190, attack: 41, speed: 11, xp: 13, credits: 15,
-      pierce: true, inflicts: StatusApplication(StatusKind.poison, 2), breakMax: 152),
+      pierce: true, inflicts: StatusApplication(StatusKind.poison, 2), breakMax: 12),
   'almaErrante': EnemyDef(id: 'almaErrante', name: 'Alma Errante', hp: 165, attack: 40, speed: 13, xp: 13, credits: 15,
-      inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 132, feminine: true),
+      inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 12, feminine: true),
   'espectroCoronado': EnemyDef(id: 'espectroCoronado', name: 'Espectro Coronado', hp: 1800, attack: 53, speed: 11,
-      xp: 290, credits: 360, boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 630,
+      xp: 290, credits: 360, boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 88,
       ultId: 'eult_lamento', title: 'Rey sin reino del Cementerio de Eras', mechanicId: 'sequito',
       legendaryId: 'primaveraRota'),
   // Siervo del Espectro (invocación que actúa, nivel 40).
@@ -99,40 +99,40 @@ const Map<String, EnemyDef> kEnemies = {
   // Zona 9 · Abismo del Tiempo (comunes nivel 41, jefe nivel 45).
   // v0.7: el Vigilante moja (Agua) y el Ojo electrocuta (Electro).
   'vigilanteVacio': EnemyDef(id: 'vigilanteVacio', name: 'Vigilante del Vacío', hp: 210, attack: 43, speed: 10, xp: 15,
-      credits: 17, breakMax: 168, markHit: 0.2, inflicts: StatusApplication(StatusKind.wet, 1)),
+      credits: 17, breakMax: 12, markHit: 0.2, inflicts: StatusApplication(StatusKind.wet, 1)),
   'ojoAbismo': EnemyDef(id: 'ojoAbismo', name: 'Ojo del Abismo', hp: 170, attack: 44, speed: 12, xp: 14, credits: 16,
-      inflicts: StatusApplication(StatusKind.stun, 1, chance: 0.3), breakMax: 136),
+      inflicts: StatusApplication(StatusKind.stun, 1, chance: 0.3), breakMax: 12),
   // v0.7: golpes de Electro que dejan Cargado; su ULT inunda (Agua).
   'centinela': EnemyDef(id: 'centinela', name: 'Centinela del Vacío', hp: 2100, attack: 59, speed: 9, xp: 320, credits: 400,
-      boss: true, pierce: true, inflicts: StatusApplication(StatusKind.charged, 1), breakMax: 735, ultId: 'eult_colapsoVacio',
+      boss: true, pierce: true, inflicts: StatusApplication(StatusKind.charged, 1), breakMax: 91, ultId: 'eult_colapsoVacio',
       title: 'Guardián del borde del Abismo', mechanicId: 'marca', legendaryId: 'rompemundos'),
 
   // Zona 10 · Corazón del Tiempo (comunes nivel 46; jefe: el Devorador).
   'heraldoEras': EnemyDef(id: 'heraldoEras', name: 'Heraldo de las Eras', hp: 330, attack: 50, speed: 9, xp: 20,
-      credits: 24, breakMax: 264, ultId: kEliteUltId, inflictCycle: [
+      credits: 24, breakMax: 12, ultId: kEliteUltId, inflictCycle: [
         StatusApplication(StatusKind.burn, 1),
         StatusApplication(StatusKind.poison, 1),
         StatusApplication(StatusKind.freeze, 1),
       ]),
   'fragmentoTiempo': EnemyDef(id: 'fragmentoTiempo', name: 'Fragmento del Tiempo', hp: 160, attack: 45, speed: 17,
-      xp: 14, credits: 16, breakMax: 128, delayHit: 0.25),
+      xp: 14, credits: 16, breakMax: 12, delayHit: 0.25),
 
   // ---- Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 2.2): stats
   // ya al nivel 85–90 (`kEnemyBaseLevel`). Sin título (sin lore). ----
   'golemAbismo': EnemyDef(id: 'golemAbismo', name: 'Gólem Reloj del Abismo', hp: 6400, attack: 98, speed: 8,
-      xp: 700, credits: 900, boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 2240,
+      xp: 700, credits: 900, boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 95,
       ultId: 'eult_abismoReloj', mechanicId: 'abismoReloj'),
   'hechiceraAbismo': EnemyDef(id: 'hechiceraAbismo', name: 'Hechicera del Eco del Abismo', hp: 6600, attack: 100,
       speed: 10, xp: 720, credits: 920, boss: true, inflicts: StatusApplication(StatusKind.freeze, 1),
-      breakMax: 2310, ultId: 'eult_abismoEco', mechanicId: 'abismoEco', feminine: true),
+      breakMax: 95, ultId: 'eult_abismoEco', mechanicId: 'abismoEco', feminine: true),
   'espectroAbismo': EnemyDef(id: 'espectroAbismo', name: 'Espectro Coronado del Abismo', hp: 7200, attack: 104,
       speed: 11, xp: 760, credits: 960, boss: true, inflicts: StatusApplication(StatusKind.freeze, 1),
-      breakMax: 2520, ultId: 'eult_abismoCorona', mechanicId: 'abismoCorona'),
+      breakMax: 95, ultId: 'eult_abismoCorona', mechanicId: 'abismoCorona'),
   'devoradorAbismo': EnemyDef(id: 'devoradorAbismo', name: 'Devorador de Eras del Abismo', hp: 8400, attack: 110,
       speed: 10, xp: 800, credits: 1000, boss: true, inflicts: StatusApplication(StatusKind.burn, 2),
-      breakMax: 2940, ultId: 'eult_abismoEras', mechanicId: 'abismoEras'),
+      breakMax: 95, ultId: 'eult_abismoEras', mechanicId: 'abismoEras'),
   'ecoPrimordial': EnemyDef(id: 'ecoPrimordial', name: 'Eco Primordial', hp: 10000, attack: 112, speed: 11,
-      xp: 1000, credits: 1300, boss: true, breakMax: 3500, ultId: 'eult_primordial', mechanicId: 'abismoPrimordial'),
+      xp: 1000, credits: 1300, boss: true, breakMax: 95, ultId: 'eult_primordial', mechanicId: 'abismoPrimordial'),
   // Eco del Abismo (invocación que actúa, nivel 86): copia la última
   // habilidad del grupo y recibe ×0.5.
   'ecoAbismo': EnemyDef(id: 'ecoAbismo', name: 'Eco del Abismo', hp: 600, attack: 60, speed: 10, xp: 0,

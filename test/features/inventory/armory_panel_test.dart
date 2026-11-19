@@ -92,9 +92,10 @@ void main() {
         profile: start,
         build: (v, c) =>
             ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.forge));
-    // Épico con forja 1: la próxima mejora sube Ímpetu I → II.
+    // Épico con forja 1: la próxima mejora sube Ímpetu I → II. Nivel de
+    // objeto 10: tope min(8, 2 + 10/5) = 4 (combo_balance.md § 2).
     await tapVisible(tester, find.byKey(const ValueKey('forge-row-e1')));
-    expect(plain(tester, 'forge-cap'), contains('Forja 1/8'));
+    expect(plain(tester, 'forge-cap'), contains('Forja 1/4'));
     expect(plain(tester, 'forge-passive-note'),
         contains('Sube a nivel II en la próxima mejora'));
     final up = plain(tester, 'forge-passive-up-crit');
@@ -105,9 +106,9 @@ void main() {
     expect(crit, contains('Bono +0% → +2%'));
     expect(crit, contains('CRIT'));
 
-    // Común al tope de su rareza (3): motivo del motor.
+    // Común de nivel 1: tope min(3, 2 + 1/5) = 2.
     await tapVisible(tester, find.byKey(const ValueKey('forge-row-espada_bronce')));
-    expect(plain(tester, 'forge-cap'), contains('Forja 0/3'));
+    expect(plain(tester, 'forge-cap'), contains('Forja 0/2'));
     expect(plain(tester, 'forge-passive-note'), contains('Sin pasiva'));
   });
 
@@ -116,6 +117,8 @@ void main() {
       ItemInstance(
           uid: 'x1',
           baseId: 'espada_carmesi',
+          // Nivel 5: el tope por nivel (2 + 5/5 = 3) iguala al de la rareza.
+          itemLevel: 5,
           forge: WeaponUpgradeLevels(pow: 2, crit: 1)),
     ]);
     await pumpPanel(tester,

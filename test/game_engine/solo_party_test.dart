@@ -346,8 +346,8 @@ void main() {
       final solo = hpWith(0);
       expect(hpWith(1), greaterThan(solo));
       expect(hpWith(3), greaterThan(hpWith(1)));
-      // 0.55 + 0.45 × n, como en co-op.
-      expect(hpWith(3) / solo, closeTo((0.55 + 0.45 * 4) / 1.0, 0.1));
+      // 0.6 + 0.3 × n, como en co-op (combo_balance.md § 3.3).
+      expect(hpWith(3) / solo, closeTo((0.6 + 0.3 * 4) / 0.9, 0.1));
     });
 
     test('XP, créditos y loot propio para cada miembro', () {

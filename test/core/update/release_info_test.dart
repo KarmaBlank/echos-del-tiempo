@@ -87,4 +87,10 @@ void main() {
   test('cuerpo ausente → notas vacías', () {
     expect(ReleaseInfo.tryFromJson(release(body: null))!.notes, '');
   });
+
+  test('las capturas del release no se muestran en el juego', () {
+    final r = ReleaseInfo.tryFromJson(release(
+        body: '# v0.9\n- algo\n\n<!-- capturas -->\n## Capturas\n![a](x.png)'))!;
+    expect(r.notes, '# v0.9\n- algo');
+  });
 }

@@ -13,6 +13,9 @@
   5. Copia el runtime de MSVC (msvcp140, vcruntime140, vcruntime140_1) a
      dist\runtime y compila installer\ecos_del_tiempo.iss con Inno Setup 6.
   6. Escribe dist\EcosDelTiempo-Setup-X.Y.Z.exe.sha256.
+  6b. Capturas: sube docs\release_shots\vX.Y.Z\*.png (novedades) y
+     docs\release_shots\base\*.png (siempre) y las agrega al final de las
+     notas, después de <!-- capturas --> (el juego no muestra esa parte).
   7. (sin -DryRun) Commit "chore(release): vX.Y.Z" del pubspec + versión,
      push a origin main y `gh release create vX.Y.Z <setup> <sha256>`.
 
@@ -181,11 +184,36 @@ if ($LASTEXITCODE -ne 0) {
 }
 $prerelease = @()
 if ($Version.Contains('-')) { $prerelease = @('--prerelease') }
+# Capturas (docs/specs/distribution.md § "Capturas en el release"): siempre
+# las base (docs/release_shots/base) y, si hay, las nuevas de esta versión
+# (docs/release_shots/vX.Y.Z). Se suben como archivos del release y se
+# agregan al final de las notas, después de la marca que el juego recorta.
+$shotAssets = @()
+$shotMd = ''
+$baseUrl = "https://github.com/KarmaBlank/echos-del-tiempo/releases/download/$Tag"
+foreach ($sec in @(
+    @{ Dir = "docs\release_shots\v$Version"; Prefix = 'nuevo'; Title = "### Novedades de $Tag" },
+    @{ Dir = 'docs\release_shots\base'; Prefix = 'juego'; Title = '### El juego' })) {
+  $dir = Join-Path $Root $sec.Dir
+  if (-not (Test-Path $dir)) { continue }
+  $pngs = Get-ChildItem $dir -Filter *.png | Sort-Object Name
+  if (-not $pngs) { continue }
+  $shotMd += "`n$($sec.Title)`n`n"
+  foreach ($p in $pngs) {
+    $assetName = "$($sec.Prefix)-$($p.Name)"
+    $copy = Join-Path $dist $assetName
+    Copy-Item $p.FullName $copy -Force
+    $shotAssets += $copy
+    $label = ($p.BaseName -replace '^\d+[a-z]?_', '') -replace '_', ' '
+    $shotMd += "![$label]($baseUrl/$assetName)`n"
+  }
+}
+if ($shotMd) { $Notes = $Notes.TrimEnd() + "`n`n<!-- capturas -->`n## Capturas`n$shotMd" }
 # Las notas van por archivo: PowerShell 5.1 rompe los argumentos con
 # comillas dobles al pasarlos a un ejecutable (las notas las tienen).
 $notesTmp = Join-Path ([IO.Path]::GetTempPath()) "ecos-release-notes-$Tag.md"
 [IO.File]::WriteAllText($notesTmp, $Notes, (New-Object System.Text.UTF8Encoding($false)))
-Run gh (@('release', 'create', $Tag, $setup, $shaFile,
+Run gh (@('release', 'create', $Tag, $setup, $shaFile) + $shotAssets + @(
   '--target', 'main', '--title', "Ecos del Tiempo $Tag", '--notes-file', $notesTmp) + $prerelease)
 Remove-Item $notesTmp -ErrorAction SilentlyContinue
 Write-Host "`nPublicado: https://github.com/KarmaBlank/echos-del-tiempo/releases/tag/$Tag" -ForegroundColor Green

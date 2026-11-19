@@ -107,8 +107,9 @@ void main() {
         party: [_member('p1', 'guerrero'), _member('p2', 'maga')],
         enemyTypes: ['slime', 'bat'],
       ).state;
-      // 0.55 + 0.45*2 = 1.45 → Limo 30*1.45 = 43.5 → 44, Murciélago 31.9 → 32
-      expect(s.enemies.map((e) => e.maxHp), [44, 32]);
+      // 0.6 + 0.3*2 = 1.2 (combo_balance.md § 3.3) → Limo 30*1.2 = 36,
+      // Murciélago 22*1.2 = 26.4 → 26
+      expect(s.enemies.map((e) => e.maxHp), [36, 26]);
       expect(s.log, '¡Emboscada!');
     });
 
@@ -119,7 +120,7 @@ void main() {
         elite: true,
       ).state;
       final golem = s.enemies[0];
-      expect(golem.maxHp, 182); // 70 × 2.6
+      expect(golem.maxHp, 164); // 70 × 0.9 (solo) × 2.6 = 163.8
       expect(golem.attack, 16); // 12 × 1.35 = 16.2
       expect(golem.speed, closeTo(5.5, 1e-9));
       expect(golem.critChance, 0.15);
@@ -143,16 +144,21 @@ void main() {
       final step = engine.command(
           _warriorTurn(engine, ['slime']), 'p1', const AttackCommand())!;
       final slime = step.state.enemies.first;
-      expect(slime.hp, 30 - 15);
+      // Solo: vida × 0.9 (combo_balance.md § 3.3) → 27.
+      expect(slime.hp, 27 - 15);
       expect(step.state.log, 'Guerrero ataca → Limo: 15 = ATQ 15 × 1');
       expect(step.state.currentId, isNull);
     });
 
     test('crítico ×1.5, redondeado como JS', () {
       final engine = _engine([0.99, 0.0]); // inicio del slime, después crítico
-      final step = engine.command(
-          _warriorTurn(engine, ['slime']), 'p1', const AttackCommand())!;
-      expect(step.state.enemies.first.hp, 30 - 23); // 22.5 → 23
+      // Vida alta: que no entre el tope por golpe (combo_balance.md § 3.2).
+      final turn = _warriorTurn(engine, ['slime']);
+      turn.enemies.first
+        ..maxHp = 300
+        ..hp = 300;
+      final step = engine.command(turn, 'p1', const AttackCommand())!;
+      expect(step.state.enemies.first.hp, 300 - 23); // 22.5 → 23
       expect(step.state.log, contains('23 = ATQ 15 × 1 × 1.5 CRÍTICO'));
     });
 
@@ -160,7 +166,7 @@ void main() {
       final engine = _engine();
       final step = engine.command(
           _warriorTurn(engine, ['slime']), 'p1', const AttackCommand())!;
-      expect(step.state.party.first.ult, closeTo(5 + 15 / 30 * 30, 1e-9));
+      expect(step.state.party.first.ult, closeTo(5 + 15 / 27 * 30, 1e-9));
     });
 
     test('matar al último enemigo termina la batalla con recompensas', () {
@@ -212,7 +218,7 @@ void main() {
       final before = turn.enemies.first.nextTurn;
       final step = engine.command(turn, 'p1', const SkillCommand('embestida'))!;
       final golem = step.state.enemies.first;
-      expect(golem.hp, 70 - 18); // 15 × 1.2
+      expect(golem.hp, 63 - 18); // 15 × 1.2; vida 70 × 0.9 (solo)
       expect(step.state.party.first.mp, 11 - 4);
       expect(golem.nextTurn, closeTo(before + 100 / 5 * 0.45, 1e-9));
       expect(step.state.log, 'Guerrero · Embestida → Gólem: 18 = ATQ 15 × 1.2 · retrasa');
@@ -225,9 +231,13 @@ void main() {
         enemyTypes: ['golem'],
         triggeredBy: 'p1',
       );
+      // Vida alta: que no entre el tope por golpe (combo_balance.md § 3.2).
+      start.state.enemies.first
+        ..maxHp = 700
+        ..hp = 700;
       final step = engine.command(
           engine.nextTurn(start.state).state, 'p1', const UltimateCommand())!;
-      expect(step.state.enemies.first.hp, 70 - 45);
+      expect(step.state.enemies.first.hp, 700 - 45);
       expect(step.state.party.first.ult, 0);
       expect(step.events.whereType<UltimateUsedEvent>().single.name, 'Tajo Final');
     });
@@ -321,9 +331,10 @@ void main() {
       start.state.enemies.first.statuses[StatusKind.burn] = 3;
       final step = engine.nextTurn(start.state);
       final slime = step.state.enemies.first;
-      expect(slime.hp, 30 - 4); // 30 × 0.04 × 3 = 3.6 → 4
+      // Vida 27 (30 × 0.9 solo): 27 × 0.04 × 3 = 3.24 → 3
+      expect(slime.hp, 27 - 3);
       expect(slime.stacks(StatusKind.burn), 1);
-      expect(step.state.log, 'Limo sufre Quemadura 4 = 4 de daño');
+      expect(step.state.log, 'Limo sufre Quemadura 3 = 3 de daño');
     });
 
     // Hielo v0.7 (elemental_reactions.md § 7): cambio intencional. Con 5

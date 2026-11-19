@@ -76,8 +76,13 @@ BattleState _start(BattleEngine e, String boss, List<String> classes, {bool toug
 }
 
 /// Le da el turno a [id] (sin pasar por la línea de tiempo).
+/// El turno de [id] sin pasar por `nextTurn` (Pulso lleno: estas pruebas
+/// no miden el Pulso, combo_balance.md § 5.2).
 BattleState _turnOf(BattleState s, String id) {
   final c = s.copy()..currentId = id;
+  for (final p in c.party) {
+    p.pulse = BattleEngine.pulseMax;
+  }
   return c;
 }
 
@@ -99,8 +104,8 @@ void main() {
         expect([d.boss, d.mechanicId, d.legendaryId, d.ultId], [true, mech[id], legend[id], ults[id]]);
         expect(d.title, isNotEmpty);
         expect(kEnemyUlts, contains(d.ultId));
-        // Umbral ~0.35 × vida, como los jefes existentes.
-        expect(d.breakMax / d.hp, inInclusiveRange(0.3, 0.4), reason: id);
+        // Umbral en puntos (combo_balance.md § 5): jefes 65-95.
+        expect(d.breakMax, inInclusiveRange(65, 95), reason: id);
       }
       expect(kEnemies['cristalHielo']!.passive, isTrue);
       expect(kEnemies['matriarca']!.theName, 'la Matriarca Araña');
@@ -243,8 +248,11 @@ void main() {
     test('quebrar a la Sierpe rompe un cristal', () {
       final e = _engine();
       final s = _start(e, 'sierpe', ['guerrero', 'maga']);
-      s.enemies[0].breakGauge = s.enemies[0].breakMax - 1;
-      final st = e.command(_turnOf(s, 'p1'), 'p1', const AttackCommand(targetId: 'e0'))!;
+      s.enemies[0]
+        ..breakGauge = s.enemies[0].breakMax
+        ..fissured = true;
+      final st = e.command(_turnOf(s, 'p1'), 'p1',
+          const SkillCommand('quebrar', targetId: 'e0'))!;
       final sh = _mech(st).where((m) => m.phase == BossMechanicPhase.shatter).single;
       expect(sh.targetId, 'e1');
       expect(st.state.enemies[1].alive, isFalse);
@@ -289,14 +297,15 @@ void main() {
       final boss = s.enemies[0];
       expect([boss.stance, boss.stanceTurns], [1, 2]);
       final atk = s.party[0].attack;
-      expect(attackDamage(e, s, const AttackCommand()), jsRound(atk * 0.3));
+      // × 0.92: mitigación de grupo con 2 jugadores (combo_balance.md § 3.3).
+      expect(attackDamage(e, s, const AttackCommand()), jsRound(atk * 0.3 * 0.92));
       final st = e.command(_turnOf(s, 'p1'), 'p1', const AttackCommand())!;
       final res = _mech(st).single;
       expect([res.phase, res.value], [BossMechanicPhase.resisted, 0.7]);
       expect(st.state.log, contains('POSTURA'));
       // Espada: el físico entra completo.
       s.enemies[0].stance = 2;
-      expect(attackDamage(e, s, const AttackCommand()), atk);
+      expect(attackDamage(e, s, const AttackCommand()), jsRound(atk * 0.92));
     });
 
     test('solo: la postura bloquea 50%', () {
@@ -309,7 +318,8 @@ void main() {
       final e = _engine();
       final s = _start(e, 'caballeroHueco', ['guerrero', 'maga']);
       s.enemies[0].vulnerable = 2;
-      expect(attackDamage(e, s, const AttackCommand()), jsRound(s.party[0].attack * 1.5));
+      expect(attackDamage(e, s, const AttackCommand()),
+          jsRound(s.party[0].attack * 1.5 * 0.92));
     });
 
     test('cambia cada 2 turnos suyos y avisa 1 antes', () {

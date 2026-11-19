@@ -1,5 +1,6 @@
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
+import 'package:echos_del_tiempo/game_engine/models/status.dart';
 import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/companion_ai.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,6 +30,7 @@ void main() {
     s.enemies[1].hp = 5;
     s.enemies[2].hp = 3;
     s.enemies[2].hp = 0; // caído: no cuenta
+    s.party[1].chained = true; // ya preparó con su Instante
     final c = ai.choose(s, 'c');
     expect(c, isA<AttackCommand>());
     expect((c as AttackCommand).targetId, s.enemies[1].id);
@@ -72,9 +74,57 @@ void main() {
   test('determinística: el mismo estado elige lo mismo', () {
     final s = battle();
     s.enemies[2].hp = 4;
-    final a = ai.choose(s, 'c') as AttackCommand;
-    final b = ai.choose(s.copy(), 'c') as AttackCommand;
-    expect(a.targetId, b.targetId);
+    final a = ai.choose(s, 'c') as SkillCommand;
+    final b = ai.choose(s.copy(), 'c') as SkillCommand;
+    expect([a.skillId, a.targetId], [b.skillId, b.targetId]);
+  });
+
+  group('combos (combo_balance.md § 5.2)', () {
+    test('turno nuevo: prepara con su Instante (Brasa Fugaz)', () {
+      final s = battle();
+      final c = ai.choose(s, 'c') as SkillCommand;
+      expect(c.skillId, 'brasaEco');
+    });
+
+    test('ya encadenó: no prepara otra vez, ataca', () {
+      final s = battle()..party[1].chained = true;
+      expect(ai.choose(s, 'c'), isA<AttackCommand>());
+    });
+
+    test('Fisurado y Pulso 2: Quebrar sobre él', () {
+      final s = battle();
+      s.enemies[1].fissured = true;
+      s.party[1].pulse = 2;
+      final c = ai.choose(s, 'c') as SkillCommand;
+      expect([c.skillId, c.targetId], ['quebrar', s.enemies[1].id]);
+    });
+
+    test('Fisurado sin Pulso: no intenta Quebrar', () {
+      final s = battle();
+      s.enemies[1].fissured = true;
+      s.party[1].pulse = 1;
+      expect((ai.choose(s, 'c') as SkillCommand).skillId, isNot('quebrar'));
+    });
+
+    test('5+ Quemadura y Pulso 2: el Tirador detona Combustión', () {
+      final s = battle(cls: 'tirador');
+      s.enemies[2].statuses[StatusKind.burn] = 6;
+      s.party[1].pulse = 2;
+      final c = ai.choose(s, 'c') as SkillCommand;
+      expect(c.targetId, s.enemies[2].id);
+      expect(c.skillId, 'ponzonaEco');
+    });
+
+    test('prepara sin detonar antes de tiempo', () {
+      // 2 de Quemadura en todos: la Flecha Venenosa no va a ninguno (los
+      // detonaría con pocos stacks); prepara donde no hay nada.
+      final s = battle(cls: 'tirador');
+      for (final e in s.enemies.take(2)) {
+        e.statuses[StatusKind.burn] = 2;
+      }
+      final c = ai.choose(s, 'c') as SkillCommand;
+      expect([c.skillId, c.targetId], ['venenosa', s.enemies[2].id]);
+    });
   });
 
   test('un id que no está o un enemigo: null', () {

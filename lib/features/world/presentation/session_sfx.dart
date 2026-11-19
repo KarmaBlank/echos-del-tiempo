@@ -351,7 +351,12 @@ class SessionSfx {
               out.add(cue(Sfx.breakShatter, hitAt(targetId)));
             case BreakPhase.skipped:
               out.add(cue(Sfx.breakDazed));
-            case BreakPhase.decay || BreakPhase.recovered:
+            case BreakPhase.fissured:
+              // Fisurado (combo_balance.md § 5): el aviso del quiebre.
+              out.add(cue(Sfx.breakTick, hitAt(targetId)));
+            case BreakPhase.decay ||
+                  BreakPhase.recovered ||
+                  BreakPhase.steadied:
               break;
           }
         case EnemyUltWarningEvent():

@@ -133,9 +133,8 @@ void main() {
       expect(StatusKind.charged.iconId, 'status_charged');
     });
 
-    test('Quemadura y Veneno sin tope de stacks', () {
-      expect(StatusKind.burn.maxStacks, greaterThanOrEqualTo(1000000));
-      expect(StatusKind.poison.maxStacks, greaterThanOrEqualTo(1000000));
+    test('Quemadura y Veneno: tope de stacks del catálogo (30, v0.9)', () {
+      expect(GameCatalog.standard.combo.stackCap, 30);
     });
 
     test('elementOf clasifica TODA habilidad, kit, variante y ULT', () {
@@ -210,7 +209,7 @@ void main() {
       expect(s.state.log, contains('ELECTROCUCIÓN'));
     });
 
-    test('Explosión tóxica: ×1 por stack, 50% a los demás, sin tope', () {
+    test('Explosión tóxica (Convergencia): 2.5% de vida máx. por stack, 30% a los demás', () {
       final s = _skill(
           _engine(),
           BattleState(party: [
@@ -222,20 +221,20 @@ void main() {
           ]),
           'bola');
       final hp = s.state.enemies.map((e) => e.hp).toList();
-      // Bola de Fuego 36; extra 36 × 3 = 108; salpica 54.
-      expect(hp, [500 - 36 - 108, 500 - 54, 500 - 54]);
+      // Bola de Fuego 36; 3 × 2.5% de 500 = 37.5 → 38; salpica 30% = 11.
+      expect(hp, [500 - 36 - 38, 500 - 11, 500 - 11]);
       expect(s.state.enemies.first.stacks(StatusKind.poison), 0);
       expect(s.state.enemies.first.stacks(StatusKind.burn), 2);
       final r = _reactions(s).single;
       expect([r.kind, r.amount, r.consumedStacks],
-          [ReactionKind.explosionToxica, 108, 3]);
-      expect(r.splash, {'e1': 54, 'e2': 54});
+          [ReactionKind.explosionToxica, 38, 3]);
+      expect(r.splash, {'e1': 11, 'e2': 11});
       final extra = s.events
           .whereType<DamageEvent>()
           .where((d) => d.sourceId == reactionSourceId(ReactionKind.explosionToxica));
       expect(extra, hasLength(3));
 
-      // Sin tope de stacks: 12 Veneno = ×12.
+      // 12 Veneno = 30% de la vida máx. (no depende del golpe).
       final big = _skill(
           _engine(),
           BattleState(party: [
@@ -244,22 +243,22 @@ void main() {
             _foe('e0', hp: 1000, st: {StatusKind.poison: 12}),
           ]),
           'bola');
-      expect(_reactions(big).single.amount, 36 * 12);
+      expect(_reactions(big).single.amount, 300);
     });
 
-    test('Explosión tóxica contra un jefe: tope 25% de su vida máx.', () {
+    test('Explosión tóxica contra un jefe: tope 40% de su vida máx.', () {
       final s = _skill(
           _engine(),
           BattleState(party: [
             _hero(skills: ['bola'])
           ], enemies: [
-            _foe('e0', hp: 400, boss: true, st: {StatusKind.poison: 10}),
+            _foe('e0', hp: 400, boss: true, st: {StatusKind.poison: 20}),
           ]),
           'bola');
       final r = _reactions(s).single;
-      expect(r.amount, 100); // 360 → 25% de 400
-      expect(s.state.enemies.single.hp, 400 - 36 - 100);
-      expect(s.state.log, contains('tope de jefe'));
+      expect(r.amount, 160); // 20 × 2.5% = 50% → 40% de 400
+      expect(s.state.enemies.single.hp, 400 - 36 - 160);
+      expect(s.state.log, contains('(tope)'));
     });
 
     test('Congelación súbita: Mojado + Hielo congela al instante', () {
@@ -468,7 +467,8 @@ void main() {
         _hero(id: 'p2', name: 'Leo'),
       ], _foe('e0', type: 'salamandra', inflicts: const StatusApplication(StatusKind.burn, 2)));
       final hp = s.state.party.map((p) => p.hp).toList();
-      expect(hp, [100 - 10 - 40, 100 - 20]);
+      // Convergencia: 4 × 2.5% de 100 = 10; salpica 30% = 3.
+      expect(hp, [100 - 10 - 10, 100 - 3]);
       expect(s.state.party[0].stacks(StatusKind.poison), 0);
       expect(s.state.party[0].stacks(StatusKind.burn), 2);
       expect(_reactions(s).single.kind, ReactionKind.explosionToxica);
@@ -571,7 +571,7 @@ void main() {
       // El golpe de la salamandra lleva el elemento de su estado (veneno:
       // sin tipo de familia) → sin debilidad.
       expect(p.hp, 90);
-      // Con fuego, débil ×1.25.
+      // Con fuego, débil ×1.5 (combo_balance.md § 3.1).
       final fire = BattleState(party: [
         _hero(family: EnemyFamily.undead),
       ], enemies: [
@@ -580,8 +580,8 @@ void main() {
             inflicts: const StatusApplication(StatusKind.burn, 1))
       ], currentId: 'e0');
       final f = _engine(rolls: const [0.0], families: true).enemyTurn(fire)!;
-      expect(f.state.party.single.hp, 100 - 13); // 10 × 1.25 → 13
-      expect(f.events.whereType<DamageEvent>().first.affinity, 1.25);
+      expect(f.state.party.single.hp, 100 - 15); // 10 × 1.5
+      expect(f.events.whereType<DamageEvent>().first.affinity, 1.5);
     });
 
     test('jugadores sin raza: family null; enemigos: la de su tipo', () {

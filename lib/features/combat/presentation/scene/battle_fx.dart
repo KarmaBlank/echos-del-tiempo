@@ -1181,7 +1181,9 @@ List<BattleFx> mapBattleEvents(
     if (e.affinity != 1 && affinityShown.add(id)) {
       final weak = e.affinity > 1;
       txt(id, e.vulnerable ? -54 : -44,
-          '${weak ? 'DÉBIL' : 'RESISTE'} ×${fm(e.affinity)}',
+          e.affinity == 0
+              ? 'INMUNE'
+              : '${weak ? 'DÉBIL' : 'RESISTE'} ×${fm(e.affinity)}',
           weak ? _orange : _gray,
           dl: dl);
     }
@@ -1253,6 +1255,19 @@ List<BattleFx> mapBattleEvents(
         aura(id, FxElement.stun);
       case BreakPhase.recovered:
         txt(id, -40, 'SE RECUPERA', _gray, dl: action == null ? 0 : lateBase());
+      case BreakPhase.fissured:
+        // Barra llena (combo_balance.md § 5): cartel FISURADO con el golpe.
+        final dl = procDl[id] ?? action?.dl[id] ?? 0;
+        final p = position(id);
+        out.add(BattleFx(FxKind.tag,
+            x: p.dx,
+            y: p.dy - 10,
+            text: 'FISURADO',
+            color: breakColor,
+            delayMs: dl + BattleFx.breakBannerMs,
+            who: id));
+      case BreakPhase.steadied:
+        txt(id, -40, 'SE RECOMPONE', _gray);
       case BreakPhase.fill || BreakPhase.decay:
         break; // la barra de la etiqueta ya lo muestra
     }

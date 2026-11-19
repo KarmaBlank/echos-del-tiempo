@@ -36,8 +36,12 @@ import 'map_generator.dart';
 import 'mulberry32.dart';
 import 'progression_rules.dart';
 import 'trial_rules.dart';
+import 'tutorial_rules.dart';
+import 'companion_ai.dart';
 import 'world_rules.dart';
 import 'zone_rules.dart';
+
+part 'session_engine_tutorial.dart';
 
 /// Genera la semilla de cada misión (`(Math.random() * 1e9) | 0`).
 typedef SeedSource = int Function();
@@ -72,7 +76,9 @@ class SessionEngine {
     this.devTools = false,
     this.atlasRules = const AtlasRules(),
     RandomSource? abyssRandom,
-  })  : _random = random ?? math.Random().nextDouble,
+    TutorialRules? tutorials,
+  })  : tutorials = tutorials ?? TutorialRules(catalog: progression.catalog),
+        _random = random ?? math.Random().nextDouble,
         _ecoRandom = ecoRandom ?? math.Random().nextDouble,
         _abyssRandom = abyssRandom ?? math.Random().nextDouble,
         _seeds = seeds ?? (() => math.Random().nextInt(1000000000));
@@ -81,6 +87,9 @@ class SessionEngine {
   /// exclusivas, docs/specs/abyss_bosses.md § 1.1): no mueve ninguna
   /// tirada de antes.
   final RandomSource _abyssRandom;
+
+  /// El TUTORIAL: Ecos de práctica (docs/specs/combat_tutorial.md).
+  final TutorialRules tutorials;
 
   /// Reglas de los Jefes del Abismo.
   AbyssRules get abyssRules => AbyssRules(catalog: catalog);
@@ -333,13 +342,18 @@ class SessionEngine {
   /// `addPlayer`: entra un jugador con su perfil (se valida con
   /// `ProgressionRules.normalize`). `null` si la sala está llena o el id
   /// ya existe.
-  SessionStep? addPlayer(GameSession session, String id, PlayerProfile profile) {
+  ///
+  /// [tutorialVersion]: la `tutV` de su cuenta (combat_tutorial.md § 2,
+  /// llega en el `hello`). Por defecto, vigente: quien llama sin saberla
+  /// (tests, herramientas) no queda bloqueado por el sello.
+  SessionStep? addPlayer(GameSession session, String id, PlayerProfile profile,
+      {int tutorialVersion = kTutorialVersion}) {
     if (session.players.length >= maxPlayers ||
         session.players.containsKey(id)) {
       return null;
     }
     final op = _Op(this, session.copy());
-    op.addPlayer(id, profile);
+    op.addPlayer(id, profile, tutorialVersion: tutorialVersion);
     return op.result;
   }
 
@@ -415,7 +429,9 @@ class SessionEngine {
         action is! SetLootFilterAction &&
         action is! SetBuildWantsAction &&
         action is! MoveInventoryAction &&
-        action is! SortInventoryAction) {
+        action is! SortInventoryAction &&
+        // Menú de pausa del TUTORIAL (combat_tutorial.md § 4.3).
+        action is! TutorialControlAction) {
       return null;
     }
     final op = _Op(this, session.copy());
@@ -526,7 +542,8 @@ class _Op {
     p.mp = p.maxMp.toDouble();
   }
 
-  void addPlayer(String id, PlayerProfile raw, {String? leaderId}) {
+  void addPlayer(String id, PlayerProfile raw,
+      {String? leaderId, int tutorialVersion = kTutorialVersion}) {
     var profile = rules.normalize(raw);
     if (profile.name.isEmpty) profile = profile.copyWith(name: 'Héroe');
     final d = rules.derivedStats(profile);
@@ -541,10 +558,14 @@ class _Op {
       maxHp: d.maxHp,
       maxMp: d.maxMp,
       leaderId: leaderId,
+      tutorialVersion: tutorialVersion,
     );
     final b = s.battle;
     if (s.mode == SessionMode.battle && b != null) {
       b.state = e.battles.join(b.state, e.partyMember(p, blessing: s.mission?.blessing)).state;
+      // En la pelea de práctica nadie cae y nadie trae su build: kit de
+      // práctica (combat_tutorial.md § 3).
+      if (s.tutorial case final t?) e.tutorials.applyKit(b.state, t, id);
     }
     s.players[id] = p;
     events.add(PlayerJoinedEvent(id));
@@ -628,7 +649,8 @@ class _Op {
         if (s.mode != SessionMode.lobby ||
             s.vote != null ||
             m == null ||
-            !ZoneRules.canPropose(catalog, p.profile, m.id)) {
+            !ZoneRules.canPropose(catalog, p.profile, m.id) ||
+            tutorialLocked) {
           return false;
         }
         s.vote = MissionVote(m.id, p.name, {p.id});
@@ -813,7 +835,7 @@ class _Op {
         return _interactPoi(p, a.poiId);
 
       case ProposeEcoAction():
-        return _proposeEco(p, a.uid);
+        return !tutorialLocked && _proposeEco(p, a.uid);
 
       case EcoCraftAction():
         return _ecoCraft(p, a);
@@ -831,7 +853,7 @@ class _Op {
 
       // ---- ascensión (docs/specs/ascension.md) ----
       case ProposeTrialAction():
-        return _proposeTrial(p, a.trial);
+        return !tutorialLocked && _proposeTrial(p, a.trial);
 
       case ChooseAscensionAction():
         if (s.mode != SessionMode.lobby &&
@@ -895,7 +917,15 @@ class _Op {
 
       // ---- Jefes del Abismo v0.8 (abyss_bosses.md) ----
       case ProposeAbyssAction():
-        return _proposeAbyss(p, a.boss);
+        return !tutorialLocked && _proposeAbyss(p, a.boss);
+
+      // TUTORIAL (combat_tutorial.md).
+      case StartTutorialAction():
+        return startTutorial(p, a);
+      case TutorialAckAction():
+        return ackTutorial(p);
+      case TutorialControlAction():
+        return controlTutorial(p, a.op);
 
       case DevAbyssAction():
         if (!e.devTools || !s.canShop) return false;
@@ -1370,7 +1400,8 @@ class _Op {
           extraBonus: extraBonus +
               (bonus?.rarity ?? 0) +
               (fortune ? kFortuneRarity : 0),
-          legendaryMult: eco == null ? 1 : 1 + atlas.legendary));
+          legendaryMult: eco == null ? 1 : 1 + atlas.legendary,
+          levelCap: _lootCap()));
     }
     if (eco != null) drops.addAll(_ecoExtras(p, src, zone, bonus!, atlas));
     // Fragmentos del Abismo: Ecos de tier 10+ (abyss_bosses.md § 1.1).
@@ -1396,7 +1427,7 @@ class _Op {
     };
     for (var i = 0; i < weapons; i++) {
       out.add(LootDrop.item(rules.loot.generate(_rand,
-          itemLevel: LootRules.itemLevelFor(zone, src),
+          itemLevel: LootRules.itemLevelFor(zone, src, cap: _lootCap()),
           family: p.profile.classId,
           source: src,
           extraBonus: bonus.rarity,
@@ -1423,7 +1454,9 @@ class _Op {
     final id = type == null ? null : catalog.enemies[type]?.legendaryId;
     final u = id == null ? null : kUniques[id];
     if (u == null || !catalog.weapons.containsKey(u.baseId)) return;
-    final il = level ?? s.mission?.zoneLevel ?? 1;
+    final cap = _lootCap();
+    final lv = level ?? s.mission?.zoneLevel ?? 1;
+    final il = cap == null ? lv : math.min(lv, cap);
     final chance = SessionEngine.bossLegendaryChance +
         (_eco == null ? 0 : _atlas.bossUnique);
     for (final p in players) {
@@ -1542,20 +1575,32 @@ class _Op {
     return out;
   }
 
-  /// Nivel de los enemigos de [en] (0 = misión sin zona).
-  int _levelFor(FieldEnemy en) {
+  /// Nivel tope del loot de la misión actual (combo_balance.md § 2): el
+  /// nivel máximo de su zona (o el del Abismo). `null` = sin zona.
+  int? _lootCap() {
+    final abyss = _abyss;
+    if (abyss != null) return abyss.level;
+    return _zoneDef()?.maxLevel;
+  }
+
+  ZoneDef? _zoneDef() {
     final m = s.mission;
     final eco = _eco;
     final trial = _trial;
-    final abyss = _abyss;
-    if (abyss != null) return abyss.level;
-    final z = eco != null
+    return eco != null
         ? ecos.zoneDef(eco)
         : trial != null
             ? e.trialRules.zoneDef(trial)
             : m == null || m.zone == 0
                 ? null
                 : catalog.zone(m.zone);
+  }
+
+  /// Nivel de los enemigos de [en] (0 = misión sin zona).
+  int _levelFor(FieldEnemy en) {
+    final abyss = _abyss;
+    if (abyss != null) return abyss.level;
+    final z = _zoneDef();
     if (z == null) return 0;
     if (en.boss) return ZoneRules.bossLevel(z);
     if (en.elite) return ZoneRules.eliteLevel(z, en.floor);
@@ -1584,7 +1629,11 @@ class _Op {
       case SessionMode.field:
         fieldTick(dt);
       case SessionMode.battle:
-        battleTick(dt);
+        if (s.tutorial != null) {
+          tutorialTick(dt);
+        } else {
+          battleTick(dt);
+        }
       case SessionMode.result:
         final r = s.result!;
         r.timeLeft -= dt;
@@ -1906,6 +1955,54 @@ class _Op {
       elite(last, 1);
       objectives.add(MissionObjective(ObjectiveKind.elite, 1));
     }
+    // Zonas C (combo_balance.md § 1): más élites, 1 de cada `eliteEveryC`
+    // grupos. Azar propio para no mover las tiradas de siempre; no
+    // reemplaza comunes (el objetivo de bajas no cambia).
+    final curve = catalog.curve;
+    final er = mulberry32(seed + 29);
+    for (final fl in map.floors) {
+      if (m.elite.isEmpty ||
+          !curve.isZoneC(ZoneRules.floorLevel(z, fl.index))) {
+        continue;
+      }
+      final commons = enemies
+          .where((x) => x.floor == fl.index && !x.elite && !x.boss)
+          .length;
+      final have =
+          enemies.where((x) => x.floor == fl.index && x.elite).length;
+      final want = curve.eliteEveryC <= 1
+          ? commons
+          : (commons / (curve.eliteEveryC - 1)).ceil();
+      final spots = fl.spots;
+      if (spots.isEmpty) continue;
+      final groups = m.groupsFor(fl.index);
+      for (var k = have; k < want; k++) {
+        WorldPoint? q;
+        for (var t = 0; t < 120 && q == null; t++) {
+          final c = px(spots[(er() * spots.length).floor() % spots.length]);
+          if (solid((c.x / 16).floor(), (c.y / 16).floor()) ||
+              _dist(c.x, c.y, fl.spawn.x, fl.spawn.y) < 120 ||
+              enemies.any((o) => _dist(o.x, o.y, c.x, c.y) < 64)) {
+            continue;
+          }
+          q = c;
+        }
+        if (q == null) break;
+        enemies.add(FieldEnemy(
+          id: id++,
+          x: q.x,
+          y: q.y,
+          homeX: q.x,
+          homeY: q.y,
+          group: res([
+            m.elite,
+            groups[(er() * groups.length).floor() % groups.length].first,
+          ]),
+          elite: true,
+          floor: fl.index,
+        ));
+      }
+    }
     // Cofres (worldgen.md § 11.2 y § 11.5, loot.md § 23): calidad con
     // su propio azar para no mover las tiradas de siempre.
     final cr = mulberry32(seed + 13);
@@ -2116,7 +2213,7 @@ class _Op {
   /// Las tiradas de un cofre de calidad [def] para [q].
   List<LootDrop> _chestDrops(SessionPlayer q, ChestTierDef def, int zone) {
     final drops = <LootDrop>[];
-    final il = LootRules.itemLevelFor(zone, LootSource.chest);
+    final il = LootRules.itemLevelFor(zone, LootSource.chest, cap: _lootCap());
     if (def.guaranteedRare) {
       drops.add(LootDrop.item(_rareWeapon(q, il,
           source: LootSource.chest,
@@ -2380,7 +2477,7 @@ class _Op {
       ];
       _bless(others[(_rand() * others.length).floor() % others.length]);
     }
-    final il = LootRules.itemLevelFor(level, LootSource.elite);
+    final il = LootRules.itemLevelFor(level, LootSource.elite, cap: _lootCap());
     for (final p in players) {
       final drops = <LootDrop>[];
       if (reward == QuestReward.arma || reward == QuestReward.bendicion) {
@@ -2665,7 +2762,7 @@ class _Op {
       triggeredBy: trigger.id,
     );
     final level = _levelFor(en);
-    ZoneRules.scaleBattle(step.state, level);
+    ZoneRules.scaleBattle(step.state, level, curve: catalog.curve);
     final eco = _eco;
     if (eco != null) {
       EcoRules.applyBattle(step.state, eco, atlas: _atlas, boss: en.boss);
@@ -2695,9 +2792,17 @@ class _Op {
         b.wait > 0) {
       return false;
     }
+    // TUTORIAL: el host valida contra el paso (combat_tutorial.md § 6).
+    if (tutorialAllows(p, cmd) == false) return false;
+    final before = b.state;
     final step = e.battles.command(b.state, p.id, cmd);
     if (step == null) return false;
-    _applyBattleStep(b, step);
+    if (s.tutorial != null) {
+      _applyTutorialStep(b, step);
+      afterTutorialCommand(p, cmd, before, step.events);
+    } else {
+      _applyBattleStep(b, step);
+    }
     // Dúo (v0.8.3): su cinemática dura ~1.6 s (battle_presentation.md
     // § "Dúos"); el próximo paso espera a que termine la descarga.
     if (b.endTimer == null) {

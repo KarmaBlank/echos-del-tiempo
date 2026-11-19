@@ -130,7 +130,7 @@ void main() {
 
     test('colores: de la reacción; franjas del estado consumido', () {
       final cols = {for (final k in ReactionKind.values) reactionLook(k).color};
-      expect(cols.length, 4); // Electro: Electrocución y Cortocircuito
+      expect(cols.length, 5); // Electro: Electrocución y Cortocircuito
       expect(reactionLook(ReactionKind.electrocucion).accent,
           const Color(0xFF3FA9F5));
     });

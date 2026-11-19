@@ -16,6 +16,7 @@ import '../models/player_state.dart';
 import '../models/status.dart';
 import '../models/upgrade_stat.dart';
 import '../models/weapon.dart';
+import '../models/tutorial.dart';
 import 'json_read.dart';
 
 /// `GameSession` completo ⇄ JSON: el snapshot que el host manda a los
@@ -68,6 +69,9 @@ class SessionJson {
         // Jefes del Abismo v0.8 (abyss_bosses.md § 5): opcionales.
         if (s.abyss != null) 'abyss': s.abyss,
         if (s.abyssOwner != null) 'abyssBy': s.abyssOwner,
+        // TUTORIAL v0.9 (combat_tutorial.md § 6): opcionales.
+        if (s.tutorial != null) 'tut': s.tutorial!.toJson(),
+        if (s.tutorialRuns != 0) 'tutN': s.tutorialRuns,
       };
 
   GameSession fromJson(Json j) {
@@ -104,6 +108,10 @@ class SessionJson {
       turnTimer: TurnTimer.fromName(j['tt']),
       abyss: j.intOrNull('abyss'),
       abyssOwner: j.strOrNull('abyssBy'),
+      tutorial: j.objOrNull('tut') == null
+          ? null
+          : TutorialState.fromJson(j.objOrNull('tut')!),
+      tutorialRuns: j.intOrNull('tutN') ?? 0,
     );
   }
 
@@ -152,6 +160,7 @@ class SessionJson {
         'mmp': p.maxMp,
         'ult': p.ult,
         'lvup': p.levelUpPending,
+        if (p.tutorialVersion != 0) 'tv': p.tutorialVersion,
       };
 
   SessionPlayer playerFromJson(Json j) => SessionPlayer(
@@ -168,6 +177,7 @@ class SessionJson {
         maxMp: j.integer('mmp'),
         ult: j.dbl('ult'),
         levelUpPending: j.boolean('lvup'),
+        tutorialVersion: j.intOrNull('tv') ?? 0,
       );
 
   // ------------------------------------------------------------------
@@ -396,7 +406,8 @@ class SessionJson {
       timeLeft: j.dbl('left'),
       zone: j.intOrNull('zone') ?? 0,
       unlocked: {
-        for (final e in (j.objOrNull('unl') ?? const <String, Object?>{}).entries)
+        for (final e
+            in (j.objOrNull('unl') ?? const <String, Object?>{}).entries)
           e.key: e.value is num
               ? (e.value as num).toInt()
               : throw FormatException('JSON inválido: unl', e.value),
@@ -455,7 +466,9 @@ class SessionJson {
   BattleState battleStateFromJson(Json j) {
     final out = j.objOrNull('out');
     return BattleState(
-      party: [for (final raw in j.list('party')) combatantFromJson(asJson(raw))],
+      party: [
+        for (final raw in j.list('party')) combatantFromJson(asJson(raw))
+      ],
       enemies: [
         for (final raw in j.list('enemies')) combatantFromJson(asJson(raw)),
       ],
@@ -532,10 +545,12 @@ class SessionJson {
         if (c.extraTurn != 0) 'xt': c.extraTurn,
         // Quiebre y ULT enemiga (opcionales).
         if (c.breakBase != 0) 'brkB': c.breakBase,
+        if (c.level != 0) 'lv': c.level,
         if (c.breakGauge != 0) 'brk': c.breakGauge,
         if (c.breaks != 0) 'brkN': c.breaks,
         if (c.vulnerable != 0) 'vul': c.vulnerable,
         if (c.breakSkip) 'brkS': true,
+        if (c.fissured) 'fis': true,
         if (c.ultId != null) 'eult': c.ultId,
         if (c.ultPending) 'ultP': true,
         // Mecánicas de jefe v0.2 (opcionales).
@@ -570,6 +585,7 @@ class SessionJson {
         if (c.abyssSealTurns != 0) 'abSN': c.abyssSealTurns,
         if (c.abyssAspect != 0) 'abA': c.abyssAspect,
         if (c.abyssTaken != 0) 'abK': c.abyssTaken,
+        if (c.delayStreak != 0) 'dlS': c.delayStreak,
         if (c.abyssFeast != 0) 'abF': c.abyssFeast,
         if (c.abyssCopy != null) 'abC': c.abyssCopy,
         // Invocador v0.8.1 (opcionales).
@@ -577,6 +593,10 @@ class SessionJson {
         if (c.summonKind != null) 'smK': c.summonKind,
         if (c.summonTurns != 0) 'smT': c.summonTurns,
         if (c.summonKills != 0) 'smN': c.summonKills,
+        // Pulso e Instante v0.9 (opcionales; combo_balance.md § 5.2).
+        if (c.pulse != 0) 'pls': c.pulse,
+        if (c.chained) 'chn': true,
+        if (c.practice) 'prac': true,
       };
 
   Json timedEffectToJson(TimedEffect e) => {
@@ -654,10 +674,12 @@ class SessionJson {
           : [for (final raw in j.list('fx')) timedEffectFromJson(asJson(raw))],
       extraTurn: j.intOrNull('xt') ?? 0,
       breakBase: j.dblOrNull('brkB') ?? 0,
+      level: j.intOrNull('lv') ?? 0,
       breakGauge: j.dblOrNull('brk') ?? 0,
       breaks: j.intOrNull('brkN') ?? 0,
       vulnerable: j.intOrNull('vul') ?? 0,
       breakSkip: j.flag('brkS'),
+      fissured: j.flag('fis'),
       ultId: j.strOrNull('eult'),
       ultPending: j.flag('ultP'),
       webbed: j.flag('web'),
@@ -687,12 +709,16 @@ class SessionJson {
       abyssSealTurns: j.intOrNull('abSN') ?? 0,
       abyssAspect: j.intOrNull('abA') ?? 0,
       abyssTaken: j.intOrNull('abK') ?? 0,
+      delayStreak: j.intOrNull('dlS') ?? 0,
       abyssFeast: j.intOrNull('abF') ?? 0,
       abyssCopy: j.strOrNull('abC'),
       summonOwner: j.strOrNull('smO'),
       summonKind: j.strOrNull('smK'),
       summonTurns: j.intOrNull('smT') ?? 0,
       summonKills: j.intOrNull('smN') ?? 0,
+      pulse: j.intOrNull('pls') ?? 0,
+      chained: j.flag('chn'),
+      practice: j.flag('prac'),
     );
   }
 
@@ -733,7 +759,8 @@ class SessionJson {
       })),
       equippedWeapon: weapon,
       weaponUpgrades: up,
-      passiveProgress: PlayerPassiveProgress(List.unmodifiable(j.strings('tree'))),
+      passiveProgress:
+          PlayerPassiveProgress(List.unmodifiable(j.strings('tree'))),
       item: j['item'] == null
           ? null
           : ItemInstance.fromJson(j['item']) ??

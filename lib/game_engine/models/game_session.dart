@@ -9,6 +9,7 @@ import 'item.dart';
 import 'loot.dart';
 import 'player_profile.dart';
 import 'turn_timer.dart';
+import 'tutorial.dart';
 
 export 'exploration.dart';
 export 'turn_timer.dart';
@@ -65,6 +66,7 @@ class SessionPlayer {
     this.leaderId,
     List<WorldPoint>? trail,
     this.trailEpoch = 0,
+    this.tutorialVersion = 0,
   }) : trail = trail ?? const [];
 
   /// Compañero de la party de un jugador solo (docs/specs/solo_party.md
@@ -79,6 +81,10 @@ class SessionPlayer {
   /// Rastro del líder (el más nuevo primero) que siguen sus compañeros
   /// en fila (solo_party.md § 3.5). Solo host.
   List<WorldPoint> trail;
+
+  /// Última versión del TUTORIAL que completó su cuenta (`tutV`, llega
+  /// en el `hello`; combat_tutorial.md § 2). 0 = nunca.
+  int tutorialVersion;
 
   /// `epoch` del líder cuando se armó [trail] (otro = se teletransportó).
   int trailEpoch;
@@ -142,6 +148,7 @@ class SessionPlayer {
         leaderId: leaderId,
         trail: trail,
         trailEpoch: trailEpoch,
+        tutorialVersion: tutorialVersion,
       );
 }
 
@@ -488,7 +495,8 @@ class SessionBattle {
 
 /// Votación de misión en el lobby (`S.vote`).
 class MissionVote {
-  MissionVote(this.missionId, this.proposedBy, Set<String> yes) : yes = {...yes};
+  MissionVote(this.missionId, this.proposedBy, Set<String> yes)
+      : yes = {...yes};
   final String missionId;
   final String proposedBy; // nombre
   final Set<String> yes;
@@ -600,6 +608,8 @@ class GameSession {
     this.turnTimer = TurnTimer.normal,
     this.abyss,
     this.abyssOwner,
+    this.tutorial,
+    this.tutorialRuns = 0,
   })  : players = players ?? LinkedHashMap(),
         ground = ground ?? [],
         atlas = List.unmodifiable(atlas ?? const <String>[]);
@@ -664,6 +674,17 @@ class GameSession {
 
   /// Quien lo abrió (se le consumen los Fragmentos al empezar).
   String? abyssOwner;
+
+  /// El guion del TUTORIAL en curso (docs/specs/combat_tutorial.md § 4.1):
+  /// viaja en el snapshot. `null` = no se está jugando.
+  TutorialState? tutorial;
+
+  /// Tutoriales empezados en esta sala: el próximo intento rota los roles
+  /// (§ 4.3).
+  int tutorialRuns;
+
+  /// Se juega el TUTORIAL.
+  bool get inTutorial => tutorial != null;
 
   /// Tiempo de turno de la sala: el ajuste del anfitrión (o el local
   /// jugando solo). Ver [TurnTimer].
@@ -741,5 +762,7 @@ class GameSession {
         turnTimer: turnTimer,
         abyss: abyss,
         abyssOwner: abyssOwner,
+        tutorial: tutorial?.copy(),
+        tutorialRuns: tutorialRuns,
       );
 }

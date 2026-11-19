@@ -40,6 +40,48 @@ quiebre con el 40-50% de la vida perdida; avisos 0.5-1.9 y ULT 0.2-1.8
 grupo gana **más** que sin él (los turnos de aviso y los quiebres
 compensan la ULT): no endurece las peleas, les da ritmo.
 
+## 0. v0.9: quiebre por puntos, Fisurado y Quebrar (manda sobre § 1)
+
+Rework de combo_balance.md § 5 (pasos 3-4). Lo de § 1 sobre **cómo se
+llena** y **cuándo se quiebra** queda como historia; lo demás (pierde el
+turno, +50% de daño 2 turnos del grupo, umbral +25% por quiebre con tope
+×2, cancela la ULT avisada, baja del 10% por turno) sigue igual.
+
+- **Puntos por acción, no por daño** (`ComboRulesDef`, admin `combo`),
+  una vez por objetivo y acción: ataque 4, habilidad física 6, mágica 4,
+  ULT 12, dúo 10, Quebrar base 1; +50% si el golpe pega a una debilidad;
+  Aturdido o Congelación aplicados +6; reacción o Convergencia +8; ticks,
+  rebotes, ecos, daño secundario y directo 0. Los críticos no suman.
+- **Modificadores** (se suman y multiplican los puntos): `breakBonus` de
+  la habilidad, pasivas de arma y nodos del árbol; afijo de arma
+  **Rompedor** (+10% a +30% por tier); armas pesadas (hacha, martillo y
+  escudo) +25%; después, familia (constructo ×1.5) y Congelación (+10%
+  por stack).
+- **Umbrales** (`EnemyDef.breakMax`, en puntos): comunes 12; élite × 2.5;
+  jefes 65 a 95 según la zona (Rey Limo 65, Matriarca 68, Gólem Reloj 70,
+  Sierpe 74, Caballero Hueco 77, Hechicera 80, Bestia de Magma 83,
+  Espectro Coronado 88, Centinela 91, Devorador y Jefes del Abismo 95);
+  × `0.6 + 0.3 × jugadores`. **No escalan** con la vida ni con el nivel
+  de zona (`ZoneRules.scaleBattle` ya no toca `breakBase`).
+- **Fisurado:** la barra llena no quiebra. El enemigo queda Fisurado
+  (`Combatant.fissured`, JSON `fis`; `BreakEvent(fissured)`; cartel
+  `FISURADO` en la escena; la etiqueta del objetivo dice `FISURADO`). Ya
+  no suma puntos.
+- **Quebrar:** un golpe primario de una acción con Quebrar (habilidad con
+  `SkillDef.breaks`, toda ULT, todo dúo, toda Convergencia) sobre un
+  Fisurado de un paso anterior lo **quiebra** (`BreakEvent(broken)`). El
+  golpe que lo fisura no lo quiebra.
+- **Se recompone:** si llega a su turno Fisurado, la barra baja a la
+  mitad (`BreakEvent(steadied)`, texto `SE RECOMPONE`).
+- **Quebrar base:** toda arma trae al final de su kit `Quebrar` (física,
+  ATQ × 0.6) o `Quebrar arcano` (báculo, varita y tomo, MAG × 0.6), 2 de
+  MP; casi no llena (1 punto). Tooltip: "Quebrar: quiebra a un enemigo
+  FISURADO (barra llena). Si no está Fisurado, no quiebra".
+- **Sin traba de jefe.** Meta medida (combo_balance.md, tabla de los
+  pasos 3-4): grupo mixto, jefe quebrado antes de su primera ULT 0-9%.
+- Red: el protocolo ya estaba en 13 en esta rama (sin publicar); viajan
+  `fis` en el combatiente y las fases nuevas en `BreakEvent` (por nombre).
+
 ## 1. Barra de quiebre (todos los enemigos)
 
 - Cada enemigo tiene `breakGauge` 0..`breakMax`. Umbral base

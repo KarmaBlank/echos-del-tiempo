@@ -131,6 +131,27 @@ docs/specs/balance_admin.md) escribe `assets/balance/balance.json` y
 Cada parche de balance es un release PATCH nuevo: el hash de balance va
 en el `hello` y una sala no mezcla parches distintos.
 
+## Capturas en el release
+
+Pedido del dueño: cada release muestra capturas del juego, siempre unas
+base y además las nuevas de los cambios.
+
+- `docs/release_shots/base/*.png`: las capturas base (1920×1080), que van
+  en **todos** los releases. Se reemplazan cuando el juego cambia mucho
+  de aspecto.
+- `docs/release_shots/vX.Y.Z/*.png`: las de los cambios de esa versión
+  (opcional). Se sacan del juego compilado antes de publicar.
+- El orden es el del nombre (`01_…`, `02_…`); el texto del nombre, sin el
+  número, es la descripción de la imagen.
+- `release.ps1` las sube como archivos del release (`nuevo-…` y
+  `juego-…`) y agrega al final de las notas:
+  `<!-- capturas -->`, `## Capturas`, `### Novedades de vX.Y.Z` y
+  `### El juego`, con las imágenes.
+- El juego no muestra imágenes: `ReleaseInfo.stripScreenshots` corta las
+  notas en `<!-- capturas -->`, así el cartel de actualización muestra
+  solo el texto. (Los clientes anteriores a esta versión sí ven las
+  líneas de imagen al final de las notas.)
+
 ## Seguridad
 
 - **Sin firma de código**: Windows SmartScreen muestra "Windows protegió

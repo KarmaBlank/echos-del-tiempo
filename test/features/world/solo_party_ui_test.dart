@@ -282,8 +282,14 @@ void main() {
     expect(c.isAuto('local-c2'), isTrue);
     expect(c.view!.myTurn, isFalse);
     expect(_hasText('Turno de Leo (AUTO)'), isTrue);
-    // A los 0.5 s actúa solo.
+    // A los 0.5 s actúa solo. Si prepara con una Instante (combo_balance.md
+    // § 5.2) el turno sigue y hace una acción más.
     c.advance(SessionController.autoDelay + 0.1);
+    for (var i = 0;
+        i < 20 && c.session!.battle?.state.currentId == 'local-c2';
+        i++) {
+      c.advance(0.25);
+    }
     expect(c.session!.battle?.state.currentId, isNot('local-c2'));
   });
 

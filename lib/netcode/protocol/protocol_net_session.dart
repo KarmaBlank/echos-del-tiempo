@@ -381,7 +381,8 @@ abstract class ProtocolNetSession
           _pending.remove(link);
           _clients[pid] = link;
           link.send(codec.encode(WelcomeMessage(pid, _roomCode ?? '')));
-          _emit(PeerJoinedEvent(pid, msg.profile));
+          _emit(PeerJoinedEvent(pid, msg.profile,
+              tutorialVersion: msg.tutorialVersion));
           // Indicador de ping prendido: medir al nuevo enseguida.
           if (_latencyOut.hasListener) {
             link.send(codec.encode(PingMessage(_clock().inMicroseconds)));
@@ -475,7 +476,8 @@ abstract class ProtocolNetSession
       cancelOnError: false,
     );
     link.send(
-        codec.encode(HelloMessage(config.profile, balance: balanceHash)));
+        codec.encode(HelloMessage(config.profile,
+            balance: balanceHash, tutorialVersion: config.tutorialVersion)));
     try {
       await welcome.future.timeout(welcomeTimeout,
           onTimeout: () => throw const NetException(

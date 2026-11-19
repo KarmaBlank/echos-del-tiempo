@@ -112,6 +112,13 @@ Map<String, SfxDef> buildReactionSfx() {
       _t(3000, 0.04, w: Waveform.square, v: 0.25, at: 0.15),
       _t(3500, 0.04, w: Waveform.square, v: 0.2, at: 0.21),
     ]),
+    // Quemadura + Veneno (Convergencia v0.9): llamarada que se aviva y
+    // estalla.
+    ReactionKind.combustion.sfxId: r([
+      _n(3000, 0.3, to: 900, lp: 2500, a: 0.04, v: 0.6, seed: 97),
+      _t(110, 0.45, w: Waveform.sawtooth, to: 45, lp: 700, v: 0.6, at: 0.08),
+      _n(6000, 0.3, to: 1800, lp: 4000, v: 0.35, at: 0.14, seed: 101),
+    ]),
     // Aplicar Mojado: una gota.
     Sfx.status('wet'): st([
       _t(1320, 0.12, w: Waveform.sine, to: 520, v: 0.5),

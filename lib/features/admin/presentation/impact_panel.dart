@@ -171,6 +171,9 @@ class _ImpactPanelState extends State<ImpactPanel> {
       case BalanceKind.elementStatus:
       case BalanceKind.abyssBoss:
       case BalanceKind.fragmentDrop:
+      case BalanceKind.hitCap:
+      case BalanceKind.combo:
+      case BalanceKind.curve:
         return const _Plan();
     }
   }
@@ -372,8 +375,11 @@ class _ImpactPanelState extends State<ImpactPanel> {
     final b = c.draftCatalog.enemies[id]!;
     final lv = c.previewLevel;
     final base = ZoneRules.baseLevel(id);
-    final hf = math.max(1.0, ZoneRules.hpScale(lv) / ZoneRules.hpScale(base));
-    final af = math.max(1.0, ZoneRules.atkScale(lv) / ZoneRules.atkScale(base));
+    final cv = c.draftCatalog.curve;
+    final solo = cv.groupHp(1);
+    final hf = solo *
+        math.max(1.0, ZoneRules.hpScale(lv, cv) / ZoneRules.hpScale(base, cv));
+    final af = math.max(1.0, ZoneRules.atkScale(lv, cv) / ZoneRules.atkScale(base, cv));
     return SectionCard(
       title: 'A nivel $lv (1 jugador)',
       child: Column(children: [

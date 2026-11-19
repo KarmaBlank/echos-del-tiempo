@@ -41,7 +41,8 @@ void main() {
     expect(t, contains('+7% ATQ (T5)'));
     // Ímpetu nivel I + 1 de forja = I (sube cada 2).
     expect(t, contains(protoPlain('Ímpetu I:')));
-    expect(t, contains('Forja +1/8 (Poder 1)'));
+    // Nivel de objeto 10: tope min(8, 2 + 10/5) = 4 (combo_balance.md § 2).
+    expect(t, contains('Forja +1/4 (Poder 1)'));
     expect(t, contains('ULT:'));
   });
 

@@ -203,8 +203,13 @@ void main() {
 
     test('sube de a 1 hasta el tope de la rareza, cobra y cambia los stats',
         () {
-      // Común: tope 3 niveles de forja en total.
+      // Común: tope 3 niveles de forja en total (nivel de objeto 5: el
+      // tope por nivel, 2 + 5/5, también es 3; combo_balance.md § 2).
       var p = _warriorL3(credits: 10000);
+      p = p.copyWith(items: [
+        for (final i in p.items)
+          i.baseId == 'espada_bronce' ? i.copyWith(itemLevel: 5) : i,
+      ]);
       final before = progression.derivedStats(p);
       for (var l = 0; l < 3; l++) {
         final next = progression.upgrade(p, 'espada_bronce', UpgradeStat.pow)!;
@@ -219,7 +224,9 @@ void main() {
       // Una Épica llega a 5 en una estadística (tope por estadística).
       var e = p.copyWith(items: [
         for (final i in p.items)
-          i.baseId == 'espada_bronce' ? i.copyWith(rarity: Rarity.epico) : i,
+          i.baseId == 'espada_bronce'
+              ? i.copyWith(rarity: Rarity.epico, itemLevel: 30)
+              : i,
       ]);
       e = progression.upgrade(e, 'espada_bronce', UpgradeStat.pow)!;
       e = progression.upgrade(e, 'espada_bronce', UpgradeStat.pow)!;

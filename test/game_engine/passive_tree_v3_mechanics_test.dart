@@ -39,6 +39,8 @@ Combatant _hero({
       id: id,
       name: id,
       isPlayer: true,
+      // Pulso lleno: las pruebas de mecánicas no miden el Pulso.
+      pulse: BattleEngine.pulseMax,
       hp: hp,
       maxHp: 100,
       speed: 10,
@@ -59,6 +61,7 @@ Combatant _hero({
 Combatant _foe(String id,
         {int hp = 100,
         double breakBase = 0,
+        bool fissured = false,
         int vulnerable = 0,
         Map<StatusKind, int>? st,
         List<TimedEffect>? fx}) =>
@@ -75,6 +78,7 @@ Combatant _foe(String id,
       statuses: st,
       nextTurn: 50,
       breakBase: breakBase,
+      fissured: fissured,
       vulnerable: vulnerable,
       effects: fx,
     );
@@ -136,9 +140,13 @@ void main() {
     });
 
     test('Demoledor: al quebrar +20 ULT y +25% ATQ 2 turnos', () {
-      final a = _cmd(_engine(), _battle([_hero()], [_foe('e0', breakBase: 10)]), _atk);
+      // Fisurado + Quebrar (combo_balance.md § 5).
+      const q = SkillCommand('quebrar', targetId: 'e0');
+      final a = _cmd(_engine(),
+          _battle([_hero(skills: ['quebrar'])], [_foe('e0', breakBase: 10, fissured: true)]), q);
       final b = _cmd(_engine(),
-          _battle([_hero(mech: {'demoledor'})], [_foe('e0', breakBase: 10)]), _atk);
+          _battle([_hero(mech: {'demoledor'}, skills: ['quebrar'])],
+              [_foe('e0', breakBase: 10, fissured: true)]), q);
       expect(_e(b).broken, isTrue);
       expect(_proc(b, 'demoledor'), isTrue);
       expect(_p(b).ult - _p(a).ult, closeTo(20, 1e-9));
@@ -255,7 +263,7 @@ void main() {
     test('Aguacero: habilidades a todos +15%', () {
       final st = _cmd(_engine(), _battle([archer({'aguacero'})], foes()), _sk('rafaga'));
       for (final f in st.state.enemies) {
-        expect(f.hp, 100 - 21); // 18 × 1.15
+        expect(f.hp, 100 - 12); // 18 × 0.6 (área) × 1.15
       }
       // A un solo objetivo no aplica.
       final one = _cmd(_engine(), _battle([archer({'aguacero'})], foes()), _atk);
@@ -272,7 +280,8 @@ void main() {
       final st = _cmd(_engine(), _battle([archer({'diluvio'})], foes()), _sk('rafaga'));
       expect(_proc(st, 'diluvio'), isTrue);
       for (final f in st.state.enemies) {
-        expect(f.hp, 100 - 18 - 7);
+        // 18 × 0.6 (área) = 11; la repetición (secundaria) 40% de 18 = 7.
+        expect(f.hp, 100 - 11 - 7);
       }
     });
   });
@@ -422,14 +431,16 @@ void main() {
           ], [_foe('e0')], current: 'p2'),
           'p2',
           _atk)!;
-      expect(_e(ally).hp, 79);
+      // 21 × 0.92 (mitigación de grupo, 2 jugadores) = 19.3 → 19.
+      expect(_e(ally).hp, 81);
     });
 
     test('Carga Conjunta: al quebrar, grupo +10% ATQ', () {
       final st = _cmd(_engine(), _battle([
-        _hero(mech: {'cargaConjunta'}),
+        _hero(mech: {'cargaConjunta'}, skills: ['quebrar']),
         _hero(id: 'p2', nextTurn: 50),
-      ], [_foe('e0', breakBase: 10)]), _atk);
+      ], [_foe('e0', breakBase: 10, fissured: true)]),
+          const SkillCommand('quebrar', targetId: 'e0'));
       for (final id in ['p1', 'p2']) {
         expect(_p(st, id).effectFrom('cargaConjunta', BuffStat.attack)!.value,
             0.10);

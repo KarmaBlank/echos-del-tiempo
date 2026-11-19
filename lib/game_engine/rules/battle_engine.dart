@@ -8,10 +8,12 @@ import '../data/game_catalog.dart';
 import '../data/passive_mechanics.dart' show mechanicById;
 import '../data/skills_catalog.dart';
 import '../data/summoner_catalog.dart';
+import '../data/zones_catalog.dart' show kEnemyBaseLevel;
 import '../models/battle_command.dart';
 import '../models/battle_event.dart';
 import '../models/battle_state.dart';
 import '../models/enemy_def.dart';
+import '../models/item.dart' show ModStat;
 import '../models/passive_mechanic.dart';
 import '../models/skill.dart';
 import '../models/status.dart';
@@ -20,6 +22,7 @@ import 'abyss_rules.dart';
 import 'dual_rules.dart';
 import 'family_rules.dart';
 import 'js_math.dart';
+import 'skill_requirements.dart';
 import 'stats_calculator.dart';
 import 'summon_rules.dart';
 
@@ -91,20 +94,9 @@ class BattleEngine {
   /// pueden apagarlas.
   final bool familiesEnabled;
 
-  // ---- quiebre: llenado por tipo de acción ----
-  static const breakAttack = 1.0;
-  static const breakPhysicalSkill = 1.3;
-  static const breakMagicalSkill = 0.8;
-  static const breakUltimate = 2.0;
-  static const breakDual = 1.5;
-
-  /// Daño secundario de notables (rebotes, explosiones, eco, reflejo,
-  /// ataque gratis).
-  static const breakSecondary = 0.5;
-  static const breakCrit = 1.5;
-
-  /// Aturdir / congelar aplicado por el grupo.
-  static const breakStatusFlat = 15.0;
+  // ---- quiebre (combo_balance.md § 5) ----
+  // Los puntos por acción, el umbral del élite y el del grupo están en
+  // `ComboRulesDef` (catálogo, editable en el admin de balance).
 
   /// Baja al empezar el turno del enemigo (fracción del umbral).
   static const breakDecay = 0.10;
@@ -113,8 +105,6 @@ class BattleEngine {
   static const vulnerableTurns = 2;
   static const vulnerableBonus = 0.5;
 
-  /// Élite: umbral × 1.5.
-  static const eliteBreak = 1.5;
 
   /// Golpe esquivado por un común (Eco Sombrío): solo lo roza.
   static const evadeFactor = 0.3;
@@ -122,6 +112,13 @@ class BattleEngine {
   /// Pasar turno (v0.8.3, combat.md § "Pasar turno"): el próximo turno
   /// llega en IV × esto (Defender: × 0.7; acción normal: × 1).
   static const passTurnFactor = 0.5;
+
+  // ---- Pulso (combo_balance.md § 5.2) ----
+  /// Tope de Pulso por jugador.
+  static const pulseMax = 5;
+
+  /// Pulso con el que arranca la pelea.
+  static const pulseStart = 1;
 
   // ---- ULT enemiga ----
   /// Carga por turno propio.
@@ -168,14 +165,27 @@ class BattleEngine {
     bool elite = false,
     String? triggeredBy,
   }) {
-    final mult = 0.55 + 0.45 * party.length;
+    // Vida en cooperativo (combo_balance.md § 3.3): 0.6 + 0.3 × jugadores
+    // (antes 0.55 + 0.45 × jugadores).
+    final curve = catalog.curve;
+    final mult = curve.groupHp(party.length);
+    final solo = party.length == 1;
     final first = catalog.enemies[enemyTypes.first]!;
+    // Jefe en solitario: escolta recortada (§ 3.3, ajuste del paso 5).
+    final types = solo && first.boss
+        ? enemyTypes.take(1 + math.max(0, curve.soloEscorts)).toList()
+        : enemyTypes;
 
     final enemies = <Combatant>[];
-    for (var i = 0; i < enemyTypes.length; i++) {
-      final d = catalog.enemies[enemyTypes[i]]!;
+    for (var i = 0; i < types.length; i++) {
+      final d = catalog.enemies[types[i]]!;
       final el = elite && i == 0;
-      final hp = jsRound(d.hp * mult * (el ? 2.6 : 1));
+      // Jefe en solitario (§ 3.3, ajuste del paso 5).
+      final soloBoss = solo && d.boss;
+      final hp = jsRound(d.hp *
+          mult *
+          (el ? 2.6 : 1) *
+          (soloBoss ? curve.soloBossHp : 1));
       final ultId = el ? kEliteUltId : d.ultId;
       enemies.add(Combatant(
         id: 'e$i',
@@ -184,7 +194,10 @@ class BattleEngine {
         hp: hp,
         maxHp: hp,
         speed: d.speed * (el ? 1.1 : 1),
-        attack: jsRound(d.attack * (el ? 1.35 : 1)),
+        attack: jsRound(d.attack *
+            (el ? 1.35 : 1) *
+            (soloBoss ? curve.soloBossAtk : 1) *
+            curve.groupAtk(party.length)),
         critChance: el ? 0.15 : (d.boss ? 0.12 : 0.08),
         enemyType: d.id,
         elite: el,
@@ -192,7 +205,13 @@ class BattleEngine {
         areaAttack: d.areaAttack,
         pierce: d.pierce,
         inflicts: d.inflicts,
-        breakBase: breakEnabled ? d.breakMax * mult * (el ? eliteBreak : 1) : 0,
+        // Umbral de quiebre en puntos (combo_balance.md § 5): × grupo y
+        // élite, no escala con la vida.
+        breakBase: breakEnabled
+            ? d.breakMax *
+                catalog.combo.groupBreak(party.length) *
+                (el ? catalog.combo.eliteBreak : 1)
+            : 0,
         ultId: enemyUltsEnabled && catalog.enemyUlts.containsKey(ultId)
             ? ultId
             : null,
@@ -315,6 +334,7 @@ class BattleEngine {
     final p = t.state.current!;
     t.events.add(ActionEvent(p.id, BattleActionKind.defend));
     p.defending = true;
+    t._gainPulse(p);
     t.tickEffects(p);
     p.nextTurn = t.state.clock + interval(p);
     t.state.log = 'Tiempo agotado: ${p.name} se defiende automáticamente';
@@ -391,6 +411,17 @@ class BattleEngine {
         }
       }
     }
+    // Combo de clase (combo_balance.md § 5.2) y Quebrar base del arma
+    // (§ 5.1), al final de todo.
+    for (final combo in kClassComboSkill[cls.id] ?? const <String>[]) {
+      if (catalog.skills.containsKey(combo) && !skills.contains(combo)) {
+        skills.add(combo);
+      }
+    }
+    final quebrar = quebrarSkillFor(w.type);
+    if (catalog.skills.containsKey(quebrar) && !skills.contains(quebrar)) {
+      skills.add(quebrar);
+    }
     final c = Combatant(
       id: m.id,
       name: m.name,
@@ -414,12 +445,16 @@ class BattleEngine {
     _refreshStats(c);
     c.hp = math.min(m.hp ?? c.maxHp, c.maxHp);
     c.mp = math.min(m.mp ?? c.maxMp.toDouble(), c.maxMp.toDouble());
+    c.pulse = pulseStart;
     return c;
   }
 
   /// `stats(p)` dentro de la batalla: recalcula con el bonus de DEF actual.
   void _refreshStats(Combatant c) {
-    final d = stats.calculate(c.build!.withBonusDefense(c.bonusDefense));
+    // Sin build (kit del TUTORIAL): stats fijas.
+    final build = c.build;
+    if (build == null) return;
+    final d = stats.calculate(build.withBonusDefense(c.bonusDefense));
     c
       ..maxHp = d.maxHp
       ..maxMp = d.maxMp
@@ -492,13 +527,22 @@ class _Action {
   /// Factor del próximo turno (Sed de Sangre: 0.5).
   double turnFactor = 1;
 
-  /// Llenado de la barra de quiebre por punto de daño de los golpes
-  /// primarios (ataque 1.0, habilidad física 1.3, mágica 0.8, ULT 2.0,
-  /// dúo 1.5).
-  double breakFactor = BattleEngine.breakAttack;
+  /// Puntos de quiebre de la acción por objetivo (combo_balance.md § 5):
+  /// ataque 4, habilidad física 6, mágica 4, ULT 12, dúo 10, Quebrar
+  /// base 1. `null`: los del ataque básico.
+  double? breakPoints;
+
+  /// La acción tiene Quebrar (ULT, dúo, habilidad con `breaks`).
+  bool canBreak = false;
+
+  /// Objetivos que ya recibieron los puntos de quiebre de esta acción.
+  final breakHit = <String>{};
 
   /// Dúo (la postura del Caballero Hueco no lo bloquea).
   bool dual = false;
+
+  /// Ya ganó el +1 de Pulso por debilidad o reacción (una vez por acción).
+  bool pulsed = false;
 }
 
 /// Contexto de una reacción para las mecánicas del árbol (§ 8 de
@@ -538,6 +582,10 @@ class _Turn {
   /// Enemigos quebrados en este paso (su vulnerabilidad empieza a
   /// contar en el próximo turno del grupo).
   final _brokenNow = <String>{};
+
+  /// Enemigos que quedaron Fisurados en este paso: Quebrar los quiebra
+  /// recién desde el paso siguiente (dos pasos, combo_balance.md § 5).
+  final _fissuredNow = <String>{};
 
   /// Enemigos cuya postura ya bloqueó en este paso (un evento por paso;
   /// también los ecos que recibieron daño reducido).
@@ -600,6 +648,9 @@ class _Turn {
       best.defending = false;
       best.protecting = false;
       best.extraTurn = best.extraTurn == 1 ? 2 : 0;
+      // Pulso (combo_balance.md § 5.2): +1 al empezar su turno.
+      best.chained = false;
+      _gainPulse(best);
       state.log = 'Turno de ${best.name}';
     } else {
       _decayBreak(best);
@@ -656,6 +707,12 @@ class _Turn {
       state.currentId = null;
       _checkEnd();
     }
+  }
+
+  /// +[n] de Pulso a un jugador, con tope (combo_balance.md § 5.2).
+  void _gainPulse(Combatant p, [int n = 1]) {
+    if (!p.isPlayer || p.isSummon) return;
+    p.pulse = math.min(BattleEngine.pulseMax, p.pulse + n);
   }
 
   void endTurn() {
@@ -904,8 +961,12 @@ class _Turn {
       if (turns <= 0) return false;
       a.statuses[st.kind] = math.max(a.stacks(st.kind), turns);
     } else {
-      a.statuses[st.kind] =
-          math.min(st.kind.maxStacks, a.stacks(st.kind) + n);
+      // Quemadura y Veneno: tope de stacks del catálogo (combo_balance.md
+      // § 4: 30).
+      final cap = st.kind == StatusKind.burn || st.kind == StatusKind.poison
+          ? engine.catalog.combo.stackCap
+          : st.kind.maxStacks;
+      a.statuses[st.kind] = math.min(cap, a.stacks(st.kind) + n);
     }
     if (st.kind == StatusKind.holy) a.holyTurns = 3;
     if (st.kind == StatusKind.regen) a.statuses[StatusKind.regen] = 3;
@@ -919,7 +980,7 @@ class _Turn {
     events.add(StatusAppliedEvent(a.id, st.kind, n, weakness: weak > 0));
     if (source != null && source.isPlayer && !a.isPlayer) {
       if (st.kind == StatusKind.stun || st.kind == StatusKind.freeze) {
-        _addBreak(a, BattleEngine.breakStatusFlat);
+        _addBreak(a, engine.catalog.combo.breakStatus);
       }
       if (st.kind == StatusKind.stun && !a.boss) _extendStun(source, a);
       if (primary) {
@@ -1169,7 +1230,7 @@ class _Turn {
           if (part <= 0) return 0;
           events.add(ProcEvent(g.id, m.id, targetId: p.id));
           final taken = part - _absorb(g, part);
-          g.hp = math.max(0, g.hp - taken);
+          g.hp = math.max(g.practice ? 1 : 0, g.hp - taken);
           events.add(DamageEvent(g.id, taken, sourceId: m.id));
           _notes.add('${m.name}: ${g.name} recibe $part por ${p.name}');
           if (!g.alive) {
@@ -1187,6 +1248,8 @@ class _Turn {
   /// Inmortal / Mártir: el golpe mortal deja a [p] en 1 HP (1 vez por
   /// batalla y por dueño). Devuelve el daño que pasa.
   int _cheatDeath(Combatant p, int taken) {
+    // De práctica (combat_tutorial.md § 3): queda en 1 de vida.
+    if (p.practice) return math.max(0, p.hp - 1);
     // Primero la propia (Inmortal), después el aura de un aliado (Mártir).
     for (final pass in [false, true]) {
       for (final owner in pass ? state.party : [p]) {
@@ -1576,6 +1639,22 @@ class _Turn {
     return total;
   }
 
+  /// Puntos de quiebre de la acción en curso de [a] sobre [e]
+  /// (combo_balance.md § 5): los de la acción, +50% a una debilidad, ×
+  /// (1 + quiebre extra de la habilidad, del árbol / pasivas de arma, del
+  /// afijo "rompedor" y de las armas pesadas).
+  double _breakPoints(Combatant a, Combatant e, {required bool weak}) {
+    final combo = engine.catalog.combo;
+    var pts = _act?.breakPoints ?? combo.breakAttack;
+    if (weak) pts *= 1 + combo.breakWeak;
+    final bonus = _breakBonus(a, e) +
+        (_act?.skill?.breakBonus ?? 0) +
+        SummonRules.affix(a.build, ModStat.breakPower) *
+            ModStat.breakPower.scale +
+        (kHeavyWeaponTypes.contains(a.weaponType) ? combo.heavyBreak : 0);
+    return pts * (1 + bonus);
+  }
+
   /// ATQ efectivo: con buffs (Represalia) y Último Aliento.
   int _atk(Combatant p) {
     final b =
@@ -1660,6 +1739,18 @@ class _Turn {
       mult *= 1 + taken;
       mods.add('× ${fm(1 + taken)} Marca');
     }
+    // Área (combo_balance.md § 4): las habilidades a todos pegan menos
+    // por blanco; sus estados entran completos. Las ULT no.
+    final areaSkill = primary &&
+        sk0 != null &&
+        sk0.allTargets &&
+        !(_act?.ultimate ?? false) &&
+        !(_act?.dual ?? false);
+    final areaMult = engine.catalog.combo.areaMult;
+    if (areaSkill && areaMult != 1) {
+      mult *= areaMult;
+      mods.add('× ${fm(areaMult)} área');
+    }
     final vul = e.broken;
     if (vul) {
       mult *= 1 + BattleEngine.vulnerableBonus;
@@ -1672,13 +1763,12 @@ class _Turn {
     }
     // Familia: debilidades y resistencias por tipo de daño
     // (bestiary.md § 1.3).
-    final affinity = _familyMods(
-        family,
-        {
-          ...(tags ?? skillDamageTags(_act?.skill)),
-          if (damageTagOf(el) case final t?) t,
-        },
-        mods);
+    final hitTags = {
+      ...(tags ?? skillDamageTags(_act?.skill)),
+      if (damageTagOf(el) case final t?) t,
+    };
+    final affinity = _familyMods(family, hitTags, mods);
+    final weakHit = familyFactors(family, hitTags).any((f) => f.weak);
     mult *= affinity;
     // Reacción elemental (una por golpe) o golpe físico a un Quebradizo
     // (elemental_reactions.md § 2 y § 7). Si el elemento propio del golpe
@@ -1746,11 +1836,46 @@ class _Turn {
       mods.add('× ${fm(BattleEngine.evadeFactor)} ESQUIVA');
       events.add(BossMechanicEvent(e.id, BossMechanicPhase.evaded));
     }
+    // Mitigación de grupo (combo_balance.md § 3.3): todo el daño directo
+    // al enemigo, incluido el plano, salvo los golpes que detonan una
+    // reacción (y las Convergencias, que no pasan por acá).
+    var mitigation = 1.0;
+    if (a != null && !e.isPlayer && reaction == null) {
+      final curve = engine.catalog.curve;
+      final n = state.party.length;
+      final gm = curve.groupMitigationMult(n);
+      if (gm != 1) {
+        mult *= gm;
+        mitigation *= gm;
+        mods.add('× ${fm(gm)} grupo ($n jug.)');
+      }
+      final zc = curve.zoneCMult(e.level);
+      if (zc != 1) {
+        mult *= zc;
+        mitigation *= zc;
+        mods.add('× ${fm(zc)} zona C');
+      }
+    }
     final crit = _rand() < chance;
-    final dmg = abyss == 0
+    var dmg = abyss == 0 || affinity == 0
         ? 0
         : math.max(1, jsRound(base * (crit ? cm : 1) * mult));
-    final breakBonus = a == null ? 0.0 : _breakBonus(a, e);
+    // Tope por golpe sin debilidad (combo_balance.md § 3.2).
+    if (a != null && dmg > 0) {
+      final cap = _hitCapFor(a, e,
+          weak: weakHit, reacted: reaction != null, broken: vul);
+      if (cap != null && dmg > cap) {
+        mods.add('→ $cap (resiste el golpe)');
+        dmg = cap;
+      }
+    }
+    // Quebrar (combo_balance.md § 5): el golpe quiebra a un Fisurado de
+    // antes de este paso. Se mira antes de que el golpe sume puntos.
+    final quebrar = primary &&
+        a != null &&
+        (_act?.canBreak ?? false) &&
+        e.fissured &&
+        !_fissuredNow.contains(e.id);
     final before = e.hp;
     e.hp = math.max(0, e.hp - dmg);
     final shift = _gatePhase(e);
@@ -1767,7 +1892,8 @@ class _Turn {
         affinity: affinity));
     if (!e.alive) _knockedOut(e);
     if (shift) _transform(e);
-    _chargeUlt(e, lost);
+    // La mitigación no atrasa la ULT enemiga: carga como sin mitigar.
+    _chargeUlt(e, lost, scale: mitigation > 0 ? 1 / mitigation : 1);
     if (reaction != null) {
       _react(a, e, reaction, dmg, hitStatus: hitStatus ?? _act?.skill?.status);
     } else if (shatter) {
@@ -1776,15 +1902,27 @@ class _Turn {
     // Avatar del Pacto (summoner.md § 7): los estados de lo absorbido.
     if (primary && a != null) _avatarHit(a, e);
     // La transformación vacía la barra: el golpe que la causa no llena.
-    if (!shift) {
-      _addBreak(
-          e,
-          dmg *
-              (primary
-                  ? (_act?.breakFactor ?? BattleEngine.breakAttack)
-                  : BattleEngine.breakSecondary) *
-              (crit ? BattleEngine.breakCrit : 1) *
-              (1 + breakBonus));
+    // Puntos de quiebre (§ 5): una vez por objetivo y acción, sin mirar el
+    // daño; los golpes secundarios no suman.
+    if (!shift && e.alive) {
+      if (quebrar) {
+        _break(e);
+      } else if (primary &&
+          a != null &&
+          _act != null &&
+          _act!.breakHit.add(e.id)) {
+        _addBreak(e, _breakPoints(a, e, weak: weakHit));
+      }
+    }
+    // Pulso: +1 por golpe a una debilidad o reacción, una vez por acción.
+    if (primary &&
+        a != null &&
+        a.isPlayer &&
+        _act != null &&
+        !_act!.pulsed &&
+        (weakHit || reaction != null)) {
+      _act!.pulsed = true;
+      _gainPulse(a);
     }
     final hit = _Hit(dmg, crit, e, mods);
     if (primary && a != null && _act != null) {
@@ -1825,7 +1963,6 @@ class _Turn {
     if (!e.alive) _knockedOut(e);
     if (shift) _transform(e);
     _chargeUlt(e, lost);
-    if (!shift) _addBreak(e, dmg * BattleEngine.breakSecondary);
     return dmg;
   }
 
@@ -2037,34 +2174,8 @@ class _Turn {
                 source: by);
         _notes.add('¡ELECTROCUCIÓN! ${t.name} ×${fm(def.damageMult)}'
             '${stunned ? ' y queda aturdido' : ''}');
-      case ReactionKind.explosionToxica:
-        t.statuses[StatusKind.poison] = 0;
-        final base = math.max(1, jsRound(hitDamage * def.perStack * consumed));
-        int capped(Combatant c, int d) => c.boss && def.bossCap > 0
-            ? math.min(d, math.max(1, jsRound(c.maxHp * def.bossCap)))
-            : d;
-        amount = t.alive ? capped(t, base) : 0;
-        final others = _sideOf(t);
-        if (def.splash > 0) {
-          final sp = math.max(1, jsRound(base * def.splash));
-          for (final c in others) {
-            splash[c.id] = capped(c, sp);
-          }
-        }
-        events.add(ReactionEvent(t.id, k, amount,
-            sourceId: by?.id, consumedStacks: consumed, splash: splash));
-        if (amount > 0) _rawDamage(by, t, amount, src);
-        for (final c in others) {
-          final d = splash[c.id];
-          if (d != null) _rawDamage(by, c, d, src);
-        }
-        final capNote = t.boss && amount < base ? ' (tope de jefe)' : '';
-        final splashNote = splash.isEmpty
-            ? ''
-            : ' · salpica a ${splash.length} '
-                '(${splash.values.map((d) => '$d').join(', ')})';
-        _notes.add('¡EXPLOSIÓN TÓXICA! $consumed Veneno × $hitDamage = '
-            '$amount a ${t.name}$capNote$splashNote');
+      case ReactionKind.explosionToxica || ReactionKind.combustion:
+        amount = _converge(by, t, k, def, consumed, splash);
       case ReactionKind.congelacionSubita:
         t.statuses[StatusKind.wet] = 0;
         final n = StatusKind.freeze.maxStacks - t.stacks(StatusKind.freeze);
@@ -2072,9 +2183,6 @@ class _Turn {
         events.add(ReactionEvent(t.id, k, 0,
             sourceId: by?.id, consumedStacks: consumed));
         events.add(StatusAppliedEvent(t.id, StatusKind.freeze, n));
-        if (by != null && by.isPlayer && !t.isPlayer) {
-          _addBreak(t, BattleEngine.breakStatusFlat);
-        }
         _notes.add('¡CONGELACIÓN SÚBITA! ${t.name} queda CONGELADO');
       case ReactionKind.derretir:
         events.add(ReactionEvent(t.id, k, amount,
@@ -2103,10 +2211,87 @@ class _Turn {
           _notes.add('¡CORTOCIRCUITO! (nadie a quien saltar)');
         }
     }
+    // Quiebre (combo_balance.md § 5): toda reacción suma puntos; una
+    // Convergencia además tiene Quebrar.
+    if (by != null && by.isPlayer && !t.isPlayer && t.alive) {
+      if (k.convergence && t.fissured && !_fissuredNow.contains(t.id)) {
+        _break(t);
+      } else {
+        _addBreak(t, engine.catalog.combo.breakReaction);
+      }
+    }
+    // Combo entre jugadores: si detona otro, carga de ULT para los dos.
+    if (k.convergence && by != null && by.isPlayer && primer != null &&
+        primer != by.id) {
+      final q = state.party.where((c) => c.id == primer).firstOrNull;
+      final bonus = engine.catalog.combo.ultBonus;
+      if (q != null && q.alive && bonus > 0) {
+        by.ult = math.min(100, by.ult + bonus);
+        q.ult = math.min(100, q.ult + bonus);
+        _notes.add('combo de ${q.name} y ${by.name}: +${fm(bonus)} de ULT '
+            'a los dos');
+      }
+    }
     _reactionTriggers(by, t, k, hitDamage, consumed, primer,
         {t.id, ...splash.keys}, hitStatus);
     // Sello de un Jefe del Abismo: lo rompe la reacción pedida.
     _abyssReacted(by, t, k);
+  }
+
+  /// Convergencia [k] (combo_balance.md § 4): consume los [consumed]
+  /// stacks de su estado y pega `vida máx. × perStack × stacks`, × débil /
+  /// resiste al elemento que detona, con tope por común / élite / jefe y
+  /// salpicadura a los demás del bando. Daño directo: ni tope por golpe ni
+  /// mitigaciones. Llena [splash] y devuelve el daño al objetivo.
+  int _converge(Combatant? by, Combatant t, ReactionKind k, ReactionDef def,
+      int consumed, Map<String, int> splash) {
+    final combo = engine.catalog.combo;
+    t.statuses[k.primer] = 0;
+    // Afinidad de la familia al elemento que detona.
+    double affinity(Combatant c) {
+      final tag = damageTagOf(k.detonator);
+      if (tag == null) return 1;
+      final fs = familyFactors(_fam(c), {tag});
+      if (fs.any((f) => f.value == 0)) return 0;
+      if (fs.any((f) => f.weak)) return combo.weakMult;
+      if (fs.any((f) => f.value < 1)) return combo.resistMult;
+      return 1;
+    }
+
+    int capped(Combatant c, double raw) {
+      final cap = def.capFor(elite: c.elite, boss: c.boss);
+      final d = cap > 0 ? math.min(raw, c.maxHp * cap) : raw;
+      return d <= 0 ? 0 : math.max(1, jsRound(d));
+    }
+
+    final pct = def.perStack * consumed;
+    final aff = affinity(t);
+    final raw = t.maxHp * pct * aff;
+    final amount = t.alive ? capped(t, raw) : 0;
+    final others = _sideOf(t);
+    if (def.splash > 0 && amount > 0) {
+      for (final c in others) {
+        final d = capped(c, amount * def.splash * affinity(c));
+        if (d > 0) splash[c.id] = d;
+      }
+    }
+    events.add(ReactionEvent(t.id, k, amount,
+        sourceId: by?.id, consumedStacks: consumed, splash: splash));
+    if (amount > 0) _rawDamage(by, t, amount, reactionSourceId(k));
+    for (final c in others) {
+      final d = splash[c.id];
+      if (d != null) _rawDamage(by, c, d, reactionSourceId(k));
+    }
+    final affNote = aff == 1 ? '' : ' × ${fm(aff)}';
+    final capNote = amount > 0 && amount < jsRound(raw) ? ' (tope)' : '';
+    final splashNote = splash.isEmpty
+        ? ''
+        : ' · salpica a ${splash.length} '
+            '(${splash.values.map((d) => '$d').join(', ')})';
+    _notes.add('¡${k.label.toUpperCase()}! $consumed ${k.primer.label} × '
+        '${fm(def.perStack * 100)}% = ${fm(pct * 100)}%$affNote → $amount a '
+        '${t.name}$capNote$splashNote');
+    return amount;
   }
 
   /// Disparadores del árbol de una reacción que detonó [by] sobre [t]
@@ -2178,9 +2363,8 @@ class _Turn {
     if (!t.alive) _knockedOut(t);
     if (shift) _transform(t);
     _chargeUlt(t, lost);
-    if (!shift && by != null && by.isPlayer) {
-      _addBreak(t, amount * BattleEngine.breakSecondary);
-    }
+    // Daño directo (reacciones, curas que dañan): 0 puntos de quiebre
+    // (combo_balance.md § 5); la reacción suma los suyos en `_react`.
     return amount;
   }
 
@@ -2204,10 +2388,31 @@ class _Turn {
     var m = 1.0;
     for (final f in familyFactors(r, tags)) {
       m *= f.value;
-      mods.add('× ${fm(f.value)} ${f.weak ? 'DÉBIL' : 'RESISTE'} '
-          '${f.tag.label}');
+      mods.add(f.value == 0
+          ? '× 0 INMUNE ${f.tag.label}'
+          : '× ${fm(f.value)} ${f.weak ? 'DÉBIL' : 'RESISTE'} '
+              '${f.tag.label}');
     }
     return m;
+  }
+
+  /// Tope de daño de un golpe de [a] a [e] (combo_balance.md § 3.2), o
+  /// `null` si no hay: golpe a una debilidad, reacción, enemigo quebrado
+  /// o [a] con `overLevel` o más niveles sobre [e].
+  int? _hitCapFor(Combatant a, Combatant e,
+      {required bool weak, required bool reacted, required bool broken}) {
+    if (e.isPlayer || weak || reacted || broken) return null;
+    final rule = engine.catalog.hitCap;
+    final pl = a.build?.level ?? 0;
+    final el = e.level > 0 ? e.level : (kEnemyBaseLevel[e.enemyType] ?? 1);
+    if (pl > 0 && pl - el >= rule.overLevel) return null;
+    final f = rule.fraction(
+        elite: e.elite,
+        boss: e.boss,
+        partySize: state.party.length,
+        zoneC: engine.catalog.curve.isZoneC(e.level));
+    if (f >= 1) return null;
+    return math.max(1, (e.maxHp * f).ceil());
   }
 
   /// Las curas de habilidad del grupo dañan a las familias con
@@ -2238,6 +2443,14 @@ class _Turn {
   /// Un actor cae. Si es un enemigo: cuenta para `onKill` de la acción y
   /// dispara `onEnemyDeath` (Plaga) del primer jugador que la tenga.
   void _knockedOut(Combatant c) {
+    // De práctica (combat_tutorial.md § 3): queda en 1 y no cae.
+    if (c.practice) {
+      c.hp = 1;
+      _notes.add(c.isPlayer
+          ? '${c.name} aguanta con 1 de vida (práctica)'
+          : 'el ${c.name.toLowerCase()} se recompone');
+      return;
+    }
     events.add(KnockedOutEvent(c.id));
     if (c.isPlayer) {
       _allyDown(c);
@@ -2729,7 +2942,8 @@ class _Turn {
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
         target.nextTurn += _iv(target) *
             fx.value *
-            (_fam(target)?.delayMult ?? 1);
+            (_fam(target)?.delayMult ?? 1) *
+            _delayFalloff(target);
         events.add(DelayedEvent(target.id));
         _notes.add('${m.name}: ${target.name} se retrasa ${_pct(fx.value)}');
       case ProcEffectKind.repeatSkill:
@@ -2897,10 +3111,16 @@ class _Turn {
 
   static double _r1(double v) => (v * 10).round() / 10;
 
-  /// Suma [amount] a la barra de quiebre de [e]; al llegar al umbral,
-  /// ¡QUIEBRE!. Quebrado, la barra no se llena.
+  /// Suma [amount] puntos a la barra de quiebre de [e]; al llegar al
+  /// umbral queda **Fisurado** (combo_balance.md § 5): recién un golpe con
+  /// Quebrar lo quiebra. Quebrado o Fisurado, la barra no se llena.
   void _addBreak(Combatant e, double amount) {
-    if (e.isPlayer || !e.alive || !e.hasBreak || e.broken || amount <= 0) {
+    if (e.isPlayer ||
+        !e.alive ||
+        !e.hasBreak ||
+        e.broken ||
+        e.fissured ||
+        amount <= 0) {
       return;
     }
     // Familia (bestiary.md § 1): los constructos se quiebran antes.
@@ -2911,10 +3131,26 @@ class _Turn {
     final max = e.breakMax;
     e.breakGauge = math.min(max, _r1(e.breakGauge + amount));
     if (e.breakGauge >= max) {
-      _break(e);
+      e.fissured = true;
+      _fissuredNow.add(e.id);
+      events.add(BreakEvent(e.id, BreakPhase.fissured, max, max));
+      _notes.add('¡${e.name} queda FISURADO! (un golpe con Quebrar lo '
+          'quiebra antes de su turno)');
     } else {
       events.add(BreakEvent(e.id, BreakPhase.fill, e.breakGauge, max));
     }
+  }
+
+  /// Fisurado que llega a su turno sin quebrarse: la barra vuelve a la
+  /// mitad (combo_balance.md § 5).
+  void _steady(Combatant e) {
+    if (!e.fissured) return;
+    final max = e.breakMax;
+    e
+      ..fissured = false
+      ..breakGauge = _r1(max * engine.catalog.combo.steadyGauge);
+    events.add(BreakEvent(e.id, BreakPhase.steadied, e.breakGauge, max));
+    _notes.add('${e.name} se recompone (ya no está Fisurado)');
   }
 
   /// Quiebre: pierde su próximo turno, su ULT vuelve a 0 (y se cancela
@@ -2923,6 +3159,7 @@ class _Turn {
     final max = e.breakMax;
     final cancelled = e.ultPending;
     e
+      ..fissured = false
       ..breakGauge = max
       ..vulnerable = BattleEngine.vulnerableTurns
       ..breakSkip = true
@@ -2964,6 +3201,10 @@ class _Turn {
   /// Al empezar su turno, la barra baja 10% del umbral (si no está
   /// quebrado).
   void _decayBreak(Combatant e) {
+    if (e.fissured) {
+      _steady(e);
+      return;
+    }
     if (!e.alive || !e.hasBreak || e.broken || e.breakGauge <= 0) return;
     final max = e.breakMax;
     e.breakGauge =
@@ -2989,11 +3230,23 @@ class _Turn {
   }
 
   /// Carga de ULT enemiga por vida perdida: +1 cada 2%.
-  void _chargeUlt(Combatant e, int lost) {
+  /// Rendimiento decreciente del retraso (combo_balance.md § 3.3, ajuste
+  /// de los pasos 5-6): cada retraso del grupo a un enemigo desde su
+  /// último turno rinde `delayFalloff` del anterior (1, 0.5, 0.25…).
+  double _delayFalloff(Combatant e) {
+    if (e.isPlayer) return 1;
+    final f = math.pow(engine.catalog.curve.delayFalloff, e.delayStreak);
+    e.delayStreak++;
+    return f.toDouble();
+  }
+
+  /// [scale] compensa la mitigación de grupo (combo_balance.md § 3.3).
+  void _chargeUlt(Combatant e, int lost, {double scale = 1}) {
     // Rebobinar (Jefes del Abismo): lo recibido desde su acción anterior.
     if (lost > 0 && _abyssDef(e) != null) e.abyssTaken += lost;
     if (e.isPlayer || e.ultId == null || e.ultPending || lost <= 0) return;
-    e.ult = math.min(100, e.ult + lost / e.maxHp * BattleEngine.enemyUltPerHp);
+    e.ult = math.min(
+        100, e.ult + lost * scale / e.maxHp * BattleEngine.enemyUltPerHp);
   }
 
   // ---------------- enemigos ----------------
@@ -3001,6 +3254,7 @@ class _Turn {
   /// `enemyAct`. Con ULT (jefes y élites): con la carga llena avisa (pierde
   /// la acción) y en su siguiente turno la lanza.
   void enemyAct(Combatant e) {
+    e.delayStreak = 0;
     if (_aliveParty.isEmpty) return;
     final mech = _mechanicOf(e);
     if (mech != null) _mechanicTurn(e, mech);
@@ -3590,7 +3844,11 @@ class _Turn {
       ..brittle = false
       ..attack = jsRound(e.attack * (m.power > 0 ? m.power : 1))
       ..actions = 0;
-    if (!e.broken) e.breakGauge = 0;
+    if (!e.broken) {
+      e
+        ..breakGauge = 0
+        ..fissured = false;
+    }
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.phaseShift, value: 2));
     _notes.add('¡${e.name} se transforma! FASE 2: pierde sus estados, ATQ '
         '+${_pct(m.power - 1)} y Colapso Temporal cada ${m.every} acciones');
@@ -3812,16 +4070,26 @@ class _Turn {
             targetId: target.id,
             allTargets: p.keystones.contains('imparable')));
         _attack(p, foes, target);
+        _gainPulse(p);
       case SkillCommand(:final skillId):
         final sk = engine.catalog.skills[skillId];
-        if (sk == null || !p.skillIds.contains(skillId) || p.mp < sk.mp) {
+        // MP, Pulso y precondiciones (combo_balance.md § 5.2): el host
+        // rechaza la acción si falta algo.
+        if (sk == null ||
+            !p.skillIds.contains(skillId) ||
+            SkillRequirements.missing(sk, p, target, foes: foes).isNotEmpty) {
           return false;
         }
-        act.breakFactor = (sk.kind == SkillKind.physical
-                ? BattleEngine.breakPhysicalSkill
-                : BattleEngine.breakMagicalSkill) *
-            (1 + sk.breakBonus);
+        final combo = engine.catalog.combo;
+        act
+          ..breakPoints = kBaseQuebrarIds.contains(sk.id)
+              ? combo.breakQuebrar
+              : sk.kind == SkillKind.physical
+                  ? combo.breakPhysical
+                  : combo.breakMagical
+          ..canBreak = sk.breaks;
         p.mp -= sk.mp;
+        p.pulse -= sk.pulse;
         // Sangría: cuesta vida (nunca deja en menos de 1).
         if (sk.hpCost > 0) {
           final cost = math.min(p.hp - 1, jsRound(p.maxHp * sk.hpCost));
@@ -3857,14 +4125,16 @@ class _Turn {
         act
           ..skill = sk
           ..ultimate = true
-          ..breakFactor = BattleEngine.breakUltimate;
+          ..breakPoints = engine.catalog.combo.breakUltimate
+          ..canBreak = true;
         _useSkill(p, sk, foes, target, ultimate: true);
         _skillExtras(p, sk);
         _fire(ProcTrigger.onSkill, p);
         _fire(ProcTrigger.onUltimate, p);
       case DualCommand(:final partnerId, :final dualId):
         act
-          ..breakFactor = BattleEngine.breakDual
+          ..breakPoints = engine.catalog.combo.breakDual
+          ..canBreak = true
           ..dual = true;
         if (!_dual(p, partnerId, dualId, foes)) return false;
       case ItemCommand(:final item, :final targetPlayerId):
@@ -3875,6 +4145,7 @@ class _Turn {
       case DefendCommand():
         events.add(ActionEvent(p.id, BattleActionKind.defend));
         p.defending = true;
+        _gainPulse(p);
         state.log = '${p.name} se defiende (actúa antes)';
         _act = null;
         tickEffects(p);
@@ -3884,11 +4155,17 @@ class _Turn {
       case PassCommand():
         // Sin acción: no carga ULT, no defiende, no dispara procs ni
         // emite ActionEvent (los eventos siguen siendo los de v0.8.2).
-        state.log = '${p.name} pasa el turno (el próximo llega antes)';
+        // Después de una Instante ya actuó: termina el turno sin el
+        // adelanto de Pasar (combat.md § "Pulso e Instante").
+        final acted = p.chained;
+        state.log = acted
+            ? '${p.name} termina el turno'
+            : '${p.name} pasa el turno (el próximo llega antes)';
         _act = null;
         _attacker = null;
         tickEffects(p);
-        p.nextTurn = state.clock + _iv(p) * BattleEngine.passTurnFactor;
+        p.nextTurn = state.clock +
+            _iv(p) * (acted ? 1 : BattleEngine.passTurnFactor);
         endTurn();
         return true;
     }
@@ -3925,6 +4202,17 @@ class _Turn {
     }
     _attacker = null;
     _act = null;
+    // Instante (combo_balance.md § 5.2): no termina el turno; una por
+    // turno, y después una acción más.
+    final instant = cmd is SkillCommand && (act.skill?.instant ?? false);
+    if (instant && !p.chained && p.alive) {
+      p.chained = true;
+      _notes.add('Instante: una acción más');
+      _flush();
+      _checkEnd();
+      if (state.ended) state.currentId = null;
+      return true;
+    }
     tickEffects(p);
     if (act.extraTurn) {
       // Danza de Cuchillas: el próximo turno es ahora.
@@ -4240,7 +4528,8 @@ class _Turn {
             e.nextTurn += _iv(e) *
                 tk.delay *
                 delayMult *
-                (_fam(e)?.delayMult ?? 1);
+                (_fam(e)?.delayMult ?? 1) *
+                _delayFalloff(e);
             events.add(DelayedEvent(e.id));
             _fire(ProcTrigger.onDelayApplied, p, target: e);
           }

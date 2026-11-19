@@ -126,8 +126,9 @@ void main() {
       expect(undead, [
         'las curas le hacen daño (100% de la cura)',
         'Sagrado ×1.5',
-        'Fuego ×1.25',
+        'Fuego ×1.5',
         'daño del estado Sagrado ×2',
+        'Hielo ×0.5',
         'Veneno',
       ]);
     });
@@ -149,9 +150,9 @@ void main() {
       expect(familyMultiplier(undead, skillDamageTags(kSkills['consagrar'])),
           1.5);
       final spectre = kFamilyRules[EnemyFamily.spectre]!;
-      // Lanza de Luz: mágico ×1.25 y Sagrado ×1.25.
+      // Lanza de Luz: mágico (normal desde v0.9) y Sagrado ×1.5.
       expect(familyMultiplier(spectre, skillDamageTags(kSkills['lanzaLuz'])),
-          closeTo(1.5625, 1e-9));
+          closeTo(1.5, 1e-9));
     });
 
     test('isFamily (para notables y pasivas)', () {
@@ -233,20 +234,21 @@ void main() {
       expect(b.s.log, contains('× 1.5 DÉBIL Sagrado'));
     });
 
-    test('espectro: el ataque físico ×0.7 (RESISTE físico)', () {
+    test('espectro: el ataque físico ×0.5 (RESISTE físico)', () {
       final b = _B([_foe('ghost')]);
       final step = b.attack();
       final dmg = step.events.whereType<DamageEvent>().single;
-      expect([dmg.amount, dmg.affinity], [14, 0.7]);
-      expect(b.s.log, contains('× 0.7 RESISTE físico'));
+      expect([dmg.amount, dmg.affinity], [10, 0.5]);
+      expect(b.s.log, contains('× 0.5 RESISTE físico'));
     });
 
-    test('elemental de escarcha: hielo ×0.5, inmune a la Congelación', () {
+    test('elemental de escarcha: inmune al daño de hielo y a la Congelación', () {
       final b = _B([_foe('elementalEscarcha')], hero: _hero(skill: 'lanzaH'));
       final step = b.use('lanzaH');
-      // MAG 20 × 1.6 = 32 × 0.85 armadura × 0.5 = 13.6.
-      expect(step.events.whereType<DamageEvent>().single.amount, 14);
-      expect(b.s.log, contains('× 0.5 RESISTE hielo'));
+      // v0.9: inmune al hielo (×0), cartel INMUNE.
+      final dmg = step.events.whereType<DamageEvent>().single;
+      expect([dmg.amount, dmg.affinity], [0, 0]);
+      expect(b.s.log, contains('× 0 INMUNE hielo'));
       expect(b.foe().stacks(StatusKind.freeze), 0);
       expect(step.events.whereType<StatusAppliedEvent>(), isEmpty);
       expect(b.s.log, contains('INMUNE a Congelación'));
@@ -259,11 +261,11 @@ void main() {
       expect(b.foe().stacks(StatusKind.freeze), 3);
     });
 
-    test('aberración: el mágico ×0.75', () {
+    test('aberración: el mágico ×0.5', () {
       final b = _B([_foe('ojoAbismo')], hero: _hero(skill: 'misil'));
       final step = b.use('misil');
-      // MAG 20 × 1.4 = 28 × 0.75.
-      expect(step.events.whereType<DamageEvent>().single.amount, 21);
+      // MAG 20 × 1.4 = 28 × 0.5.
+      expect(step.events.whereType<DamageEvent>().single.amount, 14);
     });
   });
 
@@ -299,11 +301,12 @@ void main() {
     test('constructo: la barra de quiebre se llena ×1.5', () {
       final b = _B([_foe('golem', breakBase: 1000)]);
       final on = b.attack();
-      final dmg = on.events.whereType<DamageEvent>().single.amount;
-      expect(b.foe().breakGauge, closeTo(dmg * 1.5, 0.05));
+      expect(on.events.whereType<DamageEvent>(), hasLength(1));
+      // Puntos de quiebre (combo_balance.md § 5): ataque 4 × 1.5.
+      expect(b.foe().breakGauge, closeTo(4 * 1.5, 0.05));
       final off = _B([_foe('golem', breakBase: 1000)], families: false);
       off.attack();
-      expect(off.foe().breakGauge, closeTo(dmg * 1.0, 0.05));
+      expect(off.foe().breakGauge, closeTo(4, 0.05));
     });
 
     test('temporal: los retrasos de las habilidades ×1.5', () {

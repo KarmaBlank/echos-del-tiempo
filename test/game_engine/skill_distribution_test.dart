@@ -22,7 +22,9 @@ void main() {
       for (final a in kAscensions.values) ...a.skillIds,
       for (final c in kClasses.values) ...c.kitSkillIds,
     };
-    for (final id in kSkills.keys) {
+    // La Quebrar base la trae toda arma (combo_balance.md § 5.1) y el
+    // combo de clase, toda clase (§ 5.2): las agrega el motor.
+    for (final id in kSkills.keys.where((k) => !kEngineSkillIds.contains(k))) {
       expect(given, contains(id), reason: '$id no la da nadie');
     }
   });

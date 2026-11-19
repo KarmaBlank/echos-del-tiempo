@@ -80,7 +80,15 @@ BattleState _start(BattleEngine e, String boss,
   return s;
 }
 
-BattleState _turnOf(BattleState s, String id) => s.copy()..currentId = id;
+/// El turno de [id] sin pasar por `nextTurn` (Pulso lleno: estas pruebas
+/// no miden el Pulso, combo_balance.md § 5.2).
+BattleState _turnOf(BattleState s, String id) {
+  final c = s.copy()..currentId = id;
+  for (final p in c.party) {
+    p.pulse = BattleEngine.pulseMax;
+  }
+  return c;
+}
 
 Iterable<BossMechanicEvent> _mech(BattleStep s, [BossMechanicPhase? ph]) =>
     s.events.whereType<BossMechanicEvent>().where((e) => ph == null || e.phase == ph);
@@ -120,7 +128,8 @@ void main() {
         for (var i = 1; i < d.phases.length; i++) {
           expect(d.phases[i].gate, lessThan(d.phases[i - 1].gate));
         }
-        expect(en.breakMax / en.hp, closeTo(0.35, 0.01));
+        // Quiebre en puntos (combo_balance.md § 5): jefes 65-95.
+        expect(en.breakMax, 95);
         for (final id in d.legendaryIds) {
           expect(kUniques[id]!.exclusive, isTrue, reason: id);
           expect(kUniques[id]!.flavor, isEmpty, reason: 'sin lore');
@@ -161,13 +170,15 @@ void main() {
       expect(_start(e, 'ecoPrimordial').enemies.first.abyssAspect, GameElement.fuego.index + 1);
     });
 
-    test('solo vs 4 jugadores: vida y quiebre × (0.55 + 0.45 n)', () {
+    test('solo vs 4 jugadores: vida × (0.6 + 0.3 n) (solo, × jefe en '
+        'solitario), quiebre × (0.6 + 0.3 n)', () {
       final e = _engine();
       final one = _start(e, 'devoradorAbismo', 1).enemies.first;
       final four = _start(e, 'devoradorAbismo', 4).enemies.first;
-      expect(one.maxHp, 8400);
-      expect(four.maxHp, (8400 * 2.35).round());
-      expect(four.breakBase / one.breakBase, closeTo(2.35, 0.001));
+      // combo_balance.md § 3.3: 0.9 solo × soloBossHp (1.0).
+      expect(one.maxHp, (8400 * 0.9).round());
+      expect(four.maxHp, (8400 * 1.8).round());
+      expect(four.breakBase / one.breakBase, closeTo(1.8 / 0.9, 0.001));
     });
   });
 
@@ -206,23 +217,24 @@ void main() {
     test('quebrado no rebobina; en solo rebobina 50%', () {
       final e = _engine();
       var s = _start(e, 'golemAbismo', 1);
+      // Fase 1 (vida solo 7560 desde los pasos 5-6): 5000.
       final b = s.enemies.first
         ..ult = 0
         ..actions = 4
-        ..hp = 6000
+        ..hp = 5000
         ..abyssTaken = 400;
       var st = e.enemyTurn(_turnOf(s, 'e0'))!;
-      expect(st.state.enemies.first.hp, 6200);
+      expect(st.state.enemies.first.hp, 5200);
       s = _start(e, 'golemAbismo', 1);
       s.enemies.first
         ..ult = 0
         ..actions = 4
-        ..hp = 6000
+        ..hp = 5000
         ..abyssTaken = 400
         ..vulnerable = 2;
       st = e.enemyTurn(_turnOf(s, 'e0'))!;
-      expect(st.state.enemies.first.hp, 6000);
-      expect(b.hp, 6000);
+      expect(st.state.enemies.first.hp, 5000);
+      expect(b.hp, 5000);
     });
 
     test('fases: el golpe se queda en el umbral; F2 electro y Diluvio + Descarga', () {
@@ -334,8 +346,11 @@ void main() {
       final b = s.enemies.first
         ..abyssSeal = ReactionKind.electrocucion.index + 1
         ..abyssSealTurns = 3;
-      b.breakGauge = b.breakMax - 1;
-      final br = _hit(e, s, 'p1');
+      b
+        ..breakGauge = b.breakMax
+        ..fissured = true;
+      final br = e.command(_turnOf(s, 'p1'), 'p1',
+          const SkillCommand('quebrar', targetId: 'e0'))!;
       expect(_mech(br, BossMechanicPhase.sealBroken), hasLength(1));
       // Se apaga solo.
       s = _start(e, 'hechiceraAbismo');

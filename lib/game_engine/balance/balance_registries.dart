@@ -122,6 +122,9 @@ class BalanceBase {
             for (final e in catalog.abyssBosses.entries) '${e.key}': e.value,
           },
         BalanceKind.fragmentDrop => catalog.fragmentDrops,
+        BalanceKind.hitCap => catalog.hitCaps,
+        BalanceKind.combo => catalog.comboRules,
+        BalanceKind.curve => catalog.curves,
       };
 
   late final BalanceContext context = BalanceContext(

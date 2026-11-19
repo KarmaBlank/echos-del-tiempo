@@ -25,6 +25,9 @@ class MissionBoardPanel extends StatefulWidget {
     this.bossName,
     this.playerLevel,
     this.zones,
+    this.tutorial,
+    this.lockText,
+    this.tutorialDone = true,
   });
 
   /// Las 10 zonas con su estado para el jugador local
@@ -49,6 +52,17 @@ class MissionBoardPanel extends StatefulWidget {
   /// Nivel del jugador local.
   final int? playerLevel;
 
+  /// TUTORIAL: Ecos de práctica, primera fila del sello
+  /// (docs/specs/combat_tutorial.md § 1): su detalle. `null` = sin fila.
+  final Widget? tutorial;
+
+  /// La cuenta local ya lo hizo (la fila no se resalta).
+  final bool tutorialDone;
+
+  /// "Primero, todos tienen que hacer el TUTORIAL. Falta: …": las demás
+  /// misiones salen desactivadas con este motivo (§ 2).
+  final String? lockText;
+
   static const help = '<b>Mostrador</b><br>'
       'Elige una misión y pulsa PROPONER: se abre una votación para todo el '
       'grupo.<br>'
@@ -64,6 +78,21 @@ class MissionBoardPanel extends StatefulWidget {
 
 class _MissionBoardPanelState extends State<MissionBoardPanel> {
   String? _sel;
+
+  static const _tutorialId = 'tutorial';
+
+  /// La fila TUTORIAL: Ecos de práctica.
+  Widget _tutorialRow(bool selected) => MenuRow(
+        key: const ValueKey('mission-tutorial'),
+        selected: selected,
+        onTap: () => setState(() => _sel = _tutorialId),
+        onFocus: () => setState(() => _sel = _tutorialId),
+        autofocus: selected,
+        label: protoColor(ProtoColors.gold, 'TUTORIAL: Ecos de práctica'),
+        value: widget.tutorialDone
+            ? protoColor(ProtoColors.green, 'Hecho')
+            : protoColor(ProtoColors.orange, 'Pendiente'),
+      );
 
   /// (misión, zona) de cada fila elegible, en orden.
   List<(MissionDef, ZoneStatus?)> get _entries {
@@ -87,7 +116,13 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
     final sel = entries.where((e) => e.$1.id == _sel).firstOrNull ??
         (w.zones == null ? entries.firstOrNull : open.lastOrNull) ??
         entries.firstOrNull;
-    final list = <Widget>[];
+    // TUTORIAL (combat_tutorial.md § 1): primera fila; elegida por
+    // defecto si falta hacerlo.
+    final tutSel = w.tutorial != null &&
+        (_sel == _tutorialId || (_sel == null && !w.tutorialDone));
+    final list = <Widget>[
+      if (w.tutorial != null) _tutorialRow(tutSel),
+    ];
     if (w.zones case final zs?) {
       for (final z in zs) {
         final m = z.mission;
@@ -102,12 +137,12 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                 overflow: TextOverflow.ellipsis),
           ));
         } else {
-          list.add(_row(m, z, m.id == sel?.$1.id));
+          list.add(_row(m, z, !tutSel && m.id == sel?.$1.id));
         }
       }
     } else {
       for (final m in w.missions) {
-        list.add(_row(m, null, m.id == sel?.$1.id));
+        list.add(_row(m, null, !tutSel && m.id == sel?.$1.id));
       }
     }
     // 1-9 eligen la zona N; Q / E la anterior / siguiente.
@@ -143,7 +178,11 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: list)),
                   ],
-                  detail: sel == null
+                  detail: tutSel
+                      ? PanelDetail(children: [
+                          SizedBox(height: 420, child: w.tutorial),
+                        ])
+                      : sel == null
                       ? const PanelDetail(children: [])
                       : _detail(sel.$1, sel.$2),
                 ),
@@ -185,11 +224,13 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         PanelButton('PROPONER',
             key: ValueKey('propose-${m.id}'),
             accent: ProtoColors.green,
-            reason: locked
-                ? 'Bloqueada'
-                : w.voteOpen
-                    ? 'Ya hay una votación'
-                    : null,
+            // TUTORIAL pendiente en la sala (combat_tutorial.md § 2).
+            reason: w.lockText ??
+                (locked
+                    ? 'Bloqueada'
+                    : w.voteOpen
+                        ? 'Ya hay una votación'
+                        : null),
             onPressed: () => w.onPropose(m.id)),
       ],
       children: [

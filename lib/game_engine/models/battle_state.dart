@@ -87,10 +87,12 @@ class Combatant {
     List<TimedEffect>? effects,
     this.extraTurn = 0,
     this.breakBase = 0,
+    this.level = 0,
     this.breakGauge = 0,
     this.breaks = 0,
     this.vulnerable = 0,
     this.breakSkip = false,
+    this.fissured = false,
     this.ultId,
     this.ultPending = false,
     this.webbed = false,
@@ -111,12 +113,16 @@ class Combatant {
     this.abyssSealTurns = 0,
     this.abyssAspect = 0,
     this.abyssTaken = 0,
+    this.delayStreak = 0,
     this.abyssFeast = 0,
     this.abyssCopy,
     this.summonOwner,
     this.summonKind,
     this.summonTurns = 0,
     this.summonKills = 0,
+    this.pulse = 0,
+    this.chained = false,
+    this.practice = false,
   })  : primedBy = primedBy ?? {},
         family = family ??
             (isPlayer || enemyType == null ? null : kEnemyFamily[enemyType]),
@@ -165,7 +171,10 @@ class Combatant {
   final PlayerBuild? build;
   final String? classId;
   final String? weaponType;
-  final List<String> skillIds;
+
+  /// Mutable solo para el tutorial: las habilidades prestadas del guion
+  /// (combat_tutorial.md § 3).
+  List<String> skillIds;
   int potions;
   int ethers;
 
@@ -202,6 +211,11 @@ class Combatant {
   /// 0: sin barra (jugadores).
   double breakBase;
 
+  /// Nivel del enemigo en esta batalla (`ZoneRules.scaleBattle`); 0 =
+  /// sin escalar (vale el nivel base del catálogo). Para el tope por golpe
+  /// (combo_balance.md § 3.2).
+  int level;
+
   /// Barra de quiebre actual (0..[breakMax]).
   double breakGauge;
 
@@ -213,6 +227,11 @@ class Combatant {
 
   /// Quebrado: pierde su próximo turno.
   bool breakSkip;
+
+  /// Fisurado (combo_balance.md § 5): la barra se llenó; un golpe con
+  /// Quebrar lo quiebra. Si llega a su turno así, la barra vuelve a la
+  /// mitad.
+  bool fissured;
 
   /// ULT del enemigo (`EnemyUltDef.id`), si tiene. Su carga es [ult].
   final String? ultId;
@@ -293,6 +312,10 @@ class Combatant {
   /// Daño recibido desde su acción anterior (Rebobinar).
   int abyssTaken;
 
+  /// Retrasos recibidos del grupo desde su último turno (rendimiento
+  /// decreciente, combo_balance.md § 3.3).
+  int delayStreak;
+
   /// Buffs del grupo que se comió (Devorar).
   int abyssFeast;
 
@@ -312,6 +335,20 @@ class Combatant {
 
   /// Enemigos que mató (Festín Arcano).
   int summonKills;
+
+  // ---- Pulso e Instante v0.9 (combo_balance.md § 5.2) ----
+
+  /// Pulso del jugador (0..`BattleEngine.pulseMax`; arranca en
+  /// `pulseStart`). Enemigos e invocaciones: 0.
+  int pulse;
+
+  /// Ya usó una habilidad Instante en este turno: el turno sigue para
+  /// una acción más, pero no otra Instante encadenada.
+  bool chained;
+
+  /// De práctica (combat_tutorial.md § 3): su vida nunca baja de 1, no
+  /// cae ("se recompone").
+  bool practice;
 
   bool get isSummon => summonOwner != null;
 
@@ -410,10 +447,12 @@ class Combatant {
         effects: List.of(effects),
         extraTurn: extraTurn,
         breakBase: breakBase,
+        level: level,
         breakGauge: breakGauge,
         breaks: breaks,
         vulnerable: vulnerable,
         breakSkip: breakSkip,
+        fissured: fissured,
         ultId: ultId,
         ultPending: ultPending,
         webbed: webbed,
@@ -434,12 +473,16 @@ class Combatant {
         abyssSealTurns: abyssSealTurns,
         abyssAspect: abyssAspect,
         abyssTaken: abyssTaken,
+        delayStreak: delayStreak,
         abyssFeast: abyssFeast,
         abyssCopy: abyssCopy,
         summonOwner: summonOwner,
         summonKind: summonKind,
         summonTurns: summonTurns,
         summonKills: summonKills,
+        pulse: pulse,
+        chained: chained,
+        practice: practice,
       );
 }
 

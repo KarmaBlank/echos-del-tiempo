@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../../../game_engine/rules/balance_migration.dart';
 import '../../lobby/data/json_file_profile_store.dart';
 import '../domain/account.dart';
 
@@ -156,23 +157,59 @@ class JsonFileAccountStore implements AccountStore {
     }
   }
 
-  static Account? _parse(List<int> bytes) {
+  /// La cuenta y su versión de balance (`bv`, 0 si no tiene).
+  static (Account, int)? _parseV(List<int> bytes) {
     try {
       final json = jsonDecode(utf8.decode(bytes));
-      if (json is Map<String, Object?>) return Account.fromJson(json);
+      if (json is Map<String, Object?>) {
+        final bv = json['bv'];
+        return (Account.fromJson(json), bv is num ? bv.toInt() : 0);
+      }
     } catch (_) {
       // JSON roto, UTF-8 inválido o forma inesperada.
     }
     return null;
   }
 
+  String _stamp() {
+    final t = _now();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${t.year}${two(t.month)}${two(t.day)}-'
+        '${two(t.hour)}${two(t.minute)}${two(t.second)}';
+  }
+
+  /// Migración de balance (combo_balance.md § 6b), una sola vez: si [bv]
+  /// es viejo, copia [source] (`account.pre-bv<N>-<fecha>.json`, nunca se
+  /// borra; si la copia falla, tira y no se pisa nada), migra, guarda y
+  /// suma el aviso de lo devuelto.
+  Future<AccountLoad> _migrateBalance(AccountLoad l, int bv, File? source) async {
+    if (bv >= kBalanceVersion) return l;
+    if (source != null && await source.exists()) {
+      final stamp = _stamp();
+      var name = 'account.pre-bv$kBalanceVersion-$stamp.json';
+      var n = 2;
+      while (await File(_path(name)).exists()) {
+        name = 'account.pre-bv$kBalanceVersion-$stamp-${n++}.json';
+      }
+      await source.copy(_path(name));
+    }
+    final (a, notice) = migrateAccountBalance(l.account);
+    await save(a);
+    final both = [
+      if (l.notice case final n?) n,
+      if (notice != null) notice,
+    ];
+    return AccountLoad(a,
+        notice: both.isEmpty ? null : both.join(' '), migrated: l.migrated);
+  }
+
   /// La copia `.tmp` si quedó completa (un guardado cortado justo entre
   /// escribirla y reemplazar `account.json`).
-  Future<Account?> _fromTemp() async {
+  Future<(Account, int)?> _fromTempV() async {
     try {
       final t = tempFile;
       if (!await t.exists()) return null;
-      return _parse(await t.readAsBytes());
+      return _parseV(await t.readAsBytes());
     } on FileSystemException {
       return null;
     }
@@ -194,30 +231,36 @@ class JsonFileAccountStore implements AccountStore {
       // Si no se puede leer (bloqueado, permisos) no es "dañado": tira y
       // quien carga queda sin escribir, sin tocar nada.
       final bytes = await _retry(f.readAsBytes);
-      final account = _parse(bytes);
-      final tmp = await _fromTemp();
-      if (account != null) {
+      final parsed = _parseV(bytes);
+      final tmp = await _fromTempV();
+      if (parsed != null) {
         // Una copia completa MÁS NUEVA que no llegó a reemplazarlo (el
         // reemplazo y el plan B fallaron): es el último guardado.
         if (tmp != null && await _newer(tempFile, f)) {
-          await save(tmp);
-          return AccountLoad(tmp);
+          if (tmp.$2 >= kBalanceVersion) {
+            await save(tmp.$1);
+            return AccountLoad(tmp.$1);
+          }
+          return _migrateBalance(AccountLoad(tmp.$1), tmp.$2, tempFile);
         }
-        return AccountLoad(account);
+        return _migrateBalance(AccountLoad(parsed.$1), parsed.$2, f);
       }
       if (tmp != null) {
-        await save(tmp);
-        return AccountLoad(tmp,
-            notice: 'La cuenta estaba dañada; se recuperó el último '
-                'guardado completo.');
+        await save(tmp.$1);
+        return _migrateBalance(
+            AccountLoad(tmp.$1,
+                notice: 'La cuenta estaba dañada; se recuperó el último '
+                    'guardado completo.'),
+            tmp.$2,
+            null);
       }
       return _recoverCorrupt(f);
     }
     // Sin `account.json` pero con la copia completa: el reemplazo se cortó.
-    final tmp = await _fromTemp();
+    final tmp = await _fromTempV();
     if (tmp != null) {
-      await save(tmp);
-      return AccountLoad(tmp);
+      await save(tmp.$1);
+      return _migrateBalance(AccountLoad(tmp.$1), tmp.$2, null);
     }
     // Migración: el perfil único de antes pasa a ser el personaje #1.
     final legacy = legacyFile;
@@ -232,8 +275,9 @@ class JsonFileAccountStore implements AccountStore {
         }
         final a = Account().add(p, now: when)!;
         final migrated = when == null ? a : a.touch(a.selectedId!, when);
-        await save(migrated);
-        return AccountLoad(migrated, migrated: true);
+        // `profile.json` queda como copia (nunca se borra).
+        return _migrateBalance(
+            AccountLoad(migrated, migrated: true), 0, null);
       }
     }
     return AccountLoad(Account());
@@ -242,10 +286,7 @@ class JsonFileAccountStore implements AccountStore {
   /// Copia el archivo dañado (nunca se borra) y empieza una cuenta vacía.
   /// Si la copia falla, tira: no se pisa nada.
   Future<AccountLoad> _recoverCorrupt(File f) async {
-    final t = _now();
-    String two(int n) => n.toString().padLeft(2, '0');
-    final stamp = '${t.year}${two(t.month)}${two(t.day)}-'
-        '${two(t.hour)}${two(t.minute)}${two(t.second)}';
+    final stamp = _stamp();
     var name = 'account.corrupt-$stamp.json';
     var n = 2;
     while (await File(_path(name)).exists()) {

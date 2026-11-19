@@ -24,6 +24,7 @@ Color familyColor(EnemyFamily f) => switch (f) {
       EnemyFamily.iceElemental => ProtoColors.ice,
       EnemyFamily.temporal => ProtoColors.sky,
       EnemyFamily.aberration => ProtoColors.crimson,
+      EnemyFamily.training => ProtoColors.gold,
     };
 
 /// "Zona" de los Jefes del Abismo en el bestiario (después de la 10).
@@ -77,7 +78,8 @@ class BestiaryEntry {
 
 /// Todas las fichas, por zona (comunes, después invocaciones, después el
 /// jefe). Sale de las misiones de zona y de las mecánicas de los jefes.
-List<BestiaryEntry> bestiaryEntries([Map<String, EnemyDef> enemies = kEnemies]) {
+List<BestiaryEntry> bestiaryEntries(
+    [Map<String, EnemyDef> enemies = kEnemies]) {
   final zoneOf = <String, int>{};
   final elites = <String>{};
   for (final m in kZoneMissions) {

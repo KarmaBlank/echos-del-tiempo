@@ -304,3 +304,41 @@ mínimo, chance por fuente, + por tier / rareza / mod, jefe que coincide y
 tope). Vida, ATQ, quiebre y ULT de los jefes, en Enemigos y ULT
 enemigas como siempre. Las fases y rotaciones de movimientos no se
 editan (son diseño).
+
+## v0.9: Tope por golpe
+
+Tipo nuevo `hitCap` (una entrada `tope`, combo_balance.md § 3.2):
+fracción de la vida máxima que puede sacar un golpe sin debilidad a un
+común, a un élite y a un jefe, y cuántos niveles de más tiene que tener
+el jugador para que no haya tope. Un valor de 1 apaga el tope de ese
+tipo. La tabla de afinidades por familia (`kFamilyRules`) sigue en
+código: su escala es fija (×1.5 / ×0.5 / ×0) y cambiarla es diseño.
+
+Pasos 3-4: el élite y el jefe tienen dos valores, solo (eliteSolo,
+ossSolo) y a 4 jugadores (elite, oss); el motor interpola lineal
+con el tamaño del grupo.
+
+## v0.9: Combos y quiebre
+
+Tipo nuevo combo (una entrada combos, combo_balance.md § 4-5): las
+reglas globales de las Convergencias (× débil / × resiste al elemento que
+detona, +ULT si detona otro jugador, tope de stacks de Quemadura y
+Veneno), el × de daño de las habilidades de área, y el quiebre: puntos
+por acción (ataque, física, mágica, ULT, dúo, Quebrar base), +% a una
+debilidad, puntos por Aturdido / Congelación y por reacción, +% de las
+armas pesadas, × del umbral del élite, fórmula del grupo
+(ase + por jugador × jugadores) y a cuánto baja la barra de un
+Fisurado que llega a su turno. Los números propios de cada Convergencia
+(% por stack, salpicadura, topes común / élite / jefe) están en
+
+eaction. Las habilidades tienen el campo nuevo reaks (Quebrar).
+
+## v0.9: Curva y grupo
+
+Tipo nuevo `curve` (una entrada `curva`, combo_balance.md § 1 y § 3.3):
+niveles por tramo y dónde terminan A y B, pendiente de vida por nivel en
+A/B y en C, ATQ por nivel, +ATQ de los comunes en C, 1 élite cada N
+grupos en C, vida en grupo (base + por jugador), mitigación de grupo por
+jugador extra y la de zona C, y los ajustes del jefe en solitario (vida
+×, ATQ ×, escolta máxima). La vista previa de un enemigo ("A nivel N, 1
+jugador") usa la curva y la vida solo (× 0.9) del borrador.

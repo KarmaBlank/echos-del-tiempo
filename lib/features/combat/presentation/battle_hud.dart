@@ -675,14 +675,54 @@ class _BarRow extends StatelessWidget {
         Expanded(child: bar),
         SizedBox(
           width: valueW,
-          child: Text(value,
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.fade,
-              textAlign: TextAlign.right,
-              // Cifras de las barras: Press Start 2P (monoespaciada).
-              style: style),
+          // Si las cifras no entran ("1200/1200"), se achican en vez de
+          // cortarse; las que entran quedan igual.
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(value,
+                maxLines: 1,
+                softWrap: false,
+                textAlign: TextAlign.right,
+                // Cifras de las barras: Press Start 2P (monoespaciada).
+                style: style),
+          ),
         ),
+      ],
+    );
+  }
+}
+
+/// Pulso de [p] como pips (combo_balance.md § 5.2): llenos en oro, vacíos
+/// en el borde del panel; con borde celeste si encadenó una Instante (le
+/// queda una acción). El número va en el tooltip de la tarjeta.
+class PulsePips extends StatelessWidget {
+  const PulsePips(this.player, {super.key});
+
+  final Combatant player;
+
+  static const size = 6.0;
+  static const gap = 2.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final n = player.pulse.clamp(0, BattleEngine.pulseMax);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < BattleEngine.pulseMax; i++) ...[
+          if (i > 0) const SizedBox(width: gap),
+          Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: i < n ? ProtoColors.gold : ProtoColors.barBg,
+              border: Border.all(
+                  color: player.chained ? ProtoColors.sky : ProtoColors.panelBorder,
+                  width: 1),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -715,7 +755,9 @@ String heroStatsMarkup(Combatant p, {int points = 0}) {
     '${heroNameMarkup(p)} <span class="k">${_classLine(p)}</span>',
     if (weapon.isNotEmpty) hexSpan('#ff9f43', '⚔ ${protoEsc(weapon)}$pts'),
     'HP ${p.hp}/${p.maxHp} · MP ${p.mp.floor()}/${p.maxMp} · '
-        'ULT ${p.ult.floor()}%',
+        'ULT ${p.ult.floor()}% · '
+        '${hexSpan('#ffb142', 'Pulso ${p.pulse}/${BattleEngine.pulseMax}')}'
+        '${p.chained ? ' ${hexSpan('#9fe8ff', '+1 acción (Instante)')}' : ''}',
     '<span class="k">ATQ ${p.attack} · MAG ${p.magic} · '
         'DEF ${p.defense}</span>',
     '<span class="k">Crít ${jsRound(p.critChance * 100)}% '
@@ -901,7 +943,7 @@ class _PartyCard extends StatelessWidget {
                         Expanded(
                           child: ProtoText('<b$nameColor>${protoEsc(p.name)}'
                               '</b> <span class="k">'
-                              'Lv${p.build?.level ?? '?'}</span>'),
+                              'Lv${p.build?.level ?? (p.level > 0 ? p.level : '?')}</span>'),
                         ),
                         if (turn.isNotEmpty) ProtoText(turn),
                       ],
@@ -914,6 +956,12 @@ class _PartyCard extends StatelessWidget {
                       _BarRow(ultBar(p.ult),
                           p.ult >= 100 ? '¡LISTA!' : '${p.ult.floor()}%',
                           label: 'ULT', color: ultColor, valueChars: 9),
+                    // Pulso (combo_balance.md § 5.2): pips llenos y vacíos,
+                    // de alto fijo (no crece con el tamaño del texto).
+                    if (p.alive) ...[
+                      const SizedBox(height: 2),
+                      PulsePips(p, key: ValueKey('pulse-${p.id}')),
+                    ],
                     if (summons.isNotEmpty) ...[
                       const SizedBox(height: 2),
                       SummonsRow(summons: summons),
@@ -961,7 +1009,11 @@ class TargetBar extends StatelessWidget {
     const breakColor = VisionColor(VisionSlot.breakBar);
     final hpText = '${e.hp}/${e.maxHp}';
     final breakText =
-        e.broken ? '¡ROTO!' : '${e.breakGauge.floor()}/${e.breakMax.round()}';
+        e.broken
+            ? '¡ROTO!'
+            : e.fissured
+                ? 'FISURADO'
+                : '${e.breakGauge.floor()}/${e.breakMax.round()}';
     // Jefes del Abismo: 5 cifras ("3300/10000") — la columna crece.
     final chars =
         math.max(9, math.max(hpText.length, breakText.length)).toDouble();

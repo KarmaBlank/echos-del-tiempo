@@ -91,12 +91,14 @@ void main() {
   group('forja', () {
     test('tope total por rareza y 5 por estadística', () {
       var p = _rich();
-      for (var i = 0; i < 3; i++) {
+      // Común de nivel 1: min(3 de la rareza, 2 + 1/5) = 2
+      // (combo_balance.md § 2).
+      for (var i = 0; i < 2; i++) {
         p = _craft.forge(p, 'c', UpgradeStat.pow).profile!;
       }
       final cap = _craft.forge(p, 'c', UpgradeStat.crit);
       expect(cap.ok, isFalse);
-      expect(cap.error, 'Tope de forja (3)');
+      expect(cap.error, 'Tope de forja (2)');
       expect(cap.profile, isNull);
       expect(Rarity.values.map((r) => r.forgeCap), [3, 5, 6, 8, 10]);
     });
@@ -239,6 +241,8 @@ void main() {
 
     test('Esquirla del Eco: valores nuevos dentro del rango', () {
       final p = _rich();
+      // Legendaria de nivel 20: los fijos escalan 2 tiers sobre T3 = T1
+      // (combo_balance.md § 2): rango completo.
       expect(_craft.reroll(p, 'l').outcomes, ['% ATQ: 20–30', '% crítico: 5–8']);
       for (var seed = 0; seed < 20; seed++) {
         final r = _craft.reroll(p, 'l', random: mulberry32(seed));

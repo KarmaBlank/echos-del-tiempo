@@ -3,6 +3,7 @@ import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/build_plan.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
+import '../../../game_engine/rules/balance_migration.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import 'stash.dart';
 
@@ -81,6 +82,7 @@ class Account {
     BestiaryProgress? bestiary,
     List<String> party = const [],
     Set<String> partyAuto = const {},
+    this.tutorialVersion = 0,
   })  : characters = List.unmodifiable(characters),
         selectedId = _pick(characters, selectedId),
         party = List.unmodifiable(party),
@@ -119,6 +121,11 @@ class Account {
 
   /// Compañeros con AUTO prendido (JSON `party.auto`).
   final Set<String> partyAuto;
+
+  /// Última versión del TUTORIAL que completó la cuenta (JSON `tutV`,
+  /// junto a `bv`; docs/specs/combat_tutorial.md § 2). 0 = nunca. Por
+  /// cuenta, no por personaje.
+  final int tutorialVersion;
 
   /// La party saneada: ranuras que existen, sin repetir, nunca el
   /// elegido, hasta [maxCompanions].
@@ -168,6 +175,7 @@ class Account {
     BestiaryProgress? bestiary,
     List<String>? party,
     Set<String>? partyAuto,
+    int? tutorialVersion,
   }) =>
       Account(
         characters: characters ?? this.characters,
@@ -178,6 +186,7 @@ class Account {
         bestiary: bestiary ?? this.bestiary,
         party: party ?? this.party,
         partyAuto: partyAuto ?? this.partyAuto,
+        tutorialVersion: tutorialVersion ?? this.tutorialVersion,
       );
 
   /// Agrega un personaje con un `id` nuevo y lo elige. `null` si está
@@ -225,6 +234,7 @@ class Account {
           if (c != id) c
       ],
       partyAuto: {...partyAuto}..remove(id),
+      tutorialVersion: tutorialVersion,
     );
   }
 
@@ -251,11 +261,21 @@ class Account {
 
   Account withAtlas(AtlasProgress atlas) => _copy(atlas: atlas);
 
+  /// Marca el TUTORIAL completado en la versión [version] (nunca baja).
+  Account withTutorial(int version) => _copy(
+      tutorialVersion:
+          version > tutorialVersion ? version : tutorialVersion);
+
   Account withBestiary(BestiaryProgress bestiary) =>
       _copy(bestiary: bestiary);
 
   Map<String, Object?> toJson() => {
         'v': formatVersion,
+        // Balance con el que se guardó (combo_balance.md § 6b): las
+        // cuentas sin `bv` se migran una vez al cargar.
+        'bv': kBalanceVersion,
+        // TUTORIAL (combat_tutorial.md § 2): opcional, 0 = nunca.
+        if (tutorialVersion > 0) 'tutV': tutorialVersion,
         'sel': selectedId,
         'seq': seq,
         'chars': [for (final c in characters) c.toJson()],
@@ -297,6 +317,7 @@ class Account {
           .sanitize(AtlasProgress.fromJson(json['atlas'])),
       // Cuentas de antes de la v0.6: sin `best`, bestiario vacío.
       bestiary: BestiaryProgress.fromJson(json['best']),
+      tutorialVersion: json['tutV'] is num ? (json['tutV'] as num).toInt() : 0,
     );
   }
 }
@@ -347,4 +368,45 @@ class CharacterRules {
     if (c == null || !confirmsDelete(c, typed)) return null;
     return a.remove(id);
   }
+}
+
+/// Migra [a] al balance v0.9 (combo_balance.md § 6b): las armas de cada
+/// personaje y del alijo. Los créditos de las armas de un personaje van a
+/// ese personaje; los del alijo, al elegido. Devuelve la cuenta y el aviso
+/// único (`null` si no hubo nada que devolver). Idempotente.
+(Account, String?) migrateAccountBalance(Account a,
+    {BalanceMigration rules = const BalanceMigration()}) {
+  var total = const BalanceRefund();
+  var next = a;
+  for (final c in a.characters) {
+    final (p, r) = rules.migrateProfile(c.profile);
+    if (r.isEmpty) continue;
+    total += r;
+    next = next.replace(c.id, p, lastPlayed: c.lastPlayed);
+  }
+  var stash = a.stash;
+  var stashRefund = const BalanceRefund();
+  for (var i = 0; i < Stash.size; i++) {
+    final it = stash.cells[i]?.item;
+    if (it == null) continue;
+    final (m, r) = rules.migrateItem(it);
+    if (r.isEmpty) continue;
+    stashRefund += r;
+    stash = stash.put(i, StashEntry.item(m));
+  }
+  if (!stashRefund.isEmpty) {
+    total += stashRefund;
+    next = next.withStash(stash);
+    final sel = next.selectedId == null ? null : next.byId(next.selectedId!);
+    if (sel != null && stashRefund.credits > 0) {
+      next = next.replace(sel.id,
+          sel.profile.copyWith(credits: sel.profile.credits + stashRefund.credits),
+          lastPlayed: sel.lastPlayed);
+    }
+  }
+  if (total.isEmpty) return (next, null);
+  return (
+    next,
+    'Rebalance v0.9: te devolvimos lo que cambió. ${total.lines.join('; ')}.',
+  );
 }

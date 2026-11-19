@@ -2,6 +2,7 @@ import '../../game_engine/models/game_session.dart';
 import '../../game_engine/models/player_profile.dart';
 import '../../game_engine/models/session_action.dart';
 import '../../game_engine/models/session_event.dart';
+import '../../game_engine/models/tutorial.dart' show kTutorialVersion;
 import 'net_event.dart';
 
 export 'net_event.dart';
@@ -9,7 +10,10 @@ export 'net_latency.dart';
 
 /// Configuración para crear o unirse a una sala.
 class SessionConfig {
-  const SessionConfig({required this.profile, this.roomCode});
+  const SessionConfig(
+      {required this.profile,
+      this.roomCode,
+      this.tutorialVersion = kTutorialVersion});
 
   /// El perfil del jugador local: viaja en el `hello` (cliente). El host
   /// lo usa él mismo para entrar a su sala.
@@ -17,6 +21,11 @@ class SessionConfig {
 
   /// `null` → crear sala nueva (host); si no, el código para unirse.
   final String? roomCode;
+
+  /// `tutV` de la cuenta (docs/specs/combat_tutorial.md § 2): viaja en el
+  /// `hello` para que el sello del host sepa quién falta. Por defecto,
+  /// vigente (quien no la sabe no bloquea el sello).
+  final int tutorialVersion;
 }
 
 /// Error de conexión con un mensaje listo para mostrarle al jugador

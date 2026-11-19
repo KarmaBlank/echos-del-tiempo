@@ -187,8 +187,9 @@ cuando el id existe.
 - **Stats de enemigos**: cada id tiene un nivel nativo
   (`kEnemyBaseLevel`: el nivel para el que están pensados sus stats del
   catálogo; sin dato, 1). En una batalla de nivel `L`:
-  vida y quiebre `× hpScale(L) / hpScale(nativo)` con
-  `hpScale(n) = 1 + 0.15 × (n − 1)`;
+  vida `× hpScale(L) / hpScale(nativo)` con la curva por tramos de
+  combo_balance.md § 1 (v0.9; antes `hpScale(n) = 1 + 0.15 × (n − 1)`,
+  y el quiebre ya no escala: va en puntos, combo_balance.md § 5);
   ATQ `× atkScale(L) / atkScale(nativo)` con
   `atkScale(n) = 1 + 0.08 × (n − 1)`; nunca baja de los stats del
   catálogo (factor mínimo 1); la velocidad no cambia. Lo aplica la sesión

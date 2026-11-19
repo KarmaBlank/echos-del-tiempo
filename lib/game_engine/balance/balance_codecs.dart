@@ -1,3 +1,5 @@
+import '../data/enemy_families.dart' show ComboRulesDef, HitCapDef;
+import '../data/zone_curve.dart';
 import '../models/abyss.dart';
 import '../models/class_def.dart';
 import '../models/elements.dart';
@@ -34,7 +36,16 @@ enum BalanceKind {
   abyssBoss('abyssBoss', 'Jefes del Abismo', 'Jefe del Abismo'),
 
   /// Drop de Fragmentos del Abismo (abyss_bosses.md § 1.1).
-  fragmentDrop('fragmentDrop', 'Fragmentos', 'Drop de Fragmentos');
+  fragmentDrop('fragmentDrop', 'Fragmentos', 'Drop de Fragmentos'),
+
+  /// Tope por golpe sin debilidad (combo_balance.md § 3.2).
+  hitCap('hitCap', 'Tope por golpe', 'Tope por golpe'),
+
+  /// Convergencias, área y quiebre (combo_balance.md § 4-5).
+  combo('combo', 'Combos y quiebre', 'Reglas de combos'),
+
+  /// Curva por tramos y grupo (combo_balance.md § 1 y § 3.3).
+  curve('curve', 'Curva y grupo', 'Curva y grupo');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -144,9 +155,15 @@ const _skillCombat = <BalanceField>[
   BalanceField('charge', 'Disparo cargado (× ATQ)', _dec, max: 20, step: 0.05),
   BalanceField('breakBonus', 'Quiebre extra', _frac, max: 5, step: 0.05),
   BalanceField('ultDrain', 'Quita carga de ULT', _dec, max: 100, step: 1),
+  BalanceField('breaks', 'Quebrar (quiebra a un Fisurado)', _flag),
 ];
 
 const _mpField = BalanceField('mp', 'MP', _int, max: 99);
+
+// Pulso e Instante (combo_balance.md § 5.2). Las precondiciones no se
+// editan en el admin: se conservan las del catálogo.
+const _pulseField = BalanceField('pulse', 'Pulso', _int, max: 5);
+const _instantField = BalanceField('instant', 'Instante (no termina el turno)', _flag);
 
 Map<String, Object?> _readSkill(Object o) {
   final s = o as SkillDef;
@@ -189,6 +206,9 @@ Map<String, Object?> _readSkill(Object o) {
     'charge': s.charge,
     'breakBonus': s.breakBonus,
     'ultDrain': s.ultDrain,
+    'breaks': s.breaks,
+    'pulse': s.pulse,
+    'instant': s.instant,
     'disabled': false,
   };
 }
@@ -238,6 +258,10 @@ Object _writeSkill(Object o, BalanceFieldReader f) {
     debuffs: decodeBuffList(f.values['debuffs']),
     breakBonus: f.d('breakBonus'),
     ultDrain: f.d('ultDrain'),
+    breaks: f.b('breaks'),
+    pulse: f.values.containsKey('pulse') ? f.i('pulse') : b.pulse,
+    instant: f.values.containsKey('instant') ? f.b('instant') : b.instant,
+    requires: b.requires,
   );
 }
 
@@ -245,7 +269,7 @@ String _skillName(Object o) => (o as SkillDef).name;
 
 const skillCodec = EntityCodec(
   kind: BalanceKind.skill,
-  fields: [_mpField, ..._skillCombat, _disabled],
+  fields: [_mpField, _pulseField, _instantField, ..._skillCombat, _disabled],
   read: _readSkill,
   write: _writeSkill,
   nameOf: _skillName,
@@ -623,9 +647,11 @@ final reactionCodec = EntityCodec(
   kind: BalanceKind.reaction,
   fields: const [
     BalanceField('damageMult', 'Multiplicador del golpe', _dec, min: 1, max: 5, step: 0.05),
-    BalanceField('perStack', 'Daño extra por stack (× golpe)', _dec, max: 5, step: 0.05),
+    BalanceField('perStack', 'Convergencia: vida máx. por stack', _frac, max: 0.5, step: 0.005),
     BalanceField('splash', 'Salpicadura / salto', _frac, max: 2, step: 0.05),
-    BalanceField('bossCap', 'Tope contra jefes (vida máx.)', _frac, max: 1, step: 0.01),
+    BalanceField('commonCap', 'Convergencia: tope común (vida máx.)', _frac, max: 1, step: 0.01),
+    BalanceField('eliteCap', 'Convergencia: tope élite (vida máx.)', _frac, max: 1, step: 0.01),
+    BalanceField('bossCap', 'Convergencia: tope jefe (vida máx.)', _frac, max: 1, step: 0.01),
     BalanceField('stunTurns', 'Turnos de Aturdido', _int, max: 5),
   ],
   read: (o) {
@@ -634,6 +660,8 @@ final reactionCodec = EntityCodec(
       'damageMult': r.damageMult,
       'perStack': r.perStack,
       'splash': r.splash,
+      'commonCap': r.commonCap,
+      'eliteCap': r.eliteCap,
       'bossCap': r.bossCap,
       'stunTurns': r.stunTurns,
     };
@@ -645,6 +673,8 @@ final reactionCodec = EntityCodec(
       damageMult: f.d('damageMult'),
       perStack: f.d('perStack'),
       splash: f.d('splash'),
+      commonCap: f.d('commonCap'),
+      eliteCap: f.d('eliteCap'),
       bossCap: f.d('bossCap'),
       stunTurns: f.i('stunTurns'),
     );
@@ -790,10 +820,187 @@ final fragmentDropCodec = EntityCodec(
   nameOf: (o) => (o as FragmentDropDef).name,
 );
 
+final hitCapCodec = EntityCodec(
+  kind: BalanceKind.hitCap,
+  fields: const [
+    BalanceField('common', 'Común: tope (vida máx.)', _frac, min: 0.05, max: 1, step: 0.01),
+    BalanceField('commonC', 'Común en zona C: tope (vida máx.)', _frac, min: 0.05, max: 1, step: 0.01),
+    BalanceField('eliteSolo', 'Élite solo: tope (vida máx.)', _frac, min: 0.05, max: 1, step: 0.01),
+    BalanceField('elite', 'Élite a 4: tope (vida máx.)', _frac, min: 0.05, max: 1, step: 0.01),
+    BalanceField('bossSolo', 'Jefe solo: tope (vida máx.)', _frac, min: 0.05, max: 1, step: 0.01),
+    BalanceField('boss', 'Jefe a 4: tope (vida máx.)', _frac, min: 0.05, max: 1, step: 0.01),
+    BalanceField('overLevel', 'Sin tope desde (niveles de más)', _int, min: 1, max: 50),
+  ],
+  read: (o) {
+    final h = o as HitCapDef;
+    return {
+      'common': h.common,
+      'commonC': h.commonC,
+      'eliteSolo': h.eliteSolo,
+      'elite': h.elite,
+      'bossSolo': h.bossSolo,
+      'boss': h.boss,
+      'overLevel': h.overLevel,
+    };
+  },
+  write: (o, f) => HitCapDef(
+    common: f.d('common'),
+    commonC: f.d('commonC'),
+    eliteSolo: f.d('eliteSolo'),
+    elite: f.d('elite'),
+    bossSolo: f.d('bossSolo'),
+    boss: f.d('boss'),
+    overLevel: f.i('overLevel'),
+  ),
+  nameOf: (o) => (o as HitCapDef).name,
+);
+
+final comboCodec = EntityCodec(
+  kind: BalanceKind.combo,
+  fields: const [
+    BalanceField('weakMult', 'Convergencia: débil al detonador (×)', _dec, min: 1, max: 3, step: 0.05),
+    BalanceField('resistMult', 'Convergencia: resiste el detonador (×)', _frac, max: 1, step: 0.05),
+    BalanceField('ultBonus', 'Carga de ULT si detona otro', _dec, max: 50, step: 1),
+    BalanceField('stackCap', 'Tope de stacks (Quemadura, Veneno)', _int, min: 1, max: 200),
+    BalanceField('areaMult', 'Área: daño por blanco (×)', _frac, min: 0.1, max: 1, step: 0.05),
+    BalanceField('breakAttack', 'Quiebre: ataque básico', _dec, max: 50, step: 1),
+    BalanceField('breakPhysical', 'Quiebre: habilidad física', _dec, max: 50, step: 1),
+    BalanceField('breakMagical', 'Quiebre: habilidad mágica', _dec, max: 50, step: 1),
+    BalanceField('breakUltimate', 'Quiebre: ULT', _dec, max: 100, step: 1),
+    BalanceField('breakDual', 'Quiebre: dúo', _dec, max: 100, step: 1),
+    BalanceField('breakQuebrar', 'Quiebre: habilidad base Quebrar', _dec, max: 50, step: 1),
+    BalanceField('breakWeak', 'Quiebre: + a una debilidad', _frac, max: 3, step: 0.05),
+    BalanceField('breakStatus', 'Quiebre: Aturdido o Congelación', _dec, max: 50, step: 1),
+    BalanceField('breakReaction', 'Quiebre: reacción o Convergencia', _dec, max: 50, step: 1),
+    BalanceField('heavyBreak', 'Quiebre: + armas pesadas', _frac, max: 2, step: 0.05),
+    BalanceField('eliteBreak', 'Umbral del élite (×)', _dec, min: 1, max: 10, step: 0.1),
+    BalanceField('groupBreakBase', 'Umbral: base del grupo', _dec, max: 3, step: 0.05),
+    BalanceField('groupBreakPer', 'Umbral: + por jugador', _dec, max: 3, step: 0.05),
+    BalanceField('steadyGauge', 'Fisurado que no se quiebra: barra a', _frac, max: 1, step: 0.05),
+  ],
+  read: (o) {
+    final c = o as ComboRulesDef;
+    return {
+      'weakMult': c.weakMult,
+      'resistMult': c.resistMult,
+      'ultBonus': c.ultBonus,
+      'stackCap': c.stackCap,
+      'areaMult': c.areaMult,
+      'breakAttack': c.breakAttack,
+      'breakPhysical': c.breakPhysical,
+      'breakMagical': c.breakMagical,
+      'breakUltimate': c.breakUltimate,
+      'breakDual': c.breakDual,
+      'breakQuebrar': c.breakQuebrar,
+      'breakWeak': c.breakWeak,
+      'breakStatus': c.breakStatus,
+      'breakReaction': c.breakReaction,
+      'heavyBreak': c.heavyBreak,
+      'eliteBreak': c.eliteBreak,
+      'groupBreakBase': c.groupBreakBase,
+      'groupBreakPer': c.groupBreakPer,
+      'steadyGauge': c.steadyGauge,
+    };
+  },
+  write: (o, f) => ComboRulesDef(
+    weakMult: f.d('weakMult'),
+    resistMult: f.d('resistMult'),
+    ultBonus: f.d('ultBonus'),
+    stackCap: f.i('stackCap'),
+    areaMult: f.d('areaMult'),
+    breakAttack: f.d('breakAttack'),
+    breakPhysical: f.d('breakPhysical'),
+    breakMagical: f.d('breakMagical'),
+    breakUltimate: f.d('breakUltimate'),
+    breakDual: f.d('breakDual'),
+    breakQuebrar: f.d('breakQuebrar'),
+    breakWeak: f.d('breakWeak'),
+    breakStatus: f.d('breakStatus'),
+    breakReaction: f.d('breakReaction'),
+    heavyBreak: f.d('heavyBreak'),
+    eliteBreak: f.d('eliteBreak'),
+    groupBreakBase: f.d('groupBreakBase'),
+    groupBreakPer: f.d('groupBreakPer'),
+    steadyGauge: f.d('steadyGauge'),
+  ),
+  nameOf: (o) => (o as ComboRulesDef).name,
+);
+
+final curveCodec = EntityCodec(
+  kind: BalanceKind.curve,
+  fields: const [
+    BalanceField('tramoSize', 'Niveles por tramo', _int, min: 1, max: 50),
+    BalanceField('aEnd', 'Fin de A (posición en el tramo)', _int, min: 0, max: 50),
+    BalanceField('bEnd', 'Fin de B (posición en el tramo)', _int, min: 0, max: 50),
+    BalanceField('hpSlopeAB', 'Vida: + por nivel en A y B', _frac, max: 2, step: 0.01),
+    BalanceField('hpSlopeC', 'Vida: + por nivel en C', _frac, max: 2, step: 0.01),
+    BalanceField('atkSlope', 'ATQ: + por nivel', _frac, max: 2, step: 0.01),
+    BalanceField('commonAtkC', 'Comunes en C: + ATQ', _frac, max: 2, step: 0.01),
+    BalanceField('eliteEveryC', 'Zonas C: 1 élite cada N grupos', _int, min: 1, max: 20),
+    BalanceField('groupHpBase', 'Vida en grupo: base', _dec, max: 3, step: 0.05),
+    BalanceField('groupHpPer', 'Vida en grupo: + por jugador', _dec, max: 3, step: 0.05),
+    BalanceField('groupMitigation', 'Mitigación: − por jugador extra', _frac, max: 0.3, step: 0.01),
+    BalanceField('zoneCMitigation', 'Mitigación: − en zonas C', _frac, max: 0.5, step: 0.01),
+    BalanceField('soloBossHp', 'Jefe en solitario: vida (×)', _dec, min: 0.1, max: 3, step: 0.05),
+    BalanceField('soloBossAtk', 'Jefe en solitario: ATQ (×)', _dec, min: 0.1, max: 3, step: 0.05),
+    BalanceField('soloEscorts', 'Jefe en solitario: escolta (máx.)', _int, max: 10),
+    BalanceField('groupAtkPer', 'ATQ enemigo: + por jugador extra', _frac, max: 1, step: 0.01),
+    BalanceField('delayFalloff', 'Retraso sucesivo: rinde (×)', _frac, max: 1, step: 0.05),
+    BalanceField('groupInitiativeC', 'Zona C en grupo: primer turno enemigo (×)', _frac, min: 0.05, max: 1, step: 0.05),
+  ],
+  read: (o) {
+    final c = o as CurveDef;
+    return {
+      'tramoSize': c.tramoSize,
+      'aEnd': c.aEnd,
+      'bEnd': c.bEnd,
+      'hpSlopeAB': c.hpSlopeAB,
+      'hpSlopeC': c.hpSlopeC,
+      'atkSlope': c.atkSlope,
+      'commonAtkC': c.commonAtkC,
+      'eliteEveryC': c.eliteEveryC,
+      'groupHpBase': c.groupHpBase,
+      'groupHpPer': c.groupHpPer,
+      'groupMitigation': c.groupMitigation,
+      'zoneCMitigation': c.zoneCMitigation,
+      'soloBossHp': c.soloBossHp,
+      'soloBossAtk': c.soloBossAtk,
+      'soloEscorts': c.soloEscorts,
+      'groupAtkPer': c.groupAtkPer,
+      'delayFalloff': c.delayFalloff,
+      'groupInitiativeC': c.groupInitiativeC,
+    };
+  },
+  write: (o, f) => CurveDef(
+    tramoSize: f.i('tramoSize'),
+    aEnd: f.i('aEnd'),
+    bEnd: f.i('bEnd'),
+    hpSlopeAB: f.d('hpSlopeAB'),
+    hpSlopeC: f.d('hpSlopeC'),
+    atkSlope: f.d('atkSlope'),
+    commonAtkC: f.d('commonAtkC'),
+    eliteEveryC: f.i('eliteEveryC'),
+    groupHpBase: f.d('groupHpBase'),
+    groupHpPer: f.d('groupHpPer'),
+    groupMitigation: f.d('groupMitigation'),
+    zoneCMitigation: f.d('zoneCMitigation'),
+    soloBossHp: f.d('soloBossHp'),
+    soloBossAtk: f.d('soloBossAtk'),
+    soloEscorts: f.i('soloEscorts'),
+    groupAtkPer: f.d('groupAtkPer'),
+    delayFalloff: f.d('delayFalloff'),
+    groupInitiativeC: f.d('groupInitiativeC'),
+  ),
+  nameOf: (o) => (o as CurveDef).name,
+);
+
 /// El codec de cada tipo.
 EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.abyssBoss => abyssBossCodec,
       BalanceKind.fragmentDrop => fragmentDropCodec,
+      BalanceKind.hitCap => hitCapCodec,
+      BalanceKind.combo => comboCodec,
+      BalanceKind.curve => curveCodec,
       BalanceKind.skill => skillCodec,
       BalanceKind.ultimate => ultimateCodec,
       BalanceKind.dual => dualCodec,

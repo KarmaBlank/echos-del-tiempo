@@ -89,6 +89,21 @@ void main() {
       expect(_txt(fx, 'ULT CANCELADA').single.delayMs, greaterThan(dl));
     });
 
+    test('FISURADO: cartel con el golpe que llena la barra; SE RECOMPONE '
+        '(combo_balance.md § 5)', () {
+      final s = _battle();
+      final fx = _map(const [
+        ActionEvent('p1', BattleActionKind.attack, targetId: 'e0'),
+        DamageEvent('e0', 30),
+        BreakEvent('e0', BreakPhase.fissured, 50, 50),
+        BreakEvent('e1', BreakPhase.steadied, 25, 50),
+      ], s);
+      final tag = _of(fx, FxKind.tag).single;
+      expect([tag.text, tag.who, tag.color], ['FISURADO', 'e0', breakColor]);
+      expect(_of(fx, FxKind.shatter), isEmpty);
+      expect(_txt(fx, 'SE RECOMPONE'), hasLength(1));
+    });
+
     test('llenar o bajar no dibuja nada (lo muestra la barra)', () {
       final fx = _map(const [
         BreakEvent('e0', BreakPhase.fill, 12, 50),

@@ -32,16 +32,32 @@ más (mín. 1 con los negativos).
 
 | Familia (sigla) | Enemigos | Débil | Resiste | Inmune | Especial |
 |---|---|---|---|---|---|
-| No muerto (NM) | Esqueleto, Caballero Caído, **Caballero Hueco**, Necrófago | Sagrado ×1.5, fuego ×1.25 | — | Veneno | **Las curas lo dañan** (100% de la cura); estado Sagrado ×2 |
-| Espectro (ES) | Espectro, Alma Errante, **Espectro Coronado**, Siervo Espectral | mágico ×1.25, Sagrado ×1.25 | físico ×0.7 | Veneno | Las curas lo dañan al 50%; estado Sagrado ×1.5 |
-| Bestia (BE) | Murciélago, Lobo, Murciélago de Hielo | fuego ×1.25, Quemadura +1 stack, Marca ×1.5 | — | — | — |
-| Arácnido (AR) | Araña, **Matriarca Araña** | fuego ×1.5, Quemadura +1 stack | — | Veneno | — |
-| Cieno (CI) | Limo, **Rey Limo** | fuego ×1.25 | — | — | — |
-| Constructo (CO) | Gólem, **Gólem Reloj**, Guardián del Reloj | quiebre ×1.5 | mágico ×0.8 | Veneno | — |
-| Elemental ígneo (IG) | Salamandra, Gólem de Magma, **Bestia de Magma** | hielo ×1.5, Congelación +1 stack | fuego ×0.5 | Quemadura | — |
-| Elemental de escarcha (HE) | Elemental de Escarcha, **Sierpe de Escarcha**, Cristal de Hielo | fuego ×1.5, Quemadura +1 stack | hielo ×0.5 | Congelación | — |
-| Temporal (TE) | Eco Sombrío, **Hechicera del Eco**, Eco de la Hechicera, Fragmento del Tiempo, Heraldo de las Eras, **Devorador de Eras** | hielo ×1.25, Congelación +1 stack, retrasos ×1.5 | Veneno −1 stack | — | — |
-| Aberración del Vacío (VA) | Vigilante del Vacío, Ojo del Abismo, **Centinela del Vacío** | físico ×1.2, Sagrado ×1.5 | mágico ×0.75 | — | — |
+| No muerto (NM) | Esqueleto, Caballero Caído, **Caballero Hueco**, Necrófago | Sagrado ×1.5, fuego ×1.5 | hielo ×0.5 | Veneno | **Las curas lo dañan** (100% de la cura); estado Sagrado ×2 |
+| Espectro (ES) | Espectro, Alma Errante, **Espectro Coronado**, Siervo Espectral | Sagrado ×1.5 | físico ×0.5 | Veneno | Las curas lo dañan al 50%; estado Sagrado ×1.5 |
+| Bestia (BE) | Murciélago, Lobo, Murciélago de Hielo | fuego ×1.5, Quemadura +1 stack, Marca ×1.5 | hielo ×0.5 | — | — |
+| Arácnido (AR) | Araña, **Matriarca Araña** | fuego ×1.5, Quemadura +1 stack | hielo ×0.5 | Veneno | — |
+| Cieno (CI) | Limo, **Rey Limo** | fuego ×1.5, electro ×1.5 | agua ×0.5 | — | — |
+| Constructo (CO) | Gólem, **Gólem Reloj**, Guardián del Reloj | electro ×1.5, quiebre ×1.5 | mágico ×0.5 | Veneno | — |
+| Elemental ígneo (IG) | Salamandra, Gólem de Magma, **Bestia de Magma** | hielo ×1.5, agua ×1.5, Congelación +1 stack | electro ×0.5 | **daño de fuego (×0)**, Quemadura | — |
+| Elemental de escarcha (HE) | Elemental de Escarcha, **Sierpe de Escarcha**, Cristal de Hielo | fuego ×1.5, Quemadura +1 stack | agua ×0.5 | **daño de hielo (×0)**, Congelación | — |
+| Temporal (TE) | Eco Sombrío, **Hechicera del Eco**, Eco de la Hechicera, Fragmento del Tiempo, Heraldo de las Eras, **Devorador de Eras** | hielo ×1.5, Congelación +1 stack, retrasos ×1.5 | electro ×0.5, Veneno −1 stack | — | — |
+| Aberración del Vacío (VA) | Vigilante del Vacío, Ojo del Abismo, **Centinela del Vacío** | Sagrado ×1.5 | mágico ×0.5 | — | — |
+
+**v0.9 (combo_balance.md § 3.1):** escala fija débil ×1.5 / normal /
+resistente ×0.5 / inmune ×0. Cada familia tiene al menos una debilidad y
+una resistencia; las debilidades son elementos (los tipos amplios físico
+/ mágico solo aparecen como resistencia, así el tope por golpe de
+combo_balance.md § 3.2 se rompe combinando elementos). Inmune al daño:
+el golpe hace 0, el log dice `× 0 INMUNE fuego` y la escena muestra
+`INMUNE` (`DamageEvent.affinity` = 0); la ficha lo lista como
+`daño de fuego` entre las inmunidades. Cambios respecto a v0.8.6:
+fuego ×1.25 → ×1.5 (no muertos, bestias, cienos), hielo ×1.25 → ×1.5
+(temporales), electro ×1.25 → ×1.5 (constructos), físico ×0.7 → ×0.5 y
+mágico ×1.25 → normal (espectros), mágico ×0.8 → ×0.5 (constructos),
+físico ×1.2 → normal y mágico ×0.75 → ×0.5 (aberraciones), fuego ×0.5
+→ inmune (ígneos), hielo ×0.5 → inmune (escarcha); resistencias nuevas:
+hielo (no muertos, bestias, arácnidos), agua (cienos, escarcha), electro
+(ígneos, temporales); debilidad nueva: electro (cienos).
 
 (En negrita, los jefes.) La ficha muestra solo datos de juego: cada
 rasgo con su factor numérico (`Sagrado ×1.5`, `Veneno +1 stack`) y, para
@@ -55,7 +71,7 @@ Devorador la conservan.
 Builds que habilita: curas / sagrado contra la Fortaleza y el Cementerio
 (zonas 5 y 8, donde el veneno no sirve), fuego contra el Bosque, hielo
 contra la Grieta Ígnea, retrasos / congelación contra el Laberinto y el
-Corazón, físico o sagrado contra el Abismo, quiebre contra los gólems.
+Corazón, sagrado contra el Abismo (v0.9), quiebre contra los gólems.
 
 ### 1.2 Tipos de daño de un golpe (`skillDamageTags`)
 
@@ -89,9 +105,9 @@ daño secundario de mecánicas del árbol (`_procDamage`: rebote de Arco
 Voltaico, Combustión, Eco Arcano...), que ya usa la Marca y el quiebre.
 
 El log lo dice con el resto de multiplicadores: `× 1.5 DÉBIL Sagrado`,
-`× 0.7 RESISTE físico`. `DamageEvent.affinity` lleva el factor (JSON
+`× 0.5 RESISTE físico`. `DamageEvent.affinity` lleva el factor (JSON
 `af`, solo si ≠ 1: aditivo, sin subir el protocolo) y la escena muestra
-`DÉBIL ×1.5` (naranja) o `RESISTE ×0.7` (gris) sobre el enemigo, una vez
+`DÉBIL ×1.5` (naranja) o `RESISTE ×0.5` (gris) o `INMUNE` sobre el enemigo, una vez
 por acción (encima de `QUIEBRE ×1.5` si lo hay).
 
 ### 1.4 Las curas dañan (`healHarm`)

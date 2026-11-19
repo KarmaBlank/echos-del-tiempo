@@ -8,11 +8,14 @@ import '../models/zone_def.dart';
 import 'abyss_catalog.dart';
 import 'classes_catalog.dart';
 import 'elements_catalog.dart';
+import 'enemy_families.dart'
+    show ComboRulesDef, HitCapDef, kComboRules, kHitCaps;
 import 'enemies_catalog.dart';
 import 'missions_catalog.dart';
 import 'skills_catalog.dart';
 import 'weapon_duals_catalog.dart';
 import 'weapons_catalog.dart';
+import 'zone_curve.dart';
 import 'zones_catalog.dart';
 
 /// Todos los datos de juego juntos, para inyectarlos en el motor. Los
@@ -48,6 +51,9 @@ class GameCatalog {
     this.elementStatuses = kElementStatuses,
     this.abyssBosses = kAbyssBosses,
     this.fragmentDrops = kFragmentDrops,
+    this.hitCaps = kHitCaps,
+    this.comboRules = kComboRules,
+    this.curves = kCurves,
   });
 
   /// Jefes del Abismo por número (docs/specs/abyss_bosses.md § 2).
@@ -55,6 +61,22 @@ class GameCatalog {
 
   /// Números del drop de Fragmentos (una sola entrada, `fragmentos`).
   final Map<String, FragmentDropDef> fragmentDrops;
+
+  /// Tope por golpe sin debilidad (combo_balance.md § 3.2), una entrada.
+  final Map<String, HitCapDef> hitCaps;
+
+  HitCapDef get hitCap => hitCaps['tope'] ?? const HitCapDef();
+
+  /// Reglas de combos y quiebre (combo_balance.md § 4-5), una entrada.
+  final Map<String, ComboRulesDef> comboRules;
+
+  ComboRulesDef get combo => comboRules['combos'] ?? const ComboRulesDef();
+
+  /// Curva por tramos y reglas de grupo (combo_balance.md § 1 y § 3.3),
+  /// una entrada.
+  final Map<String, CurveDef> curves;
+
+  CurveDef get curve => curves['curva'] ?? const CurveDef();
 
   FragmentDropDef get fragmentDrop =>
       fragmentDrops['fragmentos'] ?? const FragmentDropDef();

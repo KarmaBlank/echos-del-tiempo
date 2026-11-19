@@ -193,6 +193,32 @@ const Map<String, String> kWeaponImpactSfx = {
 
 /// Firma de cada habilidad de `kSkills` (sin el prefijo `skill.`).
 final Map<String, List<SfxTone>> _kBaseSkillVoices = {
+  // ---- Quebrar base (combo_balance.md § 5.1): golpe seco y crujido ----
+  'quebrar': [
+    ..._swingBlade(0.7, 0.9),
+    _n(2600, 0.06, crush: 3, v: 0.5, at: 0.08, seed: 211),
+  ],
+  'quebrarArcano': [
+    _n(4200, 0.08, lp: 3000, v: 0.4, seed: 223),
+    _n(2600, 0.06, crush: 3, v: 0.5, at: 0.09, seed: 227),
+  ],
+  // ---- combo de clase (combo_balance.md § 5.2) ----
+  'brasaEco': [..._swingBlade(1.3, 0.6), ..._x(_fire(1.2, 0.5, 5), dt: 0.04)],
+  'ascuaEco': [..._fire(1.6, 0.4, 11), ..._crackle(0.3)],
+  'puaEco': [..._whoosh(1.15, 0.5), ..._x(_bubbles(1.3, 0.5, 2), dt: 0.04)],
+  'selloInstante': [
+    _t(1400, 0.06, w: _tri, to: 2100, v: 0.35),
+    _t(700, 0.25, w: _pu, to: 520, vr: 7, vd: 0.08, v: 0.25, at: 0.05),
+  ],
+  'ignicionEco': [
+    ..._fire(0.9, 1.0, 7),
+    _n(2200, 0.12, crush: 2, v: 0.45, at: 0.1, seed: 233),
+  ],
+  'ponzonaEco': [
+    ..._whoosh(0.95, 0.8),
+    ..._x(_bubbles(0.85, 0.9, 6), dt: 0.06),
+    _n(1800, 0.1, crush: 2, v: 0.4, at: 0.12, seed: 239),
+  ],
   // ---- corte ----
   'giro': [..._swingBlade(1, 0.8), ..._x(_swingBlade(1.15, 0.8), dt: 0.1)],
   'embestida': [

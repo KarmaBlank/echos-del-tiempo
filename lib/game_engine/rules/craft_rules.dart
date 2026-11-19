@@ -282,8 +282,10 @@ class CraftRules {
     }
     final l = it.forge.level(stat);
     if (l >= WeaponUpgradeLevels.upMax) return const CraftResult.fail('MAX');
-    if (it.forgeLevel >= it.rarity.forgeCap) {
-      return CraftResult.fail('Tope de forja (${it.rarity.forgeCap})');
+    // Tope por rareza y por nivel de objeto (combo_balance.md § 2).
+    final cap = ItemRules.forgeCapOf(it);
+    if (it.forgeLevel >= cap) {
+      return CraftResult.fail('Tope de forja ($cap)');
     }
     final cost = forgeCost(w, it.rarity, l);
     final after = it.copyWith(forge: it.forge.withLevel(stat, l + 1));
