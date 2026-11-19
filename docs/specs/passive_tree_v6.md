@@ -281,3 +281,32 @@ congelado con 69:
   estados de los nodos se recalculan solo cuando cambia el perfil.
 - Test de rendimiento: el hover y la búsqueda no regraban la capa fija y
   200 cuadros con resaltado se pintan en < 1 s.
+- **Zoom alejado a 60 FPS (v0.9.11).** Con zoom < 0.75 la capa fija se
+  dibuja como UNA imagen (`toImageSync` del `ui.Picture`) rasterizada a la
+  escala del zoom × px del dispositivo, redondeada hacia arriba en pasos
+  de 2^(1/4) (~19 %; máx. 2048 px de lado) y escalada con filtro bilineal:
+  ya no se reproducen ~600 nodos y ~800 enlaces vectoriales en cada
+  cuadro. Se vuelve a rasterizar solo si cambia la capa fija o el escalón
+  de zoom (`PassiveTreePainter.farLevel` / `farBuilds`). El lienzo se
+  repinta solo si cambia el estado, el resaltado o el escalón de zoom; el
+  arrastre solo mueve la capa (`RepaintBoundary`). Los nombres de los
+  clusters ya se medían una vez (`TextPainter` en caché) y no se dibujan
+  con zoom < 0.55. Desde 0.75 hacia arriba todo sigue vectorial.
+- **Nivel de detalle** (único cambio visual): con zoom < 0.4 los nodos
+  del cluster bajo el mouse no llevan el anillo dorado de 1 px (mediría
+  menos de medio px de pantalla); sus enlaces dorados, el camino, el
+  foco, la búsqueda y el plan se ven igual. Con zoom < 0.75 la capa fija
+  puede verse apenas más suave (imagen reescalada ≤ 19 %).
+- **Benchmark** `flutter test test/perf/passive_tree_perf_test.dart`:
+  graba y rasteriza (CPU, `toImage`) 40 cuadros del visor 1000×420 con
+  resaltado + nombres, vectorial (como antes) y con la capa rasterizada.
+  Medición de referencia (p50, ms; rasterizado por software, sirve para
+  comparar):
+
+  | zoom | antes | después |
+  |------|-------|---------|
+  | 0.20 (TODO) | 9.60 | 1.56 |
+  | 0.35 | 10.80 | 3.90 |
+  | 0.60 | 10.66 | 6.92 |
+  | 1.00 | 9.32 | ≈ igual (vectorial) |
+  | 2.50 | 2.84 | ≈ igual (vectorial) |
