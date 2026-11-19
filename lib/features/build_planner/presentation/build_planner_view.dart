@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/theme/action_box.dart';
 import '../../../app/theme/min_hit_target.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
@@ -223,7 +224,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
           SizedBox(
             width: RetroType.width(context, 20),
             child: onToggle != null && _editable
-                ? InkWell(
+                ? ActionLink(
                     key: ValueKey('build-toggle-${g.key}'),
                     onTap: onToggle,
                     child: markText)
@@ -247,14 +248,12 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
           ),
           if (trailing != null) trailing,
           if (_editable && onRemove != null)
-            InkWell(
+            ActionBox(
               key: ValueKey('build-remove-${g.key}'),
               onTap: onRemove,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: const MinHitTarget(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4),
-                  child: Text('×', style: TextStyle(color: ProtoColors.red)),
-                ),
+                child: Text('×', style: TextStyle(color: ProtoColors.red)),
               ),
             ),
         ],
@@ -327,22 +326,26 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     }
 
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      InkWell(
-          key: ValueKey('build-dec-${g.ref}'),
-          onTap: () => bump(-5),
-          child: const MinHitTarget(
-              child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4),
-                  child:
-                      Text('−5', style: TextStyle(color: ProtoColors.sky))))),
-      InkWell(
-          key: ValueKey('build-inc-${g.ref}'),
-          onTap: () => bump(5),
-          child: const MinHitTarget(
-              child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4),
-                  child:
-                      Text('+5', style: TextStyle(color: ProtoColors.sky))))),
+      Padding(
+        padding: const EdgeInsets.only(left: 2),
+        child: ActionBox(
+            key: ValueKey('build-dec-${g.ref}'),
+            onTap: () => bump(-5),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: const MinHitTarget(
+                child:
+                    Text('−5', style: TextStyle(color: ProtoColors.sky)))),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(left: 2),
+        child: ActionBox(
+            key: ValueKey('build-inc-${g.ref}'),
+            onTap: () => bump(5),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: const MinHitTarget(
+                child:
+                    Text('+5', style: TextStyle(color: ProtoColors.sky)))),
+      ),
     ]);
   }
 
@@ -894,11 +897,11 @@ class _PickerState<T> extends State<_Picker<T>> {
             const Text('Nada para agregar.',
                 style: TextStyle(color: ProtoColors.dim)),
           for (final o in list)
-            InkWell(
-              key: ValueKey('pick-${o.key}'),
-              onTap: () => Navigator.of(context).pop(o.value),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: ActionBox(
+                key: ValueKey('pick-${o.key}'),
+                onTap: () => Navigator.of(context).pop(o.value),
                 child: ProtoText('<b>${protoEsc(o.label)}</b>'
                     '${o.sub == null ? '' : '  ${protoColor(ProtoColors.dim, protoEsc(o.sub!))}'}'),
               ),

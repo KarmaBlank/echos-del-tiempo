@@ -12,6 +12,7 @@ import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/rules/tutorial_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import '../../app/button_look.dart';
 
 /// Sello y batalla del TUTORIAL (docs/specs/combat_tutorial.md § 1, 4, 5).
 
@@ -54,6 +55,8 @@ void main() {
         ));
     // Pendiente: la fila del tutorial está elegida y es la primera.
     expect(find.byKey(const ValueKey('mission-tutorial')), findsOneWidget);
+    expectButtonLook(tester, find.byKey(const ValueKey('mission-tutorial')));
+    expectButtonLook(tester, find.byKey(const ValueKey('tutorial-party')));
     await tester.tap(find.byKey(const ValueKey('tutorial-party')));
     expect(started, isTrue);
     await tester.tap(find.byKey(const ValueKey('tutorial-solo')));
