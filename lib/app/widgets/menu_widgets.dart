@@ -273,12 +273,16 @@ class StepCrumbs extends StatelessWidget {
     required this.current,
     required this.onStep,
     this.keyPrefix = 'step-crumb-',
+    this.tips,
   });
 
   final List<String> steps;
   final int current;
   final ValueChanged<int> onStep;
   final String keyPrefix;
+
+  /// Tooltip (markup) de cada paso, en el orden de [steps] (`null` = sin).
+  final List<String>? tips;
 
   @override
   Widget build(BuildContext context) {
@@ -289,14 +293,24 @@ class StepCrumbs extends StatelessWidget {
       children: [
         for (var i = 0; i < steps.length; i++) ...[
           if (i > 0) const Text('›', style: TextStyle(color: ProtoColors.dim)),
-          PanelButton('${i + 1} ${steps[i]}',
-              key: ValueKey('$keyPrefix$i'),
-              selected: i == current,
-              accent: i == current ? ProtoColors.gold : null,
-              onPressed: () => onStep(i)),
+          _tip(
+              i,
+              PanelButton('${i + 1} ${steps[i]}',
+                  key: ValueKey('$keyPrefix$i'),
+                  selected: i == current,
+                  accent: i == current ? ProtoColors.gold : null,
+                  onPressed: () => onStep(i))),
         ],
       ],
     );
+  }
+
+  Widget _tip(int i, Widget child) {
+    final t = tips?.elementAtOrNull(i);
+    return t == null
+        ? child
+        : RetroTooltip(
+            key: ValueKey('${keyPrefix}tip-$i'), message: t, child: child);
   }
 }
 

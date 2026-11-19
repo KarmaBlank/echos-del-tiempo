@@ -477,6 +477,42 @@ detalle"). Donde difiere de la sección v0.2.0, manda esta:
   cambiar de paso) `Esc` vuelve un paso (en el paso 1 cierra el panel) y
   `Enter` avanza / confirma si se puede.
 
+### FUSIÓN (v0.8.3: tooltips)
+
+Pedido del dueño: "que haya tooltip en cada opción de la fusión porque no
+se entiende". Los textos viven en `lib/features/inventory/domain/
+craft_help.dart` (`CraftHelp`), armados con los datos de `CraftRules` /
+`Rarity` / `LootRules` (ningún número copiado); las líneas en pantalla no
+cambian.
+
+- **Acciones del paso 2** (`RetroHoverCard` al costado, con mouse o foco
+  de teclado; contenido `bench-op-tip-<op>`): título y una línea por
+  parte (`CraftOpHelp`): `Qué hace:` · `En tu arma:` (con los números del
+  arma elegida: `Mods 2/4 → 3/4`, `Raro → Épico: lugar de mods 4 → 6
+  (+2), +3 mods al azar..., tope de forja 6 → 8, y gana una pasiva`) ·
+  `Cuesta:` (exacto de la vista previa por defecto, o el rango por tier
+  `₵100 (T5) a ₵800 (T1)`; con `(tienes N)`) · `Pierdes:` (traslados: el
+  arma de origen con mods, pasiva, forja y habilidades) · `Bloqueada:`
+  (solo si lo está: el mismo motivo que el pie / `ShopGuards`, más una
+  pista para `Falta <material>`, `Faltan $N`, `Está equipada`, `Arma
+  inicial`) · `Ejemplo:`.
+- **Secciones** (`SectionPanel.tooltip`): una línea por grupo
+  (`CraftHelp.groups`). **Migas** (`StepCrumbs.tips`,
+  `bench-crumb-tip-<i>`): `CraftHelp.steps`.
+- **Materiales**: un tooltip por contador (`craft-mat-<material>`, dentro
+  de `craft-materials`): `Para qué:` (acciones y cantidades) · `Dónde:`
+  (chance de loot de `LootRules.materialChance`, qué rarezas lo dan al
+  desarmar según `CraftRules.salvageYield`; Ancla solo en Ecos, Esencia de
+  los Jefes del Abismo) · `Tienes: N (máximo 99)`.
+- **Paso 3**: cada fila de `¿De qué arma? (se destruye)`
+  (`craft-source-tip-<uid>`): `Te llevas:` y `Se destruye` con rareza,
+  nivel, mods, pasiva, forja y habilidades. Las tarjetas de `¿Qué
+  habilidad reemplazas?` (`craft-replace-tip-<id>`) suman arriba de la
+  ficha de la habilidad si es base (no se reemplaza), trasladada o la que
+  se reemplaza.
+
+Tests: `test/features/inventory/craft_help_test.dart`.
+
 ### CONSUMIBLES (`itemsHtml`)
 
 `Se usan en batalla desde el menú. Máximo 9 de cada uno.` Una fila por
