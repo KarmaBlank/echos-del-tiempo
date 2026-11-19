@@ -92,7 +92,9 @@ class InventoryActionRow extends StatefulWidget {
 }
 
 class _RowState extends State<InventoryActionRow> {
-  bool _hover = false;
+  bool _mouse = false;
+  bool _focus = false;
+  bool get _hover => _mouse || _focus;
 
   void _tap() {
     final e = widget.entry;
@@ -106,8 +108,7 @@ class _RowState extends State<InventoryActionRow> {
     final e = widget.entry;
     final on = e.enabled;
     final label = protoColor(
-        on ? (e.color ?? ProtoColors.ink) : ProtoColors.dim,
-        protoEsc(e.label));
+        on ? (e.color ?? ProtoColors.ink) : ProtoColors.dim, protoEsc(e.label));
     final tail = on ? e.note : (e.shortReason ?? e.reason);
     final line = tail == null
         ? label
@@ -116,26 +117,38 @@ class _RowState extends State<InventoryActionRow> {
       enabled: on,
       autofocus: widget.autofocus,
       mouseCursor: on ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onShowHoverHighlight: (h) => setState(() => _hover = h),
-      onShowFocusHighlight: (h) => setState(() => _hover = h),
+      onShowFocusHighlight: (h) => setState(() => _focus = h),
       actions: {
         ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => _tap()),
       },
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _tap,
-        child: Container(
-          padding: EdgeInsets.symmetric(
-              horizontal: RetroTheme.minButtonInset,
-              vertical: UiTheme.space(4)),
-          decoration: BoxDecoration(
-            color: _hover && on ? ProtoColors.buttonHover : null,
-            border: Border(
-                left: BorderSide(
-                    color: _hover && on ? ProtoColors.gold : Colors.transparent,
-                    width: RetroTheme.thinBorderWidth)),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _mouse = true),
+        onExit: (_) => setState(() => _mouse = false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _tap,
+          // Fila de menú clickeable (ui_style.md § "Filas de menú"): se ve
+          // como botón; la desactivada, texto suelto atenuado.
+          child: Container(
+            key: ValueKey(on ? 'menu-row-on' : 'menu-row-off'),
+            margin: EdgeInsets.symmetric(
+                horizontal: UiTheme.space(4), vertical: UiTheme.space(2)),
+            padding: EdgeInsets.symmetric(
+                horizontal: math.max(8, RetroTheme.minButtonInset),
+                vertical: math.max(8, UiTheme.space(6))),
+            decoration: on
+                ? BoxDecoration(
+                    color:
+                        _hover ? ProtoColors.buttonHover : ProtoColors.button,
+                    border: Border.all(
+                        color: _hover
+                            ? ProtoColors.buttonHoverBorder
+                            : ProtoColors.buttonBorder,
+                        width: RetroTheme.thinBorderWidth),
+                  )
+                : null,
+            child: ProtoText(line),
           ),
-          child: ProtoText(line),
         ),
       ),
     );
@@ -165,9 +178,7 @@ class InventoryContextMenu {
   }
 
   static void show(BuildContext context, Offset at,
-      {required List<InventoryMenuEntry> entries,
-      String? title,
-      Rect? avoid}) {
+      {required List<InventoryMenuEntry> entries, String? title, Rect? avoid}) {
     close();
     RetroHoverCard.dismissAll();
     RetroHoverCard.suppressed = true;
@@ -207,7 +218,8 @@ class _MenuLayer extends StatelessWidget {
         delegate: _MenuLayout(at, size, avoid),
         child: Focus(
           onKeyEvent: (_, e) {
-            if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape) {
+            if (e is KeyDownEvent &&
+                e.logicalKey == LogicalKeyboardKey.escape) {
               InventoryContextMenu.close();
               return KeyEventResult.handled;
             }
@@ -237,15 +249,24 @@ class _MenuLayer extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (title != null)
+                      // Encabezado no clickeable, separado con una línea.
+                      if (title != null) ...[
                         Padding(
+                          key: const ValueKey('inv-ctx-title'),
                           padding: const EdgeInsets.fromLTRB(
                               RetroTheme.minButtonInset,
                               2,
                               RetroTheme.minButtonInset,
                               4),
-                          child: ProtoText(title!),
+                          child: DefaultTextStyle.merge(
+                              style: const TextStyle(color: ProtoColors.gold),
+                              child: ProtoText(title!)),
                         ),
+                        Container(
+                            height: 1,
+                            margin: const EdgeInsets.only(bottom: 4),
+                            color: ProtoColors.panelBorder),
+                      ],
                       InventoryActionList(
                           entries: entries,
                           autofocusFirst: true,
@@ -270,8 +291,9 @@ class _MenuLayout extends SingleChildLayoutDelegate {
   final Rect? avoid;
 
   @override
-  BoxConstraints getConstraintsForChild(BoxConstraints c) => BoxConstraints.loose(
-      Size(math.min(c.maxWidth - 16, 360), c.maxHeight - 16));
+  BoxConstraints getConstraintsForChild(BoxConstraints c) =>
+      BoxConstraints.loose(
+          Size(math.min(c.maxWidth - 16, 360), c.maxHeight - 16));
 
   @override
   Offset getPositionForChild(Size size, Size child) {
@@ -286,8 +308,7 @@ class _MenuLayout extends SingleChildLayoutDelegate {
     }
     // Si tapa [avoid] (el buscador), se corre:
     final av = avoid;
-    if (av != null &&
-        (Offset(ax, ay) & child).overlaps(av)) {
+    if (av != null && (Offset(ax, ay) & child).overlaps(av)) {
       // Debajo del buscador (sobre la grilla, sin tapar ESTADÍSTICAS);
       // si ahí no entra, a su derecha.
       if (av.bottom + 4 + child.height <= size.height - 8) {
@@ -296,8 +317,10 @@ class _MenuLayout extends SingleChildLayoutDelegate {
         ax = av.right + 4;
       }
     }
-    final x = ax.clamp(8.0, (size.width - 8 - child.width).clamp(8.0, double.infinity));
-    final y = ay.clamp(8.0, (size.height - 8 - child.height).clamp(8.0, double.infinity));
+    final x = ax.clamp(
+        8.0, (size.width - 8 - child.width).clamp(8.0, double.infinity));
+    final y = ay.clamp(
+        8.0, (size.height - 8 - child.height).clamp(8.0, double.infinity));
     return Offset(x, y);
   }
 

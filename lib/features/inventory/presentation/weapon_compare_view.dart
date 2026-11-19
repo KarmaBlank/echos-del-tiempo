@@ -175,8 +175,8 @@ class _LabeledCard extends StatelessWidget {
           // Resumen + secciones plegables (ui_style.md § "Tooltips
           // cortos").
           LayoutBuilder(builder: (context, c) {
-            final parts = itemTipParts(rules, item,
-                level: level, attributes: attributes);
+            final parts =
+                itemTipParts(rules, item, level: level, attributes: attributes);
             return RetroTipFolds(
                 summary: parts.summary,
                 sections: parts.sections,
@@ -186,8 +186,118 @@ class _LabeledCard extends StatelessWidget {
       );
 }
 
-/// Ficha del mouse: [item] a la izquierda, la equipada ([equipped],
-/// rótulo `EQUIPADA`) a la derecha y `Si la equipas:` debajo.
+/// `Si la equipas:` corto del tooltip (ui_style.md § "Tooltips cortos",
+/// panels.md § "Comparar armas"): solo las estadísticas que cambian, en
+/// una grilla de dos columnas si entra (`ATQ 116 → 120 ▲4`), y el resto
+/// (turno, habilidades, mods, pasiva, ULT, requisitos) en `▸ Cambios`.
+class CompactComparison extends StatelessWidget {
+  const CompactComparison({
+    super.key,
+    required this.rules,
+    required this.cmp,
+    required this.level,
+    required this.attributes,
+    required this.maxWidth,
+  });
+
+  final ProgressionRules rules;
+  final WeaponComparison cmp;
+  final int level;
+  final PlayerAttributes attributes;
+  final double maxWidth;
+
+  /// Markup de la sección plegada `Cambios` (vacío si no hay nada).
+  static String changesMarkup(ProgressionRules rules, WeaponComparison cmp,
+      int level, PlayerAttributes attributes) {
+    final speedChanged = (cmp.before.speed - cmp.after.speed).abs() > 1e-6;
+    final w = rules.items.baseOf(cmp.to);
+    return [
+      if (cmp.weightClassChanged)
+        'Peso: ${_weightTag(cmp.weightClassBefore)} → '
+            '${_weightTag(cmp.weightClassAfter)}',
+      if (speedChanged) turnIntervalLine(rules, cmp.before, cmp.after.speed),
+      if (cmp.skillsGained.isNotEmpty)
+        _plus('Habilidad', protoEsc(cmp.skillsGained.join(', '))),
+      if (cmp.skillsLost.isNotEmpty)
+        _minus('Habilidad', protoEsc(cmp.skillsLost.join(', '))),
+      if (cmp.modsGained.isNotEmpty) _plus('Mod', _mods(cmp.modsGained)),
+      if (cmp.modsLost.isNotEmpty) _minus('Mod', _mods(cmp.modsLost)),
+      // La pasiva y la ULT solo si cambian.
+      if (cmp.passiveChanged && cmp.passiveAfter != null)
+        _plus('Pasiva', _passive(cmp.passiveAfter!)),
+      if (cmp.passiveChanged && cmp.passiveBefore != null)
+        _minus('Pasiva', _passive(cmp.passiveBefore!)),
+      if (cmp.ultChanged)
+        protoColor(ProtoColors.pink,
+            'ULT: ${protoEsc(cmp.ultBefore ?? '—')} → ${protoEsc(cmp.ultAfter ?? '—')}'),
+      if (w != null && !cmp.meetsRequirements)
+        requirementsLineMarkup(w, level, attributes),
+    ].join('<br>');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final changed = [
+      for (final s in cmp.stats)
+        if (s.changed) s
+    ];
+    // Dos columnas si cada una tiene ~20 letras; si no, una.
+    final half = (maxWidth - 8) / 2;
+    final cellW = half >= RetroType.width(context, 160) ? half : maxWidth;
+    final changes = changesMarkup(rules, cmp, level, attributes);
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ProtoText(protoColor(ProtoColors.sky, 'Si la equipas:')),
+          if (cmp.same)
+            ProtoText(protoColor(ProtoColors.dim, 'Es la misma arma.'))
+          else if (changed.isEmpty)
+            ProtoText(protoColor(ProtoColors.dim, 'Mismas estadísticas.'))
+          else
+            Wrap(
+              spacing: 8,
+              children: [
+                for (final s in changed)
+                  SizedBox(width: cellW, child: _ShortDelta(s)),
+              ],
+            ),
+          if (!cmp.meetsRequirements)
+            ProtoText(
+                protoColor(ProtoColors.red, 'No cumples los requisitos.')),
+          if (!cmp.same && changes.isNotEmpty)
+            RetroTipFold(title: 'Cambios', body: changes, maxWidth: maxWidth),
+        ],
+      ),
+    );
+  }
+}
+
+/// `ATQ 116 → 120 ▲4` (verde ▲ si mejora, rojo ▼ si empeora).
+class _ShortDelta extends StatelessWidget {
+  _ShortDelta(this.s) : super(key: ValueKey('cmp-stat-${s.label}'));
+  final StatDelta s;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = s.better ? ProtoColors.green : ProtoColors.red;
+    final d = s.diffText.replaceFirst(RegExp(r'^[+-]'), '');
+    return Text.rich(TextSpan(children: [
+      TextSpan(text: retroText('${s.label} ${s.format(s.before)} ')),
+      TextSpan(
+          style: TextStyle(color: c),
+          children: symbolSpans(
+              retroText('→ ${s.format(s.after)} ${s.better ? '▲' : '▼'}$d'))),
+    ]));
+  }
+}
+
+/// Ficha del mouse (v0.9.11): [item] a la izquierda (resumen + plegables)
+/// y, a la derecha, el nombre de la EQUIPADA y la comparación corta
+/// ([CompactComparison]). Dos columnas angostas (~40 letras cada una) que
+/// crecen con el texto pero nunca pasan de [maxScreenShare] del ancho.
 class HoverCompareCard extends StatelessWidget {
   const HoverCompareCard({
     super.key,
@@ -198,7 +308,11 @@ class HoverCompareCard extends StatelessWidget {
     this.ownerName,
   });
 
-  static const cardWidth = 340.0;
+  /// Ancho de cada columna en Normal (~40 letras de VT323).
+  static const cardWidth = 220.0;
+
+  /// Parte máxima del ancho de la pantalla que ocupa la ficha.
+  static const maxScreenShare = 0.7;
 
   final ProgressionRules rules;
   final PlayerProfile viewer;
@@ -208,19 +322,14 @@ class HoverCompareCard extends StatelessWidget {
   /// Dueño si no es el jugador local.
   final String? ownerName;
 
-  /// Desde este agrandamiento del texto la ficha va en dos columnas
-  /// (arma | comparación) sin la equipada al lado: con las tres no entra
-  /// en 720 px de alto.
-  static const compactFrom = 1.5;
-
   @override
   Widget build(BuildContext context) {
     final eq = rules.equippedItem(viewer);
     final cmp = compareWeapons(rules, viewer, to: item, attributes: attributes);
-    final f = RetroType.factorOf(context);
-    // Dos tarjetas + separación dentro de la pantalla (márgenes, padding
-    // y borde de la caja del tip).
-    final room = (MediaQuery.sizeOf(context).width - 16 - 24 - 16) / 2;
+    // Dos columnas + separación dentro de [maxScreenShare] de la pantalla
+    // (padding y borde de la caja del tip aparte).
+    final room =
+        (MediaQuery.sizeOf(context).width * maxScreenShare - 24 - 16) / 2;
     final width = RetroType.width(context, cardWidth).clamp(0.0, room);
     final card = _LabeledCard(
         rules: rules,
@@ -230,77 +339,38 @@ class HoverCompareCard extends StatelessWidget {
         label: ownerName == null
             ? null
             : protoColor(ProtoColors.dim, 'de ${protoEsc(ownerName!)}'));
-    final delta = ComparisonDelta(
-      key: const ValueKey('inv-cmp-tip-delta'),
-      rules: rules,
-      cmp: cmp,
-      level: viewer.level,
-      attributes: attributes,
-      title: 'Si la equipas:',
-    );
-    final equipped = eq == null
-        ? ProtoText(protoColor(ProtoColors.dim, 'Sin arma'))
-        : _LabeledCard(
-            rules: rules,
-            item: eq,
-            level: viewer.level,
-            attributes: attributes,
-            label: '<b style="color:#ffd166">EQUIPADA</b>');
-    if (f >= compactFrom) {
-      // Texto muy grande: el arma y, al lado, qué cambia respecto de la
-      // equipada (solo su nombre).
-      return SizedBox(
-        key: const ValueKey('inv-cmp-tip'),
-        width: width * 2 + 16,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(width: width, child: card),
-            const SizedBox(width: 16),
-            SizedBox(
-              width: width,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  KeyedSubtree(
-                    key: const ValueKey('inv-cmp-tip-equipped'),
-                    child: ProtoText(eq == null
-                        ? protoColor(ProtoColors.dim, 'Sin arma')
-                        : '<b style="color:#ffd166">EQUIPADA</b> '
-                            '${itemNameMarkup(rules, eq)}'),
-                  ),
-                  const SizedBox(height: 6),
-                  delta,
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
     return SizedBox(
       key: const ValueKey('inv-cmp-tip'),
       width: width * 2 + 16,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(width: width, child: card),
-              const SizedBox(width: 16),
-              SizedBox(
-                key: const ValueKey('inv-cmp-tip-equipped'),
-                width: width,
-                child: equipped,
-              ),
-            ],
+          SizedBox(width: width, child: card),
+          const SizedBox(width: 16),
+          SizedBox(
+            width: width,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                KeyedSubtree(
+                  key: const ValueKey('inv-cmp-tip-equipped'),
+                  child: ProtoText(eq == null
+                      ? protoColor(ProtoColors.dim, 'Sin arma equipada')
+                      : '<b style="color:#ffd166">EQUIPADA</b> '
+                          '${itemNameMarkup(rules, eq)}'),
+                ),
+                const SizedBox(height: 4),
+                CompactComparison(
+                  key: const ValueKey('inv-cmp-tip-delta'),
+                  rules: rules,
+                  cmp: cmp,
+                  level: viewer.level,
+                  attributes: attributes,
+                  maxWidth: width,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 6),
-          Container(height: 2, color: ProtoColors.panelBorder),
-          const SizedBox(height: 6),
-          delta,
         ],
       ),
     );

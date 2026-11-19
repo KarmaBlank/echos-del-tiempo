@@ -638,9 +638,11 @@ inventario de un compañero, abajo a la derecha: `Solo lectura` y
   buscador: se abre debajo de él (si no entra, a su derecha). Los
   tooltips del inventario (sin `RetroTipArea` desde v0.9.10) nunca se
   salen de la pantalla. Orden: Equipar, Comparar,
-  Mover (`· o arrastrá`), Dar a <nombre> (una por compañero; sin
-  compañeros `Dar a...`), Tirar (`· queda en el piso`), Desarmar, Vender
-  ₵N (con `· Recibís ...`). Las que no se pueden, en gris con el
+  Mover (`· o arrastrá`), Dar a <nombre> (una por compañero; si dos se
+  llaman igual, `Dar a Héroe (Maga, Nv 6)`; sin compañeros `Dar a...`),
+  Tirar (`· queda en el piso`), Desarmar (`· +2 Cristal de Era` o
+  `· sin materiales`; v0.9.11), Vender ₵N. Filas con aspecto de botón:
+  ui_style.md § "Filas de menú clickeables". Las que no se pueden, en gris con el
   **motivo corto en la misma línea** y atenuado (`inventoryReasonShort`):
   `Tirar · equipada`, `Dar a... · sin compañeros`, `Equipar · ya
   equipada`, `Vender ₵N · arma inicial`, `Equipar · Requisitos: ESP 14`;
@@ -731,7 +733,10 @@ UI):
   - requisitos de B (`Requiere:` en verde/rojo) y, si no los cumple,
     `No cumples los requisitos: hoy no podrías equiparla.` en rojo.
   - Mismo objeto en A y B → `Es la misma arma.` sin diferencias.
-- **Ficha comparada al pasar el mouse** (`inv-cmp-tip`, tooltip de
+- **Ficha comparada al pasar el mouse** (v0.9.11: corta; ver
+  ui_style.md § "Tooltips cortos" — ficha del arma a la izquierda y, a
+  la derecha, `EQUIPADA <nombre>` + solo las stats que cambian + `▸
+  Cambios`; lo que sigue describe la versión anterior) (`inv-cmp-tip`, tooltip de
   widgets `RetroHoverCard` en `lib/app/theme/`): sobre un arma de la
   grilla (tuya o de un compañero) que no sea la que usás, la ficha del
   objeto a la izquierda y la de la equipada a la derecha con el rótulo

@@ -1,4 +1,7 @@
+import 'package:echos_del_tiempo/app/theme/retro_hover_card.dart';
+import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/features/inventory/domain/weapon_compare.dart';
+import 'package:echos_del_tiempo/features/inventory/presentation/weapon_compare_view.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
@@ -35,6 +38,10 @@ int _cell(PlayerProfile p, String token) =>
 String _statText(StatDelta s) => s.changed
     ? '${s.label} ${s.format(s.before)} → ${s.format(s.after)} ${s.diffText}'
     : '${s.label} ${s.format(s.before)}';
+
+/// `ATQ 21 → 30 ▲9` del tooltip corto.
+String _shortText(StatDelta s) => '${s.label} ${s.format(s.before)} → '
+    '${s.format(s.after)} ${s.better ? '▲' : '▼'}${s.diffText.substring(1)}';
 
 Future<TestGesture> _hover(WidgetTester tester, Finder f) async {
   final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
@@ -126,12 +133,39 @@ void main() {
     expect(text, contains('Filo del Alba'));
     expect(plain(tester, 'inv-cmp-tip-equipped'), contains('EQUIPADA'));
     expect(plain(tester, 'inv-cmp-tip-equipped'), contains('Espada de Bronce'));
-    final delta = plain(tester, 'inv-cmp-tip-delta');
+    var delta = plain(tester, 'inv-cmp-tip-delta');
     expect(delta, contains('Si la equipas:'));
     final cmp = compareWeapons(progression, p, to: epicSword);
+    // Corto (v0.9.11): solo las stats que cambian, `ATQ 21 → 30 ▲9`.
     for (final s in cmp.stats) {
-      expect(delta, contains(_statText(s)));
+      if (s.changed) {
+        expect(delta, contains(_shortText(s)));
+      } else {
+        expect(find.byKey(ValueKey('cmp-stat-${s.label}')), findsNothing);
+      }
     }
+    // Sin turno, habilidades, mods ni pasiva fuera de `▸ Cambios`.
+    for (final t in [
+      'Tu turno llega',
+      '+ Mod:',
+      '- Mod:',
+      'Habilidad:',
+      'Pasiva:',
+      'ULT:',
+      'Requiere'
+    ]) {
+      expect(delta, isNot(contains(t)), reason: t);
+    }
+    // A lo sumo 10 líneas visibles.
+    final lineH =
+        RetroHoverCard.textStyle.fontSize! * RetroHoverCard.textStyle.height!;
+    expect(
+        tester.getSize(find.byKey(const ValueKey('inv-cmp-tip-delta'))).height,
+        lessThanOrEqualTo(lineH * 10 + 1));
+    expect(plain(tester, 'inv-cmp-tip'), isNot(contains('Tu turno llega')));
+    await tester.tap(find.byKey(const ValueKey('tip-fold-Cambios')));
+    await tester.pump();
+    delta = plain(tester, 'inv-cmp-tip-delta');
     expect(delta, contains('+ Mod:'));
     expect(delta, contains(cmp.modsGained.first));
     expect(delta, contains('+ Pasiva:'));
@@ -255,5 +289,74 @@ void main() {
     expect(plain(tester, 'cmp-card-a'), contains('Solo lectura'));
     expect(find.byKey(const ValueKey('cmp-equip-a')), findsNothing);
     expect(find.byKey(const ValueKey('cmp-equip-b')), findsOneWidget);
+  });
+
+  group('tooltip corto (v0.9.11)', () {
+    for (final (size, text) in const [
+      (Size(1280, 720), TextSize.normal),
+      (Size(1920, 1080), TextSize.normal),
+      (Size(1280, 720), TextSize.enormous),
+      (Size(1920, 1080), TextSize.enormous),
+    ]) {
+      testWidgets(
+          'ancho máximo en ${size.width.toInt()}×${size.height.toInt()} '
+          '${text.name}', (tester) async {
+        final c = await pumpPanel(tester,
+            profile: lootWarrior(),
+            textSize: text,
+            build: (v, c) => CharacterPanel(
+                view: v, controller: c, initialTab: CharacterTab.inventory));
+        tester.view.physicalSize = size * tester.view.devicePixelRatio;
+        await tester.pumpAndSettle();
+        final p = c.view!.me!.profile;
+        final cell = find.byKey(ValueKey('inv-cell-${_cell(p, 'e1')}'));
+        await tester.ensureVisible(cell);
+        await tester.pump();
+        final mouse = await _hover(tester, cell);
+        final tip = tester.getRect(find.byKey(const ValueKey('inv-cmp-tip')));
+        expect(tip.width,
+            lessThanOrEqualTo(size.width * HoverCompareCard.maxScreenShare),
+            reason: '$tip');
+        // Cada columna: ~40 letras escaladas por el texto.
+        // En pantallas anchas, menos de la mitad del ancho.
+        if (size.width >= 1920 && text == TextSize.normal) {
+          expect(tip.width, lessThan(size.width / 2));
+        }
+        expect(
+            (Offset.zero & size).inflate(1).contains(tip.bottomRight), isTrue);
+        expect(tester.takeException(), isNull);
+        await mouse.removePointer();
+        await tester.pump(const Duration(milliseconds: 300));
+      });
+    }
+
+    testWidgets('Esc y clic fuera lo cierran (también fijado)', (tester) async {
+      final c = await _inventory(tester, lootWarrior());
+      final p = c.view!.me!.profile;
+      final cell = find.byKey(ValueKey('inv-cell-${_cell(p, 'e1')}'));
+      final tip = find.byKey(const ValueKey('inv-cmp-tip'));
+      // Esc.
+      var mouse = await _hover(tester, cell);
+      expect(tip, findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(tip, findsNothing);
+      expect(find.byType(CharacterPanel), findsOneWidget,
+          reason: 'el primer Esc es del tooltip');
+      await mouse.removePointer();
+      // Fijado (mouse encima de la caja) y clic fuera.
+      mouse = await _hover(tester, cell);
+      await mouse.moveTo(tester.getCenter(tip));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(tip, findsOneWidget, reason: 'fijado');
+      final out = await tester.createGesture(kind: PointerDeviceKind.touch);
+      await out.down(const Offset(4, 710));
+      await out.up();
+      await tester.pump();
+      expect(tip, findsNothing);
+      expect(RetroHoverCard.anyShowing, isFalse);
+      await mouse.removePointer();
+      await tester.pump(const Duration(milliseconds: 300));
+    });
   });
 }

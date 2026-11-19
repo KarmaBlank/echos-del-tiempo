@@ -203,7 +203,47 @@ se pliega.
   el primer efecto) y estados de batalla (`foldAfter: 1`, `▸ Qué hace`).
 - Las líneas de ayuda de los paneles (`PanelHint`) largas (≥ 160 letras)
   muestran la primera oración y el resto en `▸ Más`.
+- **v0.9.11 (pedido del dueño: "el tooltip sigue siendo gigante")**:
+  - **La letra nunca se achica.** Nada de `FittedBox` ni escalado: la
+    caja tiene ancho y alto máximos (la pantalla menos 8 px de margen; el
+    ancho de cada ficha además acotado, ver abajo) y, si el contenido no
+    entra, scrollea en vertical adentro (`retro-tip-scroll`, rueda del
+    mouse; con plegables la caja queda fija con el mouse encima) con una
+    barra fina del tema (`buttonBorder`, 4 px).
+  - **Comparación del inventario**: dos columnas angostas de
+    `HoverCompareCard.cardWidth` (220 × el factor de texto, ~40 letras),
+    juntas nunca más del 70% del ancho de la pantalla. Izquierda: la
+    ficha corta del arma. Derecha: `EQUIPADA <nombre>` en una línea y
+    `Si la equipas:` con **solo las estadísticas que cambian** en una
+    grilla de 2 columnas si entra (`ATQ 116 → 120 ▲4`, verde ▲ / rojo
+    ▼). El resto (peso, `Tu turno llega cada...`, ± habilidades, ± mods,
+    pasiva y ULT solo si cambian, `Requiere` si no se cumple) va en
+    `▸ Cambios`. Si no entra a ningún costado, va debajo (o arriba) de
+    la casilla.
+  - **Cerrar fácil**: además de salir con el mouse de la casilla y de la
+    caja, `Esc` (el primer `Esc` es del tooltip; los abiertos por el
+    cursor de teclado no lo toman) y un clic fuera de la caja la cierran,
+    también si quedó fija.
+  - **Habilidades plegadas**: una línea por habilidad (nombre, costo y
+    lo principal) y el detalle largo (stacks, Pulso...) en su propio `▸`
+    (`tipSubFold` → sub-plegable de `RetroTipFold`).
+  - No hay ajuste de tooltips en AJUSTES; no se agregan opciones.
 
+### Filas de menú clickeables (v0.9.11)
+
+Pedido del dueño: en los menús "no se distingue qué es texto y qué es
+clickeable". Regla para toda lista de acciones en filas de texto
+(`InventoryActionRow`: menú del clic derecho y LIMPIAR INVENTARIO;
+ORDENAR ya usa `PanelButton`):
+- Habilitada = botón: fondo `button`, borde fino `buttonBorder`
+  (`thinBorderWidth`), padding ≥ 8 px, separación de 2 px; hover o foco
+  con `buttonHover` y borde `buttonHoverBorder`; cursor de mano.
+- Desactivada: sin fondo ni borde, texto `dim`, cursor normal; el motivo
+  corto al lado y el completo en su tooltip.
+- El título del menú (el nombre del objeto) es encabezado: dorado, no
+  clickeable, separado de las filas por una línea `panelBorder`.
+- El texto de ayuda (`· queda en el piso`) va en `dim`, secundario.
+- Nombres repetidos se desambiguan: `Dar a Héroe (Maga, Nv 6)`.
 Interlineado: paneles, tooltips, `.pbox` y chat `RetroType.line`.
 
 ## Paleta (`ProtoColors`, `lib/app/theme/proto_colors.dart`)

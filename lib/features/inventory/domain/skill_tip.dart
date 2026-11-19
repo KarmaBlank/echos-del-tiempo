@@ -76,15 +76,36 @@ String skillTipMarkup(SkillDef s,
 /// efecto · efecto`.
 String skillOneLineMarkup(SkillDef s,
     {DerivedStats? stats, bool ultimate = false}) {
-  final lines = describeSkillMarkup(s, tipUser(stats),
-          ultimate: ultimate, element: false)
-      .split('<br>')
-      .skip(1)
-      .toList();
+  final lines =
+      describeSkillMarkup(s, tipUser(stats), ultimate: ultimate, element: false)
+          .split('<br>')
+          .skip(1)
+          .toList();
   final name = ultimate
       ? '<b style="color:#e84393">ULT ${s.name}</b>'
       : '<b>${s.name}</b>';
   final cost = ultimate ? 'barra ULT' : '${s.mp} MP';
   return '$name <span class="k">($cost · ${skillKindLabel(s)})</span>'
       '${lines.isEmpty ? '' : ': ${lines.join(' · ')}'}';
+}
+
+/// Una línea por habilidad para el tooltip plegado (v0.9.11): nombre,
+/// costo y lo principal; el resto del detalle (stacks, Pulso...) va en
+/// su propio ▸ ([tipSubFold]).
+(String, String) skillShortLineMarkup(SkillDef s,
+    {DerivedStats? stats, bool ultimate = false}) {
+  final lines =
+      describeSkillMarkup(s, tipUser(stats), ultimate: ultimate, element: false)
+          .split('<br>')
+          .skip(1)
+          .toList();
+  final name = ultimate
+      ? '<b style="color:#e84393">ULT ${s.name}</b>'
+      : '<b>${s.name}</b>';
+  final cost = ultimate ? 'barra ULT' : '${s.mp} MP';
+  return (
+    '$name <span class="k">($cost)</span>'
+        '${lines.isEmpty ? '' : ' ${lines.first}'}',
+    lines.skip(1).join('<br>'),
+  );
 }
