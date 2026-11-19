@@ -20,18 +20,16 @@ Pedido del dueño (v0.8.6):
   de arma.
 - Mini tutorial de combos y quiebre.
 
-Referencias que se tomaron (de lo que se sabe de cada juego, sin
-investigación nueva):
-- **un RPG táctico de números chicos:** números chicos, resistencia = mitad, inmunidad =
-  0; la dificultad viene de cómo actúan los enemigos, no de su vida.
-- **un RPG táctico de combos de superficies:** la diferencia de nivel pesa mucho y el
-  equipo envejece rápido; los combos de superficies son la gracia. Lo
-  que **no** se copia: los enemigos esponja.
-- **un JRPG por turnos moderno:** afinidades fuertes (débil, resistente, inmune,
-  absorbe); el poder viene de preparar (marcas, stacks, cargas) y
-  liberar; la barra de quiebre se llena con habilidades que tienen su
-  propio valor de quiebre, no con el daño; el techo de daño se rompe
-  recién con la build.
+Principios de diseño:
+- **Números chicos:** resistencia = mitad, inmunidad = 0; la dificultad
+  viene de cómo actúan los enemigos, no de su vida.
+- **La diferencia de nivel pesa** y el equipo envejece rápido; los combos
+  son la gracia. Lo que **no** se quiere: enemigos esponja.
+- **Afinidades fuertes** (débil, resistente, inmune, absorbe); el poder
+  viene de preparar (marcas, stacks, cargas) y liberar; la barra de
+  quiebre se llena con habilidades que tienen su propio valor de
+  quiebre, no con el daño; el techo de daño se rompe recién con la
+  build.
 
 Todos los números de abajo son el **punto de partida**: se calibran con
 el simulador de balance (balance_admin.md § 5) antes de implementarlos y

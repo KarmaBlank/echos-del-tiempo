@@ -1,6 +1,6 @@
 # Spec: Loot con modificadores y filtros (loot v2)
 
-Pedido del dueño: "que el loot sea como en los ARPG de loot, que se puedan crear filtros,
+Pedido del dueño: "que el loot sea como en los ARPG, que se puedan crear filtros,
 que las armas tengan modificadores". Se toman las **mecánicas** del género
 (bases + afijos aleatorios por rareza, filtros de loot editables); nombres,
 textos y contenido son propios de Ecos del Tiempo.
