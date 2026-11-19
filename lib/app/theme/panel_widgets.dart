@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import 'action_box.dart';
 import 'proto_colors.dart';
 import 'proto_markup.dart';
 import 'retro_hover_card.dart';
@@ -187,11 +188,6 @@ class _PanelListItemState extends State<PanelListItem> {
 
   @override
   Widget build(BuildContext context) {
-    final border = widget.selected
-        ? ProtoColors.gold
-        : _hot
-            ? ProtoColors.sky
-            : ProtoColors.panelBorder;
     return FocusableActionDetector(
       mouseCursor: SystemMouseCursors.click,
       onShowFocusHighlight: (v) => setState(() => _hot = v),
@@ -206,13 +202,8 @@ class _PanelListItemState extends State<PanelListItem> {
         child: Container(
           margin: const EdgeInsets.only(bottom: 6),
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: widget.selected
-                ? ProtoColors.button.withValues(alpha: 0.5)
-                : null,
-            border:
-                Border.all(color: border, width: RetroTheme.thinBorderWidth),
-          ),
+          decoration: actionDecoration(
+              enabled: true, hot: _hot, selected: widget.selected),
           child: Row(
             children: [
               Expanded(child: widget.child),

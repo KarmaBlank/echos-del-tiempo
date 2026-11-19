@@ -552,6 +552,23 @@ casilla y como ficha en los detalles:
 
 ## Inventario (pestaña INVENTARIO del personaje, tecla I)
 
+Cambios v0.9.13 (pedido del dueño):
+- Ficha del mouse de un arma no equipada (`HoverCompareCard`): una sola
+  columna angosta (`cardWidth` 180 × factor de texto, ~32 letras), puede
+  ser más alta. Ya no lleva al lado `EQUIPADA / Si la equipas:`.
+- Mantener Shift suma al lado la columna compacta de la equipada
+  (`EQUIPADA <nombre>` + `Si la equipas:` corto), como la segunda columna
+  de v0.9.11. Tooltip atravesable, Alt y clic para fijar: ver ui_style.md
+  § "Tooltips cortos".
+- Franja de cambios (`ChangeStrip`, `inv-strip`) a la izquierda de la
+  grilla, en el espacio libre (si no entra, la grilla se corre lo justo):
+  siempre visible; con el mouse o el cursor de teclado sobre un arma no
+  equipada muestra una línea corta por stat (`ATQ 19→28 ▲9`, verde ▲ /
+  rojo ▼; sin cambio en gris) en orden ATQ, MAG, CRÍT, VEL, Vida, Maná,
+  DEF, Peso (`stripStats`); sin arma mirada, `ACTUAL` con los valores de
+  hoy en gris.
+- COMPARAR del clic derecho (A vs B en grande) no cambia.
+
 Reemplaza a la pestaña ARMAS (equipar y comparar están acá). Línea "qué
 hace": `Arrastra para mover · clic para ver · clic derecho (o Enter):
 acciones. ORDENAR · LIMPIAR INVENTARIO: por rareza o elegidas a mano.`

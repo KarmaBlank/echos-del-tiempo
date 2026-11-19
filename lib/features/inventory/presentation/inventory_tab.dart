@@ -28,6 +28,7 @@ import '../../build_planner/presentation/build_fit_badge.dart';
 import '../../build_planner/presentation/build_plan_providers.dart';
 import '../domain/inventory_menu.dart';
 import '../domain/item_text.dart';
+import '../domain/weapon_compare.dart' show stripStats;
 import 'clean_selection.dart';
 import 'consumables_bar.dart';
 import 'inventory_action_menu.dart';
@@ -201,6 +202,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         placement: RetroTipPlacement.below,
         gap: 4,
         interactive: true,
+        pinOnClick: true,
+        hint: _tipHint,
         keyboardFocus: focused,
         builder: (ctx) => RetroTipFolds(
             key: const ValueKey('inv-tip-folds'),
@@ -219,6 +222,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         ownerName: mine ? null : owner.name);
     return RetroHoverCard(
       interactive: true,
+      pinOnClick: true,
+      hint: _tipHint,
       keyboardFocus: focused,
       builder: (_) => fit == null
           ? card
@@ -238,6 +243,29 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       child: child,
     );
   }
+
+  /// Ayuda al pie de la ficha del mouse (ui_style.md § "Tooltips cortos").
+  static const _tipHint = 'Alt: detalle · Shift: comparar · clic: fijar';
+
+  /// Arma no equipada bajo el mouse o el cursor de teclado (franja de
+  /// cambios, panels.md § "Inventario").
+  String? _hoverUid;
+
+  void _hover(String? uid) {
+    if (_hoverUid != uid) setState(() => _hoverUid = uid);
+  }
+
+  Widget _strip(SessionPlayer me, PlayerAttributes attrs) {
+    final p = me.profile;
+    final it = _hoverUid == null ? null : _hoverItem;
+    final using = shop.rules.equippedItem(p)?.uid;
+    final to = it != null && it.uid != using ? it : null;
+    return ChangeStrip(
+        stats: stripStats(shop.rules, p, to: to, attributes: attrs),
+        hovering: to != null);
+  }
+
+  ItemInstance? _hoverItem;
 
   /// En "elige B": toma [token] como B si es un arma.
   bool _pickB(String owner, String? token, CellContent? c) {
@@ -388,6 +416,21 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           ]);
         }
         w = _withTip(me, owner, c, attrs, w, focused: focused);
+        if (c.item case final it?) {
+          final inner = w;
+          w = MouseRegion(
+              onEnter: (_) {
+                _hoverItem = it;
+                _hover('$_owner/${it.uid}');
+              },
+              onExit: (_) {
+                if (_hoverItem == it) {
+                  _hoverItem = null;
+                  _hover(null);
+                }
+              },
+              child: inner);
+        }
         if (fresh) {
           final inner = w;
           w = MouseRegion(onEnter: (_) => _seen(p, token), child: inner);
@@ -578,6 +621,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             final t = layout.cells[i];
             if (pickMode) return;
             if (_moveFrom == null && !_picking && t != null) _select(t, i);
+            _hoverItem = t == null ? null : p.itemByUid(t);
+            _hover(_hoverItem == null ? null : '$_owner/$t');
           },
           // ELEGIR A MANO: Enter / Espacio marcan o desmarcan.
           onActivate: (i) => pickMode
@@ -750,19 +795,38 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         final wide = inventoryScaleWide(box.maxWidth, box.maxHeight);
         _wide = wide > narrow;
         _scale = _wide ? wide : narrow;
+        final mainW =
+            _wide ? _gridW + 16 + inventorySideWidth(_scale) + 4 : _gridW + 4;
+        // Franja de cambios en el espacio libre a la izquierda; si no
+        // entra, la grilla se corre lo justo.
+        final strip = _strip(me, attrs);
+        final stripW = RetroType.width(context, ChangeStrip.width) + 8;
+        final free = (box.maxWidth - mainW) / 2;
+        final main = SizedBox(
+            key: const ValueKey('inv-main'), width: mainW, child: buildLeft());
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
               child: SingleChildScrollView(
-                child: Center(
-                  child: SizedBox(
-                      key: const ValueKey('inv-main'),
-                      width: _wide
-                          ? _gridW + 16 + inventorySideWidth(_scale) + 4
-                          : _gridW + 4,
-                      child: buildLeft()),
-                ),
+                child: free >= stripW
+                    ? Stack(children: [
+                        Center(child: main),
+                        Positioned(left: free - stripW, top: 48, child: strip),
+                      ])
+                    : SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                                padding: const EdgeInsets.only(top: 48),
+                                child: strip),
+                            const SizedBox(width: 8),
+                            main,
+                          ],
+                        ),
+                      ),
               ),
             ),
             if (!mine)

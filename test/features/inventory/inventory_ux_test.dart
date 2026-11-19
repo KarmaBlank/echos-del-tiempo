@@ -215,6 +215,8 @@ void main() {
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
     final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
+    // Shift: la columna de la equipada con lo que cambia (v0.9.13).
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     for (final uid in ['e1', 'l1', 'c1']) {
       final i = _cell(c.view!.me!.profile, uid);
       await mouse.moveTo(tester.getCenter(find.byKey(ValueKey('inv-cell-$i'))));
@@ -233,6 +235,7 @@ void main() {
             reason: '$uid: ${s.label}');
       }
     }
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
     await mouse.removePointer();
     await tester.pump(const Duration(milliseconds: 300));
   });

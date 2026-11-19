@@ -294,10 +294,11 @@ class _ShortDelta extends StatelessWidget {
   }
 }
 
-/// Ficha del mouse (v0.9.11): [item] a la izquierda (resumen + plegables)
-/// y, a la derecha, el nombre de la EQUIPADA y la comparación corta
-/// ([CompactComparison]). Dos columnas angostas (~40 letras cada una) que
-/// crecen con el texto pero nunca pasan de [maxScreenShare] del ancho.
+/// Ficha del mouse (v0.9.13): una sola columna angosta con [item]
+/// (resumen + plegables), ~32 letras que crecen con el texto. Con Shift
+/// apretado ([showEquipped], por defecto [RetroHoverCard.shiftHeld]) se
+/// suma al lado la columna compacta de la EQUIPADA con `Si la equipas:`
+/// ([CompactComparison]). Nunca pasa de [maxScreenShare] del ancho.
 class HoverCompareCard extends StatelessWidget {
   const HoverCompareCard({
     super.key,
@@ -306,10 +307,11 @@ class HoverCompareCard extends StatelessWidget {
     required this.item,
     required this.attributes,
     this.ownerName,
+    this.showEquipped,
   });
 
-  /// Ancho de cada columna en Normal (~40 letras de VT323).
-  static const cardWidth = 220.0;
+  /// Ancho de la columna en Normal (~32 letras de VT323).
+  static const cardWidth = 180.0;
 
   /// Parte máxima del ancho de la pantalla que ocupa la ficha.
   static const maxScreenShare = 0.7;
@@ -322,12 +324,19 @@ class HoverCompareCard extends StatelessWidget {
   /// Dueño si no es el jugador local.
   final String? ownerName;
 
+  /// Forzar la columna de la equipada (`null` = mientras Shift).
+  final bool? showEquipped;
+
   @override
   Widget build(BuildContext context) {
-    final eq = rules.equippedItem(viewer);
-    final cmp = compareWeapons(rules, viewer, to: item, attributes: attributes);
-    // Dos columnas + separación dentro de [maxScreenShare] de la pantalla
-    // (padding y borde de la caja del tip aparte).
+    final forced = showEquipped;
+    if (forced != null) return _card(context, forced);
+    return ValueListenableBuilder<bool>(
+        valueListenable: RetroHoverCard.shiftHeld,
+        builder: (context, shift, _) => _card(context, shift));
+  }
+
+  Widget _card(BuildContext context, bool withEquipped) {
     final room =
         (MediaQuery.sizeOf(context).width * maxScreenShare - 24 - 16) / 2;
     final width = RetroType.width(context, cardWidth).clamp(0.0, room);
@@ -339,6 +348,12 @@ class HoverCompareCard extends StatelessWidget {
         label: ownerName == null
             ? null
             : protoColor(ProtoColors.dim, 'de ${protoEsc(ownerName!)}'));
+    if (!withEquipped) {
+      return SizedBox(
+          key: const ValueKey('inv-cmp-tip'), width: width, child: card);
+    }
+    final eq = rules.equippedItem(viewer);
+    final cmp = compareWeapons(rules, viewer, to: item, attributes: attributes);
     return SizedBox(
       key: const ValueKey('inv-cmp-tip'),
       width: width * 2 + 16,
@@ -374,6 +389,61 @@ class HoverCompareCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Franja de cambios a la izquierda de la grilla (v0.9.13, panels.md §
+/// "Inventario"): una línea corta por stat (`ATQ 19→28 ▲9`, verde ▲ /
+/// rojo ▼) con [stats] de [stripStats]; sin arma mirada, los valores
+/// actuales en gris.
+class ChangeStrip extends StatelessWidget {
+  const ChangeStrip({super.key, required this.stats, required this.hovering});
+
+  final List<StatDelta> stats;
+  final bool hovering;
+
+  /// Ancho en Normal (~14 letras).
+  static const width = 96.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('inv-strip'),
+      width: RetroType.width(context, width),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+          border: Border.all(color: ProtoColors.panelBorder, width: 1)),
+      child: DefaultTextStyle(
+        style: RetroHoverCard.textStyle,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(hovering ? 'CAMBIOS' : 'ACTUAL',
+                style: const TextStyle(color: ProtoColors.sky)),
+            for (final s in stats) _line(s),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _line(StatDelta s) {
+    final k = ValueKey('inv-strip-${s.label}');
+    if (!hovering || !s.changed) {
+      return Text(retroText('${s.label} ${s.format(s.before)}'),
+          key: k, style: const TextStyle(color: ProtoColors.dim));
+    }
+    final c = s.better ? ProtoColors.green : ProtoColors.red;
+    final d = s.diffText.replaceFirst(RegExp(r'^[+-]'), '');
+    return Text.rich(
+        key: k,
+        TextSpan(children: [
+          TextSpan(text: retroText('${s.label} ${s.format(s.before)}')),
+          TextSpan(
+              style: TextStyle(color: c),
+              children: symbolSpans(retroText(
+                  '→${s.format(s.after)} ${s.better ? '▲' : '▼'}$d'))),
+        ]));
   }
 }
 

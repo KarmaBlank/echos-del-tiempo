@@ -17,6 +17,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../game_engine/session_test_helpers.dart';
 import '../../real_fonts.dart';
 import '../panel_test_harness.dart';
+import '../../app/button_look.dart';
 
 /// Tarjeta SUGERENCIA (ATRIBUTOS) y "Atributos sugeridos" (BUILD):
 /// docs/specs/build_planner.md § 8.
@@ -44,6 +45,8 @@ void main() {
         find.text('Sugerencia: ${AttributeAdvisor.split(advice)}'),
         findsOneWidget);
     expect(find.byKey(const ValueKey('attr-advice-fue')), findsOneWidget);
+    // APLICAR SUGERENCIA se ve como botón, no como texto suelto.
+    expectButtonLook(tester, find.byKey(const ValueKey('apply-advice')));
     expect(find.textContaining('escala FUE×0.6'), findsWidgets);
 
     // Con un reparto pendiente: "No" no cambia nada.
@@ -52,6 +55,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('se descarta el reparto pendiente'),
         findsOneWidget);
+    // Las opciones del selector también son botones.
+    expectButtonLook(tester, find.byKey(const ValueKey('pick-advice-yes')));
+    expectButtonLook(tester, find.byKey(const ValueKey('pick-advice-no')));
     await tester.tap(find.byKey(const ValueKey('pick-advice-no')));
     await tester.pumpAndSettle();
     expect(c.view!.me!.profile.points, 6);
