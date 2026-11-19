@@ -28,7 +28,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// del filtro de loot; docs/specs/netcode.md § "Build y filtro").
 /// 11 desde v0.8.5: el `state` lleva los perfiles aparte (`pp`) y solo
 /// cuando cambian (netcode.md § "Perfiles solo cuando cambian").
-const kProtocolVersion = 11;
+/// 12 desde v0.8.6: el `state` lleva su número (`q`) y el cliente lo
+/// confirma con `ack`; el host no manda más si hay muchos sin confirmar
+/// (netcode.md § "Control de flujo").
+const kProtocolVersion = 12;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {
@@ -90,9 +93,19 @@ class ActionMessage extends WireMessage {
 
 /// host → cliente: `{"t":"state","s":<GameSession>,"ev":[...]}`.
 class StateMessage extends WireMessage {
-  const StateMessage(this.session, this.events);
+  const StateMessage(this.session, this.events, {this.seq});
   final GameSession session;
   final List<SessionEvent> events;
+
+  /// Número del `state` (`q`); el cliente lo devuelve en un [AckMessage].
+  final int? seq;
+}
+
+/// cliente → host: `{"t":"ack","q":12}`: llegó el `state` número [seq]
+/// (control de flujo, netcode.md § "Control de flujo"). No es una acción.
+class AckMessage extends WireMessage {
+  const AckMessage(this.seq);
+  final int seq;
 }
 
 /// Cualquiera de los dos lados: `{"t":"ping","ts":123456}`. [ts] son
@@ -135,9 +148,11 @@ class WireCodec {
         RejectMessage() => {'t': 'reject', 'why': m.reason.name},
         PingMessage() => {'t': 'ping', 'ts': m.ts},
         PongMessage() => {'t': 'pong', 'ts': m.ts},
+        AckMessage() => {'t': 'ack', 'q': m.seq},
         ActionMessage() => ActionJson.toJson(m.action),
         StateMessage() => {
             't': 'state',
+            if (m.seq != null) 'q': m.seq,
             's': session.toJson(m.session),
             'ev': [for (final e in m.events) events.toJson(e)],
           },
@@ -149,8 +164,11 @@ class WireCodec {
   /// [events] se codifican una vez con [stateBody] / [stateEvents] y se
   /// reusan para todos los clientes.
   static String stateText(
-      String body, String events, Map<String, String> profiles) {
-    final b = StringBuffer('{"t":"state","s":')
+      String body, String events, Map<String, String> profiles,
+      {int? seq}) {
+    final b = StringBuffer('{"t":"state",')
+      ..write(seq == null ? '' : '"q":$seq,')
+      ..write('"s":')
       ..write(body)
       ..write(',"ev":')
       ..write(events);
@@ -200,6 +218,8 @@ class WireCodec {
           return PingMessage(j.integer('ts'));
         case 'pong':
           return PongMessage(j.integer('ts'));
+        case 'ack':
+          return AckMessage(j.integer('q'));
         case 'state':
           final s = j.obj('s');
           final known = profiles ?? <String, Object?>{};
@@ -217,6 +237,7 @@ class WireCodec {
             List.unmodifiable([
               for (final raw in j.list('ev')) events.fromJson(asJson(raw)),
             ]),
+            seq: j.intOrNull('q'),
           );
         default:
           return ActionMessage(ActionJson.fromJson(j));

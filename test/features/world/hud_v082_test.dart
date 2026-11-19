@@ -2,6 +2,8 @@ import 'package:echos_del_tiempo/app/theme/party_box.dart';
 import 'package:echos_del_tiempo/app/theme/retro_panel.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
+import 'package:echos_del_tiempo/features/characters/domain/xp_text.dart';
+import 'package:echos_del_tiempo/game_engine/rules/progression_rules.dart';
 import 'package:echos_del_tiempo/core/settings/settings_providers.dart';
 import 'package:echos_del_tiempo/features/world/presentation/hud/minimap.dart';
 import 'package:echos_del_tiempo/features/world/presentation/hud/world_hud.dart';
@@ -153,6 +155,35 @@ void main() {
     await tester.pump();
     expect(g.state.partyExpanded, isFalse);
     expect(find.byType(CompactPlayerBox), findsNWidgets(4));
+  });
+
+  testWidgets('XP para subir: barra en la compacta; "faltan N" desplegada',
+      (tester) async {
+    final (c, _) = await _pumpHud(tester);
+    final local = c.view!.localId;
+    final me = c.view!.session.players[local]!.profile;
+    final need = ProgressionRules.xpNeed(me.level);
+    expect(find.byKey(ValueKey('hud-compact-xp-$local')), findsOneWidget);
+    expect(find.byType(CompactPlayerBox), findsNWidgets(4));
+    expect(xpProgressText(me),
+        'XP ${me.xp}/$need · faltan ${need - me.xp}');
+    expect(xpProgressText(me, next: true),
+        endsWith('para el nivel ${me.level + 1}'));
+    await tester.tap(find.byKey(ValueKey('hud-party-$local')));
+    await tester.pump();
+    expect(find.byKey(ValueKey('hud-xp-bar-$local')), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(ValueKey('hud-xp-$local'))).data,
+        contains('faltan ${need - me.xp}'));
+    expect(tester.takeException(), isNull);
+  });
+
+  test('XP en el nivel máximo: Maestría; completa, sin barra', () {
+    final top = PlayerProfile(
+        name: 'Z', classId: 'guerrero', level: ProgressionRules.maxLevel);
+    expect(xpProgress(top)!.mastery, isTrue);
+    expect(xpProgressText(top, next: true), contains('para la Maestría 1'));
+    final done = top.copyWith(mastery: PlayerProfile.maxMastery);
+    expect(xpProgress(done), isNull);
   });
 
   testWidgets('guardado desplegado: arranca desplegado', (tester) async {

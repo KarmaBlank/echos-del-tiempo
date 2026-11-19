@@ -7,4 +7,8 @@ abstract interface class NetTraffic {
 
   /// Bytes del último `state` mandado (el más grande de ese envío).
   int get lastStateBytes;
+
+  /// `state` que el host se salteó (sumando clientes) porque la conexión
+  /// no daba abasto (control de flujo).
+  int get skippedStates;
 }

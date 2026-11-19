@@ -299,7 +299,31 @@ subida del host; con la subida llena, el `pong` espera detrás de los
   misión 15 KB → 4.9 KB.
 - Con FPS Y PING prendido, el host anota en la línea `Rendimiento:` de
   `ecos.log` el tamaño del último `state` (`red: state X KB a N
-  clientes`).
+  clientes (M salteados por conexión lenta)`).
+
+### Control de flujo (protocolo 12, v0.8.6)
+
+Problema (captura del dueño en batalla, v0.8.5): `ping 39244 ms`. El
+canal es ordenado y fiable y el host mandaba un `state` cada 66 ms sin
+mirar si llegaban: con una conexión que no da abasto la cola crecía sin
+fin y el `pong` esperaba detrás de toda la cola.
+
+- Cada `state` lleva su número: `{"t":"state","q":12,...}` (contador del
+  host, uno por `broadcast`).
+- El cliente lo confirma apenas lo recibe: `{"t":"ack","q":12}` (no es
+  una acción; el host no lo pasa al juego).
+- Host, por cliente: los `q` mandados sin confirmar. Con
+  **`maxInFlight` = 6** en vuelo (~400 ms de `state`) ese cliente se
+  **saltea** en este envío: no se le manda nada, no cambia qué perfiles
+  tiene (§ anterior) y los eventos de ese `state` se guardan
+  (`maxPendingEvents` = 400, se pierden los más viejos) y viajan delante
+  de los del próximo `state` que sí se le mande. Como cada `state` es la
+  sala entera, saltear uno no pierde estado: el siguiente lo reemplaza.
+- Un `ack` borra todos los `q` ≤ al confirmado. Con una conexión que
+  alcanza, nunca hay 6 en vuelo y no se saltea nada (test).
+- Resultado: la cola del canal queda acotada a ~6 `state`, así que el
+  ping mide la latencia real más esa cola, no una cola infinita.
+- Contador `NetTraffic.skippedStates` → línea de rendimiento.
 
 Acciones nuevas (cliente → host): `craft` (`{op, w, src?, i?, sk?, rep?, us?}`; `rep` desde v0.5.1 = habilidad a reemplazar, loot.md § 16.2; `us` desde v0.5.1 = lista de `uid` de `salvageSelected` / `sellSelected`, loot.md § 21.5),
 `give` (`{to, tok, n?}`), `drop` (`{tok, n?}`), `pick` (`{id}`),
