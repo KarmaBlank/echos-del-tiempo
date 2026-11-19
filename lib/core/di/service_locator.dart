@@ -11,6 +11,7 @@ import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/data/passive_tree_catalog.dart';
 import '../../game_engine/models/atlas_store.dart';
 import '../../game_engine/models/bestiary.dart';
+import '../../game_engine/models/tutorial_store.dart';
 import '../../game_engine/models/party_store.dart';
 import '../../game_engine/models/profile_store.dart';
 import '../../game_engine/rules/battle_engine.dart';
@@ -129,6 +130,10 @@ void registerSharedDependencies(
   // Bestiario: uno por cuenta (docs/specs/bestiary.md § 2).
   sl.registerLazySingleton<BestiaryStore>(
     () => AccountBestiaryStore(sl<AccountRepository>()),
+  );
+  // TUTORIAL: bandera `tutV` por cuenta (docs/specs/combat_tutorial.md § 2).
+  sl.registerLazySingleton<TutorialStore>(
+    () => AccountTutorialStore(sl<AccountRepository>()),
   );
   // Sonido real con audioplayers (docs/specs/audio.md § "Reproducción").
   // Los tests no pasan por acá: usan su propio reproductor o el no-op.

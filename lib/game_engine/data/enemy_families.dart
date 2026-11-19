@@ -17,7 +17,11 @@ enum EnemyFamily {
   fireElemental('Elemental ígneo', 'Elementales ígneos', 'IG'),
   iceElemental('Elemental de escarcha', 'Elementales de escarcha', 'HE'),
   temporal('Temporal', 'Temporales', 'TE'),
-  aberration('Aberración del Vacío', 'Aberraciones del Vacío', 'VA');
+  aberration('Aberración del Vacío', 'Aberraciones del Vacío', 'VA'),
+
+  /// Autómatas del TUTORIAL (combat_tutorial.md § 3): débil al Fuego,
+  /// resiste lo físico. No aparece en el bestiario.
+  training('Autómata de práctica', 'Autómatas de práctica', 'AU');
 
   const EnemyFamily(this.label, this.plural, this.code);
 
@@ -177,6 +181,10 @@ const Map<EnemyFamily, FamilyRule> kFamilyRules = {
   EnemyFamily.aberration: FamilyRule(
     family: EnemyFamily.aberration,
     damage: {DamageTag.holy: 1.5, DamageTag.magical: 0.5},
+  ),
+  EnemyFamily.training: FamilyRule(
+    family: EnemyFamily.training,
+    damage: {DamageTag.fire: 1.5, DamageTag.physical: 0.5},
   ),
 };
 

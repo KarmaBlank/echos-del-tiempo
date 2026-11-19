@@ -1227,7 +1227,7 @@ class _Turn {
           if (part <= 0) return 0;
           events.add(ProcEvent(g.id, m.id, targetId: p.id));
           final taken = part - _absorb(g, part);
-          g.hp = math.max(0, g.hp - taken);
+          g.hp = math.max(g.practice ? 1 : 0, g.hp - taken);
           events.add(DamageEvent(g.id, taken, sourceId: m.id));
           _notes.add('${m.name}: ${g.name} recibe $part por ${p.name}');
           if (!g.alive) {
@@ -1245,6 +1245,8 @@ class _Turn {
   /// Inmortal / Mártir: el golpe mortal deja a [p] en 1 HP (1 vez por
   /// batalla y por dueño). Devuelve el daño que pasa.
   int _cheatDeath(Combatant p, int taken) {
+    // De práctica (combat_tutorial.md § 3): queda en 1 de vida.
+    if (p.practice) return math.max(0, p.hp - 1);
     // Primero la propia (Inmortal), después el aura de un aliado (Mártir).
     for (final pass in [false, true]) {
       for (final owner in pass ? state.party : [p]) {
@@ -2438,6 +2440,14 @@ class _Turn {
   /// Un actor cae. Si es un enemigo: cuenta para `onKill` de la acción y
   /// dispara `onEnemyDeath` (Plaga) del primer jugador que la tenga.
   void _knockedOut(Combatant c) {
+    // De práctica (combat_tutorial.md § 3): queda en 1 y no cae.
+    if (c.practice) {
+      c.hp = 1;
+      _notes.add(c.isPlayer
+          ? '${c.name} aguanta con 1 de vida (práctica)'
+          : 'el ${c.name.toLowerCase()} se recompone');
+      return;
+    }
     events.add(KnockedOutEvent(c.id));
     if (c.isPlayer) {
       _allyDown(c);

@@ -82,6 +82,7 @@ class Account {
     BestiaryProgress? bestiary,
     List<String> party = const [],
     Set<String> partyAuto = const {},
+    this.tutorialVersion = 0,
   })  : characters = List.unmodifiable(characters),
         selectedId = _pick(characters, selectedId),
         party = List.unmodifiable(party),
@@ -120,6 +121,11 @@ class Account {
 
   /// Compañeros con AUTO prendido (JSON `party.auto`).
   final Set<String> partyAuto;
+
+  /// Última versión del TUTORIAL que completó la cuenta (JSON `tutV`,
+  /// junto a `bv`; docs/specs/combat_tutorial.md § 2). 0 = nunca. Por
+  /// cuenta, no por personaje.
+  final int tutorialVersion;
 
   /// La party saneada: ranuras que existen, sin repetir, nunca el
   /// elegido, hasta [maxCompanions].
@@ -169,6 +175,7 @@ class Account {
     BestiaryProgress? bestiary,
     List<String>? party,
     Set<String>? partyAuto,
+    int? tutorialVersion,
   }) =>
       Account(
         characters: characters ?? this.characters,
@@ -179,6 +186,7 @@ class Account {
         bestiary: bestiary ?? this.bestiary,
         party: party ?? this.party,
         partyAuto: partyAuto ?? this.partyAuto,
+        tutorialVersion: tutorialVersion ?? this.tutorialVersion,
       );
 
   /// Agrega un personaje con un `id` nuevo y lo elige. `null` si está
@@ -226,6 +234,7 @@ class Account {
           if (c != id) c
       ],
       partyAuto: {...partyAuto}..remove(id),
+      tutorialVersion: tutorialVersion,
     );
   }
 
@@ -252,6 +261,11 @@ class Account {
 
   Account withAtlas(AtlasProgress atlas) => _copy(atlas: atlas);
 
+  /// Marca el TUTORIAL completado en la versión [version] (nunca baja).
+  Account withTutorial(int version) => _copy(
+      tutorialVersion:
+          version > tutorialVersion ? version : tutorialVersion);
+
   Account withBestiary(BestiaryProgress bestiary) =>
       _copy(bestiary: bestiary);
 
@@ -260,6 +274,8 @@ class Account {
         // Balance con el que se guardó (combo_balance.md § 6b): las
         // cuentas sin `bv` se migran una vez al cargar.
         'bv': kBalanceVersion,
+        // TUTORIAL (combat_tutorial.md § 2): opcional, 0 = nunca.
+        if (tutorialVersion > 0) 'tutV': tutorialVersion,
         'sel': selectedId,
         'seq': seq,
         'chars': [for (final c in characters) c.toJson()],
@@ -301,6 +317,7 @@ class Account {
           .sanitize(AtlasProgress.fromJson(json['atlas'])),
       // Cuentas de antes de la v0.6: sin `best`, bestiario vacío.
       bestiary: BestiaryProgress.fromJson(json['best']),
+      tutorialVersion: json['tutV'] is num ? (json['tutV'] as num).toInt() : 0,
     );
   }
 }

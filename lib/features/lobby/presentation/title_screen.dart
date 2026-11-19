@@ -340,7 +340,12 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     });
     final net = factory.create();
     try {
-      await net.connect(SessionConfig(profile: p, roomCode: code?.trim()));
+      var tutV = 0;
+      try {
+        tutV = await ref.read(tutorialStoreProvider).load();
+      } catch (_) {}
+      await net.connect(SessionConfig(
+          profile: p, roomCode: code?.trim(), tutorialVersion: tutV));
     } on Object catch (e) {
       await net.disconnect();
       if (!mounted) return;

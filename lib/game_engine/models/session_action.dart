@@ -198,8 +198,7 @@ class CraftAction extends SessionAction {
 
   /// Desarmar ([CraftOp.salvageAll]) o vender ([CraftOp.sellAll]) todas
   /// las armas de rareza [r] que no estén equipadas ni protegidas.
-  CraftAction.batch(CraftOp op, Rarity r)
-      : this(op, '*', index: r.index);
+  CraftAction.batch(CraftOp op, Rarity r) : this(op, '*', index: r.index);
 }
 
 /// `give`: dar un arma (`uid`) o [count] de una pila (`pot`, `eter`,
@@ -329,4 +328,37 @@ class DevAbyssAction extends SessionAction {
 
   static const fragments = 'frag';
   static const kills = 'kills';
+}
+
+// ---------------- TUTORIAL v0.9 (docs/specs/combat_tutorial.md) ----------
+
+/// Empezar el TUTORIAL: Ecos de práctica desde el sello (§ 1). En una
+/// sala con más humanos solo el host puede, y entran todos. Jugando solo,
+/// [companions] decide si entran los compañeros de la party.
+class StartTutorialAction extends SessionAction {
+  final bool companions;
+  const StartTutorialAction({this.companions = true});
+}
+
+/// Cerrar el cartel de efecto (ESPACIO, clic): el paso avanza cuando lo
+/// cierra quien actuó (§ 4.1).
+class TutorialAckAction extends SessionAction {
+  const TutorialAckAction();
+}
+
+/// Menú de pausa del tutorial (§ 4.3).
+enum TutorialControl {
+  /// Empieza de nuevo con los roles rotados.
+  repeat,
+
+  /// Vuelve al principio de la etapa actual.
+  repeatStage,
+
+  /// Sale sin completarlo.
+  exit,
+}
+
+class TutorialControlAction extends SessionAction {
+  final TutorialControl op;
+  const TutorialControlAction(this.op);
 }

@@ -42,6 +42,7 @@ import 'map/map_game.dart';
 import 'panels/character_panel.dart';
 import 'panels/party_member_bar.dart';
 import 'panels/party_panel.dart';
+import '../../tutorial/presentation/tutorial_widgets.dart';
 import 'session_battle_screen.dart';
 import 'session_controller.dart';
 import 'session_music.dart';
@@ -196,6 +197,15 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               event.logicalKey == LogicalKeyboardKey.space)) {
         _cineKey.currentState?.skip();
       }
+      return KeyEventResult.handled;
+    }
+    // TUTORIAL: ESPACIO cierra el cartel de efecto (combat_tutorial.md
+    // § 4.1).
+    final tc = ref.read(sessionControllerProvider.notifier);
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.space &&
+        tc.tutorialCard != null) {
+      tc.ackTutorial();
       return KeyEventResult.handled;
     }
     if (_choosing &&
@@ -483,6 +493,13 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final s = view.session;
     switch (s.mode) {
       case SessionMode.battle:
+        // TUTORIAL (combat_tutorial.md § 4): cartel del paso, botones del
+        // paso y cartel de efecto.
+        final tut = s.tutorial;
+        final tb = s.battle?.state;
+        final rules = controller.tutorialRules;
+        final present = {...?tb?.party.map((c) => c.id)};
+        final humans = s.playerList.where((p) => !p.isCompanion).toList();
         return [
           Positioned.fill(
             child: SessionBattleScreen(
@@ -492,8 +509,26 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               onCommand: controller.battleCommand,
               onAuto: controller.setAuto,
               sceneOptions: _sceneOptions(ref.watch(gameSettingsProvider)),
+              actionGate: tut == null || tb == null
+                  ? null
+                  : (id) => rules.gate(
+                      tut, tb, tb.currentId ?? view.localId, id),
             ),
           ),
+          if (tut != null)
+            Positioned.fill(
+              child: TutorialOverlay(
+                key: const ValueKey('tutorial-overlay'),
+                banner: rules.banner(s, controller.members.toSet()),
+                card: controller.tutorialCard,
+                rules: rules,
+                attemptText: rules.attemptText(tut, view.localId, present),
+                canControl: humans.length <= 1 ||
+                    humans.first.id == view.localId,
+                onCloseCard: () => controller.ackTutorial(),
+                onControl: (op) => controller.tutorialControl(op),
+              ),
+            ),
           // `≡ MENÚ`: la pausa también se abre con el mouse en batalla.
           // Abajo a la izquierda de la escena, justo encima de la barra
           // (arriba está la franja de turnos).
@@ -657,6 +692,23 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           bossName: (m) => missionBossName(catalog, m),
           playerLevel: me.profile.level,
           zones: controller.zones,
+          // TUTORIAL: Ecos de práctica (combat_tutorial.md § 1-2).
+          lockText: controller.tutorialRules.lockText(s),
+          tutorialDone:
+              controller.tutorialRules.upToDate(me.tutorialVersion),
+          tutorial: TutorialSealDetail(
+            rules: controller.tutorialRules,
+            done: controller.tutorialRules.upToDate(me.tutorialVersion),
+            humans: s.playerList.where((p) => !p.isCompanion).length,
+            companions: s.playerList.where((p) => p.isCompanion).length,
+            isHost: s.playerList.firstOrNull?.id == view.localId,
+            lockText: controller.tutorialRules.lockText(s),
+            onStart: (companions) {
+              if (controller.startTutorial(companions: companions)) {
+                controller.closePanel();
+              }
+            },
+          ),
           // Proponer cierra el mostrador (línea 1363).
           onPropose: (id) {
             if (controller.proposeMission(id)) controller.closePanel();

@@ -28,10 +28,15 @@ class SessionBattleScreen extends StatefulWidget {
     this.battleKey,
     this.sceneOptions = const SceneOptions(),
     this.onAuto,
+    this.actionGate,
   });
 
   /// Prende / apaga el AUTO de un compañero (docs/specs/solo_party.md § 4).
   final void Function(String id, bool on)? onAuto;
+
+  /// TUTORIAL: lo que no es del paso sale desactivado con el motivo
+  /// (combat_tutorial.md § 4.1).
+  final String? Function(String actionId)? actionGate;
 
   final SessionView view;
   final bool Function(BattleCommand command) onCommand;
@@ -75,9 +80,13 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
       events: view.battleEvents,
       eventSeq: view.battleEventSeq,
       battleId: b.id,
-      canAct: view.myTurn,
+      // Con el cartel del tutorial abierto no se actúa (§ 4.1).
+      canAct: view.myTurn && view.session.tutorial?.card == null,
       // Sin límite (tiempo de turno de la sala): sin reloj.
-      turnTimeLeft: b.waitingForPlayer && view.session.turnLimit != null
+      // El TUTORIAL no tiene límite de 30 s (combat_tutorial.md § 4.1).
+      turnTimeLeft: b.waitingForPlayer &&
+              view.session.turnLimit != null &&
+              view.session.tutorial == null
           ? view.session.turnLimit! - b.turnTime
           : null,
       turnLimit: view.session.turnLimit ?? 30,
@@ -94,6 +103,7 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
       companions: view.companions.toSet(),
       auto: view.auto,
       onAuto: widget.onAuto,
+      actionGate: widget.actionGate,
     );
   }
 

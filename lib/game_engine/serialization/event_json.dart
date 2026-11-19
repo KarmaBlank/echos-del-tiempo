@@ -153,6 +153,12 @@ class EventJson {
             'n': e.boss,
             'ids': e.playerIds,
           },
+        // TUTORIAL v0.9 (combat_tutorial.md § 6).
+        TutorialDoneEvent() => {
+            't': 'tutDone',
+            'ids': e.playerIds,
+            'v': e.version,
+          },
       };
 
   static LootDrop _drop(Object? raw) =>
@@ -246,6 +252,9 @@ class EventJson {
       case 'trap':
         return TrapTriggeredEvent(j.str('id'),
             j.enumByName('k', TrapKind.values), j.integer('d'));
+      case 'tutDone':
+        return TutorialDoneEvent(
+            List.unmodifiable(j.strings('ids')), j.integer('v'));
       case 'abyssDone':
         return AbyssDefeatedEvent(
             j.integer('n'), List.unmodifiable(j.strings('ids')));

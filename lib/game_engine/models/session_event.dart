@@ -283,3 +283,13 @@ class TrapTriggeredEvent extends SessionEvent {
   final int damage;
   const TrapTriggeredEvent(this.playerId, this.kind, this.damage);
 }
+
+// ---------------- TUTORIAL v0.9 (docs/specs/combat_tutorial.md) ----------
+
+/// Se completó el TUTORIAL: cada cliente cuyo id está en [playerIds]
+/// marca SU cuenta con `tutV = version` y la guarda (§ 6).
+class TutorialDoneEvent extends SessionEvent {
+  final List<String> playerIds;
+  final int version;
+  const TutorialDoneEvent(this.playerIds, this.version);
+}

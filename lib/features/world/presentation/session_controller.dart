@@ -30,11 +30,13 @@ import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/models/upgrade_stat.dart';
+import '../../../game_engine/models/tutorial_store.dart';
 import '../../../game_engine/rules/abyss_rules.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
 import '../../../game_engine/rules/companion_ai.dart';
 import '../../../game_engine/rules/exploration_rules.dart';
 import '../../../game_engine/rules/session_engine.dart';
+import '../../../game_engine/rules/tutorial_rules.dart';
 import '../../../game_engine/rules/world_rules.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 import '../../../netcode/contracts/net_session.dart';
@@ -91,6 +93,14 @@ final partyStoreProvider = Provider<PartyStore>((ref) =>
         ? sl<PartyStore>()
         : AccountPartyStore(ref.watch(accountRepositoryProvider)));
 
+/// La bandera del TUTORIAL de la cuenta (docs/specs/combat_tutorial.md
+/// § 2); sin registro (tests), una en memoria ya completada (los tests de
+/// siempre no quedan bloqueados por el sello).
+final tutorialStoreProvider = Provider<TutorialStore>((ref) =>
+    sl.isRegistered<TutorialStore>()
+        ? sl<TutorialStore>()
+        : InMemoryTutorialStore(kTutorialVersion));
+
 final sessionClockProvider =
     Provider<SessionClock>((ref) => const SessionClock());
 
@@ -113,6 +123,7 @@ final sessionControllerProvider =
     store: ref.watch(profileStoreProvider),
     atlasStore: ref.watch(atlasStoreProvider),
     bestiaryStore: ref.watch(bestiaryStoreProvider),
+    tutorialStore: ref.watch(tutorialStoreProvider),
     clock: ref.watch(sessionClockProvider),
     net: ref.read(activeNetSessionProvider),
     turnTimer: ref.read(gameSettingsProvider).turnTimer,
@@ -154,12 +165,14 @@ class SessionController extends StateNotifier<SessionView?> {
     String localId = 'local',
     AtlasStore? atlasStore,
     BestiaryStore? bestiaryStore,
+    TutorialStore? tutorialStore,
     TurnTimer turnTimer = TurnTimer.normal,
     this.party,
   })  : localId = net?.localId ?? localId,
         _turnTimer = turnTimer,
         atlasStore = atlasStore ?? InMemoryAtlasStore(),
         bestiaryStore = bestiaryStore ?? InMemoryBestiaryStore(),
+        tutorialStore = tutorialStore ?? InMemoryTutorialStore(kTutorialVersion),
         super(null);
 
   /// Compañeros de la party jugando solo (docs/specs/solo_party.md);
@@ -342,6 +355,62 @@ class SessionController extends StateNotifier<SessionView?> {
   /// actualiza solo con lo que este jugador ve ganar (eventos y estado de
   /// la batalla), también como cliente; no viaja por la red.
   final BestiaryStore bestiaryStore;
+
+  /// La bandera `tutV` de la cuenta (docs/specs/combat_tutorial.md § 2).
+  final TutorialStore tutorialStore;
+
+  /// `tutV` de esta cuenta (cargada al empezar).
+  int _tutorialVersion = 0;
+  int get tutorialVersion => _tutorialVersion;
+
+  /// Las reglas del TUTORIAL de la sala (las del motor).
+  TutorialRules get tutorialRules => engine.tutorials;
+
+  /// Se completó el TUTORIAL con este jugador adentro: marca la cuenta.
+  void _onTutorialDone(int version) {
+    if (version <= _tutorialVersion) return;
+    _tutorialVersion = version;
+    unawaited(tutorialStore.save(version).catchError((Object e) {
+      EcosLog.error('Guardado del tutorial', e);
+      _saveFailed(e);
+    }));
+  }
+
+  /// Empieza el TUTORIAL desde el sello (§ 1): en grupo (host, entran
+  /// todos), solo, o solo con los compañeros de la party.
+  bool startTutorial({bool companions = true}) =>
+      _apply(StartTutorialAction(companions: companions));
+
+  /// Cierra el cartel del tutorial (ESPACIO, clic). Si no actuaste, solo
+  /// se cierra en tu pantalla.
+  bool ackTutorial() {
+    if (_apply(const TutorialAckAction())) return true;
+    final card = _s?.tutorial?.card;
+    if (card == null) return false;
+    _hiddenCard = card;
+    _emit();
+    return true;
+  }
+
+  /// El cartel que este jugador ya cerró en su pantalla (el paso sigue
+  /// esperando al que actuó).
+  TutorialCard? _hiddenCard;
+
+  /// El cartel del tutorial que se ve en esta pantalla.
+  TutorialCard? get tutorialCard {
+    final c = _s?.tutorial?.card;
+    return c == null || identical(c, _hiddenCard) ||
+            (_hiddenCard != null && _sameCard(c, _hiddenCard!))
+        ? null
+        : c;
+  }
+
+  static bool _sameCard(TutorialCard a, TutorialCard b) =>
+      a.actorId == b.actorId && a.lines.join('\n') == b.lines.join('\n');
+
+  /// Menú de pausa del tutorial: Repetir, Repetir etapa, Salir.
+  bool tutorialControl(TutorialControl op) =>
+      _apply(TutorialControlAction(op));
   BestiaryProgress? _bestiary;
 
   /// La última batalla vista (para saber a quiénes se venció cuando
@@ -467,6 +536,10 @@ class SessionController extends StateNotifier<SessionView?> {
       // Atlas de la cuenta, no a uno vacío que lo pisaría.
       await _loadAtlas();
       if (!mounted) return;
+      try {
+        _tutorialVersion = await tutorialStore.load();
+      } catch (_) {}
+      if (!mounted) return;
       _netSub = n!.events.listen(_onNet);
       if (clock.autoStart) {
         _timer = Timer.periodic(clock.interval, (_) => _clientTick(clock.dt));
@@ -489,7 +562,14 @@ class SessionController extends StateNotifier<SessionView?> {
     // Y su tiempo de turno (accessibility.md § 7).
     final room = engine.setTurnTimer(
         engine.setAtlas(engine.create(), atlas.nodes).state, _turnTimer);
-    var step = engine.addPlayer(room.state, localId, profile)!;
+    try {
+      _tutorialVersion = await tutorialStore.load();
+    } catch (_) {
+      _tutorialVersion = 0; // sin disco: el sello pide el tutorial
+    }
+    if (!mounted) return;
+    var step = engine.addPlayer(room.state, localId, profile,
+        tutorialVersion: _tutorialVersion)!;
     final code = n?.roomCode;
     if (code != null) {
       // `sysChat('Sala creada. Comparte el código ...')` del prototipo.
@@ -658,9 +738,10 @@ class SessionController extends StateNotifier<SessionView?> {
           _step(SessionStep(session, events));
           _syncWants();
         }
-      case PeerJoinedEvent(:final peerId, :final profile):
+      case PeerJoinedEvent(:final peerId, :final profile, :final tutorialVersion):
         if (s == null || isClient) return;
-        final step = engine.addPlayer(s, peerId, profile);
+        final step = engine.addPlayer(s, peerId, profile,
+            tutorialVersion: tutorialVersion);
         if (step != null) _step(step);
       case PeerActionEvent(:final peerId, :final action):
         if (s == null || isClient) return;
@@ -1324,6 +1405,9 @@ class SessionController extends StateNotifier<SessionView?> {
           lastAbyss = null;
         case EcoCompletedEvent():
           _onEcoCompleted(e);
+        case TutorialDoneEvent(:final playerIds, :final version)
+            when playerIds.contains(localId):
+          _onTutorialDone(version);
         case AbyssDefeatedEvent():
           _onAbyssDefeated(e);
         case TrialCompletedEvent(:final trial, :final playerIds):

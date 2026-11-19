@@ -8,6 +8,7 @@ import '../../../game_engine/models/build_wants.dart';
 import '../../../game_engine/models/party_store.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/profile_store.dart';
+import '../../../game_engine/models/tutorial_store.dart';
 import '../domain/account.dart';
 import 'account_store.dart';
 
@@ -287,5 +288,21 @@ class AccountBestiaryStore implements BestiaryStore {
       }
       return a.withBestiary(BestiaryProgress(merged));
     });
+  }
+}
+
+/// `TutorialStore` sobre la cuenta: la bandera `tutV` es una sola para
+/// todos los personajes (docs/specs/combat_tutorial.md § 2).
+class AccountTutorialStore implements TutorialStore {
+  AccountTutorialStore(this.repository);
+
+  final AccountRepository repository;
+
+  @override
+  Future<int> load() async => (await repository.load()).tutorialVersion;
+
+  @override
+  Future<void> save(int version) async {
+    await repository.update((a) => a.withTutorial(version));
   }
 }

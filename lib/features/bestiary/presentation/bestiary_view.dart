@@ -189,7 +189,7 @@ class _BestiaryViewState extends State<BestiaryView> {
           const SizedBox(height: 6),
           chip('TODAS', null, null),
           for (final f in EnemyFamily.values)
-            chip(_short(f), f, familyColor(f)),
+            if (f != EnemyFamily.training) chip(_short(f), f, familyColor(f)),
         ],
       ),
     );

@@ -122,6 +122,7 @@ class Combatant {
     this.summonKills = 0,
     this.pulse = 0,
     this.chained = false,
+    this.practice = false,
   })  : primedBy = primedBy ?? {},
         family = family ??
             (isPlayer || enemyType == null ? null : kEnemyFamily[enemyType]),
@@ -170,7 +171,10 @@ class Combatant {
   final PlayerBuild? build;
   final String? classId;
   final String? weaponType;
-  final List<String> skillIds;
+
+  /// Mutable solo para el tutorial: las habilidades prestadas del guion
+  /// (combat_tutorial.md § 3).
+  List<String> skillIds;
   int potions;
   int ethers;
 
@@ -342,6 +346,10 @@ class Combatant {
   /// una acción más, pero no otra Instante encadenada.
   bool chained;
 
+  /// De práctica (combat_tutorial.md § 3): su vida nunca baja de 1, no
+  /// cae ("se recompone").
+  bool practice;
+
   bool get isSummon => summonOwner != null;
 
   /// Ascensión del jugador (`null` = clase base o enemigo).
@@ -474,6 +482,7 @@ class Combatant {
         summonKills: summonKills,
         pulse: pulse,
         chained: chained,
+        practice: practice,
       );
 }
 

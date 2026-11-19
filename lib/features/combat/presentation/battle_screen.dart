@@ -69,6 +69,7 @@ class BattleView extends StatefulWidget {
     this.companions = const {},
     this.auto = const {},
     this.onAuto,
+    this.actionGate,
   });
 
   /// Compañeros de la party de este dispositivo (docs/specs/
@@ -81,6 +82,10 @@ class BattleView extends StatefulWidget {
 
   /// Prende / apaga el AUTO de un compañero; `null` = sin botón.
   final void Function(String id, bool on)? onAuto;
+
+  /// TUTORIAL: por qué la acción `id` del menú está desactivada (`null` =
+  /// habilitada). `null` = sin tutorial.
+  final String? Function(String actionId)? actionGate;
 
   /// Bestiario de la cuenta (docs/specs/bestiary.md § 3): al pasar el
   /// mouse sobre un enemigo se ve su ficha si ya se lo mató, o "???".
@@ -737,7 +742,32 @@ class BattleViewState extends State<BattleView>
           onSelect: () => _send(const PassCommand()),
         ),
     ]));
-    return out;
+    // TUTORIAL (combat_tutorial.md § 4.1): solo lo del paso, el resto
+    // desactivado con el motivo.
+    final gate = widget.actionGate;
+    if (gate == null) return out;
+    return [
+      for (final e in out)
+        BattleCategoryEntry(
+            e.category,
+            [
+              for (final a in e.actions)
+                if (gate(a.id) case final why?)
+                  BattleAction(
+                    id: a.id,
+                    name: a.name,
+                    value: a.value,
+                    cost: a.cost,
+                    description: a.description,
+                    dual: a.dual,
+                    reason: why,
+                    onSelect: null,
+                  )
+                else
+                  a,
+            ],
+            badge: e.badge),
+    ];
   }
 
   /// Las acciones que se ven: los aliados de la poción elegida, o la

@@ -1,4 +1,4 @@
-﻿# Spec (BORRADOR, falta OK del dueño): Tutorial de combate — v0.9
+﻿# Spec: Tutorial de combate — v0.9 (implementado, ver § 8; falta OK del dueño)
 
 Pedido del dueño: un tutorial de verdad en el overworld, junto a la
 armería, con un jefe de práctica. Tiene que explicar todo **en base a lo
@@ -111,7 +111,7 @@ anuncia.
 | 1 | Línea de tiempo | Se ilumina la barra de turnos; el que es más rápido actúa antes; Defender y Pasar adelantan tu próximo turno | turnos, velocidad, Defender/Pasar |
 | 2 | Maná y Pulso | Ataque básico (+1 Pulso), después una habilidad que gasta MP | qué es cada recurso y cómo se recupera |
 | 3 | Afinidades | Golpe físico (RESISTE ×0.5) y golpe de Fuego (DÉBIL ×1.5); muestra el tope sin debilidad | debilidad, resistencia, tope |
-| 4 | Estados | Ignición deja Quemadura y Toxina deja Veneno; se ve el tick al empezar el turno del autómata | estados, stacks, duración |
+| 4 | Estados | Dos Quemaduras se suman (un Veneno acá detonaría la Combustión; el Veneno se ve en la 5); se ve el tick al empezar el turno del autómata | estados, stacks, duración |
 | 5 | Precondición y encadenar | "Detonar" aparece desactivado ("Necesita: 5 de Veneno"); una Instante que pone Veneno no termina el turno y en el mismo turno se detona | precondiciones, Instante, encadenar |
 | 6 | Convergencia en equipo | Uno acumula Quemadura y **otro** la detona con Veneno; el cartel muestra el cálculo (`20 × 2.5% = 50%`) y los dos ganan Pulso | combos entre jugadores |
 | 7 | Quiebre | Los demás llenan la barra (debilidad, Golpe pesado, aturdir); el autómata queda **Fisurado** y el último usa **Quebrar** | puntos de quiebre, Fisurado, Quebrar, +50% de daño |
@@ -171,3 +171,83 @@ números a mano.
 - Las acciones fuera del paso se rechazan.
 - Al salir, nada del tutorial queda en el perfil: ni las habilidades
   prestadas, ni vida, MP, XP o loot.
+
+## 8. Implementación (v0.9)
+
+Código: `game_engine/models/tutorial.dart` (`TutorialState`,
+`TutorialCard`, etapas y pasos, `kTutorialVersion`),
+`game_engine/rules/tutorial_rules.dart` (guion, roles, validación,
+carteles, glosario), `game_engine/rules/session_engine_tutorial.dart`
+(el host lleva el guion), `game_engine/models/tutorial_store.dart` +
+`AccountTutorialStore` (cuenta), `features/tutorial/presentation/` (sello,
+cartel, menú, glosario). Tests: `test/game_engine/tutorial_test.dart`,
+`test/features/tutorial/`.
+
+Decisiones tomadas al implementar (el spec manda; esto completa lo que
+no decía):
+
+- **Bandera.** `tutV` vive en `account.json` junto a `bv` (se escribe solo
+  si es > 0; nunca baja). `kTutorialVersion = 1` (todas las etapas tienen
+  `desde: 1`). El motor recibe la `tutV` de cada jugador en
+  `addPlayer(..., tutorialVersion)`; quien no la pasa (tests,
+  herramientas, `SessionConfig` sin el dato) cuenta como vigente para no
+  bloquear el sello por error. Los compañeros no cuentan para el bloqueo
+  ni lo completan (la cuenta es la del líder).
+- **Bloqueo.** El host rechaza proponer misión, Eco, Prueba o Jefe del
+  Abismo mientras falte alguien. En la UI, el mostrador de misiones
+  muestra el aviso en PROPONER; los paneles del Portal del Eco, de la
+  Prueba y del Abismo todavía no muestran el motivo (pendiente).
+- **Sello.** TUTORIAL es la primera fila del mostrador de misiones
+  (elegida por defecto si falta hacerlo). Botones: EMPEZAR / REPETIR EN
+  GRUPO (solo el host; si no, "Lo inicia el host"), SOLO, CON COMPAÑEROS
+  (si hay party) y GLOSARIO. "Repetir" es volver a empezarlo: cada vez
+  que se empieza en la misma sala sube el intento (`tutorialRuns`) y
+  rotan los roles.
+- **Habilidades prestadas.** En vez de cartas nuevas, el guion presta
+  habilidades del catálogo, así números y textos salen de los datos:
+  Bola de Fuego (Fuego + Quemadura), Embestida (física, mucho quiebre),
+  Púa Fugaz (Instante + Veneno), Ignición Convergente (pide Veneno),
+  Ponzoña Convergente (pide Quemadura), Llamarada (área) y la Quebrar
+  base del arma. A cada jugador se le prestan las de sus roles; viven
+  solo en el combatiente de la batalla.
+- **Roles.** Cuatro: acumula, detona, llena la barra, quiebra. El rol r lo
+  hace el jugador `(r + intento − 1) mod n` del orden de la sala; con
+  menos de 4, uno hace varios.
+- **Etapa 4.** Un golpe de Veneno sobre la Quemadura dispara la
+  Combustión (Convergencia), así que la etapa de estados usa dos
+  Quemaduras (los stacks se suman) y el tick; el Veneno se ve en la 5.
+- **Acomodar turnos.** Antes de cada paso, el próximo turno del que
+  actúa pasa a ser el primero de la línea de tiempo y el motor da el
+  turno normal (procesa estados). El guion le repone MP y Pulso y, si la
+  precondición del paso no se cumple (por ejemplo, Quebrar sin Fisurado),
+  la cumple: nunca hay "me toca y no me sale". "Hasta Fisurado" repite
+  el Golpe pesado hasta 3 veces y sigue igual.
+- **ULT enemiga (etapa 8).** El autómata arranca con la ULT cargada,
+  avisa, todos Defienden y la lanza. La rama "quebrarlo a tiempo la
+  cancela" no se juega: la explica el cartel (pendiente: una variante con
+  quiebre).
+- **Área (etapa 9).** Los Autómatas chicos aparecen y no actúan.
+- **Libre.** 3 acciones de jugadores con la línea de tiempo real; los
+  compañeros actúan con su IA.
+- **Autómata.** Usa el dibujo del Gólem, familia nueva "Autómata de
+  práctica" (débil Fuego ×1.5, resiste físico ×0.5; oculta en el
+  bestiario). Todos los combatientes del tutorial son "de práctica": la
+  vida no baja de 1 (el log dice "el autómata se recompone"); la ULT de
+  práctica es Diluvio Ácido con ATQ bajo.
+- **Cartel de efecto.** Hasta 3 líneas generadas de los eventos y del
+  estado antes/después (Convergencia con el cálculo, quiebre, afinidad,
+  estados, Instante, Pulso, MP, Defender/Pasar). La flecha es un rótulo
+  ("→ barra de quiebre"); falta dibujarla sobre la escena (pendiente). El
+  cartel de efecto lo cierra quien actuó (o su líder si es un compañero)
+  o se cierra solo a los 6 s; los demás lo cierran solo en su pantalla.
+  El cartel de inicio de etapa lo cierra cualquiera.
+- **Pausa.** Repetir etapa, Repetir, Glosario y Salir están en el botón
+  "TUTORIAL ≡" de la batalla (no en el menú de pausa general). En grupo
+  solo el host repite o sale.
+- **Salir / host se va.** Salir vuelve al pueblo sin completar; si el
+  host se va, la sala se cierra y nadie lo completa. Nada del tutorial se
+  copia al perfil: vida y MP se llenan al volver, pociones, XP y loot no
+  cambian.
+- **Resaltado.** La acción del paso queda habilitada y el resto sale
+  desactivado con "Ahora no: el paso es …"; no hay un brillo extra en el
+  botón (pendiente).

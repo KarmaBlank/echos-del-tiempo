@@ -11,9 +11,12 @@ sealed class NetEvent {
 
 /// Host: un cliente se unió (mandó un `hello` válido y recibió su id).
 class PeerJoinedEvent extends NetEvent {
-  const PeerJoinedEvent(this.peerId, this.profile);
+  const PeerJoinedEvent(this.peerId, this.profile, {this.tutorialVersion = 0});
   final String peerId;
   final PlayerProfile profile;
+
+  /// `tutV` de su cuenta (combat_tutorial.md § 2; `tv` del `hello`).
+  final int tutorialVersion;
 }
 
 /// Host: llegó una acción de [peerId] (el id es el del enlace, nunca uno

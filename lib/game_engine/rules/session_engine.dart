@@ -36,8 +36,12 @@ import 'map_generator.dart';
 import 'mulberry32.dart';
 import 'progression_rules.dart';
 import 'trial_rules.dart';
+import 'tutorial_rules.dart';
+import 'companion_ai.dart';
 import 'world_rules.dart';
 import 'zone_rules.dart';
+
+part 'session_engine_tutorial.dart';
 
 /// Genera la semilla de cada misión (`(Math.random() * 1e9) | 0`).
 typedef SeedSource = int Function();
@@ -72,7 +76,9 @@ class SessionEngine {
     this.devTools = false,
     this.atlasRules = const AtlasRules(),
     RandomSource? abyssRandom,
-  })  : _random = random ?? math.Random().nextDouble,
+    TutorialRules? tutorials,
+  })  : tutorials = tutorials ?? TutorialRules(catalog: progression.catalog),
+        _random = random ?? math.Random().nextDouble,
         _ecoRandom = ecoRandom ?? math.Random().nextDouble,
         _abyssRandom = abyssRandom ?? math.Random().nextDouble,
         _seeds = seeds ?? (() => math.Random().nextInt(1000000000));
@@ -81,6 +87,9 @@ class SessionEngine {
   /// exclusivas, docs/specs/abyss_bosses.md § 1.1): no mueve ninguna
   /// tirada de antes.
   final RandomSource _abyssRandom;
+
+  /// El TUTORIAL: Ecos de práctica (docs/specs/combat_tutorial.md).
+  final TutorialRules tutorials;
 
   /// Reglas de los Jefes del Abismo.
   AbyssRules get abyssRules => AbyssRules(catalog: catalog);
@@ -333,13 +342,18 @@ class SessionEngine {
   /// `addPlayer`: entra un jugador con su perfil (se valida con
   /// `ProgressionRules.normalize`). `null` si la sala está llena o el id
   /// ya existe.
-  SessionStep? addPlayer(GameSession session, String id, PlayerProfile profile) {
+  ///
+  /// [tutorialVersion]: la `tutV` de su cuenta (combat_tutorial.md § 2,
+  /// llega en el `hello`). Por defecto, vigente: quien llama sin saberla
+  /// (tests, herramientas) no queda bloqueado por el sello.
+  SessionStep? addPlayer(GameSession session, String id, PlayerProfile profile,
+      {int tutorialVersion = kTutorialVersion}) {
     if (session.players.length >= maxPlayers ||
         session.players.containsKey(id)) {
       return null;
     }
     final op = _Op(this, session.copy());
-    op.addPlayer(id, profile);
+    op.addPlayer(id, profile, tutorialVersion: tutorialVersion);
     return op.result;
   }
 
@@ -415,7 +429,9 @@ class SessionEngine {
         action is! SetLootFilterAction &&
         action is! SetBuildWantsAction &&
         action is! MoveInventoryAction &&
-        action is! SortInventoryAction) {
+        action is! SortInventoryAction &&
+        // Menú de pausa del TUTORIAL (combat_tutorial.md § 4.3).
+        action is! TutorialControlAction) {
       return null;
     }
     final op = _Op(this, session.copy());
@@ -526,7 +542,8 @@ class _Op {
     p.mp = p.maxMp.toDouble();
   }
 
-  void addPlayer(String id, PlayerProfile raw, {String? leaderId}) {
+  void addPlayer(String id, PlayerProfile raw,
+      {String? leaderId, int tutorialVersion = kTutorialVersion}) {
     var profile = rules.normalize(raw);
     if (profile.name.isEmpty) profile = profile.copyWith(name: 'Héroe');
     final d = rules.derivedStats(profile);
@@ -541,10 +558,13 @@ class _Op {
       maxHp: d.maxHp,
       maxMp: d.maxMp,
       leaderId: leaderId,
+      tutorialVersion: tutorialVersion,
     );
     final b = s.battle;
     if (s.mode == SessionMode.battle && b != null) {
       b.state = e.battles.join(b.state, e.partyMember(p, blessing: s.mission?.blessing)).state;
+      // En la pelea de práctica nadie cae (combat_tutorial.md § 3).
+      if (s.tutorial != null) b.state.byId(id)?.practice = true;
     }
     s.players[id] = p;
     events.add(PlayerJoinedEvent(id));
@@ -628,7 +648,8 @@ class _Op {
         if (s.mode != SessionMode.lobby ||
             s.vote != null ||
             m == null ||
-            !ZoneRules.canPropose(catalog, p.profile, m.id)) {
+            !ZoneRules.canPropose(catalog, p.profile, m.id) ||
+            tutorialLocked) {
           return false;
         }
         s.vote = MissionVote(m.id, p.name, {p.id});
@@ -813,7 +834,7 @@ class _Op {
         return _interactPoi(p, a.poiId);
 
       case ProposeEcoAction():
-        return _proposeEco(p, a.uid);
+        return !tutorialLocked && _proposeEco(p, a.uid);
 
       case EcoCraftAction():
         return _ecoCraft(p, a);
@@ -831,7 +852,7 @@ class _Op {
 
       // ---- ascensión (docs/specs/ascension.md) ----
       case ProposeTrialAction():
-        return _proposeTrial(p, a.trial);
+        return !tutorialLocked && _proposeTrial(p, a.trial);
 
       case ChooseAscensionAction():
         if (s.mode != SessionMode.lobby &&
@@ -895,7 +916,15 @@ class _Op {
 
       // ---- Jefes del Abismo v0.8 (abyss_bosses.md) ----
       case ProposeAbyssAction():
-        return _proposeAbyss(p, a.boss);
+        return !tutorialLocked && _proposeAbyss(p, a.boss);
+
+      // TUTORIAL (combat_tutorial.md).
+      case StartTutorialAction():
+        return startTutorial(p, a);
+      case TutorialAckAction():
+        return ackTutorial(p);
+      case TutorialControlAction():
+        return controlTutorial(p, a.op);
 
       case DevAbyssAction():
         if (!e.devTools || !s.canShop) return false;
@@ -1599,7 +1628,11 @@ class _Op {
       case SessionMode.field:
         fieldTick(dt);
       case SessionMode.battle:
-        battleTick(dt);
+        if (s.tutorial != null) {
+          tutorialTick(dt);
+        } else {
+          battleTick(dt);
+        }
       case SessionMode.result:
         final r = s.result!;
         r.timeLeft -= dt;
@@ -2758,9 +2791,17 @@ class _Op {
         b.wait > 0) {
       return false;
     }
+    // TUTORIAL: el host valida contra el paso (combat_tutorial.md § 6).
+    if (tutorialAllows(p, cmd) == false) return false;
+    final before = b.state;
     final step = e.battles.command(b.state, p.id, cmd);
     if (step == null) return false;
-    _applyBattleStep(b, step);
+    if (s.tutorial != null) {
+      _applyTutorialStep(b, step);
+      afterTutorialCommand(p, cmd, before, step.events);
+    } else {
+      _applyBattleStep(b, step);
+    }
     // Dúo (v0.8.3): su cinemática dura ~1.6 s (battle_presentation.md
     // § "Dúos"); el próximo paso espera a que termine la descarga.
     if (b.endTimer == null) {
