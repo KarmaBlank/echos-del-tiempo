@@ -128,23 +128,16 @@ extension _TutorialOp on _Op {
     if (card != null && card.effect) _advanceStep();
   }
 
-  /// Avanza al próximo paso (o repite el de "hasta Fisurado", o sigue en
-  /// la libre). Si pasó algo imprevisto, el guion lo acepta y sigue.
+  /// Avanza al próximo paso. Si pasó algo imprevisto, el guion lo acepta
+  /// y sigue.
   void _advanceStep() {
     final t = s.tutorial!;
-    final b = s.battle!;
-    final st = _tut.currentStage(t);
-    final step = _tut.currentStep(t);
-    t.prepared = false;
-    if (step is TutorialPlayerStep && step.untilFissured) {
-      t.reps++;
-      final boss = b.state.byId(TutorialRules.bossId);
-      if (boss != null && !boss.fissured && t.reps < step.maxReps) return;
-    }
+    final turns = _tut.currentTurns(t).length;
     t
+      ..prepared = false
       ..step += 1
       ..reps = 0;
-    if (st != null && t.step >= st.steps.length) {
+    if (t.running && t.step >= turns) {
       t.stage++;
       if (t.running) _enterStage();
     }
@@ -168,7 +161,7 @@ extension _TutorialOp on _Op {
             say('Se repite la etapa.');
           case TutorialPhase.train || TutorialPhase.trainOver:
             _startTraining();
-          case TutorialPhase.menu || TutorialPhase.roles:
+          case TutorialPhase.menu:
             break;
         }
       case TutorialControl.repeat:
@@ -232,9 +225,7 @@ extension _TutorialOp on _Op {
       return;
     }
     switch (t.phase) {
-      case TutorialPhase.menu ||
-            TutorialPhase.roles ||
-            TutorialPhase.trainOver:
+      case TutorialPhase.menu || TutorialPhase.trainOver:
         // Votación: si el que faltaba se desconectó, deja de contarse.
         _resolvePicks();
         return;
@@ -267,6 +258,32 @@ extension _TutorialOp on _Op {
           return;
         }
         _enemyStep(b, t);
+      case TutorialResetStep step:
+        // Entre parejas: el autómata vuelve a cero, con lo justo puesto.
+        _tut
+          ..resetCombatants(b.state)
+          ..applySetup(b.state, step.setup);
+        _advanceStep();
+      case TutorialFillStep step:
+        if (!t.prepared) {
+          // Se reinicia y se ve la barra vacía un instante.
+          if (step.reset) _tut.resetCombatants(b.state);
+          t.prepared = true;
+          b.wait = step.reset ? 0.6 : 0.3;
+          return;
+        }
+        final boss = b.state.byId(TutorialRules.bossId)!;
+        boss
+          ..breakGauge = boss.breakMax
+          ..fissured = true;
+        final turns = _tut.currentTurns(t);
+        final next = t.step + 1 < turns.length ? turns[t.step + 1].actor : null;
+        final id = next == null || next >= t.order.length ? null : t.order[next];
+        _openCard(
+            t,
+            _tut.fillCard(
+                id == null ? null : (b.state.byId(id)?.name ?? s.players[id]?.name),
+                said: t.said));
       case null:
         t.stage++;
         if (t.running) _enterStage();
@@ -293,7 +310,7 @@ extension _TutorialOp on _Op {
   void _playerStep(
       SessionBattle b, TutorialState t, TutorialPlayerStep step, double dt) {
     final present = {for (final c in b.state.party) c.id};
-    final id = _tut.actorOf(t, step.role, present);
+    final id = _tut.currentActor(t, present);
     if (id == null) {
       _advanceStep();
       return;
@@ -314,7 +331,7 @@ extension _TutorialOp on _Op {
     if (p != null &&
         p.isCompanion &&
         b.turnTime >= TutorialRules.companionDelay) {
-      // La IA hace el rol que no es tuyo (y el cartel lo anuncia).
+      // La IA hace su paso (y el cartel lo anuncia).
       final cmd = _tut.scripted(step, b.state.byId(id)!);
       if (cmd != null && !_battleCommand(p, cmd)) _advanceStep();
     }
@@ -457,26 +474,17 @@ extension _TutorialOp on _Op {
     final d = _tut.decided(s);
     if (d == null) return;
     switch (d) {
-      case 'roles':
-        if (t.phase == TutorialPhase.menu) {
-          t
-            ..phase = TutorialPhase.roles
-            ..picks.clear();
-          return;
-        }
+      case 'repeat':
         final present = {for (final c in s.battle!.state.party) c.id};
-        final order = [
-          for (final id in t.order)
-            if (present.contains(id)) id
-        ];
-        final assign = _tut.assignRoles(t.picks, order);
         s.tutorialRuns++;
         _startTutorialBattle(TutorialState(
           attempt: s.tutorialRuns,
-          stages: t.stages,
-          order: order,
-          fromVersion: t.fromVersion,
-          assign: assign,
+          stages: _tut.stagesFor(0),
+          order: [
+            for (final id in t.order)
+              if (present.contains(id)) id
+          ],
+          fromVersion: _tut.version,
         ));
       case 'train' || 'restart':
         _startTraining();
@@ -487,7 +495,7 @@ extension _TutorialOp on _Op {
   }
 
   /// Terminó el guion: cada cuenta que sigue en la pelea lo completa y se
-  /// abre la votación "Repetir con otros roles" / "ENTRENAR" / "Salir".
+  /// abre la votación "Repetir tutorial" / "ENTRENAR" / "Salir".
   void _finishScript() {
     final t = s.tutorial!;
     final inBattle = {for (final c in s.battle!.state.party) c.id};

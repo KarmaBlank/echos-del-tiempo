@@ -99,20 +99,18 @@ void main() {
         TutorialOverlay(
           battle: const SizedBox.expand(key: ValueKey('arena')),
           banner: const TutorialBanner('TE TOCA: usar Bola de Fuego',
-              yourTurn: true, stage: 'Etapa 3/9 · Afinidades'),
+              yourTurn: true, stage: 'Etapa 5/10 · Afinidades'),
           card: const TutorialCard(
               ['Golpe a la debilidad: DÉBIL ×1.5 (35 de daño).'],
               arrow: TutorialArrow.hp,
               effect: true),
           waitingText: 'Esperando: Beto',
           rules: const TutorialRules(),
-          attemptText: 'Intento 2: esta vez quebrás vos.',
           onNext: () => next++,
           onControl: (o) => op = o,
         ));
-    expect(find.text('Etapa 3/9 · Afinidades'), findsOneWidget);
+    expect(find.text('Etapa 5/10 · Afinidades'), findsOneWidget);
     expect(find.text('Esperando: Beto'), findsOneWidget);
-    expect(find.text('Intento 2: esta vez quebrás vos.'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('tutorial-next')));
     expect(next, 1);
     await tester.tap(find.byKey(const ValueKey('tutorial-menu')));
@@ -124,28 +122,28 @@ void main() {
     expect(op, TutorialControl.repeatStage);
   });
 
-  testWidgets('panel lateral: votación de roles y narrador de ENTRENAR',
+  testWidgets('panel lateral: votación del final y narrador de ENTRENAR',
       (tester) async {
     String? picked;
     await _pump(
         tester,
         TutorialOverlay(
           battle: const SizedBox.expand(),
-          banner: const TutorialBanner('Cada uno elige el rol que quiere probar.',
-              stage: 'Repetir con otros roles'),
+          banner: const TutorialBanner('¡Guion completo! Votá cómo seguir en el panel.',
+              stage: 'Fin del guion'),
           card: null,
           rules: const TutorialRules(),
           onNext: () {},
           onControl: (_) {},
-          options: const [('role:quiebra', 'QUIEBRA'), ('role:detona', 'DETONA')],
-          pickLines: const ['Ana: QUIEBRA', 'Beto: eligiendo…'],
-          myPick: 'role:quiebra',
+          options: const [('repeat', 'REPETIR TUTORIAL'), ('train', 'IR A ENTRENAR'), ('exit', 'SALIR')],
+          pickLines: const ['Ana: SALIR', 'Beto: eligiendo…'],
+          myPick: 'exit',
           onPick: (c) => picked = c,
         ));
     expect(find.text('VOTACIÓN'), findsOneWidget);
     expect(find.text('Beto: eligiendo…'), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('tutorial-pick-role:detona')));
-    expect(picked, 'role:detona');
+    await tester.tap(find.byKey(const ValueKey('tutorial-pick-train')));
+    expect(picked, 'train');
     await _pump(
         tester,
         TutorialOverlay(
@@ -168,7 +166,7 @@ void main() {
         TutorialOverlay(
           battle: const SizedBox.expand(),
           banner: const TutorialBanner('MIRÁ: Beto va a defender',
-              stage: 'Etapa 1/9 · Línea de tiempo'),
+              stage: 'Etapa 1/10 · Línea de tiempo'),
           card: null,
           last: const TutorialCard(['Defender: mitad del daño.'],
               effect: true),

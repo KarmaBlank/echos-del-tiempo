@@ -143,7 +143,7 @@ class _TutorialSealDetailState extends State<TutorialSealDetail> {
                         Text('${s.number}. ${s.title}: ${s.teaches}',
                             style: _body(ProtoColors.dim)),
                       Text(
-                          'Después: repetir con otros roles o ENTRENAR '
+                          'Después: repetir el tutorial o ENTRENAR '
                           '(libre, con un kit para probar todo).',
                           style: _body(ProtoColors.dim)),
                     ],
@@ -215,7 +215,6 @@ class TutorialOverlay extends StatefulWidget {
     this.waitingText,
     this.voted = false,
     this.hud = const {},
-    this.attemptText,
     this.canControl = true,
     this.options = const [],
     this.pickLines = const [],
@@ -261,9 +260,6 @@ class TutorialOverlay extends StatefulWidget {
 
   /// Qué resaltar en el HUD (`HudHighlight.mp` / `.pulse`).
   final Set<String> hud;
-
-  /// "Intento 2: esta vez quebrás vos".
-  final String? attemptText;
 
   /// En grupo, solo el host repite o sale.
   final bool canControl;
@@ -318,8 +314,6 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
                       })),
             ],
           ),
-          if (w.attemptText case final a?)
-            Text(retroText(a), style: _body(ProtoColors.violet)),
           Expanded(
             child: SingleChildScrollView(
               child: Column(

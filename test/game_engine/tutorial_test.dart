@@ -137,8 +137,8 @@ void main() {
     expect(kTutorialVersion,
         kTutorialStages.map((s) => s.desde).reduce((a, b) => a > b ? a : b));
     expect(kTutorialStages.map((s) => s.number),
-        [1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    expect(kTutorialVersion, 2, reason: 'v0.9.6: etapas rehechas');
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(kTutorialVersion, 3, reason: 'v0.9.7: sin roles');
   });
 
   group('guion completo: todos terminan con tutV', () {
@@ -175,18 +175,16 @@ void main() {
   // § 3: kit de práctica en reemplazo total de la build.
   group('kit de práctica', () {
     for (final (humans, companions) in [(1, 0), (2, 0), (4, 0), (1, 3)]) {
-      for (final attempt in [1, 2, 3, 4]) {
-        test('$humans humano(s) + $companions IA, intento $attempt: cada '
-            'paso tiene su habilidad en el kit y habilitada', () {
+      {
+        test('$humans humano(s) + $companions IA: cada paso tiene su '
+            'habilidad en el kit y habilitada', () {
           final e = sessionEngine();
           final rules = e.tutorials;
           var s = _room(e, humans: humans, companions: companions);
-          s.tutorialRuns = attempt - 1;
           s = _start(e, s);
           final t0 = s.tutorial!;
-          expect(t0.attempt, attempt);
           final present = t0.order.toSet();
-          // Kit: stats y arma fijas, solo las habilidades de sus roles.
+          // Kit: stats, arma y habilidades iguales para todos.
           for (final c in s.battle!.state.party) {
             expect(c.build, isNull, reason: 'sin build en el tutorial');
             expect([c.maxHp, c.maxMp, c.attack, c.magic, c.weaponType], [
@@ -196,7 +194,7 @@ void main() {
               kTutorialKit.magic,
               kTutorialKit.weaponType
             ]);
-            expect(c.skillIds, rules.kitSkills(t0, c.id, present));
+            expect(c.skillIds, rules.kitSkills());
           }
           final checked = <String>{};
           for (var i = 0; i < 40000 && s.tutorial != null; i++) {
@@ -219,7 +217,7 @@ void main() {
             }
             final st = rules.currentStep(t);
             if (st is! TutorialPlayerStep || !t.prepared) continue;
-            final id = rules.actorOf(t, st.role, present)!;
+            final id = rules.currentActor(t, present)!;
             if (b.state.currentId != id) continue;
             final actor = b.state.byId(id)!;
             final key = '${t.stage}/${t.step}/${t.reps}';
@@ -291,25 +289,6 @@ void main() {
     // Con todos al día, se puede.
     final ok = e.addPlayer(e.create(), 'h', newProfile('Ana', 'guerrero'))!;
     expect(e.apply(ok.state, 'h', ProposeMissionAction(mission)), isNotNull);
-  });
-
-  test('rotar roles: en el intento 2 cada uno tiene otro rol', () {
-    final e = sessionEngine();
-    var s = _room(e, humans: 4, tutV: 0);
-    s = _start(e, s);
-    final rules = e.tutorials;
-    final present = s.tutorial!.order.toSet();
-    final first = {
-      for (final id in present) id: rules.rolesOf(s.tutorial!, id, present),
-    };
-    s = act(e, s, 'h', const TutorialControlAction(TutorialControl.repeat));
-    expect(s.tutorial!.attempt, 2);
-    for (final id in present) {
-      final second = rules.rolesOf(s.tutorial!, id, present);
-      expect(second, isNot(first[id]), reason: id);
-    }
-    expect(rules.attemptText(s.tutorial!, 'h', present),
-        startsWith('Intento 2: esta vez'));
   });
 
   test('repetir etapa vuelve al principio de la etapa', () {
@@ -413,18 +392,17 @@ void main() {
     final st = e.tutorials.currentStep(t) as TutorialPlayerStep;
     final cur = s.battle!.state.currentId!;
     final other = cur == 'h' ? 'p1' : 'h';
-    expect(st.move, TutorialMove.attack, reason: 'etapa 1: Atacar');
+    expect(st.move, TutorialMove.defend, reason: 'etapa 1: Defender');
     // Otra acción del que tiene el turno, o la correcta de otro jugador.
     expect(e.apply(s, cur, const BattleAction(PassCommand())), isNull);
-    expect(e.apply(s, cur, const BattleAction(DefendCommand())), isNull);
-    expect(e.apply(s, other, const BattleAction(AttackCommand(targetId: 'e0'))),
-        isNull);
-    // El botón dice por qué.
-    expect(e.tutorials.gate(t, s.battle!.state, cur, 'defend'),
-        startsWith('Ahora no: el paso es'));
-    expect(e.tutorials.gate(t, s.battle!.state, cur, 'attack'), isNull);
     expect(e.apply(s, cur, const BattleAction(AttackCommand(targetId: 'e0'))),
-        isNotNull);
+        isNull);
+    expect(e.apply(s, other, const BattleAction(DefendCommand())), isNull);
+    // El botón dice por qué.
+    expect(e.tutorials.gate(t, s.battle!.state, cur, 'attack'),
+        startsWith('Ahora no: el paso es'));
+    expect(e.tutorials.gate(t, s.battle!.state, cur, 'defend'), isNull);
+    expect(e.apply(s, cur, const BattleAction(DefendCommand())), isNotNull);
   });
 
   test('cartel del paso: TE TOCA para quien actúa, MIRÁ para el resto', () {
@@ -451,13 +429,13 @@ void main() {
           title: 'Vieja',
           teaches: 'x',
           desde: 1,
-          steps: [TutorialPlayerStep(TutorialRole.acumula, TutorialMove.defend)]),
+          steps: [TutorialPlayerStep(TutorialMove.defend)]),
       TutorialStage(
           number: 2,
           title: 'Nueva',
           teaches: 'y',
           desde: 2,
-          steps: [TutorialPlayerStep(TutorialRole.acumula, TutorialMove.pass)]),
+          steps: [TutorialPlayerStep(TutorialMove.pass)]),
     ];
     const rules = TutorialRules(stages: stages, version: 2);
     expect(rules.stagesFor(0), [1, 2], reason: 'cuenta nueva: completo');
@@ -620,8 +598,8 @@ void main() {
       final two = r.stageIntro(2).join(' ');
       expect(two, contains('dura toda la misión'));
       expect(two, isNot(contains('expedición')));
-      expect(two, contains('Pulso'));
-      expect(r.stageIntro(5).first, startsWith('Instante no es un recurso'));
+      expect(r.stageIntro(3).join(' '), contains('Pulso'));
+      expect(r.stageIntro(4).first, startsWith('Instante no es un recurso'));
       // Defender: la explicación sale la primera vez, después solo el dato.
       final e = sessionEngine();
       final s = _start(e, _room(e));

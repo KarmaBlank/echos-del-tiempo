@@ -16,11 +16,6 @@ import 'skill_requirements.dart';
 
 export '../models/tutorial.dart';
 
-const _r0 = TutorialRole.acumula;
-const _r1 = TutorialRole.detona;
-const _r2 = TutorialRole.barra;
-const _r3 = TutorialRole.quiebra;
-
 // Habilidades del catálogo que el guion presta (§ 3): las mismas que usa
 // el combate, así sus números y textos salen de los datos.
 const _fuego = 'bola'; // Bola de Fuego: Fuego + Quemadura
@@ -30,6 +25,21 @@ const _detonaVeneno = 'ignicionEco'; // Ignición Convergente (pide Veneno)
 const _detonaQuemadura = 'ponzonaEco'; // Ponzoña Convergente (pide Quemadura)
 const _area = 'llamarada'; // Llamarada: a todos + Quemadura
 const _hielo = 'lanzaH'; // Lanza de Hielo: Hielo + Congelación
+const _pulso = 'rompearmaduras'; // Rompearmaduras: cuesta 1 de Pulso
+const _quiebra = 'estocada'; // Estocada Firme: "puede quebrar"
+
+/// El kit de tutorial (§ 3, v0.9.7): igual para todos, con todo lo que
+/// piden las etapas. Quebrar (la del arma) va al final.
+const List<String> kTutorialSkills = [
+  _fuego,
+  _instante,
+  _pulso,
+  _fisico,
+  _quiebra,
+  _detonaQuemadura,
+  _detonaVeneno,
+  _area,
+];
 
 /// Stats y arma del kit de práctica (§ 3): iguales para todos, sea cual
 /// sea la clase, el arma, el árbol o el equipo del personaje.
@@ -65,162 +75,157 @@ const kTutorialKit = TutorialKit(
   weaponType: 'espada',
 );
 
-// Para qué sirve cada acción de apoyo (todos actúan en cada etapa, § 4.2).
-const _whyAttack = 'el ataque básico no gasta MP y da +1 Pulso';
-const _whyDefend = 'mitad del daño y tu próximo turno llega antes (+1 Pulso)';
-const _whyUlt = 'viene la ULT avisada: Defender baja el daño a la mitad';
+const _defend = TutorialPlayerStep(TutorialMove.defend,
+    why: 'tu próximo turno llega antes en la barra de turnos');
 
-/// Las 9 etapas con guion del § 4.2 (después, la votación del § 4.4).
-/// En cada etapa actúan los 4 roles (todos los humanos hacen algo) y el
-/// rol de la etapa hace la acción clave al final.
+/// Las 10 etapas del § 4.2 (después, la votación del § 4.4). Cada
+/// jugador hace él mismo lo que enseña la etapa, en su turno.
 const List<TutorialStage> kTutorialStages = [
   TutorialStage(
     number: 1,
     title: 'Línea de tiempo',
     teaches: 'turnos, velocidad, Defender y Pasar',
-    desde: 2,
-    steps: [
-      TutorialPlayerStep(_r2, TutorialMove.attack, why: _whyAttack),
-      TutorialPlayerStep(_r3, TutorialMove.defend, why: _whyDefend),
-      TutorialPlayerStep(_r0, TutorialMove.pass,
-          why: 'tu próximo turno llega antes, sin cargar ULT'),
-      TutorialPlayerStep(_r1, TutorialMove.defend,
-          why: 'mirá cómo tu turno se adelanta en la barra de turnos'),
-    ],
+    desde: 3,
+    steps: [_defend],
   ),
   TutorialStage(
     number: 2,
-    title: 'MP y Pulso',
-    teaches: 'MP (de toda la misión) y Pulso (de cada pelea)',
-    desde: 2,
+    title: 'MP',
+    teaches: 'MP (de toda la misión)',
+    desde: 3,
     steps: [
-      TutorialPlayerStep(_r3, TutorialMove.attack,
-          why: 'el ataque básico da +1 Pulso'),
-      TutorialPlayerStep(_r2, TutorialMove.defend,
-          why: 'Defender también da +1 Pulso'),
-      TutorialPlayerStep(_r0, TutorialMove.skill,
+      TutorialPlayerStep(TutorialMove.skill,
           skillId: _fuego, why: 'una habilidad gasta MP'),
-      TutorialPlayerStep(_r1, TutorialMove.skill,
-          skillId: _fisico, why: 'mirá cómo baja tu MP'),
     ],
   ),
   TutorialStage(
     number: 3,
-    title: 'Afinidades',
-    teaches: 'debilidad, resistencia y tope sin debilidad',
-    desde: 2,
+    title: 'Pulso',
+    teaches: 'ganar Pulso y gastarlo',
+    desde: 3,
     steps: [
-      TutorialPlayerStep(_r3, TutorialMove.attack,
-          why: 'golpe físico: el autómata lo resiste'),
-      TutorialPlayerStep(_r1, TutorialMove.skill,
-          skillId: _fisico, why: 'física otra vez: RESISTE'),
-      TutorialPlayerStep(_r2, TutorialMove.defend, why: _whyDefend),
-      TutorialPlayerStep(_r0, TutorialMove.skill,
-          skillId: _fuego, why: 'Fuego: su debilidad (+1 Pulso)'),
+      TutorialPlayerStep(TutorialMove.attack,
+          why: 'el ataque básico da +1 Pulso'),
+      TutorialPlayerStep(TutorialMove.skill,
+          skillId: _pulso, why: 'cuesta Pulso: mirá cómo bajan los pips'),
     ],
   ),
   TutorialStage(
     number: 4,
-    title: 'Estados',
-    teaches: 'estados, stacks y duración',
-    desde: 2,
+    title: 'Instante',
+    teaches: 'habilidades Instante',
+    desde: 3,
     steps: [
-      TutorialPlayerStep(_r3, TutorialMove.attack,
-          why: 'un golpe físico no detona estados'),
-      TutorialPlayerStep(_r1, TutorialMove.defend,
-          why: 'el autómata va a atacar: Defender baja el daño'),
-      TutorialPlayerStep(_r2, TutorialMove.skill,
-          skillId: _fuego, why: 'pone Quemadura'),
-      // Otra Quemadura: los stacks se suman (un golpe de Veneno acá la
-      // detonaría; el Veneno se ve en la etapa 5).
-      TutorialPlayerStep(_r0, TutorialMove.skill,
-          skillId: _fuego, why: 'otra Quemadura: los stacks se suman'),
-      TutorialEnemyStep(),
+      TutorialPlayerStep(TutorialMove.skill,
+          skillId: _instante, why: 'Instante: no termina tu turno'),
+      TutorialPlayerStep(TutorialMove.attack,
+          why: 'seguís en tu turno: otra acción'),
     ],
   ),
   TutorialStage(
     number: 5,
-    title: 'Precondición e Instante',
-    teaches: 'precondiciones y habilidades Instante',
-    desde: 2,
-    setup: TutorialSetup.poisonPrimed,
+    title: 'Afinidades',
+    teaches: 'debilidad y resistencia',
+    desde: 3,
     steps: [
-      TutorialPlayerStep(_r2, TutorialMove.attack, why: _whyAttack),
-      TutorialPlayerStep(_r3, TutorialMove.attack, why: _whyAttack),
-      TutorialPlayerStep(_r0, TutorialMove.defend, why: _whyDefend),
-      TutorialPlayerStep(_r1, TutorialMove.skill,
-          skillId: _instante, why: 'Instante: no termina tu turno'),
-      TutorialPlayerStep(_r1, TutorialMove.skill,
-          skillId: _detonaVeneno, why: 'ya tiene el Veneno que pedía'),
+      TutorialPlayerStep(TutorialMove.attack,
+          why: 'golpe físico: el autómata lo resiste'),
+      TutorialPlayerStep(TutorialMove.skill,
+          skillId: _fuego, why: 'Fuego: su debilidad (+1 Pulso)'),
     ],
   ),
   TutorialStage(
     number: 6,
-    title: 'Convergencia en equipo',
-    teaches: 'combos entre jugadores',
-    desde: 2,
+    title: 'Estados',
+    teaches: 'estados, stacks y duración',
+    desde: 3,
     steps: [
-      TutorialPlayerStep(_r3, TutorialMove.attack, why: _whyAttack),
-      TutorialPlayerStep(_r2, TutorialMove.defend, why: _whyDefend),
-      TutorialPlayerStep(_r0, TutorialMove.skill,
-          skillId: _fuego, why: 'acumulá Quemadura para el que detona'),
-      TutorialPlayerStep(_r1, TutorialMove.skill,
-          skillId: _detonaQuemadura,
-          why: 'detoná la Quemadura que puso otro'),
+      TutorialPlayerStep(TutorialMove.skill,
+          skillId: _fuego, why: 'pone Quemadura: los stacks se suman'),
     ],
+    tail: [TutorialEnemyStep()],
   ),
   TutorialStage(
     number: 7,
-    title: 'Quiebre',
-    teaches: 'puntos de quiebre, Fisurado, Quebrar y el daño de más',
-    desde: 2,
-    steps: [
-      TutorialPlayerStep(_r0, TutorialMove.skill,
-          skillId: _fuego, why: 'la debilidad llena más la barra de quiebre'),
-      TutorialPlayerStep(_r1, TutorialMove.skill,
-          skillId: _fisico, why: 'Embestida llena mucho la barra'),
-      TutorialPlayerStep(_r2, TutorialMove.skill,
-          skillId: _fisico,
-          untilFissured: true,
-          maxReps: 3,
-          why: 'hasta que quede Fisurado'),
-      TutorialPlayerStep(_r3, TutorialMove.skill,
-          skillId: kTutorialQuebrar,
-          why: 'está Fisurado: Quebrar lo quiebra'),
-    ],
+    title: 'Convergencia en parejas',
+    teaches: 'uno pone el estado y otro lo detona',
+    desde: 3,
+    kind: TutorialStageKind.pairs,
+    steps: [],
   ),
   TutorialStage(
     number: 8,
-    title: 'ULT enemiga',
-    teaches: 'aviso, cancelar y defender',
-    desde: 2,
-    setup: TutorialSetup.enemyUlt,
+    title: 'Quiebre',
+    teaches: 'barra de quiebre, Fisurado, Quebrar y quebrado',
+    desde: 3,
+    kind: TutorialStageKind.breakEach,
     steps: [
-      TutorialEnemyStep(),
-      TutorialPlayerStep(_r2, TutorialMove.defend, why: _whyUlt),
-      TutorialPlayerStep(_r0, TutorialMove.defend, why: _whyUlt),
-      TutorialPlayerStep(_r1, TutorialMove.defend, why: _whyUlt),
-      TutorialPlayerStep(_r3, TutorialMove.defend, why: _whyUlt),
-      TutorialEnemyStep(),
+      TutorialPlayerStep(TutorialMove.skill,
+          skillId: _fisico, why: 'Embestida llena la barra de quiebre'),
     ],
+    tail: [TutorialFillStep()],
   ),
   TutorialStage(
     number: 9,
+    title: 'ULT enemiga',
+    teaches: 'aviso, cancelar y defender',
+    desde: 3,
+    setup: TutorialSetup.enemyUlt,
+    head: [TutorialEnemyStep()],
+    steps: [
+      TutorialPlayerStep(TutorialMove.defend,
+          why: 'viene la ULT avisada: Defender baja el daño a la mitad'),
+    ],
+    tail: [TutorialEnemyStep()],
+  ),
+  TutorialStage(
+    number: 10,
     title: 'Área',
     teaches: 'área para preparar y salpicadura',
-    desde: 2,
+    desde: 3,
     setup: TutorialSetup.adds,
     steps: [
-      TutorialPlayerStep(_r3, TutorialMove.attack, why: _whyAttack),
-      TutorialPlayerStep(_r2, TutorialMove.defend, why: _whyDefend),
-      TutorialPlayerStep(_r0, TutorialMove.skill,
+      TutorialPlayerStep(TutorialMove.skill,
           skillId: _area, why: 'un área pone Quemadura a todos'),
-      TutorialPlayerStep(_r1, TutorialMove.skill,
+      TutorialPlayerStep(TutorialMove.skill,
           skillId: _detonaQuemadura,
           why: 'la Convergencia salpica a los demás'),
     ],
   ),
 ];
+
+/// Los pasos de la pareja [i] de la Convergencia (§ 4.3): [primer]
+/// pone, [detonator] detona. Las pares usan Quemadura; las impares,
+/// Veneno. Antes se reinicia el autómata con lo justo para que el que
+/// pone complete lo que pide la detonación.
+List<TutorialTurn> convergencePair(int i, int primer, int detonator) {
+  final burn = i.isEven;
+  return [
+    TutorialTurn(TutorialResetStep(
+        burn ? TutorialSetup.burnPrimed : TutorialSetup.poisonPrimed)),
+    TutorialTurn(
+        TutorialPlayerStep(TutorialMove.skill,
+            skillId: burn ? _fuego : _instante,
+            why: burn
+                ? 'poné Quemadura para que detone tu pareja'
+                : 'poné Veneno para que detone tu pareja'),
+        primer),
+    TutorialTurn(
+        TutorialPlayerStep(TutorialMove.skill,
+            skillId: burn ? _detonaQuemadura : _detonaVeneno,
+            why: burn
+                ? 'Veneno sobre Quemadura: detonás la Convergencia'
+                : 'Fuego sobre Veneno: detonás la Convergencia'),
+        detonator),
+  ];
+}
+
+/// El paso de quiebre de cada jugador: Quebrar o una habilidad que
+/// "puede quebrar".
+const kTutorialBreakStep = TutorialPlayerStep(TutorialMove.skill,
+    skillId: kTutorialQuebrar,
+    alt: _quiebra,
+    why: 'está Fisurado: Quebrar o una que "puede quebrar"');
 
 /// Un kit básico de ENTRENAR (§ 4.4): no es de rol. Entre los 4 está todo
 /// lo que hay que probar: Quebrar, Quemadura y Veneno (Combustión y
@@ -335,8 +340,10 @@ class TutorialRules {
       if (l.contains('Pulso')) out.add(TutorialArrow.pulse);
     }
     final st = currentStage(t);
-    if (st?.number == 2) out.addAll({TutorialArrow.mp, TutorialArrow.pulse});
-    if (st?.number == 5 || st?.number == 7) out.add(TutorialArrow.pulse);
+    if (st?.number == 2) out.add(TutorialArrow.mp);
+    if (st?.number == 3 || st?.number == 7 || st?.number == 8) {
+      out.add(TutorialArrow.pulse);
+    }
     return out;
   }
 
@@ -375,38 +382,60 @@ class TutorialRules {
   TutorialStage? currentStage(TutorialState t) =>
       t.running ? stageDef(t.stages[t.stage]) : null;
 
-  TutorialStep? currentStep(TutorialState t) {
-    final st = currentStage(t);
-    if (st == null || t.step >= st.steps.length) return null;
-    return st.steps[t.step];
-  }
-
-  // ---------------------------------------------------------------
-  // Roles (§ 4.3)
-  // ---------------------------------------------------------------
-
-  /// Índice en `order` de quien hace [role] en el intento de [t].
-  static int actorIndex(TutorialRole role, int attempt, int players) =>
-      players <= 0 ? 0 : (role.index + attempt - 1) % players;
-
-  /// Quién hace [role] entre los que siguen ([present]).
-  String? actorOf(TutorialState t, TutorialRole role, Set<String> present) {
-    // Roles elegidos por votación (§ 4.4).
-    if (t.assign[role] case final id? when present.contains(id)) return id;
-    final order = [
-      for (final id in t.order)
-        if (present.contains(id)) id
+  /// Los pasos de [st] repartidos entre los [players] jugadores de
+  /// `order` (§ 4.2 y § 4.3).
+  List<TutorialTurn> turnsOf(TutorialStage st, int players) {
+    final n = math.max(1, players);
+    final out = <TutorialTurn>[
+      for (final x in st.head) TutorialTurn(x),
     ];
-    if (order.isEmpty) return null;
-    return order[actorIndex(role, t.attempt, order.length)];
+    for (var i = 0; i < n; i++) {
+      for (final x in st.steps) {
+        out.add(TutorialTurn(x, i));
+      }
+    }
+    for (final x in st.tail) {
+      out.add(TutorialTurn(x));
+    }
+    switch (st.kind) {
+      case TutorialStageKind.each:
+        break;
+      case TutorialStageKind.pairs:
+        // Rueda: i pone, i+1 detona; así todos ponen y todos detonan (con
+        // 1 solo, él pone y él detona).
+        for (var i = 0; i < n; i++) {
+          out.addAll(convergencePair(i, i, (i + 1) % n));
+        }
+      case TutorialStageKind.breakEach:
+        for (var i = 0; i < n; i++) {
+          out
+            ..add(const TutorialTurn(TutorialFillStep(reset: true)))
+            ..add(TutorialTurn(kTutorialBreakStep, i));
+        }
+    }
+    return out;
   }
 
-  /// Los roles de [id] en este intento.
-  List<TutorialRole> rolesOf(TutorialState t, String id, Set<String> present) =>
-      [
-        for (final r in TutorialRole.values)
-          if (actorOf(t, r, present) == id) r,
-      ];
+  List<TutorialTurn> currentTurns(TutorialState t) {
+    final st = currentStage(t);
+    return st == null ? const [] : turnsOf(st, t.order.length);
+  }
+
+  TutorialTurn? currentTurn(TutorialState t) {
+    final ts = currentTurns(t);
+    return t.step < ts.length ? ts[t.step] : null;
+  }
+
+  TutorialStep? currentStep(TutorialState t) => currentTurn(t)?.step;
+
+  /// Quién hace el paso actual (`null` = el autómata, un paso automático
+  /// o alguien que ya no está en [present]).
+  String? currentActor(TutorialState t, [Set<String>? present]) {
+    final i = currentTurn(t)?.actor;
+    if (i == null || i >= t.order.length) return null;
+    final id = t.order[i];
+    return present == null || present.contains(id) ? id : null;
+  }
 
   // ---------------------------------------------------------------
   // Batalla de práctica (§ 3)
@@ -418,35 +447,9 @@ class TutorialRules {
           ? quebrarSkillFor(actor.weaponType)
           : st.skillId;
 
-  /// Las habilidades del guion que se le prestan a [id] (las de sus
-  /// roles).
-  List<String> lentSkills(TutorialState t, String id, Set<String> present) {
-    final roles = rolesOf(t, id, present).toSet();
-    final out = <String>[];
-    for (final n in t.stages) {
-      for (final st in stageDef(n).steps) {
-        if (st is TutorialPlayerStep &&
-            roles.contains(st.role) &&
-            st.skillId != null &&
-            st.skillId != kTutorialQuebrar &&
-            !out.contains(st.skillId)) {
-          out.add(st.skillId!);
-        }
-      }
-    }
-    return out;
-  }
-
-  /// El kit de práctica de [id] (§ 3): exactamente las habilidades de sus
-  /// roles, en el orden del guion (Quebrar para quien quiebra). Sin
-  /// roles (se unió con la pelea empezada): lo básico para la etapa libre.
-  List<String> kitSkills(TutorialState t, String id, Set<String> present) {
-    final out = lentSkills(t, id, present);
-    if (rolesOf(t, id, present).contains(_r3)) {
-      out.add(quebrarSkillFor(kTutorialKit.weaponType));
-    }
-    return out.isEmpty ? [_fuego, _fisico] : out;
-  }
+  /// El kit de tutorial (§ 3): el mismo para todos.
+  List<String> kitSkills() =>
+      [...kTutorialSkills, quebrarSkillFor(kTutorialKit.weaponType)];
 
   /// Cambia a [c] por su kit de práctica (§ 3): la build del jugador
   /// (clase, arma, árbol, equipo, ascensión) no existe en el tutorial.
@@ -473,7 +476,7 @@ class TutorialRules {
       classId: c.classId, // solo el dibujo
       level: c.build?.level ?? c.level, // solo el cartel
       weaponType: k.weaponType,
-      skillIds: kit?.skills ?? kitSkills(t, c.id, present),
+      skillIds: kit?.skills ?? kitSkills(),
       nextTurn: c.nextTurn,
       pulse: BattleEngine.pulseStart,
       practice: true,
@@ -584,16 +587,25 @@ class TutorialRules {
         (e) => e.id != bossId && st.setup != TutorialSetup.adds);
     final hasAdds = b.enemies.length > 1;
     resetCombatants(b);
+    applySetup(b, st.setup, hasAdds: hasAdds);
+  }
+
+  /// Lo propio de [setup] sobre la escena recién reiniciada.
+  void applySetup(BattleState b, TutorialSetup setup, {bool hasAdds = true}) {
     final boss = b.byId(bossId)!;
-    switch (st.setup) {
+    switch (setup) {
       case TutorialSetup.fresh:
         break;
       case TutorialSetup.poisonPrimed:
-        // Detonar sale desactivado ("Necesita: 5 de Veneno") hasta que la
-        // Instante sume lo que falta.
+        // Detonar sale desactivado ("Necesita: 5 de Veneno") hasta que el
+        // que pone sume lo que falta.
         final need = _requiredStacks(_detonaVeneno, StatusKind.poison);
         final adds = catalog.skills[_instante]?.status?.stacks ?? 0;
         boss.statuses[StatusKind.poison] = math.max(1, need - adds);
+      case TutorialSetup.burnPrimed:
+        final need = _requiredStacks(_detonaQuemadura, StatusKind.burn);
+        final adds = catalog.skills[_fuego]?.status?.stacks ?? 0;
+        boss.statuses[StatusKind.burn] = math.max(1, need - adds);
       case TutorialSetup.enemyUlt:
         boss.ult = 100;
       case TutorialSetup.adds:
@@ -682,7 +694,7 @@ class TutorialRules {
     final step = currentStep(t);
     if (step is! TutorialPlayerStep || t.card != null) return false;
     final present = {for (final c in b.party) c.id};
-    if (actorOf(t, step.role, present) != playerId) return false;
+    if (currentActor(t, present) != playerId) return false;
     final actor = b.byId(playerId);
     if (actor == null) return false;
     final targetOk = switch (cmd) {
@@ -697,7 +709,9 @@ class TutorialRules {
           TutorialMove.defend => cmd is DefendCommand,
           TutorialMove.pass => cmd is PassCommand,
           TutorialMove.skill =>
-            cmd is SkillCommand && cmd.skillId == skillFor(step, actor),
+            cmd is SkillCommand &&
+                (cmd.skillId == skillFor(step, actor) ||
+                    (step.alt != null && cmd.skillId == step.alt)),
         };
   }
 
@@ -731,7 +745,10 @@ class TutorialRules {
       TutorialMove.pass => 'pass',
       TutorialMove.skill => 'skill-${skillFor(step, actor)}',
     };
-    return actionId == want
+    return actionId == want ||
+            (step.move == TutorialMove.skill &&
+                step.alt != null &&
+                actionId == 'skill-${step.alt}')
         ? null
         : 'Ahora no: el paso es ${doText(step, actor)}.';
   }
@@ -745,9 +762,10 @@ class TutorialRules {
             final id = actor == null ? st.skillId : skillFor(st, actor);
             final sk = catalog.skills[id];
             final n = sk?.name ?? 'Quebrar';
+            final alt = st.alt == null ? null : catalog.skills[st.alt]?.name;
             return sk?.allTargets ?? false
                 ? 'usar $n (a todos)'
-                : 'usar $n sobre el autómata';
+                : 'usar $n${alt == null ? '' : ' o $alt'} sobre el autómata';
           }(),
       };
 
@@ -761,9 +779,6 @@ class TutorialRules {
         return const TutorialBanner(
             '¡Guion completo! Votá cómo seguir en el panel.',
             stage: 'Fin del guion');
-      case TutorialPhase.roles:
-        return const TutorialBanner('Cada uno elige el rol que quiere probar.',
-            stage: 'Repetir con otros roles');
       case TutorialPhase.train:
         return TutorialBanner(
             'ENTRENAR: probá lo que quieras; el autómata puede caer.',
@@ -784,18 +799,20 @@ class TutorialRules {
     switch (step) {
       case TutorialEnemyStep():
         return TutorialBanner('MIRÁ: actúa el autómata.', stage: head);
+      case TutorialFillStep():
+        return TutorialBanner('MIRÁ: la barra de quiebre se llena sola.',
+            stage: head);
+      case TutorialResetStep():
+        return TutorialBanner('', stage: head);
       case TutorialPlayerStep():
-        final id = actorOf(t, step.role, present);
+        final id = currentActor(t, present);
         final actor = id == null ? null : b.byId(id);
         final what = doText(step, actor);
         final companion = id != null && s.players[id]?.isCompanion == true;
         if (id != null && mine.contains(id) && !companion) {
-          final known = (s.players[id]?.tutorialVersion ?? 0) >= version &&
-              t.fromVersion > 0;
           return TutorialBanner(
               'TE TOCA: ${what[0].toLowerCase()}${what.substring(1)}'
-              '${step.why == null ? '' : ' · ${step.why}'}'
-              '${known ? ' · Ya lo conocés: ayudá al grupo' : ''}',
+              '${step.why == null ? '' : ' · ${step.why}'}',
               yourTurn: true,
               stage: head);
         }
@@ -839,25 +856,29 @@ class TutorialRules {
           '${[
         for (final n in t.stages) stageDef(n).title
       ].join(', ')}.');
-    } else if (idx == 1 && t.attempt > 1) {
-      final parts = <String>[];
-      for (final id in t.order) {
-        if (!present.contains(id)) continue;
-        final r = rolesOf(t, id, present);
-        if (r.isNotEmpty) parts.add('${names[id] ?? id} ${r.first.verb}');
-      }
-      lines.add('Intento ${t.attempt}: roles rotados (${parts.join(', ')}).');
     }
     lines.addAll(stageIntro(st.number));
+    if (st.kind == TutorialStageKind.pairs) {
+      final ids = [for (final id in t.order) names[id] ?? id];
+      final n = ids.length;
+      lines.add(n == 1
+          ? 'Ponés vos y detonás vos.'
+          : 'Parejas: ${[
+              for (var i = 0; i < n; i++)
+                '${ids[i]} pone, ${ids[(i + 1) % n]} detona'
+            ].join('; ')}.');
+    }
     return TutorialCard(lines, arrow: _introArrow(st.number));
   }
 
   TutorialArrow? _introArrow(int stage) => switch (stage) {
         1 => TutorialArrow.timeline,
         2 => TutorialArrow.mp,
-        5 => TutorialArrow.timeline,
-        7 => TutorialArrow.breakBar,
-        8 => TutorialArrow.ult,
+        3 => TutorialArrow.pulse,
+        4 => TutorialArrow.timeline,
+        6 => TutorialArrow.status,
+        8 => TutorialArrow.breakBar,
+        9 => TutorialArrow.ult,
         _ => null,
       };
 
@@ -868,17 +889,20 @@ class TutorialRules {
   /// datos.
   List<String> stageIntro(int stage) {
     final det = catalog.skills[_detonaVeneno];
-    final req = _requiredStacks(_detonaVeneno, StatusKind.poison);
+    final quebrar = catalog.skills[kQuebrarId];
     return switch (stage) {
       1 => [
           'La barra de turnos (arriba) muestra quién sigue: con más '
               'velocidad, turnos más seguidos.',
-          'Defender y Pasar adelantan tu próximo turno.',
+          'Defender y Pasar adelantan tu próximo turno. Cada uno lo prueba '
+              'en su turno.',
         ],
       2 => [
           'MP (barra azul): dura toda la misión. Lo gastan casi todas las '
               'habilidades y no vuelve solo entre peleas: se recupera con '
               'pociones o al volver al lobby.',
+        ],
+      3 => [
           'Pulso (pips dorados, 0-${BattleEngine.pulseMax}): es de esta '
               'pelea. Sube al empezar tu turno, con el ataque básico, al '
               'pegarle a una debilidad o hacer una reacción y al defender.',
@@ -887,35 +911,38 @@ class TutorialRules {
               'y ${det?.pulse ?? 0} de Pulso (en el menú: "${det?.mp ?? 0} MP  '
               'P${det?.pulse ?? 0}").',
         ],
-      3 => [
-          'El autómata resiste lo físico y es débil al Fuego: mirá el '
-              'número de daño de cada golpe.',
-        ],
       4 => [
-          'Los estados se acumulan (stacks) y le hacen daño al empezar su '
-              'turno.',
-        ],
-      5 => [
           'Instante no es un recurso: es un tipo de habilidad que no '
               'termina tu turno. Después hacés otra acción (una Instante '
               'por turno).',
-          '${det?.name ?? 'Detonar'} sale desactivada: necesita $req de '
-              'Veneno. ${_skillName(_instante)} (Instante) pone lo que falta '
-              'y en el mismo turno detonás.',
+        ],
+      5 => [
+          'El autómata resiste lo físico y es débil al Fuego: mirá el '
+              'número de daño de cada golpe.',
         ],
       6 => [
-          'Uno pone Quemadura y otro la detona con un golpe de Veneno: '
-              'cuantos más stacks, más daño.',
+          'Los estados se acumulan (stacks) y le hacen daño al empezar su '
+              'turno.',
         ],
       7 => [
-          'Los golpes llenan la barra de quiebre; llena, queda Fisurado. '
-              'Ahí Quebrar (pide Pulso) lo quiebra.',
+          'Uno pone un estado y su pareja lo detona: Veneno sobre '
+              'Quemadura o Fuego sobre Veneno. Cuantos más stacks, más daño.',
+          'Las detonaciones piden stacks (si faltan, el botón sale '
+              'desactivado): el autómata ya tiene algunos y el que pone '
+              'completa lo que falta.',
         ],
       8 => [
+          'Los golpes llenan la barra de quiebre; llena, queda Fisurado. '
+              'Primero la llenan entre todos.',
+          'Después, cada uno quiebra: Quebrar viene de base (Pulso '
+              '${quebrar?.pulse ?? 0}) y algunas habilidades también quiebran '
+              '(dicen "puede quebrar", como ${_skillName(_quiebra)}).',
+        ],
+      9 => [
           'Los jefes avisan su ULT un turno antes. Quebrarlos la cancela; '
               'Defender baja el daño.',
         ],
-      9 => [
+      10 => [
           'Un área pone estados a todos; la Convergencia salpica a los '
               'demás.',
         ],
@@ -923,12 +950,24 @@ class TutorialRules {
     };
   }
 
-  /// "Intento 2: esta vez quebrás vos" para [id].
-  String? attemptText(TutorialState t, String id, Set<String> present) {
-    if (t.attempt <= 1) return null;
-    final r = rolesOf(t, id, present);
-    if (r.isEmpty) return null;
-    return 'Intento ${t.attempt}: esta vez ${r.first.verb} vos.';
+  /// El cartel de cuando la barra se llena sola (§ 4.2, etapa 8): la
+  /// primera vez explica; después, solo el dato. [next]: quién quiebra
+  /// (`null` = la barra la llenaron entre todos).
+  TutorialCard fillCard(String? next, {Set<String>? said}) {
+    final first = next != null && (said?.add('fill') ?? true);
+    final lines = <String>[
+      if (next == null)
+        'La barra de quiebre se llenó: FISURADO. Un golpe que quiebra lo '
+            'deja QUEBRADO.'
+      else if (first)
+        'Autómata reiniciado y barra llena sola: FISURADO. Ahora quiebra '
+            '$next con Quebrar (viene de base) o con '
+            '${_skillName(_quiebra)} ("puede quebrar").'
+      else
+        'Barra llena: FISURADO. Quiebra $next.',
+    ];
+    return TutorialCard(lines,
+        arrow: TutorialArrow.breakBar, targetId: bossId, effect: true);
   }
 
   /// El cartel de efecto (2-3 líneas) de lo que pasó entre [before] y
@@ -990,9 +1029,12 @@ class TutorialRules {
       if (o == null) continue;
       if (e.vulnerable > o.vulnerable || (e.breakSkip && !o.breakSkip)) {
         add(
-            '¡QUEBRADO! Pierde su turno y recibe '
-            '+${_fmt(BattleEngine.vulnerableBonus * 100)}% de daño por '
-            '${BattleEngine.vulnerableTurns} turnos del grupo.',
+            said?.add('broken') ?? true
+                ? '¡QUEBRADO! Pierde su turno y recibe '
+                    '+${_fmt(BattleEngine.vulnerableBonus * 100)}% de daño por '
+                    '${BattleEngine.vulnerableTurns} turnos del grupo.'
+                : '¡QUEBRADO! +${_fmt(BattleEngine.vulnerableBonus * 100)}%, '
+                    'pierde su turno.',
             TutorialArrow.breakBar,
             e.id);
       } else if (e.fissured && !o.fissured) {
@@ -1272,13 +1314,9 @@ class TutorialRules {
   /// Opciones de la votación abierta (id, rótulo), o vacío.
   List<(String, String)> options(TutorialState t) => switch (t.phase) {
         TutorialPhase.menu => const [
-            ('roles', 'REPETIR CON OTROS ROLES'),
+            ('repeat', 'REPETIR TUTORIAL'),
             ('train', 'IR A ENTRENAR'),
             ('exit', 'SALIR'),
-          ],
-        TutorialPhase.roles => [
-            for (final r in TutorialRole.values)
-              ('role:${r.name}', roleLabel(r)),
           ],
         TutorialPhase.trainOver => const [
             ('restart', 'REINICIAR'),
@@ -1287,33 +1325,22 @@ class TutorialRules {
         _ => const [],
       };
 
-  static String roleLabel(TutorialRole r) => switch (r) {
-        TutorialRole.acumula => 'ACUMULA',
-        TutorialRole.detona => 'DETONA',
-        TutorialRole.barra => 'LLENA LA BARRA',
-        TutorialRole.quiebra => 'QUIEBRA',
-      };
-
   /// Si [choice] vale en la votación abierta.
   bool validChoice(TutorialState t, String choice) =>
       options(t).any((o) => o.$1 == choice);
 
   /// Lo que se decidió, o `null` si todavía no hay acuerdo. Regla (la más
-  /// simple): todos los humanos de la sala eligieron lo mismo; en la de
-  /// roles, todos eligieron y sin roles repetidos entre humanos.
+  /// simple): todos los humanos de la sala eligieron lo mismo.
   String? decided(GameSession s) {
     final t = s.tutorial;
     if (t == null) return null;
     final vs = voters(s);
     if (vs.isEmpty || vs.any((p) => !t.picks.containsKey(p.id))) return null;
     final picks = [for (final p in vs) t.picks[p.id]!];
-    if (t.phase == TutorialPhase.roles) {
-      return picks.toSet().length == picks.length ? 'roles' : null;
-    }
     return picks.toSet().length == 1 ? picks.first : null;
   }
 
-  /// Quién eligió qué ("Ana: QUIEBRA", "Beto: eligiendo…") y el motivo si
+  /// Quién eligió qué ("Ana: SALIR", "Beto: eligiendo…") y el motivo si
   /// no hay acuerdo.
   List<String> pickLines(GameSession s) {
     final t = s.tutorial;
@@ -1329,36 +1356,7 @@ class TutorialRules {
         if (t.picks[p.id] case final c?) c
     ];
     if (picked.length == vs.length && decided(s) == null) {
-      out.add(t.phase == TutorialPhase.roles
-          ? 'Hay un rol repetido: elijan roles distintos.'
-          : 'Falta acuerdo: hace falta que todos elijan lo mismo.');
-    }
-    return out;
-  }
-
-  /// Los roles de "Repetir con otros roles": cada humano el que eligió;
-  /// los que sobran, primero a quien no tiene rol (compañeros), después
-  /// en orden a todos.
-  Map<TutorialRole, String> assignRoles(
-      Map<String, String> picks, List<String> order) {
-    final out = <TutorialRole, String>{};
-    for (final e in picks.entries) {
-      final name = e.value.startsWith('role:') ? e.value.substring(5) : '';
-      for (final r in TutorialRole.values) {
-        if (r.name == name) out[r] = e.key;
-      }
-    }
-    final free = [
-      for (final r in TutorialRole.values)
-        if (!out.containsKey(r)) r
-    ];
-    final without = [
-      for (final id in order)
-        if (!out.values.contains(id)) id
-    ];
-    final pool = [...without, ...order];
-    for (var i = 0; i < free.length && pool.isNotEmpty; i++) {
-      out[free[i]] = pool[i % pool.length];
+      out.add('Falta acuerdo: hace falta que todos elijan lo mismo.');
     }
     return out;
   }

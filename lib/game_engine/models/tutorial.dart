@@ -8,20 +8,18 @@
 /// Versión vigente del tutorial: el máximo de las `desde` de
 /// `kTutorialStages` (combat_tutorial.md § 2). Solo se sube cuando cambia
 /// el combate básico (un ajuste de números no la cambia). 2 desde v0.9.6:
-/// etapas rehechas (todos actúan en cada etapa, reinicio por etapa).
-const kTutorialVersion = 2;
+/// etapas rehechas (todos actúan en cada etapa, reinicio por etapa). 3
+/// desde v0.9.7: sin roles; cada jugador prueba todo él mismo.
+const kTutorialVersion = 3;
 
 /// En qué parte del tutorial está la sala (§ 4.4).
 enum TutorialPhase {
   /// Etapas con guion.
   script,
 
-  /// Terminó el guion: votación "Repetir con otros roles" / "ENTRENAR" /
+  /// Terminó el guion: votación "Repetir tutorial" / "ENTRENAR" /
   /// "Salir".
   menu,
-
-  /// Cada humano elige el rol que quiere probar.
-  roles,
 
   /// ENTRENAR: libre, kit de entrenamiento, el autómata puede caer.
   train,
@@ -36,17 +34,17 @@ enum TutorialMove { attack, skill, defend, pass }
 /// Hacia dónde apunta la flecha del cartel de efecto (§ 4.1).
 enum TutorialArrow { timeline, hp, mp, pulse, status, breakBar, ult }
 
-/// Los 4 roles del guion (§ 4.3). Con menos jugadores, uno hace varios.
-enum TutorialRole {
-  acumula('acumulás'),
-  detona('detonás'),
-  barra('llenás la barra'),
-  quiebra('quebrás');
+/// Cómo se reparten los pasos de una etapa entre los jugadores (§ 4.2).
+enum TutorialStageKind {
+  /// `head` una vez, `steps` cada jugador en orden, `tail` una vez.
+  each,
 
-  const TutorialRole(this.verb);
+  /// Convergencia en parejas: el jugador i pone, el i+1 detona (§ 4.3).
+  pairs,
 
-  /// "Intento 2: esta vez quebrás vos".
-  final String verb;
+  /// Quiebre: `steps` cada jugador y `tail` (barra llena, Fisurado);
+  /// después, por jugador, reinicio, barra llena sola y quiebra él.
+  breakEach,
 }
 
 /// Un paso del guion.
@@ -54,16 +52,15 @@ sealed class TutorialStep {
   const TutorialStep();
 }
 
-/// Actúa el jugador que tiene [role]: solo [move] (y [skillId]) está
-/// habilitado.
+/// Actúa un jugador (el que le toca según la etapa): solo [move] (y
+/// [skillId] o [alt]) está habilitado.
 class TutorialPlayerStep extends TutorialStep {
-  const TutorialPlayerStep(this.role, this.move,
-      {this.skillId,
-      this.untilFissured = false,
-      this.maxReps = 1,
-      this.why});
-  final TutorialRole role;
+  const TutorialPlayerStep(this.move, {this.skillId, this.alt, this.why});
   final TutorialMove move;
+
+  /// Otra habilidad que también vale (quebrar con una habilidad que
+  /// "puede quebrar" en vez de Quebrar).
+  final String? alt;
 
   /// Para qué sirve el paso ("el ataque básico da +1 Pulso"): todos
   /// actúan en cada etapa y cada uno sabe por qué (§ 4.2).
@@ -72,10 +69,6 @@ class TutorialPlayerStep extends TutorialStep {
   /// Con [TutorialMove.skill]: la habilidad. [kTutorialQuebrar] = la
   /// Quebrar base del arma del que actúa.
   final String? skillId;
-
-  /// Se repite (hasta [maxReps]) mientras el autómata no esté Fisurado.
-  final bool untilFissured;
-  final int maxReps;
 }
 
 /// Actúa el autómata (tick de estados, aviso o ULT).
@@ -83,11 +76,33 @@ class TutorialEnemyStep extends TutorialStep {
   const TutorialEnemyStep();
 }
 
+/// El autómata vuelve a como al empezar y se prepara [setup] (entre
+/// parejas de Convergencia). Automático, sin cartel.
+class TutorialResetStep extends TutorialStep {
+  const TutorialResetStep(this.setup);
+  final TutorialSetup setup;
+}
+
+/// La barra de quiebre se llena sola hasta Fisurado (con [reset], antes
+/// se reinicia el autómata). Automático, con cartel.
+class TutorialFillStep extends TutorialStep {
+  const TutorialFillStep({this.reset = false});
+  final bool reset;
+}
+
+/// Un paso de la etapa ya repartido: [actor] es el índice en
+/// `TutorialState.order` (`null` = nadie: autómata o paso automático).
+class TutorialTurn {
+  const TutorialTurn(this.step, [this.actor]);
+  final TutorialStep step;
+  final int? actor;
+}
+
 /// Id de paso que pide "la Quebrar base del arma del que actúa".
 const kTutorialQuebrar = '@quebrar';
 
 /// Preparación de la escena al empezar una etapa.
-enum TutorialSetup { fresh, poisonPrimed, enemyUlt, adds }
+enum TutorialSetup { fresh, poisonPrimed, burnPrimed, enemyUlt, adds }
 
 /// Una etapa del guion (§ 4.2).
 class TutorialStage {
@@ -97,6 +112,9 @@ class TutorialStage {
     required this.teaches,
     required this.desde,
     required this.steps,
+    this.head = const [],
+    this.tail = const [],
+    this.kind = TutorialStageKind.each,
     this.setup = TutorialSetup.fresh,
   });
 
@@ -108,7 +126,14 @@ class TutorialStage {
 
   /// Versión del combate en la que apareció o cambió de verdad (§ 2).
   final int desde;
+
+  /// Lo que hace cada jugador, en su turno (todos lo prueban).
   final List<TutorialStep> steps;
+
+  /// Una vez antes y una vez después de la ronda de [steps].
+  final List<TutorialStep> head;
+  final List<TutorialStep> tail;
+  final TutorialStageKind kind;
   final TutorialSetup setup;
 }
 
@@ -175,7 +200,6 @@ class TutorialState {
     this.fromVersion = 0,
     this.prepared = false,
     Map<String, String>? picks,
-    Map<TutorialRole, String>? assign,
     List<String>? narration,
     Map<String, String>? primers,
   })  : stages = List.unmodifiable(stages),
@@ -183,38 +207,33 @@ class TutorialState {
         votes = votes ?? <String>{},
         said = said ?? <String>{},
         picks = picks ?? <String, String>{},
-        assign = Map.unmodifiable(assign ?? const <TutorialRole, String>{}),
         narration = narration ?? <String>[],
         primers = primers ?? <String, String>{};
 
-  /// Intento (1, 2...): rota los roles (§ 4.3).
+  /// Intento (1, 2...).
   final int attempt;
 
   /// Números de etapa que se juegan (completo o solo las de cambios + la
   /// libre, § 2).
   final List<int> stages;
 
-  /// Jugadores del tutorial en orden (humanos y compañeros). El rol de
-  /// cada uno sale de su índice y del [attempt].
+  /// Jugadores del tutorial en orden (humanos y compañeros): en cada
+  /// etapa actúan en este orden y arman las parejas (§ 4.3).
   final List<String> order;
 
   /// Índice en [stages] y paso dentro de la etapa.
   int stage;
   int step;
 
-  /// Veces que se repitió el paso actual (`untilFissured`).
+  /// Reservado (antes: repeticiones de un paso); siempre 0.
   int reps;
 
   /// Guion, votaciones del final o ENTRENAR (§ 4.4).
   TutorialPhase phase;
 
-  /// Lo que eligió cada humano en la votación abierta (`roles`, `train`,
-  /// `exit`, `restart` o `role:<rol>`).
+  /// Lo que eligió cada humano en la votación abierta (`repeat`,
+  /// `train`, `exit` o `restart`).
   final Map<String, String> picks;
-
-  /// Roles elegidos por votación ("Repetir con otros roles"): si está
-  /// vacío, los roles salen del intento (rotan).
-  final Map<TutorialRole, String> assign;
 
   /// ENTRENAR: lo que narra el panel (las últimas líneas).
   final List<String> narration;
@@ -262,7 +281,6 @@ class TutorialState {
         fromVersion: fromVersion,
         prepared: prepared,
         picks: {...picks},
-        assign: assign,
         narration: [...narration],
         primers: {...primers},
       );
@@ -276,7 +294,6 @@ class TutorialState {
         if (reps != 0) 'r': reps,
         if (phase != TutorialPhase.script) 'ph': phase.name,
         if (picks.isNotEmpty) 'pk': picks,
-        if (assign.isNotEmpty) 'as': {for (final e in assign.entries) e.key.name: e.value},
         if (narration.isNotEmpty) 'nr': narration,
         if (primers.isNotEmpty) 'pr': primers,
         if (card != null) 'c': card!.toJson(),
@@ -298,10 +315,6 @@ class TutorialState {
         reps: (j['r'] as num?)?.toInt() ?? 0,
         phase: _enum(j['ph'], TutorialPhase.values) ?? TutorialPhase.script,
         picks: _strMap(j['pk']),
-        assign: {
-          for (final e in _strMap(j['as']).entries)
-            if (_enum(e.key, TutorialRole.values) case final r?) r: e.value,
-        },
         narration: [for (final x in (j['nr'] as List? ?? const [])) '$x'],
         primers: _strMap(j['pr']),
         card: j['c'] is Map

@@ -501,7 +501,6 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         final tut = s.tutorial;
         final tb = s.battle?.state;
         final rules = controller.tutorialRules;
-        final present = {...?tb?.party.map((c) => c.id)};
         final humans = s.playerList.where((p) => !p.isCompanion).toList();
         final battle = SessionBattleScreen(
           view: view,
@@ -528,7 +527,6 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                     voted: controller.tutorialVoted,
                     hud: tutorialHudParts(rules.hudFocus(tut)),
                     rules: rules,
-                    attemptText: rules.attemptText(tut, view.localId, present),
                     canControl: humans.length <= 1 ||
                         humans.first.id == view.localId,
                     onNext: () => controller.ackTutorial(),

@@ -46,7 +46,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// (votos de la votación abierta), `as` (roles elegidos), `nr`
 /// (narrador de ENTRENAR) y `pr`; cartel con `h`; acción `tutPick`; sin
 /// `f` (combat_tutorial.md § 4.4).
-const kProtocolVersion = 17;
+/// 18 desde v0.9.7: TUTORIAL sin roles: `tut` sin `as`; voto `repeat`
+/// en vez de `roles`/`role:*` (combat_tutorial.md § 4.3).
+const kProtocolVersion = 18;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {
