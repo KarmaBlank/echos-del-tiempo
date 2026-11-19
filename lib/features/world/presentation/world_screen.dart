@@ -269,6 +269,18 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     return used ? KeyEventResult.handled : KeyEventResult.ignored;
   }
 
+  /// Se perdió la sala: cierra lo que haya encima (pausa, diálogos) y
+  /// vuelve al título con el motivo. `maybePop` solo cerraba el diálogo de
+  /// arriba y la pantalla quedaba trabada en DESCONECTADO.
+  void _leaveLost(String reason) {
+    if (!mounted) return;
+    final route = ModalRoute.of(context);
+    if (route == null) return;
+    final nav = Navigator.of(context);
+    nav.popUntil((r) => r == route);
+    if (route.isCurrent && nav.canPop()) nav.pop(reason);
+  }
+
   @override
   Widget build(BuildContext context) {
     final view = ref.watch(sessionControllerProvider);
@@ -296,20 +308,34 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final lost = view?.disconnected;
     if (lost != null && !_leaving) {
       _leaving = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) Navigator.of(context).maybePop(lost);
-      });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _leaveLost(lost));
     }
 
     final Widget body;
-    if (view == null || !sprites.hasValue || lost != null) {
+    if (lost != null) {
+      // Respaldo: si la vuelta automática no pudo salir, un botón.
+      body = Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('DESCONECTADO',
+                style: TextStyle(color: RetroPalette.gold)),
+            const SizedBox(height: 8),
+            Text(lost, style: const TextStyle(color: RetroPalette.muted)),
+            const SizedBox(height: 16),
+            TextButton(
+              key: const Key('lost-back'),
+              autofocus: true,
+              onPressed: () => _leaveLost(lost),
+              child: const Text('VOLVER AL TÍTULO'),
+            ),
+          ],
+        ),
+      );
+    } else if (view == null || !sprites.hasValue) {
       body = Center(
         child: Text(
-          lost != null
-              ? 'DESCONECTADO'
-              : sprites.hasError
-                  ? 'ERROR AL CARGAR SPRITES'
-                  : 'CARGANDO...',
+          sprites.hasError ? 'ERROR AL CARGAR SPRITES' : 'CARGANDO...',
           style: const TextStyle(color: RetroPalette.gold),
         ),
       );

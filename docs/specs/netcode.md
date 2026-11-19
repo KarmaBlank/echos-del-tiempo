@@ -368,7 +368,10 @@ estado.
   como el `gone()` del prototipo.
 - **Host que se va:** el cliente recibe `ConnectionLostEvent` y la
   pantalla del juego vuelve al título con `Se perdió la conexión con el
-  host.` (el prototipo mostraba ese mismo mensaje).
+  host.` (el prototipo mostraba ese mismo mensaje). Antes cierra todo lo
+  que haya encima de la partida (pausa, diálogos); si por algo no puede
+  salir sola, la pantalla DESCONECTADO muestra el motivo y un botón
+  **VOLVER AL TÍTULO** (v0.8.5).
 - Salir al título (host o cliente) llama a `disconnect()`.
 
 ## Cómo la sesión usa la red (`SessionController`)
