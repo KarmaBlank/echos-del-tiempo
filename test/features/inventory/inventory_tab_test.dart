@@ -44,9 +44,9 @@ void main() {
     }
     // 5 armas (v0.5.1: las pilas van en CONSUMIBLES / MATERIALES).
     expect(plain(tester, 'inv-summary'), contains('Casillas 5/40'));
-    // v0.9.9: a la derecha solo ESTADÍSTICAS (la ficha es el tooltip).
+    // v0.9.10: sin panel derecho (la ficha del mouse compara).
     await _tap(tester, 'inv-cell-${cellOf(p, 'e1')}');
-    expect(find.byKey(const ValueKey('inv-stats')), findsOneWidget);
+    expect(find.byKey(const ValueKey('inv-stats')), findsNothing);
     expect(find.text('FICHA'), findsNothing);
     // Una pila: cantidad en la casilla.
     expect(

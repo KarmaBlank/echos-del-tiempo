@@ -10,7 +10,6 @@ import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/menu_focus.dart';
-import '../../../app/widgets/menu_widgets.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../app/widgets/section_panel.dart';
 import '../../../core/settings/settings_providers.dart';
@@ -112,21 +111,16 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   /// Foco propio: `Esc` cancela "elige B" sin cerrar el panel.
   final _keys = FocusNode(debugLabel: 'inventory');
 
-  /// Arma bajo el mouse (o el cursor de teclado): ESTADÍSTICAS muestra
-  /// cómo cambiarían si la equiparas (v0.9.9).
-  String? _hoverUid;
-
-  /// Panel ESTADÍSTICAS: los tooltips del inventario no lo tapan.
-  final _statsKey = GlobalKey(debugLabel: 'inv-stats');
   final _searchKey = GlobalKey(debugLabel: 'inv-search');
 
-  /// Lo que queda a la izquierda de ESTADÍSTICAS (global).
-  Rect? _tipBounds() {
-    final box = _statsKey.currentContext?.findRenderObject();
-    if (box is! RenderBox || !box.hasSize) return null;
-    final left = box.localToGlobal(Offset.zero).dx - 8;
-    return Rect.fromLTRB(0, 0, left, double.maxFinite / 4);
-  }
+  /// Escala de la grilla (v0.9.10): casilla de `cell × _scale` px.
+  double _scale = 1;
+
+  /// Con lugar a lo ancho, la EQUIPADA y las pilas van al lado.
+  bool _wide = false;
+  double get _cellSize => InventoryTab.cell * _scale;
+  double get _gap => InventoryTab.gap * _scale;
+  double get _gridW => InventoryTab.gridWidth * _scale;
 
   /// Buscador (v0.9.7): nombre, tipo, rareza, mod, pasiva, habilidad.
   final _search = TextEditingController();
@@ -365,6 +359,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       Widget w = ItemCell(
         rules: shop.rules,
         content: c,
+        size: _cellSize,
         selected: selected || _moveFrom == i,
         highlight: _moveFrom != null && _moveFrom != i,
         buildMatch: c?.item != null && _fit(c!.item!).any,
@@ -393,7 +388,6 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           ]);
         }
         w = _withTip(me, owner, c, attrs, w, focused: focused);
-        if (c.item != null) w = _hoverStats(token!, w);
         if (fresh) {
           final inner = w;
           w = MouseRegion(onEnter: (_) => _seen(p, token), child: inner);
@@ -428,8 +422,12 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             data: i,
             feedback: Opacity(
                 opacity: 0.8,
-                child: ItemCell(rules: shop.rules, content: c, selected: true)),
-            childWhenDragging: ItemCell(rules: shop.rules),
+                child: ItemCell(
+                    rules: shop.rules,
+                    content: c,
+                    size: _cellSize,
+                    selected: true)),
+            childWhenDragging: ItemCell(rules: shop.rules, size: _cellSize),
             child: w,
           );
         }
@@ -459,63 +457,60 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     }
 
     final eq = p.equippedItem;
-    final eqCell = eq == null
-        ? ItemCell(rules: shop.rules)
-        : _withTip(
-            me,
-            owner,
-            CellContent.item(eq),
-            attrs,
-            ItemCell(
-                rules: shop.rules,
-                content: CellContent.item(eq),
-                selected: _sel == eq.uid,
-                buildMatch: _fit(eq).any),
-            equipped: true);
-    final left = NavSection(
-        child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: owners),
-            if (mine) ...[
-              const SizedBox(width: 6),
-              InventorySortButton(
-                  current: _lastSort,
-                  onSort: (k) {
-                    setState(() => _lastSort = k);
-                    shop.controller.sortInventory(k);
-                  }),
-            ],
+    Widget buildLeft() {
+      final eqCell = eq == null
+          ? ItemCell(rules: shop.rules, size: _cellSize)
+          : _withTip(
+              me,
+              owner,
+              CellContent.item(eq),
+              attrs,
+              ItemCell(
+                  rules: shop.rules,
+                  size: _cellSize,
+                  content: CellContent.item(eq),
+                  selected: _sel == eq.uid,
+                  buildMatch: _fit(eq).any),
+              equipped: true);
+      final ownersRow = Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: owners),
+          if (mine) ...[
+            const SizedBox(width: 6),
+            InventorySortButton(
+                current: _lastSort,
+                onSort: (k) {
+                  setState(() => _lastSort = k);
+                  shop.controller.sortInventory(k);
+                }),
           ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            _CellButton(
-                key: const ValueKey('inv-equipped'),
-                // El menú de la EQUIPADA se abre debajo del buscador (no lo
-                // tapa).
-                onSecondaryTap: mine && eq != null && !pickMode
-                    ? (at) => _openMenu(p, me, mates, eq.uid, null, at,
-                        avoid: _searchRect())
-                    : null,
-                onTap: () {
-                  if (eq == null) return;
-                  if (_pickB(owner.id, eq.uid, CellContent.item(eq))) return;
-                  _select(eq.uid, null);
-                },
-                child: eqCell),
-            const SizedBox(width: 8),
-            Expanded(
-              child: ProtoText('<b style="color:#ffd166">EQUIPADA</b><br>'
-                  '${eq == null ? '—' : itemNameMarkup(shop.rules, eq)}'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
+        ],
+      );
+      final eqRow = Row(
+        children: [
+          _CellButton(
+              key: const ValueKey('inv-equipped'),
+              // El menú de la EQUIPADA se abre debajo del buscador (no lo
+              // tapa).
+              onSecondaryTap: mine && eq != null && !pickMode
+                  ? (at) => _openMenu(p, me, mates, eq.uid, null, at,
+                      avoid: _searchRect())
+                  : null,
+              onTap: () {
+                if (eq == null) return;
+                if (_pickB(owner.id, eq.uid, CellContent.item(eq))) return;
+                _select(eq.uid, null);
+              },
+              child: eqCell),
+          const SizedBox(width: 8),
+          Expanded(
+            child: ProtoText('<b style="color:#ffd166">EQUIPADA</b><br>'
+                '${eq == null ? '—' : itemNameMarkup(shop.rules, eq)}'),
+          ),
+        ],
+      );
+      final notes = <Widget>[
         if (_picking)
           Row(children: [
             Expanded(
@@ -539,101 +534,96 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         else if (!mine)
           ProtoText(protoColor(ProtoColors.dim,
               'Inventario de ${protoEsc(owner.name)} (solo lectura)')),
-        const SizedBox(height: 4),
-        SizedBox(
-          key: _searchKey,
-          width: InventoryTab.gridWidth,
-          child: TextField(
-            key: const ValueKey('inv-search'),
-            controller: _search,
-            style: RetroType.smallStyle,
-            decoration: InputDecoration(
-              isDense: true,
-              hintText: 'Buscar: nombre, tipo, mod...',
-              hintStyle: RetroType.smallStyle.copyWith(color: ProtoColors.dim),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-              suffix: _query.isEmpty
-                  ? null
-                  : GestureDetector(
-                      key: const ValueKey('inv-search-clear'),
-                      onTap: () => setState(() {
-                            _search.clear();
-                            _query = '';
-                          }),
-                      child: Text('x',
-                          style: RetroType.smallStyle
-                              .copyWith(color: ProtoColors.dim))),
-            ),
-            onChanged: (v) => setState(() => _query = v),
+      ];
+      final searchBox = SizedBox(
+        key: _searchKey,
+        width: _gridW,
+        child: TextField(
+          key: const ValueKey('inv-search'),
+          controller: _search,
+          style: RetroType.smallStyle,
+          decoration: InputDecoration(
+            isDense: true,
+            hintText: 'Buscar: nombre, tipo, mod...',
+            hintStyle: RetroType.smallStyle.copyWith(color: ProtoColors.dim),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            suffix: _query.isEmpty
+                ? null
+                : GestureDetector(
+                    key: const ValueKey('inv-search-clear'),
+                    onTap: () => setState(() {
+                          _search.clear();
+                          _query = '';
+                        }),
+                    child: Text('x',
+                        style: RetroType.smallStyle
+                            .copyWith(color: ProtoColors.dim))),
           ),
+          onChanged: (v) => setState(() => _query = v),
         ),
-        const SizedBox(height: 4),
-        SizedBox(
-          width: InventoryTab.gridWidth,
-          // Flechas: el cursor recorre la grilla y elige la casilla;
-          // Enter otra vez sobre un arma la equipa (menu_focus.dart).
-          child: InitialFocus(
-              child: FocusGrid(
-            count: InventoryRules.cells,
-            columns: InventoryRules.columns,
-            spacing: InventoryTab.gap,
-            keyPrefix: 'inv-focus-',
-            cell: (_, i, focused) => cellAt(i, focused),
-            onFocusCell: (i) {
-              final t = layout.cells[i];
-              if (pickMode) return;
-              if (_hoverUid != t) setState(() => _hoverUid = t);
-              if (_moveFrom == null && !_picking && t != null) _select(t, i);
-            },
-            // ELEGIR A MANO: Enter / Espacio marcan o desmarcan.
-            onActivate: (i) => pickMode
-                ? togglePick(layout.cells[i])
-                : _activateCell(p, layout.cells[i], i, mine, owner.id,
-                    cellTap: () {
-                    final c = _content(p, layout.cells[i]);
-                    if (_pickB(owner.id, layout.cells[i], c)) return;
-                    final from = _moveFrom;
-                    if (mine && from != null) {
-                      setState(() => _moveFrom = null);
-                      if (from != i) {
-                        shop.controller.moveInventory(from, i);
-                        _selCell = i;
-                      }
-                      return;
+      );
+      final gridBox = SizedBox(
+        width: _gridW,
+        // Flechas: el cursor recorre la grilla y elige la casilla;
+        // Enter otra vez sobre un arma la equipa (menu_focus.dart).
+        child: InitialFocus(
+            child: FocusGrid(
+          count: InventoryRules.cells,
+          columns: InventoryRules.columns,
+          spacing: _gap,
+          keyPrefix: 'inv-focus-',
+          cell: (_, i, focused) => cellAt(i, focused),
+          onFocusCell: (i) {
+            final t = layout.cells[i];
+            if (pickMode) return;
+            if (_moveFrom == null && !_picking && t != null) _select(t, i);
+          },
+          // ELEGIR A MANO: Enter / Espacio marcan o desmarcan.
+          onActivate: (i) => pickMode
+              ? togglePick(layout.cells[i])
+              : _activateCell(p, layout.cells[i], i, mine, owner.id,
+                  cellTap: () {
+                  final c = _content(p, layout.cells[i]);
+                  if (_pickB(owner.id, layout.cells[i], c)) return;
+                  final from = _moveFrom;
+                  if (mine && from != null) {
+                    setState(() => _moveFrom = null);
+                    if (from != i) {
+                      shop.controller.moveInventory(from, i);
+                      _selCell = i;
                     }
-                    if (layout.cells[i] case final t?) _select(t, i);
-                  }, openMenu: () {
-                    if (layout.cells[i] case final t?) {
-                      _openMenuAtFocus(p, me, mates, t, i);
-                    }
-                  }),
-          )),
-        ),
-        const SizedBox(height: 8),
-        // CONSUMIBLES / MATERIALES (v0.5.1): pilas fuera de la grilla; las
-        // flechas bajan desde la grilla y Enter las elige.
-        InventoryStacksBar(
-          rules: shop.rules,
-          profile: p,
-          cell: InventoryTab.cell,
-          gap: InventoryTab.gap,
-          selected: _sel,
-          onSelect: pickMode || _picking || _moveFrom != null
-              ? null
-              : (t) => _select(t, null),
-          onMenu: !mine || pickMode || _picking || _moveFrom != null
-              ? null
-              : (t, at) => at == null
-                  ? _openMenuAtFocus(p, me, mates, t, null)
-                  : _openMenu(p, me, mates, t, null, at),
-        ),
-        const SizedBox(height: 6),
-        ProtoText(
-            key: const ValueKey('inv-summary'),
-            'Casillas ${InventoryRules.cellsUsed(p)}/${InventoryRules.cells}'
-            '${mine ? ' · <b>₵${p.credits}</b>' : ''}'
-            '${layout.overflow.isEmpty ? '' : ' · ${protoColor(ProtoColors.orange, '${layout.overflow.length} sin lugar')}'}'),
+                    return;
+                  }
+                  if (layout.cells[i] case final t?) _select(t, i);
+                }, openMenu: () {
+                  if (layout.cells[i] case final t?) {
+                    _openMenuAtFocus(p, me, mates, t, i);
+                  }
+                }),
+        )),
+      );
+      final stacksBar = InventoryStacksBar(
+        rules: shop.rules,
+        profile: p,
+        cell: _cellSize,
+        gap: _gap,
+        selected: _sel,
+        onSelect: pickMode || _picking || _moveFrom != null
+            ? null
+            : (t) => _select(t, null),
+        onMenu: !mine || pickMode || _picking || _moveFrom != null
+            ? null
+            : (t, at) => at == null
+                ? _openMenuAtFocus(p, me, mates, t, null)
+                : _openMenu(p, me, mates, t, null, at),
+      );
+      final summary = ProtoText(
+          key: const ValueKey('inv-summary'),
+          'Casillas ${InventoryRules.cellsUsed(p)}/${InventoryRules.cells}'
+          '${mine ? ' · <b>₵${p.credits}</b>' : ''}'
+          '${layout.overflow.isEmpty ? '' : ' · ${protoColor(ProtoColors.orange, '${layout.overflow.length} sin lugar')}'}');
+      final tail = <Widget>[
         if (mine && sel != null && _sel != null)
           if (_selectionBar(p, me, mates, sel) case final bar?) bar,
         if (mine) ...[
@@ -654,8 +644,67 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             _cleanMenuBox(p),
           ],
         ],
-      ],
-    ));
+      ];
+      if (_wide) {
+        // Ancho (v0.9.10): la grilla a la izquierda y, al lado, la
+        // EQUIPADA, las pilas y LIMPIAR (así la grilla puede crecer más).
+        return NavSection(
+            child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: _gridW,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ownersRow,
+                  const SizedBox(height: 8),
+                  ...notes,
+                  searchBox,
+                  const SizedBox(height: 4),
+                  gridBox,
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                key: const ValueKey('inv-side'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  eqRow,
+                  const SizedBox(height: 8),
+                  stacksBar,
+                  const SizedBox(height: 6),
+                  summary,
+                  ...tail,
+                ],
+              ),
+            ),
+          ],
+        ));
+      }
+      return NavSection(
+          child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ownersRow,
+          const SizedBox(height: 8),
+          eqRow,
+          const SizedBox(height: 8),
+          ...notes,
+          const SizedBox(height: 4),
+          searchBox,
+          const SizedBox(height: 4),
+          gridBox,
+          const SizedBox(height: 8),
+          stacksBar,
+          const SizedBox(height: 6),
+          summary,
+          ...tail,
+        ],
+      ));
+    }
 
     final cmpA = _cmpA, cmpB = _cmpB;
     if (cmpA != null && cmpB != null) {
@@ -675,10 +724,12 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     }
 
     if (_cleaning && mine) {
+      _scale = 1;
+      _wide = false;
       return PanelSplit(
         listWidth: InventoryTab.gridWidth + 4,
         scaleList: false,
-        list: [left],
+        list: [buildLeft()],
         detail: _cleaner(p),
       );
     }
@@ -688,30 +739,47 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         : PanelButton('COMPARAR',
             key: const ValueKey('inv-compare'),
             onPressed: () => _startCompare(WeaponRef(owner.id, _sel!)));
+    // Sin panel derecho (v0.9.10): la ficha del mouse ya compara con la
+    // equipada. La grilla escala para llenar el ancho (panels.md §
+    // "Inventario").
     return Focus(
       focusNode: _keys,
       onKeyEvent: _onKey,
-      child: RetroTipArea(
-        bounds: _tipBounds,
-        child: PanelSplit(
-          listWidth: InventoryTab.gridWidth + 4,
-          scaleList: false,
-          list: [left],
-          detail: PanelDetail(
-            footer: [
-              const KeyHints(confirm: 'Elegir / acciones', back: 'Cerrar'),
-              if (!mine) ...[
-                const Text('Solo lectura',
-                    style: TextStyle(color: ProtoColors.dim)),
-                if (compareButton != null) compareButton,
-              ],
-            ],
-            children: [
-              KeyedSubtree(key: _statsKey, child: _statsPanel(me, attrs)),
-            ],
-          ),
-        ),
-      ),
+      child: LayoutBuilder(builder: (context, box) {
+        final narrow = inventoryScale(box.maxWidth, box.maxHeight);
+        final wide = inventoryScaleWide(box.maxWidth, box.maxHeight);
+        _wide = wide > narrow;
+        _scale = _wide ? wide : narrow;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Center(
+                  child: SizedBox(
+                      key: const ValueKey('inv-main'),
+                      width: _wide
+                          ? _gridW + 16 + inventorySideWidth(_scale) + 4
+                          : _gridW + 4,
+                      child: buildLeft()),
+                ),
+              ),
+            ),
+            if (!mine)
+              Wrap(
+                alignment: WrapAlignment.end,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  const Text('Solo lectura',
+                      style: TextStyle(color: ProtoColors.dim)),
+                  if (compareButton != null) compareButton,
+                ],
+              ),
+          ],
+        );
+      }),
     );
   }
 
@@ -743,7 +811,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     const rs = [Rarity.comun, Rarity.magico, Rarity.raro];
     return Container(
       key: const ValueKey('inv-clean-menu'),
-      width: InventoryTab.gridWidth,
+      width: _gridW,
       decoration: BoxDecoration(
         color: ProtoColors.bg,
         border: Border.all(
@@ -898,7 +966,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       return Padding(padding: const EdgeInsets.only(top: 6), child: list.first);
     }
     return SizedBox(
-      width: InventoryTab.gridWidth,
+      width: _gridW,
       child: SectionPanel(
         key: const ValueKey('inv-confirm'),
         icon: PixelIconKind.lock,
@@ -915,50 +983,6 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           ),
         ],
       ),
-    );
-  }
-
-  /// Marca el arma bajo el mouse para ESTADÍSTICAS.
-  Widget _hoverStats(String uid, Widget child) => MouseRegion(
-        onEnter: (_) {
-          if (_hoverUid != uid) setState(() => _hoverUid = uid);
-        },
-        onExit: (_) {
-          if (_hoverUid == uid) setState(() => _hoverUid = null);
-        },
-        child: child,
-      );
-
-  /// ESTADÍSTICAS del personaje, siempre a la vista (v0.9.9): las de
-  /// ATRIBUTOS › VISTA PREVIA; con el mouse sobre un arma que no está
-  /// equipada, al lado de cada una cómo cambiaría si la equiparas.
-  Widget _statsPanel(SessionPlayer me, PlayerAttributes attrs) {
-    final viewer = me.profile;
-    final rules = shop.rules;
-    final now = shop.preview.current(viewer, attributes: attrs);
-    final eq = rules.equippedItem(viewer);
-    final hoverUid = _hoverUid;
-    final owner = shop.view.session.players[_owner] ?? me;
-    final hover = hoverUid == null ? null : owner.profile.itemByUid(hoverUid);
-    final cmp = hover != null && hover.uid != eq?.uid ? hover : null;
-    final next = cmp == null
-        ? now
-        : shop.preview.withItem(viewer, cmp, attributes: attrs);
-    double weightOf(ItemInstance? it) =>
-        it == null ? 0 : rules.items.baseOf(it)?.weight ?? 0;
-    return SectionPanel(
-      key: const ValueKey('inv-stats'),
-      icon: PixelIconKind.arrowIn,
-      title: 'ESTADÍSTICAS',
-      subtitle:
-          cmp == null ? null : 'si equipas ${rules.items.displayName(cmp)}',
-      children: [
-        CharacterStatRows(
-            now: now,
-            next: next,
-            weight: weightOf(eq),
-            nextWeight: cmp == null ? null : weightOf(cmp)),
-      ],
     );
   }
 
@@ -1250,4 +1274,47 @@ class NewItemTag extends StatelessWidget {
                   color: ProtoColors.gold)),
         ),
       );
+}
+
+/// Escala de la grilla del inventario para un área de [w] × [h] px
+/// (v0.9.10): la mayor escala con la que la grilla entra a lo ancho y
+/// sus 5 filas, la EQUIPADA y las pilas (más ~200 px de textos y
+/// botones) a lo alto; entera desde ×2
+/// (nitidez del pixel art), en cuartos entre ×1 y ×2. Si ni la escala 1
+/// entra a lo ancho, la que entre.
+double inventoryScale(double w, double h) {
+  final byW = w.isFinite ? (w - 8) / (InventoryTab.gridWidth + 4) : 1.0;
+  if (byW < 1) return byW.clamp(0.5, 1.0);
+  const rows = InventoryRules.cells / InventoryRules.columns;
+  final byH = h.isFinite
+      // Escalan: 5 filas, la EQUIPADA y las pilas; fijo: textos y botones.
+      ? (h - 200) / ((rows + 2) * (InventoryTab.cell + InventoryTab.gap))
+      : byW;
+  final k = byW < byH ? byW : byH;
+  if (k < 1) return 1;
+  // Desde ×2, entera (nitidez); entre 1 y 2, la que entre (en cuartos).
+  return k >= 2 ? k.floorToDouble() : (k * 4).floorToDouble() / 4;
+}
+
+/// Ancho de la columna de al lado en el modo ancho (4 casillas de pilas
+/// o los botones, lo que sea más).
+double inventorySideWidth(double k) {
+  final cells = 4 * InventoryTab.cell * k + 3 * InventoryTab.gap * k;
+  return cells < 240 ? 240 : cells;
+}
+
+/// Como [inventoryScale] pero con la EQUIPADA y las pilas al lado de la
+/// grilla: a lo alto solo cuentan sus 5 filas, el buscador y ORDENAR.
+double inventoryScaleWide(double w, double h) {
+  if (!w.isFinite || !h.isFinite) return 0;
+  const rows = InventoryRules.cells / InventoryRules.columns;
+  final byH = (h - 110) / (rows * (InventoryTab.cell + InventoryTab.gap));
+  var k = byH;
+  // El ancho: grilla + separación + columna de al lado.
+  while (k > 0 &&
+      InventoryTab.gridWidth * k + 16 + inventorySideWidth(k) + 12 > w) {
+    k -= 0.25;
+  }
+  if (k < 1) return 0;
+  return k >= 2 ? k.floorToDouble() : (k * 4).floorToDouble() / 4;
 }
