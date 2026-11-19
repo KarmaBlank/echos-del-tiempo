@@ -171,7 +171,9 @@ class SessionEngine {
 
   /// El filtro de loot de un perfil (texto → filtro, con caché).
   LootFilter filterOf(PlayerProfile p) => _filters.putIfAbsent(
-      p.lootFilter, () => const LootFilterRules().fromProfileText(p.lootFilter));
+      p.lootFilter,
+      // Con el mismo catálogo que la vista previa del editor (`Base`).
+      () => LootFilterRules(catalog: catalog).fromProfileText(p.lootFilter));
 
   /// Cómo ve [p] un drop según su filtro (para la UI y el auto-levantar).
   /// [wants]: el resumen del plan de build de ese jugador (condición

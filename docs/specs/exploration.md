@@ -537,6 +537,20 @@ Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
     despliega **todas** a la caja completa de siempre (arma + pts, XP ·
     ₵, pociones); otra vez `H` / clic las compacta. Se recuerda en
     `game.json` (`partyExpanded`, por defecto `false`).
+  - **XP para subir (v0.8.6)**. Pedido del dueño: "¿dónde se ve cuánta
+    XP me hace falta para el siguiente nivel?" (antes solo había un
+    `XP n/max` gris en la caja desplegada). Texto común en
+    `features/characters/domain/xp_text.dart` (`xpProgress`,
+    `xpProgressText`): `XP 120/300 · faltan 180` (con `next`: `… para
+    el nivel 13`); en el nivel 50 cuenta la Maestría (`para la Maestría
+    N`, barra violeta); con la Maestría completa no hay barra.
+    - Compacta: barra fina de XP (2 px, dorada) debajo de HP/MP
+      (`hud-compact-xp-<id>`); al pasar el mouse, `XP … · faltan … para
+      el nivel N`.
+    - Desplegada: barra de XP (4 px, `hud-xp-bar-<id>`) y `XP n/max ·
+      faltan N · ₵créditos` (`hud-xp-<id>`).
+    - Panel PERSONAJE: el encabezado suma `· XP n/max · faltan N` entre
+      el nivel y los puntos.
 - **Chat** (abajo a la izquierda): ver § "Chat".
 - **Menú** (arriba a la izquierda, junto a `< TITULO` en el lobby):
   `≡ MENU [ESC]` abre la pausa / configuración (docs/specs/settings.md);

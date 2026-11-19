@@ -229,6 +229,29 @@ abstract class ProtocolNetSession
   @override
   int lastStateBytes = 0;
 
+  // ---- control de flujo (netcode.md § "Control de flujo") ----
+
+  /// `state` mandados a un cliente que todavía no confirmó (`ack`): con
+  /// esta cantidad en vuelo el host se saltea a ese cliente hasta que
+  /// confirme. Sin esto, con una conexión que no da abasto la cola del
+  /// canal (ordenado y fiable) crecía sin fin y el ping llegaba a
+  /// decenas de segundos.
+  static const maxInFlight = 6;
+
+  /// Eventos guardados de un cliente salteado (se mandan con el próximo
+  /// `state`); tope por si nunca vuelve a confirmar.
+  static const maxPendingEvents = 400;
+
+  int _stateSeq = 0;
+  final _inFlight = <String, List<int>>{};
+  final _pendingEvents = <String, List<String>>{};
+
+  @override
+  int skippedStates = 0;
+
+  void _onAck(String pid, int seq) =>
+      _inFlight[pid]?.removeWhere((q) => q <= seq);
+
   @override
   void broadcast(GameSession state, List<SessionEvent> events) {
     if (!_isHost || _closed || _clients.isEmpty) return;
@@ -249,10 +272,26 @@ abstract class ProtocolNetSession
     _profiles.removeWhere((id, _) => !ids.contains(id));
 
     final body = codec.stateBody(state);
-    final ev = codec.stateEvents(events);
+    final evParts = [for (final e in events) jsonEncode(codec.events.toJson(e))];
+    final seq = ++_stateSeq;
     final now = _clock();
     var biggest = 0;
     for (final MapEntry(key: pid, value: link) in _clients.entries) {
+      final flying = _inFlight.putIfAbsent(pid, () => []);
+      final pending = _pendingEvents.putIfAbsent(pid, () => []);
+      if (flying.length >= maxInFlight) {
+        // Conexión saturada: este `state` no se manda (el próximo lo
+        // reemplaza entero); sus eventos esperan.
+        skippedStates++;
+        pending.addAll(evParts);
+        if (pending.length > maxPendingEvents) {
+          pending.removeRange(0, pending.length - maxPendingEvents);
+        }
+        continue;
+      }
+      final ev = '[${[...pending, ...evParts].join(',')}]';
+      pending.clear();
+      flying.add(seq);
       final has = _clientProfiles.putIfAbsent(pid, () => {});
       final last = _clientRefreshed[pid];
       final refresh = last == null || now - last >= profileRefresh;
@@ -265,7 +304,7 @@ abstract class ProtocolNetSession
         has[id] = _profiles[id]!.ver;
       }
       has.removeWhere((id, _) => !_profiles.containsKey(id));
-      final text = WireCodec.stateText(body, ev, send);
+      final text = WireCodec.stateText(body, ev, send, seq: seq);
       if (text.length > biggest) biggest = text.length;
       link.send(text);
     }
@@ -356,6 +395,8 @@ abstract class ProtocolNetSession
               _pong(link, msg.ts);
             case PongMessage():
               _onPong(pid, msg.ts);
+            case AckMessage():
+              _onAck(pid, msg.seq);
             default:
               break;
           }
@@ -367,6 +408,8 @@ abstract class ProtocolNetSession
         _pending.remove(link);
         _clientProfiles.remove(pid);
         _clientRefreshed.remove(pid);
+        _inFlight.remove(pid);
+        _pendingEvents.remove(pid);
         if (_clients.remove(pid) != null) {
           _emit(PeerLeftEvent(pid));
           if (_rtt.remove(pid) != null) _publishLatency();
@@ -405,6 +448,8 @@ abstract class ProtocolNetSession
               welcome.completeError(NetException(msg.reason.message));
             }
           case StateMessage():
+            // Confirmar enseguida (control de flujo del host).
+            if (msg.seq case final q?) link.send(codec.encode(AckMessage(q)));
             if (welcome.isCompleted) {
               _emit(SnapshotEvent(msg.session, msg.events));
             }

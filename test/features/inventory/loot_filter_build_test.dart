@@ -74,6 +74,7 @@ void main() {
       // Elegir MOD y agregar la condición a la regla del cursor (al final).
       await tapVisible(tester, find.byKey(const ValueKey('filter-build-kind-mod')));
       expect(_txt(tester, 'filter-build-line'), contains('Build Mod'));
+      await tapVisible(tester, find.byKey(const ValueKey('filter-view-text')));
       final field = find.byKey(const ValueKey('filter-text'));
       final ctl = tester.widget<TextField>(field).controller!;
       ctl.selection = TextSelection.collapsed(offset: ctl.text.length);

@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/feature_flags.dart';
 import '../../../ascension/domain/ascension_text.dart';
 import '../../../characters/domain/unused_points.dart';
+import '../../../characters/domain/xp_text.dart';
 import '../../../characters/presentation/grimoire_section.dart';
 import '../../../bestiary/presentation/bestiary_view.dart';
 import '../../../combat/presentation/game_sprites.dart';
@@ -146,7 +147,12 @@ class _CharacterPanelState extends State<CharacterPanel> {
       CharacterTab.attributes => _attributes(),
       CharacterTab.inventory =>
         InventoryTab(shop: ShopContext(view, c), pending: Map.of(_alloc)),
-      CharacterTab.filter => LootFilterTab(shop: ShopContext(view, c)),
+      // Por miembro: el editor arranca con el filtro de ese miembro (sin
+      // la clave, al cambiar de miembro quedaba el texto del anterior y
+      // GUARDAR se lo pisaba al nuevo).
+      CharacterTab.filter => LootFilterTab(
+          key: ValueKey('filter-tab-${view.actorId}'),
+          shop: ShopContext(view, c)),
       CharacterTab.build => Consumer(
           builder: (context, ref, _) => BuildPlannerView(
                 key: const ValueKey('build-planner'),
@@ -211,10 +217,15 @@ class _CharacterPanelState extends State<CharacterPanel> {
             _ => CharacterPanel.help,
           },
           onClose: close,
-          titleTrailing: ProtoText('${protoEsc(profileTitle(prof))} · '
+          // Flexible: con texto grande baja de línea en vez de desbordar.
+          titleTrailing: Flexible(
+              child: ProtoText('${protoEsc(profileTitle(prof))} · '
               '<span class="k">$cls Lv${prof.level}</span>'
-              '${prof.level >= ProgressionRules.maxLevel ? ' · <span style="color:#a29bfe">${protoEsc(masteryText(prof))}</span>' : ''} · Puntos: '
-              '<b>$left</b>'),
+              '${prof.level >= ProgressionRules.maxLevel ? ' · <span style="color:#a29bfe">${protoEsc(masteryText(prof))}</span>' : ''}'
+              // XP para subir (v0.8.6).
+              '${xpProgress(prof) == null ? '' : ' · ${protoColor(ProtoColors.dim, protoEsc(xpProgressText(prof)))}'}'
+              ' · Puntos: '
+              '<b>$left</b>')),
           header: must
               ? null
               : PartyMemberBar.header(

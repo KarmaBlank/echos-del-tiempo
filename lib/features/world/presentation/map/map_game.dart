@@ -99,7 +99,8 @@ class MapGame extends Game {
       '${switch (controller.net) {
         final NetTraffic n when n.clientCount > 0 =>
           ' · red: state ${(n.lastStateBytes / 1024).toStringAsFixed(1)} KB'
-              ' a ${n.clientCount} clientes',
+              ' a ${n.clientCount} clientes'
+              ' (${n.skippedStates} salteados por conexión lenta)',
         _ => '',
       }}';
 

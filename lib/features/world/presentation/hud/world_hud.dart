@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/theme/panel_frame.dart' show RetroTooltip;
 import '../../../../app/theme/party_box.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/proto_markup.dart';
@@ -34,6 +35,7 @@ import '../../../../core/settings/game_settings.dart';
 import '../../../../core/settings/notices.dart';
 import '../../../../core/settings/settings_providers.dart';
 import '../../../characters/domain/unused_points.dart';
+import '../../../characters/domain/xp_text.dart';
 import 'chat_box.dart';
 import 'exploration_lines.dart';
 import 'full_map.dart';
@@ -995,6 +997,20 @@ class CompactPlayerBox extends StatelessWidget {
             ],
           ),
         ),
+        // XP: barra fina; el detalle (cuánto falta) al pasar el mouse.
+        if (xpProgress(prof) case final x?)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: RetroTooltip(
+              message: retroText(xpProgressText(prof, next: true)),
+              child: RetroBar(
+                  key: ValueKey('hud-compact-xp-${p.id}'),
+                  value: x.value,
+                  max: x.max,
+                  height: 2,
+                  color: x.mastery ? ProtoColors.violet : ProtoColors.gold),
+            ),
+          ),
       ],
     );
   }
@@ -1255,12 +1271,19 @@ class _PlayerBox extends StatelessWidget {
                     '₵${prof.credits}'),
             style: const TextStyle(color: ProtoColors.violet),
           ),
-        ] else
+        ] else ...[
+          RetroBar(
+              key: ValueKey('hud-xp-bar-${p.id}'),
+              value: xpProgress(prof)!.value,
+              max: xpProgress(prof)!.max,
+              height: 4,
+              color: ProtoColors.gold),
           Text(
-            retroText('XP ${prof.xp}/${ProgressionRules.xpNeed(prof.level)} · '
-                '₵${prof.credits}'),
+            key: ValueKey('hud-xp-${p.id}'),
+            retroText('${xpProgressText(prof)} · ₵${prof.credits}'),
             style: const TextStyle(color: ProtoColors.dim),
           ),
+        ],
         ProtoText(
           'Pociones: ${protoColor(ProtoColors.green, '♥${prof.potions}')} '
           '${protoColor(ProtoColors.ice, '✦${prof.ethers}')}',

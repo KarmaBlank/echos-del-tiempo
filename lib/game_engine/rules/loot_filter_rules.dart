@@ -451,7 +451,13 @@ Ocultar # Mágicos de nivel bajo
                 key == 'pasiva' ? PassiveCondition(yes) : UsableCondition(yes));
           }
         case 'material':
-          final mats = [for (final m in a) CraftMaterial.byName(_fold(m))];
+          // Sin distinguir mayúsculas: `serialize` escribe `fragReloj`.
+          final mats = [
+            for (final m in a)
+              CraftMaterial.values
+                  .where((x) => _fold(x.name) == _fold(m))
+                  .firstOrNull,
+          ];
           if (a.isEmpty || mats.any((m) => m == null)) {
             err('material desconocido');
           } else {
