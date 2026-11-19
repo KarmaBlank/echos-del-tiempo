@@ -35,7 +35,10 @@ enum ModStat {
   /// Invocador (docs/specs/summoner.md § 2): daño y duración de las
   /// invocaciones. Solo tomos.
   summonDamage('% daño de invocaciones', 0.01),
-  summonTurns('turno de duración de invocaciones', 1);
+  summonTurns('turno de duración de invocaciones', 1),
+
+  /// Afijo Rompedor (combo_balance.md § 5): +% de puntos de quiebre.
+  breakPower('% de quiebre', 0.01);
 
   const ModStat(this.label, this.scale);
 
@@ -54,7 +57,8 @@ enum ModStat {
         ModStat.ultCharge ||
         ModStat.healReceived ||
         ModStat.healPower ||
-        ModStat.summonDamage =>
+        ModStat.summonDamage ||
+        ModStat.breakPower =>
           '+$value$label',
         ModStat.speed => '+${(value / 10).toStringAsFixed(1)} $label',
         ModStat.burnStacks ||

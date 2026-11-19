@@ -31,7 +31,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 12 desde v0.8.6: el `state` lleva su número (`q`) y el cliente lo
 /// confirma con `ack`; el host no manda más si hay muchos sin confirmar
 /// (netcode.md § "Control de flujo").
-const kProtocolVersion = 12;
+/// 13 desde v0.9: combatiente `lv` (nivel del enemigo, para el tope por
+/// golpe sin debilidad; combo_balance.md § 3.2).
+const kProtocolVersion = 13;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {

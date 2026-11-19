@@ -208,7 +208,7 @@ enum BreakPhase {
   /// Bajó al empezar su turno.
   decay,
 
-  /// Llegó al máximo: ¡QUIEBRE!
+  /// Un golpe con Quebrar lo quebró (antes: llegó al máximo).
   broken,
 
   /// Pierde su turno por estar quebrado.
@@ -216,6 +216,12 @@ enum BreakPhase {
 
   /// Se terminó la vulnerabilidad: la barra vuelve a 0.
   recovered,
+
+  /// La barra llegó al máximo: Fisurado (combo_balance.md § 5).
+  fissured,
+
+  /// Llegó a su turno Fisurado sin quebrarse: la barra baja a la mitad.
+  steadied,
 }
 
 /// Cambio en la barra de quiebre de [targetId] (docs/specs/

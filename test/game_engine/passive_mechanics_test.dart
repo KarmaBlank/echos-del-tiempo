@@ -321,7 +321,8 @@ void main() {
           ], burning(3)),
           const SkillCommand('llamarada'));
       expect(_procs(area, 'combustion'), hasLength(1));
-      expect(area.state.enemies.map((e) => e.hp), [76, 64, 64]);
+      // Área × 0.6 (combo_balance.md § 4).
+      expect(area.state.enemies.map((e) => e.hp), [86, 79, 79]);
     });
 
     test('Choque Térmico: quemar a un congelado lo aturde', () {
@@ -579,7 +580,8 @@ void main() {
             _hero(mech: {'rebote'}, skills: ['giro'])
           ], _foes()),
           const SkillCommand('giro'));
-      expect(area.state.enemies.map((e) => e.hp), [80, 80, 80]);
+      // Área × 0.6 (combo_balance.md § 4).
+      expect(area.state.enemies.map((e) => e.hp), [88, 88, 88]);
     });
 
     test('Viento a Favor: habilidad a todos → ataque gratis al más débil', () {
@@ -589,7 +591,8 @@ void main() {
             _hero(mech: {'vientoFavor'}, skills: ['rafaga'])
           ], _foes(hp: [100, 30, 100])),
           const SkillCommand('rafaga'));
-      expect(s.state.enemies.map((e) => e.hp), [82, 0, 82]);
+      // Área × 0.6 (combo_balance.md § 4).
+      expect(s.state.enemies.map((e) => e.hp), [89, 0, 89]);
       expect(
           s.state.log, contains('Viento a Favor: ataque gratis → Limo B: 20'));
       expect(s.events.whereType<ActionEvent>().map((a) => a.kind).toList(),

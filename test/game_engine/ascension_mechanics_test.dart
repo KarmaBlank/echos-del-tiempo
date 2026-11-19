@@ -84,6 +84,7 @@ Combatant _foe(String id,
         bool boss = false,
         double nextTurn = 50,
         double breakBase = 0,
+        bool fissured = false,
         String? ultId,
         double ult = 0,
         Map<StatusKind, int>? st,
@@ -102,6 +103,7 @@ Combatant _foe(String id,
       statuses: st,
       nextTurn: nextTurn,
       breakBase: breakBase,
+      fissured: fissured,
       ultId: ultId,
       ult: ult,
       effects: fx,
@@ -258,8 +260,9 @@ void main() {
     test('Estratega: cuando un aliado quiebra, todo el grupo +20% ATQ', () {
       final st = _cmd(_engine(), _battle([
         _hero(mech: {'senorGuerra_a3'}, nextTurn: 30),
-        _hero(id: 'p2'),
-      ], [_foe('e0', breakBase: 10)], current: 'p2'), _atk, 'p2');
+        _hero(id: 'p2', skills: ['quebrar']),
+      ], [_foe('e0', breakBase: 10, fissured: true)], current: 'p2'),
+          const SkillCommand('quebrar', targetId: 'e0'), 'p2');
       expect(st.state.enemies.first.broken, isTrue);
       for (final id in ['p1', 'p2']) {
         expect(_p(st, id).effectFrom('senorGuerra_a3', BuffStat.attack)!.value, 0.2);
@@ -560,7 +563,7 @@ void main() {
         _hero(mech: {'trampero_b1', 'trampero_b2', 'trampero_b3'}, skills: ['rafaga']),
       ], [_foe('e0'), _foe('e1')]), const SkillCommand('rafaga', targetId: 'e0'));
       for (final f in st.state.enemies) {
-        expect(f.hp, 100 - 23); // 20 × 0.9 × 1.25
+        expect(f.hp, 100 - 14); // 20 × 0.9 × 0.6 (área) × 1.25
         expect(f.stacks(StatusKind.poison), 1);
         expect(f.effectFrom('trampero_b3', BuffStat.trap)!.value, 8);
       }
@@ -586,7 +589,8 @@ void main() {
       ], [_foe('e0', breakBase: 100, st: {StatusKind.stun: 1})]), _atk);
       final f = st.state.enemies.first;
       expect(f.hp, 73);
-      expect(f.breakGauge, closeTo(27 * 2, 1e-9));
+      // Puntos (combo_balance.md § 5): ataque 4, × 2 a aturdidos.
+      expect(f.breakGauge, closeTo(4 * 2, 1e-9));
     });
 
     test('Aura Sagrada: todo el grupo hace +10% de daño', () {
@@ -725,7 +729,7 @@ void main() {
       expect(s1.state.enemies.first.hp, 100 - 48);
       final s2 = _cmd(_engine(), _battle([_hero(skills: ['torbellino'], hp: 50)],
           [_foe('e0'), _foe('e1')]), const SkillCommand('torbellino', targetId: 'e0'));
-      expect(_p(s2).hp, 50 + 14); // 48 de daño × 0.3
+      expect(_p(s2).hp, 50 + 8); // daño de área (× 0.6) × 0.3
     });
 
     test('Estandarte: grupo −25% de daño; Protección (Guardián): −20% propio',
@@ -775,7 +779,8 @@ void main() {
       final wet = run({StatusKind.wet: 2});
       expect(wet.events.whereType<ReactionEvent>().single.kind,
           ReactionKind.electrocucion);
-      expect(999 - wet.state.enemies.first.hp, 59); // 30 × 1.5 × 1.3
+      // v0.9: el limo es débil al Electro ×1.5 (combo_balance.md § 3.1).
+      expect(999 - wet.state.enemies.first.hp, 88); // 30 × 1.5 × 1.3 × 1.5
       expect(wet.state.enemies.first.stacks(StatusKind.stun), 1);
       // Veneno → Fuego: Explosión tóxica.
       final poi = run({StatusKind.poison: 2});

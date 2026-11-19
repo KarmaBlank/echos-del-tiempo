@@ -120,7 +120,8 @@ void main() {
         for (var i = 1; i < d.phases.length; i++) {
           expect(d.phases[i].gate, lessThan(d.phases[i - 1].gate));
         }
-        expect(en.breakMax / en.hp, closeTo(0.35, 0.01));
+        // Quiebre en puntos (combo_balance.md § 5): jefes 65-95.
+        expect(en.breakMax, 95);
         for (final id in d.legendaryIds) {
           expect(kUniques[id]!.exclusive, isTrue, reason: id);
           expect(kUniques[id]!.flavor, isEmpty, reason: 'sin lore');
@@ -161,13 +162,13 @@ void main() {
       expect(_start(e, 'ecoPrimordial').enemies.first.abyssAspect, GameElement.fuego.index + 1);
     });
 
-    test('solo vs 4 jugadores: vida y quiebre × (0.55 + 0.45 n)', () {
+    test('solo vs 4 jugadores: vida × (0.55 + 0.45 n), quiebre × (0.6 + 0.3 n)', () {
       final e = _engine();
       final one = _start(e, 'devoradorAbismo', 1).enemies.first;
       final four = _start(e, 'devoradorAbismo', 4).enemies.first;
       expect(one.maxHp, 8400);
       expect(four.maxHp, (8400 * 2.35).round());
-      expect(four.breakBase / one.breakBase, closeTo(2.35, 0.001));
+      expect(four.breakBase / one.breakBase, closeTo(1.8 / 0.9, 0.001));
     });
   });
 
@@ -334,8 +335,11 @@ void main() {
       final b = s.enemies.first
         ..abyssSeal = ReactionKind.electrocucion.index + 1
         ..abyssSealTurns = 3;
-      b.breakGauge = b.breakMax - 1;
-      final br = _hit(e, s, 'p1');
+      b
+        ..breakGauge = b.breakMax
+        ..fissured = true;
+      final br = e.command(_turnOf(s, 'p1'), 'p1',
+          const SkillCommand('quebrar', targetId: 'e0'))!;
       expect(_mech(br, BossMechanicPhase.sealBroken), hasLength(1));
       // Se apaga solo.
       s = _start(e, 'hechiceraAbismo');

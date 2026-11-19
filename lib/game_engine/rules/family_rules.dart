@@ -177,7 +177,7 @@ List<FamilyTrait> familyTraits(FamilyRule r) {
         TraitKind.weak, 'daño del estado Sagrado ${_x(r.holyTick)}'));
   }
   for (final e in r.damage.entries) {
-    if (e.value < 1) {
+    if (e.value > 0 && e.value < 1) {
       out.add(
           FamilyTrait(TraitKind.resist, '${_cap(e.key.label)} ${_x(e.value)}'));
     }
@@ -185,6 +185,12 @@ List<FamilyTrait> familyTraits(FamilyRule r) {
   for (final e in r.stacks.entries) {
     if (e.value < 0) {
       out.add(FamilyTrait(TraitKind.resist, '${e.key.label} ${e.value} stack'));
+    }
+  }
+  // Inmunidad de daño (combo_balance.md § 3.1): ×0.
+  for (final e in r.damage.entries) {
+    if (e.value == 0) {
+      out.add(FamilyTrait(TraitKind.immune, 'daño de ${e.key.label}'));
     }
   }
   for (final k in r.immune) {

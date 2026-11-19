@@ -257,8 +257,10 @@ List<String> variantEffectLines(SkillDef tk) {
             _ => '${d.stat.label} ${pct(d.value)} (${t(d.turns)})',
           }),
     if (tk.breakBonus > 0)
-      hexSpan('#ffe14d', 'Quiebre: +${pct(tk.breakBonus)} de llenado de la '
-          'barra de quiebre'),
+      hexSpan('#ffe14d', 'Quiebre: +${pct(tk.breakBonus)} de puntos de quiebre'),
+    if (tk.breaks)
+      hexSpan('#ffe14d', 'Quebrar: quiebra a un enemigo FISURADO (barra '
+          'llena). Si no está Fisurado, no quiebra'),
     if (tk.ultDrain > 0)
       hexSpan('#a29bfe', 'Silencio: le quita ${jsRound(tk.ultDrain)} de '
           'carga de ULT'),
@@ -291,6 +293,7 @@ String variantTagMarkup(SkillDef tk) {
             _ => d.stat.label,
           }),
     if (tk.breakBonus > 0) hexSpan('#ffe14d', 'quiebre+'),
+    if (tk.breaks) hexSpan('#ffe14d', 'quebrar'),
     if (tk.ultDrain > 0) hexSpan('#a29bfe', 'silencio'),
   ];
   return tags.isEmpty ? '' : ' ${tags.join(' ')}';

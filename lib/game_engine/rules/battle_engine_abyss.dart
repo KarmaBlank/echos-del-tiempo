@@ -379,7 +379,11 @@ extension _AbyssTurn on _Turn {
       ..abyssSealTurns = 0
       ..abyssTaken = 0
       ..abyssAspect = ph.aspects.isEmpty ? 0 : ph.aspects.first.index + 1;
-    if (!e.broken) e.breakGauge = 0;
+    if (!e.broken) {
+      e
+        ..breakGauge = 0
+        ..fissured = false;
+    }
     events.add(BossMechanicEvent(e.id, BossMechanicPhase.phaseShift,
         value: e.phase.toDouble()));
     _notes.add('¡${e.name}: FASE ${e.phase} · ${ph.name}! Pierde sus estados'

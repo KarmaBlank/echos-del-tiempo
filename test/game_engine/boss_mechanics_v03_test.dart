@@ -96,18 +96,18 @@ void main() {
       'devorador': ('fases', 'eult_finEras', 'segadoraEras'),
     };
 
-    test('comunes: quiebre ≈ 0.8 × vida, sin mecánica de jefe', () {
+    test('comunes: quiebre 12 puntos, sin mecánica de jefe', () {
       for (final id in commons.keys) {
         final d = kEnemies[id]!;
         expect(d.boss, isFalse, reason: id);
-        expect(d.breakMax / d.hp, closeTo(0.8, 0.01), reason: id);
+        expect(d.breakMax, 12, reason: id);
         expect(d.mechanicId, isNull, reason: id);
       }
       // Los comunes suben con la zona.
       expect(kEnemies['heraldoEras']!.attack, greaterThan(kEnemies['ecoSombra']!.attack));
     });
 
-    test('jefes: mecánica, ULT, título, legendario y quiebre ≈ 0.35 × vida', () {
+    test('jefes: mecánica, ULT, título, legendario y quiebre 65-95 puntos', () {
       for (final e in bosses.entries) {
         final d = kEnemies[e.key]!;
         final (mech, ult, legend) = e.value;
@@ -116,7 +116,7 @@ void main() {
         expect(kBossMechanics[mech]!.counter, isNotEmpty);
         expect(kEnemyUlts, contains(ult));
         expect(kUniques, contains(legend), reason: legend);
-        expect(d.breakMax / d.hp, inInclusiveRange(0.3, 0.4), reason: e.key);
+        expect(d.breakMax, inInclusiveRange(65, 95), reason: e.key);
       }
       // Escalón de jefe a jefe.
       final hp = [for (final id in bosses.keys) kEnemies[id]!.hp];
@@ -188,8 +188,11 @@ void main() {
     test('quebrarla disipa un eco', () {
       final e = _engine();
       final s = _start(e, ['hechicera'], ['guerrero', 'maga']);
-      s.enemies[0].breakGauge = s.enemies[0].breakMax - 1;
-      final st = e.command(_turnOf(s, 'p1'), 'p1', const AttackCommand(targetId: 'e0'))!;
+      s.enemies[0]
+        ..breakGauge = s.enemies[0].breakMax
+        ..fissured = true;
+      final st = e.command(_turnOf(s, 'p1'), 'p1',
+          const SkillCommand('quebrar', targetId: 'e0'))!;
       final sh = _mech(st, BossMechanicPhase.shatter).single;
       expect(st.state.byId(sh.targetId!)!.alive, isFalse);
       expect(st.state.log, contains('disipa'));

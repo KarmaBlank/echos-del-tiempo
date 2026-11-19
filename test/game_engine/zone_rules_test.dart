@@ -74,7 +74,7 @@ void main() {
       expect(ZoneRules.floorLevel(cat.zone(3)!, 0), 12);
     });
 
-    test('scaleBattle: vida, quiebre y ATQ relativos al nivel nativo', () {
+    test('scaleBattle: vida y ATQ relativos al nivel nativo; el quiebre no', () {
       final b = BattleEngine(stats: statsCalc, random: () => 0.5);
       final st = b.start(
           party: [partyOf('guerrero')], enemyTypes: ['golem', 'slime']);
@@ -86,7 +86,8 @@ void main() {
       final hf = ZoneRules.hpScale(13) / ZoneRules.hpScale(4);
       expect(g.maxHp, jsRound(golemHp * hf));
       expect(g.hp, g.maxHp);
-      expect(g.breakBase, closeTo(golemBreak * hf, 1e-9));
+      // Quiebre en puntos (combo_balance.md § 5): no escala con la vida.
+      expect(g.breakBase, golemBreak);
       expect(s.attack, jsRound(slimeAtk * ZoneRules.atkScale(13)));
       // Nivel 0: sin cambios; debajo del nativo: nunca baja.
       final st2 = b.start(party: [partyOf('guerrero')], enemyTypes: ['ghost']);

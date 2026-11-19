@@ -193,6 +193,15 @@ const Map<String, String> kWeaponImpactSfx = {
 
 /// Firma de cada habilidad de `kSkills` (sin el prefijo `skill.`).
 final Map<String, List<SfxTone>> _kBaseSkillVoices = {
+  // ---- Quebrar base (combo_balance.md § 5.1): golpe seco y crujido ----
+  'quebrar': [
+    ..._swingBlade(0.7, 0.9),
+    _n(2600, 0.06, crush: 3, v: 0.5, at: 0.08, seed: 211),
+  ],
+  'quebrarArcano': [
+    _n(4200, 0.08, lp: 3000, v: 0.4, seed: 223),
+    _n(2600, 0.06, crush: 3, v: 0.5, at: 0.09, seed: 227),
+  ],
   // ---- corte ----
   'giro': [..._swingBlade(1, 0.8), ..._x(_swingBlade(1.15, 0.8), dt: 0.1)],
   'embestida': [

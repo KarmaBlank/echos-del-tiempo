@@ -61,6 +61,7 @@ Combatant _hero({
 Combatant _foe(String id,
         {int hp = 100,
         double breakBase = 0,
+        bool fissured = false,
         double nextTurn = 50,
         Map<StatusKind, int>? st,
         List<TimedEffect>? fx}) =>
@@ -77,6 +78,7 @@ Combatant _foe(String id,
       statuses: st,
       nextTurn: nextTurn,
       breakBase: breakBase,
+      fissured: fissured,
       effects: fx,
     );
 
@@ -234,16 +236,18 @@ void main() {
     });
 
     test('Brecha: al quebrar, tu próximo turno (solo) llega 30% antes', () {
-      final a = _cmd(
-          _engine(), _battle([_hero()], [_foe('e0', breakBase: 10)]), _atk);
+      // Fisurado + Quebrar (combo_balance.md § 5).
+      final a = _cmd(_engine(),
+          _battle([_hero(skills: ['quebrar'])], [_foe('e0', breakBase: 10, fissured: true)]),
+          _sk('quebrar'));
       final b = _cmd(
           _engine(),
           _battle([
-            _hero(mech: {'brecha'})
+            _hero(mech: {'brecha'}, skills: ['quebrar'])
           ], [
-            _foe('e0', breakBase: 10)
+            _foe('e0', breakBase: 10, fissured: true)
           ]),
-          _atk);
+          _sk('quebrar'));
       expect(_e(b).broken, isTrue);
       expect(_proc(b, 'brecha'), isTrue);
       expect(_p(b).nextTurn, closeTo(_p(a).nextTurn * 0.7, 1e-9));
@@ -253,12 +257,12 @@ void main() {
       final st = _cmd(
           _engine(),
           _battle([
-            _hero(mech: {'brecha'}),
+            _hero(mech: {'brecha'}, skills: ['quebrar']),
             _hero(id: 'p2', nextTurn: 50),
           ], [
-            _foe('e0', breakBase: 10)
+            _foe('e0', breakBase: 10, fissured: true)
           ]),
-          _atk);
+          _sk('quebrar'));
       expect(_p(st, 'p2').nextTurn, closeTo(47, 1e-9)); // IV 10 × 0.3
     });
 

@@ -150,9 +150,13 @@ void main() {
 
     test('crítico ×1.5, redondeado como JS', () {
       final engine = _engine([0.99, 0.0]); // inicio del slime, después crítico
-      final step = engine.command(
-          _warriorTurn(engine, ['slime']), 'p1', const AttackCommand())!;
-      expect(step.state.enemies.first.hp, 30 - 23); // 22.5 → 23
+      // Vida alta: que no entre el tope por golpe (combo_balance.md § 3.2).
+      final turn = _warriorTurn(engine, ['slime']);
+      turn.enemies.first
+        ..maxHp = 300
+        ..hp = 300;
+      final step = engine.command(turn, 'p1', const AttackCommand())!;
+      expect(step.state.enemies.first.hp, 300 - 23); // 22.5 → 23
       expect(step.state.log, contains('23 = ATQ 15 × 1 × 1.5 CRÍTICO'));
     });
 
@@ -225,9 +229,13 @@ void main() {
         enemyTypes: ['golem'],
         triggeredBy: 'p1',
       );
+      // Vida alta: que no entre el tope por golpe (combo_balance.md § 3.2).
+      start.state.enemies.first
+        ..maxHp = 700
+        ..hp = 700;
       final step = engine.command(
           engine.nextTurn(start.state).state, 'p1', const UltimateCommand())!;
-      expect(step.state.enemies.first.hp, 70 - 45);
+      expect(step.state.enemies.first.hp, 700 - 45);
       expect(step.state.party.first.ult, 0);
       expect(step.events.whereType<UltimateUsedEvent>().single.name, 'Tajo Final');
     });

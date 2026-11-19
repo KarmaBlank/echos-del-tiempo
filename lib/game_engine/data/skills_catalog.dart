@@ -16,8 +16,25 @@ const _stun = StatusKind.stun;
 const _phys = SkillKind.physical;
 const _mag = SkillKind.magical;
 
+/// Habilidad base Quebrar de las armas físicas y la de los lanzadores
+/// (combo_balance.md § 5.1).
+const kQuebrarId = 'quebrar';
+const kQuebrarArcanoId = 'quebrarArcano';
+const kBaseQuebrarIds = {kQuebrarId, kQuebrarArcanoId};
+
+/// La Quebrar base del tipo de arma [weaponType]: la arcana para los
+/// lanzadores (báculo, varita, tomo), la física para el resto.
+String quebrarSkillFor(String? weaponType) =>
+    const {'báculo', 'varita', 'tomo'}.contains(weaponType)
+        ? kQuebrarArcanoId
+        : kQuebrarId;
+
 /// Habilidades que otorgan las armas (`SK`) y los kits de las ascensiones.
 const Map<String, SkillDef> kSkills = {
+  // Quebrar base (combo_balance.md § 5.1): toda arma la trae en su kit.
+  // Pega poco (×0.6) y casi no llena la barra: cierra el quiebre.
+  kQuebrarId: SkillDef(id: kQuebrarId, name: 'Quebrar', mp: 2, kind: _phys, power: 0.6, breaks: true),
+  kQuebrarArcanoId: SkillDef(id: kQuebrarArcanoId, name: 'Quebrar arcano', mp: 2, kind: _mag, power: 0.6, breaks: true),
   'giro': SkillDef(id: 'giro', name: 'Corte Giratorio', mp: 4, kind: _phys, power: 1.0, allTargets: true),
   'embestida': SkillDef(id: 'embestida', name: 'Embestida', mp: 4, kind: _phys, power: 1.2, delay: 0.45),
   'ignea': SkillDef(id: 'ignea', name: 'Golpe Ígneo', mp: 4, kind: _phys, power: 1.8, status: StatusApplication(_burn, 2)),

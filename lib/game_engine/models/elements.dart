@@ -53,7 +53,16 @@ enum ReactionKind {
   explosionToxica('Explosión tóxica'),
   congelacionSubita('Congelación súbita'),
   derretir('Derretir'),
-  cortocircuito('Cortocircuito');
+  cortocircuito('Cortocircuito'),
+
+  /// Convergencia v0.9 (combo_balance.md § 4): Quemadura + golpe de
+  /// Veneno. Al final del enum: byssSeal guarda el índice.
+  combustion('Combustión');
+
+  /// Convergencia (combo_balance.md § 4): consume stacks y pega por % de
+  /// la vida máxima. Las demás son reacciones de golpe.
+  bool get convergence =>
+      this == ReactionKind.explosionToxica || this == ReactionKind.combustion;
 
   const ReactionKind(this.label);
   final String label;
@@ -90,6 +99,7 @@ const List<ReactionRule> kReactionTable = [
   ReactionRule(StatusKind.wet, GameElement.hielo, ReactionKind.congelacionSubita),
   ReactionRule(StatusKind.freeze, GameElement.fuego, ReactionKind.derretir),
   ReactionRule(StatusKind.charged, GameElement.agua, ReactionKind.cortocircuito),
+  ReactionRule(StatusKind.burn, GameElement.veneno, ReactionKind.combustion),
 ];
 
 /// Reacción de un par (estado, elemento), o `null`.
@@ -123,6 +133,8 @@ class ReactionDef {
     this.damageMult = 1,
     this.perStack = 0,
     this.splash = 0,
+    this.commonCap = 0,
+    this.eliteCap = 0,
     this.bossCap = 0,
     this.stunTurns = 0,
   });
@@ -135,17 +147,21 @@ class ReactionDef {
   /// Multiplicador del golpe que la detona (Electrocución, Derretir ×1.5).
   final double damageMult;
 
-  /// Explosión tóxica: daño extra = golpe × [perStack] × stacks de Veneno
-  /// consumidos (sin tope).
+  /// Convergencias (combo_balance.md § 4): daño = vida máx. del objetivo
+  /// × [perStack] × stacks consumidos (0.025 = 2.5% por stack).
   final double perStack;
 
-  /// Fracción que salpica a los demás del bando del objetivo (Explosión
-  /// tóxica 0.5) o que salta a 1 más (Cortocircuito 0.5).
+  /// Fracción que salpica a los demás del bando del objetivo
+  /// (Convergencias 0.3) o que salta a 1 más (Cortocircuito 0.5).
   final double splash;
 
-  /// Contra jefes: tope del daño extra por detonación, en fracción de su
-  /// vida máxima (Explosión tóxica 0.25). 0 = sin tope.
-  final double bossCap;
+  /// Convergencias: tope del daño contra un común / élite / jefe, en
+  /// fracción de su vida máxima. 0 = sin tope.
+  final double commonCap, eliteCap, bossCap;
+
+  /// El tope de una Convergencia contra [c] (0 = sin tope).
+  double capFor({required bool elite, required bool boss}) =>
+      boss ? bossCap : (elite ? eliteCap : commonCap);
 
   /// Turnos de Aturdido que deja (Electrocución 1).
   final int stunTurns;

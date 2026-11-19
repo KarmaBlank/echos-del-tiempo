@@ -954,7 +954,11 @@ class BattleScenePainter extends CustomPainter {
       final max = e.breakMax;
       final frac = max <= 0 ? 0.0 : (e.breakGauge / max).clamp(0.0, 1.0);
       _pen.rect(c, const Color(0xCC000000), x, yy, w, 3 * u);
-      final blink = e.broken && !still && (t / 110).floor().isEven;
+      // Fisurado (combo_balance.md § 5): parpadea más lento que quebrado.
+      final blink = !still &&
+          (e.broken
+              ? (t / 110).floor().isEven
+              : e.fissured && (t / 260).floor().isEven);
       final fw = (w * (e.broken ? 1 : frac)).roundToDouble();
       _pen.rect(c, blink ? fxWhite : breakColor, x, yy, fw, 3 * u);
       _pen.rect(c, blink ? breakColor : const Color(0xFFFFF7C2), x, yy, fw, u);

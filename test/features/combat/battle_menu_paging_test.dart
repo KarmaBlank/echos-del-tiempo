@@ -157,7 +157,9 @@ void main() {
         'Guardián con 13 opciones: categorías, todas sus técnicas sin '
         'paginar, teclas 1-9 dentro de la categoría', (tester) async {
       final skills = state.party.single.skillIds;
-      expect(skills, hasLength(8));
+      // 8 + la Quebrar base del arma (combo_balance.md § 5.1): entra justo
+      // en las 9 teclas.
+      expect(skills, hasLength(9));
       BattleCommand? sent;
       final menu = await pump(tester, (c) => sent = c);
       expect(menu.hasSubmenu, isFalse);

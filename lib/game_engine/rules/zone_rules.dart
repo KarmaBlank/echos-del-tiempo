@@ -35,7 +35,8 @@ abstract final class ZoneRules {
   /// Nivel nativo de los stats del catálogo de [enemyId].
   static int baseLevel(String enemyId) => kEnemyBaseLevel[enemyId] ?? 1;
 
-  /// Escala la vida, el quiebre y el ATQ de los enemigos de una batalla
+  /// Escala la vida y el ATQ (el quiebre va en puntos y no escala,
+  /// combo_balance.md § 5) de los enemigos de una batalla
   /// recién creada a nivel [level] (0 = sin escalar). Muta [state].
   static void scaleBattle(BattleState state, int level) {
     if (level <= 0) return;
@@ -48,7 +49,7 @@ abstract final class ZoneRules {
         ..maxHp = hp
         ..hp = hp
         ..attack = jsRound(e.attack * af)
-        ..breakBase = e.breakBase * hf;
+        ..level = level;
     }
   }
 

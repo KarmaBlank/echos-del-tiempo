@@ -185,6 +185,22 @@ List<AdminEntry> buildAdminIndex(BalanceBase base) {
         name: f.name,
         detail: 'tier ${f.minTier}+ · jefe ${trimNum(f.boss)}'));
   }
+  for (final h in c.hitCaps.values) {
+    out.add(AdminEntry(
+        kind: BalanceKind.hitCap,
+        id: h.id,
+        name: h.name,
+        detail: 'común ${trimNum(h.common)} · élite ${trimNum(h.eliteSolo)}→${trimNum(h.elite)} · '
+            'jefe ${trimNum(h.bossSolo)}→${trimNum(h.boss)}'));
+  }
+  for (final r in c.comboRules.values) {
+    out.add(AdminEntry(
+        kind: BalanceKind.combo,
+        id: r.id,
+        name: r.name,
+        detail: 'stacks ${r.stackCap} · área ×${trimNum(r.areaMult)} · '
+            'quiebre ULT ${trimNum(r.breakUltimate)}'));
+  }
   for (final a in kAscensions.values) {
     out.add(AdminEntry(
       kind: null,

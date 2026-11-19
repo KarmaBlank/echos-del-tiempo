@@ -94,22 +94,24 @@ Iterable<BreakEvent> _breaks(BattleStep s) => s.events.whereType<BreakEvent>();
 
 void main() {
   group('inicio', () {
-    test('umbral por tipo × grupo × élite; ULT solo jefes y élites', () {
+    test('umbral en puntos: tipo × grupo (0.6 + 0.3 × jugadores) × élite; '
+        'ULT solo jefes y élites', () {
       final s = _engine().start(
           party: [_member('p1', 'guerrero'), _member('p2', 'maga')],
           enemyTypes: ['golem', 'slime'],
           elite: true).state;
-      // 50 × 1.45 (2 jugadores) × 1.5 (élite).
-      expect(s.enemies[0].breakBase, closeTo(50 * 1.45 * 1.5, 1e-9));
+      // Común 12 × 1.2 (2 jugadores) × 2.5 (élite) = 36.
+      expect(s.enemies[0].breakBase, closeTo(12 * 1.2 * 2.5, 1e-9));
       expect(s.enemies[0].ultId, kEliteUltId);
-      expect(s.enemies[1].breakBase, closeTo(25 * 1.45, 1e-9));
+      expect(s.enemies[1].breakBase, closeTo(12 * 1.2, 1e-9));
       expect(s.enemies[1].ultId, isNull);
       final boss = _engine()
           .start(party: [_member('p1', 'guerrero')], enemyTypes: ['devorador'])
           .state
           .enemies
           .single;
-      expect([boss.breakBase, boss.ultId], [910, 'eult_finEras']);
+      expect(boss.breakBase, closeTo(95 * 0.9, 1e-9));
+      expect(boss.ultId, 'eult_finEras');
       expect(s.party.every((p) => !p.hasBreak), isTrue);
     });
 
@@ -128,52 +130,58 @@ void main() {
       expect(step.state.enemies.single.ult, 0);
       expect(e.breakEnabled && e.enemyUltsEnabled, isTrue);
     });
+
+    test('toda arma trae la Quebrar base al final del kit', () {
+      final g = _myTurn(_engine(), ['golem']).party.single;
+      expect(g.skillIds.last, 'quebrar');
+      final m = _myTurn(_engine(), ['golem'], classId: 'maga').party.single;
+      expect(m.skillIds.last, 'quebrarArcano');
+    });
   });
 
-  group('llenado por tipo de acción', () {
-    test('ataque básico ×1.0', () {
+  group('puntos por tipo de acción (combo_balance.md § 5)', () {
+    test('ataque básico: 4, sin mirar el daño', () {
       final engine = _engine();
       final step =
           engine.command(_myTurn(engine, ['golem']), 'p1', const AttackCommand())!;
-      expect(step.state.enemies.single.breakGauge, 15);
+      expect(step.state.enemies.single.breakGauge, 4);
       final b = _breaks(step).single;
-      expect([b.phase, b.gauge, b.max], [BreakPhase.fill, 15, 50]);
+      expect([b.phase, b.gauge, b.max], [BreakPhase.fill, 4, closeTo(10.8, 1e-9)]);
       // Va después del golpe.
       expect(step.events.indexOf(b),
           greaterThan(step.events.indexWhere((e) => e is DamageEvent)));
     });
 
-    test('habilidad física ×1.3', () {
+    test('habilidad física: 6', () {
       final engine = _engine();
       final step = engine.command(
           _myTurn(engine, ['golem']), 'p1', const SkillCommand('embestida'))!;
-      expect(step.state.enemies.single.breakGauge, closeTo(18 * 1.3, 1e-9));
+      expect(step.state.enemies.single.breakGauge, 6);
     });
 
-    test('habilidad mágica ×0.8', () {
+    test('habilidad mágica: 4', () {
       final engine = _engine();
       final step = engine.command(_myTurn(engine, ['golem'], classId: 'maga'),
           'p1', const SkillCommand('chispa'))!;
-      final dmg = step.events.whereType<DamageEvent>().first.amount;
-      expect(step.state.enemies.single.breakGauge, closeTo(dmg * 0.8, 0.05));
+      expect(step.state.enemies.single.breakGauge, 4);
     });
 
-    test('crítico ×1.5 adicional', () {
+    test('el crítico no suma', () {
       final engine = _engine([0.99, 0.0]);
       final step =
           engine.command(_myTurn(engine, ['golem']), 'p1', const AttackCommand())!;
       expect(step.events.whereType<DamageEvent>().single.critical, isTrue);
-      expect(step.state.enemies.single.breakGauge, closeTo(23 * 1.5, 1e-9));
+      expect(step.state.enemies.single.breakGauge, 4);
     });
 
-    test('ULT ×2.0', () {
+    test('ULT: 12', () {
       final engine = _engine();
       final step = engine.command(
           _myTurn(engine, ['devorador'], ult: 100), 'p1', const UltimateCommand())!;
-      expect(step.state.enemies.single.breakGauge, 45 * 2.0);
+      expect(step.state.enemies.single.breakGauge, 12);
     });
 
-    test('dúo ×1.5', () {
+    test('dúo: 10', () {
       final engine = _engine();
       final start = engine.start(
           party: [_member('p1', 'guerrero'), _member('p2', 'maga')],
@@ -181,11 +189,17 @@ void main() {
           triggeredBy: 'p1');
       final step = engine.command(
           engine.nextTurn(start.state).state, 'p1', const DualCommand('p2'))!;
-      final dmg = step.events.whereType<DamageEvent>().single.amount;
-      expect(step.state.enemies.single.breakGauge, closeTo(dmg * 1.5, 0.05));
+      expect(step.state.enemies.single.breakGauge, 10);
     });
 
-    test('daño secundario de notables ×0.5 (rebote)', () {
+    test('la Quebrar base casi no llena: 1', () {
+      final engine = _engine();
+      final step = engine.command(
+          _myTurn(engine, ['devorador']), 'p1', const SkillCommand('quebrar'))!;
+      expect(step.state.enemies.single.breakGauge, 1);
+    });
+
+    test('daño secundario de notables (rebote): 0', () {
       final engine = _engine();
       final turn = _myTurn(engine, ['golem', 'golem']);
       turn.party.single.mechanics = {'rebote'};
@@ -194,17 +208,25 @@ void main() {
           .whereType<DamageEvent>()
           .singleWhere((d) => d.sourceId == 'rebote');
       expect(bounce.targetId, 'e1');
-      expect(step.state.enemies[1].breakGauge, closeTo(bounce.amount * 0.5, 1e-9));
+      expect(step.state.enemies[1].breakGauge, 0);
     });
 
-    test('aturdir aplicado: +15 plano (también desde procs)', () {
+    test('aturdir aplicado: +6 (también desde procs)', () {
       // Paladín: 3% de aturdir con el ataque (azar 0 en esa tirada).
       final engine = _engine([0.99, 0.99, 0.0]);
       final step = engine.command(
           _myTurn(engine, ['golem'], classId: 'paladin'), 'p1', const AttackCommand())!;
-      final dmg = step.events.whereType<DamageEvent>().single.amount;
       expect(step.events.whereType<StatusAppliedEvent>().single.kind, StatusKind.stun);
-      expect(step.state.enemies.single.breakGauge, closeTo(dmg + 15, 1e-9));
+      expect(step.state.enemies.single.breakGauge, 4 + 6);
+    });
+
+    test('los ticks de estado no suman', () {
+      final engine = _engine([0.0]);
+      final start = engine.start(party: [_member('p1', 'guerrero')], enemyTypes: ['golem']);
+      start.state.enemies.single.statuses[StatusKind.burn] = 5;
+      final step = engine.nextTurn(start.state);
+      expect(step.state.currentId, 'e0');
+      expect(step.state.enemies.single.breakGauge, 0);
     });
 
     test('la vida perdida carga la ULT enemiga: +1 por cada 1%', () {
@@ -223,61 +245,116 @@ void main() {
     });
   });
 
-  group('baja y quiebre', () {
+  group('Fisurado y Quebrar', () {
     test('baja 10% del umbral al empezar el turno del enemigo', () {
       final engine = _engine([0.0]);
       final start = engine.start(party: [_member('p1', 'guerrero')], enemyTypes: ['golem']);
-      start.state.enemies.single.breakGauge = 30;
+      start.state.enemies.single.breakGauge = 8;
       final step = engine.nextTurn(start.state);
       expect(step.state.currentId, 'e0');
-      expect(step.state.enemies.single.breakGauge, 25);
+      expect(step.state.enemies.single.breakGauge, closeTo(6.9, 1e-9));
       expect(_breaks(step).single.phase, BreakPhase.decay);
     });
 
-    test('quiebre: pierde el turno, +50% de daño 2 turnos del grupo, '
-        'después la barra a 0 y el umbral +25%', () {
+    test('barra llena: FISURADO, no quebrado', () {
       final engine = _engine();
       final turn = _myTurn(engine, ['golem']);
-      turn.enemies.single.breakGauge = 40;
-      var step = engine.command(turn, 'p1', const AttackCommand())!;
+      turn.enemies.single.breakGauge = 8;
+      final step = engine.command(turn, 'p1', const AttackCommand())!;
+      final golem = step.state.enemies.single;
+      expect(_breaks(step).single.phase, BreakPhase.fissured);
+      expect([golem.fissured, golem.broken, golem.breakSkip], [true, false, false]);
+      expect(golem.breakGauge, closeTo(10.8, 1e-9));
+      expect(step.state.log, contains('¡Gólem queda FISURADO!'));
+    });
+
+    test('un golpe sin Quebrar no quiebra a un Fisurado', () {
+      final engine = _engine();
+      final turn = _myTurn(engine, ['golem']);
+      turn.enemies.single
+        ..breakGauge = 10.8
+        ..fissured = true;
+      final step = engine.command(turn, 'p1', const AttackCommand())!;
+      expect(_breaks(step), isEmpty);
+      expect(step.state.enemies.single.fissured, isTrue);
+    });
+
+    test('Quebrar sobre un no Fisurado no quiebra (solo suma su punto)', () {
+      final engine = _engine();
+      final turn = _myTurn(engine, ['golem']);
+      turn.enemies.single.breakGauge = 2;
+      final step = engine.command(turn, 'p1', const SkillCommand('quebrar'))!;
+      expect(_breaks(step).single.phase, BreakPhase.fill);
+      expect(step.state.enemies.single.broken, isFalse);
+      expect(step.state.enemies.single.breakGauge, 3);
+    });
+
+    test('la ULT que llena la barra no quiebra en el mismo golpe', () {
+      final engine = _engine();
+      final turn = _myTurn(engine, ['devorador'], ult: 100);
+      turn.enemies.single.breakGauge = 80;
+      final step = engine.command(turn, 'p1', const UltimateCommand())!;
+      expect(_breaks(step).single.phase, BreakPhase.fissured);
+      expect(step.state.enemies.single.broken, isFalse);
+    });
+
+    test('Quebrar sobre un Fisurado: ¡QUIEBRE!, pierde el turno, +50% de daño '
+        '2 turnos del grupo, después la barra a 0 y el umbral +25%', () {
+      final engine = _engine();
+      final turn = _myTurn(engine, ['golem']);
+      turn.enemies.single
+        ..breakGauge = 10.8
+        ..fissured = true;
+      final step = engine.command(turn, 'p1', const SkillCommand('quebrar'))!;
       var golem = step.state.enemies.single;
       expect(_breaks(step).single.phase, BreakPhase.broken);
-      expect([golem.breakGauge, golem.vulnerable, golem.breakSkip], [50, 2, true]);
+      expect([golem.vulnerable, golem.breakSkip, golem.fissured], [2, true, false]);
+      expect(golem.breakGauge, closeTo(10.8, 1e-9));
       expect(step.state.log, contains('¡QUIEBRE! Gólem: pierde su turno, +50% de daño'));
 
-      // 1.er turno del grupo: +50%.
-      var s = engine.nextTurn(step.state).state;
-      expect(s.currentId, 'p1');
-      step = engine.command(s, 'p1', const AttackCommand())!;
-      final hit = step.events.whereType<DamageEvent>().single;
-      expect([hit.amount, hit.vulnerable], [23, true]); // 15 × 1.5 = 22.5
-      expect(step.state.log, contains('× 1.5 QUIEBRE'));
-      expect(step.state.enemies.single.vulnerable, 1);
-      // Quebrado, la barra no se llena.
-      expect(_breaks(step), isEmpty);
+      // Hasta que se recupera: pierde su turno y los golpes hacen +50%.
+      var s = step.state;
+      var skipped = false;
+      var boosted = 0;
+      var recovered = false;
+      for (var i = 0; i < 12 && !recovered; i++) {
+        final n = engine.nextTurn(s);
+        if (_breaks(n).any((b) => b.phase == BreakPhase.skipped)) {
+          skipped = true;
+          expect(n.state.log, contains('Gólem está QUEBRADO y pierde su turno'));
+        }
+        s = n.state;
+        if (s.currentId != 'p1') continue;
+        final a = engine.command(s, 'p1', const AttackCommand())!;
+        final hit = a.events.whereType<DamageEvent>().first;
+        if (hit.vulnerable) {
+          boosted++;
+          expect(hit.amount, 23); // 15 × 1.5 = 22.5
+          // Quebrado, la barra no se llena.
+          expect(_breaks(a).where((b) => b.phase == BreakPhase.fill), isEmpty);
+        }
+        recovered = _breaks(a).any((b) => b.phase == BreakPhase.recovered);
+        s = a.state;
+      }
+      expect([skipped, boosted, recovered], [true, 2, true]);
+      golem = s.enemies.single;
+      expect([golem.vulnerable, golem.breaks], [0, 1]);
+      expect(golem.breakMax, closeTo(10.8 * 1.25, 1e-9));
+      expect(s.log, contains('Gólem se recupera del quiebre'));
+    });
 
-      // Turno del gólem: lo pierde.
-      final skip = engine.nextTurn(step.state);
-      expect(skip.state.currentId, isNull);
-      expect(_breaks(skip).single.phase, BreakPhase.skipped);
-      expect(skip.state.log, contains('Gólem está QUEBRADO y pierde su turno'));
-      expect(skip.state.enemies.single.breakSkip, isFalse);
-
-      // 2.º turno del grupo: +50% y se recupera al terminar.
-      s = engine.nextTurn(skip.state).state;
-      expect(s.currentId, 'p1');
-      step = engine.command(s, 'p1', const AttackCommand())!;
-      expect(step.events.whereType<DamageEvent>().single.amount, 23);
-      golem = step.state.enemies.single;
-      expect(_breaks(step).single.phase, BreakPhase.recovered);
-      expect([golem.vulnerable, golem.breakGauge, golem.breaks], [0, 0, 1]);
-      expect(golem.breakMax, 62.5);
-      expect(step.state.log, contains('Gólem se recupera del quiebre'));
-
-      // 3.er turno: daño normal.
-      s = engine.nextTurn(step.state).state;
-      final after = engine.command(s, 'p1', const AttackCommand())!;
-      expect(after.events.whereType<DamageEvent>().single.vulnerable, isFalse);
+    test('Fisurado que llega a su turno: la barra vuelve a la mitad', () {
+      final engine = _engine([0.0]);
+      final start = engine.start(party: [_member('p1', 'guerrero')], enemyTypes: ['golem']);
+      start.state.enemies.single
+        ..breakGauge = 10.8
+        ..fissured = true;
+      final step = engine.nextTurn(start.state);
+      expect(step.state.currentId, 'e0');
+      final golem = step.state.enemies.single;
+      expect([golem.fissured, golem.breakGauge], [false, closeTo(5.4, 1e-9)]);
+      expect(_breaks(step).single.phase, BreakPhase.steadied);
+      expect(step.state.log, contains('se recompone'));
     });
 
     test('el umbral sube +25% por quiebre con tope ×2', () {
@@ -403,10 +480,12 @@ void main() {
       final turn = _myTurn(engine, ['reyLimo']);
       final boss = turn.enemies.single
         ..ult = 100
-        ..ultPending = true
-        ..breakGauge = 79;
-      expect(boss.breakMax, 80);
-      final step = engine.command(turn, 'p1', const AttackCommand())!;
+        ..ultPending = true;
+      expect(boss.breakMax, closeTo(65 * 0.9, 1e-9));
+      boss
+        ..breakGauge = boss.breakMax
+        ..fissured = true;
+      final step = engine.command(turn, 'p1', const SkillCommand('quebrar'))!;
       final b = _breaks(step).single;
       expect([b.phase, b.cancelledUlt], [BreakPhase.broken, true]);
       final after = step.state.enemies.single;
@@ -458,15 +537,16 @@ void main() {
         id: 'e0', name: 'Rey Limo', isPlayer: false, hp: 100, maxHp: 230,
         speed: 8, attack: 13, critChance: 0.12, enemyType: 'reyLimo', boss: true,
         breakBase: 80, breakGauge: 33.5, breaks: 1, vulnerable: 2,
-        breakSkip: true, ultId: 'eult_diluvio', ultPending: true, ult: 100,
+        breakSkip: true, fissured: true, ultId: 'eult_diluvio', ultPending: true,
+        ult: 100,
       );
       const json = SessionJson();
       final text = jsonEncode(json.combatantToJson(e));
       final back = json.combatantFromJson(asJson(jsonDecode(text)));
       expect(jsonEncode(json.combatantToJson(back)), text);
       expect([back.breakBase, back.breakGauge, back.breaks, back.vulnerable,
-          back.breakSkip, back.ultId, back.ultPending],
-          [80, 33.5, 1, 2, true, 'eult_diluvio', true]);
+          back.breakSkip, back.fissured, back.ultId, back.ultPending],
+          [80, 33.5, 1, 2, true, true, 'eult_diluvio', true]);
       // Un estado viejo (sin los campos) se lee con los valores por defecto.
       final old = json.combatantToJson(e)
         ..remove('brkB')

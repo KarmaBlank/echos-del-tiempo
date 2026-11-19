@@ -181,6 +181,27 @@ void main() {
       expect(again.avgActions, sa.avgActions);
     });
 
+    test('simulador: grupo mixto, quiebres y jefe quebrado antes de su ULT '
+        '(combo_balance.md § 5)', () {
+      final sim = ImpactSimulator(GameCatalog.standard);
+      const g = SimLoadout(
+          classId: 'guerrero', level: 10, weaponId: 'hacha_rompe', skillId: 'sismo');
+      const m = SimLoadout(
+          classId: 'maga', level: 10, weaponId: 'baculo_fuego', skillId: 'bola');
+      final r = sim.simulate(g,
+          enemies: const ['reyLimo', 'slime'],
+          enemyLevel: 10,
+          party: const [g, m, g, m],
+          runs: 6);
+      expect(r.runs, 6);
+      expect(r.bossRuns, 6);
+      expect(r.bossEarlyBreaks, inInclusiveRange(0, 6));
+      expect(r.avgBreaks, greaterThanOrEqualTo(0));
+      expect(r.bossEarlyBreakRate, r.bossEarlyBreaks / 6);
+      // Sin jefe con ULT no cuenta.
+      final c = sim.simulate(g, enemies: const ['slime'], enemyLevel: 10, runs: 2);
+      expect(c.bossRuns, 0);
+    });
     test('personaje típico: ⅔ al atributo principal del arma y ⅓ a VIT', () {
       final sim = ImpactSimulator(GameCatalog.standard);
       final w = GameCatalog.standard.weapons['hacha_rompe']!;

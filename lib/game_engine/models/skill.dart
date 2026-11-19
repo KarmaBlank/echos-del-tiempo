@@ -155,6 +155,11 @@ class SkillDef {
   /// Silencio: quita esta carga de ULT a cada enemigo golpeado.
   final double ultDrain;
 
+  /// Quebrar (combo_balance.md § 5): un golpe de esta habilidad quiebra
+  /// a un enemigo Fisurado. Las ULT, los dúos y las Convergencias lo
+  /// tienen siempre.
+  final bool breaks;
+
   const SkillDef({
     required this.id,
     required this.name,
@@ -198,6 +203,7 @@ class SkillDef {
     this.debuffs = const [],
     this.breakBonus = 0,
     this.ultDrain = 0,
+    this.breaks = false,
   });
 
   bool get dealsDamage =>

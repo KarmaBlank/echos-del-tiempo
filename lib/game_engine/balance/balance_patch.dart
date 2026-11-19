@@ -1,3 +1,4 @@
+import '../data/enemy_families.dart' show ComboRulesDef, HitCapDef;
 import 'dart:convert';
 
 import '../data/game_catalog.dart';
@@ -334,6 +335,9 @@ class BalancePatch {
       },
       fragmentDrops: patched<FragmentDropDef>(
           BalanceKind.fragmentDrop, catalog.fragmentDrops),
+      hitCaps: patched<HitCapDef>(BalanceKind.hitCap, catalog.hitCaps),
+      comboRules:
+          patched<ComboRulesDef>(BalanceKind.combo, catalog.comboRules),
     );
   }
 

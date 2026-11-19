@@ -1,4 +1,5 @@
 import '../../../game_engine/data/elements_catalog.dart';
+import '../../../game_engine/data/enemy_families.dart' show ComboRulesDef;
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/js_math.dart';
 import 'skill_text.dart' show statusHex;
@@ -29,7 +30,10 @@ String reactionHex(ReactionKind k) => switch (k) {
       ReactionKind.explosionToxica => '#badc58',
       ReactionKind.congelacionSubita => '#81ecec',
       ReactionKind.derretir => '#ff9f43',
+      ReactionKind.combustion => '#e17055',
     };
+
+const kComboRulesDefault = ComboRulesDef();
 
 String _pct(double v) => '${jsRound(v * 100)}%';
 String _x(double v) => '×${fm(v)}';
@@ -50,10 +54,9 @@ String reactionDescription(ReactionKind k, {Map<String, ReactionDef>? defs}) {
           '${d.stunTurns > 0 ? ' y aturde ${d.stunTurns} '
               '${d.stunTurns == 1 ? 'turno' : 'turnos'}' : ''}. Consume Mojado.',
     ReactionKind.explosionToxica =>
-      'Fuego sobre Veneno: consume todos los stacks de Veneno; daño extra = '
-          'golpe × ${fm(d.perStack)} por stack (sin tope)'
-          '${d.splash > 0 ? ' y ${_pct(d.splash)} de eso a los demás' : ''}.'
-          '${d.bossCap > 0 ? ' Contra jefes, máx. ${_pct(d.bossCap)} de su vida.' : ''}',
+      'Convergencia. Fuego sobre Veneno: ${_convergence(d, StatusKind.poison)}',
+    ReactionKind.combustion =>
+      'Convergencia. Veneno sobre Quemadura: ${_convergence(d, StatusKind.burn)}',
     ReactionKind.congelacionSubita =>
       'Hielo sobre Mojado: Congelación completa al instante (pierde el '
           'turno). Consume Mojado.',
@@ -65,6 +68,15 @@ String reactionDescription(ReactionKind k, {Map<String, ReactionDef>? defs}) {
           '${_pct(d.splash)}. Consume Cargado.',
   };
 }
+
+/// Texto común de las Convergencias (combo_balance.md § 4).
+String _convergence(ReactionDef d, StatusKind primer) =>
+    'consume los stacks de ${primer.label}; ${fm(d.perStack * 100)}% de la vida '
+    'máx. por stack (tope ${_pct(d.commonCap)} común, ${_pct(d.eliteCap)} '
+    'élite, ${_pct(d.bossCap)} jefe), ${_x(kComboRulesDefault.weakMult)} si '
+    'es débil al elemento que detona y ${_x(kComboRulesDefault.resistMult)} si '
+    'lo resiste${d.splash > 0 ? '; ${_pct(d.splash)} a los demás' : ''}. '
+    'Ignora el tope por golpe y tiene Quebrar.';
 
 /// Elementos con los que [e] reacciona, con sus reacciones (en cualquier
 /// orden: dejar el estado o detonarlo), en el orden de la tabla.

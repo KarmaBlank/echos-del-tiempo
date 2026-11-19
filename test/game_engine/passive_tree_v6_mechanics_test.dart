@@ -74,6 +74,7 @@ Combatant _foe(String id,
         int atk = 10,
         String type = 'slime',
         double breakBase = 0,
+        bool fissured = false,
         double nextTurn = 50,
         Map<StatusKind, int>? st,
         Map<StatusKind, String>? primed,
@@ -92,6 +93,7 @@ Combatant _foe(String id,
       primedBy: primed,
       nextTurn: nextTurn,
       breakBase: breakBase,
+      fissured: fissured,
       effects: fx,
     );
 
@@ -219,17 +221,18 @@ BattleStep _protect(Set<String> mech) => _enemyHits(
       _foe('e0')
     ]));
 
-/// p1 quiebra a e0 con un ataque (con p2 en el grupo).
+/// p1 quiebra a e0 (Fisurado) con la Quebrar base (con p2 en el grupo;
+/// combo_balance.md § 5).
 BattleStep _break(Set<String> mech) => _cmd(
     _engine(),
     _battle([
-      _hero(mech: mech),
+      _hero(mech: mech, skills: ['quebrar']),
       _hero(id: 'p2', nextTurn: 50),
     ], [
-      _foe('e0', breakBase: 10),
+      _foe('e0', breakBase: 10, fissured: true),
       _foe('e1'),
     ]),
-    _atk);
+    _sk('quebrar'));
 
 /// p1 mata a e0 (1 HP) con un ataque; p2 a media vida.
 BattleStep _kill(Set<String> mech,
@@ -350,8 +353,9 @@ void main() {
 
     test('crítico a un objetivo, área y reacción', () {
       expect(_dmg({'verdugo_s1'}, crit: 1), greaterThan(_dmg({}, crit: 1)));
-      expect(_dmg({'monzon_ma'}, cmd: _sk('rafaga'), skills: ['rafaga']),
-          greaterThan(_dmg({}, cmd: _sk('rafaga'), skills: ['rafaga'])));
+      // Lluvia (×1.1): con el ×0.6 del área, Ráfaga redondea igual.
+      expect(_dmg({'monzon_ma'}, cmd: _sk('lluvia'), skills: ['lluvia']),
+          greaterThan(_dmg({}, cmd: _sk('lluvia'), skills: ['lluvia'])));
       int rx(Set<String> m) => 1000 - _e(_react(m, _wet, 'chispazo')).hp;
       expect(rx({'voltio_ma'}), greaterThan(rx({})));
     });

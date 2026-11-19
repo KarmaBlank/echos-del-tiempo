@@ -87,10 +87,12 @@ class Combatant {
     List<TimedEffect>? effects,
     this.extraTurn = 0,
     this.breakBase = 0,
+    this.level = 0,
     this.breakGauge = 0,
     this.breaks = 0,
     this.vulnerable = 0,
     this.breakSkip = false,
+    this.fissured = false,
     this.ultId,
     this.ultPending = false,
     this.webbed = false,
@@ -202,6 +204,11 @@ class Combatant {
   /// 0: sin barra (jugadores).
   double breakBase;
 
+  /// Nivel del enemigo en esta batalla (`ZoneRules.scaleBattle`); 0 =
+  /// sin escalar (vale el nivel base del catálogo). Para el tope por golpe
+  /// (combo_balance.md § 3.2).
+  int level;
+
   /// Barra de quiebre actual (0..[breakMax]).
   double breakGauge;
 
@@ -213,6 +220,11 @@ class Combatant {
 
   /// Quebrado: pierde su próximo turno.
   bool breakSkip;
+
+  /// Fisurado (combo_balance.md § 5): la barra se llenó; un golpe con
+  /// Quebrar lo quiebra. Si llega a su turno así, la barra vuelve a la
+  /// mitad.
+  bool fissured;
 
   /// ULT del enemigo (`EnemyUltDef.id`), si tiene. Su carga es [ult].
   final String? ultId;
@@ -410,10 +422,12 @@ class Combatant {
         effects: List.of(effects),
         extraTurn: extraTurn,
         breakBase: breakBase,
+        level: level,
         breakGauge: breakGauge,
         breaks: breaks,
         vulnerable: vulnerable,
         breakSkip: breakSkip,
+        fissured: fissured,
         ultId: ultId,
         ultPending: ultPending,
         webbed: webbed,

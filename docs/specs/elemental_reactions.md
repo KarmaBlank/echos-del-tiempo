@@ -29,7 +29,8 @@ de veneno (dagas, ballestas) llevan Veneno.
 | Primero (estado en el enemigo) | Después (golpe) | Reacción | Efecto (valores a ajustar con el admin de balance) |
 |---|---|---|---|
 | Mojado | Electro | **Electrocución** | aturde 1 turno y el golpe hace ×1.5; consume Mojado |
-| Veneno | Fuego | **Explosión tóxica** | consume todos los stacks de Veneno; daño extra = daño del golpe de fuego × (1 por stack, máx. ×3) a ese enemigo, y 50% de eso a los demás |
+| Veneno | Fuego | **Explosión tóxica** (Convergencia, v0.9) | consume todos los stacks de Veneno; 2.5% de la vida máx. del enemigo por stack (tope 70% común, 55% élite, 40% jefe) y 30% de eso a los demás (combo_balance.md § 4) |
+| Quemadura | Veneno | **Combustión** (Convergencia, v0.9) | consume todos los stacks de Quemadura; mismos números que la Explosión tóxica |
 | Mojado | Hielo | **Congelación súbita** | Congelación completa al instante (pierde el turno); consume Mojado |
 | Congelación | Fuego | **Derretir** | el golpe hace ×1.5 y quita la Congelación |
 | Cargado | Agua | **Cortocircuito** | el golpe salta a 1 enemigo más con 50% (como rebote) |
@@ -39,7 +40,7 @@ de veneno (dagas, ballestas) llevan Veneno.
 - En grupo, el estado lo puede dejar un jugador y detonarlo otro: premia
   coordinarse (foco co-op).
 - Familias de enemigos (bestiary.md): un Elemental ígneo es inmune a
-  Quemadura, así que con él no hay Explosión tóxica por fuego; los
+  Quemadura, así que con él no hay Explosión tóxica por fuego (y desde v0.9 es inmune al daño de fuego, combo_balance.md § 3.1); los
   Constructos no se envenenan. Se respeta la tabla de familias.
 
 ## 3. Interfaz
@@ -75,7 +76,12 @@ de veneno (dagas, ballestas) llevan Veneno.
    las curas). El motor debe tratar "familia/raza" igual para jugadores
    y enemigos desde la v0.7 aunque las razas lleguen después.
 
-## 6. Stacks sin tope (Quemadura y Veneno)
+## 6. Stacks sin tope (Quemadura y Veneno) — reemplazado en v0.9
+
+**v0.9 (combo_balance.md § 4):** Quemadura y Veneno tienen tope de **30**
+stacks por enemigo (`ComboRulesDef.stackCap`, editable), y la Explosión
+tóxica pasa a ser una **Convergencia**: pega por % de la vida máxima por
+stack, no por el golpe. Lo de abajo queda como historia de la v0.7.
 
 - Se quita el máximo de stacks de Quemadura y Veneno.
 - El daño por turno de cada stack sigue igual que hoy, así que acumular
@@ -189,9 +195,13 @@ Lo que quedó en el código (el resto del spec sigue mandando):
   (Chorro sobre un Cargado: Cortocircuito y después Mojado). Una por
   golpe; prioridad = orden de la tabla de § 2.
 - **Números (catálogo `kReactions`, editables: `BalanceKind.reaction`):**
-  Electrocución ×1.5 + 1 turno de Aturdido; Explosión tóxica `golpe × 1 ×
-  stacks` al objetivo, 50% de eso a cada otro del **bando del objetivo**,
-  tope contra jefes 25% de su vida máx. por objetivo; Congelación súbita
+  Electrocución ×1.5 + 1 turno de Aturdido; Explosión tóxica y Combustión
+  (Convergencias v0.9, combo_balance.md § 4): `vida máx. × 2.5% × stacks`,
+  × 1.25 si el objetivo es débil al elemento que detona y × 0.5 si lo
+  resiste, tope 70% / 55% / 40% (común / élite / jefe) por objetivo, 30%
+  a cada otro del **bando del objetivo**, con Quebrar y +10 de ULT a quien
+  preparó y a quien detonó si son distintos (antes: `golpe × 1 × stacks`,
+  50%, tope de jefe 25%); Congelación súbita
   lleva la Congelación a 5 (pierde su próximo turno; no reacciona si no se
   puede congelar: resistencia, inmunidad, ya congelado); Derretir ×1.5 y
   quita la Congelación (si estaba Congelado, resistencia); Cortocircuito

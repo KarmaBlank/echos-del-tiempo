@@ -7,8 +7,10 @@ import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
+import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/passive_tree.dart';
 import '../../../game_engine/models/player_state.dart';
+import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/battle_engine.dart';
 import '../../../game_engine/rules/mulberry32.dart';
@@ -37,7 +39,23 @@ class BattleSimResult {
     required this.avgActions,
     required this.avgHpLeft,
     required this.avgDamagePerAction,
+    this.avgBestHit = 0,
+    this.avgBreaks = 0,
+    this.bossEarlyBreaks = 0,
+    this.bossRuns = 0,
   });
+
+  /// Quiebres por batalla (combo_balance.md § 5), promedio.
+  final double avgBreaks;
+
+  /// Batallas en las que un jefe se quebró antes de su primera ULT, sobre
+  /// [bossRuns] (batallas con jefe con ULT).
+  final int bossEarlyBreaks;
+  final int bossRuns;
+
+  /// Fracción de batallas con jefe quebrado antes de su primera ULT.
+  double get bossEarlyBreakRate =>
+      bossRuns == 0 ? 0 : bossEarlyBreaks / bossRuns;
 
   final int runs;
   final int wins;
@@ -51,6 +69,10 @@ class BattleSimResult {
   /// Daño directo hecho por acción propia.
   final double avgDamagePerAction;
 
+  /// Golpe directo más grande de cada batalla, como fracción de la vida
+  /// máxima del blanco (promedio). Sirve para ver el tope por golpe.
+  final double avgBestHit;
+
   double get winRate => runs == 0 ? 0 : wins / runs;
 }
 
@@ -63,6 +85,7 @@ class SimLoadout {
     this.skillId,
     this.fusedSkillId,
     this.takenNodes = const [],
+    this.item,
   });
 
   final String classId;
@@ -77,6 +100,10 @@ class SimLoadout {
 
   /// Nodos del árbol tomados (vista previa de nodos y mecánicas).
   final List<String> takenNodes;
+
+  /// Arma concreta (afijos, forja, legendaria). Si está, su base manda
+  /// sobre [weaponId] (combo_balance.md § 7: medir con loot).
+  final ItemInstance? item;
 }
 
 /// Vista previa de impacto con el motor real (Dart puro). Usa el
@@ -112,21 +139,23 @@ class ImpactSimulator {
   }
 
   PlayerBuild typicalBuild(SimLoadout l) {
-    final w = catalog.weapons[l.weaponId]!;
+    final w = catalog.weapons[l.item?.baseId ?? l.weaponId]!;
     return PlayerBuild(
       classId: l.classId,
       level: l.level,
       attributes: typicalAttributes(l.classId, l.level, w),
       equippedWeapon: w,
       passiveProgress: PlayerPassiveProgress(l.takenNodes),
+      item: l.item,
     );
   }
 
   DerivedStats statSheet(SimLoadout l) => stats.calculate(typicalBuild(l));
 
-  BattlePartyMember _member(SimLoadout l, {double ult = 0}) =>
+  BattlePartyMember _member(SimLoadout l,
+          {double ult = 0, String id = 'p1'}) =>
       BattlePartyMember(
-        id: 'p1',
+        id: id,
         name: catalog.classes[l.classId]!.name,
         build: typicalBuild(l),
         ult: ult,
@@ -204,28 +233,55 @@ class ImpactSimulator {
   }
 
   /// [runs] batallas de un personaje típico contra [enemies] escalados a
-  /// [enemyLevel] (semillas fijas: el mismo resultado cada vez).
+  /// [enemyLevel] (semillas fijas: el mismo resultado cada vez). Con
+  /// [party], un grupo de esos personajes (uno por jugador) en vez de
+  /// [partySize] copias de [l].
+  ///
+  /// IA simple: si hay un enemigo Fisurado, lo quiebra (ULT cargada o la
+  /// habilidad con Quebrar de su kit); si no, ULT si está cargada, si no
+  /// su habilidad si alcanza el MP, si no ataque; al primer enemigo vivo.
   BattleSimResult simulate(SimLoadout l,
       {required List<String> enemies,
       required int enemyLevel,
       int runs = 40,
       int seed = 1,
-      bool elite = false}) {
+      bool elite = false,
+      int partySize = 1,
+      List<SimLoadout>? party}) {
+    final loadouts = party == null || party.isEmpty
+        ? [for (var k = 0; k < partySize.clamp(1, 4); k++) l]
+        : party.take(4).toList();
     var wins = 0;
     var actionsSum = 0;
     var hpSum = 0.0;
     var dmgSum = 0;
     var actionsAll = 0;
+    var bestSum = 0.0;
+    var breaks = 0;
+    var bossRuns = 0;
+    var bossEarly = 0;
     for (var r = 0; r < runs; r++) {
       final engine = BattleEngine(
           stats: stats,
           catalog: catalog,
           random: mulberry32(seed * 7919 + r * 104729));
       var s = engine
-          .start(party: [_member(l)], enemyTypes: enemies, elite: elite)
+          .start(party: [
+            for (var k = 0; k < loadouts.length; k++)
+              _member(loadouts[k], id: 'p${k + 1}'),
+          ], enemyTypes: enemies, elite: elite)
           .state;
       ZoneRules.scaleBattle(s, enemyLevel);
+      // Jefes con ULT: si se quiebran antes de lanzarla (combo_balance.md
+      // § 5, meta < 10% con un grupo al azar).
+      final bossIds = {
+        for (final e in s.enemies)
+          if (e.boss && e.ultId != null) e.id,
+      };
+      final ulted = <String>{};
+      var early = false;
       var actions = 0;
+      var best = 0.0;
       for (var i = 0; i < 3000 && !s.ended; i++) {
         final cur = s.current;
         if (cur != null && cur.isPlayer && !cur.alive) s.currentId = null;
@@ -236,15 +292,33 @@ class ImpactSimulator {
           step = engine.enemyTurn(s);
         } else {
           final p = s.current!;
-          final sk = l.skillId == null ? null : catalog.skills[l.skillId];
-          final target = s.enemies.where((e) => e.alive).firstOrNull?.id;
+          final k = int.tryParse(p.id.substring(1)) ?? 1;
+          final lo = loadouts[(k - 1).clamp(0, loadouts.length - 1)];
+          final sk = lo.skillId == null ? null : catalog.skills[lo.skillId];
+          final alive = s.enemies.where((e) => e.alive);
+          final fissured = alive.where((e) => e.fissured).firstOrNull;
+          final target = (fissured ?? alive.firstOrNull)?.id;
+          SkillDef? quebrar;
+          if (fissured != null) {
+            for (final id in p.skillIds) {
+              final q = catalog.skills[id];
+              if (q != null && q.breaks && p.mp >= q.mp) {
+                quebrar = q;
+                break;
+              }
+            }
+          }
           step = (p.ult >= 100
-                  ? engine.command(s, 'p1', UltimateCommand(targetId: target))
+                  ? engine.command(s, p.id, UltimateCommand(targetId: target))
+                  : null) ??
+              (quebrar != null
+                  ? engine.command(
+                      s, p.id, SkillCommand(quebrar.id, targetId: target))
                   : null) ??
               (sk != null && p.mp >= sk.mp
-                  ? engine.command(s, 'p1', SkillCommand(sk.id, targetId: target))
+                  ? engine.command(s, p.id, SkillCommand(sk.id, targetId: target))
                   : null) ??
-              engine.command(s, 'p1', AttackCommand(targetId: target)) ??
+              engine.command(s, p.id, AttackCommand(targetId: target)) ??
               engine.timeout(s);
           actions++;
           if (step != null) {
@@ -252,12 +326,34 @@ class ImpactSimulator {
                 .whereType<DamageEvent>()
                 .where((e) => e.targetId.startsWith('e'))
                 .fold<int>(0, (n, e) => n + e.amount);
+            for (final ev in step.events.whereType<DamageEvent>()) {
+              final t = step.state.enemies
+                  .where((e) => e.id == ev.targetId)
+                  .firstOrNull;
+              if (t != null && t.maxHp > 0 && !ev.fromStatus) {
+                best = math.max(best, ev.amount / t.maxHp);
+              }
+            }
           }
         }
         if (step == null) break;
+        for (final ev in step.events) {
+          if (ev is EnemyUltEvent) ulted.add(ev.actorId);
+          if (ev is BreakEvent && ev.phase == BreakPhase.broken) {
+            breaks++;
+            if (bossIds.contains(ev.targetId) && !ulted.contains(ev.targetId)) {
+              early = true;
+            }
+          }
+        }
         s = step.state;
       }
+      if (bossIds.isNotEmpty) {
+        bossRuns++;
+        if (early) bossEarly++;
+      }
       actionsAll += actions;
+      bestSum += best;
       if (s.outcome?.victory ?? false) {
         wins++;
         actionsSum += actions;
@@ -271,6 +367,10 @@ class ImpactSimulator {
       avgActions: wins == 0 ? 0 : actionsSum / wins,
       avgHpLeft: wins == 0 ? 0 : hpSum / wins,
       avgDamagePerAction: actionsAll == 0 ? 0 : dmgSum / actionsAll,
+      avgBestHit: runs == 0 ? 0 : bestSum / runs,
+      avgBreaks: runs == 0 ? 0 : breaks / runs,
+      bossEarlyBreaks: bossEarly,
+      bossRuns: bossRuns,
     );
   }
 }

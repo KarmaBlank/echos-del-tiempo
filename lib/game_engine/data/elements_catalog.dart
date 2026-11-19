@@ -28,6 +28,9 @@ const _electro = GameElement.electro;
 /// la luz del paladín, y [GameElement.fisico] (neutro) para el resto; Flecha
 /// Rayo y Descarga son Electro, Marea Vital es Agua.
 const Map<String, GameElement> kSkillElement = {
+  // ---- Quebrar base (combo_balance.md § 5.1) ----
+  'quebrar': _fisico,
+  'quebrarArcano': _fisico,
   // ---- Habilidades de arma y ULT por tipo de arma ----
   'giro': _fisico, // Corte Giratorio
   'embestida': _fisico, // Embestida
@@ -249,7 +252,9 @@ GameElement enemyUltElement(EnemyUltDef u) =>
 /// Números de las reacciones (§ 2 y § 6).
 const Map<String, ReactionDef> kReactions = {
   'electrocucion': ReactionDef(kind: ReactionKind.electrocucion, damageMult: 1.5, stunTurns: 1),
-  'explosionToxica': ReactionDef(kind: ReactionKind.explosionToxica, perStack: 1.0, splash: 0.5, bossCap: 0.25),
+  // Convergencias v0.9 (combo_balance.md § 4): % de vida máx. por stack.
+  'explosionToxica': ReactionDef(kind: ReactionKind.explosionToxica, perStack: 0.025, splash: 0.3, commonCap: 0.70, eliteCap: 0.55, bossCap: 0.40),
+  'combustion': ReactionDef(kind: ReactionKind.combustion, perStack: 0.025, splash: 0.3, commonCap: 0.70, eliteCap: 0.55, bossCap: 0.40),
   'congelacionSubita': ReactionDef(kind: ReactionKind.congelacionSubita),
   'derretir': ReactionDef(kind: ReactionKind.derretir, damageMult: 1.5),
   'cortocircuito': ReactionDef(kind: ReactionKind.cortocircuito, splash: 0.5),

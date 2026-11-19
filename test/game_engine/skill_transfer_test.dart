@@ -44,7 +44,9 @@ void main() {
     test('toda habilidad de arma tiene entrega; los kits de ascensión no', () {
       final expected = {
         for (final id in kSkills.keys)
-          if (!kAscensionSkills.containsKey(id)) id,
+          if (!kAscensionSkills.containsKey(id) &&
+              !kBaseQuebrarIds.contains(id))
+            id,
       };
       expect(kSkillDelivery.keys.toSet(), expected);
       for (final id in kAscensionSkills.keys) {

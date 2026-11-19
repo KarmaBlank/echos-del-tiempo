@@ -163,7 +163,7 @@ void main() {
       // Elige la primera conocida.
       expect(find.byKey(const ValueKey('bestiary-detail-slime')), findsOneWidget);
       expect(_text('Derrotados: 5'), findsOneWidget);
-      expect(_text('Fuego ×1.25'), findsOneWidget);
+      expect(_text('Fuego ×1.5'), findsOneWidget);
       expect(_text('Masa viva'), findsNothing, reason: 'sin ambientación');
       // Una desconocida: ??? en la tarjeta y en el detalle.
       await tester.tap(find.byKey(const ValueKey('bestiary-card-bat')));

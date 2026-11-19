@@ -961,7 +961,11 @@ class TargetBar extends StatelessWidget {
     const breakColor = VisionColor(VisionSlot.breakBar);
     final hpText = '${e.hp}/${e.maxHp}';
     final breakText =
-        e.broken ? '¡ROTO!' : '${e.breakGauge.floor()}/${e.breakMax.round()}';
+        e.broken
+            ? '¡ROTO!'
+            : e.fissured
+                ? 'FISURADO'
+                : '${e.breakGauge.floor()}/${e.breakMax.round()}';
     // Jefes del Abismo: 5 cifras ("3300/10000") — la columna crece.
     final chars =
         math.max(9, math.max(hpText.length, breakText.length)).toDouble();

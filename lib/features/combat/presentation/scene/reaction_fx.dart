@@ -90,6 +90,8 @@ ReactionLook reactionLook(ReactionKind kind) {
   final color = _c(reactionHex(kind));
   final accent = kind == ReactionKind.explosionToxica
       ? statusColor(StatusKind.burn)
+      : kind == ReactionKind.combustion
+          ? statusColor(StatusKind.poison)
       : statusColor(kind.primer);
   return switch (kind) {
     ReactionKind.electrocucion ||
@@ -102,6 +104,9 @@ ReactionLook reactionLook(ReactionKind kind) {
       ReactionLook(kind, color, accent, FxElement.freeze, ring: true),
     ReactionKind.derretir =>
       ReactionLook(kind, color, accent, FxElement.burn, ring: true),
+    ReactionKind.combustion => ReactionLook(
+        kind, color, accent, FxElement.burn,
+        ring: true, bigRing: true),
   };
 }
 
