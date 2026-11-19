@@ -383,7 +383,7 @@ fuertes, de apertura o perforantes, sin `breakBonus` (las que llenan la
 barra no la cierran también). Las cargadas (`charge`) quedan afuera:
 caen el turno siguiente, cuando el Fisurado ya se recompuso.
 
-**Propuesta, falta OK del dueño:**
+**Aprobada por el dueño (v0.9.1):**
 
 | Tipo de arma | Habilidades con "Puede quebrar" |
 |---|---|
