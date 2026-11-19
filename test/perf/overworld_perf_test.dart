@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/feature_flags.dart';
 import 'package:flutter/rendering.dart' show OffsetLayer;
 import 'package:echos_del_tiempo/app/app.dart';
 import 'package:echos_del_tiempo/core/perf/frame_stats.dart';
@@ -149,6 +150,10 @@ Future<SessionController> pumpField(WidgetTester tester,
 }
 
 void main() {
+  // La party jugando solo está detrás de FeatureFlags.soloParty
+  // (apagada en la build principal desde v0.9.14).
+  setUpAll(() => FeatureFlags.instance = const FeatureFlags(soloParty: true));
+  tearDownAll(() => FeatureFlags.instance = const FeatureFlags());
   setUpAll(loadRealFonts);
 
   testWidgets('overworld: perfil de cuadros (quieto y caminando)',

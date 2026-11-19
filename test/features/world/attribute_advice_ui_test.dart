@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/feature_flags.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/build_planner/presentation/build_plan_providers.dart';
 import 'package:echos_del_tiempo/features/characters/data/account_repository.dart';
@@ -31,6 +32,10 @@ Future<void> _applyAdvice(WidgetTester tester) async {
 }
 
 void main() {
+  // La party jugando solo está detrás de FeatureFlags.soloParty
+  // (apagada en la build principal desde v0.9.14).
+  setUpAll(() => FeatureFlags.instance = const FeatureFlags(soloParty: true));
+  tearDownAll(() => FeatureFlags.instance = const FeatureFlags());
   testWidgets('ATRIBUTOS: la sugerencia se ve y APLICAR gasta los puntos',
       (tester) async {
     final start = progression

@@ -16,12 +16,20 @@ class FeatureFlags {
   /// (docs/specs/ecos_atlas.md § 8).
   final bool devTools;
 
+  /// Jugar solo con compañeros (party de personajes de la cuenta;
+  /// docs/specs/solo_party.md). Apagado en la build principal desde
+  /// v0.9.14: sin esto el título no ofrece PARTY y la sesión arranca
+  /// solo con el personaje elegido (la party guardada se ignora, no se
+  /// borra).
+  final bool soloParty;
+
   const FeatureFlags({
     this.unlockAllCharacters = false,
     this.showDebugOverlay = false,
     this.enableExperimentalFeatures = false,
     this.restrictedCharacterIds = const {},
     this.devTools = false,
+    this.soloParty = false,
   });
 
   static FeatureFlags instance = const FeatureFlags();

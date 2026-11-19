@@ -1,5 +1,31 @@
 # Spec: Party jugando solo (v0.8.1)
 
+## 0. Disponibilidad por build (v0.9.14)
+
+**Apagado en la build principal desde v0.9.14 (`FeatureFlags.soloParty`);
+se mantiene en dev.** Decisión del dueño: manejar la progresión de 4
+personajes es demasiado pesado. `main_p2p` deja el flag en `false`;
+`main_dev` lo prende.
+
+Con el flag apagado:
+
+- El título no muestra la sección PARTY ni el selector de compañeros;
+  JUGAR arranca solo con el personaje elegido. Los demás personajes de
+  la cuenta siguen existiendo y se pueden elegir para jugar.
+- `sessionControllerProvider` no recibe `PartyStore`: la sesión no
+  carga compañeros, así que no hay PARTY [P], selector de miembro
+  (Ctrl+←/→), "Dar a..." a compañeros, filtro de compañeros, opción
+  "con compañeros" en el sello del tutorial ni compañeros en ENTRENAR.
+- La party guardada en la cuenta (`party.c` / `party.auto`) **no se
+  borra ni se toca**: se ignora mientras el flag esté apagado y vuelve
+  a valer al prenderlo. Cargar una cuenta con party guardada no rompe
+  nada.
+- El motor (`game_engine/`) no cambia.
+
+Tests: `test/features/world/solo_party_ui_test.dart` (grupo "sin
+FeatureFlags.soloParty"); los tests de party existentes corren con el
+flag prendido.
+
 Pedido del dueño: "si jugás solo, que puedas tener una party, que
 decidas de cuántos". Jugando **solo** (sin sala de red) podés llevar
 de **1 a 3 compañeros**: tus **otros personajes de la cuenta**

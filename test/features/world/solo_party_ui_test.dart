@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:echos_del_tiempo/app/feature_flags.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/characters/data/account_repository.dart';
 import 'package:echos_del_tiempo/features/characters/data/account_store.dart';
@@ -87,6 +88,10 @@ Future<SessionController> _pumpSession(WidgetTester tester, AccountRepository re
 }
 
 void main() {
+  // La party jugando solo está detrás de FeatureFlags.soloParty
+  // (apagada en la build principal desde v0.9.14).
+  setUpAll(() => FeatureFlags.instance = const FeatureFlags(soloParty: true));
+  tearDownAll(() => FeatureFlags.instance = const FeatureFlags());
   testWidgets('título: PARTY tú + N, elegir y sacar compañeros', (tester) async {
     await _size(tester);
     final repo = AccountRepository(InMemoryAccountStore(_account()));
@@ -332,5 +337,61 @@ void main() {
     expect(leo2.ult, leo.ult);
     expect(leo2.defending, isFalse);
     expect(leo2.nextTurn, closeTo(before.clock + iv * 0.5, 1e-6));
+  });
+
+  group('sin FeatureFlags.soloParty (build principal, v0.9.14)', () {
+    setUp(() => FeatureFlags.instance = const FeatureFlags());
+    tearDown(
+        () => FeatureFlags.instance = const FeatureFlags(soloParty: true));
+
+    testWidgets('título: no hay sección PARTY', (tester) async {
+      await _size(tester);
+      final repo = AccountRepository(
+          InMemoryAccountStore(_account(party: ['c2'])));
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          sessionEngineProvider.overrideWithValue(sessionEngine()),
+          profileStoreProvider
+              .overrideWithValue(SelectedCharacterProfileStore(repo)),
+          accountRepositoryProvider.overrideWithValue(repo),
+          gameSpritesProvider
+              .overrideWith((ref) => Completer<GameSprites>().future),
+        ],
+        child: MaterialApp(
+          theme: RetroTheme.build(),
+          home: TitleScreen(onStart: () {}),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump();
+      expect(_hasText('PARTY'), isFalse);
+      expect(find.byKey(const ValueKey('party-pick-c2')), findsNothing);
+      expect(find.byKey(const ValueKey('party-solo-note')), findsNothing);
+      // La party guardada no se borra: solo se ignora.
+      expect(repo.current!.companions, ['c2']);
+    });
+
+    testWidgets('sesión: la party guardada se ignora, sin compañeros',
+        (tester) async {
+      final repo = AccountRepository(
+          InMemoryAccountStore(_account(party: ['c2', 'c3'])));
+      final c = await _pumpSession(
+          tester,
+          repo,
+          (view, c) => view.panel == WorldPanel.character
+              ? CharacterPanel(view: view, controller: c)
+              : const SizedBox.shrink());
+      expect(c.companionIds, isEmpty);
+      expect(c.view!.companions, isEmpty);
+      // El sello del tutorial cuenta compañeros de la sala: ninguno.
+      expect(c.view!.session.playerList.where((p) => p.isCompanion),
+          isEmpty);
+      expect(c.canEditParty, isFalse);
+      expect(c.handleKey(LogicalKeyboardKey.keyP), isFalse);
+      c.openPanel(WorldPanel.character);
+      await tester.pump();
+      expect(find.byKey(const ValueKey('party-member-bar')), findsNothing);
+      expect(repo.current!.companions, ['c2', 'c3']);
+    });
   });
 }
