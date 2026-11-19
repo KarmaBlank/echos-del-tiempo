@@ -85,8 +85,9 @@ void main() {
     // Armas: la Ígnea pide FUE 14 / DES 8; Lv3 tiene FUE 12, DES 6.
     await armas();
     expect(find.textContaining('EQUIPADA'), findsWidgets);
-    // Comparación con la equipada antes de equipar.
-    expect(find.textContaining('Comparada con Espada de Bronce'), findsOneWidget);
+    // ESTADÍSTICAS a la derecha; las acciones, en el menú.
+    expect(find.byKey(const ValueKey('inv-stats')), findsOneWidget);
+    await openInventoryActions(tester);
     expect(tester
         .widget<InventoryActionRow>(find.byKey(const ValueKey('inv-equip')))
         .entry
@@ -99,6 +100,7 @@ void main() {
     await tapVisible(tester, find.byKey(const ValueKey('inc-des')));
     await tapVisible(tester, find.byKey(const ValueKey('inc-des')));
     await armas();
+    await openInventoryActions(tester);
     expect(tester
         .widget<InventoryActionRow>(find.byKey(const ValueKey('inv-equip')))
         .entry

@@ -112,6 +112,22 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   /// Foco propio: `Esc` cancela "elige B" sin cerrar el panel.
   final _keys = FocusNode(debugLabel: 'inventory');
 
+  /// Arma bajo el mouse (o el cursor de teclado): ESTADÍSTICAS muestra
+  /// cómo cambiarían si la equiparas (v0.9.9).
+  String? _hoverUid;
+
+  /// Panel ESTADÍSTICAS: los tooltips del inventario no lo tapan.
+  final _statsKey = GlobalKey(debugLabel: 'inv-stats');
+  final _searchKey = GlobalKey(debugLabel: 'inv-search');
+
+  /// Lo que queda a la izquierda de ESTADÍSTICAS (global).
+  Rect? _tipBounds() {
+    final box = _statsKey.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return null;
+    final left = box.localToGlobal(Offset.zero).dx - 8;
+    return Rect.fromLTRB(0, 0, left, double.maxFinite / 4);
+  }
+
   /// Buscador (v0.9.7): nombre, tipo, rareza, mod, pasiva, habilidad.
   final _search = TextEditingController();
   String _query = '';
@@ -136,7 +152,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     shop.controller.markSeen([uid]);
   }
 
-  bool _matches(CellContent c) => _query.trim().isEmpty ||
+  bool _matches(CellContent c) =>
+      _query.trim().isEmpty ||
       inventoryMatches(shop.rules, _query,
           item: c.item, eco: c.eco, label: c.stack?.label);
 
@@ -171,12 +188,15 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   /// usás (§ "Comparar armas"); si no, la ficha simple.
   Widget _withTip(SessionPlayer me, SessionPlayer owner, CellContent c,
       PlayerAttributes attrs, Widget child,
-      {bool equipped = false}) {
+      {bool equipped = false, bool focused = false}) {
     final it = c.item;
     final mine = owner.id == me.id;
     final using = shop.rules.equippedItem(me.profile)?.uid;
     if (it == null) {
-      return RetroTooltip(message: _tooltip(me.profile, c, attrs), child: child);
+      return RetroTooltip(
+          message: _tooltip(me.profile, c, attrs),
+          keyboardFocus: focused,
+          child: child);
     }
     if (mine && it.uid == using) {
       // La equipada: resumen + secciones plegables (ui_style.md §
@@ -187,6 +207,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         placement: RetroTipPlacement.below,
         gap: 4,
         interactive: true,
+        keyboardFocus: focused,
         builder: (ctx) => RetroTipFolds(
             key: const ValueKey('inv-tip-folds'),
             summary: parts.summary + _fitLine(it),
@@ -204,6 +225,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         ownerName: mine ? null : owner.name);
     return RetroHoverCard(
       interactive: true,
+      keyboardFocus: focused,
       builder: (_) => fit == null
           ? card
           : Column(
@@ -336,7 +358,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       ],
     );
 
-    Widget cellAt(int i) {
+    Widget cellAt(int i, [bool focused = false]) {
       final token = layout.cells[i];
       final c = _content(p, token);
       final selected = token != null && token == _sel && _selCell == i;
@@ -370,7 +392,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                       child: NewItemTag(key: ValueKey('inv-new-$i')))),
           ]);
         }
-        w = _withTip(me, owner, c, attrs, w);
+        w = _withTip(me, owner, c, attrs, w, focused: focused);
+        if (c.item != null) w = _hoverStats(token!, w);
         if (fresh) {
           final inner = w;
           w = MouseRegion(onEnter: (_) => _seen(p, token), child: inner);
@@ -473,8 +496,11 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           children: [
             _CellButton(
                 key: const ValueKey('inv-equipped'),
+                // El menú de la EQUIPADA se abre debajo del buscador (no lo
+                // tapa).
                 onSecondaryTap: mine && eq != null && !pickMode
-                    ? (at) => _openMenu(p, me, mates, eq.uid, null, at)
+                    ? (at) => _openMenu(p, me, mates, eq.uid, null, at,
+                        avoid: _searchRect())
                     : null,
                 onTap: () {
                   if (eq == null) return;
@@ -515,6 +541,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
               'Inventario de ${protoEsc(owner.name)} (solo lectura)')),
         const SizedBox(height: 4),
         SizedBox(
+          key: _searchKey,
           width: InventoryTab.gridWidth,
           child: TextField(
             key: const ValueKey('inv-search'),
@@ -552,30 +579,35 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             columns: InventoryRules.columns,
             spacing: InventoryTab.gap,
             keyPrefix: 'inv-focus-',
-            cell: (_, i, __) => cellAt(i),
+            cell: (_, i, focused) => cellAt(i, focused),
             onFocusCell: (i) {
               final t = layout.cells[i];
               if (pickMode) return;
+              if (_hoverUid != t) setState(() => _hoverUid = t);
               if (_moveFrom == null && !_picking && t != null) _select(t, i);
             },
             // ELEGIR A MANO: Enter / Espacio marcan o desmarcan.
             onActivate: (i) => pickMode
                 ? togglePick(layout.cells[i])
-                : _activateCell(
-                p, layout.cells[i], i, mine, owner.id, cellTap: () {
-              final c = _content(p, layout.cells[i]);
-              if (_pickB(owner.id, layout.cells[i], c)) return;
-              final from = _moveFrom;
-              if (mine && from != null) {
-                setState(() => _moveFrom = null);
-                if (from != i) {
-                  shop.controller.moveInventory(from, i);
-                  _selCell = i;
-                }
-                return;
-              }
-              if (layout.cells[i] case final t?) _select(t, i);
-            }),
+                : _activateCell(p, layout.cells[i], i, mine, owner.id,
+                    cellTap: () {
+                    final c = _content(p, layout.cells[i]);
+                    if (_pickB(owner.id, layout.cells[i], c)) return;
+                    final from = _moveFrom;
+                    if (mine && from != null) {
+                      setState(() => _moveFrom = null);
+                      if (from != i) {
+                        shop.controller.moveInventory(from, i);
+                        _selCell = i;
+                      }
+                      return;
+                    }
+                    if (layout.cells[i] case final t?) _select(t, i);
+                  }, openMenu: () {
+                    if (layout.cells[i] case final t?) {
+                      _openMenuAtFocus(p, me, mates, t, i);
+                    }
+                  }),
           )),
         ),
         const SizedBox(height: 8),
@@ -590,6 +622,11 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           onSelect: pickMode || _picking || _moveFrom != null
               ? null
               : (t) => _select(t, null),
+          onMenu: !mine || pickMode || _picking || _moveFrom != null
+              ? null
+              : (t, at) => at == null
+                  ? _openMenuAtFocus(p, me, mates, t, null)
+                  : _openMenu(p, me, mates, t, null, at),
         ),
         const SizedBox(height: 6),
         ProtoText(
@@ -597,6 +634,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             'Casillas ${InventoryRules.cellsUsed(p)}/${InventoryRules.cells}'
             '${mine ? ' · <b>₵${p.credits}</b>' : ''}'
             '${layout.overflow.isEmpty ? '' : ' · ${protoColor(ProtoColors.orange, '${layout.overflow.length} sin lugar')}'}'),
+        if (mine && sel != null && _sel != null)
+          if (_selectionBar(p, me, mates, sel) case final bar?) bar,
         if (mine) ...[
           const SizedBox(height: 6),
           PanelButton('LIMPIAR INVENTARIO...',
@@ -652,27 +691,25 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     return Focus(
       focusNode: _keys,
       onKeyEvent: _onKey,
-      child: PanelSplit(
-        listWidth: InventoryTab.gridWidth + 4,
-        scaleList: false,
-        list: [left],
-        detail: PanelDetail(
-          footer: [
-            const KeyHints(confirm: 'Elegir / equipar', back: 'Cerrar'),
-            if (!mine) ...[
-              const Text('Solo lectura',
-                  style: TextStyle(color: ProtoColors.dim)),
-              if (compareButton != null) compareButton,
+      child: RetroTipArea(
+        bounds: _tipBounds,
+        child: PanelSplit(
+          listWidth: InventoryTab.gridWidth + 4,
+          scaleList: false,
+          list: [left],
+          detail: PanelDetail(
+            footer: [
+              const KeyHints(confirm: 'Elegir / acciones', back: 'Cerrar'),
+              if (!mine) ...[
+                const Text('Solo lectura',
+                    style: TextStyle(color: ProtoColors.dim)),
+                if (compareButton != null) compareButton,
+              ],
             ],
-          ],
-          children: sel == null
-              ? [
-                  Text(retroText('Elige una casilla.'),
-                      style: const TextStyle(color: ProtoColors.dim)),
-                ]
-              : _withActions(_detail(p, me.profile, sel, attrs, mine),
-                  mine ? _actionsSection(p, me, mates, sel) : null,
-                  item: sel.item != null),
+            children: [
+              KeyedSubtree(key: _statsKey, child: _statsPanel(me, attrs)),
+            ],
+          ),
         ),
       ),
     );
@@ -710,8 +747,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       decoration: BoxDecoration(
         color: ProtoColors.bg,
         border: Border.all(
-            color: ProtoColors.buttonBorder,
-            width: RetroTheme.thinBorderWidth),
+            color: ProtoColors.buttonBorder, width: RetroTheme.thinBorderWidth),
       ),
       child: InventoryActionList(keyPrefix: 'inv-', entries: [
         InventoryMenuEntry(
@@ -832,137 +868,112 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     );
   }
 
-  /// Las acciones van antes de la ficha (se ven sin bajar).
-  List<Widget> _withActions(List<Widget> detail, Widget? actions,
-      {required bool item}) {
-    if (actions == null) return detail;
-    if (!item || detail.isEmpty) return [...detail, actions];
-    return [...detail.take(detail.length - 1), actions, detail.last];
-  }
-
   /// Enter sobre una casilla de la grilla: en MOVER / "elige B" es el
-  /// clic; sobre el arma ya elegida la equipa si se puede; si no, la
-  /// elige.
+  /// clic; sobre la casilla ya elegida abre el menú de acciones (v0.9.9;
+  /// Enter otra vez sobre "Equipar" la equipa); si no, la elige.
   void _activateCell(
       PlayerProfile p, String? token, int i, bool mine, String owner,
-      {required VoidCallback cellTap}) {
-    final it = token == null ? null : p.itemByUid(token);
+      {required VoidCallback cellTap, required VoidCallback openMenu}) {
     if (mine &&
         _moveFrom == null &&
         !_picking &&
-        it != null &&
-        token == _sel &&
-        it.uid != p.equippedUid &&
-        shop.guards.equip(p, it.uid, pending: widget.pending) == null) {
-      shop.controller.equip(it.uid);
+        token != null &&
+        token == _sel) {
+      openMenu();
       return;
     }
     cellTap();
   }
 
-  List<Widget> _detail(PlayerProfile p, PlayerProfile viewer, CellContent c,
-      PlayerAttributes attrs, bool mine) {
-    final it = c.item;
-    final eco = c.eco;
-    if (eco != null) {
-      return [
-        SectionPanel(
-          icon: PixelIconKind.gem,
-          title: 'ECO',
-          subtitle: 'ábrelo en el Portal del Eco',
-          children: [
-            ProtoText(key: const ValueKey('inv-eco-detail'), _ecoTip(eco)),
-          ],
-        ),
-      ];
-    }
-    if (it == null) {
-      return [
-        SectionPanel(
-          icon: PixelIconKind.shard,
-          title: 'OBJETO',
-          children: [ProtoText(stackTooltipMarkup(c.stack!, c.count))],
-        ),
-      ];
-    }
-    final equipped = it.uid == p.equippedUid;
-    final rules = shop.rules;
-    final eq = rules.equippedItem(viewer);
-    return [
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: ProtoText(
-                key: const ValueKey('inv-detail-title'),
-                '${itemNameMarkup(rules, it)}'
-                '${equipped ? ' ${protoColor(ProtoColors.gold, 'EQUIPADA')}' : ''}'),
-          ),
-          BuildFitBadge(item: it, compact: false),
-        ],
-      ),
-      const SizedBox(height: 4),
-      if (!equipped || !mine)
-        SectionPanel(
-          icon: PixelIconKind.arrowIn,
-          title: 'SI LA EQUIPAS',
-          children: [
-            StatsCompare(
-              title: 'Comparada con '
-                  '${eq == null ? '-' : protoEsc(rules.items.displayName(eq))}',
-              before: shop.preview.current(viewer, attributes: attrs),
-              after: shop.preview.withItem(viewer, it, attributes: attrs),
-            ),
-          ],
-        ),
-      SectionPanel(
-        icon: PixelIconKind.sword,
-        title: 'FICHA',
-        children: [
-          ItemCard(
-            rules: rules,
-            item: it,
-            level: viewer.level,
-            attributes: attrs,
-            stats: shop.preview.withItem(viewer, it, attributes: attrs),
-            equipped: equipped,
-          ),
-          if (buildFitMarkup(_fit(it)) case final fit?)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: ProtoText(fit, key: const ValueKey('inv-build-fit')),
-            ),
-        ],
-      ),
-    ];
-  }
-
-  /// Sección ACCIONES del detalle: una tarjeta por acción (con su costo o
-  /// lo que recibes, o el motivo completo si no se puede) o, si hay una
-  /// confirmación abierta, la pregunta con CANCELAR y el botón rojo.
-  Widget _actionsSection(PlayerProfile p, SessionPlayer me,
+  /// Debajo de la grilla (v0.9.9): la cantidad de una pila elegida y,
+  /// con una confirmación abierta (TIRAR, VENDER, DESARMAR), la pregunta
+  /// con CANCELAR y el botón rojo. Nada si no hace falta.
+  Widget? _selectionBar(PlayerProfile p, SessionPlayer me,
       List<SessionPlayer> mates, CellContent c) {
     final confirming =
         _confirmDrop || (_confirmCraft != null && c.item != null);
     final list = _actions(p, me, mates, c);
-    return SectionPanel(
-      icon: confirming ? PixelIconKind.lock : PixelIconKind.check,
-      color: confirming ? ProtoColors.red : ProtoColors.gold,
-      title: confirming ? 'CONFIRMAR' : 'ACCIONES',
-      subtitle: confirming ? null : 'o clic derecho en la casilla',
-      children: confirming
-          ? [
-              list.first,
-              const SizedBox(height: 6),
-              Wrap(
-                alignment: WrapAlignment.end,
-                spacing: 8,
-                runSpacing: 8,
-                children: list.skip(1).toList(),
-              ),
-            ]
-          : list,
+    if (list.isEmpty) return null;
+    if (!confirming) {
+      return Padding(padding: const EdgeInsets.only(top: 6), child: list.first);
+    }
+    return SizedBox(
+      width: InventoryTab.gridWidth,
+      child: SectionPanel(
+        key: const ValueKey('inv-confirm'),
+        icon: PixelIconKind.lock,
+        color: ProtoColors.red,
+        title: 'CONFIRMAR',
+        children: [
+          list.first,
+          const SizedBox(height: 6),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 8,
+            children: list.skip(1).toList(),
+          ),
+        ],
+      ),
     );
+  }
+
+  /// Marca el arma bajo el mouse para ESTADÍSTICAS.
+  Widget _hoverStats(String uid, Widget child) => MouseRegion(
+        onEnter: (_) {
+          if (_hoverUid != uid) setState(() => _hoverUid = uid);
+        },
+        onExit: (_) {
+          if (_hoverUid == uid) setState(() => _hoverUid = null);
+        },
+        child: child,
+      );
+
+  /// ESTADÍSTICAS del personaje, siempre a la vista (v0.9.9): las de
+  /// ATRIBUTOS › VISTA PREVIA; con el mouse sobre un arma que no está
+  /// equipada, al lado de cada una cómo cambiaría si la equiparas.
+  Widget _statsPanel(SessionPlayer me, PlayerAttributes attrs) {
+    final viewer = me.profile;
+    final rules = shop.rules;
+    final now = shop.preview.current(viewer, attributes: attrs);
+    final eq = rules.equippedItem(viewer);
+    final hoverUid = _hoverUid;
+    final owner = shop.view.session.players[_owner] ?? me;
+    final hover = hoverUid == null ? null : owner.profile.itemByUid(hoverUid);
+    final cmp = hover != null && hover.uid != eq?.uid ? hover : null;
+    final next = cmp == null
+        ? now
+        : shop.preview.withItem(viewer, cmp, attributes: attrs);
+    double weightOf(ItemInstance? it) =>
+        it == null ? 0 : rules.items.baseOf(it)?.weight ?? 0;
+    return SectionPanel(
+      key: const ValueKey('inv-stats'),
+      icon: PixelIconKind.arrowIn,
+      title: 'ESTADÍSTICAS',
+      subtitle:
+          cmp == null ? null : 'si equipas ${rules.items.displayName(cmp)}',
+      children: [
+        CharacterStatRows(
+            now: now,
+            next: next,
+            weight: weightOf(eq),
+            nextWeight: cmp == null ? null : weightOf(cmp)),
+      ],
+    );
+  }
+
+  /// Abre el menú de acciones junto a la casilla con el cursor de
+  /// teclado (Enter sobre la casilla ya elegida).
+  void _openMenuAtFocus(PlayerProfile p, SessionPlayer me,
+      List<SessionPlayer> mates, String token, int? cell) {
+    final box = FocusManager.instance.primaryFocus?.context?.findRenderObject();
+    final at = box is RenderBox && box.hasSize
+        ? box.localToGlobal(Offset(box.size.width, 0))
+        : (context.findRenderObject() as RenderBox?)
+                ?.localToGlobal(Offset.zero)
+                .translate(40, 40) ??
+            Offset.zero;
+    _openMenu(p, me, mates, token, cell, at);
   }
 
   List<Widget> _actions(PlayerProfile p, SessionPlayer me,
@@ -1021,32 +1032,27 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     }
     return [
       if (it == null && c.eco == null && c.count > 1)
-        Padding(
-          padding: const EdgeInsets.only(bottom: 6),
-          child: Row(
-            children: [
-              Text(retroText('Cantidad'),
-                  style: const TextStyle(color: ProtoColors.sky)),
-              const SizedBox(width: 8),
-              PanelButton('-',
-                  key: const ValueKey('inv-count-dec'),
-                  onPressed: count > 1
-                      ? () => setState(() => _count = count - 1)
-                      : null),
-              const SizedBox(width: 6),
-              Text('x$count', key: const ValueKey('inv-count')),
-              const SizedBox(width: 6),
-              PanelButton('+',
-                  key: const ValueKey('inv-count-inc'),
-                  onPressed: count < c.count
-                      ? () => setState(() => _count = count + 1)
-                      : null),
-            ],
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(retroText('Cantidad'),
+                style: const TextStyle(color: ProtoColors.sky)),
+            const SizedBox(width: 8),
+            PanelButton('-',
+                key: const ValueKey('inv-count-dec'),
+                onPressed: count > 1
+                    ? () => setState(() => _count = count - 1)
+                    : null),
+            const SizedBox(width: 6),
+            Text('x$count', key: const ValueKey('inv-count')),
+            const SizedBox(width: 6),
+            PanelButton('+',
+                key: const ValueKey('inv-count-inc'),
+                onPressed: count < c.count
+                    ? () => setState(() => _count = count + 1)
+                    : null),
+          ],
         ),
-      InventoryActionList(
-          key: const ValueKey('inv-actions'),
-          entries: _menuEntries(p, me, mates, c)),
     ];
   }
 
@@ -1062,6 +1068,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final count = it == null ? _count.clamp(1, c.count) : 1;
     String? why(InventoryMenuAction a, String? r) =>
         r == null ? null : inventoryReasonLine(a, r);
+    String? short(InventoryMenuAction a, String? r) =>
+        r == null ? null : inventoryReasonShort(a, r);
     InventoryMenuEntry craft(ItemInstance it, CraftOp op) {
       final act = CraftAction(op, it.uid);
       final sell = op == CraftOp.sell;
@@ -1071,21 +1079,20 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           credits: r.gainedCredits,
           materials: r.gainedMaterials,
           chances: r.outcomes);
+      final why2 = g.craft(p, act);
       return InventoryMenuEntry(
         id: sell ? 'sell' : 'salvage',
-        label: sell
-            ? 'Vender ₵${shop.rules.crafting.sellPrice(it)}'
-            : ma.label,
+        shortReason: short(ma, why2),
+        label: sell ? 'Vender ₵${shop.rules.crafting.sellPrice(it)}' : ma.label,
         note: 'Recibís $gains',
         color: ProtoColors.orange,
-        reason: why(ma, g.craft(p, act)),
+        reason: why(ma, why2),
         onTap: () => setState(() => _confirmCraft = op),
       );
     }
 
-    final eqReason = it == null
-        ? null
-        : g.equip(p, it.uid, pending: widget.pending);
+    final eqReason =
+        it == null ? null : g.equip(p, it.uid, pending: widget.pending);
     return [
       if (it != null)
         InventoryMenuEntry(
@@ -1093,6 +1100,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           label: InventoryMenuAction.equip.label,
           color: ProtoColors.green,
           reason: why(InventoryMenuAction.equip, eqReason),
+          shortReason: short(InventoryMenuAction.equip, eqReason),
           onTap: () => shop.controller.equip(it.uid),
         ),
       if (it != null && !_picking)
@@ -1103,23 +1111,34 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           onTap: () => _startCompare(WeaponRef(me.id, token)),
         ),
       if (it != null || c.eco != null)
-      InventoryMenuEntry(
-        id: 'move',
-        label: InventoryMenuAction.move.label,
-        note: 'elegí la casilla destino (o arrastrá)',
-        reason: _selCell == null
-            ? (it != null && it.uid == p.equippedUid
-                ? 'Está en su ranura de equipada'
-                : 'Va en su sección fija')
-            : null,
-        onTap: () => setState(() => _moveFrom = _selCell),
-      ),
+        InventoryMenuEntry(
+          id: 'move',
+          label: InventoryMenuAction.move.label,
+          note: 'o arrastrá',
+          reason: _selCell == null
+              ? (it != null && it.uid == p.equippedUid
+                  ? 'Está en su ranura de equipada'
+                  : 'Va en su sección fija')
+              : null,
+          shortReason: _selCell == null
+              ? (it != null && it.uid == p.equippedUid
+                  ? 'equipada'
+                  : 'lugar fijo')
+              : null,
+          onTap: () => setState(() => _moveFrom = _selCell),
+        ),
       if (mates.isEmpty)
         InventoryMenuEntry(
           id: 'give',
           label: InventoryMenuAction.give.label,
-          reason: why(InventoryMenuAction.give,
-              g.give(p, token, null, count: count) ?? 'No hay compañeros en la sala'),
+          reason: why(
+              InventoryMenuAction.give,
+              g.give(p, token, null, count: count) ??
+                  'No hay compañeros en la sala'),
+          shortReason: short(
+              InventoryMenuAction.give,
+              g.give(p, token, null, count: count) ??
+                  'No hay compañeros en la sala'),
         )
       else
         for (final m in mates)
@@ -1127,8 +1146,10 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             id: 'give-${m.id}',
             label: 'Dar a ${m.name}',
             color: ProtoColors.sky,
-            reason: why(InventoryMenuAction.give,
-                g.give(p, token, m, count: count)),
+            reason: why(
+                InventoryMenuAction.give, g.give(p, token, m, count: count)),
+            shortReason: short(
+                InventoryMenuAction.give, g.give(p, token, m, count: count)),
             onTap: () => shop.controller.give(m.id, token, count: count),
           ),
       InventoryMenuEntry(
@@ -1137,6 +1158,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         note: 'queda en el piso',
         color: ProtoColors.orange,
         reason: why(InventoryMenuAction.drop,
+            g.drop(p, token, count: count, alive: me.alive)),
+        shortReason: short(InventoryMenuAction.drop,
             g.drop(p, token, count: count, alive: me.alive)),
         // Ajuste CONFIRMAR AL TIRAR (docs/specs/settings.md § "JUEGO").
         onTap: () => ref.read(gameSettingsProvider).confirmDrop
@@ -1152,8 +1175,16 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
 
   /// Clic derecho sobre una casilla: la elige y abre el menú de acciones
   /// donde está el mouse.
+  /// Rect global del buscador (el menú de la EQUIPADA no lo tapa).
+  Rect? _searchRect() {
+    final box = _searchKey.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return null;
+    return box.localToGlobal(Offset.zero) & box.size;
+  }
+
   void _openMenu(PlayerProfile p, SessionPlayer me, List<SessionPlayer> mates,
-      String token, int? cell, Offset at) {
+      String token, int? cell, Offset at,
+      {Rect? avoid}) {
     _select(token, cell);
     final c = _content(p, token);
     if (c == null) return;
@@ -1163,14 +1194,17 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             ? protoEsc(shop.rules.ecos.fullName(c.eco!))
             : protoEsc(c.stack!.label);
     InventoryContextMenu.show(context, at,
-        title: title, entries: _menuEntries(p, me, mates, c));
+        title: title, entries: _menuEntries(p, me, mates, c), avoid: avoid);
   }
 }
 
 /// Casilla clicable con foco de teclado (Enter / Espacio la activan).
 class _CellButton extends StatelessWidget {
   const _CellButton(
-      {super.key, required this.onTap, required this.child, this.onSecondaryTap});
+      {super.key,
+      required this.onTap,
+      required this.child,
+      this.onSecondaryTap});
 
   final VoidCallback onTap;
   final ValueChanged<Offset>? onSecondaryTap;

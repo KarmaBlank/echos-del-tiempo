@@ -553,9 +553,22 @@ casilla y como ficha en los detalles:
 ## Inventario (pestaña INVENTARIO del personaje, tecla I)
 
 Reemplaza a la pestaña ARMAS (equipar y comparar están acá). Línea "qué
-hace": `Arrastra para mover · clic para ver · EQUIPAR, DAR A, TIRAR,
-DESARMAR (materiales) o VENDER (créditos). ORDENAR · LIMPIAR
-INVENTARIO: por rareza o elegidas a mano.` (v0.5.1)
+hace": `Arrastra para mover · clic para ver · clic derecho (o Enter):
+acciones. ORDENAR · LIMPIAR INVENTARIO: por rareza o elegidas a mano.`
+(v0.9.9).
+
+**Panel derecho (v0.9.9): solo `ESTADÍSTICAS`** (`inv-stats`). Ya no
+hay sección ACCIONES ni FICHA: la ficha del objeto es su tooltip y las
+acciones van en el menú contextual. ESTADÍSTICAS usa las mismas filas
+que ATRIBUTOS › VISTA PREVIA (`CharacterStatRows`: HP, MP, VEL con la
+fórmula y el peso del arma, ATQ, MAG, DEF con % de daño, CRÍT), siempre
+a la vista y sin párrafos. Con el mouse (o el cursor de teclado) sobre
+un arma que no es la equipada (tuya o de un compañero), el subtítulo
+dice `si equipas <nombre>` y cada fila muestra `antes → después` en
+verde si sube y en rojo si baja (`StatChange`), y el peso `a → b`; al
+salir vuelve a los valores actuales y al equipar se actualiza. Abajo
+del panel quedan las teclas (`Enter Elegir / acciones · Esc Cerrar`) y,
+en el inventario de un compañero, `Solo lectura` y `COMPARAR`.
 
 - Arriba de la grilla, pestañas de dueño (`inv-owner-<id>`): `TÚ` y una
   por compañero de sala (solo lectura: `Inventario de <nombre> (solo
@@ -573,9 +586,10 @@ INVENTARIO: por rareza o elegidas a mano.` (v0.5.1)
   `MATERIALES` (Esquirla, Cristal, Prisma, Ancla), cada una con su
   cantidad (en 0: atenuada, no se elige). Clave `inv-stack-<token>`
   (`inv-stack-pot`, `inv-stack-mat:cristal`). Clic, o el cursor con las
-  flechas, la elige y el detalle muestra la ficha y las acciones de
-  siempre (cantidad, DAR A, TIRAR); `Enter` / `Espacio` también la
-  eligen. Las flechas pasan de la grilla a las secciones (abajo) y entre
+  flechas, la elige; clic derecho (o `Enter` sobre la ya elegida) abre
+  el menú de acciones (DAR A, TIRAR). Con una pila de más de 1 elegida,
+  debajo de la grilla aparece la cantidad (`inv-count-dec` /
+  `inv-count-inc`, 1..N) para dar o tirar. Las flechas pasan de la grilla a las secciones (abajo) y entre
   las dos filas. No se mueven ni se ordenan (lugar fijo). En el alijo
   (`stash_screen.dart`) la misma fila de MATERIALES está debajo de la
   grilla del personaje para guardarlos.
@@ -598,32 +612,41 @@ INVENTARIO: por rareza o elegidas a mano.` (v0.5.1)
   intercambia), o elegirla, `MOVER` (`inv-move`) y clic en la casilla
   destino (la línea de ayuda dice `Elige la casilla destino`;
   `CANCELAR` lo anula).
-- **Acciones (v0.9.7)**: ya no hay tarjetas gigantes. Clic derecho en
-  una casilla (o en la EQUIPADA) la elige y abre un **menú contextual**
-  donde está el mouse (`inv-ctx-menu`, filas `inv-ctx-<acción>`; `Esc`
-  o clic afuera lo cierran). Con clic izquierdo, la misma lista va en la
-  sección ACCIONES del detalle (`inv-actions`, filas `inv-<acción>`).
-  Orden: Equipar, Comparar, Mover, Dar a <nombre> (una por compañero;
-  sin compañeros `Dar a...`), Tirar, Desarmar, Vender ₵N (con
-  `Recibís ...`). Una línea por acción; las que no se pueden, en gris
-  con el motivo en una línea (`inventoryReasonLine`): `No podés
-  desarmar el arma equipada`, `No podés dársela a otro jugador: está
-  equipada`, `No podés tirar tu última arma inicial`, `No podés
-  equiparla. Requisitos: ESP 14`; los motivos de contexto (`No en
-  batalla`, `No hay compañeros en la sala`) van como vienen. Las pilas
-  no tienen Mover (lugar fijo). Las confirmaciones (tirar, desarmar,
-  vender) siguen en el detalle como abajo. `inventory_action_menu.dart`.
-- **Detalle** (derecha): ficha del objeto y, si es un arma propia no
-  equipada, `Comparada con <equipada>` (ATQ / MAG / VEL / CRÍT / DEF,
-  `StatChange`). Acciones: `EQUIPAR` (`inv-equip`, motivos de la tabla),
-  `TIRAR` (`inv-drop`) que pide confirmación (`inv-drop-confirm`:
-  `¿Tirar X al piso? Lo puede levantar cualquiera.`), y `DAR A <nombre>`
-  (`inv-give-<id>`) por compañero, o `DAR A...` deshabilitado con el
-  motivo. Las pilas tienen cantidad (`inv-count-dec` / `inv-count-inc`,
-  1..N) para dar o tirar.
+- **Menú de acciones (v0.9.9, `inventory_action_menu.dart`)**: el único
+  lugar de las acciones. Clic derecho en una casilla propia (grilla,
+  EQUIPADA o pila) la elige y abre el menú junto al cursor
+  (`inv-ctx-menu`); con el teclado, `Enter` sobre la casilla ya elegida
+  lo abre junto a ella y el cursor arranca en la primera acción
+  disponible (`Enter` otra vez sobre Equipar la equipa). `Esc`, clic
+  afuera o elegir una acción lo cierran. Al abrirse cierra el tooltip y,
+  mientras está abierto, no se abre ninguno (nunca los dos a la vez;
+  `RetroHoverCard.suppressed`). Caja compacta: título (nombre del
+  objeto) y **una línea por acción** (`inv-<acción>`: `inv-equip`,
+  `inv-compare`, `inv-move`, `inv-give` / `inv-give-<id>`, `inv-drop`,
+  `inv-salvage`, `inv-sell`), ancho ajustado al contenido (máx. 360 px),
+  sin salirse de la pantalla: si no entra abajo se abre hacia arriba y
+  si no entra a la derecha, hacia la izquierda. El de la EQUIPADA no tapa el
+  buscador: se abre debajo de él (si no entra, a su derecha). Los
+  tooltips del inventario se abren solo en la zona a la izquierda de
+  ESTADÍSTICAS (`RetroTipArea`; la ficha comparada se achica para
+  entrar), así nunca tapan el panel que se mira al pasar el mouse. Orden: Equipar, Comparar,
+  Mover (`· o arrastrá`), Dar a <nombre> (una por compañero; sin
+  compañeros `Dar a...`), Tirar (`· queda en el piso`), Desarmar, Vender
+  ₵N (con `· Recibís ...`). Las que no se pueden, en gris con el
+  **motivo corto en la misma línea** y atenuado (`inventoryReasonShort`):
+  `Tirar · equipada`, `Dar a... · sin compañeros`, `Equipar · ya
+  equipada`, `Vender ₵N · arma inicial`, `Equipar · Requisitos: ESP 14`;
+  el motivo completo (`inventoryReasonLine`: `No podés desarmar el arma
+  equipada`, `No podés dársela a otro jugador: está equipada`...) va en
+  el tooltip de la fila. Las pilas no tienen Mover (lugar fijo). En el
+  inventario de un compañero no hay menú.
+- **Confirmaciones** (debajo de la grilla, `inv-confirm`): TIRAR (si
+  CONFIRMAR AL TIRAR está en SÍ) muestra `¿Tirar X al piso? Lo puede
+  levantar cualquiera.` (`inv-drop-question`) con `CANCELAR`
+  (`inv-drop-cancel`) y `TIRAR` rojo (`inv-drop-confirm`).
 - **DESARMAR / VENDER** (v0.2.0, loot.md § 21) en las armas:
   `DESARMAR` (`inv-salvage`) y `VENDER $N` (`inv-sell`, con el precio)
-  piden confirmación en la misma fila (`inv-craft-question`: `¿Desarmar
+  piden confirmación debajo de la grilla (`inv-craft-question`: `¿Desarmar
   X? Recibes +2 Cristal de Era (puede salir: 35% de +1 Prisma Roto). El
   arma se destruye.` / `¿Vender X? Recibes +$N...`, más lo que se pierde
   por el tope de 99), `CANCELAR` (`inv-craft-cancel`) y el botón rojo
@@ -1009,17 +1032,11 @@ cortado, y todo usable con teclado. Piezas en `lib/app/widgets/`
   línea violeta si sube la pasiva y el pie `CostChip` `+1 · $N` (o `MAX`,
   o candado + motivo, p. ej. `Tope de forja (3)`). Clic / `Enter` = +1.
   Grilla de 3 columnas a 1280 en Normal.
-- **Inventario (detalle)**: título (`inv-detail-title`) con `EQUIPADA` y
-  `BuildFitBadge`; secciones `SI LA EQUIPAS`, **`ACCIONES`** (antes de la
-  ficha: se ven sin bajar) y `FICHA` (con los chips de habilidades). Cada
-  acción es una `ActionCard` con su clave de siempre (`inv-equip`,
-  `inv-compare`, `inv-move`, `inv-give[-<id>]`, `inv-drop`,
-  `inv-salvage`, `inv-sell`): qué hace en una línea y el pie con
-  `Gratis`, `Recibes +2 Cristal de Era...` / `Recibes +$N`, o el motivo
-  entero. Las pilas: `Cantidad - xN +`. Las confirmaciones (tirar,
-  desarmar, vender) reemplazan la sección por `CONFIRMAR` en rojo con la
-  pregunta, `CANCELAR` y el botón rojo. Ecos y pilas: sección `ECO` /
-  `OBJETO`. La grilla y LIMPIAR INVENTARIO no cambian (salvo el teclado).
+- **Inventario (derecha)**: desde v0.9.9 solo `ESTADÍSTICAS` (ver §
+  "Inventario"); la ficha (con habilidades, pasiva, mods, peso y forja,
+  plegadas) es el tooltip de la casilla y las acciones, el menú
+  contextual. Las confirmaciones (`CONFIRMAR` en rojo) y la cantidad de
+  una pila van debajo de la grilla.
 - **ATRIBUTOS**: sección `ATRIBUTOS · Puntos libres: N` con una tarjeta
   por atributo (`attr-row-<attr>`: sigla, nombre, valor `+n`, `★ n/meta`
   del plan, `-` / `+` y qué hace, entero, debajo; borde verde si tiene
@@ -1073,9 +1090,11 @@ es la de CONTROLES › MENÚS):
   hay que repartir), inventario y alijo.
 - **Grillas** (`FocusGrid`: inventario `inv-focus-<i>`, alijo): las
   flechas mueven el cursor casilla por casilla (en el borde salen de la
-  grilla) y en el inventario **eligen** la casilla (su ficha); `Enter`
-  sobre el arma ya elegida la **equipa** si se puede (si no, la elige);
-  en MOVER / "elige B" `Enter` es el clic. Clic también mueve el cursor.
+  grilla) y en el inventario **eligen** la casilla y muestran su
+  tooltip (`RetroHoverCard.keyboardFocus`; abierto por teclado no toma
+  el mouse); `Enter` sobre la casilla ya elegida abre el **menú de
+  acciones** (v0.9.9; `Enter` en Equipar la equipa); en MOVER / "elige
+  B" `Enter` es el clic. Clic también mueve el cursor.
 - Con un campo de texto enfocado nada de esto toca las teclas (en el
   título, `Esc` sale del campo). La batalla tiene su propio teclado
   (sin cambios).

@@ -24,6 +24,7 @@ import 'package:echos_del_tiempo/game_engine/models/upgrade_stat.dart';
 import 'package:echos_del_tiempo/game_engine/rules/inventory_rules.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:echos_del_tiempo/app/theme/retro_hover_card.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -149,12 +150,11 @@ void main() {
     PlayerProfile me() => c.view!.me!.profile;
     final cells = InventoryRules.layout(me()).cells;
     expect(_focusedKey(), 'inv-focus-0');
-    // Flecha a la derecha: la casilla 1 queda elegida (su ficha).
+    // Flecha a la derecha: la casilla 1 queda elegida y muestra su
+    // tooltip (v0.9.9: no hay ficha a la derecha).
     await _key(tester, LogicalKeyboardKey.arrowRight);
     expect(_focusedKey(), 'inv-focus-1');
-    final uid = cells[1]!;
-    expect(plain(tester, 'inv-detail-title'),
-        contains(progression.items.displayName(me().itemByUid(uid)!)));
+    expect(RetroHoverCard.anyShowing, isTrue);
     // Abajo y vuelta arriba.
     await _key(tester, LogicalKeyboardKey.arrowDown);
     expect(_focusedKey(), 'inv-focus-${1 + InventoryRules.columns}');
@@ -171,6 +171,11 @@ void main() {
     await _key(tester, LogicalKeyboardKey.arrowLeft);
     await _key(tester, LogicalKeyboardKey.arrowRight, times: ok);
     expect(_focusedKey(), 'inv-focus-$ok');
+    // Enter sobre la elegida abre el menú; Enter otra vez (en Equipar)
+    // la equipa.
+    await _key(tester, LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('inv-ctx-menu')), findsOneWidget);
     await _key(tester, LogicalKeyboardKey.enter);
     expect(me().equippedUid, cells[ok]);
   });

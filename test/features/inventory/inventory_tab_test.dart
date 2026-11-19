@@ -44,13 +44,16 @@ void main() {
     }
     // 5 armas (v0.5.1: las pilas van en CONSUMIBLES / MATERIALES).
     expect(plain(tester, 'inv-summary'), contains('Casillas 5/40'));
-    // Elegir el Épico muestra su ficha y la comparación.
+    // v0.9.9: a la derecha solo ESTADÍSTICAS (la ficha es el tooltip).
     await _tap(tester, 'inv-cell-${cellOf(p, 'e1')}');
-    expect(find.textContaining('Filo del Alba'), findsWidgets);
-    expect(find.textContaining('Comparada con Espada de Bronce'), findsOneWidget);
-    // Una pila: cantidad en la casilla y en la ficha.
-    await _tap(tester, 'inv-stack-mat:esquirla');
-    expect(find.textContaining('Esquirla del Eco x2'), findsOneWidget);
+    expect(find.byKey(const ValueKey('inv-stats')), findsOneWidget);
+    expect(find.text('FICHA'), findsNothing);
+    // Una pila: cantidad en la casilla.
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('inv-stack-mat:esquirla')),
+            matching: find.text('2')),
+        findsOneWidget);
   });
 
   testWidgets('mover: con MOVER y arrastrando', (tester) async {
@@ -84,11 +87,14 @@ void main() {
     final c = await _inventory(tester, lootWarrior());
     PlayerProfile me() => c.view!.me!.profile;
     await _tap(tester, 'inv-cell-${cellOf(me(), 'c1')}');
+    await openInventoryActions(tester);
     expect(button(tester, 'inv-equip').reason,
         'No podés equiparla. Requisitos: ESP 14');
+    await openInventoryActions(tester);
     expect(plain(tester, 'inv-equip'), contains('Requisitos: ESP 14'));
     // El Épico (Nv 2, FUE 14, DES 8) sí.
     await _tap(tester, 'inv-cell-${cellOf(me(), 'e1')}');
+    await openInventoryActions(tester);
     expect(button(tester, 'inv-equip').reason, isNull);
     await _tap(tester, 'inv-equip');
     expect(me().equippedUid, 'e1');
@@ -101,6 +107,7 @@ void main() {
     final c = await _inventory(tester, low);
     PlayerProfile me() => c.view!.me!.profile;
     await _tap(tester, 'inv-cell-${cellOf(me(), 'c1')}');
+    await openInventoryActions(tester);
     expect(button(tester, 'inv-equip').reason, isNull);
     await _tap(tester, 'inv-equip');
     expect(me().equippedUid, 'c1', reason: 'un guerrero equipa un báculo');
@@ -126,6 +133,7 @@ void main() {
     PlayerProfile me() => c.view!.me!.profile;
     await _tap(tester, 'inv-cell-${cellOf(me(), 'm1')}');
     // Sin compañeros: DAR A... con el motivo.
+    await openInventoryActions(tester);
     expect(button(tester, 'inv-give').reason, 'No hay compañeros en la sala');
     await _tap(tester, 'inv-drop');
     expect(plain(tester, 'inv-drop-question'), contains('al piso'));
@@ -135,6 +143,7 @@ void main() {
     expect(c.session!.ground, hasLength(1));
     // La equipada no se tira.
     await _tap(tester, 'inv-equipped');
+    await openInventoryActions(tester);
     expect(button(tester, 'inv-drop').reason, 'No podés tirar el arma equipada');
     // Pilas: elegir cuántas.
     await _tap(tester, 'inv-stack-mat:esquirla');
@@ -156,9 +165,11 @@ void main() {
             ));
     final p = c.view!.me!.profile;
     await _tap(tester, 'inv-cell-${cellOf(p, 'm1')}');
+    await openInventoryActions(tester);
     expect(button(tester, 'inv-give-p9').reason, isNull);
     // La equipada no se da.
     await _tap(tester, 'inv-equipped');
+    await openInventoryActions(tester);
     expect(button(tester, 'inv-give-p9').reason,
         'No podés dársela a otro jugador: está equipada');
     // Inventario del compañero: solo lectura, sin botones.

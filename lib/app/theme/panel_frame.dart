@@ -445,7 +445,11 @@ class RetroTooltip extends StatelessWidget {
       required this.message,
       required this.child,
       this.foldAfter,
-      this.foldTitle = 'Más detalle'});
+      this.foldTitle = 'Más detalle',
+      this.keyboardFocus = false});
+
+  /// Ver [RetroHoverCard.keyboardFocus].
+  final bool keyboardFocus;
 
   final String message;
   final Widget child;
@@ -471,6 +475,7 @@ class RetroTooltip extends StatelessWidget {
       placement: RetroTipPlacement.below,
       gap: 4,
       interactive: fold,
+      keyboardFocus: keyboardFocus,
       builder: (ctx) {
         final w = RetroType.width(ctx, RetroHoverCard.textWidth);
         if (!fold) return RetroTipText(message, maxWidth: w);

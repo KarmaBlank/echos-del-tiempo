@@ -58,9 +58,9 @@ enum CharacterTab {
           '${ProgressionRules.pointsPerLevel} puntos.'),
   inventory(
       'INVENTARIO',
-      'Arrastra para mover · clic para ver · EQUIPAR, DAR A, TIRAR, DESARMAR '
-          '(materiales) o VENDER (créditos). ORDENAR · LIMPIAR INVENTARIO: '
-          'por rareza o elegidas a mano.'),
+      'Arrastra para mover · clic para ver · clic derecho (o Enter): '
+          'acciones. ORDENAR · LIMPIAR INVENTARIO: por rareza o elegidas a '
+          'mano.'),
   tree(
       'ÁRBOL',
       'Pasivas de clase: 2 puntos por nivel. Arrastra para mover, rueda para '
@@ -411,7 +411,6 @@ class _CharacterPanelState extends State<CharacterPanel> {
       for (final a in Attribute.values)
         if ((_alloc[a] ?? 0) > 0) '+${_alloc[a]} ${kAttributeInfo[a]!.$1}',
     ];
-    String pct(num x) => '${(x * 100).round()}%';
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -421,28 +420,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
             title: 'VISTA PREVIA',
             subtitle: 'cómo cambian tus stats',
             children: [
-              StatChange('HP', now.maxHp, next.maxHp,
-                  key: const ValueKey('stat-HP')),
-              StatChange('MP', now.maxMp, next.maxMp,
-                  key: const ValueKey('stat-MP')),
-              StatChange('VEL', now.speed, next.speed,
-                  key: const ValueKey('stat-VEL'),
-                  format: (x) => x.toStringAsFixed(1)),
-              Text(
-                  retroText('  6 + AGI×0.5 + DES×0.1 − peso arma '
-                      '${w.weight.toStringAsFixed(1)}'),
-                  style: const TextStyle(color: ProtoColors.dim)),
-              StatChange('ATQ', now.attack, next.attack,
-                  key: const ValueKey('stat-ATQ')),
-              StatChange('MAG', now.magic, next.magic,
-                  key: const ValueKey('stat-MAG')),
-              StatChange('DEF', now.defense, next.defense,
-                  key: const ValueKey('stat-DEF'),
-                  suffix: '(-${(next.defensePercent * 100).round()}% daño)'),
-              StatChange('CRÍT', now.critChance, next.critChance,
-                  key: const ValueKey('stat-CRIT'),
-                  format: pct,
-                  suffix: '(daño ×${now.critMultiplier == 2 ? '2' : '1.5'})'),
+              CharacterStatRows(now: now, next: next, weight: w.weight),
             ],
           ),
           SectionPanel(
