@@ -146,7 +146,12 @@ class _CharacterPanelState extends State<CharacterPanel> {
       CharacterTab.attributes => _attributes(),
       CharacterTab.inventory =>
         InventoryTab(shop: ShopContext(view, c), pending: Map.of(_alloc)),
-      CharacterTab.filter => LootFilterTab(shop: ShopContext(view, c)),
+      // Por miembro: el editor arranca con el filtro de ese miembro (sin
+      // la clave, al cambiar de miembro quedaba el texto del anterior y
+      // GUARDAR se lo pisaba al nuevo).
+      CharacterTab.filter => LootFilterTab(
+          key: ValueKey('filter-tab-${view.actorId}'),
+          shop: ShopContext(view, c)),
       CharacterTab.build => Consumer(
           builder: (context, ref, _) => BuildPlannerView(
                 key: const ValueKey('build-planner'),

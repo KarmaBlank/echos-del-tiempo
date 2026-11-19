@@ -19,6 +19,7 @@ import '../../../game_engine/rules/progression_rules.dart';
 import '../../build_planner/presentation/build_fit_badge.dart' show kPlanColor;
 import '../../build_planner/presentation/build_plan_providers.dart';
 import '../domain/filter_build_snippets.dart';
+import '../domain/filter_quick.dart';
 import '../domain/item_text.dart';
 import '../domain/shop_guards.dart';
 import 'item_widgets.dart';
@@ -96,10 +97,11 @@ List<LootDrop> filterSamples(int level) {
   ];
 }
 
-/// Pestaña FILTRO del personaje: editor de texto del filtro de loot con
-/// validación por línea, vista previa sobre objetos de muestra, guardar y
-/// restaurar. El editor visual queda para la próxima versión. Ver
-/// docs/specs/panels.md § "Filtro de loot".
+/// Pestaña FILTRO del personaje: vista CASILLAS (OCULTAR RÁPIDO y la
+/// lista de reglas con prender / apagar / borrar) o TEXTO (el editor),
+/// las dos sobre el mismo texto; validación por línea, vista previa sobre
+/// objetos de muestra, guardar y restaurar. Ver docs/specs/panels.md
+/// § "Filtro de loot".
 class LootFilterTab extends ConsumerStatefulWidget {
   const LootFilterTab({super.key, required this.shop});
 
@@ -119,6 +121,11 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
   /// Qué partes del plan pide la condición `Build` que se agrega (vacío =
   /// cualquier meta).
   final _buildKinds = <BuildMatch>{};
+
+  /// Vista TEXTO (`true`) o CASILLAS (`false`, la de entrada).
+  var _textView = false;
+
+  late final _options = quickOptions(widget.shop.rules.catalog);
 
   void _setText((String, int) r) {
     _text.value = TextEditingValue(
@@ -156,28 +163,47 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
         _text.text, p.lootFilter, parsed.errors.length,
         defaultText: LootFilterRules.defaultText);
 
+    final doc = FilterDoc.parse(_text.text, _options, catalog: rules.catalog);
     final editor = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(
-          child: TextField(
-            key: const ValueKey('filter-text'),
-            controller: _text,
-            focusNode: _focus,
-            maxLines: null,
-            expands: true,
-            keyboardType: TextInputType.multiline,
-            textAlignVertical: TextAlignVertical.top,
-            style: TextStyle(
-                fontFamily: RetroType.bodyFamily,
-                letterSpacing: RetroType.letterSpacing,
-                fontFamilyFallback: RetroType.bodyFallback,
-                fontSize: RetroType.small,
-                height: 1.8),
-            decoration: const InputDecoration(
-                contentPadding: EdgeInsets.all(8), isDense: true),
-          ),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            PanelButton('CASILLAS',
+                key: const ValueKey('filter-view-checks'),
+                selected: !_textView,
+                onPressed: () => setState(() => _textView = false)),
+            PanelButton('TEXTO',
+                key: const ValueKey('filter-view-text'),
+                selected: _textView,
+                onPressed: () => setState(() => _textView = true)),
+          ],
         ),
+        const SizedBox(height: 8),
+        if (!_textView) Expanded(child: _checksView(doc)),
+        if (_textView)
+          Expanded(
+            child: TextField(
+              key: const ValueKey('filter-text'),
+              controller: _text,
+              focusNode: _focus,
+              maxLines: null,
+              expands: true,
+              keyboardType: TextInputType.multiline,
+              textAlignVertical: TextAlignVertical.top,
+              style: TextStyle(
+                  fontFamily: RetroType.bodyFamily,
+                  letterSpacing: RetroType.letterSpacing,
+                  fontFamilyFallback: RetroType.bodyFallback,
+                  fontSize: RetroType.small,
+                  height: 1.8),
+              decoration: const InputDecoration(
+                  contentPadding: EdgeInsets.all(8), isDense: true),
+            ),
+          ),
         const SizedBox(height: 8),
         Wrap(
           alignment: WrapAlignment.end,
@@ -257,6 +283,139 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
         const SizedBox(width: 16),
         SizedBox(width: 400, child: side),
       ],
+    );
+  }
+
+  /// Vista CASILLAS: OCULTAR RÁPIDO (casillas que agregan / sacan reglas
+  /// `# rápido: …`) y TUS REGLAS (cada regla con prender / apagar y ✕).
+  /// Todo cambia el mismo texto (filter_quick.dart).
+  Widget _checksView(FilterDoc doc) {
+    final checked = doc.checked;
+    Widget group(QuickGroup g) {
+      final opts = [
+        for (final o in _options)
+          if (o.group == g) o
+      ];
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: RetroType.width(context, 150),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Text(retroText(g.label),
+                    style: const TextStyle(color: ProtoColors.sky)),
+              ),
+            ),
+            Expanded(
+              child: Wrap(spacing: 14, children: [
+                for (final o in opts)
+                  FilterCheck(
+                    key: ValueKey('filter-quick-${o.id}'),
+                    label: o.label,
+                    value: checked.contains(o.id),
+                    color: g == QuickGroup.excepcion ? kPlanColor : null,
+                    onChanged: (on) => _setText((doc.setQuick(o.id, on), 0)),
+                  ),
+              ]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      key: const ValueKey('filter-checks'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(retroText('OCULTAR RÁPIDO'),
+              style: const TextStyle(color: ProtoColors.gold)),
+          Text(
+              retroText(
+                  'Marcá lo que no querés ver en el mapa. Por tipo, peso, '
+                  'uso y nivel nunca se ocultan Épicas ni Legendarias. La '
+                  'excepción ★ va primero y le gana a todo lo demás.'),
+              style: const TextStyle(color: ProtoColors.dim)),
+          const SizedBox(height: 6),
+          for (final g in QuickGroup.values) group(g),
+          const SizedBox(height: 8),
+          Text(retroText('TUS REGLAS (${doc.blocks.length})'),
+              key: const ValueKey('filter-rules-title'),
+              style: const TextStyle(color: ProtoColors.gold)),
+          Text(
+              retroText(
+                  'En orden, de arriba a abajo. La casilla apaga la regla '
+                  'sin borrarla (queda en el texto con #OFF); ✕ la borra.'),
+              style: const TextStyle(color: ProtoColors.dim)),
+          const SizedBox(height: 4),
+          if (doc.blocks.isEmpty)
+            Text(retroText('Sin reglas: todo se ve con el color de su rareza.'),
+                style: const TextStyle(color: ProtoColors.dim)),
+          for (final (i, b) in doc.blocks.indexed) _ruleRow(doc, i, b),
+        ],
+      ),
+    );
+  }
+
+  Widget _ruleRow(FilterDoc doc, int i, FilterBlock b) {
+    final on = b.enabled;
+    final verbColor = !on
+        ? ProtoColors.dim
+        : b.show
+            ? ProtoColors.green
+            : ProtoColors.red;
+    final name = FilterDoc.summary(b);
+    final conds = FilterDoc.conditionsText(b);
+    return Padding(
+      key: ValueKey('filter-rule-$i'),
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Row(
+        children: [
+          FilterCheck(
+            key: ValueKey('filter-rule-on-$i'),
+            value: on,
+            onChanged: (v) => _setText((doc.setEnabled(i, v), 0)),
+          ),
+          Expanded(
+            child: RetroTooltip(
+              message: protoEsc(b.text.trimRight()).replaceAll('\n', '<br>'),
+              child: Text.rich(
+                TextSpan(children: [
+                  TextSpan(
+                      text: retroText(b.show ? 'Mostrar' : 'Ocultar'),
+                      style: TextStyle(color: verbColor)),
+                  TextSpan(
+                      text: retroText(' · $name'),
+                      style: TextStyle(
+                          color: on ? ProtoColors.ink : ProtoColors.dim)),
+                  if (name != conds)
+                    TextSpan(
+                        text: retroText(' · $conds'),
+                        style: const TextStyle(color: ProtoColors.dim)),
+                  if (b.errors.isNotEmpty)
+                    TextSpan(
+                        text: retroText(' · con errores'),
+                        style: const TextStyle(color: ProtoColors.red)),
+                ]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          InkWell(
+            key: ValueKey('filter-rule-del-$i'),
+            onTap: () => _setText((doc.remove(i), 0)),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              child: Text('✕', style: TextStyle(color: ProtoColors.red)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -371,6 +530,42 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
                   ' · $rule${extra.isEmpty ? '' : ' · ${extra.join(' · ')}'}'),
               style: const TextStyle(color: ProtoColors.dim)),
         ],
+      ),
+    );
+  }
+}
+
+/// Casilla `[x] texto` / `[ ] texto` (marcada en dorado, o en [color]).
+class FilterCheck extends StatelessWidget {
+  const FilterCheck({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.label,
+    this.color,
+  });
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final String? label;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final on = color ?? ProtoColors.gold;
+    return InkWell(
+      onTap: () => onChanged(!value),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
+        child: Text.rich(TextSpan(children: [
+          TextSpan(
+              text: value ? '[x]' : '[ ]',
+              style: TextStyle(color: value ? on : ProtoColors.dim)),
+          if (label != null)
+            TextSpan(
+                text: retroText(' $label'),
+                style: TextStyle(color: value ? on : ProtoColors.ink)),
+        ])),
       ),
     );
   }

@@ -737,14 +737,40 @@ Tests: `test/features/inventory/weapon_weight_test.dart`.
 
 ## Filtro de loot (pestaña FILTRO del personaje)
 
-Editor de **texto** para esta versión (decisión del dueño). El **editor
-visual** (lista de reglas con ▲▼, agregar, duplicar, borrar; loot.md
-§ 6) **queda para la próxima versión**.
+Desde v0.8.6 la izquierda tiene dos vistas sobre **el mismo texto**,
+conmutables con `CASILLAS` (`filter-view-checks`, la de entrada) y
+`TEXTO` (`filter-view-text`). Todo lo que cambian las casillas es texto:
+la vista previa y la validación se actualizan en vivo y nada se aplica
+hasta `GUARDAR`. Lógica pura en
+`lib/features/inventory/domain/filter_quick.dart` (`FilterDoc`,
+`quickOptions`); reglas del texto en loot.md § 13.1. Pendiente (loot.md
+§ 6): reordenar con ▲▼ y duplicar.
 
-- Línea "qué hace": `Reglas en orden: gana la primera que coincide.
-  Ocultar no borra el loot: lo deja en el piso.`
-- Izquierda: campo multilínea (`filter-text`) con el texto guardado
+- Línea "qué hace" (la de la pestaña): `Reglas en orden: gana la primera
+  que coincide. Ocultar no borra el loot: lo deja en el piso.`
+- **CASILLAS** (`filter-checks`, con scroll):
+  - `OCULTAR RÁPIDO` y una ayuda corta. Una fila por grupo (`QuickGroup`:
+    Excepción, Armas por rareza, Armas por peso, Armas por tipo, Otras
+    armas, Materiales y pociones) con casillas `[x]`/`[ ]`
+    (`FilterCheck`, `filter-quick-<id>`; marcada en dorado, la ★ en el
+    violeta del plan). Los tipos salen del catálogo de armas. Marcar
+    agrega la regla `# rápido: …`; desmarcar la saca. Al abrir, cada
+    casilla se lee del texto (marcada si su regla está tal cual y
+    prendida).
+  - `TUS REGLAS (N)` (`filter-rules-title`) y una ayuda; una fila por
+    regla del texto, en orden (`filter-rule-<i>`): casilla prender /
+    apagar (`filter-rule-on-<i>`; apagada = `#OFF`), `Mostrar` en verde
+    u `Ocultar` en rojo (dim si está apagada), el nombre o, sin nombre,
+    las condiciones, y las condiciones en dim; `· con errores` en rojo si
+    la regla tiene líneas que no se entienden; tooltip con la regla
+    completa; `✕` (`filter-rule-del-<i>`) la borra. Sin reglas: `Sin
+    reglas: todo se ve con el color de su rareza.`
+- **TEXTO**: campo multilínea (`filter-text`) con el texto guardado
   (`profile.lootFilter`) o el por defecto.
+- El editor es **por miembro** (`LootFilterTab` con clave
+  `filter-tab-<actorId>`): al cambiar de miembro en el selector arranca
+  con el filtro de ese miembro (antes de v0.8.6 quedaba el texto del
+  anterior y `GUARDAR` se lo pisaba al nuevo).
 - Derecha: `VALIDACIÓN` (`filter-status`): `Sin errores · N reglas` en
   verde o los errores del parser (`línea N: ...`) en rojo; `VISTA
   PREVIA`: objetos de muestra (Común de nivel bajo, Mágico, Raro, Épico
@@ -765,6 +791,10 @@ visual** (lista de reglas con ▲▼, agregar, duplicar, borrar; loot.md
   `DESHACER` (`filter-revert`: vuelve al guardado) y el primario
   `GUARDAR` (`filter-save`, `SetLootFilterAction`; si el texto es el
   por defecto se guarda `null`).
+
+Tests: `test/features/inventory/filter_quick_test.dart`,
+`test/features/inventory/loot_filter_tab_test.dart`,
+`test/features/inventory/loot_filter_build_test.dart`.
 
 ## Resultado de misión: tus drops
 

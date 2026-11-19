@@ -1,4 +1,13 @@
+import 'package:echos_del_tiempo/core/settings/game_settings.dart';
+import 'package:echos_del_tiempo/features/characters/data/account_repository.dart';
+import 'package:echos_del_tiempo/features/characters/data/account_store.dart';
+import 'package:echos_del_tiempo/features/characters/domain/account.dart';
+import 'package:echos_del_tiempo/features/characters/presentation/characters_providers.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/item_widgets.dart';
+import 'package:echos_del_tiempo/features/inventory/presentation/loot_filter_tab.dart';
+import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
+import 'package:echos_del_tiempo/features/world/presentation/session_view.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:echos_del_tiempo/features/missions/presentation/results_panel.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
@@ -10,6 +19,8 @@ import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../game_engine/session_test_helpers.dart';
+import '../../real_fonts.dart';
 import '../panel_test_harness.dart';
 import 'loot_fixtures.dart';
 
@@ -28,6 +39,8 @@ void main() {
         build: (v, c) => CharacterPanel(
             view: v, controller: c, initialTab: CharacterTab.filter));
     String? saved() => c.view!.me!.profile.lootFilter;
+    // Vista TEXTO (la de entrada es CASILLAS).
+    await tapVisible(tester, find.byKey(const ValueKey('filter-view-text')));
     final field = find.byKey(const ValueKey('filter-text'));
     // Arranca con el por defecto, sin errores y sin cambios.
     expect(plain(tester, 'filter-status'), contains('Sin errores'));
@@ -56,6 +69,145 @@ void main() {
         LootFilterRules.defaultText);
     await tapVisible(tester, find.byKey(const ValueKey('filter-save')));
     expect(saved(), isNull);
+  });
+
+  testWidgets('casillas: ocultar rápido, apagar y borrar reglas',
+      (tester) async {
+    final c = await pumpPanel(tester,
+        profile: lootWarrior(level: 12),
+        textSize: TextSize.normal,
+        build: (v, c) => CharacterPanel(
+            view: v, controller: c, initialTab: CharacterTab.filter));
+    String text() => tester
+        .widget<TextField>(find.byKey(const ValueKey('filter-text')))
+        .controller!
+        .text;
+    Future<void> tap(String key) =>
+        tapVisible(tester, find.byKey(ValueKey(key)));
+    String title() => tester
+        .widget<Text>(find.byKey(const ValueKey('filter-rules-title')))
+        .data!;
+    String check(String key) =>
+        (tester.widget<FilterCheck>(find.byKey(ValueKey(key))).value)
+            ? 'x'
+            : ' ';
+
+    // Arranca en CASILLAS con las 8 reglas del por defecto.
+    expect(find.byKey(const ValueKey('filter-checks')), findsOneWidget);
+    expect(find.byKey(const ValueKey('filter-text')), findsNothing);
+    expect(title(), 'TUS REGLAS (8)');
+    expect(check('filter-quick-rareza-comun'), ' ');
+    // La muestra Común de nivel bajo la oculta la regla del por defecto.
+    expect(plain(tester, 'filter-sample-0'), contains('Comunes de nivel bajo'));
+
+    // Marcar: regla nueva arriba, la vista previa la usa.
+    await tap('filter-quick-rareza-comun');
+    expect(check('filter-quick-rareza-comun'), 'x');
+    expect(plain(tester, 'filter-status'), contains('9 reglas'));
+    expect(plain(tester, 'filter-sample-0'), contains('(oculto)'));
+    expect(plain(tester, 'filter-sample-0'), contains('rápido: armas comunes'));
+    expect(plain(tester, 'filter-rule-0'), contains('rápido: armas comunes'));
+    // Desmarcar la saca: vuelve el por defecto exacto.
+    await tap('filter-quick-rareza-comun');
+    expect(plain(tester, 'filter-status'), contains('8 reglas'));
+    expect(button(tester, 'filter-save').reason, 'Sin cambios');
+
+    // OFF: "Comunes de nivel bajo" (la 7.ª) queda comentada y no aplica.
+    expect(plain(tester, 'filter-rule-6'), contains('Comunes de nivel bajo'));
+    await tap('filter-rule-on-6');
+    expect(check('filter-rule-on-6'), ' ');
+    expect(plain(tester, 'filter-status'), contains('7 reglas'));
+    expect(plain(tester, 'filter-sample-0'), isNot(contains('(oculto)')));
+    expect(title(), 'TUS REGLAS (8)');
+
+    // ✕ borra la primera (Ecos).
+    await tap('filter-rule-del-0');
+    expect(title(), 'TUS REGLAS (7)');
+    expect(plain(tester, 'filter-rule-0'), contains('Legendarios'));
+
+    // Todo pasó por el texto.
+    await tap('filter-view-text');
+    expect(text(), contains('#OFF Ocultar # Comunes de nivel bajo\n'));
+    expect(text(), isNot(contains('Mostrar # Ecos')));
+    await tap('filter-save');
+    expect(c.view!.me!.profile.lootFilter, text());
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compañero: el editor muestra y guarda SU filtro',
+      (tester) async {
+    await loadRealFonts(tester);
+    tester.view.physicalSize = const Size(1280, 720);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    var a = Account();
+    a = a.add(newProfile('Ana', 'guerrero'))!;
+    a = a.add(newProfile('Leo', 'maga'))!;
+    final repo = AccountRepository(
+        InMemoryAccountStore(a.select('c1').withParty(['c2'])));
+    late SessionController c;
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        sessionEngineProvider.overrideWithValue(sessionEngine()),
+        profileStoreProvider
+            .overrideWithValue(SelectedCharacterProfileStore(repo)),
+        accountRepositoryProvider.overrideWithValue(repo),
+        partyStoreProvider.overrideWithValue(AccountPartyStore(repo)),
+        sessionClockProvider
+            .overrideWithValue(const SessionClock(autoStart: false)),
+      ],
+      child: MaterialApp(
+        theme: RetroTheme.build(),
+        home: Scaffold(
+          body: Consumer(builder: (context, ref, _) {
+            final view = ref.watch(sessionControllerProvider);
+            c = ref.read(sessionControllerProvider.notifier);
+            if (view == null || view.panel != WorldPanel.character) {
+              return const SizedBox.shrink();
+            }
+            return CharacterPanel(
+                view: view, controller: c, initialTab: CharacterTab.filter);
+          }),
+        ),
+      ),
+    ));
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    for (var i = 0; i < 4; i++) {
+      await tester.pump();
+    }
+    c.openPanel(WorldPanel.character);
+    await tester.pump();
+    bool checked(String id) => tester
+        .widget<FilterCheck>(find.byKey(ValueKey('filter-quick-$id')))
+        .value;
+
+    // La líder marca algo sin guardar y cambia a Leo.
+    await tapVisible(
+        tester, find.byKey(const ValueKey('filter-quick-rareza-comun')));
+    expect(checked('rareza-comun'), isTrue);
+    await tester.tap(find.byKey(const ValueKey('member-local-c2')));
+    await tester.pump();
+    expect(c.view!.actorId, 'local-c2');
+    // Leo arranca con SU filtro (el por defecto), no con el de Ana.
+    expect(checked('rareza-comun'), isFalse);
+    expect(button(tester, 'filter-save').reason, 'Sin cambios');
+
+    await tapVisible(
+        tester, find.byKey(const ValueKey('filter-quick-pociones')));
+    await tapVisible(tester, find.byKey(const ValueKey('filter-save')));
+    expect(c.session!.players['local-c2']!.profile.lootFilter,
+        contains('rápido: pociones'));
+    expect(c.session!.players['local']!.profile.lootFilter, isNull);
+    // El host lo usa para Leo: las pociones de Leo quedan ocultas.
+    const pot = LootDrop.stack(StackKind.potion, 1);
+    expect(c.lootVerdictFor('local-c2', pot)!.visible, isFalse);
+    expect(c.lootVerdictFor('local', pot)!.visible, isTrue);
+
+    // De vuelta en Ana: su editor, sin la casilla de Leo.
+    await tester.tap(find.byKey(const ValueKey('member-local')));
+    await tester.pump();
+    expect(checked('pociones'), isFalse);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('resultado: tus drops con el estilo del filtro', (tester) async {

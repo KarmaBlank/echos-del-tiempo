@@ -671,6 +671,55 @@ suficiente (fijos siempre), la pasiva del plan, una habilidad del plan.
 Lo que cumple tu plan lleva **★** delante del nombre (piso, vista previa,
 resultado, registro de loot), lo use una regla o no.
 
+Los ids de `Material` se comparan sin mayúsculas ni tildes, como el
+resto (v0.8.6: antes `Material fragReloj`, que es lo que escribe
+`serialize`, daba "material desconocido"). El host lee el filtro con el
+catálogo de la sesión (el mismo que la vista previa del editor).
+
+### 13.1 Casillas y reglas apagadas (v0.8.6)
+
+El editor por casillas (panels.md § "Filtro de loot") escribe y lee
+**este mismo texto**; no hay otro formato guardado.
+
+- **Regla** del texto = su línea `Mostrar`/`Ocultar` y las que siguen
+  hasta la próxima regla. Las líneas antes de la primera regla
+  (comentarios) no son de ninguna.
+- **Regla apagada**: cada una de sus líneas (no vacías) lleva delante
+  `#OFF ` (por ejemplo `#OFF Ocultar # Comunes de nivel bajo`). Para el
+  parser es un comentario: sigue en el texto pero no aplica. Prenderla
+  saca ese prefijo; el resto de la línea queda igual.
+- **Reglas rápidas**: cada casilla de OCULTAR RÁPIDO agrega una regla con
+  nombre `# rápido: …` y un texto fijo (`quickOptions`). Una casilla
+  está marcada si su regla está **tal cual** (sin contar sangría ni
+  líneas vacías) y prendida. Si el jugador la edita a mano, la casilla
+  queda desmarcada y la regla queda como una regla suya, intacta.
+- **Orden**: al marcar o desmarcar, las reglas rápidas prendidas se
+  vuelven a escribir juntas, **antes de la primera de las demás reglas**
+  (debajo de los comentarios de arriba), en este orden: primero la
+  excepción ★ y después los Ocultar rápidos. Gana la primera regla que
+  coincide, así que la ★ le gana a los rápidos y los rápidos a las reglas
+  del jugador (marcar "Raras" oculta los Raros aunque más abajo haya un
+  `Mostrar # Raros`). Las reglas del jugador y las rápidas apagadas no
+  se mueven ni se tocan.
+- **Qué agrega cada casilla**:
+
+| Casilla | Regla |
+|---|---|
+| Mostrar siempre lo de mi build (★) | `Mostrar` · `Build` · `Rareza <= Épico` con el estilo violeta de **Tu build** (los Legendarios siguen con su regla) |
+| Armas por rareza: Comunes / Mágicas / Raras / Épicas | `Ocultar` · `Objeto Arma` · `Rareza <rareza>` (`Objeto Arma`: un Eco también tiene rareza) |
+| Armas por peso: Ligeras / Medias / Pesadas | `Ocultar` · `Peso <categoría>` · `Rareza <= Raro` |
+| Armas por tipo (los tipos del catálogo) | `Ocultar` · `Tipo <tipo>` · `Rareza <= Raro` |
+| Que no podés usar | `Ocultar` · `Utilizable No` · `Rareza <= Raro` |
+| De nivel bajo | `Ocultar` · `NivelRelativo <= -6` · `Rareza <= Raro` |
+| Esquirla / Cristal / Prisma / Ancla | `Ocultar` · `Material <id>` |
+| Fragmentos | `Ocultar` · `Material fragReloj fragEco fragCorona fragEras` |
+| Pociones y éter | `Ocultar` · `Objeto Pocion` |
+
+  Por tipo, peso, uso y nivel nunca se ocultan Épicas ni Legendarias
+  (decisión de esta versión: es fácil perder un buen drop por una
+  casilla de tipo); para ocultar Épicas está su casilla de rareza.
+- **✕** borra las líneas de esa regla y nada más.
+
 ## 14. Drops
 
 **Nivel de zona**: en las misiones de zona (v0.2.0) es el nivel de la
