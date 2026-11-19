@@ -273,10 +273,11 @@ donde difieren (esas quedan como referencia del prototipo).
 requisitos; para equiparlas sí.`
 
 - Lista: las armas de su clase con precio `> 0`, en el orden del
-  catálogo (`shop-row-<id>`): nombre, tipo, y a la derecha `TIENES`
+  catálogo (`shop-row-<id>`): nombre, tipo, la categoría de peso
+  (`Ligera` / `Media` / `Pesada`, v0.8.4) y a la derecha `TIENES`
   (verde) o `$precio`.
-- Detalle: nombre y tipo, `Req:` coloreado (`reqHtml`), `Escala:`
-  (`wPowTxt`), `Peso N (-vel.)`, `Habilidades:` con la descripción de
+- Detalle: nombre, tipo y categoría de peso, `Req:` coloreado (`reqHtml`), `Escala:`
+  (`wPowTxt`), la línea de peso (§ "Peso del arma"), `Habilidades:` con la descripción de
   cada una (`describeSkill`) y la ULT, y **comparación con la equipada**
   (`Si la equipas:` ATQ / MAG / VEL / CRÍT / DEF de la equipada → con
   esta, calculado con `StatsCalculator` sobre la build hipotética,
@@ -535,6 +536,11 @@ casilla y como ficha en los detalles:
   no (con el reparto pendiente si lo hay).
 - `ATQ N · MAG M` con tus atributos si la equiparas (mods y forja
   incluidos).
+- Peso, **siempre** (v0.8.4, § "Peso del arma"): `Ligera · sin
+  penalización de velocidad`, `Media: −0.5 vel. · algo más lenta a cambio
+  de poder` o `Pesada: −1.3 vel. · suele dar más ATQ`; con tus stats, además
+  `Por el peso tu turno llega cada 11.8 de tiempo en vez de 10 (≈15% más
+  lento)`. Reemplaza al viejo `Peso N (−N vel.)` del final.
 - `Implícito:` (sky), cada mod con su tier (`+12% ATQ (T3)`; los fijos
   de un legendario `(único)` en naranja) y `Mods n/max`.
 - `Pasiva: <nombre nivel>: <efecto>` en violeta (nivel efectivo I–V con
@@ -693,6 +699,41 @@ UI):
   - `Esc` (o `CERRAR COMPARACIÓN`) vuelve al inventario sin cerrar el
     panel; `Esc` en el modo "elige B" lo cancela.
   Tests: `test/features/inventory/weapon_compare_test.dart`.
+
+### Peso del arma (v0.8.4)
+
+Pedido del dueño: los jugadores no entendían por qué algunas armas
+tienen peso. Dos cosas: el peso se muestra **siempre** (también en las
+ligeras) y en **tres categorías** (`weightClassOf`, loot.md § 1.1), con
+el trade-off y su efecto real en turnos. Nada de números duplicados en la
+UI: el tag sale de `weightClassOf` y el turno de `BattleEngine.interval`
+(helpers de `battle_impact.dart`: `turnChange`, `turnIntervalLine`,
+`weightTurnLine`). Textos en `item_text.dart`: `weightTagMarkup`
+(etiqueta en su color: Ligera verde, Media amarilla, Pesada naranja),
+`weightTradeoffText`, `weightLinesMarkup`.
+
+- **Ficha** (`itemTooltipMarkup`): debajo de `ATQ · MAG`, § "Ficha de
+  objeto". Cubre tooltip de la grilla, detalle del inventario, FICHA de
+  COMPRAR, columnas A / B de COMPARAR, alijo y filtro.
+- **COMPRAR**: la categoría en cada fila y en el título del detalle.
+- **Comparar armas** (`compareWeapons`): stat `Peso` (1 decimal) después
+  de `VEL`, con ▲ verde si **baja** y ▼ rojo si sube
+  (`StatDelta.higherIsBetter = false`); `WeaponComparison.weightBefore /
+  weightAfter` y `weightClassBefore / After`. En `ComparisonDelta`
+  (`cmp-weight`): `Peso: Ligera → Pesada` si cambia la categoría y, si
+  cambia la VEL, `Tu turno llega cada 10 → 11.8 de tiempo (≈15% más
+  lento)` (la misma línea que "En batalla").
+- **FUSIÓN → Reforjar base**: cada base de la lista lleva su categoría;
+  la vista previa suma la fila `Peso` (`craft-weight`): categoría y peso
+  antes → después con ▲/▼, el trade-off de la base nueva y lo que cuesta
+  en turnos con ella.
+- **Filtro de loot**: condición `Peso Ligera|Media|Pesada` (loot.md § 13),
+  también en la ayuda de la pestaña FILTRO.
+- **Balance**: el peso ya era editable por arma (`Peso (−velocidad)`); la
+  categoría se recalcula sola.
+- Bestiario / drops: sin cambios.
+
+Tests: `test/features/inventory/weapon_weight_test.dart`.
 
 ## Filtro de loot (pestaña FILTRO del personaje)
 

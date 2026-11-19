@@ -24,14 +24,7 @@ List<String> battleImpactLines(ProgressionRules rules, DerivedStats before,
 
   // Turnos: el tiempo entre turnos de la línea de tiempo.
   if ((before.speed - after.speed).abs() > 1e-6) {
-    final engine = BattleEngine(stats: rules.stats, catalog: rules.catalog);
-    final ib = engine.interval(tipUser(before)!);
-    final ia = engine.interval(tipUser(after)!);
-    final pct = jsRound((ib / ia - 1) * 100);
-    final every = ib > ia ? jsRound(ia / (ib - ia)) : 0;
-    out.add('Tu turno llega cada ${_fmt(ib)} → '
-        '${up(ib, ia, higherIsBetter: false)} de tiempo'
-        '${pct > 0 ? ' (≈$pct% más seguido${every > 0 && every < 100 ? '; +1 turno cada ~$every' : ''})' : pct < 0 ? ' (≈${-pct}% más lento)' : ''}');
+    out.add(turnIntervalLine(rules, before, after.speed));
   }
   // Daño: el básico y cada habilidad del arma.
   final skills = <SkillDef>[
@@ -87,6 +80,62 @@ List<String> battleImpactLines(ProgressionRules rules, DerivedStats before,
         '${s == null ? '' : ' (${s.name}: ${before.maxMp ~/ s.mp} → ${after.maxMp ~/ s.mp} usos)'}');
   }
   return out;
+}
+
+/// Cambio del tiempo entre turnos (`BattleEngine.interval`, el de la
+/// batalla) al pasar de una velocidad a otra.
+class TurnChange {
+  const TurnChange(this.before, this.after);
+
+  /// Tiempo entre turnos antes y después.
+  final double before;
+  final double after;
+
+  /// `+12` = 12% más seguido; `-12` = 12% más lento.
+  int get percent => jsRound((before / after - 1) * 100);
+
+  /// Si es más rápido: cada cuántos turnos se gana uno (0 = no aplica).
+  int get extraTurnEvery =>
+      before > after ? jsRound(after / (before - after)) : 0;
+}
+
+/// [TurnChange] de la velocidad de [stats] (sin buffs: fuera de la
+/// batalla) a la misma ficha con velocidad [afterSpeed].
+TurnChange turnChange(
+    ProgressionRules rules, DerivedStats stats, double afterSpeed) {
+  final engine = BattleEngine(stats: rules.stats, catalog: rules.catalog);
+  final u = tipUser(stats)!;
+  final ib = engine.interval(u);
+  u.speed = afterSpeed;
+  return TurnChange(ib, engine.interval(u));
+}
+
+/// `Tu turno llega cada 10.4 → 9.9 de tiempo (≈5% más seguido; +1 turno
+/// cada ~19)` (markup), de la velocidad de [before] a [afterSpeed].
+String turnIntervalLine(
+    ProgressionRules rules, DerivedStats before, double afterSpeed) {
+  final t = turnChange(rules, before, afterSpeed);
+  final ib = t.before, ia = t.after;
+  final pct = t.percent;
+  final every = t.extraTurnEvery;
+  return 'Tu turno llega cada ${_fmt(ib)} → '
+      '<b style="color:${ia < ib ? '#7bed9f' : '#ff6b81'}">${_fmt(ia)}</b> de tiempo'
+      '${pct > 0 ? ' (≈$pct% más seguido${every > 0 && every < 100 ? '; +1 turno cada ~$every' : ''})' : pct < 0 ? ' (≈${-pct}% más lento)' : ''}';
+}
+
+/// Lo que el peso [weight] del arma le cuesta en turnos a quien tiene
+/// [stats] (los suyos **con** esa arma): `Por el peso tu turno llega cada
+/// 10.6 de tiempo en vez de 9.3 (≈12% más lento)`. `null` si no pesa.
+String? weightTurnLine(
+    ProgressionRules rules, DerivedStats stats, double weight) {
+  if (weight <= 1e-9) return null;
+  // Sin el peso tendría `speed + weight` (la fórmula lo resta 1:1).
+  final t = turnChange(rules, stats, stats.speed + weight);
+  // t.before = con el peso, t.after = sin él.
+  final pct = -TurnChange(t.after, t.before).percent;
+  return 'Por el peso tu turno llega cada '
+      '<b style="color:#ff6b81">${_fmt(t.before)}</b> de tiempo en vez de '
+      '${_fmt(t.after)}${pct > 0 ? ' (≈$pct% más lento)' : ''}';
 }
 
 /// `En batalla:` + las líneas (o `null` si nada cambia).

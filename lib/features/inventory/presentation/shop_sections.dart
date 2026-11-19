@@ -319,7 +319,8 @@ class _BuyTabState extends ConsumerState<BuyTab> {
                           label:
                               '${fitOf(x.id).any ? '<span style="color:$kPlanHex">★</span> ' : ''}'
                               '${protoEsc(x.name)} '
-                              '${protoColor(ProtoColors.dim, protoEsc(x.type))}',
+                              '${protoColor(ProtoColors.dim, protoEsc(x.type))} '
+                              '${weightTagMarkup(x)}',
                           value: 'Nv ${x.level}  '
                               '${p.items.any((i) => i.baseId == x.id) ? protoColor(ProtoColors.green, 'TIENES') : '${rules.meetsRequirements(p, x) ? '' : '${protoColor(ProtoColors.red, 'Req')} '}<b>₵${x.price}</b>'}',
                         ),
@@ -353,7 +354,8 @@ class _BuyTabState extends ConsumerState<BuyTab> {
                       child: ProtoText(
                           key: const ValueKey('shop-title'),
                           '<b style="color:#e8ecff">${protoEsc(w.name)}</b> '
-                          '${protoColor(ProtoColors.dim, '${protoEsc(w.type)} · Nv ${w.level} · Común')}'),
+                          '${protoColor(ProtoColors.dim, '${protoEsc(w.type)} · Nv ${w.level} · Común')} '
+                          '${protoColor(ProtoColors.dim, '·')} ${weightTagMarkup(w)}'),
                     ),
                     BuildFitBadge(item: sample, compact: false),
                   ],

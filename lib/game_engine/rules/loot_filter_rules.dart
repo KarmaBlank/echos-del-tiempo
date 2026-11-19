@@ -6,6 +6,7 @@ import '../models/build_wants.dart';
 import '../models/item.dart';
 import '../models/loot.dart';
 import '../models/loot_filter.dart';
+import 'weapon_weight.dart';
 
 /// Quién mira el loot (para `Utilizable` y `NivelRelativo`).
 class FilterContext {
@@ -215,6 +216,7 @@ Ocultar # Mágicos de nivel bajo
           (a) =>
               a.affixId == affixId &&
               (op == null || tier == null || op.test(a.fixed ? 1 : a.tier, tier))),
+      WeightCondition(:final classes) => classes.contains(weightClassOf(w)),
       PassiveCondition(:final has) =>
         (it.passiveId != null && it.rarity.hasPassive) == has,
       UltCondition(:final name, :final has) => switch (itemUlt(it)) {
@@ -422,6 +424,18 @@ Ocultar # Mágicos de nivel bajo
             } else {
               conds.add(HasModCondition(a.first, op: op, tier: t));
             }
+          }
+        case 'peso':
+          final cs = [
+            for (final x in a)
+              WeightClass.values
+                  .where((c) => _fold(c.label) == _fold(x))
+                  .firstOrNull,
+          ];
+          if (a.isEmpty || cs.any((c) => c == null)) {
+            err('se esperaba Ligera, Media o Pesada');
+          } else {
+            conds.add(WeightCondition([for (final c in cs) c!]));
           }
         case 'ult':
           final no = a.length == 1 && _fold(a.first) == 'no';
