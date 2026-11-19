@@ -49,6 +49,9 @@ class SkillChip extends StatelessWidget {
     return RetroTooltip(
       message:
           skillTipMarkup(skill, stats: stats, ultimate: ultimate, note: note),
+      // Tooltip corto (ui_style.md § "Tooltips cortos"): nombre, costo,
+      // tipo y el primer efecto; el resto, plegado.
+      foldAfter: 3,
       // Enfocable (Tab / flechas: la ficha aparece con el foco) pero sin
       // tomar el clic: el clic sigue a la tarjeta o fila de abajo.
       child: _ChipFocus(

@@ -47,6 +47,7 @@ class PlayerProfile {
     int mastery = 0,
     AscensionProgress ascension = AscensionProgress.empty,
     Set<int> abyssKills = const {},
+    Set<String> fresh = const {},
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -76,10 +77,12 @@ class PlayerProfile {
       mastery: mastery.clamp(0, maxMastery),
       ascension: ascension,
       abyssKills: Set.unmodifiable(abyssKills),
+      fresh: Set.unmodifiable(fresh),
     );
   }
 
   const PlayerProfile._({
+    required this.fresh,
     required this.ascension,
     required this.abyssKills,
     required this.ecos,
@@ -104,6 +107,11 @@ class PlayerProfile {
     required this.treeRefunded,
     required this.unlockedZone,
   });
+
+  /// `uid` de armas y Ecos recién levantados, todavía sin mirar (marca
+  /// NUEVO del inventario; JSON `nw`, perfil v4; loot.md § 17.4). Se
+  /// desmarcan al pasar el mouse (`SeenItemsAction`).
+  final Set<String> fresh;
 
   /// Zonas del mapa del mundo (docs/specs/worldgen.md § 6.4).
   static const maxZone = 10;
@@ -154,8 +162,9 @@ class PlayerProfile {
   static const defaultPotions = 3;
   static const defaultEthers = 1;
 
-  /// Versión del formato del perfil (`pv`). 3 = loot v2.
-  static const formatVersion = 3;
+  /// Versión del formato del perfil (`pv`). 3 = loot v2; 4 = marca NUEVO
+  /// (`nw`, v0.9.7; un perfil v3 se lee igual, sin marcas).
+  static const formatVersion = 4;
 
   final String name;
   final String classId;
@@ -287,6 +296,7 @@ class PlayerProfile {
     int? mastery,
     AscensionProgress? ascension,
     Set<int>? abyssKills,
+    Set<String>? fresh,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -329,6 +339,7 @@ class PlayerProfile {
       ascension: ascension ?? this.ascension,
       abyssKills:
           abyssKills == null ? this.abyssKills : Set.unmodifiable(abyssKills),
+      fresh: fresh == null ? this.fresh : Set.unmodifiable(fresh),
     );
   }
 
@@ -449,6 +460,8 @@ class PlayerProfile {
         if (!ascension.isEmpty) 'asc': ascension.toJson(),
         // Jefes del Abismo v0.8 (abyss_bosses.md § 1.3): opcional.
         if (abyssKills.isNotEmpty) 'aby': (abyssKills.toList()..sort()),
+        // Marca NUEVO v0.9.7 (loot.md § 17.4): opcional.
+        if (fresh.isNotEmpty) 'nw': (fresh.toList()..sort()),
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -556,6 +569,7 @@ class PlayerProfile {
                 if (v is num && v >= 1 && v <= 5) v.toInt()
             }
           : const {},
+      fresh: {..._strings(json['nw'])},
     );
   }
 

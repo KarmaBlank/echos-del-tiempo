@@ -107,7 +107,23 @@ class InventoryRules {
   static PlayerProfile relayout(PlayerProfile p) {
     final l = layout(p);
     var last = l.cells.lastIndexWhere((t) => t != null);
-    return p.copyWith(grid: l.cells.sublist(0, last + 1));
+    // Las marcas NUEVO de lo que ya no está se van.
+    final fresh = p.fresh.isEmpty
+        ? null
+        : {
+            for (final t in p.fresh)
+              if (p.itemByUid(t) != null || p.ecoByUid(t) != null) t
+          };
+    return p.copyWith(
+        grid: l.cells.sublist(0, last + 1),
+        fresh: fresh != null && fresh.length != p.fresh.length ? fresh : null);
+  }
+
+  /// Saca la marca NUEVO de [uids] (`SeenItemsAction`); `null` si no
+  /// cambia nada.
+  static PlayerProfile? markSeen(PlayerProfile p, Iterable<String> uids) {
+    final next = {...p.fresh}..removeAll(uids);
+    return next.length == p.fresh.length ? null : p.copyWith(fresh: next);
   }
 
   /// Mueve (intercambia) dos casillas. `null` si alguna está fuera.
@@ -308,13 +324,18 @@ class InventoryRules {
     return (relayout(next), uid);
   }
 
-  /// Recibe un drop si hay lugar; `null` si no.
-  static PlayerProfile? receive(PlayerProfile p, LootDrop d) {
+  /// Recibe un drop si hay lugar; `null` si no. Las armas y los Ecos
+  /// quedan marcados NUEVO ([markNew]; el alijo no marca).
+  static PlayerProfile? receive(PlayerProfile p, LootDrop d,
+      {bool markNew = true}) {
     if (cannotReceive(p, d) != null) return null;
+    PlayerProfile mark((PlayerProfile, String) r) => markNew
+        ? r.$1.copyWith(fresh: {...r.$1.fresh, r.$2})
+        : r.$1;
     final it = d.item;
-    if (it != null) return addItem(p, it).$1;
+    if (it != null) return mark(addItem(p, it));
     final eco = d.eco;
-    if (eco != null) return addEco(p, eco).$1;
+    if (eco != null) return mark(addEco(p, eco));
     final st = d.stack!;
     return relayout(withStack(p, st, stackCount(p, st) + d.count));
   }

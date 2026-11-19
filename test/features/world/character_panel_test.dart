@@ -1,9 +1,9 @@
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
-import 'package:echos_del_tiempo/app/widgets/action_card.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/rules/inventory_rules.dart';
+import 'package:echos_del_tiempo/features/inventory/presentation/inventory_action_menu.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -88,8 +88,9 @@ void main() {
     // Comparación con la equipada antes de equipar.
     expect(find.textContaining('Comparada con Espada de Bronce'), findsOneWidget);
     expect(tester
-        .widget<ActionCard>(find.byKey(const ValueKey('inv-equip')))
-        .reason, 'Requisitos: FUE 14 DES 8');
+        .widget<InventoryActionRow>(find.byKey(const ValueKey('inv-equip')))
+        .entry
+        .reason, 'No podés equiparla. Requisitos: FUE 14 DES 8');
 
     // Con el reparto pendiente cumpliría: "Confirma puntos".
     await tapVisible(tester, find.byKey(const ValueKey('tab-0')));
@@ -99,7 +100,8 @@ void main() {
     await tapVisible(tester, find.byKey(const ValueKey('inc-des')));
     await armas();
     expect(tester
-        .widget<ActionCard>(find.byKey(const ValueKey('inv-equip')))
+        .widget<InventoryActionRow>(find.byKey(const ValueKey('inv-equip')))
+        .entry
         .reason, 'Confirma puntos');
     await tapVisible(tester, find.byKey(const ValueKey('tab-0')));
     await tapVisible(tester, find.byKey(const ValueKey('confirm-points')));

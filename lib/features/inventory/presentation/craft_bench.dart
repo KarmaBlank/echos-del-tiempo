@@ -850,8 +850,10 @@ class _CraftBenchState extends State<CraftBench> {
           for (var i = 0; i < picks.length; i++)
             if (rules.catalog.skills[srcSkills.elementAtOrNull(i)]
                 case final sk?) ...[
-              RetroTooltip(
-                message: skillTipMarkup(sk, stats: tipStats),
+              // Sin tooltip (v0.9.7): la ficha de la elegida ya está
+              // debajo (`craft-pick-desc`); antes salía dos veces.
+              KeyedSubtree(
+                key: ValueKey('craft-pick-row-$i'),
                 child: Builder(builder: (_) {
                   // Físicas: cuerpo a cuerpo / a distancia según el arma.
                   final why = rules.items.canReceiveSkill(target, sk.id);

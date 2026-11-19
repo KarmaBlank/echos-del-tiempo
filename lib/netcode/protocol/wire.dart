@@ -48,7 +48,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// `f` (combat_tutorial.md § 4.4).
 /// 18 desde v0.9.7: TUTORIAL sin roles: `tut` sin `as`; voto `repeat`
 /// en vez de `roles`/`role:*` (combat_tutorial.md § 4.3).
-const kProtocolVersion = 18;
+/// 19 desde v0.9.8: perfil v4 con `nw` (marca NUEVO del inventario) y
+/// acción `seen` (loot.md § 17.4).
+const kProtocolVersion = 19;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {

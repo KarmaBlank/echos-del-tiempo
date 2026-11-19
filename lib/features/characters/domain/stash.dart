@@ -219,7 +219,7 @@ class StashRules {
       final drop = it != null ? LootDrop.item(it) : LootDrop.eco(eco!);
       final why = InventoryRules.cannotReceive(p, drop);
       if (why != null) return StashMove.error(why);
-      return StashMove(InventoryRules.receive(p, drop)!, s.put(cell, null));
+      return StashMove(InventoryRules.receive(p, drop, markNew: false)!, s.put(cell, null));
     }
     final st = StackKind.of(e.material!);
     final have = InventoryRules.stackCount(p, st);
@@ -231,7 +231,7 @@ class StashRules {
     final why = InventoryRules.cannotReceive(p, drop);
     if (why != null) return StashMove.error(why);
     final left = e.count - n;
-    return StashMove(InventoryRules.receive(p, drop)!,
+    return StashMove(InventoryRules.receive(p, drop, markNew: false)!,
         s.put(cell, left > 0 ? StashEntry.material(e.material!, left) : null));
   }
 

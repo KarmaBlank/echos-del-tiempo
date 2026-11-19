@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 
 import 'proto_colors.dart';
@@ -33,7 +35,27 @@ class RetroHoverCard extends StatefulWidget {
     this.gap = 8,
     this.margin = 8,
     this.placement = RetroTipPlacement.side,
+    this.interactive = false,
   });
+
+  /// Con secciones plegables ([RetroTipFold]): la caja toma el mouse y
+  /// se **fija** mientras el mouse está encima: se puede pasar de la
+  /// casilla a la caja sin que se cierre ([pinDelay]) y hacer clic en
+  /// los ▸. Sin esto la caja no toma el mouse.
+  final bool interactive;
+
+  /// Margen para cruzar de la casilla a una caja [interactive].
+  static const pinDelay = Duration(milliseconds: 220);
+
+  /// La caja visible (una sola a la vez en toda la app; ui_style.md §
+  /// "Tooltips").
+  static _RetroHoverCardState? _active;
+
+  /// ¿Hay una caja abierta? (tests).
+  static bool get anyShowing => _active != null;
+
+  /// Cierra la caja abierta, si hay (cambio de pantalla, menú contextual).
+  static void dismissAll() => _active?._hide();
 
   /// Contenido; se arma recién al mostrarse.
   final WidgetBuilder builder;
@@ -73,13 +95,74 @@ class RetroHoverCard extends StatefulWidget {
 
 class _RetroHoverCardState extends State<RetroHoverCard> {
   final _portal = OverlayPortalController();
+  Timer? _closer;
+  bool _overTarget = false;
+  bool _overBox = false;
+
+  /// Solo si su pantalla es la de arriba: una caja de una ruta tapada no
+  /// se abre (ni queda abierta).
+  bool get _routeCurrent => ModalRoute.of(context)?.isCurrent ?? true;
 
   void _show() {
+    _closer?.cancel();
+    if (!mounted || !_routeCurrent) return;
+    final other = RetroHoverCard._active;
+    if (other != null && other != this) other._hide();
+    RetroHoverCard._active = this;
     if (!_portal.isShowing) _portal.show();
   }
 
   void _hide() {
+    _closer?.cancel();
+    _overTarget = false;
+    _overBox = false;
+    if (RetroHoverCard._active == this) RetroHoverCard._active = null;
     if (_portal.isShowing) _portal.hide();
+  }
+
+  /// Salida del objetivo o de la caja: en una caja [interactive] espera
+  /// un poco por si el mouse va hacia la caja.
+  void _leave() {
+    if (!widget.interactive) return _hide();
+    _closer?.cancel();
+    _closer = Timer(RetroHoverCard.pinDelay, () {
+      if (!_overTarget && !_overBox) _hide();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Cambió la pantalla (se tapó la ruta): fuera la caja.
+    if (!_routeCurrent && _portal.isShowing) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _hide();
+      });
+    }
+  }
+
+  @override
+  void deactivate() {
+    // Sale del árbol (cambió la pantalla): deja de ser la caja activa.
+    // El portal se va con el elemento; si vuelve (se movió), se cierra
+    // después del cuadro (no se puede ocultar en medio del build).
+    _closer?.cancel();
+    _overTarget = false;
+    _overBox = false;
+    if (RetroHoverCard._active == this) RetroHoverCard._active = null;
+    if (_portal.isShowing) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && RetroHoverCard._active != this) _hide();
+      });
+    }
+    super.deactivate();
+  }
+
+  @override
+  void dispose() {
+    _closer?.cancel();
+    if (RetroHoverCard._active == this) RetroHoverCard._active = null;
+    super.dispose();
   }
 
   Rect? _targetRect(BuildContext overlayContext) {
@@ -99,13 +182,25 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
       overlayChildBuilder: (ctx) {
         final rect = _targetRect(ctx);
         if (rect == null) return const SizedBox.shrink();
+        final box = widget.interactive
+            ? MouseRegion(
+                key: const ValueKey('retro-tip-pinned'),
+                onEnter: (_) {
+                  _overBox = true;
+                  _closer?.cancel();
+                },
+                onExit: (_) {
+                  _overBox = false;
+                  _leave();
+                },
+                child: _box(ctx),
+              )
+            : _box(ctx);
         return Positioned.fill(
-          child: IgnorePointer(
-            child: CustomSingleChildLayout(
-              delegate: _HoverLayout(rect, widget.gap, widget.margin,
-                  widget.placement, MediaQuery.devicePixelRatioOf(ctx)),
-              child: _box(ctx),
-            ),
+          child: CustomSingleChildLayout(
+            delegate: _HoverLayout(rect, widget.gap, widget.margin,
+                widget.placement, MediaQuery.devicePixelRatioOf(ctx)),
+            child: widget.interactive ? box : IgnorePointer(child: box),
           ),
         );
       },
@@ -120,8 +215,14 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
             ? _show()
             : _hide(),
         child: MouseRegion(
-          onEnter: (_) => _show(),
-          onExit: (_) => _hide(),
+          onEnter: (_) {
+            _overTarget = true;
+            _show();
+          },
+          onExit: (_) {
+            _overTarget = false;
+            _leave();
+          },
           // Como el Tooltip: un clic o un arrastre lo esconde.
           child: Listener(
             onPointerDown: (_) => _hide(),
@@ -320,4 +421,95 @@ class _HoverLayout extends SingleChildLayoutDelegate {
       old.margin != margin ||
       old.placement != placement ||
       old.dpr != dpr;
+}
+
+/// Sección plegable de un tip (ui_style.md § "Tooltips cortos"): una
+/// línea `▸ Título` (`sky`) que se despliega con clic, Enter o Espacio y
+/// muestra [body] (markup) debajo; `▼` cuando está abierta. Cerrada por
+/// defecto ([initiallyOpen]).
+class RetroTipFold extends StatefulWidget {
+  const RetroTipFold({
+    super.key,
+    required this.title,
+    required this.body,
+    this.maxWidth,
+    this.initiallyOpen = false,
+  });
+
+  final String title;
+  final String body;
+  final double? maxWidth;
+  final bool initiallyOpen;
+
+  @override
+  State<RetroTipFold> createState() => _RetroTipFoldState();
+}
+
+class _RetroTipFoldState extends State<RetroTipFold> {
+  late bool _open = widget.initiallyOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final head = FocusableActionDetector(
+      mouseCursor: SystemMouseCursors.click,
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) => setState(() => _open = !_open)),
+      },
+      child: GestureDetector(
+        key: ValueKey('tip-fold-${widget.title}'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() => _open = !_open),
+        child: ProtoText(protoColor(
+            ProtoColors.sky, '${_open ? '▼' : '▸'} ${protoEsc(widget.title)}')),
+      ),
+    );
+    final w = widget.maxWidth;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        head,
+        if (_open)
+          Padding(
+            key: ValueKey('tip-fold-body-${widget.title}'),
+            padding: const EdgeInsets.only(left: 12),
+            child: w == null
+                ? ProtoText(widget.body)
+                : ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: w - 12),
+                    child: ProtoText(widget.body)),
+          ),
+      ],
+    );
+  }
+}
+
+/// Resumen + secciones plegables: lo esencial a la vista y el resto en
+/// [RetroTipFold] (`(título, markup)`; las vacías no se dibujan).
+class RetroTipFolds extends StatelessWidget {
+  const RetroTipFolds(
+      {super.key,
+      required this.summary,
+      required this.sections,
+      required this.maxWidth});
+
+  final String summary;
+  final List<(String, String)> sections;
+  final double maxWidth;
+
+  @override
+  Widget build(BuildContext context) => ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ProtoText(summary),
+            for (final (t, b) in sections)
+              if (b.isNotEmpty)
+                RetroTipFold(title: t, body: b, maxWidth: maxWidth),
+          ],
+        ),
+      );
 }

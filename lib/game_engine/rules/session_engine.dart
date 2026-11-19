@@ -230,6 +230,7 @@ class SessionEngine {
         EquipAction() ||
         MoveInventoryAction() ||
         SortInventoryAction() ||
+        SeenItemsAction() ||
         CraftAction() ||
         FuseAction() ||
         UpgradeAction() ||
@@ -430,6 +431,7 @@ class SessionEngine {
         action is! SetBuildWantsAction &&
         action is! MoveInventoryAction &&
         action is! SortInventoryAction &&
+        action is! SeenItemsAction &&
         // Menú de pausa del TUTORIAL (combat_tutorial.md § 4.3).
         action is! TutorialControlAction) {
       return null;
@@ -769,6 +771,9 @@ class _Op {
 
       case SortInventoryAction():
         return _profileChange(p, rules.inventory.sort(p.profile, a.key));
+
+      case SeenItemsAction():
+        return _profileChange(p, InventoryRules.markSeen(p.profile, a.uids));
 
       case SetLootFilterAction():
         final t = a.text;
