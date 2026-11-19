@@ -1,7 +1,7 @@
 # Ecos del Tiempo (Flutter)
 
 Co-op JRPG táctico por turnos, P2P entre amigos. Puerto a Flutter del
-prototipo original (`ecos-del-tiempo.html`, single-file JS) con Clean
+prototipo original con Clean
 Architecture + Feature-First, y un netcode agnóstico pensado para poder
 evolucionar sin reescribir el juego.
 
