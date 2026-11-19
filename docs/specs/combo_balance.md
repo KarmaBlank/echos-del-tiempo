@@ -22,12 +22,12 @@ Pedido del dueño (v0.8.6):
 
 Referencias que se tomaron (de lo que se sabe de cada juego, sin
 investigación nueva):
-- **Baldur's Gate 3:** números chicos, resistencia = mitad, inmunidad =
+- **un RPG táctico de números chicos:** números chicos, resistencia = mitad, inmunidad =
   0; la dificultad viene de cómo actúan los enemigos, no de su vida.
-- **Divinity: Original Sin 2:** la diferencia de nivel pesa mucho y el
+- **un RPG táctico de combos de superficies:** la diferencia de nivel pesa mucho y el
   equipo envejece rápido; los combos de superficies son la gracia. Lo
   que **no** se copia: los enemigos esponja.
-- **Expedition 33:** afinidades fuertes (débil, resistente, inmune,
+- **un JRPG por turnos moderno:** afinidades fuertes (débil, resistente, inmune,
   absorbe); el poder viene de preparar (marcas, stacks, cargas) y
   liberar; la barra de quiebre se llena con habilidades que tienen su
   propio valor de quiebre, no con el daño; el techo de daño se rompe
@@ -89,7 +89,7 @@ quedan editables en `assets/balance/balance.json`.
 - Tope de forja por nivel del objeto: una legendaria de nivel 5 no llega
   a +10, sino a `min(tope de rareza, 2 + nivel/5)`.
 - Así una legendaria se siente enorme en su tramo y en el siguiente ya la
-  pasa el loot nuevo, como en Divinity.
+  pasa el loot nuevo, como en los RPG con equipo que envejece rápido.
 
 **Implementado (v0.9, paso 6):**
 - `LootRules.itemLevelFor(…, cap:)` y `rollDrops(levelCap:)`: la sesión
@@ -264,7 +264,7 @@ detona. Pasan a tener dos tipos:
 Hoy la barra se llena con `daño × factor`, el umbral es ~0.35 × la vida
 del jefe y un golpe grande quiebra solo.
 
-**Nuevo**, inspirado en Expedition 33:
+**Nuevo**, inspirado en los JRPG por turnos modernos:
 - La barra se llena con **puntos de quiebre** de cada acción, sin mirar
   el daño:
 
@@ -289,7 +289,7 @@ del jefe y un golpe grande quiebra solo.
   - élite 30;
   - jefe de 40 a 60;
   - × `0.6 + 0.3 × jugadores`.
-- **Dos pasos** (como en Expedition 33, donde llenar la barra no hace
+- **Dos pasos** (como en los JRPG por turnos modernos, donde llenar la barra no hace
   nada y hace falta una habilidad que diga "Puede quebrar"): la barra
   llena deja al enemigo **Fisurado**, y recién un golpe con
   **Quebrar** lo quiebra. Si no se quiebra antes de su turno, se
@@ -300,7 +300,7 @@ del jefe y un golpe grande quiebra solo.
   - los dúos;
   - al menos 1 habilidad de **cada** arma, garantizada en su kit base.
     Además, un mod de habilidad lo puede agregar a otra.
-  - **v0.9.1 (pedido del dueño, como en Expedition 33 no hay forma
+  - **v0.9.1 (pedido del dueño, como en los JRPG por turnos modernos no hay forma
     garantizada de quebrar):** Quebrar base sigue viniendo en toda arma
     pero **se puede quitar** con la fusión (loot.md § 16.3). Si un grupo
     se queda sin nada que quiebre, es decisión del jugador. Ver § 5.3.
@@ -434,8 +434,8 @@ las que pueden quebrar se usan como ataque normal.
 
 ## 5.2 Pulso y precondiciones (nombres aprobados: Pulso, Instante, encadenar)
 
-Punto medio entre los puntos de acción de Expedition 33 y la energía por
-turno de Slay the Spire, sin tirar el timeline actual (cada actor sigue
+Punto medio entre los puntos de acción de un JRPG por turnos moderno y la energía por
+turno de los juegos de cartas por turnos, sin tirar el timeline actual (cada actor sigue
 teniendo **un** turno según su velocidad).
 
 - **Pulso:** un recurso de batalla por personaje, de 0 a 5. Arranca la

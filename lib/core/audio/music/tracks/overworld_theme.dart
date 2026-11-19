@@ -21,8 +21,7 @@ import '../music_score.dart';
 /// charango punteado, pandero).
 ///
 /// Original: no cita ni parafrasea ninguna melodía, ritmo ni armonía
-/// existentes (en particular, nada de "Concerning Hobbits" de Howard
-/// Shore: solo se toma el clima).
+/// existentes: solo se toma el clima pastoral.
 Song overworldTheme() {
   const intro = 'G G';
   const a = 'G C G D G C D G';

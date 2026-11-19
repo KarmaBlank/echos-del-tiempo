@@ -1,4 +1,4 @@
-# Lore base (dado por el dueño, v0.9)
+﻿# Lore base (dado por el dueño, v0.9)
 
 Esto es todo el lore que hay. Cualquier historia o nombre que vaya más
 allá de esto se propone y espera el OK del dueño.
@@ -15,8 +15,7 @@ allá de esto se propone y espera el OK del dueño.
 
 - Hay un **mal** que todavía no se sabe qué es: está oculto, en las
   sombras.
-- La party es un grupo de héroes de fantasía (al estilo de El Señor de
-  los Anillos) que intenta encontrar dónde está ese mal.
+- La party es un grupo de héroes de fantasía clásica que intenta encontrar dónde está ese mal.
 - El presente es muy **medieval**.
 
 ## El futuro
@@ -27,14 +26,13 @@ allá de esto se propone y espera el OK del dueño.
   cosas que tienen que pasar para que ese futuro sea real.
 - Los ecos del futuro llegan para que se cumpla lo que tiene que pasar.
   Probablemente el final sea bueno, pero porque tuvieron que pasar
-  cosas (referencia del dueño: la idea del final de Endgame).
+  cosas.
 
 ## El pasado
 
 - En el pasado hubo algo, y quedan **restos y ruinas**.
-- El pasado era **más avanzado**: **tecnología mágica**, no cyberpunk.
-  Referencias del dueño: Tears of the Kingdom; los autómatas de
-  Mushoku Tensei.
+- El pasado era **más avanzado**: **tecnología mágica**, no cyberpunk
+  (autómatas, mecanismos antiguos movidos por magia).
 - Algo hizo que ahora todo sea medieval. Por eso la Torre se ve tan
   tecnológica: sus cosas vienen del pasado.
 

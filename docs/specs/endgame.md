@@ -13,7 +13,7 @@
 
 Pregunta del dueño: "si llegaste a nivel 50, ¿qué más podrías hacer con el
 personaje? ¿O ya terminaste y te creás otro? ¿Cómo sería el endgame? Revisá
-cómo lo hace PoE". Se toman las **mecánicas** del género (mapas como loot
+cómo lo hacen los ARPG de loot". Se toman las **mecánicas** del género (mapas como loot
 con tiers y modificadores, árbol de progresión de endgame, jefes
 pináculo, subclases, temporadas); nombres y contenido son propios.
 
@@ -100,7 +100,7 @@ probar otra build en otro personaje → nueva **Temporada**.
   de 8 nodos con 10 de costo; 2 habilidades y una ULT por ascensión;
   reiniciar y cambiar de ascensión gratis).
 - **Equipo**: la búsqueda de armas perfectas (mods de tier alto,
-  legendarios, crafteo) es el motor del endgame, como en PoE.
+  legendarios, crafteo) es el motor del endgame, como en los ARPG de loot.
 
 ## 5. Varios personajes y alijo compartido
 

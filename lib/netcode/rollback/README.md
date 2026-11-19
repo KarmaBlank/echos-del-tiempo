@@ -1,7 +1,7 @@
 # Rollback netcode (futuro, opcional)
 
 **Nota honesta de arquitectura:** el combate por turnos (timeline tipo
-Expedition 33) NO necesita rollback — es lockstep discreto, no hay nada
+por turnos) NO necesita rollback — es lockstep discreto, no hay nada
 continuo que predecir/revertir entre turnos. Un modelo autoritativo
 simple (host o servidor dedicado) alcanza y sobra ahí.
 

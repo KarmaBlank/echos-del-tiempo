@@ -1,8 +1,7 @@
 # Ecos del Tiempo — contexto para Claude Code
 
 Este proyecto es el puerto a Flutter de un prototipo JS single-file
-(`ecos-del-tiempo.html`, un co-op JRPG táctico por turnos tipo PSO2 +
-Expedition 33, P2P entre amigos). El scaffold inicial se armó en una
+(`ecos-del-tiempo.html`, un co-op JRPG táctico por turnos, P2P entre amigos). El scaffold inicial se armó en una
 sesión de chat de Claude que **no tenía Flutter SDK disponible**, así
 que todo el código se escribió a mano sin poder correr
 `flutter pub get` / `flutter analyze` / `flutter test`. Esta es tu

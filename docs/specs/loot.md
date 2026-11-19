@@ -1,6 +1,6 @@
 # Spec: Loot con modificadores y filtros (loot v2)
 
-Pedido del dueño: "que el loot sea como POE, que se puedan crear filtros,
+Pedido del dueño: "que el loot sea como en los ARPG de loot, que se puedan crear filtros,
 que las armas tengan modificadores". Se toman las **mecánicas** del género
 (bases + afijos aleatorios por rareza, filtros de loot editables); nombres,
 textos y contenido son propios de Ecos del Tiempo.
@@ -17,7 +17,7 @@ para la **próxima versión**.
 
 Pedido: nivel máximo 50, muchas más armas, armas con pasivas que crecen
 al mejorarlas, fusión libre, "que cada uno se arme como quiera, sin
-tanta restricción, como en PoE".
+tanta restricción, como en los ARPG de loot".
 
 1. **Nivel máximo 50** (`ProgressionRules.maxLevel = 50`). El contenido
    1–50 lo dan las zonas del mundo nuevo (worldgen.md: cada zona con su

@@ -2,7 +2,7 @@
 
 Pedido del dueño: "3 ULTs por camino elegido". Decisión posterior: **no van
 en el árbol**; salen en **armas**, como un mod especial "ULT: <nombre>"
-(como "otorga habilidad" de PoE). El árbol no cambia.
+(como "otorga habilidad" de los ARPG). El árbol no cambia.
 
 Implementación: `lib/game_engine/data/branch_ults_catalog.dart`
 (`kBranchUltList`, `kBranchUlts`, `kBranchUltWeaponTypes`,
