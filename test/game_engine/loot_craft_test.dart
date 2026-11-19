@@ -241,14 +241,14 @@ void main() {
 
     test('Esquirla del Eco: valores nuevos dentro del rango', () {
       final p = _rich();
-      // Legendaria de nivel 20: los fijos escalan a T2 (combo_balance.md
-      // § 2): Feroz 20-30 × 32/40, Certero 5-8 × 9/12.
-      expect(_craft.reroll(p, 'l').outcomes, ['% ATQ: 16–24', '% crítico: 4–6']);
+      // Legendaria de nivel 20: los fijos escalan 2 tiers sobre T3 = T1
+      // (combo_balance.md § 2): rango completo.
+      expect(_craft.reroll(p, 'l').outcomes, ['% ATQ: 20–30', '% crítico: 5–8']);
       for (var seed = 0; seed < 20; seed++) {
         final r = _craft.reroll(p, 'l', random: mulberry32(seed));
         final v = r.after!.affixes;
-        expect(v[0].value, inInclusiveRange(16, 24));
-        expect(v[1].value, inInclusiveRange(4, 6));
+        expect(v[0].value, inInclusiveRange(20, 30));
+        expect(v[1].value, inInclusiveRange(5, 8));
         expect(v.every((a) => a.fixed), isTrue);
         expect(r.profile!.material(CraftMaterial.esquirla), 1);
       }

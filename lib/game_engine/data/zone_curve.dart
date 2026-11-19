@@ -25,10 +25,27 @@ class CurveDef {
     this.groupHpPer = 0.3,
     this.groupMitigation = 0.08,
     this.zoneCMitigation = 0.10,
-    this.soloBossHp = 1.2,
-    this.soloBossAtk = 1.0,
+    this.soloBossHp = 1.0,
+    this.soloBossAtk = 0.8,
     this.soloEscorts = 0,
+    this.groupAtkPer = 0.40,
+    this.delayFalloff = 0.3,
+    this.groupInitiativeC = 0.2,
   });
+
+  /// Zonas C con 2+ jugadores: el primer turno de los enemigos llega a
+  /// esta fracción de lo normal (actúan antes; 1 = sin cambio).
+  final double groupInitiativeC;
+
+  /// ATQ enemigo: + fracción por jugador después del primero.
+  final double groupAtkPer;
+
+  /// Retraso sucesivo del grupo a un mismo enemigo (desde su último
+  /// turno): rinde esta fracción del anterior.
+  final double delayFalloff;
+
+  /// Multiplicador del ATQ enemigo por tamaño del grupo.
+  double groupAtk(int players) => 1 + groupAtkPer * (players.clamp(1, 4) - 1);
 
   String get id => 'curva';
   String get name => 'Curva y grupo';

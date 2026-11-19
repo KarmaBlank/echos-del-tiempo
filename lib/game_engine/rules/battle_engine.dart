@@ -186,8 +186,10 @@ class BattleEngine {
         hp: hp,
         maxHp: hp,
         speed: d.speed * (el ? 1.1 : 1),
-        attack: jsRound(
-            d.attack * (el ? 1.35 : 1) * (soloBoss ? curve.soloBossAtk : 1)),
+        attack: jsRound(d.attack *
+            (el ? 1.35 : 1) *
+            (soloBoss ? curve.soloBossAtk : 1) *
+            curve.groupAtk(party.length)),
         critChance: el ? 0.15 : (d.boss ? 0.12 : 0.08),
         enemyType: d.id,
         elite: el,
@@ -2362,7 +2364,10 @@ class _Turn {
     final el = e.level > 0 ? e.level : (kEnemyBaseLevel[e.enemyType] ?? 1);
     if (pl > 0 && pl - el >= rule.overLevel) return null;
     final f = rule.fraction(
-        elite: e.elite, boss: e.boss, partySize: state.party.length);
+        elite: e.elite,
+        boss: e.boss,
+        partySize: state.party.length,
+        zoneC: engine.catalog.curve.isZoneC(e.level));
     if (f >= 1) return null;
     return math.max(1, (e.maxHp * f).ceil());
   }
@@ -2886,7 +2891,8 @@ class _Turn {
         events.add(ProcEvent(owner.id, m.id, targetId: target.id));
         target.nextTurn += _iv(target) *
             fx.value *
-            (_fam(target)?.delayMult ?? 1);
+            (_fam(target)?.delayMult ?? 1) *
+            _delayFalloff(target);
         events.add(DelayedEvent(target.id));
         _notes.add('${m.name}: ${target.name} se retrasa ${_pct(fx.value)}');
       case ProcEffectKind.repeatSkill:
@@ -3173,6 +3179,16 @@ class _Turn {
   }
 
   /// Carga de ULT enemiga por vida perdida: +1 cada 2%.
+  /// Rendimiento decreciente del retraso (combo_balance.md § 3.3, ajuste
+  /// de los pasos 5-6): cada retraso del grupo a un enemigo desde su
+  /// último turno rinde `delayFalloff` del anterior (1, 0.5, 0.25…).
+  double _delayFalloff(Combatant e) {
+    if (e.isPlayer) return 1;
+    final f = math.pow(engine.catalog.curve.delayFalloff, e.delayStreak);
+    e.delayStreak++;
+    return f.toDouble();
+  }
+
   /// [scale] compensa la mitigación de grupo (combo_balance.md § 3.3).
   void _chargeUlt(Combatant e, int lost, {double scale = 1}) {
     // Rebobinar (Jefes del Abismo): lo recibido desde su acción anterior.
@@ -3187,6 +3203,7 @@ class _Turn {
   /// `enemyAct`. Con ULT (jefes y élites): con la carga llena avisa (pierde
   /// la acción) y en su siguiente turno la lanza.
   void enemyAct(Combatant e) {
+    e.delayStreak = 0;
     if (_aliveParty.isEmpty) return;
     final mech = _mechanicOf(e);
     if (mech != null) _mechanicTurn(e, mech);
@@ -4436,7 +4453,8 @@ class _Turn {
             e.nextTurn += _iv(e) *
                 tk.delay *
                 delayMult *
-                (_fam(e)?.delayMult ?? 1);
+                (_fam(e)?.delayMult ?? 1) *
+                _delayFalloff(e);
             events.add(DelayedEvent(e.id));
             _fire(ProcTrigger.onDelayApplied, p, target: e);
           }

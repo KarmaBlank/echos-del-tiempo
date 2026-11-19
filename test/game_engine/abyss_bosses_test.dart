@@ -167,8 +167,8 @@ void main() {
       final e = _engine();
       final one = _start(e, 'devoradorAbismo', 1).enemies.first;
       final four = _start(e, 'devoradorAbismo', 4).enemies.first;
-      // combo_balance.md § 3.3: 0.9 solo × 1.2 (jefe en solitario).
-      expect(one.maxHp, (8400 * 0.9 * 1.2).round());
+      // combo_balance.md § 3.3: 0.9 solo × soloBossHp (1.0).
+      expect(one.maxHp, (8400 * 0.9).round());
       expect(four.maxHp, (8400 * 1.8).round());
       expect(four.breakBase / one.breakBase, closeTo(1.8 / 0.9, 0.001));
     });
@@ -209,23 +209,24 @@ void main() {
     test('quebrado no rebobina; en solo rebobina 50%', () {
       final e = _engine();
       var s = _start(e, 'golemAbismo', 1);
+      // Fase 1 (vida solo 7560 desde los pasos 5-6): 5000.
       final b = s.enemies.first
         ..ult = 0
         ..actions = 4
-        ..hp = 6000
+        ..hp = 5000
         ..abyssTaken = 400;
       var st = e.enemyTurn(_turnOf(s, 'e0'))!;
-      expect(st.state.enemies.first.hp, 6200);
+      expect(st.state.enemies.first.hp, 5200);
       s = _start(e, 'golemAbismo', 1);
       s.enemies.first
         ..ult = 0
         ..actions = 4
-        ..hp = 6000
+        ..hp = 5000
         ..abyssTaken = 400
         ..vulnerable = 2;
       st = e.enemyTurn(_turnOf(s, 'e0'))!;
-      expect(st.state.enemies.first.hp, 6000);
-      expect(b.hp, 6000);
+      expect(st.state.enemies.first.hp, 5000);
+      expect(b.hp, 5000);
     });
 
     test('fases: el golpe se queda en el umbral; F2 electro y Diluvio + Descarga', () {

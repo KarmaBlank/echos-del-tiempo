@@ -572,6 +572,7 @@ class SessionJson {
         if (c.abyssSealTurns != 0) 'abSN': c.abyssSealTurns,
         if (c.abyssAspect != 0) 'abA': c.abyssAspect,
         if (c.abyssTaken != 0) 'abK': c.abyssTaken,
+        if (c.delayStreak != 0) 'dlS': c.delayStreak,
         if (c.abyssFeast != 0) 'abF': c.abyssFeast,
         if (c.abyssCopy != null) 'abC': c.abyssCopy,
         // Invocador v0.8.1 (opcionales).
@@ -691,6 +692,7 @@ class SessionJson {
       abyssSealTurns: j.intOrNull('abSN') ?? 0,
       abyssAspect: j.intOrNull('abA') ?? 0,
       abyssTaken: j.intOrNull('abK') ?? 0,
+      delayStreak: j.intOrNull('dlS') ?? 0,
       abyssFeast: j.intOrNull('abF') ?? 0,
       abyssCopy: j.strOrNull('abC'),
       summonOwner: j.strOrNull('smO'),

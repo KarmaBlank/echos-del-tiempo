@@ -189,6 +189,7 @@ const Map<EnemyFamily, FamilyRule> kFamilyRules = {
 class HitCapDef {
   const HitCapDef({
     this.common = 0.60,
+    this.commonC = 0.35,
     this.eliteSolo = 0.45,
     this.elite = 0.35,
     this.bossSolo = 0.25,
@@ -202,6 +203,10 @@ class HitCapDef {
   /// Común (no depende del grupo).
   final double common;
 
+  /// Común en un nivel de zona C (combo_balance.md § 3.2, ajuste de los
+  /// pasos 5-6).
+  final double commonC;
+
   /// Élite y jefe: solo y a 4 jugadores.
   final double eliteSolo, elite, bossSolo, boss;
 
@@ -211,8 +216,11 @@ class HitCapDef {
   /// Fracción de vida máxima que puede sacar un golpe a [elite] / [boss]
   /// con [partySize] jugadores: `solo + (a4 − solo) × (jugadores − 1) / 3`.
   double fraction(
-      {required bool elite, required bool boss, int partySize = 1}) {
-    if (!boss && !elite) return common;
+      {required bool elite,
+      required bool boss,
+      int partySize = 1,
+      bool zoneC = false}) {
+    if (!boss && !elite) return zoneC ? commonC : common;
     final t = ((partySize.clamp(1, 4)) - 1) / 3;
     final (solo, four) = boss ? (bossSolo, this.boss) : (eliteSolo, this.elite);
     return solo + (four - solo) * t;

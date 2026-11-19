@@ -146,7 +146,7 @@ class ItemRules {
 
   /// Tiers de ventaja de los mods fijos de una legendaria sobre los
   /// aleatorios del mismo nivel (combo_balance.md § 2).
-  static const legendaryTierBonus = 1;
+  static const legendaryTierBonus = 2;
 
   /// Rango de un mod fijo de legendaria a nivel de objeto [itemLevel]
   /// (combo_balance.md § 2): escala como los aleatorios. El rango del

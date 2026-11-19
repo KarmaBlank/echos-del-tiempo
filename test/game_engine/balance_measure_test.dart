@@ -42,8 +42,8 @@ void main() {
     final rows = <String>[
       '| Zona | Clase | Loot | Jug. | Pelea | Victorias | Acciones | '
           'Acc./jug. | Daño/acción | Mayor golpe | Quiebres | Jefe quebrado '
-          'antes de su ULT |',
-      '|---|---|---|---|---|---|---|---|---|---|---|---|',
+          'antes de su ULT | Vida al ganar |',
+      '|---|---|---|---|---|---|---|---|---|---|---|---|---|',
     ];
 
     for (final (zi, tag, level) in zones) {
@@ -112,7 +112,8 @@ void main() {
                   '| ${(r.avgActions / n).toStringAsFixed(1)} '
                   '| ${r.avgDamagePerAction.toStringAsFixed(0)} '
                   '| ${(r.avgBestHit * 100).toStringAsFixed(0)}% '
-                  '| ${r.avgBreaks.toStringAsFixed(1)} | ${_early(r)} |');
+                  '| ${r.avgBreaks.toStringAsFixed(1)} | ${_early(r)} '
+                  '| ${(r.avgHpLeft * 100).toStringAsFixed(0)}% |');
             }
           }
         }
@@ -159,20 +160,24 @@ void main() {
         ('jefe', m.boss, false),
       ];
       for (final (fight, enemies, elite) in fights) {
+       for (final combos in const [false, true]) {
         final r = sim.simulate(party.first,
             enemies: enemies,
             enemyLevel: level,
             elite: elite,
             party: party,
-            runs: 32);
+            runs: 32,
+            combos: combos);
         final n = party.length;
-        rows.add('| ${z.name} ($tag, nv $level) | Mixto | Raro +2 | $n '
+        rows.add('| ${z.name} ($tag, nv $level) | Mixto${combos ? ' + combos' : ''} | Raro +2 | $n '
             '| $fight | ${r.wins}/${r.runs} '
             '| ${r.avgActions.toStringAsFixed(1)} '
             '| ${(r.avgActions / n).toStringAsFixed(1)} '
             '| ${r.avgDamagePerAction.toStringAsFixed(0)} '
             '| ${(r.avgBestHit * 100).toStringAsFixed(0)}% '
-            '| ${r.avgBreaks.toStringAsFixed(1)} | ${_early(r)} |');
+            '| ${r.avgBreaks.toStringAsFixed(1)} | ${_early(r)} '
+            '| ${(r.avgHpLeft * 100).toStringAsFixed(0)}% |');
+       }
       }
     }
     // ignore: avoid_print

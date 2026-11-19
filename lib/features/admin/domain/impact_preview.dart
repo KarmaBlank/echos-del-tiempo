@@ -1,16 +1,19 @@
 import 'dart:math' as math;
 
 import '../../../game_engine/data/ascension_catalog.dart';
+import '../../../game_engine/data/elements_catalog.dart' show elementOf;
 import '../../../game_engine/data/game_catalog.dart';
 import '../../../game_engine/data/passive_tree_catalog.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/battle_event.dart';
 import '../../../game_engine/models/battle_state.dart';
+import '../../../game_engine/models/elements.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/passive_tree.dart';
 import '../../../game_engine/models/player_state.dart';
 import '../../../game_engine/models/skill.dart';
+import '../../../game_engine/models/status.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/battle_engine.dart';
 import '../../../game_engine/rules/mulberry32.dart';
@@ -263,7 +266,8 @@ class ImpactSimulator {
       int partySize = 1,
       List<SimLoadout>? party,
       double potionAt = 0.4,
-      double defendBelow = 0.5}) {
+      double defendBelow = 0.5,
+      bool combos = false}) {
     final loadouts = party == null || party.isEmpty
         ? [for (var k = 0; k < partySize.clamp(1, 4); k++) l]
         : party.take(4).toList();
@@ -329,6 +333,28 @@ class ImpactSimulator {
           final warned = alive.any((e) => e.ultPending);
           final hpFrac = p.maxHp > 0 ? p.hp / p.maxHp : 1.0;
           final low = hpFrac < potionAt;
+          // Con [combos]: detona una Convergencia si el objetivo tiene 5+
+          // stacks de su preparación; si no, prepara (Quemadura / Veneno).
+          SkillDef? combo;
+          if (combos && fissured == null) {
+            final t = alive.firstOrNull;
+            SkillDef? prep;
+            for (final id in p.skillIds) {
+              final q = catalog.skills[id];
+              if (q == null || p.mp < q.mp || t == null) continue;
+              final el = elementOf(id);
+              for (final st in const [StatusKind.burn, StatusKind.poison]) {
+                final rk = reactionOf(st, el);
+                if (rk != null && rk.convergence && t.stacks(st) >= 5) {
+                  combo = q;
+                }
+              }
+              final applies = [if (q.status != null) q.status!, ...q.extraStatuses]
+                  .any((a) => a.kind == StatusKind.burn || a.kind == StatusKind.poison);
+              if (applies) prep ??= q;
+            }
+            combo ??= prep;
+          }
           step = (low && p.potions > 0
                   ? engine.command(
                       s, p.id, ItemCommand(BattleItem.potion, targetPlayerId: p.id))
@@ -338,6 +364,9 @@ class ImpactSimulator {
                   : warned && !p.defending && hpFrac < defendBelow
                       ? engine.command(s, p.id, const DefendCommand())
                       : null) ??
+              (combo != null
+                  ? engine.command(s, p.id, SkillCommand(combo.id, targetId: target))
+                  : null) ??
               (p.ult >= 100
                   ? engine.command(s, p.id, UltimateCommand(targetId: target))
                   : null) ??

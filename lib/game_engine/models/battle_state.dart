@@ -113,6 +113,7 @@ class Combatant {
     this.abyssSealTurns = 0,
     this.abyssAspect = 0,
     this.abyssTaken = 0,
+    this.delayStreak = 0,
     this.abyssFeast = 0,
     this.abyssCopy,
     this.summonOwner,
@@ -305,6 +306,10 @@ class Combatant {
   /// Daño recibido desde su acción anterior (Rebobinar).
   int abyssTaken;
 
+  /// Retrasos recibidos del grupo desde su último turno (rendimiento
+  /// decreciente, combo_balance.md § 3.3).
+  int delayStreak;
+
   /// Buffs del grupo que se comió (Devorar).
   int abyssFeast;
 
@@ -448,6 +453,7 @@ class Combatant {
         abyssSealTurns: abyssSealTurns,
         abyssAspect: abyssAspect,
         abyssTaken: abyssTaken,
+        delayStreak: delayStreak,
         abyssFeast: abyssFeast,
         abyssCopy: abyssCopy,
         summonOwner: summonOwner,

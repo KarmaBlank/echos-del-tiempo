@@ -234,8 +234,8 @@ void main() {
       final turn = _myTurn(engine, ['reyLimo']);
       expect(turn.enemies.single.ult, BattleEngine.enemyUltStart);
       final step = engine.command(turn, 'p1', const AttackCommand())!;
-      // Rey Limo solo: 230 × 0.9 × 1.2 (jefe en solitario) = 248.
-      expect(step.state.enemies.single.ult, closeTo(40 + 15 / 248 * 100, 1e-9));
+      // Rey Limo solo: 230 × 0.9 = 207 (soloBossHp 1.0).
+      expect(step.state.enemies.single.ult, closeTo(40 + 15 / 207 * 100, 1e-9));
       // Los comunes no tienen ULT.
       final slime = engine
           .command(_myTurn(engine, ['slime']), 'p1', const AttackCommand())!
@@ -399,8 +399,9 @@ void main() {
       expect([u.ultId, u.allTargets, u.targetId], ['eult_diluvio', true, null]);
       final hits = ult.events.whereType<DamageEvent>().toList();
       expect(hits.map((h) => h.targetId), ['p1', 'p2']);
-      // Guerrero: 13 × 1.2 × (1 − 9%) = 14.2.
-      expect(hits.first.amount, 14);
+      // Guerrero: 13 × 1.4 (ATQ de grupo, 2 jugadores) = 18 × 1.2 ×
+      // (1 − 9%) = 19.7.
+      expect(hits.first.amount, 20);
       for (final p in ult.state.party) {
         expect(p.stacks(StatusKind.poison), 2);
       }

@@ -884,5 +884,168 @@ Mismo test, con estos cambios:
   16/16 por el ajuste del jefe solo) por la forja +4 y los fijos
   escalados. Queda apenas arriba del Raro +2 (66 vs 65 contra el jefe,
   49 vs 43 contra comunes): para que "se sienta enorme en su tramo" puede
-  hacer falta `legendaryTierBonus = 2`.
+  hacer falta `legendaryTierBonus = 2` (hecho en el ajuste de abajo).
+
+### Ajuste de cierre (decisiones del dueño sobre los pasos 5-6)
+
+Cambios (todos editables en el admin):
+- **Retraso con rendimiento decreciente** (`curve.delayFalloff = 0.3`):
+  cada retraso del grupo a un mismo enemigo desde su último turno rinde
+  0.3 del anterior (1, 0.3, 0.09…); se reinicia cuando el enemigo actúa.
+  Vale para el retraso de habilidades y de procs (`Combatant.delayStreak`,
+  JSON `dlS`). El umbral de la Hechicera no se tocó.
+- **Tope de común en zona C: 35%** (`hitCap.commonC`); A/B sigue en 60%.
+- **ATQ enemigo por grupo:** +40% por jugador después del primero
+  (`curve.groupAtkPer`, 4 → ×2.2), en `BattleEngine.start`. Con +10-30% el
+  grupo no perdía nunca (los comunes morían antes de actuar).
+- **Iniciativa en C:** con 2+ jugadores, en un nivel C el primer turno de
+  los enemigos llega a ×0.2 de lo normal (`curve.groupInitiativeC`):
+  actúan antes de que el grupo los barra.
+- **Jefe en solitario:** vida ×1.0 y ATQ ×0.8 (`soloBossHp`,
+  `soloBossAtk`), sin escolta. Con vida ×1.2 el Caballero Hueco solo
+  quedaba en 0-1/16.
+- `legendaryTierBonus = 2`: los fijos van 2 tiers sobre los aleatorios
+  (Feroz 12-18 a nivel 1-9, 16-24 a 10-19, completo desde 20).
+- Simulador: opción `combos` (detona una Convergencia si el objetivo tiene
+  5+ stacks de su preparación; si no, usa una habilidad que pone
+  Quemadura o Veneno). Con los kits base del grupo mixto casi no hay
+  pares preparar/detonar, así que "+ combos" da casi lo mismo: **la
+  medición con combos no es representativa** hasta que haya kits o IA de
+  compañeros que combinen.
+- Tabla: columna nueva *Vida al ganar* (del jugador 1).
+
+| Zona | Clase | Loot | Jug. | Pelea | Victorias | Acciones | Acc./jug. | Daño/acción | Mayor golpe | Quiebres | Jefe quebrado antes de su ULT | Vida al ganar |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Pradera Esmeralda (T1 A, nv 1) | Guerrero | Raro +2 | 1 | comunes | 16/16 | 2.0 | 2.0 | 27 | 61% | 0.0 | — | 67% |
+| Pradera Esmeralda (T1 A, nv 1) | Guerrero | Raro +2 | 1 | élite | 16/16 | 3.6 | 3.6 | 15 | 45% | 0.0 | — | 56% |
+| Pradera Esmeralda (T1 A, nv 1) | Guerrero | Raro +2 | 1 | jefe | 16/16 | 12.3 | 12.3 | 18 | 25% | 0.0 | 0/16 (0%) | 52% |
+| Pradera Esmeralda (T1 A, nv 1) | Guerrero | Raro +2 | 4 | comunes | 16/16 | 5.5 | 1.4 | 19 | 33% | 0.1 | — | 85% |
+| Pradera Esmeralda (T1 A, nv 1) | Guerrero | Raro +2 | 4 | élite | 16/16 | 9.3 | 2.3 | 12 | 18% | 0.0 | — | 75% |
+| Pradera Esmeralda (T1 A, nv 1) | Guerrero | Raro +2 | 4 | jefe | 16/16 | 27.1 | 6.8 | 20 | 28% | 0.3 | 0/16 (0%) | 40% |
+| Pradera Esmeralda (T1 A, nv 1) | Maga | Raro +2 | 1 | comunes | 16/16 | 2.0 | 2.0 | 48 | 240% | 0.0 | — | 71% |
+| Pradera Esmeralda (T1 A, nv 1) | Maga | Raro +2 | 1 | élite | 16/16 | 1.6 | 1.6 | 48 | 96% | 0.0 | — | 89% |
+| Pradera Esmeralda (T1 A, nv 1) | Maga | Raro +2 | 1 | jefe | 16/16 | 4.1 | 4.1 | 48 | 28% | 0.0 | 0/16 (0%) | 56% |
+| Pradera Esmeralda (T1 A, nv 1) | Maga | Raro +2 | 4 | comunes | 16/16 | 3.9 | 1.0 | 38 | 102% | 0.0 | — | 96% |
+| Pradera Esmeralda (T1 A, nv 1) | Maga | Raro +2 | 4 | élite | 16/16 | 2.9 | 0.7 | 36 | 40% | 0.0 | — | 100% |
+| Pradera Esmeralda (T1 A, nv 1) | Maga | Raro +2 | 4 | jefe | 16/16 | 15.3 | 3.8 | 33 | 84% | 0.0 | 0/16 (0%) | 68% |
+| Bosque Hondo (T1 C, nv 10) | Guerrero | Raro +2 | 1 | comunes | 16/16 | 3.0 | 3.0 | 25 | 35% | 0.0 | — | 54% |
+| Bosque Hondo (T1 C, nv 10) | Guerrero | Raro +2 | 1 | élite | 16/16 | 4.3 | 4.3 | 54 | 45% | 0.0 | — | 58% |
+| Bosque Hondo (T1 C, nv 10) | Guerrero | Raro +2 | 1 | jefe | 16/16 | 6.9 | 6.9 | 70 | 25% | 0.0 | 0/16 (0%) | 52% |
+| Bosque Hondo (T1 C, nv 10) | Guerrero | Raro +2 | 4 | comunes | 16/16 | 3.0 | 0.8 | 51 | 36% | 0.0 | — | 92% |
+| Bosque Hondo (T1 C, nv 10) | Guerrero | Raro +2 | 4 | élite | 16/16 | 7.3 | 1.8 | 53 | 18% | 0.0 | — | 52% |
+| Bosque Hondo (T1 C, nv 10) | Guerrero | Raro +2 | 4 | jefe | 0/16 | 0.0 | 0.0 | 39 | 10% | 0.0 | 0/16 (0%) | 0% |
+| Bosque Hondo (T1 C, nv 10) | Guerrero | Leg. +4 | 1 | comunes | 16/16 | 1.9 | 1.9 | 50 | 71% | 0.0 | — | 68% |
+| Bosque Hondo (T1 C, nv 10) | Guerrero | Leg. +4 | 1 | élite | 16/16 | 2.3 | 2.3 | 50 | 35% | 0.0 | — | 41% |
+| Bosque Hondo (T1 C, nv 10) | Guerrero | Leg. +4 | 1 | jefe | 14/16 | 6.1 | 6.1 | 72 | 51% | 0.0 | 0/16 (0%) | 54% |
+| Bosque Hondo (T1 C, nv 10) | Guerrero | Leg. +4 | 4 | comunes | 16/16 | 3.2 | 0.8 | 36 | 30% | 0.8 | — | 91% |
+| Bosque Hondo (T1 C, nv 10) | Guerrero | Leg. +4 | 4 | élite | 16/16 | 5.9 | 1.5 | 37 | 12% | 0.0 | — | 59% |
+| Bosque Hondo (T1 C, nv 10) | Guerrero | Leg. +4 | 4 | jefe | 16/16 | 16.4 | 4.1 | 49 | 31% | 1.6 | 0/16 (0%) | 58% |
+| Bosque Hondo (T1 C, nv 10) | Maga | Raro +2 | 1 | comunes | 16/16 | 3.0 | 3.0 | 25 | 35% | 0.0 | — | 47% |
+| Bosque Hondo (T1 C, nv 10) | Maga | Raro +2 | 1 | élite | 12/16 | 4.8 | 4.8 | 53 | 45% | 0.0 | — | 45% |
+| Bosque Hondo (T1 C, nv 10) | Maga | Raro +2 | 1 | jefe | 16/16 | 5.6 | 5.6 | 80 | 23% | 0.0 | 0/16 (0%) | 57% |
+| Bosque Hondo (T1 C, nv 10) | Maga | Raro +2 | 4 | comunes | 16/16 | 3.0 | 0.8 | 51 | 36% | 0.0 | — | 88% |
+| Bosque Hondo (T1 C, nv 10) | Maga | Raro +2 | 4 | élite | 16/16 | 5.9 | 1.5 | 68 | 23% | 0.0 | — | 75% |
+| Bosque Hondo (T1 C, nv 10) | Maga | Raro +2 | 4 | jefe | 0/16 | 0.0 | 0.0 | 52 | 17% | 0.0 | 0/16 (0%) | 0% |
+| Bosque Hondo (T1 C, nv 10) | Maga | Leg. +4 | 1 | comunes | 16/16 | 1.0 | 1.0 | 130 | 183% | 0.0 | — | 86% |
+| Bosque Hondo (T1 C, nv 10) | Maga | Leg. +4 | 1 | élite | 16/16 | 1.8 | 1.8 | 135 | 76% | 0.0 | — | 79% |
+| Bosque Hondo (T1 C, nv 10) | Maga | Leg. +4 | 1 | jefe | 16/16 | 2.9 | 2.9 | 134 | 35% | 0.0 | 0/16 (0%) | 79% |
+| Bosque Hondo (T1 C, nv 10) | Maga | Leg. +4 | 4 | comunes | 16/16 | 1.9 | 0.5 | 99 | 71% | 0.0 | — | 88% |
+| Bosque Hondo (T1 C, nv 10) | Maga | Leg. +4 | 4 | élite | 16/16 | 3.8 | 0.9 | 94 | 32% | 0.0 | — | 88% |
+| Bosque Hondo (T1 C, nv 10) | Maga | Leg. +4 | 4 | jefe | 12/16 | 13.9 | 3.5 | 76 | 63% | 0.0 | 0/16 (0%) | 56% |
+| Fortaleza Caída (T3 A, nv 21) | Guerrero | Raro +2 | 1 | comunes | 16/16 | 4.6 | 4.6 | 47 | 33% | 0.8 | — | 80% |
+| Fortaleza Caída (T3 A, nv 21) | Guerrero | Raro +2 | 1 | élite | 14/16 | 9.8 | 9.8 | 52 | 40% | 0.1 | — | 61% |
+| Fortaleza Caída (T3 A, nv 21) | Guerrero | Raro +2 | 1 | jefe | 9/16 | 18.8 | 18.8 | 58 | 21% | 0.0 | 0/16 (0%) | 14% |
+| Fortaleza Caída (T3 A, nv 21) | Guerrero | Raro +2 | 4 | comunes | 16/16 | 10.7 | 2.7 | 35 | 14% | 1.0 | — | 96% |
+| Fortaleza Caída (T3 A, nv 21) | Guerrero | Raro +2 | 4 | élite | 16/16 | 27.7 | 6.9 | 36 | 13% | 1.1 | — | 81% |
+| Fortaleza Caída (T3 A, nv 21) | Guerrero | Raro +2 | 4 | jefe | 6/16 | 58.2 | 14.5 | 47 | 25% | 0.7 | 0/16 (0%) | 29% |
+| Fortaleza Caída (T3 A, nv 21) | Guerrero | Leg. +6 | 1 | comunes | 16/16 | 3.6 | 3.6 | 59 | 43% | 0.1 | — | 74% |
+| Fortaleza Caída (T3 A, nv 21) | Guerrero | Leg. +6 | 1 | élite | 16/16 | 7.3 | 7.3 | 70 | 45% | 0.0 | — | 55% |
+| Fortaleza Caída (T3 A, nv 21) | Guerrero | Leg. +6 | 1 | jefe | 11/16 | 15.9 | 15.9 | 72 | 24% | 0.0 | 0/16 (0%) | 13% |
+| Fortaleza Caída (T3 A, nv 21) | Guerrero | Leg. +6 | 4 | comunes | 16/16 | 8.4 | 2.1 | 48 | 23% | 1.0 | — | 97% |
+| Fortaleza Caída (T3 A, nv 21) | Guerrero | Leg. +6 | 4 | élite | 16/16 | 20.3 | 5.1 | 48 | 9% | 1.0 | — | 89% |
+| Fortaleza Caída (T3 A, nv 21) | Guerrero | Leg. +6 | 4 | jefe | 15/16 | 45.6 | 11.4 | 63 | 31% | 0.0 | 0/16 (0%) | 28% |
+| Fortaleza Caída (T3 A, nv 21) | Maga | Raro +2 | 1 | comunes | 16/16 | 2.0 | 2.0 | 108 | 60% | 0.0 | — | 81% |
+| Fortaleza Caída (T3 A, nv 21) | Maga | Raro +2 | 1 | élite | 15/16 | 4.9 | 4.9 | 121 | 46% | 0.0 | — | 67% |
+| Fortaleza Caída (T3 A, nv 21) | Maga | Raro +2 | 1 | jefe | 11/16 | 11.5 | 11.5 | 102 | 23% | 0.0 | 0/16 (0%) | 29% |
+| Fortaleza Caída (T3 A, nv 21) | Maga | Raro +2 | 4 | comunes | 16/16 | 4.5 | 1.1 | 98 | 34% | 0.0 | — | 95% |
+| Fortaleza Caída (T3 A, nv 21) | Maga | Raro +2 | 4 | élite | 16/16 | 10.2 | 2.5 | 96 | 15% | 0.0 | — | 94% |
+| Fortaleza Caída (T3 A, nv 21) | Maga | Raro +2 | 4 | jefe | 3/16 | 29.7 | 7.4 | 98 | 101% | 0.0 | 0/16 (0%) | 0% |
+| Fortaleza Caída (T3 A, nv 21) | Maga | Leg. +6 | 1 | comunes | 16/16 | 2.0 | 2.0 | 108 | 60% | 0.0 | — | 79% |
+| Fortaleza Caída (T3 A, nv 21) | Maga | Leg. +6 | 1 | élite | 16/16 | 3.0 | 3.0 | 209 | 45% | 0.0 | — | 76% |
+| Fortaleza Caída (T3 A, nv 21) | Maga | Leg. +6 | 1 | jefe | 15/16 | 8.5 | 8.5 | 149 | 24% | 0.0 | 0/16 (0%) | 53% |
+| Fortaleza Caída (T3 A, nv 21) | Maga | Leg. +6 | 4 | comunes | 16/16 | 2.5 | 0.6 | 173 | 53% | 0.0 | — | 95% |
+| Fortaleza Caída (T3 A, nv 21) | Maga | Leg. +6 | 4 | élite | 16/16 | 5.6 | 1.4 | 180 | 24% | 0.0 | — | 94% |
+| Fortaleza Caída (T3 A, nv 21) | Maga | Leg. +6 | 4 | jefe | 16/16 | 14.2 | 3.5 | 207 | 69% | 0.0 | 0/16 (0%) | 54% |
+| Laberinto Temporal (T3 C, nv 30) | Guerrero | Raro +2 | 1 | comunes | 16/16 | 3.0 | 3.0 | 167 | 180% | 1.0 | — | 99% |
+| Laberinto Temporal (T3 C, nv 30) | Guerrero | Raro +2 | 1 | élite | 16/16 | 3.1 | 3.1 | 226 | 46% | 0.1 | — | 99% |
+| Laberinto Temporal (T3 C, nv 30) | Guerrero | Raro +2 | 1 | jefe | 16/16 | 2.9 | 2.9 | 430 | 38% | 0.0 | 0/16 (0%) | 80% |
+| Laberinto Temporal (T3 C, nv 30) | Guerrero | Raro +2 | 4 | comunes | 16/16 | 4.0 | 1.0 | 153 | 69% | 1.0 | — | 91% |
+| Laberinto Temporal (T3 C, nv 30) | Guerrero | Raro +2 | 4 | élite | 16/16 | 5.9 | 1.5 | 197 | 30% | 1.0 | — | 88% |
+| Laberinto Temporal (T3 C, nv 30) | Guerrero | Raro +2 | 4 | jefe | 8/16 | 18.3 | 4.6 | 204 | 101% | 0.3 | 0/16 (0%) | 45% |
+| Laberinto Temporal (T3 C, nv 30) | Guerrero | Leg. +8 | 1 | comunes | 16/16 | 3.6 | 3.6 | 68 | 34% | 0.1 | — | 71% |
+| Laberinto Temporal (T3 C, nv 30) | Guerrero | Leg. +8 | 1 | élite | 16/16 | 6.2 | 6.2 | 136 | 83% | 0.4 | — | 53% |
+| Laberinto Temporal (T3 C, nv 30) | Guerrero | Leg. +8 | 1 | jefe | 14/16 | 12.0 | 12.0 | 122 | 35% | 0.0 | 0/16 (0%) | 21% |
+| Laberinto Temporal (T3 C, nv 30) | Guerrero | Leg. +8 | 4 | comunes | 16/16 | 6.6 | 1.7 | 66 | 26% | 1.0 | — | 91% |
+| Laberinto Temporal (T3 C, nv 30) | Guerrero | Leg. +8 | 4 | élite | 16/16 | 17.4 | 4.4 | 63 | 10% | 1.0 | — | 81% |
+| Laberinto Temporal (T3 C, nv 30) | Guerrero | Leg. +8 | 4 | jefe | 13/16 | 27.2 | 6.8 | 151 | 34% | 0.1 | 0/16 (0%) | 27% |
+| Laberinto Temporal (T3 C, nv 30) | Maga | Raro +2 | 1 | comunes | 16/16 | 16.1 | 16.1 | 12 | 35% | 0.8 | — | 84% |
+| Laberinto Temporal (T3 C, nv 30) | Maga | Raro +2 | 1 | élite | 16/16 | 25.3 | 25.3 | 22 | 27% | 0.8 | — | 87% |
+| Laberinto Temporal (T3 C, nv 30) | Maga | Raro +2 | 1 | jefe | 16/16 | 18.1 | 18.1 | 77 | 36% | 0.0 | 0/16 (0%) | 79% |
+| Laberinto Temporal (T3 C, nv 30) | Maga | Raro +2 | 4 | comunes | 16/16 | 46.0 | 11.5 | 9 | 33% | 1.0 | — | 100% |
+| Laberinto Temporal (T3 C, nv 30) | Maga | Raro +2 | 4 | élite | 16/16 | 90.6 | 22.6 | 10 | 13% | 1.3 | — | 60% |
+| Laberinto Temporal (T3 C, nv 30) | Maga | Raro +2 | 4 | jefe | 12/16 | 47.3 | 11.8 | 92 | 55% | 0.7 | 0/16 (0%) | 80% |
+| Laberinto Temporal (T3 C, nv 30) | Maga | Leg. +8 | 1 | comunes | 16/16 | 14.2 | 14.2 | 17 | 35% | 1.0 | — | 81% |
+| Laberinto Temporal (T3 C, nv 30) | Maga | Leg. +8 | 1 | élite | 16/16 | 23.4 | 23.4 | 25 | 28% | 1.6 | — | 77% |
+| Laberinto Temporal (T3 C, nv 30) | Maga | Leg. +8 | 1 | jefe | 16/16 | 14.6 | 14.6 | 143 | 210% | 0.0 | 0/16 (0%) | 62% |
+| Laberinto Temporal (T3 C, nv 30) | Maga | Leg. +8 | 4 | comunes | 16/16 | 47.2 | 11.8 | 10 | 30% | 1.7 | — | 95% |
+| Laberinto Temporal (T3 C, nv 30) | Maga | Leg. +8 | 4 | élite | 16/16 | 107.1 | 26.8 | 10 | 13% | 2.4 | — | 75% |
+| Laberinto Temporal (T3 C, nv 30) | Maga | Leg. +8 | 4 | jefe | 13/16 | 41.8 | 10.4 | 121 | 155% | 0.3 | 0/16 (0%) | 82% |
+| Pradera Esmeralda (T1 A, nv 1) | Mixto | Raro +2 | 4 | comunes | 32/32 | 6.1 | 1.5 | 23 | 129% | 0.0 | — | 90% |
+| Pradera Esmeralda (T1 A, nv 1) | Mixto + combos | Raro +2 | 4 | comunes | 32/32 | 6.1 | 1.5 | 23 | 129% | 0.0 | — | 90% |
+| Pradera Esmeralda (T1 A, nv 1) | Mixto | Raro +2 | 4 | élite | 32/32 | 4.9 | 1.2 | 21 | 52% | 0.0 | — | 96% |
+| Pradera Esmeralda (T1 A, nv 1) | Mixto + combos | Raro +2 | 4 | élite | 32/32 | 4.9 | 1.2 | 21 | 52% | 0.0 | — | 96% |
+| Pradera Esmeralda (T1 A, nv 1) | Mixto | Raro +2 | 4 | jefe | 30/32 | 16.4 | 4.1 | 33 | 56% | 0.0 | 0/32 (0%) | 69% |
+| Pradera Esmeralda (T1 A, nv 1) | Mixto + combos | Raro +2 | 4 | jefe | 27/32 | 17.4 | 4.3 | 28 | 38% | 0.0 | 0/32 (0%) | 65% |
+| Bosque Hondo (T1 C, nv 10) | Mixto | Raro +2 | 4 | comunes | 32/32 | 2.0 | 0.5 | 86 | 86% | 0.0 | — | 94% |
+| Bosque Hondo (T1 C, nv 10) | Mixto + combos | Raro +2 | 4 | comunes | 32/32 | 2.0 | 0.5 | 86 | 86% | 0.0 | — | 94% |
+| Bosque Hondo (T1 C, nv 10) | Mixto | Raro +2 | 4 | élite | 32/32 | 4.8 | 1.2 | 88 | 43% | 0.0 | — | 93% |
+| Bosque Hondo (T1 C, nv 10) | Mixto + combos | Raro +2 | 4 | élite | 32/32 | 4.8 | 1.2 | 88 | 43% | 0.0 | — | 93% |
+| Bosque Hondo (T1 C, nv 10) | Mixto | Raro +2 | 4 | jefe | 32/32 | 15.8 | 4.0 | 82 | 91% | 0.1 | 0/32 (0%) | 69% |
+| Bosque Hondo (T1 C, nv 10) | Mixto + combos | Raro +2 | 4 | jefe | 32/32 | 16.2 | 4.1 | 80 | 101% | 0.0 | 0/32 (0%) | 69% |
+| Fortaleza Caída (T3 A, nv 21) | Mixto | Raro +2 | 4 | comunes | 32/32 | 6.1 | 1.5 | 66 | 32% | 0.3 | — | 100% |
+| Fortaleza Caída (T3 A, nv 21) | Mixto + combos | Raro +2 | 4 | comunes | 32/32 | 5.9 | 1.5 | 69 | 34% | 0.6 | — | 98% |
+| Fortaleza Caída (T3 A, nv 21) | Mixto | Raro +2 | 4 | élite | 32/32 | 15.4 | 3.8 | 64 | 15% | 0.8 | — | 100% |
+| Fortaleza Caída (T3 A, nv 21) | Mixto + combos | Raro +2 | 4 | élite | 32/32 | 14.2 | 3.5 | 69 | 13% | 0.5 | — | 86% |
+| Fortaleza Caída (T3 A, nv 21) | Mixto | Raro +2 | 4 | jefe | 31/32 | 43.2 | 10.8 | 65 | 37% | 0.0 | 0/32 (0%) | 71% |
+| Fortaleza Caída (T3 A, nv 21) | Mixto + combos | Raro +2 | 4 | jefe | 26/32 | 41.2 | 10.3 | 64 | 36% | 0.0 | 0/32 (0%) | 38% |
+| Laberinto Temporal (T3 C, nv 30) | Mixto | Raro +2 | 4 | comunes | 32/32 | 3.4 | 0.9 | 153 | 73% | 0.1 | — | 99% |
+| Laberinto Temporal (T3 C, nv 30) | Mixto + combos | Raro +2 | 4 | comunes | 32/32 | 3.4 | 0.9 | 153 | 73% | 0.1 | — | 99% |
+| Laberinto Temporal (T3 C, nv 30) | Mixto | Raro +2 | 4 | élite | 32/32 | 7.6 | 1.9 | 155 | 31% | 0.8 | — | 100% |
+| Laberinto Temporal (T3 C, nv 30) | Mixto + combos | Raro +2 | 4 | élite | 32/32 | 7.6 | 1.9 | 155 | 31% | 0.8 | — | 100% |
+| Laberinto Temporal (T3 C, nv 30) | Mixto | Raro +2 | 4 | jefe | 21/32 | 24.8 | 6.2 | 134 | 53% | 0.1 | 1/32 (3%) | 59% |
+| Laberinto Temporal (T3 C, nv 30) | Mixto + combos | Raro +2 | 4 | jefe | 21/32 | 24.8 | 6.2 | 134 | 53% | 0.1 | 1/32 (3%) | 59% |
+
+#### Metas (ajuste de cierre)
+
+| Meta | Resultado | ¿Se cumple? |
+|---|---|---|
+| C: comunes en 3-4 acciones sin combos (solo) | Bosque 3.0 (guerrero y maga Raro), Laberinto guerrero 3.0 / 3.6 | Sí (la maga con legendaria, 1.0: es débil al fuego) |
+| C a 4 sin combos: gana ~50-80% con poca vida | Jefes de C: mixto 32/32 (Bosque, 69% de vida) y 21/32 (Laberinto, 59%); 4 copias 0-13/16. Comunes y élites de C: 100%, con 52-100% de vida | Sí en jefes (Matriarca a 4 copias de más: 0/16); no en comunes y élites |
+| Hechicera quebrada antes de su ULT, grupo al azar < 10% | Mixto 1/32 (3%), 4 guerreros 0/16 (antes 66% y 94%) | Sí |
+| Solo tramo 1 ≥ 60-80% | Rey Limo 16/16 y 16/16, Matriarca 16/16 y 16/16 (Raro) | Sí (arriba del rango) |
+| Solo T3 | Caballero Hueco 9/16 guerrero, 11/16 maga (Raro), 11-15/16 (Leg.); Hechicera 16/16 | Sí |
+
+#### Lectura
+
+- Los comunes y élites de C a 4 siguen sin poder ganarle al grupo: con
+  tope 35% el grupo los baja en ~1 acción por jugador, y ni con iniciativa
+  ×0.2 llegan a pegar lo suficiente. Lo que puede perder a 4 es el jefe.
+- 4 copias del mismo personaje contra la Matriarca pierden siempre (0/16
+  guerrero y maga Raro): ATQ ×2.2 más su escolta y Nido Venenoso. El grupo
+  mixto la gana 32/32: la diferencia es el Paladín y el Tirador.
+- A/B a 4 también pega más (+40% por jugador es global): Pradera, jefe a
+  4 mixto 30/32 (antes 32/32).
+- Solo el tramo 1 queda en 100% (arriba del 60-80%) porque el ajuste de
+  ATQ ×0.8 hace falta para el Caballero Hueco; si se quiere 60-80% en el
+  tramo 1, habría que separar el ajuste de solitario por tramo.
 

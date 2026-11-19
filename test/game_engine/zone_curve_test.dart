@@ -40,6 +40,7 @@ Combatant _hero(String id) => Combatant(
       maxMp: 50,
       classId: 'guerrero',
       weaponType: 'espada',
+      skillIds: const ['embestida'],
     );
 
 Combatant _foe({int level = 0}) => Combatant(
@@ -163,6 +164,51 @@ void main() {
       expect(logC, contains('× 0.76 grupo (4 jug.) × 0.9 zona C'));
     });
 
+    test('ATQ enemigo +40% por jugador extra; en C a 2+ jugadores actúan '
+        'antes', () {
+      expect(curve.groupAtk(1), 1);
+      expect(curve.groupAtk(4), closeTo(2.2, 1e-9));
+      final engine = BattleEngine(stats: _stats, random: () => 0.5);
+      BattleState start(int n) => engine
+          .start(party: [
+            for (var i = 1; i <= n; i++)
+              BattlePartyMember(id: 'p$i', name: 'p$i', build: _build()),
+          ], enemyTypes: ['arana'])
+          .state;
+      final solo = start(1), duo = start(2);
+      expect(duo.enemies.first.attack, (11 * 1.4).round());
+      final t0 = duo.enemies.first.nextTurn;
+      ZoneRules.scaleBattle(duo, 10);
+      expect(duo.enemies.first.nextTurn, closeTo(t0 * 0.2, 1e-9));
+      final s0 = solo.enemies.first.nextTurn;
+      ZoneRules.scaleBattle(solo, 10);
+      expect(solo.enemies.first.nextTurn, s0);
+    });
+
+    test('retraso con rendimiento decreciente hasta el turno del enemigo',
+        () {
+      final engine = BattleEngine(
+          stats: _stats, random: () => 0.99, familiesEnabled: false);
+      final s = BattleState(
+          party: [_hero('p1'), _hero('p2')], enemies: [_foe()]);
+      final gains = <double>[];
+      for (var i = 0; i < 3; i++) {
+        final who = i.isEven ? 'p1' : 'p2';
+        s.currentId = who;
+        s.party.firstWhere((p) => p.id == who).mp = 50;
+        final before = s.enemies.first.nextTurn;
+        final st = engine.command(
+            s, who, const SkillCommand('embestida', targetId: 'e0'))!;
+        gains.add(st.state.enemies.first.nextTurn - before);
+        s.enemies.first
+          ..nextTurn = st.state.enemies.first.nextTurn
+          ..delayStreak = st.state.enemies.first.delayStreak
+          ..hp = 5000;
+      }
+      expect(gains[1] / gains[0], closeTo(0.3, 1e-6));
+      expect(gains[2] / gains[0], closeTo(0.09, 1e-6));
+    });
+
     test('jefe en solitario: sin escolta y con vida × soloBossHp', () {
       final engine = BattleEngine(stats: _stats, random: () => 0.5);
       const cat = GameCatalog.standard;
@@ -194,22 +240,22 @@ void main() {
     });
 
     test('los mods fijos de las legendarias escalan con el nivel del '
-        'objeto, un tier por encima de los aleatorios', () {
+        'objeto, dos tiers por encima de los aleatorios', () {
       final u = kUniques['juramentoAlba']!;
       final feroz = u.fixed.firstWhere((f) => f.affixId == 'feroz');
-      // Feroz 20-30. Nivel 5: sale T5 (máx 9) → T4 (máx 16) / 40 = 0.4.
-      expect(ItemRules.fixedRangeAt(feroz, 5), (8, 12));
-      // Nivel 10: T4 → T3 (24 / 40).
-      expect(ItemRules.fixedRangeAt(feroz, 10), (12, 18));
-      // Nivel 30+: rango completo.
-      expect(ItemRules.fixedRangeAt(feroz, 30), (20, 30));
+      // Feroz 20-30. Nivel 5: sale T5 → T3 (máx 24) / 40 = 0.6.
+      expect(ItemRules.fixedRangeAt(feroz, 5), (12, 18));
+      // Nivel 10: T4 → T2 (32 / 40).
+      expect(ItemRules.fixedRangeAt(feroz, 10), (16, 24));
+      // Nivel 20+: rango completo.
+      expect(ItemRules.fixedRangeAt(feroz, 20), (20, 30));
       expect(ItemRules.fixedRangeAt(feroz, 50), (20, 30));
       const loot = LootRules();
       final low = loot.generateUnique(mulberry32(3), u, 5);
       final high = loot.generateUnique(mulberry32(3), u, 40);
       // La base pide un nivel mínimo: el objeto sale a ese nivel.
       final (lo, hi) = ItemRules.fixedRangeAt(feroz, low.itemLevel);
-      expect(hi, lessThan(30));
+      expect(hi, lessThanOrEqualTo(30));
       final lv = low.affixes.firstWhere((a) => a.affixId == 'feroz').value;
       final hv = high.affixes.firstWhere((a) => a.affixId == 'feroz').value;
       expect(lv, inInclusiveRange(lo, hi));
@@ -218,6 +264,11 @@ void main() {
       final again = loot.rerollValues(mulberry32(9), low);
       expect(again.affixes.firstWhere((a) => a.affixId == 'feroz').value,
           inInclusiveRange(lo, hi));
+    });
+
+    test('tope de común en zona C: 35%; en A/B, 60%', () {
+      expect(_cappedHit(level: 10), 35);
+      expect(_cappedHit(level: 5), 60);
     });
 
     test('tope de forja: min(tope de rareza, 2 + nivel / 5)', () {
@@ -257,3 +308,17 @@ PlayerBuild _build() => PlayerBuild(
       attributes: PlayerAttributes.base(kClasses['guerrero']!.baseAttributes),
       equippedWeapon: GameCatalog.standard.weapons['espada_bronce']!,
     );
+
+/// Golpe enorme de un jugador solo a un común de 100 de vida a [level].
+int _cappedHit({required int level}) {
+  final engine = BattleEngine(
+      stats: _stats, random: () => 0.99, familiesEnabled: false);
+  final foe = _foe(level: level)
+    ..hp = 100
+    ..maxHp = 100;
+  final hero = _hero('p1')..attack = 500;
+  final s = BattleState(party: [hero], enemies: [foe]);
+  s.currentId = 'p1';
+  final st = engine.command(s, 'p1', const AttackCommand(targetId: 'e0'))!;
+  return 100 - st.state.enemies.first.hp;
+}

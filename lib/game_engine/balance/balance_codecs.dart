@@ -814,6 +814,7 @@ final hitCapCodec = EntityCodec(
   kind: BalanceKind.hitCap,
   fields: const [
     BalanceField('common', 'Común: tope (vida máx.)', _frac, min: 0.05, max: 1, step: 0.01),
+    BalanceField('commonC', 'Común en zona C: tope (vida máx.)', _frac, min: 0.05, max: 1, step: 0.01),
     BalanceField('eliteSolo', 'Élite solo: tope (vida máx.)', _frac, min: 0.05, max: 1, step: 0.01),
     BalanceField('elite', 'Élite a 4: tope (vida máx.)', _frac, min: 0.05, max: 1, step: 0.01),
     BalanceField('bossSolo', 'Jefe solo: tope (vida máx.)', _frac, min: 0.05, max: 1, step: 0.01),
@@ -824,6 +825,7 @@ final hitCapCodec = EntityCodec(
     final h = o as HitCapDef;
     return {
       'common': h.common,
+      'commonC': h.commonC,
       'eliteSolo': h.eliteSolo,
       'elite': h.elite,
       'bossSolo': h.bossSolo,
@@ -833,6 +835,7 @@ final hitCapCodec = EntityCodec(
   },
   write: (o, f) => HitCapDef(
     common: f.d('common'),
+    commonC: f.d('commonC'),
     eliteSolo: f.d('eliteSolo'),
     elite: f.d('elite'),
     bossSolo: f.d('bossSolo'),
@@ -931,6 +934,9 @@ final curveCodec = EntityCodec(
     BalanceField('soloBossHp', 'Jefe en solitario: vida (×)', _dec, min: 0.1, max: 3, step: 0.05),
     BalanceField('soloBossAtk', 'Jefe en solitario: ATQ (×)', _dec, min: 0.1, max: 3, step: 0.05),
     BalanceField('soloEscorts', 'Jefe en solitario: escolta (máx.)', _int, max: 10),
+    BalanceField('groupAtkPer', 'ATQ enemigo: + por jugador extra', _frac, max: 1, step: 0.01),
+    BalanceField('delayFalloff', 'Retraso sucesivo: rinde (×)', _frac, max: 1, step: 0.05),
+    BalanceField('groupInitiativeC', 'Zona C en grupo: primer turno enemigo (×)', _frac, min: 0.05, max: 1, step: 0.05),
   ],
   read: (o) {
     final c = o as CurveDef;
@@ -950,6 +956,9 @@ final curveCodec = EntityCodec(
       'soloBossHp': c.soloBossHp,
       'soloBossAtk': c.soloBossAtk,
       'soloEscorts': c.soloEscorts,
+      'groupAtkPer': c.groupAtkPer,
+      'delayFalloff': c.delayFalloff,
+      'groupInitiativeC': c.groupInitiativeC,
     };
   },
   write: (o, f) => CurveDef(
@@ -968,6 +977,9 @@ final curveCodec = EntityCodec(
     soloBossHp: f.d('soloBossHp'),
     soloBossAtk: f.d('soloBossAtk'),
     soloEscorts: f.i('soloEscorts'),
+    groupAtkPer: f.d('groupAtkPer'),
+    delayFalloff: f.d('delayFalloff'),
+    groupInitiativeC: f.d('groupInitiativeC'),
   ),
   nameOf: (o) => (o as CurveDef).name,
 );
