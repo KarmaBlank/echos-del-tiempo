@@ -129,7 +129,7 @@ class ComparisonDelta extends StatelessWidget {
 /// `ATQ 21 → 30 +9 ▲` (verde y ▲ si mejora, rojo y ▼ si empeora; sin
 /// cambio, dim).
 class _StatDeltaText extends StatelessWidget {
-  const _StatDeltaText(this.s);
+  _StatDeltaText(this.s) : super(key: ValueKey('cmp-stat-${s.label}'));
   final StatDelta s;
 
   @override

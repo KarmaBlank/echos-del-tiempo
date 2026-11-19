@@ -85,8 +85,8 @@ void main() {
     // Armas: la Ígnea pide FUE 14 / DES 8; Lv3 tiene FUE 12, DES 6.
     await armas();
     expect(find.textContaining('EQUIPADA'), findsWidgets);
-    // ESTADÍSTICAS a la derecha; las acciones, en el menú.
-    expect(find.byKey(const ValueKey('inv-stats')), findsOneWidget);
+    // Sin panel derecho (v0.9.10); las acciones, en el menú.
+    expect(find.byKey(const ValueKey('inv-stats')), findsNothing);
     await openInventoryActions(tester);
     expect(tester
         .widget<InventoryActionRow>(find.byKey(const ValueKey('inv-equip')))

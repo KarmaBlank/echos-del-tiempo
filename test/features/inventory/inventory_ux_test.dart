@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:echos_del_tiempo/app/theme/retro_hover_card.dart';
 import 'package:echos_del_tiempo/features/inventory/domain/inventory_menu.dart';
+import 'package:echos_del_tiempo/features/inventory/presentation/inventory_tab.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/game_engine/models/inventory_sort.dart';
@@ -65,8 +66,8 @@ void main() {
       expect(inventoryMatches(rules, 'RARO', item: rareAxe), isTrue);
       expect(inventoryMatches(rules, 'hacha zzz', item: rareAxe), isFalse);
       expect(inventoryMatches(rules, 'baculo', item: commonStaff), isTrue);
-      expect(inventoryMatches(rules, 'pocion', label: 'Poción de vida'),
-          isTrue);
+      expect(
+          inventoryMatches(rules, 'pocion', label: 'Poción de vida'), isTrue);
     });
 
     test('NUEVO: se marca al levantar, se saca al mirar y viaja en el JSON',
@@ -76,9 +77,11 @@ void main() {
       final uid = p1.items.last.uid;
       expect(p1.fresh, {uid});
       // El alijo no marca.
-      expect(InventoryRules.receive(p0, const LootDrop.item(epicSword),
-              markNew: false)!
-          .fresh, isEmpty);
+      expect(
+          InventoryRules.receive(p0, const LootDrop.item(epicSword),
+                  markNew: false)!
+              .fresh,
+          isEmpty);
       final back = PlayerProfile.fromJson(
           jsonDecode(jsonEncode(p1.toJson())) as Map<String, Object?>);
       expect(back.fresh, {uid});
@@ -157,8 +160,9 @@ void main() {
     expect(line, isNot(contains('\n')));
     expect(plain(tester, 'inv-give'), contains('Dar a... · sin compañeros'));
     final rowH = tester.getSize(find.byKey(const ValueKey('inv-equip'))).height;
-    expect(tester.getSize(find.byKey(const ValueKey('inv-salvage'))).height,
-        rowH, reason: 'la desactivada ocupa una línea, como las demás');
+    expect(
+        tester.getSize(find.byKey(const ValueKey('inv-salvage'))).height, rowH,
+        reason: 'la desactivada ocupa una línea, como las demás');
     // Ancho ajustado al contenido, no medio panel.
     expect(tester.getSize(find.byKey(const ValueKey('inv-ctx-menu'))).width,
         lessThan(361));
@@ -189,46 +193,59 @@ void main() {
     expect(find.byKey(const ValueKey('inv-ctx-menu')), findsNothing);
   });
 
-  testWidgets('ESTADÍSTICAS: siempre a la vista; el mouse sobre un arma '
-      'muestra cómo cambian', (tester) async {
-    final c = await _inventory(tester, lootWarrior());
-    expect(find.byKey(const ValueKey('inv-stats')), findsOneWidget);
-    expect(find.byKey(const ValueKey('stat-ATQ')), findsOneWidget);
-    expect(find.textContaining('si equipas'), findsNothing);
-    final i = _cell(c.view!.me!.profile, 'e1');
-    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await mouse.addPointer(location: Offset.zero);
-    await mouse.moveTo(tester.getCenter(find.byKey(ValueKey('inv-cell-$i'))));
-    await tester.pump();
-    expect(find.textContaining('si equipas Filo del Alba'), findsOneWidget);
-    await mouse.moveTo(Offset.zero);
-    await tester.pump();
-    expect(find.textContaining('si equipas'), findsNothing);
-    await mouse.removePointer();
-    await tester.pump(const Duration(milliseconds: 300));
+  testWidgets('sin panel derecho: la grilla llena el ancho', (tester) async {
+    await _inventory(tester, lootWarrior());
+    expect(find.byKey(const ValueKey('inv-stats')), findsNothing);
+    tester.view.physicalSize = const Size(1920, 1080);
+    await tester.pumpAndSettle();
+    final grid = tester.getRect(find.byKey(const ValueKey('inv-cell-0')));
+    expect(grid.width, greaterThan(InventoryTab.cell));
+    final last = tester.getRect(
+        find.byKey(const ValueKey('inv-cell-${InventoryRules.columns - 1}')));
+    expect(last.right - grid.left, greaterThan(InventoryTab.gridWidth));
+    // En cuartos (o entera desde ×2): nitidez del pixel art.
+    expect((grid.width / InventoryTab.cell * 4) % 1, 0);
+    expect(tester.takeException(), isNull);
   });
 
-  testWidgets('el tooltip de un arma no tapa ESTADÍSTICAS', (tester) async {
+  testWidgets('el tooltip de un arma compara las stats con la equipada',
+      (tester) async {
     final c = await _inventory(tester, lootWarrior());
-    final stats = tester.getRect(find.byKey(const ValueKey('inv-stats')));
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
+    final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
     for (final uid in ['e1', 'l1', 'c1']) {
       final i = _cell(c.view!.me!.profile, uid);
       await mouse.moveTo(tester.getCenter(find.byKey(ValueKey('inv-cell-$i'))));
       await tester.pump();
       final tip = tester.getRect(find.byKey(const ValueKey('inv-cmp-tip')));
-      expect(tip.overlaps(stats), isFalse, reason: '$uid: $tip vs $stats');
+      expect((Offset.zero & screen).inflate(1).contains(tip.topLeft), isTrue);
+      expect(
+          (Offset.zero & screen).inflate(1).contains(tip.bottomRight), isTrue,
+          reason: '$uid: $tip');
+      for (final s in ['Vida', 'Maná', 'VEL', 'ATQ', 'MAG', 'DEF', 'Crítico']) {
+        expect(find.byKey(ValueKey('cmp-stat-$s')), findsOneWidget,
+            reason: '$uid: $s');
+      }
     }
-    // La equipada (tooltip plegable) tampoco.
-    await mouse.moveTo(
-        tester.getCenter(find.byKey(const ValueKey('inv-equipped'))));
-    await tester.pump();
-    final folds = tester.getRect(find.byKey(const ValueKey('inv-tip-folds')));
-    expect(folds.overlaps(stats), isFalse);
     await mouse.removePointer();
     await tester.pump(const Duration(milliseconds: 300));
   });
+
+  for (final size in const [
+    Size(1024, 600),
+    Size(1280, 720),
+    Size(1920, 1080),
+    Size(2560, 1440)
+  ]) {
+    testWidgets('sin overflow en ${size.width.toInt()}×${size.height.toInt()}',
+        (tester) async {
+      await _inventory(tester, lootWarrior());
+      tester.view.physicalSize = size;
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  }
 
   testWidgets('el menú de la EQUIPADA no tapa el buscador', (tester) async {
     await _inventory(tester, lootWarrior());
@@ -239,7 +256,8 @@ void main() {
     final search = tester.getRect(find.byKey(const ValueKey('inv-search')));
     expect(menu.overlaps(search), isFalse, reason: '$menu vs $search');
     final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
-    expect((Offset.zero & screen).contains(menu.bottomRight - const Offset(1, 1)),
+    expect(
+        (Offset.zero & screen).contains(menu.bottomRight - const Offset(1, 1)),
         isTrue);
   });
 

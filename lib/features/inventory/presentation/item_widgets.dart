@@ -383,21 +383,23 @@ class ItemCell extends StatelessWidget {
     final c = content;
     final Color border;
     Widget? icon;
+    // Escala de la casilla (44 px = 1): el ícono crece en proporción.
+    final k = size / 44;
     if (c?.item case final it?) {
       border = RarityColors.of(it.rarity);
       final type = rules.catalog.weapons[it.baseId]?.type ?? 'espada';
       icon = PixelIcon(iconKeyForType(type),
-          accent: RarityColors.of(it.rarity), size: size - 12);
+          accent: RarityColors.of(it.rarity), size: size - 12 * k);
     } else if (c?.eco case final e?) {
       border = RarityColors.of(e.rarity);
       // Más chico y arriba: abajo a la derecha va el tier.
       icon = Align(
           alignment: const Alignment(-0.5, -0.6),
-          child: PixelIcon('eco', accent: kEcoColor, size: size - 16));
+          child: PixelIcon('eco', accent: kEcoColor, size: size - 16 * k));
     } else if (c?.stack case final st?) {
       border = ProtoColors.panelBorder;
       final (key, accent) = iconForStack(st);
-      icon = PixelIcon(key, accent: accent, size: size - 12);
+      icon = PixelIcon(key, accent: accent, size: size - 12 * k);
     } else {
       border = ProtoColors.panelBorder;
     }

@@ -557,25 +557,34 @@ hace": `Arrastra para mover · clic para ver · clic derecho (o Enter):
 acciones. ORDENAR · LIMPIAR INVENTARIO: por rareza o elegidas a mano.`
 (v0.9.9).
 
-**Panel derecho (v0.9.9): solo `ESTADÍSTICAS`** (`inv-stats`). Ya no
-hay sección ACCIONES ni FICHA: la ficha del objeto es su tooltip y las
-acciones van en el menú contextual. ESTADÍSTICAS usa las mismas filas
-que ATRIBUTOS › VISTA PREVIA (`CharacterStatRows`: HP, MP, VEL con la
-fórmula y el peso del arma, ATQ, MAG, DEF con % de daño, CRÍT), siempre
-a la vista y sin párrafos. Con el mouse (o el cursor de teclado) sobre
-un arma que no es la equipada (tuya o de un compañero), el subtítulo
-dice `si equipas <nombre>` y cada fila muestra `antes → después` en
-verde si sube y en rojo si baja (`StatChange`), y el peso `a → b`; al
-salir vuelve a los valores actuales y al equipar se actualiza. Abajo
-del panel quedan las teclas (`Enter Elegir / acciones · Esc Cerrar`) y,
-en el inventario de un compañero, `Solo lectura` y `COMPARAR`.
+**Sin panel derecho (v0.9.10).** ESTADÍSTICAS (`inv-stats`, v0.9.9)
+se sacó: la ficha del mouse de un arma ya compara con la equipada
+(`Si la equipas:` con Vida, Maná, VEL, ATQ, MAG, DEF, Crítico y peso,
+`antes → después` en verde ▲ si mejora y rojo ▼ si empeora; clave
+`cmp-stat-<stat>`). El inventario ocupa todo el ancho: la columna
+(`inv-main`) va centrada y la grilla, la EQUIPADA, las pilas, el
+buscador, el menú de LIMPIAR y la confirmación escalan juntos con
+`inventoryScale(ancho, alto)`: la mayor escala k (casillas de 44 × k
+px, íconos proporcionales) con la que la grilla entra a lo ancho y sus
+5 filas, la EQUIPADA y las pilas (más ~200 px de textos y botones) a lo
+alto, así LIMPIAR queda a la vista sin scroll; entera desde k = 2
+(nitidez del pixel art) y en cuartos entre 1 y 2; si ni k = 1 entra a
+lo ancho, la que entre (sin scroll horizontal; a lo alto, la columna
+tiene scroll). Si hay lugar a lo ancho (`inventoryScaleWide`), la
+EQUIPADA, CONSUMIBLES / MATERIALES, el resumen y LIMPIAR van en una
+columna al lado de la grilla (`inv-side`) y a lo alto solo cuentan
+ORDENAR, el buscador y las 5 filas: se usa el modo que dé la grilla más
+grande (en 1280×720, k = 1,25 con la columna al lado). Con LIMPIAR INVENTARIO abierto se vuelve a
+k = 1 y el detalle de LIMPIAR va a la derecha (`PanelSplit`). En el
+inventario de un compañero, abajo a la derecha: `Solo lectura` y
+`COMPARAR`.
 
 - Arriba de la grilla, pestañas de dueño (`inv-owner-<id>`): `TÚ` y una
   por compañero de sala (solo lectura: `Inventario de <nombre> (solo
   lectura)`, sin botones).
 - Casilla de la **equipada** (`inv-equipped`, rótulo `EQUIPADA`) y la
-  grilla de 8 × 5 (`InventoryRules.layout`), casillas de 44 px
-  (`inv-cell-<i>`): ícono pixel del tipo de arma con el borde del color
+  grilla de 8 × 5 (`InventoryRules.layout`), casillas de 44 px × la
+  escala (`inv-cell-<i>`): ícono pixel del tipo de arma con el borde del color
   de la rareza, o la pila (poción, éter, materiales) con su cantidad.
   Pasar el mouse muestra la ficha (tooltip; en las armas, comparada con
   la equipada: § "Comparar armas"). Debajo: `Casillas N/40 ·
@@ -627,9 +636,8 @@ en el inventario de un compañero, `Solo lectura` y `COMPARAR`.
   sin salirse de la pantalla: si no entra abajo se abre hacia arriba y
   si no entra a la derecha, hacia la izquierda. El de la EQUIPADA no tapa el
   buscador: se abre debajo de él (si no entra, a su derecha). Los
-  tooltips del inventario se abren solo en la zona a la izquierda de
-  ESTADÍSTICAS (`RetroTipArea`; la ficha comparada se achica para
-  entrar), así nunca tapan el panel que se mira al pasar el mouse. Orden: Equipar, Comparar,
+  tooltips del inventario (sin `RetroTipArea` desde v0.9.10) nunca se
+  salen de la pantalla. Orden: Equipar, Comparar,
   Mover (`· o arrastrá`), Dar a <nombre> (una por compañero; sin
   compañeros `Dar a...`), Tirar (`· queda en el piso`), Desarmar, Vender
   ₵N (con `· Recibís ...`). Las que no se pueden, en gris con el
@@ -1032,8 +1040,8 @@ cortado, y todo usable con teclado. Piezas en `lib/app/widgets/`
   línea violeta si sube la pasiva y el pie `CostChip` `+1 · $N` (o `MAX`,
   o candado + motivo, p. ej. `Tope de forja (3)`). Clic / `Enter` = +1.
   Grilla de 3 columnas a 1280 en Normal.
-- **Inventario (derecha)**: desde v0.9.9 solo `ESTADÍSTICAS` (ver §
-  "Inventario"); la ficha (con habilidades, pasiva, mods, peso y forja,
+- **Inventario (derecha)**: desde v0.9.10 sin panel derecho (ver §
+  "Inventario"; la grilla ocupa todo el ancho); la ficha (con habilidades, pasiva, mods, peso y forja,
   plegadas) es el tooltip de la casilla y las acciones, el menú
   contextual. Las confirmaciones (`CONFIRMAR` en rojo) y la cantidad de
   una pila van debajo de la grilla.
