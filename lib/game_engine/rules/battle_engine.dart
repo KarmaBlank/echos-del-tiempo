@@ -1445,7 +1445,7 @@ class _Turn {
       final foes = state.enemies.where((e) => e.alive).toList();
       if (foes.isEmpty) return;
       final t = foes.where((e) => e.id == c.ownerId).firstOrNull ?? foes.first;
-      final sk = engine.catalog.skills[c.sourceId];
+      final sk = engine.catalog.skills[c.sourceId] ?? _ultById(c.sourceId);
       events.add(ProcEvent(p.id, c.sourceId, targetId: t.id));
       final d = _skillProcDamage(
           p, t, math.max(1, c.value.round()), c.sourceId, sk);
@@ -1883,6 +1883,12 @@ class _Turn {
           if (_attacker case final a?) ..._avatarStatuses(a),
         ]);
   }
+
+  /// La ULT [id] (de tipo de arma, de camino / Invocador o de ascensión).
+  SkillDef? _ultById(String id) =>
+      kWeaponUltSkills[id] ??
+      engine.catalog.ultimates.values.where((u) => u.id == id).firstOrNull ??
+      kAscensionUltimates.values.where((u) => u.id == id).firstOrNull;
 
   /// Daño de mecánica que repite / difiere un golpe de la habilidad [sk]
   /// (Eco Arcano, Disparo cargado): lleva su elemento, así que detona
@@ -4138,8 +4144,10 @@ class _Turn {
 
       case SkillKind.physical:
       case SkillKind.magical:
-        if (tk.charge > 0 && !ultimate) {
+        if (tk.charge > 0) {
           // Disparo cargado: apunta ahora, cae al empezar tu próximo turno.
+          // También las ULT cargadas (Tensión Máxima): antes caían al
+          // golpe normal con `power` 0 y hacían 1 de daño.
           final dmg = math.max(1, jsRound(_atk(p) * tk.charge));
           p.effects = [
             for (final e in p.effects)

@@ -1,8 +1,10 @@
+import 'package:echos_del_tiempo/game_engine/data/ascension_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/branch_ults_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/elements_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/game_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/skills_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/summoner_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
@@ -250,5 +252,58 @@ void main() {
           hero: _hero(skills: ['chispazo'], mech: {'diosTrueno'}));
       expect(_rx(s), hasLength(1));
     });
+  });
+
+  group('ULT cargadas (bug v0.8.3: Tensión Máxima hacía 1 de daño)', () {
+    test('Tensión Máxima apunta y cae al empezar el próximo turno', () {
+      final ult = kBranchUltSkills['ult_tensionMaxima']!;
+      final e = _engine(catalog: _withUlt(ult));
+      final s = _run(e, [_foe('e0', st: {StatusKind.wet: 2})], _ult,
+          hero: _hero(ult: 100));
+      // Al usarla no pega: carga ATQ 20 × 5 = 100.
+      expect(s.state.enemies.single.hp, 1000);
+      final p = s.state.party.single;
+      expect(p.effects.where((x) => x.stat == BuffStat.charge).single.value,
+          100);
+      // Al empezar su turno cae: Electro sobre un Mojado → Electrocución.
+      s.state.enemies.single
+        ..statuses[StatusKind.wet] = 2
+        ..nextTurn = 1000;
+      final next = e.nextTurn(s.state);
+      expect(next.state.currentId, 'p1');
+      final foe = next.state.enemies.single;
+      expect(foe.hp, 1000 - 150);
+      expect(_rx(next).single.kind, ReactionKind.electrocucion);
+      expect(foe.stacks(StatusKind.charged), greaterThan(0));
+    });
+  });
+
+  test('catálogo: toda ULT hace daño o tiene un efecto', () {
+    final ults = <SkillDef>[
+      ...kAllUltimates.values,
+      ...kAscensionUltimates.values,
+      ...kBranchUltSkills.values,
+      ...kSummonerUltimates.values,
+    ];
+    bool useful(SkillDef u) => switch (u.kind) {
+          SkillKind.physical || SkillKind.magical => u.power > 0 || u.charge > 0,
+          SkillKind.support => kSummonerUltimates.containsKey(u.id) ||
+              u.partyBuffs.isNotEmpty ||
+              u.partyShield > 0 ||
+              u.advanceAllies > 0 ||
+              u.selfBuff != null ||
+              u.selfShield > 0 ||
+              u.allyShield > 0 ||
+              u.selfTurn > 0 ||
+              u.protect ||
+              u.debuffs.isNotEmpty ||
+              u.trap > 0 ||
+              u.ultDrain > 0,
+          SkillKind.taunt => u.amount > 0,
+          SkillKind.heal || SkillKind.regen => u.power > 0 || u.revive > 0,
+          _ => true,
+        };
+    final useless = [for (final u in ults) if (!useful(u)) u.id];
+    expect(useless, isEmpty);
   });
 }
