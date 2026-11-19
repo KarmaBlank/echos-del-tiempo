@@ -259,6 +259,29 @@ ORDENAR ya usa `PanelButton`):
   clickeable, separado de las filas por una línea `panelBorder`.
 - El texto de ayuda (`· queda en el piso`) va en `dim`, secundario.
 - Nombres repetidos se desambiguan: `Dar a Héroe (Maga, Nv 6)`.
+
+### Toda acción se ve como botón (v0.9.13)
+
+Pedido del dueño: fuera del inventario había acciones que se veían como
+texto blanco (p. ej. las opciones de "APLICAR SUGERENCIA" en BUILD). Regla
+general: todo lo que se clickea usa un componente del tema, nunca un
+`InkWell` / `GestureDetector` suelto sobre texto.
+- Botones: `PanelButton` / `ElevatedButton` con el tema
+  (`RetroTheme.build`) o `ConfirmButton`.
+- Filas de lista: `MenuRow`, `PanelListItem`, `InventoryActionRow`; usan
+  la decoración de botón (`actionDecoration`, `lib/app/theme/action_box.dart`):
+  fondo `button`, borde fino `buttonBorder`, hover / foco `buttonHover` +
+  `buttonHoverBorder`, elegida con borde `gold`, cursor de mano, padding
+  ≥ 8 px a lo ancho (6 / 8 px de alto en filas de una línea).
+- Otras acciones (opciones de un selector, `×`, `−5` / `+5`): `ActionBox`,
+  el mismo aspecto; `onTap: null` la desactiva.
+- Desactivado (todas las anteriores): sin fondo ni borde, texto `dim`,
+  cursor normal. Las filas atenuadas de `MenuRow` (`dimmed`) siguen
+  elegibles para leer el motivo.
+- Links plegables (`▸ Más`, `[+]` de objetivos, marca de una meta):
+  `ActionLink`, sin caja pero con cursor de mano y, con hover / foco, el
+  texto en `buttonHoverBorder` subrayado.
+Pruebas: `test/app/button_look.dart` (`expectButtonLook`).
 Interlineado: paneles, tooltips, `.pbox` y chat `RetroType.line`.
 
 ## Paleta (`ProtoColors`, `lib/app/theme/proto_colors.dart`)

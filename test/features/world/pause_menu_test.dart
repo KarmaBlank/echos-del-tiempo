@@ -19,6 +19,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../game_engine/session_test_helpers.dart';
 import 'world_test_helpers.dart';
+import '../../app/button_look.dart';
 
 GameSprites? _sprites;
 
@@ -104,6 +105,7 @@ void main() {
     expect(_menu, findsOneWidget);
     expect(find.text('PAUSA'), findsOneWidget);
     expect(find.text('Juego en pausa'), findsOneWidget, reason: 'solo');
+    expectButtonLook(tester, find.byKey(const ValueKey('pause-exit-title')));
     expect(w.c.menuOpen, isTrue);
     expect(w.c.paused, isTrue);
 

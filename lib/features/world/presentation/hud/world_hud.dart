@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/theme/action_box.dart';
 import '../../../../app/theme/panel_frame.dart' show RetroTooltip;
 import '../../../../app/theme/party_box.dart';
 import '../../../../app/theme/proto_colors.dart';
@@ -1092,11 +1093,8 @@ class _Objectives extends StatelessWidget {
         ? '${floorLabelText(zoneName, f, mission.floors)}'
             '${floorLevel == null ? '' : ' · Lv $floorLevel'}'
         : zoneName;
-    final header = MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
+    final header = ActionLink(
         key: const ValueKey('hud-objectives-header'),
-        behavior: HitTestBehavior.opaque,
         onTap: onToggle,
         child: Padding(
           padding: const EdgeInsets.only(bottom: kObjectiveLineGap),
@@ -1123,7 +1121,6 @@ class _Objectives extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
     // `drawObjectives`: caja `#000a` con borde `#5b74c9`.
     return Container(

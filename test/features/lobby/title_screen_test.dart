@@ -18,6 +18,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../game_engine/session_test_helpers.dart';
 import '../inventory/loot_fixtures.dart';
+import '../../app/button_look.dart';
 
 final _rules = CharacterRules(progression);
 
@@ -87,6 +88,8 @@ void main() {
     expect(find.text('CREA TU PRIMER PERSONAJE'), findsOneWidget);
     expect(find.byKey(const ValueKey('char-create-cancel')), findsNothing);
     expect(find.byKey(const ValueKey('title-settings')), findsOneWidget);
+    expectButtonLook(tester, find.byKey(const ValueKey('char-create-confirm')));
+    expectButtonLook(tester, find.byKey(const ValueKey('title-settings')));
 
     await tester.enterText(
         find.byKey(const ValueKey('title-name')), 'Anastasia Larga');

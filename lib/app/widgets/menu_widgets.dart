@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../theme/action_box.dart';
 import '../theme/panel_frame.dart';
 import '../theme/proto_colors.dart';
 import '../theme/proto_markup.dart';
@@ -88,11 +89,6 @@ class _MenuRowState extends State<MenuRow> {
 
   @override
   Widget build(BuildContext context) {
-    final border = widget.selected
-        ? ProtoColors.gold
-        : _hot
-            ? ProtoColors.sky
-            : ProtoColors.panelBorder;
     final style =
         widget.dimmed ? const TextStyle(color: ProtoColors.dim) : null;
     return Padding(
@@ -113,15 +109,12 @@ class _MenuRowState extends State<MenuRow> {
           child: FocusRing(
             focused: _focus,
             child: Container(
+              // Toda acción se ve como botón (ui_style.md § "Toda acción
+              // se ve como botón"); atenuada, sin fondo ni borde.
               padding: EdgeInsets.symmetric(
-                  horizontal: UiTheme.space(8), vertical: UiTheme.wide ? 6 : 3),
-              decoration: BoxDecoration(
-                color: widget.selected
-                    ? ProtoColors.button.withValues(alpha: 0.5)
-                    : null,
-                border: Border.all(
-                    color: border, width: RetroTheme.thinBorderWidth),
-              ),
+                  horizontal: UiTheme.space(8), vertical: UiTheme.wide ? 8 : 6),
+              decoration: actionDecoration(
+                  enabled: !widget.dimmed, hot: _hot, selected: widget.selected),
               child: widget.wrap ? _wrapped(style) : _oneLine(style),
             ),
           ),

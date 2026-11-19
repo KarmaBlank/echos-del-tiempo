@@ -86,8 +86,10 @@ abstract final class RetroTheme {
       ),
       // `button` / `button:hover` / `button:disabled` del prototipo.
       backgroundColor: WidgetStateProperty.resolveWith(
+        // Desactivado: sin fondo ni borde (ui_style.md § "Toda acción se
+        // ve como botón").
         (s) => s.contains(WidgetState.disabled)
-            ? ProtoColors.button.withValues(alpha: 0.35)
+            ? Colors.transparent
             : s.contains(WidgetState.hovered) ||
                     s.contains(WidgetState.focused) ||
                     s.contains(WidgetState.pressed)
@@ -96,7 +98,7 @@ abstract final class RetroTheme {
       ),
       foregroundColor: WidgetStateProperty.resolveWith(
         (s) => s.contains(WidgetState.disabled)
-            ? ProtoColors.white.withValues(alpha: 0.35)
+            ? ProtoColors.dim
             : ProtoColors.white,
       ),
       side: WidgetStateProperty.resolveWith(
@@ -104,7 +106,7 @@ abstract final class RetroTheme {
           // 3 px en ALTO CONTRASTE (accessibility.md § 8.1).
           width: UiTheme.buttonBorderWidth,
           color: s.contains(WidgetState.disabled)
-              ? ProtoColors.buttonBorder.withValues(alpha: 0.35)
+              ? Colors.transparent
               // Foco de teclado: el mismo dorado del aro de los menús
               // (`FocusRing`, lib/app/widgets/menu_focus.dart).
               : s.contains(WidgetState.focused)
