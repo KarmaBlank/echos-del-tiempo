@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart' show OffsetLayer;
 import 'package:echos_del_tiempo/app/app.dart';
 import 'package:echos_del_tiempo/core/perf/frame_stats.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
@@ -226,6 +227,35 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('overworld: rasterizado del cuadro entero', (tester) async {
+    // Rasteriza (CPU, `toImage` de la capa raíz) la pantalla entera
+    // quieto en el campo: mapa, nombres, loot, HUD y minimapa. Sirve para
+    // comparar antes / después de un cambio de dibujo (exploration.md §
+    // "Rendimiento").
+    final c = await pumpField(tester);
+    final layer = tester.binding.renderViews.first.debugLayer! as OffsetLayer;
+    final size = tester.view.physicalSize / tester.view.devicePixelRatio;
+    final times = <double>[];
+    for (var i = 0; i < 35; i++) {
+      if (i % 3 == 0) c.advance(0.05);
+      await tester.pump(const Duration(microseconds: 16667));
+      await tester.runAsync(() async {
+        final sw = Stopwatch()..start();
+        final img = await layer.toImage(Offset.zero & size);
+        sw.stop();
+        img.dispose();
+        if (i >= 5) times.add(sw.elapsedMicroseconds / 1000);
+      });
+    }
+    times.sort();
+    double p(double q) => times[((times.length - 1) * q).round()];
+    // ignore: avoid_print
+    print('\n=== Overworld: rasterizado (${times.length} cuadros) ===\n'
+        '  p50 ${p(.5).toStringAsFixed(2)} · p90 ${p(.9).toStringAsFixed(2)}'
+        ' · máx ${times.last.toStringAsFixed(2)} ms');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('el HUD no reconstruye lo que no cambió en cada tick',
       (tester) async {
     final c = await pumpField(tester);
@@ -273,10 +303,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(counts['CompactPlayerBox'], 1);
     final hp = c.session!.players[mate.id]!.hp;
-    expect(
-        tester
-            .widget<Text>(find.byKey(ValueKey('hud-hp-${mate.id}')))
-            .data,
+    expect(tester.widget<Text>(find.byKey(ValueKey('hud-hp-${mate.id}'))).data,
         startsWith('${hp.ceil()}/'));
 
     // Llega un mensaje de chat: el chat se arma, las cajas no.

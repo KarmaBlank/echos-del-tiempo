@@ -321,8 +321,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                   TextSpan(text: retroText('Puntos de árbol disponibles: ')),
                   TextSpan(
                       text: '$points',
-                      style: const TextStyle(
-                          color: ProtoColors.gold)),
+                      style: const TextStyle(color: ProtoColors.gold)),
                 ])),
             if (widget.showReset)
               PanelButton(widget.resetLabel,
@@ -333,28 +332,30 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
           ],
         ),
         const SizedBox(height: 8),
-        _grow(fill, Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: SizedBox(
-                height: widget.height,
-                child: LayoutBuilder(builder: (context, box) {
-                  _fit(box.biggest);
-                  return _viewport(
-                      box.biggest, states, hoverPath, hits, route.toSet());
-                }),
-              ),
-            ),
-            const SizedBox(width: 16),
-            // Mismo alto que el visor; si no entra, se desplaza.
-            SizedBox(
-              width: 352,
-              height: widget.height,
-              child: SingleChildScrollView(child: _info(focusId, route)),
-            ),
-          ],
-        )),
+        _grow(
+            fill,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: widget.height,
+                    child: LayoutBuilder(builder: (context, box) {
+                      _fit(box.biggest);
+                      return _viewport(
+                          box.biggest, states, hoverPath, hits, route.toSet());
+                    }),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Mismo alto que el visor; si no entra, se desplaza.
+                SizedBox(
+                  width: 352,
+                  height: widget.height,
+                  child: SingleChildScrollView(child: _info(focusId, route)),
+                ),
+              ],
+            )),
       ],
     );
   }
@@ -436,19 +437,28 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                   child: GestureDetector(
                     key: const ValueKey('tree-canvas'),
                     onTapUp: (d) => _tap(d.localPosition),
+                    // Repinta solo si cambia el estado, el resaltado o el
+                    // nivel de zoom ([PassiveTreePainter.farLevel]); el
+                    // arrastre solo mueve la capa.
                     child: RepaintBoundary(
-                      child: CustomPaint(
-                        size: const Size.square(PassiveTreeView.size),
-                        painter: PassiveTreePainter(
-                          catalog: _cat,
-                          startId:
-                              _cat.startNodeByClass[widget.profile.classId],
-                          states: states,
-                          focus: _hover ?? _selected,
-                          highlightPath: hoverPath,
-                          route: route,
-                          hits: hits,
-                          planned: widget.planned,
+                      child: ValueListenableBuilder<Matrix4>(
+                        valueListenable: _transform,
+                        builder: (context, m, _) => CustomPaint(
+                          size: const Size.square(PassiveTreeView.size),
+                          painter: PassiveTreePainter(
+                            zoom: m.storage[0],
+                            devicePixelRatio:
+                                MediaQuery.devicePixelRatioOf(context),
+                            catalog: _cat,
+                            startId:
+                                _cat.startNodeByClass[widget.profile.classId],
+                            states: states,
+                            focus: _hover ?? _selected,
+                            highlightPath: hoverPath,
+                            route: route,
+                            hits: hits,
+                            planned: widget.planned,
+                          ),
                         ),
                       ),
                     ),
@@ -736,8 +746,43 @@ class PassiveTreePainter extends CustomPainter {
     this.route = const {},
     this.hits = const {},
     this.planned = const {},
+    this.zoom = 1,
+    this.devicePixelRatio = 1,
   });
 
+  /// Zoom del visor y px físicos por px lógico: con zoom alejado
+  /// ([farZoom]) la capa fija se dibuja como UNA imagen ya rasterizada a
+  /// esa escala ([farLevel]) en vez de reproducir ~600 nodos y ~800
+  /// enlaces vectoriales en cada cuadro (passive_tree_v6.md § 9).
+  final double zoom;
+  final double devicePixelRatio;
+
+  /// Apagado solo en el benchmark, para comparar con el dibujo vectorial.
+  @visibleForTesting
+  static bool farCache = true;
+
+  /// Por debajo de este zoom la capa fija va como imagen.
+  static const farZoom = 0.75;
+
+  /// Por debajo de este zoom (nivel de detalle) los nodos del cluster
+  /// bajo el mouse no llevan el anillo dorado fino de 1 px (mediría
+  /// menos de medio px de pantalla); sus enlaces dorados, el camino, el
+  /// foco, la búsqueda y el plan se dibujan igual.
+  static const detailZoom = 0.4;
+
+  /// Escala (px de la imagen por px del lienzo) de la capa fija con este
+  /// zoom, o `null` si va vectorial. Se redondea hacia arriba en pasos de
+  /// 2^(1/4) (~19 %) para no regrabar con cada tick de la rueda, y nunca
+  /// pasa de 2048 px de lado.
+  double? get farLevel {
+    if (!farCache || zoom >= farZoom) return null;
+    final want = zoom * devicePixelRatio;
+    final step = (math.log(want) / math.ln2 * 4).ceil() / 4;
+    final l = math.pow(2, step).toDouble();
+    return math.min(l, 2048 / PassiveTreeView.size);
+  }
+
+  bool get _fine => zoom >= detailZoom;
   final PassiveTreeCatalog catalog;
   final String? startId;
   final Map<String, TreeNodeState> states;
@@ -776,12 +821,25 @@ class PassiveTreePainter extends CustomPainter {
   /// plan ni la clase: mover el mouse o buscar solo redibuja la capa de
   /// resaltado (árbol v6, ~600 nodos; passive_tree_v6.md § 9).
   static ui.Picture? _base;
-  static (PassiveTreeCatalog, String?, Map<String, TreeNodeState>,
-      Set<String>)? _baseKey;
+  static (
+    PassiveTreeCatalog,
+    String?,
+    Map<String, TreeNodeState>,
+    Set<String>
+  )? _baseKey;
 
   /// Cuántas veces se grabó la capa fija (tests de rendimiento).
   @visibleForTesting
   static int baseBuilds = 0;
+
+  /// Capa fija rasterizada para el zoom alejado ([farLevel]).
+  static ui.Image? _far;
+  static double? _farLevel;
+  static ui.Picture? _farOf;
+
+  /// Cuántas veces se rasterizó la capa fija (tests de rendimiento).
+  @visibleForTesting
+  static int farBuilds = 0;
 
   bool _baseValid() {
     final k = _baseKey;
@@ -817,8 +875,10 @@ class PassiveTreePainter extends CustomPainter {
         if (n.id.compareTo(l) >= 0) continue;
         final b = catalog.nodes[l];
         if (b == null) continue;
-        canvas.drawLine(PassiveTreeView.nodeCenter(n),
-            PassiveTreeView.nodeCenter(b), _has(n.id) && _has(l) ? owned : idle);
+        canvas.drawLine(
+            PassiveTreeView.nodeCenter(n),
+            PassiveTreeView.nodeCenter(b),
+            _has(n.id) && _has(l) ? owned : idle);
       }
     }
     for (final n in catalog.nodes.values) {
@@ -870,7 +930,31 @@ class PassiveTreePainter extends CustomPainter {
       _baseKey = (catalog, startId, states, Set.of(planned));
       baseBuilds++;
     }
-    canvas.drawPicture(_base!);
+    final level = farLevel;
+    if (level == null) {
+      canvas.drawPicture(_base!);
+    } else {
+      if (_far == null || _farLevel != level || !identical(_farOf, _base)) {
+        final rec = ui.PictureRecorder();
+        Canvas(rec)
+          ..scale(level)
+          ..drawPicture(_base!);
+        final pic = rec.endRecording();
+        final side = (PassiveTreeView.size * level).ceil();
+        _far?.dispose();
+        _far = pic.toImageSync(side, side);
+        pic.dispose();
+        _farLevel = level;
+        _farOf = _base;
+        farBuilds++;
+      }
+      final img = _far!;
+      canvas.drawImageRect(
+          img,
+          Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
+          Rect.fromLTWH(0, 0, img.width / level, img.height / level),
+          Paint()..filterQuality = FilterQuality.low);
+    }
 
     // Resaltado: enlaces del camino y del cluster bajo el mouse (encima
     // de la capa fija), y se vuelven a dibujar sus nodos.
@@ -938,7 +1022,7 @@ class PassiveTreePainter extends CustomPainter {
                 ..color = planColor);
         }
       }
-      if (_onRoute(n.id) || n.id == focus || _inPath(n)) {
+      if (_onRoute(n.id) || n.id == focus || (_inPath(n) && _fine)) {
         canvas.drawCircle(
           c,
           r + 3,
@@ -969,6 +1053,8 @@ class PassiveTreePainter extends CustomPainter {
   bool shouldRepaint(PassiveTreePainter old) =>
       old.focus != focus ||
       old.startId != startId ||
+      old.farLevel != farLevel ||
+      old._fine != _fine ||
       old.highlightPath != highlightPath ||
       !_sameSet(old.route, route) ||
       !_sameSet(old.hits, hits) ||
@@ -980,6 +1066,7 @@ class PassiveTreePainter extends CustomPainter {
 
   static bool _sameStates(
       Map<String, TreeNodeState> a, Map<String, TreeNodeState> b) {
+    if (identical(a, b)) return true;
     if (a.length != b.length) return false;
     for (final e in a.entries) {
       if (b[e.key] != e.value) return false;

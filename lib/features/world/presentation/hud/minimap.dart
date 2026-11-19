@@ -67,8 +67,7 @@ Color? poiMinimapColor(MapPoi p, MissionRun m) {
   return switch (p.kind) {
     PoiKind.secret => used ? spent : mk(MapMark.secret),
     PoiKind.shrine => used ? spent : mk(MapMark.shrine),
-    PoiKind.waystone =>
-      used ? mk(MapMark.waystoneUsed) : mk(MapMark.waystone),
+    PoiKind.waystone => used ? mk(MapMark.waystoneUsed) : mk(MapMark.waystone),
     PoiKind.wind => mk(MapMark.wind),
     PoiKind.shortcut => used ? spent : mk(MapMark.shortcut),
     PoiKind.brazier => used ? mk(MapMark.brazierLit) : mk(MapMark.brazier),
@@ -179,8 +178,14 @@ class Minimap extends StatelessWidget {
   }
 }
 
-/// La base del minimapa (tiles) se graba una vez por mapa y tema.
-final _baseCache = Expando<(Object, ui.Picture)>('minimapa');
+/// La base del minimapa (tiles) se graba una vez por mapa y tema como una
+/// imagen de 1 px por tile, que se dibuja escalada sin suavizado (cada tile
+/// sigue siendo un bloque nítido): un solo drawImageRect por cuadro en vez
+/// de reproducir un rectángulo por tile dentro de un saveLayer.
+final _baseCache = Expando<(Object, ui.Image)>('minimapa');
+
+/// Estrella del jefe (dos colores que parpadean) por tamaño: se mide una vez.
+final _bossStar = <(bool, double), TextPainter>{};
 
 class _MinimapPainter extends CustomPainter {
   _MinimapPainter(this.w, this.v);
@@ -192,7 +197,7 @@ class _MinimapPainter extends CustomPainter {
 
   static const _ts = 16.0;
 
-  ui.Picture _base(GameMap map) {
+  ui.Image _base(GameMap map) {
     final version = MapPalette.version;
     final cached = _baseCache[map];
     if (cached != null && cached.$1 == version) return cached.$2;
@@ -201,17 +206,15 @@ class _MinimapPainter extends CustomPainter {
     final p = Paint()..isAntiAlias = false;
     for (var y = 0; y < map.height; y++) {
       for (var x = 0; x < map.width; x++) {
-        final ch = map.tileAt(x, y);
-        p.color = minimapTileColor(ch);
-        c.drawRect(
-            Rect.fromLTWH(x * Minimap.baseCell, y * Minimap.baseCell,
-                Minimap.baseCell, Minimap.baseCell),
-            p);
+        p.color = minimapTileColor(map.tileAt(x, y));
+        c.drawRect(Rect.fromLTWH(x.toDouble(), y.toDouble(), 1, 1), p);
       }
     }
     final pic = rec.endRecording();
-    _baseCache[map] = (version, pic);
-    return pic;
+    final img = pic.toImageSync(map.width, map.height);
+    pic.dispose();
+    _baseCache[map] = (version, img);
+    return img;
   }
 
   @override
@@ -230,9 +233,19 @@ class _MinimapPainter extends CustomPainter {
     canvas.translate(-v.left * cell, -v.top * cell);
     final shown = Rect.fromLTWH(
         v.left * cell, v.top * cell, v.width * cell, v.height * cell);
-    canvas.saveLayer(
-        shown, Paint()..color = const Color.fromRGBO(0, 0, 0, 0.85));
-    canvas.drawPicture(_base(map));
+    // Base al 85 % de opacidad (como la capa de antes), recortada a lo
+    // que se ve.
+    final base = _base(map);
+    canvas.save();
+    canvas.clipRect(shown);
+    canvas.drawImageRect(
+        base,
+        Rect.fromLTWH(0, 0, base.width.toDouble(), base.height.toDouble()),
+        Rect.fromLTWH(0, 0, map.width * cell, map.height * cell),
+        Paint()
+          ..filterQuality = FilterQuality.none
+          ..isAntiAlias = false
+          ..color = const Color.fromRGBO(0, 0, 0, 0.85));
     canvas.restore();
 
     final p = Paint()..isAntiAlias = false;
@@ -306,18 +319,21 @@ class _MinimapPainter extends CustomPainter {
       for (final e in m.enemies) {
         if (!e.boss || !e.alive || e.floor != m.floor) continue;
         final blink = (w.time * 1000 / 300).floor() % 2 == 1;
-        final tp = TextPainter(
-          text: TextSpan(
-            text: '★',
-            style: TextStyle(
-              fontFamily: RetroTheme.fontFamily,
-              fontSize: 8 * dk,
-              height: 1,
-              color: MapPalette.mark(blink ? MapMark.boss : MapMark.bossAlt),
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        )..layout();
+        final tp = _bossStar.putIfAbsent(
+            (blink, 8 * dk),
+            () => TextPainter(
+                  text: TextSpan(
+                    text: '★',
+                    style: TextStyle(
+                      fontFamily: RetroTheme.fontFamily,
+                      fontSize: 8 * dk,
+                      height: 1,
+                      color: MapPalette.mark(
+                          blink ? MapMark.boss : MapMark.bossAlt),
+                    ),
+                  ),
+                  textDirection: TextDirection.ltr,
+                )..layout());
         tp.paint(
             canvas,
             Offset(e.x / _ts * cell - tp.width / 2,
