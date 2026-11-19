@@ -1,7 +1,7 @@
 # Spec: Barra de quiebre y ULT enemigas
 
 Pedido del dueño: "sonidos de ataque de los enemigos y ultimates de los
-enemigos, una barra de aturdimiento a lo Expedition 33". Se toma la
+enemigos, una barra de aturdimiento". Se toma la
 **mecánica** del género (barra de quiebre que se llena con golpes y deja
 al enemigo vulnerable; ataques definitivos de jefes con aviso y
 cinemática); el contenido es propio de Ecos del Tiempo.

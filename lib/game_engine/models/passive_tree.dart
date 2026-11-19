@@ -1,4 +1,4 @@
-/// Un nodo del árbol de pasivas tipo PoE. Puerto 1:1 del objeto `TREE`
+/// Un nodo del árbol de pasivas con clusters y keystones. Puerto 1:1 del objeto `TREE`
 /// del prototipo (ver docs/specs/passive_tree.md para el detalle de reglas).
 class PassiveNode {
   final String id;

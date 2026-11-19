@@ -1,4 +1,4 @@
-# Spec: Árbol de pasivas (tipo Path of Exile)
+# Spec: Árbol de pasivas (clusters, notables y keystones)
 
 > **Versión vigente: v3** — docs/specs/passive_tree_v3.md (352 nodos:
 > anillo central, 20 clusters de clase con bifurcaciones, 4 puentes

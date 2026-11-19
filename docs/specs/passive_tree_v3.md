@@ -6,7 +6,7 @@
 
 Pedido del dueño (v0.5.0): "el árbol normal es muy pequeño". Propuesta
 aprobada ("sí, dale"): ~350 nodos para que, con el máximo de puntos, un
-personaje cubra ~20% del árbol y tenga que **elegir** (como en PoE); los
+personaje cubra ~20% del árbol y tenga que **elegir** (como en los ARPG de loot); los
 caminos rectos de la v2 pasan a ser una **red con bifurcaciones**:
 clusters temáticos por clase, **puentes híbridos** entre clases vecinas y
 **clusters de grupo** pensados para el co-op (que sirven también solo).

@@ -154,8 +154,8 @@ Tiempos y tamaños (medidos, ver § 8): 1.4–2.7 MB por bucle de 33–63 s,
 
 ### 4.1 Título y mapa del mundo: épico-folk con ocarina andina
 
-Pedido del dueño: que el título y el mapa del mundo sean "tipo Señor de
-los Anillos" y "algo andino con la ocarina". Se toma como **estilo**:
+Pedido del dueño: que el título y el mapa del mundo suenen a fantasía
+épica clásica y "algo andino con la ocarina". Se toma como **estilo**:
 música de cine de fantasía épica/pastoral (modos dórico y mixolidio,
 frases largas en arco, un tema dicho simple y después repetido más
 grande, acordes abiertos —quintas, sus2, sus4—, armonía lenta) mezclada
@@ -164,9 +164,8 @@ adornos de quena, charango rasgueado, bombo legüero, zampoñas en
 hoquetus). La ocarina lleva siempre la melodía.
 
 **Melodías originales — sin citas.** No reproducen ni imitan de cerca
-ningún tema existente: ni los de Howard Shore para El Señor de los
-Anillos (la Comarca, la Comunidad, Gondor…) ni canciones andinas
-conocidas ("El Cóndor Pasa" y similares). Los rasgos de estilo
+ningún tema existente: ni bandas sonoras de películas o juegos de
+fantasía ni canciones andinas conocidas. Los rasgos de estilo
 (modos, ritmos, instrumentación) no son citas.
 
 **`title` · "Ecos del Tiempo"** — Re dórico (Re menor con Si natural;
@@ -186,12 +185,11 @@ chajchas (`h`).
 
 **`overworld` · Mapa del mundo** — pedido del dueño (segunda vuelta):
 la versión huayno de 104 bpm era "muy animada"; tiene que tener el
-**clima** de "Concerning Hobbits" (Howard Shore): campo tranquilo,
+**clima** de la música pastoral de las películas de fantasía: campo tranquilo,
 cálido, pastoral, la alegría sin apuro de estar en casa. Solo se toma
 el clima: **la melodía, el ritmo y la armonía son originales y no citan
-ni parafrasean ese tema** (está en Re mayor y abre subiendo desde la
-tónica; esta pieza está en Sol, abre bajando por grados desde el Re, y
-su cifrado y forma son propios).
+ni parafrasean ningún tema existente** (esta pieza está en Sol, abre
+bajando por grados desde el Re, y su cifrado y forma son propios).
 
 Sol mayor (jónico), 72 bpm (negra con punto), 6/8 con balanceo suave
 (negra–corchea), grilla de semicorcheas (`stepsPerBeat = 6`) para

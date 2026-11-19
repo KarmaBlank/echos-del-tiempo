@@ -47,7 +47,7 @@ String lootDropName(String Function(ItemInstance) itemName, LootDrop d,
   return d.count > 1 ? '${d.count} ${k.label}' : k.label;
 }
 
-/// Tamaño del filtro (18–45, como PoE) → px del lienzo virtual (5–7;
+/// Tamaño del filtro (18–45) → px del lienzo virtual (5–7;
 /// el mapa se ve ×2.5, y los nombres de los actores son de 6).
 double labelPx(int? size) =>
     (5 + ((size ?? FilterStyle.defaultSize) - FilterStyle.minSize) / 13.5)

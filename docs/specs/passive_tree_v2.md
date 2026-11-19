@@ -2,7 +2,7 @@
 
 Pedido del dueño: "que haya puntos gordos que no sean solo subir stats;
 por ejemplo, si hace un crítico aumenta la velocidad de ataque, o realiza
-un ataque en cadena; que se note el camino, como en PoE". Se toma la
+un ataque en cadena; que se note el camino, como en los ARPG de loot". Se toma la
 **mecánica** del género (árbol grande con caminos temáticos, nodos
 chicos de stats que llevan a notables con efectos que cambian el juego y
 keystones con trade-offs); los nodos, nombres y efectos son propios.

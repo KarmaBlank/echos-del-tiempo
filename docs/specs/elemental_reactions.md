@@ -68,7 +68,7 @@ de veneno (dagas, ballestas) llevan Veneno.
 2. **Explosión tóxica: ×1 por stack, sin tope.** Quemadura y Veneno se
    pueden acumular sin límite, para que acumular sirva de algo.
 3. **Las reglas son simétricas**: todo lo que aplica a los enemigos
-   aplica a los jugadores (estilo Divinity: Original Sin 2). Los
+   aplica a los jugadores (como en los RPG tácticos de superficies). Los
    enemigos pueden mojarte, electrocutarte o detonar tu veneno, y las
    reglas de familia valen para ambos lados.
 4. **Más adelante: razas de personaje** con las mismas reglas que las
