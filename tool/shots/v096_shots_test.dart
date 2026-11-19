@@ -1,4 +1,4 @@
-// Capturas del TUTORIAL v0.9.6 (todos actúan, votación de roles, ENTRENAR) (docs/release_shots/v0.9.6). NO es parte de la
+// Capturas del TUTORIAL v0.9.6 (todos actúan, ENTRENAR) (docs/release_shots/v0.9.6). NO es parte de la
 // suite: vive fuera de test/. Correr con
 //   flutter test tool/shots/v096_shots_test.dart
 //
@@ -160,22 +160,6 @@ void main() {
             t.prepared);
     await _settle(tester, 400);
     await _shot(tester, '01_etapa_todos_actuan.png');
-    await _settle(tester, 3000); // los sonidos terminan
-  });
-
-  testWidgets('02 votación de roles', (tester) async {
-    await _setup(tester);
-    final c = await _world(tester);
-    expect(c.startTutorial(), isTrue);
-    await _until(tester, c, (s, t) => t.phase == TutorialPhase.menu);
-    expect(c.tutorialPick('roles'), isTrue);
-    for (var i = 0; i < 4; i++) {
-      c.advance(0.05);
-    }
-    expect(c.view!.session.tutorial!.phase, TutorialPhase.roles);
-    await tester.pump();
-    await _settle(tester, 400);
-    await _shot(tester, '02_votacion_roles.png');
     await _settle(tester, 3000); // los sonidos terminan
   });
 
