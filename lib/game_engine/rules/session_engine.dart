@@ -1234,8 +1234,24 @@ class _Op {
     return _take(p, g);
   }
 
+  /// Loot propio: como `grant`, pero un material con la pila al tope se
+  /// toma igual y lo que sobra se descarta (loot.md § 14.2), así no
+  /// quedan pilas imposibles de levantar en el piso.
+  PlayerProfile? _grantLoot(PlayerProfile p, LootDrop d) {
+    final next = rules.grant(p, d);
+    if (next != null) return next;
+    final st = d.stack;
+    if (st == null || st.material == null) return null;
+    final max = InventoryRules.stackMax(st);
+    final have = InventoryRules.stackCount(p, st);
+    return have >= max ? p : InventoryRules.withStack(p, st, max);
+  }
+
   bool _take(SessionPlayer p, GroundLoot g) {
-    final next = rules.grant(p.profile, g.drop);
+    // Lo que otro soltó (compartido) no se descarta: si no entra, queda.
+    final next = g.ownerId == p.id
+        ? _grantLoot(p.profile, g.drop)
+        : rules.grant(p.profile, g.drop);
     if (next == null) return false;
     _profileChange(p, next);
     s.ground.remove(g);
@@ -1272,16 +1288,22 @@ class _Op {
       double x, double y) {
     if (drops.isEmpty) return;
     var full = false;
+    final capped = <String>{};
     final shown = <LootDrop>[];
     for (final d in drops) {
       final mission = src == LootSource.mission;
       final visible = mission ||
           e.lootVerdict(p.profile, d, wants: p.buildWants).visible;
       if (visible) shown.add(d);
+      // Material con la pila llena: nunca al piso (loot.md § 14.2).
+      final st = d.stack;
+      final atCap = st?.material != null && rules.grant(p.profile, d) == null;
+      if (atCap && !visible) continue; // oculto por el filtro: se descarta
+      if (atCap) capped.add(st!.label);
       // Un compañero no camina el piso: lo suyo va directo al inventario
       // (solo_party.md § 3.6).
-      if ((!e.groundLoot || mission || p.isCompanion) && visible) {
-        final next = rules.grant(p.profile, d);
+      if (((!e.groundLoot || mission || p.isCompanion) && visible) || atCap) {
+        final next = _grantLoot(p.profile, d);
         if (next != null) {
           p.profile = next;
           events.add(LootDropEvent(p.id, d, src,
@@ -1299,7 +1321,9 @@ class _Op {
     }
     if (shown.isEmpty) return;
     say('${p.name} obtuvo: ${shown.map(_dropText).join(', ')}'
-        '${full ? ' (inventario lleno: quedó en el piso)' : ''}');
+        '${full ? ' (inventario lleno: quedó en el piso)' : ''}'
+        '${capped.isEmpty ? '' : ' (${capped.join(', ')} al tope de '
+            '${CraftMaterial.maxStack}: lo que sobra se descarta)'}');
   }
 
   /// Tira y entrega el loot de [src] a cada jugador (loot por jugador),

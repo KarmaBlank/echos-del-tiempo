@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:convert';
 
 import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/models/game_session.dart';
 import '../../game_engine/models/session_action.dart';
 import '../../game_engine/models/session_event.dart';
 import '../contracts/net_session.dart';
+import '../contracts/net_traffic.dart';
 import 'wire.dart';
 
 /// Un enlace de texto con el otro extremo (un WebSocket, un DataChannel,
@@ -26,7 +28,8 @@ abstract class PeerLink {
 /// `reject`, acciones, `state`, sala llena, ids `h` / `p1`...,
 /// desconexiones y el ping ([LatencyProbe], § "Ping"). Cada transporte
 /// solo implementa [openRoom], [joinRoom] y [closeTransport].
-abstract class ProtocolNetSession implements NetSession, LatencyProbe {
+abstract class ProtocolNetSession
+    implements NetSession, LatencyProbe, NetTraffic {
   ProtocolNetSession({
     GameCatalog catalog = GameCatalog.standard,
     Duration Function()? clock,
@@ -106,6 +109,7 @@ abstract class ProtocolNetSession implements NetSession, LatencyProbe {
   Stream<NetEvent> get events => _events.stream;
 
   /// Clientes unidos ahora (host).
+  @override
   int get clientCount => _clients.length;
 
   // ------------------------------------------------------------------
@@ -203,13 +207,69 @@ abstract class ProtocolNetSession implements NetSession, LatencyProbe {
     _host?.send(codec.encode(ActionMessage(action)));
   }
 
+  /// Cada cuánto el host le reenvía todos los perfiles a cada cliente
+  /// aunque no hayan cambiado (respaldo; el canal ya es ordenado y fiable).
+  static const profileRefresh = Duration(seconds: 10);
+
+  /// Perfil actual de cada jugador: el objeto (atajo con `identical`), su
+  /// JSON y una versión que sube cada vez que cambia.
+  final _profiles = <String, ({Object profile, String json, int ver})>{};
+  int _profileSeq = 0;
+
+  /// Host: qué versión de cada perfil tiene ya cada cliente, y cuándo le
+  /// llegaron todos por última vez.
+  final _clientProfiles = <String, Map<String, int>>{};
+  final _clientRefreshed = <String, Duration>{};
+
+  /// Cliente: los perfiles recibidos (id → JSON).
+  final _knownProfiles = <String, Object?>{};
+
+  /// Tamaño en bytes del último `state` mandado (el más grande del
+  /// tick); lo lee el registro de rendimiento.
+  @override
+  int lastStateBytes = 0;
+
   @override
   void broadcast(GameSession state, List<SessionEvent> events) {
     if (!_isHost || _closed || _clients.isEmpty) return;
-    final text = codec.encode(StateMessage(state, events));
-    for (final link in _clients.values) {
+    // Perfiles: solo se recodifica el que cambió de objeto, y solo sube
+    // de versión si además cambió su JSON.
+    final ids = <String>{};
+    for (final p in state.playerList) {
+      ids.add(p.id);
+      final cur = _profiles[p.id];
+      if (cur != null && identical(cur.profile, p.profile)) continue;
+      final json = jsonEncode(p.profile.toJson());
+      _profiles[p.id] = (
+        profile: p.profile,
+        json: json,
+        ver: cur != null && cur.json == json ? cur.ver : ++_profileSeq,
+      );
+    }
+    _profiles.removeWhere((id, _) => !ids.contains(id));
+
+    final body = codec.stateBody(state);
+    final ev = codec.stateEvents(events);
+    final now = _clock();
+    var biggest = 0;
+    for (final MapEntry(key: pid, value: link) in _clients.entries) {
+      final has = _clientProfiles.putIfAbsent(pid, () => {});
+      final last = _clientRefreshed[pid];
+      final refresh = last == null || now - last >= profileRefresh;
+      if (refresh) _clientRefreshed[pid] = now;
+      final send = <String, String>{
+        for (final MapEntry(key: id, value: p) in _profiles.entries)
+          if (refresh || has[id] != p.ver) id: p.json,
+      };
+      for (final id in send.keys) {
+        has[id] = _profiles[id]!.ver;
+      }
+      has.removeWhere((id, _) => !_profiles.containsKey(id));
+      final text = WireCodec.stateText(body, ev, send);
+      if (text.length > biggest) biggest = text.length;
       link.send(text);
     }
+    lastStateBytes = biggest;
   }
 
   @override
@@ -305,6 +365,8 @@ abstract class ProtocolNetSession implements NetSession, LatencyProbe {
       onDone: () {
         timeout.cancel();
         _pending.remove(link);
+        _clientProfiles.remove(pid);
+        _clientRefreshed.remove(pid);
         if (_clients.remove(pid) != null) {
           _emit(PeerLeftEvent(pid));
           if (_rtt.remove(pid) != null) _publishLatency();
@@ -328,7 +390,7 @@ abstract class ProtocolNetSession implements NetSession, LatencyProbe {
     final welcome = Completer<void>();
     link.incoming.listen(
       (text) {
-        final msg = codec.decode(text);
+        final msg = codec.decode(text, profiles: _knownProfiles);
         switch (msg) {
           case WelcomeMessage():
             if (welcome.isCompleted) return;
