@@ -18,6 +18,8 @@ Future<void> main() async {
   registerSharedDependencies(balance: await BalanceAssetLoader.load());
   // Cerrar la ventana guarda antes (docs/specs/characters.md § 1.4).
   installExitOnClose();
+  // Sin party jugando solo (FeatureFlags.soloParty queda en false;
+  // docs/specs/solo_party.md § 0).
   registerP2PNetcode(signaling: await resolveP2PSignaling());
   runApp(const EcosApp());
 }

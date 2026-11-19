@@ -20,6 +20,7 @@ Future<void> main() async {
     showDebugOverlay: true,
     enableExperimentalFeatures: true,
     devTools: true,
+    soloParty: true,
   );
   // Parche de balance (docs/specs/balance_admin.md § 3).
   registerSharedDependencies(balance: await BalanceAssetLoader.load());

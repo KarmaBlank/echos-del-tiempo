@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/feature_flags.dart';
 import '../../../core/di/service_locator.dart';
 import '../../../core/persistence/ecos_log.dart';
 import '../../../core/persistence/exit_guard.dart';
@@ -127,7 +128,10 @@ final sessionControllerProvider =
     clock: ref.watch(sessionClockProvider),
     net: ref.read(activeNetSessionProvider),
     turnTimer: ref.read(gameSettingsProvider).turnTimer,
-    party: ref.read(partyStoreProvider),
+    // Sin FeatureFlags.soloParty no hay compañeros (solo_party.md § 0).
+    party: FeatureFlags.instance.soloParty
+        ? ref.read(partyStoreProvider)
+        : null,
   );
   // Tiempo de turno (accessibility.md § 7): el ajuste local manda en la
   // sala si este dispositivo corre el motor (solo o anfitrión).

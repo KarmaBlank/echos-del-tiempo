@@ -461,7 +461,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                 onPressed: _busy ? null : _openBestiary),
           ],
         ),
-        if (sel != null) ...[
+        // Party solo si este build la ofrece (FeatureFlags.soloParty).
+        if (sel != null && FeatureFlags.instance.soloParty) ...[
           const SizedBox(height: 16),
           _party(a, sel),
         ],

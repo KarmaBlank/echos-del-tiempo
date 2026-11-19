@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/feature_flags.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/features/characters/data/account_repository.dart';
 import 'package:echos_del_tiempo/features/characters/data/account_store.dart';
@@ -33,6 +34,10 @@ Mostrar
 ''';
 
 void main() {
+  // La party jugando solo está detrás de FeatureFlags.soloParty
+  // (apagada en la build principal desde v0.9.14).
+  setUpAll(() => FeatureFlags.instance = const FeatureFlags(soloParty: true));
+  tearDownAll(() => FeatureFlags.instance = const FeatureFlags());
   testWidgets('filtro: errores por línea, guardar y restaurar', (tester) async {
     final c = await pumpPanel(tester,
         profile: lootWarrior(),
