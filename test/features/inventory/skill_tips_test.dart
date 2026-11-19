@@ -62,10 +62,11 @@ void main() {
     final desc = plain(tester, 'craft-pick-desc');
     expect(desc, contains('MP'));
     expect(desc, matches(RegExp('Físico|Mágico|Curación|Apoyo')));
-    // Con el mouse sobre otra fila aparece su ficha (tooltip).
+    // v0.9.7: sin tooltip en la lista (la ficha ya está debajo de la
+    // elegida; antes salía dos veces).
     final before = _count(' · a ');
     await _hover(tester, find.byKey(const ValueKey('craft-pick-1')));
-    expect(_count(' · a '), greaterThan(before));
+    expect(_count(' · a '), before);
   });
 
   testWidgets('fusión: con los cupos llenos se elige qué trasladada '
@@ -126,7 +127,11 @@ void main() {
     expect(InventoryRules.layout(p).cells, isNotEmpty);
     expect(_count('MP · '), 0);
     await _hover(tester, find.byKey(const ValueKey('inv-equipped')));
-    // `Nombre (8 MP · Mágico): Daño mágico...` en el tooltip.
+    // Tooltip corto (v0.9.7): las habilidades van plegadas; al
+    // desplegarlas, `Nombre (8 MP · Mágico): Daño mágico...`.
+    expect(_count('MP · '), 0);
+    await tester.tap(find.byKey(const ValueKey('tip-fold-Habilidades')));
+    await tester.pump();
     expect(_count('MP · '), greaterThan(0));
   });
 

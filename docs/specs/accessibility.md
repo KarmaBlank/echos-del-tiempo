@@ -41,6 +41,10 @@ accesibilidad más que todo". Prioridad de v0.5; lo que no entra queda en
   la UI y ensucia la fuente (settings.md § 3.2).
 - **Tooltips** que nunca se salen de la pantalla: columnas si son más
   altos que ella (ui_style.md § "Tooltips").
+- **Tooltips cortos** (v0.9.7): lo largo va plegado en `▸` que se
+  despliegan con clic, `Enter` o `Espacio`; la caja se fija con el
+  mouse encima y nunca hay dos a la vez (ui_style.md § "Tooltips
+  cortos"). Botones con 8 px libres entre borde y texto.
 - **Árbol de pasivas**: los nombres de clusters se dibujan en px de
   pantalla con el texto de lectura (siguen el ajuste) y se ocultan con
   zoom < 0.55 (ahí serían ilegibles); si dos se pisan, queda uno

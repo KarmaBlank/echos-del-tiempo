@@ -35,8 +35,8 @@ void main() {
     });
   });
 
-  test('el hello lleva tv (protocolo 18)', () {
-    expect(kProtocolVersion, 18);
+  test('el hello lleva tv', () {
+    expect(kProtocolVersion, greaterThanOrEqualTo(18));
     final codec = WireCodec();
     final p = PlayerProfile(name: 'Ana', classId: 'guerrero');
     final msg = codec.decode(

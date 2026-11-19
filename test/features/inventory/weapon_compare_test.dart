@@ -242,7 +242,8 @@ void main() {
         await _hover(tester, find.byKey(const ValueKey('inv-equipped')));
     expect(plain(tester, 'inv-cmp-tip'), contains('de Beto'));
     await mouse.removePointer();
-    await tester.pump();
+    // Caja fijable (v0.9.7): espera un toque por si el mouse va a ella.
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.byKey(const ValueKey('inv-cmp-tip')), findsNothing);
     await _tap(tester, 'inv-equipped');
     await _tap(tester, 'inv-compare');

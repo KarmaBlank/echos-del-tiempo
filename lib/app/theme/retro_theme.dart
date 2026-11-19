@@ -34,6 +34,17 @@ abstract final class RetroTheme {
 
   static const _square = RoundedRectangleBorder();
 
+  /// Aire mínimo entre el borde de un botón y su texto (ui_style.md §
+  /// "Padding de botones", v0.9.7): 8 px **libres**, sin contar el borde.
+  static const minButtonInset = 8.0;
+
+  /// Padding de un botón con [inset] px libres entre el borde (que
+  /// Material pinta encima del padding) y el contenido; nunca menos de
+  /// [minButtonInset].
+  static EdgeInsets buttonPadding(double inset) => EdgeInsets.all(
+      (inset < minButtonInset ? minButtonInset : inset) +
+          UiTheme.buttonBorderWidth);
+
   /// Botón compacto para paneles y HUD (docs/specs/ui_style.md §
   /// "Botón compacto"): texto [RetroType.small], padding de 8 px y borde
   /// de 2 px.
@@ -41,9 +52,7 @@ abstract final class RetroTheme {
   static ButtonStyle compactButton() => ButtonStyle(
         // Cambio de color instantáneo (sin la animación de Material).
         animationDuration: Duration.zero,
-        padding: const WidgetStatePropertyAll(
-          EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        ),
+        padding: WidgetStatePropertyAll(buttonPadding(8)),
         minimumSize: const WidgetStatePropertyAll(Size(0, 32)),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         textStyle: WidgetStatePropertyAll(
@@ -69,9 +78,7 @@ abstract final class RetroTheme {
       animationDuration: Duration.zero,
       elevation: const WidgetStatePropertyAll(0),
       shape: const WidgetStatePropertyAll(_square),
-      padding: const WidgetStatePropertyAll(
-        EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      ),
+      padding: WidgetStatePropertyAll(buttonPadding(14)),
       splashFactory: NoSplash.splashFactory,
       overlayColor: const WidgetStatePropertyAll(Colors.transparent),
       textStyle: WidgetStatePropertyAll(

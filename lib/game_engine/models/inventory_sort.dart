@@ -14,7 +14,7 @@ enum InventorySortKey {
   name('Nombre'),
 
   /// Lo más nuevo primero (armas y Ecos juntos).
-  recent('Recientes');
+  recent('Últimos levantados');
 
   const InventorySortKey(this.label);
 

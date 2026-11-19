@@ -238,6 +238,13 @@ class SortInventoryAction extends SessionAction {
   const SortInventoryAction(this.key);
 }
 
+/// `seen` (v0.9.7): sacar la marca NUEVO de armas / Ecos del inventario
+/// (al pasar el mouse; loot.md § 17.4).
+class SeenItemsAction extends SessionAction {
+  final List<String> uids;
+  const SeenItemsAction(this.uids);
+}
+
 /// `filter`: guardar el filtro de loot (texto; `null` = el por defecto).
 class SetLootFilterAction extends SessionAction {
   final String? text;
