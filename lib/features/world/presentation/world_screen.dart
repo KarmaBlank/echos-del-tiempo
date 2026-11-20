@@ -16,6 +16,7 @@ import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/rules/eco_rules.dart';
 import '../../../game_engine/rules/trial_rules.dart';
+import '../../characters/presentation/stash_panel.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../ascension/domain/ascension_text.dart';
 import '../../ascension/presentation/ascension_cinematic.dart';
@@ -731,6 +732,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return ArmoryPanel(view: view, controller: controller);
       case WorldPanel.party:
         return PartyPanel(view: view, controller: controller);
+      case WorldPanel.stash:
+        return StashPanel(view: view, controller: controller);
       case WorldPanel.map:
         return fullMapPanel(view, controller);
       case WorldPanel.ecoPortal:

@@ -4,6 +4,7 @@ import 'build_wants.dart';
 import 'eco.dart' show EcoCraftOp;
 import 'inventory_sort.dart';
 import 'item.dart' show CraftOp, Rarity;
+import 'loot.dart' show LootDrop;
 import 'upgrade_stat.dart';
 
 /// Lo que un jugador le pide al host (`onMsg` del prototipo, un caso por
@@ -231,6 +232,38 @@ class DropItemAction extends SessionAction {
   final String token;
   final int count;
   const DropItemAction(this.token, {this.count = 1});
+}
+
+/// Una pieza de un `stashPut`: [token] (`uid` de arma / Eco o
+/// `mat:<m>`) y cuántos ([count], solo pilas).
+class StashPutItem {
+  final String token;
+  final int count;
+  const StashPutItem(this.token, {this.count = 1});
+}
+
+/// `stashPut` (v0.11.1, protocolo 21): sacar del perfil en la sesión
+/// [items] (uno o un lote) para guardarlos en el alijo **local** de la
+/// cuenta. El host valida cada pieza del lado del perfil y anota [opId]
+/// en `SessionPlayer.stashAcks` con lo que salió; el cliente recién con
+/// esa confirmación escribe su alijo. Repetir [opId] no hace nada
+/// (docs/specs/characters.md § 3.2).
+class StashPutAction extends SessionAction {
+  final String opId;
+  final List<StashPutItem> items;
+  const StashPutAction(this.opId, this.items);
+
+  /// Como mucho tantas piezas por operación.
+  static const maxItems = 160;
+}
+
+/// `stashTake` (v0.11.1): sumar al perfil en la sesión [drops], que el
+/// cliente tiene en su alijo local (los saca de ahí recién con la
+/// confirmación [opId], solo los aceptados). Ver [StashPutAction].
+class StashTakeAction extends SessionAction {
+  final String opId;
+  final List<LootDrop> drops;
+  const StashTakeAction(this.opId, this.drops);
 }
 
 /// `pick`: levantar un objeto del piso (tecla E), propio o compartido.

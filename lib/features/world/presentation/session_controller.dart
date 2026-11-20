@@ -44,6 +44,7 @@ import '../../../netcode/contracts/net_session.dart';
 import '../../../netcode/contracts/net_session_factory.dart';
 import '../../ascension/domain/ascension_text.dart';
 import '../../characters/data/account_repository.dart';
+import '../../characters/domain/stash.dart';
 import '../../characters/presentation/characters_providers.dart';
 import 'local_player.dart';
 import 'session_view.dart';
@@ -102,6 +103,13 @@ final tutorialStoreProvider = Provider<TutorialStore>((ref) =>
         ? sl<TutorialStore>()
         : InMemoryTutorialStore(kTutorialVersion));
 
+/// El alijo de la cuenta en partida (characters.md § 3.2); sin registro
+/// (tests), sobre [accountRepositoryProvider].
+final stashStoreProvider = Provider<StashStore>((ref) =>
+    sl.isRegistered<StashStore>()
+        ? sl<StashStore>()
+        : AccountStashStore(ref.watch(accountRepositoryProvider)));
+
 final sessionClockProvider =
     Provider<SessionClock>((ref) => const SessionClock());
 
@@ -125,6 +133,7 @@ final sessionControllerProvider =
     atlasStore: ref.watch(atlasStoreProvider),
     bestiaryStore: ref.watch(bestiaryStoreProvider),
     tutorialStore: ref.watch(tutorialStoreProvider),
+    stashStore: ref.watch(stashStoreProvider),
     clock: ref.watch(sessionClockProvider),
     net: ref.read(activeNetSessionProvider),
     turnTimer: ref.read(gameSettingsProvider).turnTimer,
@@ -172,6 +181,7 @@ class SessionController extends StateNotifier<SessionView?> {
     TutorialStore? tutorialStore,
     TurnTimer turnTimer = TurnTimer.normal,
     this.party,
+    this.stashStore,
   })  : localId = net?.localId ?? localId,
         _turnTimer = turnTimer,
         atlasStore = atlasStore ?? InMemoryAtlasStore(),
@@ -182,6 +192,9 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Compañeros de la party jugando solo (docs/specs/solo_party.md);
   /// `null` = sin party. Con red no se usa (en salas no hay compañeros).
   final PartyStore? party;
+
+  /// El alijo de la cuenta (characters.md § 3.2); `null` = sin alijo.
+  final StashStore? stashStore;
 
   /// Compañeros en la sala: id de jugador → ranura de la cuenta, en orden.
   final _companions = <String, String>{};
@@ -531,6 +544,8 @@ class SessionController extends StateNotifier<SessionView?> {
         _tutorialVersion = await tutorialStore.load();
       } catch (_) {}
       if (!mounted) return;
+      await _loadStash();
+      if (!mounted) return;
       _netSub = n!.events.listen(_onNet);
       if (clock.autoStart) {
         _timer = Timer.periodic(clock.interval, (_) => _clientTick(clock.dt));
@@ -545,6 +560,8 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     if (!mounted) return;
     profile ??= PlayerProfile(name: defaultName, classId: defaultClass);
+    await _loadStash();
+    if (!mounted) return;
     await _loadAtlas();
     if (!mounted) return;
     // Jefes del Abismo vencidos por la cuenta (abyss_bosses.md § 1.3).
@@ -712,6 +729,7 @@ class SessionController extends StateNotifier<SessionView?> {
   void _clientTick(double dt) {
     if (_s == null || !mounted) return;
     _sendPosition();
+    _retryStash(dt);
     _sinceSave += dt;
     _save();
   }
@@ -751,6 +769,7 @@ class SessionController extends StateNotifier<SessionView?> {
         if (step != null) _step(step);
       case ConnectionLostEvent(:final reason):
         _disconnected = reason;
+        _dropStashOp('Se perdió la conexión: no se movió nada');
         _timer?.cancel();
         _broadcastTimer?.cancel();
         _emit();
@@ -1027,6 +1046,10 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     if (key == LogicalKeyboardKey.keyI && s.mode != SessionMode.battle) {
       toggleInventory();
+      return true;
+    }
+    if (key == LogicalKeyboardKey.keyB && s.mode != SessionMode.battle) {
+      toggleStash();
       return true;
     }
     if (key == LogicalKeyboardKey.keyP && canEditParty) {
@@ -1333,6 +1356,228 @@ class SessionController extends StateNotifier<SessionView?> {
   bool get canOpenAscension =>
       _s?.mode == SessionMode.lobby || _s?.mode == SessionMode.prep;
 
+  // ------------------------------------------------------------------
+  // Alijo en partida (docs/specs/characters.md § 3.2)
+  // ------------------------------------------------------------------
+
+  Stash? _stash;
+  _StashOp? _stashOp;
+  int _stashSeq = 0;
+  String? _stashNotice;
+
+  /// Cada cuánto (s de juego) un cliente reenvía la operación sin
+  /// confirmar, y cuántas veces antes de darla por perdida.
+  static const stashRetryEvery = 1.0;
+  static const stashRetries = 5;
+
+  /// El alijo local de la cuenta (`null` = sin alijo o cargando).
+  Stash? get stash => _stash;
+
+  /// Hay una operación esperando la confirmación del anfitrión.
+  bool get stashBusy => _stashOp != null;
+
+  /// Última línea de resultado (`Movidos N · Quedaron M: ...`).
+  String? get stashNotice => _stashNotice;
+
+  StashRules get stashRules =>
+      StashRules(inventory: engine.progression.inventory);
+
+  /// Motivo por el que el alijo no se abre ahora, o `null`.
+  String? get stashBlock {
+    final s = _s;
+    if (s == null || _stash == null) return 'Sin alijo';
+    if (s.mode != SessionMode.lobby && s.mode != SessionMode.field) {
+      return 'Solo en el lobby o en misión, fuera de batalla';
+    }
+    return null;
+  }
+
+  Future<void> _loadStash() async {
+    final st = stashStore;
+    if (st == null) return;
+    try {
+      _stash = await st.load();
+    } catch (e) {
+      EcosLog.error('Alijo', e);
+    }
+  }
+
+  /// Tecla B / botón ALIJO [B].
+  void toggleStash() {
+    if (_panel == WorldPanel.stash) {
+      closePanel();
+    } else {
+      openStash();
+    }
+  }
+
+  bool openStash() {
+    if (stashBlock != null) return false;
+    _panel = WorldPanel.stash;
+    _emit();
+    return true;
+  }
+
+  String _newStashOpId() =>
+      '$localId-${_stashSeq++}-${DateTime.now().microsecondsSinceEpoch}';
+
+  /// Guarda [tokens] del inventario del jugador local en el alijo (uno,
+  /// los elegidos o MOVER TODO: una sola operación). Devuelve el motivo
+  /// si no se pudo mandar.
+  String? stashPut(List<String> tokens, {int tab = 0}) {
+    final why = _stashReady();
+    if (why != null) return why;
+    final me = _s!.players[localId]!;
+    final dry = stashRules.depositMany(me.profile, _stash!, tokens, tab: tab);
+    if (dry.moved.isEmpty) {
+      _emit();
+      return _stashNotice = dry.reason ?? 'Nada para mover';
+    }
+    final id = _newStashOpId();
+    return _sendStash(_StashOp(
+      id,
+      StashPutAction(id, [
+        for (final m in dry.moved)
+          StashPutItem(m.token!,
+              count: m.drop.stack == null ? 1 : m.drop.count),
+      ]),
+      put: true,
+      tab: tab,
+      left: dry.left,
+      reason: dry.reason,
+      cells: const [],
+    ));
+  }
+
+  /// Saca las casillas [cells] del alijo al inventario del jugador local.
+  String? stashTake(List<int> cells) {
+    final why = _stashReady();
+    if (why != null) return why;
+    final me = _s!.players[localId]!;
+    final dry = stashRules.withdrawMany(me.profile, _stash!, cells);
+    if (dry.moved.isEmpty) {
+      _emit();
+      return _stashNotice = dry.reason ?? 'Nada para sacar';
+    }
+    final id = _newStashOpId();
+    return _sendStash(_StashOp(
+      id,
+      StashTakeAction(id, [for (final m in dry.moved) m.drop]),
+      put: false,
+      tab: 0,
+      left: dry.left,
+      reason: dry.reason,
+      cells: [for (final m in dry.moved) m.cell!],
+    ));
+  }
+
+  /// Reordena el alijo (solo local: no pasa por el anfitrión).
+  bool stashMove(int from, int to) {
+    final s = _stash, st = stashStore;
+    final me = _s?.players[localId];
+    if (s == null || st == null || me == null || _stashOp != null) {
+      return false;
+    }
+    final next = StashRules.move(s, from, to);
+    if (next == null) return false;
+    _stash = next;
+    unawaited(st.commit(next, me.profile).catchError(_saveFailed));
+    _emit();
+    return true;
+  }
+
+  /// Motivo por el que [token] no se puede guardar ahora en el alijo
+  /// (menú del inventario), o `null`.
+  String? stashPutReason(String token) {
+    final why = _stashReady();
+    if (why != null) return why;
+    if (actingId != localId) return 'El alijo es de tu personaje';
+    return stashRules
+        .deposit(_s!.players[localId]!.profile, _stash!, token)
+        .error;
+  }
+
+  String? _stashReady() {
+    final why = stashBlock;
+    if (why != null) return why;
+    if (_stashOp != null) return 'Esperando al anfitrión...';
+    if (_s!.players[localId] == null) return 'Sin personaje';
+    return null;
+  }
+
+  String? _sendStash(_StashOp op) {
+    _stashOp = op;
+    _stashNotice = null;
+    if (!_apply(op.action)) {
+      _stashOp = null;
+      _stashNotice = 'El anfitrión no lo aceptó';
+      _emit();
+      return _stashNotice;
+    }
+    _emit();
+    return null;
+  }
+
+  void _dropStashOp(String notice) {
+    if (_stashOp == null) return;
+    _stashOp = null;
+    _stashNotice = notice;
+  }
+
+  /// Cliente: reenvía la operación sin confirmar (mismo id: el host no
+  /// la aplica dos veces).
+  void _retryStash(double dt) {
+    final op = _stashOp;
+    if (op == null || !isClient) return;
+    op.wait += dt;
+    if (op.wait < stashRetryEvery) return;
+    op.wait = 0;
+    if (++op.tries > stashRetries) {
+      _dropStashOp('El anfitrión no confirmó: no se movió nada');
+      _emit();
+      return;
+    }
+    net!.sendAction(op.action);
+  }
+
+  /// Con la confirmación en el estado (y el perfil ya cambiado en el mismo
+  /// snapshot) recién se escribe el alijo: alijo + perfil en una escritura.
+  void _settleStash() {
+    final op = _stashOp, me = _s?.players[localId], st = _stash;
+    final store = stashStore;
+    if (op == null || me == null || st == null || store == null) return;
+    final ack = me.stashAcks[op.id];
+    if (ack == null) return;
+    _stashOp = null;
+    var s = st;
+    var moved = 0;
+    for (var i = 0; i < ack.drops.length; i++) {
+      final d = ack.drops[i];
+      if (d == null) continue;
+      final next = op.put
+          ? StashRules.store(s, d, tab: op.tab)
+          : i < op.cells.length
+              ? StashRules.unstore(s, op.cells[i], d)
+              : null;
+      if (next == null) {
+        EcosLog.error('Alijo: pieza sin lugar en ${op.id}');
+        continue;
+      }
+      s = next;
+      moved++;
+    }
+    _stash = s;
+    final left = op.left + ack.drops.length - moved;
+    _stashNotice = left == 0
+        ? 'Movidos $moved'
+        : 'Movidos $moved · Quedaron $left: '
+            '${(op.reason ?? 'rechazados').toLowerCase()}';
+    final p = me.profile;
+    _lastSaved = p;
+    unawaited(store.commit(s, p).then((_) => _saveOk(p),
+        onError: (Object e) => _saveFailed(e)));
+  }
+
   /// Enter en el campo de chat (`send({t:'chat'})`).
   bool sendChat(String text) => _apply(ChatAction(text));
 
@@ -1433,6 +1678,8 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     final me = _s!.players[localId];
     if (me != null) local.sync(me);
+    // Antes de cualquier guardado: alijo + perfil van juntos.
+    _settleStash();
     if (forceSave) _save(force: true);
     _emit();
   }
@@ -1587,6 +1834,7 @@ class SessionController extends StateNotifier<SessionView?> {
       _panel = null;
     }
     if (_panel == WorldPanel.party && !canEditParty) _panel = null;
+    if (_panel == WorldPanel.stash && stashBlock != null) _panel = null;
     if (must && _panel != WorldPanel.character) {
       _panel = WorldPanel.character;
       _autoChar = true;
@@ -1672,4 +1920,24 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearMerchant) return (WorldPrompt.merchant, null);
     return (null, null);
   }
+}
+
+/// Una operación del alijo esperando confirmación.
+class _StashOp {
+  _StashOp(this.id, this.action,
+      {required this.put,
+      required this.tab,
+      required this.left,
+      required this.reason,
+      required this.cells});
+
+  final String id;
+  final SessionAction action;
+  final bool put;
+  final int tab;
+  final int left;
+  final String? reason;
+  final List<int> cells;
+  double wait = 0;
+  int tries = 0;
 }

@@ -203,6 +203,9 @@ class SessionEngine {
   /// Compañeros de un jugador solo (docs/specs/solo_party.md § 2).
   static const maxCompanions = 3;
 
+  /// Largo máximo del id de una operación del alijo.
+  static const maxStashOpId = 48;
+
   /// Fila detrás del líder: px de camino entre cada miembro, cada cuánto
   /// se anota un punto del rastro y cuántos se guardan (§ 3.5).
   static const followGap = 18.0;
@@ -435,6 +438,9 @@ class SessionEngine {
         action is! MoveInventoryAction &&
         action is! SortInventoryAction &&
         action is! SeenItemsAction &&
+        // El alijo no toca el mundo (characters.md § 3.2).
+        action is! StashPutAction &&
+        action is! StashTakeAction &&
         // Menú de pausa del TUTORIAL (combat_tutorial.md § 4.3).
         action is! TutorialControlAction) {
       return null;
@@ -786,6 +792,12 @@ class _Op {
 
       case PickUpAction():
         return _pickUp(p, a.groundId);
+
+      case StashPutAction():
+        return _stashPut(p, a);
+
+      case StashTakeAction():
+        return _stashTake(p, a);
 
       case MoveInventoryAction():
         return _profileChange(
@@ -1279,6 +1291,78 @@ class _Op {
     _profileChange(p, t.profile);
     _toGround(drop, p.x, p.y);
     say('${p.name} soltó ${_dropText(drop)}');
+    return true;
+  }
+
+  /// El alijo se abre en el lobby y en el campo (nunca en batalla,
+  /// preparación ni resultado), solo para humanos, con un id de operación
+  /// razonable (characters.md § 3.2).
+  bool _stashOpen(SessionPlayer p, String opId) =>
+      _onMap &&
+      !p.isCompanion &&
+      opId.isNotEmpty &&
+      opId.length <= SessionEngine.maxStashOpId;
+
+  /// `StashPutAction`: cada pieza válida sale del perfil; el cliente la
+  /// guarda en su alijo al ver la confirmación. Un id ya confirmado (o un
+  /// lote sin ninguna pieza válida) no hace nada.
+  bool _stashPut(SessionPlayer p, StashPutAction a) {
+    if (!_stashOpen(p, a.opId) || p.stashAcks.containsKey(a.opId)) {
+      return false;
+    }
+    if (a.items.isEmpty || a.items.length > StashPutAction.maxItems) {
+      return false;
+    }
+    final out = <LootDrop?>[];
+    var prof = p.profile;
+    for (final i in a.items) {
+      out.add(null);
+      if (i.count < 1 || _ecoLocked(p, i.token)) continue;
+      final st = StackKind.byToken(i.token);
+      // Las pociones no van al alijo.
+      if (st != null && st.material == null) continue;
+      final t = rules.inventory.take(prof, i.token, count: i.count);
+      if (t.drop == null || t.profile == null) continue;
+      prof = t.profile!;
+      out[out.length - 1] = t.drop;
+    }
+    if (out.every((d) => d == null)) return false;
+    _profileChange(p, prof);
+    p.addStashAck(a.opId, StashAck(put: true, drops: out));
+    return true;
+  }
+
+  /// `StashTakeAction`: entra al perfil cada pieza que el cliente saca de
+  /// su alijo (saneada; cada una tiene que entrar entera).
+  bool _stashTake(SessionPlayer p, StashTakeAction a) {
+    if (!_stashOpen(p, a.opId) || p.stashAcks.containsKey(a.opId)) {
+      return false;
+    }
+    if (a.drops.isEmpty || a.drops.length > StashPutAction.maxItems) {
+      return false;
+    }
+    final out = <LootDrop?>[];
+    var prof = p.profile;
+    for (final d in a.drops) {
+      out.add(null);
+      LootDrop? drop;
+      if (d.item case final it?) {
+        final ok = rules.items.sanitize(it);
+        if (ok != null) drop = LootDrop.item(ok);
+      } else if (d.eco case final eco?) {
+        drop = LootDrop.eco(EcoRules.sanitize(eco));
+      } else if (d.stack?.material != null && d.count >= 1) {
+        drop = d;
+      }
+      if (drop == null) continue;
+      final next = InventoryRules.receive(prof, drop, markNew: false);
+      if (next == null) continue;
+      prof = next;
+      out[out.length - 1] = drop;
+    }
+    if (out.every((d) => d == null)) return false;
+    _profileChange(p, prof);
+    p.addStashAck(a.opId, StashAck(put: false, drops: out));
     return true;
   }
 

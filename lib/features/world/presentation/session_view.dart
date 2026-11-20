@@ -26,6 +26,9 @@ enum WorldPanel {
   /// Mapa del piso en grande (tecla M, v0.8.1; exploration.md § "HUD").
   map,
 
+  /// El alijo de la cuenta (tecla B; characters.md § 3.2).
+  stash,
+
   /// La party jugando solo (tecla P, solo en el pueblo;
   /// docs/specs/solo_party.md § 2.3).
   party,

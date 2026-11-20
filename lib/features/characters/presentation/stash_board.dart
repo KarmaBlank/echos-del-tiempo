@@ -1,0 +1,625 @@
+import 'package:material_ui/material_ui.dart';
+
+import '../../../app/design/design.dart';
+import '../../../app/theme/panel_frame.dart';
+import '../../../app/theme/proto_colors.dart';
+import '../../../app/theme/proto_markup.dart';
+import '../../../app/theme/retro_text.dart';
+import '../../../app/theme/retro_theme.dart';
+import '../../../app/widgets/menu_focus.dart';
+import '../../../game_engine/models/item.dart';
+import '../../../game_engine/models/loot.dart';
+import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/rules/inventory_rules.dart';
+import '../../../game_engine/rules/progression_rules.dart';
+import '../../inventory/domain/item_text.dart';
+import '../../inventory/presentation/consumables_bar.dart';
+import '../../inventory/presentation/inventory_action_menu.dart';
+import '../../inventory/presentation/item_widgets.dart';
+import '../domain/stash.dart';
+
+/// Lo que el tablero del alijo necesita de quien lo abre: fuera de la
+/// sesión, la cuenta directa ([StashScreen]); en partida, el
+/// `SessionController` (que pasa por el anfitrión). Ver
+/// docs/specs/characters.md § 3.
+abstract class StashBoardHost {
+  ProgressionRules get rules;
+  PlayerProfile get profile;
+  Stash get stash;
+
+  /// Hay una operación en curso (guardando / esperando al anfitrión).
+  bool get busy;
+
+  /// Última línea de resultado del host (`Movidos N · ...`), si la hay.
+  String? get notice;
+
+  /// Guarda [tokens] (una operación). Devuelve el motivo si no se pudo.
+  String? put(List<String> tokens, int tab);
+
+  /// Saca las casillas [cells] (una operación).
+  String? take(List<int> cells);
+
+  bool moveStash(int from, int to);
+  bool moveCharacter(int from, int to);
+}
+
+enum _Side { character, stash }
+
+/// Tablero del alijo: el inventario a la izquierda, el alijo con sus 3
+/// pestañas (2 generales + ECOS) a la derecha, cada lado con su
+/// buscador. Clic elige, doble clic o el botón mueve, clic derecho abre
+/// "Guardar en alijo" / "Sacar al inventario". MOVER TODO AL ALIJO y el
+/// modo ELEGIR (varias casillas, una sola operación).
+class StashBoard extends StatefulWidget {
+  const StashBoard({super.key, required this.host, this.title});
+
+  final StashBoardHost host;
+
+  /// Encabezado del lado del personaje (nombre · clase · nivel).
+  final String? title;
+
+  static const cell = 44.0;
+  static const gap = 4.0;
+
+  static const tabLabels = ['GENERAL I', 'GENERAL II', 'ECOS'];
+
+  @override
+  State<StashBoard> createState() => StashBoardState();
+}
+
+class StashBoardState extends State<StashBoard> {
+  int _tab = 0;
+  _Side? _side;
+  String? _selToken;
+  int? _selCell;
+
+  bool _picking = false;
+  final _pickedTokens = <String>[];
+  final _pickedCells = <int>[];
+
+  String _qChar = '';
+  String _qStash = '';
+  final _searchChar = TextEditingController();
+  final _searchStash = TextEditingController();
+
+  String? _error;
+
+  DateTime? _lastTap;
+  String? _lastTapKey;
+
+  StashBoardHost get host => widget.host;
+  ProgressionRules get _rules => host.rules;
+  StashRules get _stashRules => StashRules(inventory: _rules.inventory);
+
+  int get tab => _tab;
+  set tab(int t) => setState(() => _tab = t);
+
+  @override
+  void dispose() {
+    _searchChar.dispose();
+    _searchStash.dispose();
+    super.dispose();
+  }
+
+  void _clearSel() {
+    _side = null;
+    _selToken = null;
+    _selCell = null;
+  }
+
+  StashMove? _dryRun() {
+    if (_side == null) return null;
+    return _side == _Side.character
+        ? _stashRules.deposit(host.profile, host.stash, _selToken!, tab: _tab)
+        : _stashRules.withdraw(host.profile, host.stash, _selCell!);
+  }
+
+  void _result(String? why) => setState(() => _error = why);
+
+  void _move() {
+    final m = _dryRun();
+    if (m == null) return;
+    if (!m.ok) return _result(m.error);
+    final side = _side;
+    final token = _selToken, cell = _selCell;
+    setState(_clearSel);
+    _result(side == _Side.character
+        ? host.put([token!], _tab)
+        : host.take([cell!]));
+  }
+
+  void _moveAll() {
+    setState(_clearSel);
+    _result(host.put(_stashRules.movableTokens(host.profile), _tab));
+  }
+
+  void _movePicked() {
+    final toks = [..._pickedTokens], cells = [..._pickedCells];
+    setState(_cancelPick);
+    _result(toks.isNotEmpty ? host.put(toks, _tab) : host.take(cells));
+  }
+
+  void _cancelPick() {
+    _picking = false;
+    _pickedTokens.clear();
+    _pickedCells.clear();
+  }
+
+  bool _isDouble(String key) {
+    final now = DateTime.now();
+    final dbl = _lastTapKey == key &&
+        _lastTap != null &&
+        now.difference(_lastTap!) < const Duration(milliseconds: 400);
+    _lastTap = dbl ? null : now;
+    _lastTapKey = dbl ? null : key;
+    return dbl;
+  }
+
+  void _tapCharacter(String? token, int? cell) {
+    if (_picking) {
+      if (token == null) return;
+      setState(() {
+        _pickedCells.clear();
+        if (!_pickedTokens.remove(token)) _pickedTokens.add(token);
+        _error = null;
+      });
+      return;
+    }
+    if (token == null) {
+      if (_side == _Side.character && _selCell != null && cell != null) {
+        final from = _selCell!;
+        setState(_clearSel);
+        host.moveCharacter(from, cell);
+      }
+      return;
+    }
+    final dbl = _isDouble('c:$token');
+    setState(() {
+      _side = _Side.character;
+      _selToken = token;
+      _selCell = cell;
+      _error = null;
+    });
+    if (dbl) _move();
+  }
+
+  void _tapStash(int i) {
+    if (_picking) {
+      if (host.stash.cells[i] == null) return;
+      setState(() {
+        _pickedTokens.clear();
+        if (!_pickedCells.remove(i)) _pickedCells.add(i);
+        _error = null;
+      });
+      return;
+    }
+    if (host.stash.cells[i] == null) {
+      if (_side == _Side.stash && _selCell != null) {
+        final from = _selCell!;
+        setState(_clearSel);
+        if (!host.moveStash(from, i)) _result(StashRules.ecoTabOnly);
+      }
+      return;
+    }
+    final dbl = _isDouble('s:$i');
+    setState(() {
+      _side = _Side.stash;
+      _selCell = i;
+      _selToken = null;
+      _error = null;
+    });
+    if (dbl) _move();
+  }
+
+  void _menuCharacter(String token, int? cell, Offset at) {
+    _tapCharacter(token, cell);
+    final why = _stashRules
+        .deposit(host.profile, host.stash, token, tab: _tab)
+        .error;
+    InventoryContextMenu.show(context, at, entries: [
+      InventoryMenuEntry(
+          id: 'stash-put',
+          label: 'Guardar en alijo',
+          color: ProtoColors.sky,
+          reason: why,
+          onTap: _move),
+    ]);
+  }
+
+  void _menuStash(int i, Offset at) {
+    _tapStash(i);
+    final why = _stashRules.withdraw(host.profile, host.stash, i).error;
+    InventoryContextMenu.show(context, at, entries: [
+      InventoryMenuEntry(
+          id: 'stash-take',
+          label: 'Sacar al inventario',
+          color: ProtoColors.sky,
+          reason: why,
+          onTap: _move),
+    ]);
+  }
+
+  // ------------------------------------------------------------------
+  // Contenido
+  // ------------------------------------------------------------------
+
+  CellContent? _charContent(PlayerProfile p, String? token) {
+    if (token == null) return null;
+    final st = StackKind.byToken(token);
+    if (st != null) {
+      return CellContent.stack(st, InventoryRules.stackCount(p, st));
+    }
+    final eco = p.ecoByUid(token);
+    if (eco != null) return CellContent.eco(eco);
+    final it = p.itemByUid(token);
+    return it == null ? null : CellContent.item(it);
+  }
+
+  static CellContent? _stashContent(StashEntry? e) {
+    if (e == null) return null;
+    final it = e.item;
+    if (it != null) return CellContent.item(it);
+    if (e.eco case final eco?) return CellContent.eco(eco);
+    return CellContent.stack(StackKind.of(e.material!), e.count);
+  }
+
+  String _name(CellContent c) {
+    if (c.item case final it?) return _rules.items.displayName(it);
+    if (c.eco case final eco?) return _rules.ecos.fullName(eco);
+    return c.stack!.label;
+  }
+
+  static String _fold(String s) => s.toLowerCase().trim();
+
+  bool _matches(CellContent? c, String q) =>
+      q.trim().isEmpty || (c != null && _fold(_name(c)).contains(_fold(q)));
+
+  String _tooltip(PlayerProfile p, CellContent c,
+      {bool equipped = false, String? blocked}) {
+    final it = c.item;
+    String base;
+    if (it != null) {
+      base = itemTooltipMarkup(_rules, it,
+          skillDetails: true,
+          level: p.level,
+          attributes: p.attributes,
+          equipped: equipped);
+    } else if (c.eco case final eco?) {
+      base = ecoTooltipMarkup(_rules, eco);
+    } else {
+      base = stackTooltipMarkup(c.stack!, c.count);
+    }
+    if (blocked == null) return base;
+    return '$base<br><b style="color:#ff6b6b">No va al alijo: '
+        '${protoEsc(blocked)}</b>';
+  }
+
+  static String _stashStackTooltip(CraftMaterial m, int n) =>
+      '<b style="color:#78e6dc">${protoEsc(m.label)}</b> x$n<br>'
+      '<span class="k">Material · en el alijo hasta '
+      '${Stash.maxMaterialStack}</span><br>${protoEsc(m.description)}';
+
+  Widget _cell({
+    required Key key,
+    required CellContent? content,
+    required bool selected,
+    required String? tooltip,
+    required VoidCallback onTap,
+    ValueChanged<Offset>? onMenu,
+    bool dim = false,
+  }) {
+    Widget w = ItemCell(
+        rules: _rules,
+        content: content,
+        selected: selected,
+        highlight: selected,
+        size: StashBoard.cell);
+    if (tooltip != null) w = RetroTooltip(message: tooltip, child: w);
+    if (dim) w = Opacity(opacity: 0.25, child: w);
+    return GestureDetector(
+        key: key,
+        onTap: onTap,
+        onSecondaryTapUp:
+            onMenu == null ? null : (d) => onMenu(d.globalPosition),
+        child: w);
+  }
+
+  static double _gridWidth(int columns) =>
+      columns * StashBoard.cell + (columns - 1) * StashBoard.gap;
+
+  Widget _grid(int columns, int count, Widget Function(int) build,
+          {required ValueChanged<int> onActivate, String? keyPrefix}) =>
+      FocusGrid(
+        count: count,
+        columns: columns,
+        spacing: StashBoard.gap,
+        width: _gridWidth(columns),
+        keyPrefix: keyPrefix,
+        cell: (_, i, __) => build(i),
+        onActivate: onActivate,
+      );
+
+  bool _charSelected(String? t) =>
+      t != null &&
+      (_picking
+          ? _pickedTokens.contains(t)
+          : _side == _Side.character && _selToken == t);
+
+  Widget _characterSide(PlayerProfile p) {
+    final cells = InventoryRules.layout(p).cells;
+    final eq = p.equippedItem;
+    final eqContent = eq == null ? null : CellContent.item(eq);
+    return SizedBox(
+      width: _gridWidth(InventoryRules.columns),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (widget.title != null) ...[
+            Text(retroText(widget.title!), style: DsText.title()),
+            SizedBox(height: DsSpace.sm),
+          ],
+          Row(children: [
+            Text('Equipada:', style: DsText.detail()),
+            SizedBox(width: DsSpace.sm),
+            _cell(
+              key: const ValueKey('stash-char-equipped'),
+              content: eqContent,
+              selected: _charSelected(eq?.uid),
+              tooltip: eqContent == null
+                  ? null
+                  : _tooltip(p, eqContent,
+                      equipped: true, blocked: _stashRules.blocked(p, eq!.uid)),
+              onTap: () => _tapCharacter(eq?.uid, null),
+            ),
+            SizedBox(width: DsSpace.md),
+            Expanded(
+              child: Text(retroText('Créditos: ₵${p.credits}'),
+                  textAlign: TextAlign.right,
+                  style: DsText.body(DsColors.reward)),
+            ),
+          ]),
+          SizedBox(height: DsSpace.sm),
+          Row(children: [
+            Text(
+                'INVENTARIO (${InventoryRules.cellsUsed(p)}/${InventoryRules.cells})',
+                style: DsText.detail()),
+            const Spacer(),
+          ]),
+          SizedBox(height: DsSpace.xs),
+          KeyedSubtree(
+            key: const ValueKey('stash-search-char'),
+            child: DsSearchField(
+              hint: 'BUSCAR EN EL INVENTARIO',
+              width: 260,
+              controller: _searchChar,
+              onChanged: (v) => setState(() => _qChar = v),
+            ),
+          ),
+          SizedBox(height: DsSpace.sm),
+          _grid(InventoryRules.columns, InventoryRules.cells, (i) {
+            final t = cells[i];
+            final c = _charContent(p, t);
+            return _cell(
+              key: ValueKey('stash-char-$i'),
+              content: c,
+              selected: _charSelected(t),
+              dim: c != null && !_matches(c, _qChar),
+              tooltip: c == null
+                  ? null
+                  : _tooltip(p, c, blocked: _stashRules.blocked(p, t!)),
+              onTap: () => _tapCharacter(t, i),
+              onMenu: t == null ? null : (at) => _menuCharacter(t, i, at),
+            );
+          }, onActivate: (i) => _tapCharacter(cells[i], i)),
+          SizedBox(height: DsSpace.sm),
+          // Los materiales no ocupan casilla (loot.md § 17.1); las pociones
+          // se ven pero no van al alijo.
+          InventoryStacksBar(
+            rules: _rules,
+            profile: p,
+            cell: StashBoard.cell,
+            gap: StashBoard.gap,
+            selected: _picking
+                ? (_pickedTokens.isEmpty ? null : _pickedTokens.last)
+                : _side == _Side.character
+                    ? _selToken
+                    : null,
+            onSelect: (t) => _tapCharacter(t, null),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _tabUsed(Stash s, int t) {
+    var n = 0;
+    for (var i = t * Stash.perTab; i < (t + 1) * Stash.perTab; i++) {
+      if (s.cells[i] != null) n++;
+    }
+    return n;
+  }
+
+  Widget _stashSide(PlayerProfile p, Stash s) {
+    final base = _tab * Stash.perTab;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Text('ALIJO', style: DsText.title()),
+          SizedBox(width: DsSpace.md),
+          Text('${s.used}/${Stash.size}',
+              key: const ValueKey('stash-used'), style: DsText.detail()),
+        ]),
+        SizedBox(height: DsSpace.xs),
+        DsTabBar(
+          tabs: [
+            for (var t = 0; t < Stash.tabs; t++)
+              DsTab(StashBoard.tabLabels[t],
+                  key: ValueKey('tab-$t'),
+                  badge: '${_tabUsed(s, t)}/${Stash.perTab}'),
+          ],
+          index: _tab,
+          onChanged: (t) => setState(() => _tab = t),
+        ),
+        SizedBox(height: DsSpace.xs),
+        KeyedSubtree(
+          key: const ValueKey('stash-search-stash'),
+          child: DsSearchField(
+            hint: 'BUSCAR EN EL ALIJO',
+            width: 260,
+            controller: _searchStash,
+            onChanged: (v) => setState(() => _qStash = v),
+          ),
+        ),
+        SizedBox(height: DsSpace.sm),
+        _grid(Stash.columns, Stash.perTab, (k) {
+          final i = base + k;
+          final e = s.cells[i];
+          final c = _stashContent(e);
+          return _cell(
+            key: ValueKey('stash-cell-$i'),
+            content: c,
+            selected: _picking
+                ? _pickedCells.contains(i)
+                : _side == _Side.stash && _selCell == i,
+            dim: c != null && !_matches(c, _qStash),
+            tooltip: e == null
+                ? null
+                : e.material != null
+                    ? _stashStackTooltip(e.material!, e.count)
+                    : _tooltip(p, c!),
+            onTap: () => _tapStash(i),
+            onMenu: e == null ? null : (at) => _menuStash(i, at),
+          );
+        }, onActivate: (k) => _tapStash(base + k)),
+        if (_tab == Stash.ecoTab) ...[
+          SizedBox(height: DsSpace.xs),
+          Text('Ecos y materiales del Atlas y del Abismo',
+              style: DsText.detail()),
+        ],
+      ],
+    );
+  }
+
+  String? _selectionMarkup(PlayerProfile p, Stash s) {
+    if (_side == null) return null;
+    final CellContent? c = _side == _Side.character
+        ? _charContent(p, _selToken)
+        : _stashContent(s.cells[_selCell!]);
+    if (c == null) return null;
+    final it = c.item;
+    if (it != null) return itemNameMarkup(_rules, it);
+    if (c.eco case final eco?) return ecoNameMarkup(_rules, eco);
+    return '<b style="color:#78e6dc">${protoEsc(c.stack!.label)}</b> x${c.count}';
+  }
+
+  List<Widget> _actions(PlayerProfile p, Stash s) {
+    final busy = host.busy;
+    final wait = busy ? 'Esperando...' : null;
+    if (_picking) {
+      final n = _pickedTokens.length + _pickedCells.length;
+      final toStash = _pickedCells.isEmpty;
+      return [
+        Text('$n elegidos',
+            key: const ValueKey('stash-picked'), style: DsText.body()),
+        DsButton(toStash ? 'MOVER ELEGIDOS' : 'SACAR ELEGIDOS',
+            key: const ValueKey('stash-move-picked'),
+            kind: DsButtonKind.primary,
+            tooltip: wait ?? (n == 0 ? 'Elige casillas con clic' : null),
+            onPressed: n == 0 || busy ? null : _movePicked),
+        DsButton('CANCELAR',
+            key: const ValueKey('stash-pick-cancel'),
+            onPressed: () => setState(_cancelPick)),
+      ];
+    }
+    final dry = _dryRun();
+    final reason = wait ?? (dry == null ? 'Elige un objeto' : dry.error);
+    final all = _stashRules.movableTokens(p);
+    return [
+      if (_side == _Side.stash)
+        DsButton('< AL INVENTARIO',
+            key: const ValueKey('stash-withdraw'),
+            kind: DsButtonKind.primary,
+            tooltip: reason,
+            onPressed: reason == null ? _move : null)
+      else
+        DsButton('AL ALIJO >',
+            key: const ValueKey('stash-deposit'),
+            kind: DsButtonKind.primary,
+            tooltip: reason,
+            onPressed: reason == null ? _move : null),
+      DsButton('MOVER TODO AL ALIJO',
+          key: const ValueKey('stash-move-all'),
+          tooltip: wait ??
+              (all.isEmpty
+                  ? 'No hay nada movible (la equipada, el arma inicial y las '
+                      'pociones se quedan)'
+                  : 'Armas no protegidas, Ecos y materiales'),
+          onPressed: all.isEmpty || busy ? null : _moveAll),
+      DsButton('ELEGIR',
+          key: const ValueKey('stash-pick'),
+          tooltip: 'Marcar varias casillas de un lado y moverlas juntas',
+          onPressed: () => setState(() {
+                _clearSel();
+                _picking = true;
+                _error = null;
+              })),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = host.profile, s = host.stash;
+    final sel = _selectionMarkup(p, s);
+    final dry = _dryRun();
+    final line = _error ?? (dry != null && !dry.ok ? dry.error : null);
+    final notice = host.notice;
+    return MenuTabKeys(
+      count: Stash.tabs,
+      index: _tab,
+      onChanged: (t) => setState(() => _tab = t),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _characterSide(p),
+              SizedBox(width: DsSpace.xl),
+              _stashSide(p, s),
+            ],
+          ),
+          SizedBox(height: DsSpace.md),
+          Wrap(
+            spacing: DsSpace.sm,
+            runSpacing: DsSpace.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: _actions(p, s),
+          ),
+          SizedBox(height: DsSpace.sm),
+          SizedBox(
+            height: RetroType.line *
+                MediaQuery.textScalerOf(context).scale(RetroType.small),
+            child: line != null
+                ? Text(retroText(line),
+                    key: const ValueKey('stash-error'),
+                    style: DsText.body(DsColors.danger))
+                : notice != null
+                    ? Text(retroText(notice),
+                        key: const ValueKey('stash-notice'),
+                        style: DsText.body(DsColors.success))
+                    : sel != null
+                        ? ProtoText(sel)
+                        : Text(
+                            'Armas, Ecos y materiales se comparten; créditos '
+                            'y pociones no.',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: DsText.detail()),
+          ),
+        ],
+      ),
+    );
+  }
+}
