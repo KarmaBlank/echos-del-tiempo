@@ -507,8 +507,13 @@ class ProgressionRules {
     return crafting.transferSkill(p, a.uid, b.uid, skillId).profile;
   }
 
-  /// `node`: toma un nodo del árbol de pasivas.
-  PlayerProfile? takeNode(PlayerProfile p, String nodeId) {
+  /// `node`: toma un nodo del árbol de pasivas. Con un hito pendiente se
+  /// rechaza: primero se elige el hito (progression_v2.md § 5.1).
+  PlayerProfile? takeNode(PlayerProfile p, String nodeId) =>
+      p.pendingMilestones.isNotEmpty ? null : _takeNode(p, nodeId);
+
+  /// Toma [nodeId] sin mirar los hitos pendientes (camino del hito).
+  PlayerProfile? _takeNode(PlayerProfile p, String nodeId) {
     if (!treeRules.canTake(
         p.classId, p.treePoints, p.passiveProgress, nodeId)) {
       return null;
@@ -550,11 +555,15 @@ class ProgressionRules {
   /// Camino en un clic (progression_v2.md § 4): toma [ids] en orden hasta
   /// el primero que no se pueda. Devuelve el perfil y cuántos tomó
   /// (`null` si ninguno).
-  (PlayerProfile, int)? takeNodes(PlayerProfile p, List<String> ids) {
+  /// Con un hito pendiente se rechaza, como [takeNode].
+  (PlayerProfile, int)? takeNodes(PlayerProfile p, List<String> ids) =>
+      p.pendingMilestones.isNotEmpty ? null : _takeNodes(p, ids);
+
+  (PlayerProfile, int)? _takeNodes(PlayerProfile p, List<String> ids) {
     var next = p;
     var n = 0;
     for (final id in ids) {
-      final t = takeNode(next, id);
+      final t = _takeNode(next, id);
       if (t == null) break;
       next = t;
       n++;
@@ -589,7 +598,7 @@ class ProgressionRules {
     // `pathTo` ya trae solo los nodos que faltan: los puntos del hito no
     // se gastan en nodos tomados.
     final take = path.take(bound).toList();
-    next = takeNodes(next, take)?.$1 ?? next;
+    next = _takeNodes(next, take)?.$1 ?? next;
     return next;
   }
 
