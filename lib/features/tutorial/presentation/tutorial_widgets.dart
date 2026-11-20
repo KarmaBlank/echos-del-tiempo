@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
+
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_panel.dart';
@@ -276,16 +278,19 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
   bool _menu = false;
   bool _glossary = false;
 
-  Widget _section(String label, List<Widget> children) => Padding(
-        padding: const EdgeInsets.only(top: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(label, style: _body(ProtoColors.dim, RetroType.label)),
-            const SizedBox(height: 2),
-            ...children,
-          ],
-        ),
+  // Panel lateral con el sistema de diseño (design_system.md § 10.3):
+  // `DsCard`, secciones con `DsSectionHeader`, jerarquía por color.
+  Widget _section(String label, List<Widget> children) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [DsSectionHeader(label), ...children],
+      );
+
+  Widget _line(String text, Color color, {Key? key, bool detail = false}) =>
+      Padding(
+        padding: EdgeInsets.only(bottom: DsSpace.xs),
+        child: Text(retroText(text),
+            key: key,
+            style: detail ? DsText.detail(color) : DsText.body(color)),
       );
 
   Widget _panel() {
@@ -294,9 +299,8 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
     final card = w.card;
     final last = w.last;
     final head = b?.stage ?? '';
-    return RetroPanel(
+    return DsCard(
       key: const ValueKey('tutorial-panel'),
-      padding: const EdgeInsets.all(8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -304,10 +308,13 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
             children: [
               Expanded(
                 child: Text(head.isEmpty ? 'TUTORIAL' : retroText(head),
-                    style: _body(ProtoColors.gold)),
+                    style: DsText.subtitle(DsColors.textTitle)),
               ),
-              PanelButton('≡',
+              // ≡ como ícono (la fuente pixel no tiene el glifo).
+              DsButton.icon(const Icon(Icons.menu, size: 16),
                   key: const ValueKey('tutorial-menu'),
+                  size: DsButtonSize.compact,
+                  tooltip: 'Menú del tutorial',
                   onPressed: () => setState(() {
                         _menu = !_menu;
                         _glossary = false;
@@ -322,80 +329,70 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
                   if (w.options.isNotEmpty)
                     _section('VOTACIÓN', [
                       if (b != null && b.text.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Text(retroText(b.text),
-                              style: _body(ProtoColors.gold)),
-                        ),
+                        _line(b.text, DsColors.textTitle),
                       for (final (id, label) in w.options)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 3),
-                          child: PanelButton(label,
+                          padding: EdgeInsets.only(bottom: DsSpace.xs),
+                          child: DsButton(label,
                               key: ValueKey('tutorial-pick-$id'),
                               selected: w.myPick == id,
-                              accent: w.myPick == id
-                                  ? ProtoColors.green
-                                  : null,
                               onPressed: () => w.onPick?.call(id)),
                         ),
                       for (final l in w.pickLines)
-                        Text(retroText(l),
-                            style: _body(l.startsWith('Hay ') ||
-                                    l.startsWith('Falta ')
-                                ? ProtoColors.orange
-                                : ProtoColors.ink)),
-                      Text('Hace falta que voten todos.',
-                          style: _body(ProtoColors.dim, RetroType.label)),
+                        _line(
+                            l,
+                            l.startsWith('Hay ') || l.startsWith('Falta ')
+                                ? DsColors.warning
+                                : DsColors.textPrimary),
+                      _line('Hace falta que voten todos.',
+                          DsColors.textSecondary,
+                          detail: true),
                     ])
                   else if (w.narration.isNotEmpty && card == null) ...[
                     if (b != null && b.text.isNotEmpty)
                       _section('AHORA', [
-                        Text(retroText(b.text),
-                            key: const ValueKey('tutorial-now'),
-                            style: _body(b.yourTurn
-                                ? ProtoColors.gold
-                                : ProtoColors.sky)),
+                        _line(
+                            b.text,
+                            b.yourTurn
+                                ? DsColors.textTitle
+                                : DsColors.textSubtitle,
+                            key: const ValueKey('tutorial-now')),
                       ]),
                     _section('LO QUE PASA', [
                       for (final (i, l) in w.narration.indexed)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 3),
-                          child: Text(retroText(l),
-                              key: const ValueKey('tutorial-narration'),
-                              style: _body(i == w.narration.length - 1
-                                  ? ProtoColors.ink
-                                  : ProtoColors.dim)),
-                        ),
+                        _line(
+                            l,
+                            i == w.narration.length - 1
+                                ? DsColors.textPrimary
+                                : DsColors.textSecondary,
+                            key: const ValueKey('tutorial-narration')),
                     ]),
                   ] else if (card != null)
                     _section(
                         card.heading ??
                             (card.effect ? 'LO QUE PASÓ' : 'EN ESTA ETAPA'),
                         [
-                      for (final l in card.lines)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 3),
-                          child: Text(retroText(l),
-                              key: const ValueKey('tutorial-card-line'),
-                              style: _body(ProtoColors.ink)),
-                        ),
-                      if (tutorialArrowText(card.arrow) case final a
-                          when a.isNotEmpty)
-                        Text(a, style: _body(ProtoColors.orange)),
-                    ])
+                          for (final l in card.lines)
+                            _line(l, DsColors.textPrimary,
+                                key: const ValueKey('tutorial-card-line')),
+                          if (tutorialArrowText(card.arrow) case final a
+                              when a.isNotEmpty)
+                            _line(a, DsColors.warning),
+                        ])
                   else ...[
                     if (b != null && b.text.isNotEmpty)
                       _section('AHORA', [
-                        Text(retroText(b.text),
-                            key: const ValueKey('tutorial-now'),
-                            style: _body(b.yourTurn
-                                ? ProtoColors.gold
-                                : ProtoColors.sky)),
+                        _line(
+                            b.text,
+                            b.yourTurn
+                                ? DsColors.textTitle
+                                : DsColors.textSubtitle,
+                            key: const ValueKey('tutorial-now')),
                       ]),
                     if (last != null)
                       _section('ÚLTIMA ACCIÓN', [
                         for (final l in last.lines)
-                          Text(retroText(l), style: _body(ProtoColors.dim)),
+                          _line(l, DsColors.textSecondary),
                       ]),
                   ],
                 ],
@@ -403,23 +400,20 @@ class _TutorialOverlayState extends State<TutorialOverlay> {
             ),
           ),
           if (card != null) ...[
-            const SizedBox(height: 6),
+            SizedBox(height: DsSpace.sm),
             if (w.waitingText case final t?)
-              Text(retroText(t),
-                  key: const ValueKey('tutorial-waiting'),
-                  style: _body(ProtoColors.orange)),
-            const SizedBox(height: 4),
+              _line(t, DsColors.warning,
+                  key: const ValueKey('tutorial-waiting')),
             if (w.voted)
-              Text('Ya votaste SIGUIENTE.',
-                  key: const ValueKey('tutorial-voted'),
-                  style: _body(ProtoColors.green))
+              _line('Ya votaste SIGUIENTE.', DsColors.success,
+                  key: const ValueKey('tutorial-voted'))
             else
-              PanelButton('SIGUIENTE',
+              DsButton('SIGUIENTE',
                   key: const ValueKey('tutorial-next'),
-                  accent: ProtoColors.green,
+                  kind: DsButtonKind.primary,
                   onPressed: w.onNext),
-            Text('ESPACIO o Enter: leí y entendí',
-                style: _body(ProtoColors.dim, RetroType.label)),
+            SizedBox(height: DsSpace.xs),
+            Text('ESPACIO o Enter: leí y entendí', style: DsText.detail()),
           ],
         ],
       ),

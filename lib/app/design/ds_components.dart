@@ -319,6 +319,7 @@ class DsListRow extends StatelessWidget {
     this.tooltip,
     this.focusNode,
     this.autofocus = false,
+    this.compact = false,
   });
 
   final String title;
@@ -340,11 +341,17 @@ class DsListRow extends StatelessWidget {
   /// El foco de teclado arranca en esta fila (menús).
   final bool autofocus;
 
+  /// Fila baja para listas densas (menú de batalla): aire vertical
+  /// mínimo y `sm` a los lados.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     Widget row(DsPressState s) => Container(
-          padding: EdgeInsets.symmetric(
-              horizontal: DsSpace.md, vertical: DsSpace.sm),
+          padding: compact
+              ? EdgeInsets.symmetric(horizontal: DsSpace.sm, vertical: 2)
+              : EdgeInsets.symmetric(
+                  horizontal: DsSpace.md, vertical: DsSpace.sm),
           decoration: BoxDecoration(
             color: s.hot ? DsColors.hover : Colors.transparent,
             border: Border.all(

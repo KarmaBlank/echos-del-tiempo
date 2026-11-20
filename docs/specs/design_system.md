@@ -308,3 +308,48 @@ campo y botón de cada tema; mínimo pedido 4.5:1 (Cuerpo, Detalle) y 3:1
 
 Ningún token necesitó ajuste. Nota: Detalle sobre botón en AZUL es 6.08:1
 (no "≥ 7:1" como decía § 3.2; sobre fondo y panel sí pasa de 8).
+
+### 10.3 Batalla (v0.12)
+
+Hecho (rama `feat/ds-batalla`), sin tocar la escena (painter, arena, fx)
+ni las reglas:
+
+- Ventana de comandos (`battle_command_window.dart`): categorías y
+  acciones en `DsListRow` compactas de una línea (`compact: true`, nuevo:
+  aire vertical mínimo para que las 7 categorías entren sin scroll).
+  Acción: tecla 1-9 en Detalle, nombre en Cuerpo (dúos y ULT en naranja,
+  desactivada en el color desactivado), dato corto en Detalle (Atacar,
+  pociones, Defender) y a la derecha `DsTag.instant`, el alcance como
+  `DsTag` (`1 ENEMIGO`, `TODOS`, `ALIADO`, `GRUPO`, `VOS`, en el color del
+  alcance) y el costo con `DsCost` (MP azul, Pulso `2 P` dorado, rojo si no
+  alcanza). Las etiquetas se achican (FittedBox, tope 55 % del ancho) con
+  texto ENORME. El separador de las Instante en Detalle celeste. Las filas
+  no toman el foco (`ExcludeFocus`): Enter y 1-9 siguen siendo de la
+  batalla.
+- Detalle: quién actúa en Subtítulo Título, recursos en Detalle, motivos
+  de la desactivada en Cuerpo rojo arriba, resumen de una línea
+  (habilidades: `skillSummaryMarkup`; el resto: las dos primeras líneas) y
+  lo demás en `DsFold` (MÁS / MENOS). Objetivo y teclas en Detalle.
+- `BattleAction` suma `instant`, `reach`, `mpCost`, `pulseCost` y
+  `summary`; la ventana recibe `mp` / `pulse` para el rojo de `DsCost`.
+- Tarjetas del grupo (`battle_hud.dart`): superficie / superficie hundida,
+  borde de selección en la del turno; nombre en Cuerpo (el propio en
+  Título), `Lv` y turno (`▶ 25s` dorado, `T+3` / `K.O.` en Detalle). Las
+  barras (HP / MP / ULT con cifras en Press Start) y la fila PULSO (en el
+  dorado de Pulso) quedan igual. AUTO: `DsButton` compacto.
+- Caja del objetivo: nombre en Cuerpo rojo, `¡ULT!` como `DsTag` rojo,
+  borde de peligro. Banda del log en Cuerpo y reloj en
+  selección / peligro; REGISTRO EXTENDIDO en Cuerpo / Detalle; "Turno de"
+  en Título.
+- Panel lateral del tutorial (`tutorial_widgets.dart`): `DsCard`,
+  secciones con `DsSectionHeader` (AHORA, LO QUE PASO, VOTACION...), ≡
+  como `DsButton.icon`, opciones de la votación como `DsButton`
+  (elegida = `selected`) y SIGUIENTE principal.
+
+Pendiente: el menú ≡ del tutorial (modal) y el cartel final siguen con
+`RetroPanel` / `PanelButton`.
+
+Capturas antes / después (1920×1080): `docs/release_shots/v0.12.0/`,
+generadas por `tool/shots/ds_batalla_shots_test.dart` (`SHOT_SUFFIX`).
+En las capturas de prueba los íconos de Material salen como cuadrado
+(la fuente de íconos no se carga en `flutter test`).

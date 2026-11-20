@@ -143,7 +143,7 @@ void main() {
           myPick: 'exit',
           onPick: (c) => picked = c,
         ));
-    expect(find.text('VOTACIÓN'), findsOneWidget);
+    expect(find.text('VOTACION'), findsOneWidget); // DsSectionHeader
     expect(find.text('Beto: eligiendo…'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('tutorial-pick-train')));
     expect(picked, 'train');

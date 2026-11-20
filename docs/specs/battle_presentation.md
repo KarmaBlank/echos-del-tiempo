@@ -1073,6 +1073,11 @@ el turno propio (co-op: cada uno ve sus comandos):
 2. **Acciones** de la categoría: una fila por acción — tecla (1-9), nombre,
    la cifra principal (daño estimado, cura) y el costo a la derecha
    (`4 MP`, `x2`, `45%`). El crítico y los efectos van a la descripción.
+   Desde v0.12 (design_system.md § 10.3) las filas son `DsListRow` de una
+   línea: en las habilidades la cifra pasa al resumen del detalle y la
+   fila lleva `INSTANTE`, el alcance (`1 ENEMIGO`, `TODOS`...) y el costo
+   `DsCost` (`4 MP` azul, `2 P` dorado, rojo si no alcanza). En el detalle
+   se ve el resumen de una línea; el resto, plegado en MÁS.
    El nombre baja de línea antes que cortarse (nunca se recorta). Con más
    de 9 acciones en una categoría se pagina (`battleMenuPage`, "Más ▸" /
    "← Volver"); con las pociones en OBJETOS ningún kit actual pagina.

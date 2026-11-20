@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/party_box.dart';
 import '../../../app/theme/proto_colors.dart';
@@ -621,7 +622,7 @@ Widget _chips(List<StatusChip> chips, {bool long = false}) => Wrap(
 /// `valueChars`) para que crezcan con el tamaño del texto.
 class _BarRow extends StatelessWidget {
   const _BarRow(this.bar, this.value,
-      {this.label, this.color = ProtoColors.ink, this.valueChars = 8});
+      {this.label, this.color = DsColors.textPrimary, this.valueChars = 8});
 
   final Widget bar;
   final String value;
@@ -785,7 +786,7 @@ class _PulseRow extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: PulsePips(player, key: ValueKey('pulse-${player.id}')));
     }
-    final style = RetroType.style(RetroType.label, color: ProtoColors.gold);
+    final style = RetroType.style(RetroType.label, color: DsColors.pulse);
     final n = player.pulse.clamp(0, BattleEngine.pulseMax);
     return Row(
       children: [
@@ -970,41 +971,44 @@ class _PartyCard extends StatelessWidget {
     final chips = combatantChips(p);
     final left = turnTimeLeft;
     // Turno: corto para que el nombre no se corte ("T+3").
+    // Sistema de diseño (design_system.md § 10.3): jerarquía por color.
     final String turn;
+    final Color turnColor;
     if (current) {
-      turn = hexSpan(
-          '#ffd166', '▶${left == null ? '' : ' ${left.ceil().clamp(0, 99)}s'}');
+      turn = '▶${left == null ? '' : ' ${left.ceil().clamp(0, 99)}s'}';
+      turnColor = DsColors.selected;
     } else if (!p.alive) {
-      turn = hexSpan('#7d8bc4', 'K.O.');
+      turn = 'K.O.';
+      turnColor = DsColors.textSecondary;
     } else {
-      turn = turnIndex < 0 ? '' : hexSpan('#7d8bc4', 'T+$turnIndex');
+      turn = turnIndex < 0 ? '' : 'T+$turnIndex';
+      turnColor = DsColors.textSecondary;
     }
     final ultColor = p.ult >= 100 ? ProtoColors.pink : ProtoColors.violet;
-    final nameColor = local ? ' style="color:#ffd166"' : '';
     final card = Opacity(
       opacity: p.alive ? 1 : 0.55,
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: local ? ProtoColors.panel : ProtoColors.input,
+          color: local ? DsColors.surface : DsColors.surfaceSunken,
           border: Border.all(
             color: current
-                ? ProtoColors.gold
+                ? DsColors.selected
                 : local
-                    ? ProtoColors.buttonBorder
-                    : ProtoColors.panelBorder,
+                    ? DsColors.borderControl
+                    : DsColors.border,
             width: 2,
           ),
         ),
         child: DefaultTextStyle.merge(
-          style: RetroType.smallStyle.copyWith(color: ProtoColors.ink),
+          style: DsText.detail(DsColors.textPrimary),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 width: _avatar.width,
                 height: _avatar.height,
-                color: ProtoColors.bg,
+                color: DsColors.background,
                 alignment: Alignment.center,
                 child: img == null
                     ? const SizedBox.shrink()
@@ -1021,11 +1025,19 @@ class _PartyCard extends StatelessWidget {
                       children: [
                         // El nombre baja de línea antes que cortarse.
                         Expanded(
-                          child: ProtoText('<b$nameColor>${protoEsc(p.name)}'
-                              '</b> <span class="k">'
-                              'Lv${p.build?.level ?? (p.level > 0 ? p.level : '?')}</span>'),
+                          child: Text.rich(TextSpan(children: [
+                            TextSpan(
+                                text: p.name,
+                                style: DsText.body(local
+                                    ? DsColors.textTitle
+                                    : DsColors.textPrimary)),
+                            TextSpan(
+                                text: ' Lv${p.build?.level ?? (p.level > 0 ? p.level : '?')}',
+                                style: DsText.detail()),
+                          ])),
                         ),
-                        if (turn.isNotEmpty) ProtoText(turn),
+                        if (turn.isNotEmpty)
+                          Text(turn, style: DsText.detail(turnColor)),
                       ],
                     ),
                     _BarRow(hpBar(p.hp, p.maxHp), '${p.hp}/${p.maxHp}',
@@ -1058,9 +1070,10 @@ class _PartyCard extends StatelessWidget {
                       const SizedBox(height: 2),
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: PanelButton(
+                        child: DsButton(
                           'AUTO: ${auto ? 'SÍ' : 'NO'}',
                           key: ValueKey('auto-toggle-${p.id}'),
+                          size: DsButtonSize.compact,
                           selected: auto,
                           onPressed: () => toggle(!auto),
                         ),
@@ -1109,18 +1122,29 @@ class TargetBar extends StatelessWidget {
       key: const ValueKey('target-bar'),
       width: RetroType.width(context, 200 + (chars - 9) * 8.0),
       padding: const EdgeInsets.all(4),
+      // Sistema de diseño: nombre en Cuerpo rojo, ¡ULT! como DsTag.
       decoration: BoxDecoration(
-        color: ProtoColors.bg.withValues(alpha: 0.9),
-        border: Border.all(color: ProtoColors.crimson, width: 2),
+        color: DsColors.background.withValues(alpha: 0.9),
+        border: Border.all(color: DsColors.danger, width: 2),
       ),
       child: DefaultTextStyle.merge(
-        style: RetroType.smallStyle.copyWith(color: ProtoColors.ink),
+        style: DsText.detail(DsColors.textPrimary),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            ProtoText('<b style="color:#ff6b81">${protoEsc(e.name)}</b>'
-                '${e.ultPending ? ' ${hexSpan('#ff3355', '¡ULT!')}' : ''}'),
+            Row(children: [
+              Flexible(
+                child: Text(e.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DsText.body(DsColors.danger)),
+              ),
+              if (e.ultPending) ...[
+                const SizedBox(width: 4),
+                const DsTag('¡ULT!', color: DsColors.danger),
+              ],
+            ]),
             _BarRow(
                 RetroBar(value: e.hp, max: e.maxHp, color: ProtoColors.crimson),
                 hpText,
