@@ -7,6 +7,7 @@ import '../../../ascension/domain/ascension_text.dart';
 import '../../../characters/domain/unused_points.dart';
 import '../../../characters/domain/xp_text.dart';
 import '../../../characters/presentation/grimoire_section.dart';
+import '../../../achievements/presentation/achievements_view.dart';
 import '../../../bestiary/presentation/bestiary_view.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../build_planner/presentation/build_fit_badge.dart';
@@ -75,7 +76,11 @@ enum CharacterTab {
   bestiary(
       'BESTIARIO',
       'Los enemigos que derrotaste (toda la cuenta): familia, debilidades, '
-          'resistencias y botín. Derrotá a los que faltan para descubrirlos.');
+          'resistencias y botín. Derrotá a los que faltan para descubrirlos.'),
+  achievements(
+      'HAZAÑAS',
+      'Una vez por cuenta, con recompensa para el personaje que la logra. '
+          'Pasá el mouse por una fila para ver cómo se consigue.');
 
   const CharacterTab(this.label, this.hint);
   final String label;
@@ -184,6 +189,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 bestiary: view.bestiary ?? BestiaryProgress.empty,
                 sprites: ref.watch(gameSpritesProvider).valueOrNull,
               )),
+      // Hazañas de la cuenta (docs/specs/achievements.md § 7): las del
+      // perfil de sesión, que el host mantiene al día.
+      CharacterTab.achievements => AchievementsView(
+          key: const ValueKey('achievements-view'),
+          progress: prof.achievements),
     };
 
     final closeButton = view.mode == SessionMode.prep
@@ -260,6 +270,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
             CharacterTab.filter => kFilterHelp,
             CharacterTab.build => BuildPlannerView.help,
             CharacterTab.bestiary => BestiaryView.help,
+            CharacterTab.achievements => AchievementsView.help,
             _ => CharacterPanel.help,
           }}<br><br><span class="k">${tab.label}</span>: ${protoEsc(tab.hint)}',
           onClose: close,

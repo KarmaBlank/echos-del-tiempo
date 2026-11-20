@@ -437,3 +437,12 @@ class TutorialControlAction extends SessionAction {
   final TutorialControl op;
   const TutorialControlAction(this.op);
 }
+
+/// `ach` (docs/specs/achievements.md § 5.2): el cliente avisa una hazaña
+/// que solo él ve (buscador, MOVER TODO, Atlas de la cuenta, plan de
+/// BUILD). El host acepta solo las de `kClientClaimableAchievements` y
+/// paga una sola vez, como las demás.
+class ClaimAchievementAction extends SessionAction {
+  final String id;
+  const ClaimAchievementAction(this.id);
+}

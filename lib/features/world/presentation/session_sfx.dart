@@ -138,6 +138,9 @@ class SessionSfx {
         }
       case LevelUpEvent() || MasteryUpEvent():
         service.play(Sfx.levelUp);
+      // Hazaña propia (achievements.md § 7); la de otro no suena.
+      case AchievementUnlockedEvent(:final playerId) when playerId == localId:
+        service.play(Sfx.achUnlock);
       case BattleStartedEvent(:final boss) when boss:
         // Cartel de entrada del jefe.
         service.play(Sfx.bossIntro);

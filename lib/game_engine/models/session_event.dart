@@ -293,3 +293,13 @@ class TutorialDoneEvent extends SessionEvent {
   final int version;
   const TutorialDoneEvent(this.playerIds, this.version);
 }
+
+// ---------------- Hazañas v0.14 (docs/specs/achievements.md) ----------
+
+/// [playerId] logró la hazaña [id]; el host ya le pagó la recompensa en
+/// su perfil de sesión (JSON `ach`: `{p, id}`). El toast lo ve solo él.
+class AchievementUnlockedEvent extends SessionEvent {
+  final String playerId;
+  final String id;
+  const AchievementUnlockedEvent(this.playerId, this.id);
+}

@@ -1,7 +1,10 @@
+import '../../../game_engine/data/achievements_catalog.dart';
+import '../../../game_engine/models/achievement.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/build_plan.dart';
 import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/rules/achievement_rules.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
 import '../../../game_engine/rules/balance_migration.dart';
 import '../../../game_engine/rules/progression_rules.dart';
@@ -83,6 +86,7 @@ class Account {
     List<String> party = const [],
     Set<String> partyAuto = const {},
     this.tutorialVersion = 0,
+    this.achievementsRaw,
   })  : characters = List.unmodifiable(characters),
         selectedId = _pick(characters, selectedId),
         party = List.unmodifiable(party),
@@ -126,6 +130,42 @@ class Account {
   /// junto a `bv`; docs/specs/combat_tutorial.md § 2). 0 = nunca. Por
   /// cuenta, no por personaje.
   final int tutorialVersion;
+
+  /// Hazañas de la cuenta (JSON `ach`, docs/specs/achievements.md § 6).
+  /// `null` = una cuenta de antes de las hazañas (todavía sin migrar,
+  /// § 6.1); usar [achievements].
+  final AchievementProgress? achievementsRaw;
+
+  AchievementProgress get achievements =>
+      achievementsRaw ?? AchievementProgress.empty;
+
+  /// El perfil de [id] con las hazañas de la cuenta: lo que se lleva a la
+  /// sala (el host no paga lo ya logrado, § 5.1).
+  PlayerProfile? profileFor(String? id) {
+    final c = byId(id);
+    if (c == null) return null;
+    return c.profile.copyWith(achievements: achievements);
+  }
+
+  /// Une [a] a las hazañas de la cuenta (unión de logradas, máximo de
+  /// contadores).
+  Account withAchievements(AchievementProgress a) =>
+      _copy(achievements: achievements.merge(a));
+
+  /// Paga en local (fuera de la sesión, § 5.2) las hazañas [ids] al
+  /// personaje [id]. Devuelve la cuenta y lo logrado (vacío si ya
+  /// estaban).
+  (Account, List<AchievementUnlock>) grantAchievements(
+      String id, Iterable<String> ids, int nowS,
+      {AchievementRules rules = const AchievementRules()}) {
+    final p = profileFor(id);
+    if (p == null) return (this, const []);
+    final h = AchievementHits();
+    ids.forEach(h.add);
+    final (next, unlocks) = rules.grant(p, h, nowS);
+    if (unlocks.isEmpty) return (this, const []);
+    return (replace(id, next), unlocks);
+  }
 
   /// La party saneada: ranuras que existen, sin repetir, nunca el
   /// elegido, hasta [maxCompanions].
@@ -176,6 +216,7 @@ class Account {
     List<String>? party,
     Set<String>? partyAuto,
     int? tutorialVersion,
+    AchievementProgress? achievements,
   }) =>
       Account(
         characters: characters ?? this.characters,
@@ -187,6 +228,7 @@ class Account {
         party: party ?? this.party,
         partyAuto: partyAuto ?? this.partyAuto,
         tutorialVersion: tutorialVersion ?? this.tutorialVersion,
+        achievementsRaw: achievements ?? achievementsRaw,
       );
 
   /// Agrega un personaje con un `id` nuevo y lo elige. `null` si está
@@ -198,9 +240,13 @@ class Account {
     while (ids.contains('c$n')) {
       n++;
     }
-    final slot = CharacterSlot(id: 'c$n', profile: profile, created: now);
+    final slot = CharacterSlot(
+        id: 'c$n', profile: _strip(profile), created: now);
     return _copy(
-        characters: [...characters, slot], selectedId: slot.id, seq: n);
+        characters: [...characters, slot],
+        selectedId: slot.id,
+        seq: n,
+        achievements: _mergedAch(profile));
   }
 
   /// Elige a [id]; si estaba en la party, sale de ella (un personaje no
@@ -235,15 +281,32 @@ class Account {
       ],
       partyAuto: {...partyAuto}..remove(id),
       tutorialVersion: tutorialVersion,
+      achievementsRaw: achievementsRaw,
     );
   }
 
+  /// Las hazañas viven en la cuenta, no en el personaje (§ 6).
+  static PlayerProfile _strip(PlayerProfile p) => p.achievements.isEmpty
+      ? p
+      : p.copyWith(achievements: AchievementProgress.empty);
+
+  AchievementProgress? _mergedAch(PlayerProfile p) => p.achievements.isEmpty
+      ? achievementsRaw
+      : achievements.merge(p.achievements);
+
   /// Reemplaza el perfil de un personaje (y la fecha si se da).
+  /// Las hazañas del perfil se unen a las de la cuenta (§ 5.1: nunca se
+  /// pisan ni se pierden).
   Account replace(String id, PlayerProfile profile, {DateTime? lastPlayed}) =>
-      _copy(characters: [
-        for (final c in characters)
-          c.id == id ? c.copyWith(profile: profile, lastPlayed: lastPlayed) : c,
-      ]);
+      _copy(
+        characters: [
+          for (final c in characters)
+            c.id == id
+                ? c.copyWith(profile: _strip(profile), lastPlayed: lastPlayed)
+                : c,
+        ],
+        achievements: _mergedAch(profile),
+      );
 
   /// Anota la última partida de un personaje.
   Account touch(String id, DateTime when) => _copy(characters: [
@@ -285,6 +348,9 @@ class Account {
         if (!bestiary.isEmpty) 'best': bestiary.toJson(),
         if (party.isNotEmpty || partyAuto.isNotEmpty)
           'party': {'c': party, 'auto': partyAuto.toList()},
+        // Hazañas (achievements.md § 6): con `v` aunque esté vacío, así
+        // la migración de § 6.1 corre una sola vez.
+        if (achievementsRaw != null) 'ach': achievementsRaw!.toJson(),
       };
 
   /// Lectura tolerante (lo que falta toma su valor por defecto; entradas
@@ -318,7 +384,23 @@ class Account {
       // Cuentas de antes de la v0.6: sin `best`, bestiario vacío.
       bestiary: BestiaryProgress.fromJson(json['best']),
       tutorialVersion: json['tutV'] is num ? (json['tutV'] as num).toInt() : 0,
+      achievementsRaw: _readAch(json['ach'], chars),
     );
+  }
+
+  /// `ach` de la cuenta más lo que haya quedado en algún personaje (un
+  /// archivo editado a mano). `null` si no hay ninguno.
+  static AchievementProgress? _readAch(
+      Object? raw, List<CharacterSlot> chars) {
+    AchievementProgress? a =
+        raw is Map ? AchievementProgress.fromJson(raw) : null;
+    for (var i = 0; i < chars.length; i++) {
+      final p = chars[i].profile;
+      if (p.achievements.isEmpty) continue;
+      a = (a ?? AchievementProgress.empty).merge(p.achievements);
+      chars[i] = chars[i].copyWith(profile: _strip(p));
+    }
+    return a;
   }
 }
 
@@ -431,3 +513,41 @@ class CharacterRules {
 /// Aviso único de la migración a la progresión v2.
 const kProgressionV2Notice = 'La progresión cambió: te devolvimos todos tus '
     'puntos de atributo y de árbol. Reasigná antes de salir.';
+
+/// Migración retroactiva de las hazañas (achievements.md § 6.1): a una
+/// cuenta sin `ach` se le marcan las que se pueden inferir de sus
+/// personajes, el alijo y el Atlas, **con** su recompensa, en un solo
+/// paquete para el personaje elegido (el primero que se abre). Devuelve
+/// la cuenta (ya con `ach`, aunque quede vacío) y lo recuperado.
+/// Idempotente: una cuenta con `ach` no cambia.
+(Account, List<AchievementUnlock>) migrateAccountAchievements(Account a,
+    {required int nowS, AchievementRules rules = const AchievementRules()}) {
+  if (a.achievementsRaw != null) return (a, const []);
+  final h = rules.infer(
+    profiles: [for (final c in a.characters) c.profile],
+    stashItems: [
+      for (final c in a.stash.cells)
+        if (c?.item case final i?) i
+    ],
+    atlasNodes: a.atlas.nodes.isNotEmpty,
+    atlasDone: a.atlas.done,
+  );
+  final base = a._copy(achievements: AchievementProgress());
+  final sel = base.selectedId;
+  if (sel == null || h.isEmpty) return (base, const []);
+  final (next, unlocks) = rules.grant(base.profileFor(sel)!, h, nowS);
+  return (base.replace(sel, next), unlocks);
+}
+
+/// Aviso de la migración (§ 6.1).
+String achievementsRecoveredNotice(List<AchievementUnlock> u) {
+  var total = const AchievementReward();
+  for (final x in u) {
+    total += x.reward;
+  }
+  return 'Hazañas recuperadas: ${u.length} (${total.text}).';
+}
+
+/// Cuántas logradas siguen en el catálogo (las quitadas se ignoran, § 6).
+int knownAchievements(AchievementProgress p) =>
+    p.done.keys.where(kAchievementsById.containsKey).length;

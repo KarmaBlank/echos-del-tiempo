@@ -3,6 +3,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
+import '../../../game_engine/data/achievements_catalog.dart';
+import '../../../game_engine/models/achievement.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/inventory_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
@@ -94,8 +96,38 @@ class _StashScreenState extends ConsumerState<StashScreen>
   }
 
   @override
-  String? put(List<String> tokens, int tab) =>
-      _batch(_stashRules.depositMany(_p!, _stash!, tokens, tab: tab));
+  String? put(List<String> tokens, int tab) {
+    final why = _batch(_stashRules.depositMany(_p!, _stash!, tokens, tab: tab));
+    if (why == null) achievement('stash_store');
+    return why;
+  }
+
+  /// Fuera de la sesión las hazañas del alijo se pagan en local, sobre la
+  /// cuenta (achievements.md § 5.2), después de lo que ya se esté
+  /// guardando.
+  @override
+  void achievement(String id) {
+    final repo = ref.read(accountRepositoryProvider);
+    final cur = repo.current;
+    if (cur == null || cur.achievements.isDone(id)) return;
+    var got = const <AchievementUnlock>[];
+    repo.update((a) {
+      final (next, u) = a.grantAchievements(widget.characterId, [id],
+          repo.now().millisecondsSinceEpoch ~/ 1000);
+      got = u;
+      return next;
+    }).then((a) {
+      if (!mounted || got.isEmpty) return;
+      final slot = a.byId(widget.characterId);
+      setState(() {
+        if (slot != null) _p = rules.normalize(slot.profile);
+        _notice = [
+          for (final u in got)
+            'HAZAÑA · ${kAchievementsById[u.id]?.name ?? u.id} · ${u.reward.text}'
+        ].join('  ');
+      });
+    }).catchError((Object _) {});
+  }
 
   @override
   String? take(List<int> cells) =>

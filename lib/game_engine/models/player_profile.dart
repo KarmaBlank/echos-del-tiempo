@@ -1,6 +1,7 @@
 import '../data/passive_tree_catalog.dart';
 import '../rules/passive_tree_migration.dart';
 import '../rules/passive_tree_rules.dart';
+import 'achievement.dart';
 import 'ascension.dart';
 import 'attributes.dart';
 import 'eco.dart';
@@ -51,6 +52,7 @@ class PlayerProfile {
     Set<String> fresh = const {},
     String? milestone10,
     String? milestone20,
+    AchievementProgress? achievements,
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -83,10 +85,12 @@ class PlayerProfile {
       fresh: Set.unmodifiable(fresh),
       milestone10: milestone10,
       milestone20: milestone20,
+      achievements: achievements ?? AchievementProgress.empty,
     );
   }
 
   const PlayerProfile._({
+    required this.achievements,
     required this.milestone10,
     required this.milestone20,
     required this.fresh,
@@ -124,6 +128,11 @@ class PlayerProfile {
   /// progression_v2.md § 5); `null` = sin elegir (pendiente si ya llegó).
   final String? milestone10;
   final String? milestone20;
+
+  /// Hazañas de la cuenta (JSON `ach`, docs/specs/achievements.md § 5.1):
+  /// el cliente las manda al unirse y el host las lleva para no pagar dos
+  /// veces. En disco viven en la cuenta, no en el personaje.
+  final AchievementProgress achievements;
 
   /// Puntos de árbol ganados: nivel, Maestría, Pruebas e hitos elegidos.
   int get treePoints => PassiveTreeRules.pointsEarned(treeLevel,
@@ -323,6 +332,7 @@ class PlayerProfile {
     Set<String>? fresh,
     String? Function()? milestone10,
     String? Function()? milestone20,
+    AchievementProgress? achievements,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -368,6 +378,7 @@ class PlayerProfile {
       fresh: fresh == null ? this.fresh : Set.unmodifiable(fresh),
       milestone10: milestone10 == null ? this.milestone10 : milestone10(),
       milestone20: milestone20 == null ? this.milestone20 : milestone20(),
+      achievements: achievements ?? this.achievements,
     );
   }
 
@@ -490,6 +501,7 @@ class PlayerProfile {
         if (abyssKills.isNotEmpty) 'aby': (abyssKills.toList()..sort()),
         // Marca NUEVO v0.9.7 (loot.md § 17.4): opcional.
         if (fresh.isNotEmpty) 'nw': (fresh.toList()..sort()),
+        if (!achievements.isEmpty) 'ach': achievements.toJson(),
         // Hitos v0.10 (progression_v2.md § 5): opcionales.
         if (milestone10 != null) 'ms10': milestone10,
         if (milestone20 != null) 'ms20': milestone20,
@@ -608,6 +620,7 @@ class PlayerProfile {
       milestone20: tv >= treeVersion && json['ms20'] is String
           ? json['ms20'] as String
           : null,
+      achievements: AchievementProgress.fromJson(json['ach']),
     );
   }
 

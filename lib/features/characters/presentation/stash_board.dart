@@ -43,6 +43,10 @@ abstract class StashBoardHost {
 
   bool moveStash(int from, int to);
   bool moveCharacter(int from, int to);
+
+  /// Una hazaña que detecta el tablero (buscador con resultados, MOVER
+  /// TODO; achievements.md § 5.2).
+  void achievement(String id);
 }
 
 enum _Side { character, stash }
@@ -166,7 +170,10 @@ class StashBoardState extends State<StashBoard> {
 
   void _moveAll() {
     setState(_clearSel);
-    _result(host.put(_stashRules.movableTokens(host.profile), _tab));
+    final toks = _stashRules.movableTokens(host.profile);
+    final why = host.put(toks, _tab);
+    _result(why);
+    if (why == null && toks.isNotEmpty) host.achievement('stash_move_all');
   }
 
   void _movePicked() {
@@ -307,8 +314,21 @@ class StashBoardState extends State<StashBoard> {
 
   static String _fold(String s) => s.toLowerCase().trim();
 
-  bool _matches(CellContent? c, String q) =>
-      q.trim().isEmpty || (c != null && _fold(_name(c)).contains(_fold(q)));
+  bool _matches(CellContent? c, String q) {
+    final hit =
+        q.trim().isEmpty || (c != null && _fold(_name(c)).contains(_fold(q)));
+    if (hit && c != null && q.trim().isNotEmpty) _searchFound();
+    return hit;
+  }
+
+  bool _searchClaimed = false;
+  void _searchFound() {
+    if (_searchClaimed) return;
+    _searchClaimed = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) host.achievement('inv_search');
+    });
+  }
 
   String _tooltip(PlayerProfile p, CellContent c,
       {bool equipped = false, String? blocked}) {

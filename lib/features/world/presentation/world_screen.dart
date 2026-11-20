@@ -46,6 +46,7 @@ import 'panels/party_panel.dart';
 import '../../../game_engine/models/tutorial.dart' show TutorialPhase;
 import '../../tutorial/presentation/tutorial_widgets.dart';
 import 'session_battle_screen.dart';
+import '../../achievements/presentation/achievement_feed.dart';
 import 'session_controller.dart';
 import 'session_music.dart';
 import 'session_sfx.dart';
@@ -305,6 +306,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     ref.watch(sessionSfxProvider);
     // Avisos del plan de build: viven toda la sesión (no solo el HUD).
     ref.watch(buildFeedProvider);
+    // Toasts de hazañas (achievements.md § 7): ídem, también en batalla.
+    final achFeed = ref.watch(achievementFeedProvider);
     // Música: el bucle y los jingles según el estado (session_music.dart).
     ref.watch(sessionMusicProvider);
 
@@ -377,6 +380,12 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             ),
           ),
           ..._overlays(view, controller, sprites.requireValue),
+          // Hazaña lograda: arriba a la derecha, sobre el mapa y la batalla.
+          Positioned(
+            top: 56,
+            right: 12,
+            child: AchievementToasts(feed: achFeed),
+          ),
           // Vuelta de la arena al mapa: fundido de bloques
           // (docs/specs/battle_presentation.md § "Arenas" → "Transición").
           Positioned.fill(

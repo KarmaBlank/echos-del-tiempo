@@ -101,6 +101,17 @@ final buildFeedProvider = Provider.autoDispose<BuildFeed>((ref) {
   void check() {
     final plan = ref.read(buildPlanProvider).plan;
     final texts = tracker.observe(plan, c.view?.me?.profile, feed.now);
+    // Hazaña `build_plan_done` (achievements.md § 2.6): todos los
+    // objetivos del plan activo cumplidos.
+    final last = tracker.last;
+    if (last != null &&
+        plan.goalCount > 0 &&
+        last.goals.isNotEmpty &&
+        last.goals.every((g) => g.done)) {
+      scheduleMicrotask(() {
+        if (c.mounted) c.claimAchievement('build_plan_done');
+      });
+    }
     if (texts.isEmpty || !ref.read(gameSettingsProvider).buildNotices) return;
     texts.forEach(feed.push);
     // Fuera de la notificación del controlador (agrega al chat y emite).

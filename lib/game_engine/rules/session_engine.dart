@@ -23,6 +23,8 @@ import '../models/session_action.dart';
 import '../models/session_event.dart';
 import '../models/zone_def.dart';
 import '../data/abyss_catalog.dart';
+import '../data/achievements_catalog.dart';
+import 'achievement_rules.dart';
 import 'abyss_rules.dart';
 import 'atlas_rules.dart';
 import 'battle_engine.dart';
@@ -81,7 +83,11 @@ class SessionEngine {
     RandomSource? abyssRandom,
     TutorialRules? tutorials,
     this.maxPlayers = kDefaultMaxPlayers,
-  })  : tutorials = tutorials ?? TutorialRules(catalog: progression.catalog),
+    int Function()? nowSeconds,
+    this.achievementsEnabled = true,
+  })  : nowSeconds = nowSeconds ??
+            (() => DateTime.now().millisecondsSinceEpoch ~/ 1000),
+        tutorials = tutorials ?? TutorialRules(catalog: progression.catalog),
         _random = random ?? math.Random().nextDouble,
         _ecoRandom = ecoRandom ?? math.Random().nextDouble,
         _abyssRandom = abyssRandom ?? math.Random().nextDouble,
@@ -94,6 +100,18 @@ class SessionEngine {
 
   /// El TUTORIAL: Ecos de práctica (docs/specs/combat_tutorial.md).
   final TutorialRules tutorials;
+
+  /// Hazañas (docs/specs/achievements.md § 5.1): fecha de las logradas.
+  final int Function() nowSeconds;
+
+  /// Detectar y pagar hazañas. Apagado solo en herramientas y tests que
+  /// comparan una vista previa con el resultado exacto de una acción.
+  final bool achievementsEnabled;
+  final achievements = const AchievementRules();
+
+  /// Seguimiento de la batalla actual para las hazañas de combate (solo
+  /// en el host; no viaja).
+  final achievementTracker = AchievementBattleTracker();
 
   /// Reglas de los Jefes del Abismo.
   AbyssRules get abyssRules => AbyssRules(catalog: catalog);
@@ -227,6 +245,7 @@ class SessionEngine {
         BattleAction() ||
         SetBuildWantsAction() ||
         SetLootFilterAction() ||
+        ClaimAchievementAction() ||
         // Personaje.
         AllocateStatsAction() ||
         RespecAction() ||
@@ -453,7 +472,11 @@ class SessionEngine {
       return null;
     }
     final op = _Op(this, session.copy());
-    return op.apply(op.s.players[playerId]!, action) ? op.result : null;
+    final p = op.s.players[playerId]!;
+    final before = p.profile;
+    if (!op.apply(p, action)) return null;
+    op.achievements(actor: p, action: action, before: before);
+    return op.result;
   }
 
   /// `hostTick`: avanza [dt] segundos. Con la sala pausada no avanza
@@ -462,6 +485,7 @@ class SessionEngine {
     if (session.paused) return SessionStep(session, const []);
     final op = _Op(this, session.copy());
     op.tick(dt);
+    op.achievements();
     return op.result;
   }
 
@@ -1026,6 +1050,79 @@ class _Op {
             return true;
         }
         return false;
+
+      // Hazañas que detecta el cliente (achievements.md § 5.2): solo las
+      // de la lista y sin repetir; el pago lo hace [achievements].
+      case ClaimAchievementAction(:final id):
+        return kClientClaimableAchievements.contains(id) &&
+            !p.profile.achievements.isDone(id);
+    }
+  }
+
+  // ---------------- Hazañas (achievements.md § 5) ----------------
+
+  /// Detecta y paga las hazañas del paso: la acción de [actor] (si hay)
+  /// y los eventos de batalla / Eco / Abismo. Cada jugador gana la suya;
+  /// el host paga en su perfil de sesión y avisa con
+  /// [AchievementUnlockedEvent]. Una vez por cuenta: el líder y sus
+  /// compañeros (la misma cuenta) comparten lo logrado.
+  void achievements(
+      {SessionPlayer? actor, SessionAction? action, PlayerProfile? before}) {
+    if (!e.achievementsEnabled) return;
+    if (s.tutorial != null) return; // práctica guionada: no cuenta
+    final rules = e.achievements;
+    final hits = <String, AchievementHits>{};
+    if (actor != null && action != null && before != null) {
+      rules.fromAction(hits.putIfAbsent(actor.id, AchievementHits.new),
+          action, before, actor.profile);
+    }
+    final battle = s.battle?.state;
+    for (final ev in events) {
+      switch (ev) {
+        case BattleStartedEvent():
+          e.achievementTracker.reset();
+        case BattleStepEvent(events: final list):
+          rules.fromBattle(hits, list, e.achievementTracker,
+              isPlayer: (id) => s.players.containsKey(id),
+              isBoss: (id) => battle?.byId(id)?.boss ?? false,
+              skill: (id) => catalog.skills[id]);
+        default:
+          rules.fromSession(hits, ev);
+      }
+    }
+    if (hits.values.every((h) => h.isEmpty)) return;
+    final now = e.nowSeconds();
+    for (final entry in hits.entries) {
+      final p = s.players[entry.key];
+      if (p == null || entry.value.isEmpty) continue;
+      final root = p.leaderId ?? p.id;
+      final group = [
+        for (final q in players)
+          if (q.id == root || q.leaderId == root) q
+      ];
+      var shared = p.profile.achievements;
+      for (final q in group) {
+        shared = shared.merge(q.profile.achievements);
+      }
+      final start = p.profile.copyWith(achievements: shared);
+      final (next, unlocks) = rules.grant(start, entry.value, now);
+      p.profile = next;
+      for (final q in group) {
+        if (q.id != p.id) {
+          q.profile = q.profile.copyWith(achievements: next.achievements);
+        }
+      }
+      // En batalla las pociones viven en el combatiente: se le suman ahí
+      // también (al terminar, la batalla las devuelve al perfil).
+      final c = battle?.byId(p.id);
+      if (c != null) {
+        c
+          ..potions += next.potions - start.potions
+          ..ethers += next.ethers - start.ethers;
+      }
+      for (final u in unlocks) {
+        events.add(AchievementUnlockedEvent(p.id, u.id));
+      }
     }
   }
 

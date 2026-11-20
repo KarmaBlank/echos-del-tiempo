@@ -138,6 +138,8 @@ abstract final class ActionJson {
         // v0.9.6 (combat_tutorial.md § 4.4).
         TutorialChoiceAction() => {'t': 'tutPick', 'c': a.choice},
         DevAbyssAction() => {'t': 'devAbyss', 'k': a.kind},
+        // Hazañas v0.14 (achievements.md § 5.2).
+        ClaimAchievementAction() => {'t': 'ach', 'id': a.id},
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -282,6 +284,8 @@ abstract final class ActionJson {
         return TutorialChoiceAction(j.str('c'));
       case 'devAbyss':
         return DevAbyssAction(j.str('k'));
+      case 'ach':
+        return ClaimAchievementAction(j.str('id'));
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

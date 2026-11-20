@@ -1,4 +1,4 @@
-# Spec (BORRADOR, falta OK del dueño): Hazañas
+# Spec (APROBADO, v0.14.0): Hazañas
 
 Pedido del dueño: incentivar que se usen las mecánicas (sobre todo
 **FUSIÓN** y **FORJA**; también inventario, filtro, alijo, combate,
@@ -40,11 +40,11 @@ Condición = evento del motor que la dispara (en el host, § 5). "OK" =
 
 | id | Nombre | Condición | Recompensa |
 |---|---|---|---|
-| `forge_first` | Primera forja | `UpgradeAction` OK | ₵200 + 2E |
-| `forge_plus5` | Forjar a +5 | un arma propia llega a 5 niveles totales de forja tras `UpgradeAction` OK | ₵400 + 1C |
-| `forge_cap` | Al tope | un arma Rara o mejor llega a su tope total de forja (loot.md § 9) | ₵900 + 1P |
-| `forge_10` | Forjador II | contador `forgeLevels` ≥ 10 (cada `UpgradeAction` OK suma 1) | ₵500 + 1C |
-| `forge_30` | Forjador III | `forgeLevels` ≥ 30 | ₵1200 + 1P |
+| `forge_first` | Primera forja | `UpgradeAction` OK | ₵400 + 2E |
+| `forge_plus5` | Forjar a +5 | un arma propia llega a 5 niveles totales de forja tras `UpgradeAction` OK | ₵800 + 1C |
+| `forge_cap` | Al tope | un arma Rara o mejor llega a su tope total de forja (loot.md § 9) | ₵1800 + 1P |
+| `forge_10` | Forjador II | contador `forgeLevels` ≥ 10 (cada `UpgradeAction` OK suma 1) | ₵1000 + 1C |
+| `forge_30` | Forjador III | `forgeLevels` ≥ 30 | ₵2400 + 1P |
 
 (`forge_first` hace de Forjador I.)
 
@@ -56,74 +56,77 @@ volver a tirar, subir rareza). Reforjar, desarmar y vender **no** cuentan.
 
 | id | Nombre | Condición | Recompensa |
 |---|---|---|---|
-| `fuse_first` | Primera fusión | contador `fusions` ≥ 1 | ₵300 + 2E + 1C |
-| `fuse_5` | Fusionador II | `fusions` ≥ 5 | ₵600 + 1C + 1P |
-| `fuse_20` | Fusionador III | `fusions` ≥ 20 | ₵1500 + 2P |
-| `fuse_skill` | Traer habilidad | trasladar habilidad OK | ₵300 + 1C |
-| `fuse_passive` | Traer pasiva | trasladar pasiva OK (Épico → Épico) | ₵500 + 1P |
-| `fuse_affix` | Traer afijo | trasladar afijo OK | ₵200 + 2E |
-| `fuse_break_slot` | Reemplazar Quebrar | trasladar habilidad a la **Ranura de Quebrar** (loot.md § 16.3) | ₵300 + 1C |
-| `fuse_rarity` | Subir de rareza | subir rareza (Prisma Roto) OK | ₵300 + 1P |
-| `fuse_reroll` | Volver a tirar | volver a tirar (Esquirla) OK | ₵100 + 3E |
+| `fuse_first` | Primera fusión | contador `fusions` ≥ 1 | ₵600 + 2E + 1C |
+| `fuse_5` | Fusionador II | `fusions` ≥ 5 | ₵1200 + 1C + 1P |
+| `fuse_20` | Fusionador III | `fusions` ≥ 20 | ₵3000 + 2P |
+| `fuse_skill` | Traer habilidad | trasladar habilidad OK | ₵600 + 1C |
+| `fuse_passive` | Traer pasiva | trasladar pasiva OK (Épico → Épico) | ₵1000 + 1P |
+| `fuse_affix` | Traer afijo | trasladar afijo OK | ₵400 + 2E |
+| `fuse_break_slot` | Reemplazar Quebrar | trasladar habilidad a la **Ranura de Quebrar** (loot.md § 16.3) | ₵600 + 1C |
+| `fuse_rarity` | Subir de rareza | subir rareza (Prisma Roto) OK | ₵600 + 1P |
+| `fuse_reroll` | Volver a tirar | volver a tirar (Esquirla) OK | ₵200 + 3E |
 
 ### 2.3 Reforja, desarme y venta (4)
 
 | id | Nombre | Condición | Recompensa |
 |---|---|---|---|
-| `reforge_first` | Reforjar | `CraftOp.reforge` OK | ₵500 + 1C |
-| `salvage_10` | Desarmar 10 | contador `salvaged` ≥ 10 (el lote suma cada arma) | ₵200 + 3E |
-| `salvage_50` | Desarmar 50 | `salvaged` ≥ 50 | ₵500 + 1C + 1P |
-| `sell_first` | Primera venta | `CraftOp.sell` / `sellAll` OK | ₵50 + 1PV |
+| `reforge_first` | Reforjar | `CraftOp.reforge` OK | ₵1000 + 1C |
+| `salvage_10` | Desarmar 10 | contador `salvaged` ≥ 10 (el lote suma cada arma) | ₵400 + 3E |
+| `salvage_50` | Desarmar 50 | `salvaged` ≥ 50 | ₵1000 + 1C + 1P |
+| `sell_first` | Primera venta | `CraftOp.sell` / `sellAll` OK | ₵100 + 1PV |
 
 ### 2.4 Inventario, filtro y alijo (4)
 
 | id | Nombre | Condición | Recompensa |
 |---|---|---|---|
 | `inv_search` | Usar buscador | el buscador del inventario o del alijo deja ≥ 1 resultado con texto no vacío (evento local del cliente, § 5.2) | 2PV |
-| `filter_rule` | Primera regla de filtro | se guarda un filtro con una regla creada o editada por el jugador (no el filtro por defecto) | ₵100 + 2E |
-| `stash_store` | Guardar en alijo | mover un objeto del inventario al alijo compartido | ₵100 + 1PM |
-| `stash_move_all` | Mover todo | usar **Mover todo** (inventario ↔ alijo) con ≥ 1 objeto movido | ₵100 + 2E |
+| `filter_rule` | Primera regla de filtro | se guarda un filtro con una regla creada o editada por el jugador (no el filtro por defecto) | ₵200 + 2E |
+| `stash_store` | Guardar en alijo | mover un objeto del inventario al alijo compartido | ₵200 + 1PM |
+| `stash_move_all` | Mover todo | usar **Mover todo** (inventario ↔ alijo) con ≥ 1 objeto movido | ₵200 + 2E |
 
 ### 2.5 Combate (4)
 
 | id | Nombre | Condición | Recompensa |
 |---|---|---|---|
 | `combat_break` | Primer quiebre | un enemigo queda Quebrado por una acción del jugador (combo_balance.md § 5) | 2PV |
-| `combat_convergence` | Primera Convergencia | el jugador detona una Convergencia (combo_balance.md § 4; cuenta para quien detona y quien preparó) | ₵100 + 1PV + 1PM |
-| `combat_instant_chain` | Encadenar Instante | en un mismo turno propio, usar una habilidad `INSTANTE` y otra acción después | ₵100 + 2PM |
-| `combat_cancel_ult` | Cancelar ULT de jefe | quebrar a un jefe mientras carga su ULT y que la ULT se cancele (break_and_enemy_ults.md) | ₵400 + 1C |
+| `combat_convergence` | Primera Convergencia | el jugador detona una Convergencia (combo_balance.md § 4; cuenta para quien detona y quien preparó) | ₵200 + 1PV + 1PM |
+| `combat_instant_chain` | Encadenar Instante | en un mismo turno propio, usar una habilidad `INSTANTE` y otra acción después | ₵200 + 2PM |
+| `combat_cancel_ult` | Cancelar ULT de jefe | quebrar a un jefe mientras carga su ULT y que la ULT se cancele (break_and_enemy_ults.md) | ₵800 + 1C |
 
 ### 2.6 Progresión (4)
 
 | id | Nombre | Condición | Recompensa |
 |---|---|---|---|
-| `equip_legendary` | Equipar legendaria | equipar un arma Legendaria | ₵300 + 1C |
-| `tree_milestone` | Primer hito | `chooseMilestone` OK (hito 10 ó 20) | ₵300 + 2PV |
-| `build_plan_done` | Completar plan de BUILD | todos los objetivos del plan de build activo quedan cumplidos (build_planner.md) | ₵600 + 1P |
-| `attr_cap` | Pasar tope de atributo | un atributo pasa el punto desde el que rinde menos (`StatsCalculator`) | ₵200 + 2E |
+| `equip_legendary` | Equipar legendaria | equipar un arma Legendaria | ₵600 + 1C |
+| `tree_milestone` | Primer hito | `chooseMilestone` OK (hito 10 ó 20) | ₵600 + 2PV |
+| `build_plan_done` | Completar plan de BUILD | todos los objetivos del plan de build activo quedan cumplidos (build_planner.md) | ₵1200 + 1P |
+| `attr_cap` | Pasar tope de atributo | un atributo pasa el punto desde el que rinde menos (`StatsCalculator`) | ₵400 + 2E |
 
 ### 2.7 Endgame (3)
 
 | id | Nombre | Condición | Recompensa |
 |---|---|---|---|
-| `eco_first` | Primer Eco | completar una misión dentro de un Eco | ₵600 + 1P |
-| `atlas_node` | Nodo del Atlas | tomar el primer nodo del Atlas | ₵500 + 1C |
-| `abyss_boss` | Fondo del Abismo | vencer a cualquier Jefe del Abismo | ₵1200 + 1P |
+| `eco_first` | Primer Eco | completar una misión dentro de un Eco | ₵1200 + 1P |
+| `atlas_node` | Nodo del Atlas | tomar el primer nodo del Atlas | ₵1000 + 1C |
+| `abyss_boss` | Fondo del Abismo | vencer a cualquier Jefe del Abismo | ₵2400 + 1P |
 
 ## 3. Totales
 
+Créditos ya ajustados (×2) con la medición de § 4.
+
 | Categoría | Créditos | E | C | P | Pociones |
 |---|---|---|---|---|---|
-| Forja | 3200 | 2 | 2 | 2 | — |
-| Fusión | 4100 | 7 | 4 | 5 | — |
-| Reforja / desarme / venta | 1250 | 3 | 2 | 1 | 1 |
-| Inventario / filtro / alijo | 300 | 4 | — | — | 3 |
-| Combate | 600 | — | 1 | — | 7 |
-| Progresión | 1400 | 2 | 1 | 1 | 2 |
-| Endgame | 2300 | — | 1 | 2 | — |
-| **Total** | **₵13 150** | **18** | **11** | **11** | **13** |
+| Forja | 6400 | 2 | 2 | 2 | — |
+| Fusión | 8200 | 7 | 4 | 5 | — |
+| Reforja / desarme / venta | 2500 | 3 | 2 | 1 | 1 |
+| Inventario / filtro / alijo | 600 | 4 | — | — | 3 |
+| Combate | 1200 | — | 1 | — | 6 |
+| Progresión | 2800 | 2 | 1 | 1 | 2 |
+| Endgame | 4600 | — | 1 | 2 | — |
+| Total | ₵26 300 | 18 | 11 | 11 | 12 |
 
-Forja + fusión + reforja = ₵8550 (65%) y casi todos los materiales.
+Forja + fusión + reforja = ₵17 100 (65%) y casi todos los materiales. (El
+borrador decía 13 pociones: la suma real de la lista es 12; combate da 6.)
 
 ## 4. Economía
 
@@ -138,19 +141,27 @@ worldgen.md; enemies_catalog):
 - Reforjar Épico nv 20: ₵1200 + 1C + 1P.
 - Una misión (créditos sin escalar por nivel): enemigos ₵5–18 cada uno,
   jefe ₵80–280, cofres 20–50 + 10 × rango, misión opcional `60 + 6 ×
-  nivel`, bonus por nota. **Estimado ₵800–1200 por misión** a mitad de
-  juego (verificar con el admin de balance, § 9).
+  nivel`, bonus por nota. El borrador estimaba ₵800–1200 por misión.
+- Medición (v0.14.0, `tool/hazanas_economia_measure_test.dart`): arma cada
+  misión de zona con el motor real (5 semillas) y suma las batallas que
+  pide el objetivo (promedio de los grupos del mapa × objetivo + jefe, el
+  élite ×3), la mitad de los cofres del mapa, la misión opcional y el bonus
+  de rango A. Mediana por misión: m1 ₵755, z2 ₵1293, m2 ₵1570, z4 ₵1777,
+  z5 ₵2962, z6 ₵3196, z7 ₵2789, z8 ₵2732, z9 ₵3000, z10 ₵4345. **Mitad de
+  juego ≈ ₵2400 por misión** (el doble del estimado).
 - Materiales por misión: la opcional da 3E + 1C (+1P desde nivel 30);
   desarmar un Raro da 1C + 1E.
 
 Comparación:
-- Total ₵13 150 ≈ **11–16 misiones** (≈ una tarde y media), repartido en
-  toda la vida de la cuenta. Equivale a ~11 niveles de forja de un Raro
-  nv 20: alcanza para *probar* la mecánica, no para saltearse la
-  economía.
+- Con ₵2400 por misión, el total del borrador (₵13 150) eran ~5,5
+  misiones, la mitad de lo buscado. Se duplicaron los créditos de cada
+  hazaña (materiales y pociones sin cambio): total ₵26 300 ≈ **11
+  misiones** a mitad de juego, repartido en toda la vida de la cuenta.
+  Equivale a un Raro nv 20 forjado entero: alcanza para *probar* la
+  mecánica, no para saltearse la economía.
 - Cada primera vez cubre la primera operación de esa mecánica a
-  rareza baja (Primera fusión ₵300 ≥ trasladar habilidad en Común/Mágico
-  ₵200–240; Primera forja ₵200 ≥ primeros niveles de un Común/Mágico).
+  rareza baja (Primera fusión ₵600 ≥ trasladar habilidad en Común/Mágico
+  ₵200–240; Primera forja ₵400 ≥ primeros niveles de un Común/Mágico).
 - Materiales: 11 Prismas ≈ lo que da la opcional en 11 misiones de
   nivel ≥ 30; 18 Esquirlas ≈ 6 misiones. Sumados son un empujón al
   primer "subir rareza" (1+2+4 = 7 Prismas para llegar a Épico).
@@ -227,10 +238,14 @@ personajes y el alijo:
 - Contadores de fusión, desarme y venta: no se pueden inferir, arrancan
   en 0.
 
-**Propuesta**: las inferidas se marcan logradas **con** su recompensa,
-entregada en un solo paquete al primer personaje que se abra (un toast
-`Hazañas recuperadas: N`). Alternativa: marcarlas sin recompensa
-(pregunta 1).
+Decidido (pregunta 1): las inferidas se marcan logradas **con** su
+recompensa, en un solo paquete para el personaje elegido de la cuenta (el
+primero que se abre). El aviso `Hazañas recuperadas: N (+₵… +…)` sale en
+el aviso de carga del título. También se infieren `fuse_break_slot` (arma
+con la Ranura de Quebrar reemplazada), `attr_cap` (atributo crudo sobre el
+tope blando), `filter_rule` (filtro propio guardado) y `forge_10` /
+`forge_30` por el contador `forgeLevels` inferido. La cuenta queda con
+`ach` (aunque vacío): la migración corre una sola vez.
 
 ## 7. UI (design_system.md)
 
@@ -263,7 +278,53 @@ entregada en un solo paquete al primer personaje que se abra (un toast
 - Coop: dos jugadores, Convergencia → los dos ganan; quiebre → solo el
   que lo hace.
 
-## 9. Preguntas abiertas
+## 9. Implementación (v0.14.0)
+
+- Dart puro: `game_engine/models/achievement.dart` (progreso, recompensa,
+  definición), `game_engine/data/achievements_catalog.dart` (las 33) y
+  `game_engine/rules/achievement_rules.dart` (detección y pago).
+- Host: `SessionEngine.apply` / `tick` corren las reglas después de cada
+  acción aceptada y con los eventos del paso (`BattleStepEvent`,
+  `EcoCompletedEvent`, `AbyssDefeatedEvent`). Lo que dura más de un paso
+  (quién preparó una Convergencia, la INSTANTE del turno) lo lleva
+  `AchievementBattleTracker` en el host. El quiebre se atribuye al actor
+  del último `ActionEvent` antes del `BreakEvent` roto. En batalla, las
+  pociones de la recompensa se suman también al combatiente (la batalla
+  las devuelve al perfil al terminar).
+- Una vez por cuenta también en la sala: el líder y sus compañeros de
+  party (otras ranuras de la misma cuenta) comparten lo logrado; gane quien
+  gane, el pago es uno y va a ese personaje.
+- El TUTORIAL no cuenta (práctica guionada).
+- Las que detecta el cliente (`kClientClaimableAchievements`):
+  `inv_search`, `stash_move_all`, `atlas_node` (el Atlas es local de la
+  cuenta) y `build_plan_done` (el plan de BUILD no viaja). Van como acción
+  `ach` `{id}`; el host acepta solo esas y paga una vez. `stash_store` en
+  sesión la detecta el host (`StashPutAction` aceptada); fuera de sesión
+  (ALIJO del título), `stash_store` y `stash_move_all` se pagan en local
+  sobre la cuenta (`Account.grantAchievements`).
+- Datos: `PlayerProfile.achievements` (JSON `ach`) viaja en el `hello` y en
+  el estado; en disco vive solo en la cuenta (`Account.replace` / `add`
+  unen y lo sacan del personaje). `AccountRepository` migra al cargar.
+- Contadores ya pasados de una meta (p. ej. de otra sesión) pagan esa tier
+  en el próximo pago de hazañas.
+- El toast del cliente no dice lo perdido por la pila 99 (el host lo sabe;
+  el evento no lo lleva). Fuera de sesión, el aviso del ALIJO sí lo
+  muestra como recompensa entregada.
+- Protocolo 24 (`kProtocolVersion`).
+
+## 10. Respuestas del dueño (APROBADO)
+
+1. Cuentas existentes: las hazañas inferibles del perfil / cuenta se
+   marcan logradas **con** recompensa (§ 6.1).
+2. La recompensa va al **personaje que la logró**.
+3. Verificar con la medición los créditos por misión y ajustar el total:
+   medido ≈ ₵2400 por misión a mitad de juego; créditos ×2, total ₵26 300
+   ≈ 11 misiones (§ 4).
+4. `attr_cap` ("pasar el punto de rendimiento decreciente": un atributo
+   crudo pasa su tope blando) y `combat_instant_chain` ("INSTANTE + otra
+   acción en el mismo turno propio"): como están.
+
+## 11. Preguntas abiertas (resueltas, ver § 10)
 
 1. Migración: ¿las hazañas inferidas de cuentas existentes se pagan o se
    marcan logradas sin recompensa?

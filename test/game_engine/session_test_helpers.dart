@@ -49,9 +49,14 @@ SessionEngine sessionEngine({
   RandomSource? ecoRandom,
   bool devTools = false,
   int maxPlayers = kDefaultMaxPlayers,
+  // Hazañas (achievements.md): apagadas por defecto, así las pruebas de
+  // "vista previa = resultado" comparan solo la acción. Las de hazañas
+  // las prenden.
+  bool achievements = false,
 }) =>
     SessionEngine(
       maxPlayers: maxPlayers,
+      achievementsEnabled: achievements,
       battles: BattleEngine(stats: statsCalc, random: rolls(battleRolls)),
       progression: zones ? zoneProgression : progression,
       random: rolls(fieldRolls, fallback: fieldFallback),

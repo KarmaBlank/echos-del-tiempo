@@ -159,6 +159,8 @@ class EventJson {
             'ids': e.playerIds,
             'v': e.version,
           },
+        // Hazañas v0.14 (achievements.md § 5.1).
+        AchievementUnlockedEvent() => {'t': 'ach', 'p': e.playerId, 'id': e.id},
       };
 
   static LootDrop _drop(Object? raw) =>
@@ -258,6 +260,8 @@ class EventJson {
       case 'abyssDone':
         return AbyssDefeatedEvent(
             j.integer('n'), List.unmodifiable(j.strings('ids')));
+      case 'ach':
+        return AchievementUnlockedEvent(j.str('p'), j.str('id'));
     }
     throw FormatException('JSON inválido: evento desconocido', t);
   }
