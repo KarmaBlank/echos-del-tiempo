@@ -6,13 +6,15 @@ import 'balance_page.dart';
 import 'changes_page.dart';
 import 'editor/animations_page.dart';
 import 'editor/fx_editor_controller.dart';
+import 'editor/layout_editor_controller.dart';
+import 'editor/layout_page.dart';
 import 'editor/sprite_editor_controller.dart';
 import 'editor/sprites_page.dart';
 import 'monitoring_page.dart';
 import 'patch_page.dart';
 
 /// Áreas del Editor (docs/specs/game_editor.md § 6).
-enum EditorArea { monitoring, balance, visuals }
+enum EditorArea { monitoring, balance, visuals, layout }
 
 /// El Editor del juego (game_editor.md; antes "admin de balance",
 /// balance_admin.md § 5): Monitoreo · Balance · Visuales. Tema Material
@@ -24,10 +26,14 @@ class AdminApp extends StatelessWidget {
       required this.controller,
       this.sprites,
       this.animations,
+      this.layouts,
       this.animateFx = true,
       this.initialArea = EditorArea.balance,
       this.initialVisualTab = 0});
   final AdminController controller;
+
+  /// LAYOUT (editor_layout.md § 3; `null`: sin área de layout).
+  final LayoutEditorController? layouts;
 
   /// Visuales → Sprites (`null`: área sin catálogo, p. ej. tests de
   /// balance).
@@ -56,6 +62,7 @@ class AdminApp extends StatelessWidget {
             controller: controller,
             sprites: sprites,
             animations: animations,
+            layouts: layouts,
             animateFx: animateFx,
             initialArea: initialArea,
             initialVisualTab: initialVisualTab),
@@ -68,11 +75,15 @@ class AdminShell extends StatefulWidget {
       required this.controller,
       this.sprites,
       this.animations,
+      this.layouts,
       this.animateFx = true,
       this.initialArea = EditorArea.balance,
       this.initialVisualTab = 0});
   final AdminController controller;
   final SpriteEditorController? sprites;
+
+  /// LAYOUT (editor_layout.md § 3).
+  final LayoutEditorController? layouts;
 
   /// Visuales → Animaciones (`null`: sin catálogo de fx).
   final FxEditorController? animations;
@@ -111,6 +122,7 @@ class _AdminShellState extends State<AdminShell> {
           widget.sprites?.setQuery(q);
         }
       case EditorArea.monitoring:
+      case EditorArea.layout:
         break;
     }
   }
@@ -143,10 +155,11 @@ class _AdminShellState extends State<AdminShell> {
                   const DsTab('MONITOREO'),
                   DsTab('BALANCE', badge: pending > 0 ? '$pending' : null),
                   DsTab('VISUALES', badge: overrides > 0 ? '$overrides' : null),
+                  const DsTab('LAYOUT'),
                 ],
               ),
               actions: [
-                if (area != EditorArea.monitoring)
+                if (area != EditorArea.monitoring && area != EditorArea.layout)
                   DsSearchField(
                       key: const ValueKey('editor-search'),
                       controller: _search,
@@ -179,6 +192,11 @@ class _AdminShellState extends State<AdminShell> {
     switch (area) {
       case EditorArea.monitoring:
         return MonitoringPage(c: c);
+      case EditorArea.layout:
+        final l = widget.layouts;
+        return l == null
+            ? Center(child: Text('SIN ÁREA DE LAYOUT', style: DsText.detail()))
+            : LayoutPage(c: l);
       case EditorArea.balance:
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           DsTabBar(

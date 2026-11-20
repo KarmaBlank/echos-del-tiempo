@@ -1,4 +1,4 @@
-# Spec (BORRADOR, para revisar con el dueño): Layout editable desde el Editor
+# Spec (APROBADO): Layout editable desde el Editor
 
 Pedido: en el Editor (admin) poder ver TODAS las pantallas y mover su
 disposición: una fila entera de botones (p. ej. en el ALIJO, la fila
@@ -6,7 +6,8 @@ disposición: una fila entera de botones (p. ej. en el ALIJO, la fila
 o un botón suelto, a otra región/posición, sin perder nunca lo
 responsivo. Se aplica a todas las pantallas.
 
-Este documento es solo spec: no cambia el juego.
+Estado: **APROBADO** por el dueño con las 6 recomendaciones de § 5
+(ver § 5, "Decisiones"). Fases 1–3 implementadas en v0.20.0 (§ 6).
 
 ## 1. Estado actual
 
@@ -228,23 +229,74 @@ Tests:
 - Editor: mover `stash.actions` a `header` y `stash.actions.pick` a
   `right` → valida, se guarda, recarga en caliente, deshacer vuelve.
 
-## 5. Preguntas abiertas para el dueño
+## 5. Decisiones del dueño (antes "preguntas abiertas")
 
-1. **¿Mover libre por píxeles o solo entre regiones/orden?**
-   Recomiendo regiones + orden + reglas por breakpoint. Por píxeles
-   rompe lo responsivo y el tamaño de texto.
-2. **¿Cambios para todos (publicar) o también preferencia del
-   jugador?** Recomiendo solo publicar (como sprites/fx) en esta
-   etapa; preferencia por jugador más adelante, limitada a ocultar o
-   reordenar dentro de la misma región.
-3. **¿Puede el editor crear regiones nuevas o solo usar las que
-   declara cada pantalla?** Recomiendo solo las declaradas; si hace
-   falta una región nueva, se pide y se agrega en código.
-4. **¿Qué pantallas primero tras el ALIJO?** Recomiendo INVENTARIO y
-   fusión/forja/condensar (mismo patrón grilla + fila de acciones),
-   luego PERSONAJE.
-5. **¿Se permite ocultar elementos?** Recomiendo solo los marcados
-   `hideable` y nunca acciones únicas (sin otra forma de hacerlas).
-6. **¿Breakpoints globales o por pantalla?** Recomiendo cuatro
-   globales en anchos de texto, con ajuste fino por región si la
-   validación lo exige.
+1. **Solo regiones y orden**, más reglas por corte. Nada de píxeles.
+2. **Solo publicar** (para todos, como sprites/fx). Sin preferencias por
+   jugador en esta etapa.
+3. **El editor no crea regiones**: usa las que declara cada pantalla;
+   una región nueva se pide y se agrega en código.
+4. **Orden tras el ALIJO**: INVENTARIO y fusión/forja/condensar, luego
+   PERSONAJE.
+5. **Ocultar** solo lo marcado `hideable`; nunca acciones únicas.
+6. **Cuatro cortes globales** en anchos de texto (`narrow < 60 tx ≤
+   medium < 90 tx ≤ wide < 140 tx ≤ ultra`; 1 tx = 10 px lógicos al
+   100 % y crece con el tamaño de letra). Se mide el ancho de la raíz de
+   la pantalla, no la ventana.
+
+## 6. Implementación (v0.20.0, fases 1–3)
+
+- **Dart puro** en `lib/core/layout/`: `layout_doc.dart` (`LayoutDoc`,
+  `SlotPlacement`, `SlotRule`, `LayoutBreakpoints`; `parse`/`encode`
+  estables, `resolve(bp)` cacheado, `move`/`withRule` inmutables),
+  `layout_spec.dart` (`LayoutScreenSpec`, `LayoutRegionSpec`,
+  `LayoutSlotSpec` con `movable`, `hideable`, `allowedRegions`,
+  `group`, `interactive`, `gap`), `layout_validator.dart`
+  (`validateStatic` y `validateGeometry`: fuera de la ventana, solapes
+  entre hermanos, clic ≥ 32, orden de foco = orden visual por
+  contenedor).
+- **Grupos como contenedores**: un hijo de grupo tiene `region: <id del
+  grupo>`; sacarlo del grupo es moverlo a una región. En el YAML los
+  hijos van en `children:` (forma corta).
+- **`LayoutCatalog`** (`layout_catalog.dart`): único lector. Override
+  local válido → YAML del repo válido → defecto en código; lo inválido
+  se ignora con log. `reload(screen)` = recarga en caliente (avisa a
+  los `DsLayoutHost`). Lo cargan `main_p2p`, `main_lan` y `main_dev`
+  (este con `overrides/layouts/`); el Editor usa su propio catálogo que
+  lee el repo en disco.
+- **Overrides** (`layout_overrides_io.dart`, stub web):
+  `overrides/layouts/<screen>.layout.yaml`; PUBLICAR AL REPO escribe
+  `assets/layouts/<screen>.layout.yaml` y la entrada en
+  `layout_manifest.yaml` (carpeta registrada entera en pubspec). El
+  **paquete de arte** lleva `layouts:` (EXPORTAR/IMPORTAR de Visuales).
+- **`DsLayoutHost`** (`lib/app/design/ds_layout_host.dart`, template):
+  `frame(context, box, regions)` lo da la pantalla (su lógica de
+  apilado/escala) y pide `regions.region('left')`; el host arma cada
+  región/grupo según eje y `gap` del slot. `DsLayoutHooks` (solo el
+  Editor) envuelve slots y contenedores; en el juego es `null`.
+- **ALIJO** (`stash_layout.dart` + `stash_board.dart`): regiones
+  `header/left/right/footer`; slots `stash.title`, `.equipped`,
+  `.inventory_label`, `.search_char`, `.inventory_grid` (fijo),
+  `.stacks`, `.stash_header`, `.stash_tabs`, `.search_stash`,
+  `.stash_grid` (fijo), `.eco_note`, `.actions(.transfer|.move_all|
+  .pick)`, `.status` (solo `header`/`footer`). El árbol manual se borró;
+  el golden `test/features/characters/goldens/stash_default_*.png`
+  (generado con el árbol viejo) confirma píxel a píxel que el YAML por
+  defecto reproduce la pantalla. En modo ELEGIR, `transfer` muestra la
+  cuenta + MOVER ELEGIDOS y `move_all` CANCELAR.
+- **Editor → LAYOUT** (`layout_page.dart`, `layout_editor_controller.dart`,
+  `layout_previews.dart`): galería de todas las pantallas (las no
+  migradas, "sin vista previa"), datos de ejemplo sin red; ventana
+  1280×720 / 1920×1080 / 2560×1440 / 800×600 / 600×900 / personalizada,
+  texto 100/125/150/200 %; selección, arrastre con guías (línea verde
+  de inserción, región verde o roja tachada), teclado (flechas, Tab,
+  Esc, Ctrl+Z/Ctrl+Y), propiedades por corte (BASE o un corte; HEREDA /
+  SOBRESCRITO), árbol con FIJO, validación en vivo y VALIDAR TODO,
+  GUARDAR (no con errores), RESTAURAR, RECARGAR, PUBLICAR AL REPO.
+  Sin tickers: se reconstruye solo por cambios del controlador; el
+  arrastre solo repinta las guías (`ValueNotifier`).
+- **Desbordes en el Editor**: además de "fuera de la ventana", un slot
+  que se sale del rectángulo de su región cuenta como desborde. En los
+  tests, además, `takeException` atrapa los `RenderFlex overflowed`.
+- **Pendiente (fase 4+)**: INVENTARIO, fusión/forja/condensar,
+  PERSONAJE y el resto, en ese orden.

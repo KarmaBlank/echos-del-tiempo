@@ -16,7 +16,8 @@ import 'package:yaml/yaml.dart';
 /// fx/<id>.fx.yaml
 /// ```
 class ArtPack {
-  const ArtPack(this.sprites, [this.fx = const {}, this.procedural]);
+  const ArtPack(this.sprites,
+      [this.fx = const {}, this.procedural, this.layouts = const {}]);
 
   /// Id de sprite → bytes PNG.
   final Map<String, Uint8List> sprites;
@@ -28,6 +29,9 @@ class ArtPack {
   final String? procedural;
 
   static const proceduralName = 'procedural.yaml';
+
+  /// Pantalla → texto `<screen>.layout.yaml` (editor_layout.md § 2.6).
+  final Map<String, String> layouts;
 
   static const indexName = 'art_pack.yaml';
   static const schema = 1;
@@ -47,6 +51,13 @@ class ArtPack {
       }
     }
     if (procedural != null) index.writeln('procedural: $proceduralName');
+    final layoutIds = layouts.keys.toList()..sort();
+    if (layoutIds.isNotEmpty) {
+      index.writeln('layouts:');
+      for (final id in layoutIds) {
+        index.writeln('  $id: layouts/$id.layout.yaml');
+      }
+    }
     final a = Archive();
     final idx = utf8.encode(index.toString());
     a.addFile(ArchiveFile(indexName, idx.length, idx));
@@ -60,6 +71,10 @@ class ArtPack {
     if (procedural case final p?) {
       final b = utf8.encode(p);
       a.addFile(ArchiveFile(proceduralName, b.length, b));
+    }
+    for (final id in layoutIds) {
+      final b = utf8.encode(layouts[id]!);
+      a.addFile(ArchiveFile('layouts/$id.layout.yaml', b.length, b));
     }
     return Uint8List.fromList(ZipEncoder().encode(a)!);
   }
@@ -102,7 +117,15 @@ class ArtPack {
       if (f == null) throw FormatException('Falta $path.');
       procedural = utf8.decode(f.content as List<int>);
     }
-    return ArtPack(out, fx, procedural);
+    final layouts = <String, String>{};
+    if (doc['layouts'] case final YamlMap l) {
+      for (final MapEntry(:key, :value) in l.entries) {
+        final f = a.findFile(value as String);
+        if (f == null) throw FormatException('Falta $value.');
+        layouts[key as String] = utf8.decode(f.content as List<int>);
+      }
+    }
+    return ArtPack(out, fx, procedural, layouts);
   }
 }
 
