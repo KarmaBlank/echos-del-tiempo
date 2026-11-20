@@ -358,6 +358,20 @@ queda en el paso 3 y confirma de nuevo.
   mejorar o cambiar.`): lista de tus armas (`bench-weapon-<uid>`,
   `EQUIPADA` en dorado; por defecto la equipada) y a la derecha su ficha.
   Primario `ELEGIR ESTA ARMA ›` (`bench-next`).
+- Buscador (v0.11.x, pedido del dueño): siempre hay un `DsSearchField`
+  arriba de cada lista donde se elige un arma: arma destino en el paso 1
+  (`bench-weapon-search`), arma de origen que se destruye en el paso 3
+  (`craft-source-search`) y base nueva al reforjar (`bench-base-search`,
+  por nombre y tipo). Las armas se filtran con `inventoryMatches` (mismo
+  criterio que el inventario: nombre, tipo, rareza, mods, pasiva y
+  habilidades; todas las palabras, sin acentos). Lo que no coincide se
+  oculta (son listas, no una grilla con posiciones), salvo el arma ya
+  elegida, que queda a la vista; si nada coincide, `Ninguna arma coincide
+  con la búsqueda.`. Esc con texto limpia el buscador; sin texto vuelve
+  de paso como siempre. El texto del paso 1 se mantiene al volver a él;
+  los del paso 3 se borran al elegir otra acción. Las habilidades / mods a
+  traer salen del arma de origen elegida (lista corta, sin buscador
+  propio): el buscador de origen ya encuentra armas por habilidad o mod.
 - **Paso 2 — ¿Qué querés hacer?** (línea `Paso 2 de 3: ...`): lista
   ancha (560 px) de acciones agrupadas, cada una con nombre en negrita,
   **una línea** "qué hace" y a la derecha `Se puede` (verde) o el motivo
