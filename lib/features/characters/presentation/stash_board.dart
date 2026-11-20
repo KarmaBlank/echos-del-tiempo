@@ -4,6 +4,7 @@ import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
+import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/menu_focus.dart';
@@ -15,6 +16,7 @@ import '../../../game_engine/rules/progression_rules.dart';
 import '../../inventory/domain/item_text.dart';
 import '../../inventory/presentation/consumables_bar.dart';
 import '../../inventory/presentation/inventory_action_menu.dart';
+import '../../inventory/presentation/item_hover_tip.dart';
 import '../../inventory/presentation/item_widgets.dart';
 import '../domain/stash.dart';
 
@@ -290,8 +292,44 @@ class StashBoardState extends State<StashBoard> {
       base = stackTooltipMarkup(c.stack!, c.count);
     }
     if (blocked == null) return base;
-    return '$base<br><b style="color:#ff6b6b">No va al alijo: '
-        '${protoEsc(blocked)}</b>';
+    return '$base<br>${_blockedNote(blocked)}';
+  }
+
+  static String _blockedNote(String blocked) =>
+      '<b style="color:#ff6b6b">No va al alijo: ${protoEsc(blocked)}</b>';
+
+  /// Zona de los tooltips de cada lado (ui_style.md § "Tooltips cortos"):
+  /// desde el borde de arriba de su grilla hasta el pie de las dos
+  /// grillas, y de ancho todo lo que hay de su lado sin llegar a la otra
+  /// grilla; nunca tapa la otra grilla ni los botones.
+  final _charGridKey = GlobalKey(debugLabel: 'stash-char-grid');
+  final _stashGridKey = GlobalKey(debugLabel: 'stash-stash-grid');
+  final _sidesKey = GlobalKey(debugLabel: 'stash-sides');
+
+  /// Alto mínimo de la zona (si no, todo el alto de la pantalla).
+  static const minTipAreaHeight = 200.0;
+
+  Rect? _rectOf(GlobalKey k) {
+    final b = k.currentContext?.findRenderObject();
+    if (b is! RenderBox || !b.hasSize) return null;
+    return b.localToGlobal(Offset.zero) & b.size;
+  }
+
+  Rect? _tipBounds({required bool character}) {
+    final c = _rectOf(_charGridKey), s = _rectOf(_stashGridKey);
+    final rr = _rectOf(_sidesKey);
+    if (c == null || s == null || rr == null) return null;
+    final own = character ? c : s;
+    var top = own.top;
+    var bottom = rr.bottom;
+    if (bottom - top < minTipAreaHeight) {
+      top = -double.maxFinite;
+      bottom = double.maxFinite;
+    }
+    const gap = 4.0;
+    return character
+        ? Rect.fromLTRB(-double.maxFinite, top, s.left - gap, bottom)
+        : Rect.fromLTRB(c.right + gap, top, double.maxFinite, bottom);
   }
 
   static String _stashStackTooltip(CraftMaterial m, int n) =>
@@ -307,6 +345,9 @@ class StashBoardState extends State<StashBoard> {
     required VoidCallback onTap,
     ValueChanged<Offset>? onMenu,
     bool dim = false,
+    PlayerProfile? viewer,
+    bool equipped = false,
+    String? blocked,
   }) {
     Widget w = ItemCell(
         rules: _rules,
@@ -314,7 +355,20 @@ class StashBoardState extends State<StashBoard> {
         selected: selected,
         highlight: selected,
         size: StashBoard.cell);
-    if (tooltip != null) w = RetroTooltip(message: tooltip, child: w);
+    final it = content?.item;
+    if (it != null && viewer != null) {
+      // La misma ficha que el inventario (characters.md § 3).
+      w = itemHoverTip(
+          rules: _rules,
+          viewer: viewer,
+          item: it,
+          attributes: viewer.attributes,
+          equipped: equipped,
+          note: blocked == null ? null : _blockedNote(blocked),
+          child: w);
+    } else if (tooltip != null) {
+      w = RetroTooltip(message: tooltip, child: w);
+    }
     if (dim) w = Opacity(opacity: 0.25, child: w);
     return GestureDetector(
         key: key,
@@ -365,10 +419,10 @@ class StashBoardState extends State<StashBoard> {
               key: const ValueKey('stash-char-equipped'),
               content: eqContent,
               selected: _charSelected(eq?.uid),
-              tooltip: eqContent == null
-                  ? null
-                  : _tooltip(p, eqContent,
-                      equipped: true, blocked: _stashRules.blocked(p, eq!.uid)),
+              tooltip: null,
+              viewer: p,
+              equipped: true,
+              blocked: eq == null ? null : _stashRules.blocked(p, eq.uid),
               onTap: () => _tapCharacter(eq?.uid, null),
             ),
             SizedBox(width: DsSpace.md),
@@ -396,7 +450,11 @@ class StashBoardState extends State<StashBoard> {
             ),
           ),
           SizedBox(height: DsSpace.sm),
-          _grid(InventoryRules.columns, InventoryRules.cells, (i) {
+          RetroTipArea(
+              bounds: () => _tipBounds(character: true),
+              child: KeyedSubtree(
+                  key: _charGridKey,
+                  child: _grid(InventoryRules.columns, InventoryRules.cells, (i) {
             final t = cells[i];
             final c = _charContent(p, t);
             return _cell(
@@ -407,10 +465,12 @@ class StashBoardState extends State<StashBoard> {
               tooltip: c == null
                   ? null
                   : _tooltip(p, c, blocked: _stashRules.blocked(p, t!)),
+              viewer: p,
+              blocked: t == null ? null : _stashRules.blocked(p, t),
               onTap: () => _tapCharacter(t, i),
               onMenu: t == null ? null : (at) => _menuCharacter(t, i, at),
             );
-          }, onActivate: (i) => _tapCharacter(cells[i], i)),
+          }, onActivate: (i) => _tapCharacter(cells[i], i)))),
           SizedBox(height: DsSpace.sm),
           // Los materiales no ocupan casilla (loot.md § 17.1); las pociones
           // se ven pero no van al alijo.
@@ -472,7 +532,11 @@ class StashBoardState extends State<StashBoard> {
           ),
         ),
         SizedBox(height: DsSpace.sm),
-        _grid(Stash.columns, Stash.perTab, (k) {
+        RetroTipArea(
+            bounds: () => _tipBounds(character: false),
+            child: KeyedSubtree(
+                key: _stashGridKey,
+                child: _grid(Stash.columns, Stash.perTab, (k) {
           final i = base + k;
           final e = s.cells[i];
           final c = _stashContent(e);
@@ -488,10 +552,11 @@ class StashBoardState extends State<StashBoard> {
                 : e.material != null
                     ? _stashStackTooltip(e.material!, e.count)
                     : _tooltip(p, c!),
+            viewer: p,
             onTap: () => _tapStash(i),
             onMenu: e == null ? null : (at) => _menuStash(i, at),
           );
-        }, onActivate: (k) => _tapStash(base + k)),
+        }, onActivate: (k) => _tapStash(base + k)))),
         if (_tab == Stash.ecoTab) ...[
           SizedBox(height: DsSpace.xs),
           Text('Ecos y materiales del Atlas y del Abismo',
@@ -583,6 +648,7 @@ class StashBoardState extends State<StashBoard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            key: _sidesKey,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _characterSide(p),

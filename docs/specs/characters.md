@@ -251,6 +251,13 @@ Destructivo, por eso pide **escribir el nombre**:
 - Motivos de bloqueo: el botón desactivado lleva el motivo en su
   tooltip y la línea de estado lo dice en rojo; la ficha de una casilla
   que no puede ir al alijo suma `No va al alijo: <motivo>`.
+- Fichas del mouse de las armas (v0.13.1): **las mismas que el
+  inventario** (`itemHoverTip`, ui_style.md § "Tooltips cortos"): una
+  columna `HoverCompareCard` (la que usás: resumen + plegables),
+  atravesable, Alt detalle, Shift la equipada, clic fija. Cada grilla
+  tiene su `RetroTipArea`: desde su borde de arriba hasta el pie de las
+  dos grillas y de ancho todo su lado sin llegar a la otra grilla (nunca
+  tapa la otra grilla ni los botones).
 - `MOVER TODO AL ALIJO` (siempre visible): lleva en **una** operación
   todo lo movible (`StashRules.movableTokens`: armas no protegidas, Ecos
   y pilas de materiales; nunca la equipada, la última arma inicial ni las
