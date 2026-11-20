@@ -14,6 +14,7 @@ class LanNetSession extends ProtocolNetSession {
     this.advertisedHost,
     this.bindLoopbackOnly = false,
     super.catalog = GameCatalog.standard,
+    super.maxPlayers,
   });
 
   /// Puerto preferido; si está ocupado se usa uno libre.

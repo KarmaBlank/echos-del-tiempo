@@ -177,6 +177,24 @@ class BattleLayout {
     Offset(40, 0),
   ];
 
+  /// Lugar del héroe [i] de un grupo de [n] respecto del ancla del grupo
+  /// (x hacia afuera de la pelea, y = pies). Hasta 4: una columna
+  /// escalonada (paso 24, impares 14 más afuera). De 5 a 8 (v0.13): dos
+  /// columnas de hasta 4, la de atrás [backColumnGap] más afuera y medio
+  /// paso más abajo, cada una escalonada 10.
+  static Offset partyOffset(int i, int n) {
+    if (n <= 4) return Offset((i % 2) * 14.0, (i - (n - 1) / 2) * 24);
+    final front = (n + 1) ~/ 2;
+    final back = i >= front;
+    final row = back ? i - front : i;
+    final count = back ? n - front : front;
+    return Offset((back ? backColumnGap : 0) + (row % 2) * 10.0,
+        (row - (count - 1) / 2) * 24 + (back ? 12 : 0));
+  }
+
+  /// Separación de la segunda columna del grupo (5-8 jugadores).
+  static const backColumnGap = 32.0;
+
   /// Invocaciones (cristales): hacia el grupo desde el ancla.
   static const _addOffsets = [
     Offset(30, -22),
@@ -206,8 +224,8 @@ class BattleLayout {
     final boxes = <String, Rect>{};
     final n = state.party.length;
     for (var i = 0; i < n; i++) {
-      final p =
-          Offset(bx + s * (72 + (i % 2) * 14), by + (i - (n - 1) / 2) * 24);
+      final o = partyOffset(i, n);
+      final p = Offset(bx + s * (72 + o.dx), by + o.dy);
       pos[state.party[i].id] = p;
       boxes[state.party[i].id] = Rect.fromLTWH(p.dx - 10, p.dy - 19, 20, 22);
     }
@@ -288,8 +306,8 @@ class BattleLayout {
     const mid = -8.5;
     final n = state.party.length;
     for (var i = 0; i < n; i++) {
-      final p = Offset(
-          cx + gap + 10 + (i % 2) * 14, by + (i - (n - 1) / 2) * 24);
+      final o = partyOffset(i, n);
+      final p = Offset(cx + gap + 10 + o.dx, by + o.dy);
       pos[state.party[i].id] = p;
       boxes[state.party[i].id] = Rect.fromLTWH(p.dx - 10, p.dy - 19, 20, 22);
     }

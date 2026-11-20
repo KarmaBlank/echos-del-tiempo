@@ -177,6 +177,36 @@ quedan editables en `assets/balance/balance.json`.
 - Vida: `BattleEngine.start` usa `CurveDef.groupHp` = `0.6 + 0.3 ×
   jugadores` (solo ×0.9, 4 → ×1.8). El umbral de quiebre ya usaba la
   misma fórmula (`ComboRulesDef.groupBreak`, § 5): verificado.
+- **Grupos de más de 4 (v0.13):** las fórmulas son funciones de n sin
+  tope fijo de jugadores; cada una tiene su tope editable en el admin
+  (`BalanceKind.curve`):
+  - Vida `min(groupHpMax, 0.6 + 0.3 × n)`, `groupHpMax = 3.0` (8 → ×3.0).
+  - Mitigación `1 − min(groupMitigationMax, 0.08 × (n − 1))`,
+    `groupMitigationMax = 0.40` (se alcanza a 6).
+  - ATQ enemigo `min(groupAtkMax, 1 + 0.40 × (n − 1))`,
+    `groupAtkMax = 3.0` (se alcanza a 6; con 2.6 los grupos de 8
+    ganaban con más vida que los de 4).
+  - Umbral de quiebre `0.6 + 0.3 × n` (8 → ×3.0).
+  - Tope por golpe de élite / jefe (§ 3.2): lineal solo → 4 como antes;
+    desde 5 sigue bajando a la mitad del ritmo, con piso en 0.6 × el
+    valor de 4 (`HitCapDef.bigPartyFloor`). Jefe 8 → 9%, élite 8 → 28%.
+  - El máximo de jugadores no está acá: netcode.md § "Máximo de
+    jugadores".
+  - Medición (`test/game_engine/party_scale_test.dart`, grupo mixto
+    guerrero / maga / tirador / paladín repetido, sin combos, 16
+    corridas; victorias · acciones por jugador · vida al ganar):
+
+    | Pelea | 4 | 6 | 8 |
+    |---|---|---|---|
+    | Pradera nv 1, jefe | 16/16 · 2.8 · 80% | 16/16 · 2.3 · 91% | 16/16 · 2.2 · 100% |
+    | Bosque Hondo nv 10, jefe | 16/16 · 4.1 · 68% | 16/16 · 3.9 · 74% | 16/16 · 3.4 · 82% |
+    | Fortaleza nv 21, élite | 16/16 · 4.0 · 100% | 16/16 · 4.2 · 94% | 16/16 · 4.1 · 100% |
+    | Fortaleza nv 21, jefe | 16/16 · 10.8 · 76% | 12/16 · 11.8 · 52% | 16/16 · 11.6 · 98% |
+    | Laberinto nv 30, jefe | 11/16 · 6.4 · 55% | 11/16 · 6.0 · 87% | 15/16 · 5.6 · 82% |
+
+    Un grupo de 8 sin combos ni arrasa (cada uno actúa 2-12 veces contra
+    jefes, casi lo mismo que con 4) ni muere siempre; los comunes
+    caen antes de que actúen todos, igual que con 4.
 - Mitigación en `dmgEnemy` (golpes del grupo a un enemigo, primarios y
   secundarios que pasan por ahí, incluido el ATQ plano): `× (1 − 0.08 ×
   (jugadores − 1))` y, si el enemigo es de un nivel C, `× 0.9`. Se

@@ -102,7 +102,7 @@ cambios.
 - `addCompanion(session, id, profile, leaderId:)`: entra como un jugador
   más (mismo `addPlayer`: perfil normalizado, spawn junto al grupo) con
   `SessionPlayer.leaderId = leaderId`. `null` si la sala está llena
-  (`maxPlayers` = 4), el id existe, el líder no está o es a su vez un
+  (`maxPlayers`, configurable: netcode.md § "Máximo de jugadores"), el id existe, el líder no está o es a su vez un
   compañero, o no es el pueblo (`lobby`) sin votación ni preparación
   (al crear la sala el modo ya es `lobby`).
 - `removeCompanion(session, id)`: mismo control de modo; solo saca
@@ -150,7 +150,7 @@ como listos.
 
 ### 3.4 Escalado
 
-Todo lo que escala con el tamaño del grupo usa la party entera (1–4):
+Todo lo que escala con el tamaño del grupo usa la party entera (hasta `maxPlayers`):
 vida de los enemigos (`0.55 + 0.45 × n`), adds de jefes (`soloAdds` solo
 con 1), bonus de loot de los Ecos, "Quedan N objetos de X" al cambiar de
 piso. Igual que en co-op.

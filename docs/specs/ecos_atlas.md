@@ -52,7 +52,7 @@ partida con `ALIJO [B]` (characters.md § 3 y § 3.2).
   tope 50. Los enemigos escalan con `ZoneRules.scaleBattle` (vida
   `1 + 0.15 (L−1)`, ATQ `1 + 0.08 (L−1)`): T16 ≈ +54% vida y +49% ATQ
   sobre nivel 50, antes de los modificadores. El escalado por grupo
-  (1–4 jugadores) de la batalla se aplica igual que en todo el juego.
+  (1 a `maxPlayers`) de la batalla se aplica igual que en todo el juego.
 - **Nombre**: `Eco de <zona> · T<tier>` (raros o mejores: nombre
   generado `"<A> <B>"` como las armas, p. ej. "Eco Hueco del Olvido").
 - **Mods por rareza** (al generarse = el mínimo; Cristal de Era agrega
@@ -231,7 +231,7 @@ Tesoro a la derecha, Caza abajo, Dominio a la izquierda): ver
 
 ## 7. Co-op (endgame.md § 7)
 
-- Escalado 1–4: el de siempre (vida, quiebre y ULT enemigas por grupo).
+- Escalado por grupo: el de siempre (vida, quiebre y ULT enemigas por grupo).
 - +10% cantidad de loot por jugador extra dentro del Eco (§ 2.2).
 - Atlas del host para modificadores y efectos; puntos para cada uno.
 - Solo: todo es jugable; el escalado por grupo baja vida y quiebre.

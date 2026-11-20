@@ -39,8 +39,8 @@ GameSession _touch(SessionEngine e, GameSession s, int id,
 
 void main() {
   group('lobby', () {
-    test('entra hasta 4 jugadores, sin ids repetidos', () {
-      final e = sessionEngine();
+    test('entra hasta el máximo de jugadores, sin ids repetidos', () {
+      final e = sessionEngine(maxPlayers: 4);
       var s = e.create();
       for (var i = 0; i < 4; i++) {
         final step = e.addPlayer(s, 'p$i', newProfile('J$i', 'maga'))!;
@@ -56,6 +56,19 @@ void main() {
       expect(p0.hp, p0.maxHp);
       expect(p0.mp, p0.maxMp);
     });
+
+    for (final max in const [8, 12]) {
+      test('máximo $max: entran $max con lugares distintos, no uno más', () {
+        final e = sessionEngine(maxPlayers: max);
+        var s = e.create();
+        for (var i = 0; i < max; i++) {
+          s = e.addPlayer(s, 'p$i', newProfile('J$i', 'maga'))!.state;
+        }
+        expect(s.players.length, max);
+        expect(e.addPlayer(s, 'px', newProfile('X', 'maga')), isNull);
+        expect({for (final p in s.playerList) '${p.x},${p.y}'}, hasLength(max));
+      });
+    }
 
     test('nombre vacío entra como Héroe', () {
       final e = sessionEngine();

@@ -314,7 +314,8 @@ fila (normal, elegida y desactivada, atenuado).
   gastó Pulso, encadenó una Instante, vio RESISTE y DÉBIL, puso un
   estado, puso y detonó una Convergencia y quebró al menos una vez (el
   caso de 3 cubre el impar).
-- Parejas con n = 1..5: todos ponen y todos detonan.
+- Parejas con n = 1..6, 8 y 12: todos ponen y todos detonan; guion
+  completo con 1-6 y 8 humanos.
 - Quiebre: reinicio y barra llena sola antes de cada jugador; con 2 o
   más humanos se quiebra con Quebrar y con Estocada Firme.
 - Votación del final sin roles: Repetir tutorial, Ir a ENTRENAR, Salir.

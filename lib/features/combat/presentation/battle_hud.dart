@@ -622,7 +622,14 @@ Widget _chips(List<StatusChip> chips, {bool long = false}) => Wrap(
 /// `valueChars`) para que crezcan con el tamaño del texto.
 class _BarRow extends StatelessWidget {
   const _BarRow(this.bar, this.value,
-      {this.label, this.color = DsColors.textPrimary, this.valueChars = 8});
+      {this.label,
+      this.color = DsColors.textPrimary,
+      this.valueChars = 8,
+      this.stack = false});
+
+  /// Apilada aunque el texto no sea ENORME (tarjetas angostas de un grupo
+  /// de más de 8, v0.13).
+  final bool stack;
 
   final Widget bar;
   final String value;
@@ -645,7 +652,7 @@ class _BarRow extends StatelessWidget {
     final labelW = label == null ? 0.0 : RetroType.em(context, labelChars);
     final valueW = RetroType.em(context, valueChars);
     final style = RetroType.style(RetroType.label, color: color);
-    if (stacked(context)) {
+    if (stack || stacked(context)) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -877,39 +884,64 @@ class BattlePartyBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final order = predictTurns(battle, 10);
-    // Siempre 4 lugares de 1/4 del ancho, desde la izquierda (los vacíos
+    final order = predictTurns(battle, turnWindow(battle));
+    // Lugares de 1/[perRow] del ancho, desde la izquierda (los vacíos
     // quedan vacíos): una tarjeta sola no se estira a toda la pantalla y
     // los números quedan junto a sus barras.
     final party = battle.party;
-    final slots = math.max(slotCount, party.length);
-    // Una fila, todas arriba y del mismo alto (el de la más alta: la
+    final (rows, perRow) = gridFor(party.length);
+    final compact = party.length > slotCount;
+    // Cada fila: todas arriba y del mismo alto (el de la más alta: la
     // local con ULT o la que tiene estados).
-    return IntrinsicHeight(
-      child: Row(
-        key: const ValueKey('party-bar'),
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (var i = 0; i < slots; i++) ...[
-            if (i > 0) const SizedBox(width: gap),
-            Expanded(
-              child: i >= party.length
-                  ? const SizedBox.shrink()
-                  : _card(party[i], order),
-            ),
-          ],
+    Widget row(int r) => IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var c = 0; c < perRow; c++) ...[
+                if (c > 0) const SizedBox(width: gap),
+                Expanded(
+                  child: r * perRow + c >= party.length
+                      ? const SizedBox.shrink()
+                      : _card(party[r * perRow + c], order, compact,
+                          narrow: perRow > slotCount),
+                ),
+              ],
+            ],
+          ),
+        );
+    return Column(
+      key: const ValueKey('party-bar'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var r = 0; r < rows; r++) ...[
+          if (r > 0) const SizedBox(height: gap),
+          row(r),
         ],
-      ),
+      ],
     );
   }
 
-  /// Lugares de la barra (el máximo del grupo).
+  /// Lugares por fila con un grupo chico (y desde cuántos jugadores las
+  /// tarjetas pasan a compactas).
   static const slotCount = 4;
+
+  /// Filas y lugares por fila para un grupo de [n] (v0.13, cualquier n):
+  /// 1 fila de [slotCount] hasta [slotCount]; después 2 filas, de
+  /// [slotCount] por fila hasta el doble y más angostas si son más.
+  static (int, int) gridFor(int n) {
+    if (n <= slotCount) return (1, slotCount);
+    return (2, math.max(slotCount, (n + 1) ~/ 2));
+  }
 
   /// Separación entre tarjetas.
   static const gap = 6.0;
 
-  Widget _card(Combatant p, List<String> order) => _PartyCard(
+  Widget _card(Combatant p, List<String> order, bool compact,
+          {bool narrow = false}) =>
+      _PartyCard(
+        compact: compact,
+        narrow: narrow,
         key: ValueKey(p.id == localId ? 'my-panel-${p.id}' : 'member-${p.id}'),
         player: p,
         local: p.id == localId,
@@ -944,7 +976,18 @@ class _PartyCard extends StatelessWidget {
     this.auto = false,
     this.onAuto,
     this.summons = const [],
+    this.compact = false,
+    this.narrow = false,
   });
+
+  /// Más de [BattlePartyBar.slotCount] por fila: barras con las cifras
+  /// arriba.
+  final bool narrow;
+
+  /// Grupo de más de [BattlePartyBar.slotCount] (v0.13): sin retrato,
+  /// nombre en una línea y sin Pulso, invocaciones ni estados (siguen en
+  /// el tooltip y en la escena) salvo en la tarjeta propia.
+  final bool compact;
 
   /// Invocaciones de este jugador (summoner.md § 8).
   final List<Combatant> summons;
@@ -1005,16 +1048,18 @@ class _PartyCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: _avatar.width,
-                height: _avatar.height,
-                color: DsColors.background,
-                alignment: Alignment.center,
-                child: img == null
-                    ? const SizedBox.shrink()
-                    : PixelSprite(img, scale: 2),
-              ),
-              const SizedBox(width: 5),
+              if (!compact) ...[
+                Container(
+                  width: _avatar.width,
+                  height: _avatar.height,
+                  color: DsColors.background,
+                  alignment: Alignment.center,
+                  child: img == null
+                      ? const SizedBox.shrink()
+                      : PixelSprite(img, scale: 2),
+                ),
+                const SizedBox(width: 5),
+              ],
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1025,7 +1070,10 @@ class _PartyCard extends StatelessWidget {
                       children: [
                         // El nombre baja de línea antes que cortarse.
                         Expanded(
-                          child: Text.rich(TextSpan(children: [
+                          child: Text.rich(
+                              maxLines: compact ? 1 : null,
+                              overflow: compact ? TextOverflow.ellipsis : null,
+                              TextSpan(children: [
                             TextSpan(
                                 text: p.name,
                                 style: DsText.body(local
@@ -1041,28 +1089,31 @@ class _PartyCard extends StatelessWidget {
                       ],
                     ),
                     _BarRow(hpBar(p.hp, p.maxHp), '${p.hp}/${p.maxHp}',
-                        label: 'HP', valueChars: 9),
+                        label: 'HP', valueChars: 9, stack: narrow),
                     HudHighlight.wrap(
                         context,
                         HudHighlight.mp,
                         ValueKey('hl-mp-${p.id}'),
                         _BarRow(mpBar(p.mp, p.maxMp),
                             '${p.mp.floor()}/${p.maxMp}',
-                            label: 'MP', valueChars: 9)),
+                            label: 'MP', valueChars: 9, stack: narrow)),
                     if (local || companion)
                       _BarRow(ultBar(p.ult),
                           p.ult >= 100 ? '¡LISTA!' : '${p.ult.floor()}%',
-                          label: 'ULT', color: ultColor, valueChars: 9),
+                          label: 'ULT',
+                          color: ultColor,
+                          valueChars: 9,
+                          stack: narrow),
                     // Pulso (combo_balance.md § 5.2): una fila con nombre y
                     // cifras como HP y MP, con los pips en lugar de barra
                     // (pedido del dueño: "que se vea que tenés Pulso").
-                    if (p.alive)
+                    if (p.alive && (!compact || local))
                       HudHighlight.wrap(
                           context,
                           HudHighlight.pulse,
                           ValueKey('hl-pulse-${p.id}'),
                           _PulseRow(p)),
-                    if (summons.isNotEmpty) ...[
+                    if (summons.isNotEmpty && (!compact || local)) ...[
                       const SizedBox(height: 2),
                       SummonsRow(summons: summons),
                     ],
@@ -1079,7 +1130,7 @@ class _PartyCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (chips.isNotEmpty) ...[
+                    if (chips.isNotEmpty && (!compact || local)) ...[
                       const SizedBox(height: 2),
                       _chips(chips),
                     ],

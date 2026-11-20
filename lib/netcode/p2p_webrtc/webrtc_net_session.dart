@@ -18,6 +18,7 @@ class WebRTCNetSession extends ProtocolNetSession {
   WebRTCNetSession({
     required SignalingService signaling,
     super.catalog = GameCatalog.standard,
+    super.maxPlayers,
     math.Random? random,
   })  : _signaling = signaling,
         _random = random ?? math.Random();

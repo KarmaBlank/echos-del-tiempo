@@ -41,8 +41,9 @@ composition root (`lib/app/flavors/main_*.dart`).
 - Ids: el host es `h`; los clientes `p1`, `p2`... en orden de conexión
   (`'p'+(nextPid++)`). Sin red (sesión local de un jugador) el id es
   `local`.
-- Máximo **4** jugadores contando al host (`MAXP`): el quinto recibe
-  `reject full` y se le cierra la conexión.
+- Máximo configurable de jugadores contando al host (`MAXP`; 8 por
+  defecto desde v0.13, antes 4): el siguiente recibe `reject full` y se
+  le cierra la conexión. Ver § "Máximo de jugadores".
 
 ## Contrato (`lib/netcode/contracts/`)
 
@@ -151,8 +152,9 @@ host → cliente  {"t":"welcome","v":1,"id":"p1","code":"ABCDE"}
   `up`, `fuse`, `tree`), el mismo objeto del `hello` original pero
   anidado en vez de plano.
 - `v` distinta a la del host → `reject version`.
-- Sala llena (host + 3 clientes) → `reject full` y se cierra a los
-  300 ms (como el prototipo).
+- Sala llena (host + máximo − 1 clientes) → `reject full` con `mx` (el
+  cliente ve "La sala está llena (máx. N jugadores).") y se cierra a
+  los 300 ms (como el prototipo).
 - Un enlace que no manda `hello` en 10 s se cierra.
 - El cliente espera `welcome` hasta 15 s (el `setTimeout` de 15 s del
   prototipo); si no, `NetException`.
@@ -679,3 +681,32 @@ Acciones `stashPut` / `stashTake` con id de operación y lote; el host
 anota la confirmación en el jugador (`sk` en el snapshot, junto al perfil
 cambiado). El alijo nunca viaja: es local de la cuenta de cada cliente.
 Detalle, orden de escritura e idempotencia en characters.md § 3.2.
+
+## Máximo de jugadores (v0.13, protocolo 23)
+
+Un solo lugar para cambiarlo: `FeatureFlags.maxPlayers`
+(`lib/app/feature_flags.dart`, por defecto `kDefaultMaxPlayers = 8` de
+`lib/game_engine/rules/party_limits.dart`). Cada composition root
+(`main_p2p`, `main_dev`, ...) puede fijar otro. `service_locator` lo pasa
+por constructor a `SessionEngine(maxPlayers:)` (también cuenta a los
+compañeros de un jugador solo) y a cada `ProtocolNetSession`
+(`WebRTCNetSession`, `LanNetSession`, `LoopbackNetSession`): el motor y
+la red no leen globales. Nada más asume un número fijo:
+
+- `welcome` y `reject` llevan `mx` (el máximo del host); el cliente lo
+  expone en `roomMaxPlayers`.
+- Lugares de aparición: 2×2 para los primeros 4 y después anillos de 8
+  cada vez más anchos (`_around`), para cualquier n.
+- Votaciones, tutorial (parejas en rueda) y loot por jugador ya iteraban
+  sobre el grupo.
+- Balance de grupo: funciones de n con topes editables en el admin
+  (combo_balance.md § 3.3). UI: battle_presentation.md § "Barra de
+  batalla" y exploration.md § "HUD".
+- Tests: `loopback_big_room_test.dart` (n = 2, 6, 8 y 12 con máximo 12;
+  9.º rechazado) y los de UI con n = 1, 2, 4, 6, 8, 12.
+
+Ancho de banda (state más grande del tick, loopback, en batalla de la
+misión 1): 2 jugadores 7.5 KB, 6 → 11.0 KB, 8 → 12.7 KB, 12 → 16.2 KB
+por cliente. El control de flujo es por cliente (`maxInFlight = 6`) y
+los perfiles van como deltas (§ "Perfiles solo cuando cambian"): crece
+la subida total del host (≈ × clientes), no el costo por cliente.

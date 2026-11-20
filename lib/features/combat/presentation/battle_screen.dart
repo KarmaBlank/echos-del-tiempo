@@ -971,10 +971,16 @@ class BattleViewState extends State<BattleView>
   /// pantalla de alto [h] y el texto agrandado [textFactor]
   /// (`RetroType.factorOf`): más alta con texto grande; la escena se
   /// achica (los sprites son chicos).
-  static double barHeight(double h, [double textFactor = 1]) {
+  ///
+  /// Con más de `BattlePartyBar.slotCount` en [partySize] (dos filas de
+  /// tarjetas, v0.13): + 6 % del alto, hasta 68 %.
+  static double barHeight(double h,
+      [double textFactor = 1, int partySize = 1]) {
     final f = textFactor < 1 ? 1.0 : textFactor;
+    final big = partySize > BattlePartyBar.slotCount;
     return math
-        .min(h * (0.42 + 0.08 * (f - 1)), h * 0.62)
+        .min(h * (0.42 + 0.08 * (f - 1) + (big ? 0.06 : 0)),
+            h * (big ? 0.68 : 0.62))
         .clamp(math.min(260.0, h * 0.6), double.infinity);
   }
 
@@ -990,7 +996,8 @@ class BattleViewState extends State<BattleView>
       color: ProtoColors.bg,
       child: LayoutBuilder(builder: (context, cons) {
         final size = cons.biggest;
-        final barH = barHeight(size.height, RetroType.factorOf(context));
+        final barH = barHeight(
+            size.height, RetroType.factorOf(context), b.party.length);
         final me = _me;
         return Stack(
           children: [
@@ -1156,7 +1163,7 @@ class BattleViewState extends State<BattleView>
     }
     var mine = '';
     if (me != null && cur?.id != me.id) {
-      final i = predictTurns(b, 10).indexOf(me.id);
+      final i = predictTurns(b, turnWindow(b)).indexOf(me.id);
       if (!me.alive) {
         mine = hexSpan('#7d8bc4', 'Estás fuera de combate');
       } else if (i >= 0) {

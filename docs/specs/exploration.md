@@ -444,6 +444,15 @@ lobby, campo y subida de nivel (`map/loot_painter.dart`):
 
 Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
 
+Grupos grandes (v0.13): las cajas del grupo se acomodan en filas desde
+abajo a la derecha (como siempre); desplegadas solo si entran en
+`WorldHud.maxPartyRows` = 2 filas, si no pasan a compactas. Con 8 y
+texto normal, 2 filas compactas en 1280×720 y 1920×1080; con texto
+grande o enorme, 3-4 filas, siempre adentro de la pantalla
+(`hud_big_party_test.dart`, n = 1, 2, 4, 6, 8, 12). Nombres y minimapa
+recorren a todos los jugadores; los lugares de aparición para más de 4
+están en netcode.md § "Máximo de jugadores".
+
 Cambios v0.12 (sistema de diseño, design_system.md § 10.3): botones
 `DsButton` compactos (zoom del minimapa `DsButton.icon` con tooltip),
 línea de misión / objetivos / registro como superficie sin borde con

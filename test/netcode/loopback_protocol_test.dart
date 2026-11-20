@@ -75,16 +75,16 @@ void main() {
     expect((snap.events.single as SystemMessageEvent).text, 'hola a todos');
   });
 
-  test('sala llena: el quinto jugador es rechazado', () async {
+  test('sala llena: el jugador máximo + 1 es rechazado', () async {
     final h = await host();
-    for (final n in ['A', 'B', 'C']) {
-      await join(h.roomCode!, n);
+    for (var i = 1; i < h.maxPlayers; i++) {
+      await join(h.roomCode!, 'J$i');
     }
-    expect(h.clientCount, 3);
+    expect(h.clientCount, h.maxPlayers - 1);
     await expectLater(
         join(h.roomCode!, 'E'),
-        throwsA(isA<NetException>()
-            .having((e) => e.message, 'message', contains('llena'))));
+        throwsA(isA<NetException>().having((e) => e.message, 'message',
+            contains('llena (máx. ${h.maxPlayers} jugadores)'))));
   });
 
   test('código inexistente', () async {

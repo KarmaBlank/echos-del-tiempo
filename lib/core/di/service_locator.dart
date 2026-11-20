@@ -100,6 +100,7 @@ void registerSharedDependencies(
       // Atajos de desarrollo de los Ecos solo en `main_dev`
       // (docs/specs/ecos_atlas.md § 8).
       devTools: FeatureFlags.instance.devTools,
+      maxPlayers: FeatureFlags.instance.maxPlayers,
     ),
   );
   // Cuenta con varios personajes y alijo (`account.json`, migra el
@@ -209,6 +210,7 @@ void registerP2PNetcode({required SignalingService Function()? signaling}) {
     create: () => WebRTCNetSession(
       signaling: sl<SignalingService>(),
       catalog: sl<GameCatalog>(),
+      maxPlayers: FeatureFlags.instance.maxPlayers,
     ),
   ));
 }
@@ -221,7 +223,9 @@ void registerLanNetcode() {
   sl.registerSingleton<NetSessionFactory>(NetSessionFactory(
     label: 'LAN',
     codeHint: 'IP:PUERTO',
-    create: () => LanNetSession(catalog: sl<GameCatalog>()),
+    create: () => LanNetSession(
+        catalog: sl<GameCatalog>(),
+        maxPlayers: FeatureFlags.instance.maxPlayers),
   ));
 }
 

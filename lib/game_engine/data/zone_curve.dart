@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 /// Parte de un tramo de 10 niveles (combo_balance.md § 1): A (primeros
 /// niveles), B (medio) y C (los últimos, los que cuestan).
 enum TramoPart { a, b, c }
@@ -29,6 +31,9 @@ class CurveDef {
     this.soloBossAtk = 0.8,
     this.soloEscorts = 0,
     this.groupAtkPer = 0.40,
+    this.groupAtkMax = 3.0,
+    this.groupMitigationMax = 0.40,
+    this.groupHpMax = 3.0,
     this.delayFalloff = 0.3,
     this.groupInitiativeC = 0.2,
   });
@@ -40,12 +45,24 @@ class CurveDef {
   /// ATQ enemigo: + fracción por jugador después del primero.
   final double groupAtkPer;
 
+  /// Tope del multiplicador de ATQ enemigo por grupo (v0.13, grupos de
+  /// 5+: ×3.0, se alcanza a 6; sin tope, 8 darían ×3.8).
+  final double groupAtkMax;
+
+  /// Tope de la mitigación de grupo (v0.13: −40%, se alcanza a 6).
+  final double groupMitigationMax;
+
+  /// Tope del multiplicador de vida por grupo (v0.13: x3.0, se alcanza
+  /// a 8 con los valores de arranque).
+  final double groupHpMax;
+
   /// Retraso sucesivo del grupo a un mismo enemigo (desde su último
   /// turno): rinde esta fracción del anterior.
   final double delayFalloff;
 
   /// Multiplicador del ATQ enemigo por tamaño del grupo.
-  double groupAtk(int players) => 1 + groupAtkPer * (players.clamp(1, 4) - 1);
+  double groupAtk(int players) =>
+      math.min(groupAtkMax, 1 + groupAtkPer * (math.max(1, players) - 1));
 
   String get id => 'curva';
   String get name => 'Curva y grupo';
@@ -107,11 +124,14 @@ class CurveDef {
   double atkScale(int level) => 1 + atkSlope * (level - 1);
 
   /// Vida de los enemigos por tamaño del grupo.
-  double groupHp(int players) => groupHpBase + groupHpPer * players.clamp(1, 4);
+  double groupHp(int players) =>
+      math.min(groupHpMax, groupHpBase + groupHpPer * math.max(1, players));
 
   /// Multiplicador de la mitigación de grupo (1 = sin mitigación).
-  double groupMitigationMult(int players) =>
-      (1 - groupMitigation * (players.clamp(1, 4) - 1)).clamp(0.0, 1.0);
+  double groupMitigationMult(int players) {
+    final m = groupMitigation * (math.max(1, players) - 1);
+    return (1.0 - math.min(groupMitigationMax, m)).clamp(0.0, 1.0);
+  }
 
   /// Multiplicador de la mitigación de zona C a nivel [level].
   double zoneCMult(int level) =>

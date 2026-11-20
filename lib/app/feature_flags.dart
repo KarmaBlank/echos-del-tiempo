@@ -1,3 +1,5 @@
+import '../game_engine/rules/party_limits.dart';
+
 /// Flags que cada `main_*.dart` (composition root) configura al arrancar.
 /// `features/*` lee esto para decidir qué mostrar/habilitar — nunca
 /// hardcodea "si es la versión dev, hacé X".
@@ -23,6 +25,11 @@ class FeatureFlags {
   /// borra).
   final bool soloParty;
 
+  /// Máximo de jugadores por sala (contando al host y compañeros). Único
+  /// lugar para cambiarlo: el motor y la red lo reciben de acá por
+  /// constructor (docs/specs/netcode.md § "Máximo de jugadores").
+  final int maxPlayers;
+
   const FeatureFlags({
     this.unlockAllCharacters = false,
     this.showDebugOverlay = false,
@@ -30,6 +37,7 @@ class FeatureFlags {
     this.restrictedCharacterIds = const {},
     this.devTools = false,
     this.soloParty = false,
+    this.maxPlayers = kDefaultMaxPlayers,
   });
 
   static FeatureFlags instance = const FeatureFlags();
