@@ -370,7 +370,9 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         widget.onChooseMilestone == null ? const <int>[] : p.pendingMilestones;
     final options = pending.isEmpty
         ? const <String>[]
-        : rules.milestoneOptions(p.classId, pending.first);
+        : rules.milestoneOptions(p.classId, pending.first,
+            taken: PassiveTreeRules.milestoneTaken(
+                p.tree, p.milestone10, p.milestone20));
     final hits = {..._hits(), ...options};
     final focusId = _hover ?? _pinned ?? _cardHover ?? _selected;
     final route = focusId == null

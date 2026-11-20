@@ -510,3 +510,28 @@ balance):
   TOMAR NODO, textos del hito), `button_padding_test`. Capturas:
   `docs/release_shots/v0.10.1/pantalla_arbol*.png`
   (`tool/shots/v0101_tree_screen_shots_test.dart`).
+
+### 11.3 Hitos con keystones ya tomadas (v0.10.1, bug del dueño)
+
+Si el jugador tomaba una keystone de entrada con puntos normales, el
+hito se la volvía a ofrecer. Regla (en `PassiveTreeRules.milestoneOptions`,
+no solo en la UI):
+
+- Las opciones de cada hito excluyen las keystones **tomadas a mano**
+  (`PassiveTreeRules.milestoneTaken`: el árbol menos las elegidas en
+  hitos, que siguen siendo opción de su propio hito).
+- La lista de cada hito sigue el § 5 (5 keystones de clase por costo: el
+  10 las 3 primeras no tomadas, el 20 las que quedan + la del puente más
+  cercano no tomada). Si una falta, entra **la siguiente elegible** de
+  esa lista (p. ej. el 10 pasa a ofrecer la 4.ª de clase).
+- Si así no llega a 3, se completa con **las keystones no tomadas más
+  cercanas al inicio** (de clase, puente o grupo), nunca una que ofrezca
+  el otro hito. Cada hito ofrece siempre 3 mientras queden.
+- Al elegir, los puntos del hito solo pagan los nodos que **faltan** del
+  camino (`pathTo` ya salta los tomados); lo que sobra queda libre.
+- El host valida igual (`ProgressionRules.chooseMilestone` rechaza una
+  keystone ya tomada o fuera de las opciones), y `normalize` sanea con
+  las mismas opciones.
+- Reiniciar el árbol vacía árbol e hitos: vuelven las opciones del § 5.
+- Tests: `progression_v2_test` ("una keystone tomada a mano no se vuelve
+  a ofrecer", "el hito paga solo los nodos que faltan").

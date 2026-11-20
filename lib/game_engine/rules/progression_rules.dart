@@ -241,9 +241,11 @@ class ProgressionRules {
     // Maestría suma puntos).
     // Hitos (progression_v2.md § 5): solo keystones elegibles y con el
     // nivel alcanzado.
+    final manual = PassiveTreeRules.milestoneTaken(
+        raw.tree, raw.milestone10, raw.milestone20);
     String? ms(int m, String? id) => id != null &&
             level >= m &&
-            treeRules.milestoneOptions(cls, m).contains(id)
+            treeRules.milestoneOptions(cls, m, taken: manual).contains(id)
         ? id
         : null;
     final ms10 = ms(10, raw.milestone10), ms20 = ms(20, raw.milestone20);
@@ -539,7 +541,13 @@ class ProgressionRules {
     if (bound == null || p.level < milestone) return null;
     final current = milestone == 10 ? p.milestone10 : p.milestone20;
     if (current != null) return null;
-    if (!treeRules.milestoneOptions(p.classId, milestone).contains(keystoneId)) {
+    // El host valida igual que el cliente: nunca una keystone ya tomada.
+    if (p.tree.contains(keystoneId)) return null;
+    final manual =
+        PassiveTreeRules.milestoneTaken(p.tree, p.milestone10, p.milestone20);
+    if (!treeRules
+        .milestoneOptions(p.classId, milestone, taken: manual)
+        .contains(keystoneId)) {
       return null;
     }
     final path = treeRules.pathTo(p.classId, p.passiveProgress, keystoneId);
@@ -547,6 +555,8 @@ class ProgressionRules {
     var next = milestone == 10
         ? p.copyWith(milestone10: () => keystoneId)
         : p.copyWith(milestone20: () => keystoneId);
+    // `pathTo` ya trae solo los nodos que faltan: los puntos del hito no
+    // se gastan en nodos tomados.
     final take = path.take(bound).toList();
     next = takeNodes(next, take)?.$1 ?? next;
     return next;

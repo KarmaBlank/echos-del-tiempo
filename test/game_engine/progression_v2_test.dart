@@ -183,6 +183,49 @@ void main() {
       expect(zoneProgression.chooseMilestone(_fresh('maga', 9), 10, k), isNull);
     });
 
+    test('una keystone tomada a mano no se vuelve a ofrecer en el hito', () {
+      // Maga 9 con 7 puntos libres: toma a mano la primera opción del 10.
+      var p = _fresh('maga', 9);
+      final o10 = rules.milestoneOptions('maga', 10);
+      final o20 = rules.milestoneOptions('maga', 20);
+      final k = o10.first;
+      final path = rules.pathTo('maga', p.passiveProgress, k)!;
+      p = zoneProgression.normalize(p.copyWith(level: 20));
+      p = zoneProgression.takeNodes(p, path)!.$1;
+      expect(p.tree, contains(k));
+      expect(p.pendingMilestones, [10, 20]);
+      final manual = PassiveTreeRules.milestoneTaken(
+          p.tree, p.milestone10, p.milestone20);
+      final n10 = rules.milestoneOptions('maga', 10, taken: manual);
+      final n20 = rules.milestoneOptions('maga', 20, taken: manual);
+      expect(n10, isNot(contains(k)));
+      expect(n10, hasLength(3));
+      // La que falta la reemplaza la siguiente de la clase (la 4.ª).
+      expect(n10, [...o10.skip(1), o20.first]);
+      expect(n20, hasLength(3));
+      expect(n10.toSet().intersection(n20.toSet()), isEmpty);
+      expect(n20, isNot(contains(k)));
+      // El host la rechaza aunque llegue por red.
+      expect(zoneProgression.chooseMilestone(p, 10, k), isNull);
+      // Sanear no invalida una elección válida hecha después.
+      final q = zoneProgression.chooseMilestone(p, 10, n10.first)!;
+      expect(zoneProgression.normalize(q).milestone10, n10.first);
+    });
+
+    test('el hito paga solo los nodos que faltan del camino', () {
+      var p = _fresh('maga', 12);
+      final k = rules.milestoneOptions('maga', 10)[1];
+      final path = rules.pathTo('maga', p.passiveProgress, k)!;
+      // Ya tiene los 3 primeros nodos del camino con puntos libres.
+      p = zoneProgression.takeNodes(p, path.take(3).toList())!.$1;
+      final freeBefore = p.treePoints - p.tree.length;
+      final q = zoneProgression.chooseMilestone(p, 10, k)!;
+      expect(q.tree, [...path.take(3), ...path.skip(3)]);
+      expect(q.tree.last, k);
+      // 7 de hito, 4 gastados: sobran 3 libres más (no se pierden).
+      expect(q.treePoints - q.tree.length, freeBefore + 3);
+    });
+
     test('reiniciar el árbol deja los hitos pendientes, sin duplicar puntos',
         () {
       var p = _fresh('paladin', 20);
