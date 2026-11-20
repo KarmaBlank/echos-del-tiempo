@@ -31,6 +31,7 @@ import '../../bestiary/domain/bestiary_text.dart';
 import '../../bestiary/presentation/enemy_info_card.dart';
 import '../domain/skill_text.dart';
 import '../domain/turn_order.dart';
+import 'enemy_live_info.dart';
 import 'battle_command_window.dart';
 import 'battle_hud.dart';
 import 'game_sprites.dart';
@@ -537,7 +538,8 @@ class BattleViewState extends State<BattleView>
   /// Descripción de Atacar.
   static String _attackDesc(Combatant cur) =>
       '<b>Atacar</b> <span class="k">sin costo</span><br>'
-      'Daño físico ATQ ${cur.attack}:${_est(cur, cur.attack)}'
+      'Daño físico ATQ ${cur.attack}:${_est(cur, cur.attack, crit: false)}'
+      '<br>${critLineMarkup(cur, cur.attack)}'
       '${cur.stunOnAttackChance > 0 ? '<br>${hexSpan('#ffeaa7', '${jsRound(cur.stunOnAttackChance * 100)}% de aturdir')}' : ''}'
       '${cur.branch == 'creyente' ? '<br>${hexSpan('#7bed9f', '25%: cura 2% al grupo')}' : cur.branch == 'inherente' ? '<br>${hexSpan('#fff3b0', '25%: aplica Sagrado')}' : ''}';
 
@@ -578,6 +580,7 @@ class BattleViewState extends State<BattleView>
           '${el.label}<br>'
           '(máx(ATQ, MAG) tuyo + suyo) × ${fm(du.power)} = <b>'
           '${jsRound(sum)}</b> a TODOS los enemigos<br>'
+          '${critLineMarkup(cur, sum, all: true)}<br>'
           '${statusApplicationMarkup(du.status)}<br>'
           '$mp MP cada uno · ${protoEsc(q.name)} pierde su próximo turno',
       reason: ok ? null : 'Hace falta $mp MP cada uno.',
@@ -595,7 +598,15 @@ class BattleViewState extends State<BattleView>
     final ok = missing.isEmpty;
     // Instante: ya encadenaste una en este turno, esta lo termina.
     final instant = sk.instant && !cur.chained;
+    final lines = ok
+        ? const <String>[]
+        : SkillRequirements.missingLines(
+            sk, cur, _foes.where((e) => e.id == tg).firstOrNull,
+            foes: _foes);
+    // Condición especial (no el MP/Pulso que ya se ve en rojo): tooltip.
+    final special = lines.where((l) => l.startsWith('Necesita')).toList();
     return BattleAction(
+      disabledHint: special.isEmpty ? null : special.join('\n'),
       id: 'skill-${sk.id}',
       name: '${sk.name}${sk.delay > 0 ? ' ⏳' : ''}',
       // Fila: etiquetas (INSTANTE, alcance) y costos del sistema de
@@ -608,12 +619,7 @@ class BattleViewState extends State<BattleView>
       summary: skillSummaryMarkup(sk, cur),
       description: describeSkillMarkup(sk, cur),
       // Una línea roja por condición que falta (arriba del detalle).
-      reason: ok
-          ? null
-          : SkillRequirements.missingLines(
-                  sk, cur, _foes.where((e) => e.id == tg).firstOrNull,
-                  foes: _foes)
-              .join('\n'),
+      reason: ok ? null : lines.join('\n'),
       separatorBefore: separatorBefore,
       onSelect: ok ? () => _send(SkillCommand(sk.id, targetId: tg)) : null,
     );
@@ -664,13 +670,12 @@ class BattleViewState extends State<BattleView>
       ...defs.where((s) => s.instant),
       ...defs.where((s) => !s.instant),
     ];
-    final hasInstant = ordered.isNotEmpty && ordered.first.instant;
+    // Sin banner arriba: el panel de la derecha dice "INSTANTE · no
+    // termina tu turno" cuando la del cursor lo es (battle_presentation.md).
     final skills = [
-      for (final (i, sk) in ordered.indexed)
-        _skillAction(sk, cur, tg,
-            SkillRequirements.missing(sk, cur, tgC, foes: foes),
-            separatorBefore:
-                hasInstant && i == 0 ? kInstantSeparator : null),
+      for (final sk in ordered)
+        _skillAction(
+            sk, cur, tg, SkillRequirements.missing(sk, cur, tgC, foes: foes)),
     ];
     if (skills.isNotEmpty) {
       out.add(BattleCategoryEntry(BattleCategory.skills, skills,
@@ -831,6 +836,7 @@ class BattleViewState extends State<BattleView>
                     description: a.description,
                     dual: a.dual,
                     reason: why,
+                    disabledHint: why,
                     onSelect: null,
                   )
                 else
@@ -978,7 +984,10 @@ class BattleViewState extends State<BattleView>
         child: CustomSingleChildLayout(
           delegate: PointerCardLayout(at),
           child: EnemyInfoCard(
-              enemy: hv, bestiary: best, level: widget.enemyLevel),
+              enemy: hv,
+              bestiary: best,
+              level: widget.enemyLevel,
+              live: EnemyLiveInfo(enemy: hv)),
         ),
       ),
     );

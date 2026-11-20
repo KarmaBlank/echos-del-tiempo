@@ -98,11 +98,8 @@ void main() {
     expect(find.byKey(const ValueKey('battle-cat-skills')), findsOneWidget);
     expect(find.byKey(const ValueKey('battle-cat-items')), findsOneWidget);
     expect(find.byKey(const ValueKey('battle-cat-defend')), findsOneWidget);
-    expect(
-        find.descendant(
-            of: find.byKey(const ValueKey('battle-target')),
-            matching: find.textContaining('Limo', findRichText: true)),
-        findsOneWidget);
+    // Sin sección OBJETIVO en el panel (vive en el tooltip del enemigo).
+    expect(find.byKey(const ValueKey('battle-target')), findsNothing);
     // 4 jugadores → vida ×1.8 (combo_balance.md § 3.3): Limo 30 × 1.8 = 54
     expect(state.enemies[0].maxHp, 54);
 

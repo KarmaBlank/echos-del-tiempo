@@ -14,6 +14,7 @@ import 'package:echos_del_tiempo/game_engine/models/player_state.dart';
 import 'package:echos_del_tiempo/game_engine/models/skill.dart';
 import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
+import 'package:echos_del_tiempo/game_engine/rules/skill_requirements.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -135,11 +136,9 @@ void main() {
     final (menu, sent) = await pump(tester);
     expect(tester.getTopLeft(row(instant)).dy,
         lessThan(tester.getTopLeft(row(oneFoe)).dy));
-    final sep = find.byKey(ValueKey('battle-sep-skill-$instant'));
-    expect(sep, findsOneWidget);
-    expect(find.descendant(of: sep, matching: find.textContaining('no terminan tu turno')),
-        findsOneWidget);
-    expect(find.byKey(ValueKey('battle-sep-skill-$oneFoe')), findsNothing);
+    // Sin banner arriba de la lista.
+    expect(find.byKey(ValueKey('battle-sep-skill-$instant')), findsNothing);
+    expect(find.textContaining('no terminan tu turno'), findsNothing);
     expect(
         find.descendant(
             of: row(instant),
@@ -149,6 +148,90 @@ void main() {
     menu.handleKey(LogicalKeyboardKey.digit1);
     await tester.pump();
     expect((sent.single as SkillCommand).skillId, instant);
+  });
+
+  for (final scale in [1.0, 1.5, 2.0]) {
+    testWidgets('panel derecho: INSTANTE solo con una Instante (x$scale)',
+        (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      // Solo los desbordes del panel de detalle (la barra de objetivo es
+      // de otro componente).
+      final errs = <String>[];
+      final prev = FlutterError.onError;
+      FlutterError.onError = (d) => errs.add(d.toString());
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final (menu, _) = await pump(tester);
+      final note = find.byKey(const ValueKey('battle-instant-note'));
+      // Foco de teclado: la primera fila es la Instante.
+      expect(note, findsOneWidget);
+      expect(
+          find.descendant(
+              of: note, matching: find.textContaining('no termina tu turno')),
+          findsOneWidget);
+      expect(find.descendant(of: note, matching: find.byType(DsTag)),
+          findsOneWidget);
+      menu.handleKey(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
+      expect(note, findsNothing);
+      // Hover vuelve a la Instante.
+      final g = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await g.addPointer(location: Offset.zero);
+      addTearDown(g.removePointer);
+      await g.moveTo(tester.getCenter(row(instant)));
+      await tester.pump();
+      expect(note, findsOneWidget);
+      FlutterError.onError = prev;
+      expect(errs.where((e) => e.contains('battle-desc')), isEmpty);
+    });
+  }
+
+  testWidgets('deshabilitada: tooltip solo con motivo especial',
+      (tester) async {
+    final special = kSkills.values.firstWhere((s) =>
+        s.requires.isNotEmpty &&
+        s.id != pulsed &&
+        !s.instant &&
+        SkillRequirements.missingLines(s, state.current!, state.enemies.first,
+                foes: state.enemies)
+            .any((l) => l.startsWith('Necesita')));
+    state.current!
+      ..skillIds = [oneFoe, special.id, ally]
+      ..mp = 0
+      ..pulse = 0;
+    await pump(tester);
+    expect(find.byKey(ValueKey('battle-hint-skill-${special.id}')),
+        findsOneWidget);
+    expect(
+        tester
+            .widget<Tooltip>(
+                find.byKey(ValueKey('battle-hint-skill-${special.id}')))
+            .message,
+        contains('Necesita'));
+    // Básico (falta MP, se ve en rojo): gris sin tooltip.
+    expect(kSkills[ally]!.mp, greaterThan(0));
+    expect(find.byKey(ValueKey('battle-hint-skill-$ally')), findsNothing);
+  });
+
+  testWidgets('dúo sin MP: gris, sin texto extra ni tooltip', (tester) async {
+    for (final q in state.party) {
+      q.mp = 0;
+    }
+    final (menu, _) = await pump(tester);
+    menu.selectCategory(BattleCategory.duos);
+    await tester.pump();
+    final rows = find.byWidgetPredicate((w) =>
+        w.key is ValueKey<String> &&
+        (w.key as ValueKey<String>).value.startsWith('battle-act-duo-'));
+    if (rows.evaluate().isEmpty) return; // sin dúo para este par
+    final r = tester.widget<DsListRow>(
+        find.descendant(of: rows.first, matching: find.byType(DsListRow)));
+    expect(r.enabled, isFalse);
+    expect(find.textContaining('sin compañ', findRichText: true), findsNothing);
+    expect(
+        find.byWidgetPredicate((w) =>
+            w.key is ValueKey<String> &&
+            (w.key as ValueKey<String>).value.startsWith('battle-hint-duo')),
+        findsNothing);
   });
 
   testWidgets('encadenada: el encabezado avisa la acción que queda',

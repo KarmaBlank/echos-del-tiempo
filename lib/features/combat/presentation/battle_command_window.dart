@@ -47,6 +47,7 @@ class BattleAction {
     this.description = '',
     this.dual = false,
     this.reason,
+    this.disabledHint,
     this.separatorBefore,
     this.instant = false,
     this.reach,
@@ -85,6 +86,11 @@ class BattleAction {
 
   /// Por qué está deshabilitada (en rojo arriba del detalle).
   final String? reason;
+
+  /// Motivo raro de la deshabilitada (condición de la habilidad, regla
+  /// del tutorial...): tooltip al pasar el mouse por la fila gris. Los
+  /// motivos básicos (MP visible, sin pociones, ULT sin cargar) no llevan.
+  final String? disabledHint;
 
   /// Línea fina arriba de la fila (p. ej. el separador de las Instante).
   /// No es una acción: los atajos 1-9 no cambian.
@@ -301,6 +307,15 @@ class _Actions extends StatelessWidget {
   final num? mp;
   final int? pulse;
 
+  /// Fila gris con motivo raro: tooltip del sistema (como `DsButton`).
+  Widget _hinted(BattleAction a, Widget row) => a.onSelect == null &&
+          a.disabledHint != null
+      ? Tooltip(
+          key: ValueKey('battle-hint-${a.id}'),
+          message: retroText(a.disabledHint!),
+          child: row)
+      : row;
+
   Widget? _trailing(BattleAction a, double width) {
     final tags = <Widget>[
       if (a.instant) const DsTag.instant(),
@@ -389,7 +404,7 @@ class _Actions extends StatelessWidget {
             MouseRegion(
               key: ValueKey('battle-act-${a.id}'),
               onEnter: (_) => onHover(i),
-              child: DsListRow(
+              child: _hinted(a, DsListRow(
                 leading: SizedBox(
                   width: RetroType.em(context, 1.5),
                   child: Text(i < 9 ? '${i + 1}' : '', style: DsText.detail()),
@@ -404,7 +419,7 @@ class _Actions extends StatelessWidget {
                 onTap: a.onSelect,
                 compact: true,
                 trailing: _trailing(a, width),
-              ),
+              )),
             ),
           ],
         ],
@@ -471,6 +486,22 @@ class _Description extends StatelessWidget {
               ],
             ),
             SizedBox(height: DsSpace.xs),
+            // Instante bajo el cursor: insignia del DS y qué significa.
+            if (a != null && a.instant)
+              Padding(
+                key: const ValueKey('battle-instant-note'),
+                padding: EdgeInsets.only(bottom: DsSpace.xs),
+                child: Wrap(
+                  spacing: DsSpace.xs,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    const DsTag.instant(),
+                    Text(retroText('· no termina tu turno'),
+                        style: DsText.body(DsColors.instant)),
+                  ],
+                ),
+              ),
             // Lo que falta, arriba y en rojo: una línea por condición.
             if (a?.reason case final r?)
               for (final (i, l) in r.split('\n').indexed)
@@ -490,11 +521,8 @@ class _Description extends StatelessWidget {
                     ),
                 ],
               ),
-            if (target.isNotEmpty) ...[
-              SizedBox(height: DsSpace.xs),
-              ProtoText(target,
-                  key: const ValueKey('battle-target'), style: DsText.detail()),
-            ],
+            // Sin sección OBJETIVO (v0.19.1): esa info vive en el tooltip
+            // del enemigo (battle_presentation.md).
             if (extra != null) ...[SizedBox(height: DsSpace.xs), extra!],
             // Las teclas al final: nunca le quitan lugar al detalle.
             SizedBox(height: DsSpace.xs),
