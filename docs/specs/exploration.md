@@ -222,6 +222,7 @@ panel de preparación en vez de cerrar.
 | Esc | con panel | cierra el panel (salvo las reglas de arriba) |
 | Esc | sin panel ni campo de texto (lobby, campo, subida de nivel, resultado) | abre / cierra el menú de pausa (docs/specs/settings.md § 6) |
 | Y / N | lobby, votación pendiente | `VoteMissionAction(true/false)` |
+| 1 / 2 | lobby o campo, sin panel (v0.12.2) | usa Poción de vida / de maná (`UseItemAction`, loot.md § 17.5) |
 | 1-9 | batalla, tu turno | el botón N del menú de comandos |
 | Q / Tab | batalla | `cycleTarget`: siguiente enemigo vivo |
 | P | batalla, tu turno (v0.8.3) | va a PASAR; con PASAR elegida, `PassCommand` (combat.md § "Pasar turno") |

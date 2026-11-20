@@ -14,6 +14,7 @@ import '../../../app/widgets/menu_focus.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../../game_engine/models/attributes.dart';
+import '../../../game_engine/models/battle_command.dart';
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/inventory_sort.dart';
@@ -350,6 +351,16 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     return stackTooltipMarkup(c.stack!, c.count);
   }
 
+  /// Usa la poción [token] si es una y se puede; `true` si la mandó.
+  bool _usePotion(String token) {
+    final item = token == StackKind.potion.token
+        ? BattleItem.potion
+        : token == StackKind.ether.token
+            ? BattleItem.ether
+            : null;
+    return item != null && shop.controller.useItem(item);
+  }
+
   void _select(String token, int? cell) => setState(() {
         if (_sel != token) _count = 1;
         _sel = token;
@@ -656,7 +667,11 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         selected: _sel,
         onSelect: pickMode || _picking || _moveFrom != null
             ? null
-            : (t) => _select(t, null),
+            // Clic sobre la poción ya elegida: la usa (loot.md § 17.5).
+            : (t) {
+                if (mine && t == _sel && _usePotion(t)) return;
+                _select(t, null);
+              },
         onMenu: !mine || pickMode || _picking || _moveFrom != null
             ? null
             : (t, at) => at == null
@@ -1303,7 +1318,21 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
 
     final eqReason =
         it == null ? null : g.equip(p, it.uid, pending: widget.pending);
+    // Pociones fuera de batalla (loot.md § 17.5).
+    final usable = token == StackKind.potion.token
+        ? BattleItem.potion
+        : token == StackKind.ether.token
+            ? BattleItem.ether
+            : null;
     return [
+      if (usable != null)
+        InventoryMenuEntry(
+          id: 'use',
+          label: 'Usar',
+          color: ProtoColors.green,
+          reason: shop.controller.useItemBlock(usable),
+          onTap: () => shop.controller.useItem(usable),
+        ),
       if (it != null)
         InventoryMenuEntry(
           id: 'equip',

@@ -58,6 +58,7 @@ import '../../game_engine/serialization/session_json.dart';
 /// 23 desde v0.13: máximo de jugadores configurable (8 por defecto),
 /// `mx` en `welcome` / `reject`, y balance de grupo para n > 4 con
 /// topes (combo_balance.md § 3.3).
+
 const kProtocolVersion = 23;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").

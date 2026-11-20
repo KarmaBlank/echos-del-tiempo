@@ -43,6 +43,7 @@ import 'exploration_lines.dart';
 import 'full_map.dart';
 import 'loot_feed.dart';
 import 'minimap.dart';
+import 'potion_shortcuts.dart';
 import 'unused_points_notice.dart';
 
 /// `m:ss` con minutos de dos dígitos (`mm:ss` del HUD del prototipo).
@@ -394,7 +395,18 @@ class WorldHud extends StatelessWidget {
             Positioned(
               right: _gap,
               bottom: _gap,
-              child: SizedBox(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+              // Pociones fuera de batalla (loot.md § 17.5).
+              if (s.mode != SessionMode.battle)
+                if (s.players[view.localId] case final me?)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: PotionShortcuts(controller: controller, player: me),
+                  ),
+              SizedBox(
                 key: const ValueKey('hud-party-boxes'),
                 width: partyWidth,
                 child: Wrap(
@@ -430,6 +442,8 @@ class WorldHud extends StatelessWidget {
                       ),
                   ],
                 ),
+              ),
+                ],
               ),
             ),
             Positioned(
