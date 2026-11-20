@@ -311,6 +311,34 @@ void main() {
     expect(find.byKey(const ValueKey('tree-milestone-mark')), findsOneWidget);
   });
 
+  for (final scale in [1.0, 1.3, 1.6]) {
+    testWidgets('hito: opciones como botones, PENDIENTE, sin desbordes '
+        '(texto x$scale)', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final handle = tester.ensureSemantics();
+      await _pumpTree(
+          tester,
+          PlayerProfile(
+              name: 'Ana',
+              classId: 'maga',
+              level: 20,
+              milestone10: treeRules.milestoneOptions('maga', 10).first));
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const ValueKey('milestone-pending')), findsOneWidget);
+      for (final id in treeRules.milestoneOptions('maga', 20)) {
+        final pick = find.byKey(ValueKey('milestone-pick-$id'));
+        expect(tester.widget(pick), isA<DsButton>());
+        expect(
+            tester.getSemantics(find
+                .descendant(of: pick, matching: find.byType(OutlinedButton))
+                .first),
+            isSemantics(isButton: true, isEnabled: true, hasTapAction: true));
+      }
+      handle.dispose();
+    });
+  }
+
   testWidgets('hito pendiente: no se toman nodos hasta elegirlo',
       (tester) async {
     final c = await _pumpTree(

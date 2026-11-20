@@ -52,3 +52,8 @@ tracks:
     fire:
       - { t: 500, pre: true }
       - { t: 800 }
+  # Sonido (game_editor.md § 7.6): la carga y la descarga propias de la ULT.
+  - type: sound
+    fire:
+      - { t: 0, cue: build }
+      - { t: 650, cue: release }

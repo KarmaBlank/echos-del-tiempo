@@ -113,6 +113,19 @@ String statusApplicationMarkup(StatusApplication? st, {int bonus = 0}) {
 ///
 /// Con [element] (por defecto) suma la línea del elemento y sus
 /// reacciones (elemental_reactions.md § 3) si no es Físico.
+/// "Crítico 18%: 245" con la probabilidad efectiva de [p] (base +
+/// [bonus] de la técnica, tope 100 %) y el daño [v] por golpe × su
+/// multiplicador. Con [hits] > 1 suma el total; con [all], "c/u".
+String critLineMarkup(Combatant p, num v,
+    {double bonus = 0, int hits = 1, bool all = false}) {
+  final pct = jsRound(((p.critChance + bonus).clamp(0.0, 1.0)) * 100);
+  final c = jsRound(v * p.critMultiplier);
+  return hexSpan(
+      '#7d8bc4',
+      'Crítico $pct%: $c${all ? ' c/u' : ''}'
+          '${hits > 1 ? ' por golpe · ${c * hits} en total' : ''}');
+}
+
 String describeSkillMarkup(SkillDef tk, Combatant? user,
     {bool ultimate = false, String? nameColor, bool element = true}) {
   final p = user;
@@ -120,7 +133,7 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
   final l = <String>[
     '<b${nameColor == null ? '' : ' style="color:$nameColor"'}>'
         '${ultimate ? '★ ULTIMATE: ' : ''}${tk.name}</b> '
-        '${ultimate ? '<span class="k">(barra ULT: ${tk.ultCost}%)</span>' : skillCostLongMarkup(tk)}',
+        '${ultimate ? '<span class="k">(barra ULT llena)</span>' : skillCostLongMarkup(tk)}',
     if (element && el != GameElement.fisico) elementReactionMarkup(el),
   ];
   final mag = tk.kind == SkillKind.magical;
@@ -130,7 +143,8 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
       l.add('${hexSpan('#ff9f43', 'Disparo cargado')}: no pega ahora. Al '
           'empezar tu próximo turno cae ATQ × ${fm(tk.charge)}'
           '${p != null ? ' = <b>${jsRound(v * tk.charge)}</b>' : ''} sobre el '
-          'objetivo (si cayó, sobre el primer enemigo en pie)');
+          'objetivo (si cayó, sobre el primer enemigo en pie)'
+          '${p != null ? ' · ${critLineMarkup(p, v * tk.charge, bonus: tk.critBonus)}' : ''}');
       final st = tk.status;
       if (st != null) {
         l.add(statusApplicationMarkup(st,
@@ -142,7 +156,7 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
           '${fm(tk.power)}${p != null ? ' = <b>${jsRound(v * tk.power)}</b>' : ''}'
           '${tk.allTargets ? ' a TODOS los enemigos' : ' a 1 enemigo'}'
           '${tk.hits > 1 ? ', <b>${tk.hits} golpes</b> seguidos' : ''}'
-          '${p != null ? ' (crítico ${jsRound(v * tk.power * p.critMultiplier)})' : ''}');
+          '${p != null ? ' · ${critLineMarkup(p, v * tk.power, bonus: tk.critBonus, hits: tk.hits, all: tk.allTargets)}' : ''}');
       if (tk.pierce > 0) {
         l.add('${hexSpan('#dfe6e9', 'Atraviesa')}: también golpea a los '
             'enemigos detrás del objetivo con el ${jsRound(tk.pierce * 100)}% '

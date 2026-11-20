@@ -97,6 +97,58 @@ class RetroHoverCard extends StatefulWidget {
   /// (nunca tooltip y menú a la vez; ui_style.md § "Tooltips").
   static bool suppressed = false;
 
+  /// ¿La última entrada fue una tecla (no modificadora) y no el puntero?
+  /// Los tips por foco solo se abren así (v0.19.1): `highlightMode` de
+  /// Flutter queda en `traditional` también con el mouse en escritorio,
+  /// y el autofocus al abrir / cambiar de pestaña mostraba el tip del
+  /// primer elemento con el mouse quieto.
+  static bool get keyboardNav {
+    _installInputTracker();
+    return _keyboardNav;
+  }
+
+  static set keyboardNav(bool v) {
+    _installInputTracker();
+    _keyboardNav = v;
+  }
+
+  static bool _keyboardNav = false;
+  static bool _trackerOn = false;
+
+  static void _installInputTracker() {
+    // Idempotente: los tests de widgets limpian los handlers del teclado.
+    HardwareKeyboard.instance
+      ..removeHandler(_onKey)
+      ..addHandler(_onKey);
+    if (_trackerOn) return;
+    _trackerOn = true;
+    GestureBinding.instance.pointerRouter.addGlobalRoute((e) {
+      if (e is PointerDownEvent ||
+          e is PointerSignalEvent ||
+          (e is PointerHoverEvent && e.delta != Offset.zero)) {
+        _keyboardNav = false;
+      }
+    });
+  }
+
+  static bool _onKey(KeyEvent e) {
+    if (e is KeyDownEvent && !_isModifier(e.logicalKey)) _keyboardNav = true;
+    return false;
+  }
+
+  static bool _isModifier(LogicalKeyboardKey k) => _modifiers.contains(k);
+
+  static final _modifiers = {
+    LogicalKeyboardKey.altLeft,
+    LogicalKeyboardKey.altRight,
+    LogicalKeyboardKey.shiftLeft,
+    LogicalKeyboardKey.shiftRight,
+    LogicalKeyboardKey.controlLeft,
+    LogicalKeyboardKey.controlRight,
+    LogicalKeyboardKey.metaLeft,
+    LogicalKeyboardKey.metaRight,
+  };
+
   /// Contenido; se arma recién al mostrarse.
   final WidgetBuilder builder;
   final Widget child;
@@ -152,6 +204,7 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
   @override
   void initState() {
     super.initState();
+    RetroHoverCard._installInputTracker();
     if (widget.keyboardFocus) _syncKeyboard();
   }
 
@@ -165,8 +218,7 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (widget.keyboardFocus) {
-        if (FocusManager.instance.highlightMode ==
-            FocusHighlightMode.traditional) {
+        if (RetroHoverCard.keyboardNav) {
           _byKeyboard = true;
           _show();
         }
@@ -387,9 +439,7 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
       child: Focus(
         canRequestFocus: false,
         skipTraversal: true,
-        onFocusChange: (f) => f &&
-                FocusManager.instance.highlightMode ==
-                    FocusHighlightMode.traditional
+        onFocusChange: (f) => f && RetroHoverCard.keyboardNav
             ? _show()
             : _hide(),
         child: MouseRegion(

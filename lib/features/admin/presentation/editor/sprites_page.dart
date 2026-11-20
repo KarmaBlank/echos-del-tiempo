@@ -60,7 +60,8 @@ class _Browser extends StatelessWidget {
             key: const ValueKey('sprite-search'),
             hint: 'BUSCAR SPRITE',
             width: 320,
-            onChanged: c.setQuery),
+            onChanged: c.setQuery)
+            .tip('Filtra la lista por id del sprite.'),
         SizedBox(height: DsSpace.sm),
         for (final cat in <SpriteCategory?>[null, ...SpriteCategory.values])
           DsListRow(
@@ -70,6 +71,10 @@ class _Browser extends StatelessWidget {
             trailing: Text('${c.countOf(cat)}', style: DsText.detail()),
             selected: c.category == cat,
             onTap: () => c.setCategory(cat),
+            tooltip: DsTooltipCard(
+                title: cat == null
+                    ? 'Muestra todos los sprites.'
+                    : 'Muestra solo ${cat.label}.'),
           ),
         DsListRow(
           key: const ValueKey('sprite-only-overrides'),
@@ -77,6 +82,8 @@ class _Browser extends StatelessWidget {
           title: c.onlyOverrides ? '[X] CON OVERRIDE' : '[ ] CON OVERRIDE',
           trailing: Text('${c.overrideCount}', style: DsText.detail()),
           onTap: () => c.setOnlyOverrides(!c.onlyOverrides),
+          tooltip: const DsTooltipCard(
+              title: 'Muestra solo los sprites con un override local.'),
         ),
         DsSectionHeader('${items.length} SPRITES'),
         Expanded(
@@ -97,6 +104,8 @@ class _Browser extends StatelessWidget {
                 trailing: over ? const DsBadge('OVERRIDE') : null,
                 selected: c.selected?.id == e.id,
                 onTap: () => c.select(e),
+                tooltip: const DsTooltipCard(
+                    title: 'Abre este sprite en la ficha y la escena de contexto.'),
               );
             },
           ),
@@ -128,6 +137,7 @@ class _Preview extends StatelessWidget {
           for (final z in const [1, 2, 4, 8]) ...[
             DsButton('×$z',
                 key: ValueKey('sprite-zoom-$z'),
+                tooltip: 'Zoom de la vista ×$z (píxeles enteros).',
                 size: DsButtonSize.compact,
                 selected: c.zoom == z,
                 onPressed: () => c.setZoom(z)),
@@ -478,11 +488,14 @@ class _Properties extends StatelessWidget {
               SizedBox(height: DsSpace.md),
               Row(mainAxisAlignment: MainAxisAlignment.end, children: [
                 DsButton('CANCELAR',
+                    tooltip: 'Cierra sin publicar.',
                     kind: DsButtonKind.ghost,
                     onPressed: () => Navigator.of(ctx).pop(false)),
                 SizedBox(width: DsSpace.sm),
                 DsButton('PUBLICAR',
                     key: const ValueKey('sprite-publish-confirm'),
+                    tooltip: 'Copia los overrides al repo y los borra de la '
+                        'carpeta local.',
                     kind: DsButtonKind.primary,
                     onPressed: () => Navigator.of(ctx).pop(true)),
               ]),
@@ -523,11 +536,14 @@ class _Properties extends StatelessWidget {
             SizedBox(height: DsSpace.sm),
             DsButton('REEMPLAZAR PNG',
                 key: const ValueKey('sprite-replace'),
+                tooltip: 'Elige un PNG que reemplaza este sprite (override '
+                    'local, se valida el tamaño).',
                 kind: DsButtonKind.primary,
                 onPressed: c.canWrite ? c.pickAndReplace : null),
             SizedBox(height: DsSpace.xs),
             DsButton('DESCARTAR OVERRIDE',
                 key: const ValueKey('sprite-discard'),
+                tooltip: 'Borra el override local: vuelve el sprite del repo.',
                 kind: DsButtonKind.ghost,
                 onPressed: over ? c.discard : null),
             if (v != null) ...[
@@ -541,24 +557,32 @@ class _Properties extends StatelessWidget {
           Text(c.overrides?.root ?? 'Sin disco (solo lectura)', style: DsText.detail()),
           SizedBox(height: DsSpace.xs),
           DsButton('RECARGAR ARTE',
-              key: const ValueKey('sprite-reload'), onPressed: c.reloadAll),
+              key: const ValueKey('sprite-reload'),
+              tooltip: 'Relee los overrides del disco.',
+              onPressed: c.reloadAll),
           const DsSectionHeader('PAQUETE DE ARTE'),
           Row(children: [
             Expanded(
               child: DsButton('EXPORTAR',
                   key: const ValueKey('sprite-export'),
+                  tooltip: 'Guarda un zip con todos los overrides (sprites, '
+                      'animaciones, perillas y sonidos).',
                   onPressed: c.canWrite ? c.exportPack : null),
             ),
             SizedBox(width: DsSpace.xs),
             Expanded(
               child: DsButton('IMPORTAR',
                   key: const ValueKey('sprite-import'),
+                  tooltip: 'Instala un paquete de arte (pisa overrides con el '
+                      'mismo id).',
                   onPressed: c.canWrite ? c.importPack : null),
             ),
           ]),
           const DsSectionHeader('REPO'),
           DsButton('PUBLICAR AL REPO (${c.publishable.length})',
               key: const ValueKey('sprite-publish'),
+              tooltip: 'Copia los PNG y las perillas al repo (después falta '
+                  'el commit).',
               onPressed: c.canWrite &&
                       c.repoPath != null &&
                       (c.publishable.isNotEmpty || c.procPublishable)
@@ -583,11 +607,13 @@ class _Properties extends StatelessWidget {
       Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
         DsButton('ESTA ENTRADA',
             key: const ValueKey('proc-scope-entry'),
+            tooltip: 'Las perillas cambian solo esta entrada.',
             size: DsButtonSize.compact,
             selected: !c.procFamily,
             onPressed: () => c.setProcFamily(false)),
         DsButton('TODA LA FAMILIA',
             key: const ValueKey('proc-scope-family'),
+            tooltip: 'Las perillas cambian todas las entradas de la categoría.',
             size: DsButtonSize.compact,
             selected: c.procFamily,
             onPressed: () => c.setProcFamily(true)),
@@ -601,16 +627,19 @@ class _Properties extends StatelessWidget {
       SizedBox(height: DsSpace.sm),
       DsButton('GUARDAR PERILLAS',
           key: const ValueKey('proc-save'),
+          tooltip: 'Guarda las perillas como override local (procedural.yaml).',
           kind: DsButtonKind.primary,
           onPressed: c.canWrite && c.procDirty ? c.saveProc : null),
       SizedBox(height: DsSpace.xs),
       DsButton('DESHACER CAMBIOS',
           key: const ValueKey('proc-revert'),
+          tooltip: 'Vuelve a las perillas guardadas sin escribir nada.',
           kind: DsButtonKind.ghost,
           onPressed: c.procDirty ? c.revertProc : null),
       SizedBox(height: DsSpace.xs),
       DsButton('DESCARTAR PERILLAS',
           key: const ValueKey('proc-discard'),
+          tooltip: 'Borra el override de perillas: vuelven las del repo.',
           kind: DsButtonKind.ghost,
           onPressed: c.canWrite && c.procHasOverride ? c.discardProc : null),
     ];
@@ -624,9 +653,11 @@ class _Properties extends StatelessWidget {
           step: k.step,
           min: k.min,
           max: k.max,
-          onChanged: (n) => c.setKnob(k.key, n)),
+          onChanged: (n) => c.setKnob(k.key, n))
+          .tip('${k.label}: de ${k.min} a ${k.max} (se ve en vivo).'),
       ProcKnobKind.toggle => DsButton((v as bool) ? 'SÍ' : 'NO',
           key: ValueKey('proc-knob-${k.key}'),
+          tooltip: '${k.label}: prende o apaga.',
           size: DsButtonSize.compact,
           selected: v,
           onPressed: () => c.setKnob(k.key, !v)),
@@ -634,6 +665,7 @@ class _Properties extends StatelessWidget {
           if (k.allowEmpty)
             DsButton('AUTO',
                 key: ValueKey('proc-knob-${k.key}-auto'),
+                tooltip: '${k.label}: usa el color propio del generador.',
                 size: DsButtonSize.compact,
                 selected: v == '',
                 onPressed: () => c.setKnob(k.key, '')),
@@ -642,7 +674,8 @@ class _Properties extends StatelessWidget {
                 key: ValueKey('proc-knob-${k.key}-$s'),
                 hex: s,
                 selected: s == v,
-                onTap: () => c.setKnob(k.key, s)),
+                onTap: () => c.setKnob(k.key, s))
+                .tip('${k.label}: usa $s.'),
         ]),
     };
     return Padding(

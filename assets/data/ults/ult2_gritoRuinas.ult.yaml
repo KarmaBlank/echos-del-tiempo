@@ -5,10 +5,9 @@ source: {kind: tree, ref: "guerrero:40"}
 weapons: []
 classes: ["guerrero"]
 element: fisico
-cost: 80
 pulse: 0
 skill:
   kind: support
-  partyBuffs: [{"stat":"attack","value":0.2,"turns":3}]
+  partyBuffs: [{"stat":"attack","value":0.281,"turns":3}]
   advanceAllies: 0.25
 fx: ult2_gritoRuinas

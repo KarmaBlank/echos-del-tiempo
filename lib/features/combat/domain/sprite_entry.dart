@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import '../../../core/audio/sfx_overrides.dart';
 import '../../../core/fx/fx_overrides.dart';
 
 /// Categoría de un sprite en el Editor (docs/specs/game_editor.md § 3.1).
@@ -113,8 +114,14 @@ abstract class ProceduralOverrideSource {
 /// Overrides que el Editor puede escribir (game_editor.md § 3.1 y § 4).
 /// También guarda los overrides de animaciones (paso 2, § 4.2): misma
 /// carpeta, mismo paquete de arte.
+///
+/// Y los de sonido (game_editor.md § 7.6): `sfx/<id>.wav|ogg`.
 abstract class EditableSpriteOverrides
-    implements SpriteOverrideSource, EditableFxOverrides, ProceduralOverrideSource {
+    implements
+        SpriteOverrideSource,
+        EditableFxOverrides,
+        ProceduralOverrideSource,
+        EditableSfxOverrides {
   /// Guarda el `procedural.yaml` del override (perillas, § 7.5).
   Future<void> putProcedural(String yaml);
 

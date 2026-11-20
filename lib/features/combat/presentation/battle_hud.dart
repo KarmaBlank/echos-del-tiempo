@@ -14,8 +14,6 @@ import '../../../app/theme/vision_palette.dart';
 import '../../../game_engine/data/abyss_catalog.dart';
 import '../../../game_engine/models/elements.dart';
 import '../../../game_engine/rules/abyss_rules.dart';
-import '../../../game_engine/data/ascension_catalog.dart';
-import '../../../game_engine/data/ascension_mechanics.dart';
 import '../../../game_engine/data/classes_catalog.dart';
 import '../../../game_engine/data/skills_catalog.dart';
 import '../../ascension/domain/ascension_text.dart';
@@ -26,12 +24,13 @@ import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/passive_mechanic.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart';
+import '../../../game_engine/rules/display_names.dart';
 import '../../../game_engine/rules/js_math.dart';
 import '../domain/element_text.dart';
 import '../domain/skill_text.dart';
 import '../domain/turn_order.dart';
 import 'game_sprites.dart';
-import 'pixel_sprite.dart';
+import 'hero_figure.dart';
 import 'status_icons.dart';
 import 'summons_row.dart';
 
@@ -423,14 +422,7 @@ Widget bossMechanicRow(BattleState b) {
 /// cada uno dice su origen y los turnos que le quedan.
 List<StatusChip> treeEffectChips(Combatant p) {
   final chips = <StatusChip>[];
-  String src(TimedEffect e) =>
-      kMechanics[e.sourceId]?.name ??
-      kAscensionMechanics[e.sourceId]?.name ??
-      kSkills[e.sourceId]?.name ??
-      kAscensionUltimatesById[e.sourceId]?.name ??
-      kBossMechanics[e.sourceId]?.name ??
-      (e.sourceId == 'vigilancia' ? 'Vigilante del Vacío' : null) ??
-      e.sourceId;
+  String src(TimedEffect e) => displayName(e.sourceId);
   String turns(TimedEffect e) => '${e.turns} turno${e.turns == 1 ? '' : 's'}';
   for (final e in p.effects) {
     final pct = jsRound(e.value.abs() * 100);
@@ -1062,7 +1054,11 @@ class _PartyCard extends StatelessWidget {
                   alignment: Alignment.center,
                   child: img == null
                       ? const SizedBox.shrink()
-                      : PixelSprite(img, scale: 2),
+                      : HeroFigure(img,
+                          key: ValueKey('hud-figure-${p.id}'),
+                          classId: p.classId ?? '',
+                          weaponType: p.weaponType,
+                          size: _avatar),
                 ),
                 const SizedBox(width: 5),
               ],
@@ -1360,7 +1356,12 @@ class BattleAllyList extends StatelessWidget {
             height: 40,
             color: DsColors.background,
             alignment: Alignment.center,
-            child: img == null ? null : PixelSprite(img, scale: 2),
+            child: img == null
+                ? null
+                : HeroFigure(img,
+                    classId: p.classId ?? '',
+                    weaponType: p.weaponType,
+                    size: const Size(32, 40)),
           ),
           const SizedBox(width: 5),
           Expanded(

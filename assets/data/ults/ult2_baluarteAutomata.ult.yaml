@@ -5,7 +5,6 @@ source: {kind: unique, ref: "coronaInvertida"}
 weapons: ["espada+escudo", "maza+escudo"]
 classes: []
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: support

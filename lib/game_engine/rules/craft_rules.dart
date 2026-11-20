@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../data/tuning_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/weapon_passives.dart';
 import '../models/item.dart';
@@ -156,35 +157,38 @@ class CraftRules {
 
   /// Trasladar una habilidad: ₵200 × rareza (Común = la fusión vieja).
   static int transferSkillCost(Rarity target) =>
-      jsRound(200 * target.costFactor);
+      jsRound(tuning(TuningId.materials).d('transferCredits') * target.costFactor);
 
   /// Materiales de trasladar una habilidad: 2 Cristales de Era hacia un
   /// arma Rara o mejor; nada a Común / Mágico (materials_economy.md
   /// § 4.2).
   static Map<CraftMaterial, int> transferSkillMaterials(Rarity target) =>
       target.index >= Rarity.raro.index
-          ? const {CraftMaterial.cristal: 2}
+          ? {CraftMaterial.cristal: tuning(TuningId.materials).i('transferCristales')}
           : const {};
 
-  static int addAffixCost(Rarity r) => jsRound(50 * r.costFactor);
+  static int addAffixCost(Rarity r) => jsRound(tuning(TuningId.materials).d('addAffixCredits') * r.costFactor);
 
-  static int rerollCost(Rarity r) => jsRound(25 * r.costFactor);
+  static int rerollCost(Rarity r) => jsRound(tuning(TuningId.materials).d('rerollCredits') * r.costFactor);
 
   /// Prismas y créditos para subir desde [r] (`null` si no se puede):
   /// 1 / 3 / 6 Prismas, 10 de Común a Épico (materials_economy.md § 4.2).
-  static (int, int)? upgradeRarityCost(Rarity r) => switch (r) {
-        Rarity.comun => (1, 100),
-        Rarity.magico => (3, 300),
-        Rarity.raro => (6, 800),
-        _ => null,
-      };
+  static (int, int)? upgradeRarityCost(Rarity r) {
+    final t = tuning(TuningId.materials);
+    return switch (r) {
+      Rarity.comun => (t.i('upComunPrismas'), t.i('upComunCredits')),
+      Rarity.magico => (t.i('upMagicoPrismas'), t.i('upMagicoCredits')),
+      Rarity.raro => (t.i('upRaroPrismas'), t.i('upRaroCredits')),
+      _ => null,
+    };
+  }
 
   // ------------------------------------------------------------------
   // Sumideros de loot: desarmar, vender, reforjar (loot.md § 21)
   // ------------------------------------------------------------------
 
   /// Nivel de objeto desde el que desarmar da 1 material más.
-  static const salvageHighLevel = 25;
+  static int get salvageHighLevel => tuning(TuningId.materials).i('salvageHighLevel');
 
   /// Lo que da desarmar [i]: seguro según rareza y nivel de objeto (+1
   /// desde el nivel [salvageHighLevel]) y +1 Esquirla cada 2 niveles de
@@ -803,8 +807,12 @@ class CraftRules {
   /// 1 Cristal; 10 Cristales + ₵500 → 1 Prisma.
   static (CraftMaterial, int, int)? condenseRecipe(CraftMaterial out) =>
       switch (out) {
-        CraftMaterial.cristal => (CraftMaterial.esquirla, 10, 100),
-        CraftMaterial.prisma => (CraftMaterial.cristal, 10, 500),
+        CraftMaterial.cristal => (CraftMaterial.esquirla,
+            tuning(TuningId.condense).i('cristalCost'),
+            tuning(TuningId.condense).i('cristalCredits')),
+        CraftMaterial.prisma => (CraftMaterial.cristal,
+            tuning(TuningId.condense).i('prismaCost'),
+            tuning(TuningId.condense).i('prismaCredits')),
         _ => null,
       };
 

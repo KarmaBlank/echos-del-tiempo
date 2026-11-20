@@ -203,6 +203,15 @@ class _ImpactPanelState extends State<ImpactPanel> {
       case BalanceKind.hitCap:
       case BalanceKind.combo:
       case BalanceKind.curve:
+      // Ajustes de economía, mejora / carga de ULT y hazañas: sin
+      // simulación de combate.
+      case BalanceKind.ultLevel:
+      case BalanceKind.ultUpgrade:
+      case BalanceKind.ultCharge:
+      case BalanceKind.condense:
+      case BalanceKind.materials:
+      case BalanceKind.ecoTier:
+      case BalanceKind.featReward:
         return const _Plan();
     }
   }

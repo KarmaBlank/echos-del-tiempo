@@ -360,9 +360,11 @@ class _SettingRow extends StatelessWidget {
               width: RetroType.width(context, 200),
               child: hint == null
                   ? name
-                  : Tooltip(
+                  // El `#tip` del sistema (como el resto del juego), no
+                  // el `Tooltip` de Material (fix v0.19.1).
+                  : RetroTooltip(
                       key: ValueKey('setting-hint-$label'),
-                      message: retroText(hint!),
+                      message: hint!,
                       child: MouseRegion(
                           cursor: SystemMouseCursors.help, child: name))),
           Expanded(child: control),

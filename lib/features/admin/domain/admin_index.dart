@@ -2,6 +2,9 @@ import '../../../game_engine/data/build_templates_catalog.dart';
 import '../../../game_engine/balance/balance_codecs.dart';
 import '../../../game_engine/balance/balance_registries.dart';
 import '../../../game_engine/data/ascension_catalog.dart';
+import '../../../game_engine/data/tuning_catalog.dart';
+import '../../../game_engine/models/achievement.dart';
+import '../../../game_engine/data/ults_v2_catalog.dart' show kUltV2;
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/skill.dart';
 import 'balance_diff.dart';
@@ -99,6 +102,26 @@ List<AdminEntry> buildAdminIndex(BalanceBase base) {
         id: e.key,
         name: e.value.name,
         detail: 'ULT de ${e.key} · poder ${trimNum(e.value.power)}'));
+  }
+  // Las 50 ULT v2 de jugador (ultimates_v2.md § 3), con fuente, rol y
+  // compatibilidad: el parche ya las cubre (BalanceKind.ultimate).
+  for (final s in c.playerUlts.values) {
+    final u = kUltV2[s.id];
+    final role = s.kind == SkillKind.heal
+        ? 'cura'
+        : !s.dealsDamage
+            ? 'apoyo'
+            : s.allTargets
+                ? 'daño a todos'
+                : 'daño a uno';
+    final compat = u == null ? const <String>[] : [...u.weapons, ...u.classes];
+    out.add(AdminEntry(
+        kind: BalanceKind.ultimate,
+        id: s.id,
+        name: s.name,
+        detail: 'ULT v2 · ${u?.source.label ?? '?'} · $role · '
+            'poder ${trimNum(s.power)}'
+            '${compat.isEmpty ? '' : ' · ${compat.join('/')}'}'));
   }
   for (final e in c.duals.entries) {
     out.add(AdminEntry(
@@ -225,6 +248,26 @@ List<AdminEntry> buildAdminIndex(BalanceBase base) {
         name: cv.name,
         detail: 'vida A/B +${trimNum(cv.hpSlopeAB)} · C +${trimNum(cv.hpSlopeC)} · '
             'grupo −${trimNum(cv.groupMitigation)}/jug.'));
+  }
+  // Ajustes (tuning_catalog.dart) y recompensas de hazañas.
+  for (final k in kTuningKinds) {
+    final t = base.entities(k)[k.jsonKey]! as TuningDef;
+    out.add(AdminEntry(
+        kind: k,
+        id: k.jsonKey,
+        name: t.name,
+        detail: t.values.entries
+            .take(4)
+            .map((e) => '${e.key} ${trimNum(e.value)}')
+            .join(' · ')));
+  }
+  for (final a in base.entities(BalanceKind.featReward).values) {
+    final d = a as AchievementDef;
+    out.add(AdminEntry(
+        kind: BalanceKind.featReward,
+        id: d.id,
+        name: d.name,
+        detail: '${d.category.label} · ${d.baseReward.text}'));
   }
   for (final a in kAscensions.values) {
     out.add(AdminEntry(

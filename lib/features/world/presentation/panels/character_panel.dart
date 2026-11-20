@@ -35,6 +35,7 @@ import '../../../inventory/presentation/loot_filter_tab.dart';
 import '../../../inventory/presentation/shop_sections.dart';
 import '../../../passive_tree/presentation/passive_tree_view.dart';
 import '../session_controller.dart';
+import '../session_sfx.dart' show sfxServiceProvider;
 import '../session_view.dart';
 import 'party_member_bar.dart';
 
@@ -159,14 +160,19 @@ class _CharacterPanelState extends State<CharacterPanel> {
       // Por miembro: el editor arranca con el filtro de ese miembro (sin
       // la clave, al cambiar de miembro quedaba el texto del anterior y
       // GUARDAR se lo pisaba al nuevo).
-      CharacterTab.ults => UltRepertoireView(
-          key: ValueKey('ults-${view.actorId}'),
-          profile: prof,
-          weapon: rules.equippedWeapon(prof),
-          item: rules.equippedItem(prof),
-          editable: view.session.battle == null,
-          onSelect: c.selectUlt,
-          onUpgrade: c.upgradeUlt),
+      CharacterTab.ults => Consumer(
+          builder: (context, ref, _) => UltRepertoireView(
+              key: ValueKey('ults-${view.actorId}'),
+              profile: prof,
+              weapon: rules.equippedWeapon(prof),
+              item: rules.equippedItem(prof),
+              editable: view.session.battle == null,
+              onSelect: c.selectUlt,
+              onUpgrade: c.upgradeUlt,
+              // Vista previa (ultimates_v2.md § 2.5).
+              stats: rules.derivedStats(prof),
+              sprites: ref.watch(gameSpritesProvider).valueOrNull,
+              sfx: ref.read(sfxServiceProvider))),
       CharacterTab.filter => LootFilterTab(
           key: ValueKey('filter-tab-${view.actorId}'),
           shop: ShopContext(view, c)),
@@ -594,9 +600,21 @@ class _CharacterPanelState extends State<CharacterPanel> {
                       child: targetText),
                 const Spacer(),
               ],
-              DsButton.icon(const Text('-'),
+              // "−" quita solo el reparto pendiente (sin confirmar); los
+              // puntos confirmados se reasignan con REINICIAR PUNTOS
+              // (progression_v2.md § Reiniciar). El texto lleva su color:
+              // IconButton no apaga el color de un Text con estilo propio.
+              DsButton.icon(
+                  Text('-',
+                      style: DsText.subtitle(add > 0
+                          ? DsColors.textPrimary
+                          : DsColors.textDisabled)),
                   key: ValueKey('dec-${a.name}'),
-                  tooltip: 'Quitar $short',
+                  tooltip: add > 0
+                      ? 'Quitar $short (+$kAttrPerPoint sin confirmar)'
+                      : 'Solo quita puntos sin confirmar. Para reasignar '
+                          'los confirmados: REINICIAR PUNTOS'
+                          '${ProgressionRules.freeRespec ? ' (gratis)' : ''}',
                   size: DsButtonSize.compact,
                   onPressed: add > 0
                       ? () => setState(() => _alloc[a] = add - 1)

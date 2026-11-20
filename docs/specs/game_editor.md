@@ -662,8 +662,8 @@ Todo con los componentes de docs/specs/design_system.md:
     cualquier otro = id del catálogo de sonido (los que no existen se
     ignoran). Si la pista existe, reemplaza a la carga/descarga del
     código; el impacto de cada golpe sigue sonando con su golpe (no hace
-    falta ponerlo en la pista). Hoy ninguna ULT del repo trae la pista
-    (sin cambio de sonido).
+    falta ponerlo en la pista). Desde v0.19.1 todas las ULT del repo
+    traen la pista (§ 7.6).
 - **Pendiente**: plantillas de animación nueva, duplicar/renombrar una
   animación entera, mostrar/ocultar y "solo" por pista, zoom de la regla,
   hojas de sprites por cuadro en `sprite`, pistas `actor` y
@@ -823,6 +823,70 @@ entries:
 - **Pendiente**: generadores con perillas para tiles (`arena_painter`),
   UI e íconos de fx; el ícono del piso del mapa (`loot_painter`) todavía
   usa su propio dibujo.
+
+### 7.6 Paso 6: tooltips y sonido en Animaciones (v0.19.1)
+
+**Tooltips en todo el Editor visual.** Cada botón, interruptor, campo,
+fila de lista y la línea de tiempo de Visuales → Animaciones y de
+Visuales → Sprites (perillas incluidas) dice qué hace en una o dos
+líneas, en español. Botones: `DsButton.tooltip`; el resto: la extensión
+`.tip(texto)` del sistema de diseño (`DsTooltip` + `DsTooltipCard` con
+solo título); filas: `DsListRow.tooltip`; `DsFold` ganó `tooltip`.
+Test (`editor_sound_test.dart`): ningún `DsButton`, `DsListRow`,
+`NumberStepper` ni `DsSearchField` de esas páginas queda sin tooltip
+(con un disparo de sonido elegido, con un key con curva, con una
+animación legacy y con un sprite de perillas).
+
+**Los sonidos pasan a datos.** Las 107 ULT de `assets/fx/ult/` y
+`assets/fx/enemy_ult/` traen la pista `sound` con lo que antes hacía el
+código: `{ t: 0, cue: build }` y `{ t: <fin de la preparación>, cue:
+release }`. El juego lee la pista también en las ULT enemigas. Regla
+(igual en juego y Editor): `build`/`release`/`impact` = los sonidos
+propios de la ULT (`<id>.build`…); si la ULT no tiene sonidos propios,
+`build` suena el genérico (`ultimate`) y el resto no suena. El impacto
+de cada golpe sigue sonando con su golpe. Test: para cada ULT del repo la
+pista da exactamente los mismos sonidos y tiempos que el código de antes.
+
+**Pista `sound`.** Disparos `{ t, cue, vol, pitch }`: `cue` = parte de
+la ULT o id del catálogo de sonido (sintetizado o archivo, p. ej.
+`ach.unlock`); `vol` 0..1 (sobre el volumen de efectos, por defecto 1);
+`pitch` 0.5..2 (tono: más alto = más agudo y más corto; por defecto 1).
+Viajan como id afinado (`hit@0.8,1.2`, `tunedSfx`) hasta `SfxService`.
+El tono se aplica remuestreando el WAV (PCM de 16 bits: sintetizados y
+archivos WAV); un OGG suena con su tono original.
+
+**Vista previa con sonido.** Al reproducir, cada disparo suena cuando el
+cabezal lo cruza (a la velocidad elegida, sin cambiar el tono), también
+al volver a empezar en LOOP. El scrub, el clic en la regla y `seek` NO
+disparan (ni en ráfaga): solo la reproducción. Botón SONIDO / SIN
+SONIDO. Los tests miran `FxEditorController.firedSounds`.
+
+**Editar un disparo de sonido** (ficha, al elegir la marca en la pista
+`sound`): sonido actual (y el id real si es una parte de la ULT),
+ESCUCHAR (suena aunque la vista previa esté en silencio), VOLUMEN, TONO,
+buscador + lista de sonidos (partes de la ULT primero, luego el catálogo
+y los archivos; los que tienen override llevan ARCHIVO), REEMPLAZAR POR
+ARCHIVO (WAV u OGG) y SONIDO ORIGINAL. El momento se mueve arrastrando la
+marca (imán) o con T (MS).
+
+**Sonidos como archivo** (`SfxFiles`, la única clase que sabe que un
+sonido puede ser un archivo): `assets/sfx/sfx_manifest.yaml`
+(`sfx: { <id>: <archivo> }`) + `assets/sfx/<id>.wav|ogg` (registrada en
+pubspec) y los overrides locales `overrides/sfx/<id>.wav|ogg` +
+`overrides/sfx_overrides.yaml`. Orden: override → asset → sintetizador.
+Un id nuevo (que no está en el catálogo) también suena si tiene archivo.
+Misma capa que sprites y fx: recarga en caliente al reemplazar o
+revertir, viaja en el paquete de arte (`sfx:` en `art_pack.yaml`,
+`sfx/<id>.<ext>` en el zip) y PUBLICAR AL REPO copia a `assets/sfx/` y
+suma la entrada al manifest. Lo cargan los composition roots
+(`SfxFiles.install`; `main_dev` y el admin con los overrides locales).
+
+- **Red**: sin cambios (`kProtocolVersion` igual; el sonido es local).
+- Capturas: `tool/shots/v0191_editor_sound_shots_test.dart` →
+  `docs/release_shots/v0.19.1/editor/`.
+- **Pendiente**: sonido en momentos de batalla que no son ULT (hoy los
+  elige `SessionSfx` por código), forma de onda en la pista, tono para
+  OGG.
 
 ## 8. Preguntas abiertas (respondidas por el dueño)
 

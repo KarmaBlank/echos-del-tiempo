@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import '../../core/audio/audioplayers_sfx_player.dart';
+import '../../core/audio/sfx_files.dart';
+import '../../core/audio/sfx_service.dart';
 import '../../core/data/build_template_loader.dart';
 import '../../features/admin/data/admin_host.dart';
 import '../../features/admin/presentation/admin_app.dart';
@@ -46,11 +49,15 @@ Future<void> main() async {
   );
   // Visuales → Animaciones (§ 3.2): fx de datos + overrides de la misma
   // carpeta + el adaptador de lo que todavía es código.
+  // Sonidos como archivo + overrides de la misma carpeta (§ 7.6).
+  await SfxFiles.install(overrides: overrides);
   final fx = FxEditorController(
     catalog: await installFx(overrides: overrides),
     overrides: overrides,
     repoPath: repo,
     spriteImage: sprites.imageOf,
+    // Vista previa con sonido (§ 7.6): el mismo sintetizador del juego.
+    sfx: SfxService(player: AudioplayersSfxPlayer()),
   );
   sprites.fx = fx;
   unawaited(sprites.loadAll());

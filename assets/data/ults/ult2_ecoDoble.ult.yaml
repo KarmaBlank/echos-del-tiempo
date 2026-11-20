@@ -5,10 +5,9 @@ source: {kind: eco, ref: "mastery:20"}
 weapons: []
 classes: []
 element: fisico
-cost: 80
 pulse: 0
 skill:
   kind: physical
-  power: 2.0
+  power: 4.164
   echoLast: 0.8
 fx: ult2_ecoDoble

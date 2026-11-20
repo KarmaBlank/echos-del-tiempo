@@ -546,26 +546,35 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       width: width,
       padding: EdgeInsets.all(DsSpace.sm),
       decoration: BoxDecoration(
+        // Acento dorado de la acción principal: el hito pendiente es lo
+        // que hay que resolver ahora (v0.19.1).
         border: const Border(
-            left: BorderSide(color: milestoneColor, width: 2)),
+            left: BorderSide(color: DsColors.actionPrimary, width: 2)),
         color: ProtoColors.bg.withValues(alpha: 0.94),
       ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const Align(
+                alignment: Alignment.centerLeft,
+                child: DsTag('PENDIENTE',
+                    key: ValueKey('milestone-pending'),
+                    color: DsColors.actionPrimary)),
+            SizedBox(height: DsSpace.xs),
+            // Jerarquía por color: título > instrucción (secundario).
             Text(retroText('HITO DEL NIVEL $m'),
-                style: DsText.subtitle(milestoneColor)),
+                style: DsText.subtitle(DsColors.textTitle)),
             SizedBox(height: DsSpace.xs),
             Text(retroText(lockedText),
                 key: const ValueKey('tree-locked'),
-                style: DsText.detail(milestoneColor)),
+                style: DsText.body(DsColors.textPrimary)),
             SizedBox(height: DsSpace.xs),
             Text(
                 retroText('Elegí una keystone. El camino hasta ella '
                     'se toma solo y es gratis.'),
                 key: const ValueKey('milestone-points'),
-                style: DsText.body()),
+                style: DsText.detail(DsColors.textSecondary)),
             for (final id in options) ...[
               SizedBox(height: DsSpace.sm),
               _milestoneCard(m, id),
@@ -628,10 +637,19 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       onExit: (_) => exit(),
       child: SizedBox(
         width: double.infinity,
-        child: DsCard(
+        child: DsButton(
+          node.name,
           key: ValueKey('milestone-pick-$id'),
           selected: chosen,
-          onTap: widget.inBattle
+          details: [
+            // El efecto completo, sin repetir el nombre ("Nombre: …").
+            for (final e in passiveEffectsText(node))
+              e.startsWith('${node.name}: ')
+                  ? e.substring(node.name.length + 2)
+                  : e,
+            chosen ? 'Clic de nuevo para confirmar' : pathText,
+          ],
+          onPressed: widget.inBattle
               ? null
               : () {
                   if (!chosen) {
@@ -643,31 +661,6 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                   }
                   widget.onChooseMilestone?.call(m, id);
                 },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(retroText(node.name),
-                  style: DsText.body(
-                      chosen ? DsColors.selected : milestoneColor)),
-              SizedBox(height: DsSpace.xs),
-              // El efecto completo, sin repetir el nombre ("Nombre: …").
-              for (final e in passiveEffectsText(node))
-                Text(
-                    retroText(e.startsWith('${node.name}: ')
-                        ? e.substring(node.name.length + 2)
-                        : e),
-                    key: ValueKey('milestone-effect-$id'),
-                    style: DsText.detail(DsColors.textPrimary)),
-              SizedBox(height: DsSpace.xs),
-              Text(
-                  retroText(chosen
-                      ? 'Clic de nuevo para confirmar'
-                      : pathText),
-                  style: DsText.detail(
-                      chosen ? DsColors.selected : DsColors.textSecondary)),
-            ],
-          ),
         ),
       ),
       ),

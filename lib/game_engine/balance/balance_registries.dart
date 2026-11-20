@@ -1,4 +1,7 @@
+import '../data/achievements_catalog.dart';
 import '../data/affixes_catalog.dart';
+import '../data/tuning_catalog.dart';
+import '../models/achievement.dart';
 import '../data/ascension_mechanics.dart';
 import '../data/game_catalog.dart';
 import '../data/passive_mechanics.dart';
@@ -50,6 +53,10 @@ abstract final class BalanceRegistries {
     _mechanics!.forEach((k, v) => kMechanics[k] = v);
     _ascMechanics!.forEach((k, v) => kAscensionMechanics[k] = v);
     _nodes!.forEach((k, v) => kPassiveTree.nodes[k] = v);
+    kTuning
+      ..clear()
+      ..addAll(kTuningDefaults);
+    kAchievementRewardOverrides.clear();
   }
 
   /// Instala los overrides de afijos, nodos y mecánicas de [overrides]
@@ -78,6 +85,23 @@ abstract final class BalanceRegistries {
       if (_mechanics!.containsKey(id)) kMechanics[id] = m;
       if (_ascMechanics!.containsKey(id)) kAscensionMechanics[id] = m;
     });
+    for (final kind in kTuningKinds) {
+      final id = kind.jsonKey;
+      final o = overrides[kind]?[id];
+      final base = kTuningDefaults[id];
+      if (o == null || o.isEmpty || base == null) continue;
+      final codec = codecOf(kind);
+      kTuning[id] = codec.write(
+          base, BalanceFieldReader({...codec.read(base), ...o})) as TuningDef;
+    }
+    for (final e in (overrides[BalanceKind.featReward] ?? const {}).entries) {
+      final def = kAchievementsById[e.key];
+      if (def == null || e.value.isEmpty) continue;
+      final codec = codecOf(BalanceKind.featReward);
+      kAchievementRewardOverrides[e.key] = codec.write(
+              def, BalanceFieldReader({...codec.read(def), ...e.value}))
+          as AchievementReward;
+    }
   }
 }
 
@@ -126,6 +150,14 @@ class BalanceBase {
         BalanceKind.hitCap => catalog.hitCaps,
         BalanceKind.combo => catalog.comboRules,
         BalanceKind.curve => catalog.curves,
+        BalanceKind.ultLevel ||
+        BalanceKind.ultUpgrade ||
+        BalanceKind.ultCharge ||
+        BalanceKind.condense ||
+        BalanceKind.materials ||
+        BalanceKind.ecoTier =>
+          {k.jsonKey: kTuningDefaults[k.jsonKey]!},
+        BalanceKind.featReward => kAchievementsById,
       };
 
   late final BalanceContext context = BalanceContext(

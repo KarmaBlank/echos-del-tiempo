@@ -93,6 +93,10 @@ class SkillReq {
 
 /// Una habilidad (o ULT). Puerto 1:1 de las entradas de `SK` / `ULTS`,
 /// más los efectos opcionales del kit de ascensión (ascension.md § 4).
+/// Carga que pide toda ULT: la barra llena (la vacía al lanzarla). El
+/// costo variable 60 / 80 / 100 de ULT v2 se revirtió (ultimates_v2.md § 7).
+const double kUltCost = 100;
+
 class SkillDef {
   final String id;
   final String name;
@@ -231,10 +235,6 @@ class SkillDef {
 
   // ---- ULT v2 (docs/specs/ultimates_v2.md § 2.2 y § 5.4) ----
 
-  /// Carga de ULT que cuesta lanzarla (60 / 80 / 100). Resta, no pone
-  /// la barra a 0. Solo cuenta en las ULT.
-  final int ultCost;
-
   /// +Pulso a todo el grupo (Pulso Magitec).
   final int pulseParty;
 
@@ -302,7 +302,6 @@ class SkillDef {
     this.pulse = 0,
     this.instant = false,
     this.requires = const [],
-    this.ultCost = 100,
     this.pulseParty = 0,
     this.openerBonus = 0,
     this.echoLast = 0,
@@ -365,7 +364,6 @@ class SkillDef {
         pulse: keepCosts ? pulse : 0,
         instant: keepCosts && instant,
         requires: keepCosts ? requires : const [],
-        ultCost: ultCost,
         pulseParty: pulseParty,
         openerBonus: openerBonus,
         echoLast: keepCosts ? echoLast : 0,

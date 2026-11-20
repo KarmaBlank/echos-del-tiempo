@@ -5,7 +5,6 @@ source: {kind: unique, ref: "primaveraRota"}
 weapons: ["arco", "ballesta"]
 classes: []
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: physical

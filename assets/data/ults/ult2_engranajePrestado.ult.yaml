@@ -5,7 +5,6 @@ source: {kind: boss, ref: "golemReloj"}
 weapons: []
 classes: []
 element: hielo
-cost: 100
 pulse: 0
 skill:
   kind: magical

@@ -1,4 +1,5 @@
 import '../data/ascension_catalog.dart';
+import '../data/tuning_catalog.dart';
 import '../data/branch_ults_catalog.dart'
     show kBranchUltWeaponTypes, kWeaponUltSkills, ownWeaponUlt;
 import '../data/game_catalog.dart';
@@ -74,7 +75,7 @@ abstract final class UltRules {
   static const maxLevel = 5;
 
   /// +poder (y efectos numéricos) por nivel sobre el 1.
-  static const perLevel = 0.06;
+  static double get perLevel => tuning(TuningId.ultLevel).d('perLevel');
 
   /// Factor de la ULT a nivel [level].
   static double levelFactor(int level) =>
@@ -97,10 +98,12 @@ abstract final class UltRules {
     final frag = kUltV2[id]?.source == UltSource.boss
         ? _bossFragment[kUltV2[id]!.ref]
         : null;
-    return UltUpgradeCost(1000 * level, {
-      CraftMaterial.cristal: level,
-      if (level >= 3) CraftMaterial.prisma: level - 2,
-      if (frag != null && level >= 3) frag: 1,
+    final t = tuning(TuningId.ultUpgrade);
+    final pf = t.i('prismaFrom');
+    return UltUpgradeCost(t.i('credits') * level, {
+      if (t.i('cristal') > 0) CraftMaterial.cristal: t.i('cristal') * level,
+      if (level >= pf) CraftMaterial.prisma: level - pf + 1,
+      if (frag != null && level >= t.i('fragFrom')) frag: 1,
     });
   }
 

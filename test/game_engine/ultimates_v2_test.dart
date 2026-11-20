@@ -99,14 +99,14 @@ void main() {
   });
 
   group('motor', () {
-    test('el costo resta de la carga (no la vacía) y sin carga se rechaza', () {
+    test('toda ULT pide la barra llena y la vacía; sin carga se rechaza', () {
       final e = _engine();
       final t = _turn(e, [_member('p1', 'guerrero', ult: 100, sel: 'ult2_sangreEco')],
           ['golem']);
       expect(ultimateOf(t.party.single)!.id, 'ult2_sangreEco');
       final step = e.command(t, 'p1', const UltimateCommand())!;
-      expect(step.state.party.single.ult, closeTo(20, 1e-9));
-      final low = _turn(e, [_member('p1', 'guerrero', ult: 70, sel: 'ult2_sangreEco')],
+      expect(step.state.party.single.ult, 0);
+      final low = _turn(e, [_member('p1', 'guerrero', ult: 90, sel: 'ult2_sangreEco')],
           ['golem']);
       expect(e.command(low, 'p1', const UltimateCommand()), isNull);
     });

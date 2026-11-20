@@ -352,8 +352,9 @@ tienen que cumplir):
   si se agota después de una Instante, defiende y termina.
 - **Menú de HABILIDADES (v0.10.x, pedido del dueño):** las Instante van
   primero, con la marca `[INSTANTE]` en celeste junto al nombre y un
-  separador fino "Instante — no terminan tu turno" arriba (no es una
-  fila: las teclas 1-9 siguen el orden que se ve). Con `chained` el
+  etiqueta "[INSTANTE] · no termina tu turno" en el panel derecho cuando
+  está bajo el cursor (v0.19.1, battle_presentation.md; antes era un
+  separador arriba de la lista). Con `chained` el
   encabezado del menú dice "Encadenaste: te queda una acción". Cada fila
   lleva su objetivo (`skillReach`: `[1 enemigo]`, `[TODOS]`,
   `[aliado]`, `[grupo]`, `[vos]`); con el cursor o el mouse sobre

@@ -2,11 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/services.dart' show AssetBundle;
 
+import '../../../../core/audio/sfx_service.dart' show tunedSfx;
 import '../../../../core/fx/fx_catalog.dart';
 import '../../../../game_engine/data/branch_ults_catalog.dart' show kBranchUltLooks;
 import '../../../../game_engine/data/enemies_catalog.dart' show kEnemyUlts;
 import '../../../../game_engine/fx/cinematic_durations.dart';
 import 'duo_cinematic.dart';
+import '../../../../game_engine/rules/display_names.dart';
 import 'fx_style.dart' show kSkillsById;
 import 'ult_cinematic.dart';
 
@@ -39,7 +41,7 @@ class LegacyFxAdapter implements LegacyFxSource {
                 : 'ult';
         final name = id == 'duo'
             ? 'Dúo (código)'
-            : kSkillsById[id]?.name ?? kEnemyUlts[id]?.name ?? id;
+            : kSkillsById[id]?.name ?? kEnemyUlts[id]?.name ?? displayName(id);
         return fromScript(id, s, category: category, name: name);
       });
 
@@ -201,6 +203,8 @@ bool hasLetterbox(FxTimeline? t) => t?.track('letterbox') != null;
 /// Cues de la pista `sound` de [t]: `(cue, ms)`. `build`, `release` e
 /// `impact` son los sonidos propios de la ULT [ultId] (audio.md
 /// § "Ultimates"); cualquier otro nombre es un id del catálogo de sonido.
+/// `vol` (0..1) y `pitch` (tono, 1 = normal) del disparo van en el id
+/// afinado (`tunedSfx`, game_editor.md § 7.6).
 List<(String, int)> soundCues(FxTimeline t, String? ultId,
     String Function(String id, String part) ultCue) {
   final tr = t.track('sound');
@@ -209,11 +213,14 @@ List<(String, int)> soundCues(FxTimeline t, String? ultId,
     for (final f in tr.fires)
       if (f.s('cue') case final cue?)
         (
-          switch (cue) {
-            'build' || 'release' || 'impact' when ultId != null =>
-              ultCue(ultId, cue),
-            _ => cue,
-          },
+          tunedSfx(
+              switch (cue) {
+                'build' || 'release' || 'impact' when ultId != null =>
+                  ultCue(ultId, cue),
+                _ => cue,
+              },
+              vol: f.d('vol', 1),
+              pitch: f.d('pitch', 1)),
           f.t
         ),
   ];

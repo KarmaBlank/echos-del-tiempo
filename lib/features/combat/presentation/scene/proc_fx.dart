@@ -1,7 +1,7 @@
 import 'dart:ui';
 
-import '../../../../game_engine/data/passive_mechanics.dart';
 import '../../../../game_engine/data/passive_tree_catalog.dart';
+import '../../../../game_engine/rules/display_names.dart';
 import 'fx_style.dart';
 import 'ult_cinematic.dart';
 
@@ -94,8 +94,8 @@ const procKeystoneColor = Color(0xFFFF4757);
 Color procTagColor(String id) =>
     kKeystoneMechanics.contains(id) ? procKeystoneColor : procNotableColor;
 
-/// Nombre que muestra el cartel (el de `kMechanics`, o el id).
-String procName(String id) => kMechanics[id]?.name ?? id;
+/// Nombre que muestra el cartel: siempre legible (`displayName`).
+String procName(String id) => displayName(id);
 
 /// Color y elemento del daño secundario de [sourceId] (rebotes,
 /// estallido, reflejo, sagrado). `null`: el de la acción (Eco Arcano).

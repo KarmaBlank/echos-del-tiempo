@@ -1847,6 +1847,7 @@ List<BattleFx> mapBattleEvents(
               ultId: sk?.id,
               casterClass: c?.classId,
               casterAscension: c?.ascensionId,
+              casterWeapon: c?.weaponType,
               script: ultScriptFor(sk?.id),
             )));
       case DamageEvent():

@@ -173,8 +173,25 @@ abstract final class RetroTheme {
       scrollbarTheme: const ScrollbarThemeData(radius: Radius.zero),
       checkboxTheme: const CheckboxThemeData(shape: _square),
       chipTheme: const ChipThemeData(shape: _square),
-      tooltipTheme: const TooltipThemeData(
-          decoration: BoxDecoration(color: RetroPalette.panel)),
+      // Mismo aspecto que el `#tip` (RetroHoverCard): sin `textStyle`
+      // Material usa texto negro en tema oscuro y el `Tooltip` estándar
+      // salía como una franja negra vacía (fix v0.19.1).
+      tooltipTheme: TooltipThemeData(
+        decoration: BoxDecoration(
+          color: ProtoColors.bg,
+          border: Border.all(color: ProtoColors.gold, width: 2),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        textStyle: TextStyle(
+            fontFamily: RetroType.bodyFamily,
+            letterSpacing: RetroType.letterSpacing,
+            fontFamilyFallback: RetroType.bodyFallback,
+            fontSize: RetroType.small,
+            height: RetroType.line,
+            color: ProtoColors.ink),
+        preferBelow: true,
+        verticalOffset: 14,
+      ),
       snackBarTheme: const SnackBarThemeData(shape: _square),
       popupMenuTheme: const PopupMenuThemeData(shape: _square),
       menuTheme: const MenuThemeData(

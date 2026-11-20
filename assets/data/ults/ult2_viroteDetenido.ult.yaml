@@ -5,11 +5,10 @@ source: {kind: weapon_mod, ref: ""}
 weapons: ["ballesta"]
 classes: []
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 2.2
+  power: 3.13
   status: {"kind":"stun","stacks":1}
   debuffs: [{"stat":"damageTaken","value":0.2,"turns":2}]
 fx: ult2_viroteDetenido

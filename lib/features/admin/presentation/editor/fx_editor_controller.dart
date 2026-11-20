@@ -3,6 +3,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/audio/sfx_catalog.dart';
+import '../../../../core/audio/sfx_files.dart';
+import '../../../../core/audio/sfx_service.dart';
 import '../../../../core/fx/fx_catalog.dart';
 import '../../../combat/domain/sprite_entry.dart';
 import 'sprite_editor_controller.dart';
@@ -60,7 +63,16 @@ class FxEditorController extends ChangeNotifier {
     this.files = const FileSelectorEditorFiles(),
     this.repoPath,
     this.spriteImage,
+    this.sfx,
+    this.pickAudio,
   });
+
+  /// Sonidos de la vista previa y del botón ESCUCHAR (game_editor.md
+  /// § 7.6). `null` = muda (tests sin audio).
+  final SfxService? sfx;
+
+  /// Diálogo para elegir un WAV/OGG (`null` = el de `file_selector`).
+  final Future<Uint8List?> Function()? pickAudio;
 
   final FxCatalog catalog;
   final EditableSpriteOverrides? overrides;
@@ -158,6 +170,148 @@ class FxEditorController extends ChangeNotifier {
 
   void togglePlay() {
     playing = !playing;
+    // Al arrancar suena lo que está justo en el cabezal (p. ej. t = 0).
+    if (playing) _soundFrom = time - 0.5;
+    notifyListeners();
+  }
+
+  // ------------------------------------------------ sonido (§ 7.6)
+
+  /// SILENCIO: la vista previa no suena (el resto sigue igual).
+  bool muted = false;
+
+  /// Hasta dónde (ms) ya sonó la pista `sound` en esta pasada.
+  double _soundFrom = -1;
+
+  void setMuted(bool v) {
+    muted = v;
+    notifyListeners();
+  }
+
+  /// El id del catálogo de sonido que suena para [cue] en la animación
+  /// elegida, con la misma regla que el juego: `build`/`release`/`impact`
+  /// = los propios de la ULT (sin sonidos propios, `build` = el genérico
+  /// y el resto no suena); cualquier otro = id del catálogo o de un
+  /// archivo. `null` si no suena.
+  String? soundIdFor(String cue) {
+    final t = edit;
+    if (t == null) return null;
+    if (Sfx.ultParts.contains(cue)) {
+      if (_knows(Sfx.ult(t.id, Sfx.ultBuild))) {
+        final own = Sfx.ult(t.id, cue);
+        return _knows(own) ? own : null;
+      }
+      return cue == Sfx.ultBuild ? Sfx.ultimate : null;
+    }
+    return _knows(cue) ? cue : null;
+  }
+
+  bool _knows(String id) =>
+      sfx?.knows(id) ??
+      (kSfxCatalog.containsKey(id) || (sfxFiles?.has(id) ?? false));
+
+  /// Archivos de sonido (assets + overrides) del juego.
+  SfxFiles? get sfxFiles => sfx?.files ?? SfxFiles.active;
+
+  /// Sonidos que disparó la vista previa: `(id, t)` (los tests los miran).
+  final firedSounds = <(String, int)>[];
+
+  void _fireSounds(double from, double to) {
+    final t = edit;
+    final tr = t?.track('sound');
+    if (t == null || tr == null) return;
+    for (final f in tr.fires) {
+      if (f.t > from && f.t <= to) {
+        final cue = f.s('cue');
+        final id = cue == null ? null : soundIdFor(cue);
+        if (id == null) continue;
+        firedSounds.add((id, f.t));
+        if (firedSounds.length > 200) firedSounds.removeAt(0);
+        if (!muted) {
+          sfx?.preview(id, vol: f.d('vol', 1), pitch: f.d('pitch', 1));
+        }
+      }
+    }
+  }
+
+  /// ESCUCHAR: toca [cue] ya, aunque la vista previa esté en silencio.
+  void listen(String cue, {double vol = 1, double pitch = 1}) {
+    final id = soundIdFor(cue);
+    if (id != null) sfx?.preview(id, vol: vol, pitch: pitch);
+  }
+
+  /// Texto del buscador de sonidos.
+  String soundQuery = '';
+
+  void setSoundQuery(String q) {
+    soundQuery = q;
+    notifyListeners();
+  }
+
+  /// Sonidos que se pueden elegir en un disparo: las partes de la ULT, el
+  /// catálogo sintetizado y los archivos, filtrados por [soundQuery].
+  List<String> get soundChoices {
+    final q = soundQuery.trim().toLowerCase();
+    final all = <String>{
+      ...Sfx.ultParts,
+      ...kSfxCatalog.keys,
+      ...?sfxFiles?.ids,
+    };
+    return [
+      for (final id in all)
+        if (q.isEmpty || id.toLowerCase().contains(q)) id
+    ]..sort((a, b) {
+        final pa = Sfx.ultParts.contains(a), pb = Sfx.ultParts.contains(b);
+        if (pa != pb) return pa ? -1 : 1;
+        return a.compareTo(b);
+      });
+  }
+
+  /// Cambia el sonido del disparo [r].
+  void setSoundCue(FxKeyRef r, String id) => setKeyText(r, 'cue', id);
+
+  /// Volumen (`vol`, 0..1) o tono (`pitch`, 0.5..2) del disparo [r]; el
+  /// valor neutro (1) borra el campo.
+  void setSoundLevel(FxKeyRef r, String field, double v) {
+    final x = field == 'vol' ? v.clamp(0.0, 1.0) : v.clamp(0.5, 2.0);
+    _setKey(r, (k) => k.withField(field, (x - 1).abs() < 0.001 ? null : x));
+  }
+
+  /// `true` si el sonido [id] tiene override local (archivo del Editor).
+  bool soundOverridden(String id) => sfxFiles?.hasOverride(id) ?? false;
+
+  /// REEMPLAZAR POR ARCHIVO: elige un WAV/OGG y lo guarda como override
+  /// del sonido [id].
+  Future<void> replaceSound(String id) async {
+    if (overrides == null) return;
+    final pick = pickAudio ?? const FileSelectorEditorFiles().pickAudio;
+    final bytes = await pick();
+    if (bytes != null) await putSound(id, bytes);
+  }
+
+  /// Guarda [bytes] como override del sonido [id] y recarga en caliente.
+  Future<void> putSound(String id, Uint8List bytes) async {
+    final o = overrides;
+    if (o == null) return;
+    if (!isSfxFile(bytes)) {
+      notice = const EditorNotice('No es un WAV ni un OGG.', error: true);
+      notifyListeners();
+      return;
+    }
+    await o.putSfx(id, bytes);
+    await sfxFiles?.reload();
+    notice = EditorNotice('Sonido reemplazado: $id', ok: true);
+    notifyListeners();
+  }
+
+  /// Borra el override del sonido [id] (vuelve el del repo o el
+  /// sintetizado).
+  Future<void> revertSound(String id) async {
+    final o = overrides;
+    if (o == null) return;
+    await o.removeSfx(id);
+    await sfxFiles?.reload();
+    notice = EditorNotice('Sonido original: $id');
     notifyListeners();
   }
 
@@ -185,6 +339,8 @@ class FxEditorController extends ChangeNotifier {
   void seek(double ms) {
     time = ms.clamp(0, duration);
     playing = false;
+    // El scrub nunca dispara sonidos (game_editor.md § 7.6).
+    _soundFrom = time;
     notifyListeners();
   }
 
@@ -192,10 +348,14 @@ class FxEditorController extends ChangeNotifier {
   void advance(double dtMs) {
     if (!playing || edit == null) return;
     var t = time + dtMs * speed;
+    _fireSounds(_soundFrom, math.min(t, duration));
+    _soundFrom = t;
     if (t > duration + 400) {
       // Pausa corta al final antes de volver a empezar.
       if (loop) {
         t = 0;
+        _fireSounds(-1, 0);
+        _soundFrom = 0;
       } else {
         t = duration;
         playing = false;
@@ -690,13 +850,17 @@ class FxEditorController extends ChangeNotifier {
     final o = overrides;
     if (o == null) return;
     await o.refreshFx();
-    final n = o.overriddenIds.length + o.overriddenFx.length;
+    await o.refreshSfx();
+    final n = o.overriddenIds.length +
+        o.overriddenFx.length +
+        o.overriddenSfx.length;
     if (n == 0) {
       notice = const EditorNotice('No hay overrides para exportar.', error: true);
     } else if (await files.saveZip(await o.exportPack(), 'paquete_de_arte.zip')) {
       notice = EditorNotice(
           'Paquete exportado (${o.overriddenIds.length} sprites, '
-          '${o.overriddenFx.length} animaciones).',
+          '${o.overriddenFx.length} animaciones, '
+          '${o.overriddenSfx.length} sonidos).',
           ok: true);
     }
     notifyListeners();
@@ -710,6 +874,7 @@ class FxEditorController extends ChangeNotifier {
     try {
       final got = await o.importPack(zip);
       await catalog.reload();
+      await sfxFiles?.reload();
       if (selectedId != null) edit = catalog.timeline(selectedId!);
       dirty = false;
       notice = EditorNotice('Paquete importado (${got.length} archivos).', ok: true);
@@ -720,6 +885,9 @@ class FxEditorController extends ChangeNotifier {
   }
 
   /// Overrides de fx a publicar: id → ruta dentro de `assets/fx/`.
+  /// Sonidos con override local (se publican junto con las animaciones).
+  int get publishableSounds => overrides?.overriddenSfx.length ?? 0;
+
   Map<String, String> get publishable => {
         for (final id in ids)
           if (catalog.hasOverride(id))
@@ -736,10 +904,13 @@ class FxEditorController extends ChangeNotifier {
     }
     try {
       final done = await overrides!.publishFx(repo, publishable);
+      final sounds = await overrides!.publishSfx(repo);
       await catalog.reload();
+      await sfxFiles?.reload();
       if (selectedId != null) edit = catalog.timeline(selectedId!);
       notice = EditorNotice(
-          'Publicado al repo: ${done.length} animaciones (falta commit).',
+          'Publicado al repo: ${done.length} animaciones, '
+          '${sounds.length} sonidos (falta commit).',
           ok: true);
     } catch (e) {
       notice = EditorNotice('$e', error: true);

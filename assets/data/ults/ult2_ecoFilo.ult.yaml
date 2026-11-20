@@ -5,11 +5,10 @@ source: {kind: weapon_mod, ref: ""}
 weapons: ["espada"]
 classes: []
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 1.05
+  power: 1.42
   hits: 3
   breakBonus: 0.5
 fx: ult2_ecoFilo
