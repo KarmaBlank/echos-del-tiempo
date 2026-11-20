@@ -20,6 +20,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../game_engine/session_test_helpers.dart';
 import '../inventory/loot_fixtures.dart';
 import '../../app/button_look.dart';
+import '../../app/square_ui_audit.dart';
 
 final _rules = CharacterRules(progression);
 
@@ -85,6 +86,7 @@ void main() {
     var started = 0;
     await _pumpTitle(tester,
         repo: repo, store: store, onStart: () => started++);
+    expect(roundedUi(tester), isEmpty, reason: 'regla pixel: sin redondeos');
     expect(find.text('ECOS DEL TIEMPO'), findsOneWidget);
     expect(find.text('CREA TU PRIMER PERSONAJE'), findsOneWidget);
     expect(find.byKey(const ValueKey('char-create-cancel')), findsNothing);

@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../game_engine/session_test_helpers.dart';
 import '../panel_test_harness.dart';
+import '../../app/square_ui_audit.dart';
 
 String _plain(WidgetTester tester, String key) => tester
     .widget<Text>(find.descendant(
@@ -27,6 +28,14 @@ void main() {
     final c = await pumpPanel(tester,
         profile: start,
         build: (v, c) => CharacterPanel(view: v, controller: c));
+    // Regla pixel: ninguna pestaña de PERSONAJE tiene redondeos.
+    for (var i = 0; i < CharacterTab.values.length; i++) {
+      await tester.tap(find.byKey(ValueKey('tab-$i')));
+      await tester.pumpAndSettle();
+      expect(roundedUi(tester), isEmpty, reason: 'pestaña $i');
+    }
+    await tester.tap(find.byKey(const ValueKey('tab-0')));
+    await tester.pumpAndSettle();
     final before = progression.derivedStats(start);
     // DsStatLine sin cambio: solo `HP 100` (design_system.md § 6).
     DsStatLine line(String k) =>

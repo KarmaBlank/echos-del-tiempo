@@ -16,6 +16,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../game_engine/session_test_helpers.dart';
 import '../panel_test_harness.dart';
 import 'loot_fixtures.dart';
+import '../../app/square_ui_audit.dart';
 
 Future<SessionController> _inventory(WidgetTester tester, PlayerProfile p,
         {SessionView Function(SessionView v, SessionController c)? view}) =>
@@ -37,6 +38,7 @@ void main() {
   testWidgets('grilla: equipada aparte, pilas con cantidad y ficha',
       (tester) async {
     final c = await _inventory(tester, lootWarrior());
+    expect(roundedUi(tester), isEmpty, reason: 'regla pixel: sin redondeos');
     final p = c.view!.me!.profile;
     expect(find.byKey(const ValueKey('inv-equipped')), findsOneWidget);
     for (var i = 0; i < InventoryRules.cells; i++) {

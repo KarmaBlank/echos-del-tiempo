@@ -208,7 +208,6 @@ class _FieldRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
         color: pending
             ? theme.colorScheme.tertiaryContainer.withValues(alpha: 0.35)
             : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),

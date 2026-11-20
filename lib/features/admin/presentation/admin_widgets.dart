@@ -14,8 +14,7 @@ class KindBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: s.secondaryContainer,
-        borderRadius: BorderRadius.circular(4),
-      ),
+        ),
       child: Text(label,
           style: TextStyle(fontSize: 10, color: s.onSecondaryContainer, fontWeight: FontWeight.w600)),
     );
