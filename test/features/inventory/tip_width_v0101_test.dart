@@ -112,19 +112,31 @@ void main() {
               w.key is ValueKey<String> &&
               (w.key as ValueKey<String>).value.startsWith('inv-strip-')));
       expect(lines.evaluate().length, greaterThanOrEqualTo(6));
-      final head = tester.getSize(find.descendant(
-          of: strip, matching: find.textContaining(RegExp('CAMBIOS|ACTUAL'))));
+      // DsStatLine: todas las líneas del mismo alto (una línea de Cuerpo)
+      // y ninguna parte partida ni recortada.
+      final first =
+          tester.getSize(find.byKey(lines.evaluate().first.widget.key!));
       for (final k in [for (final e in lines.evaluate()) e.widget.key!]) {
         final f = find.byKey(k);
-        final r = tester.renderObject<RenderParagraph>(
-            find.descendant(of: f, matching: find.byType(RichText)).first);
-        // Una línea: ni partida ni recortada.
-        expect(tester.getSize(f).height, closeTo(head.height, 0.5),
+        expect(tester.getSize(f).height, closeTo(first.height, 0.5),
             reason: '$k ($size)');
-        expect(r.didExceedMaxLines, isFalse, reason: '$k');
-        expect(r.size.width,
-            greaterThanOrEqualTo(r.getMaxIntrinsicWidth(double.infinity) - 0.5),
-            reason: '$k recortada');
+        expect(tester.getSize(f).width,
+            lessThanOrEqualTo(tester.getSize(strip).width + 0.5),
+            reason: '$k ($size) se sale de la franja');
+        for (final e in find
+            .descendant(of: f, matching: find.byType(RichText))
+            .evaluate()) {
+          final r = e.renderObject! as RenderParagraph;
+          expect(r.didExceedMaxLines, isFalse, reason: '$k');
+          expect(
+              r.size.width,
+              greaterThanOrEqualTo(
+                  r.getMaxIntrinsicWidth(double.infinity) - 0.5),
+              reason: '$k recortada');
+          expect(r.size.height,
+              lessThanOrEqualTo(r.getMaxIntrinsicHeight(double.infinity) + 0.5),
+              reason: '$k partida');
+        }
         // Se puede llevar a la vista (scroll del panel).
         await tester.ensureVisible(f);
         await tester.pump();

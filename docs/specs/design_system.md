@@ -240,10 +240,31 @@ título por color, ATRIBUTOS completo (barra de herramientas arriba,
 `DsSectionHeader`: título y acción con tope de 45 % del ancho cada uno
 (con texto ENORME no desbordan).
 
-Pendiente: el contenido de INVENTARIO, ÁRBOL, FILTRO, BUILD y BESTIARIO
-(sus vistas en `lib/features/inventory`, `passive_tree`, `build_planner`,
-`bestiary`) sigue con `PanelButton` / `SectionPanel` y sus textos fijos
-propios; se migran vista por vista.
+INVENTARIO (panels.md § Inventario, "Cambios v0.11"): barra de
+herramientas arriba (`TÚ` / compañeros, `DsSearchField`, ORDENAR,
+LIMPIAR), `DsButton` en todo (motivo en el tooltip), menús de acciones
+y de LIMPIAR con filas `DsListRow`, franja de CAMBIOS con `DsStatLine`,
+COMPARAR A / B con superficies sin borde, rótulos en Subtítulo.
+
+FILTRO (panels.md § Filtro de loot, "Cambios v0.11"): barra con vista
+CASILLAS / TEXTO, estado, RESTAURAR, DESHACER y GUARDAR (principal);
+reglas en `DsListRow` de una línea con on / off y ×; casillas en grilla
+compacta; ayudas al "?".
+
+Cambios de componentes por esta migración:
+- `DsStatLine`: `format` / `diffFormat` (decimales, %), `higherIsBetter`
+  (el peso: menos es mejor) y `showChange`; sin cambio muestra solo
+  `ATQ  15` en Detalle (principio 0: el dato aparece cuando cambia).
+- `DsListRow`: el dato corto se recorta con "…" (con texto ENORME no
+  desborda) y `autofocus` (primera fila de un menú).
+
+`CharacterStatRows` (compartido con ATRIBUTOS › VISTA PREVIA) sigue con
+`StatChange`: sus filas llevan sufijos (`(-12% daño)`, `(daño ×2)`) y la
+línea del peso, y los tests de ATRIBUTOS leen `HP 100 → 120 ▲`; se
+migra junto con esa vista.
+
+Pendiente: ÁRBOL, BUILD y BESTIARIO (`passive_tree`, `build_planner`,
+`bestiary`), en otra rama.
 
 Capturas antes / después (1920×1080): `docs/release_shots/v0.11.0/`,
 generadas por `tool/shots/personaje_ds_shots_test.dart` (`SHOT_SUFFIX`).

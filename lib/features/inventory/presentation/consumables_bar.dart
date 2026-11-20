@@ -1,9 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
-import '../../../app/theme/retro_type.dart';
 import '../../../app/widgets/menu_focus.dart';
 import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -84,9 +83,7 @@ class InventoryStacksBar extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(retroText(title),
-              style: const TextStyle(
-                  color: ProtoColors.gold, fontSize: RetroType.small)),
+          Text(retroText(title), style: DsText.subtitle()),
           SizedBox(height: gap),
           FocusGrid(
             count: kinds.length,
@@ -109,8 +106,8 @@ class InventoryStacksBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Wrap(
         key: const ValueKey('inv-stacks'),
-        spacing: 20,
-        runSpacing: 6,
+        spacing: DsSpace.lg,
+        runSpacing: DsSpace.xs,
         children: [
           if (consumables)
             _group('CONSUMIBLES', 'consumables', InventoryRules.consumables),

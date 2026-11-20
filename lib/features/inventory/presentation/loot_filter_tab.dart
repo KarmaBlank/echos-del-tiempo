@@ -3,10 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/panel_widgets.dart';
-import '../../../app/theme/proto_colors.dart';
-import '../../../app/theme/proto_markup.dart';
+import '../../../app/design/design.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/build_wants.dart';
@@ -43,7 +40,16 @@ const kFilterGrammar = '<b>Mostrar</b> u <b>Ocultar</b> [# nombre] y debajo, '
     'Gana la primera regla que coincide. # empieza un comentario.';
 
 /// Ayuda `[?]` de la pestaña.
-const kFilterHelp = '<b>Filtro de loot</b><br>$kFilterGrammar';
+const kFilterHelp = '<b>Filtro de loot</b><br>'
+    '<span class="k">CASILLAS</span>: OCULTAR RÁPIDO marca lo que no querés '
+    'ver en el mapa (por tipo, peso, uso y nivel nunca se ocultan Épicas ni '
+    'Legendarias; la excepción ★ va primero y le gana a todo). TUS REGLAS, en '
+    'orden de arriba a abajo: la casilla apaga la regla sin borrarla (queda '
+    'en el texto con #OFF) y ✕ la borra.<br>'
+    '<span class="k">★ MI BUILD</span>: la condición Build coincide con lo '
+    'que pide tu plan (pestaña BUILD); en el mapa lleva ★.<br>'
+    '<span class="k">VISTA PREVIA</span>: cómo se verían objetos de muestra '
+    'de tu nivel.<br><br>$kFilterGrammar';
 
 /// Objetos de muestra para la vista previa del filtro (nivel [level]).
 List<LootDrop> filterSamples(int level) {
@@ -162,38 +168,81 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
     final reason = ShopGuards.saveFilter(
         _text.text, p.lootFilter, parsed.errors.length,
         defaultText: LootFilterRules.defaultText);
+    final f = parsed.filter;
 
     final doc = FilterDoc.parse(_text.text, _options, catalog: rules.catalog);
-    // Con poco alto (texto ENORME + el padding mínimo de los botones) el
-    // editor no entra: la lista pasa a alto fijo y todo scrollea.
-    Widget editorFor(bool tight) => Column(
-      mainAxisSize: tight ? MainAxisSize.min : MainAxisSize.max,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            PanelButton('CASILLAS',
-                key: const ValueKey('filter-view-checks'),
-                selected: !_textView,
-                onPressed: () => setState(() => _textView = false)),
-            PanelButton('TEXTO',
-                key: const ValueKey('filter-view-text'),
-                selected: _textView,
-                onPressed: () => setState(() => _textView = true)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (!_textView)
-          tight
-              ? SizedBox(height: 260, child: _checksView(doc))
-              : Expanded(child: _checksView(doc)),
-        if (_textView)
-          _flex(
-            tight,
-            TextField(
+
+    // Barra de herramientas (design_system.md § 4): vista, estado y
+    // acciones en una fila; GUARDAR es la principal.
+    final status = parsed.ok
+        ? 'Sin errores · ${f.rules.length} regla${f.rules.length == 1 ? '' : 's'}'
+            '${p.lootFilter == null ? ' · por defecto' : ''}'
+        : '${parsed.errors.first}'
+            '${parsed.errors.length > 1 ? ' (+${parsed.errors.length - 1})' : ''}';
+    final statusText = KeyedSubtree(
+      key: const ValueKey('filter-status'),
+      child: Text(retroText(status),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: DsText.detail(parsed.ok ? DsColors.success : DsColors.danger)),
+    );
+    final toolbar = Padding(
+      padding: EdgeInsets.only(bottom: DsSpace.sm),
+      child: Wrap(
+        spacing: DsSpace.sm,
+        runSpacing: DsSpace.xs,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          DsButton('CASILLAS',
+              key: const ValueKey('filter-view-checks'),
+              size: DsButtonSize.compact,
+              selected: !_textView,
+              onPressed: () => setState(() => _textView = false)),
+          DsButton('TEXTO',
+              key: const ValueKey('filter-view-text'),
+              size: DsButtonSize.compact,
+              selected: _textView,
+              onPressed: () => setState(() => _textView = true)),
+          SizedBox(width: DsSpace.md),
+          parsed.ok
+              ? statusText
+              : Tooltip(message: parsed.errors.join('\n'), child: statusText),
+          SizedBox(width: DsSpace.md),
+          DsButton('RESTAURAR POR DEFECTO',
+              key: const ValueKey('filter-default'),
+              kind: DsButtonKind.ghost,
+              size: DsButtonSize.compact,
+              onPressed: _text.text == LootFilterRules.defaultText
+                  ? null
+                  : () => _text.text = LootFilterRules.defaultText),
+          DsButton('DESHACER',
+              key: const ValueKey('filter-revert'),
+              size: DsButtonSize.compact,
+              onPressed: _text.text == _savedText
+                  ? null
+                  : () => _text.text = _savedText),
+          DsButton('GUARDAR',
+              key: const ValueKey('filter-save'),
+              kind: DsButtonKind.primary,
+              size: DsButtonSize.compact,
+              tooltip: reason,
+              onPressed: reason != null
+                  ? null
+                  : () {
+                      final t = _text.text;
+                      shop.controller.setLootFilter(
+                          t == LootFilterRules.defaultText ? null : t);
+                      setState(() {});
+                    }),
+        ],
+      ),
+    );
+
+    // Con poco alto (texto ENORME) el editor no entra: alto fijo y todo
+    // scrollea.
+    Widget editorFor(bool tight) {
+      final Widget view = _textView
+          ? TextField(
               key: const ValueKey('filter-text'),
               controller: _text,
               focusNode: _focus,
@@ -201,46 +250,16 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
               expands: true,
               keyboardType: TextInputType.multiline,
               textAlignVertical: TextAlignVertical.top,
-              style: TextStyle(
-                  fontFamily: RetroType.bodyFamily,
-                  letterSpacing: RetroType.letterSpacing,
-                  fontFamilyFallback: RetroType.bodyFallback,
-                  fontSize: RetroType.small,
-                  height: 1.8),
-              decoration: const InputDecoration(
-                  contentPadding: EdgeInsets.all(8), isDense: true),
-            ),
-          ),
-        const SizedBox(height: 8),
-        Wrap(
-          alignment: WrapAlignment.end,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            PanelButton('RESTAURAR POR DEFECTO',
-                key: const ValueKey('filter-default'),
-                onPressed: _text.text == LootFilterRules.defaultText
-                    ? null
-                    : () => _text.text = LootFilterRules.defaultText),
-            PanelButton('DESHACER',
-                key: const ValueKey('filter-revert'),
-                onPressed: _text.text == _savedText
-                    ? null
-                    : () => _text.text = _savedText),
-            PanelButton('GUARDAR',
-                key: const ValueKey('filter-save'),
-                accent: ProtoColors.green,
-                reason: reason, onPressed: () {
-              final t = _text.text;
-              shop.controller
-                  .setLootFilter(t == LootFilterRules.defaultText ? null : t);
-              setState(() {});
-            }),
-          ],
-        ),
-      ],
-    );
+              style: DsText.body(DsColors.textPrimary).copyWith(height: 1.4),
+              decoration: InputDecoration(
+                  contentPadding: EdgeInsets.all(DsSpace.sm), isDense: true),
+            )
+          : _checksView(doc);
+      return tight
+          ? SizedBox(height: 260, child: view)
+          : SizedBox.expand(child: view);
+    }
+
     final editor = LayoutBuilder(
         builder: (context, c) => c.maxHeight < RetroType.width(context, 260)
             ? SingleChildScrollView(child: editorFor(true))
@@ -256,53 +275,48 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
         attributes: p.attributes,
         classId: p.classId,
         wants: wants);
-    final f = parsed.filter;
-    final side = PanelDetail(
-      children: [
-        const Text('VALIDACION', style: TextStyle(color: ProtoColors.gold)),
-        ProtoText(
-          key: const ValueKey('filter-status'),
-          parsed.ok
-              ? protoColor(ProtoColors.green,
-                  'Sin errores · ${f.rules.length} regla${f.rules.length == 1 ? '' : 's'}')
-              : protoColor(ProtoColors.red,
-                  [for (final e in parsed.errors) protoEsc(e)].join('<br>')),
-        ),
-        if (p.lootFilter == null)
-          Text(retroText('Usas el filtro por defecto.'),
-              style: const TextStyle(color: ProtoColors.dim)),
-        const SizedBox(height: 8),
-        ..._buildSection(wants),
-        const SizedBox(height: 8),
-        const Text('VISTA PREVIA', style: TextStyle(color: ProtoColors.gold)),
-        Text(retroText('Así se verían en el mapa (tu nivel ${p.level}):'),
-            style: const TextStyle(color: ProtoColors.dim)),
-        const SizedBox(height: 4),
-        for (final (i, d) in filterSamples(p.level).indexed)
-          _sample(rules, fr, f, d, ctx, i),
-        const SizedBox(height: 8),
-        const Text('GRAMATICA', style: TextStyle(color: ProtoColors.gold)),
-        const ProtoText(kFilterGrammar,
-            style: TextStyle(color: ProtoColors.dim)),
-      ],
+    final side = SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ..._buildSection(wants),
+          DsSectionHeader('VISTA PREVIA · NV ${p.level}'),
+          for (final (i, d) in filterSamples(p.level).indexed)
+            _sample(rules, fr, f, d, ctx, i),
+        ],
+      ),
     );
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(child: editor),
-        const SizedBox(width: 16),
-        SizedBox(width: 400, child: side),
-      ],
-    );
+    return LayoutBuilder(
+        builder: (context, box) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Con texto ENORME la barra baja de línea: tope del 40 % del alto.
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxHeight: box.maxHeight.isFinite
+                          ? box.maxHeight * 0.4
+                          : double.infinity),
+                  child: SingleChildScrollView(child: toolbar),
+                ),
+                Expanded(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: editor),
+                      SizedBox(width: DsSpace.md),
+                      SizedBox(width: 400, child: side),
+                    ],
+                  ),
+                ),
+              ],
+            ));
   }
 
-  Widget _flex(bool tight, Widget child) =>
-      tight ? SizedBox(height: 260, child: child) : Expanded(child: child);
-
-  /// Vista CASILLAS: OCULTAR RÁPIDO (casillas que agregan / sacan reglas
-  /// `# rápido: …`) y TUS REGLAS (cada regla con prender / apagar y ✕).
-  /// Todo cambia el mismo texto (filter_quick.dart).
+  /// Vista CASILLAS: OCULTAR RÁPIDO (casillas en grilla que agregan /
+  /// sacan reglas `# rápido: …`) y TUS REGLAS (una fila por regla con
+  /// prender / apagar y ✕). Todo cambia el mismo texto (filter_quick.dart).
+  /// La explicación está en el "?" ([kFilterHelp]).
   Widget _checksView(FilterDoc doc) {
     final checked = doc.checked;
     Widget group(QuickGroup g) {
@@ -310,33 +324,38 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
         for (final o in _options)
           if (o.group == g) o
       ];
+      final label = Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Text(retroText(g.label), style: DsText.detail()),
+      );
+      final checks = Wrap(spacing: DsSpace.md, children: [
+        for (final o in opts)
+          FilterCheck(
+            key: ValueKey('filter-quick-${o.id}'),
+            label: o.label,
+            value: checked.contains(o.id),
+            color: g == QuickGroup.excepcion ? kPlanColor : null,
+            onChanged: (on) => _setText((doc.setQuick(o.id, on), 0)),
+          ),
+      ]);
+      // Grilla: rótulo a la izquierda; si no entra (texto grande), arriba.
       return Padding(
-        padding: const EdgeInsets.only(bottom: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: RetroType.width(context, 150),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Text(retroText(g.label),
-                    style: const TextStyle(color: ProtoColors.sky)),
-              ),
-            ),
-            Expanded(
-              child: Wrap(spacing: 14, children: [
-                for (final o in opts)
-                  FilterCheck(
-                    key: ValueKey('filter-quick-${o.id}'),
-                    label: o.label,
-                    value: checked.contains(o.id),
-                    color: g == QuickGroup.excepcion ? kPlanColor : null,
-                    onChanged: (on) => _setText((doc.setQuick(o.id, on), 0)),
-                  ),
-              ]),
-            ),
-          ],
-        ),
+        padding: EdgeInsets.only(bottom: DsSpace.xs),
+        child: LayoutBuilder(builder: (context, c) {
+          final lw = RetroType.width(context, 150);
+          if (c.maxWidth < lw * 2.5) {
+            return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [label, checks]);
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(width: lw, child: label),
+              Expanded(child: checks),
+            ],
+          );
+        }),
       );
     }
 
@@ -345,102 +364,69 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(retroText('OCULTAR RÁPIDO'),
-              style: const TextStyle(color: ProtoColors.gold)),
-          Text(
-              retroText(
-                  'Marcá lo que no querés ver en el mapa. Por tipo, peso, '
-                  'uso y nivel nunca se ocultan Épicas ni Legendarias. La '
-                  'excepción ★ va primero y le gana a todo lo demás.'),
-              style: const TextStyle(color: ProtoColors.dim)),
-          const SizedBox(height: 6),
+          const DsSectionHeader('OCULTAR RÁPIDO'),
           for (final g in QuickGroup.values) group(g),
-          const SizedBox(height: 8),
-          Text(retroText('TUS REGLAS (${doc.blocks.length})'),
-              key: const ValueKey('filter-rules-title'),
-              style: const TextStyle(color: ProtoColors.gold)),
-          Text(
-              retroText(
-                  'En orden, de arriba a abajo. La casilla apaga la regla '
-                  'sin borrarla (queda en el texto con #OFF); ✕ la borra.'),
-              style: const TextStyle(color: ProtoColors.dim)),
-          const SizedBox(height: 4),
+          DsSectionHeader('TUS REGLAS (${doc.blocks.length})',
+              key: const ValueKey('filter-rules-title')),
           if (doc.blocks.isEmpty)
-            Text(retroText('Sin reglas: todo se ve con el color de su rareza.'),
-                style: const TextStyle(color: ProtoColors.dim)),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: DsSpace.md),
+              child: Text(retroText('Sin reglas'), style: DsText.detail()),
+            ),
           for (final (i, b) in doc.blocks.indexed) _ruleRow(doc, i, b),
         ],
       ),
     );
   }
 
+  /// Una regla en una línea: casilla, verbo (verde / rojo), nombre y
+  /// condiciones; el texto completo en el tooltip.
   Widget _ruleRow(FilterDoc doc, int i, FilterBlock b) {
     final on = b.enabled;
-    final verbColor = !on
-        ? ProtoColors.dim
-        : b.show
-            ? ProtoColors.green
-            : ProtoColors.red;
     final name = FilterDoc.summary(b);
     final conds = FilterDoc.conditionsText(b);
-    return Padding(
+    // El verbo da el color de la fila: verde Mostrar, rojo Ocultar.
+    return DsListRow(
       key: ValueKey('filter-rule-$i'),
-      padding: const EdgeInsets.symmetric(vertical: 1),
-      child: Row(
+      leading: FilterCheck(
+        key: ValueKey('filter-rule-on-$i'),
+        value: on,
+        onChanged: (v) => _setText((doc.setEnabled(i, v), 0)),
+      ),
+      title: retroText('${b.show ? 'Mostrar' : 'Ocultar'} · $name'),
+      titleColor: b.show ? DsColors.success : DsColors.danger,
+      enabled: on,
+      detail: b.errors.isNotEmpty
+          ? retroText('con errores')
+          : name != conds
+              ? retroText(conds)
+              : null,
+      detailColor: b.errors.isNotEmpty ? DsColors.danger : null,
+      onTap: () => _setText((doc.setEnabled(i, !on), 0)),
+      tooltip: DsTooltipCard(
+        title: retroText(name),
         children: [
-          FilterCheck(
-            key: ValueKey('filter-rule-on-$i'),
-            value: on,
-            onChanged: (v) => _setText((doc.setEnabled(i, v), 0)),
-          ),
-          Expanded(
-            child: RetroTooltip(
-              message: protoEsc(b.text.trimRight()).replaceAll('\n', '<br>'),
-              child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(
-                      text: retroText(b.show ? 'Mostrar' : 'Ocultar'),
-                      style: TextStyle(color: verbColor)),
-                  TextSpan(
-                      text: retroText(' · $name'),
-                      style: TextStyle(
-                          color: on ? ProtoColors.ink : ProtoColors.dim)),
-                  if (name != conds)
-                    TextSpan(
-                        text: retroText(' · $conds'),
-                        style: const TextStyle(color: ProtoColors.dim)),
-                  if (b.errors.isNotEmpty)
-                    TextSpan(
-                        text: retroText(' · con errores'),
-                        style: const TextStyle(color: ProtoColors.red)),
-                ]),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-          InkWell(
-            key: ValueKey('filter-rule-del-$i'),
-            onTap: () => _setText((doc.remove(i), 0)),
-            child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              child: Text('✕', style: TextStyle(color: ProtoColors.red)),
-            ),
-          ),
+          Text(b.text.trimRight(), style: DsText.detail()),
         ],
       ),
+      // Fantasma (sin caja hasta el hover): la fila no crece por el botón.
+      trailing: DsButton('×',
+          key: ValueKey('filter-rule-del-$i'),
+          kind: DsButtonKind.ghost,
+          size: DsButtonSize.compact,
+          accent: DsColors.danger,
+          tooltip: 'Borrar la regla',
+          onPressed: () => _setText((doc.remove(i), 0))),
     );
   }
 
-  /// Sección "Coincide con mi build" (condición `Build`, loot.md § 13):
-  /// elegir qué parte del plan y agregarla a la regla del cursor o como
-  /// una regla nueva que resalta / oculta.
+  /// Sección "★ MI BUILD" (condición `Build`, loot.md § 13): elegir qué
+  /// parte del plan y agregarla a la regla del cursor o como una regla
+  /// nueva que resalta / oculta.
   List<Widget> _buildSection(BuildWants wants) {
     String count(int n, String one, String many) => '$n ${n == 1 ? one : many}';
     final summary = wants.isEmpty
-        ? 'No tenés plan de build: la condición no coincide con nada hasta '
-            'que armes uno en la pestaña BUILD.'
+        ? 'No tenés plan de build (pestaña BUILD).'
         : 'Tu plan busca: ${[
             if (wants.weaponTypes.length + wants.weaponBases.length > 0)
               count(wants.weaponTypes.length + wants.weaponBases.length,
@@ -452,10 +438,10 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
           ].join(' · ')}.';
     Widget kind(String label, BuildMatch? k) {
       final on = k == null ? _buildKinds.isEmpty : _buildKinds.contains(k);
-      return PanelButton(label,
+      return DsButton(label,
           key: ValueKey('filter-build-kind-${k?.name ?? 'any'}'),
+          size: DsButtonSize.compact,
           selected: on,
-          accent: kPlanColor,
           onPressed: () => setState(() {
                 if (k == null) {
                   _buildKinds.clear();
@@ -467,53 +453,54 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
 
     final cond = FilterBuildSnippets.condition(_buildKinds).text;
     return [
-      Text(retroText('★ COINCIDE CON MI BUILD'),
-          key: const ValueKey('filter-build-title'),
-          style: const TextStyle(color: kPlanColor)),
-      Text(
-          retroText('Condición para tus reglas: el arma cumple algo de tu '
-              'plan de build. En el mapa lleva ★. Elegí qué tiene que cumplir:'),
-          style: const TextStyle(color: ProtoColors.dim)),
-      const SizedBox(height: 4),
-      Wrap(spacing: 6, runSpacing: 6, children: [
-        kind('CUALQUIER META', null),
+      const DsSectionHeader('★ MI BUILD', key: ValueKey('filter-build-title')),
+      Text(retroText(summary),
+          key: const ValueKey('filter-build-plan'),
+          style: DsText.detail(wants.isEmpty ? null : kPlanColor)),
+      SizedBox(height: DsSpace.xs),
+      Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+        kind('CUALQUIERA', null),
         kind('BASE O TIPO', BuildMatch.base),
         kind('MOD', BuildMatch.mod),
         kind('PASIVA', BuildMatch.pasiva),
         kind('HABILIDAD', BuildMatch.habilidad),
       ]),
-      const SizedBox(height: 4),
+      SizedBox(height: DsSpace.xs),
       Text(retroText('Línea: $cond'),
           key: const ValueKey('filter-build-line'),
-          style: const TextStyle(color: ProtoColors.ink)),
-      const SizedBox(height: 4),
-      Wrap(spacing: 6, runSpacing: 6, children: [
-        PanelButton('+ A LA REGLA DEL CURSOR',
+          style: DsText.body(DsColors.textPrimary)),
+      SizedBox(height: DsSpace.xs),
+      Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+        DsButton('+ AL CURSOR',
             key: const ValueKey('filter-build-insert'),
+            size: DsButtonSize.compact,
+            tooltip: 'Agrega la condición a la regla donde está el cursor',
             onPressed: () => _setText(FilterBuildSnippets.insertCondition(
                 _text.text, _text.selection.baseOffset, _buildKinds))),
-        PanelButton('+ REGLA: RESALTAR',
+        DsButton('+ RESALTAR',
             key: const ValueKey('filter-build-highlight'),
+            size: DsButtonSize.compact,
             accent: kPlanColor,
+            tooltip: 'Regla nueva arriba: resalta lo de tu build',
             onPressed: () => _setText(FilterBuildSnippets.prependRule(
                 _text.text, FilterBuildSnippets.highlightRule(_buildKinds)))),
-        PanelButton('+ REGLA: OCULTAR COMUNES FUERA DEL PLAN',
+        DsButton('+ OCULTAR FUERA',
             key: const ValueKey('filter-build-hide'),
+            size: DsButtonSize.compact,
+            tooltip: 'Regla nueva arriba: oculta comunes fuera del plan',
             onPressed: () => _setText(FilterBuildSnippets.prependRule(
                 _text.text, FilterBuildSnippets.hideRule))),
       ]),
-      const SizedBox(height: 4),
-      Text(retroText(summary),
-          key: const ValueKey('filter-build-plan'),
-          style: const TextStyle(color: ProtoColors.dim)),
     ];
   }
 
+  /// Una muestra en una línea: la etiqueta como en el mapa y, al lado, la
+  /// regla que la toma.
   Widget _sample(ProgressionRules rules, LootFilterRules fr, LootFilter f,
       LootDrop d, FilterContext ctx, int i) {
     final v = fr.evaluate(f, d, ctx);
     final rule = v.ruleIndex == null
-        ? 'sin regla: color de la rareza'
+        ? 'sin regla'
         : f.rules[v.ruleIndex!].name ?? 'regla ${v.ruleIndex! + 1}';
     final st = v.style;
     final extra = [
@@ -526,30 +513,36 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
     final it = d.item;
     return Padding(
       key: ValueKey('filter-sample-$i'),
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: EdgeInsets.only(bottom: DsSpace.xs),
+      child: Row(
         children: [
-          LootLabel(
-            text: dropLabelText(rules, d),
-            verdict: v,
-            tooltip: it == null
-                ? stackTooltipMarkup(d.stack!, d.count)
-                : itemTooltipMarkup(rules, it,
-                    level: ctx.level, attributes: ctx.attributes),
+          Flexible(
+            child: LootLabel(
+              text: dropLabelText(rules, d),
+              verdict: v,
+              tooltip: it == null
+                  ? stackTooltipMarkup(d.stack!, d.count)
+                  : itemTooltipMarkup(rules, it,
+                      level: ctx.level, attributes: ctx.attributes),
+            ),
           ),
-          Text(
-              retroText(
-                  '${it == null ? 'Material' : '${it.rarity.label} · nv ${it.itemLevel}'}'
-                  ' · $rule${extra.isEmpty ? '' : ' · ${extra.join(' · ')}'}'),
-              style: const TextStyle(color: ProtoColors.dim)),
+          SizedBox(width: DsSpace.sm),
+          Expanded(
+            child: Text(
+                retroText(
+                    '$rule${extra.isEmpty ? '' : ' · ${extra.join(' · ')}'}'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: DsText.detail()),
+          ),
         ],
       ),
     );
   }
 }
 
-/// Casilla `[x] texto` / `[ ] texto` (marcada en dorado, o en [color]).
+/// Casilla `[x] texto` / `[ ] texto` (marcada en dorado, o en [color]),
+/// con hover, foco de teclado y cursor de mano.
 class FilterCheck extends StatelessWidget {
   const FilterCheck({
     super.key,
@@ -566,19 +559,20 @@ class FilterCheck extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final on = color ?? ProtoColors.gold;
-    return InkWell(
+    final on = color ?? DsColors.selected;
+    return DsPressable(
       onTap: () => onChanged(!value),
-      child: Padding(
+      builder: (_, s) => Container(
+        color: s.hot ? DsColors.hover : Colors.transparent,
         padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
         child: Text.rich(TextSpan(children: [
           TextSpan(
               text: value ? '[x]' : '[ ]',
-              style: TextStyle(color: value ? on : ProtoColors.dim)),
+              style: DsText.body(value ? on : DsColors.textSecondary)),
           if (label != null)
             TextSpan(
                 text: retroText(' $label'),
-                style: TextStyle(color: value ? on : ProtoColors.ink)),
+                style: DsText.body(value ? on : DsColors.textPrimary)),
         ])),
       ),
     );

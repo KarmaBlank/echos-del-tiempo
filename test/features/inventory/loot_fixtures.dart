@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/widgets/action_card.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/inventory_action_menu.dart';
@@ -106,7 +107,7 @@ PlayerProfile lootWarrior({
     ));
 
 /// Un botón o una tarjeta de acción y su motivo de bloqueo (`null` = se
-/// puede): `PanelButton`, `ConfirmButton` o `ActionCard`.
+/// puede): `PanelButton`, `DsButton`, `ConfirmButton` o `ActionCard`.
 class ActionRef {
   const ActionRef(this.reason);
   final String? reason;
@@ -115,6 +116,8 @@ class ActionRef {
 ActionRef button(WidgetTester tester, String key) =>
     switch (tester.widget(find.byKey(ValueKey(key)))) {
       PanelButton b => ActionRef(b.reason),
+      // Del sistema de diseño: deshabilitado, el motivo va en el tooltip.
+      DsButton b => ActionRef(b.onPressed == null ? b.tooltip : null),
       ConfirmButton b => ActionRef(b.reason),
       ActionCard c => ActionRef(c.reason),
       InventoryActionRow r => ActionRef(r.entry.reason),

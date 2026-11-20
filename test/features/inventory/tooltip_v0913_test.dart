@@ -121,12 +121,13 @@ void main() {
     final mouse = await open(tester);
     final strip = find.byKey(const ValueKey('inv-strip'));
     expect(strip, findsOneWidget);
+    // DsStatLine: un Text por parte (etiqueta, antes, →, después, ▲, Δ).
     String line(String l) => tester
-        .widget<RichText>(find.descendant(
+        .widgetList<RichText>(find.descendant(
             of: find.byKey(ValueKey('inv-strip-$l')),
             matching: find.byType(RichText)))
-        .text
-        .toPlainText();
+        .map((t) => t.text.toPlainText().trim())
+        .join(' ');
     final p = lootWarrior();
     final now = stripStats(progression, p);
     expect(line('ATQ'), 'ATQ ${now.first.format(now.first.before)}');
@@ -137,7 +138,7 @@ void main() {
     final d = stripStats(progression, p, to: p.itemByUid('e1'));
     final atq = d.first;
     expect(atq.changed, isTrue);
-    expect(line('ATQ'), contains('→${atq.format(atq.after)}'));
+    expect(line('ATQ'), contains('→ ${atq.format(atq.after)}'));
     expect(line('ATQ'), contains(atq.better ? '▲' : '▼'));
     // No achica la grilla: la franja está a la izquierda, sin pisarla.
     expect(tester.getRect(strip).right,

@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/theme/panel_frame.dart';
+import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_hover_card.dart';
@@ -425,23 +425,41 @@ class ChangeStrip extends StatelessWidget {
   /// Ancho mínimo en Normal (~14 letras).
   static const width = 96.0;
 
-  /// Línea más larga posible (`CRÍT 99.9%→99.9% ▲99.9`): con ella se mide
-  /// el ancho para que cada stat entre en una línea con el texto actual.
-  static const _sample = 'CRÍT 999.9%→999.9% ▲999.9';
+  /// Ancho de la etiqueta de cada línea (en letras, `CRÍT`, `Vida`).
+  static const labelEm = 5.0;
+
+  /// Valor más largo posible: con él se mide el ancho para que cada stat
+  /// entre en una línea con el texto actual.
+  static const _value = '999.9%';
 
   /// Ancho de la franja con el tamaño de texto actual (v0.10.1): cada
-  /// stat en una sola línea, nunca partida.
+  /// stat en una sola línea ([DsStatLine]), nunca partida.
   static double widthOf(BuildContext context) {
-    final tp = TextPainter(
-      text: TextSpan(text: retroText(_sample), style: RetroHoverCard.textStyle),
-      textDirection: TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
-      maxLines: 1,
-    )..layout();
-    final w = tp.width + 8 + 2 + 4;
-    tp.dispose();
+    final scaler = MediaQuery.textScalerOf(context);
+    double w(String t, TextStyle st) {
+      final tp = TextPainter(
+        text: TextSpan(text: t, style: st),
+        textDirection: TextDirection.ltr,
+        textScaler: scaler,
+        maxLines: 1,
+      )..layout();
+      final r = tp.width;
+      tp.dispose();
+      return r;
+    }
+
+    final glyph = RetroType.style(RetroType.glyph);
+    final total = RetroType.em(context, labelEm, size: RetroType.body) +
+        w(_value, DsText.detail()) +
+        w(' → ', glyph) +
+        w(_value, DsText.body()) +
+        DsSpace.sm +
+        w('▲', glyph) +
+        w(_value, DsText.body()) +
+        2 * DsSpace.xs +
+        4;
     final min = RetroType.width(context, width);
-    return w > min ? w : min;
+    return total > min ? total : min;
   }
 
   @override
@@ -449,44 +467,27 @@ class ChangeStrip extends StatelessWidget {
     return Container(
       key: const ValueKey('inv-strip'),
       width: widthOf(context),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-          border: Border.all(color: ProtoColors.panelBorder, width: 1)),
-      child: DefaultTextStyle(
-        style: RetroHoverCard.textStyle,
-        // Una línea por stat: nunca se parte (si no entrara, se recorta el
-        // final en vez de ocupar tres líneas).
-        softWrap: false,
-        maxLines: 1,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(hovering ? 'CAMBIOS' : 'ACTUAL',
-                style: const TextStyle(color: ProtoColors.sky)),
-            for (final s in stats) _line(s),
-          ],
-        ),
+      padding: EdgeInsets.all(DsSpace.xs),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(hovering ? 'CAMBIOS' : 'ACTUAL', style: DsText.subtitle()),
+          SizedBox(height: DsSpace.xs),
+          // Una línea por stat; sin arma mirada, solo el valor actual.
+          for (final s in stats)
+            DsStatLine(retroText(s.label), s.before, s.after,
+                key: ValueKey('inv-strip-${s.label}'),
+                labelWidth: labelEm,
+                format: (x) => retroText(s.format(x)),
+                diffFormat: (x) => retroText(
+                    StatDelta(s.label, 0, x, kind: s.kind)
+                        .diffText
+                        .substring(1)),
+                higherIsBetter: s.higherIsBetter,
+                showChange: hovering),
+        ],
       ),
     );
-  }
-
-  Widget _line(StatDelta s) {
-    final k = ValueKey('inv-strip-${s.label}');
-    if (!hovering || !s.changed) {
-      return Text(retroText('${s.label} ${s.format(s.before)}'),
-          key: k, style: const TextStyle(color: ProtoColors.dim));
-    }
-    final c = s.better ? ProtoColors.green : ProtoColors.red;
-    final d = s.diffText.replaceFirst(RegExp(r'^[+-]'), '');
-    return Text.rich(
-        key: k,
-        TextSpan(children: [
-          TextSpan(text: retroText('${s.label} ${s.format(s.before)}')),
-          TextSpan(
-              style: TextStyle(color: c),
-              children: symbolSpans(retroText(
-                  '→${s.format(s.after)} ${s.better ? '▲' : '▼'}$d'))),
-        ]));
   }
 }
 
@@ -548,6 +549,20 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
     return KeyEventResult.ignored;
   }
 
+  /// Botón compacto; con [reason] queda deshabilitado y la dice en el
+  /// tooltip.
+  Widget _btn(String label, String key, String? reason, VoidCallback onTap,
+          {DsButtonKind kind = DsButtonKind.secondary,
+          Color? accent,
+          String? tooltip}) =>
+      DsButton(label,
+          key: ValueKey(key),
+          kind: kind,
+          size: DsButtonSize.compact,
+          accent: accent,
+          tooltip: reason ?? tooltip,
+          onPressed: reason == null ? onTap : null);
+
   void _closeLater() {
     if (_closing) return;
     _closing = true;
@@ -584,19 +599,16 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
       return Expanded(
         child: Container(
           key: ValueKey('cmp-card-$k'),
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            border: Border.all(
-                color: ProtoColors.panelBorder,
-                width: RetroTheme.thinBorderWidth),
-          ),
+          // Superficie sin borde (design_system.md § 6, DsCard).
+          padding: EdgeInsets.all(DsSpace.sm),
+          color: DsColors.surface,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ProtoText('<b style="color:#ffd166">$letter</b>'
+              ProtoText('<span style="color:#ffd166">$letter</span>'
                   '${mine ? '' : ' ${protoColor(ProtoColors.dim, 'de ${protoEsc(owner?.name ?? '?')}')}'}'
                   '${using ? ' ${protoColor(ProtoColors.orange, 'EQUIPADA')}' : ''}'),
-              const SizedBox(height: 4),
+              SizedBox(height: DsSpace.xs),
               Expanded(
                 child: SingleChildScrollView(
                   child: Column(
@@ -612,37 +624,35 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
                   ),
                 ),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: DsSpace.sm),
               Wrap(
                 alignment: WrapAlignment.end,
                 crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                runSpacing: 6,
+                spacing: DsSpace.xs,
+                runSpacing: DsSpace.xs,
                 children: !mine
-                    ? [
-                        const Text('Solo lectura',
-                            style: TextStyle(color: ProtoColors.dim)),
-                      ]
+                    ? [Text('Solo lectura', style: DsText.detail())]
                     : [
-                        PanelButton('DESARMAR',
-                            key: ValueKey('cmp-salvage-$k'),
-                            reason: g.craft(
+                        _btn(
+                            'DESARMAR',
+                            'cmp-salvage-$k',
+                            g.craft(
                                 viewer, CraftAction(CraftOp.salvage, it.uid)),
-                            onPressed: () => setState(
+                            () => setState(
                                 () => _confirm = (letter, CraftOp.salvage))),
-                        PanelButton('VENDER ₵${rules.crafting.sellPrice(it)}',
-                            key: ValueKey('cmp-sell-$k'),
-                            reason: g.craft(
-                                viewer, CraftAction(CraftOp.sell, it.uid)),
-                            onPressed: () => setState(
+                        _btn(
+                            'VENDER ₵${rules.crafting.sellPrice(it)}',
+                            'cmp-sell-$k',
+                            g.craft(viewer, CraftAction(CraftOp.sell, it.uid)),
+                            () => setState(
                                 () => _confirm = (letter, CraftOp.sell))),
                         if (!using)
-                          PanelButton('EQUIPAR $letter',
-                              key: ValueKey('cmp-equip-$k'),
-                              accent: ProtoColors.green,
-                              reason: g.equip(viewer, it.uid,
-                                  pending: widget.pending),
-                              onPressed: () => shop.controller.equip(it.uid)),
+                          _btn(
+                              'EQUIPAR $letter',
+                              'cmp-equip-$k',
+                              g.equip(viewer, it.uid, pending: widget.pending),
+                              () => shop.controller.equip(it.uid),
+                              kind: DsButtonKind.primary),
                       ],
               ),
             ],
@@ -664,32 +674,28 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
           child: ProtoText(
               key: const ValueKey('cmp-craft-question'),
               '¿${sell ? 'Vender' : 'Desarmar'} ${confirm.$1}: '
-              '<b>${protoEsc(rules.items.displayName(it))}</b>? '
+              '${protoEsc(rules.items.displayName(it))}? '
               'Recibes ${protoColor(ProtoColors.green, protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes)))}. '
               '${protoColor(ProtoColors.red, 'El arma se destruye.')}'
               '${r.lost.isEmpty ? '' : ' ${protoColor(ProtoColors.orange, 'Se pierde: ${protoEsc(r.lost.join(', '))}')}'}'),
         ),
-        const SizedBox(width: 8),
-        PanelButton('CANCELAR',
-            key: const ValueKey('cmp-craft-cancel'),
-            onPressed: () => setState(() => _confirm = null)),
-        const SizedBox(width: 8),
-        PanelButton(sell ? 'VENDER ₵${r.gainedCredits}' : 'DESARMAR',
-            key: const ValueKey('cmp-craft-confirm'),
-            accent: ProtoColors.red,
-            reason: shop.guards.craft(viewer, act), onPressed: () {
+        SizedBox(width: DsSpace.sm),
+        _btn('CANCELAR', 'cmp-craft-cancel', null,
+            () => setState(() => _confirm = null)),
+        SizedBox(width: DsSpace.xs),
+        _btn(sell ? 'VENDER ₵${r.gainedCredits}' : 'DESARMAR',
+            'cmp-craft-confirm', shop.guards.craft(viewer, act), () {
           shop.controller.craft(act);
           setState(() => _confirm = null);
-        }),
+        }, accent: DsColors.danger),
       ]);
     } else {
       footer.addAll([
         const Spacer(),
-        PanelButton('INTERCAMBIAR A/B',
-            key: const ValueKey('cmp-swap'), onPressed: widget.onSwap),
-        const SizedBox(width: 8),
-        PanelButton('CERRAR COMPARACIÓN [ESC]',
-            key: const ValueKey('cmp-close'), onPressed: widget.onClose),
+        _btn('INTERCAMBIAR A/B', 'cmp-swap', null, widget.onSwap),
+        SizedBox(width: DsSpace.xs),
+        _btn('CERRAR [ESC]', 'cmp-close', null, widget.onClose,
+            tooltip: 'Cerrar la comparación'),
       ]);
     }
 
@@ -700,9 +706,12 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
         key: const ValueKey('cmp-view'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ProtoText('<b style="color:#ffd166">COMPARAR</b> '
-              '${protoColor(ProtoColors.dim, '· Si equiparas B en vez de A')}'),
-          const SizedBox(height: 6),
+          Text.rich(TextSpan(children: [
+            TextSpan(text: 'COMPARAR', style: DsText.subtitle()),
+            TextSpan(
+                text: '  Si equiparas B en vez de A', style: DsText.detail()),
+          ])),
+          SizedBox(height: DsSpace.sm),
           Expanded(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -713,16 +722,12 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
               ],
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: DsSpace.sm),
           ConstrainedBox(
             constraints: const BoxConstraints(maxHeight: 150),
             child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                border: Border.all(
-                    color: ProtoColors.panelBorder,
-                    width: RetroTheme.thinBorderWidth),
-              ),
+              padding: EdgeInsets.all(DsSpace.sm),
+              color: DsColors.surface,
               child: SingleChildScrollView(
                 child: ComparisonDelta(
                   key: const ValueKey('cmp-delta'),
@@ -735,7 +740,7 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: DsSpace.sm),
           Row(children: footer),
         ],
       ),
