@@ -123,6 +123,43 @@ está al máximo, alcanzan créditos y materiales); fuera de combate. UI:
 PERSONAJE → ULT, ficha con nivel, próximo efecto, costo y MEJORAR →
 CONFIRMAR MEJORA / CANCELAR.
 
+### 2.5 Vista previa animada (v0.19.1)
+
+Pedido del dueño. Al lado del repertorio (ventana ancha, ≥ 760 px de
+panel) o arriba de la lista (angosta) hay una **mini escena de
+batalla** en loop de la ULT elegida en la lista o bajo el mouse (filas
+del repertorio y de LAS 50 ULT), además del texto de siempre:
+
+- Escena de 240 × 135 px: el personaje (sprite de su clase/ascensión
+  con la silueta de su arma) y dos aliados a la izquierda, enemigos a la
+  derecha. Objetivo según `skillReach`: 1 enemigo, TODOS (3), un
+  aliado / vos (1) o el grupo (3).
+- La animación es la de datos (`assets/fx/ult/<id>.fx.yaml`, o la de la
+  ULT a la que se parece si es de camino) reproducida con el mismo
+  `FxPlayer` que la batalla (ecos, estelas, formas, partículas,
+  destellos); sin catálogo, una genérica de ecos. Pausa de 700 ms entre
+  vueltas.
+- Números de ejemplo después del primer impacto, con los stats reales
+  del personaje y la ULT a su nivel (`ultPreviewSamples`, mismas
+  fórmulas que el motor): daño (`ATQ/MAG × poder`, `×golpes`), cura
+  `(MAG × poder + 6) × (1 + cura)`, `ESCUDO` (fracción de la vida máx.),
+  estados, `QUIEBRE`, buffs / debuffs. Con el mouse sobre MEJORAR, los
+  del próximo nivel.
+- Liviana: un único `Ticker` mueve un reloj que solo escucha el lienzo
+  (`CustomPainter(repaint:)` dentro de `RepaintBoundary`); ningún
+  controlador ni la página se reconstruyen por frame. Se pausa con
+  PAUSA / REPRODUCIR, cuando la ventana pierde el foco y cuando la
+  pestaña no está a la vista (`TickerMode` / la vista se desmonta).
+- Sonido apagado por defecto; `SONIDO: NO / SÍ` toca los cues de la ULT
+  (pista `sound`, o preparación/descarga) y los impactos.
+- En `flutter test` arranca en pausa (`UltPreviewPanel.autoplayOverride`).
+
+Código: `features/combat/presentation/scene/ult_preview_scene.dart`
+(organismo: escena, reloj, pintor), `features/characters/presentation/
+ult_preview_panel.dart`, `features/characters/domain/
+ult_preview_samples.dart`. Tests: `test/features/characters/
+ult_preview_test.dart`.
+
 ### 2.3 Reparto de las 50
 
 | Fuente | Cuántas | Cómo se obtienen |

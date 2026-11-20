@@ -605,7 +605,8 @@ abstract final class FxPlayer {
           ..color = col(0.8 * out)
           ..strokeWidth = 1.5;
         c.drawArc(rect, math.pi, math.pi, false, _stroke);
-        for (var k = 1; k < 4; k++) {
+        // rx = 0 en el primer instante (fx / rx sería NaN).
+        for (var k = 1; k < 4 && rx > 0; k++) {
           final fx = (k / 4 * 2 - 1) * rx;
           final h = ry * math.sqrt(math.max(0, 1 - (fx / rx) * (fx / rx)));
           _line(c, Offset(feet.dx + fx, feet.dy + 2),
