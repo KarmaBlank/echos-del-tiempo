@@ -72,9 +72,7 @@ Future<_Host> _pump(WidgetTester tester, TextSize size) async {
       home: Scaffold(
           body: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
-              child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: StashBoard(host: host)))),
+              child: StashBoard(host: host))),
     ),
   ));
   await tester.pump();

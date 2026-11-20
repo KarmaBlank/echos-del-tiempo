@@ -65,8 +65,36 @@ class StashBoard extends StatefulWidget {
 
   static const tabLabels = ['GENERAL I', 'GENERAL II', 'ECOS'];
 
+  /// Ancho de una grilla de 8 columnas a escala 1.
+  static const gridWidth = 8 * cell + 7 * gap;
+
+  /// Separación entre los dos lados cuando van lado a lado.
+  static const sideGap = 24.0;
+
   @override
   State<StashBoard> createState() => StashBoardState();
+}
+
+/// Disposición del alijo para un ancho [w] (characters.md § 3,
+/// "Responsivo"): lado a lado si entran las dos grillas a escala 1 y
+/// cada lado mide al menos [sideMin]; si no, apilado (inventario arriba,
+/// alijo abajo). La escala de la casilla (44 × k) es la mayor que entra:
+/// en cuartos hasta ×2 y, si ni ×1 entra, la que entre. Nunca más ancho
+/// que [w] (sin scroll horizontal).
+({bool wide, double scale}) stashLayout(double w, {double sideMin = 0}) {
+  const base = StashBoard.gridWidth, sep = StashBoard.sideGap;
+  final width = w.isFinite ? w : 2 * base + sep;
+  double snap(double k) {
+    if (k >= 2) return 2;
+    if (k >= 1) return (k * 4).floorToDouble() / 4;
+    return k > 0.3 ? k : 0.3;
+  }
+
+  final side = base > sideMin ? base : sideMin;
+  if (width >= 2 * side + sep) {
+    return (wide: true, scale: snap((width - sep) / 2 / base));
+  }
+  return (wide: false, scale: snap(width / base));
 }
 
 class StashBoardState extends State<StashBoard> {
@@ -85,6 +113,12 @@ class StashBoardState extends State<StashBoard> {
   final _searchStash = TextEditingController();
 
   String? _error;
+
+  /// Disposición y escala que elige [stashLayout] en el `LayoutBuilder`.
+  bool _wide = true;
+  double _scale = 1;
+  double get _cellSize => StashBoard.cell * _scale;
+  double get _gap => StashBoard.gap * _scale;
 
   DateTime? _lastTap;
   String? _lastTapKey;
@@ -327,6 +361,15 @@ class StashBoardState extends State<StashBoard> {
       bottom = double.maxFinite;
     }
     const gap = 4.0;
+    if (!_wide) {
+      // Apilado: el inventario va de su grilla hasta antes de la del
+      // alijo; el alijo, de su grilla al pie. Todo el ancho.
+      return character
+          ? Rect.fromLTRB(-double.maxFinite, c.top, double.maxFinite,
+              s.top - gap)
+          : Rect.fromLTRB(
+              -double.maxFinite, s.top, double.maxFinite, rr.bottom);
+    }
     return character
         ? Rect.fromLTRB(-double.maxFinite, top, s.left - gap, bottom)
         : Rect.fromLTRB(c.right + gap, top, double.maxFinite, bottom);
@@ -354,7 +397,7 @@ class StashBoardState extends State<StashBoard> {
         content: content,
         selected: selected,
         highlight: selected,
-        size: StashBoard.cell);
+        size: _cellSize);
     final it = content?.item;
     if (it != null && viewer != null) {
       // La misma ficha que el inventario (characters.md § 3).
@@ -378,15 +421,15 @@ class StashBoardState extends State<StashBoard> {
         child: w);
   }
 
-  static double _gridWidth(int columns) =>
-      columns * StashBoard.cell + (columns - 1) * StashBoard.gap;
+  double _gridWidth(int columns) =>
+      columns * _cellSize + (columns - 1) * _gap;
 
   Widget _grid(int columns, int count, Widget Function(int) build,
           {required ValueChanged<int> onActivate, String? keyPrefix}) =>
       FocusGrid(
         count: count,
         columns: columns,
-        spacing: StashBoard.gap,
+        spacing: _gap,
         width: _gridWidth(columns),
         keyPrefix: keyPrefix,
         cell: (_, i, __) => build(i),
@@ -412,9 +455,12 @@ class StashBoardState extends State<StashBoard> {
             Text(retroText(widget.title!), style: DsText.title()),
             SizedBox(height: DsSpace.sm),
           ],
-          Row(children: [
+          Wrap(
+              spacing: DsSpace.sm,
+              runSpacing: DsSpace.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
             Text('Equipada:', style: DsText.detail()),
-            SizedBox(width: DsSpace.sm),
             _cell(
               key: const ValueKey('stash-char-equipped'),
               content: eqContent,
@@ -425,20 +471,13 @@ class StashBoardState extends State<StashBoard> {
               blocked: eq == null ? null : _stashRules.blocked(p, eq.uid),
               onTap: () => _tapCharacter(eq?.uid, null),
             ),
-            SizedBox(width: DsSpace.md),
-            Expanded(
-              child: Text(retroText('Créditos: ₵${p.credits}'),
-                  textAlign: TextAlign.right,
-                  style: DsText.body(DsColors.reward)),
-            ),
+            Text(retroText('Créditos: ₵${p.credits}'),
+                style: DsText.body(DsColors.reward)),
           ]),
           SizedBox(height: DsSpace.sm),
-          Row(children: [
-            Text(
-                'INVENTARIO (${InventoryRules.cellsUsed(p)}/${InventoryRules.cells})',
-                style: DsText.detail()),
-            const Spacer(),
-          ]),
+          Text(
+              'INVENTARIO (${InventoryRules.cellsUsed(p)}/${InventoryRules.cells})',
+              style: DsText.detail()),
           SizedBox(height: DsSpace.xs),
           KeyedSubtree(
             key: const ValueKey('stash-search-char'),
@@ -477,8 +516,8 @@ class StashBoardState extends State<StashBoard> {
           InventoryStacksBar(
             rules: _rules,
             profile: p,
-            cell: StashBoard.cell,
-            gap: StashBoard.gap,
+            cell: _cellSize,
+            gap: _gap,
             selected: _picking
                 ? (_pickedTokens.isEmpty ? null : _pickedTokens.last)
                 : _side == _Side.character
@@ -499,27 +538,60 @@ class StashBoardState extends State<StashBoard> {
     return n;
   }
 
+  /// Una pestaña del alijo con el estilo de `DsTabBar` (texto dorado y
+  /// subrayado la elegida).
+  Widget _tabButton(Stash s, int t) {
+    final on = t == _tab;
+    return MouseRegion(
+      key: ValueKey('tab-$t'),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() => _tab = t),
+        child: Container(
+          constraints: BoxConstraints(
+              minHeight: RetroType.width(context, DsMetrics.minHeight)),
+          padding: EdgeInsets.symmetric(horizontal: DsSpace.md),
+          decoration: BoxDecoration(
+              border: Border(
+                  bottom: BorderSide(
+                      color: on ? DsColors.selected : Colors.transparent,
+                      width: 3))),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text(retroText(StashBoard.tabLabels[t]),
+                style: DsText.subtitle(on ? DsColors.selected : DsColors.text)),
+            SizedBox(width: DsSpace.sm),
+            DsBadge('${_tabUsed(s, t)}/${Stash.perTab}'),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _stashSide(PlayerProfile p, Stash s) {
     final base = _tab * Stash.perTab;
-    return Column(
+    return SizedBox(
+      width: _gridWidth(Stash.columns),
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(children: [
+        Wrap(
+            spacing: DsSpace.md,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
           Text('ALIJO', style: DsText.title()),
-          SizedBox(width: DsSpace.md),
           Text('${s.used}/${Stash.size}',
               key: const ValueKey('stash-used'), style: DsText.detail()),
         ]),
         SizedBox(height: DsSpace.xs),
-        DsTabBar(
-          tabs: [
-            for (var t = 0; t < Stash.tabs; t++)
-              DsTab(StashBoard.tabLabels[t],
-                  key: ValueKey('tab-$t'),
-                  badge: '${_tabUsed(s, t)}/${Stash.perTab}'),
+        // Pestañas en un Wrap (no el TabBar desplazable): con texto
+        // grande bajan de línea en vez de salirse del panel.
+        Wrap(
+          spacing: DsSpace.xs,
+          runSpacing: DsSpace.xs,
+          children: [
+            for (var t = 0; t < Stash.tabs; t++) _tabButton(s, t),
           ],
-          index: _tab,
-          onChanged: (t) => setState(() => _tab = t),
         ),
         SizedBox(height: DsSpace.xs),
         KeyedSubtree(
@@ -563,6 +635,7 @@ class StashBoardState extends State<StashBoard> {
               style: DsText.detail()),
         ],
       ],
+      ),
     );
   }
 
@@ -643,19 +716,36 @@ class StashBoardState extends State<StashBoard> {
       count: Stash.tabs,
       index: _tab,
       onChanged: (t) => setState(() => _tab = t),
-      child: Column(
+      child: LayoutBuilder(builder: (context, box) {
+        // Cada lado pide, además de la grilla, lugar para su texto
+        // (buscador, encabezados) según el tamaño de letra.
+        final l = stashLayout(box.maxWidth,
+            sideMin: RetroType.width(context, 300));
+        _wide = l.wide;
+        _scale = l.scale;
+        return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            key: _sidesKey,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _characterSide(p),
-              SizedBox(width: DsSpace.xl),
-              _stashSide(p, s),
-            ],
-          ),
+          _wide
+              ? Row(
+                  key: _sidesKey,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _characterSide(p),
+                    const SizedBox(width: StashBoard.sideGap),
+                    _stashSide(p, s),
+                  ],
+                )
+              : Column(
+                  key: _sidesKey,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _characterSide(p),
+                    SizedBox(height: DsSpace.lg),
+                    _stashSide(p, s),
+                  ],
+                ),
           SizedBox(height: DsSpace.md),
           Wrap(
             spacing: DsSpace.sm,
@@ -685,7 +775,8 @@ class StashBoardState extends State<StashBoard> {
                             style: DsText.detail()),
           ),
         ],
-      ),
+        );
+      }),
     );
   }
 }

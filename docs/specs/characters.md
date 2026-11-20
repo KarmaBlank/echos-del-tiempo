@@ -291,6 +291,29 @@ Destructivo, por eso pide **escribir el nombre**:
 - Al cargar, los objetos del alijo pasan por `ItemRules.sanitize`; los
   inválidos se descartan y dos pilas del mismo material se juntan.
 
+### 3.1 Responsivo (v0.13.1)
+
+Con texto Grande / Enorme a 1280 px el tablero se salía del panel a lo
+ancho. Como el inventario (panels.md § Inventario, "Cambios v0.12.0"):
+- Un `LayoutBuilder` elige con `stashLayout(ancho, sideMin)` (`sideMin`
+  = 300 px por el factor de texto): **lado a lado** si entran las dos
+  grillas a escala 1 y cada lado mide al menos `sideMin`; si no,
+  **apilado** (inventario arriba, alijo abajo).
+- La casilla es 44 × k (k en cuartos hasta ×2; por debajo de 1, la que
+  entre). Cada lado mide lo que su grilla; el buscador, la fila
+  Equipada / Créditos, el encabezado ALIJO y las pestañas (un `Wrap`,
+  ya no el `TabBar` desplazable) bajan de línea dentro de ese ancho. La
+  barra de botones (MOVER TODO, ELEGIR...) es un `Wrap`.
+- Nunca más ancho que el panel: sin scroll horizontal; a lo alto, el
+  scroll del panel.
+- Zona de tooltip por grilla: lado a lado, como antes (su lado sin
+  llegar a la otra grilla); apilado, todo el ancho, del borde de arriba
+  de su grilla hasta antes de la grilla del alijo (inventario) o hasta
+  el pie (alijo).
+- Test: `test/features/characters/stash_responsive_test.dart`
+  (1024×600 a 1920×1080, texto Normal / Grande / Enorme, dentro y fuera
+  de partida).
+
 ### 3.2 Alijo en partida (v0.12.1, protocolo 22)
 
 - Se abre en el **lobby y en misión, fuera de batalla** (modos `lobby` y
