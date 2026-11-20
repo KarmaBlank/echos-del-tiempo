@@ -1,5 +1,6 @@
 import '../data/passive_tree_catalog.dart';
 import '../rules/passive_tree_migration.dart';
+import '../rules/passive_tree_rules.dart';
 import 'ascension.dart';
 import 'attributes.dart';
 import 'eco.dart';
@@ -48,6 +49,8 @@ class PlayerProfile {
     AscensionProgress ascension = AscensionProgress.empty,
     Set<int> abyssKills = const {},
     Set<String> fresh = const {},
+    String? milestone10,
+    String? milestone20,
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -78,10 +81,14 @@ class PlayerProfile {
       ascension: ascension,
       abyssKills: Set.unmodifiable(abyssKills),
       fresh: Set.unmodifiable(fresh),
+      milestone10: milestone10,
+      milestone20: milestone20,
     );
   }
 
   const PlayerProfile._({
+    required this.milestone10,
+    required this.milestone20,
     required this.fresh,
     required this.ascension,
     required this.abyssKills,
@@ -113,6 +120,23 @@ class PlayerProfile {
   /// desmarcan al pasar el mouse (`SeenItemsAction`).
   final Set<String> fresh;
 
+  /// Keystone elegida en el hito del nivel 10 / 20 (JSON `ms10` / `ms20`,
+  /// progression_v2.md § 5); `null` = sin elegir (pendiente si ya llegó).
+  final String? milestone10;
+  final String? milestone20;
+
+  /// Puntos de árbol ganados: nivel, Maestría, Pruebas e hitos elegidos.
+  int get treePoints => PassiveTreeRules.pointsEarned(treeLevel,
+      trials: ascension.trials.length,
+      ms10: milestone10 != null,
+      ms20: milestone20 != null);
+
+  /// Hitos alcanzados sin elegir (10 y/o 20).
+  List<int> get pendingMilestones => [
+        if (level >= 10 && milestone10 == null) 10,
+        if (level >= 20 && milestone20 == null) 20,
+      ];
+
   /// Zonas del mapa del mundo (docs/specs/worldgen.md § 6.4).
   static const maxZone = 10;
 
@@ -128,7 +152,7 @@ class PlayerProfile {
   /// Nivel de Maestría 0–20 (JSON `ms`): con nivel 50 la XP la llena.
   final int mastery;
 
-  /// Nivel para los puntos del árbol: cada maestría cuenta como un nivel más (2 puntos desde el árbol v6).
+  /// Nivel para los puntos del árbol: cada maestría cuenta como un nivel más (1 punto, progresión v2).
   int get treeLevel => level + mastery;
 
   /// Pruebas del Tiempo, ascensión y sus nodos (JSON `asc`,
@@ -297,6 +321,8 @@ class PlayerProfile {
     AscensionProgress? ascension,
     Set<int>? abyssKills,
     Set<String>? fresh,
+    String? Function()? milestone10,
+    String? Function()? milestone20,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -340,6 +366,8 @@ class PlayerProfile {
       abyssKills:
           abyssKills == null ? this.abyssKills : Set.unmodifiable(abyssKills),
       fresh: fresh == null ? this.fresh : Set.unmodifiable(fresh),
+      milestone10: milestone10 == null ? this.milestone10 : milestone10(),
+      milestone20: milestone20 == null ? this.milestone20 : milestone20(),
     );
   }
 
@@ -462,6 +490,9 @@ class PlayerProfile {
         if (abyssKills.isNotEmpty) 'aby': (abyssKills.toList()..sort()),
         // Marca NUEVO v0.9.7 (loot.md § 17.4): opcional.
         if (fresh.isNotEmpty) 'nw': (fresh.toList()..sort()),
+        // Hitos v0.10 (progression_v2.md § 5): opcionales.
+        if (milestone10 != null) 'ms10': milestone10,
+        if (milestone20 != null) 'ms20': milestone20,
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -570,6 +601,13 @@ class PlayerProfile {
             }
           : const {},
       fresh: {..._strings(json['nw'])},
+      // Hitos: solo con el árbol actual (uno viejo se devuelve entero).
+      milestone10: tv >= treeVersion && json['ms10'] is String
+          ? json['ms10'] as String
+          : null,
+      milestone20: tv >= treeVersion && json['ms20'] is String
+          ? json['ms20'] as String
+          : null,
     );
   }
 

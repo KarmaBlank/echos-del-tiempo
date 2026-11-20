@@ -1,7 +1,7 @@
 # Spec (APROBADA por el dueño): Progresión v2 — punto medio
 
-Estado: **borrador**. No se implementa nada hasta que el dueño responda
-las preguntas del final. Reemplaza, cuando se apruebe, las partes de
+Estado: **implementado en v0.10** (ver § 11 al final: lo que quedó, las
+decisiones fuera del spec y lo pendiente). Reemplaza las partes de
 `progression.md` (§ Niveles, § Atributos, § Reiniciar) y de
 `passive_tree_v6.md` (§ 7 Puntos) que se citan abajo.
 
@@ -347,3 +347,103 @@ No debería cambiar (y un test lo fija):
 2. Tope blando de DES: **60**, como FUE / ESP / VIT.
 3. Maestría: **solo +1 por nivel** (se acepta ~2% menos al máximo).
 4. Los 27 nodos chicos sueltos que no se promueven: **los absorbe el notable vecino**.
+
+## 11. Implementación (v0.10)
+
+Versiones: `kPassiveTreeVersion` 5 → **6** (árbol v7), `kBalanceVersion`
+2 → **3**, `kProtocolVersion` 19 → **20** (perfil con `ms10` / `ms20`,
+`AllocateStats` en puntos de +3 y acciones nuevas `nodes` /
+`milestone`; un cliente viejo queda afuera por el saludo).
+
+Lo que quedó:
+
+- Atributos: `kAttrPerPoint = 3`, `ProgressionRules.pointsPerLevel = 1`,
+  `allocate` / `previewAllocation` en puntos, `normalize` exige
+  `base + 3k`. Topes blandos `kAttrSoftCap` (VIT / ESP / FUE / DES 60,
+  AGI 40; respuesta 2 del dueño) y `effectiveAttr`; `StatsCalculator`
+  usa el efectivo en vida, maná, velocidad, crítico, ATQ y MAG. El
+  asesor de atributos (`AttributeAdvisor`) cuenta en puntos y muestra lo
+  que suma (`FUE +6`).
+- ATRIBUTOS: botón `+3 FUE` (pasado el tope `+3 VIT → +1.5`, naranja),
+  `tope 60` bajo cada fila y `tope 60: rinde ½` (naranja) cuando lo
+  pasa; tooltip con el rendimiento real; la vista previa ya usa el tope.
+- Árbol v7 (`passive_tree_v7.dart`, armado desde el v6 con reglas
+  determinísticas): **422 nodos** (v6: 597): 132 chicos dobles, 17
+  chicos simples, 207 notables + 24 notables menores, 38 keystones, 4
+  inicios; `kTreeV7Merged` (175 ids v6 → v7). Con todo el árbol tomado
+  los stats son los del v6 más el × 2 de los notables menores (test).
+- Puntos de árbol (`PlayerProfile.treePoints`): `(nivel − 1) + Maestría
+  + 2 × Pruebas + 7 (hito 10) + 10 (hito 20)` = 92 al máximo (respuesta
+  3: Maestría solo +1).
+- Hitos: `milestoneOptions(clase, 10 | 20)`; elegir toma con los puntos
+  del hito el camino más corto (`chooseMilestone`); las 3 keystones del
+  10 están a 7 puntos (llegan justo), las 2 de clase del 20 a 8 (sobran
+  2, quedan libres) y la del puente a 13 (faltan 3, se pagan con libres).
+  Vista de hito en ÁRBOL (cartel naranja, keystones resaltadas, primer
+  clic muestra el camino y el segundo elige, `Puntos de hito: N, solo
+  para esta ruta.`), marca `Hito del nivel N` en la keystone, aviso
+  propio en el HUD (`¡Hito del nivel 10! Elegí tu keystone en ÁRBOL`) y
+  línea de chat al subir.
+- Reiniciar árbol (decisión del dueño, v0.10): devuelve los puntos y deja
+  los hitos **pendientes** otra vez; los puntos de hito vuelven al elegir
+  (no se pierden ni se duplican); la confirmación dice "También podés
+  volver a elegir tus hitos (nivel 10 y 20)". Mientras está pendiente,
+  esos puntos no existen para gastar en otra cosa.
+- Camino en un clic: clic en un notable o keystone que no conecta →
+  diálogo `Tomar N nodos por N puntos` (o `Tomar los primeros P de N
+  (te faltan …)`) con `Marcar` (agrega o quita del plan de BUILD); botón
+  `TOMAR CAMINO (N)` en el panel del nodo. Por red, una
+  `TakeNodesAction` (máx. 64 ids).
+- Migración: `tv < 6` → árbol vacío; `bv < 3` → `resetProgressionV2`
+  (atributos base, `nivel − 1` puntos, árbol vacío, hitos sin elegir) con
+  la copia `account.pre-bv3-<fecha>.json` de siempre y el aviso único
+  "La progresión cambió: te devolvimos todos tus puntos de atributo y de
+  árbol. Reasigná antes de salir."; migrar dos veces no cambia nada
+  (test). Los planes de BUILD traducen ids con `kTreeV7Merged`.
+
+Decisiones fuera del spec:
+
+1. **24 notables menores, no 40.** De los 67 chicos sueltos medidos, solo
+   8 clusters v4 (`_ma` / `_mb`), los 12 exteriores (`_m3`) y los 4
+   puentes elementales (`_i1`) tienen uno; los puentes v3 no tienen
+   sueltos y el Invocador suma sus mecánicas por id (no se puede duplicar
+   con una copia), así que sus 3 sueltos se absorben. Los otros 43 los
+   absorbe el notable vecino (respuesta 4). Con eso, en una ruta a
+   keystone hay como mucho 4 chicos seguidos (en el anillo central),
+   2 puntos v7.
+2. **× 2 de un notable menor:** números dobles; la mecánica se repite con
+   id `<id>_x2`. Tres menores de crítico contra Mojado empujaban esa
+   condición a +80% (tope +75%): esa copia pasa a **quiebre** contra el
+   mismo estado (como pedía § 3.4).
+3. **Hito 20:** las 2 keystones restantes de los clusters v4 de la clase
+   y la del puente elemental más cercano (los puentes v3 no tienen
+   keystone).
+4. El aviso de migración sale en la pantalla de título; adentro, el
+   botón `PERSONAJE [C] +N` del HUD y la insignia de las pestañas llevan
+   a ATRIBUTOS / ÁRBOL (no se fuerza `mustAllocate`).
+
+Balance (§ 8):
+
+- `passive_tree_balance_test` (nuevo bloque v7): 92 puntos v7 contra 138
+  del v6, build codicioso mixto: **6.19 → 6.24 (1.01×)** en las 4
+  clases; cada stat dentro de ±15%; condiciones ≤ +80% daño / ≤ +75%
+  crítico en las 4 clases (después del cambio del punto 2).
+- `balance_measure_test` antes / después: los escenarios de nivel 1, 10
+  y 20 dan **idénticos**; en nivel 30 hay diferencias chicas por el
+  build de árbol del simulador con menos puntos: Guerrero Raro +2 4 jug.
+  jefe 7/16 → 7/16 (46% → 40% vida), Leg. +8 4 jug. jefe 12/16 → 9/16;
+  Maga Leg. +8 4 jug. élite 14/16 → 14/16 (79% → 57% vida); grupo mixto
+  jefe 22/32 → 19/32, mixto + combos 30/32 → 30/32. Todo dentro de las
+  metas de combo_balance.md (sin ajustes).
+
+Pendiente:
+
+- Capturas de v0.10 (`tool/shots/v0100_shots_test.dart`): no se
+  generaron (el dueño pidió publicar primero).
+- Volcado vs. repartido a nivel 30 / 50 con el simulador (§ 8.2) y la
+  curva 1–20 por hitos (§ 8.1): sin medir; los topes están cubiertos por
+  tests de `StatsCalculator`.
+- BUILD: `REASIGNAR TODO` y `TOMAR SIGUIENTE DEL PLAN` (§ 6 y § 4) no se
+  hicieron; `MARCAR` está en el diálogo del camino, no en clic derecho.
+- Dibujo: los chicos dobles y los notables menores se ven como un chico
+  y un notable comunes (sin aro doble ni borde fino).

@@ -1,3 +1,4 @@
+import '../data/passive_tree_catalog.dart' show treeV7Id;
 import 'attributes.dart';
 
 /// Plan de build de un personaje (docs/specs/build_planner.md § 1-2).
@@ -203,7 +204,10 @@ class BuildPlan {
       notes: str(raw['notes']) ?? '',
       templateId: str(raw['tpl']),
       attributes: Map.unmodifiable(attrs),
-      treeNodes: strings(raw['tree']),
+      // Ids del árbol v6 fusionados → v7 (progression_v2.md § 7).
+      treeNodes: [
+        for (final id in {for (final s in strings(raw['tree'])) treeV7Id(s)}) id
+      ],
       ascensionId: str(raw['asc']),
       ascensionNodes: strings(raw['ascN']),
       weaponTypes: strings(raw['types']),

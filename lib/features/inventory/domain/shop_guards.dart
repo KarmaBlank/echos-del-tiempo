@@ -72,7 +72,8 @@ class ShopGuards {
     if (w == null) return 'No se puede equipar';
     if (p.level < w.level) return 'Nivel ${w.level}';
     if (pending.values.any((v) => v > 0) &&
-        w.meetsRequirements(p.attributes.add(pending))) {
+        w.meetsRequirements(
+            p.attributes.add(ProgressionRules.rawOf(pending)))) {
       return 'Confirma puntos';
     }
     return 'Requisitos: ${missingRequirements(w, p.attributes)}';

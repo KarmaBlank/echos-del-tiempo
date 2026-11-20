@@ -136,10 +136,14 @@ class AttributeAdvisor {
       if (w.level > p.level + requirementLevelSlack) continue;
       for (final e in w.requirements.entries) {
         if (left <= 0) break;
-        final have = p.attributes[e.key] + (alloc[e.key] ?? 0);
+        final have =
+            p.attributes[e.key] + (alloc[e.key] ?? 0) * kAttrPerPoint;
         final gap = e.value - have;
         if (gap <= 0) continue;
-        final n = math.min(gap, left);
+        // Cada punto suma +3 (progression_v2.md § 2.1).
+        final pts = (gap + kAttrPerPoint - 1) ~/ kAttrPerPoint;
+        final n = math.min(pts, left);
+        final after = gap - n * kAttrPerPoint;
         final short = e.key.name.toUpperCase();
         give(
             e.key,
@@ -147,7 +151,7 @@ class AttributeAdvisor {
             AttrSuggestionKind.requirement,
             'Te falta${gap == 1 ? '' : 'n'} $gap $short para equipar ${w.name}'
             '${w.level > p.level ? ' (nivel ${w.level})' : ''}'
-            '${n < gap ? ' (después quedan ${gap - n})' : ''}');
+            '${after > 0 ? ' (después quedan $after)' : ''}');
       }
     }
 
@@ -239,9 +243,9 @@ class AttributeAdvisor {
   static Map<Attribute, int> allocation(List<AttrSuggestion> s) =>
       {for (final x in s) x.attribute: x.points};
 
-  /// "FUE +2, DES +1".
+  /// "FUE +6, DES +3" (lo que suma: cada punto es +3).
   static String split(List<AttrSuggestion> s) =>
-      [for (final x in s) '${x.short} +${x.points}'].join(', ');
+      [for (final x in s) '${x.short} +${x.points * kAttrPerPoint}'].join(', ');
 
   /// Una línea: "FUE +2, DES +1: <la razón principal>".
   static String summary(List<AttrSuggestion> s) {
@@ -258,7 +262,7 @@ class AttributeAdvisor {
     if (s.isEmpty) return plan;
     final attrs = Map<Attribute, int>.from(plan.attributes);
     for (final x in s) {
-      final t = p.attributes[x.attribute] + x.points;
+      final t = p.attributes[x.attribute] + x.points * kAttrPerPoint;
       attrs[x.attribute] = math.max(attrs[x.attribute] ?? 0, t);
     }
     return plan.copyWith(attributes: Map.unmodifiable(attrs));
@@ -279,7 +283,7 @@ class AttributeAdvisor {
       for (final b in _plannedWeapons(plan, p.level))
         if (b.id != w.id) b,
     ];
-    final attrs = p.attributes.add(alloc);
+    final attrs = p.attributes.add(ProgressionRules.rawOf(alloc));
     final out = <Attribute, AttrScore>{};
     for (final a in Attribute.values) {
       final d = _delta(p, alloc, a);

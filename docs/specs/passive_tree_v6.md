@@ -227,6 +227,8 @@ Las contras de stats las suma `PassiveTreeRules.aggregate`
 
 ## 7. Puntos (el doble)
 
+> **Reemplazado por la progresión v2 (v0.10, progression_v2.md § 3.3):** 1 punto por nivel y por Maestría, +2 por Prueba del Tiempo y 7 / 10 de los hitos 10 / 20 sobre el árbol v7 (nodos de paso fusionados). Lo de abajo queda como historia.
+
 - `PassiveTreeRules.pointsPerLevel = 2`: **2 puntos por nivel ganado
   después del 1 y 2 por nivel de Maestría** (`pointsEarned(treeLevel) =
   (treeLevel − 1) × 2`, con `treeLevel = nivel + Maestría`). Máximo:

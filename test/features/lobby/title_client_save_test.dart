@@ -124,7 +124,7 @@ void main() {
     final me = solo.session!.players[solo.localId]!.profile;
     expect(me.points, 0, reason: 'solo arranca con lo jugado en la sala');
     expect(me.attributes[Attribute.vit],
-        start.attributes[Attribute.vit] + start.points);
+        start.attributes[Attribute.vit] + start.points * 3);
 
     // Y en "disco".
     final fresh = (await disk.load()).account.selected!.profile;

@@ -189,7 +189,7 @@ void main() {
         'lvl': 20,
         'xp': 0,
         'cr': 50,
-        'st': {'VIT': 40, 'ESP': 20, 'AGI': 10, 'FUE': 20, 'DES': 5},
+        'st': {'VIT': 42, 'ESP': 18, 'AGI': 10, 'FUE': 19, 'DES': 6},
         'pts': 0,
         'items': [
           {'u': 'a', 'b': 'espada_escudo_novato'},

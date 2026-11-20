@@ -564,7 +564,7 @@ class BuildPlanRules {
     }
     // 2. El nodo planificado más cercano.
     final tree = progression.treeRules;
-    final free = tree.pointsAvailable(p.treeLevel, p.passiveProgress);
+    final free = tree.pointsAvailable(p.treePoints, p.passiveProgress);
     List<String>? bestRoute;
     String? bestTarget;
     for (final id in plan.treeNodes) {

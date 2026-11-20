@@ -152,7 +152,7 @@ tocó. Época de posición +1. Las posiciones de batalla son de la UI.
 Apenas cae el último enemigo: cada jugador recibe XP y créditos del
 `BattleOutcome` (élite ×3, ver combat.md), se suman a los totales de la
 misión, y se aplica la subida de nivel (progression.md: puede subir
-varios niveles; cada uno +3 puntos, +maxHp/+maxMp ganados a la vida y
+varios niveles; cada uno 1 punto de atributo (+3) y 1 de árbol, progression_v2.md; +maxHp/+maxMp ganados a la vida y
 maná actuales, `levelUpPending`). Vida, maná, ULT y pociones de la
 batalla vuelven al jugador.
 

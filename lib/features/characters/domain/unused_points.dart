@@ -1,5 +1,6 @@
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/ascension_rules.dart';
+import '../../../game_engine/rules/passive_tree_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 
 /// Puntos sin usar de un personaje: de atributos, de árbol y de ascensión
@@ -11,7 +12,11 @@ class UnusedPoints {
     this.tree = 0,
     this.ascension = 0,
     this.companions = const [],
+    this.milestone = 0,
   });
+
+  /// Hito pendiente (10 o 20; 0 = ninguno; progression_v2.md § 5).
+  final int milestone;
 
   /// Los mismos puntos más los de los compañeros de la party jugando solo
   /// (nombre, total; solo los que tienen; solo_party.md § 6.3).
@@ -19,6 +24,7 @@ class UnusedPoints {
         attributes: attributes,
         tree: tree,
         ascension: ascension,
+        milestone: milestone,
         companions: [
           for (final c in list)
             if (c.$2 > 0) c
@@ -29,8 +35,12 @@ class UnusedPoints {
   factory UnusedPoints.of(PlayerProfile p, ProgressionRules rules) =>
       UnusedPoints(
         attributes: p.points < 0 ? 0 : p.points,
-        tree: rules.treeRules.pointsAvailable(p.treeLevel, p.passiveProgress),
+        // Libres + los de los hitos pendientes (se ganan al elegir).
+        tree: rules.treeRules.pointsAvailable(p.treePoints, p.passiveProgress) +
+            p.pendingMilestones.fold<int>(
+                0, (a, m) => a + PassiveTreeRules.milestonePoints[m]!),
         ascension: _ascension.free(p.ascension).clamp(0, 1 << 20),
+        milestone: p.pendingMilestones.isEmpty ? 0 : p.pendingMilestones.first,
       );
 
   static const _ascension = AscensionRules();
@@ -76,6 +86,9 @@ class UnusedPoints {
   ///
   /// Con compañeros, una parte por cada uno: `Leo tiene 3 puntos sin usar`.
   String? get toastText {
+    if (milestone > 0) {
+      return '¡Hito del nivel $milestone! Elegí tu keystone en ÁRBOL · [C]';
+    }
     final p = _ownParts;
     final mates = [
       for (final (name, n) in companions)
@@ -102,6 +115,7 @@ class UnusedPoints {
       other.attributes == attributes &&
       other.tree == tree &&
       other.ascension == ascension &&
+      other.milestone == milestone &&
       _sameList(other.companions, companions);
 
   static bool _sameList(List<(String, int)> a, List<(String, int)> b) {
@@ -114,7 +128,8 @@ class UnusedPoints {
 
   @override
   int get hashCode =>
-      Object.hash(attributes, tree, ascension, Object.hashAll(companions));
+      Object.hash(
+      attributes, tree, ascension, milestone, Object.hashAll(companions));
 
   @override
   String toString() =>

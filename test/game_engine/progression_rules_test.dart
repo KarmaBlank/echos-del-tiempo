@@ -3,6 +3,7 @@ import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 
+import 'package:echos_del_tiempo/game_engine/models/passive_tree.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/upgrade_stat.dart';
 import 'package:echos_del_tiempo/game_engine/models/weapon.dart';
@@ -11,14 +12,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
 
-/// Guerrero nivel 3 con FUE 14 / DES 8 (2 puntos sin repartir).
+/// Guerrero nivel 5 con FUE 15 / DES 9 (2 puntos sin repartir; v2: +3).
 PlayerProfile _warriorL3({int credits = 0, List<String>? inventory}) =>
     progression.normalize(PlayerProfile.fromJson({
       'name': 'Ana',
       'cls': 'guerrero',
-      'lvl': 3,
+      'lvl': 5,
       'cr': credits,
-      'st': {'VIT': 10, 'ESP': 4, 'AGI': 6, 'FUE': 14, 'DES': 8},
+      'st': {'VIT': 10, 'ESP': 4, 'AGI': 6, 'FUE': 15, 'DES': 9},
       'pts': 2,
       'inv': inventory ?? ['espada_bronce'],
       'eq': 'espada_bronce',
@@ -65,12 +66,12 @@ void main() {
       expect(g.levelsGained, 1);
     });
 
-    test('gainXp sube varios niveles de una y da 3 puntos por nivel', () {
+    test('gainXp sube varios niveles de una y da 1 puntos por nivel', () {
       final g = progression.gainXp(newProfile('A', 'maga'), 70);
       expect(g.levelsGained, 2);
       expect(g.profile.level, 3);
       expect(g.profile.xp, 70 - 18 - 42);
-      expect(g.profile.points, 6);
+      expect(g.profile.points, 2);
     });
 
     test('gainXp sin llegar al siguiente nivel', () {
@@ -85,7 +86,7 @@ void main() {
     test('allocate: negativos cuentan 0, total > 0 y ≤ puntos', () {
       final p = _warriorL3();
       final next = progression.allocate(p, {Attribute.fue: 2, Attribute.vit: -5})!;
-      expect(next.attributes[Attribute.fue], 16);
+      expect(next.attributes[Attribute.fue], 21);
       expect(next.attributes[Attribute.vit], 10);
       expect(next.points, 0);
       expect(progression.allocate(p, {Attribute.fue: 3}), isNull);
@@ -104,7 +105,7 @@ void main() {
       final p = progression.resetBuild(_warriorL3());
       expect(p.attributes[Attribute.fue], 12);
       expect(p.attributes[Attribute.des], 6);
-      expect(p.points, 6);
+      expect(p.points, 4);
     });
 
     test('resetBuild equipa la inicial si el arma deja de cumplir requisitos', () {
@@ -124,7 +125,7 @@ void main() {
       expect(m.equipped, 'baculo_aprendiz');
       expect(m.inventory, containsAll(['espada_bronce', 'baculo_aprendiz']));
       expect(m.attributes[Attribute.esp], 13);
-      expect(m.points, 6);
+      expect(m.points, 4);
       expect(progression.changeClass(m, 'maga'), isNull);
       expect(progression.changeClass(m, 'ninja'), isNull);
     });
@@ -146,12 +147,12 @@ void main() {
 
     test('cualquier clase equipa cualquier arma si cumple nivel y requisitos',
         () {
-      // Guerrero nivel 5 con ESP 14: puede usar el Báculo de Fuego.
+      // Guerrero nivel 5 con ESP 16: puede usar el Báculo de Fuego.
       final p = progression.normalize(PlayerProfile.fromJson({
         'cls': 'guerrero',
         'lvl': 5,
-        'st': {'VIT': 10, 'ESP': 14, 'AGI': 6, 'FUE': 12, 'DES': 6},
-        'pts': 2,
+        'st': {'VIT': 10, 'ESP': 16, 'AGI': 6, 'FUE': 12, 'DES': 6},
+        'pts': 0,
         'inv': ['espada_bronce', 'baculo_fuego', 'tomo_tiempo'],
       }));
       expect(progression.canEquip(p, 'baculo_fuego'), isTrue);
@@ -161,7 +162,7 @@ void main() {
       expect(progression.weaponSkills(e), ['bola', 'llamarada']);
       // Tomo del Tiempo: nivel 7 y ESP 22.
       expect(progression.canEquip(p, 'tomo_tiempo'), isFalse);
-      final lvl = p.copyWith(level: 7, points: 8);
+      final lvl = p.copyWith(level: 7, points: 2);
       expect(progression.canEquip(lvl, 'tomo_tiempo'), isFalse,
           reason: 'falta ESP');
       expect(
@@ -359,20 +360,20 @@ void main() {
     });
 
     test('valida el árbol en orden', () {
+      final path = progression.treeRules.pathTo('guerrero',
+          PlayerPassiveProgress.empty, 'sangre_k')!;
       final p = progression.normalize(PlayerProfile.fromJson({
         'cls': 'guerrero',
-        'lvl': 3,
-        'tv': 4,
+        'lvl': 4,
+        'tv': PlayerProfile.treeVersion,
         'tree': [
-          'gue_f3', 'gue_r1', 'gue_f3', 'mag_r1', 's_gue', 'p_gue', 'r_gm1', //
-          'r_gm2',
+          path[1], path[0], path[1], 'mag_r1', 's_gue', path[2], path[3], //
         ],
       }));
-      // Nivel 3: 4 puntos (2 por nivel desde el árbol v6). gue_f3 no
-      // conecta todavía; gue_r1 sí; después gue_f3 ya conecta; mag_r1 no
-      // conecta; s_gue ya lo tiene; p_gue y r_gm1 entran y no quedan
-      // puntos para r_gm2.
-      expect(p.tree, ['gue_r1', 'gue_f3', 'p_gue', 'r_gm1']);
+      // Nivel 4: 3 puntos (1 por nivel, progresión v2). path[1] no conecta
+      // todavía; path[0] sí; después path[1] ya conecta; mag_r1 no
+      // conecta; s_gue ya lo tiene; path[2] entra y no quedan puntos.
+      expect(p.tree, [path[0], path[1], path[2]]);
     });
 
     test('perfil nuevo: 3 pociones, 1 de maná y arma inicial', () {
@@ -386,7 +387,7 @@ void main() {
 
     test('atributos válidos se conservan', () {
       final p = _warriorL3();
-      expect(p.attributes[Attribute.fue], 14);
+      expect(p.attributes[Attribute.fue], 15);
       expect(p.points, 2);
     });
   });

@@ -136,7 +136,8 @@ class ImpactSimulator {
   /// atributo principal del arma y â…“ a VIT (Â§ 5).
   PlayerAttributes typicalAttributes(String classId, int level, WeaponDef w) {
     final cls = catalog.classes[classId]!;
-    final points = (level - 1) * ProgressionRules.pointsPerLevel;
+    final points =
+        (level - 1) * ProgressionRules.pointsPerLevel * kAttrPerPoint;
     final formula = w.mag ?? w.atk;
     var main = Attribute.fue;
     var best = -1.0;

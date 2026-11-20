@@ -37,8 +37,8 @@ void main() {
           'name': 'Bo',
           'cls': 'maga',
           'lvl': 3,
-          'st': {'VIT': 6, 'ESP': 14, 'AGI': 7, 'FUE': 4, 'DES': 6},
-          'pts': 5,
+          'st': {'VIT': 6, 'ESP': 16, 'AGI': 7, 'FUE': 4, 'DES': 6},
+          'pts': 1,
           'inv': ['baculo_aprendiz', 'baculo_fuego', 'baculo_fuego'],
           'eq': 'baculo_fuego',
           'up': {

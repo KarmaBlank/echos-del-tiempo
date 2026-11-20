@@ -37,7 +37,7 @@ const _classCluster = ['n1', 'm1', 'm2', 'na', 'nb', 'ma', 'mb', 'nc', 'k'];
 final _v5Paths = kV5PassiveTree.paths.keys.toSet();
 
 void main() {
-  final tree = kPassiveTree;
+  final tree = kPassiveTreeV6;
   final rules = PassiveTreeRules(tree);
 
   test('597 nodos: 207 notables, 38 keystones (v6 + Invocador)', () {
@@ -58,12 +58,13 @@ void main() {
     }
     expect(tree.paths.values.where((p) => p.kind == 'puente'), hasLength(8));
     expect(tree.paths.values.where((p) => p.kind == 'grupo'), hasLength(8));
-    // Con el máximo (nivel 50 + 20 de Maestría = 138 puntos) se cubre
+    // Progresión v2: con el máximo (92 puntos en el árbol v7) se cubre
     // ~23.6%, lo mismo que la v5 (69 / 308 = 22.4%): sigue habiendo que
     // elegir.
-    final max = PassiveTreeRules.pointsEarned(50 + 20);
-    expect(max, 138);
-    expect(max / tree.nodes.length, inInclusiveRange(0.21, 0.25));
+    final max = PassiveTreeRules.pointsEarned(50 + 20,
+        trials: 3, ms10: true, ms20: true);
+    expect(max, 92);
+    expect(max / kPassiveTree.nodes.length, inInclusiveRange(0.20, 0.25));
   });
 
   test('anillo exterior: forma de los clusters, puentes y grupos v6', () {
@@ -142,7 +143,7 @@ void main() {
   });
 
   test('ids únicos y determinísticos; enlaces simétricos y sin repetir', () {
-    expect(_bfs(kPassiveTree, 's_gue').length, tree.nodes.length);
+    expect(_bfs(kPassiveTreeV6, 's_gue').length, tree.nodes.length);
     for (final n in tree.nodes.values) {
       expect(n.links.toSet(), hasLength(n.links.length), reason: n.id);
       expect(n.links, isNot(contains(n.id)));

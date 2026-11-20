@@ -520,7 +520,7 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
     final session = shop.view.session;
     final me = shop.view.actor!;
     final viewer = me.profile;
-    final attrs = viewer.attributes.add(widget.pending);
+    final attrs = viewer.attributes.add(ProgressionRules.rawOf(widget.pending));
     ItemInstance? find(WeaponRef r) =>
         session.players[r.owner]?.profile.itemByUid(r.uid);
     final a = find(widget.a);

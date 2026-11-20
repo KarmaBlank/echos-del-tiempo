@@ -13,6 +13,7 @@ import '../../../app/widgets/menu_focus.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../app/widgets/section_panel.dart';
 import '../../../core/settings/settings_providers.dart';
+import '../../../game_engine/rules/progression_rules.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/game_session.dart';
@@ -338,7 +339,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final owner = view.session.players[_owner] ?? me;
     final mine = owner.id == me.id;
     final p = owner.profile;
-    final attrs = me.profile.attributes.add(widget.pending);
+    final attrs = me.profile.attributes.add(ProgressionRules.rawOf(widget.pending));
     final layout = InventoryRules.layout(p);
     // Selección por defecto: la equipada.
     if (_content(p, _sel) == null) {

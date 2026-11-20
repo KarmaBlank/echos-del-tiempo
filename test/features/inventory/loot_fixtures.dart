@@ -82,15 +82,15 @@ PlayerProfile lootWarrior({
       classId: 'guerrero',
       level: level,
       credits: credits,
-      // Suma válida (como `richWarrior`: Lv5 con 4 puntos libres); cada
-      // punto de ESP sobre 4 sale de los libres.
-      points: 4 + 3 * (level - 5) - (esp - 4),
+      // Suma válida (progresión v2: Lv5 = 4 puntos, 2 en FUE y DES, 2 libres);
+      // cada +3 de ESP sobre 4 sale de los libres.
+      points: 2 + (level - 5) - (esp - 4) ~/ 3,
       attributes: PlayerAttributes({
         Attribute.vit: 10,
         Attribute.esp: esp,
         Attribute.agi: 6,
-        Attribute.fue: 16,
-        Attribute.des: 10,
+        Attribute.fue: 15,
+        Attribute.des: 9,
       }),
       items: [
         const ItemInstance(uid: 'espada_bronce', baseId: 'espada_bronce'),

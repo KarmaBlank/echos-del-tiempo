@@ -1,4 +1,6 @@
+import '../data/classes_catalog.dart';
 import '../data/skills_catalog.dart';
+import '../models/attributes.dart';
 import '../data/ascension_catalog.dart';
 import '../models/item.dart';
 import '../models/player_profile.dart';
@@ -13,7 +15,9 @@ import 'item_rules.dart';
 /// y no pierden nada (la migración de 1 → 2 no cambia ningún arma, solo
 /// sube `bv`). Las cuentas sin `bv` son de antes (v0.8.x) y se migran
 /// una vez.
-const kBalanceVersion = 2;
+/// 3 = v0.10, progresión v2 (progression_v2.md § 7): se devuelven todos
+/// los puntos de atributo y de árbol ([resetProgressionV2]).
+const kBalanceVersion = 3;
 
 /// Lo que la migración cambió y devolvió, para el aviso único al cargar.
 class BalanceRefund {
@@ -166,3 +170,21 @@ class BalanceMigration {
     );
   }
 }
+
+/// Progresión v2 (`bv` 3, progression_v2.md § 7): atributos al base de la
+/// clase con todos sus puntos (`nivel − 1`, cada uno +3), árbol vacío y
+/// hitos sin elegir. Gratis e idempotente. El arma que deje de cumplir
+/// requisitos la cambia por la inicial `ProgressionRules.normalize`.
+PlayerProfile resetProgressionV2(PlayerProfile p) {
+  final cls = kClasses[p.classId] ?? kClasses['guerrero']!;
+  return p.copyWith(
+    attributes: PlayerAttributes.base(cls.baseAttributes),
+    points: (p.level.clamp(1, 50) - 1) * kAttrPointsPerLevelV2,
+    tree: const [],
+    milestone10: () => null,
+    milestone20: () => null,
+  );
+}
+
+/// Puntos de atributo por nivel desde la progresión v2.
+const kAttrPointsPerLevelV2 = 1;

@@ -208,7 +208,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('confirm-points')));
     await tester.pump();
     final leo = c.session!.players['local-c2']!.profile;
-    expect(leo.attributes[Attribute.vit], leo0.attributes[Attribute.vit] + 1);
+    expect(leo.attributes[Attribute.vit], leo0.attributes[Attribute.vit] + 3);
     expect(leo.points, leo0.points - 1);
     final ana = c.session!.players['local']!.profile;
     expect(ana.attributes[Attribute.vit], ana0.attributes[Attribute.vit],

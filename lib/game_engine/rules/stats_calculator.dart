@@ -67,14 +67,17 @@ class StatsCalculator {
     final s = attrMods.values.any((v) => v != 0)
         ? build.attributes.add(attrMods)
         : build.attributes;
+    // Tope blando (progression_v2.md § 2.2): las fórmulas usan el valor
+    // efectivo; los requisitos del arma miran el crudo.
+    double e(Attribute a) => effectiveAttr(a, s[a]);
 
-    final hpBase = jsRound(20 + s[Attribute.vit] * 4 + build.level * 2);
-    final mpBase = jsRound(4 + s[Attribute.esp] * 1.5 + build.level);
+    final hpBase = jsRound(20 + e(Attribute.vit) * 4 + build.level * 2);
+    final mpBase = jsRound(4 + e(Attribute.esp) * 1.5 + build.level);
     var maxHp = hpBase + m(ModStat.maxHp);
     var maxMp = mpBase + m(ModStat.maxMp);
     var speed = jsRound((6 +
-                s[Attribute.agi] * 0.5 +
-                s[Attribute.des] * 0.1 -
+                e(Attribute.agi) * 0.5 +
+                e(Attribute.des) * 0.1 -
                 w.weight +
                 up.spd * WeaponUpgradeLevels.spdPer +
                 m(ModStat.speed) * ModStat.speed.scale) *
@@ -83,7 +86,7 @@ class StatsCalculator {
     var crit = math.min(
       0.6,
       0.03 +
-          s[Attribute.des] * 0.012 +
+          e(Attribute.des) * 0.012 +
           up.crit * WeaponUpgradeLevels.critPer +
           m(ModStat.critChance) * ModStat.critChance.scale,
     );
@@ -94,13 +97,13 @@ class StatsCalculator {
         m(ModStat.defense);
 
     final powMult = 1 + WeaponUpgradeLevels.powPer * up.pow;
-    final atkBase = w.atk.evaluate(s);
+    final atkBase = w.atk.evaluateEffective(e);
     final atkFlat = m(ModStat.flatAtk);
     final atkPct = m(ModStat.atkPct) * ModStat.atkPct.scale;
     var attack = jsRound((atkBase + atkFlat) * (1 + atkPct) * powMult);
     // Sin fórmula de MAG, la magia copia al ataque (como el prototipo).
     final magFormula = w.mag;
-    final magBase = (magFormula ?? w.atk).evaluate(s);
+    final magBase = (magFormula ?? w.atk).evaluateEffective(e);
     final magFlat = magFormula == null ? atkFlat : m(ModStat.flatMag);
     final magPct = magFormula == null
         ? atkPct
@@ -166,7 +169,7 @@ class StatsCalculator {
         if (tree['mp'] != 0) '${treeStep('mp')} árbol',
       ])),
       'VEL': StatBreakdown('VEL', speed, clean([
-        'base ${_n(6 + s[Attribute.agi] * 0.5 + s[Attribute.des] * 0.1)}',
+        'base ${_n(6 + e(Attribute.agi) * 0.5 + e(Attribute.des) * 0.1)}',
         if (w.weight != 0) '− ${_n(w.weight)} peso',
         if (m(ModStat.speed) != 0)
           '+ ${_n(m(ModStat.speed) * ModStat.speed.scale)} afijos',
@@ -174,7 +177,7 @@ class StatsCalculator {
         if (tree['spd'] != 0) '+ ${_n(tree['spd'])} árbol',
       ])),
       'CRIT': StatBreakdown('CRIT', jsRound(crit * 100), clean([
-        'base ${jsRound((0.03 + s[Attribute.des] * 0.012) * 100)}%',
+        'base ${jsRound((0.03 + e(Attribute.des) * 0.012) * 100)}%',
         if (m(ModStat.critChance) != 0) '+ ${m(ModStat.critChance)}% afijos',
         if (up.crit > 0)
           '+ ${jsRound(up.crit * WeaponUpgradeLevels.critPer * 100)}% forja',

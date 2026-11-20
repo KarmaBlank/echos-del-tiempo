@@ -23,6 +23,7 @@ import '../../../../app/widgets/section_panel.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/bestiary.dart';
 import '../../../../game_engine/models/build_plan.dart';
+import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/rules/attribute_advisor.dart';
@@ -54,8 +55,8 @@ const kAttributeInfo = {
 enum CharacterTab {
   attributes(
       'ATRIBUTOS',
-      'Reparte puntos con + y -; nada cambia hasta CONFIRMAR. Cada nivel da '
-          '${ProgressionRules.pointsPerLevel} puntos.'),
+      'Cada nivel da 1 punto (+3 a un atributo). Hasta el tope rinde '
+          'completo; después, la mitad. Nada cambia hasta CONFIRMAR.'),
   inventory(
       'INVENTARIO',
       'Arrastra para mover · clic para ver · clic derecho (o Enter): '
@@ -63,8 +64,8 @@ enum CharacterTab {
           'mano.'),
   tree(
       'ÁRBOL',
-      'Pasivas de clase: 2 puntos por nivel. Arrastra para mover, rueda para '
-          'zoom, clic para tomar un nodo.'),
+      'Pasivas de clase: 1 punto por nivel. Clic en un nodo lejano: tomar el '
+          'camino entero. Arrastra para mover, rueda para zoom.'),
   filter(
       'FILTRO',
       'Reglas en orden: gana la primera que coincide. Ocultar no borra el '
@@ -206,7 +207,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
         onChanged: (i) => setState(() => _tab = CharacterTab.values[i]),
         child: PanelFrame(
           title: must
-              ? '¡SUBISTE A NIVEL ${prof.level}! Reparte tus puntos'
+              ? '¡SUBISTE A NIVEL ${prof.level}! 1 punto de atributo (+3) y 1 de árbol'
               : 'PERSONAJE',
           width: 1000,
           fill: true,
@@ -409,7 +410,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
     final w = rules.equippedWeapon(prof);
     final pending = [
       for (final a in Attribute.values)
-        if ((_alloc[a] ?? 0) > 0) '+${_alloc[a]} ${kAttributeInfo[a]!.$1}',
+        if ((_alloc[a] ?? 0) > 0)
+          '+${_alloc[a]! * kAttrPerPoint} ${kAttributeInfo[a]!.$1}',
     ];
     return SingleChildScrollView(
       child: Column(
@@ -459,18 +461,35 @@ class _CharacterPanelState extends State<CharacterPanel> {
     final impact =
         battleImpactMarkup(rules, now, next, weapon: rules.equippedItem(prof));
     final big = RetroType.settingFactor(context) >= 1.9;
-    final nameText = ProtoText('<b style="color:#e8ecff">$short</b> '
+    // Tope blando (progression_v2.md § 2.2).
+    final cap = kAttrSoftCap[a]!;
+    final shown = value + add * kAttrPerPoint;
+    final over = shown > cap;
+    final gain = effectiveAttr(a, shown + kAttrPerPoint) - effectiveAttr(a, shown);
+    final full = gain >= kAttrPerPoint;
+    String num1(double v) =>
+        v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1);
+    final nameText = ProtoText('<span style="color:#e8ecff">$short</span> '
         '<span class="k">${retroText(name)}</span>');
-    final valueText = ProtoText('<b>$value</b>'
-        '${add > 0 ? ' ${protoColor(ProtoColors.green, '+$add')}' : ''}');
+    final valueColor = over ? ProtoColors.orange : ProtoColors.ink;
+    final addText = add > 0
+        ? ' ${protoColor(over ? ProtoColors.orange : ProtoColors.green, '+${add * kAttrPerPoint}')}'
+        : '';
+    final valueText =
+        ProtoText('${protoColor(valueColor, '$value')}$addText');
+    final capText = Text(
+        over ? 'tope $cap: rinde ½' : 'tope $cap',
+        key: ValueKey('attr-cap-${a.name}'),
+        style: TextStyle(color: over ? ProtoColors.orange : ProtoColors.dim));
     final targetText = target == null
         ? null
-        : Text('★ ${value + add}/$target',
+        : Text('★ $shown/$target',
             key: ValueKey('build-attr-${a.name}'),
             style: TextStyle(
-                color: value + add >= target ? ProtoColors.green : kPlanColor));
+                color: shown >= target ? ProtoColors.green : kPlanColor));
     return RetroTooltip(
-        message: '<b>+1 ${retroText(name)}</b>: ${retroText(desc)}'
+        message: '+$kAttrPerPoint ${retroText(name)}: ${retroText(desc)}'
+            '${full ? '' : '<br>Pasaste el tope $cap: rinde +${num1(gain)}'}'
             '${impact == null ? '' : '<br>$impact'}',
         child: Container(
           key: ValueKey('attr-row-${a.name}'),
@@ -512,18 +531,22 @@ class _CharacterPanelState extends State<CharacterPanel> {
                           ? () => setState(() => _alloc[a] = add - 1)
                           : null),
                   const SizedBox(width: 8),
-                  PanelButton('+',
+                  PanelButton(
+                      full
+                          ? '+$kAttrPerPoint $short'
+                          : '+$kAttrPerPoint $short → +${num1(gain)}',
                       key: ValueKey('inc-${a.name}'),
+                      accent: full ? null : ProtoColors.orange,
                       onPressed: left > 0
                           ? () => setState(() => _alloc[a] = add + 1)
                           : null),
                 ],
               ),
-              if (big)
-                Wrap(spacing: 12, children: [
-                  valueText,
-                  if (targetText != null) targetText,
-                ]),
+              Wrap(spacing: 12, children: [
+                if (big) valueText,
+                if (big && targetText != null) targetText,
+                capText,
+              ]),
               Text(retroText(desc),
                   style: const TextStyle(color: ProtoColors.dim)),
             ],
@@ -608,15 +631,40 @@ class _CharacterPanelState extends State<CharacterPanel> {
         profile: p,
         inBattle: view.mode == SessionMode.battle,
         onTake: c.takeNode,
+        onTakePath: c.takeNodes,
+        onChooseMilestone: c.chooseMilestone,
+        onMark: (id) {
+          final slot = _slot;
+          final plan = ref.read(buildPlanProvider).planFor(slot);
+          ref
+              .read(buildPlanProvider.notifier)
+              .save(plan.toggleTreeNode(id), characterId: slot);
+        },
         showReset: guards.showRespec,
         resetLabel: ProgressionRules.freeRespec
             ? 'REINICIAR ÁRBOL (GRATIS)'
             : 'REINICIAR ÁRBOL',
         resetReason: guards.resetTree(p),
-        onReset: c.resetTree,
+        onReset: () => _resetTree(p),
         height: height,
         showHelp: false,
       ),
     );
+  }
+
+  /// REINICIAR ÁRBOL: con hitos elegidos pide confirmar (vuelven a
+  /// quedar pendientes; progression_v2.md § 6).
+  Future<void> _resetTree(PlayerProfile p) async {
+    final c = widget.controller;
+    if (p.milestone10 == null && p.milestone20 == null) {
+      c.resetTree();
+      return;
+    }
+    final ok = await showBuildPicker<bool>(context, '¿REINICIAR ÁRBOL?', [
+      const PickOption(true, 'Sí, reiniciar',
+          'También podés volver a elegir tus hitos (nivel 10 y 20).',
+          key: 'tree-reset-yes'),
+    ]);
+    if (ok == true && mounted) c.resetTree();
   }
 }

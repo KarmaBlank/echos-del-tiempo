@@ -35,12 +35,12 @@ void main() {
       final u = UnusedPoints.of(p, progression);
       final attr = p.points;
       expect(attr, greaterThan(0));
-      // 2 puntos de árbol por nivel (v0.8): 5 × 2 − 1.
-      expect(u, UnusedPoints(attributes: attr, tree: 9, ascension: 2));
-      expect(u.total, attr + 11);
+      // Progresión v2: 1 por nivel + 2 por la Prueba − 1 tomado.
+      expect(u, UnusedPoints(attributes: attr, tree: 6, ascension: 2));
+      expect(u.total, attr + 8);
       expect(u.parts, [
         '$attr puntos de atributos',
-        '9 puntos de árbol',
+        '6 puntos de árbol',
         '2 puntos de ascensión',
       ]);
       expect(
@@ -48,6 +48,9 @@ void main() {
     });
 
     test('texto del aviso', () {
+      // Hito pendiente: aviso propio (progression_v2.md § 5).
+      expect(const UnusedPoints(tree: 7, milestone: 10).toastText,
+          '¡Hito del nivel 10! Elegí tu keystone en ÁRBOL · [C]');
       expect(const UnusedPoints(tree: 2).toastText,
           'Tenés 2 puntos de árbol sin usar · [C]');
       expect(const UnusedPoints(tree: 1).toastText,
@@ -175,7 +178,7 @@ void main() {
   group('en el juego', () {
     testWidgets('HUD: PERSONAJE [C] +N abre el panel; pestañas con +N',
         (tester) async {
-      // Nivel 6 sin repartir: 10 de árbol (2 por nivel desde la v0.8; y
+      // Nivel 6 sin repartir: 5 de árbol (1 por nivel, progresión v2; y
       // los de atributos del nivel).
       final c = await pumpPanel(tester,
           profile: progression.normalize(
@@ -186,7 +189,7 @@ void main() {
               ]));
       final me = c.view!.me!.profile;
       final u = UnusedPoints.of(me, c.engine.progression);
-      expect(u.tree, 10);
+      expect(u.tree, 5);
       expect(find.byKey(const ValueKey('hud-points-button')), findsOneWidget);
       expect(
           find.descendant(
@@ -201,7 +204,7 @@ void main() {
       expect(
           find.descendant(
               of: find.byKey(ValueKey('tab-badge-${CharacterTab.tree.index}')),
-              matching: find.text('+10')),
+              matching: find.text('+5')),
           findsOneWidget);
       if (me.points > 0) {
         expect(

@@ -127,7 +127,7 @@ void main() {
     // Abre con el cursor en el primer `+`.
     expect(_focusedKey(), 'inc-vit');
     await _key(tester, LogicalKeyboardKey.enter);
-    expect(plain(tester, 'pending-points'), contains('+1 VIT'));
+    expect(plain(tester, 'pending-points'), contains('+3 VIT'));
     await _key(tester, LogicalKeyboardKey.arrowDown);
     expect(_focusedKey(), 'inc-esp');
     await _key(tester, LogicalKeyboardKey.keyE);

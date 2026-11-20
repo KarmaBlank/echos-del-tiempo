@@ -40,8 +40,9 @@ PlayerProfile _guerrero({
   // `normalize` reinicia los atributos).
   final spent = attrs == null
       ? 0
-      : attrs.values.fold<int>(0, (a, b) => a + b) -
-          _baseAttrs.values.fold<int>(0, (a, b) => a + b);
+      : (attrs.values.fold<int>(0, (a, b) => a + b) -
+              _baseAttrs.values.fold<int>(0, (a, b) => a + b)) ~/
+          kAttrPerPoint;
   return _progression.normalize(PlayerProfile(
     name: 'Ana',
     classId: 'guerrero',
@@ -156,13 +157,13 @@ void main() {
     });
 
     test('atributos: actual/objetivo y hecho', () {
-      final p = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 32});
+      final p = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 33});
       final r = _rules.evaluate(
           const BuildPlan(attributes: {Attribute.fue: 40, Attribute.vit: 8}),
           p);
       final fue = r.byKey('attr:fue')!;
       expect(fue.state, GoalState.partial);
-      expect((fue.current, fue.total), (32, 40));
+      expect((fue.current, fue.total), (33, 40));
       expect(r.byKey('attr:vit')!.state, GoalState.done);
     });
 
@@ -347,12 +348,12 @@ void main() {
 
     test('siguiente paso: puntos de atributo y de árbol', () {
       // Nivel 4: 9 puntos, 8 en FUE → queda 1... nivel 5 (12): 9 en FUE.
-      final p = _guerrero(level: 5, attrs: {..._baseAttrs, Attribute.fue: 21});
+      final p = _guerrero(level: 5, attrs: {..._baseAttrs, Attribute.fue: 18});
       var r = _rules.evaluate(
           const BuildPlan(
               attributes: {Attribute.fue: 40}, treeNodes: ['quiebre_na']),
           p);
-      expect(r.next, 'Tenés 3 puntos: según tu build, FUE (21/40)');
+      expect(r.next, 'Tenés 2 puntos: según tu build, FUE (18/40)');
       r = _rules.evaluate(
           const BuildPlan(treeNodes: ['quiebre_na']), _guerrero(level: 1));
       final n = _tree
@@ -367,7 +368,7 @@ void main() {
 
   group('diff y avisos', () {
     const plan = BuildPlan(
-      attributes: {Attribute.fue: 40},
+      attributes: {Attribute.fue: 60},
       treeNodes: ['gue_r1', 'gue_f3', 'sangre_na'],
       weaponBases: ['hacha_rompe'],
     );
@@ -379,7 +380,7 @@ void main() {
           plan,
           _guerrero(attrs: {
             ..._baseAttrs,
-            Attribute.fue: 32
+            Attribute.fue: 33
           }, tree: [
             'gue_r1',
             'gue_f3'
@@ -388,7 +389,7 @@ void main() {
             ItemInstance.common('h', 'hacha_rompe'),
           ]));
       final n = BuildPlanRules.diff(before, after).map((e) => e.text).toList();
-      expect(n, contains('Build: FUE 32/40'));
+      expect(n, contains('Build: FUE 33/60'));
       expect(n, contains('Build: árbol 2/3'));
       expect(n.any((t) => t.startsWith('Build: » Hacha Rompeturnos')), isTrue);
       // Al revés no avisa nada.
@@ -409,22 +410,22 @@ void main() {
     test('tracker: base sin avisos, cambio de plan no avisa, tope', () {
       final t = BuildTracker(_rules,
           throttle: BuildNoticeThrottle(max: 2, windowS: 4));
-      final p0 = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 30});
+      final p0 = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 15});
       expect(t.observe(plan, p0, 0), isEmpty); // base
-      final p1 = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 31});
-      expect(t.observe(plan, p1, 1), ['Build: FUE 31/40']);
+      final p1 = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 18});
+      expect(t.observe(plan, p1, 1), ['Build: FUE 18/60']);
       // Plan nuevo: base nueva, sin aviso.
-      const plan2 = BuildPlan(attributes: {Attribute.fue: 31});
+      const plan2 = BuildPlan(attributes: {Attribute.fue: 18});
       expect(t.observe(plan2, p1, 2), isEmpty);
-      final p2 = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 32});
+      final p2 = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 21});
       expect(t.observe(plan, p2, 2.5), isEmpty); // otra vez otro plan
-      final p3 = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 33});
-      expect(t.observe(plan, p3, 3), ['Build: FUE 33/40']);
+      final p3 = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 24});
+      expect(t.observe(plan, p3, 3), ['Build: FUE 24/60']);
       // Tope de 2 en 4 s (1 s y 3 s): el siguiente espera.
-      final p4 = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 34});
+      final p4 = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 27});
       expect(t.observe(plan, p4, 3.5), isEmpty);
-      final p5 = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 35});
-      expect(t.observe(plan, p5, 5.5), ['Build: FUE 35/40']);
+      final p5 = _guerrero(attrs: {..._baseAttrs, Attribute.fue: 30});
+      expect(t.observe(plan, p5, 5.5), ['Build: FUE 30/60']);
     });
 
     test('tope: lo que sobra se resume', () {

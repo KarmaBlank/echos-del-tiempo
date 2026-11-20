@@ -13,20 +13,77 @@ class PassiveTreeRules {
         progress.takenNodeIds.contains(nodeId);
   }
 
-  /// Puntos de árbol disponibles: [pointsEarned] (2 por nivel ganado
-  /// después del 1 y por Maestría) menos los ya gastados.
-  int pointsAvailable(int level, PlayerPassiveProgress progress) {
+  /// Puntos de árbol disponibles: [earned] (`PlayerProfile.treePoints`,
+  /// ver [pointsEarned]) menos los ya gastados.
+  int pointsAvailable(int earned, PlayerPassiveProgress progress) {
     final spent = progress.takenNodeIds.length;
-    return (pointsEarned(level) - spent).clamp(0, 1 << 30);
+    return (earned - spent).clamp(0, 1 << 30);
   }
 
   /// Puntos de árbol por nivel ganado después del 1 y por nivel de
-  /// Maestría (árbol v6, v0.8: 2; antes 1; passive_tree_v6.md § 7).
-  static const pointsPerLevel = 2;
+  /// Maestría (progresión v2: 1; árbol v6: 2; progression_v2.md § 3.3).
+  static const pointsPerLevel = 1;
 
-  /// Puntos de árbol ganados con [level] (`PlayerProfile.treeLevel`:
-  /// nivel + Maestría): nivel 50 + 20 de Maestría = 138.
-  static int pointsEarned(int level) => (level - 1) * pointsPerLevel;
+  /// Puntos por Prueba del Tiempo superada (ascensión 30 / 40 / 50).
+  static const pointsPerTrial = 2;
+
+  /// Puntos de hito (progression_v2.md § 5): nivel → puntos.
+  static const milestonePoints = {10: 7, 20: 10};
+
+  /// Puntos de árbol ganados con [treeLevel] (nivel + Maestría), las
+  /// Pruebas superadas y los hitos elegidos: nivel 50 + 20 de Maestría +
+  /// 3 Pruebas + hitos = 49 + 20 + 6 + 17 = 92.
+  static int pointsEarned(int treeLevel,
+          {int trials = 0, bool ms10 = false, bool ms20 = false}) =>
+      (treeLevel - 1) * pointsPerLevel +
+      trials * pointsPerTrial +
+      (ms10 ? milestonePoints[10]! : 0) +
+      (ms20 ? milestonePoints[20]! : 0);
+
+  /// Keystones elegibles en el hito [milestone] (10 o 20) para [classId]
+  /// (progression_v2.md § 5): las 5 de los clusters v4 de su clase por
+  /// costo desde el inicio; el 10 ofrece las 3 más cercanas y el 20 las
+  /// otras 2 más la del puente más cercano.
+  List<String> milestoneOptions(String classId, int milestone) {
+    final start = catalog.startNodeByClass[classId];
+    if (start == null) return const [];
+    final dist = <String, int>{start: 0};
+    var f = [start];
+    while (f.isNotEmpty) {
+      final n = <String>[];
+      for (final id in f) {
+        for (final l in catalog.nodes[id]!.links) {
+          if (dist.containsKey(l)) continue;
+          dist[l] = dist[id]! + 1;
+          n.add(l);
+        }
+      }
+      f = n;
+    }
+    int cmp(String a, String b) {
+      final c = (dist[a] ?? 1 << 20).compareTo(dist[b] ?? 1 << 20);
+      return c != 0 ? c : a.compareTo(b);
+    }
+
+    final own = [
+      for (final n in catalog.nodes.values)
+        if (n.kind == 'k' &&
+            catalog.paths[n.pathId]?.kind == 'clase' &&
+            catalog.paths[n.pathId]?.classId == classId)
+          n.id
+    ]..sort(cmp);
+    final inner = own.take(5).toList();
+    if (milestone == 10) return inner.take(3).toList();
+    final bridge = [
+      for (final n in catalog.nodes.values)
+        if (n.kind == 'k' &&
+            catalog.paths[n.pathId]?.kind == 'puente' &&
+            (catalog.paths[n.pathId]?.classId.split('+').contains(classId) ??
+                false))
+          n.id
+    ]..sort(cmp);
+    return [...inner.skip(3), ...bridge.take(1)];
+  }
 
   bool canTake(
     String classId,
@@ -60,7 +117,7 @@ class PassiveTreeRules {
     for (final id in ids) {
       final node = catalog.nodes[id];
       if (node == null) continue;
-      if (node.mechanicId case final mech?) mechanics.add(mech);
+      mechanics.addAll(node.mechanicIds);
       node.effects.forEach((k, v) {
         if (k == 'key' && node.keystoneId != null) {
           keys.add(node.keystoneId!);

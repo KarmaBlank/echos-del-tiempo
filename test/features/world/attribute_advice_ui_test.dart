@@ -65,13 +65,13 @@ void main() {
     expectButtonLook(tester, find.byKey(const ValueKey('pick-advice-no')));
     await tester.tap(find.byKey(const ValueKey('pick-advice-no')));
     await tester.pumpAndSettle();
-    expect(c.view!.me!.profile.points, 6);
+    expect(c.view!.me!.profile.points, 2);
 
     await _applyAdvice(tester);
     final p = c.view!.me!.profile;
     expect(p.points, 0);
     for (final a in Attribute.values) {
-      expect(p.attributes[a], start.attributes[a] + (add[a] ?? 0),
+      expect(p.attributes[a], start.attributes[a] + (add[a] ?? 0) * 3,
           reason: a.name);
     }
     // Sin puntos la tarjeta desaparece.
@@ -129,7 +129,7 @@ void main() {
     expect(c.view!.actorId, 'local-c2');
     final leo0 = c.session!.players['local-c2']!.profile;
     final ana0 = c.session!.players['local']!.profile;
-    expect(leo0.points, 12);
+    expect(leo0.points, 4);
     final add = AttributeAdvisor.allocation(
         AttributeAdvisor(c.engine.progression).recommend(leo0));
     expect(add[Attribute.esp], greaterThan(0), reason: 'maga: ESP');
@@ -139,7 +139,7 @@ void main() {
     final leo = c.session!.players['local-c2']!.profile;
     expect(leo.points, 0);
     for (final x in Attribute.values) {
-      expect(leo.attributes[x], leo0.attributes[x] + (add[x] ?? 0));
+      expect(leo.attributes[x], leo0.attributes[x] + (add[x] ?? 0) * 3);
     }
     final ana = c.session!.players['local']!.profile;
     expect(ana.attributes.values, ana0.attributes.values);
@@ -155,7 +155,7 @@ void main() {
         build: (v, c) => CharacterPanel(
             view: v, controller: c, initialTab: CharacterTab.build));
     final pts = AttributeAdvisor.horizonPoints(start);
-    expect(pts, 6 + 15);
+    expect(pts, 2 + 5);
     final s = AttributeAdvisor(c.engine.progression).recommend(start, null, pts);
     expect(
         find.text('Atributos sugeridos ($pts puntos: libres y próximos '
@@ -168,7 +168,7 @@ void main() {
     final plan = container.read(buildPlanProvider).plan;
     for (final x in s) {
       expect(plan.attributes[x.attribute],
-          start.attributes[x.attribute] + x.points);
+          start.attributes[x.attribute] + x.points * 3);
     }
     expect(find.byKey(const ValueKey('build-goal-attr:fue')), findsOneWidget);
   });

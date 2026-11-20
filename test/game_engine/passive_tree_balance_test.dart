@@ -98,7 +98,7 @@ double _weighted(TreeMods m) {
 
 void main() {
   final v2 = PassiveTreeRules(kPassiveTreeV2);
-  final v4 = PassiveTreeRules(kPassiveTree);
+  final v4 = PassiveTreeRules(kPassiveTreeV6);
   final v3 = PassiveTreeRules(kPassiveTreeV3);
   const classes = ['guerrero', 'maga', 'tirador', 'paladin'];
 
@@ -266,8 +266,83 @@ void main() {
             isTrue,
             reason: '$cls ${old[i]}');
       }
-      expect(v4.pointsAvailable(70, PlayerPassiveProgress(old)),
+      expect(v4.pointsAvailable(_pointsV6, PlayerPassiveProgress(old)),
           _pointsV6 - old.length);
+    }
+  });
+
+  // ---- Árbol v7 (progresión v2, progression_v2.md § 3 y § 8) ----
+  //
+  // 92 puntos v7 (49 + 20 de Maestría + 6 de Pruebas + 17 de hitos)
+  // contra 138 del v6: el árbol cuesta ~0.7 y hay ~0.67 de los puntos.
+  // Meta: mismo poder ±15% en un stat y en el build mixto; condiciones
+  // con los mismos topes (≤ +80% daño, ≤ +75% crítico).
+  const pointsV7 = 92;
+  final v7 = PassiveTreeRules(kPassiveTree);
+
+  test('92 puntos v7 contra 138 v6: un stat y build mixto dentro de ±15%',
+      () {
+    final out = <String>[];
+    for (final cls in classes) {
+      for (final k in ['hp', 'atk', 'mag', 'crit', 'spd', 'def', 'mp']) {
+        double best(PassiveTreeRules r, int pts) {
+          final b = _greedy(r, cls, pts, (m) => m[k]);
+          final v = r.aggregate(cls, PlayerPassiveProgress(b))[k];
+          return k == 'def' ? (v * 0.03).clamp(0.0, 0.6) : v;
+        }
+
+        final a = best(v4, _pointsV6), b = best(v7, pointsV7);
+        if (a > 0 && (b < a * 0.85 - 1e-9 || b > a * 1.15 + 1e-9)) {
+          out.add('$cls $k: v6 ${a.toStringAsFixed(2)} → v7 '
+              '${b.toStringAsFixed(2)}');
+        }
+      }
+      double total(PassiveTreeRules r, int pts) {
+        final b = _greedy(r, cls, pts, _weighted);
+        return _weighted(r.aggregate(cls, PlayerPassiveProgress(b)));
+      }
+
+      final a = total(v4, _pointsV6), b = total(v7, pointsV7);
+      // ignore: avoid_print
+      print('mixto $cls: v6 ${a.toStringAsFixed(2)} → v7 '
+          '${b.toStringAsFixed(2)} (${(b / a).toStringAsFixed(2)}×)');
+      if (b < a * 0.85 || b > a * 1.15) out.add('$cls mixto ${b / a}');
+    }
+    expect(out, isEmpty);
+  });
+
+  test('92 puntos v7: lo que se junta contra un mismo estado tiene tope', () {
+    double cond(TreeMods m, StatusKind st, BuffStat stat) {
+      var t = 0.0;
+      for (final id in m.mechanics) {
+        final mm = kMechanics[id];
+        if (mm == null) continue;
+        final ok = (mm.trigger == ProcTrigger.always &&
+                mm.filter == ProcFilter.any) ||
+            (mm.trigger == ProcTrigger.vsStatus && mm.status == st);
+        if (!ok) continue;
+        for (final fx in mm.effects) {
+          if (fx.kind == ProcEffectKind.statBonus && fx.stat == stat) {
+            t += fx.value;
+          }
+        }
+      }
+      return t;
+    }
+
+    for (final cls in classes) {
+      for (final st in StatusKind.values) {
+        for (final (stat, cap) in [
+          (BuffStat.damage, 0.80),
+          (BuffStat.crit, 0.75)
+        ]) {
+          final b = _greedy(v7, cls, pointsV7, (m) => cond(m, st, stat));
+          final v =
+              cond(v7.aggregate(cls, PlayerPassiveProgress(b)), st, stat);
+          expect(v, lessThanOrEqualTo(cap + 1e-9),
+              reason: '$cls ${st.name} $stat');
+        }
+      }
     }
   });
 }

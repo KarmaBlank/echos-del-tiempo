@@ -1,4 +1,5 @@
-﻿// Medición temporal para docs/specs/progression_v2.md. No es un test real.
+// ignore_for_file: avoid_print
+// Medición temporal para docs/specs/progression_v2.md. No es un test real.
 // flutter test tool/progression_v2_measure_test.dart
 import 'dart:collection';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';

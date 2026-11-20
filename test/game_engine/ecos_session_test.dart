@@ -410,9 +410,9 @@ void main() {
     test('la Maestría deja tomar nodos de más y normalize los conserva', () {
       var p = endgamer('Ana').copyWith(mastery: 2);
       final rules = zoneProgression.treeRules;
-      final free = rules.pointsAvailable(p.treeLevel, p.passiveProgress);
-      // 2 puntos por nivel y por Maestría (árbol v6): (49 + 2) × 2.
-      expect(free, 102);
+      final free = rules.pointsAvailable(p.treePoints, p.passiveProgress);
+      // 1 punto por nivel y por Maestría (progresión v2): 49 + 2.
+      expect(free, 51);
       expect(zoneProgression.normalize(p).mastery, 2);
       // Sin nivel 50 no hay Maestría.
       expect(

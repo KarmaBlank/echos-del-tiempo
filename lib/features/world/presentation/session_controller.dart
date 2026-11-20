@@ -1264,6 +1264,14 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool takeNode(String nodeId) => _applyFor(actingId, TakeNodeAction(nodeId));
 
+  /// Camino en un clic (progression_v2.md § 4).
+  bool takeNodes(List<String> ids) =>
+      _applyFor(actingId, TakeNodesAction(ids));
+
+  /// Hito del nivel [milestone] (progression_v2.md § 5).
+  bool chooseMilestone(int milestone, String keystoneId) =>
+      _applyFor(actingId, ChooseMilestoneAction(milestone, keystoneId));
+
   bool resetTree() => _applyFor(actingId, const ResetTreeAction());
 
   // ---- endgame (docs/specs/ecos_atlas.md) ----
