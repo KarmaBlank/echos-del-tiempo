@@ -55,11 +55,11 @@ class InventoryStacksBar extends StatelessWidget {
     if (_count(k) > 0) onSelect?.call(k.token);
   }
 
-  Widget _cell(StackKind k) {
+  Widget _cell(StackKind k, double size) {
     final n = _count(k);
     Widget w = ItemCell(
       rules: rules,
-      size: cell,
+      size: size,
       content: CellContent.stack(k, n),
       selected: selected == k.token && n > 0,
     );
@@ -85,21 +85,31 @@ class InventoryStacksBar extends StatelessWidget {
         children: [
           Text(retroText(title), style: DsText.subtitle()),
           SizedBox(height: gap),
-          FocusGrid(
-            count: kinds.length,
-            columns: kinds.length,
-            spacing: gap,
-            keyPrefix: 'inv-stack-focus-$id-',
-            cell: (_, i, __) => _cell(kinds[i]),
-            onFocusCell: onSelect == null ? null : (i) => _pick(kinds[i]),
-            onActivate: onSelect == null
-                ? null
-                : (i) => onMenu != null &&
-                        selected == kinds[i].token &&
-                        _count(kinds[i]) > 0
-                    ? onMenu!(kinds[i].token, null)
-                    : _pick(kinds[i]),
-          ),
+          // Responsivo (v0.12.0): tantas columnas como entren en el
+          // ancho; las demás pilas bajan de línea (nunca se cortan).
+          LayoutBuilder(builder: (context, box) {
+            final size = box.maxWidth < cell ? box.maxWidth : cell;
+            final fit = box.maxWidth.isFinite
+                ? ((box.maxWidth + gap) / (size + gap)).floor()
+                : kinds.length;
+            final cols =
+                fit < 1 ? 1 : (fit > kinds.length ? kinds.length : fit);
+            return FocusGrid(
+              count: kinds.length,
+              columns: cols,
+              spacing: gap,
+              keyPrefix: 'inv-stack-focus-$id-',
+              cell: (_, i, __) => _cell(kinds[i], size),
+              onFocusCell: onSelect == null ? null : (i) => _pick(kinds[i]),
+              onActivate: onSelect == null
+                  ? null
+                  : (i) => onMenu != null &&
+                          selected == kinds[i].token &&
+                          _count(kinds[i]) > 0
+                      ? onMenu!(kinds[i].token, null)
+                      : _pick(kinds[i]),
+            );
+          }),
         ],
       );
 
