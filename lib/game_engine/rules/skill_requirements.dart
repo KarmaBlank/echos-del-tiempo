@@ -40,6 +40,20 @@ class SkillRequirements {
   }
 
   /// Tooltip del botón desactivado: "Necesita: objetivo Fisurado · Pulso 2".
+  /// Una línea por condición que falta, para el detalle del menú:
+  /// `Falta: 3 MP (tenés 1)`, `Falta: Pulso 2 (tenés 1)`,
+  /// `Necesita: objetivo Fisurado`. Vacío = se puede usar.
+  static List<String> missingLines(SkillDef sk, Combatant user,
+          Combatant? target,
+          {Iterable<Combatant> foes = const []}) =>
+      [
+        if (user.mp < sk.mp) 'Falta: ${sk.mp} MP (tenés ${user.mp})',
+        if (user.pulse < sk.pulse)
+          'Falta: Pulso ${sk.pulse} (tenés ${user.pulse})',
+        for (final r in sk.requires)
+          if (!met(r, sk, user, target, foes)) 'Necesita: ${r.label}',
+      ];
+
   static String? needsText(List<String> missing) =>
       missing.isEmpty ? null : 'Necesita: ${missing.join(' · ')}';
 }

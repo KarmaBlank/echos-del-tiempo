@@ -4,6 +4,7 @@ import 'package:echos_del_tiempo/features/combat/presentation/battle_screen.dart
 import 'package:echos_del_tiempo/game_engine/data/ascension_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/skills_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/weapons_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/ascension.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
@@ -156,7 +157,12 @@ void main() {
     testWidgets(
         'Guardián con 14 opciones: categorías, sus técnicas en dos páginas '
         '(Más), teclas 1-9 dentro de la categoría', (tester) async {
-      final skills = state.party.single.skillIds;
+      // En el menú las Instante van primero (orden estable).
+      final ids = state.party.single.skillIds;
+      final skills = [
+        ...ids.where((id) => kSkills[id]?.instant ?? false),
+        ...ids.where((id) => !(kSkills[id]?.instant ?? false)),
+      ];
       // 8 + el combo de clase (combo_balance.md § 5.2) + la Quebrar base
       // del arma (§ 5.1): 10, pasa de las 9 teclas y pagina.
       expect(skills, hasLength(10));

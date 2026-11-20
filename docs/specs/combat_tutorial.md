@@ -269,10 +269,11 @@ Una página del panel del entrenamiento y del menú de pausa en batalla,
 con una entrada corta por concepto y un ícono:
 - Línea de tiempo;
 - MP (maná): dura toda la misión, no vuelve solo entre peleas;
-- Pulso: de la pelea, pips 0-5, cómo se gana (turno, ataque básico,
-  debilidad o reacción, defender) y **todos sus usos leídos del catálogo**
-  (cada habilidad con costo de Pulso, `TutorialRules.pulseSkills`), con
-  ejemplo de habilidad que pide MP y Pulso ("3 MP  P2");
+- Pulso (corto, pedido del dueño v0.10.x): solo qué es ("puntos de
+  cada pelea, de 0 a 5; las habilidades fuertes lo piden") y cómo se
+  gana ("+1 al empezar tu turno, con ataque básico, golpe a la debilidad
+  o reacción, y al defender"). Sin la lista de habilidades que lo usan;
+  la intro de la etapa de Pulso tiene como máximo 2 líneas;
 - Precondición;
 - Instante (no es un recurso: es un tipo de habilidad);
 - Afinidades (débil, resistente, inmune) y tope sin debilidad;
@@ -290,7 +291,9 @@ números a mano.
 **Costo en el menú (v0.9.6).** En HABILIDADES el Pulso se ve igual que el
 MP pero en dorado: "4 MP", "P2" o "3 MP  P2" en cada fila que lo pida; en
 el detalle/tooltip, "3 MP · 2 Pulso" (`skillCostMarkup`,
-`skillCostLongMarkup`).
+`skillCostLongMarkup`). Desde v0.10.x el dorado es el mismo token que la
+fila PULSO de la tarjeta (`ProtoColors.gold`) en todos los estados de la
+fila (normal, elegida y desactivada, atenuado).
 
 ## 6. Red
 

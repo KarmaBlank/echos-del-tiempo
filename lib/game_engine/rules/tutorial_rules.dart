@@ -888,7 +888,6 @@ class TutorialRules {
   /// repetir el título (el panel ya lo muestra) y con los números de los
   /// datos.
   List<String> stageIntro(int stage) {
-    final det = catalog.skills[_detonaVeneno];
     final quebrar = catalog.skills[kQuebrarId];
     return switch (stage) {
       1 => [
@@ -903,13 +902,10 @@ class TutorialRules {
               'pociones o al volver al lobby.',
         ],
       3 => [
-          'Pulso (pips dorados, 0-${BattleEngine.pulseMax}): es de esta '
-              'pelea. Sube al empezar tu turno, con el ataque básico, al '
-              'pegarle a una debilidad o hacer una reacción y al defender.',
-          'Se gasta en: ${pulseUsesText()}. Una puede pedir MP y Pulso '
-              'a la vez: ${det?.name ?? 'Ignición'} cuesta ${det?.mp ?? 0} MP '
-              'y ${det?.pulse ?? 0} de Pulso (en el menú: "${det?.mp ?? 0} MP  '
-              'P${det?.pulse ?? 0}").',
+          'Pulso: puntos de cada pelea, de 0 a ${BattleEngine.pulseMax}; las '
+              'habilidades fuertes lo piden.',
+          '+1 al empezar tu turno, con ataque básico, golpe a la debilidad o '
+              'reacción, y al defender.',
         ],
       4 => [
           'Instante no es un recurso: es un tipo de habilidad que no '
@@ -1217,16 +1213,13 @@ class TutorialRules {
               'No vuelve solo entre peleas: se recupera con pociones (Poción '
               'de maná) o al volver al lobby. El Pulso, en cambio, es de cada '
               'pelea.'),
-      GlossaryEntry(
+      const GlossaryEntry(
           'PU',
           'Pulso',
-          'Puntos de esta pelea (pips 0-${BattleEngine.pulseMax}; arrancás '
-              'con ${BattleEngine.pulseStart}). Suben al empezar tu turno, '
-              'con el ataque básico, al pegarle a una debilidad o hacer una '
-              'reacción y al defender. Se gasta en: ${pulseUsesText()}. Una habilidad '
-              'puede pedir MP y Pulso a la vez (${detona?.name ?? '-'}: '
-              '${detona?.mp ?? 0} MP y ${detona?.pulse ?? 0} de Pulso; en el '
-              'menú, "${detona?.mp ?? 0} MP  P${detona?.pulse ?? 0}").'),
+          'Puntos de cada pelea, de 0 a ${BattleEngine.pulseMax}; las '
+              'habilidades fuertes lo piden. +1 al empezar tu turno, con '
+              'ataque básico, golpe a la debilidad o reacción, y al '
+              'defender.'),
       GlossaryEntry(
           'PR',
           'Precondición',
