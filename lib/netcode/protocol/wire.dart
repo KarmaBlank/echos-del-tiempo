@@ -55,7 +55,7 @@ import '../../game_engine/serialization/session_json.dart';
 
 /// 22 desde v0.12.1: acciones `stashPut` / `stashTake` y confirmaciones
 /// `sk` del jugador en el snapshot (alijo en partida, characters.md § 3.2).
-const kProtocolVersion = 22;
+const kProtocolVersion = 23;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {

@@ -39,6 +39,7 @@ import 'progression_rules.dart';
 import 'trial_rules.dart';
 import 'tutorial_rules.dart';
 import 'companion_ai.dart';
+import 'consumable_rules.dart';
 import 'world_rules.dart';
 import 'zone_rules.dart';
 
@@ -829,6 +830,11 @@ class _Op {
       case BuyItemAction():
         if (!s.canShop) return false;
         return _profileChange(p, rules.buyItem(p.profile, a.item));
+
+      case UseItemAction(:final item):
+        if (ConsumableRules.blockReason(s, p, item) != null) return false;
+        ConsumableRules.apply(p, item);
+        return true;
 
       case BuyWeaponAction():
         if (!s.canShop) return false;

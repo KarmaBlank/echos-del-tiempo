@@ -68,6 +68,7 @@ abstract final class ActionJson {
           },
         UpgradeAction() => {'t': 'up', 'w': a.weaponId, 'stat': a.stat.key},
         BuyItemAction() => {'t': 'buyItem', 'it': itemKey(a.item)},
+        UseItemAction() => {'t': 'useItem', 'it': itemKey(a.item)},
         BuyWeaponAction() => {'t': 'buy', 'w': a.weaponId},
         BattleAction() => {'t': 'cmd', ...commandToJson(a.command)},
         ChatAction() => {'t': 'chat', 'txt': a.text},
@@ -193,6 +194,8 @@ abstract final class ActionJson {
         return UpgradeAction(j.str('w'), stat);
       case 'buyItem':
         return BuyItemAction(itemFromKey(j.str('it')));
+      case 'useItem':
+        return UseItemAction(itemFromKey(j.str('it')));
       case 'buy':
         return BuyWeaponAction(j.str('w'));
       case 'cmd':

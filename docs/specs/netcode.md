@@ -96,7 +96,8 @@ root registra para que el título sepa si hay red: `label` (`LAN`, `P2P`),
 
 ## Protocolo (versión 15)
 
-`kProtocolVersion` (`wire.dart`) = 19 desde v0.9.8 (perfil v4 con `nw`,
+`kProtocolVersion` (`wire.dart`) = 23 desde v0.12.2 (acción `useItem`:
+pociones fuera de batalla, loot.md § 17.5). 19 desde v0.9.8 (perfil v4 con `nw`,
 marca NUEVO, y acción `seen`; loot.md § 17.4; 16 y 17 en `wire.dart`).
 15 desde v0.9.1 (armas con `nq`,
 Quebrar reemplazado, loot.md § 16.3; afijo `quebrantador`; habilidades

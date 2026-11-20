@@ -136,7 +136,7 @@ void main() {
       final codec = SessionJson(e.catalog);
       final p = codec.playerFromJson(codec.playerToJson(s.players['p0']!));
       expect(p.stashAcks['op']!.drops.single!.count, 3);
-      expect(kProtocolVersion, 22);
+      expect(kProtocolVersion, greaterThanOrEqualTo(22));
     });
   });
 

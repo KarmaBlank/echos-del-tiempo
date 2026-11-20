@@ -142,6 +142,12 @@ class BuyItemAction extends SessionAction {
   const BuyItemAction(this.item);
 }
 
+/// `useItem`: poción de vida / maná fuera de batalla (loot.md § 17.5).
+class UseItemAction extends SessionAction {
+  final BattleItem item;
+  const UseItemAction(this.item);
+}
+
 /// `buy`.
 class BuyWeaponAction extends SessionAction {
   final String weaponId;
