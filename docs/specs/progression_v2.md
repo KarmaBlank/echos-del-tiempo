@@ -551,7 +551,7 @@ Sistema de diseño (v0.11, design_system.md § 10.1): la barra es un
 `DsToolbar` (puntos en dorado, `HITO N` como `DsTag` naranja,
 `DsSearchField`, zoom con `DsButton.icon`, REINICIAR fantasma con el
 motivo en su tooltip: "No hay nodos tomados"); las tarjetas de hito son
-`DsCard`; el tooltip es un `DsTooltipCard` (la marca de hito,
+`DsCard` (desde v0.19.1, `DsButton` con `details`, ver § 11.5); el tooltip es un `DsTooltipCard` (la marca de hito,
 `tree-milestone-mark`, y "★ EN TU BUILD" son `DsTag`); TOMAR NODO es la
 acción principal y, si no se puede, queda apagado con el motivo en su
 tooltip (y en la línea de estado). Captura:
@@ -631,3 +631,23 @@ finito. Ahora:
   `text_size_test`. Capturas:
   `docs/release_shots/v0.13.3/hito_columna_antes.png` y
   `hito_columna_despues.png` (`tool/shots/v0133_hito_columna_shots_test.dart`).
+
+Opciones como botones (v0.19.1, pedido del dueño: no se leían como
+algo a elegir):
+
+- La columna lleva acento dorado (borde izquierdo `actionPrimary`) y
+  arriba un `DsTag` dorado `PENDIENTE` (`milestone-pending`).
+- Jerarquía por color, sin negritas: `HITO DEL NIVEL N` en Subtítulo
+  color título > `Primero elegí tu hito` en Texto > `Elegí una
+  keystone…` en Detalle secundario.
+- Cada opción (`milestone-pick-<id>`) es un `DsButton` secundario con
+  `details`: nombre como etiqueta y debajo, en Detalle secundario, el
+  efecto completo y `Camino: …` (o `Clic de nuevo para confirmar` si
+  está elegida). Borde/relleno de botón, hover, foco, seleccionado
+  (borde y texto dorados), cursor de mano y semántica de botón.
+- Hover / foco siguen encuadrando el camino; clic elige, clic de nuevo
+  confirma.
+- Tests: `passive_tree_view_test` (opciones = botones con semántica,
+  `PENDIENTE`, sin desbordes a texto 1.0 / 1.3 / 1.6). Capturas:
+  `docs/release_shots/v0.19.1/hito_botones_antes.png` y
+  `hito_botones_despues.png` (`tool/shots/v0191_hito_botones_shots_test.dart`).

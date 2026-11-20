@@ -30,6 +30,7 @@ class DsButton extends StatelessWidget {
     this.autofocus = false,
     this.accent,
     this.previewStates,
+    this.details = const [],
   }) : icon = null;
 
   /// Botón de ícono (cuadrado). [tooltip] es obligatorio: dice qué hace.
@@ -47,7 +48,8 @@ class DsButton extends StatelessWidget {
   })  : label = '',
         kind = DsButtonKind.icon,
         leading = null,
-        trailing = null;
+        trailing = null,
+        details = const [];
 
   final String label;
   final Widget? icon;
@@ -69,6 +71,11 @@ class DsButton extends StatelessWidget {
 
   /// Estados forzados para mostrarlos quietos (solo la galería).
   final Set<WidgetState>? previewStates;
+
+  /// Líneas de detalle debajo del texto (botón-opción: nombre + qué da).
+  /// Con detalle el contenido se alinea a la izquierda y las líneas van
+  /// en Detalle secundario (jerarquía por color, design_system.md § 6).
+  final List<String> details;
 
   bool get _compact => size == DsButtonSize.compact;
 
@@ -145,14 +152,32 @@ class DsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final st = style(context);
+    final st = details.isEmpty
+        ? style(context)
+        : style(context).copyWith(alignment: Alignment.centerLeft);
     final ps = previewStates;
     final sc = ps == null ? null : WidgetStatesController(ps);
-    final Widget child = leading == null && trailing == null
+    final Widget text = details.isEmpty
         ? Text(retroText(label))
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(retroText(label)),
+              for (final d in details) ...[
+                SizedBox(height: DsSpace.xs),
+                Text(retroText(d),
+                    style: DsText.detail(onPressed == null
+                        ? DsColors.textDisabled
+                        : DsColors.textSecondary)),
+              ],
+            ],
+          );
+    final Widget child = leading == null && trailing == null
+        ? text
         : Row(mainAxisSize: MainAxisSize.min, children: [
             if (leading != null) ...[leading!, SizedBox(width: DsSpace.xs)],
-            Text(retroText(label)),
+            Flexible(child: text),
             if (trailing != null) ...[SizedBox(width: DsSpace.xs), trailing!],
           ]);
 
