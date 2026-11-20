@@ -958,7 +958,7 @@ class BattleViewState extends State<BattleView>
     if (f == null) return null;
     final v = local / f.geometry.scale;
     for (final s in BattleScenePainter.timelineSlots(
-        f.battle, f.geometry.virtualWidth.toDouble())) {
+        f.battle, f.geometry.virtualWidth.toDouble(), f.geometry)) {
       if (s.rect.inflate(1).contains(v)) return s.id;
     }
     return null;
@@ -1121,16 +1121,22 @@ class BattleViewState extends State<BattleView>
   Widget _scene(BattleState b) {
     return LayoutBuilder(builder: (context, cons) {
       // Las etiquetas crecen con el texto y la ventana (accessibility.md).
-      final g = SceneGeometry.fit(cons.biggest,
-          textFactor: RetroType.factorOf(context));
       final sprites = widget.sprites;
-      final layout = BattleLayout.compute(b, widget.arena, vw: g.virtualWidth,
-          enemySize: (e) {
+      Size enemySize(Combatant e) {
         final type = sprites.enemySpriteId(e.enemyType ?? '', e.phase);
         final img = sprites?.enemy(type);
         final sc = (sprites?.enemyScale(type) ?? 1) * (e.elite ? 1.45 : 1);
         return Size((img?.width ?? 16) * sc, (img?.height ?? 14) * sc);
-      });
+      }
+
+      BattleLayout layoutFor(SceneGeometry g) => BattleLayout.compute(
+          b, widget.arena,
+          vw: g.virtualWidth, enemySize: enemySize);
+      // Franja adaptable: la grande solo si no baja el zoom de la arena.
+      final g = SceneGeometry.adaptive(cons.biggest,
+          textFactor: RetroType.factorOf(context),
+          zoomOf: (g) => layoutFor(g).frame(g, widget.arena).zoom);
+      final layout = layoutFor(g);
       scene.frame = SceneFrame(
         battle: b,
         geometry: g,
@@ -1171,7 +1177,7 @@ class BattleViewState extends State<BattleView>
             ),
             Positioned(
               left: 0,
-              top: (BattleScenePainter.logTop * s).roundToDouble(),
+              top: (g.logTop * s).roundToDouble(),
               width: (g.virtualWidth * s).roundToDouble(),
               height: (BattleScenePainter.logHeight * s).roundToDouble(),
               child: _LogBand(
@@ -1185,7 +1191,7 @@ class BattleViewState extends State<BattleView>
             // banda y centradas (no tapan la barra del objetivo).
             if (widget.sceneOptions.extendedLog && _logHistory.isNotEmpty)
               Positioned(
-                top: (SceneGeometry.stripHeight * s).roundToDouble(),
+                top: g.stripPx,
                 left: g.virtualWidth * s * 0.25,
                 width: g.virtualWidth * s * 0.5,
                 child: IgnorePointer(
@@ -1213,7 +1219,7 @@ class BattleViewState extends State<BattleView>
             if (_foes.where((e) => e.id == target).firstOrNull case final tg?)
               Positioned(
                 left: 8,
-                top: (SceneGeometry.stripHeight * s).roundToDouble() + 4,
+                top: g.stripPx + 4,
                 child: IgnorePointer(child: TargetBar(enemy: tg)),
               ),
           ],

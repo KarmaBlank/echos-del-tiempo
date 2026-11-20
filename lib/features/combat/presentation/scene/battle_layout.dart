@@ -86,6 +86,7 @@ class SceneGeometry {
     required this.sceneHeight,
     this.size = const Size(480, 342),
     this.textFactor = 1,
+    this.strip = stripHeight,
   });
 
   /// Ancho y alto nominales del prototipo (`VW`, `VH`).
@@ -96,6 +97,28 @@ class SceneGeometry {
   /// v0.13.1 con los íconos más grandes).
   static const stripHeight = 74;
 
+  /// Alto chico de la franja (el del prototipo, íconos de 28 / 22). La
+  /// franja se adapta entre este y [stripHeight] ([SceneGeometry.adaptive]).
+  static const stripSmall = 54;
+
+  /// Alto de la franja de esta geometría ([stripSmall]..[stripHeight]).
+  final int strip;
+
+  /// Cuánto de los 20 px extra de la franja grande usa esta (0 = chica,
+  /// 1 = grande).
+  double get _grow => (strip - stripSmall) / (stripHeight - stripSmall);
+
+  /// Lado del ícono del de turno y de los demás: 28 / 22 con la franja
+  /// chica, 46 / 40 con la grande.
+  double get bigIcon => (28 + 18 * _grow).floorToDouble();
+  double get smallIcon => (22 + 18 * _grow).floorToDouble();
+
+  /// Alto de la banda de íconos (la línea va debajo): `strip − 22`.
+  double get iconBand => (strip - 22).toDouble();
+
+  /// Banda del log (16 px al pie de la franja).
+  double get logTop => (strip - 16).toDouble();
+
   /// Píxeles de pantalla por píxel virtual.
   final double scale;
   final int virtualWidth;
@@ -103,13 +126,14 @@ class SceneGeometry {
   /// Alto de la escena (sin la franja), ≥ 288.
   final int sceneHeight;
 
-  int get virtualHeight => stripHeight + sceneHeight;
+  int get virtualHeight => strip + sceneHeight;
 
   /// Tamaño en pantalla de toda la escena (franja + mundo).
   final Size size;
 
-  /// Alto en pantalla de la franja de turnos.
-  double get stripPx => (stripHeight * scale).roundToDouble();
+  /// Alto en pantalla de la franja de turnos (hacia abajo: el píxel que
+  /// sobra va al mundo, que es el que fija el zoom de la arena).
+  double get stripPx => (strip * scale).floorToDouble();
 
   /// Área del mundo en px de pantalla (debajo de la franja).
   Rect get worldRect => Rect.fromLTWH(
@@ -129,21 +153,42 @@ class SceneGeometry {
   int get labelUnit =>
       math.max(hudUnit, (2 * textFactor).round()).clamp(1, 6);
 
-  factory SceneGeometry.fit(Size size, {double textFactor = 1}) {
+  factory SceneGeometry.fit(Size size,
+      {double textFactor = 1, int strip = stripHeight}) {
     if (size.width <= 0 || size.height <= 0) {
-      return const SceneGeometry(
-          scale: 1, virtualWidth: baseWidth, sceneHeight: baseSceneHeight);
+      return SceneGeometry(
+          scale: 1,
+          virtualWidth: baseWidth,
+          sceneHeight: baseSceneHeight,
+          strip: strip);
     }
-    final s = math.min(
-        size.width / baseWidth, size.height / (stripHeight + baseSceneHeight));
+    final s =
+        math.min(size.width / baseWidth, size.height / (strip + baseSceneHeight));
     return SceneGeometry(
       scale: s,
       virtualWidth: math.max(baseWidth, (size.width / s).floor()),
-      sceneHeight:
-          math.max(baseSceneHeight, (size.height / s).floor() - stripHeight),
+      sceneHeight: math.max(baseSceneHeight, (size.height / s).floor() - strip),
       size: size,
       textFactor: textFactor,
+      strip: strip,
     );
+  }
+
+  /// Franja adaptable (battle_presentation.md § "Franja de turnos"): la
+  /// más alta entre [stripSmall] y [stripHeight] con la que el encuadre
+  /// ([zoomOf], el zoom de la arena con esa geometría) no baja respecto
+  /// del que tendría con la franja chica.
+  factory SceneGeometry.adaptive(Size size,
+      {double textFactor = 1,
+      required double Function(SceneGeometry g) zoomOf}) {
+    final small =
+        SceneGeometry.fit(size, textFactor: textFactor, strip: stripSmall);
+    final target = zoomOf(small);
+    for (var h = stripHeight; h > stripSmall; h -= 2) {
+      final g = SceneGeometry.fit(size, textFactor: textFactor, strip: h);
+      if (zoomOf(g) >= target) return g;
+    }
+    return small;
   }
 
   /// Punto de pantalla → punto del lienzo virtual.
