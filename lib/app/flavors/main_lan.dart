@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../core/audio/sfx_files.dart';
 import '../../core/balance/balance_asset_loader.dart';
 import '../../core/data/build_template_loader.dart';
 import '../../core/data/ult_data_loader.dart';
@@ -19,6 +20,8 @@ Future<void> main() async {
   // Parche de balance (docs/specs/balance_admin.md § 3).
   // Animaciones como datos (docs/specs/game_editor.md § 2.2).
   await installFx();
+  // Sonidos como archivo (docs/specs/game_editor.md § 7.6).
+  await SfxFiles.install();
   // Plantillas de BUILD (docs/specs/build_planner_v2.md § 2.2).
   await BuildTemplateLoader.load();
   registerSharedDependencies(

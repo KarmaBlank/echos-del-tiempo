@@ -68,6 +68,8 @@ flutter:
     - assets/fx/proc/
     - assets/fx/map_move/
     - assets/fx/ui/
+    # Sonidos como archivo (game_editor.md § 7.6; el Editor publica acá).
+    - assets/sfx/
     # Datos de las ULT (docs/specs/ultimates_v2.md § 5.1).
     - assets/data/ults/
     - assets/data/enemy_ults/
