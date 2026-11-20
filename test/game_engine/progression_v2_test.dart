@@ -190,8 +190,10 @@ void main() {
       final o20 = rules.milestoneOptions('maga', 20);
       final k = o10.first;
       final path = rules.pathTo('maga', p.passiveProgress, k)!;
-      p = zoneProgression.normalize(p.copyWith(level: 20));
+      // Tomada antes del nivel 10 (con un hito pendiente ya no se puede,
+      // § 11.4).
       p = zoneProgression.takeNodes(p, path)!.$1;
+      p = zoneProgression.normalize(p.copyWith(level: 20));
       expect(p.tree, contains(k));
       expect(p.pendingMilestones, [10, 20]);
       final manual = PassiveTreeRules.milestoneTaken(
@@ -213,11 +215,14 @@ void main() {
     });
 
     test('el hito paga solo los nodos que faltan del camino', () {
-      var p = _fresh('maga', 12);
+      var p = _fresh('maga', 9);
       final k = rules.milestoneOptions('maga', 10)[1];
       final path = rules.pathTo('maga', p.passiveProgress, k)!;
-      // Ya tiene los 3 primeros nodos del camino con puntos libres.
+      // Ya tiene los 3 primeros nodos del camino con puntos libres
+      // (tomados antes del hito: con el hito pendiente no se puede).
       p = zoneProgression.takeNodes(p, path.take(3).toList())!.$1;
+      p = zoneProgression.normalize(p.copyWith(level: 12));
+      expect(zoneProgression.takeNodes(p, path.skip(3).toList()), isNull);
       final freeBefore = p.treePoints - p.tree.length;
       final q = zoneProgression.chooseMilestone(p, 10, k)!;
       expect(q.tree, [...path.take(3), ...path.skip(3)]);
