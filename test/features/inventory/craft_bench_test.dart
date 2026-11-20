@@ -5,6 +5,7 @@ import 'package:echos_del_tiempo/features/world/presentation/session_controller.
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/rules/craft_rules.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -212,6 +213,57 @@ void main() {
     // Sin materiales: el motivo.
     await _tap(tester, 'bench-base-baculo_ponzona');
     expect(_confirm(tester).reason, 'Falta Cristal de Era');
+  });
+
+  testWidgets('buscador en cada paso de elegir arma: nombre y mod',
+      (tester) async {
+    await _bench(tester, lootWarrior());
+    Finder k(String key) => find.byKey(ValueKey(key));
+    // Paso 1: arma destino.
+    expect(k('bench-weapon-search'), findsOneWidget);
+    await tester.enterText(
+        find.descendant(
+            of: k('bench-weapon-search'), matching: find.byType(TextField)),
+        'katana');
+    await tester.pumpAndSettle();
+    expect(k('bench-weapon-m1'), findsOneWidget);
+    expect(k('bench-weapon-r1'), findsNothing);
+    await tester.enterText(
+        find.descendant(
+            of: k('bench-weapon-search'), matching: find.byType(TextField)),
+        'zorro');
+    await tester.pumpAndSettle();
+    expect(k('bench-weapon-m1'), findsOneWidget);
+    expect(k('bench-weapon-r1'), findsNothing);
+    // Esc limpia el texto (y no vuelve de paso).
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(k('bench-weapon-r1'), findsOneWidget);
+
+    // Paso 3: arma de origen (la que se destruye).
+    await _choose(tester, 'r1', CraftOp.transferAffix);
+    expect(k('craft-source-search'), findsOneWidget);
+    await _tap(tester, 'craft-source-e1');
+    Future<void> type(String q) async {
+      await tester.enterText(
+          find.descendant(
+              of: k('craft-source-search'), matching: find.byType(TextField)),
+          q);
+      await tester.pumpAndSettle();
+    }
+
+    await type('katana');
+    expect(k('craft-source-m1'), findsOneWidget);
+    expect(k('craft-source-l1'), findsNothing);
+    // La elegida queda a la vista aunque no coincida.
+    expect(k('craft-source-e1'), findsOneWidget);
+    await type('zorro');
+    expect(k('craft-source-m1'), findsOneWidget);
+    expect(k('craft-source-l1'), findsNothing);
+
+    // Reforjar: base nueva.
+    await _choose(tester, 'e1', CraftOp.reforge);
+    expect(k('bench-base-search'), findsOneWidget);
   });
 
   testWidgets('subir rareza con Prisma: Común → Mágico', (tester) async {

@@ -5,10 +5,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../bestiary/presentation/bestiary_screen.dart';
 import '../../build_planner/presentation/build_planner_screen.dart';
+import '../../../app/design/design.dart';
 import '../../../app/design/gallery/ds_gallery_screen.dart';
 import '../../../app/feature_flags.dart';
-import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/menu_focus.dart';
@@ -55,7 +54,15 @@ class TitleScreen extends ConsumerStatefulWidget {
   ConsumerState<TitleScreen> createState() => _TitleScreenState();
 }
 
+/// Los atajos del título (en el "?").
+const _keysHelp =
+    'Mover: WASD/Flechas · Interactuar: E/Espacio · Combate por turnos: '
+    '1-9 o clic · Cambiar objetivo: Q o clic en enemigo · Chat: Enter\n'
+    'Menús: flechas mueven · Enter elige (otra vez sobre tu personaje: '
+    'jugar) · 1-9 eligen · Esc vuelve';
+
 class _TitleScreenState extends ConsumerState<TitleScreen> {
+
   final _name = TextEditingController();
   final _code = TextEditingController();
   Account? _account;
@@ -399,7 +406,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text('PERSONAJES (${a.characters.length}/${Account.maxCharacters})',
-            style: const TextStyle(color: RetroPalette.muted)),
+            style: DsText.subtitle()),
         const SizedBox(height: 12),
         SizedBox(
           width: 4 * CharacterSlotCard.widthOf(context) + 3 * 12,
@@ -433,38 +440,40 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            ElevatedButton(
-              key: const ValueKey('title-start'),
-              onPressed: has ? _start : null,
-              child: const Text('> JUGAR'),
-            ),
-            PanelButton('CREAR PERSONAJE',
+            // JUGAR es la acción principal (borde y texto dorados).
+            DsButton('> JUGAR',
+                key: const ValueKey('title-start'),
+                kind: DsButtonKind.primary,
+                onPressed: has ? _start : null),
+            DsButton('CREAR PERSONAJE',
                 key: const ValueKey('char-create'),
-                reason: a.isFull
+                tooltip: a.isFull
                     ? 'Máximo ${Account.maxCharacters} personajes'
                     : null,
-                onPressed: _busy ? null : () => setState(_openCreator)),
-            PanelButton('RENOMBRAR',
+                onPressed:
+                    _busy || a.isFull ? null : () => setState(_openCreator)),
+            DsButton('RENOMBRAR',
                 key: const ValueKey('char-rename'),
                 onPressed: has ? _rename : null),
-            PanelButton('BORRAR',
+            DsButton('BORRAR',
                 key: const ValueKey('char-delete'),
                 onPressed: has ? _delete : null),
-            PanelButton('ALIJO',
+            DsButton('ALIJO',
                 key: const ValueKey('char-stash'),
                 onPressed: has ? _openStash : null),
-            PanelButton('BUILD',
+            DsButton('BUILD',
                 key: const ValueKey('char-build'),
                 onPressed: has ? _openBuild : null),
             // Bestiario de la cuenta, solo lectura (bestiary.md § 4).
-            PanelButton('BESTIARIO',
+            DsButton('BESTIARIO',
                 key: const ValueKey('title-bestiary'),
                 onPressed: _busy ? null : _openBestiary),
             // Galería del sistema de diseño, solo en la versión de
             // desarrollo (design_system.md § 8).
             if (FeatureFlags.instance.devTools)
-              PanelButton('GALERÍA',
+              DsButton('GALERÍA',
                   key: const ValueKey('title-gallery'),
+                  kind: DsButtonKind.ghost,
                   onPressed: _busy
                       ? null
                       : () => Navigator.of(context).push(
@@ -510,7 +519,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                   'personaje por jugador.'),
               key: const ValueKey('party-solo-note'),
               textAlign: TextAlign.center,
-              style: const TextStyle(color: ProtoColors.dim)),
+              style: DsText.detail()),
         ],
       ],
     );
@@ -621,15 +630,14 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                                 confirm: 'Crear',
                                 back: first ? null : 'Cancelar'),
                             if (!first)
-                              PanelButton('CANCELAR',
+                              DsButton('CANCELAR',
                                   key: const ValueKey('char-create-cancel'),
                                   onPressed: () =>
                                       setState(() => _creating = false)),
-                            ElevatedButton(
-                              key: const ValueKey('char-create-confirm'),
-                              onPressed: _busy ? null : _create,
-                              child: const Text('> CREAR'),
-                            ),
+                            DsButton('> CREAR',
+                                key: const ValueKey('char-create-confirm'),
+                                kind: DsButtonKind.primary,
+                                onPressed: _busy ? null : _create),
                           ],
                         ),
                       ],
@@ -670,10 +678,10 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
       alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        PanelButton('CREAR SALA',
+        DsButton('CREAR SALA',
             key: const ValueKey('title-host'),
             onPressed: netOk ? () => _connect(factory) : null),
-        const Text('o', style: TextStyle(color: RetroPalette.muted)),
+        Text('o', style: DsText.detail()),
         SizedBox(
           width: 170,
           child: TextField(
@@ -683,8 +691,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             style: TextStyle(
                 fontFamily: RetroType.titleFamily,
                 fontSize: RetroType.label,
-                color: RetroPalette.ink),
-            cursorColor: RetroPalette.gold,
+                color: DsColors.textPrimary),
+            cursorColor: DsColors.focus,
             onSubmitted: (_) {
               if (netOk) _connect(factory, code: _code.text);
             },
@@ -694,12 +702,12 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
               hintStyle: TextStyle(
                   fontFamily: RetroType.titleFamily,
                   fontSize: RetroType.label,
-                  color: RetroPalette.muted),
-              contentPadding: const EdgeInsets.all(8),
+                  color: DsColors.textSecondary),
+              contentPadding: EdgeInsets.all(DsSpace.sm),
             ),
           ),
         ),
-        PanelButton('UNIRSE',
+        DsButton('UNIRSE',
             key: const ValueKey('title-join'),
             onPressed:
                 netOk ? () => _connect(factory, code: _code.text) : null),
@@ -708,7 +716,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                 ? 'P2P: próximamente'
                 : factory.unavailableReason ?? 'Red: ${factory.label}'),
             key: const ValueKey('title-p2p'),
-            style: const TextStyle(color: RetroPalette.muted)),
+            maxLines: 1,
+            style: DsText.detail()),
       ],
     );
   }
@@ -746,7 +755,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                       )),
                   const SizedBox(height: 16),
                   Text(retroText('Co-op JRPG táctico · 1-4 jugadores'),
-                      style: const TextStyle(color: RetroPalette.muted)),
+                      style: DsText.detail()),
                   const SizedBox(height: 12),
                   // Aviso de versión nueva (docs/specs/distribution.md).
                   const UpdateBanner(),
@@ -758,13 +767,12 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                       child: Text(retroText(n),
                           key: const ValueKey('title-account-notice'),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: RetroPalette.red)),
+                          style: DsText.body(DsColors.danger)),
                     ),
                   ],
                   const SizedBox(height: 20),
                   if (a == null)
-                    const Text('Cargando...',
-                        style: TextStyle(color: RetroPalette.muted))
+                    Text('Cargando...', style: DsText.detail())
                   else if (creating)
                     _creator(a, sprites)
                   else ...[
@@ -778,15 +786,21 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                     runSpacing: 8,
                     alignment: WrapAlignment.center,
                     children: [
-                      PanelButton('CONFIGURACIÓN',
+                      DsButton('CONFIGURACIÓN',
                           key: const ValueKey('title-settings'),
                           onPressed: () => showSettingsDialog(context)),
                       // Salida segura (v0.8.2): confirma y guarda todo
                       // (ExitGuard) antes de cerrar, como la pausa.
-                      PanelButton('SALIR DEL JUEGO',
+                      DsButton('SALIR DEL JUEGO',
                           key: const ValueKey('title-quit'),
-                          accent: ProtoColors.red,
+                          accent: DsColors.danger,
                           onPressed: _quitGame),
+                      // Atajos de teclado al "?" (design_system.md § 2,
+                      // principio 0: nada de textos de ayuda fijos).
+                      DsButton.icon(const Text('?'),
+                          key: const ValueKey('title-help'),
+                          tooltip: _keysHelp,
+                          onPressed: () {}),
                     ],
                   ),
                   if (_netStatus case final status?) ...[
@@ -794,27 +808,10 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                     Text(retroText(status),
                         key: const ValueKey('title-net-status'),
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                            color: _netError
-                                ? RetroPalette.red
-                                : RetroPalette.muted)),
+                        style: DsText.body(_netError
+                            ? DsColors.danger
+                            : DsColors.textSecondary)),
                   ],
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Mover: WASD/Flechas · Interactuar: E/Espacio · Combate por '
-                    'turnos: 1-9 o clic · Cambiar objetivo: Q o clic en enemigo · '
-                    'Chat: Enter',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: RetroPalette.muted),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Menús: flechas mueven · Enter elige (otra vez sobre tu '
-                    'personaje: jugar) · 1-9 eligen · Esc vuelve',
-                    key: ValueKey('title-menu-keys'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: RetroPalette.muted),
-                  ),
                 ],
               ),
             ),

@@ -5,7 +5,6 @@ import 'package:echos_del_tiempo/app/theme/pixel_label.dart';
 import 'package:echos_del_tiempo/app/theme/proto_colors.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/app/theme/ui_theme.dart';
-import 'package:echos_del_tiempo/app/widgets/notice_close.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/features/bestiary/presentation/bestiary_view.dart';
 import 'package:echos_del_tiempo/features/build_planner/presentation/build_feed.dart';
@@ -280,7 +279,7 @@ void main() {
       await tester.pumpWidget(chat(const []));
       await tester.pumpWidget(chat(const [a]));
       expect(find.byKey(const ValueKey('chat-toast-0')), findsOneWidget);
-      expect(find.byType(NoticeClose), findsOneWidget);
+      expect(find.byKey(const ValueKey('chat-toast-close-0')), findsOneWidget);
       // Mucho después sigue ahí.
       await tester.pump(const Duration(minutes: 5));
       expect(find.byKey(const ValueKey('chat-toast-0')), findsOneWidget);
@@ -297,7 +296,8 @@ void main() {
       const c = ChatLine.system('¡Voten!');
       await tester.pumpWidget(
           chat(const [a, b, c], d: NoticeDuration.long.scale(ChatBox.toastDuration)));
-      expect(find.byType(NoticeClose), findsNothing);
+      expect(find.byKey(const ValueKey('chat-toast-close-2')), findsNothing);
+      expect(find.byKey(const ValueKey('chat-toast-close-0')), findsNothing);
       await tester.pump(const Duration(seconds: 5));
       expect(find.byKey(const ValueKey('chat-toast-0')), findsOneWidget);
       await tester.pump(const Duration(seconds: 4));

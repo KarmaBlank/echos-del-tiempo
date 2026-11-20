@@ -51,6 +51,7 @@ abstract final class ActionJson {
           },
         EquipAction() => {'t': 'equip', 'w': a.weaponId},
         TakeNodeAction() => {'t': 'node', 'id': a.nodeId},
+        UntakeNodeAction() => {'t': 'untake', 'id': a.nodeId},
         TakeNodesAction() => {'t': 'nodes', 'ids': a.nodeIds},
         ChooseMilestoneAction() => {
             't': 'milestone',
@@ -166,6 +167,8 @@ abstract final class ActionJson {
         ]);
       case 'milestone':
         return ChooseMilestoneAction(j.integer('m'), j.str('id'));
+      case 'untake':
+        return UntakeNodeAction(j.str('id'));
       case 'treeReset':
         return const ResetTreeAction();
       case 'fuse':

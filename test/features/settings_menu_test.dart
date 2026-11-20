@@ -1,6 +1,6 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'dart:async';
 
-import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/proto_colors.dart';
 import 'package:echos_del_tiempo/app/theme/vision_palette.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
@@ -135,7 +135,7 @@ void main() {
     await _tap(tester, 'audio-mute-SÍ');
     expect(f.audio.saved!.muted, isTrue);
     expect(f.music.muted, isTrue);
-    expect(find.text('Todo el sonido está silenciado.'), findsOneWidget);
+    expect(find.byTooltip('Todo el sonido está silenciado.'), findsOneWidget);
 
     await _tap(tester, 'settings-close');
     expect(find.byKey(const ValueKey('settings-menu')), findsNothing);
@@ -170,7 +170,7 @@ void main() {
       'display-particles-ALTA',
       'display-fps-60',
     ]) {
-      final b = tester.widget<PanelButton>(find.byKey(ValueKey(k)));
+      final b = tester.widget<DsButton>(find.byKey(ValueKey(k)));
       expect(b.selected, isTrue, reason: k);
     }
     expect(find.textContaining('VSYNC'), findsNothing);
@@ -178,7 +178,7 @@ void main() {
 
     await _tap(tester, 'display-scale-PIXEL PERFECT');
     expect(f.game.saved!.scale, ScaleMode.pixelPerfect);
-    expect(find.text('Píxeles exactos (×2, ×3...) con barras negras.'),
+    expect(find.byTooltip('Píxeles exactos (×2, ×3...) con barras negras.'),
         findsOneWidget);
     await _tap(tester, 'display-crt-APAGADO');
     expect(f.game.saved!.crt, CrtLevel.off);
@@ -198,8 +198,8 @@ void main() {
     final f = await _pumpMenu(tester);
     await _tap(tester, 'tab-1');
     expect(find.text('FPS Y PING'), findsOneWidget);
-    PanelButton btn(String k) =>
-        tester.widget<PanelButton>(find.byKey(ValueKey(k)));
+    DsButton btn(String k) =>
+        tester.widget<DsButton>(find.byKey(ValueKey(k)));
     expect(btn('display-perf-NO').selected, isTrue);
     expect(btn('display-perf-corner-ARRIBA DER.').selected, isTrue);
     // Apagado: la esquina no se elige.
@@ -218,7 +218,7 @@ void main() {
     await _tap(tester, 'tab-2');
     expect(
         tester
-            .widget<PanelButton>(
+            .widget<DsButton>(
                 find.byKey(const ValueKey('display-text-NORMAL')))
             .selected,
         isTrue);
@@ -321,7 +321,7 @@ void main() {
     await _tap(tester, 'tab-2');
     // Tab recorre los botones hasta TÍTULOS CON LA FUENTE DE LECTURA: SÍ.
     Key? focused() => FocusManager.instance.primaryFocus?.context
-        ?.findAncestorWidgetOfExactType<PanelButton>()
+        ?.findAncestorWidgetOfExactType<DsButton>()
         ?.key;
     var found = false;
     for (var i = 0; i < 120 && !found; i++) {
@@ -374,7 +374,7 @@ void main() {
     expect(find.byKey(const ValueKey('a11y-vision-preview')), findsOneWidget);
     expect(
         tester
-            .widget<PanelButton>(find.byKey(const ValueKey('a11y-vision-NO')))
+            .widget<DsButton>(find.byKey(const ValueKey('a11y-vision-NO')))
             .selected,
         isTrue);
     for (final (key, mode) in const [
@@ -404,16 +404,16 @@ void main() {
     expect(s.flashFactor, FlashLevel.reduced.factor);
     // SACUDIDA se ve en NO y deshabilitada; DESTELLOS en SUAVES.
     final shake =
-        tester.widget<PanelButton>(find.byKey(const ValueKey('display-shake-NO')));
+        tester.widget<DsButton>(find.byKey(const ValueKey('display-shake-NO')));
     expect(shake.selected, isTrue);
     expect(shake.onPressed, isNull);
     expect(
         tester
-            .widget<PanelButton>(
+            .widget<DsButton>(
                 find.byKey(const ValueKey('display-flashes-SUAVES')))
             .selected,
         isTrue);
-    expect(find.text('Apagada por REDUCIR MOVIMIENTO.'), findsOneWidget);
+    expect(find.byTooltip('Apagada por REDUCIR MOVIMIENTO.'), findsOneWidget);
     await _tap(tester, 'a11y-motion-NO');
     expect(f.game.saved!.shakeOn, isTrue);
   });
@@ -423,7 +423,7 @@ void main() {
     await _tap(tester, 'tab-3');
     expect(
         tester
-            .widget<PanelButton>(
+            .widget<DsButton>(
                 find.byKey(const ValueKey('game-turn-NORMAL (30 S)')))
             .selected,
         isTrue);

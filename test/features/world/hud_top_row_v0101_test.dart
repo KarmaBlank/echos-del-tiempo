@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/retro_panel.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
@@ -95,7 +96,8 @@ void main() {
           }
         }
 
-        add('botón', find.byType(ElevatedButton));
+        add('botón', find.byType(DsButton));
+        expect(find.byType(DsButton), findsWidgets);
         add('barra', find.byKey(const ValueKey('hud-mission-bar')));
         add(
             'minimapa',

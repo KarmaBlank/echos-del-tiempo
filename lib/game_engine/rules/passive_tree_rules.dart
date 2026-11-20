@@ -124,6 +124,25 @@ class PassiveTreeRules {
           List<String> tree, String? ms10, String? ms20) =>
       {...tree}..removeAll([if (ms10 != null) ms10, if (ms20 != null) ms20]);
 
+  /// Si todos los nodos de [tree] siguen conectados al inicio de
+  /// [classId] (BFS por enlaces, pasando solo por nodos tomados).
+  bool allConnected(String classId, Iterable<String> tree) {
+    final start = catalog.startNodeByClass[classId];
+    final left = {...tree}..remove(start);
+    if (start == null) return left.isEmpty;
+    var f = [start];
+    while (f.isNotEmpty && left.isNotEmpty) {
+      final next = <String>[];
+      for (final id in f) {
+        for (final l in catalog.nodes[id]?.links ?? const <String>[]) {
+          if (left.remove(l)) next.add(l);
+        }
+      }
+      f = next;
+    }
+    return left.isEmpty;
+  }
+
   bool canTake(
     String classId,
     int level,

@@ -23,6 +23,7 @@ class DsButton extends StatelessWidget {
     this.kind = DsButtonKind.secondary,
     this.size = DsButtonSize.normal,
     this.leading,
+    this.trailing,
     this.selected = false,
     this.tooltip,
     this.focusNode,
@@ -45,11 +46,16 @@ class DsButton extends StatelessWidget {
     this.previewStates,
   })  : label = '',
         kind = DsButtonKind.icon,
-        leading = null;
+        leading = null,
+        trailing = null;
 
   final String label;
   final Widget? icon;
   final Widget? leading;
+
+  /// A la derecha del texto, separado `xs` (p. ej. una insignia `+N`):
+  /// suma al ancho, nunca tapa el texto.
+  final Widget? trailing;
   final VoidCallback? onPressed;
   final DsButtonKind kind;
   final DsButtonSize size;
@@ -142,13 +148,14 @@ class DsButton extends StatelessWidget {
     final st = style(context);
     final ps = previewStates;
     final sc = ps == null ? null : WidgetStatesController(ps);
-    final Widget child = leading == null
+    final Widget child = leading == null && trailing == null
         ? Text(retroText(label))
         : Row(mainAxisSize: MainAxisSize.min, children: [
-            leading!,
-            SizedBox(width: DsSpace.xs),
+            if (leading != null) ...[leading!, SizedBox(width: DsSpace.xs)],
             Text(retroText(label)),
+            if (trailing != null) ...[SizedBox(width: DsSpace.xs), trailing!],
           ]);
+
     final Widget button = switch (kind) {
       DsButtonKind.primary => FilledButton(
           statesController: sc,

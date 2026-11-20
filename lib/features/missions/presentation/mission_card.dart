@@ -1,15 +1,18 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
-import '../../../app/theme/retro_theme.dart';
+import '../../../app/theme/retro_text.dart';
 import '../../../game_engine/models/mission_def.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 import '../domain/mission_text.dart';
 
-/// Tarjeta de misión (mostrador y preparación): rango, nombre, tipo,
-/// nivel recomendado, objetivo, condición de rango S y recompensas, con
-/// la acción ([action]) abajo a la derecha. Ver docs/specs/panels.md §
+/// Detalle de una misión (mostrador y preparación) con el sistema de
+/// diseño (design_system.md § 10.3): rango y nombre, `tipo · Lv`, zona y
+/// motivo de bloqueo en una línea cada uno; OBJETIVO y RECOMPENSAS con
+/// `DsSectionHeader`; la condición de rango S en un `DsFold`. La acción
+/// ([action]) va abajo a la derecha. Ver docs/specs/panels.md §
 /// "Mostrador".
 class MissionCard extends StatelessWidget {
   const MissionCard({
@@ -42,63 +45,60 @@ class MissionCard extends StatelessWidget {
     final low = playerLevel != null && playerLevel! < m.recommendedLevel;
     final lv = 'Lv recomendado ${m.recommendedLevel}'
         '${low ? ' · tu Lv $playerLevel' : ''}';
-    String row(String label, String text) =>
-        '<span class="k">$label</span> ${protoEsc(text)}';
     final z = zone;
     final locked = z != null && !z.open;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: locked ? ProtoColors.scrim(0.25) : null,
-        border: Border.all(
-            color: locked ? ProtoColors.barBg : ProtoColors.panelBorder,
-            width: RetroTheme.thinBorderWidth),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: EdgeInsets.only(bottom: DsSpace.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            width: 40,
-            // `.mrow .rk`: 16 px `#ff9f1c`.
-            child: Text(m.rank,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontFamily: RetroType.titleFamily,
-                    fontSize: RetroType.title,
-                    color: ProtoColors.amber,
-                    shadows: const [
-                      Shadow(
-                          color: ProtoColors.titleShadow, offset: Offset(2, 2))
-                    ])),
+          // Rango (naranja) y nombre (Título): la jerarquía es por color.
+          Text.rich(
+            TextSpan(children: [
+              TextSpan(
+                  text: '${m.rank}  ',
+                  style: DsText.title(DsColors.warning)),
+              TextSpan(
+                  text: retroText(m.name),
+                  style: DsText.title(
+                      locked ? DsColors.textDisabled : DsColors.textTitle)),
+            ]),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (z != null)
-                  ProtoText(
-                      key: ValueKey('mission-zone-${m.id}'),
-                      protoColor(locked ? ProtoColors.dim : ProtoColors.gold,
-                          protoEsc(zoneLineText(z.zone)))),
-                if (z != null && z.label.isNotEmpty)
-                  ProtoText(
-                      key: ValueKey('mission-lock-${m.id}'),
-                      protoColor(ProtoColors.red, protoEsc(z.label))),
-                ProtoText('<b style="color:#e8ecff">${protoEsc(m.name)}</b> · '
-                    '<span class="k">${protoEsc(m.type)}</span> · '
-                    '${low ? protoColor(ProtoColors.red, lv) : protoColor(ProtoColors.green, lv)}'),
-                ProtoText(row(
-                    'Objetivo:', missionObjectiveText(m, bossName: bossName))),
-                ProtoText(row('Rango S:', missionSRankText(m))),
-                ProtoText(row('Recompensas:', missionRewardText(m, tier)),
-                    key: ValueKey('mission-rewards-${m.id}')),
-                if (action != null)
-                  Align(alignment: Alignment.centerRight, child: action),
-              ],
-            ),
+          ProtoText(
+              '${protoColor(DsColors.textSecondary, protoEsc(m.type))} · '
+              '${protoColor(low ? DsColors.danger : DsColors.success, lv)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+          if (z != null)
+            ProtoText(
+                key: ValueKey('mission-zone-${m.id}'),
+                protoColor(
+                    locked ? DsColors.textDisabled : DsColors.textSecondary,
+                    protoEsc(zoneLineText(z.zone)))),
+          if (z != null && z.label.isNotEmpty)
+            ProtoText(
+                key: ValueKey('mission-lock-${m.id}'),
+                protoColor(ProtoColors.red, protoEsc(z.label))),
+          SizedBox(height: DsSpace.sm),
+          const DsSectionHeader('OBJETIVO'),
+          Text(retroText(missionObjectiveText(m, bossName: bossName)),
+              style: DsText.body(DsColors.textPrimary)),
+          SizedBox(height: DsSpace.sm),
+          const DsSectionHeader('RECOMPENSAS'),
+          Text(retroText(missionRewardText(m, tier)),
+              key: ValueKey('mission-rewards-${m.id}'),
+              style: DsText.body(DsColors.textPrimary)),
+          SizedBox(height: DsSpace.xs),
+          DsFold(
+            key: ValueKey('mission-srank-${m.id}'),
+            label: 'RANGO S',
+            openLabel: 'RANGO S',
+            child: Text(retroText(missionSRankText(m))),
           ),
+          if (action != null)
+            Align(alignment: Alignment.centerRight, child: action),
         ],
       ),
     );

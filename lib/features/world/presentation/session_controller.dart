@@ -1265,6 +1265,9 @@ class SessionController extends StateNotifier<SessionView?> {
   bool takeNode(String nodeId) => _applyFor(actingId, TakeNodeAction(nodeId));
 
   /// Camino en un clic (progression_v2.md § 4).
+  bool untakeNode(String nodeId) =>
+      _applyFor(actingId, UntakeNodeAction(nodeId));
+
   bool takeNodes(List<String> ids) =>
       _applyFor(actingId, TakeNodesAction(ids));
 

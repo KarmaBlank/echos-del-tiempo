@@ -2,7 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
+import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
+
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/mission_def.dart';
@@ -130,17 +132,19 @@ class _PrepPanelState extends State<PrepPanel> {
             onChanged: (i) => setState(() => _tab = i),
           )),
           leading: [
-            PanelButton('CANCELAR MISIÓN',
-                key: const ValueKey('prep-cancel'), onPressed: w.onCancel),
+            DsButton('CANCELAR MISIÓN',
+                key: const ValueKey('prep-cancel'),
+                kind: DsButtonKind.ghost,
+                onPressed: w.onCancel),
           ],
           actions: [
-            PanelButton('PERSONAJE [C]',
+            DsButton('PERSONAJE [C]',
                 key: const ValueKey('prep-character'),
                 onPressed: w.onCharacter),
-            PanelButton(w.ready ? 'YA NO ESTOY LISTO' : '¡LISTO!',
+            // ¡LISTO! es la acción principal (borde y texto dorados).
+            DsButton(w.ready ? 'YA NO ESTOY LISTO' : '¡LISTO!',
                 key: const ValueKey('prep-ready'),
-                accent: w.ready ? null : RetroPalette.green,
-                selected: !w.ready,
+                kind: w.ready ? DsButtonKind.secondary : DsButtonKind.primary,
                 onPressed: () => w.onReady(!w.ready)),
           ],
           child: Column(
@@ -164,15 +168,8 @@ class _PrepPanelState extends State<PrepPanel> {
       children: [
         Expanded(
           child: SingleChildScrollView(
-            child: SectionPanel(
-              icon: PixelIconKind.star,
-              title: 'MISIÓN',
-              subtitle: 'objetivo, rango S y recompensas',
-              children: [
-                MissionCard(
-                    mission: w.mission, tier: w.tier, bossName: w.bossName),
-              ],
-            ),
+            child: MissionCard(
+                mission: w.mission, tier: w.tier, bossName: w.bossName),
           ),
         ),
         const SizedBox(width: 16),
@@ -182,37 +179,32 @@ class _PrepPanelState extends State<PrepPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SectionPanel(
-                  icon: PixelIconKind.check,
-                  title: 'GRUPO',
-                  subtitle: '$nReady/${w.players.length} listos',
-                  titleKey: const ValueKey('prep-group'),
-                  children: [
-                    for (final p in w.players)
-                      Container(
-                        key: ValueKey('prep-player-${p.name}'),
-                        margin: const EdgeInsets.only(bottom: 4),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                              color: p.ready
-                                  ? ProtoColors.green
-                                  : ProtoColors.panelBorder,
-                              width: RetroTheme.thinBorderWidth),
-                        ),
-                        child: ProtoText(
-                          '${p.ready ? protoColor(ProtoColors.green, 'LISTO') : protoColor(ProtoColors.dim, 'preparando...')} '
-                          '${p.isLocal ? '<b style="color:#ffd166">${protoEsc(p.name)}</b>' : protoEsc(p.name)} '
-                          '<small>${protoEsc(p.className)} Lv${p.level}</small>',
-                        ),
-                      ),
-                  ],
-                ),
+                DsSectionHeader('GRUPO',
+                    key: const ValueKey('prep-group'),
+                    trailing: Text('$nReady/${w.players.length} listos',
+                        style: DsText.detail(nReady == w.players.length
+                            ? DsColors.success
+                            : DsColors.textSecondary))),
+                // Una línea por jugador: estado, nombre y clase.
+                for (final p in w.players)
+                  Padding(
+                    key: ValueKey('prep-player-${p.name}'),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: DsSpace.md, vertical: DsSpace.xs),
+                    child: ProtoText(
+                      '${p.ready ? protoColor(DsColors.success, 'LISTO') : protoColor(DsColors.textSecondary, 'preparando...')} '
+                      '${protoColor(p.isLocal ? DsColors.selected : DsColors.textPrimary, protoEsc(p.name))} '
+                      '${protoColor(DsColors.textSecondary, '${protoEsc(p.className)} Lv${p.level}')}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                SizedBox(height: DsSpace.sm),
                 SectionPanel(
                   icon: PixelIconKind.sword,
                   title: 'TU EQUIPO',
                   children: [
+
                     InfoLine('Arma',
                         '<b style="color:#ff9f43">${protoEsc(w.weaponName)}</b>',
                         labelEms: 13),

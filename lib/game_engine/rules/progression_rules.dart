@@ -516,6 +516,37 @@ class ProgressionRules {
     return p.copyWith(tree: [...p.tree, nodeId]);
   }
 
+  /// Perfil tras quitar [nodeId] del árbol, sin validar: 1 punto vuelve
+  /// al pool y, si era la keystone de un hito, ese hito queda pendiente
+  /// (progression_v2.md § 6.1).
+  PlayerProfile _without(PlayerProfile p, String nodeId) {
+    var next = p.copyWith(tree: [...p.tree]..remove(nodeId));
+    if (p.milestone10 == nodeId) next = next.copyWith(milestone10: () => null);
+    if (p.milestone20 == nodeId) next = next.copyWith(milestone20: () => null);
+    return next;
+  }
+
+  /// Motivo por el que no se puede quitar [nodeId] (`null` = se puede;
+  /// progression_v2.md § 6.1).
+  String? untakeReason(PlayerProfile p, String nodeId) {
+    if (!p.tree.contains(nodeId)) return 'No está tomado';
+    final next = _without(p, nodeId);
+    if (!treeRules.allConnected(p.classId, next.tree)) {
+      return 'Otros nodos dependen de este';
+    }
+    final over = next.tree.length - next.treePoints;
+    if (over > 0) {
+      return 'Quitá antes $over nodo${over == 1 ? '' : 's'}: '
+          'los puntos del hito están en uso';
+    }
+    return null;
+  }
+
+  /// `untake`: quita un nodo tomado (reembolso gratis). `null` si no se
+  /// puede ([untakeReason]).
+  PlayerProfile? untakeNode(PlayerProfile p, String nodeId) =>
+      untakeReason(p, nodeId) == null ? _without(p, nodeId) : null;
+
   /// Camino en un clic (progression_v2.md § 4): toma [ids] en orden hasta
   /// el primero que no se pueda. Devuelve el perfil y cuántos tomó
   /// (`null` si ninguno).

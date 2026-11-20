@@ -2,17 +2,21 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
+import '../domain/skill_text.dart' show SkillReach;
 
-/// Ventana de comandos de la batalla v0.5 (docs/specs/
-/// battle_presentation.md § "Barra de batalla (v0.5)"): tres columnas
-/// — categorías, acciones de la categoría (una línea cada una, costo a la
-/// derecha) y la descripción de la acción elegida con quién actúa (arriba,
-/// desde v0.8.3), el objetivo y las teclas. No tiene estado propio: lo que está elegido lo decide
-/// `BattleViewState` (así las teclas y el mouse andan igual).
+/// Ventana de comandos de la batalla (docs/specs/battle_presentation.md
+/// § "Barra de batalla", con el sistema de diseño desde v0.12:
+/// design_system.md § 10.3): tres columnas — categorías, acciones de la
+/// categoría (filas `DsListRow` de una línea: nombre, etiquetas y costo a
+/// la derecha) y el detalle de la elegida (quién actúa arriba, motivos en
+/// rojo, resumen de una línea y el resto en un `DsFold`). No tiene estado
+/// propio: lo que está elegido lo decide `BattleViewState` (así las
+/// teclas y el mouse andan igual).
 
 /// Categorías del menú.
 enum BattleCategory {
@@ -44,34 +48,56 @@ class BattleAction {
     this.dual = false,
     this.reason,
     this.separatorBefore,
+    this.instant = false,
+    this.reach,
+    this.mpCost,
+    this.pulseCost,
+    this.summary,
   });
 
   final String id;
 
-  /// Nombre (markup corto).
+  /// Nombre (markup corto; en la fila va como texto plano).
   final String name;
 
-  /// La cifra principal (daño estimado, cura...), markup corto.
+  /// La cifra principal (daño estimado, cura...), markup corto. En la
+  /// fila va como dato corto en Detalle (sin [summary]).
   final String? value;
 
-  /// Costo a la derecha (`4 MP`, `x2`, `100%`), markup corto.
+  /// Costo a la derecha (`x2`, `100%`), markup corto. Las habilidades
+  /// usan [mpCost] / [pulseCost] (`DsCost`).
   final String? cost;
 
-  /// Detalle para la columna de descripción (markup).
+  /// Detalle de la columna de descripción (markup). Con [summary], todo
+  /// va plegado; sin él, las dos primeras líneas se ven y el resto se
+  /// pliega.
   final String description;
 
-  /// ULT y dúos: borde ámbar.
+  /// ULT y dúos: nombre en naranja.
   final bool dual;
 
   /// `null` = deshabilitada.
   final VoidCallback? onSelect;
 
-  /// Por qué está deshabilitada (se ve en la descripción).
+  /// Por qué está deshabilitada (en rojo arriba del detalle).
   final String? reason;
 
   /// Línea fina arriba de la fila (p. ej. el separador de las Instante).
   /// No es una acción: los atajos 1-9 no cambian.
   final String? separatorBefore;
+
+  /// Etiqueta INSTANTE (celeste).
+  final bool instant;
+
+  /// Etiqueta de alcance (`1 ENEMIGO`, `TODOS`...).
+  final SkillReach? reach;
+
+  /// Costos de habilidad (MP azul, Pulso dorado; rojo si no alcanza).
+  final int? mpCost;
+  final int? pulseCost;
+
+  /// Resumen de una línea arriba del detalle (markup).
+  final String? summary;
 }
 
 /// Una categoría con sus acciones (vacía = no se muestra).
@@ -100,6 +126,8 @@ class BattleCommandWindow extends StatelessWidget {
     required this.resources,
     this.header,
     this.extra,
+    this.mp,
+    this.pulse,
     this.hints =
         'Enter: confirmar · Esc: volver · Flechas: elegir · Q/Tab: objetivo'
             ' · P: pasar',
@@ -126,6 +154,10 @@ class BattleCommandWindow extends StatelessWidget {
 
   /// Debajo del objetivo (p. ej. las mecánicas del jefe).
   final Widget? extra;
+
+  /// MP y Pulso de quien actúa: el costo que no alcanza va en rojo.
+  final num? mp;
+  final int? pulse;
   final String hints;
 
   @override
@@ -152,49 +184,55 @@ class BattleCommandWindow extends StatelessWidget {
   static const maxWidth = 1240.0;
 
   Widget _window(BuildContext context, double catW, BattleAction? sel) {
-    return Container(
-      key: const ValueKey('battle-menu'),
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: ProtoColors.panel,
-        border: Border.all(color: ProtoColors.gold, width: 2),
-      ),
-      child: DefaultTextStyle.merge(
-        style: RetroType.smallStyle.copyWith(color: ProtoColors.ink),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(
-              width: catW,
-              child: _Categories(
-                categories: categories,
-                category: category,
-                onCategory: onCategory,
+    // Las filas no toman el foco: las teclas las maneja la batalla
+    // (Enter confirma la acción elegida, no la última fila clickeada).
+    return ExcludeFocus(
+      child: Container(
+        key: const ValueKey('battle-menu'),
+        padding: EdgeInsets.all(DsSpace.xs),
+        decoration: BoxDecoration(
+          color: DsColors.surface,
+          border: Border.all(color: DsColors.selected, width: 2),
+        ),
+        child: DefaultTextStyle.merge(
+          style: DsText.body(),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(
+                width: catW,
+                child: _Categories(
+                  categories: categories,
+                  category: category,
+                  onCategory: onCategory,
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              flex: 5,
-              child: _Actions(
-                header: header,
-                visible: visible,
-                selected: selected,
-                onHover: onHoverAction,
+              SizedBox(width: DsSpace.xs),
+              Expanded(
+                flex: 5,
+                child: _Actions(
+                  header: header,
+                  visible: visible,
+                  selected: selected,
+                  onHover: onHoverAction,
+                  mp: mp,
+                  pulse: pulse,
+                ),
               ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              flex: 4,
-              child: _Description(
-                actorName: actorName,
-                action: sel,
-                target: target,
-                resources: resources,
-                hints: hints,
-                extra: extra,
+              SizedBox(width: DsSpace.xs),
+              Expanded(
+                flex: 4,
+                child: _Description(
+                  actorName: actorName,
+                  action: sel,
+                  target: target,
+                  resources: resources,
+                  hints: hints,
+                  extra: extra,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -218,24 +256,17 @@ class _Categories extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Quién actúa va arriba de la descripción (v0.8.3): así las 7
-          // categorías (con PASAR) entran sin scroll a texto Normal.
           for (final c in categories)
-            _Row(
+            DsListRow(
               key: ValueKey('battle-cat-${c.category.name}'),
+              title: retroText(c.category.label),
               selected: c.category == category,
               enabled: c.actions.any((a) => a.onSelect != null),
               onTap: () => onCategory(c.category),
-              child: Row(
-                children: [
-                  // Texto de lectura (como las filas de acciones): crece
-                  // con el ajuste y no queda diminuto en pantallas anchas.
-                  Expanded(
-                    child: Text(retroText(c.category.label)),
-                  ),
-                  if (c.badge != null) ProtoText(c.badge!),
-                ],
-              ),
+              compact: true,
+              trailing: c.badge == null
+                  ? null
+                  : ProtoText(c.badge!, maxLines: 1, style: DsText.detail()),
             ),
         ],
       ),
@@ -249,65 +280,97 @@ class _Actions extends StatelessWidget {
     required this.visible,
     required this.selected,
     required this.onHover,
+    this.mp,
+    this.pulse,
   });
 
   final String? header;
   final List<BattleAction> visible;
   final int selected;
   final ValueChanged<int> onHover;
+  final num? mp;
+  final int? pulse;
+
+  Widget? _trailing(BattleAction a, double width) {
+    final parts = <Widget>[
+      if (a.instant) const DsTag.instant(),
+      if (a.reach case final r?)
+        DsTag(r.label.toUpperCase(),
+            color: ProtoColors.parse(r.hex) ?? DsColors.textSecondary),
+      if (a.mpCost case final c?)
+        DsCost.mp(c, affordable: mp == null || mp! >= c),
+      if (a.pulseCost case final c?)
+        DsCost.pulse(c, affordable: pulse == null || pulse! >= c),
+      if (a.cost case final c? when a.mpCost == null && a.pulseCost == null)
+        ProtoText(c, maxLines: 1),
+    ];
+    if (parts.isEmpty) return null;
+    // Con texto ENORME las etiquetas se achican antes que desbordar: tope
+    // de 55 % del ancho de la fila.
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: width * 0.55),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerRight,
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          for (final (i, p) in parts.indexed) ...[
+            if (i > 0) SizedBox(width: DsSpace.sm),
+            p,
+          ],
+        ]),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    return LayoutBuilder(
+        builder: (context, box) => _list(context, box.maxWidth));
+  }
+
+  Widget _list(BuildContext context, double width) {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (header != null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: ProtoText(header!, key: const ValueKey('battle-header')),
+              padding: EdgeInsets.only(bottom: DsSpace.xs),
+              child: ProtoText(header!,
+                  key: const ValueKey('battle-header'), style: DsText.body()),
             ),
           for (final (i, a) in visible.indexed) ...[
             if (a.separatorBefore case final s?)
               Container(
                 key: ValueKey('battle-sep-${a.id}'),
-                margin: const EdgeInsets.only(bottom: 3),
+                margin: EdgeInsets.only(bottom: DsSpace.xs),
+                padding: const EdgeInsets.only(bottom: 2),
                 decoration: const BoxDecoration(
-                  border: Border(
-                      bottom: BorderSide(color: ProtoColors.panelBorder)),
+                  border: Border(bottom: BorderSide(color: DsColors.border)),
                 ),
-                child: Text(retroText(s),
-                    style: RetroType.style(RetroType.label,
-                        color: ProtoColors.dim)),
+                child:
+                    Text(retroText(s), style: DsText.detail(DsColors.instant)),
               ),
-            _Row(
-              // Clave estable por acción: nunca se reutiliza la fila de
-              // otra técnica al cambiar de turno, de página o de categoría.
+            // Clave estable por acción: nunca se reutiliza la fila de
+            // otra técnica al cambiar de turno, de página o de categoría.
+            MouseRegion(
               key: ValueKey('battle-act-${a.id}'),
-              selected: i == selected,
-              enabled: a.onSelect != null,
-              dual: a.dual,
-              onTap: a.onSelect,
-              onHover: () => onHover(i),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: RetroType.em(context, 2),
-                    child: Text(i < 9 ? '${i + 1}' : '',
-                        style: RetroType.style(RetroType.label,
-                            color: ProtoColors.sky)),
-                  ),
-                  // El nombre baja de línea antes que cortarse.
-                  Expanded(
-                    child: ProtoText(
-                        '${a.name}${a.value == null ? '' : ' ${a.value}'}'),
-                  ),
-                  if (a.cost != null) ...[
-                    const SizedBox(width: 8),
-                    ProtoText(a.cost!),
-                  ],
-                ],
+              onEnter: (_) => onHover(i),
+              child: DsListRow(
+                leading: SizedBox(
+                  width: RetroType.em(context, 1.5),
+                  child: Text(i < 9 ? '${i + 1}' : '', style: DsText.detail()),
+                ),
+                title: retroText(protoPlain(a.name)),
+                detail: a.summary == null && a.value != null
+                    ? retroText(protoPlain(a.value!))
+                    : null,
+                titleColor: a.dual ? DsColors.warning : null,
+                selected: i == selected,
+                enabled: a.onSelect != null,
+                onTap: a.onSelect,
+                compact: true,
+                trailing: _trailing(a, width),
               ),
             ),
           ],
@@ -334,68 +397,77 @@ class _Description extends StatelessWidget {
   final String resources;
   final String hints;
 
+  /// Resumen visible y lo plegado de [a].
+  static (String, String) _split(BattleAction a) {
+    if (a.summary case final s?) return (s, a.description);
+    final lines = a.description.split('<br>');
+    return (lines.take(2).join('<br>'), lines.skip(2).join('<br>'));
+  }
+
   @override
   Widget build(BuildContext context) {
     final a = action;
+    final parts = a == null ? null : _split(a);
     return Container(
       key: const ValueKey('battle-desc'),
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: ProtoColors.bg,
-        border: Border.all(color: ProtoColors.panelBorder, width: 2),
-      ),
+      padding: EdgeInsets.all(DsSpace.sm),
+      color: DsColors.surfaceSunken,
       // Todo scrollea (también los recursos: con texto ENORME ocupan
       // varias líneas).
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Quién actúa (izquierda) y sus recursos (derecha).
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(retroText(actorName),
+                      key: const ValueKey('battle-actor'),
+                      style: DsText.subtitle(DsColors.textTitle)),
+                ),
+                SizedBox(width: DsSpace.sm),
+                // Con texto ENORME baja de línea en vez de desbordar.
+                Flexible(
+                  child: ProtoText(resources,
+                      key: const ValueKey('battle-resources'),
+                      style: DsText.detail(),
+                      textAlign: TextAlign.right),
+                ),
+              ],
+            ),
+            SizedBox(height: DsSpace.xs),
+            // Lo que falta, arriba y en rojo: una línea por condición.
+            if (a?.reason case final r?)
+              for (final (i, l) in r.split('\n').indexed)
+                Text(retroText(l),
+                    key: ValueKey('battle-reason-$i'),
+                    style: DsText.body(DsColors.danger)),
+            if (a != null)
+              Column(
+                key: ValueKey('battle-desc-${a.id}'),
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Quién actúa (izquierda) y sus recursos (derecha).
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(retroText(actorName),
-                            key: const ValueKey('battle-actor'),
-                            style: RetroType.style(RetroType.label,
-                                color: ProtoColors.title)),
-                      ),
-                      const SizedBox(width: 8),
-                      // Con texto ENORME baja de línea en vez de desbordar.
-                      Flexible(
-                        child: ProtoText(resources,
-                            key: const ValueKey('battle-resources'),
-                            textAlign: TextAlign.right),
-                      ),
-                    ],
-                  ),
-                  // Lo que falta, arriba y en rojo: una línea por
-                  // condición.
-                  if (a?.reason case final r?)
-                    for (final (i, l) in r.split('\n').indexed)
-                      ProtoText(hexSpanSafe('#ff6b81', l),
-                          key: ValueKey('battle-reason-$i')),
-                  if (a != null)
-                    ProtoText(a.description,
-                        key: ValueKey('battle-desc-${a.id}')),
-                  if (target.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    ProtoText(target, key: const ValueKey('battle-target')),
-                  ],
-                  if (extra != null) ...[const SizedBox(height: 4), extra!],
-                  // Las teclas al final: nunca le quitan lugar al detalle.
-                  const SizedBox(height: 4),
-                  ProtoText(hints,
-                      style: const TextStyle(color: ProtoColors.dim)),
+                  ProtoText(parts!.$1, style: DsText.body()),
+                  if (parts.$2.isNotEmpty)
+                    DsFold(
+                      key: ValueKey('battle-fold-${a.id}'),
+                      child: ProtoText(parts.$2, style: DsText.detail()),
+                    ),
                 ],
               ),
-            ),
-          ),
-        ],
+            if (target.isNotEmpty) ...[
+              SizedBox(height: DsSpace.xs),
+              ProtoText(target,
+                  key: const ValueKey('battle-target'), style: DsText.detail()),
+            ],
+            if (extra != null) ...[SizedBox(height: DsSpace.xs), extra!],
+            // Las teclas al final: nunca le quitan lugar al detalle.
+            SizedBox(height: DsSpace.xs),
+            Text(retroText(hints), style: DsText.detail()),
+          ],
+        ),
       ),
     );
   }
@@ -404,73 +476,3 @@ class _Description extends StatelessWidget {
 /// `<span style="color:hex">texto</span>` con el texto escapado.
 String hexSpanSafe(String hex, String text) =>
     '<span style="color:$hex">${protoEsc(text)}</span>';
-
-/// Fila elegible: borde dorado si está elegida, más clara con el mouse;
-/// 35 % de opacidad deshabilitada; ámbar en ULT y dúos.
-class _Row extends StatefulWidget {
-  const _Row({
-    super.key,
-    required this.child,
-    required this.selected,
-    required this.enabled,
-    this.onTap,
-    this.onHover,
-    this.dual = false,
-  });
-
-  final Widget child;
-  final bool selected;
-  final bool enabled;
-  final bool dual;
-  final VoidCallback? onTap;
-  final VoidCallback? onHover;
-
-  @override
-  State<_Row> createState() => _RowState();
-}
-
-class _RowState extends State<_Row> {
-  bool _hover = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final hot = _hover || widget.selected;
-    final border = widget.selected
-        ? ProtoColors.gold
-        : widget.dual
-            ? ProtoColors.amber
-            : _hover
-                ? ProtoColors.buttonHoverBorder
-                : ProtoColors.panelBorder;
-    // El clic toma también el hueco de abajo: la fila mide ≥ 24 px de
-    // alto a texto Normal (accessibility.md § "Objetivos clicables").
-    return MouseRegion(
-      cursor: widget.onTap != null
-          ? SystemMouseCursors.click
-          : SystemMouseCursors.basic,
-      onEnter: (_) {
-        setState(() => _hover = true);
-        widget.onHover?.call();
-      },
-      onExit: (_) => setState(() => _hover = false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: widget.onTap,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 3),
-          child: Opacity(
-            opacity: widget.enabled ? 1 : 0.45,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              decoration: BoxDecoration(
-                color: hot ? ProtoColors.buttonHover : ProtoColors.button,
-                border: Border.all(color: border, width: 2),
-              ),
-              child: widget.child,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

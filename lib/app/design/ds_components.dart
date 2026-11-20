@@ -175,11 +175,23 @@ class DsToolbar extends StatelessWidget {
 /// [onTap], clickeable con hover.
 class DsCard extends StatelessWidget {
   const DsCard(
-      {super.key, required this.child, this.onTap, this.selected = false});
+      {super.key,
+      required this.child,
+      this.onTap,
+      this.selected = false,
+      this.hot = false,
+      this.padding});
 
   final Widget child;
   final VoidCallback? onTap;
   final bool selected;
+
+  /// Hover / foco forzado: la tarjeta la maneja otro (p. ej. el foco de
+  /// teclado de un menú, `MenuFocusable`).
+  final bool hot;
+
+  /// Padding en vez del `md` por defecto.
+  final EdgeInsets? padding;
 
   BoxDecoration _deco(bool hot) => BoxDecoration(
         color: hot ? DsColors.hover : DsColors.surface,
@@ -189,11 +201,12 @@ class DsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget box(bool hot) => Container(
-        decoration: _deco(hot),
-        padding: EdgeInsets.all(DsSpace.md),
+    Widget box(bool h) => Container(
+        decoration: _deco(h || hot),
+        padding: padding ?? EdgeInsets.all(DsSpace.md),
         child: child);
     if (onTap == null) return box(false);
+
     return DsPressable(onTap: onTap, builder: (_, s) => box(s.hot));
   }
 }
@@ -202,15 +215,36 @@ class DsCard extends StatelessWidget {
 enum DsToastKind { info, success, danger, reward }
 
 /// Aviso de una línea con franja de color a la izquierda y × opcional.
+/// [content] reemplaza al texto (avisos con marcado, como el chat);
+/// [leading] es una marca de forma antes del texto (no solo el color);
+/// [color] reemplaza al del tipo. Con [closeFocusable] `false` la × no
+/// toma el foco (avisos del HUD: el teclado sigue en el juego y
+/// `Retroceso` los cierra todos).
 class DsToast extends StatelessWidget {
   const DsToast(this.message,
-      {super.key, this.kind = DsToastKind.info, this.onClose});
+      {super.key,
+      this.kind = DsToastKind.info,
+      this.onClose,
+      this.content,
+      this.leading,
+      this.color,
+      this.textColor,
+      this.closeKey,
+      this.closeFocusable = true});
 
   final String message;
   final DsToastKind kind;
   final VoidCallback? onClose;
+  final Widget? content;
+  final Widget? leading;
+  final Color? color;
+  final Color? textColor;
+  final Key? closeKey;
+  final bool closeFocusable;
 
-  Color get color => switch (kind) {
+  Color get stripe =>
+      color ??
+      switch (kind) {
         DsToastKind.info => DsColors.mp,
         DsToastKind.success => DsColors.success,
         DsToastKind.danger => DsColors.danger,
@@ -219,10 +253,17 @@ class DsToast extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final close = onClose == null
+        ? null
+        : DsButton.icon(const Text('×'),
+            key: closeKey,
+            tooltip: 'Cerrar',
+            onPressed: onClose,
+            size: DsButtonSize.compact);
     return Container(
       decoration: BoxDecoration(
         color: DsColors.surface,
-        border: Border(left: BorderSide(color: color, width: 4)),
+        border: Border(left: BorderSide(color: stripe, width: 4)),
       ),
       padding: EdgeInsets.only(
           left: DsSpace.md,
@@ -230,17 +271,17 @@ class DsToast extends StatelessWidget {
           top: DsSpace.xs,
           bottom: DsSpace.xs),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (leading != null) ...[leading!, SizedBox(width: DsSpace.sm)],
         Flexible(
             child: Padding(
           padding: EdgeInsets.symmetric(vertical: DsSpace.xs),
-          child: Text(message, style: DsText.body(DsColors.textPrimary)),
+          child: content ??
+              Text(message,
+                  style: DsText.body(textColor ?? DsColors.textPrimary)),
         )),
-        if (onClose != null) ...[
+        if (close != null) ...[
           SizedBox(width: DsSpace.sm),
-          DsButton.icon(const Text('×'),
-              tooltip: 'Cerrar',
-              onPressed: onClose,
-              size: DsButtonSize.compact),
+          closeFocusable ? close : ExcludeFocus(child: close),
         ] else
           SizedBox(width: DsSpace.sm),
       ]),
@@ -319,6 +360,7 @@ class DsListRow extends StatelessWidget {
     this.tooltip,
     this.focusNode,
     this.autofocus = false,
+    this.compact = false,
   });
 
   final String title;
@@ -340,11 +382,17 @@ class DsListRow extends StatelessWidget {
   /// El foco de teclado arranca en esta fila (menús).
   final bool autofocus;
 
+  /// Fila baja para listas densas (menú de batalla): aire vertical
+  /// mínimo y `sm` a los lados.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     Widget row(DsPressState s) => Container(
-          padding: EdgeInsets.symmetric(
-              horizontal: DsSpace.md, vertical: DsSpace.sm),
+          padding: compact
+              ? EdgeInsets.symmetric(horizontal: DsSpace.sm, vertical: 2)
+              : EdgeInsets.symmetric(
+                  horizontal: DsSpace.md, vertical: DsSpace.sm),
           decoration: BoxDecoration(
             color: s.hot ? DsColors.hover : Colors.transparent,
             border: Border.all(
@@ -481,7 +529,8 @@ class DsStatLine extends StatelessWidget {
       this.format,
       this.diffFormat,
       this.higherIsBetter = true,
-      this.showChange = true});
+      this.showChange = true,
+      this.suffix});
 
   final String label;
   final num from;
@@ -495,6 +544,10 @@ class DsStatLine extends StatelessWidget {
   final String Function(num)? diffFormat;
   final bool higherIsBetter;
   final bool showChange;
+
+  /// Dato derivado al final, en Detalle (`(-12% daño)`, `(daño ×2)`,
+  /// `peso 2.5`); se recorta con "…" antes que desbordar.
+  final String? suffix;
 
   static String _n(num v) => v == v.roundToDouble() ? '${v.round()}' : '$v';
 
@@ -520,7 +573,17 @@ class DsStatLine extends StatelessWidget {
             style: RetroType.style(RetroType.glyph, color: c)),
         Text((diffFormat ?? f)(d.abs()), style: DsText.body(c)),
       ],
+      if (suffix != null) ...[
+        SizedBox(width: DsSpace.sm),
+        Flexible(
+          child: Text(retroText(suffix!),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: DsText.detail()),
+        ),
+      ],
     ]);
+
   }
 }
 

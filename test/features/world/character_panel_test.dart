@@ -28,7 +28,16 @@ void main() {
         profile: start,
         build: (v, c) => CharacterPanel(view: v, controller: c));
     final before = progression.derivedStats(start);
-    expect(_plain(tester, 'stat-HP'), 'HP ${before.maxHp}');
+    // DsStatLine sin cambio: solo `HP 100` (design_system.md § 6).
+    DsStatLine line(String k) =>
+        tester.widget<DsStatLine>(find.byKey(ValueKey(k)));
+    expect(line('stat-HP').from, before.maxHp);
+    expect(line('stat-HP').to, before.maxHp);
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('stat-HP')),
+            matching: find.text('▲')),
+        findsNothing);
     expect(find.textContaining('Puntos: 2'), findsOneWidget);
     // Sin reparto, confirmar está deshabilitado y dice por qué (en la
     // barra de ATRIBUTOS, al lado del botón principal).
@@ -44,10 +53,22 @@ void main() {
     final preview = progression
         .previewAllocation(start, {Attribute.vit: 1, Attribute.fue: 1});
     expect(preview.maxHp, greaterThan(before.maxHp));
+    // `HP 100 → 120 ▲20`: el después en principal, flecha y diferencia.
+    expect(line('stat-HP').to, preview.maxHp);
+    expect(line('stat-ATQ').from, before.attack);
+    expect(line('stat-ATQ').to, preview.attack);
+    for (final k in ['stat-HP', 'stat-ATQ']) {
+      expect(
+          find.descendant(
+              of: find.byKey(ValueKey(k)), matching: find.text('▲')),
+          findsOneWidget,
+          reason: k);
+    }
     expect(
-        _plain(tester, 'stat-HP'), 'HP ${before.maxHp} → ${preview.maxHp} ▲');
-    expect(_plain(tester, 'stat-ATQ'),
-        'ATQ ${before.attack} → ${preview.attack} ▲');
+        find.descendant(
+            of: find.byKey(const ValueKey('stat-HP')),
+            matching: find.text('${preview.maxHp - before.maxHp}')),
+        findsOneWidget);
     expect(find.textContaining('Puntos: 0'), findsOneWidget);
     expect(_plain(tester, 'pending-points'), 'Pendiente: +3 VIT +3 FUE');
     // Nada cambió todavía en el host.
@@ -61,7 +82,8 @@ void main() {
     expect(p.points, 1);
     expect(c.view!.me!.maxHp,
         progression.previewAllocation(start, {Attribute.vit: 1}).maxHp);
-    expect(_plain(tester, 'stat-HP'), 'HP ${c.view!.me!.maxHp}');
+    expect(line('stat-HP').from, c.view!.me!.maxHp);
+    expect(line('stat-HP').to, c.view!.me!.maxHp);
 
     // Reiniciar puntos (en el lobby).
     await tapVisible(tester, find.byKey(const ValueKey('respec')));

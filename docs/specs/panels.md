@@ -135,6 +135,14 @@ Contenido, pausa de grupo y ajustes: docs/specs/settings.md.
 
 ## Mostrador (`board`, 1271-1276)
 
+Cambios v0.12 (design_system.md § 10.3): lista de `DsListRow` de una
+línea (rango, zona, `Lv N` / `Bloqueada`), TUTORIAL primero; detalle
+con `DsSectionHeader` (OBJETIVO, RECOMPENSAS) y RANGO S en `DsFold`;
+PROPONER principal con el motivo en el tooltip y en una línea roja al
+lado; la línea "Propón…" pasó al "?". Preparación: `¡LISTO!`
+principal y GRUPO con una línea por jugador.
+
+
 Título `MOSTRADOR DE MISIONES` [?]; línea "qué hace": `Propón una
 misión: cuando todos votan SÍ pasan a la preparación.` Una **tarjeta**
 por misión (`MissionCard`, borde `panelBorder`):
@@ -350,6 +358,20 @@ queda en el paso 3 y confirma de nuevo.
   mejorar o cambiar.`): lista de tus armas (`bench-weapon-<uid>`,
   `EQUIPADA` en dorado; por defecto la equipada) y a la derecha su ficha.
   Primario `ELEGIR ESTA ARMA ›` (`bench-next`).
+- Buscador (v0.11.x, pedido del dueño): siempre hay un `DsSearchField`
+  arriba de cada lista donde se elige un arma: arma destino en el paso 1
+  (`bench-weapon-search`), arma de origen que se destruye en el paso 3
+  (`craft-source-search`) y base nueva al reforjar (`bench-base-search`,
+  por nombre y tipo). Las armas se filtran con `inventoryMatches` (mismo
+  criterio que el inventario: nombre, tipo, rareza, mods, pasiva y
+  habilidades; todas las palabras, sin acentos). Lo que no coincide se
+  oculta (son listas, no una grilla con posiciones), salvo el arma ya
+  elegida, que queda a la vista; si nada coincide, `Ninguna arma coincide
+  con la búsqueda.`. Esc con texto limpia el buscador; sin texto vuelve
+  de paso como siempre. El texto del paso 1 se mantiene al volver a él;
+  los del paso 3 se borran al elegir otra acción. Las habilidades / mods a
+  traer salen del arma de origen elegida (lista corta, sin buscador
+  propio): el buscador de origen ya encuentra armas por habilidad o mod.
 - **Paso 2 — ¿Qué querés hacer?** (línea `Paso 2 de 3: ...`): lista
   ancha (560 px) de acciones agrupadas, cada una con nombre en negrita,
   **una línea** "qué hace" y a la derecha `Se puede` (verde) o el motivo
@@ -552,14 +574,42 @@ casilla y como ficha en los detalles:
 
 ## Inventario (pestaña INVENTARIO del personaje, tecla I)
 
+Cambios v0.12.0 (responsivo, pedido del dueño): en 1750×1040 con texto
+Grande la columna de al lado se salía del panel (la cuarta pila de
+MATERIALES quedaba cortada). Reemplaza a `inventoryScale`,
+`inventoryScaleWide` e `inventorySideWidth`:
+- Un `LayoutBuilder` elige la disposición con `inventoryLayout(ancho,
+  alto, stripWidth, sideMin)` (`sideMin` = 240 px por el factor de
+  texto), por puntos de quiebre del ancho del panel:
+  - ancha (`InventoryLayoutMode.wide`): si entran la franja de CAMBIOS,
+    la grilla a k = 1 y la columna de al lado: franja | grilla |
+    columna (`inv-side`: EQUIPADA, consumibles, materiales,
+    casillas / créditos). La columna pide 4 pilas por fila al tamaño
+    de la casilla; si no entran, la grilla baja de escala (hasta 1).
+  - media: si entran la franja y la grilla: la columna va debajo de la
+    grilla (EQUIPADA arriba de ella).
+  - angosta: todo apilado (la franja arriba, achicada con
+    `FittedBox(scaleDown)` si hace falta).
+- La casilla sale del espacio que queda (44 × k; entera desde k = 2, en
+  cuartos entre 1 y 2, y por debajo de 1 la que entre a lo ancho);
+  siempre `InventoryRules.columns` columnas. El bloque nunca es más
+  ancho que el panel: sin scroll horizontal; a lo alto, scroll.
+- Pilas (`InventoryStacksBar`): cada grupo mide su ancho con un
+  `LayoutBuilder` y usa tantas columnas como entren; las demás bajan
+  de línea (nunca se cortan). El menú de LIMPIAR y la confirmación
+  toman como mucho el ancho de la grilla.
+- Test: `test/features/inventory/inventory_responsive_test.dart`
+  (1024×600 a 2560×1440, texto Normal / Grande / Enorme, con todas las
+  pilas). Capturas: `docs/release_shots/v0.12.0/inventario_responsivo_*`.
+
 Cambios v0.11 (sistema de diseño, design_system.md § 10):
 - Barra de herramientas arriba, en una fila (`inv-toolbar`): de quién es
   el inventario (`TÚ` / compañeros, `inv-owner-<id>`), búsqueda
   (`DsSearchField`, `inv-search`; × `inv-search-clear` para borrarla),
   `ORDENAR ▼` (`inv-sort`) y `LIMPIAR` (`inv-clean`). Con texto ENORME
   la barra baja de línea y ocupa como mucho el 40 % del alto (scroll).
-  La escala de la grilla ya no descuenta esa barra (`inventoryScale`:
-  120 px fijos; `inventoryScaleWide`: 30).
+  La escala de la grilla ya no descuenta esa barra (desde v0.12.0,
+  `inventoryLayout`).
 - Botones `DsButton` (compactos); deshabilitados con el motivo en el
   tooltip (antes al lado). Confirmaciones (TIRAR, VENDER, DESARMAR) con
   franja roja a la izquierda en vez de caja con candado.
@@ -624,8 +674,8 @@ se sacó: la ficha del mouse de un arma ya compara con la equipada
 `antes → después` en verde ▲ si mejora y rojo ▼ si empeora; clave
 `cmp-stat-<stat>`). El inventario ocupa todo el ancho: la columna
 (`inv-main`) va centrada y la grilla, la EQUIPADA, las pilas, el
-buscador, el menú de LIMPIAR y la confirmación escalan juntos con
-`inventoryScale(ancho, alto)`: la mayor escala k (casillas de 44 × k
+buscador, el menú de LIMPIAR y la confirmación escalan juntos (desde
+v0.12.0 con `inventoryLayout`, ver "Cambios v0.12.0"): la mayor escala k (casillas de 44 × k
 px, íconos proporcionales) con la que la grilla entra a lo ancho y sus
 5 filas, la EQUIPADA y las pilas (más ~200 px de textos y botones) a lo
 alto, así LIMPIAR queda a la vista sin scroll; entera desde k = 2

@@ -145,11 +145,15 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     return Rect.fromLTRB(gr.left, top, gr.right, bottom);
   }
 
-  /// Escala de la grilla (v0.9.10): casilla de `cell × _scale` px.
+  /// Escala de la grilla: casilla de `cell × _scale` px. La calcula
+  /// [inventoryLayout] desde el espacio que da el `LayoutBuilder`.
   double _scale = 1;
 
+  /// Disposición según el ancho (v0.12.0, panels.md § "Inventario").
+  InventoryLayoutMode _mode = InventoryLayoutMode.medium;
+
   /// Con lugar a lo ancho, la EQUIPADA y las pilas van al lado.
-  bool _wide = false;
+  bool get _wide => _mode == InventoryLayoutMode.wide;
   double get _cellSize => InventoryTab.cell * _scale;
   double get _gap => InventoryTab.gap * _scale;
   double get _gridW => InventoryTab.gridWidth * _scale;
@@ -296,7 +300,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
 
   /// La franja arranca a la altura de la grilla (debajo de la EQUIPADA si
   /// va arriba).
-  double get _stripTop => _wide ? 0 : _cellSize + DsSpace.sm;
+  double get _stripTop =>
+      _mode == InventoryLayoutMode.medium ? _cellSize + DsSpace.sm : 0;
 
   /// En "elige B": toma [token] como B si es un arma.
   bool _pickB(String owner, String? token, CellContent? c) {
@@ -814,7 +819,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
 
     if (_cleaning && mine) {
       _scale = 1;
-      _wide = false;
+      _mode = InventoryLayoutMode.medium;
       return _withToolbar(
           toolbar,
           PanelSplit(
@@ -840,34 +845,42 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       child: RetroTipArea(
         bounds: _tipBounds,
         child: LayoutBuilder(builder: (context, box) {
-          final narrow = inventoryScale(box.maxWidth, box.maxHeight);
-          final wide = inventoryScaleWide(box.maxWidth, box.maxHeight);
-          _wide = wide > narrow;
-          _scale = _wide ? wide : narrow;
-          final mainW =
-              _wide ? _gridW + 16 + inventorySideWidth(_scale) + 4 : _gridW + 4;
-          // Franja de cambios en el espacio libre a la izquierda; si no
-          // entra, la grilla se corre lo justo.
-          final strip = _strip(me, attrs);
+          // Puntos de quiebre según el ancho del panel (panels.md §
+          // "Inventario"): la casilla sale del espacio disponible.
           final stripW = ChangeStrip.widthOf(context) + 8;
-          final free = (box.maxWidth - mainW) / 2;
+          final l = inventoryLayout(box.maxWidth, box.maxHeight,
+              stripWidth: stripW,
+              sideMin: MediaQuery.textScalerOf(context).scale(240));
+          _mode = l.mode;
+          _scale = l.scale;
+          final strip = _strip(me, attrs);
           final main = SizedBox(
               key: const ValueKey('inv-main'),
-              width: mainW,
+              width: l.mainWidth,
               child: buildLeft());
           return Column(
             key: _panelKey,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Expanded(
+                // Solo scroll vertical: a lo ancho todo entra.
                 child: SingleChildScrollView(
-                  // En fila (no en un Stack): la franja suma su alto y
-                  // scrollea con el panel en vez de cortarse abajo.
-                  child: free >= stripW
-                      ? Row(
+                  child: l.mode == InventoryLayoutMode.narrow
+                      ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(width: free - stripW),
+                            FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.topLeft,
+                                child: strip),
+                            SizedBox(height: DsSpace.sm),
+                            main,
+                          ],
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             SizedBox(
                               width: stripW,
                               child: Align(
@@ -879,19 +892,6 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                             ),
                             main,
                           ],
-                        )
-                      : SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                  padding: EdgeInsets.only(top: _stripTop),
-                                  child: strip),
-                              const SizedBox(width: 8),
-                              main,
-                            ],
-                          ),
                         ),
                 ),
               ),
@@ -959,7 +959,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     const rs = [Rarity.comun, Rarity.magico, Rarity.raro];
     return Container(
       key: const ValueKey('inv-clean-menu'),
-      width: _gridW,
+      constraints: BoxConstraints(maxWidth: _gridW),
       decoration: BoxDecoration(
         color: DsColors.background,
         border: Border.all(
@@ -1113,8 +1113,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     if (!confirming) {
       return Padding(padding: const EdgeInsets.only(top: 6), child: list.first);
     }
-    return SizedBox(
-      width: _gridW,
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: _gridW),
       // Franja roja a la izquierda (como un aviso), sin caja anidada.
       child: Container(
         key: const ValueKey('inv-confirm'),
@@ -1454,46 +1454,70 @@ class NewItemTag extends StatelessWidget {
       );
 }
 
-/// Escala de la grilla del inventario para un área de [w] × [h] px
-/// (v0.9.10): la mayor escala con la que la grilla entra a lo ancho y
-/// sus 5 filas, la EQUIPADA y las pilas (más ~120 px de textos y
-/// botones; la barra de arriba ya no cuenta) a lo alto; entera desde ×2
-/// (nitidez del pixel art), en cuartos entre ×1 y ×2. Si ni la escala 1
-/// entra a lo ancho, la que entre.
-double inventoryScale(double w, double h) {
-  final byW = w.isFinite ? (w - 8) / (InventoryTab.gridWidth + 4) : 1.0;
-  if (byW < 1) return byW.clamp(0.5, 1.0);
-  const rows = InventoryRules.cells / InventoryRules.columns;
-  final byH = h.isFinite
-      // Escalan: 5 filas, la EQUIPADA y las pilas; fijo: textos y botones.
-      ? (h - 120) / ((rows + 2) * (InventoryTab.cell + InventoryTab.gap))
-      : byW;
-  final k = byW < byH ? byW : byH;
-  if (k < 1) return 1;
-  // Desde ×2, entera (nitidez); entre 1 y 2, la que entre (en cuartos).
-  return k >= 2 ? k.floorToDouble() : (k * 4).floorToDouble() / 4;
+/// Disposición del INVENTARIO según el ancho del panel (v0.12.0).
+enum InventoryLayoutMode {
+  /// Franja CAMBIOS | grilla | columna (EQUIPADA, pilas, casillas).
+  wide,
+
+  /// Franja CAMBIOS | grilla con la columna debajo.
+  medium,
+
+  /// Todo apilado: la franja arriba, la grilla y la columna debajo.
+  narrow,
 }
 
-/// Ancho de la columna de al lado en el modo ancho (4 casillas de pilas
-/// o los botones, lo que sea más).
-double inventorySideWidth(double k) {
-  final cells = 4 * InventoryTab.cell * k + 3 * InventoryTab.gap * k;
-  return cells < 240 ? 240 : cells;
-}
+/// Resultado de [inventoryLayout]: disposición, escala de la casilla
+/// (`InventoryTab.cell × scale`) y ancho del bloque grilla + columna.
+typedef InventoryLayout = ({
+  InventoryLayoutMode mode,
+  double scale,
+  double mainWidth,
+});
 
-/// Como [inventoryScale] pero con la EQUIPADA y las pilas al lado de la
-/// grilla: a lo alto solo cuentan sus 5 filas (el buscador y ORDENAR
-/// van en la barra de arriba).
-double inventoryScaleWide(double w, double h) {
-  if (!w.isFinite || !h.isFinite) return 0;
+/// Elige la disposición para un área de [w] × [h] px (panels.md §
+/// "Inventario"): ancha si entran la franja ([stripWidth]), la grilla a
+/// escala 1 y la columna de al lado ([sideMin]); media si entran la
+/// franja y la grilla; si no, angosta. La escala es la mayor con la que
+/// la grilla entra en el ancho que le queda y a lo alto (sin las pilas
+/// en la ancha; con la EQUIPADA y las pilas debajo en las otras):
+/// entera desde ×2 (nitidez del pixel art), en cuartos entre ×1 y ×2 y,
+/// si ni ×1 entra a lo ancho, la que entre. Nunca más ancho que [w].
+InventoryLayout inventoryLayout(double w, double h,
+    {required double stripWidth, double sideMin = 240}) {
+  const base = InventoryTab.gridWidth;
+  const unit = InventoryTab.cell + InventoryTab.gap;
   const rows = InventoryRules.cells / InventoryRules.columns;
-  final byH = (h - 30) / (rows * (InventoryTab.cell + InventoryTab.gap));
-  var k = byH;
-  // El ancho: grilla + separación + columna de al lado.
-  while (k > 0 &&
-      InventoryTab.gridWidth * k + 16 + inventorySideWidth(k) + 12 > w) {
-    k -= 0.25;
+  const sep = 16.0;
+  final width = w.isFinite ? w - 8 : stripWidth + base + sep + sideMin;
+  double snap(double byW, double byH) {
+    final k = byW < byH ? byW : byH;
+    if (k < 1) return byW < 1 ? (byW > 0.3 ? byW : 0.3) : 1;
+    return k >= 2 ? k.floorToDouble() : (k * 4).floorToDouble() / 4;
   }
-  if (k < 1) return 0;
-  return k >= 2 ? k.floorToDouble() : (k * 4).floorToDouble() / 4;
+
+  if (width >= stripWidth + base + sep + sideMin) {
+    final byW = (width - stripWidth - sep - sideMin) / base;
+    var k = snap(byW, h.isFinite ? (h - 30) / (rows * unit) : byW);
+    // La columna de al lado lleva 4 pilas por fila al tamaño de la
+    // casilla: si no entran, la grilla baja de escala (hasta ×1).
+    double side(double k) => 4 * unit * k > sideMin ? 4 * unit * k : sideMin;
+    while (k > 1 && base * k + sep + side(k) > width - stripWidth) {
+      k = k > 2 ? k.ceilToDouble() - 1 : k - 0.25;
+    }
+    final gridW = base * k;
+    final room = width - stripWidth - gridW - sep;
+    final want = 6 * unit * k > sideMin ? 6 * unit * k : sideMin;
+    return (
+      mode: InventoryLayoutMode.wide,
+      scale: k,
+      mainWidth: gridW + sep + (room < want ? room : want),
+    );
+  }
+  final byH = h.isFinite ? (h - 120) / ((rows + 2) * unit) : double.infinity;
+  if (width >= stripWidth + base) {
+    final k = snap((width - stripWidth) / base, byH);
+    return (mode: InventoryLayoutMode.medium, scale: k, mainWidth: base * k);
+  }
+  final k = snap(width / base, byH);
+  return (mode: InventoryLayoutMode.narrow, scale: k, mainWidth: width);
 }

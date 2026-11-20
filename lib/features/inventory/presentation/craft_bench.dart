@@ -21,7 +21,9 @@ import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/craft_rules.dart';
 import '../../build_planner/presentation/build_fit_badge.dart';
 import '../domain/battle_impact.dart';
+import '../../../app/design/ds_components.dart';
 import '../domain/craft_help.dart';
+import '../domain/inventory_menu.dart' show foldSearch, inventoryMatches;
 import '../domain/item_text.dart';
 import '../domain/skill_tip.dart';
 import '../domain/weapon_text.dart' show fmtNum;
@@ -227,6 +229,12 @@ class _CraftBenchState extends State<CraftBench> {
 
   final _focus = FocusNode(debugLabel: 'craft-bench');
 
+  /// Buscadores de cada lista donde se elige un arma (paso 1: destino;
+  /// paso 3: origen que se destruye y base nueva al reforjar).
+  final _weaponQ = TextEditingController();
+  final _sourceQ = TextEditingController();
+  final _baseQ = TextEditingController();
+
   /// Lo que hace `Enter` en el paso actual (con el foco en la mesa).
   VoidCallback? _enter;
 
@@ -235,6 +243,9 @@ class _CraftBenchState extends State<CraftBench> {
   @override
   void dispose() {
     _focus.dispose();
+    _weaponQ.dispose();
+    _sourceQ.dispose();
+    _baseQ.dispose();
     super.dispose();
   }
 
@@ -260,6 +271,48 @@ class _CraftBenchState extends State<CraftBench> {
     }
     return KeyEventResult.ignored;
   }
+
+  /// ¿[it] coincide con el texto de [q]? Mismo criterio que el buscador
+  /// del inventario (nombre, tipo, rareza, mods, pasiva, habilidades).
+  bool _hit(TextEditingController q, ItemInstance it) =>
+      inventoryMatches(shop.rules, q.text, item: it);
+
+  bool _baseHit(WeaponDef w) {
+    final words =
+        foldSearch(_baseQ.text).split(RegExp(r'\s+')).where((x) => x.isNotEmpty);
+    final text = foldSearch('${w.name} ${w.type} ${w.classId}');
+    return words.every(text.contains);
+  }
+
+  /// Campo de búsqueda arriba de una lista de armas. Esc con texto lo
+  /// limpia (sin texto, Esc sigue volviendo al paso anterior).
+  Widget _searchField(String key, TextEditingController q, String hint) =>
+      Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: (_, e) {
+          if (e is KeyDownEvent &&
+              e.logicalKey == LogicalKeyboardKey.escape &&
+              q.text.isNotEmpty) {
+            setState(q.clear);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: DsSearchField(
+              key: ValueKey(key),
+              hint: hint,
+              width: 320,
+              controller: q,
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+        ),
+      );
 
   // ------------------------------------------------------------------
   // Elección por defecto y acción
@@ -589,10 +642,16 @@ class _CraftBenchState extends State<CraftBench> {
     return PanelSplit(
       listWidth: 480,
       list: [
+        _searchField(
+            'bench-weapon-search', _weaponQ, 'BUSCAR: nombre, tipo, mod'),
+        if (!items.any((it) => _hit(_weaponQ, it)))
+          const Text('Ninguna arma coincide con la búsqueda.',
+              style: TextStyle(color: ProtoColors.dim)),
         CardGrid(
           minWidth: 220,
           children: [
             for (final it in items)
+              if (it.uid == target.uid || _hit(_weaponQ, it))
               () {
                 final color =
                     ProtoColors.parse(rarityHex(it.rarity)) ?? ProtoColors.ink;
@@ -667,6 +726,8 @@ class _CraftBenchState extends State<CraftBench> {
           _pick = 0;
           _source = null;
           _base = null;
+          _sourceQ.clear();
+          _baseQ.clear();
           _step = 2;
           _lastBefore = null;
           _done = false;
@@ -964,8 +1025,15 @@ class _CraftBenchState extends State<CraftBench> {
       if (sources.isEmpty) {
         list.add(dim(_quickReason(p, target, op) ??
             'No hay armas (no la equipada ni tu última arma inicial)'));
+      } else {
+        list.add(_searchField('craft-source-search', _sourceQ,
+            'BUSCAR: nombre, tipo, mod, habilidad'));
+        if (!sources.any((it) => _hit(_sourceQ, it))) {
+          list.add(dim('Ninguna arma coincide con la búsqueda.'));
+        }
       }
       for (final it in sources) {
+        if (it.uid != action.sourceUid && !_hit(_sourceQ, it)) continue;
         final sel = it.uid == action.sourceUid;
         list.add(RetroTooltip(
             key: ValueKey('craft-source-tip-${it.uid}'),
@@ -1016,8 +1084,17 @@ class _CraftBenchState extends State<CraftBench> {
       ));
       list.add(const SizedBox(height: 4));
       final bases = _bases(target);
-      if (bases.isEmpty) list.add(dim('(ninguna de esta familia)'));
+      if (bases.isEmpty) {
+        list.add(dim('(ninguna de esta familia)'));
+      } else {
+        list.add(_searchField(
+            'bench-base-search', _baseQ, 'BUSCAR: nombre, tipo'));
+        if (!bases.any(_baseHit)) {
+          list.add(dim('Ninguna base coincide con la búsqueda.'));
+        }
+      }
       for (final w in bases) {
+        if (w.id != action.sourceUid && !_baseHit(w)) continue;
         list.add(row(
             'bench-base-${w.id}',
             '${protoEsc(w.name)} ${protoColor(ProtoColors.dim, protoEsc(w.type))} '

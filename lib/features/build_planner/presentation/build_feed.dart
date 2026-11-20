@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/theme/proto_colors.dart';
+import '../../../app/design/design.dart';
+
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/pixel_icon.dart';
-import '../../../app/widgets/notice_close.dart';
 import '../../../core/settings/notices.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/build_wants.dart';
@@ -217,28 +217,19 @@ class BuildToastBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = toast.done ? ProtoColors.green : kPlanColor;
-    return Container(
+    // Aviso del sistema (design_system.md § 6): franja violeta del plan
+    // (verde si completó algo) y la ★ como marca de forma.
+    return DsToast(
+      retroText(toast.text),
       key: const ValueKey('build-toast'),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: ProtoColors.scrim(0.9),
-        border: Border.all(color: kPlanColor, width: 2),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          PixelIcon(PixelIconKind.star,
-              size: RetroType.width(context, 14), color: kPlanColor),
-          const SizedBox(width: 8),
-          // Tamaño de lectura (VT323) como el resto de los avisos.
-          Text(retroText(toast.text), style: TextStyle(color: color)),
-          if (onDismiss case final close?) ...[
-            const SizedBox(width: 8),
-            NoticeClose(key: const ValueKey('build-toast-close'), onPressed: close),
-          ],
-        ],
-      ),
+      color: toast.done ? DsColors.success : kPlanColor,
+      textColor: toast.done ? DsColors.success : DsColors.textPrimary,
+      leading: PixelIcon(PixelIconKind.star,
+          size: RetroType.width(context, 14), color: kPlanColor),
+      closeKey: const ValueKey('build-toast-close'),
+      closeFocusable: false,
+      onClose: onDismiss,
     );
+
   }
 }

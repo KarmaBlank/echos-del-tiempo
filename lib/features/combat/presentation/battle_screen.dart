@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_panel.dart';
@@ -588,13 +589,15 @@ class BattleViewState extends State<BattleView>
     return BattleAction(
       id: 'skill-${sk.id}',
       name: '${sk.name}${sk.delay > 0 ? ' ⏳' : ''}',
-      value: '${instant ? '${instantTagMarkup()} ' : ''}'
-              '${skillReachMarkup(sk)}'
-              '${_skillInfo(sk, cur, crit: false)}'
-          .trim(),
-      cost: skillCostMarkup(sk),
-      description: '${skillSummaryMarkup(sk, cur)}<br>'
-          '${describeSkillMarkup(sk, cur)}',
+      // Fila: etiquetas (INSTANTE, alcance) y costos del sistema de
+      // diseño; la cifra va en el resumen del detalle.
+      value: _skillInfo(sk, cur, crit: false).trim(),
+      instant: instant,
+      reach: skillReach(sk),
+      mpCost: sk.mp > 0 || sk.pulse == 0 ? sk.mp : null,
+      pulseCost: sk.pulse > 0 ? sk.pulse : null,
+      summary: skillSummaryMarkup(sk, cur),
+      description: describeSkillMarkup(sk, cur),
       // Una línea roja por condición que falta (arriba del detalle).
       reason: ok
           ? null
@@ -798,6 +801,11 @@ class BattleViewState extends State<BattleView>
                     name: a.name,
                     value: a.value,
                     cost: a.cost,
+                    instant: a.instant,
+                    reach: a.reach,
+                    mpCost: a.mpCost,
+                    pulseCost: a.pulseCost,
+                    summary: a.summary,
                     description: a.description,
                     dual: a.dual,
                     reason: why,
@@ -1164,7 +1172,7 @@ class BattleViewState extends State<BattleView>
             children: [
               bossMechanicRow(b),
               ProtoText(who,
-                  style: RetroType.style(RetroType.title),
+                  style: DsText.title(),
                   textAlign: TextAlign.center),
               if (mine.isNotEmpty) ...[
                 const SizedBox(height: 8),
@@ -1222,6 +1230,8 @@ class BattleViewState extends State<BattleView>
           ' · <span style="color:${cur.ult >= 100 ? '#ee70ad' : '#a29bfe'}">'
           'ULT ${cur.ult.floor()}%</span>',
       extra: bossMechanicRow(widget.battle),
+      mp: cur.mp,
+      pulse: cur.pulse,
       onCategory: selectCategory,
       onHoverAction: (i) {
         if (i != _selected) setState(() => _selected = i);
@@ -1321,7 +1331,7 @@ class _LogBand extends StatelessWidget {
                                     .scale(RetroType.small),
                                 (box.maxHeight - 2) / 1.25),
                         height: 1.25,
-                        color: ProtoColors.white),
+                        color: DsColors.textPrimary),
                   ),
                 ),
               ),
@@ -1339,7 +1349,7 @@ class _LogBand extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: RetroType.pixelFamily,
                     fontSize: timerPx,
-                    color: left <= 10 ? ProtoColors.red : ProtoColors.gold,
+                    color: left <= 10 ? DsColors.danger : DsColors.selected,
                   ),
                 ),
               ),
@@ -1376,8 +1386,8 @@ class BattleLogHistory extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: RetroType.style(RetroType.small,
                     color: i == lines.length - 1
-                        ? ProtoColors.ink
-                        : ProtoColors.dim)),
+                        ? DsColors.textPrimary
+                        : DsColors.textSecondary)),
         ],
       ),
     );

@@ -1,4 +1,4 @@
-import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/missions/domain/mission_text.dart';
 import 'package:echos_del_tiempo/features/missions/presentation/mission_board_panel.dart';
@@ -19,11 +19,12 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
   await tester.pump();
 }
 
-String _plain(WidgetTester tester, Finder f) =>
-    tester
-        .widget<Text>(find.descendant(of: f, matching: find.byType(Text)))
-        .textSpan!
-        .toPlainText();
+String _plain(WidgetTester tester, Finder f) {
+  final t = tester.widget<Text>(find
+      .descendant(of: f, matching: find.byType(Text), matchRoot: true)
+      .first);
+  return t.textSpan?.toPlainText() ?? t.data!;
+}
 
 void main() {
   const cat = GameCatalog.standard;
@@ -45,7 +46,7 @@ void main() {
     final m1 = cat.missions.first;
     final rewards =
         _plain(tester, find.byKey(ValueKey('mission-rewards-${m1.id}')));
-    expect(rewards, contains('Recompensas:'));
+    expect(find.text('RECOMPENSAS'), findsOneWidget);
     expect(rewards, contains('arma de tier 1'));
     expect(rewards, contains('cofres nivel ${m1.chestTier}'));
     // Misión de zona: el objetivo es por piso.
@@ -82,9 +83,8 @@ void main() {
           onPropose: (_) {},
           onClose: () {},
         ));
-    final b = tester.widget<PanelButton>(
-        find.byKey(ValueKey('propose-${cat.missions.first.id}')));
-    expect(b.reason, 'Ya hay una votación');
+    final b = tester.widget<DsButton>(find.byKey(ValueKey('propose-${cat.missions.first.id}')));
+    expect(b.tooltip, 'Ya hay una votación');
     // Un solo PROPONER (el de la elegida), con el motivo al lado.
     expect(find.text('Ya hay una votación'), findsOneWidget);
     // Elegir otra fila cambia el detalle.

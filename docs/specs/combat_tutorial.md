@@ -130,6 +130,9 @@ Convergencias).
     (el último cartel de efecto, atenuado);
   - la votación: "Esperando: Beto", SIGUIENTE y "ESPACIO o Enter: leí y
     entendí" (o "Ya votaste SIGUIENTE.").
+  - Desde v0.12 con el sistema de diseño (design_system.md § 10.3):
+    `DsCard`, secciones `DsSectionHeader`, ≡ como botón de ícono y
+    SIGUIENTE como botón principal (borde y texto dorados).
 - El panel **resalta en el HUD** (borde naranja, sin negritas) la barra
   de MP en la etapa 2, los pips de Pulso en la 3, la 7 y la 8, y
   cuando el cartel abierto habla de MP o de Pulso (`hudFocus`).

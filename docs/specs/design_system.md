@@ -283,12 +283,8 @@ Cambios de componentes por esta migración:
 - `DsListRow`: el dato corto se recorta con "…" (con texto ENORME no
   desborda) y `autofocus` (primera fila de un menú).
 
-`CharacterStatRows` (compartido con ATRIBUTOS › VISTA PREVIA) sigue con
-`StatChange`: sus filas llevan sufijos (`(-12% daño)`, `(daño ×2)`) y la
-línea del peso, y los tests de ATRIBUTOS leen `HP 100 → 120 ▲`; se
-migra junto con esa vista.
-
-Las seis pestañas de PERSONAJE quedan migradas (v0.11.0); pendiente: `CharacterStatRows`.
+Las seis pestañas de PERSONAJE quedan migradas (v0.11.0); `CharacterStatRows`
+se migró en v0.12 (§ 10.3).
 
 Capturas antes / después (1920×1080): `docs/release_shots/v0.11.0/`,
 generadas por `tool/shots/personaje_ds_shots_test.dart` (`SHOT_SUFFIX`).
@@ -308,3 +304,103 @@ campo y botón de cada tema; mínimo pedido 4.5:1 (Cuerpo, Detalle) y 3:1
 
 Ningún token necesitó ajuste. Nota: Detalle sobre botón en AZUL es 6.08:1
 (no "≥ 7:1" como decía § 3.2; sobre fondo y panel sí pasa de 8).
+
+### 10.3 Batalla (v0.12)
+
+Hecho (rama `feat/ds-batalla`), sin tocar la escena (painter, arena, fx)
+ni las reglas:
+
+- Ventana de comandos (`battle_command_window.dart`): categorías y
+  acciones en `DsListRow` compactas de una línea (`compact: true`, nuevo:
+  aire vertical mínimo para que las 7 categorías entren sin scroll).
+  Acción: tecla 1-9 en Detalle, nombre en Cuerpo (dúos y ULT en naranja,
+  desactivada en el color desactivado), dato corto en Detalle (Atacar,
+  pociones, Defender) y a la derecha `DsTag.instant`, el alcance como
+  `DsTag` (`1 ENEMIGO`, `TODOS`, `ALIADO`, `GRUPO`, `VOS`, en el color del
+  alcance) y el costo con `DsCost` (MP azul, Pulso `2 P` dorado, rojo si no
+  alcanza). Las etiquetas se achican (FittedBox, tope 55 % del ancho) con
+  texto ENORME. El separador de las Instante en Detalle celeste. Las filas
+  no toman el foco (`ExcludeFocus`): Enter y 1-9 siguen siendo de la
+  batalla.
+- Detalle: quién actúa en Subtítulo Título, recursos en Detalle, motivos
+  de la desactivada en Cuerpo rojo arriba, resumen de una línea
+  (habilidades: `skillSummaryMarkup`; el resto: las dos primeras líneas) y
+  lo demás en `DsFold` (MÁS / MENOS). Objetivo y teclas en Detalle.
+- `BattleAction` suma `instant`, `reach`, `mpCost`, `pulseCost` y
+  `summary`; la ventana recibe `mp` / `pulse` para el rojo de `DsCost`.
+- Tarjetas del grupo (`battle_hud.dart`): superficie / superficie hundida,
+  borde de selección en la del turno; nombre en Cuerpo (el propio en
+  Título), `Lv` y turno (`▶ 25s` dorado, `T+3` / `K.O.` en Detalle). Las
+  barras (HP / MP / ULT con cifras en Press Start) y la fila PULSO (en el
+  dorado de Pulso) quedan igual. AUTO: `DsButton` compacto.
+- Caja del objetivo: nombre en Cuerpo rojo, `¡ULT!` como `DsTag` rojo,
+  borde de peligro. Banda del log en Cuerpo y reloj en
+  selección / peligro; REGISTRO EXTENDIDO en Cuerpo / Detalle; "Turno de"
+  en Título.
+- Panel lateral del tutorial (`tutorial_widgets.dart`): `DsCard`,
+  secciones con `DsSectionHeader` (AHORA, LO QUE PASO, VOTACION...), ≡
+  como `DsButton.icon`, opciones de la votación como `DsButton`
+  (elegida = `selected`) y SIGUIENTE principal.
+
+Pendiente: el menú ≡ del tutorial (modal) y el cartel final siguen con
+`RetroPanel` / `PanelButton`.
+
+Capturas antes / después (1920×1080): `docs/release_shots/v0.12.0/`,
+generadas por `tool/shots/ds_batalla_shots_test.dart` (`SHOT_SUFFIX`).
+En las capturas de prueba los íconos de Material salen como cuadrado
+(la fuente de íconos no se carga en `flutter test`).
+
+### 10.3 HUD, título, sello, pausa y VISTA PREVIA (v0.12)
+
+Hecho (rama `feat/ds-hud`), sin cambiar reglas ni funcionalidad; las
+claves de test se mantienen:
+
+- HUD del mundo (exploration.md § "HUD"): fila de arriba con `DsButton`
+  compactos (`< TITULO`, `MENU [ESC]` con el ≡ como `leading`, `PARTY`,
+  `PERSONAJE [C]` con la insignia `+N` como `trailing`, `COPIAR` con
+  tooltip); zoom del minimapa con `DsButton.icon` (− / +, tooltip) y
+  `MAPA [M]`. `_TopRowLayout` sin cambios (nada superpuesto). Línea de
+  misión, objetivos y registro sin borde (superficie, principio 0),
+  misión en Cuerpo, tiempo de turno en Detalle, título de objetivos en
+  Título, `[+]` / `[-]` en Detalle. Cajas del grupo con colores del
+  sistema (nombre Título, clase Detalle, nivel Cuerpo, K.O. peligro,
+  `+N` recompensa). Avisos con `DsToast`: barrera / escalera abierta
+  (recompensa), puntos sin usar (▲ + franja dorada), avances del plan
+  (★ + franja violeta o verde), avisos del chat plegado (una línea). La
+  píldora `CHAT [ENTER]` es `DsButton` con `DsBadge` de no leídos. Los
+  avisos de loot conservan el estilo del filtro del jugador.
+- Título (exploration.md § "Título"): tarjetas de personaje y `+ NUEVO
+  PERSONAJE` como `DsCard` (elegida con borde dorado; `hot` sigue al
+  foco de `MenuFocusable`); `> JUGAR` y `> CREAR` principales; el resto
+  `DsButton` (GALERÍA de dev, fantasma); el motivo de CREAR PERSONAJE
+  deshabilitado (cuenta llena) va al tooltip. Las dos líneas de atajos
+  pasaron al botón "?" (`title-help`).
+- Sello / mostrador (panels.md § "Mostrador"): lista de `DsListRow` de
+  una línea (rango, zona, `Lv N` / `Bloqueada`), TUTORIAL primero; el
+  foco de teclado sigue eligiendo (el detalle sigue al cursor). Detalle
+  (`MissionCard`, también en la preparación): rango y nombre en Título,
+  `tipo · Lv`, zona y bloqueo en una línea; OBJETIVO y RECOMPENSAS con
+  `DsSectionHeader`; RANGO S en `DsFold`. PROPONER principal, con el
+  motivo en su tooltip y en una línea roja al lado. La línea "Propón…"
+  pasó al "?". Preparación: `¡LISTO!` principal, GRUPO con
+  `DsSectionHeader` y una línea por jugador.
+- Pausa / CONFIGURACIÓN (settings.md § 1): `DsTabBar` (claves `tab-N`);
+  la línea de cada pestaña pasó al "?"; filas de ajuste en UNA línea
+  (nombre + control) con la ayuda en el tooltip del nombre, marcado
+  con "?"; opciones como `DsButton` compactos (`selected`);
+  CONTINUAR / CERRAR principal; confirmaciones con `DsButton`.
+- `CharacterStatRows` (ATRIBUTOS › VISTA PREVIA e INVENTARIO ›
+  ESTADÍSTICAS): `DsStatLine` por stat; DEF y CRÍT con su sufijo; VEL
+  con `peso N` (o `N → M`) y la fórmula en el tooltip (`stat-weight`).
+
+Cambios de componentes:
+- `DsStatLine.suffix`: dato derivado al final, en Detalle, recortado con
+  "…".
+- `DsButton.trailing`: a la derecha del texto (insignias).
+- `DsCard.hot` (hover / foco manejado afuera) y `DsCard.padding`.
+- `DsToast`: `content` (marcado), `leading` (marca de forma), `color`,
+  `textColor`, `closeKey` y `closeFocusable` (la × del HUD no toma el
+  foco; `Retroceso` sigue cerrando todos).
+
+Capturas antes / después (1920×1080): `docs/release_shots/v0.12.0/`,
+generadas por `tool/shots/ds_hud_shots_test.dart` (`SHOT_SUFFIX`).

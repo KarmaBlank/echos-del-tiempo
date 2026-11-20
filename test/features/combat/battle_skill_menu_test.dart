@@ -1,4 +1,4 @@
-import 'package:echos_del_tiempo/app/theme/proto_colors.dart';
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/combat/domain/skill_text.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/battle_command_window.dart';
@@ -167,9 +167,9 @@ void main() {
       (tester) async {
     final (menu, _) = await pump(tester);
     for (final (id, label) in [
-      (oneFoe, '[1 enemigo]'),
-      (allFoes, '[TODOS]'),
-      (ally, '[aliado]'),
+      (oneFoe, '1 ENEMIGO'),
+      (allFoes, 'TODOS'),
+      (ally, 'ALIADO'),
     ]) {
       expect(
           find.descendant(
@@ -200,18 +200,26 @@ void main() {
         findsOneWidget);
   });
 
-  testWidgets('Pulso en dorado en la fila normal y elegida', (tester) async {
+  testWidgets('Pulso en dorado en la fila normal y elegida (DsCost)',
+      (tester) async {
+    state.current!.pulse = BattleEngine.pulseMax;
     final (menu, _) = await pump(tester);
-    final p = 'P${kSkills[pulsed]!.pulse}';
+    final p = '${kSkills[pulsed]!.pulse} P';
     const idx = 4; // la última fila (la Instante subió)
     expect(menu.selectedAction, isNot(idx));
-    expect(spanColors(tester, row(pulsed), p), [ProtoColors.gold]);
+    expect(spanColors(tester, row(pulsed), p), [DsColors.pulse]);
     for (var i = 0; i < idx; i++) {
       menu.handleKey(LogicalKeyboardKey.arrowDown);
     }
     await tester.pump();
     expect(menu.selectedAction, idx);
-    expect(spanColors(tester, row(pulsed), p), [ProtoColors.gold]);
+    expect(spanColors(tester, row(pulsed), p), [DsColors.pulse]);
+  });
+
+  testWidgets('costo que no alcanza: en rojo', (tester) async {
+    final (_, _) = await pump(tester);
+    final p = '${kSkills[pulsed]!.pulse} P';
+    expect(spanColors(tester, row(pulsed), p), [DsColors.danger]);
   });
 
   testWidgets('desactivada: atenuada, motivos en rojo arriba, no actúa',
@@ -221,9 +229,10 @@ void main() {
       ..pulse = 1;
     final (menu, sent) = await pump(tester);
     final sk = kSkills[pulsed]!;
-    final op = tester.widget<Opacity>(
-        find.descendant(of: row(pulsed), matching: find.byType(Opacity)));
-    expect(op.opacity, lessThan(1));
+    // Desactivada: el nombre en el color de texto desactivado.
+    final title = tester.widget<Text>(find.descendant(
+        of: row(pulsed), matching: find.text(kSkills[pulsed]!.name)));
+    expect(title.style?.color, DsColors.textDisabled);
     for (var i = 0; i < 4; i++) {
       menu.handleKey(LogicalKeyboardKey.arrowDown);
     }
@@ -234,8 +243,7 @@ void main() {
     ];
     for (final (i, l) in lines.indexed) {
       final f = find.byKey(ValueKey('battle-reason-$i'));
-      expect(spanColors(tester, f, l), [ProtoColors.parse('#ff6b81')],
-          reason: l);
+      expect(spanColors(tester, f, l), [DsColors.danger], reason: l);
     }
     menu.handleKey(LogicalKeyboardKey.enter);
     await tester.pump();

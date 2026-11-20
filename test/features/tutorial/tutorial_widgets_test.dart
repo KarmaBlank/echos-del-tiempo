@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/battle_command_window.dart'
@@ -55,7 +56,12 @@ void main() {
         ));
     // Pendiente: la fila del tutorial está elegida y es la primera.
     expect(find.byKey(const ValueKey('mission-tutorial')), findsOneWidget);
-    expectButtonLook(tester, find.byKey(const ValueKey('mission-tutorial')));
+    // Fila del sistema de diseño (DsListRow), elegida.
+    expect(
+        tester
+            .widget<DsListRow>(find.byKey(const ValueKey('mission-tutorial')))
+            .selected,
+        isTrue);
     expectButtonLook(tester, find.byKey(const ValueKey('tutorial-party')));
     await tester.tap(find.byKey(const ValueKey('tutorial-party')));
     expect(started, isTrue);
@@ -69,8 +75,9 @@ void main() {
     final m = cat.missions.first;
     await tester.tap(find.byKey(ValueKey('mission-${m.id}')));
     await tester.pump();
-    final b = tester.widget<PanelButton>(find.byKey(ValueKey('propose-${m.id}')));
-    expect(b.reason, lock);
+    final b = tester.widget<DsButton>(find.byKey(ValueKey('propose-${m.id}')));
+    expect(b.tooltip, lock);
+    expect(b.onPressed, isNull);
   });
 
   testWidgets('sello en grupo: solo el host lo inicia', (tester) async {
@@ -143,7 +150,7 @@ void main() {
           myPick: 'exit',
           onPick: (c) => picked = c,
         ));
-    expect(find.text('VOTACIÓN'), findsOneWidget);
+    expect(find.text('VOTACION'), findsOneWidget); // DsSectionHeader
     expect(find.text('Beto: eligiendo…'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('tutorial-pick-train')));
     expect(picked, 'train');
