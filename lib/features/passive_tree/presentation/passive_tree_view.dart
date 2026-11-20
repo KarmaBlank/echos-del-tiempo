@@ -1025,15 +1025,42 @@ class PassiveTreePainter extends CustomPainter {
         if (n.id.compareTo(l) >= 0) continue;
         final b = catalog.nodes[l];
         if (b == null) continue;
-        canvas.drawLine(
-            PassiveTreeView.nodeCenter(n),
-            PassiveTreeView.nodeCenter(b),
-            _has(n.id) && _has(l) ? owned : idle);
+        _drawEdge(canvas, n.id, l, _has(n.id) && _has(l) ? owned : idle);
       }
     }
+    catalog.extraStrokes.forEach((key, segs) {
+      final paint = key.split('|').every(_has) ? owned : idle;
+      for (final (a, b) in segs) {
+        canvas.drawLine(PassiveTreeView.toCanvas(a.$1, a.$2),
+            PassiveTreeView.toCanvas(b.$1, b.$2), paint);
+      }
+    });
     for (final n in catalog.nodes.values) {
       _drawNode(canvas, n);
     }
+  }
+
+  /// Arista como polilínea por su recorrido (`edgeRoutes`): sigue los
+  /// tallos y arcos del árbol original en vez de cortar en diagonal.
+  void _drawEdge(Canvas canvas, String a, String b, Paint paint) {
+    final pts = catalog.edgePoints(a, b);
+    if (pts.length == 2) {
+      canvas.drawLine(PassiveTreeView.toCanvas(pts[0].$1, pts[0].$2),
+          PassiveTreeView.toCanvas(pts[1].$1, pts[1].$2), paint);
+      return;
+    }
+    final path = Path();
+    for (var i = 0; i < pts.length; i++) {
+      final o = PassiveTreeView.toCanvas(pts[i].$1, pts[i].$2);
+      i == 0 ? path.moveTo(o.dx, o.dy) : path.lineTo(o.dx, o.dy);
+    }
+    canvas.drawPath(
+        path,
+        Paint()
+          ..color = paint.color
+          ..strokeWidth = paint.strokeWidth
+          ..style = PaintingStyle.stroke
+          ..strokeJoin = StrokeJoin.round);
   }
 
   void _drawNode(Canvas canvas, PassiveNode n) {
@@ -1137,8 +1164,7 @@ class PassiveTreePainter extends CustomPainter {
               ? ProtoColors.gold
               : ProtoColors.gold.withValues(alpha: 0.5)
           ..strokeWidth = routeLink ? 4 : 3;
-        canvas.drawLine(
-            PassiveTreeView.nodeCenter(n), PassiveTreeView.nodeCenter(b), link);
+        _drawEdge(canvas, n.id, l, link);
         redraw
           ..add(n.id)
           ..add(l);

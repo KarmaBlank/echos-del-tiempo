@@ -447,3 +447,30 @@ Pendiente:
   hicieron; `MARCAR` está en el diálogo del camino, no en clic derecho.
 - Dibujo: los chicos dobles y los notables menores se ven como un chico
   y un notable comunes (sin aro doble ni borde fino).
+
+### 11.1 Forma del árbol v7 (v0.10.1)
+
+En v0.10.0 cada nodo fusionado quedaba en el punto del id que
+sobrevivía y la arista nueva era una recta al vecino lejano: diagonales
+largas, tres aristas que cruzaban el anillo central y cuadrantes que ya
+no eran simétricos. Desde v0.10.1 (sin tocar ids, enlaces, costos ni
+balance):
+
+- Cada nodo v7 queda en el punto v6 de su id (los notables que absorben
+  y los menores promovidos, donde estaban).
+- `PassiveTreeCatalog.edgeRoutes` (`a|b`, `a < b`): puntos intermedios
+  de cada arista v7, tomados de la arista v6 que la generó (la más
+  corta si hay varias). La arista se dibuja como polilínea por los
+  puntos de los nodos absorbidos: sigue los tallos y arcos del v6.
+- `PassiveTreeCatalog.extraStrokes`: los tramos v6 que ninguna arista
+  dibuja (dentro de un nodo fusionado o de la arista v6 no elegida)
+  quedan como trazo fijo de su nodo / arista dueño (se pinta tomado
+  cuando el dueño lo está). Así el trazado es exactamente el del v6.
+- `passive_tree_v7_shape_test`: segmentos que entran al disco central:
+  v6 0 / v0.10.0 3 / ahora **0**; cruces: v6 0 / ahora **0**; asimetría
+  al rotar 90° (nodos + segmentos, a 0.05): v6 47 / v0.10.0 93 / ahora
+  **56**; solo líneas: **26 = v6**. Lo que queda son los puntos de los
+  nodos que la fusión saca en un cuadrante y no en otro (lo decide el
+  emparejamiento por id, que no cambia).
+- Capturas antes / después: `docs/release_shots/v0.10.1/arbol_*.png`
+  (`tool/shots/v0101_tree_shape_shots_test.dart`).

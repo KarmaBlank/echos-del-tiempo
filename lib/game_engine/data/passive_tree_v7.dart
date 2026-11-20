@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../models/passive_mechanic.dart';
 import '../models/passive_tree.dart';
 import 'passive_tree_v6.dart';
@@ -43,7 +45,7 @@ class _N {
         mech = n.mechanicId,
         links = {...n.links};
   final String id;
-  final double x, y;
+  double x, y;
   final String name;
   final Map<String, num> fx;
   String kind;
@@ -147,6 +149,8 @@ TreeV7 buildTreeV7(PassiveTreeCatalog v6,
       ..add(a)
       ..add(b);
     contract(a, b);
+    // El doble queda en el punto v6 del que sobrevive; sus aristas pasan
+    // por el punto del absorbido (§ 4 abajo, progression_v2.md § 11.1).
     nodes[a]!.isDouble = true;
   }
 
@@ -224,12 +228,79 @@ TreeV7 buildTreeV7(PassiveTreeCatalog v6,
     contract(pool.first, s);
   }
 
+  // 4. Recorridos: cada arista v7 se dibuja por los puntos v6 de la
+  //    arista original que la generó (la más corta si hay varias), así
+  //    la figura no gana diagonales ni cruces (progression_v2.md § 11).
+  String owner(String id) {
+    var o = id;
+    while (merged.containsKey(o)) {
+      o = merged[o]!;
+    }
+    return o;
+  }
+
+  final routes = <String, List<(double, double)>>{};
+  final routeLen = <String, double>{};
+  for (final p in v6.nodes.values) {
+    for (final qId in p.links) {
+      final q = v6.nodes[qId]!;
+      final u = owner(p.id), v = owner(qId);
+      if (u == v || u.compareTo(v) > 0) continue;
+      final a = nodes[u]!, b = nodes[v]!;
+      final pts = <(double, double)>[(a.x, a.y)];
+      for (final w in [(p.x, p.y), (q.x, q.y), (b.x, b.y)]) {
+        if (w != pts.last) pts.add(w);
+      }
+      var len = 0.0;
+      for (var i = 1; i < pts.length; i++) {
+        final dx = pts[i].$1 - pts[i - 1].$1, dy = pts[i].$2 - pts[i - 1].$2;
+        len += math.sqrt(dx * dx + dy * dy);
+      }
+      final key = '$u|$v';
+      if (routeLen[key] case final l? when l <= len) continue;
+      routeLen[key] = len;
+      routes[key] = pts.sublist(1, pts.length - 1);
+    }
+  }
+  // Tramos v6 que ningún recorrido dibuja (dentro de un nodo fusionado,
+  // o de la arista v6 que no se eligió): quedan como trazo fijo del
+  // nodo o arista dueño, para no dejar huecos en la figura.
+  String pk((double, double) a, (double, double) b) =>
+      a.$1 < b.$1 || (a.$1 == b.$1 && a.$2 < b.$2) ? '$a$b' : '$b$a';
+  final drawn = <String>{};
+  routes.forEach((key, mid) {
+    final [u, v] = key.split('|');
+    final pts = [(nodes[u]!.x, nodes[u]!.y), ...mid, (nodes[v]!.x, nodes[v]!.y)];
+    for (var i = 1; i < pts.length; i++) {
+      drawn.add(pk(pts[i - 1], pts[i]));
+    }
+  });
+  for (final n in nodes.values) {
+    for (final l in n.links) {
+      drawn.add(pk((n.x, n.y), (nodes[l]!.x, nodes[l]!.y)));
+    }
+  }
+  final strokes = <String, List<((double, double), (double, double))>>{};
+  for (final p in v6.nodes.values) {
+    for (final qId in p.links) {
+      if (p.id.compareTo(qId) >= 0) continue;
+      final q = v6.nodes[qId]!;
+      if (!drawn.add(pk((p.x, p.y), (q.x, q.y)))) continue;
+      final u = owner(p.id), v = owner(qId);
+      final key = u == v ? u : (u.compareTo(v) < 0 ? '$u|$v' : '$v|$u');
+      (strokes[key] ??= []).add(((p.x, p.y), (q.x, q.y)));
+    }
+  }
+  routes.removeWhere((_, w) => w.isEmpty);
+
   return TreeV7(
     PassiveTreeCatalog(
       nodes: {for (final n in nodes.values) n.id: n.freeze()},
       startNodeByClass: v6.startNodeByClass,
       exclusions: v6.exclusions,
       paths: v6.paths,
+      edgeRoutes: Map.unmodifiable(routes),
+      extraStrokes: Map.unmodifiable(strokes),
     ),
     Map.unmodifiable(merged),
     Set.unmodifiable(promoted),
