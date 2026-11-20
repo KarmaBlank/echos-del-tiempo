@@ -175,6 +175,7 @@ Las claves de `onMsg` del prototipo (`lib/game_engine/serialization/action_json.
 | `EquipAction` | `{"t":"equip","w":"espada2"}` |
 | `TakeNodeAction` | `{"t":"node","id":"g1"}` |
 | `ResetTreeAction` | `{"t":"treeReset"}` |
+| `UntakeNodeAction` | `{"t":"untake","id":"g1"}` (v0.12, progression_v2.md § 6.1) |
 | `FuseAction` | `{"t":"fuse","a":base,"b":sacrificada,"sk":habilidad}` |
 | `UpgradeAction` | `{"t":"up","w":arma,"stat":"pow"\|"crit"\|"spd"\|"def"}` |
 | `BuyItemAction` | `{"t":"buyItem","it":"pot"\|"eter"}` |

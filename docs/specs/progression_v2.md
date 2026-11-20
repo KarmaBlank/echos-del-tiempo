@@ -252,6 +252,38 @@ puntos).
   hay un plan, ofrece aplicarlo de una (atributos y nodos del plan, en
   orden, hasta donde alcancen los puntos).
 
+### 6.1 Quitar un nodo (v0.12, pedido del dueño)
+
+- Además de reiniciar todo, se puede quitar un nodo tomado. Es gratis
+  (coherente con `freeRespec`) y vale en cualquier modo salvo batalla.
+- Regla: se puede quitar si, sin él, todos los demás nodos tomados
+  siguen conectados al inicio de la clase (BFS por enlaces desde el
+  inicio, pasando solo por nodos tomados:
+  `PassiveTreeRules.allConnected`). Si no: `Otros nodos dependen de
+  este`.
+- Reembolso: 1 punto vuelve al pool. El pool es uno solo: los puntos de
+  un hito se suman a `treePoints` mientras el hito está elegido (§ 5;
+  lo que sobra del camino ya quedaba libre), así que no hay un pool de
+  hito aparte al que devolver.
+- Quitar la keystone de un hito deja ese hito pendiente (como el
+  reinicio): `ms10` / `ms20` vuelven a `null` y sus 7 / 10 puntos dejan
+  de contar. Solo se permite si los nodos que quedan entran en los
+  puntos sin el hito; si no: `Quitá antes N nodos: los puntos del hito
+  están en uso`. Al volver a elegir el hito, sus puntos vuelven a
+  contar una vez y el camino que ya está tomado no se paga de nuevo.
+- No se duplican puntos: `treePoints` se deriva de nivel, Maestría,
+  Pruebas e hitos elegidos y lo gastado es `tree.length`; nada se
+  guarda como saldo.
+- Red: acción `untake` (`UntakeNodeAction`, `{'t':'untake','id':…}`);
+  el host aplica `ProgressionRules.untakeNode` y rechaza lo inválido.
+  `kProtocolVersion` 20 → 21.
+- UI (ÁRBOL): clic en un nodo tomado fija la cajita junto al nodo con
+  `¿Quitar <nombre>? Te devuelve 1 punto` (o `Deja pendiente el hito
+  del nivel N`), QUITAR (principal) y Cancelar; si no se puede, el
+  motivo y solo Cancelar. Clic derecho sobre un nodo tomado lo quita
+  directo (atajo). DESHACER en la barra del árbol invierte el último
+  tomar / quitar de un nodo, si todavía aplica.
+
 ## 7. Migración
 
 - `kPassiveTreeVersion` 5 → **6** (ids fusionados, § 3.2) y

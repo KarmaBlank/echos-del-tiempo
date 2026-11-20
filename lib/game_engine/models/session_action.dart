@@ -93,6 +93,13 @@ class TakeNodeAction extends SessionAction {
   const TakeNodeAction(this.nodeId);
 }
 
+/// `untake` (v0.12): quita un nodo tomado; el host valida que el resto
+/// siga conectado al inicio (progression_v2.md § 6.1).
+class UntakeNodeAction extends SessionAction {
+  final String nodeId;
+  const UntakeNodeAction(this.nodeId);
+}
+
 /// `nodes` (v0.10): camino en un clic; el host los toma en orden hasta
 /// el primero que falle (progression_v2.md § 4).
 class TakeNodesAction extends SessionAction {

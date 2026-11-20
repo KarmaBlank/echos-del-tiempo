@@ -41,7 +41,16 @@ class PassiveTreeView extends StatefulWidget {
     this.onTakePath,
     this.onMark,
     this.onChooseMilestone,
+    this.onUntake,
+    this.untakeReason,
   });
+
+  /// Quitar un nodo tomado (progression_v2.md § 6.1); `null` = no se
+  /// ofrece.
+  final ValueChanged<String>? onUntake;
+
+  /// Motivo por el que no se puede quitar un nodo (`null` = se puede).
+  final String? Function(String nodeId)? untakeReason;
 
   /// Camino en un clic (progression_v2.md § 4): toma la lista en orden.
   final ValueChanged<List<String>>? onTakePath;
@@ -127,6 +136,52 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
 
   /// Nodo con el tooltip fijado (clic); Esc o un clic afuera lo suelta.
   String? _pinned;
+
+  /// Último cambio de un nodo (DESHACER): (tomado, id).
+  (bool, String)? _last;
+
+  bool _isTaken(String id) => widget.profile.tree.contains(id);
+
+  void _take(String id) {
+    _last = (true, id);
+    widget.onTake(id);
+  }
+
+  void _untake(String id) {
+    final f = widget.onUntake;
+    if (f == null) return;
+    setState(() {
+      _pinned = null;
+      _last = (false, id);
+    });
+    f(id);
+  }
+
+  /// DESHACER: el inverso del último cambio, si todavía aplica.
+  VoidCallback? get _undo {
+    final l = _last;
+    if (l == null || widget.inBattle) return null;
+    final (took, id) = l;
+    if (took) {
+      if (!_isTaken(id) || widget.untakeReason?.call(id) != null) return null;
+      return () {
+        widget.onUntake?.call(id);
+        setState(() => _last = null);
+      };
+    }
+    if (!_status(id).canTake) return null;
+    return () {
+      widget.onTake(id);
+      setState(() => _last = null);
+    };
+  }
+
+  /// Clic derecho: quita el nodo tomado sin confirmar (atajo).
+  void _secondaryTap(Offset pos) {
+    final id = _hit(pos);
+    if (id == null || widget.onPlan != null || !_isTaken(id)) return;
+    if (widget.untakeReason?.call(id) == null) _untake(id);
+  }
 
   /// Tarjeta de hito bajo el mouse (resalta su camino).
   String? _cardHover;
@@ -232,7 +287,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     } else if (_status(id).canTake) {
       // Conectado y con puntos: se toma con un clic.
       setState(() => _pinned = null);
-      widget.onTake(id);
+      _take(id);
     } else {
       // Si no, se fija el tooltip con sus botones (TOMAR CAMINO).
       setState(() => _pinned = id);
@@ -581,6 +636,15 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
           _iconButton('tree-fit', PixelIconKind.fit, 'Ver todo', _fitAll),
           SizedBox(width: DsSpace.xs),
           _iconButton('tree-home', PixelIconKind.target, 'Mi clase', _home),
+          if (widget.onUntake != null && _last != null) ...[
+            SizedBox(width: DsSpace.sm),
+            DsButton('DESHACER',
+                key: const ValueKey('tree-undo'),
+                kind: DsButtonKind.ghost,
+                size: DsButtonSize.compact,
+                tooltip: _undo == null ? 'Ya no se puede deshacer' : null,
+                onPressed: _undo),
+          ],
           if (widget.showReset) ...[
             SizedBox(width: DsSpace.sm),
             // El motivo (p. ej. "No hay nodos tomados") va en el tooltip.
@@ -629,6 +693,8 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                     child: GestureDetector(
                       key: const ValueKey('tree-canvas'),
                       onTapUp: (d) => _tap(d.localPosition),
+                      onSecondaryTapUp: (d) =>
+                          _secondaryTap(d.localPosition),
                       // Repinta solo si cambia el estado, el resaltado o el
                       // nivel de zoom ([PassiveTreePainter.farLevel]); el
                       // arrastre solo mueve la capa.
@@ -809,6 +875,9 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
             onPressed: () => plan(node.id)),
       ];
     }
+    if (st.state == TreeNodeState.taken && widget.onUntake != null) {
+      return _untakeBox(node);
+    }
     if (st.state == TreeNodeState.start || st.state == TreeNodeState.taken) {
       return const [];
     }
@@ -820,7 +889,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
             kind: DsButtonKind.primary,
             size: DsButtonSize.compact,
             tooltip: st.reason,
-            onPressed: st.reason == null ? () => widget.onTake(node.id) : null),
+            onPressed: st.reason == null ? () => _take(node.id) : null),
       ];
     }
     if (widget.onTakePath == null || route.length < 2) return const [];
@@ -830,6 +899,46 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
           key: const ValueKey('tree-take-path'),
           size: DsButtonSize.compact,
           onPressed: widget.inBattle ? null : () => _askPath(node.id)),
+    ];
+  }
+
+  /// Confirmación de QUITAR junto al nodo tomado (progression_v2.md
+  /// § 6.1): qué devuelve, o el motivo si no se puede.
+  List<Widget> _untakeBox(PassiveNode node) {
+    final p = widget.profile;
+    final reason = widget.inBattle
+        ? 'No en batalla'
+        : widget.untakeReason?.call(node.id);
+    final ms = p.milestone10 == node.id
+        ? 10
+        : p.milestone20 == node.id
+            ? 20
+            : null;
+    final what = ms == null
+        ? 'Te devuelve 1 punto'
+        : 'Deja pendiente el hito del nivel $ms';
+    return [
+      SizedBox(height: DsSpace.sm),
+      Text(
+          retroText(reason ?? '¿Quitar ${node.name}? $what'),
+          key: const ValueKey('tree-untake-text'),
+          style: DsText.body(
+              reason == null ? DsColors.textPrimary : RetroPalette.red)),
+      SizedBox(height: DsSpace.xs),
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        if (reason == null) ...[
+          DsButton('QUITAR',
+              key: const ValueKey('tree-untake'),
+              kind: DsButtonKind.primary,
+              size: DsButtonSize.compact,
+              onPressed: () => _untake(node.id)),
+          SizedBox(width: DsSpace.sm),
+        ],
+        DsButton('Cancelar',
+            key: const ValueKey('tree-untake-cancel'),
+            size: DsButtonSize.compact,
+            onPressed: () => setState(() => _pinned = null)),
+      ]),
     ];
   }
 
