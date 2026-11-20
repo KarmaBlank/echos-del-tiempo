@@ -99,6 +99,49 @@ void main() {
     expect(c.view!.me!.profile.points, 2);
   });
 
+  testWidgets(
+      'personaje: "−" quita lo pendiente; sin pendiente se ve apagado y '
+      'explica REINICIAR PUNTOS', (tester) async {
+    final start = progression.normalize(
+        PlayerProfile(name: 'Ana', classId: 'guerrero', level: 3));
+    final c = await pumpPanel(tester,
+        profile: start,
+        build: (v, c) => CharacterPanel(view: v, controller: c));
+    DsButton dec() =>
+        tester.widget<DsButton>(find.byKey(const ValueKey('dec-fue')));
+    Color? decColor() => tester
+        .widget<Text>(find.descendant(
+            of: find.byKey(const ValueKey('dec-fue')),
+            matching: find.text('-')))
+        .style
+        ?.color;
+    // Sin pendiente: apagado (color desactivado) y dice cómo reasignar.
+    expect(dec().onPressed, isNull);
+    expect(decColor(), DsColors.textDisabled);
+    expect(dec().tooltip, contains('REINICIAR PUNTOS'));
+
+    await tapVisible(tester, find.byKey(const ValueKey('inc-fue')));
+    await tapVisible(tester, find.byKey(const ValueKey('inc-fue')));
+    expect(find.textContaining('Puntos: 0'), findsOneWidget);
+    expect(dec().onPressed, isNotNull);
+    expect(decColor(), DsColors.textPrimary);
+    await tapVisible(tester, find.byKey(const ValueKey('dec-fue')));
+    expect(find.textContaining('Puntos: 1'), findsOneWidget);
+    expect(_plain(tester, 'pending-points'), 'Pendiente: +3 FUE');
+    await tapVisible(tester, find.byKey(const ValueKey('dec-fue')));
+    expect(find.textContaining('Puntos: 2'), findsOneWidget);
+    // No baja de 0 pendiente: vuelve a apagarse.
+    expect(dec().onPressed, isNull);
+    expect(c.view!.me!.profile.attributes[Attribute.fue],
+        start.attributes[Attribute.fue]);
+
+    // El host no acepta repartos negativos (no baja del base).
+    final p = c.view!.me!.profile;
+    expect(progression.allocate(p, {Attribute.fue: -1}), isNull);
+    expect(progression.allocate(p, {Attribute.fue: -1, Attribute.vit: 1})
+        ?.attributes[Attribute.fue], p.attributes[Attribute.fue]);
+  });
+
   testWidgets('personaje: cambio de clase en el lobby y equipar en Inventario',
       (tester) async {
     final c = await pumpPanel(tester,

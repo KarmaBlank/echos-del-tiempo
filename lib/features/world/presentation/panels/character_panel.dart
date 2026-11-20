@@ -594,9 +594,21 @@ class _CharacterPanelState extends State<CharacterPanel> {
                       child: targetText),
                 const Spacer(),
               ],
-              DsButton.icon(const Text('-'),
+              // "−" quita solo el reparto pendiente (sin confirmar); los
+              // puntos confirmados se reasignan con REINICIAR PUNTOS
+              // (progression_v2.md § Reiniciar). El texto lleva su color:
+              // IconButton no apaga el color de un Text con estilo propio.
+              DsButton.icon(
+                  Text('-',
+                      style: DsText.subtitle(add > 0
+                          ? DsColors.textPrimary
+                          : DsColors.textDisabled)),
                   key: ValueKey('dec-${a.name}'),
-                  tooltip: 'Quitar $short',
+                  tooltip: add > 0
+                      ? 'Quitar $short (+$kAttrPerPoint sin confirmar)'
+                      : 'Solo quita puntos sin confirmar. Para reasignar '
+                          'los confirmados: REINICIAR PUNTOS'
+                          '${ProgressionRules.freeRespec ? ' (gratis)' : ''}',
                   size: DsButtonSize.compact,
                   onPressed: add > 0
                       ? () => setState(() => _alloc[a] = add - 1)
