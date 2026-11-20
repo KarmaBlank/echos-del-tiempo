@@ -38,6 +38,9 @@ import '../../../app/widgets/section_panel.dart';
 import '../domain/battle_impact.dart';
 import '../domain/skill_tip.dart';
 import 'craft_bench.dart';
+import 'item_grid.dart';
+import 'item_hover_tip.dart';
+import 'item_widgets.dart' show CellContent;
 import 'skill_chip.dart';
 
 /// Lo que comparten las pestañas de tienda e inventario: el jugador
@@ -581,23 +584,30 @@ class _ForgeTabState extends State<ForgeTab> {
       list: [
         NavSection(
           child: InitialFocus(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final x in list)
-                  MenuRow(
-                    wrap: true,
-                    key: ValueKey('forge-row-${x.uid}'),
-                    selected: x.uid == it.uid,
-                    onTap: () => setState(() => _sel = x.uid),
-                    onFocus: () => setState(() => _sel = x.uid),
-                    label: itemNameMarkup(rules, x),
-                    value: p.equippedUid == x.uid
-                        ? protoColor(ProtoColors.gold, 'EQUIPADA')
-                        : protoColor(ProtoColors.dim,
-                            'forja ${x.forgeLevel}/${ItemRules.forgeCapOf(x)}'),
-                  ),
-              ],
+            // La misma grilla que el INVENTARIO (design_system.md
+            // § "Estructura atómica").
+            child: DsItemGrid(
+              rules: rules,
+              count: list.length,
+              cellKey: (i) => ValueKey('forge-row-${list[i].uid}'),
+              focusKeyPrefix: 'forge-row-at-',
+              slot: (i) => ItemSlotData(
+                  content: CellContent.item(list[i]),
+                  selected: list[i].uid == it.uid),
+              tip: (i, child, focused) => itemHoverTip(
+                  rules: rules,
+                  viewer: p,
+                  item: list[i],
+                  attributes: p.attributes,
+                  equipped: list[i].uid == p.equippedUid,
+                  focused: focused,
+                  note: p.equippedUid == list[i].uid
+                      ? protoColor(ProtoColors.gold, 'EQUIPADA')
+                      : protoColor(ProtoColors.dim,
+                          'forja ${list[i].forgeLevel}/${ItemRules.forgeCapOf(list[i])}'),
+                  child: child),
+              onTap: (i) => setState(() => _sel = list[i].uid),
+              onFocusCell: (i) => setState(() => _sel = list[i].uid),
             ),
           ),
         ),
