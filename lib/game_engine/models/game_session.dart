@@ -67,7 +67,23 @@ class SessionPlayer {
     List<WorldPoint>? trail,
     this.trailEpoch = 0,
     this.tutorialVersion = 0,
-  }) : trail = trail ?? const [];
+    Map<String, StashAck>? stashAcks,
+  })  : trail = trail ?? const [],
+        stashAcks = stashAcks ?? {};
+
+  /// Confirmaciones de `stashPut` / `stashTake` (id de operación → qué se
+  /// movió), en orden; las últimas [StashAck.keep]. Viajan en el snapshot
+  /// (`sk`) junto al perfil ya cambiado: el cliente escribe su alijo local
+  /// recién al verlas (docs/specs/characters.md § 3.2).
+  final Map<String, StashAck> stashAcks;
+
+  /// Anota [ack] como [opId] (descarta las más viejas).
+  void addStashAck(String opId, StashAck ack) {
+    stashAcks[opId] = ack;
+    while (stashAcks.length > StashAck.keep) {
+      stashAcks.remove(stashAcks.keys.first);
+    }
+  }
 
   /// Compañero de la party de un jugador solo (docs/specs/solo_party.md
   /// § 3): el id del líder que lo controla; `null` = un humano. Solo lo
@@ -149,7 +165,24 @@ class SessionPlayer {
         trail: trail,
         trailEpoch: trailEpoch,
         tutorialVersion: tutorialVersion,
+        stashAcks: {...stashAcks},
       );
+}
+
+/// Lo que el host confirmó de una operación del alijo: [put] = salió del
+/// perfil hacia el alijo; si no, entró al perfil desde el alijo. [drop] es
+/// lo que se movió.
+class StashAck {
+  const StashAck({required this.put, required this.drops});
+
+  final bool put;
+
+  /// Una por pieza pedida, en el mismo orden: lo que se movió, o `null`
+  /// si esa pieza se rechazó.
+  final List<LootDrop?> drops;
+
+  /// Cuántas confirmaciones se guardan por jugador.
+  static const keep = 32;
 }
 
 /// Un grupo de enemigos en el campo (`S.fe`).

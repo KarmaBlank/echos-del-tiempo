@@ -795,6 +795,14 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                       _confirmCraft = null;
                       _moveFrom = null;
                     })),
+            DsButton('ALIJO',
+                key: const ValueKey('inv-stash'),
+                size: DsButtonSize.compact,
+                tooltip: shop.controller.stashBlock ??
+                    'Abrir el alijo de la cuenta [B]',
+                onPressed: shop.controller.stashBlock == null
+                    ? shop.controller.openStash
+                    : null),
           ],
         ],
       ),
@@ -1367,6 +1375,14 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         onTap: () => ref.read(gameSettingsProvider).confirmDrop
             ? setState(() => _confirmDrop = true)
             : shop.controller.dropItem(token, count: count),
+      ),
+      // Alijo de la cuenta (characters.md § 3.2).
+      InventoryMenuEntry(
+        id: 'stash',
+        label: 'Guardar en alijo',
+        color: ProtoColors.sky,
+        reason: shop.controller.stashPutReason(token),
+        onTap: () => shop.controller.stashPut([token]),
       ),
       if (it != null) ...[
         craft(it, CraftOp.salvage),

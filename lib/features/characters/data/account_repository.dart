@@ -10,6 +10,7 @@ import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/profile_store.dart';
 import '../../../game_engine/models/tutorial_store.dart';
 import '../domain/account.dart';
+import '../domain/stash.dart';
 import 'account_store.dart';
 
 /// Dueño de la cuenta en memoria: la lee una vez del [store], aplica los
@@ -304,5 +305,34 @@ class AccountTutorialStore implements TutorialStore {
   @override
   Future<void> save(int version) async {
     await repository.update((a) => a.withTutorial(version));
+  }
+}
+
+/// El alijo de la cuenta visto desde la sesión (characters.md § 3.2).
+/// [commit] escribe alijo y personaje elegido **juntos** (una sola
+/// escritura de la cuenta), así una operación confirmada nunca queda a
+/// medias en disco.
+abstract class StashStore {
+  Future<Stash> load();
+  Future<void> commit(Stash stash, PlayerProfile profile);
+}
+
+/// [StashStore] sobre la cuenta.
+class AccountStashStore implements StashStore {
+  AccountStashStore(this.repository);
+
+  final AccountRepository repository;
+
+  @override
+  Future<Stash> load() async => (await repository.load()).stash;
+
+  @override
+  Future<void> commit(Stash stash, PlayerProfile profile) async {
+    final when = repository.now();
+    await repository.update((a) {
+      final sel = a.selectedId;
+      final next = a.withStash(stash);
+      return sel == null ? next : next.replace(sel, profile, lastPlayed: when);
+    });
   }
 }

@@ -4,6 +4,7 @@ import '../models/build_wants.dart';
 import '../models/eco.dart' show EcoCraftOp;
 import '../models/inventory_sort.dart';
 import '../models/item.dart' show CraftOp;
+import '../models/loot.dart' show LootDrop;
 
 import '../models/player_profile.dart';
 import '../models/session_action.dart';
@@ -97,6 +98,19 @@ abstract final class ActionJson {
             if (a.count != 1) 'n': a.count,
           },
         PickUpAction() => {'t': 'pick', 'id': a.groundId},
+        StashPutAction() => {
+            't': 'stashPut',
+            'op': a.opId,
+            'it': [
+              for (final i in a.items)
+                {'tok': i.token, if (i.count != 1) 'n': i.count},
+            ],
+          },
+        StashTakeAction() => {
+            't': 'stashTake',
+            'op': a.opId,
+            'd': [for (final d in a.drops) d.toJson()],
+          },
         MoveInventoryAction() => {'t': 'invMove', 'a': a.from, 'b': a.to},
         SortInventoryAction() => {'t': 'invSort', 'k': a.key.name},
         SeenItemsAction() => {'t': 'seen', 'u': a.uids},
@@ -205,6 +219,22 @@ abstract final class ActionJson {
             count: j.intOrNull('n') ?? 1);
       case 'drop':
         return DropItemAction(j.str('tok'), count: j.intOrNull('n') ?? 1);
+      case 'stashPut':
+        final its = j['it'];
+        return StashPutAction(j.str('op'), [
+          if (its is List)
+            for (final r in its.take(StashPutAction.maxItems))
+              if (r is Map && r['tok'] is String)
+                StashPutItem(r['tok'] as String,
+                    count: r['n'] is num ? (r['n'] as num).toInt() : 1),
+        ]);
+      case 'stashTake':
+        final ds = j['d'];
+        return StashTakeAction(j.str('op'), [
+          if (ds is List)
+            for (final r in ds.take(StashPutAction.maxItems))
+              if (LootDrop.fromJson(r) case final d?) d,
+        ]);
       case 'pick':
         return PickUpAction(j.integer('id'));
       case 'invMove':

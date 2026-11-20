@@ -118,6 +118,10 @@ void registerSharedDependencies(
   sl.registerLazySingleton<ProfileStore>(
     () => SelectedCharacterProfileStore(sl<AccountRepository>()),
   );
+  // Alijo en partida (docs/specs/characters.md § 3.2).
+  sl.registerLazySingleton<StashStore>(
+    () => AccountStashStore(sl<AccountRepository>()),
+  );
   // Party jugando solo: las otras ranuras de la misma cuenta
   // (docs/specs/solo_party.md § 5).
   sl.registerLazySingleton<PartyStore>(

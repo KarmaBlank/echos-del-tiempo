@@ -165,6 +165,7 @@ class WorldHud extends StatelessWidget {
                   onExit != null,
                   onMenu != null,
                   controller.canEditParty,
+                  controller.stashBlock == null,
                   view.companions.length,
                   _unusedKey(_unused(s)),
                 ],
@@ -179,6 +180,17 @@ class WorldHud extends StatelessWidget {
                       const SizedBox(width: 8),
                     ],
                     if (onMenu != null) PauseMenuButton(onPressed: onMenu!),
+                    // Alijo de la cuenta, fuera de batalla (characters.md
+                    // § 3.2).
+                    if (controller.stashBlock == null) ...[
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        key: const ValueKey('hud-stash'),
+                        style: RetroTheme.compactButton(),
+                        onPressed: controller.toggleStash,
+                        child: const Text('ALIJO [B]'),
+                      ),
+                    ],
                     // Party jugando solo, en el pueblo (solo_party.md § 2.3).
                     if (controller.canEditParty) ...[
                       const SizedBox(width: 8),

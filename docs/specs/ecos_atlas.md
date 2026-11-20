@@ -32,7 +32,9 @@ Código: `lib/game_engine/models/eco.dart` (modelo), `models/atlas.dart`,
 
 `EcoItem` (inmutable) vive en el inventario como cualquier objeto: 1
 casilla, se puede mover, dar, tirar, guardar en el alijo y lo evalúa el
-filtro de loot. No se equipa ni se vende/desarma.
+filtro de loot. No se equipa ni se vende/desarma. En el alijo van primero a la
+pestaña ECOS (con el Ancla y los materiales del Abismo), también desde la
+partida con `ALIJO [B]` (characters.md § 3 y § 3.2).
 
 | Campo | JSON | Valores |
 |---|---|---|
