@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/balance/balance_asset_loader.dart';
+import '../../core/data/build_template_loader.dart';
 import '../../core/data/ult_data_loader.dart';
 import '../../core/di/service_locator.dart';
 import '../../core/persistence/exit_on_close.dart';
@@ -33,6 +34,8 @@ Future<void> main() async {
   // Animaciones como datos, con los overrides locales del Editor (§ 4.2).
   await installFx(overrides: local);
   // Parche de balance (docs/specs/balance_admin.md § 3).
+  // Plantillas de BUILD (docs/specs/build_planner_v2.md § 2.2).
+  await BuildTemplateLoader.load();
   registerSharedDependencies(
       balance: await BalanceAssetLoader.load(),
       ults: await UltDataLoader.load());

@@ -5,6 +5,7 @@ import 'package:flame/components.dart';
 import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 import 'package:yaml/yaml.dart';
 
+import '../../../core/procedural/procedural_art.dart';
 import '../../../game_engine/data/enemies_catalog.dart';
 import '../domain/sprite_entry.dart';
 
@@ -56,8 +57,33 @@ class SpriteCatalog {
       {AssetBundle? bundle, SpriteOverrideSource? overrides}) async {
     final b = bundle ?? rootBundle;
     final raw = await b.loadString(manifestPath);
-    return SpriteCatalog.fromYaml(raw,
+    final c = SpriteCatalog.fromYaml(raw,
         bundle: b, overrides: overrides ?? defaultOverrides);
+    await c.loadProcedural();
+    return c;
+  }
+
+  /// Ruta de las perillas del arte procedural publicadas (§ 7.5).
+  static const proceduralPath = 'assets/sprites/procedural.yaml';
+
+  /// Carga en [ProceduralArt.instance] las perillas del repo y, si la capa
+  /// de overrides las tiene, las del override (game_editor.md § 7.5).
+  /// Datos rotos o ausentes = valores por defecto (nunca rompe el juego).
+  Future<void> loadProcedural() async {
+    final art = ProceduralArt.instance;
+    try {
+      art.setRepo(ProcDoc.parse(await _bundle.loadString(proceduralPath)));
+    } catch (_) {
+      art.setRepo(ProcDoc());
+    }
+    final o = overrides;
+    if (o is ProceduralOverrideSource) {
+      try {
+        art.setOverride(ProcDoc.parse(await (o as ProceduralOverrideSource).readProcedural()));
+      } catch (_) {
+        art.setOverride(ProcDoc());
+      }
+    }
   }
 
   /// Desde el texto del manifest (tests y Editor).
@@ -136,6 +162,7 @@ class SpriteCatalog {
     await overrides?.refresh();
     if (id == null) {
       _cache.clear();
+      await loadProcedural();
     } else {
       _cache.remove(id);
     }

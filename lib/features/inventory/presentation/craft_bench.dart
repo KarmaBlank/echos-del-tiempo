@@ -20,6 +20,10 @@ import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/craft_rules.dart';
+import '../../../game_engine/models/build_plan.dart';
+import '../../../game_engine/rules/build_plan_rules.dart';
+import '../../../game_engine/rules/weapon_target_rules.dart';
+import '../../build_planner/domain/build_wants_of.dart';
 import '../../build_planner/presentation/build_fit_badge.dart';
 import '../../build_planner/presentation/build_plan_providers.dart';
 import '../domain/battle_impact.dart';
@@ -314,10 +318,14 @@ class _CraftBenchState extends State<CraftBench> {
           required ValueChanged<ItemInstance> onTap,
           ItemGridSearch? search,
           String? empty,
-          String Function(ItemInstance)? note}) =>
+          String Function(ItemInstance)? note,
+          Set<String> Function(BuildPlan plan, BuildPlanRules rules)? stars}) =>
       Consumer(builder: (context, ref, _) {
         final plan = ref.watch(buildPlanProvider).plan;
         final fit = ref.watch(buildPlanRulesProvider);
+        // ★ de BUILD v2 (build_planner_v2.md § 1.5): mejor candidata como
+        // destino y donante sugerido como origen.
+        final starred = stars?.call(plan, fit) ?? const <String>{};
         return DsItemGrid(
           rules: shop.rules,
           count: list.length,
@@ -327,11 +335,15 @@ class _CraftBenchState extends State<CraftBench> {
           slot: (i) => ItemSlotData(
               content: CellContent.item(list[i]),
               selected: list[i].uid == selected,
-              buildMatch:
-                  plan.goalCount > 0 && fit.itemFit(plan, list[i]).any),
+              buildMatch: starred.contains(list[i].uid) ||
+                  (plan.goalCount > 0 && fit.itemFit(plan, list[i]).any)),
           tip: (i, child, focused) {
             final it = list[i];
-            final n = note?.call(it);
+            final base = note?.call(it);
+            final n = starred.contains(it.uid)
+                ? '★ Sugerida para tu arma objetivo'
+                    '${base == null ? '' : '<br>$base'}'
+                : base;
             return itemHoverTip(
                 rules: shop.rules,
                 viewer: p,
@@ -696,6 +708,7 @@ class _CraftBenchState extends State<CraftBench> {
           ],
           selected: target.uid,
           keyPrefix: 'bench-weapon-',
+          stars: (plan, r) => _bestTarget(plan, r, p),
           search: _search('bench-weapon-search', _weaponQ,
               'BUSCAR: nombre, tipo, mod'),
           empty: 'Ninguna arma coincide con la búsqueda.',
@@ -1052,6 +1065,7 @@ class _CraftBenchState extends State<CraftBench> {
           ],
           selected: action.sourceUid,
           keyPrefix: 'craft-source-',
+          stars: (plan, r) => _donors(plan, r, p, target, op),
           search: _search('craft-source-search', _sourceQ,
               'BUSCAR: nombre, tipo, mod, habilidad'),
           note: (it) => CraftHelp(rules.crafting).source(it, op),
@@ -1177,12 +1191,77 @@ class _CraftBenchState extends State<CraftBench> {
     );
   }
 
+  List<ItemInstance> get _stash => stashWeapons(shop.controller.stash);
+
+  /// Mejor candidata del arma objetivo principal en el inventario.
+  Set<String> _bestTarget(BuildPlan plan, BuildPlanRules r, PlayerProfile p) {
+    final t = plan.mainTarget;
+    if (t == null) return const {};
+    final best = r.targets.best(t, p);
+    return best == null || best.percent == 0 ? const {} : {best.item.uid};
+  }
+
+  /// Donantes sugeridos (inventario) de lo que le falta a [target] para
+  /// el objetivo principal y que [op] puede traer.
+  Set<String> _donors(BuildPlan plan, BuildPlanRules r, PlayerProfile p,
+      ItemInstance target, CraftOp op) {
+    final t = plan.mainTarget;
+    if (t == null) return const {};
+    final tr = r.targets;
+    final out = <String>{};
+    for (final q in tr.match(t, target, viewer: p).reqs) {
+      if (q.done) continue;
+      final ok = switch (op) {
+        CraftOp.transferAffix => q.kind == TargetReqKind.mod,
+        CraftOp.transferPassive => q.kind == TargetReqKind.passive,
+        CraftOp.transferSkill => q.kind == TargetReqKind.skill,
+        _ => false,
+      };
+      if (!ok) continue;
+      final d = tr.donor(t, target, q.key, p, stash: _stash);
+      if (d != null && !d.inStash) out.add(d.item.uid);
+    }
+    return out;
+  }
+
+  /// `★ Hacha Tronante Épica: 72% → 81%` (vista previa, § 1.5) y, si el
+  /// mejor donante está en el alijo, el aviso (nunca se mueve solo).
+  Widget _targetLine(PlayerProfile p, ItemInstance before, ItemInstance? after,
+          CraftOp op) =>
+      Consumer(builder: (context, ref, _) {
+        final t = ref.watch(buildPlanProvider).plan.mainTarget;
+        if (t == null) return const SizedBox.shrink();
+        final tr = ref.watch(buildPlanRulesProvider).targets;
+        final a = tr.match(t, before, viewer: p).percent;
+        final stashHint = [
+          for (final q in tr.match(t, before, viewer: p).reqs)
+            if (!q.done &&
+                (q.kind == TargetReqKind.mod ||
+                    q.kind == TargetReqKind.skill ||
+                    q.kind == TargetReqKind.passive))
+              if (tr.donor(t, before, q.key, p, stash: _stash)
+                  case final d? when d.inStash)
+                '${q.label}: ${protoEsc(shop.rules.items.displayName(d.item))} '
+                    'está en el alijo (sacala primero)',
+        ];
+        final text = after == null
+            ? '$a%'
+            : '$a% → ${tr.match(t, after, viewer: p).percent}%';
+        return InfoLine(
+            'Objetivo',
+            '★ ${protoEsc(tr.targetName(t))}: $text'
+                '${stashHint.isEmpty ? '' : '<br>${stashHint.join('<br>')}'}',
+            key: const ValueKey('craft-target'),
+            color: kPlanColor);
+      });
+
   /// Vista previa: lo que gastás y perdés y una tabla ANTES | DESPUÉS.
   List<Widget> _preview(
       PlayerProfile p, ItemInstance target, CraftOp op, CraftResult r) {
     final rules = shop.rules;
     final after = r.after;
     final out = <Widget>[];
+    out.add(_targetLine(p, target, after, op));
     final last = _lastBefore;
     if (_done && last != null && last.uid == target.uid) {
       out.add(ProtoText(

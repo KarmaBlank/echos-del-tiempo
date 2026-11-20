@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:yaml/yaml.dart';
 
+import '../../../core/procedural/procedural_art.dart';
 import '../../admin/domain/sprites/art_pack.dart';
 import '../domain/sprite_entry.dart';
 
@@ -123,7 +124,48 @@ class LocalSpriteOverrides implements EditableSpriteOverrides {
       for (final id in overriddenIds) id: (await read(id))!,
     }, {
       for (final id in overriddenFx) id: (await readFx(id))!,
-    }).encode();
+    }, await readProcedural()).encode();
+  }
+
+  // ------------------------------------------------- perillas (§ 7.5)
+
+  static const proceduralName = 'procedural.yaml';
+
+  @override
+  Future<String?> readProcedural() async {
+    final f = _file(proceduralName);
+    return f.existsSync() ? f.readAsString() : null;
+  }
+
+  @override
+  Future<void> putProcedural(String yaml) async {
+    await Directory(root).create(recursive: true);
+    await _file(proceduralName).writeAsString(yaml, flush: true);
+  }
+
+  @override
+  Future<void> removeProcedural() async {
+    final f = _file(proceduralName);
+    if (f.existsSync()) await f.delete();
+  }
+
+  @override
+  Future<bool> publishProcedural(String repoRoot) async {
+    final raw = await readProcedural();
+    if (raw == null) return false;
+    final mine = ProcDoc.parse(raw);
+    if (mine.isEmpty) {
+      await removeProcedural();
+      return false;
+    }
+    final out = File('$repoRoot/assets/sprites/$proceduralName');
+    final repo = out.existsSync()
+        ? ProcDoc.parse(await out.readAsString())
+        : ProcDoc();
+    await out.parent.create(recursive: true);
+    await out.writeAsString(repo.merged(mine).encode(), flush: true);
+    await removeProcedural();
+    return true;
   }
 
   /// Instala un paquete de arte (pisa overrides con el mismo id).
@@ -138,7 +180,16 @@ class LocalSpriteOverrides implements EditableSpriteOverrides {
     for (final MapEntry(:key, :value) in pack.fx.entries) {
       await putFx(key, value);
     }
-    return [...pack.sprites.keys, ...pack.fx.keys];
+    // Perillas: se fusionan con las que ya hay (las del paquete pisan).
+    if (pack.procedural case final p?) {
+      final mine = ProcDoc.parse(await readProcedural());
+      await putProcedural(mine.merged(ProcDoc.parse(p)).encode());
+    }
+    return [
+      ...pack.sprites.keys,
+      ...pack.fx.keys,
+      if (pack.procedural != null) ArtPack.proceduralName,
+    ];
   }
 
   // ------------------------------------------------------------ fx

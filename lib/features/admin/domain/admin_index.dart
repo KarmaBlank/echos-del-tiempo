@@ -1,3 +1,4 @@
+import '../../../game_engine/data/build_templates_catalog.dart';
 import '../../../game_engine/balance/balance_codecs.dart';
 import '../../../game_engine/balance/balance_registries.dart';
 import '../../../game_engine/data/ascension_catalog.dart';
@@ -14,6 +15,7 @@ class AdminEntry {
     required this.name,
     required this.detail,
     this.links = const [],
+    this.special,
   });
 
   final BalanceKind? kind;
@@ -24,12 +26,18 @@ class AdminEntry {
   /// Entidades relacionadas (kit y mecánicas de una ascensión).
   final List<(BalanceKind, String)> links;
 
-  /// Clave del filtro (`skill`, `weapon`, … o `ascension`).
-  String get category => kind?.jsonKey ?? ascensionCategory;
+  /// Categoría fuera del parche de balance (`template`: plantilla de
+  /// BUILD, docs/specs/build_planner_v2.md § 2.2).
+  final String? special;
 
-  String get categoryLabel => kind?.singular ?? 'Ascensión';
+  /// Clave del filtro (`skill`, `weapon`, … `ascension` o `template`).
+  String get category => kind?.jsonKey ?? special ?? ascensionCategory;
+
+  String get categoryLabel => kind?.singular ??
+      (special == templateCategory ? 'Plantilla' : 'Ascensión');
 
   static const ascensionCategory = 'ascension';
+  static const templateCategory = 'template';
 
   bool matches(String query) {
     if (query.isEmpty) return true;
@@ -64,9 +72,18 @@ const _skillKinds = {
   SkillKind.support: 'apoyo',
 };
 
-/// Todas las entidades del catálogo base, en el orden de los tipos.
+/// Todas las entidades del catálogo base, en el orden de los tipos; al
+/// final, las plantillas de BUILD cargadas.
 List<AdminEntry> buildAdminIndex(BalanceBase base) {
   final out = <AdminEntry>[];
+  for (final t in BuildTemplates.all) {
+    out.add(AdminEntry(
+        kind: null,
+        special: AdminEntry.templateCategory,
+        id: t.id,
+        name: t.name,
+        detail: '${t.classId} · ${t.tags.join(', ')}'));
+  }
   final c = base.catalog;
   for (final s in c.skills.values) {
     out.add(AdminEntry(

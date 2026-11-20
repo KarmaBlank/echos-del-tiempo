@@ -647,6 +647,7 @@ Palabras clave sin distinguir mayúsculas ni tildes. Condiciones:
 | `Peso <categoría>...` | `Peso Media Pesada` | categoría de peso de la base (§ 1.1): Ligera, Media, Pesada; cualquiera de esas (v0.8.4) |
 | `Build [Base/Mod/Pasiva/Habilidad...]` | `Build Mod Pasiva` | "Coincide con mi build" (v0.5.1): el arma cumple algo de tu plan de build; con clases, alguna de esas (`Base` = base o tipo; también `Tipo`/`Arma`); sin clases, cualquiera. `MiBuild` es sinónimo |
 | `Build No` | `Build No` | el arma no cumple nada de tu plan |
+| `BuildMejora` | `BuildMejora` / `BuildMejora No` | el arma sube el % de tu mejor candidata del arma objetivo principal (build_planner_v2.md § 1.4); sin objetivo v2 no coincide nunca |
 
 `op`: `=` (por defecto), `!=`, `<`, `<=`, `>`, `>=`. Acciones: `Color R G
 B [A]` (texto), `Borde R G B [A]`, `Fondo R G B [A]`, `Tamaño N`

@@ -5,6 +5,7 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/theme/vision_palette.dart';
+import '../../../core/procedural/item_icons.dart';
 import '../../build_planner/presentation/build_fit_badge.dart' show kPlanColor;
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/item.dart';
@@ -45,218 +46,13 @@ abstract final class RarityColors {
 // ---------------------------------------------------------------------
 // Íconos pixel (8 × 8)
 // ---------------------------------------------------------------------
-
-const _metal = Color(0xFFC8D2FF);
-const _handle = Color(0xFFA0703C);
-const _string = Color(0xFFE8ECFF);
-const _paper = Color(0xFFE8DCC0);
-const _cover = Color(0xFF8E3B46);
-const _glass = Color(0xFFDDE6FF);
-
-/// Bitmaps 8 × 8: `.` vacío; `m` metal; `h` mango; `g` acento (gema,
-/// color de la rareza o del material); `s` cuerda; `p` papel; `c` tapa;
-/// `w` vidrio.
-const _icons = <String, List<String>>{
-  'espada': [
-    '.......m',
-    '......mm',
-    '.....mm.',
-    '.h..mm..',
-    '..hmm...',
-    '...h....',
-    '..h.h...',
-    '.h......',
-  ],
-  'hacha': [
-    '..mmm...',
-    '.mmmmh..',
-    '.mmmh...',
-    '..mh....',
-    '...h....',
-    '....h...',
-    '.....h..',
-    '......h.',
-  ],
-  'lanza': [
-    '......mm',
-    '......mm',
-    '.....h..',
-    '....h...',
-    '...h....',
-    '..h.....',
-    '.h......',
-    'h.......',
-  ],
-  'báculo': [
-    '.....gg.',
-    '....gggg',
-    '.....gg.',
-    '....h...',
-    '...h....',
-    '..h.....',
-    '.h......',
-    'h.......',
-  ],
-  'tomo': [
-    '........',
-    '.cccccc.',
-    '.cppppc.',
-    '.cpggpc.',
-    '.cppppc.',
-    '.cppppc.',
-    '.cccccc.',
-    '........',
-  ],
-  'varita': [
-    '......g.',
-    '.....g.g',
-    '......g.',
-    '.....h..',
-    '....h...',
-    '...h....',
-    '..h.....',
-    '........',
-  ],
-  'arco': [
-    '..hh....',
-    '.h..s...',
-    'h....s..',
-    'h.....s.',
-    'h.....s.',
-    'h....s..',
-    '.h..s...',
-    '..hh....',
-  ],
-  'rifle': [
-    '........',
-    '........',
-    'mmmmmmm.',
-    'hhhmm...',
-    'hh.h....',
-    'h.......',
-    '........',
-    '........',
-  ],
-  'ballesta': [
-    '...m....',
-    '..mmm...',
-    '.h.m.h..',
-    'h..m..h.',
-    '...m....',
-    '...h....',
-    '...h....',
-    '........',
-  ],
-  'dagas': [
-    'm......m',
-    '.m....m.',
-    '..m..m..',
-    '...hh...',
-    '...hh...',
-    '..h..h..',
-    '.h....h.',
-    '........',
-  ],
-  'escudo': [
-    '.mmmmmm.',
-    '.mggggm.',
-    '.mgmmgm.',
-    '.mggggm.',
-    '.mggggm.',
-    '..mggm..',
-    '...mm...',
-    '........',
-  ],
-  'pocion': [
-    '...hh...',
-    '...ww...',
-    '..gggg..',
-    '.gggggg.',
-    '.gggggg.',
-    '.gggggg.',
-    '..gggg..',
-    '........',
-  ],
-  'esquirla': [
-    '....g...',
-    '...gg...',
-    '...ggg..',
-    '..gggg..',
-    '..ggg...',
-    '.ggg....',
-    '.gg.....',
-    '........',
-  ],
-  'cristal': [
-    '...gg...',
-    '..gggg..',
-    '.gggggg.',
-    'gggwgggg',
-    '.gggggg.',
-    '..gggg..',
-    '...gg...',
-    '........',
-  ],
-  'prisma': [
-    '...g....',
-    '...gg...',
-    '..gggm..',
-    '..ggmm..',
-    '.ggmmmh.',
-    '.gmmmhh.',
-    'gggmmhhh',
-    '........',
-  ],
-  // Eco: un portal con un reloj adentro (ecos_atlas.md § 2).
-  'eco': [
-    '..gggg..',
-    '.gwwwwg.',
-    'gww.mwwg',
-    'gww.mwwg',
-    'gwwmmwwg',
-    'gwwwwwwg',
-    '.gwwwwg.',
-    '..gggg..',
-  ],
-  // Ancla Temporal.
-  'ancla': [
-    '...gg...',
-    '...gg...',
-    '.mmggmm.',
-    '...gg...',
-    '...gg...',
-    'g..gg..g',
-    '.g.gg.g.',
-    '..gggg..',
-  ],
-  // Fragmento del Abismo (v0.8): rombo partido con núcleo.
-  'fragmento': [
-    '...m....',
-    '..mgm...',
-    '.mgwgm..',
-    'mggwggm.',
-    '.mggm...',
-    '..mgm...',
-    '...m....',
-    '........',
-  ],
-  // Esencia del Abismo (v0.8): gota.
-  'esencia': [
-    '...g....',
-    '...g....',
-    '..ggg...',
-    '.ggwgg..',
-    '.gwggg..',
-    '.ggggg..',
-    '..ggg...',
-    '........',
-  ],
-};
+// Las formas y el pintor son el generador `item_icon`
+// (lib/core/procedural/item_icons.dart; game_editor.md § 7.5).
 
 /// Clave del ícono de un tipo de arma (`espada+escudo` → `escudo`).
 String iconKeyForType(String type) => type.contains('escudo')
     ? 'escudo'
-    : (_icons.containsKey(type) ? type : 'espada');
+    : (kItemIconRows.containsKey(type) ? type : 'espada');
 
 /// Clave y color de acento del ícono de una pila.
 (String, Color) iconForStack(StackKind k) => switch (k) {
@@ -277,50 +73,23 @@ String iconKeyForType(String type) => type.contains('escudo')
 /// Ícono pixel (8 × 8 escalado) sin difuminado.
 class PixelIcon extends StatelessWidget {
   const PixelIcon(this.iconKey,
-      {super.key, this.accent = ProtoColors.ice, this.size = 32});
+      {super.key, this.accent = ProtoColors.ice, this.size = 32, this.procKey});
 
   final String iconKey;
   final Color accent;
   final double size;
 
+  /// Entrada `items.<procKey>` del manifest cuyas perillas usa
+  /// (`procKeyForType`); `null` = las de la familia `items`.
+  final String? procKey;
+
   @override
   Widget build(BuildContext context) => CustomPaint(
         size: Size.square(size),
-        painter: _PixelPainter(_icons[iconKey] ?? _icons['espada']!, accent),
+        painter: ItemIconPainter(
+            kItemIconRows[iconKey] ?? kItemIconRows['espada']!, accent,
+            procKey == null ? 'items' : 'items.$procKey'),
       );
-}
-
-class _PixelPainter extends CustomPainter {
-  _PixelPainter(this.rows, this.accent);
-  final List<String> rows;
-  final Color accent;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final px = size.width / 8;
-    final paint = Paint()..isAntiAlias = false;
-    for (var y = 0; y < rows.length; y++) {
-      for (var x = 0; x < rows[y].length; x++) {
-        final color = switch (rows[y][x]) {
-          'm' => _metal,
-          'h' => _handle,
-          'g' => accent,
-          's' => _string,
-          'p' => _paper,
-          'c' => _cover,
-          'w' => _glass,
-          _ => null,
-        };
-        if (color == null) continue;
-        paint.color = color;
-        canvas.drawRect(Rect.fromLTWH(x * px, y * px, px, px), paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_PixelPainter old) =>
-      old.rows != rows || old.accent != accent;
 }
 
 // ---------------------------------------------------------------------
@@ -389,7 +158,9 @@ class ItemCell extends StatelessWidget {
       border = RarityColors.of(it.rarity);
       final type = rules.catalog.weapons[it.baseId]?.type ?? 'espada';
       icon = PixelIcon(iconKeyForType(type),
-          accent: RarityColors.of(it.rarity), size: size - 12 * k);
+          accent: RarityColors.of(it.rarity),
+          size: size - 12 * k,
+          procKey: procKeyForType(type));
     } else if (c?.eco case final e?) {
       border = RarityColors.of(e.rarity);
       // Más chico y arriba: abajo a la derecha va el tier.
@@ -399,7 +170,10 @@ class ItemCell extends StatelessWidget {
     } else if (c?.stack case final st?) {
       border = ProtoColors.panelBorder;
       final (key, accent) = iconForStack(st);
-      icon = PixelIcon(key, accent: accent, size: size - 12 * k);
+      icon = PixelIcon(key,
+          accent: accent,
+          size: size - 12 * k,
+          procKey: key == 'pocion' ? 'pocion' : null);
     } else {
       border = ProtoColors.panelBorder;
     }

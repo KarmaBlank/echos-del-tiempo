@@ -244,6 +244,19 @@ class BuildCondition extends FilterCondition {
   String get args => has ? [for (final k in kinds) k.word].join(' ') : 'No';
 }
 
+/// `BuildMejora` / `BuildMejora No` (build_planner_v2.md § 1.4): el arma
+/// sube el % de la mejor candidata del objetivo de arma principal de
+/// quien la mira (`BuildWants.target` y `best`). Sin objetivo v2 no
+/// coincide nunca. `Build` sigue igual (cualquier requisito).
+class BuildUpgradeCondition extends FilterCondition {
+  const BuildUpgradeCondition({this.has = true});
+  final bool has;
+  @override
+  String get keyword => 'BuildMejora';
+  @override
+  String get args => has ? '' : 'No';
+}
+
 /// Color RGBA (0–255).
 class FilterColor {
   const FilterColor(this.r, this.g, this.b, [this.a = 255]);

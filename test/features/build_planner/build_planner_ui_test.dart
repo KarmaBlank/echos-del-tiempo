@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../game_engine/session_test_helpers.dart';
+import '../../helpers/build_templates_fixture.dart';
 import '../panel_test_harness.dart';
 
 ProviderContainer _container(WidgetTester tester) =>
@@ -29,6 +30,8 @@ String _text(WidgetTester tester, String key) {
 }
 
 void main() {
+  setUpAll(installBuildTemplates);
+
   testWidgets('BUILD: plantilla, progreso, siguiente paso y quitar metas',
       (tester) async {
     final start = progression
@@ -42,21 +45,25 @@ void main() {
 
     await tapVisible(tester, find.byKey(const ValueKey('build-template')));
     await tester.pumpAndSettle();
-    // Solo las plantillas del Guerrero.
-    expect(
-        find.byKey(const ValueKey('pick-tpl-gue_berserker')), findsOneWidget);
-    expect(find.byKey(const ValueKey('pick-tpl-mag_brasa')), findsNothing);
-    await tester.tap(find.byKey(const ValueKey('pick-tpl-gue_berserker')));
+    // Solo las plantillas del Guerrero (5, con la de grupo).
+    expect(find.byKey(const ValueKey('tpl-gue_berserker')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tpl-gue_grupo')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tpl-mag_brasa')), findsNothing);
+    await tapVisible(tester, find.byKey(const ValueKey('tpl-gue_berserker')));
+    await tapVisible(tester, find.byKey(const ValueKey('tpl-follow')));
     await tester.pumpAndSettle();
 
     final plan = _container(tester).read(buildPlanProvider).plan;
     expect(plan.templateId, 'gue_berserker');
-    expect(plan.attributes[Attribute.fue], 40);
+    expect(plan.version, 2);
+    expect(plan.attributes[Attribute.fue], 60);
+    expect(plan.weaponTargets, isNotEmpty);
     expect(_text(tester, 'build-name'), contains('Berserker sangrado'));
-    // Tiene 15 puntos sin repartir: el siguiente paso es FUE.
-    expect(_text(tester, 'build-next'), contains('según tu build, FUE'));
+    // Tiene puntos sin repartir: el tramo de la plantilla dice FUE.
+    expect(_text(tester, 'build-next'), contains('según tu plantilla, FUE'));
     expect(find.byKey(const ValueKey('build-goal-attr:fue')), findsOneWidget);
-    expect(_text(tester, 'build-goal-attr:fue'), contains('12/40'));
+    expect(_text(tester, 'build-goal-attr:fue'), contains('12/60'));
+    expect(find.byKey(const ValueKey('build-target-0')), findsOneWidget);
     expect(
         find.byKey(const ValueKey('build-goal-node:sangre_k')), findsOneWidget);
     expect(_text(tester, 'build-tree-small'), contains('/'));
@@ -64,7 +71,7 @@ void main() {
     // Quitar una meta.
     await tapVisible(
         tester, find.byKey(const ValueKey('build-remove-skill:hendir')));
-    expect(_container(tester).read(buildPlanProvider).plan.skills, ['sangria']);
+    expect(_container(tester).read(buildPlanProvider).plan.skills, ['sifon']);
     // −5 / +5 al objetivo de un atributo.
     await tapVisible(tester, find.byKey(const ValueKey('build-inc-fue')));
     expect(
@@ -72,7 +79,7 @@ void main() {
             .read(buildPlanProvider)
             .plan
             .attributes[Attribute.fue],
-        45);
+        65);
 
     // Árbol en modo planificar.
     await tapVisible(tester, find.byKey(const ValueKey('build-open-tree')));

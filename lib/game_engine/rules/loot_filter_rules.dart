@@ -2,10 +2,15 @@ import '../data/branch_ults_catalog.dart' show itemUlt;
 import '../data/affixes_catalog.dart';
 import '../data/game_catalog.dart';
 import '../models/attributes.dart';
+import '../data/passive_tree_catalog.dart' show kPassiveTree;
 import '../models/build_wants.dart';
 import '../models/item.dart';
 import '../models/loot.dart';
 import '../models/loot_filter.dart';
+import 'passive_tree_rules.dart';
+import 'progression_rules.dart';
+import 'stats_calculator.dart';
+import 'weapon_target_rules.dart';
 import 'weapon_weight.dart';
 
 /// Quién mira el loot (para `Utilizable` y `NivelRelativo`).
@@ -157,6 +162,20 @@ Ocultar # Mágicos de nivel bajo
     return wants.matches(it, catalog.weapons[it.baseId]);
   }
 
+  /// Reglas del objetivo de arma (sin perfil: solo lo del arma).
+  WeaponTargetRules get _targets => WeaponTargetRules(ProgressionRules(
+      stats: StatsCalculator(
+          classes: catalog.classes, treeRules: PassiveTreeRules(kPassiveTree)),
+      catalog: catalog));
+
+  /// El drop [d] supera el % de la mejor candidata de quien mira
+  /// (`BuildMejora`, build_planner_v2.md § 1.4).
+  bool improvesBuild(LootDrop d, FilterContext ctx) {
+    final it = d.item, t = ctx.wants?.target;
+    if (it == null || t == null) return false;
+    return (_targets.score(t, it) * 100).round() > (ctx.wants?.best ?? 0);
+  }
+
   bool matches(FilterCondition c, LootDrop d, FilterContext ctx) {
     final it = d.item;
     final eco = d.eco;
@@ -171,6 +190,10 @@ Ocultar # Mágicos de nivel bajo
             ? got.isNotEmpty
             : kinds.any(got.contains);
         return hit == has;
+      case BuildUpgradeCondition(:final has):
+        final t = ctx.wants?.target;
+        if (it == null || t == null) return false;
+        return improvesBuild(d, ctx) == has;
       case KindCondition(:final kinds):
         final k = it != null
             ? LootKind.arma
@@ -229,7 +252,8 @@ Ocultar # Mágicos de nivel bajo
       KindCondition() ||
       MaterialCondition() ||
       TierCondition() ||
-      BuildCondition() =>
+      BuildCondition() ||
+      BuildUpgradeCondition() =>
         false,
     };
   }
@@ -474,6 +498,13 @@ Ocultar # Mágicos de nivel bajo
             err('se esperaba Arma, Material, Pocion o Eco');
           } else {
             conds.add(KindCondition([for (final k in ks) k!]));
+          }
+        case 'buildmejora' || 'mejorabuild':
+          final yn = _yesNo(a);
+          if (a.length > 1 || yn == null) {
+            err('se esperaba "BuildMejora" o "BuildMejora No"');
+          } else {
+            conds.add(BuildUpgradeCondition(has: yn));
           }
         case 'build' || 'mibuild':
           if (a.length == 1 && _yesNo(a) == false) {

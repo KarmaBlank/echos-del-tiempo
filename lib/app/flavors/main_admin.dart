@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import '../../core/data/build_template_loader.dart';
 import '../../features/admin/data/admin_host.dart';
 import '../../features/admin/presentation/admin_app.dart';
 import '../../features/admin/presentation/admin_controller.dart';
@@ -22,6 +23,8 @@ import '../../firebase_options.dart';
 /// abre red de juego. Solo el motor puro para la vista previa.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Plantillas de BUILD para Balance → Plantillas (build_planner_v2.md § 2.2).
+  await BuildTemplateLoader.load();
   // Mismas opciones que la señalización REST de escritorio (solo lectura).
   const firebase = DefaultFirebaseOptions.windows;
   final controller = AdminController(

@@ -10,9 +10,9 @@ import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../core/settings/notices.dart';
 import '../../../core/settings/settings_providers.dart';
-import '../../../game_engine/models/build_wants.dart';
 import '../../world/presentation/session_controller.dart';
 import '../domain/build_tracker.dart';
+import '../domain/build_wants_of.dart';
 import 'build_fit_badge.dart';
 import 'build_plan_providers.dart';
 
@@ -123,12 +123,19 @@ final buildFeedProvider = Provider.autoDispose<BuildFeed>((ref) {
   var disposed = false;
   void syncWants() {
     if (disposed || !c.mounted) return;
-    c.setBuildWants(BuildWants.fromPlan(ref.read(buildPlanProvider).plan));
+    c.setBuildWants(buildWantsOf(ref.read(buildPlanRulesProvider),
+        ref.read(buildPlanProvider).plan, c.view?.me?.profile,
+        stash: stashWeapons(c.stash)));
   }
 
   // Fuera de la construcción del provider (aplicarlo emite una vista).
   scheduleMicrotask(syncWants);
-  final remove = c.addListener((_) => check());
+  // El % de la mejor candidata cambia con el inventario: se resincroniza
+  // (setBuildWants no manda nada si no cambió).
+  final remove = c.addListener((_) {
+    check();
+    syncWants();
+  });
   ref.listen(buildPlanProvider, (_, __) {
     check();
     syncWants();

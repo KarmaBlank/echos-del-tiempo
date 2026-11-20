@@ -13,7 +13,9 @@ import '../../../game_engine/models/loot_filter.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/loot_filter_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
-import '../../build_planner/presentation/build_fit_badge.dart' show kPlanColor;
+import '../../build_planner/domain/build_wants_of.dart';
+import '../../build_planner/presentation/build_fit_badge.dart'
+    show buildPlanRulesProvider, kPlanColor;
 import '../../build_planner/presentation/build_plan_providers.dart';
 import '../domain/filter_build_snippets.dart';
 import '../domain/filter_quick.dart';
@@ -127,6 +129,9 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
   /// Qué partes del plan pide la condición `Build` que se agrega (vacío =
   /// cualquier meta).
   final _buildKinds = <BuildMatch>{};
+
+  /// `BuildMejora` en vez de `Build` (build_planner_v2.md § 1.4).
+  bool _buildUpgrade = false;
 
   /// Vista TEXTO (`true`) o CASILLAS (`false`, la de entrada).
   var _textView = false;
@@ -267,9 +272,13 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
 
     // El plan del miembro activo: la vista previa evalúa `Build` igual
     // que el host.
-    final wants = BuildWants.fromPlan(ref
-        .watch(buildPlanProvider)
-        .planFor(shop.controller.slotOf(shop.view.actorId)));
+    final wants = buildWantsOf(
+        ref.watch(buildPlanRulesProvider),
+        ref
+            .watch(buildPlanProvider)
+            .planFor(shop.controller.slotOf(shop.view.actorId)),
+        p,
+        stash: stashWeapons(shop.controller.stash));
     final ctx = FilterContext(
         level: p.level,
         attributes: p.attributes,
@@ -435,14 +444,16 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
             if (wants.weaponPassive != null) 'una pasiva',
             if (wants.skills.isNotEmpty)
               count(wants.skills.length, 'habilidad', 'habilidades'),
+            if (wants.target != null) 'arma objetivo (${wants.best}%)',
           ].join(' · ')}.';
     Widget kind(String label, BuildMatch? k) {
       final on = k == null ? _buildKinds.isEmpty : _buildKinds.contains(k);
       return DsButton(label,
           key: ValueKey('filter-build-kind-${k?.name ?? 'any'}'),
           size: DsButtonSize.compact,
-          selected: on,
+          selected: on && !_buildUpgrade,
           onPressed: () => setState(() {
+                _buildUpgrade = false;
                 if (k == null) {
                   _buildKinds.clear();
                 } else if (!_buildKinds.remove(k)) {
@@ -451,7 +462,8 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
               }));
     }
 
-    final cond = FilterBuildSnippets.condition(_buildKinds).text;
+    final cond =
+        FilterBuildSnippets.line(_buildKinds, upgrade: _buildUpgrade);
     return [
       const DsSectionHeader('★ MI BUILD', key: ValueKey('filter-build-title')),
       Text(retroText(summary),
@@ -464,6 +476,14 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
         kind('MOD', BuildMatch.mod),
         kind('PASIVA', BuildMatch.pasiva),
         kind('HABILIDAD', BuildMatch.habilidad),
+        DsButton('SOLO SI MEJORA',
+            key: const ValueKey('filter-build-kind-upgrade'),
+            size: DsButtonSize.compact,
+            selected: _buildUpgrade,
+            tooltip: wants.target == null
+                ? 'Armá un arma objetivo en BUILD'
+                : 'BuildMejora: sube el % de tu mejor candidata',
+            onPressed: () => setState(() => _buildUpgrade = !_buildUpgrade)),
       ]),
       SizedBox(height: DsSpace.xs),
       Text(retroText('Línea: $cond'),
@@ -476,14 +496,17 @@ class _LootFilterTabState extends ConsumerState<LootFilterTab> {
             size: DsButtonSize.compact,
             tooltip: 'Agrega la condición a la regla donde está el cursor',
             onPressed: () => _setText(FilterBuildSnippets.insertCondition(
-                _text.text, _text.selection.baseOffset, _buildKinds))),
+                _text.text, _text.selection.baseOffset, _buildKinds,
+                upgrade: _buildUpgrade))),
         DsButton('+ RESALTAR',
             key: const ValueKey('filter-build-highlight'),
             size: DsButtonSize.compact,
             accent: kPlanColor,
             tooltip: 'Regla nueva arriba: resalta lo de tu build',
             onPressed: () => _setText(FilterBuildSnippets.prependRule(
-                _text.text, FilterBuildSnippets.highlightRule(_buildKinds)))),
+                _text.text,
+                FilterBuildSnippets.highlightRule(_buildKinds,
+                    upgrade: _buildUpgrade)))),
         DsButton('+ OCULTAR FUERA',
             key: const ValueKey('filter-build-hide'),
             size: DsButtonSize.compact,

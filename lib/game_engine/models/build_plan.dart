@@ -1,5 +1,82 @@
 import '../data/passive_tree_catalog.dart' show treeV7Id;
 import 'attributes.dart';
+import 'weapon_target.dart';
+
+export 'weapon_target.dart';
+
+/// Un nodo del árbol por nivel (plan v2 `tl`): desde qué nivel se toma.
+class TreeStep {
+  const TreeStep(this.level, this.node, {this.milestone});
+
+  final int level;
+  final String node;
+
+  /// 10 / 20 si es la keystone de un hito.
+  final int? milestone;
+
+  List<Object> toJson() =>
+      [level, node, if (milestone != null) milestone!];
+
+  static TreeStep? fromJson(Object? raw) {
+    if (raw is! List || raw.length < 2) return null;
+    final l = raw[0], n = raw[1];
+    if (l is! num || n is! String || n.isEmpty) return null;
+    final m = raw.length > 2 && raw[2] is num ? (raw[2] as num).toInt() : null;
+    return TreeStep(l.toInt().clamp(1, 70), treeV7Id(n),
+        milestone: m == 10 || m == 20 ? m : null);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is TreeStep &&
+      other.level == level &&
+      other.node == node &&
+      other.milestone == milestone;
+
+  @override
+  int get hashCode => Object.hash(level, node, milestone);
+}
+
+/// Tramo de atributos (plan v2 `as`): de [from] a [to] (cerrado) cada
+/// punto va a [attribute].
+class AttrSpan {
+  const AttrSpan(this.from, this.to, this.attribute, {this.overcap = false});
+
+  final int from;
+  final int to;
+  final Attribute attribute;
+
+  /// La plantilla pasa el tope blando a propósito.
+  final bool overcap;
+
+  int get points => to - from + 1;
+
+  List<Object> toJson() =>
+      [from, to, attribute.name.toUpperCase(), if (overcap) true];
+
+  static AttrSpan? fromJson(Object? raw) {
+    if (raw is! List || raw.length < 3) return null;
+    final f = raw[0], t = raw[1], a = raw[2];
+    if (f is! num || t is! num || a is! String) return null;
+    final attr = Attribute.values
+        .where((x) => x.name == a.toLowerCase())
+        .firstOrNull;
+    if (attr == null || t < f) return null;
+    return AttrSpan(f.toInt(), t.toInt(), attr,
+        overcap: raw.length > 3 && raw[3] == true);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is AttrSpan &&
+      other.from == from &&
+      other.to == to &&
+      other.attribute == attribute &&
+      other.overcap == overcap;
+
+  @override
+  int get hashCode => Object.hash(from, to, attribute, overcap);
+}
 
 /// Plan de build de un personaje (docs/specs/build_planner.md § 1-2).
 /// Inmutable y serializable; vive en el slot del personaje de la cuenta,
@@ -21,9 +98,26 @@ class BuildPlan {
     this.targetLevel,
     this.targetMastery,
     this.checklist = const [],
+    this.weaponTargets = const [],
+    this.timeline = const [],
+    this.attrSpans = const [],
+    this.ultActive,
+    this.ultUpgrades = const {},
+    this.feats = const [],
   });
 
-  static const formatVersion = 1;
+  /// Versión del formato: 1 = plan v1; 2 = con algún campo de BUILD v2
+  /// (build_planner_v2.md § 2.2). Un plan v1 se guarda igual que siempre.
+  static const formatVersion = 2;
+
+  int get version => weaponTargets.isEmpty &&
+          timeline.isEmpty &&
+          attrSpans.isEmpty &&
+          ultActive == null &&
+          ultUpgrades.isEmpty &&
+          feats.isEmpty
+      ? 1
+      : 2;
   static const empty = BuildPlan();
 
   /// Largo máximo del nombre y de cada ítem del checklist.
@@ -61,6 +155,51 @@ class BuildPlan {
   final int? targetMastery;
   final List<ChecklistItem> checklist;
 
+  /// Objetivos de arma v2 (hasta [WeaponTarget.maxPerPlan], en orden de
+  /// prioridad).
+  final List<WeaponTarget> weaponTargets;
+
+  /// Árbol por nivel de la plantilla: desde qué nivel se toma cada nodo
+  /// (lo usa "TOMAR SIGUIENTE DEL PLAN").
+  final List<TreeStep> timeline;
+
+  /// Tramos de atributos por nivel de la plantilla.
+  final List<AttrSpan> attrSpans;
+
+  /// ULT activa sugerida (ultimates_v2.md § 2.1) y nivel de mejora
+  /// buscado de cada ULT del repertorio.
+  final String? ultActive;
+  final Map<String, int> ultUpgrades;
+
+  /// Hazañas buscadas (`kAchievements`).
+  final List<String> feats;
+
+  /// Objetivo de arma principal (el primero `main`, si no el primero).
+  WeaponTarget? get mainTarget {
+    for (final t in weaponTargets) {
+      if (t.priority == TargetPriority.main) return t;
+    }
+    return weaponTargets.isEmpty ? null : weaponTargets.first;
+  }
+
+  /// Objetivo de arma vigente al nivel [level]: el de mayor `lvl` que ya
+  /// llegó (principal antes que transición si empatan).
+  WeaponTarget? targetAt(int level) {
+    WeaponTarget? best;
+    for (final t in weaponTargets) {
+      if (t.priority == TargetPriority.alt || t.level > level) continue;
+      if (best == null ||
+          t.level > best.level ||
+          (t.level == best.level && t.priority == TargetPriority.main)) {
+        best = t;
+      }
+    }
+    return best ??
+        (weaponTargets.isEmpty
+            ? null
+            : weaponTargets.reduce((a, b) => a.level <= b.level ? a : b));
+  }
+
   /// Cantidad de metas (sin contar nombre ni notas).
   int get goalCount =>
       attributes.length +
@@ -74,7 +213,11 @@ class BuildPlan {
       skills.length +
       (targetLevel == null ? 0 : 1) +
       (targetMastery == null ? 0 : 1) +
-      checklist.length;
+      checklist.length +
+      weaponTargets.length +
+      (ultActive == null ? 0 : 1) +
+      ultUpgrades.length +
+      feats.length;
 
   bool get isEmpty => goalCount == 0 && name.isEmpty && notes.isEmpty;
 
@@ -94,6 +237,12 @@ class BuildPlan {
     int? Function()? targetLevel,
     int? Function()? targetMastery,
     List<ChecklistItem>? checklist,
+    List<WeaponTarget>? weaponTargets,
+    List<TreeStep>? timeline,
+    List<AttrSpan>? attrSpans,
+    String? Function()? ultActive,
+    Map<String, int>? ultUpgrades,
+    List<String>? feats,
   }) =>
       BuildPlan(
         name: name ?? this.name,
@@ -113,7 +262,31 @@ class BuildPlan {
         targetMastery:
             targetMastery != null ? targetMastery() : this.targetMastery,
         checklist: checklist ?? this.checklist,
+        weaponTargets: weaponTargets ?? this.weaponTargets,
+        timeline: timeline ?? this.timeline,
+        attrSpans: attrSpans ?? this.attrSpans,
+        ultActive: ultActive != null ? ultActive() : this.ultActive,
+        ultUpgrades: ultUpgrades ?? this.ultUpgrades,
+        feats: feats ?? this.feats,
       );
+
+  /// Próximo nodo del árbol por nivel que falta en [taken] y ya se puede
+  /// buscar a [level] (`null` = ninguno).
+  String? nextTimelineNode(int level, Set<String> taken) {
+    for (final s in timeline) {
+      if (s.level > level) break;
+      if (!taken.contains(s.node)) return s.node;
+    }
+    return null;
+  }
+
+  /// Atributo del tramo vigente a [level] (`null` = sin tramo).
+  Attribute? spanAttributeAt(int level) {
+    for (final s in attrSpans) {
+      if (level >= s.from && level <= s.to) return s.attribute;
+    }
+    return null;
+  }
 
   /// Marca o desmarca un nodo del árbol.
   BuildPlan toggleTreeNode(String id) => copyWith(
@@ -134,7 +307,7 @@ class BuildPlan {
   static String _attrKey(Attribute a) => a.name.toUpperCase();
 
   Map<String, Object?> toJson() => {
-        'v': formatVersion,
+        'v': version,
         if (name.isNotEmpty) 'name': name,
         if (notes.isNotEmpty) 'notes': notes,
         if (templateId != null) 'tpl': templateId,
@@ -155,6 +328,14 @@ class BuildPlan {
         if (targetMastery != null) 'ms': targetMastery,
         if (checklist.isNotEmpty)
           'check': [for (final c in checklist) c.toJson()],
+        if (weaponTargets.isNotEmpty)
+          'wt': [for (final t in weaponTargets) t.toJson()],
+        if (timeline.isNotEmpty) 'tl': [for (final s in timeline) s.toJson()],
+        if (attrSpans.isNotEmpty)
+          'as': [for (final s in attrSpans) s.toJson()],
+        if (ultActive != null) 'ult': ultActive,
+        if (ultUpgrades.isNotEmpty) 'ultUp': {...ultUpgrades},
+        if (feats.isNotEmpty) 'feat': feats,
       };
 
   /// Lectura tolerante: `null` si [raw] no es un objeto; lo que falta o
@@ -199,6 +380,32 @@ class BuildPlan {
     }
     final lvl = integer(raw['lvl']);
     final ms = integer(raw['ms']);
+    final targets = <WeaponTarget>[];
+    if (raw['wt'] case final List l) {
+      for (final t in l) {
+        if (targets.length >= WeaponTarget.maxPerPlan) break;
+        if (WeaponTarget.fromJson(t) case final w?) targets.add(w);
+      }
+    }
+    final tl = <TreeStep>[
+      if (raw['tl'] case final List l)
+        for (final s in l)
+          if (TreeStep.fromJson(s) case final x?) x,
+    ];
+    final spans = <AttrSpan>[
+      if (raw['as'] case final List l)
+        for (final s in l)
+          if (AttrSpan.fromJson(s) case final x?) x,
+    ];
+    final ups = <String, int>{};
+    if (raw['ultUp'] case final Map m) {
+      for (final e in m.entries) {
+        final v = integer(e.value);
+        if (e.key is String && v != null && v > 1) {
+          ups[e.key as String] = v.clamp(2, 5);
+        }
+      }
+    }
     return BuildPlan(
       name: str(raw['name']) ?? '',
       notes: str(raw['notes']) ?? '',
@@ -218,6 +425,12 @@ class BuildPlan {
       targetLevel: lvl != null && lvl > 0 ? lvl : null,
       targetMastery: ms != null && ms > 0 ? ms : null,
       checklist: List.unmodifiable(check),
+      weaponTargets: List.unmodifiable(targets),
+      timeline: List.unmodifiable(tl),
+      attrSpans: List.unmodifiable(spans),
+      ultActive: str(raw['ult']),
+      ultUpgrades: Map.unmodifiable(ups),
+      feats: strings(raw['feat']),
     );
   }
 
