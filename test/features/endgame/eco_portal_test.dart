@@ -78,7 +78,7 @@ void main() {
     expect(d, contains('Jefe: Gólem Reloj'));
     expect(d, contains('Enemigos con +30% de vida'));
     expect(d, contains('+2 grupos por piso'));
-    expect(d, contains('Botín: +18% cantidad · +6% rareza'));
+    expect(d, contains('Botín: +30% cantidad · +6% rareza'));
     // Sin materiales: los crafteos dicen qué falta.
     expect(button(tester, 'eco-craft-tier').reason, 'Falta Ancla Temporal');
     expect(button(tester, 'eco-craft-reroll').reason, 'Falta Esquirla del Eco');

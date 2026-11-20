@@ -84,7 +84,9 @@ grupos por piso.
 
 ### 2.2 Bonus de loot dentro del Eco
 
-- `Q = Σ cantidad de los mods × (1 + Potencia) + Atlas + 10% × (jugadores − 1)`.
+- `Q = Σ cantidad de los mods × (1 + Potencia) + 3% × (tier − 1) + Atlas + 10% × (jugadores − 1)`
+  (el tier paga desde v0.15: T8 +21%, T16 +45%; `EcoRules.tierBonus`,
+  materials_economy.md § 4.4).
 - `R = Σ rareza de los mods × (1 + Potencia) + Atlas`.
 - Cada tirada de loot dentro del Eco (batalla, élite, jefe, cofre, fin)
   se repite `⌊1 + Q⌋` veces y una más con probabilidad `frac(1 + Q)`.
@@ -147,7 +149,7 @@ inventario.
 |---|---|---|
 | `reroll` | 1 Esquirla del Eco | vuelve a tirar todos los mods (misma cantidad) |
 | `addMod` | 1 Cristal de Era | agrega un mod si no llegó al máximo de su rareza |
-| `rarity` | Prisma Roto ×1 / ×2 / ×3 (a Mágico / Raro / Épico) | sube la rareza (hasta Épico) y agrega mods hasta el mínimo nuevo |
+| `rarity` | Prisma Roto ×1 / ×2 / ×4 (a Mágico / Raro / Épico; v0.15, antes ×3) | sube la rareza (hasta Épico) y agrega mods hasta el mínimo nuevo |
 | `tier` | 1 Ancla Temporal | tier +1 (hasta 16) |
 
 ## 5. Atlas del Tiempo

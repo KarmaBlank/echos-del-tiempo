@@ -218,6 +218,10 @@ const kQuestEsquirlas = 3;
 const kQuestCristales = 1;
 const kQuestPrismaLevel = 30;
 
+/// Chance del Prisma del paquete desde [kQuestPrismaLevel] (antes seguro;
+/// materials_economy.md § 4.1).
+const kQuestPrismaChance = 0.5;
+
 /// Créditos del premio: base + por nivel del piso.
 const kQuestCreditsBase = 60;
 const kQuestCreditsPerLevel = 6;

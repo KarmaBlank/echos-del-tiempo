@@ -133,7 +133,7 @@ void main() {
       expect(t, contains('Dónde:'));
       expect(t, contains('Tienes:</span> ${p.material(m)}'));
     }
-    expect(help.material(CraftMaterial.esquirla, p), contains('10%'));
+    expect(help.material(CraftMaterial.esquirla, p), contains('8%'));
     expect(help.material(CraftMaterial.prisma, p), contains('Legendario 1'));
     expect(help.material(CraftMaterial.ancla, p), contains('Ecos'));
     expect(help.material(CraftMaterial.esencia, p),

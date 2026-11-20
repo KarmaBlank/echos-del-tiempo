@@ -30,6 +30,7 @@ import '../domain/skill_tip.dart';
 import '../domain/weapon_text.dart' show fmtNum;
 import 'item_grid.dart';
 import 'item_hover_tip.dart';
+import 'condense_panel.dart';
 import 'item_widgets.dart' show CellContent;
 import 'shop_sections.dart';
 import 'skill_chip.dart';
@@ -95,6 +96,7 @@ extension CraftOpText on CraftOp {
         CraftOp.salvageSelected => 'Desarmar elegidas',
         CraftOp.sellSelected => 'Vender elegidas',
         CraftOp.essence => 'Esencia del Abismo',
+        CraftOp.condense => 'Condensar materiales',
       };
 
   /// Explicación de 3-6 palabras para la fila del paso 2.
@@ -142,6 +144,9 @@ extension CraftOpText on CraftOp {
         CraftOp.essence =>
           'Solo legendarios: cada mod fijo se tira 2 veces y queda el mayor; '
               'nunca baja. Usa 1 Esencia del Abismo.',
+        CraftOp.condense =>
+          'Junta materiales bajos en uno alto, con créditos. Sin azar y sin '
+              'vuelta atrás.',
       };
 
   /// Texto del botón de confirmar.
@@ -160,6 +165,7 @@ extension CraftOpText on CraftOp {
           'DESARMAR',
         CraftOp.sell || CraftOp.sellAll || CraftOp.sellSelected => 'VENDER',
         CraftOp.essence => 'USAR ESENCIA',
+        CraftOp.condense => 'CONDENSAR',
       };
 
   bool get needsSource =>
@@ -226,6 +232,9 @@ class _CraftBenchState extends State<CraftBench> {
 
   /// Familia del filtro de bases al reforjar (`null` = todas).
   late String? _family = widget.shop.profile.classId;
+
+  /// CONDENSAR abierto (en lugar del paso 1; materials_economy.md § 4.3).
+  bool _condense = false;
 
   /// La destino antes de la última operación (para mostrar qué salió).
   ItemInstance? _lastBefore;
@@ -490,6 +499,12 @@ class _CraftBenchState extends State<CraftBench> {
     _target = target.uid;
     _enter = null;
     final body = switch (_step) {
+      0 when _condense => CondensePanel(
+          shop: shop,
+          onBack: () => setState(() {
+                _condense = false;
+                _focus.requestFocus();
+              })),
       0 => _weaponStep(p, items, target),
       1 => _opStep(p, target),
       _ => _confirmStep(p, target),
@@ -698,6 +713,10 @@ class _CraftBenchState extends State<CraftBench> {
       detail: PanelDetail(
         footer: [
           const KeyHints(back: null),
+          PanelButton('CONDENSAR',
+              key: const ValueKey('bench-condense'),
+              accent: ProtoColors.violet,
+              onPressed: () => setState(() => _condense = true)),
           PanelButton('ELEGIR ›',
               key: const ValueKey('bench-next'),
               accent: ProtoColors.green,

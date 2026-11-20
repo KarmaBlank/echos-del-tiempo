@@ -68,8 +68,9 @@ class LootRules {
   // Rareza
   // ------------------------------------------------------------------
 
-  /// Probabilidad base (Común 60%, Mágico 27%, Raro 10%, Épico 2.7%,
-  /// Legendario 0.3%).
+  /// Peso base (Común 60, Mágico 27, Raro 10, Épico 2.7, Legendario
+  /// 0.3). Es el de los Ecos; en zonas el Épico pesa [zoneEpicWeight]
+  /// (materials_economy.md § 4.1).
   static const baseRarityWeights = {
     Rarity.comun: 60.0,
     Rarity.magico: 27.0,
@@ -77,6 +78,11 @@ class LootRules {
     Rarity.epico: 2.7,
     Rarity.legendario: 0.3,
   };
+
+  /// Peso base del Épico fuera de un Eco (campaña, cofres, misiones):
+  /// 1.5 en vez de 2.7, para que el Épico crafteado valga
+  /// (materials_economy.md § 4.1).
+  static const zoneEpicWeight = 1.5;
 
   /// Cuánto multiplica el bonus de rareza a cada rareza (`× (1 + k·b)`).
   static const rarityBonusScale = {
@@ -102,13 +108,16 @@ class LootRules {
 
   /// Probabilidades normalizadas de cada rareza.
   /// [legendaryMult] multiplica el peso del Legendario (Atlas: Fortuna
-  /// de Eras, ecos_atlas.md § 5.3).
+  /// de Eras, ecos_atlas.md § 5.3). [eco] = dentro de un Eco (peso de
+  /// Épico de [baseRarityWeights]; si no, [zoneEpicWeight]).
   static Map<Rarity, double> rarityOdds(int zoneLevel, LootSource source,
-      {double extraBonus = 0, double legendaryMult = 1}) {
+      {double extraBonus = 0, double legendaryMult = 1, bool eco = false}) {
     final b = zoneBonus(zoneLevel) + sourceBonus(source) + extraBonus;
     final w = {
       for (final r in Rarity.values)
-        r: baseRarityWeights[r]! *
+        r: (r == Rarity.epico && !eco
+                ? zoneEpicWeight
+                : baseRarityWeights[r]!) *
             (1 + rarityBonusScale[r]! * b) *
             (r == Rarity.legendario ? legendaryMult : 1),
     };
@@ -117,9 +126,9 @@ class LootRules {
   }
 
   Rarity rollRarity(RandomSource rng, int zoneLevel, LootSource source,
-      {double extraBonus = 0, double legendaryMult = 1}) {
+      {double extraBonus = 0, double legendaryMult = 1, bool eco = false}) {
     final odds = rarityOdds(zoneLevel, source,
-        extraBonus: extraBonus, legendaryMult: legendaryMult);
+        extraBonus: extraBonus, legendaryMult: legendaryMult, eco: eco);
     var r = rng();
     for (final e in odds.entries) {
       if (r < e.value) return e.key;
@@ -245,12 +254,13 @@ class LootRules {
     LootSource source = LootSource.battle,
     double extraBonus = 0,
     double legendaryMult = 1,
+    bool eco = false,
     String uid = newUid,
   }) {
     final il = itemLevel.clamp(1, maxLevel);
     var r = rarity ??
         rollRarity(rng, il, source,
-            extraBonus: extraBonus, legendaryMult: legendaryMult);
+            extraBonus: extraBonus, legendaryMult: legendaryMult, eco: eco);
     if (r == Rarity.legendario && baseId == null) {
       final u = pickUnique(rng, il, family: family);
       if (u != null) return generateUnique(rng, u, il, uid: uid);
@@ -349,11 +359,12 @@ class LootRules {
         _ => (0, 0.0),
       };
 
-  /// Probabilidad base de cada material por drop (× fuente × zona).
+  /// Probabilidad base de cada material por drop (× fuente × zona;
+  /// materials_economy.md § 4.1).
   static const materialChance = {
-    CraftMaterial.esquirla: 0.10,
-    CraftMaterial.cristal: 0.04,
-    CraftMaterial.prisma: 0.015,
+    CraftMaterial.esquirla: 0.08,
+    CraftMaterial.cristal: 0.025,
+    CraftMaterial.prisma: 0.006,
   };
 
   static double materialMultiplier(LootSource s) => switch (s) {
@@ -389,6 +400,7 @@ class LootRules {
     double? chance,
     double extraBonus = 0,
     double legendaryMult = 1,
+    bool eco = false,
     int? levelCap,
   }) {
     final il = itemLevelFor(zoneLevel, source, cap: levelCap);
@@ -398,7 +410,8 @@ class LootRules {
         family: family,
         source: source,
         extraBonus: extraBonus,
-        legendaryMult: legendaryMult);
+        legendaryMult: legendaryMult,
+        eco: eco);
     if (rng() < (chance ?? weaponChance(source))) {
       out.add(LootDrop.item(gen()));
       final (more, maybe) = extraWeapons(source);

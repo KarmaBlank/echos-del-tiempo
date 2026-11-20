@@ -312,7 +312,8 @@ void main() {
       ]);
       s = openEco(e, s);
       final b = EcoRules.lootBonus(s.eco!, players: 3);
-      expect(b.quantity, closeTo(0.08 + 0.20, 1e-9));
+      expect(b.quantity,
+          closeTo(0.08 + EcoRules.tierBonus(s.eco!) + 0.20, 1e-9));
       final log = <SessionEvent>[];
       s = winFight(e, s, normalEnemy(s), log: log);
       // 2 repeticiones × (1 arma + 3 materiales) por jugador.

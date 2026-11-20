@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/widgets/action_card.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/armory_panel.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/shop_sections.dart';
@@ -138,8 +139,12 @@ void main() {
   });
 
   testWidgets('traer habilidad y quitar mod', (tester) async {
-    final c = await _bench(tester, lootWarrior());
+    final c = await _bench(
+        tester, lootWarrior(materials: const {CraftMaterial.cristal: 2}));
     PlayerProfile me() => c.view!.me!.profile;
+    // Hacia un Épico cuesta 2 Cristales: se ve en la tarjeta del paso 2.
+    await _pickWeapon(tester, 'e1');
+    expect(_why(tester, CraftOp.transferSkill), contains('2 Cristal'));
     await _choose(tester, 'e1', CraftOp.transferSkill);
     await _tap(tester, 'craft-source-c1');
     await _tap(tester, 'craft-pick-0');
@@ -147,6 +152,7 @@ void main() {
     await _tap(tester, 'craft-confirm');
     expect(me().itemByUid('e1')!.extraSkills, hasLength(1));
     expect(me().itemByUid('c1'), isNull);
+    expect(me().material(CraftMaterial.cristal), 0);
 
     await _choose(tester, 'r1', CraftOp.removeAffix);
     await _tap(tester, 'craft-pick-1');
@@ -275,5 +281,37 @@ void main() {
     final it = c.view!.me!.profile.itemByUid('c1')!;
     expect(it.rarity, Rarity.magico);
     expect(it.affixes, isNotEmpty);
+  });
+
+  testWidgets('condensar: cantidades, confirmación y sin vuelta atrás',
+      (tester) async {
+    final c = await _bench(
+        tester,
+        lootWarrior(
+            materials: const {CraftMaterial.esquirla: 25}, credits: 1000));
+    PlayerProfile me() => c.view!.me!.profile;
+    await _tap(tester, 'bench-condense');
+    expect(plain(tester, 'condense-have-cristal'), contains('alcanza para 2'));
+    expect(plain(tester, 'condense-have-prisma'), contains('alcanza para 0'));
+    // Sin Cristales suficientes, los botones del Prisma no se pueden usar.
+    expect(
+        tester
+            .widget<DsButton>(find.byKey(const ValueKey('condense-prisma-1')))
+            .onPressed,
+        isNull);
+    await _tap(tester, 'condense-cristal-all');
+    expect(plain(tester, 'condense-summary'), contains('Gastas 20 Esquirla'));
+    expect(plain(tester, 'condense-summary'), contains('200.'));
+    expect(plain(tester, 'condense-summary'), contains('No se puede deshacer'));
+    // Cancelar no gasta nada.
+    await _tap(tester, 'condense-cancel');
+    expect(me().material(CraftMaterial.esquirla), 25);
+    await _tap(tester, 'condense-cristal-1');
+    await _tap(tester, 'condense-go');
+    expect(me().material(CraftMaterial.esquirla), 15);
+    expect(me().material(CraftMaterial.cristal), 1);
+    expect(me().credits, 900);
+    await _tap(tester, 'condense-back');
+    expect(find.byKey(const ValueKey('bench-next')), findsOneWidget);
   });
 }

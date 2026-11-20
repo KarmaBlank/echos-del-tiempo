@@ -1,16 +1,19 @@
-﻿// ignore_for_file: avoid_print
-// Medición para docs/specs/materials_economy.md (BORRADOR). No es parte de
-// la suite. Correr con
+// ignore_for_file: avoid_print
+// Medición para docs/specs/materials_economy.md. No es parte de la suite.
+// Correr con
 //   flutter test tool/materiales_economia_measure_test.dart
 //
 // Arma cada misión de zona con el motor real (mismas semillas que
 // tool/hazanas_economia_measure_test.dart) y cuenta sus fuentes de loot
 // por piso: grupos que pide el objetivo, élites del mapa, jefe, cofres por
 // calidad, misión opcional y el botín de fin (rango A). Después tira esas
-// fuentes R veces con `LootRules.rollDrops` (armas reales) y con una copia
-// parametrizable de `rollMaterials` / `salvageYield` (para poder simular
-// la propuesta con el mismo código). Es el techo de una misión limpia, 1
-// jugador, todos los cofres abiertos y todas las armas desarmadas.
+// fuentes R veces con las fórmulas reales: `LootRules.rollDrops` (armas y
+// materiales), `LootRules.rollMaterials` (tiradas extra de cofre),
+// `CraftRules.salvageYield` (desarme de cada arma que cayó),
+// `CraftRules.upgradeRarityCost`, `CraftRules.condenseRecipe`,
+// `EcoRules.rollRepeats` / `EcoRules.tierQuantity` y `kQuestPrismaChance`.
+// Es el techo de una misión limpia, 1 jugador, la mitad de los cofres
+// abiertos y todas las armas no legendarias desarmadas.
 import 'dart:math' as math;
 
 import 'package:echos_del_tiempo/game_engine/data/achievements_catalog.dart';
@@ -21,6 +24,8 @@ import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/loot.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
+import 'package:echos_del_tiempo/game_engine/rules/craft_rules.dart';
+import 'package:echos_del_tiempo/game_engine/rules/eco_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/loot_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -28,78 +33,35 @@ import '../test/game_engine/session_test_helpers.dart';
 
 const _e = CraftMaterial.esquirla, _c = CraftMaterial.cristal, _p = CraftMaterial.prisma;
 
-/// Parámetros de economía (hoy = valores del motor).
-class Rates {
-  const Rates({
-    required this.name,
-    required this.chance,
-    required this.salvage,
-    required this.questPrisma,
-    required this.prismToEpic,
-    required this.cristalToEpic,
-    required this.skillMats,
-    this.tierQuantity = 0,
-    this.conv = const {},
-  });
-  final String name;
-  final Map<CraftMaterial, double> chance;
-
-  /// Desarme por rareza: seguro + chance de prisma.
-  final Map<Rarity, (Map<CraftMaterial, int>, double)> salvage;
-  final double questPrisma;
-  final int prismToEpic, cristalToEpic;
-
-  /// Materiales para traer una habilidad a un Épico.
-  final Map<CraftMaterial, int> skillMats;
-
-  /// + cantidad por tier de Eco por encima de T1.
-  final double tierQuantity;
-
-  /// Conversión: material → (cuántos del inferior, créditos).
-  final Map<CraftMaterial, (int, int)> conv;
-}
-
-const today = Rates(
-  name: 'HOY',
-  chance: {_e: 0.10, _c: 0.04, _p: 0.015},
-  salvage: {
-    Rarity.comun: ({_e: 1}, 0),
-    Rarity.magico: ({_e: 2}, 0), // + 25% cristal (abajo)
-    Rarity.raro: ({_c: 1, _e: 1}, 0.10),
-    Rarity.epico: ({_c: 2}, 0.35),
-    Rarity.legendario: ({_p: 1, _c: 2}, 0),
-  },
-  questPrisma: 1,
-  prismToEpic: 7, // 1 + 2 + 4
-  cristalToEpic: 1, // del 5.º al 6.º mod
-  skillMats: {},
-);
-
-const proposal = Rates(
-  name: 'PROPUESTA',
-  chance: {_e: 0.08, _c: 0.025, _p: 0.006},
-  salvage: {
-    Rarity.comun: ({_e: 1}, 0),
-    Rarity.magico: ({_e: 2}, 0),
-    Rarity.raro: ({_e: 2}, 0.05), // cristal pasa a 50% (abajo)
-    Rarity.epico: ({_c: 1}, 0.15),
-    Rarity.legendario: ({_p: 1, _c: 2}, 0),
-  },
-  questPrisma: 0.5,
-  prismToEpic: 10, // 1 + 3 + 6
-  cristalToEpic: 1,
-  skillMats: {_c: 2},
-  tierQuantity: 0.03,
-  conv: {_c: (10, 100), _p: (10, 500)},
-);
-
 class Tally {
   final m = <CraftMaterial, double>{_e: 0, _c: 0, _p: 0};
   final w = <Rarity, double>{for (final r in Rarity.values) r: 0};
-  void add(CraftMaterial k, double n) => m[k] = m[k]! + n;
+
+  /// Lo que da desarmar todo lo que cayó (valor esperado).
+  final sv = <CraftMaterial, double>{_e: 0, _c: 0, _p: 0};
+
+  void add(CraftMaterial k, double n) {
+    if (m.containsKey(k)) m[k] = m[k]! + n;
+  }
+
+  void item(ItemInstance i) {
+    w[i.rarity] = w[i.rarity]! + 1;
+    if (i.rarity == Rarity.legendario) return; // no se desarman
+    final y = CraftRules.salvageYield(i);
+    y.guaranteed.forEach((k, n) {
+      if (sv.containsKey(k)) sv[k] = sv[k]! + n;
+    });
+    for (final c in y.chances) {
+      if (sv.containsKey(c.material)) {
+        sv[c.material] = sv[c.material]! + c.chance * c.count;
+      }
+    }
+  }
+
   void scale(double k) {
     for (final x in m.keys) {
       m[x] = m[x]! * k;
+      sv[x] = sv[x]! * k;
     }
     for (final x in w.keys) {
       w[x] = w[x]! * k;
@@ -109,21 +71,73 @@ class Tally {
 
 const loot = LootRules();
 
-void _roll(Rates r, math.Random rng, Tally t, int zone, LootSource src,
-    {double? chance, double extraBonus = 0, double q = 0}) {
-  final reps = 1 + q;
-  var n = reps.floor() + (rng.nextDouble() < reps - reps.floor() ? 1 : 0);
+/// Prismas de Común a Épico (`CraftRules.upgradeRarityCost`).
+final int prismToEpic = [Rarity.comun, Rarity.magico, Rarity.raro]
+    .fold(0, (a, r) => a + CraftRules.upgradeRarityCost(r)!.$1);
+
+void _roll(math.Random rng, Tally t, int zone, LootSource src,
+    {double? chance, double extraBonus = 0, double q = 0, bool eco = false}) {
+  final n = EcoRules.rollRepeats(rng.nextDouble, q);
   for (var k = 0; k < n; k++) {
     for (final d in loot.rollDrops(rng.nextDouble,
-        zoneLevel: zone, source: src, chance: chance, extraBonus: extraBonus)) {
-      if (d.item != null) t.w[d.item!.rarity] = t.w[d.item!.rarity]! + 1;
+        zoneLevel: zone,
+        source: src,
+        chance: chance,
+        extraBonus: extraBonus,
+        eco: eco)) {
+      if (d.item != null) t.item(d.item!);
+      if (d.stack?.material case final mat?) t.add(mat, d.count.toDouble());
     }
-    final mult = LootRules.materialMultiplier(src) * (1 + LootRules.zoneBonus(zone));
-    for (final e in r.chance.entries) {
-      if (rng.nextDouble() < math.min(0.95, e.value * mult)) t.add(e.key, 1);
-    }
-    if (src == LootSource.boss) t.add(_e, 1);
   }
+}
+
+/// Lo que deja una misión (promedio por corrida): drops y desarme.
+Tally _mission(Sources src,
+    {int zone = 0, double q = 0, int runs = 400, bool eco = false}) {
+  final z = zone == 0 ? src.level : zone;
+  final rng = math.Random(src.id.hashCode ^ z ^ (q * 1000).round());
+  final t = Tally();
+  int fl(double x) => x.floor() + (rng.nextDouble() < x - x.floor() ? 1 : 0);
+  for (var run = 0; run < runs; run++) {
+    for (var i = 0; i < fl(src.battles); i++) {
+      _roll(rng, t, z, LootSource.battle, q: q, eco: eco);
+    }
+    for (var i = 0; i < fl(src.elites); i++) {
+      _roll(rng, t, z, LootSource.elite, q: q, eco: eco);
+    }
+    for (var i = 0; i < fl(src.boss); i++) {
+      _roll(rng, t, z, LootSource.boss, q: q, eco: eco);
+    }
+    for (final e in src.chests.entries) {
+      final d = kChestTiers[e.key]!;
+      for (var i = 0; i < fl(e.value); i++) {
+        _roll(rng, t, z, LootSource.chest,
+            chance: d.weaponChance, extraBonus: d.rarityBonus, q: q, eco: eco);
+        for (var k = 0; k < d.extraMaterialRolls; k++) {
+          for (final m
+              in loot.rollMaterials(rng.nextDouble, z, LootSource.chest).entries) {
+            t.add(m.key, m.value.toDouble());
+          }
+        }
+        t.add(_e, d.esquirlas.toDouble());
+      }
+    }
+    // Fin de misión, rango A.
+    _roll(rng, t, z, LootSource.mission,
+        chance: 0.7, extraBonus: 0.5, q: q, eco: eco);
+    // Misión opcional (una por misión).
+    t.add(_e, kQuestEsquirlas.toDouble());
+    t.add(_c, kQuestCristales.toDouble());
+    if (z >= kQuestPrismaLevel) t.add(_p, kQuestPrismaChance);
+    final armaW = kQuestRewardWeights.values.first /
+        kQuestRewardWeights.values.reduce((a, b) => a + b);
+    if (rng.nextDouble() < armaW) {
+      final rr = rng.nextDouble() < kQuestEpicChance ? Rarity.epico : Rarity.raro;
+      t.item(loot.generate(rng.nextDouble, itemLevel: z, rarity: rr));
+    }
+  }
+  t.scale(1 / runs);
+  return t;
 }
 
 /// Fuentes de una misión (por misión, sumando pisos).
@@ -182,64 +196,6 @@ List<Sources> _missions() {
   return out;
 }
 
-/// Lo que deja una misión (promedio por corrida), sin desarmar y desarmando.
-(Tally drops, Map<CraftMaterial, double> salvaged) _mission(
-    Rates r, Sources src, {int zone = 0, double q = 0, int runs = 400}) {
-  final z = zone == 0 ? src.level : zone;
-  final rng = math.Random(src.id.hashCode ^ z ^ (q * 1000).round());
-  final t = Tally();
-  int fl(double x) => x.floor() + (rng.nextDouble() < x - x.floor() ? 1 : 0);
-  for (var run = 0; run < runs; run++) {
-    for (var i = 0; i < fl(src.battles); i++) {
-      _roll(r, rng, t, z, LootSource.battle, q: q);
-    }
-    for (var i = 0; i < fl(src.elites); i++) {
-      _roll(r, rng, t, z, LootSource.elite, q: q);
-    }
-    for (var i = 0; i < fl(src.boss); i++) {
-      _roll(r, rng, t, z, LootSource.boss, q: q);
-    }
-    for (final e in src.chests.entries) {
-      final d = kChestTiers[e.key]!;
-      for (var i = 0; i < fl(e.value); i++) {
-        _roll(r, rng, t, z, LootSource.chest,
-            chance: d.weaponChance, extraBonus: d.rarityBonus, q: q);
-        for (var k = 0; k < d.extraMaterialRolls; k++) {
-          _roll(r, rng, t, z, LootSource.chest, chance: 0, q: q);
-        }
-        t.add(_e, d.esquirlas.toDouble());
-      }
-    }
-    // Fin de misión, rango A.
-    _roll(r, rng, t, z, LootSource.mission, chance: 0.7, extraBonus: 0.5, q: q);
-    // Misión opcional (una por misión).
-    t.add(_e, kQuestEsquirlas.toDouble());
-    t.add(_c, kQuestCristales.toDouble());
-    if (z >= kQuestPrismaLevel) t.add(_p, r.questPrisma);
-    final armaW = kQuestRewardWeights.values.first /
-        kQuestRewardWeights.values.reduce((a, b) => a + b);
-    if (rng.nextDouble() < armaW) {
-      final rr = rng.nextDouble() < kQuestEpicChance ? Rarity.epico : Rarity.raro;
-      t.w[rr] = t.w[rr]! + 1;
-    }
-  }
-  t.scale(1 / runs);
-  final sv = <CraftMaterial, double>{_e: 0, _c: 0, _p: 0};
-  for (final e in t.w.entries) {
-    if (e.key == Rarity.legendario) continue; // los legendarios no se desarman
-    final (safe, pc) = r.salvage[e.key]!;
-    final hi = z >= 25 ? 1 : 0;
-    for (final s in safe.entries) {
-      final extra = s.key == _e && e.key != Rarity.epico ? hi : 0;
-      sv[s.key] = sv[s.key]! + e.value * (s.value + extra);
-    }
-    if (e.key == Rarity.epico) sv[_c] = sv[_c]! + e.value * hi;
-    sv[_p] = sv[_p]! + e.value * pc;
-    if (e.key == Rarity.magico) sv[_c] = sv[_c]! + e.value * 0.25;
-    if (e.key == Rarity.raro && r.name != 'HOY') sv[_c] = sv[_c]! + e.value * 0.5;
-  }
-  return (t, sv);
-}
 
 String _f(double x) => x.toStringAsFixed(x < 10 ? 2 : 1);
 
@@ -251,76 +207,67 @@ void main() {
       ach += a.reward;
     }
     print('hazañas: esq ${ach.esquirlas} cri ${ach.cristales} pri ${ach.prismas}');
-    for (final r in [today, proposal]) {
-      print('\n===== ${r.name} =====');
-      print('mis  nv | bat eli cof | esq cri pri (drop) | esq cri pri (desarme) | Rar Épi Leg');
-      final cum = {_e: 0.0, _c: 0.0, _p: 0.0};
-      final perMission = <List<double>>[];
-      for (final s in ms) {
-        final (t, sv) = _mission(r, s);
-        final tot = {for (final k in cum.keys) k: t.m[k]! + sv[k]!};
-        for (final k in cum.keys) {
-          cum[k] = cum[k]! + tot[k]!;
-        }
-        perMission.add([tot[_e]!, tot[_c]!, tot[_p]!, t.w[Rarity.legendario]!, t.w[Rarity.epico]!]);
-        final ch = s.chests.values.reduce((a, b) => a + b);
-        print('${s.id.padRight(4)} ${s.level.toString().padLeft(2)} | '
-            '${_f(s.battles)} ${_f(s.elites)} ${_f(ch)} | '
-            '${_f(t.m[_e]!)} ${_f(t.m[_c]!)} ${_f(t.m[_p]!)} | '
-            '${_f(sv[_e]!)} ${_f(sv[_c]!)} ${_f(sv[_p]!)} | '
-            '${_f(t.w[Rarity.raro]!)} ${_f(t.w[Rarity.epico]!)} ${_f(t.w[Rarity.legendario]!)}');
+    print('Común → Épico: $prismToEpic Prismas');
+    print('mis  nv | bat eli cof | esq cri pri (drop) | esq cri pri (desarme) | Rar Épi Leg');
+    final cum = {_e: 0.0, _c: 0.0, _p: 0.0};
+    final perMission = <List<double>>[];
+    for (final s in ms) {
+      final t = _mission(s);
+      final tot = {for (final k in cum.keys) k: t.m[k]! + t.sv[k]!};
+      for (final k in cum.keys) {
+        cum[k] = cum[k]! + tot[k]!;
       }
-      print('campaña completa (1 vez cada misión): '
-          'esq ${_f(cum[_e]!)} cri ${_f(cum[_c]!)} pri ${_f(cum[_p]!)} '
-          '(+ hazañas esq ${ach.esquirlas} cri ${ach.cristales} pri ${ach.prismas})');
-      // Hitos: misiones de su zona para juntar un Épico desde Común.
-      for (final band in [
-        ('temprano', 0, ms.length ~/ 3),
-        ('medio', ms.length ~/ 3, 2 * ms.length ~/ 3),
-        ('tardío', 2 * ms.length ~/ 3, ms.length),
-      ]) {
-        final sl = perMission.sublist(band.$2, band.$3);
-        double av(int i) => sl.map((x) => x[i]).reduce((a, b) => a + b) / sl.length;
-        final pri = av(2), cri = av(1), esq = av(0);
-        final epic = r.prismToEpic / pri;
-        // Techo con conversión: todo lo bajo pasa a Prisma (menos una
-        // reserva de 10 Esquirlas y 2 Cristales por misión para usar).
-        var conv = '';
-        if (r.conv.isNotEmpty) {
-          final cn = r.conv[_c]!.$1, pn = r.conv[_p]!.$1;
-          final eff = pri +
-              math.max(0, esq - 10) / (cn * pn) +
-              math.max(0, cri - 2) / pn;
-          conv = ' | con conversión ≈ ${_f(r.prismToEpic / eff)} misiones';
-        }
-        print('  ${band.$1}: por misión esq ${_f(esq)} cri ${_f(cri)} pri ${_f(pri)} '
-            '→ Épico (${r.prismToEpic} pri) ≈ ${_f(epic)} misiones; '
-            'leg/misión ${_f(av(3))} (≈ ${_f(1 / math.max(1e-6, av(3)))} misiones)'
-            '; Épicos que caen/misión ${_f(av(4))}$conv');
-      }
-      // Endgame: zona 10 a nivel 50 como Eco, con cantidad de mods y tier.
-      final last = ms.last;
-      for (final (label, mods, tier) in [
-        ('Eco T1 común (0 mods)', 0.0, 1),
-        ('Eco T1 raro (~2.5 mods)', 0.16, 1),
-        ('Eco T8 raro', 0.16, 8),
-        ('Eco T16 legendario (~4.5 mods)', 0.29, 16),
-      ]) {
-        final q = mods + r.tierQuantity * (tier - 1);
-        final (t, sv) = _mission(r, last, zone: 50, q: q, runs: 300);
-        final pri = t.m[_p]! + sv[_p]!;
-        print('  $label q=+${(q * 100).round()}%: esq ${_f(t.m[_e]! + sv[_e]!)} '
-            'cri ${_f(t.m[_c]! + sv[_c]!)} pri ${_f(pri)} leg ${_f(t.w[Rarity.legendario]!)} '
-            '→ Épico ≈ ${_f(r.prismToEpic / pri)} Ecos, '
-            'Legendario ≈ ${_f(1 / math.max(1e-6, t.w[Rarity.legendario]!))} Ecos');
-      }
-      // Conversión: cuántos prismas extra salen de lo que sobra.
-      if (r.conv.isNotEmpty) {
-        final (cn, cc) = r.conv[_c]!;
-        final (pn, pc) = r.conv[_p]!;
-        print('  conversión: $cn esq + ₵$cc → 1 cri; $pn cri + ₵$pc → 1 pri '
-            '(1 pri = ${cn * pn} esq + ₵${cc * pn + pc})');
-      }
+      perMission.add([tot[_e]!, tot[_c]!, tot[_p]!, t.w[Rarity.legendario]!, t.w[Rarity.epico]!]);
+      final ch = s.chests.values.reduce((a, b) => a + b);
+      print('${s.id.padRight(4)} ${s.level.toString().padLeft(2)} | '
+          '${_f(s.battles)} ${_f(s.elites)} ${_f(ch)} | '
+          '${_f(t.m[_e]!)} ${_f(t.m[_c]!)} ${_f(t.m[_p]!)} | '
+          '${_f(t.sv[_e]!)} ${_f(t.sv[_c]!)} ${_f(t.sv[_p]!)} | '
+          '${_f(t.w[Rarity.raro]!)} ${_f(t.w[Rarity.epico]!)} ${_f(t.w[Rarity.legendario]!)}');
     }
+    print('campaña completa (1 vez cada misión): '
+        'esq ${_f(cum[_e]!)} cri ${_f(cum[_c]!)} pri ${_f(cum[_p]!)} '
+        '(+ hazañas esq ${ach.esquirlas} cri ${ach.cristales} pri ${ach.prismas})');
+    final (_, cn, cc) = CraftRules.condenseRecipe(_c)!;
+    final (_, pn, pc) = CraftRules.condenseRecipe(_p)!;
+    // Techo con conversión: todo lo bajo pasa a Prisma (menos una reserva
+    // de 10 Esquirlas y 2 Cristales por misión para usar).
+    double withConv(double esq, double cri, double pri) =>
+        pri + math.max(0, esq - 10) / (cn * pn) + math.max(0, cri - 2) / pn;
+    for (final band in [
+      ('temprano', 0, ms.length ~/ 3),
+      ('medio', ms.length ~/ 3, 2 * ms.length ~/ 3),
+      ('tardío', 2 * ms.length ~/ 3, ms.length),
+    ]) {
+      final sl = perMission.sublist(band.$2, band.$3);
+      double av(int i) => sl.map((x) => x[i]).reduce((a, b) => a + b) / sl.length;
+      final pri = av(2), cri = av(1), esq = av(0);
+      print('  ${band.$1}: por misión esq ${_f(esq)} cri ${_f(cri)} pri ${_f(pri)} '
+          '→ Épico ≈ ${_f(prismToEpic / pri)} misiones '
+          '(con conversión ≈ ${_f(prismToEpic / withConv(esq, cri, pri))}); '
+          'leg/misión ${_f(av(3))} (≈ ${_f(1 / math.max(1e-6, av(3)))} misiones)'
+          '; Épicos que caen/misión ${_f(av(4))}');
+    }
+    // Endgame: zona 10 a nivel 50 como Eco, con cantidad de mods y tier.
+    final last = ms.last;
+    for (final (label, mods, tier) in [
+      ('Eco T1 común (0 mods)', 0.0, 1),
+      ('Eco T1 raro (~2.5 mods)', 0.16, 1),
+      ('Eco T8 raro', 0.16, 8),
+      ('Eco T16 legendario (~4.5 mods)', 0.29, 16),
+    ]) {
+      final q = mods + EcoRules.tierQuantity * (tier - 1);
+      final t = _mission(last, zone: 50, q: q, runs: 300, eco: true);
+      final esq = t.m[_e]! + t.sv[_e]!, cri = t.m[_c]! + t.sv[_c]!;
+      final pri = t.m[_p]! + t.sv[_p]!;
+      print('  $label q=+${(q * 100).round()}%: esq ${_f(esq)} '
+          'cri ${_f(cri)} pri ${_f(pri)} épi ${_f(t.w[Rarity.epico]!)} '
+          'leg ${_f(t.w[Rarity.legendario]!)} '
+          '→ Épico ≈ ${_f(prismToEpic / pri)} Ecos '
+          '(con conversión ≈ ${_f(prismToEpic / withConv(esq, cri, pri))}), '
+          'Legendario ≈ ${_f(1 / math.max(1e-6, t.w[Rarity.legendario]!))} Ecos');
+    }
+    print('  conversión: $cn esq + ₵$cc → 1 cri; $pn cri + ₵$pc → 1 pri '
+        '(1 pri = ${cn * pn} esq + ₵${cc * pn + pc})');
   });
 }

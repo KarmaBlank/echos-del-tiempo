@@ -1,6 +1,9 @@
-# Economía de materiales — BORRADOR
+# Economía de materiales
 
-> Estado: **borrador para revisar con el dueño**. No cambia código del juego.
+> Estado: **APROBADO** por el dueño e **implementado en v0.15.0** (rama
+> `feat/materiales`). Respuestas a las preguntas en § 5; números finales
+> medidos contra el código real en § 7. Las tablas de §§ 1–2 son el
+> estado previo (v0.14), como referencia.
 > Números medidos con `tool/materiales_economia_measure_test.dart`
 > (`flutter test tool/materiales_economia_measure_test.dart`), motor real,
 > mismas semillas que `tool/hazanas_economia_measure_test.dart`.
@@ -88,6 +91,10 @@ Campaña completa (cada misión una vez): **611 Esquirlas, 133 Cristales,
 | Prisma | 1.5% | **0.6%** |
 
 - Misión opcional: Prisma (nv ≥ 30) pasa de seguro a **50%**.
+- Épico que cae: peso base **2.7 → 1.5** fuera de un Eco
+  (`LootRules.zoneEpicWeight`; zonas, cofres, misiones, Pruebas, Abismo).
+  Dentro de un Eco sigue 2.7 (`eco: true`), así el endgame no pierde
+  Épicos y el Legendario no se toca (§ 7: cumple la meta sin cambiarlo).
 - Desarme: Raro `1 Cristal + 1 Esq + 10% Prisma` → `2 Esq + 50% Cristal + 5% Prisma`; Épico `2 Cristales + 35% Prisma` → `1 Cristal (+1 desde nv 25) + 15% Prisma`. Mágico, Común y Legendario igual.
 - Hazañas: sin cambio (11 Prismas pasan a ser ~1 Épico extra, un premio que se nota).
 
@@ -147,26 +154,78 @@ La conversión es el tope (todo convertido, reserva de 10 Esq y 2 Cri por
 misión); un jugador real queda entre las dos columnas, es decir **Épico ≈
 4–6 misiones medias y 3–6 tardías**, dentro de la meta.
 
-## 5. Preguntas abiertas para el dueño
+## 5. Decisiones del dueño (aprobadas)
 
-1. **¿Bajamos también el drop directo de Épicos?** Hoy caen ~1.4 por misión
-   tardía; mientras eso siga, encarecer el Prisma solo afecta a quien quiere
-   *esa* arma con *esa* base. *Recomendación:* bajar el peso base del Épico
-   de 2.7 a ~1.5 en zonas (no en jefes de Eco) y medirlo en otra pasada.
-2. **¿La conversión cuesta créditos?** *Recomendación:* sí (₵100 / ₵500),
-   para que sea un sumidero de créditos y no un atajo gratis; sin azar.
-3. **¿Traer una habilidad con Cristales o con Prismas?** *Recomendación:*
-   2 Cristales: pesa sin competir con la rareza; Prisma lo volvería caro de más.
-4. **¿Escalones de riesgo también en la campaña** (p. ej. "modo Eco" para
-   misiones de zona con mods opcionales)? *Recomendación:* no por ahora;
-   que el riesgo alto sea el endgame (Ecos con tier que paga). Revisar
-   tras jugar v0.15.
-5. **¿Subir el tope de pila (99) o dejarlo?** *Recomendación:* dejarlo;
-   con la conversión deja de doler y sigue empujando a gastar.
+1. **Bajar el drop directo de Épicos**: SÍ. Peso base del Épico 2.7 →
+   1.5 en zonas (no en Ecos). Simulado (§ 7): con 1.5 se cumple la meta;
+   no hizo falta tocar el Legendario.
+2. **Condensar cuesta créditos**: SÍ, ₵100 (→ Cristal) y ₵500 (→ Prisma)
+   por unidad; sin azar, irreversible, host-autoritativo.
+3. **Traer habilidad**: 2 Cristales de Era hacia un arma Rara o mejor
+   (Común / Mágico solo créditos).
+4. **Escalones de riesgo**: solo en Ecos: +3% de cantidad por tier sobre
+   T1 (`EcoRules.tierQuantity`). Sin modo de riesgo en la campaña.
+5. **Tope de pila**: se mantiene en 99 (Condensar no deja pasarlo).
 
-## 6. Fuera de alcance / pendiente
+## 6. Implementación (v0.15.0)
 
-- Implementación (ops, UI de Condensar, migración de perfiles no hace falta:
-  solo cambian tablas).
+- `LootRules.materialChance` 8% / 2.5% / 0.6%; `LootRules.zoneEpicWeight`
+  1.5 y el parámetro `eco` en `rarityOdds` / `rollRarity` / `generate` /
+  `rollDrops` (el `SessionEngine` pasa `eco: _eco != null`).
+- `kQuestPrismaChance = 0.5` (misión opcional, desde nivel 30).
+- `CraftRules.salvageYield`: Raro y Épico nuevos (§ 4.1).
+- `CraftRules.upgradeRarityCost` 1 / 3 / 6; `EcoRules.prismCost` 1 / 2 / 4.
+- `CraftRules.transferSkillMaterials` (2 Cristales a Raro+): lo cobra
+  `transferSkill` (el host lo valida con `_payError`) y la UI lo muestra
+  desde la misma vista previa (`CraftResult.materials`: chip del paso 2,
+  `Cuesta:` del tooltip y GASTAS del paso 3).
+- `CraftOp.condense` + `CraftRules.condense` / `condenseRecipe` /
+  `condenseMax`; UI en la mesa de fusión (`CondensePanel`, panels.md §
+  "FUSIÓN (v0.15: CONDENSAR)").
+- `EcoRules.tierBonus` dentro de `EcoRules.lootBonus` (el tooltip del
+  Eco ya suma el tier).
+- **Red**: `CraftAction` no cambia de forma (`t: craft`, `op` por
+  nombre), pero hay un valor nuevo de `op`: `condense` (`w` = material,
+  `i` = cuántos). Un host viejo no lo entiende: requiere subir
+  `kProtocolVersion` al integrar.
+- Sin migración de perfiles (solo cambian tablas).
+
+## 7. Resultado medido (código real, v0.15.0)
+
+`flutter test tool/materiales_economia_measure_test.dart` (usa
+`LootRules.rollDrops`, `CraftRules.salvageYield`,
+`CraftRules.upgradeRarityCost`, `CraftRules.condenseRecipe`,
+`EcoRules.tierQuantity` y `kQuestPrismaChance`; ninguna copia).
+
+| Tramo | Esquirlas | Cristales | Prismas | Épicos que caen | Legendario |
+|---|---|---|---|---|---|
+| Temprano (m1–z4) | 39 | 5.6 | 0.58 | 0.60 | 1 cada 10.3 |
+| Medio (z5–z7) | 64 | 8.4 | 0.94 | 0.84 | 1 cada 6.6 |
+| Tardío (z8–z10) | 81 | 9.9 | 1.58 | 0.91 | 1 cada 5.5 |
+| Eco T1, 0 mods | 103 | 14.3 | 2.06 | 2.0 | 1 cada 5.4 |
+| Eco T8, ~2.5 mods (+37%) | 133 | 18.3 | 2.49 | 2.5 | 1 cada 2.7 |
+| Eco T16, ~4.5 mods (+74%) | 161 | 23.0 | 3.11 | 3.2 | 1 cada 2.5 |
+
+| Hito | Meta | Hoy (v0.14) | v0.15 solo drops | v0.15 + condensar todo |
+|---|---|---|---|---|
+| Épico crafteado, temprano | — | 4.6 | 17.1 | 8.1 |
+| Épico crafteado, medio | 5–8 | 2.9 | 10.7 | 4.7 |
+| Épico crafteado, tardío | 3–4 | 1.9 | 6.3 | 3.3 |
+| Épico crafteado, Eco T1 | 3–5 | 1.5 | 4.8 | 2.4 |
+| Épico crafteado, Eco T8 | — | 1.3 | 4.0 | 1.9 |
+| Épico crafteado, Eco T16 | ≈ 3 | 1.2 | 3.2 | 1.5 |
+| Legendario, tardío | ≈ 6 | 6 | 5.5 | — |
+| Legendario, Eco T16 | ≈ 2.5 | 3.3 | **2.5** | — |
+| Épicos que caen / misión tardía | bajar | 1.4 | **0.91** | — |
+| Campaña: Prismas / Cristales | — | 27 / 133 | 10.9 / 81 (+11 / 11 hazañas) | — |
+
+Un jugador real queda entre las dos columnas (condensa parte del
+excedente y gasta Esquirlas y Cristales en re-tirar y agregar mods):
+Épico ≈ 5–8 misiones medias, 3–6 tardías y 3–5 Ecos. Condensar todo un
+tramo tardío cuesta ≈ ₵1500 por Prisma, del orden de lo que paga una
+misión: acelera pero no reemplaza jugar.
+
+## 8. Fuera de alcance / pendiente
+
 - Créditos por misión (ya medidos en achievements.md § 4) no se tocan acá.
 - El script asume 1 jugador; en grupo cada uno tira su propio botín.

@@ -24,7 +24,7 @@ PlayerProfile _rich({int credits = 10000, Map<CraftMaterial, int>? mats}) =>
           const {
             CraftMaterial.esquirla: 2,
             CraftMaterial.cristal: 1,
-            CraftMaterial.prisma: 5,
+            CraftMaterial.prisma: 7,
           },
       items: const [
         ItemInstance(uid: 'c', baseId: 'espada_bronce'),
@@ -166,7 +166,8 @@ void main() {
     });
 
     test('arma inicial: la última no se sacrifica', () {
-      final p = _rich().copyWith(equipped: 'a');
+      final p =
+          _rich(mats: const {CraftMaterial.cristal: 2}).copyWith(equipped: 'a');
       expect(_craft.transferSkill(p, 'a', 'c', 'giro').error, 'Arma inicial');
       final two = p.copyWith(items: [
         ...p.items,
@@ -189,8 +190,9 @@ void main() {
 
     test('trasladar habilidad: cupos por rareza, el jugador elige el reemplazo',
         () {
-      final p = _rich();
+      final p = _rich(mats: const {CraftMaterial.cristal: 4});
       final r = _craft.transferSkill(p, 'c', 'b', 'sismo');
+      expect(r.materials, isEmpty, reason: 'Común: sin materiales');
       expect(r.after!.extraSkills, ['sismo']);
       expect(r.credits, 200, reason: 'Común: la fusión vieja');
       final q = r.profile!;
@@ -206,6 +208,8 @@ void main() {
       final e2 = _craft.transferSkill(e1, 'f', 'a', 'ignea');
       expect(e2.after!.extraSkills, ['sismo', 'ignea']);
       expect(e2.replaced, isNull);
+      expect(e2.materials, {CraftMaterial.cristal: 2});
+      expect(e2.profile!.material(CraftMaterial.cristal), 0);
       expect(_craft.transferSkill(p, 'c', 'b', 'nada').error, 'Elige una habilidad');
       expect(progression.weaponSkills(q), ['giro', 'embestida', 'sismo']);
     });
@@ -261,7 +265,7 @@ void main() {
       expect(m.after!.rarity, Rarity.magico);
       expect(m.after!.affixes, isNotEmpty);
       expect(m.credits, 100);
-      expect(m.profile!.material(CraftMaterial.prisma), 4);
+      expect(m.profile!.material(CraftMaterial.prisma), 6);
       p = m.profile!;
       final e = _craft.upgradeRarity(p, 'a', random: mulberry32(2));
       expect(e.after!.rarity, Rarity.epico);
@@ -297,7 +301,9 @@ void main() {
       expect(CraftRules.tierCost(5), 1);
       expect(CraftRules.tierCost(1), 8);
       expect(CraftRules.transferSkillCost(Rarity.comun), 200);
-      expect(CraftRules.upgradeRarityCost(Rarity.raro), (4, 800));
+      expect(CraftRules.upgradeRarityCost(Rarity.comun), (1, 100));
+      expect(CraftRules.upgradeRarityCost(Rarity.magico), (3, 300));
+      expect(CraftRules.upgradeRarityCost(Rarity.raro), (6, 800));
       expect(CraftRules.forgeCost(kWeapons['espada_bronce']!, Rarity.comun, 0), 44);
     });
   });
