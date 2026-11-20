@@ -9,6 +9,6 @@ cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 3.0
+  power: 3.35
   critBonus: 1.0
 fx: ult2_golpeMaestro

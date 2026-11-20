@@ -9,6 +9,6 @@ cost: 80
 pulse: 0
 skill:
   kind: physical
-  power: 2.2
+  power: 3.57
   execute: 0.35
 fx: ult2_remateEco

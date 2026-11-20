@@ -9,7 +9,7 @@ cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 0.55
+  power: 0.64
   hits: 6
   critBonus: 0.25
   status: {"kind":"poison","stacks":2}

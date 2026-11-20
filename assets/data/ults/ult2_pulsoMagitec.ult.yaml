@@ -9,7 +9,7 @@ cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 1.4
+  power: 1.74
   allTargets: true
   status: {"kind":"charged","stacks":1}
   pulseParty: 2

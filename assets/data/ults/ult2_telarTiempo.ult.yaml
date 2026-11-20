@@ -9,7 +9,7 @@ cost: 100
 pulse: 0
 skill:
   kind: magical
-  power: 1.2
+  power: 1.98
   allTargets: true
   status: {"kind":"poison","stacks":2}
   debuffs: [{"stat":"speed","value":-0.2,"turns":2}]

@@ -9,7 +9,7 @@ cost: 100
 pulse: 0
 skill:
   kind: magical
-  power: 1.2
+  power: 1.95
   allTargets: true
   status: {"kind":"wet","stacks":1}
   extraStatuses: [{"kind":"freeze","stacks":1}]

@@ -9,7 +9,7 @@ cost: 80
 pulse: 0
 skill:
   kind: heal
-  power: 0.5
+  power: 0.91
   cleanse: 2
   protect: true
   allyShield: 0.5

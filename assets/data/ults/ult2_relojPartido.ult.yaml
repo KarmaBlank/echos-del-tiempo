@@ -9,7 +9,7 @@ cost: 100
 pulse: 0
 skill:
   kind: magical
-  power: 1.0
+  power: 1.51
   delay: 1.0
   allTargets: true
   advanceAllies: 0.3

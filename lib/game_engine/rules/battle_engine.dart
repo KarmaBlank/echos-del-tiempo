@@ -55,7 +55,11 @@ SkillDef? ultimateOf(Combatant c,
   }
   // Mod "ULT: <nombre>" / legendario (branch_ults.md) o base propia.
   final own = ownWeaponUlt(c.build?.equippedWeapon.id, c.build?.item);
-  if (own != null) return UltRules.leveled(own, b?.ultLevel ?? 1);
+  // Una ULT v2 que trae el arma sale del catálogo (con el parche de
+  // balance), no del registro fijo.
+  if (own != null) {
+    return UltRules.leveled(catalog.playerUlts[own.id] ?? own, b?.ultLevel ?? 1);
+  }
   return catalog.ultimates[c.weaponType];
 }
 

@@ -9,7 +9,7 @@ cost: 100
 pulse: 0
 skill:
   kind: magical
-  power: 1.0
+  power: 1.76
   allTargets: true
   perAlly: 0.25
 fx: ult2_coroPrestado

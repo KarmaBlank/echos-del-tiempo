@@ -9,7 +9,7 @@ cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 0.35
+  power: 0.51
   hits: 8
   pierce: 0.3
 fx: ult2_lluviaEcos

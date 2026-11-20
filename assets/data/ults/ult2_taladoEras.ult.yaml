@@ -9,7 +9,7 @@ cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 1.7
+  power: 2.03
   delay: 0.2
   allTargets: true
   breakBonus: 0.6

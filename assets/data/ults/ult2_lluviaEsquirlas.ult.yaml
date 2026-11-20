@@ -9,7 +9,7 @@ cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 1.5
+  power: 1.81
   allTargets: true
   ultDrain: 30.0
 fx: ult2_lluviaEsquirlas

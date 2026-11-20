@@ -9,6 +9,6 @@ cost: 100
 pulse: 0
 skill:
   kind: heal
-  power: 1.2
+  power: 1.35
   revive: 0.4
 fx: ult2_lamentoPrestado

@@ -9,7 +9,7 @@ cost: 80
 pulse: 0
 skill:
   kind: magical
-  power: 1.0
+  power: 1.77
   allTargets: true
   status: {"kind":"poison","stacks":3}
 fx: ult2_diluvioMenor

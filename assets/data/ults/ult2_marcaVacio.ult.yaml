@@ -9,7 +9,7 @@ cost: 80
 pulse: 0
 skill:
   kind: magical
-  power: 2.4
+  power: 2.77
   status: {"kind":"charged","stacks":1}
   debuffs: [{"stat":"damageTaken","value":0.3,"turns":3}]
 fx: ult2_marcaVacio

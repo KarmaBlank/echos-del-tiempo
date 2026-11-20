@@ -9,5 +9,5 @@ cost: 100
 pulse: 0
 skill:
   kind: physical
-  delayedHit: 4.0
+  delayedHit: 4.92
 fx: ult2_loQueSera

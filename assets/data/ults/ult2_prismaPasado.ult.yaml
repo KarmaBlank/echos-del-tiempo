@@ -9,7 +9,7 @@ cost: 100
 pulse: 0
 skill:
   kind: magical
-  power: 1.6
+  power: 2.03
   allTargets: true
   detonate: 0.5
 fx: ult2_prismaPasado

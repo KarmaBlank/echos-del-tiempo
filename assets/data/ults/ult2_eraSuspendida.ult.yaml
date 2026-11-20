@@ -9,7 +9,7 @@ cost: 100
 pulse: 0
 skill:
   kind: magical
-  power: 1.6
+  power: 3.16
   delay: 1.4
   ultDrain: 50.0
 fx: ult2_eraSuspendida
