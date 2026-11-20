@@ -34,6 +34,7 @@ import 'clean_selection.dart';
 import 'consumables_bar.dart';
 import 'inventory_action_menu.dart';
 import 'inventory_sort_button.dart';
+import 'item_hover_tip.dart';
 import 'item_widgets.dart' hide PixelIcon;
 import 'shop_sections.dart';
 import 'weapon_compare_view.dart';
@@ -222,42 +223,22 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       {bool equipped = false, bool focused = false}) {
     final it = c.item;
     final mine = owner.id == me.id;
-    final using = shop.rules.equippedItem(me.profile)?.uid;
     if (it == null) {
       return RetroTooltip(
           message: _tooltip(me.profile, c, attrs),
           keyboardFocus: focused,
           child: child);
     }
-    if (mine && it.uid == using) {
-      // La equipada: resumen + secciones plegables (ui_style.md §
-      // "Tooltips cortos").
-      final parts = itemTipParts(shop.rules, it,
-          level: me.profile.level, attributes: attrs, equipped: equipped);
-      return RetroHoverCard(
-        placement: RetroTipPlacement.below,
-        gap: 4,
-        interactive: true,
-        pinOnClick: true,
-        hint: _tipHint,
-        keyboardFocus: focused,
-        builder: (ctx) => RetroTipFolds(
-            key: const ValueKey('inv-tip-folds'),
-            summary: parts.summary + _fitLine(it),
-            sections: parts.sections,
-            maxWidth: RetroType.width(ctx, RetroHoverCard.textWidth)),
-        child: child,
-      );
-    }
     final fit = buildFitMarkup(_fit(it));
-    final card = HoverCompareCard(
+    return itemHoverTip(
         rules: shop.rules,
         viewer: me.profile,
         item: it,
         attributes: attrs,
         ownerName: mine ? null : owner.name,
-        // Del ancho de la ficha: antes iba en una Column con `stretch`
-        // y la caja tomaba todo el ancho de la pantalla.
+        equipped: equipped,
+        focused: focused,
+        summaryExtra: _fitLine(it),
         footer: fit == null
             ? null
             : Container(
@@ -265,19 +246,10 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                 padding: const EdgeInsets.all(6),
                 color: ProtoColors.bg,
                 child: ProtoText(fit),
-              ));
-    return RetroHoverCard(
-      interactive: true,
-      pinOnClick: true,
-      hint: _tipHint,
-      keyboardFocus: focused,
-      builder: (_) => card,
-      child: child,
-    );
+              ),
+        child: child);
   }
 
-  /// Ayuda al pie de la ficha del mouse (ui_style.md § "Tooltips cortos").
-  static const _tipHint = 'Alt: detalle · Shift: comparar · clic: fijar';
 
   /// Arma no equipada bajo el mouse o el cursor de teclado (franja de
   /// cambios, panels.md § "Inventario").
