@@ -50,6 +50,14 @@ class EcoRules {
   /// Bonus de cantidad por jugador extra (§ 7).
   static const partyQuantity = 0.10;
 
+  /// Bonus de cantidad por tier sobre T1 (materials_economy.md § 4.4):
+  /// el riesgo alto paga (T8 +21%, T16 +45%).
+  static const tierQuantity = 0.03;
+
+  /// Cantidad que suma el tier de [e].
+  static double tierBonus(EcoItem e) =>
+      tierQuantity * math.max(0, e.tier - EcoItem.minTier);
+
   // ------------------------------------------------------------------
   // Texto
   // ------------------------------------------------------------------
@@ -84,12 +92,14 @@ class EcoRules {
     return (quantity: q / 100 * k, rarity: r / 100 * k);
   }
 
-  /// Bonus total dentro del Eco: mods + Atlas + 10% por jugador extra.
+  /// Bonus total dentro del Eco: mods + tier ([tierBonus]) + Atlas + 10%
+  /// por jugador extra.
   static EcoBonus lootBonus(EcoItem e,
       {AtlasEffects atlas = AtlasEffects.none, int players = 1}) {
     final m = modBonus(e, modPower: atlas.modPower);
     return (
       quantity: m.quantity +
+          tierBonus(e) +
           atlas.quantity +
           partyQuantity * math.max(0, players - 1),
       rarity: m.rarity + atlas.rarity,
@@ -149,7 +159,8 @@ class EcoRules {
     String uid = LootRules.newUid,
   }) {
     final r =
-        rarity ?? const LootRules().rollRarity(rng, LootRules.maxLevel, source);
+        rarity ?? const LootRules()
+            .rollRarity(rng, LootRules.maxLevel, source, eco: true);
     final zone = rollZone(rng, atlas: atlas);
     final boss = catalog.zones[_pick(rng, catalog.zones.length)].index;
     final floors = 1 + _pick(rng, EcoItem.maxFloors);
@@ -353,7 +364,7 @@ class EcoRules {
   static int? prismCost(Rarity r) => switch (r) {
         Rarity.comun => 1,
         Rarity.magico => 2,
-        Rarity.raro => 3,
+        Rarity.raro => 4,
         _ => null,
       };
 

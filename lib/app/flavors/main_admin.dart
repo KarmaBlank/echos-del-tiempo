@@ -5,6 +5,9 @@ import 'package:flutter/widgets.dart';
 import '../../features/admin/data/admin_host.dart';
 import '../../features/admin/presentation/admin_app.dart';
 import '../../features/admin/presentation/admin_controller.dart';
+import '../../features/admin/presentation/editor/sprite_editor_controller.dart';
+import '../../features/combat/data/local_sprite_overrides.dart';
+import '../../features/combat/presentation/sprite_catalog.dart';
 import '../../firebase_options.dart';
 
 /// Composition root del admin de balance y monitoreo
@@ -25,7 +28,19 @@ Future<void> main() async {
     firestoreApiKey: firebase.apiKey,
   );
   await controller.load();
-  runApp(AdminApp(controller: controller));
+  // Visuales → Sprites (docs/specs/game_editor.md § 3.1): el catálogo con
+  // la capa de overrides locales (`overrides/` junto al repo/ejecutable).
+  final host = controller.host;
+  final repo = host.defaultRepoPath;
+  final overrides = await createLocalSpriteOverrides(
+      repo == null ? null : host.join(repo, 'overrides'));
+  final sprites = SpriteEditorController(
+    catalog: await SpriteCatalog.load(overrides: overrides),
+    overrides: overrides,
+    repoPath: repo,
+  );
+  unawaited(sprites.loadAll());
+  runApp(AdminApp(controller: controller, sprites: sprites));
   // Releases publicados: la versión siguiente no puede repetir un tag.
   unawaited(controller.refreshReleases());
 }

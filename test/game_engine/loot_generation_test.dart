@@ -44,12 +44,16 @@ void _valid(ItemInstance i) {
 
 void main() {
   test('rareza: probabilidades base 60 / 27 / 10 / 2.7 / 0.3', () {
-    final odds = LootRules.rarityOdds(1, LootSource.battle);
+    final odds = LootRules.rarityOdds(1, LootSource.battle, eco: true);
     expect(odds[Rarity.comun], closeTo(0.60, 1e-9));
     expect(odds[Rarity.magico], closeTo(0.27, 1e-9));
     expect(odds[Rarity.raro], closeTo(0.10, 1e-9));
     expect(odds[Rarity.epico], closeTo(0.027, 1e-9));
     expect(odds[Rarity.legendario], closeTo(0.003, 1e-9));
+    // Fuera de un Eco el Épico pesa 1.5 (materials_economy.md § 4.1).
+    final zone = LootRules.rarityOdds(1, LootSource.battle);
+    expect(zone[Rarity.epico], closeTo(1.5 / 98.8, 1e-9));
+    expect(zone[Rarity.epico]!, lessThan(odds[Rarity.epico]!));
     // Zona, élites y jefes mejoran la rareza.
     final boss = LootRules.rarityOdds(50, LootSource.boss);
     expect(boss[Rarity.legendario]!, greaterThan(0.01));
@@ -63,7 +67,7 @@ void main() {
     const n = 30000;
     final rng = mulberry32(777);
     for (var i = 0; i < n; i++) {
-      final r = _loot.rollRarity(rng, 1, LootSource.battle);
+      final r = _loot.rollRarity(rng, 1, LootSource.battle, eco: true);
       count[r] = count[r]! + 1;
     }
     expect(count[Rarity.comun]! / n, closeTo(0.60, 0.015));

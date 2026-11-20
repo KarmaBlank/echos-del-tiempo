@@ -45,6 +45,8 @@ tanta restricción, como en los ARPG de loot".
 
    Probabilidad base al soltar: Común 60%, Mágico 27%, Raro 10%, Épico
    2.7%, Legendario 0.3%, modificada por nivel de zona, élites y jefes.
+   Fuera de un Eco el Épico pesa 1.5 en vez de 2.7 (v0.15,
+   materials_economy.md § 4.1).
 5. **Pasivas de arma**: efectos mecánicos usando el mismo sistema de
    disparadores del árbol v2 (`PassiveMechanic`), p. ej. "al atacar
    golpea también a un 2.º enemigo al 40%", "al aplicar Congelación,
@@ -732,7 +734,9 @@ zona. **Nivel de objeto**: zona (+1 élite y fin de misión, +2 jefe),
 tope 50. **Base**: nivel ≤ nivel de objeto, peso ×3 si está en los
 últimos 10 niveles y ×2 si es de la familia del jugador.
 
-**Rareza**: pesos base 60 / 27 / 10 / 2.7 / 0.3, cada uno
+**Rareza**: pesos base 60 / 27 / 10 / 2.7 / 0.3 (dentro de un Eco; en
+zonas, cofres y misiones el Épico pesa `LootRules.zoneEpicWeight` = 1.5
+desde v0.15 — la tabla de abajo es la del Eco), cada uno
 `× (1 + k·b)` con `k` = 0 / 0.5 / 1 / 1.5 / 2 y `b` = bonus de zona
 (`0.5 × (zona − 1) / 49`) + fuente (batalla 0, cofre 0.5, élite 1, fin de
 misión 1 + rango (S +1, A +0.5), jefe 2). Ejemplos:
@@ -756,8 +760,9 @@ misión 1 + rango (S +1, A +0.5), jefe 2). Ejemplos:
 | Fin de misión | S 90%, A 70%, B 50% de 1 | ×2 |
 
 Materiales: una tirada por material, `chance × fuente × (1 + bonus de
-zona)`, tope 95%: Esquirla del Eco 10%, Cristal de Era 4%, Prisma Roto
-1.5%. Pila máx. 99 de cada uno.
+zona)`, tope 95%: Esquirla del Eco 8%, Cristal de Era 2.5%, Prisma Roto
+0.6% (v0.15; antes 10 / 4 / 1.5). Pila máx. 99 de cada uno; lo que sobra
+se puede condensar (§ 16, Condensar).
 
 **Entrega** (`SessionEngine.groundLoot`): con `true`, todo cae al piso
 del mapa con dueño (lo ve y lo levanta solo él: caminando encima si su
@@ -857,11 +862,12 @@ Desarmar, vender y reforjar base: § 21.
 |---|---|---|
 | Trasladar afijo | el destino tiene cupo (total y lado), el tipo lo admite y no lo tiene; no mods fijos | ₵100 × tier × rareza destino |
 | Trasladar pasiva | de un Épico (no única) a un Épico; reemplaza la que tenía; conserva el nivel base | ₵300 × rareza |
-| Trasladar habilidad | de las del arma sacrificada (base o trasladadas); el arma destino tiene que poder usarla (§ 16.1); con los cupos llenos el jugador **elige** cuál trasladada reemplaza (§ 16.2) | ₵200 × rareza (Común = la fusión vieja, ₵200) |
+| Trasladar habilidad | de las del arma sacrificada (base o trasladadas); el arma destino tiene que poder usarla (§ 16.1); con los cupos llenos el jugador **elige** cuál trasladada reemplaza (§ 16.2) | ₵200 × rareza (Común = la fusión vieja, ₵200) + **2 Cristales** si el destino es Raro o mejor (v0.15) |
 | Quitar afijo | no mods fijos | ₵50 × tier × rareza |
 | Agregar afijo (Cristal de Era) | no en Común; si hay lugar; afijo aleatorio del pool al nivel del objeto | 1 Cristal + ₵50 × rareza |
 | Volver a tirar (Esquirla del Eco) | valores nuevos en el rango de cada tier (o del único) | 1 Esquirla + ₵25 × rareza |
-| Subir rareza (Prisma Roto) | Común → Mágico → Raro → Épico, tira los afijos que falten para el mínimo y, al llegar a Épico, nombre y pasiva | 1 / 2 / 4 Prismas + ₵100 / 300 / 800 |
+| Subir rareza (Prisma Roto) | Común → Mágico → Raro → Épico, tira los afijos que falten para el mínimo y, al llegar a Épico, nombre y pasiva | 1 / 3 / 6 Prismas + ₵100 / 300 / 800 (v0.15; antes 1 / 2 / 4) |
+| Condensar (v0.15, sin arma) | 10 Esquirlas → 1 Cristal; 10 Cristales → 1 Prisma; sin azar ni vuelta atrás; no pasa del tope de 99 (`CraftOp.condense`, `targetUid` = material que sale, `index` = cuántos) | ₵100 / ₵500 por unidad |
 
 `tier` en los costos: T5 1, T4 2, T3 3, T2 5, T1 8. Las aleatorias sin
 `RandomSource` devuelven solo costo, motivo y `outcomes` (qué puede
@@ -1322,8 +1328,8 @@ cada 2 niveles de forja**; y una tirada extra:
 |---|---|---|
 | Común | 1 Esquirla (+1) | — |
 | Mágico | 2 Esquirlas (+1) | 25% de +1 Cristal |
-| Raro | 1 Cristal + 1 Esquirla (+1) | 10% de +1 Prisma |
-| Épico | 2 Cristales (+1) | 35% de +1 Prisma |
+| Raro | 2 Esquirlas (+1) | 50% de +1 Cristal, 5% de +1 Prisma |
+| Épico | 1 Cristal (+1) | 15% de +1 Prisma |
 | Legendario | 1 Prisma + 2 Cristales (+1) | — |
 
 `CraftRules.salvageYield(item)` → `SalvageYield(guaranteed, chances)`.
@@ -1502,8 +1508,8 @@ Por jugador (worldgen.md § 11.8), siempre al inventario (fuente
     nivel 45 pasa a `arma`.
   - `bendicion` (20%): una bendición de santuario distinta de la activa
     para el grupo (además del paquete de abajo).
-- **Siempre**: 3 Esquirlas del Eco + 1 Cristal de Era (+1 Prisma Roto
-  desde nivel 30; +1 Ancla dentro de un Eco) y `60 + 6 × nivel del piso`
+- **Siempre**: 3 Esquirlas del Eco + 1 Cristal de Era (+50% de 1 Prisma
+  Roto desde nivel 30, `kQuestPrismaChance`; +1 Ancla dentro de un Eco) y `60 + 6 × nivel del piso`
   créditos.
 
 ## v0.8.0: legendarios exclusivos y Esencia del Abismo

@@ -545,6 +545,29 @@ cambian.
 
 Tests: `test/features/inventory/craft_help_test.dart`.
 
+### FUSIÓN (v0.15: CONDENSAR)
+
+materials_economy.md § 4.3. En el paso 1 (ARMA), al pie de la ficha:
+`CONDENSAR` (`bench-condense`) abre el panel `CondensePanel`
+(`condense_panel.dart`, en lugar del paso 1; `‹ VOLVER` =
+`condense-back`):
+
+- Una tarjeta `DsCard` por receta (`condense-card-<material>`):
+  `10 Esquirla + ₵100 → 1 Cristal de Era` y `10 Cristal + ₵500 → 1 Prisma
+  Roto`; debajo lo que tienes y cuántos alcanzan (`condense-have-<m>`:
+  `Tienes 25 Esquirla · 0 Cristal · ₵1000 — alcanza para 2`,
+  `CraftRules.condenseMax`: materiales, créditos y lugar hasta 99). Aviso
+  dorado si la pila de origen está llena ("condensa para no perder lo que
+  caiga") y rojo si la de destino está en 99.
+- Botones `x1` / `x5` / `TODO (N)` (`condense-<m>-1|5|all`), apagados si
+  no alcanzan.
+- Confirmación (`condense-confirm`): `Gastas 20 Esquirla del Eco y ₵200.
+  Obtienes 2 Cristal de Era. No se puede deshacer.` (`condense-summary`),
+  el motivo si el host lo rechazaría (`condense-error`, `ShopGuards.craft`)
+  y `CONDENSAR` (`condense-go`) / `CANCELAR` (`condense-cancel`).
+- Manda `CraftAction(CraftOp.condense, '<material>', index: N)`; el host
+  valida fondos y tope (`CraftRules.condense`).
+
 ### CONSUMIBLES (`itemsHtml`)
 
 `Se usan en batalla desde el menú. Máximo 9 de cada uno.` Una fila por
@@ -777,7 +800,7 @@ inventario de un compañero, abajo a la derecha: `Solo lectura` y
 - **DESARMAR / VENDER** (v0.2.0, loot.md § 21) en las armas:
   `DESARMAR` (`inv-salvage`) y `VENDER $N` (`inv-sell`, con el precio)
   piden confirmación debajo de la grilla (`inv-craft-question`: `¿Desarmar
-  X? Recibes +2 Cristal de Era (puede salir: 35% de +1 Prisma Roto). El
+  X? Recibes +1 Cristal de Era (puede salir: 15% de +1 Prisma Roto). El
   arma se destruye.` / `¿Vender X? Recibes +$N...`, más lo que se pierde
   por el tope de 99), `CANCELAR` (`inv-craft-cancel`) y el botón rojo
   (`inv-craft-confirm`). Deshabilitados con el motivo del motor

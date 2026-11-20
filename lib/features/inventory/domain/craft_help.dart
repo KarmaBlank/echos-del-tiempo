@@ -376,7 +376,8 @@ class CraftHelp {
           change: 'Habilidades traídas ${t.extraSkills.length}/'
               '${t.skillCapacity}'
               '${t.extraSkills.length >= t.skillCapacity ? ' (lleno: eliges cuál reemplazar, también Quebrar)' : ' → ${t.extraSkills.length + 1}/${t.skillCapacity}'}.',
-          cost: cost(CraftRules.transferSkillCost(r), const {}),
+          cost: cost(CraftRules.transferSkillCost(r),
+              CraftRules.transferSkillMaterials(r)),
           lose: t.extraSkills.length >= t.skillCapacity
               ? '$sourceLost Y una habilidad traída o Quebrar (la que elijas).'
               : sourceLost,
@@ -437,6 +438,15 @@ class CraftHelp {
           lose: 'El arma entera.',
           blocked: blocked,
           example: 'vender esta arma da ₵${rules.sellPrice(t)}.',
+        ),
+      CraftOp.condense => CraftOpHelp(
+          what: 'Junta materiales bajos en uno alto: 10 Esquirlas → 1 '
+              'Cristal, 10 Cristales → 1 Prisma.',
+          change: 'Esta arma no cambia.',
+          cost: 'Créditos por cada material que sale.',
+          lose: 'Los materiales que se gastan (no se puede deshacer).',
+          blocked: blocked,
+          example: '30 Esquirlas + ₵300 dan 3 Cristales.',
         ),
     };
   }

@@ -30,6 +30,11 @@ class FeatureFlags {
   /// constructor (docs/specs/netcode.md § "Máximo de jugadores").
   final int maxPlayers;
 
+  /// Lee los overrides locales de sprites del Editor (carpeta `overrides/`;
+  /// docs/specs/game_editor.md § 4.2) y muestra RECARGAR ARTE en el
+  /// título. Solo `main_dev`.
+  final bool useLocalOverrides;
+
   const FeatureFlags({
     this.unlockAllCharacters = false,
     this.showDebugOverlay = false,
@@ -38,6 +43,7 @@ class FeatureFlags {
     this.devTools = false,
     this.soloParty = false,
     this.maxPlayers = kDefaultMaxPlayers,
+    this.useLocalOverrides = false,
   });
 
   static FeatureFlags instance = const FeatureFlags();

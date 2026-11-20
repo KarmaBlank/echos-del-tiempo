@@ -63,8 +63,8 @@ void main() {
     await _tap(tester, 'inv-cell-${_cell(me(), 'e1')}');
     await _tap(tester, 'inv-salvage');
     final q = plain(tester, 'inv-craft-question');
-    expect(q, contains('+2 Cristal de Era'));
-    expect(q, contains('35% de +1 Prisma Roto'));
+    expect(q, contains('+1 Cristal de Era'));
+    expect(q, contains('15% de +1 Prisma Roto'));
     await _tap(tester, 'inv-craft-cancel');
     expect(find.byKey(const ValueKey('inv-craft-question')), findsNothing);
     // El Común: determinístico.

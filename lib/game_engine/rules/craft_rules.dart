@@ -158,15 +158,24 @@ class CraftRules {
   static int transferSkillCost(Rarity target) =>
       jsRound(200 * target.costFactor);
 
+  /// Materiales de trasladar una habilidad: 2 Cristales de Era hacia un
+  /// arma Rara o mejor; nada a Común / Mágico (materials_economy.md
+  /// § 4.2).
+  static Map<CraftMaterial, int> transferSkillMaterials(Rarity target) =>
+      target.index >= Rarity.raro.index
+          ? const {CraftMaterial.cristal: 2}
+          : const {};
+
   static int addAffixCost(Rarity r) => jsRound(50 * r.costFactor);
 
   static int rerollCost(Rarity r) => jsRound(25 * r.costFactor);
 
-  /// Prismas y créditos para subir desde [r] (`null` si no se puede).
+  /// Prismas y créditos para subir desde [r] (`null` si no se puede):
+  /// 1 / 3 / 6 Prismas, 10 de Común a Épico (materials_economy.md § 4.2).
   static (int, int)? upgradeRarityCost(Rarity r) => switch (r) {
         Rarity.comun => (1, 100),
-        Rarity.magico => (2, 300),
-        Rarity.raro => (4, 800),
+        Rarity.magico => (3, 300),
+        Rarity.raro => (6, 800),
         _ => null,
       };
 
@@ -195,12 +204,12 @@ class CraftRules {
         add(CraftMaterial.esquirla, 2 + hi);
         chances.add(const MaterialChance(CraftMaterial.cristal, 0.25));
       case Rarity.raro:
-        add(CraftMaterial.cristal, 1);
-        add(CraftMaterial.esquirla, 1 + hi);
-        chances.add(const MaterialChance(CraftMaterial.prisma, 0.10));
+        add(CraftMaterial.esquirla, 2 + hi);
+        chances.add(const MaterialChance(CraftMaterial.cristal, 0.50));
+        chances.add(const MaterialChance(CraftMaterial.prisma, 0.05));
       case Rarity.epico:
-        add(CraftMaterial.cristal, 2 + hi);
-        chances.add(const MaterialChance(CraftMaterial.prisma, 0.35));
+        add(CraftMaterial.cristal, 1 + hi);
+        chances.add(const MaterialChance(CraftMaterial.prisma, 0.15));
       case Rarity.legendario:
         add(CraftMaterial.prisma, 1);
         add(CraftMaterial.cristal, 2 + hi);
@@ -388,6 +397,7 @@ class CraftRules {
           quebrarReplaced: true, extraSkills: [...t.extraSkills, skillId]);
       return _done(p, t, after,
           credits: transferSkillCost(t.rarity),
+          materials: transferSkillMaterials(t.rarity),
           consumed: [sourceUid],
           replaced: catalog.skills[quebrar]?.name,
           replacedSkillId: quebrar);
@@ -414,6 +424,7 @@ class CraftRules {
     final after = t.copyWith(extraSkills: [...skills, skillId]);
     return _done(p, t, after,
         credits: transferSkillCost(t.rarity),
+        materials: transferSkillMaterials(t.rarity),
         consumed: [sourceUid],
         replaced: replaced == null ? null : catalog.skills[replaced]?.name,
         replacedSkillId: replaced);
@@ -775,7 +786,62 @@ class CraftRules {
             ? const CraftResult.fail('Elige una rareza')
             : sellAll(p, Rarity.values[index]),
         CraftOp.essence => essence(p, targetUid, random: random),
+        CraftOp.condense => switch (CraftMaterial.values
+              .where((m) => m.name == targetUid)
+              .firstOrNull) {
+            final m? => condense(p, m, index),
+            null => const CraftResult.fail('Elige un material'),
+          },
       };
+
+  // ------------------------------------------------------------------
+  // Condensar (materials_economy.md § 4.3)
+  // ------------------------------------------------------------------
+
+  /// Receta para obtener 1 de [out]: (material que se gasta, cuántos,
+  /// créditos), o `null` si [out] no se condensa. 10 Esquirlas + ₵100 →
+  /// 1 Cristal; 10 Cristales + ₵500 → 1 Prisma.
+  static (CraftMaterial, int, int)? condenseRecipe(CraftMaterial out) =>
+      switch (out) {
+        CraftMaterial.cristal => (CraftMaterial.esquirla, 10, 100),
+        CraftMaterial.prisma => (CraftMaterial.cristal, 10, 500),
+        _ => null,
+      };
+
+  /// Materiales que se obtienen condensando.
+  static const condensable = [CraftMaterial.cristal, CraftMaterial.prisma];
+
+  /// Cuántos de [out] se pueden condensar ahora (materiales, créditos y
+  /// lugar en la pila de 99).
+  static int condenseMax(PlayerProfile p, CraftMaterial out) {
+    final r = condenseRecipe(out);
+    if (r == null) return 0;
+    final (from, n, cr) = r;
+    return math.max(
+        0,
+        [
+          p.material(from) ~/ n,
+          p.credits ~/ cr,
+          CraftMaterial.maxStack - p.material(out),
+        ].reduce(math.min));
+  }
+
+  /// Condensar [times] veces hacia [out]: sin azar, sin vuelta atrás. No
+  /// deja pasar del tope de 99 (nunca se pierde lo condensado).
+  CraftResult condense(PlayerProfile p, CraftMaterial out, int times) {
+    final r = condenseRecipe(out);
+    if (r == null) return const CraftResult.fail('Ese material no se condensa');
+    if (times < 1) return const CraftResult.fail('Elige cuántos');
+    final (from, n, cr) = r;
+    if (p.material(out) + times > CraftMaterial.maxStack) {
+      return const CraftResult.fail(
+          'Pila llena (tope ${CraftMaterial.maxStack})');
+    }
+    return _done(p, null, null,
+        credits: cr * times,
+        materials: {from: n * times},
+        gainMaterials: {out: times});
+  }
 
   /// Esencia del Abismo (v0.8, abyss_bosses.md § 3.1): los mods fijos de
   /// un legendario se re-tiran dos veces cada uno y queda el mayor, nunca

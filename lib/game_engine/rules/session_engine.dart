@@ -1402,6 +1402,7 @@ class _Op {
         CraftOp.upgradeRarity => 'Prisma Roto: rareza mejorada',
         CraftOp.reforge => 'base reforjada',
         CraftOp.essence => 'Esencia del Abismo: mods fijos mejorados',
+        CraftOp.condense => 'materiales condensados',
         _ => 'desarmada / vendida', // destruyen: sin `after`, no se anuncia
       };
 
@@ -1658,6 +1659,7 @@ class _Op {
               (bonus?.rarity ?? 0) +
               (fortune ? kFortuneRarity : 0),
           legendaryMult: eco == null ? 1 : 1 + atlas.legendary,
+          eco: eco != null,
           levelCap: _lootCap()));
     }
     if (eco != null) drops.addAll(_ecoExtras(p, src, zone, bonus!, atlas));
@@ -1688,7 +1690,8 @@ class _Op {
           family: p.profile.classId,
           source: src,
           extraBonus: bonus.rarity,
-          legendaryMult: 1 + atlas.legendary)));
+          legendaryMult: 1 + atlas.legendary,
+          eco: true)));
     }
     if (src == LootSource.boss) {
       for (var i = 0; i < atlas.bossEcos; i++) {
@@ -2519,7 +2522,8 @@ class _Op {
   ItemInstance _themed(SessionPlayer q, int il,
       {Rarity? rarity, double extraBonus = 0, LootSource source = LootSource.chest}) {
     final r = rarity ??
-        rules.loot.rollRarity(_rand, il, source, extraBonus: extraBonus);
+        rules.loot.rollRarity(_rand, il, source,
+            extraBonus: extraBonus, eco: _eco != null);
     String? base;
     if (r != Rarity.legendario) {
       final gen = _zoneGen;
@@ -2542,7 +2546,8 @@ class _Op {
         baseId: base,
         family: q.profile.classId,
         source: source,
-        extraBonus: extraBonus);
+        extraBonus: extraBonus,
+        eco: _eco != null);
   }
 
   /// Un arma Rara o mejor (cofre dorado).
@@ -2550,7 +2555,8 @@ class _Op {
       {required LootSource source,
       double extraBonus = 0,
       double themeChance = 0}) {
-    var r = rules.loot.rollRarity(_rand, il, source, extraBonus: extraBonus);
+    var r = rules.loot.rollRarity(_rand, il, source,
+        extraBonus: extraBonus, eco: _eco != null);
     if (r.index < Rarity.raro.index) r = Rarity.raro;
     if (_rand() < themeChance) {
       return _themed(q, il, rarity: r, source: source);
@@ -2751,7 +2757,7 @@ class _Op {
       drops
         ..add(const LootDrop.stack(StackKind.esquirla, kQuestEsquirlas))
         ..add(const LootDrop.stack(StackKind.cristal, kQuestCristales));
-      if (level >= kQuestPrismaLevel) {
+      if (level >= kQuestPrismaLevel && _rand() < kQuestPrismaChance) {
         drops.add(const LootDrop.stack(StackKind.prisma, 1));
       }
       if (_eco != null) drops.add(const LootDrop.stack(StackKind.ancla, 1));

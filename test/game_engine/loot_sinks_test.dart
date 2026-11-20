@@ -93,12 +93,15 @@ void main() {
       // Nivel 30 (+1) y forja 2 (+1).
       expect(g('c3'), {CraftMaterial.esquirla: 3});
       expect(g('m1'), {CraftMaterial.esquirla: 2});
-      expect(g('e1'), {CraftMaterial.cristal: 2});
-      expect(g('sh'), {CraftMaterial.cristal: 1, CraftMaterial.esquirla: 1});
+      expect(g('e1'), {CraftMaterial.cristal: 1});
+      expect(g('sh'), {CraftMaterial.esquirla: 2});
       expect(g('l1'), {CraftMaterial.prisma: 1, CraftMaterial.cristal: 2});
       final e = CraftRules.salvageYield(_p().itemByUid('e1')!).chances.single;
-      expect([e.material, e.chance], [CraftMaterial.prisma, 0.35]);
-      expect(e.text, '35% de +1 Prisma Roto');
+      expect([e.material, e.chance], [CraftMaterial.prisma, 0.15]);
+      expect(e.text, '15% de +1 Prisma Roto');
+      final rare = CraftRules.salvageYield(_p().itemByUid('sh')!).chances;
+      expect([for (final c in rare) c.text],
+          ['50% de +1 Cristal de Era', '5% de +1 Prisma Roto']);
     });
 
     test('Común: determinística, vista previa = resultado', () {

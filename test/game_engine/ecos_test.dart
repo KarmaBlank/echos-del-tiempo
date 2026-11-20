@@ -328,7 +328,7 @@ void main() {
         expect(r.after!.mods.length, ecoModRange(want).$1);
         q = r.profile!;
       }
-      expect(q.material(CraftMaterial.prisma), 10 - 1 - 2 - 3);
+      expect(q.material(CraftMaterial.prisma), 10 - 1 - 2 - 4);
       expect(EcoRules.cannotCraft(q, uid, EcoCraftOp.rarity),
           'Rareza máxima (Épico)');
     });

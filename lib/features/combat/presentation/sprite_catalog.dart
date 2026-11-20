@@ -1,8 +1,14 @@
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
 import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 import 'package:yaml/yaml.dart';
+
+import '../../../game_engine/data/enemies_catalog.dart';
+import '../domain/sprite_entry.dart';
+
+export '../domain/sprite_entry.dart';
 
 /// Lee `assets/sprites/sprite_manifest.yaml` y resuelve id lógico ->
 /// `Sprite` de Flame. Es la ÚNICA clase que sabe que los sprites viven
@@ -13,10 +19,15 @@ import 'package:yaml/yaml.dart';
 /// Cambiar un sprite = reemplazar el PNG (y el manifest si cambia el
 /// path). Nunca hace falta recompilar lógica de juego.
 ///
+/// Capa de overrides (docs/specs/game_editor.md § 4.2): si hay una
+/// [SpriteOverrideSource] (el Editor, o `main_dev` con
+/// `FeatureFlags.useLocalOverrides`), cada imagen se busca primero ahí y
+/// después en el asset. [reload] invalida la caché (recarga en caliente).
+///
 /// Todo es pixel art: los `Sprite` salen con `FilterQuality.none`
 /// (vecino más cercano). Formato y animaciones: docs/specs/sprites.md.
 class SpriteCatalog {
-  SpriteCatalog._(this._manifest, this._bundle);
+  SpriteCatalog._(this._manifest, this._bundle, this.overrides);
 
   /// Ruta del manifest dentro del bundle.
   static const manifestPath = 'assets/sprites/sprite_manifest.yaml';
@@ -24,19 +35,142 @@ class SpriteCatalog {
   /// Prefijo de todas las rutas del manifest.
   static const spritesRoot = 'assets/sprites/';
 
+  /// Overrides que usa [load] si no se le pasan otros (los pone el
+  /// composition root: `main_dev` con `useLocalOverrides`).
+  static SpriteOverrideSource? defaultOverrides;
+
   final YamlMap _manifest;
   final AssetBundle _bundle;
 
+  /// Capa de overrides locales (`null` en el juego publicado).
+  final SpriteOverrideSource? overrides;
+
   /// Cache de imágenes decodificadas (guarda el `Future` para que dos
   /// pedidos simultáneos del mismo archivo lo carguen una sola vez).
+  /// Clave: id de la entrada.
   final _cache = <String, Future<ui.Image>>{};
 
   /// Carga el manifest. [bundle] permite inyectar otro `AssetBundle`
   /// (tests); por defecto usa `rootBundle`.
-  static Future<SpriteCatalog> load({AssetBundle? bundle}) async {
+  static Future<SpriteCatalog> load(
+      {AssetBundle? bundle, SpriteOverrideSource? overrides}) async {
     final b = bundle ?? rootBundle;
     final raw = await b.loadString(manifestPath);
-    return SpriteCatalog._(loadYaml(raw) as YamlMap, b);
+    return SpriteCatalog.fromYaml(raw,
+        bundle: b, overrides: overrides ?? defaultOverrides);
+  }
+
+  /// Desde el texto del manifest (tests y Editor).
+  factory SpriteCatalog.fromYaml(String raw,
+          {AssetBundle? bundle, SpriteOverrideSource? overrides}) =>
+      SpriteCatalog._(loadYaml(raw) as YamlMap? ?? YamlMap(),
+          bundle ?? rootBundle, overrides);
+
+  /// Secciones del manifest que lista el Editor, en orden.
+  static const sections = ['characters', 'enemies', 'items', 'tiles', 'ui', 'fx'];
+
+  /// Todas las entradas del manifest (una por frame), en orden del
+  /// archivo, con su categoría (game_editor.md § 3.1).
+  List<SpriteEntry> get entries => [
+        for (final s in sections)
+          for (final MapEntry(:key, :value) in _section(s).entries)
+            ..._entriesOf(s, key as String, value),
+      ];
+
+  Iterable<SpriteEntry> _entriesOf(String section, String key, Object? v) {
+    if (v is! YamlMap) return const [];
+    final category = switch (section) {
+      'characters' => SpriteCategory.characters,
+      'enemies' =>
+        kEnemies[key]?.boss == true || key.contains('Fase2')
+            ? SpriteCategory.bosses
+            : SpriteCategory.enemies,
+      'items' => SpriteCategory.items,
+      'tiles' => SpriteCategory.tiles,
+      'ui' => SpriteCategory.ui,
+      _ => SpriteCategory.fx,
+    };
+    final size = v['size'];
+    final expected = size is YamlList && size.length == 2
+        ? ((size[0] as num).toInt(), (size[1] as num).toInt())
+        : null;
+    if (v['procedural'] == true) {
+      return [
+        SpriteEntry(
+            section: section,
+            key: key,
+            animation: 'idle',
+            category: category,
+            expectedSize: expected),
+      ];
+    }
+    return [
+      for (final MapEntry(key: anim, value: path) in v.entries)
+        if (path is String && path.endsWith('.png'))
+          SpriteEntry(
+              section: section,
+              key: key,
+              animation: anim as String,
+              category: category,
+              path: path,
+              expectedSize: expected),
+    ];
+  }
+
+  /// La entrada de [id] (`<sección>.<clave>.<frame>`), o `null`.
+  SpriteEntry? entry(String id) {
+    for (final e in entries) {
+      if (e.id == id) return e;
+    }
+    return null;
+  }
+
+  /// [id] tiene override local.
+  bool hasOverride(String id) =>
+      overrides?.overriddenIds.contains(id) ?? false;
+
+  /// Recarga en caliente: olvida la imagen de [id] (o todas) y relee el
+  /// índice de overrides. La próxima vez que alguien la pida se lee de
+  /// nuevo (override → asset).
+  Future<void> reload([String? id]) async {
+    await overrides?.refresh();
+    if (id == null) {
+      _cache.clear();
+    } else {
+      _cache.remove(id);
+    }
+  }
+
+  /// Bytes PNG del asset del repo (sin override), o `null` si es
+  /// procedural o no se puede leer.
+  Future<Uint8List?> assetBytes(SpriteEntry e) async {
+    if (e.path == null) return null;
+    try {
+      final data = await _bundle.load('$spritesRoot${e.path}');
+      return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Bytes PNG efectivos: override si hay, si no el asset.
+  Future<Uint8List?> bytes(SpriteEntry e) async {
+    if (hasOverride(e.id)) {
+      final o = await overrides!.read(e.id);
+      if (o != null) return o;
+    }
+    return assetBytes(e);
+  }
+
+  /// Imagen efectiva de [e] (override → asset), o `null` si es
+  /// procedural sin override.
+  Future<ui.Image?> image(SpriteEntry e) async {
+    if (e.procedural && !hasOverride(e.id)) return null;
+    try {
+      return await _loadImage(e);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Ids de clase con sprites (`characters:` del manifest).
@@ -57,7 +191,12 @@ class SpriteCatalog {
       throw StateError(
           'No hay sprite para $classId.$animation en sprite_manifest.yaml');
     }
-    return _pixelSprite(await _loadImage('$spritesRoot$path'));
+    return _pixelSprite(await _loadImage(SpriteEntry(
+        section: 'characters',
+        key: classId,
+        animation: animation,
+        category: SpriteCategory.characters,
+        path: path)));
   }
 
   Future<Sprite> enemy(String enemyId) async {
@@ -66,7 +205,12 @@ class SpriteCatalog {
       throw StateError(
           'No hay sprite para el enemigo $enemyId en sprite_manifest.yaml');
     }
-    return _pixelSprite(await _loadImage('$spritesRoot$path'));
+    return _pixelSprite(await _loadImage(SpriteEntry(
+        section: 'enemies',
+        key: enemyId,
+        animation: 'idle',
+        category: SpriteCategory.enemies,
+        path: path)));
   }
 
   /// Escala de dibujo del enemigo (`sc` del prototipo; 1 si no figura).
@@ -100,12 +244,11 @@ class SpriteCatalog {
   /// Precarga todas las imágenes del manifest (útil antes de entrar a
   /// batalla para no decodificar en el primer frame).
   Future<void> preloadAll() async {
-    final paths = [
-      for (final c in characterIds)
-        for (final a in characterAnimations(c)) characterPath(c, a),
-      for (final e in enemyIds) enemyPath(e),
-    ].whereType<String>();
-    await Future.wait(paths.map((p) => _loadImage('$spritesRoot$p')));
+    await Future.wait([
+      for (final e in entries)
+        if (e.section == 'characters' || e.section == 'enemies')
+          _loadImage(e),
+    ]);
   }
 
   /// `Paint` para dibujar pixel art a mano (`canvas.drawImageRect`):
@@ -118,17 +261,22 @@ class SpriteCatalog {
 
   YamlMap _section(String name) => _manifest[name] as YamlMap? ?? YamlMap();
 
-  Future<ui.Image> _loadImage(String assetPath) {
-    return _cache.putIfAbsent(assetPath, () async {
+  Future<ui.Image> _loadImage(SpriteEntry e) {
+    return _cache.putIfAbsent(e.id, () async {
       try {
-        final data = await _bundle.load(assetPath);
-        final codec = await ui.instantiateImageCodec(
-            data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes));
+        Uint8List? bytes;
+        if (hasOverride(e.id)) bytes = await overrides!.read(e.id);
+        if (bytes == null) {
+          final data = await _bundle.load('$spritesRoot${e.path}');
+          bytes =
+              data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+        }
+        final codec = await ui.instantiateImageCodec(bytes);
         final frame = await codec.getNextFrame();
         codec.dispose();
         return frame.image;
       } catch (_) {
-        _cache.remove(assetPath); // no cachear fallos: permite reintentar
+        _cache.remove(e.id); // no cachear fallos: permite reintentar
         rethrow;
       }
     });

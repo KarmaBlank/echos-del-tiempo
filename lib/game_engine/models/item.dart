@@ -278,7 +278,12 @@ enum CraftOp {
 
   /// Esencia del Abismo (v0.8): re-tira con ventaja los mods fijos de un
   /// legendario (docs/specs/abyss_bosses.md § 3.1).
-  essence;
+  essence,
+
+  /// Condensar materiales bajos en uno alto (v0.15,
+  /// materials_economy.md § 4.3): `targetUid` = nombre del material que
+  /// se obtiene (`cristal` / `prisma`), `index` = cuántos. Sin azar.
+  condense;
 
   /// Destruye el arma (o las armas) en vez de cambiarla.
   bool get destroys =>
