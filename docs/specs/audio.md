@@ -387,6 +387,11 @@ Un oyente fuera del motor (el motor no sabe de sonido) escucha
 motor no cambia. Cada sonido de batalla es un `SfxCue(id, delayMs)`:
 `SfxService.play(id, delayMs:)` lo programa con un `Timer`.
 
+Fin de batalla: `BattleEndedEvent` no suena; los jingles de victoria y
+derrota son de la música y esperan a que termine la cinemática del golpe
+final (`SessionBattle.outcomeShown`, battle_presentation.md § "Fin de
+batalla"). Los sonidos del golpe que mata van en sus tiempos de impacto.
+
 ### Tiempos (los de `battle_fx.dart`)
 
 - Retraso del impacto en un objetivo (`hitDelay`): proyectil 280 ms

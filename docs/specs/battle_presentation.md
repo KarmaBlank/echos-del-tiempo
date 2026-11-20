@@ -903,6 +903,32 @@ los efectos pendientes de la ULT (números, etc.) arrancan ya. Otra
 batalla limpia todo. El cartel de victoria/derrota espera a que termine
 la cinemática.
 
+### Fin de batalla (v0.13.4)
+
+Bug: una ULT o un dúo que mataba a los últimos enemigos hacía sonar la
+música de victoria **en medio de la cinemática** (el motor ya tenía el
+desenlace) y la pausa final de 2 s podía volver al mapa antes de que el
+enemigo cayera en pantalla. Regla: el motor resuelve cuando quiere; la
+presentación reacciona al desenlace **visual**.
+
+- Al detectar el desenlace, el host mide la cinemática del paso que lo
+  cerró (`battleCinematicHold`: ULT propia o enemiga 2.3 s, dúo 1.5 s,
+  lo mismo que la pausa `wait` tras esos comandos; 0 para cualquier otro
+  golpe) y la guarda en `SessionBattle.endHold`. La pausa final
+  (`endTimer`, 2.0 s victoria / 2.2 s derrota) se **alarga** en ese
+  tanto, así el regreso al mapa, el loot y el XP nunca cortan la
+  cinemática: termina entera.
+- `endHold` baja con el reloj de la pausa y viaja en el snapshot
+  (`hold`): los clientes lo reciben junto con el paso y esperan igual.
+- `SessionBattle.outcomeShown` (= desenlace y `endHold` <= 0) es lo que
+  mira la música: jingle de victoria/derrota, corte de la pieza de
+  batalla y zona de fondo (music.md § 5.1).
+- El cartel de victoria/derrota además espera a la escena local
+  (`ult == null && !holding`), así un cliente con retraso tampoco lo ve
+  antes de tiempo. Saltar la cinemática de dúo (clic) adelanta el cartel
+  pero no el jingle (la espera la cuenta el host).
+- Un golpe normal que mata no espera nada extra (`endHold` = 0).
+
 ## Dúos (v0.8.3)
 
 Todos los dúos (de clase y de armas, combat.md § "Dúos") tienen una

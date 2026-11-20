@@ -185,7 +185,8 @@ class SessionMusic {
     if (!_started) {
       // Lo que ya pasó antes de mirar no suena.
       _started = true;
-      _jingledBattle = s.battle?.state.ended ?? false ? s.battle!.id : null;
+      _jingledBattle =
+          s.battle?.state.ended ?? false ? s.battle!.id : null;
       _resultId = s.result?.id;
       _level = me?.profile.level;
       _battleSeq = view.battleEventSeq;
@@ -203,8 +204,9 @@ class SessionMusic {
 
     // La batalla ya tiene desenlace (la pausa final antes de volver): de
     // fondo suena la pieza de la zona, no la de batalla.
+    // Espera a que termine la cinemática del golpe final (endHold).
     final ended =
-        s.mode == SessionMode.battle && (s.battle?.state.ended ?? false);
+        s.mode == SessionMode.battle && (s.battle?.outcomeShown ?? false);
     final m = s.mission;
     final t = MusicSelector.trackFor(
       mode: ended ? SessionMode.field : s.mode,
@@ -237,7 +239,9 @@ class SessionMusic {
       _lastOutcome = null;
     }
     final b = s.battle;
-    final outcome = b?.state.outcome;
+    // El jingle va con el desenlace visual, no con el del motor: si el
+    // golpe final es una ULT o un dúo, espera a que termine su cinemática.
+    final outcome = b != null && b.outcomeShown ? b.state.outcome : null;
     if (b != null && outcome != null && b.id != _jingledBattle) {
       _jingledBattle = b.id;
       _lastOutcome = outcome.victory;

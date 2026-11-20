@@ -453,6 +453,7 @@ class SessionJson {
         'wait': b.wait,
         'turn': b.turnTime,
         'end': b.endTimer,
+        if (b.endHold > 0) 'hold': b.endHold,
         if (b.level != 0) 'lv': b.level,
       };
 
@@ -465,6 +466,7 @@ class SessionJson {
         wait: j.dbl('wait'),
         turnTime: j.dbl('turn'),
         endTimer: j.dblOrNull('end'),
+        endHold: j.dblOrNull('hold') ?? 0,
         level: j.intOrNull('lv') ?? 0,
       );
 
