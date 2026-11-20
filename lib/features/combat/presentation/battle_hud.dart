@@ -30,7 +30,7 @@ import '../domain/element_text.dart';
 import '../domain/skill_text.dart';
 import '../domain/turn_order.dart';
 import 'game_sprites.dart';
-import 'pixel_sprite.dart';
+import 'hero_figure.dart';
 import 'status_icons.dart';
 import 'summons_row.dart';
 
@@ -1054,7 +1054,11 @@ class _PartyCard extends StatelessWidget {
                   alignment: Alignment.center,
                   child: img == null
                       ? const SizedBox.shrink()
-                      : PixelSprite(img, scale: 2),
+                      : HeroFigure(img,
+                          key: ValueKey('hud-figure-${p.id}'),
+                          classId: p.classId ?? '',
+                          weaponType: p.weaponType,
+                          size: _avatar),
                 ),
                 const SizedBox(width: 5),
               ],
@@ -1352,7 +1356,12 @@ class BattleAllyList extends StatelessWidget {
             height: 40,
             color: DsColors.background,
             alignment: Alignment.center,
-            child: img == null ? null : PixelSprite(img, scale: 2),
+            child: img == null
+                ? null
+                : HeroFigure(img,
+                    classId: p.classId ?? '',
+                    weaponType: p.weaponType,
+                    size: const Size(32, 40)),
           ),
           const SizedBox(width: 5),
           Expanded(

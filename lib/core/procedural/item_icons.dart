@@ -157,6 +157,28 @@ const kItemIconRows = <String, List<String>>{
     '...mm...',
     '........',
   ],
+  // Armas en mano de las familias con escudo (sprites.md § "Armas en
+  // mano"): el ícono de inventario sigue siendo el escudo.
+  'maza': [
+    '..g.g...',
+    '.gmmmg..',
+    '..mmm...',
+    '.gmmmg..',
+    '...h....',
+    '...h....',
+    '...h....',
+    '...h....',
+  ],
+  'martillo': [
+    'mmmmmmm.',
+    'mmmmmmm.',
+    'mmmhmmm.',
+    '...h....',
+    '...h....',
+    '...h....',
+    '...h....',
+    '...h....',
+  ],
   'pocion': [
     '...hh...',
     '...ww...',

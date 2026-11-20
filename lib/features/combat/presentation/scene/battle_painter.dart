@@ -113,6 +113,16 @@ class _Pen {
   }
 }
 
+/// El arma en mano del retrato grande de la ULT (sprites.md § "Armas en
+/// mano"): misma escala [k] que el sprite dibujado en [dst].
+void _heldWeapon(Canvas c, Rect dst, double k, String? cls, String? weapon) {
+  c.save();
+  c.translate(dst.left + 7 * k, dst.top + 17 * k);
+  c.scale(k);
+  WeaponOverlay.draw(c, cls ?? '', weapon);
+  c.restore();
+}
+
 /// Copia una imagen escalándola con vecino más cercano.
 void _blit(Canvas canvas, ui.Image image, Rect dst) {
   canvas.drawImageRect(
@@ -2085,6 +2095,9 @@ class BattleOverlayPainter extends CustomPainter {
           Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
       c.drawImageRect(img, src, dst.shift(const Offset(2, 2)), shadow);
       c.drawImageRect(img, src, dst, SpriteCatalog.pixelPaint());
+      if (!enemy) {
+        _heldWeapon(c, dst, k, u.fx.ult?.casterClass, u.fx.ult?.casterWeapon);
+      }
     }
     final tx = x0 + 52;
     final ult = u.fx.ult;
@@ -2191,6 +2204,7 @@ class BattleOverlayPainter extends CustomPainter {
         }
         c.drawImageRect(img, src, dst.shift(const Offset(2, 2)), shadow);
         c.drawImageRect(img, src, dst, SpriteCatalog.pixelPaint());
+        _heldWeapon(c, dst, k, cls, weapon);
         c.restore();
         textX = fromLeft ? sx + iw + 8 : sx - iw - 8;
       }
