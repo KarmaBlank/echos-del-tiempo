@@ -22,3 +22,6 @@ macos/Flutter/ephemeral/
 # Distribucion (tool/release.ps1, installer/*.iss)
 dist/
 installer/Output/
+
+# Overrides locales del Editor (docs/specs/game_editor.md § 4.2)
+overrides/

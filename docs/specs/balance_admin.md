@@ -1,5 +1,9 @@
 # Spec: Balance y Admin (parches de balance + monitoreo)
 
+> Desde el paso 1 del Editor (docs/specs/game_editor.md § 7.1) esta
+> herramienta es el área **BALANCE** (y **MONITOREO**) del **Editor**:
+> mismas páginas, con barra `DsToolbar` + pestañas y buscador global.
+
 Pedido del dueño: "una web que pueda levantar o una aplicación Flutter, de
 monitoreo, y que me deje tirar parches de balanceo: elegir una habilidad,
 un arma, cosas, y cambiarle números, bajarle, subirle, quitar, agregar

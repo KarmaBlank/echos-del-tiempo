@@ -35,6 +35,10 @@ dependencies:
   yaml: ^3.1.2
   material_ui: ^1.11.1
   audioplayers: ^6.8.1
+  # Editor (docs/specs/game_editor.md): paquetes de arte (zip) y selector
+  # de archivos del área Visuales.
+  archive: ^3.6.1
+  file_selector: ^1.0.3
 
 dev_dependencies:
   flutter_test:
@@ -101,6 +105,9 @@ flutter:
     - assets/sprites/enemies/ecoPrimordial/
     - assets/sprites/effects/
     - assets/sprites/tiles/
+    # Editor (game_editor.md § 3.1): lo que hoy se dibuja en código.
+    - assets/sprites/items/
+    - assets/sprites/ui/
 
   # Filtro retro CRT (docs/specs/settings.md § 3.2).
   shaders:

@@ -4,6 +4,8 @@ import '../../core/balance/balance_asset_loader.dart';
 import '../../core/di/service_locator.dart';
 import '../../core/persistence/exit_on_close.dart';
 import '../../core/settings/frame_limiter.dart';
+import '../../features/combat/data/local_sprite_overrides.dart';
+import '../../features/combat/presentation/sprite_catalog.dart';
 import '../app.dart';
 import '../feature_flags.dart';
 import 'firebase_bootstrap.dart';
@@ -21,7 +23,10 @@ Future<void> main() async {
     enableExperimentalFeatures: true,
     devTools: true,
     soloParty: true,
+    useLocalOverrides: true,
   );
+  // Arte de prueba del Editor (docs/specs/game_editor.md § 4.2).
+  SpriteCatalog.defaultOverrides = await createLocalSpriteOverrides();
   // Parche de balance (docs/specs/balance_admin.md § 3).
   registerSharedDependencies(balance: await BalanceAssetLoader.load());
   // Cerrar la ventana guarda antes (docs/specs/characters.md § 1.4).

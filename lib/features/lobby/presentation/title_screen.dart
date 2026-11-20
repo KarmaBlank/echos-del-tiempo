@@ -32,6 +32,7 @@ import '../../characters/presentation/characters_providers.dart';
 import '../../characters/presentation/party_picker.dart';
 import '../../characters/presentation/stash_screen.dart';
 import '../../combat/presentation/game_sprites.dart';
+import '../../combat/presentation/sprite_catalog.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../settings/presentation/settings_menu.dart';
 import '../../world/presentation/world_screen.dart';
@@ -479,6 +480,18 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                       : () => Navigator.of(context).push(
                           MaterialPageRoute<void>(
                               builder: (_) => const DsGalleryScreen()))),
+            // Recarga en caliente del arte de prueba del Editor
+            // (game_editor.md § 3.1): relee overrides/ y los sprites.
+            if (FeatureFlags.instance.useLocalOverrides)
+              DsButton('RECARGAR ARTE',
+                  key: const ValueKey('title-reload-art'),
+                  kind: DsButtonKind.ghost,
+                  onPressed: _busy
+                      ? null
+                      : () async {
+                          await SpriteCatalog.defaultOverrides?.refresh();
+                          ref.invalidate(gameSpritesProvider);
+                        }),
           ],
         ),
         // Party solo si este build la ofrece (FeatureFlags.soloParty).

@@ -1,4 +1,7 @@
-# Spec (BORRADOR, falta OK del dueño): Editor del juego
+# Spec (APROBADO por el dueño): Editor del juego
+
+Estado: **paso 1 implementado** (§ 7.1). Respuestas del dueño a las
+preguntas abiertas en § 8.
 
 Pedido del dueño: convertir la herramienta de admin/monitoreo
 (docs/specs/balance_admin.md, flavor `lib/app/flavors/main_admin.dart`,
@@ -425,7 +428,88 @@ Todo con los componentes de docs/specs/design_system.md:
    Actualizar battle_presentation.md y sprites.md para que apunten a
    los datos.
 
-## 8. Preguntas abiertas
+### 7.1 Paso 1 tal como quedó (implementado)
+
+- **Editor** (`main_admin`): `DsToolbar` "EDITOR" + `DsTabBar`
+  **MONITOREO · BALANCE · VISUALES** (`lib/features/admin/presentation/
+  admin_app.dart`, `EditorArea`). Arranca en Balance. Buscador global en
+  la barra: filtra el área activa (Balance → entidades por nombre/id/
+  campo, vuelve a la sub-pestaña Entidades; Visuales → sprites). Balance
+  conserva sus sub-pestañas Entidades · Cambios · Parche; insignias con
+  cambios sin guardar (Balance) y cantidad de overrides (Visuales).
+- **Visuales → Sprites** (`editor/sprites_page.dart`,
+  `editor/sprite_editor_controller.dart`): columna izquierda con
+  buscador, categorías (TODO, PERSONAJES, ENEMIGOS, JEFES, ARMAS E ÍTEMS,
+  TILES, UI, EFECTOS) con conteo, filtro "con override" y lista con
+  miniatura e insignia OVERRIDE; centro con zoom ×1/×2/×4/×8 sobre
+  damero con grilla de píxeles y ancla, ANTES / AHORA cuando hay
+  override, y **escena de contexto** (batalla: héroe/enemigo de prueba,
+  ítem en mano, efecto sobre el enemigo, ícono en un panel; mapa: tile
+  repetido con el héroe encima); derecha, ficha (`DsCard` única) con
+  REEMPLAZAR PNG, DESCARTAR OVERRIDE, validación, RECARGAR ARTE,
+  paquete de arte (EXPORTAR / IMPORTAR) y PUBLICAR AL REPO (con diálogo
+  de confirmación que lista lo que se copia). Animaciones: pestaña
+  reservada para el paso 2.
+- **Categorías**: personajes = `characters:`; enemigos/jefes =
+  `enemies:` partido por `EnemyDef.boss` (y las `…Fase2`); el manifest
+  gana `items:`, `tiles:`, `ui:` y `fx:` con entradas
+  `{ procedural: true, size: [w, h] }` (lo que hoy se dibuja en código).
+  Una procedural se muestra rayada como "dibujo en código" hasta que
+  tenga PNG. **Pendiente**: que el juego lea esos PNG nuevos (hoy el
+  render de ítems/tiles/UI/fx sigue siendo procedural aunque se
+  publique uno); se hace al migrar cada painter.
+- **Ids de sprite**: `<sección>.<clave>.<frame>` (`characters.maga.idle`,
+  `items.espada.idle`). `SpriteEntry` / `SpriteCategory`
+  (`lib/features/combat/domain/sprite_entry.dart`).
+- **`SpriteCatalog`** sigue siendo el único lector del manifest: suma
+  `entries`, `entry(id)`, `bytes`/`assetBytes`/`image`, `hasOverride`,
+  `reload([id])` y la capa `overrides` (`SpriteOverrideSource`), que se
+  consulta antes que el asset. `SpriteCatalog.defaultOverrides` la pone
+  el composition root.
+- **Overrides locales** (`lib/features/combat/data/
+  local_sprite_overrides_io.dart`, stub en web): `<root>/sprites/<id>.png`
+  + `<root>/sprite_overrides.yaml` (`sprites: { <id>: sprites/<id>.png }`).
+  Root: `<repo>/overrides` en el Editor; `overrides/` del directorio
+  actual (o `--dart-define=ECOS_OVERRIDES=<ruta>`) en `main_dev`.
+  Ignorado por git. Lanza si se intenta dentro de
+  `%APPDATA%\EcosDelTiempo`.
+- **`main_dev`**: `FeatureFlags.useLocalOverrides` → lee los overrides y
+  el título muestra **RECARGAR ARTE** (relee la carpeta e invalida
+  `gameSpritesProvider`).
+- **Validación** (`domain/sprites/png_validator.dart`, Dart puro):
+  error si no es PNG, sin alfa (tipo 4/6 o `tRNS`), > 1 MB, o tamaño
+  distinto que no sea múltiplo/divisor entero exacto del original;
+  aviso si es múltiplo/divisor (se acepta), si hay píxeles
+  semitransparentes o más de 32 colores. Tamaño esperado: el PNG del
+  repo, o `size:` del manifest para las procedurales.
+- **Paquete de arte** (`domain/sprites/art_pack.dart`): zip con
+  `art_pack.yaml` (`schema: 1`, `sprites: { <id>: sprites/<id>.png }`) +
+  los PNG. Importar pisa overrides con el mismo id. Reservado `fx:` para
+  el paso 2.
+- **Publicar al repo**: copia cada override a `assets/sprites/<ruta>`
+  (la del manifest; las procedurales van a `items/`, `tiles/`, `ui/` o
+  `effects/<clave>.png`), reescribe solo esa entrada de
+  `sprite_manifest.yaml` conservando comentarios (`setManifestPath`) y
+  borra el override. El commit queda a mano. El catálogo en memoria del
+  Editor ve el manifest nuevo al reiniciar.
+- Capturas: `tool/shots/editor_shots_test.dart` →
+  `docs/release_shots/editor/`.
+
+## 8. Preguntas abiertas (respondidas por el dueño)
+
+Respuestas:
+1. **YAML**, como está.
+2. **Sí**: exportar/importar un **paquete de arte** (zip con overrides
+   de sprites, y de fx desde el paso 2) para que un amigo lo pruebe sin
+   publicar.
+3. Seguir con **1 frame `idle` + animación procedural**, pero el formato
+   queda listo para hojas de sprites cuadro por cuadro (el manifest ya
+   admite varios frames por entrada: cada clave que no sea `scale`,
+   `float`, `size` o `procedural` es un frame; el id incluye el frame).
+4. **Aprobado** el tope de **~2.6 s** por ULT y los **"ecos"
+   translúcidos** como firma visual común.
+
+Preguntas originales:
 
 1. ¿YAML está bien como formato (editable a mano y por el editor) o
    preferís JSON para alinear con `balance.json`?

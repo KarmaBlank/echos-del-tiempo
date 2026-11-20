@@ -186,3 +186,42 @@ enemies:
     idle: enemies/ecoPrimordial/idle.png
     scale: 2.6
     float: true
+
+# --- Editor (docs/specs/game_editor.md § 3.1) -------------------------
+# Lo que todavía se dibuja en código. `procedural: true` = sin PNG: el
+# juego usa el dibujo procedural y el editor lo muestra como "por
+# defecto" hasta que se publique un PNG (entonces aparece `idle:` y se va
+# `procedural`). `size: [ancho, alto]` es el tamaño esperado del PNG.
+# Carpetas: items/, tiles/, ui/ y effects/ (fx), ya en pubspec.yaml.
+items:
+  espada: { procedural: true, size: [16, 16] }
+  hacha: { procedural: true, size: [16, 16] }
+  lanza: { procedural: true, size: [16, 16] }
+  dagas: { procedural: true, size: [16, 16] }
+  espada_escudo: { procedural: true, size: [16, 16] }
+  maza_escudo: { procedural: true, size: [16, 16] }
+  martillo_escudo: { procedural: true, size: [16, 16] }
+  arco: { procedural: true, size: [16, 16] }
+  ballesta: { procedural: true, size: [16, 16] }
+  rifle: { procedural: true, size: [16, 16] }
+  baculo: { procedural: true, size: [16, 16] }
+  varita: { procedural: true, size: [16, 16] }
+  tomo: { procedural: true, size: [16, 16] }
+  pocion: { procedural: true, size: [16, 16] }
+  cofre: { procedural: true, size: [16, 16] }
+tiles:
+  suelo: { procedural: true, size: [16, 16] }
+  pared: { procedural: true, size: [16, 16] }
+  agua: { procedural: true, size: [16, 16] }
+  hierba: { procedural: true, size: [16, 16] }
+  puerta: { procedural: true, size: [16, 16] }
+ui:
+  icono_oro: { procedural: true, size: [8, 8] }
+  icono_eco: { procedural: true, size: [8, 8] }
+  icono_pulso: { procedural: true, size: [8, 8] }
+  cursor: { procedural: true, size: [8, 8] }
+fx:
+  chispa: { procedural: true, size: [16, 16] }
+  tajo: { procedural: true, size: [32, 32] }
+  explosion: { procedural: true, size: [32, 32] }
+  meteoro: { procedural: true, size: [16, 16] }

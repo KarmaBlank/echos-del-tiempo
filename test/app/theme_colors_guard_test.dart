@@ -55,6 +55,9 @@ const _allow = <String, (int, String)>{
   // Fuera del juego.
   'lib/features/admin/presentation/admin_app.dart':
       (1, 'herramienta de balance (no es la UI del juego)'),
+  'lib/features/admin/presentation/editor/sprites_page.dart':
+      (9, 'Editor: damero de transparencia, rayado procedural y fondo de '
+          'la escena de contexto (herramienta, no la UI del juego)'),
 };
 
 /// Archivos de UI: lib/app y toda `presentation/`.
