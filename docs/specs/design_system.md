@@ -212,6 +212,55 @@ Medidas en px nominales (Normal, 1280×720); todo escala.
   texto), alto máximo 60 % de la pantalla con scroll, título + cuerpo +
   pie de atajos (`[E] equipar  [Supr] tirar`) en Detalle.
 
+## 6 bis. Estructura atómica (v0.14.0)
+
+Directiva del dueño: el sistema de diseño es atómico y la parte visual
+es totalmente agnóstica de la lógica. Los widgets reciben datos ya
+calculados (qué hay, si está elegido, si coincide con la búsqueda, el
+texto de la ficha) y callbacks; la lógica de juego (qué se puede, qué
+cuesta, qué pasa al tocar) queda en la pantalla o su controlador.
+Layout, claridad y accesibilidad siguen los principios de Material
+Design 3 (áreas de toque, foco visible, jerarquía por tipografía y
+espacio), con estilo pixel art y sin redondeos.
+
+Niveles:
+
+- Átomos: piezas sin estado propio ni composición. `DsCost`, `DsTag`,
+  `DsBadge`, `DsButton`, `PixelIcon` (ícono de ítem), la letra de rareza
+  y la ★ de tu build, `NewItemTag` (marca NUEVO), colores de rareza
+  (`RarityColors`).
+- Moléculas: un átomo con su contexto mínimo. `ItemCell` / `ItemSlot`
+  (casilla de ítem: borde y letra de rareza, ícono, ★, NUEVO, atenuada si
+  no coincide con la búsqueda, `✓` o candado de selección múltiple, borde
+  dorado de elegida), `DsStatLine` (fila de stat), `DsSearchField` (campo
+  de búsqueda), `DsListRow`, `DsAttributeRow`.
+- Organismos: secciones completas reutilizables.
+  - `DsItemGrid` (`lib/features/inventory/presentation/item_grid.dart`):
+    grilla de casillas de ítem con buscador opcional (`ItemGridSearch`,
+    Esc con texto lo limpia), cursor de teclado (flechas, Enter /
+    Espacio), clic, clic derecho para el menú contextual opcional
+    (`onMenu`), ficha estándar (`tip:`, normalmente `itemHoverTip`) y
+    selección simple (`selected`) o múltiple (`picked` / `locked`). El
+    filtro (`inventoryMatches`) lo aplica la pantalla: o atenúa
+    (`dimmed`, grillas con posiciones fijas) o pasa solo lo que
+    coincide (grillas de elección). `decorate:` deja a la pantalla
+    agregar arrastre u otros envoltorios sin tocar la grilla.
+  - Ficha de arma (`ItemCard`, `HoverCompareCard`) y lista de
+    habilidades (`SkillChips`).
+- Templates: el layout de un panel: barra arriba (`DsToolbar`, pestañas,
+  migas) + contenido (lista o grilla) + detalle (`PanelSplit` /
+  `PanelDetail`, con los botones al pie).
+
+Regla: todo lo de los cuatro niveles es presentacional; cero lógica de
+juego adentro. Una misma cosa se ve igual en todas las pantallas: un
+arma es siempre la misma casilla, con los mismos colores de rareza, la
+misma ficha, el mismo buscador y las mismas marcas.
+
+Dónde se usa `DsItemGrid`: INVENTARIO (grilla 8 × 5 con arrastre), ALIJO
+(los dos lados), FUSIÓN (arma destino, arma de origen y base nueva al
+reforjar) y FORJA (arma a forjar). COMPRAR sigue en lista: elige bases
+del catálogo con precio y "TIENES" a la vista, no ítems propios.
+
 ## 7. Tema (`DsTheme`)
 
 `DsTheme.extension()` es una `ThemeExtension` con los roles de color y

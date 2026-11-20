@@ -152,7 +152,7 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('FUSIÓN: ★ en la tarjeta del arma que cumple el plan',
+  testWidgets('FUSIÓN: ★ en la casilla del arma que cumple el plan',
       (tester) async {
     final start = progression.normalize(
         PlayerProfile(name: 'Ana', classId: 'guerrero', level: 5, items: [
@@ -165,7 +165,7 @@ void main() {
     ]));
     await pumpPanel(tester,
         profile: start, build: (v, c) => CraftBench(shop: ShopContext(v, c)));
-    expect(find.byKey(const ValueKey('build-fit-badge')), findsNothing);
+    expect(find.byKey(const ValueKey('cell-build')), findsNothing);
     await _container(tester)
         .read(buildPlanProvider.notifier)
         .save(const BuildPlan(mods: [ModGoal('feroz', 5)]));
@@ -173,12 +173,12 @@ void main() {
     expect(
         find.descendant(
             of: find.byKey(const ValueKey('bench-weapon-m')),
-            matching: find.byKey(const ValueKey('build-fit-badge'))),
+            matching: find.byKey(const ValueKey('cell-build'))),
         findsOneWidget);
     expect(
         find.descendant(
             of: find.byKey(const ValueKey('bench-weapon-espada_bronce')),
-            matching: find.byKey(const ValueKey('build-fit-badge'))),
+            matching: find.byKey(const ValueKey('cell-build'))),
         findsNothing);
   });
 }

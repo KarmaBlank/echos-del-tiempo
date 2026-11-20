@@ -355,23 +355,31 @@ queda en el paso 3 y confirma de nuevo.
   Esquirla xN · Cristal xN · Prisma xN` (`craft-materials`; el tooltip
   explica cada material y que salen del loot o de desarmar).
 - **Paso 1 — ¿Qué arma?** (línea `Paso 1 de 3: elige el arma que quieres
-  mejorar o cambiar.`): lista de tus armas (`bench-weapon-<uid>`,
-  `EQUIPADA` en dorado; por defecto la equipada) y a la derecha su ficha.
+  mejorar o cambiar.`): tus armas en la grilla de ítems (`DsItemGrid`,
+  v0.14.0: la misma casilla, ficha del mouse y buscador que el
+  INVENTARIO; `bench-weapon-<uid>`, ★ si cumple tu build; por defecto la
+  equipada, con borde dorado) y a la derecha su ficha. Tocar la ya
+  elegida avanza al paso 2.
   Primario `ELEGIR ESTA ARMA ›` (`bench-next`).
 - Buscador (v0.11.x, pedido del dueño): siempre hay un `DsSearchField`
-  arriba de cada lista donde se elige un arma: arma destino en el paso 1
+  arriba de cada grilla donde se elige un arma: arma destino en el paso 1
   (`bench-weapon-search`), arma de origen que se destruye en el paso 3
   (`craft-source-search`) y base nueva al reforjar (`bench-base-search`,
   por nombre y tipo). Las armas se filtran con `inventoryMatches` (mismo
   criterio que el inventario: nombre, tipo, rareza, mods, pasiva y
   habilidades; todas las palabras, sin acentos). Lo que no coincide se
-  oculta (son listas, no una grilla con posiciones), salvo el arma ya
+  oculta (grillas de elección, sin posiciones fijas), salvo el arma ya
   elegida, que queda a la vista; si nada coincide, `Ninguna arma coincide
   con la búsqueda.`. Esc con texto limpia el buscador; sin texto vuelve
   de paso como siempre. El texto del paso 1 se mantiene al volver a él;
   los del paso 3 se borran al elegir otra acción. Las habilidades / mods a
-  traer salen del arma de origen elegida (lista corta, sin buscador
-  propio): el buscador de origen ya encuentra armas por habilidad o mod.
+  traer salen del arma de origen elegida (lista corta debajo de la
+  grilla, sin buscador propio): el buscador de origen ya encuentra armas
+  por habilidad o mod. Arma de origen (`craft-source-<uid>`) y base
+  nueva (`bench-base-<id>`, casilla de una Común de esa base) también van
+  en grilla (v0.14.0); la ficha del origen lleva al pie qué te llevás y
+  qué se destruye (`craft-source-tip-<uid>`); la de la base, nombre,
+  tipo, peso, nivel y si cumplís los requisitos.
 - **Paso 2 — ¿Qué querés hacer?** (línea `Paso 2 de 3: ...`): lista
   ancha (560 px) de acciones agrupadas, cada una con nombre en negrita,
   **una línea** "qué hace" y a la derecha `Se puede` (verde) o el motivo
