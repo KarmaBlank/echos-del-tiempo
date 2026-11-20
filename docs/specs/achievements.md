@@ -22,7 +22,7 @@ netcode.md; audio.md.
   más.
 - Las de contador (tiers I / II / III) cuentan desde que existe el
   sistema (o desde la migración, § 6); cada tier es una hazaña aparte.
-- Al lograrla: `DsToast` chico + sonido `ach.unlock` (§ 7).
+- Al lograrla: toast compacto + sonido `ach.unlock` (§ 7).
 - Pestaña **HAZAÑAS** con logradas y pendientes y cómo se consigue cada
   una: funciona como guía de las mecánicas.
 
@@ -253,10 +253,17 @@ tope blando), `filter_rule` (filtro propio guardado) y `forge_10` /
   BESTIARIO, `CharacterTab.achievements`), porque es de la cuenta como el
   Bestiario y la guía se lee al lado del inventario y la fusión. También
   se abre desde el menú principal (mismo panel, como el Bestiario).
-- **Toast**: `DsToast` chico arriba a la derecha, 3 s, franja dorada,
-  marca `estrella`: `HAZAÑA · <Nombre> · +₵300 +1 Cristal de Era`.
-  Varios seguidos se encolan. Sonido `ach.unlock` (audio.md: arpegio
-  corto, distinto del de subir de nivel).
+- **Toast** (v0.19.1): tarjeta compacta arriba a la derecha, franja
+  dorada; `★ HAZAÑA LOGRADA` (Subtítulo), el nombre en una línea (Cuerpo,
+  con "…") y la recompensa en una fila en Detalle: `+₵300` y un ícono
+  procedural por material/poción con `xN` (`+ULT` si enseña una). Ancho
+  máx. 300 px × factor del texto. Entra deslizando desde la derecha con
+  destello y un eco translúcido (360 ms; sin animación con reducir
+  movimiento), dura 4 s × DURACIÓN DE LOS AVISOS y se desvanece. Se apilan
+  hasta 3 (mismo ancho); los demás esperan lugar. Clic: lo descarta.
+  Sonido `ach.unlock` (audio.md: arpegio corto, distinto del de subir de
+  nivel). Antes (≤ v0.19.0) era una línea en Cuerpo de hasta 520 px fijos
+  que se partía en dos y se veía gigante.
 - **Pestaña**: encabezado con `logradas/33` y filtros `Todas · Pendientes
   · Logradas` (`DsTabBar` chico) y categorías como secciones (FORJA,
   FUSIÓN, REFORJA Y DESARME, INVENTARIO, COMBATE, PROGRESIÓN, ENDGAME).
