@@ -5,33 +5,51 @@ import 'package:archive/archive.dart';
 import 'package:yaml/yaml.dart';
 
 /// Paquete de arte (game_editor.md § 4.2): un zip con overrides de
-/// sprites (y, desde el paso 2, de fx) para pasárselo a un amigo sin
+/// sprites y de animaciones (fx, paso 2) para pasárselo a un amigo sin
 /// publicar. Dart puro.
 ///
 /// ```
-/// art_pack.yaml      schema: 1 / sprites: { <id>: sprites/<id>.png }
+/// art_pack.yaml      schema: 1
+///                    sprites: { <id>: sprites/<id>.png }
+///                    fx: { <id>: fx/<id>.fx.yaml }
 /// sprites/<id>.png
+/// fx/<id>.fx.yaml
 /// ```
 class ArtPack {
-  const ArtPack(this.sprites);
+  const ArtPack(this.sprites, [this.fx = const {}]);
 
   /// Id de sprite → bytes PNG.
   final Map<String, Uint8List> sprites;
+
+  /// Id de animación → texto `.fx.yaml`.
+  final Map<String, String> fx;
 
   static const indexName = 'art_pack.yaml';
   static const schema = 1;
 
   Uint8List encode() {
     final ids = sprites.keys.toList()..sort();
-    final index = StringBuffer('schema: $schema\nsprites:\n');
+    final fxIds = fx.keys.toList()..sort();
+    final index = StringBuffer('schema: $schema\n')
+      ..writeln(ids.isEmpty ? 'sprites: {}' : 'sprites:');
     for (final id in ids) {
       index.writeln('  $id: sprites/$id.png');
+    }
+    if (fxIds.isNotEmpty) {
+      index.writeln('fx:');
+      for (final id in fxIds) {
+        index.writeln('  $id: fx/$id.fx.yaml');
+      }
     }
     final a = Archive();
     final idx = utf8.encode(index.toString());
     a.addFile(ArchiveFile(indexName, idx.length, idx));
     for (final id in ids) {
       a.addFile(ArchiveFile('sprites/$id.png', sprites[id]!.length, sprites[id]!));
+    }
+    for (final id in fxIds) {
+      final b = utf8.encode(fx[id]!);
+      a.addFile(ArchiveFile('fx/$id.fx.yaml', b.length, b));
     }
     return Uint8List.fromList(ZipEncoder().encode(a)!);
   }
@@ -59,8 +77,43 @@ class ArtPack {
         out[key as String] = Uint8List.fromList(f.content as List<int>);
       }
     }
-    return ArtPack(out);
+    final fx = <String, String>{};
+    final fxIdx = doc['fx'];
+    if (fxIdx is YamlMap) {
+      for (final MapEntry(:key, :value) in fxIdx.entries) {
+        final f = a.findFile(value as String);
+        if (f == null) throw FormatException('Falta $value.');
+        fx[key as String] = utf8.decode(f.content as List<int>);
+      }
+    }
+    return ArtPack(out, fx);
   }
+}
+
+/// Suma (o corrige) en el texto de fx_manifest.yaml la entrada
+/// `<id>: <path>` bajo `fx:`, conservando comentarios y el resto. Si ya
+/// apunta a [path], devuelve el texto igual.
+String addFxManifestEntry(String manifest, String id, String path) {
+  final lines = const LineSplitter().convert(manifest);
+  final s = lines.indexOf('fx:');
+  if (s < 0) return '${manifest.trimRight()}\nfx:\n  $id: $path\n';
+  var end = s + 1;
+  while (end < lines.length &&
+      (lines[end].startsWith(' ') || lines[end].trim().isEmpty)) {
+    end++;
+  }
+  final k = lines.indexWhere((l) => l.startsWith('  $id:'), s + 1);
+  if (k >= 0 && k < end) {
+    if (lines[k].trim() == '$id: $path') return manifest;
+    lines[k] = '  $id: $path';
+  } else {
+    var at = end;
+    while (at > s + 1 && lines[at - 1].trim().isEmpty) {
+      at--;
+    }
+    lines.insert(at, '  $id: $path');
+  }
+  return '${lines.join('\n')}\n';
 }
 
 /// Reescribe en el texto de sprite_manifest.yaml la entrada

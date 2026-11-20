@@ -1,0 +1,63 @@
+schema: 1
+id: ult_ballesta
+category: ult
+name: Andanada
+tags: [ballesta, tirador, un_objetivo, físico, eco]
+duration: 2300
+phases: { build: 900, release: 900, recover: 500 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 900, focus: line }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.9 }
+      - { t: 1800, v: 0.75 }
+      - { t: 2300, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 900, color: element }
+      - { t: 300, shape: reticle, anchor: target, ms: 1000, color: '#ffb86b', scale: 1.2 }
+      - { t: 1300, shape: ring, anchor: target, scale: 2, color: '#ffb86b', ms: 320 }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 60
+    alpha: 0.45
+    color: echo
+    fade: 160
+    keys:
+      - { t: 1100, at: caster }
+      - { t: 1260, at: caster, dx: -16, ease: out }
+  - type: trail
+    fire:
+      - { t: 1100, from: caster, to: target, dy: -4, ms: 70, head: bolt, color: light, echoes: 2, lag: 15, ease: linear }
+      - { t: 1160, from: caster, to: target, dy: 3, ms: 70, head: bolt, color: light, echoes: 2, lag: 15, ease: linear }
+      - { t: 1220, from: caster, to: target, dy: -2, ms: 70, head: bolt, color: light, echoes: 2, lag: 15, ease: linear }
+      - { t: 1240, from: caster, to: target, ms: 60, head: bolt, color: white, width: 3, scale: 1.6, echoes: 5, lag: 16, ease: linear }
+  - type: particles
+    fire:
+      - { t: 1170, preset: sparks, anchor: target, count: 0.8 }
+      - { t: 1230, preset: sparks, anchor: target, count: 0.8 }
+      - { t: 1300, preset: burst, anchor: target, element: phys, count: 4 }
+      - { t: 1300, preset: burst, anchor: target, element: burn, count: 2 }
+      - { t: 1300, preset: debris, anchor: target, count: 1 }
+  - type: flash
+    fire:
+      - { t: 1295, color: white, alpha: 0.6, ms: 150 }
+  - type: hitstop
+    fire:
+      - { t: 1300, ms: 150 }
+  - type: shake
+    fire:
+      - { t: 1170, amp: 3 }
+      - { t: 1230, amp: 3 }
+      - { t: 1300, amp: 13 }
+  - type: impact
+    fire:
+      - { t: 1170, pre: true }
+      - { t: 1230, pre: true }
+      - { t: 1300, stagger: 0 }

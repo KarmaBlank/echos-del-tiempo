@@ -299,7 +299,15 @@ class BattleScenePainter extends CustomPainter {
     final stage = scene.ultStage(f);
     if (u != null && stage != null) {
       UltDirector.density = scene.particles.density;
-      UltDirector.paintWorld(c, u, t - u.t0, stage, visible);
+      UltDirector.flash = scene.options.flash;
+      final ult = u.fx.ult;
+      // Los ecos de las animaciones de datos usan los sprites reales.
+      final st = u.script.data == null
+          ? stage
+          : stage.withImages(
+              f.sprites?.heroFor(ult?.casterClass, ult?.casterAscension),
+              f.sprites?.heroFor(ult?.partnerClass, ult?.partnerAscension));
+      UltDirector.paintWorld(c, u, t - u.t0, st, visible);
     }
     scene.particles.paint(c);
   }

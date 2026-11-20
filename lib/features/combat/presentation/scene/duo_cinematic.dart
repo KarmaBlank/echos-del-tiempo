@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'fx_bridge.dart';
 import 'ult_cinematic.dart';
 
 /// Cinemática de los DÚOS (v0.8.3, docs/specs/battle_presentation.md
@@ -27,6 +28,11 @@ const UltScript kDuoScript = UltScript(
   shake: 9,
   focus: UltFocus.targets,
 );
+
+/// El guion del dúo [key] (`claseA+claseB` o `w_...`): el de sus datos
+/// FXA (`duo_<key>`, o el genérico `duo`) si el catálogo activo los
+/// tiene; si no, [kDuoScript] (docs/specs/game_editor.md § 2.2).
+UltScript duoScript([String? key]) => dataDuoScript(key) ?? kDuoScript;
 
 /// Cuánto dura la tarjeta partida (entra con la preparación y se va al
 /// empezar la descarga).

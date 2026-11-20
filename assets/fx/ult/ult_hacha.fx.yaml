@@ -1,0 +1,69 @@
+schema: 1
+id: ult_hacha
+category: ult
+name: Cataclismo
+tags: [hacha, guerrero, a_todos, físico, eco]
+duration: 2400
+phases: { build: 900, release: 1100, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 900, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 2000, v: 0.7 }
+      - { t: 2400, v: 0 }
+  - type: tint
+    color: '#ff9f43'
+    keys:
+      - { t: 1250, v: 0 }
+      - { t: 1320, v: 0.22 }
+      - { t: 1900, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 900, color: element }
+      - { t: 1300, shape: shockwave, anchor: targets_center, scale: 2.4, color: '#ffb86b', ms: 420 }
+      - { t: 1300, shape: quake, anchor: targets_center, scale: 2, color: '#ffd29a', ms: 700 }
+  - type: shape
+    each_target: true
+    stagger: 60
+    fire:
+      - { t: 1300, shape: pillar, anchor: target, scale: 0.7, color: '#ff9f43', alpha: 0.6, ms: 260 }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 45
+    alpha: 0.5
+    color: echo
+    fade: 120
+    keys:
+      - { t: 850, at: caster }
+      - { t: 1100, at: sky_caster, dy: 10, ease: out }
+      - { t: 1300, at: targets_center, dx: -16, ease: in }
+  - type: particles
+    fire:
+      - { t: 600, preset: dust, anchor: caster, count: 0.8 }
+      - { t: 900, preset: dust, anchor: caster, count: 1.2 }
+  - type: particles
+    each_target: true
+    stagger: 60
+    fire:
+      - { t: 1300, preset: debris, anchor: target, count: 1.6 }
+      - { t: 1300, preset: burst, anchor: target, element: auto, count: 2 }
+  - type: flash
+    fire:
+      - { t: 1300, color: '#ffd29a', alpha: 0.4, ms: 160 }
+  - type: hitstop
+    fire:
+      - { t: 1300, ms: 100 }
+  - type: shake
+    fire:
+      - { t: 900, amp: 4 }
+      - { t: 1300, amp: 12 }
+  - type: impact
+    fire:
+      - { t: 1300, stagger: 60 }

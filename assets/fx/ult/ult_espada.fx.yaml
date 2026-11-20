@@ -1,0 +1,64 @@
+schema: 1
+id: ult_espada
+category: ult
+name: Tajo Final
+tags: [espada, guerrero, un_objetivo, físico, eco]
+duration: 2300
+phases: { build: 800, release: 1100, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1900, v: 0.75 }
+      - { t: 2300, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: element }
+      - { t: 1000, shape: slash_arc, anchor: target, angle: -30, color: echo, ms: 180 }
+      - { t: 1120, shape: slash_arc, anchor: target, angle: 25, color: echo, ms: 180 }
+      - { t: 1240, shape: slash_arc, anchor: target, angle: -70, color: echo, ms: 180 }
+      - { t: 1400, shape: slash_cross, anchor: target, scale: 2.2, color: white, ms: 280 }
+      - { t: 1400, shape: ring, anchor: target, scale: 1.6, color: element, ms: 320 }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 120
+    alpha: 0.55
+    color: echo
+    fade: 160
+    keys:
+      - { t: 820, at: caster }
+      - { t: 1000, at: target, dx: -14, ease: out }
+      - { t: 1080, at: target, dx: -14 }
+  - type: particles
+    fire:
+      - { t: 1000, preset: sparks, anchor: target, count: 0.6 }
+      - { t: 1120, preset: sparks, anchor: target, count: 0.6 }
+      - { t: 1240, preset: sparks, anchor: target, count: 0.6 }
+      - { t: 1400, preset: burst, anchor: target, element: auto, count: 4 }
+      - { t: 1400, preset: shards, anchor: target, count: 2 }
+      - { t: 1500, preset: embers, anchor: target, count: 1 }
+  - type: flash
+    fire:
+      - { t: 1395, color: white, alpha: 0.6, ms: 150 }
+  - type: hitstop
+    fire:
+      - { t: 1400, ms: 120 }
+  - type: shake
+    fire:
+      - { t: 1000, amp: 3 }
+      - { t: 1120, amp: 3 }
+      - { t: 1240, amp: 4 }
+      - { t: 1400, amp: 11 }
+  - type: impact
+    fire:
+      - { t: 1000, pre: true }
+      - { t: 1120, pre: true }
+      - { t: 1240, pre: true }
+      - { t: 1400, stagger: 0 }

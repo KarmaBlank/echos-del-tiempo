@@ -1,5 +1,7 @@
 import 'dart:typed_data';
 
+import '../../../core/fx/fx_overrides.dart';
+
 /// Categoría de un sprite en el Editor (docs/specs/game_editor.md § 3.1).
 enum SpriteCategory {
   characters('PERSONAJES', 'characters'),
@@ -102,7 +104,10 @@ abstract class SpriteOverrideSource {
 }
 
 /// Overrides que el Editor puede escribir (game_editor.md § 3.1 y § 4).
-abstract class EditableSpriteOverrides implements SpriteOverrideSource {
+/// También guarda los overrides de animaciones (paso 2, § 4.2): misma
+/// carpeta, mismo paquete de arte.
+abstract class EditableSpriteOverrides
+    implements SpriteOverrideSource, EditableFxOverrides {
   /// Carpeta de los overrides (para mostrarla).
   String get root;
 

@@ -5,7 +5,9 @@ import 'package:flutter/widgets.dart';
 import '../../features/admin/data/admin_host.dart';
 import '../../features/admin/presentation/admin_app.dart';
 import '../../features/admin/presentation/admin_controller.dart';
+import '../../features/admin/presentation/editor/fx_editor_controller.dart';
 import '../../features/admin/presentation/editor/sprite_editor_controller.dart';
+import '../../features/combat/presentation/scene/fx_bridge.dart';
 import '../../features/combat/data/local_sprite_overrides.dart';
 import '../../features/combat/presentation/sprite_catalog.dart';
 import '../../firebase_options.dart';
@@ -39,8 +41,17 @@ Future<void> main() async {
     overrides: overrides,
     repoPath: repo,
   );
+  // Visuales → Animaciones (§ 3.2): fx de datos + overrides de la misma
+  // carpeta + el adaptador de lo que todavía es código.
+  final fx = FxEditorController(
+    catalog: await installFx(overrides: overrides),
+    overrides: overrides,
+    repoPath: repo,
+    spriteImage: sprites.imageOf,
+  );
+  sprites.fx = fx;
   unawaited(sprites.loadAll());
-  runApp(AdminApp(controller: controller, sprites: sprites));
+  runApp(AdminApp(controller: controller, sprites: sprites, animations: fx));
   // Releases publicados: la versión siguiente no puede repetir un tag.
   unawaited(controller.refreshReleases());
 }

@@ -912,8 +912,9 @@ enemigo cayera en pantalla. Regla: el motor resuelve cuando quiere; la
 presentación reacciona al desenlace **visual**.
 
 - Al detectar el desenlace, el host mide la cinemática del paso que lo
-  cerró (`battleCinematicHold`: ULT propia o enemiga 2.3 s, dúo 1.5 s,
-  lo mismo que la pausa `wait` tras esos comandos; 0 para cualquier otro
+  cerró (`battleCinematicHold`: desde v0.16.0 la `duration` de los datos
+  FXA del release, game_editor.md § 4.3 y § 7.2; sin datos, ULT propia o
+  enemiga 2.3 s, dúo 1.5 s; lo mismo que la pausa `wait` tras esos comandos; 0 para cualquier otro
   golpe) y la guarda en `SessionBattle.endHold`. La pausa final
   (`endTimer`, 2.0 s victoria / 2.2 s derrota) se **alarga** en ese
   tanto, así el regreso al mapa, el loot y el XP nunca cortan la
