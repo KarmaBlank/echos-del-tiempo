@@ -1,3 +1,6 @@
+import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
+import 'package:echos_del_tiempo/core/settings/game_settings.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/battle_screen.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_labels.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_layout.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_painter.dart';
@@ -6,6 +9,29 @@ import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
 import 'package:echos_del_tiempo/game_engine/models/status.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+
+import '../../real_fonts.dart';
+import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
+import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
+import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
+import 'big_party_ui_test.dart' show bigMember;
+
+/// [n] jugadores contra 4 enemigos (por el motor real).
+BattleState _battle(int n) {
+  final engine = BattleEngine(
+    stats: StatsCalculator(
+        classes: kClasses, treeRules: PassiveTreeRules(kPassiveTree)),
+    random: () => 0.99,
+  );
+  final start = engine.start(
+    party: [for (var i = 0; i < n; i++) bigMember(i)],
+    enemyTypes: const ['slime', 'bat', 'golem', 'slime'],
+    triggeredBy: 'j0',
+  );
+  return engine.nextTurn(start.state).state;
+}
 
 const _names = ['Guerrero', 'Maga', 'Tirador', 'Paladín'];
 
@@ -110,6 +136,104 @@ void main() {
         }
       }
     }
+  });
+
+  group('franja adaptable', () {
+    double zoomOf(BattleState s, SceneGeometry g) =>
+        BattleLayout.compute(s, null, vw: g.virtualWidth).frame(g, null).zoom;
+
+    test('nunca baja el zoom respecto de la franja chica', () {
+      final s = _fourVsFour(boss: true);
+      for (final size in const [
+        Size(1280, 300), Size(1280, 330), Size(1280, 446), Size(1920, 780),
+        Size(960, 400),
+      ]) {
+        final small = SceneGeometry.fit(size, strip: SceneGeometry.stripSmall);
+        final g = SceneGeometry.adaptive(size, zoomOf: (g) => zoomOf(s, g));
+        expect(zoomOf(s, g), zoomOf(s, small), reason: '$size');
+        expect(g.strip, inInclusiveRange(54, 74));
+        expect(g.bigIcon, inInclusiveRange(28, 46));
+      }
+    });
+
+    test('1920×780: franja grande, mismo zoom que antes', () {
+      final s = _fourVsFour(boss: true);
+      const size = Size(1920, 780);
+      final g = SceneGeometry.adaptive(size, zoomOf: (g) => zoomOf(s, g));
+      expect(g.strip, SceneGeometry.stripHeight);
+      expect((g.bigIcon, g.smallIcon), (46, 40));
+      expect(zoomOf(s, g), zoomOf(s, SceneGeometry.fit(size)));
+    });
+
+    test('con la franja chica: íconos 28 / 22 y log en [38, 54)', () {
+      final g = SceneGeometry.fit(const Size(1280, 400), strip: 54);
+      expect((g.bigIcon, g.smallIcon, g.iconBand, g.logTop), (28, 22, 32, 38));
+    });
+
+    Future<BattleViewState> pumpBattle(WidgetTester tester, Size size, int n,
+        {required bool solo, double text = 1}) async {
+      await loadRealFonts(tester);
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final b = _battle(n);
+      expect(b.enemies.length, 4);
+      await tester.pumpWidget(MaterialApp(
+        theme: RetroTheme.build(),
+        builder: (context, child) => RetroTextScale(factor: text, child: child!),
+        home: Scaffold(
+          body: BattleView(
+              battle: b,
+              canAct: true,
+              localId: b.currentId,
+              turnTimeLeft: 20,
+              companions: solo
+                  ? {for (final p in b.party) if (p.id != b.currentId) p.id}
+                  : const {},
+              onCommand: (_) => true),
+        ),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      return tester.state<BattleViewState>(find.byType(BattleView));
+    }
+
+    double zoomIn(BattleViewState v) {
+      final f = v.scene.frame!;
+      return f.layout.frame(f.geometry, null).zoom;
+    }
+
+    for (final (name, solo, text) in [
+      ('soloParty', true, 1.0),
+      ('texto Grande', false, TextSize.large.factor),
+      ('soloParty y texto Grande', true, TextSize.large.factor),
+    ]) {
+      testWidgets('4 contra 4 en 1280×720 con $name: arena ×3', (tester) async {
+        final v = await pumpBattle(tester, const Size(1280, 720), 4,
+            solo: solo, text: text);
+        expect(zoomIn(v), 3);
+        final f = v.scene.frame!;
+        final small = SceneGeometry.fit(f.geometry.size,
+            textFactor: f.geometry.textFactor, strip: SceneGeometry.stripSmall);
+        expect(zoomIn(v), f.layout.frame(small, null).zoom);
+      });
+    }
+
+    testWidgets('1920×1080: franja grande', (tester) async {
+      final v = await pumpBattle(tester, const Size(1920, 1080), 4, solo: true);
+      final g = v.scene.frame!.geometry;
+      expect(g.strip, SceneGeometry.stripHeight);
+      expect(zoomIn(v), v.scene.frame!.layout
+          .frame(SceneGeometry.fit(g.size, textFactor: g.textFactor), null)
+          .zoom);
+    });
+
+    testWidgets('8 jugadores, grupo compacto en 1280×720', (tester) async {
+      final v = await pumpBattle(tester, const Size(1280, 720), 8, solo: false);
+      expect(find.byKey(const ValueKey('ally-list')), findsOneWidget);
+      final g = v.scene.frame!.geometry;
+      expect(g.strip, inInclusiveRange(54, 74));
+    });
   });
 
   test('placeLabels corre las que chocan y respeta los bordes', () {

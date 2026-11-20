@@ -388,13 +388,24 @@ stacks` del color del estado), en la línea del nombre / de la vida.
 ## Franja de turnos (`drawTimeline`)
 
 - Alto 74 (v0.13.1; el prototipo usaba 54 con íconos de 28 / 22).
+- **Franja adaptable** (`SceneGeometry.adaptive`): la escena calcula el
+  encuadre (`BattleLayout.frame`, el zoom entero de la arena) con la franja
+  chica (54) y usa la más alta, de 74 hacia abajo de a 2, que mantenga ese
+  mismo zoom; si ninguna, la de 54. Con la altura `h` de la franja todo se
+  deriva: íconos `floor(28 + 18·k)` / `floor(22 + 18·k)` con
+  `k = (h − 54)/20`, línea en `h − 22`, `TURNOS` en `y = (h − 22)/2 + 3`,
+  log en `[h − 16, h)`. La franja ocupa `floor(h·s)` px de pantalla (el
+  píxel sobrante va al mundo). Ej.: 4 contra 4 en 1280×720 con soloParty o
+  texto Grande → franja más baja y arena en ×3 (con 74 caía a ×2);
+  1920×1080 → 74 y el mismo zoom de siempre. Se recalcula en cada layout,
+  sin animación.
 - Fondo `#0b0e1a`; banda `0..52` `#0b0e1acc`; línea `#5b74c9` en `y=52`.
 - Barra de tiempo (turno de un jugador y la sesión esperando): fondo
   `#000000aa` `0..VW × 53..57`, relleno `VW · left/30`; `#ffd166`, o
   si `left ≤ 10` alterna `#ff4757` / `#ff6b81` cada 250 ms.
 - `TURNOS` 8 px `#9fb4ff` centrado en `(30, 29)`.
 - Los próximos 10 turnos de `predictTurns` desde `x = 60`: el primero de
-  46 px en `y = 2`, el resto de 40 px centrados con él; si no entran en
+  46 px (franja grande) en `y = 2`, el resto de 40 px centrados con él; si no entran en
   `VW` se achican todos por igual (nunca se cortan); fondo `#1d2a5a`
   (jugador) o `#4a1820` (enemigo); borde `#ffd166` de 2 px el primero,
   si no 1 px `#ffd166aa` (jugador local), `#5b74c9` (otro jugador) o
@@ -404,7 +415,7 @@ stacks` del color del estado), en la línea del nombre / de la vida.
   Triángulo `#ffd166` bajo el primero (`b = sin(t/150)·1.5`) y una
   flecha `#5b74c9` 3×2 entre el primero y el segundo. Separación 8 px
   tras el primero, 4 tras el resto.
-- Banda del log `y ∈ [58, 74)` negra: log de batalla y, en el turno de
+- Banda del log `y ∈ [58, 74)` negra (con la franja grande): log de batalla y, en el turno de
   un jugador, `TÚ` o su nombre (6 letras) + segundos restantes a la
   derecha, `#ffd166` o `#ff6b81` con ≤ 10 s (`drawTurnLabel`). Son
   textos Flutter de 8 px (ver desvíos).
