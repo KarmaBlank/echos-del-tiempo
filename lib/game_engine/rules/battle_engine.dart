@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../data/tuning_catalog.dart';
 import '../data/ascension_catalog.dart';
 import '../data/branch_ults_catalog.dart';
 import '../data/elements_catalog.dart';
@@ -42,6 +43,9 @@ typedef RandomSource = double Function();
 ///
 /// ULT v2 (ultimates_v2.md § 2.1): si el jugador eligió una ULT activa
 /// válida (`PlayerBuild.ultSel`), esa; si no, el orden de siempre.
+/// Carga de ULT por recibir el 100% de la vida en daño (Ajustes → Carga de barra ULT).
+double get _ultTaken => tuning(TuningId.ultCharge).d('takenFactor');
+
 SkillDef? ultimateOf(Combatant c,
     [GameCatalog catalog = GameCatalog.standard]) {
   final b = c.build;
@@ -56,7 +60,11 @@ SkillDef? ultimateOf(Combatant c,
   }
   // Mod "ULT: <nombre>" / legendario (branch_ults.md) o base propia.
   final own = ownWeaponUlt(c.build?.equippedWeapon.id, c.build?.item);
-  if (own != null) return UltRules.leveled(own, b?.ultLevel ?? 1);
+  // Una ULT v2 que trae el arma sale del catálogo (con el parche de
+  // balance), no del registro fijo.
+  if (own != null) {
+    return UltRules.leveled(catalog.playerUlts[own.id] ?? own, b?.ultLevel ?? 1);
+  }
   return catalog.ultimates[c.weaponType];
 }
 
@@ -64,7 +72,7 @@ SkillDef? ultimateOf(Combatant c,
 /// (ultimates_v2.md § 2.2).
 bool ultReady(Combatant c, [GameCatalog catalog = GameCatalog.standard]) {
   final u = ultimateOf(c, catalog);
-  return u != null && c.ult >= u.ultCost;
+  return u != null && c.ult >= kUltCost;
 }
 
 /// Los 3 estados elementales (Elementalista).
@@ -140,10 +148,10 @@ class BattleEngine {
 
   // ---- ULT enemiga ----
   /// Carga por turno propio.
-  static const enemyUltPerTurn = 25.0;
+  static double get enemyUltPerTurn => tuning(TuningId.ultCharge).d('enemyPerTurn');
 
   /// Carga por vida perdida: +1 por cada 1% (= 100 × fracción).
-  static const enemyUltPerHp = 100.0;
+  static double get enemyUltPerHp => tuning(TuningId.ultCharge).d('enemyPerHp');
 
   /// Tope de lo que el drenaje le quita a una ULT ya avisada
   /// (ultimates_v2.md § 4.1).
@@ -1112,7 +1120,7 @@ class _Turn {
     if (taken >= p.hp && p.hp > 0) taken = _cheatDeath(p, taken);
     if (taken > 0) {
       p.ult =
-          math.min(100, p.ult + taken / p.maxHp * 110 * (1 + p.ultChargeBonus));
+          math.min(100, p.ult + taken / p.maxHp * _ultTaken * (1 + p.ultChargeBonus));
     }
     p.hp = math.max(0, p.hp - taken);
     events.add(DamageEvent(p.id, taken,
@@ -2420,7 +2428,7 @@ class _Turn {
       if (taken >= t.hp) taken = _cheatDeath(t, taken);
       if (taken > 0) {
         t.ult = math.min(
-            100, t.ult + taken / t.maxHp * 110 * (1 + t.ultChargeBonus));
+            100, t.ult + taken / t.maxHp * _ultTaken * (1 + t.ultChargeBonus));
       }
       t.hp = math.max(0, t.hp - taken);
       events.add(DamageEvent(t.id, taken, sourceId: sourceId));
@@ -3860,7 +3868,7 @@ class _Turn {
       final taken = dmg - _absorb(p, dmg);
       if (taken > 0) {
         p.ult = math.min(
-            100, p.ult + taken / p.maxHp * 110 * (1 + p.ultChargeBonus));
+            100, p.ult + taken / p.maxHp * _ultTaken * (1 + p.ultChargeBonus));
       }
       p.hp = math.max(0, p.hp - taken);
       events.add(DamageEvent(p.id, taken));
@@ -4255,8 +4263,8 @@ class _Turn {
       case UltimateCommand():
         final sk = ultimateOf(p, engine.catalog);
         // Costo variable (ultimates_v2.md § 2.2): resta, no vacía.
-        if (sk == null || p.ult < sk.ultCost) return false;
-        p.ult = math.max(0, p.ult - sk.ultCost);
+        if (sk == null || p.ult < kUltCost) return false;
+        p.ult = 0;
         usedUlt = true;
         if (sk.hpCost > 0) {
           final cost = math.min(p.hp - 1, jsRound(p.maxHp * sk.hpCost));
@@ -4357,7 +4365,11 @@ class _Turn {
     }
     if (!usedUlt) {
       final dealtBonus =
-          _dealt > 0 ? math.min(22.0, 5 + _dealt / _dealtMaxHp * 30) : 0.0;
+          _dealt > 0
+              ? math.min(tuning(TuningId.ultCharge).d('dealtCap'),
+                  tuning(TuningId.ultCharge).d('dealtBase') +
+                      _dealt / _dealtMaxHp * tuning(TuningId.ultCharge).d('dealtScale'))
+              : 0.0;
       p.ult = math.min(
           100, p.ult + (ultGain + dealtBonus) * (1 + p.ultChargeBonus));
     }

@@ -1,7 +1,9 @@
 import '../data/enemy_families.dart' show ComboRulesDef, HitCapDef;
 import '../data/ults_v2_catalog.dart' show kUltV2;
 import '../data/zone_curve.dart';
+import '../data/tuning_catalog.dart';
 import '../models/abyss.dart';
+import '../models/achievement.dart';
 import '../models/class_def.dart';
 import '../models/elements.dart';
 import '../models/enemy_def.dart';
@@ -46,7 +48,30 @@ enum BalanceKind {
   combo('combo', 'Combos y quiebre', 'Reglas de combos'),
 
   /// Curva por tramos y grupo (combo_balance.md § 1 y § 3.3).
-  curve('curve', 'Curva y grupo', 'Curva y grupo');
+  curve('curve', 'Curva y grupo', 'Curva y grupo'),
+
+  // ---- Ajustes (tuning_catalog.dart): un grupo de números por tipo ----
+
+  /// Escalado de ULT por nivel (ultimates_v2.md § 2.4).
+  ultLevel('ultLevel', 'ULT: escalado por nivel', 'Escalado de ULT'),
+
+  /// Costo de mejorar una ULT (ultimates_v2.md § 2.4).
+  ultUpgrade('ultUpgrade', 'ULT: costo de mejora', 'Mejora de ULT'),
+
+  /// Carga de la barra ULT (golpes, daño recibido, enemigos).
+  ultCharge('ultCharge', 'ULT: carga de la barra', 'Carga de ULT'),
+
+  /// Recetas de Condensar (materials_economy.md § 4.3).
+  condense('condense', 'Condensar', 'Recetas de Condensar'),
+
+  /// Drop de materiales, desarme y costos por rareza (economía v0.15).
+  materials('materials', 'Economía de materiales', 'Economía de materiales'),
+
+  /// Bonus de cantidad por tier y grupo en los Ecos (§ 4.4).
+  ecoTier('ecoTier', 'Ecos: bonus de tier', 'Bonus de Ecos'),
+
+  /// Recompensa de cada hazaña (achievements.md § 1).
+  featReward('featReward', 'Hazañas', 'Hazaña');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -211,7 +236,6 @@ Map<String, Object?> _readSkill(Object o) {
     'pulse': s.pulse,
     'instant': s.instant,
     // ULT v2 (ultimates_v2.md § 5.4).
-    'ultCost': s.ultCost,
     'pulseParty': s.pulseParty,
     'openerBonus': s.openerBonus,
     'echoLast': s.echoLast,
@@ -271,7 +295,6 @@ Object _writeSkill(Object o, BalanceFieldReader f) {
     pulse: f.values.containsKey('pulse') ? f.i('pulse') : b.pulse,
     instant: f.values.containsKey('instant') ? f.b('instant') : b.instant,
     requires: b.requires,
-    ultCost: f.values.containsKey('ultCost') ? f.i('ultCost') : b.ultCost,
     pulseParty:
         f.values.containsKey('pulseParty') ? f.i('pulseParty') : b.pulseParty,
     openerBonus: f.values.containsKey('openerBonus')
@@ -308,7 +331,6 @@ const skillCodec = EntityCodec(
 
 /// Campos propios de las ULT (ultimates_v2.md § 2.2 y § 5.4).
 const _ultFields = <BalanceField>[
-  BalanceField('ultCost', 'Costo de carga (60 / 80 / 100)', _int, min: 1, max: 100),
   _pulseField,
   _instantField,
   BalanceField('pulseParty', 'Pulso al grupo', _int, max: 5),
@@ -1085,6 +1107,118 @@ final curveCodec = EntityCodec(
   nameOf: (o) => (o as CurveDef).name,
 );
 
+// ---------------------------------------------------------------------
+// Ajustes (tuning_catalog.dart) y hazañas
+// ---------------------------------------------------------------------
+
+EntityCodec _tuningCodec(BalanceKind kind, List<BalanceField> fields) =>
+    EntityCodec(
+      kind: kind,
+      fields: fields,
+      read: (o) => {...(o as TuningDef).values},
+      write: (o, f) {
+        final t = o as TuningDef;
+        return TuningDef(t.name, {
+          for (final k in t.values.keys) k: f.values[k] as num,
+        });
+      },
+      nameOf: (o) => (o as TuningDef).name,
+    );
+
+final ultLevelCodec = _tuningCodec(BalanceKind.ultLevel, const [
+  BalanceField('perLevel', 'Poder extra por nivel sobre el 1', _frac, max: 0.5, step: 0.01),
+]);
+
+final ultUpgradeCodec = _tuningCodec(BalanceKind.ultUpgrade, const [
+  BalanceField('credits', 'Créditos × nivel', _int, max: 100000, step: 100),
+  BalanceField('cristal', 'Cristales de Era × nivel', _int, max: 20),
+  BalanceField('prismaFrom', 'Prismas desde el nivel (1 + uno por nivel)', _int, min: 1, max: 6),
+  BalanceField('fragFrom', 'Fragmento de jefe desde el nivel', _int, min: 1, max: 6),
+]);
+
+final ultChargeCodec = _tuningCodec(BalanceKind.ultCharge, const [
+  BalanceField('takenFactor', 'Carga por recibir el 100% de la vida', _dec, max: 500, step: 5),
+  BalanceField('dealtBase', 'Carga base por hacer daño', _dec, max: 50, step: 0.5),
+  BalanceField('dealtScale', 'Carga por daño (× fracción de la vida del objetivo)', _dec, max: 200, step: 1),
+  BalanceField('dealtCap', 'Tope de carga por hacer daño', _dec, max: 100, step: 1),
+  BalanceField('enemyPerTurn', 'Enemigos: carga por turno', _dec, max: 100, step: 1),
+  BalanceField('enemyPerHp', 'Enemigos: carga por perder el 100% de la vida', _dec, max: 500, step: 5),
+]);
+
+final condenseCodec = _tuningCodec(BalanceKind.condense, const [
+  BalanceField('cristalCost', 'Cristal: Esquirlas que gasta', _int, min: 1, max: 99),
+  BalanceField('cristalCredits', 'Cristal: créditos', _int, max: 100000, step: 50),
+  BalanceField('prismaCost', 'Prisma: Cristales que gasta', _int, min: 1, max: 99),
+  BalanceField('prismaCredits', 'Prisma: créditos', _int, max: 100000, step: 50),
+]);
+
+final materialsCodec = _tuningCodec(BalanceKind.materials, const [
+  BalanceField('chanceEsquirla', 'Drop: Esquirla (prob. base)', _frac, max: 1, step: 0.005),
+  BalanceField('chanceCristal', 'Drop: Cristal (prob. base)', _frac, max: 1, step: 0.005),
+  BalanceField('chancePrisma', 'Drop: Prisma (prob. base)', _frac, max: 1, step: 0.001),
+  BalanceField('multBattle', 'Drop: × en batalla', _dec, max: 20, step: 0.5),
+  BalanceField('multChest', 'Drop: × en cofre', _dec, max: 20, step: 0.5),
+  BalanceField('multMission', 'Drop: × en misión', _dec, max: 20, step: 0.5),
+  BalanceField('multElite', 'Drop: × de élite', _dec, max: 20, step: 0.5),
+  BalanceField('multBoss', 'Drop: × de jefe', _dec, max: 20, step: 0.5),
+  BalanceField('weightComun', 'Rareza: peso Común', _dec, max: 1000, step: 1),
+  BalanceField('weightMagico', 'Rareza: peso Mágico', _dec, max: 1000, step: 1),
+  BalanceField('weightRaro', 'Rareza: peso Raro', _dec, max: 1000, step: 0.5),
+  BalanceField('weightEpico', 'Rareza: peso Épico (Ecos)', _dec, max: 1000, step: 0.1),
+  BalanceField('weightLegendario', 'Rareza: peso Legendario', _dec, max: 1000, step: 0.1),
+  BalanceField('zoneEpicWeight', 'Rareza: peso Épico fuera de Ecos', _dec, max: 1000, step: 0.1),
+  BalanceField('salvageHighLevel', 'Desarme: +1 material desde nivel', _int, min: 1, max: 100),
+  BalanceField('upComunPrismas', 'Subir Común: Prismas', _int, max: 99),
+  BalanceField('upComunCredits', 'Subir Común: créditos', _int, max: 100000, step: 50),
+  BalanceField('upMagicoPrismas', 'Subir Mágico: Prismas', _int, max: 99),
+  BalanceField('upMagicoCredits', 'Subir Mágico: créditos', _int, max: 100000, step: 50),
+  BalanceField('upRaroPrismas', 'Subir Raro: Prismas', _int, max: 99),
+  BalanceField('upRaroCredits', 'Subir Raro: créditos', _int, max: 100000, step: 50),
+  BalanceField('transferCredits', 'Trasladar habilidad: créditos × rareza', _int, max: 100000, step: 10),
+  BalanceField('transferCristales', 'Trasladar a Raro+: Cristales', _int, max: 99),
+  BalanceField('addAffixCredits', 'Agregar afijo: créditos × rareza', _int, max: 100000, step: 5),
+  BalanceField('rerollCredits', 'Retirar afijo: créditos × rareza', _int, max: 100000, step: 5),
+]);
+
+final ecoTierCodec = _tuningCodec(BalanceKind.ecoTier, const [
+  BalanceField('tierQuantity', 'Cantidad extra por tier sobre T1', _frac, max: 1, step: 0.005),
+  BalanceField('partyQuantity', 'Cantidad extra por jugador extra', _frac, max: 1, step: 0.01),
+]);
+
+final featRewardCodec = EntityCodec(
+  kind: BalanceKind.featReward,
+  fields: const [
+    BalanceField('credits', 'Créditos', _int, max: 1000000, step: 100),
+    BalanceField('esquirlas', 'Esquirlas del Eco', _int, max: 999),
+    BalanceField('cristales', 'Cristales de Era', _int, max: 999),
+    BalanceField('prismas', 'Prismas Rotos', _int, max: 999),
+    BalanceField('potions', 'Pociones de vida', _int, max: 99),
+    BalanceField('ethers', 'Pociones de maná', _int, max: 99),
+  ],
+  read: (o) {
+    final r = (o as AchievementDef).baseReward;
+    return {
+      'credits': r.credits,
+      'esquirlas': r.esquirlas,
+      'cristales': r.cristales,
+      'prismas': r.prismas,
+      'potions': r.potions,
+      'ethers': r.ethers,
+    };
+  },
+  // Devuelve la recompensa (lo que instala el registro), no la hazaña.
+  write: (o, f) => AchievementReward(
+    credits: f.i('credits'),
+    esquirlas: f.i('esquirlas'),
+    cristales: f.i('cristales'),
+    prismas: f.i('prismas'),
+    potions: f.i('potions'),
+    ethers: f.i('ethers'),
+    ult: (o as AchievementDef).baseReward.ult,
+  ),
+  nameOf: (o) => (o as AchievementDef).name,
+);
+
 /// El codec de cada tipo.
 EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.abyssBoss => abyssBossCodec,
@@ -1104,4 +1238,21 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.mechanic => mechanicCodec,
       BalanceKind.reaction => reactionCodec,
       BalanceKind.elementStatus => elementStatusCodec,
+      BalanceKind.ultLevel => ultLevelCodec,
+      BalanceKind.ultUpgrade => ultUpgradeCodec,
+      BalanceKind.ultCharge => ultChargeCodec,
+      BalanceKind.condense => condenseCodec,
+      BalanceKind.materials => materialsCodec,
+      BalanceKind.ecoTier => ecoTierCodec,
+      BalanceKind.featReward => featRewardCodec,
     };
+
+/// Tipos de "Ajustes": un grupo de [kTuning] cada uno (id = jsonKey).
+const kTuningKinds = [
+  BalanceKind.ultLevel,
+  BalanceKind.ultUpgrade,
+  BalanceKind.ultCharge,
+  BalanceKind.condense,
+  BalanceKind.materials,
+  BalanceKind.ecoTier,
+];

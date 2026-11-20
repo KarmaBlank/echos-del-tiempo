@@ -210,7 +210,7 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
       child: DsListRow(
       key: ValueKey('ult-row-${o.id}'),
       compact: true,
-      title: '${o.skill.name}$lv · ${o.skill.ultCost}',
+      title: '${o.skill.name}$lv',
       detail: o.reason == null ? kind : '$kind · ${o.reason}',
       titleColor: o.available ? null : DsColors.textSecondary,
       selected: o.id == _focus,

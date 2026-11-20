@@ -5,11 +5,10 @@ source: {kind: weapon_mod, ref: ""}
 weapons: ["varita"]
 classes: []
 element: electro
-cost: 100
 pulse: 0
 skill:
   kind: magical
-  power: 1.5
+  power: 1.72
   allTargets: true
   status: {"kind":"charged","stacks":1}
   advanceAllies: 0.2

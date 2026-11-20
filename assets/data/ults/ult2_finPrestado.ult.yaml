@@ -5,7 +5,6 @@ source: {kind: boss, ref: "devorador"}
 weapons: []
 classes: []
 element: fuego
-cost: 100
 pulse: 0
 skill:
   kind: magical

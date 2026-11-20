@@ -142,6 +142,12 @@ class BalancePatch {
         for (final f in fields.entries) {
           final key = '${f.key}';
           final spec = codec.field(key);
+          if (spec == null && kind == BalanceKind.ultimate && key == 'ultCost') {
+            // Parches viejos: toda ULT cuesta la barra llena (se ignora).
+            issues.add(BalanceIssue('$path.$key',
+                'ignorado: toda ULT cuesta la barra llena', error: false));
+            continue;
+          }
           if (spec == null) {
             issues.add(BalanceIssue('$path.$key',
                 key == 'disabled'

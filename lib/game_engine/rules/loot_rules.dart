@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../data/tuning_catalog.dart';
 import '../data/branch_ults_catalog.dart';
 import '../data/ults_v2_catalog.dart' show ultV2ModsForType;
 
@@ -72,18 +73,21 @@ class LootRules {
   /// Peso base (Común 60, Mágico 27, Raro 10, Épico 2.7, Legendario
   /// 0.3). Es el de los Ecos; en zonas el Épico pesa [zoneEpicWeight]
   /// (materials_economy.md § 4.1).
-  static const baseRarityWeights = {
-    Rarity.comun: 60.0,
-    Rarity.magico: 27.0,
-    Rarity.raro: 10.0,
-    Rarity.epico: 2.7,
-    Rarity.legendario: 0.3,
-  };
+  static Map<Rarity, double> get baseRarityWeights {
+    final t = tuning(TuningId.materials);
+    return {
+      Rarity.comun: t.d('weightComun'),
+      Rarity.magico: t.d('weightMagico'),
+      Rarity.raro: t.d('weightRaro'),
+      Rarity.epico: t.d('weightEpico'),
+      Rarity.legendario: t.d('weightLegendario'),
+    };
+  }
 
   /// Peso base del Épico fuera de un Eco (campaña, cofres, misiones):
   /// 1.5 en vez de 2.7, para que el Épico crafteado valga
   /// (materials_economy.md § 4.1).
-  static const zoneEpicWeight = 1.5;
+  static double get zoneEpicWeight => tuning(TuningId.materials).d('zoneEpicWeight');
 
   /// Cuánto multiplica el bonus de rareza a cada rareza (`× (1 + k·b)`).
   static const rarityBonusScale = {
@@ -363,19 +367,25 @@ class LootRules {
 
   /// Probabilidad base de cada material por drop (× fuente × zona;
   /// materials_economy.md § 4.1).
-  static const materialChance = {
-    CraftMaterial.esquirla: 0.08,
-    CraftMaterial.cristal: 0.025,
-    CraftMaterial.prisma: 0.006,
-  };
+  static Map<CraftMaterial, double> get materialChance {
+    final t = tuning(TuningId.materials);
+    return {
+      CraftMaterial.esquirla: t.d('chanceEsquirla'),
+      CraftMaterial.cristal: t.d('chanceCristal'),
+      CraftMaterial.prisma: t.d('chancePrisma'),
+    };
+  }
 
-  static double materialMultiplier(LootSource s) => switch (s) {
-        LootSource.battle => 1,
-        LootSource.chest => 2,
-        LootSource.mission => 2,
-        LootSource.elite => 3,
-        LootSource.boss => 5,
-      };
+  static double materialMultiplier(LootSource s) {
+    final t = tuning(TuningId.materials);
+    return switch (s) {
+      LootSource.battle => t.d('multBattle'),
+      LootSource.chest => t.d('multChest'),
+      LootSource.mission => t.d('multMission'),
+      LootSource.elite => t.d('multElite'),
+      LootSource.boss => t.d('multBoss'),
+    };
+  }
 
   /// Materiales de un drop: una tirada por material (`chance × fuente ×
   /// (1 + bonus de zona)`, tope 95%); el jefe además deja 1 Esquirla.

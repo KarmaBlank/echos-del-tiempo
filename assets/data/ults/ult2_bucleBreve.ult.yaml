@@ -5,11 +5,10 @@ source: {kind: tree, ref: "maga:20"}
 weapons: []
 classes: ["maga"]
 element: fisico
-cost: 60
 pulse: 0
 skill:
   kind: magical
-  power: 0.9
+  power: 1.7
   delay: 0.6
   allTargets: true
   instant: true

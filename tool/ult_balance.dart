@@ -20,6 +20,7 @@ import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_state.dart';
 import 'package:echos_del_tiempo/game_engine/models/skill.dart';
+import 'package:echos_del_tiempo/game_engine/models/status.dart';
 import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/mulberry32.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
@@ -81,6 +82,13 @@ double measure(String id, {int level = 1, String? weaponType}) {
         for (var i = 2; i <= g; i++) member('p$i', 'guerrero', 'espada_bronce'),
       ];
       var st = engine.start(party: party, enemyTypes: _enemies, triggeredBy: 'p1').state;
+      // Enemigos con 10x vida: sin esto el daño de un objetivo se pierde
+      // en exceso (el esqueleto tiene 125) y las ULT de un golpe grande
+      // quedan subvaloradas.
+      for (final e in st.enemies) {
+        e.maxHp *= 10;
+        e.hp = e.maxHp;
+      }
       for (final p in st.party.skip(1)) {
         p.hp = (p.maxHp * 0.6).round();
       }
@@ -135,6 +143,31 @@ double measure(String id, {int level = 1, String? weaponType}) {
               .fold(0, (a, e) => a + e.stacks) *
           atk *
           0.3;
+      // Control duro (aturdir / congelar): el turno que pierde el enemigo
+      // vale como un retraso de un turno entero (+0.5 golpe por stack,
+      // sobre los 0.3 de cualquier estado).
+      v += step.events
+              .whereType<StatusAppliedEvent>()
+              .where((e) => e.targetId.startsWith('e') &&
+                  (e.kind == StatusKind.stun || e.kind == StatusKind.freeze))
+              .fold(0, (a, e) => a + e.stacks) *
+          atk *
+          0.5;
+      // Robo de carga de ULT: los esqueletos no tienen ULT, así que el
+      // motor no lo registra; vale carga/100 golpes por enemigo golpeado
+      // (retrasa la ULT enemiga ese tanto).
+      final sk = kUltV2Skills[id];
+      if (sk != null && sk.ultDrain > 0) {
+        final hit = step.events
+            .whereType<DamageEvent>()
+            .where((e) => e.targetId.startsWith('e'))
+            .map((e) => e.targetId)
+            .toSet()
+            .length;
+        v += sk.ultDrain / 100 * hit * atk;
+      }
+      // Proteger (atraer golpes): 0.25 golpe por aliado cubierto.
+      if (sk != null && sk.protect) v += 0.25 * (g - 1) * atk;
       // Disparo cargado / marca diferida: su daño futuro.
       for (final f in s.party.first.effects) {
         if (f.stat.name == 'charge') v += f.value;

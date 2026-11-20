@@ -91,8 +91,8 @@ futuro o del pasado, futuro inmutable, pasado magitec).
 
 ### 2.2 Costo
 
-- Nuevo campo `SkillDef.ultCost` (60 / 80 / 100; default 100). Lanzar
-  resta `ultCost` (no pone a 0): con 100 de carga y una de 60 sobran 40.
+- ~~Nuevo campo `SkillDef.ultCost` (60 / 80 / 100)~~ — revertido (§ 7):
+  toda ULT pide la barra llena y la vacía.
 - Las de 60 son más chicas o utilitarias; las de 100 son las fuertes.
   Regla de balance: valor esperado ≈ proporcional al costo
   (§ 3.2, script de medición).
@@ -375,7 +375,7 @@ source: { kind: weapon_mod, rarity: [rara, epica] }  # weapon_mod | unique | tre
 weapons: [espada]
 classes: []            # vacío = cualquiera
 element: physical
-cost: 100              # ultCost
+cost: 100              # (ignorado: toda ULT cuesta 100)
 pulse: 0
 skill:                 # campos de SkillDef, mismos nombres
   kind: physical
@@ -458,7 +458,7 @@ que cada `fx` exista y dure ≤ 2600 ms.
 
 Respuestas aprobadas: 1) las 144 de camino ya no caen (el mod de arma
 usa el pool de 12; las armas ya caídas conservan `ul`); 2) una ULT
-activa; 3) reemplazada (§ 2.1: nunca se pierden); 4) costos 60/80/100;
+activa; 3) reemplazada (§ 2.1: nunca se pierden); 4) costos 60/80/100 (revertido después: toda ULT cuesta la barra llena);
 5) Heraldo con ULT solo como élite; 6) fragmento de jefe por jugador.
 
 **Código**
@@ -472,7 +472,7 @@ activa; 3) reemplazada (§ 2.1: nunca se pierden); 4) costos 60/80/100;
   `UltYaml` (Dart puro) y `UltDataLoader` (core, pone los datos debajo
   del parche de balance). `dart run tool/export_ult_data.dart` los
   regenera desde el código; `ult_data_test.dart` comprueba que coincidan.
-- Motor: `SkillDef.ultCost` (resta), `pulseParty`, `openerBonus`,
+- Motor: ~~`SkillDef.ultCost`~~ (revertido), `pulseParty`, `openerBonus`,
   `echoLast` (`Combatant.lastSkillId`), `delayedHit` (`doom`,
   `doomTurns`, `doomBy`; cae al empezar el turno del marcado),
   `perAlly`, `stripBuffs`; ULT con `hpCost` cobra vida; ULT `instant`
@@ -522,6 +522,88 @@ Autómata escudo 40%→50%. Resultado: ninguna pasa 1.35× la mediana de su
 rol a nivel 1 ni 1.7× a nivel 5. La meta de ±15% no se cumple en la
 cola baja (utilitarias de un objetivo y buffs que el script valora por
 debajo); quedan anotadas como "baja" en la salida del script.
+
+**Costo único (revierte la respuesta 4).** El dueño pidió que toda ULT
+se lance con la barra al 100% y la vacíe, como antes: se quitó `ultCost`
+(`SkillDef`, codec, YAML `cost`, UI). La velocidad de carga la dan las
+pasivas y el árbol. Datos viejos: el `cost` / `ultCost` de un YAML se
+ignora y un `ultCost` en `balance.json` queda como aviso (no se aplica).
+Las ULT que costaban 60 / 80 suben de poder para compensar.
+
+**Balance v2 de utilidad (rama balance/ult-utilidad).** El dueño pidió
+subir las ULT flojas: mejor que queden un poco fuertes y después se
+bajan, antes que inútiles.
+
+Correcciones al modelo de `tool/ult_balance.dart`:
+
+- Enemigos con 10× vida al medir: el esqueleto (125) se moría y el daño
+  de un objetivo se perdía en exceso, así que los golpes grandes de un
+  objetivo (Corona Rota, Golpe Maestro, Remate) quedaban subvalorados.
+  El remate (`execute`) ya casi no se dispara en la medición.
+- Control duro: aturdir / congelar suma +0.5 golpe por stack aparte de
+  los 0.3 de cualquier estado (un turno perdido vale como un retraso de
+  un turno entero).
+- Robo de carga de ULT (`ultDrain`): los esqueletos no tienen ULT y el
+  motor no lo registraba. Ahora vale carga/100 golpes por enemigo golpeado.
+- Proteger (`protect`): 0.25 golpe por aliado cubierto.
+- Toda ULT se mide con costo 100.
+
+**Objetivo absoluto.** Referencia fija = las medianas de rol con el
+modelo nuevo sobre los números originales (antes de estas subas, con sus
+costos originales): D1 3.83, DA 5.42, S 1.15, C 6.27 golpes por 100 de
+carga. Las tocadas (y cualquiera que midiera < 1.0 de la referencia)
+quedan entre 1.05× y 1.15× de la referencia a nivel 1, sin pasar 1.35× a
+nivel 5. Las demás no cambian.
+
+| ULT | costo antes | cambio | nv1 / ref | nv5 / ref |
+|---|---|---|---|---|
+| Eco del Filo | 100 | poder 1.05 → 1.42 | 1.08 | 1.34 |
+| Talado de Eras | 100 | poder 1.7 → 1.929 | 1.09 | 1.34 |
+| Flecha que Vuelve | 80 | poder 1.5 → 1.854 | 1.08 | 1.34 |
+| Disparo Anterior | 80 | carga 3.6 → 4.149 | 1.08 | 1.34 |
+| Virote Detenido | 100 | poder 2.2 → 3.13 | 1.14 | 1.35 |
+| Mil Ayeres | 100 | poder 0.55 → 0.599 | 1.09 | 1.35 |
+| Página que Recuerda | 100 | poder 1.4 → 1.9 | 1.12 | 1.24 |
+| Chispa Relojera | 100 | poder 1.5 → 1.72 | 1.12 | 1.34 |
+| Muro de Ayer | 100 | escudo grupo 0.20 → 0.22 | 1.07 | 1.34 |
+| Yunque del Tiempo | 100 | poder 3.4 → 3.927 | 1.11 | 1.32 |
+| Reloj Partido | 100 | poder 1.0 → 1.51 | 1.12 | 1.32 |
+| Hoja de la Corona Rota | 100 | poder 3.2 → 4.169 | 1.08 | 1.34 |
+| Pulso Magitec | 100 | poder 1.4 → 1.684 | 1.11 | 1.34 |
+| Doble Horizonte | 100 | poder 1.6 → 1.792 | 1.10 | 1.33 |
+| Sangre de Eco | 80 | poder 2.6 → 3.29 | 1.08 | 1.34 |
+| Grito de las Ruinas | 80 | ATQ grupo 0.20 → 0.281 | 1.07 | 1.07 |
+| Bucle Breve | 60 | poder 0.9 → 1.7 | 1.08 | 1.30 |
+| Prisma del Pasado | 100 | poder 1.6 → 2.002 | 1.08 | 1.33 |
+| Sentencia Lejana | 80 | poder 1.9 → 2.364 | 1.06 | 1.28 |
+| Lluvia de Ecos | 100 | poder 0.35 → 0.476 | 1.09 | 1.35 |
+| Primer Golpe | 80 | poder 2.5 → 2.775 | 1.08 | 1.34 |
+| Cadena de Eras | 100 | poder 1.2 → 2.005 | 1.08 | 1.34 |
+| Lluvia de Esquirlas | 100 | poder 1.5 → 1.751 | 1.11 | 1.34 |
+| Custodio del Instante | 80 | poder 0.5 → 1.255 | 1.06 | 1.27 |
+| Forjado en el Ayer | 60 | daño propio 0.40 → 0.846 | 1.10 | 1.10 |
+| Remate del Eco | 80 | poder 2.2 → 4.175 | 1.08 | 1.34 |
+| Era Suspendida | 100 | poder 1.6 → 3.16 | 1.13 | 1.33 |
+| Golpe Maestro | 100 | poder 3.0 → 3.13 | 1.08 | 1.34 |
+| Eco Doble | 80 | poder 2.0 → 4.164 | 1.08 | 1.34 |
+| Lo Que Será | 100 | golpe diferido 4.0 → 4.853 | 1.08 | 1.34 |
+| Diluvio Menor | 80 | poder 1.0 → 2.066 | 1.08 | 1.34 |
+| Telar del Tiempo | 100 | poder 1.2 → 1.901 | 1.10 | 1.34 |
+| Aliento Prestado | 100 | poder 1.2 → 1.95 | 1.12 | 1.24 |
+| Coro Prestado | 100 | poder 1.0 → 1.655 | 1.08 | 1.34 |
+| Lamento Prestado | 100 | poder 1.2 → 1.35 | 1.11 | 1.34 |
+| Marca del Vacío | 80 | poder 2.4 → 3.416 | 1.05 | 1.26 |
+
+Siguen por encima de la meta sin tocar (ya estaban altas): Ojo del
+Futuro (1.22 / 1.51), Atlas Abierto (1.29 / 1.46), Engranaje Prestado
+(1.35 / 1.43), Erupción Contenida (1.27 / 1.50), Lanza Inmóvil (1.15 /
+1.41), Baluarte Autómata (1.20 / 1.40), Última Cuerda (1.17 / 1.39);
+candidatas a bajar después.
+
+En Editor → Balance las 50 ULT de jugador se listan (fuente, rol,
+compatibilidad) y se editan con los campos de ULT v2. El parche llega
+también a la ULT que trae el arma (mod o legendario), no solo a la
+elegida en el repertorio.
 
 **Desvíos**
 

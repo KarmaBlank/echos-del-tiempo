@@ -5,11 +5,10 @@ source: {kind: feat, ref: "ult_breaks"}
 weapons: []
 classes: []
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 1.2
+  power: 2.005
   allTargets: true
   breakBonus: 0.8
 fx: ult2_cadenaEras

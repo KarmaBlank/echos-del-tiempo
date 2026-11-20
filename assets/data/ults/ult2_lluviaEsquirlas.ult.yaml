@@ -5,11 +5,10 @@ source: {kind: feat, ref: "ult_cancels"}
 weapons: []
 classes: []
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 1.5
+  power: 1.751
   allTargets: true
   ultDrain: 30.0
 fx: ult2_lluviaEsquirlas

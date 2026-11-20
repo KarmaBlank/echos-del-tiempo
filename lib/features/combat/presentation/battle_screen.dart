@@ -695,15 +695,13 @@ class BattleViewState extends State<BattleView>
     }
 
     if (ult != null) {
-      final ready = cur.ult >= ult.ultCost;
+      final ready = cur.ult >= kUltCost;
       out.add(BattleCategoryEntry(
           BattleCategory.ultimate,
           [
             BattleAction(
               id: 'ult',
-              name: ult.ultCost == 100
-                  ? '★ ${ult.name}'
-                  : '★ ${ult.name} (${ult.ultCost})',
+              name: '★ ${ult.name}',
               value: ult.dealsDamage
                   ? _est(
                       cur,
@@ -718,7 +716,7 @@ class BattleViewState extends State<BattleView>
               description: describeSkillMarkup(ult, cur, ultimate: true),
               reason: ready
                   ? null
-                  : 'La barra ULT tiene que llegar al ${ult.ultCost}%.',
+                  : 'La barra ULT tiene que estar llena.',
               onSelect:
                   ready ? () => _send(UltimateCommand(targetId: tg)) : null,
             ),

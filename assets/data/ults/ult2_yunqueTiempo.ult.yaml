@@ -5,11 +5,10 @@ source: {kind: unique, ref: "yunqueEras"}
 weapons: ["martillo+escudo"]
 classes: []
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 3.4
+  power: 3.927
   status: {"kind":"stun","stacks":1}
   breakBonus: 1.0
 fx: ult2_yunqueTiempo

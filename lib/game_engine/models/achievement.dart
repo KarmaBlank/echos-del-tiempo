@@ -42,6 +42,10 @@ abstract final class AchievementCounter {
   ];
 }
 
+/// Recompensas cambiadas por el parche de balance (las instala
+/// `BalanceRegistries`); vacío = las del código.
+final Map<String, AchievementReward> kAchievementRewardOverrides = {};
+
 /// Lo que paga una hazaña: créditos, materiales de forja / fusión y
 /// pociones (§ 1). Inmutable.
 class AchievementReward {
@@ -121,10 +125,10 @@ class AchievementDef {
     required this.name,
     required this.category,
     required this.how,
-    required this.reward,
+    required AchievementReward reward,
     this.counter,
     this.goal = 1,
-  });
+  }) : baseReward = reward;
 
   final String id;
   final String name;
@@ -132,7 +136,12 @@ class AchievementDef {
 
   /// Cómo se consigue (texto de guía del tooltip).
   final String how;
-  final AchievementReward reward;
+  /// La recompensa del código.
+  final AchievementReward baseReward;
+
+  /// La vigente: la del parche de balance (Ajustes → Hazañas) o la del
+  /// código.
+  AchievementReward get reward => kAchievementRewardOverrides[id] ?? baseReward;
 
   /// Las de tiers: el contador (`AchievementCounter`) y la meta.
   final String? counter;

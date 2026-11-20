@@ -5,10 +5,9 @@ source: {kind: weapon_mod, ref: ""}
 weapons: ["arco"]
 classes: []
 element: fisico
-cost: 80
 pulse: 0
 skill:
   kind: physical
-  power: 1.5
+  power: 1.854
   bounces: 2
 fx: ult2_flechaVuelve

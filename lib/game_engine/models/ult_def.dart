@@ -41,7 +41,7 @@ enum UltSource {
 }
 
 /// Una ULT v2 del catálogo de datos (`assets/data/ults/<id>.ult.yaml`):
-/// la habilidad (campos de [SkillDef], `ultCost` incluido) más su fuente,
+/// la habilidad (campos de [SkillDef]) más su fuente,
 /// compatibilidad y animación.
 class UltDef {
   const UltDef({
@@ -75,7 +75,8 @@ class UltDef {
 
   String get id => skill.id;
   String get name => skill.name;
-  int get cost => skill.ultCost;
+  /// Toda ULT se lanza con la barra llena ([kUltCost]).
+  int get cost => kUltCost.toInt();
 
   /// Animación FXA (`assets/fx/ult/<id>.fx.yaml`).
   String get fx => skill.id;

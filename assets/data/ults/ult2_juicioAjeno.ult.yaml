@@ -5,7 +5,6 @@ source: {kind: boss, ref: "caballeroHueco"}
 weapons: ["espada", "hacha", "lanza", "dagas", "espada+escudo", "maza+escudo", "martillo+escudo"]
 classes: []
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: physical
