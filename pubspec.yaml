@@ -53,11 +53,20 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sprites/sprite_manifest.yaml
-    # Animaciones como datos (docs/specs/game_editor.md § 2.1).
+    # Animaciones como datos (docs/specs/game_editor.md § 2.1): una carpeta
+    # por categoría de kFxCategories, todas registradas de antemano (el
+    # Editor publica ahí sin tocar este archivo; test fx_assets_test).
     - assets/fx/fx_manifest.yaml
     - assets/fx/ult/
     - assets/fx/duo/
+    - assets/fx/skill/
+    - assets/fx/attack/
     - assets/fx/enemy_ult/
+    - assets/fx/status/
+    - assets/fx/death/
+    - assets/fx/proc/
+    - assets/fx/map_move/
+    - assets/fx/ui/
     # Datos de las ULT (docs/specs/ultimates_v2.md § 5.1).
     - assets/data/ults/
     - assets/data/enemy_ults/

@@ -1,0 +1,16 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: attack_all
+category: attack
+name: Ataque a todos
+tags: [básico, área]
+duration: 450
+phases: { build: 0, release: 450, recover: 0 }
+targets: all
+tracks:
+  - type: prim
+    fire:
+      - { t: 0, kind: act, at: caster, color: white, who: true }
+      - { t: 0, kind: ring, at: caster, dy: -8, color: white }

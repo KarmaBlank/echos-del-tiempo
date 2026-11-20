@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -30,4 +32,32 @@ Future<void> loadRealFonts([WidgetTester? tester]) async {
     await load();
   }
   _loaded = true;
+}
+
+bool _materialLoaded = false;
+
+/// Fuentes de Material que trae el SDK de Flutter (íconos y Roboto, la de
+/// los campos de texto del Editor): sin ellas las capturas muestran
+/// cuadrados en los íconos y en los números de los `TextField`. Se leen de
+/// `$FLUTTER_ROOT/bin/cache/artifacts/material_fonts`; si no están, no
+/// hace nada.
+Future<void> loadMaterialFonts(WidgetTester tester) async {
+  if (_materialLoaded) return;
+  final root = Platform.environment['FLUTTER_ROOT'];
+  if (root == null) return;
+  final dir = '$root/bin/cache/artifacts/material_fonts';
+  Future<void> font(String family, String file) async {
+    final f = File('$dir/$file');
+    if (!f.existsSync()) return;
+    final bytes = f.readAsBytesSync();
+    await (FontLoader(family)
+          ..addFont(Future.value(ByteData.sublistView(bytes))))
+        .load();
+  }
+
+  await tester.runAsync(() async {
+    await font('MaterialIcons', 'materialicons-regular.otf');
+    await font('Roboto', 'roboto-regular.ttf');
+  });
+  _materialLoaded = true;
 }

@@ -177,3 +177,44 @@ Future<FxCatalog> installFx(
   });
   return cat;
 }
+
+/// Alto de las barras de cine (fracción del alto del área) a la edad [a]
+/// según la pista `letterbox` de [t] (0 si no tiene).
+double letterboxAt(FxTimeline t, double a) =>
+    (t.track('letterbox')?.numAt('v', a) ?? 0).clamp(0.0, 0.25);
+
+/// La animación trae su propia pista `letterbox`.
+bool hasLetterbox(FxTimeline? t) => t?.track('letterbox') != null;
+
+/// Ventana `(desde, hasta)` en ms de la tarjeta del nombre según la pista
+/// `title_card` (`at`, `until`; `hidden: true` = sin tarjeta → `(0, 0)`).
+/// `null` si la animación no la trae (la tarjeta sigue las fases).
+(int, int)? titleCardWindow(FxTimeline? t) {
+  final tr = t?.track('title_card');
+  if (t == null || tr == null) return null;
+  if (tr.b('hidden')) return (0, 0);
+  final at = tr.n('at')?.toInt() ?? 80;
+  final until = tr.n('until')?.toInt() ?? t.phases.build;
+  return (at, math.max(at + 1, until));
+}
+
+/// Cues de la pista `sound` de [t]: `(cue, ms)`. `build`, `release` e
+/// `impact` son los sonidos propios de la ULT [ultId] (audio.md
+/// § "Ultimates"); cualquier otro nombre es un id del catálogo de sonido.
+List<(String, int)> soundCues(FxTimeline t, String? ultId,
+    String Function(String id, String part) ultCue) {
+  final tr = t.track('sound');
+  if (tr == null) return const [];
+  return [
+    for (final f in tr.fires)
+      if (f.s('cue') case final cue?)
+        (
+          switch (cue) {
+            'build' || 'release' || 'impact' when ultId != null =>
+              ultCue(ultId, cue),
+            _ => cue,
+          },
+          f.t
+        ),
+  ];
+}

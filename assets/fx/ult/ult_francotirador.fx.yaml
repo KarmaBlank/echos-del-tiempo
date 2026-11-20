@@ -1,0 +1,56 @@
+schema: 1
+id: ult_francotirador
+category: ult
+name: Bala del Juicio
+tags: [francotirador, tirador, un_objetivo, físico, eco, ascensión]
+duration: 2300
+phases: { build: 900, release: 1000, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 900, focus: line }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.9 }
+      - { t: 1921, v: 0.8 }
+      - { t: 2300, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 900, color: element }
+      - { t: 250, shape: reticle, anchor: target, ms: 1100, color: '#ff6b6b', scale: 1.4 }
+      - { t: 1389, shape: beam, anchor: target, ms: 320, color: white, scale: 1.4 }
+      - { t: 1400, shape: ring, anchor: target, scale: 1.8, color: element, ms: 300 }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 50
+    alpha: 0.5
+    color: echo
+    fade: 180
+    keys:
+      - { t: 1344, at: caster }
+      - { t: 1466, at: caster, dx: -18, ease: out }
+  - type: trail
+    fire:
+      - { t: 1333, from: caster, to: target, ms: 60, head: bolt, color: white, width: 2, echoes: 5, lag: 18, ease: linear }
+  - type: particles
+    fire:
+      - { t: 1344, preset: sparks, anchor: caster, count: 1.5 }
+      - { t: 1400, preset: burst, anchor: target, element: auto, count: 4 }
+      - { t: 1400, preset: shards, anchor: target, count: 2 }
+  - type: flash
+    fire:
+      - { t: 1394, color: white, alpha: 0.6, ms: 140 }
+  - type: shake
+    fire:
+      - { t: 1344, amp: 5 }
+      - { t: 1400, amp: 12 }
+  - type: hitstop
+    fire:
+      - { t: 1400, ms: 180 }
+  - type: impact
+    fire:
+      - { t: 1400, stagger: 0 }

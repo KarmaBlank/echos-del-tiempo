@@ -1,0 +1,16 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: enemy_strike
+category: attack
+name: Golpe de un enemigo
+tags: [enemigo]
+duration: 300
+phases: { build: 0, release: 300, recover: 0 }
+targets: single
+tracks:
+  - type: prim
+    fire:
+      - { t: 0, kind: windup, at: caster, color: white, who: true }
+      - { t: 100, kind: act, at: caster, color: white, who: true }

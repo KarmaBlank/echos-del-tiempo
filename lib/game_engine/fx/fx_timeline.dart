@@ -56,6 +56,22 @@ const kFxTrackTypes = {
   'damage_style',
   'sound',
   'legacy',
+  // Primitivas del pintor de batalla (anillo, tajo, aura, escudo…) para
+  // los momentos de batalla (game_editor.md § 7.4).
+  'prim',
+};
+
+/// Pistas que dibuja o dispara el `FxPlayer` por su cuenta (un momento
+/// de batalla con alguna de estas lleva un efecto `data`).
+const kFxVisualTracks = {
+  'echo',
+  'particles',
+  'trail',
+  'shape',
+  'shake',
+  'flash',
+  'tint',
+  'hitstop',
 };
 
 /// Curva entre un keyframe y el siguiente (la del keyframe de llegada).

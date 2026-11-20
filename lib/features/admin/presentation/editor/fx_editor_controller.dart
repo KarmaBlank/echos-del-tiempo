@@ -21,6 +21,31 @@ const kFxCategoryLabels = {
   'ui': 'UI',
 };
 
+/// Opciones de los campos de texto que el editor ofrece como botones
+/// (game_editor.md § 7.2: anclas, colores por rol, formas, partículas).
+const kFxFieldOptions = <String, List<String>>{
+  'anchor': _anchors,
+  'at': _anchors,
+  'from': _anchors,
+  'to': _anchors,
+  'focus': ['caster', 'target', 'line', 'targets', 'allies', 'group'],
+  'color': ['element', 'echo', 'light', 'dark', 'white', 'gold', 'action'],
+  'shape': [
+    'gather', 'slash_arc', 'slash_cross', 'ring', 'rune_circle', 'shockwave',
+    'quake', 'pillar', 'beam', 'shield_dome', 'sky_crack', 'bolt', 'clock',
+    'cross', 'rain', 'shards', 'reticle',
+  ],
+  'preset': [
+    'burst', 'sparks', 'shards', 'sparkles', 'embers', 'dust', 'debris', 'frost',
+  ],
+  'head': ['dot', 'arrow', 'spear', 'hammer', 'meteor', 'bolt'],
+};
+
+const _anchors = [
+  'caster', 'partner', 'target', 'targets_center', 'allies_center', 'sky',
+  'sky_center', 'sky_caster', 'screen',
+];
+
 /// Qué key o disparo está elegido: pista, si es disparo, índice.
 typedef FxKeyRef = ({int track, bool fire, int index});
 
@@ -112,6 +137,7 @@ class FxEditorController extends ChangeNotifier {
     selectedId = id;
     edit = catalog.timeline(id);
     dirty = false;
+    _clearHistory();
     time = 0;
     selectedTrack = null;
     selectedKey = null;
@@ -192,11 +218,350 @@ class FxEditorController extends ChangeNotifier {
     return r.index < l.length ? l[r.index] : null;
   }
 
-  void _apply(FxTimeline t) {
+  // ------------------------------------------------ deshacer / rehacer
+
+  final _undo = <FxTimeline>[];
+  final _redo = <FxTimeline>[];
+  static const _maxUndo = 200;
+
+  bool get canUndo => _undo.isNotEmpty;
+  bool get canRedo => _redo.isNotEmpty;
+
+  /// Imán: los tiempos se redondean a 10 ms y se pegan a otros keys a
+  /// menos de [snapMs] (game_editor.md § 3.2).
+  bool snap = true;
+  static const snapMs = 25;
+
+  void setSnap(bool v) {
+    snap = v;
+    notifyListeners();
+  }
+
+  /// [record] = `false` en un arrastre (la foto se toma al empezar).
+  void _apply(FxTimeline t, {bool record = true}) {
+    final prev = edit;
+    if (record && prev != null) {
+      _undo.add(prev);
+      if (_undo.length > _maxUndo) _undo.removeAt(0);
+      _redo.clear();
+    }
     edit = t;
     dirty = true;
     catalog.setLive(t.id, t);
     notifyListeners();
+  }
+
+  void _restore(FxTimeline t) {
+    edit = t;
+    dirty = true;
+    catalog.setLive(t.id, t);
+    if (selectedKey case final r? when keyOf(r) == null) selectedKey = null;
+    if ((selectedTrack ?? 0) >= t.tracks.length) selectedTrack = null;
+    notifyListeners();
+  }
+
+  void undo() {
+    final cur = edit;
+    if (_undo.isEmpty || cur == null || readOnly) return;
+    _redo.add(cur);
+    _restore(_undo.removeLast());
+  }
+
+  void redo() {
+    final cur = edit;
+    if (_redo.isEmpty || cur == null || readOnly) return;
+    _undo.add(cur);
+    _restore(_redo.removeLast());
+  }
+
+  void _clearHistory() {
+    _undo.clear();
+    _redo.clear();
+    _dragging = null;
+  }
+
+  // ------------------------------------------------ edición visual (paso 3)
+
+  /// Pistas que se editan con disparos (eventos puntuales) y no keys.
+  static const fireTracks = {
+    'particles',
+    'shape',
+    'trail',
+    'shake',
+    'flash',
+    'hitstop',
+    'impact',
+    'sound',
+    'prim',
+  };
+
+  /// Tipos que ofrece NUEVA PISTA, en orden.
+  static const newTrackTypes = [
+    'echo',
+    'shape',
+    'particles',
+    'trail',
+    'flash',
+    'shake',
+    'hitstop',
+    'impact',
+    'dim',
+    'letterbox',
+    'tint',
+    'camera',
+    'title_card',
+    'sound',
+    'prim',
+  ];
+
+  /// [ms] con el imán aplicado (10 ms y otros keys/disparos, menos [self]).
+  int snapTime(double ms, {FxKeyRef? self}) {
+    final t = edit;
+    final d = t?.duration ?? 0;
+    final raw = ms.round().clamp(0, d);
+    if (!snap || t == null) return raw;
+    var best = snapMs + 1.0;
+    var out = raw;
+    for (var i = 0; i < t.tracks.length; i++) {
+      final tr = t.tracks[i];
+      for (final (fire, list) in [(false, tr.keys), (true, tr.fires)]) {
+        for (var k = 0; k < list.length; k++) {
+          if (self == (track: i, fire: fire, index: k)) continue;
+          final dd = (list[k].t - ms).abs();
+          if (dd < best) {
+            best = dd;
+            out = list[k].t;
+          }
+        }
+      }
+    }
+    if (best > snapMs) out = ((ms / 10).round() * 10).clamp(0, d);
+    return out;
+  }
+
+  FxKeyRef? _dragging;
+
+  /// Empieza a arrastrar el key [r] (una sola entrada de deshacer).
+  void beginDrag(FxKeyRef r) {
+    final t = edit;
+    if (t == null || readOnly || keyOf(r) == null) return;
+    _undo.add(t);
+    _redo.clear();
+    _dragging = r;
+    selectKey(r);
+  }
+
+  /// Mueve el key arrastrado a [ms] (con imán).
+  void dragTo(double ms) {
+    final r = _dragging;
+    if (r == null) return;
+    _setKey(r, (k) => k.copyWith(t: snapTime(ms, self: r)), record: false);
+    _dragging = selectedKey;
+  }
+
+  void endDrag() => _dragging = null;
+  bool get dragging => _dragging != null;
+
+  /// Agrega un key (o disparo) a la pista [track] en [ms]: copia los
+  /// valores del key anterior (o una plantilla del tipo) y lo elige.
+  void addKey(int track, double ms) {
+    final t = edit;
+    if (t == null || readOnly || track >= t.tracks.length) return;
+    final tr = t.tracks[track];
+    final fire = tr.fires.isNotEmpty ||
+        (tr.keys.isEmpty && fireTracks.contains(tr.type));
+    final at = snapTime(ms);
+    final list = fire ? tr.fires : tr.keys;
+    FxKey? prev;
+    for (final k in list) {
+      if (k.t <= at) prev = k;
+    }
+    prev ??= list.isEmpty ? null : list.first;
+    final nk =
+        FxKey(at, prev?.data ?? _template(tr.type), prev?.ease ?? FxEase.smooth);
+    final nl = [...list, nk];
+    final ntr = fire ? tr.copyWith(fires: nl) : tr.copyWith(keys: nl);
+    _apply(t.withTrack(track, ntr));
+    final l = fire ? ntr.fires : ntr.keys;
+    selectedTrack = track;
+    selectedKey =
+        (track: track, fire: fire, index: l.indexWhere((x) => identical(x, nk)));
+    notifyListeners();
+  }
+
+  /// Borra el key [r].
+  void removeKey(FxKeyRef r) {
+    final t = edit;
+    if (t == null || readOnly || keyOf(r) == null) return;
+    final tr = t.tracks[r.track];
+    final list = [...(r.fire ? tr.fires : tr.keys)]..removeAt(r.index);
+    _apply(t.withTrack(
+        r.track, r.fire ? tr.copyWith(fires: list) : tr.copyWith(keys: list)));
+    selectedKey = null;
+    selectedTrack = r.track;
+    notifyListeners();
+  }
+
+  /// Curva de llegada del key [r].
+  void setKeyEase(FxKeyRef r, FxEase e) =>
+      _setKey(r, (k) => k.copyWith(ease: e));
+
+  /// Cambia un campo de texto (ancla, forma, color por rol…) del key [r].
+  void setKeyText(FxKeyRef r, String field, String v) =>
+      _setKey(r, (k) => k.withField(field, v.isEmpty ? null : v));
+
+  /// Duplica la pista [i] (queda justo debajo y elegida).
+  void duplicateTrack(int i) {
+    final t = edit;
+    if (t == null || readOnly || i >= t.tracks.length) return;
+    final tr = t.tracks[i];
+    _apply(t.copyWith(tracks: [...t.tracks]..insert(i + 1, tr.copyWith())));
+    selectTrack(i + 1);
+  }
+
+  /// Borra la pista [i].
+  void removeTrack(int i) {
+    final t = edit;
+    if (t == null || readOnly || i >= t.tracks.length) return;
+    _apply(t.copyWith(tracks: [...t.tracks]..removeAt(i)));
+    selectTrack(null);
+  }
+
+  /// Agrega una pista nueva de [type] con un key de ejemplo.
+  void addTrack(String type) {
+    final t = edit;
+    if (t == null || readOnly) return;
+    final tr = type == 'echo' ? echoLayerFor(t) : _newTrack(type, t);
+    _apply(t.copyWith(tracks: [...t.tracks, tr]));
+    selectTrack(t.tracks.length);
+  }
+
+  /// Capa de ecos (la firma de las ULT, § 5.1).
+  void addEchoLayer() => addTrack('echo');
+
+  /// Capa de ecos por defecto: copias del lanzador que van al objetivo
+  /// justo antes del primer impacto.
+  static FxTrack echoLayerFor(FxTimeline t) {
+    final imp = t.impacts.isEmpty ? t.phases.build + 200 : t.impacts.first.t;
+    final from = math.max(0, imp - 400);
+    return FxTrack('echo', props: const {
+      'who': 'caster',
+      'count': 3,
+      'lag': 90,
+      'alpha': 0.5,
+      'color': 'echo',
+      'fade': 160,
+    }, keys: [
+      FxKey(from, const {'at': 'caster'}),
+      FxKey(math.max(from + 10, imp - 120), const {'at': 'target', 'dx': -14},
+          FxEase.easeOut),
+      FxKey(math.max(from + 20, imp), const {'at': 'target', 'dx': -14}),
+    ]);
+  }
+
+  static FxTrack _newTrack(String type, FxTimeline t) {
+    final mid = t.impacts.isEmpty ? t.duration ~/ 2 : t.impacts.first.t;
+    return switch (type) {
+      'dim' || 'letterbox' || 'tint' => FxTrack(type, keys: [
+          FxKey(0, const {'v': 0}),
+          FxKey(200, {'v': type == 'letterbox' ? 0.09 : 0.6}),
+          FxKey(t.duration, const {'v': 0}),
+        ]),
+      'camera' => FxTrack(type, keys: [
+          FxKey(0, const {'focus': 'caster'}),
+          FxKey(t.phases.build, const {'focus': 'target'}),
+        ]),
+      'title_card' =>
+        FxTrack(type, props: {'at': 80, 'until': t.phases.build}),
+      _ when fireTracks.contains(type) =>
+        FxTrack(type, fires: [FxKey(mid, _template(type))]),
+      _ => FxTrack(type, keys: [FxKey(0, _template(type))]),
+    };
+  }
+
+  static Map<String, Object?> _template(String type) => switch (type) {
+        'shape' => const {
+            'shape': 'ring',
+            'anchor': 'target',
+            'color': 'element',
+            'ms': 300
+          },
+        'particles' => const {
+            'preset': 'burst',
+            'anchor': 'target',
+            'element': 'auto',
+            'count': 1
+          },
+        'trail' => const {
+            'from': 'caster',
+            'to': 'target',
+            'ms': 250,
+            'head': 'dot'
+          },
+        'flash' => const {'color': 'white', 'alpha': 0.5, 'ms': 150},
+        'shake' => const {'amp': 4},
+        'hitstop' => const {'ms': 80},
+        'impact' => const {'stagger': 0},
+        'sound' => const {'cue': 'impact'},
+        'prim' => const {'kind': 'ring', 'at': 'target', 'color': 'action'},
+        'dim' || 'letterbox' || 'tint' => const {'v': 0.5},
+        'camera' => const {'focus': 'target'},
+        _ => const {},
+      };
+
+  /// Convierte una animación del código (legacy) en datos editables: las
+  /// pistas de tiempos quedan; la pista `legacy` se cambia por una capa de
+  /// ecos, un anillo y partículas en el impacto (punto de partida).
+  void convertToData() {
+    final t = edit;
+    if (t == null || !t.legacy) return;
+    final base = t.copyWith(
+        legacy: false,
+        tags: [
+          for (final g in t.tags)
+            if (g != 'legacy') g
+        ],
+        tracks: [
+          for (final tr in t.tracks)
+            if (tr.type != 'legacy') tr
+        ]);
+    final imp = base.impacts.isEmpty ? base.phases.build : base.impacts.first.t;
+    _apply(base.copyWith(tracks: [
+      ...base.tracks,
+      echoLayerFor(base),
+      FxTrack('shape', fires: [
+        FxKey(imp, const {
+          'shape': 'ring',
+          'anchor': 'target',
+          'color': 'element',
+          'ms': 320,
+          'scale': 1.4
+        }),
+      ]),
+      FxTrack('particles', fires: [
+        FxKey(imp, const {
+          'preset': 'burst',
+          'anchor': 'target',
+          'element': 'auto',
+          'count': 3
+        }),
+      ]),
+    ]));
+    notice =
+        const EditorNotice('Convertida a datos: GUARDAR crea el override.');
+    notifyListeners();
+  }
+
+  /// Errores que impiden guardar (tope de la ULT, impactos fuera).
+  List<String> get blocking {
+    final t = edit;
+    if (t == null) return const [];
+    return [
+      if (t.category == 'ult' && t.duration > kUltMaxDurationMs)
+        'La ULT dura ${t.duration} ms (tope $kUltMaxDurationMs).',
+      for (final i in t.impacts)
+        if (i.t > t.duration) 'Impacto en ${i.t} ms, después del final.',
+    ];
   }
 
   /// Cambia la duración total (ms, ≤ tope del formato).
@@ -218,7 +583,7 @@ class FxEditorController extends ChangeNotifier {
   void setKeyField(FxKeyRef r, String field, num v) =>
       _setKey(r, (k) => k.withField(field, v));
 
-  void _setKey(FxKeyRef r, FxKey Function(FxKey) f) {
+  void _setKey(FxKeyRef r, FxKey Function(FxKey) f, {bool record = true}) {
     final t = edit;
     final k = keyOf(r);
     if (t == null || k == null || readOnly) return;
@@ -227,13 +592,13 @@ class FxEditorController extends ChangeNotifier {
     final nk = f(k);
     list[r.index] = FxKey(nk.t.clamp(0, t.duration), nk.data, nk.ease);
     final ntr = r.fire ? tr.copyWith(fires: list) : tr.copyWith(keys: list);
-    _apply(t.withTrack(r.track, ntr));
     final l = r.fire ? ntr.fires : ntr.keys;
     selectedKey = (
       track: r.track,
       fire: r.fire,
       index: math.max(0, l.indexWhere((x) => identical(x, list[r.index])))
     );
+    _apply(t.withTrack(r.track, ntr), record: record);
   }
 
   /// Avisos de validación de la copia de trabajo (§ 3.2).
@@ -242,19 +607,29 @@ class FxEditorController extends ChangeNotifier {
     if (t == null) return const [];
     return [
       for (final w in t.warnings) w,
-      if (t.category == 'ult' && t.duration > kUltMaxDurationMs)
-        'La ULT dura ${t.duration} ms (tope $kUltMaxDurationMs).',
-      for (final i in t.impacts)
-        if (i.t > t.duration) 'Impacto en ${i.t} ms, después del final.',
+      ...blocking,
+      for (final tr in t.tracks)
+        for (final k in [...tr.keys, ...tr.fires])
+          if (k.t > t.duration && tr.type != 'impact')
+            '${tr.type}: key en ${k.t} ms, después del final.',
+      for (final tr in t.ofType('echo'))
+        if (tr.keys.isEmpty) 'Capa de ecos sin camino (agregá keys).',
       if (t.impacts.isEmpty && const {'ult', 'duo'}.contains(t.category))
         'Sin pista impact: los números caen al empezar la descarga.',
     ];
   }
 
-  /// Guarda la copia de trabajo como override local (§ 4.2).
+  /// Guarda la copia de trabajo como override local (§ 4.2). No guarda
+  /// si hay errores de [blocking] (p. ej. una ULT de más de 2.6 s).
   Future<void> save() async {
     final t = edit;
     if (t == null || overrides == null || readOnly) return;
+    final errors = blocking;
+    if (errors.isNotEmpty) {
+      notice = EditorNotice('No se guardó: ${errors.first}', error: true);
+      notifyListeners();
+      return;
+    }
     await overrides!.putFx(t.id, t.toYaml());
     await catalog.reload(t.id);
     edit = catalog.timeline(t.id);
@@ -270,6 +645,7 @@ class FxEditorController extends ChangeNotifier {
     catalog.clearLive(id);
     edit = catalog.timeline(id);
     dirty = false;
+    _clearHistory();
     notifyListeners();
   }
 
@@ -346,8 +722,7 @@ class FxEditorController extends ChangeNotifier {
       await catalog.reload();
       if (selectedId != null) edit = catalog.timeline(selectedId!);
       notice = EditorNotice(
-          'Publicado al repo: ${done.length} animaciones (falta commit; '
-          'carpetas nuevas van en pubspec.yaml).',
+          'Publicado al repo: ${done.length} animaciones (falta commit).',
           ok: true);
     } catch (e) {
       notice = EditorNotice('$e', error: true);

@@ -39,6 +39,7 @@ class _Files implements EditorFiles {
 void main() {
   testWidgets('editor: capturas', (tester) async {
     await loadRealFonts(tester);
+    await loadMaterialFonts(tester);
     tester.view.physicalSize = const Size(1600, 1000);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);

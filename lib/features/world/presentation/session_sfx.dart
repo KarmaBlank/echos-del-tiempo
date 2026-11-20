@@ -20,6 +20,7 @@ import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart' show ultimateOf;
 import '../../combat/presentation/scene/battle_fx.dart';
+import '../../combat/presentation/scene/fx_bridge.dart' show soundCues;
 import '../../combat/presentation/scene/fx_style.dart';
 import '../../combat/presentation/scene/proc_fx.dart';
 import '../../combat/presentation/scene/duo_cinematic.dart';
@@ -591,6 +592,14 @@ class SessionSfx {
   List<SfxCue> ultimateCues(UltimateUsedEvent e) {
     final c = battle?.byId(e.actorId);
     final sk = c == null ? null : ultimateOf(c);
+    // Pista `sound` de la animación de datos (game_editor.md § 2.1).
+    final data = sk == null ? null : ultScriptFor(sk.id).data;
+    if (data != null && data.track('sound') != null) {
+      return [
+        for (final (id, ms) in soundCues(data, sk!.id, Sfx.ult))
+          if (service.catalog.containsKey(id)) cue(id, ms),
+      ];
+    }
     if (sk == null ||
         !service.catalog.containsKey(Sfx.ult(sk.id, Sfx.ultBuild))) {
       return [cue(Sfx.ultimate)];

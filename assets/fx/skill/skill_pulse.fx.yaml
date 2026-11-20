@@ -1,0 +1,19 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: skill_pulse
+category: skill
+name: Pulso del Tiempo
+tags: [habilidad, pulso, eco]
+duration: 700
+phases: { build: 0, release: 700, recover: 0 }
+targets: allies
+tracks:
+  - type: shape
+    fire:
+      - { t: 0, shape: clock, anchor: caster, color: echo, ms: 600, scale: 0.8 }
+      - { t: 120, shape: ring, anchor: caster, color: echo, ms: 420, scale: 1.4 }
+  - type: particles
+    fire:
+      - { t: 120, preset: sparkles, anchor: caster, color: echo, count: 0.8 }

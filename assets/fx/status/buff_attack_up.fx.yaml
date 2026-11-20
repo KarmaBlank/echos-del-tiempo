@@ -1,0 +1,16 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: buff_attack_up
+category: status
+name: Ataque arriba
+tags: [buff]
+duration: 900
+phases: { build: 0, release: 900, recover: 0 }
+targets: single
+tracks:
+  - type: prim
+    fire:
+      - { t: 0, kind: pulse, at: caster, dy: -8, color: action, who: true }
+      - { t: 0, kind: arrow, at: caster, dy: -8, color: action, up: true, who: true }

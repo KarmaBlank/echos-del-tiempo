@@ -1,0 +1,15 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: skill_support
+category: skill
+name: Apoyo de ascensión
+tags: [habilidad, apoyo]
+duration: 450
+phases: { build: 0, release: 450, recover: 0 }
+targets: allies
+tracks:
+  - type: prim
+    fire:
+      - { t: 0, kind: ring, at: caster, dy: -8, color: action, big: true }

@@ -194,8 +194,36 @@ class FxPreviewPainter extends CustomPainter {
           flip: true);
     }
     FxPlayer.paint(canvas, t, time, st);
+    FxPlayer.paintPrims(canvas, t, time, st);
     sim.particles.paint(canvas);
     canvas.restore();
+    // Barras de cine y tarjeta del nombre (pistas `letterbox` y
+    // `title_card`; las mismas reglas que la batalla).
+    final area = Rect.fromLTWH((size.width - w.width * fit) / 2,
+        (size.height - w.height * fit) / 2, w.width * fit, w.height * fit);
+    final lb = letterboxAt(t, time);
+    if (lb > 0) {
+      final bh = (area.height * lb).roundToDouble();
+      final black = Paint()..color = DsColors.background;
+      canvas.drawRect(Rect.fromLTWH(area.left, area.top, area.width, bh), black);
+      canvas.drawRect(
+          Rect.fromLTWH(area.left, area.bottom - bh, area.width, bh), black);
+    }
+    final card = titleCardWindow(t);
+    if (card != null && time >= card.$1 && time <= card.$2) {
+      final k = ((time - card.$1) / 180).clamp(0.0, 1.0) *
+          (1 - ((time - (card.$2 - 140)) / 200).clamp(0.0, 1.0));
+      final by = area.top + area.height * 0.2;
+      canvas.drawRect(Rect.fromLTWH(area.left, by, area.width * 0.6 * k, 34),
+          Paint()..color = st.color.withValues(alpha: 0.75 * k));
+      final tp = TextPainter(
+          text: TextSpan(
+              text: t.name.toUpperCase(),
+              style: DsText.subtitle()),
+          textDirection: TextDirection.ltr)
+        ..layout();
+      if (k > 0.5) tp.paint(canvas, Offset(area.left + 12, by + 8));
+    }
   }
 
   @override
