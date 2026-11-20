@@ -174,10 +174,9 @@ void main() {
   testWidgets('paso 2: el foco de teclado también abre el tooltip',
       (tester) async {
     await _toOps(tester, 'r1');
-    FocusManager.instance.highlightStrategy =
-        FocusHighlightStrategy.alwaysTraditional;
-    addTearDown(() => FocusManager.instance.highlightStrategy =
-        FocusHighlightStrategy.automatic);
+    // Foco llegado por teclado (v0.19.1: con el mouse no abre el tip).
+    RetroHoverCard.keyboardNav = true;
+    addTearDown(() => RetroHoverCard.keyboardNav = false);
     expect(find.byKey(const ValueKey('bench-op-tip-addAffix')), findsNothing);
     final inner = find.descendant(
         of: find.byKey(const ValueKey('bench-op-addAffix')),

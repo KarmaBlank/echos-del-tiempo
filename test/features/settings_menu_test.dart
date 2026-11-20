@@ -1,6 +1,7 @@
 import 'package:echos_del_tiempo/app/design/design.dart';
 import 'dart:async';
 
+import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/proto_colors.dart';
 import 'package:echos_del_tiempo/app/theme/vision_palette.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
@@ -135,7 +136,7 @@ void main() {
     await _tap(tester, 'audio-mute-SÍ');
     expect(f.audio.saved!.muted, isTrue);
     expect(f.music.muted, isTrue);
-    expect(find.byTooltip('Todo el sonido está silenciado.'), findsOneWidget);
+    expect(_byHint('Todo el sonido está silenciado.'), findsOneWidget);
 
     await _tap(tester, 'settings-close');
     expect(find.byKey(const ValueKey('settings-menu')), findsNothing);
@@ -178,7 +179,7 @@ void main() {
 
     await _tap(tester, 'display-scale-PIXEL PERFECT');
     expect(f.game.saved!.scale, ScaleMode.pixelPerfect);
-    expect(find.byTooltip('Píxeles exactos (×2, ×3...) con barras negras.'),
+    expect(_byHint('Píxeles exactos (×2, ×3...) con barras negras.'),
         findsOneWidget);
     await _tap(tester, 'display-crt-APAGADO');
     expect(f.game.saved!.crt, CrtLevel.off);
@@ -413,7 +414,7 @@ void main() {
                 find.byKey(const ValueKey('display-flashes-SUAVES')))
             .selected,
         isTrue);
-    expect(find.byTooltip('Apagada por REDUCIR MOVIMIENTO.'), findsOneWidget);
+    expect(_byHint('Apagada por REDUCIR MOVIMIENTO.'), findsOneWidget);
     await _tap(tester, 'a11y-motion-NO');
     expect(f.game.saved!.shakeOn, isTrue);
   });
@@ -485,3 +486,7 @@ void main() {
     expect(find.byKey(const ValueKey('settings-menu')), findsNothing);
   });
 }
+
+/// El "?" de una fila de ajuste (un `RetroTooltip` desde v0.19.1).
+Finder _byHint(String message) => find.byWidgetPredicate(
+    (w) => w is RetroTooltip && w.message == message);
