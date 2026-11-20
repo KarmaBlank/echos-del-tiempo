@@ -59,6 +59,7 @@ import '../../game_engine/serialization/session_json.dart';
 /// `mx` en `welcome` / `reject`, y balance de grupo para n > 4 con
 /// topes (combo_balance.md § 3.3).
 
+/// También en 23: acción `useItem` (pociones fuera de pelea, loot.md § 17.5).
 const kProtocolVersion = 23;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
