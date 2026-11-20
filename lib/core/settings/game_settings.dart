@@ -241,7 +241,7 @@ class GameSettings {
     this.objectivesCollapsed = false,
     this.partyExpanded = false,
     this.minimapZoom = 3,
-    this.readingTitles = false,
+    this.readingTitles = true,
     this.letterSpacing = LetterSpacing.normal,
     this.noticeDuration = NoticeDuration.normal,
     this.mapLabelBackdrop = MapLabelBackdrop.none,
@@ -426,7 +426,13 @@ class GameSettings {
         battleLog: battleLog ?? this.battleLog,
       );
 
+  /// Versión del formato guardado. v2 (v0.13.1): `readingTitles` pasó a SÍ
+  /// por defecto; un archivo sin versión (v1) que lo tenga en NO lo tenía
+  /// por el default viejo (v1 no distingue "elegido"), así que migra a SÍ.
+  static const formatVersion = 2;
+
   Map<String, Object?> toJson() => {
+        'version': formatVersion,
         'fullscreen': fullscreen,
         'shake': screenShake,
         'flashes': flashes.name,
@@ -464,6 +470,7 @@ class GameSettings {
   factory GameSettings.fromJson(Map<String, Object?> json) {
     const d = GameSettings();
     bool flag(Object? v, bool def) => v is bool ? v : def;
+    final version = json['version'] is int ? json['version'] as int : 1;
     return GameSettings(
       fullscreen: flag(json['fullscreen'], d.fullscreen),
       screenShake: flag(json['shake'], d.screenShake),
@@ -496,7 +503,9 @@ class GameSettings {
         final int z when z >= 1 && z <= minimapZooms => z,
         _ => d.minimapZoom,
       },
-      readingTitles: flag(json['readingTitles'], d.readingTitles),
+      readingTitles: version < 2
+          ? d.readingTitles
+          : flag(json['readingTitles'], d.readingTitles),
       letterSpacing:
           LetterSpacing.fromName(json['letterSpacing'], d.letterSpacing),
       noticeDuration: NoticeDuration.fromName(

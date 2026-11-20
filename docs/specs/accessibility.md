@@ -396,7 +396,7 @@ corrido: entra en las mismas cajas que VT323 a 20): 18 / 23 / 27 / 36 en
 los cuatro tamaños. Interlineado 1.2 (AMPLIO 1.45); avance medio 0.45 em
 (`RetroType.bodyAdvance`). Lo que le falta (★ ▶ …) sale de Press Start.
 
-### 9.2 TÍTULOS CON LA FUENTE DE LECTURA (SÍ / **NO**)
+### 9.2 TÍTULOS CON LA FUENTE DE LECTURA (**SÍ** / NO, por defecto SÍ desde v0.13.1)
 
 `readingTitles`. Títulos de panel, botones, pestañas, encabezados y
 cifras (todo lo que usa `RetroType.titleFamily`: el `fontFamily` del
