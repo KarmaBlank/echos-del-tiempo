@@ -387,21 +387,24 @@ stacks` del color del estado), en la línea del nombre / de la vida.
 
 ## Franja de turnos (`drawTimeline`)
 
-- Fondo `#0b0e1a`; banda `0..32` `#0b0e1acc`; línea `#5b74c9` en `y=32`.
+- Alto 74 (v0.13.1; el prototipo usaba 54 con íconos de 28 / 22).
+- Fondo `#0b0e1a`; banda `0..52` `#0b0e1acc`; línea `#5b74c9` en `y=52`.
 - Barra de tiempo (turno de un jugador y la sesión esperando): fondo
-  `#000000aa` `0..VW × 33..37`, relleno `VW · left/30`; `#ffd166`, o
+  `#000000aa` `0..VW × 53..57`, relleno `VW · left/30`; `#ffd166`, o
   si `left ≤ 10` alterna `#ff4757` / `#ff6b81` cada 250 ms.
-- `TURNOS` 6 px `#9fb4ff` centrado en `(26, 19)`.
-- Los próximos 10 turnos de `predictTurns` desde `x = 52`: el primero de
-  28 px en `y = 2`, el resto de 22 px en `y = 6`; fondo `#1d2a5a`
+- `TURNOS` 8 px `#9fb4ff` centrado en `(30, 29)`.
+- Los próximos 10 turnos de `predictTurns` desde `x = 60`: el primero de
+  46 px en `y = 2`, el resto de 40 px centrados con él; si no entran en
+  `VW` se achican todos por igual (nunca se cortan); fondo `#1d2a5a`
   (jugador) o `#4a1820` (enemigo); borde `#ffd166` de 2 px el primero,
   si no 1 px `#ffd166aa` (jugador local), `#5b74c9` (otro jugador) o
   `#ff4757` (enemigo). Sprite escalado a `min((sz−4)/w, (sz−4)/h)`,
-  centrado. Puntos de estado 3×3 de su color en `(x+2+4k, y+sz−4)`.
+  redondeado hacia abajo a entero si es ≥ 1 (píxeles parejos),
+  centrado. Puntos de estado 4×4 de su color en `(x+2+5k, y+sz−6)`.
   Triángulo `#ffd166` bajo el primero (`b = sin(t/150)·1.5`) y una
   flecha `#5b74c9` 3×2 entre el primero y el segundo. Separación 8 px
   tras el primero, 4 tras el resto.
-- Banda del log `y ∈ [38, 54)` negra: log de batalla y, en el turno de
+- Banda del log `y ∈ [58, 74)` negra: log de batalla y, en el turno de
   un jugador, `TÚ` o su nombre (6 letras) + segundos restantes a la
   derecha, `#ffd166` o `#ff6b81` con ≤ 10 s (`drawTurnLabel`). Son
   textos Flutter de 8 px (ver desvíos).
@@ -419,12 +422,13 @@ Con dos o más combatientes del mismo tipo no se sabía qué ícono era cuál.
   la caja del objetivo, los logs y las tarjetas.
 - Arena: la vida del enemigo va precedida por su letra en blanco
   (`B 60/60`).
-- Franja: la letra, en blanco 6 px sobre un cuadro negro 8×8 en la
+- Franja: la letra, en blanco 8 px sobre un cuadro negro 12×12 en la
   esquina de abajo a la derecha del ícono.
 - Élite: borde `#ffd166` y un segundo filete dorado 1 px por fuera, con
-  `★` 6 px dorada arriba a la izquierda. Jefe: mismo borde con una
+  `★` 8 px dorada sobre un cuadro negro 11×11 arriba a la izquierda. Jefe: mismo borde con una
   corona dorada de tres puntas arriba a la izquierda.
-- Mouse: sobre un ícono de la franja o sobre un enemigo de la arena, ese
+- Mouse: sobre un ícono de la franja, un actor de la arena o una fila de
+  la lista del grupo (§ "Grupo compacto"), ese
   actor queda señalado en las dos (`SceneFrame.hoverId`): en la franja
   con un filete blanco por fuera del ícono; en la arena con el
   marcador del objetivo (se suma a `highlightIds`; aliados, con el
@@ -1433,10 +1437,44 @@ fase 2; el Eco Primordial, arte propio (24 × 22, escala 2.6).
   Pulso, invocaciones y estados solo en la propia (el resto, en el
   tooltip y la escena). Con más de 4 por fila las barras van con las
   cifras arriba.
-- Alto de la barra (`barHeight`): + 6 % de la pantalla con más de 4
-  (hasta 68 %).
+- Alto de la barra (`barHeight`): + 9 % de la pantalla con más de 4
+  tarjetas (hasta 68 %; v0.13.1, las de compañeros llevan ULT y AUTO).
+- Formación de 5 o más (`partyOffset`): dos columnas con paso vertical
+  `bigPartyPitch` 30, la de atrás `backColumnGap` 56 más afuera y medio
+  paso más abajo, escalonadas 14 (v0.13.1: antes 24 / 32 / 10; con 8 los
+  nombres se pisaban).
 - `T+n` de cada tarjeta y "te toca en" miran `turnWindow` turnos
   (10, o grupo + enemigos + 2 si es más), así todos aparecen.
 - Tests: `big_party_ui_test.dart` (1280×720 y 1920×1080, los cuatro
   tamaños de texto, n = 1, 2, 4, 6, 8, 12, todas las categorías) y
   capturas en `docs/release_shots/v0.13.0/`.
+
+## Grupo compacto (v0.13.1)
+
+Sin compañeros propios (`FeatureFlags.soloParty` apagado, o grupo de uno
+solo: `BattleView.companions` vacío) cada jugador maneja su personaje,
+así que no hacen falta las tarjetas de los demás.
+
+- Abajo, solo la tarjeta propia (`BattlePartyBar.onlyLocal`): HP, MP,
+  ULT, Pulso y estados. La barra (`barHeight(..., compact: true)`) usa
+  38 % de base en vez de 42 % con texto Normal: la escena recupera el
+  espacio.
+- Los demás, en `BattleAllyList` a la derecha de la arena (debajo de la
+  franja), de arriba hacia abajo en orden de grupo: avatar ×2, nombre,
+  vida verde (6 px) y maná azul (4 px), y a la derecha `T+n`, `▶` si es
+  su turno, `K.O.` en rojo o el ícono de Aturdido. Borde dorado el de
+  turno, blanco el señalado con el mouse. Ancho 250 × tamaño de texto
+  (como mucho 30 % de la escena). Hasta `maxRows` (12) filas se achica
+  entera para entrar; con más, scroll.
+- Mouse: sobre una fila, ese aliado queda señalado en la arena y en la
+  franja (`hoverId`); sobre el aliado en la arena, su fila se resalta.
+- La arena no cambia: nombres de los aliados como siempre, sin barra de
+  vida extra (pedido del dueño).
+- Con compañeros (`soloParty`), las tarjetas de siempre (ULT y AUTO).
+- Zoom al turno de cada uno: no hace falta. Con la formación separada
+  y la escena más alta la pelea de 8 entra entera, con sprites del
+  tamaño de siempre, y los nombres no se pisan; un 4 contra 4 sigue a
+  ×3 en 1280×720 (capturas `docs/release_shots/v0.13.1/
+  batalla_grupo_*`).
+- Tests: `big_party_ui_test.dart` (n = 1…12, 1280×720 y 1920×1080, los
+  cuatro tamaños de texto, compacto y `soloParty`; vínculo del mouse).

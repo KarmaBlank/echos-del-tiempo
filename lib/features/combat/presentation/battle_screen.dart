@@ -918,18 +918,35 @@ class BattleViewState extends State<BattleView>
   /// Actor señalado con el mouse, en la arena o en la franja de turnos:
   /// se resalta en las dos (battle_presentation.md § "Identificador de
   /// repetidos").
-  String? get hoveredId => _hoverId ?? _hoverSlot;
+  String? get hoveredId => _hoverId ?? _hoverSlot ?? _hoverAlly;
+
+  /// Aliado señalado con el mouse en la lista del grupo o en la arena.
+  String? _hoverAlly;
+
+  /// Grupo compacto (battle_presentation.md § "Grupo compacto"): sin
+  /// compañeros propios (`FeatureFlags.soloParty` apagado o grupo de uno
+  /// solo) abajo va solo la tarjeta propia y los demás, en la lista de la
+  /// derecha de la arena.
+  bool get compactParty => widget.companions.isEmpty;
+
+  void _hoverRow(String? id) {
+    if (id == _hoverAlly) return;
+    setState(() => _hoverAlly = id);
+  }
 
   void _hoverScene(Offset local) {
     final slot = _slotAt(local);
     final e = slot == null ? _foeAt(local) : null;
+    final ally = slot == null && e == null ? _allyAt(local) : null;
     if (slot == _hoverSlot &&
         e?.id == _hoverId &&
+        ally == _hoverAlly &&
         (e == null || _hoverAt == local)) {
       return;
     }
     setState(() {
       _hoverSlot = slot;
+      _hoverAlly = ally;
       _hoverId = e?.id;
       _hoverAt = e == null ? null : local;
     });
@@ -940,7 +957,8 @@ class BattleViewState extends State<BattleView>
     final f = scene.frame;
     if (f == null) return null;
     final v = local / f.geometry.scale;
-    for (final s in BattleScenePainter.timelineSlots(f.battle)) {
+    for (final s in BattleScenePainter.timelineSlots(
+        f.battle, f.geometry.virtualWidth.toDouble())) {
       if (s.rect.inflate(1).contains(v)) return s.id;
     }
     return null;
@@ -993,6 +1011,19 @@ class BattleViewState extends State<BattleView>
     return null;
   }
 
+  /// El aliado bajo [local] (coordenadas de la escena), o `null`.
+  String? _allyAt(Offset local) {
+    final f = scene.frame;
+    if (f == null) return null;
+    final vp = SceneViewport(f.geometry.worldRect, scene.viewFor(f));
+    if (!vp.area.contains(local)) return null;
+    final w = vp.toWorld(local);
+    for (final p in f.battle.party) {
+      if (f.layout.boxOf(p.id).inflate(2).contains(w)) return p.id;
+    }
+    return null;
+  }
+
   /// El jugador de este dispositivo: [BattleView.localId]; sin él
   /// (tests, previsualización), el de turno si puede actuar o el primero.
   Combatant? get _me {
@@ -1016,13 +1047,17 @@ class BattleViewState extends State<BattleView>
   /// achica (los sprites son chicos).
   ///
   /// Con más de `BattlePartyBar.slotCount` en [partySize] (dos filas de
-  /// tarjetas, v0.13): + 6 % del alto, hasta 68 %.
+  /// tarjetas con ULT y AUTO de los compañeros, v0.13.1): + 9 % del
+  /// alto, hasta 68 %.
   static double barHeight(double h,
-      [double textFactor = 1, int partySize = 1]) {
+      [double textFactor = 1, int partySize = 1, bool compact = false]) {
     final f = textFactor < 1 ? 1.0 : textFactor;
     final big = partySize > BattlePartyBar.slotCount;
+    // Grupo compacto con texto Normal: una sola tarjeta (−4 %, para la
+    // escena). Con texto grande el menú necesita ese alto.
+    final base = compact && f <= 1 ? 0.38 : 0.42;
     return math
-        .min(h * (0.42 + 0.08 * (f - 1) + (big ? 0.06 : 0)),
+        .min(h * (base + 0.08 * (f - 1) + (big ? 0.09 : 0)),
             h * (big ? 0.68 : 0.62))
         .clamp(math.min(260.0, h * 0.6), double.infinity);
   }
@@ -1039,8 +1074,8 @@ class BattleViewState extends State<BattleView>
       color: ProtoColors.bg,
       child: LayoutBuilder(builder: (context, cons) {
         final size = cons.biggest;
-        final barH = barHeight(
-            size.height, RetroType.factorOf(context), b.party.length);
+        final barH = barHeight(size.height, RetroType.factorOf(context),
+            compactParty ? 1 : b.party.length, compactParty);
         final me = _me;
         return Stack(
           children: [
@@ -1136,9 +1171,9 @@ class BattleViewState extends State<BattleView>
             ),
             Positioned(
               left: 0,
-              top: (38 * s).roundToDouble(),
+              top: (BattleScenePainter.logTop * s).roundToDouble(),
               width: (g.virtualWidth * s).roundToDouble(),
-              height: (16 * s).roundToDouble(),
+              height: (BattleScenePainter.logHeight * s).roundToDouble(),
               child: _LogBand(
                 battle: b,
                 turnTimeLeft: widget.turnTimeLeft,
@@ -1150,23 +1185,47 @@ class BattleViewState extends State<BattleView>
             // banda y centradas (no tapan la barra del objetivo).
             if (widget.sceneOptions.extendedLog && _logHistory.isNotEmpty)
               Positioned(
-                top: (54 * s).roundToDouble(),
+                top: (SceneGeometry.stripHeight * s).roundToDouble(),
                 left: g.virtualWidth * s * 0.25,
                 width: g.virtualWidth * s * 0.5,
                 child: IgnorePointer(
                     child: BattleLogHistory(lines: _logHistory)),
               ),
+            // Grupo compacto: los demás aliados, a la derecha.
+            if (compactParty && _others(b).isNotEmpty)
+              Positioned(
+                right: 6,
+                top: g.stripPx + 6,
+                bottom: 6,
+                width: math.min(
+                    BattleAllyList.width *
+                        math.max(1.0, RetroType.factorOf(context)),
+                    g.size.width * 0.3),
+                child: BattleAllyList(
+                  battle: b,
+                  members: _others(b),
+                  sprites: widget.sprites,
+                  hoverId: hoveredId,
+                  onHover: _hoverRow,
+                ),
+              ),
             // El objetivo: nombre, vida y quiebre (arriba a la izquierda).
             if (_foes.where((e) => e.id == target).firstOrNull case final tg?)
               Positioned(
                 left: 8,
-                top: (54 * s).roundToDouble() + 4,
+                top: (SceneGeometry.stripHeight * s).roundToDouble() + 4,
                 child: IgnorePointer(child: TargetBar(enemy: tg)),
               ),
           ],
         ),
       );
     });
+  }
+
+  /// Los aliados de la lista compacta: todos menos el propio.
+  List<Combatant> _others(BattleState b) {
+    final me = _me?.id;
+    return [for (final p in b.party) if (p.id != me) p];
   }
 
   /// La barra de abajo: la ventana de comandos (o de quién es el turno)
@@ -1186,6 +1245,7 @@ class BattleViewState extends State<BattleView>
           companions: widget.companions,
           auto: widget.auto,
           onAuto: widget.onAuto,
+          onlyLocal: compactParty,
         ),
       ],
     );

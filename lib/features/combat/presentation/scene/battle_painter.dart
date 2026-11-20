@@ -844,7 +844,9 @@ class BattleScenePainter extends CustomPainter {
       final anchor =
           vp.toScreen(Offset(box.center.dx, box.top)) - Offset(0, 2 * u);
       reqs.add(LabelRequest(
-          p.id, anchor, Size(m(p.name, 8 * u) + badges(p), 10 * u)));
+          p.id,
+          anchor,
+          Size(m(p.name, 8 * u) + badges(p), 10 * u)));
     }
     for (final e in f.battle.enemies) {
       if (!e.alive) continue;
@@ -1742,35 +1744,62 @@ class BattleScenePainter extends CustomPainter {
 
   // ---------------- franja de turnos (`drawTimeline`) ----------------
 
-  /// Íconos de la franja de turnos (lienzo virtual): id del actor y su
-  /// cuadro. El primero (el de turno) es el grande. Lo usa también la
-  /// pantalla para saber qué ícono está bajo el mouse.
-  static List<({String id, Rect rect})> timelineSlots(BattleState b) {
+  /// Íconos de la franja de turnos (lienzo virtual de ancho [vw]): id del
+  /// actor y su cuadro. El primero (el de turno) es el grande. Lo usa
+  /// también la pantalla para saber qué ícono está bajo el mouse. Si los
+  /// 10 no entran en [vw], se achican todos por igual (nunca se cortan).
+  static List<({String id, Rect rect})> timelineSlots(BattleState b,
+      [double vw = 480]) {
+    final ids = [
+      for (final id in predictTurns(b, 10))
+        if (b.byId(id) != null) id,
+    ];
     final out = <({String id, Rect rect})>[];
-    var x = 52.0;
-    for (final id in predictTurns(b, 10)) {
-      if (b.byId(id) == null) continue;
-      final big = out.isEmpty;
-      final sz = big ? 28.0 : 22.0;
-      out.add((id: id, rect: Rect.fromLTWH(x, big ? 2.0 : 6.0, sz, sz)));
-      x += sz + (big ? 8 : 4);
+    if (ids.isEmpty) return out;
+    final need = bigIcon + 8 + (ids.length - 1) * (smallIcon + 4);
+    final k = math.min(1.0, (vw - timelineX - 4) / need);
+    final big = (bigIcon * k).floorToDouble();
+    final small = (smallIcon * k).floorToDouble();
+    var x = timelineX;
+    for (final id in ids) {
+      final first = out.isEmpty;
+      final sz = first ? big : small;
+      out.add((
+        id: id,
+        rect: Rect.fromLTWH(x, first ? 2.0 : 2 + (big - small) / 2, sz, sz)
+      ));
+      x += sz + (first ? 8 : 4);
     }
     return out;
   }
+
+  /// Lado del ícono del de turno y de los demás (v0.13.1: ×1.6 y ×1.8 de
+  /// los 28 / 22 originales) y dónde empiezan.
+  static const bigIcon = 46.0;
+  static const smallIcon = 40.0;
+  static const timelineX = 60.0;
+
+  /// Alto de la banda de íconos (la línea va debajo).
+  static const iconBand = 52.0;
+
+  /// Banda del log, debajo de la barra de tiempo.
+  static const logTop = 58.0;
+  static const logHeight = 16.0;
 
   void _timeline(Canvas c, SceneFrame f) {
     final t = scene.t;
     final b = f.battle;
     final vw = f.geometry.virtualWidth.toDouble();
-    _pen.rect(c, const Color(0xFF0B0E1A), 0, 0, vw, 54);
-    _pen.rect(c, const Color(0xCC0B0E1A), 0, 0, vw, 32);
-    _pen.rect(c, const Color(0xFF5B74C9), 0, 32, vw, 1);
+    const sh = SceneGeometry.stripHeight * 1.0;
+    _pen.rect(c, const Color(0xFF0B0E1A), 0, 0, vw, sh);
+    _pen.rect(c, const Color(0xCC0B0E1A), 0, 0, vw, iconBand);
+    _pen.rect(c, const Color(0xFF5B74C9), 0, iconBand, vw, 1);
     final cur = b.current;
     final left = f.turnTimeLeft;
     if (cur != null && cur.isPlayer && left != null) {
       final full = f.turnLimit <= 0 ? 30.0 : f.turnLimit;
       final l = left.clamp(0.0, full);
-      _pen.rect(c, const Color(0xAA000000), 0, 33, vw, 4);
+      _pen.rect(c, const Color(0xAA000000), 0, iconBand + 1, vw, 4);
       // <= 10 s: parpadea (fijo con REDUCIR MOVIMIENTO).
       final odd = !scene.options.reduceMotion && (t / 250).floor().isOdd;
       _pen.rect(
@@ -1781,13 +1810,13 @@ class BattleScenePainter extends CustomPainter {
                   : const VisionColor(VisionSlot.hurt))
               : const Color(0xFFFFD166),
           0,
-          33,
+          iconBand + 1,
           vw * l / full,
           4);
     }
-    _pen.text(c, 'TURNOS', 26, 19, const Color(0xFF9FB4FF), 6);
+    _pen.text(c, 'TURNOS', 30, 29, const Color(0xFF9FB4FF), 8);
 
-    final slots = timelineSlots(b);
+    final slots = timelineSlots(b, vw);
     for (var i = 0; i < slots.length; i++) {
       final a = b.byId(slots[i].id)!;
       final big = i == 0;
@@ -1818,7 +1847,9 @@ class BattleScenePainter extends CustomPainter {
           : f.sprites
               ?.enemy(f.sprites.enemySpriteId(a.enemyType ?? '', a.phase));
       if (img != null) {
-        final k = math.min((sz - 4) / img.width, (sz - 4) / img.height);
+        // Escala entera si entra (píxeles parejos); si no, la que entre.
+        final fit = math.min((sz - 4) / img.width, (sz - 4) / img.height);
+        final k = fit >= 1 ? fit.floorToDouble() : fit;
         final w = img.width * k, h = img.height * k;
         c.drawImageRect(
             img,
@@ -1830,8 +1861,8 @@ class BattleScenePainter extends CustomPainter {
       var dx = 0.0;
       for (final k in StatusKind.values) {
         if (a.stacks(k) <= 0) continue;
-        _pen.rect(c, statusColor(k), x + 2 + dx, y + sz - 4, 3, 3);
-        dx += 4;
+        _pen.rect(c, statusColor(k), x + 2 + dx, y + sz - 6, 4, 4);
+        dx += 5;
       }
       // Élite: borde dorado doble y ★; jefe: corona (tres puntas).
       if (a.elite || a.boss) {
@@ -1840,22 +1871,23 @@ class BattleScenePainter extends CustomPainter {
           ..color = const Color(0xFFFFD166);
         c.drawRect(Rect.fromLTWH(x - 1.5, y - 1.5, sz + 3, sz + 3), _pen.stroke);
         if (a.boss) {
-          _pen.rect(c, const Color(0xFFFFD166), x + 1, y + 1, 7, 2);
-          _pen.rect(c, const Color(0xFFFFD166), x + 1, y - 1, 1, 2);
-          _pen.rect(c, const Color(0xFFFFD166), x + 4, y - 1, 1, 2);
-          _pen.rect(c, const Color(0xFFFFD166), x + 7, y - 1, 1, 2);
+          _pen.rect(c, const Color(0xFFFFD166), x + 2, y + 2, 11, 3);
+          _pen.rect(c, const Color(0xFFFFD166), x + 2, y - 1, 2, 3);
+          _pen.rect(c, const Color(0xFFFFD166), x + 6.5, y - 1, 2, 3);
+          _pen.rect(c, const Color(0xFFFFD166), x + 11, y - 1, 2, 3);
         } else {
-          _pen.text(c, '★', x + 4, y + 7, const Color(0xFFFFD166), 6);
+          _pen.rect(c, const Color(0xE6000000), x + 1, y + 1, 11, 11);
+          _pen.text(c, '★', x + 6.5, y + 10.5, const Color(0xFFFFD166), 8);
         }
       }
       // Letra de repetidos, en la esquina de abajo a la derecha.
       if (a.tag case final tag?) {
-        _pen.rect(c, const Color(0xE6000000), x + sz - 8, y + sz - 8, 8, 8);
-        _pen.text(c, tag, x + sz - 4, y + sz - 1.5, const Color(0xFFFFFFFF), 6);
+        _pen.rect(c, const Color(0xE6000000), x + sz - 12, y + sz - 12, 12, 12);
+        _pen.text(c, tag, x + sz - 6, y + sz - 2, const Color(0xFFFFFFFF), 8);
       }
-      // Vínculo con la arena: el señalado con el mouse (en la arena o
-      // acá), en blanco; el objetivo elegido y los que tocaría la
-      // habilidad, con una raya roja debajo.
+      // Vínculo con la arena: el señalado con el mouse (en la arena, en
+      // la lista del grupo o acá), en blanco; el objetivo elegido y los
+      // que tocaría la habilidad, con una raya roja debajo.
       if (a.id == f.hoverId) {
         _pen.stroke
           ..strokeWidth = 1
@@ -1881,7 +1913,7 @@ class BattleScenePainter extends CustomPainter {
       }
     }
     // Banda del log (el texto es un widget encima).
-    _pen.rect(c, const Color(0xFF000000), 0, 38, vw, 16);
+    _pen.rect(c, const Color(0xFF000000), 0, logTop, vw, logHeight);
   }
 }
 

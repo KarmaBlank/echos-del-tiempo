@@ -61,7 +61,8 @@ void main() {
   Future<void> pump(WidgetTester tester,
       {required bool canAct,
       required bool Function(BattleCommand) onCommand,
-      String? localId}) async {
+      String? localId,
+      Set<String> companions = const {}}) async {
     tester.view.physicalSize = const Size(1280, 720);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
@@ -72,6 +73,7 @@ void main() {
             battle: state,
             canAct: canAct,
             localId: localId,
+            companions: companions,
             onCommand: onCommand),
       ),
     ));
@@ -216,7 +218,10 @@ void main() {
         .state;
     expect(state.currentId, 'guerrero');
     BattleCommand? sent;
-    await pump(tester, canAct: true, onCommand: (c) {
+    // Con compañeros propios (soloParty): una tarjeta por cada uno.
+    await pump(tester,
+        canAct: true,
+        companions: const {'maga', 'tirador', 'paladin'}, onCommand: (c) {
       sent = c;
       return true;
     });
@@ -336,7 +341,7 @@ void main() {
         localId: 'maga',
         onCommand: (_) => fail('no debía mandar'));
     // Como el prototipo: sin menú. El panel dice de quién es el turno y
-    // cuándo me toca; la tarjeta del guerrero lo marca (▶).
+    // cuándo me toca; su fila de la lista del grupo lo marca (▶).
     expect(find.byKey(const ValueKey('battle-menu')), findsNothing);
     Finder waiting(String text) => find.descendant(
         of: find.byKey(const ValueKey('battle-waiting')),
@@ -345,7 +350,7 @@ void main() {
     expect(waiting('Tu turno en 3'), findsOneWidget);
     expect(
         find.descendant(
-            of: find.byKey(const ValueKey('member-guerrero')),
+            of: find.byKey(const ValueKey('ally-row-guerrero')),
             matching: find.textContaining('▶', findRichText: true)),
         findsOneWidget);
   });
@@ -362,7 +367,12 @@ void main() {
       ..bonusDefense = 4
       ..statuses = {StatusKind.regen: 2};
     m('guerrero').hp = 0;
-    await pump(tester, canAct: false, localId: 'maga', onCommand: (_) => true);
+    // Con compañeros propios (soloParty): tarjetas de todos.
+    await pump(tester,
+        canAct: false,
+        localId: 'maga',
+        companions: const {'guerrero', 'tirador', 'paladin'},
+        onCommand: (_) => true);
 
     // Mi tarjeta y las del resto del grupo.
     expect(find.byKey(const ValueKey('my-panel-maga')), findsOneWidget);

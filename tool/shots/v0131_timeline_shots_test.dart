@@ -10,6 +10,7 @@ import 'dart:ui' as ui;
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/battle_screen.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
+import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_painter.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/sprite_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
@@ -95,12 +96,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
     await _shot(tester, '01_linea_de_tiempo');
-    // Mouse sobre el tercer ícono de la franja (x virtual 114).
+    // Mouse sobre el tercer ícono de la franja.
     final v = tester.state<BattleViewState>(find.byType(BattleView));
-    final s = v.scene.frame!.geometry.scale;
+    final fr = v.scene.frame!;
+    final s = fr.geometry.scale;
+    final slot = BattleScenePainter.timelineSlots(
+        fr.battle, fr.geometry.virtualWidth.toDouble())[2];
     final g = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await g.addPointer(location: Offset.zero);
-    await g.moveTo(Offset((114 + 11) * s, (6 + 11) * s));
+    await g.moveTo(slot.rect.center * s);
     for (var i = 0; i < 5; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
