@@ -5,10 +5,9 @@ source: {kind: feat, ref: "ult_flawless"}
 weapons: ["espada", "hacha", "lanza", "dagas", "espada+escudo", "maza+escudo", "martillo+escudo"]
 classes: []
 element: fisico
-cost: 80
 pulse: 0
 skill:
   kind: physical
-  power: 2.5
+  power: 2.775
   openerBonus: 0.5
 fx: ult2_primerGolpe

@@ -5,7 +5,6 @@ source: {kind: eco, ref: "fortuna"}
 weapons: ["báculo", "tomo", "varita"]
 classes: []
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: magical

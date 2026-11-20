@@ -5,7 +5,6 @@ source: {kind: unique, ref: "manecillaAbismo"}
 weapons: ["báculo", "varita"]
 classes: []
 element: agua
-cost: 100
 pulse: 0
 skill:
   kind: magical

@@ -5,7 +5,6 @@ source: {kind: eco, ref: "ecojefe"}
 weapons: []
 classes: ["guerrero", "paladin"]
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: support

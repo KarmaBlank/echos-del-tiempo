@@ -5,11 +5,10 @@ source: {kind: tree, ref: "maga:40"}
 weapons: []
 classes: ["maga"]
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: magical
-  power: 2.03
+  power: 2.002
   allTargets: true
   detonate: 0.5
 fx: ult2_prismaPasado

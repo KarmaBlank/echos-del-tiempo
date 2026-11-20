@@ -5,7 +5,6 @@ source: {kind: tree, ref: "tirador:20"}
 weapons: []
 classes: ["tirador"]
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: physical

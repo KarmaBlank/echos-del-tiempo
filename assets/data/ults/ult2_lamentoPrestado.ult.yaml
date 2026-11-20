@@ -5,7 +5,6 @@ source: {kind: boss, ref: "espectroCoronado"}
 weapons: []
 classes: []
 element: sagrado
-cost: 100
 pulse: 0
 skill:
   kind: heal

@@ -346,3 +346,30 @@ grupos en C, vida en grupo (base + por jugador), mitigación de grupo por
 jugador extra y la de zona C, y los ajustes del jefe en solitario (vida
 ×, ATQ ×, escolta máxima). La vista previa de un enemigo ("A nivel N, 1
 jugador") usa la curva y la vida solo (× 0.9) del borrador.
+
+## Ajustes: economía, mejora y carga de ULT, Ecos, hazañas
+
+Tipos nuevos del parche (cada uno es un grupo de `kTuning` en
+`game_engine/data/tuning_catalog.dart`, con una sola entidad cuyo id es
+el `jsonKey`; los instala `BalanceRegistries.install` en el lugar y
+`restore` los devuelve):
+
+| Tipo (`jsonKey`) | Campos |
+|---|---|
+| `ultLevel` | `perLevel` (poder extra por nivel de ULT) |
+| `ultUpgrade` | `credits`, `cristal` (× nivel), `prismaFrom`, `fragFrom` |
+| `ultCharge` | `takenFactor`, `dealtBase`, `dealtScale`, `dealtCap`, `enemyPerTurn`, `enemyPerHp` |
+| `condense` | `cristalCost`, `cristalCredits`, `prismaCost`, `prismaCredits` |
+| `materials` | prob. de drop por material, × por fuente, pesos de rareza, Épico fuera de Ecos, desarme, subir rareza, traslado, afijos |
+| `ecoTier` | `tierQuantity`, `partyQuantity` |
+| `featReward` | por hazaña (id): `credits`, `esquirlas`, `cristales`, `prismas`, `potions`, `ethers` (la ULT que enseña no se edita) |
+
+Sin vista previa de impacto (no son combate). Las pasivas y nodos que
+suben la carga de ULT ya se editaban (`passiveNode` efecto `ult`,
+`mechanic`). Quedan fijos en el código: la carga por acción de cada
+habilidad (6 / 8 según el tipo, repartida en el motor) y la cantidad de
+niveles de ULT (5).
+
+Red: un parche que use estos tipos tiene otro hash; un par sin estos
+tipos los descarta ("tipo de entidad desconocido"), su hash no coincide
+y el apretón de manos lo rechaza. Sin parche el hash sigue siendo `base`.

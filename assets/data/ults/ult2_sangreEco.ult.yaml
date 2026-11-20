@@ -5,11 +5,10 @@ source: {kind: tree, ref: "guerrero:20"}
 weapons: []
 classes: ["guerrero"]
 element: fisico
-cost: 80
 pulse: 0
 skill:
   kind: physical
-  power: 2.81
+  power: 3.29
   hpCost: 0.1
   lifeSteal: 0.4
 fx: ult2_sangreEco

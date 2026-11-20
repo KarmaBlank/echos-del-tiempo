@@ -5,11 +5,10 @@ source: {kind: unique, ref: "fauceEras"}
 weapons: ["espada", "dagas"]
 classes: []
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 4.21
+  power: 4.169
   lifeSteal: 0.25
   execute: 0.25
 fx: ult2_coronaRota

@@ -5,9 +5,8 @@ source: {kind: eco, ref: "eco:raro"}
 weapons: []
 classes: []
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: physical
-  delayedHit: 4.92
+  delayedHit: 4.853
 fx: ult2_loQueSera

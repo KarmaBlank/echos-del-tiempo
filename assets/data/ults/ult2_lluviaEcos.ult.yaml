@@ -5,11 +5,10 @@ source: {kind: tree, ref: "tirador:40"}
 weapons: []
 classes: ["tirador"]
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 0.51
+  power: 0.476
   hits: 8
   pierce: 0.3
 fx: ult2_lluviaEcos

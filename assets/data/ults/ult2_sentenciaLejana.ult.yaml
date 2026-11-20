@@ -5,11 +5,10 @@ source: {kind: tree, ref: "paladin:40"}
 weapons: []
 classes: ["paladin"]
 element: sagrado
-cost: 80
 pulse: 0
 skill:
   kind: magical
-  power: 1.9
+  power: 2.364
   status: {"kind":"holy","stacks":2}
   breakBonus: 0.5
 fx: ult2_sentenciaLejana

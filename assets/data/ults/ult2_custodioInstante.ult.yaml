@@ -5,11 +5,10 @@ source: {kind: feat, ref: "ult_shields"}
 weapons: ["espada+escudo", "maza+escudo", "martillo+escudo"]
 classes: []
 element: fisico
-cost: 80
 pulse: 0
 skill:
   kind: heal
-  power: 0.91
+  power: 1.255
   cleanse: 2
   protect: true
   allyShield: 0.5

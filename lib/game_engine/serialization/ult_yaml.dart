@@ -32,7 +32,6 @@ abstract final class UltYaml {
   static String playerToYaml(UltDef u) {
     final skill = _diff(ultimateCodec.read(u.skill),
         ultimateCodec.read(SkillDef(id: u.id, name: u.name, kind: u.skill.kind)))
-      ..remove('ultCost')
       ..remove('pulse');
     return [
       'schema: $schema',
@@ -42,7 +41,6 @@ abstract final class UltYaml {
       'weapons: ${_list(u.weapons)}',
       'classes: ${_list(u.classes)}',
       'element: ${u.element.name}',
-      'cost: ${u.cost}',
       'pulse: ${u.skill.pulse}',
       'skill:',
       '  kind: ${u.skill.kind.name}',
@@ -68,8 +66,9 @@ abstract final class UltYaml {
     final values = {
       ...ultimateCodec.read(base),
       for (final e in sk.entries)
-        if (e.key != 'kind') '${e.key}': _plain(e.value),
-      'ultCost': (doc['cost'] as num?)?.toInt() ?? 100,
+        // `ultCost` / `cost` de datos viejos: se ignoran (toda ULT
+        // cuesta la barra llena).
+        if (e.key != 'kind' && e.key != 'ultCost') '${e.key}': _plain(e.value),
       'pulse': (doc['pulse'] as num?)?.toInt() ?? 0,
     };
     final skill = ultimateCodec.write(base, BalanceFieldReader(values)) as SkillDef;

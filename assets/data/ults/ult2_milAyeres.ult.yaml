@@ -5,11 +5,10 @@ source: {kind: weapon_mod, ref: ""}
 weapons: ["dagas"]
 classes: []
 element: veneno
-cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 0.64
+  power: 0.599
   hits: 6
   critBonus: 0.25
   status: {"kind":"poison","stacks":2}

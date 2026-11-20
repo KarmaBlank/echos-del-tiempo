@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../data/tuning_catalog.dart';
 import '../data/eco_catalog.dart';
 import '../data/game_catalog.dart';
 import '../models/atlas.dart';
@@ -48,11 +49,11 @@ class EcoRules {
   static const dropMinLevel = 45;
 
   /// Bonus de cantidad por jugador extra (§ 7).
-  static const partyQuantity = 0.10;
+  static double get partyQuantity => tuning(TuningId.ecoTier).d('partyQuantity');
 
   /// Bonus de cantidad por tier sobre T1 (materials_economy.md § 4.4):
   /// el riesgo alto paga (T8 +21%, T16 +45%).
-  static const tierQuantity = 0.03;
+  static double get tierQuantity => tuning(TuningId.ecoTier).d('tierQuantity');
 
   /// Cantidad que suma el tier de [e].
   static double tierBonus(EcoItem e) =>

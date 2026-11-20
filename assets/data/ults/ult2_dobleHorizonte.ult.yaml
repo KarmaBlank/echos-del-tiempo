@@ -5,11 +5,10 @@ source: {kind: unique, ref: "filoPrimordial"}
 weapons: ["lanza", "hacha"]
 classes: []
 element: fisico
-cost: 100
 pulse: 0
 skill:
   kind: physical
-  power: 1.84
+  power: 1.792
   delay: 0.5
   allTargets: true
 fx: ult2_dobleHorizonte
