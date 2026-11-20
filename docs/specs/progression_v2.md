@@ -531,7 +531,8 @@ balance):
   tomado (con el motivo si no se puede: exclusión, sin puntos); si no
   conecta, solo **TOMAR CAMINO (N)** (abre `Tomar N nodos por N
   puntos`). En PLANIFICAR, PLANIFICAR / QUITAR DEL PLAN.
-- **Hito pendiente = tarjetas** arriba del árbol: título chico
+- **Hito pendiente = tarjetas** (v0.13.3: en columna dentro del visor,
+  ver § 11.5): título chico
   `HITO DEL NIVEL 10` (v0.13.1: ver § 11.4) y una tarjeta por
   keystone de entrada (`milestone-pick-<id>`: nombre + una línea de
   efecto). Pasar el mouse resalta su camino; el primer clic la elige
@@ -604,3 +605,29 @@ hito siguió apareciendo. Reglas:
 - Reiniciar el árbol vacía árbol e hitos: vuelven las opciones del § 5.
 - Tests: `progression_v2_test` ("una keystone tomada a mano no se vuelve
   a ofrecer", "el hito paga solo los nodos que faltan").
+
+### 11.5 Hito en columna dentro del árbol (v0.13.3, pedido del dueño)
+
+El recuadro del hito ocupaba todo el ancho arriba y el árbol quedaba
+finito. Ahora:
+
+- El visor del árbol ocupa todo el alto disponible. El hito
+  (`milestone-banner-N`) es una **columna vertical a la derecha dentro
+  del visor** (borde izquierdo naranja, fondo casi opaco): título
+  `HITO DEL NIVEL N`, `Primero elegí tu hito` (`tree-locked`), la línea
+  `Elegí una keystone…` y las tarjetas apiladas (nombre, efecto completo,
+  `Camino: N nodos gratis`). Si no entra en alto, la columna se desplaza.
+- Ancho de la columna: 38 % del visor, entre 140 px (o 45 % del visor si
+  es más chico) y 300 px escalados por el tamaño del texto; con poco
+  ancho el texto baja de línea.
+- El área útil del árbol es la parte izquierda (visor menos columna).
+  Pasar el mouse **o el foco** por una tarjeta, o elegirla, encuadra el
+  camino y la keystone centrados en esa zona izquierda: nunca debajo de
+  la columna.
+- Clic elige / clic de nuevo confirma, y el resto de las reglas del
+  § 11.4 siguen igual.
+- Tests: `passive_tree_view_test` (columna dentro del visor a la
+  derecha; cada nodo del camino resaltado a la izquierda de la columna),
+  `text_size_test`. Capturas:
+  `docs/release_shots/v0.13.3/hito_columna_antes.png` y
+  `hito_columna_despues.png` (`tool/shots/v0133_hito_columna_shots_test.dart`).

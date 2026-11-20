@@ -25,15 +25,23 @@ class DsBadge extends StatelessWidget {
     final fs = MediaQuery.textScalerOf(context).scale(RetroType.label);
     final style =
         DsText.subtitle(neutral ? DsColors.textSecondary : ProtoColors.bg);
-    return Badge(
-      label: Text(retroText(text), textScaler: TextScaler.noScaling),
-      textStyle: style.copyWith(fontSize: fs, height: 1),
-      textColor: style.color,
-      backgroundColor:
-          neutral ? DsColors.surfaceSunken : DsColors.actionPrimary,
-      largeSize: fs + 10,
-      padding: EdgeInsets.symmetric(horizontal: DsSpace.xs + 2),
-      alignment: Alignment.center,
+    // Cuadrada (regla pixel, design_system.md § Principios): rectángulo
+    // de esquinas rectas con borde de 1 px, nunca la pastilla de Material.
+    final bg = neutral ? DsColors.surfaceSunken : DsColors.actionPrimary;
+    return Container(
+      // Alto fs + 10 (el de la pastilla anterior), texto centrado.
+      constraints: BoxConstraints(minWidth: fs + 10),
+      padding: EdgeInsets.symmetric(horizontal: DsSpace.xs + 2, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border.all(
+            color: neutral ? DsColors.textSecondary : ProtoColors.bg,
+            width: 1),
+      ),
+      child: Text(retroText(text),
+          textAlign: TextAlign.center,
+          textScaler: TextScaler.noScaling,
+          style: style.copyWith(fontSize: fs, height: 1)),
     );
   }
 }

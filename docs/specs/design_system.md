@@ -43,6 +43,16 @@ espaciado AMPLIO, alto contraste).
    el mismo `Ds*`.
 6. Accesible siempre: sigue TAMAÑO DEL TEXTO, ESPACIADO AMPLIO y ALTO
    CONTRASTE; foco de teclado visible; cursor de mano en lo clickeable.
+7. Todo cuadrado / pixel (regla del dueño, v0.13.3): en la interfaz no
+   hay formas redondeadas ni circulares. Botones, chips, insignias,
+   tarjetas, tooltips, toasts, campos, scrollbars, checkboxes y radios
+   usan esquinas rectas (radio 0); el tema Material
+   (`RetroTheme.build`) pone formas rectangulares por defecto. Solo el
+   arte de escena que dibuja algo intencionalmente redondo (painters: anillo y
+   nodos del árbol de pasivas, efectos de batalla, minimapa; nodos y aura de
+   la constelación de Ascensión) queda fuera. Lo vigila
+   `test/app/square_ui_audit.dart` (`roundedUi`) en título, HUD,
+   pestañas de PERSONAJE, inventario y batalla.
 
 ## 3. Escalas
 
@@ -162,9 +172,10 @@ Medidas en px nominales (Normal, 1280×720); todo escala.
   Base: `FilledButton` / `OutlinedButton` / `TextButton` / `IconButton`.
 - DsTab / DsTabBar: pestaña con texto y, opcional, insignia DsBadge
   adentro, a la derecha del texto, separada `xs` (nunca encima). Elegida:
-  texto `gold` + subrayado 3 px. Base: `TabBar` + `Badge` sin hijo.
-- DsBadge: pastilla con número o palabra corta; fondo `gold`, texto
-  `bg`, padding `xs` horizontal; variante neutra (borde, texto
+  texto `gold` + subrayado 3 px. Base: `TabBar` + `DsBadge`.
+- DsBadge: rectángulo de esquinas rectas (no pastilla) con número o
+  palabra corta; fondo `gold`, borde de 1 px, texto `bg`, padding `xs`
+  horizontal; variante neutra (borde, texto
   secundario).
 - DsToolbar: fila superior con título, contenido flexible (pestañas) y
   acciones a la derecha; padding `sm`/`md`, borde inferior.

@@ -167,6 +167,33 @@ abstract final class RetroTheme {
           side: BorderSide(color: ProtoColors.buttonBorder, width: borderWidth),
         ),
       ),
+      // Regla pixel (design_system.md § Principios): ninguna forma
+      // redondeada en la UI; todo lo que Material redondea por defecto
+      // pasa a esquinas rectas.
+      scrollbarTheme: const ScrollbarThemeData(radius: Radius.zero),
+      checkboxTheme: const CheckboxThemeData(shape: _square),
+      chipTheme: const ChipThemeData(shape: _square),
+      tooltipTheme: const TooltipThemeData(
+          decoration: BoxDecoration(color: RetroPalette.panel)),
+      snackBarTheme: const SnackBarThemeData(shape: _square),
+      popupMenuTheme: const PopupMenuThemeData(shape: _square),
+      menuTheme: const MenuThemeData(
+          style: MenuStyle(shape: WidgetStatePropertyAll(_square))),
+      bottomSheetTheme: const BottomSheetThemeData(shape: _square),
+      floatingActionButtonTheme:
+          const FloatingActionButtonThemeData(shape: _square),
+      iconButtonTheme: const IconButtonThemeData(
+          style: ButtonStyle(shape: WidgetStatePropertyAll(_square))),
+      segmentedButtonTheme: const SegmentedButtonThemeData(
+          style: ButtonStyle(shape: WidgetStatePropertyAll(_square))),
+      navigationRailTheme:
+          const NavigationRailThemeData(indicatorShape: _square),
+      navigationBarTheme:
+          const NavigationBarThemeData(indicatorShape: _square),
+      tabBarTheme: const TabBarThemeData(
+          splashBorderRadius: BorderRadius.zero),
+      progressIndicatorTheme:
+          const ProgressIndicatorThemeData(borderRadius: BorderRadius.zero),
       inputDecorationTheme: const InputDecorationTheme(
         filled: true,
         fillColor: ProtoColors.input,

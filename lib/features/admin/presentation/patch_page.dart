@@ -227,8 +227,7 @@ class _Step extends StatelessWidget {
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(6),
-          ),
+            ),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(
               child: SelectableText(text,

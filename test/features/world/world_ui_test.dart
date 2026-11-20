@@ -27,6 +27,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../game_engine/session_test_helpers.dart';
+import '../../app/square_ui_audit.dart';
 
 const _cat = GameCatalog.standard;
 
@@ -240,6 +241,7 @@ void main() {
       }
 
       await pumpHud();
+      expect(roundedUi(tester), isEmpty, reason: 'regla pixel: sin redondeos');
       final lv = ZoneRules.floorLevel(_cat.zone(1)!, 0);
       expect(find.text('Pradera Esmeralda · Piso 1/2 · Lv $lv'), findsOneWidget);
       expect(find.byKey(const ValueKey('hud-boss-floor')), findsNothing);

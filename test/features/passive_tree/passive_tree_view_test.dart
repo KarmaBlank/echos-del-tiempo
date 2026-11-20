@@ -276,6 +276,20 @@ void main() {
     final after = nodeOnScreen(tester, options[2]);
     expect(vp.contains(after), isTrue);
     expect(after, isNot(before));
+    // La columna del hito va DENTRO del visor, pegada a la derecha.
+    final col =
+        tester.getRect(find.byKey(const ValueKey('milestone-banner-10')));
+    expect(vp.inflate(1).contains(col.topLeft), isTrue);
+    expect(vp.inflate(1).contains(col.bottomRight), isTrue);
+    expect((vp.right - col.right).abs(), lessThan(3));
+    expect(col.width, lessThan(vp.width / 2));
+    // Todo el camino resaltado (y la keystone) cae a la izquierda de la
+    // columna, nunca debajo.
+    for (final id in _painter(tester).route) {
+      final o = nodeOnScreen(tester, id);
+      expect(o.dx, lessThan(col.left), reason: id);
+      expect(vp.contains(o), isTrue, reason: id);
+    }
     await mouse.moveTo(Offset.zero);
     await tester.pump();
     // Primer clic: se ve el camino; segundo: se elige.
