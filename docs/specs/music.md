@@ -363,7 +363,9 @@ modo y el jingle de nivel quedaba en cola detrás de la victoria
 (arrancaba ~5 s después, con la pantalla de nivel ya abierta o cerrada).
 Ahora:
 
-1. **Desenlace** (aparece `battle.state.outcome`, todavía en `battle`):
+1. **Desenlace** (`battle.outcomeShown`: hay `battle.state.outcome` y
+   ya terminó la cinemática del golpe final, `endHold` ≤ 0 —
+   battle_presentation.md § "Fin de batalla"; todavía en `battle`):
    la pieza de batalla / jefe / jefe final se **corta** en
    `battleCutSeconds` = 0.15 s; suena `jingle.victory` o
    `jingle.defeat` **entero**; la pieza de la zona actual entra ya

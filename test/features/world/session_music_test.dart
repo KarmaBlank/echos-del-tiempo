@@ -307,7 +307,10 @@ void main() {
         enemyType: 'slime');
 
     GameSession session(SessionMode mode,
-            {int level = 1, BattleOutcome? outcome, MissionResult? result}) =>
+            {int level = 1,
+            BattleOutcome? outcome,
+            MissionResult? result,
+            double hold = 0}) =>
         GameSession(
           mode: mode,
           players: LinkedHashMap.of({
@@ -328,7 +331,8 @@ void main() {
                       party: const [], enemies: [enemy()], outcome: outcome),
                   fieldEnemyId: 0,
                   boss: false,
-                  elite: false)
+                  elite: false,
+                  endHold: hold)
               : null,
           result: result,
         );
@@ -395,6 +399,33 @@ void main() {
       run(0.6);
       expect(music.deckVolume(deckOf(zone)), 1);
       expect(music.played, [Music.victory], reason: 'nada se repite');
+    });
+
+    test(
+        'ULT / dúo que mata al último: ni jingle ni corte hasta que termina '
+        'la cinemática', () {
+      // El motor ya tiene el desenlace, pero el golpe se sigue viendo.
+      for (final hold in [2.3, 1.2, 0.04]) {
+        sm.onView(view(session(SessionMode.battle, outcome: won, hold: hold)));
+        run(0.04);
+      }
+      expect(music.played, isEmpty);
+      expect(music.current, Music.battle);
+      expect(music.bedHeld, isFalse);
+      sm.onView(view(session(SessionMode.battle, outcome: won)));
+      expect(music.played, [Music.victory]);
+      expect(music.current, zone);
+      sm.onView(view(session(SessionMode.battle, outcome: won)));
+      expect(music.played, [Music.victory], reason: 'una sola vez');
+    });
+
+    test('derrota tras una ULT enemiga: espera igual', () {
+      const lost = BattleOutcome(victory: false);
+      sm.onView(view(session(SessionMode.battle, outcome: lost, hold: 2.3)));
+      expect(music.played, isEmpty);
+      expect(music.current, Music.battle);
+      sm.onView(view(session(SessionMode.battle, outcome: lost)));
+      expect(music.played, [Music.defeat]);
     });
 
     test('subida de nivel: la pantalla corta la victoria y entra su jingle',

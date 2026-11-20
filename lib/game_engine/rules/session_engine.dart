@@ -50,6 +50,24 @@ part 'session_engine_tutorial.dart';
 typedef SeedSource = int Function();
 
 /// Resultado de un paso de la sesión: el estado nuevo y lo que pasó.
+/// Segundos de cinemática de un paso de batalla (los mismos que la pausa
+/// `wait` tras una ULT o un dúo): 0 si no hay ninguna. Con eso se alarga
+/// la pausa final cuando el golpe que cierra la batalla es una ULT, un
+/// dúo o una ULT enemiga (battle_presentation.md § "Fin de batalla").
+double battleCinematicHold(List<BattleEvent> evs) {
+  var hold = 0.0;
+  for (final ev in evs) {
+    final h = switch (ev) {
+      ActionEvent(kind: BattleActionKind.ultimate) => 2.3,
+      EnemyUltEvent() => 2.3,
+      ActionEvent(kind: BattleActionKind.dual) => 1.5,
+      _ => 0.0,
+    };
+    if (h > hold) hold = h;
+  }
+  return hold;
+}
+
 class SessionStep {
   final GameSession state;
   final List<SessionEvent> events;
@@ -2986,7 +3004,16 @@ class _Op {
       }
     }
     final outcome = step.state.outcome;
-    if (outcome != null && b.endTimer == null) _onBattleOver(b, outcome);
+    if (outcome != null && b.endTimer == null) {
+      _onBattleOver(b, outcome);
+      // Golpe final con cinemática: la pausa final se alarga lo que dura
+      // y la presentación no muestra el desenlace hasta que termine
+      // (battle_presentation.md § "Fin de batalla").
+      final hold = battleCinematicHold(step.events);
+      b
+        ..endHold = hold
+        ..endTimer = b.endTimer! + hold;
+    }
   }
 
   /// `checkEnd`: reparto inmediato de XP/créditos y subida de nivel.
@@ -3043,6 +3070,7 @@ class _Op {
     final end = b.endTimer;
     if (end != null) {
       b.endTimer = end - dt;
+      if (b.endHold > 0) b.endHold = math.max(0, b.endHold - dt);
       if (b.endTimer! <= 0) finishBattle();
       return;
     }

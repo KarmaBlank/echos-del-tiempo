@@ -485,6 +485,7 @@ class SessionBattle {
     this.wait = 1.0,
     this.turnTime = 0,
     this.endTimer,
+    this.endHold = 0,
     this.level = 0,
   });
 
@@ -507,6 +508,15 @@ class SessionBattle {
   /// Pausa final antes de `finishBattle`; `null` mientras se pelea.
   double? endTimer;
 
+  /// Parte de [endTimer] que todavía ocupa la cinemática del golpe final
+  /// (ULT, dúo, ULT enemiga): mientras sea > 0 la presentación no muestra
+  /// el desenlace (battle_presentation.md § "Fin de batalla").
+  double endHold;
+
+  /// El desenlace ya se puede presentar (jingle, pieza de fondo, cartel):
+  /// terminó la reproducción del golpe que cerró la batalla.
+  bool get outcomeShown => state.outcome != null && endHold <= 0;
+
   /// Le toca a un jugador y la sesión espera su `BattleAction`.
   bool get waitingForPlayer {
     final cur = state.current;
@@ -522,6 +532,7 @@ class SessionBattle {
         wait: wait,
         turnTime: turnTime,
         endTimer: endTimer,
+        endHold: endHold,
         level: level,
       );
 }
