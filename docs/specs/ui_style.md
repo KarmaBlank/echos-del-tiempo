@@ -398,6 +398,12 @@ insignias del canvas.
 - Bordes y fondos del prototipo; esquinas rectas (radio 0) para que el
   borde se vea pixelado (el prototipo usa 3-6 px de radio: es el único
   desvío visual).
+- **Sin redondeos** (regla del dueño, v0.13.3): nada redondeado ni
+  circular en la UI; todo cuadrado/pixel, incluidas las insignias
+  (`DsBadge`: rectángulo con borde de 1 px), los tooltips, el thumb de
+  las scrollbars y los checkboxes. Excepción: arte dibujado por painters
+  (árbol de pasivas, efectos de batalla, minimapa) y los nodos de la
+  constelación de Ascensión. Ver design_system.md § 2 (principio 7).
 - Sin elevación ni sombras suaves salvo la del `#tip` (`0 4 18 #000a`).
 - Sin animaciones de ondas (ripple) de Material: el feedback es el cambio
   instantáneo de color.

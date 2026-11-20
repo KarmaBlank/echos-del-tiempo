@@ -132,16 +132,24 @@ void main() {
             index: 0,
             onChanged: (_) {}),
       ])));
-      final hud = tester.widget<Badge>(find.descendant(
-          of: find.byKey(const ValueKey('hud-points-badge')),
-          matching: find.byType(Badge)));
-      final tab = tester.widget<Badge>(find.descendant(
-          of: find.byType(DsTabBar), matching: find.byType(Badge)));
+      // DsBadge es cuadrada (regla pixel): se comparan su texto y su caja.
+      Text text(Finder of) => tester.widget<Text>(find.descendant(
+          of: find.descendant(of: of, matching: find.byType(DsBadge)),
+          matching: find.byType(Text)));
+      BoxDecoration box(Finder of) => tester
+          .widget<Container>(find.descendant(
+              of: find.descendant(of: of, matching: find.byType(DsBadge)),
+              matching: find.byType(Container)))
+          .decoration! as BoxDecoration;
+      final hudF = find.byKey(const ValueKey('hud-points-badge'));
+      final tabF = find.byType(DsTabBar);
       expect(find.byType(DsBadge), findsNWidgets(2));
-      expect(hud.textStyle!.fontSize, tab.textStyle!.fontSize);
-      expect(hud.textStyle!.fontFamily, tab.textStyle!.fontFamily);
-      expect(hud.backgroundColor, tab.backgroundColor);
-      expect(hud.largeSize, tab.largeSize);
+      expect(text(hudF).style!.fontSize, text(tabF).style!.fontSize);
+      expect(text(hudF).style!.fontFamily, text(tabF).style!.fontFamily);
+      expect(box(hudF).color, box(tabF).color);
+      expect(box(hudF).borderRadius, isNull);
+      expect(tester.getSize(find.descendant(of: hudF, matching: find.byType(DsBadge))).height,
+          tester.getSize(find.descendant(of: tabF, matching: find.byType(DsBadge))).height);
   });
   });
 

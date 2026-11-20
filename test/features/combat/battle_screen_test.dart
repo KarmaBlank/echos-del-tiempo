@@ -20,6 +20,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import '../../app/square_ui_audit.dart';
 
 /// Las 4 clases en nivel 1 con su arma inicial.
 BattlePartyMember member(String classId) {
@@ -92,6 +93,7 @@ void main() {
 
     // Ventana de comandos: quién actúa, categorías y el objetivo.
     expect(find.textContaining('¡Tu turno! Guerrero'), findsOneWidget);
+    expect(roundedUi(tester), isEmpty, reason: 'regla pixel: sin redondeos');
     expect(find.byKey(const ValueKey('battle-cat-attack')), findsOneWidget);
     expect(find.byKey(const ValueKey('battle-cat-skills')), findsOneWidget);
     expect(find.byKey(const ValueKey('battle-cat-items')), findsOneWidget);
