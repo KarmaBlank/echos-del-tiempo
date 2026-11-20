@@ -28,6 +28,7 @@ Implementación:
 | Armería | `lib/features/inventory/presentation/armory_panel.dart` |
 | Personaje (pestañas Atributos / Inventario / Árbol / Filtro) | `lib/features/world/presentation/panels/character_panel.dart` |
 | Pestaña BESTIARIO (personaje y título; docs/specs/bestiary.md § 4) | `lib/features/bestiary/presentation/bestiary_view.dart`, `bestiary_screen.dart` |
+| Pestaña HAZAÑAS (personaje y título; docs/specs/achievements.md § 7) y su toast | `lib/features/achievements/presentation/achievements_view.dart`, `achievements_screen.dart`, `achievement_feed.dart` |
 | Textos de objetos (ficha / tooltip, requisitos) — loot v2 | `lib/features/inventory/domain/item_text.dart` |
 | Colores de rareza, ícono de objeto, etiqueta de loot con el estilo del filtro | `lib/features/inventory/presentation/item_widgets.dart` |
 | Inventario (grilla 8×5, equipada, dar / tirar, compañeros) | `lib/features/inventory/presentation/inventory_tab.dart` |

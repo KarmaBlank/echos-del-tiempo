@@ -184,6 +184,17 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     shop.controller.markSeen([uid]);
   }
 
+  /// Hazaña `inv_search` (achievements.md § 2.4): el buscador encontró
+  /// algo. Una vez por pantalla; el host no la paga dos veces.
+  bool _searchClaimed = false;
+  void _searchFound() {
+    if (_searchClaimed) return;
+    _searchClaimed = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) shop.controller.claimAchievement('inv_search');
+    });
+  }
+
   bool _matches(CellContent c) =>
       _query.trim().isEmpty ||
       inventoryMatches(shop.rules, _query,
@@ -421,6 +432,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       if (c != null) {
         final fresh = mine && token != null && p.fresh.contains(token);
         final match = _matches(c);
+        if (match && _query.trim().isNotEmpty) _searchFound();
         if (fresh || !match) {
           w = Stack(children: [
             Opacity(opacity: match ? 1 : 0.25, child: w),

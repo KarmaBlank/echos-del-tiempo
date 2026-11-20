@@ -126,6 +126,10 @@ abstract final class Sfx {
   /// `¡NIVEL N!` (línea 1469).
   static const levelUp = 'levelUp';
 
+  /// Hazaña lograda (achievements.md § 7): arpegio corto ascendente,
+  /// distinto del de subir de nivel.
+  static const achUnlock = 'ach.unlock';
+
   /// Los ocho del prototipo.
   static const legacy = [
     myTurn, turnTick, ultimate, heal, hurt, hit, flash, levelUp, //
@@ -387,4 +391,10 @@ final Map<String, SfxDef> kSfxCatalog = {
   ...buildCombatSfx(),
   ...buildAscensionSfx(),
   ...buildReactionSfx(),
+  Sfx.achUnlock: const SfxDef([
+    SfxTone(784, 0.07, wave: Waveform.triangle, volume: 0.05),
+    SfxTone(988, 0.07, wave: Waveform.triangle, volume: 0.05, delay: 0.07),
+    SfxTone(1175, 0.07, wave: Waveform.triangle, volume: 0.05, delay: 0.14),
+    SfxTone(1568, 0.16, wave: Waveform.triangle, volume: 0.05, delay: 0.21),
+  ], peak: SfxLevel.ui),
 };

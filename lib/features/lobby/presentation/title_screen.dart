@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../achievements/presentation/achievements_screen.dart';
 import '../../bestiary/presentation/bestiary_screen.dart';
 import '../../build_planner/presentation/build_planner_screen.dart';
 import '../../../app/design/design.dart';
@@ -274,6 +275,12 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
         builder: (_) => const BestiaryScreen()));
   }
 
+  Future<void> _openAchievements() async {
+    if (_busy) return;
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => const AchievementsScreen()));
+  }
+
   Future<void> _openStash() async {
     final c = _account?.selected;
     if (c == null || _busy) return;
@@ -468,6 +475,10 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             DsButton('BESTIARIO',
                 key: const ValueKey('title-bestiary'),
                 onPressed: _busy ? null : _openBestiary),
+            // Hazañas de la cuenta, solo lectura (achievements.md § 7).
+            DsButton('HAZAÑAS',
+                key: const ValueKey('title-achievements'),
+                onPressed: _busy ? null : _openAchievements),
             // Galería del sistema de diseño, solo en la versión de
             // desarrollo (design_system.md § 8).
             if (FeatureFlags.instance.devTools)
