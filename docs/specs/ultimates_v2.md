@@ -1,10 +1,12 @@
-# Spec (BORRADOR): ULT v2 — 50 ULT de jugador y una ULT por jefe y élite
+# Spec (APROBADO, implementado en v0.17.0): ULT v2 — 50 ULT de jugador y una ULT por jefe y élite
 
 Pedido del dueño: "quiero 50 ULTs, repartidas en armas y en todos los
 lugares donde se puedan conseguir ultis; los enemigos también: una ULT
 por jefe o élite".
 
-Estado: **borrador**, sin código. Asume el formato de animación FXA del
+Estado: **APROBADO** por el dueño con las respuestas del § 6 (la 3 fue
+reemplazada después por "las ULT nunca se pierden", § 2.1) e
+**implementado en v0.17.0** (§ 7 cuenta cómo quedó). Asume el formato de animación FXA del
 Editor (game_editor.md § 2.1, `assets/fx/<categoría>/<id>.fx.yaml`,
 categorías `ult` y `enemy_ult`) y **no toca** lo que hace el paso 2 del
 Editor (FxCatalog, rediseño de las 13 ULT de tipo de arma con ecos
@@ -76,11 +78,16 @@ futuro o del pasado, futuro inmutable, pasado magitec).
 - Orden si `ultSel` no es válida: ascensión > arma propia > tipo de arma
   (el `ultimateOf` actual, sin cambios). Así nada se rompe para perfiles
   viejos (`ultSel` ausente = comportamiento de hoy).
-- **Traer habilidad / fusión** (loot.md § 16): una ULT **no** se traslada
-  por fusión (igual que hoy el mod `ul`) ni se puede poner en una ranura
-  de habilidad. Excepción propuesta: la Fusión puede **grabar** el mod
-  ULT de un arma en otra del mismo tipo consumiendo la primera
-  (pregunta 3).
+- **Las ULT nunca se pierden** (cambio del dueño, reemplaza la respuesta
+  3): toda ULT que el personaje obtiene —también la de un arma con mod
+  "ULT" o de un legendario— entra al repertorio permanente (`uk`) apenas
+  la consigue; el arma es solo la fuente. Vender o desarmar el arma no
+  la quita. Elegir/cambiar la activa es algo "de afuera" (PERSONAJE →
+  ULT), sin consumir armas ni ULT. Se mantiene la compatibilidad por
+  **tipo** de arma (una de espada se usa con cualquier espada equipada),
+  no hace falta el arma concreta. No hay fusión ni grabado de ULT.
+  Migración: las armas que el personaje ya tiene con ULT propia (de
+  camino, v2 o del Invocador) suman esa ULT al repertorio.
 
 ### 2.2 Costo
 
@@ -91,6 +98,30 @@ futuro o del pasado, futuro inmutable, pasado magitec).
   (§ 3.2, script de medición).
 - Algunas suman o piden **Pulso** (`pulse`) como sinergia, nunca como
   condición dura salvo que el texto lo diga.
+
+### 2.4 Mejora de ULT (niveles 1-5)
+
+Cambio del dueño. Cada ULT del repertorio tiene un **nivel por
+personaje** (perfil `ulv`, aditivo; sin entrada = 1). Cada nivel suma
+**+6%** a poder, disparo cargado, trampa, golpe diferido, poder por
+aliado y escudos de la ULT (nivel 5 = ×1.24). La activa viaja con su
+nivel en el `build` del combatiente (`ulv`).
+
+| De → a | Créditos | Cristal de Era | Prisma Roto | Fragmento de Abismo* |
+|---|---|---|---|---|
+| 1 → 2 | 1000 | 1 | — | — |
+| 2 → 3 | 2000 | 2 | — | — |
+| 3 → 4 | 3000 | 3 | 1 | 1 |
+| 4 → 5 | 4000 | 4 | 2 | 1 |
+
+*Solo las 4 ULT de jefe con versión del Abismo (Engranaje Prestado →
+Fragmento del Reloj, Coro Prestado → del Eco, Lamento Prestado → de la
+Corona, Fin Prestado → de las Eras). Total por ULT a nivel 5: ₵10000,
+10 Cristales, 3 Prismas (materials_economy.md § "Sumideros"). La mejora
+es una acción del jugador (`ultUp`) que el host valida (la tiene, no
+está al máximo, alcanzan créditos y materiales); fuera de combate. UI:
+PERSONAJE → ULT, ficha con nivel, próximo efecto, costo y MEJORAR →
+CONFIRMAR MEJORA / CANCELAR.
 
 ### 2.3 Reparto de las 50
 
@@ -377,12 +408,93 @@ que cada `fx` exista y dure ≤ 2600 ms.
    generadas y prestan su aspecto: chocan con "50 bien hechas".
 2. **¿Una ULT activa o dos?** Recomiendo **una**, elegida fuera de combate;
    dos ranuras complican la IA de compañero y la UI.
-3. **¿Grabar el mod ULT de un arma en otra (fusión)?** Recomiendo **sí,
-   solo mismo tipo y consumiendo la fuente**, con costo en Cristal de Era;
-   evita que una ULT quede atada a un arma vieja.
+3. ~~¿Grabar el mod ULT de un arma en otra (fusión)?~~ **Reemplazada**
+   por el dueño: las ULT nunca se pierden y no se graban (§ 2.1).
 4. **¿Costos variables (60/80/100) o todas 100?** Recomiendo **variables**:
    abre decisiones de ritmo sin tocar la carga.
 5. **¿El Heraldo de las Eras sigue con ULT sin ser élite?** Recomiendo
    **no**: solo élite, con Anuncio de las Eras; ya tiene ciclo de estados.
 6. **Fragmentos de jefe en co-op**: recomiendo que **cada jugador** tire
    su propio fragmento (botín por jugador como el resto del loot).
+
+## 7. Implementación (v0.17.0)
+
+Respuestas aprobadas: 1) las 144 de camino ya no caen (el mod de arma
+usa el pool de 12; las armas ya caídas conservan `ul`); 2) una ULT
+activa; 3) reemplazada (§ 2.1: nunca se pierden); 4) costos 60/80/100;
+5) Heraldo con ULT solo como élite; 6) fragmento de jefe por jugador.
+
+**Código**
+
+- Modelo: `UltDef` (`game_engine/models/ult_def.dart`), catálogo
+  `ults_v2_catalog.dart` (respaldo del código), élites en
+  `elite_ults_catalog.dart` (`kEliteUlts`, `kEliteUltLooks` = guion y
+  sonido de código que toman prestados). `GameCatalog.playerUlts`.
+- Datos: `assets/data/ults/*.ult.yaml` + `ult_manifest.yaml`,
+  `assets/data/enemy_ults/*.eult.yaml` + `eult_manifest.yaml`;
+  `UltYaml` (Dart puro) y `UltDataLoader` (core, pone los datos debajo
+  del parche de balance). `dart run tool/export_ult_data.dart` los
+  regenera desde el código; `ult_data_test.dart` comprueba que coincidan.
+- Motor: `SkillDef.ultCost` (resta), `pulseParty`, `openerBonus`,
+  `echoLast` (`Combatant.lastSkillId`), `delayedHit` (`doom`,
+  `doomTurns`, `doomBy`; cae al empezar el turno del marcado),
+  `perAlly`, `stripBuffs`; ULT con `hpCost` cobra vida; ULT `instant`
+  no termina el turno; las ULT de cura con `revive` reviven a todos los
+  caídos y además curan. Enemigos: `EnemyDef.eliteUltId`,
+  `EnemyUltDef.hits/selfShield/selfShieldTurns/drainHeal/debuffs/
+  delayTarget/extraStatuses/cycleStatus`; drenaje durante el aviso:
+  `Combatant.ultWeaken` (−1% por punto, tope 40%).
+- Repertorio: `UltRules` (`absorb`, `learn`, `options`, `validSel`,
+  `selected`, `upgrade`, `upgradeCost`). `ultimateOf` mira primero
+  `PlayerBuild.ultSel` (validada por el host en `buildOf`).
+- Fuentes: mod de arma (pool v2 en `rollUltMod`), 8 legendarios (6
+  existentes sin ULT + 2 nuevos: Corazón de Autómata, rifle, y Yunque de
+  las Eras, martillo+escudo, con pasivas únicas nuevas), hitos (árbol de
+  la clase con 20 y 40 nodos), 6 hazañas nuevas (pagan la ULT con
+  `AchievementReward.ult`), Atlas (nodos notables resonancia / fortuna /
+  ecojefe al completar un Eco), Maestría, Eco Raro o mejor, fragmentos de
+  jefe (al ganar, por jugador; Abismo → el del jefe base).
+- UI: PERSONAJE → ULT (`ult_repertoire_view.dart`), botón de ULT con su
+  costo, barra de objetivo con "Prepara <ULT>", Balance → ULT (las 50
+  con fuente y compatibilidad en el nombre) y ULT enemigas (las 20 de
+  élite, con impacto), Visuales → Animaciones (categorías ULT y ULT
+  ENEMIGAS, 86 FXA nuevas: 50 en `assets/fx/ult/`, 36 en
+  `assets/fx/enemy_ult/`, todas con pista `echo` y ≤ 2600 ms).
+
+**Red** (lo cambia el protocolo; la versión la sube el dueño)
+
+- Perfil: `uk` (lista), `us` (activa), `ulv` (niveles) — aditivos.
+- `build` del combatiente: `us`, `ulv` — aditivos.
+- `Combatant`: `ultW`, `lsk`, `doom` — aditivos.
+- Acciones nuevas `{"t":"ultSel","id":…}` y `{"t":"ultUp","id":…}`: un
+  host viejo las rechaza (acción desconocida).
+- Avisos de ULT aprendidas / mejoradas por `SystemMessageEvent` (sin
+  eventos nuevos). La ULT enemiga avisada ya llevaba su id.
+- Un cliente sin los datos nuevos dibuja las ULT nuevas con el guion de
+  código (la ULT de tipo de arma a la que se parecen / Furia Élite).
+
+**Balance** (`dart run tool/ult_balance.dart`: 40 semillas, grupos 1-4,
+valor por 100 de carga contra la mediana de su rol D1 / DA / S / C).
+Ajustes respecto de las tablas del § 3: Lanza Inmóvil 2.6→2.1, Flecha
+que Vuelve 2.4→1.5, Disparo Anterior carga 5.0→3.6, Brasa Antigua
+1.8→1.0, Campana del Pasado 1.3→1.1, Luz de Ayer cura 2.2→1.4 y revive
+30%→25%, Sentencia Lejana 2.8→1.9, Erupción Contenida 1.5→1.2, Fin
+Prestado 1.6→1.05, Ancla Temporal escudo 30%→15% y defensa +30%→+20%;
+suben Era Suspendida 1.2→1.6, Forjado en el Ayer +30%→+40% y Baluarte
+Autómata escudo 40%→50%. Resultado: ninguna pasa 1.35× la mediana de su
+rol a nivel 1 ni 1.7× a nivel 5. La meta de ±15% no se cumple en la
+cola baja (utilitarias de un objetivo y buffs que el script valora por
+debajo); quedan anotadas como "baja" en la salida del script.
+
+**Desvíos**
+
+- Maestría 25 / 50 no existe (tope 20): Golpe Maestro en Maestría 10 y
+  Eco Doble en Maestría 20.
+- Fragmentos de jefe: el primero es seguro (mientras no la tenga); como
+  la ULT se aprende, la tirada de 5% / 15% posterior no aplica.
+- "Al azar" de Mil Ayeres y Lluvia de Ecos: los golpes van al objetivo
+  (ráfaga), con atraviesa en Lluvia de Ecos.
+- Hazañas con contador aproximado: "sin recibir daño el 1.er turno" =
+  ningún daño antes de tu segundo turno; "salvar aliados con escudo" =
+  poner escudos a otro jugador; "rematadas" = golpes finales.
+- Anuncio de las Eras aplica el estado de su ciclo (uno por lanzamiento).

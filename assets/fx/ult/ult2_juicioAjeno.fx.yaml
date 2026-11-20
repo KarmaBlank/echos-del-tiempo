@@ -1,0 +1,55 @@
+schema: 1
+id: ult2_juicioAjeno
+category: ult
+name: Juicio Ajeno
+tags: [cuerpo_a_cuerpo, un_objetivo, aturdir, eco]
+duration: 2400
+phases: { build: 850, release: 1150, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 850, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 2000, v: 0.75 }
+      - { t: 2400, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 850, color: element }
+  - type: echo
+    who: caster
+    count: 1
+    lag: 0
+    alpha: 0.6
+    color: '#b0b6c0'
+    fade: 300
+    keys:
+      - { t: 750, at: caster }
+      - { t: 970, at: target, dx: -14, ease: out }
+      - { t: 1110, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 850, shape: slash_arc, anchor: target, angle: -80, color: '#b0b6c0', ms: 180 }
+      - { t: 1250, shape: slash_cross, anchor: target, scale: 2.4, color: white, ms: 260 }
+      - { t: 1250, shape: quake, anchor: target, color: '#b0b6c0', ms: 500, scale: 1.2 }
+  - type: particles
+    fire:
+      - { t: 1250, preset: burst, anchor: target, count: 4, element: auto }
+  - type: flash
+    fire:
+      - { t: 1245, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1250, ms: 140 }
+  - type: shake
+    fire:
+      - { t: 850, amp: 3 }
+      - { t: 1250, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 850, pre: true }
+      - { t: 1250 }

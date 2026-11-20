@@ -1,0 +1,65 @@
+schema: 1
+id: eult_e_arana
+category: enemy_ult
+name: Red Envenenada
+tags: [élite, a_todos, veneno, eco]
+duration: 2000
+phases: { build: 750, release: 850, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 750, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1600, v: 0.75 }
+      - { t: 2000, v: 0 }
+  - type: tint
+    color: '#a6e3a1'
+    keys:
+      - { t: 750, v: 0 }
+      - { t: 1000, v: 0.25 }
+      - { t: 1500, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 750, color: element }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 80
+    alpha: 0.35
+    color: echo
+    fade: 200
+    keys:
+      - { t: 200, at: caster }
+      - { t: 950, at: caster, dy: -4 }
+  - type: shape
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1050, shape: rune_circle, anchor: target, color: element, ms: 380, scale: 0.8 }
+  - type: trail
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 750, from: caster, to: target, ms: 300, head: dot, color: '#d6ffd0', echoes: 6, lag: 20 }
+  - type: particles
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1070, preset: burst, anchor: target, count: 2, element: auto }
+  - type: flash
+    fire:
+      - { t: 1065, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1070, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1070, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1070, stagger: 90 }

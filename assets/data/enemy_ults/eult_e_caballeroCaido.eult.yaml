@@ -1,0 +1,10 @@
+schema: 1
+id: eult_e_caballeroCaido
+name: "Último Juramento"
+owner: caballeroCaido
+elite: true
+extra: none
+ult:
+  power: 1.8
+  selfShield: 0.2
+fx: eult_e_caballeroCaido

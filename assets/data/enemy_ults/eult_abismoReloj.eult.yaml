@@ -1,0 +1,12 @@
+schema: 1
+id: eult_abismoReloj
+name: "Reloj sin Agujas"
+owner: golemAbismo
+elite: false
+extra: none
+ult:
+  power: 1.5
+  allTargets: true
+  status: {"kind":"freeze","stacks":2}
+  delayAll: 0.5
+fx: eult_abismoReloj

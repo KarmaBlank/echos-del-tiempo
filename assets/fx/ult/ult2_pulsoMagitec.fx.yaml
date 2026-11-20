@@ -1,0 +1,65 @@
+schema: 1
+id: ult2_pulsoMagitec
+category: ult
+name: Pulso Magitec
+tags: [rifle, a_todos, electro, pulso, eco]
+duration: 2000
+phases: { build: 750, release: 850, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 750, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1600, v: 0.75 }
+      - { t: 2000, v: 0 }
+  - type: tint
+    color: '#7fe8ff'
+    keys:
+      - { t: 750, v: 0 }
+      - { t: 1000, v: 0.25 }
+      - { t: 1500, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: rune_circle, anchor: caster, ms: 750, color: element }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 0
+    alpha: 0.35
+    color: echo
+    fade: 200
+    spacing: [-10, -3]
+    keys:
+      - { t: 200, at: caster }
+      - { t: 950, at: caster, dy: -4 }
+  - type: shape
+    fire:
+      - { t: 750, shape: ring, anchor: caster, color: element, ms: 500, scale: 3 }
+      - { t: 900, shape: shockwave, anchor: targets_center, color: echo, ms: 380, scale: 2.6 }
+  - type: shape
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1050, shape: bolt, anchor: target, color: element, ms: 130 }
+  - type: particles
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1050, preset: sparks, anchor: target, count: 1.2 }
+  - type: flash
+    fire:
+      - { t: 1045, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1050, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1050, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1050, stagger: 90 }

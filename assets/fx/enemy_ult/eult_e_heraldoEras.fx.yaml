@@ -1,0 +1,57 @@
+schema: 1
+id: eult_e_heraldoEras
+category: enemy_ult
+name: Anuncio de las Eras
+tags: [élite, a_todos, ciclo, eco]
+duration: 2300
+phases: { build: 850, release: 1050, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 850, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1900, v: 0.75 }
+      - { t: 2300, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 850, color: element }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 120
+    alpha: 0.35
+    color: echo
+    fade: 200
+    spacing: [-14, 0]
+    keys:
+      - { t: 150, at: caster }
+      - { t: 850, at: caster, dy: -18, ease: out }
+      - { t: 1150, at: caster, dy: -10 }
+  - type: shape
+    fire:
+      - { t: 850, shape: pillar, anchor: caster, color: '#ff8a3c', ms: 500, dx: -16 }
+      - { t: 970, shape: pillar, anchor: caster, color: '#7bed9f', ms: 500 }
+      - { t: 1090, shape: pillar, anchor: caster, color: '#74b9ff', ms: 500, dx: 16 }
+      - { t: 1250, shape: shockwave, anchor: targets_center, color: echo, ms: 420, scale: 2.6 }
+  - type: particles
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1250, preset: burst, anchor: target, count: 3, element: auto }
+  - type: flash
+    fire:
+      - { t: 1245, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1250, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1250, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1250, stagger: 90 }

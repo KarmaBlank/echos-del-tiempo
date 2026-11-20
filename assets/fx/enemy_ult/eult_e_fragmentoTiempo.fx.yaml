@@ -1,0 +1,62 @@
+schema: 1
+id: eult_e_fragmentoTiempo
+category: enemy_ult
+name: Esquirla Desfasada
+tags: [élite, un_objetivo, retraso, eco]
+duration: 1900
+phases: { build: 700, release: 800, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 700, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1500, v: 0.75 }
+      - { t: 1900, v: 0 }
+  - type: tint
+    color: '#a29bfe'
+    keys:
+      - { t: 700, v: 0 }
+      - { t: 950, v: 0.25 }
+      - { t: 1400, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 700, color: element }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 50
+    alpha: 0.4
+    color: echo
+    fade: 200
+    spacing: [-4, 4]
+    keys:
+      - { t: 600, at: caster }
+      - { t: 820, at: target, dx: -14, ease: out }
+      - { t: 960, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 700, shape: shards, anchor: caster, color: echo, ms: 360, scale: 1.4 }
+      - { t: 1040, shape: shards, anchor: target, color: white, ms: 300, scale: 1.2 }
+  - type: trail
+    fire:
+      - { t: 880, from: caster, to: target, ms: 160, head: dot, color: echo, echoes: 6, lag: 15 }
+  - type: particles
+    fire:
+      - { t: 1040, preset: shards, anchor: target, count: 1 }
+  - type: flash
+    fire:
+      - { t: 1035, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1040, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1040, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1040 }

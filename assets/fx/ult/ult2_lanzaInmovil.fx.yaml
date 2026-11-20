@@ -1,0 +1,58 @@
+schema: 1
+id: ult2_lanzaInmovil
+category: ult
+name: Lanza Inmóvil
+tags: [lanza, un_objetivo, físico, retraso, eco]
+duration: 2200
+phases: { build: 750, release: 1050, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 750, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1800, v: 0.75 }
+      - { t: 2200, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 750, color: element }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 90
+    alpha: 0.45
+    color: echo
+    fade: 200
+    spacing: [-10, 0]
+    keys:
+      - { t: 200, at: caster }
+      - { t: 950, at: caster, dy: -4 }
+  - type: shape
+    fire:
+      - { t: 1050, shape: clock, anchor: target, color: echo, ms: 500, scale: 1.2 }
+      - { t: 1400, shape: beam, anchor: target, color: white, ms: 200 }
+  - type: trail
+    fire:
+      - { t: 750, from: caster, to: target, ms: 180, head: spear, color: light, echoes: 2, lag: 30 }
+      - { t: 1400, from: caster, to: target, ms: 120, head: spear, color: element, echoes: 5, lag: 20, scale: 1.4 }
+  - type: particles
+    fire:
+      - { t: 1400, preset: burst, anchor: target, count: 4, element: auto }
+  - type: flash
+    fire:
+      - { t: 1395, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1400, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 930, amp: 3 }
+      - { t: 1400, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 930, pre: true }
+      - { t: 1400 }

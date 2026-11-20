@@ -1,0 +1,63 @@
+schema: 1
+id: eult_e_ghost
+category: enemy_ult
+name: Toque Frío
+tags: [élite, un_objetivo, hielo, eco]
+duration: 2000
+phases: { build: 750, release: 850, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 750, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1600, v: 0.75 }
+      - { t: 2000, v: 0 }
+  - type: tint
+    color: '#9fd8ff'
+    keys:
+      - { t: 750, v: 0 }
+      - { t: 1000, v: 0.25 }
+      - { t: 1500, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 750, color: element }
+  - type: echo
+    who: caster
+    count: 2
+    lag: 100
+    alpha: 0.35
+    color: echo
+    fade: 200
+    keys:
+      - { t: 650, at: caster }
+      - { t: 870, at: target, dx: -14, ease: out }
+      - { t: 1010, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 1170, shape: shards, anchor: target, color: '#d8f0ff', ms: 300 }
+  - type: trail
+    fire:
+      - { t: 750, from: caster, to: target, ms: 200, head: dot, color: '#d8f0ff', echoes: 4, lag: 30 }
+      - { t: 970, from: target, to: caster, ms: 200, head: dot, color: echo, echoes: 4, lag: 30 }
+  - type: particles
+    fire:
+      - { t: 1170, preset: frost, anchor: target, count: 1 }
+  - type: flash
+    fire:
+      - { t: 1165, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1170, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 950, amp: 3 }
+      - { t: 1170, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 950, pre: true }
+      - { t: 1170 }

@@ -1,0 +1,39 @@
+# Índice de ULT en datos (docs/specs/ultimates_v2.md § 5.1).
+schema: 1
+eults:
+  eult_diluvio: eult_diluvio.eult.yaml
+  eult_engranaje: eult_engranaje.eult.yaml
+  eult_finEras: eult_finEras.eult.yaml
+  eult_nido: eult_nido.eult.yaml
+  eult_aliento: eult_aliento.eult.yaml
+  eult_juicio: eult_juicio.eult.yaml
+  eult_coro: eult_coro.eult.yaml
+  eult_erupcion: eult_erupcion.eult.yaml
+  eult_lamento: eult_lamento.eult.yaml
+  eult_colapsoVacio: eult_colapsoVacio.eult.yaml
+  eult_abismoReloj: eult_abismoReloj.eult.yaml
+  eult_abismoEco: eult_abismoEco.eult.yaml
+  eult_abismoCorona: eult_abismoCorona.eult.yaml
+  eult_abismoEras: eult_abismoEras.eult.yaml
+  eult_primordial: eult_primordial.eult.yaml
+  eult_e_slime: eult_e_slime.eult.yaml
+  eult_e_bat: eult_e_bat.eult.yaml
+  eult_e_golem: eult_e_golem.eult.yaml
+  eult_e_ghost: eult_e_ghost.eult.yaml
+  eult_e_arana: eult_e_arana.eult.yaml
+  eult_e_lobo: eult_e_lobo.eult.yaml
+  eult_e_murcielagoHielo: eult_e_murcielagoHielo.eult.yaml
+  eult_e_elementalEscarcha: eult_e_elementalEscarcha.eult.yaml
+  eult_e_esqueleto: eult_e_esqueleto.eult.yaml
+  eult_e_caballeroCaido: eult_e_caballeroCaido.eult.yaml
+  eult_e_ecoSombra: eult_e_ecoSombra.eult.yaml
+  eult_e_guardianReloj: eult_e_guardianReloj.eult.yaml
+  eult_e_salamandra: eult_e_salamandra.eult.yaml
+  eult_e_golemMagma: eult_e_golemMagma.eult.yaml
+  eult_e_necrofago: eult_e_necrofago.eult.yaml
+  eult_e_almaErrante: eult_e_almaErrante.eult.yaml
+  eult_e_vigilanteVacio: eult_e_vigilanteVacio.eult.yaml
+  eult_e_ojoAbismo: eult_e_ojoAbismo.eult.yaml
+  eult_e_heraldoEras: eult_e_heraldoEras.eult.yaml
+  eult_e_fragmentoTiempo: eult_e_fragmentoTiempo.eult.yaml
+  eult_furia: eult_furia.eult.yaml

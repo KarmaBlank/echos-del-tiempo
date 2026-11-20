@@ -1,0 +1,11 @@
+schema: 1
+id: eult_e_ojoAbismo
+name: "Mirada Eléctrica"
+owner: ojoAbismo
+elite: true
+extra: none
+ult:
+  power: 1.8
+  status: {"kind":"charged","stacks":1}
+  extraStatuses: [{"kind":"stun","stacks":1,"chance":0.3}]
+fx: eult_e_ojoAbismo

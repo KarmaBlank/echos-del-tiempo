@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_bucleBreve
+name: "Bucle Breve"
+source: {kind: tree, ref: "maga:20"}
+weapons: []
+classes: ["maga"]
+element: fisico
+cost: 60
+pulse: 0
+skill:
+  kind: magical
+  power: 0.9
+  delay: 0.6
+  allTargets: true
+  instant: true
+fx: ult2_bucleBreve

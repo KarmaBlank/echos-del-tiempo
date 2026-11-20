@@ -1,0 +1,64 @@
+schema: 1
+id: eult_e_necrofago
+category: enemy_ult
+name: Festín
+tags: [élite, un_objetivo, drena, eco]
+duration: 2100
+phases: { build: 750, release: 950, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 750, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1700, v: 0.75 }
+      - { t: 2100, v: 0 }
+  - type: tint
+    color: '#ff4757'
+    keys:
+      - { t: 750, v: 0 }
+      - { t: 1000, v: 0.25 }
+      - { t: 1600, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 750, color: element }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 70
+    alpha: 0.4
+    color: echo
+    fade: 200
+    keys:
+      - { t: 650, at: caster }
+      - { t: 870, at: target, dx: -14, ease: out }
+      - { t: 1010, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 750, shape: slash_arc, anchor: target, angle: -20, color: '#ff4757', ms: 180 }
+      - { t: 840, shape: slash_arc, anchor: target, angle: 20, color: '#ff4757', ms: 180 }
+      - { t: 1000, shape: slash_cross, anchor: target, scale: 1.8, color: '#ff6b81', ms: 260 }
+  - type: trail
+    fire:
+      - { t: 1100, from: target, to: caster, ms: 300, head: dot, color: '#ff6b81', echoes: 4, lag: 30 }
+  - type: particles
+    fire:
+      - { t: 1000, preset: burst, anchor: target, count: 3, element: auto }
+  - type: flash
+    fire:
+      - { t: 995, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1000, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 750, amp: 3 }
+      - { t: 1000, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 750, pre: true }
+      - { t: 1000 }

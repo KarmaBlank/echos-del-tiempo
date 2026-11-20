@@ -1,0 +1,55 @@
+schema: 1
+id: ult2_anclaTemporal
+category: ult
+name: Ancla Temporal
+tags: [guerrero, paladín, aliados, escudo, eco]
+duration: 2100
+phases: { build: 800, release: 900, recover: 400 }
+targets: allies
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: allies }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1700, v: 0.75 }
+      - { t: 2100, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: gold }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 80
+    alpha: 0.35
+    color: echo
+    fade: 200
+    keys:
+      - { t: 700, at: caster }
+      - { t: 1000, at: allies_center, dx: 14, ease: out }
+      - { t: 1400, at: allies_center, dx: 14 }
+  - type: shape
+    fire:
+      - { t: 1000, shape: shockwave, anchor: allies_center, color: gold, ms: 420, scale: 2.2 }
+      - { t: 1000, shape: shield_dome, anchor: allies_center, color: '#9fd8ff', ms: 800, scale: 1.4 }
+  - type: trail
+    fire:
+      - { t: 800, from: sky_center, to: allies_center, ms: 200, head: hammer, color: gold, echoes: 4, lag: 30, ease: in }
+  - type: particles
+    fire:
+      - { t: 1000, preset: dust, anchor: allies_center, count: 1 }
+  - type: flash
+    fire:
+      - { t: 995, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1000, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1000, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1000 }

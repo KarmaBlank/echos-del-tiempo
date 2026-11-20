@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_alientoPrestado
+name: "Aliento Prestado"
+source: {kind: boss, ref: "sierpe"}
+weapons: []
+classes: []
+element: agua
+cost: 100
+pulse: 0
+skill:
+  kind: magical
+  power: 1.2
+  allTargets: true
+  status: {"kind":"wet","stacks":1}
+  extraStatuses: [{"kind":"freeze","stacks":1}]
+fx: ult2_alientoPrestado

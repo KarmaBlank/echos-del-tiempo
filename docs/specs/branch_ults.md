@@ -119,3 +119,11 @@ Implementación: `lib/game_engine/data/branch_ults_catalog.dart`
 | `coro` | Gran Himno · Canon Eterno · Crescendo | varita, tomo, lanza |
 | `santuario` | Santuario · Altar Sagrado · Último Rezo | maza+escudo, báculo, tomo |
 | `fortaleza` | Muralla Eterna · Torre del Homenaje · Ciudadela | espada+escudo, martillo+escudo, maza+escudo |
+
+## v0.17.0 (ultimates_v2.md)
+
+Las 144 ULT de camino **ya no caen** en botín nuevo: el mod "ULT" de las
+armas Raras / Épicas sale del pool de las 12 ULT v2 de arma de su tipo.
+Las armas ya caídas conservan su `ul` (sanitize lo sigue aceptando) y,
+desde v0.17, esa ULT entra al repertorio del personaje y no se pierde.
+Los legendarios con ULT de camino la siguen trayendo.

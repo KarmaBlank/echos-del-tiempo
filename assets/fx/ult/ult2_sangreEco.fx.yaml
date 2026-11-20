@@ -1,0 +1,64 @@
+schema: 1
+id: ult2_sangreEco
+category: ult
+name: Sangre de Eco
+tags: [guerrero, un_objetivo, robo_de_vida, eco]
+duration: 2000
+phases: { build: 700, release: 900, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 700, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1600, v: 0.75 }
+      - { t: 2000, v: 0 }
+  - type: tint
+    color: '#ff4757'
+    keys:
+      - { t: 700, v: 0 }
+      - { t: 950, v: 0.25 }
+      - { t: 1500, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 700, color: element }
+  - type: echo
+    who: caster
+    count: 1
+    lag: 0
+    alpha: 0.55
+    color: '#ff4757'
+    fade: 200
+    keys:
+      - { t: 600, at: caster }
+      - { t: 820, at: target, dx: -14, ease: out }
+      - { t: 960, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 780, shape: slash_arc, anchor: target, angle: -45, color: '#ff4757', ms: 180 }
+      - { t: 920, shape: slash_arc, anchor: target, angle: 45, color: '#ff4757', ms: 180 }
+      - { t: 1000, shape: slash_cross, anchor: target, scale: 2, color: '#ff6b81', ms: 260 }
+  - type: trail
+    fire:
+      - { t: 1100, from: target, to: caster, ms: 300, head: dot, color: '#ff6b81', echoes: 4, lag: 30 }
+  - type: particles
+    fire:
+      - { t: 1000, preset: burst, anchor: target, count: 3, element: phys }
+  - type: flash
+    fire:
+      - { t: 995, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1000, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 780, amp: 3 }
+      - { t: 1000, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 780, pre: true }
+      - { t: 1000 }

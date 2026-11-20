@@ -1,6 +1,8 @@
 import '../data/affixes_catalog.dart';
 import '../data/ascension_catalog.dart';
 import '../data/branch_ults_catalog.dart' show kBranchUltWeaponTypes;
+import '../data/ults_v2_catalog.dart' show kUltV2;
+import '../models/ult_def.dart' show UltSource;
 import '../data/game_catalog.dart';
 import '../data/skills_catalog.dart' show kBaseQuebrarIds, kSkillDelivery, quebrarSkillFor;
 import '../data/uniques_catalog.dart';
@@ -237,10 +239,20 @@ class ItemRules {
   /// El mod "ULT: <nombre>" [ultId] puede estar en un arma [rarity] de
   /// tipo [type] (docs/specs/branch_ults.md): solo Raro / Épico y una ULT
   /// de camino compatible con el tipo (los legendarios traen la suya).
+  /// Desde v0.17 también las 12 ULT v2 de mod (ultimates_v2.md § 3.1);
+  /// las de camino siguen valiendo en las armas ya caídas.
   static bool ultModAllowed(Rarity rarity, String type, String? ultId) =>
       ultId != null &&
       (rarity == Rarity.raro || rarity == Rarity.epico) &&
-      (kBranchUltWeaponTypes[ultId]?.contains(type) ?? false);
+      ((kBranchUltWeaponTypes[ultId]?.contains(type) ?? false) ||
+          _v2Mod(ultId, type));
+
+  static bool _v2Mod(String id, String type) {
+    final u = kUltV2[id];
+    return u != null &&
+        u.source == UltSource.weaponMod &&
+        u.weapons.contains(type);
+  }
 
   /// Deja una instancia leída de disco o de la red en un estado válido.
   /// `null` si la base no existe. Lo inválido se corrige o se descarta:

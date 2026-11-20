@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_ultimaCuerda
+name: "Última Cuerda"
+source: {kind: unique, ref: "primaveraRota"}
+weapons: ["arco", "ballesta"]
+classes: []
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: physical
+  power: 1.6
+  allTargets: true
+  trap: 0.6
+fx: ult2_ultimaCuerda

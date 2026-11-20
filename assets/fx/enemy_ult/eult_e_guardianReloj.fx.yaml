@@ -1,0 +1,53 @@
+schema: 1
+id: eult_e_guardianReloj
+category: enemy_ult
+name: Campanada
+tags: [élite, a_todos, retraso, eco]
+duration: 2100
+phases: { build: 800, release: 900, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1700, v: 0.75 }
+      - { t: 2100, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: clock, anchor: caster, ms: 800, color: element, scale: 1.3 }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 130
+    alpha: 0.35
+    color: gold
+    fade: 200
+    keys:
+      - { t: 200, at: caster }
+      - { t: 1000, at: caster, dy: -4 }
+  - type: shape
+    fire:
+      - { t: 800, shape: clock, anchor: caster, color: gold, ms: 500, scale: 1.4 }
+      - { t: 1100, shape: shockwave, anchor: targets_center, color: gold, ms: 500, scale: 2.6 }
+  - type: particles
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1150, preset: sparkles, anchor: target, count: 0.8 }
+  - type: flash
+    fire:
+      - { t: 1145, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1150, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1150, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1150, stagger: 90 }

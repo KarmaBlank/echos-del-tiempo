@@ -1,0 +1,54 @@
+schema: 1
+id: ult2_primerGolpe
+category: ult
+name: Primer Golpe
+tags: [cuerpo_a_cuerpo, un_objetivo, físico, eco]
+duration: 1800
+phases: { build: 650, release: 750, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 650, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1400, v: 0.75 }
+      - { t: 1800, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 650, color: element }
+  - type: echo
+    who: caster
+    count: 1
+    lag: 0
+    alpha: 0.55
+    color: echo
+    fade: 200
+    keys:
+      - { t: 550, at: caster }
+      - { t: 770, at: target, dx: -14, ease: out }
+      - { t: 910, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 500, shape: slash_arc, anchor: target, angle: -30, color: echo, ms: 180 }
+      - { t: 800, shape: slash_cross, anchor: target, scale: 2, color: white, ms: 260 }
+  - type: particles
+    fire:
+      - { t: 800, preset: burst, anchor: target, count: 3, element: auto }
+  - type: flash
+    fire:
+      - { t: 795, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 800, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 500, amp: 3 }
+      - { t: 800, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 500, pre: true }
+      - { t: 800 }

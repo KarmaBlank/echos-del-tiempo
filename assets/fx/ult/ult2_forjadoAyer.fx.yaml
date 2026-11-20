@@ -1,0 +1,53 @@
+schema: 1
+id: ult2_forjadoAyer
+category: ult
+name: Forjado en el Ayer
+tags: [propio, buff, eco]
+duration: 1600
+phases: { build: 600, release: 600, recover: 400 }
+targets: allies
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 600, focus: allies }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1200, v: 0.75 }
+      - { t: 1600, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 600, color: '#ffb142' }
+  - type: echo
+    who: caster
+    count: 1
+    lag: 0
+    alpha: 0.5
+    color: '#ffb142'
+    fade: 200
+    keys:
+      - { t: 200, at: caster }
+      - { t: 800, at: caster, dy: -4 }
+  - type: shape
+    fire:
+      - { t: 780, shape: ring, anchor: caster, color: '#ffb142', ms: 300, scale: 1.4 }
+  - type: trail
+    fire:
+      - { t: 600, from: sky_caster, to: caster, ms: 180, head: hammer, color: echo, echoes: 2, lag: 30 }
+  - type: particles
+    fire:
+      - { t: 780, preset: sparks, anchor: caster, count: 1.2 }
+  - type: flash
+    fire:
+      - { t: 775, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 780, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 780, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 780 }

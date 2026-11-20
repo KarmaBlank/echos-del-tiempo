@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_finPrestado
+name: "Fin Prestado"
+source: {kind: boss, ref: "devorador"}
+weapons: []
+classes: []
+element: fuego
+cost: 100
+pulse: 0
+skill:
+  kind: magical
+  power: 1.05
+  allTargets: true
+  status: {"kind":"burn","stacks":2}
+  stripBuffs: true
+fx: ult2_finPrestado

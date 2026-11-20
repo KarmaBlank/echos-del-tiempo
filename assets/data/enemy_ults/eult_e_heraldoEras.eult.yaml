@@ -1,0 +1,11 @@
+schema: 1
+id: eult_e_heraldoEras
+name: "Anuncio de las Eras"
+owner: heraldoEras
+elite: true
+extra: none
+ult:
+  power: 1.5
+  allTargets: true
+  cycleStatus: true
+fx: eult_e_heraldoEras

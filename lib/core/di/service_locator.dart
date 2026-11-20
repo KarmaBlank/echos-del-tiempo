@@ -25,6 +25,7 @@ import '../../netcode/p2p_webrtc/signaling_service.dart';
 import '../../netcode/p2p_webrtc/webrtc_net_session.dart';
 import '../audio/audio_settings.dart';
 import '../balance/balance_asset_loader.dart';
+import '../data/ult_data_loader.dart';
 import '../audio/audioplayers_music_player.dart';
 import '../audio/audioplayers_sfx_player.dart';
 import '../audio/music/music_service.dart';
@@ -49,7 +50,7 @@ final sl = GetIt.instance;
 /// [balance] es el `balance.json` ya leído (`BalanceAssetLoader.load`,
 /// docs/specs/balance_admin.md § 3); `null` = el catálogo del código.
 void registerSharedDependencies(
-    {AccountStore? accountStore, BalanceParseResult? balance}) {
+    {AccountStore? accountStore, BalanceParseResult? balance, UltData? ults}) {
   if (sl.isRegistered<PassiveTreeRules>()) return;
   // `ecos.log` junto a la cuenta (docs/specs/characters.md § 1.5).
   if (accountStore == null) {
@@ -65,7 +66,9 @@ void registerSharedDependencies(
   }
 
   // Parche de balance encima del código (registros globales incluidos).
-  final catalog = BalanceAssetLoader.install(balance);
+  // Datos de las ULT (YAML, ultimates_v2.md § 5.1) y, encima, el parche.
+  final catalog = BalanceAssetLoader.install(balance,
+      base: UltDataLoader.install(GameCatalog.standard, ults));
   sl.registerLazySingleton<GameCatalog>(() => catalog);
   sl.registerLazySingleton<PassiveTreeRules>(
     () => PassiveTreeRules(kPassiveTree),

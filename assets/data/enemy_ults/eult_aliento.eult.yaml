@@ -1,0 +1,11 @@
+schema: 1
+id: eult_aliento
+name: "Aliento Glacial"
+owner: sierpe
+elite: false
+extra: reformCrystals
+ult:
+  power: 1.2
+  allTargets: true
+  status: {"kind":"freeze","stacks":2}
+fx: eult_aliento

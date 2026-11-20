@@ -335,3 +335,13 @@ tope blando), `filter_rule` (filtro propio guardado) y `forge_10` /
 4. `attr_cap` y `combat_instant_chain`: ¿la definición propuesta ("pasar
    el punto de rendimiento decreciente" / "INSTANTE + otra acción en el
    mismo turno") es la que buscabas?
+
+## v0.17.0: hazañas de ULT (ultimates_v2.md § 3.4)
+
+Seis hazañas nuevas pagan una ULT (`AchievementReward.ult`) y créditos:
+Primer Golpe (25 peleas sin daño antes de tu segundo turno), Cadena de
+Eras (100 quiebres), Silencio del Tiempo (20 ULT de jefe canceladas),
+Custodio (50 escudos a aliados), Forjado en el Ayer (10 armas a +10),
+Remate (200 golpes finales). Contadores nuevos: `flawlessWins`,
+`breaks`, `bossUltCancels`, `allyShields`, `weaponsPlus10`,
+`finishers`. Total: 39 hazañas.

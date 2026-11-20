@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_juicioAjeno
+name: "Juicio Ajeno"
+source: {kind: boss, ref: "caballeroHueco"}
+weapons: ["espada", "hacha", "lanza", "dagas", "espada+escudo", "maza+escudo", "martillo+escudo"]
+classes: []
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: physical
+  power: 3.2
+  status: {"kind":"stun","stacks":1}
+  selfBuff: {"stat":"guard","value":0.3,"turns":2}
+fx: ult2_juicioAjeno

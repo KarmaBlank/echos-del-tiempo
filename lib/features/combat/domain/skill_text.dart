@@ -120,7 +120,7 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
   final l = <String>[
     '<b${nameColor == null ? '' : ' style="color:$nameColor"'}>'
         '${ultimate ? '★ ULTIMATE: ' : ''}${tk.name}</b> '
-        '${ultimate ? '<span class="k">(barra ULT al 100%)</span>' : skillCostLongMarkup(tk)}',
+        '${ultimate ? '<span class="k">(barra ULT: ${tk.ultCost}%)</span>' : skillCostLongMarkup(tk)}',
     if (element && el != GameElement.fisico) elementReactionMarkup(el),
   ];
   final mag = tk.kind == SkillKind.magical;

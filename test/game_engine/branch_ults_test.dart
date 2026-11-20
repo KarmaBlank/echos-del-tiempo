@@ -19,6 +19,8 @@ import 'package:echos_del_tiempo/game_engine/rules/item_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/loot_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
+import 'package:echos_del_tiempo/game_engine/data/ults_v2_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/models/ult_def.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // ULT de camino en armas (docs/specs/branch_ults.md).
@@ -88,12 +90,13 @@ void main() {
       }
     });
 
-    test('las ULT de los legendarios son de camino y van con el tipo de su base', () {
+    test('las ULT de los legendarios (de camino o v2) van con el tipo de su base', () {
       final withUlt = kUniques.values.where((u) => u.ultId != null).toList();
       expect(withUlt.length, greaterThanOrEqualTo(12));
       for (final u in withUlt) {
         final type = kWeapons[u.baseId]!.type;
-        expect(kBranchUltWeaponTypes[u.ultId]!, contains(type), reason: u.id);
+        final types = kBranchUltWeaponTypes[u.ultId] ?? kUltV2[u.ultId]!.weapons;
+        expect(types, contains(type), reason: u.id);
       }
     });
   });
@@ -151,14 +154,16 @@ void main() {
           }
           return r;
         }, Rarity.epico, 'arco');
-        expect(kBranchUltWeaponTypes[u]!, contains('arco'));
+        // v0.17: el pool del mod son las ULT v2 del tipo (§ 6, resp. 1).
+        expect(kUltV2[u]!.weapons, contains('arco'));
+        expect(kUltV2[u]!.source, UltSource.weaponMod);
       }
     });
 
     test('generate: un Raro con el mod sale con una ULT de su tipo', () {
       final it = loot.generate(() => 0.0, itemLevel: 10, rarity: Rarity.raro, baseId: 'espada_bronce');
       expect(it.ultId, isNotNull);
-      expect(kBranchUltWeaponTypes[it.ultId]!, contains('espada'));
+      expect(kUltV2[it.ultId]!.weapons, contains('espada'));
       final no = loot.generate(() => 0.99, itemLevel: 10, rarity: Rarity.raro, baseId: 'espada_bronce');
       expect(no.ultId, isNull);
     });

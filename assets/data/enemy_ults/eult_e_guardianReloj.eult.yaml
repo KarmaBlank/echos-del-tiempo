@@ -1,0 +1,11 @@
+schema: 1
+id: eult_e_guardianReloj
+name: "Campanada"
+owner: guardianReloj
+elite: true
+extra: none
+ult:
+  power: 1.2
+  allTargets: true
+  delayAll: 0.5
+fx: eult_e_guardianReloj

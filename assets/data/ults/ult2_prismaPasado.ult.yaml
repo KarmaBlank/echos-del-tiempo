@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_prismaPasado
+name: "Prisma del Pasado"
+source: {kind: tree, ref: "maga:40"}
+weapons: []
+classes: ["maga"]
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: magical
+  power: 1.6
+  allTargets: true
+  detonate: 0.5
+fx: ult2_prismaPasado

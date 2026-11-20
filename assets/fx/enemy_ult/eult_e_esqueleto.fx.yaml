@@ -1,0 +1,56 @@
+schema: 1
+id: eult_e_esqueleto
+category: enemy_ult
+name: Carga de Huesos
+tags: [élite, un_objetivo, crítico, eco]
+duration: 1900
+phases: { build: 700, release: 800, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 700, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1500, v: 0.75 }
+      - { t: 1900, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 700, color: element }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 70
+    alpha: 0.4
+    color: echo
+    fade: 200
+    spacing: [-8, 2]
+    keys:
+      - { t: 600, at: caster }
+      - { t: 820, at: target, dx: -14, ease: out }
+      - { t: 960, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 920, shape: slash_cross, anchor: target, scale: 2, color: white, ms: 260 }
+  - type: trail
+    fire:
+      - { t: 700, from: caster, to: target, ms: 200, head: spear, color: '#e8e0d0', echoes: 4, lag: 30 }
+  - type: particles
+    fire:
+      - { t: 920, preset: debris, anchor: target, count: 0.8 }
+      - { t: 920, preset: burst, anchor: target, count: 3, element: auto }
+  - type: flash
+    fire:
+      - { t: 915, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 920, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 920, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 920 }

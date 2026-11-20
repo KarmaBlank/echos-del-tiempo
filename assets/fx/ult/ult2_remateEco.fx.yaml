@@ -1,0 +1,54 @@
+schema: 1
+id: ult2_remateEco
+category: ult
+name: Remate del Eco
+tags: [un_objetivo, remate, eco]
+duration: 1900
+phases: { build: 700, release: 800, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 700, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1500, v: 0.75 }
+      - { t: 1900, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 700, color: element }
+  - type: echo
+    who: caster
+    count: 2
+    lag: 60
+    alpha: 0.5
+    color: echo
+    fade: 200
+    keys:
+      - { t: 600, at: caster }
+      - { t: 820, at: target, dx: -14, ease: out }
+      - { t: 960, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 580, shape: slash_cross, anchor: target, scale: 1.6, color: echo, ms: 260 }
+      - { t: 900, shape: slash_cross, anchor: target, scale: 2.2, color: white, ms: 260 }
+  - type: particles
+    fire:
+      - { t: 900, preset: burst, anchor: target, count: 3, element: auto }
+  - type: flash
+    fire:
+      - { t: 895, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 900, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 580, amp: 3 }
+      - { t: 900, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 580, pre: true }
+      - { t: 900 }

@@ -13,6 +13,7 @@ import '../../../game_engine/rules/js_math.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 import '../domain/admin_index.dart';
 import '../domain/impact_preview.dart';
+import '../../../game_engine/data/ults_v2_catalog.dart';
 import 'admin_controller.dart';
 import 'admin_widgets.dart';
 
@@ -101,6 +102,25 @@ class _ImpactPanelState extends State<ImpactPanel> {
               : 'Con ${cat.weapons[weaponId]!.name} (${cat.classes[cls]!.name}).',
         );
       case BalanceKind.ultimate:
+        // ULT v2 (ultimates_v2.md § 5.3): un arma y clase compatibles.
+        if (kUltV2[e.id] case final u?) {
+          final cls = u.classes.isNotEmpty ? u.classes.first : c.previewClass;
+          final w = u.weapons.isNotEmpty
+              ? sim.weaponOfType(u.weapons.first)
+              : cat.classes[cls]?.startWeaponId;
+          if (w == null) return const _Plan(note: 'Ningún arma compatible.');
+          return _Plan(
+            loadout: SimLoadout(
+                classId: u.classes.isNotEmpty ? cls : family(w, cls),
+                level: level,
+                weaponId: w,
+                ultSel: u.id),
+            ultimate: true,
+            enemies: foes,
+            note: '${u.name} (${u.source.label}, costo ${u.cost}); la '
+                'simulación la usa con la carga llena.',
+          );
+        }
         final w = sim.weaponOfType(e.id);
         if (w == null) return const _Plan(note: 'Ningún arma de este tipo.');
         return _Plan(
@@ -130,18 +150,27 @@ class _ImpactPanelState extends State<ImpactPanel> {
               'Se escala al nivel elegido.',
         );
       case BalanceKind.enemyUlt:
-        final elite = e.id == kEliteUltId;
-        final owner = elite
+        // Furia Élite (respaldo) o la ULT de élite propia de un tipo
+        // (ultimates_v2.md § 4.3).
+        final eliteOwner = cat.enemies.values
+            .where((x) => x.eliteUltId == e.id)
+            .firstOrNull
+            ?.id;
+        final elite = e.id == kEliteUltId || eliteOwner != null;
+        final owner = e.id == kEliteUltId
             ? c.previewEnemy
-            : cat.enemies.values.where((x) => x.ultId == e.id).firstOrNull?.id;
+            : eliteOwner ??
+                cat.enemies.values.where((x) => x.ultId == e.id).firstOrNull?.id;
         if (owner == null) return const _Plan(note: 'Ningún enemigo usa esta ULT.');
         return _Plan(
           loadout: start(c.previewClass),
           enemies: [owner],
           elite: elite,
-          note: elite
+          note: e.id == kEliteUltId
               ? 'Furia Élite: élite de ${cat.enemies[owner]!.name}.'
-              : 'La usa ${cat.enemies[owner]!.name}.',
+              : elite
+                  ? 'La usa ${cat.enemies[owner]!.name} Élite.'
+                  : 'La usa ${cat.enemies[owner]!.name}.',
         );
       case BalanceKind.classDef:
         return _Plan(loadout: start(e.id), attack: true, stats: true, enemies: foes);

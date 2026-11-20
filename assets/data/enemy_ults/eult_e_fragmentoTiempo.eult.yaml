@@ -1,0 +1,10 @@
+schema: 1
+id: eult_e_fragmentoTiempo
+name: "Esquirla Desfasada"
+owner: fragmentoTiempo
+elite: true
+extra: none
+ult:
+  power: 1.6
+  delayTarget: 0.6
+fx: eult_e_fragmentoTiempo

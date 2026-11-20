@@ -319,6 +319,8 @@ class BalancePatch {
       weapons: weapons,
       skills: patched<SkillDef>(BalanceKind.skill, catalog.skills),
       ultimates: patched<SkillDef>(BalanceKind.ultimate, catalog.ultimates),
+      playerUlts:
+          patched<SkillDef>(BalanceKind.ultimate, catalog.playerUlts),
       duals: patched<DualDef>(BalanceKind.dual, catalog.duals),
       enemies: patched<EnemyDef>(BalanceKind.enemy, catalog.enemies),
       enemyUlts: patched<EnemyUltDef>(BalanceKind.enemyUlt, catalog.enemyUlts),

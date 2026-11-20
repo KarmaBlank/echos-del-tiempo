@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_pulsoMagitec
+name: "Pulso Magitec"
+source: {kind: unique, ref: "pulsoAutomata"}
+weapons: ["rifle"]
+classes: []
+element: electro
+cost: 100
+pulse: 0
+skill:
+  kind: physical
+  power: 1.4
+  allTargets: true
+  status: {"kind":"charged","stacks":1}
+  pulseParty: 2
+fx: ult2_pulsoMagitec

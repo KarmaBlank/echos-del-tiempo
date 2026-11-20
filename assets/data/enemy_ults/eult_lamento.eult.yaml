@@ -1,0 +1,11 @@
+schema: 1
+id: eult_lamento
+name: "Lamento Eterno"
+owner: espectroCoronado
+elite: false
+extra: summonAll
+ult:
+  power: 1.25
+  allTargets: true
+  status: {"kind":"freeze","stacks":2}
+fx: eult_lamento

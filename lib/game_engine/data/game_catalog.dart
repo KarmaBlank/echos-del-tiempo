@@ -13,6 +13,7 @@ import 'enemy_families.dart'
 import 'enemies_catalog.dart';
 import 'missions_catalog.dart';
 import 'skills_catalog.dart';
+import 'ults_v2_catalog.dart' show kUltV2Skills;
 import 'weapon_duals_catalog.dart';
 import 'weapons_catalog.dart';
 import 'zone_curve.dart';
@@ -54,7 +55,14 @@ class GameCatalog {
     this.hitCaps = kHitCaps,
     this.comboRules = kComboRules,
     this.curves = kCurves,
-  });
+    Map<String, SkillDef>? playerUlts,
+  }) : _playerUlts = playerUlts;
+
+  final Map<String, SkillDef>? _playerUlts;
+
+  /// Las 50 ULT v2 de jugador por id (docs/specs/ultimates_v2.md): las
+  /// del código o las del parche de balance / datos.
+  Map<String, SkillDef> get playerUlts => _playerUlts ?? kUltV2Skills;
 
   /// Jefes del Abismo por número (docs/specs/abyss_bosses.md § 2).
   final Map<int, AbyssBossDef> abyssBosses;
@@ -122,6 +130,31 @@ class GameCatalog {
     final m = mission(missionId);
     return m == null || m.zone == 0 ? null : zone(m.zone);
   }
+
+  /// Copia con otras ULT (datos YAML, ultimates_v2.md § 5.1).
+  GameCatalog withUlts(
+          {Map<String, SkillDef>? playerUlts,
+          Map<String, EnemyUltDef>? enemyUlts}) =>
+      GameCatalog(
+        classes: classes,
+        weapons: weapons,
+        skills: skills,
+        ultimates: ultimates,
+        duals: duals,
+        enemies: enemies,
+        enemyUlts: enemyUlts ?? this.enemyUlts,
+        missions: missions,
+        zones: zones,
+        balanceHash: balanceHash,
+        reactions: reactions,
+        elementStatuses: elementStatuses,
+        abyssBosses: abyssBosses,
+        fragmentDrops: fragmentDrops,
+        hitCaps: hitCaps,
+        comboRules: comboRules,
+        curves: curves,
+        playerUlts: playerUlts ?? _playerUlts,
+      );
 
   static const standard = GameCatalog(
     classes: kClasses,

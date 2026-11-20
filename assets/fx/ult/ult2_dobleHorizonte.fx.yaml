@@ -1,0 +1,62 @@
+schema: 1
+id: ult2_dobleHorizonte
+category: ult
+name: Doble Horizonte
+tags: [lanza, hacha, a_todos, retraso, eco]
+duration: 2200
+phases: { build: 800, release: 1000, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1800, v: 0.75 }
+      - { t: 2200, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: element }
+  - type: echo
+    who: caster
+    count: 1
+    lag: 0
+    alpha: 0.5
+    color: echo
+    fade: 280
+    keys:
+      - { t: 700, at: caster }
+      - { t: 920, at: targets_center, dx: -14, ease: out }
+      - { t: 1060, at: targets_center, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 800, shape: shockwave, anchor: targets_center, color: element, ms: 360, scale: 2.4 }
+  - type: shape
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 800, shape: slash_arc, anchor: target, angle: 0, color: white, ms: 180 }
+      - { t: 1000, shape: slash_arc, anchor: target, angle: 0, color: echo, ms: 180 }
+  - type: particles
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1000, preset: dust, anchor: target, count: 1 }
+      - { t: 1000, preset: burst, anchor: target, count: 2, element: auto }
+  - type: flash
+    fire:
+      - { t: 995, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1000, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 800, amp: 3 }
+      - { t: 1000, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 800, pre: true }
+      - { t: 1000, stagger: 90 }

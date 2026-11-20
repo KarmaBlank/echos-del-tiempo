@@ -1,0 +1,12 @@
+schema: 1
+id: eult_primordial
+name: "Todas las Eras"
+owner: ecoPrimordial
+elite: false
+extra: none
+ult:
+  power: 1.6
+  allTargets: true
+  status: {"kind":"wet","stacks":1}
+  wipeBuffs: true
+fx: eult_primordial

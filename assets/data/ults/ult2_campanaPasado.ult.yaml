@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_campanaPasado
+name: "Campana del Pasado"
+source: {kind: weapon_mod, ref: ""}
+weapons: ["maza+escudo"]
+classes: []
+element: sagrado
+cost: 100
+pulse: 0
+skill:
+  kind: magical
+  power: 1.1
+  allTargets: true
+  status: {"kind":"holy","stacks":1}
+  partyBuffs: [{"stat":"guard","value":0.2,"turns":2}]
+fx: ult2_campanaPasado

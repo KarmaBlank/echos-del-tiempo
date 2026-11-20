@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_milAyeres
+name: "Mil Ayeres"
+source: {kind: weapon_mod, ref: ""}
+weapons: ["dagas"]
+classes: []
+element: veneno
+cost: 100
+pulse: 0
+skill:
+  kind: physical
+  power: 0.55
+  hits: 6
+  critBonus: 0.25
+  status: {"kind":"poison","stacks":2}
+fx: ult2_milAyeres

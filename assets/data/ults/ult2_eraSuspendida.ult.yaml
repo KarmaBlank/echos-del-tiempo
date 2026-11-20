@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_eraSuspendida
+name: "Era Suspendida"
+source: {kind: eco, ref: "fortuna"}
+weapons: ["báculo", "tomo", "varita"]
+classes: []
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: magical
+  power: 1.6
+  delay: 1.4
+  ultDrain: 50.0
+fx: ult2_eraSuspendida

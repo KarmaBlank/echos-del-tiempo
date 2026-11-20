@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_diluvioMenor
+name: "Diluvio Menor"
+source: {kind: boss, ref: "reyLimo"}
+weapons: []
+classes: []
+element: veneno
+cost: 80
+pulse: 0
+skill:
+  kind: magical
+  power: 1.0
+  allTargets: true
+  status: {"kind":"poison","stacks":3}
+fx: ult2_diluvioMenor

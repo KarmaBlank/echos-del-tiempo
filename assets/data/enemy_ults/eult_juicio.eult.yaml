@@ -1,0 +1,10 @@
+schema: 1
+id: eult_juicio
+name: "Juicio Hueco"
+owner: caballeroHueco
+elite: false
+extra: stanceShift
+ult:
+  power: 1.9
+  status: {"kind":"stun","stacks":1}
+fx: eult_juicio

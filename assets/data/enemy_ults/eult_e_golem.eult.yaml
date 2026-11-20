@@ -1,0 +1,10 @@
+schema: 1
+id: eult_e_golem
+name: "Puño de Piedra"
+owner: golem
+elite: true
+extra: none
+ult:
+  power: 2.0
+  status: {"kind":"stun","stacks":1}
+fx: eult_e_golem

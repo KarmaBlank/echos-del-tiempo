@@ -1,0 +1,14 @@
+schema: 1
+id: ult2_lamentoPrestado
+name: "Lamento Prestado"
+source: {kind: boss, ref: "espectroCoronado"}
+weapons: []
+classes: []
+element: sagrado
+cost: 100
+pulse: 0
+skill:
+  kind: heal
+  power: 1.2
+  revive: 0.4
+fx: ult2_lamentoPrestado

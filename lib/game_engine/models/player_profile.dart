@@ -53,6 +53,9 @@ class PlayerProfile {
     String? milestone10,
     String? milestone20,
     AchievementProgress? achievements,
+    Set<String> ultKnown = const {},
+    String? ultSel,
+    Map<String, int> ultLevels = const {},
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -86,10 +89,16 @@ class PlayerProfile {
       milestone10: milestone10,
       milestone20: milestone20,
       achievements: achievements ?? AchievementProgress.empty,
+      ultKnown: Set.unmodifiable(ultKnown),
+      ultSel: ultSel,
+      ultLevels: Map.unmodifiable(ultLevels),
     );
   }
 
   const PlayerProfile._({
+    required this.ultLevels,
+    required this.ultKnown,
+    required this.ultSel,
     required this.achievements,
     required this.milestone10,
     required this.milestone20,
@@ -133,6 +142,18 @@ class PlayerProfile {
   /// el cliente las manda al unirse y el host las lleva para no pagar dos
   /// veces. En disco viven en la cuenta, no en el personaje.
   final AchievementProgress achievements;
+
+  /// Repertorio de ULT aprendidas (JSON `uk`, ultimates_v2.md § 2.1):
+  /// árbol, hazañas, Ecos/Atlas/Maestría y fragmentos de jefe.
+  final Set<String> ultKnown;
+
+  /// ULT activa elegida (JSON `us`); `null` = el orden de siempre
+  /// (ascensión > arma propia > tipo de arma).
+  final String? ultSel;
+
+  /// Nivel de mejora de cada ULT del repertorio (JSON `ulv`, 2-5; sin
+  /// entrada = 1).
+  final Map<String, int> ultLevels;
 
   /// Puntos de árbol ganados: nivel, Maestría, Pruebas e hitos elegidos.
   int get treePoints => PassiveTreeRules.pointsEarned(treeLevel,
@@ -333,6 +354,9 @@ class PlayerProfile {
     String? Function()? milestone10,
     String? Function()? milestone20,
     AchievementProgress? achievements,
+    Set<String>? ultKnown,
+    String? Function()? ultSel,
+    Map<String, int>? ultLevels,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -379,6 +403,10 @@ class PlayerProfile {
       milestone10: milestone10 == null ? this.milestone10 : milestone10(),
       milestone20: milestone20 == null ? this.milestone20 : milestone20(),
       achievements: achievements ?? this.achievements,
+      ultKnown: ultKnown == null ? this.ultKnown : Set.unmodifiable(ultKnown),
+      ultSel: ultSel == null ? this.ultSel : ultSel(),
+      ultLevels:
+          ultLevels == null ? this.ultLevels : Map.unmodifiable(ultLevels),
     );
   }
 
@@ -505,6 +533,10 @@ class PlayerProfile {
         // Hitos v0.10 (progression_v2.md § 5): opcionales.
         if (milestone10 != null) 'ms10': milestone10,
         if (milestone20 != null) 'ms20': milestone20,
+        // ULT v2 (ultimates_v2.md § 5.2): opcionales.
+        if (ultKnown.isNotEmpty) 'uk': (ultKnown.toList()..sort()),
+        if (ultSel != null) 'us': ultSel,
+        if (ultLevels.isNotEmpty) 'ulv': ultLevels,
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -621,6 +653,14 @@ class PlayerProfile {
           ? json['ms20'] as String
           : null,
       achievements: AchievementProgress.fromJson(json['ach']),
+      ultKnown: {..._strings(json['uk'])},
+      ultSel: json['us'] is String ? json['us'] as String : null,
+      ultLevels: {
+        if (json['ulv'] case final Map m)
+          for (final e in m.entries)
+            if (e.key is String && e.value is num)
+              e.key as String: (e.value as num).toInt(),
+      },
     );
   }
 

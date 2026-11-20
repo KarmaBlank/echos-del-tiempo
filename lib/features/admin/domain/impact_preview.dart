@@ -97,7 +97,12 @@ class SimLoadout {
     this.takenNodes = const [],
     this.item,
     this.potions = 0,
+    this.ultSel,
   });
+
+  /// ULT activa (ULT v2, ultimates_v2.md § 5.3): la que mide la vista
+  /// previa en vez de la del tipo de arma.
+  final String? ultSel;
 
   /// Pociones de vida con las que entra (el perfil nuevo trae 3).
   final int potions;
@@ -162,6 +167,7 @@ class ImpactSimulator {
       equippedWeapon: w,
       passiveProgress: PlayerPassiveProgress(l.takenNodes),
       item: l.item,
+      ultSel: l.ultSel,
     );
   }
 

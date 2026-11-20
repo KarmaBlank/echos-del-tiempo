@@ -1,0 +1,14 @@
+schema: 1
+id: ult2_forjadoAyer
+name: "Forjado en el Ayer"
+source: {kind: feat, ref: "ult_forge10"}
+weapons: []
+classes: []
+element: fisico
+cost: 60
+pulse: 0
+skill:
+  kind: support
+  selfBuff: {"stat":"damage","value":0.4,"turns":3}
+  selfTurn: 0.5
+fx: ult2_forjadoAyer

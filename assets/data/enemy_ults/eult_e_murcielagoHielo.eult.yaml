@@ -1,0 +1,11 @@
+schema: 1
+id: eult_e_murcielagoHielo
+name: "Ventisca Alada"
+owner: murcielagoHielo
+elite: true
+extra: none
+ult:
+  power: 1.4
+  allTargets: true
+  status: {"kind":"freeze","stacks":1}
+fx: eult_e_murcielagoHielo

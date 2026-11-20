@@ -26,6 +26,7 @@ import 'skill_requirements.dart';
 import 'stats_calculator.dart';
 import 'summon_rules.dart';
 import 'break_rules.dart';
+import 'ult_rules.dart';
 
 part 'battle_engine_abyss.dart';
 part 'battle_engine_summons.dart';
@@ -37,8 +38,16 @@ typedef RandomSource = double Function();
 /// La ULT de [c]: la de su ascensión si ascendió (docs/specs/ascension.md
 /// § 4); si no, la propia de su arma (tomos del Invocador,
 /// docs/specs/summoner.md § 7) o la de su tipo de arma.
+///
+/// ULT v2 (ultimates_v2.md § 2.1): si el jugador eligió una ULT activa
+/// válida (`PlayerBuild.ultSel`), esa; si no, el orden de siempre.
 SkillDef? ultimateOf(Combatant c,
     [GameCatalog catalog = GameCatalog.standard]) {
+  final b = c.build;
+  if (b != null) {
+    final sel = UltRules.selected(b, catalog);
+    if (sel != null) return sel;
+  }
   final asc = kAscensions[c.ascensionId];
   if (asc != null && asc.classId == c.classId) {
     final u = kAscensionUltimates[asc.id];
@@ -46,8 +55,15 @@ SkillDef? ultimateOf(Combatant c,
   }
   // Mod "ULT: <nombre>" / legendario (branch_ults.md) o base propia.
   final own = ownWeaponUlt(c.build?.equippedWeapon.id, c.build?.item);
-  if (own != null) return own;
+  if (own != null) return UltRules.leveled(own, b?.ultLevel ?? 1);
   return catalog.ultimates[c.weaponType];
+}
+
+/// La ULT de [c] se puede lanzar: tiene la carga de su costo
+/// (ultimates_v2.md § 2.2).
+bool ultReady(Combatant c, [GameCatalog catalog = GameCatalog.standard]) {
+  final u = ultimateOf(c, catalog);
+  return u != null && c.ult >= u.ultCost;
 }
 
 /// Los 3 estados elementales (Elementalista).
@@ -128,6 +144,10 @@ class BattleEngine {
   /// Carga por vida perdida: +1 por cada 1% (= 100 × fracción).
   static const enemyUltPerHp = 100.0;
 
+  /// Tope de lo que el drenaje le quita a una ULT ya avisada
+  /// (ultimates_v2.md § 4.1).
+  static const ultWeakenMax = 0.4;
+
   /// Carga con la que empiezan jefes y élites (la primera ULT llega
   /// hacia su 3.er turno).
   static const enemyUltStart = 40.0;
@@ -187,7 +207,8 @@ class BattleEngine {
           mult *
           (el ? 2.6 : 1) *
           (soloBoss ? curve.soloBossHp : 1));
-      final ultId = el ? kEliteUltId : d.ultId;
+      // Élite: su ULT propia (ultimates_v2.md § 4.3) o Furia Élite.
+      final ultId = el ? (d.eliteUltId ?? kEliteUltId) : d.ultId;
       enemies.add(Combatant(
         id: 'e$i',
         name: el ? '${d.name} Élite' : d.name,
@@ -664,6 +685,8 @@ class _Turn {
     var (skip, text) = _statusTick(best);
     // Trampas del Trampero: saltan al empezar el turno del enemigo.
     if (!best.isPlayer && best.alive) _springTraps(best);
+    // Lo Que Será (ULT v2): la marca baja y, en 0, cae.
+    if (!best.isPlayer && best.alive) _tickDoom(best);
     // Disparo cargado (variantes): cae al empezar el turno del tirador.
     if (best.isPlayer && best.alive) _fireCharge(best);
     final cleared = state.enemies.every((e) => !e.alive);
@@ -1424,6 +1447,15 @@ class _Turn {
     if (tk.ultDrain > 0 && e.ultId != null && !e.ultPending && e.ult > 0) {
       e.ult = math.max(0, e.ult - tk.ultDrain);
       _notes.add('${tk.name}: ${e.name} −${jsRound(tk.ultDrain)} carga de ULT');
+    } else if (tk.ultDrain > 0 && e.ultPending) {
+      // Avisada (ultimates_v2.md § 4.1): −1% de poder por punto, tope −40%.
+      final before = e.ultWeaken;
+      e.ultWeaken = math.min(BattleEngine.ultWeakenMax,
+          e.ultWeaken + tk.ultDrain / 100);
+      if (e.ultWeaken > before) {
+        _notes.add('${tk.name}: la ULT de ${e.name} pierde '
+            '${_pct(e.ultWeaken)} de poder');
+      }
     }
   }
 
@@ -1567,6 +1599,50 @@ class _Turn {
       if (act != null) act.turnFactor = math.min(act.turnFactor, sk.selfTurn);
     }
     if (sk.protect) p.protecting = true;
+    // Pulso Magitec: +Pulso a todo el grupo.
+    if (sk.pulseParty > 0) {
+      for (final q in _aliveParty) {
+        _gainPulse(q, sk.pulseParty);
+      }
+      _notes.add('${sk.name}: +${sk.pulseParty} Pulso al grupo');
+    }
+  }
+
+  /// Fin Prestado: quita los buffs (efectos positivos y escudos) de [e].
+  void _stripBuffs(Combatant e, String name) {
+    if (!e.alive) return;
+    final before = e.effects.length;
+    e.effects = [
+      for (final fx in e.effects)
+        if (fx.value <= 0 ||
+            fx.stat == BuffStat.stunLock ||
+            fx.stat == BuffStat.damageTaken)
+          fx,
+    ];
+    if (e.effects.length < before) {
+      _notes.add('$name: ${e.name} pierde sus buffs');
+    }
+  }
+
+  /// Lo Que Será: al empezar el turno del marcado baja la cuenta; en 0
+  /// cae el golpe y, si está Fisurado, se quiebra.
+  void _tickDoom(Combatant e) {
+    if (e.doomTurns <= 0) return;
+    e.doomTurns--;
+    if (e.doomTurns > 0) return;
+    final owner = state.byId(e.doomBy ?? '') ?? e;
+    final dmg = e.doom;
+    e
+      ..doom = 0
+      ..doomBy = null;
+    events.add(ProcEvent(owner.id, 'ult2_loQueSera', targetId: e.id));
+    final d = _procDamage(owner, e, dmg, 'ult2_loQueSera');
+    var note = '¡Lo Que Será! ${e.name} recibe $d';
+    if (e.alive && e.fissured) {
+      _break(e);
+      note += ' · QUEBRADO';
+    }
+    _notes.add(note);
   }
 
   /// Bonus de las condiciones del árbol de [a] (Último Aliento, Fractura,
@@ -3462,8 +3538,10 @@ class _Turn {
   /// La ULT de [e] (docs/specs/break_and_enemy_ults.md § 2): Defender,
   /// Protección, Provocar y escudos aplican como en un golpe normal.
   void _enemyUlt(Combatant e, EnemyUltDef ult, List<Combatant> alive) {
+    final weaken = e.ultWeaken;
     e
       ..ultPending = false
+      ..ultWeaken = 0
       ..ult = 0;
     final taunter = alive.where((p) => p.taunt > 0).firstOrNull;
     final protector = alive.where((p) => p.protecting).firstOrNull;
@@ -3486,7 +3564,15 @@ class _Turn {
     final crit = ult.guaranteedCrit ? 1.0 : e.critChance;
     final mech = _mechanicOf(e);
     // Coro de Ecos: más poder por cada eco vivo.
-    var power = ult.power;
+    var power = ult.power * (1 - weaken);
+    if (weaken > 0) _notes.add('drenada: −${_pct(weaken)} de poder');
+    // Anuncio de las Eras: el estado de su ciclo.
+    final def = engine.catalog.enemies[e.enemyType];
+    final cycle = def?.inflictCycle ?? const <StatusApplication>[];
+    final status = ult.cycleStatus && cycle.isNotEmpty
+        ? cycle[e.actions % cycle.length]
+        : ult.status;
+    var dealt = 0;
     if (ult.extra == EnemyUltExtra.echoChorus && mech?.addType != null) {
       power += ult.perAdd *
           state.enemies
@@ -3513,21 +3599,59 @@ class _Turn {
             targetId: p0.id, value: mult));
       }
       final h = _hurt(p, atk * power * mult, crit, e.pierce,
-          from: e, element: enemyUltElement(ult), inflicted: ult.status);
+          from: e, element: enemyUltElement(ult), inflicted: status);
+      dealt += h.damage;
       if (p != p0 && p.alive) {
         _fire(ProcTrigger.onProtectHit, p, target: e, amount: h.damage);
       }
-      final st = ult.status;
+      final st = status;
       if (st != null) _addStatus(p, st);
+      // ULT de élite v2 (ultimates_v2.md § 4.3): estados extra, debuffs y
+      // retraso al golpeado.
+      for (final x in ult.extraStatuses) {
+        if (p.alive && (x.chance == null || _rand() < x.chance!)) {
+          _addStatus(p, StatusApplication(x.kind, x.stacks));
+        }
+      }
+      if (p.alive && ult.debuffs.isNotEmpty) {
+        final m = _ultMech(ult);
+        for (final d in ult.debuffs) {
+          _giveEffect(p, e, m, d.stat, d.value, d.turns);
+          events.add(BuffAppliedEvent(p.id, ult.id, d.stat, d.value, d.turns));
+        }
+      }
+      if (p.alive && ult.delayTarget > 0) {
+        p.nextTurn += _iv(p) * ult.delayTarget;
+        events.add(DelayedEvent(p.id));
+      }
       final who = p != p0 ? '${p.name} (por ${p0.name})' : p.name;
       parts.add('$who ${h.damage}${h.critical ? '!' : ''}'
           '${mult != 1 ? ' (MARCA ×${fm(mult)})' : ''}');
     }
 
-    if (ult.allTargets) {
-      alive.forEach(strike);
-    } else {
-      strike(pick0!);
+    for (var i = 0; i < math.max(1, ult.hits); i++) {
+      final now = _aliveParty.toList();
+      if (now.isEmpty) break;
+      if (ult.allTargets) {
+        now.forEach(strike);
+      } else if (i == 0) {
+        strike(pick0!);
+      } else {
+        // Ráfaga: cada golpe extra a uno al azar (Provocar manda).
+        final t = now.where((p) => p.taunt > 0).firstOrNull ??
+            now[(_rand() * now.length).floor().clamp(0, now.length - 1)];
+        strike(t);
+      }
+    }
+    if (ult.drainHeal > 0 && dealt > 0 && e.alive) {
+      final h = math.max(1, jsRound(dealt * ult.drainHeal));
+      e.hp = math.min(e.maxHp, e.hp + h);
+      events.add(HealEvent(e.id, h));
+      parts.add('se cura $h');
+    }
+    if (ult.selfShield > 0 && e.alive) {
+      _shield(e, e, _ultMech(ult), jsRound(e.maxHp * ult.selfShield),
+          ult.selfShieldTurns);
     }
     if (ult.delayAll > 0) {
       for (final p in _aliveParty) {
@@ -3551,16 +3675,23 @@ class _Turn {
       }
     }
     final extra = _ultExtra(e, ult);
-    final st = ult.status;
     state.log = '${e.name} · ULT ${ult.name} '
         '(${ult.allTargets ? 'todos, ' : ''}$atkText × ${fm(power)}'
         '${ult.guaranteedCrit ? ' × ${fm(BattleEngine.enemyCritMultiplier)} CRÍTICO' : ''}): '
         '${parts.join(', ')}'
-        '${st != null ? _statusText(st) : ''}'
+        '${status != null ? _statusText(status) : ''}'
         '${ult.delayAll > 0 ? ' · retrasa a todos' : ''}'
         '${ult.wipeBuffs ? ' · borra los buffs del grupo' : ''}'
         '$extra';
   }
+
+  /// La ULT enemiga [ult] como fuente de efectos (debuffs, escudo).
+  PassiveMechanic _ultMech(EnemyUltDef ult) => PassiveMechanic(
+      id: ult.id,
+      name: ult.name,
+      trigger: ProcTrigger.onSkill,
+      effects: const [],
+      description: '');
 
   // ---------------- mecánicas de jefe (docs/specs/bosses.md § "v0.2") ----
 
@@ -4111,6 +4242,7 @@ class _Turn {
             targetId: sk.dealsDamage && !sk.allTargets ? target.id : null,
             allTargets: sk.allTargets));
         act.skill = sk;
+        p.lastSkillId = sk.id;
         // Reflejo de los Jefes del Abismo: copian la última habilidad.
         _abyssCopied(sk.id);
         final gain = _useSkill(p, sk, foes, target, ultimate: false);
@@ -4121,9 +4253,18 @@ class _Turn {
         _fire(ProcTrigger.onSkill, p);
       case UltimateCommand():
         final sk = ultimateOf(p, engine.catalog);
-        if (sk == null || p.ult < 100) return false;
-        p.ult = 0;
+        // Costo variable (ultimates_v2.md § 2.2): resta, no vacía.
+        if (sk == null || p.ult < sk.ultCost) return false;
+        p.ult = math.max(0, p.ult - sk.ultCost);
         usedUlt = true;
+        if (sk.hpCost > 0) {
+          final cost = math.min(p.hp - 1, jsRound(p.maxHp * sk.hpCost));
+          if (cost > 0) {
+            p.hp -= cost;
+            events.add(DamageEvent(p.id, cost, sourceId: sk.id));
+            _notes.add('${sk.name}: cuesta $cost HP');
+          }
+        }
         events.add(UltimateUsedEvent(p.id, sk.name));
         events.add(ActionEvent(p.id, BattleActionKind.ultimate,
             skillId: sk.id,
@@ -4134,7 +4275,19 @@ class _Turn {
           ..ultimate = true
           ..breakPoints = engine.catalog.combo.breakUltimate
           ..canBreak = true;
-        _useSkill(p, sk, foes, target, ultimate: true);
+        // Eco Doble: repite la última habilidad al `echoLast` de poder.
+        final last = sk.echoLast > 0
+            ? engine.catalog.skills[p.lastSkillId ?? '']
+            : null;
+        if (last != null) {
+          final copy = last.scaled(sk.echoLast);
+          act.skill = copy;
+          _notes.add('${sk.name}: repite ${last.name} al ${_pct(sk.echoLast)}');
+          _useSkill(p, copy, foes, target, ultimate: true);
+          _skillExtras(p, copy);
+        } else {
+          _useSkill(p, sk, foes, target, ultimate: true);
+        }
         _skillExtras(p, sk);
         _fire(ProcTrigger.onSkill, p);
         _fire(ProcTrigger.onUltimate, p);
@@ -4211,7 +4364,8 @@ class _Turn {
     _act = null;
     // Instante (combo_balance.md § 5.2): no termina el turno; una por
     // turno, y después una acción más.
-    final instant = cmd is SkillCommand && (act.skill?.instant ?? false);
+    final instant = (cmd is SkillCommand || cmd is UltimateCommand) &&
+        (act.skill?.instant ?? false);
     if (instant && !p.chained && p.alive) {
       p.chained = true;
       _notes.add('Instante: una acción más');
@@ -4371,11 +4525,20 @@ class _Turn {
         final a = jsRound((p.magic * tk.power + 6) * (1 + p.healBonus));
         // Resurrección: primero el aliado caído.
         if (tk.revive > 0) {
-          final down = state.party.where((q) => !q.alive).firstOrNull;
-          if (down != null) {
-            _revive(p, down, tk);
+          // ULT (ultimates_v2.md § 3): revive a todos los caídos y además
+          // cura al grupo.
+          final downs = [
+            for (final q in state.party)
+              if (!q.alive && !q.isSummon) q
+          ];
+          if (downs.isNotEmpty && !ultimate) {
+            _revive(p, downs.first, tk);
             return 8;
           }
+          for (final q in downs) {
+            _revive(p, q, tk);
+          }
+          if (downs.isNotEmpty) allies.addAll(downs.where((q) => q.alive));
         }
         final healed = tk.lowestAlly
             ? [if (_lowest(allies, (c) => c.hp / c.maxHp) case final q?) q]
@@ -4473,12 +4636,35 @@ class _Turn {
               '${ok ? ': QUEBRADO' : ': no está Fisurado'}';
           return 0;
         }
+        if (tk.delayedHit > 0) {
+          // Lo Que Será (ultimates_v2.md § 3.5): marca; el golpe cae tras
+          // 2 turnos del objetivo.
+          final v = tk.kind == SkillKind.magical ? p.magic : _atk(p);
+          target
+            ..doom = math.max(1, jsRound(v * tk.delayedHit))
+            ..doomTurns = 2
+            ..doomBy = p.id;
+          events.add(ProcEvent(p.id, tk.id, targetId: target.id));
+          state.log = '${p.name} · ${ultimate ? 'ULT ' : ''}${tk.name} → '
+              '${target.name}: en 2 turnos recibe ${target.doom} '
+              '(${tk.kind == SkillKind.magical ? 'MAG' : 'ATQ'} $v × '
+              '${fm(tk.delayedHit)}) y se quiebra si está Fisurado';
+          return 0;
+        }
         final tormenta = p.keystones.contains('tormenta')
             ? (tk.allTargets ? 1.25 : 0.85)
             : 1.0;
         final magical = tk.kind == SkillKind.magical;
         final sourceValue = magical ? p.magic : _atk(p);
-        final base = sourceValue * tk.power * tormenta;
+        // Coro Prestado: +poder por aliado vivo (además del lanzador).
+        final allyPower = tk.perAlly > 0
+            ? tk.perAlly *
+                _aliveParty.where((q) => q != p && !q.isSummon).length
+            : 0.0;
+        if (allyPower > 0) {
+          _notes.add('${tk.name}: +${fm(allyPower)} de poder por aliados');
+        }
+        final base = sourceValue * (tk.power + allyPower) * tormenta;
         final st = tk.status;
         final bonus = st == null ? 0 : (p.statusBonus[st.kind] ?? 0);
         final act = _act!
@@ -4509,9 +4695,15 @@ class _Turn {
             }
             if (keep != StatusKind.freeze) e.brittle = false;
           }
+          // Primer Golpe: +daño si el objetivo tiene la vida llena.
+          if (tk.openerBonus > 0 && e.hp >= e.maxHp) {
+            b *= 1 + tk.openerBonus;
+            _notes.add('${tk.name}: vida llena, +${_pct(tk.openerBonus)}');
+          }
           final hit = _damageEnemy(e, b, p.critChance + tk.critBonus,
               single: !tk.allTargets);
           hits.add(hit);
+          if (tk.stripBuffs) _stripBuffs(e, tk.name);
           if (!tk.allTargets) {
             act
               ..mainTarget = e

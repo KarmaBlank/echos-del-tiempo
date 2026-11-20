@@ -1,0 +1,55 @@
+schema: 1
+id: eult_e_caballeroCaido
+category: enemy_ult
+name: Último Juramento
+tags: [élite, un_objetivo, escudo, eco]
+duration: 2200
+phases: { build: 800, release: 1000, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1800, v: 0.75 }
+      - { t: 2200, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: element }
+  - type: echo
+    who: caster
+    count: 1
+    lag: 0
+    alpha: 0.55
+    color: '#b0b6c0'
+    fade: 200
+    keys:
+      - { t: 700, at: caster }
+      - { t: 920, at: target, dx: -14, ease: out }
+      - { t: 1060, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 800, shape: slash_arc, anchor: target, angle: -60, color: '#b0b6c0', ms: 180 }
+      - { t: 1100, shape: slash_cross, anchor: target, scale: 2, color: white, ms: 260 }
+      - { t: 1100, shape: shield_dome, anchor: caster, color: '#b0b6c0', ms: 600, scale: 0.9 }
+  - type: particles
+    fire:
+      - { t: 1100, preset: burst, anchor: target, count: 3, element: auto }
+  - type: flash
+    fire:
+      - { t: 1095, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1100, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 800, amp: 3 }
+      - { t: 1100, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 800, pre: true }
+      - { t: 1100 }

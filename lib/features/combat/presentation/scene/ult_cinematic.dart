@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 import '../../../../core/fx/fx_catalog.dart';
 import '../../../../game_engine/data/branch_ults_catalog.dart' show kBranchUltLooks;
+import '../../../../game_engine/data/elite_ults_catalog.dart' show kEliteUltLooks;
 import 'fx_bridge.dart';
 
 /// Estilo visual de cada ULT (uno por `SkillDef.id` de `kAllUltimates`).
@@ -356,7 +357,12 @@ const UltScript kDefaultUltScript = UltScript(
 
 /// Los guiones de las ULT enemigas por `EnemyUltDef.id`
 /// (docs/specs/battle_presentation.md § "ULT enemigas").
-const Map<String, UltScript> kEnemyUltScripts = {
+final Map<String, UltScript> kEnemyUltScripts = {
+  ..._kBaseEnemyUltScripts,
+  ...kEliteUltScripts,
+};
+
+const Map<String, UltScript> _kBaseEnemyUltScripts = {
   'eult_diluvio': UltScript(
     style: UltStyle.acidFlood,
     buildMs: 900,
@@ -521,6 +527,13 @@ const Map<String, UltScript> kEnemyUltScripts = {
 
 /// La ULT es de un enemigo.
 bool isEnemyUlt(String? ultId) => kEnemyUltScripts.containsKey(ultId);
+
+/// Guiones del código de las ULT de élite v2: el del jefe al que se
+/// parecen (la animación propia viene de los datos, `enemy_ult/`).
+final Map<String, UltScript> kEliteUltScripts = {
+  for (final MapEntry(key: id, value: base) in kEliteUltLooks.entries)
+    if (_kBaseEnemyUltScripts[base] case final s?) id: s,
+};
 
 /// El guion de la ULT [ultId]: el de sus datos FXA si el catálogo activo
 /// tiene una animación (no legacy) para ese id; si no, el del código.

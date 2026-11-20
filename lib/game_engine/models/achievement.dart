@@ -21,7 +21,25 @@ abstract final class AchievementCounter {
   static const fusions = 'fusions';
   static const salvaged = 'salvaged';
 
-  static const all = [forgeLevels, fusions, salvaged];
+  // ---- ULT v2 (ultimates_v2.md § 3.4) ----
+  static const flawlessWins = 'flawlessWins';
+  static const breaks = 'breaks';
+  static const bossUltCancels = 'bossUltCancels';
+  static const allyShields = 'allyShields';
+  static const weaponsPlus10 = 'weaponsPlus10';
+  static const finishers = 'finishers';
+
+  static const all = [
+    forgeLevels,
+    fusions,
+    salvaged,
+    flawlessWins,
+    breaks,
+    bossUltCancels,
+    allyShields,
+    weaponsPlus10,
+    finishers,
+  ];
 }
 
 /// Lo que paga una hazaña: créditos, materiales de forja / fusión y
@@ -34,7 +52,11 @@ class AchievementReward {
     this.prismas = 0,
     this.potions = 0,
     this.ethers = 0,
+    this.ult,
   });
+
+  /// ULT v2 que se aprende (ultimates_v2.md § 3.4); `null` = ninguna.
+  final String? ult;
 
   final int credits;
   final int esquirlas, cristales, prismas;
@@ -54,7 +76,8 @@ class AchievementReward {
       cristales == 0 &&
       prismas == 0 &&
       potions == 0 &&
-      ethers == 0;
+      ethers == 0 &&
+      ult == null;
 
   AchievementReward operator +(AchievementReward o) => AchievementReward(
         credits: credits + o.credits,
@@ -63,6 +86,7 @@ class AchievementReward {
         prismas: prismas + o.prismas,
         potions: potions + o.potions,
         ethers: ethers + o.ethers,
+        ult: ult ?? o.ult,
       );
 
   /// Corto, para la fila y el toast: `+₵300 +1 Cristal de Era`.
@@ -73,6 +97,7 @@ class AchievementReward {
         if (prismas > 0) '+$prismas ${_n(prismas, 'Prisma Roto', 'Prismas Rotos')}',
         if (potions > 0) '+$potions ${_n(potions, 'Poción', 'Pociones')} de vida',
         if (ethers > 0) '+$ethers ${_n(ethers, 'Poción', 'Pociones')} de maná',
+        if (ult != null) '+ULT',
       ].join(' ');
 
   /// Abreviado para la fila de una línea (§ 1): `₵300 · 1C · 2PV`.
@@ -83,6 +108,7 @@ class AchievementReward {
         if (prismas > 0) '${prismas}P',
         if (potions > 0) '${potions}PV',
         if (ethers > 0) '${ethers}PM',
+        if (ult != null) 'ULT',
       ].join(' · ');
 
   static String _n(int n, String one, String many) => n == 1 ? one : many;

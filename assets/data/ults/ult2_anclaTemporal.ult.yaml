@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_anclaTemporal
+name: "Ancla Temporal"
+source: {kind: eco, ref: "ecojefe"}
+weapons: []
+classes: ["guerrero", "paladin"]
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: support
+  partyBuffs: [{"stat":"guard","value":0.2,"turns":2}]
+  partyShield: 0.15
+  partyShieldTurns: 2
+fx: ult2_anclaTemporal

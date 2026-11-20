@@ -1,0 +1,11 @@
+schema: 1
+id: eult_e_ecoSombra
+name: "Paso Doble"
+owner: ecoSombra
+elite: true
+extra: none
+ult:
+  power: 1.0
+  hits: 2
+  delayTarget: 0.3
+fx: eult_e_ecoSombra

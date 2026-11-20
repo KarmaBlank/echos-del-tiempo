@@ -193,3 +193,12 @@ por defecto (sin barra).
 sistema (sin barra ni ULT): los tests de reglas viejas que lo necesiten
 pueden usarlo. Ninguno existente lo necesitó: sin golpes del grupo la
 barra no se mueve, y el azar no cambia (el sistema no tira dados extra).
+
+## v0.17.0: ULT de élite (ultimates_v2.md § 4)
+
+Cada tipo común que puede salir élite tiene su ULT (`EnemyDef.eliteUltId`,
+20 en `elite_ults_catalog.dart`); la Furia Élite queda de respaldo. El
+Heraldo de las Eras ya no trae ULT si no es élite. Los 5 jefes del
+Abismo tienen nombre propio (Reloj sin Agujas, Coro del Abismo, Corona
+Vacía, Última Era, Todas las Eras). Drenar carga (`ultDrain`) a un
+enemigo que ya avisó le baja 1% de poder por punto (tope −40%).

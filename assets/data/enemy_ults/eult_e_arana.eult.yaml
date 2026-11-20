@@ -1,0 +1,11 @@
+schema: 1
+id: eult_e_arana
+name: "Red Envenenada"
+owner: arana
+elite: true
+extra: none
+ult:
+  power: 1.4
+  allTargets: true
+  status: {"kind":"poison","stacks":2}
+fx: eult_e_arana

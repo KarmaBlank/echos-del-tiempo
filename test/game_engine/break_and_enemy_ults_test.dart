@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
-import 'package:echos_del_tiempo/game_engine/data/enemies_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/weapons_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
@@ -102,7 +101,8 @@ void main() {
           elite: true).state;
       // Común 12 × 1.2 (2 jugadores) × 2.5 (élite) = 36.
       expect(s.enemies[0].breakBase, closeTo(12 * 1.2 * 2.5, 1e-9));
-      expect(s.enemies[0].ultId, kEliteUltId);
+      // ULT v2 (ultimates_v2.md § 4.3): cada élite trae la suya.
+      expect(s.enemies[0].ultId, 'eult_e_golem');
       expect(s.enemies[1].breakBase, closeTo(12 * 1.2, 1e-9));
       expect(s.enemies[1].ultId, isNull);
       final boss = _engine()
@@ -455,16 +455,18 @@ void main() {
       expect(p.bonusDefense, 4, reason: 'el estado de entrada no cambia');
     });
 
-    test('Furia Élite: ATQ × 2.0 al objetivo con crítico garantizado', () {
+    test('Puño de Piedra (élite de Gólem): ATQ × 2.0 al objetivo', () {
       final engine = _engine([0.0]);
       final turn = _enemyTurn(engine, 'golem', elite: true);
       turn.enemies.single.ultPending = true;
       final step = engine.enemyTurn(turn)!;
-      expect((step.events.first as EnemyUltEvent).name, 'Furia Élite');
+      expect((step.events.first as EnemyUltEvent).name, 'Puño de Piedra');
       final hit = step.events.whereType<DamageEvent>().single;
-      expect(hit.critical, isTrue);
-      // 16 × 2 × 1.5 × (1 − 9%) = 43.68.
-      expect(hit.amount, 44);
+      // Sin crítico garantizado (la Furia Élite queda de respaldo).
+      expect(hit.critical, isFalse);
+      // 16 × 2 × (1 − 9%) = 29.12.
+      expect(hit.amount, 29);
+      expect(step.state.party.single.stacks(StatusKind.stun), 1);
     });
 
     test('Defender reduce a la mitad', () {
@@ -473,7 +475,7 @@ void main() {
       turn.enemies.single.ultPending = true;
       turn.party.single.defending = true;
       final hit = engine.enemyTurn(turn)!.events.whereType<DamageEvent>().single;
-      expect(hit.amount, 22); // 43.68 / 2 = 21.84
+      expect(hit.amount, 15); // 29.12 / 2 = 14.56
     });
 
     test('quebrarlo antes cancela la ULT avisada', () {

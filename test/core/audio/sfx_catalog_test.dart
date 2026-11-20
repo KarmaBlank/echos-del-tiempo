@@ -342,7 +342,9 @@ void main() {
       expect(def.peak, isNotNull, reason: e.key);
       // Solo las partes de las ULT (del grupo y enemigas) pasan el nivel
       // del crítico.
-      final ult = e.key.startsWith('ult_') || e.key.startsWith('eult_');
+      final ult = e.key.startsWith('ult_') ||
+          e.key.startsWith('ult2_') ||
+          e.key.startsWith('eult_');
       expect(def.peak!,
           lessThanOrEqualTo(ult ? SfxLevel.ultImpact : SfxLevel.crit),
           reason: e.key);

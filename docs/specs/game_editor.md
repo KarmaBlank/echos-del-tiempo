@@ -645,3 +645,12 @@ Preguntas originales:
    frames solo para efectos?
 4. Rediseño de ULT: ¿aprobás el tope de ~2.6 s (hoy 2.2–2.5 s) y la idea
    de "ecos" translúcidos como firma visual común?
+
+## v0.17.0: FXA de las ULT v2
+
+86 animaciones nuevas en datos (ultimates_v2.md): 50 de jugador en
+`assets/fx/ult/ult2_*.fx.yaml` y 36 enemigas (jefes, élites y Furia
+Élite) en `assets/fx/enemy_ult/` (carpeta nueva en pubspec). Las ULT
+enemigas dejan de ser legacy en el Editor; las de ascensión siguen en
+el código. Todas con pista `echo` y ≤ 2600 ms (test
+`ult_data_test.dart`).

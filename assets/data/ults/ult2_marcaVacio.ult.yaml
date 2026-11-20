@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_marcaVacio
+name: "Marca del Vacío"
+source: {kind: boss, ref: "centinela"}
+weapons: []
+classes: []
+element: electro
+cost: 80
+pulse: 0
+skill:
+  kind: magical
+  power: 2.4
+  status: {"kind":"charged","stacks":1}
+  debuffs: [{"stat":"damageTaken","value":0.3,"turns":3}]
+fx: ult2_marcaVacio

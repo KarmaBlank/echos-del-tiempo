@@ -1279,6 +1279,12 @@ class SessionController extends StateNotifier<SessionView?> {
   /// en la sesión, en orden: el toast las muestra (§ 7).
   final achievementLog = <AchievementUnlockedEvent>[];
 
+  /// Elegir la ULT activa (`null` = automática; ultimates_v2.md § 2.1).
+  bool selectUlt(String? id) => _applyFor(actingId, SelectUltAction(id));
+
+  /// Subir un nivel la ULT [id] del repertorio (§ 2.4).
+  bool upgradeUlt(String id) => _applyFor(actingId, UpgradeUltAction(id));
+
   /// Guardar el filtro de loot (`null` = el por defecto).
   bool setLootFilter(String? text) =>
       _applyFor(actingId, SetLootFilterAction(text));

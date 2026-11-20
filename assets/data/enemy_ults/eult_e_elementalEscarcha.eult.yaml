@@ -1,0 +1,10 @@
+schema: 1
+id: eult_e_elementalEscarcha
+name: "Prisión de Hielo"
+owner: elementalEscarcha
+elite: true
+extra: none
+ult:
+  power: 1.8
+  status: {"kind":"freeze","stacks":3}
+fx: eult_e_elementalEscarcha

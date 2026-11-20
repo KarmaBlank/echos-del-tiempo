@@ -229,3 +229,11 @@ misión: acelera pero no reemplaza jugar.
 
 - Créditos por misión (ya medidos en achievements.md § 4) no se tocan acá.
 - El script asume 1 jugador; en grupo cada uno tira su propio botín.
+
+## v0.17.0: mejora de ULT (ultimates_v2.md § 2.4)
+
+Sumidero nuevo de Cristales de Era y Prismas Rotos: subir una ULT de
+nivel 1 a 5 cuesta ₵10000, 10 Cristales y 3 Prismas (las 4 de jefe con
+Abismo, además 2 Fragmentos de ese jefe). Con ~50 ULT posibles es un
+sumidero de largo plazo que no compite con la forja temprana (los
+Prismas recién desde el nivel 3).

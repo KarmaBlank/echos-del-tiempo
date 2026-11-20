@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_atlasAbierto
+name: "Atlas Abierto"
+source: {kind: eco, ref: "resonancia"}
+weapons: []
+classes: ["maga", "tirador"]
+element: fuego
+cost: 100
+pulse: 0
+skill:
+  kind: magical
+  power: 1.7
+  allTargets: true
+  status: {"kind":"burn","stacks":1}
+  extraStatuses: [{"kind":"freeze","stacks":1},{"kind":"poison","stacks":1}]
+fx: ult2_atlasAbierto

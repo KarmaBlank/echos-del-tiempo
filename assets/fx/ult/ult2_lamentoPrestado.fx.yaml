@@ -1,0 +1,58 @@
+schema: 1
+id: ult2_lamentoPrestado
+category: ult
+name: Lamento Prestado
+tags: [aliados, revivir, cura, eco]
+duration: 2400
+phases: { build: 850, release: 1150, recover: 400 }
+targets: allies
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 850, focus: allies }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 2000, v: 0.75 }
+      - { t: 2400, v: 0 }
+  - type: tint
+    color: '#e0e6ff'
+    keys:
+      - { t: 850, v: 0 }
+      - { t: 1100, v: 0.25 }
+      - { t: 1900, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 850, color: '#e0e6ff' }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 100
+    alpha: 0.4
+    color: '#e0e6ff'
+    fade: 200
+    keys:
+      - { t: 750, at: caster }
+      - { t: 1050, at: allies_center, dx: 14, ease: out }
+      - { t: 1450, at: allies_center, dx: 14 }
+  - type: shape
+    fire:
+      - { t: 850, shape: pillar, anchor: allies_center, color: '#e0e6ff', ms: 800, scale: 1.4 }
+      - { t: 1100, shape: ring, anchor: allies_center, color: gold, ms: 400, scale: 1.8 }
+  - type: particles
+    fire:
+      - { t: 1250, preset: sparkles, anchor: allies_center, count: 1.6 }
+  - type: flash
+    fire:
+      - { t: 1245, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1250, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1250, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1250 }

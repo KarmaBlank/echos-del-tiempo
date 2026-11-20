@@ -1,0 +1,55 @@
+schema: 1
+id: eult_e_bat
+category: enemy_ult
+name: Chillido Antiguo
+tags: [élite, a_todos, retraso, eco]
+duration: 1900
+phases: { build: 700, release: 800, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 700, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1500, v: 0.75 }
+      - { t: 1900, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 700, color: element }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 60
+    alpha: 0.35
+    color: echo
+    fade: 200
+    keys:
+      - { t: 150, at: caster }
+      - { t: 700, at: caster, dy: -18, ease: out }
+      - { t: 1000, at: caster, dy: -10 }
+  - type: shape
+    fire:
+      - { t: 700, shape: ring, anchor: caster, color: echo, ms: 400, scale: 2 }
+      - { t: 820, shape: ring, anchor: caster, color: echo, ms: 400, scale: 2.6 }
+      - { t: 940, shape: ring, anchor: caster, color: echo, ms: 400, scale: 3 }
+  - type: particles
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1000, preset: sparkles, anchor: target, count: 0.6 }
+  - type: flash
+    fire:
+      - { t: 995, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1000, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1000, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1000, stagger: 90 }

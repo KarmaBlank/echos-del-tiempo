@@ -1,0 +1,14 @@
+schema: 1
+id: ult2_gritoRuinas
+name: "Grito de las Ruinas"
+source: {kind: tree, ref: "guerrero:40"}
+weapons: []
+classes: ["guerrero"]
+element: fisico
+cost: 80
+pulse: 0
+skill:
+  kind: support
+  partyBuffs: [{"stat":"attack","value":0.2,"turns":3}]
+  advanceAllies: 0.25
+fx: ult2_gritoRuinas

@@ -1,0 +1,11 @@
+schema: 1
+id: eult_abismoCorona
+name: "Corona Vacía"
+owner: espectroAbismo
+elite: false
+extra: summonAll
+ult:
+  power: 1.3
+  allTargets: true
+  status: {"kind":"freeze","stacks":2}
+fx: eult_abismoCorona

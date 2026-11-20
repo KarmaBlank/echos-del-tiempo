@@ -1,0 +1,10 @@
+schema: 1
+id: eult_e_ghost
+name: "Toque Frío"
+owner: ghost
+elite: true
+extra: none
+ult:
+  power: 1.6
+  status: {"kind":"freeze","stacks":2}
+fx: eult_e_ghost

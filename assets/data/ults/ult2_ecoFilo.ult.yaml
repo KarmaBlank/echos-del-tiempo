@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_ecoFilo
+name: "Eco del Filo"
+source: {kind: weapon_mod, ref: ""}
+weapons: ["espada"]
+classes: []
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: physical
+  power: 1.05
+  hits: 3
+  breakBonus: 0.5
+fx: ult2_ecoFilo

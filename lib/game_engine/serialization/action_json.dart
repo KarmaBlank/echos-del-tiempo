@@ -116,6 +116,9 @@ abstract final class ActionJson {
         SortInventoryAction() => {'t': 'invSort', 'k': a.key.name},
         SeenItemsAction() => {'t': 'seen', 'u': a.uids},
         SetLootFilterAction() => {'t': 'filter', 'txt': a.text},
+        // ULT v2 (ultimates_v2.md § 5.2).
+        SelectUltAction() => {'t': 'ultSel', 'id': a.ultId},
+        UpgradeUltAction() => {'t': 'ultUp', 'id': a.ultId},
         SetBuildWantsAction(:final wants) => {
             't': 'wants',
             if (wants != null && !wants.isEmpty) 'w': wants.toJson(),
@@ -252,6 +255,10 @@ abstract final class ActionJson {
         return SortInventoryAction(j.enumByName('k', InventorySortKey.values));
       case 'filter':
         return SetLootFilterAction(j.strOrNull('txt'));
+      case 'ultSel':
+        return SelectUltAction(j.strOrNull('id'));
+      case 'ultUp':
+        return UpgradeUltAction(j.str('id'));
       case 'wants':
         final w = BuildWants.fromJson(j['w']);
         return SetBuildWantsAction(w.isEmpty ? null : w);

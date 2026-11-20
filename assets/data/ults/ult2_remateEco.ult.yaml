@@ -1,0 +1,14 @@
+schema: 1
+id: ult2_remateEco
+name: "Remate del Eco"
+source: {kind: feat, ref: "ult_executes"}
+weapons: []
+classes: []
+element: fisico
+cost: 80
+pulse: 0
+skill:
+  kind: physical
+  power: 2.2
+  execute: 0.35
+fx: ult2_remateEco

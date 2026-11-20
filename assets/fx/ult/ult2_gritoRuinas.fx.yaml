@@ -1,0 +1,53 @@
+schema: 1
+id: ult2_gritoRuinas
+category: ult
+name: Grito de las Ruinas
+tags: [guerrero, aliados, buff, eco]
+duration: 1900
+phases: { build: 700, release: 800, recover: 400 }
+targets: allies
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 700, focus: allies }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1500, v: 0.75 }
+      - { t: 1900, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 700, color: gold }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 60
+    alpha: 0.35
+    color: gold
+    fade: 200
+    keys:
+      - { t: 150, at: caster }
+      - { t: 700, at: caster, dy: -18, ease: out }
+      - { t: 1000, at: caster, dy: -10 }
+  - type: shape
+    fire:
+      - { t: 700, shape: shockwave, anchor: caster, color: gold, ms: 420, scale: 2.6 }
+      - { t: 800, shape: pillar, anchor: allies_center, color: '#ffb142', ms: 500, dx: -20 }
+      - { t: 800, shape: pillar, anchor: allies_center, color: '#ffb142', ms: 500, dx: 20 }
+  - type: particles
+    fire:
+      - { t: 900, preset: embers, anchor: allies_center, count: 1.2 }
+  - type: flash
+    fire:
+      - { t: 895, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 900, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 900, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 900 }

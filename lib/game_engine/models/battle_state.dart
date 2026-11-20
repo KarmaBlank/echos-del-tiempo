@@ -123,6 +123,11 @@ class Combatant {
     this.pulse = 0,
     this.chained = false,
     this.practice = false,
+    this.ultWeaken = 0,
+    this.lastSkillId,
+    this.doom = 0,
+    this.doomTurns = 0,
+    this.doomBy,
     this.tag,
   })  : primedBy = primedBy ?? {},
         family = family ??
@@ -360,6 +365,21 @@ class Combatant {
   /// cae ("se recompone").
   bool practice;
 
+  // ---- ULT v2 (docs/specs/ultimates_v2.md) ----
+
+  /// ULT enemiga avisada y drenada (§ 4.1): fracción de poder que pierde
+  /// al lanzarla (tope 0.4).
+  double ultWeaken;
+
+  /// Última habilidad que usó el jugador (Eco Doble la repite).
+  String? lastSkillId;
+
+  /// Marca de Lo Que Será: daño que cae cuando [doomTurns] llega a 0
+  /// (baja al empezar cada turno del marcado) y quién la puso.
+  int doom;
+  int doomTurns;
+  String? doomBy;
+
   bool get isSummon => summonOwner != null;
 
   /// Ascensión del jugador (`null` = clase base o enemigo).
@@ -493,6 +513,11 @@ class Combatant {
         pulse: pulse,
         chained: chained,
         practice: practice,
+        ultWeaken: ultWeaken,
+        lastSkillId: lastSkillId,
+        doom: doom,
+        doomTurns: doomTurns,
+        doomBy: doomBy,
         tag: tag,
       );
 }

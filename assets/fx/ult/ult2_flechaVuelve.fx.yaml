@@ -1,0 +1,59 @@
+schema: 1
+id: ult2_flechaVuelve
+category: ult
+name: Flecha que Vuelve
+tags: [arco, un_objetivo, físico, rebote, eco]
+duration: 2000
+phases: { build: 700, release: 900, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 700, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1600, v: 0.75 }
+      - { t: 2000, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 700, color: element }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 70
+    alpha: 0.45
+    color: echo
+    fade: 200
+    spacing: [-8, -3]
+    keys:
+      - { t: 200, at: caster }
+      - { t: 900, at: caster, dy: -4 }
+  - type: shape
+    fire:
+      - { t: 1370, shape: ring, anchor: target, color: echo, ms: 280, scale: 1.2 }
+  - type: trail
+    fire:
+      - { t: 700, from: caster, to: target, ms: 180, head: arrow, color: element, echoes: 3, lag: 30 }
+      - { t: 1000, from: target, to: caster, ms: 160, head: arrow, color: echo, echoes: 4, lag: 30 }
+      - { t: 1220, from: caster, to: target, ms: 150, head: arrow, color: white, echoes: 5, lag: 20 }
+  - type: particles
+    fire:
+      - { t: 880, preset: sparks, anchor: target, count: 0.8 }
+      - { t: 1370, preset: burst, anchor: target, count: 3, element: auto }
+  - type: flash
+    fire:
+      - { t: 1365, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1370, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 880, amp: 3 }
+      - { t: 1370, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 880, pre: true }
+      - { t: 1370 }

@@ -1,0 +1,55 @@
+schema: 1
+id: ult2_ojoFuturo
+category: ult
+name: Ojo del Futuro
+tags: [tirador, un_objetivo, crítico, eco]
+duration: 2200
+phases: { build: 850, release: 950, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 850, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1800, v: 0.75 }
+      - { t: 2200, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: reticle, anchor: caster, ms: 850, color: element }
+  - type: echo
+    who: caster
+    count: 1
+    lag: 0
+    alpha: 0.5
+    color: echo
+    fade: 200
+    keys:
+      - { t: 200, at: caster }
+      - { t: 1050, at: caster, dy: -4 }
+  - type: shape
+    fire:
+      - { t: 550, shape: slash_cross, anchor: target, scale: 1.4, color: echo, ms: 260 }
+      - { t: 850, shape: reticle, anchor: target, color: white, ms: 400, scale: 1 }
+      - { t: 1310, shape: ring, anchor: target, color: element, ms: 300, scale: 1.6 }
+  - type: trail
+    fire:
+      - { t: 1230, from: caster, to: target, ms: 80, head: bolt, color: white, echoes: 5, lag: 12 }
+  - type: particles
+    fire:
+      - { t: 1310, preset: burst, anchor: target, count: 4, element: auto }
+  - type: flash
+    fire:
+      - { t: 1305, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1310, ms: 150 }
+  - type: shake
+    fire:
+      - { t: 1310, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1310 }

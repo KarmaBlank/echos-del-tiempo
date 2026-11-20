@@ -1,0 +1,59 @@
+schema: 1
+id: eult_colapsoVacio
+category: enemy_ult
+name: Colapso del Vacío
+tags: [jefe, a_todos, agua, eco]
+duration: 2300
+phases: { build: 800, release: 1100, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1900, v: 0.75 }
+      - { t: 2300, v: 0 }
+  - type: tint
+    color: '#6c5ce7'
+    keys:
+      - { t: 800, v: 0 }
+      - { t: 1050, v: 0.25 }
+      - { t: 1800, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: element }
+  - type: echo
+    who: caster
+    count: 2
+    lag: 120
+    alpha: 0.4
+    color: echo
+    fade: 200
+    keys:
+      - { t: 200, at: caster }
+      - { t: 1000, at: caster, dy: -4 }
+  - type: shape
+    fire:
+      - { t: 800, shape: ring, anchor: targets_center, color: '#6c5ce7', ms: 700, scale: 2.8, implode: true }
+      - { t: 1300, shape: shockwave, anchor: targets_center, color: element, ms: 500, scale: 3 }
+  - type: particles
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1300, preset: burst, anchor: target, count: 3, element: auto }
+  - type: flash
+    fire:
+      - { t: 1295, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1300, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1300, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1300, stagger: 90 }
