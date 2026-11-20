@@ -97,21 +97,61 @@ void main() {
       expect(roundedUi(tester), isEmpty);
       expect(achievementToastText('salvage_50'),
           'HAZAÑA · Desarmar 50 · +₵1000 +1 Cristal de Era +1 Prisma Roto');
-      expect(tester.getSize(find.byKey(const ValueKey('ach-toast'))).width,
-          lessThanOrEqualTo(520));
+      // Compacto (v0.19.1): ancho y alto acotados por la escala del texto.
+      final box = tester.getSize(find.byKey(const ValueKey('ach-toast')));
+      final k = size.factor;
+      expect(box.width, lessThanOrEqualTo(300 * k + 0.5));
+      expect(box.height, lessThanOrEqualTo(110 * k));
+      // Recompensa en una fila con íconos (créditos + cristal + prisma).
+      expect(find.byKey(const ValueKey('ach-toast-reward-credits')),
+          findsOneWidget);
+      expect(find.byKey(const ValueKey('ach-toast-reward-cristal')),
+          findsOneWidget);
+      expect(find.byKey(const ValueKey('ach-toast-reward-prisma')),
+          findsOneWidget);
+      expect(find.text('HAZAÑA LOGRADA'), findsOneWidget);
     });
   }
 
-  test('la cola muestra de a uno, 3 s cada uno', () {
+  for (final size in [TextSize.normal, TextSize.large, TextSize.enormous]) {
+    testWidgets('filas de HAZAÑAS a la escala de BESTIARIO (${size.name})',
+        (tester) async {
+      double rowH(CharacterTab tab, Finder f) =>
+          tester.getSize(f.first).height;
+      await pumpPanel(tester,
+          profile: _profile(),
+          textSize: size,
+          build: (v, c) => CharacterPanel(
+              view: v, controller: c, initialTab: CharacterTab.bestiary));
+      await tester.pumpAndSettle();
+      final best = rowH(CharacterTab.bestiary,
+          find.byWidgetPredicate((w) =>
+              w.key is ValueKey<String> &&
+              (w.key! as ValueKey<String>).value.startsWith('bestiary-card-')));
+      await pumpPanel(tester,
+          profile: _profile(),
+          textSize: size,
+          build: (v, c) => CharacterPanel(
+              view: v, controller: c, initialTab: CharacterTab.achievements));
+      await tester.pumpAndSettle();
+      final ach = rowH(CharacterTab.achievements, find.byType(AchievementRow));
+      expect(ach, lessThanOrEqualTo(best + 0.5));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  test('la cola apila hasta 3, 4 s cada uno', () {
     var t = 0.0;
     final f = AchievementFeed(clock: () => t);
     f
       ..push('fuse_first')
-      ..push('fuse_skill');
-    expect(f.current, 'fuse_first');
-    t = 3.1;
-    expect(f.current, 'fuse_skill');
-    t = 6.2;
+      ..push('fuse_skill')
+      ..push('sell_first')
+      ..push('forge_first');
+    expect(f.visible, ['fuse_first', 'fuse_skill', 'sell_first']);
+    t = 4.1;
+    expect(f.visible, ['forge_first']);
+    f.dismissAt(0);
     expect(f.current, isNull);
   });
 
