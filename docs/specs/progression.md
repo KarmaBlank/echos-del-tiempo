@@ -71,9 +71,9 @@ de `addPlayer`:
 - Mejoras: estadísticas válidas para esa arma, cada nivel `0..5` (la
   suma no se recorta: las armas migradas conservan su forja aunque pase
   el tope de su rareza).
-- Atributos válidos si cada uno es `≥` al base de la clase, los puntos
-  son `≥ 0` y `Σ atributos + puntos = Σ base + (nivel − 1) × 3`; si no,
-  `resetBuild`. Siempre tiene el arma inicial de su clase.
+- Atributos válidos (progresión v2, progression_v2.md § 2.1) si cada
+  uno es `base + 3 × k` con `k ≥ 0`, los puntos son `≥ 0` y
+  `Σ k + puntos = nivel − 1`; si no, `resetBuild`. Siempre tiene el arma inicial de su clase.
 - Arma equipada que no existe o no puede equipar → la inicial.
 
 Desde v0.3 cada `PlayerProfile` es **un personaje** de la cuenta
@@ -102,9 +102,11 @@ implementación con disco o `shared_preferences` vive fuera de
     `ZoneRules.xpMult(nivel) = xpFactor(nivel) × bonus del mundo`
     (worldgen.md § 6.3); ~nivel 25 en unas 10 misiones de zona.
 - `gainXp`: suma la XP y mientras alcance resta `xpNeed(nivel)`, sube
-  1 nivel y da `+3` puntos de atributo (`PTS_LVL`), hasta el 50 (la XP
-  sobrante se guarda). El árbol gana 1 punto por nivel (passive_tree.md; 2 desde la v0.8,
-  passive_tree_v6.md § 7).
+  1 nivel y da **1 punto de atributo** (que suma +3 al atributo elegido)
+  y **1 punto de árbol** (progresión v2, v0.10: progression_v2.md), hasta
+  el 50 (la XP sobrante se guarda). Hitos en 10 y 20 (keystone de
+  entrada con 7 / 10 puntos ligados a su ruta) y +2 de árbol por Prueba
+  del Tiempo superada.
 - Al subir, la vida y el maná actuales suben lo mismo que el máximo
   (lo hace la sesión).
 - **Maestría** (v0.4.0, docs/specs/ecos_atlas.md § 6): con nivel 50 la
@@ -117,7 +119,10 @@ implementación con disco o `shared_preferences` vive fuera de
 
 ## Atributos (`allocate`)
 
-`alloc` del panel: cuánto se suma a cada atributo. Valores negativos
+`alloc` del panel: cuántos **puntos** van a cada atributo (cada uno
++3; topes blandos VIT/ESP/FUE/DES 60 y AGI 40, pasado el tope cada +1
+rinde +0.5 en las fórmulas de `StatsCalculator`; los requisitos miran el
+valor crudo; progression_v2.md § 2). Valores negativos
 cuentan como 0. Se acepta si el total es `> 0` y `≤` puntos disponibles.
 Vida y maná actuales suben lo que suba el máximo.
 `previewAllocation` calcula los stats con el reparto sin aplicarlo
@@ -125,7 +130,7 @@ Vida y maná actuales suben lo que suba el máximo.
 subió y tiene puntos.
 
 `respec` / `resetBuild`: atributos al base de la clase, puntos
-`(nivel − 1) × 3`, agrega el arma inicial si falta y, si el arma equipada
+`nivel − 1`, agrega el arma inicial si falta y, si el arma equipada
 deja de cumplir requisitos, equipa la inicial. En la sesión, en lobby o
 preparación llena vida y maná; en otro modo solo recorta al máximo nuevo.
 
@@ -191,8 +196,10 @@ carga igual y queda con las habilidades de su arma.
 
 ## Árbol de pasivas
 
-`takeNode` (`PassiveTreeRules.canTake`) y `resetTree` (vacía la lista;
-gratis, ver § "Reiniciar").
+`takeNode` (`PassiveTreeRules.canTake`), `takeNodes` (camino en un clic),
+`chooseMilestone` (hitos 10 / 20) y `resetTree` (vacía la lista y deja
+los hitos pendientes otra vez; gratis, ver § "Reiniciar"). Árbol v7 y
+puntos: progression_v2.md § 3-6.
 Al tomar un nodo, vida y maná actuales suben lo que suba el máximo; al
 reiniciar se recortan al máximo nuevo. Ver passive_tree.md.
 

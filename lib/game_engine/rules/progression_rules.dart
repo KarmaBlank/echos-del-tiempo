@@ -63,7 +63,9 @@ class ProgressionRules {
   AscensionRules get ascensions => const AscensionRules();
   TrialRules get trials => TrialRules(catalog: catalog);
 
-  static const pointsPerLevel = 3;
+  /// Puntos de atributo por nivel ganado (progresión v2: 1, que suma
+  /// [kAttrPerPoint] = +3 al atributo elegido; antes 3 de +1).
+  static const pointsPerLevel = 1;
   static const upgradeMax = WeaponUpgradeLevels.upMax;
 
   /// Costo de la fusión vieja (trasladar una habilidad a un arma Común).
@@ -172,9 +174,10 @@ class ProgressionRules {
 
   DerivedStats derivedStats(PlayerProfile p) => stats.calculate(buildOf(p));
 
-  /// `previewOf`: los stats si se confirmara el reparto [add].
+  /// `previewOf`: los stats si se confirmara el reparto [add] (en puntos,
+  /// como [allocate]; ya con el tope blando).
   DerivedStats previewAllocation(PlayerProfile p, Map<Attribute, int> add) =>
-      stats.calculate(buildOf(p, attributes: p.attributes.add(add)));
+      stats.calculate(buildOf(p, attributes: p.attributes.add(rawOf(add))));
 
   /// Stats si [p] equipara el arma [weaponId] (vista previa de equipar).
   DerivedStats previewEquip(PlayerProfile p, String weaponId) {
@@ -236,10 +239,20 @@ class ProgressionRules {
 
     // Árbol: en orden, solo nodos que se podrían haber tomado (la
     // Maestría suma puntos).
+    // Hitos (progression_v2.md § 5): solo keystones elegibles y con el
+    // nivel alcanzado.
+    String? ms(int m, String? id) => id != null &&
+            level >= m &&
+            treeRules.milestoneOptions(cls, m).contains(id)
+        ? id
+        : null;
+    final ms10 = ms(10, raw.milestone10), ms20 = ms(20, raw.milestone20);
+    final asc = ascensions.sanitize(cls, level, raw.ascension);
+    final earned = PassiveTreeRules.pointsEarned(level + mastery,
+        trials: asc.trials.length, ms10: ms10 != null, ms20: ms20 != null);
     final tree = <String>[];
     for (final id in raw.tree) {
-      if (treeRules.canTake(
-          cls, level + mastery, PlayerPassiveProgress(tree), id)) {
+      if (treeRules.canTake(cls, earned, PlayerPassiveProgress(tree), id)) {
         tree.add(id);
       }
     }
@@ -298,7 +311,9 @@ class ProgressionRules {
       ecos: ecos,
       ecosUnlocked: raw.ecosUnlocked,
       mastery: mastery,
-      ascension: ascensions.sanitize(cls, level, raw.ascension),
+      ascension: asc,
+      milestone10: ms10,
+      milestone20: ms20,
       // Jefes del Abismo vencidos (v0.8): solo 1..5.
       abyssKills: {
         for (final n in raw.abyssKills)
@@ -312,10 +327,17 @@ class ProgressionRules {
     );
 
     final base = catalog.classes[cls]!.baseAttributes;
-    final okAttributes = Attribute.values.every((k) => p.attributes[k] >= (base[k] ?? 0)) &&
-        p.points >= 0 &&
-        attributeSum(p.attributes) + p.points ==
-            baseAttributeSum(cls) + (level - 1) * pointsPerLevel;
+    // Progresión v2: cada atributo = base + 3 × k, con Σ k + puntos =
+    // nivel − 1 (progression_v2.md § 2.1).
+    var spentUnits = 0;
+    var okAttributes = p.points >= 0;
+    for (final k in Attribute.values) {
+      final d = p.attributes[k] - (base[k] ?? 0);
+      if (d < 0 || d % kAttrPerPoint != 0) okAttributes = false;
+      spentUnits += d ~/ kAttrPerPoint;
+    }
+    okAttributes = okAttributes &&
+        spentUnits + p.points == (level - 1) * pointsPerLevel;
     if (okAttributes) {
       p = _withStartWeapon(p);
     } else {
@@ -357,8 +379,8 @@ class ProgressionRules {
     return InventoryRules.relayout(next);
   }
 
-  /// Suma XP y sube los niveles que alcance (+3 puntos cada uno), hasta
-  /// el nivel máximo; en el 50 la XP llena la Maestría (+2 puntos de árbol
+  /// Suma XP y sube los niveles que alcance (+1 punto de atributo y 1 de árbol cada uno), hasta
+  /// el nivel máximo; en el 50 la XP llena la Maestría (+1 punto de árbol
   /// cada nivel, tope 20; docs/specs/ecos_atlas.md § 6). Con la Maestría
   /// al tope la XP deja de acumularse.
   XpGain gainXp(PlayerProfile p, int xp) {
@@ -399,17 +421,22 @@ class ProgressionRules {
     return t;
   }
 
-  /// `stats`: reparte puntos. Negativos cuentan como 0; el total debe
-  /// ser > 0 y alcanzar.
+  /// `stats`: reparte puntos. [add] cuenta puntos (cada uno suma
+  /// [kAttrPerPoint] al atributo; progression_v2.md § 2.1). Negativos
+  /// cuentan como 0; el total debe ser > 0 y alcanzar.
   PlayerProfile? allocate(PlayerProfile p, Map<Attribute, int> add) {
     final clean = {for (final k in Attribute.values) k: math.max(0, add[k] ?? 0)};
     final total = clean.values.fold(0, (a, b) => a + b);
     if (total <= 0 || total > p.points) return null;
     return p.copyWith(
-      attributes: p.attributes.add(clean),
+      attributes: p.attributes.add(rawOf(clean)),
       points: p.points - total,
     );
   }
+
+  /// Puntos por atributo → suma cruda (× [kAttrPerPoint]).
+  static Map<Attribute, int> rawOf(Map<Attribute, int> units) =>
+      {for (final e in units.entries) e.key: e.value * kAttrPerPoint};
 
   /// `cls`: cambia de clase (árbol vacío, arma inicial, `resetBuild`).
   PlayerProfile? changeClass(PlayerProfile p, String classId) {
@@ -419,6 +446,8 @@ class ProgressionRules {
     final next = _withStartWeapon(p.copyWith(
         classId: classId,
         tree: const [],
+        milestone10: () => null,
+        milestone20: () => null,
         ascension: ascensions.reset(p, full: true).ascension));
     return resetBuild(next.copyWith(equipped: c.startWeaponId));
   }
@@ -479,14 +508,54 @@ class ProgressionRules {
   /// `node`: toma un nodo del árbol de pasivas.
   PlayerProfile? takeNode(PlayerProfile p, String nodeId) {
     if (!treeRules.canTake(
-        p.classId, p.treeLevel, p.passiveProgress, nodeId)) {
+        p.classId, p.treePoints, p.passiveProgress, nodeId)) {
       return null;
     }
     return p.copyWith(tree: [...p.tree, nodeId]);
   }
 
-  /// `treeReset`.
-  PlayerProfile resetTree(PlayerProfile p) => p.copyWith(tree: const []);
+  /// Camino en un clic (progression_v2.md § 4): toma [ids] en orden hasta
+  /// el primero que no se pueda. Devuelve el perfil y cuántos tomó
+  /// (`null` si ninguno).
+  (PlayerProfile, int)? takeNodes(PlayerProfile p, List<String> ids) {
+    var next = p;
+    var n = 0;
+    for (final id in ids) {
+      final t = takeNode(next, id);
+      if (t == null) break;
+      next = t;
+      n++;
+    }
+    return n == 0 ? null : (next, n);
+  }
+
+  /// Hito del nivel [milestone] (10 o 20, progression_v2.md § 5): elige
+  /// [keystoneId] entre `milestoneOptions` y toma con los puntos del hito
+  /// el camino más corto hacia ella (hasta donde alcancen; lo que sobra
+  /// queda libre). `null` si no se puede.
+  PlayerProfile? chooseMilestone(
+      PlayerProfile p, int milestone, String keystoneId) {
+    final bound = PassiveTreeRules.milestonePoints[milestone];
+    if (bound == null || p.level < milestone) return null;
+    final current = milestone == 10 ? p.milestone10 : p.milestone20;
+    if (current != null) return null;
+    if (!treeRules.milestoneOptions(p.classId, milestone).contains(keystoneId)) {
+      return null;
+    }
+    final path = treeRules.pathTo(p.classId, p.passiveProgress, keystoneId);
+    if (path == null) return null;
+    var next = milestone == 10
+        ? p.copyWith(milestone10: () => keystoneId)
+        : p.copyWith(milestone20: () => keystoneId);
+    final take = path.take(bound).toList();
+    next = takeNodes(next, take)?.$1 ?? next;
+    return next;
+  }
+
+  /// `treeReset`: árbol vacío y los hitos vuelven a quedar pendientes
+  /// (sus puntos se recuperan al volver a elegir; no se duplican).
+  PlayerProfile resetTree(PlayerProfile p) => p.copyWith(
+      tree: const [], milestone10: () => null, milestone20: () => null);
 
   /// Agrega un arma Común de [weaponId] (compatibilidad; sin mirar el
   /// lugar).

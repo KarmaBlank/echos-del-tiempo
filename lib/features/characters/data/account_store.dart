@@ -193,7 +193,7 @@ class JsonFileAccountStore implements AccountStore {
       }
       await source.copy(_path(name));
     }
-    final (a, notice) = migrateAccountBalance(l.account);
+    final (a, notice) = migrateAccountBalance(l.account, fromBv: bv);
     await save(a);
     final both = [
       if (l.notice case final n?) n,

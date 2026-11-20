@@ -25,10 +25,10 @@ PlayerProfile richWarrior({int credits = 1000}) =>
         Attribute.vit: 10,
         Attribute.esp: 4,
         Attribute.agi: 6,
-        Attribute.fue: 16,
-        Attribute.des: 10,
+        Attribute.fue: 15,
+        Attribute.des: 9,
       }),
-      points: 4,
+      points: 2,
       inventory: const ['espada_bronce', 'hacha_rompe'],
       equipped: 'espada_bronce',
     ));

@@ -2,13 +2,16 @@ import 'dart:math' as math;
 
 import '../models/passive_tree.dart';
 import 'passive_tree_v6.dart';
+import 'passive_tree_v7.dart';
+
+export 'passive_tree_v7.dart' show TreeV7;
 import 'summoner_catalog.dart';
 
 /// Versión del árbol que guarda el perfil (`tv`). Un perfil con una
 /// versión menor se migra al cargarlo (passive_tree_v4.md § 6). El árbol
 /// v6 (v0.8) solo agrega nodos: los ids de la v5 siguen iguales, así que
 /// la versión no cambia (passive_tree_v6.md § 8).
-const kPassiveTreeVersion = 5;
+const kPassiveTreeVersion = 6;
 
 /// Árbol de pasivas v6 (v0.8, passive_tree_v6.md): el árbol v5 (4
 /// inicios, anillo central de 12, rutas de clase, 20 clusters de clase
@@ -18,7 +21,20 @@ const kPassiveTreeVersion = 5;
 /// exteriores (584 nodos, 200 notables, 36 keystones). Forma, coordenadas
 /// e ids exactos en los specs; todo se genera desde las definiciones de
 /// abajo y de passive_tree_v6.dart, con ids determinísticos.
-final PassiveTreeCatalog kPassiveTree = _build();
+/// Árbol v6 tal cual (base del v7).
+final PassiveTreeCatalog kPassiveTreeV6 = _build();
+
+/// Árbol v7 (progression_v2.md § 3): el v6 con los nodos de paso
+/// fusionados, notables menores y sueltos absorbidos. `tv` 6.
+final TreeV7 kTreeV7 = buildTreeV7(kPassiveTreeV6, v6SmallMechanic);
+
+final PassiveTreeCatalog kPassiveTree = kTreeV7.catalog;
+
+/// Id v6 fusionado o absorbido → id v7 que lo contiene.
+Map<String, String> get kTreeV7Merged => kTreeV7.merged;
+
+/// Traduce un id v6 al v7 (el mismo si sigue existiendo).
+String treeV7Id(String id) => kTreeV7.merged[id] ?? id;
 
 /// Ids que existen igual en la v2 y la v4 (mismo id, nombre y efecto):
 /// el anillo central y los inicios. La migración desde la v2 conserva

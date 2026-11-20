@@ -375,7 +375,8 @@ class CharacterRules {
 /// ese personaje; los del alijo, al elegido. Devuelve la cuenta y el aviso
 /// único (`null` si no hubo nada que devolver). Idempotente.
 (Account, String?) migrateAccountBalance(Account a,
-    {BalanceMigration rules = const BalanceMigration()}) {
+    {int fromBv = 0,
+    BalanceMigration rules = const BalanceMigration()}) {
   var total = const BalanceRefund();
   var next = a;
   for (final c in a.characters) {
@@ -404,9 +405,29 @@ class CharacterRules {
           lastPlayed: sel.lastPlayed);
     }
   }
-  if (total.isEmpty) return (next, null);
-  return (
-    next,
-    'Rebalance v0.9: te devolvimos lo que cambió. ${total.lines.join('; ')}.',
-  );
+  // Progresión v2 (bv 3): todos los puntos devueltos, una vez.
+  var progression = false;
+  if (fromBv < 3) {
+    for (final c in next.characters) {
+      final p = resetProgressionV2(c.profile);
+      if (p.tree.isEmpty && c.profile.tree.isEmpty &&
+          p.points == c.profile.points &&
+          p.attributes.values.toString() ==
+              c.profile.attributes.values.toString()) {
+        continue;
+      }
+      progression = true;
+      next = next.replace(c.id, p, lastPlayed: c.lastPlayed);
+    }
+  }
+  final lines = [
+    if (progression) kProgressionV2Notice,
+    if (!total.isEmpty)
+      'Rebalance v0.9: te devolvimos lo que cambió. ${total.lines.join('; ')}.',
+  ];
+  return (next, lines.isEmpty ? null : lines.join(' '));
 }
+
+/// Aviso único de la migración a la progresión v2.
+const kProgressionV2Notice = 'La progresión cambió: te devolvimos todos tus '
+    'puntos de atributo y de árbol. Reasigná antes de salir.';

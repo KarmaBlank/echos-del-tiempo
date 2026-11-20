@@ -21,7 +21,7 @@ import 'package:flutter_test/flutter_test.dart';
 // al acabarse: nunca crítico ni probabilidad).
 
 final _stats = StatsCalculator(
-    classes: kClasses, treeRules: PassiveTreeRules(kPassiveTree));
+    classes: kClasses, treeRules: PassiveTreeRules(kPassiveTreeV6));
 
 BattleEngine _engine([List<double> rolls = const []]) {
   var i = 0;
@@ -121,10 +121,10 @@ void main() {
       'luz_nc': 'luzPurificadora',
       'acecho_nc': 'cazadorBestias',
     };
-    expect(kPassiveTreeVersion, 5);
+    expect(kPassiveTreeVersion, 6);
     expect(kTreeIdsChangedInV5, expected.keys.toSet());
     for (final MapEntry(key: node, value: mech) in expected.entries) {
-      final n = kPassiveTree.nodes[node]!;
+      final n = kPassiveTreeV6.nodes[node]!;
       expect(n.kind, 'n', reason: node);
       expect(n.mechanicId, mech, reason: node);
       final m = kMechanics[mech]!;
@@ -143,7 +143,7 @@ void main() {
     }
   });
 
-  test('migración v4 → v5: se devuelven solo los nodos que cambiaron', () {
+  test('migración v4 → árbol v7: se devuelve todo (progresión v2)', () {
     final kept = migrateTreeIds(
         'maga',
         [
@@ -151,8 +151,8 @@ void main() {
           'cronos_n1', 'cronos_m1',
         ],
         4);
-    // brasa_n1 cambió; brasa_m1 queda sin conexión: los dos vuelven.
-    expect(kept, ['mag_r1', 'mag_f2', 'mag_f3', 'cronos_n1', 'cronos_m1']);
+
+    expect(kept, isEmpty);
     final p = PlayerProfile.fromJson({
       'name': 'Ana',
       'cls': 'maga',
@@ -160,9 +160,9 @@ void main() {
       'tv': 4,
       'tree': ['mag_r1', 'mag_f2', 'mag_f1', 'arcano_n1', 'arcano_m1'],
     });
-    expect(p.tree, ['mag_r1', 'mag_f2', 'mag_f1']);
-    expect(p.treeRefunded, 2);
-    expect(p.toJson()['tv'], 5);
+    expect(p.tree, isEmpty);
+    expect(p.treeRefunded, 5);
+    expect(p.toJson()['tv'], 6);
   });
 
   test('quién preparó: se guarda al aplicar y viaja en el JSON', () {

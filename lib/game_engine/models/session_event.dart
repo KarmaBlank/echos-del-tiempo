@@ -236,7 +236,7 @@ class EcoCompletedEvent extends SessionEvent {
       {required this.tier, required this.zone, required this.boss});
 }
 
-/// [playerId] subió a la Maestría [mastery] (+2 puntos de árbol desde la v0.8).
+/// [playerId] subió a la Maestría [mastery] (+1 punto de árbol, progresión v2).
 class MasteryUpEvent extends SessionEvent {
   final String playerId;
   final int mastery;

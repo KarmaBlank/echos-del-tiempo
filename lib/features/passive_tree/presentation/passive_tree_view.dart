@@ -11,6 +11,8 @@ import '../../../app/theme/ui_theme.dart';
 import '../../../game_engine/models/passive_tree.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/passive_tree_rules.dart';
+import '../../build_planner/presentation/build_planner_view.dart'
+    show PickOption, showBuildPicker;
 import '../domain/passive_text.dart';
 
 /// El árbol de pasivas v3 (docs/specs/passive_tree_v3.md § 13): lienzo con
@@ -33,7 +35,19 @@ class PassiveTreeView extends StatefulWidget {
     this.showHelp = true,
     this.planned = const {},
     this.onPlan,
+    this.onTakePath,
+    this.onMark,
+    this.onChooseMilestone,
   });
+
+  /// Camino en un clic (progression_v2.md § 4): toma la lista en orden.
+  final ValueChanged<List<String>>? onTakePath;
+
+  /// MARCAR: agrega o quita un nodo del plan de build.
+  final ValueChanged<String>? onMark;
+
+  /// Hito del nivel 10 / 20 (progression_v2.md § 5).
+  final void Function(int milestone, String keystoneId)? onChooseMilestone;
 
   final PassiveTreeRules rules;
   final PlayerProfile profile;
@@ -128,7 +142,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
 
   Map<String, TreeNodeState> _allStates() {
     final p = widget.profile;
-    final key = '${identityHashCode(_cat)}|${p.classId}|${p.treeLevel}|'
+    final key = '${identityHashCode(_cat)}|${p.classId}|${p.treePoints}|'
         '${widget.inBattle}|${p.tree.join(',')}';
     if (_statesKey != key || _states == null) {
       _statesKey = key;
@@ -154,7 +168,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         widget.rules,
         classId: widget.profile.classId,
         // La Maestría suma puntos de árbol (ecos_atlas.md § 6).
-        level: widget.profile.treeLevel,
+        level: widget.profile.treePoints,
         progress: widget.profile.passiveProgress,
         nodeId: id,
         inBattle: widget.inBattle,
@@ -201,6 +215,46 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       plan(id);
     } else if (_status(id).canTake) {
       widget.onTake(id);
+    } else {
+      _askPath(id);
+    }
+  }
+
+  /// Camino en un clic (progression_v2.md § 4): un notable o keystone que
+  /// todavía no conecta → confirmar "Tomar N nodos por N puntos".
+  Future<void> _askPath(String id) async {
+    final take = widget.onTakePath;
+    final node = _cat.nodes[id];
+    if (take == null || node == null || widget.inBattle) return;
+    if (node.kind != 'n' && node.kind != 'k') return;
+    final p = widget.profile;
+    final route = widget.rules.pathTo(p.classId, p.passiveProgress, id);
+    if (route == null || route.length < 2) return;
+    final n = route.length;
+    final have = widget.rules.pointsAvailable(p.treePoints, p.passiveProgress);
+    final names = [for (final r in route) _cat.nodes[r]!.name].join(' · ');
+    final can = math.min(n, have);
+    final choice = await showBuildPicker<String>(
+        context, can >= n ? 'Tomar $n nodos por $n puntos' : 'Faltan puntos', [
+      if (can > 0)
+        PickOption(
+            'take',
+            can >= n
+                ? 'Tomar $n nodos por $n puntos'
+                : 'Tomar los primeros $can de $n (te faltan ${n - can})',
+            names,
+            key: 'path-take'),
+      if (widget.onMark != null)
+        PickOption('mark',
+            widget.planned.contains(id) ? 'Quitar marca' : 'Marcar', null,
+            key: 'path-mark'),
+    ]);
+    if (!mounted) return;
+    switch (choice) {
+      case 'take':
+        take(route.take(can).toList());
+      case 'mark':
+        widget.onMark?.call(id);
     }
   }
 
@@ -289,9 +343,15 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   Widget build(BuildContext context) {
     final rules = widget.rules;
     final p = widget.profile;
-    final points = rules.pointsAvailable(p.treeLevel, p.passiveProgress);
+    final points = rules.pointsAvailable(p.treePoints, p.passiveProgress);
     final states = _allStates();
-    final hits = _hits();
+    // Hito pendiente (progression_v2.md § 5): sus keystones se marcan.
+    final pending =
+        widget.onChooseMilestone == null ? const <int>[] : p.pendingMilestones;
+    final options = pending.isEmpty
+        ? const <String>[]
+        : rules.milestoneOptions(p.classId, pending.first);
+    final hits = {..._hits(), ...options};
     final focusId = _hover ?? _selected;
     final route = focusId == null
         ? const <String>[]
@@ -332,6 +392,10 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
           ],
         ),
         const SizedBox(height: 8),
+        if (pending.isNotEmpty) ...[
+          _milestoneBanner(pending.first, options),
+          const SizedBox(height: 8),
+        ],
         _grow(
             fill,
             Row(
@@ -362,6 +426,77 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
 
   static Widget _grow(bool fill, Widget child) =>
       fill ? Expanded(child: child) : child;
+
+  /// Color de los hitos (los puntos de hito se ven aparte de los libres).
+  static const milestoneColor = ProtoColors.orange;
+
+  /// Hito del nivel 10 / 20 (progression_v2.md § 5): qué gana, las
+  /// keystones de entrada para elegir (marcadas en el árbol; al pasar o
+  /// tocar se ve el camino) y sus puntos aparte.
+  Widget _milestoneBanner(int m, List<String> options) {
+    final pts = PassiveTreeRules.milestonePoints[m]!;
+    final p = widget.profile;
+    return Container(
+      key: ValueKey('milestone-banner-$m'),
+      padding: EdgeInsets.all(UiTheme.space(8)),
+      decoration: BoxDecoration(
+        border: Border.all(color: milestoneColor, width: 2),
+        color: ProtoColors.bg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+              retroText('Hito del nivel $m: elegí una keystone de entrada; '
+                  'te damos los puntos de su camino.'),
+              style: const TextStyle(color: ProtoColors.title)),
+          Text(retroText('Puntos de hito: $pts, solo para esta ruta.'),
+              key: const ValueKey('milestone-points'),
+              style: const TextStyle(color: milestoneColor)),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              for (final id in options)
+                MouseRegion(
+                  onEnter: (_) => setState(() => _selected = id),
+                  child: PanelButton(
+                    'ELEGIR ${_cat.nodes[id]!.name} '
+                    '(${widget.rules.pathTo(p.classId, p.passiveProgress, id)?.length ?? 0} nodos)',
+                    key: ValueKey('milestone-pick-$id'),
+                    accent: milestoneColor,
+                    selected: _selected == id,
+                    onPressed: widget.inBattle
+                        ? null
+                        : () {
+                            if (_selected != id) {
+                              setState(() => _selected = id);
+                              return;
+                            }
+                            widget.onChooseMilestone?.call(m, id);
+                          },
+                  ),
+                ),
+            ],
+          ),
+          if (options.contains(_selected))
+            Text(
+                retroText('Clic otra vez para confirmar: se toma el camino '
+                    'resaltado.'),
+                style: const TextStyle(color: ProtoColors.dim)),
+        ],
+      ),
+    );
+  }
+
+  /// "Hito del nivel N" si [id] es la keystone elegida en un hito.
+  String? _milestoneOf(String id) {
+    final p = widget.profile;
+    if (p.milestone10 == id) return 'Hito del nivel 10';
+    if (p.milestone20 == id) return 'Hito del nivel 20';
+    return null;
+  }
 
   /// Buscador y botones de zoom.
   Widget _toolbar(int hitCount) => Wrap(
@@ -578,6 +713,9 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                 if (cost != null)
                   Text(retroText(cost),
                       style: const TextStyle(color: ProtoColors.gold)),
+                if (_milestoneOf(id) case final ms?)
+                  Text(retroText(ms),
+                      style: const TextStyle(color: milestoneColor)),
                 if (widget.planned.contains(id))
                   Text(retroText('★ En tu build'),
                       style:
@@ -694,6 +832,10 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
             child: Text(retroText(line)),
           ),
         const SizedBox(height: 8),
+        if (_milestoneOf(node.id) case final ms?)
+          Text(retroText(ms),
+              key: const ValueKey('tree-milestone-mark'),
+              style: const TextStyle(color: milestoneColor)),
         if (cost != null)
           Text(retroText(cost),
               style: const TextStyle(color: ProtoColors.gold)),
@@ -724,6 +866,14 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                 reason: st.reason,
                 onPressed: () => widget.onTake(node.id)),
           ),
+          if (widget.onTakePath != null &&
+              route.length > 1 &&
+              (node.kind == 'n' || node.kind == 'k')) ...[
+            const SizedBox(height: 6),
+            PanelButton('TOMAR CAMINO (${route.length})',
+                key: const ValueKey('tree-take-path'),
+                onPressed: widget.inBattle ? null : () => _askPath(node.id)),
+          ],
         ],
         const SizedBox(height: 16),
         _legend(),

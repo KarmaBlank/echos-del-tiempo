@@ -387,7 +387,7 @@ void main() {
       expect(s.players['local-c2']!.profile.level, 2);
       expect(s.mode, SessionMode.field,
           reason: 'el compañero guarda sus puntos sin pausar');
-      expect(s.players['local-c2']!.profile.points, 3);
+      expect(s.players['local-c2']!.profile.points, 1);
     });
   });
 

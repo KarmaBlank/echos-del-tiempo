@@ -84,7 +84,7 @@ keystone, ascensión de otra clase o ya elegiste otra, id desconocido).
 - `next`: **siguiente paso sugerido** (una línea), en este orden:
   1. puntos de atributo sin repartir y el atributo del plan al que más
      le falta:
-     "Tenés 3 puntos: según tu build, FUE (32/40)";
+     "Tenés 2 puntos: según tu build, FUE (18/40)" (progresión v2: cada punto +3);
   2. puntos de árbol libres y un nodo del plan: el más cercano
      (`pathTo`): "Te faltan 3 puntos para Rompeguardias" (si alcanzan:
      "Tomá Impacto → camino a Rompeguardias");

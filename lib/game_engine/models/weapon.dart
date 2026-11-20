@@ -13,6 +13,14 @@ class PowerFormula {
     coefficients.forEach((attr, coef) => total += coef * attrs[attr]);
     return total;
   }
+
+  /// Igual que [evaluate] con atributos efectivos (tope blando,
+  /// progression_v2.md § 2.2).
+  double evaluateEffective(double Function(Attribute) attr) {
+    var total = base;
+    coefficients.forEach((a, coef) => total += coef * attr(a));
+    return total;
+  }
 }
 
 /// Categoría de un tipo de arma (loot.md § 16.1): qué habilidades

@@ -123,7 +123,9 @@ class _UnusedPointsToastState extends State<UnusedPointsToast> {
     if (widget.treeLevel > _level ||
         widget.ascensionEarned > _asc ||
         // Un compañero ganó puntos (solo_party.md § 6.3).
-        widget.points.companionTotal > old.points.companionTotal) {
+        widget.points.companionTotal > old.points.companionTotal ||
+        // Hito nuevo (progression_v2.md § 5): aviso propio.
+        widget.points.milestone > old.points.milestone) {
       _pending = true;
     }
     // Bajar (cambio de personaje, reinicio de Maestría): solo se anota.

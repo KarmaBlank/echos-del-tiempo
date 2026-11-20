@@ -103,7 +103,7 @@ void main() {
   testWidgets('equipar: nivel de la base y arma de otra clase que cumple',
       (tester) async {
     // Guerrero con ESP 14 (Lv7): equipa el báculo de maga.
-    final low = lootWarrior(level: 7, esp: 14);
+    final low = lootWarrior(level: 7, esp: 16);
     final c = await _inventory(tester, low);
     PlayerProfile me() => c.view!.me!.profile;
     await _tap(tester, 'inv-cell-${cellOf(me(), 'c1')}');

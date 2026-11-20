@@ -93,6 +93,21 @@ class TakeNodeAction extends SessionAction {
   const TakeNodeAction(this.nodeId);
 }
 
+/// `nodes` (v0.10): camino en un clic; el host los toma en orden hasta
+/// el primero que falle (progression_v2.md § 4).
+class TakeNodesAction extends SessionAction {
+  final List<String> nodeIds;
+  const TakeNodesAction(this.nodeIds);
+}
+
+/// `milestone` (v0.10): elige la keystone del hito 10 o 20
+/// (progression_v2.md § 5).
+class ChooseMilestoneAction extends SessionAction {
+  final int milestone;
+  final String keystoneId;
+  const ChooseMilestoneAction(this.milestone, this.keystoneId);
+}
+
 /// `treeReset`.
 class ResetTreeAction extends SessionAction {
   const ResetTreeAction();

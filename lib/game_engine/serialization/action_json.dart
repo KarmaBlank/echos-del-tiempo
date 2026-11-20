@@ -51,6 +51,12 @@ abstract final class ActionJson {
           },
         EquipAction() => {'t': 'equip', 'w': a.weaponId},
         TakeNodeAction() => {'t': 'node', 'id': a.nodeId},
+        TakeNodesAction() => {'t': 'nodes', 'ids': a.nodeIds},
+        ChooseMilestoneAction() => {
+            't': 'milestone',
+            'm': a.milestone,
+            'id': a.keystoneId,
+          },
         ResetTreeAction() => {'t': 'treeReset'},
         FuseAction() => {
             't': 'fuse',
@@ -153,6 +159,13 @@ abstract final class ActionJson {
         return EquipAction(j.str('w'));
       case 'node':
         return TakeNodeAction(j.str('id'));
+      case 'nodes':
+        return TakeNodesAction([
+          for (final x in asList(j['ids']).take(64))
+            x is String ? x : throw const FormatException('JSON inválido: id'),
+        ]);
+      case 'milestone':
+        return ChooseMilestoneAction(j.integer('m'), j.str('id'));
       case 'treeReset':
         return const ResetTreeAction();
       case 'fuse':

@@ -341,6 +341,23 @@ class PassiveMechanic {
   /// Texto completo para el tooltip del árbol.
   final String description;
 
+  /// La misma mecánica con otro id (dos ids iguales en el conjunto de un
+  /// jugador cuentan una vez; con otro id suman).
+  PassiveMechanic withId(String newId) => PassiveMechanic(
+        id: newId,
+        name: name,
+        trigger: trigger,
+        filter: filter,
+        chance: chance,
+        status: status,
+        minStacks: minStacks,
+        threshold: threshold,
+        reaction: reaction,
+        family: family,
+        effects: effects,
+        description: description,
+      );
+
   bool get isCondition =>
       trigger == ProcTrigger.whileLowHealth ||
       trigger == ProcTrigger.vsStatus ||

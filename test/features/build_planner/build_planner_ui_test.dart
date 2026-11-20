@@ -94,7 +94,7 @@ void main() {
     expect(find.byKey(const ValueKey('build-attr-hint')), findsOneWidget);
     expect(find.text('★ 12/30'), findsOneWidget);
     await tapVisible(tester, find.byKey(const ValueKey('inc-fue')));
-    expect(find.text('★ 13/30'), findsOneWidget);
+    expect(find.text('★ 15/30'), findsOneWidget);
   });
 
   testWidgets('COMPRAR: ★ en la fila y "Tu build" en el detalle',
@@ -133,11 +133,11 @@ void main() {
         .read(buildPlanProvider.notifier)
         .save(const BuildPlan(attributes: {Attribute.fue: 30}));
     await tester.pump();
-    expect(c.allocate({Attribute.fue: 2}), isTrue);
+    expect(c.allocate({Attribute.fue: 1}), isTrue);
     await tester.pump();
     await tester.pump();
-    expect(find.text('Build: FUE 14/30'), findsOneWidget);
-    expect(c.view!.chat.last.text, 'Build: FUE 14/30');
+    expect(find.text('Build: FUE 15/30'), findsOneWidget);
+    expect(c.view!.chat.last.text, 'Build: FUE 15/30');
     expect(c.view!.chat.last.system, isTrue);
 
     // Con el ajuste apagado no hay aviso nuevo.
@@ -147,7 +147,7 @@ void main() {
     expect(c.allocate({Attribute.fue: 1}), isTrue);
     await tester.pump();
     await tester.pump();
-    expect(c.view!.chat.last.text, 'Build: FUE 14/30');
+    expect(c.view!.chat.last.text, 'Build: FUE 15/30');
     // Fuera la pantalla: se cancela el refresco de los carteles.
     await tester.pumpWidget(const SizedBox());
   });

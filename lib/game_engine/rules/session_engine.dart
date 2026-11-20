@@ -34,6 +34,7 @@ import 'loot_filter_rules.dart';
 import 'loot_rules.dart';
 import 'map_generator.dart';
 import 'mulberry32.dart';
+import 'passive_tree_rules.dart';
 import 'progression_rules.dart';
 import 'trial_rules.dart';
 import 'tutorial_rules.dart';
@@ -222,6 +223,8 @@ class SessionEngine {
         RespecAction() ||
         ChangeClassAction() ||
         TakeNodeAction() ||
+        TakeNodesAction() ||
+        ChooseMilestoneAction() ||
         ResetTreeAction() ||
         ChooseAscensionAction() ||
         TakeAscensionNodeAction() ||
@@ -723,6 +726,25 @@ class _Op {
         }
         final node = rules.treeRules.catalog.nodes[a.nodeId]!;
         if (node.kind == 'k') say('${p.name} tomó la keystone ${node.name}');
+        return true;
+
+      case TakeNodesAction():
+        if (s.mode == SessionMode.battle) return false;
+        final r = rules.takeNodes(p.profile, a.nodeIds);
+        if (r == null || !_profileChange(p, r.$1, gain: true)) return false;
+        for (final id in a.nodeIds.take(r.$2)) {
+          final node = rules.treeRules.catalog.nodes[id]!;
+          if (node.kind == 'k') say('${p.name} tomó la keystone ${node.name}');
+        }
+        return true;
+
+      case ChooseMilestoneAction():
+        if (s.mode == SessionMode.battle) return false;
+        final next =
+            rules.chooseMilestone(p.profile, a.milestone, a.keystoneId);
+        if (!_profileChange(p, next, gain: true)) return false;
+        final k = rules.treeRules.catalog.nodes[a.keystoneId]!;
+        say('${p.name} juró la keystone ${k.name} (hito ${a.milestone})');
         return true;
 
       case ResetTreeAction():
@@ -2884,9 +2906,13 @@ class _Op {
         refresh(p, gain: true);
         for (var l = oldLevel + 1; l <= g.profile.level; l++) {
           events.add(LevelUpEvent(p.id, l));
+          if (PassiveTreeRules.milestonePoints.containsKey(l)) {
+            say('${p.name}: ¡hito del nivel $l! Elegí una keystone de '
+                'entrada en ÁRBOL.');
+          }
         }
       }
-      // Maestría (ecos_atlas.md § 6): +2 puntos de árbol (v0.8), sin pausar.
+      // Maestría (ecos_atlas.md § 6): +1 punto de árbol (progresión v2), sin pausar.
       if (g.masteryGained > 0) {
         final m = g.profile.mastery;
         for (var k = m - g.masteryGained + 1; k <= m; k++) {

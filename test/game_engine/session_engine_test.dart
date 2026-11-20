@@ -13,7 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'session_test_helpers.dart';
 
 /// Guerrero de nivel [level] con los puntos repartidos en VIT y FUE.
-PlayerProfile _strong(int level, {int vit = 17, String name = 'Fuerte'}) {
+PlayerProfile _strong(int level, {int vit = 18, String name = 'Fuerte'}) {
   final pts = (level - 1) * 3;
   return progression.normalize(PlayerProfile.fromJson({
     'name': name,
@@ -278,7 +278,7 @@ void main() {
       expect(s.mustAllocate('p0'), isTrue);
       final p = s.players['p0']!;
       expect(p.profile.level, 2);
-      expect(p.profile.points, 3);
+      expect(p.profile.points, 1);
       expect(p.profile.xp, 29 - 18);
       expect(p.maxHp, greaterThan(before));
       // El reloj de la misión no corre en levelUp.
@@ -288,7 +288,7 @@ void main() {
       expect(s.mission!.elapsed, elapsed);
       final hp = s.players['p0']!.hp;
       final maxHp = s.players['p0']!.maxHp;
-      s = act(e, s, 'p0', const AllocateStatsAction({Attribute.vit: 3}));
+      s = act(e, s, 'p0', const AllocateStatsAction({Attribute.vit: 1}));
       // VIT +3 → +12 de vida base, × 1.05 del nodo inicial (redondeado).
       final gained = s.players['p0']!.maxHp - maxHp;
       expect(gained, 13);

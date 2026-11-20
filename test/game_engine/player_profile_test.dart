@@ -50,79 +50,37 @@ void main() {
       final p = progression.normalize(raw);
       expect(p.tree, isEmpty);
       expect(p.treeRefunded, 0, reason: 'normalize lo consume');
-      expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 10);
+      expect(treeRules.pointsAvailable(p.treePoints, p.passiveProgress), 5);
       expect(p.toJson()['tv'], PlayerProfile.treeVersion);
       expect(p.toJson().containsKey('tvRef'), isFalse);
     });
 
-    test('un perfil v4 conserva su árbol', () {
+    // Progresión v2 (progression_v2.md § 7): cualquier árbol anterior al
+    // v7 (`tv` < 6) se devuelve entero, gratis.
+    test('un perfil v2 / v3 / v4 / v5 vuelve con el árbol vacío', () {
+      for (final tv in [2, 3, 4, 5]) {
+        final raw = PlayerProfile.fromJson({
+          ...v1,
+          'lvl': 20,
+          'tv': tv,
+          'tree': ['p_gue', 'gue_r1', 'gue_f3', 'id_que_no_existe'],
+        });
+        expect(raw.tree, isEmpty, reason: 'tv $tv');
+        expect(raw.treeRefunded, 4, reason: 'tv $tv');
+        final p = progression.normalize(raw);
+        expect(treeRules.pointsAvailable(p.treePoints, p.passiveProgress), 19);
+        expect(p.toJson()['tv'], PlayerProfile.treeVersion);
+      }
+    });
+
+    test('un perfil del árbol actual conserva su árbol', () {
       final p = PlayerProfile.fromJson({
         ...v1,
-        'tv': 4,
-        'tree': ['gue_r1', 'gue_f3'],
+        'tv': PlayerProfile.treeVersion,
+        'tree': ['gue_r1'],
       });
-      expect(p.tree, ['gue_r1', 'gue_f3']);
+      expect(p.tree, ['gue_r1']);
       expect(p.treeRefunded, 0);
-    });
-
-    // passive_tree_v4.md § 6: de la v3 queda lo que sigue igual (anillo,
-    // inicios, r1, abanico, notables A/B, keystones, puentes y grupos salvo
-    // la punta) si sigue conectado; el resto vuelve gratis.
-    test('un perfil v3 conserva lo que no cambió y recupera lo demás', () {
-      final raw = PlayerProfile.fromJson({
-        ...v1,
-        'lvl': 30,
-        'tv': 3,
-        'tree': [
-          'gue_r1', 'gue_r2', 'gue_f3', 'quiebre_e1', 'quiebre_e2', //
-          'quiebre_f', 'quiebre_a1', 'quiebre_a2', 'quiebre_na', 'p_gue',
-          'r_gm1', 'estandarte_e1', 'estandarte_e2', 'estandarte_a1',
-          'estandarte_a2', 'estandarte_na', 'estandarte_j', 'estandarte_t',
-        ],
-      });
-      expect(raw.tree, [
-        'gue_r1', 'gue_f3', 'p_gue', 'r_gm1', 'estandarte_e1', //
-        'estandarte_e2', 'estandarte_a1', 'estandarte_a2', 'estandarte_na',
-        'estandarte_j',
-      ]);
-      expect(raw.treeRefunded, 8,
-          reason: 'quiebre_na sigue igual pero ya no conecta: también vuelve');
-      final p = progression.normalize(raw);
-      expect(p.tree, raw.tree);
-      expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 58 - 10);
-      expect(p.toJson()['tv'], PlayerProfile.treeVersion);
-    });
-
-    // passive_tree_v3.md § 11: de la v2 solo quedan el anillo y los
-    // inicios (mismo id y efecto), si siguen conectados; el resto vuelve.
-    test('un perfil v2 conserva anillo e inicios y recupera lo demás', () {
-      final raw = PlayerProfile.fromJson({
-        ...v1,
-        'lvl': 20,
-        'tv': 2,
-        'tree': [
-          'p_gue', 'sangre_1', 'sangre_2', 'r_gm1', 'r_gm2', 'p_mag', //
-          's_mag', 'brasa_1', 'brasa_2', 'id_que_no_existe', 'r_tp1',
-        ],
-      });
-      expect(raw.tree, ['p_gue', 'r_gm1', 'r_gm2', 'p_mag', 's_mag']);
-      expect(raw.treeRefunded, 6, reason: 'r_tp1 no conecta: también vuelve');
-      final p = progression.normalize(raw);
-      expect(p.tree, raw.tree);
-      expect(treeRules.pointsAvailable(p.level, p.passiveProgress), 38 - 5);
-      expect(p.toJson()['tv'], PlayerProfile.treeVersion);
-    });
-
-    test('v2 con una clase desconocida o ids basura no rompe', () {
-      final raw = PlayerProfile.fromJson({
-        'cls': 'nigromante',
-        'lvl': 5,
-        'tv': 2,
-        'tree': ['???', 's_gue', 'p_gue', 42],
-      });
-      expect(raw.tree, ['p_gue']);
-      expect(raw.treeRefunded, 2);
-      expect(progression.normalize(raw).tree, ['p_gue']);
     });
 
     test('v1 sin nodos: nada que devolver', () {

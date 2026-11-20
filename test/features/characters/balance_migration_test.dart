@@ -126,7 +126,8 @@ void main() {
       // Lo demás no cambia.
       expect(p.level, 8);
       expect(p.xp, 120);
-      expect(p.tree, ['nodoX']);
+      // Progresión v2 (bv 3): el árbol se devuelve entero.
+      expect(p.tree, isEmpty);
       expect(p.material(CraftMaterial.esquirla), 4);
       expect(notice, contains('Rebalance v0.9'));
       expect(notice, contains('₵'));

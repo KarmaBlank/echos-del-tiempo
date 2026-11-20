@@ -226,7 +226,7 @@ void main() {
       final (m, refund) = const BalanceMigration().migrateItem(old);
       expect(m, old);
       expect(refund.isEmpty, isTrue);
-      expect(kBalanceVersion, 2);
+      expect(kBalanceVersion, greaterThanOrEqualTo(2));
       expect(_battleKit(old).last, kQuebrarId);
     });
   });

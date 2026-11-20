@@ -42,7 +42,7 @@ void main() {
     expect(s.first.kind, AttrSuggestionKind.scaling);
     expect(s.first.reasons.first,
         contains('ATQ por punto con tu Espada de Bronce (escala FUE×0.6)'));
-    expect(_sum(s), 3);
+    expect(_sum(s), 1);
     final sc = _advisor.scores(g, BuildPlan.empty);
     expect(sc[Attribute.fue]!.total, greaterThan(sc[Attribute.des]!.total));
     expect(sc[Attribute.des]!.total, greaterThan(sc[Attribute.esp]!.total));
@@ -64,15 +64,15 @@ void main() {
     expect(s.first.kind, AttrSuggestionKind.requirement);
     expect(s.first.reasons.first,
         'Te faltan 6 FUE para equipar Hacha Rompeturnos');
-    expect(s.first.points, greaterThanOrEqualTo(6));
+    expect(s.first.points, greaterThanOrEqualTo(2));
     expect(_sum(s), g.points);
     expect(AttributeAdvisor.summary(s),
-        startsWith('FUE +${s.first.points}'));
+        startsWith('FUE +${s.first.points * 3}'));
 
     // Con menos puntos que el requisito: todos ahí, y lo dice.
     final few = _p('guerrero', 2);
     final f = _advisor.recommend(few, plan);
-    expect(AttributeAdvisor.allocation(f), {Attribute.fue: 3});
+    expect(AttributeAdvisor.allocation(f), {Attribute.fue: 1});
     expect(f.single.reasons.first, contains('(nivel 4)'));
     expect(f.single.reasons.first, contains('después quedan 3'));
 
@@ -115,12 +115,12 @@ void main() {
     final s = _advisor.recommend(m);
     expect(s.first.attribute, Attribute.vit);
     expect(s.first.kind, AttrSuggestionKind.survival);
-    expect(s.first.points, 2); // 6 HP / 4 por punto
+    expect(s.first.points, 1); // 6 HP / 12 por punto (+3 VIT)
     expect(s.first.reasons.first, contains('Tu vida (64)'));
     expect(_sum(s), m.points);
 
     // Con pocos puntos, como mucho la mitad (mínimo 1) va a VIT.
-    final late = _p('maga', 25, spend: {Attribute.esp: 69});
+    final late = _p('maga', 25, spend: {Attribute.esp: 21});
     expect(late.points, 3);
     final l = _advisor.recommend(late);
     expect(AttributeAdvisor.allocation(l)[Attribute.vit], 1);
@@ -146,7 +146,7 @@ void main() {
       }
     }
     final g = _p('guerrero', 2);
-    expect(AttributeAdvisor.horizonPoints(g), 3 + 15);
+    expect(AttributeAdvisor.horizonPoints(g), 1 + 5);
     expect(_sum(_advisor.recommend(g, null, 18)), 18);
     expect(AttributeAdvisor.horizonPoints(_p('guerrero', 50)),
         _p('guerrero', 50).points);
@@ -169,10 +169,10 @@ void main() {
     const plan = BuildPlan(attributes: {Attribute.des: 40, Attribute.vit: 20});
     final out = AttributeAdvisor.addAsGoals(plan, g, s);
     expect(out.attributes, {
-      Attribute.fue: g.attributes[Attribute.fue] + 2,
+      Attribute.fue: g.attributes[Attribute.fue] + 6,
       Attribute.des: 40,
       Attribute.vit: 20,
     });
-    expect(AttributeAdvisor.split(s), 'FUE +2, DES +1');
+    expect(AttributeAdvisor.split(s), 'FUE +6, DES +3');
   });
 }

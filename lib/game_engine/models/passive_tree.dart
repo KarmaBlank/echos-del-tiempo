@@ -16,6 +16,19 @@ class PassiveNode {
   /// Mecánica del notable o keystone v2 (`kMechanics`).
   final String? mechanicId;
 
+  /// Árbol v7 (progression_v2.md § 3.2): mecánicas de los nodos que se
+  /// fusionaron o absorbieron en este.
+  final List<String> extraMechanicIds;
+
+  /// Ids del árbol v6 que se fusionaron o absorbieron en este nodo.
+  final List<String> mergedIds;
+
+  /// Chico doble (dos chicos v6 fusionados).
+  final bool isDouble;
+
+  /// Notable menor (un chico suelto promovido, § 3.4).
+  final bool isMinor;
+
   const PassiveNode({
     required this.id,
     required this.x,
@@ -27,7 +40,15 @@ class PassiveNode {
     this.keystoneId,
     this.pathId,
     this.mechanicId,
+    this.extraMechanicIds = const [],
+    this.mergedIds = const [],
+    this.isDouble = false,
+    this.isMinor = false,
   });
+
+  /// Todas sus mecánicas (la propia y las fusionadas).
+  List<String> get mechanicIds =>
+      [if (mechanicId case final m?) m, ...extraMechanicIds];
 }
 
 /// Un cluster temático del árbol (v3: docs/specs/passive_tree_v3.md § 2;

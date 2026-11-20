@@ -3,6 +3,7 @@ import '../models/passive_mechanic.dart';
 import '../models/status.dart';
 import 'enemy_families.dart' show EnemyFamily;
 import 'ascension_mechanics.dart';
+import 'passive_tree_catalog.dart' show kTreeV7;
 import 'passive_tree_v6.dart';
 import 'summoner_catalog.dart';
 import 'weapon_passives.dart';
@@ -20,6 +21,8 @@ final Map<String, PassiveMechanic> kMechanics = {
   for (final m in kTreeV6SmallMechanics) m.id: m,
   // Cluster Invocador v0.8.1 (docs/specs/summoner.md § 5).
   for (final m in kSummonerTreeMechanics) m.id: m,
+  // Árbol v7: copia de la mecánica de cada notable menor (× 2).
+  for (final m in kTreeV7.extraMechanics) m.id: m,
 };
 
 /// Una mecánica por id: del árbol ([kMechanics]) o de una pasiva de arma
