@@ -1,5 +1,7 @@
 import '../../../game_engine/data/branch_ults_catalog.dart' show itemUlt;
+import '../../../game_engine/data/weapon_elements_catalog.dart';
 import '../../../game_engine/models/attributes.dart';
+import '../../../game_engine/models/elements.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/player_state.dart';
@@ -112,6 +114,11 @@ class WeaponComparison {
   bool get same => identical(from, to) || from == to;
   bool get passiveChanged => passiveBefore != passiveAfter;
   bool get ultChanged => ultBefore != ultAfter;
+
+  /// Elemento de base de A y de B (weapon_identity.md § 4).
+  GameElement? get elementBefore => weaponElementOf(from);
+  GameElement? get elementAfter => weaponElementOf(to);
+  bool get elementChanged => elementBefore != elementAfter;
 }
 
 /// Compara usar [from] (por defecto, el arma que [viewer] realmente usa)

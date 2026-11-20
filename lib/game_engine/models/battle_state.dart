@@ -77,6 +77,7 @@ class Combatant {
     this.inflicts,
     Map<StatusKind, int>? statuses,
     this.holyTurns = 0,
+    this.basicHits = 0,
     this.nextTurn = 0,
     this.defending = false,
     this.protecting = false,
@@ -204,6 +205,10 @@ class Combatant {
   // ---- estado de batalla ----
   Map<StatusKind, int> statuses;
   int holyTurns;
+
+  /// Ataques básicos con elemento de arma dados (weapon_identity.md § 4:
+  /// 1 pila cada `kWeaponElementHitsPerStack`).
+  int basicHits;
   double nextTurn;
   bool defending;
   bool protecting;
@@ -467,6 +472,7 @@ class Combatant {
         inflicts: inflicts,
         statuses: Map.of(statuses),
         holyTurns: holyTurns,
+        basicHits: basicHits,
         nextTurn: nextTurn,
         defending: defending,
         protecting: protecting,

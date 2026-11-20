@@ -1,8 +1,10 @@
 import '../../../game_engine/data/branch_ults_catalog.dart' show itemUlt;
 import '../../../game_engine/data/eco_catalog.dart';
+import '../../../game_engine/data/weapon_elements_catalog.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/eco.dart';
+import '../../../game_engine/models/elements.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/loot.dart';
 import '../../../game_engine/models/player_state.dart';
@@ -114,6 +116,32 @@ List<String> itemSkillLinesMarkup(ProgressionRules rules, ItemInstance it,
 /// Línea plegable dentro de una sección de tip: `head` a la vista y
 /// `detail` en su propio ▸ (lo dibuja `RetroTipFold`). Separadores
 /// U+0001 (cabeza / detalle) y U+0002 (saltos del detalle).
+/// Color de cada elemento en los textos (mismos tonos que el aura).
+String elementHex(GameElement e) => switch (e) {
+      GameElement.fisico => '#dfe6e9',
+      GameElement.fuego => '#ff7b29',
+      GameElement.hielo => '#74b9ff',
+      GameElement.veneno => '#7bed9f',
+      GameElement.sagrado => '#fff3b0',
+      GameElement.agua => '#3fa9f5',
+      GameElement.electro => '#c39bff',
+    };
+
+/// Elemento de base como pasiva fija (weapon_identity.md § 4): `null` sin
+/// elemento.
+String? weaponElementMarkup(ItemInstance it) {
+  final e = weaponElementOf(it);
+  if (e == null) return null;
+  final hex = elementHex(e);
+  const every = kWeaponElementHitsPerStack;
+  final pct = (kWeaponElementSynergy * 100).round();
+  final name = _esc(e.label);
+  return '${_c(hex, '<b style="color:$hex">Elemento $name</b>')} '
+      '${_c(_dim, '(fijo)')} '
+      '${_c(hex, 'Ataque básico de $name: +1 pila cada $every golpes · '
+          '+$pct % a habilidades de $name')}';
+}
+
 String tipSubFold(String head, String detail) =>
     '$head\u0001${detail.replaceAll('<br>', '\u0002')}';
 
@@ -194,6 +222,7 @@ String itemTooltipMarkup(
   if (itemUlt(it) case final u?) {
     l.add('• ${_c(_pink, 'ULT: ${_esc(u.name)}')}');
   }
+  if (weaponElementMarkup(it) case final el?) l.add(el);
   final passive = items.passiveText(it);
   if (passive != null) {
     l.add('${_c(kPassiveHex, '<b style="color:$kPassiveHex">Pasiva</b>')} '
@@ -260,8 +289,11 @@ String itemTooltipMarkup(
   ];
   final flavor = items.uniqueOf(it)?.flavor;
   final hasMods = it.rarity.maxMods > 0 || it.affixes.isNotEmpty;
+  final element = weaponElementMarkup(it);
+  final el = weaponElementOf(it);
   final counts = [
     if (hasMods) 'Mods ${it.modCount}/${it.rarity.maxMods}',
+    if (el != null) _c(elementHex(el), _esc(el.label)),
     if (passive != null) _c(kPassiveHex, 'Pasiva'),
     '${skills.length} ${skills.length == 1 ? 'habilidad' : 'habilidades'}',
     if (w != null) weightClassOf(w).label,
@@ -271,6 +303,7 @@ String itemTooltipMarkup(
     summary: head.join('<br>'),
     sections: [
       ('Mods', mods.join('<br>')),
+      if (element != null) ('Elemento', element),
       if (passive != null) ('Pasiva', _c(kPassiveHex, _esc(passive))),
       ('Habilidades', _skillFolds(rules, it, stats).join('<br>')),
       ('Peso y forja', weight.join('<br>')),

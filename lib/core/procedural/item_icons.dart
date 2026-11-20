@@ -1,26 +1,33 @@
 import 'package:flutter/rendering.dart';
 
+import '../../game_engine/models/item.dart' show Rarity;
 import 'procedural_art.dart';
+import 'weapon_look.dart';
 
 /// Pintor del ícono de [entryId] (`items.espada`, o `items` = familia)
 /// con las perillas vigentes de [ProceduralArt.instance].
 class ItemIconPainter extends CustomPainter {
-  ItemIconPainter(this.rows, this.accent, this.entryId)
+  ItemIconPainter(this.rows, this.accent, this.entryId, {this.look})
       : revision = ProceduralArt.instance.revision;
   final List<String> rows;
   final Color accent;
   final String entryId;
   final int revision;
 
+  /// Identidad del arma concreta (aura sutil, acento, ULT, variante).
+  final WeaponLook? look;
+
   @override
   void paint(Canvas canvas, Size size) => paintItemIcon(canvas,
-      Offset.zero & size, rows, accent, ProceduralArt.instance.resolve(entryId));
+      Offset.zero & size, rows, accent, ProceduralArt.instance.resolve(entryId),
+      look: look);
 
   @override
   bool shouldRepaint(ItemIconPainter old) =>
       old.rows != rows ||
       old.accent != accent ||
       old.entryId != entryId ||
+      old.look != look ||
       old.revision != revision;
 }
 
@@ -315,9 +322,18 @@ Color _tone(Color c, double shine) => shine == 0
 /// Dibuja la forma [rows] en [r] con las perillas [p]. [accent] = el
 /// acento que decide el juego (rareza, material) si la perilla `accent`
 /// está vacía.
+///
+/// Con [look] (un arma concreta, weapon_identity.md § 3) suma la
+/// identidad: acento de la rareza, variante suave por uid (tono del
+/// metal y gema, sin tocar la silueta), aura tenue del elemento con
+/// partículas, destello del legendario y el píxel de la ULT en el pomo.
+/// [time] (segundos) anima el aura y el destello; con 0 queda quieto.
 void paintItemIcon(Canvas canvas, Rect r, List<String> rows, Color accent,
-    ProcParams p) {
-  final shine = p.number('shine');
+    ProcParams p, {WeaponLook? look, double time = 0}) {
+  final vary = look != null && p.flag('variation') ? look.variant : 0;
+  final shine = (p.number('shine') +
+          switch (vary) { 1 => 0.12, 2 => -0.12, _ => 0.0 })
+      .clamp(-0.6, 0.6);
   Color col(String k) => _tone(_hex(p.color(k)), shine);
   final acc = p.color('accent').isEmpty ? _tone(accent, shine) : col('accent');
   final palette = {
@@ -356,8 +372,23 @@ void paintItemIcon(Canvas canvas, Rect r, List<String> rows, Color accent,
       }
     }
   }
-  final highlight = p.flag('highlight');
-  var gem = p.flag('gem');
+  // Aura del elemento: halo de 1 celda alrededor de la silueta.
+  final aura = look?.auraColor;
+  final auraK = p.number('aura');
+  if (aura != null && auraK > 0) {
+    final ac = aura.withValues(alpha: (auraK * 0.7).clamp(0.0, 1.0));
+    for (var y = 0; y < 8; y++) {
+      for (var x = 0; x < 8; x++) {
+        if (filled(x, y)) continue;
+        if (filled(x - 1, y) || filled(x + 1, y) || filled(x, y - 1) ||
+            filled(x, y + 1)) {
+          cell(x, y, ac);
+        }
+      }
+    }
+  }
+  final highlight = p.flag('highlight') || look?.rarity == Rarity.epico;
+  var gem = p.flag('gem') || vary == 2;
   for (var y = 0; y < rows.length; y++) {
     var lit = false;
     for (var x = 0; x < rows[y].length; x++) {
@@ -373,5 +404,52 @@ void paintItemIcon(Canvas canvas, Rect r, List<String> rows, Color accent,
       }
       cell(x, y, c);
     }
+  }
+  if (look == null) return;
+  // Partículas lentas del aura (2), solo en celdas vacías.
+  if (aura != null && auraK > 0 && p.flag('aura_particles')) {
+    final pc = aura.withValues(alpha: (auraK * 0.9).clamp(0.0, 1.0));
+    for (var k = 0; k < 2; k++) {
+      final ph = time * 1.2 + k * 4 + look.variant;
+      final y = 7 - (ph % 8).floor();
+      final x = (k * 5 + 1 + (ph / 8).floor() * 3) % 8;
+      if (!filled(x, y)) cell(x, y, pc);
+    }
+  }
+  // Destello del legendario: un píxel blanco recorre el metal cada ~2 s.
+  if (look.legendary && p.flag('sparkle')) {
+    final metal = <(int, int)>[
+      for (var y = 0; y < rows.length; y++)
+        for (var x = 0; x < rows[y].length; x++)
+          if (rows[y][x] == 'm' || rows[y][x] == 'g') (x, y),
+    ];
+    if (metal.isNotEmpty) {
+      final i = (time * 6).floor() % (metal.length + 6);
+      final (x, y) = metal[i < metal.length ? i : 0];
+      cell(x, y, i < metal.length ? const Color(0xFFFFFFFF) : const Color(0xFFFFE08A));
+    }
+  }
+  // Marca de ULT: un píxel rosa en el pomo (la última celda del mango).
+  if (look.hasUlt && p.flag('ult_mark')) {
+    (int, int)? pommel;
+    for (var y = rows.length - 1; y >= 0 && pommel == null; y--) {
+      for (var x = 0; x < rows[y].length; x++) {
+        if (rows[y][x] == 'h') {
+          pommel = (x, y);
+          break;
+        }
+      }
+    }
+    if (pommel == null) {
+      for (var y = rows.length - 1; y >= 0 && pommel == null; y--) {
+        for (var x = 0; x < rows[y].length; x++) {
+          if (filled(x, y)) {
+            pommel = (x, y);
+            break;
+          }
+        }
+      }
+    }
+    if (pommel != null) cell(pommel.$1, pommel.$2, kUltMarkColor);
   }
 }

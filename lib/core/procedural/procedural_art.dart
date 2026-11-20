@@ -57,6 +57,14 @@ const kItemIconKnobs = <ProcKnob>[
   ProcKnob('mirror', 'ESPEJO', ProcKnobKind.toggle, false),
   ProcKnob('scale', 'PROPORCIÓN', ProcKnobKind.number, 1.0,
       min: 0.5, max: 1, step: 0.125),
+  // Identidad del arma (weapon_identity.md § 3): solo se ven en armas
+  // concretas (con elemento, rareza, ULT o uid).
+  ProcKnob('aura', 'AURA', ProcKnobKind.number, 0.5,
+      min: 0, max: 1, step: 0.05),
+  ProcKnob('aura_particles', 'PARTÍCULAS AURA', ProcKnobKind.toggle, true),
+  ProcKnob('sparkle', 'DESTELLO LEGENDARIO', ProcKnobKind.toggle, true),
+  ProcKnob('ult_mark', 'MARCA ULT', ProcKnobKind.toggle, true),
+  ProcKnob('variation', 'VARIACIÓN POR ARMA', ProcKnobKind.toggle, true),
 ];
 
 /// Perillas de cada familia (sección del manifest) con generador.

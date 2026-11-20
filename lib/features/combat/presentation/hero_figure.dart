@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/procedural/procedural_art.dart';
+import '../../../core/procedural/weapon_look.dart';
 import 'sprite_catalog.dart';
 import 'weapon_overlay.dart';
 
@@ -16,24 +17,29 @@ class HeroFigure extends StatelessWidget {
       {super.key,
       required this.classId,
       required this.weaponType,
-      required this.size});
+      required this.size,
+      this.look});
 
   final ui.Image image;
   final String classId;
   final String? weaponType;
   final Size size;
 
+  /// Identidad del arma equipada (aura, acento...). `null` = genérica.
+  final WeaponLook? look;
+
   @override
   Widget build(BuildContext context) => SizedBox.fromSize(
         size: size,
         child: CustomPaint(
-            painter: HeroFigurePainter(image, classId, weaponType)),
+            painter: HeroFigurePainter(image, classId, weaponType, look: look)),
       );
 }
 
 class HeroFigurePainter extends CustomPainter {
-  HeroFigurePainter(this.image, this.classId, this.weaponType)
+  HeroFigurePainter(this.image, this.classId, this.weaponType, {this.look})
       : revision = ProceduralArt.instance.revision;
+  final WeaponLook? look;
   final ui.Image image;
   final String classId;
   final String? weaponType;
@@ -48,7 +54,7 @@ class HeroFigurePainter extends CustomPainter {
         size.height / 2 - b.center.dy * k);
     canvas.scale(k);
     canvas.drawImage(image, const Offset(-7, -17), SpriteCatalog.pixelPaint());
-    WeaponOverlay.draw(canvas, classId, weaponType);
+    WeaponOverlay.draw(canvas, classId, weaponType, look: look);
     canvas.restore();
   }
 
@@ -57,5 +63,6 @@ class HeroFigurePainter extends CustomPainter {
       old.image != image ||
       old.classId != classId ||
       old.weaponType != weaponType ||
+      old.look != look ||
       old.revision != revision;
 }

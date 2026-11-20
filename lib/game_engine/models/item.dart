@@ -1,3 +1,4 @@
+import 'elements.dart';
 import 'upgrade_stat.dart';
 import 'weapon.dart';
 
@@ -413,6 +414,7 @@ class ItemInstance {
     this.uniqueId,
     this.name,
     this.ultId,
+    this.element,
   });
 
   /// Común sin nada: lo que era un id de arma en el inventario viejo.
@@ -466,6 +468,12 @@ class ItemInstance {
   /// del objeto: no se traslada por fusión.
   final String? ultId;
 
+  /// Elemento de base del arma (weapon_identity.md § 4): pasiva fija que
+  /// no se puede quitar (la fusión y el condensado no la mueven). `null`
+  /// = sin elemento. Los legendarios lo derivan de su único
+  /// (`weaponElementOf`). JSON `el`.
+  final GameElement? element;
+
   static const maxPassiveLevel = 5;
 
   int get forgeLevel => forge.total;
@@ -490,6 +498,8 @@ class ItemInstance {
     String? name,
     String? ultId,
     bool clearUlt = false,
+    GameElement? element,
+    bool clearElement = false,
   }) =>
       ItemInstance(
         uid: uid ?? this.uid,
@@ -505,6 +515,7 @@ class ItemInstance {
         uniqueId: uniqueId,
         name: name ?? this.name,
         ultId: clearUlt ? null : ultId ?? this.ultId,
+        element: clearElement ? null : element ?? this.element,
       );
 
   // ------------------------------------------------------------------
@@ -525,6 +536,7 @@ class ItemInstance {
         if (uniqueId != null) 'q': uniqueId,
         if (name != null) 'n': name,
         if (ultId != null) 'ul': ultId,
+        if (element != null) 'el': element!.name,
       };
 
   /// Lectura tolerante: `null` si falta lo esencial (uid y base). No
@@ -565,7 +577,16 @@ class ItemInstance {
       uniqueId: raw['q'] is String ? raw['q'] as String : null,
       name: raw['n'] is String ? raw['n'] as String : null,
       ultId: raw['ul'] is String ? raw['ul'] as String : null,
+      element: _elementByName(raw['el']),
     );
+  }
+
+  static GameElement? _elementByName(Object? n) {
+    if (n is! String) return null;
+    for (final e in GameElement.values) {
+      if (e.name == n && e != GameElement.fisico) return e;
+    }
+    return null;
   }
 
   @override
@@ -586,7 +607,8 @@ class ItemInstance {
       other.quebrarReplaced == quebrarReplaced &&
       other.uniqueId == uniqueId &&
       other.name == name &&
-      other.ultId == ultId;
+      other.ultId == ultId &&
+      other.element == element;
 
   @override
   int get hashCode => Object.hash(uid, baseId, rarity, itemLevel,

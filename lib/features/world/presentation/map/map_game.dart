@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/theme/pixel_label.dart';
 import '../../../../core/perf/perf_log.dart';
+import '../../../../core/procedural/weapon_look.dart';
 import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/models/game_map.dart';
@@ -582,6 +583,9 @@ class MapGame extends Game {
       void hero(double x, double y) => actors.hero(c,
           classId: p.profile.classId,
           weaponType: weapon?.type,
+          look: p.profile.equippedItem == null
+              ? null
+              : WeaponLook.of(p.profile.equippedItem!),
           x: x,
           y: y,
           t: t,

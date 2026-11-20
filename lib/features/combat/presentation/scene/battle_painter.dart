@@ -18,6 +18,7 @@ import '../../domain/turn_order.dart';
 import '../game_sprites.dart';
 import '../sprite_catalog.dart';
 import '../status_icons.dart';
+import '../../../../core/procedural/weapon_look.dart';
 import '../weapon_overlay.dart';
 import 'arena/arena_transition.dart';
 import 'battle_fx.dart';
@@ -115,11 +116,12 @@ class _Pen {
 
 /// El arma en mano del retrato grande de la ULT (sprites.md § "Armas en
 /// mano"): misma escala [k] que el sprite dibujado en [dst].
-void _heldWeapon(Canvas c, Rect dst, double k, String? cls, String? weapon) {
+void _heldWeapon(Canvas c, Rect dst, double k, String? cls, String? weapon,
+    {WeaponLook? look}) {
   c.save();
   c.translate(dst.left + 7 * k, dst.top + 17 * k);
   c.scale(k);
-  WeaponOverlay.draw(c, cls ?? '', weapon);
+  WeaponOverlay.draw(c, cls ?? '', weapon, look: look);
   c.restore();
 }
 
@@ -375,7 +377,8 @@ class BattleScenePainter extends CustomPainter {
     } else {
       _pen.rect(c, const Color(0xFF8B93AF), -6, -16, 12, 16);
     }
-    WeaponOverlay.draw(c, p.classId ?? '', p.weaponType);
+    WeaponOverlay.draw(c, p.classId ?? '', p.weaponType,
+        look: lookOfCombatant(p), time: scene.t / 1000);
     if (p.defending && !dead) {
       _pen.stroke
         ..color = const Color(0xAA74B9FF)
@@ -2096,7 +2099,9 @@ class BattleOverlayPainter extends CustomPainter {
       c.drawImageRect(img, src, dst.shift(const Offset(2, 2)), shadow);
       c.drawImageRect(img, src, dst, SpriteCatalog.pixelPaint());
       if (!enemy) {
-        _heldWeapon(c, dst, k, u.fx.ult?.casterClass, u.fx.ult?.casterWeapon);
+        final caster = u.fx.who == null ? null : f.battle.byId(u.fx.who!);
+        _heldWeapon(c, dst, k, u.fx.ult?.casterClass, u.fx.ult?.casterWeapon,
+            look: caster == null ? null : lookOfCombatant(caster));
       }
     }
     final tx = x0 + 52;
