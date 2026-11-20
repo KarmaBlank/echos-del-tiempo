@@ -672,3 +672,10 @@ personaje por humano). `SessionPlayer.leaderId` y el rastro del líder son
 **solo del host** y no viajan en el snapshot; `SessionEngine.applyFor`
 (actuar por un compañero) nunca se usa con red. Sin cambio de protocolo.
 Ver solo_party.md § 1.
+
+## Protocolo 22 (v0.12.1, alijo en partida)
+
+Acciones `stashPut` / `stashTake` con id de operación y lote; el host
+anota la confirmación en el jugador (`sk` en el snapshot, junto al perfil
+cambiado). El alijo nunca viaja: es local de la cuenta de cada cliente.
+Detalle, orden de escritura e idempotencia en characters.md § 3.2.

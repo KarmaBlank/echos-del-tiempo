@@ -260,7 +260,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('stash-screen')), findsOneWidget);
     expect(find.text('ALIJO COMPARTIDO'), findsOneWidget);
-    expect(find.text('2/96'), findsOneWidget);
+    expect(find.text('2/144'), findsOneWidget);
 
     // La equipada no se puede guardar.
     await _tap(tester, 'stash-char-equipped');
@@ -281,7 +281,7 @@ void main() {
         saved.byId('c2')!.profile.items.any((i) => i.baseId == 'espada_ignea'),
         isFalse);
     expect(saved.stash.cells[2]!.item!.name, 'Filo del Alba');
-    expect(find.text('3/96'), findsOneWidget);
+    expect(find.text('3/144'), findsOneWidget);
 
     // Las pociones no van (v0.5.1: pilas en su sección, no en la grilla).
     await _tap(tester, 'inv-stack-pot');

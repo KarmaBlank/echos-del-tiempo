@@ -161,7 +161,31 @@ class SessionJson {
         'ult': p.ult,
         'lvup': p.levelUpPending,
         if (p.tutorialVersion != 0) 'tv': p.tutorialVersion,
+        // Protocolo 21: confirmaciones del alijo (characters.md § 3.2).
+        if (p.stashAcks.isNotEmpty)
+          'sk': [
+            for (final MapEntry(key: id, value: a) in p.stashAcks.entries)
+              {
+                'id': id,
+                if (a.put) 'put': true,
+                'd': [for (final d in a.drops) d?.toJson()],
+              },
+          ],
       };
+
+  static Map<String, StashAck> _stashAcks(Object? raw) {
+    final out = <String, StashAck>{};
+    if (raw is! List) return out;
+    for (final r in raw) {
+      if (r is! Map) continue;
+      final id = r['id'], d = r['d'];
+      if (id is! String || d is! List) continue;
+      out[id] = StashAck(
+          put: r['put'] == true,
+          drops: [for (final x in d) LootDrop.fromJson(x)]);
+    }
+    return out;
+  }
 
   SessionPlayer playerFromJson(Json j) => SessionPlayer(
         id: j.str('id'),
@@ -178,6 +202,7 @@ class SessionJson {
         ult: j.dbl('ult'),
         levelUpPending: j.boolean('lvup'),
         tutorialVersion: j.intOrNull('tv') ?? 0,
+        stashAcks: _stashAcks(j['sk']),
       );
 
   // ------------------------------------------------------------------

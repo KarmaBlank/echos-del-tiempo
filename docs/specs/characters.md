@@ -226,48 +226,116 @@ Destructivo, por eso pide **escribir el nombre**:
 
 ## 3. Alijo compartido
 
-- **2 pestañas de 8 × 6** casillas (`Stash.tabs`, `columns`, `rows`: 96
-  casillas), compartidas por todos los personajes de la cuenta.
-- Se abre con `ALIJO` desde la lista (fuera de la sesión). Pantalla
-  `ALIJO COMPARTIDO`: a la izquierda el inventario del personaje elegido
-  (su arma equipada aparte y la grilla 8 × 5 de siempre), a la derecha
-  el alijo con sus pestañas. Mismas casillas, íconos, colores de rareza
-  y fichas al pasar el mouse que el inventario (`item_widgets.dart`,
-  `item_text.dart`, solo lectura).
-- Clic en una casilla la elige (borde dorado); el botón de abajo la
-  mueve al otro lado: `AL ALIJO >` o `< AL PERSONAJE`. Doble clic = mover
-  directo. Con algo del alijo elegido, clic en una casilla vacía del
-  alijo lo cambia de lugar (lo mismo dentro de la grilla del personaje,
-  `InventoryRules.move`).
+- **3 pestañas de 8 × 6** casillas (`Stash.tabs`, `columns`, `rows`: 144
+  casillas), compartidas por todos los personajes de la cuenta:
+  `GENERAL I`, `GENERAL II` (cualquier cosa que vaya al alijo) y `ECOS`
+  (`Stash.ecoTab`, v0.11.1): solo Ecos y materiales de endgame (Ancla
+  Temporal, Fragmentos del Abismo, Esencia del Abismo:
+  `Stash.isEndgame`). Capacidad total 144: 96 generales + 48 de endgame
+  (un Eco por casilla; los materiales apilan hasta 999 en una casilla).
+  Las cuentas viejas (2 pestañas) cargan igual: sus casillas 0–95 son las
+  mismas.
+- Se abre **fuera de la sesión** con `ALIJO` desde la lista de personajes
+  (pantalla `ALIJO COMPARTIDO`) y **dentro de la partida** (§ 3.2). Las
+  dos usan el mismo tablero (`StashBoard`): a la izquierda el inventario
+  del personaje (equipada aparte, grilla 8 × 5, barra de pilas), a la
+  derecha el alijo con sus pestañas (`DsTabBar`, insignia `usadas/48`).
+  Cada lado tiene su buscador (`DsSearchField`): lo que no coincide se ve
+  atenuado. Mismas casillas, íconos, colores y fichas que el inventario.
+- Mover: clic elige (borde dorado) y el botón de abajo lo pasa al otro
+  lado (`AL ALIJO >` / `< AL INVENTARIO`); doble clic = mover directo;
+  clic derecho = menú con `Guardar en alijo` / `Sacar al inventario`.
+  Con algo del alijo elegido, clic en una casilla vacía del alijo lo
+  cambia de lugar (nada que no sea endgame entra a la pestaña ECOS); lo
+  mismo dentro de la grilla del personaje (`InventoryRules.move`).
+- Motivos de bloqueo: el botón desactivado lleva el motivo en su
+  tooltip y la línea de estado lo dice en rojo; la ficha de una casilla
+  que no puede ir al alijo suma `No va al alijo: <motivo>`.
+- `MOVER TODO AL ALIJO` (siempre visible): lleva en **una** operación
+  todo lo movible (`StashRules.movableTokens`: armas no protegidas, Ecos
+  y pilas de materiales; nunca la equipada, la última arma inicial ni las
+  pociones), respetando la capacidad. Resultado en una línea:
+  `Movidos N` o `Movidos N · Quedaron M: alijo lleno`.
+- Modo `ELEGIR`: clic marca / desmarca casillas de **un** lado (marcar en
+  el otro lado limpia las marcas), contador `N elegidos`, `MOVER
+  ELEGIDOS` (del inventario) o `SACAR ELEGIDOS` (del alijo) y `CANCELAR`.
+  Misma línea de resultado (`StashRules.depositMany` / `withdrawMany`).
 - Qué se puede guardar:
   - **Armas**: una casilla cada una. No se pueden guardar la **equipada**
     ni la **última arma inicial** de la clase (`InventoryRules.isProtected`,
-    motivo `Equipada` / `Arma inicial`). Al guardarla va a la primera
-    casilla libre de la pestaña a la vista (si no hay, la otra); `Alijo
+    motivo `Equipada` / `Arma inicial`). Van a la primera casilla libre de
+    la pestaña general a la vista (si no hay, la otra general); `Alijo
     lleno` si no hay lugar.
   - **Materiales**: se apilan en **una casilla por tipo**, hasta **999**
-    (el inventario del personaje sigue con su tope de 99). Guardar mueve
-    toda la pila del personaje (lo que entre). Sacar mueve lo que entre
-    en el personaje (hasta 99); el resto queda en el alijo.
-  - **Ecos** (v0.4.0): una casilla cada uno, como las armas (sin
-    protecciones). Al cargar pasan por `EcoRules.sanitize`.
-  - **Pociones** de vida y de maná: **no** (son consumibles de cada
-    personaje: `Las pociones no van al alijo`).
-  - **Créditos**: siguen siendo **de cada personaje** (no hay moneda
-    compartida, para que un personaje nuevo no salte la economía de la
-    herrería; ver progression.md).
-- Sacar del alijo valida con `InventoryRules.cannotReceive` (casillas
-  libres, tope de armas, tope de la pila): `Inventario lleno`,
-  `Máximo 99`. El arma recibe un `uid` nuevo del personaje
-  (`InventoryRules.addItem`). No se miran requisitos de nivel ni de
-  atributos: solo se necesitan para **equipar**.
-- Cada movimiento guarda la cuenta (personaje + alijo juntos).
+    (el personaje sigue con su tope de 99). Guardar mueve toda la pila
+    (lo que entre). Sacar mueve lo que entre en el personaje; el resto
+    queda en el alijo. Los de endgame van primero a la pestaña ECOS.
+  - **Ecos**: una casilla cada uno, sin protecciones; primero a la
+    pestaña ECOS y, si está llena, a las generales. Al cargar pasan por
+    `EcoRules.sanitize`.
+  - **Pociones** de vida y de maná: **no** (`Las pociones no van al
+    alijo`).
+  - **Créditos**: siguen siendo **de cada personaje**.
+- Sacar del alijo valida con `InventoryRules.cannotReceive`: `Inventario
+  lleno`, `Máximo 99`. El arma recibe un `uid` nuevo del personaje. No se
+  miran requisitos de nivel ni de atributos.
+- Cada movimiento guarda la cuenta (personaje + alijo juntos, una
+  escritura).
 - Al cargar, los objetos del alijo pasan por `ItemRules.sanitize`; los
   inválidos se descartan y dos pilas del mismo material se juntan.
 
+### 3.2 Alijo en partida (v0.12.1, protocolo 22)
+
+- Se abre en el **lobby y en misión, fuera de batalla** (modos `lobby` y
+  `field`; nunca en batalla, preparación ni resultado: si el modo cambia,
+  el panel se cierra). Accesos: botón `ALIJO [B]` del HUD (junto a
+  `MENÚ`), tecla **B**, botón `ALIJO` en la barra de PERSONAJE →
+  INVENTARIO y `Guardar en alijo` en el menú de clic derecho de cada
+  objeto del inventario. Panel `WorldPanel.stash` con el mismo
+  `StashBoard`.
+- El alijo es **local de la cuenta** de cada jugador: solo su dueño lo ve
+  y lo toca; nunca viaja por la red (el host no lo conoce). Lo que viaja
+  es la parte del **perfil**, que en partida es del host.
+- Acciones (cliente → host), una por operación, también en lote:
+  - `{"t":"stashPut","op":<id>,"it":[{"tok":<token>,"n":<cant>}...]}`:
+    sacar del perfil en la sesión esas piezas (uid de arma / Eco o
+    `mat:<m>`; `n` solo en pilas, por defecto 1).
+  - `{"t":"stashTake","op":<id>,"d":[<LootDrop>...]}`: sumar al perfil
+    lo que el cliente saca de su alijo.
+  - Hasta `StashPutAction.maxItems` (160) piezas. `op` es único por
+    operación (`<jugador>-<n>-<µs>`, ≤ 48 caracteres).
+- El host valida cada pieza: modo `lobby`/`field`, humano (no un
+  compañero), el objeto existe, no es la equipada ni la última arma
+  inicial (`InventoryRules.take`), no es poción ni el Eco que se está
+  votando; para sacar, cada pieza se sanea (`ItemRules.sanitize`,
+  `EcoRules.sanitize`) y tiene que entrar entera (`cannotReceive`). Las
+  piezas válidas se aplican, las otras quedan `null`. La capacidad del
+  alijo la valida el cliente antes de mandar (es el único que lo
+  conoce): solo manda lo que entra (`depositMany` como ensayo).
+- Confirmación: el host anota `op` en `SessionPlayer.stashAcks` (últimas
+  32) con lo que se movió por pieza; viaja en el snapshot como
+  `sk: [{"id","put"?,"d":[drop|null...]}]`, **en el mismo mensaje** que el
+  perfil ya cambiado.
+- Orden de escritura (sin duplicados ni pérdidas): el cliente no toca su
+  alijo al mandar. Al ver su `op` en `sk`, aplica al alijo lo confirmado
+  (`StashRules.store` / `unstore`) y escribe **alijo + perfil del
+  snapshot en una sola escritura** de la cuenta (`StashStore.commit`),
+  antes de cualquier otro guardado de ese paso.
+- Idempotencia: un `op` ya anotado no se vuelve a aplicar (el host lo
+  ignora). El cliente reenvía la operación sin confirmar cada 1 s (hasta
+  5 veces, mismo `op`); después la da por no hecha. Una sola operación
+  en curso por vez (los botones dicen `Esperando...`).
+- Desconexión a mitad: la operación pendiente se descarta. Lo guardado
+  en disco es siempre el último snapshot recibido: si no llegó la
+  confirmación, tampoco llegó el perfil cambiado, así que el objeto sigue
+  en el inventario y no en el alijo (lo que cambió en la copia del host
+  se pierde con la sala, como siempre al caerse).
+- Jugando solo o como host, el mismo camino corre local (la confirmación
+  está en el estado al instante).
 ## 4. Desvíos / pendientes
 
-- Sin arrastrar y soltar entre grillas (clic + botón o doble clic).
+- Sin arrastrar y soltar entre grillas (clic + botón, doble clic o clic
+  derecho).
 - Sin elegir cuántos materiales mover (se mueve la pila, lo que entre).
 - El Atlas del Tiempo (endgame.md § 2) va a vivir en la cuenta junto al
   alijo cuando se implemente.

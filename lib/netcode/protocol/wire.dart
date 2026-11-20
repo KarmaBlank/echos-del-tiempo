@@ -52,7 +52,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// acción `seen` (loot.md § 17.4).
 /// 21 desde v0.12: acción `untake` (quitar un nodo del árbol;
 /// progression_v2.md § 6.1).
-const kProtocolVersion = 21;
+
+/// 22 desde v0.12.1: acciones `stashPut` / `stashTake` y confirmaciones
+/// `sk` del jugador en el snapshot (alijo en partida, characters.md § 3.2).
+const kProtocolVersion = 22;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {
