@@ -1,4 +1,6 @@
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
+import 'package:echos_del_tiempo/app/theme/proto_colors.dart';
+import 'package:echos_del_tiempo/app/theme/proto_markup.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
@@ -19,8 +21,8 @@ String _plain(WidgetTester tester, String key) => tester
 void main() {
   testWidgets('personaje: el reparto muestra antes > después y se confirma',
       (tester) async {
-    final start = progression.normalize(
-        PlayerProfile(name: 'Ana', classId: 'guerrero', level: 3)); // 2 pts (+3 cada uno)
+    final start = progression.normalize(PlayerProfile(
+        name: 'Ana', classId: 'guerrero', level: 3)); // 2 pts (+3 cada uno)
     final c = await pumpPanel(tester,
         profile: start,
         build: (v, c) => CharacterPanel(view: v, controller: c));
@@ -37,10 +39,11 @@ void main() {
 
     await tapVisible(tester, find.byKey(const ValueKey('inc-vit')));
     await tapVisible(tester, find.byKey(const ValueKey('inc-fue')));
-    final preview = progression.previewAllocation(
-        start, {Attribute.vit: 1, Attribute.fue: 1});
+    final preview = progression
+        .previewAllocation(start, {Attribute.vit: 1, Attribute.fue: 1});
     expect(preview.maxHp, greaterThan(before.maxHp));
-    expect(_plain(tester, 'stat-HP'), 'HP ${before.maxHp} → ${preview.maxHp} ▲');
+    expect(
+        _plain(tester, 'stat-HP'), 'HP ${before.maxHp} → ${preview.maxHp} ▲');
     expect(_plain(tester, 'stat-ATQ'),
         'ATQ ${before.attack} → ${preview.attack} ▲');
     expect(find.textContaining('Puntos: 0'), findsOneWidget);
@@ -87,10 +90,12 @@ void main() {
     // Sin panel derecho (v0.9.10); las acciones, en el menú.
     expect(find.byKey(const ValueKey('inv-stats')), findsNothing);
     await openInventoryActions(tester);
-    expect(tester
-        .widget<InventoryActionRow>(find.byKey(const ValueKey('inv-equip')))
-        .entry
-        .reason, 'No podés equiparla. Requisitos: FUE 14 DES 8');
+    expect(
+        tester
+            .widget<InventoryActionRow>(find.byKey(const ValueKey('inv-equip')))
+            .entry
+            .reason,
+        'No podés equiparla. Requisitos: FUE 14 DES 8');
 
     // Con el reparto pendiente cumpliría: "Confirma puntos".
     await tapVisible(tester, find.byKey(const ValueKey('tab-0')));
@@ -98,10 +103,12 @@ void main() {
     await tapVisible(tester, find.byKey(const ValueKey('inc-des')));
     await armas();
     await openInventoryActions(tester);
-    expect(tester
-        .widget<InventoryActionRow>(find.byKey(const ValueKey('inv-equip')))
-        .entry
-        .reason, 'Confirma puntos');
+    expect(
+        tester
+            .widget<InventoryActionRow>(find.byKey(const ValueKey('inv-equip')))
+            .entry
+            .reason,
+        'Confirma puntos');
     await tapVisible(tester, find.byKey(const ValueKey('tab-0')));
     await tapVisible(tester, find.byKey(const ValueKey('confirm-points')));
     await armas();
@@ -115,18 +122,33 @@ void main() {
     expect(c.view!.me!.profile.equipped, 'baculo_aprendiz');
   });
 
-  testWidgets('personaje: tope blando visible (tope 60, rinde ½)',
+  testWidgets('personaje: tope blando en el botón, el valor y el tooltip',
       (tester) async {
-    var p = progression.normalize(
-        PlayerProfile(name: 'Ana', classId: 'guerrero', level: 20));
+    var p = progression
+        .normalize(PlayerProfile(name: 'Ana', classId: 'guerrero', level: 20));
     p = progression.allocate(p, {Attribute.vit: 17})!; // VIT 10 + 51 = 61
     await pumpPanel(tester,
         profile: p, build: (v, c) => CharacterPanel(view: v, controller: c));
     expect(p.attributes[Attribute.vit], 61);
-    expect(find.text('tope 60: rinde ½'), findsOneWidget);
-    expect(find.text('tope 60'), findsWidgets);
-    expect(find.text('tope 40'), findsOneWidget);
+    // v0.10.1: la fila es una línea, sin "tope N" ni la descripción.
+    expect(find.textContaining('tope 60'), findsNothing);
+    expect(find.textContaining('tope 40'), findsNothing);
     expect(find.text('+3 VIT → +1.5'), findsOneWidget);
     expect(find.text('+3 FUE'), findsOneWidget);
+    final row = find.byKey(const ValueKey('attr-row-vit'));
+    final line = tester.getSize(find.byKey(const ValueKey('inc-vit'))).height;
+    // Una línea: el alto del botón más padding, borde y margen.
+    expect(tester.getSize(row).height, lessThan(line * 1.5 + 16));
+    // Pasado el tope, el valor en naranja.
+    expect(
+        tester
+            .widget<ProtoText>(find.byKey(const ValueKey('attr-value-vit')))
+            .markup,
+        contains(protoColor(ProtoColors.orange, '61')));
+    // El tooltip: qué da, el tope y que pasado el tope rinde ½.
+    final tip = tester.widget<RetroTooltip>(
+        find.ancestor(of: row, matching: find.byType(RetroTooltip)).first);
+    expect(tip.message, contains('Tope 60: pasado el tope rinde ½'));
+    expect(tip.message, contains('+3 Vitalidad'));
   });
 }

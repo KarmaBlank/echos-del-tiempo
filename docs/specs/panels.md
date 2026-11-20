@@ -556,9 +556,8 @@ Cambios v0.9.13 (pedido del dueño):
 - Ficha del mouse de un arma no equipada (`HoverCompareCard`): una sola
   columna angosta (`cardWidth` 180 × factor de texto, ~32 letras), puede
   ser más alta. Ya no lleva al lado `EQUIPADA / Si la equipas:`.
-- Mantener Shift suma al lado la columna compacta de la equipada
-  (`EQUIPADA <nombre>` + `Si la equipas:` corto), como la segunda columna
-  de v0.9.11. Tooltip atravesable, Alt y clic para fijar: ver ui_style.md
+- Mantener Shift suma al lado la columna de la equipada (v0.10.1: su
+  ficha completa, ver "Cambios v0.10.1"). Tooltip atravesable, Alt y clic para fijar: ver ui_style.md
   § "Tooltips cortos".
 - Franja de cambios (`ChangeStrip`, `inv-strip`) a la izquierda de la
   grilla, en el espacio libre (si no entra, la grilla se corre lo justo):
@@ -568,6 +567,28 @@ Cambios v0.9.13 (pedido del dueño):
   DEF, Peso (`stripStats`); sin arma mirada, `ACTUAL` con los valores de
   hoy en gris.
 - COMPARAR del clic derecho (A vs B en grande) no cambia.
+
+Cambios v0.10.1 (pedido del dueño):
+- La caja del tooltip mide su contenido con un máximo de una columna
+  (`HoverCompareCard.cardWidth` escalado), con o sin la línea `★ Tu
+  build` (antes iba en una `Column` con `stretch` y tomaba todo el ancho)
+  y con cualquier tamaño de texto. La línea de ayuda (`Alt: detalle ·
+  …`) se parte al ancho del contenido: nunca ensancha la caja.
+- Zona de los tooltips del inventario (`RetroTipArea`): solo la columna
+  de la grilla, desde su borde de arriba hasta el pie del panel (si eso
+  queda muy bajo, todo el alto). Nunca tapan la franja de CAMBIOS ni la
+  EQUIPADA / pilas. Si no entran al costado de la casilla, abajo o
+  arriba, dentro de esa zona; si el contenido no entra en el alto,
+  scrollea.
+- Shift: al lado va la ficha completa de la EQUIPADA (la misma de una
+  columna: nombre, rareza, requisitos, resumen y plegables), con el
+  rótulo `EQUIPADA` y el mismo ancho que la del arma mirada. Ya no lleva
+  `Si la equipas:`: los cambios están en la franja de CAMBIOS.
+- Franja de CAMBIOS: una línea por stat (`ATQ 15→50 ▲35`), nunca
+  partida; el ancho se mide con el texto actual (`ChangeStrip.widthOf`)
+  y la grilla se corre lo justo si no entra. Va en fila con la grilla
+  (no flotando), así suma su alto y scrollea con el panel en vez de
+  cortarse abajo.
 
 Reemplaza a la pestaña ARMAS (equipar y comparar están acá). Línea "qué
 hace": `Arrastra para mover · clic para ver · clic derecho (o Enter):
@@ -653,8 +674,8 @@ inventario de un compañero, abajo a la derecha: `Solo lectura` y
   sin salirse de la pantalla: si no entra abajo se abre hacia arriba y
   si no entra a la derecha, hacia la izquierda. El de la EQUIPADA no tapa el
   buscador: se abre debajo de él (si no entra, a su derecha). Los
-  tooltips del inventario (sin `RetroTipArea` desde v0.9.10) nunca se
-  salen de la pantalla. Orden: Equipar, Comparar,
+  tooltips del inventario nunca se salen de la pantalla (desde v0.10.1,
+  dentro de la zona de la grilla: ver "Cambios v0.10.1"). Orden: Equipar, Comparar,
   Mover (`· o arrastrá`), Dar a <nombre> (una por compañero; si dos se
   llaman igual, `Dar a Héroe (Maga, Nv 6)`; sin compañeros `Dar a...`),
   Tirar (`· queda en el piso`), Desarmar (`· +2 Cristal de Era` o

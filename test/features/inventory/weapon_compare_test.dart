@@ -39,10 +39,6 @@ String _statText(StatDelta s) => s.changed
     ? '${s.label} ${s.format(s.before)} → ${s.format(s.after)} ${s.diffText}'
     : '${s.label} ${s.format(s.before)}';
 
-/// `ATQ 21 → 30 ▲9` del tooltip corto.
-String _shortText(StatDelta s) => '${s.label} ${s.format(s.before)} → '
-    '${s.format(s.after)} ${s.better ? '▲' : '▼'}${s.diffText.substring(1)}';
-
 Future<TestGesture> _hover(WidgetTester tester, Finder f) async {
   final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
   await mouse.addPointer(location: Offset.zero);
@@ -121,7 +117,7 @@ void main() {
     });
   });
 
-  testWidgets('mouse sobre un arma: ficha + EQUIPADA + Si la equipas',
+  testWidgets('mouse sobre un arma: ficha; Shift suma la ficha de la EQUIPADA',
       (tester) async {
     final c = await _inventory(tester, lootWarrior());
     final p = c.view!.me!.profile;
@@ -129,54 +125,23 @@ void main() {
         tester, find.byKey(ValueKey('inv-cell-${_cell(p, 'e1')}')));
     final tip = find.byKey(const ValueKey('inv-cmp-tip'));
     expect(tip, findsOneWidget);
-    final text = plain(tester, 'inv-cmp-tip');
-    expect(text, contains('Filo del Alba'));
+    expect(plain(tester, 'inv-cmp-tip'), contains('Filo del Alba'));
     // v0.9.13: una columna; la equipada aparece con Shift.
     expect(find.byKey(const ValueKey('inv-cmp-tip-equipped')), findsNothing);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     await tester.pump();
-    expect(plain(tester, 'inv-cmp-tip-equipped'), contains('EQUIPADA'));
-    expect(plain(tester, 'inv-cmp-tip-equipped'), contains('Espada de Bronce'));
-    var delta = plain(tester, 'inv-cmp-tip-delta');
-    expect(delta, contains('Si la equipas:'));
-    final cmp = compareWeapons(progression, p, to: epicSword);
-    // Corto (v0.9.11): solo las stats que cambian, `ATQ 21 → 30 ▲9`.
-    for (final s in cmp.stats) {
-      if (s.changed) {
-        expect(delta, contains(_shortText(s)));
-      } else {
-        expect(find.byKey(ValueKey('cmp-stat-${s.label}')), findsNothing);
-      }
-    }
-    // Sin turno, habilidades, mods ni pasiva fuera de `▸ Cambios`.
-    for (final t in [
-      'Tu turno llega',
-      '+ Mod:',
-      '- Mod:',
-      'Habilidad:',
-      'Pasiva:',
-      'ULT:',
-      'Requiere'
-    ]) {
-      expect(delta, isNot(contains(t)), reason: t);
-    }
-    // A lo sumo 10 líneas visibles.
-    final lineH =
-        RetroHoverCard.textStyle.fontSize! * RetroHoverCard.textStyle.height!;
-    expect(
-        tester.getSize(find.byKey(const ValueKey('inv-cmp-tip-delta'))).height,
-        lessThanOrEqualTo(lineH * 10 + 1));
-    expect(plain(tester, 'inv-cmp-tip'), isNot(contains('Tu turno llega')));
-    await tester.tap(find.byKey(ValueKey('inv-cell-${_cell(p, 'e1')}')),
-        kind: PointerDeviceKind.mouse);
-    await tester.pump();
-    expect(RetroHoverCard.pinned, isTrue);
-    await tester.tap(find.byKey(const ValueKey('tip-fold-Cambios')));
-    await tester.pump();
-    delta = plain(tester, 'inv-cmp-tip-delta');
-    expect(delta, contains('+ Mod:'));
-    expect(delta, contains(cmp.modsGained.first));
-    expect(delta, contains('+ Pasiva:'));
+    // v0.10.1: la ficha de la equipada (nombre, requisitos, plegables),
+    // sin deltas (ya están en la franja de CAMBIOS).
+    final eq = plain(tester, 'inv-cmp-tip-equipped');
+    expect(eq, contains('EQUIPADA'));
+    expect(eq, contains('Espada de Bronce'));
+    expect(eq, isNot(contains('Si la equipas')));
+    expect(find.byKey(const ValueKey('inv-cmp-tip-delta')), findsNothing);
+    // Mismo ancho de columna para las dos.
+    final w = tester
+        .getSize(find.byKey(const ValueKey('inv-cmp-tip-equipped')))
+        .width;
+    expect(tester.getSize(tip).width, closeTo(w * 2 + 16, 0.5));
     // La caja queda dentro de la pantalla.
     final r = tester.getRect(tip);
     expect(r.left, greaterThanOrEqualTo(0));
@@ -333,8 +298,11 @@ void main() {
         if (size.width >= 1920 && text == TextSize.normal) {
           expect(tip.width, lessThan(size.width / 2));
         }
+        // La caja (el contenido scrollea si no entra en la zona).
+        final box =
+            tester.getRect(find.byKey(const ValueKey('retro-tip-scroll')));
         expect(
-            (Offset.zero & size).inflate(1).contains(tip.bottomRight), isTrue);
+            (Offset.zero & size).inflate(1).contains(box.bottomRight), isTrue);
         expect(tester.takeException(), isNull);
         await mouse.removePointer();
         await tester.pump(const Duration(milliseconds: 300));
@@ -355,9 +323,11 @@ void main() {
       expect(find.byType(CharacterPanel), findsOneWidget,
           reason: 'el primer Esc es del tooltip');
       await mouse.removePointer();
-      // Fijado (mouse encima de la caja) y clic fuera.
+      // Fijado con clic sobre la casilla (v0.9.13) y clic fuera. La caja
+      // se abre sobre la grilla (v0.10.1): no se pasa el mouse por ella.
       mouse = await _hover(tester, cell);
-      await mouse.moveTo(tester.getCenter(tip));
+      await mouse.down(tester.getCenter(cell));
+      await mouse.up();
       await tester.pump(const Duration(milliseconds: 300));
       expect(tip, findsOneWidget, reason: 'fijado');
       final out = await tester.createGesture(kind: PointerDeviceKind.touch);

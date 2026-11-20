@@ -74,23 +74,18 @@ class PartyMemberBar extends StatelessWidget {
           ? '<b>${retroText(p.name)}</b>: puntos sin usar<br>'
               '${points.parts.map(retroText).join('<br>')}'
           : '<b>${retroText(p.name)}</b>: sin puntos sin usar',
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          PanelButton(local ? '${p.name} (vos)' : p.name,
-              key: ValueKey('member-${p.id}'),
-              selected: selected,
-              onPressed: () => controller.setActing(p.id)),
-          if (points.any) ...[
-            const SizedBox(width: 4),
-            PointsBadge(
-              key: ValueKey('member-points-${p.id}'),
-              count: points.total,
-              pulse: false,
-            ),
-          ],
-        ],
-      ),
+      // La insignia dentro del botón, a la derecha del nombre (v0.10.1).
+      child: PanelButton(local ? '${p.name} (vos)' : p.name,
+          key: ValueKey('member-${p.id}'),
+          selected: selected,
+          onPressed: () => controller.setActing(p.id),
+          trailing: points.any
+              ? PointsBadge(
+                  key: ValueKey('member-points-${p.id}'),
+                  count: points.total,
+                  pulse: false,
+                )
+              : null),
     );
   }
 }

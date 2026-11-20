@@ -159,7 +159,11 @@ class _LabeledCard extends StatelessWidget {
     required this.level,
     required this.attributes,
     this.label,
+    this.equipped = false,
   });
+
+  /// Ficha de la equipada (`itemTipParts(equipped:)`).
+  final bool equipped;
 
   final ProgressionRules rules;
   final ItemInstance item;
@@ -175,8 +179,8 @@ class _LabeledCard extends StatelessWidget {
           // Resumen + secciones plegables (ui_style.md § "Tooltips
           // cortos").
           LayoutBuilder(builder: (context, c) {
-            final parts =
-                itemTipParts(rules, item, level: level, attributes: attributes);
+            final parts = itemTipParts(rules, item,
+                level: level, attributes: attributes, equipped: equipped);
             return RetroTipFolds(
                 summary: parts.summary,
                 sections: parts.sections,
@@ -297,8 +301,10 @@ class _ShortDelta extends StatelessWidget {
 /// Ficha del mouse (v0.9.13): una sola columna angosta con [item]
 /// (resumen + plegables), ~32 letras que crecen con el texto. Con Shift
 /// apretado ([showEquipped], por defecto [RetroHoverCard.shiftHeld]) se
-/// suma al lado la columna compacta de la EQUIPADA con `Si la equipas:`
-/// ([CompactComparison]). Nunca pasa de [maxScreenShare] del ancho.
+/// suma al lado la ficha de la EQUIPADA (v0.10.1, mismo ancho; los
+/// cambios están en la franja de CAMBIOS). Nunca pasa de
+/// [maxScreenShare] del ancho de la pantalla (ni de la zona de
+/// [RetroTipArea] si la hay).
 class HoverCompareCard extends StatelessWidget {
   const HoverCompareCard({
     super.key,
@@ -308,7 +314,12 @@ class HoverCompareCard extends StatelessWidget {
     required this.attributes,
     this.ownerName,
     this.showEquipped,
+    this.footer,
   });
+
+  /// Debajo de la ficha y del mismo ancho (p. ej. "★ Tu build"); nunca
+  /// la ensancha.
+  final Widget? footer;
 
   /// Ancho de la columna en Normal (~32 letras de VT323).
   static const cardWidth = 180.0;
@@ -337,8 +348,27 @@ class HoverCompareCard extends StatelessWidget {
   }
 
   Widget _card(BuildContext context, bool withEquipped) {
-    final room =
-        (MediaQuery.sizeOf(context).width * maxScreenShare - 24 - 16) / 2;
+    final f = footer;
+    final body = _cardBody(context, withEquipped);
+    if (f == null) return body;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        body,
+        SizedBox(width: body.width, child: f),
+      ],
+    );
+  }
+
+  SizedBox _cardBody(BuildContext context, bool withEquipped) {
+    // Dentro de la zona del tooltip (en el inventario, la columna de la
+    // grilla): una columna entera sola; con Shift, dos que entren.
+    final inArea =
+        context.getInheritedWidgetOfExactType<RetroTipArea>() != null;
+    final avail =
+        MediaQuery.sizeOf(context).width * (inArea ? 1 : maxScreenShare) - 24;
+    final room = withEquipped ? (avail - 16) / 2 : avail;
     final width = RetroType.width(context, cardWidth).clamp(0.0, room);
     final card = _LabeledCard(
         rules: rules,
@@ -352,8 +382,9 @@ class HoverCompareCard extends StatelessWidget {
       return SizedBox(
           key: const ValueKey('inv-cmp-tip'), width: width, child: card);
     }
+    // Shift (v0.10.1): al lado, la ficha de la EQUIPADA (la misma de una
+    // columna); los cambios ya están en la franja de CAMBIOS.
     final eq = rules.equippedItem(viewer);
-    final cmp = compareWeapons(rules, viewer, to: item, attributes: attributes);
     return SizedBox(
       key: const ValueKey('inv-cmp-tip'),
       width: width * 2 + 16,
@@ -363,28 +394,17 @@ class HoverCompareCard extends StatelessWidget {
           SizedBox(width: width, child: card),
           const SizedBox(width: 16),
           SizedBox(
+            key: const ValueKey('inv-cmp-tip-equipped'),
             width: width,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                KeyedSubtree(
-                  key: const ValueKey('inv-cmp-tip-equipped'),
-                  child: ProtoText(eq == null
-                      ? protoColor(ProtoColors.dim, 'Sin arma equipada')
-                      : '<b style="color:#ffd166">EQUIPADA</b> '
-                          '${itemNameMarkup(rules, eq)}'),
-                ),
-                const SizedBox(height: 4),
-                CompactComparison(
-                  key: const ValueKey('inv-cmp-tip-delta'),
-                  rules: rules,
-                  cmp: cmp,
-                  level: viewer.level,
-                  attributes: attributes,
-                  maxWidth: width,
-                ),
-              ],
-            ),
+            child: eq == null
+                ? ProtoText(protoColor(ProtoColors.dim, 'Sin arma equipada'))
+                : _LabeledCard(
+                    rules: rules,
+                    item: eq,
+                    level: viewer.level,
+                    attributes: attributes,
+                    equipped: true,
+                    label: '<b style="color:#ffd166">EQUIPADA</b>'),
           ),
         ],
       ),
@@ -402,19 +422,42 @@ class ChangeStrip extends StatelessWidget {
   final List<StatDelta> stats;
   final bool hovering;
 
-  /// Ancho en Normal (~14 letras).
+  /// Ancho mínimo en Normal (~14 letras).
   static const width = 96.0;
+
+  /// Línea más larga posible (`CRÍT 99.9%→99.9% ▲99.9`): con ella se mide
+  /// el ancho para que cada stat entre en una línea con el texto actual.
+  static const _sample = 'CRÍT 999.9%→999.9% ▲999.9';
+
+  /// Ancho de la franja con el tamaño de texto actual (v0.10.1): cada
+  /// stat en una sola línea, nunca partida.
+  static double widthOf(BuildContext context) {
+    final tp = TextPainter(
+      text: TextSpan(text: retroText(_sample), style: RetroHoverCard.textStyle),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+      maxLines: 1,
+    )..layout();
+    final w = tp.width + 8 + 2 + 4;
+    tp.dispose();
+    final min = RetroType.width(context, width);
+    return w > min ? w : min;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       key: const ValueKey('inv-strip'),
-      width: RetroType.width(context, width),
+      width: widthOf(context),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
           border: Border.all(color: ProtoColors.panelBorder, width: 1)),
       child: DefaultTextStyle(
         style: RetroHoverCard.textStyle,
+        // Una línea por stat: nunca se parte (si no entrara, se recorta el
+        // final en vez de ocupar tres líneas).
+        softWrap: false,
+        maxLines: 1,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

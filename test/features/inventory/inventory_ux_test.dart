@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:echos_del_tiempo/app/theme/retro_hover_card.dart';
 import 'package:echos_del_tiempo/features/inventory/domain/inventory_menu.dart';
-import 'package:echos_del_tiempo/features/inventory/domain/weapon_compare.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/inventory_tab.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
@@ -215,7 +214,7 @@ void main() {
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
     final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
-    // Shift: la columna de la equipada con lo que cambia (v0.9.13).
+    // Shift: la columna de la ficha de la equipada (v0.10.1).
     await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     for (final uid in ['e1', 'l1', 'c1']) {
       final i = _cell(c.view!.me!.profile, uid);
@@ -226,14 +225,11 @@ void main() {
       expect(
           (Offset.zero & screen).inflate(1).contains(tip.bottomRight), isTrue,
           reason: '$uid: $tip');
-      // Solo las que cambian (v0.9.11).
-      final p = c.view!.me!.profile;
-      final cmp = compareWeapons(progression, p, to: p.itemByUid(uid)!);
-      for (final s in cmp.stats) {
-        expect(find.byKey(ValueKey('cmp-stat-${s.label}')),
-            s.changed ? findsOneWidget : anything,
-            reason: '$uid: ${s.label}');
-      }
+      // v0.10.1: al lado va la ficha de la equipada; los cambios están
+      // en la franja de CAMBIOS (no se repiten en el tooltip).
+      expect(
+          find.byKey(const ValueKey('inv-cmp-tip-equipped')), findsOneWidget);
+      expect(find.byKey(const ValueKey('cmp-stat-ATQ')), findsNothing);
     }
     await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
     await mouse.removePointer();

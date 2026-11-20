@@ -31,23 +31,24 @@ class UnusedPointsButton extends StatelessWidget {
     return RetroTooltip(
       message: '<b>Puntos sin usar</b><br>'
           '${points.parts.map(retroText).join('<br>')}',
-      // La insignia va pegada al botón (no encima: no tapa el texto).
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ElevatedButton(
-            key: const ValueKey('hud-points-button'),
-            style: RetroTheme.compactButton(),
-            onPressed: onPressed,
-            child: const Text('PERSONAJE [C]'),
-          ),
-          const SizedBox(width: 4),
-          PointsBadge(
-            key: const ValueKey('hud-points-badge'),
-            count: points.total,
-            reduceMotion: reduceMotion,
-          ),
-        ],
+      // La insignia va dentro del botón, a la derecha del texto (v0.10.1):
+      // suma al ancho y nunca lo tapa.
+      child: ElevatedButton(
+        key: const ValueKey('hud-points-button'),
+        style: RetroTheme.compactButton(),
+        onPressed: onPressed,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('PERSONAJE [C]'),
+            const SizedBox(width: 6),
+            PointsBadge(
+              key: const ValueKey('hud-points-badge'),
+              count: points.total,
+              reduceMotion: reduceMotion,
+            ),
+          ],
+        ),
       ),
     );
   }

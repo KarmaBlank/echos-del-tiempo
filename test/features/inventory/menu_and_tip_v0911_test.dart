@@ -144,6 +144,8 @@ void main() {
           (w.key as ValueKey<String>).value.startsWith('tip-fold-') &&
           !(w.key as ValueKey<String>).value.startsWith('tip-fold-body'));
       for (final e in heads.evaluate().toList()) {
+        // Un plegable abierto rearma los de abajo.
+        if (!e.mounted) continue;
         final f = find.byWidget(e.widget);
         if (f.evaluate().isEmpty) continue;
         await tester.ensureVisible(f);

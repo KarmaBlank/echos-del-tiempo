@@ -288,10 +288,15 @@ class PanelButton extends StatelessWidget {
     this.accent,
     this.reason,
     this.selected = false,
+    this.trailing,
   });
 
   final String label;
   final VoidCallback? onPressed;
+
+  /// Dentro del botón, a la derecha del texto (p. ej. [PointsBadge]):
+  /// suma al ancho, nunca tapa el texto.
+  final Widget? trailing;
 
   /// Color de texto alternativo (p. ej. verde para "¡LISTO!").
   final Color? accent;
@@ -317,7 +322,13 @@ class PanelButton extends StatelessWidget {
     final button = ElevatedButton(
       style: style,
       onPressed: enabled,
-      child: Text(retroText(label)),
+      child: trailing == null
+          ? Text(retroText(label))
+          : Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(retroText(label)),
+              const SizedBox(width: 6),
+              trailing!,
+            ]),
     );
     if (reason == null) return button;
     // Con texto ENORME el motivo va arriba del botón (al lado no entra).
@@ -488,7 +499,8 @@ class RetroTooltip extends StatelessWidget {
 }
 
 /// Pestañas de un panel: una fila de [PanelButton] con la elegida en
-/// `gold`. [badges]: insignia `+N` (quieta) sobre la pestaña `i`, p. ej.
+/// `gold`. [badges]: insignia `N` (quieta) dentro de la pestaña `i`, a la
+/// derecha del texto (v0.10.1), p. ej.
 /// puntos sin usar en ÁRBOL / ATRIBUTOS (passive_tree_v4.md § 7).
 class PanelTabs extends StatelessWidget {
   const PanelTabs({
@@ -507,26 +519,16 @@ class PanelTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget tab(int i) {
-      final button = PanelButton(labels[i],
+      final n = badges[i] ?? 0;
+      return PanelButton(labels[i],
           key: ValueKey('tab-$i'),
           selected: i == index,
           accent: i == index ? RetroPalette.gold : null,
-          onPressed: () => onChanged(i));
-      final n = badges[i] ?? 0;
-      if (n <= 0) return button;
-      return Stack(
-        clipBehavior: Clip.none,
-        children: [
-          button,
-          Positioned(
-            top: -13,
-            right: -8,
-            child: IgnorePointer(
-                child: PointsBadge(
-                    key: ValueKey('tab-badge-$i'), count: n, pulse: false)),
-          ),
-        ],
-      );
+          onPressed: () => onChanged(i),
+          trailing: n <= 0
+              ? null
+              : PointsBadge(
+                  key: ValueKey('tab-badge-$i'), count: n, pulse: false));
     }
 
     return Wrap(

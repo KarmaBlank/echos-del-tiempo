@@ -131,12 +131,19 @@ class WorldHud extends StatelessWidget {
         style: small,
         child: Stack(
           children: [
-            Positioned(
-              top: _gap,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Memo(
+            // Fila de arriba (v0.10.1): botones a la izquierda, la línea
+            // de misión en el medio y sala / minimapa a la derecha, sin
+            // superponerse nunca (`_TopRowLayout`).
+            Positioned.fill(
+              child: CustomMultiChildLayout(
+                delegate: _TopRowLayout(
+                    gap: _gap,
+                    minimapTop: _gap + 48,
+                    objectivesTop: _gap + RetroType.width(context, 48)),
+                children: [
+                  LayoutId(
+                    id: _TopSlot.bar,
+                    child: Memo(
                   deps: [
                     _MissionBar.textFor(view, _missionName(s)),
                     turnTimerNote(view),
@@ -146,14 +153,12 @@ class WorldHud extends StatelessWidget {
                     missionName: _missionName(s),
                   ),
                 ),
-              ),
-            ),
-            // `< TITULO` (solo en el lobby) y `≡ MENÚ` (siempre): la pausa
-            // con sonido, pantalla, juego, controles y salidas.
-            Positioned(
-              top: _gap,
-              left: _gap,
-              child: Memo(
+                  ),
+                  // `< TITULO` (solo en el lobby) y `≡ MENÚ` (siempre): la pausa
+                  // con sonido, pantalla, juego, controles y salidas.
+                  LayoutId(
+                    id: _TopSlot.left,
+                    child: Memo(
                 deps: [
                   s.mode == SessionMode.lobby,
                   onExit != null,
@@ -201,13 +206,12 @@ class WorldHud extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-            // `Sala: CODIGO [Copiar]` del prototipo (HTML línea 87).
-            if (view.roomCode case final code?)
-              Positioned(
-                top: _gap,
-                right: _gap,
-                child: Row(
+                  ),
+                  // `Sala: CODIGO [Copiar]` del prototipo (HTML línea 87).
+                  if (view.roomCode case final code?)
+                    LayoutId(
+                      id: _TopSlot.room,
+                      child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text('Sala: $code',
@@ -222,32 +226,13 @@ class WorldHud extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-            if (field && s.mission != null)
-              Positioned(
-                // Debajo de la barra de misión, que crece con el texto.
-                top: _gap + RetroType.width(context, 48),
-                left: _gap,
-                // Plegable (J o clic en la cabecera); el estado se guarda.
-                child: Consumer(
-                  builder: (context, ref, _) => _Objectives(
-                      mission: s.mission!,
-                      zoneName: _missionName(s),
-                      floorLevel: MapGame.currentFloor(view)?.level,
-                      floor: MapGame.currentFloor(view),
-                      time: s.time,
-                      collapsed: ref.watch(gameSettingsProvider
-                          .select((g) => g.objectivesCollapsed)),
-                      onToggle: () => toggleObjectives(ref)),
-                ),
-              ),
-            if (showMinimap)
-              Positioned(
-                top: _gap + 48,
-                right: _gap,
-                // Minimapa con zoom (rueda o `-` `+`, se recuerda) y
-                // `MAPA [M]` (v0.8.1).
-                child: Consumer(builder: (context, ref, _) {
+                    ),
+                  // Minimapa con zoom (rueda o `-` `+`, se recuerda) y
+                  // `MAPA [M]` (v0.8.1).
+                  if (showMinimap)
+                    LayoutId(
+                      id: _TopSlot.minimap,
+                      child: Consumer(builder: (context, ref, _) {
                   final zoom = ref
                       .watch(gameSettingsProvider.select((g) => g.minimapZoom));
                   return Column(
@@ -306,7 +291,28 @@ class WorldHud extends StatelessWidget {
                     ],
                   );
                 }),
+                    ),
+                  // Objetivos plegables (J o clic en la cabecera; el estado
+                  // se guarda), debajo de los botones y de la línea de
+                  // misión si le queda encima.
+                  if (field && s.mission != null)
+                    LayoutId(
+                      id: _TopSlot.objectives,
+                      child: Consumer(
+                  builder: (context, ref, _) => _Objectives(
+                      mission: s.mission!,
+                      zoneName: _missionName(s),
+                      floorLevel: MapGame.currentFloor(view)?.level,
+                      floor: MapGame.currentFloor(view),
+                      time: s.time,
+                      collapsed: ref.watch(gameSettingsProvider
+                          .select((g) => g.objectivesCollapsed)),
+                      onToggle: () => toggleObjectives(ref)),
+                ),
+                    ),
+                ],
               ),
+            ),
             Positioned(
               left: _gap,
               bottom: _gap,
@@ -667,17 +673,109 @@ String? turnTimerNote(SessionView view) {
   return 'Turnos: ${s.turnTimer.label}$host';
 }
 
+enum _TopSlot { left, bar, room, minimap, objectives }
+
+/// Fila de arriba del HUD (v0.10.1, exploration.md § "HUD"): los botones
+/// arriba a la izquierda, la sala arriba a la derecha y el minimapa
+/// debajo de ella; la línea de misión centrada en el hueco del medio
+/// (más angosta si hace falta). Si el hueco es muy chico, va debajo de
+/// los botones. Nunca se superponen.
+class _TopRowLayout extends MultiChildLayoutDelegate {
+  _TopRowLayout(
+      {required this.gap,
+      required this.minimapTop,
+      required this.objectivesTop});
+
+  final double gap;
+  final double minimapTop;
+
+  /// Alto mínimo de la caja de objetivos (debajo de los botones).
+  final double objectivesTop;
+
+  /// Hueco mínimo del medio para la línea de misión (más chico: va
+  /// debajo de los botones).
+  static const minBar = 120.0;
+
+  @override
+  void performLayout(Size size) {
+    final loose = BoxConstraints.loose(size);
+    var leftRect = Rect.fromLTWH(gap, gap, 0, 0);
+    if (hasChild(_TopSlot.left)) {
+      final l = layoutChild(_TopSlot.left, loose);
+      positionChild(_TopSlot.left, Offset(gap, gap));
+      leftRect = Offset(gap, gap) & l;
+    }
+    var right = size.width - gap;
+    var roomBottom = gap;
+    if (hasChild(_TopSlot.room)) {
+      final r = layoutChild(_TopSlot.room, loose);
+      final o = Offset(size.width - gap - r.width, gap);
+      positionChild(_TopSlot.room, o);
+      right = o.dx;
+      roomBottom = gap + r.height;
+    }
+    if (hasChild(_TopSlot.minimap)) {
+      final m = layoutChild(_TopSlot.minimap, loose);
+      final top = minimapTop > roomBottom + 4 ? minimapTop : roomBottom + 4;
+      final o = Offset(size.width - gap - m.width, top);
+      positionChild(_TopSlot.minimap, o);
+      if (o.dx < right) right = o.dx;
+    }
+    Rect? barRect;
+    if (hasChild(_TopSlot.bar)) {
+      final from = leftRect.right + 8;
+      final to = right - 8;
+      if (to - from >= minBar) {
+        final b = layoutChild(_TopSlot.bar,
+            BoxConstraints(maxWidth: to - from, maxHeight: size.height));
+        // Centrada en la pantalla si entra; si no, en el hueco.
+        final x = ((size.width - b.width) / 2).clamp(from, to - b.width);
+        positionChild(_TopSlot.bar, Offset(x, gap));
+        barRect = Offset(x, gap) & b;
+      } else {
+        final w = (right - 8 - gap).clamp(0.0, size.width);
+        final b = layoutChild(
+            _TopSlot.bar, BoxConstraints(maxWidth: w, maxHeight: size.height));
+        final o = Offset(gap, leftRect.bottom + 4);
+        positionChild(_TopSlot.bar, o);
+        barRect = o & b;
+      }
+    }
+    if (hasChild(_TopSlot.objectives)) {
+      final o = layoutChild(_TopSlot.objectives, loose);
+      var top = objectivesTop;
+      if (leftRect.bottom + 4 > top) top = leftRect.bottom + 4;
+      final bar = barRect;
+      if (bar != null &&
+          !bar.isEmpty &&
+          bar.left < gap + o.width &&
+          bar.bottom + 4 > top) {
+        top = bar.bottom + 4;
+      }
+      positionChild(_TopSlot.objectives, Offset(gap, top));
+    }
+  }
+
+  @override
+  bool shouldRelayout(_TopRowLayout old) =>
+      old.gap != gap ||
+      old.minimapTop != minimapTop ||
+      old.objectivesTop != objectivesTop;
+}
+
 class _MissionBar extends StatelessWidget {
   const _MissionBar({required this.view, required this.missionName});
 
   final SessionView view;
   final String missionName;
 
-  /// El texto de la barra (también es la clave de su [Memo]).
-  static String textFor(SessionView view, String missionName) {
+  /// El texto de la barra (también es la clave de su [Memo]); `null` en
+  /// el pueblo (v0.10.1: sin barra de ayuda, los `[E]` salen al acercarse
+  /// y los atajos están en la pausa).
+  static String? textFor(SessionView view, String missionName) {
     final s = view.session;
     final m = s.mission;
-    final String text;
+    final String? text;
     if (m != null &&
         s.mode != SessionMode.lobby &&
         s.mode != SessionMode.prep) {
@@ -693,11 +791,8 @@ class _MissionBar extends StatelessWidget {
       text = '$name · $goals · ${clockText(m.elapsed)}';
     } else if (s.mode == SessionMode.prep) {
       text = 'Preparación de misión';
-    } else if (view.map.entrances.isNotEmpty) {
-      text = 'Lobby · Mostrador [E] · Armería [E] · Zonas: puertas [E] · '
-          'Personaje [C]';
     } else {
-      text = 'Lobby · Mostrador [E] · Armería [E] · Personaje [C]';
+      text = null;
     }
     return text;
   }
@@ -708,20 +803,27 @@ class _MissionBar extends StatelessWidget {
     // Tiempo de turno de la sala si no es el normal (en co-op lo fija el
     // anfitrión; accessibility.md § 7).
     final turns = turnTimerNote(view);
-    // `#mission`: verde `#7bed9f`.
-    return RetroPanel(
-      key: const ValueKey('hud-mission-bar'),
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(retroText(text),
-              style: const TextStyle(color: ProtoColors.green)),
-          if (turns != null)
-            Text(retroText(turns),
-                key: const ValueKey('hud-turn-timer'),
-                style: const TextStyle(color: ProtoColors.sky)),
-        ],
+    if (text == null && turns == null) return const SizedBox.shrink();
+    // `#mission`: verde `#7bed9f`. Una línea; si no entra en el hueco
+    // entre los botones y el minimapa, se achica (v0.10.1: nunca se
+    // superpone ni empuja los objetivos hacia abajo).
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: RetroPanel(
+        key: const ValueKey('hud-mission-bar'),
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (text != null)
+              Text(retroText(text),
+                  style: const TextStyle(color: ProtoColors.green)),
+            if (turns != null)
+              Text(retroText(turns),
+                  key: const ValueKey('hud-turn-timer'),
+                  style: const TextStyle(color: ProtoColors.sky)),
+          ],
+        ),
       ),
     );
   }

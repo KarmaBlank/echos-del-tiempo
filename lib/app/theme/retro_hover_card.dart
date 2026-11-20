@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -457,12 +458,13 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
                     maxHeight: c.maxHeight,
                     child: widget.hint == null
                         ? Builder(builder: widget.builder)
-                        : Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        // La ayuda corta en el ancho de la ficha: nunca
+                        // la ensancha (una ayuda larga con texto grande
+                        // la hacía más ancha que la columna).
+                        : _HintBelow(
+                            gap: 4,
                             children: [
                               Builder(builder: widget.builder),
-                              const SizedBox(height: 4),
                               Text(
                                   _pinned
                                       ? 'Fijado · Esc o clic afuera: soltar'
@@ -815,4 +817,65 @@ class RetroTipFolds extends StatelessWidget {
           ],
         ),
       );
+}
+
+/// [children] = (contenido, ayuda): la ayuda va debajo con el ancho del
+/// contenido (se parte en líneas si no entra), sin agrandar la caja.
+class _HintBelow extends MultiChildRenderObjectWidget {
+  const _HintBelow({required this.gap, required super.children});
+
+  final double gap;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderHintBelow(gap);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderHintBelow r) =>
+      r.gap = gap;
+}
+
+class _HintParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderHintBelow extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _HintParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _HintParentData> {
+  _RenderHintBelow(this._gap);
+
+  double _gap;
+  set gap(double v) {
+    if (v == _gap) return;
+    _gap = v;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _HintParentData) {
+      child.parentData = _HintParentData();
+    }
+  }
+
+  @override
+  void performLayout() {
+    final body = firstChild!;
+    final hint = childAfter(body)!;
+    body.layout(constraints.loosen(), parentUsesSize: true);
+    final w = body.size.width;
+    hint.layout(BoxConstraints(maxWidth: w), parentUsesSize: true);
+    (body.parentData! as _HintParentData).offset = Offset.zero;
+    (hint.parentData! as _HintParentData).offset =
+        Offset(0, body.size.height + _gap);
+    size = constraints
+        .constrain(Size(w, body.size.height + _gap + hint.size.height));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) =>
+      defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
 }

@@ -365,8 +365,11 @@ Lo que quedó:
   asesor de atributos (`AttributeAdvisor`) cuenta en puntos y muestra lo
   que suma (`FUE +6`).
 - ATRIBUTOS: botón `+3 FUE` (pasado el tope `+3 VIT → +1.5`, naranja),
-  `tope 60` bajo cada fila y `tope 60: rinde ½` (naranja) cuando lo
-  pasa; tooltip con el rendimiento real; la vista previa ya usa el tope.
+  valor en naranja pasado el tope; tooltip con qué da por punto, `Tope
+  60: pasado el tope rinde ½` y el rendimiento real; la vista previa ya
+  usa el tope. v0.10.1 (pedido del dueño): cada fila es una sola línea
+  (nombre, valor, ★ del plan, `-` y `+3 X`), sin la línea `tope N` ni la
+  descripción (están en el tooltip). Con texto ENORME, solo la sigla.
 - Árbol v7 (`passive_tree_v7.dart`, armado desde el v6 con reglas
   determinísticas): **422 nodos** (v6: 597): 132 chicos dobles, 17
   chicos simples, 207 notables + 24 notables menores, 38 keystones, 4

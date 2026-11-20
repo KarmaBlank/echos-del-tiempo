@@ -192,6 +192,11 @@ usa). Test: `test/app/retro_hover_card_test.dart`.
   - Línea de ayuda chiquita al pie (`dim`): `Alt: detalle · Shift:
     comparar · clic: fijar` (fijada: `Fijado · Esc o clic afuera:
     soltar`).
+    Se parte al ancho del contenido: nunca ensancha la caja (v0.10.1).
+  - La caja mide su contenido (máximo una columna); nada adentro la
+    estira al ancho disponible (v0.10.1: nada de `stretch` sin ancho).
+  - Shift (inventario, v0.10.1): al lado, la ficha de la EQUIPADA del
+    mismo ancho, sin deltas (están en la franja de CAMBIOS).
   - El resto de los tooltips (`interactive` sin `pinOnClick`) no cambia.
 
 Pedido del dueño: "hay demasiado texto". Por defecto un tooltip muestra

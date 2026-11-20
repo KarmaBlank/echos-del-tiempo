@@ -1,5 +1,6 @@
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/app/widgets/points_badge.dart';
+import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/features/characters/domain/unused_points.dart';
 import 'package:echos_del_tiempo/features/world/presentation/hud/unused_points_notice.dart';
 import 'package:echos_del_tiempo/features/world/presentation/hud/world_hud.dart';
@@ -65,8 +66,8 @@ void main() {
     });
 
     test('v0.8.3: cuenta a los compañeros (solo_party.md § 6.3)', () {
-      final u = const UnusedPoints(tree: 2)
-          .withCompanions([('Leo', 3), ('Mia', 0)]);
+      final u =
+          const UnusedPoints(tree: 2).withCompanions([('Leo', 3), ('Mia', 0)]);
       expect(u.total, 5);
       expect(u.own, 2);
       expect(u.companionTotal, 3);
@@ -94,7 +95,7 @@ void main() {
           points: const UnusedPoints(attributes: 2, tree: 3),
           onPressed: () => taps++)));
       expect(find.byKey(const ValueKey('hud-points-button')), findsOneWidget);
-      expect(find.text('+5'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
       expect(find.byKey(const ValueKey('points-badge-pulse')), findsOneWidget);
       expect(tester.hasRunningAnimations, isTrue);
       await tester.tap(find.byKey(const ValueKey('hud-points-button')));
@@ -107,7 +108,7 @@ void main() {
           points: const UnusedPoints(tree: 1),
           reduceMotion: true,
           onPressed: () {})));
-      expect(find.text('+1'), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
       expect(find.byKey(const ValueKey('points-badge-static')), findsOneWidget);
       expect(find.byKey(const ValueKey('points-badge-pulse')), findsNothing);
       expect(tester.hasRunningAnimations, isFalse);
@@ -143,8 +144,8 @@ void main() {
     testWidgets('v0.8.3: avisa cuando un compañero gana puntos',
         (tester) async {
       await tester.pumpWidget(_app(_toast(UnusedPoints.none)));
-      await tester.pumpWidget(_app(
-          _toast(UnusedPoints.none.withCompanions([('Leo', 3)]))));
+      await tester.pumpWidget(
+          _app(_toast(UnusedPoints.none.withCompanions([('Leo', 3)]))));
       await tester.pump(const Duration(milliseconds: 300));
       expect(find.text('Leo tiene 3 puntos sin usar · [C]'), findsOneWidget);
     });
@@ -194,7 +195,7 @@ void main() {
       expect(
           find.descendant(
               of: find.byKey(const ValueKey('hud-points-badge')),
-              matching: find.text('+${u.total}')),
+              matching: find.text('${u.total}')),
           findsOneWidget);
 
       await tester.tap(find.byKey(const ValueKey('hud-points-button')));
@@ -204,7 +205,7 @@ void main() {
       expect(
           find.descendant(
               of: find.byKey(ValueKey('tab-badge-${CharacterTab.tree.index}')),
-              matching: find.text('+5')),
+              matching: find.text('5')),
           findsOneWidget);
       if (me.points > 0) {
         expect(
@@ -221,4 +222,48 @@ void main() {
       expect(find.byType(PointsBadge), findsNothing);
     });
   });
+
+  // v0.10.1: la insignia va dentro del botón, a la derecha del texto,
+  // sin taparlo, con cualquier tamaño de texto.
+  for (final size in TextSize.values) {
+    testWidgets('insignias dentro del botón, sin tapar el texto ($size)',
+        (tester) async {
+      final c = await pumpPanel(tester,
+          profile: progression.normalize(
+              PlayerProfile(name: 'Ana', classId: 'guerrero', level: 30)),
+          textSize: size,
+          build: (v, c) => Stack(children: [
+                WorldHud(view: v, controller: c),
+                if (v.panel != null) CharacterPanel(view: v, controller: c),
+              ]));
+      void check(Finder button, Finder badge) {
+        final b = tester.getRect(badge);
+        final btn = tester.getRect(button);
+        final label = tester.getRect(
+            find.descendant(of: button, matching: find.byType(Text)).first);
+        expect(b.overlaps(label), isFalse, reason: '$badge $size');
+        expect(b.left, greaterThanOrEqualTo(label.right));
+        // Dentro del botón, con su padding.
+        expect(btn.left <= b.left && b.right <= btn.right - 7.5, isTrue,
+            reason: '$b en $btn');
+        expect(btn.top <= b.top && b.bottom <= btn.bottom, isTrue,
+            reason: '$b en $btn');
+      }
+
+      check(find.byKey(const ValueKey('hud-points-button')),
+          find.byKey(const ValueKey('hud-points-badge')));
+      await tester.tap(find.byKey(const ValueKey('hud-points-button')));
+      await tester.pump();
+      await tester.pump();
+      expect(c.view!.panel, isNotNull);
+      var n = 0;
+      for (final t in CharacterTab.values) {
+        final badge = find.byKey(ValueKey('tab-badge-${t.index}'));
+        if (badge.evaluate().isEmpty) continue;
+        check(find.byKey(ValueKey('tab-${t.index}')), badge);
+        n++;
+      }
+      expect(n, greaterThanOrEqualTo(2));
+    });
+  }
 }

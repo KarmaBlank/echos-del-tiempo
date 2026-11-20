@@ -441,9 +441,19 @@ Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
 
 - **Barra de misión** (arriba al centro, `#mission` del prototipo):
   en misión `nombre · objetivos · mm:ss` (o `¡Derrota al jefe!` con la
-  barrera abierta); en el lobby
-  `Lobby · Mostrador [E] · Armería [E] · Personaje [C]`; en `prep`
-  `Preparación de misión`.
+  barrera abierta); en `prep` `Preparación de misión`. En el pueblo no
+  hay barra (v0.10.1, pedido del dueño: la barra de ayuda se superponía
+  con los botones de arriba a la izquierda): los `[E] Mostrador` /
+  `[E] Armería` / puertas salen como etiqueta al acercarse y los atajos
+  están en la pausa (CONTROLES).
+- **Fila de arriba sin superposiciones (v0.10.1)**: `_TopRowLayout`
+  ubica los botones (`< TITULO`, `≡ MENÚ`, `PARTY`, `PERSONAJE [C]` con
+  su insignia dentro del botón) arriba a la izquierda, la sala arriba a
+  la derecha y el minimapa debajo; la línea de misión va centrada en el
+  hueco del medio (más angosta si hace falta, y si el hueco es muy chico,
+  debajo de los botones) y los objetivos debajo de los botones y de la
+  línea si le queda encima. Test de rects con todos los tamaños de
+  texto (`hud_top_row_v0101_test.dart`).
 - **Objetivos** (arriba a la izquierda, solo campo; `drawObjectives`):
   una línea por objetivo `Etiqueta n/goal` y la línea del jefe
   (`* ¡Ve por el JEFE!` / `Jefe: completa los objetivos`).
@@ -645,8 +655,8 @@ resto al aire libre (`lobby = false`).
   es la elección de zona y la votación que aparece arriba es la
   confirmación (se puede cancelar con N). El mostrador sigue en el pueblo
   con todas las zonas.
-- **Barra de misión** en el mundo: `Lobby · Mostrador [E] · Armería [E]
-  · Zonas: puertas [E] · Personaje [C]`.
+- **Barra de misión** en el mundo: ninguna (v0.10.1; antes `Lobby ·
+  Mostrador [E] · Armería [E] · Zonas: puertas [E] · Personaje [C]`).
 - **Minimapa** también en el mundo (antes nunca en el lobby): tiles
   (pasto como suelo, árbol/roca como muro), el pueblo en su color de
   suelo, las entradas como cuadros de 3 tiles del color de la zona (gris
