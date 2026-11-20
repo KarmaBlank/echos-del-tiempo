@@ -1,7 +1,7 @@
-# Spec (BORRADOR): categoría ATAQUE del menú de batalla
+# Spec: categoría ARMA del menú de batalla
 
-Estado: **borrador para el dueño**, nada implementado. No cambia el juego
-hasta que se aprueben las preguntas de § 5.
+Estado: **APROBADO (etapa 1)**, implementado en v0.20.0. Lo que manda es
+§ 6 (decisión del dueño); §§ 1–5 quedan como análisis previo.
 
 Pedido del dueño: "En el menú de batalla, la categoría ATAQUE solo tiene
 'Atacar'; queda solito mientras HABILIDADES puede tener 6. Podría haber
@@ -214,3 +214,59 @@ la categoría ahorra poco y suma errores.
    ARMA*, sin MP ni Pulso y con enfriamiento, para que HABILIDADES siga
    siendo el lugar del Pulso y las Instante; definirlas en
    weapon_identity.md.
+
+## 6. Decisión del dueño (APROBADO, etapa 1)
+
+Solo la etapa 1 de § 4, con un ajuste: las **Instante** se mudan a ARMA
+("un instante es más un ataque que una habilidad").
+
+### 6.1 Menú
+
+| # | Categoría | Filas (en orden) |
+|---|---|---|
+| 1 | **ARMA** | `Atacar` · `Defender` · `Liberar a X` (contextual) · separador "Instante — no terminan tu turno" · las Instante del kit |
+| 2 | HABILIDADES | solo las que terminan el turno (sin Instante; si no queda ninguna, la categoría no aparece) |
+| 3 | DÚOS | sin cambio |
+| 4 | ULTIMATE | sin cambio |
+| 5 | OBJETOS | sin cambio |
+| 6 | PASAR | sin cambio, aparte (`P P`) para no perder turnos por un clic |
+
+La categoría DEFENDER desaparece. Costo por teclado al empezar el turno:
+Atacar `1`/`Enter` (1 tecla), **Defender `2` (1 tecla)**, Instante N
+`N` (1 tecla, después de Liberar si hay). El separador no cuenta para los
+atajos 1-9. El resaltado de objetivos de la escena vale para las Instante
+en ARMA igual que en HABILIDADES.
+
+Panel derecho: cada fila trae su detalle. Atacar como antes; Defender:
+`½ daño · +N Pulso · +6 ULT` y el texto de § 6.2; las Instante, la
+insignia INSTANTE y "no termina tu turno" (battle_presentation.md).
+
+### 6.2 Defender con valor (motor, host-autoritativo)
+
+- ½ daño hasta su próximo turno; próximo turno en `IV × 0.7` (igual).
+- **+2 Pulso** (`BattleEngine.defendPulse`). Si su turno anterior también
+  terminó en un Defender elegido, **+1** (`defendPulseRepeat`):
+  rendimiento decreciente contra "defender en bucle".
+- **+6 de carga de ULT** al defender (`defendUlt`) y **+6** más al
+  **primer** golpe enemigo que reciba defendiendo (`defendHitUlt`, una
+  vez por defensa). Ambos escalan con `ultChargeBonus`.
+- **Tiempo agotado**: la defensa automática da el +1 de Pulso de siempre,
+  nada de ULT, y corta la racha (no premia el AFK).
+- Estado: `Combatant.guardStreak` (racha) y `guardHitPending` (+6
+  pendiente). Viajan en el estado como claves opcionales `gst` / `ghp`
+  (ausentes = `false`); el comando `DefendCommand` no cambia, así que
+  **no sube `kProtocolVersion`**.
+- AUTO / IA de compañeros: sigue usando `DefendCommand` como respaldo; el
+  valor lo aplica el motor.
+
+### 6.3 Debilidades gratis
+
+El tooltip del enemigo (`EnemyLiveInfo`) muestra Débil / Resiste / Inmune
+de su familia aunque el bestiario todavía no lo conozca (cuando la ficha
+dice "???"); si ya lo conoce, la ficha las muestra y no se repiten.
+
+### 6.4 Fuera de alcance
+
+- **Golpe de quiebre y técnicas por arma: NO.** Las Instante en ARMA
+  cumplen el rol de "variante del golpe" que proponían § 3 B y § 4.2–4.3.
+- Analizar con turno (§ 3 D) no se hace.

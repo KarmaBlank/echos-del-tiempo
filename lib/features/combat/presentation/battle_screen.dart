@@ -200,7 +200,7 @@ class BattleViewState extends State<BattleView>
   BattleItem? _potMode;
 
   /// Categoría elegida en la ventana de comandos.
-  BattleCategory _category = BattleCategory.attack;
+  BattleCategory _category = BattleCategory.weapon;
 
   /// Acción elegida (índice en la lista que se ve).
   int _selected = 0;
@@ -224,7 +224,10 @@ class BattleViewState extends State<BattleView>
   Set<String> get highlightedTargets {
     final cur = widget.battle.current;
     if (!widget.canAct || cur == null || !cur.isPlayer) return const {};
-    if (_category != BattleCategory.skills) return const {};
+    if (_category != BattleCategory.skills &&
+        _category != BattleCategory.weapon) {
+      return const {};
+    }
     final v = _visible(cur);
     if (_selected < 0 || _selected >= v.length) return const {};
     final id = v[_selected].id;
@@ -311,7 +314,7 @@ class BattleViewState extends State<BattleView>
 
   void _resetMenu() {
     _potMode = null;
-    _category = BattleCategory.attack;
+    _category = BattleCategory.weapon;
     _selected = 0;
     _page = 0;
   }
@@ -625,6 +628,33 @@ class BattleViewState extends State<BattleView>
     );
   }
 
+  /// Defender en ARMA (battle_attack_menu.md § 6): ½ daño, próximo turno
+  /// × 0.7, +2 Pulso (+1 si ya defendió el turno anterior) y carga de ULT.
+  BattleAction _defendAction(Combatant cur) {
+    final pulse = cur.guardStreak
+        ? BattleEngine.defendPulseRepeat
+        : BattleEngine.defendPulse;
+    final ult = BattleEngine.defendUlt.round();
+    final hit = BattleEngine.defendHitUlt.round();
+    return BattleAction(
+      id: 'defend',
+      name: 'Defender',
+      value: hexSpan('#74b9ff', '½ daño'),
+      cost: hexSpan(kPulseHex, '+$pulse Pulso'),
+      summary: '${hexSpan('#74b9ff', '½ daño')} · '
+          '${hexSpan(kPulseHex, '+$pulse Pulso')} · '
+          '${hexSpan('#ee70ad', '+$ult ULT')}',
+      description: '<b>Defender</b><br>Recibís la mitad del daño hasta tu '
+          'próximo turno, y tu siguiente turno llega 30% antes.<br>'
+          '+$pulse de Pulso${cur.guardStreak ? ' (defendiste el turno '
+              'anterior: rinde menos)' : ' (+${BattleEngine.defendPulseRepeat}'
+              ' si repetís)'}. Carga +$ult de ULT, y +$hit más si te '
+          'golpean defendiendo.<br><span class="k">El tiempo agotado '
+          'defiende solo, sin este premio.</span>',
+      onSelect: () => _send(const DefendCommand()),
+    );
+  }
+
   /// Las categorías del menú de [cur] con sus acciones (las vacías no
   /// están). Cada acción con su id estable.
   List<BattleCategoryEntry> _entries(Combatant cur) {
@@ -633,8 +663,17 @@ class BattleViewState extends State<BattleView>
     final ult = ultimateOf(cur);
     final allies = b.party.where((q) => q.alive && q.id != cur.id).toList();
     final out = <BattleCategoryEntry>[];
+    // MP, Pulso y precondiciones (combo_balance.md § 5.2): si falta algo,
+    // el botón sale desactivado con "Necesita: …".
+    final foes = _foes;
+    final tgC = foes.where((e) => e.id == tg).firstOrNull;
+    final defs = [
+      for (final id in cur.skillIds)
+        if (kSkills[id] case final sk?) sk,
+    ];
+    final instants = defs.where((s) => s.instant).toList();
 
-    out.add(BattleCategoryEntry(BattleCategory.attack, [
+    out.add(BattleCategoryEntry(BattleCategory.weapon, [
       BattleAction(
         id: 'attack',
         name: 'Atacar',
@@ -642,6 +681,9 @@ class BattleViewState extends State<BattleView>
         description: _attackDesc(cur),
         onSelect: () => _send(AttackCommand(targetId: tg)),
       ),
+      // Defender con valor (battle_attack_menu.md § 6): fila 2 de ARMA,
+      // así por teclado es `2` (una tecla al empezar el turno).
+      _defendAction(cur),
       // Telaraña de la Matriarca: Atacar sobre un aliado atrapado lo libera.
       for (final q in allies)
         if (q.webbed)
@@ -654,26 +696,19 @@ class BattleViewState extends State<BattleView>
                 'turno.',
             onSelect: () => _send(AttackCommand(targetId: q.id)),
           ),
+      // Las Instante viven en ARMA (battle_attack_menu.md § 6: "un
+      // instante es más un ataque que una habilidad"), después de un
+      // separador; el panel de la derecha dice "INSTANTE · no termina tu
+      // turno" (battle_presentation.md).
+      for (final (i, sk) in instants.indexed)
+        _skillAction(
+            sk, cur, tg, SkillRequirements.missing(sk, cur, tgC, foes: foes),
+            separatorBefore: i == 0 ? kInstantSeparator : null),
     ]));
 
-    // MP, Pulso y precondiciones (combo_balance.md § 5.2): si falta algo,
-    // el botón sale desactivado con "Necesita: …".
-    final foes = _foes;
-    final tgC = foes.where((e) => e.id == tg).firstOrNull;
-    // Las Instante van primero, con un separador fino antes del resto
-    // (combat.md § "Pulso e Instante").
-    final defs = [
-      for (final id in cur.skillIds)
-        if (kSkills[id] case final sk?) sk,
-    ];
-    final ordered = [
-      ...defs.where((s) => s.instant),
-      ...defs.where((s) => !s.instant),
-    ];
-    // Sin banner arriba: el panel de la derecha dice "INSTANTE · no
-    // termina tu turno" cuando la del cursor lo es (battle_presentation.md).
+    // HABILIDADES: las que terminan el turno (las Instante están en ARMA).
     final skills = [
-      for (final sk in ordered)
+      for (final sk in defs.where((s) => !s.instant))
         _skillAction(
             sk, cur, tg, SkillRequirements.missing(sk, cur, tgC, foes: foes)),
     ];
@@ -772,17 +807,6 @@ class BattleViewState extends State<BattleView>
           ),
         ],
         badge: hexSpan('#9fb4ff', 'x${cur.potions + cur.ethers}')));
-
-    out.add(BattleCategoryEntry(BattleCategory.defend, [
-      BattleAction(
-        id: 'defend',
-        name: 'Defender',
-        value: hexSpan('#74b9ff', '½ daño'),
-        description: '<b>Defender</b><br>Recibes la mitad del daño hasta tu '
-            'próximo turno, y tu siguiente turno llega 30% antes.',
-        onSelect: () => _send(const DefendCommand()),
-      ),
-    ]));
 
     // Pasar turno (v0.8.3, combat.md § "Pasar turno"). AUTO nunca pasa.
     // Después de una Instante, la misma tecla termina el turno sin el
@@ -987,7 +1011,12 @@ class BattleViewState extends State<BattleView>
               enemy: hv,
               bestiary: best,
               level: widget.enemyLevel,
-              live: EnemyLiveInfo(enemy: hv)),
+              // Debilidades gratis (battle_attack_menu.md § 6): si la
+              // ficha todavía dice "???", las muestra el estado en vivo.
+              live: EnemyLiveInfo(
+                  enemy: hv,
+                  affinities:
+                      !hv.practice && !best.knows(hv.enemyType))),
         ),
       ),
     );

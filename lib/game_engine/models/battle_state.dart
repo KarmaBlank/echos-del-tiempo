@@ -122,6 +122,8 @@ class Combatant {
     this.summonKills = 0,
     this.pulse = 0,
     this.chained = false,
+    this.guardStreak = false,
+    this.guardHitPending = false,
     this.practice = false,
     this.ultWeaken = 0,
     this.lastSkillId,
@@ -361,6 +363,16 @@ class Combatant {
   /// una acción más, pero no otra Instante encadenada.
   bool chained;
 
+  /// Su última defensa fue un Defender elegido (no la automática por
+  /// tiempo agotado) y no hizo otra cosa desde entonces: el próximo
+  /// Defender da +1 Pulso en vez de +2 (battle_attack_menu.md § 6).
+  /// Lo decide el host; viaja en el estado como `gst` (opcional).
+  bool guardStreak;
+
+  /// Defendió a mano y todavía no le cobró el +6 de ULT por recibir un
+  /// golpe defendiendo (una vez por defensa).
+  bool guardHitPending;
+
   /// De práctica (combat_tutorial.md § 3): su vida nunca baja de 1, no
   /// cae ("se recompone").
   bool practice;
@@ -512,6 +524,8 @@ class Combatant {
         summonKills: summonKills,
         pulse: pulse,
         chained: chained,
+        guardStreak: guardStreak,
+        guardHitPending: guardHitPending,
         practice: practice,
         ultWeaken: ultWeaken,
         lastSkillId: lastSkillId,

@@ -193,7 +193,11 @@ Objetivo: el enemigo vivo pedido, o el primero vivo.
   Si revive, su próximo turno es `reloj + IV`.
 - **Poción de maná**: 50% del maná máx. Sin objetivo: el aliado vivo con
   menor % de maná.
-- **Defender**: ½ daño hasta su próximo turno, que llega antes (`IV × 0.7`).
+- **Defender** (en la categoría ARMA desde v0.20.0, battle_attack_menu.md
+  § 6): ½ daño hasta su próximo turno, que llega antes (`IV × 0.7`); +2
+  Pulso (+1 si su turno anterior también fue Defender), +6 de ULT y +6
+  más al primer golpe recibido defendiendo. La defensa automática por
+  tiempo agotado no se premia (+1 Pulso, sin ULT).
 - **Pasar turno** (`PassCommand`, v0.8.3): ver abajo.
 
 ### Dúos (v0.8.3)
@@ -305,7 +309,8 @@ IA) y el catálogo (`SkillDef.pulse`, `instant`, `requires`).
 | Empezar su turno (`nextTurn`) | +1 |
 | Ataque básico | +1 (no al liberar a un aliado de la telaraña) |
 | Golpe primario a una debilidad o que reacciona (incluye Convergencia) | +1, una vez por acción (una habilidad a todos que reacciona en 3 enemigos da +1) |
-| Defender (también la defensa automática del tiempo agotado) | +1 |
+| Defender (v0.20.0, battle_attack_menu.md § 6) | +2; +1 si su turno anterior también fue Defender |
+| Defensa automática del tiempo agotado | +1 (sin ULT, corta la racha) |
 | Pasar, pociones, dúos, ULT | 0 (salvo lo que el golpe gane por debilidad o reacción) |
 | Tope | 5 (`pulseMax`) |
 
@@ -350,6 +355,9 @@ tienen que cumplir):
 - **Tiempo agotado**: el reloj de 30 s (`SessionBattle.turnTime`) se
   reinicia solo cuando empieza otro turno, así que cuenta el turno entero;
   si se agota después de una Instante, defiende y termina.
+- **Desde v0.20.0 las Instante viven en ARMA** (debajo de Atacar y
+  Defender, con el separador "Instante — no terminan tu turno"); en
+  HABILIDADES ya no aparecen (battle_attack_menu.md § 6). Historia:
 - **Menú de HABILIDADES (v0.10.x, pedido del dueño):** las Instante van
   primero, con la marca `[INSTANTE]` en celeste junto al nombre y un
   etiqueta "[INSTANTE] · no termina tu turno" en el panel derecho cuando

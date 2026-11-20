@@ -20,12 +20,13 @@ import '../domain/skill_text.dart' show SkillReach;
 
 /// Categorías del menú.
 enum BattleCategory {
-  attack('ATACAR'),
+  /// ARMA (battle_attack_menu.md § 6): Atacar, Defender, filas
+  /// contextuales (Liberar a X) y las Instante.
+  weapon('ARMA'),
   skills('HABILIDADES'),
   duos('DÚOS'),
   ultimate('ULTIMATE'),
   items('OBJETOS'),
-  defend('DEFENDER'),
 
   /// Pasar turno (v0.8.3): siempre la última.
   pass('PASAR');

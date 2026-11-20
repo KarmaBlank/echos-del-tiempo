@@ -106,9 +106,10 @@ void main() {
           BattleEngine.pulseMax);
     });
 
-    test('+1 al defender (también la defensa automática del tiempo)', () {
+    test('+2 al defender (battle_attack_menu.md § 6); la defensa '
+        'automática del tiempo, +1', () {
       final s = _battle(_hero(pulse: 2), [_foe('e0')]);
-      expect(_p(_do(s, const DefendCommand())!).pulse, 3);
+      expect(_p(_do(s, const DefendCommand())!).pulse, 4);
       expect(_engine().timeout(s)!.state.party.single.pulse, 3);
     });
 

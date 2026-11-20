@@ -65,7 +65,7 @@ const kPulseHex = '#ffd166';
 /// Celeste propio de las Instante.
 const kInstantHex = '#9fe8ff';
 
-/// Separador de la lista de HABILIDADES: las Instante van arriba.
+/// Separador de las Instante en ARMA (debajo de Atacar y Defender).
 const kInstantSeparator = 'Instante — no terminan tu turno';
 
 /// Marca de las Instante en el menú: INSTANTE en celeste.

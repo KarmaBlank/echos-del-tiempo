@@ -1128,8 +1128,9 @@ class TutorialRules {
     if (cmd is DefendCommand) {
       add(
           first('defend')
-              ? 'Defender: mitad del daño hasta tu próximo turno, que llega '
-                  'antes.'
+              ? 'Defender (en ARMA): mitad del daño hasta tu próximo turno, '
+                  'que llega antes. Da +${BattleEngine.defendPulse} de Pulso y '
+                  'carga la ULT.'
               : 'Defender: mitad del daño.',
           TutorialArrow.timeline,
           actorId);
@@ -1203,8 +1204,10 @@ class TutorialRules {
       GlossaryEntry(
           'DF',
           'Defender y Pasar',
-          'Defender: la mitad del daño hasta tu próximo turno, que llega '
-              'antes. Pasar: tu próximo turno llega a '
+          'Defender (en ARMA): la mitad del daño hasta tu próximo turno, '
+              'que llega antes; +${BattleEngine.defendPulse} de Pulso '
+              '(+${BattleEngine.defendPulseRepeat} si repetís) y carga la ULT. '
+              'Pasar: tu próximo turno llega a '
               '×${_fmt(BattleEngine.passTurnFactor)} del intervalo.'),
       const GlossaryEntry(
           'MP',
