@@ -178,6 +178,10 @@ class ShopGuards {
     return null;
   }
 
+  /// `UntakeNodeAction`.
+  String? untakeNode(PlayerProfile p, String nodeId) =>
+      _respecMode() ?? rules.untakeReason(p, nodeId);
+
   /// `AllocateStatsAction` con el reparto [add].
   String? allocate(PlayerProfile p, Map<Attribute, int> add) {
     if (mode == SessionMode.battle) return 'No en batalla';

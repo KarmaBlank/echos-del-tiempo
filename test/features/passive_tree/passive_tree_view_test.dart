@@ -485,4 +485,47 @@ void main() {
     await tester.pump();
     expect(find.byKey(const ValueKey('tree-info')), findsNothing);
   });
+
+  testWidgets('quitar nodo: clic en tomado pide confirmar, QUITAR y DESHACER',
+      (tester) async {
+    final full = treeRules.pathTo(
+        'tirador', PlayerPassiveProgress.empty, 'precision_k')!;
+    final tree = full.sublist(0, 3);
+    final c = await _pumpTree(
+        tester,
+        PlayerProfile(
+            name: 'Leo', classId: 'tirador', level: 6, tree: tree));
+    List<String> now() => c.view!.me!.profile.tree;
+    // Intermedio: el motivo y solo Cancelar.
+    await tapNode(tester, tree[1]);
+    expect(find.text(retroText('Otros nodos dependen de este')),
+        findsOneWidget);
+    expect(find.byKey(const ValueKey('tree-untake')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('tree-untake-cancel')));
+    await tester.pump();
+    expect(now(), tree);
+    // Hoja: Cancelar no cambia nada; QUITAR reembolsa.
+    final leaf = tree.last;
+    final name = kPassiveTree.nodes[leaf]!.name;
+    await tapNode(tester, leaf);
+    expect(find.text(retroText('¿Quitar $name? Te devuelve 1 punto')),
+        findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('tree-untake-cancel')));
+    await tester.pump();
+    expect(now(), tree);
+    expect(find.byKey(const ValueKey('tree-info')), findsNothing);
+    await tapNode(tester, leaf);
+    await tester.tap(find.byKey(const ValueKey('tree-untake')));
+    await tester.pump();
+    expect(now(), tree.take(2));
+    // DESHACER lo vuelve a tomar.
+    await tester.tap(find.byKey(const ValueKey('tree-undo')));
+    await tester.pump();
+    expect(now(), tree);
+    // Clic derecho: atajo directo.
+    await tester.tapAt(nodeOnScreen(tester, leaf),
+        buttons: kSecondaryButton);
+    await tester.pump();
+    expect(now(), tree.take(2));
+  });
 }

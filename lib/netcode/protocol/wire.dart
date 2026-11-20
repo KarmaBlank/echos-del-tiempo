@@ -50,7 +50,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// en vez de `roles`/`role:*` (combat_tutorial.md § 4.3).
 /// 19 desde v0.9.8: perfil v4 con `nw` (marca NUEVO del inventario) y
 /// acción `seen` (loot.md § 17.4).
-const kProtocolVersion = 20;
+/// 21 desde v0.12: acción `untake` (quitar un nodo del árbol;
+/// progression_v2.md § 6.1).
+const kProtocolVersion = 21;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {

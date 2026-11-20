@@ -224,6 +224,7 @@ class SessionEngine {
         ChangeClassAction() ||
         TakeNodeAction() ||
         TakeNodesAction() ||
+        UntakeNodeAction() ||
         ChooseMilestoneAction() ||
         ResetTreeAction() ||
         ChooseAscensionAction() ||
@@ -746,6 +747,10 @@ class _Op {
         final k = rules.treeRules.catalog.nodes[a.keystoneId]!;
         say('${p.name} juró la keystone ${k.name} (hito ${a.milestone})');
         return true;
+
+      case UntakeNodeAction():
+        if (!rules.canRespec(s.mode)) return false;
+        return _profileChange(p, rules.untakeNode(p.profile, a.nodeId));
 
       case ResetTreeAction():
         if (!rules.canRespec(s.mode)) return false;

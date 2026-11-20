@@ -684,6 +684,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
         inBattle: view.mode == SessionMode.battle,
         onTake: c.takeNode,
         onTakePath: c.takeNodes,
+        onUntake: c.untakeNode,
+        untakeReason: (id) => guards.untakeNode(p, id),
         onChooseMilestone: c.chooseMilestone,
         onMark: (id) {
           final slot = _slot;
