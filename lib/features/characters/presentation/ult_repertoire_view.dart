@@ -12,7 +12,12 @@ import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/ult_def.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/ult_rules.dart';
+import '../../../core/audio/sfx_service.dart';
+import '../../../game_engine/models/player_state.dart';
+import '../../../game_engine/models/skill.dart';
 import '../../combat/domain/skill_text.dart';
+import '../../combat/presentation/game_sprites.dart';
+import 'ult_preview_panel.dart';
 
 /// Pestaña ULT de PERSONAJE (docs/specs/ultimates_v2.md § 2.1 y § 2.4):
 /// elegir la ULT activa del repertorio, mejorarla (nivel, próximo efecto,
@@ -26,7 +31,21 @@ class UltRepertoireView extends StatefulWidget {
     required this.editable,
     required this.onSelect,
     required this.onUpgrade,
+    this.stats,
+    this.sprites,
+    this.sfx,
   });
+
+  /// Stats del personaje para los números de ejemplo de la vista previa.
+  final DerivedStats? stats;
+  final GameSprites? sprites;
+  final SfxService? sfx;
+
+  /// Ancho desde el que la vista previa va al lado de la lista.
+  static const wideFrom = 760.0;
+
+  /// Builds de la vista (tests: la vista previa no la reconstruye).
+  static int debugBuilds = 0;
 
   final PlayerProfile profile;
   final WeaponDef weapon;
@@ -49,6 +68,8 @@ class UltRepertoireView extends StatefulWidget {
 
 class _UltRepertoireViewState extends State<UltRepertoireView> {
   String? _focus;
+  String? _hover;
+  bool _hoverUpgrade = false;
   bool _confirm = false;
 
   String _name(String id) =>
@@ -70,8 +91,57 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
             ?.id;
     final focus = opts.where((o) => o.id == (_focus ?? shown)).firstOrNull;
     final known = {...p.ultKnown, ...UltRules.earned(p)};
-    return SingleChildScrollView(
-      child: Column(
+    UltRepertoireView.debugBuilds++;
+    // Vista previa: la del hover, si no la elegida en la lista.
+    final hovered = opts.where((o) => o.id == _hover).firstOrNull;
+    final catalogHover = hovered == null ? kUltV2[_hover] : null;
+    final o = hovered ?? focus;
+    final preview = catalogHover != null
+        ? _preview(catalogHover.skill, catalogHover.source.learned)
+        : o == null
+            ? null
+            : _preview(o.skill, o.kind == UltOptionKind.learned);
+    final list = _list(p, opts, active, shown, focus, known);
+    return LayoutBuilder(builder: (context, box) {
+      if (preview == null) return SingleChildScrollView(child: list);
+      if (box.maxWidth >= UltRepertoireView.wideFrom) {
+        return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(child: SingleChildScrollView(child: list)),
+          SizedBox(width: DsSpace.md),
+          SizedBox(
+              width: (box.maxWidth * 0.4).clamp(260.0, 420.0),
+              child: SingleChildScrollView(child: preview)),
+        ]);
+      }
+      // Angosta: la vista previa arriba de la lista.
+      return SingleChildScrollView(
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [preview, SizedBox(height: DsSpace.md), list]));
+    });
+  }
+
+  Widget _preview(SkillDef skill, bool learned) {
+    final p = widget.profile;
+    final lv = learned ? UltRules.levelOf(p, skill.id) : 1;
+    final next = learned && _hoverUpgrade && lv < UltRules.maxLevel;
+    final shownLv = next ? lv + 1 : lv;
+    return UltPreviewPanel(
+      skill: UltRules.leveled(skill, shownLv),
+      level: shownLv,
+      nextLevel: next,
+      classId: p.classId,
+      ascensionId: p.ascension.id,
+      weaponType: widget.weapon.type,
+      stats: widget.stats,
+      sprites: widget.sprites,
+      sfx: widget.sfx,
+    );
+  }
+
+  Widget _list(PlayerProfile p, List<UltOption> opts, String? active,
+      String? shown, UltOption? focus, Set<String> known) {
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DsSectionHeader('ULT ACTIVA',
@@ -104,7 +174,13 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
               child: Text(s.label.toUpperCase(), style: DsText.subtitle()),
             ),
             for (final u in kUltV2List.where((u) => u.source == s))
-              DsListRow(
+              MouseRegion(
+                onEnter: (_) => setState(() => _hover = u.id),
+                onExit: (_) {
+                  if (_hover == u.id) setState(() => _hover = null);
+                },
+                child: DsListRow(
+                key: ValueKey('ult-all-${u.id}'),
                 compact: true,
                 title: known.contains(u.id)
                     ? '${u.name} · Nv ${UltRules.levelOf(p, u.id)}'
@@ -112,10 +188,9 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
                 titleColor: known.contains(u.id) ? null : DsColors.textSecondary,
                 detail: '${known.contains(u.id) ? 'Obtenida' : 'Falta'} · '
                     '${ultHowText(u, name: _name)}',
-              ),
+              )),
           ],
         ],
-      ),
     );
   }
 
@@ -127,7 +202,13 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
       UltOptionKind.weaponType => 'Del tipo de arma',
       UltOptionKind.learned => o.def?.source.label ?? 'De arma',
     };
-    return DsListRow(
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = o.id),
+      onExit: (_) {
+        if (_hover == o.id) setState(() => _hover = null);
+      },
+      child: DsListRow(
+      key: ValueKey('ult-row-${o.id}'),
       compact: true,
       title: '${o.skill.name}$lv · ${o.skill.ultCost}',
       detail: o.reason == null ? kind : '$kind · ${o.reason}',
@@ -144,6 +225,7 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
               onPressed: widget.editable && o.available
                   ? () => widget.onSelect(o.id)
                   : null),
+      ),
     );
   }
 
@@ -178,11 +260,17 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
               SizedBox(height: DsSpace.sm),
               Row(children: [
                 if (!_confirm)
-                  DsButton('MEJORAR',
-                      kind: DsButtonKind.primary,
-                      onPressed: widget.editable && affordable
-                          ? () => setState(() => _confirm = true)
-                          : null)
+                  // Hover de MEJORAR: la vista previa muestra el próximo
+                  // nivel.
+                  MouseRegion(
+                    onEnter: (_) => setState(() => _hoverUpgrade = true),
+                    onExit: (_) => setState(() => _hoverUpgrade = false),
+                    child: DsButton('MEJORAR',
+                        kind: DsButtonKind.primary,
+                        onPressed: widget.editable && affordable
+                            ? () => setState(() => _confirm = true)
+                            : null),
+                  )
                 else ...[
                   DsButton('CONFIRMAR MEJORA',
                       kind: DsButtonKind.primary,
