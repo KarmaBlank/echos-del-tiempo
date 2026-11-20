@@ -560,7 +560,16 @@ class BattleViewState extends State<BattleView>
       name: '★ ${du.name} (+${protoEsc(q.name)})',
       value: '${hexSpan(w == null ? '#9fb4ff' : '#ffd166', '[$pair]')} '
           '${_est(cur, sum, all: true, crit: false)} ${_stTag(du.status)}',
-      cost: hexSpan('#74b9ff', '$mp MP c/u'),
+      // Mismo camino que HABILIDADES: DsCost, alcance y resumen.
+      mpCost: mp,
+      reach: SkillReach.allFoes,
+      summary: [
+        hexSpan(SkillReach.allFoes.hex, 'A TODOS'),
+        el.label,
+        hexSpan('#ffd166', '${jsRound(sum)} c/u'),
+        _stTag(du.status),
+        '$mp MP cada uno',
+      ].join(' · '),
       dual: true,
       description: '<b>★ ${du.name}</b> <span class="k">dúo '
           '${w == null ? 'de clase' : 'de armas'}: ${protoEsc(cur.name)} + '
@@ -695,8 +704,9 @@ class BattleViewState extends State<BattleView>
                           ult.power,
                       all: ult.allTargets)
                   : hexSpan('#74b9ff', 'apoyo'),
-              cost:
-                  hexSpan(ready ? '#ee70ad' : '#a29bfe', '${cur.ult.floor()}%'),
+              ultCharge: cur.ult.floor(),
+              reach: skillReach(ult),
+              summary: skillSummaryMarkup(ult, cur),
               dual: true,
               description: describeSkillMarkup(ult, cur, ultimate: true),
               reason: ready ? null : 'La barra ULT tiene que llegar al 100%.',
@@ -715,7 +725,10 @@ class BattleViewState extends State<BattleView>
             id: 'potion',
             name: 'Poción de vida',
             value: hexSpan('#7bed9f', '+45%'),
-            cost: hexSpan('#9fb4ff', 'x${cur.potions}'),
+            count: cur.potions,
+            reach: SkillReach.ally,
+            summary: '${hexSpan(SkillReach.ally.hex, 'A un aliado')} · '
+                '${hexSpan('#7bed9f', '+45% HP')} · revive',
             description:
                 '<b>Poción de vida</b> ▸ elegir a quién<br>Cura 45% de '
                 'la vida máx. del aliado que elijas (o a ti). Revive a un aliado '
@@ -733,7 +746,10 @@ class BattleViewState extends State<BattleView>
             id: 'ether',
             name: 'Poción de maná',
             value: hexSpan('#74b9ff', '+50%'),
-            cost: hexSpan('#9fb4ff', 'x${cur.ethers}'),
+            count: cur.ethers,
+            reach: SkillReach.ally,
+            summary: '${hexSpan(SkillReach.ally.hex, 'A un aliado')} · '
+                '${hexSpan('#74b9ff', '+50% MP')}',
             description:
                 '<b>Poción de maná</b> ▸ elegir a quién<br>Restaura 50% '
                 'del maná máx. del aliado que elijas (o a ti).',
@@ -805,6 +821,8 @@ class BattleViewState extends State<BattleView>
                     reach: a.reach,
                     mpCost: a.mpCost,
                     pulseCost: a.pulseCost,
+                    ultCharge: a.ultCharge,
+                    count: a.count,
                     summary: a.summary,
                     description: a.description,
                     dual: a.dual,

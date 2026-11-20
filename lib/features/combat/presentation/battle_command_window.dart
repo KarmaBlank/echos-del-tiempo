@@ -52,6 +52,8 @@ class BattleAction {
     this.reach,
     this.mpCost,
     this.pulseCost,
+    this.ultCharge,
+    this.count,
     this.summary,
   });
 
@@ -64,8 +66,10 @@ class BattleAction {
   /// fila va como dato corto en Detalle (sin [summary]).
   final String? value;
 
-  /// Costo a la derecha (`x2`, `100%`), markup corto. Las habilidades
-  /// usan [mpCost] / [pulseCost] (`DsCost`).
+  /// Costo a la derecha que no es MP / Pulso / ULT / cantidad (`½ turno`,
+  /// `próximo ×½`, `45/90 HP`), markup corto, en Cuerpo como `DsCost`.
+  /// Los costos de recurso usan [mpCost], [pulseCost], [ultCharge] y
+  /// [count] (`DsCost`). Nunca un costo en [name].
   final String? cost;
 
   /// Detalle de la columna de descripción (markup). Con [summary], todo
@@ -95,6 +99,12 @@ class BattleAction {
   /// Costos de habilidad (MP azul, Pulso dorado; rojo si no alcanza).
   final int? mpCost;
   final int? pulseCost;
+
+  /// Carga de ULT (%), `DsCost.ult`.
+  final int? ultCharge;
+
+  /// Cantidad que queda (pociones), `DsCost.count`.
+  final int? count;
 
   /// Resumen de una línea arriba del detalle (markup).
   final String? summary;
@@ -292,33 +302,56 @@ class _Actions extends StatelessWidget {
   final int? pulse;
 
   Widget? _trailing(BattleAction a, double width) {
-    final parts = <Widget>[
+    final tags = <Widget>[
       if (a.instant) const DsTag.instant(),
       if (a.reach case final r?)
         DsTag(r.label.toUpperCase(),
             color: ProtoColors.parse(r.hex) ?? DsColors.textSecondary),
+    ];
+    final costs = <Widget>[
       if (a.mpCost case final c?)
         DsCost.mp(c, affordable: mp == null || mp! >= c),
       if (a.pulseCost case final c?)
         DsCost.pulse(c, affordable: pulse == null || pulse! >= c),
-      if (a.cost case final c? when a.mpCost == null && a.pulseCost == null)
-        ProtoText(c, maxLines: 1),
+      if (a.ultCharge case final c?) DsCost.ult(c),
+      if (a.count case final c?) DsCost.count(c),
+      if (a.cost case final c?)
+        ProtoText(c, maxLines: 1, style: DsText.body()),
     ];
-    if (parts.isEmpty) return null;
-    // Con texto ENORME las etiquetas se achican antes que desbordar: tope
-    // de 55 % del ancho de la fila.
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: width * 0.55),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerRight,
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          for (final (i, p) in parts.indexed) ...[
+    if (tags.isEmpty && costs.isEmpty) return null;
+    Widget row(List<Widget> ws) =>
+        Row(mainAxisSize: MainAxisSize.min, children: [
+          for (final (i, p) in ws.indexed) ...[
             if (i > 0) SizedBox(width: DsSpace.sm),
             p,
           ],
-        ]),
-      ),
+        ]);
+    // Tope de 55 % del ancho de la fila. Con texto ENORME se achican
+    // primero las etiquetas; el costo va siempre al borde derecho y al
+    // mismo tamaño en todas las categorías (solo se achica si él solo no
+    // entra).
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: width * 0.55),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (tags.isNotEmpty)
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: row(tags),
+            ),
+          ),
+        if (tags.isNotEmpty && costs.isNotEmpty) SizedBox(width: DsSpace.sm),
+        if (costs.isNotEmpty)
+          Flexible(
+            child: FittedBox(
+              key: const ValueKey('battle-cost'),
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: row(costs),
+            ),
+          ),
+      ]),
     );
   }
 
