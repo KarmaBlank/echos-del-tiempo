@@ -22,6 +22,13 @@ teclado común).
 
 ## 1. Estructura
 
+Cambios v0.12 (design_system.md § 10.3): pestañas `DsTabBar`; qué tiene
+cada pestaña, en el "?"; cada ajuste en UNA línea (nombre + control) con
+la explicación en el tooltip del nombre (marcado con "?"); opciones
+como `DsButton` (la elegida con borde dorado); CONTINUAR / CERRAR
+principal.
+
+
 ```
 PAUSA [?]                              Juego en pausa | El juego sigue corriendo en multijugador | Grupo en pausa
 [SONIDO] [PANTALLA] [ACCESIBILIDAD] [JUEGO] [CONTROLES]

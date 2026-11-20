@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
@@ -114,7 +115,7 @@ class CharacterSlotCard extends StatelessWidget {
     final img = sprites?.heroFor(profile.classId, asc?.id);
     // Una línea por dato (se cortan con "…"): con texto grande la tarjeta
     // crece en alto sin partir palabras.
-    const small = TextStyle(color: RetroPalette.muted);
+    final small = DsText.detail();
     Widget line(String t, {TextStyle? style, Key? key}) => Text(retroText(t),
         key: key, maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
     return MenuFocusable(
@@ -123,10 +124,12 @@ class CharacterSlotCard extends StatelessWidget {
       onKeyActivate: onKeyActivate,
       builder: (context, hot) => SizedBox(
         width: widthOf(context),
-        child: RetroPanel(
+        // Tarjeta del sistema (design_system.md § 6): sin borde, elegida
+        // con borde dorado, hover / foco con fondo.
+        child: DsCard(
           selected: selected,
-          borderColor: selected || !hot ? null : ProtoColors.sky,
-          padding: const EdgeInsets.all(10),
+          hot: hot,
+          padding: EdgeInsets.all(DsSpace.sm),
           child: Row(
             children: [
               SizedBox(
@@ -144,18 +147,16 @@ class CharacterSlotCard extends StatelessWidget {
                     Text(retroText(slot.displayName),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontFamily: RetroType.titleFamily,
-                            fontSize: RetroType.title,
-                            color: selected
-                                ? RetroPalette.gold
-                                : RetroPalette.ink)),
+                        style: DsText.subtitle(selected
+                            ? DsColors.selected
+                            : DsColors.textPrimary)),
                     const SizedBox(height: 4),
                     if (asc != null)
                       line(asc.name,
                           key: ValueKey('char-asc-${slot.id}'),
                           style: TextStyle(color: Color(asc.color))),
-                    line('$className · Nv ${profile.level}'),
+                    line('$className · Nv ${profile.level}',
+                        style: DsText.body(DsColors.textPrimary)),
                     line('Zona ${profile.unlockedZone}', style: small),
                     line(lastPlayedText(slot.lastPlayed), style: small),
                   ],
@@ -182,14 +183,14 @@ class NewCharacterCard extends StatelessWidget {
         builder: (context, hot) => SizedBox(
           width: CharacterSlotCard.widthOf(context),
           height: RetroType.width(context, 90),
-          child: RetroPanel(
-            borderColor: hot ? ProtoColors.sky : ProtoColors.panelBorder,
-            padding: const EdgeInsets.all(10),
-            child: const Center(
-              child: Text('+ NUEVO PERSONAJE',
-                  style: TextStyle(color: RetroPalette.muted)),
+          child: DsCard(
+            hot: hot,
+            padding: EdgeInsets.all(DsSpace.sm),
+            child: Center(
+              child: Text('+ NUEVO PERSONAJE', style: DsText.subtitle()),
             ),
           ),
+
         ),
       );
 }

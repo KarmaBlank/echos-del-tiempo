@@ -3,11 +3,12 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/design/design.dart';
 import '../../../../app/theme/proto_colors.dart';
+
 import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_theme.dart';
-import '../../../../app/widgets/notice_close.dart';
 import '../../../../game_engine/models/session_action.dart';
 import '../session_view.dart';
 
@@ -283,46 +284,30 @@ class _ChatBoxState extends State<ChatBox> {
             Padding(
               key: ValueKey('chat-toast-$i'),
               padding: const EdgeInsets.only(bottom: 4),
-              child: RetroPanel(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: ProtoText(_markup(t.line),
-                          style: lineStyle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                    if (t.timer == null) ...[
-                      const SizedBox(width: 8),
-                      NoticeClose(
-                          key: ValueKey('chat-toast-close-$i'),
-                          onPressed: () => _dismiss(t)),
-                    ],
-                  ],
-                ),
+              // Aviso del sistema (design_system.md § 6), una línea.
+              child: DsToast(
+                '',
+                content: ProtoText(_markup(t.line),
+                    style: lineStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                closeKey: ValueKey('chat-toast-close-$i'),
+                closeFocusable: false,
+                onClose: t.timer == null ? () => _dismiss(t) : null,
               ),
             ),
           // La píldora no toma el foco: el teclado sigue en el juego.
           ExcludeFocus(
-            child: ElevatedButton(
+            child: DsButton(
+              'CHAT [ENTER]',
               key: const ValueKey('chat-pill'),
-              style: RetroTheme.compactButton(),
+              size: DsButtonSize.compact,
               onPressed: widget.focusNode.requestFocus,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('CHAT [ENTER]'),
-                  if (_unread > 0) ...[
-                    const SizedBox(width: 8),
-                    Text('+$_unread',
-                        key: const ValueKey('chat-unread'),
-                        style: const TextStyle(color: ProtoColors.gold)),
-                  ],
-                ],
-              ),
+              trailing: _unread > 0
+                  ? DsBadge('+$_unread', key: const ValueKey('chat-unread'))
+                  : null,
             ),
+
           ),
         ],
         // El campo existe siempre (fuera de escena plegado): Enter en el

@@ -3,7 +3,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
+import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
+
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../game_engine/data/branch_ults_catalog.dart';
@@ -254,36 +256,40 @@ class CharacterStatRows extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String pct(num x) => '${(x * 100).round()}%';
+    String dec(num x) => x.toStringAsFixed(1);
     final w = weight.toStringAsFixed(1);
     final w2 = nextWeight.toStringAsFixed(1);
+    // `DsStatLine` (design_system.md § 6): una línea por stat, sufijo en
+    // Detalle; la fórmula de VEL va al tooltip.
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        StatChange('HP', now.maxHp, next.maxHp,
+        DsStatLine('HP', now.maxHp, next.maxHp,
             key: const ValueKey('stat-HP')),
-        StatChange('MP', now.maxMp, next.maxMp,
+        DsStatLine('MP', now.maxMp, next.maxMp,
             key: const ValueKey('stat-MP')),
-        StatChange('VEL', now.speed, next.speed,
-            key: const ValueKey('stat-VEL'),
-            format: (x) => x.toStringAsFixed(1)),
-        Text(
-            retroText('  6 + AGI×0.5 + DES×0.1 − peso arma '
-                '${w == w2 ? w : '$w → $w2'}'),
-            key: const ValueKey('stat-weight'),
-            style: const TextStyle(color: ProtoColors.dim)),
-        StatChange('ATQ', now.attack, next.attack,
+        Tooltip(
+          key: const ValueKey('stat-weight'),
+          message: retroText('VEL = 6 + AGI×0.5 + DES×0.1 − peso del arma'),
+          child: DsStatLine('VEL', now.speed, next.speed,
+              key: const ValueKey('stat-VEL'),
+              format: dec,
+              suffix: 'peso ${w == w2 ? w : '$w → $w2'}'),
+        ),
+        DsStatLine('ATQ', now.attack, next.attack,
             key: const ValueKey('stat-ATQ')),
-        StatChange('MAG', now.magic, next.magic,
+        DsStatLine('MAG', now.magic, next.magic,
             key: const ValueKey('stat-MAG')),
-        StatChange('DEF', now.defense, next.defense,
+        DsStatLine('DEF', now.defense, next.defense,
             key: const ValueKey('stat-DEF'),
             suffix: '(-${(next.defensePercent * 100).round()}% daño)'),
-        StatChange('CRÍT', now.critChance, next.critChance,
+        DsStatLine('CRÍT', now.critChance, next.critChance,
             key: const ValueKey('stat-CRIT'),
             format: pct,
             suffix: '(daño ×${next.critMultiplier == 2 ? '2' : '1.5'})'),
       ],
     );
+
   }
 }
 

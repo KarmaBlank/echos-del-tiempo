@@ -1,6 +1,6 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'dart:ui' as ui;
 
-import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/retro_text.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
@@ -311,9 +311,8 @@ void main() {
                 retroText('Zona $z · ${zone.name} · ${zone.levelText} · '
                     '${zone.floors} pisos')),
             findsOneWidget);
-        final b = tester.widget<PanelButton>(
-            find.byKey(ValueKey('propose-${zone.missionId}')));
-        expect(b.reason, z <= 8 ? isNull : 'Bloqueada', reason: 'zona $z');
+        final b = tester.widget<DsButton>(find.byKey(ValueKey('propose-${zone.missionId}')));
+        expect(b.tooltip, z <= 8 ? isNull : 'Bloqueada', reason: 'zona $z');
       }
       final z9 = ValueKey('mission-${_cat.zone(9)!.missionId}');
       await tester.ensureVisible(find.byKey(z9));

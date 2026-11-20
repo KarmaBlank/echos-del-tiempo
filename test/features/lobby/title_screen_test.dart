@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/characters/data/account_repository.dart';
 import 'package:echos_del_tiempo/features/characters/data/account_store.dart';
@@ -222,7 +223,13 @@ void main() {
     await _pumpTitle(tester, repo: AccountRepository(InMemoryAccountStore(a)));
     expect(find.text('PERSONAJES (8/8)'), findsOneWidget);
     expect(find.byKey(const ValueKey('char-new')), findsNothing);
-    expect(find.text('Máximo 8 personajes'), findsOneWidget);
+    // El motivo va al tooltip del botón (design_system.md § 2).
+    expect(find.byTooltip('Máximo 8 personajes'), findsOneWidget);
+    expect(
+        tester
+            .widget<DsButton>(find.byKey(const ValueKey('char-create')))
+            .onPressed,
+        isNull);
   });
 
   testWidgets('archivo dañado: el aviso se ve en rojo', (tester) async {

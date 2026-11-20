@@ -1,13 +1,13 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
-import '../../../app/theme/proto_colors.dart';
-import '../../../app/theme/proto_markup.dart';
+import '../../../app/theme/retro_text.dart';
+import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/mission_def.dart';
 import '../../../game_engine/rules/zone_rules.dart';
 import '../../../app/widgets/menu_focus.dart';
-import '../../../app/widgets/menu_widgets.dart';
 import 'mission_card.dart';
 
 /// Mostrador de misiones (`board` del prototipo) en lista + detalle: una
@@ -64,13 +64,16 @@ class MissionBoardPanel extends StatefulWidget {
   final String? lockText;
 
   static const help = '<b>Mostrador</b><br>'
+      'Propón una zona o misión: cuando todos votan SÍ, a prepararse.<br>'
       'Elige una misión y pulsa PROPONER: se abre una votación para todo el '
       'grupo.<br>'
       'Cuando <b>todos</b> votan SÍ pasan a la preparación (tienda, forja, '
       'equipo) y la misión empieza cuando todos marcan ¡LISTO!.<br>'
       'Con zonas también se entra por las puertas del mapa del mundo.<br>'
       '<span class="k">Rango</span>: S si terminas a tiempo sin K.O.; más '
-      'rango = más créditos y más chance de arma.';
+      'rango = más créditos y más chance de arma.<br>'
+      '<span class="k">Flechas / 1-9</span> eligen · '
+      '<span class="k">Enter</span> elige · <span class="k">Esc</span> cierra.';
 
   @override
   State<MissionBoardPanel> createState() => _MissionBoardPanelState();
@@ -81,17 +84,32 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
 
   static const _tutorialId = 'tutorial';
 
-  /// La fila TUTORIAL: Ecos de práctica.
-  Widget _tutorialRow(bool selected) => MenuRow(
-        key: const ValueKey('mission-tutorial'),
-        selected: selected,
-        onTap: () => setState(() => _sel = _tutorialId),
-        onFocus: () => setState(() => _sel = _tutorialId),
-        autofocus: selected,
-        label: protoColor(ProtoColors.gold, 'TUTORIAL: Ecos de práctica'),
-        value: widget.tutorialDone
-            ? protoColor(ProtoColors.green, 'Hecho')
-            : protoColor(ProtoColors.orange, 'Pendiente'),
+  /// Una fila `DsListRow` cuyo foco de teclado elige (el detalle sigue al
+  /// cursor).
+  Widget _focusRow({required String id, required Widget row}) => Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onFocusChange: (f) {
+          if (f && _sel != id) setState(() => _sel = id);
+        },
+        child: row,
+      );
+
+  /// La fila TUTORIAL: Ecos de práctica (primera del sello).
+  Widget _tutorialRow(bool selected) => _focusRow(
+        id: _tutorialId,
+        row: DsListRow(
+          key: const ValueKey('mission-tutorial'),
+          title: 'TUTORIAL: Ecos de práctica',
+          titleColor: DsColors.reward,
+          selected: selected,
+          autofocus: selected,
+          onTap: () => setState(() => _sel = _tutorialId),
+          trailing: Text(widget.tutorialDone ? 'Hecho' : 'Pendiente',
+              style: DsText.detail(widget.tutorialDone
+                  ? DsColors.success
+                  : DsColors.warning)),
+        ),
       );
 
   /// (misión, zona) de cada fila elegible, en orden.
@@ -127,14 +145,11 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
       for (final z in zs) {
         final m = z.mission;
         if (m == null) {
-          list.add(Padding(
+          list.add(DsListRow(
             key: ValueKey('zone-soon-${z.zone.index}'),
-            padding: const EdgeInsets.only(bottom: 2, left: 8),
-            child: ProtoText(
-                protoColor(ProtoColors.dim,
-                    protoEsc('${z.zone.index} · ${z.zone.name} · ${z.label}')),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
+            title: retroText('${z.zone.index} · ${z.zone.name}'),
+            enabled: false,
+            detail: retroText(z.label),
           ));
         } else {
           list.add(_row(m, z, !tutSel && m.id == sel?.$1.id));
@@ -160,15 +175,15 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
           onClose: w.onClose,
           actions: [
             if (w.onCharacter != null)
-              PanelButton('PERSONAJE [C]', onPressed: w.onCharacter),
-            PanelButton('CERRAR [ESC]', onPressed: w.onClose),
+              DsButton('PERSONAJE [C]',
+                  key: const ValueKey('board-character'),
+                  onPressed: w.onCharacter),
+            DsButton('CERRAR [ESC]',
+                key: const ValueKey('board-close'), onPressed: w.onClose),
           ],
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PanelHint(w.zones == null
-                  ? 'Propón una misión: cuando todos votan SÍ, a prepararse.'
-                  : 'Propón una zona: cuando todos votan SÍ, a prepararse.'),
               Expanded(
                 child: PanelSplit(
                   listWidth: 340,
@@ -192,47 +207,65 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         ));
   }
 
-  /// Fila de una línea: `C Pradera Esmeralda .... Lv 1`.
+  /// Fila de una línea (`DsListRow`): rango, zona / misión y, a la
+  /// derecha, el nivel o "Bloqueada" (el motivo, en el detalle).
   Widget _row(MissionDef m, ZoneStatus? z, bool selected) {
     final locked = z != null && !z.open;
     final low =
         widget.playerLevel != null && widget.playerLevel! < m.recommendedLevel;
     final name = z == null ? m.name : '${z.zone.index} · ${z.zone.name}';
-    return MenuRow(
-      key: ValueKey('mission-${m.id}'),
-      selected: selected,
-      dimmed: locked,
-      onTap: () => setState(() => _sel = m.id),
-      // El detalle sigue al cursor del teclado.
-      onFocus: () => setState(() => _sel = m.id),
-      autofocus: selected,
-      label: '<span style="color:#ff9f1c">${protoEsc(m.rank)}</span> '
-          '${protoEsc(name)}',
-      value: locked
-          ? protoColor(ProtoColors.dim, 'Bloqueada')
-          : protoColor(low ? ProtoColors.red : ProtoColors.green,
-              'Lv ${m.recommendedLevel}'),
+    return _focusRow(
+      id: m.id,
+      row: DsListRow(
+        key: ValueKey('mission-${m.id}'),
+        title: retroText(name),
+        titleColor: locked ? DsColors.textDisabled : null,
+        selected: selected,
+        autofocus: selected,
+        onTap: () => setState(() => _sel = m.id),
+        leading: Text(m.rank, style: DsText.subtitle(DsColors.warning)),
+        trailing: Text(
+            locked ? 'Bloqueada' : 'Lv ${m.recommendedLevel}',
+            style: DsText.detail(locked
+                ? DsColors.textSecondary
+                : low
+                    ? DsColors.danger
+                    : DsColors.success)),
+      ),
     );
   }
 
   Widget _detail(MissionDef m, ZoneStatus? z) {
     final w = widget;
     final locked = z != null && !z.open;
+    // TUTORIAL pendiente en la sala (combat_tutorial.md § 2).
+    final reason = w.lockText ??
+        (locked
+            ? 'Bloqueada'
+            : w.voteOpen
+                ? 'Ya hay una votación'
+                : null);
     return PanelDetail(
       footer: [
-        const KeyHints(confirm: 'Elegir', back: 'Cerrar'),
-        PanelButton('PROPONER',
+        // Por qué no se puede: una línea a la izquierda de PROPONER (y en
+        // su tooltip).
+        if (reason != null)
+          ConstrainedBox(
+            constraints:
+                BoxConstraints(maxWidth: RetroType.width(context, 420)),
+            child: Text(retroText(reason),
+                key: ValueKey('propose-reason-${m.id}'),
+                maxLines: 2,
+                textAlign: TextAlign.right,
+                style: DsText.detail(DsColors.danger)),
+          ),
+        DsButton('PROPONER',
             key: ValueKey('propose-${m.id}'),
-            accent: ProtoColors.green,
-            // TUTORIAL pendiente en la sala (combat_tutorial.md § 2).
-            reason: w.lockText ??
-                (locked
-                    ? 'Bloqueada'
-                    : w.voteOpen
-                        ? 'Ya hay una votación'
-                        : null),
-            onPressed: () => w.onPropose(m.id)),
+            kind: DsButtonKind.primary,
+            tooltip: reason,
+            onPressed: reason == null ? () => w.onPropose(m.id) : null),
       ],
+
       children: [
         MissionCard(
           key: ValueKey('mission-card-${m.id}'),
