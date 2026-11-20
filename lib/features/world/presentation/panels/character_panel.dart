@@ -11,6 +11,7 @@ import '../../../characters/presentation/ult_repertoire_view.dart';
 import '../../../achievements/presentation/achievements_view.dart';
 import '../../../bestiary/presentation/bestiary_view.dart';
 import '../../../combat/presentation/game_sprites.dart';
+import '../../../build_planner/domain/build_wants_of.dart';
 import '../../../build_planner/presentation/build_fit_badge.dart';
 import '../../../build_planner/presentation/build_plan_providers.dart';
 import '../../../build_planner/presentation/build_planner_view.dart';
@@ -24,7 +25,6 @@ import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/bestiary.dart';
 import '../../../../game_engine/models/build_plan.dart';
 import '../../../../game_engine/models/player_profile.dart';
-import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/rules/attribute_advisor.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
@@ -176,6 +176,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 rules: ref.watch(buildPlanRulesProvider),
                 profile: prof,
                 plan: ref.watch(buildPlanProvider).planFor(_slot),
+                stash: stashWeapons(c.stash),
+                onTakeNode: view.session.battle == null ? c.takeNode : null,
                 onChanged: (p) {
                   final slot = _slot;
                   ref
@@ -184,7 +186,10 @@ class _CharacterPanelState extends State<CharacterPanel> {
                   // El del líder lo manda `build_feed`; el de un compañero,
                   // acá (su condición `Build` del filtro).
                   if (slot != null) {
-                    c.setMemberWants(view.actorId, BuildWants.fromPlan(p));
+                    c.setMemberWants(
+                        view.actorId,
+                        buildWantsOf(ref.read(buildPlanRulesProvider), p, prof,
+                            stash: stashWeapons(c.stash)));
                   }
                 },
               )),

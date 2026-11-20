@@ -1,0 +1,5 @@
+# Plantillas de BUILD del dueño (docs/specs/build_planner_v2.md § 2.2).
+# Mismo formato que build_templates.yaml; si repite un id, gana esta.
+# La escribe el Editor (Balance → Plantillas → GUARDAR EN EL REPO).
+version: 2
+templates: []

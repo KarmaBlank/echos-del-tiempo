@@ -23,6 +23,8 @@ import 'package:echos_del_tiempo/game_engine/rules/progression_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/build_templates_fixture.dart';
+
 final _tree = PassiveTreeRules(kPassiveTree);
 final _progression = ProgressionRules(
     stats: StatsCalculator(classes: kClasses, treeRules: _tree));
@@ -475,53 +477,29 @@ void main() {
   });
 
   group('plantillas', () {
-    test('2 por clase y todas válidas contra los catálogos', () {
+    setUpAll(installBuildTemplates);
+
+    test('5 por clase y sin metas bloqueadas para un personaje nuevo', () {
       const cat = GameCatalog.standard;
       for (final c in cat.classes.keys) {
-        expect(buildTemplatesFor(c).length, inInclusiveRange(2, 3), reason: c);
+        expect(buildTemplatesFor(c).length, 5, reason: c);
       }
-      final ids = <String>{};
       for (final t in kBuildTemplates) {
-        expect(ids.add(t.id), isTrue, reason: 'id repetido ${t.id}');
-        final p = t.plan;
+        final p = _rules.applyTemplate(BuildPlan.empty, t);
         expect(p.templateId, t.id);
         for (final n in p.treeNodes) {
           expect(kPassiveTree.nodes, contains(n), reason: '${t.id}: $n');
-          expect(_tree.pathTo(t.classId, PlayerPassiveProgress.empty, n),
-              isNotNull,
-              reason: '${t.id}: $n no se alcanza');
         }
-        final asc = kAscensions[p.ascensionId]!;
-        expect(asc.classId, t.classId, reason: t.id);
-        for (final n in p.ascensionNodes) {
-          expect(asc.node(n), isNotNull, reason: '${t.id}: $n');
-        }
-        // Los nodos de ascensión entran en los 6 puntos de las Pruebas.
-        final cost =
-            p.ascensionNodes.fold<int>(0, (s, n) => s + asc.node(n)!.cost);
-        expect(cost, lessThanOrEqualTo(6), reason: t.id);
-        for (final b in p.weaponBases) {
-          expect(cat.weapons[b]?.type, isIn(p.weaponTypes),
-              reason: '${t.id}: $b');
-        }
+        expect(kAscensions[p.ascensionId]!.classId, t.classId, reason: t.id);
         for (final m in p.mods) {
-          final a = kAffixes[m.affixId];
-          expect(a, isNotNull, reason: '${t.id}: ${m.affixId}');
-          expect(a!.tier(m.minTier), isNotNull,
-              reason: '${t.id}: ${m.affixId}');
-          expect(p.weaponTypes.any(a.allows), isTrue,
-              reason: '${t.id}: ${m.affixId} no sale en ${p.weaponTypes}');
+          expect(kAffixes[m.affixId], isNotNull, reason: '${t.id}: ${m.affixId}');
         }
-        final wp = kWeaponPassives[p.weaponPassive]!;
-        expect(p.weaponTypes.any(wp.types.contains), isTrue, reason: t.id);
-        for (final s in p.skills) {
-          expect(cat.skills, contains(s), reason: '${t.id}: $s');
+        if (p.weaponPassive != null) {
+          expect(kWeaponPassives[p.weaponPassive], isNotNull, reason: t.id);
         }
-        // Sin metas bloqueadas para un personaje nuevo de su clase.
         final fresh = _progression
             .normalize(PlayerProfile(name: 'X', classId: t.classId));
-        final r =
-            _rules.evaluate(_rules.applyTemplate(BuildPlan.empty, t), fresh);
+        final r = _rules.evaluate(p, fresh);
         expect(r.goals.where((g) => g.state == GoalState.blocked), isEmpty,
             reason: t.id);
       }
@@ -534,12 +512,18 @@ void main() {
       final p = _rules.applyTemplate(mine, t);
       expect(p.name, t.name);
       expect(p.notes, 'mis notas');
-      expect(p.checklist, mine.checklist);
-      expect(p.treeNodes, containsAll(t.plan.treeNodes));
-      expect(p.treeNodes.first, 'gue_r1');
+      // Lo tuyo se queda primero; lo de la plantilla se suma.
+      expect(p.checklist.first, mine.checklist.first);
+      expect(p.checklist.map((c) => c.text),
+          containsAll(t.endgame.checklist));
       final route =
           _tree.pathTo('guerrero', PlayerPassiveProgress.empty, 'sangre_k')!;
       expect(p.treeNodes, containsAll(route));
+      // El árbol por nivel va en orden de nivel.
+      for (var i = 1; i < p.timeline.length; i++) {
+        expect(p.timeline[i].level,
+            greaterThanOrEqualTo(p.timeline[i - 1].level));
+      }
       // Un nombre propio se queda; el de otra plantilla, no.
       expect(_rules.applyTemplate(mine.copyWith(name: 'Mío'), t).name, 'Mío');
       final other = buildTemplate('gue_quiebre')!;

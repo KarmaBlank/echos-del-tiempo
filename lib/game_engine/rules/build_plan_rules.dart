@@ -1,6 +1,8 @@
 import '../data/affixes_catalog.dart';
 import '../data/ascension_catalog.dart';
+import '../data/achievements_catalog.dart';
 import '../data/build_templates_catalog.dart';
+import '../data/ults_v2_catalog.dart';
 import '../data/weapon_passives.dart';
 import '../models/ascension.dart';
 import '../models/attributes.dart';
@@ -9,7 +11,10 @@ import '../models/item.dart';
 import '../models/passive_tree.dart';
 import '../models/player_profile.dart';
 import 'ascension_rules.dart';
+import 'build_template_rules.dart';
 import 'progression_rules.dart';
+import 'ult_rules.dart';
+import 'weapon_target_rules.dart';
 
 /// Clase de meta de un plan (docs/specs/build_planner.md § 2).
 enum BuildGoalKind {
@@ -25,6 +30,16 @@ enum BuildGoalKind {
   level,
   mastery,
   check,
+
+  /// Objetivo de arma v2 (build_planner_v2.md § 1).
+  weaponTarget,
+
+  /// ULT activa sugerida y mejora de una ULT (ultimates_v2.md § 2).
+  ultActive,
+  ultUpgrade,
+
+  /// Hazaña buscada (achievements.md).
+  feat,
 }
 
 /// Sección de la pantalla BUILD donde va cada meta (en orden).
@@ -34,6 +49,7 @@ enum BuildSection {
   ascension('ASCENSIÓN'),
   weapon('ARMA Y MODS'),
   skills('HABILIDADES'),
+  ult('ULT Y HAZAÑAS'),
   level('NIVEL'),
   notes('NOTAS Y CHECKLIST');
 
@@ -51,8 +67,13 @@ extension BuildGoalKindSection on BuildGoalKind {
         BuildGoalKind.weaponType ||
         BuildGoalKind.weaponBase ||
         BuildGoalKind.mod ||
-        BuildGoalKind.weaponPassive =>
+        BuildGoalKind.weaponPassive ||
+        BuildGoalKind.weaponTarget =>
           BuildSection.weapon,
+        BuildGoalKind.ultActive ||
+        BuildGoalKind.ultUpgrade ||
+        BuildGoalKind.feat =>
+          BuildSection.ult,
         BuildGoalKind.skill => BuildSection.skills,
         BuildGoalKind.level || BuildGoalKind.mastery => BuildSection.level,
         BuildGoalKind.check => BuildSection.notes,
@@ -230,7 +251,10 @@ class BuildPlanRules {
   // Evaluación
   // ------------------------------------------------------------------
 
-  BuildProgress evaluate(BuildPlan plan, PlayerProfile p) {
+  /// Progreso de [plan] con [p]. [stash]: las armas del alijo compartido
+  /// (cuentan para los objetivos de arma, marcadas aparte).
+  BuildProgress evaluate(BuildPlan plan, PlayerProfile p,
+      {List<ItemInstance> stash = const []}) {
     if (plan.goalCount == 0) return BuildProgress.none;
     final goals = <GoalStatus>[
       for (final a in Attribute.values)
@@ -242,7 +266,12 @@ class BuildPlanRules {
       for (final b in plan.weaponBases) _weaponBase(p, b),
       for (final m in plan.mods) _mod(p, m),
       if (plan.weaponPassive case final wp?) _passive(p, wp),
+      for (var i = 0; i < plan.weaponTargets.length; i++)
+        _target(p, plan.weaponTargets[i], i, stash),
       for (final s in plan.skills) _skill(p, s),
+      if (plan.ultActive case final u?) _ultActive(p, u),
+      for (final e in plan.ultUpgrades.entries) _ultUpgrade(p, e.key, e.value),
+      for (final f in plan.feats) _feat(p, f),
       if (plan.targetLevel case final l?)
         _counter(BuildGoalKind.level, 'lvl', 'Nivel $l', p.level, l),
       if (plan.targetMastery case final m?)
@@ -539,6 +568,102 @@ class BuildPlanRules {
             : 'la da ${givers.take(2).map((w) => w.name).join(' o ')}');
   }
 
+  WeaponTargetRules get targets => WeaponTargetRules(progression);
+
+  GoalStatus _target(
+      PlayerProfile p, WeaponTarget t, int i, List<ItemInstance> stash) {
+    final tr = targets;
+    final best = tr.best(t, p, stash: stash);
+    final name = tr.targetName(t);
+    final pct = best?.percent ?? 0;
+    final state = best == null || pct == 0
+        ? GoalState.todo
+        : pct >= 100
+            ? (best.equipped ? GoalState.done : GoalState.partial)
+            : GoalState.partial;
+    final hint = best == null
+        ? 'sin candidatas: buscala en el loot'
+        : '${best.inStash ? '[ALIJO] ' : ''}${_itemName(best.item)} '
+            '$pct% · faltan ${best.missing}'
+            '${pct >= 100 && !best.equipped ? ': equipala' : ''}';
+    return GoalStatus(
+      kind: BuildGoalKind.weaponTarget,
+      key: 'wt:$i',
+      ref: '$i',
+      label: '★ $name (${t.priority.label})',
+      state: state,
+      current: pct,
+      total: 100,
+      hint: hint,
+      major: t.priority == TargetPriority.main,
+    );
+  }
+
+  GoalStatus _ultActive(PlayerProfile p, String id) {
+    final def = kUltV2[id];
+    GoalStatus st(GoalState s, [String? hint]) => GoalStatus(
+          kind: BuildGoalKind.ultActive,
+          key: 'ult',
+          ref: id,
+          label: 'ULT activa: ${def?.name ?? id}',
+          state: s,
+          hint: hint,
+        );
+    if (def == null) return st(GoalState.blocked, 'ULT desconocida');
+    final known = {...p.ultKnown, ...UltRules.earned(p)};
+    if (p.ultSel == id) return st(GoalState.done);
+    if (known.contains(id)) {
+      return st(GoalState.partial, 'la tenés: elegila en PERSONAJE › ULT');
+    }
+    return st(GoalState.todo, def.how);
+  }
+
+  GoalStatus _ultUpgrade(PlayerProfile p, String id, int level) {
+    final def = kUltV2[id];
+    final cur = UltRules.levelOf(p, id);
+    final known = {...p.ultKnown, ...UltRules.earned(p)};
+    final cost = UltRules.upgradeCost(id, cur);
+    return GoalStatus(
+      kind: BuildGoalKind.ultUpgrade,
+      key: 'ultUp:$id',
+      ref: id,
+      label: '${def?.name ?? id} nivel $level',
+      state: def == null
+          ? GoalState.blocked
+          : cur >= level
+              ? GoalState.done
+              : known.contains(id)
+                  ? GoalState.partial
+                  : GoalState.todo,
+      current: known.contains(id) ? cur : 0,
+      total: level,
+      hint: def == null
+          ? 'ULT desconocida'
+          : !known.contains(id)
+              ? def.how
+              : cost == null
+                  ? null
+                  : 'próximo nivel: ₵${cost.credits} + '
+                      '${cost.materials.entries.map((e) => '${e.value} ${e.key.label}').join(' + ')}',
+    );
+  }
+
+  GoalStatus _feat(PlayerProfile p, String id) {
+    final def = kAchievementsById[id];
+    return GoalStatus(
+      kind: BuildGoalKind.feat,
+      key: 'feat:$id',
+      ref: id,
+      label: 'Hazaña: ${def?.name ?? id}',
+      state: def == null
+          ? GoalState.blocked
+          : p.achievements.isDone(id)
+              ? GoalState.done
+              : GoalState.todo,
+      hint: def?.how,
+    );
+  }
+
   // ------------------------------------------------------------------
   // Siguiente paso (§ 2)
   // ------------------------------------------------------------------
@@ -546,6 +671,12 @@ class BuildPlanRules {
   String _next(BuildPlan plan, PlayerProfile p, List<GoalStatus> goals) {
     // 1. Puntos de atributo sin repartir: el atributo al que más le
     // falta.
+    if (p.points > 0 && plan.spanAttributeAt(p.level) != null) {
+      final a = plan.spanAttributeAt(p.level)!;
+      return 'Tenés ${p.points} punto${p.points == 1 ? '' : 's'}: '
+          'según tu plantilla, ${attributeShort(a)} '
+          '(${attributeShort(a)} ${p.attributes[a]})';
+    }
     if (p.points > 0) {
       Attribute? best;
       var gap = 0;
@@ -562,9 +693,13 @@ class BuildPlanRules {
             '(${p.attributes[best]}/${plan.attributes[best]})';
       }
     }
-    // 2. El nodo planificado más cercano.
+    // 2. El nodo planificado más cercano (árbol por nivel primero).
     final tree = progression.treeRules;
     final free = tree.pointsAvailable(p.treePoints, p.passiveProgress);
+    if (nextTreeNode(plan, p) case final id?) {
+      return 'Tenés puntos de árbol: TOMAR SIGUIENTE DEL PLAN '
+          '(${nodeName(id)})';
+    }
     List<String>? bestRoute;
     String? bestTarget;
     for (final id in plan.treeNodes) {
@@ -773,17 +908,27 @@ class BuildPlanRules {
   /// Aplica la plantilla [t]: reemplaza las metas (con el camino del
   /// árbol completo) y conserva nombre propio, notas y checklist de
   /// [current] (§ 3).
-  BuildPlan applyTemplate(BuildPlan current, BuildTemplate t) {
-    final plan = withTreePaths(t.plan, t.classId);
-    return plan.copyWith(
-      // Nombre propio del jugador: se queda; el de otra plantilla, no.
-      name: current.name.isEmpty ||
-              current.name == buildTemplate(current.templateId ?? '')?.name
-          ? t.name
-          : current.name,
-      notes: current.notes,
-      checklist: current.checklist,
-    );
+  BuildPlan applyTemplate(BuildPlan current, BuildTemplate t) =>
+      BuildTemplateRules(progression).follow(current, t);
+
+  /// TOMAR SIGUIENTE DEL PLAN (build_planner_v2.md § 3): el primer nodo
+  /// que falta del camino al próximo nodo del árbol por nivel que ya
+  /// toca a tu nivel, si tenés puntos; `null` si no hay.
+  String? nextTreeNode(BuildPlan plan, PlayerProfile p) {
+    final tree = progression.treeRules;
+    if (plan.timeline.isEmpty ||
+        tree.pointsAvailable(p.treePoints, p.passiveProgress) <= 0) {
+      return null;
+    }
+    final taken = {...p.passiveProgress.takenNodeIds};
+    for (final s in plan.timeline) {
+      if (s.level > p.treeLevel) break;
+      if (taken.contains(s.node)) continue;
+      final r = tree.pathTo(p.classId, p.passiveProgress, s.node);
+      if (r == null || r.isEmpty) continue;
+      return r.first;
+    }
+    return null;
   }
 
   /// Ascensión a la que pertenece un nodo de mini-árbol.

@@ -1,0 +1,841 @@
+# Plantillas de BUILD v2 (docs/specs/build_planner_v2.md § 2).
+#
+# 5 por clase: las 2 de siempre, 2 combinaciones con puentes y una "de
+# grupo" (clusters de grupo del árbol). Las lee BuildTemplateCatalog; el
+# test build_templates_data_test valida todos los ids, los tramos de
+# atributos y que el árbol entre en los puntos de cada nivel.
+#
+# tree: objetivos en orden ("lvl" = desde qué nivel). El camino entre
+#   objetivos lo completa el juego; si un objetivo no entra a ese nivel
+#   se corre solo al primero en que entra.
+# attributes: tramos cerrados de 2 a 50; cada nivel = 1 punto = +3.
+# weapons: 1-3 objetivos de arma (priority main / transition / alt).
+version: 2
+templates:
+  # ------------------------------------------------------------------
+  # Guerrero
+  # ------------------------------------------------------------------
+  - id: gue_berserker
+    class: guerrero
+    name: Berserker sangrado
+    desc: Hacha pesada, robo de vida y Furia de Sangre; pega más cuanto menos vida tiene.
+    tags: [sangrado, criticos]
+    difficulty: 1
+    tree:
+      - {lvl: 2, node: sangre_n1}
+      - {lvl: 10, milestone: 10, key: sangre_k, alt: quiebre_k}
+      - {lvl: 11, node: sangre_nb}
+      - {lvl: 14, node: sangre_nc}
+      - {lvl: 20, milestone: 20, key: filo_k, alt: gritos_k}
+      - {lvl: 21, node: filo_nb}
+      - {lvl: 24, node: verdugo_n1}
+      - {lvl: 28, node: verdugo_na}
+      - {lvl: 32, node: verdugo_nb}
+      - {lvl: 36, node: verdugo_nc}
+      - {lvl: 40, node: verdugo_nd}
+      - {lvl: 44, node: verdugo_k}
+    ascension:
+      id: berserker
+      order: [berserker_a1, berserker_a2, berserker_a3, berserker_k]
+    attributes:
+      - {from: 2, to: 17, attr: FUE}
+      - {from: 18, to: 33, attr: VIT}
+      - {from: 34, to: 43, attr: DES}
+      - {from: 44, to: 50, attr: AGI}
+    weapons:
+      - {priority: transition, lvl: 4, base: hacha_rompe, rarity: raro, slots: 4, ilvl: 10,
+         mods: [[feroz, 4], [letal, 4], [del_vampiro, 4], [del_toro, 4]]}
+      - {priority: main, lvl: 17, base: hacha_berserker, rarity: epico, slots: 6, ilvl: 30,
+         mods: [[feroz, 2], [letal, 3], [afilado, 3], [del_vampiro, 2], [del_toro, 3], [de_la_vida, 3]],
+         passive: [sedDelArma, 3], skills: [hendir, sifon], forge: {power: 5, crit: 3}}
+      - {priority: alt, lvl: 43, base: hacha_cataclismo, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[feroz, 1], [letal, 2], [del_vampiro, 1]], passive: [sedDelArma, 4]}
+    ult: {active: ult2_sangreEco, upgrades: {ult2_sangreEco: 4}}
+    feats: [tree_milestone, ult_executes]
+    endgame:
+      mastery: [{ms: 4, node: sangre_na}, {ms: 10, node: filo_na}, {ms: 16, node: estandarte_na}]
+      atlas: [rutas, verde, resonancia, brillo, fortuna]
+      ecoMods: {prefer: [furia, horda], avoid: [vida]}
+      checklist: ["Prueba III superada", "Hacha Berserker Épica 100%"]
+
+  - id: gue_quiebre
+    class: guerrero
+    name: Rompeguardias
+    desc: Espada, quiebre y Demoledor; Señor de la Guerra para potenciar al grupo.
+    tags: [quiebre, grupo-apoyo]
+    difficulty: 1
+    tree:
+      - {lvl: 2, node: quiebre_n1}
+      - {lvl: 10, milestone: 10, key: quiebre_k, alt: muralla_k}
+      - {lvl: 11, node: quiebre_nb}
+      - {lvl: 14, node: quiebre_nc}
+      - {lvl: 20, milestone: 20, key: gritos_k, alt: filo_k}
+      - {lvl: 21, node: muralla_n1}
+      - {lvl: 26, node: glaciar_i1}
+      - {lvl: 30, node: glaciar_na}
+      - {lvl: 34, node: glaciar_nl}
+      - {lvl: 40, node: glaciar_k}
+    ascension:
+      id: senorGuerra
+      order: [senorGuerra_b1, senorGuerra_b2, senorGuerra_b3, senorGuerra_k]
+    attributes:
+      - {from: 2, to: 17, attr: FUE}
+      - {from: 18, to: 29, attr: DES}
+      - {from: 30, to: 44, attr: VIT}
+      - {from: 45, to: 50, attr: AGI}
+    weapons:
+      - {priority: transition, lvl: 4, base: hacha_rompe, rarity: raro, slots: 4, ilvl: 10,
+         mods: [[feroz, 4], [rompedor, 4], [del_toro, 4]]}
+      - {priority: main, lvl: 24, base: espada_runica, rarity: epico, slots: 6, ilvl: 30,
+         mods: [[feroz, 2], [rompedor, 2], [letal, 3], [del_toro, 3], [de_la_vida, 3]],
+         passive: [filoResonante, 3], skills: [tajoT, inspirar], forge: {power: 5, crit: 2}}
+      - {priority: alt, lvl: 37, base: mandoble_eras, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[feroz, 1], [rompedor, 2]], passive: [filoResonante, 4]}
+    ult: {active: ult2_gritoRuinas, upgrades: {ult2_gritoRuinas: 4}}
+    feats: [combat_break, ult_breaks]
+    endgame:
+      mastery: [{ms: 5, node: glaciar_nb}, {ms: 12, node: refugio_na}, {ms: 18, node: refugio_nt}]
+      atlas: [rutas, piedra, resonancia, brillo, destello]
+      ecoMods: {prefer: [coraza, tirano], avoid: [prisa]}
+      checklist: ["Prueba III superada", "Espada Rúnica Épica 100%"]
+
+  - id: gue_tormenta_filo
+    class: guerrero
+    name: Tormenta de filo
+    desc: El arma deja Cargado, el árbol premia quebrar a los Cargados y Filo convierte críticos en turnos.
+    tags: [electro, quiebre, criticos]
+    difficulty: 2
+    tree:
+      - {lvl: 2, node: quiebre_n1}
+      - {lvl: 10, milestone: 10, key: quiebre_k, alt: muralla_k}
+      - {lvl: 11, node: quiebre_nb}
+      - {lvl: 14, node: quiebre_nc}
+      - {lvl: 17, node: tempestad_n1}
+      - {lvl: 20, milestone: 20, key: filo_k, alt: gritos_k}
+      - {lvl: 21, node: filo_nb}
+      - {lvl: 24, node: tempestad_nb}
+      - {lvl: 28, node: tempestad_na}
+      - {lvl: 31, node: tempestad_nc}
+      - {lvl: 35, node: tempestad_nd}
+      - {lvl: 39, node: tempestad_k}
+      - {lvl: 45, node: filo_nc}
+    ascension:
+      id: senorGuerra
+      order: [senorGuerra_a1, senorGuerra_a2, senorGuerra_a3, senorGuerra_k]
+    attributes:
+      - {from: 2, to: 17, attr: FUE}
+      - {from: 18, to: 27, attr: DES}
+      - {from: 28, to: 42, attr: VIT}
+      - {from: 43, to: 50, attr: AGI}
+    weapons:
+      - {priority: transition, lvl: 19, base: espada_coral, rarity: raro, slots: 4, ilvl: 10,
+         mods: [[feroz, 4], [certero, 4], [del_toro, 4], [de_la_vida, 4]]}
+      - {priority: main, lvl: 34, base: hacha_tronante, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[feroz, 2], [afilado, 2], [letal, 3], [del_toro, 2], [de_la_vida, 3], [del_halcon, 3]],
+         passive: [conmocion, 3], skills: [golpeTrueno, remolino, tajoMarea], keepQuebrar: false,
+         stats: {atk: 140, crit: 30}, forge: {power: 5, crit: 3}}
+    ult: {active: ult2_taladoEras, upgrades: {ult2_taladoEras: 3, ult2_gritoRuinas: 2}}
+    feats: [combat_break, ult_breaks, fuse_break_slot]
+    endgame:
+      mastery: [{ms: 6, node: glaciar_nl}, {ms: 14, node: forja_nb}, {ms: 20, node: vanguardia_nd}]
+      atlas: [rutas, piedra, resonancia, brillo, destello, fortuna]
+      ecoMods: {prefer: [tirano, horda], avoid: [coraza]}
+      checklist: ["Prueba III superada", "Hacha Tronante Épica 100%"]
+
+  - id: gue_forja
+    class: guerrero
+    name: Quiebre al rojo
+    desc: Quiebre con fuego por el puente Forja; cada quiebre deja el hierro al rojo.
+    tags: [fuego, quiebre, puente]
+    difficulty: 3
+    tree:
+      - {lvl: 2, node: quiebre_n1}
+      - {lvl: 10, milestone: 10, key: quiebre_k, alt: sangre_k}
+      - {lvl: 11, node: quiebre_nc}
+      - {lvl: 20, milestone: 20, key: glaciar_k, alt: gritos_k}
+      - {lvl: 21, node: forja_i1}
+      - {lvl: 25, node: forja_na}
+      - {lvl: 29, node: forja_nb}
+      - {lvl: 33, node: forja_n1}
+      - {lvl: 37, node: forja_nl}
+      - {lvl: 41, node: forja_k}
+    ascension:
+      id: berserker
+      order: [berserker_b1, berserker_b2, berserker_b3, berserker_k]
+    attributes:
+      - {from: 2, to: 3, attr: ESP}
+      - {from: 4, to: 19, attr: FUE}
+      - {from: 20, to: 29, attr: DES}
+      - {from: 30, to: 44, attr: VIT}
+      - {from: 45, to: 50, attr: AGI}
+    weapons:
+      - {priority: transition, lvl: 6, base: hacha_volcanica, rarity: raro, slots: 4, ilvl: 12,
+         mods: [[feroz, 4], [abrasador, 2], [del_toro, 4]]}
+      - {priority: main, lvl: 43, base: hacha_cataclismo, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[feroz, 1], [abrasador, 1], [rompedor, 2], [del_toro, 2], [de_la_vida, 2]],
+         passive: [espinas, 3], skills: [erupcion, rugidoIntimidante], forge: {power: 5, crit: 3}}
+    ult: {active: ult2_taladoEras, upgrades: {ult2_taladoEras: 4}}
+    feats: [ult_forge10, forge_cap]
+    endgame:
+      mastery: [{ms: 5, node: forja_nr}, {ms: 12, node: quiebre_nb}, {ms: 18, node: quiebre_na}]
+      atlas: [rutas, verde, resonancia, potencia, gratis2]
+      ecoMods: {prefer: [brasas, tirano], avoid: [sequia]}
+      checklist: ["Prueba III superada", "Forja 8 en el hacha"]
+
+  - id: gue_grupo
+    class: guerrero
+    name: Baluarte del grupo
+    desc: Primera línea con Fortaleza y Estandarte; protege y empuja al grupo entero.
+    tags: [grupo, defensa]
+    difficulty: 2
+    tree:
+      - {lvl: 2, node: estandarte_na}
+      - {lvl: 5, node: estandarte_nt}
+      - {lvl: 10, milestone: 10, key: muralla_k, alt: quiebre_k}
+      - {lvl: 11, node: refugio_na}
+      - {lvl: 14, node: refugio_nt}
+      - {lvl: 20, milestone: 20, key: gritos_k, alt: filo_k}
+      - {lvl: 24, node: fortaleza_n0}
+      - {lvl: 28, node: fortaleza_na}
+      - {lvl: 32, node: fortaleza_nb}
+      - {lvl: 36, node: fortaleza_nt}
+      - {lvl: 40, node: vanguardia_n1}
+      - {lvl: 44, node: vanguardia_nd}
+    ascension:
+      id: senorGuerra
+      order: [senorGuerra_a1, senorGuerra_a2, senorGuerra_a3, senorGuerra_k]
+    attributes:
+      - {from: 2, to: 17, attr: FUE}
+      - {from: 18, to: 35, attr: VIT}
+      - {from: 36, to: 45, attr: DES}
+      - {from: 46, to: 50, attr: AGI}
+    weapons:
+      - {priority: transition, lvl: 7, base: hacha_tormenta, rarity: raro, slots: 4, ilvl: 10,
+         mods: [[feroz, 4], [del_oso, 4], [de_la_vida, 4]]}
+      - {priority: main, lvl: 28, base: hacha_glaciar, rarity: epico, slots: 6, ilvl: 30,
+         mods: [[feroz, 2], [rompedor, 3], [del_oso, 2], [de_la_vida, 2], [del_toro, 3]],
+         passive: [espinas, 3], skills: [vendaval, rompearmaduras], forge: {power: 4, crit: 2}}
+    ult: {active: ult2_primerGolpe, upgrades: {ult2_primerGolpe: 3}}
+    feats: [ult_flawless, tree_milestone]
+    endgame:
+      mastery: [{ms: 6, node: vanguardia_na}, {ms: 13, node: vanguardia_k}]
+      atlas: [rutas, piedra, resonancia, abundancia, cofres]
+      ecoMods: {prefer: [coraza, vida], avoid: [herida]}
+      checklist: ["Prueba III superada", "Grupo de 4 en el Abismo"]
+
+  # ------------------------------------------------------------------
+  # Maga
+  # ------------------------------------------------------------------
+  - id: mag_brasa
+    class: maga
+    name: Elementalista de brasa
+    desc: Quemaduras que se apilan y Detonar para reventarlas.
+    tags: [fuego, estados]
+    difficulty: 1
+    tree:
+      - {lvl: 2, node: brasa_n1}
+      - {lvl: 10, milestone: 10, key: brasa_k, alt: arcano_k}
+      - {lvl: 11, node: brasa_nb}
+      - {lvl: 14, node: brasa_nc}
+      - {lvl: 20, milestone: 20, key: prisma_k, alt: escarcha_k}
+      - {lvl: 21, node: prisma_nb}
+      - {lvl: 25, node: marea_n1}
+      - {lvl: 29, node: marea_na}
+      - {lvl: 33, node: marea_nb}
+      - {lvl: 37, node: marea_nc}
+      - {lvl: 42, node: marea_k}
+    ascension:
+      id: elementalista
+      order: [elementalista_a1, elementalista_a2, elementalista_a3, elementalista_k]
+    attributes:
+      - {from: 2, to: 17, attr: ESP}
+      - {from: 18, to: 29, attr: VIT}
+      - {from: 30, to: 39, attr: AGI}
+      - {from: 40, to: 50, attr: DES}
+    weapons:
+      - {priority: transition, lvl: 2, base: baculo_fuego, rarity: raro, slots: 4, ilvl: 12,
+         mods: [[arcano, 4], [abrasador, 2], [del_sabio, 4]]}
+      - {priority: main, lvl: 35, base: baculo_eclipse, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[arcano, 1], [abrasador, 1], [runico, 2], [del_sabio, 2], [del_eter, 3], [de_la_vida, 3]],
+         passive: [brasaAvivada, 3], skills: [infierno, marea], forge: {power: 5, crit: 3}}
+      - {priority: alt, lvl: 50, base: baculo_origen, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[arcano, 1], [abrasador, 1]], passive: [brasaAvivada, 4]}
+    ult: {active: ult2_brasaAntigua, upgrades: {ult2_brasaAntigua: 4}}
+    feats: [tree_milestone, combat_convergence]
+    endgame:
+      mastery: [{ms: 5, node: marea_nd}, {ms: 12, node: alquimia_n1}, {ms: 18, node: alquimia_nd}]
+      atlas: [rutas, helada, resonancia, brillo, fortuna]
+      ecoMods: {prefer: [brasas, horda], avoid: [sequia]}
+      checklist: ["Prueba III superada", "Báculo del Eclipse Épico 100%"]
+
+  - id: mag_cronos
+    class: maga
+    name: Cronomante del tiempo
+    desc: Retrasa enemigos y adelanta aliados; el grupo juega más turnos.
+    tags: [tiempo, grupo-apoyo]
+    difficulty: 1
+    tree:
+      - {lvl: 2, node: cronos_n1}
+      - {lvl: 10, milestone: 10, key: cronos_k, alt: arcano_k}
+      - {lvl: 11, node: cronos_nb}
+      - {lvl: 14, node: arcano_n1}
+      - {lvl: 20, milestone: 20, key: prisma_k, alt: escarcha_k}
+      - {lvl: 21, node: arcano_nb}
+      - {lvl: 25, node: arcano_nc}
+      - {lvl: 29, node: alquimia_n1}
+      - {lvl: 33, node: alquimia_na}
+      - {lvl: 37, node: alquimia_nc}
+      - {lvl: 42, node: alquimia_k}
+    ascension:
+      id: cronomante
+      order: [cronomante_b1, cronomante_b2, cronomante_b3, cronomante_k]
+    attributes:
+      - {from: 2, to: 17, attr: ESP}
+      - {from: 18, to: 29, attr: VIT}
+      - {from: 30, to: 39, attr: AGI}
+      - {from: 40, to: 50, attr: DES}
+    weapons:
+      - {priority: transition, lvl: 7, base: tomo_tiempo, rarity: raro, slots: 4, ilvl: 10,
+         mods: [[arcano, 4], [veloz, 4], [del_sabio, 4]]}
+      - {priority: main, lvl: 40, base: tomo_eternidad, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[arcano, 1], [veloz, 2], [runico, 3], [del_sabio, 2], [del_eter, 2], [del_zorro, 3]],
+         passive: [pesoDelTiempo, 3], skills: [pesoTiempo, resurreccion, plaga], forge: {power: 4, speed: 4}}
+    ult: {active: ult2_bucleBreve, upgrades: {ult2_bucleBreve: 4, ult2_paginaRecuerda: 2}}
+    feats: [combat_instant_chain, tree_milestone]
+    endgame:
+      mastery: [{ms: 5, node: cronos_na}, {ms: 10, node: cronos_nc}, {ms: 16, node: sintonia_na}]
+      atlas: [rutas, tiempo, resonancia, gratis, potencia]
+      ecoMods: {prefer: [prisa], avoid: [furia]}
+      checklist: ["Prueba III superada", "Tomo de la Eternidad Épico 100%"]
+
+  - id: mag_galvanica
+    class: maga
+    name: Galvánica
+    desc: Mojar y cargar para Electrocución y Cortocircuito; el puente Galvánica vuelve a dejar los estados.
+    tags: [electro, agua, puente]
+    difficulty: 3
+    tree:
+      - {lvl: 2, node: cronos_n1}
+      - {lvl: 10, milestone: 10, key: cronos_k, alt: brasa_k}
+      - {lvl: 11, node: voltio_n1}
+      - {lvl: 15, node: voltio_nb}
+      - {lvl: 20, milestone: 20, key: prisma_k, alt: escarcha_k}
+      - {lvl: 21, node: voltio_na}
+      - {lvl: 25, node: voltio_nc}
+      - {lvl: 29, node: galvanica_nb}
+      - {lvl: 34, node: galvanica_na}
+      - {lvl: 38, node: galvanica_n1}
+      - {lvl: 42, node: galvanica_k}
+    ascension:
+      id: elementalista
+      order: [elementalista_a1, elementalista_a2, elementalista_a3, elementalista_k]
+    attributes:
+      - {from: 2, to: 17, attr: ESP}
+      - {from: 18, to: 29, attr: AGI}
+      - {from: 30, to: 41, attr: VIT}
+      - {from: 42, to: 50, attr: DES}
+    weapons:
+      - {priority: transition, lvl: 20, base: baculo_marea, rarity: epico, slots: 6, ilvl: 20,
+         mods: [[arcano, 3], [runico, 3], [impetuoso, 3], [del_sabio, 3]],
+         passive: [ecoMistico, 1], skills: [chorro, oleada, escudoAgua]}
+      - {priority: main, lvl: 30, base: tomo_tormentas, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[arcano, 1], [runico, 2], [certero, 3], [del_sabio, 2], [del_eter, 3], [de_la_vida, 3]],
+         passive: [ecoMistico, 3], skills: [tormentaElectrica, cadenaRayos, descargaEstatica],
+         stats: {mag: 180}, forge: {power: 5, crit: 3}}
+      - {priority: alt, lvl: 41, base: tomo_mareas, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[arcano, 1], [runico, 2]], passive: [ecoMistico, 3], skills: [torrente, bruma, geiser]}
+    ult: {active: ult2_chispaRelojera, upgrades: {ult2_prismaPasado: 3}}
+    feats: [combat_convergence, ult_breaks]
+    endgame:
+      mastery: [{ms: 4, node: marea_n1}, {ms: 8, node: marea_nb}, {ms: 11, node: galvanica_nl}, {ms: 18, node: alquimia_n1}]
+      atlas: [rutas, tiempo, resonancia, gratis, potencia, gratis2]
+      ecoMods: {prefer: [horda, tirano], avoid: [sequia]}
+      checklist: ["Arcano T1 en el tomo", "Prueba III superada"]
+
+  - id: mag_hielo_forja
+    class: maga
+    name: Escarcha y forja
+    desc: Congela y quiebra con Arcano; el puente Forja suma golpes al rojo desde el lado de la Maga.
+    tags: [hielo, fuego, puente]
+    difficulty: 3
+    tree:
+      - {lvl: 2, node: escarcha_n1}
+      - {lvl: 10, milestone: 10, key: arcano_k, alt: cronos_k}
+      - {lvl: 11, node: escarcha_nb}
+      - {lvl: 15, node: escarcha_nc}
+      - {lvl: 20, milestone: 20, key: escarcha_k, alt: forja_k}
+      - {lvl: 21, node: forja_i1}
+      - {lvl: 26, node: forja_na}
+      - {lvl: 30, node: forja_n1}
+      - {lvl: 34, node: forja_nr}
+      - {lvl: 40, node: forja_k}
+    ascension:
+      id: elementalista
+      order: [elementalista_b1, elementalista_b2, elementalista_b3, elementalista_k]
+    attributes:
+      - {from: 2, to: 2, attr: AGI}
+      - {from: 3, to: 18, attr: ESP}
+      - {from: 19, to: 32, attr: VIT}
+      - {from: 33, to: 40, attr: AGI}
+      - {from: 41, to: 50, attr: DES}
+    weapons:
+      - {priority: transition, lvl: 4, base: baculo_escarcha, rarity: raro, slots: 4, ilvl: 12,
+         mods: [[arcano, 4], [gelido, 2], [del_sabio, 4]]}
+      - {priority: transition, lvl: 16, base: tomo_escarcha, rarity: epico, slots: 6, ilvl: 20,
+         mods: [[arcano, 3], [gelido, 2], [del_sabio, 3]], passive: [escarchaViva, 1]}
+      - {priority: main, lvl: 50, base: baculo_origen, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[arcano, 1], [gelido, 1], [runico, 2], [del_sabio, 2], [del_eter, 2], [de_la_vida, 3]],
+         passive: [escarchaViva, 4], skills: [ventisca, fenix, graciaDesbordante], forge: {power: 5, crit: 3}}
+    ult: {active: ult2_paginaRecuerda, upgrades: {ult2_brasaAntigua: 3}}
+    feats: [ult_forge10, combat_break]
+    endgame:
+      mastery: [{ms: 6, node: forja_nl}, {ms: 12, node: arcano_na}, {ms: 18, node: glaciar_i1}]
+      atlas: [rutas, helada, resonancia, brillo, destello]
+      ecoMods: {prefer: [brasas, coraza], avoid: [prisa]}
+      checklist: ["Prueba III superada", "Báculo del Origen Épico 100%"]
+
+  - id: mag_grupo
+    class: maga
+    name: Estratega del grupo
+    desc: Táctica y Sintonía; prepara los combos del grupo y reparte turnos.
+    tags: [grupo, tiempo]
+    difficulty: 2
+    tree:
+      - {lvl: 2, node: estandarte_na}
+      - {lvl: 6, node: sintonia_nt}
+      - {lvl: 10, milestone: 10, key: cronos_k, alt: arcano_k}
+      - {lvl: 11, node: cronos_nb}
+      - {lvl: 20, milestone: 20, key: prisma_k, alt: escarcha_k}
+      - {lvl: 24, node: tactica_n0}
+      - {lvl: 28, node: tactica_na}
+      - {lvl: 32, node: tactica_nb}
+      - {lvl: 36, node: tactica_nt}
+      - {lvl: 40, node: estandarte_nt}
+    ascension:
+      id: cronomante
+      order: [cronomante_a1, cronomante_a2, cronomante_a3, cronomante_k]
+    attributes:
+      - {from: 2, to: 17, attr: ESP}
+      - {from: 18, to: 27, attr: AGI}
+      - {from: 28, to: 41, attr: VIT}
+      - {from: 42, to: 50, attr: DES}
+    weapons:
+      - {priority: transition, lvl: 2, base: varita_sauce, rarity: raro, slots: 4, ilvl: 10,
+         mods: [[arcano, 4], [veloz, 4], [del_sabio, 4]]}
+      - {priority: main, lvl: 23, base: baculo_ambar, rarity: epico, slots: 6, ilvl: 30,
+         mods: [[arcano, 2], [veloz, 2], [runico, 3], [de_la_fe, 2], [del_sabio, 3], [de_la_vida, 3]],
+         passive: [egidaSanadora, 3], skills: [purificar, curaM], forge: {power: 3, speed: 5}}
+    ult: {active: ult2_eraSuspendida, upgrades: {ult2_bucleBreve: 3}}
+    feats: [combat_instant_chain, combat_cancel_ult]
+    endgame:
+      mastery: [{ms: 5, node: coro_n0}, {ms: 10, node: coro_nt}, {ms: 16, node: sintonia_na}]
+      atlas: [rutas, tiempo, resonancia, abundancia, cofres]
+      ecoMods: {prefer: [prisa, vida], avoid: [furia]}
+      checklist: ["Prueba III superada", "Grupo de 4 en el Abismo"]
+
+  # ------------------------------------------------------------------
+  # Tirador
+  # ------------------------------------------------------------------
+  - id: tir_precision
+    class: tirador
+    name: Francotirador crítico
+    desc: Críticos enormes a un objetivo con rifle y Ojo de Halcón.
+    tags: [criticos, rifle]
+    difficulty: 1
+    tree:
+      - {lvl: 2, node: precision_n1}
+      - {lvl: 10, milestone: 10, key: precision_k, alt: viento_k}
+      - {lvl: 11, node: precision_nb}
+      - {lvl: 14, node: precision_nc}
+      - {lvl: 20, milestone: 20, key: acecho_k, alt: toxina_k}
+      - {lvl: 21, node: viento_n1}
+      - {lvl: 25, node: viento_nb}
+      - {lvl: 29, node: centella_n1}
+      - {lvl: 33, node: centella_na}
+      - {lvl: 37, node: centella_nc}
+      - {lvl: 42, node: centella_k}
+    ascension:
+      id: francotirador
+      order: [francotirador_a1, francotirador_a2, francotirador_a3, francotirador_k]
+    attributes:
+      - {from: 2, to: 17, attr: DES}
+      - {from: 18, to: 20, attr: FUE}
+      - {from: 21, to: 30, attr: AGI}
+      - {from: 31, to: 46, attr: VIT}
+      - {from: 47, to: 50, attr: FUE}
+    weapons:
+      - {priority: transition, lvl: 7, base: rifle_ocaso, rarity: raro, slots: 4, ilvl: 10,
+         mods: [[certero, 4], [letal, 4], [del_halcon, 4]]}
+      - {priority: main, lvl: 20, base: rifle_precision, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[certero, 1], [letal, 2], [afilado, 3], [del_halcon, 2], [del_zorro, 3], [de_la_vida, 3]],
+         passive: [ojoCertero, 3], skills: [perfora, tiroQuebrantador], forge: {power: 4, crit: 4}}
+    ult: {active: ult2_disparoAnterior, upgrades: {ult2_disparoAnterior: 4, ult2_ojoFuturo: 2}}
+    feats: [ult_executes, tree_milestone]
+    endgame:
+      mastery: [{ms: 5, node: precision_na}, {ms: 10, node: centella_nd}, {ms: 18, node: galvanica_i1}]
+      atlas: [rutas, verde, resonancia, brillo, fortuna]
+      ecoMods: {prefer: [tirano], avoid: [prisa]}
+      checklist: ["Prueba III superada", "Rifle de Precisión Épico 100%"]
+
+  - id: tir_toxina
+    class: tirador
+    name: Trampero tóxico
+    desc: Veneno que se acumula, trampas y daño en área.
+    tags: [veneno, estados]
+    difficulty: 1
+    tree:
+      - {lvl: 2, node: toxina_n1}
+      - {lvl: 10, milestone: 10, key: lluvia_k, alt: viento_k}
+      - {lvl: 11, node: toxina_na}
+      - {lvl: 14, node: toxina_nb}
+      - {lvl: 20, milestone: 20, key: toxina_k, alt: acecho_k}
+      - {lvl: 21, node: acecho_n1}
+      - {lvl: 25, node: acecho_nb}
+      - {lvl: 29, node: monteria_n1}
+      - {lvl: 33, node: monteria_na}
+      - {lvl: 37, node: monteria_nc}
+      - {lvl: 42, node: monteria_k}
+    ascension:
+      id: trampero
+      order: [trampero_b1, trampero_b2, trampero_b3, trampero_k]
+    attributes:
+      - {from: 2, to: 17, attr: DES}
+      - {from: 18, to: 28, attr: AGI}
+      - {from: 29, to: 44, attr: VIT}
+      - {from: 45, to: 50, attr: FUE}
+    weapons:
+      - {priority: transition, lvl: 4, base: arco_sombra, rarity: raro, slots: 4, ilvl: 12,
+         mods: [[ponzonoso, 2], [veloz, 4], [del_zorro, 4]]}
+      - {priority: main, lvl: 32, base: dagas_vibora, rarity: epico, slots: 6, ilvl: 36,
+         mods: [[ponzonoso, 1], [veloz, 2], [letal, 3], [del_zorro, 2], [de_la_vida, 3], [del_halcon, 3]],
+         passive: [toxinaPersistente, 3], skills: [abanico, dagaSaltarina, venenosa], forge: {power: 4, speed: 3}}
+    ult: {active: ult2_milAyeres, upgrades: {ult2_milAyeres: 4}}
+    feats: [combat_convergence, ult_breaks]
+    endgame:
+      mastery: [{ms: 5, node: monteria_nd}, {ms: 12, node: eclipse_i1}, {ms: 18, node: eclipse_na}]
+      atlas: [rutas, verde, resonancia, abundancia, fortuna]
+      ecoMods: {prefer: [horda, herida], avoid: [vida]}
+      checklist: ["Prueba III superada", "Dagas Víbora Épicas 100%"]
+
+  - id: tir_centella
+    class: tirador
+    name: Centella galvánica
+    desc: Flechas con electro que encadenan Cargado y Mojado; Galvánica por el lado del Tirador.
+    tags: [electro, agua, puente]
+    difficulty: 2
+    tree:
+      - {lvl: 2, node: precision_n1}
+      - {lvl: 10, milestone: 10, key: precision_k, alt: lluvia_k}
+      - {lvl: 11, node: centella_n1}
+      - {lvl: 15, node: centella_na}
+      - {lvl: 20, milestone: 20, key: galvanica_k, alt: acecho_k}
+      - {lvl: 21, node: galvanica_nl}
+      - {lvl: 25, node: galvanica_nr}
+      - {lvl: 29, node: centella_nb}
+      - {lvl: 33, node: centella_nc}
+      - {lvl: 37, node: centella_nd}
+      - {lvl: 42, node: centella_k}
+    ascension:
+      id: francotirador
+      order: [francotirador_b1, francotirador_b2, francotirador_b3, francotirador_k]
+    attributes:
+      - {from: 2, to: 17, attr: DES}
+      - {from: 18, to: 28, attr: AGI}
+      - {from: 29, to: 44, attr: VIT}
+      - {from: 45, to: 50, attr: FUE}
+    weapons:
+      - {priority: transition, lvl: 18, base: arco_tormenta, rarity: raro, slots: 4, ilvl: 10,
+         mods: [[certero, 4], [veloz, 4], [del_halcon, 4]]}
+      - {priority: main, lvl: 22, base: arco_relampago, rarity: epico, slots: 6, ilvl: 30,
+         mods: [[certero, 2], [veloz, 2], [letal, 3], [del_halcon, 2], [del_zorro, 3], [de_la_vida, 3]],
+         passive: [vientoDeCola, 3], skills: [flechaVoltaica, relampago, flechaAcuatica], forge: {power: 4, crit: 3}}
+    ult: {active: ult2_flechaVuelve, upgrades: {ult2_flechaVuelve: 4}}
+    feats: [combat_convergence, ult_breaks]
+    endgame:
+      mastery: [{ms: 5, node: galvanica_na}, {ms: 10, node: monzon_n1}, {ms: 16, node: monzon_nb}]
+      atlas: [rutas, tiempo, resonancia, gratis, potencia]
+      ecoMods: {prefer: [prisa, horda], avoid: [sequia]}
+      checklist: ["Prueba III superada", "Arco Relámpago Épico 100%"]
+
+  - id: tir_eclipse
+    class: tirador
+    name: Eclipse
+    desc: Veneno y sagrado juntos por el puente Eclipse; purga y corrompe.
+    tags: [veneno, sagrado, puente]
+    difficulty: 3
+    tree:
+      - {lvl: 2, node: toxina_n1}
+      - {lvl: 10, milestone: 10, key: lluvia_k, alt: precision_k}
+      - {lvl: 11, node: toxina_nb}
+      - {lvl: 20, milestone: 20, key: toxina_k, alt: acecho_k}
+      - {lvl: 21, node: eclipse_i1}
+      - {lvl: 25, node: eclipse_na}
+      - {lvl: 29, node: eclipse_nb}
+      - {lvl: 33, node: eclipse_n1}
+      - {lvl: 37, node: eclipse_nl}
+      - {lvl: 41, node: eclipse_k}
+    ascension:
+      id: trampero
+      order: [trampero_a1, trampero_a2, trampero_a3, trampero_k]
+    attributes:
+      - {from: 2, to: 17, attr: DES}
+      - {from: 18, to: 25, attr: AGI}
+      - {from: 26, to: 32, attr: FUE}
+      - {from: 33, to: 50, attr: VIT}
+    weapons:
+      - {priority: transition, lvl: 25, base: dagas_electricas, rarity: epico, slots: 6, ilvl: 30,
+         mods: [[ponzonoso, 2], [letal, 3], [del_zorro, 3]], passive: [toxinaPersistente, 2]}
+      - {priority: main, lvl: 43, base: ballesta_asedio, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[ponzonoso, 1], [letal, 2], [certero, 2], [del_halcon, 2], [de_la_vida, 2], [del_zorro, 3]],
+         passive: [toxinaPersistente, 4], skills: [viroteAsedio, viroteIgneo, aturdir], forge: {power: 5, crit: 3}}
+    ult: {active: ult2_viroteDetenido, upgrades: {ult2_lluviaEcos: 3}}
+    feats: [combat_convergence, ult_executes]
+    endgame:
+      mastery: [{ms: 5, node: eclipse_nr}, {ms: 10, node: centinela_n1}, {ms: 16, node: centinela_nl}]
+      atlas: [rutas, vacio, resonancia, brillo, fortuna]
+      ecoMods: {prefer: [herida, tirano], avoid: [vida]}
+      checklist: ["Prueba III superada", "Ballesta de Asedio Épica 100%"]
+
+  - id: tir_grupo
+    class: tirador
+    name: Coro de cazadores
+    desc: Coro, Sintonía y Vínculo; marca presas para todo el grupo y lo sostiene de lejos.
+    tags: [grupo, apoyo]
+    difficulty: 2
+    tree:
+      - {lvl: 2, node: sintonia_na}
+      - {lvl: 6, node: vinculo_nt}
+      - {lvl: 10, milestone: 10, key: viento_k, alt: lluvia_k}
+      - {lvl: 11, node: sintonia_nt}
+      - {lvl: 20, milestone: 20, key: acecho_k, alt: toxina_k}
+      - {lvl: 24, node: coro_n0}
+      - {lvl: 28, node: coro_na}
+      - {lvl: 32, node: coro_nb}
+      - {lvl: 36, node: coro_nt}
+      - {lvl: 40, node: centinela_n1}
+    ascension:
+      id: trampero
+      order: [trampero_b1, trampero_b2, trampero_b3, trampero_k]
+    attributes:
+      - {from: 2, to: 17, attr: DES}
+      - {from: 18, to: 28, attr: AGI}
+      - {from: 29, to: 44, attr: VIT}
+      - {from: 45, to: 50, attr: FUE}
+    weapons:
+      - {priority: transition, lvl: 2, base: dagas_cobre, rarity: raro, slots: 4, ilvl: 10,
+         mods: [[veloz, 4], [certero, 4], [del_zorro, 4]]}
+      - {priority: main, lvl: 28, base: arco_viento, rarity: epico, slots: 6, ilvl: 30,
+         mods: [[veloz, 2], [certero, 2], [impetuoso, 3], [del_zorro, 2], [de_la_gracia, 3], [de_la_vida, 3]],
+         passive: [marcaPresa, 3], skills: [rayoF, vientoPrisa, tiroRebote], forge: {power: 3, speed: 4}}
+    ult: {active: ult2_lluviaEcos, upgrades: {ult2_lluviaEcos: 4}}
+    feats: [combat_cancel_ult, ult_flawless]
+    endgame:
+      mastery: [{ms: 5, node: santuario_n0}, {ms: 10, node: santuario_nt}, {ms: 16, node: centinela_nr}]
+      atlas: [rutas, verde, resonancia, abundancia, cofres]
+      ecoMods: {prefer: [vida, prisa], avoid: [herida]}
+      checklist: ["Prueba III superada", "Grupo de 4 en el Abismo"]
+
+  # ------------------------------------------------------------------
+  # Paladín
+  # ------------------------------------------------------------------
+  - id: pal_guardian
+    class: paladin
+    name: Guardián muralla
+    desc: Escudos para todo el grupo, provocar y Égida Eterna.
+    tags: [defensa, grupo-apoyo]
+    difficulty: 1
+    tree:
+      - {lvl: 2, node: bastion_n1}
+      - {lvl: 10, milestone: 10, key: fe_k, alt: luz_k}
+      - {lvl: 11, node: bastion_na}
+      - {lvl: 14, node: bastion_nc}
+      - {lvl: 20, milestone: 20, key: bastion_k, alt: vigilia_k}
+      - {lvl: 21, node: fe_nb}
+      - {lvl: 25, node: fe_nc}
+      - {lvl: 29, node: refugio_na}
+      - {lvl: 33, node: refugio_nt}
+      - {lvl: 37, node: vinculo_na}
+      - {lvl: 41, node: vinculo_nt}
+    ascension:
+      id: guardian
+      order: [guardian_b1, guardian_b2, guardian_b3, guardian_k]
+    attributes:
+      - {from: 2, to: 2, attr: ESP}
+      - {from: 3, to: 17, attr: VIT}
+      - {from: 18, to: 27, attr: FUE}
+      - {from: 28, to: 37, attr: ESP}
+      - {from: 38, to: 50, attr: AGI}
+    weapons:
+      - {priority: transition, lvl: 4, base: maza_escudo_bastion, rarity: raro, slots: 4, ilvl: 10,
+         mods: [[arcano, 4], [del_baluarte, 4], [de_la_vida, 4]]}
+      - {priority: main, lvl: 32, base: maza_escudo_custodio, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[arcano, 2], [runico, 3], [rompedor, 3], [de_la_vida, 2], [del_baluarte, 1], [del_oso, 2]],
+         passive: [bastionVivo, 3], skills: [provocar, murallaFe], forge: {power: 3, def: 5}}
+    ult: {active: ult2_campanaPasado, upgrades: {ult2_custodioInstante: 3}}
+    feats: [ult_shields, tree_milestone]
+    endgame:
+      mastery: [{ms: 5, node: bastion_nb}, {ms: 10, node: fortaleza_n0}, {ms: 16, node: fortaleza_nt}]
+      atlas: [rutas, piedra, resonancia, abundancia, cofres]
+      ecoMods: {prefer: [coraza, vida], avoid: [herida]}
+      checklist: ["Prueba III superada", "Maza del Custodio Épica 100%"]
+
+  - id: pal_templario
+    class: paladin
+    name: Templario del juicio
+    desc: Daño sagrado y aturdir con martillo y escudo.
+    tags: [sagrado, aturdir]
+    difficulty: 1
+    tree:
+      - {lvl: 2, node: juicio_n1}
+      - {lvl: 10, milestone: 10, key: juicio_k, alt: luz_k}
+      - {lvl: 11, node: juicio_nb}
+      - {lvl: 14, node: juicio_nc}
+      - {lvl: 20, milestone: 20, key: vigilia_k, alt: bastion_k}
+      - {lvl: 21, node: exorcismo_n1}
+      - {lvl: 25, node: exorcismo_na}
+      - {lvl: 29, node: exorcismo_nb}
+      - {lvl: 33, node: exorcismo_nc}
+      - {lvl: 37, node: exorcismo_nd}
+      - {lvl: 42, node: exorcismo_k}
+    ascension:
+      id: templario
+      order: [templario_b1, templario_b2, templario_b3, templario_k]
+    attributes:
+      - {from: 2, to: 2, attr: VIT}
+      - {from: 3, to: 18, attr: FUE}
+      - {from: 19, to: 30, attr: VIT}
+      - {from: 31, to: 40, attr: ESP}
+      - {from: 41, to: 50, attr: AGI}
+    weapons:
+      - {priority: transition, lvl: 7, base: martillo_escudo_juicio, rarity: raro, slots: 4, ilvl: 10,
+         mods: [[feroz, 4], [certero, 4], [del_toro, 4]]}
+      - {priority: main, lvl: 35, base: martillo_escudo_titan, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[feroz, 2], [certero, 3], [rompedor, 3], [del_toro, 2], [de_la_fe, 3], [de_la_vida, 3]],
+         passive: [conmocion, 3], skills: [juicio, temblor, sagrado], forge: {power: 5, crit: 3}}
+    ult: {active: ult2_sentenciaLejana, upgrades: {ult2_sentenciaLejana: 4}}
+    feats: [combat_break, ult_breaks]
+    endgame:
+      mastery: [{ms: 5, node: juicio_na}, {ms: 10, node: luz_n1}, {ms: 16, node: luz_nb}]
+      atlas: [rutas, vacio, resonancia, brillo, fortuna]
+      ecoMods: {prefer: [tirano, furia], avoid: [coraza]}
+      checklist: ["Prueba III superada", "Martillo del Titán Épico 100%"]
+
+  - id: pal_pararrayos
+    class: paladin
+    name: Pararrayos
+    desc: Electro defensivo; atrae las descargas, las devuelve y congela con el puente Glaciar.
+    tags: [electro, defensa, puente]
+    difficulty: 2
+    tree:
+      - {lvl: 2, node: vigilia_n1}
+      - {lvl: 10, milestone: 10, key: luz_k, alt: fe_k}
+      - {lvl: 11, node: vigilia_nb}
+      - {lvl: 20, milestone: 20, key: vigilia_k, alt: bastion_k}
+      - {lvl: 21, node: pararrayos_n1}
+      - {lvl: 25, node: pararrayos_na}
+      - {lvl: 29, node: pararrayos_nb}
+      - {lvl: 33, node: pararrayos_nc}
+      - {lvl: 37, node: pararrayos_nd}
+      - {lvl: 42, node: pararrayos_k}
+    ascension:
+      id: guardian
+      order: [guardian_a1, guardian_a2, guardian_a3, guardian_k]
+    attributes:
+      - {from: 2, to: 4, attr: FUE}
+      - {from: 5, to: 15, attr: ESP}
+      - {from: 16, to: 31, attr: VIT}
+      - {from: 32, to: 43, attr: AGI}
+      - {from: 44, to: 50, attr: DES}
+    weapons:
+      - {priority: transition, lvl: 20, base: espada_escudo_vigia, rarity: raro, slots: 4, ilvl: 20,
+         mods: [[arcano, 3], [del_baluarte, 3], [de_la_vida, 3]]}
+      - {priority: main, lvl: 29, base: espada_escudo_aurora, rarity: epico, slots: 6, ilvl: 30,
+         mods: [[arcano, 2], [runico, 2], [veloz, 3], [del_baluarte, 2], [de_la_vida, 2], [del_eter, 3]],
+         passive: [bastionVivo, 3], skills: [lanzaLuz, escudoVolatil, estocada], forge: {power: 3, def: 5}}
+    ult: {active: ult2_muroAyer, upgrades: {ult2_muroAyer: 4}}
+    feats: [ult_shields, combat_convergence]
+    endgame:
+      mastery: [{ms: 5, node: glaciar_i1}, {ms: 10, node: glaciar_nr}, {ms: 16, node: glaciar_k}]
+      atlas: [rutas, helada, resonancia, brillo, destello]
+      ecoMods: {prefer: [coraza], avoid: [prisa]}
+      checklist: ["Prueba III superada", "Espada y Escudo de la Aurora Épica 100%"]
+
+  - id: pal_eclipse
+    class: paladin
+    name: Penitente
+    desc: Sagrado y veneno por el puente Eclipse; penitencia que se contagia.
+    tags: [sagrado, veneno, puente]
+    difficulty: 3
+    tree:
+      - {lvl: 2, node: juicio_n1}
+      - {lvl: 10, milestone: 10, key: juicio_k, alt: fe_k}
+      - {lvl: 11, node: juicio_na}
+      - {lvl: 20, milestone: 20, key: eclipse_k, alt: vigilia_k}
+      - {lvl: 21, node: eclipse_n1}
+      - {lvl: 25, node: eclipse_nl}
+      - {lvl: 29, node: eclipse_na}
+      - {lvl: 33, node: eclipse_nb}
+      - {lvl: 37, node: manantial_n1}
+      - {lvl: 41, node: manantial_na}
+    ascension:
+      id: templario
+      order: [templario_a1, templario_a2, templario_a3, templario_k]
+    attributes:
+      - {from: 2, to: 17, attr: ESP}
+      - {from: 18, to: 33, attr: VIT}
+      - {from: 34, to: 45, attr: AGI}
+      - {from: 46, to: 50, attr: FUE}
+    weapons:
+      - {priority: main, lvl: 23, base: maza_escudo_sagrada, rarity: epico, slots: 6, ilvl: 30,
+         mods: [[arcano, 2], [runico, 3], [de_la_fe, 2], [de_la_vida, 3]],
+         passive: [plegariaAcero, 3], skills: [sanar, escudoFe, golpeEscudo], forge: {power: 4, def: 3}}
+      - {priority: alt, lvl: 42, base: maza_escudo_bendita, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[arcano, 1], [runico, 2], [de_la_fe, 1]], passive: [plegariaAcero, 4]}
+    ult: {active: ult2_luzAyer, upgrades: {ult2_luzAyer: 4}}
+    feats: [combat_convergence, ult_shields]
+    endgame:
+      mastery: [{ms: 5, node: eclipse_nr}, {ms: 10, node: manantial_nb}, {ms: 16, node: manantial_nd}]
+      atlas: [rutas, vacio, resonancia, abundancia, fortuna]
+      ecoMods: {prefer: [herida, vida], avoid: [furia]}
+      checklist: ["Prueba III superada", "Maza Bendita Épica 100%"]
+
+  - id: pal_grupo
+    class: paladin
+    name: Santuario vivo
+    desc: Santuario, Refugio y Vínculo; cura, protege y sostiene al grupo en el Abismo.
+    tags: [grupo, curacion]
+    difficulty: 2
+    tree:
+      - {lvl: 2, node: refugio_na}
+      - {lvl: 5, node: refugio_nt}
+      - {lvl: 10, milestone: 10, key: fe_k, alt: luz_k}
+      - {lvl: 11, node: vinculo_na}
+      - {lvl: 14, node: vinculo_nt}
+      - {lvl: 20, milestone: 20, key: bastion_k, alt: vigilia_k}
+      - {lvl: 24, node: santuario_n0}
+      - {lvl: 28, node: santuario_na}
+      - {lvl: 32, node: santuario_nb}
+      - {lvl: 36, node: santuario_nt}
+      - {lvl: 40, node: manantial_n1}
+    ascension:
+      id: guardian
+      order: [guardian_a1, guardian_a2, guardian_a3, guardian_k]
+    attributes:
+      - {from: 2, to: 2, attr: ESP}
+      - {from: 3, to: 17, attr: VIT}
+      - {from: 18, to: 27, attr: FUE}
+      - {from: 28, to: 37, attr: ESP}
+      - {from: 38, to: 50, attr: AGI}
+    weapons:
+      - {priority: transition, lvl: 3, base: maza_escudo_roble, rarity: raro, slots: 4, ilvl: 10,
+         mods: [[arcano, 4], [de_la_fe, 4], [de_la_vida, 4]]}
+      - {priority: main, lvl: 42, base: maza_escudo_bendita, rarity: epico, slots: 6, ilvl: 40,
+         mods: [[arcano, 1], [runico, 2], [impetuoso, 3], [de_la_fe, 1], [de_la_vida, 2], [del_renacer, 2]],
+         passive: [egidaSanadora, 3], skills: [bendicion, resurreccion, selloSagrado], forge: {power: 3, def: 5}}
+    ult: {active: ult2_custodioInstante, upgrades: {ult2_custodioInstante: 4}}
+    feats: [ult_shields, combat_cancel_ult]
+    endgame:
+      mastery: [{ms: 5, node: manantial_na}, {ms: 10, node: manantial_nc}, {ms: 16, node: manantial_k}]
+      atlas: [rutas, verde, resonancia, abundancia, cofres]
+      ecoMods: {prefer: [vida, coraza], avoid: [herida]}
+      checklist: ["Prueba III superada", "Grupo de 4 en el Abismo"]

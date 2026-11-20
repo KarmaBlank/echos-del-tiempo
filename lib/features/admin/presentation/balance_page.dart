@@ -8,6 +8,7 @@ import 'admin_controller.dart';
 import 'admin_widgets.dart';
 import 'field_editors.dart';
 import 'impact_panel.dart';
+import 'template_editor.dart';
 
 /// Pestaña Balance: navegador + editor + impacto (balance_admin.md § 5).
 class BalancePage extends StatelessWidget {
@@ -45,6 +46,7 @@ class EntityBrowser extends StatelessWidget {
       (null, 'Todo'),
       for (final k in BalanceKind.values) (k.jsonKey, k.plural),
       (AdminEntry.ascensionCategory, 'Ascensiones'),
+      (AdminEntry.templateCategory, 'Plantillas'),
     ];
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
@@ -124,6 +126,9 @@ class _EntityEditorState extends State<EntityEditor> {
     final c = widget.c;
     final e = widget.entry;
     final theme = Theme.of(context);
+    if (e.category == AdminEntry.templateCategory) {
+      return TemplateEditor(key: ValueKey('tpl-${e.id}'), c: c, entry: e);
+    }
     if (e.kind == null) return _AscensionView(c: c, entry: e);
     final kind = e.kind!;
     final codec = codecOf(kind);

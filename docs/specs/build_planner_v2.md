@@ -1,4 +1,19 @@
-# Spec (BORRADOR, falta OK del dueño): BUILD v2
+# Spec (APROBADO, implementado en v0.19.0): BUILD v2
+
+> **Aprobado por el dueño** con estas respuestas a § 5:
+> 1. **5 plantillas por clase**: las 4 de abajo + una **de grupo** con los
+>    clusters de grupo del árbol (20 en total).
+> 2. **Alijo**: la comparación y las sugerencias de fusión miran también
+>    el alijo compartido, **marcado aparte con etiqueta** (`ALIJO`); nada
+>    se mueve sin una acción explícita del jugador.
+> 3. **Plantillas en YAML del juego** + **exportar / importar a archivo**
+>    para compartir con amigos.
+> 4. **`BuildMejora`** es una condición **nueva** del filtro; `Build`
+>    sigue igual.
+>
+> El borrador se escribió antes de v0.14–v0.18; § 6 lo pone al día con
+> lo que existe hoy (economía v0.15, ULT v2, Hazañas, Editor) y § 7 dice
+> cómo quedó la implementación y qué se desvió.
 
 Amplía `build_planner.md` (v0.5–v0.11). Todo lo que no se nombra acá
 sigue igual: el plan es local, va en `CharacterSlot.plan`, se evalúa con
@@ -498,17 +513,130 @@ cliqueables) y `DsPercent` (número + barra de una línea).
 
 ---
 
-## 5. Preguntas abiertas para el dueño
+## 5. Preguntas abiertas para el dueño (respondidas)
 
-1. **Plantillas**: ¿4 por clase como acá (las 2 de v1 + 2 combinaciones
-   con puentes) o preferís 5 (sumando una "de grupo" por clase, con los
-   clusters de grupo Táctica / Coro / Santuario / Fortaleza)?
-2. **Alijo**: ¿la comparación y las sugerencias de fusión miran el alijo
-   compartido de la cuenta (otros personajes pueden perder un arma que
-   donan) o solo el inventario del personaje?
-3. **Archivo editable**: ¿te sirve YAML en `assets/data/` (requiere
-   recompilar o RECARGAR en `main_dev`), o querés poder cargar
-   plantillas desde un archivo fuera del juego (en la carpeta de la
-   cuenta) para compartirlas con amigos?
-4. **Filtro `BuildMejora`**: ¿lo querés como condición nueva del filtro
-   o preferís que `Build` cambie de significado a "solo si mejora"?
+1. **Plantillas**: 5 por clase (las 4 + una "de grupo"). ✔
+2. **Alijo**: sí, marcado aparte con etiqueta y sin moverlo solo. ✔
+3. **Archivo editable**: YAML del juego + exportar / importar a archivo. ✔
+4. **Filtro**: `BuildMejora` nueva; `Build` igual. ✔
+
+---
+
+## 6. Puesta al día (v0.14–v0.18)
+
+### 6.1 Economía v0.15 (materials_economy.md § 4)
+
+Los costos de "qué te falta" y del PLAN DE FUSIÓN son los de hoy
+(`CraftRules`):
+- **Rareza**: 1 / 3 / 6 Prismas Rotos + ₵100 / ₵300 / ₵800 (Común →
+  Mágico → Raro → Épico). Si no te alcanzan los Prismas, la línea suma
+  `(te faltan N: Condensar 10 Cristales + ₵500 = 1)`.
+- **Mod**: trasladar `100 × peso del tier × rareza`; un mod con peor tier
+  se **quita** (`50 × peso × rareza`) y se traslada el mejor. Sin
+  donante: **Cristal de Era** (afijo al azar, `50 × rareza` + 1 Cristal).
+- **Pasiva**: `300 × rareza` (solo hacia un Épico).
+- **Habilidad**: `200 × rareza` + **2 Cristales de Era** hacia Raro o
+  mejor.
+- **Forja**: la suma de `forgeCost` de cada nivel que falta.
+
+### 6.2 ULT v2 (ultimates_v2.md § 2)
+
+Un plan v2 puede pedir la **ULT activa** (`ult`) y **mejoras** de ULT del
+repertorio (`ultUp`: id → nivel 2–5). Son metas de la sección nueva **ULT
+Y HAZAÑAS**: hecha si es tu `us` / llegó al nivel; en camino si ya está
+en tu repertorio (la pista dice el costo del próximo nivel: créditos,
+Cristales y, desde el 3, Prismas); si no, cómo se consigue (`how`). Cada
+plantilla trae una ULT activa sugerida y su mejora.
+
+### 6.3 Hazañas (achievements.md)
+
+`feat`: lista de ids de `kAchievements`; meta hecha cuando la hazaña está
+en tu progreso. Las plantillas sugieren las que van con su estilo (p. ej.
+`ult_breaks` para las de quiebre, `ult_shields` para las de escudo).
+
+### 6.4 Editor (game_editor.md)
+
+**Balance → Plantillas**: cada plantilla cargada es una entidad del
+navegador. Se edita como el mapa del YAML (en JSON), se valida con las
+mismas reglas del test de datos (ids, tramos, árbol por puntos, armas) y
+**GUARDAR EN EL REPO** la escribe en `assets/data/build_templates_custom.yaml`
+(gana su id sobre la del juego). Nunca toca la carpeta de datos del
+juego.
+
+### 6.5 Hitos reales del árbol v7
+
+El borrador tenía mal los hitos del Guerrero. Los de hoy
+(`milestoneOptions`):
+
+| Clase | Hito 10 | Hito 20 |
+|---|---|---|
+| Guerrero | Muralla / Quiebre / Sangre | Filo / Gritos / puente Glaciar |
+| Maga | Arcano / Brasa / Cronos | Escarcha / Prisma / puente Forja |
+| Tirador | Lluvia / Precisión / Viento | Acecho / Toxina / puente Galvánica |
+| Paladín | Fe / Juicio / Luz | Bastión / Vigilia / puente Eclipse |
+
+### 6.6 Catálogo final (5 por clase)
+
+| Clase | Plantillas |
+|---|---|
+| Guerrero | `gue_berserker`, `gue_quiebre`, `gue_tormenta_filo`, `gue_forja`, **`gue_grupo`** (Estandarte + Refugio + Fortaleza) |
+| Maga | `mag_brasa`, `mag_cronos`, `mag_galvanica`, `mag_hielo_forja`, **`mag_grupo`** (Estandarte + Sintonía + Táctica) |
+| Tirador | `tir_precision`, `tir_toxina`, `tir_centella`, `tir_eclipse`, **`tir_grupo`** (Sintonía + Vínculo + Coro) |
+| Paladín | `pal_guardian`, `pal_templario`, `pal_pararrayos`, `pal_eclipse`, **`pal_grupo`** (Refugio + Vínculo + Santuario) |
+
+Las 8 de v1 conservan su id. Los niveles del YAML son "desde"; el árbol
+por nivel (`BuildTemplateRules.timeline`) corre cada objetivo al primer
+nivel en que entra con los puntos (1 por nivel, +7 hito 10, +10 hito 20,
++2 por Prueba; hasta 50 + Maestría 20). Las armas de las tablas de § 2.4
+y § 2.5 se ajustaron a lo que permiten los atributos de cada tramo (p.
+ej. la Espada de Coral se busca desde el 19, cuando hay DES 10).
+
+---
+
+## 7. Implementación (v0.19.0)
+
+- **Dart puro**: `models/weapon_target.dart` (objetivo de arma),
+  `BuildPlan` v2 (`wt`, `tl`, `as`, `ult`, `ultUp`, `feat`; un plan sin
+  esos campos se sigue guardando como `v: 1`),
+  `rules/weapon_target_rules.dart` (validación, %, candidatas con alijo,
+  donantes, "qué te falta", plan de fusión, buscador de bases, aviso de
+  loot), `rules/build_template_rules.dart` (timeline, atributos por
+  nivel, validación, `toPlan`, `follow`, `compare`),
+  `data/build_templates_catalog.dart` (modelo, YAML, registro).
+- **Datos**: `assets/data/build_templates.yaml` (20 plantillas) y
+  `build_templates_custom.yaml` (del dueño, vacío). Los carga
+  `BuildTemplateLoader` en cada composition root; en `main_dev` hay
+  **RECARGAR PLANTILLAS** en la lista.
+- **Exportar / importar**: EXPORTAR (una plantilla) y EXPORTAR CLASE
+  escriben un `.yaml` con el formato del juego (una línea JSON por
+  plantilla, que también es YAML); IMPORTAR lo lee, valida cada una y
+  descarta las inválidas con aviso. Las importadas viven en la sesión
+  (marcadas "importada"); un id que choca con una del juego se renombra
+  `<id>_imp`. Seguir una importada la deja en tu plan como cualquier otra.
+- **Red** (sin subir `kProtocolVersion`): `BuildWants` suma dos claves
+  opcionales, `wt` (objetivo principal sin estadísticas, acotado como lo
+  demás) y `best` (% de tu mejor candidata, 0–100). Un par viejo las
+  ignora; un host viejo no evalúa `BuildMejora` (no coincide). El plan
+  sigue sin viajar.
+- **UI** (sistema de diseño): átomos nuevos `DsSlider`, `DsTimeline`,
+  `DsPercent` (en la galería, TARJETAS); `WeaponTargetRow`, buscador de
+  bases, detalle del objetivo (requisitos con `GoalMark`, qué te falta,
+  PLAN DE FUSIÓN, candidatas en dos `DsItemGrid`: INVENTARIO y ALIJO
+  COMPARTIDO con etiqueta), lista + vista de plantilla, sección ULT Y
+  HAZAÑAS, TOMAR SIGUIENTE DEL PLAN (pestaña BUILD de la sesión), SOLO SI
+  MEJORA en el filtro y, en la FUSIÓN, ★ a la mejor candidata (destino) y
+  a los donantes sugeridos (origen) más la línea `Objetivo: 72% → 81%`.
+
+**Desvíos** respecto del borrador:
+- Las **estadísticas mínimas** se calculan con tu perfil actual (no con
+  el del plan al nivel del plan); el anfitrión no las cuenta.
+- No se extrajo un `DsWeaponCard` nuevo: la ficha sigue siendo
+  `itemHoverTip` (la misma de inventario / alijo / fusión); el modo
+  "objetivo" es la lista de requisitos del detalle.
+- Los pasos del **PLAN DE FUSIÓN** se listan con su costo, pero todavía
+  no abren la fusión con origen y destino elegidos (la mesa marca con ★
+  la candidata y el donante).
+- La **vista de plantilla** pinta como tomado lo de la plantilla a ese
+  nivel (no tu árbol); la diferencia con tu personaje la da COMPARAR.
+- Las marcas ★ del loot en el piso / mapa con el aporte al objetivo
+  quedan para después: el aviso (`lootNote`) ya está en las reglas.

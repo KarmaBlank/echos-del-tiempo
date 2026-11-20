@@ -42,6 +42,8 @@ class BuildWants {
     this.mods = const [],
     this.weaponPassive,
     this.skills = const [],
+    this.target,
+    this.best = 0,
   });
 
   static const none = BuildWants();
@@ -56,21 +58,37 @@ class BuildWants {
   final String? weaponPassive;
   final List<String> skills;
 
-  /// Lo que un plan quiere de un arma.
-  factory BuildWants.fromPlan(BuildPlan plan) => BuildWants(
-        weaponTypes: List.unmodifiable(plan.weaponTypes),
-        weaponBases: List.unmodifiable(plan.weaponBases),
-        mods: List.unmodifiable(plan.mods),
-        weaponPassive: plan.weaponPassive,
-        skills: List.unmodifiable(plan.skills),
-      );
+  /// Objetivo de arma principal del plan v2 (condición `BuildMejora`,
+  /// build_planner_v2.md § 1.4): sin estadísticas mínimas (el anfitrión
+  /// no conoce el perfil del plan).
+  final WeaponTarget? target;
+
+  /// % de la mejor candidata del jugador (inventario + alijo) contra
+  /// [target], calculado sin estadísticas: un drop `BuildMejora` lo supera.
+  final int best;
+
+  /// Lo que un plan quiere de un arma; [best]: el % de tu mejor candidata
+  /// (`WeaponTargetRules.score`).
+  factory BuildWants.fromPlan(BuildPlan plan, {int best = 0}) {
+    final t = plan.mainTarget;
+    return BuildWants(
+      weaponTypes: List.unmodifiable(plan.weaponTypes),
+      weaponBases: List.unmodifiable(plan.weaponBases),
+      mods: List.unmodifiable(plan.mods),
+      weaponPassive: plan.weaponPassive,
+      skills: List.unmodifiable(plan.skills),
+      target: t == null || t.isEmpty ? null : t.copyWith(stats: const {}),
+      best: best.clamp(0, 100),
+    );
+  }
 
   bool get isEmpty =>
       weaponTypes.isEmpty &&
       weaponBases.isEmpty &&
       mods.isEmpty &&
       weaponPassive == null &&
-      skills.isEmpty;
+      skills.isEmpty &&
+      target == null;
 
   /// Qué cumple [it] (con su base [w]). Misma regla que
   /// `BuildPlanRules.itemFit`: base o tipo del plan, mod con tier ≤ el
@@ -109,6 +127,8 @@ class BuildWants {
         if (mods.isNotEmpty) 'mods': [for (final m in mods) m.toJson()],
         if (weaponPassive != null) 'wp': weaponPassive,
         if (skills.isNotEmpty) 'skills': skills,
+        if (target != null) 'wt': target!.toJson(),
+        if (target != null) 'best': best,
       };
 
   /// Lectura tolerante y acotada (viene de la red): lo que no es del tipo
@@ -142,12 +162,35 @@ class BuildWants {
       }
     }
     final wp = raw['wp'];
+    // Objetivo v2: acotado como lo demás (viene de la red).
+    var t = WeaponTarget.fromJson(raw['wt']);
+    if (t != null) {
+      bool fine(String? v) => v == null || ok(v);
+      t = t.copyWith(
+        base: () => fine(t!.base) ? t.base : null,
+        type: () => fine(t!.type) ? t.type : null,
+        passive: () => fine(t!.passive) ? t.passive : null,
+        mods: [
+          for (final m in t.mods.take(maxEntries))
+            if (ok(m.affixId)) m
+        ],
+        skills: [
+          for (final s in t.skills.take(maxEntries))
+            if (ok(s)) s
+        ],
+        stats: const {},
+      );
+      if (t.isEmpty) t = null;
+    }
+    final b = raw['best'];
     return BuildWants(
       weaponTypes: strings(raw['types']),
       weaponBases: strings(raw['bases']),
       mods: List.unmodifiable(mods),
       weaponPassive: ok(wp) ? wp as String : null,
       skills: strings(raw['skills']),
+      target: t,
+      best: t == null || b is! num ? 0 : b.toInt().clamp(0, 100),
     );
   }
 
@@ -166,10 +209,12 @@ class BuildWants {
       _listEq(other.weaponBases, weaponBases) &&
       _listEq(other.mods, mods) &&
       other.weaponPassive == weaponPassive &&
-      _listEq(other.skills, skills);
+      _listEq(other.skills, skills) &&
+      other.target == target &&
+      other.best == best;
 
   @override
   int get hashCode => Object.hash(Object.hashAll(weaponTypes),
       Object.hashAll(weaponBases), Object.hashAll(mods), weaponPassive,
-      Object.hashAll(skills));
+      Object.hashAll(skills), target, best);
 }

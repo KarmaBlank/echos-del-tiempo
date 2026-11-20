@@ -9,15 +9,21 @@ import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../game_engine/data/affixes_catalog.dart';
 import '../../../game_engine/data/ascension_catalog.dart';
-import '../../../game_engine/data/build_templates_catalog.dart';
+import '../../../game_engine/data/achievements_catalog.dart';
+import '../../../game_engine/data/ults_v2_catalog.dart';
 import '../../../game_engine/data/weapon_passives.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/build_plan.dart';
+import '../../../game_engine/models/item.dart' show ItemInstance;
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/attribute_advisor.dart';
 import '../../../game_engine/rules/build_plan_rules.dart';
+import '../../../game_engine/rules/build_template_rules.dart';
 import '../../passive_tree/presentation/passive_tree_view.dart';
+import '../data/template_files.dart';
 import 'build_fit_badge.dart';
+import 'template_view.dart';
+import 'weapon_target_view.dart';
 
 /// Pantalla BUILD (docs/specs/build_planner.md § 4): progreso total,
 /// siguiente paso, tarjetas por sección con su checklist y, con
@@ -31,6 +37,9 @@ class BuildPlannerView extends StatefulWidget {
     required this.plan,
     this.onChanged,
     this.treeHeight = 360,
+    this.stash = const [],
+    this.templateFiles = const FileSelectorTemplateFiles(),
+    this.onTakeNode,
   });
 
   final BuildPlanRules rules;
@@ -40,6 +49,16 @@ class BuildPlannerView extends StatefulWidget {
 
   /// Alto del árbol en modo planificar.
   final double treeHeight;
+
+  /// Armas del alijo compartido: cuentan para los objetivos de arma,
+  /// marcadas aparte (build_planner_v2.md § 1.3). Nunca se mueven solas.
+  final List<ItemInstance> stash;
+
+  /// Exportar / importar plantillas (inyectable en tests).
+  final TemplateFiles templateFiles;
+
+  /// TOMAR SIGUIENTE DEL PLAN (solo en la sesión, con el árbol real).
+  final ValueChanged<String>? onTakeNode;
 
   static const help = '<b>Build</b><br>'
       'Armá un plan para tu personaje: atributos, nodos del árbol, '
@@ -59,7 +78,11 @@ class BuildPlannerView extends StatefulWidget {
       '<span class="k">ASCENSIÓN</span>: una de las 2 de tu clase y sus '
       'nodos.<br>'
       '<span class="k">ARMA</span>: tipo o base, mods con tier mínimo y '
-      'pasiva.<br>'
+      'pasiva. <span class="k">+ ARMA OBJETIVO</span>: buscá cualquier base '
+      'y armá el arma completa; el % compara tu inventario y el alijo '
+      '(marcado ALIJO, nunca se mueve solo) y dice qué te falta.<br>'
+      '<span class="k">ULT Y HAZAÑAS</span>: la ULT activa, sus mejoras y '
+      'hazañas que buscás.<br>'
       'Pasá el mouse por una meta para ver qué falta.';
 
   @override
@@ -95,7 +118,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
   @override
   Widget build(BuildContext context) {
     if (_tree) return _treeMode();
-    final progress = _rules.evaluate(_plan, _p);
+    final progress = _rules.evaluate(_plan, _p, stash: widget.stash);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -113,6 +136,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
               final right = [
                 _weapon(progress),
                 _skills(progress),
+                _ult(progress),
                 _notesCard(progress),
               ];
               if (box.maxWidth < 640) {
@@ -391,6 +415,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
             detailColor:
                 smallDone == small.length ? DsColors.success : DsColors.mp,
           ),
+        if (_takeNext() case final w?) w,
         Padding(
           padding: EdgeInsets.symmetric(
               horizontal: DsSpace.md, vertical: DsSpace.xs),
@@ -427,6 +452,172 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     );
   }
 
+  /// TOMAR SIGUIENTE DEL PLAN (build_planner_v2.md § 3).
+  Widget? _takeNext() {
+    final take = widget.onTakeNode;
+    if (take == null || _plan.timeline.isEmpty) return null;
+    final id = _rules.nextTreeNode(_plan, _p);
+    if (id == null) return null;
+    return Padding(
+      padding:
+          EdgeInsets.symmetric(horizontal: DsSpace.md, vertical: DsSpace.xs),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: DsButton(retroText('TOMAR SIGUIENTE DEL PLAN'),
+            key: const ValueKey('build-take-next'),
+            kind: DsButtonKind.primary,
+            size: DsButtonSize.compact,
+            tooltip: _rules.nodeName(id),
+            onPressed: () => take(id)),
+      ),
+    );
+  }
+
+  PlayerAttributes _attrsAt(int level) {
+    if (_plan.attrSpans.isEmpty) return _p.attributes;
+    return BuildTemplateRules(_rules.progression)
+        .attributesAt(_p.classId, _plan.attrSpans, level);
+  }
+
+  Widget _targets() {
+    final tr = _rules.targets;
+    return Column(
+      key: const ValueKey('build-targets'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < _plan.weaponTargets.length; i++)
+          WeaponTargetRow(
+            key: ValueKey('build-target-$i'),
+            rules: tr,
+            target: _plan.weaponTargets[i],
+            best: tr.best(_plan.weaponTargets[i], _p, stash: widget.stash),
+            onTap: () => _openTarget(i),
+          ),
+        if (_editable &&
+            _plan.weaponTargets.length < WeaponTarget.maxPerPlan)
+          Padding(
+            padding: EdgeInsets.symmetric(
+                horizontal: DsSpace.md, vertical: DsSpace.xs),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: DsButton('+ ARMA OBJETIVO',
+                  key: const ValueKey('build-add-target'),
+                  size: DsButtonSize.compact,
+                  accent: kPlanColor,
+                  onPressed: _addTarget),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _addTarget() async {
+    final tr = _rules.targets;
+    final lvl = _plan.targetLevel ?? 50;
+    final w = await showBaseSearch(context,
+        rules: tr,
+        attributesAt: _attrsAt,
+        planLevel: lvl,
+        starred: {
+          for (final t in _plan.weaponTargets)
+            if (t.base != null) t.base!
+        });
+    if (w == null || !mounted) return;
+    final prio =
+        _plan.weaponTargets.any((t) => t.priority == TargetPriority.main)
+            ? TargetPriority.transition
+            : TargetPriority.main;
+    final t = tr.targetFor(w, priority: prio, level: _p.level);
+    await _openTarget(_plan.weaponTargets.length, initial: t);
+  }
+
+  /// Abre el detalle del objetivo [i]; con [initial], es uno nuevo (se
+  /// agrega al guardar, o igual si se cierra sin cambios).
+  Future<void> _openTarget(int i, {WeaponTarget? initial}) async {
+    final list = [..._plan.weaponTargets, if (initial != null) initial];
+    if (i >= list.length) return;
+    final r = await showWeaponTargetDetail(context,
+        rules: _rules,
+        target: list[i],
+        profile: _p,
+        stash: widget.stash,
+        editable: _editable,
+        attributesAt: _attrsAt);
+    if (!mounted) return;
+    if (r == null) {
+      if (initial != null) _set(_plan.copyWith(weaponTargets: list));
+      return;
+    }
+    final next = [...list];
+    if (r.removed) {
+      next.removeAt(i);
+    } else if (r.target != null) {
+      next[i] = r.target!;
+    }
+    _set(_plan.copyWith(weaponTargets: next));
+  }
+
+  Widget _ult(BuildProgress progress) => _card(
+        BuildSection.ult,
+        progress,
+        [
+          for (final g in progress.section(BuildSection.ult))
+            _row(g,
+                onRemove: () => _set(switch (g.kind) {
+                      BuildGoalKind.ultActive =>
+                        _plan.copyWith(ultActive: () => null),
+                      BuildGoalKind.ultUpgrade => _plan.copyWith(ultUpgrades: {
+                          for (final e in _plan.ultUpgrades.entries)
+                            if (e.key != g.ref) e.key: e.value,
+                        }),
+                      _ => _plan.copyWith(feats: [
+                          for (final f in _plan.feats)
+                            if (f != g.ref) f
+                        ]),
+                    })),
+        ],
+        onAdd: _addUlt,
+      );
+
+  Future<void> _addUlt() async {
+    final what = await _pick<String>('AGREGAR', const [
+      PickOption('ult', 'ULT activa', 'la que usás en batalla',
+          key: 'what-ult'),
+      PickOption('up', 'Mejora de ULT', 'nivel 2 a 5', key: 'what-ultup'),
+      PickOption('feat', 'Hazaña', 'de HAZAÑAS', key: 'what-feat'),
+    ]);
+    if (what == null) return;
+    if (what == 'feat') {
+      final id = await _pick<String>('HAZAÑA', [
+        for (final a in kAchievements)
+          if (!_plan.feats.contains(a.id))
+            PickOption(a.id, a.name, a.how, key: 'feat-${a.id}'),
+      ]);
+      if (id != null) _set(_plan.copyWith(feats: [..._plan.feats, id]));
+      return;
+    }
+    final list = [
+      for (final u in kUltV2List)
+        if (u.classes.isEmpty || u.classes.contains(_p.classId)) u
+    ];
+    final id = await _pick<String>(what == 'ult' ? 'ULT ACTIVA' : 'ULT', [
+      for (final u in list)
+        PickOption(u.id, u.name, u.how, key: 'ult-${u.id}'),
+    ]);
+    if (id == null) return;
+    if (what == 'ult') {
+      _set(_plan.copyWith(ultActive: () => id));
+      return;
+    }
+    final lv = await _pick<int>('NIVEL BUSCADO', [
+      for (var l = 2; l <= 5; l++)
+        PickOption(l, 'Nivel $l', null, key: 'ulv-$l'),
+    ]);
+    if (lv != null) {
+      _set(_plan.copyWith(ultUpgrades: {..._plan.ultUpgrades, id: lv}));
+    }
+  }
+
   Widget _weapon(BuildProgress progress) {
     BuildPlan without(GoalStatus g) => switch (g.kind) {
           BuildGoalKind.weaponType => _plan.copyWith(weaponTypes: [
@@ -447,8 +638,10 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
       BuildSection.weapon,
       progress,
       [
+        _targets(),
         for (final g in progress.section(BuildSection.weapon))
-          _row(g, onRemove: () => _set(without(g))),
+          if (g.kind != BuildGoalKind.weaponTarget)
+            _row(g, onRemove: () => _set(without(g))),
       ],
       onAdd: _addWeapon,
     );
@@ -613,18 +806,14 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
       showBuildPicker<T>(context, title, options);
 
   Future<void> _chooseTemplate() async {
-    final list = buildTemplatesFor(_p.classId);
-    final t = await _pick<BuildTemplate>(
-      _plan.goalCount == 0
-          ? 'PLANTILLA'
-          : 'PLANTILLA (reemplaza las metas; notas y checklist se quedan)',
-      [
-        for (final t in list)
-          PickOption(t, t.name, t.description, key: 'tpl-${t.id}'),
-      ],
-    );
-    if (t == null) return;
-    _set(_rules.applyTemplate(_plan, t));
+    final p = await showTemplateBrowser(context,
+        rules: _rules,
+        profile: _p,
+        plan: _plan,
+        files: widget.templateFiles,
+        stash: widget.stash,
+        editable: _editable);
+    if (p != null) _set(p);
   }
 
   Future<void> _rename() async {

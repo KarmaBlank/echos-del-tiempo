@@ -12,11 +12,19 @@ abstract final class FilterBuildSnippets {
           if (kinds.contains(k)) k
       ]);
 
+  /// `BuildMejora` (build_planner_v2.md § 1.4): solo si sube el % de tu
+  /// mejor candidata del arma objetivo.
+  static const upgradeCondition = BuildUpgradeCondition();
+
+  /// La línea a insertar: `BuildMejora` con [upgrade], si no `Build ...`.
+  static String line(Set<BuildMatch> kinds, {bool upgrade = false}) =>
+      upgrade ? upgradeCondition.text : condition(kinds).text;
+
   /// Regla que resalta lo que coincide (va arriba de todo: gana la
   /// primera que coincide). Mismo estilo que la del filtro por defecto.
-  static String highlightRule(Set<BuildMatch> kinds) =>
-      'Mostrar # Coincide con mi build\n'
-      '  ${condition(kinds).text}\n'
+  static String highlightRule(Set<BuildMatch> kinds, {bool upgrade = false}) =>
+      'Mostrar # ${upgrade ? 'Mejora mi arma objetivo' : 'Coincide con mi build'}\n'
+      '  ${line(kinds, upgrade: upgrade)}\n'
       '  Borde 195 155 255\n'
       '  Fondo 30 12 50 220\n'
       '  Tamaño 36\n'
@@ -38,17 +46,20 @@ abstract final class FilterBuildSnippets {
   /// Si el cursor no está dentro de una regla, agrega una regla nueva
   /// que resalta ([highlightRule]) al principio.
   static (String, int) insertCondition(
-      String text, int cursor, Set<BuildMatch> kinds) {
+      String text, int cursor, Set<BuildMatch> kinds,
+      {bool upgrade = false}) {
     final at = cursor < 0 || cursor > text.length ? text.length : cursor;
     final before = text.substring(0, at);
     final inRule = before
         .split(RegExp(r'\r?\n'))
         .map((l) => l.split('#').first.trim().toLowerCase())
         .any((w) => w == 'mostrar' || w == 'ocultar');
-    if (!inRule) return prependRule(text, highlightRule(kinds));
+    if (!inRule) {
+      return prependRule(text, highlightRule(kinds, upgrade: upgrade));
+    }
     final nl = text.indexOf('\n', at);
     final lineEnd = nl < 0 ? text.length : nl;
-    final line = '  ${condition(kinds).text}';
+    final line = '  ${FilterBuildSnippets.line(kinds, upgrade: upgrade)}';
     if (nl < 0) {
       final pre = text.isEmpty || text.endsWith('\n') ? '' : '\n';
       final out = '$text$pre$line\n';

@@ -4,9 +4,11 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../game_engine/models/build_plan.dart';
+import '../../../game_engine/models/item.dart' show ItemInstance;
 import '../../../game_engine/models/player_profile.dart';
 import '../../characters/presentation/characters_providers.dart';
 import '../../world/presentation/session_controller.dart';
+import '../domain/build_wants_of.dart';
 import 'build_fit_badge.dart';
 import 'build_plan_providers.dart';
 import 'build_planner_view.dart';
@@ -27,6 +29,7 @@ class _BuildPlannerScreenState extends ConsumerState<BuildPlannerScreen> {
   PlayerProfile? _p;
   BuildPlan _plan = BuildPlan.empty;
   String _name = '';
+  List<ItemInstance> _stash = const [];
 
   @override
   void initState() {
@@ -44,6 +47,7 @@ class _BuildPlannerScreenState extends ConsumerState<BuildPlannerScreen> {
           : ref.read(sessionEngineProvider).progression.normalize(slot.profile);
       _plan = slot?.plan ?? BuildPlan.empty;
       _name = slot?.displayName ?? '';
+      _stash = stashWeapons(a.stash);
     });
   }
 
@@ -77,6 +81,7 @@ class _BuildPlannerScreenState extends ConsumerState<BuildPlannerScreen> {
                 rules: ref.watch(buildPlanRulesProvider),
                 profile: p,
                 plan: _plan,
+                stash: _stash,
                 onChanged: _changed,
               ),
       ),

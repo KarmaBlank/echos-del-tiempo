@@ -147,6 +147,47 @@ class _DsGalleryScreenState extends State<DsGalleryScreen> {
       };
 }
 
+/// DsSlider + DsTimeline juntos (vista de plantilla de BUILD).
+class _SliderSample extends StatefulWidget {
+  const _SliderSample();
+
+  @override
+  State<_SliderSample> createState() => _SliderSampleState();
+}
+
+class _SliderSampleState extends State<_SliderSample> {
+  int _v = 24;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DsSlider(
+              value: _v,
+              min: 1,
+              max: 50,
+              marks: const {
+                10: DsColors.warning,
+                20: DsColors.warning,
+                30: DsColors.instant,
+                40: DsColors.instant,
+                50: DsColors.instant,
+              },
+              onChanged: (v) => setState(() => _v = v)),
+          Text('Nv $_v', style: DsText.detail()),
+          DsTimeline(
+              selected: _v,
+              onSelect: (v) => setState(() => _v = v),
+              marks: const [
+                DsTimelineMark(10, '10 HITO', color: DsColors.warning),
+                DsTimelineMark(20, '20 HITO', color: DsColors.warning),
+                DsTimelineMark(30, '30 PRUEBA', color: DsColors.instant),
+              ]),
+        ],
+      );
+}
+
 /// Una muestra con su nombre arriba.
 class _Sample extends StatelessWidget {
   const _Sample(this.name, this.child);
@@ -410,6 +451,14 @@ class SurfacesPage extends StatelessWidget {
           const DsFold(
               initiallyOpen: true,
               child: Text('Daño de luz: +20 % contra sombras.')),
+          const DsSectionHeader('Nivel y porcentaje'),
+          const _SliderSample(),
+          SizedBox(height: DsSpace.xs),
+          const Wrap(spacing: 16, children: [
+            DsPercent(0, label: 'Sin candidata'),
+            DsPercent(72, label: 'Hacha Tronante'),
+            DsPercent(100, label: 'Completa'),
+          ]),
         ]),
       ),
       SizedBox(
