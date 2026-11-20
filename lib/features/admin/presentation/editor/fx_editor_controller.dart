@@ -79,8 +79,15 @@ class FxEditorController extends ChangeNotifier {
   bool dirty = false;
 
   // Reproducción.
-  double time = 0;
-  bool playing = true;
+  /// Cabezal (ms). Vive aparte del controlador (game_editor.md § 7.5):
+  /// avanzar el reloj repinta solo el lienzo, la línea de tiempo y el
+  /// contador, nunca toda la página.
+  final clock = ValueNotifier<double>(0);
+  double get time => clock.value;
+  set time(double v) => clock.value = v;
+
+  /// Arranca en PAUSA (al abrir y al elegir otra animación).
+  bool playing = false;
   bool loop = true;
   double speed = 1;
   bool camera = true;
@@ -139,6 +146,7 @@ class FxEditorController extends ChangeNotifier {
     dirty = false;
     _clearHistory();
     time = 0;
+    playing = false;
     selectedTrack = null;
     selectedKey = null;
     notifyListeners();
@@ -191,10 +199,19 @@ class FxEditorController extends ChangeNotifier {
       } else {
         t = duration;
         playing = false;
+        time = t;
+        notifyListeners();
+        return;
       }
     }
+    // Solo el reloj: sin notifyListeners (no reconstruye la página).
     time = t;
-    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    clock.dispose();
+    super.dispose();
   }
 
   // ------------------------------------------------------------ edición

@@ -3,7 +3,10 @@ import 'dart:ui' as ui;
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
+import '../../../../core/procedural/item_icons.dart';
+import '../../../../core/procedural/procedural_art.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
+import '../field_editors.dart' show NumberStepper;
 import 'sprite_editor_controller.dart';
 
 /// Visuales → Sprites (docs/specs/game_editor.md § 3.1 y § 6): catálogo
@@ -152,16 +155,18 @@ class _Preview extends StatelessWidget {
         DsSectionHeader(e.category.onMap ? 'EN CONTEXTO · MAPA' : 'EN CONTEXTO · BATALLA'),
         Expanded(
           flex: 2,
-          child: ClipRect(
-            child: CustomPaint(
-              key: const ValueKey('sprite-context'),
-              painter: SpriteContextPainter(
-                entry: e,
-                image: img,
-                hero: c.imageOf('characters.guerrero.idle'),
-                enemy: c.imageOf('enemies.slime.idle'),
+          child: RepaintBoundary(
+            child: ClipRect(
+              child: CustomPaint(
+                key: const ValueKey('sprite-context'),
+                painter: SpriteContextPainter(
+                  entry: e,
+                  image: img,
+                  hero: c.imageOf('characters.guerrero.idle'),
+                  enemy: c.imageOf('enemies.slime.idle'),
+                ),
+                size: Size.infinite,
               ),
-              size: Size.infinite,
             ),
           ),
         ),
@@ -209,10 +214,12 @@ class _Zoomed extends StatelessWidget {
 }
 
 class _ZoomPainter extends CustomPainter {
-  _ZoomPainter(this.image, this.entry, this.grid);
+  _ZoomPainter(this.image, this.entry, this.grid)
+      : revision = ProceduralArt.instance.revision;
   final ui.Image? image;
   final SpriteEntry entry;
   final bool grid;
+  final int revision;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -237,7 +244,7 @@ class _ZoomPainter extends CustomPainter {
           Offset.zero & size,
           SpriteCatalog.pixelPaint());
     } else {
-      paintProcedural(canvas, Offset.zero & size);
+      paintEntryInCode(canvas, Offset.zero & size, entry);
     }
     if (grid) {
       final g = Paint()
@@ -260,7 +267,16 @@ class _ZoomPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ZoomPainter old) =>
-      old.image != image || old.entry != entry || old.grid != grid;
+      old.image != image ||
+      old.entry != entry ||
+      old.grid != grid ||
+      old.revision != revision;
+}
+
+/// Entrada sin PNG: el dibujo procedural real si tiene generador con
+/// perillas (game_editor.md § 7.5); si no, el rayado.
+void paintEntryInCode(Canvas canvas, Rect r, SpriteEntry entry) {
+  if (!paintProceduralEntry(canvas, r, entry.id)) paintProcedural(canvas, r);
 }
 
 /// Marca de "se dibuja en código" (todavía sin PNG): rayado.
@@ -287,20 +303,29 @@ void paintProcedural(Canvas canvas, Rect r) {
 /// un panel) o mapa (tile repetido con el héroe parado encima).
 class SpriteContextPainter extends CustomPainter {
   SpriteContextPainter(
-      {required this.entry, required this.image, this.hero, this.enemy});
+      {required this.entry, required this.image, this.hero, this.enemy})
+      : revision = ProceduralArt.instance.revision;
   final SpriteEntry entry;
   final ui.Image? image;
   final ui.Image? hero;
   final ui.Image? enemy;
+  final int revision;
 
   static const _scale = 3.0;
 
-  void _draw(Canvas c, ui.Image? img, Offset feet, {double scale = _scale, bool flip = false}) {
+  void _draw(Canvas c, ui.Image? img, Offset feet,
+      {double scale = _scale, bool flip = false, bool own = false}) {
     final w = (img?.width ?? entry.expectedSize?.$1 ?? 16) * scale;
     final h = (img?.height ?? entry.expectedSize?.$2 ?? 16) * scale;
     final dst = Rect.fromLTWH(feet.dx - w / 2, feet.dy - h, w, h);
     if (img == null) {
-      paintProcedural(c, dst);
+      // Solo el propio sprite se dibuja en código (los actores de prueba
+      // sin imagen quedan rayados).
+      if (own) {
+        paintEntryInCode(c, dst, entry);
+      } else {
+        paintProcedural(c, dst);
+      }
       return;
     }
     c.save();
@@ -330,7 +355,7 @@ class SpriteContextPainter extends CustomPainter {
     const t = 16 * _scale;
     for (var y = 0.0; y < s.height; y += t) {
       for (var x = 0.0; x < s.width; x += t) {
-        _draw(c, image, Offset(x + t / 2, y + t));
+        _draw(c, image, Offset(x + t / 2, y + t), own: true);
       }
     }
     _draw(c, hero, Offset(s.width / 2, s.height / 2 + t / 2));
@@ -348,27 +373,27 @@ class SpriteContextPainter extends CustomPainter {
     final enemyAt = Offset(s.width * 0.72, ground);
     switch (entry.category) {
       case SpriteCategory.characters:
-        _draw(c, image, heroAt);
+        _draw(c, image, heroAt, own: true);
         _draw(c, enemy, enemyAt);
       case SpriteCategory.enemies:
       case SpriteCategory.bosses:
         _draw(c, hero, heroAt);
         final big = entry.category == SpriteCategory.bosses ? 2.0 : _scale;
-        _draw(c, image, enemyAt, scale: big);
+        _draw(c, image, enemyAt, scale: big, own: true);
       case SpriteCategory.items:
         _draw(c, hero, heroAt);
         _draw(c, enemy, enemyAt);
-        _draw(c, image, heroAt + const Offset(30, -30), scale: 2);
+        _draw(c, image, heroAt + const Offset(30, -30), scale: 2, own: true);
       case SpriteCategory.fx:
         _draw(c, hero, heroAt);
         _draw(c, enemy, enemyAt);
-        _draw(c, image, enemyAt + const Offset(0, -10));
+        _draw(c, image, enemyAt + const Offset(0, -10), own: true);
       case SpriteCategory.ui:
         _draw(c, hero, heroAt);
         _draw(c, enemy, enemyAt);
         final panel = Rect.fromLTWH(s.width * 0.3, 12, s.width * 0.4, 48);
         c.drawRect(panel, Paint()..color = DsColors.surface);
-        _draw(c, image, Offset(panel.left + 28, panel.bottom - 8));
+        _draw(c, image, Offset(panel.left + 28, panel.bottom - 8), own: true);
       case SpriteCategory.tiles:
         break;
     }
@@ -376,7 +401,11 @@ class SpriteContextPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(SpriteContextPainter old) =>
-      old.entry != entry || old.image != image || old.hero != hero || old.enemy != enemy;
+      old.entry != entry ||
+      old.image != image ||
+      old.hero != hero ||
+      old.enemy != enemy ||
+      old.revision != revision;
 }
 
 /// Miniatura de la lista.
@@ -387,18 +416,21 @@ class _Pixels extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-      painter: _ThumbPainter(image));
+      painter: _ThumbPainter(image, entry));
 }
 
 class _ThumbPainter extends CustomPainter {
-  _ThumbPainter(this.image);
+  _ThumbPainter(this.image, this.entry)
+      : revision = ProceduralArt.instance.revision;
   final ui.Image? image;
+  final SpriteEntry entry;
+  final int revision;
 
   @override
   void paint(Canvas canvas, Size size) {
     final img = image;
     if (img == null) {
-      paintProcedural(canvas, Offset.zero & size);
+      paintEntryInCode(canvas, Offset.zero & size, entry);
       return;
     }
     final k = (size.width / img.width).clamp(0.0, size.height / img.height);
@@ -412,7 +444,8 @@ class _ThumbPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ThumbPainter old) => old.image != image;
+  bool shouldRepaint(_ThumbPainter old) =>
+      old.image != image || old.entry != entry || old.revision != revision;
 }
 
 class _Properties extends StatelessWidget {
@@ -479,7 +512,14 @@ class _Properties extends StatelessWidget {
             _kv('CATEGORÍA', e.category.label),
             _kv('RUTA', e.path ?? '(procedural) → ${e.publishPath}'),
             _kv('TAMAÑO', exp == null ? '—' : '${exp.$1}x${exp.$2}'),
-            _kv('ESTADO', over ? 'OVERRIDE LOCAL' : e.procedural ? 'DIBUJO EN CÓDIGO' : 'ASSET DEL REPO'),
+            _kv('ESTADO', over
+                ? 'OVERRIDE LOCAL'
+                : c.hasKnobs
+                    ? 'PROCEDURAL CON PERILLAS'
+                    : e.procedural
+                        ? 'DIBUJO EN CÓDIGO'
+                        : 'ASSET DEL REPO'),
+            if (c.hasKnobs && !over) ..._knobs(),
             SizedBox(height: DsSpace.sm),
             DsButton('REEMPLAZAR PNG',
                 key: const ValueKey('sprite-replace'),
@@ -519,11 +559,98 @@ class _Properties extends StatelessWidget {
           const DsSectionHeader('REPO'),
           DsButton('PUBLICAR AL REPO (${c.publishable.length})',
               key: const ValueKey('sprite-publish'),
-              onPressed: c.canWrite && c.repoPath != null && c.publishable.isNotEmpty
+              onPressed: c.canWrite &&
+                      c.repoPath != null &&
+                      (c.publishable.isNotEmpty || c.procPublishable)
                   ? () => _confirmPublish(context)
                   : null),
         ]),
       ),
+    );
+  }
+
+  static const _swatches = [
+    '#c8d2ff', '#dfe6e9', '#ffd166', '#e17055', '#d63031', '#74b9ff',
+    '#55efc4', '#a29bfe', '#a0703c', '#636e72', '#2d3436', '#ffffff',
+  ];
+
+  /// Perillas del generador del elegido (game_editor.md § 7.5): alcance,
+  /// una fila por perilla (vista previa en tiempo real) y acciones.
+  List<Widget> _knobs() {
+    final p = c.procParams;
+    return [
+      const DsSectionHeader('PERILLAS DEL GENERADOR'),
+      Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+        DsButton('ESTA ENTRADA',
+            key: const ValueKey('proc-scope-entry'),
+            size: DsButtonSize.compact,
+            selected: !c.procFamily,
+            onPressed: () => c.setProcFamily(false)),
+        DsButton('TODA LA FAMILIA',
+            key: const ValueKey('proc-scope-family'),
+            size: DsButtonSize.compact,
+            selected: c.procFamily,
+            onPressed: () => c.setProcFamily(true)),
+      ]),
+      Text(c.procFamily
+              ? 'Aplica a todas las entradas de ${c.selected!.category.label}.'
+              : 'Aplica solo a ${SpriteEditorController.procIdOf(c.selected!)}.',
+          style: DsText.detail()),
+      SizedBox(height: DsSpace.xs),
+      for (final k in c.knobs) _knob(k, p.values[k.key]!),
+      SizedBox(height: DsSpace.sm),
+      DsButton('GUARDAR PERILLAS',
+          key: const ValueKey('proc-save'),
+          kind: DsButtonKind.primary,
+          onPressed: c.canWrite && c.procDirty ? c.saveProc : null),
+      SizedBox(height: DsSpace.xs),
+      DsButton('DESHACER CAMBIOS',
+          key: const ValueKey('proc-revert'),
+          kind: DsButtonKind.ghost,
+          onPressed: c.procDirty ? c.revertProc : null),
+      SizedBox(height: DsSpace.xs),
+      DsButton('DESCARTAR PERILLAS',
+          key: const ValueKey('proc-discard'),
+          kind: DsButtonKind.ghost,
+          onPressed: c.canWrite && c.procHasOverride ? c.discardProc : null),
+    ];
+  }
+
+  Widget _knob(ProcKnob k, Object v) {
+    final Widget editor = switch (k.kind) {
+      ProcKnobKind.number => NumberStepper(
+          key: ValueKey('proc-knob-${k.key}-${c.procScope}'),
+          value: v as double,
+          step: k.step,
+          min: k.min,
+          max: k.max,
+          onChanged: (n) => c.setKnob(k.key, n)),
+      ProcKnobKind.toggle => DsButton((v as bool) ? 'SÍ' : 'NO',
+          key: ValueKey('proc-knob-${k.key}'),
+          size: DsButtonSize.compact,
+          selected: v,
+          onPressed: () => c.setKnob(k.key, !v)),
+      ProcKnobKind.color => Wrap(spacing: 2, runSpacing: 2, children: [
+          if (k.allowEmpty)
+            DsButton('AUTO',
+                key: ValueKey('proc-knob-${k.key}-auto'),
+                size: DsButtonSize.compact,
+                selected: v == '',
+                onPressed: () => c.setKnob(k.key, '')),
+          for (final s in {if (v != '') v as String, ..._swatches})
+            _Swatch(
+                key: ValueKey('proc-knob-${k.key}-$s'),
+                hex: s,
+                selected: s == v,
+                onTap: () => c.setKnob(k.key, s)),
+        ]),
+    };
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 100, child: Text(k.label, style: DsText.detail())),
+        Expanded(child: Align(alignment: Alignment.centerLeft, child: editor)),
+      ]),
     );
   }
 
@@ -533,5 +660,33 @@ class _Properties extends StatelessWidget {
           SizedBox(width: 100, child: Text(k, style: DsText.detail())),
           Expanded(child: Text(v, style: DsText.body())),
         ]),
+      );
+}
+
+/// Muestra de color elegible de una perilla (cuadrada, sin redondeo).
+class _Swatch extends StatelessWidget {
+  const _Swatch(
+      {super.key, required this.hex, required this.selected, required this.onTap});
+  final String hex;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => DsPressable(
+        onTap: onTap,
+        builder: (context, st) => Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            color: Color(int.parse('ff${hex.substring(1)}', radix: 16)),
+            border: Border.all(
+                width: 2,
+                color: selected
+                    ? DsColors.focus
+                    : st.hovered
+                        ? DsColors.textPrimary
+                        : DsColors.border),
+          ),
+        ),
       );
 }

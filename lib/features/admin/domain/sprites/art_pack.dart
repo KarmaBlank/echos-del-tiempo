@@ -16,13 +16,18 @@ import 'package:yaml/yaml.dart';
 /// fx/<id>.fx.yaml
 /// ```
 class ArtPack {
-  const ArtPack(this.sprites, [this.fx = const {}]);
+  const ArtPack(this.sprites, [this.fx = const {}, this.procedural]);
 
   /// Id de sprite → bytes PNG.
   final Map<String, Uint8List> sprites;
 
   /// Id de animación → texto `.fx.yaml`.
   final Map<String, String> fx;
+
+  /// Perillas del arte procedural (`procedural.yaml`, § 7.5), o `null`.
+  final String? procedural;
+
+  static const proceduralName = 'procedural.yaml';
 
   static const indexName = 'art_pack.yaml';
   static const schema = 1;
@@ -41,6 +46,7 @@ class ArtPack {
         index.writeln('  $id: fx/$id.fx.yaml');
       }
     }
+    if (procedural != null) index.writeln('procedural: $proceduralName');
     final a = Archive();
     final idx = utf8.encode(index.toString());
     a.addFile(ArchiveFile(indexName, idx.length, idx));
@@ -50,6 +56,10 @@ class ArtPack {
     for (final id in fxIds) {
       final b = utf8.encode(fx[id]!);
       a.addFile(ArchiveFile('fx/$id.fx.yaml', b.length, b));
+    }
+    if (procedural case final p?) {
+      final b = utf8.encode(p);
+      a.addFile(ArchiveFile(proceduralName, b.length, b));
     }
     return Uint8List.fromList(ZipEncoder().encode(a)!);
   }
@@ -86,7 +96,13 @@ class ArtPack {
         fx[key as String] = utf8.decode(f.content as List<int>);
       }
     }
-    return ArtPack(out, fx);
+    String? procedural;
+    if (doc['procedural'] case final String path) {
+      final f = a.findFile(path);
+      if (f == null) throw FormatException('Falta $path.');
+      procedural = utf8.decode(f.content as List<int>);
+    }
+    return ArtPack(out, fx, procedural);
   }
 }
 
