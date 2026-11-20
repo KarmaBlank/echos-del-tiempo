@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/design/ds_components.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/app/widgets/points_badge.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
@@ -112,11 +113,36 @@ void main() {
       expect(find.byKey(const ValueKey('points-badge-static')), findsOneWidget);
       expect(find.byKey(const ValueKey('points-badge-pulse')), findsNothing);
       expect(tester.hasRunningAnimations, isFalse);
-      // Borde más grueso en vez del latido.
-      final box = tester.widget<Container>(find.descendant(
-          of: find.byType(PointsBadge), matching: find.byType(Container)));
-      expect((box.decoration! as BoxDecoration).border!.top.width, 2);
+      // La insignia es la del sistema (DsBadge), sin borde propio.
+      expect(
+          find.descendant(
+              of: find.byType(PointsBadge), matching: find.byType(DsBadge)),
+          findsOneWidget);
     });
+
+    testWidgets('misma insignia que las pestañas: DsBadge, mismo texto',
+        (tester) async {
+      await tester.pumpWidget(_app(Column(children: [
+        UnusedPointsButton(
+            points: const UnusedPoints(tree: 3),
+            reduceMotion: true,
+            onPressed: () {}),
+        DsTabBar(
+            tabs: const [DsTab('ÁRBOL', badge: '23')],
+            index: 0,
+            onChanged: (_) {}),
+      ])));
+      final hud = tester.widget<Badge>(find.descendant(
+          of: find.byKey(const ValueKey('hud-points-badge')),
+          matching: find.byType(Badge)));
+      final tab = tester.widget<Badge>(find.descendant(
+          of: find.byType(DsTabBar), matching: find.byType(Badge)));
+      expect(find.byType(DsBadge), findsNWidgets(2));
+      expect(hud.textStyle!.fontSize, tab.textStyle!.fontSize);
+      expect(hud.textStyle!.fontFamily, tab.textStyle!.fontFamily);
+      expect(hud.backgroundColor, tab.backgroundColor);
+      expect(hud.largeSize, tab.largeSize);
+  });
   });
 
   group('aviso al subir de nivel', () {

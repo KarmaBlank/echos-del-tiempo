@@ -65,7 +65,7 @@ void main() {
     test('por defecto = como antes; se guardan; viejo / inválido = defecto',
         () {
       const d = GameSettings();
-      expect(d.readingTitles, isFalse);
+      expect(d.readingTitles, isTrue);
       expect(d.letterSpacing, LetterSpacing.normal);
       expect(d.noticeDuration, NoticeDuration.normal);
       expect(d.mapLabelBackdrop, MapLabelBackdrop.none);
@@ -73,7 +73,7 @@ void main() {
       const s = GameSettings(
         readingFont: ReadingFont.atkinson,
         textSize: TextSize.enormous,
-        readingTitles: true,
+        readingTitles: false,
         letterSpacing: LetterSpacing.wide,
         noticeDuration: NoticeDuration.untilDismissed,
         mapLabelBackdrop: MapLabelBackdrop.box,
@@ -82,7 +82,8 @@ void main() {
       final j = s.toJson();
       expect(j['readingFont'], 'atkinson');
       expect(j['textSize'], 'enormous');
-      expect(j['readingTitles'], true);
+      expect(j['readingTitles'], false);
+      expect(j['version'], GameSettings.formatVersion);
       expect(j['letterSpacing'], 'wide');
       expect(j['noticeDuration'], 'untilDismissed');
       expect(j['mapLabelBackdrop'], 'box');
@@ -92,7 +93,7 @@ void main() {
       // Un game.json de v0.8.0 (sin las claves) o con basura.
       final old = GameSettings.fromJson(const {'textSize': 'huge'});
       expect(old.textSize, TextSize.huge);
-      expect(old.readingTitles, isFalse);
+      expect(old.readingTitles, isTrue);
       expect(old.noticeDuration, NoticeDuration.normal);
       final junk = GameSettings.fromJson(const {
         'readingFont': 'comic',
@@ -105,12 +106,28 @@ void main() {
       expect(junk, const GameSettings());
     });
 
+    test('migración v1 → v2: TÍTULOS CON LA FUENTE DE LECTURA', () {
+      // v1 (sin versión) guardaba siempre el default viejo NO: no se sabe
+      // si el jugador lo eligió, así que pasa al default nuevo SÍ.
+      expect(GameSettings.fromJson(const {'readingTitles': false})
+          .readingTitles, isTrue);
+      expect(GameSettings.fromJson(const {'readingTitles': true})
+          .readingTitles, isTrue);
+      // Desde v2 se respeta lo elegido a mano.
+      expect(
+          GameSettings.fromJson(const {'version': 2, 'readingTitles': false})
+              .readingTitles,
+          isFalse);
+      final off = const GameSettings(readingTitles: false).toJson();
+      expect(GameSettings.fromJson(off).readingTitles, isFalse);
+    });
+
     test('el controlador guarda cada opción', () async {
       final store = InMemoryGameSettingsStore();
       final c = GameSettingsController(store: store);
       await c.update(c.state.copyWith(
-          readingTitles: true, mapLabelBackdrop: MapLabelBackdrop.shaded));
-      expect(store.saved!.readingTitles, isTrue);
+          readingTitles: false, mapLabelBackdrop: MapLabelBackdrop.shaded));
+      expect(store.saved!.readingTitles, isFalse);
       expect(store.saved!.mapLabelBackdrop, MapLabelBackdrop.shaded);
     });
 

@@ -1,15 +1,15 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../design/ds_components.dart';
 import '../theme/proto_colors.dart';
-import '../theme/retro_type.dart';
 
 /// Insignia chica `N` de puntos sin usar (passive_tree_v4.md § 7):
-/// pastilla dorada con texto oscuro y borde claro, dentro del botón a la
-/// derecha del texto (v0.10.1, nunca encima). No depende solo del color:
+/// un [DsBadge] (la misma pastilla que en las pestañas), dentro del botón
+/// a la derecha del texto (v0.10.1, nunca encima). No depende solo del color:
 /// el número se lee igual con cualquier paleta de daltonismo.
 ///
-/// Con [pulse] late suave (opacidad y brillo del borde); con "Reducir
-/// movimiento" ([reduceMotion]) queda quieta con un borde más grueso.
+/// Con [pulse] late suave (solo opacidad); con "Reducir movimiento"
+/// ([reduceMotion]) queda quieta.
 class PointsBadge extends StatefulWidget {
   const PointsBadge({
     super.key,
@@ -64,18 +64,9 @@ class _PointsBadgeState extends State<PointsBadge>
     super.dispose();
   }
 
-  Widget _box(double t) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: Color.lerp(ProtoColors.gold, ProtoColors.white, 0.45 * t)!,
-          border: Border.all(
-              color: Color.lerp(ProtoColors.title, ProtoColors.white, t)!,
-              width: widget.reduceMotion ? 2 : 1),
-        ),
-        child: Text('${widget.count}',
-            style: RetroType.style(RetroType.small,
-                color: PointsBadge.ink, fontWeight: FontWeight.bold)),
-      );
+  // Siempre la misma insignia del sistema (design_system.md § 6): forma,
+  // tamaño, colores y tipografía de [DsBadge], igual que en las pestañas.
+  Widget _box() => DsBadge('${widget.count}');
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +79,7 @@ class _PointsBadgeState extends State<PointsBadge>
     if (c == null) {
       return KeyedSubtree(
         key: const ValueKey('points-badge-static'),
-        child: Stack(children: [label, _box(0)]),
+        child: Stack(children: [label, _box()]),
       );
     }
     return KeyedSubtree(
@@ -97,7 +88,7 @@ class _PointsBadgeState extends State<PointsBadge>
         animation: c,
         builder: (context, _) => Opacity(
           opacity: 0.7 + 0.3 * c.value,
-          child: Stack(children: [label, _box(c.value)]),
+          child: Stack(children: [label, _box()]),
         ),
       ),
     );
