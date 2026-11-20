@@ -4,6 +4,8 @@ import '../../../app/design/design.dart';
 import 'admin_controller.dart';
 import 'balance_page.dart';
 import 'changes_page.dart';
+import 'editor/animations_page.dart';
+import 'editor/fx_editor_controller.dart';
 import 'editor/sprite_editor_controller.dart';
 import 'editor/sprites_page.dart';
 import 'monitoring_page.dart';
@@ -21,6 +23,8 @@ class AdminApp extends StatelessWidget {
       {super.key,
       required this.controller,
       this.sprites,
+      this.animations,
+      this.animateFx = true,
       this.initialArea = EditorArea.balance,
       this.initialVisualTab = 0});
   final AdminController controller;
@@ -28,6 +32,12 @@ class AdminApp extends StatelessWidget {
   /// Visuales → Sprites (`null`: área sin catálogo, p. ej. tests de
   /// balance).
   final SpriteEditorController? sprites;
+
+  /// Visuales → Animaciones (`null`: sin catálogo de fx).
+  final FxEditorController? animations;
+
+  /// El preview de animaciones avanza solo (`false` en capturas).
+  final bool animateFx;
   final EditorArea initialArea;
   final int initialVisualTab;
 
@@ -45,6 +55,8 @@ class AdminApp extends StatelessWidget {
         home: AdminShell(
             controller: controller,
             sprites: sprites,
+            animations: animations,
+            animateFx: animateFx,
             initialArea: initialArea,
             initialVisualTab: initialVisualTab),
       );
@@ -55,10 +67,18 @@ class AdminShell extends StatefulWidget {
       {super.key,
       required this.controller,
       this.sprites,
+      this.animations,
+      this.animateFx = true,
       this.initialArea = EditorArea.balance,
       this.initialVisualTab = 0});
   final AdminController controller;
   final SpriteEditorController? sprites;
+
+  /// Visuales → Animaciones (`null`: sin catálogo de fx).
+  final FxEditorController? animations;
+
+  /// El preview de animaciones avanza solo (`false` en capturas).
+  final bool animateFx;
   final EditorArea initialArea;
   final int initialVisualTab;
 
@@ -85,7 +105,11 @@ class _AdminShellState extends State<AdminShell> {
         widget.controller.setQuery(q);
         if (balanceTab != 0) setState(() => balanceTab = 0);
       case EditorArea.visuals:
-        widget.sprites?.setQuery(q);
+        if (visualTab == 1) {
+          widget.animations?.setQuery(q);
+        } else {
+          widget.sprites?.setQuery(q);
+        }
       case EditorArea.monitoring:
         break;
     }
@@ -95,10 +119,15 @@ class _AdminShellState extends State<AdminShell> {
   Widget build(BuildContext context) {
     final c = widget.controller;
     return ListenableBuilder(
-      listenable: Listenable.merge([c, if (widget.sprites != null) widget.sprites!]),
+      listenable: Listenable.merge([
+        c,
+        if (widget.sprites != null) widget.sprites!,
+        if (widget.animations != null) widget.animations!,
+      ]),
       builder: (context, _) {
         final pending = c.pendingChanges.length;
-        final overrides = widget.sprites?.overrideCount ?? 0;
+        final overrides = (widget.sprites?.overrideCount ?? 0) +
+            (widget.animations?.overrideCount ?? 0);
         return Scaffold(
           body: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             DsToolbar(
@@ -123,7 +152,9 @@ class _AdminShellState extends State<AdminShell> {
                       controller: _search,
                       hint: area == EditorArea.balance
                           ? 'BUSCAR (NOMBRE, ID, CAMPO)'
-                          : 'BUSCAR SPRITE',
+                          : visualTab == 1
+                              ? 'BUSCAR ANIMACIÓN'
+                              : 'BUSCAR SPRITE',
                       width: 300,
                       onChanged: _onSearch),
                 Text(
@@ -174,15 +205,20 @@ class _AdminShellState extends State<AdminShell> {
           DsTabBar(
             key: const ValueKey('visual-tabs'),
             index: visualTab,
-            onChanged: (i) => setState(() => visualTab = i),
+            onChanged: (i) => setState(() {
+              visualTab = i;
+              _search.clear();
+            }),
             tabs: const [DsTab('SPRITES'), DsTab('ANIMACIONES')],
           ),
           Expanded(
             child: visualTab == 1
-                ? Center(
-                    child: Text(
-                        'ANIMACIONES: PASO 2 (docs/specs/game_editor.md § 7)',
-                        style: DsText.detail()))
+                ? widget.animations == null
+                    ? Center(
+                        child: Text('SIN CATÁLOGO DE ANIMACIONES',
+                            style: DsText.detail()))
+                    : AnimationsPage(
+                        c: widget.animations!, ticking: widget.animateFx)
                 : s == null
                     ? Center(child: Text('SIN CATÁLOGO DE SPRITES', style: DsText.detail()))
                     : SpritesPage(c: s),

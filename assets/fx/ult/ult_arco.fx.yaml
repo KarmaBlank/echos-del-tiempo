@@ -1,0 +1,61 @@
+schema: 1
+id: ult_arco
+category: ult
+name: Tormenta de Flechas
+tags: [arco, tirador, a_todos, veneno, eco]
+duration: 2400
+phases: { build: 700, release: 1300, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 700, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 2000, v: 0.7 }
+      - { t: 2400, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 700, color: element }
+      - { t: 1050, shape: rain, anchor: targets_center, ms: 600, color: element, scale: 1.4 }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 90
+    alpha: 0.45
+    color: echo
+    spacing: [-11, -5]
+    fade: 200
+    keys:
+      - { t: 250, at: caster }
+      - { t: 700, at: caster, dy: -3 }
+      - { t: 950, at: caster }
+  - type: trail
+    fire:
+      - { t: 700, from: caster, to: sky_caster, ms: 180, head: arrow, color: light, echoes: 3, lag: 25 }
+      - { t: 790, from: caster, to: sky_caster, dx: -10, ms: 180, head: arrow, color: light, echoes: 3, lag: 25 }
+      - { t: 880, from: caster, to: sky_caster, dx: -20, ms: 180, head: arrow, color: light, echoes: 3, lag: 25 }
+  - type: trail
+    each_target: true
+    stagger: 70
+    fire:
+      - { t: 1150, from: sky, to: target, ms: 150, head: arrow, color: element, echoes: 3, lag: 25, ease: in }
+  - type: particles
+    each_target: true
+    stagger: 70
+    fire:
+      - { t: 1300, preset: burst, anchor: target, element: auto, count: 2.5 }
+      - { t: 1300, preset: burst, anchor: target, element: phys, count: 1.5 }
+  - type: shake
+    fire:
+      - { t: 1150, amp: 3 }
+      - { t: 1300, amp: 8 }
+  - type: hitstop
+    fire:
+      - { t: 1300, ms: 80 }
+  - type: impact
+    fire:
+      - { t: 1300, stagger: 70 }

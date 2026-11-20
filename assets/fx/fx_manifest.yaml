@@ -1,0 +1,19 @@
+# Índice de animaciones FXA (docs/specs/game_editor.md § 2.1): id lógico
+# → archivo dentro de assets/fx/. FxCatalog es la única clase que lo lee.
+# Lo que no está acá se arma desde el código (LegacyFxAdapter, § 2.3).
+schema: 1
+fx:
+  ult_espada: ult/ult_espada.fx.yaml
+  ult_hacha: ult/ult_hacha.fx.yaml
+  ult_baculo: ult/ult_baculo.fx.yaml
+  ult_tomo: ult/ult_tomo.fx.yaml
+  ult_arco: ult/ult_arco.fx.yaml
+  ult_rifle: ult/ult_rifle.fx.yaml
+  ult_espada_escudo: ult/ult_espada_escudo.fx.yaml
+  ult_maza_escudo: ult/ult_maza_escudo.fx.yaml
+  ult_martillo_escudo: ult/ult_martillo_escudo.fx.yaml
+  ult_lanza: ult/ult_lanza.fx.yaml
+  ult_varita: ult/ult_varita.fx.yaml
+  ult_ballesta: ult/ult_ballesta.fx.yaml
+  ult_dagas: ult/ult_dagas.fx.yaml
+  duo: duo/duo.fx.yaml

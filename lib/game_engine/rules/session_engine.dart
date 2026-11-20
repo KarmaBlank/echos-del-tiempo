@@ -45,6 +45,7 @@ import 'companion_ai.dart';
 import 'consumable_rules.dart';
 import 'world_rules.dart';
 import 'zone_rules.dart';
+import '../fx/cinematic_durations.dart';
 
 part 'session_engine_tutorial.dart';
 
@@ -56,15 +57,14 @@ typedef SeedSource = int Function();
 /// `wait` tras una ULT o un dúo): 0 si no hay ninguna. Con eso se alarga
 /// la pausa final cuando el golpe que cierra la batalla es una ULT, un
 /// dúo o una ULT enemiga (battle_presentation.md § "Fin de batalla").
-double battleCinematicHold(List<BattleEvent> evs) {
+/// La duración sale de los datos de la animación ([durations], por
+/// defecto [CinematicDurations.shared]; game_editor.md § 4.3).
+double battleCinematicHold(List<BattleEvent> evs,
+    [CinematicDurations? durations]) {
+  final d = durations ?? CinematicDurations.shared;
   var hold = 0.0;
   for (final ev in evs) {
-    final h = switch (ev) {
-      ActionEvent(kind: BattleActionKind.ultimate) => 2.3,
-      EnemyUltEvent() => 2.3,
-      ActionEvent(kind: BattleActionKind.dual) => 1.5,
-      _ => 0.0,
-    };
+    final h = d.holdFor(ev);
     if (h > hold) hold = h;
   }
   return hold;
@@ -103,6 +103,7 @@ class SessionEngine {
     this.maxPlayers = kDefaultMaxPlayers,
     int Function()? nowSeconds,
     this.achievementsEnabled = true,
+    this.cinematics,
   })  : nowSeconds = nowSeconds ??
             (() => DateTime.now().millisecondsSinceEpoch ~/ 1000),
         tutorials = tutorials ?? TutorialRules(catalog: progression.catalog),
@@ -125,6 +126,10 @@ class SessionEngine {
   /// Detectar y pagar hazañas. Apagado solo en herramientas y tests que
   /// comparan una vista previa con el resultado exacto de una acción.
   final bool achievementsEnabled;
+
+  /// Duración de las cinemáticas (fin de batalla); `null` = la tabla
+  /// compartida que carga el catálogo de fx (game_editor.md § 4.3).
+  final CinematicDurations? cinematics;
   final achievements = const AchievementRules();
 
   /// Seguimiento de la batalla actual para las hazañas de combate (solo
@@ -3112,7 +3117,7 @@ class _Op {
       // Golpe final con cinemática: la pausa final se alarga lo que dura
       // y la presentación no muestra el desenlace hasta que termine
       // (battle_presentation.md § "Fin de batalla").
-      final hold = battleCinematicHold(step.events);
+      final hold = battleCinematicHold(step.events, e.cinematics);
       b
         ..endHold = hold
         ..endTimer = b.endTimer! + hold;

@@ -1,0 +1,55 @@
+schema: 1
+id: ult_espada_escudo
+category: ult
+name: Baluarte
+tags: [espada, escudo, paladín, aliados, sagrado, eco]
+duration: 2300
+phases: { build: 800, release: 1100, recover: 400 }
+targets: allies
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: allies }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.8 }
+      - { t: 1900, v: 0.7 }
+      - { t: 2300, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: gold }
+      - { t: 820, shape: shield_dome, anchor: allies_center, color: gold, ms: 1000, scale: 1.4 }
+      - { t: 820, shape: shockwave, anchor: caster, color: gold, ms: 420, scale: 1.6 }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 80
+    alpha: 0.4
+    color: gold
+    fade: 260
+    keys:
+      - { t: 800, at: caster }
+      - { t: 1050, at: allies_center, dx: 14, ease: out }
+      - { t: 1500, at: allies_center, dx: 14 }
+  - type: shape
+    each_target: true
+    stagger: 60
+    fire:
+      - { t: 1150, shape: ring, anchor: target, color: gold, scale: 1, ms: 360 }
+  - type: particles
+    each_target: true
+    stagger: 60
+    fire:
+      - { t: 1150, preset: sparkles, anchor: target, color: gold, count: 1.2 }
+      - { t: 1150, preset: burst, anchor: target, element: heal, count: 1.5 }
+  - type: flash
+    fire:
+      - { t: 820, color: gold, alpha: 0.3, ms: 200 }
+  - type: shake
+    fire:
+      - { t: 820, amp: 4 }
+  - type: impact
+    fire:
+      - { t: 1150, stagger: 60 }

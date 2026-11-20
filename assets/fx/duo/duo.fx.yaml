@@ -1,0 +1,66 @@
+schema: 1
+id: duo
+category: duo
+name: Dúo
+tags: [dúo, a_todos, eco]
+duration: 1600
+phases: { build: 650, release: 650, recover: 300 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1300, v: 0.7 }
+      - { t: 1600, v: 0 }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 50
+    alpha: 0.45
+    color: element
+    fade: 150
+    keys:
+      - { t: 650, at: caster }
+      - { t: 960, at: targets_center, dx: -18, ease: in }
+  - type: echo
+    who: partner
+    count: 3
+    lag: 50
+    alpha: 0.45
+    color: echo
+    fade: 150
+    keys:
+      - { t: 690, at: partner }
+      - { t: 980, at: targets_center, dx: -18, dy: 8, ease: in }
+  - type: trail
+    fire:
+      - { t: 650, from: caster, to: targets_center, ms: 350, color: element, width: 2, echoes: 3, lag: 30, ease: in }
+      - { t: 690, from: partner, to: targets_center, ms: 310, color: echo, width: 2, echoes: 3, lag: 30, ease: in }
+  - type: shape
+    each_target: true
+    stagger: 50
+    fire:
+      - { t: 1000, shape: slash_cross, anchor: target, scale: 1.8, color: white, ms: 260 }
+      - { t: 1000, shape: ring, anchor: target, scale: 1.5, color: element, ms: 300 }
+  - type: particles
+    each_target: true
+    stagger: 50
+    fire:
+      - { t: 1000, preset: burst, anchor: target, element: auto, count: 3.5 }
+      - { t: 1000, preset: sparks, anchor: target, count: 1.6 }
+  - type: flash
+    fire:
+      - { t: 995, color: white, alpha: 0.5, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1000, ms: 90 }
+  - type: shake
+    fire:
+      - { t: 1000, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1000, stagger: 50 }

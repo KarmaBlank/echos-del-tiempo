@@ -115,21 +115,125 @@ class LocalSpriteOverrides implements EditableSpriteOverrides {
         flush: true);
   }
 
-  /// Paquete de arte con todos los overrides.
+  /// Paquete de arte con todos los overrides (sprites y fx).
   @override
-  Future<Uint8List> exportPack() async => ArtPack({
-        for (final id in overriddenIds) id: (await read(id))!,
-      }).encode();
+  Future<Uint8List> exportPack() async {
+    await refreshFx();
+    return ArtPack({
+      for (final id in overriddenIds) id: (await read(id))!,
+    }, {
+      for (final id in overriddenFx) id: (await readFx(id))!,
+    }).encode();
+  }
 
   /// Instala un paquete de arte (pisa overrides con el mismo id).
-  /// Devuelve los ids instalados. [FormatException] si no es válido.
+  /// Devuelve los ids instalados (sprites y fx). [FormatException] si no
+  /// es válido.
   @override
   Future<List<String>> importPack(Uint8List zip) async {
     final pack = ArtPack.decode(zip);
     for (final MapEntry(:key, :value) in pack.sprites.entries) {
       await put(key, value);
     }
-    return pack.sprites.keys.toList();
+    for (final MapEntry(:key, :value) in pack.fx.entries) {
+      await putFx(key, value);
+    }
+    return [...pack.sprites.keys, ...pack.fx.keys];
+  }
+
+  // ------------------------------------------------------------ fx
+
+  static const fxIndexName = 'fx_overrides.yaml';
+  final _fx = <String, String>{};
+
+  @override
+  Set<String> get overriddenFx => _fx.keys.toSet();
+
+  @override
+  Future<void> refreshFx() async {
+    _fx.clear();
+    final f = _file(fxIndexName);
+    if (!f.existsSync()) return;
+    try {
+      final doc = loadYaml(await f.readAsString());
+      final s = doc is YamlMap ? doc['fx'] : null;
+      if (s is YamlMap) {
+        for (final MapEntry(:key, :value) in s.entries) {
+          if (value is String && _file(value).existsSync()) {
+            _fx[key as String] = value;
+          }
+        }
+      }
+    } catch (_) {
+      // Índice roto: sin overrides de fx.
+    }
+  }
+
+  @override
+  Future<String?> readFx(String id) async {
+    final rel = _fx[id];
+    if (rel == null) return null;
+    final f = _file(rel);
+    return f.existsSync() ? f.readAsString() : null;
+  }
+
+  @override
+  Future<void> putFx(String id, String yaml) async {
+    final rel = 'fx/$id.fx.yaml';
+    final f = _file(rel);
+    await f.parent.create(recursive: true);
+    await f.writeAsString(yaml, flush: true);
+    _fx[id] = rel;
+    await _writeFxIndex();
+  }
+
+  @override
+  Future<void> removeFx(String id) async {
+    final rel = _fx.remove(id);
+    if (rel != null) {
+      final f = _file(rel);
+      if (f.existsSync()) await f.delete();
+    }
+    await _writeFxIndex();
+  }
+
+  Future<void> _writeFxIndex() async {
+    final ids = _fx.keys.toList()..sort();
+    final b = StringBuffer('# Overrides locales de animaciones (Editor; '
+        'docs/specs/game_editor.md § 4.2).\n');
+    if (ids.isEmpty) {
+      b.writeln('fx: {}');
+    } else {
+      b.writeln('fx:');
+      for (final id in ids) {
+        b.writeln('  $id: ${_fx[id]}');
+      }
+    }
+    await Directory(root).create(recursive: true);
+    await _file(fxIndexName).writeAsString(b.toString(), flush: true);
+  }
+
+  @override
+  Future<List<String>> publishFx(
+      String repoRoot, Map<String, String> paths) async {
+    final manifestFile = File('$repoRoot/assets/fx/fx_manifest.yaml');
+    if (!manifestFile.existsSync()) {
+      throw StateError('No encuentro assets/fx/fx_manifest.yaml en $repoRoot');
+    }
+    var manifest = await manifestFile.readAsString();
+    final done = <String>[];
+    for (final MapEntry(key: id, value: rel) in paths.entries) {
+      final yaml = await readFx(id);
+      if (yaml == null) continue;
+      final out = File('$repoRoot/assets/fx/$rel');
+      await out.parent.create(recursive: true);
+      await out.writeAsString(yaml, flush: true);
+      manifest = addFxManifestEntry(manifest, id, rel);
+      await removeFx(id);
+      done.add(id);
+    }
+    await manifestFile.writeAsString(manifest, flush: true);
+    return done;
   }
 
   /// "Publicar al repo": copia cada override de [entries] a

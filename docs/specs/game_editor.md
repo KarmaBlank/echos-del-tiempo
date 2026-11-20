@@ -1,7 +1,7 @@
 # Spec (APROBADO por el dueño): Editor del juego
 
-Estado: **paso 1 implementado** (§ 7.1). Respuestas del dueño a las
-preguntas abiertas en § 8.
+Estado: **pasos 1 y 2 implementados** (§ 7.1 y § 7.2). Respuestas del
+dueño a las preguntas abiertas en § 8.
 
 Pedido del dueño: convertir la herramienta de admin/monitoreo
 (docs/specs/balance_admin.md, flavor `lib/app/flavors/main_admin.dart`,
@@ -494,6 +494,130 @@ Todo con los componentes de docs/specs/design_system.md:
   Editor ve el manifest nuevo al reiniciar.
 - Capturas: `tool/shots/editor_shots_test.dart` →
   `docs/release_shots/editor/`.
+
+### 7.2 Paso 2 tal como quedó (implementado, v0.16.0)
+
+- **Modelo y parser** (`lib/game_engine/fx/fx_timeline.dart`, Dart
+  puro): `FxTimeline` / `FxTrack` / `FxKey` / `FxPhases` / `FxEase`.
+  Cada key o disparo guarda `t`, `ease` y el resto como mapa (el modelo
+  no conoce los campos de cada pista; los interpreta el `FxPlayer`).
+  `numAt` interpola con la curva del key de llegada; `textAt` es
+  escalonado. `toYaml()` escribe ordenado y estable (ida y vuelta
+  exacta). `duration` se recorta a 6000 ms con aviso; `schema` mayor →
+  `FormatException`; pistas desconocidas se conservan con aviso.
+- **Formato, agregados al § 2.1**:
+  - `impact` con `pre: true` = golpe previo (solo visual/sonido; los
+    `preHitsMs` del guion). El primero sin `pre` es el impacto real
+    (`stagger` incluido).
+  - Pista **`echo`** (la firma de las ULT): `who: caster|partner`,
+    `count`, `lag` (ms entre copias), `alpha`, `color` (rol), `fade`,
+    `spacing: [dx, dy]` (abanico por copia) y `orbit` (radio alrededor
+    del destino). Los keys son el camino `{ t, at: <ancla>, dx, dy, ease }`;
+    la copia *i* lo recorre `i·lag` ms más tarde y más tenue. Se dibuja
+    con el sprite real del actor: silueta luminosa sumada + halo ±1 px +
+    el sprite tenue encima.
+  - `camera`: en este paso solo cuenta `focus` (caster, target, line,
+    targets, allies, group); el movimiento lo sigue haciendo
+    `ultCameraAt` con ese foco (empujón en el impacto incluido).
+  - Anclas: `caster`, `partner`, `target` (el *i* con `each_target`),
+    `targets_center`, `allies_center`, `sky` / `sky_center` /
+    `sky_caster`, `screen`. `dx` es relativo a hacia dónde mira el
+    lanzador.
+  - Colores por rol: `element` (color de la acción), `light`, `dark`,
+    `echo` (el de la acción llevado al cian temporal), `white`, `gold`
+    o `'#rrggbb'`.
+  - Formas (`shape`): `gather`, `slash_arc`, `slash_cross`, `ring`
+    (`implode`), `rune_circle`, `shockwave`, `quake`, `pillar`, `beam`,
+    `shield_dome`, `sky_crack`, `bolt`, `clock`, `cross`, `rain`,
+    `shards`, `reticle`. Estelas (`trail`): `from`/`to`, `ms`, `head`
+    (`dot`, `arrow`, `spear`, `hammer`, `meteor`, `bolt`), `echoes` +
+    `lag` (cabezas fantasma). Partículas: `burst` (`element`), `sparks`,
+    `shards`, `sparkles`, `embers`, `dust`, `debris`, `frost`.
+  - `title_card`, `letterbox`, `actor`, `sprite`, `sound`,
+    `damage_style` y `tint` con color por key quedan reservados: se
+    leen y se guardan, pero la tarjeta, las barras y el sonido siguen
+    las fases y el estilo del código (paso 3/4). Formas, estelas y
+    tinte se dibujan sumando luz (brillan sobre el oscurecido sin tapar).
+- **Archivos**: `assets/fx/fx_manifest.yaml` (`fx: { <id>: <ruta> }`),
+  `assets/fx/ult/<id>.fx.yaml` (las 13 ULT de arma) y
+  `assets/fx/duo/duo.fx.yaml` (dúo genérico; `duo_<clave>` lo pisa por
+  dúo). pubspec lista `assets/fx/ult/` y `assets/fx/duo/`: una carpeta
+  nueva (p. ej. `skill/`) hay que sumarla a mano al publicar.
+- **`FxCatalog`** (`lib/core/fx/fx_catalog.dart`): único lector; capas
+  edición en vivo (Editor) → override local → asset → `LegacyFxSource`.
+  `forAction('duo', clave)`, `durationOf`, `releaseDurations()` (asset
+  + legacy, nunca overrides), `reload([id])`, `setLive/clearLive`,
+  `sourceOf` (override / datos / legacy), `log` de avisos. Nunca lanza.
+  Overrides: `FxOverrideSource` / `EditableFxOverrides`
+  (`lib/core/fx/fx_overrides.dart`), implementados por
+  `LocalSpriteOverrides` en la misma carpeta: `<root>/fx/<id>.fx.yaml`
+  + `<root>/fx_overrides.yaml` (`fx: { <id>: fx/<id>.fx.yaml }`).
+- **`LegacyFxAdapter`** (`scene/fx_bridge.dart`): timeline de solo
+  lectura desde cada `UltScript` del código (ULT de ascensión, ULT
+  enemigas, dúo viejo): fases, cámara, oscurecido, impactos, hit-stop,
+  sacudida y una pista `legacy` con el `UltStyle`. Test de oro: el
+  guion derivado de ese timeline coincide en fases, impactos, hit-stop,
+  sacudida y foco con el original.
+- **Escena**: `installFx()` (composition roots p2p, lan, dev, admin)
+  carga el catálogo, lo deja en `FxCatalog.active` y llena
+  `CinematicDurations.shared`. `ultScriptFor(id)` / `duoScript(clave)`
+  devuelven el guion **derivado de los datos** (`scriptFromTimeline`:
+  fases, primer impacto + `stagger`, golpes previos, hit-stop y
+  sacudida mayores, foco) con `data` = el timeline; el estilo del
+  código se conserva (sonido y elemento de partículas). Con `data`,
+  `UltDirector.tick/paintWorld/worldDim` delegan en **`FxPlayer`**
+  (`scene/fx_player.dart`: `tick` dispara partículas/sacudidas/hit-stop
+  una vez por clave, sin sacudida ni hit-stop si se adelantó; `paint`
+  dibuja tinte, formas, estelas, ecos y destellos ≤ 0.7 × el factor de
+  destellos del jugador). Sin catálogo (tests de escena/sonido) todo
+  sigue con el código. Las ULT de ascensión, de camino (`kBranchUltLooks`
+  usa los datos de la ULT a la que se parece) y enemigas siguen legacy.
+- **Duración desde datos** (§ 4.3): `CinematicDurations`
+  (`game_engine/fx/`, Dart puro) mapea id → ms; `battleCinematicHold`
+  la usa (inyectable en `SessionEngine(cinematics:)`, si no
+  `CinematicDurations.shared`). Sin datos: 2.3 s / 1.5 s históricos. El
+  host usa la del release; el snapshot lleva `hold` como antes (**sin
+  cambio de protocolo**). La pausa `wait` del cliente
+  (`session_music`, `session_sfx`) sale del mismo guion derivado.
+- **Las 13 ULT rediseñadas** (≤ 2.6 s, todas con ecos):
+  Tajo Final (3 ecos que se adelantan al corte real), Cataclismo (ecos
+  que saltan y caen, onda + grietas + columnas), Meteoro (círculo
+  rúnico, grieta en el cielo, meteoros con cabezas fantasma), Paradoja
+  (reloj que gira hacia atrás, 5 ecos del pasado que convergen, anillo
+  que implota), Tormenta de Flechas (ecos en abanico disparando al
+  cielo, lluvia), Disparo Letal (retícula que se cierra, bala con 5
+  ecos, rayo que queda), Baluarte (ecos dorados que cubren al grupo,
+  cúpula), Juicio Divino (ecos que ascienden en oración, columnas y
+  cruces), Martillo Celestial (salto con estela de ecos, martillo
+  fantasma, columna + onda), Lluvia de Lanzas (ecos en el aire, lanzas
+  dobles), Tormenta Arcana (ecos en unísono, rayos de aviso y rayos
+  reales), Andanada (tres virotes y el grande con 5 ecos), Danza de Mil
+  Cortes (7 ecos en órbita que cortan uno tras otro). Dúo: los ecos de
+  los dos convergen con sus estelas, cruz + anillo por objetivo.
+- **Editor → Visuales → Animaciones** (`editor/animations_page.dart`,
+  `fx_editor_controller.dart`, `fx_preview.dart`): lista por categoría
+  (ULT, DÚOS, ULT ENEMIGAS… con conteo) + buscador (nombre, id,
+  etiqueta; también el buscador global), insignia DATOS / LEGACY /
+  OVERRIDE; mini escena de batalla (240 × 135 px del mundo, sprites
+  reales, 1–4 enemigos, cámara de la cinemática opcional, oscurecido)
+  con REPRODUCIR/PAUSA, ×0.25/×0.5/×1, LOOP; línea de tiempo con fases,
+  rombos (keys), marcas (disparos), impactos y cabezal: clic/arrastre =
+  scrub, clic en un rombo = elegirlo. Ficha: duración y valores
+  numéricos del key elegido (`t` y cada campo numérico) con
+  `NumberStepper`; cada cambio se reproduce al instante
+  (`FxCatalog.setLive`); validación (tope de ULT, impactos fuera de la
+  duración); GUARDAR (override), DESHACER CAMBIOS, DESCARTAR OVERRIDE,
+  RECARGAR, EXPORTAR / IMPORTAR paquete y PUBLICAR AL REPO
+  (copia a `assets/fx/<ruta>` y suma la entrada a `fx_manifest.yaml` con
+  `addFxManifestEntry`). Lo legacy es de solo lectura. El paquete de
+  arte (`art_pack.yaml` gana `fx: { <id>: fx/<id>.fx.yaml }`) y
+  PUBLICAR AL REPO de Sprites también llevan las fx.
+- **Pendiente (paso 3)**: agregar/quitar pistas y keys, arrastrar keys
+  en el tiempo, plantillas, duplicar/renombrar, deshacer/rehacer,
+  convertir legacy a datos, hojas de sprites por cuadro en la pista
+  `sprite` (el formato ya las admite).
+- Capturas: `tool/shots/fx_shots_test.dart` →
+  `docs/release_shots/v0.16.0/`.
 
 ## 8. Preguntas abiertas (respondidas por el dueño)
 

@@ -1,0 +1,58 @@
+schema: 1
+id: ult_lanza
+category: ult
+name: Lluvia de Lanzas
+tags: [lanza, guerrero, a_todos, físico, eco]
+duration: 2400
+phases: { build: 800, release: 1200, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 2000, v: 0.7 }
+      - { t: 2400, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 520, color: element }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 60
+    alpha: 0.5
+    color: echo
+    fade: 160
+    keys:
+      - { t: 380, at: caster }
+      - { t: 620, at: sky_caster, ease: out }
+      - { t: 900, at: sky_caster, dx: 20 }
+  - type: trail
+    fire:
+      - { t: 520, from: caster, to: sky_caster, ms: 160, head: spear, color: light, echoes: 3, lag: 30 }
+  - type: trail
+    each_target: true
+    stagger: 80
+    fire:
+      - { t: 1150, from: sky, to: target, ms: 150, head: spear, color: element, scale: 1.3, echoes: 3, lag: 30, ease: in }
+      - { t: 1190, from: sky, to: target, dx: -18, ms: 150, head: spear, color: echo, echoes: 2, lag: 30, ease: in }
+  - type: particles
+    each_target: true
+    stagger: 80
+    fire:
+      - { t: 1300, preset: burst, anchor: target, element: phys, count: 3 }
+      - { t: 1300, preset: debris, anchor: target, count: 0.8 }
+      - { t: 1300, preset: dust, anchor: target, count: 0.8 }
+  - type: shake
+    fire:
+      - { t: 1300, amp: 10 }
+  - type: hitstop
+    fire:
+      - { t: 1300, ms: 90 }
+  - type: impact
+    fire:
+      - { t: 1300, stagger: 80 }

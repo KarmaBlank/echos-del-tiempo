@@ -631,9 +631,9 @@ class SessionSfx {
         // acorde + destello al descargar y el choque doble en el impacto.
         return [
           cue(Sfx.dualRise),
-          cue(Sfx.flash, kDuoScript.buildMs),
-          cue(Sfx.dualCast, kDuoScript.buildMs),
-          cue(Sfx.dualClash, kDuoScript.impactMs),
+          cue(Sfx.flash, duoScript(a.event.skillId).buildMs),
+          cue(Sfx.dualCast, duoScript(a.event.skillId).buildMs),
+          cue(Sfx.dualClash, duoScript(a.event.skillId).impactMs),
         ];
       case BattleActionKind.potion:
         return [cue(Sfx.potion)];
@@ -679,7 +679,7 @@ class SessionSfx {
             ? BattleFx.projMs
             : 0;
       case BattleActionKind.dual:
-        return kDuoScript.impactMs;
+        return duoScript(a.event.skillId).impactMs;
       case BattleActionKind.enemyAttack ||
             BattleActionKind.enemyHeavy ||
             BattleActionKind.enemyArea:
@@ -702,7 +702,7 @@ class SessionSfx {
     // ULT: el impacto de su guion en ese objetivo (ya escalonado).
     if (ult != null) return ult.impactFor(i);
     // Dúo: el de su cinemática (duo_cinematic.dart).
-    if (a.event.kind == BattleActionKind.dual) return kDuoScript.impactFor(i);
+    if (a.event.kind == BattleActionKind.dual) return duoScript(a.event.skillId).impactFor(i);
     final dl = _hitDelay(a);
     final melee = dl == 0;
     return dl + (melee ? meleeImpactMs : 0) + i * staggerMs;

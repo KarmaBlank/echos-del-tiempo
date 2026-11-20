@@ -638,7 +638,7 @@ List<BattleFx> mapBattleEvents(
           ..el = du == null
               ? FxElement.arcane
               : elementOfStatus(du.def.status.kind)
-          ..ult = kDuoScript;
+          ..ult = duoScript(du?.id ?? e.skillId);
         ultAction = a;
         ultIndex = out.length;
         out.add(BattleFx(FxKind.ult,
@@ -654,7 +654,7 @@ List<BattleFx> mapBattleEvents(
               ultId: du?.id,
               casterClass: actor?.classId,
               casterAscension: actor?.ascensionId,
-              script: kDuoScript,
+              script: a.ult!,
               partnerId: partner ?? '',
               partnerName: q?.name ?? '',
               partnerClass: q?.classId,
@@ -664,10 +664,10 @@ List<BattleFx> mapBattleEvents(
             )));
         // Los dos se lanzan al descargar.
         out.add(BattleFx(FxKind.act,
-            who: e.actorId, delayMs: kDuoScript.buildMs));
+            who: e.actorId, delayMs: a.ult!.buildMs));
         if (partner != null) {
           out.add(BattleFx(FxKind.act,
-              who: partner, delayMs: kDuoScript.buildMs + 40));
+              who: partner, delayMs: a.ult!.buildMs + 40));
         }
         final pq = partner == null ? here : position(partner);
         out.add(BattleFx(FxKind.ring,
@@ -675,7 +675,7 @@ List<BattleFx> mapBattleEvents(
             y: (here.dy + pq.dy) / 2 - 8,
             color: a.color,
             big: true,
-            delayMs: kDuoScript.buildMs));
+            delayMs: a.ult!.buildMs));
       case BattleActionKind.enemyAttack || BattleActionKind.enemyHeavy:
         windup(e.actorId);
         a.el = actor?.inflicts == null

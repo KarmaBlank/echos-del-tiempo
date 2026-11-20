@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../combat/presentation/sprite_catalog.dart';
 import '../../domain/sprites/png_validator.dart';
+import 'fx_editor_controller.dart';
 
 /// Diálogos de archivo del área Visuales (inyectable en tests).
 abstract class EditorFiles {
@@ -67,6 +68,10 @@ class SpriteEditorController extends ChangeNotifier {
   final EditorFiles files;
   final String? repoPath;
   final List<SpriteEntry> entries;
+
+  /// Animaciones (paso 2): el paquete de arte y "publicar al repo"
+  /// también las llevan. Lo conecta el composition root.
+  FxEditorController? fx;
 
   String query = '';
   SpriteCategory? category;
@@ -207,12 +212,14 @@ class SpriteEditorController extends ChangeNotifier {
 
   Future<void> exportPack() async {
     if (overrides == null) return;
-    if (overrides!.overriddenIds.isEmpty) {
+    await overrides!.refreshFx();
+    if (overrides!.overriddenIds.isEmpty && overrides!.overriddenFx.isEmpty) {
       notice = const EditorNotice('No hay overrides para exportar.', error: true);
     } else if (await files.saveZip(
         await overrides!.exportPack(), 'paquete_de_arte.zip')) {
       notice = EditorNotice(
-          'Paquete exportado (${overrides!.overriddenIds.length} sprites).',
+          'Paquete exportado (${overrides!.overriddenIds.length} sprites, '
+          '${overrides!.overriddenFx.length} animaciones).',
           ok: true);
     }
     notifyListeners();
@@ -227,7 +234,8 @@ class SpriteEditorController extends ChangeNotifier {
       await catalog.reload();
       await loadAll();
       if (selected != null) await select(selected!);
-      notice = EditorNotice('Paquete importado (${ids.length} sprites).', ok: true);
+      await fx?.catalog.reload();
+      notice = EditorNotice('Paquete importado (${ids.length} archivos).', ok: true);
     } on FormatException catch (e) {
       notice = EditorNotice(e.message, error: true);
     }
@@ -247,10 +255,16 @@ class SpriteEditorController extends ChangeNotifier {
     }
     try {
       final ids = await overrides!.publish(repo, publishable);
+      final f = fx;
+      final fxIds = f == null
+          ? const <String>[]
+          : await overrides!.publishFx(repo, f.publishable);
+      if (fxIds.isNotEmpty) await f!.catalog.reload();
       await catalog.reload();
       await loadAll();
       notice = EditorNotice(
-          'Publicado al repo: ${ids.length} sprites (falta commit).',
+          'Publicado al repo: ${ids.length} sprites y ${fxIds.length} '
+          'animaciones (falta commit).',
           ok: true);
     } catch (e) {
       notice = EditorNotice('$e', error: true);

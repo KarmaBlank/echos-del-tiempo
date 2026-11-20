@@ -121,8 +121,8 @@ abstract final class MusicSelector {
             when kind == BattleActionKind.ultimate =>
           ultScriptFor(skillId).totalMs,
         EnemyUltEvent(:final ultId) => ultScriptFor(ultId).totalMs,
-        ActionEvent(:final kind) when kind == BattleActionKind.dual =>
-          kDuoScript.totalMs,
+        ActionEvent(:final kind, :final skillId) when kind == BattleActionKind.dual =>
+          duoScript(skillId).totalMs,
         _ => null,
       };
       if (t != null && t > ms) ms = t;

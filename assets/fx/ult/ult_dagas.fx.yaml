@@ -1,0 +1,73 @@
+schema: 1
+id: ult_dagas
+category: ult
+name: Danza de Mil Cortes
+tags: [dagas, tirador, un_objetivo, físico, eco]
+duration: 2500
+phases: { build: 700, release: 1400, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 700, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.9 }
+      - { t: 2100, v: 0.75 }
+      - { t: 2500, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 700, color: element }
+      - { t: 950, shape: slash_arc, anchor: target, angle: -40, color: echo, ms: 150 }
+      - { t: 1030, shape: slash_arc, anchor: target, angle: 35, color: echo, ms: 150 }
+      - { t: 1110, shape: slash_arc, anchor: target, angle: -80, color: echo, ms: 150 }
+      - { t: 1190, shape: slash_arc, anchor: target, angle: 10, color: echo, ms: 150 }
+      - { t: 1270, shape: slash_arc, anchor: target, angle: 70, color: echo, ms: 150 }
+      - { t: 1350, shape: slash_arc, anchor: target, angle: -15, color: echo, ms: 150 }
+      - { t: 1420, shape: slash_arc, anchor: target, angle: 55, color: echo, ms: 150 }
+      - { t: 1500, shape: slash_cross, anchor: target, scale: 2.4, color: white, ms: 300 }
+      - { t: 1500, shape: ring, anchor: target, scale: 1.8, color: element, ms: 320 }
+  - type: echo
+    who: caster
+    count: 7
+    lag: 75
+    alpha: 0.5
+    color: echo
+    orbit: 20
+    fade: 180
+    keys:
+      - { t: 700, at: caster }
+      - { t: 900, at: target, ease: out }
+      - { t: 1000, at: target }
+  - type: particles
+    fire:
+      - { t: 950, preset: sparks, anchor: target, count: 0.8 }
+      - { t: 1110, preset: sparks, anchor: target, count: 0.8 }
+      - { t: 1270, preset: sparks, anchor: target, count: 0.8 }
+      - { t: 1420, preset: sparks, anchor: target, count: 0.8 }
+      - { t: 1500, preset: burst, anchor: target, element: phys, count: 4 }
+      - { t: 1500, preset: shards, anchor: target, count: 2.5 }
+  - type: flash
+    fire:
+      - { t: 1495, color: white, alpha: 0.6, ms: 150 }
+  - type: hitstop
+    fire:
+      - { t: 1500, ms: 130 }
+  - type: shake
+    fire:
+      - { t: 950, amp: 2 }
+      - { t: 1110, amp: 2 }
+      - { t: 1270, amp: 2 }
+      - { t: 1500, amp: 11 }
+  - type: impact
+    fire:
+      - { t: 950, pre: true }
+      - { t: 1030, pre: true }
+      - { t: 1110, pre: true }
+      - { t: 1190, pre: true }
+      - { t: 1270, pre: true }
+      - { t: 1350, pre: true }
+      - { t: 1420, pre: true }
+      - { t: 1500, stagger: 0 }

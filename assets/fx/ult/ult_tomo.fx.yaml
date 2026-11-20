@@ -1,0 +1,66 @@
+schema: 1
+id: ult_tomo
+category: ult
+name: Paradoja
+tags: [tomo, maga, a_todos, hielo, tiempo, eco]
+duration: 2500
+phases: { build: 900, release: 1200, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 900, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.9 }
+      - { t: 2100, v: 0.8 }
+      - { t: 2500, v: 0 }
+  - type: tint
+    color: '#7ff3ff'
+    keys:
+      - { t: 700, v: 0 }
+      - { t: 1100, v: 0.2 }
+      - { t: 1450, v: 0.28 }
+      - { t: 2100, v: 0 }
+  - type: shape
+    fire:
+      - { t: 200, shape: clock, anchor: targets_center, ms: 1250, color: '#bdf6ff', scale: 1.1 }
+      - { t: 1000, shape: ring, anchor: targets_center, scale: 2.6, implode: true, color: echo, ms: 450 }
+  - type: echo
+    who: caster
+    count: 5
+    lag: 90
+    alpha: 0.45
+    color: echo
+    fade: 160
+    keys:
+      - { t: 150, at: caster }
+      - { t: 800, at: caster, dx: 20, dy: -14, ease: out }
+      - { t: 1050, at: caster, dx: 26, dy: -14 }
+      - { t: 1300, at: targets_center, ease: in }
+  - type: shape
+    each_target: true
+    stagger: 50
+    fire:
+      - { t: 1450, shape: ring, anchor: target, scale: 1.5, color: white, ms: 320 }
+      - { t: 1450, shape: shards, anchor: target, color: '#bdf6ff', ms: 500 }
+  - type: particles
+    each_target: true
+    stagger: 50
+    fire:
+      - { t: 1450, preset: burst, anchor: target, element: auto, count: 3.5 }
+      - { t: 1450, preset: frost, anchor: target, count: 1.4 }
+  - type: flash
+    fire:
+      - { t: 1445, color: '#e8ffff', alpha: 0.5, ms: 160 }
+  - type: hitstop
+    fire:
+      - { t: 1500, ms: 120 }
+  - type: shake
+    fire:
+      - { t: 1450, amp: 8 }
+  - type: impact
+    fire:
+      - { t: 1450, stagger: 50 }

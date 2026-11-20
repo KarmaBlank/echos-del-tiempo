@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'dart:ui';
+import '../../../../core/fx/fx_catalog.dart';
 import '../../../../game_engine/data/branch_ults_catalog.dart' show kBranchUltLooks;
+import 'fx_bridge.dart';
 
 /// Estilo visual de cada ULT (uno por `SkillDef.id` de `kAllUltimates`).
 enum UltStyle {
@@ -80,6 +82,7 @@ class UltScript {
     this.hitStopMs = 0,
     this.shake = 8,
     this.focus = UltFocus.targets,
+    this.data,
   });
 
   final UltStyle style;
@@ -102,6 +105,11 @@ class UltScript {
   /// Sacudida del impacto (px del mundo, como `shake`).
   final double shake;
   final UltFocus focus;
+
+  /// Animación FXA de la que sale este guion (`null` = guion del código;
+  /// docs/specs/game_editor.md § 2.3). Con datos, la escena reproduce
+  /// sus pistas con el `FxPlayer` en lugar del dibujo de [style].
+  final FxTimeline? data;
 
   /// Objetivos con separación propia (el 5.º en adelante pega con el 4.º).
   static const maxStaggered = 4;
@@ -514,7 +522,13 @@ const Map<String, UltScript> kEnemyUltScripts = {
 /// La ULT es de un enemigo.
 bool isEnemyUlt(String? ultId) => kEnemyUltScripts.containsKey(ultId);
 
+/// El guion de la ULT [ultId]: el de sus datos FXA si el catálogo activo
+/// tiene una animación (no legacy) para ese id; si no, el del código.
 UltScript ultScriptFor(String? ultId) =>
+    dataScriptFor(ultId, codeUltScriptFor(ultId)) ?? codeUltScriptFor(ultId);
+
+/// El guion del código (tablas de arriba), sin mirar los datos.
+UltScript codeUltScriptFor(String? ultId) =>
     kUltScripts[ultId] ??
     kEnemyUltScripts[ultId] ??
     // ULT de camino (branch_ults.md): el guion de la ULT a la que se parece.

@@ -5,6 +5,7 @@ import 'dart:ui';
 import '../../../../core/settings/graphics.dart';
 import 'battle_fx.dart';
 import 'duo_cinematic.dart';
+import 'fx_player.dart';
 import 'fx_style.dart';
 import 'particles.dart';
 import 'ult_cinematic.dart';
@@ -39,10 +40,26 @@ class UltStage {
     this.targetBoxes = const [],
     this.party = const [],
     this.partner,
+    this.casterImage,
+    this.partnerImage,
   });
 
   /// Dúo: pies del compañero (origen de la segunda estela).
   final Offset? partner;
+
+  /// Sprites del lanzador y del compañero (ecos de las animaciones de
+  /// datos; `null` = silueta).
+  final ui.Image? casterImage, partnerImage;
+
+  UltStage withImages(ui.Image? caster, ui.Image? partner) => UltStage(
+        caster: this.caster,
+        targets: targets,
+        targetBoxes: targetBoxes,
+        party: party,
+        partner: this.partner,
+        casterImage: caster,
+        partnerImage: partner,
+      );
 
   final Offset caster;
   final List<Offset> targets;
@@ -175,6 +192,24 @@ abstract final class UltDirector {
   /// (ajuste PARTÍCULAS; lo pone el pintor de la escena en cada frame).
   static double density = 1;
 
+  /// Factor de destellos del jugador (accesibilidad; lo pone el pintor).
+  static double flash = 1;
+
+  /// Escenario del `FxPlayer` para una cinemática de datos.
+  static FxStage fxStage(UltCinematic u, UltStage st,
+          [Rect visible = Rect.largest]) =>
+      FxStage(
+        caster: st.caster,
+        targets: st.targets,
+        party: st.party,
+        partner: st.partner,
+        casterImage: st.casterImage,
+        partnerImage: st.partnerImage,
+        color: u.fx.color,
+        element: elementOf(u),
+        visible: visible,
+      );
+
   /// Elemento de las partículas de cada estilo.
   static FxElement element(UltStyle s) => switch (s) {
         UltStyle.finalSlash => FxElement.phys,
@@ -213,6 +248,7 @@ abstract final class UltDirector {
   /// descarga, baja en el regreso).
   static double worldDim(UltCinematic u, double a) {
     final s = u.script;
+    if (s.data case final data?) return FxPlayer.dim(data, a);
     final d = s.darkness(a);
     final k = a < s.buildMs
         ? 0.85
@@ -224,6 +260,14 @@ abstract final class UltDirector {
   static void tick(UltCinematic u, double a, UltStage st, ParticleSystem p,
       void Function(int ms) hitStop) {
     final s = u.script;
+    final data = s.data;
+    if (data != null) {
+      // Animación de datos (game_editor.md § 2.2): todo lo puntual sale
+      // de sus pistas.
+      FxPlayer.tick(data, a, fxStage(u, st), p, u.done,
+          hitStop: hitStop, skipped: u.skipped);
+      return;
+    }
     final el = elementOf(u);
     bool once(String k) => u.done.add(k);
     final c = st.caster;
@@ -648,6 +692,10 @@ abstract final class UltDirector {
   static void paintWorld(
       Canvas c, UltCinematic u, double a, UltStage st, Rect visible) {
     final s = u.script;
+    if (s.data case final data?) {
+      FxPlayer.paint(c, data, a, fxStage(u, st, visible), flash: flash);
+      return;
+    }
     final col = u.fx.color;
     final out = s.phaseAt(a) == UltPhase.recover
         ? 1 - _q(a, s.returnAt, s.returnMs)

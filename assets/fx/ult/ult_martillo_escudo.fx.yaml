@@ -1,0 +1,56 @@
+schema: 1
+id: ult_martillo_escudo
+category: ult
+name: Martillo Celestial
+tags: [martillo, escudo, paladín, un_objetivo, sagrado, eco]
+duration: 2400
+phases: { build: 900, release: 1000, recover: 500 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 900, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.9 }
+      - { t: 1900, v: 0.75 }
+      - { t: 2400, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 900, color: gold }
+      - { t: 1300, shape: shockwave, anchor: target, scale: 2.6, color: gold, ms: 450 }
+      - { t: 1300, shape: pillar, anchor: target, scale: 1.4, color: white, ms: 320 }
+      - { t: 1300, shape: quake, anchor: target, scale: 1.4, color: '#ffe8a3', ms: 600 }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 40
+    alpha: 0.5
+    color: echo
+    fade: 140
+    keys:
+      - { t: 850, at: caster }
+      - { t: 1060, at: sky, dy: 20, ease: out }
+      - { t: 1300, at: target, dx: -12, ease: in }
+  - type: trail
+    fire:
+      - { t: 1080, from: sky, to: target, ms: 220, head: hammer, color: gold, scale: 1.5, echoes: 3, lag: 40, ease: in }
+  - type: particles
+    fire:
+      - { t: 1300, preset: burst, anchor: target, element: phys, count: 5 }
+      - { t: 1300, preset: dust, anchor: target, count: 2 }
+      - { t: 1300, preset: burst, anchor: target, element: holy, count: 2 }
+  - type: flash
+    fire:
+      - { t: 1295, color: white, alpha: 0.65, ms: 160 }
+  - type: hitstop
+    fire:
+      - { t: 1300, ms: 150 }
+  - type: shake
+    fire:
+      - { t: 1300, amp: 14 }
+  - type: impact
+    fire:
+      - { t: 1300, stagger: 0 }
