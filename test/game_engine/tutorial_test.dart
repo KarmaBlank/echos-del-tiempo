@@ -500,8 +500,8 @@ void main() {
       expect(titles, contains(t));
     }
     final pulso = g.firstWhere((x) => x.title == 'Pulso').text;
-    expect(pulso, contains('pips 0-${BattleEngine.pulseMax}'));
-    expect(pulso, contains('MP y Pulso a la vez'));
+    expect(pulso, contains('de 0 a ${BattleEngine.pulseMax}'));
+    expect(pulso, contains('+1 al empezar tu turno'));
     final mp = g.firstWhere((x) => x.title == 'MP (maná)').text;
     expect(mp, contains('Dura toda la misión'));
     final inst = g.firstWhere((x) => x.title == 'Instante').text;

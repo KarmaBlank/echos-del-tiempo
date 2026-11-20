@@ -216,6 +216,26 @@ class BattleViewState extends State<BattleView>
   /// Acción elegida (tests).
   int get selectedAction => _selected;
 
+  /// Enemigos que afectaría la habilidad elegida (cursor o mouse): todos
+  /// si es a TODOS, el objetivo si es a 1; vacío si no es una habilidad
+  /// contra enemigos. La escena los marca.
+  Set<String> get highlightedTargets {
+    final cur = widget.battle.current;
+    if (!widget.canAct || cur == null || !cur.isPlayer) return const {};
+    if (_category != BattleCategory.skills) return const {};
+    final v = _visible(cur);
+    if (_selected < 0 || _selected >= v.length) return const {};
+    final id = v[_selected].id;
+    if (!id.startsWith('skill-')) return const {};
+    final sk = kSkills[id.substring(6)];
+    if (sk == null) return const {};
+    return switch (skillReach(sk)) {
+      SkillReach.allFoes => {for (final e in _foes) e.id},
+      SkillReach.oneFoe => {if (target case final t?) t},
+      _ => const {},
+    };
+  }
+
   late final BattleSceneController scene =
       BattleSceneController(random: widget.random);
   late final Ticker _ticker;
@@ -560,19 +580,29 @@ class BattleViewState extends State<BattleView>
   /// Una fila de HABILIDADES: costo en MP y Pulso, Instante, y el motivo
   /// si falta algo ([missing]).
   BattleAction _skillAction(
-      SkillDef sk, Combatant cur, String? tg, List<String> missing) {
+      SkillDef sk, Combatant cur, String? tg, List<String> missing,
+      {String? separatorBefore}) {
     final ok = missing.isEmpty;
     // Instante: ya encadenaste una en este turno, esta lo termina.
     final instant = sk.instant && !cur.chained;
     return BattleAction(
       id: 'skill-${sk.id}',
       name: '${sk.name}${sk.delay > 0 ? ' ⏳' : ''}',
-      value: '${instant ? '${hexSpan('#9fe8ff', 'Instante')} ' : ''}'
+      value: '${instant ? '${instantTagMarkup()} ' : ''}'
+              '${skillReachMarkup(sk)}'
               '${_skillInfo(sk, cur, crit: false)}'
           .trim(),
       cost: skillCostMarkup(sk),
-      description: describeSkillMarkup(sk, cur),
-      reason: SkillRequirements.needsText(missing),
+      description: '${skillSummaryMarkup(sk, cur)}<br>'
+          '${describeSkillMarkup(sk, cur)}',
+      // Una línea roja por condición que falta (arriba del detalle).
+      reason: ok
+          ? null
+          : SkillRequirements.missingLines(
+                  sk, cur, _foes.where((e) => e.id == tg).firstOrNull,
+                  foes: _foes)
+              .join('\n'),
+      separatorBefore: separatorBefore,
       onSelect: ok ? () => _send(SkillCommand(sk.id, targetId: tg)) : null,
     );
   }
@@ -612,11 +642,23 @@ class BattleViewState extends State<BattleView>
     // el botón sale desactivado con "Necesita: …".
     final foes = _foes;
     final tgC = foes.where((e) => e.id == tg).firstOrNull;
-    final skills = [
+    // Las Instante van primero, con un separador fino antes del resto
+    // (combat.md § "Pulso e Instante").
+    final defs = [
       for (final id in cur.skillIds)
-        if (kSkills[id] case final sk?)
-          _skillAction(sk, cur, tg,
-              SkillRequirements.missing(sk, cur, tgC, foes: foes)),
+        if (kSkills[id] case final sk?) sk,
+    ];
+    final ordered = [
+      ...defs.where((s) => s.instant),
+      ...defs.where((s) => !s.instant),
+    ];
+    final hasInstant = ordered.isNotEmpty && ordered.first.instant;
+    final skills = [
+      for (final (i, sk) in ordered.indexed)
+        _skillAction(sk, cur, tg,
+            SkillRequirements.missing(sk, cur, tgC, foes: foes),
+            separatorBefore:
+                hasInstant && i == 0 ? kInstantSeparator : null),
     ];
     if (skills.isNotEmpty) {
       out.add(BattleCategoryEntry(BattleCategory.skills, skills,
@@ -1004,6 +1046,7 @@ class BattleViewState extends State<BattleView>
         sprites: widget.sprites,
         localId: widget.localId,
         targetId: widget.canAct ? target : null,
+        highlightIds: highlightedTargets,
         turnTimeLeft: widget.turnTimeLeft,
         turnLimit: widget.turnLimit,
       );
@@ -1152,7 +1195,10 @@ class BattleViewState extends State<BattleView>
           '${statusNameMarkup(StatusKind.poison)})?</b>',
       BattleItem.ether => '<b>¿A quién le das la Poción de maná (+50% '
           'maná)?</b>',
-      _ => null,
+      // Después de una Instante el turno sigue (combat.md).
+      _ => cur.chained
+          ? hexSpan(kInstantHex, 'Encadenaste: te queda una acción')
+          : null,
     };
     final targetLine = tg == null
         ? ''

@@ -493,6 +493,12 @@ teniendo **un** turno según su velocidad).
   atacar. El simulador con `combos` además prepara con una habilidad
   normal si no tiene Instante.
 
+- Menú (v0.10.x): Instante arriba con marca y separador, costo de Pulso
+  en el dorado de la tarjeta (`ProtoColors.gold`), objetivo por fila y
+  motivos en rojo de las desactivadas (combat.md § "Pulso, precondiciones
+  e Instante"). El tutorial explica el Pulso en dos líneas, sin la lista
+  de habilidades (combat_tutorial.md § 5).
+
 ### 5.2.1 Tabla de kits (paso 7)
 
 Costos nuevos: todo lo que no figura acá cuesta 0 de Pulso, no es

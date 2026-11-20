@@ -523,11 +523,18 @@ void main() {
     final uses = rules.pulseSkills().map((s) => s.name).toList();
     expect(uses, containsAll(['Quebrar', 'Ignición Convergente',
         'Ponzoña Convergente', 'Rompearmaduras']));
-    final intro = rules.stageIntro(3).join(' ');
+    // Pedido del dueño: Pulso corto, solo qué es y cómo se gana; sin la
+    // lista de habilidades y en ≤ 2 líneas.
+    final introLines = rules.stageIntro(3);
+    final intro = introLines.join(' ');
     final glos = rules.glossary().firstWhere((g) => g.title == 'Pulso').text;
+    expect(introLines.length, lessThanOrEqualTo(2));
+    expect(intro, contains('las habilidades fuertes lo piden'));
+    expect(intro, contains('+1 al empezar tu turno'));
+    expect(glos, contains('de 0 a ${BattleEngine.pulseMax}'));
     for (final n in uses) {
-      expect(intro, contains(n));
-      expect(glos, contains(n));
+      expect(intro, isNot(contains(n)));
+      expect(glos, isNot(contains(n)));
     }
   });
 }

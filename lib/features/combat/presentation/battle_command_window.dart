@@ -43,6 +43,7 @@ class BattleAction {
     this.description = '',
     this.dual = false,
     this.reason,
+    this.separatorBefore,
   });
 
   final String id;
@@ -67,6 +68,10 @@ class BattleAction {
 
   /// Por qué está deshabilitada (se ve en la descripción).
   final String? reason;
+
+  /// Línea fina arriba de la fila (p. ej. el separador de las Instante).
+  /// No es una acción: los atajos 1-9 no cambian.
+  final String? separatorBefore;
 }
 
 /// Una categoría con sus acciones (vacía = no se muestra).
@@ -262,7 +267,19 @@ class _Actions extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 4),
               child: ProtoText(header!, key: const ValueKey('battle-header')),
             ),
-          for (final (i, a) in visible.indexed)
+          for (final (i, a) in visible.indexed) ...[
+            if (a.separatorBefore case final s?)
+              Container(
+                key: ValueKey('battle-sep-${a.id}'),
+                margin: const EdgeInsets.only(bottom: 3),
+                decoration: const BoxDecoration(
+                  border: Border(
+                      bottom: BorderSide(color: ProtoColors.panelBorder)),
+                ),
+                child: Text(retroText(s),
+                    style: RetroType.style(RetroType.label,
+                        color: ProtoColors.dim)),
+              ),
             _Row(
               // Clave estable por acción: nunca se reutiliza la fila de
               // otra técnica al cambiar de turno, de página o de categoría.
@@ -293,6 +310,7 @@ class _Actions extends StatelessWidget {
                 ],
               ),
             ),
+          ],
         ],
       ),
     );
@@ -355,11 +373,15 @@ class _Description extends StatelessWidget {
                       ),
                     ],
                   ),
+                  // Lo que falta, arriba y en rojo: una línea por
+                  // condición.
+                  if (a?.reason case final r?)
+                    for (final (i, l) in r.split('\n').indexed)
+                      ProtoText(hexSpanSafe('#ff6b81', l),
+                          key: ValueKey('battle-reason-$i')),
                   if (a != null)
                     ProtoText(a.description,
                         key: ValueKey('battle-desc-${a.id}')),
-                  if (a?.reason case final r?)
-                    ProtoText(hexSpanSafe('#ff6b81', r)),
                   if (target.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     ProtoText(target, key: const ValueKey('battle-target')),
