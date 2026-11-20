@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_engranajePrestado
+name: "Engranaje Prestado"
+source: {kind: boss, ref: "golemReloj"}
+weapons: []
+classes: []
+element: hielo
+cost: 100
+pulse: 0
+skill:
+  kind: magical
+  power: 1.3
+  delay: 0.4
+  allTargets: true
+  status: {"kind":"freeze","stacks":2}
+fx: ult2_engranajePrestado

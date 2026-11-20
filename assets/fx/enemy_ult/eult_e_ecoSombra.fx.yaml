@@ -1,0 +1,62 @@
+schema: 1
+id: eult_e_ecoSombra
+category: enemy_ult
+name: Paso Doble
+tags: [élite, un_objetivo, retraso, eco]
+duration: 1900
+phases: { build: 700, release: 800, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 700, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1500, v: 0.75 }
+      - { t: 1900, v: 0 }
+  - type: tint
+    color: '#6c5ce7'
+    keys:
+      - { t: 700, v: 0 }
+      - { t: 950, v: 0.25 }
+      - { t: 1400, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 700, color: element }
+  - type: echo
+    who: caster
+    count: 2
+    lag: 100
+    alpha: 0.45
+    color: echo
+    fade: 200
+    spacing: [0, 8]
+    keys:
+      - { t: 600, at: caster }
+      - { t: 820, at: target, dx: -14, ease: out }
+      - { t: 960, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 700, shape: slash_arc, anchor: target, angle: -45, color: echo, ms: 180 }
+      - { t: 900, shape: slash_arc, anchor: target, angle: 45, color: '#6c5ce7', ms: 180 }
+      - { t: 900, shape: clock, anchor: target, color: echo, ms: 360, scale: 0.8 }
+  - type: particles
+    fire:
+      - { t: 900, preset: burst, anchor: target, count: 2, element: auto }
+  - type: flash
+    fire:
+      - { t: 895, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 900, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 700, amp: 3 }
+      - { t: 900, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 700, pre: true }
+      - { t: 900 }

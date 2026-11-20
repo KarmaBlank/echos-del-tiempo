@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_coronaRota
+name: "Hoja de la Corona Rota"
+source: {kind: unique, ref: "fauceEras"}
+weapons: ["espada", "dagas"]
+classes: []
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: physical
+  power: 3.2
+  lifeSteal: 0.25
+  execute: 0.25
+fx: ult2_coronaRota

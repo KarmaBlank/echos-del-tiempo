@@ -1,0 +1,11 @@
+schema: 1
+id: eult_nido
+name: "Nido Venenoso"
+owner: matriarca
+elite: false
+extra: web
+ult:
+  power: 1.1
+  allTargets: true
+  status: {"kind":"poison","stacks":3}
+fx: eult_nido

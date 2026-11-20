@@ -1,0 +1,11 @@
+schema: 1
+id: eult_e_golemMagma
+name: "Corazón Fundido"
+owner: golemMagma
+elite: true
+extra: none
+ult:
+  power: 1.6
+  allTargets: true
+  status: {"kind":"burn","stacks":1}
+fx: eult_e_golemMagma

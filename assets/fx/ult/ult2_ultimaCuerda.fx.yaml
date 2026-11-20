@@ -1,0 +1,63 @@
+schema: 1
+id: ult2_ultimaCuerda
+category: ult
+name: Última Cuerda
+tags: [arco, ballesta, a_todos, trampa, eco]
+duration: 2300
+phases: { build: 800, release: 1100, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1900, v: 0.75 }
+      - { t: 2300, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: element }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 70
+    alpha: 0.45
+    color: echo
+    fade: 200
+    spacing: [-10, -4]
+    keys:
+      - { t: 200, at: caster }
+      - { t: 1000, at: caster, dy: -4 }
+  - type: shape
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1250, shape: rune_circle, anchor: target, color: '#7bed9f', ms: 600, scale: 0.8 }
+  - type: trail
+    fire:
+      - { t: 800, from: caster, to: sky_caster, ms: 160, head: arrow, color: light, echoes: 3, lag: 30 }
+  - type: trail
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1100, from: sky, to: target, ms: 150, head: arrow, color: element, echoes: 3, lag: 30, ease: in }
+  - type: particles
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1250, preset: sparks, anchor: target, count: 0.8 }
+  - type: flash
+    fire:
+      - { t: 1245, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1250, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1250, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1250, stagger: 90 }

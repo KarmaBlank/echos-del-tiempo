@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_taladoEras
+name: "Talado de Eras"
+source: {kind: weapon_mod, ref: ""}
+weapons: ["hacha"]
+classes: []
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: physical
+  power: 1.7
+  delay: 0.2
+  allTargets: true
+  breakBonus: 0.6
+fx: ult2_taladoEras

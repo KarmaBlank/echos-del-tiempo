@@ -1,0 +1,62 @@
+schema: 1
+id: ult2_yunqueTiempo
+category: ult
+name: Yunque del Tiempo
+tags: [martillo, escudo, un_objetivo, quiebre, eco]
+duration: 2500
+phases: { build: 850, release: 1250, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 850, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 2100, v: 0.75 }
+      - { t: 2500, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 850, color: element }
+  - type: echo
+    who: caster
+    count: 2
+    lag: 180
+    alpha: 0.4
+    color: echo
+    fade: 200
+    keys:
+      - { t: 650, at: caster }
+      - { t: 900, at: sky_center, ease: out }
+      - { t: 1100, at: target, dy: -6, ease: in }
+  - type: shape
+    fire:
+      - { t: 1450, shape: quake, anchor: target, color: '#c8a070', ms: 600, scale: 1.6 }
+      - { t: 1450, shape: shockwave, anchor: target, color: gold, ms: 400, scale: 2 }
+  - type: trail
+    fire:
+      - { t: 850, from: sky, to: target, ms: 200, head: hammer, color: echo, echoes: 2, lag: 30 }
+      - { t: 1050, from: sky, to: target, ms: 200, head: hammer, color: echo, echoes: 2, lag: 30 }
+      - { t: 1250, from: sky, to: target, ms: 200, head: hammer, color: gold, echoes: 4, lag: 30, scale: 1.5 }
+  - type: particles
+    fire:
+      - { t: 1450, preset: debris, anchor: target, count: 1.2 }
+      - { t: 1450, preset: burst, anchor: target, count: 4, element: auto }
+  - type: flash
+    fire:
+      - { t: 1445, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1450, ms: 150 }
+  - type: shake
+    fire:
+      - { t: 1050, amp: 3 }
+      - { t: 1250, amp: 3 }
+      - { t: 1450, amp: 14 }
+  - type: impact
+    fire:
+      - { t: 1050, pre: true }
+      - { t: 1250, pre: true }
+      - { t: 1450 }

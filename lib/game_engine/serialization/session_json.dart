@@ -580,6 +580,10 @@ class SessionJson {
         if (c.fissured) 'fis': true,
         if (c.ultId != null) 'eult': c.ultId,
         if (c.ultPending) 'ultP': true,
+        // ULT v2 (opcionales; ultimates_v2.md § 5.2).
+        if (c.ultWeaken != 0) 'ultW': c.ultWeaken,
+        if (c.lastSkillId != null) 'lsk': c.lastSkillId,
+        if (c.doomTurns != 0) 'doom': [c.doom, c.doomTurns, c.doomBy],
         // Mecánicas de jefe v0.2 (opcionales).
         if (c.webbed) 'web': true,
         if (c.stance != 0) 'stc': c.stance,
@@ -711,6 +715,11 @@ class SessionJson {
       fissured: j.flag('fis'),
       ultId: j.strOrNull('eult'),
       ultPending: j.flag('ultP'),
+      ultWeaken: j.dblOrNull('ultW') ?? 0,
+      lastSkillId: j.strOrNull('lsk'),
+      doom: _doom(j['doom'], 0) as int,
+      doomTurns: _doom(j['doom'], 1) as int,
+      doomBy: _doom(j['doom'], 2) as String?,
       webbed: j.flag('web'),
       stance: j.intOrNull('stc') ?? 0,
       stanceTurns: j.intOrNull('stcN') ?? 0,
@@ -752,6 +761,14 @@ class SessionJson {
     );
   }
 
+  /// Campo [i] de la marca `doom` (`[daño, turnos, quién]`).
+  static Object? _doom(Object? raw, int i) {
+    if (raw is! List || raw.length < 3) return i == 2 ? null : 0;
+    final v = raw[i];
+    if (i == 2) return v is String ? v : null;
+    return v is num ? v.toInt() : 0;
+  }
+
   Json buildToJson(PlayerBuild b) => {
         'cls': b.classId,
         'lvl': b.level,
@@ -765,6 +782,9 @@ class SessionJson {
         'bdef': b.bonusDefense,
         if (b.item != null) 'item': b.item!.toJson(),
         if (!b.ascension.isEmpty) 'asc': b.ascension.toJson(),
+        // ULT activa (ultimates_v2.md § 5.2): opcional.
+        if (b.ultSel != null) 'us': b.ultSel,
+        if (b.ultLevel > 1) 'ulv': b.ultLevel,
       };
 
   PlayerBuild buildFromJson(Json j) {
@@ -797,6 +817,8 @@ class SessionJson {
               (throw FormatException('JSON inválido: arma', j['item'])),
       bonusDefense: j.integer('bdef'),
       ascension: AscensionProgress.fromJson(j['asc']),
+      ultSel: j.strOrNull('us'),
+      ultLevel: j.intOrNull('ulv') ?? 1,
     );
   }
 }

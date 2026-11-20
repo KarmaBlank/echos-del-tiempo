@@ -1,0 +1,10 @@
+schema: 1
+id: eult_e_lobo
+name: "Manada Fantasma"
+owner: lobo
+elite: true
+extra: none
+ult:
+  power: 0.7
+  hits: 3
+fx: eult_e_lobo

@@ -1,0 +1,11 @@
+schema: 1
+id: eult_e_slime
+name: "Masa Pegajosa"
+owner: slime
+elite: true
+extra: none
+ult:
+  power: 1.4
+  allTargets: true
+  debuffs: [{"stat":"speed","value":-0.2,"turns":2}]
+fx: eult_e_slime

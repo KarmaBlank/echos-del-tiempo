@@ -1,0 +1,55 @@
+schema: 1
+id: ult2_disparoAnterior
+category: ult
+name: Disparo Anterior
+tags: [rifle, un_objetivo, físico, cargado, eco]
+duration: 2100
+phases: { build: 850, release: 850, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 850, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1700, v: 0.75 }
+      - { t: 2100, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: reticle, anchor: caster, ms: 850, color: element }
+  - type: echo
+    who: caster
+    count: 2
+    lag: 400
+    alpha: 0.35
+    color: echo
+    fade: 200
+    keys:
+      - { t: 200, at: caster }
+      - { t: 1050, at: caster, dy: -4 }
+  - type: shape
+    fire:
+      - { t: 850, shape: reticle, anchor: target, color: echo, ms: 500, scale: 1.2 }
+      - { t: 1390, shape: beam, anchor: target, color: element, ms: 260 }
+  - type: trail
+    fire:
+      - { t: 1300, from: caster, to: target, ms: 90, head: bolt, color: white, echoes: 6, lag: 15 }
+  - type: particles
+    fire:
+      - { t: 1390, preset: burst, anchor: target, count: 4, element: auto }
+      - { t: 1390, preset: embers, anchor: target, count: 1 }
+  - type: flash
+    fire:
+      - { t: 1385, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1390, ms: 140 }
+  - type: shake
+    fire:
+      - { t: 1390, amp: 11 }
+  - type: impact
+    fire:
+      - { t: 1390 }

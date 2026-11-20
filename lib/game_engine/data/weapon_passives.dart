@@ -331,6 +331,30 @@ final List<WeaponPassiveDef> _pool = [
 // ----------------------------------------------------------------------
 
 final List<WeaponPassiveDef> _uniques = [
+  // ---- ULT v2 (ultimates_v2.md § 3.2): legendarios nuevos ----
+  _one(
+    id: 'latidoMagitec',
+    name: 'Latido Magitec',
+    unique: true,
+    values: [0.10, 0.125, 0.15, 0.175, 0.20],
+    describe: (v) => 'Al usar la ULT: +${_pct(v)} crítico por 2 turnos.',
+    mech: (id, n, v, d) => _m(id, n, ProcTrigger.onUltimate, [
+      ProcEffect(ProcEffectKind.buffSelf,
+          value: v, turns: 2, stat: BuffStat.crit)
+    ], d),
+  ),
+  _one(
+    id: 'resuenaYunque',
+    name: 'Resuena el Yunque',
+    unique: true,
+    values: [0.10, 0.15, 0.20, 0.25, 0.30],
+    describe: (v) =>
+        'Al quebrar a un enemigo: +${_pct(v)} defensa por 2 turnos.',
+    mech: (id, n, v, d) => _m(id, n, ProcTrigger.onBreak, [
+      ProcEffect(ProcEffectKind.buffSelf,
+          value: v, turns: 2, stat: BuffStat.guard)
+    ], d),
+  ),
   _one(
     id: 'albaImplacable',
     name: 'Alba Implacable',

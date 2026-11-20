@@ -1033,7 +1033,7 @@ class _PartyCard extends StatelessWidget {
       turn = turnIndex < 0 ? '' : 'T+$turnIndex';
       turnColor = DsColors.textSecondary;
     }
-    final ultColor = p.ult >= 100 ? ProtoColors.pink : ProtoColors.violet;
+    final ultColor = ultReady(p) ? ProtoColors.pink : ProtoColors.violet;
     final card = Opacity(
       opacity: p.alive ? 1 : 0.55,
       child: Container(
@@ -1105,7 +1105,7 @@ class _PartyCard extends StatelessWidget {
                             label: 'MP', valueChars: 9, stack: narrow)),
                     if (local || companion)
                       _BarRow(ultBar(p.ult),
-                          p.ult >= 100 ? '¡LISTA!' : '${p.ult.floor()}%',
+                          ultReady(p) ? '¡LISTA!' : '${p.ult.floor()}%',
                           label: 'ULT',
                           color: ultColor,
                           valueChars: 9,
@@ -1212,6 +1212,13 @@ class TargetBar extends StatelessWidget {
                 const DsTag('¡ULT!', color: DsColors.danger),
               ],
             ]),
+            // ULT v2 (ultimates_v2.md § 4.1): el nombre de la que avisa;
+            // la lanza en su próximo turno.
+            if (e.ultPending && kEnemyUlts[e.ultId] != null)
+              Text('Prepara ${kEnemyUlts[e.ultId]!.name}: la lanza en su turno',
+                  key: const ValueKey('target-ult-name'),
+                  maxLines: 2,
+                  style: DsText.detail(DsColors.danger)),
             _BarRow(
                 RetroBar(value: e.hp, max: e.maxHp, color: ProtoColors.crimson),
                 hpText,

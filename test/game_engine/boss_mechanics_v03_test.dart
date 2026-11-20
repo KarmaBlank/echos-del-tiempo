@@ -573,11 +573,13 @@ void main() {
       expect(st2.state.log, contains('marca'));
     });
 
-    test('Heraldo: estados en ciclo y ULT propia sin ser élite', () {
+    test('Heraldo: estados en ciclo; ULT solo como élite (ULT v2)', () {
       final e = _engine();
+      // ultimates_v2.md § 6, respuesta 5: sin ser élite no trae ULT.
+      expect(kEnemies['heraldoEras']!.ultId, isNull);
+      expect(kEnemies['heraldoEras']!.eliteUltId, 'eult_e_heraldoEras');
       final s = _start(e, ['heraldoEras'], ['guerrero']);
-      expect(s.enemies[0].ultId, kEliteUltId);
-      expect(s.enemies[0].ult, BattleEngine.enemyUltStart);
+      expect(s.enemies[0].ultId, isNull);
       var cur = s;
       final kinds = <StatusKind>[];
       for (var k = 0; k < 3; k++) {

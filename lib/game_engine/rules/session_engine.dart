@@ -45,6 +45,10 @@ import 'companion_ai.dart';
 import 'consumable_rules.dart';
 import 'world_rules.dart';
 import 'zone_rules.dart';
+import 'ult_rules.dart';
+import '../data/ults_v2_catalog.dart';
+import '../data/branch_ults_catalog.dart' show kWeaponUltSkills;
+import '../models/ult_def.dart';
 import '../fx/cinematic_durations.dart';
 
 part 'session_engine_tutorial.dart';
@@ -498,6 +502,7 @@ class SessionEngine {
     final p = op.s.players[playerId]!;
     final before = p.profile;
     if (!op.apply(p, action)) return null;
+    op.learnEarnedUlts(p);
     op.achievements(actor: p, action: action, before: before);
     return op.result;
   }
@@ -572,6 +577,56 @@ class _Op {
 
   void say(String text) => events.add(SystemMessageEvent(text));
 
+  // ---------------- ULT v2 (ultimates_v2.md § 2) ----------------
+
+  /// Anota las ULT ganadas por progreso (hitos del árbol, Maestría).
+  void learnEarnedUlts(SessionPlayer p) {
+    final next = UltRules.absorb(p.profile);
+    if (identical(next, p.profile)) return;
+    final added = next.ultKnown.difference(p.profile.ultKnown);
+    p.profile = next;
+    for (final id in added) {
+      say('${p.name} aprendió la ULT ${kWeaponUltSkills[id]?.name ?? id}.');
+    }
+  }
+
+  /// [p] aprende la ULT [id] (si no la tenía) y se avisa.
+  void learnUlt(SessionPlayer p, String id, String from) {
+    final next = UltRules.learn(p.profile, id);
+    if (identical(next, p.profile)) return;
+    p.profile = next;
+    say('${p.name} aprendió la ULT ${kWeaponUltSkills[id]?.name ?? id} ($from).');
+  }
+
+  /// Fragmento de ULT del jefe vencido (§ 2.3): uno por jugador, seguro
+  /// mientras no lo tenga (la primera victoria).
+  void _bossFragment(SessionBattle b) {
+    final type = b.state.enemies.firstOrNull?.enemyType;
+    if (type == null) return;
+    final base = kAbyssFragmentOf[type] ?? type;
+    final u = UltRules.bySource(UltSource.boss, base);
+    if (u == null) return;
+    for (final p in players) {
+      learnUlt(p, u.id, 'Fragmento de ULT');
+    }
+  }
+
+  /// Eco completado: nodos notables del Atlas tomados y Eco Raro o mejor
+  /// (§ 3.5).
+  void _ecoUlts(EcoItem eco) {
+    final nodes = s.atlas;
+    for (final u in kUltV2List) {
+      if (u.source != UltSource.eco) continue;
+      final ok = u.ref == 'eco:raro'
+          ? eco.rarity.index >= Rarity.raro.index
+          : nodes.contains(u.ref);
+      if (!ok) continue;
+      for (final p in players) {
+        learnUlt(p, u.id, 'Eco');
+      }
+    }
+  }
+
   static double _dist(double ax, double ay, double bx, double by) =>
       WorldRules.distance(ax, ay, bx, by);
 
@@ -603,6 +658,9 @@ class _Op {
   /// `stats(p)`: recalcula máximos. Con [gain], la vida y el maná actuales
   /// suben lo que subió el máximo; siempre se recortan al máximo nuevo.
   void refresh(SessionPlayer p, {bool gain = false}) {
+    // ULT v2: lo que ganó (también de las armas que tiene) entra al
+    // repertorio y no se pierde (ultimates_v2.md § 2.1).
+    learnEarnedUlts(p);
     final oh = p.maxHp, om = p.maxMp;
     final d = rules.derivedStats(p.profile);
     p.maxHp = d.maxHp;
@@ -886,6 +944,29 @@ class _Op {
           return false;
         }
         p.profile = p.profile.copyWith(lootFilter: t, clearLootFilter: t == null);
+        return true;
+
+      case SelectUltAction(:final ultId):
+        // Fuera de combate (pueblo o campamento, ultimates_v2.md § 2.1).
+        if (s.battle != null) return false;
+        final prof = UltRules.absorb(p.profile);
+        if (!UltRules.canSelect(prof, ultId, rules.equippedWeapon(prof),
+            rules.equippedItem(prof), catalog)) {
+          return false;
+        }
+        p.profile = prof.copyWith(ultSel: () => ultId);
+        refresh(p);
+        return true;
+
+      case UpgradeUltAction(:final ultId):
+        // Fuera de combate, como la forja.
+        if (s.battle != null) return false;
+        final next = UltRules.upgrade(UltRules.absorb(p.profile), ultId);
+        if (next == null) return false;
+        p.profile = next;
+        refresh(p);
+        say('${p.name} mejoró ${kWeaponUltSkills[ultId]?.name ?? ultId} a nivel '
+            '${UltRules.levelOf(next, ultId)}.');
         return true;
 
       case SetBuildWantsAction(:final wants):
@@ -3168,6 +3249,7 @@ class _Op {
         }
         say('${p.name} alcanzó Maestría $m: +${g.masteryGained} punto'
             '${g.masteryGained == 1 ? '' : 's'} de árbol.');
+        learnEarnedUlts(p);
       }
     }
   }
@@ -3256,6 +3338,7 @@ class _Op {
     } else if (b.boss) {
       _lootAll(LootSource.boss, lx, ly, level: lootLevel);
       _bossLegendary(b, lx, ly, lootLevel);
+      if (s.tutorial == null) _bossFragment(b);
     } else {
       m.kills++;
       final k = m.objective(ObjectiveKind.kills);
@@ -3395,6 +3478,7 @@ class _Op {
     events.add(EcoCompletedEvent([for (final p in players) p.id],
         tier: eco.tier, zone: eco.zone, boss: eco.boss));
     say('¡Eco completado! ${ecos.fullName(eco)}');
+    _ecoUlts(eco);
     for (final p in players) {
       final drops = ecos.completionDrops(_ecoRand, eco, atlas: _atlas);
       _deliver(p, [for (final d in drops) LootDrop.eco(d)], LootSource.mission,

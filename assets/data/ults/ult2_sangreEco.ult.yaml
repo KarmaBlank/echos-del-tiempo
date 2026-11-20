@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_sangreEco
+name: "Sangre de Eco"
+source: {kind: tree, ref: "guerrero:20"}
+weapons: []
+classes: ["guerrero"]
+element: fisico
+cost: 80
+pulse: 0
+skill:
+  kind: physical
+  power: 2.6
+  hpCost: 0.1
+  lifeSteal: 0.4
+fx: ult2_sangreEco

@@ -1,0 +1,12 @@
+schema: 1
+id: eult_coro
+name: "Coro de Ecos"
+owner: hechicera
+elite: false
+extra: echoChorus
+ult:
+  power: 1.0
+  allTargets: true
+  delayAll: 0.3
+  perAdd: 0.3
+fx: eult_coro

@@ -1,17 +1,21 @@
 import '../models/enemy_def.dart';
 import '../models/status.dart';
 
+import 'elite_ults_catalog.dart';
+
+export 'elite_ults_catalog.dart';
+
 /// `EN` del prototipo, 1:1. El sprite, color y escala de cada enemigo
 /// son arte y se resuelven por id en `assets/sprites/sprite_manifest.yaml`.
 /// `breakMax` y `ultId`: docs/specs/break_and_enemy_ults.md. Quiebre en puntos (combo_balance.md § 5): comunes 12, jefes 65-95 (calibrado).
 const Map<String, EnemyDef> kEnemies = {
-  'slime': EnemyDef(id: 'slime', name: 'Limo', hp: 30, attack: 7, speed: 7, xp: 6, credits: 5,
+  'slime': EnemyDef(id: 'slime', eliteUltId: 'eult_e_slime', name: 'Limo', hp: 30, attack: 7, speed: 7, xp: 6, credits: 5,
       inflicts: StatusApplication(StatusKind.poison, 1), breakMax: 12),
-  'bat': EnemyDef(id: 'bat', name: 'Murciélago', hp: 22, attack: 9, speed: 13, xp: 7, credits: 6,
+  'bat': EnemyDef(id: 'bat', eliteUltId: 'eult_e_bat', name: 'Murciélago', hp: 22, attack: 9, speed: 13, xp: 7, credits: 6,
       pierce: true, breakMax: 12),
-  'golem': EnemyDef(id: 'golem', name: 'Gólem', hp: 70, attack: 12, speed: 5, xp: 14, credits: 12,
+  'golem': EnemyDef(id: 'golem', eliteUltId: 'eult_e_golem', name: 'Gólem', hp: 70, attack: 12, speed: 5, xp: 14, credits: 12,
       breakMax: 12),
-  'ghost': EnemyDef(id: 'ghost', name: 'Espectro', hp: 55, attack: 15, speed: 11, xp: 16, credits: 14,
+  'ghost': EnemyDef(id: 'ghost', eliteUltId: 'eult_e_ghost', name: 'Espectro', hp: 55, attack: 15, speed: 11, xp: 16, credits: 14,
       pierce: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 12),
   'reyLimo': EnemyDef(id: 'reyLimo', name: 'Rey Limo', hp: 230, attack: 13, speed: 8, xp: 60, credits: 80,
       boss: true, inflicts: StatusApplication(StatusKind.poison, 2), breakMax: 65, ultId: 'eult_diluvio',
@@ -28,18 +32,18 @@ const Map<String, EnemyDef> kEnemies = {
   // `kEnemyBaseLevel` (comunes: mínimo de su zona; jefes: máximo). ----
 
   // Zona 2 · Bosque Hondo (comunes nivel 6, jefe nivel 10).
-  'arana': EnemyDef(id: 'arana', name: 'Araña', hp: 52, attack: 11, speed: 10, xp: 8, credits: 7,
+  'arana': EnemyDef(id: 'arana', eliteUltId: 'eult_e_arana', name: 'Araña', hp: 52, attack: 11, speed: 10, xp: 8, credits: 7,
       inflicts: StatusApplication(StatusKind.poison, 1), breakMax: 12, feminine: true),
-  'lobo': EnemyDef(id: 'lobo', name: 'Lobo', hp: 50, attack: 12, speed: 14, xp: 8, credits: 7,
+  'lobo': EnemyDef(id: 'lobo', eliteUltId: 'eult_e_lobo', name: 'Lobo', hp: 50, attack: 12, speed: 14, xp: 8, credits: 7,
       pierce: true, breakMax: 12),
   'matriarca': EnemyDef(id: 'matriarca', name: 'Matriarca Araña', hp: 480, attack: 21, speed: 9, xp: 90, credits: 110,
       boss: true, inflicts: StatusApplication(StatusKind.poison, 1), breakMax: 68, ultId: 'eult_nido',
       title: 'Reina del Bosque Hondo', mechanicId: 'telarana', legendaryId: 'susurroVibora', feminine: true),
 
   // Zona 4 · Cavernas Heladas (comunes nivel 16, jefe nivel 20).
-  'murcielagoHielo': EnemyDef(id: 'murcielagoHielo', name: 'Murciélago de Hielo', hp: 80, attack: 22, speed: 14,
+  'murcielagoHielo': EnemyDef(id: 'murcielagoHielo', eliteUltId: 'eult_e_murcielagoHielo', name: 'Murciélago de Hielo', hp: 80, attack: 22, speed: 14,
       xp: 10, credits: 9, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 12),
-  'elementalEscarcha': EnemyDef(id: 'elementalEscarcha', name: 'Elemental de Escarcha', hp: 170, attack: 23, speed: 5,
+  'elementalEscarcha': EnemyDef(id: 'elementalEscarcha', eliteUltId: 'eult_e_elementalEscarcha', name: 'Elemental de Escarcha', hp: 170, attack: 23, speed: 5,
       xp: 16, credits: 15, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 12, armor: 0.15),
   // v0.7: su mordida moja (Agua) y su Aliento Glacial (Hielo) congela al
   // instante a los mojados (Congelación súbita; bestiary.md § 4).
@@ -52,9 +56,9 @@ const Map<String, EnemyDef> kEnemies = {
       passive: true),
 
   // Zona 5 · Fortaleza Caída (comunes nivel 21, jefe nivel 25).
-  'esqueleto': EnemyDef(id: 'esqueleto', name: 'Esqueleto', hp: 125, attack: 27, speed: 10, xp: 12, credits: 11,
+  'esqueleto': EnemyDef(id: 'esqueleto', eliteUltId: 'eult_e_esqueleto', name: 'Esqueleto', hp: 125, attack: 27, speed: 10, xp: 12, credits: 11,
       pierce: true, breakMax: 12),
-  'caballeroCaido': EnemyDef(id: 'caballeroCaido', name: 'Caballero Caído', hp: 200, attack: 28, speed: 7, xp: 18, credits: 16,
+  'caballeroCaido': EnemyDef(id: 'caballeroCaido', eliteUltId: 'eult_e_caballeroCaido', name: 'Caballero Caído', hp: 200, attack: 28, speed: 7, xp: 18, credits: 16,
       inflicts: StatusApplication(StatusKind.stun, 1, chance: 0.25), breakMax: 12, armor: 0.2),
   'caballeroHueco': EnemyDef(id: 'caballeroHueco', name: 'Caballero Hueco', hp: 1250, attack: 38, speed: 9, xp: 200, credits: 240,
       boss: true, breakMax: 77, ultId: 'eult_juicio',
@@ -63,9 +67,9 @@ const Map<String, EnemyDef> kEnemies = {
   // ---- v0.3 (docs/specs/bosses.md § "v0.3"): zonas 6–10. ----
 
   // Zona 6 · Laberinto Temporal (comunes nivel 26, jefa nivel 30).
-  'ecoSombra': EnemyDef(id: 'ecoSombra', name: 'Eco Sombrío', hp: 120, attack: 32, speed: 15, xp: 12, credits: 13,
+  'ecoSombra': EnemyDef(id: 'ecoSombra', eliteUltId: 'eult_e_ecoSombra', name: 'Eco Sombrío', hp: 120, attack: 32, speed: 15, xp: 12, credits: 13,
       breakMax: 12, evasion: 0.25),
-  'guardianReloj': EnemyDef(id: 'guardianReloj', name: 'Guardián del Reloj', hp: 190, attack: 30, speed: 6, xp: 16,
+  'guardianReloj': EnemyDef(id: 'guardianReloj', eliteUltId: 'eult_e_guardianReloj', name: 'Guardián del Reloj', hp: 190, attack: 30, speed: 6, xp: 16,
       credits: 18, breakMax: 12, armor: 0.15, delayHit: 0.3),
   'hechicera': EnemyDef(id: 'hechicera', name: 'Hechicera del Eco', hp: 1350, attack: 42, speed: 10, xp: 230, credits: 280,
       boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 80, ultId: 'eult_coro',
@@ -75,18 +79,18 @@ const Map<String, EnemyDef> kEnemies = {
       credits: 0, feminine: true),
 
   // Zona 7 · Grieta Ígnea (comunes nivel 31, jefa nivel 35).
-  'salamandra': EnemyDef(id: 'salamandra', name: 'Salamandra', hp: 150, attack: 37, speed: 12, xp: 12, credits: 14,
+  'salamandra': EnemyDef(id: 'salamandra', eliteUltId: 'eult_e_salamandra', name: 'Salamandra', hp: 150, attack: 37, speed: 12, xp: 12, credits: 14,
       inflicts: StatusApplication(StatusKind.burn, 2), breakMax: 12, feminine: true),
-  'golemMagma': EnemyDef(id: 'golemMagma', name: 'Gólem de Magma', hp: 260, attack: 36, speed: 5, xp: 17, credits: 20,
+  'golemMagma': EnemyDef(id: 'golemMagma', eliteUltId: 'eult_e_golemMagma', name: 'Gólem de Magma', hp: 260, attack: 36, speed: 5, xp: 17, credits: 20,
       inflicts: StatusApplication(StatusKind.burn, 1), breakMax: 12, armor: 0.25),
   'bestiaMagma': EnemyDef(id: 'bestiaMagma', name: 'Bestia de Magma', hp: 1700, attack: 48, speed: 7, xp: 260, credits: 320,
       boss: true, inflicts: StatusApplication(StatusKind.burn, 2), breakMax: 83, ultId: 'eult_erupcion',
       title: 'Furia viva de la Grieta Ígnea', mechanicId: 'lava', legendaryId: 'fauceVolcan', feminine: true),
 
   // Zona 8 · Cementerio de Eras (comunes nivel 36, jefe nivel 40).
-  'necrofago': EnemyDef(id: 'necrofago', name: 'Necrófago', hp: 190, attack: 41, speed: 11, xp: 13, credits: 15,
+  'necrofago': EnemyDef(id: 'necrofago', eliteUltId: 'eult_e_necrofago', name: 'Necrófago', hp: 190, attack: 41, speed: 11, xp: 13, credits: 15,
       pierce: true, inflicts: StatusApplication(StatusKind.poison, 2), breakMax: 12),
-  'almaErrante': EnemyDef(id: 'almaErrante', name: 'Alma Errante', hp: 165, attack: 40, speed: 13, xp: 13, credits: 15,
+  'almaErrante': EnemyDef(id: 'almaErrante', eliteUltId: 'eult_e_almaErrante', name: 'Alma Errante', hp: 165, attack: 40, speed: 13, xp: 13, credits: 15,
       inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 12, feminine: true),
   'espectroCoronado': EnemyDef(id: 'espectroCoronado', name: 'Espectro Coronado', hp: 1800, attack: 53, speed: 11,
       xp: 290, credits: 360, boss: true, inflicts: StatusApplication(StatusKind.freeze, 1), breakMax: 88,
@@ -98,9 +102,9 @@ const Map<String, EnemyDef> kEnemies = {
 
   // Zona 9 · Abismo del Tiempo (comunes nivel 41, jefe nivel 45).
   // v0.7: el Vigilante moja (Agua) y el Ojo electrocuta (Electro).
-  'vigilanteVacio': EnemyDef(id: 'vigilanteVacio', name: 'Vigilante del Vacío', hp: 210, attack: 43, speed: 10, xp: 15,
+  'vigilanteVacio': EnemyDef(id: 'vigilanteVacio', eliteUltId: 'eult_e_vigilanteVacio', name: 'Vigilante del Vacío', hp: 210, attack: 43, speed: 10, xp: 15,
       credits: 17, breakMax: 12, markHit: 0.2, inflicts: StatusApplication(StatusKind.wet, 1)),
-  'ojoAbismo': EnemyDef(id: 'ojoAbismo', name: 'Ojo del Abismo', hp: 170, attack: 44, speed: 12, xp: 14, credits: 16,
+  'ojoAbismo': EnemyDef(id: 'ojoAbismo', eliteUltId: 'eult_e_ojoAbismo', name: 'Ojo del Abismo', hp: 170, attack: 44, speed: 12, xp: 14, credits: 16,
       inflicts: StatusApplication(StatusKind.stun, 1, chance: 0.3), breakMax: 12),
   // v0.7: golpes de Electro que dejan Cargado; su ULT inunda (Agua).
   'centinela': EnemyDef(id: 'centinela', name: 'Centinela del Vacío', hp: 2100, attack: 59, speed: 9, xp: 320, credits: 400,
@@ -108,13 +112,13 @@ const Map<String, EnemyDef> kEnemies = {
       title: 'Guardián del borde del Abismo', mechanicId: 'marca', legendaryId: 'rompemundos'),
 
   // Zona 10 · Corazón del Tiempo (comunes nivel 46; jefe: el Devorador).
-  'heraldoEras': EnemyDef(id: 'heraldoEras', name: 'Heraldo de las Eras', hp: 330, attack: 50, speed: 9, xp: 20,
-      credits: 24, breakMax: 12, ultId: kEliteUltId, inflictCycle: [
+  'heraldoEras': EnemyDef(id: 'heraldoEras', eliteUltId: 'eult_e_heraldoEras', name: 'Heraldo de las Eras', hp: 330, attack: 50, speed: 9, xp: 20,
+      credits: 24, breakMax: 12, inflictCycle: [
         StatusApplication(StatusKind.burn, 1),
         StatusApplication(StatusKind.poison, 1),
         StatusApplication(StatusKind.freeze, 1),
       ]),
-  'fragmentoTiempo': EnemyDef(id: 'fragmentoTiempo', name: 'Fragmento del Tiempo', hp: 160, attack: 45, speed: 17,
+  'fragmentoTiempo': EnemyDef(id: 'fragmentoTiempo', eliteUltId: 'eult_e_fragmentoTiempo', name: 'Fragmento del Tiempo', hp: 160, attack: 45, speed: 17,
       xp: 14, credits: 16, breakMax: 12, delayHit: 0.25),
 
   // ---- Jefes del Abismo v0.8 (docs/specs/abyss_bosses.md § 2.2): stats
@@ -317,7 +321,7 @@ const Map<String, BossMechanicDef> kBossMechanics = {
 BossMechanicDef? bossMechanicOf(EnemyDef? d) =>
     d?.mechanicId == null ? null : kBossMechanics[d!.mechanicId];
 
-/// ULT de los élites (cualquier tipo).
+/// ULT de respaldo de los élites sin `eliteUltId` propia.
 const kEliteUltId = 'eult_furia';
 
 /// ULT enemigas por id (docs/specs/break_and_enemy_ults.md § 2).
@@ -407,7 +411,7 @@ const Map<String, EnemyUltDef> kEnemyUlts = {
   // ---- Jefes del Abismo v0.8 ----
   'eult_abismoReloj': EnemyUltDef(
     id: 'eult_abismoReloj',
-    name: 'Engranaje del Fin',
+    name: 'Reloj sin Agujas',
     power: 1.5,
     allTargets: true,
     status: StatusApplication(StatusKind.freeze, 2),
@@ -415,7 +419,7 @@ const Map<String, EnemyUltDef> kEnemyUlts = {
   ),
   'eult_abismoEco': EnemyUltDef(
     id: 'eult_abismoEco',
-    name: 'Coro de Ecos',
+    name: 'Coro del Abismo',
     power: 1.1,
     allTargets: true,
     delayAll: 0.3,
@@ -424,7 +428,7 @@ const Map<String, EnemyUltDef> kEnemyUlts = {
   ),
   'eult_abismoCorona': EnemyUltDef(
     id: 'eult_abismoCorona',
-    name: 'Lamento Eterno',
+    name: 'Corona Vacía',
     power: 1.3,
     allTargets: true,
     status: StatusApplication(StatusKind.freeze, 2),
@@ -432,7 +436,7 @@ const Map<String, EnemyUltDef> kEnemyUlts = {
   ),
   'eult_abismoEras': EnemyUltDef(
     id: 'eult_abismoEras',
-    name: 'Fin de las Eras',
+    name: 'Última Era',
     power: 1.5,
     allTargets: true,
     status: StatusApplication(StatusKind.burn, 2),
@@ -446,6 +450,7 @@ const Map<String, EnemyUltDef> kEnemyUlts = {
     status: StatusApplication(StatusKind.wet, 1),
     wipeBuffs: true,
   ),
+  ...kEliteUlts,
   kEliteUltId: EnemyUltDef(
     id: kEliteUltId,
     name: 'Furia Élite',

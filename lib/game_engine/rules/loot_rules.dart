@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../data/branch_ults_catalog.dart';
+import '../data/ults_v2_catalog.dart' show ultV2ModsForType;
 
 import '../data/affixes_catalog.dart';
 import '../data/game_catalog.dart';
@@ -285,8 +286,9 @@ class LootRules {
   }
 
   /// Mod especial "ULT: <nombre>" (docs/specs/branch_ults.md): Raro 8%,
-  /// Épico 20%; una ULT de camino al azar entre las compatibles con
-  /// [type]. `null` = no sale.
+  /// Épico 20%. Desde v0.17 (ultimates_v2.md § 6, respuesta 1) el pool
+  /// son las ULT v2 de mod del tipo [type]; las de camino ya no caen.
+  /// `null` = no sale.
   String? rollUltMod(RandomSource rng, Rarity r, String type) {
     final chance = switch (r) {
       Rarity.raro => kBranchUltChanceRare,
@@ -294,7 +296,7 @@ class LootRules {
       _ => 0.0,
     };
     if (chance <= 0 || rng() >= chance) return null;
-    final pool = branchUltsForType(type);
+    final pool = ultV2ModsForType(type);
     if (pool.isEmpty) return null;
     return pool[(rng() * pool.length).floor().clamp(0, pool.length - 1)];
   }

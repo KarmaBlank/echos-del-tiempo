@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_coroPrestado
+name: "Coro Prestado"
+source: {kind: boss, ref: "hechicera"}
+weapons: ["báculo", "tomo", "varita"]
+classes: []
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: magical
+  power: 1.0
+  allTargets: true
+  perAlly: 0.25
+fx: ult2_coroPrestado

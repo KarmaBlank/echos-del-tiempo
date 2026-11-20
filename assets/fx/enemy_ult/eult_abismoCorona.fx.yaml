@@ -1,0 +1,64 @@
+schema: 1
+id: eult_abismoCorona
+category: enemy_ult
+name: Corona Vacía
+tags: [abismo, a_todos, hielo, invoca, eco]
+duration: 2200
+phases: { build: 800, release: 1000, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1800, v: 0.75 }
+      - { t: 2200, v: 0 }
+  - type: tint
+    color: '#6c5ce7'
+    keys:
+      - { t: 800, v: 0 }
+      - { t: 1050, v: 0.25 }
+      - { t: 1700, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: element }
+  - type: echo
+    who: caster
+    count: 5
+    lag: 80
+    alpha: 0.3
+    color: echo
+    fade: 200
+    keys:
+      - { t: 150, at: caster }
+      - { t: 800, at: caster, dy: -18, ease: out }
+      - { t: 1100, at: caster, dy: -10 }
+  - type: shape
+    fire:
+      - { t: 800, shape: cross, anchor: sky_center, color: '#6c5ce7', ms: 600, scale: 1.6 }
+  - type: shape
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1100, shape: pillar, anchor: target, color: '#e0e6ff', ms: 420 }
+  - type: particles
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1300, preset: frost, anchor: target, count: 1.2 }
+  - type: flash
+    fire:
+      - { t: 1295, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1300, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1300, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1300, stagger: 90 }

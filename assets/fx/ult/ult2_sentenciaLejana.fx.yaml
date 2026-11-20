@@ -1,0 +1,64 @@
+schema: 1
+id: ult2_sentenciaLejana
+category: ult
+name: Sentencia Lejana
+tags: [paladín, un_objetivo, sagrado, quiebre, eco]
+duration: 2100
+phases: { build: 800, release: 900, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1700, v: 0.75 }
+      - { t: 2100, v: 0 }
+  - type: tint
+    color: '#fff3b0'
+    keys:
+      - { t: 800, v: 0 }
+      - { t: 1050, v: 0.25 }
+      - { t: 1600, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: element }
+  - type: echo
+    who: caster
+    count: 2
+    lag: 160
+    alpha: 0.45
+    color: gold
+    fade: 200
+    keys:
+      - { t: 150, at: caster }
+      - { t: 800, at: caster, dy: -18, ease: out }
+      - { t: 1100, at: caster, dy: -10 }
+  - type: shape
+    fire:
+      - { t: 1230, shape: pillar, anchor: target, color: '#fff3b0', ms: 400 }
+      - { t: 1230, shape: cross, anchor: target, color: gold, ms: 360 }
+  - type: trail
+    fire:
+      - { t: 800, from: sky, to: target, ms: 220, head: spear, color: echo, echoes: 3, lag: 30, ease: in }
+      - { t: 1050, from: sky, to: target, ms: 180, head: spear, color: gold, echoes: 5, lag: 30, scale: 1.4, ease: in }
+  - type: particles
+    fire:
+      - { t: 1230, preset: burst, anchor: target, count: 3, element: holy }
+  - type: flash
+    fire:
+      - { t: 1225, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1230, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1020, amp: 3 }
+      - { t: 1230, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1020, pre: true }
+      - { t: 1230 }

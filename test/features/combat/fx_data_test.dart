@@ -180,11 +180,12 @@ void main() {
       expect(a.build('nada'), isNull);
     });
 
-    test('las ULT enemigas siguen en el código y aparecen en el catálogo', () async {
+    test('las ULT enemigas pasan a datos (v0.17); la ascensión sigue en el código', () async {
       final cat = await load();
-      expect(cat.sourceOf('eult_diluvio'), FxSource.legacy);
+      expect(cat.sourceOf('eult_diluvio'), FxSource.data);
       expect(cat.timeline('eult_diluvio')!.category, 'enemy_ult');
       expect(cat.ids, contains('eult_diluvio'));
+      expect(cat.sourceOf('ult_berserker'), FxSource.legacy);
     });
   });
 
@@ -201,8 +202,10 @@ void main() {
       expect(s.focus, UltFocus.single);
       expect(s.style, UltStyle.finalSlash, reason: 'el sonido sigue igual');
       expect(duoScript('guerrero+maga').data, same(cat.timeline('duo')));
-      // Las ULT enemigas no cambian.
-      expect(ultScriptFor('eult_diluvio').data, isNull);
+      // ULT v2: las enemigas también vienen de los datos.
+      expect(ultScriptFor('eult_diluvio').data, same(cat.timeline('eult_diluvio')));
+      // La ascensión sigue en el código.
+      expect(ultScriptFor('ult_berserker').data, isNull);
       // Y el motor recibe las duraciones del release.
       expect(CinematicDurations.shared.ultMs('ult_baculo'), 2600);
       expect(CinematicDurations.shared.duoMs('x+y'), 1600);
@@ -260,7 +263,7 @@ void main() {
       await c.discardOverride();
       expect(cat.timeline('ult_dagas')!.track('hitstop')!.fires.single.n('ms'), 130);
       // Lo legacy es de solo lectura.
-      c.select('eult_diluvio');
+      c.select('ult_berserker');
       expect(c.readOnly, isTrue);
     });
   });

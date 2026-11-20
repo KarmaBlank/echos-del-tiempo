@@ -8,6 +8,7 @@ import 'package:echos_del_tiempo/game_engine/models/session_event.dart';
 import 'package:echos_del_tiempo/game_engine/models/upgrade_stat.dart';
 import 'package:echos_del_tiempo/game_engine/rules/craft_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/mulberry32.dart';
+import 'package:echos_del_tiempo/game_engine/rules/ult_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
@@ -285,7 +286,9 @@ void main() {
       final pv = _craft.transferAffix(s.players['p0']!.profile, 'a', 'b', 0);
       final step = e.apply(s, 'p0', const CraftAction(CraftOp.transferAffix, 'a',
           sourceUid: 'b', index: 0))!;
-      expect(step.state.players['p0']!.profile.toJson(), pv.profile!.toJson());
+      // ULT v2: el host además anota en el repertorio la ULT de las armas.
+      expect(step.state.players['p0']!.profile.toJson(),
+          UltRules.absorb(pv.profile!).toJson());
       expect(step.events.whereType<CraftedEvent>().single.uid, 'a');
       final r = e.apply(step.state, 'p0', const CraftAction(CraftOp.addAffix, 'a'))!;
       expect(r.state.players['p0']!.profile.itemByUid('a')!.affixes, hasLength(4));

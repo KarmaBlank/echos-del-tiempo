@@ -1,0 +1,60 @@
+schema: 1
+id: eult_e_ojoAbismo
+category: enemy_ult
+name: Mirada Eléctrica
+tags: [élite, un_objetivo, electro, eco]
+duration: 1900
+phases: { build: 750, release: 750, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 750, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1500, v: 0.75 }
+      - { t: 1900, v: 0 }
+  - type: tint
+    color: '#ffe66d'
+    keys:
+      - { t: 750, v: 0 }
+      - { t: 1000, v: 0.25 }
+      - { t: 1400, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 750, color: element }
+  - type: echo
+    who: caster
+    count: 1
+    lag: 0
+    alpha: 0.5
+    color: echo
+    fade: 200
+    keys:
+      - { t: 200, at: caster }
+      - { t: 950, at: caster, dy: -4 }
+  - type: shape
+    fire:
+      - { t: 550, shape: bolt, anchor: target, color: echo, ms: 120, alpha: 0.6 }
+      - { t: 900, shape: beam, anchor: target, color: element, ms: 260 }
+      - { t: 900, shape: bolt, anchor: target, color: white, ms: 140 }
+  - type: particles
+    fire:
+      - { t: 900, preset: sparks, anchor: target, count: 1.4 }
+  - type: flash
+    fire:
+      - { t: 895, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 900, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 550, amp: 3 }
+      - { t: 900, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 550, pre: true }
+      - { t: 900 }

@@ -1,0 +1,65 @@
+schema: 1
+id: ult2_ecoFilo
+category: ult
+name: Eco del Filo
+tags: [espada, un_objetivo, físico, quiebre, eco]
+duration: 2300
+phases: { build: 800, release: 1100, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1900, v: 0.75 }
+      - { t: 2300, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: element }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 110
+    alpha: 0.45
+    color: echo
+    fade: 200
+    spacing: [-6, 4]
+    keys:
+      - { t: 700, at: caster }
+      - { t: 920, at: target, dx: -14, ease: out }
+      - { t: 1060, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 900, shape: slash_arc, anchor: target, angle: -50, color: echo, ms: 180 }
+      - { t: 1020, shape: slash_arc, anchor: target, angle: 0, color: echo, ms: 180 }
+      - { t: 1140, shape: slash_arc, anchor: target, angle: 50, color: echo, ms: 180 }
+      - { t: 1260, shape: slash_cross, anchor: target, scale: 2.4, color: white, ms: 260 }
+      - { t: 1260, shape: shards, anchor: target, color: echo, ms: 420 }
+  - type: particles
+    fire:
+      - { t: 900, preset: sparks, anchor: target, count: 0.6 }
+      - { t: 1020, preset: sparks, anchor: target, count: 0.6 }
+      - { t: 1140, preset: sparks, anchor: target, count: 0.6 }
+      - { t: 1260, preset: burst, anchor: target, count: 4, element: auto }
+  - type: flash
+    fire:
+      - { t: 1255, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1260, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 900, amp: 3 }
+      - { t: 1020, amp: 3 }
+      - { t: 1140, amp: 3 }
+      - { t: 1260, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 900, pre: true }
+      - { t: 1020, pre: true }
+      - { t: 1140, pre: true }
+      - { t: 1260 }

@@ -1,0 +1,52 @@
+schema: 1
+id: ult2_custodioInstante
+category: ult
+name: Custodio del Instante
+tags: [escudos, aliado, escudo, eco]
+duration: 1900
+phases: { build: 700, release: 800, recover: 400 }
+targets: allies
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 700, focus: allies }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1500, v: 0.75 }
+      - { t: 1900, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 700, color: gold }
+  - type: echo
+    who: caster
+    count: 2
+    lag: 120
+    alpha: 0.45
+    color: '#9fd8ff'
+    fade: 200
+    keys:
+      - { t: 600, at: caster }
+      - { t: 900, at: allies_center, dx: 14, ease: out }
+      - { t: 1300, at: allies_center, dx: 14 }
+  - type: shape
+    fire:
+      - { t: 700, shape: shield_dome, anchor: allies_center, color: '#9fd8ff', ms: 800, scale: 1 }
+      - { t: 800, shape: ring, anchor: allies_center, color: gold, ms: 360, scale: 1.4 }
+  - type: particles
+    fire:
+      - { t: 900, preset: sparkles, anchor: allies_center, count: 1 }
+  - type: flash
+    fire:
+      - { t: 895, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 900, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 900, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 900 }

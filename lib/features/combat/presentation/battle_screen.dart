@@ -23,7 +23,7 @@ import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart'
-    show BattleEngine, ultimateOf;
+    show BattleEngine, ultReady, ultimateOf;
 import '../../../game_engine/rules/dual_rules.dart';
 import '../../../game_engine/rules/js_math.dart';
 import '../../../game_engine/rules/skill_requirements.dart';
@@ -690,13 +690,15 @@ class BattleViewState extends State<BattleView>
     }
 
     if (ult != null) {
-      final ready = cur.ult >= 100;
+      final ready = cur.ult >= ult.ultCost;
       out.add(BattleCategoryEntry(
           BattleCategory.ultimate,
           [
             BattleAction(
               id: 'ult',
-              name: '★ ${ult.name}',
+              name: ult.ultCost == 100
+                  ? '★ ${ult.name}'
+                  : '★ ${ult.name} (${ult.ultCost})',
               value: ult.dealsDamage
                   ? _est(
                       cur,
@@ -709,7 +711,9 @@ class BattleViewState extends State<BattleView>
               summary: skillSummaryMarkup(ult, cur),
               dual: true,
               description: describeSkillMarkup(ult, cur, ultimate: true),
-              reason: ready ? null : 'La barra ULT tiene que llegar al 100%.',
+              reason: ready
+                  ? null
+                  : 'La barra ULT tiene que llegar al ${ult.ultCost}%.',
               onSelect:
                   ready ? () => _send(UltimateCommand(targetId: tg)) : null,
             ),
@@ -1347,7 +1351,7 @@ class BattleViewState extends State<BattleView>
       target: targetLine,
       resources:
           '<span style="color:#74b9ff">MP ${cur.mp.floor()}/${cur.maxMp}</span>'
-          ' · <span style="color:${cur.ult >= 100 ? '#ee70ad' : '#a29bfe'}">'
+          ' · <span style="color:${ultReady(cur) ? '#ee70ad' : '#a29bfe'}">'
           'ULT ${cur.ult.floor()}%</span>',
       extra: bossMechanicRow(widget.battle),
       mp: cur.mp,

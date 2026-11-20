@@ -1,0 +1,11 @@
+schema: 1
+id: eult_diluvio
+name: "Diluvio Ácido"
+owner: reyLimo
+elite: false
+extra: none
+ult:
+  power: 1.2
+  allTargets: true
+  status: {"kind":"poison","stacks":2}
+fx: eult_diluvio

@@ -1,0 +1,60 @@
+schema: 1
+id: eult_juicio
+category: enemy_ult
+name: Juicio Hueco
+tags: [jefe, un_objetivo, aturdir, eco]
+duration: 2200
+phases: { build: 800, release: 1000, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1800, v: 0.75 }
+      - { t: 2200, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: element }
+  - type: echo
+    who: caster
+    count: 3
+    lag: 130
+    alpha: 0.45
+    color: '#b0b6c0'
+    fade: 200
+    keys:
+      - { t: 700, at: caster }
+      - { t: 920, at: target, dx: -14, ease: out }
+      - { t: 1060, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 800, shape: slash_arc, anchor: target, angle: -70, color: '#b0b6c0', ms: 180 }
+      - { t: 930, shape: slash_arc, anchor: target, angle: 0, color: '#b0b6c0', ms: 180 }
+      - { t: 1060, shape: slash_arc, anchor: target, angle: 70, color: '#b0b6c0', ms: 180 }
+      - { t: 1250, shape: slash_cross, anchor: target, scale: 2.4, color: white, ms: 260 }
+  - type: particles
+    fire:
+      - { t: 1250, preset: burst, anchor: target, count: 4, element: auto }
+  - type: flash
+    fire:
+      - { t: 1245, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1250, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 800, amp: 3 }
+      - { t: 930, amp: 3 }
+      - { t: 1060, amp: 3 }
+      - { t: 1250, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 800, pre: true }
+      - { t: 930, pre: true }
+      - { t: 1060, pre: true }
+      - { t: 1250 }

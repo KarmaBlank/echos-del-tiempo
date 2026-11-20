@@ -1,0 +1,12 @@
+schema: 1
+id: eult_finEras
+name: "Fin de las Eras"
+owner: devorador
+elite: false
+extra: none
+ult:
+  power: 1.4
+  allTargets: true
+  status: {"kind":"burn","stacks":2}
+  wipeBuffs: true
+fx: eult_finEras

@@ -1,0 +1,11 @@
+schema: 1
+id: eult_e_vigilanteVacio
+name: "Ojo que Inunda"
+owner: vigilanteVacio
+elite: true
+extra: none
+ult:
+  power: 1.4
+  allTargets: true
+  status: {"kind":"wet","stacks":2}
+fx: eult_e_vigilanteVacio

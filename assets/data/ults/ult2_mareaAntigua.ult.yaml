@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_mareaAntigua
+name: "Marea Antigua"
+source: {kind: unique, ref: "manecillaAbismo"}
+weapons: ["báculo", "varita"]
+classes: []
+element: agua
+cost: 100
+pulse: 0
+skill:
+  kind: magical
+  power: 1.3
+  allTargets: true
+  status: {"kind":"wet","stacks":2}
+  partyBuffs: [{"stat":"crit","value":0.15,"turns":2}]
+fx: ult2_mareaAntigua

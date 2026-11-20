@@ -1,0 +1,11 @@
+schema: 1
+id: eult_engranaje
+name: "Engranaje del Fin"
+owner: golemReloj
+elite: false
+extra: none
+ult:
+  power: 1.5
+  status: {"kind":"freeze","stacks":3}
+  delayAll: 0.5
+fx: eult_engranaje

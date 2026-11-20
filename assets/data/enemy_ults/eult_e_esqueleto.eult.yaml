@@ -1,0 +1,10 @@
+schema: 1
+id: eult_e_esqueleto
+name: "Carga de Huesos"
+owner: esqueleto
+elite: true
+extra: none
+ult:
+  power: 2.0
+  guaranteedCrit: true
+fx: eult_e_esqueleto

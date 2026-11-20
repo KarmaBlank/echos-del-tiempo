@@ -31,6 +31,13 @@ class PlayerBuild {
   /// sin ascender.
   final AscensionProgress ascension;
 
+  /// ULT activa elegida (docs/specs/ultimates_v2.md § 2.1), ya validada
+  /// por el host contra el repertorio. `null` = el orden de siempre.
+  final String? ultSel;
+
+  /// Nivel de mejora de la ULT que resuelve (1-5, § 2.4).
+  final int ultLevel;
+
   const PlayerBuild({
     required this.classId,
     required this.level,
@@ -41,6 +48,8 @@ class PlayerBuild {
     this.item,
     this.bonusDefense = 0,
     this.ascension = AscensionProgress.empty,
+    this.ultSel,
+    this.ultLevel = 1,
   });
 
   /// Id de la ascensión elegida (`null` = clase base).
@@ -59,6 +68,8 @@ class PlayerBuild {
         item: item,
         bonusDefense: value,
         ascension: ascension,
+        ultSel: ultSel,
+        ultLevel: ultLevel,
       );
 }
 

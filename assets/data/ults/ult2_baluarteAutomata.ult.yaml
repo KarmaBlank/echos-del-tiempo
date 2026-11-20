@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_baluarteAutomata
+name: "Baluarte Autómata"
+source: {kind: unique, ref: "coronaInvertida"}
+weapons: ["espada+escudo", "maza+escudo"]
+classes: []
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: support
+  protect: true
+  selfShield: 0.5
+  shieldTurns: 3
+  shieldBurst: 0.8
+fx: ult2_baluarteAutomata

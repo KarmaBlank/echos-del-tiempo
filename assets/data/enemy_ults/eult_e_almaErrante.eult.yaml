@@ -1,0 +1,11 @@
+schema: 1
+id: eult_e_almaErrante
+name: "Llanto Errante"
+owner: almaErrante
+elite: true
+extra: none
+ult:
+  power: 1.3
+  allTargets: true
+  status: {"kind":"freeze","stacks":1}
+fx: eult_e_almaErrante

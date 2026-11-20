@@ -1,0 +1,67 @@
+schema: 1
+id: ult2_finPrestado
+category: ult
+name: Fin Prestado
+tags: [a_todos, fuego, quita_buffs, eco]
+duration: 2600
+phases: { build: 950, release: 1250, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 950, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 2200, v: 0.75 }
+      - { t: 2600, v: 0 }
+  - type: tint
+    color: '#ff6b3c'
+    keys:
+      - { t: 950, v: 0 }
+      - { t: 1200, v: 0.25 }
+      - { t: 2100, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 950, color: element }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 110
+    alpha: 0.35
+    color: echo
+    fade: 200
+    spacing: [-12, -4]
+    keys:
+      - { t: 150, at: caster }
+      - { t: 950, at: caster, dy: -18, ease: out }
+      - { t: 1250, at: caster, dy: -10 }
+  - type: shape
+    fire:
+      - { t: 950, shape: sky_crack, anchor: targets_center, color: '#ffb86b', ms: 600 }
+      - { t: 1550, shape: quake, anchor: targets_center, color: '#ff8a3c', ms: 600, scale: 2.4 }
+  - type: trail
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1300, from: sky, to: target, ms: 250, head: meteor, color: element, echoes: 4, lag: 30, ease: in }
+  - type: particles
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1550, preset: debris, anchor: target, count: 1 }
+      - { t: 1550, preset: embers, anchor: target, count: 1.4 }
+  - type: flash
+    fire:
+      - { t: 1545, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1550, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1550, amp: 13 }
+  - type: impact
+    fire:
+      - { t: 1550, stagger: 90 }

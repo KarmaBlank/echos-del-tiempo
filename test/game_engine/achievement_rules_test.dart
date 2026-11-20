@@ -74,9 +74,10 @@ SessionStep _do(SessionEngine e, GameSession s, String id, SessionAction a) {
 
 void main() {
   group('catálogo', () {
-    test('33 hazañas, ids únicos, 7 categorías, totales del spec', () {
-      expect(kAchievements, hasLength(33));
-      expect(kAchievementsById, hasLength(33));
+    test('39 hazañas (33 + 6 de ULT v2), ids únicos, 7 categorías, '
+        'totales del spec', () {
+      expect(kAchievements, hasLength(39));
+      expect(kAchievementsById, hasLength(39));
       expect({for (final a in kAchievements) a.category},
           AchievementCategory.values.toSet());
       var total = const AchievementReward();
@@ -85,7 +86,12 @@ void main() {
         expect(a.how, isNotEmpty);
         expect(a.reward.isEmpty, isFalse, reason: a.id);
       }
-      expect(total.credits, 26300);
+      // 26300 + 10400 de las 6 de ULT v2 (ultimates_v2.md § 3.4).
+      expect(total.credits, 26300 + 10400);
+      expect([
+        for (final a in kAchievements)
+          if (a.reward.ult != null) a.reward.ult
+      ], hasLength(6));
       expect(total.esquirlas, 18);
       expect(total.cristales, 11);
       expect(total.prismas, 11);

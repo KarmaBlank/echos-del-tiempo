@@ -1,5 +1,6 @@
 import '../../game_engine/data/skill_variants_catalog.dart';
 import '../../game_engine/data/branch_ults_catalog.dart' show kBranchUltLooks;
+import '../../game_engine/data/elite_ults_catalog.dart' show kEliteUltLooks;
 import 'sfx_catalog.dart';
 
 // Recetas del diseño de sonido de combate (docs/specs/audio.md
@@ -2024,6 +2025,15 @@ final Map<String, UltVoices> kEnemyUltVoices = {
       release: _x(_kBaseEnemyUltVoices[base]!.release, p: p),
       impact: _x(_kBaseEnemyUltVoices[base]!.impact, p: p),
     ),
+  // ULT de élite v2 (ultimates_v2.md § 4.3): la voz del jefe al que se
+  // parecen, cada una en su propio tono.
+  for (final (i, MapEntry(key: id, value: base)) in kEliteUltLooks.entries.indexed)
+    if (_kBaseEnemyUltVoices[base] case final v?)
+      id: (
+        build: _x(v.build, p: 0.84 + 0.031 * i),
+        release: _x(v.release, p: 0.84 + 0.031 * i),
+        impact: _x(v.impact, p: 0.84 + 0.031 * i),
+      ),
 };
 
 final Map<String, UltVoices> _kBaseEnemyUltVoices = {

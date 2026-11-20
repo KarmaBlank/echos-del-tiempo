@@ -1,0 +1,57 @@
+schema: 1
+id: eult_e_golem
+category: enemy_ult
+name: Puño de Piedra
+tags: [élite, un_objetivo, aturdir, eco]
+duration: 2000
+phases: { build: 750, release: 850, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 750, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1600, v: 0.75 }
+      - { t: 2000, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 750, color: element }
+  - type: echo
+    who: caster
+    count: 1
+    lag: 0
+    alpha: 0.5
+    color: echo
+    fade: 200
+    keys:
+      - { t: 650, at: caster }
+      - { t: 870, at: target, dx: -14, ease: out }
+      - { t: 1010, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 1110, shape: quake, anchor: target, color: '#c8a070', ms: 500, scale: 1.2 }
+  - type: trail
+    fire:
+      - { t: 750, from: caster, to: target, ms: 180, head: hammer, color: echo, echoes: 2, lag: 30 }
+      - { t: 950, from: caster, to: target, ms: 160, head: hammer, color: '#c8a070', echoes: 3, lag: 30, scale: 1.4 }
+  - type: particles
+    fire:
+      - { t: 1110, preset: debris, anchor: target, count: 1 }
+  - type: flash
+    fire:
+      - { t: 1105, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1110, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 930, amp: 3 }
+      - { t: 1110, amp: 12 }
+  - type: impact
+    fire:
+      - { t: 930, pre: true }
+      - { t: 1110 }

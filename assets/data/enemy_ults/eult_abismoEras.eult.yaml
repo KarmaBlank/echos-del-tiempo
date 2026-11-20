@@ -1,0 +1,12 @@
+schema: 1
+id: eult_abismoEras
+name: "Última Era"
+owner: devoradorAbismo
+elite: false
+extra: none
+ult:
+  power: 1.5
+  allTargets: true
+  status: {"kind":"burn","stacks":2}
+  wipeBuffs: true
+fx: eult_abismoEras

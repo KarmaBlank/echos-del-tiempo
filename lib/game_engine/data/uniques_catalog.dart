@@ -138,6 +138,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'primaveraRota',
+    ultId: 'ult2_ultimaCuerda',
     name: 'Arco de la Primavera Rota',
     baseId: 'arco_eterno',
     fixed: [
@@ -148,7 +149,27 @@ const List<UniqueDef> _list = [
     passiveId: 'florecer',
     flavor: 'Florece cada vez que alguien cae.',
   ),
+  // ULT v2 (ultimates_v2.md § 3.2): legendario nuevo de rifle.
+  UniqueDef(
+    id: 'pulsoAutomata',
+    ultId: 'ult2_pulsoMagitec',
+    name: 'Corazón de Autómata',
+    baseId: 'rifle_cronal',
+    fixed: [UniqueMod('feroz', 30, 40), UniqueMod('letal', 20, 30)],
+    passiveId: 'latidoMagitec',
+    flavor: 'Late con la energía de un autómata que nunca se detuvo.',
+  ),
   // ---------------- Paladín ----------------
+  // ULT v2 (ultimates_v2.md § 3.2): legendario nuevo de martillo.
+  UniqueDef(
+    id: 'yunqueEras',
+    ultId: 'ult2_yunqueTiempo',
+    name: 'Yunque de las Eras',
+    baseId: 'martillo_escudo_forja',
+    fixed: [UniqueMod('feroz', 25, 35), UniqueMod('del_toro', 12, 18)],
+    passiveId: 'resuenaYunque',
+    flavor: 'Cada golpe se repite en otra era.',
+  ),
   UniqueDef(
     id: 'egidaPrimerRey',
     ultId: 'ult_murallaEterna',
@@ -195,6 +216,7 @@ const List<UniqueDef> _list = [
   // pool normal). Sin texto de ambientación (lore pendiente).
   UniqueDef(
     id: 'manecillaAbismo',
+    ultId: 'ult2_mareaAntigua',
     name: 'Manecilla del Abismo',
     baseId: 'baculo_origen',
     fixed: [UniqueMod('arcano', 30, 40), UniqueMod('del_eter', 15, 20)],
@@ -203,6 +225,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'espejoSinFondo',
+    ultId: 'ult2_relojPartido',
     name: 'Espejo sin Fondo',
     baseId: 'varita_vacio',
     fixed: [UniqueMod('arcano', 25, 35), UniqueMod('letal', 25, 35)],
@@ -211,6 +234,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'coronaInvertida',
+    ultId: 'ult2_baluarteAutomata',
     name: 'Corona Invertida',
     baseId: 'maza_escudo_eterna',
     fixed: [UniqueMod('de_la_fe', 20, 30), UniqueMod('de_la_vida', 60, 90)],
@@ -219,6 +243,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'fauceEras',
+    ultId: 'ult2_coronaRota',
     name: 'Fauce de las Eras',
     baseId: 'espada_cronos',
     fixed: [UniqueMod('feroz', 40, 50), UniqueMod('del_vampiro', 4, 6)],
@@ -235,6 +260,7 @@ const List<UniqueDef> _list = [
   ),
   UniqueDef(
     id: 'filoPrimordial',
+    ultId: 'ult2_dobleHorizonte',
     name: 'Filo Primordial',
     baseId: 'hacha_cataclismo',
     fixed: [UniqueMod('feroz', 35, 45), UniqueMod('del_toro', 12, 18)],

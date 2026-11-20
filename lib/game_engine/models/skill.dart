@@ -229,6 +229,32 @@ class SkillDef {
   /// Precondiciones (todas tienen que cumplirse).
   final List<SkillReq> requires;
 
+  // ---- ULT v2 (docs/specs/ultimates_v2.md § 2.2 y § 5.4) ----
+
+  /// Carga de ULT que cuesta lanzarla (60 / 80 / 100). Resta, no pone
+  /// la barra a 0. Solo cuenta en las ULT.
+  final int ultCost;
+
+  /// +Pulso a todo el grupo (Pulso Magitec).
+  final int pulseParty;
+
+  /// +daño (fracción) si el objetivo tiene la vida llena (Primer Golpe).
+  final double openerBonus;
+
+  /// Repite la última habilidad del lanzador con este factor de poder
+  /// (Eco Doble). Sin habilidad previa, pega con `power`.
+  final double echoLast;
+
+  /// Marca: tras 2 turnos del objetivo recibe ATQ/MAG × esto y queda
+  /// quebrado si está Fisurado (Lo Que Será). Reemplaza el golpe.
+  final double delayedHit;
+
+  /// +poder por cada aliado vivo además del lanzador (Coro Prestado).
+  final double perAlly;
+
+  /// Quita los buffs (efectos positivos) de los enemigos golpeados.
+  final bool stripBuffs;
+
   const SkillDef({
     required this.id,
     required this.name,
@@ -276,7 +302,78 @@ class SkillDef {
     this.pulse = 0,
     this.instant = false,
     this.requires = const [],
+    this.ultCost = 100,
+    this.pulseParty = 0,
+    this.openerBonus = 0,
+    this.echoLast = 0,
+    this.delayedHit = 0,
+    this.perAlly = 0,
+    this.stripBuffs = false,
   });
+
+  /// Copia con el poder escalado por [factor] (Eco Doble repite la última
+  /// habilidad al 80%): golpe, disparo cargado y trampa. Con [keepCosts]
+  /// (nivel de una ULT, ultimates_v2.md § 2.4) conserva costos, Pulso,
+  /// Instante y precondiciones y también escala escudos, golpe diferido
+  /// y poder por aliado.
+  SkillDef scaled(double factor, {bool keepCosts = false}) {
+    final s = keepCosts ? factor : 1.0;
+    return SkillDef(
+        id: id,
+        name: name,
+        kind: kind,
+        mp: mp,
+        power: power * factor,
+        allTargets: allTargets,
+        delay: delay,
+        status: status,
+        critBonus: critBonus,
+        cleanse: cleanse,
+        amount: amount,
+        hpCost: keepCosts ? hpCost : 0,
+        lifeSteal: lifeSteal,
+        extraStatuses: extraStatuses,
+        detonate: detonate,
+        catalyst: catalyst,
+        execute: execute,
+        trap: trap * factor,
+        partyBuffs: partyBuffs,
+        partyShield: partyShield * s,
+        partyShieldTurns: partyShieldTurns,
+        advanceAllies: advanceAllies,
+        selfBuff: selfBuff,
+        selfTurn: selfTurn,
+        protect: protect,
+        lowestAlly: lowestAlly,
+        revive: revive,
+        overheal: overheal,
+        drainHeal: drainHeal,
+        allyShield: allyShield * s,
+        selfShield: selfShield * s,
+        shieldTurns: shieldTurns,
+        shieldReflect: shieldReflect,
+        shieldBurst: shieldBurst,
+        shieldGrow: shieldGrow,
+        pierce: pierce,
+        bounces: bounces,
+        hits: hits,
+        charge: charge * factor,
+        debuffs: debuffs,
+        breakBonus: breakBonus,
+        ultDrain: ultDrain,
+        breaks: breaks,
+        pulse: keepCosts ? pulse : 0,
+        instant: keepCosts && instant,
+        requires: keepCosts ? requires : const [],
+        ultCost: ultCost,
+        pulseParty: pulseParty,
+        openerBonus: openerBonus,
+        echoLast: keepCosts ? echoLast : 0,
+        delayedHit: delayedHit * s,
+        perAlly: perAlly * s,
+        stripBuffs: stripBuffs,
+      );
+  }
 
   bool get dealsDamage =>
       kind == SkillKind.physical || kind == SkillKind.magical;

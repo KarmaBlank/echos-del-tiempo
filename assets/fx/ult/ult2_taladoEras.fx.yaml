@@ -1,0 +1,63 @@
+schema: 1
+id: ult2_taladoEras
+category: ult
+name: Talado de Eras
+tags: [hacha, a_todos, físico, quiebre, eco]
+duration: 2400
+phases: { build: 850, release: 1150, recover: 400 }
+targets: all
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 850, focus: targets }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 2000, v: 0.75 }
+      - { t: 2400, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 850, color: element }
+  - type: echo
+    who: caster
+    count: 2
+    lag: 160
+    alpha: 0.4
+    color: echo
+    fade: 200
+    keys:
+      - { t: 650, at: caster }
+      - { t: 900, at: sky_center, ease: out }
+      - { t: 1100, at: targets_center, dy: -6, ease: in }
+  - type: shape
+    fire:
+      - { t: 1100, shape: quake, anchor: targets_center, color: '#c8a070', ms: 700, scale: 2.2 }
+      - { t: 1100, shape: shockwave, anchor: targets_center, color: element, ms: 320, scale: 2.4 }
+      - { t: 1370, shape: ring, anchor: targets_center, color: echo, ms: 360, scale: 1.8 }
+  - type: trail
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 950, from: sky, to: target, ms: 180, head: hammer, color: element, echoes: 3, lag: 30 }
+  - type: particles
+    each_target: true
+    stagger: 90
+    fire:
+      - { t: 1100, preset: debris, anchor: target, count: 1.2 }
+      - { t: 1100, preset: dust, anchor: target, count: 1.5 }
+  - type: flash
+    fire:
+      - { t: 1365, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1370, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1100, amp: 3 }
+      - { t: 1370, amp: 12 }
+  - type: impact
+    fire:
+      - { t: 1100, pre: true }
+      - { t: 1370, stagger: 90 }

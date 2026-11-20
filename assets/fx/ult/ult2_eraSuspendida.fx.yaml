@@ -1,0 +1,59 @@
+schema: 1
+id: ult2_eraSuspendida
+category: ult
+name: Era Suspendida
+tags: [mágicas, un_objetivo, retraso, silencio, eco]
+duration: 2200
+phases: { build: 800, release: 1000, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1800, v: 0.75 }
+      - { t: 2200, v: 0 }
+  - type: tint
+    color: '#a29bfe'
+    keys:
+      - { t: 800, v: 0 }
+      - { t: 1050, v: 0.25 }
+      - { t: 1700, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: element }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 80
+    alpha: 0.35
+    color: echo
+    fade: 200
+    keys:
+      - { t: 200, at: caster, dx: -30 }
+      - { t: 800, at: target, dx: -20, ease: in }
+      - { t: 950, at: target }
+  - type: shape
+    fire:
+      - { t: 800, shape: shield_dome, anchor: target, color: echo, ms: 800, scale: 0.9 }
+      - { t: 800, shape: clock, anchor: target, color: white, ms: 800, scale: 0.9 }
+      - { t: 1300, shape: shards, anchor: target, color: echo, ms: 320 }
+  - type: particles
+    fire:
+      - { t: 1300, preset: shards, anchor: target, count: 1 }
+  - type: flash
+    fire:
+      - { t: 1295, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1300, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1300, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1300 }

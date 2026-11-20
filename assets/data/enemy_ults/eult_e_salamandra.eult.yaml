@@ -1,0 +1,11 @@
+schema: 1
+id: eult_e_salamandra
+name: "Escupitajo Ígneo"
+owner: salamandra
+elite: true
+extra: none
+ult:
+  power: 1.5
+  allTargets: true
+  status: {"kind":"burn","stacks":2}
+fx: eult_e_salamandra

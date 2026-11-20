@@ -1,0 +1,9 @@
+schema: 1
+id: eult_furia
+name: "Furia Élite"
+elite: true
+extra: none
+ult:
+  power: 2.0
+  guaranteedCrit: true
+fx: eult_furia

@@ -1,0 +1,14 @@
+schema: 1
+id: ult2_golpeMaestro
+name: "Golpe Maestro"
+source: {kind: eco, ref: "mastery:10"}
+weapons: []
+classes: []
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: physical
+  power: 3.0
+  critBonus: 1.0
+fx: ult2_golpeMaestro

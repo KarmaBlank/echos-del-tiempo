@@ -1,0 +1,69 @@
+schema: 1
+id: ult2_lluviaEcos
+category: ult
+name: Lluvia de Ecos
+tags: [tirador, un_objetivo, ráfaga, atraviesa, eco]
+duration: 2500
+phases: { build: 800, release: 1300, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 2100, v: 0.75 }
+      - { t: 2500, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: element }
+  - type: echo
+    who: caster
+    count: 5
+    lag: 70
+    alpha: 0.3
+    color: echo
+    fade: 200
+    spacing: [-8, -6]
+    keys:
+      - { t: 150, at: caster }
+      - { t: 800, at: caster, dy: -18, ease: out }
+      - { t: 1100, at: caster, dy: -10 }
+  - type: shape
+    fire:
+      - { t: 800, shape: rain, anchor: target, color: echo, ms: 900, scale: 1.4 }
+  - type: particles
+    fire:
+      - { t: 900, preset: sparks, anchor: target, count: 0.5 }
+      - { t: 1100, preset: sparks, anchor: target, count: 0.5 }
+      - { t: 1300, preset: sparks, anchor: target, count: 0.5 }
+      - { t: 1700, preset: burst, anchor: target, count: 3, element: auto }
+  - type: flash
+    fire:
+      - { t: 1695, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1700, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 900, amp: 3 }
+      - { t: 1000, amp: 3 }
+      - { t: 1100, amp: 3 }
+      - { t: 1200, amp: 3 }
+      - { t: 1300, amp: 3 }
+      - { t: 1400, amp: 3 }
+      - { t: 1500, amp: 3 }
+      - { t: 1700, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 900, pre: true }
+      - { t: 1000, pre: true }
+      - { t: 1100, pre: true }
+      - { t: 1200, pre: true }
+      - { t: 1300, pre: true }
+      - { t: 1400, pre: true }
+      - { t: 1500, pre: true }
+      - { t: 1700 }

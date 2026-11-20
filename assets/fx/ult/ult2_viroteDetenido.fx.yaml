@@ -1,0 +1,59 @@
+schema: 1
+id: ult2_viroteDetenido
+category: ult
+name: Virote Detenido
+tags: [ballesta, un_objetivo, físico, aturdir, eco]
+duration: 2300
+phases: { build: 800, release: 1100, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 800, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 1900, v: 0.75 }
+      - { t: 2300, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 800, color: element }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 100
+    alpha: 0.45
+    color: echo
+    fade: 200
+    spacing: [-6, 2]
+    keys:
+      - { t: 200, at: caster }
+      - { t: 1000, at: caster, dy: -4 }
+  - type: shape
+    fire:
+      - { t: 1060, shape: clock, anchor: target, color: echo, ms: 420, scale: 0.9 }
+      - { t: 1580, shape: cross, anchor: target, color: element, ms: 300 }
+  - type: trail
+    fire:
+      - { t: 800, from: caster, to: target, ms: 260, head: arrow, color: light, echoes: 2, lag: 30, scale: 1.2 }
+      - { t: 1480, from: caster, to: target, ms: 100, head: arrow, color: white, echoes: 6, lag: 18, scale: 1.5 }
+  - type: particles
+    fire:
+      - { t: 1580, preset: burst, anchor: target, count: 4, element: auto }
+      - { t: 1580, preset: shards, anchor: target, count: 1 }
+  - type: flash
+    fire:
+      - { t: 1575, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1580, ms: 110 }
+  - type: shake
+    fire:
+      - { t: 1060, amp: 3 }
+      - { t: 1580, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1060, pre: true }
+      - { t: 1580 }

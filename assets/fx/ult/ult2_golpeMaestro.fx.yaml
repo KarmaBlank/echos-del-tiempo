@@ -1,0 +1,67 @@
+schema: 1
+id: ult2_golpeMaestro
+category: ult
+name: Golpe Maestro
+tags: [un_objetivo, crítico, eco]
+duration: 2400
+phases: { build: 900, release: 1100, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 900, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 2000, v: 0.75 }
+      - { t: 2400, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 900, color: element }
+  - type: echo
+    who: caster
+    count: 4
+    lag: 90
+    alpha: 0.4
+    color: echo
+    fade: 200
+    spacing: [-14, 0]
+    keys:
+      - { t: 200, at: caster }
+      - { t: 1100, at: caster, dy: -4 }
+  - type: shape
+    fire:
+      - { t: 1200, shape: slash_arc, anchor: target, angle: -60, color: echo, ms: 180 }
+      - { t: 1270, shape: slash_arc, anchor: target, angle: -20, color: echo, ms: 180 }
+      - { t: 1340, shape: slash_arc, anchor: target, angle: 20, color: echo, ms: 180 }
+      - { t: 1410, shape: slash_arc, anchor: target, angle: 60, color: echo, ms: 180 }
+      - { t: 1520, shape: slash_cross, anchor: target, scale: 2.8, color: white, ms: 260 }
+      - { t: 1520, shape: ring, anchor: target, color: gold, ms: 320, scale: 2 }
+  - type: trail
+    fire:
+      - { t: 900, from: caster, to: target, ms: 200, head: dot, color: echo, echoes: 6, lag: 20 }
+  - type: particles
+    fire:
+      - { t: 1520, preset: burst, anchor: target, count: 5, element: auto }
+  - type: flash
+    fire:
+      - { t: 1515, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1520, ms: 150 }
+  - type: shake
+    fire:
+      - { t: 1200, amp: 3 }
+      - { t: 1270, amp: 3 }
+      - { t: 1340, amp: 3 }
+      - { t: 1410, amp: 3 }
+      - { t: 1520, amp: 12 }
+  - type: impact
+    fire:
+      - { t: 1200, pre: true }
+      - { t: 1270, pre: true }
+      - { t: 1340, pre: true }
+      - { t: 1410, pre: true }
+      - { t: 1520 }

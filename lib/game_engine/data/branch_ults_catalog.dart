@@ -5,6 +5,7 @@ import '../models/status.dart';
 import '../models/item.dart';
 import 'summoner_catalog.dart' show kSummonerUltimates, kWeaponUltOf;
 import 'uniques_catalog.dart';
+import 'ults_v2_catalog.dart';
 
 // ULT de camino (docs/specs/branch_ults.md): 3 por cada camino del árbol
 // v6 (menos el Invocador, que trae las suyas en summoner_catalog.dart),
@@ -296,10 +297,26 @@ final Map<String, String> kBranchUltPath = {
   for (final (p, s, _) in kBranchUltList) s.id: p,
 };
 
-/// ULT → la ULT existente a la que se parece (guion, FX y sonido).
+/// ULT → la ULT existente a la que se parece (guion, FX y sonido). Las
+/// ULT v2 (ultimates_v2.md) tienen animación propia en datos; acá solo
+/// prestan el estilo de sonido y partículas de su tipo de arma.
 final Map<String, String> kBranchUltLooks = {
   for (final (_, s, l) in kBranchUltList) s.id: l,
+  for (final u in kUltV2List) u.id: _v2Look(u.weapons, u.classes),
 };
+
+String _v2Look(List<String> weapons, List<String> classes) {
+  final w = weapons.isEmpty ? null : weapons.first;
+  if (w != null) {
+    return 'ult_${w.replaceAll('+', '_').replaceAll('á', 'a')}';
+  }
+  return switch (classes.isEmpty ? null : classes.first) {
+    'maga' => _baculo,
+    'tirador' => _arco,
+    'paladin' => _maza,
+    _ => _espada,
+  };
+}
 
 /// ULT → tipos de arma compatibles.
 final Map<String, List<String>> kBranchUltWeaponTypes = {
@@ -310,6 +327,7 @@ final Map<String, List<String>> kBranchUltWeaponTypes = {
 /// que aplica; Sagrado las curas; Físico el resto.
 final Map<String, GameElement> kBranchUltElement = {
   for (final (_, s, _) in kBranchUltList) s.id: _elementOf(s),
+  for (final u in kUltV2List) u.id: u.element,
 };
 
 GameElement _elementOf(SkillDef s) {
@@ -341,6 +359,7 @@ const kBranchUltChanceEpic = 0.20;
 final Map<String, SkillDef> kWeaponUltSkills = {
   ...kBranchUltSkills,
   ...kSummonerUltimates,
+  ...kUltV2Skills,
 };
 
 /// La ULT propia de un arma concreta, o `null` (usa la del tipo): el mod

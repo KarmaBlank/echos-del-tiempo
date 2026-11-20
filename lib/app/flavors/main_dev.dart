@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../core/balance/balance_asset_loader.dart';
+import '../../core/data/ult_data_loader.dart';
 import '../../core/di/service_locator.dart';
 import '../../core/persistence/exit_on_close.dart';
 import '../../core/settings/frame_limiter.dart';
@@ -32,7 +33,9 @@ Future<void> main() async {
   // Animaciones como datos, con los overrides locales del Editor (§ 4.2).
   await installFx(overrides: local);
   // Parche de balance (docs/specs/balance_admin.md § 3).
-  registerSharedDependencies(balance: await BalanceAssetLoader.load());
+  registerSharedDependencies(
+      balance: await BalanceAssetLoader.load(),
+      ults: await UltDataLoader.load());
   // Cerrar la ventana guarda antes (docs/specs/characters.md § 1.4).
   installExitOnClose();
   registerP2PNetcode(signaling: await resolveP2PSignaling());

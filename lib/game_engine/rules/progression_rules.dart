@@ -23,6 +23,7 @@ import 'loot_rules.dart';
 import 'passive_tree_rules.dart';
 import 'stats_calculator.dart';
 import 'trial_rules.dart';
+import 'ult_rules.dart';
 
 /// Resultado de [ProgressionRules.gainXp].
 typedef XpGain = ({
@@ -160,6 +161,7 @@ class ProgressionRules {
     final it = equippedItem(p);
     final w = equippedWeapon(p);
     final item = it != null && it.baseId == w.id ? it : null;
+    final sel = UltRules.validSel(p, w, item, catalog);
     return PlayerBuild(
       classId: p.classId,
       level: p.level,
@@ -169,6 +171,9 @@ class ProgressionRules {
       passiveProgress: p.passiveProgress,
       item: item,
       ascension: p.ascension,
+      ultSel: sel,
+      ultLevel: UltRules.levelOf(
+          p, sel ?? (item == null ? null : UltRules.itemUltId(item)) ?? ''),
     );
   }
 
@@ -317,6 +322,17 @@ class ProgressionRules {
       milestone10: ms10,
       milestone20: ms20,
       achievements: raw.achievements,
+      // ULT v2 (ultimates_v2.md § 5.2): solo ids que existen.
+      ultKnown: {
+        for (final id in raw.ultKnown)
+          if (UltRules.isLearnable(id)) id
+      },
+      ultSel: UltRules.isUltId(raw.ultSel, catalog) ? raw.ultSel : null,
+      ultLevels: {
+        for (final e in raw.ultLevels.entries)
+          if (UltRules.isLearnable(e.key) && e.value > 1)
+            e.key: e.value.clamp(1, UltRules.maxLevel),
+      },
       // Jefes del Abismo vencidos (v0.8): solo 1..5.
       abyssKills: {
         for (final n in raw.abyssKills)

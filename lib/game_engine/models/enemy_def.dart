@@ -1,3 +1,4 @@
+import 'skill.dart' show PartyBuff;
 import 'status.dart';
 
 /// Un tipo de enemigo (`EN` en el prototipo).
@@ -20,9 +21,12 @@ class EnemyDef {
   /// grupo como la vida). Ver docs/specs/break_and_enemy_ults.md § 1.
   final int breakMax;
 
-  /// ULT propia (`EnemyUltDef.id`), solo jefes. Los élites usan Furia
-  /// Élite (`kEliteUltId`).
+  /// ULT propia (`EnemyUltDef.id`), solo jefes.
   final String? ultId;
+
+  /// ULT de su versión élite (docs/specs/ultimates_v2.md § 4.3); sin
+  /// ella, Furia Élite (`kEliteUltId`).
+  final String? eliteUltId;
 
   /// Título del cartel de entrada del jefe (docs/specs/bosses.md).
   final String? title;
@@ -75,6 +79,7 @@ class EnemyDef {
     this.areaAttack = false,
     this.breakMax = 0,
     this.ultId,
+    this.eliteUltId,
     this.title,
     this.mechanicId,
     this.legendaryId,
@@ -221,6 +226,32 @@ class EnemyUltDef {
   /// Erupción Total: turnos de lava.
   final int turns;
 
+  // ---- ULT de élite v2 (docs/specs/ultimates_v2.md § 4.3) ----
+
+  /// Golpes seguidos (a todos o, si no es a todos, cada uno a un jugador
+  /// al azar).
+  final int hits;
+
+  /// Escudo propio: fracción de su vida máx., por [selfShieldTurns].
+  final double selfShield;
+  final int selfShieldTurns;
+
+  /// Se cura esta fracción del daño hecho.
+  final double drainHeal;
+
+  /// Debuffs a cada golpeado (velocidad, daño recibido...).
+  final List<PartyBuff> debuffs;
+
+  /// Retrasa a cada golpeado `IV × delayTarget`.
+  final double delayTarget;
+
+  /// Estados extra a cada golpeado (con su probabilidad).
+  final List<StatusApplication> extraStatuses;
+
+  /// Aplica el estado de su ciclo (`EnemyDef.inflictCycle`) en vez de
+  /// [status] (Heraldo de las Eras).
+  final bool cycleStatus;
+
   const EnemyUltDef({
     required this.id,
     required this.name,
@@ -233,6 +264,14 @@ class EnemyUltDef {
     this.extra = EnemyUltExtra.none,
     this.perAdd = 0,
     this.turns = 0,
+    this.hits = 1,
+    this.selfShield = 0,
+    this.selfShieldTurns = 2,
+    this.drainHeal = 0,
+    this.debuffs = const [],
+    this.delayTarget = 0,
+    this.extraStatuses = const [],
+    this.cycleStatus = false,
   });
 }
 

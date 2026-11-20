@@ -307,6 +307,22 @@ class SeenItemsAction extends SessionAction {
 }
 
 /// `filter`: guardar el filtro de loot (texto; `null` = el por defecto).
+/// `ultSel` (v0.17, ultimates_v2.md § 2.1): elige la ULT activa fuera
+/// de combate. `null` = volver al orden de siempre. El host rechaza un id
+/// que el jugador no tiene.
+class SelectUltAction extends SessionAction {
+  final String? ultId;
+  const SelectUltAction(this.ultId);
+}
+
+/// `ultUp` (v0.17, ultimates_v2.md § 2.4): sube un nivel la ULT [ultId]
+/// del repertorio pagando su costo. El host valida que la tenga y que
+/// alcancen los créditos y materiales.
+class UpgradeUltAction extends SessionAction {
+  final String ultId;
+  const UpgradeUltAction(this.ultId);
+}
+
 class SetLootFilterAction extends SessionAction {
   final String? text;
   const SetLootFilterAction(this.text);

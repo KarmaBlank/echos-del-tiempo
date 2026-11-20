@@ -1,0 +1,11 @@
+schema: 1
+id: eult_colapsoVacio
+name: "Colapso del Vacío"
+owner: centinela
+elite: false
+extra: voidMark
+ult:
+  power: 1.3
+  allTargets: true
+  status: {"kind":"wet","stacks":1}
+fx: eult_colapsoVacio

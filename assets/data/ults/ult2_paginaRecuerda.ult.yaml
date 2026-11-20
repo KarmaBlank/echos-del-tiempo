@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_paginaRecuerda
+name: "Página que Recuerda"
+source: {kind: weapon_mod, ref: ""}
+weapons: ["tomo"]
+classes: []
+element: hielo
+cost: 100
+pulse: 0
+skill:
+  kind: magical
+  power: 1.4
+  allTargets: true
+  status: {"kind":"wet","stacks":1}
+  extraStatuses: [{"kind":"freeze","stacks":1}]
+fx: ult2_paginaRecuerda

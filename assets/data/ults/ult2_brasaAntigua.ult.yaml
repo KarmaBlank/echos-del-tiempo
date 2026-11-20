@@ -1,0 +1,16 @@
+schema: 1
+id: ult2_brasaAntigua
+name: "Brasa Antigua"
+source: {kind: weapon_mod, ref: ""}
+weapons: ["báculo"]
+classes: []
+element: fuego
+cost: 100
+pulse: 0
+skill:
+  kind: magical
+  power: 1.0
+  allTargets: true
+  status: {"kind":"burn","stacks":2}
+  catalyst: 0.2
+fx: ult2_brasaAntigua

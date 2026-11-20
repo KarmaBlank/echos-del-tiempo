@@ -1,4 +1,5 @@
 import '../data/enemy_families.dart' show ComboRulesDef, HitCapDef;
+import '../data/ults_v2_catalog.dart' show kUltV2;
 import '../data/zone_curve.dart';
 import '../models/abyss.dart';
 import '../models/class_def.dart';
@@ -209,6 +210,14 @@ Map<String, Object?> _readSkill(Object o) {
     'breaks': s.breaks,
     'pulse': s.pulse,
     'instant': s.instant,
+    // ULT v2 (ultimates_v2.md § 5.4).
+    'ultCost': s.ultCost,
+    'pulseParty': s.pulseParty,
+    'openerBonus': s.openerBonus,
+    'echoLast': s.echoLast,
+    'delayedHit': s.delayedHit,
+    'perAlly': s.perAlly,
+    'stripBuffs': s.stripBuffs,
     'disabled': false,
   };
 }
@@ -262,10 +271,32 @@ Object _writeSkill(Object o, BalanceFieldReader f) {
     pulse: f.values.containsKey('pulse') ? f.i('pulse') : b.pulse,
     instant: f.values.containsKey('instant') ? f.b('instant') : b.instant,
     requires: b.requires,
+    ultCost: f.values.containsKey('ultCost') ? f.i('ultCost') : b.ultCost,
+    pulseParty:
+        f.values.containsKey('pulseParty') ? f.i('pulseParty') : b.pulseParty,
+    openerBonus: f.values.containsKey('openerBonus')
+        ? f.d('openerBonus')
+        : b.openerBonus,
+    echoLast: f.values.containsKey('echoLast') ? f.d('echoLast') : b.echoLast,
+    delayedHit:
+        f.values.containsKey('delayedHit') ? f.d('delayedHit') : b.delayedHit,
+    perAlly: f.values.containsKey('perAlly') ? f.d('perAlly') : b.perAlly,
+    stripBuffs:
+        f.values.containsKey('stripBuffs') ? f.b('stripBuffs') : b.stripBuffs,
   );
 }
 
 String _skillName(Object o) => (o as SkillDef).name;
+
+/// ULT v2 (ultimates_v2.md § 5.3): nombre, fuente y compatibilidad.
+String _ultName(Object o) {
+  final s = o as SkillDef;
+  final u = kUltV2[s.id];
+  if (u == null) return s.name;
+  final compat = [...u.weapons, ...u.classes];
+  return '${s.name} · ${u.source.label}'
+      '${compat.isEmpty ? '' : ' · ${compat.join('/')}'}';
+}
 
 const skillCodec = EntityCodec(
   kind: BalanceKind.skill,
@@ -275,12 +306,25 @@ const skillCodec = EntityCodec(
   nameOf: _skillName,
 );
 
+/// Campos propios de las ULT (ultimates_v2.md § 2.2 y § 5.4).
+const _ultFields = <BalanceField>[
+  BalanceField('ultCost', 'Costo de carga (60 / 80 / 100)', _int, min: 1, max: 100),
+  _pulseField,
+  _instantField,
+  BalanceField('pulseParty', 'Pulso al grupo', _int, max: 5),
+  BalanceField('openerBonus', 'Extra con vida llena', _frac, max: 3, step: 0.05),
+  BalanceField('echoLast', 'Repite la última habilidad (×)', _dec, max: 2, step: 0.05),
+  BalanceField('delayedHit', 'Golpe diferido (× ATQ/MAG)', _dec, max: 20, step: 0.05),
+  BalanceField('perAlly', 'Poder por aliado vivo', _dec, max: 2, step: 0.05),
+  BalanceField('stripBuffs', 'Quita buffs enemigos', _flag),
+];
+
 final ultimateCodec = EntityCodec(
   kind: BalanceKind.ultimate,
-  fields: _skillCombat,
+  fields: [..._ultFields, ..._skillCombat],
   read: (o) => _readSkill(o)..remove('disabled'),
   write: _writeSkill,
-  nameOf: _skillName,
+  nameOf: _ultName,
 );
 
 // ---------------------------------------------------------------------
@@ -433,6 +477,7 @@ final enemyCodec = EntityCodec(
       areaAttack: f.b('areaAttack'),
       breakMax: f.i('breakMax'),
       ultId: e.ultId,
+      eliteUltId: e.eliteUltId,
       title: e.title,
       mechanicId: e.mechanicId,
       legendaryId: e.legendaryId,
@@ -459,6 +504,15 @@ final enemyUltCodec = EntityCodec(
     BalanceField('guaranteedCrit', 'Crítico garantizado', _flag),
     BalanceField('perAdd', 'Poder por invocación', _dec, max: 5, step: 0.05),
     BalanceField('turns', 'Turnos', _int, max: 10),
+    // ULT de élite v2 (ultimates_v2.md § 4.3).
+    BalanceField('hits', 'Golpes', _int, min: 1, max: 10),
+    BalanceField('selfShield', 'Escudo propio', _frac, max: 2, step: 0.01),
+    BalanceField('selfShieldTurns', 'Turnos del escudo', _int, max: 10),
+    BalanceField('drainHeal', 'Se cura del daño', _frac, max: 2, step: 0.01),
+    BalanceField('delayTarget', 'Retraso al golpeado', _dec, max: 3, step: 0.05),
+    BalanceField('debuffs', 'Debuffs', BalanceFieldType.buffList),
+    BalanceField('extraStatuses', 'Estados extra', BalanceFieldType.statusList),
+    BalanceField('cycleStatus', 'Estado de su ciclo', _flag),
   ],
   read: (o) {
     final u = o as EnemyUltDef;
@@ -471,6 +525,14 @@ final enemyUltCodec = EntityCodec(
       'guaranteedCrit': u.guaranteedCrit,
       'perAdd': u.perAdd,
       'turns': u.turns,
+      'hits': u.hits,
+      'selfShield': u.selfShield,
+      'selfShieldTurns': u.selfShieldTurns,
+      'drainHeal': u.drainHeal,
+      'delayTarget': u.delayTarget,
+      'debuffs': encodeBuffList(u.debuffs),
+      'extraStatuses': encodeStatusList(u.extraStatuses),
+      'cycleStatus': u.cycleStatus,
     };
   },
   write: (o, f) {
@@ -487,6 +549,26 @@ final enemyUltCodec = EntityCodec(
       extra: u.extra,
       perAdd: f.d('perAdd'),
       turns: f.i('turns'),
+      hits: f.values.containsKey('hits') ? f.i('hits') : u.hits,
+      selfShield:
+          f.values.containsKey('selfShield') ? f.d('selfShield') : u.selfShield,
+      selfShieldTurns: f.values.containsKey('selfShieldTurns')
+          ? f.i('selfShieldTurns')
+          : u.selfShieldTurns,
+      drainHeal:
+          f.values.containsKey('drainHeal') ? f.d('drainHeal') : u.drainHeal,
+      delayTarget: f.values.containsKey('delayTarget')
+          ? f.d('delayTarget')
+          : u.delayTarget,
+      debuffs: f.values.containsKey('debuffs')
+          ? decodeBuffList(f.values['debuffs'])
+          : u.debuffs,
+      extraStatuses: f.values.containsKey('extraStatuses')
+          ? decodeStatusList(f.values['extraStatuses'])
+          : u.extraStatuses,
+      cycleStatus: f.values.containsKey('cycleStatus')
+          ? f.b('cycleStatus')
+          : u.cycleStatus,
     );
   },
   nameOf: (o) => (o as EnemyUltDef).name,

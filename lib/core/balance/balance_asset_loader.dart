@@ -24,22 +24,25 @@ abstract final class BalanceAssetLoader {
 
   /// Instala los registros globales del parche y devuelve el catálogo
   /// parcheado. Ante cualquier falla, vuelve al código.
-  static GameCatalog install(BalanceParseResult? loaded) {
+  /// [base]: el catálogo de partida (el del código con los datos de las
+  /// ULT ya puestos, ultimates_v2.md § 5.1).
+  static GameCatalog install(BalanceParseResult? loaded,
+      {GameCatalog base = GameCatalog.standard}) {
     final r = loaded ?? const BalanceParseResult(BalancePatch.empty, []);
     for (final i in r.issues) {
       EcosLog.error('Balance: $i');
     }
-    if (r.patch.isEmpty) return GameCatalog.standard;
+    if (r.patch.isEmpty) return base;
     try {
       r.patch.installRegistries();
-      final catalog = r.patch.applyTo(GameCatalog.standard);
+      final catalog = r.patch.applyTo(base);
       EcosLog.info('Balance: parche ${catalog.balanceHash} '
           '(${r.patch.entityCount} entradas)');
       return catalog;
     } on Object catch (e) {
       BalanceRegistries.restore();
       EcosLog.error('Balance: no se pudo aplicar, se usa el código', e);
-      return GameCatalog.standard;
+      return base;
     }
   }
 }

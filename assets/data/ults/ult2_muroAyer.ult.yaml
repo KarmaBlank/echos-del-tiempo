@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_muroAyer
+name: "Muro de Ayer"
+source: {kind: weapon_mod, ref: ""}
+weapons: ["espada+escudo"]
+classes: []
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: support
+  partyShield: 0.2
+  partyShieldTurns: 3
+  shieldReflect: 0.3
+fx: ult2_muroAyer

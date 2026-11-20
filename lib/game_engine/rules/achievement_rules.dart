@@ -38,9 +38,16 @@ class AchievementBattleTracker {
   /// Jugadores que ya usaron una INSTANTE en su turno actual.
   final _instant = <String>{};
 
+  /// Turnos empezados por jugador y los que recibieron daño antes de su
+  /// segundo turno (hazaña Primer Golpe, ULT v2).
+  final _turns = <String, int>{};
+  final _hurtEarly = <String>{};
+
   void reset() {
     _primers.clear();
     _instant.clear();
+    _turns.clear();
+    _hurtEarly.clear();
   }
 }
 
@@ -83,6 +90,10 @@ class AchievementRules {
           ..add('forge_first')
           ..count(AchievementCounter.forgeLevels);
         final w = after.item(weaponId);
+        final was = before.item(weaponId);
+        if (w != null && w.forge.total >= 10 && (was?.forge.total ?? 0) < 10) {
+          h.count(AchievementCounter.weaponsPlus10);
+        }
         if (w != null) {
           if (w.forge.total >= 5) h.add('forge_plus5');
           if (w.rarity.index >= Rarity.raro.index &&
@@ -158,6 +169,29 @@ class AchievementRules {
         case TurnStartedEvent(:final actorId):
           t._instant.remove(actorId);
           actor = null;
+          if (isPlayer(actorId)) {
+            t._turns[actorId] = (t._turns[actorId] ?? 0) + 1;
+          }
+        case DamageEvent(:final targetId, :final amount):
+          if (amount > 0 && isPlayer(targetId) && (t._turns[targetId] ?? 0) <= 1) {
+            t._hurtEarly.add(targetId);
+          }
+        case KnockedOutEvent(:final targetId):
+          if (actor != null && !isPlayer(targetId)) {
+            hits(actor).count(AchievementCounter.finishers);
+          }
+        case ShieldEvent(:final targetId, :final absorbed):
+          if (!absorbed && actor != null && targetId != actor && isPlayer(targetId)) {
+            hits(actor).count(AchievementCounter.allyShields);
+          }
+        case BattleEndedEvent(:final victory):
+          if (victory) {
+            for (final id in t._turns.keys) {
+              if (!t._hurtEarly.contains(id)) {
+                hits(id).count(AchievementCounter.flawlessWins);
+              }
+            }
+          }
         case ActionEvent(:final actorId, :final kind, :final skillId):
           actor = isPlayer(actorId) ? actorId : null;
           if (actor == null) break;
@@ -185,9 +219,13 @@ class AchievementRules {
           }
         case BreakEvent(:final targetId, :final phase, :final cancelledUlt):
           if (phase != BreakPhase.broken || actor == null) break;
-          hits(actor).add('combat_break');
+          hits(actor)
+            ..add('combat_break')
+            ..count(AchievementCounter.breaks);
           if (cancelledUlt && isBoss(targetId)) {
-            hits(actor).add('combat_cancel_ult');
+            hits(actor)
+              ..add('combat_cancel_ult')
+              ..count(AchievementCounter.bossUltCancels);
           }
         default:
           break;
@@ -262,8 +300,10 @@ class AchievementRules {
       return cur + got;
     }
 
+    final ult = r.ult;
     return (
       p.copyWith(
+        ultKnown: ult == null ? null : {...p.ultKnown, ult},
         credits: p.credits + r.credits,
         materials: mats,
         potions: r.potions > 0 ? cap(p.potions, r.potions, 'Poción de vida') : null,

@@ -1,0 +1,63 @@
+schema: 1
+id: ult2_coronaRota
+category: ult
+name: Hoja de la Corona Rota
+tags: [espada, dagas, un_objetivo, remate, eco]
+duration: 2400
+phases: { build: 850, release: 1150, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 850, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 200, v: 0.85 }
+      - { t: 2000, v: 0.75 }
+      - { t: 2400, v: 0 }
+  - type: tint
+    color: '#ffd166'
+    keys:
+      - { t: 850, v: 0 }
+      - { t: 1100, v: 0.25 }
+      - { t: 1900, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 850, color: element }
+  - type: echo
+    who: caster
+    count: 1
+    lag: 0
+    alpha: 0.55
+    color: gold
+    fade: 300
+    keys:
+      - { t: 750, at: caster }
+      - { t: 970, at: target, dx: -14, ease: out }
+      - { t: 1110, at: target, dx: -14 }
+  - type: shape
+    fire:
+      - { t: 850, shape: cross, anchor: target, color: gold, ms: 360, scale: 1.2 }
+      - { t: 1150, shape: slash_arc, anchor: target, angle: -35, color: gold, ms: 180 }
+      - { t: 1310, shape: slash_arc, anchor: target, angle: 35, color: gold, ms: 180 }
+      - { t: 1450, shape: slash_cross, anchor: target, scale: 2.6, color: white, ms: 260 }
+  - type: particles
+    fire:
+      - { t: 1450, preset: burst, anchor: target, count: 4, element: auto }
+      - { t: 1450, preset: sparkles, anchor: target, count: 1 }
+  - type: flash
+    fire:
+      - { t: 1445, color: white, alpha: 0.55, ms: 140 }
+  - type: hitstop
+    fire:
+      - { t: 1450, ms: 140 }
+  - type: shake
+    fire:
+      - { t: 1150, amp: 3 }
+      - { t: 1450, amp: 9 }
+  - type: impact
+    fire:
+      - { t: 1150, pre: true }
+      - { t: 1450 }

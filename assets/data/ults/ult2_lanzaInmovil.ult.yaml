@@ -1,0 +1,15 @@
+schema: 1
+id: ult2_lanzaInmovil
+name: "Lanza Inmóvil"
+source: {kind: weapon_mod, ref: ""}
+weapons: ["lanza"]
+classes: []
+element: fisico
+cost: 100
+pulse: 0
+skill:
+  kind: physical
+  power: 2.1
+  delay: 0.6
+  pierce: 0.5
+fx: ult2_lanzaInmovil

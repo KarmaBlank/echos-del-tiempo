@@ -1,0 +1,10 @@
+schema: 1
+id: eult_e_necrofago
+name: "Festín"
+owner: necrofago
+elite: true
+extra: none
+ult:
+  power: 1.8
+  drainHeal: 0.5
+fx: eult_e_necrofago

@@ -7,6 +7,7 @@ import '../../../ascension/domain/ascension_text.dart';
 import '../../../characters/domain/unused_points.dart';
 import '../../../characters/domain/xp_text.dart';
 import '../../../characters/presentation/grimoire_section.dart';
+import '../../../characters/presentation/ult_repertoire_view.dart';
 import '../../../achievements/presentation/achievements_view.dart';
 import '../../../bestiary/presentation/bestiary_view.dart';
 import '../../../combat/presentation/game_sprites.dart';
@@ -65,6 +66,10 @@ enum CharacterTab {
       'ÁRBOL',
       'Pasivas de clase: 1 punto por nivel. Clic en un nodo lejano: tomar el '
           'camino entero. Arrastra para mover, rueda para zoom.'),
+  ults(
+      'ULT',
+      'Tu repertorio de ULT: elegí la activa y mejorala fuera de combate. '
+          'Nada se pierde al vender o desarmar un arma.'),
   filter(
       'FILTRO',
       'Reglas en orden: gana la primera que coincide. Ocultar no borra el '
@@ -154,6 +159,14 @@ class _CharacterPanelState extends State<CharacterPanel> {
       // Por miembro: el editor arranca con el filtro de ese miembro (sin
       // la clave, al cambiar de miembro quedaba el texto del anterior y
       // GUARDAR se lo pisaba al nuevo).
+      CharacterTab.ults => UltRepertoireView(
+          key: ValueKey('ults-${view.actorId}'),
+          profile: prof,
+          weapon: rules.equippedWeapon(prof),
+          item: rules.equippedItem(prof),
+          editable: view.session.battle == null,
+          onSelect: c.selectUlt,
+          onUpgrade: c.upgradeUlt),
       CharacterTab.filter => LootFilterTab(
           key: ValueKey('filter-tab-${view.actorId}'),
           shop: ShopContext(view, c)),
@@ -268,6 +281,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
           // contenido) vive en el "?" (design_system.md § 2.4).
           help: '${switch (tab) {
             CharacterTab.filter => kFilterHelp,
+            CharacterTab.ults => UltRepertoireView.help,
             CharacterTab.build => BuildPlannerView.help,
             CharacterTab.bestiary => BestiaryView.help,
             CharacterTab.achievements => AchievementsView.help,

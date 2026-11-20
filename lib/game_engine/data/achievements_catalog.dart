@@ -250,6 +250,56 @@ const List<AchievementDef> kAchievements = [
       category: _end,
       how: 'Vencé a cualquier Jefe del Abismo.',
       reward: _R(credits: 2400, prismas: 1)),
+
+  // ---- ULT v2 (docs/specs/ultimates_v2.md § 3.4): pagan una ULT ----
+  AchievementDef(
+      id: 'ult_flawless',
+      name: 'Primer Golpe',
+      category: _combat,
+      how: 'Ganá 25 peleas sin recibir daño antes de tu segundo turno.',
+      reward: _R(credits: 1500, ult: 'ult2_primerGolpe'),
+      counter: AchievementCounter.flawlessWins,
+      goal: 25),
+  AchievementDef(
+      id: 'ult_breaks',
+      name: 'Cadena de Eras',
+      category: _combat,
+      how: 'Quebrá a 100 enemigos.',
+      reward: _R(credits: 1500, ult: 'ult2_cadenaEras'),
+      counter: AchievementCounter.breaks,
+      goal: 100),
+  AchievementDef(
+      id: 'ult_cancels',
+      name: 'Silencio del Tiempo',
+      category: _combat,
+      how: 'Cancelá 20 ULT de jefe quebrándolos mientras la avisan.',
+      reward: _R(credits: 2000, ult: 'ult2_lluviaEsquirlas'),
+      counter: AchievementCounter.bossUltCancels,
+      goal: 20),
+  AchievementDef(
+      id: 'ult_shields',
+      name: 'Custodio',
+      category: _combat,
+      how: 'Poné escudos a aliados 50 veces.',
+      reward: _R(credits: 1500, ult: 'ult2_custodioInstante'),
+      counter: AchievementCounter.allyShields,
+      goal: 50),
+  AchievementDef(
+      id: 'ult_forge10',
+      name: 'Forjado en el Ayer',
+      category: _forge,
+      how: 'Llevá 10 armas distintas a +10 de forja.',
+      reward: _R(credits: 2400, ult: 'ult2_forjadoAyer'),
+      counter: AchievementCounter.weaponsPlus10,
+      goal: 10),
+  AchievementDef(
+      id: 'ult_executes',
+      name: 'Remate',
+      category: _combat,
+      how: 'Dale el golpe final a 200 enemigos.',
+      reward: _R(credits: 1500, ult: 'ult2_remateEco'),
+      counter: AchievementCounter.finishers,
+      goal: 200),
 ];
 
 /// Por id.

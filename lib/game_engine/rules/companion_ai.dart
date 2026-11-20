@@ -2,7 +2,7 @@ import '../data/game_catalog.dart';
 import '../models/battle_command.dart';
 import '../models/battle_state.dart';
 import '../models/skill.dart';
-import 'battle_engine.dart' show ultimateOf;
+import 'battle_engine.dart' show ultReady;
 import 'combo_planner.dart';
 import 'skill_requirements.dart';
 
@@ -53,7 +53,7 @@ class CompanionAi {
     }
 
     // 2. ULT lista.
-    if (me.ult >= 100 && ultimateOf(me, catalog) != null) {
+    if (ultReady(me, catalog)) {
       return UltimateCommand(targetId: weakest.id);
     }
 

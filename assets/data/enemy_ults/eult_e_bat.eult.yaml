@@ -1,0 +1,11 @@
+schema: 1
+id: eult_e_bat
+name: "Chillido Antiguo"
+owner: bat
+elite: true
+extra: none
+ult:
+  power: 1.4
+  allTargets: true
+  delayAll: 0.3
+fx: eult_e_bat

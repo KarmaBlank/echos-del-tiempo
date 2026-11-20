@@ -106,7 +106,8 @@ class BalanceBase {
   /// Las entidades base de un tipo, por id.
   Map<String, Object> entities(BalanceKind k) => switch (k) {
         BalanceKind.skill => catalog.skills,
-        BalanceKind.ultimate => catalog.ultimates,
+        // Las 13 de tipo de arma (por tipo) y las 50 v2 (por id).
+        BalanceKind.ultimate => {...catalog.ultimates, ...catalog.playerUlts},
         BalanceKind.dual => catalog.duals,
         BalanceKind.weapon => catalog.weapons,
         BalanceKind.enemy => catalog.enemies,
