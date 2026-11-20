@@ -194,6 +194,9 @@ Medidas en px nominales (Normal, 1280×720); todo escala.
 - DsAttributeRow: fila de ATRIBUTOS en una línea: nombre, valor, ★ de
   plan (si está en el plan), botón −, botón "+3 VIT". Al pasar el tope
   blando el botón muestra `+3 → +1.5` en naranja (solo entonces).
+  El − quita solo el reparto sin confirmar; sin pendiente se ve apagado
+  (texto desactivado) y su tooltip dice que los confirmados se reasignan
+  con REINICIAR PUNTOS.
 - DsStatLine: `ATQ  15 → 50  ▲35`: etiqueta secundaria, antes
   secundario, después principal, diferencia verde ▲ / roja ▼ (con
   flecha: nunca solo el color).
