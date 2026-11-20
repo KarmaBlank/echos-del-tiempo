@@ -109,7 +109,7 @@ void main() {
     await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     await tester.pump();
     expect(find.byKey(const ValueKey('inv-cmp-tip-equipped')), findsOneWidget);
-    expect(find.byKey(const ValueKey('inv-cmp-tip-delta')), findsOneWidget);
+    expect(find.byKey(const ValueKey('inv-cmp-tip-delta')), findsNothing);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
     await tester.pump();
     expect(find.byKey(const ValueKey('inv-cmp-tip-equipped')), findsNothing);

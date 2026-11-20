@@ -221,12 +221,12 @@ class _CharacterPanelState extends State<CharacterPanel> {
           // Flexible: con texto grande baja de línea en vez de desbordar.
           titleTrailing: Flexible(
               child: ProtoText('${protoEsc(profileTitle(prof))} · '
-              '<span class="k">$cls Lv${prof.level}</span>'
-              '${prof.level >= ProgressionRules.maxLevel ? ' · <span style="color:#a29bfe">${protoEsc(masteryText(prof))}</span>' : ''}'
-              // XP para subir (v0.8.6).
-              '${xpProgress(prof) == null ? '' : ' · ${protoColor(ProtoColors.dim, protoEsc(xpProgressText(prof)))}'}'
-              ' · Puntos: '
-              '<b>$left</b>')),
+                  '<span class="k">$cls Lv${prof.level}</span>'
+                  '${prof.level >= ProgressionRules.maxLevel ? ' · <span style="color:#a29bfe">${protoEsc(masteryText(prof))}</span>' : ''}'
+                  // XP para subir (v0.8.6).
+                  '${xpProgress(prof) == null ? '' : ' · ${protoColor(ProtoColors.dim, protoEsc(xpProgressText(prof)))}'}'
+                  ' · Puntos: '
+                  '<b>$left</b>')),
           header: must
               ? null
               : PartyMemberBar.header(
@@ -272,7 +272,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PanelHint(tab.hint),
+              // El árbol va sin línea de ayuda: barra compacta y el
+              // árbol a pantalla casi completa (progression_v2.md § 11.2).
+              if (tab != CharacterTab.tree) PanelHint(tab.hint),
               Expanded(child: body),
             ],
           ),
@@ -338,8 +340,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 }),
                 // Qué subir según el arma y el árbol (build_planner.md § 8).
                 Consumer(
-                    builder: (context, ref, _) => _advice(
-                        ref.watch(buildPlanProvider).planFor(_slot))),
+                    builder: (context, ref, _) =>
+                        _advice(ref.watch(buildPlanProvider).planFor(_slot))),
                 if (view.mustAllocate)
                   const Padding(
                     padding: EdgeInsets.only(bottom: 10),
@@ -444,9 +446,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
     );
   }
 
-  /// Un atributo como tarjeta: nombre, valor (+ reparto pendiente), meta
-  /// del plan (★), `-` / `+` y qué hace, entero (en otra línea si no
-  /// entra).
+  /// Un atributo en una línea (v0.10.1): nombre, valor (+ reparto
+  /// pendiente), meta del plan (★), `-` / `+`; qué hace y el tope, en el
+  /// tooltip.
   Widget _attrRow(Attribute a, int value, int left, {int? target}) {
     final (short, name, desc) = kAttributeInfo[a]!;
     final add = _alloc[a] ?? 0;
@@ -465,22 +467,24 @@ class _CharacterPanelState extends State<CharacterPanel> {
     final cap = kAttrSoftCap[a]!;
     final shown = value + add * kAttrPerPoint;
     final over = shown > cap;
-    final gain = effectiveAttr(a, shown + kAttrPerPoint) - effectiveAttr(a, shown);
+    final gain =
+        effectiveAttr(a, shown + kAttrPerPoint) - effectiveAttr(a, shown);
     final full = gain >= kAttrPerPoint;
     String num1(double v) =>
         v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1);
-    final nameText = ProtoText('<span style="color:#e8ecff">$short</span> '
-        '<span class="k">${retroText(name)}</span>');
+    // Una sola línea (v0.10.1): nombre, valor, ★ del plan, - y +. Qué da,
+    // el tope y el rendimiento van solo en el tooltip; el tope se nota
+    // cuando importa (valor y botón en naranja).
+    final nameText = ProtoText(big
+        ? '<span style="color:#e8ecff">$short</span>'
+        : '<span style="color:#e8ecff">$short</span> '
+            '<span class="k">${retroText(name)}</span>');
     final valueColor = over ? ProtoColors.orange : ProtoColors.ink;
     final addText = add > 0
         ? ' ${protoColor(over ? ProtoColors.orange : ProtoColors.green, '+${add * kAttrPerPoint}')}'
         : '';
-    final valueText =
-        ProtoText('${protoColor(valueColor, '$value')}$addText');
-    final capText = Text(
-        over ? 'tope $cap: rinde ½' : 'tope $cap',
-        key: ValueKey('attr-cap-${a.name}'),
-        style: TextStyle(color: over ? ProtoColors.orange : ProtoColors.dim));
+    final valueText = ProtoText('${protoColor(valueColor, '$value')}$addText',
+        key: ValueKey('attr-value-${a.name}'));
     final targetText = target == null
         ? null
         : Text('★ $shown/$target',
@@ -489,6 +493,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 color: shown >= target ? ProtoColors.green : kPlanColor));
     return RetroTooltip(
         message: '+$kAttrPerPoint ${retroText(name)}: ${retroText(desc)}'
+            '<br>Tope $cap: pasado el tope rinde ½'
             '${full ? '' : '<br>Pasaste el tope $cap: rinde +${num1(gain)}'}'
             '${impact == null ? '' : '<br>$impact'}',
         child: Container(
@@ -501,54 +506,51 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 color: add > 0 ? ProtoColors.green : ProtoColors.panelBorder,
                 width: RetroTheme.thinBorderWidth),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Row(
             children: [
-              Row(
-                children: [
-                  // Con texto ENORME el nombre cede lugar y el valor va en
-                  // la línea de abajo (si no, no entra).
-                  if (big)
-                    Expanded(child: nameText)
-                  else
-                    SizedBox(
-                        width: RetroType.em(context, 15, size: RetroType.small),
-                        child: nameText),
-                  if (!big) ...[
-                    SizedBox(
-                        width: RetroType.em(context, 7, size: RetroType.small),
-                        child: valueText),
-                    if (targetText != null)
-                      SizedBox(
-                          width:
-                              RetroType.em(context, 9, size: RetroType.small),
-                          child: targetText),
-                    const Spacer(),
-                  ],
-                  PanelButton('-',
-                      key: ValueKey('dec-${a.name}'),
-                      onPressed: add > 0
-                          ? () => setState(() => _alloc[a] = add - 1)
-                          : null),
-                  const SizedBox(width: 8),
-                  PanelButton(
-                      full
-                          ? '+$kAttrPerPoint $short'
-                          : '+$kAttrPerPoint $short → +${num1(gain)}',
-                      key: ValueKey('inc-${a.name}'),
-                      accent: full ? null : ProtoColors.orange,
-                      onPressed: left > 0
-                          ? () => setState(() => _alloc[a] = add + 1)
-                          : null),
-                ],
-              ),
-              Wrap(spacing: 12, children: [
-                if (big) valueText,
-                if (big && targetText != null) targetText,
-                capText,
-              ]),
-              Text(retroText(desc),
-                  style: const TextStyle(color: ProtoColors.dim)),
+              // Con texto ENORME: solo la sigla, sin anchos fijos; si aun
+              // así no entra, la sigla, el valor y la ★ se acomodan a la
+              // izquierda de los botones (nunca desborda).
+              if (big)
+                Expanded(
+                  child: Wrap(
+                    spacing: 8,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      nameText,
+                      valueText,
+                      if (targetText != null) targetText
+                    ],
+                  ),
+                )
+              else ...[
+                SizedBox(
+                    width: RetroType.em(context, 15, size: RetroType.small),
+                    child: nameText),
+                SizedBox(
+                    width: RetroType.em(context, 7, size: RetroType.small),
+                    child: valueText),
+                if (targetText != null)
+                  SizedBox(
+                      width: RetroType.em(context, 9, size: RetroType.small),
+                      child: targetText),
+                const Spacer(),
+              ],
+              PanelButton('-',
+                  key: ValueKey('dec-${a.name}'),
+                  onPressed: add > 0
+                      ? () => setState(() => _alloc[a] = add - 1)
+                      : null),
+              const SizedBox(width: 8),
+              PanelButton(
+                  full
+                      ? '+$kAttrPerPoint $short'
+                      : '+$kAttrPerPoint $short → +${num1(gain)}',
+                  key: ValueKey('inc-${a.name}'),
+                  accent: full ? null : ProtoColors.orange,
+                  onPressed: left > 0
+                      ? () => setState(() => _alloc[a] = add + 1)
+                      : null),
             ],
           ),
         ));
@@ -568,9 +570,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
     final reason = ShopContext(view, c).guards.allocate(prof, add);
     Future<void> apply() async {
       final ok = await showBuildPicker<bool>(context, '¿APLICAR SUGERENCIA?', [
-        PickOption(true, 'Sí, repartir: $split',
+        PickOption(
+            true,
+            'Sí, repartir: $split',
             'Se gastan ${prof.points} puntos de ${prof.name}'
-            '${_allocSum > 0 ? '; se descarta el reparto pendiente' : ''}.',
+                '${_allocSum > 0 ? '; se descarta el reparto pendiente' : ''}.',
             key: 'advice-yes'),
         const PickOption(false, 'No', null, key: 'advice-no'),
       ]);

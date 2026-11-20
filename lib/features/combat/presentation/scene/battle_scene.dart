@@ -25,6 +25,7 @@ class SceneFrame {
     this.sprites,
     this.localId,
     this.targetId,
+    this.highlightIds = const {},
     this.turnTimeLeft,
     this.turnLimit = 30,
   });
@@ -40,6 +41,10 @@ class SceneFrame {
 
   /// Enemigo apuntado; solo se marca si es el turno del jugador local.
   final String? targetId;
+
+  /// Enemigos que afectaría la habilidad elegida en el menú (se marcan
+  /// como el objetivo).
+  final Set<String> highlightIds;
 
   /// Segundos del turno del jugador (barra de tiempo); `null` si no espera.
   final double? turnTimeLeft;

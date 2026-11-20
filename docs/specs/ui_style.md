@@ -192,6 +192,11 @@ usa). Test: `test/app/retro_hover_card_test.dart`.
   - Línea de ayuda chiquita al pie (`dim`): `Alt: detalle · Shift:
     comparar · clic: fijar` (fijada: `Fijado · Esc o clic afuera:
     soltar`).
+    Se parte al ancho del contenido: nunca ensancha la caja (v0.10.1).
+  - La caja mide su contenido (máximo una columna); nada adentro la
+    estira al ancho disponible (v0.10.1: nada de `stretch` sin ancho).
+  - Shift (inventario, v0.10.1): al lado, la ficha de la EQUIPADA del
+    mismo ancho, sin deltas (están en la franja de CAMBIOS).
   - El resto de los tooltips (`interactive` sin `pinOnClick`) no cambia.
 
 Pedido del dueño: "hay demasiado texto". Por defecto un tooltip muestra
@@ -421,6 +426,20 @@ acciones (`InventoryActionList`) usan el mismo aire a los lados.
 Verificado con `test/app/text_size_test.dart` en los cuatro tamaños de
 texto (la vista CASILLAS del filtro de loot pasa a scroll cuando el alto
 no alcanza).
+
+
+**v0.10.1: la densidad de escritorio se comía el padding.** En Windows
+Flutter usa `VisualDensity.compact` por defecto, que le resta 8 px al
+padding y al alto mínimo de cada botón: en la app los textos quedaban
+pegados al borde aunque los tests (que corren como Android, densidad
+estándar) pasaban. `compactButton`, el estilo de botón del tema y
+`ActionCard` fijan `visualDensity: VisualDensity.standard`.
+`test/app/button_padding_test.dart` corre como Windows y mide, en título,
+ATRIBUTOS, INVENTARIO, ÁRBOL (con tarjetas de hito y tooltip fijado),
+sello y pausa, que el contenido de cada botón (textos e íconos) quede a
+≥ 8 px + borde de cada lado. Fuera de ese test: el "?" de los paneles
+(caja chica, no es un botón de Material) y las filas hechas con
+`GestureDetector` (`ActionBox`, `MenuRow`, con su propio padding).
 
 ## Caja (`RetroPanel`)
 

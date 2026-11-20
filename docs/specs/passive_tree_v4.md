@@ -167,11 +167,15 @@ viajan en el perfil y el host migra igual).
 (`pointsAvailable(treeLevel)`) y ascensión (`AscensionRules.free`).
 
 - **HUD**: junto a `≡ MENÚ`, un botón compacto `PERSONAJE [C]` con una
-  insignia `+N` (total) arriba a la derecha. Solo aparece si hay puntos
+  insignia `N` (total) dentro del botón, a la derecha del texto (v0.10.1:
+  pastilla dorada sin `+`, suma al ancho y nunca tapa el texto). Solo aparece si hay puntos
   sin usar (no ocupa lugar si no). Tooltip con el desglose
   (`3 puntos de atributos`, `2 puntos de árbol`…). Clic = tecla C.
-- **Pestañas**: ATRIBUTOS y ÁRBOL del panel de personaje llevan su `+N`
-  (quieto) cuando tienen puntos (`PanelTabs.badges`).
+- **Pestañas**: ATRIBUTOS y ÁRBOL del panel de personaje llevan su `N`
+  (quieto) cuando tienen puntos (`PanelTabs.badges`), en una pastilla
+  dentro de la pestaña a la derecha del texto (`PanelButton.trailing`;
+  v0.10.1, antes iba encima y tapaba la palabra). Igual en la barra de
+  personajes del grupo.
 - **Aviso** (zona de avisos del HUD, sobre el centro): cuando sube el
   `treeLevel` (nivel o Maestría) o los puntos de ascensión ganados, y
   quedan puntos de árbol / ascensión, un cartel suave 6 s: `▲ Tenés 2
@@ -181,7 +185,7 @@ viajan en el perfil y el host migra igual).
   entrar al juego no avisa (lo muestra la insignia).
 - **Accesibilidad**: la insignia late suave (opacidad 70-100% y brillo,
   900 ms); con "Reducir movimiento" queda quieta con un borde de 2 px.
-  No depende solo del color: el `+N` y la marca `▲` se leen igual con
+  No depende solo del color: el número y la marca `▲` se leen igual con
   cualquier paleta. Desactivar el aviso desde ajustes queda para más
   adelante (no hizo falta un ajuste nuevo).
 

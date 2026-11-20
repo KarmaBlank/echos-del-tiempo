@@ -53,6 +53,9 @@ abstract final class RetroTheme {
         // Cambio de color instantáneo (sin la animación de Material).
         animationDuration: Duration.zero,
         padding: WidgetStatePropertyAll(buttonPadding(8)),
+        // Densidad fija: en escritorio Flutter usa la compacta por
+        // defecto y le restaba 8 px al padding (v0.10.1).
+        visualDensity: VisualDensity.standard,
         minimumSize: const WidgetStatePropertyAll(Size(0, 32)),
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         textStyle: WidgetStatePropertyAll(
@@ -79,6 +82,8 @@ abstract final class RetroTheme {
       elevation: const WidgetStatePropertyAll(0),
       shape: const WidgetStatePropertyAll(_square),
       padding: WidgetStatePropertyAll(buttonPadding(14)),
+      // Ídem botón compacto: sin densidad compacta de escritorio.
+      visualDensity: VisualDensity.standard,
       splashFactory: NoSplash.splashFactory,
       overlayColor: const WidgetStatePropertyAll(Colors.transparent),
       textStyle: WidgetStatePropertyAll(

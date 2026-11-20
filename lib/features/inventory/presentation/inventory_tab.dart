@@ -115,6 +115,37 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
 
   final _searchKey = GlobalKey(debugLabel: 'inv-search');
 
+  /// Grilla y panel: los tooltips se abren solo en la columna de la
+  /// grilla (sin tapar la franja de CAMBIOS ni la EQUIPADA / pilas).
+  final _gridKey = GlobalKey(debugLabel: 'inv-grid');
+  final _panelKey = GlobalKey(debugLabel: 'inv-panel');
+
+  /// Zona de los tooltips (panels.md § "Inventario"): el ancho de la
+  /// grilla, desde su borde de arriba (o el del panel si así queda muy
+  /// baja) hasta el pie del panel.
+  /// Alto mínimo de la zona de los tooltips.
+  static const minTipAreaHeight = 200.0;
+
+  Rect? _tipBounds() {
+    final g = _gridKey.currentContext?.findRenderObject();
+    final p = _panelKey.currentContext?.findRenderObject();
+    if (g is! RenderBox || p is! RenderBox || !g.hasSize || !p.hasSize) {
+      return null;
+    }
+    final gr = g.localToGlobal(Offset.zero) & g.size;
+    final pr = p.localToGlobal(Offset.zero) & p.size;
+    // Si debajo del borde de la grilla queda poco (pantalla baja), todo el
+    // alto del panel: la franja y la EQUIPADA siguen fuera (a los lados).
+    // Y si el panel mismo es bajo, todo el alto de la pantalla.
+    var top = pr.bottom - gr.top >= pr.height / 2 ? gr.top : pr.top;
+    var bottom = pr.bottom;
+    if (bottom - top < minTipAreaHeight) {
+      top = -double.maxFinite;
+      bottom = double.maxFinite;
+    }
+    return Rect.fromLTRB(gr.left, top, gr.right, bottom);
+  }
+
   /// Escala de la grilla (v0.9.10): casilla de `cell × _scale` px.
   double _scale = 1;
 
@@ -220,27 +251,23 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         viewer: me.profile,
         item: it,
         attributes: attrs,
-        ownerName: mine ? null : owner.name);
+        ownerName: mine ? null : owner.name,
+        // Del ancho de la ficha: antes iba en una Column con `stretch`
+        // y la caja tomaba todo el ancho de la pantalla.
+        footer: fit == null
+            ? null
+            : Container(
+                key: const ValueKey('inv-build-fit-hover'),
+                padding: const EdgeInsets.all(6),
+                color: ProtoColors.bg,
+                child: ProtoText(fit),
+              ));
     return RetroHoverCard(
       interactive: true,
       pinOnClick: true,
       hint: _tipHint,
       keyboardFocus: focused,
-      builder: (_) => fit == null
-          ? card
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                card,
-                Container(
-                  key: const ValueKey('inv-build-fit-hover'),
-                  padding: const EdgeInsets.all(6),
-                  color: ProtoColors.bg,
-                  child: ProtoText(fit),
-                ),
-              ],
-            ),
+      builder: (_) => card,
       child: child,
     );
   }
@@ -339,7 +366,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final owner = view.session.players[_owner] ?? me;
     final mine = owner.id == me.id;
     final p = owner.profile;
-    final attrs = me.profile.attributes.add(ProgressionRules.rawOf(widget.pending));
+    final attrs =
+        me.profile.attributes.add(ProgressionRules.rawOf(widget.pending));
     final layout = InventoryRules.layout(p);
     // Selección por defecto: la equipada.
     if (_content(p, _sel) == null) {
@@ -608,6 +636,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         ),
       );
       final gridBox = SizedBox(
+        key: _gridKey,
         width: _gridW,
         // Flechas: el cursor recorre la grilla y elige la casilla;
         // Enter otra vez sobre un arma la equipa (menu_focus.dart).
@@ -791,60 +820,80 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     return Focus(
       focusNode: _keys,
       onKeyEvent: _onKey,
-      child: LayoutBuilder(builder: (context, box) {
-        final narrow = inventoryScale(box.maxWidth, box.maxHeight);
-        final wide = inventoryScaleWide(box.maxWidth, box.maxHeight);
-        _wide = wide > narrow;
-        _scale = _wide ? wide : narrow;
-        final mainW =
-            _wide ? _gridW + 16 + inventorySideWidth(_scale) + 4 : _gridW + 4;
-        // Franja de cambios en el espacio libre a la izquierda; si no
-        // entra, la grilla se corre lo justo.
-        final strip = _strip(me, attrs);
-        final stripW = RetroType.width(context, ChangeStrip.width) + 8;
-        final free = (box.maxWidth - mainW) / 2;
-        final main = SizedBox(
-            key: const ValueKey('inv-main'), width: mainW, child: buildLeft());
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: free >= stripW
-                    ? Stack(children: [
-                        Center(child: main),
-                        Positioned(left: free - stripW, top: 48, child: strip),
-                      ])
-                    : SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
+      child: RetroTipArea(
+        bounds: _tipBounds,
+        child: LayoutBuilder(builder: (context, box) {
+          final narrow = inventoryScale(box.maxWidth, box.maxHeight);
+          final wide = inventoryScaleWide(box.maxWidth, box.maxHeight);
+          _wide = wide > narrow;
+          _scale = _wide ? wide : narrow;
+          final mainW =
+              _wide ? _gridW + 16 + inventorySideWidth(_scale) + 4 : _gridW + 4;
+          // Franja de cambios en el espacio libre a la izquierda; si no
+          // entra, la grilla se corre lo justo.
+          final strip = _strip(me, attrs);
+          final stripW = ChangeStrip.widthOf(context) + 8;
+          final free = (box.maxWidth - mainW) / 2;
+          final main = SizedBox(
+              key: const ValueKey('inv-main'),
+              width: mainW,
+              child: buildLeft());
+          return Column(
+            key: _panelKey,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  // En fila (no en un Stack): la franja suma su alto y
+                  // scrollea con el panel en vez de cortarse abajo.
+                  child: free >= stripW
+                      ? Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Padding(
-                                padding: const EdgeInsets.only(top: 48),
-                                child: strip),
-                            const SizedBox(width: 8),
+                            SizedBox(width: free - stripW),
+                            SizedBox(
+                              width: stripW,
+                              child: Align(
+                                alignment: Alignment.topLeft,
+                                child: Padding(
+                                    padding: const EdgeInsets.only(top: 48),
+                                    child: strip),
+                              ),
+                            ),
                             main,
                           ],
+                        )
+                      : SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                  padding: const EdgeInsets.only(top: 48),
+                                  child: strip),
+                              const SizedBox(width: 8),
+                              main,
+                            ],
+                          ),
                         ),
-                      ),
+                ),
               ),
-            ),
-            if (!mine)
-              Wrap(
-                alignment: WrapAlignment.end,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  const Text('Solo lectura',
-                      style: TextStyle(color: ProtoColors.dim)),
-                  if (compareButton != null) compareButton,
-                ],
-              ),
-          ],
-        );
-      }),
+              if (!mine)
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    const Text('Solo lectura',
+                        style: TextStyle(color: ProtoColors.dim)),
+                    if (compareButton != null) compareButton,
+                  ],
+                ),
+            ],
+          );
+        }),
+      ),
     );
   }
 

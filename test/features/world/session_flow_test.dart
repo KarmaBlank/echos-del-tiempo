@@ -57,7 +57,8 @@ void main() {
     final c = ProviderScope.containerOf(tester.element(find.byType(WorldScreen)))
         .read(sessionControllerProvider.notifier);
     expect(c.view!.mode, SessionMode.lobby);
-    expect(find.textContaining('Lobby · Mostrador [E]'), findsOneWidget);
+    // v0.10.1: sin barra de ayuda en el pueblo.
+    expect(find.textContaining('Lobby · Mostrador [E]'), findsNothing);
 
     // ---- caminar con las flechas hasta el mostrador ----
     await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowUp);
@@ -149,7 +150,8 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('results-back')));
     await tester.pump();
     expect(c.view!.mode, SessionMode.lobby);
-    expect(find.textContaining('Lobby · Mostrador [E]'), findsOneWidget);
+    // v0.10.1: sin barra de ayuda en el pueblo.
+    expect(find.textContaining('Lobby · Mostrador [E]'), findsNothing);
 
     // ---- salir al título: se descarta la sesión y se guarda ----
     await tester.tap(find.text('< TITULO'));

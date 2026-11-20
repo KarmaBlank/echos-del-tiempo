@@ -59,7 +59,17 @@ String statusDescriptionOf(StatusKind k) => switch (k) {
 
 /// Color del MP (azul) y del Pulso (dorado) en los costos.
 const kMpHex = '#74b9ff';
-const kPulseHex = '#ffb142';
+/// Mismo dorado que la fila PULSO de la tarjeta (`ProtoColors.gold`).
+const kPulseHex = '#ffd166';
+
+/// Celeste propio de las Instante.
+const kInstantHex = '#9fe8ff';
+
+/// Separador de la lista de HABILIDADES: las Instante van arriba.
+const kInstantSeparator = 'Instante — no terminan tu turno';
+
+/// Marca de las Instante en el menú: INSTANTE en celeste.
+String instantTagMarkup() => hexSpan(kInstantHex, '[INSTANTE]');
 
 /// Costo de una habilidad para la fila del menú (combat_tutorial.md § 3,
 /// pedido del dueño v0.9.6): el Pulso se ve igual que el MP pero en
@@ -332,4 +342,76 @@ String variantTagMarkup(SkillDef tk) {
     if (tk.ultDrain > 0) hexSpan('#a29bfe', 'silencio'),
   ];
   return tags.isEmpty ? '' : ' ${tags.join(' ')}';
+}
+
+/// A quién afecta una habilidad (etiqueta corta del menú de batalla).
+enum SkillReach {
+  oneFoe('1 enemigo', '#ff6b81'),
+  allFoes('TODOS', '#ff9f43'),
+  ally('aliado', '#7bed9f'),
+  party('grupo', '#7bed9f'),
+  self('vos', '#9fb4ff');
+
+  const SkillReach(this.label, this.hex);
+  final String label;
+  final String hex;
+
+  /// Si apunta a enemigos (se resaltan en la escena).
+  bool get foes => this == oneFoe || this == allFoes;
+}
+
+/// El objetivo real de [sk] según su tipo, `allTargets` y sus efectos.
+SkillReach skillReach(SkillDef sk) {
+  final foe = sk.allTargets ? SkillReach.allFoes : SkillReach.oneFoe;
+  switch (sk.kind) {
+    case SkillKind.physical || SkillKind.magical:
+      return foe;
+    case SkillKind.heal || SkillKind.regen:
+      return sk.lowestAlly ? SkillReach.ally : SkillReach.party;
+    case SkillKind.haste || SkillKind.guard || SkillKind.protect:
+      return SkillReach.party;
+    case SkillKind.taunt || SkillKind.bulwark:
+      return SkillReach.self;
+    case SkillKind.defenseUp:
+      return sk.partyShield > 0 ? SkillReach.party : SkillReach.self;
+    case SkillKind.support:
+      if (sk.debuffs.isNotEmpty || sk.power > 0) return foe;
+      if (sk.lowestAlly || sk.allyShield > 0) return SkillReach.ally;
+      if (sk.partyBuffs.isNotEmpty ||
+          sk.partyShield > 0 ||
+          sk.advanceAllies > 0) {
+        return SkillReach.party;
+      }
+      return SkillReach.self;
+  }
+}
+
+/// Etiqueta del objetivo en su color: `[1 enemigo]`, `[TODOS]`...
+String skillReachMarkup(SkillDef sk) {
+  final r = skillReach(sk);
+  return hexSpan(r.hex, '[${r.label}]');
+}
+/// Resumen de una línea, arriba del detalle: "A TODOS · Fuego · 32 c/u ·
+/// +2 Quemadura".
+String skillSummaryMarkup(SkillDef sk, Combatant p) {
+  final r = skillReach(sk);
+  final dmg = sk.kind == SkillKind.physical || sk.kind == SkillKind.magical;
+  final v = sk.charge > 0
+      ? p.attack * sk.charge
+      : (sk.kind == SkillKind.magical ? p.magic : p.attack) * sk.power;
+  final st = sk.status;
+  return [
+    hexSpan(r.hex, switch (r) {
+      SkillReach.oneFoe => 'A 1 enemigo',
+      SkillReach.allFoes => 'A TODOS',
+      SkillReach.ally => 'A un aliado',
+      SkillReach.party => 'Al grupo',
+      SkillReach.self => 'A vos',
+    }),
+    if (dmg) elementOf(sk.id).label,
+    if (dmg) hexSpan('#ffd166', '${jsRound(v)}${sk.allTargets ? ' c/u' : ''}'),
+    if (st != null)
+      hexSpan(statusHex(st.kind),
+          '${st.chance != null ? '${jsRound(st.chance! * 100)}%' : '+${st.stacks}'} ${st.kind.label}'),
+  ].join(' · ');
 }

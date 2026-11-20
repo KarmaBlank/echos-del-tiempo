@@ -344,6 +344,20 @@ tienen que cumplir):
 - **Tiempo agotado**: el reloj de 30 s (`SessionBattle.turnTime`) se
   reinicia solo cuando empieza otro turno, así que cuenta el turno entero;
   si se agota después de una Instante, defiende y termina.
+- **Menú de HABILIDADES (v0.10.x, pedido del dueño):** las Instante van
+  primero, con la marca `[INSTANTE]` en celeste junto al nombre y un
+  separador fino "Instante — no terminan tu turno" arriba (no es una
+  fila: las teclas 1-9 siguen el orden que se ve). Con `chained` el
+  encabezado del menú dice "Encadenaste: te queda una acción". Cada fila
+  lleva su objetivo (`skillReach`: `[1 enemigo]`, `[TODOS]`,
+  `[aliado]`, `[grupo]`, `[vos]`); con el cursor o el mouse sobre
+  una habilidad contra enemigos la escena marca a quién afectaría (todos
+  o el objetivo actual). El detalle arranca con un resumen de una línea
+  ("A TODOS · Fuego · 32 c/u · +2 Quemadura"). Si no se puede usar, la
+  fila sale atenuada y el detalle muestra arriba, en rojo, una línea por
+  condición (`SkillRequirements.missingLines`: "Falta: 3 MP (tenés 1)",
+  "Falta: Pulso 2 (tenés 1)", "Necesita: objetivo Fisurado"); confirmar
+  no hace nada.
 - Si la Instante gana la batalla, termina como cualquier acción.
 - Sesión: después de una Instante el host espera la pausa normal (0.8 s)
   y vuelve a esperar al mismo jugador (`waitingForPlayer`); el AUTO de los

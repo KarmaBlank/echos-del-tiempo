@@ -40,11 +40,22 @@ class PassiveTreeRules {
       (ms10 ? milestonePoints[10]! : 0) +
       (ms20 ? milestonePoints[20]! : 0);
 
+  /// Cuántas keystones ofrece cada hito.
+  static const milestoneChoices = 3;
+
   /// Keystones elegibles en el hito [milestone] (10 o 20) para [classId]
-  /// (progression_v2.md § 5): las 5 de los clusters v4 de su clase por
-  /// costo desde el inicio; el 10 ofrece las 3 más cercanas y el 20 las
-  /// otras 2 más la del puente más cercano.
-  List<String> milestoneOptions(String classId, int milestone) {
+  /// (progression_v2.md § 5 y § 11.3): las 5 de los clusters v4 de su
+  /// clase por costo desde el inicio; el 10 ofrece las 3 más cercanas y
+  /// el 20 las otras 2 más la del puente más cercano.
+  ///
+  /// [taken]: keystones que el jugador ya tomó con puntos normales (sin
+  /// las elegidas en hitos: ver [milestoneTaken]). No se ofrecen; su
+  /// lugar lo ocupa la siguiente elegible de la misma lista y, si no
+  /// alcanza, la keystone no tomada más cercana al inicio (de clase,
+  /// puente o grupo; nunca una que ofrezca el otro hito).
+  List<String> milestoneOptions(String classId, int milestone,
+      {Iterable<String> taken = const []}) {
+    final have = taken.toSet();
     final start = catalog.startNodeByClass[classId];
     if (start == null) return const [];
     final dist = <String, int>{start: 0};
@@ -72,8 +83,6 @@ class PassiveTreeRules {
             catalog.paths[n.pathId]?.classId == classId)
           n.id
     ]..sort(cmp);
-    final inner = own.take(5).toList();
-    if (milestone == 10) return inner.take(3).toList();
     final bridge = [
       for (final n in catalog.nodes.values)
         if (n.kind == 'k' &&
@@ -82,8 +91,38 @@ class PassiveTreeRules {
                 false))
           n.id
     ]..sort(cmp);
-    return [...inner.skip(3), ...bridge.take(1)];
+    final anyKey = [
+      for (final n in catalog.nodes.values)
+        if (n.kind == 'k' && dist.containsKey(n.id)) n.id
+    ]..sort(cmp);
+    bool free(String id) => !have.contains(id);
+    // Lista de cada hito según el spec, sin las tomadas; si faltan, las
+    // más cercanas no tomadas que no estén en el otro hito.
+    final inner = own.take(5).where(free).toList();
+    final ten = inner.take(milestoneChoices).toList();
+    final twenty = [
+      ...inner.skip(milestoneChoices),
+      ...bridge.where(free).take(1),
+    ];
+    List<String> fill(List<String> base, Set<String> avoid) {
+      final out = [...base];
+      for (final k in anyKey) {
+        if (out.length >= milestoneChoices) break;
+        if (free(k) && !out.contains(k) && !avoid.contains(k)) out.add(k);
+      }
+      return out;
+    }
+
+    final ten3 = fill(ten, twenty.toSet());
+    if (milestone == 10) return ten3;
+    return fill(twenty, ten3.toSet());
   }
+
+  /// Keystones tomadas con puntos normales en [tree] (las elegidas en
+  /// hitos no cuentan: siguen siendo opción de su hito).
+  static Set<String> milestoneTaken(
+          List<String> tree, String? ms10, String? ms20) =>
+      {...tree}..removeAll([if (ms10 != null) ms10, if (ms20 != null) ms20]);
 
   bool canTake(
     String classId,

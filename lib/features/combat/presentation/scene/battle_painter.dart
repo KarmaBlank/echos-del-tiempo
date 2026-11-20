@@ -931,7 +931,8 @@ class BattleScenePainter extends CustomPainter {
             (bw * (e.hp / e.maxHp).clamp(0.0, 1.0)).roundToDouble(),
             3 * u);
         _breakBars(c, e, bx, by + 4 * u, bw, u, pt);
-        if (e.alive && f.targetId == e.id) {
+        if (e.alive &&
+            (f.targetId == e.id || f.highlightIds.contains(e.id))) {
           _marker(c, r, _bob(pt / 120) * 2 * u, u);
         }
       }

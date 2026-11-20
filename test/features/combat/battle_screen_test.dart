@@ -1,5 +1,6 @@
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
+import 'package:echos_del_tiempo/game_engine/data/skills_catalog.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/battle_command_window.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/battle_screen.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/scene/battle_fx.dart';
@@ -147,10 +148,15 @@ void main() {
     await tester.pump();
     expect(menu.selectedAction, 1);
     // La descripción es la de la acción elegida.
-    expect(find.byKey(ValueKey('battle-desc-skill-${cur.skillIds[1]}')),
+    // En el menú las Instante van primero.
+    final shown = [
+      ...cur.skillIds.where((id) => kSkills[id]?.instant ?? false),
+      ...cur.skillIds.where((id) => !(kSkills[id]?.instant ?? false)),
+    ];
+    expect(find.byKey(ValueKey('battle-desc-skill-${shown[1]}')),
         findsOneWidget);
     menu.handleKey(LogicalKeyboardKey.enter);
-    expect((sent! as SkillCommand).skillId, cur.skillIds[1]);
+    expect((sent! as SkillCommand).skillId, shown[1]);
   });
 
   testWidgets('PASAR: última categoría, descripción y clic pasa el turno',

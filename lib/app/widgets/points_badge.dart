@@ -3,9 +3,10 @@ import 'package:material_ui/material_ui.dart';
 import '../theme/proto_colors.dart';
 import '../theme/retro_type.dart';
 
-/// Insignia chica `+N` de puntos sin usar (passive_tree_v4.md § 7): caja
-/// dorada con texto oscuro y borde claro. No depende solo del color: el
-/// `+N` se lee igual con cualquier paleta de daltonismo.
+/// Insignia chica `N` de puntos sin usar (passive_tree_v4.md § 7):
+/// pastilla dorada con texto oscuro y borde claro, dentro del botón a la
+/// derecha del texto (v0.10.1, nunca encima). No depende solo del color:
+/// el número se lee igual con cualquier paleta de daltonismo.
 ///
 /// Con [pulse] late suave (opacidad y brillo del borde); con "Reducir
 /// movimiento" ([reduceMotion]) queda quieta con un borde más grueso.
@@ -71,7 +72,7 @@ class _PointsBadgeState extends State<PointsBadge>
               color: Color.lerp(ProtoColors.title, ProtoColors.white, t)!,
               width: widget.reduceMotion ? 2 : 1),
         ),
-        child: Text('+${widget.count}',
+        child: Text('${widget.count}',
             style: RetroType.style(RetroType.small,
                 color: PointsBadge.ink, fontWeight: FontWeight.bold)),
       );
