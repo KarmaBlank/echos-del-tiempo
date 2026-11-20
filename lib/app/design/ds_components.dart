@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../theme/proto_colors.dart';
 import '../theme/retro_text.dart';
 import '../theme/retro_theme.dart';
+import '../theme/ui_theme.dart';
 import 'ds_button.dart';
 import 'ds_focus.dart';
 import 'ds_tokens.dart';
@@ -22,8 +23,8 @@ class DsBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fs = MediaQuery.textScalerOf(context).scale(RetroType.label);
-    final style = DsText.subtitle(
-        neutral ? DsColors.textSecondary : DsColors.onActionPrimary);
+    final style =
+        DsText.subtitle(neutral ? DsColors.textSecondary : ProtoColors.bg);
     return Badge(
       label: Text(retroText(text), textScaler: TextScaler.noScaling),
       textStyle: style.copyWith(fontSize: fs, height: 1),
@@ -419,7 +420,7 @@ class DsAttributeRow extends StatelessWidget {
         SizedBox(
             width: RetroType.em(context, 10) +
                 2 *
-                    (DsMetrics.inset +
+                    (UiTheme.space(12) +
                         DsMetrics.controlBorder +
                         DsFocusRing.extent),
             child: DsButton(

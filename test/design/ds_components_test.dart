@@ -24,6 +24,8 @@ void main() {
       expect(btn.right - txt.right - b, greaterThanOrEqualTo(8));
       expect(txt.top - btn.top - b, greaterThanOrEqualTo(8 - 0.5));
       expect(btn.bottom - txt.bottom - b, greaterThanOrEqualTo(8 - 0.5));
+      // Horizontal mayor que vertical (estilo Material 3).
+      expect(txt.left - btn.left, greaterThan(txt.top - btn.top));
     }
   });
 

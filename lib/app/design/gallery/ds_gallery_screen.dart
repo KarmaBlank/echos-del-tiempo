@@ -77,46 +77,58 @@ class _DsGalleryScreenState extends State<DsGalleryScreen> {
             data: DsTheme.apply(Theme.of(context)),
             child: Scaffold(
               backgroundColor: DsColors.background,
-              body: Column(children: [
-                DsToolbar(
-                  title: 'GALERÍA',
-                  center: DsTabBar(
-                    tabs: [
-                      for (final p in DsGalleryPage.values) DsTab(p.label)
-                    ],
-                    index: _page.index,
-                    onChanged: (i) =>
-                        setState(() => _page = DsGalleryPage.values[i]),
-                  ),
-                  actions: [
-                    DsButton('TEXTO ${_sizeNames[_size]}',
-                        size: DsButtonSize.compact,
-                        tooltip: 'Tamaño del texto',
-                        onPressed: () => setState(
-                            () => _size = _next(TextSize.values, _size))),
-                    DsButton(_themeNames[_theme]!,
-                        size: DsButtonSize.compact,
-                        tooltip: 'Tema de interfaz',
-                        onPressed: () => setState(() =>
-                            _theme = _next(InterfaceTheme.values, _theme))),
-                    DsButton(_spacing == UiSpacing.wide ? 'AMPLIO' : 'COMPACTO',
-                        size: DsButtonSize.compact,
-                        tooltip: 'Espaciado',
-                        onPressed: () => setState(() =>
-                            _spacing = _next(UiSpacing.values, _spacing))),
-                  ],
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: EdgeInsets.all(DsSpace.xl),
-                    child: KeyedSubtree(
-                        key: ValueKey(_page),
-                        child: Align(
-                            alignment: Alignment.topLeft,
-                            child: pageFor(_page))),
-                  ),
-                ),
-              ]),
+              body: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DsToolbar(
+                      title: 'GALERÍA',
+                      center: DsTabBar(
+                        tabs: [
+                          for (final p in DsGalleryPage.values) DsTab(p.label)
+                        ],
+                        index: _page.index,
+                        onChanged: (i) =>
+                            setState(() => _page = DsGalleryPage.values[i]),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: DsSpace.xl, vertical: DsSpace.sm),
+                      child: Wrap(
+                          spacing: DsSpace.sm,
+                          runSpacing: DsSpace.xs,
+                          children: [
+                            DsButton('TEXTO ${_sizeNames[_size]}',
+                                size: DsButtonSize.compact,
+                                tooltip: 'Tamaño del texto',
+                                onPressed: () => setState(() =>
+                                    _size = _next(TextSize.values, _size))),
+                            DsButton(_themeNames[_theme]!,
+                                size: DsButtonSize.compact,
+                                tooltip: 'Tema de interfaz',
+                                onPressed: () => setState(() => _theme =
+                                    _next(InterfaceTheme.values, _theme))),
+                            DsButton(
+                                _spacing == UiSpacing.wide
+                                    ? 'AMPLIO'
+                                    : 'COMPACTO',
+                                size: DsButtonSize.compact,
+                                tooltip: 'Espaciado',
+                                onPressed: () => setState(() => _spacing =
+                                    _next(UiSpacing.values, _spacing))),
+                          ]),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.all(DsSpace.xl),
+                        child: KeyedSubtree(
+                            key: ValueKey(_page),
+                            child: Align(
+                                alignment: Alignment.topLeft,
+                                child: pageFor(_page))),
+                      ),
+                    ),
+                  ]),
             ),
           );
         }),

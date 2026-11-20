@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/retro_text.dart';
-import '../theme/retro_theme.dart';
+import '../theme/ui_theme.dart';
 import 'ds_focus.dart';
 import 'ds_tokens.dart';
 
@@ -69,29 +69,29 @@ class DsButton extends StatelessWidget {
   /// Padding real: aire libre + borde (Material pinta el borde encima).
   EdgeInsets padding() {
     final b = DsMetrics.controlBorder;
+    // Regla (design_system.md § 6): ≥ 8 libres en todos los lados y
+    // horizontal mayor que vertical: normal 16 × 8, compacto 12 × 8,
+    // ícono 8 (cuadrado).
     final v = DsMetrics.inset + b;
     if (kind == DsButtonKind.icon) return EdgeInsets.all(v);
-    final h = (_compact ? DsMetrics.inset : DsSpace.md) + b;
+    final h = UiTheme.space(_compact ? 12 : 16) + b;
     return EdgeInsets.symmetric(horizontal: h, vertical: v);
   }
 
   ButtonStyle style(BuildContext context) {
-    final minH = RetroType.width(
-        context, _compact ? DsMetrics.minHeightCompact : DsMetrics.minHeight);
     final primary = kind == DsButtonKind.primary;
     final ghost = kind == DsButtonKind.ghost;
     Color bg(Set<WidgetState> s) {
       if (s.contains(WidgetState.disabled)) return Colors.transparent;
       final hot =
           s.contains(WidgetState.hovered) || s.contains(WidgetState.pressed);
-      if (primary) return DsColors.actionPrimary;
       if (ghost && !hot && !selected) return Colors.transparent;
       return hot ? DsColors.hover : DsColors.surfaceRaised;
     }
 
     Color fg(Set<WidgetState> s) {
       if (s.contains(WidgetState.disabled)) return DsColors.textDisabled;
-      if (primary) return DsColors.onActionPrimary;
+      if (primary) return DsColors.actionPrimary;
       if (selected) return DsColors.selected;
       return accent ?? DsColors.textPrimary;
     }
@@ -106,7 +106,7 @@ class DsButton extends StatelessWidget {
       if (s.contains(WidgetState.pressed) || selected) {
         c = primary ? DsColors.textPrimary : DsColors.selected;
       } else if (primary) {
-        c = hot ? DsColors.textPrimary : DsColors.actionPrimary;
+        c = DsColors.actionPrimary;
       } else if (ghost) {
         c = hot ? DsColors.hoverBorder : Colors.transparent;
       } else {
@@ -120,7 +120,7 @@ class DsButton extends StatelessWidget {
       elevation: const WidgetStatePropertyAll(0),
       shape: const WidgetStatePropertyAll(RoundedRectangleBorder()),
       padding: WidgetStatePropertyAll(padding()),
-      minimumSize: WidgetStatePropertyAll(Size(minH, minH)),
+      minimumSize: const WidgetStatePropertyAll(Size.zero),
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       visualDensity: VisualDensity.standard,
       splashFactory: NoSplash.splashFactory,

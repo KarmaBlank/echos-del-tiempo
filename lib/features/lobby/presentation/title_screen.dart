@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../bestiary/presentation/bestiary_screen.dart';
 import '../../build_planner/presentation/build_planner_screen.dart';
+import '../../../app/design/gallery/ds_gallery_screen.dart';
 import '../../../app/feature_flags.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
@@ -459,6 +460,16 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             PanelButton('BESTIARIO',
                 key: const ValueKey('title-bestiary'),
                 onPressed: _busy ? null : _openBestiary),
+            // Galería del sistema de diseño, solo en la versión de
+            // desarrollo (design_system.md § 8).
+            if (FeatureFlags.instance.devTools)
+              PanelButton('GALERÍA',
+                  key: const ValueKey('title-gallery'),
+                  onPressed: _busy
+                      ? null
+                      : () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                              builder: (_) => const DsGalleryScreen()))),
           ],
         ),
         // Party solo si este build la ofrece (FeatureFlags.soloParty).

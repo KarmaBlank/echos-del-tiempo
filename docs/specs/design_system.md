@@ -63,16 +63,30 @@ Nunca un número suelto: siempre `DsSpace.*` (pasa por `UiTheme.space`).
 Cuatro estilos con nombre, sobre los tokens de `RetroType` (escalan con
 TAMAÑO DEL TEXTO por `RetroTextScaler`; a 1920×1080 todo ×1.5):
 
-| nombre | fuente | nominal | real a 1280×720 Normal | color por defecto |
+| nombre | fuente | nominal | real a 1280×720 / 1920×1080 | color |
 |---|---|---|---|---|
-| Título | Press Start 2P | `RetroType.title` 16 | 16 px | texto principal |
-| Subtítulo | Press Start 2P | `RetroType.label` 9 | 10→8 px de grilla (8 / 16 físicos) | texto secundario |
-| Texto | VT323 (fuente de lectura) | `RetroType.body` 11 | 20 px | texto |
-| Detalle | VT323 (fuente de lectura) | `RetroType.small` 10 | 20 px | texto secundario |
+| Título | Press Start 2P | `RetroType.title` 16 | 16 / 24 px | dorado claro |
+| Subtítulo | Press Start 2P | `RetroType.label` 9 | 8 / 16 px | celeste |
+| Cuerpo (Texto) | VT323 (fuente de lectura) | `RetroType.body` 11 | 20 / 30 px | blanco tinta |
+| Detalle | VT323 (fuente de lectura) | `RetroType.small` 10 | 20 / 30 px | lavanda |
 
-Texto y Detalle tienen el mismo tamaño (VT323 por debajo de 20 px no se
-lee): la diferencia es el color. Los estilos respetan "Fuente de lectura"
+Jerarquía por COLOR (respuesta del dueño, v0.11): las fuentes pixel no
+tienen pesos y la regla del juego es sin negritas, así que cada nivel
+tiene su propio tono (no "el mismo blanco más apagado"). Cuerpo y
+Detalle tienen el mismo tamaño porque VT323 por debajo de 20 px no se
+lee; los separa el color. Los estilos respetan "Fuente de lectura"
 (CLÁSICA / ATKINSON) y "Títulos con la fuente de lectura".
+
+Colores de texto (`DsTextColor`, siguen al tema):
+
+| rol | AZUL | OSCURO | ALTO CONTRASTE |
+|---|---|---|---|
+| Título | #FFE3A8 | #F5D99A | #FFF1A8 |
+| Subtítulo | #8FD3F4 | #8EC5E6 | #9FE7FF |
+| Cuerpo | #E8ECFF | #EDEDED | #FFFFFF |
+| Detalle | #B3ACE6 | #B8B2DC | #D4CCFF |
+
+Todos ≥ 7:1 sobre el fondo de su tema. Desactivado: Detalle al 55 %.
 
 ### 3.3 Roles de color (`DsColors`)
 
@@ -85,11 +99,9 @@ Todos son tokens de `ProtoColors` (siguen al tema y al modo daltónico).
 | superficie hundida | `input` | #0F1530 | #000000 |
 | borde | `panelBorder` | #2E3B6B | #BDBDBD |
 | borde de control | `buttonBorder` | #5B74C9 | #FFFFFF |
-| texto principal | `title` | #E8ECFF | #FFFFFF |
-| texto | `ink` | #B0BAE5 | #F0F0F0 |
-| texto secundario | `dim` | #929ABA | #C8C8C8 |
-| texto desactivado | `dim` al 60 % | — | — |
-| acción principal | relleno `gold`, texto `bg` | #D3AC4F | #FFE600 |
+| Título / Subtítulo / Cuerpo / Detalle | `DsTextColor` (§ 3.2) | | |
+| texto desactivado | Detalle al 55 % | — | — |
+| acción principal | caja `button`, borde y texto `gold` | #D3AC4F | #FFE600 |
 | acción secundaria | `button` + `buttonBorder` | | |
 | foco | `gold` (aro de 2 px por fuera) | #D3AC4F | #FFE600 |
 | peligro | `red` | VisionColor | VisionColor |
@@ -99,8 +111,8 @@ Todos son tokens de `ProtoColors` (siguen al tema y al modo daltónico).
 | MP | `ice` | #77A7D7 | #B8DCFF |
 | Instante | celeste fijo #81ECEC (el de Congelación súbita, ya en `UiTheme.keep`) | igual | igual |
 
-Regla: el color dice qué es (MP, Pulso, peligro); la jerarquía la da el
-brillo (principal > texto > secundario > desactivado).
+Regla: el color dice qué es (MP, Pulso, peligro) y también qué nivel de
+jerarquía es (Título, Subtítulo, Cuerpo, Detalle).
 
 ## 4. Disposición de un panel
 
@@ -140,12 +152,14 @@ foco amarillo #FFE600.
 
 Medidas en px nominales (Normal, 1280×720); todo escala.
 
-- DsButton: variantes principal (relleno dorado, texto oscuro),
-  secundario (caja del tema), fantasma (sin caja hasta hover), ícono
-  (cuadrado, con tooltip obligatorio). Tamaños normal (8 libres + borde,
-  alto mín. 40, Subtítulo) y compacto (8 libres + borde, alto mín. 32,
-  Subtítulo). Ícono: cuadrado de alto igual al botón. Base:
-  `FilledButton` / `OutlinedButton` / `TextButton` / `IconButton`.
+- DsButton: variantes principal (misma caja que el resto, borde y texto
+  dorados; decisión del dueño: nada de relleno dorado), secundario (caja
+  del tema), fantasma (sin caja hasta hover), ícono (cuadrado, con
+  tooltip obligatorio). Padding (estilo Material 3, horizontal mayor que
+  vertical, ≥ 8 libres en todos los lados, sin contar el borde): normal
+  16 h × 8 v, compacto 12 h × 8 v, ícono 8 en los cuatro lados. Sin alto
+  mínimo forzado (el alto sale del texto + padding). Texto en Subtítulo.
+  Base: `FilledButton` / `OutlinedButton` / `TextButton` / `IconButton`.
 - DsTab / DsTabBar: pestaña con texto y, opcional, insignia DsBadge
   adentro, a la derecha del texto, separada `xs` (nunca encima). Elegida:
   texto `gold` + subrayado 3 px. Base: `TabBar` + `Badge` sin hijo.
@@ -194,8 +208,9 @@ tokens ya siguen al tema activo).
 
 ## 8. Galería
 
-Pantalla `DsGalleryScreen` (solo flavor `main_gallery.dart`, que arma
-los FeatureFlags de dev). Arriba: selector de TAMAÑO DEL TEXTO, TEMA
+Pantalla `DsGalleryScreen`: botón GALERÍA en la pantalla de título solo
+con `FeatureFlags.devTools` (flavor dev), o directo con
+`main_gallery.dart`. Arriba: selector de TAMAÑO DEL TEXTO, TEMA
 (AZUL / OSCURO / ALTO CONTRASTE) y ESPACIADO. Secciones: Paleta,
 Tipografía, Botones, Pestañas y barra, Campos y filas, Valores,
 Superficies, Ejemplos (mockups: barra de PERSONAJE, fila de inventario
