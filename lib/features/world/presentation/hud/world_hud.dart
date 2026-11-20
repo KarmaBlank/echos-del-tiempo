@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/design/design.dart';
 import '../../../../app/theme/action_box.dart';
 import '../../../../app/theme/panel_frame.dart' show RetroTooltip;
 import '../../../../app/theme/party_box.dart';
@@ -171,24 +172,20 @@ class WorldHud extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (s.mode == SessionMode.lobby && onExit != null) ...[
-                      ElevatedButton(
-                        style: RetroTheme.compactButton(),
-                        onPressed: onExit,
-                        child: const Text('< TITULO'),
-                      ),
+                      DsButton('< TITULO',
+                          key: const ValueKey('hud-exit'),
+                          size: DsButtonSize.compact,
+                          onPressed: onExit),
                       const SizedBox(width: 8),
                     ],
                     if (onMenu != null) PauseMenuButton(onPressed: onMenu!),
                     // Party jugando solo, en el pueblo (solo_party.md § 2.3).
                     if (controller.canEditParty) ...[
                       const SizedBox(width: 8),
-                      ElevatedButton(
-                        key: const ValueKey('hud-party'),
-                        style: RetroTheme.compactButton(),
-                        onPressed: controller.toggleParty,
-                        child:
-                            Text('PARTY (${view.companions.length + 1}) [P]'),
-                      ),
+                      DsButton('PARTY (${view.companions.length + 1}) [P]',
+                          key: const ValueKey('hud-party'),
+                          size: DsButtonSize.compact,
+                          onPressed: controller.toggleParty),
                     ],
                     // Puntos sin usar: `PERSONAJE [C]` con `+N` (solo si hay;
                     // passive_tree_v4.md § 7).
@@ -216,14 +213,14 @@ class WorldHud extends StatelessWidget {
                   children: [
                     Text('Sala: $code',
                         key: const ValueKey('hud-room-code'),
-                        style: const TextStyle(color: RetroPalette.gold)),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      style: RetroTheme.compactButton(),
-                      onPressed: () =>
-                          Clipboard.setData(ClipboardData(text: code)),
-                      child: const Text('COPIAR'),
-                    ),
+                        style: DsText.body(DsColors.textTitle)),
+                    SizedBox(width: DsSpace.sm),
+                    DsButton('COPIAR',
+                        key: const ValueKey('hud-room-copy'),
+                        size: DsButtonSize.compact,
+                        tooltip: 'Copiar el código de la sala',
+                        onPressed: () =>
+                            Clipboard.setData(ClipboardData(text: code))),
                   ],
                 ),
                     ),
@@ -260,30 +257,26 @@ class WorldHud extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              ElevatedButton(
-                                key: const ValueKey('minimap-zoom-out'),
-                                style: RetroTheme.compactButton(),
-                                onPressed: zoom > 1
-                                    ? () => setMinimapZoom(ref, zoom - 1)
-                                    : null,
-                                child: const Text('-'),
-                              ),
-                              const SizedBox(width: 4),
-                              ElevatedButton(
-                                key: const ValueKey('minimap-zoom-in'),
-                                style: RetroTheme.compactButton(),
-                                onPressed: zoom < GameSettings.minimapZooms
-                                    ? () => setMinimapZoom(ref, zoom + 1)
-                                    : null,
-                                child: const Text('+'),
-                              ),
-                              const SizedBox(width: 4),
-                              ElevatedButton(
-                                key: const ValueKey('minimap-open-map'),
-                                style: RetroTheme.compactButton(),
-                                onPressed: controller.toggleMap,
-                                child: const Text('MAPA [M]'),
-                              ),
+                              DsButton.icon(const Text('-'),
+                                  key: const ValueKey('minimap-zoom-out'),
+                                  tooltip: 'Alejar el minimapa',
+                                  size: DsButtonSize.compact,
+                                  onPressed: zoom > 1
+                                      ? () => setMinimapZoom(ref, zoom - 1)
+                                      : null),
+                              SizedBox(width: DsSpace.xs),
+                              DsButton.icon(const Text('+'),
+                                  key: const ValueKey('minimap-zoom-in'),
+                                  tooltip: 'Acercar el minimapa',
+                                  size: DsButtonSize.compact,
+                                  onPressed: zoom < GameSettings.minimapZooms
+                                      ? () => setMinimapZoom(ref, zoom + 1)
+                                      : null),
+                              SizedBox(width: DsSpace.xs),
+                              DsButton('MAPA [M]',
+                                  key: const ValueKey('minimap-open-map'),
+                                  size: DsButtonSize.compact,
+                                  onPressed: controller.toggleMap),
                             ],
                           ),
                         ),
@@ -466,7 +459,9 @@ class WorldHud extends StatelessWidget {
                     for (final line in _banners(s))
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: _CanvasLabel(line.$1, color: line.$2),
+                        child: DsToast(retroText(line),
+                            key: const ValueKey('hud-banner'),
+                            kind: DsToastKind.reward),
                       ),
                     // `[E] ...`: caja `#000a` y texto dorado (sello violeta).
                     if (view.promptLabel case final label?)
@@ -627,8 +622,8 @@ class WorldHud extends StatelessWidget {
   }
 
   /// Avisos de una línea: barrera abierta (escalera o jefe).
-  List<(String, Color)> _banners(GameSession s) {
-    final out = <(String, Color)>[];
+  List<String> _banners(GameSession s) {
+    final out = <String>[];
     final m = s.mission;
     final f = MapGame.currentFloor(view);
     if (m != null && f != null && !f.last) {
@@ -639,10 +634,7 @@ class WorldHud extends StatelessWidget {
           WorldRules.distance(
                   controller.local.x, controller.local.y, d.x, d.y) >
               140) {
-        out.add((
-          'La escalera se abrió → bajá al piso ${m.floor + 2}',
-          ProtoColors.gold
-        ));
+        out.add('La escalera se abrió → bajá al piso ${m.floor + 2}');
       }
       return out;
     }
@@ -653,10 +645,7 @@ class WorldHud extends StatelessWidget {
         WorldRules.distance(
                 controller.local.x, controller.local.y, boss.x, boss.y) >
             140) {
-      out.add((
-        'La barrera se abrió → busca al JEFE (★ en el minimapa)',
-        ProtoColors.gold
-      ));
+      out.add('La barrera se abrió → busca al JEFE (★ en el minimapa)');
     }
     return out;
   }
@@ -809,19 +798,24 @@ class _MissionBar extends StatelessWidget {
     // superpone ni empuja los objetivos hacia abajo).
     return FittedBox(
       fit: BoxFit.scaleDown,
-      child: RetroPanel(
+      // Superficie sin borde (design_system.md § 2, principio 0): la
+      // misión en Cuerpo, el tiempo de turno en Detalle.
+      child: Container(
         key: const ValueKey('hud-mission-bar'),
-        padding: const EdgeInsets.all(8),
+        color: DsColors.surface,
+        padding: EdgeInsets.symmetric(
+            horizontal: DsSpace.md, vertical: DsSpace.sm),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (text != null)
               Text(retroText(text),
-                  style: const TextStyle(color: ProtoColors.green)),
+                  maxLines: 1, style: DsText.body(DsColors.textPrimary)),
             if (turns != null)
               Text(retroText(turns),
                   key: const ValueKey('hud-turn-timer'),
-                  style: const TextStyle(color: ProtoColors.sky)),
+                  maxLines: 1,
+                  style: DsText.detail()),
           ],
         ),
       ),
@@ -1036,14 +1030,15 @@ class CompactPlayerBox extends StatelessWidget {
                       TextSpan(children: [
                         TextSpan(
                             text: retroText(p.name),
-                            style: const TextStyle(color: ProtoColors.title)),
+                            style: const TextStyle(color: DsColors.textTitle)),
                         if (asc != null)
                           TextSpan(
                               text: retroText(', ${asc.name}'),
                               style: TextStyle(color: Color(asc.color))),
                         TextSpan(
                             text: retroText(' $cls'),
-                            style: const TextStyle(color: ProtoColors.sky)),
+                            style:
+                                const TextStyle(color: DsColors.textSecondary)),
                       ]),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1059,20 +1054,20 @@ class CompactPlayerBox extends StatelessWidget {
                     TextSpan(children: [
                       TextSpan(
                           text: ' Lv${prof.level}',
-                          style: const TextStyle(color: ProtoColors.sky)),
+                          style: const TextStyle(color: DsColors.textPrimary)),
                       // Chips de estado: texto de color (sin caja: no
                       // agranda la línea).
                       if (!p.alive)
                         const TextSpan(
                             text: ' K.O.',
-                            style: TextStyle(color: ProtoColors.crimson)),
+                            style: TextStyle(color: DsColors.danger)),
                       if (prof.points > 0)
                         TextSpan(
                             text: ' +${prof.points}',
-                            style: const TextStyle(color: ProtoColors.gold)),
+                            style: const TextStyle(color: DsColors.reward)),
                       const TextSpan(
                           text: ' [+]',
-                          style: TextStyle(color: ProtoColors.dim)),
+                          style: TextStyle(color: DsColors.textSecondary)),
                     ]),
                     key: ValueKey('hud-level-${p.id}'),
                     maxLines: 1,
@@ -1111,7 +1106,7 @@ class CompactPlayerBox extends StatelessWidget {
                   value: x.value,
                   max: x.max,
                   height: 2,
-                  color: x.mastery ? ProtoColors.violet : ProtoColors.gold),
+                  color: x.mastery ? ProtoColors.violet : DsColors.reward),
             ),
           ),
       ],
@@ -1210,16 +1205,16 @@ class _Objectives extends StatelessWidget {
                 child: collapsed
                     ? Text(retroText(objectivesSummaryText(mission, floor)),
                         key: const ValueKey('hud-objectives-summary'),
-                        style: const TextStyle(color: ProtoColors.ink))
+                        style: const TextStyle(color: DsColors.textPrimary))
                     : Text(retroText(title),
                         key: ValueKey(
                             floors ? 'hud-floor' : 'hud-objectives-title'),
-                        style: const TextStyle(color: ProtoColors.gold)),
+                        style: const TextStyle(color: DsColors.textTitle)),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: DsSpace.sm),
               Text(collapsed ? '[+]' : '[-]',
                   key: const ValueKey('hud-objectives-toggle'),
-                  style: const TextStyle(color: ProtoColors.sky)),
+                  style: const TextStyle(color: DsColors.textSecondary)),
             ],
           ),
         ),
@@ -1230,11 +1225,9 @@ class _Objectives extends StatelessWidget {
       constraints: BoxConstraints(
           maxWidth: RetroType.width(
               context, collapsed ? collapsedMaxWidth : maxWidth)),
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 4),
-      decoration: BoxDecoration(
-        color: ProtoColors.scrim(),
-        border: Border.all(color: ProtoColors.buttonBorder),
-      ),
+      padding: EdgeInsets.fromLTRB(DsSpace.sm, 6, DsSpace.sm, 4),
+      // Superficie sin borde (design_system.md § 2, principio 0).
+      color: DsColors.surface,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -1288,8 +1281,9 @@ class _MessageLog extends StatelessWidget {
     final last = messages.length > lines
         ? messages.sublist(messages.length - lines)
         : messages;
-    return RetroPanel(
-      padding: const EdgeInsets.all(8),
+    return Container(
+      color: DsColors.surface,
+      padding: EdgeInsets.all(DsSpace.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -1298,7 +1292,7 @@ class _MessageLog extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(retroText('» $m'),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: ProtoColors.green)),
             ),
@@ -1380,13 +1374,13 @@ class _PlayerBox extends StatelessWidget {
           Text(
             key: ValueKey('hud-xp-${p.id}'),
             retroText('${xpProgressText(prof)} · ₵${prof.credits}'),
-            style: const TextStyle(color: ProtoColors.dim),
+            style: const TextStyle(color: DsColors.textSecondary),
           ),
         ],
         ProtoText(
           'Pociones: ${protoColor(ProtoColors.green, '♥${prof.potions}')} '
           '${protoColor(ProtoColors.ice, '✦${prof.ethers}')}',
-          style: const TextStyle(color: ProtoColors.dim),
+          style: const TextStyle(color: DsColors.textSecondary),
         ),
       ],
     );
@@ -1415,14 +1409,11 @@ class _LevelUpBanner extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('¡SUBIDA DE NIVEL!',
-                style: TextStyle(
-                    fontFamily: RetroType.titleFamily,
-                    fontSize: 16,
-                    color: ProtoColors.gold)),
-            const SizedBox(height: 8),
+            Text('¡SUBIDA DE NIVEL!', style: DsText.title()),
+            SizedBox(height: DsSpace.sm),
             Text(retroText('Esperando a: $waiting'),
-                style: const TextStyle(color: ProtoColors.white)),
+                style: DsText.body(DsColors.textPrimary)),
+
           ],
         ),
       ),

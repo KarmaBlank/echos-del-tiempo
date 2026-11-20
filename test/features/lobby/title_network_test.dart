@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'dart:async';
 
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
@@ -40,8 +41,8 @@ Future<void> _pump(WidgetTester tester, NetSessionFactory factory) async {
 }
 
 VoidCallback? _onPressed(WidgetTester tester, String label) => tester
-    .widget<ElevatedButton>(find.ancestor(
-        of: find.text(label), matching: find.byType(ElevatedButton)))
+    .widget<DsButton>(find.ancestor(
+        of: find.text(label), matching: find.byType(DsButton)))
     .onPressed;
 
 void main() {

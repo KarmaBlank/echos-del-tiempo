@@ -48,6 +48,11 @@ Tests: `test/features/world/session_flow_test.dart`,
 
 ## Título (`#title` y `title()`, HTML 70-83 y líneas 1471-1490)
 
+Cambios v0.12 (design_system.md § 10.3): tarjetas `DsCard`, `> JUGAR`
+principal, `DsButton` en todo y los atajos de teclado en el "?"
+(`title-help`) en vez de dos líneas fijas abajo.
+
+
 - `ECOS DEL TIEMPO` (32 px `gold`, sombra dura `red`) y subtítulo.
 - **Selección de personaje** (v0.3, docs/specs/characters.md § 2): la
   cuenta tiene hasta 8 personajes; el título los lista (sprite, nombre,
@@ -438,6 +443,13 @@ lobby, campo y subida de nivel (`map/loot_painter.dart`):
 ## HUD (overlays Flutter sobre el `GameWidget`)
 
 Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
+
+Cambios v0.12 (sistema de diseño, design_system.md § 10.3): botones
+`DsButton` compactos (zoom del minimapa `DsButton.icon` con tooltip),
+línea de misión / objetivos / registro como superficie sin borde con
+jerarquía por color, avisos (`hud-banner`, puntos sin usar, plan de
+build, chat plegado) como `DsToast`. Mismo orden, mismas teclas, misma
+`_TopRowLayout`.
 
 - **Barra de misión** (arriba al centro, `#mission` del prototipo):
   en misión `nombre · objetivos · mm:ss` (o `¡Derrota al jefe!` con la

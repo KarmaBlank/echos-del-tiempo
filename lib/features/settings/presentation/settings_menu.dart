@@ -3,8 +3,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/widgets/menu_focus.dart';
-import '../../../app/theme/panel_widgets.dart';
+import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
+
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
@@ -111,14 +112,23 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
     }
   }
 
+  /// Qué tiene cada pestaña (antes, una línea fija debajo de las
+  /// pestañas; ahora en el "?": design_system.md § 2, principio 0).
+  static String get _tabsHelp => [
+        for (final t in SettingsTab.values)
+          '<span class="k">${t.label}</span>: ${t.hint}'
+      ].join('<br>');
+
   String get _help => widget.inGame
       ? '<b>Pausa</b><br>Ajustes del juego y salidas. '
           '${widget.multiplayer ? 'En multijugador el juego <b>no se detiene</b> solo: <b>PAUSAR AL GRUPO</b> lo pausa para todos y cualquiera puede reanudar.' : 'Jugando solo, la partida se detiene mientras el menú está abierto.'}'
           '<br><span class="k">Esc</span> cierra · <span class="k">Tab</span> / flechas mueven · <span class="k">Enter</span> elige.<br>'
-          'Los ajustes se guardan solos.'
+          'Los ajustes se guardan solos. Pasá el mouse por un ajuste para '
+          'ver qué hace.<br>$_tabsHelp'
       : '<b>Configuración</b><br>Sonido, pantalla, juego y controles. '
-          'Los cambios se aplican y se guardan al momento.<br>'
-          '<span class="k">Esc</span> cierra · <span class="k">Tab</span> / flechas mueven · <span class="k">Enter</span> elige.';
+          'Los cambios se aplican y se guardan al momento. Pasá el mouse '
+          'por un ajuste para ver qué hace.<br>'
+          '<span class="k">Esc</span> cierra · <span class="k">Tab</span> / flechas mueven · <span class="k">Enter</span> elige.<br>$_tabsHelp';
 
   @override
   Widget build(BuildContext context) {
@@ -137,25 +147,24 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
           help: _help,
           onClose: _escape,
           titleTrailing: widget.inGame ? _status() : null,
-          header: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              PanelTabs(
-                labels: [for (final t in SettingsTab.values) t.label],
-                index: _tab.index,
-                onChanged: (i) => setState(() => _tab = SettingsTab.values[i]),
-              ),
-              PanelHint(_tab.hint),
+          // Pestañas del sistema de diseño (DsTabBar); qué tiene cada
+          // una, en el "?".
+          header: DsTabBar(
+            index: _tab.index,
+            onChanged: (i) => setState(() => _tab = SettingsTab.values[i]),
+            tabs: [
+              for (final t in SettingsTab.values)
+                DsTab(t.label, key: ValueKey('tab-${t.index}')),
             ],
           ),
           leading: [
             if (widget.inGame && confirm == null) ...[
-              PanelButton('SALIR AL TÍTULO',
+              DsButton('SALIR AL TÍTULO',
                   key: const ValueKey('pause-exit-title'),
                   onPressed: widget.onExitToTitle == null
                       ? null
                       : () => setState(() => _confirm = _Exit.title)),
-              PanelButton('SALIR DEL JUEGO',
+              DsButton('SALIR DEL JUEGO',
                   key: const ValueKey('pause-quit'),
                   onPressed: widget.onQuitGame == null
                       ? null
@@ -166,7 +175,7 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
               ? _confirmRow(confirm)
               : [
                   if (widget.inGame && widget.onGroupPause != null)
-                    PanelButton(
+                    DsButton(
                         widget.groupPaused
                             ? 'REANUDAR AL GRUPO'
                             : 'PAUSAR AL GRUPO',
@@ -174,10 +183,11 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
                         selected: widget.groupPaused,
                         onPressed: () =>
                             widget.onGroupPause!(!widget.groupPaused)),
-                  PanelButton(
+                  // CONTINUAR es la acción principal.
+                  DsButton(
                       widget.inGame ? 'CONTINUAR [ESC]' : 'CERRAR [ESC]',
                       key: const ValueKey('settings-close'),
-                      accent: ProtoColors.green,
+                      kind: DsButtonKind.primary,
                       onPressed: widget.onClose),
                 ],
           child: Builder(builder: (ctx) {
@@ -206,12 +216,8 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
               ? 'Grupo en pausa'
               : 'Juego en pausa'),
       key: const ValueKey('pause-status'),
-      style: TextStyle(
-          fontFamily: RetroType.bodyFamily,
-          letterSpacing: RetroType.letterSpacing,
-          fontFamilyFallback: RetroType.bodyFallback,
-          fontSize: RetroType.small,
-          color: running ? ProtoColors.orange : ProtoColors.green),
+      maxLines: 1,
+      style: DsText.detail(running ? DsColors.warning : DsColors.success),
     );
   }
 
@@ -231,12 +237,12 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
           '${protoColor(ProtoColors.orange, consequence)}',
         ),
       ),
-      PanelButton('CANCELAR',
+      DsButton('CANCELAR',
           key: const ValueKey('pause-confirm-cancel'),
           onPressed: () => setState(() => _confirm = null)),
-      PanelButton(quit ? 'SALIR DEL JUEGO' : 'SALIR AL TÍTULO',
+      DsButton(quit ? 'SALIR DEL JUEGO' : 'SALIR AL TÍTULO',
           key: const ValueKey('pause-confirm-yes'),
-          accent: ProtoColors.red, onPressed: () {
+          accent: DsColors.danger, onPressed: () {
         setState(() => _confirm = null);
         (quit ? widget.onQuitGame : widget.onExitToTitle)?.call();
       }),
@@ -269,13 +275,13 @@ Future<bool> showQuitGameDialog(BuildContext context) async =>
           onClose: () => Navigator.of(ctx).pop(false),
           actions: [
             InitialFocus(
-              child: PanelButton('CANCELAR',
+              child: DsButton('CANCELAR',
                   key: const ValueKey('quit-cancel'),
                   onPressed: () => Navigator.of(ctx).pop(false)),
             ),
-            PanelButton('SALIR DEL JUEGO',
+            DsButton('SALIR DEL JUEGO',
                 key: const ValueKey('quit-yes'),
-                accent: ProtoColors.red,
+                accent: DsColors.danger,
                 onPressed: () => Navigator.of(ctx).pop(true)),
           ],
           child: ProtoText(
@@ -295,19 +301,12 @@ class PauseMenuButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) => ElevatedButton(
-        key: const ValueKey('pause-open'),
-        style: RetroTheme.compactButton(),
-        onPressed: onPressed,
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _MenuGlyph(),
-            SizedBox(width: 8),
-            Text('MENU [ESC]'),
-          ],
-        ),
-      );
+  Widget build(BuildContext context) => DsButton('MENU [ESC]',
+      key: const ValueKey('pause-open'),
+      size: DsButtonSize.compact,
+      leading: const _MenuGlyph(),
+      onPressed: onPressed);
+
 }
 
 /// `≡` dibujado (la fuente pixel no lo tiene): tres barras de 2 px.
@@ -332,8 +331,9 @@ class _MenuGlyph extends StatelessWidget {
 // Filas
 // ---------------------------------------------------------------------
 
-/// Una fila de ajuste: nombre a la izquierda, control a la derecha y una
-/// línea `dim` debajo que dice qué hace.
+/// Una fila de ajuste en una línea (design_system.md § 10.3): nombre a
+/// la izquierda y su control a la derecha. Qué hace va al tooltip del
+/// nombre, marcado con "?" (nada de textos de ayuda fijos).
 class _SettingRow extends StatelessWidget {
   const _SettingRow({required this.label, required this.control, this.hint});
 
@@ -343,25 +343,29 @@ class _SettingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final name = Row(mainAxisSize: MainAxisSize.min, children: [
+      Flexible(
+          child: Text(retroText(label),
+              style: DsText.body(DsColors.textPrimary))),
+      if (hint != null) ...[
+        SizedBox(width: DsSpace.xs),
+        Text('?', style: DsText.detail(DsColors.textSecondary)),
+      ],
+    ]);
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: UiTheme.space(6)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: EdgeInsets.symmetric(vertical: DsSpace.xs),
+      child: Row(
         children: [
-          Row(
-            children: [
-              SizedBox(
-                  width: RetroType.width(context, 200),
-                  child: Text(retroText(label))),
-              Expanded(child: control),
-            ],
-          ),
-          if (hint != null)
-            Padding(
-              padding: EdgeInsets.only(left: RetroType.width(context, 200)),
-              child: Text(retroText(hint!),
-                  style: const TextStyle(color: ProtoColors.dim)),
-            ),
+          SizedBox(
+              width: RetroType.width(context, 200),
+              child: hint == null
+                  ? name
+                  : Tooltip(
+                      key: ValueKey('setting-hint-$label'),
+                      message: retroText(hint!),
+                      child: MouseRegion(
+                          cursor: SystemMouseCursors.help, child: name))),
+          Expanded(child: control),
         ],
       ),
     );
@@ -392,10 +396,10 @@ class _Choice<T> extends StatelessWidget {
       runSpacing: 8,
       children: [
         for (final e in options.entries)
-          PanelButton(e.value,
+          DsButton(e.value,
               key: ValueKey('$keyPrefix-${e.value}'),
+              size: DsButtonSize.compact,
               selected: e.key == value,
-              accent: e.key == value ? ProtoColors.gold : null,
               onPressed: on == null ? null : () => on(e.key)),
       ],
     );
@@ -982,18 +986,10 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(top: UiTheme.space(10), bottom: 2),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(retroText(text),
-                style: RetroType.titleStyle(RetroType.label,
-                    color: ProtoColors.title)),
-            const SizedBox(height: 4),
-            Container(height: 1, color: ProtoColors.panelBorder),
-          ],
-        ),
+        padding: EdgeInsets.only(top: DsSpace.sm),
+        child: DsSectionHeader(retroText(text)),
       );
+
 }
 
 /// Vista previa en vivo de la sección TEXTO (accessibility.md § 9): un

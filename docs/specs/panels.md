@@ -135,6 +135,14 @@ Contenido, pausa de grupo y ajustes: docs/specs/settings.md.
 
 ## Mostrador (`board`, 1271-1276)
 
+Cambios v0.12 (design_system.md § 10.3): lista de `DsListRow` de una
+línea (rango, zona, `Lv N` / `Bloqueada`), TUTORIAL primero; detalle
+con `DsSectionHeader` (OBJETIVO, RECOMPENSAS) y RANGO S en `DsFold`;
+PROPONER principal con el motivo en el tooltip y en una línea roja al
+lado; la línea "Propón…" pasó al "?". Preparación: `¡LISTO!`
+principal y GRUPO con una línea por jugador.
+
+
 Título `MOSTRADOR DE MISIONES` [?]; línea "qué hace": `Propón una
 misión: cuando todos votan SÍ pasan a la preparación.` Una **tarjeta**
 por misión (`MissionCard`, borde `panelBorder`):

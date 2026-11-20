@@ -1,6 +1,6 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'dart:ui' as ui;
 
-import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/game_sprites.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/sprite_catalog.dart';
@@ -322,9 +322,8 @@ void main() {
       await tester.pump();
       expect(find.textContaining('Bloqueada: vencé a Rey Limo en Pradera'),
           findsOneWidget);
-      final z2 = tester.widget<PanelButton>(
-          find.byKey(const ValueKey('propose-z2')));
-      expect(z2.reason, 'Bloqueada');
+      final z2 = tester.widget<DsButton>(find.byKey(const ValueKey('propose-z2')));
+      expect(z2.tooltip, 'Bloqueada');
       // v0.3.0: las 10 zonas tienen tarjeta (worldgen.md § 9.4).
       for (var i = 6; i <= 10; i++) {
         expect(find.byKey(ValueKey('zone-soon-$i')), findsNothing);

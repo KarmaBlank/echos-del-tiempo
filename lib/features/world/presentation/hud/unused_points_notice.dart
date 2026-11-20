@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/design/design.dart';
 import '../../../../app/theme/panel_frame.dart';
-import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
-import '../../../../app/widgets/notice_close.dart';
+
 import '../../../../app/widgets/points_badge.dart';
 import '../../../characters/domain/unused_points.dart';
 
@@ -33,21 +33,15 @@ class UnusedPointsButton extends StatelessWidget {
           '${points.parts.map(retroText).join('<br>')}',
       // La insignia va dentro del botón, a la derecha del texto (v0.10.1):
       // suma al ancho y nunca lo tapa.
-      child: ElevatedButton(
+      child: DsButton(
+        'PERSONAJE [C]',
         key: const ValueKey('hud-points-button'),
-        style: RetroTheme.compactButton(),
+        size: DsButtonSize.compact,
         onPressed: onPressed,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('PERSONAJE [C]'),
-            const SizedBox(width: 6),
-            PointsBadge(
-              key: const ValueKey('hud-points-badge'),
-              count: points.total,
-              reduceMotion: reduceMotion,
-            ),
-          ],
+        trailing: PointsBadge(
+          key: const ValueKey('hud-points-badge'),
+          count: points.total,
+          reduceMotion: reduceMotion,
         ),
       ),
     );
@@ -169,33 +163,23 @@ class _UnusedPointsToastState extends State<UnusedPointsToast> {
           : const Duration(milliseconds: 250),
       child: text == null
           ? const SizedBox.shrink()
-          : Container(
+          : Padding(
               key: const ValueKey('hud-points-toast'),
-              margin: const EdgeInsets.only(top: 6),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: ProtoColors.scrim(0.8),
-                border: Border.all(color: ProtoColors.gold, width: 2),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Marca de forma (no solo color) para daltonismo.
-                  Text('▲ ',
-                      style: RetroType.style(RetroType.small,
-                          color: ProtoColors.gold)),
-                  Text(retroText(text),
-                      style: RetroType.style(RetroType.small,
-                          color: ProtoColors.white)),
-                  if (widget.duration == null) ...[
-                    const SizedBox(width: 8),
-                    NoticeClose(
-                        key: const ValueKey('hud-points-toast-close'),
-                        onPressed: _close),
-                  ],
-                ],
+              padding: const EdgeInsets.only(top: 6),
+              // Aviso del sistema (design_system.md § 6): franja dorada y
+              // una marca de forma (no solo color) para daltonismo.
+              child: DsToast(
+                retroText(text),
+                kind: DsToastKind.reward,
+                leading: Text('▲',
+                    style: RetroType.style(RetroType.glyph,
+                        color: DsColors.reward)),
+                closeKey: const ValueKey('hud-points-toast-close'),
+                closeFocusable: false,
+                onClose: widget.duration == null ? _close : null,
               ),
             ),
+
     );
   }
 }
