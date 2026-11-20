@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../game_engine/models/bestiary.dart';
@@ -44,7 +45,7 @@ class _BestiaryScreenState extends ConsumerState<BestiaryScreen> {
         help: BestiaryView.help,
         onClose: () => Navigator.of(context).maybePop(),
         actions: [
-          PanelButton('VOLVER',
+          DsButton('VOLVER',
               key: const ValueKey('bestiary-screen-close'),
               onPressed: () => Navigator.of(context).maybePop()),
         ],

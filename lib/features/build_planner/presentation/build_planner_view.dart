@@ -1,15 +1,12 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/theme/action_box.dart';
-import '../../../app/theme/min_hit_target.dart';
+import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
-import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_bar.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/pixel_icon.dart';
-import '../../../app/widgets/section_panel.dart';
 import '../../../game_engine/data/affixes_catalog.dart';
 import '../../../game_engine/data/ascension_catalog.dart';
 import '../../../game_engine/data/build_templates_catalog.dart';
@@ -52,7 +49,18 @@ class BuildPlannerView extends StatefulWidget {
       '<span class="k">★ Tu build</span>: marca en la tienda, el inventario '
       'y la fusión lo que sirve para el plan.<br>'
       'Cuando una meta avanza aparece un aviso (se apaga en Configuración › '
-      'Juego › Avisos de build).';
+      'Juego › Avisos de build).<br>'
+      '<span class="k">ATRIBUTOS</span>: ej. FUE 40; al subir de nivel te '
+      'recuerda dónde poner los puntos. APLICAR SUGERENCIA agrega como metas '
+      'el reparto sugerido para tus puntos libres y los de los próximos '
+      'niveles.<br>'
+      '<span class="k">ÁRBOL</span>: marcá notables y keystones; + CAMINOS '
+      'agrega los nodos que los conectan.<br>'
+      '<span class="k">ASCENSIÓN</span>: una de las 2 de tu clase y sus '
+      'nodos.<br>'
+      '<span class="k">ARMA</span>: tipo o base, mods con tier mínimo y '
+      'pasiva.<br>'
+      'Pasá el mouse por una meta para ver qué falta.';
 
   @override
   State<BuildPlannerView> createState() => _BuildPlannerViewState();
@@ -133,54 +141,79 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     final pct = (progress.ratio * 100).round();
     final name = _plan.name.isEmpty ? 'Plan sin nombre' : _plan.name;
     final counted = progress.counted.length;
-    return Container(
+    return Column(
       key: const ValueKey('build-header'),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: ProtoColors.bg.withValues(alpha: 0.35),
-        border:
-            Border.all(color: kPlanColor, width: RetroTheme.thinBorderWidth),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              PixelIcon(PixelIconKind.star,
-                  size: RetroType.width(context, 16), color: kPlanColor),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ProtoText(
-                    '<b style="color:$kPlanHex">${protoEsc(name)}</b>  '
-                    '${protoColor(ProtoColors.dim, '${progress.doneCount}/$counted metas')}',
-                    key: const ValueKey('build-name')),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DsToolbar(
+          title: '',
+          center: Row(mainAxisSize: MainAxisSize.min, children: [
+            PixelIcon(PixelIconKind.star,
+                size: RetroType.width(context, 16), color: kPlanColor),
+            SizedBox(width: DsSpace.sm),
+            Flexible(
+              child: Text.rich(
+                key: const ValueKey('build-name'),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                TextSpan(children: [
+                  TextSpan(
+                      text: retroText(name), style: DsText.body(kPlanColor)),
+                  TextSpan(
+                      text: retroText(
+                          '  ${progress.doneCount}/$counted metas'),
+                      style: DsText.detail()),
+                ]),
               ),
-              Text('$pct%',
-                  key: const ValueKey('build-percent'),
-                  style: const TextStyle(color: kPlanColor)),
-              if (_editable) ...[
-                const SizedBox(width: 8),
-                PanelButton('PLANTILLA',
-                    key: const ValueKey('build-template'),
-                    onPressed: _chooseTemplate),
-                const SizedBox(width: 4),
-                PanelButton('RENOMBRAR',
-                    key: const ValueKey('build-rename'), onPressed: _rename),
-                const SizedBox(width: 4),
-                PanelButton('BORRAR PLAN',
-                    key: const ValueKey('build-clear'),
-                    onPressed: _plan.isEmpty ? null : _clear),
-              ],
+            ),
+            SizedBox(width: DsSpace.sm),
+            Text('$pct%',
+                key: const ValueKey('build-percent'),
+                style: DsText.body(kPlanColor)),
+          ]),
+          actions: [
+            if (_editable) ...[
+              DsButton('PLANTILLA',
+                  key: const ValueKey('build-template'),
+                  size: DsButtonSize.compact,
+                  onPressed: _chooseTemplate),
+              DsButton('RENOMBRAR',
+                  key: const ValueKey('build-rename'),
+                  kind: DsButtonKind.ghost,
+                  size: DsButtonSize.compact,
+                  onPressed: _rename),
+              DsButton('BORRAR PLAN',
+                  key: const ValueKey('build-clear'),
+                  kind: DsButtonKind.ghost,
+                  size: DsButtonSize.compact,
+                  onPressed: _plan.isEmpty ? null : _clear),
+            ],
+          ],
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: DsSpace.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SizedBox(height: DsSpace.xs),
+              RetroBar(
+                  value: progress.ratio, max: 1, color: kPlanColor, height: 8),
+              SizedBox(height: DsSpace.xs),
+              Text.rich(
+                key: const ValueKey('build-next'),
+                TextSpan(children: [
+                  TextSpan(
+                      text: retroText('Siguiente paso: '),
+                      style: DsText.detail()),
+                  TextSpan(
+                      text: retroText(progress.next),
+                      style: DsText.body(DsColors.reward)),
+                ]),
+              ),
             ],
           ),
-          RetroBar(value: progress.ratio, max: 1, color: kPlanColor, height: 8),
-          const SizedBox(height: 2),
-          ProtoText(
-              '${protoColor(ProtoColors.dim, 'Siguiente paso:')} '
-              '<b style="color:#d3ac4f">${protoEsc(progress.next)}</b>',
-              key: const ValueKey('build-next')),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -188,83 +221,84 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
   // Secciones
   // ------------------------------------------------------------------
 
-  Widget _card(BuildSection s, PixelIconKind icon, BuildProgress progress,
-      List<Widget> rows,
-      {VoidCallback? onAdd, String? empty}) {
+  Widget _card(BuildSection s, BuildProgress progress, List<Widget> rows,
+      {VoidCallback? onAdd}) {
     final goals = progress.section(s);
     final done = goals.where((g) => g.done).length;
-    return SectionPanel(
+    return Column(
       key: ValueKey('build-section-${s.name}'),
-      icon: icon,
-      color: kPlanColor,
-      title: s.label,
-      subtitle: goals.isEmpty ? null : '$done/${goals.length} hechas',
-      trailing: _editable && onAdd != null
-          ? PanelButton('+ AGREGAR',
-              key: ValueKey('build-add-${s.name}'), onPressed: onAdd)
-          : null,
-      children: rows.isEmpty
-          ? [
-              Text(retroText(empty ?? 'Sin metas.'),
-                  style: const TextStyle(color: ProtoColors.dim)),
-            ]
-          : rows,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DsSectionHeader(
+          goals.isEmpty ? s.label : '${s.label}  $done/${goals.length}',
+          trailing: _editable && onAdd != null
+              ? DsButton('+ AGREGAR',
+                  key: ValueKey('build-add-${s.name}'),
+                  kind: DsButtonKind.ghost,
+                  size: DsButtonSize.compact,
+                  onPressed: onAdd)
+              : null,
+        ),
+        if (rows.isEmpty)
+          Padding(
+            padding: EdgeInsets.symmetric(
+                horizontal: DsSpace.md, vertical: DsSpace.xs),
+            child: Text(retroText('Sin metas'), style: DsText.detail()),
+          )
+        else
+          ...rows,
+      ],
     );
   }
 
+  /// Una meta en una fila (design_system.md § 6, DsListRow): marca, nombre,
+  /// avance o motivo; la pista va al tooltip.
   Widget _row(GoalStatus g,
       {VoidCallback? onRemove, Widget? trailing, VoidCallback? onToggle}) {
-    final markText = GoalMark(g.state);
-    return Padding(
+    final blocked = g.state == GoalState.blocked;
+    final detail = blocked && g.hint != null
+        ? g.hint!
+        : g.countable
+            ? '${g.current}/${g.total}'
+            : null;
+    final toggle = onToggle != null && _editable;
+    return DsListRow(
       key: ValueKey('build-goal-${g.key}'),
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: RetroType.width(context, 20),
-            child: onToggle != null && _editable
-                ? ActionLink(
-                    key: ValueKey('build-toggle-${g.key}'),
-                    onTap: onToggle,
-                    child: markText)
-                : markText,
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ProtoText(
-                    '${g.done ? protoColor(ProtoColors.green, protoEsc(g.label)) : protoEsc(g.label)}'
-                    '${g.countable ? '  ${protoColor(ProtoColors.sky, '${g.current}/${g.total}')}' : ''}'
-                    '${g.hint == null ? '' : '  ${protoColor(g.state == GoalState.blocked ? ProtoColors.red : ProtoColors.dim, protoEsc(g.hint!))}'}'),
-                if (g.countable)
-                  RetroBar(
-                      value: g.current,
-                      max: g.total,
-                      color: g.done ? ProtoColors.green : kPlanColor),
-              ],
-            ),
-          ),
-          if (trailing != null) trailing,
-          if (_editable && onRemove != null)
-            ActionBox(
+      leading: toggle
+          ? KeyedSubtree(
+              key: ValueKey('build-toggle-${g.key}'), child: GoalMark(g.state))
+          : GoalMark(g.state),
+      title: retroText(g.label),
+      titleColor: g.done ? DsColors.success : null,
+      detail: detail == null ? null : retroText(detail),
+      detailColor: blocked
+          ? DsColors.danger
+          : g.done
+              ? DsColors.success
+              : DsColors.mp,
+      onTap: toggle ? onToggle : null,
+      tooltip: g.hint == null || blocked
+          ? null
+          : DsTooltipCard(title: retroText(g.label), children: [
+              Text(retroText(g.hint!), style: DsText.detail()),
+            ]),
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (trailing != null) trailing,
+        if (_editable && onRemove != null) ...[
+          SizedBox(width: DsSpace.xs),
+          DsButton.icon(Text('×', style: DsText.body(DsColors.danger)),
               key: ValueKey('build-remove-${g.key}'),
-              onTap: onRemove,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: const MinHitTarget(
-                child: Text('×', style: TextStyle(color: ProtoColors.red)),
-              ),
-            ),
+              tooltip: 'Quitar meta',
+              size: DsButtonSize.compact,
+              onPressed: onRemove),
         ],
-      ),
+      ]),
     );
   }
 
   Widget _attributes(BuildProgress progress) {
     return _card(
       BuildSection.attributes,
-      PixelIconKind.plus,
       progress,
       [
         if (_advice() case final w?) w,
@@ -277,42 +311,40 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
                   }))),
       ],
       onAdd: _addAttribute,
-      empty: 'Ej.: FUE 40. Al subir de nivel te recuerda dónde poner '
-          'los puntos.',
     );
   }
 
   /// "Atributos sugeridos" (build_planner.md § 8.5): el reparto del
   /// asesor para tus puntos libres + los de los próximos 5 niveles, y
-  /// AGREGAR COMO META.
+  /// APLICAR SUGERENCIA (las agrega como metas). El porqué, en el tooltip.
   Widget? _advice() {
     final pts = AttributeAdvisor.horizonPoints(_p);
     final s = AttributeAdvisor(_rules.progression).recommend(_p, _plan, pts);
     if (s.isEmpty) return null;
     final goals = AttributeAdvisor.addAsGoals(_plan, _p, s);
-    final why = s.first.reasons.isEmpty ? '' : s.first.reasons.first;
+    final why = s.first.reasons.isEmpty ? null : s.first.reasons.first;
+    final same = goals == _plan;
     return Padding(
       key: const ValueKey('build-attr-advice'),
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: EdgeInsets.symmetric(
+          horizontal: DsSpace.md, vertical: DsSpace.xs),
+      child: Wrap(
+        spacing: DsSpace.sm,
+        runSpacing: DsSpace.xs,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Text(
               retroText('Atributos sugeridos ($pts puntos: libres y '
                   'próximos niveles): ${AttributeAdvisor.split(s)}'),
               key: const ValueKey('build-attr-advice-split'),
-              style: const TextStyle(color: ProtoColors.gold)),
-          if (why.isNotEmpty)
-            Text(retroText(why),
-                style: const TextStyle(color: ProtoColors.dim)),
+              style: DsText.body(DsColors.reward)),
           if (_editable)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: PanelButton('AGREGAR COMO META',
-                  key: const ValueKey('build-advice-goals'),
-                  reason: goals == _plan ? 'Ya están en tus metas' : null,
-                  onPressed: () => _set(goals)),
-            ),
+            DsButton('APLICAR SUGERENCIA',
+                key: const ValueKey('build-advice-goals'),
+                kind: DsButtonKind.primary,
+                size: DsButtonSize.compact,
+                tooltip: same ? 'Ya están en tus metas' : why,
+                onPressed: same ? null : () => _set(goals)),
         ],
       ),
     );
@@ -326,26 +358,17 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     }
 
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      Padding(
-        padding: const EdgeInsets.only(left: 2),
-        child: ActionBox(
-            key: ValueKey('build-dec-${g.ref}'),
-            onTap: () => bump(-5),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: const MinHitTarget(
-                child:
-                    Text('−5', style: TextStyle(color: ProtoColors.sky)))),
-      ),
-      Padding(
-        padding: const EdgeInsets.only(left: 2),
-        child: ActionBox(
-            key: ValueKey('build-inc-${g.ref}'),
-            onTap: () => bump(5),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: const MinHitTarget(
-                child:
-                    Text('+5', style: TextStyle(color: ProtoColors.sky)))),
-      ),
+      DsButton.icon(Text('-5', style: DsText.body(DsColors.mp)),
+          key: ValueKey('build-dec-${g.ref}'),
+          tooltip: 'Bajar el objetivo 5',
+          size: DsButtonSize.compact,
+          onPressed: () => bump(-5)),
+      SizedBox(width: DsSpace.xs),
+      DsButton.icon(Text('+5', style: DsText.body(DsColors.mp)),
+          key: ValueKey('build-inc-${g.ref}'),
+          tooltip: 'Subir el objetivo 5',
+          size: DsButtonSize.compact,
+          onPressed: () => bump(5)),
     ]);
   }
 
@@ -356,47 +379,38 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     final smallDone = small.where((g) => g.done).length;
     return _card(
       BuildSection.tree,
-      PixelIconKind.gem,
       progress,
       [
         for (final g in major)
           _row(g, onRemove: () => _set(_plan.toggleTreeNode(g.ref))),
         if (small.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ProtoText(
-                    'Nodos de camino: '
-                    '${protoColor(ProtoColors.sky, '$smallDone/${small.length}')}',
-                    key: const ValueKey('build-tree-small')),
-                RetroBar(
-                    value: smallDone,
-                    max: small.length,
-                    color: smallDone == small.length
-                        ? ProtoColors.green
-                        : kPlanColor),
-              ],
-            ),
+          DsListRow(
+            key: const ValueKey('build-tree-small'),
+            title: retroText('Nodos de camino'),
+            detail: '$smallDone/${small.length}',
+            detailColor:
+                smallDone == small.length ? DsColors.success : DsColors.mp,
           ),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: PanelButton(
-              _editable ? 'PLANIFICAR EN EL ÁRBOL' : 'VER EN EL ÁRBOL',
-              key: const ValueKey('build-open-tree'),
-              accent: kPlanColor,
-              onPressed: () => setState(() => _tree = true)),
+        Padding(
+          padding: EdgeInsets.symmetric(
+              horizontal: DsSpace.md, vertical: DsSpace.xs),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: DsButton(
+                _editable ? 'PLANIFICAR EN EL ÁRBOL' : 'VER EN EL ÁRBOL',
+                key: const ValueKey('build-open-tree'),
+                size: DsButtonSize.compact,
+                accent: kPlanColor,
+                onPressed: () => setState(() => _tree = true)),
+          ),
         ),
       ],
-      empty: 'Marcá notables y keystones en el árbol.',
     );
   }
 
   Widget _ascension(BuildProgress progress) {
     return _card(
       BuildSection.ascension,
-      PixelIconKind.prism,
       progress,
       [
         for (final g in progress.section(BuildSection.ascension))
@@ -410,7 +424,6 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
                     ]))),
       ],
       onAdd: _addAscension,
-      empty: 'Elegí una de las 2 ascensiones de tu clase y sus nodos.',
     );
   }
 
@@ -432,20 +445,17 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
         };
     return _card(
       BuildSection.weapon,
-      PixelIconKind.sword,
       progress,
       [
         for (final g in progress.section(BuildSection.weapon))
           _row(g, onRemove: () => _set(without(g))),
       ],
       onAdd: _addWeapon,
-      empty: 'Tipo o base de arma, mods con tier mínimo y pasiva.',
     );
   }
 
   Widget _skills(BuildProgress progress) => _card(
         BuildSection.skills,
-        PixelIconKind.shard,
         progress,
         [
           for (final g in progress.section(BuildSection.skills))
@@ -456,12 +466,10 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
                     ]))),
         ],
         onAdd: _addSkill,
-        empty: 'Habilidades que querés tener en batalla.',
       );
 
   Widget _level(BuildProgress progress) => _card(
         BuildSection.level,
-        PixelIconKind.arrowIn,
         progress,
         [
           for (final g in progress.section(BuildSection.level))
@@ -471,14 +479,12 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
                     : _plan.copyWith(targetMastery: () => null))),
         ],
         onAdd: _addLevel,
-        empty: 'Nivel o Maestría objetivo.',
       );
 
   Widget _notesCard(BuildProgress progress) {
     final checks = progress.section(BuildSection.notes);
     return _card(
       BuildSection.notes,
-      PixelIconKind.check,
       progress,
       [
         for (final g in checks)
@@ -496,7 +502,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
             ]));
           }),
         if (_editable || _plan.notes.isNotEmpty) ...[
-          const SizedBox(height: 4),
+          SizedBox(height: DsSpace.xs),
           if (_editable)
             TextField(
               key: const ValueKey('build-notes'),
@@ -515,13 +521,14 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
               },
             )
           else
-            Text(retroText(_plan.notes)),
+            Text(retroText(_plan.notes), style: DsText.body()),
           if (_notesDirty)
             Align(
               alignment: Alignment.centerRight,
-              child: PanelButton('GUARDAR NOTAS',
+              child: DsButton('GUARDAR NOTAS',
                   key: const ValueKey('build-notes-save'),
-                  accent: ProtoColors.green, onPressed: () {
+                  kind: DsButtonKind.primary,
+                  size: DsButtonSize.compact, onPressed: () {
                 setState(() => _notesDirty = false);
                 _set(_plan.copyWith(notes: _notes.text.trim()));
               }),
@@ -541,29 +548,40 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 4,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            PanelButton('< VOLVER AL PLAN',
+        DsToolbar(
+          title: '',
+          center: Row(mainAxisSize: MainAxisSize.min, children: [
+            DsButton('< VOLVER AL PLAN',
                 key: const ValueKey('build-tree-back'),
+                kind: DsButtonKind.ghost,
+                size: DsButtonSize.compact,
                 onPressed: () => setState(() => _tree = false)),
+            SizedBox(width: DsSpace.sm),
+            Flexible(
+              child: Text(
+                  retroText(_editable
+                      ? 'PLANIFICAR · ${planned.length} nodos en el plan'
+                      : '${planned.length} nodos en el plan'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: DsText.body(kPlanColor)),
+            ),
+          ]),
+          actions: [
             if (_editable)
-              PanelButton('+ CAMINOS',
+              DsButton('+ CAMINOS',
                   key: const ValueKey('build-tree-paths'),
-                  reason: planned.isEmpty ? 'Marcá un nodo primero' : null,
-                  onPressed: () => _set(_rules.withTreePaths(_plan, _p.classId,
-                      taken: _p.passiveProgress))),
-            Text(
-                retroText(_editable
-                    ? 'PLANIFICAR: clic marca o desmarca · ${planned.length} '
-                        'nodos en el plan'
-                    : '${planned.length} nodos en el plan'),
-                style: const TextStyle(color: kPlanColor)),
+                  size: DsButtonSize.compact,
+                  tooltip: planned.isEmpty
+                      ? 'Marcá un nodo primero'
+                      : 'Agrega los nodos que conectan lo marcado',
+                  onPressed: planned.isEmpty
+                      ? null
+                      : () => _set(_rules.withTreePaths(_plan, _p.classId,
+                          taken: _p.passiveProgress))),
           ],
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: DsSpace.xs),
         Expanded(
           child: LayoutBuilder(
             builder: (context, box) => SingleChildScrollView(
@@ -865,47 +883,58 @@ class _PickerState<T> extends State<_Picker<T>> {
         if (q.isEmpty || _fold('${o.label} ${o.sub ?? ''}').contains(q)) o,
     ];
     final searchable = widget.options.length > 8;
+    // Confirmación (Sí / No): la explicación en una línea y dos botones.
+    final confirm = widget.options.isNotEmpty &&
+        widget.options.length <= 2 &&
+        widget.options.every((o) => o.value is bool);
+    final note = confirm ? widget.options.first.sub : null;
+    void pick(PickOption<T> o) => Navigator.of(context).pop(o.value);
     return PanelFrame(
       key: const ValueKey('build-picker'),
       title: widget.title,
       width: 560,
       onClose: () => Navigator.of(context).pop(),
       actions: [
-        PanelButton('CANCELAR',
-            key: const ValueKey('build-picker-cancel'),
-            onPressed: () => Navigator.of(context).pop()),
+        if (confirm)
+          for (final o in widget.options.reversed)
+            DsButton(retroText(o.label.toUpperCase()),
+                key: ValueKey('pick-${o.key}'),
+                kind: o.value == true
+                    ? DsButtonKind.primary
+                    : DsButtonKind.secondary,
+                onPressed: () => pick(o))
+        else
+          DsButton('CANCELAR',
+              key: const ValueKey('build-picker-cancel'),
+              onPressed: () => Navigator.of(context).pop()),
       ],
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (searchable) ...[
-            TextField(
-              key: const ValueKey('build-picker-search'),
-              controller: _q,
-              autofocus: true,
-              style: RetroType.smallStyle,
-              decoration: const InputDecoration(
-                  hintText: 'Buscar...',
-                  isDense: true,
-                  contentPadding: EdgeInsets.all(8)),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 6),
-          ],
-          if (list.isEmpty)
-            const Text('Nada para agregar.',
-                style: TextStyle(color: ProtoColors.dim)),
-          for (final o in list)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 2),
-              child: ActionBox(
-                key: ValueKey('pick-${o.key}'),
-                onTap: () => Navigator.of(context).pop(o.value),
-                child: ProtoText('<b>${protoEsc(o.label)}</b>'
-                    '${o.sub == null ? '' : '  ${protoColor(ProtoColors.dim, protoEsc(o.sub!))}'}'),
+          if (confirm) ...[
+            if (note != null) Text(retroText(note), style: DsText.body()),
+          ] else ...[
+            if (searchable) ...[
+              DsSearchField(
+                key: const ValueKey('build-picker-search'),
+                hint: 'Buscar...',
+                width: 520,
+                controller: _q,
+                onChanged: (_) => setState(() {}),
               ),
-            ),
+              SizedBox(height: DsSpace.sm),
+            ],
+            if (list.isEmpty)
+              Text(retroText('Nada para agregar'), style: DsText.detail()),
+            for (final o in list)
+              DsListRow(
+                key: ValueKey('pick-${o.key}'),
+                title: retroText(o.label),
+                detail: o.sub == null ? null : retroText(o.sub!),
+                onTap: () => pick(o),
+              ),
+          ],
         ],
       ),
     );
@@ -949,9 +978,11 @@ class _TextDialogState extends State<_TextDialog> {
         width: 480,
         onClose: () => Navigator.of(context).pop(),
         actions: [
-          PanelButton('CANCELAR', onPressed: () => Navigator.of(context).pop()),
-          PanelButton('GUARDAR',
-              key: const ValueKey('build-text-ok'), onPressed: _ok),
+          DsButton('CANCELAR', onPressed: () => Navigator.of(context).pop()),
+          DsButton('GUARDAR',
+              key: const ValueKey('build-text-ok'),
+              kind: DsButtonKind.primary,
+              onPressed: _ok),
         ],
         child: TextField(
           key: const ValueKey('build-text-field'),

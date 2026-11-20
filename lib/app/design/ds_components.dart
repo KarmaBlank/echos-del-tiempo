@@ -156,8 +156,11 @@ class DsToolbar extends StatelessWidget {
       decoration: const BoxDecoration(
           border: Border(bottom: BorderSide(color: DsColors.border, width: 2))),
       child: Row(children: [
-        Text(retroText(title), style: DsText.title()),
-        SizedBox(width: DsSpace.lg),
+        // Sin título (barra de una pestaña): arranca con [center].
+        if (title.isNotEmpty) ...[
+          Text(retroText(title), style: DsText.title()),
+          SizedBox(width: DsSpace.lg),
+        ],
         Expanded(
             child: Align(
                 alignment: Alignment.centerLeft,
@@ -252,12 +255,16 @@ class DsSearchField extends StatelessWidget {
       this.hint = 'BUSCAR',
       this.controller,
       this.onChanged,
+      this.onSubmitted,
       this.focusNode,
       this.width = 240});
 
   final String hint;
   final TextEditingController? controller;
   final ValueChanged<String>? onChanged;
+
+  /// Enter en el campo (p. ej. ir a la primera coincidencia).
+  final ValueChanged<String>? onSubmitted;
   final FocusNode? focusNode;
   final double width;
 
@@ -270,6 +277,7 @@ class DsSearchField extends StatelessWidget {
         controller: controller,
         focusNode: focusNode,
         onChanged: onChanged,
+        onSubmitted: onSubmitted,
         hintText: hint,
         elevation: const WidgetStatePropertyAll(0),
         constraints: BoxConstraints(minHeight: h, maxHeight: h),
@@ -309,10 +317,14 @@ class DsListRow extends StatelessWidget {
     this.titleColor,
     this.detailColor,
     this.tooltip,
+    this.focusNode,
   });
 
   final String title;
   final String? detail;
+
+  /// Foco propio (listas que se recorren con flechas).
+  final FocusNode? focusNode;
   final Widget? leading;
   final Widget? trailing;
   final VoidCallback? onTap;
@@ -351,19 +363,25 @@ class DsListRow extends StatelessWidget {
               ),
               if (detail != null) ...[
                 SizedBox(width: DsSpace.sm),
-                Text(detail!,
-                    maxLines: 1,
-                    style: DsText.detail(detailColor ??
-                        (enabled
-                            ? DsColors.textSecondary
-                            : DsColors.textDisabled))),
+                // Un dato largo se corta con "…" (nunca desborda la fila).
+                Flexible(
+                  child: Text(detail!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: DsText.detail(detailColor ??
+                          (enabled
+                              ? DsColors.textSecondary
+                              : DsColors.textDisabled))),
+                ),
               ],
             ])),
             if (trailing != null) ...[SizedBox(width: DsSpace.sm), trailing!],
           ]),
         );
     final Widget body = DsPressable(
-        onTap: enabled ? (onTap ?? () {}) : null, builder: (_, s) => row(s));
+        focusNode: focusNode,
+        onTap: enabled ? (onTap ?? () {}) : null,
+        builder: (_, s) => row(s));
     if (tooltip == null) return body;
     return DsTooltip(card: tooltip!, child: body);
   }

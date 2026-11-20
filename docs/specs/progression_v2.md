@@ -514,6 +514,16 @@ balance):
   `docs/release_shots/v0.10.1/pantalla_arbol*.png`
   (`tool/shots/v0101_tree_screen_shots_test.dart`).
 
+Sistema de diseño (v0.11, design_system.md § 10.1): la barra es un
+`DsToolbar` (puntos en dorado, `HITO N` como `DsTag` naranja,
+`DsSearchField`, zoom con `DsButton.icon`, REINICIAR fantasma con el
+motivo en su tooltip: "No hay nodos tomados"); las tarjetas de hito son
+`DsCard`; el tooltip es un `DsTooltipCard` (la marca de hito,
+`tree-milestone-mark`, y "★ EN TU BUILD" son `DsTag`); TOMAR NODO es la
+acción principal y, si no se puede, queda apagado con el motivo en su
+tooltip (y en la línea de estado). Captura:
+`docs/release_shots/v0.11.0/03_arbol_despues.png`.
+
 ### 11.3 Hitos con keystones ya tomadas (v0.10.1, bug del dueño)
 
 Si el jugador tomaba una keystone de entrada con puntos normales, el

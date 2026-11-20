@@ -240,10 +240,32 @@ título por color, ATRIBUTOS completo (barra de herramientas arriba,
 `DsSectionHeader`: título y acción con tope de 45 % del ancho cada uno
 (con texto ENORME no desbordan).
 
-Pendiente: el contenido de INVENTARIO, ÁRBOL, FILTRO, BUILD y BESTIARIO
-(sus vistas en `lib/features/inventory`, `passive_tree`, `build_planner`,
-`bestiary`) sigue con `PanelButton` / `SectionPanel` y sus textos fijos
-propios; se migran vista por vista.
+Hecho también (v0.11, rama `feat/personaje-ds-arbol`):
+
+- ÁRBOL (`passive_tree_view.dart`): barra `DsToolbar` sin título (puntos
+  en Cuerpo dorado, `DsTag` HITO N en naranja, `DsSearchField`, zoom con
+  `DsButton.icon` y REINICIAR como fantasma con el motivo en el tooltip);
+  tarjetas de hito `DsCard` (elegida con borde dorado); tooltip del nodo
+  `DsTooltipCard` (marca de hito y "★ EN TU BUILD" como `DsTag`; TOMAR
+  NODO principal, motivo en el tooltip del botón); leyenda en una fila en
+  Detalle.
+- BUILD (`build_planner_view.dart`): barra arriba (★ nombre, metas, %,
+  PLANTILLA / RENOMBRAR / BORRAR PLAN), secciones con `DsSectionHeader`
+  (+ AGREGAR fantasma a la derecha), metas en `DsListRow` (marca, nombre,
+  `actual/objetivo` o motivo en rojo; la pista en el tooltip; −5 / +5 y ×
+  como `DsButton.icon`), APLICAR SUGERENCIA principal, selectores con
+  `DsSearchField` + `DsListRow` y confirmaciones Sí / No con `DsButton`
+  (Sí principal). Los textos de "sección vacía" pasaron al "?".
+- BESTIARIO (`bestiary_view.dart`): búsqueda y `Descubiertos N/M` en la
+  barra de arriba; filtros por familia como `DsButton` fantasma; lista
+  por zona (`DsSectionHeader`) de `DsListRow` (sprite chico, nombre o
+  `???`, código de familia); flechas arriba / abajo eligen; ficha con
+  `DsSectionHeader` FICHA y `DsFold` ZONA Y BOTÍN.
+- Componentes: `DsToolbar` acepta `title: ''` (barra de una pestaña),
+  `DsSearchField.onSubmitted`, `DsListRow.focusNode` y el dato corto de
+  `DsListRow` se corta con "…".
+
+Pendiente: INVENTARIO y FILTRO (`lib/features/inventory`), en otra rama.
 
 Capturas antes / después (1920×1080): `docs/release_shots/v0.11.0/`,
 generadas por `tool/shots/personaje_ds_shots_test.dart` (`SHOT_SUFFIX`).

@@ -154,12 +154,12 @@ void main() {
       await tester.pump();
     }
 
-    testWidgets('grilla por zona: descubiertos, siluetas y detalle',
+    testWidgets('lista por zona: descubiertos, siluetas y detalle',
         (tester) async {
       await pumpView(tester, BestiaryProgress({'slime': 5, 'lobo': 1}));
       final total = bestiaryEntries().length;
       expect(_text('Descubiertos 2/$total'), findsOneWidget);
-      expect(_text('Zona 1 · Pradera Esmeralda'), findsOneWidget);
+      expect(_text('ZONA 1 · PRADERA ESMERALDA'), findsOneWidget);
       // Elige la primera conocida.
       expect(find.byKey(const ValueKey('bestiary-detail-slime')), findsOneWidget);
       expect(_text('Derrotados: 5'), findsOneWidget);
@@ -193,11 +193,11 @@ void main() {
       expect(find.byKey(const ValueKey('bestiary-card-bat')), findsNothing);
     });
 
-    testWidgets('teclado: flechas mueven la ficha elegida', (tester) async {
+    testWidgets('teclado: flechas arriba / abajo mueven la ficha elegida', (tester) async {
       await pumpView(tester, BestiaryProgress({'slime': 1, 'bat': 1}));
       await tester.tap(find.byKey(const ValueKey('bestiary-card-slime')));
       await tester.pump();
-      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
       await tester.pump();
       expect(find.byKey(const ValueKey('bestiary-detail-bat')), findsOneWidget);
     });
