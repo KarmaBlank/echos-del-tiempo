@@ -1,4 +1,4 @@
-# Spec (BORRADOR, falta OK del dueño): Progresión v2 — punto medio
+# Spec (APROBADA por el dueño): Progresión v2 — punto medio
 
 Estado: **borrador**. No se implementa nada hasta que el dueño responda
 las preguntas del final. Reemplaza, cuando se apruebe, las partes de
@@ -339,3 +339,11 @@ No debería cambiar (y un test lo fija):
 4. Los 27 chicos sueltos que no se promueven, ¿los dejamos simples
    (cuestan 1 punto por la mitad de valor) o los absorbe el notable
    vecino (bajan otros 27 nodos)?
+
+
+## Respuestas del dueño (aprobado)
+
+1. Hitos 10 / 20: **puntos ligados a la ruta** de la keystone elegida.
+2. Tope blando de DES: **60**, como FUE / ESP / VIT.
+3. Maestría: **solo +1 por nivel** (se acepta ~2% menos al máximo).
+4. Los 27 nodos chicos sueltos que no se promueven: **los absorbe el notable vecino**.
