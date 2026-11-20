@@ -318,6 +318,7 @@ class DsListRow extends StatelessWidget {
     this.detailColor,
     this.tooltip,
     this.focusNode,
+    this.autofocus = false,
   });
 
   final String title;
@@ -335,6 +336,9 @@ class DsListRow extends StatelessWidget {
   /// Color del dato corto (p. ej. el motivo de una desactivada, en rojo).
   final Color? detailColor;
   final Widget? tooltip;
+
+  /// El foco de teclado arranca en esta fila (menús).
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -381,6 +385,7 @@ class DsListRow extends StatelessWidget {
     final Widget body = DsPressable(
         focusNode: focusNode,
         onTap: enabled ? (onTap ?? () {}) : null,
+        autofocus: autofocus,
         builder: (_, s) => row(s));
     if (tooltip == null) return body;
     return DsTooltip(card: tooltip!, child: body);
@@ -466,38 +471,54 @@ class DsAttributeRow extends StatelessWidget {
 }
 
 /// `ATQ  15 → 50  ▲35`: flecha además del color (nunca solo el color).
+/// ▲ verde si mejora, ▼ rojo si empeora ([higherIsBetter] `false`: menos
+/// es mejor, p. ej. el peso). Sin cambio (o con [showChange] `false`),
+/// solo `ATQ  15` en Detalle: un dato se muestra cuando cambia algo.
 class DsStatLine extends StatelessWidget {
   const DsStatLine(this.label, this.from, this.to,
-      {super.key, this.labelWidth = 5});
+      {super.key,
+      this.labelWidth = 5,
+      this.format,
+      this.diffFormat,
+      this.higherIsBetter = true,
+      this.showChange = true});
 
   final String label;
   final num from;
   final num to;
   final double labelWidth;
 
+  /// Cómo se escribe un valor (`7.5`, `12%`); por defecto el número.
+  final String Function(num)? format;
+
+  /// Cómo se escribe la diferencia (sin signo); por defecto [format].
+  final String Function(num)? diffFormat;
+  final bool higherIsBetter;
+  final bool showChange;
+
+  static String _n(num v) => v == v.roundToDouble() ? '${v.round()}' : '$v';
+
   @override
   Widget build(BuildContext context) {
+    final f = format ?? _n;
     final d = to - from;
-    final up = d > 0;
-    final diff = d == 0
-        ? ''
-        : '${up ? '▲' : '▼'}${d.abs() == d.abs().roundToDouble() ? d.abs().round() : d.abs()}';
+    final changed = showChange && d.abs() > 1e-6;
+    final good = higherIsBetter ? d > 0 : d < 0;
+    final c = good ? DsColors.success : DsColors.danger;
     return Row(mainAxisSize: MainAxisSize.min, children: [
       SizedBox(
           width: RetroType.em(context, labelWidth, size: RetroType.body),
           child: Text(label, style: DsText.detail())),
-      Text('$from', style: DsText.detail()),
-      Text(' → ',
-          style:
-              RetroType.style(RetroType.glyph, color: DsColors.textSecondary)),
-      Text('$to', style: DsText.body(DsColors.textPrimary)),
-      if (diff.isNotEmpty) ...[
-        SizedBox(width: DsSpace.sm),
-        Text(up ? '▲' : '▼',
+      Text(f(from), style: DsText.detail()),
+      if (changed) ...[
+        Text(' → ',
             style: RetroType.style(RetroType.glyph,
-                color: up ? DsColors.success : DsColors.danger)),
-        Text(diff.substring(1),
-            style: DsText.body(up ? DsColors.success : DsColors.danger)),
+                color: DsColors.textSecondary)),
+        Text(f(to), style: DsText.body(DsColors.textPrimary)),
+        SizedBox(width: DsSpace.sm),
+        Text(good ? '▲' : '▼',
+            style: RetroType.style(RetroType.glyph, color: c)),
+        Text((diffFormat ?? f)(d.abs()), style: DsText.body(c)),
       ],
     ]);
   }

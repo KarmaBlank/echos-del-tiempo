@@ -3,10 +3,11 @@ import 'dart:math' as math;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/proto_colors.dart';
+import '../../../app/design/design.dart';
 import '../../../app/theme/proto_markup.dart';
+import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_hover_card.dart';
+import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/theme/ui_theme.dart';
 
@@ -92,10 +93,6 @@ class InventoryActionRow extends StatefulWidget {
 }
 
 class _RowState extends State<InventoryActionRow> {
-  bool _mouse = false;
-  bool _focus = false;
-  bool get _hover => _mouse || _focus;
-
   void _tap() {
     final e = widget.entry;
     if (!e.enabled) return;
@@ -107,56 +104,27 @@ class _RowState extends State<InventoryActionRow> {
   Widget build(BuildContext context) {
     final e = widget.entry;
     final on = e.enabled;
-    final label = protoColor(
-        on ? (e.color ?? ProtoColors.ink) : ProtoColors.dim, protoEsc(e.label));
     final tail = on ? e.note : (e.shortReason ?? e.reason);
-    final line = tail == null
-        ? label
-        : '$label ${protoColor(ProtoColors.dim, '· ${protoEsc(tail)}')}';
-    Widget row = FocusableActionDetector(
-      enabled: on,
-      autofocus: widget.autofocus,
-      mouseCursor: on ? SystemMouseCursors.click : SystemMouseCursors.basic,
-      onShowFocusHighlight: (h) => setState(() => _focus = h),
-      actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => _tap()),
-      },
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _mouse = true),
-        onExit: (_) => setState(() => _mouse = false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: _tap,
-          // Fila de menú clickeable (ui_style.md § "Filas de menú"): se ve
-          // como botón; la desactivada, texto suelto atenuado.
-          child: Container(
-            key: ValueKey(on ? 'menu-row-on' : 'menu-row-off'),
-            margin: EdgeInsets.symmetric(
-                horizontal: UiTheme.space(4), vertical: UiTheme.space(2)),
-            padding: EdgeInsets.symmetric(
-                horizontal: math.max(8, RetroTheme.minButtonInset),
-                vertical: math.max(8, UiTheme.space(6))),
-            decoration: on
-                ? BoxDecoration(
-                    color:
-                        _hover ? ProtoColors.buttonHover : ProtoColors.button,
-                    border: Border.all(
-                        color: _hover
-                            ? ProtoColors.buttonHoverBorder
-                            : ProtoColors.buttonBorder,
-                        width: RetroTheme.thinBorderWidth),
-                  )
-                : null,
-            child: ProtoText(line),
-          ),
-        ),
+    final full = e.reason;
+    // Fila de una línea del sistema de diseño (design_system.md § 6): sin
+    // borde, fondo con hover / foco; la desactivada atenuada con el
+    // motivo corto al lado y el completo en el tooltip.
+    return KeyedSubtree(
+      key: ValueKey(on ? 'menu-row-on' : 'menu-row-off'),
+      child: DsListRow(
+        title: retroText(e.label),
+        titleColor: e.color,
+        detail: tail == null ? null : retroText(tail),
+        enabled: on,
+        autofocus: widget.autofocus,
+        onTap: on ? _tap : null,
+        tooltip: !on && full != null && full != tail
+            ? DsTooltipCard(title: retroText(e.label), children: [
+                Text(retroText(full), style: DsText.detail(DsColors.danger)),
+              ])
+            : null,
       ),
     );
-    final full = e.reason;
-    if (!on && full != null && full != tail) {
-      row = RetroTooltip(message: protoEsc(full), child: row);
-    }
-    return row;
   }
 }
 

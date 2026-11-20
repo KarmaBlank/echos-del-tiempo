@@ -156,9 +156,10 @@ void main() {
         'No podés desarmar el arma equipada');
     // Una línea por acción: el motivo corto al lado, sin salto.
     final line = plain(tester, 'inv-salvage');
-    expect(line, contains('Desarmar · equipada'));
+    // DsListRow: nombre y, al lado, el motivo en Detalle.
+    expect(line, contains('Desarmar equipada'));
     expect(line, isNot(contains('\n')));
-    expect(plain(tester, 'inv-give'), contains('Dar a... · sin compañeros'));
+    expect(plain(tester, 'inv-give'), contains('Dar a... sin compañeros'));
     final rowH = tester.getSize(find.byKey(const ValueKey('inv-equip'))).height;
     expect(
         tester.getSize(find.byKey(const ValueKey('inv-salvage'))).height, rowH,

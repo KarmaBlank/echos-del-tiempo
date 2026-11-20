@@ -89,9 +89,7 @@ void main() {
         .text;
     Future<void> tap(String key) =>
         tapVisible(tester, find.byKey(ValueKey(key)));
-    String title() => tester
-        .widget<Text>(find.byKey(const ValueKey('filter-rules-title')))
-        .data!;
+    String title() => plain(tester, 'filter-rules-title');
     String check(String key) =>
         (tester.widget<FilterCheck>(find.byKey(ValueKey(key))).value)
             ? 'x'

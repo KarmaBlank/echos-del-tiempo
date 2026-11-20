@@ -1,4 +1,4 @@
-import 'package:echos_del_tiempo/app/theme/proto_markup.dart';
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/retro_hover_card.dart';
 import 'package:echos_del_tiempo/features/inventory/domain/item_text.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
@@ -19,7 +19,7 @@ import 'loot_fixtures.dart';
 /// cortos").
 void main() {
   testWidgets(
-      'menú: filas habilitadas con fondo y borde, desactivadas sin; '
+      'menú: filas DsListRow (fondo con hover), desactivadas atenuadas; '
       'nombres repetidos con clase y nivel', (tester) async {
     final c = await pumpPanel(tester, profile: lootWarrior(), build: (v, c) {
       var s = v.session;
@@ -37,37 +37,43 @@ void main() {
     await tester.pump();
     expect(find.byKey(const ValueKey('inv-ctx-menu')), findsOneWidget);
 
-    BoxDecoration? deco(String key) => tester
-        .widget<Container>(find.descendant(
-            of: find.byKey(ValueKey(key)),
-            matching: find.byWidgetPredicate((w) =>
-                w is Container &&
-                (w.key == const ValueKey('menu-row-on') ||
-                    w.key == const ValueKey('menu-row-off')))))
-        .decoration as BoxDecoration?;
-    final on = deco('inv-compare')!;
-    expect(on.color, isNotNull);
-    expect(on.border, isNotNull);
+    // Fila del sistema de diseño (design_system.md § 5): sin borde en
+    // normal; el fondo aparece con hover.
+    DsListRow row(String key) => tester.widget<DsListRow>(find.descendant(
+        of: find.byKey(ValueKey(key)), matching: find.byType(DsListRow)));
+    BoxDecoration deco(String key) => tester
+        .widget<Container>(find
+            .descendant(
+                of: find.byKey(ValueKey(key)),
+                matching: find.byWidgetPredicate(
+                    (w) => w is Container && w.decoration is BoxDecoration))
+            .first)
+        .decoration! as BoxDecoration;
+    expect(row('inv-compare').enabled, isTrue);
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('inv-compare')),
+            matching: find.byKey(const ValueKey('menu-row-on'))),
+        findsOneWidget);
+    final on = deco('inv-compare');
+    expect(on.color, Colors.transparent);
     expect(tester.getSize(find.byKey(const ValueKey('inv-compare'))).height,
         greaterThanOrEqualTo(16 + 10));
-    // Hover: cambia el fondo.
+    // Hover: aparece el fondo.
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
     await mouse
         .moveTo(tester.getCenter(find.byKey(const ValueKey('inv-compare'))));
     await tester.pump();
     await tester.pump();
-    expect(deco('inv-compare')!.color, isNot(on.color));
-    expect(deco('inv-compare')!.border, isNot(on.border));
+    expect(deco('inv-compare').color, isNot(on.color));
     await mouse.removePointer();
 
     // Nombres repetidos: con clase y nivel.
-    final labels = find
-        .byType(ProtoText)
-        .evaluate()
-        .map((e) => protoPlain((e.widget as ProtoText).markup))
-        .where((t) => t.startsWith('Dar a'))
-        .toList();
+    final labels = [
+      for (final r in tester.widgetList<DsListRow>(find.byType(DsListRow)))
+        if (r.title.startsWith('Dar a')) r.title
+    ];
     expect(labels, hasLength(2));
     expect(labels.toSet(), hasLength(2));
     expect(labels.first, matches(RegExp(r'Dar a Héroe \(.+, Nv \d+\)')));
@@ -75,7 +81,7 @@ void main() {
     expect(find.byKey(const ValueKey('inv-ctx-title')), findsOneWidget);
   });
 
-  testWidgets('menú: la desactivada no tiene fondo ni borde', (tester) async {
+  testWidgets('menú: la desactivada atenuada, sin acción', (tester) async {
     await pumpPanel(tester,
         profile: lootWarrior(),
         build: (v, c) => CharacterPanel(
@@ -83,10 +89,16 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('inv-equipped')),
         buttons: kSecondaryButton);
     await tester.pump();
-    final off = tester.widget<Container>(find.descendant(
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('inv-salvage')),
+            matching: find.byKey(const ValueKey('menu-row-off'))),
+        findsOneWidget);
+    final off = tester.widget<DsListRow>(find.descendant(
         of: find.byKey(const ValueKey('inv-salvage')),
-        matching: find.byKey(const ValueKey('menu-row-off'))));
-    expect(off.decoration, isNull);
+        matching: find.byType(DsListRow)));
+    expect(off.enabled, isFalse);
+    expect(off.onTap, isNull);
   });
 
   test('desarmar sin materiales seguros: texto claro', () {

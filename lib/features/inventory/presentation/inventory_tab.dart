@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
@@ -10,8 +11,6 @@ import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/menu_focus.dart';
-import '../../../app/widgets/pixel_icon.dart';
-import '../../../app/widgets/section_panel.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../../game_engine/models/attributes.dart';
@@ -295,6 +294,10 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
 
   ItemInstance? _hoverItem;
 
+  /// La franja arranca a la altura de la grilla (debajo de la EQUIPADA si
+  /// va arriba).
+  double get _stripTop => _wide ? 0 : _cellSize + DsSpace.sm;
+
   /// En "elige B": toma [token] como B si es un arma.
   bool _pickB(String owner, String? token, CellContent? c) {
     if (!_picking || token == null || c?.item == null) return false;
@@ -385,29 +388,27 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       setState(() => _picked = togglePicked(shop.rules, p, _picked, token));
     }
 
-    final owners = Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: [
-        PanelButton(view.actingCompanion ? me.name.toUpperCase() : 'TÚ',
-            key: ValueKey('inv-owner-${me.id}'),
-            selected: mine,
+    final owners = [
+      DsButton(view.actingCompanion ? me.name.toUpperCase() : 'TÚ',
+          key: ValueKey('inv-owner-${me.id}'),
+          size: DsButtonSize.compact,
+          selected: mine,
+          onPressed: () => setState(() {
+                _owner = null;
+                _sel = null;
+                _moveFrom = null;
+              })),
+      for (final m in mates)
+        DsButton(m.name.toUpperCase(),
+            key: ValueKey('inv-owner-${m.id}'),
+            size: DsButtonSize.compact,
+            selected: owner.id == m.id,
             onPressed: () => setState(() {
-                  _owner = null;
+                  _owner = m.id;
                   _sel = null;
                   _moveFrom = null;
                 })),
-        for (final m in mates)
-          PanelButton(m.name.toUpperCase(),
-              key: ValueKey('inv-owner-${m.id}'),
-              selected: owner.id == m.id,
-              onPressed: () => setState(() {
-                    _owner = m.id;
-                    _sel = null;
-                    _moveFrom = null;
-                  })),
-      ],
-    );
+    ];
 
     Widget cellAt(int i, [bool focused = false]) {
       final token = layout.cells[i];
@@ -544,21 +545,6 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                   selected: _sel == eq.uid,
                   buildMatch: _fit(eq).any),
               equipped: true);
-      final ownersRow = Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: owners),
-          if (mine) ...[
-            const SizedBox(width: 6),
-            InventorySortButton(
-                current: _lastSort,
-                onSort: (k) {
-                  setState(() => _lastSort = k);
-                  shop.controller.sortInventory(k);
-                }),
-          ],
-        ],
-      );
       final eqRow = Row(
         children: [
           _CellButton(
@@ -575,10 +561,15 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                 _select(eq.uid, null);
               },
               child: eqCell),
-          const SizedBox(width: 8),
+          SizedBox(width: DsSpace.sm),
           Expanded(
-            child: ProtoText('<b style="color:#ffd166">EQUIPADA</b><br>'
-                '${eq == null ? '—' : itemNameMarkup(shop.rules, eq)}'),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(retroText('EQUIPADA'), style: DsText.subtitle()),
+                ProtoText(eq == null ? '—' : itemNameMarkup(shop.rules, eq)),
+              ],
+            ),
           ),
         ],
       );
@@ -588,53 +579,27 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             Expanded(
                 child: ProtoText(
                     key: const ValueKey('inv-compare-pick'),
-                    protoColor(ProtoColors.sky,
-                        'Elige el arma B para comparar con ${_cmpAName()}'))),
-            PanelButton('CANCELAR',
+                    style: DsText.body(DsColors.textSubtitle),
+                    'Elige el arma B para comparar con ${_cmpAName()}')),
+            DsButton('CANCELAR',
                 key: const ValueKey('inv-compare-cancel'),
+                size: DsButtonSize.compact,
                 onPressed: _closeCompare),
           ])
         else if (_moveFrom != null)
           Row(children: [
-            const Expanded(
+            Expanded(
                 child: Text('Elige la casilla destino',
-                    style: TextStyle(color: ProtoColors.sky))),
-            PanelButton('CANCELAR',
+                    style: DsText.body(DsColors.textSubtitle))),
+            DsButton('CANCELAR',
                 key: const ValueKey('inv-move-cancel'),
+                size: DsButtonSize.compact,
                 onPressed: () => setState(() => _moveFrom = null)),
           ])
         else if (!mine)
-          ProtoText(protoColor(ProtoColors.dim,
-              'Inventario de ${protoEsc(owner.name)} (solo lectura)')),
+          Text('Inventario de ${owner.name} (solo lectura)',
+              style: DsText.detail()),
       ];
-      final searchBox = SizedBox(
-        key: _searchKey,
-        width: _gridW,
-        child: TextField(
-          key: const ValueKey('inv-search'),
-          controller: _search,
-          style: RetroType.smallStyle,
-          decoration: InputDecoration(
-            isDense: true,
-            hintText: 'Buscar: nombre, tipo, mod...',
-            hintStyle: RetroType.smallStyle.copyWith(color: ProtoColors.dim),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            suffix: _query.isEmpty
-                ? null
-                : GestureDetector(
-                    key: const ValueKey('inv-search-clear'),
-                    onTap: () => setState(() {
-                          _search.clear();
-                          _query = '';
-                        }),
-                    child: Text('x',
-                        style: RetroType.smallStyle
-                            .copyWith(color: ProtoColors.dim))),
-          ),
-          onChanged: (v) => setState(() => _query = v),
-        ),
-      );
       final gridBox = SizedBox(
         key: _gridKey,
         width: _gridW,
@@ -693,31 +658,28 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                 ? _openMenuAtFocus(p, me, mates, t, null)
                 : _openMenu(p, me, mates, t, null, at),
       );
-      final summary = ProtoText(
+      final summary = KeyedSubtree(
           key: const ValueKey('inv-summary'),
-          'Casillas ${InventoryRules.cellsUsed(p)}/${InventoryRules.cells}'
-          '${mine ? ' · <b>₵${p.credits}</b>' : ''}'
-          '${layout.overflow.isEmpty ? '' : ' · ${protoColor(ProtoColors.orange, '${layout.overflow.length} sin lugar')}'}');
+          child: Text.rich(TextSpan(children: [
+            TextSpan(
+                text: 'Casillas ${InventoryRules.cellsUsed(p)}/'
+                    '${InventoryRules.cells}',
+                style: DsText.detail()),
+            if (mine)
+              TextSpan(
+                  text: retroText(' · ₵${p.credits}'),
+                  style: DsText.body(DsColors.reward)),
+            if (layout.overflow.isNotEmpty)
+              TextSpan(
+                  text: ' · ${layout.overflow.length} sin lugar',
+                  style: DsText.body(DsColors.warning)),
+          ])));
       final tail = <Widget>[
         if (mine && sel != null && _sel != null)
           if (_selectionBar(p, me, mates, sel) case final bar?) bar,
-        if (mine) ...[
-          const SizedBox(height: 6),
-          PanelButton('LIMPIAR INVENTARIO...',
-              key: const ValueKey('inv-clean'),
-              selected: _cleaning,
-              onPressed: () => setState(() {
-                    _cleaning = !_cleaning;
-                    _cleanMenu = _cleaning;
-                    _picked = const [];
-                    _confirmDrop = false;
-                    _confirmCraft = null;
-                    _moveFrom = null;
-                  })),
-          if (_cleaning && _cleanMenu) ...[
-            const SizedBox(height: 4),
-            _cleanMenuBox(p),
-          ],
+        if (mine && _cleaning && _cleanMenu) ...[
+          SizedBox(height: DsSpace.xs),
+          _cleanMenuBox(p),
         ],
       ];
       if (_wide) {
@@ -732,11 +694,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ownersRow,
-                  const SizedBox(height: 8),
                   ...notes,
-                  searchBox,
-                  const SizedBox(height: 4),
+                  if (notes.isNotEmpty) SizedBox(height: DsSpace.xs),
                   gridBox,
                 ],
               ),
@@ -763,14 +722,10 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ownersRow,
-          const SizedBox(height: 8),
           eqRow,
-          const SizedBox(height: 8),
+          SizedBox(height: DsSpace.sm),
           ...notes,
-          const SizedBox(height: 4),
-          searchBox,
-          const SizedBox(height: 4),
+          if (notes.isNotEmpty) SizedBox(height: DsSpace.xs),
           gridBox,
           const SizedBox(height: 8),
           stacksBar,
@@ -780,6 +735,65 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         ],
       ));
     }
+
+    // Barra de herramientas (design_system.md § 4): de quién es el
+    // inventario, búsqueda, ORDENAR y LIMPIAR en una fila.
+    final toolbar = Padding(
+      key: const ValueKey('inv-toolbar'),
+      padding: EdgeInsets.only(bottom: DsSpace.sm),
+      child: Wrap(
+        spacing: DsSpace.xs,
+        runSpacing: DsSpace.xs,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          ...owners,
+          SizedBox(width: DsSpace.md),
+          KeyedSubtree(
+            key: _searchKey,
+            child: KeyedSubtree(
+              key: const ValueKey('inv-search'),
+              child: DsSearchField(
+                hint: 'BUSCAR: nombre, tipo, mod',
+                width: 280,
+                controller: _search,
+                onChanged: (v) => setState(() => _query = v),
+              ),
+            ),
+          ),
+          if (_query.isNotEmpty)
+            DsButton.icon(const Text('×'),
+                key: const ValueKey('inv-search-clear'),
+                tooltip: 'Borrar la búsqueda',
+                size: DsButtonSize.compact,
+                onPressed: () => setState(() {
+                      _search.clear();
+                      _query = '';
+                    })),
+          if (mine) ...[
+            SizedBox(width: DsSpace.md),
+            InventorySortButton(
+                current: _lastSort,
+                onSort: (k) {
+                  setState(() => _lastSort = k);
+                  shop.controller.sortInventory(k);
+                }),
+            DsButton('LIMPIAR',
+                key: const ValueKey('inv-clean'),
+                size: DsButtonSize.compact,
+                selected: _cleaning,
+                tooltip: 'Desarmar o vender varias armas de una vez',
+                onPressed: () => setState(() {
+                      _cleaning = !_cleaning;
+                      _cleanMenu = _cleaning;
+                      _picked = const [];
+                      _confirmDrop = false;
+                      _confirmCraft = null;
+                      _moveFrom = null;
+                    })),
+          ],
+        ],
+      ),
+    );
 
     final cmpA = _cmpA, cmpB = _cmpB;
     if (cmpA != null && cmpB != null) {
@@ -801,23 +815,26 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     if (_cleaning && mine) {
       _scale = 1;
       _wide = false;
-      return PanelSplit(
-        listWidth: InventoryTab.gridWidth + 4,
-        scaleList: false,
-        list: [buildLeft()],
-        detail: _cleaner(p),
-      );
+      return _withToolbar(
+          toolbar,
+          PanelSplit(
+            listWidth: InventoryTab.gridWidth + 4,
+            scaleList: false,
+            list: [buildLeft()],
+            detail: _cleaner(p),
+          ));
     }
 
     final compareButton = sel?.item == null || _picking
         ? null
-        : PanelButton('COMPARAR',
+        : DsButton('COMPARAR',
             key: const ValueKey('inv-compare'),
+            size: DsButtonSize.compact,
             onPressed: () => _startCompare(WeaponRef(owner.id, _sel!)));
     // Sin panel derecho (v0.9.10): la ficha del mouse ya compara con la
     // equipada. La grilla escala para llenar el ancho (panels.md §
     // "Inventario").
-    return Focus(
+    final body = Focus(
       focusNode: _keys,
       onKeyEvent: _onKey,
       child: RetroTipArea(
@@ -856,7 +873,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                               child: Align(
                                 alignment: Alignment.topLeft,
                                 child: Padding(
-                                    padding: const EdgeInsets.only(top: 48),
+                                    padding: EdgeInsets.only(top: _stripTop),
                                     child: strip),
                               ),
                             ),
@@ -869,7 +886,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Padding(
-                                  padding: const EdgeInsets.only(top: 48),
+                                  padding: EdgeInsets.only(top: _stripTop),
                                   child: strip),
                               const SizedBox(width: 8),
                               main,
@@ -885,8 +902,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    const Text('Solo lectura',
-                        style: TextStyle(color: ProtoColors.dim)),
+                    Text('Solo lectura', style: DsText.detail()),
                     if (compareButton != null) compareButton,
                   ],
                 ),
@@ -895,7 +911,25 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         }),
       ),
     );
+    return _withToolbar(toolbar, body);
   }
+
+  /// La barra arriba y [body] debajo. Con texto ENORME la barra (que baja
+  /// de línea) se limita al 40 % del alto y se desplaza.
+  Widget _withToolbar(Widget toolbar, Widget body) => LayoutBuilder(
+      builder: (context, c) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                    maxHeight: c.maxHeight.isFinite
+                        ? c.maxHeight * 0.4
+                        : double.infinity),
+                child: SingleChildScrollView(child: toolbar),
+              ),
+              Expanded(child: body),
+            ],
+          ));
 
   /// Menú de LIMPIAR INVENTARIO (v0.9.7), debajo del botón: elegir a
   /// mano o desarmar / vender todos los Comunes, Mágicos o Raros. Elegir
@@ -927,9 +961,9 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       key: const ValueKey('inv-clean-menu'),
       width: _gridW,
       decoration: BoxDecoration(
-        color: ProtoColors.bg,
+        color: DsColors.background,
         border: Border.all(
-            color: ProtoColors.buttonBorder, width: RetroTheme.thinBorderWidth),
+            color: DsColors.borderControl, width: DsMetrics.controlBorder),
       ),
       child: InventoryActionList(keyPrefix: 'inv-', entries: [
         InventoryMenuEntry(
@@ -979,58 +1013,58 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final summary = n == 0
         ? protoColor(ProtoColors.dim,
             'No tienes armas ${rarityPlural(_cleanRarity)} para ${sell ? 'vender' : 'desarmar'}.')
-        : 'Vas a ${sell ? 'vender' : 'desarmar'} <b>${protoEsc(what)}</b> → '
+        : 'Vas a ${sell ? 'vender' : 'desarmar'} ${protoEsc(what)} → '
             '${protoColor(ProtoColors.green, protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes)))}';
     return PanelDetail(
       footer: [
-        PanelButton('CANCELAR',
+        DsButton('CANCELAR',
             key: const ValueKey('inv-clean-cancel'),
+            size: DsButtonSize.compact,
             onPressed: () => setState(() => _cleaning = false)),
-        PanelButton(
+        DsButton(
             '${sell ? 'VENDER' : 'DESARMAR'} ${n == 0 ? '' : '$n '}'
             '${rarityPlural(_cleanRarity).toUpperCase()}',
             key: const ValueKey('inv-clean-confirm'),
-            accent: ProtoColors.red,
-            reason: g.craft(p, a), onPressed: () {
-          shop.controller.craft(a);
-          setState(() {});
-        }),
+            size: DsButtonSize.compact,
+            accent: DsColors.danger,
+            tooltip: g.craft(p, a),
+            onPressed: g.craft(p, a) != null
+                ? null
+                : () {
+                    shop.controller.craft(a);
+                    setState(() {});
+                  }),
       ],
       children: [
-        const Text('LIMPIAR INVENTARIO',
-            style: TextStyle(color: ProtoColors.gold)),
-        const SizedBox(height: 4),
+        const DsSectionHeader('LIMPIAR INVENTARIO'),
         CleanModeToggle(pick: false, onChanged: mode),
-        const SizedBox(height: 6),
-        RetroTipFold(
-            key: const ValueKey('inv-clean-help'),
-            title: 'Cómo funciona',
-            body: protoColor(
-                ProtoColors.dim,
-                'Desarma o vende de una vez todas las armas de una rareza. '
-                'Nunca toca la equipada ni tu última arma inicial.')),
-        const SizedBox(height: 8),
-        Wrap(spacing: 6, runSpacing: 6, children: [
-          PanelButton('DESARMAR (materiales)',
+        SizedBox(height: DsSpace.sm),
+        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+          DsButton('DESARMAR',
               key: const ValueKey('inv-clean-salvage'),
+              size: DsButtonSize.compact,
+              tooltip: 'Recibís materiales',
               selected: !sell,
               onPressed: () => setState(() => _cleanOp = CraftOp.salvageAll)),
-          PanelButton('VENDER (créditos)',
+          DsButton('VENDER',
               key: const ValueKey('inv-clean-sell'),
+              size: DsButtonSize.compact,
+              tooltip: 'Recibís créditos',
               selected: sell,
               onPressed: () => setState(() => _cleanOp = CraftOp.sellAll)),
         ]),
-        const SizedBox(height: 6),
-        Wrap(spacing: 6, runSpacing: 6, children: [
+        SizedBox(height: DsSpace.xs),
+        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
           for (final rr in const [Rarity.comun, Rarity.magico, Rarity.raro])
-            PanelButton(
+            DsButton(
                 '${rarityPlural(rr).toUpperCase()} '
                 '(${rules.crafting.batchTargets(p, rr).length})',
                 key: ValueKey('inv-clean-rarity-${rr.name}'),
+                size: DsButtonSize.compact,
                 selected: _cleanRarity == rr,
                 onPressed: () => setState(() => _cleanRarity = rr)),
         ]),
-        const SizedBox(height: 8),
+        SizedBox(height: DsSpace.sm),
         ProtoText(summary, key: const ValueKey('inv-clean-summary')),
         if (r.lost.isNotEmpty)
           ProtoText(protoColor(
@@ -1081,21 +1115,28 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     }
     return SizedBox(
       width: _gridW,
-      child: SectionPanel(
+      // Franja roja a la izquierda (como un aviso), sin caja anidada.
+      child: Container(
         key: const ValueKey('inv-confirm'),
-        icon: PixelIconKind.lock,
-        color: ProtoColors.red,
-        title: 'CONFIRMAR',
-        children: [
-          list.first,
-          const SizedBox(height: 6),
-          Wrap(
-            alignment: WrapAlignment.end,
-            spacing: 8,
-            runSpacing: 8,
-            children: list.skip(1).toList(),
-          ),
-        ],
+        margin: EdgeInsets.only(top: DsSpace.sm),
+        padding: EdgeInsets.all(DsSpace.sm),
+        decoration: const BoxDecoration(
+          color: DsColors.surface,
+          border: Border(left: BorderSide(color: DsColors.danger, width: 4)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            list.first,
+            SizedBox(height: DsSpace.sm),
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: DsSpace.sm,
+              runSpacing: DsSpace.xs,
+              children: list.skip(1).toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1133,39 +1174,48 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       return [
         ProtoText(
             key: const ValueKey('inv-craft-question'),
-            '¿${sell ? 'Vender' : 'Desarmar'} <b>${protoEsc(name)}</b>? '
+            '¿${sell ? 'Vender' : 'Desarmar'} ${protoEsc(name)}? '
             'Recibes ${protoColor(ProtoColors.green, protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes)))}. '
             '${protoColor(ProtoColors.red, 'El arma se destruye.')}'
             '${r.lost.isEmpty ? '' : ' ${protoColor(ProtoColors.orange, 'Se pierde: ${protoEsc(r.lost.join(', '))}')}'}'),
-        PanelButton('CANCELAR',
+        DsButton('CANCELAR',
             key: const ValueKey('inv-craft-cancel'),
+            size: DsButtonSize.compact,
             onPressed: () => setState(() => _confirmCraft = null)),
-        PanelButton(sell ? 'VENDER ₵${r.gainedCredits}' : 'DESARMAR',
+        DsButton(sell ? 'VENDER ₵${r.gainedCredits}' : 'DESARMAR',
             key: const ValueKey('inv-craft-confirm'),
-            accent: ProtoColors.red,
-            reason: g.craft(p, a), onPressed: () {
-          shop.controller.craft(a);
-          setState(() => _confirmCraft = null);
-        }),
+            size: DsButtonSize.compact,
+            accent: DsColors.danger,
+            tooltip: g.craft(p, a),
+            onPressed: g.craft(p, a) != null
+                ? null
+                : () {
+                    shop.controller.craft(a);
+                    setState(() => _confirmCraft = null);
+                  }),
       ];
     }
     if (_confirmDrop) {
       return [
         ProtoText(
             key: const ValueKey('inv-drop-question'),
-            '¿Tirar <b>${protoEsc(name)}</b> al piso? Lo puede levantar '
+            '¿Tirar ${protoEsc(name)} al piso? Lo puede levantar '
             'cualquiera.'),
-        PanelButton('CANCELAR',
+        DsButton('CANCELAR',
             key: const ValueKey('inv-drop-cancel'),
+            size: DsButtonSize.compact,
             onPressed: () => setState(() => _confirmDrop = false)),
-        PanelButton('TIRAR',
+        DsButton('TIRAR',
             key: const ValueKey('inv-drop-confirm'),
-            accent: ProtoColors.red,
-            reason: g.drop(p, token, count: count, alive: me.alive),
-            onPressed: () {
-          shop.controller.dropItem(token, count: count);
-          setState(() => _confirmDrop = false);
-        }),
+            size: DsButtonSize.compact,
+            accent: DsColors.danger,
+            tooltip: g.drop(p, token, count: count, alive: me.alive),
+            onPressed: g.drop(p, token, count: count, alive: me.alive) != null
+                ? null
+                : () {
+                    shop.controller.dropItem(token, count: count);
+                    setState(() => _confirmDrop = false);
+                  }),
       ];
     }
     return [
@@ -1173,19 +1223,24 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(retroText('Cantidad'),
-                style: const TextStyle(color: ProtoColors.sky)),
-            const SizedBox(width: 8),
-            PanelButton('-',
+            Text(retroText('Cantidad'), style: DsText.detail()),
+            SizedBox(width: DsSpace.sm),
+            DsButton.icon(const Text('-'),
                 key: const ValueKey('inv-count-dec'),
+                tooltip: 'Uno menos',
+                size: DsButtonSize.compact,
                 onPressed: count > 1
                     ? () => setState(() => _count = count - 1)
                     : null),
-            const SizedBox(width: 6),
-            Text('x$count', key: const ValueKey('inv-count')),
-            const SizedBox(width: 6),
-            PanelButton('+',
+            SizedBox(width: DsSpace.xs),
+            Text('x$count',
+                key: const ValueKey('inv-count'),
+                style: DsText.body(DsColors.textPrimary)),
+            SizedBox(width: DsSpace.xs),
+            DsButton.icon(const Text('+'),
                 key: const ValueKey('inv-count-inc'),
+                tooltip: 'Uno más',
+                size: DsButtonSize.compact,
                 onPressed: count < c.count
                     ? () => setState(() => _count = count + 1)
                     : null),
@@ -1401,8 +1456,8 @@ class NewItemTag extends StatelessWidget {
 
 /// Escala de la grilla del inventario para un área de [w] × [h] px
 /// (v0.9.10): la mayor escala con la que la grilla entra a lo ancho y
-/// sus 5 filas, la EQUIPADA y las pilas (más ~200 px de textos y
-/// botones) a lo alto; entera desde ×2
+/// sus 5 filas, la EQUIPADA y las pilas (más ~120 px de textos y
+/// botones; la barra de arriba ya no cuenta) a lo alto; entera desde ×2
 /// (nitidez del pixel art), en cuartos entre ×1 y ×2. Si ni la escala 1
 /// entra a lo ancho, la que entre.
 double inventoryScale(double w, double h) {
@@ -1411,7 +1466,7 @@ double inventoryScale(double w, double h) {
   const rows = InventoryRules.cells / InventoryRules.columns;
   final byH = h.isFinite
       // Escalan: 5 filas, la EQUIPADA y las pilas; fijo: textos y botones.
-      ? (h - 200) / ((rows + 2) * (InventoryTab.cell + InventoryTab.gap))
+      ? (h - 120) / ((rows + 2) * (InventoryTab.cell + InventoryTab.gap))
       : byW;
   final k = byW < byH ? byW : byH;
   if (k < 1) return 1;
@@ -1427,11 +1482,12 @@ double inventorySideWidth(double k) {
 }
 
 /// Como [inventoryScale] pero con la EQUIPADA y las pilas al lado de la
-/// grilla: a lo alto solo cuentan sus 5 filas, el buscador y ORDENAR.
+/// grilla: a lo alto solo cuentan sus 5 filas (el buscador y ORDENAR
+/// van en la barra de arriba).
 double inventoryScaleWide(double w, double h) {
   if (!w.isFinite || !h.isFinite) return 0;
   const rows = InventoryRules.cells / InventoryRules.columns;
-  final byH = (h - 110) / (rows * (InventoryTab.cell + InventoryTab.gap));
+  final byH = (h - 30) / (rows * (InventoryTab.cell + InventoryTab.gap));
   var k = byH;
   // El ancho: grilla + separación + columna de al lado.
   while (k > 0 &&
