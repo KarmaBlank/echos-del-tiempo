@@ -8,6 +8,7 @@ import '../../../../game_engine/models/battle_state.dart';
 import '../game_sprites.dart';
 import 'battle_fx.dart';
 import 'battle_layout.dart';
+import 'fx_player.dart';
 import 'fx_style.dart';
 import 'particles.dart';
 import 'proc_fx.dart';
@@ -88,6 +89,9 @@ class LiveFx {
 
   /// Ya disparó sus partículas / sacudida (`fxVisual`).
   bool fired = false;
+
+  /// Claves ya disparadas de un efecto `data` (`FxPlayer.tick`).
+  final done = <String>{};
 
   /// Edad en ms descontado el retraso (`age` del prototipo).
   double age(double t) => t - t0 - fx.delayMs;
@@ -319,6 +323,7 @@ class BattleSceneController extends ChangeNotifier {
       _trackDeaths(f.battle);
     }
     _fire();
+    _tickData();
     if (f != null) _updateUlt(f);
     _flush();
     if (f != null) _updateCamera(f, dt / 1000);
@@ -327,6 +332,30 @@ class BattleSceneController extends ChangeNotifier {
     if (i != null && t - i.t0 > BossIntro.durationMs) intro = null;
     notifyListeners();
   }
+
+  /// Lo puntual (partículas, sacudidas, hit-stop) de los momentos de
+  /// batalla con datos (`FxKind.data`, game_editor.md § 7.4).
+  void _tickData() {
+    for (final live in fx) {
+      final f = live.fx;
+      final data = f.data;
+      if (f.kind != FxKind.data || data == null) continue;
+      final a = live.age(t);
+      if (a < 0 || a > data.duration) continue;
+      FxPlayer.tick(data, a, dataStage(f), particles, live.done,
+          hitStop: (ms) => hitStop = math.max(hitStop, ms.toDouble()));
+    }
+  }
+
+  /// Escenario del `FxPlayer` de un efecto `data`.
+  static FxStage dataStage(BattleFx f, [Rect visible = Rect.largest]) =>
+      FxStage(
+        caster: Offset(f.x, f.y),
+        targets: [Offset(f.tx, f.ty)],
+        color: f.color,
+        element: f.el,
+        visible: visible,
+      );
 
   void _trackDeaths(BattleState s) {
     for (final e in s.enemies) {

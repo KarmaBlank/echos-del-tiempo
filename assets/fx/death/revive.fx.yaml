@@ -1,0 +1,19 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: revive
+category: death
+name: Vuelve a la pelea
+tags: [revivir, eco]
+duration: 620
+phases: { build: 0, release: 620, recover: 0 }
+targets: single
+tracks:
+  - type: prim
+    fire:
+      - { t: 0, kind: ring, at: caster, dy: -8, color: '#55efc4', big: true }
+      - { t: 0, kind: aura, at: caster, el: holy }
+  - type: shape
+    fire:
+      - { t: 0, shape: pillar, anchor: caster, color: light, ms: 420, scale: 0.6 }

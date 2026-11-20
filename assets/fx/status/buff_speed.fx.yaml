@@ -1,0 +1,15 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: buff_speed
+category: status
+name: Velocidad arriba
+tags: [buff]
+duration: 650
+phases: { build: 0, release: 650, recover: 0 }
+targets: single
+tracks:
+  - type: prim
+    fire:
+      - { t: 0, kind: afterimage, at: caster, dy: -8, color: action, who: true }

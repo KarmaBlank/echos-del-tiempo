@@ -180,12 +180,16 @@ void main() {
       expect(a.build('nada'), isNull);
     });
 
-    test('las ULT enemigas pasan a datos (v0.17); la ascensión sigue en el código', () async {
+    test('las ULT enemigas (v0.17) y las de ascensión (v0.18) son datos', () async {
       final cat = await load();
       expect(cat.sourceOf('eult_diluvio'), FxSource.data);
       expect(cat.timeline('eult_diluvio')!.category, 'enemy_ult');
       expect(cat.ids, contains('eult_diluvio'));
-      expect(cat.sourceOf('ult_berserker'), FxSource.legacy);
+      expect(cat.sourceOf('ult_berserker'), FxSource.data);
+      // Sin el asset, el adaptador sigue de respaldo.
+      final bare = FxCatalog.fromFiles('fx: {}', const {},
+          legacy: const LegacyFxAdapter());
+      expect(bare.sourceOf('ult_berserker'), FxSource.legacy);
     });
   });
 
@@ -204,8 +208,8 @@ void main() {
       expect(duoScript('guerrero+maga').data, same(cat.timeline('duo')));
       // ULT v2: las enemigas también vienen de los datos.
       expect(ultScriptFor('eult_diluvio').data, same(cat.timeline('eult_diluvio')));
-      // La ascensión sigue en el código.
-      expect(ultScriptFor('ult_berserker').data, isNull);
+      // Y la de ascensión (v0.18, paso 4).
+      expect(ultScriptFor('ult_berserker').data, same(cat.timeline('ult_berserker')));
       // Y el motor recibe las duraciones del release.
       expect(CinematicDurations.shared.ultMs('ult_baculo'), 2600);
       expect(CinematicDurations.shared.duoMs('x+y'), 1600);
@@ -262,9 +266,75 @@ void main() {
       expect(await o.readFx('ult_dagas'), contains('ms: 90'));
       await c.discardOverride();
       expect(cat.timeline('ult_dagas')!.track('hitstop')!.fires.single.n('ms'), 130);
-      // Lo legacy es de solo lectura.
-      c.select('ult_berserker');
-      expect(c.readOnly, isTrue);
+      // Lo legacy es de solo lectura (sin asset: el adaptador).
+      final bare = FxEditorController(
+          catalog: FxCatalog.fromFiles('fx: {}', const {},
+              legacy: const LegacyFxAdapter()),
+          overrides: o);
+      bare.select('ult_berserker');
+      expect(bare.readOnly, isTrue);
+      bare.convertToData();
+      expect(bare.readOnly, isFalse);
+      expect(bare.edit!.track('legacy'), isNull);
+      expect(bare.edit!.ofType('echo'), isNotEmpty);
+    });
+
+    test('paso 3: keys, arrastre con imán, curvas, pistas, deshacer/rehacer',
+        () async {
+      final o = LocalSpriteOverrides('${tmp.path}/ov');
+      final cat = await load(o);
+      final c = FxEditorController(catalog: cat, overrides: o)
+        ..select('ult_espada');
+      final t0 = c.edit!;
+      final shake = t0.tracks.indexWhere((t) => t.type == 'shake');
+      final n0 = t0.tracks[shake].fires.length;
+      // Doble clic: disparo nuevo (con imán a 10 ms).
+      c.addKey(shake, 503);
+      expect(c.edit!.tracks[shake].fires, hasLength(n0 + 1));
+      expect(c.keyOf(c.selectedKey!)!.t, 500);
+      // Arrastre: una sola entrada de deshacer, imán a otro key (1400).
+      c.beginDrag(c.selectedKey!);
+      c.dragTo(900);
+      c.dragTo(1402);
+      c.endDrag();
+      expect(c.keyOf(c.selectedKey!)!.t, 1400, reason: 'se pega al impacto');
+      c.undo();
+      expect(c.edit!.tracks[shake].fires.map((f) => f.t), contains(500));
+      c.redo();
+      expect(c.edit!.tracks[shake].fires.map((f) => f.t), isNot(contains(500)));
+      // Sin imán: 10 ms.
+      c.setSnap(false);
+      expect(c.snapTime(1393), 1393);
+      c.setSnap(true);
+      expect(c.snapTime(1703), 1700);
+      // Curva de un key de la pista dim.
+      final dim = c.edit!.tracks.indexWhere((t) => t.type == 'dim');
+      c.setKeyEase((track: dim, fire: false, index: 1), FxEase.back);
+      expect(c.edit!.tracks[dim].keys[1].ease, FxEase.back);
+      // Duplicar / borrar pista, capa de ecos, borrar key.
+      final n = c.edit!.tracks.length;
+      c.duplicateTrack(dim);
+      expect(c.edit!.tracks, hasLength(n + 1));
+      expect(c.edit!.tracks[dim + 1].type, 'dim');
+      c.removeTrack(dim + 1);
+      c.addEchoLayer();
+      expect(c.edit!.tracks.last.type, 'echo');
+      expect(c.edit!.tracks.last.keys, hasLength(3));
+      c.addTrack('title_card');
+      expect(c.edit!.tracks.last.n('until'), c.edit!.phases.build);
+      c.removeKey((track: shake, fire: true, index: 0));
+      expect(c.edit!.tracks[shake].fires, hasLength(n0));
+      // Deshacer todo vuelve al original.
+      while (c.canUndo) {
+        c.undo();
+      }
+      expect(c.edit!.toYaml(), t0.toYaml());
+      // Tope de 2.6 s: no se guarda.
+      c.setDuration(3000);
+      expect(c.blocking, isNotEmpty);
+      await c.save();
+      expect(c.notice!.error, isTrue);
+      expect(cat.sourceOf('ult_espada'), FxSource.data);
     });
   });
 

@@ -700,6 +700,68 @@ abstract final class FxPlayer {
         _line(c, body.translate(0, -3), body.translate(0, 3), col(blink), 1);
     }
   }
+
+  // ---------------------------------------------------------- primitivas
+
+  /// Vista aproximada de las pistas `prim` (primitivas del pintor de
+  /// batalla) para el Editor: en la batalla las dibuja el pintor de
+  /// siempre; acá alcanza con ver dónde y cuándo caen.
+  static void paintPrims(Canvas c, FxTimeline t, double a, FxStage st) {
+    for (final tr in t.ofType('prim')) {
+      for (final f in tr.fires) {
+        final age = a - f.t;
+        const len = 450.0;
+        if (age < 0 || age > len) continue;
+        final k = age / len;
+        final at = f.s('at') ?? 'target';
+        final anchors = switch (at) {
+          'caster' => [st.caster],
+          'allies' || 'allies_others' =>
+            st.party.isEmpty ? [st.caster] : st.party,
+          _ => [st.anchor('target')],
+        };
+        final col = switch (f.s('color')) {
+          null || 'action' || 'status' => st.color,
+          'hurt' || 'crit' => const Color(0xFFFF5A5A),
+          'heal' || 'regen' => const Color(0xFF55EFC4),
+          'mana' || 'shield' => const Color(0xFF74B9FF),
+          'break' || 'break_flash' => const Color(0xFFFFE066),
+          final r => color(r, st),
+        };
+        for (final p0 in anchors) {
+          final p = p0.translate(f.d('dx', 0), f.d('dy', 0));
+          switch (f.s('kind')) {
+            case 'ring' || 'pulse' || 'bubble':
+              final r = (f.b('big') ? 18 : 10) * (0.3 + k);
+              _ring(c, p, r, r * 0.45, _a(col, 1 - k), 1);
+            case 'slash':
+              _line(c, p.translate(-6 + 12 * k, -6), p.translate(6, 6 - 12 * k),
+                  _a(col, 1 - k), 2);
+            case 'shatter' || 'crack':
+              for (var i = 0; i < 6; i++) {
+                final ang = i * math.pi / 3;
+                _line(c, p, p.translate(math.cos(ang) * 14 * k, math.sin(ang) * 14 * k),
+                    _a(col, 1 - k), 1);
+              }
+            case 'aura' || 'afterimage' || 'arrow' || 'reticle':
+              _fill.color = _a(col, (1 - k) * 0.8);
+              for (var i = 0; i < 4; i++) {
+                c.drawRect(
+                    Rect.fromLTWH(p.dx - 6 + i * 4, p.dy - 4 - 16 * k - i * 2, 2, 2),
+                    _fill);
+              }
+            case 'proj' || 'arc':
+              final to = st.anchor('target').translate(0, f.d('dy', 0));
+              final m = Offset.lerp(p, to, (age / 280).clamp(0.0, 1.0))!;
+              _fill.color = col;
+              c.drawRect(Rect.fromCenter(center: m, width: 3, height: 3), _fill);
+            case 'poof':
+              _ring(c, p, 8 * (0.5 + k), 5 * (0.5 + k), _a(const Color(0xFFA29BFE), 1 - k), 2);
+          }
+        }
+      }
+    }
+  }
 }
 
 /// Curvas mínimas (sin depender de Flutter).

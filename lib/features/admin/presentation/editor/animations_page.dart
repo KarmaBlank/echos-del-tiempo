@@ -1,4 +1,5 @@
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart' show LogicalKeyboardKey;
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
@@ -50,7 +51,18 @@ class _AnimationsPageState extends State<AnimationsPage>
   @override
   Widget build(BuildContext context) {
     final c = widget.c;
-    return ListenableBuilder(
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): c.undo,
+        const SingleActivator(LogicalKeyboardKey.keyY, control: true): c.redo,
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true, shift: true): c.redo,
+        const SingleActivator(LogicalKeyboardKey.delete): () {
+          if (c.selectedKey case final k?) c.removeKey(k);
+        },
+      },
+      child: Focus(
+        autofocus: true,
+        child: ListenableBuilder(
       listenable: c,
       builder: (context, _) => Stack(children: [
         Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -75,6 +87,8 @@ class _AnimationsPageState extends State<AnimationsPage>
                 onClose: c.clearNotice),
           ),
       ]),
+        ),
+      ),
     );
   }
 }
@@ -211,6 +225,58 @@ class _Stage extends StatelessWidget {
           Text('${c.time.round()} / ${t.duration} ms', style: DsText.detail()),
         ]),
         SizedBox(height: DsSpace.sm),
+        // Edición de la línea de tiempo (paso 3, game_editor.md § 7.3).
+        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          DsButton('DESHACER',
+              key: const ValueKey('fx-undo'),
+              size: DsButtonSize.compact,
+              onPressed: c.canUndo && !c.readOnly ? c.undo : null),
+          DsButton('REHACER',
+              key: const ValueKey('fx-redo'),
+              size: DsButtonSize.compact,
+              onPressed: c.canRedo && !c.readOnly ? c.redo : null),
+          DsButton('IMÁN',
+              key: const ValueKey('fx-snap'),
+              size: DsButtonSize.compact,
+              selected: c.snap,
+              onPressed: () => c.setSnap(!c.snap)),
+          DsButton('+ KEY',
+              key: const ValueKey('fx-add-key'),
+              size: DsButtonSize.compact,
+              onPressed: c.readOnly || c.selectedTrack == null
+                  ? null
+                  : () => c.addKey(c.selectedTrack!, c.time)),
+          DsButton('BORRAR KEY',
+              key: const ValueKey('fx-del-key'),
+              size: DsButtonSize.compact,
+              onPressed: c.readOnly || c.selectedKey == null
+                  ? null
+                  : () => c.removeKey(c.selectedKey!)),
+          DsButton('DUPLICAR PISTA',
+              key: const ValueKey('fx-dup-track'),
+              size: DsButtonSize.compact,
+              onPressed: c.readOnly || c.selectedTrack == null
+                  ? null
+                  : () => c.duplicateTrack(c.selectedTrack!)),
+          DsButton('BORRAR PISTA',
+              key: const ValueKey('fx-del-track'),
+              size: DsButtonSize.compact,
+              onPressed: c.readOnly || c.selectedTrack == null
+                  ? null
+                  : () => c.removeTrack(c.selectedTrack!)),
+          DsButton('CAPA DE ECOS',
+              key: const ValueKey('fx-echo-layer'),
+              size: DsButtonSize.compact,
+              onPressed: c.readOnly ? null : c.addEchoLayer),
+          if (t.legacy)
+            DsButton('CONVERTIR A DATOS',
+                key: const ValueKey('fx-convert'),
+                kind: DsButtonKind.primary,
+                size: DsButtonSize.compact,
+                onPressed: c.convertToData),
+          Text('DOBLE CLIC: KEY NUEVO · ARRASTRAR: MOVER', style: DsText.detail()),
+        ]),
+        SizedBox(height: DsSpace.xs),
         // Línea de tiempo (scrub con clic/arrastre; clic en un rombo lo elige).
         SizedBox(
           height: FxTimelinePainter.rulerH + rows * FxTimelinePainter.rowH + 4,
@@ -221,12 +287,20 @@ class _Stage extends StatelessWidget {
               c.seek(x / w * t.duration);
             }
 
-            void pick(Offset p) {
+            double msAt(Offset p) {
+              final x = p.dx - FxTimelinePainter.labelW;
+              final w = box.maxWidth - FxTimelinePainter.labelW - 8;
+              return x / w * t.duration;
+            }
+
+            int? rowAt(Offset p) {
               final row = ((p.dy - FxTimelinePainter.rulerH) / FxTimelinePainter.rowH).floor();
-              if (p.dy < FxTimelinePainter.rulerH || row < 0 || row >= rows) {
-                scrub(p);
-                return;
-              }
+              return p.dy < FxTimelinePainter.rulerH || row < 0 || row >= rows ? null : row;
+            }
+
+            FxKeyRef? keyAt(Offset p) {
+              final row = rowAt(p);
+              if (row == null) return null;
               final tr = t.tracks[row];
               FxKeyRef? best;
               var bestD = 7.0;
@@ -241,6 +315,16 @@ class _Stage extends StatelessWidget {
                   }
                 }
               }
+              return best;
+            }
+
+            void pick(Offset p) {
+              final row = rowAt(p);
+              if (row == null) {
+                scrub(p);
+                return;
+              }
+              final best = keyAt(p);
               if (best != null) {
                 c.selectKey(best);
               } else {
@@ -249,10 +333,26 @@ class _Stage extends StatelessWidget {
               }
             }
 
+            // Arrastrar un rombo lo mueve (con imán); arrastrar en vacío
+            // hace scrub. Doble clic en una fila agrega un key ahí.
             return GestureDetector(
               key: const ValueKey('fx-timeline'),
               onTapDown: (d) => pick(d.localPosition),
-              onHorizontalDragUpdate: (d) => scrub(d.localPosition),
+              onDoubleTapDown: (d) {
+                final row = rowAt(d.localPosition);
+                if (row != null && keyAt(d.localPosition) == null) {
+                  c.addKey(row, msAt(d.localPosition));
+                }
+              },
+              onDoubleTap: () {},
+              onHorizontalDragStart: (d) {
+                final k = keyAt(d.localPosition);
+                if (k != null && !c.readOnly) c.beginDrag(k);
+              },
+              onHorizontalDragUpdate: (d) => c.dragging
+                  ? c.dragTo(msAt(d.localPosition))
+                  : scrub(d.localPosition),
+              onHorizontalDragEnd: (_) => c.endDrag(),
               child: CustomPaint(
                 painter: FxTimelinePainter(
                     timeline: t,
@@ -360,16 +460,45 @@ class _Properties extends StatelessWidget {
                 if (e.value is num)
                   _num(e.key.toUpperCase(), e.value! as num,
                       _stepFor(e.key), (v) => c.setKeyField(c.selectedKey!, e.key, v))
+                else if (e.value is String && kFxFieldOptions[e.key] != null)
+                  _choice(e.key, e.value! as String)
                 else
                   _kv(e.key.toUpperCase(), '${e.value}'),
+              if (!c.selectedKey!.fire) ...[
+                SizedBox(height: DsSpace.xs),
+                Text('CURVA DE LLEGADA', style: DsText.detail()),
+                SizedBox(height: DsSpace.xs),
+                Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+                  for (final e in FxEase.values)
+                    DsButton(_easeLabel(e),
+                        key: ValueKey('fx-ease-${e.name}'),
+                        size: DsButtonSize.compact,
+                        selected: key.ease == e,
+                        onPressed: c.readOnly
+                            ? null
+                            : () => c.setKeyEase(c.selectedKey!, e)),
+                ]),
+              ],
             ] else if (c.selectedTrack != null && c.selectedTrack! < t.tracks.length) ...[
               DsSectionHeader('PISTA ${t.tracks[c.selectedTrack!].type.toUpperCase()}'),
               for (final e in t.tracks[c.selectedTrack!].props.entries)
                 _kv(e.key.toUpperCase(), '${e.value}'),
-              Text('Clic en un rombo o marca para editarlo.', style: DsText.detail()),
+              Text('Clic en un rombo o marca para editarlo; doble clic agrega.',
+                  style: DsText.detail()),
             ] else
               Text('Clic en la línea de tiempo para elegir un key.',
                   style: DsText.detail()),
+            if (!c.readOnly)
+              DsFold(
+                label: 'NUEVA PISTA', openLabel: 'NUEVA PISTA',
+                child: Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+                  for (final type in FxEditorController.newTrackTypes)
+                    DsButton(type.toUpperCase(),
+                        key: ValueKey('fx-new-track-$type'),
+                        size: DsButtonSize.compact,
+                        onPressed: () => c.addTrack(type)),
+                ]),
+              ),
             if (warn.isNotEmpty) ...[
               const DsSectionHeader('VALIDACIÓN'),
               for (final w in warn) Text('! $w', style: DsText.detail(DsColors.warning)),
@@ -417,6 +546,39 @@ class _Properties extends StatelessWidget {
                   : null),
         ]),
       ),
+    );
+  }
+
+  static String _easeLabel(FxEase e) => switch (e) {
+        FxEase.linear => 'LINEAL',
+        FxEase.smooth => 'SUAVE',
+        FxEase.easeIn => 'ENTRA',
+        FxEase.easeOut => 'SALE',
+        FxEase.snap => 'CORTE',
+        FxEase.back => 'REBOTE',
+      };
+
+  /// Campo de texto con opciones conocidas (ancla, color, forma…): un
+  /// botón por opción.
+  Widget _choice(String field, String value) {
+    final opts = {...kFxFieldOptions[field]!, value}.toList();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 100, child: Text(field.toUpperCase(), style: DsText.detail())),
+        Expanded(
+          child: Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+            for (final o in opts)
+              DsButton(o.toUpperCase(),
+                  key: ValueKey('fx-opt-$field-$o'),
+                  size: DsButtonSize.compact,
+                  selected: o == value,
+                  onPressed: c.readOnly
+                      ? null
+                      : () => c.setKeyText(c.selectedKey!, field, o)),
+          ]),
+        ),
+      ]),
     );
   }
 

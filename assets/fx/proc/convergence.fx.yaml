@@ -1,0 +1,22 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: convergence
+category: proc
+name: Convergencia
+tags: [convergencia, reacción, eco]
+duration: 620
+phases: { build: 0, release: 620, recover: 0 }
+targets: single
+tracks:
+  - type: shape
+    fire:
+      - { t: 0, shape: shockwave, anchor: caster, color: element, ms: 420, scale: 1.3 }
+      - { t: 60, shape: ring, anchor: caster, color: echo, ms: 380, scale: 1.1, implode: true }
+  - type: particles
+    fire:
+      - { t: 0, preset: burst, anchor: caster, element: auto, count: 1.5 }
+  - type: shake
+    fire:
+      - { t: 0, amp: 4 }

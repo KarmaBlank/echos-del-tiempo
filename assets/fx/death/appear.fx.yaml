@@ -1,0 +1,17 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: appear
+category: death
+name: Aparición (invocación)
+tags: [aparición, eco]
+duration: 620
+phases: { build: 0, release: 620, recover: 0 }
+targets: single
+tracks:
+  - type: prim
+    fire:
+      - { t: 0, kind: arc, at: caster, to: target, dy: -14, color: action, el: arcane, who: true }
+      - { t: 120, kind: poof, at: target, dy: -10, who: true }
+      - { t: 120, kind: ring, at: target, dy: -8, color: action, who: true }

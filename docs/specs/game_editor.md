@@ -533,16 +533,15 @@ Todo con los componentes de docs/specs/design_system.md:
     (`dot`, `arrow`, `spear`, `hammer`, `meteor`, `bolt`), `echoes` +
     `lag` (cabezas fantasma). Partículas: `burst` (`element`), `sparks`,
     `shards`, `sparkles`, `embers`, `dust`, `debris`, `frost`.
-  - `title_card`, `letterbox`, `actor`, `sprite`, `sound`,
-    `damage_style` y `tint` con color por key quedan reservados: se
-    leen y se guardan, pero la tarjeta, las barras y el sonido siguen
-    las fases y el estilo del código (paso 3/4). Formas, estelas y
+  - `actor`, `sprite`, `damage_style` y `tint` con color por key quedan
+    reservados: se leen y se guardan. (`title_card`, `letterbox` y
+    `sound` se reproducen desde v0.18.0, § 7.3.) Formas, estelas y
     tinte se dibujan sumando luz (brillan sobre el oscurecido sin tapar).
 - **Archivos**: `assets/fx/fx_manifest.yaml` (`fx: { <id>: <ruta> }`),
   `assets/fx/ult/<id>.fx.yaml` (las 13 ULT de arma) y
   `assets/fx/duo/duo.fx.yaml` (dúo genérico; `duo_<clave>` lo pisa por
-  dúo). pubspec lista `assets/fx/ult/` y `assets/fx/duo/`: una carpeta
-  nueva (p. ej. `skill/`) hay que sumarla a mano al publicar.
+  dúo). Desde v0.18.0 pubspec registra la carpeta de cada categoría de
+  `kFxCategories` (§ 7.4): publicar no requiere tocarlo.
 - **`FxCatalog`** (`lib/core/fx/fx_catalog.dart`): único lector; capas
   edición en vivo (Editor) → override local → asset → `LegacyFxSource`.
   `forAction('duo', clave)`, `durationOf`, `releaseDurations()` (asset
@@ -615,9 +614,123 @@ Todo con los componentes de docs/specs/design_system.md:
 - **Pendiente (paso 3)**: agregar/quitar pistas y keys, arrastrar keys
   en el tiempo, plantillas, duplicar/renombrar, deshacer/rehacer,
   convertir legacy a datos, hojas de sprites por cuadro en la pista
-  `sprite` (el formato ya las admite).
+  `sprite` (el formato ya las admite). → Hecho en v0.18.0 salvo lo que
+  lista § 7.3 como pendiente.
 - Capturas: `tool/shots/fx_shots_test.dart` →
   `docs/release_shots/v0.16.0/`.
+
+### 7.3 Paso 3 tal como quedó (implementado, v0.18.0)
+
+- **Edición visual** (`fx_editor_controller.dart`, `animations_page.dart`):
+  - **Keys**: doble clic en una fila vacía agrega un key (o un disparo en
+    las pistas de disparos: `particles`, `shape`, `trail`, `shake`,
+    `flash`, `hitstop`, `impact`, `sound`, `prim`) que copia los valores
+    del key anterior (o una plantilla del tipo); `+ KEY` lo agrega en el
+    cabezal de la pista elegida; `BORRAR KEY` o la tecla Supr lo borra.
+  - **Arrastrar** un rombo/marca lo mueve en el tiempo (una sola entrada
+    de deshacer por arrastre); arrastrar en vacío sigue siendo scrub.
+  - **Imán** (`IMÁN`, encendido por defecto): se pega a cualquier otro
+    key/disparo a menos de 25 ms; si no, redondea a 10 ms.
+  - **Curvas**: el key elegido muestra LINEAL · SUAVE · ENTRA · SALE ·
+    CORTE · REBOTE (`FxEase`, la curva de llegada). Los campos de texto
+    conocidos (ancla, foco, color por rol, forma, partículas, cabeza de
+    estela: `kFxFieldOptions`) se eligen con botones.
+  - **Pistas**: `DUPLICAR PISTA` (queda debajo), `BORRAR PISTA`, `NUEVA
+    PISTA` (plegable con los tipos, cada uno con un key de ejemplo) y
+    `CAPA DE ECOS` (pista `echo` de 3 copias del lanzador que llegan al
+    objetivo justo antes del primer impacto).
+  - **Deshacer/rehacer**: pila por documento (200 pasos), `DESHACER` /
+    `REHACER` y Ctrl+Z / Ctrl+Y (Ctrl+Mayús+Z). Elegir otra animación,
+    DESHACER CAMBIOS o guardar la vacían.
+  - **Convertir a datos** (solo legacy): la copia pierde la pista
+    `legacy` y gana capa de ecos + anillo + partículas en el impacto;
+    GUARDAR crea el override.
+  - **Validación**: además de lo del paso 2, keys fuera de la duración y
+    ecos sin camino. **Bloquean el guardado** (`blocking`): ULT de más de
+    2600 ms e impactos después del final (aviso de error, no se escribe).
+  - La vista previa dibuja también las primitivas `prim` (aproximadas),
+    las barras de cine (`letterbox`) y la tarjeta (`title_card`).
+- **El juego reproduce desde los datos** (cinemáticas ULT/dúo/enemigas):
+  - `letterbox`: alto de las barras = `v` × alto del área del mundo
+    (0.09 = el de siempre), tope 0.25. Sin la pista, como antes.
+  - `title_card`: `at` / `until` (ms) = entra en `at` (180 ms) y sale en
+    los 200 ms que empiezan en `until − 140`; `hidden: true` = sin
+    tarjeta. Sin la pista: `at` 80, `until` = fin de la preparación.
+    El dúo mantiene su tarjeta partida.
+  - `sound`: cada disparo `{ t, cue }` suena en `t`; `cue: build |
+    release | impact` = los sonidos propios de la ULT (`Sfx.ult(id, …)`),
+    cualquier otro = id del catálogo de sonido (los que no existen se
+    ignoran). Si la pista existe, reemplaza a la carga/descarga del
+    código; el impacto de cada golpe sigue sonando con su golpe (no hace
+    falta ponerlo en la pista). Hoy ninguna ULT del repo trae la pista
+    (sin cambio de sonido).
+- **Pendiente**: plantillas de animación nueva, duplicar/renombrar una
+  animación entera, mostrar/ocultar y "solo" por pista, zoom de la regla,
+  hojas de sprites por cuadro en `sprite`, pistas `actor` y
+  `damage_style`.
+
+### 7.4 Paso 4 tal como quedó (implementado, v0.18.0)
+
+- **ULT de ascensión en datos**: `assets/fx/ult/ult_<ascensión>.fx.yaml`
+  (berserker, señor de la guerra, cronomante, elementalista,
+  francotirador, trampero, templario, guardián). Parten del diseño de
+  datos de la ULT de arma con el mismo estilo (Danza de Mil Cortes,
+  Cataclismo, Paradoja, Meteoro, Disparo Letal, Tormenta de Flechas,
+  Juicio Divino, Baluarte) retimado a los tiempos del guion del código:
+  misma duración, preparación, impacto, `stagger`, golpes previos y
+  hit-stop (test), así que el host espera lo mismo que antes. Todas con
+  ecos. Con esto todo lo que arma `LegacyFxAdapter` tiene datos: el
+  adaptador queda solo como respaldo (sin asset o con un archivo roto).
+- **Momentos de batalla** (`kBattleFxMoments` en `battle_fx.dart`, 41
+  archivos en `assets/fx/{attack,skill,proc,status,death}/`): ataque,
+  ataque a todos, proyectil, golpe a enemigo / a aliado, golpe y golpe en
+  área de enemigo; habilidad, a todos, defensa, proteger, provocar,
+  escudo del grupo, prisa, apoyo y grito de ascensión, **Pulso del
+  Tiempo** e **Instante**; **quiebre**, quebrado, **Fisurado**,
+  quebradizo que se rompe, **Convergencia**; estado aplicado, tics de
+  quemadura/veneno, aturdido, congelado, buffs (velocidad, ataque ±,
+  marca), curación (normal, sagrada, regeneración, maná), escudo y
+  escudo que absorbe; **muerte**, **aparición** (invocación) y revivir.
+- **Pista `prim`** (nueva en el formato): disparos `{ t, kind, at, to,
+  dx, dy, color, el, big, up, heavy, ghost, who, weapon }` = una
+  primitiva del pintor de batalla (`FxKind`: `ring`, `slash`, `aura`,
+  `proj`, `poof`, `shatter`, `bubble`, `crack`, `pulse`, `arrow`,
+  `reticle`, `afterimage`, `arc`, `act`, `windup`, `flash`…). `at`:
+  `caster` (quien actúa), `target`, `allies`, `allies_others`; `color`
+  por rol: `action` (el de la acción), `status`, `white`, `gold`,
+  `hurt`, `crit`, `heal`, `regen`, `mana`, `holy`, `orange`, `violet`,
+  `gray`, `break`, `break_flash`, `brittle`, `shield`, `echo` o
+  `'#rrggbb'`; `el`: elemento o `action`; `weapon: true` usa el estilo
+  del arma de quien actúa; `who: true` asocia el efecto al actor. Así los
+  momentos se ven **igual que el código** (test que juega batallas
+  enteras con y sin datos y compara cada efecto).
+- Las demás pistas visuales de un momento (`shape`, `particles`,
+  `echo`, `trail`, `flash`, `shake`, `hitstop`, `tint`) van en un efecto
+  `FxKind.data` que la escena reproduce con el mismo `FxPlayer` (anclas:
+  `caster` = quien actúa, `target` = el objetivo). Mejoras con ecos donde
+  aportan (nuevas, no estaban en el código): Pulso del Tiempo (reloj y
+  anillo de eco, destellos), Instante (estela + anillo de eco), Fisurado
+  (pulso + astillas), Convergencia (onda, anillo que implota, estallido
+  y sacudida sobre las piezas de la reacción), estado aplicado (aura del
+  elemento del estado), aturdido (aura), prisa (pulso dorado en los
+  aliados) y revivir (anillo, aura y columna de luz).
+- **Respaldo**: sin catálogo (tests del motor/escena) o sin el archivo,
+  cada momento usa el código de siempre en `mapBattleEvents`. Los
+  números, textos y carteles (contenido que depende del evento) y la
+  geometría de reacciones, rebotes, procs del árbol y mecánicas de jefe
+  siguen en código (pendiente).
+- **Carpetas**: pubspec registra `assets/fx/<categoría>/` para cada una
+  de `kFxCategories` (`map_move/` y `ui/` reservadas con un README);
+  test de que estén todas. PUBLICAR AL REPO ya no pide tocar pubspec.
+- **Red**: sin cambios (los datos visuales no viajan; `kProtocolVersion`
+  igual; las duraciones de las ULT de ascensión no cambian).
+- **Pendiente**: movimiento en el mapa y UI; borrar `UltDirector` y el
+  código de respaldo cuando el dueño apruebe (hoy queda como red de
+  seguridad); actualizar battle_presentation.md y sprites.md en detalle
+  (por ahora apuntan acá).
+- Capturas: `tool/shots/v0180_editor_fx_shots_test.dart` →
+  `docs/release_shots/v0.18.0/` (las capturas cargan las fuentes de
+  Material del SDK: `loadMaterialFonts`).
 
 ## 8. Preguntas abiertas (respondidas por el dueño)
 

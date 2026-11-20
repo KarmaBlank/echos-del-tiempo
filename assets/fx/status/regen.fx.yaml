@@ -1,0 +1,15 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: regen
+category: status
+name: Regeneración
+tags: [cura]
+duration: 500
+phases: { build: 0, release: 500, recover: 0 }
+targets: single
+tracks:
+  - type: prim
+    fire:
+      - { t: 0, kind: aura, at: caster, el: heal }

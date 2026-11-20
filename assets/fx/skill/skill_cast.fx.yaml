@@ -1,0 +1,15 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: skill_cast
+category: skill
+name: Habilidad
+tags: [habilidad]
+duration: 300
+phases: { build: 0, release: 300, recover: 0 }
+targets: single
+tracks:
+  - type: prim
+    fire:
+      - { t: 0, kind: act, at: caster, color: white, who: true }

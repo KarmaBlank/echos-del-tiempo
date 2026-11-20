@@ -1,0 +1,15 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: skill_taunt
+category: skill
+name: Provocar
+tags: [habilidad]
+duration: 450
+phases: { build: 0, release: 450, recover: 0 }
+targets: self
+tracks:
+  - type: prim
+    fire:
+      - { t: 0, kind: ring, at: caster, dy: -8, color: '#ff7675', big: true }

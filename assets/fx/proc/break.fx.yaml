@@ -1,0 +1,16 @@
+# Momento de batalla (docs/specs/game_editor.md § 7.4). Las pistas
+# `prim` son primitivas del pintor de batalla: mismo aspecto que el
+# código de respaldo de battle_fx.dart.
+schema: 1
+id: break
+category: proc
+name: ¡Quiebre!
+tags: [quiebre]
+duration: 650
+phases: { build: 0, release: 650, recover: 0 }
+targets: single
+tracks:
+  - type: prim
+    fire:
+      - { t: 0, kind: shatter, at: caster, dy: -10, color: break, who: true }
+      - { t: 0, kind: flash, color: break_flash }

@@ -104,3 +104,54 @@ fx:
   eult_e_ojoAbismo: enemy_ult/eult_e_ojoAbismo.fx.yaml
   eult_e_heraldoEras: enemy_ult/eult_e_heraldoEras.fx.yaml
   eult_e_fragmentoTiempo: enemy_ult/eult_e_fragmentoTiempo.fx.yaml
+  # ---- ULT de ascensión (paso 4, game_editor.md § 7.4) ----
+  ult_berserker: ult/ult_berserker.fx.yaml
+  ult_senorGuerra: ult/ult_senorGuerra.fx.yaml
+  ult_cronomante: ult/ult_cronomante.fx.yaml
+  ult_elementalista: ult/ult_elementalista.fx.yaml
+  ult_francotirador: ult/ult_francotirador.fx.yaml
+  ult_trampero: ult/ult_trampero.fx.yaml
+  ult_templario: ult/ult_templario.fx.yaml
+  ult_guardian: ult/ult_guardian.fx.yaml
+  # ---- Momentos de batalla (paso 4) ----
+  attack: attack/attack.fx.yaml
+  attack_all: attack/attack_all.fx.yaml
+  projectile: attack/projectile.fx.yaml
+  hit: attack/hit.fx.yaml
+  hurt: attack/hurt.fx.yaml
+  enemy_strike: attack/enemy_strike.fx.yaml
+  enemy_area: attack/enemy_area.fx.yaml
+  skill_cast: skill/skill_cast.fx.yaml
+  skill_all: skill/skill_all.fx.yaml
+  skill_defense_up: skill/skill_defense_up.fx.yaml
+  skill_protect: skill/skill_protect.fx.yaml
+  skill_taunt: skill/skill_taunt.fx.yaml
+  skill_guard: skill/skill_guard.fx.yaml
+  skill_haste: skill/skill_haste.fx.yaml
+  skill_support: skill/skill_support.fx.yaml
+  skill_support_rally: skill/skill_support_rally.fx.yaml
+  skill_pulse: skill/skill_pulse.fx.yaml
+  skill_instant: skill/skill_instant.fx.yaml
+  break: proc/break.fx.yaml
+  break_stunned: proc/break_stunned.fx.yaml
+  fissure: proc/fissure.fx.yaml
+  brittle_shatter: proc/brittle_shatter.fx.yaml
+  convergence: proc/convergence.fx.yaml
+  status_apply: status/status_apply.fx.yaml
+  status_burn: status/status_burn.fx.yaml
+  status_poison: status/status_poison.fx.yaml
+  stunned: status/stunned.fx.yaml
+  frozen: status/frozen.fx.yaml
+  buff_speed: status/buff_speed.fx.yaml
+  buff_attack_up: status/buff_attack_up.fx.yaml
+  buff_attack_down: status/buff_attack_down.fx.yaml
+  buff_mark: status/buff_mark.fx.yaml
+  heal: status/heal.fx.yaml
+  heal_holy: status/heal_holy.fx.yaml
+  regen: status/regen.fx.yaml
+  mana: status/mana.fx.yaml
+  shield_up: status/shield_up.fx.yaml
+  shield_absorb: status/shield_absorb.fx.yaml
+  death: death/death.fx.yaml
+  appear: death/appear.fx.yaml
+  revive: death/revive.fx.yaml

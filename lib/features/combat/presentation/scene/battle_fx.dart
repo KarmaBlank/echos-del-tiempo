@@ -14,6 +14,7 @@ import '../../../../game_engine/rules/battle_engine.dart'
     show stanceName, ultimateOf;
 import '../../../../game_engine/rules/js_math.dart';
 import '../../../../app/theme/vision_palette.dart';
+import '../../../../core/fx/fx_catalog.dart';
 import 'chain_fx.dart';
 import 'fx_style.dart';
 import 'proc_fx.dart';
@@ -102,6 +103,11 @@ enum FxKind {
   /// Pieza de una reacción elemental: cartel, anillo o rayo
   /// (reaction_fx, `BattleFx.reaction`).
   reaction,
+
+  /// Animación de datos (FXA, game_editor.md § 7.4): las pistas visuales
+  /// de un momento de batalla (`BattleFx.data`) que reproduce el
+  /// `FxPlayer` desde `(x, y)` (quien actúa) hacia `(tx, ty)`.
+  data,
 }
 
 /// Datos de la cinemática de una ultimate (`addFx({k:'ult'})`).
@@ -207,7 +213,11 @@ class BattleFx {
     this.slot = 0,
     this.weapon,
     this.reaction,
+    this.data,
   });
+
+  /// `data`: la animación (pistas visuales del momento).
+  final FxTimeline? data;
 
   final FxKind kind;
   final double x, y;
@@ -281,6 +291,7 @@ class BattleFx {
         FxKind.lavaBurst => lavaBurstMs,
         FxKind.hop || FxKind.streak => chainFxMs(kind),
         FxKind.reaction => reaction?.durationMs ?? 0,
+        FxKind.data => data?.duration ?? 0,
       };
 
   static const numMs = 1100;
@@ -355,7 +366,8 @@ class BattleFx {
       up: up,
       slot: slot,
       weapon: weapon,
-      reaction: reaction);
+      reaction: reaction,
+      data: data);
 
   @override
   String toString() => 'BattleFx($kind, ($x, $y), text: $text, '
@@ -414,6 +426,89 @@ class _Action {
   late final chain = ChainPlanner(hits: skill?.hits ?? 1);
 }
 
+/// Momentos de batalla que salen de datos FXA (game_editor.md § 7.4): id
+/// del `.fx.yaml` → categoría. Sin catálogo (tests del motor) o sin
+/// archivo, cada uno usa el código de respaldo de [mapBattleEvents].
+const kBattleFxMoments = <String, String>{
+  // Ataques y golpes básicos.
+  'attack': 'attack',
+  'attack_all': 'attack',
+  'projectile': 'attack',
+  'hit': 'attack',
+  'hurt': 'attack',
+  'enemy_strike': 'attack',
+  'enemy_area': 'attack',
+  // Habilidades.
+  'skill_cast': 'skill',
+  'skill_all': 'skill',
+  'skill_defense_up': 'skill',
+  'skill_protect': 'skill',
+  'skill_taunt': 'skill',
+  'skill_guard': 'skill',
+  'skill_haste': 'skill',
+  'skill_support': 'skill',
+  'skill_support_rally': 'skill',
+  'skill_pulse': 'skill',
+  'skill_instant': 'skill',
+  // Quiebre y Convergencias.
+  'break': 'proc',
+  'break_stunned': 'proc',
+  'fissure': 'proc',
+  'brittle_shatter': 'proc',
+  'convergence': 'proc',
+  // Estados, curación y escudos.
+  'status_apply': 'status',
+  'status_burn': 'status',
+  'status_poison': 'status',
+  'stunned': 'status',
+  'frozen': 'status',
+  'buff_speed': 'status',
+  'buff_attack_up': 'status',
+  'buff_attack_down': 'status',
+  'buff_mark': 'status',
+  'heal': 'status',
+  'heal_holy': 'status',
+  'regen': 'status',
+  'mana': 'status',
+  'shield_up': 'status',
+  'shield_absorb': 'status',
+  // Muerte y aparición.
+  'death': 'death',
+  'appear': 'death',
+  'revive': 'death',
+};
+
+/// Colores por rol de la pista `prim` (los mismos del código).
+Color _primColor(String? role, Color action, Color status) => switch (role) {
+      null || 'action' => action,
+      'status' => status,
+      'white' => fxWhite,
+      'gold' => _gold,
+      'hurt' => _hurtRed,
+      'crit' => _critRed,
+      'heal' => _healGreen,
+      'regen' => _regenGreen,
+      'mana' => _manaBlue,
+      'orange' => _orange,
+      'violet' => _violet,
+      'holy' => _holyLight,
+      'gray' => _gray,
+      'break' => breakColor,
+      'break_flash' => breakFlashColor,
+      'brittle' => kBrittleColor,
+      'shield' => ProcColors.shield,
+      'echo' => echoColor,
+      final String hex when hex.startsWith('#') && hex.length == 7 =>
+        Color(0xFF000000 | (int.tryParse(hex.substring(1), radix: 16) ?? 0)),
+      _ => action,
+    };
+
+/// El timeline de datos del momento [id], o `null` (código de respaldo).
+FxTimeline? battleMomentData(String id) {
+  final t = FxCatalog.active?.timeline(id);
+  return t == null || t.legacy ? null : t;
+}
+
 /// Traduce los [BattleEvent] de un paso a efectos (los `addFx` que el
 /// prototipo hacía dentro de la lógica). Puro: no tiene reloj ni azar.
 /// Tabla en docs/specs/battle_presentation.md § "Eventos → efectos".
@@ -470,6 +565,84 @@ List<BattleFx> mapBattleEvents(
   bool isPlayer(String id) => state.byId(id)?.isPlayer ?? false;
   Iterable<Combatant> aliveParty() => state.party.where((p) => p.alive);
 
+  /// Momento de batalla desde datos (§ 7.4 de game_editor.md): cada
+  /// disparo de una pista `prim` es una primitiva del pintor de siempre
+  /// (mismo aspecto); el resto de las pistas visuales (formas, ecos,
+  /// partículas…) van en un efecto `data` que reproduce el `FxPlayer`.
+  /// `false` si no hay datos: quien llama usa el código de respaldo.
+  bool moment(String id,
+      {required String caster,
+      String? target,
+      Color color = fxWhite,
+      Color status = fxWhite,
+      FxElement el = FxElement.phys,
+      int dl = 0,
+      String? weapon}) {
+    final t = battleMomentData(id);
+    if (t == null) return false;
+    final tg = target ?? caster;
+    for (final tr in t.ofType('prim')) {
+      for (final f in tr.fires) {
+        final kind = FxKind.values.where((k) => k.name == f.s('kind')).firstOrNull;
+        if (kind == null) continue;
+        final at = f.s('at') ?? 'target';
+        final ids = switch (at) {
+          'caster' => [caster],
+          'allies' => [for (final q in aliveParty()) q.id],
+          'allies_others' => [
+              for (final q in aliveParty())
+                if (q.id != caster) q.id
+            ],
+          _ => [tg],
+        };
+        final elName = f.s('el');
+        final fel = elName == 'action'
+            ? el
+            : FxElement.values.where((e) => e.name == elName).firstOrNull ??
+                FxElement.phys;
+        final dy = f.d('dy', 0);
+        // `act` y `flash` no tienen lugar (actor por `who` / pantalla).
+        final placed = kind != FxKind.act && kind != FxKind.flash;
+        for (final who in ids) {
+          final p = placed ? position(who) : Offset.zero;
+          final to = switch (f.s('to')) {
+            'caster' => position(caster),
+            'target' => position(tg),
+            _ => null,
+          };
+          out.add(BattleFx(kind,
+              x: p.dx + f.d('dx', 0),
+              y: p.dy + dy,
+              tx: to?.dx ?? 0,
+              ty: (to?.dy ?? 0) + dy,
+              color: _primColor(f.s('color'), color, status),
+              el: fel,
+              big: f.b('big'),
+              up: f.b('up'),
+              heavy: f.b('heavy'),
+              ghost: f.b('ghost'),
+              weapon: f.b('weapon') ? weapon : null,
+              delayMs: dl + f.t,
+              who: f.b('who') ? who : null));
+        }
+      }
+    }
+    if (t.tracks.any((tr) => kFxVisualTracks.contains(tr.type))) {
+      final p = position(caster), q = position(tg);
+      out.add(BattleFx(FxKind.data,
+          x: p.dx,
+          y: p.dy,
+          tx: q.dx,
+          ty: q.dy,
+          color: color,
+          el: el,
+          delayMs: dl,
+          who: caster,
+          data: t));
+    }
+    return true;
+  }
+
   void txt(String id, double dy, String text, Color color, {int dl = 0}) {
     final p = position(id);
     out.add(BattleFx(FxKind.txt,
@@ -506,6 +679,7 @@ List<BattleFx> mapBattleEvents(
 
   /// Golpe de un enemigo: se echa atrás y después se lanza.
   void windup(String id) {
+    if (moment('enemy_strike', caster: id)) return;
     final p = position(id);
     out.add(BattleFx(FxKind.windup, x: p.dx, y: p.dy, who: id));
     out.add(BattleFx(FxKind.act, who: id, delayMs: BattleFx.enemyLungeMs));
@@ -513,6 +687,14 @@ List<BattleFx> mapBattleEvents(
 
   /// `proj(p, e, col, el)`: devuelve el `dl` (280).
   int proj(String from, String to, Color color, FxElement el) {
+    if (moment('projectile',
+        caster: from,
+        target: to,
+        color: color,
+        el: el,
+        weapon: state.byId(from)?.weaponType)) {
+      return BattleFx.projMs;
+    }
     final a = position(from), b = position(to);
     out.add(BattleFx(FxKind.proj,
         x: a.dx,
@@ -573,8 +755,11 @@ List<BattleFx> mapBattleEvents(
     final here = position(e.actorId);
     switch (e.kind) {
       case BattleActionKind.attack:
-        act(e.actorId);
-        if (e.allTargets) ring(here.dx, here.dy - 8, fxWhite);
+        if (!moment(e.allTargets ? 'attack_all' : 'attack',
+            caster: e.actorId)) {
+          act(e.actorId);
+          if (e.allTargets) ring(here.dx, here.dy - 8, fxWhite);
+        }
       case BattleActionKind.skill:
       case BattleActionKind.ultimate:
         final sk = kSkillsById[e.skillId];
@@ -590,41 +775,63 @@ List<BattleFx> mapBattleEvents(
           // El lanzador se lanza al descargar.
           out.add(
               BattleFx(FxKind.act, who: e.actorId, delayMs: script.buildMs));
-        } else {
+        } else if (!moment('skill_cast', caster: e.actorId, color: a.color, el: a.el)) {
           act(e.actorId);
         }
         if (sk == null) break;
+        // Pulso del Tiempo e Instante: firma propia (datos, § 7.4).
+        if (!ult && sk.pulseParty > 0) {
+          moment('skill_pulse', caster: e.actorId, color: a.color, el: a.el);
+        }
+        if (!ult && sk.instant) {
+          moment('skill_instant', caster: e.actorId, color: a.color, el: a.el);
+        }
+        bool m(String id) =>
+            moment(id, caster: e.actorId, color: a.color, el: a.el);
         switch (sk.kind) {
           case SkillKind.physical || SkillKind.magical:
-            if (sk.allTargets && !ult) ring(here.dx, here.dy - 8, a.color);
+            if (sk.allTargets && !ult && !m('skill_all')) {
+              ring(here.dx, here.dy - 8, a.color);
+            }
           case SkillKind.defenseUp:
             txt(e.actorId, -30, 'DEF +${sk.amount}', _manaBlue);
-            aura(e.actorId, FxElement.mana);
+            if (!m('skill_defense_up')) aura(e.actorId, FxElement.mana);
           case SkillKind.protect:
-            ring(here.dx, here.dy - 8, const Color(0xFFFFEAA7), big: true);
-            for (final q in aliveParty()) {
-              if (q.id != e.actorId) aura(q.id, FxElement.holy);
+            if (!m('skill_protect')) {
+              ring(here.dx, here.dy - 8, const Color(0xFFFFEAA7), big: true);
+              for (final q in aliveParty()) {
+                if (q.id != e.actorId) aura(q.id, FxElement.holy);
+              }
             }
           case SkillKind.taunt:
             txt(e.actorId, -30, '¡PROVOCA!', const Color(0xFFFF7675));
-            ring(here.dx, here.dy - 8, const Color(0xFFFF7675), big: true);
+            if (!m('skill_taunt')) {
+              ring(here.dx, here.dy - 8, const Color(0xFFFF7675), big: true);
+            }
           case SkillKind.guard:
             for (final q in aliveParty()) {
               txt(q.id, -30, 'ESCUDO', _manaBlue);
-              aura(q.id, FxElement.holy);
+            }
+            if (!m('skill_guard')) {
+              for (final q in aliveParty()) {
+                aura(q.id, FxElement.holy);
+              }
             }
           case SkillKind.haste:
             for (final q in aliveParty()) {
               if (q.id != e.actorId) txt(q.id, -26, '¡PRISA!', _gold);
             }
+            m('skill_haste');
           case SkillKind.heal || SkillKind.regen || SkillKind.bulwark:
             break; // los HealEvent traen números y auras
           case SkillKind.support:
             // Kit de ascensión: grito / escudo / adelanto para el grupo.
-            ring(here.dx, here.dy - 8, a.color, big: true);
-            if (sk.rally || sk.protect) {
-              for (final q in aliveParty()) {
-                aura(q.id, FxElement.level);
+            if (!m(sk.rally || sk.protect ? 'skill_support_rally' : 'skill_support')) {
+              ring(here.dx, here.dy - 8, a.color, big: true);
+              if (sk.rally || sk.protect) {
+                for (final q in aliveParty()) {
+                  aura(q.id, FxElement.level);
+                }
               }
             }
         }
@@ -682,10 +889,11 @@ List<BattleFx> mapBattleEvents(
             ? FxElement.phys
             : elementOfStatus(actor!.inflicts!.kind);
       case BattleActionKind.enemyArea:
-        windup(e.actorId);
         a.el = actor?.inflicts == null
             ? FxElement.phys
             : elementOfStatus(actor!.inflicts!.kind);
+        if (moment('enemy_area', caster: e.actorId, el: a.el)) break;
+        windup(e.actorId);
         const pink = Color(0xFFE84393);
         out.add(const BattleFx(FxKind.flash,
             color: pink, delayMs: BattleFx.enemyStrikeMs));
@@ -941,12 +1149,16 @@ List<BattleFx> mapBattleEvents(
       // Con el golpe enemigo que absorbe.
       final a = action;
       final dl = a == null ? 0 : hitDelay(a, id);
-      at(FxKind.crack, id, color: ProcColors.shield, dl: dl);
+      if (!moment('shield_absorb', caster: id, dl: dl)) {
+        at(FxKind.crack, id, color: ProcColors.shield, dl: dl);
+      }
       txt(id, -30, 'ABSORBE ${e.amount}', ProcColors.shield, dl: dl);
       return;
     }
     final dl = procDl[id] ?? procBase();
-    at(FxKind.bubble, id, color: ProcColors.shield, dl: dl);
+    if (!moment('shield_up', caster: id, dl: dl)) {
+      at(FxKind.bubble, id, color: ProcColors.shield, dl: dl);
+    }
     final lp = lastProc;
     final label = 'ESCUDO +${e.amount}';
     // Escudo propio: el valor va en el cartel; si no, sobre el aliado.
@@ -970,18 +1182,28 @@ List<BattleFx> mapBattleEvents(
       BuffStat.stunLock => ('ATURDIDO +${e.turns}', ProcColors.stun),
       _ => ('${e.stat.label} ${e.value < 0 ? '−' : '+'}$pct', _gold),
     };
-    switch (e.stat) {
-      case BuffStat.speed:
-        at(FxKind.afterimage, id, color: color, dl: dl);
-      case BuffStat.attack when e.value >= 0:
-        at(FxKind.pulse, id, color: color, dl: dl);
-        at(FxKind.arrow, id, color: color, up: true, dl: dl);
-      case BuffStat.attack:
-        at(FxKind.arrow, id, color: color, dl: dl);
-      case BuffStat.damageTaken:
-        at(FxKind.reticle, id, dy: -10, color: color, dl: dl);
-      default:
-        break;
+    final buffMoment = switch (e.stat) {
+      BuffStat.speed => 'buff_speed',
+      BuffStat.attack when e.value >= 0 => 'buff_attack_up',
+      BuffStat.attack => 'buff_attack_down',
+      BuffStat.damageTaken => 'buff_mark',
+      _ => null,
+    };
+    if (buffMoment == null ||
+        !moment(buffMoment, caster: id, color: color, dl: dl)) {
+      switch (e.stat) {
+        case BuffStat.speed:
+          at(FxKind.afterimage, id, color: color, dl: dl);
+        case BuffStat.attack when e.value >= 0:
+          at(FxKind.pulse, id, color: color, dl: dl);
+          at(FxKind.arrow, id, color: color, up: true, dl: dl);
+        case BuffStat.attack:
+          at(FxKind.arrow, id, color: color, dl: dl);
+        case BuffStat.damageTaken:
+          at(FxKind.reticle, id, dy: -10, color: color, dl: dl);
+        default:
+          break;
+      }
     }
     // Buff propio: el valor va en el cartel; si no, sobre el objetivo.
     if (!own(id, e.sourceId) || !addToTag(id, e.sourceId, label)) {
@@ -1026,6 +1248,13 @@ List<BattleFx> mapBattleEvents(
           delayMs: f.delayMs,
           who: id,
           reaction: f));
+    }
+    // Convergencia (combo_balance.md § 4): firma de datos encima de las
+    // piezas de la reacción (cartel, anillo, rayos).
+    if (e.kind.convergence) {
+      final look = reactionLook(e.kind);
+      moment('convergence',
+          caster: id, color: look.color, el: look.el, dl: at);
     }
     reactDl[id] = at;
     for (var i = 0; i < others.length; i++) {
@@ -1072,7 +1301,9 @@ List<BattleFx> mapBattleEvents(
       case IcePhase.brittle:
         txt(id, -46, '¡QUEBRADIZO!', kBrittleColor);
       case IcePhase.shattered:
-        at(FxKind.shatter, id, dy: -10, color: kBrittleColor, dl: dl);
+        if (!moment('brittle_shatter', caster: id, dl: dl)) {
+          at(FxKind.shatter, id, dy: -10, color: kBrittleColor, dl: dl);
+        }
         final m = kElementStatuses['freeze']!.brittleMult;
         txt(id, -44, '¡SE ROMPE! ×${fm(m)}', kBrittleColor, dl: dl);
       case IcePhase.thawed:
@@ -1100,7 +1331,9 @@ List<BattleFx> mapBattleEvents(
     }
     if (e.fromStatus) {
       final burn = e.statusSource == StatusKind.burn;
-      aura(id, burn ? FxElement.burn : FxElement.poison);
+      if (!moment(burn ? 'status_burn' : 'status_poison', caster: id)) {
+        aura(id, burn ? FxElement.burn : FxElement.poison);
+      }
       num(id, -20, '${e.amount}', burn ? _orange : _healGreen);
       return;
     }
@@ -1119,13 +1352,20 @@ List<BattleFx> mapBattleEvents(
       final heavy = a?.enemyUlt ?? false;
       num(id, -18, '${e.amount}', e.critical ? _critRed : _hurtRed,
           big: e.critical, hurt: true, heavy: heavy, dl: dl);
-      out.add(BattleFx(FxKind.slash,
-          x: p.dx,
-          y: p.dy - 8,
+      if (!moment('hurt',
+          caster: a?.event.actorId ?? id,
+          target: id,
           color: heavy ? a!.color : _hurtRed,
           el: a?.el ?? FxElement.phys,
-          delayMs: dl,
-          who: id));
+          dl: dl)) {
+        out.add(BattleFx(FxKind.slash,
+            x: p.dx,
+            y: p.dy - 8,
+            color: heavy ? a!.color : _hurtRed,
+            el: a?.el ?? FxElement.phys,
+            delayMs: dl,
+            who: id));
+      }
       if (e.critical) {
         txt(id, -34, '¡CRÍTICO ×${fm(e.critMultiplier)}!', _critRed, dl: dl);
       }
@@ -1187,44 +1427,57 @@ List<BattleFx> mapBattleEvents(
           weak ? _orange : _gray,
           dl: dl);
     }
-    out.add(BattleFx(FxKind.slash,
-        x: p.dx,
-        y: p.dy - 8,
+    if (!moment('hit',
+        caster: a?.event.actorId ?? id,
+        target: id,
         color: e.vulnerable ? breakColor : color,
         el: el,
-        delayMs: dl,
-        who: id,
-        weapon: a?.actor?.weaponType));
+        dl: dl,
+        weapon: a?.actor?.weaponType)) {
+      out.add(BattleFx(FxKind.slash,
+          x: p.dx,
+          y: p.dy - 8,
+          color: e.vulnerable ? breakColor : color,
+          el: el,
+          delayMs: dl,
+          who: id,
+          weapon: a?.actor?.weaponType));
+    }
   }
 
   void heal(HealEvent e) {
     if (procHeal(e)) return;
     final a = action;
     final id = e.targetId;
+    // Aura de la cura (datos si los hay; § 7.4).
+    void glow(String m, FxElement el, {int dl = 0}) {
+      if (!moment(m, caster: id, dl: dl)) aura(id, el, dl: dl);
+    }
+
     if (a == null) {
       // Regeneración al empezar el turno (el maná no se muestra).
       if (e.mana) return;
       num(id, -30, '+${e.amount}', _regenGreen);
-      aura(id, FxElement.heal);
+      glow('regen', FxElement.heal);
       return;
     }
     if (e.mana) {
       num(id, -18, '+${e.amount} MP', _manaBlue);
-      aura(id, FxElement.mana);
+      glow('mana', FxElement.mana);
       return;
     }
     switch (a.event.kind) {
       case BattleActionKind.attack:
         // Fe (rama creyente).
         num(id, -26, '+${e.amount}', _healGreen);
-        aura(id, FxElement.holy);
+        glow('heal_holy', FxElement.holy);
       case BattleActionKind.ultimate:
         // Baluarte: con el impacto de su guion en cada aliado.
         final dl = ultDelay(a, id);
         num(id, -18, '+${e.amount}', _healGreen, heavy: true, dl: dl);
-        aura(id, FxElement.holy, dl: dl);
+        glow('heal_holy', FxElement.holy, dl: dl);
       default:
-        aura(id, FxElement.heal);
+        glow('heal', FxElement.heal);
         num(id, -18, '+${e.amount}', _healGreen);
     }
   }
@@ -1236,8 +1489,11 @@ List<BattleFx> mapBattleEvents(
       case BreakPhase.broken:
         // Con el golpe que lo quebró.
         final dl = procDl[id] ?? action?.dl[id] ?? 0;
-        at(FxKind.shatter, id, dy: -10, color: breakColor, dl: dl);
-        out.add(BattleFx(FxKind.flash, color: breakFlashColor, delayMs: dl));
+        if (!moment('break', caster: id, dl: dl)) {
+          at(FxKind.shatter, id, dy: -10, color: breakColor, dl: dl);
+          out.add(
+              BattleFx(FxKind.flash, color: breakFlashColor, delayMs: dl));
+        }
         final p = position(id);
         out.add(BattleFx(FxKind.tag,
             x: p.dx,
@@ -1252,13 +1508,14 @@ List<BattleFx> mapBattleEvents(
         }
       case BreakPhase.skipped:
         txt(id, -34, '¡QUEBRADO!', breakColor);
-        aura(id, FxElement.stun);
+        if (!moment('break_stunned', caster: id)) aura(id, FxElement.stun);
       case BreakPhase.recovered:
         txt(id, -40, 'SE RECUPERA', _gray, dl: action == null ? 0 : lateBase());
       case BreakPhase.fissured:
         // Barra llena (combo_balance.md § 5): cartel FISURADO con el golpe.
         final dl = procDl[id] ?? action?.dl[id] ?? 0;
         final p = position(id);
+        moment('fissure', caster: id, color: breakColor, dl: dl);
         out.add(BattleFx(FxKind.tag,
             x: p.dx,
             y: p.dy - 10,
@@ -1402,10 +1659,17 @@ List<BattleFx> mapBattleEvents(
         final echo = e.phase == BossMechanicPhase.echoSummon;
         final col = echo ? echoColor : immuneColor;
         final dl = afterUlt(160);
-        at(FxKind.arc, e.actorId,
-            dy: -14, to: tg, color: col, el: FxElement.arcane, dl: dl);
-        at(FxKind.poof, tg, dy: -10, dl: dl + 120);
-        at(FxKind.ring, tg, dy: -8, color: col, dl: dl + 120);
+        if (!moment('appear',
+            caster: e.actorId,
+            target: tg,
+            color: col,
+            el: FxElement.arcane,
+            dl: dl)) {
+          at(FxKind.arc, e.actorId,
+              dy: -14, to: tg, color: col, el: FxElement.arcane, dl: dl);
+          at(FxKind.poof, tg, dy: -10, dl: dl + 120);
+          at(FxKind.ring, tg, dy: -8, color: col, dl: dl + 120);
+        }
         txt(tg, -34, echo ? '¡ECO!' : '¡SIERVO!', col, dl: dl + 160);
       case BossMechanicPhase.echoResist:
         final a = action;
@@ -1594,6 +1858,11 @@ List<BattleFx> mapBattleEvents(
       case HealEvent():
         heal(e);
       case StatusAppliedEvent(:final targetId, :final kind, :final stacks):
+        moment('status_apply',
+            caster: targetId,
+            status: statusColor(kind),
+            el: elementOfStatus(kind),
+            dl: procDl[targetId] ?? action?.dl[targetId] ?? 0);
         txt(
             targetId,
             -46,
@@ -1613,9 +1882,12 @@ List<BattleFx> mapBattleEvents(
       case TurnSkippedEvent(:final actorId, :final cause):
         if (cause == StatusKind.stun) {
           txt(actorId, -34, '¡ATURDIDO!', const Color(0xFFFFEAA7));
+          moment('stunned', caster: actorId);
         } else {
           txt(actorId, -34, '¡CONGELADO!', _manaBlue);
-          aura(actorId, FxElement.freeze);
+          if (!moment('frozen', caster: actorId)) {
+            aura(actorId, FxElement.freeze);
+          }
         }
       case KnockedOutEvent(:final targetId):
         if (isPlayer(targetId)) {
@@ -1627,10 +1899,13 @@ List<BattleFx> mapBattleEvents(
           final a = action;
           final dl =
               procDl[targetId] ?? (a?.ult == null ? 0 : a!.dl[targetId] ?? 0);
-          out.add(BattleFx(FxKind.poof, x: p.dx, y: p.dy - 6, delayMs: dl));
+          if (!moment('death', caster: targetId, dl: dl)) {
+            out.add(BattleFx(FxKind.poof, x: p.dx, y: p.dy - 6, delayMs: dl));
+          }
         }
-      case RevivedEvent():
-        break;
+      case RevivedEvent(:final targetId):
+        // Nuevo en datos (§ 7.4): el caído vuelve con luz.
+        moment('revive', caster: targetId, dl: afterUlt(0));
       case BattleEndedEvent(:final victory, :final credits):
         if (victory) {
           for (final p in state.party) {

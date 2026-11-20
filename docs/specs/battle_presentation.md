@@ -461,6 +461,12 @@ lista), y su `nt += iv`.
 
 ## Eventos → efectos
 
+> v0.18.0: las primitivas de cada momento (ataque, golpe, habilidad,
+> quiebre, estados, curas, escudos, muerte, aparición…) salen de datos
+> FXA (`assets/fx/{attack,skill,proc,status,death}/`, pista `prim`;
+> docs/specs/game_editor.md § 7.4). Esta tabla describe el aspecto de
+> referencia, que es también el código de respaldo sin datos.
+
 El motor emite `BattleEvent` sin coordenadas ni colores (combat.md
 § "Eventos para la UI"); `BattleFxMapper` los traduce con las posiciones
 de la escena. Un `ActionEvent` abre el contexto de la acción (quién,

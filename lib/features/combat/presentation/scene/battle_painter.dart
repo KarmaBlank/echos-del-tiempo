@@ -26,6 +26,8 @@ import 'battle_labels.dart';
 import 'battle_layout.dart';
 import 'battle_scene.dart';
 import 'duo_cinematic.dart';
+import 'fx_bridge.dart' show hasLetterbox, letterboxAt, titleCardWindow;
+import 'fx_player.dart';
 import 'fx_style.dart';
 import 'proc_fx.dart';
 import 'reaction_fx.dart';
@@ -1376,6 +1378,17 @@ class BattleScenePainter extends CustomPainter {
           _transform(c, f, age);
         case FxKind.shatter when age < BattleFx.shatterMs:
           _shatter(c, f, age);
+        // Momento de batalla con datos (game_editor.md § 7.4).
+        case FxKind.data when f.data != null && age <= f.data!.duration:
+          FxPlayer.paint(
+              c,
+              f.data!,
+              age,
+              BattleSceneController.dataStage(
+                  f,
+                  Rect.fromCenter(
+                      center: Offset(f.x, f.y), width: 1200, height: 800)),
+              flash: scene.options.flash.clamp(0.0, 1.0));
         default:
           break;
       }
@@ -1961,8 +1974,11 @@ class BattleOverlayPainter extends CustomPainter {
       canvas.drawRect(Rect.fromLTWH(0, 0, size.width, area.top), fill);
       canvas.drawRect(
           Rect.fromLTRB(0, area.bottom, size.width, size.height), fill);
-      // Barras de cine.
-      final bh = (area.height * 0.09 * d).roundToDouble();
+      // Barras de cine (las de la pista `letterbox` si la animación la
+      // trae; game_editor.md § 2.1).
+      final bh = (area.height *
+              (hasLetterbox(s.data) ? letterboxAt(s.data!, a) : 0.09 * d))
+          .roundToDouble();
       fill.color = const Color(0xFF000000);
       canvas.drawRect(Rect.fromLTWH(0, area.top, size.width, bh), fill);
       canvas.drawRect(Rect.fromLTWH(0, area.bottom - bh, size.width, bh), fill);
@@ -1972,8 +1988,12 @@ class BattleOverlayPainter extends CustomPainter {
     // partida (battle_presentation.md § "Dúos").
     if (u.fx.ult?.duo ?? false) {
       _duoCard(canvas, f, u, a, size, area);
-    } else if (a < s.buildMs + 60) {
-      _card(canvas, f, u, a, size, area);
+    } else {
+      // Ventana de la pista `title_card` (si no, la preparación).
+      final (from, until) = titleCardWindow(s.data) ?? (80, s.buildMs);
+      if (until > from && a < until + 60) {
+        _card(canvas, f, u, a, size, area, from, until);
+      }
     }
 
     // Destello blanco en el impacto principal.
@@ -1996,13 +2016,13 @@ class BattleOverlayPainter extends CustomPainter {
   }
 
   void _card(Canvas canvas, SceneFrame f, UltCinematic u, double a, Size size,
-      Rect area) {
-    final s = u.script;
+      Rect area, int from, int until) {
     final pu = 2.0 * f.geometry.hudUnit;
     final w = (size.width / pu).ceil(), h = (size.height / pu).ceil();
-    final inP = Curves.easeOutCubic.transform(((a - 80) / 180).clamp(0.0, 1.0));
+    final inP =
+        Curves.easeOutCubic.transform(((a - from) / 180).clamp(0.0, 1.0));
     if (inP <= 0) return;
-    final outP = ((a - (s.buildMs - 140)) / 200).clamp(0.0, 1.0);
+    final outP = ((a - (until - 140)) / 200).clamp(0.0, 1.0);
     final rec = ui.PictureRecorder();
     final c = Canvas(rec, Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()));
     final wd = w.toDouble();

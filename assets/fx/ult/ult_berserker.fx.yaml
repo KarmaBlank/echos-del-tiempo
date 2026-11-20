@@ -1,0 +1,71 @@
+schema: 1
+id: ult_berserker
+category: ult
+name: Frenesí Carmesí
+tags: [berserker, guerrero, un_objetivo, físico, eco, ascensión]
+duration: 2400
+phases: { build: 900, release: 1100, recover: 400 }
+targets: single
+tracks:
+  - type: camera
+    keys:
+      - { t: 0, focus: caster }
+      - { t: 900, focus: target }
+  - type: dim
+    keys:
+      - { t: 0, v: 0 }
+      - { t: 257, v: 0.9 }
+      - { t: 2060, v: 0.75 }
+      - { t: 2400, v: 0 }
+  - type: shape
+    fire:
+      - { t: 0, shape: gather, anchor: caster, ms: 700, color: element }
+      - { t: 1103, shape: slash_arc, anchor: target, angle: -40, color: echo, ms: 150 }
+      - { t: 1168, shape: slash_arc, anchor: target, angle: 35, color: echo, ms: 150 }
+      - { t: 1233, shape: slash_arc, anchor: target, angle: -80, color: echo, ms: 150 }
+      - { t: 1298, shape: slash_arc, anchor: target, angle: 10, color: echo, ms: 150 }
+      - { t: 1363, shape: slash_arc, anchor: target, angle: 70, color: echo, ms: 150 }
+      - { t: 1428, shape: slash_arc, anchor: target, angle: -15, color: echo, ms: 150 }
+      - { t: 1485, shape: slash_arc, anchor: target, angle: 55, color: echo, ms: 150 }
+      - { t: 1550, shape: slash_cross, anchor: target, scale: 2.4, color: white, ms: 300 }
+      - { t: 1550, shape: ring, anchor: target, scale: 1.8, color: element, ms: 320 }
+  - type: echo
+    who: caster
+    count: 7
+    lag: 75
+    alpha: 0.5
+    color: echo
+    orbit: 20
+    fade: 180
+    keys:
+      - { t: 900, at: caster }
+      - { t: 1062, at: target, ease: out }
+      - { t: 1144, at: target }
+  - type: particles
+    fire:
+      - { t: 1103, preset: sparks, anchor: target, count: 0.8 }
+      - { t: 1233, preset: sparks, anchor: target, count: 0.8 }
+      - { t: 1363, preset: sparks, anchor: target, count: 0.8 }
+      - { t: 1485, preset: sparks, anchor: target, count: 0.8 }
+      - { t: 1550, preset: burst, anchor: target, element: phys, count: 4 }
+      - { t: 1550, preset: shards, anchor: target, count: 2.5 }
+  - type: flash
+    fire:
+      - { t: 1546, color: white, alpha: 0.6, ms: 150 }
+  - type: shake
+    fire:
+      - { t: 1103, amp: 2 }
+      - { t: 1233, amp: 2 }
+      - { t: 1363, amp: 2 }
+      - { t: 1550, amp: 11 }
+  - type: hitstop
+    fire:
+      - { t: 1550, ms: 150 }
+  - type: impact
+    fire:
+      - { t: 1050, pre: true }
+      - { t: 1150, pre: true }
+      - { t: 1250, pre: true }
+      - { t: 1350, pre: true }
+      - { t: 1450, pre: true }
+      - { t: 1550, stagger: 0 }
