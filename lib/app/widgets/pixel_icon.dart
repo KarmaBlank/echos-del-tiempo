@@ -6,6 +6,38 @@ import '../theme/proto_colors.dart';
 /// cada `#` es un píxel. Se escalan a múltiplos enteros para quedar
 /// nítidos. Ver docs/specs/ui_style.md § "Menús: tarjetas".
 enum PixelIconKind {
+  minus([
+    '........',
+    '........',
+    '........',
+    '########',
+    '########',
+    '........',
+    '........',
+    '........',
+  ]),
+  /// Ver todo: cuatro esquinas hacia afuera.
+  fit([
+    '###..###',
+    '##....##',
+    '#.#..#.#',
+    '........',
+    '........',
+    '#.#..#.#',
+    '##....##',
+    '###..###',
+  ]),
+  /// Mi clase: mira centrada.
+  target([
+    '...##...',
+    '.######.',
+    '.#....#.',
+    '###..###',
+    '###..###',
+    '.#....#.',
+    '.######.',
+    '...##...',
+  ]),
   dice([
     '########',
     '#......#',

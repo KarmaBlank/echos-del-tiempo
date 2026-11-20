@@ -9,7 +9,7 @@ import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/passive_tree/presentation/passive_tree_view.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/passive_tree.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../test/game_engine/passive_tree_v7_shape_test.dart' show v7Before;
@@ -20,7 +20,7 @@ const _out = 'docs/release_shots/v0.10.1';
 Future<void> _render(WidgetTester tester, PassiveTreeCatalog c, String title,
     String file, {double crop = 1}) async {
   const side = 1400.0;
-  final s = PassiveTreeView.size;
+  const s = PassiveTreeView.size;
   final picSide = s * crop;
   final key = GlobalKey();
   tester.view.physicalSize = const Size(side, side + 60);
@@ -53,7 +53,7 @@ Future<void> _render(WidgetTester tester, PassiveTreeCatalog c, String title,
                     maxWidth: s,
                     maxHeight: s,
                     child: CustomPaint(
-                      size: Size(s, s),
+                      size: const Size(s, s),
                       painter: PassiveTreePainter(
                         catalog: c,
                         startId: c.startNodeByClass.values.first,

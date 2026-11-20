@@ -7,7 +7,9 @@ import 'package:echos_del_tiempo/features/world/presentation/panels/character_pa
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/passive_tree.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
+import 'package:echos_del_tiempo/app/theme/retro_text.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -42,6 +44,12 @@ Future<dynamic> _pumpTree(WidgetTester tester, PlayerProfile profile) =>
         profile: progression.normalize(profile),
         build: (v, c) => CharacterPanel(
             view: v, controller: c, initialTab: CharacterTab.tree));
+
+/// Los puntos libres en la barra de arriba (número grande en dorado).
+Finder _points(int n) => find.byWidgetPredicate((w) =>
+    w is Text &&
+    w.key == const ValueKey('tree-points') &&
+    w.textSpan!.toPlainText().startsWith('$n punto'));
 
 Future<TestGesture> _mouse(WidgetTester tester) async {
   await tester.ensureVisible(find.byKey(const ValueKey('tree-viewport')));
@@ -101,7 +109,7 @@ void main() {
         ));
     expect(c.view!.me!.profile.tree, hasLength(tree.length));
     final free = c.view!.me!.profile.treePoints - tree.length;
-    expect(find.textContaining('Puntos de árbol disponibles: $free'),
+    expect(_points(free),
         findsOneWidget);
 
     // Inherente: conectada y con puntos, pero excluida por Creyente.
@@ -171,7 +179,7 @@ void main() {
           tree: tree,
         ));
     expect(
-        find.textContaining('Puntos de árbol disponibles: 2'), findsOneWidget);
+        _points(2), findsOneWidget);
 
     // Pasar el mouse por un nodo lejano: camino dorado y su costo.
     final mouse = await _mouse(tester);
@@ -197,7 +205,7 @@ void main() {
     await tester.pump();
     expect(c.view!.me!.profile.tree.last, nc);
     expect(
-        find.textContaining('Puntos de árbol disponibles: 1'), findsOneWidget);
+        _points(1), findsOneWidget);
     expect(find.descendant(of: tip, matching: find.text('Tomado')),
         findsOneWidget);
     expect(_painter(tester).route, isEmpty);
@@ -215,7 +223,11 @@ void main() {
     final route = treeRules.pathTo(
         'tirador', PlayerPassiveProgress.empty, 'precision_k')!;
     expect(route.length, 7);
+    // Clic en un nodo lejano: fija el tooltip con TOMAR CAMINO (sin
+    // TOMAR NODO, que no conecta).
     await tapNode(tester, 'precision_k');
+    expect(find.byKey(const ValueKey('tree-take')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('tree-take-path')));
     await tester.pumpAndSettle();
     expect(find.text('Tomar 7 nodos por 7 puntos'), findsWidgets);
     expect(find.byKey(const ValueKey('pick-path-mark')), findsOneWidget);
@@ -230,7 +242,15 @@ void main() {
         tester, PlayerProfile(name: 'Ana', classId: 'maga', level: 10));
     final options = treeRules.milestoneOptions('maga', 10);
     expect(find.byKey(const ValueKey('milestone-banner-10')), findsOneWidget);
-    expect(find.text('Puntos de hito: 7, solo para esta ruta.'),
+    expect(find.text('HITO · NIVEL 10 · 7 puntos de hito para su camino'),
+        findsOneWidget);
+    expect(find.textContaining('te damos'), findsNothing);
+    expect(find.textContaining('ELEGIR'), findsNothing);
+    final name = kPassiveTree.nodes[options[1]]!.name;
+    expect(
+        find.descendant(
+            of: find.byKey(ValueKey('milestone-pick-${options[1]}')),
+            matching: find.text(name)),
         findsOneWidget);
     // Las keystones elegibles se resaltan en el árbol.
     expect(_painter(tester).hits, containsAll(options));
@@ -238,6 +258,7 @@ void main() {
     await tapVisible(
         tester, find.byKey(ValueKey('milestone-pick-${options[1]}')));
     expect(_painter(tester).route, hasLength(7));
+    expect(find.text('Confirmar $name'), findsOneWidget);
     await tapVisible(
         tester, find.byKey(ValueKey('milestone-pick-${options[1]}')));
     await tester.pump();
@@ -335,7 +356,7 @@ void main() {
         tester,
         PlayerProfile(
             name: 'Ana', classId: 'maga', level: 50, mastery: 20));
-    expect(find.textContaining('Puntos de árbol disponibles: 69'),
+    expect(_points(69),
         findsOneWidget);
     final mouse = await _mouse(tester);
     await mouse.moveTo(nodeOnScreen(tester, 'marea_nb'));
@@ -422,5 +443,46 @@ void main() {
           isTrue,
           reason: n.id);
     }
+  });
+
+  testWidgets('disposición: barra de una fila, leyenda en una línea, sin '
+      'panel fijo; tooltip fijado con Esc', (tester) async {
+    await _pumpTree(
+        tester, PlayerProfile(name: 'Leo', classId: 'tirador', level: 5));
+    // Sin el párrafo general ni la leyenda grande.
+    expect(find.textContaining('Pasa el mouse'), findsNothing);
+    expect(find.textContaining('Cada cluster se bifurca'), findsNothing);
+    expect(find.textContaining('Borde dorado'), findsNothing);
+    // La leyenda: una fila de una línea abajo del visor.
+    final legend = find.byKey(const ValueKey('tree-legend'));
+    final vp = tester.getRect(find.byKey(const ValueKey('tree-viewport')));
+    final lr = tester.getRect(legend);
+    expect(lr.top, greaterThanOrEqualTo(vp.bottom));
+    expect(lr.height, lessThan(24));
+    for (final w in ['Inicio', 'Tomado', 'Keystone', 'Disponible', 'Bloqueado',
+      'Búsqueda']) {
+      expect(find.descendant(of: legend, matching: find.text(retroText(w))),
+          findsOneWidget, reason: w);
+    }
+    // Barra de arriba: puntos y botones en la misma fila.
+    final pts = tester.getRect(find.byKey(const ValueKey('tree-points')));
+    final fit = tester.getRect(find.byKey(const ValueKey('tree-fit')));
+    expect((pts.center.dy - fit.center.dy).abs(), lessThan(12));
+    expect(pts.bottom, lessThanOrEqualTo(vp.top));
+    // El visor ocupa casi todo el ancho del panel.
+    expect(vp.width, greaterThan(900));
+
+    // Un nodo que no conecta: sin TOMAR NODO, con TOMAR CAMINO; Esc
+    // suelta el tooltip.
+    await tapNode(tester, 'precision_k');
+    expect(find.byKey(const ValueKey('tree-info')), findsOneWidget);
+    expect(find.byKey(const ValueKey('tree-take')), findsNothing);
+    expect(find.byKey(const ValueKey('tree-take-path')), findsOneWidget);
+    // El tooltip no tapa el nodo.
+    final tip = tester.getRect(find.byKey(const ValueKey('tree-tooltip')));
+    expect(tip.contains(nodeOnScreen(tester, 'precision_k')), isFalse);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('tree-info')), findsNothing);
   });
 }

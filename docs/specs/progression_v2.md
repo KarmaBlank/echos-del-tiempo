@@ -474,3 +474,39 @@ balance):
   emparejamiento por id, que no cambia).
 - Capturas antes / después: `docs/release_shots/v0.10.1/arbol_*.png`
   (`tool/shots/v0101_tree_shape_shots_test.dart`).
+
+### 11.2 Pantalla ÁRBOL compacta (v0.10.1, pedido del dueño)
+
+- **Barra de una fila** (`tree-points`): a la izquierda los puntos libres
+  grandes en dorado (`10 puntos`) y, con un hito pendiente, `Hito: 7` en
+  naranja; a la derecha buscador, zoom con íconos de píxel (−, +, ver
+  todo, mi clase; `tree-zoom-out` / `tree-zoom-in` / `tree-fit` /
+  `tree-home`) y REINICIAR. Sin línea de ayuda (el panel de personaje no
+  pone su `PanelHint` en esta pestaña).
+- **El árbol ocupa casi toda la pantalla**: se fue la columna fija de la
+  derecha (párrafo general y leyenda grande).
+- **Tooltip junto al nodo** (padding y borde de `RetroHoverCard`), del
+  lado con más lugar y sin tapar el nodo: nombre, tipo, cluster,
+  efectos, costo, marca de hito, plan y estado. Pasar el mouse lo
+  muestra; un clic en un nodo que no se puede tomar lo **fija**
+  (`tree-info`) con sus botones; Esc, un clic en el vacío o afuera del
+  visor lo sueltan. Un nodo conectado con puntos se sigue tomando con un
+  clic.
+- Botones del tooltip fijado: **TOMAR NODO** solo si el nodo toca uno
+  tomado (con el motivo si no se puede: exclusión, sin puntos); si no
+  conecta, solo **TOMAR CAMINO (N)** (abre `Tomar N nodos por N
+  puntos`). En PLANIFICAR, PLANIFICAR / QUITAR DEL PLAN.
+- **Hito pendiente = tarjetas** arriba del árbol: título chico
+  `HITO · NIVEL 10 · 7 puntos de hito para su camino` y una tarjeta por
+  keystone de entrada (`milestone-pick-<id>`: nombre + una línea de
+  efecto). Pasar el mouse resalta su camino; el primer clic la elige
+  (pasa a `Confirmar <nombre>`) y el segundo confirma. Sin "te damos" ni
+  "ELEGIR … (7 nodos)".
+- **Leyenda** (`tree-legend`) en una fila de una línea abajo del visor:
+  Inicio · Tomado · Keystone · Disponible · Bloqueado · Búsqueda (· Plan).
+- Botones con padding ≥ 8 px (ui_style.md § "Padding de botones",
+  v0.10.1: la densidad compacta de escritorio se lo comía).
+- Tests: `passive_tree_view_test` (disposición, Esc, TOMAR CAMINO sin
+  TOMAR NODO, textos del hito), `button_padding_test`. Capturas:
+  `docs/release_shots/v0.10.1/pantalla_arbol*.png`
+  (`tool/shots/v0101_tree_screen_shots_test.dart`).

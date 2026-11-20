@@ -272,9 +272,13 @@ congelado con 69:
   nodos en los dos ejes (`min(zoomX, zoomY)`, margen de 20 px para el
   radio de las keystones), centrada; zoom mínimo 0.2. MI CLASE incluye los
   clusters exteriores de tu clase.
-- Puntos, reinicio, buscador y zoom van en una sola fila (si entra), y en
-  el panel de personaje el visor ocupa todo el alto que queda
-  (`PassiveTreeView.height: null`); la columna de info se desplaza.
+- Disposición (v0.10.1, progression_v2.md § 11.2): barra de una fila
+  arriba (puntos libres grandes en dorado y `Hito: N` en naranja a la
+  izquierda; buscador, zoom con íconos −, +, ver todo, mi clase y
+  REINICIAR a la derecha), sin línea de ayuda; el visor ocupa todo el
+  ancho y el alto que queda (`PassiveTreeView.height: null`); sin panel
+  fijo a la derecha: el detalle del nodo va en un tooltip junto al nodo;
+  leyenda en una fila de una línea abajo del visor.
 - **Capa fija cacheada**: anillo, enlaces y nodos (con su estado y el
   plan) se graban una vez en un `ui.Picture` y se reutilizan mientras no
   cambien los estados, el plan ni la clase. Mover el mouse, buscar o
