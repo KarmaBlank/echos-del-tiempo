@@ -909,16 +909,41 @@ class BattleViewState extends State<BattleView>
   String? _hoverId;
   Offset? _hoverAt;
 
+  /// Actor de la franja de turnos bajo el mouse (sin ficha).
+  String? _hoverSlot;
+
   /// Enemigo con la ficha abierta (tests).
   String? get hoveredEnemy => _hoverId;
 
+  /// Actor señalado con el mouse, en la arena o en la franja de turnos:
+  /// se resalta en las dos (battle_presentation.md § "Identificador de
+  /// repetidos").
+  String? get hoveredId => _hoverId ?? _hoverSlot;
+
   void _hoverScene(Offset local) {
-    final e = _foeAt(local);
-    if (e?.id == _hoverId && (e == null || _hoverAt == local)) return;
+    final slot = _slotAt(local);
+    final e = slot == null ? _foeAt(local) : null;
+    if (slot == _hoverSlot &&
+        e?.id == _hoverId &&
+        (e == null || _hoverAt == local)) {
+      return;
+    }
     setState(() {
+      _hoverSlot = slot;
       _hoverId = e?.id;
       _hoverAt = e == null ? null : local;
     });
+  }
+
+  /// Id del actor cuyo ícono de la franja de turnos está bajo [local].
+  String? _slotAt(Offset local) {
+    final f = scene.frame;
+    if (f == null) return null;
+    final v = local / f.geometry.scale;
+    for (final s in BattleScenePainter.timelineSlots(f.battle)) {
+      if (s.rect.inflate(1).contains(v)) return s.id;
+    }
+    return null;
   }
 
   /// La ficha del enemigo bajo el mouse (o `null`).
@@ -1079,7 +1104,11 @@ class BattleViewState extends State<BattleView>
         sprites: widget.sprites,
         localId: widget.localId,
         targetId: widget.canAct ? target : null,
-        highlightIds: highlightedTargets,
+        highlightIds: {
+          ...highlightedTargets,
+          if (hoveredId case final h?) h,
+        },
+        hoverId: hoveredId,
         turnTimeLeft: widget.turnTimeLeft,
         turnLimit: widget.turnLimit,
       );

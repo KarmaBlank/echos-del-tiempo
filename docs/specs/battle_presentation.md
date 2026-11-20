@@ -406,6 +406,36 @@ stacks` del color del estado), en la línea del nombre / de la vida.
   derecha, `#ffd166` o `#ff6b81` con ≤ 10 s (`drawTurnLabel`). Son
   textos Flutter de 8 px (ver desvíos).
 
+### Identificador de repetidos, élite y vínculo con la arena (v0.13.1)
+
+Con dos o más combatientes del mismo tipo no se sabía qué ícono era cuál.
+
+- Letra estable por batalla (`Combatant.tag`, asignada por el motor con
+  `assignCombatantTags`, ver combat.md § "Inicio de batalla"): A, B, C…
+  (más de 26: números). Enemigos por tipo (`enemyType`, el élite cuenta
+  como de su tipo), aliados por nombre, invocaciones por tipo. Si el
+  tipo no se repite, sin letra. El nombre lleva la letra al final
+  ("Lobo B", "Lobo Élite A", "Héroe B"), así aparece igual en la arena,
+  la caja del objetivo, los logs y las tarjetas.
+- Arena: la vida del enemigo va precedida por su letra en blanco
+  (`B 60/60`).
+- Franja: la letra, en blanco 6 px sobre un cuadro negro 8×8 en la
+  esquina de abajo a la derecha del ícono.
+- Élite: borde `#ffd166` y un segundo filete dorado 1 px por fuera, con
+  `★` 6 px dorada arriba a la izquierda. Jefe: mismo borde con una
+  corona dorada de tres puntas arriba a la izquierda.
+- Mouse: sobre un ícono de la franja o sobre un enemigo de la arena, ese
+  actor queda señalado en las dos (`SceneFrame.hoverId`): en la franja
+  con un filete blanco por fuera del ícono; en la arena con el
+  marcador del objetivo (se suma a `highlightIds`; aliados, con el
+  marcador de turno). El objetivo elegido y los que tocaría la
+  habilidad llevan una raya roja 2 px bajo su ícono (salvo el primero,
+  que ya tiene el triángulo). Los cuadros salen de
+  `BattleScenePainter.timelineSlots`, que la pantalla usa también para
+  saber qué ícono está bajo el mouse.
+- Caja del objetivo (`TargetBar`): el élite o el jefe llevan borde
+  dorado (`DsColors.reward`) y `DsTag` `★ ÉLITE` / `JEFE`.
+
 ### `predictTurns(estado, n)`
 
 Actores vivos (jugadores primero, en orden; después enemigos) con

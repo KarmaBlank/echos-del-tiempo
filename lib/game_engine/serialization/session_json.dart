@@ -622,6 +622,8 @@ class SessionJson {
         if (c.pulse != 0) 'pls': c.pulse,
         if (c.chained) 'chn': true,
         if (c.practice) 'prac': true,
+        // Letra de repetidos v0.13.1 (opcional).
+        if (c.tag != null) 'tag': c.tag,
       };
 
   Json timedEffectToJson(TimedEffect e) => {
@@ -744,6 +746,7 @@ class SessionJson {
       pulse: j.intOrNull('pls') ?? 0,
       chained: j.flag('chn'),
       practice: j.flag('prac'),
+      tag: j.strOrNull('tag'),
     );
   }
 

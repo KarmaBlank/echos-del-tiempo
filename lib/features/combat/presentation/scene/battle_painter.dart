@@ -851,7 +851,7 @@ class BattleScenePainter extends CustomPainter {
       final box = f.layout.boxOf(e.id);
       final anchor =
           vp.toScreen(Offset(box.center.dx, box.top)) - Offset(0, 2 * u);
-      final line = m('${e.hp}/${e.maxHp}', 8 * u) + badges(e);
+      final line = m(hpLine(e), 8 * u) + badges(e);
       final bar = (e.boss || e.elite ? 48 : 28) * u;
       final chip = e.broken ? m(vulnerableText, 8 * u) + 8 * u : 0.0;
       reqs.add(LabelRequest(e.id, anchor,
@@ -859,6 +859,12 @@ class BattleScenePainter extends CustomPainter {
     }
     return placeLabels(reqs, vp.area.deflate(2));
   }
+
+  /// Vida de la etiqueta de un enemigo; con la letra de repetidos
+  /// delante ("B 30/40"; battle_presentation.md § "Identificador de
+  /// repetidos").
+  static String hpLine(Combatant e) =>
+      e.tag == null ? '${e.hp}/${e.maxHp}' : '${e.tag} ${e.hp}/${e.maxHp}';
 
   /// Texto del chip de un enemigo quebrado.
   static const vulnerableText = 'VULNERABLE';
@@ -903,15 +909,22 @@ class BattleScenePainter extends CustomPainter {
             center: false);
         final nw = _pen.width(p.name, 8 * u);
         _badges(c, p, x + nw + 3 * u, y - u, u);
-        if (cur == p.id) _marker(c, r, _bob(pt / 130) * 2 * u, u);
+        if (cur == p.id || f.hoverId == p.id) {
+          _marker(c, r, _bob(pt / 130) * 2 * u, u);
+        }
       }
       for (final e in f.battle.enemies) {
         final r = rects[e.id];
         if (r == null) continue;
         final x = r.left.roundToDouble(), y = r.top.roundToDouble();
-        final hp = '${e.hp}/${e.maxHp}';
+        final hp = hpLine(e);
         _pen.text(c, hp, x, y + 8 * u, const Color(0xFFFFD8A8), 8 * u,
             center: false);
+        // La letra, en blanco sobre el color de la vida.
+        if (e.tag case final tag?) {
+          _pen.text(c, tag, x, y + 8 * u, const Color(0xFFFFFFFF), 8 * u,
+              center: false);
+        }
         _badges(c, e, x + _pen.width(hp, 8 * u) + 3 * u, y - u, u);
         final bw = (e.boss || e.elite ? 48 : 28) * u;
         final bx = (r.center.dx - bw / 2).roundToDouble();
@@ -1729,6 +1742,22 @@ class BattleScenePainter extends CustomPainter {
 
   // ---------------- franja de turnos (`drawTimeline`) ----------------
 
+  /// Íconos de la franja de turnos (lienzo virtual): id del actor y su
+  /// cuadro. El primero (el de turno) es el grande. Lo usa también la
+  /// pantalla para saber qué ícono está bajo el mouse.
+  static List<({String id, Rect rect})> timelineSlots(BattleState b) {
+    final out = <({String id, Rect rect})>[];
+    var x = 52.0;
+    for (final id in predictTurns(b, 10)) {
+      if (b.byId(id) == null) continue;
+      final big = out.isEmpty;
+      final sz = big ? 28.0 : 22.0;
+      out.add((id: id, rect: Rect.fromLTWH(x, big ? 2.0 : 6.0, sz, sz)));
+      x += sz + (big ? 8 : 4);
+    }
+    return out;
+  }
+
   void _timeline(Canvas c, SceneFrame f) {
     final t = scene.t;
     final b = f.battle;
@@ -1758,14 +1787,12 @@ class BattleScenePainter extends CustomPainter {
     }
     _pen.text(c, 'TURNOS', 26, 19, const Color(0xFF9FB4FF), 6);
 
-    final order = predictTurns(b, 10);
-    var x = 52.0;
-    for (var i = 0; i < order.length; i++) {
-      final a = b.byId(order[i]);
-      if (a == null) continue;
+    final slots = timelineSlots(b);
+    for (var i = 0; i < slots.length; i++) {
+      final a = b.byId(slots[i].id)!;
       final big = i == 0;
-      final sz = big ? 28.0 : 22.0;
-      final y = big ? 2.0 : 6.0;
+      final r = slots[i].rect;
+      final sz = r.width, x = r.left, y = r.top;
       _pen.rect(
           c,
           a.isPlayer ? const Color(0xFF1D2A5A) : const Color(0xFF4A1820),
@@ -1775,7 +1802,7 @@ class BattleScenePainter extends CustomPainter {
           sz);
       _pen.stroke
         ..strokeWidth = big ? 2 : 1
-        ..color = big
+        ..color = big || a.elite || a.boss
             ? const Color(0xFFFFD166)
             : a.isPlayer
                 ? (a.id == f.localId
@@ -1806,6 +1833,39 @@ class BattleScenePainter extends CustomPainter {
         _pen.rect(c, statusColor(k), x + 2 + dx, y + sz - 4, 3, 3);
         dx += 4;
       }
+      // Élite: borde dorado doble y ★; jefe: corona (tres puntas).
+      if (a.elite || a.boss) {
+        _pen.stroke
+          ..strokeWidth = 1
+          ..color = const Color(0xFFFFD166);
+        c.drawRect(Rect.fromLTWH(x - 1.5, y - 1.5, sz + 3, sz + 3), _pen.stroke);
+        if (a.boss) {
+          _pen.rect(c, const Color(0xFFFFD166), x + 1, y + 1, 7, 2);
+          _pen.rect(c, const Color(0xFFFFD166), x + 1, y - 1, 1, 2);
+          _pen.rect(c, const Color(0xFFFFD166), x + 4, y - 1, 1, 2);
+          _pen.rect(c, const Color(0xFFFFD166), x + 7, y - 1, 1, 2);
+        } else {
+          _pen.text(c, '★', x + 4, y + 7, const Color(0xFFFFD166), 6);
+        }
+      }
+      // Letra de repetidos, en la esquina de abajo a la derecha.
+      if (a.tag case final tag?) {
+        _pen.rect(c, const Color(0xE6000000), x + sz - 8, y + sz - 8, 8, 8);
+        _pen.text(c, tag, x + sz - 4, y + sz - 1.5, const Color(0xFFFFFFFF), 6);
+      }
+      // Vínculo con la arena: el señalado con el mouse (en la arena o
+      // acá), en blanco; el objetivo elegido y los que tocaría la
+      // habilidad, con una raya roja debajo.
+      if (a.id == f.hoverId) {
+        _pen.stroke
+          ..strokeWidth = 1
+          ..color = const Color(0xFFFFFFFF);
+        c.drawRect(Rect.fromLTWH(x - 2.5, y - 2.5, sz + 5, sz + 5), _pen.stroke);
+      }
+      if (!big &&
+          (a.id == f.targetId || f.highlightIds.contains(a.id))) {
+        _pen.rect(c, const Color(0xFFFF4757), x, y + sz + 2, sz, 2);
+      }
       if (big) {
         final bb = math.sin(t / 150) * 1.5;
         _pen.tri(
@@ -1815,9 +1875,9 @@ class BattleScenePainter extends CustomPainter {
             Offset(x + sz / 2 + 4, y + sz + 3 + bb),
             Offset(x + sz / 2, y + sz - 1 + bb));
       }
-      x += sz + (big ? 8 : 4);
-      if (big && i < order.length - 1) {
-        _pen.rect(c, const Color(0xFF5B74C9), x - 6, y + sz / 2 - 1, 3, 2);
+      if (big && i < slots.length - 1) {
+        _pen.rect(
+            c, const Color(0xFF5B74C9), x + sz + 2, y + sz / 2 - 1, 3, 2);
       }
     }
     // Banda del log (el texto es un widget encima).

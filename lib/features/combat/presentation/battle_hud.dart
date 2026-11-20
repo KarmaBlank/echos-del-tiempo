@@ -1147,8 +1147,9 @@ class _PartyCard extends StatelessWidget {
   }
 }
 
-/// Barra del objetivo (arriba a la izquierda de la escena): nombre, vida
-/// con números, quiebre y si avisó su ULT.
+/// Barra del objetivo (arriba a la izquierda de la escena): nombre (con
+/// la letra de repetidos), marca de élite o jefe, vida con números,
+/// quiebre y si avisó su ULT.
 class TargetBar extends StatelessWidget {
   const TargetBar({super.key, required this.enemy});
 
@@ -1176,7 +1177,10 @@ class TargetBar extends StatelessWidget {
       // Sistema de diseño: nombre en Cuerpo rojo, ¡ULT! como DsTag.
       decoration: BoxDecoration(
         color: DsColors.background.withValues(alpha: 0.9),
-        border: Border.all(color: DsColors.danger, width: 2),
+        // Élite y jefe: borde dorado, como su ícono en la franja de turnos.
+        border: Border.all(
+            color: e.elite || e.boss ? DsColors.reward : DsColors.danger,
+            width: 2),
       ),
       child: DefaultTextStyle.merge(
         style: DsText.detail(DsColors.textPrimary),
@@ -1191,6 +1195,12 @@ class TargetBar extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: DsText.body(DsColors.danger)),
               ),
+              if (e.elite || e.boss) ...[
+                const SizedBox(width: 4),
+                DsTag(e.boss ? 'JEFE' : '★ ÉLITE',
+                    key: const ValueKey('target-rank'),
+                    color: DsColors.reward),
+              ],
               if (e.ultPending) ...[
                 const SizedBox(width: 4),
                 const DsTag('¡ULT!', color: DsColors.danger),

@@ -73,6 +73,12 @@ siguiente batalla.
 - Primer turno: enemigos en `IV × (0.35 + azar × 0.60)` (con su velocidad
   base); jugadores en `IV × (0.30 + azar × 0.50)`, salvo el que tocó al
   enemigo: `IV × 0.20`.
+- Repetidos (v0.13.1): `assignCombatantTags` da una letra A, B, C… a
+  los enemigos del mismo tipo, a los aliados con el mismo nombre y a las
+  invocaciones del mismo tipo, y la agrega al nombre ("Lobo B"). Se
+  vuelve a llamar cuando entra alguien a mitad de batalla (jugador,
+  séquito del jefe, invocación): los que ya tienen letra la conservan y
+  el nuevo recibe la primera libre. Viaja por la red como `tag`.
 - Jugadores: se borran estados, provocación, protección, defensa y
   `bonus_def_batalla`. Vida y maná se conservan del campo (limitados al máximo).
 

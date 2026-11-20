@@ -275,6 +275,7 @@ class BattleEngine {
               ? '¡ÉLITE: ${first.name} Élite! (opcional, mucho más fuerte)'
               : '¡Emboscada!',
     );
+    assignCombatantTags(state);
     return BattleStep(state, const []);
   }
 
@@ -354,6 +355,7 @@ class BattleEngine {
     final c = _playerCombatant(member);
     c.nextTurn = s.clock + interval(c);
     s.party.add(c);
+    assignCombatantTags(s);
     return BattleStep(s, const []);
   }
 
@@ -3699,6 +3701,7 @@ class _Turn {
       final c = engine.addCombatant(add, 'e${state.enemies.length}',
           boss.maxHp / bd.hp, boss.attack / math.max(1, bd.attack));
       state.enemies.add(c);
+      assignCombatantTags(state);
       entered(c);
     }
     return n;
