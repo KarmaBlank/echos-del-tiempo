@@ -461,22 +461,15 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         children: [
           _topBar(points, pending, hits.length),
           SizedBox(height: UiTheme.space(6)),
-          if (pending.isNotEmpty) ...[
-            _milestoneCards(pending.first, options),
-            SizedBox(height: UiTheme.space(6)),
-            Text(retroText(lockedText),
-                key: const ValueKey('tree-locked'),
-                style: DsText.detail(milestoneColor)),
-            SizedBox(height: UiTheme.space(4)),
-          ],
           _grow(
             fill,
             SizedBox(
               height: widget.height,
               child: LayoutBuilder(builder: (context, box) {
                 _fit(box.biggest);
-                return _viewport(
-                    box.biggest, states, hoverPath, hits, route);
+                return _viewport(box.biggest, states, hoverPath, hits, route,
+                    milestone: pending.isEmpty ? null : pending.first,
+                    options: options);
               }),
             ),
           ),
@@ -531,37 +524,54 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     );
   }
 
-  /// Hito del nivel 10 / 20 (progression_v2.md § 5 y § 11.2): una
-  /// tarjeta por keystone de entrada; pasar el mouse resalta su camino,
-  /// el primer clic la elige ("Confirmar …") y el segundo confirma.
-  Widget _milestoneCards(int m, List<String> options) {
+  /// Ancho de la columna del hito dentro del visor (§ 11.2): angosta en
+  /// pantallas chicas (el texto baja de línea), nunca más de un tercio
+  /// largo del visor para que el camino resaltado tenga lugar a la
+  /// izquierda.
+  double _columnWidth(double viewWidth) {
+    final max = RetroType.width(context, 300);
+    return (viewWidth * 0.38).clamp(math.min(140.0, viewWidth * 0.45), max);
+  }
+
+  /// Ancho de la columna del hito ahora (0 sin hito pendiente).
+  double _column = 0;
+
+  /// Hito del nivel 10 / 20 (progression_v2.md § 5 y § 11.2): columna
+  /// vertical a la derecha DENTRO del visor del árbol, una tarjeta por
+  /// keystone de entrada; pasar el mouse (o el foco) centra su camino en
+  /// la zona izquierda, el primer clic la elige y el segundo confirma.
+  Widget _milestoneColumn(int m, List<String> options, double width) {
     return Container(
       key: ValueKey('milestone-banner-$m'),
+      width: width,
       padding: EdgeInsets.all(DsSpace.sm),
       decoration: BoxDecoration(
-        border: Border.all(color: milestoneColor, width: 2),
-        color: milestoneColor.withValues(alpha: 0.08),
+        border: const Border(
+            left: BorderSide(color: milestoneColor, width: 2)),
+        color: ProtoColors.bg.withValues(alpha: 0.94),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(retroText('HITO DEL NIVEL $m'),
-              style: DsText.subtitle(milestoneColor)),
-          SizedBox(height: DsSpace.xs),
-          Text(
-              retroText('Elegí una keystone. El camino hasta ella '
-                  'se toma solo y es gratis.'),
-              key: const ValueKey('milestone-points'),
-              style: DsText.body()),
-          SizedBox(height: DsSpace.sm),
-          Wrap(
-            spacing: DsSpace.sm,
-            runSpacing: DsSpace.sm,
-            children: [
-              for (final id in options) _milestoneCard(m, id),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(retroText('HITO DEL NIVEL $m'),
+                style: DsText.subtitle(milestoneColor)),
+            SizedBox(height: DsSpace.xs),
+            Text(retroText(lockedText),
+                key: const ValueKey('tree-locked'),
+                style: DsText.detail(milestoneColor)),
+            SizedBox(height: DsSpace.xs),
+            Text(
+                retroText('Elegí una keystone. El camino hasta ella '
+                    'se toma solo y es gratis.'),
+                key: const ValueKey('milestone-points'),
+                style: DsText.body()),
+            for (final id in options) ...[
+              SizedBox(height: DsSpace.sm),
+              _milestoneCard(m, id),
             ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -582,8 +592,13 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     }
     if (box == null || _view.isEmpty) return;
     box = box.inflate(PassiveTreeView.scale * 1.5);
-    final z = math.min(_view.width / box.width, _view.height / box.height);
-    _look(box.center, z.clamp(0.4, 1.4));
+    // Zona visible: a la izquierda de la columna del hito.
+    final w = math.max(1.0, _view.width - _column);
+    final z = math.min(w / box.width, _view.height / box.height)
+        .clamp(PassiveTreeView.minZoom, PassiveTreeView.maxZoom);
+    _transform.value = Matrix4.diagonal3Values(z, z, 1)
+      ..setTranslationRaw(
+          w / 2 - box.center.dx * z, _view.height / 2 - box.center.dy * z, 0);
   }
 
   Widget _milestoneCard(int m, String id) {
@@ -596,17 +611,23 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     final pathText = free >= steps
         ? 'Camino: $steps ${steps == 1 ? 'nodo' : 'nodos'} gratis'
         : 'Camino: $steps nodos, $free gratis';
-    return MouseRegion(
-      onEnter: (_) => setState(() {
-        _cardHover = id;
-        _lookAtPath(id);
-      }),
-      onExit: (_) => setState(() {
-        if (_cardHover == id) _cardHover = null;
-        if (_selected case final s?) _lookAtPath(s);
-      }),
+    void enter() => setState(() {
+          _cardHover = id;
+          _lookAtPath(id);
+        });
+    void exit() => setState(() {
+          if (_cardHover == id) _cardHover = null;
+          if (_selected case final s?) _lookAtPath(s);
+        });
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (f) => f ? enter() : exit(),
+      child: MouseRegion(
+      onEnter: (_) => enter(),
+      onExit: (_) => exit(),
       child: SizedBox(
-        width: RetroType.width(context, 300),
+        width: double.infinity,
         child: DsCard(
           key: ValueKey('milestone-pick-$id'),
           selected: chosen,
@@ -648,6 +669,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
@@ -728,8 +750,10 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       );
 
   Widget _viewport(Size view, Map<String, TreeNodeState> states,
-      String? hoverPath, Set<String> hits, List<String> route) {
+      String? hoverPath, Set<String> hits, List<String> route,
+      {int? milestone, List<String> options = const []}) {
     final tipId = _pinned ?? _hover;
+    _column = milestone == null ? 0 : _columnWidth(view.width);
     return TapRegion(
       onTapOutside: (_) {
         if (_pinned != null) setState(() => _pinned = null);
@@ -814,6 +838,13 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                   ),
                 ),
               ),
+              if (milestone != null)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: _milestoneColumn(milestone, options, _column),
+                ),
               if (tipId != null)
                 Positioned.fill(
                   child: AnimatedBuilder(
