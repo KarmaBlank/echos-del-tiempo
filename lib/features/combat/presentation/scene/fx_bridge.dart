@@ -7,6 +7,7 @@ import '../../../../game_engine/data/branch_ults_catalog.dart' show kBranchUltLo
 import '../../../../game_engine/data/enemies_catalog.dart' show kEnemyUlts;
 import '../../../../game_engine/fx/cinematic_durations.dart';
 import 'duo_cinematic.dart';
+import '../../../../game_engine/rules/display_names.dart';
 import 'fx_style.dart' show kSkillsById;
 import 'ult_cinematic.dart';
 
@@ -39,7 +40,7 @@ class LegacyFxAdapter implements LegacyFxSource {
                 : 'ult';
         final name = id == 'duo'
             ? 'Dúo (código)'
-            : kSkillsById[id]?.name ?? kEnemyUlts[id]?.name ?? id;
+            : kSkillsById[id]?.name ?? kEnemyUlts[id]?.name ?? displayName(id);
         return fromScript(id, s, category: category, name: name);
       });
 

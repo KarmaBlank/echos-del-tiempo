@@ -19,6 +19,7 @@ import '../models/skill.dart';
 import '../models/status.dart';
 import '../data/abyss_catalog.dart';
 import 'abyss_rules.dart';
+import 'display_names.dart';
 import 'dual_rules.dart';
 import 'family_rules.dart';
 import 'js_math.dart';
@@ -1205,7 +1206,7 @@ class _Turn {
         final src = _sourceOf(owner, BuffStat.shieldReflect) ?? 'escudo';
         events.add(ProcEvent(owner.id, src, targetId: from.id));
         final d = _procDamage(owner, from, math.max(1, jsRound(e.value * r)), src);
-        _notes.add('${mechanicById(src)?.name ?? src}: $d a ${from.name}');
+        _notes.add('${displayName(src)}: $d a ${from.name}');
       }
     }
     return absorbed;
