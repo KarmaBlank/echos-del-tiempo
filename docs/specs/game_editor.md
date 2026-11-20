@@ -732,6 +732,98 @@ Todo con los componentes de docs/specs/design_system.md:
   `docs/release_shots/v0.18.0/` (las capturas cargan las fuentes de
   Material del SDK: `loadMaterialFonts`).
 
+### 7.5 Paso 5: arte procedural con perillas (v0.19.0)
+
+**Bug previo (Animaciones congela la app).** El reloj de la vista previa
+llamaba `notifyListeners()` del controlador en cada frame; el shell del
+Editor escucha ese controlador (`Listenable.merge`) y reconstruía TODA
+la página (lista, ficha, barra de pestañas, el cálculo de la lista de
+animaciones) 60 veces por segundo. Con el catálogo completo cada frame
+tardaba más que el intervalo y los clics no llegaban a procesarse.
+Arreglo:
+- La animación **arranca en PAUSA** (al abrir y al elegir otra).
+- El reloj vive en un `ValueNotifier` aparte (`FxEditorController.clock`):
+  avanzar el tiempo NO notifica al controlador. Solo se repintan el
+  lienzo (`CustomPainter(repaint: clock)` dentro de un
+  `RepaintBoundary`), la línea de tiempo y el contador de ms.
+- El `Ticker` corre solo mientras se reproduce (se detiene en pausa y se
+  libera con la página).
+- Sprites no tiene reloj (la escena de contexto es estática); su lienzo
+  también va en `RepaintBoundary`.
+- Test de widget: con la animación reproduciendo, cambiar de pestaña y
+  usar botones responde, y el controlador no notifica por frame.
+
+**Arte procedural real en Visuales → Sprites.** Las entradas
+`procedural: true` dejan de verse rayadas cuando hay un generador para
+ellas: se ve el dibujo que usa el juego (miniatura, zoom y escena de
+contexto). Lo que todavía no tiene generador expuesto (tiles, UI, fx)
+sigue rayado (pendiente). Reemplazar por PNG sigue igual y gana sobre el
+procedural.
+
+**Generador `item_icon` (armas e ítems).** Es el ícono pixel 8×8 del
+inventario (`ItemCell`/`PixelIcon`): un bitmap por forma con letras de
+material (`m` metal, `h` mango, `g` acento, `s` cuerda, `p` papel,
+`c` tapa, `w` vidrio). Los bitmaps viven en un catálogo único
+(`lib/core/procedural/item_icons.dart`); el pintor lee sus parámetros
+de datos. Perillas (valor por defecto = aspecto actual, sin cambio
+visual si no hay override):
+
+| perilla | tipo | defecto | efecto |
+|---|---|---|---|
+| `metal`, `handle`, `string`, `paper`, `cover`, `glass` | color `'#rrggbb'` | los de siempre | paleta por material |
+| `accent` | color o `''` | `''` (rareza/material) | fija el acento |
+| `shine` | -0.5..0.5 | 0 | aclara (+) u oscurece (−) toda la paleta |
+| `highlight` | bool | false | brillo: el primer pixel de metal de cada fila, más claro |
+| `outline` | bool | false | contorno de 1 px alrededor del dibujo |
+| `outline_color` | color | `#14101E` | color del contorno |
+| `gem` | bool | false | adorno: gema de acento en el primer pixel de mango |
+| `mirror` | bool | false | variante espejada (horizontal) |
+| `scale` | 0.5..1 | 1 | proporción: tamaño del dibujo dentro de la casilla |
+
+Entradas del manifest → forma: `espada`, `hacha`, `lanza`, `dagas`,
+`arco`, `ballesta`, `rifle`, `varita`, `tomo`, `pocion` (iguales),
+`baculo` → `báculo`, `espada_escudo`/`maza_escudo`/`martillo_escudo` →
+`escudo`, `cofre` → `cofre` (forma nueva, solo editor por ahora). El
+juego pide el ícono con la clave de la entrada (`procKeyForType`:
+`espada+escudo` → `espada_escudo`, `báculo` → `baculo`), así que un
+override por entrada afecta SOLO a esa arma.
+
+**Alcance: entrada o familia.** El generador es por familia (la sección
+del manifest: `items`). Al guardar se elige ENTRADA (`items.espada`) o
+FAMILIA (`items`, todas las armas e ítems). Resolución: defecto ←
+familia (repo) ← entrada (repo) ← familia (override) ← entrada
+(override); cada capa pisa solo las perillas que declara.
+
+**Datos (`procedural.yaml`).**
+```yaml
+schema: 1
+families:
+  items: { shine: 0.2 }
+entries:
+  items.espada: { metal: '#ffd166', gem: true }
+```
+- Repo: `assets/sprites/procedural.yaml` (lo carga `SpriteCatalog.load`;
+  sin archivo = todo por defecto).
+- Override local: `overrides/procedural.yaml` (misma carpeta que los
+  PNG y fx). GUARDAR escribe; DESCARTAR borra la entrada/familia del
+  override; DESHACER CAMBIOS vuelve al guardado. La vista previa es en
+  tiempo real (borrador en memoria) y la recarga en caliente aplica al
+  guardar.
+- Paquete de arte: `procedural.yaml` en la raíz del zip, declarado en
+  `art_pack.yaml` como `procedural: procedural.yaml` (schema sigue en 1:
+  campo opcional). Importar fusiona con el override existente.
+- PUBLICAR AL REPO fusiona el override en
+  `assets/sprites/procedural.yaml` y lo borra de la carpeta local.
+- **Red**: sin cambios (arte local; `kProtocolVersion` igual).
+- Tests: defecto = píxeles idénticos al pintor anterior; override cambia
+  el dibujo y DESCARTAR lo revierte; entrada vs familia; ida y vuelta
+  del paquete con params.
+- Capturas: `tool/shots/v0190_editor_procedural_shots_test.dart` →
+  `docs/release_shots/v0.19.0/editor/`.
+- **Pendiente**: generadores con perillas para tiles (`arena_painter`),
+  UI e íconos de fx; el ícono del piso del mapa (`loot_painter`) todavía
+  usa su propio dibujo.
+
 ## 8. Preguntas abiertas (respondidas por el dueño)
 
 Respuestas:

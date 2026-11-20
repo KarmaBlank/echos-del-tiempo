@@ -37,13 +37,27 @@ class _AnimationsPageState extends State<AnimationsPage>
         final dt = (now - _last).inMicroseconds / 1000;
         _last = now;
         widget.c.advance(dt.clamp(0, 50));
-      })
-        ..start();
+      });
+      widget.c.addListener(_syncTicker);
+      _syncTicker();
+    }
+  }
+
+  /// El reloj corre solo mientras se reproduce (game_editor.md § 7.5).
+  void _syncTicker() {
+    final t = _ticker;
+    if (t == null) return;
+    if (widget.c.playing && !t.isActive) {
+      _last = Duration.zero;
+      t.start();
+    } else if (!widget.c.playing && t.isActive) {
+      t.stop();
     }
   }
 
   @override
   void dispose() {
+    if (_ticker != null) widget.c.removeListener(_syncTicker);
     _ticker?.dispose();
     super.dispose();
   }
@@ -175,23 +189,29 @@ class _Stage extends StatelessWidget {
         ]),
         SizedBox(height: DsSpace.sm),
         Expanded(
-          child: ClipRect(
-            child: CustomPaint(
-              key: const ValueKey('fx-preview'),
-              painter: FxPreviewPainter(
-                timeline: t,
-                time: c.time,
-                sim: sim,
-                enemies: c.enemies,
-                camera: c.camera,
-                hero: img?.call('characters.$cls.idle'),
-                partner: img?.call('characters.maga.idle'),
-                enemyImages: [
-                  for (final e in const ['slime', 'bat', 'golem', 'ghost'])
-                    img?.call('enemies.$e.idle'),
-                ],
+          // Solo el lienzo escucha el reloj (game_editor.md § 7.5).
+          child: RepaintBoundary(
+            child: ClipRect(
+              child: ValueListenableBuilder<double>(
+                valueListenable: c.clock,
+                builder: (context, time, _) => CustomPaint(
+                  key: const ValueKey('fx-preview'),
+                  painter: FxPreviewPainter(
+                    timeline: t,
+                    time: time,
+                    sim: sim,
+                    enemies: c.enemies,
+                    camera: c.camera,
+                    hero: img?.call('characters.$cls.idle'),
+                    partner: img?.call('characters.maga.idle'),
+                    enemyImages: [
+                      for (final e in const ['slime', 'bat', 'golem', 'ghost'])
+                        img?.call('enemies.$e.idle'),
+                    ],
+                  ),
+                  size: Size.infinite,
+                ),
               ),
-              size: Size.infinite,
             ),
           ),
         ),
@@ -222,7 +242,12 @@ class _Stage extends StatelessWidget {
                 size: DsButtonSize.compact,
                 selected: c.enemies == n,
                 onPressed: () => c.setEnemies(n)),
-          Text('${c.time.round()} / ${t.duration} ms', style: DsText.detail()),
+          ValueListenableBuilder<double>(
+              valueListenable: c.clock,
+              builder: (context, time, _) => Text(
+                  '${time.round()} / ${t.duration} ms',
+                  key: const ValueKey('fx-time'),
+                  style: DsText.detail())),
         ]),
         SizedBox(height: DsSpace.sm),
         // Edición de la línea de tiempo (paso 3, game_editor.md § 7.3).
@@ -353,13 +378,18 @@ class _Stage extends StatelessWidget {
                   ? c.dragTo(msAt(d.localPosition))
                   : scrub(d.localPosition),
               onHorizontalDragEnd: (_) => c.endDrag(),
-              child: CustomPaint(
-                painter: FxTimelinePainter(
-                    timeline: t,
-                    time: c.time,
-                    selectedTrack: c.selectedTrack,
-                    selectedKey: c.selectedKey),
-                size: Size.infinite,
+              child: RepaintBoundary(
+                child: ValueListenableBuilder<double>(
+                  valueListenable: c.clock,
+                  builder: (context, time, _) => CustomPaint(
+                    painter: FxTimelinePainter(
+                        timeline: t,
+                        time: time,
+                        selectedTrack: c.selectedTrack,
+                        selectedKey: c.selectedKey),
+                    size: Size.infinite,
+                  ),
+                ),
               ),
             );
           }),

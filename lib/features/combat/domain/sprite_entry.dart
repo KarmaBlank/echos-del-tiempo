@@ -103,11 +103,29 @@ abstract class SpriteOverrideSource {
   Future<void> refresh();
 }
 
+/// Override local de las perillas del arte procedural
+/// (`overrides/procedural.yaml`, game_editor.md § 7.5).
+abstract class ProceduralOverrideSource {
+  /// Texto del `procedural.yaml` del override, o `null`.
+  Future<String?> readProcedural();
+}
+
 /// Overrides que el Editor puede escribir (game_editor.md § 3.1 y § 4).
 /// También guarda los overrides de animaciones (paso 2, § 4.2): misma
 /// carpeta, mismo paquete de arte.
 abstract class EditableSpriteOverrides
-    implements SpriteOverrideSource, EditableFxOverrides {
+    implements SpriteOverrideSource, EditableFxOverrides, ProceduralOverrideSource {
+  /// Guarda el `procedural.yaml` del override (perillas, § 7.5).
+  Future<void> putProcedural(String yaml);
+
+  /// Borra el override de perillas.
+  Future<void> removeProcedural();
+
+  /// Fusiona el override de perillas en
+  /// `<repo>/assets/sprites/procedural.yaml` y lo borra. `false` si no
+  /// había nada.
+  Future<bool> publishProcedural(String repoRoot);
+
   /// Carpeta de los overrides (para mostrarla).
   String get root;
 
