@@ -622,8 +622,12 @@ class _NumberMapEditor extends StatelessWidget {
     final free = [for (final k in keys) if (!value.containsKey(k)) k];
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       for (final e in value.entries)
-        Row(children: [
-          SizedBox(width: 60, child: Text('${e.key}')),
+        // Wrap, no Row: en columnas angostas el control baja de línea en
+        // vez de desbordar (el nombre del efecto puede ser largo).
+        Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: [
+          ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 60),
+              child: Text('${e.key}')),
           NumberStepper(
             value: e.value as num,
             step: (e.value as num).abs() < 1 ? 0.01 : 1,
