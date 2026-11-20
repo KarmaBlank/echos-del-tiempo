@@ -7,6 +7,7 @@ import '../../../core/audio/sfx_catalog.dart';
 import '../../../core/audio/sfx_recipes.dart';
 import '../../../core/audio/sfx_service.dart';
 import '../../../core/di/service_locator.dart';
+import '../../../game_engine/fx/fx_timeline.dart' show FxTimeline;
 import '../../../game_engine/models/game_map.dart' show PoiKind;
 import '../../../game_engine/models/ascension.dart' show TrapKind;
 import '../../../game_engine/models/battle_event.dart';
@@ -449,7 +450,11 @@ class SessionSfx {
               battle?.byId(b.actorId),
               null,
               enemyUlt: script);
-          if (service.catalog.containsKey(Sfx.ult(b.ultId, Sfx.ultBuild))) {
+          // Pista `sound` de la animación de datos (game_editor.md § 7.6).
+          final data = script.data;
+          if (data != null && data.track('sound') != null) {
+            out.addAll(dataSoundCues(data, b.ultId));
+          } else if (service.catalog.containsKey(Sfx.ult(b.ultId, Sfx.ultBuild))) {
             out.add(cue(Sfx.ult(b.ultId, Sfx.ultBuild)));
             out.add(cue(Sfx.ult(b.ultId, Sfx.ultRelease), script.buildMs));
           } else {
@@ -595,10 +600,7 @@ class SessionSfx {
     // Pista `sound` de la animación de datos (game_editor.md § 2.1).
     final data = sk == null ? null : ultScriptFor(sk.id).data;
     if (data != null && data.track('sound') != null) {
-      return [
-        for (final (id, ms) in soundCues(data, sk!.id, Sfx.ult))
-          if (service.catalog.containsKey(id)) cue(id, ms),
-      ];
+      return dataSoundCues(data, sk!.id);
     }
     if (sk == null ||
         !service.catalog.containsKey(Sfx.ult(sk.id, Sfx.ultBuild))) {
@@ -610,6 +612,28 @@ class SessionSfx {
       cue(Sfx.ult(sk.id, Sfx.ultRelease), script.buildMs),
     ];
   }
+
+  /// Cues de la pista `sound` de [data] para la ULT [ultId]. Una ULT sin
+  /// sonidos propios (`<ultId>.build` no existe) suena como en el código:
+  /// `build` → el `beep` del prototipo y `release` no suena. Los ids que
+  /// no existen se ignoran.
+  List<SfxCue> dataSoundCues(FxTimeline data, String ultId) {
+    final own = service.knows(Sfx.ult(ultId, Sfx.ultBuild));
+    final out = <SfxCue>[];
+    for (final (id, ms) in soundCues(data, ultId, Sfx.ult)) {
+      if (!own && _isUltPart(id, ultId)) {
+        if (parseTunedSfx(id).$1 == Sfx.ult(ultId, Sfx.ultBuild)) {
+          out.add(cue(Sfx.ultimate, ms));
+        }
+      } else if (service.knows(id)) {
+        out.add(cue(id, ms));
+      }
+    }
+    return out;
+  }
+
+  static bool _isUltPart(String id, String ultId) =>
+      Sfx.ultParts.any((p) => parseTunedSfx(id).$1 == Sfx.ult(ultId, p));
 
   /// Impacto propio de la ULT de [a] (o el genérico si no tiene).
   String _ultImpact(_Act a) {

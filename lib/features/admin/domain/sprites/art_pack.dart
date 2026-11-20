@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:yaml/yaml.dart';
 
+import '../../../../core/audio/sfx_files.dart' show sfxExtOf;
+
 /// Paquete de arte (game_editor.md § 4.2): un zip con overrides de
 /// sprites y de animaciones (fx, paso 2) para pasárselo a un amigo sin
 /// publicar. Dart puro.
@@ -12,11 +14,17 @@ import 'package:yaml/yaml.dart';
 /// art_pack.yaml      schema: 1
 ///                    sprites: { <id>: sprites/<id>.png }
 ///                    fx: { <id>: fx/<id>.fx.yaml }
+///                    sfx: { <id>: sfx/<id>.wav }   (o .ogg; § 7.6)
 /// sprites/<id>.png
 /// fx/<id>.fx.yaml
+/// sfx/<id>.wav
 /// ```
 class ArtPack {
-  const ArtPack(this.sprites, [this.fx = const {}, this.procedural]);
+  const ArtPack(this.sprites,
+      [this.fx = const {}, this.procedural, this.sfx = const {}]);
+
+  /// Id de sonido → bytes WAV u OGG (game_editor.md § 7.6).
+  final Map<String, Uint8List> sfx;
 
   /// Id de sprite → bytes PNG.
   final Map<String, Uint8List> sprites;
@@ -47,6 +55,13 @@ class ArtPack {
       }
     }
     if (procedural != null) index.writeln('procedural: $proceduralName');
+    final sfxIds = sfx.keys.toList()..sort();
+    if (sfxIds.isNotEmpty) {
+      index.writeln('sfx:');
+      for (final id in sfxIds) {
+        index.writeln('  $id: ${_sfxPath(id)}');
+      }
+    }
     final a = Archive();
     final idx = utf8.encode(index.toString());
     a.addFile(ArchiveFile(indexName, idx.length, idx));
@@ -60,6 +75,9 @@ class ArtPack {
     if (procedural case final p?) {
       final b = utf8.encode(p);
       a.addFile(ArchiveFile(proceduralName, b.length, b));
+    }
+    for (final id in sfxIds) {
+      a.addFile(ArchiveFile(_sfxPath(id), sfx[id]!.length, sfx[id]!));
     }
     return Uint8List.fromList(ZipEncoder().encode(a)!);
   }
@@ -102,8 +120,18 @@ class ArtPack {
       if (f == null) throw FormatException('Falta $path.');
       procedural = utf8.decode(f.content as List<int>);
     }
-    return ArtPack(out, fx, procedural);
+    final sfx = <String, Uint8List>{};
+    if (doc['sfx'] case final YamlMap m) {
+      for (final MapEntry(:key, :value) in m.entries) {
+        final f = a.findFile(value as String);
+        if (f == null) throw FormatException('Falta $value.');
+        sfx[key as String] = Uint8List.fromList(f.content as List<int>);
+      }
+    }
+    return ArtPack(out, fx, procedural, sfx);
   }
+
+  String _sfxPath(String id) => 'sfx/$id.${sfxExtOf(sfx[id]!)}';
 }
 
 /// Suma (o corrige) en el texto de fx_manifest.yaml la entrada

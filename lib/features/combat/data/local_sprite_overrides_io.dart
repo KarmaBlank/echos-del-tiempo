@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:yaml/yaml.dart';
 
+import '../../../core/audio/sfx_files.dart' show addSfxManifestEntry, sfxExtOf;
 import '../../../core/procedural/procedural_art.dart';
 import '../../admin/domain/sprites/art_pack.dart';
 import '../domain/sprite_entry.dart';
@@ -120,11 +121,14 @@ class LocalSpriteOverrides implements EditableSpriteOverrides {
   @override
   Future<Uint8List> exportPack() async {
     await refreshFx();
+    await refreshSfx();
     return ArtPack({
       for (final id in overriddenIds) id: (await read(id))!,
     }, {
       for (final id in overriddenFx) id: (await readFx(id))!,
-    }, await readProcedural()).encode();
+    }, await readProcedural(), {
+      for (final id in overriddenSfx) id: (await readSfx(id))!,
+    }).encode();
   }
 
   // ------------------------------------------------- perillas (§ 7.5)
@@ -185,9 +189,13 @@ class LocalSpriteOverrides implements EditableSpriteOverrides {
       final mine = ProcDoc.parse(await readProcedural());
       await putProcedural(mine.merged(ProcDoc.parse(p)).encode());
     }
+    for (final MapEntry(:key, :value) in pack.sfx.entries) {
+      await putSfx(key, value);
+    }
     return [
       ...pack.sprites.keys,
       ...pack.fx.keys,
+      ...pack.sfx.keys,
       if (pack.procedural != null) ArtPack.proceduralName,
     ];
   }
@@ -281,6 +289,102 @@ class LocalSpriteOverrides implements EditableSpriteOverrides {
       await out.writeAsString(yaml, flush: true);
       manifest = addFxManifestEntry(manifest, id, rel);
       await removeFx(id);
+      done.add(id);
+    }
+    await manifestFile.writeAsString(manifest, flush: true);
+    return done;
+  }
+
+  // ------------------------------------------------ sonido (§ 7.6)
+
+  static const sfxIndexName = 'sfx_overrides.yaml';
+  final _sfx = <String, String>{};
+
+  @override
+  Set<String> get overriddenSfx => _sfx.keys.toSet();
+
+  @override
+  Future<void> refreshSfx() async {
+    _sfx.clear();
+    final f = _file(sfxIndexName);
+    if (!f.existsSync()) return;
+    try {
+      final doc = loadYaml(await f.readAsString());
+      final s = doc is YamlMap ? doc['sfx'] : null;
+      if (s is YamlMap) {
+        for (final MapEntry(:key, :value) in s.entries) {
+          if (value is String && _file(value).existsSync()) {
+            _sfx[key as String] = value;
+          }
+        }
+      }
+    } catch (_) {
+      // Índice roto: sin overrides de sonido.
+    }
+  }
+
+  @override
+  Future<Uint8List?> readSfx(String id) async {
+    final rel = _sfx[id];
+    if (rel == null) return null;
+    final f = _file(rel);
+    return f.existsSync() ? f.readAsBytes() : null;
+  }
+
+  @override
+  Future<void> putSfx(String id, Uint8List bytes) async {
+    final old = _sfx[id];
+    final rel = 'sfx/$id.${sfxExtOf(bytes)}';
+    if (old != null && old != rel && _file(old).existsSync()) {
+      await _file(old).delete();
+    }
+    final f = _file(rel);
+    await f.parent.create(recursive: true);
+    await f.writeAsBytes(bytes, flush: true);
+    _sfx[id] = rel;
+    await _writeSfxIndex();
+  }
+
+  @override
+  Future<void> removeSfx(String id) async {
+    final rel = _sfx.remove(id);
+    if (rel != null && _file(rel).existsSync()) await _file(rel).delete();
+    await _writeSfxIndex();
+  }
+
+  Future<void> _writeSfxIndex() async {
+    final ids = _sfx.keys.toList()..sort();
+    final b = StringBuffer('# Overrides locales de sonido (Editor; '
+        'docs/specs/game_editor.md § 7.6).\n');
+    if (ids.isEmpty) {
+      b.writeln('sfx: {}');
+    } else {
+      b.writeln('sfx:');
+      for (final id in ids) {
+        b.writeln('  $id: ${_sfx[id]}');
+      }
+    }
+    await Directory(root).create(recursive: true);
+    await _file(sfxIndexName).writeAsString(b.toString(), flush: true);
+  }
+
+  @override
+  Future<List<String>> publishSfx(String repoRoot) async {
+    final manifestFile = File('$repoRoot/assets/sfx/sfx_manifest.yaml');
+    if (!manifestFile.existsSync()) {
+      throw StateError('No encuentro assets/sfx/sfx_manifest.yaml en $repoRoot');
+    }
+    var manifest = await manifestFile.readAsString();
+    final done = <String>[];
+    await refreshSfx();
+    for (final id in overriddenSfx.toList()..sort()) {
+      final bytes = await readSfx(id);
+      if (bytes == null) continue;
+      final rel = '$id.${sfxExtOf(bytes)}';
+      final out = File('$repoRoot/assets/sfx/$rel');
+      await out.writeAsBytes(bytes, flush: true);
+      manifest = addSfxManifestEntry(manifest, id, rel);
+      await removeSfx(id);
       done.add(id);
     }
     await manifestFile.writeAsString(manifest, flush: true);

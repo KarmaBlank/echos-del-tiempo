@@ -29,6 +29,14 @@ class FileSelectorEditorFiles implements EditorFiles {
     return f?.readAsBytes();
   }
 
+  /// Un sonido WAV u OGG (Animaciones → disparo de sonido, § 7.6).
+  Future<Uint8List?> pickAudio() async {
+    final f = await openFile(acceptedTypeGroups: const [
+      XTypeGroup(label: 'Sonido', extensions: ['wav', 'ogg']),
+    ]);
+    return f?.readAsBytes();
+  }
+
   @override
   Future<Uint8List?> pickZip() async {
     final f = await openFile(acceptedTypeGroups: const [

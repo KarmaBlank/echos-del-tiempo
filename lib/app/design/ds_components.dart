@@ -713,12 +713,16 @@ class DsFold extends StatefulWidget {
       required this.child,
       this.label = 'MÁS',
       this.openLabel = 'MENOS',
-      this.initiallyOpen = false});
+      this.initiallyOpen = false,
+      this.tooltip});
 
   final Widget child;
   final String label;
   final String openLabel;
   final bool initiallyOpen;
+
+  /// Qué hay adentro (tooltip del botón que abre y cierra).
+  final String? tooltip;
 
   @override
   State<DsFold> createState() => _DsFoldState();
@@ -734,6 +738,7 @@ class _DsFoldState extends State<DsFold> {
       mainAxisSize: MainAxisSize.min,
       children: [
         DsButton(_open ? 'v ${widget.openLabel}' : '> ${widget.label}',
+            tooltip: widget.tooltip,
             kind: DsButtonKind.ghost,
             size: DsButtonSize.compact,
             onPressed: () => setState(() => _open = !_open)),
@@ -849,4 +854,12 @@ class DsTooltip extends StatelessWidget {
         preferBelow: true,
         child: child,
       );
+}
+
+/// Tooltip del sistema de diseño en una línea (game_editor.md § 7.6; `DsTooltip` +
+/// `DsTooltipCard` con solo título):
+/// todo control del Editor dice qué hace.
+extension DsTipX on Widget {
+  Widget tip(String text) =>
+      DsTooltip(card: DsTooltipCard(title: text), child: this);
 }

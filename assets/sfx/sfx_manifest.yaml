@@ -1,0 +1,4 @@
+# Sonidos como archivo (docs/specs/game_editor.md § 7.6): id del catalogo
+# de sonido -> archivo WAV u OGG en esta carpeta. Un id que esta aca suena
+# con el archivo en lugar del sintetizador.
+sfx: {}

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
 
+import 'sfx_files.dart' show sfxExtOf;
 import 'sfx_service.dart';
 
 /// [SfxPlayer] real con `audioplayers` (docs/specs/audio.md § "Reproducción").
@@ -27,7 +28,7 @@ class AudioplayersSfxPlayer implements SfxPlayer {
   /// sonido llega siempre como el mismo objeto: se usa como clave.
   Future<String> _fileFor(Uint8List wav) => _files[wav] ??= () async {
         final dir = await Directory.systemTemp.createTemp('ecos_sfx_');
-        final file = File('${dir.path}${Platform.pathSeparator}sfx_${_files.length}.wav');
+        final file = File('${dir.path}${Platform.pathSeparator}sfx_${_files.length}.${sfxExtOf(wav)}');
         await file.writeAsBytes(wav, flush: true);
         return file.path;
       }();
