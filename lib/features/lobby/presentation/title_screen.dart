@@ -754,7 +754,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                         ],
                       )),
                   const SizedBox(height: 16),
-                  Text(retroText('Co-op JRPG táctico · 1-4 jugadores'),
+                  Text(retroText('Co-op JRPG táctico · 1-8 jugadores'),
                       style: DsText.detail()),
                   const SizedBox(height: 12),
                   // Aviso de versión nueva (docs/specs/distribution.md).

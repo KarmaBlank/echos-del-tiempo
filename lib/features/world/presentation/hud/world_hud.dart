@@ -43,6 +43,7 @@ import 'exploration_lines.dart';
 import 'full_map.dart';
 import 'loot_feed.dart';
 import 'minimap.dart';
+import 'potion_shortcuts.dart';
 import 'unused_points_notice.dart';
 
 /// `m:ss` con minutos de dos dígitos (`mm:ss` del HUD del prototipo).
@@ -83,6 +84,10 @@ class WorldHud extends StatelessWidget {
 
   static const _gap = 16.0;
 
+  /// Filas de cajas desplegadas que se permiten antes de pasar a
+  /// compactas (v0.13).
+  static const maxPartyRows = 2;
+
   @override
   Widget build(BuildContext context) {
     final s = view.session;
@@ -108,23 +113,34 @@ class WorldHud extends StatelessWidget {
       BuildContext context,
       GameSession s,
       Iterable<SessionPlayer> players,
-      bool expanded,
+      bool expandedPref,
       TextStyle small,
       bool field,
       {required bool showMinimap}) {
-    final boxW =
-        expanded ? PartyBox.widthOf(context) : PartyBox.compactWidthOf(context);
     return LayoutBuilder(builder: (context, box) {
       // Con texto grande las cajas del grupo pasan a dos filas antes que
       // pisar el chat (mínimo 240 px de chat).
       // Compactas (v0.8.2): el chat cede un poco más (es una píldora por
       // defecto), así con texto ENORME entran dos cajas por fila.
+      final n = players.length;
+      int perRowFor(bool exp) {
+        final w = exp
+            ? PartyBox.widthOf(context)
+            : PartyBox.compactWidthOf(context);
+        final chatMin = RetroType.width(context, exp ? 240 : 200);
+        final room =
+            (box.maxWidth - chatMin - _gap * 3).clamp(w, double.infinity);
+        return ((room + 6) / (w + 6)).floor().clamp(1, n == 0 ? 1 : n);
+      }
+      // Grupo grande (v0.13, cualquier n): desplegadas solo si entran en
+      // [maxPartyRows] filas; si no, compactas aunque estén desplegadas.
+      final expanded =
+          expandedPref && (n / perRowFor(true)).ceil() <= maxPartyRows;
+      final boxW = expanded
+          ? PartyBox.widthOf(context)
+          : PartyBox.compactWidthOf(context);
       final chatMin = RetroType.width(context, expanded ? 240 : 200);
-      final partyRoom =
-          (box.maxWidth - chatMin - _gap * 3).clamp(boxW, double.infinity);
-      final perRow = ((partyRoom + 6) / (boxW + 6))
-          .floor()
-          .clamp(1, players.isEmpty ? 1 : players.length);
+      final perRow = perRowFor(expanded);
       final partyWidth = perRow * (boxW + 6);
       final chatWidth = (box.maxWidth - partyWidth - _gap * 3)
           .clamp(chatMin, RetroType.width(context, 520));
@@ -379,7 +395,18 @@ class WorldHud extends StatelessWidget {
             Positioned(
               right: _gap,
               bottom: _gap,
-              child: SizedBox(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+              // Pociones fuera de batalla (loot.md § 17.5).
+              if (s.mode != SessionMode.battle)
+                if (s.players[view.localId] case final me?)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: PotionShortcuts(controller: controller, player: me),
+                  ),
+              SizedBox(
                 key: const ValueKey('hud-party-boxes'),
                 width: partyWidth,
                 child: Wrap(
@@ -415,6 +442,8 @@ class WorldHud extends StatelessWidget {
                       ),
                   ],
                 ),
+              ),
+                ],
               ),
             ),
             Positioned(

@@ -126,7 +126,7 @@ probar otra build en otro personaje → nueva **Temporada**.
 
 Decisión del dueño: "pensá el contenido singleplayer, pero el foco es
 co-op".
-- **Escalado 1–4 jugadores** en todo (vida, quiebre y ULT enemigas ya
+- **Escalado por tamaño del grupo** en todo (vida, quiebre y ULT enemigas ya
   escalan con el grupo; los Ecos y Jefes del Abismo también).
 - **Bonus de grupo**: +10% cantidad de loot por jugador extra en Ecos;
   el Atlas avanza para cada jugador que completa el Eco.

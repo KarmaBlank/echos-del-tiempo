@@ -55,7 +55,12 @@ import '../../game_engine/serialization/session_json.dart';
 
 /// 22 desde v0.12.1: acciones `stashPut` / `stashTake` y confirmaciones
 /// `sk` del jugador en el snapshot (alijo en partida, characters.md § 3.2).
-const kProtocolVersion = 22;
+/// 23 desde v0.13: máximo de jugadores configurable (8 por defecto),
+/// `mx` en `welcome` / `reject`, y balance de grupo para n > 4 con
+/// topes (combo_balance.md § 3.3).
+
+/// También en 23: acción `useItem` (pociones fuera de pelea, loot.md § 17.5).
+const kProtocolVersion = 23;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {
@@ -82,15 +87,19 @@ class HelloMessage extends WireMessage {
 
 /// host → cliente: `{"t":"welcome","v":1,"id":"p1","code":"ABCDE"}`.
 class WelcomeMessage extends WireMessage {
-  const WelcomeMessage(this.id, this.code, {this.version = kProtocolVersion});
+  const WelcomeMessage(this.id, this.code,
+      {this.version = kProtocolVersion, this.max});
   final String id;
+
+  /// `mx`: máximo de jugadores de la sala (v0.13, protocolo 23).
+  final int? max;
   final String code;
   final int version;
 }
 
 /// Por qué el host rechaza a un cliente.
 enum RejectReason {
-  full('La sala está llena (máx. 4).'),
+  full('La sala está llena.'),
   version('El host usa otra versión del juego.'),
   balance('El host tiene otro parche de balance: actualizá el juego.');
 
@@ -110,8 +119,16 @@ RejectReason? balanceReject(String? client, String host) {
 
 /// host → cliente: `{"t":"reject","why":"full"}` (y cierra).
 class RejectMessage extends WireMessage {
-  const RejectMessage(this.reason);
+  const RejectMessage(this.reason, {this.max});
   final RejectReason reason;
+
+  /// `mx`: máximo de la sala (v0.13), para el texto de sala llena.
+  final int? max;
+
+  /// Lo que ve el jugador rechazado.
+  String get text => reason == RejectReason.full && max != null
+      ? 'La sala está llena (máx. $max jugadores).'
+      : reason.message;
 }
 
 /// cliente → host: cualquier `SessionAction` (`{"t":"pos",...}`...).
@@ -174,8 +191,13 @@ class WireCodec {
             'v': m.version,
             'id': m.id,
             'code': m.code,
+            if (m.max != null) 'mx': m.max,
           },
-        RejectMessage() => {'t': 'reject', 'why': m.reason.name},
+        RejectMessage() => {
+            't': 'reject',
+            'why': m.reason.name,
+            if (m.max != null) 'mx': m.max,
+          },
         PingMessage() => {'t': 'ping', 'ts': m.ts},
         PongMessage() => {'t': 'pong', 'ts': m.ts},
         AckMessage() => {'t': 'ack', 'q': m.seq},
@@ -243,9 +265,10 @@ class WireCodec {
               tutorialVersion: j.intOrNull('tv') ?? 0);
         case 'welcome':
           return WelcomeMessage(j.str('id'), j.str('code'),
-              version: j.integer('v'));
+              version: j.integer('v'), max: j.intOrNull('mx'));
         case 'reject':
-          return RejectMessage(j.enumByName('why', RejectReason.values));
+          return RejectMessage(j.enumByName('why', RejectReason.values),
+              max: j.intOrNull('mx'));
         case 'ping':
           return PingMessage(j.integer('ts'));
         case 'pong':

@@ -1029,6 +1029,33 @@ Acciones nuevas (el host valida todo):
 - `SetLootFilterAction(texto | null)`: guardar el filtro (máx. 8000
   caracteres).
 
+### 17.5 Pociones fuera de batalla (v0.12.2)
+
+Pedido del dueño: poder usar las pociones en el lobby y en misión, no
+solo en batalla. Mismo efecto que en combate, sobre el propio jugador:
+- Poción de vida: +45% de la vida máx. (`jsRound`, sin pasar del máximo).
+- Poción de maná: +50% del maná máx.
+
+Acción `useItem` (`UseItemAction`, `{t:'useItem', it:'pot'|'eter'}`),
+validada por el host con `ConsumableRules.blockReason`
+(`rules/consumable_rules.dart`), que también usa la UI para el motivo de
+desactivado:
+- `En batalla, usa su menú` (modo batalla: ahí está el submenú de
+  pociones de combat.md).
+- `No te quedan` (pila en 0).
+- `Vida llena` / `Maná lleno`.
+
+Si pasa, el host descuenta la pila del perfil en la sesión y cura; el
+snapshot lo lleva al cliente. Dónde se usa:
+- Inventario, sección CONSUMIBLES: clic sobre la poción ya elegida, o
+  clic derecho / `Enter` y la entrada `Usar` del menú de acciones
+  (desactivada con el motivo).
+- HUD del mundo: dos botones compactos encima de las cajas del grupo,
+  `[1] Vida ×N` y `[2] Maná ×N` (motivo en el tooltip), y las teclas 1 y
+  2 sin panel abierto. No se muestran en batalla.
+
+Protocolo 23.
+
 ## 18. Red
 
 Ver netcode.md § "Loot instanciado". Decisión: el snapshot sigue siendo

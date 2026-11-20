@@ -551,7 +551,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                   Positioned(
                     left: 8,
                     bottom: BattleViewState.barHeight(
-                            box.maxHeight, RetroType.factorOf(context)) +
+                            box.maxHeight,
+                            RetroType.factorOf(context),
+                            s.battle?.state.party.length ?? 1) +
                         8,
                     child: PauseMenuButton(onPressed: _openPause),
                   ),

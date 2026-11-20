@@ -34,11 +34,13 @@ import 'loot_filter_rules.dart';
 import 'loot_rules.dart';
 import 'map_generator.dart';
 import 'mulberry32.dart';
+import 'party_limits.dart';
 import 'passive_tree_rules.dart';
 import 'progression_rules.dart';
 import 'trial_rules.dart';
 import 'tutorial_rules.dart';
 import 'companion_ai.dart';
+import 'consumable_rules.dart';
 import 'world_rules.dart';
 import 'zone_rules.dart';
 
@@ -78,6 +80,7 @@ class SessionEngine {
     this.atlasRules = const AtlasRules(),
     RandomSource? abyssRandom,
     TutorialRules? tutorials,
+    this.maxPlayers = kDefaultMaxPlayers,
   })  : tutorials = tutorials ?? TutorialRules(catalog: progression.catalog),
         _random = random ?? math.Random().nextDouble,
         _ecoRandom = ecoRandom ?? math.Random().nextDouble,
@@ -198,7 +201,10 @@ class SessionEngine {
               wants: wants));
 
   // ---- constantes del prototipo ----
-  static const maxPlayers = 4;
+  /// Máximo de jugadores de la sala (contando compañeros). Lo fija la
+  /// composition root (`FeatureFlags.maxPlayers`); por defecto
+  /// [kDefaultMaxPlayers].
+  final int maxPlayers;
 
   /// Compañeros de un jugador solo (docs/specs/solo_party.md § 2).
   static const maxCompanions = 3;
@@ -531,8 +537,21 @@ class _Op {
     return _around(f?.spawn ?? map.spawn, i);
   }
 
-  static WorldPoint _around(WorldPoint sp, int i) =>
-      WorldPoint(sp.x + (i % 2) * 14 - 7, sp.y + (i ~/ 2) * 14 - 7);
+  /// Lugar de aparición del jugador [i]: los 4 primeros en un cuadro de
+  /// 2×2 alrededor del punto; desde el 5.º (v0.13), anillos de 8 lugares
+  /// cada vez más anchos, sin superponerse para cualquier n.
+  static WorldPoint _around(WorldPoint sp, int i) {
+    if (i < 4) {
+      return WorldPoint(sp.x + (i % 2) * 14 - 7, sp.y + (i ~/ 2) * 14 - 7);
+    }
+    // Primero a los costados, con lugar para los nombres sobre las
+    // cabezas (x ±30); después arriba y abajo.
+    const ring = [(-30, -7), (30, -7), (-30, 7), (30, 7), (-7, -21),
+        (7, -21), (-7, 21), (7, 21)];
+    final k = (i - 4) ~/ ring.length + 1;
+    final (dx, dy) = ring[(i - 4) % ring.length];
+    return WorldPoint(sp.x + dx * k, sp.y + dy * k);
+  }
 
   /// `stats(p)`: recalcula máximos. Con [gain], la vida y el maná actuales
   /// suben lo que subió el máximo; siempre se recortan al máximo nuevo.
@@ -829,6 +848,11 @@ class _Op {
       case BuyItemAction():
         if (!s.canShop) return false;
         return _profileChange(p, rules.buyItem(p.profile, a.item));
+
+      case UseItemAction(:final item):
+        if (ConsumableRules.blockReason(s, p, item) != null) return false;
+        ConsumableRules.apply(p, item);
+        return true;
 
       case BuyWeaponAction():
         if (!s.canShop) return false;

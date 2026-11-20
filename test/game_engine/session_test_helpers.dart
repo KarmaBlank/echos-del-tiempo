@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/game_engine/rules/party_limits.dart';
 import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/game_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/missions_catalog.dart';
@@ -47,8 +48,10 @@ SessionEngine sessionEngine({
   bool zones = false,
   RandomSource? ecoRandom,
   bool devTools = false,
+  int maxPlayers = kDefaultMaxPlayers,
 }) =>
     SessionEngine(
+      maxPlayers: maxPlayers,
       battles: BattleEngine(stats: statsCalc, random: rolls(battleRolls)),
       progression: zones ? zoneProgression : progression,
       random: rolls(fieldRolls, fallback: fieldFallback),

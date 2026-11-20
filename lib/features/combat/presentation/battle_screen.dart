@@ -560,7 +560,16 @@ class BattleViewState extends State<BattleView>
       name: '★ ${du.name} (+${protoEsc(q.name)})',
       value: '${hexSpan(w == null ? '#9fb4ff' : '#ffd166', '[$pair]')} '
           '${_est(cur, sum, all: true, crit: false)} ${_stTag(du.status)}',
-      cost: hexSpan('#74b9ff', '$mp MP c/u'),
+      // Mismo camino que HABILIDADES: DsCost, alcance y resumen.
+      mpCost: mp,
+      reach: SkillReach.allFoes,
+      summary: [
+        hexSpan(SkillReach.allFoes.hex, 'A TODOS'),
+        el.label,
+        hexSpan('#ffd166', '${jsRound(sum)} c/u'),
+        _stTag(du.status),
+        '$mp MP cada uno',
+      ].join(' · '),
       dual: true,
       description: '<b>★ ${du.name}</b> <span class="k">dúo '
           '${w == null ? 'de clase' : 'de armas'}: ${protoEsc(cur.name)} + '
@@ -695,8 +704,9 @@ class BattleViewState extends State<BattleView>
                           ult.power,
                       all: ult.allTargets)
                   : hexSpan('#74b9ff', 'apoyo'),
-              cost:
-                  hexSpan(ready ? '#ee70ad' : '#a29bfe', '${cur.ult.floor()}%'),
+              ultCharge: cur.ult.floor(),
+              reach: skillReach(ult),
+              summary: skillSummaryMarkup(ult, cur),
               dual: true,
               description: describeSkillMarkup(ult, cur, ultimate: true),
               reason: ready ? null : 'La barra ULT tiene que llegar al 100%.',
@@ -715,7 +725,10 @@ class BattleViewState extends State<BattleView>
             id: 'potion',
             name: 'Poción de vida',
             value: hexSpan('#7bed9f', '+45%'),
-            cost: hexSpan('#9fb4ff', 'x${cur.potions}'),
+            count: cur.potions,
+            reach: SkillReach.ally,
+            summary: '${hexSpan(SkillReach.ally.hex, 'A un aliado')} · '
+                '${hexSpan('#7bed9f', '+45% HP')} · revive',
             description:
                 '<b>Poción de vida</b> ▸ elegir a quién<br>Cura 45% de '
                 'la vida máx. del aliado que elijas (o a ti). Revive a un aliado '
@@ -733,7 +746,10 @@ class BattleViewState extends State<BattleView>
             id: 'ether',
             name: 'Poción de maná',
             value: hexSpan('#74b9ff', '+50%'),
-            cost: hexSpan('#9fb4ff', 'x${cur.ethers}'),
+            count: cur.ethers,
+            reach: SkillReach.ally,
+            summary: '${hexSpan(SkillReach.ally.hex, 'A un aliado')} · '
+                '${hexSpan('#74b9ff', '+50% MP')}',
             description:
                 '<b>Poción de maná</b> ▸ elegir a quién<br>Restaura 50% '
                 'del maná máx. del aliado que elijas (o a ti).',
@@ -805,6 +821,8 @@ class BattleViewState extends State<BattleView>
                     reach: a.reach,
                     mpCost: a.mpCost,
                     pulseCost: a.pulseCost,
+                    ultCharge: a.ultCharge,
+                    count: a.count,
                     summary: a.summary,
                     description: a.description,
                     dual: a.dual,
@@ -971,10 +989,16 @@ class BattleViewState extends State<BattleView>
   /// pantalla de alto [h] y el texto agrandado [textFactor]
   /// (`RetroType.factorOf`): más alta con texto grande; la escena se
   /// achica (los sprites son chicos).
-  static double barHeight(double h, [double textFactor = 1]) {
+  ///
+  /// Con más de `BattlePartyBar.slotCount` en [partySize] (dos filas de
+  /// tarjetas, v0.13): + 6 % del alto, hasta 68 %.
+  static double barHeight(double h,
+      [double textFactor = 1, int partySize = 1]) {
     final f = textFactor < 1 ? 1.0 : textFactor;
+    final big = partySize > BattlePartyBar.slotCount;
     return math
-        .min(h * (0.42 + 0.08 * (f - 1)), h * 0.62)
+        .min(h * (0.42 + 0.08 * (f - 1) + (big ? 0.06 : 0)),
+            h * (big ? 0.68 : 0.62))
         .clamp(math.min(260.0, h * 0.6), double.infinity);
   }
 
@@ -990,7 +1014,8 @@ class BattleViewState extends State<BattleView>
       color: ProtoColors.bg,
       child: LayoutBuilder(builder: (context, cons) {
         final size = cons.biggest;
-        final barH = barHeight(size.height, RetroType.factorOf(context));
+        final barH = barHeight(
+            size.height, RetroType.factorOf(context), b.party.length);
         final me = _me;
         return Stack(
           children: [
@@ -1156,7 +1181,7 @@ class BattleViewState extends State<BattleView>
     }
     var mine = '';
     if (me != null && cur?.id != me.id) {
-      final i = predictTurns(b, 10).indexOf(me.id);
+      final i = predictTurns(b, turnWindow(b)).indexOf(me.id);
       if (!me.alive) {
         mine = hexSpan('#7d8bc4', 'Estás fuera de combate');
       } else if (i >= 0) {

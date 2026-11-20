@@ -326,8 +326,8 @@ List<String> weightLinesMarkup(ProgressionRules rules, WeaponDef w,
 String stackTooltipMarkup(StackKind k, int count) {
   final m = k.material;
   final desc = switch (k) {
-    StackKind.potion => 'Cura vida en batalla.',
-    StackKind.ether => 'Recupera maná en batalla.',
+    StackKind.potion => 'Cura vida (también fuera de batalla).',
+    StackKind.ether => 'Recupera maná (también fuera de batalla).',
     _ => m!.description,
   };
   return '<b style="color:#78e6dc">${_esc(k.label)}</b> x$count<br>'

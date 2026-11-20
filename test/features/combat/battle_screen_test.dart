@@ -443,9 +443,9 @@ void main() {
         .map((t) => t.text.toPlainText())
         .join(' ');
     expect(rowText('duo-maga'), contains('Lluvia Estelar'));
-    expect(rowText('duo-maga'), contains('Tirador + Maga'));
+    expect(rowText('duo-maga'), contains('+Maga')); // el par pasó al detalle (v0.13)
     expect(rowText('duo-maga-w_flechaArcana'), contains('Flecha Arcana Gemela'));
-    expect(rowText('duo-maga-w_flechaArcana'), contains('arco + báculo'));
+    
     expect(rowText('duo-maga-w_flechaArcana'), contains('Maga'));
     await tester.tap(act('duo-maga-w_flechaArcana'));
     await tester.pump();

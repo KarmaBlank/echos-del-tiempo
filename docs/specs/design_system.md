@@ -186,8 +186,11 @@ Medidas en px nominales (Normal, 1280×720); todo escala.
 - DsStatLine: `ATQ  15 → 50  ▲35`: etiqueta secundaria, antes
   secundario, después principal, diferencia verde ▲ / roja ▼ (con
   flecha: nunca solo el color).
-- DsCost: costo MP (`ice`, sufijo "MP") o Pulso (`gold`, sufijo "P");
-  si no alcanza, en rojo.
+- DsCost: costo MP (`ice`, sufijo "MP"), Pulso (`gold`, sufijo "P"),
+  carga de ULT (`DsCost.ult`, `45%` en secundario, naranja al 100 %) o
+  cantidad (`DsCost.count`, `x3`); si no alcanza, en rojo. Siempre en
+  Cuerpo: es el único formato de costo de las listas de acciones de
+  batalla (HABILIDADES, DÚOS, ULTIMATE, OBJETOS); nunca dentro del título.
 - DsTag: etiqueta en mayúsculas, Subtítulo chico dentro de borde del
   color del tipo: INSTANTE (celeste), PUEDE QUEBRAR (naranja), NUEVO
   (dorado).
@@ -319,7 +322,12 @@ ni las reglas:
   `DsTag` (`1 ENEMIGO`, `TODOS`, `ALIADO`, `GRUPO`, `VOS`, en el color del
   alcance) y el costo con `DsCost` (MP azul, Pulso `2 P` dorado, rojo si no
   alcanza). Las etiquetas se achican (FittedBox, tope 55 % del ancho) con
-  texto ENORME. El separador de las Instante en Detalle celeste. Las filas
+  texto ENORME; el costo va aparte, al borde derecho y al mismo tamaño en
+  todas las categorías. Dúos: `DsCost.mp(4)` + `TODOS` y resumen
+  `A TODOS · elemento · daño c/u · estado · 4 MP cada uno`; ULTIMATE:
+  `DsCost.ult` + alcance + `skillSummaryMarkup`; pociones: `DsCost.count`
+  + `ALIADO` y resumen de una línea. Costos que no son recurso (`½ turno`,
+  `próximo ×½`, HP del aliado al dar poción) en Cuerpo en el mismo lugar. El separador de las Instante en Detalle celeste. Las filas
   no toman el foco (`ExcludeFocus`): Enter y 1-9 siguen siendo de la
   batalla.
 - Detalle: quién actúa en Subtítulo Título, recursos en Detalle, motivos

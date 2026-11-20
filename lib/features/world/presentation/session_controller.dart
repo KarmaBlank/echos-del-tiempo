@@ -35,6 +35,7 @@ import '../../../game_engine/models/tutorial_store.dart';
 import '../../../game_engine/rules/abyss_rules.dart';
 import '../../../game_engine/rules/atlas_rules.dart';
 import '../../../game_engine/rules/companion_ai.dart';
+import '../../../game_engine/rules/consumable_rules.dart';
 import '../../../game_engine/rules/exploration_rules.dart';
 import '../../../game_engine/rules/session_engine.dart';
 import '../../../game_engine/rules/tutorial_rules.dart';
@@ -1052,6 +1053,15 @@ class SessionController extends StateNotifier<SessionView?> {
       toggleStash();
       return true;
     }
+    // Atajos de pociones fuera de batalla (exploration.md): 1 vida, 2 maná.
+    if (s.mode != SessionMode.battle &&
+        _panel == null &&
+        (key == LogicalKeyboardKey.digit1 || key == LogicalKeyboardKey.digit2)) {
+      useItem(key == LogicalKeyboardKey.digit1
+          ? BattleItem.potion
+          : BattleItem.ether);
+      return true;
+    }
     if (key == LogicalKeyboardKey.keyP && canEditParty) {
       toggleParty();
       return true;
@@ -1196,6 +1206,21 @@ class SessionController extends StateNotifier<SessionView?> {
       _applyFor(actingId, BuyWeaponAction(weaponId));
 
   bool buyItem(BattleItem item) => _applyFor(actingId, BuyItemAction(item));
+
+  /// Motivo por el que la poción [item] no se puede usar fuera de batalla
+  /// ahora ("Vida llena", "No te quedan"...), o `null` (loot.md § 17.5).
+  String? useItemBlock(BattleItem item) {
+    final s = _s;
+    final p = s?.players[actingId];
+    if (s == null || p == null) return 'Sin partida';
+    return ConsumableRules.blockReason(s, p, item);
+  }
+
+  /// Usa una poción fuera de batalla; el host valida y consume.
+  bool useItem(BattleItem item) {
+    if (useItemBlock(item) != null) return false;
+    return _applyFor(actingId, UseItemAction(item));
+  }
 
   bool upgrade(String weaponId, UpgradeStat stat) =>
       _applyFor(actingId, UpgradeAction(weaponId, stat));

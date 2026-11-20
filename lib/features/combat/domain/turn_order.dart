@@ -16,6 +16,13 @@ double turnInterval(Combatant a) =>
 bool isPassiveAdd(Combatant c) =>
     !c.isPlayer && (kEnemies[c.enemyType]?.passive ?? false);
 
+/// Cuántos turnos mirar para el `T+n` de cada tarjeta: 10 (el prototipo)
+/// o más con un grupo grande, así todos los vivos aparecen (v0.13).
+int turnWindow(BattleState state) {
+  final n = state.party.length + state.enemies.length + 2;
+  return n > 10 ? n : 10;
+}
+
 /// `predictTurns(v, n)` del prototipo: los ids de los próximos [n] turnos
 /// según el timeline actual. Ver docs/specs/battle_presentation.md
 /// § "predictTurns". Puro: no modifica [state].

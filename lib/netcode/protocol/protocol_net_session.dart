@@ -5,6 +5,7 @@ import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/models/game_session.dart';
 import '../../game_engine/models/session_action.dart';
 import '../../game_engine/models/session_event.dart';
+import '../../game_engine/rules/party_limits.dart';
 import '../contracts/net_session.dart';
 import '../contracts/net_traffic.dart';
 import 'wire.dart';
@@ -34,6 +35,7 @@ abstract class ProtocolNetSession
     GameCatalog catalog = GameCatalog.standard,
     Duration Function()? clock,
     this.pingInterval = defaultPingInterval,
+    this.maxPlayers = kDefaultMaxPlayers,
   })  : codec = WireCodec(catalog),
         balanceHash = catalog.balanceHash,
         _clock = clock ?? _monotonic;
@@ -58,7 +60,14 @@ abstract class ProtocolNetSession
   static Duration _monotonic() => _watch.elapsed;
 
   /// Máximo de jugadores contando al host (`MAXP`).
-  static const maxPlayers = 4;
+  /// Configurado por la composition root (`FeatureFlags.maxPlayers`);
+  /// el host lo usa para rechazar y lo anuncia en el `welcome`.
+  final int maxPlayers;
+
+  /// Máximo que anunció el host de la sala (en el host, [maxPlayers];
+  /// `null` en un cliente antes del `welcome` o con un host sin `mx`).
+  int? get roomMaxPlayers => _localId == hostId ? maxPlayers : _roomMax;
+  int? _roomMax;
 
   /// Id del host (`myId='h'` en el prototipo).
   static const hostId = 'h';
@@ -371,7 +380,7 @@ abstract class ProtocolNetSession
                       ? RejectReason.full
                       : null);
           if (reject != null) {
-            link.send(codec.encode(RejectMessage(reject)));
+            link.send(codec.encode(RejectMessage(reject, max: maxPlayers)));
             // `setTimeout(()=>c.close(),300)`: que llegue el mensaje.
             Timer(const Duration(milliseconds: 300),
                 () => unawaited(_quietly(link.close())));
@@ -380,7 +389,7 @@ abstract class ProtocolNetSession
           joined = true;
           _pending.remove(link);
           _clients[pid] = link;
-          link.send(codec.encode(WelcomeMessage(pid, _roomCode ?? '')));
+          link.send(codec.encode(WelcomeMessage(pid, _roomCode ?? '', max: maxPlayers)));
           _emit(PeerJoinedEvent(pid, msg.profile,
               tutorialVersion: msg.tutorialVersion));
           // Indicador de ping prendido: medir al nuevo enseguida.
@@ -439,6 +448,7 @@ abstract class ProtocolNetSession
           case WelcomeMessage():
             if (welcome.isCompleted) return;
             _localId = msg.id;
+            _roomMax = msg.max;
             _roomCode = msg.code.isEmpty ? code : msg.code;
             _welcomed = true;
             welcome.complete();
@@ -446,7 +456,7 @@ abstract class ProtocolNetSession
             if (_latencyOut.hasListener) pingNow();
           case RejectMessage():
             if (!welcome.isCompleted) {
-              welcome.completeError(NetException(msg.reason.message));
+              welcome.completeError(NetException(msg.text));
             }
           case StateMessage():
             // Confirmar enseguida (control de flujo del host).

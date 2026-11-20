@@ -587,25 +587,52 @@ class DsStatLine extends StatelessWidget {
   }
 }
 
-/// Costo de MP (azul) o de Pulso (dorado); en rojo si no alcanza.
+/// Qué mide un [DsCost].
+enum DsCostKind { mp, pulse, ult, count }
+
+/// Costo de una acción, siempre en Cuerpo y a la derecha de la fila: MP
+/// (azul, `4 MP`), Pulso (dorado, `2 P`), carga de ULT (`45%`, naranja
+/// al 100 %) o cantidad (`x3`). En rojo si no alcanza.
 class DsCost extends StatelessWidget {
   const DsCost.mp(this.amount, {super.key, this.affordable = true})
-      : pulse = false;
+      : kind = DsCostKind.mp;
   const DsCost.pulse(this.amount, {super.key, this.affordable = true})
-      : pulse = true;
+      : kind = DsCostKind.pulse;
+
+  /// Carga de ULT en %: alcanza al 100.
+  const DsCost.ult(this.amount, {super.key})
+      : kind = DsCostKind.ult,
+        affordable = amount >= 100;
+
+  /// Cantidad que queda (`x3`): no alcanza en 0.
+  const DsCost.count(this.amount, {super.key})
+      : kind = DsCostKind.count,
+        affordable = amount > 0;
 
   final int amount;
-  final bool pulse;
+  final DsCostKind kind;
   final bool affordable;
+
+  bool get pulse => kind == DsCostKind.pulse;
+
+  /// El texto que se ve.
+  String get label => switch (kind) {
+        DsCostKind.mp => '$amount MP',
+        DsCostKind.pulse => '$amount P',
+        DsCostKind.ult => '$amount%',
+        DsCostKind.count => 'x$amount',
+      };
 
   @override
   Widget build(BuildContext context) {
-    final c = !affordable
-        ? DsColors.danger
-        : pulse
-            ? DsColors.pulse
-            : DsColors.mp;
-    return Text('$amount ${pulse ? 'P' : 'MP'}', style: DsText.body(c));
+    final c = switch (kind) {
+      // La ULT sin cargar no es un error: secundario.
+      DsCostKind.ult => affordable ? DsColors.warning : DsColors.textSecondary,
+      _ when !affordable => DsColors.danger,
+      DsCostKind.pulse => DsColors.pulse,
+      _ => DsColors.mp,
+    };
+    return Text(label, maxLines: 1, style: DsText.body(c));
   }
 }
 

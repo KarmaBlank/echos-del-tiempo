@@ -271,8 +271,8 @@ class ImpactSimulator {
       double defendBelow = 0.5,
       bool combos = false}) {
     final loadouts = party == null || party.isEmpty
-        ? [for (var k = 0; k < partySize.clamp(1, 4); k++) l]
-        : party.take(4).toList();
+        ? [for (var k = 0; k < math.max(1, partySize); k++) l]
+        : party.toList();
     var wins = 0;
     var actionsSum = 0;
     var hpSum = 0.0;

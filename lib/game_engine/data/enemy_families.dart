@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import '../models/status.dart';
+import '../rules/party_limits.dart' show kPartyBalanceRef;
 
 // Familias de enemigos v0.6 (docs/specs/bestiary.md § 1): cada enemigo y
 // jefe pertenece a una familia con debilidades, resistencias e
@@ -205,6 +208,10 @@ class HitCapDef {
     this.overLevel = 5,
   });
 
+  /// Piso del tope de élite / jefe con 5-8 jugadores, como fracción del
+  /// valor de 4 (v0.13, combo_balance.md § 3.3).
+  static const bigPartyFloor = 0.6;
+
   String get id => 'tope';
   String get name => 'Tope por golpe';
 
@@ -229,9 +236,15 @@ class HitCapDef {
       int partySize = 1,
       bool zoneC = false}) {
     if (!boss && !elite) return zoneC ? commonC : common;
-    final t = ((partySize.clamp(1, 4)) - 1) / 3;
     final (solo, four) = boss ? (bossSolo, this.boss) : (eliteSolo, this.elite);
-    return solo + (four - solo) * t;
+    final n = math.max(1, partySize);
+    if (n <= kPartyBalanceRef) {
+      return solo + (four - solo) * (n - 1) / (kPartyBalanceRef - 1);
+    }
+    // v0.13, grupos de 5-8: sigue bajando a la mitad del ritmo, con piso
+    // en [bigPartyFloor] × el valor de 4.
+    final step = (solo - four) / (kPartyBalanceRef - 1) / 2;
+    return math.max(four * bigPartyFloor, four - step * (n - kPartyBalanceRef));
   }
 }
 const kHitCaps = {'tope': HitCapDef()};
@@ -306,7 +319,7 @@ class ComboRulesDef {
 
   /// Multiplicador del umbral por tamaño del grupo.
   double groupBreak(int players) =>
-      groupBreakBase + groupBreakPer * players.clamp(1, 4);
+      groupBreakBase + groupBreakPer * math.max(1, players);
 }
 
 const kComboRules = {'combos': ComboRulesDef()};

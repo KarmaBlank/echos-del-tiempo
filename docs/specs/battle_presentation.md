@@ -83,7 +83,10 @@ propio**, independiente del terreno del mapa.
 - `gap` del centro al borde interno de cada bando: normal 40, élite 46,
   jefe 52 (`ArenaStage.gapFor`).
 - Grupo: jugador `i` en `x = cx + gap + 10 + (i mod 2)·14`,
-  `y = 300 + (i − (n−1)/2)·24` (la columna escalonada de siempre).
+  `y = 300 + (i − (n−1)/2)·24` (la columna escalonada de siempre) hasta
+  4. Con 5 o más (v0.13, `BattleLayout.partyOffset`): dos columnas, la
+  de adelante con `ceil(n/2)` y la de atrás 32 px más afuera y 12 más
+  abajo, cada una con paso 24 y escalonada 10.
 - Enemigos en columnas desde el centro hacia afuera: invocaciones
   pasivas (cristales), comunes (de a 3 por columna, en orden) y el jefe
   atrás. Cada columna se centra en el centro de las cajas del grupo
@@ -91,7 +94,8 @@ propio**, independiente del terreno del mapa.
   se corren 14 px hacia afuera (espejo del grupo); entre columnas 10 px.
 - Al final todo se corre en `x` para que la caja de la pelea quede
   centrada en el escenario (`x = 480`).
-- Garantías (tests): sin cajas superpuestas con 1–4 jugadores y hasta 6
+- Garantías (tests): sin cajas superpuestas con 1–4 jugadores (y con
+  1, 2, 4, 6, 8 y 12 sin arena, `big_party_ui_test.dart`) y hasta 6
   enemigos, jefe + 2 cristales / 2 siervos, Devorador fase 2 (≈ 90 × 90);
   ≥ 60 px entre bandos; todo adentro del escenario y a la vista con
   1280×418, 1280×300, 1280×220, 960×400 y 1920×780.
@@ -1390,3 +1394,19 @@ Curas lo dañan, Comió N. ULT: los estilos de su jefe base, a todo el
 grupo (`kEnemyUltScripts`). Sprites: forma del jefe base con paleta del
 vacío; el Devorador del Abismo usa `devoradorAbismoFase2` desde la
 fase 2; el Eco Primordial, arte propio (24 × 22, escala 2.6).
+
+## Grupos grandes (v0.13)
+
+- Barra del grupo (`BattlePartyBar.gridFor`): 1 fila de 4 lugares hasta
+  4; con más, 2 filas de 4 hasta 8 y de `ceil(n/2)` si son más. Con más
+  de 4 las tarjetas son compactas: sin retrato, nombre en una línea, y
+  Pulso, invocaciones y estados solo en la propia (el resto, en el
+  tooltip y la escena). Con más de 4 por fila las barras van con las
+  cifras arriba.
+- Alto de la barra (`barHeight`): + 6 % de la pantalla con más de 4
+  (hasta 68 %).
+- `T+n` de cada tarjeta y "te toca en" miran `turnWindow` turnos
+  (10, o grupo + enemigos + 2 si es más), así todos aparecen.
+- Tests: `big_party_ui_test.dart` (1280×720 y 1920×1080, los cuatro
+  tamaños de texto, n = 1, 2, 4, 6, 8, 12, todas las categorías) y
+  capturas en `docs/release_shots/v0.13.0/`.

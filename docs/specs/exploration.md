@@ -222,6 +222,7 @@ panel de preparación en vez de cerrar.
 | Esc | con panel | cierra el panel (salvo las reglas de arriba) |
 | Esc | sin panel ni campo de texto (lobby, campo, subida de nivel, resultado) | abre / cierra el menú de pausa (docs/specs/settings.md § 6) |
 | Y / N | lobby, votación pendiente | `VoteMissionAction(true/false)` |
+| 1 / 2 | lobby o campo, sin panel (v0.12.2) | usa Poción de vida / de maná (`UseItemAction`, loot.md § 17.5) |
 | 1-9 | batalla, tu turno | el botón N del menú de comandos |
 | Q / Tab | batalla | `cycleTarget`: siguiente enemigo vivo |
 | P | batalla, tu turno (v0.8.3) | va a PASAR; con PASAR elegida, `PassCommand` (combat.md § "Pasar turno") |
@@ -443,6 +444,15 @@ lobby, campo y subida de nivel (`map/loot_painter.dart`):
 ## HUD (overlays Flutter sobre el `GameWidget`)
 
 Todo con `RetroPanel` (padding 8) y texto de 8 px (`bodySmall`).
+
+Grupos grandes (v0.13): las cajas del grupo se acomodan en filas desde
+abajo a la derecha (como siempre); desplegadas solo si entran en
+`WorldHud.maxPartyRows` = 2 filas, si no pasan a compactas. Con 8 y
+texto normal, 2 filas compactas en 1280×720 y 1920×1080; con texto
+grande o enorme, 3-4 filas, siempre adentro de la pantalla
+(`hud_big_party_test.dart`, n = 1, 2, 4, 6, 8, 12). Nombres y minimapa
+recorren a todos los jugadores; los lugares de aparición para más de 4
+están en netcode.md § "Máximo de jugadores".
 
 Cambios v0.12 (sistema de diseño, design_system.md § 10.3): botones
 `DsButton` compactos (zoom del minimapa `DsButton.icon` con tooltip),

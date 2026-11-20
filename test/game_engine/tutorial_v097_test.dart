@@ -26,7 +26,7 @@ GameSession _room(SessionEngine e, {int humans = 1, int companions = 0}) {
   var s = e.create();
   for (var i = 0; i < humans; i++) {
     s = e
-        .addPlayer(s, i == 0 ? 'h' : 'p$i', newProfile('J$i', _classes[i]),
+        .addPlayer(s, i == 0 ? 'h' : 'p$i', newProfile('J$i', _classes[i % _classes.length]),
             tutorialVersion: 0)!
         .state;
   }
@@ -225,7 +225,7 @@ void main() {
     const rules = TutorialRules();
     final conv = kTutorialStages.firstWhere(
         (s) => s.kind == TutorialStageKind.pairs);
-    for (var n = 1; n <= 5; n++) {
+    for (final n in const [1, 2, 3, 4, 5, 6, 8, 12]) {
       final turns = rules.turnsOf(conv, n);
       final players = [
         for (final t in turns)
@@ -257,6 +257,9 @@ void main() {
       (2, 0),
       (3, 0),
       (4, 0),
+      (5, 0),
+      (6, 0),
+      (8, 0),
       (1, 1),
       (1, 3),
       (2, 2),
