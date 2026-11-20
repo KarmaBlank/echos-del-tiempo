@@ -26,6 +26,7 @@ class SceneFrame {
     this.localId,
     this.targetId,
     this.highlightIds = const {},
+    this.hoverId,
     this.turnTimeLeft,
     this.turnLimit = 30,
   });
@@ -45,6 +46,11 @@ class SceneFrame {
   /// Enemigos que afectaría la habilidad elegida en el menú (se marcan
   /// como el objetivo).
   final Set<String> highlightIds;
+
+  /// Actor bajo el mouse, en la arena o en la franja de turnos: se
+  /// resalta en las dos (battle_presentation.md § "Identificador de
+  /// repetidos").
+  final String? hoverId;
 
   /// Segundos del turno del jugador (barra de tiempo); `null` si no espera.
   final double? turnTimeLeft;

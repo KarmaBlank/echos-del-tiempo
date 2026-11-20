@@ -279,8 +279,8 @@ void main() {
     expect(f.game.saved!.textSize, TextSize.enormous);
     expect(tester.takeException(), isNull, reason: 'ENORME');
     await _tap(tester, 'display-text-NORMAL');
-    await _tap(tester, 'a11y-titles-SÍ');
-    expect(f.game.saved!.readingTitles, isTrue);
+    await _tap(tester, 'a11y-titles-NO');
+    expect(f.game.saved!.readingTitles, isFalse);
     await _tap(tester, 'a11y-letters-AMPLIO');
     expect(f.game.saved!.letterSpacing, LetterSpacing.wide);
     // Avisos: la muestra suma la × en HASTA CERRAR.
@@ -319,7 +319,7 @@ void main() {
       (tester) async {
     final f = await _pumpMenu(tester);
     await _tap(tester, 'tab-2');
-    // Tab recorre los botones hasta TÍTULOS CON LA FUENTE DE LECTURA: SÍ.
+    // Tab recorre los botones hasta TÍTULOS CON LA FUENTE DE LECTURA: NO (el defecto es SÍ).
     Key? focused() => FocusManager.instance.primaryFocus?.context
         ?.findAncestorWidgetOfExactType<DsButton>()
         ?.key;
@@ -327,12 +327,12 @@ void main() {
     for (var i = 0; i < 120 && !found; i++) {
       await tester.sendKeyEvent(LogicalKeyboardKey.tab);
       await tester.pump();
-      found = focused() == const ValueKey('a11y-titles-SÍ');
+      found = focused() == const ValueKey('a11y-titles-NO');
     }
     expect(found, isTrue);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
-    expect(f.game.saved!.readingTitles, isTrue);
+    expect(f.game.saved!.readingTitles, isFalse);
     // Y sigue hasta REGISTRO DE BATALLA: EXTENDIDO.
     found = false;
     for (var i = 0; i < 60 && !found; i++) {

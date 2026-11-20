@@ -75,6 +75,7 @@ extension _SummonTurn on _Turn {
     );
     s.nextTurn = state.clock + engine.interval(s) * 0.5;
     state.summons.add(s);
+    assignCombatantTags(state);
     final ult = _smod(owner, SummonMod.invokeUlt);
     if (ult > 0) owner.ult = math.min(100, owner.ult + ult);
     _summonSync(owner);

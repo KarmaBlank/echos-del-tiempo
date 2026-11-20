@@ -55,7 +55,7 @@ void main() {
     'en el borde del mapa': const BattleArena(
         anchorX: 40, anchorY: 30, side: 1, worldWidth: 400, worldHeight: 300),
   }.entries) {
-    for (final size in const [Size(1280, 418), Size(1920, 780), Size(960, 400)]) {
+    for (final size in const [Size(1280, 446), Size(1920, 780), Size(960, 400)]) {
       test('4 contra 4 ${arena.key} en $size: la pelea llena el área del mundo '
           'y entra entera', () {
         final s = _fourVsFour(boss: true);
@@ -84,14 +84,14 @@ void main() {
             ? fight.width / g.worldRect.width
             : fight.height / g.worldRect.height;
         expect(fill, greaterThan(0.55), reason: '$fight en ${g.worldRect}');
-        if (size == const Size(1280, 418)) expect(view.zoom, 3);
+        if (size == const Size(1280, 446)) expect(view.zoom, 3);
       });
     }
   }
 
   test('las etiquetas de un 4 contra 4 no se superponen y quedan en el área',
       () {
-    for (final size in const [Size(1280, 418), Size(1920, 780)]) {
+    for (final size in const [Size(1280, 446), Size(1920, 780)]) {
       final s = _fourVsFour();
       final g = SceneGeometry.fit(size);
       final layout = BattleLayout.compute(s, null, vw: g.virtualWidth);

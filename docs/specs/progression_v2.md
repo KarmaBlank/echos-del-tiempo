@@ -234,9 +234,9 @@ puntos).
 | 40 | Ascensión II (existe, Prueba II) | Sin cambios + 2 puntos. |
 | 50 | Ascensión III (existe, Prueba III) | Sin cambios + 2 puntos. |
 
-- Pantalla de hito: 3 tarjetas grandes (nombre, efecto y contra de la
-  keystone, cluster) y `ELEGIR`. Se puede posponer (queda la insignia
-  `!` en ÁRBOL) pero no se pierde.
+- Pantalla de hito: 3 tarjetas (nombre y efecto completo de la
+  keystone). No se puede posponer: con un hito pendiente el árbol no se
+  gasta hasta elegirlo (§ 11.4). Quitar nodos sigue permitido.
 - Los puntos ligados que sobren (si ya tenías nodos de esa ruta) se
   vuelven puntos libres.
 - Reasignar el árbol (§ 6) también reabre la elección del hito.
@@ -532,7 +532,7 @@ balance):
   conecta, solo **TOMAR CAMINO (N)** (abre `Tomar N nodos por N
   puntos`). En PLANIFICAR, PLANIFICAR / QUITAR DEL PLAN.
 - **Hito pendiente = tarjetas** arriba del árbol: título chico
-  `HITO · NIVEL 10 · 7 puntos de hito para su camino` y una tarjeta por
+  `HITO DEL NIVEL 10` (v0.13.1: ver § 11.4) y una tarjeta por
   keystone de entrada (`milestone-pick-<id>`: nombre + una línea de
   efecto). Pasar el mouse resalta su camino; el primer clic la elige
   (pasa a `Confirmar <nombre>`) y el segundo confirma. Sin "te damos" ni
@@ -577,6 +577,30 @@ no solo en la UI):
 - El host valida igual (`ProgressionRules.chooseMilestone` rechaza una
   keystone ya tomada o fuera de las opciones), y `normalize` sanea con
   las mismas opciones.
+
+### 11.4 Hito obligatorio y tarjetas claras (v0.13.1, pedido del dueño)
+
+Bug: el jugador tomó nodos con sus puntos creyendo que era el hito, y el
+hito siguió apareciendo. Reglas:
+
+- Con un hito pendiente (`pendingMilestones`) no se toman nodos ni
+  caminos normales: `ProgressionRules.takeNode` / `takeNodes` devuelven
+  `null` (el host rechaza `TakeNodeAction` / `TakeNodesAction`). El
+  camino del hito se toma por dentro sin esa traba. Quitar nodos sigue
+  permitido. Sin cambio de red (protocolo igual).
+- En la UI el árbol muestra en una línea `Primero elegí tu hito`
+  (`tree-locked`); el clic en un nodo solo fija su tooltip, y TOMAR NODO /
+  TOMAR CAMINO quedan apagados con ese motivo. En la barra, `HITO PENDIENTE`.
+- Panel del hito: recuadro naranja, título `HITO DEL NIVEL N` y una línea
+  `Elegí una keystone. El camino hasta ella se toma solo y es gratis.`
+  (sin "puntos de hito"). Cada tarjeta: nombre, efecto completo (todas
+  las líneas, sin cortar; la tarjeta crece) y `Camino: N nodos gratis`
+  (si el camino supera los puntos del hito: `Camino: N nodos, B gratis`).
+- Pasar el mouse por una tarjeta o elegirla resalta su camino y centra el
+  visor con zoom en el camino y la keystone. El primer clic la elige
+  (`Clic de nuevo para confirmar`) y el segundo confirma.
+- Tests: `passive_tree_view_test` y `progression_rules_test`. Capturas:
+  `docs/release_shots/v0.13.1/hito_antes.png` y `hito_despues.png`.
 - Reiniciar el árbol vacía árbol e hitos: vuelven las opciones del § 5.
 - Tests: `progression_v2_test` ("una keystone tomada a mano no se vuelve
   a ofrecer", "el hito paga solo los nodos que faltan").

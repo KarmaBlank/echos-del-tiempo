@@ -9,6 +9,7 @@ import 'package:echos_del_tiempo/game_engine/models/upgrade_stat.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_event.dart';
+import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -242,6 +243,21 @@ void main() {
       expect(pts, greaterThanOrEqualTo(2));
       s = forLeo(e, s, const AllocateStatsAction({Attribute.vit: 2}));
       expect(prof(s, 'local-c2').points, pts - 2);
+      // Con un hito pendiente el host rechaza los nodos normales
+      // (progression_v2.md § 11.4): primero se eligen.
+      for (final m in prof(s, 'local-c2').pendingMilestones) {
+        final leo = prof(s, 'local-c2');
+        final o = progression.treeRules.milestoneOptions(leo.classId, m,
+            taken: PassiveTreeRules.milestoneTaken(
+                leo.tree, leo.milestone10, leo.milestone20));
+        final any = progression.treeRules.catalog.nodes.keys.firstWhere(
+            (id) => progression.treeRules
+                .canTake(leo.classId, leo.treePoints, leo.passiveProgress, id));
+        expect(e.applyFor(s, 'local', 'local-c2', TakeNodeAction(any)),
+            isNull);
+        s = forLeo(e, s, ChooseMilestoneAction(m, o.first));
+      }
+      expect(prof(s, 'local-c2').pendingMilestones, isEmpty);
       final node = progression.treeRules.catalog.nodes.keys.firstWhere(
           (id) => progression.takeNode(prof(s, 'local-c2'), id) != null);
       s = forLeo(e, s, TakeNodeAction(node));

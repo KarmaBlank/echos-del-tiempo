@@ -868,7 +868,12 @@ class BattlePartyBar extends StatelessWidget {
     this.companions = const {},
     this.auto = const {},
     this.onAuto,
+    this.onlyLocal = false,
   });
+
+  /// Solo la tarjeta propia (grupo compacto: los demás van en
+  /// [BattleAllyList]).
+  final bool onlyLocal;
 
   final BattleState battle;
   final String? localId;
@@ -888,7 +893,8 @@ class BattlePartyBar extends StatelessWidget {
     // Lugares de 1/[perRow] del ancho, desde la izquierda (los vacíos
     // quedan vacíos): una tarjeta sola no se estira a toda la pantalla y
     // los números quedan junto a sus barras.
-    final party = battle.party;
+    final mine = battle.party.where((p) => p.id == localId).toList();
+    final party = onlyLocal && mine.isNotEmpty ? mine : battle.party;
     final (rows, perRow) = gridFor(party.length);
     final compact = party.length > slotCount;
     // Cada fila: todas arriba y del mismo alto (el de la más alta: la
@@ -1147,8 +1153,9 @@ class _PartyCard extends StatelessWidget {
   }
 }
 
-/// Barra del objetivo (arriba a la izquierda de la escena): nombre, vida
-/// con números, quiebre y si avisó su ULT.
+/// Barra del objetivo (arriba a la izquierda de la escena): nombre (con
+/// la letra de repetidos), marca de élite o jefe, vida con números,
+/// quiebre y si avisó su ULT.
 class TargetBar extends StatelessWidget {
   const TargetBar({super.key, required this.enemy});
 
@@ -1176,7 +1183,10 @@ class TargetBar extends StatelessWidget {
       // Sistema de diseño: nombre en Cuerpo rojo, ¡ULT! como DsTag.
       decoration: BoxDecoration(
         color: DsColors.background.withValues(alpha: 0.9),
-        border: Border.all(color: DsColors.danger, width: 2),
+        // Élite y jefe: borde dorado, como su ícono en la franja de turnos.
+        border: Border.all(
+            color: e.elite || e.boss ? DsColors.reward : DsColors.danger,
+            width: 2),
       ),
       child: DefaultTextStyle.merge(
         style: DsText.detail(DsColors.textPrimary),
@@ -1191,6 +1201,12 @@ class TargetBar extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: DsText.body(DsColors.danger)),
               ),
+              if (e.elite || e.boss) ...[
+                const SizedBox(width: 4),
+                DsTag(e.boss ? 'JEFE' : '★ ÉLITE',
+                    key: const ValueKey('target-rank'),
+                    color: DsColors.reward),
+              ],
               if (e.ultPending) ...[
                 const SizedBox(width: 4),
                 const DsTag('¡ULT!', color: DsColors.danger),
@@ -1215,6 +1231,166 @@ class TargetBar extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Lista compacta del grupo a la derecha de la arena (v0.13.1,
+/// battle_presentation.md § "Grupo compacto"): sin compañeros propios
+/// (`soloParty` apagado) los demás jugadores manejan su personaje, así que
+/// abajo va solo la tarjeta propia y el resto, acá, de arriba hacia abajo:
+/// avatar, nombre, vida, maná y `T+n` o estado. El de turno, con borde
+/// dorado; el señalado con el mouse (acá, en la arena o en la franja),
+/// con borde blanco. Se achica entera si no entra (cualquier n).
+class BattleAllyList extends StatelessWidget {
+  const BattleAllyList({
+    super.key,
+    required this.battle,
+    required this.members,
+    this.sprites,
+    this.hoverId,
+    this.onHover,
+    this.maxRows = maxRowsDefault,
+  });
+
+  final BattleState battle;
+
+  /// Los aliados de la lista (todos menos el propio), en orden.
+  final List<Combatant> members;
+  final GameSprites? sprites;
+  final String? hoverId;
+
+  /// Mouse sobre la fila de un aliado (`null` al salir).
+  final ValueChanged<String?>? onHover;
+
+  /// Filas antes de pasar a desplazarse (con más se achican hasta este
+  /// número y después hay scroll).
+  final int maxRows;
+
+  static const maxRowsDefault = 12;
+
+  /// Ancho de la lista a texto Normal (crece con el texto).
+  static const width = 250.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final order = predictTurns(battle, turnWindow(battle));
+    final f = RetroType.factorOf(context);
+    final rows = [
+      for (var i = 0; i < members.length; i++) ...[
+        if (i > 0) const SizedBox(height: 3),
+        _row(members[i], order),
+      ],
+    ];
+    return LayoutBuilder(builder: (context, cons) {
+      final w = width * (f < 1 ? 1 : f);
+      final col = SizedBox(
+        width: w,
+        child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: rows),
+      );
+      // Hasta [maxRows] se achica para entrar; con más, scroll.
+      final Widget body = members.length > maxRows
+          ? SingleChildScrollView(child: col)
+          : FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.topRight,
+              child: col);
+      return Align(
+        key: const ValueKey('ally-list'),
+        alignment: Alignment.topRight,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+              maxWidth: math.min(w, cons.maxWidth),
+              maxHeight: cons.maxHeight),
+          child: body,
+        ),
+      );
+    });
+  }
+
+  Widget _row(Combatant p, List<String> order) {
+    final img = sprites?.heroFor(p.classId, p.ascensionId);
+    final current = battle.currentId == p.id;
+    final hovered = hoverId == p.id;
+    final i = order.indexOf(p.id);
+    final stunned = p.stacks(StatusKind.stun) > 0;
+    final stunIcon = statusIconOf(StatusKind.stun);
+    final Widget mark;
+    if (!p.alive) {
+      mark = Text('K.O.', style: DsText.detail(DsColors.danger));
+    } else if (current) {
+      mark = Text('▶', style: DsText.detail(DsColors.selected));
+    } else {
+      mark = Row(mainAxisSize: MainAxisSize.min, children: [
+        if (stunned && stunIcon != null) ...[
+          StatusIcon(stunIcon, px: 2),
+          const SizedBox(width: 3),
+        ],
+        if (i >= 0) Text('T+$i', style: DsText.detail()),
+      ]);
+    }
+    final row = Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: DsColors.surfaceSunken.withValues(alpha: 0.92),
+        border: Border.all(
+          color: hovered
+              ? ProtoColors.white
+              : current
+                  ? DsColors.selected
+                  : DsColors.border,
+          width: current || hovered ? 2 : 1,
+        ),
+      ),
+      child: Opacity(
+        opacity: p.alive ? 1 : 0.55,
+        child: Row(children: [
+          Container(
+            width: 32,
+            height: 40,
+            color: DsColors.background,
+            alignment: Alignment.center,
+            child: img == null ? null : PixelSprite(img, scale: 2),
+          ),
+          const SizedBox(width: 5),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(children: [
+                  Expanded(
+                    child: Text(p.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: DsText.body(DsColors.textPrimary)),
+                  ),
+                  const SizedBox(width: 4),
+                  mark,
+                ]),
+                const SizedBox(height: 2),
+                RetroBar(
+                    value: p.hp, max: p.maxHp, color: ProtoColors.hp, height: 6),
+                const SizedBox(height: 2),
+                RetroBar(
+                    value: p.mp.floor(),
+                    max: p.maxMp,
+                    color: ProtoColors.mp,
+                    height: 4),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+    return MouseRegion(
+      key: ValueKey('ally-row-${p.id}'),
+      onEnter: (_) => onHover?.call(p.id),
+      onExit: (_) => onHover?.call(null),
+      child: RetroTooltip(message: heroStatsMarkup(p), child: row),
     );
   }
 }

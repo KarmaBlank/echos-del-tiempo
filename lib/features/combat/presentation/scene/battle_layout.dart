@@ -92,8 +92,9 @@ class SceneGeometry {
   static const baseWidth = 480;
   static const baseSceneHeight = 288;
 
-  /// Alto de la franja de turnos (`#tl`, 54 px).
-  static const stripHeight = 54;
+  /// Alto de la franja de turnos (`#tl`; 54 px en el prototipo, 74 desde
+  /// v0.13.1 con los íconos más grandes).
+  static const stripHeight = 74;
 
   /// Píxeles de pantalla por píxel virtual.
   final double scale;
@@ -180,20 +181,26 @@ class BattleLayout {
   /// Lugar del héroe [i] de un grupo de [n] respecto del ancla del grupo
   /// (x hacia afuera de la pelea, y = pies). Hasta 4: una columna
   /// escalonada (paso 24, impares 14 más afuera). De 5 a 8 (v0.13): dos
-  /// columnas de hasta 4, la de atrás [backColumnGap] más afuera y medio
-  /// paso más abajo, cada una escalonada 10.
+  /// columnas de hasta 4 (paso [bigPartyPitch]), la de atrás
+  /// [backColumnGap] más afuera y medio paso más abajo, cada una
+  /// escalonada 14.
   static Offset partyOffset(int i, int n) {
     if (n <= 4) return Offset((i % 2) * 14.0, (i - (n - 1) / 2) * 24);
     final front = (n + 1) ~/ 2;
     final back = i >= front;
     final row = back ? i - front : i;
     final count = back ? n - front : front;
-    return Offset((back ? backColumnGap : 0) + (row % 2) * 10.0,
-        (row - (count - 1) / 2) * 24 + (back ? 12 : 0));
+    return Offset((back ? backColumnGap : 0) + (row % 2) * 14.0,
+        (row - (count - 1) / 2) * bigPartyPitch +
+            (back ? bigPartyPitch / 2 : 0));
   }
 
   /// Separación de la segunda columna del grupo (5-8 jugadores).
-  static const backColumnGap = 32.0;
+  static const backColumnGap = 56.0;
+
+  /// Paso vertical de cada columna con 5 o más (v0.13.1: 30, antes 24,
+  /// para que los nombres no se pisen).
+  static const bigPartyPitch = 30.0;
 
   /// Invocaciones (cristales): hacia el grupo desde el ancla.
   static const _addOffsets = [

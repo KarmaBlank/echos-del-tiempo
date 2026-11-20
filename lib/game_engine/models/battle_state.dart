@@ -123,6 +123,7 @@ class Combatant {
     this.pulse = 0,
     this.chained = false,
     this.practice = false,
+    this.tag,
   })  : primedBy = primedBy ?? {},
         family = family ??
             (isPlayer || enemyType == null ? null : kEnemyFamily[enemyType]),
@@ -135,7 +136,16 @@ class Combatant {
         statuses = statuses ?? {};
 
   final String id;
-  final String name;
+
+  /// Nombre a mostrar (arena, línea de tiempo, logs). Con repetidos lleva
+  /// al final la letra de [tag] ("Lobo B"; battle_presentation.md
+  /// § "Identificador de repetidos").
+  String name;
+
+  /// Letra que distingue a dos combatientes del mismo tipo en la misma
+  /// batalla (A, B, C…); `null` si el tipo no se repite. Estable: se
+  /// asigna una vez ([assignCombatantTags]) y no cambia.
+  String? tag;
   final bool isPlayer;
 
   // ---- stats ----
@@ -483,7 +493,47 @@ class Combatant {
         pulse: pulse,
         chained: chained,
         practice: practice,
+        tag: tag,
       );
+}
+
+/// Letras de repetidos (battle_presentation.md § "Identificador de
+/// repetidos"): dentro de enemigos (por tipo), grupo (por nombre) e
+/// invocaciones (por tipo), si dos o más comparten clave, los que todavía
+/// no tienen letra reciben la primera libre (A, B, C…, después números) y
+/// se les agrega al nombre. Los que ya tienen letra la conservan.
+void assignCombatantTags(BattleState s) {
+  _tagGroup(s.enemies, (c) => c.enemyType ?? _baseName(c));
+  _tagGroup(s.party, _baseName);
+  _tagGroup(s.summons, (c) => c.summonKind ?? _baseName(c));
+}
+
+String _baseName(Combatant c) => c.tag == null
+    ? c.name
+    : c.name.substring(0, c.name.length - c.tag!.length - 1);
+
+String _tagLetter(int i) =>
+    i < 26 ? String.fromCharCode(65 + i) : '${i + 1}';
+
+void _tagGroup(List<Combatant> list, String Function(Combatant) key) {
+  final groups = <String, List<Combatant>>{};
+  for (final c in list) {
+    groups.putIfAbsent(key(c), () => []).add(c);
+  }
+  for (final g in groups.values) {
+    if (g.length < 2) continue;
+    final used = {for (final c in g) if (c.tag != null) c.tag!};
+    var i = 0;
+    for (final c in g) {
+      if (c.tag != null) continue;
+      while (used.contains(_tagLetter(i))) {
+        i++;
+      }
+      c.tag = _tagLetter(i);
+      used.add(c.tag!);
+      c.name = '${c.name} ${c.tag}';
+    }
+  }
 }
 
 /// Resultado final de una batalla. XP y créditos son por jugador.

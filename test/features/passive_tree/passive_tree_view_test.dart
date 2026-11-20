@@ -242,33 +242,85 @@ void main() {
         tester, PlayerProfile(name: 'Ana', classId: 'maga', level: 10));
     final options = treeRules.milestoneOptions('maga', 10);
     expect(find.byKey(const ValueKey('milestone-banner-10')), findsOneWidget);
-    expect(find.text('HITO · NIVEL 10 · 7 puntos de hito para su camino'),
+    expect(find.text('HITO DEL NIVEL 10'), findsOneWidget);
+    expect(
+        find.text('Elegí una keystone. El camino hasta ella se toma solo '
+            'y es gratis.'),
         findsOneWidget);
+    expect(find.textContaining('puntos de hito'), findsNothing);
     expect(find.textContaining('te damos'), findsNothing);
     expect(find.textContaining('ELEGIR'), findsNothing);
     final name = kPassiveTree.nodes[options[1]]!.name;
-    expect(
-        find.descendant(
-            of: find.byKey(ValueKey('milestone-pick-${options[1]}')),
-            matching: find.text(name)),
+    final card = find.byKey(ValueKey('milestone-pick-${options[1]}'));
+    expect(find.descendant(of: card, matching: find.text(name)),
         findsOneWidget);
+    // Efecto completo, sin cortar.
+    for (final e in passiveEffectsText(kPassiveTree.nodes[options[1]]!)) {
+      final body =
+          e.startsWith('$name: ') ? e.substring(name.length + 2) : e;
+      final t = tester.widget<Text>(
+          find.descendant(of: card, matching: find.text(retroText(body))));
+      expect(t.maxLines, isNull);
+      expect(t.overflow, isNot(TextOverflow.ellipsis));
+    }
     // Las keystones elegibles se resaltan en el árbol.
     expect(_painter(tester).hits, containsAll(options));
+    // Pasar el mouse por la tarjeta: resalta su camino y centra el visor.
+    final mouse = await _mouse(tester);
+    final before = nodeOnScreen(tester, options[2]);
+    await mouse.moveTo(tester.getCenter(find.byKey(
+        ValueKey('milestone-pick-${options[2]}'))));
+    await tester.pump();
+    expect(_painter(tester).route, contains(options[2]));
+    final vp = tester.getRect(find.byKey(const ValueKey('tree-viewport')));
+    final after = nodeOnScreen(tester, options[2]);
+    expect(vp.contains(after), isTrue);
+    expect(after, isNot(before));
+    await mouse.moveTo(Offset.zero);
+    await tester.pump();
     // Primer clic: se ve el camino; segundo: se elige.
-    await tapVisible(
-        tester, find.byKey(ValueKey('milestone-pick-${options[1]}')));
+    await tapVisible(tester, card);
     expect(_painter(tester).route, hasLength(7));
-    expect(find.text('Confirmar $name'), findsOneWidget);
-    await tapVisible(
-        tester, find.byKey(ValueKey('milestone-pick-${options[1]}')));
+    expect(find.text('Clic de nuevo para confirmar'), findsOneWidget);
+    await tapVisible(tester, card);
     await tester.pump();
     final p = c.view!.me!.profile;
     expect(p.milestone10, options[1]);
     expect(p.tree.last, options[1]);
+    // Gratis: los 7 nodos del camino no gastan los puntos libres.
+    expect(p.tree, hasLength(7));
+    expect(_points(9), findsOneWidget);
     expect(find.byKey(const ValueKey('milestone-banner-10')), findsNothing);
+    expect(find.byKey(const ValueKey('tree-locked')), findsNothing);
     // La keystone queda marcada como hito.
     await tapNode(tester, options[1]);
     expect(find.byKey(const ValueKey('tree-milestone-mark')), findsOneWidget);
+  });
+
+  testWidgets('hito pendiente: no se toman nodos hasta elegirlo',
+      (tester) async {
+    final c = await _pumpTree(
+        tester, PlayerProfile(name: 'Ana', classId: 'maga', level: 10));
+    expect(find.text('Primero elegí tu hito'), findsOneWidget);
+    final near = kPassiveTree.nodes['s_mag']!.links.first;
+    await tapNode(tester, near);
+    expect(c.view!.me!.profile.tree, isEmpty);
+    final take =
+        tester.widget<DsButton>(find.byKey(const ValueKey('tree-take')));
+    expect(take.onPressed, isNull);
+    expect(take.tooltip, 'Primero elegí tu hito');
+    // Elegir el hito libera el árbol.
+    final options = treeRules.milestoneOptions('maga', 10);
+    final card = find.byKey(ValueKey('milestone-pick-${options.first}'));
+    await tapVisible(tester, card);
+    await tapVisible(tester, card);
+    await tester.pump();
+    expect(c.view!.me!.profile.milestone10, options.first);
+    expect(find.text('Primero elegí tu hito'), findsNothing);
+    final free = kPassiveTree.nodes['s_mag']!.links
+        .firstWhere((l) => !c.view!.me!.profile.tree.contains(l));
+    await tapNode(tester, free);
+    expect(c.view!.me!.profile.tree.last, free);
   });
 
   testWidgets('el visor se mueve arrastrando', (tester) async {

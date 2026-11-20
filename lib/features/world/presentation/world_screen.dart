@@ -553,7 +553,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                     bottom: BattleViewState.barHeight(
                             box.maxHeight,
                             RetroType.factorOf(context),
-                            s.battle?.state.party.length ?? 1) +
+                            s.battle?.state.party.length ?? 1,
+                            // Grupo compacto: sin compañeros propios.
+                            !s.playerList.any((p) => p.isCompanion)) +
                         8,
                     child: PauseMenuButton(onPressed: _openPause),
                   ),
