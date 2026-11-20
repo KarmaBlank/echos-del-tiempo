@@ -913,6 +913,16 @@ coincide) y, si el filtro lo oculta, `(oculto por tu filtro)` en dim.
 
 ## Personaje (`char`, 1298-1335)
 
+**v0.11 (sistema de diseño, design_system.md § 10).** Pestañas `DsTabBar`
+(`tab-N`) con la insignia de puntos adentro (`tab-badge-N`); la línea
+fija de ayuda de cada pestaña pasó al "?" del título. La línea del título
+va por color (nombre en Cuerpo, clase en Subtítulo, XP en Detalle) y ya
+no repite los puntos: ATRIBUTOS tiene su barra arriba (`Puntos: P` ·
+REINICIAR fantasma · DESHACER · CONFIRMAR PUNTOS principal + motivo en
+Detalle); el pie solo lleva CERRAR. Secciones con `DsSectionHeader`
+(ATRIBUTOS, SUGERENCIA, CLASE, VISTA PREVIA, PENDIENTE); las razones de
+la sugerencia y los rasgos de Paladín, plegados (`DsFold`).
+
 Título `PERSONAJE` o `¡SUBISTE A NIVEL N! Reparte tus puntos` [?].
 Línea `nombre · clase LvN · Puntos: P` (P = puntos menos el reparto
 pendiente). Pestañas `ATRIBUTOS · INVENTARIO · ÁRBOL · FILTRO` (loot v2:

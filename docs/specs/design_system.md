@@ -226,3 +226,40 @@ defecto del jugador: ALTO CONTRASTE + colores REDUCIDOS), generadas por
   ≥ 8 libres, insignia sin superponer, TAMAÑO DEL TEXTO ENORME sin
   desbordes.
 - `test/design/ds_golden_test.dart`: goldens de cada componente.
+
+## 10. Migración (v0.11)
+
+### 10.1 PERSONAJE
+
+Hecho: pestañas `DsTabBar` con insignia (`DsTab` acepta `key` / `badgeKey`;
+el padding va dentro de la pestaña, así toda la pestaña es clickeable y la
+insignia queda dentro con aire), ayuda de cada pestaña en el "?", línea del
+título por color, ATRIBUTOS completo (barra de herramientas arriba,
+`DsSectionHeader`, `DsButton` principal / secundario / fantasma / ícono,
+`DsFold` para razones y rasgos, filas de una línea sin borde).
+`DsSectionHeader`: título y acción con tope de 45 % del ancho cada uno
+(con texto ENORME no desbordan).
+
+Pendiente: el contenido de INVENTARIO, ÁRBOL, FILTRO, BUILD y BESTIARIO
+(sus vistas en `lib/features/inventory`, `passive_tree`, `build_planner`,
+`bestiary`) sigue con `PanelButton` / `SectionPanel` y sus textos fijos
+propios; se migran vista por vista.
+
+Capturas antes / después (1920×1080): `docs/release_shots/v0.11.0/`,
+generadas por `tool/shots/personaje_ds_shots_test.dart` (`SHOT_SUFFIX`).
+
+### 10.2 Contraste medido
+
+`test/design/ds_text_contrast_test.dart` (WCAG 2.x) contra fondo, panel,
+campo y botón de cada tema; mínimo pedido 4.5:1 (Cuerpo, Detalle) y 3:1
+(Título, Subtítulo). Peor caso por rol (siempre sobre botón):
+
+| rol | AZUL | OSCURO | ALTO CONTRASTE |
+|---|---|---|---|
+| Título | 10.26 | 11.99 | 18.40 |
+| Subtítulo | 7.81 | 8.85 | 15.35 |
+| Cuerpo | 10.91 | 14.08 | 21.00 |
+| Detalle | 6.08 | 8.19 | 13.88 |
+
+Ningún token necesitó ajuste. Nota: Detalle sobre botón en AZUL es 6.08:1
+(no "≥ 7:1" como decía § 3.2; sobre fondo y panel sí pasa de 8).

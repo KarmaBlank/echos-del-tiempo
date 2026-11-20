@@ -40,9 +40,13 @@ class DsBadge extends StatelessWidget {
 
 /// Una pestaña: texto y, opcional, [badge] adentro a la derecha.
 class DsTab {
-  const DsTab(this.label, {this.badge});
+  const DsTab(this.label, {this.badge, this.key, this.badgeKey});
   final String label;
   final String? badge;
+
+  /// Clave de la pestaña y de su insignia (tests y atajos).
+  final Key? key;
+  final Key? badgeKey;
 }
 
 /// Fila de pestañas sobre `TabBar`. Elegida: texto dorado y subrayado.
@@ -95,7 +99,10 @@ class _DsTabBarState extends State<DsTabBar>
       isScrollable: true,
       tabAlignment: TabAlignment.start,
       onTap: widget.onChanged,
-      labelPadding: EdgeInsets.symmetric(horizontal: DsSpace.md),
+      // El padding va dentro de cada pestaña (con su clave): la pestaña
+      // completa, con su aire, es el área clickeable.
+      labelPadding: EdgeInsets.zero,
+
       labelStyle: DsText.subtitle(),
       unselectedLabelStyle: DsText.subtitle(),
       labelColor: DsColors.selected,
@@ -113,16 +120,19 @@ class _DsTabBarState extends State<DsTabBar>
               : Colors.transparent),
       tabs: [
         for (final t in widget.tabs)
-          Tab(
-            height: RetroType.width(context, DsMetrics.minHeight),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Text(retroText(t.label)),
-              if (t.badge != null) ...[
-                SizedBox(width: DsSpace.sm),
-                DsBadge(t.badge!),
-              ],
-            ]),
-          ),
+          Padding(
+              key: t.key,
+              padding: EdgeInsets.symmetric(horizontal: DsSpace.md),
+              child: Tab(
+                height: RetroType.width(context, DsMetrics.minHeight),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Text(retroText(t.label)),
+                  if (t.badge != null) ...[
+                    SizedBox(width: DsSpace.sm),
+                    DsBadge(t.badge!, key: t.badgeKey),
+                  ],
+                ]),
+              )),
       ],
     );
   }
@@ -536,12 +546,25 @@ class DsSectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(top: DsSpace.md, bottom: DsSpace.xs),
-      child: Row(children: [
-        Text(retroText(text.toUpperCase()), style: DsText.subtitle()),
-        SizedBox(width: DsSpace.sm),
-        Expanded(child: Container(height: 2, color: DsColors.border)),
-        if (trailing != null) ...[SizedBox(width: DsSpace.sm), trailing!],
-      ]),
+      // Con texto enorme el título y la acción (hasta 45 % del ancho cada
+      // uno) se achican: nunca desborda. La línea ocupa lo que sobra.
+      child: LayoutBuilder(
+        builder: (context, box) => Row(children: [
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: box.maxWidth * 0.45),
+            child:
+                Text(retroText(text.toUpperCase()), style: DsText.subtitle()),
+          ),
+          SizedBox(width: DsSpace.sm),
+          Expanded(child: Container(height: 2, color: DsColors.border)),
+          if (trailing != null) ...[
+            SizedBox(width: DsSpace.sm),
+            ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: box.maxWidth * 0.45),
+                child: trailing!),
+          ],
+        ]),
+      ),
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../app/design/design.dart';
 import '../../../../app/feature_flags.dart';
 import '../../../ascension/domain/ascension_text.dart';
 import '../../../characters/domain/unused_points.dart';
@@ -12,14 +13,11 @@ import '../../../build_planner/presentation/build_fit_badge.dart';
 import '../../../build_planner/presentation/build_plan_providers.dart';
 import '../../../build_planner/presentation/build_planner_view.dart';
 import '../../../../app/theme/panel_frame.dart';
-import '../../../../app/theme/panel_widgets.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../app/widgets/menu_focus.dart';
-import '../../../../app/widgets/pixel_icon.dart';
-import '../../../../app/widgets/section_panel.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/bestiary.dart';
 import '../../../../game_engine/models/build_plan.dart';
@@ -194,6 +192,51 @@ class _CharacterPanelState extends State<CharacterPanel> {
         : PanelButton('CERRAR [ESC]',
             reason: must ? 'Reparte tus puntos' : null, onPressed: close);
     final isAttr = tab == CharacterTab.attributes;
+    final treePts = UnusedPoints.of(prof, rules).tree;
+    final confirmReason = guards.allocate(prof, _alloc);
+    // Barra de herramientas de ATRIBUTOS (design_system.md § 4): puntos y
+    // acciones arriba, en una fila; CONFIRMAR es la principal.
+    final attrBar = Padding(
+      padding: EdgeInsets.only(bottom: DsSpace.sm),
+      child: Wrap(
+        spacing: DsSpace.sm,
+        runSpacing: DsSpace.xs,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text('Puntos: $left',
+              key: const ValueKey('attr-points'),
+              style: DsText.body(left > 0 ? DsColors.reward : DsColors.text)),
+          SizedBox(width: DsSpace.md),
+          if (guards.showRespec)
+            DsButton(
+                ProgressionRules.freeRespec
+                    ? 'REINICIAR PUNTOS (GRATIS)'
+                    : 'REINICIAR PUNTOS',
+                key: const ValueKey('respec'),
+                kind: DsButtonKind.ghost,
+                size: DsButtonSize.compact,
+                tooltip: guards.respec(),
+                onPressed: guards.respec() != null
+                    ? null
+                    : () {
+                        if (c.respec()) setState(_alloc.clear);
+                      }),
+          DsButton('DESHACER',
+              key: const ValueKey('undo-points'),
+              size: DsButtonSize.compact,
+              onPressed: _allocSum == 0 ? null : () => setState(_alloc.clear)),
+          DsButton('CONFIRMAR PUNTOS',
+              key: const ValueKey('confirm-points'),
+              kind: DsButtonKind.primary,
+              size: DsButtonSize.compact,
+              tooltip: confirmReason,
+              onPressed: confirmReason == null ? _confirm : null),
+          if (confirmReason != null)
+            Text(confirmReason,
+                key: const ValueKey('confirm-reason'), style: DsText.detail()),
+        ],
+      ),
+    );
 
     // Q / E, Ctrl+Tab y 1-5 cambian de pestaña (menu_focus.dart); no
     // mientras hay que repartir.
@@ -211,70 +254,66 @@ class _CharacterPanelState extends State<CharacterPanel> {
               : 'PERSONAJE',
           width: 1000,
           fill: true,
-          help: switch (tab) {
+          // La ayuda de la pestaña (antes una línea fija arriba del
+          // contenido) vive en el "?" (design_system.md § 2.4).
+          help: '${switch (tab) {
             CharacterTab.filter => kFilterHelp,
             CharacterTab.build => BuildPlannerView.help,
             CharacterTab.bestiary => BestiaryView.help,
             _ => CharacterPanel.help,
-          },
+          }}<br><br><span class="k">${tab.label}</span>: ${protoEsc(tab.hint)}',
           onClose: close,
           // Flexible: con texto grande baja de línea en vez de desbordar.
+          // Jerarquía por color: nombre en Cuerpo, clase en Subtítulo,
+          // maestría y XP en Detalle (sin negritas).
           titleTrailing: Flexible(
-              child: ProtoText('${protoEsc(profileTitle(prof))} · '
-                  '<span class="k">$cls Lv${prof.level}</span>'
-                  '${prof.level >= ProgressionRules.maxLevel ? ' · <span style="color:#a29bfe">${protoEsc(masteryText(prof))}</span>' : ''}'
-                  // XP para subir (v0.8.6).
-                  '${xpProgress(prof) == null ? '' : ' · ${protoColor(ProtoColors.dim, protoEsc(xpProgressText(prof)))}'}'
-                  ' · Puntos: '
-                  '<b>$left</b>')),
+              child: Text.rich(
+                  key: const ValueKey('char-title-info'),
+                  TextSpan(children: [
+                    TextSpan(
+                        text: retroText(profileTitle(prof)),
+                        style: DsText.body(DsColors.textPrimary)),
+                    TextSpan(
+                        text: '  ${retroText(cls)} Lv${prof.level}',
+                        style: DsText.body(DsColors.textSubtitle)),
+                    if (prof.level >= ProgressionRules.maxLevel)
+                      TextSpan(
+                          text: '  ${retroText(masteryText(prof))}',
+                          style: DsText.detail()),
+                    // XP para subir (v0.8.6).
+                    if (xpProgress(prof) != null)
+                      TextSpan(
+                          text: '  ${retroText(xpProgressText(prof))}',
+                          style: DsText.detail()),
+                  ]))),
           header: must
               ? null
               : PartyMemberBar.header(
                   view,
                   c,
-                  PanelTabs(
-                    labels: [for (final t in CharacterTab.values) t.label],
+                  DsTabBar(
                     index: tab.index,
                     onChanged: (i) =>
                         setState(() => _tab = CharacterTab.values[i]),
-                    // Puntos sin usar (passive_tree_v4.md § 7).
-                    badges: {
-                      CharacterTab.attributes.index: left,
-                      CharacterTab.tree.index:
-                          UnusedPoints.of(prof, rules).tree,
-                    },
+                    // Puntos sin usar (passive_tree_v4.md § 7): insignia
+                    // dentro de la pestaña, a la derecha del texto.
+                    tabs: [
+                      for (final t in CharacterTab.values)
+                        DsTab(t.label,
+                            key: ValueKey('tab-${t.index}'),
+                            badgeKey: ValueKey('tab-badge-${t.index}'),
+                            badge: switch (t) {
+                              CharacterTab.attributes when left > 0 => '$left',
+                              CharacterTab.tree when treePts > 0 => '$treePts',
+                              _ => null,
+                            }),
+                    ],
                   )),
-          leading: [
-            if (isAttr && guards.showRespec)
-              PanelButton(
-                  ProgressionRules.freeRespec
-                      ? 'REINICIAR PUNTOS (GRATIS)'
-                      : 'REINICIAR PUNTOS',
-                  key: const ValueKey('respec'),
-                  reason: guards.respec(), onPressed: () {
-                if (c.respec()) setState(_alloc.clear);
-              }),
-          ],
-          actions: [
-            if (isAttr)
-              PanelButton('DESHACER',
-                  key: const ValueKey('undo-points'),
-                  onPressed:
-                      _allocSum == 0 ? null : () => setState(_alloc.clear)),
-            closeButton,
-            if (isAttr)
-              PanelButton('CONFIRMAR PUNTOS',
-                  key: const ValueKey('confirm-points'),
-                  accent: ProtoColors.green,
-                  reason: guards.allocate(prof, _alloc),
-                  onPressed: _confirm),
-          ],
+          actions: [closeButton],
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // El árbol va sin línea de ayuda: barra compacta y el
-              // árbol a pantalla casi completa (progression_v2.md § 11.2).
-              if (tab != CharacterTab.tree) PanelHint(tab.hint),
+              if (isAttr) attrBar,
               Expanded(child: body),
             ],
           ),
@@ -285,6 +324,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
 
   // ---------------- atributos ----------------
 
+  /// ATRIBUTOS (design_system.md): filas de una línea a la izquierda,
+  /// vista previa a la derecha; secciones con DsSectionHeader, sin cajas
+  /// anidadas ni párrafos (la explicación está en el "?").
   Widget _attributes() {
     final view = widget.view;
     final prof = view.actor!.profile;
@@ -310,20 +352,17 @@ class _CharacterPanelState extends State<CharacterPanel> {
                       if ((plan.attributes[a] ?? 0) > prof.attributes[a])
                         kAttributeInfo[a]!.$1,
                   ];
-                  return SectionPanel(
-                    icon: PixelIconKind.plus,
-                    title: 'ATRIBUTOS',
-                    subtitle:
-                        left > 0 ? 'Puntos libres: $left' : 'Sin puntos libres',
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      if (want.isNotEmpty && prof.points > 0)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Text(
-                              retroText('★ Según tu build: ${want.join(', ')}'),
-                              key: const ValueKey('build-attr-hint'),
-                              style: const TextStyle(color: kPlanColor)),
-                        ),
+                      DsSectionHeader('ATRIBUTOS',
+                          trailing: want.isNotEmpty && prof.points > 0
+                              ? Text(
+                                  retroText('★ Según tu build: '
+                                      '${want.join(', ')}'),
+                                  key: const ValueKey('build-attr-hint'),
+                                  style: DsText.detail(kPlanColor))
+                              : null),
                       InitialFocus(
                         enabled: left > 0,
                         child: Column(
@@ -338,66 +377,68 @@ class _CharacterPanelState extends State<CharacterPanel> {
                     ],
                   );
                 }),
+                if (view.mustAllocate)
+                  Padding(
+                    padding: EdgeInsets.only(top: DsSpace.sm),
+                    child: Text(
+                        'El equipo sigue cuando todos confirmen sus puntos.',
+                        style: DsText.body(DsColors.warning)),
+                  ),
                 // Qué subir según el arma y el árbol (build_planner.md § 8).
                 Consumer(
                     builder: (context, ref, _) =>
                         _advice(ref.watch(buildPlanProvider).planFor(_slot))),
-                if (view.mustAllocate)
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 10),
-                    child: Text(
-                        'El equipo sigue cuando todos los que subieron de nivel '
-                        'confirmen sus puntos.',
-                        style: TextStyle(color: ProtoColors.orange)),
-                  ),
-                SectionPanel(
-                  icon: PixelIconKind.sword,
-                  title: 'CLASE',
-                  subtitle: view.mode == SessionMode.lobby
-                      ? 'Cambiar de clase reinicia atributos y árbol.'
-                      : 'Solo en el lobby',
+                DsSectionHeader('CLASE',
+                    trailing: Text(
+                        view.mode == SessionMode.lobby
+                            ? 'Cambiarla reinicia atributos y árbol'
+                            : 'Solo en el lobby',
+                        style: DsText.detail())),
+                Wrap(
+                  spacing: DsSpace.sm,
+                  runSpacing: DsSpace.sm,
                   children: [
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (final cl in rules.catalog.classes.values)
-                          if (FeatureFlags.instance.isCharacterAllowed(cl.id))
-                            PanelButton(cl.name,
-                                key: ValueKey('class-${cl.id}'),
-                                selected: cl.id == prof.classId,
-                                onPressed: cl.id == prof.classId ||
-                                        guards.changeClass(prof, cl.id) != null
-                                    ? null
-                                    : () {
-                                        if (c.changeClass(cl.id)) {
-                                          setState(_alloc.clear);
-                                        }
-                                      }),
-                      ],
-                    ),
+                    for (final cl in rules.catalog.classes.values)
+                      if (FeatureFlags.instance.isCharacterAllowed(cl.id))
+                        DsButton(cl.name,
+                            key: ValueKey('class-${cl.id}'),
+                            size: DsButtonSize.compact,
+                            selected: cl.id == prof.classId,
+                            tooltip: cl.id == prof.classId
+                                ? null
+                                : guards.changeClass(prof, cl.id),
+                            onPressed: cl.id == prof.classId ||
+                                    guards.changeClass(prof, cl.id) != null
+                                ? null
+                                : () {
+                                    if (c.changeClass(cl.id)) {
+                                      setState(_alloc.clear);
+                                    }
+                                  }),
                   ],
                 ),
                 // Invocador (summoner.md § 8).
                 GrimoireSection(rules: rules, profile: prof),
-                if (prof.classId == 'paladin')
-                  const SectionPanel(
-                    icon: PixelIconKind.star,
-                    title: 'RASGOS DE PALADÍN',
-                    children: [
-                      Text(
-                        'Básico: 3% aturdir · habilidades según el arma\n'
-                        'Débil a daño perforante (×1.5) y a estados (+1 stack)\n'
-                        'Aura Restauradora, Fortaleza y Protección: kit del '
-                        'Guardián (ascensión)',
-                      ),
-                    ],
+                if (prof.classId == 'paladin') ...[
+                  const DsSectionHeader('RASGOS DE PALADÍN'),
+                  const DsFold(
+                    label: 'VER RASGOS',
+                    openLabel: 'OCULTAR',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Básico: 3% aturdir · habilidades según el arma'),
+                        Text('Débil a perforante (×1.5) y a estados (+1)'),
+                        Text('Aura, Fortaleza y Protección: kit del Guardián'),
+                      ],
+                    ),
                   ),
+                ],
               ],
             ),
           ),
         ),
-        const SizedBox(width: 16),
+        SizedBox(width: DsSpace.lg),
         SizedBox(width: RetroType.width(context, 380), child: _preview()),
       ],
     );
@@ -419,36 +460,27 @@ class _CharacterPanelState extends State<CharacterPanel> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SectionPanel(
-            icon: PixelIconKind.arrowIn,
-            title: 'VISTA PREVIA',
-            subtitle: 'cómo cambian tus stats',
-            children: [
-              CharacterStatRows(now: now, next: next, weight: w.weight),
-            ],
+          const DsSectionHeader('VISTA PREVIA'),
+          DefaultTextStyle.merge(
+            style: DsText.body(),
+            child: CharacterStatRows(now: now, next: next, weight: w.weight),
           ),
-          SectionPanel(
-            icon: PixelIconKind.check,
-            title: 'PENDIENTE',
-            children: [
-              ProtoText(
-                pending.isEmpty
-                    ? protoColor(ProtoColors.dim, 'Sin cambios pendientes')
-                    : 'Pendiente: ${protoColor(ProtoColors.green, pending.join(' '))}',
-                key: const ValueKey('pending-points'),
-              ),
-              Text(retroText('Nada cambia hasta CONFIRMAR PUNTOS.'),
-                  style: const TextStyle(color: ProtoColors.dim)),
-            ],
+          const DsSectionHeader('PENDIENTE'),
+          ProtoText(
+            pending.isEmpty
+                ? protoColor(DsColors.textSecondary, 'Sin cambios pendientes')
+                : 'Pendiente: ${protoColor(ProtoColors.green, pending.join(' '))}',
+            key: const ValueKey('pending-points'),
           ),
         ],
       ),
     );
   }
 
-  /// Un atributo en una línea (v0.10.1): nombre, valor (+ reparto
-  /// pendiente), meta del plan (★), `-` / `+`; qué hace y el tope, en el
-  /// tooltip.
+  /// Un atributo en una línea (v0.10.1, design_system.md § 6
+  /// DsAttributeRow): sigla y nombre, valor (+ reparto pendiente), meta
+  /// del plan (★), botones − y "+3 VIT"; qué hace y el tope, en el
+  /// tooltip. Sin borde: el fondo marca el reparto pendiente.
   Widget _attrRow(Attribute a, int value, int left, {int? target}) {
     final (short, name, desc) = kAttributeInfo[a]!;
     final add = _alloc[a] ?? 0;
@@ -472,14 +504,12 @@ class _CharacterPanelState extends State<CharacterPanel> {
     final full = gain >= kAttrPerPoint;
     String num1(double v) =>
         v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(1);
-    // Una sola línea (v0.10.1): nombre, valor, ★ del plan, - y +. Qué da,
-    // el tope y el rendimiento van solo en el tooltip; el tope se nota
-    // cuando importa (valor y botón en naranja).
-    final nameText = ProtoText(big
-        ? '<span style="color:#e8ecff">$short</span>'
-        : '<span style="color:#e8ecff">$short</span> '
-            '<span class="k">${retroText(name)}</span>');
-    final valueColor = over ? ProtoColors.orange : ProtoColors.ink;
+    // Jerarquía por color: sigla en Cuerpo, nombre en Detalle.
+    final nameText = Text.rich(TextSpan(children: [
+      TextSpan(text: short, style: DsText.body(DsColors.textPrimary)),
+      if (!big) TextSpan(text: '  ${retroText(name)}', style: DsText.detail()),
+    ]));
+    final valueColor = over ? ProtoColors.orange : DsColors.textPrimary;
     final addText = add > 0
         ? ' ${protoColor(over ? ProtoColors.orange : ProtoColors.green, '+${add * kAttrPerPoint}')}'
         : '';
@@ -489,8 +519,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
         ? null
         : Text('★ $shown/$target',
             key: ValueKey('build-attr-${a.name}'),
-            style: TextStyle(
-                color: shown >= target ? ProtoColors.green : kPlanColor));
+            style: DsText.detail(
+                shown >= target ? ProtoColors.green : kPlanColor));
     return RetroTooltip(
         message: '+$kAttrPerPoint ${retroText(name)}: ${retroText(desc)}'
             '<br>Tope $cap: pasado el tope rinde ½'
@@ -498,14 +528,12 @@ class _CharacterPanelState extends State<CharacterPanel> {
             '${impact == null ? '' : '<br>$impact'}',
         child: Container(
           key: ValueKey('attr-row-${a.name}'),
-          margin: const EdgeInsets.only(bottom: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: add > 0 ? ProtoColors.button.withValues(alpha: 0.4) : null,
-            border: Border.all(
-                color: add > 0 ? ProtoColors.green : ProtoColors.panelBorder,
-                width: RetroTheme.thinBorderWidth),
-          ),
+          padding: EdgeInsets.symmetric(
+              horizontal: DsSpace.md, vertical: DsSpace.xs),
+          // Siempre con color (transparente): cambiar el árbol perdería el foco.
+          color: add > 0
+              ? DsColors.hover.withValues(alpha: 0.5)
+              : Colors.transparent,
           child: Row(
             children: [
               // Con texto ENORME: solo la sigla, sin anchos fijos; si aun
@@ -525,7 +553,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 )
               else ...[
                 SizedBox(
-                    width: RetroType.em(context, 15, size: RetroType.small),
+                    width: RetroType.em(context, 15, size: RetroType.body),
                     child: nameText),
                 SizedBox(
                     width: RetroType.em(context, 7, size: RetroType.small),
@@ -536,18 +564,21 @@ class _CharacterPanelState extends State<CharacterPanel> {
                       child: targetText),
                 const Spacer(),
               ],
-              PanelButton('-',
+              DsButton.icon(const Text('-'),
                   key: ValueKey('dec-${a.name}'),
+                  tooltip: 'Quitar $short',
+                  size: DsButtonSize.compact,
                   onPressed: add > 0
                       ? () => setState(() => _alloc[a] = add - 1)
                       : null),
-              const SizedBox(width: 8),
-              PanelButton(
+              SizedBox(width: DsSpace.xs),
+              DsButton(
                   full
                       ? '+$kAttrPerPoint $short'
                       : '+$kAttrPerPoint $short → +${num1(gain)}',
                   key: ValueKey('inc-${a.name}'),
-                  accent: full ? null : ProtoColors.orange,
+                  size: DsButtonSize.compact,
+                  accent: full ? null : DsColors.warning,
                   onPressed: left > 0
                       ? () => setState(() => _alloc[a] = add + 1)
                       : null),
@@ -556,8 +587,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
         ));
   }
 
-  /// Tarjeta SUGERENCIA: el reparto del asesor para los puntos libres del
-  /// miembro activo, con sus razones y APLICAR SUGERENCIA (pide
+  /// SUGERENCIA: el reparto del asesor para los puntos libres del miembro
+  /// activo en una línea, las razones plegadas (DsFold) y APLICAR (pide
   /// confirmar; descarta el reparto pendiente).
   Widget _advice(BuildPlan plan) {
     final view = widget.view;
@@ -582,32 +613,49 @@ class _CharacterPanelState extends State<CharacterPanel> {
       if (c.allocate(add)) setState(_alloc.clear);
     }
 
-    return SectionPanel(
+    return Column(
       key: const ValueKey('attr-advice'),
-      icon: PixelIconKind.star,
-      color: kPlanColor,
-      title: 'SUGERENCIA',
-      subtitle: plan.isEmpty ? 'según tu arma y tu árbol' : 'según tu build',
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(retroText('Sugerencia: $split'),
-            key: const ValueKey('attr-advice-split'),
-            style: const TextStyle(color: ProtoColors.gold)),
-        for (final x in s)
-          Padding(
-            key: ValueKey('attr-advice-${x.attribute.name}'),
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-                retroText('${x.short} +${x.points}: ${x.reasons.join(' · ')}'),
-                style: const TextStyle(color: ProtoColors.dim)),
+        DsSectionHeader('SUGERENCIA',
+            trailing: Text(
+                plan.isEmpty ? 'según tu arma y tu árbol' : 'según tu build',
+                style: DsText.detail())),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: DsSpace.md),
+          child: Wrap(
+              spacing: DsSpace.sm,
+              runSpacing: DsSpace.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(retroText(split),
+                    key: const ValueKey('attr-advice-split'),
+                    style: DsText.body(kPlanColor)),
+                DsButton('APLICAR SUGERENCIA',
+                    key: const ValueKey('apply-advice'),
+                    size: DsButtonSize.compact,
+                    accent: kPlanColor,
+                    tooltip: reason,
+                    onPressed: reason == null ? apply : null),
+              ]),
+        ),
+        Padding(
+          padding: EdgeInsets.only(left: DsSpace.xs),
+          child: DsFold(
+            label: 'POR QUÉ',
+            openLabel: 'OCULTAR',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final x in s)
+                  Text(
+                      retroText(
+                          '${x.short} +${x.points}: ${x.reasons.join(' · ')}'),
+                      key: ValueKey('attr-advice-${x.attribute.name}'),
+                      style: DsText.detail()),
+              ],
+            ),
           ),
-        const SizedBox(height: 6),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: PanelButton('APLICAR SUGERENCIA',
-              key: const ValueKey('apply-advice'),
-              accent: kPlanColor,
-              reason: reason,
-              onPressed: apply),
         ),
       ],
     );
