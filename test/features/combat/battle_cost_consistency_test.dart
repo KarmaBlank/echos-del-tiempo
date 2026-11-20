@@ -96,7 +96,7 @@ void main() {
       skillHeight ??= height;
       expect(size, skillSize, reason: cat.label);
       // Mismo tamaño en pantalla (ningún FittedBox lo achica distinto).
-      expect(height, closeTo(skillHeight!, 0.5), reason: cat.label);
+      expect(height, closeTo(skillHeight, 0.5), reason: cat.label);
       // El costo nunca va dentro del título.
       final title = tester
           .widget<DsListRow>(
