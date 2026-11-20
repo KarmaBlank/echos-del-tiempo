@@ -272,7 +272,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PanelHint(tab.hint),
+              // El árbol va sin línea de ayuda: barra compacta y el
+              // árbol a pantalla casi completa (progression_v2.md § 11.2).
+              if (tab != CharacterTab.tree) PanelHint(tab.hint),
               Expanded(child: body),
             ],
           ),

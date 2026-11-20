@@ -274,6 +274,7 @@ class ConfirmButton extends StatelessWidget {
     final button = ElevatedButton(
       style: ElevatedButton.styleFrom(
         padding: RetroTheme.buttonPadding(10),
+        visualDensity: VisualDensity.standard,
         backgroundColor: enabled ? ProtoColors.button : ProtoColors.panel,
         side: BorderSide(
             color: enabled ? ProtoColors.green : ProtoColors.panelBorder,

@@ -450,3 +450,91 @@ Pendiente:
   hicieron; `MARCAR` está en el diálogo del camino, no en clic derecho.
 - Dibujo: los chicos dobles y los notables menores se ven como un chico
   y un notable comunes (sin aro doble ni borde fino).
+
+### 11.1 Forma del árbol v7 (v0.10.1)
+
+En v0.10.0 cada nodo fusionado quedaba en el punto del id que
+sobrevivía y la arista nueva era una recta al vecino lejano: diagonales
+largas, tres aristas que cruzaban el anillo central y cuadrantes que ya
+no eran simétricos. Desde v0.10.1 (sin tocar ids, enlaces, costos ni
+balance):
+
+- Cada nodo v7 queda en el punto v6 de su id (los notables que absorben
+  y los menores promovidos, donde estaban).
+- `PassiveTreeCatalog.edgeRoutes` (`a|b`, `a < b`): puntos intermedios
+  de cada arista v7, tomados de la arista v6 que la generó (la más
+  corta si hay varias). La arista se dibuja como polilínea por los
+  puntos de los nodos absorbidos: sigue los tallos y arcos del v6.
+- `PassiveTreeCatalog.extraStrokes`: los tramos v6 que ninguna arista
+  dibuja (dentro de un nodo fusionado o de la arista v6 no elegida)
+  quedan como trazo fijo de su nodo / arista dueño (se pinta tomado
+  cuando el dueño lo está). Así el trazado es exactamente el del v6.
+- `passive_tree_v7_shape_test`: segmentos que entran al disco central:
+  v6 0 / v0.10.0 3 / ahora **0**; cruces: v6 0 / ahora **0**; asimetría
+  al rotar 90° (nodos + segmentos, a 0.05): v6 47 / v0.10.0 93 / ahora
+  **56**; solo líneas: **26 = v6**. Lo que queda son los puntos de los
+  nodos que la fusión saca en un cuadrante y no en otro (lo decide el
+  emparejamiento por id, que no cambia).
+- Capturas antes / después: `docs/release_shots/v0.10.1/arbol_*.png`
+  (`tool/shots/v0101_tree_shape_shots_test.dart`).
+
+### 11.2 Pantalla ÁRBOL compacta (v0.10.1, pedido del dueño)
+
+- **Barra de una fila** (`tree-points`): a la izquierda los puntos libres
+  grandes en dorado (`10 puntos`) y, con un hito pendiente, `Hito: 7` en
+  naranja; a la derecha buscador, zoom con íconos de píxel (−, +, ver
+  todo, mi clase; `tree-zoom-out` / `tree-zoom-in` / `tree-fit` /
+  `tree-home`) y REINICIAR. Sin línea de ayuda (el panel de personaje no
+  pone su `PanelHint` en esta pestaña).
+- **El árbol ocupa casi toda la pantalla**: se fue la columna fija de la
+  derecha (párrafo general y leyenda grande).
+- **Tooltip junto al nodo** (padding y borde de `RetroHoverCard`), del
+  lado con más lugar y sin tapar el nodo: nombre, tipo, cluster,
+  efectos, costo, marca de hito, plan y estado. Pasar el mouse lo
+  muestra; un clic en un nodo que no se puede tomar lo **fija**
+  (`tree-info`) con sus botones; Esc, un clic en el vacío o afuera del
+  visor lo sueltan. Un nodo conectado con puntos se sigue tomando con un
+  clic.
+- Botones del tooltip fijado: **TOMAR NODO** solo si el nodo toca uno
+  tomado (con el motivo si no se puede: exclusión, sin puntos); si no
+  conecta, solo **TOMAR CAMINO (N)** (abre `Tomar N nodos por N
+  puntos`). En PLANIFICAR, PLANIFICAR / QUITAR DEL PLAN.
+- **Hito pendiente = tarjetas** arriba del árbol: título chico
+  `HITO · NIVEL 10 · 7 puntos de hito para su camino` y una tarjeta por
+  keystone de entrada (`milestone-pick-<id>`: nombre + una línea de
+  efecto). Pasar el mouse resalta su camino; el primer clic la elige
+  (pasa a `Confirmar <nombre>`) y el segundo confirma. Sin "te damos" ni
+  "ELEGIR … (7 nodos)".
+- **Leyenda** (`tree-legend`) en una fila de una línea abajo del visor:
+  Inicio · Tomado · Keystone · Disponible · Bloqueado · Búsqueda (· Plan).
+- Botones con padding ≥ 8 px (ui_style.md § "Padding de botones",
+  v0.10.1: la densidad compacta de escritorio se lo comía).
+- Tests: `passive_tree_view_test` (disposición, Esc, TOMAR CAMINO sin
+  TOMAR NODO, textos del hito), `button_padding_test`. Capturas:
+  `docs/release_shots/v0.10.1/pantalla_arbol*.png`
+  (`tool/shots/v0101_tree_screen_shots_test.dart`).
+
+### 11.3 Hitos con keystones ya tomadas (v0.10.1, bug del dueño)
+
+Si el jugador tomaba una keystone de entrada con puntos normales, el
+hito se la volvía a ofrecer. Regla (en `PassiveTreeRules.milestoneOptions`,
+no solo en la UI):
+
+- Las opciones de cada hito excluyen las keystones **tomadas a mano**
+  (`PassiveTreeRules.milestoneTaken`: el árbol menos las elegidas en
+  hitos, que siguen siendo opción de su propio hito).
+- La lista de cada hito sigue el § 5 (5 keystones de clase por costo: el
+  10 las 3 primeras no tomadas, el 20 las que quedan + la del puente más
+  cercano no tomada). Si una falta, entra **la siguiente elegible** de
+  esa lista (p. ej. el 10 pasa a ofrecer la 4.ª de clase).
+- Si así no llega a 3, se completa con **las keystones no tomadas más
+  cercanas al inicio** (de clase, puente o grupo), nunca una que ofrezca
+  el otro hito. Cada hito ofrece siempre 3 mientras queden.
+- Al elegir, los puntos del hito solo pagan los nodos que **faltan** del
+  camino (`pathTo` ya salta los tomados); lo que sobra queda libre.
+- El host valida igual (`ProgressionRules.chooseMilestone` rechaza una
+  keystone ya tomada o fuera de las opciones), y `normalize` sanea con
+  las mismas opciones.
+- Reiniciar el árbol vacía árbol e hitos: vuelven las opciones del § 5.
+- Tests: `progression_v2_test` ("una keystone tomada a mano no se vuelve
+  a ofrecer", "el hito paga solo los nodos que faltan").
