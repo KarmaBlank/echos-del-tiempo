@@ -271,40 +271,54 @@ prototipo (pantalla 480×288, tile 16 px), con `(x, y)` = pies del actor.
   0.35 cuando `floor(t / 110) % 2 == 1` (ciclo de 220 ms).
 - **Defendiendo** (`def`): círculo sin relleno centro `(0, -8)`, radio 11,
   color `#74b9ffaa`.
-- **Armas** (dibujadas en código encima del sprite, coordenadas locales ya
-  con bob/estocada; rectángulos `x, y, ancho, alto`):
-  - `guerrero` y `paladin` con espada: hoja `#dfe6e9` `(5,-17,2,9)`,
-    guarda `#ffd166` `(3,-9,6,1)`.
-  - `maga`: vara `#8a5a2b` `(6,-15,1,15)`, orbe `#74b9ff` círculo centro
-    `(6.5,-16)` radio 2.2.
-  - `paladin` + martillo: mango `#8a5a2b` `(6,-14,1,11)`, cabeza `#95a5a6`
-    `(3,-18,7,5)`, filo `#636e72` `(3,-14,7,1)`.
-  - `paladin` + maza: mango `#8a5a2b` `(6,-13,1,9)`, cabeza `#b2bec3`
-    círculo centro `(6.5,-15)` radio 2.6, púas `#dfe6e9` 1×1 en
-    `(4,-16)`, `(8,-16)`, `(6,-18)`.
-  - `paladin` (siempre) escudo: `#2c3e50` `(-10,-13,6,9)`, `#ecf0f1`
-    `(-9,-12,4,7)`, cruz `#d4af37` `(-8,-11,2,5)` y `(-9,-9,4,1)`.
-  - `tirador`: arma `#636e72` `(5,-8,6,2)` y `(5,-7,2,3)`.
+- **Armas en mano** (v0.19.1; `WeaponOverlay`,
+  `lib/features/combat/presentation/weapon_overlay.dart`). Reemplaza los
+  rectángulos del prototipo. Se dibuja **el tipo de arma equipada**
+  (loot v2: cualquier clase equipa cualquier arma); sin tipo conocido,
+  el arma de siempre de la clase (`guerrero` espada, `maga` báculo,
+  `paladin` espada+escudo, `tirador` rifle).
+  - **Dibujo**: el ícono procedural 8×8 del tipo (`kItemIconRows`,
+    `lib/core/procedural/item_icons.dart`) pintado con las perillas de su
+    entrada del Editor (`items.<tipo>`, game_editor.md § 7.5): recolorear
+    un arma en el Editor cambia también el arma en mano. Ningún arte por
+    arma individual. `maza` y `martillo` son formas solo-en-mano (el
+    ícono de inventario de las familias con escudo sigue siendo el escudo).
+  - **Agarre** (`WeaponOverlay.kGrips`): por arte, forma, tamaño de celda
+    (px del héroe), celda del ícono que cae en la mano, posición de la
+    mano respecto de los pies, espejo y giro:
 
-  **Loot v2** (cualquier clase equipa cualquier arma): el arma se elige
-  por **tipo** (`WeaponOverlay`, `lib/features/combat/presentation/
-  weapon_overlay.dart`, la misma en el mapa y en batalla). Los tipos del
-  prototipo usan el arte de la clase que los traía (`espada`/`hacha` →
-  espada, `báculo`/`tomo` → vara, `arco`/`rifle` → arma de tirador,
-  `martillo+escudo`, `maza+escudo`, `espada+escudo` → los de paladín con
-  escudo); sin tipo, el de la clase. Tipos nuevos:
-  - `lanza`: asta `#8a5a2b` `(6,-20,1,21)`, punta `#dfe6e9` `(6,-25,1,5)`
-    y `(5,-23,3,2)` con brillo blanco `(6,-24)`, borla `#d63031`
-    `(5,-19,3,1)` y `(5,-18,1,2)`.
-  - `dagas`: una en cada mano — atrás hoja `#b2bec3` `(-8,-12,1,4)` y
-    guarda `#6c5ce7` `(-9,-8,3,1)`; adelante hoja `#dfe6e9` `(6,-12,1,5)`,
-    guarda `#6c5ce7` `(5,-7,3,1)`, mango `#2d3436` `(6,-6,1,2)`.
-  - `varita`: vara `#5a3a1a` `(6,-11,1,7)`, virola `#ffd166` `(5,-12,3,1)`,
-    gema `#a29bfe` `(5,-15,3,3)` con centro `#e84393`, destello blanco
-    `(8,-16)`.
-  - `ballesta`: culata `#6b4423` `(3,-9,8,2)` y `(3,-7,2,2)`, arco
-    `#95a5a6` `(11,-13,1,10)` con puntas `#636e72`, virote `#dfe6e9`
-    `(8,-10,6,1)` con punta `#ff7b29`.
+    | Tipo | Forma | Celda | Agarre (ícono) | Mano | Extra |
+    |---|---|---|---|---|---|
+    | `espada`, `espada+escudo` | espada | 1.25 | (3,5) | (5,-7) | |
+    | `hacha` | hacha | 1.25 | (4,5) | (5,-7) | espejada (cabeza adelante) |
+    | `báculo` | báculo | 1.5 | (3,4) | (5,-7) | |
+    | `tomo` | tomo | 1 | (3.5,6) | (6,-5) | sostenido abierto al frente |
+    | `arco` | arco | 1.25 | (0,4) | (10,-8) | espejado (cuerda hacia el cuerpo) |
+    | `rifle` | rifle | 1.25 | (3,4) | (4,-6) | cañón hacia adelante |
+    | `maza+escudo` | maza | 1.25 | (3,6) | (5,-6) | |
+    | `martillo+escudo` | martillo | 1.25 | (3,6) | (5,-6) | |
+    | `lanza` | lanza | 1.5 | (3,4) | (5,-7) | |
+    | `dagas` | dagas | 1 | (3.5,4) | (7,-6) | |
+    | `varita` | varita | 1 | (3,5) | (5,-7) | |
+    | `ballesta` | ballesta | 1.25 | (3,5) | (5,-7) | girada 90° (apunta adelante) |
+
+  - **Mano**: un cuadro 2×2 `#e8b890` centrado en la mano, encima del
+    mango: el arma se ve agarrada.
+  - **Escudo** (`*+escudo`): ícono `escudo` 8×8 a celda 1 en
+    `(-11,-13)` (brazo de atrás), con las mismas perillas que el arma.
+  - **Caja**: con cualquier arma la figura entra en
+    `WeaponOverlay.bounds = (-11,-18, 24×20)` (test).
+  - **Dónde**: mapa (`ActorPainter.hero`), batalla (`BattlePainter`),
+    ULT solo y dúo (retrato grande a la escala del sprite) y retratos de
+    UI (`HeroFigure`: tarjeta de personaje y de clase, HUD de batalla y
+    lista de turnos), que escalan sprite+arma para entrar en su caja sin
+    desbordar. Las ULT y los ataques ya eligen proyectil/tajo por tipo
+    (`projStyleFor`, `slashStyleFor`).
+  - **Red**: sin cambios. El tipo viaja en el snapshot de batalla
+    (`Combatant.weaponType`, clave `wt`) y en el perfil (`eq`) en mapa y
+    sala; cada cliente dibuja el arma de los demás.
+  - Pendiente (borrador weapon_identity.md): aura por elemento y
+    diferenciación por rareza/semilla.
 - **Etiquetas**: nombre en `y - 22`; marcador de turno (triángulo
   `#ffd166`) en `y - 36 + sin(t / 130) * 2`.
 

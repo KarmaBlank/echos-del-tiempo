@@ -1,135 +1,138 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
-/// El arma dibujada encima del sprite del héroe (docs/specs/sprites.md
-/// § "Héroe"), la misma en el mapa (`ActorPainter`) y en la batalla
-/// (`BattlePainter`). Coordenadas relativas a los pies del héroe, mirando
-/// a la derecha (quien llama espeja).
+import '../../../core/procedural/item_icons.dart';
+import '../../../core/procedural/procedural_art.dart';
+
+/// El arma dibujada en la mano del héroe (docs/specs/sprites.md
+/// § "Héroe" › "Armas en mano"), la misma en el mapa (`ActorPainter`),
+/// la batalla (`BattlePainter`), las ULT y los retratos (`HeroFigure`).
+/// Coordenadas relativas a los pies del héroe, mirando a la derecha
+/// (quien llama espeja).
 ///
 /// Se elige por **tipo de arma** (loot v2: cualquier clase equipa
-/// cualquier arma); los tipos del prototipo conservan el arte de la
-/// clase que los usaba y los 4 tipos nuevos tienen el suyo. Sin tipo
-/// conocido, el de la clase.
+/// cualquier arma); sin tipo conocido, el arma de siempre de la clase.
+/// El dibujo es el **ícono procedural** del tipo (`kItemIconRows`) con
+/// las perillas de su entrada del Editor (`items.<tipo>`, game_editor.md
+/// § 7.5): si el dueño recolorea el arma en el Editor, cambia también
+/// en la mano.
 abstract final class WeaponOverlay {
   static final _fill = Paint()..isAntiAlias = false;
 
-  static void _rect(
-      Canvas c, Color color, double x, double y, double w, double h) {
-    _fill.color = color;
-    c.drawRect(Rect.fromLTWH(x, y, w, h), _fill);
-  }
-
-  static void _dot(Canvas c, Color color, double x, double y, double r) {
-    _fill.color = color;
-    c.drawCircle(Offset(x, y), r, _fill);
-  }
-
-  /// Arte del prototipo por clase (`drawHero`).
-  static const _classArt = {
-    'guerrero': WeaponArt.sword,
-    'maga': WeaponArt.staff,
-    'paladin': WeaponArt.sword,
-    'tirador': WeaponArt.gun,
+  /// Arma por defecto de cada clase (sin arma equipada conocida).
+  static const _classType = {
+    'guerrero': 'espada',
+    'maga': 'báculo',
+    'paladin': 'espada+escudo',
+    'tirador': 'rifle',
   };
 
   /// Qué arte lleva cada tipo de arma.
   static const Map<String, WeaponArt> kWeaponArt = {
     'espada': WeaponArt.sword,
-    'hacha': WeaponArt.sword,
+    'hacha': WeaponArt.axe,
     'báculo': WeaponArt.staff,
-    'tomo': WeaponArt.staff,
-    'arco': WeaponArt.gun,
+    'tomo': WeaponArt.tome,
+    'arco': WeaponArt.bow,
     'rifle': WeaponArt.gun,
     'espada+escudo': WeaponArt.sword,
     'maza+escudo': WeaponArt.mace,
     'martillo+escudo': WeaponArt.hammer,
-    // Loot v2.
     'lanza': WeaponArt.spear,
     'dagas': WeaponArt.daggers,
     'varita': WeaponArt.wand,
     'ballesta': WeaponArt.crossbow,
   };
 
+  /// Cómo se agarra cada arte: forma del catálogo, tamaño de la celda
+  /// (px del héroe), celda del agarre dentro del ícono 8×8, dónde está la
+  /// mano, si se espeja el ícono y cuartos de giro horario.
+  static const Map<WeaponArt, WeaponGrip> kGrips = {
+    WeaponArt.sword: WeaponGrip('espada', 1.25, 3, 5, 5, -7),
+    WeaponArt.axe: WeaponGrip('hacha', 1.25, 4, 5, 5, -7, mirror: true),
+    WeaponArt.staff: WeaponGrip('báculo', 1.5, 3, 4, 5, -7),
+    WeaponArt.tome: WeaponGrip('tomo', 1, 3.5, 6, 6, -5),
+    WeaponArt.bow: WeaponGrip('arco', 1.25, 0, 4, 10, -8, mirror: true),
+    WeaponArt.gun: WeaponGrip('rifle', 1.25, 3, 4, 4, -6),
+    WeaponArt.mace: WeaponGrip('maza', 1.25, 3, 6, 5, -6),
+    WeaponArt.hammer: WeaponGrip('martillo', 1.25, 3, 6, 5, -6),
+    WeaponArt.spear: WeaponGrip('lanza', 1.5, 3, 4, 5, -7),
+    WeaponArt.daggers: WeaponGrip('dagas', 1, 3.5, 4, 7, -6),
+    WeaponArt.wand: WeaponGrip('varita', 1, 3, 5, 5, -7),
+    WeaponArt.crossbow:
+        WeaponGrip('ballesta', 1.25, 3, 5, 5, -7, quarterTurns: 1),
+  };
+
+  /// Caja que ocupa el héroe con cualquier arma (para los retratos).
+  static const bounds = Rect.fromLTWH(-11, -18, 24, 20);
+
+  /// Color de la mano que agarra.
+  static const handColor = Color(0xFFE8B890);
+
+  /// El tipo efectivo: el equipado o el de la clase.
+  static String? typeFor(String classId, String? weaponType) =>
+      kWeaponArt.containsKey(weaponType) ? weaponType : _classType[classId];
+
   /// El arte para [weaponType] (o la clase si no se conoce).
   static WeaponArt artFor(String classId, String? weaponType) =>
-      kWeaponArt[weaponType] ?? _classArt[classId] ?? WeaponArt.gun;
+      kWeaponArt[typeFor(classId, weaponType)] ?? WeaponArt.gun;
 
-  /// Las armas con escudo llevan además el escudo en la espalda.
+  /// Las armas con escudo llevan además el escudo en el otro brazo.
   static bool hasShield(String classId, String? weaponType) =>
-      weaponType == null
-          ? classId == 'paladin'
-          : weaponType.endsWith('+escudo');
+      typeFor(classId, weaponType)?.endsWith('+escudo') ?? false;
 
-  static void draw(Canvas c, String classId, String? weaponType) {
-    switch (artFor(classId, weaponType)) {
-      case WeaponArt.sword:
-        _rect(c, const Color(0xFFDFE6E9), 5, -17, 2, 9);
-        _rect(c, const Color(0xFFFFD166), 3, -9, 6, 1);
-      case WeaponArt.staff:
-        _rect(c, const Color(0xFF8A5A2B), 6, -15, 1, 15);
-        _dot(c, const Color(0xFF74B9FF), 6.5, -16, 2.2);
-      case WeaponArt.hammer:
-        _rect(c, const Color(0xFF8A5A2B), 6, -14, 1, 11);
-        _rect(c, const Color(0xFF95A5A6), 3, -18, 7, 5);
-        _rect(c, const Color(0xFF636E72), 3, -14, 7, 1);
-      case WeaponArt.mace:
-        _rect(c, const Color(0xFF8A5A2B), 6, -13, 1, 9);
-        _dot(c, const Color(0xFFB2BEC3), 6.5, -15, 2.6);
-        for (final (px, py) in const [
-          (4.0, -16.0),
-          (8.0, -16.0),
-          (6.0, -18.0)
-        ]) {
-          _rect(c, const Color(0xFFDFE6E9), px, py, 1, 1);
-        }
-      case WeaponArt.gun:
-        _rect(c, const Color(0xFF636E72), 5, -8, 6, 2);
-        _rect(c, const Color(0xFF636E72), 5, -7, 2, 3);
-      case WeaponArt.spear:
-        // Asta larga que pasa la cabeza, punta de acero y borla roja.
-        _rect(c, const Color(0xFF8A5A2B), 6, -20, 1, 21);
-        _rect(c, const Color(0xFFDFE6E9), 6, -25, 1, 5);
-        _rect(c, const Color(0xFFDFE6E9), 5, -23, 3, 2);
-        _rect(c, const Color(0xFFFFFFFF), 6, -24, 1, 1);
-        _rect(c, const Color(0xFFD63031), 5, -19, 3, 1);
-        _rect(c, const Color(0xFFD63031), 5, -18, 1, 2);
-      case WeaponArt.daggers:
-        // Una daga en cada mano: la de atrás asoma del otro lado.
-        _rect(c, const Color(0xFFB2BEC3), -8, -12, 1, 4);
-        _rect(c, const Color(0xFF6C5CE7), -9, -8, 3, 1);
-        _rect(c, const Color(0xFFDFE6E9), 6, -12, 1, 5);
-        _rect(c, const Color(0xFFFFFFFF), 6, -12, 1, 1);
-        _rect(c, const Color(0xFF6C5CE7), 5, -7, 3, 1);
-        _rect(c, const Color(0xFF2D3436), 6, -6, 1, 2);
-      case WeaponArt.wand:
-        // Varita corta con gema arcana y destello.
-        _rect(c, const Color(0xFF5A3A1A), 6, -11, 1, 7);
-        _rect(c, const Color(0xFFFFD166), 5, -12, 3, 1);
-        _rect(c, const Color(0xFFA29BFE), 5, -15, 3, 3);
-        _rect(c, const Color(0xFFE84393), 6, -14, 1, 1);
-        _rect(c, const Color(0xFFFFFFFF), 8, -16, 1, 1);
-      case WeaponArt.crossbow:
-        // Ballesta pesada: culata, arco de acero al frente y virote.
-        _rect(c, const Color(0xFF6B4423), 3, -9, 8, 2);
-        _rect(c, const Color(0xFF6B4423), 3, -7, 2, 2);
-        _rect(c, const Color(0xFF95A5A6), 11, -13, 1, 10);
-        _rect(c, const Color(0xFF636E72), 10, -13, 1, 1);
-        _rect(c, const Color(0xFF636E72), 10, -4, 1, 1);
-        _rect(c, const Color(0xFFDFE6E9), 8, -10, 6, 1);
-        _rect(c, const Color(0xFFFF7B29), 14, -10, 1, 1);
-    }
-    if (hasShield(classId, weaponType)) {
-      _rect(c, const Color(0xFF2C3E50), -10, -13, 6, 9);
-      _rect(c, const Color(0xFFECF0F1), -9, -12, 4, 7);
-      _rect(c, const Color(0xFFD4AF37), -8, -11, 2, 5);
-      _rect(c, const Color(0xFFD4AF37), -9, -9, 4, 1);
-    }
+  /// Entrada del Editor cuyas perillas usa el arma en mano.
+  static String entryFor(String classId, String? weaponType) {
+    final t = typeFor(classId, weaponType);
+    return 'items.${(t == null ? null : procKeyForType(t)) ?? kGrips[artFor(classId, weaponType)]!.shape}';
   }
+
+  static void draw(Canvas c, String classId, String? weaponType,
+      {Color accent = kItemDefaultAccent}) {
+    final grip = kGrips[artFor(classId, weaponType)]!;
+    final params = ProceduralArt.instance.resolve(entryFor(classId, weaponType));
+    if (hasShield(classId, weaponType)) {
+      // Escudo en el brazo de atrás, con el puño en el centro.
+      paintItemIcon(c, const Rect.fromLTWH(-11, -13, 8, 8),
+          kItemIconRows['escudo']!, accent, params);
+    }
+    c.save();
+    c.translate(grip.handX, grip.handY);
+    if (grip.quarterTurns != 0) c.rotate(grip.quarterTurns * math.pi / 2);
+    if (grip.mirror) c.scale(-1, 1);
+    c.scale(grip.cell);
+    paintItemIcon(
+        c,
+        Rect.fromLTWH(-grip.gripX - 0.5, -grip.gripY - 0.5, 8, 8),
+        kItemIconRows[grip.shape]!,
+        accent,
+        params);
+    c.restore();
+    // La mano encima del mango: se ve agarrada.
+    _fill.color = handColor;
+    c.drawRect(
+        Rect.fromLTWH(grip.handX - 1, grip.handY - 1, 2, 2), _fill);
+  }
+}
+
+/// Agarre de un arte (ver [WeaponOverlay.kGrips]).
+class WeaponGrip {
+  const WeaponGrip(this.shape, this.cell, this.gripX, this.gripY, this.handX,
+      this.handY,
+      {this.mirror = false, this.quarterTurns = 0});
+  final String shape;
+  final double cell, gripX, gripY, handX, handY;
+  final bool mirror;
+  final int quarterTurns;
 }
 
 /// Dibujo del arma (uno por familia de tipos).
 enum WeaponArt {
   sword,
+  axe,
   staff,
+  tome,
+  bow,
   hammer,
   mace,
   gun,

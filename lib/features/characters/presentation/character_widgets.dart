@@ -14,8 +14,9 @@ import '../../../game_engine/models/class_def.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../ascension/domain/ascension_text.dart';
+import '../../../game_engine/data/weapons_catalog.dart';
 import '../../combat/presentation/game_sprites.dart';
-import '../../combat/presentation/pixel_sprite.dart';
+import '../../combat/presentation/hero_figure.dart';
 import '../domain/account.dart';
 
 /// Piezas de la selección de personaje (docs/specs/characters.md § 2).
@@ -137,7 +138,11 @@ class CharacterSlotCard extends StatelessWidget {
                 height: 56,
                 child: img == null
                     ? null
-                    : Center(child: PixelSprite(img, scale: 3)),
+                    : HeroFigure(img,
+                        key: ValueKey('char-figure-${slot.id}'),
+                        classId: profile.classId,
+                        weaponType: kWeapons[profile.equipped]?.type,
+                        size: const Size(56, 56)),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -240,7 +245,9 @@ class ClassCard extends StatelessWidget {
                 height: 56,
                 child: img == null
                     ? null
-                    : Center(child: PixelSprite(img, scale: 3)),
+                    : HeroFigure(img,
+                        classId: def.id, weaponType: null,
+                        size: const Size(56, 56)),
               ),
               const SizedBox(width: 8),
               Expanded(
