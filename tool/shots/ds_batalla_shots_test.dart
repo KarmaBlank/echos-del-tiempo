@@ -29,7 +29,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../test/real_fonts.dart';
 
-const _out = 'docs/release_shots/v0.12.0';
+final _out =
+    Platform.environment['SHOT_DIR'] ?? 'docs/release_shots/v0.12.0';
 final _suffix = Platform.environment['SHOT_SUFFIX'] ?? 'despues';
 
 Future<void> _shot(WidgetTester tester, String name) async {

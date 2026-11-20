@@ -1522,3 +1522,37 @@ así que no hacen falta las tarjetas de los demás.
   batalla_grupo_*`).
 - Tests: `big_party_ui_test.dart` (n = 1…12, 1280×720 y 1920×1080, los
   cuatro tamaños de texto, compacto y `soloParty`; vínculo del mouse).
+
+## Menú de acciones y tooltip del enemigo (v0.19.1)
+
+Pedidos del dueño, para ahorrar espacio y no tapar la elección:
+
+- **HABILIDADES sin banner arriba.** Ya no hay separador fijo
+  "Instante — no terminan tu turno" sobre la lista (las Instante siguen
+  primero, con su `DsTag.instant` en la fila). Cuando la acción bajo el
+  cursor o el foco de teclado es una Instante, el **panel de la derecha**
+  agrega `[INSTANTE] · no termina tu turno` (insignia del DS, celeste)
+  arriba del detalle; con otra acción no aparece. Nunca como tooltip
+  flotante. ULT, dúos e ítems no tenían banners parecidos.
+- **Sin sección OBJETIVO en el panel derecho.** El objetivo y su estado
+  se leen en el tooltip del enemigo.
+- **Deshabilitadas en gris** (`DsListRow` desactivada). Los motivos
+  básicos (MP / Pulso que ya se ven en rojo, sin pociones, ULT sin
+  cargar, dúo sin MP) no suman más que la línea roja del panel. Los
+  raros (precondición `Necesita: …` de la habilidad, regla del tutorial)
+  suman un tooltip (`BattleAction.disabledHint`) al pasar el mouse por la
+  fila. No hay fila "sin compañía": sin compañero DÚOS no aparece.
+- **Crítico en el detalle.** Todo lo que puede critear muestra
+  `Crítico P%: N`: probabilidad efectiva (crítico del personaje +
+  `critBonus` de la técnica, tope 100 %) y daño crítico. Atacar, daño
+  físico/mágico (golpes múltiples: por golpe y total; a todos: c/u),
+  disparo cargado, ULT de daño y dúos. Curas y escudos, nada.
+- **Tooltip del enemigo** (`EnemyInfoCard` + `EnemyLiveInfo`): debajo de
+  la ficha del bestiario, con una línea del DS entre secciones: si
+  prepara su ULT, "Prepara <ULT>: la lanza en su turno" y, plegado (Alt /
+  Shift: la ficha sigue al mouse), qué hace y cómo cancelarla (quebrarlo
+  o drenar su carga); en jefes, su mecánica (con Alt / Shift, cómo
+  contrarrestarla); y los estados con nombre completo ("Quemadura ×3",
+  "Mojado · 2 turnos"). Las insignias abreviadas del HUD ya muestran
+  nombre y efecto al pasar el mouse.
+- Tests: `battle_skill_menu_test.dart`, `enemy_live_info_test.dart`.

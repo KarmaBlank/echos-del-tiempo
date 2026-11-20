@@ -19,11 +19,16 @@ class EnemyInfoCard extends StatelessWidget {
     required this.enemy,
     required this.bestiary,
     this.level,
+    this.live,
   });
 
   final Combatant enemy;
   final BestiaryProgress bestiary;
   final int? level;
+
+  /// Estado en vivo debajo de la ficha (la batalla lo arma: ULT, mecánica
+  /// y estados).
+  final Widget? live;
 
   /// El markup que muestra (tests).
   static String markupFor(Combatant enemy, BestiaryProgress bestiary,
@@ -65,7 +70,16 @@ class EnemyInfoCard extends StatelessWidget {
       ),
       child: DefaultTextStyle.merge(
         style: RetroHoverCard.textStyle,
-        child: ProtoText(markupFor(enemy, bestiary, level: level)),
+        child: live == null
+            ? ProtoText(markupFor(enemy, bestiary, level: level))
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ProtoText(markupFor(enemy, bestiary, level: level)),
+                  live!,
+                ],
+              ),
       ),
     );
   }
