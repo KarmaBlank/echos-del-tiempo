@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/proto_colors.dart';
 import '../../../game_engine/models/build_plan.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../characters/presentation/characters_providers.dart';
@@ -66,13 +66,12 @@ class _BuildPlannerScreenState extends ConsumerState<BuildPlannerScreen> {
         help: BuildPlannerView.help,
         onClose: () => Navigator.of(context).maybePop(),
         actions: [
-          PanelButton('VOLVER',
+          DsButton('VOLVER',
               key: const ValueKey('build-screen-close'),
               onPressed: () => Navigator.of(context).maybePop()),
         ],
         child: p == null
-            ? const Text('Cargando...',
-                style: TextStyle(color: ProtoColors.dim))
+            ? Text('Cargando...', style: DsText.detail())
             : BuildPlannerView(
                 key: const ValueKey('build-planner'),
                 rules: ref.watch(buildPlanRulesProvider),

@@ -1,9 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/proto_colors.dart';
-import '../../../app/theme/retro_theme.dart';
+import '../../../app/design/design.dart';
 import '../../../app/widgets/menu_focus.dart';
 import '../../../game_engine/models/inventory_sort.dart';
 
@@ -99,11 +97,12 @@ class _InventorySortButtonState extends State<InventorySortButton> {
           child: FocusTraversalGroup(
             child: Container(
               key: const ValueKey('inv-sort-menu'),
-              padding: const EdgeInsets.all(6),
+              padding: EdgeInsets.all(DsSpace.xs),
               decoration: BoxDecoration(
-                color: ProtoColors.bg,
+                color: DsColors.background,
                 border: Border.all(
-                    color: ProtoColors.gold, width: RetroTheme.thinBorderWidth),
+                    color: DsColors.borderControl,
+                    width: DsMetrics.controlBorder),
               ),
               // Al abrir, el cursor va a la primera opción.
               child: InitialFocus(
@@ -114,9 +113,12 @@ class _InventorySortButtonState extends State<InventorySortButton> {
                     children: [
                       for (final (i, k) in InventorySortKey.values.indexed)
                         Padding(
-                          padding: EdgeInsets.only(top: i == 0 ? 0 : 4),
-                          child: PanelButton(k.label,
+                          padding:
+                              EdgeInsets.only(top: i == 0 ? 0 : DsSpace.xs),
+                          child: DsButton(k.label,
                               key: ValueKey('inv-sort-${k.name}'),
+                              kind: DsButtonKind.ghost,
+                              size: DsButtonSize.compact,
                               selected: widget.current == k,
                               onPressed: () => _choose(k)),
                         ),
@@ -146,11 +148,12 @@ class _InventorySortButtonState extends State<InventorySortButton> {
           ),
           child: TapRegion(
             groupId: _group,
-            child: PanelButton('ORDENAR ▼',
+            child: DsButton('ORDENAR ▼',
                 key: const ValueKey('inv-sort'),
+                size: DsButtonSize.compact,
                 selected: _menu.isShowing,
-                reason: widget.reason,
-                onPressed: _toggle),
+                tooltip: widget.reason,
+                onPressed: widget.reason == null ? _toggle : null),
           ),
         ),
       );

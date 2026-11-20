@@ -552,6 +552,29 @@ casilla y como ficha en los detalles:
 
 ## Inventario (pestaña INVENTARIO del personaje, tecla I)
 
+Cambios v0.11 (sistema de diseño, design_system.md § 10):
+- Barra de herramientas arriba, en una fila (`inv-toolbar`): de quién es
+  el inventario (`TÚ` / compañeros, `inv-owner-<id>`), búsqueda
+  (`DsSearchField`, `inv-search`; × `inv-search-clear` para borrarla),
+  `ORDENAR ▼` (`inv-sort`) y `LIMPIAR` (`inv-clean`). Con texto ENORME
+  la barra baja de línea y ocupa como mucho el 40 % del alto (scroll).
+  La escala de la grilla ya no descuenta esa barra (`inventoryScale`:
+  120 px fijos; `inventoryScaleWide`: 30).
+- Botones `DsButton` (compactos); deshabilitados con el motivo en el
+  tooltip (antes al lado). Confirmaciones (TIRAR, VENDER, DESARMAR) con
+  franja roja a la izquierda en vez de caja con candado.
+- Menú de acciones (clic derecho / Enter) y menú de LIMPIAR: filas
+  `DsListRow` de una línea (sin borde; fondo con hover / foco; la
+  desactivada atenuada con el motivo corto al lado en Detalle y el
+  completo en el tooltip).
+- Franja de CAMBIOS: `ACTUAL` / `CAMBIOS` en Subtítulo y una
+  `DsStatLine` por stat (`ATQ  15 → 50  ▲35`; sin arma mirada, solo el
+  valor actual en Detalle). `EQUIPADA`, `CONSUMIBLES`, `MATERIALES` en
+  Subtítulo; el resumen (`inv-summary`) en Detalle con los créditos en
+  dorado. Sin negritas.
+- LIMPIAR INVENTARIO: `DsSectionHeader`, `DESARMAR` / `VENDER` (qué se
+  recibe en el tooltip); el plegable "Cómo funciona" pasó al "?".
+
 Cambios v0.9.13 (pedido del dueño):
 - Ficha del mouse de un arma no equipada (`HoverCompareCard`): una sola
   columna angosta (`cardWidth` 180 × factor de texto, ~32 letras), puede
@@ -844,6 +867,26 @@ Tests: `test/features/inventory/weapon_weight_test.dart`.
 
 ## Filtro de loot (pestaña FILTRO del personaje)
 
+Cambios v0.11 (sistema de diseño, minimalista; design_system.md § 10):
+- Barra de herramientas arriba, en una fila: `CASILLAS` / `TEXTO`, el
+  estado (`filter-status`, Detalle: `Sin errores · N reglas · por
+  defecto` en verde o el primer error en rojo con `(+N)` y todos en el
+  tooltip), `RESTAURAR POR DEFECTO` (fantasma), `DESHACER` y `GUARDAR`
+  (principal; el motivo si no se puede, en el tooltip).
+- Sin párrafos de ayuda fijos: las ayudas de OCULTAR RÁPIDO, TUS REGLAS,
+  ★ MI BUILD y la gramática viven en el "?" (`kFilterHelp`).
+- OCULTAR RÁPIDO y TUS REGLAS con `DsSectionHeader`; las casillas en
+  grilla compacta (rótulo del grupo a la izquierda en Detalle; con texto
+  grande, arriba). Cada regla es una `DsListRow` de una línea: casilla,
+  `Mostrar · nombre` en verde u `Ocultar · nombre` en rojo (atenuada si
+  está apagada), las condiciones en Detalle, × fantasma para borrarla y
+  la regla completa en el tooltip.
+- Derecha: `★ MI BUILD` (qué busca tu plan en una línea, botones de qué
+  cumplir, la línea y los atajos `+ AL CURSOR`, `+ RESALTAR`,
+  `+ OCULTAR FUERA`, con su explicación en el tooltip) y `VISTA PREVIA ·
+  NV N` (una línea por muestra: etiqueta y, al lado, la regla que la
+  toma). Lo que sigue describe el comportamiento, que no cambió.
+
 Desde v0.8.6 la izquierda tiene dos vistas sobre **el mismo texto**,
 conmutables con `CASILLAS` (`filter-view-checks`, la de entrada) y
 `TEXTO` (`filter-view-text`). Todo lo que cambian las casillas es texto:
@@ -912,6 +955,16 @@ filtro** (`SessionEngine.lootVerdict`; color de rareza si ninguna regla
 coincide) y, si el filtro lo oculta, `(oculto por tu filtro)` en dim.
 
 ## Personaje (`char`, 1298-1335)
+
+**v0.11 (sistema de diseño, design_system.md § 10).** Pestañas `DsTabBar`
+(`tab-N`) con la insignia de puntos adentro (`tab-badge-N`); la línea
+fija de ayuda de cada pestaña pasó al "?" del título. La línea del título
+va por color (nombre en Cuerpo, clase en Subtítulo, XP en Detalle) y ya
+no repite los puntos: ATRIBUTOS tiene su barra arriba (`Puntos: P` ·
+REINICIAR fantasma · DESHACER · CONFIRMAR PUNTOS principal + motivo en
+Detalle); el pie solo lleva CERRAR. Secciones con `DsSectionHeader`
+(ATRIBUTOS, SUGERENCIA, CLASE, VISTA PREVIA, PENDIENTE); las razones de
+la sugerencia y los rasgos de Paladín, plegados (`DsFold`).
 
 Título `PERSONAJE` o `¡SUBISTE A NIVEL N! Reparte tus puntos` [?].
 Línea `nombre · clase LvN · Puntos: P` (P = puntos menos el reparto

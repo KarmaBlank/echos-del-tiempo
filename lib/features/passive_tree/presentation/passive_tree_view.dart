@@ -5,8 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:flutter/services.dart';
 
-import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/retro_hover_card.dart';
+import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
@@ -425,41 +424,41 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   /// Color de los hitos (los puntos de hito se ven aparte de los libres).
   static const milestoneColor = ProtoColors.orange;
 
-  /// Barra de arriba en una fila (progression_v2.md § 11.2): puntos a la
-  /// izquierda; buscador, zoom y reinicio a la derecha.
+  /// Barra de arriba en una fila (progression_v2.md § 11.2,
+  /// design_system.md § 4): puntos y hito a la izquierda; buscador, zoom
+  /// y reinicio a la derecha.
   Widget _topBar(int points, List<int> pending, int hitCount) {
     final pts = pending.isEmpty
         ? 0
         : pending
             .map((m) => PassiveTreeRules.milestonePoints[m] ?? 0)
             .reduce((a, b) => a + b);
-    return Row(
-      children: [
-        Text.rich(
-          key: const ValueKey('tree-points'),
-          TextSpan(children: [
-            TextSpan(
-                text: '$points',
-                style: RetroType.titleStyle(RetroType.title)
-                    .copyWith(color: ProtoColors.gold)),
-            TextSpan(
-                text: retroText(points == 1 ? ' punto' : ' puntos'),
-                style: const TextStyle(color: ProtoColors.gold)),
-            if (pts > 0)
-              TextSpan(
-                  text: retroText('   Hito: $pts'),
-                  style: const TextStyle(color: milestoneColor)),
-          ]),
-        ),
-        const SizedBox(width: 16),
+    return DsToolbar(
+      title: '',
+      center: Row(children: [
+        Text(retroText('$points ${points == 1 ? 'punto' : 'puntos'}'),
+            key: const ValueKey('tree-points'),
+            style: DsText.body(
+                points > 0 ? DsColors.reward : DsColors.textSecondary)),
+        if (pts > 0) ...[
+          SizedBox(width: DsSpace.sm),
+          DsTag('HITO $pts',
+              key: const ValueKey('tree-milestone-points'),
+              color: milestoneColor),
+        ],
+        SizedBox(width: DsSpace.md),
+        // Con texto grande la barra se desplaza (nunca desborda).
         Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            reverse: true,
-            child: _toolbar(hitCount),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              reverse: true,
+              child: _toolbar(hitCount),
+            ),
           ),
         ),
-      ],
+      ]),
     );
   }
 
@@ -474,12 +473,11 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       children: [
         Text(retroText('HITO · NIVEL $m · $pts puntos de hito para su camino'),
             key: const ValueKey('milestone-points'),
-            style: RetroType.titleStyle(RetroType.label)
-                .copyWith(color: milestoneColor)),
-        SizedBox(height: UiTheme.space(4)),
+            style: DsText.subtitle(milestoneColor)),
+        SizedBox(height: DsSpace.xs),
         Wrap(
-          spacing: 8,
-          runSpacing: 6,
+          spacing: DsSpace.sm,
+          runSpacing: DsSpace.xs,
           children: [
             for (final id in options) _milestoneCard(m, id),
           ],
@@ -499,15 +497,10 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       }),
       child: SizedBox(
         width: RetroType.width(context, 250),
-        child: ElevatedButton(
+        child: DsCard(
           key: ValueKey('milestone-pick-$id'),
-          style: RetroTheme.compactButton().copyWith(
-            alignment: Alignment.centerLeft,
-            side: WidgetStatePropertyAll(BorderSide(
-                color: chosen ? ProtoColors.gold : milestoneColor,
-                width: UiTheme.buttonBorderWidth)),
-          ),
-          onPressed: widget.inBattle
+          selected: chosen,
+          onTap: widget.inBattle
               ? null
               : () {
                   if (!chosen) {
@@ -521,14 +514,14 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(retroText(chosen ? 'Confirmar ${node.name}' : node.name),
-                  style: TextStyle(
-                      color: chosen ? ProtoColors.gold : milestoneColor)),
-              const SizedBox(height: 4),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: DsText.body(
+                      chosen ? DsColors.selected : milestoneColor)),
               Text(retroText(effect.split(':').last.trim()),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: RetroType.smallStyle
-                      .copyWith(color: ProtoColors.dim)),
+                  style: DsText.detail()),
             ],
           ),
         ),
@@ -544,20 +537,17 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     return null;
   }
 
-  /// Botón de ícono con el estilo de botón compacto (padding ≥ 8 px).
+  /// Botón de ícono del sistema (tooltip obligatorio).
   Widget _iconButton(
           String key, PixelIconKind icon, String tip, VoidCallback f) =>
-      Tooltip(
-        message: tip,
-        child: ElevatedButton(
-          key: ValueKey(key),
-          style: RetroTheme.compactButton(),
-          onPressed: f,
-          child: Semantics(
+      DsButton.icon(
+          Semantics(
               label: tip,
-              child: PixelIcon(icon, size: 16, color: ProtoColors.white)),
-        ),
-      );
+              child: PixelIcon(icon, size: 16, color: DsColors.textPrimary)),
+          key: ValueKey(key),
+          tooltip: tip,
+          size: DsButtonSize.compact,
+          onPressed: f);
 
   /// Buscador, zoom con íconos y reinicio.
   Widget _toolbar(int hitCount) => Row(
@@ -569,40 +559,38 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                     ? 'Sin coincidencias'
                     : '$hitCount coincidencia${hitCount == 1 ? '' : 's'}'),
                 key: const ValueKey('tree-search-count'),
-                style: TextStyle(
-                    color: hitCount == 0 ? ProtoColors.dim : ProtoColors.sky)),
-            const SizedBox(width: 8),
+                style: DsText.detail(
+                    hitCount == 0 ? DsColors.textSecondary : DsColors.mp)),
+            SizedBox(width: DsSpace.sm),
           ],
-          SizedBox(
-            width: RetroType.width(context, 160),
-            child: TextField(
-              key: const ValueKey('tree-search'),
-              controller: _search,
-              style: RetroType.smallStyle,
-              decoration: const InputDecoration(
-                  hintText: 'Buscar nodo...',
-                  contentPadding: EdgeInsets.all(8),
-                  isDense: true),
-              onChanged: (v) => setState(() => _query = v),
-              onSubmitted: (_) => _goToFirstHit(),
-            ),
+          DsSearchField(
+            key: const ValueKey('tree-search'),
+            hint: 'Buscar nodo...',
+            width: 180,
+            controller: _search,
+            onChanged: (v) => setState(() => _query = v),
+            onSubmitted: (_) => _goToFirstHit(),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: DsSpace.sm),
           _iconButton('tree-zoom-out', PixelIconKind.minus, 'Alejar',
               () => _zoomBy(1 / 1.25)),
-          const SizedBox(width: 4),
+          SizedBox(width: DsSpace.xs),
           _iconButton(
               'tree-zoom-in', PixelIconKind.plus, 'Acercar', () => _zoomBy(1.25)),
-          const SizedBox(width: 4),
+          SizedBox(width: DsSpace.xs),
           _iconButton('tree-fit', PixelIconKind.fit, 'Ver todo', _fitAll),
-          const SizedBox(width: 4),
+          SizedBox(width: DsSpace.xs),
           _iconButton('tree-home', PixelIconKind.target, 'Mi clase', _home),
           if (widget.showReset) ...[
-            const SizedBox(width: 8),
-            PanelButton(widget.resetLabel,
+            SizedBox(width: DsSpace.sm),
+            // El motivo (p. ej. "No hay nodos tomados") va en el tooltip.
+            DsButton(widget.resetLabel,
                 key: const ValueKey('tree-reset'),
-                reason: widget.resetReason,
-                onPressed: widget.onReset),
+                kind: DsButtonKind.ghost,
+                size: DsButtonSize.compact,
+                tooltip: widget.resetReason,
+                onPressed:
+                    widget.resetReason == null ? widget.onReset : null),
           ],
         ],
       );
@@ -764,52 +752,38 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     final path = route ??
         widget.rules.pathTo(p.classId, p.passiveProgress, id) ??
         const <String>[];
-    final box = Container(
+    final keyNode = node.kind == 'n' || node.kind == 'k';
+    final box = SizedBox(
       key: const ValueKey('tree-tooltip'),
       width: w,
-      padding: RetroHoverCard.padding,
-      decoration: BoxDecoration(
-        color: ProtoColors.bg.withValues(alpha: 0.96),
-        border: Border.all(
-            color: node.kind == 'n' || node.kind == 'k'
-                ? ProtoColors.gold
-                : RetroHoverCard.borderColor,
-            width: 2),
-      ),
-      child: DefaultTextStyle.merge(
-        style: RetroType.smallStyle,
-        child: Column(
-          key: pinned ? const ValueKey('tree-info') : null,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(retroText(node.name),
-                style: const TextStyle(color: ProtoColors.title)),
-            if (kind.isNotEmpty || pathText != null)
-              Text(
-                  retroText([
-                    if (kind.isNotEmpty) kind,
-                    if (pathText != null) pathText,
-                  ].join(' · ')),
-                  style: const TextStyle(color: ProtoColors.dim)),
-            SizedBox(height: UiTheme.space(4)),
-            for (final line in passiveEffectsText(node)) Text(retroText(line)),
-            SizedBox(height: UiTheme.space(4)),
-            if (cost != null)
-              Text(retroText(cost),
-                  style: const TextStyle(color: ProtoColors.gold)),
-            if (_milestoneOf(id) case final ms?)
-              Text(retroText(ms),
-                  key: pinned ? const ValueKey('tree-milestone-mark') : null,
-                  style: const TextStyle(color: milestoneColor)),
-            if (widget.planned.contains(id))
-              Text(retroText('★ En tu build'),
-                  style:
-                      const TextStyle(color: PassiveTreePainter.planColor)),
-            Text(retroText(stateText), style: TextStyle(color: stateColor)),
-            if (pinned) ..._actions(node, st, path),
-          ],
-        ),
+      child: DsTooltipCard(
+        key: pinned ? const ValueKey('tree-info') : null,
+        title: retroText(node.name),
+        titleColor: keyNode ? DsColors.textTitle : null,
+        tags: [
+          if (_milestoneOf(id) case final ms?)
+            DsTag(ms.toUpperCase(),
+                key: pinned ? const ValueKey('tree-milestone-mark') : null,
+                color: milestoneColor),
+          if (widget.planned.contains(id))
+            const DsTag('★ EN TU BUILD', color: PassiveTreePainter.planColor),
+        ],
+        children: [
+          if (kind.isNotEmpty || pathText != null)
+            Text(
+                retroText([
+                  if (kind.isNotEmpty) kind,
+                  if (pathText != null) pathText,
+                ].join(' · ')),
+                style: DsText.detail()),
+          for (final line in passiveEffectsText(node))
+            Text(retroText(line), style: DsText.body()),
+          SizedBox(height: DsSpace.xs),
+          if (cost != null)
+            Text(retroText(cost), style: DsText.body(DsColors.reward)),
+          Text(retroText(stateText), style: DsText.body(stateColor)),
+          if (pinned) ..._actions(node, st, path),
+        ],
       ),
     );
     return CustomSingleChildLayout(
@@ -819,15 +793,18 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
   }
 
   /// Botones del tooltip fijado: TOMAR NODO solo si conecta; si no,
-  /// TOMAR CAMINO (N).
+  /// TOMAR CAMINO (N). El motivo de un botón apagado va en su tooltip y
+  /// ya se lee en la línea de estado.
   List<Widget> _actions(
       PassiveNode node, TreeNodeStatus st, List<String> route) {
+    Widget gap() => SizedBox(height: DsSpace.sm);
     if (widget.onPlan case final plan?) {
       return [
-        SizedBox(height: UiTheme.space(6)),
-        PanelButton(
+        gap(),
+        DsButton(
             widget.planned.contains(node.id) ? 'QUITAR DEL PLAN' : 'PLANIFICAR',
             key: const ValueKey('tree-plan'),
+            size: DsButtonSize.compact,
             accent: PassiveTreePainter.planColor,
             onPressed: () => plan(node.id)),
       ];
@@ -837,18 +814,21 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
     }
     if (_connected(node.id)) {
       return [
-        SizedBox(height: UiTheme.space(6)),
-        PanelButton('TOMAR NODO',
+        gap(),
+        DsButton('TOMAR NODO',
             key: const ValueKey('tree-take'),
-            reason: st.reason,
-            onPressed: () => widget.onTake(node.id)),
+            kind: DsButtonKind.primary,
+            size: DsButtonSize.compact,
+            tooltip: st.reason,
+            onPressed: st.reason == null ? () => widget.onTake(node.id) : null),
       ];
     }
     if (widget.onTakePath == null || route.length < 2) return const [];
     return [
-      SizedBox(height: UiTheme.space(6)),
-      PanelButton('TOMAR CAMINO (${route.length})',
+      gap(),
+      DsButton('TOMAR CAMINO (${route.length})',
           key: const ValueKey('tree-take-path'),
+          size: DsButtonSize.compact,
           onPressed: widget.inBattle ? null : () => _askPath(node.id)),
     ];
   }
@@ -863,7 +843,7 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
         TreeNodeState.locked => (st.reason ?? 'Bloqueado', RetroPalette.red),
       };
 
-  /// Leyenda en una sola fila, abajo del árbol.
+  /// Leyenda en una sola fila, abajo del árbol (Detalle, marca de color).
   Widget _legend() {
     Widget dot(Color c, {bool ring = false}) => Container(
         width: 8,
@@ -885,16 +865,18 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       key: const ValueKey('tree-legend'),
       fit: BoxFit.scaleDown,
       alignment: Alignment.centerLeft,
-      child: Row(
-        children: [
-          for (final (i, (label, mark)) in items.indexed) ...[
-            if (i > 0) const SizedBox(width: 12),
-            mark,
-            const SizedBox(width: 4),
-            Text(retroText(label),
-                style: RetroType.smallStyle.copyWith(color: ProtoColors.dim)),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: DsSpace.md),
+        child: Row(
+          children: [
+            for (final (i, (label, mark)) in items.indexed) ...[
+              if (i > 0) SizedBox(width: DsSpace.md),
+              mark,
+              SizedBox(width: DsSpace.xs),
+              Text(retroText(label), style: DsText.detail()),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

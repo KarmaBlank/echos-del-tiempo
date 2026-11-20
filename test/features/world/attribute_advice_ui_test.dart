@@ -46,9 +46,9 @@ void main() {
     final advice = AttributeAdvisor(c.engine.progression).recommend(start);
     final add = AttributeAdvisor.allocation(advice);
     expect(find.byKey(const ValueKey('attr-advice')), findsOneWidget);
-    expect(
-        find.text('Sugerencia: ${AttributeAdvisor.split(advice)}'),
-        findsOneWidget);
+    expect(find.text(AttributeAdvisor.split(advice)), findsOneWidget);
+    // Las razones, plegadas (DsFold, design_system.md § 2.0).
+    await tapVisible(tester, find.textContaining('POR QU'));
     expect(find.byKey(const ValueKey('attr-advice-fue')), findsOneWidget);
     // APLICAR SUGERENCIA se ve como botón, no como texto suelto.
     expectButtonLook(tester, find.byKey(const ValueKey('apply-advice')));
@@ -86,10 +86,10 @@ void main() {
     addTearDown(tester.view.reset);
     var a = Account();
     a = a.add(newProfile('Ana', 'guerrero'))!;
-    a = a.add(progression
-        .normalize(newProfile('Leo', 'maga').copyWith(level: 5)))!;
-    final repo =
-        AccountRepository(InMemoryAccountStore(a.select('c1').withParty(['c2'])));
+    a = a.add(
+        progression.normalize(newProfile('Leo', 'maga').copyWith(level: 5)))!;
+    final repo = AccountRepository(
+        InMemoryAccountStore(a.select('c1').withParty(['c2'])));
     late SessionController c;
     await tester.pumpWidget(ProviderScope(
       overrides: [
@@ -146,8 +146,7 @@ void main() {
     expect(ana.points, ana0.points);
   });
 
-  testWidgets('BUILD: Atributos sugeridos y AGREGAR COMO META',
-      (tester) async {
+  testWidgets('BUILD: Atributos sugeridos y AGREGAR COMO META', (tester) async {
     final start = progression
         .normalize(PlayerProfile(name: 'Ana', classId: 'guerrero', level: 3));
     final c = await pumpPanel(tester,
@@ -156,15 +155,16 @@ void main() {
             view: v, controller: c, initialTab: CharacterTab.build));
     final pts = AttributeAdvisor.horizonPoints(start);
     expect(pts, 2 + 5);
-    final s = AttributeAdvisor(c.engine.progression).recommend(start, null, pts);
+    final s =
+        AttributeAdvisor(c.engine.progression).recommend(start, null, pts);
     expect(
         find.text('Atributos sugeridos ($pts puntos: libres y próximos '
             'niveles): ${AttributeAdvisor.split(s)}'),
         findsOneWidget);
 
     await tapVisible(tester, find.byKey(const ValueKey('build-advice-goals')));
-    final container = ProviderScope.containerOf(
-        tester.element(find.byType(Scaffold).first));
+    final container =
+        ProviderScope.containerOf(tester.element(find.byType(Scaffold).first));
     final plan = container.read(buildPlanProvider).plan;
     for (final x in s) {
       expect(plan.attributes[x.attribute],

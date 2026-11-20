@@ -1,9 +1,11 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/theme/panel_frame.dart';
-import '../../../app/theme/panel_widgets.dart';
+import 'package:flutter/services.dart';
+
+import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
+import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/menu_focus.dart';
 import '../../../game_engine/data/zones_catalog.dart';
@@ -13,9 +15,10 @@ import '../../combat/presentation/game_sprites.dart';
 import '../../combat/presentation/pixel_sprite.dart';
 import '../domain/bestiary_text.dart';
 
-/// El BESTIARIO (docs/specs/bestiary.md § 4): fichas por zona a la
-/// izquierda (silueta y "???" las que todavía no se mataron), detalle de
-/// la elegida a la derecha, búsqueda por nombre y filtro por familia.
+/// El BESTIARIO (docs/specs/bestiary.md § 4): búsqueda arriba, filtro por
+/// familia a la izquierda, lista por zona (una fila por enemigo; silueta y
+/// "???" los que todavía no se mataron) y la ficha del elegido a la
+/// derecha.
 /// Solo lectura: lo llena ganar batallas.
 class BestiaryView extends StatefulWidget {
   const BestiaryView({
@@ -33,10 +36,9 @@ class BestiaryView extends StatefulWidget {
       'resiste y a qué es inmune.<br>'
       'En batalla, pasá el mouse sobre un enemigo para ver su ficha; si '
       'nunca lo derrotaste verás "???".<br>'
-      'Flechas: moverse por las fichas · Tab: filtros / búsqueda.';
-
-  /// Lado de una ficha de la grilla (Normal).
-  static const card = 84.0;
+      'La búsqueda y los filtros solo ven lo descubierto.<br>'
+      'Flechas arriba / abajo: moverse por la lista · Tab: filtros / '
+      'búsqueda.';
 
   @override
   State<BestiaryView> createState() => _BestiaryViewState();
@@ -45,8 +47,12 @@ class BestiaryView extends StatefulWidget {
 class _BestiaryViewState extends State<BestiaryView> {
   final _entries = bestiaryEntries();
   final _search = TextEditingController();
+  final _nodes = <String, FocusNode>{};
   EnemyFamily? _family;
   String? _sel;
+
+  FocusNode _node(String id) =>
+      _nodes[id] ??= FocusNode(debugLabel: 'bestiary-$id');
 
   @override
   void initState() {
@@ -60,6 +66,9 @@ class _BestiaryViewState extends State<BestiaryView> {
   @override
   void dispose() {
     _search.dispose();
+    for (final n in _nodes.values) {
+      n.dispose();
+    }
     super.dispose();
   }
 
@@ -81,6 +90,25 @@ class _BestiaryViewState extends State<BestiaryView> {
     ];
   }
 
+  /// Flechas arriba / abajo: elige el anterior / siguiente de la lista.
+  KeyEventResult _onKey(List<BestiaryEntry> visible, KeyEvent e) {
+    if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
+      return KeyEventResult.ignored;
+    }
+    final d = switch (e.logicalKey) {
+      LogicalKeyboardKey.arrowDown => 1,
+      LogicalKeyboardKey.arrowUp => -1,
+      _ => 0,
+    };
+    if (d == 0 || visible.isEmpty) return KeyEventResult.ignored;
+    final i = visible.indexWhere((x) => x.id == _sel);
+    final to = (i + d).clamp(0, visible.length - 1);
+    final id = visible[to].id;
+    setState(() => _sel = id);
+    _node(id).requestFocus();
+    return KeyEventResult.handled;
+  }
+
   @override
   Widget build(BuildContext context) {
     final visible = _visible;
@@ -88,67 +116,84 @@ class _BestiaryViewState extends State<BestiaryView> {
     for (final e in visible) {
       (byZone[e.zone] ??= []).add(e);
     }
+    // En el orden en que se ven (por zona), para las flechas.
+    final ordered = [for (final l in byZone.values) ...l];
     final sel = _entries.where((e) => e.id == _sel).firstOrNull;
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SizedBox(
-          width: RetroType.width(context, 170),
-          child: NavSection(child: _filters()),
+        DsToolbar(
+          title: '',
+          center: Text.rich(
+            key: const ValueKey('bestiary-count'),
+            TextSpan(children: [
+              TextSpan(text: 'Descubiertos ', style: DsText.detail()),
+              TextSpan(
+                  text: '${_b.discovered}',
+                  style: DsText.body(DsColors.reward)),
+              TextSpan(
+                  text: '/${_entries.length}',
+                  style: DsText.body(DsColors.textPrimary)),
+              if (visible.length != _entries.length)
+                TextSpan(
+                    text: ' · mostrando ${visible.length}',
+                    style: DsText.detail()),
+            ]),
+          ),
+          actions: [
+            DsSearchField(
+                key: const ValueKey('bestiary-search'),
+                hint: 'Buscar...',
+                width: 200,
+                controller: _search),
+          ],
         ),
-        const SizedBox(width: 12),
+        SizedBox(height: DsSpace.sm),
         Expanded(
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              ProtoText(
-                  key: const ValueKey('bestiary-count'),
-                  'Descubiertos <b>${_b.discovered}</b>/${_entries.length}'
-                  '${visible.length != _entries.length ? ' · ${protoColor(ProtoColors.dim, 'mostrando ${visible.length}')}' : ''}'),
-              const SizedBox(height: 6),
+              SizedBox(
+                width: RetroType.width(context, 170),
+                child: NavSection(child: _filters()),
+              ),
+              SizedBox(width: DsSpace.md),
               Expanded(
-                child: LayoutBuilder(builder: (context, box) {
-                  final cell = RetroType.width(context, BestiaryView.card);
-                  final cols =
-                      ((box.maxWidth + 6) / (cell + 6)).floor().clamp(1, 12);
-                  if (visible.isEmpty) {
-                    return const Center(
-                        child: Text('Nada con ese filtro todavía.',
-                            style: TextStyle(color: ProtoColors.dim)));
-                  }
-                  return SingleChildScrollView(
-                    child: NavSection(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          for (final z in byZone.keys) ...[
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4, bottom: 4),
-                              child: Text(
-                                  z == kAbyssBestiaryZone
+                child: visible.isEmpty
+                    ? Center(
+                        child: Text(retroText('Nada con ese filtro todavía'),
+                            style: DsText.detail()))
+                    : Focus(
+                        canRequestFocus: false,
+                        skipTraversal: true,
+                        onKeyEvent: (_, e) => _onKey(ordered, e),
+                        child: SingleChildScrollView(
+                          child: NavSection(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                for (final z in byZone.keys) ...[
+                                  DsSectionHeader(z == kAbyssBestiaryZone
                                       ? 'Jefes del Abismo'
                                       : z <= 0 || z > kZones.length
                                           ? 'Otros'
-                                          : 'Zona $z · ${kZones[z - 1].name}',
-                                  style: const TextStyle(
-                                      color: ProtoColors.sky)),
+                                          : 'Zona $z · ${kZones[z - 1].name}'),
+                                  for (final e in byZone[z]!) _row(e),
+                                ],
+                              ],
                             ),
-                            _grid(byZone[z]!, cols, cell),
-                          ],
-                        ],
+                          ),
+                        ),
                       ),
-                    ),
-                  );
-                }),
+              ),
+              SizedBox(width: DsSpace.md),
+              SizedBox(
+                width: RetroType.width(context, 320)
+                    .clamp(320.0, MediaQuery.sizeOf(context).width * 0.4),
+                child: sel == null ? const SizedBox.shrink() : _detail(sel),
               ),
             ],
           ),
-        ),
-        const SizedBox(width: 16),
-        SizedBox(
-          width: RetroType.width(context, 320)
-              .clamp(320.0, MediaQuery.sizeOf(context).width * 0.4),
-          child: sel == null ? const SizedBox.shrink() : _detail(sel),
         ),
       ],
     );
@@ -161,13 +206,16 @@ class _BestiaryViewState extends State<BestiaryView> {
         _ => f.label.toUpperCase(),
       };
 
-  /// Búsqueda y filtros por familia (columna de la izquierda).
+  /// Filtros por familia (columna de la izquierda): botones fantasma, el
+  /// elegido con borde dorado.
   Widget _filters() {
     Widget chip(String label, EnemyFamily? f, Color? color) => Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: PanelButton(
+          padding: EdgeInsets.only(bottom: DsSpace.xs),
+          child: DsButton(
             label,
             key: ValueKey('bestiary-filter-${f?.name ?? 'all'}'),
+            kind: DsButtonKind.ghost,
+            size: DsButtonSize.compact,
             accent: color,
             selected: _family == f,
             onPressed: () => setState(() => _family = f),
@@ -177,16 +225,6 @@ class _BestiaryViewState extends State<BestiaryView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
-            key: const ValueKey('bestiary-search'),
-            controller: _search,
-            style: RetroType.smallStyle,
-            decoration: const InputDecoration(
-                hintText: 'Buscar...',
-                isDense: true,
-                contentPadding: EdgeInsets.all(8)),
-          ),
-          const SizedBox(height: 6),
           chip('TODAS', null, null),
           for (final f in EnemyFamily.values)
             if (f != EnemyFamily.training) chip(_short(f), f, familyColor(f)),
@@ -194,16 +232,6 @@ class _BestiaryViewState extends State<BestiaryView> {
       ),
     );
   }
-
-  Widget _grid(List<BestiaryEntry> list, int cols, double cell) => FocusGrid(
-        count: list.length,
-        columns: cols,
-        spacing: 6,
-        keyPrefix: 'bestiary-cell-${list.first.zone}-',
-        onFocusCell: (i) => setState(() => _sel = list[i].id),
-        onActivate: (i) => setState(() => _sel = list[i].id),
-        cell: (context, i, focused) => _card(list[i], cell),
-      );
 
   Widget _sprite(BestiaryEntry e, double box, {required bool known}) {
     final img = widget.sprites?.enemy(e.id);
@@ -213,8 +241,8 @@ class _BestiaryViewState extends State<BestiaryView> {
           height: box,
           child: Center(
               child: Text(known ? e.def.name.characters.first : '?',
-                  style: TextStyle(
-                      color: known ? ProtoColors.ink : ProtoColors.dim))));
+                  style: DsText.body(
+                      known ? DsColors.textPrimary : DsColors.textSecondary))));
     }
     final scale = (box / (img.width > img.height ? img.width : img.height))
         .floorToDouble()
@@ -235,76 +263,61 @@ class _BestiaryViewState extends State<BestiaryView> {
     );
   }
 
-  Widget _card(BestiaryEntry e, double cell) {
+  /// Una fila: sprite chico, nombre (o "???") y la familia a la derecha.
+  Widget _row(BestiaryEntry e) {
     final known = _b.knows(e.id);
-    final selected = e.id == _sel;
     final f = e.family;
-    return GestureDetector(
+    return DsListRow(
       key: ValueKey('bestiary-card-${e.id}'),
-      onTap: () => setState(() => _sel = e.id),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: Container(
-          width: cell,
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: ProtoColors.panel,
-            border: Border.all(
-                color: selected
-                    ? ProtoColors.gold
-                    : known && f != null
-                        ? familyColor(f)
-                        : ProtoColors.panelBorder,
-                width: RetroTheme.thinBorderWidth),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _sprite(e, cell - 16, known: known),
-              const SizedBox(height: 2),
-              Text(
-                known ? e.def.name : '???',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: e.def.boss
-                        ? ProtoColors.gold
-                        : known
-                            ? ProtoColors.ink
-                            : ProtoColors.dim),
-              ),
-              Text(
-                known && f != null ? f.code : (e.def.boss ? 'JEFE' : ' '),
-                style: TextStyle(
-                    color: known && f != null
-                        ? familyColor(f)
-                        : ProtoColors.dim),
-              ),
-            ],
-          ),
-        ),
-      ),
+      focusNode: _node(e.id),
+      leading: _sprite(e, RetroType.width(context, 20), known: known),
+      title: retroText(known ? e.def.name : '???'),
+      titleColor: e.def.boss
+          ? DsColors.reward
+          : known
+              ? null
+              : DsColors.textSecondary,
+      selected: e.id == _sel,
+      trailing: Text(
+          known && f != null ? f.code : (e.def.boss ? 'JEFE' : ''),
+          style: DsText.detail(
+              known && f != null ? familyColor(f) : DsColors.textSecondary)),
+      onTap: () {
+        setState(() => _sel = e.id);
+        _node(e.id).requestFocus();
+      },
     );
   }
 
+  /// Ficha: sprite, FICHA (familia, debilidades, mecánica, derrotados) y,
+  /// plegado, zona y botín.
   Widget _detail(BestiaryEntry e) {
     final known = _b.knows(e.id);
-    return PanelDetail(
+    return SingleChildScrollView(
       key: ValueKey('bestiary-detail-${e.id}'),
-      children: [
-        Center(child: _sprite(e, 120, known: known)),
-        const SizedBox(height: 8),
-        ProtoText(
-            key: const ValueKey('bestiary-detail-text'),
-            enemyInfoMarkup(e.def, _b, description: true)),
-        const SizedBox(height: 8),
-        if (known)
-          ProtoText(enemyDropsMarkup(e))
-        else
-          ProtoText(protoColor(ProtoColors.dim,
-              'Zona: ${e.zone > 0 && e.zone != kAbyssBestiaryZone ? '${e.zone} · ' : ''}${protoEsc(e.zoneName)}')),
-      ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(child: _sprite(e, 120, known: known)),
+          const DsSectionHeader('Ficha'),
+          ProtoText(
+              key: const ValueKey('bestiary-detail-text'),
+              enemyInfoMarkup(e.def, _b, description: true)),
+          if (known) ...[
+            SizedBox(height: DsSpace.sm),
+            DsFold(
+                key: ValueKey('bestiary-drops-${e.id}'),
+                label: 'ZONA Y BOTÍN',
+                openLabel: 'ZONA Y BOTÍN',
+                child: ProtoText(enemyDropsMarkup(e))),
+          ] else ...[
+            SizedBox(height: DsSpace.sm),
+            Text(
+                retroText('Zona: ${e.zone > 0 && e.zone != kAbyssBestiaryZone ? '${e.zone} · ' : ''}${e.zoneName}'),
+                style: DsText.detail()),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'dart:ui' as ui;
 
-import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/features/passive_tree/domain/passive_text.dart';
 import 'package:echos_del_tiempo/features/passive_tree/presentation/passive_tree_view.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
@@ -49,7 +49,7 @@ Future<dynamic> _pumpTree(WidgetTester tester, PlayerProfile profile) =>
 Finder _points(int n) => find.byWidgetPredicate((w) =>
     w is Text &&
     w.key == const ValueKey('tree-points') &&
-    w.textSpan!.toPlainText().startsWith('$n punto'));
+    (w.data ?? w.textSpan!.toPlainText()).startsWith('$n punto'));
 
 Future<TestGesture> _mouse(WidgetTester tester) async {
   await tester.ensureVisible(find.byKey(const ValueKey('tree-viewport')));
@@ -117,8 +117,8 @@ void main() {
     expect(c.view!.me!.profile.tree, isNot(contains('juicio_k')));
     expect(find.text('Excluye Paladín Creyente'), findsWidgets);
     final take =
-        tester.widget<PanelButton>(find.byKey(const ValueKey('tree-take')));
-    expect(take.reason, 'Excluye Paladín Creyente');
+        tester.widget<DsButton>(find.byKey(const ValueKey('tree-take')));
+    expect(take.tooltip, 'Excluye Paladín Creyente');
 
     // Un chico sin conexión: bloqueado con su motivo.
     final far = kPassiveTree.nodes.values.firstWhere((n) =>
@@ -148,8 +148,8 @@ void main() {
     expect(c.view!.me!.profile.tree, isEmpty);
     expect(
         tester
-            .widget<PanelButton>(find.byKey(const ValueKey('tree-reset')))
-            .reason,
+            .widget<DsButton>(find.byKey(const ValueKey('tree-reset')))
+            .tooltip,
         'No hay nodos tomados');
   });
 

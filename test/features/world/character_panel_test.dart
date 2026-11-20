@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/theme/proto_colors.dart';
 import 'package:echos_del_tiempo/app/theme/proto_markup.dart';
@@ -29,12 +30,13 @@ void main() {
     final before = progression.derivedStats(start);
     expect(_plain(tester, 'stat-HP'), 'HP ${before.maxHp}');
     expect(find.textContaining('Puntos: 2'), findsOneWidget);
-    // Sin reparto, confirmar está deshabilitado y dice por qué.
-    expect(
-        tester
-            .widget<PanelButton>(find.byKey(const ValueKey('confirm-points')))
-            .reason,
-        'Reparte algún punto');
+    // Sin reparto, confirmar está deshabilitado y dice por qué (en la
+    // barra de ATRIBUTOS, al lado del botón principal).
+    final confirm =
+        tester.widget<DsButton>(find.byKey(const ValueKey('confirm-points')));
+    expect(confirm.onPressed, isNull);
+    expect(confirm.kind, DsButtonKind.primary);
+    expect(confirm.tooltip, 'Reparte algún punto');
     expect(find.text('Reparte algún punto'), findsOneWidget);
 
     await tapVisible(tester, find.byKey(const ValueKey('inc-vit')));

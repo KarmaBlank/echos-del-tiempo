@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'dart:async';
 
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
@@ -70,11 +71,22 @@ String? _focusedKey() {
   return found;
 }
 
-bool _tab(WidgetTester tester, int i) =>
-    tester.widget<PanelButton>(find.byKey(ValueKey('tab-$i'))).selected;
+/// La pestaña `i` está elegida: [PanelButton] (armería) o [DsTabBar]
+/// (personaje, sistema de diseño).
+bool _tab(WidgetTester tester, int i) {
+  final f = find.byKey(ValueKey('tab-$i'));
+  final w = tester.widget(f);
+  if (w is PanelButton) return w.selected;
+  return tester
+          .widget<DsTabBar>(
+              find.ancestor(of: f, matching: find.byType(DsTabBar)))
+          .index ==
+      i;
+}
 
 void main() {
-  testWidgets('armería: flechas en la lista (el detalle sigue), E / Ctrl+Tab '
+  testWidgets(
+      'armería: flechas en la lista (el detalle sigue), E / Ctrl+Tab '
       'cambian de pestaña, Tab salta a las tarjetas y Enter forja',
       (tester) async {
     final c = await pumpPanel(tester,
@@ -141,7 +153,8 @@ void main() {
     expect(_tab(tester, CharacterTab.attributes.index), isTrue);
   });
 
-  testWidgets('inventario: las flechas mueven la casilla y la eligen; Enter '
+  testWidgets(
+      'inventario: las flechas mueven la casilla y la eligen; Enter '
       'otra vez equipa', (tester) async {
     final c = await pumpPanel(tester,
         profile: lootWarrior(),
@@ -239,7 +252,8 @@ void main() {
     expect(_tab(tester, 0), isTrue);
   });
 
-  testWidgets('título: flechas / 1-9 eligen clase en el creador, Esc lo '
+  testWidgets(
+      'título: flechas / 1-9 eligen clase en el creador, Esc lo '
       'cancela; Enter sobre el elegido juega', (tester) async {
     var a = CharacterRules(progression)
         .create(Account(), 'Ana', 'maga', now: DateTime(2026, 11, 1))!;

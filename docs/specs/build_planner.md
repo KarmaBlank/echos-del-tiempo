@@ -142,6 +142,19 @@ editar: es solo el plan).
 - Árbol: botón **PLANIFICAR EN EL ÁRBOL** abre el árbol en modo
   planificar.
 
+Sistema de diseño (v0.11, design_system.md § 10.1): la fila de arriba
+es un `DsToolbar` (★ nombre, `hechas/total metas`, %, PLANTILLA,
+RENOMBRAR y BORRAR PLAN), debajo la barra de progreso y Siguiente paso.
+Cada sección es un `DsSectionHeader` (`ATRIBUTOS  2/3`, + AGREGAR a la
+derecha) sin caja; cada meta un `DsListRow` de una línea (marca, texto,
+`actual/objetivo` o, si está bloqueada, el motivo en rojo; la pista
+corta va al tooltip; −5 / +5 y × son botones de ícono). Sin metas: solo
+"Sin metas" (los ejemplos de cada sección están en el "?"). Los
+selectores usan `DsSearchField` y filas `DsListRow`; las confirmaciones
+(¿BORRAR EL PLAN?, ¿REINICIAR ÁRBOL?, ¿APLICAR SUGERENCIA?) muestran la
+explicación en una línea y Sí / No como `DsButton` (Sí principal).
+Captura: `docs/release_shots/v0.11.0/05_build_despues.png`.
+
 ### 4.1 Contexto (consultar sin abrir la pestaña)
 
 - **COMPRAR** (armería): la fila de una base que coincide con el plan
@@ -346,7 +359,8 @@ el selector de la party). Usa el plan de ese miembro.
 
 Arriba de la tarjeta Atributos: la sugerencia para tus puntos libres +
 los de los próximos 5 niveles (`horizonPoints`, sin pasar del 50) y su
-razón principal. **AGREGAR COMO META** pone cada atributo sugerido con
+razón principal (v0.11: en el tooltip del botón). **APLICAR SUGERENCIA**
+(antes AGREGAR COMO META; botón principal, `build-advice-goals`) pone cada atributo sugerido con
 objetivo `actual + puntos` (si ya había una meta mayor, queda la mayor;
 `AttributeAdvisor.addAsGoals`).
 

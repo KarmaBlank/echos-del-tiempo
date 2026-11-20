@@ -219,17 +219,25 @@ inventa historia.
 En el panel de personaje (pestaña 6, `CharacterTab.bestiary`) y desde el
 título (`BESTIARIO`, solo lectura, `BestiaryScreen`).
 
-- Izquierda: búsqueda por nombre, filtros por familia (`TODAS` + una por
-  familia, en su color), `Descubiertos N/M` y la grilla por zona
-  (comunes, invocaciones, jefe). Las desconocidas: silueta del sprite y
-  `???`. Familia y búsqueda solo muestran fichas descubiertas (no
+Con el sistema de diseño (v0.11, design_system.md § 10.1):
+
+- Arriba (`DsToolbar`): `Descubiertos N/M` (· mostrando K si hay filtro)
+  y la búsqueda por nombre (`DsSearchField`, `bestiary-search`).
+- Izquierda: filtros por familia (`TODAS` + una por familia, en su
+  color; botones fantasma, el elegido con borde dorado).
+- Centro: lista por zona (`DsSectionHeader` por zona) con una fila
+  `DsListRow` por enemigo (`bestiary-card-<id>`): sprite chico, nombre
+  (jefe en dorado) y el código de familia a la derecha. Las desconocidas:
+  silueta y `???`. Familia y búsqueda solo muestran lo descubierto (no
   revelan lo que falta).
-- Derecha: sprite grande, la ficha de § 3 (más la descripción del
-  dueño, si hay), zona, rol, nivel nativo y botín (XP, créditos, legendario del
-  jefe). Desconocida: silueta, `???` y la zona.
-- Teclado (`menu_focus.dart`): flechas dentro de cada zona (`FocusGrid`,
-  sale por el borde a la siguiente), `Tab` entre filtros y grilla; elegir
-  una ficha con el cursor muestra su detalle.
+- Derecha: sprite grande, `DsSectionHeader` FICHA con la ficha de § 3
+  (más la descripción del dueño, si hay) y un `DsFold` ZONA Y BOTÍN
+  (zona, rol, nivel nativo, XP, créditos, legendario del jefe).
+  Desconocida: silueta, `???` y la zona.
+- Teclado: flechas arriba / abajo eligen el anterior / siguiente de la
+  lista (en el orden en que se ve); `Tab` entre filtros y lista.
+- Ayuda en el "?" (`BestiaryView.help`). Captura:
+  `docs/release_shots/v0.11.0/06_bestiario_despues.png`.
 
 ## v0.8.0: Jefes del Abismo
 

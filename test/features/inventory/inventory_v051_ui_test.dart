@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/retro_text.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/inventory/domain/shop_guards.dart';
@@ -48,12 +49,19 @@ void main() {
               rules: progression, profile: p, onSelect: picked.add));
       expect(find.text('CONSUMIBLES'), findsOneWidget);
       expect(find.text('MATERIALES'), findsOneWidget);
-      for (final t in ['pot', 'eter', 'mat:esquirla', 'mat:cristal',
-        'mat:prisma', 'mat:ancla']) {
+      for (final t in [
+        'pot',
+        'eter',
+        'mat:esquirla',
+        'mat:cristal',
+        'mat:prisma',
+        'mat:ancla'
+      ]) {
         expect(_k('inv-stack-$t'), findsOneWidget, reason: t);
       }
       expect(
-          find.descendant(of: _k('inv-stack-mat:cristal'), matching: find.text('3')),
+          find.descendant(
+              of: _k('inv-stack-mat:cristal'), matching: find.text('3')),
           findsOneWidget);
       await tester.tap(_k('inv-stack-pot'));
       await tester.tap(_k('inv-stack-mat:prisma')); // 0: nada
@@ -127,18 +135,24 @@ void main() {
     });
 
     testWidgets('con motivo: deshabilitado', (tester) async {
-      await _pump(tester,
-          InventorySortButton(onSort: (_) {}, reason: 'Solo lectura'));
-      expect(find.text('Solo lectura'), findsOneWidget);
+      await _pump(
+          tester, InventorySortButton(onSort: (_) {}, reason: 'Solo lectura'));
+      // DsButton: deshabilitado y el motivo en el tooltip.
+      expect(find.byTooltip('Solo lectura'), findsOneWidget);
+      expect(
+          tester
+              .widget<DsButton>(find.byKey(const ValueKey('inv-sort')))
+              .onPressed,
+          isNull);
     });
   });
 
   group('en la pestaña INVENTARIO', () {
-    Future<SessionController> inventory(WidgetTester tester) => pumpPanel(
-        tester,
-        profile: lootWarrior(),
-        build: (v, c) => CharacterPanel(
-            view: v, controller: c, initialTab: CharacterTab.inventory));
+    Future<SessionController> inventory(WidgetTester tester) =>
+        pumpPanel(tester,
+            profile: lootWarrior(),
+            build: (v, c) => CharacterPanel(
+                view: v, controller: c, initialTab: CharacterTab.inventory));
     Future<void> tap(WidgetTester tester, String key) =>
         tapVisible(tester, _k(key));
 
