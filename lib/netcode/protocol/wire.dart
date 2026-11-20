@@ -62,7 +62,7 @@ import '../../game_engine/serialization/session_json.dart';
 /// También en 23: acción `useItem` (pociones fuera de pelea, loot.md § 17.5).
 /// 24 desde v0.14: Hazañas (achievements.md § 5.3): `ach` en el perfil,
 /// acción `ach` (las que detecta el cliente) y evento `ach` `{p, id}`.
-const kProtocolVersion = 24;
+const kProtocolVersion = 25;
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {

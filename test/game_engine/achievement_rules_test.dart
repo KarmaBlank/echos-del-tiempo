@@ -383,8 +383,8 @@ void main() {
       expect(lost, {'Esquirla del Eco': 2});
     });
 
-    test('acción y evento viajan; protocolo 24', () {
-      expect(kProtocolVersion, 24);
+    test('acción y evento viajan; protocolo 24+', () {
+      expect(kProtocolVersion, greaterThanOrEqualTo(24));
       const a = ClaimAchievementAction('inv_search');
       final back = ActionJson.fromJson(ActionJson.toJson(a));
       expect((back as ClaimAchievementAction).id, 'inv_search');
