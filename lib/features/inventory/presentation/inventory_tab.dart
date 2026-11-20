@@ -9,7 +9,6 @@ import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
-import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/menu_focus.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/rules/progression_rules.dart';
@@ -34,6 +33,7 @@ import 'clean_selection.dart';
 import 'consumables_bar.dart';
 import 'inventory_action_menu.dart';
 import 'inventory_sort_button.dart';
+import 'item_grid.dart';
 import 'item_hover_tip.dart';
 import 'item_widgets.dart' hide PixelIcon;
 import 'shop_sections.dart';
@@ -182,6 +182,17 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   void _seen(PlayerProfile p, String uid) {
     if (!p.fresh.contains(uid) || !_seenSent.add(uid)) return;
     shop.controller.markSeen([uid]);
+  }
+
+  /// Hazaña `inv_search` (achievements.md § 2.4): el buscador encontró
+  /// algo. Una vez por pantalla; el host no la paga dos veces.
+  bool _searchClaimed = false;
+  void _searchFound() {
+    if (_searchClaimed) return;
+    _searchClaimed = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) shop.controller.claimAchievement('inv_search');
+    });
   }
 
   bool _matches(CellContent c) =>
@@ -398,123 +409,106 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                 })),
     ];
 
-    Widget cellAt(int i, [bool focused = false]) {
+    // Estado de cada casilla, ya resuelto para la grilla (DsItemGrid es
+    // solo presentación).
+    ItemSlotData slotAt(int i) {
       final token = layout.cells[i];
       final c = _content(p, token);
-      final selected = token != null && token == _sel && _selCell == i;
-      Widget w = ItemCell(
-        rules: shop.rules,
+      final picked = pickMode && token != null && _picked.contains(token);
+      if (c != null && _query.trim().isNotEmpty && _matches(c)) _searchFound();
+      return ItemSlotData(
         content: c,
-        size: _cellSize,
-        selected: selected || _moveFrom == i,
+        selected:
+            (token != null && token == _sel && _selCell == i) || _moveFrom == i,
         highlight: _moveFrom != null && _moveFrom != i,
         buildMatch: c?.item != null && _fit(c!.item!).any,
+        fresh: c != null && mine && token != null && p.fresh.contains(token),
+        dimmed: c != null && !_matches(c),
+        picked: picked,
+        locked: pickMode &&
+            token != null &&
+            !picked &&
+            cleanLockReason(shop.rules, p, token, _picked) != null,
       );
-      if (pickMode && token != null) {
-        final picked = _picked.contains(token);
-        w = CleanCellMark(
-            picked: picked,
-            locked: !picked &&
-                cleanLockReason(shop.rules, p, token, _picked) != null,
-            child: w);
-      }
-      if (c != null) {
-        final fresh = mine && token != null && p.fresh.contains(token);
-        final match = _matches(c);
-        if (fresh || !match) {
-          w = Stack(children: [
-            Opacity(opacity: match ? 1 : 0.25, child: w),
-            if (fresh)
-              Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: IgnorePointer(
-                      child: NewItemTag(key: ValueKey('inv-new-$i')))),
-          ]);
-        }
-        w = _withTip(me, owner, c, attrs, w, focused: focused);
-        if (c.item case final it?) {
-          final inner = w;
-          w = MouseRegion(
-              onEnter: (_) {
-                _hoverItem = it;
-                _hover('$_owner/${it.uid}');
-              },
-              onExit: (_) {
-                if (_hoverItem == it) {
-                  _hoverItem = null;
-                  _hover(null);
-                }
-              },
-              child: inner);
-        }
-        if (fresh) {
-          final inner = w;
-          w = MouseRegion(onEnter: (_) => _seen(p, token), child: inner);
-        }
-      }
-      void tap() {
-        if (pickMode) return togglePick(token);
-        if (_pickB(owner.id, token, c)) return;
-        final from = _moveFrom;
-        if (mine && from != null) {
-          setState(() => _moveFrom = null);
-          if (from != i) {
-            shop.controller.moveInventory(from, i);
-            _selCell = i;
-          }
-          return;
-        }
-        if (token != null) _select(token, i);
-      }
+    }
 
-      w = GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: tap,
-          // Clic derecho: el menú de acciones (v0.9.7).
-          onSecondaryTapUp: mine && !pickMode && token != null && c != null
-              ? (d) => _openMenu(p, me, mates, token, i, d.globalPosition)
-              : null,
-          child: w);
-      if (mine && !pickMode) {
-        if (c != null) {
-          w = Draggable<int>(
-            data: i,
-            feedback: Opacity(
-                opacity: 0.8,
-                child: ItemCell(
-                    rules: shop.rules,
-                    content: c,
-                    size: _cellSize,
-                    selected: true)),
-            childWhenDragging: ItemCell(rules: shop.rules, size: _cellSize),
-            child: w,
-          );
+    void tapCell(int i) {
+      final token = layout.cells[i];
+      if (pickMode) return togglePick(token);
+      if (_pickB(owner.id, token, _content(p, token))) return;
+      final from = _moveFrom;
+      if (mine && from != null) {
+        setState(() => _moveFrom = null);
+        if (from != i) {
+          shop.controller.moveInventory(from, i);
+          _selCell = i;
         }
+        return;
+      }
+      if (token != null) _select(token, i);
+    }
+
+    // Lo propio del inventario alrededor de la casilla: el mouse (franja
+    // de cambios, marca NUEVO) y arrastrar para mover.
+    Widget decorateCell(int i, Widget cell) {
+      final token = layout.cells[i];
+      final c = _content(p, token);
+      var w = cell;
+      if (c?.item case final it?) {
         final inner = w;
-        w = DragTarget<int>(
-          onWillAcceptWithDetails: (d) => d.data != i,
-          onAcceptWithDetails: (d) {
-            shop.controller.moveInventory(d.data, i);
-            setState(() {
-              if (_selCell == d.data) _selCell = i;
-            });
-          },
-          builder: (context, cand, _) => cand.isEmpty
-              ? inner
-              : Stack(children: [
-                  inner,
-                  Positioned.fill(
-                      child: IgnorePointer(
-                          child: Container(
-                              decoration: BoxDecoration(
-                                  border: Border.all(
-                                      color: ProtoColors.sky, width: 2))))),
-                ]),
+        w = MouseRegion(
+            onEnter: (_) {
+              _hoverItem = it;
+              _hover('$_owner/${it.uid}');
+            },
+            onExit: (_) {
+              if (_hoverItem == it) {
+                _hoverItem = null;
+                _hover(null);
+              }
+            },
+            child: inner);
+      }
+      if (c != null && mine && token != null && p.fresh.contains(token)) {
+        final inner = w;
+        w = MouseRegion(onEnter: (_) => _seen(p, token), child: inner);
+      }
+      if (!mine || pickMode) return w;
+      if (c != null) {
+        w = Draggable<int>(
+          data: i,
+          feedback: Opacity(
+              opacity: 0.8,
+              child: ItemCell(
+                  rules: shop.rules,
+                  content: c,
+                  size: _cellSize,
+                  selected: true)),
+          childWhenDragging: ItemCell(rules: shop.rules, size: _cellSize),
+          child: w,
         );
       }
-      return KeyedSubtree(key: ValueKey('inv-cell-$i'), child: w);
+      final inner = w;
+      return DragTarget<int>(
+        onWillAcceptWithDetails: (d) => d.data != i,
+        onAcceptWithDetails: (d) {
+          shop.controller.moveInventory(d.data, i);
+          setState(() {
+            if (_selCell == d.data) _selCell = i;
+          });
+        },
+        builder: (context, cand, _) => cand.isEmpty
+            ? inner
+            : Stack(children: [
+                inner,
+                Positioned.fill(
+                    child: IgnorePointer(
+                        child: Container(
+                            decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: ProtoColors.sky, width: 2))))),
+              ]),
+      );
     }
 
     final eq = p.equippedItem;
@@ -594,12 +588,25 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         // Flechas: el cursor recorre la grilla y elige la casilla;
         // Enter otra vez sobre un arma la equipa (menu_focus.dart).
         child: InitialFocus(
-            child: FocusGrid(
+            child: DsItemGrid(
+          rules: shop.rules,
           count: InventoryRules.cells,
           columns: InventoryRules.columns,
-          spacing: _gap,
-          keyPrefix: 'inv-focus-',
-          cell: (_, i, focused) => cellAt(i, focused),
+          cellSize: _cellSize,
+          gap: _gap,
+          focusKeyPrefix: 'inv-focus-',
+          cellKey: (i) => ValueKey('inv-cell-$i'),
+          freshKey: (i) => ValueKey('inv-new-$i'),
+          slot: slotAt,
+          tip: (i, child, focused) => _withTip(
+              me, owner, _content(p, layout.cells[i])!, attrs, child,
+              focused: focused),
+          decorate: decorateCell,
+          onTap: tapCell,
+          // Clic derecho: el menú de acciones (v0.9.7).
+          onMenu: mine && !pickMode
+              ? (i, at) => _openMenu(p, me, mates, layout.cells[i]!, i, at)
+              : null,
           onFocusCell: (i) {
             final t = layout.cells[i];
             if (pickMode) return;
@@ -611,20 +618,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           onActivate: (i) => pickMode
               ? togglePick(layout.cells[i])
               : _activateCell(p, layout.cells[i], i, mine, owner.id,
-                  cellTap: () {
-                  final c = _content(p, layout.cells[i]);
-                  if (_pickB(owner.id, layout.cells[i], c)) return;
-                  final from = _moveFrom;
-                  if (mine && from != null) {
-                    setState(() => _moveFrom = null);
-                    if (from != i) {
-                      shop.controller.moveInventory(from, i);
-                      _selCell = i;
-                    }
-                    return;
-                  }
-                  if (layout.cells[i] case final t?) _select(t, i);
-                }, openMenu: () {
+                  cellTap: () => tapCell(i), openMenu: () {
                   if (layout.cells[i] case final t?) {
                     _openMenuAtFocus(p, me, mates, t, i);
                   }
@@ -1443,31 +1437,6 @@ class _CellButton extends StatelessWidget {
                 ? null
                 : (d) => onSecondaryTap!(d.globalPosition),
             child: child),
-      );
-}
-
-/// Marca NUEVO de una casilla (loot.md § 17.4): franja `gold` abajo.
-class NewItemTag extends StatelessWidget {
-  const NewItemTag({super.key});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        color: ProtoColors.bg.withValues(alpha: 0.85),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
-        // Siempre en una línea dentro de la casilla (44 px).
-        child: const FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text('NUEVO',
-              maxLines: 1,
-              softWrap: false,
-              textScaler: TextScaler.noScaling,
-              style: TextStyle(
-                  fontFamily: RetroType.pixelFamily,
-                  fontSize: 8,
-                  height: 1,
-                  color: ProtoColors.gold)),
-        ),
       );
 }
 

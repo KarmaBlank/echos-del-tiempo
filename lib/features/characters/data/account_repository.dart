@@ -92,6 +92,7 @@ class AccountRepository {
       if (l.notice != null) EcosLog.error('Carga: ${l.notice}');
       _account ??= l.account;
       _written = _account;
+      _migrateAchievements();
       EcosLog.info('Cuenta cargada (${_account!.characters.length} '
           'personajes${l.migrated ? ', migrada de profile.json' : ''})');
     } on AccountLockedException {
@@ -109,6 +110,23 @@ class AccountRepository {
       _account ??= Account();
     }
     return _account!;
+  }
+
+  /// Hazañas de una cuenta de antes de v0.14 (achievements.md § 6.1):
+  /// marca las inferidas con su recompensa y lo avisa una vez.
+  void _migrateAchievements() {
+    final a = _account!;
+    if (a.achievementsRaw != null) return;
+    final (next, unlocks) = migrateAccountAchievements(a,
+        nowS: now().millisecondsSinceEpoch ~/ 1000);
+    _account = next;
+    if (unlocks.isNotEmpty) {
+      final n = achievementsRecoveredNotice(unlocks);
+      notice = notice == null ? n : '$notice $n';
+      EcosLog.info(n);
+    }
+    // Sin escribir acá: queda pendiente (`dirty`) y sale con el próximo
+    // guardado o al salir ([flush]).
   }
 
   /// Aplica [change] a la cuenta actual y la guarda. Los cambios se
@@ -191,7 +209,8 @@ class SelectedCharacterProfileStore implements ProfileStore {
 
   @override
   Future<PlayerProfile?> load() async =>
-      (await repository.load()).selected?.profile;
+      (await repository.load()).profileFor(
+          (await repository.load()).selectedId);
 
   @override
   Future<void> save(PlayerProfile profile) async {
@@ -223,7 +242,7 @@ class AccountPartyStore implements PartyStore {
         if (a.byId(id) case final c?)
           CompanionSlot(
             slotId: id,
-            profile: c.profile,
+            profile: a.profileFor(id)!,
             auto: a.partyAuto.contains(id),
             wants: c.plan == null ? null : BuildWants.fromPlan(c.plan!),
           ),

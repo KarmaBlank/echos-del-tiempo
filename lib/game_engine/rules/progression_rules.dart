@@ -316,6 +316,7 @@ class ProgressionRules {
       ascension: asc,
       milestone10: ms10,
       milestone20: ms20,
+      achievements: raw.achievements,
       // Jefes del Abismo vencidos (v0.8): solo 1..5.
       abyssKills: {
         for (final n in raw.abyssKills)

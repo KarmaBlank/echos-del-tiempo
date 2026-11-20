@@ -16,6 +16,7 @@ import '../../../game_engine/rules/progression_rules.dart';
 import '../../inventory/domain/item_text.dart';
 import '../../inventory/presentation/consumables_bar.dart';
 import '../../inventory/presentation/inventory_action_menu.dart';
+import '../../inventory/presentation/item_grid.dart';
 import '../../inventory/presentation/item_hover_tip.dart';
 import '../../inventory/presentation/item_widgets.dart';
 import '../domain/stash.dart';
@@ -43,6 +44,10 @@ abstract class StashBoardHost {
 
   bool moveStash(int from, int to);
   bool moveCharacter(int from, int to);
+
+  /// Una hazaña que detecta el tablero (buscador con resultados, MOVER
+  /// TODO; achievements.md § 5.2).
+  void achievement(String id);
 }
 
 enum _Side { character, stash }
@@ -166,7 +171,10 @@ class StashBoardState extends State<StashBoard> {
 
   void _moveAll() {
     setState(_clearSel);
-    _result(host.put(_stashRules.movableTokens(host.profile), _tab));
+    final toks = _stashRules.movableTokens(host.profile);
+    final why = host.put(toks, _tab);
+    _result(why);
+    if (why == null && toks.isNotEmpty) host.achievement('stash_move_all');
   }
 
   void _movePicked() {
@@ -307,8 +315,21 @@ class StashBoardState extends State<StashBoard> {
 
   static String _fold(String s) => s.toLowerCase().trim();
 
-  bool _matches(CellContent? c, String q) =>
-      q.trim().isEmpty || (c != null && _fold(_name(c)).contains(_fold(q)));
+  bool _matches(CellContent? c, String q) {
+    final hit =
+        q.trim().isEmpty || (c != null && _fold(_name(c)).contains(_fold(q)));
+    if (hit && c != null && q.trim().isNotEmpty) _searchFound();
+    return hit;
+  }
+
+  bool _searchClaimed = false;
+  void _searchFound() {
+    if (_searchClaimed) return;
+    _searchClaimed = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) host.achievement('inv_search');
+    });
+  }
 
   String _tooltip(PlayerProfile p, CellContent c,
       {bool equipped = false, String? blocked}) {
@@ -380,61 +401,61 @@ class StashBoardState extends State<StashBoard> {
       '<span class="k">Material · en el alijo hasta '
       '${Stash.maxMaterialStack}</span><br>${protoEsc(m.description)}';
 
-  Widget _cell({
-    required Key key,
-    required CellContent? content,
-    required bool selected,
-    required String? tooltip,
-    required VoidCallback onTap,
-    ValueChanged<Offset>? onMenu,
-    bool dim = false,
-    PlayerProfile? viewer,
-    bool equipped = false,
-    String? blocked,
-  }) {
-    Widget w = ItemCell(
-        rules: _rules,
-        content: content,
-        selected: selected,
-        highlight: selected,
-        size: _cellSize);
+  /// Ficha de una casilla: la misma del inventario para armas
+  /// (characters.md § 3); markup simple para pilas y Ecos.
+  Widget _tip(CellContent? content, Widget child,
+      {String? tooltip,
+      PlayerProfile? viewer,
+      bool equipped = false,
+      bool focused = false,
+      String? blocked}) {
     final it = content?.item;
     if (it != null && viewer != null) {
-      // La misma ficha que el inventario (characters.md § 3).
-      w = itemHoverTip(
+      return itemHoverTip(
           rules: _rules,
           viewer: viewer,
           item: it,
           attributes: viewer.attributes,
           equipped: equipped,
+          focused: focused,
           note: blocked == null ? null : _blockedNote(blocked),
-          child: w);
-    } else if (tooltip != null) {
-      w = RetroTooltip(message: tooltip, child: w);
+          child: child);
     }
-    if (dim) w = Opacity(opacity: 0.25, child: w);
-    return GestureDetector(
-        key: key,
-        onTap: onTap,
-        onSecondaryTapUp:
-            onMenu == null ? null : (d) => onMenu(d.globalPosition),
-        child: w);
+    if (tooltip != null) {
+      return RetroTooltip(
+          message: tooltip, keyboardFocus: focused, child: child);
+    }
+    return child;
   }
+
+  /// Casilla suelta (la EQUIPADA): la misma molécula de la grilla.
+  Widget _cell({
+    required Key key,
+    required CellContent? content,
+    required bool selected,
+    required VoidCallback onTap,
+    PlayerProfile? viewer,
+    bool equipped = false,
+    String? blocked,
+  }) =>
+      GestureDetector(
+          key: key,
+          onTap: onTap,
+          child: _tip(
+              content,
+              ItemSlot(
+                  rules: _rules,
+                  size: _cellSize,
+                  data: ItemSlotData(
+                      content: content,
+                      selected: selected,
+                      highlight: selected)),
+              viewer: viewer,
+              equipped: equipped,
+              blocked: blocked));
 
   double _gridWidth(int columns) =>
       columns * _cellSize + (columns - 1) * _gap;
-
-  Widget _grid(int columns, int count, Widget Function(int) build,
-          {required ValueChanged<int> onActivate, String? keyPrefix}) =>
-      FocusGrid(
-        count: count,
-        columns: columns,
-        spacing: _gap,
-        width: _gridWidth(columns),
-        keyPrefix: keyPrefix,
-        cell: (_, i, __) => build(i),
-        onActivate: onActivate,
-      );
 
   bool _charSelected(String? t) =>
       t != null &&
@@ -465,7 +486,6 @@ class StashBoardState extends State<StashBoard> {
               key: const ValueKey('stash-char-equipped'),
               content: eqContent,
               selected: _charSelected(eq?.uid),
-              tooltip: null,
               viewer: p,
               equipped: true,
               blocked: eq == null ? null : _stashRules.blocked(p, eq.uid),
@@ -493,23 +513,37 @@ class StashBoardState extends State<StashBoard> {
               bounds: () => _tipBounds(character: true),
               child: KeyedSubtree(
                   key: _charGridKey,
-                  child: _grid(InventoryRules.columns, InventoryRules.cells, (i) {
-            final t = cells[i];
-            final c = _charContent(p, t);
-            return _cell(
-              key: ValueKey('stash-char-$i'),
-              content: c,
-              selected: _charSelected(t),
-              dim: c != null && !_matches(c, _qChar),
-              tooltip: c == null
-                  ? null
-                  : _tooltip(p, c, blocked: _stashRules.blocked(p, t!)),
-              viewer: p,
-              blocked: t == null ? null : _stashRules.blocked(p, t),
-              onTap: () => _tapCharacter(t, i),
-              onMenu: t == null ? null : (at) => _menuCharacter(t, i, at),
-            );
-          }, onActivate: (i) => _tapCharacter(cells[i], i)))),
+                  child: DsItemGrid(
+                    rules: _rules,
+                    count: InventoryRules.cells,
+                    columns: InventoryRules.columns,
+                    cellSize: _cellSize,
+                    gap: _gap,
+                    width: _gridWidth(InventoryRules.columns),
+                    cellKey: (i) => ValueKey('stash-char-$i'),
+                    slot: (i) {
+                      final t = cells[i];
+                      final c = _charContent(p, t);
+                      final sel = _charSelected(t);
+                      return ItemSlotData(
+                          content: c,
+                          selected: sel,
+                          highlight: sel,
+                          dimmed: c != null && !_matches(c, _qChar));
+                    },
+                    tip: (i, child, focused) {
+                      final t = cells[i]!;
+                      final c = _charContent(p, t)!;
+                      final blocked = _stashRules.blocked(p, t);
+                      return _tip(c, child,
+                          tooltip: _tooltip(p, c, blocked: blocked),
+                          viewer: p,
+                          focused: focused,
+                          blocked: blocked);
+                    },
+                    onTap: (i) => _tapCharacter(cells[i], i),
+                    onMenu: (i, at) => _menuCharacter(cells[i]!, i, at),
+                  ))),
           SizedBox(height: DsSpace.sm),
           // Los materiales no ocupan casilla (loot.md § 17.1); las pociones
           // se ven pero no van al alijo.
@@ -608,27 +642,39 @@ class StashBoardState extends State<StashBoard> {
             bounds: () => _tipBounds(character: false),
             child: KeyedSubtree(
                 key: _stashGridKey,
-                child: _grid(Stash.columns, Stash.perTab, (k) {
-          final i = base + k;
-          final e = s.cells[i];
-          final c = _stashContent(e);
-          return _cell(
-            key: ValueKey('stash-cell-$i'),
-            content: c,
-            selected: _picking
-                ? _pickedCells.contains(i)
-                : _side == _Side.stash && _selCell == i,
-            dim: c != null && !_matches(c, _qStash),
-            tooltip: e == null
-                ? null
-                : e.material != null
-                    ? _stashStackTooltip(e.material!, e.count)
-                    : _tooltip(p, c!),
-            viewer: p,
-            onTap: () => _tapStash(i),
-            onMenu: e == null ? null : (at) => _menuStash(i, at),
-          );
-        }, onActivate: (k) => _tapStash(base + k)))),
+                child: DsItemGrid(
+                  rules: _rules,
+                  count: Stash.perTab,
+                  columns: Stash.columns,
+                  cellSize: _cellSize,
+                  gap: _gap,
+                  width: _gridWidth(Stash.columns),
+                  cellKey: (k) => ValueKey('stash-cell-${base + k}'),
+                  slot: (k) {
+                    final i = base + k;
+                    final c = _stashContent(s.cells[i]);
+                    final sel = _picking
+                        ? _pickedCells.contains(i)
+                        : _side == _Side.stash && _selCell == i;
+                    return ItemSlotData(
+                        content: c,
+                        selected: sel,
+                        highlight: sel,
+                        dimmed: c != null && !_matches(c, _qStash));
+                  },
+                  tip: (k, child, focused) {
+                    final e = s.cells[base + k]!;
+                    final c = _stashContent(e)!;
+                    return _tip(c, child,
+                        tooltip: e.material != null
+                            ? _stashStackTooltip(e.material!, e.count)
+                            : _tooltip(p, c),
+                        viewer: p,
+                        focused: focused);
+                  },
+                  onTap: (k) => _tapStash(base + k),
+                  onMenu: (k, at) => _menuStash(base + k, at),
+                ))),
         if (_tab == Stash.ecoTab) ...[
           SizedBox(height: DsSpace.xs),
           Text('Ecos y materiales del Atlas y del Abismo',

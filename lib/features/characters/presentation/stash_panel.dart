@@ -72,4 +72,6 @@ class _SessionStashHost implements StashBoardHost {
   @override
   bool moveCharacter(int from, int to) =>
       c.moveInventory(from, to);
+  @override
+  void achievement(String id) => c.claimAchievement(id);
 }

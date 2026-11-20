@@ -14,6 +14,7 @@ import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/atlas_store.dart';
 import '../../../game_engine/models/attributes.dart';
+import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/build_wants.dart';
 import '../../../game_engine/models/loot_filter.dart' show FilterVerdict;
@@ -656,6 +657,7 @@ class SessionController extends StateNotifier<SessionView?> {
     final next = _atlasRules.take(atlas, id);
     if (next == null) return false;
     _setAtlas(next);
+    claimAchievement('atlas_node');
     return true;
   }
 
@@ -1257,6 +1259,26 @@ class SessionController extends StateNotifier<SessionView?> {
   bool markSeen(List<String> uids) =>
       _applyFor(actingId, SeenItemsAction(uids));
 
+  /// Hazaña que detecta este dispositivo (achievements.md § 5.2): se le
+  /// avisa al host, que la paga una sola vez. Sin efecto si ya estaba o
+  /// si no es de las que puede avisar el cliente.
+  bool claimAchievement(String id) {
+    final me = _s?.players[localId];
+    if (me == null ||
+        !kClientClaimableAchievements.contains(id) ||
+        me.profile.achievements.isDone(id) ||
+        !_claimed.add(id)) {
+      return false;
+    }
+    return _apply(ClaimAchievementAction(id));
+  }
+
+  final _claimed = <String>{};
+
+  /// Hazañas logradas por este dispositivo (el jugador o sus compañeros)
+  /// en la sesión, en orden: el toast las muestra (§ 7).
+  final achievementLog = <AchievementUnlockedEvent>[];
+
   /// Guardar el filtro de loot (`null` = el por defecto).
   bool setLootFilter(String? text) =>
       _applyFor(actingId, SetLootFilterAction(text));
@@ -1693,6 +1715,14 @@ class SessionController extends StateNotifier<SessionView?> {
           _missionLoot.add(drop);
         case BattleFinishedEvent(victory: true):
           _onBattleWon();
+        // Hazañas (achievements.md § 5.1): la recompensa ya está en el
+        // perfil de sesión; se guarda enseguida en la cuenta.
+        case AchievementUnlockedEvent(:final playerId, :final id)
+            when controls(playerId):
+          achievementLog.add(e);
+          final name = kAchievementsById[id]?.name ?? id;
+          _addChat(ChatLine.system('Hazaña: $name'));
+          forceSave = true;
         case MissionEndedEvent() || ReturnedToLobbyEvent():
           forceSave = true;
         default:

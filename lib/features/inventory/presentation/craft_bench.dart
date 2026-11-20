@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/theme/panel_frame.dart';
@@ -20,13 +21,16 @@ import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/craft_rules.dart';
 import '../../build_planner/presentation/build_fit_badge.dart';
+import '../../build_planner/presentation/build_plan_providers.dart';
 import '../domain/battle_impact.dart';
-import '../../../app/design/ds_components.dart';
 import '../domain/craft_help.dart';
 import '../domain/inventory_menu.dart' show foldSearch, inventoryMatches;
 import '../domain/item_text.dart';
 import '../domain/skill_tip.dart';
 import '../domain/weapon_text.dart' show fmtNum;
+import 'item_grid.dart';
+import 'item_hover_tip.dart';
+import 'item_widgets.dart' show CellContent;
 import 'shop_sections.dart';
 import 'skill_chip.dart';
 
@@ -284,35 +288,62 @@ class _CraftBenchState extends State<CraftBench> {
     return words.every(text.contains);
   }
 
-  /// Campo de búsqueda arriba de una lista de armas. Esc con texto lo
-  /// limpia (sin texto, Esc sigue volviendo al paso anterior).
-  Widget _searchField(String key, TextEditingController q, String hint) =>
-      Focus(
-        canRequestFocus: false,
-        skipTraversal: true,
-        onKeyEvent: (_, e) {
-          if (e is KeyDownEvent &&
-              e.logicalKey == LogicalKeyboardKey.escape &&
-              q.text.isNotEmpty) {
-            setState(q.clear);
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        },
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: DsSearchField(
-              key: ValueKey(key),
-              hint: hint,
-              width: 320,
-              controller: q,
-              onChanged: (_) => setState(() {}),
-            ),
-          ),
-        ),
-      );
+  /// Buscador de una grilla de la mesa (el mismo del inventario).
+  ItemGridSearch _search(String key, TextEditingController q, String hint) =>
+      ItemGridSearch(
+          fieldKey: ValueKey(key),
+          hint: hint,
+          controller: q,
+          onChanged: (_) => setState(() {}));
+
+  /// Grilla de armas de la mesa: la misma casilla, ficha y buscador que
+  /// el INVENTARIO (design_system.md § "Estructura atómica"). [note]
+  /// agrega markup al pie de la ficha.
+  Widget _weaponGrid(PlayerProfile p, List<ItemInstance> list,
+          {required String? selected,
+          required String keyPrefix,
+          required ValueChanged<ItemInstance> onTap,
+          ItemGridSearch? search,
+          String? empty,
+          String Function(ItemInstance)? note}) =>
+      Consumer(builder: (context, ref, _) {
+        final plan = ref.watch(buildPlanProvider).plan;
+        final fit = ref.watch(buildPlanRulesProvider);
+        return DsItemGrid(
+          rules: shop.rules,
+          count: list.length,
+          search: search,
+          empty: empty,
+          cellKey: (i) => ValueKey('$keyPrefix${list[i].uid}'),
+          slot: (i) => ItemSlotData(
+              content: CellContent.item(list[i]),
+              selected: list[i].uid == selected,
+              buildMatch:
+                  plan.goalCount > 0 && fit.itemFit(plan, list[i]).any),
+          tip: (i, child, focused) {
+            final it = list[i];
+            final n = note?.call(it);
+            return itemHoverTip(
+                rules: shop.rules,
+                viewer: p,
+                item: it,
+                attributes: p.attributes,
+                equipped: it.uid == p.equippedUid,
+                focused: focused,
+                footer: n == null
+                    ? null
+                    : Container(
+                        key: ValueKey('${keyPrefix}tip-${it.uid}'),
+                        padding: const EdgeInsets.all(6),
+                        color: ProtoColors.bg,
+                        child: RetroTipText(n,
+                            maxWidth: RetroType.width(
+                                context, RetroHoverCard.textWidth))),
+                child: child);
+          },
+          onTap: (i) => onTap(list[i]),
+        );
+      });
 
   // ------------------------------------------------------------------
   // Elección por defecto y acción
@@ -642,58 +673,26 @@ class _CraftBenchState extends State<CraftBench> {
     return PanelSplit(
       listWidth: 480,
       list: [
-        _searchField(
-            'bench-weapon-search', _weaponQ, 'BUSCAR: nombre, tipo, mod'),
-        if (!items.any((it) => _hit(_weaponQ, it)))
-          const Text('Ninguna arma coincide con la búsqueda.',
-              style: TextStyle(color: ProtoColors.dim)),
-        CardGrid(
-          minWidth: 220,
-          children: [
+        _weaponGrid(
+          p,
+          [
             for (final it in items)
-              if (it.uid == target.uid || _hit(_weaponQ, it))
-              () {
-                final color =
-                    ProtoColors.parse(rarityHex(it.rarity)) ?? ProtoColors.ink;
-                return ActionCard(
-                  key: ValueKey('bench-weapon-${it.uid}'),
-                  selected: it.uid == target.uid,
-                  band: color,
-                  bandLabel: it.rarity.label.substring(0, 1),
-                  icon: PixelIcon(PixelIconKind.sword,
-                      size: RetroType.width(context, 24), color: color),
-                  title: itemNameMarkup(rules, it),
-                  // ★ si el arma cumple algo de tu build.
-                  badge: BuildFitBadge(item: it),
-                  description: '${it.rarity.label} · Nv '
-                      '${rules.items.baseOf(it)?.level ?? 1} · Mods '
-                      '${it.modCount}/${it.rarity.maxMods}',
-                  // Las habilidades con su ficha (mouse / foco = tooltip).
-                  footer: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (it.uid == p.equippedUid)
-                        const Text('EQUIPADA',
-                            style: TextStyle(color: ProtoColors.gold)),
-                      SkillChips(
-                          rules: rules,
-                          item: it,
-                          label: null,
-                          stats: shop.preview.withItem(p, it)),
-                    ],
-                  ),
-                  onTap: () {
-                    if (it.uid == target.uid) return _go(1);
-                    setState(() {
-                      _target = it.uid;
-                      _pick = 0;
-                      _source = null;
-                    });
-                    _focus.requestFocus();
-                  },
-                );
-              }(),
+              if (it.uid == target.uid || _hit(_weaponQ, it)) it
           ],
+          selected: target.uid,
+          keyPrefix: 'bench-weapon-',
+          search: _search('bench-weapon-search', _weaponQ,
+              'BUSCAR: nombre, tipo, mod'),
+          empty: 'Ninguna arma coincide con la búsqueda.',
+          onTap: (it) {
+            if (it.uid == target.uid) return _go(1);
+            setState(() {
+              _target = it.uid;
+              _pick = 0;
+              _source = null;
+            });
+            _focus.requestFocus();
+          },
         ),
       ],
       detail: PanelDetail(
@@ -1026,27 +1025,37 @@ class _CraftBenchState extends State<CraftBench> {
         list.add(dim(_quickReason(p, target, op) ??
             'No hay armas (no la equipada ni tu última arma inicial)'));
       } else {
-        list.add(_searchField('craft-source-search', _sourceQ,
-            'BUSCAR: nombre, tipo, mod, habilidad'));
+        list.add(_weaponGrid(
+          p,
+          [
+            for (final it in sources)
+              if (it.uid == action.sourceUid || _hit(_sourceQ, it)) it
+          ],
+          selected: action.sourceUid,
+          keyPrefix: 'craft-source-',
+          search: _search('craft-source-search', _sourceQ,
+              'BUSCAR: nombre, tipo, mod, habilidad'),
+          note: (it) => CraftHelp(rules.crafting).source(it, op),
+          onTap: (it) {
+            setState(() {
+              _source = it.uid;
+              _pick = 0;
+              _lastBefore = null;
+              _done = false;
+            });
+            _focus.requestFocus();
+          },
+        ));
         if (!sources.any((it) => _hit(_sourceQ, it))) {
           list.add(dim('Ninguna arma coincide con la búsqueda.'));
         }
-      }
-      for (final it in sources) {
-        if (it.uid != action.sourceUid && !_hit(_sourceQ, it)) continue;
-        final sel = it.uid == action.sourceUid;
-        list.add(RetroTooltip(
-            key: ValueKey('craft-source-tip-${it.uid}'),
-            message: CraftHelp(rules.crafting).source(it, op),
-            child: row('craft-source-${it.uid}', itemNameMarkup(rules, it),
-                sel, () {
-              _source = it.uid;
-              _pick = 0;
-            },
-                value: protoColor(ProtoColors.dim,
-                    '${it.rarity.label} · Nv ${rules.items.baseOf(it)?.level ?? 1}'))));
-        // Las elecciones de esa arma, justo debajo (sin bajar a buscarlas).
-        if (sel && op != CraftOp.transferPassive) {
+        // Las elecciones del arma elegida, debajo de la grilla.
+        final src = p.itemByUid(action.sourceUid ?? '');
+        if (src != null && op != CraftOp.transferPassive) {
+          list.add(Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: ProtoText(itemNameMarkup(rules, src),
+                  key: const ValueKey('craft-source-name'))));
           if (picks.isEmpty) {
             list.add(Padding(
                 padding: const EdgeInsets.only(left: 24),
@@ -1054,9 +1063,6 @@ class _CraftBenchState extends State<CraftBench> {
                     ? '(sin habilidades)'
                     : '(no tiene mods)')));
           }
-          // Cupos llenos: el "¿qué reemplazas?" va justo debajo de la
-          // habilidad elegida, antes de su ficha (antes quedaba al final
-          // de la lista y había que bajar para encontrarlo).
           list.addAll(pickRows(indent: 24, afterSelected: replaceRows()));
         }
       }
@@ -1087,22 +1093,43 @@ class _CraftBenchState extends State<CraftBench> {
       if (bases.isEmpty) {
         list.add(dim('(ninguna de esta familia)'));
       } else {
-        list.add(_searchField(
-            'bench-base-search', _baseQ, 'BUSCAR: nombre, tipo'));
+        final shown = [
+          for (final w in bases)
+            if (w.id == action.sourceUid || _baseHit(w)) w
+        ];
+        // Las bases van en la misma grilla: la casilla de una Común nueva.
+        list.add(DsItemGrid(
+          rules: rules,
+          count: shown.length,
+          search:
+              _search('bench-base-search', _baseQ, 'BUSCAR: nombre, tipo'),
+          cellKey: (i) => ValueKey('bench-base-${shown[i].id}'),
+          slot: (i) => ItemSlotData(
+              content: CellContent.item(
+                  ItemInstance.common(shown[i].id, shown[i].id)),
+              selected: shown[i].id == action.sourceUid),
+          tip: (i, child, focused) {
+            final w = shown[i];
+            return RetroTooltip(
+                keyboardFocus: focused,
+                message: '<b>${protoEsc(w.name)}</b> '
+                    '${protoColor(ProtoColors.dim, protoEsc(w.type))} '
+                    '${weightTagMarkup(w)}<br>Nv ${w.level} '
+                    '${rules.meetsRequirements(p, w) ? protoColor(ProtoColors.green, 'OK') : protoColor(ProtoColors.red, 'Req')}',
+                child: child);
+          },
+          onTap: (i) {
+            setState(() {
+              _base = shown[i].id;
+              _lastBefore = null;
+              _done = false;
+            });
+            _focus.requestFocus();
+          },
+        ));
         if (!bases.any(_baseHit)) {
           list.add(dim('Ninguna base coincide con la búsqueda.'));
         }
-      }
-      for (final w in bases) {
-        if (w.id != action.sourceUid && !_baseHit(w)) continue;
-        list.add(row(
-            'bench-base-${w.id}',
-            '${protoEsc(w.name)} ${protoColor(ProtoColors.dim, protoEsc(w.type))} '
-                '${weightTagMarkup(w)}',
-            w.id == action.sourceUid,
-            () => _base = w.id,
-            value: 'Nv ${w.level} '
-                '${rules.meetsRequirements(p, w) ? protoColor(ProtoColors.green, 'OK') : protoColor(ProtoColors.red, 'Req')}'));
       }
     }
     if (list.length == 1) {

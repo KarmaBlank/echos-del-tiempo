@@ -97,7 +97,10 @@ root registra para que el título sepa si hay red: `label` (`LAN`, `P2P`),
 
 ## Protocolo (versión 15)
 
-`kProtocolVersion` (`wire.dart`) = 23 desde v0.12.2 (acción `useItem`:
+`kProtocolVersion` (`wire.dart`) = 24 desde v0.14.0 (Hazañas,
+achievements.md § 5.3: `ach` en el perfil del `hello` y del estado, acción
+`ach` `{id}` para las que detecta el cliente y evento `ach` `{p, id}`).
+23 desde v0.12.2 (acción `useItem`:
 pociones fuera de batalla, loot.md § 17.5). 19 desde v0.9.8 (perfil v4 con `nw`,
 marca NUEVO, y acción `seen`; loot.md § 17.4; 16 y 17 en `wire.dart`).
 15 desde v0.9.1 (armas con `nq`,

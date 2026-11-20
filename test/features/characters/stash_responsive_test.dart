@@ -38,6 +38,8 @@ class _Host implements StashBoardHost {
   bool moveStash(int from, int to) => false;
   @override
   bool moveCharacter(int from, int to) => false;
+  @override
+  void achievement(String id) {}
 }
 
 void main() {

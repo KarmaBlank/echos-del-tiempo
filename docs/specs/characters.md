@@ -241,7 +241,9 @@ Destructivo, por eso pide **escribir el nombre**:
   del personaje (equipada aparte, grilla 8 × 5, barra de pilas), a la
   derecha el alijo con sus pestañas (`DsTabBar`, insignia `usadas/48`).
   Cada lado tiene su buscador (`DsSearchField`): lo que no coincide se ve
-  atenuado. Mismas casillas, íconos, colores y fichas que el inventario.
+  atenuado. Mismas casillas, íconos, colores y fichas que el inventario:
+  las dos grillas son el organismo `DsItemGrid` (v0.14.0,
+  design_system.md § "Estructura atómica").
 - Mover: clic elige (borde dorado) y el botón de abajo lo pasa al otro
   lado (`AL ALIJO >` / `< AL INVENTARIO`); doble clic = mover directo;
   clic derecho = menú con `Guardar en alijo` / `Sacar al inventario`.
