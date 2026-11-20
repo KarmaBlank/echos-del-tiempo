@@ -337,7 +337,7 @@ AGI 40):
 
 **Endgame**:
 - Maestría 1–20 (28 puntos con los +2 cada 5): lado Guerrero de
-  Glaciar por el lado Guerrero (`glaciar_nb` Quebrar Témpanos: +15%
+  Glaciar (`glaciar_nb` Quebrar Témpanos: +15%
   crítico vs. Congelación, ms 1–6), `forja_na` Temple / `forja_nb`
   Hierro al Rojo (ms 7–14, quiebre extra), `vanguardia_n1` Toque de
   Clarín y `vanguardia_nd` Grito de Victoria (ms 15–20, co-op).
