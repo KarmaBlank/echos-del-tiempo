@@ -1,0 +1,523 @@
+# Spec (APROBADO por el dueño): Editor del juego
+
+Estado: **paso 1 implementado** (§ 7.1). Respuestas del dueño a las
+preguntas abiertas en § 8.
+
+Pedido del dueño: convertir la herramienta de admin/monitoreo
+(docs/specs/balance_admin.md, flavor `lib/app/flavors/main_admin.dart`,
+`lib/features/admin/`) en un **editor completo del juego**, con tres
+áreas:
+
+1. **Monitorización**: lo que ya existe (`monitoring_page.dart`).
+2. **Balance**: lo que ya existe (`balance_page.dart`, `changes_page.dart`,
+   `patch_page.dart`, `impact_panel.dart`), ordenado por categoría y con
+   buscador.
+3. **Visual**: cambiar **sprites** de todo y **animaciones** de todo,
+   categorizado, con buscador, con vista previa ahí mismo. Además: que
+   **las ULT se vean muchísimo mejor** y se puedan iterar desde el editor.
+
+Nada de esto cambia reglas del juego (el motor en `game_engine/` no se
+toca); es datos + presentación + herramienta.
+
+## 1. Estado actual (punto de partida)
+
+- **Sprites**: ya son datos. `assets/sprites/sprite_manifest.yaml`
+  (`characters:`, `enemies:`, …, un frame `idle` por sprite) y
+  `SpriteCatalog` es la única clase que lo lee. Lo que falta es UI para
+  verlos/reemplazarlos y categorías para lo que todavía se dibuja en
+  código (íconos de armas/ítems, tiles, partes de UI, efectos).
+- **Animaciones**: son **código Dart**. Las ULT son guiones
+  semi-declarativos (`UltScript`, `kUltScripts` en
+  `scene/ult_cinematic.dart`) pero los efectos se dibujan a mano por
+  `UltStyle` en `scene/ult_fx.dart` (`UltDirector`) y en
+  `battle_painter.dart`; los efectos comunes en `scene/battle_fx.dart`
+  (`BattleFx`, `FxKind`); caminar/estocada/flotación son procedurales
+  (docs/specs/sprites.md). Tiempos repartidos en tablas del spec
+  (battle_presentation.md § "Guiones").
+- **Fin de batalla**: `battleCinematicHold` usa valores fijos (ULT 2.3 s,
+  dúo 1.5 s; battle_presentation.md § "Fin de batalla (v0.13.4)"). Si una
+  cinemática se alarga, la espera queda corta.
+
+## 2. Arquitectura
+
+### 2.1 Animaciones como datos: formato FXA ("efecto animado")
+
+Archivos **YAML** (mismo lector `yaml` que el manifest; legible y
+comentable a mano; el editor lo escribe ordenado y estable para que los
+diffs de git sean chicos). Un archivo por animación en
+`assets/fx/<categoría>/<id>.fx.yaml` y un índice
+`assets/fx/fx_manifest.yaml` (id lógico → archivo, como el de sprites).
+
+Una animación es una **línea de tiempo** con duración y **pistas**; cada
+pista tiene **keyframes** `(t en ms, valor, curva)` o **disparos**
+(eventos puntuales en `t`).
+
+```yaml
+schema: 1
+id: ult_tajo_final
+category: ult            # ult | duo | skill | attack | enemy_ult | status | death | map_move | ui
+name: Tajo Final
+tags: [espada, un_objetivo, físico]
+duration: 2200           # ms; la fuente de verdad para esperas (§ 4.3)
+phases: { build: 800, release: 1000, recover: 400 }   # opcional, para la cámara/tarjeta
+targets: single          # single | all | self | allies | line
+anchors: [caster, target, targets_center, screen]
+tracks:
+  - type: camera
+    keys:
+      - { t: 0,    focus: caster, zoom: +1, ease: smooth }
+      - { t: 800,  focus: target, zoom: +1, ease: snap }
+      - { t: 1800, focus: base,   zoom: 0,  ease: smooth }
+  - type: dim          # oscurecido de fondo 0..1
+    keys: [ { t: 0, v: 0 }, { t: 200, v: 0.85 }, { t: 1800, v: 0.85 }, { t: 2200, v: 0 } ]
+  - type: letterbox
+    keys: [ { t: 0, v: 0 }, { t: 200, v: 0.09 }, { t: 1800, v: 0.09 }, { t: 2200, v: 0 } ]
+  - type: title_card   # tarjeta con nombre (la actual)
+    at: 80
+    until: 740
+  - type: actor        # mover/posar un actor
+    who: caster
+    keys:
+      - { t: 0,    pose: charge }
+      - { t: 950,  move: { to: target, offset: [-14, 0] }, ease: out }
+      - { t: 1380, pose: strike }
+      - { t: 1800, move: { to: home } }
+  - type: sprite       # sprite/frames del catálogo de sprites (nunca rutas)
+    sprite: fx.slash_big
+    anchor: target
+    keys: [ { t: 1000, frame: 0 }, { t: 1060, frame: 1 }, { t: 1120, frame: 2 } ]
+  - type: particles
+    fire:
+      - { t: 1380, preset: burst, anchor: target, element: auto, count: 40, speed: 1.4 }
+  - type: shake
+    fire: [ { t: 1380, amp: 10, ms: 260 } ]
+  - type: flash        # destello de pantalla
+    fire: [ { t: 1360, color: white, alpha: 0.7, ms: 160 } ]
+  - type: hitstop
+    fire: [ { t: 1380, ms: 110 } ]
+  - type: impact       # dónde caen números/estado/sonido de golpe del objetivo i
+    fire: [ { t: 1380, stagger: 0 } ]
+  - type: sound
+    fire: [ { t: 0, cue: ult_charge }, { t: 1380, cue: ult_hit_heavy } ]
+```
+
+Reglas del formato:
+- **Tiempos en ms** desde el inicio. Valores entre keyframes se
+  interpolan con `ease` (`linear`, `smooth`, `in`, `out`, `snap`,
+  `back` = rebote).
+- `element: auto` toma el elemento de la acción (battle_presentation.md
+  § "Elemento y color de cada acción"); colores por nombre de rol, nunca
+  hex sueltos salvo `color: '#rrggbb'` explícito.
+- `sprite:` y `cue:` son **ids lógicos** del sprite_manifest y del
+  catálogo de audio (docs/specs/audio.md). El FX nunca nombra archivos.
+- `impact` es lo único que conecta con la lógica: los números, textos de
+  estado, `poof` y el sonido de golpe del objetivo `i` caen en
+  `t + stagger·min(i, 3)` (misma regla que hoy).
+- Pistas desconocidas se ignoran con aviso (compatibilidad hacia
+  adelante); `schema` mayor al soportado → se usa la animación vieja
+  (adaptador, § 2.3).
+- Tipos de pista v1: `camera`, `dim`, `letterbox`, `title_card`,
+  `actor`, `sprite`, `particles`, `trail` (estela entre dos anclas),
+  `shape` (anillo/rayo/columna/onda parametrizables), `shake`, `flash`,
+  `hitstop`, `tint` (color de la escena), `impact`, `damage_style`
+  (pesado/rebote/crítico), `sound`.
+
+### 2.2 Carga y render
+
+- **`FxCatalog`** (`lib/core/fx/fx_catalog.dart`): única clase que lee
+  `fx_manifest.yaml` + los `.fx.yaml` (como `SpriteCatalog`). Parsea a un
+  modelo inmutable Dart puro (`FxTimeline`, `FxTrack`, `FxKey`) en
+  `lib/game_engine/fx/` (sin Flutter: testeable con `flutter test`).
+  Nunca lanza: archivo roto → aviso en log y se usa el adaptador.
+- **`FxPlayer`** (presentación): dado un `FxTimeline`, el reloj de la
+  escena (respeta hit-stop y congelado) y las anclas resueltas
+  (posiciones de lanzador/objetivos), evalúa cada pista en `a` ms y le
+  pasa a los painters existentes valores ya calculados (cámara, dim,
+  partículas a disparar, sprites a dibujar). El **render no cambia de
+  tecnología**: `CustomPainter` + `Ticker` como hoy (battle_presentation
+  § "Arquitectura"); Flame sigue siendo opcional donde ya se usa.
+- Las primitivas visuales (`shape`, `particles`, `trail`) son painters
+  parametrizados que hoy están mezclados dentro de `UltDirector` por
+  `UltStyle`; se extraen como funciones reutilizables.
+- Consulta por acción: `FxCatalog.forAction(kind, id)` (p. ej.
+  `ult/espada`, `duo/guerrero+maga`, `skill/sismo`, `status/veneno`),
+  con caída a una genérica de la categoría.
+
+### 2.3 Compatibilidad: adaptador
+
+- **`LegacyFxAdapter`**: para cada animación que todavía no tiene
+  `.fx.yaml`, construye un `FxTimeline` equivalente desde el código
+  actual (`kUltScripts` → pistas `camera/dim/letterbox/title_card/
+  impact/hitstop/shake/flash`, más una pista `legacy` que delega el
+  dibujo en `UltDirector` con el `UltStyle` de siempre). Así **todas**
+  las animaciones aparecen en el editor desde el día 1 (en solo lectura
+  las partes `legacy`, con botón "Convertir a datos").
+- Prioridad de resolución: override local (§ 4.2) → asset `.fx.yaml` →
+  adaptador. Un test de oro compara, para cada ULT migrada, duración,
+  impactos y hit-stop contra la tabla actual hasta que el dueño apruebe
+  el cambio de look.
+- **Orden de migración**: (1) las 13 ULT y los dúos; (2) habilidades y
+  ataques básicos; (3) ULT enemigas y quiebre; (4) estados, muertes,
+  procs; (5) movimiento en el mapa. `UltDirector` se borra cuando no
+  quede ninguna pista `legacy`.
+
+## 3. Área Visual del editor
+
+### 3.1 Sprites
+
+- **Catálogo navegable**: árbol por categoría — Personajes (clase →
+  ascensiones), Enemigos (familia/bioma), Armas e ítems, Tiles y mapa,
+  UI (íconos, marcos), Efectos (frames usados por pistas `sprite`).
+  Buscador por id, nombre visible y etiqueta; filtro "sin arte propio"
+  (todavía el exportado procedural) y "con override".
+- Lo que hoy se dibuja en código (íconos de armas, tiles, partes de UI)
+  se agrega al manifest con nuevas secciones (`items:`, `tiles:`, `ui:`,
+  `fx:`); el catálogo muestra el render procedural como "por defecto"
+  hasta que haya PNG.
+- **Ficha del sprite**: imagen a ×1/×2/×4/×8 en grilla de píxeles, ancla
+  marcada, tamaño, ruta; y **vista en contexto**: mini escena de batalla
+  (arena real, formación de prueba, `idle` + estocada + flash de golpe)
+  o mini mapa de prueba según la categoría. Comparar antes/después
+  (deslizador).
+- **Reemplazar**: arrastrar un PNG o elegir archivo. Validación:
+  PNG con alfa; tamaño igual al original (si difiere: aviso, opción de
+  aceptar si es múltiplo/divisor exacto o de reajustar el ancla); sin
+  píxeles semitransparentes en bordes (aviso, no error: pixel art);
+  peso máx. 1 MB; paleta: aviso si supera N colores (informativo).
+- **Guardado**: copia el PNG a la carpeta de **overrides** (§ 4.2) y
+  escribe la entrada en `sprite_overrides.yaml`; "Publicar en el repo"
+  lo mueve a `assets/sprites/...` y actualiza `sprite_manifest.yaml`.
+- **Recarga en caliente**: `SpriteCatalog.reload(id)` invalida la caché
+  de esa imagen; la vista previa y cualquier escena abierta en el editor
+  se repintan sin reiniciar.
+
+### 3.2 Animaciones
+
+- **Lista por categoría** (ULT, Dúos, Habilidades, Ataques, ULT
+  enemigas, Estados, Muertes, Procs, Mapa, UI) + buscador por nombre,
+  id, arma, clase, elemento y etiqueta. Marca: datos / legacy / override.
+- **Editor de línea de tiempo simple**:
+  - regla en ms con zoom; una fila por pista (ícono + nombre);
+    keyframes como rombos, disparos como marcas;
+  - clic en un keyframe → panel de valores tipado (números con
+    deslizador, anclas como menú, sprite/sonido con selector del
+    catálogo, color por rol);
+  - arrastrar para mover en el tiempo (imán a 10 ms y a otros keys);
+    agregar/quitar pista y key; mostrar/ocultar y "solo" por pista;
+  - cabezal de reproducción arrastrable (scrub) y lectura cuadro a cuadro.
+- **Vista previa**: mini-arena con personajes de prueba (lanzador
+  elegible por clase/arma, 1–4 enemigos de prueba), en **loop**,
+  velocidad 0.25×/0.5×/1×, con sonido opcional. Muestra la duración y
+  marca impactos y hit-stop en la regla.
+- **Plantillas** para arrancar: "ULT de golpe único", "ULT a todos",
+  "ULT de varios golpes", "Proyectil", "Curación grupal", "Dúo
+  combinado", "Estado (bucle)", "Muerte".
+- **Duplicar / renombrar / borrar override**; **deshacer/rehacer**
+  (pila por documento, Ctrl+Z / Ctrl+Y); guardado explícito con aviso de
+  cambios sin guardar; validación al guardar (`impact` dentro de
+  `duration`, anclas válidas para el `targets`, ids de sprite/sonido
+  existentes).
+
+## 4. Distribución de los cambios
+
+### 4.1 En el repo (release)
+
+`assets/fx/**` y `assets/sprites/**` son la fuente de verdad del juego
+publicado: entran al instalador como cualquier asset (pubspec.yaml lista
+las carpetas; docs/specs/distribution.md sin cambios de proceso). El
+botón "Publicar en el repo" del editor escribe ahí; el commit y el
+release siguen el flujo de `patch_page.dart` (las notas de parche pueden
+listar "cambios visuales").
+
+### 4.2 Overrides locales
+
+Carpeta `overrides/` junto al ejecutable del editor (no se empaqueta en
+el juego): `overrides/sprites/…png`, `overrides/sprite_overrides.yaml`,
+`overrides/fx/<id>.fx.yaml`. Solo el flavor admin (y `main_dev`, si el
+flag `useLocalOverrides` está activo) los lee. Sirve para probar sin
+tocar el repo. Los datos visuales **no** viajan por red ni afectan el
+handshake de balance (cada cliente ve su arte; el resultado del combate
+no depende de lo visual).
+
+### 4.3 La duración sale de los datos
+
+- `FxCatalog.durationOf(action)` = `duration` del `.fx.yaml` (o del
+  adaptador). Reemplaza los fijos de `battleCinematicHold` (2.3 s ULT /
+  1.5 s dúo) y la pausa `wait` tras una ULT (missions.md).
+- El host necesita esa duración para `SessionBattle.endHold`: como los
+  clientes pueden tener overrides distintos, el host usa la del **asset
+  del release** (no la del override) y la manda en el snapshot como hoy
+  (`hold`); además el cartel local ya espera a su propia escena
+  (`ult == null && !holding`), así un override más largo en un cliente
+  solo demora su cartel, nunca el estado compartido.
+- Tope de seguridad: `duration` ≤ 6000 ms (validación del editor y
+  clamp al cargar).
+
+## 5. ULTs muchísimo mejores
+
+### 5.1 Principios
+
+1. **Anticipación**: una carga legible (pose, energía que converge,
+   sonido que sube) antes del golpe; el jugador debe sentir el "ya viene".
+2. **Impacto**: un instante claro de contacto — hit-stop, destello,
+   sacudida, número pesado — todo en el mismo ms (`impact`).
+3. **Cámara con intención**: acercar en la carga, cortar/girar al
+   objetivo, empujón en el impacto, volver suave. Nunca mover sin motivo.
+4. **Partículas con forma**: pocas y grandes > muchas y chicas; siguen
+   la dirección del golpe; restos que caen después (secuela).
+5. **Contraste y silencio**: el oscurecido y un corte de sonido de
+   ~80 ms antes del golpe hacen que el golpe pese.
+6. **Legibilidad**: siempre se ve quién golpea a quién y cuánto; nada
+   tapa los números; flashes ≤ 0.7 alfa y respetando la opción de
+   reducir destellos (docs/specs/accessibility.md).
+7. **Firma propia por arma** coherente con el lore (eco temporal: la
+   ULT "repite" golpes del pasado como ecos translúcidos).
+8. **Duración** 1.8–2.6 s; saltable como hoy.
+
+### 5.2 Ejemplos en el formato nuevo
+
+**Tajo Final (espada, un objetivo)** — ecos del espadachín:
+
+```yaml
+id: ult_espada
+category: ult
+duration: 2300
+targets: single
+tracks:
+  - { type: dim, keys: [ {t: 0, v: 0}, {t: 200, v: 0.9}, {t: 1900, v: 0.9}, {t: 2300, v: 0} ] }
+  - { type: letterbox, keys: [ {t: 0, v: 0}, {t: 200, v: 0.1}, {t: 1900, v: 0.1}, {t: 2300, v: 0} ] }
+  - { type: title_card, at: 80, until: 700 }
+  - type: camera
+    keys:
+      - { t: 0,    focus: caster, zoom: +1, ease: smooth }
+      - { t: 820,  focus: target, zoom: +1, ease: snap }
+      - { t: 1400, zoom: +1.2, ease: out }        # empujón
+      - { t: 1600, zoom: +1, ease: smooth }
+      - { t: 1900, focus: base, zoom: 0, ease: smooth }
+  - type: actor
+    who: caster
+    keys:
+      - { t: 0,   pose: charge }
+      - { t: 820, move: { to: target, offset: [-16, 0] }, ease: out }
+      - { t: 1400, pose: strike }
+      - { t: 1900, move: { to: home } }
+  - type: actor          # 3 ecos translúcidos que repiten el corte antes del real
+    who: caster_echo
+    count: 3
+    alpha: 0.4
+    keys: [ { t: 1000, pose: strike }, { t: 1120, pose: strike }, { t: 1240, pose: strike } ]
+  - type: shape
+    fire:
+      - { t: 1000, shape: slash_arc, anchor: target, angle: -30, color: element, ms: 160 }
+      - { t: 1120, shape: slash_arc, anchor: target, angle: 25,  color: element, ms: 160 }
+      - { t: 1240, shape: slash_arc, anchor: target, angle: -70, color: element, ms: 160 }
+      - { t: 1400, shape: slash_cross, anchor: target, scale: 2.2, color: white, ms: 260 }
+  - { type: sound, fire: [ {t: 0, cue: ult_charge}, {t: 1320, cue: silence_80}, {t: 1400, cue: ult_hit_heavy} ] }
+  - { type: flash, fire: [ {t: 1395, color: white, alpha: 0.7, ms: 160} ] }
+  - { type: hitstop, fire: [ {t: 1400, ms: 130} ] }
+  - { type: shake, fire: [ {t: 1400, amp: 11, ms: 280} ] }
+  - type: particles
+    fire:
+      - { t: 1400, preset: shards, anchor: target, element: auto, count: 28, dir: 0, spread: 50 }
+      - { t: 1500, preset: embers_fall, anchor: target, count: 16 }
+  - { type: impact, fire: [ {t: 1400, stagger: 0} ] }
+```
+
+**Meteoro (báculo, a todos)** — anticipación larga, lluvia escalonada:
+
+```yaml
+id: ult_baculo
+category: ult
+duration: 2600
+targets: all
+tracks:
+  - { type: dim, keys: [ {t: 0, v: 0}, {t: 250, v: 0.9}, {t: 2200, v: 0.9}, {t: 2600, v: 0} ] }
+  - { type: title_card, at: 80, until: 760 }
+  - type: camera
+    keys:
+      - { t: 0,    focus: caster, zoom: +1, ease: smooth }
+      - { t: 900,  focus: targets_center, zoom: 0, offset: [0, -30], ease: smooth }  # mirar al cielo
+      - { t: 1250, focus: targets_center, zoom: 0, ease: smooth }
+      - { t: 2200, focus: base, zoom: 0 }
+  - { type: tint, keys: [ {t: 900, color: '#ff8a3c', v: 0}, {t: 1200, v: 0.25}, {t: 2000, v: 0} ] }
+  - type: shape
+    fire:
+      - { t: 300, shape: rune_circle, anchor: caster, ms: 600, color: element }
+      - { t: 950, shape: sky_crack, anchor: targets_center, ms: 300 }
+  - type: trail          # un meteoro por objetivo, 120 ms entre sí
+    each_target: true
+    stagger: 120
+    fire: [ { t: 1100, from: sky, to: target, sprite: fx.meteor, ms: 250, ease: in } ]
+  - type: particles
+    each_target: true
+    stagger: 120
+    fire: [ { t: 1350, preset: burst, element: auto, count: 36 }, { t: 1380, preset: smoke_ring, count: 12 } ]
+  - { type: shake, each_target: true, stagger: 120, fire: [ {t: 1350, amp: 9, ms: 200} ] }
+  - { type: hitstop, fire: [ {t: 1710, ms: 100} ] }      # solo en el último
+  - { type: flash, fire: [ {t: 1700, color: white, alpha: 0.6, ms: 150} ] }
+  - { type: impact, fire: [ {t: 1350, stagger: 120} ] }
+```
+
+**Baluarte (espada+escudo, aliados)** — sin hit-stop, peso en el escudo:
+
+```yaml
+id: ult_espada_escudo
+category: ult
+duration: 2200
+targets: allies
+tracks:
+  - { type: dim, keys: [ {t: 0, v: 0}, {t: 200, v: 0.8}, {t: 1800, v: 0.8}, {t: 2200, v: 0} ] }
+  - { type: title_card, at: 80, until: 700 }
+  - { type: camera, keys: [ {t: 0, focus: caster, zoom: +1}, {t: 800, focus: allies_center, zoom: 0}, {t: 1800, focus: base} ] }
+  - { type: actor, who: caster, keys: [ {t: 0, pose: charge}, {t: 800, pose: guard} ] }
+  - type: shape
+    fire:
+      - { t: 820, shape: shield_dome, anchor: allies_center, color: gold, ms: 900, scale: 1.4 }
+      - { t: 820, shape: shockwave, anchor: caster, color: gold, ms: 400 }
+  - { type: particles, each_target: true, stagger: 60, fire: [ {t: 1150, preset: rise_sparkles, color: gold, count: 14} ] }
+  - { type: flash, fire: [ {t: 820, color: gold, alpha: 0.35, ms: 200} ] }
+  - { type: shake, fire: [ {t: 820, amp: 4, ms: 160} ] }
+  - { type: impact, fire: [ {t: 1150, stagger: 60} ] }
+```
+
+Las 13 ULT se rediseñan una por una con estos principios en el paso 2;
+cada una pasa por OK del dueño en la vista previa antes de reemplazar a
+la vieja.
+
+## 6. UI del editor (sistema de diseño)
+
+Todo con los componentes de docs/specs/design_system.md:
+
+- Raíz: `DsToolbar` con título "Editor" y `DsTabBar` de tres pestañas:
+  **Monitoreo · Balance · Visual** (Balance con sub-pestañas actuales:
+  Entidades, Cambios, Parche). `DsBadge` en la pestaña con cambios sin
+  guardar/publicar.
+- Patrón de cada área: columna izquierda = `DsSearchField` + árbol de
+  categorías + lista de `DsListRow` (insignia "override"/"legacy");
+  centro = vista previa; derecha = panel de propiedades (`DsCard`
+  única, sin tarjetas anidadas).
+- Visual tiene sub-pestañas **Sprites · Animaciones**. En Animaciones,
+  la línea de tiempo ocupa la franja inferior (alto redimensionable).
+- Acciones con `DsButton`: principal "Guardar", secundario "Publicar en
+  el repo", fantasma "Descartar override", íconos con tooltip
+  (duplicar, renombrar, deshacer, rehacer, reproducir/pausa, loop).
+- Avisos con `DsToast` (validación de PNG, errores de YAML).
+- Balance gana el buscador global (por nombre/id/campo) y orden por
+  categoría (`admin_index.dart` ya indexa las entidades).
+
+## 7. Plan de implementación
+
+1. **Visor y edición de sprites**: reorganizar admin en 3 pestañas;
+   `SpriteCatalog.reload`; catálogo por categoría + buscador; ficha con
+   zoom y vista en contexto; reemplazo con validación; overrides
+   locales; "Publicar en el repo". Nuevas secciones del manifest para lo
+   que hoy se dibuja en código (con fallback procedural). Tests:
+   validador de PNG, lectura de overrides.
+2. **Formato FXA + adaptador + ULT**: modelo Dart puro y parser
+   (`game_engine/fx/`), `FxCatalog`, `FxPlayer`, primitivas extraídas de
+   `UltDirector`, `LegacyFxAdapter`, test de oro de tiempos. Duración
+   desde datos (`battleCinematicHold`, `wait`, `endHold`). Migrar y
+   rediseñar las 13 ULT y los dúos (vista previa de solo lectura en el
+   editor para aprobar).
+3. **Editor de línea de tiempo**: pistas/keyframes, panel de valores,
+   scrub, mini-arena en loop, plantillas, duplicar/renombrar,
+   deshacer/rehacer, validación al guardar.
+4. **Resto de animaciones**: habilidades, ataques, ULT enemigas y
+   quiebre, estados, muertes, procs, movimiento en el mapa; borrar
+   `UltDirector` y los fx hardcodeados cuando no quede ninguno `legacy`.
+   Actualizar battle_presentation.md y sprites.md para que apunten a
+   los datos.
+
+### 7.1 Paso 1 tal como quedó (implementado)
+
+- **Editor** (`main_admin`): `DsToolbar` "EDITOR" + `DsTabBar`
+  **MONITOREO · BALANCE · VISUALES** (`lib/features/admin/presentation/
+  admin_app.dart`, `EditorArea`). Arranca en Balance. Buscador global en
+  la barra: filtra el área activa (Balance → entidades por nombre/id/
+  campo, vuelve a la sub-pestaña Entidades; Visuales → sprites). Balance
+  conserva sus sub-pestañas Entidades · Cambios · Parche; insignias con
+  cambios sin guardar (Balance) y cantidad de overrides (Visuales).
+- **Visuales → Sprites** (`editor/sprites_page.dart`,
+  `editor/sprite_editor_controller.dart`): columna izquierda con
+  buscador, categorías (TODO, PERSONAJES, ENEMIGOS, JEFES, ARMAS E ÍTEMS,
+  TILES, UI, EFECTOS) con conteo, filtro "con override" y lista con
+  miniatura e insignia OVERRIDE; centro con zoom ×1/×2/×4/×8 sobre
+  damero con grilla de píxeles y ancla, ANTES / AHORA cuando hay
+  override, y **escena de contexto** (batalla: héroe/enemigo de prueba,
+  ítem en mano, efecto sobre el enemigo, ícono en un panel; mapa: tile
+  repetido con el héroe encima); derecha, ficha (`DsCard` única) con
+  REEMPLAZAR PNG, DESCARTAR OVERRIDE, validación, RECARGAR ARTE,
+  paquete de arte (EXPORTAR / IMPORTAR) y PUBLICAR AL REPO (con diálogo
+  de confirmación que lista lo que se copia). Animaciones: pestaña
+  reservada para el paso 2.
+- **Categorías**: personajes = `characters:`; enemigos/jefes =
+  `enemies:` partido por `EnemyDef.boss` (y las `…Fase2`); el manifest
+  gana `items:`, `tiles:`, `ui:` y `fx:` con entradas
+  `{ procedural: true, size: [w, h] }` (lo que hoy se dibuja en código).
+  Una procedural se muestra rayada como "dibujo en código" hasta que
+  tenga PNG. **Pendiente**: que el juego lea esos PNG nuevos (hoy el
+  render de ítems/tiles/UI/fx sigue siendo procedural aunque se
+  publique uno); se hace al migrar cada painter.
+- **Ids de sprite**: `<sección>.<clave>.<frame>` (`characters.maga.idle`,
+  `items.espada.idle`). `SpriteEntry` / `SpriteCategory`
+  (`lib/features/combat/domain/sprite_entry.dart`).
+- **`SpriteCatalog`** sigue siendo el único lector del manifest: suma
+  `entries`, `entry(id)`, `bytes`/`assetBytes`/`image`, `hasOverride`,
+  `reload([id])` y la capa `overrides` (`SpriteOverrideSource`), que se
+  consulta antes que el asset. `SpriteCatalog.defaultOverrides` la pone
+  el composition root.
+- **Overrides locales** (`lib/features/combat/data/
+  local_sprite_overrides_io.dart`, stub en web): `<root>/sprites/<id>.png`
+  + `<root>/sprite_overrides.yaml` (`sprites: { <id>: sprites/<id>.png }`).
+  Root: `<repo>/overrides` en el Editor; `overrides/` del directorio
+  actual (o `--dart-define=ECOS_OVERRIDES=<ruta>`) en `main_dev`.
+  Ignorado por git. Lanza si se intenta dentro de
+  `%APPDATA%\EcosDelTiempo`.
+- **`main_dev`**: `FeatureFlags.useLocalOverrides` → lee los overrides y
+  el título muestra **RECARGAR ARTE** (relee la carpeta e invalida
+  `gameSpritesProvider`).
+- **Validación** (`domain/sprites/png_validator.dart`, Dart puro):
+  error si no es PNG, sin alfa (tipo 4/6 o `tRNS`), > 1 MB, o tamaño
+  distinto que no sea múltiplo/divisor entero exacto del original;
+  aviso si es múltiplo/divisor (se acepta), si hay píxeles
+  semitransparentes o más de 32 colores. Tamaño esperado: el PNG del
+  repo, o `size:` del manifest para las procedurales.
+- **Paquete de arte** (`domain/sprites/art_pack.dart`): zip con
+  `art_pack.yaml` (`schema: 1`, `sprites: { <id>: sprites/<id>.png }`) +
+  los PNG. Importar pisa overrides con el mismo id. Reservado `fx:` para
+  el paso 2.
+- **Publicar al repo**: copia cada override a `assets/sprites/<ruta>`
+  (la del manifest; las procedurales van a `items/`, `tiles/`, `ui/` o
+  `effects/<clave>.png`), reescribe solo esa entrada de
+  `sprite_manifest.yaml` conservando comentarios (`setManifestPath`) y
+  borra el override. El commit queda a mano. El catálogo en memoria del
+  Editor ve el manifest nuevo al reiniciar.
+- Capturas: `tool/shots/editor_shots_test.dart` →
+  `docs/release_shots/editor/`.
+
+## 8. Preguntas abiertas (respondidas por el dueño)
+
+Respuestas:
+1. **YAML**, como está.
+2. **Sí**: exportar/importar un **paquete de arte** (zip con overrides
+   de sprites, y de fx desde el paso 2) para que un amigo lo pruebe sin
+   publicar.
+3. Seguir con **1 frame `idle` + animación procedural**, pero el formato
+   queda listo para hojas de sprites cuadro por cuadro (el manifest ya
+   admite varios frames por entrada: cada clave que no sea `scale`,
+   `float`, `size` o `procedural` es un frame; el id incluye el frame).
+4. **Aprobado** el tope de **~2.6 s** por ULT y los **"ecos"
+   translúcidos** como firma visual común.
+
+Preguntas originales:
+
+1. ¿YAML está bien como formato (editable a mano y por el editor) o
+   preferís JSON para alinear con `balance.json`?
+2. Los overrides locales: ¿alcanza con que los vea el editor/`main_dev`,
+   o querés poder pasarle a un amigo un paquete de arte/animaciones para
+   que lo pruebe en su juego antes del release?
+3. ¿Querés animaciones por frames de verdad (caminar, ataque) en los
+   sprites, o seguimos con 1 frame `idle` + animación procedural y los
+   frames solo para efectos?
+4. Rediseño de ULT: ¿aprobás el tope de ~2.6 s (hoy 2.2–2.5 s) y la idea
+   de "ecos" translúcidos como firma visual común?
