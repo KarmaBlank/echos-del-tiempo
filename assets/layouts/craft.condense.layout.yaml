@@ -1,0 +1,17 @@
+# CONDENSAR (docs/specs/editor_layout.md § 6, fase 4). Regiones del
+# template: head (título y explicación), recipes (fija: las recetas),
+# confirm (dentro de la tarjeta de confirmación).
+screen: craft.condense
+version: 1
+slots:
+  - {id: condense.title, region: head, order: 0}
+  - {id: condense.intro, region: head, order: 1}
+  - {id: condense.recipes, region: recipes, order: 0}
+  - {id: condense.summary, region: confirm, order: 0}
+  - {id: condense.error, region: confirm, order: 1}
+  - id: condense.actions
+    region: confirm
+    order: 2
+    children:
+      - condense.actions.go
+      - condense.actions.cancel

@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/ds_layout_host.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
@@ -14,6 +15,7 @@ import '../../../app/widgets/cost_chip.dart';
 import '../../../app/widgets/menu_widgets.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../app/widgets/section_panel.dart';
+import '../../../core/layout/layout_doc.dart';
 import '../../../game_engine/data/skills_catalog.dart' show kBaseQuebrarIds;
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -35,6 +37,7 @@ import '../domain/weapon_text.dart' show fmtNum;
 import 'item_grid.dart';
 import 'item_hover_tip.dart';
 import 'condense_panel.dart';
+import 'craft_layout.dart';
 import 'item_widgets.dart' show CellContent;
 import 'shop_sections.dart';
 import 'skill_chip.dart';
@@ -213,9 +216,23 @@ String craftCostShort(CraftResult r) {
 /// y su motivo). `Enter` confirma, `Esc` vuelve un paso. Ver
 /// docs/specs/panels.md § "FUSIÓN".
 class CraftBench extends StatefulWidget {
-  const CraftBench({super.key, required this.shop, this.initialOp});
+  const CraftBench(
+      {super.key,
+      required this.shop,
+      this.initialOp,
+      this.layout,
+      this.layoutHooks,
+      this.condenseLayout,
+      this.condenseHooks});
 
   final ShopContext shop;
+
+  /// Layout fijo (Editor → LAYOUT); `null` = el del catálogo
+  /// (editor_layout.md § 6). Igual para CONDENSAR.
+  final LayoutDoc? layout;
+  final DsLayoutHooks? layoutHooks;
+  final LayoutDoc? condenseLayout;
+  final DsLayoutHooks? condenseHooks;
 
   /// Arranca en el paso 3 con esta operación (y la equipada).
   final CraftOp? initialOp;
@@ -510,35 +527,64 @@ class _CraftBenchState extends State<CraftBench> {
         items.firstWhere((i) => i.uid == _target, orElse: () => items.first);
     _target = target.uid;
     _enter = null;
-    final body = switch (_step) {
-      0 when _condense => CondensePanel(
-          shop: shop,
-          onBack: () => setState(() {
-                _condense = false;
-                _focus.requestFocus();
-              })),
-      0 => _weaponStep(p, items, target),
-      1 => _opStep(p, target),
-      _ => _confirmStep(p, target),
+    final slots = {
+      ..._headerSlots(p, target),
+      FuseLayout.keys: (_) => _step == 0 ? const KeyHints(back: null) : null,
+      FuseLayout.condense: (_) => _step == 0 && !_condense
+          ? PanelButton('CONDENSAR',
+              key: const ValueKey('bench-condense'),
+              accent: ProtoColors.violet,
+              onPressed: () => setState(() => _condense = true))
+          : null,
+      FuseLayout.next: (_) => _step == 0 && !_condense
+          ? PanelButton('ELEGIR ›',
+              key: const ValueKey('bench-next'),
+              accent: ProtoColors.green,
+              onPressed: () => _go(1))
+          : null,
     };
-    return Focus(
-      focusNode: _focus,
-      onKeyEvent: _onKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _header(p, target),
-          const SizedBox(height: 6),
-          Expanded(
-              child: KeyedSubtree(
-                  key: ValueKey('bench-step-$_step'), child: body)),
-        ],
-      ),
+    return DsLayoutHost(
+      spec: FuseLayout.spec,
+      doc: widget.layout,
+      hooks: widget.layoutHooks,
+      slots: slots,
+      frame: (context, box, r) {
+        final body = switch (_step) {
+          0 when _condense => CondensePanel(
+              shop: shop,
+              layout: widget.condenseLayout,
+              layoutHooks: widget.condenseHooks,
+              onBack: () => setState(() {
+                    _condense = false;
+                    _focus.requestFocus();
+                  })),
+          0 => _weaponStep(p, items, target,
+              footer: r.isEmpty('footer') ? const [] : [r.region('footer')]),
+          1 => _opStep(p, target),
+          _ => _confirmStep(p, target),
+        };
+        return Focus(
+          focusNode: _focus,
+          onKeyEvent: _onKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _header(context, box, r),
+              const SizedBox(height: 6),
+              Expanded(
+                  child: KeyedSubtree(
+                      key: ValueKey('bench-step-$_step'), child: body)),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  /// Migas (pasos, se puede volver) y contador de materiales.
-  Widget _header(PlayerProfile p, ItemInstance target) {
+  /// Migas (pasos, se puede volver), lo elegido y contador de
+  /// materiales: slots de la barra de arriba (editor_layout.md § 6).
+  Map<String, DsSlotBuilder> _headerSlots(
+      PlayerProfile p, ItemInstance target) {
     // Los Fragmentos no se usan en la forja (abren Jefes del Abismo).
     final help = CraftHelp(shop.rules.crafting);
     final mats = [
@@ -547,63 +593,83 @@ class _CraftBenchState extends State<CraftBench> {
             (m != CraftMaterial.esencia || p.material(m) > 0))
           m,
     ];
-    final crumbs = StepCrumbs(
-      steps: const ['ARMA', 'ACCIÓN', 'CONFIRMAR'],
-      tips: CraftHelp.steps,
-      current: _step,
-      keyPrefix: 'bench-crumb-',
-      onStep: _go,
-    );
-    // Un tooltip por material: para qué sirve y dónde se consigue.
-    final materials = Wrap(
-      key: const ValueKey('craft-materials'),
-      alignment: WrapAlignment.end,
-      children: [
-        for (var i = 0; i < mats.length; i++) ...[
-          if (i > 0) const Text(' · '),
-          RetroTooltip(
-            key: ValueKey('craft-mat-${mats[i].name}'),
-            message: help.material(mats[i], p),
-            child: ProtoText(
-                '${mats[i].label.split(' ').first} <b>x${p.material(mats[i])}</b>'),
+    return {
+      FuseLayout.crumbs: (_) => StepCrumbs(
+            steps: const ['ARMA', 'ACCIÓN', 'CONFIRMAR'],
+            tips: CraftHelp.steps,
+            current: _step,
+            keyPrefix: 'bench-crumb-',
+            onStep: _go,
           ),
-        ],
-      ],
-    );
+      FuseLayout.summary: (_) => _step == 0
+          ? null
+          : ProtoText(
+              key: const ValueKey('bench-summary'),
+              '${itemNameMarkup(shop.rules, target)}'
+              '${_step == 2 ? ' · <span class="k">${protoEsc(_op.title)}</span>' : ''}'),
+      // Un tooltip por material: para qué sirve y dónde se consigue.
+      FuseLayout.materials: (_) => Wrap(
+            key: const ValueKey('craft-materials'),
+            alignment: WrapAlignment.end,
+            children: [
+              for (var i = 0; i < mats.length; i++) ...[
+                if (i > 0) const Text(' · '),
+                RetroTooltip(
+                  key: ValueKey('craft-mat-${mats[i].name}'),
+                  message: help.material(mats[i], p),
+                  child: ProtoText(
+                      '${mats[i].label.split(' ').first} <b>x${p.material(mats[i])}</b>'),
+                ),
+              ],
+            ],
+          ),
+    };
+  }
+
+  /// La barra de arriba con las regiones del layout.
+  Widget _header(BuildContext context, BoxConstraints box, DsRegions r) {
+    final summary = r.isEmpty('summary') ? null : r.region('summary');
+    final materials = r.isEmpty('materials') ? null : r.region('materials');
+    final crumbs = r.isEmpty('crumbs') ? null : r.region('crumbs');
     // Con texto ENORME las migas, lo elegido y los materiales no entran
     // en una fila: van una debajo de la otra.
-    if (RetroType.settingFactor(context) >= 1.9) {
+    // Con poco ancho, igual.
+    if (RetroType.settingFactor(context) >= 1.9 ||
+        box.maxWidth < RetroType.width(context, 760)) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          crumbs,
-          if (_step > 0)
-            ProtoText(
-                key: const ValueKey('bench-summary'),
-                '${itemNameMarkup(shop.rules, target)}'
-                '${_step == 2 ? ' · <span class="k">${protoEsc(_op.title)}</span>' : ''}'),
-          Align(alignment: Alignment.centerRight, child: materials),
+          if (crumbs != null) crumbs,
+          if (summary != null) summary,
+          if (materials != null)
+            Align(alignment: Alignment.centerRight, child: materials),
         ],
       );
     }
     return Row(
       children: [
-        crumbs,
+        if (crumbs != null) crumbs,
         const SizedBox(width: 12),
         // Lo elegido en los pasos anteriores, al lado de las migas.
-        if (_step > 0)
-          Expanded(
-            child: ProtoText(
-                key: const ValueKey('bench-summary'),
-                '${itemNameMarkup(shop.rules, target)}'
-                '${_step == 2 ? ' · <span class="k">${protoEsc(_op.title)}</span>' : ''}'),
+        if (summary != null) ...[
+          Expanded(child: summary),
+          const SizedBox(width: 12),
+          // Tope a la mitad: con texto grande se parten en líneas en vez
+          // de desbordar.
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: box.maxWidth / 2),
+            child: materials ?? const SizedBox(),
           ),
-        if (_step == 0) const Spacer(),
-        const SizedBox(width: 12),
-        Flexible(
-          flex: 0,
-          child: Align(alignment: Alignment.centerRight, child: materials),
-        ),
+        ] else ...[
+          // Sin nada en el medio, los materiales usan ese lugar (y se
+          // parten en líneas si no entran).
+          const SizedBox(width: 12),
+          Expanded(
+            child: Align(
+                alignment: Alignment.centerRight,
+                child: materials ?? const SizedBox()),
+          ),
+        ],
       ],
     );
   }
@@ -694,7 +760,8 @@ class _CraftBenchState extends State<CraftBench> {
   // ------------------------------------------------------------------
 
   Widget _weaponStep(
-      PlayerProfile p, List<ItemInstance> items, ItemInstance target) {
+      PlayerProfile p, List<ItemInstance> items, ItemInstance target,
+      {required List<Widget> footer}) {
     final rules = shop.rules;
     _enter = () => _go(1);
     return PanelSplit(
@@ -724,17 +791,7 @@ class _CraftBenchState extends State<CraftBench> {
         ),
       ],
       detail: PanelDetail(
-        footer: [
-          const KeyHints(back: null),
-          PanelButton('CONDENSAR',
-              key: const ValueKey('bench-condense'),
-              accent: ProtoColors.violet,
-              onPressed: () => setState(() => _condense = true)),
-          PanelButton('ELEGIR ›',
-              key: const ValueKey('bench-next'),
-              accent: ProtoColors.green,
-              onPressed: () => _go(1)),
-        ],
+        footer: footer,
         children: [
           ItemCard(
               rules: rules,
