@@ -131,21 +131,21 @@ void main() {
     expect(skillReachMarkup(kSkills[allFoes]!), contains('[TODOS]'));
   });
 
-  testWidgets('Instante primero, con marca y separador; teclas en orden',
-      (tester) async {
+  testWidgets('Instante en ARMA (no en HABILIDADES), con marca y '
+      'separador; teclas en orden', (tester) async {
     final (menu, sent) = await pump(tester);
-    expect(tester.getTopLeft(row(instant)).dy,
-        lessThan(tester.getTopLeft(row(oneFoe)).dy));
-    // Sin banner arriba de la lista.
-    expect(find.byKey(ValueKey('battle-sep-skill-$instant')), findsNothing);
-    expect(find.textContaining('no terminan tu turno'), findsNothing);
+    expect(row(instant), findsNothing);
+    expect(row(oneFoe), findsOneWidget);
+    menu.selectCategory(BattleCategory.weapon);
+    await tester.pump();
+    expect(find.byKey(ValueKey('battle-sep-skill-$instant')), findsOneWidget);
     expect(
         find.descendant(
             of: row(instant),
             matching: find.textContaining('INSTANTE', findRichText: true)),
         findsOneWidget);
-    // La tecla 1 es la primera fila que se ve: la Instante.
-    menu.handleKey(LogicalKeyboardKey.digit1);
+    // Atacar 1, Defender 2, la Instante 3.
+    menu.handleKey(LogicalKeyboardKey.digit3);
     await tester.pump();
     expect((sent.single as SkillCommand).skillId, instant);
   });
@@ -159,10 +159,17 @@ void main() {
       final errs = <String>[];
       final prev = FlutterError.onError;
       FlutterError.onError = (d) => errs.add(d.toString());
+      addTearDown(() => FlutterError.onError = prev);
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       final (menu, _) = await pump(tester);
+      menu.selectCategory(BattleCategory.weapon);
+      await tester.pump();
       final note = find.byKey(const ValueKey('battle-instant-note'));
-      // Foco de teclado: la primera fila es la Instante.
+      expect(note, findsNothing, reason: 'Atacar no es Instante');
+      // Foco de teclado: Atacar, Defender, la Instante.
+      menu.handleKey(LogicalKeyboardKey.arrowDown);
+      menu.handleKey(LogicalKeyboardKey.arrowDown);
+      await tester.pump();
       expect(note, findsOneWidget);
       expect(
           find.descendant(
@@ -170,17 +177,19 @@ void main() {
           findsOneWidget);
       expect(find.descendant(of: note, matching: find.byType(DsTag)),
           findsOneWidget);
-      menu.handleKey(LogicalKeyboardKey.arrowDown);
+      menu.handleKey(LogicalKeyboardKey.arrowUp);
       await tester.pump();
       expect(note, findsNothing);
       // Hover vuelve a la Instante.
       final g = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await g.addPointer(location: Offset.zero);
       addTearDown(g.removePointer);
+      await tester.ensureVisible(row(instant));
+      await tester.pump();
       await g.moveTo(tester.getCenter(row(instant)));
       await tester.pump();
-      expect(note, findsOneWidget);
       FlutterError.onError = prev;
+      expect(note, findsOneWidget);
       expect(errs.where((e) => e.contains('battle-desc')), isEmpty);
     });
   }
@@ -288,7 +297,7 @@ void main() {
     state.current!.pulse = BattleEngine.pulseMax;
     final (menu, _) = await pump(tester);
     final p = '${kSkills[pulsed]!.pulse} P';
-    const idx = 4; // la última fila (la Instante subió)
+    const idx = 3; // la última fila (la Instante está en ARMA)
     expect(menu.selectedAction, isNot(idx));
     expect(spanColors(tester, row(pulsed), p), [DsColors.pulse]);
     for (var i = 0; i < idx; i++) {
@@ -316,7 +325,7 @@ void main() {
     final title = tester.widget<Text>(find.descendant(
         of: row(pulsed), matching: find.text(kSkills[pulsed]!.name)));
     expect(title.style?.color, DsColors.textDisabled);
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 3; i++) {
       menu.handleKey(LogicalKeyboardKey.arrowDown);
     }
     await tester.pump();

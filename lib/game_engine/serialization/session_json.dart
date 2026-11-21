@@ -628,6 +628,8 @@ class SessionJson {
         // Pulso e Instante v0.9 (opcionales; combo_balance.md § 5.2).
         if (c.pulse != 0) 'pls': c.pulse,
         if (c.chained) 'chn': true,
+        if (c.guardStreak) 'gst': true,
+        if (c.guardHitPending) 'ghp': true,
         if (c.practice) 'prac': true,
         // Letra de repetidos v0.13.1 (opcional).
         if (c.tag != null) 'tag': c.tag,
@@ -758,6 +760,8 @@ class SessionJson {
       summonKills: j.intOrNull('smN') ?? 0,
       pulse: j.intOrNull('pls') ?? 0,
       chained: j.flag('chn'),
+      guardStreak: j.flag('gst'),
+      guardHitPending: j.flag('ghp'),
       practice: j.flag('prac'),
       tag: j.strOrNull('tag'),
     );

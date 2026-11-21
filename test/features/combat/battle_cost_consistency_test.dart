@@ -54,7 +54,7 @@ void main() {
       p.mp = 99;
     }
     final cur = state.current!;
-    cur.skillIds = [kSkills.values.firstWhere((s) => s.mp > 0).id];
+    cur.skillIds = [kSkills.values.firstWhere((s) => s.mp > 0 && s.pulse == 0 && !s.instant).id];
     cur.ult = 45;
   });
 

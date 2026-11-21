@@ -140,6 +140,18 @@ class BattleEngine {
   /// llega en IV × esto (Defender: × 0.7; acción normal: × 1).
   static const passTurnFactor = 0.5;
 
+  // ---- Defender con valor (battle_attack_menu.md § 6) ----
+  /// Pulso de Defender elegido; baja a [defendPulseRepeat] si también
+  /// defendió (a mano) su turno anterior. La defensa automática por
+  /// tiempo agotado da solo el +1 normal y nada de ULT.
+  static const defendPulse = 2;
+  static const defendPulseRepeat = 1;
+
+  /// Carga de ULT al defender y, una vez por defensa, al recibir un
+  /// golpe defendiendo (escala con `ultChargeBonus`).
+  static const defendUlt = 6.0;
+  static const defendHitUlt = 6.0;
+
   // ---- Pulso (combo_balance.md § 5.2) ----
   /// Tope de Pulso por jugador.
   static const pulseMax = 5;
@@ -367,6 +379,8 @@ class BattleEngine {
     final p = t.state.current!;
     t.events.add(ActionEvent(p.id, BattleActionKind.defend));
     p.defending = true;
+    p.guardStreak = false;
+    p.guardHitPending = false;
     t._gainPulse(p);
     t.tickEffects(p);
     p.nextTurn = t.state.clock + interval(p);
@@ -682,6 +696,9 @@ class _Turn {
       return;
     }
     if (best.isPlayer) {
+      // Racha de Defender: solo sigue si viene de un Defender elegido.
+      if (!best.defending) best.guardStreak = false;
+      best.guardHitPending = false;
       best.defending = false;
       best.protecting = false;
       best.extraTurn = best.extraTurn == 1 ? 2 : 0;
@@ -1122,6 +1139,12 @@ class _Turn {
     if (taken > 0) {
       p.ult =
           math.min(100, p.ult + taken / p.maxHp * _ultTaken * (1 + p.ultChargeBonus));
+    }
+    if (p.defending && p.guardHitPending) {
+      // Defender con valor: +6 de ULT al primer golpe recibido.
+      p.guardHitPending = false;
+      p.ult = math.min(
+          100, p.ult + BattleEngine.defendHitUlt * (1 + p.ultChargeBonus));
     }
     p.hp = math.max(0, p.hp - taken);
     events.add(DamageEvent(p.id, taken,
@@ -4326,7 +4349,15 @@ class _Turn {
       case DefendCommand():
         events.add(ActionEvent(p.id, BattleActionKind.defend));
         p.defending = true;
-        _gainPulse(p);
+        _gainPulse(
+            p,
+            p.guardStreak
+                ? BattleEngine.defendPulseRepeat
+                : BattleEngine.defendPulse);
+        p.guardStreak = true;
+        p.guardHitPending = true;
+        p.ult = math.min(
+            100, p.ult + BattleEngine.defendUlt * (1 + p.ultChargeBonus));
         state.log = '${p.name} se defiende (actúa antes)';
         _act = null;
         tickEffects(p);

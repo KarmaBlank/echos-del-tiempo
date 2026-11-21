@@ -94,10 +94,12 @@ void main() {
     // Ventana de comandos: quién actúa, categorías y el objetivo.
     expect(find.textContaining('¡Tu turno! Guerrero'), findsOneWidget);
     expect(roundedUi(tester), isEmpty, reason: 'regla pixel: sin redondeos');
-    expect(find.byKey(const ValueKey('battle-cat-attack')), findsOneWidget);
+    expect(find.byKey(const ValueKey('battle-cat-weapon')), findsOneWidget);
     expect(find.byKey(const ValueKey('battle-cat-skills')), findsOneWidget);
     expect(find.byKey(const ValueKey('battle-cat-items')), findsOneWidget);
-    expect(find.byKey(const ValueKey('battle-cat-defend')), findsOneWidget);
+    // Defender vive en ARMA (battle_attack_menu.md § 6).
+    expect(find.byKey(const ValueKey('battle-cat-defend')), findsNothing);
+    expect(act('defend'), findsOneWidget);
     // Sin sección OBJETIVO en el panel (vive en el tooltip del enemigo).
     expect(find.byKey(const ValueKey('battle-target')), findsNothing);
     // 4 jugadores → vida ×1.8 (combo_balance.md § 3.3): Limo 30 × 1.8 = 54
@@ -136,22 +138,22 @@ void main() {
       return true;
     });
     final menu = tester.state<BattleViewState>(find.byType(BattleView));
-    expect(menu.category, BattleCategory.attack);
+    expect(menu.category, BattleCategory.weapon);
     menu.handleKey(LogicalKeyboardKey.arrowRight);
     await tester.pump();
     expect(menu.category, BattleCategory.skills);
     // Las técnicas del arma, una fila cada una con su costo.
     final cur = state.current!;
     for (final id in cur.skillIds) {
-      expect(act('skill-$id'), findsOneWidget);
+      expect(act('skill-$id'),
+          (kSkills[id]?.instant ?? false) ? findsNothing : findsOneWidget);
     }
     menu.handleKey(LogicalKeyboardKey.arrowDown);
     await tester.pump();
     expect(menu.selectedAction, 1);
     // La descripción es la de la acción elegida.
-    // En el menú las Instante van primero.
+    // Las Instante están en ARMA, no en HABILIDADES.
     final shown = [
-      ...cur.skillIds.where((id) => kSkills[id]?.instant ?? false),
       ...cur.skillIds.where((id) => !(kSkills[id]?.instant ?? false)),
     ];
     expect(find.byKey(ValueKey('battle-desc-skill-${shown[1]}')),
@@ -169,9 +171,9 @@ void main() {
     });
     final cat = find.byKey(const ValueKey('battle-cat-pass'));
     expect(cat, findsOneWidget);
-    // Después de DEFENDER.
+    // Después de OBJETOS.
     expect(tester.getTopLeft(cat).dy,
-        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('battle-cat-defend'))).dy));
+        greaterThan(tester.getTopLeft(find.byKey(const ValueKey('battle-cat-items'))).dy));
     await tester.tap(cat);
     await tester.pump();
     final menu = tester.state<BattleViewState>(find.byType(BattleView));
@@ -197,7 +199,9 @@ void main() {
     menu.selectCategory(BattleCategory.skills);
     await tester.pump();
     // Seleccionarla muestra el motivo y no manda nada.
-    final ids = state.current!.skillIds;
+    final ids = state.current!.skillIds
+        .where((id) => !(kSkills[id]?.instant ?? false))
+        .toList();
     for (var i = 0; i < ids.indexOf('quebrar'); i++) {
       menu.handleKey(LogicalKeyboardKey.arrowDown);
     }
@@ -324,7 +328,7 @@ void main() {
     await tester.pump();
     // El menú vuelve a ATACAR de quien actúa ahora; ninguna descripción
     // del guerrero queda a la vista.
-    expect(menu.category, BattleCategory.attack);
+    expect(menu.category, BattleCategory.weapon);
     expect(find.textContaining('¡Tu turno! ${other.name}'), findsOneWidget);
     for (final id in g.skillIds) {
       if (other.skillIds.contains(id)) continue;

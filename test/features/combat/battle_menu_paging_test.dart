@@ -157,32 +157,38 @@ void main() {
     testWidgets(
         'Guardián con 14 opciones: categorías, sus técnicas en dos páginas '
         '(Más), teclas 1-9 dentro de la categoría', (tester) async {
-      // En el menú las Instante van primero (orden estable).
+      // Las Instante viven en ARMA (battle_attack_menu.md § 6); en
+      // HABILIDADES quedan las demás, en orden estable.
       final ids = state.party.single.skillIds;
+      final instants = ids.where((id) => kSkills[id]?.instant ?? false);
       final skills = [
-        ...ids.where((id) => kSkills[id]?.instant ?? false),
         ...ids.where((id) => !(kSkills[id]?.instant ?? false)),
       ];
       // 8 + el combo de clase (combo_balance.md § 5.2) + la Quebrar base
-      // del arma (§ 5.1): 10, pasa de las 9 teclas y pagina.
-      expect(skills, hasLength(10));
+      // del arma (§ 5.1): 10 en total.
+      expect(ids, hasLength(10));
       BattleCommand? sent;
       final menu = await pump(tester, (c) => sent = c);
       expect(menu.hasSubmenu, isFalse);
       menu.selectCategory(BattleCategory.skills);
       await tester.pump();
-      for (final id in skills.take(8)) {
+      for (final id in instants) {
+        expect(find.byKey(ValueKey('battle-act-skill-$id')), findsNothing);
+      }
+      final paged = skills.length > 9;
+      for (final id in skills.take(paged ? 8 : 9)) {
         expect(find.byKey(ValueKey('battle-act-skill-$id')), findsOneWidget,
             reason: id);
       }
-      expect(find.byKey(const ValueKey('battle-act-more')), findsOneWidget);
+      expect(find.byKey(const ValueKey('battle-act-more')),
+          paged ? findsOneWidget : findsNothing);
       expect(menu.menuPage, 0);
       // 7 = la séptima técnica de la lista.
       menu.handleKey(LogicalKeyboardKey.digit7);
       await tester.pump();
       expect((sent! as SkillCommand).skillId, skills[6]);
-      // Después de actuar, el menú vuelve a ATACAR.
-      expect(menu.category, BattleCategory.attack);
+      // Después de actuar, el menú vuelve a ARMA.
+      expect(menu.category, BattleCategory.weapon);
     });
   });
 }
