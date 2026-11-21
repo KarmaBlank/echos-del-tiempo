@@ -199,6 +199,9 @@ void main() {
   });
 
   testWidgets('paso 3: el arma de origen dice qué se destruye', (tester) async {
+    tester.view.physicalSize = const Size(1920, 1080);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await _toOps(tester, 'r1');
     await _tap(tester, 'bench-op-transferAffix');
     await _hover(tester, find.byKey(const ValueKey('craft-source-m1')));
@@ -206,6 +209,15 @@ void main() {
     expect(m, contains('Te llevas:'));
     expect(m, contains('Se destruye'));
     expect(m, contains('Mods 2/2'));
+    // La nota no se sale de la ficha (tope de ancho de los tooltips).
+    final note = find.byKey(const ValueKey('craft-source-tip-m1'));
+    {
+      final tip = tester.getRect(find.byKey(const ValueKey('inv-cmp-tip')));
+      final r = tester.getRect(note);
+      expect(r.right, lessThanOrEqualTo(tip.right + 0.5));
+      expect(r.left, greaterThanOrEqualTo(tip.left - 0.5));
+    }
+    expect(tester.takeException(), isNull);
   });
 
   test('reemplazar habilidad: base no, trasladada sí', () {
