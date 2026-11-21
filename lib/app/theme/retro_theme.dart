@@ -189,6 +189,8 @@ abstract final class RetroTheme {
             fontSize: RetroType.small,
             height: RetroType.line,
             color: ProtoColors.ink),
+        // Regla global de tooltips (v0.20.1): ancho máximo siempre.
+        constraints: const BoxConstraints(maxWidth: 720),
         preferBelow: true,
         verticalOffset: 14,
       ),

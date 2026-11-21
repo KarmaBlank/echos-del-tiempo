@@ -780,11 +780,13 @@ class DsTooltipCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxH = MediaQuery.sizeOf(context).height * 0.6;
+    final screen = MediaQuery.sizeOf(context);
+    // ≤ 45 % del alto: entra arriba o abajo de cualquier objetivo (el
+    // resto scrollea), siempre dentro de pantalla.
+    final maxH = screen.height * 0.45;
     return Container(
       constraints: BoxConstraints(
-          maxWidth: RetroType.width(context, DsMetrics.tooltipWidth),
-          maxHeight: maxH),
+          maxWidth: DsMetrics.tooltipMaxWidth(context), maxHeight: maxH),
       decoration: BoxDecoration(
         color: DsColors.background,
         border: Border.all(color: DsColors.borderControl, width: 2),
@@ -797,7 +799,9 @@ class DsTooltipCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: DsText.body(titleColor ?? DsColors.textPrimary)),
+          // Estilos fijos del DS: nunca el DefaultTextStyle del panel.
+          Text(title,
+              style: DsText.body(titleColor ?? DsColors.textPrimary)),
           if (tags.isNotEmpty) ...[
             SizedBox(height: DsSpace.xs),
             Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: tags),
@@ -806,7 +810,7 @@ class DsTooltipCard extends StatelessWidget {
             SizedBox(height: DsSpace.sm),
             Flexible(
               child: SingleChildScrollView(
-                child: DefaultTextStyle.merge(
+                child: DefaultTextStyle(
                   style: DsText.body(),
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -846,14 +850,29 @@ class DsTooltip extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-        richMessage: WidgetSpan(child: card),
+  Widget build(BuildContext context) {
+    // El `Tooltip` arma la tarjeta dentro de un `Text.rich`, que agranda
+    // todo `WidgetSpan` por el textScaler (transform). La tarjeta ya
+    // escala su texto y su ancho: con eso el tamaño se aplicaba dos veces
+    // y el tip salía gigante (fix v0.20.1). El `Text.rich` va sin escala
+    // y la tarjeta (y el objetivo) recuperan el escalador real.
+    final scaler = MediaQuery.textScalerOf(context);
+    return MediaQuery.withNoTextScaling(
+      child: Tooltip(
+        richMessage: WidgetSpan(
+            child: MediaQuery(
+                data: MediaQuery.of(context).copyWith(textScaler: scaler),
+                child: card)),
         decoration: const BoxDecoration(),
         padding: EdgeInsets.zero,
         waitDuration: const Duration(milliseconds: 250),
         preferBelow: true,
-        child: child,
-      );
+        child: MediaQuery(
+            data: MediaQuery.of(context).copyWith(textScaler: scaler),
+            child: child),
+      ),
+    );
+  }
 }
 
 /// Tooltip del sistema de diseño en una línea (game_editor.md § 7.6; `DsTooltip` +
