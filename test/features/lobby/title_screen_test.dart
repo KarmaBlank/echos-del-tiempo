@@ -64,6 +64,9 @@ Future<void> _pumpTitle(
 }
 
 Future<void> _tap(WidgetTester tester, String key) async {
+  // El alijo scrollea: la fila de acciones arriba empuja las pilas.
+  await tester.ensureVisible(find.byKey(ValueKey(key)));
+  await tester.pump();
   await tester.tap(find.byKey(ValueKey(key)));
   await tester.pump();
   await tester.pump();

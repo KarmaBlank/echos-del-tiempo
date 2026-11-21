@@ -114,8 +114,12 @@ void main() {
     await tester.pump();
     expect(c.selected, StashLayout.actions);
 
-    // Tab: la fila entera pasa a la siguiente región permitida (header).
+    // Tab: la fila entera pasa a la siguiente región permitida.
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(c.doc!.resolve(null).of('right'), contains(StashLayout.actions));
+    // Y se la lleva al encabezado.
+    expect(c.move(StashLayout.actions, 'header', 0), isTrue);
     await tester.pump();
     expect(c.doc!.resolve(null).of('header'), [StashLayout.actions]);
 
@@ -133,7 +137,7 @@ void main() {
     await tester.pump();
     expect(c.doc!.resolve(null).containerOf(StashLayout.pick), 'right');
     expect(c.doc!.resolve(null).of(StashLayout.actions),
-        [StashLayout.transfer, StashLayout.moveAll]);
+        [StashLayout.moveAll, StashLayout.transfer]);
     expect(tester.takeException(), isNull);
     expect(c.staticIssues.where((i) => i.error), isEmpty);
 
@@ -175,7 +179,9 @@ void main() {
       c.undo();
     }
     expect(c.doc!.sameAs(StashLayout.spec.defaults), isTrue);
-    c.redo();
+    c
+      ..redo()
+      ..redo();
     expect(c.doc!.resolve(null).of('header'), [StashLayout.actions]);
 
     // Publicar al repo: copia y borra el override.

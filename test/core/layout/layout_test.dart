@@ -51,10 +51,10 @@ void main() {
             (r) => r.copyWith(hide: true));
     final base = d.resolve(null);
     expect(base.of(StashLayout.actions),
-        [StashLayout.transfer, StashLayout.moveAll, StashLayout.pick]);
+        [StashLayout.pick, StashLayout.moveAll, StashLayout.transfer]);
     final n = d.resolve(LayoutBreakpoint.narrow);
     expect(n.of('right').first, StashLayout.pick);
-    expect(n.of(StashLayout.actions), [StashLayout.transfer, StashLayout.moveAll]);
+    expect(n.of(StashLayout.actions), [StashLayout.moveAll, StashLayout.transfer]);
     expect(n.containerOf(StashLayout.title), isNull);
     expect(d.resolve(LayoutBreakpoint.wide).of('left').first, StashLayout.title);
     // Cacheado: misma instancia por corte.
