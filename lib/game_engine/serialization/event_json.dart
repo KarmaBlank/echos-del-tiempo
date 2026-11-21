@@ -77,6 +77,8 @@ class EventJson {
             'r': session.resultToJson(e.result),
           },
         ReturnedToLobbyEvent() => {'t': 'lobby'},
+        RunNodeEnteredEvent() => {'t': 'runNode', 'f': e.floor, 'n': e.nodeId},
+        RunEndedEvent() => {'t': 'runEnd', 'win': e.victory},
         FloorChangedEvent() => {'t': 'floor', 'f': e.floor, 'down': e.down},
         StairsOpenedEvent() => {'t': 'stairs', 'f': e.floor},
         PoiUsedEvent() => {
@@ -212,6 +214,10 @@ class EventJson {
         return MissionEndedEvent(session.resultFromJson(j.obj('r')));
       case 'lobby':
         return const ReturnedToLobbyEvent();
+      case 'runNode':
+        return RunNodeEnteredEvent(j.integer('f'), j.integer('n'));
+      case 'runEnd':
+        return RunEndedEvent(j.boolean('win'));
       case 'floor':
         return FloorChangedEvent(j.integer('f'), down: j.boolean('down'));
       case 'stairs':

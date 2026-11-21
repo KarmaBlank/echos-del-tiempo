@@ -13,6 +13,7 @@ import '../../../core/persistence/exit_guard.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/atlas_store.dart';
+import '../../../game_engine/models/game_mode.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/models/bestiary.dart';
@@ -389,6 +390,7 @@ class SessionController extends StateNotifier<SessionView?> {
   void _onTutorialDone(int version) {
     if (version <= _tutorialVersion) return;
     _tutorialVersion = version;
+    if (!_persist) return;
     unawaited(tutorialStore.save(version).catchError((Object e) {
       EcosLog.error('Guardado del tutorial', e);
       _saveFailed(e);
@@ -638,6 +640,7 @@ class SessionController extends StateNotifier<SessionView?> {
       final name = engine.battles.catalog.enemies[t]?.name ?? t;
       _addChat(ChatLine.system('Bestiario: $name agregado'));
     }
+    if (!_persist) return;
     unawaited(bestiaryStore.save(next).catchError((Object e) {
       EcosLog.error('Guardado del bestiario', e);
       _saveFailed(e);
@@ -670,6 +673,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   void _setAtlas(AtlasProgress next, {bool emit = true}) {
     _atlas = next;
+    if (!_persist) return;
     unawaited(atlasStore.save(next).catchError((Object e) {
       EcosLog.error('Guardado del Atlas', e);
       _saveFailed(e);
@@ -845,6 +849,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Guarda el perfil ya (antes de cerrar la aplicación).
   Future<void> saveNow() async {
+    if (!_persist) return;
     for (final id in [..._companions.keys]) {
       await _saveCompanionNow(id);
     }
@@ -862,6 +867,7 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   bool _canMove(GameSession s, SessionPlayer me) =>
+      !isRun &&
       (s.mode == SessionMode.lobby || s.mode == SessionMode.field) &&
       me.alive &&
       _panel == null;
@@ -1068,6 +1074,23 @@ class SessionController extends StateNotifier<SessionView?> {
   bool handleKey(LogicalKeyboardKey key) {
     final s = _s;
     if (s == null) return false;
+    // Travesía: no hay pueblo ni campo; solo cerrar y abrir el personaje.
+    if (isRun) {
+      if (key == LogicalKeyboardKey.escape) {
+        closePanel();
+        return true;
+      }
+      if (s.mode == SessionMode.battle) return false;
+      if (key == LogicalKeyboardKey.keyC) {
+        toggleCharacter();
+        return true;
+      }
+      if (key == LogicalKeyboardKey.keyI) {
+        toggleInventory();
+        return true;
+      }
+      return false;
+    }
     if (key == LogicalKeyboardKey.keyE || key == LogicalKeyboardKey.space) {
       interact();
       return true;
@@ -1213,6 +1236,17 @@ class SessionController extends StateNotifier<SessionView?> {
   bool useStairs({required bool down}) => _apply(UseStairsAction(down: down));
 
   bool setReady(bool ready) => _apply(ReadyAction(ready));
+
+  // ---------------- Travesía (docs/specs/roguelike.md) ----------------
+
+  bool startRun() => _apply(const RunStartAction());
+
+  bool voteRunNode(int nodeId) => _apply(RunVoteAction(nodeId));
+
+  bool chooseRunReward({int? tree, int? weapon, int? extra}) =>
+      _apply(RunRewardAction(tree: tree, weapon: weapon, extra: extra));
+
+  bool runReady() => _apply(const RunReadyAction());
 
   bool cancelPrep() => _apply(const CancelPrepAction());
 
@@ -1487,7 +1521,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   Future<void> _loadStash() async {
     final st = stashStore;
-    if (st == null) return;
+    if (st == null || !_persist) return;
     try {
       _stash = await st.load();
     } catch (e) {
@@ -1803,7 +1837,15 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Guarda a cada miembro que cambió (el local y sus compañeros, cada
   /// uno en su ranura): cada [saveEvery] s o ya con [force].
+  /// La Travesía no guarda nada de la cuenta: el personaje de la run es
+  /// descartable (docs/specs/roguelike.md § 8.5).
+  bool get _persist => engine.gameMode != GameModeKind.travesia;
+
+  /// Se juega la Travesía (la UI arma sus pantallas en vez del pueblo).
+  bool get isRun => engine.gameMode == GameModeKind.travesia;
+
   void _save({bool force = false}) {
+    if (!_persist) return;
     if (!force && _sinceSave < saveEvery) return;
     for (final id in _companions.keys) {
       if (_saveCompanion(id)) _sinceSave = 0;
@@ -1860,6 +1902,7 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   void _saveLocal() {
+    if (!_persist) return;
     final p = _s?.players[localId]?.profile;
     if (p == null || identical(p, _lastSaved)) return;
     final last = _lastSaved;

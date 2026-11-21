@@ -15,6 +15,7 @@ import '../../../game_engine/data/uniques_catalog.dart';
 import '../../../game_engine/models/game_session.dart';
 import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/rules/eco_rules.dart';
+import '../../../game_engine/rules/run_rules.dart';
 import '../../../game_engine/rules/trial_rules.dart';
 import '../../characters/presentation/stash_panel.dart';
 import '../../../app/theme/panel_frame.dart';
@@ -51,6 +52,7 @@ import 'session_controller.dart';
 import 'session_music.dart';
 import 'session_sfx.dart';
 import 'session_view.dart';
+import '../../run/presentation/run_screen.dart';
 
 /// Pantalla raíz del juego: dibuja lo que pide `session.mode` (mapa +
 /// HUD + paneles, batalla o resultado) y reparte el teclado. Ver
@@ -640,6 +642,19 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             ),
           ),
         ];
+      // Travesía (roguelike.md): sus pantallas en vez del pueblo / campo.
+      case SessionMode.lobby || SessionMode.run when controller.isRun:
+        return [
+          Positioned.fill(
+            child: RunScreen(
+              view: view,
+              controller: controller,
+              onExit: () => Navigator.of(context).maybePop(),
+            ),
+          ),
+          if (view.panel case final panel?)
+            Positioned.fill(child: _panel(panel, view, controller)),
+        ];
       default:
         return [
           Positioned.fill(
@@ -742,7 +757,16 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           onCharacter: () => controller.openPanel(WorldPanel.character),
         );
       case WorldPanel.armory:
-        return ArmoryPanel(view: view, controller: controller);
+        // Travesía: la armería del mapa abre en FORJA.
+        final run = s.run;
+        final forge = run != null &&
+            run.phase == RunPhase.stop &&
+            run.node != null &&
+            RunRules.floorOf(run).node(run.node!).type == RunNodeType.armeria;
+        return ArmoryPanel(
+            view: view,
+            controller: controller,
+            initialTab: forge ? ArmoryTab.forge : ArmoryTab.buy);
       case WorldPanel.party:
         return PartyPanel(view: view, controller: controller);
       case WorldPanel.stash:

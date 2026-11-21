@@ -714,3 +714,19 @@ misión 1): 2 jugadores 7.5 KB, 6 → 11.0 KB, 8 → 12.7 KB, 12 → 16.2 KB
 por cliente. El control de flujo es por cliente (`maxInFlight = 6`) y
 los perfiles van como deltas (§ "Perfiles solo cuando cambian"): crece
 la subida total del host (≈ × clientes), no el costo por cliente.
+
+## Protocolo 32 (modo Travesía, roguelike.md)
+
+`kProtocolVersion` = 32. Cliente y host tienen que tener la misma: un
+Mundo viejo no entra a una sala nueva y al revés.
+
+- Snapshot: `run` opcional (`RunState`: `seed`, `zones`, `f` piso, `n`
+  nodo actual, `ph` fase, `v` votos `{id: nodo}`, `o` ofertas pendientes
+  `{id: {n, w, x}}`, `ok` LISTO, `ms` racha, `win`, `w` peleas ganadas).
+  El mapa no viaja: cada dispositivo lo genera de `seed`
+  (`RunMapGenerator`, `mulberry32`).
+- Acciones: `runStart`, `runVote {n}`, `runReward {tr?, w?, x?}` (índice
+  por fila; ausente = saltar), `runReady`. El Mundo las rechaza.
+- Eventos: `runNode {f, n}` (el grupo entró a un nodo) y `runEnd {win}`.
+- El host decide todo (votación, empate por semilla, ofertas por
+  jugador); el cliente solo marca y elige.

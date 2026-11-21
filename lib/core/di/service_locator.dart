@@ -10,6 +10,7 @@ import '../../game_engine/balance/balance_patch.dart';
 import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/data/passive_tree_catalog.dart';
 import '../../game_engine/models/atlas_store.dart';
+import '../../game_engine/models/game_mode.dart';
 import '../../game_engine/models/bestiary.dart';
 import '../../game_engine/models/tutorial_store.dart';
 import '../../game_engine/models/party_store.dart';
@@ -50,8 +51,13 @@ final sl = GetIt.instance;
 /// [balance] es el `balance.json` ya leído (`BalanceAssetLoader.load`,
 /// docs/specs/balance_admin.md § 3); `null` = el catálogo del código.
 void registerSharedDependencies(
-    {AccountStore? accountStore, BalanceParseResult? balance, UltData? ults}) {
+    {AccountStore? accountStore,
+    BalanceParseResult? balance,
+    UltData? ults,
+    GameModeKind gameMode = GameModeKind.mundo}) {
   if (sl.isRegistered<PassiveTreeRules>()) return;
+  // Versión del juego (docs/specs/roguelike.md § 9): Mundo o Travesía.
+  sl.registerSingleton<GameModeKind>(gameMode);
   // `ecos.log` junto a la cuenta (docs/specs/characters.md § 1.5).
   if (accountStore == null) {
     try {
@@ -104,6 +110,7 @@ void registerSharedDependencies(
       // (docs/specs/ecos_atlas.md § 8).
       devTools: FeatureFlags.instance.devTools,
       maxPlayers: FeatureFlags.instance.maxPlayers,
+      gameMode: gameMode,
     ),
   );
   // Cuenta con varios personajes y alijo (`account.json`, migra el
@@ -119,9 +126,14 @@ void registerSharedDependencies(
     ExitGuard.register(repo, repo.flush, last: true);
     return repo;
   });
-  sl.registerLazySingleton<ProfileStore>(
-    () => SelectedCharacterProfileStore(sl<AccountRepository>()),
-  );
+  sl.registerLazySingleton<ProfileStore>(() {
+    final store = SelectedCharacterProfileStore(sl<AccountRepository>());
+    // Travesía: el personaje de la run nunca pisa al de la cuenta
+    // (roguelike.md § 8.5); se lee el elegido y no se escribe nada.
+    return gameMode == GameModeKind.travesia
+        ? ReadOnlyProfileStore(store)
+        : store;
+  });
   // Alijo en partida (docs/specs/characters.md § 3.2).
   sl.registerLazySingleton<StashStore>(
     () => AccountStashStore(sl<AccountRepository>()),

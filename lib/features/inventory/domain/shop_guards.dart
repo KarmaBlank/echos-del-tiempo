@@ -26,7 +26,11 @@ class ShopGuards {
 
   static const notShopping = 'Solo en el lobby o la preparación';
 
-  bool get canShop => mode == SessionMode.lobby || mode == SessionMode.prep;
+  bool get canShop =>
+      mode == SessionMode.lobby ||
+      mode == SessionMode.prep ||
+      // Travesía: tienda y armería del mapa (el host acota cuál).
+      mode == SessionMode.run;
 
   static const notDiscarding = 'No en batalla';
 
