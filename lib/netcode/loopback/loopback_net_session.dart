@@ -73,6 +73,7 @@ class LoopbackNetSession extends ProtocolNetSession {
     this.hub, {
     super.catalog = GameCatalog.standard,
     super.maxPlayers,
+    super.game,
     super.clock,
     super.pingInterval,
   });

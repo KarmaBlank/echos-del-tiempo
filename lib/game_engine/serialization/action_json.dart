@@ -149,7 +149,7 @@ abstract final class ActionJson {
         DevAbyssAction() => {'t': 'devAbyss', 'k': a.kind},
         // Hazañas v0.14 (achievements.md § 5.2).
         ClaimAchievementAction() => {'t': 'ach', 'id': a.id},
-        // Travesía (protocolo 32; roguelike.md).
+        // Travesía (protocolo Travesía 1; roguelike.md).
         RunStartAction() => {'t': 'runStart'},
         RunVoteAction() => {'t': 'runVote', 'n': a.nodeId},
         RunRewardAction() => {

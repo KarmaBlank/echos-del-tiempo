@@ -715,10 +715,41 @@ por cliente. El control de flujo es por cliente (`maxInFlight = 6`) y
 los perfiles van como deltas (§ "Perfiles solo cuando cambian"): crece
 la subida total del host (≈ × clientes), no el costo por cliente.
 
-## Protocolo 32 (modo Travesía, roguelike.md)
+## Un protocolo por juego (Ecos del Tiempo y Travesía)
 
-`kProtocolVersion` = 32. Cliente y host tienen que tener la misma: un
-Mundo viejo no entra a una sala nueva y al revés.
+El repo publica dos juegos (distribution.md § "Dos juegos, un repo") y
+cada uno tiene **su propia secuencia** de protocolo. El composition root
+elige `WireGame` (vía `GameEdition.wire`) y se lo pasa a la sesión
+(`ProtocolNetSession(game:)`, `registerP2PNetcode` / `registerLanNetcode`);
+ni la sesión ni `features/*` miran el nombre del flavor.
+
+| Juego | id (`g`) | `v` | Constante |
+|---|---|---|---|
+| Ecos del Tiempo (Mundo) | `mundo` | 31 | `kProtocolVersion` |
+| Ecos del Tiempo: Travesía | `travesia` | 1 | `kTravesiaProtocolVersion` |
+
+- `hello` lleva `g` (el id del juego del cliente). Es aditivo: un host
+  Mundo viejo (31) lo ignora, así que **Mundo sigue en 31** y los
+  jugadores actuales no necesitan actualizar. Un `hello` sin `g` es un
+  Mundo anterior a la separación.
+- El host compara primero el juego y después `v`:
+  - otro juego y el cliente mandó `g` → `{"t":"reject","why":"game","g":"<juego del host>"}`;
+    el cliente ve «Esa sala es de «Ecos del Tiempo: Travesía»; desde este
+    juego no se puede entrar.» (o con «Ecos del Tiempo»).
+  - otro juego sin `g` (Mundo viejo en una sala de Travesía) → `reject
+    version`, el único motivo que ese cliente conoce.
+  - mismo juego, `v` distinta → `reject version`.
+- Travesía contra un host Mundo viejo (sin `g` en su lógica): el `v` (1
+  vs 31) no coincide → `reject version`.
+- El `welcome` manda el `v` del juego de la sala.
+- Subir el protocolo de un juego no toca el del otro.
+
+## Travesía, protocolo 1 (roguelike.md)
+
+Solo existe en el protocolo de Travesía; el formato de Mundo es el de
+siempre (el MVP lo había subido a 32 y se volvió a 31: el `run` del
+snapshot solo se escribe si hay una run, y las acciones de la run solo las
+manda Travesía).
 
 - Snapshot: `run` opcional (`RunState`: `seed`, `zones`, `f` piso, `n`
   nodo actual, `ph` fase, `v` votos `{id: nodo}`, `o` ofertas pendientes

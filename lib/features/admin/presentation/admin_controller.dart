@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../../core/update/release_channel.dart';
 import '../../../core/update/semver.dart';
 import '../../../game_engine/balance/balance_codecs.dart';
 import '../../../game_engine/balance/balance_patch.dart';
@@ -273,11 +274,17 @@ class AdminController extends ChangeNotifier {
   bool notesEdited = false;
   String? patchStatus;
 
-  /// La versión más alta publicada en GitHub (si ya se consultó).
-  String? get latestReleased {
+  /// La versión más alta publicada en GitHub (si ya se consultó) de Ecos
+  /// del Tiempo: solo tags `vX.Y.Z`. Los `travesia-vX.Y.Z` son del otro
+  /// juego del repo y tienen su propia numeración (docs/specs/
+  /// distribution.md § "Dos juegos, un repo").
+  String? get latestReleased => latestReleasedOf(ReleaseChannel.mundo);
+
+  /// La más alta de [channel] (prereleases fuera).
+  String? latestReleasedOf(ReleaseChannel channel) {
     SemVer? best;
     for (final r in releases ?? const <GithubRelease>[]) {
-      final v = SemVer.tryParse(r.tag);
+      final v = channel.versionOf(r.tag);
       if (r.draft || v == null || v.isPrerelease) continue;
       if (best == null || v.compareTo(best) > 0) best = v;
     }
@@ -294,7 +301,18 @@ class AdminController extends ChangeNotifier {
     return gh.compareTo(pub) > 0 ? latestReleased! : currentVersion!;
   }
 
-  String get nextVersion => ReleasePlan.next(baseVersion, minor: minorBump);
+  String get nextVersion {
+    var v = ReleasePlan.next(baseVersion, minor: minorBump);
+    // Nunca repetir un tag ya publicado (de cualquiera de los dos juegos).
+    while (tagTaken(ReleaseChannel.mundo.tagFor(v))) {
+      v = ReleasePlan.next(v);
+    }
+    return v;
+  }
+
+  /// Si [tag] ya existe entre los releases consultados.
+  bool tagTaken(String tag) =>
+      (releases ?? const <GithubRelease>[]).any((r) => r.tag == tag);
   ReleasePlan get plan => ReleasePlan(nextVersion);
 
   void setMinor(bool v) {

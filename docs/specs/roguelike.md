@@ -293,4 +293,4 @@ keystones / ULT de rama en el jefe, sinergia por etiquetas de
 `build_wants`, armas que pide un nodo, progreso permanente (§ 8), turnos
 `porBando` (§ 6), selector de versión en el Editor y guardado de la run.
 Las acciones de puntos del árbol, respec, misiones, pueblo y alijo se
-rechazan en la Travesía. Cada partida usa protocolo 32 (netcode.md).
+rechazan en la Travesía. Cada partida usa el protocolo propio de Travesía, versión 1 (netcode.md § "Un protocolo por juego").

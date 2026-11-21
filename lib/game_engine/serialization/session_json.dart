@@ -73,7 +73,7 @@ class SessionJson {
         // TUTORIAL v0.9 (combat_tutorial.md § 6): opcionales.
         if (s.tutorial != null) 'tut': s.tutorial!.toJson(),
         if (s.tutorialRuns != 0) 'tutN': s.tutorialRuns,
-        // Travesía (protocolo 32; roguelike.md): opcional.
+        // Travesía (protocolo Travesía 1; roguelike.md): opcional.
         if (s.run != null) 'run': RunJson.toJson(s.run!),
       };
 

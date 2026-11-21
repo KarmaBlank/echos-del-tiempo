@@ -11,6 +11,8 @@ import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/data/passive_tree_catalog.dart';
 import '../../game_engine/models/atlas_store.dart';
 import '../../game_engine/models/game_mode.dart';
+import '../../netcode/protocol/wire.dart' show WireGame;
+import '../edition/game_edition.dart';
 import '../../game_engine/models/bestiary.dart';
 import '../../game_engine/models/tutorial_store.dart';
 import '../../game_engine/models/party_store.dart';
@@ -54,8 +56,13 @@ void registerSharedDependencies(
     {AccountStore? accountStore,
     BalanceParseResult? balance,
     UltData? ults,
-    GameModeKind gameMode = GameModeKind.mundo}) {
+    GameEdition edition = GameEdition.mundo}) {
   if (sl.isRegistered<PassiveTreeRules>()) return;
+  // Qué juego es (docs/specs/distribution.md § "Dos juegos, un repo"):
+  // versión, canal de releases, carpeta de datos y protocolo. Va antes del
+  // log, que ya escribe en la carpeta del juego.
+  GameEdition.install(edition);
+  final gameMode = edition.mode;
   // Versión del juego (docs/specs/roguelike.md § 9): Mundo o Travesía.
   sl.registerSingleton<GameModeKind>(gameMode);
   // `ecos.log` junto a la cuenta (docs/specs/characters.md § 1.5).
@@ -212,7 +219,11 @@ void registerSharedDependencies(
 /// escritorio, SDK en web/móvil: `resolveP2PSignaling`); `null` = Firebase
 /// sin configurar y el título muestra [p2pUnavailable]. Ver
 /// docs/specs/netcode.md § "P2P por internet".
-void registerP2PNetcode({required SignalingService Function()? signaling}) {
+/// [game]: juego y protocolo de la sala; por defecto el de
+/// `GameEdition.current` (lo instaló `registerSharedDependencies`).
+void registerP2PNetcode(
+    {required SignalingService Function()? signaling, WireGame? game}) {
+  final wire = game ?? GameEdition.current.wire;
   if (signaling == null) {
     sl.registerSingleton<NetSessionFactory>(
         NetSessionFactory.unavailable('P2P', p2pUnavailable));
@@ -226,6 +237,7 @@ void registerP2PNetcode({required SignalingService Function()? signaling}) {
       signaling: sl<SignalingService>(),
       catalog: sl<GameCatalog>(),
       maxPlayers: FeatureFlags.instance.maxPlayers,
+      game: wire,
     ),
   ));
 }
@@ -234,13 +246,15 @@ const p2pUnavailable = 'P2P por internet: falta configurar Firebase';
 
 /// Variante LAN: WebSocket en la red local, código `IP:PUERTO`, sin
 /// Firebase. Ver docs/specs/netcode.md § "LAN".
-void registerLanNetcode() {
+void registerLanNetcode({WireGame? game}) {
+  final wire = game ?? GameEdition.current.wire;
   sl.registerSingleton<NetSessionFactory>(NetSessionFactory(
     label: 'LAN',
     codeHint: 'IP:PUERTO',
     create: () => LanNetSession(
         catalog: sl<GameCatalog>(),
-        maxPlayers: FeatureFlags.instance.maxPlayers),
+        maxPlayers: FeatureFlags.instance.maxPlayers,
+        game: wire),
   ));
 }
 

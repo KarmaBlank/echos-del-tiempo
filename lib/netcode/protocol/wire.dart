@@ -62,10 +62,44 @@ import '../../game_engine/serialization/session_json.dart';
 /// También en 23: acción `useItem` (pociones fuera de pelea, loot.md § 17.5).
 /// 24 desde v0.14: Hazañas (achievements.md § 5.3): `ach` en el perfil,
 /// acción `ach` (las que detecta el cliente) y evento `ach` `{p, id}`.
-/// 32: modo Travesía (roguelike.md): `run` en el snapshot, acciones
-/// `runStart` / `runVote` / `runReward` / `runReady` y eventos `runNode` /
-/// `runEnd`.
-const kProtocolVersion = 32;
+///
+/// Es la secuencia de Ecos del Tiempo (Mundo). Travesía tiene la suya
+/// ([kTravesiaProtocolVersion]); cada composition root elige [WireGame]
+/// (docs/specs/netcode.md § "Un protocolo por juego"). El `g` del `hello`
+/// es aditivo: un host 31 viejo lo ignora, así que Mundo sigue en 31.
+const kProtocolVersion = 31;
+
+/// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
+/// el snapshot, acciones `runStart` / `runVote` / `runReward` /
+/// `runReady` y eventos `runNode` / `runEnd` (roguelike.md).
+const kTravesiaProtocolVersion = 1;
+
+/// Qué juego habla por la red y con qué versión de protocolo. Lo decide
+/// el composition root (`GameEdition.wire`); la sesión nunca mira el
+/// nombre del flavor.
+class WireGame {
+  const WireGame(this.id, this.protocol, this.title);
+
+  /// `g` del `hello` / `reject`.
+  final String id;
+
+  /// `v` del `hello` / `welcome`.
+  final int protocol;
+
+  /// Nombre para el jugador.
+  final String title;
+
+  static const mundo = WireGame('mundo', kProtocolVersion, 'Ecos del Tiempo');
+  static const travesia = WireGame(
+      'travesia', kTravesiaProtocolVersion, 'Ecos del Tiempo: Travesía');
+
+  /// Título de un id recibido (desconocido: el id tal cual).
+  static String titleOf(String id) => switch (id) {
+        'mundo' => mundo.title,
+        'travesia' => travesia.title,
+        _ => id,
+      };
+}
 
 /// Un mensaje del protocolo (docs/specs/netcode.md § "Protocolo").
 sealed class WireMessage {
@@ -77,9 +111,15 @@ class HelloMessage extends WireMessage {
   const HelloMessage(this.profile,
       {this.version = kProtocolVersion,
       this.balance,
-      this.tutorialVersion = kTutorialVersion});
+      this.tutorialVersion = kTutorialVersion,
+      this.game = 'mundo'});
   final PlayerProfile profile;
   final int version;
+
+  /// `g`: id del juego del cliente ([WireGame.id]). `null` = cliente
+  /// anterior a la separación de juegos (siempre Mundo, y no conoce el
+  /// motivo `game` del `reject`).
+  final String? game;
 
   /// Hash del parche de balance del cliente (`GameCatalog.balanceHash`,
   /// docs/specs/balance_admin.md § 4). `null` = cliente anterior al
@@ -106,7 +146,8 @@ class WelcomeMessage extends WireMessage {
 enum RejectReason {
   full('La sala está llena.'),
   version('El host usa otra versión del juego.'),
-  balance('El host tiene otro parche de balance: actualizá el juego.');
+  balance('El host tiene otro parche de balance: actualizá el juego.'),
+  game('Esa sala es de otro juego.');
 
   const RejectReason(this.message);
   final String message;
@@ -124,8 +165,11 @@ RejectReason? balanceReject(String? client, String host) {
 
 /// host → cliente: `{"t":"reject","why":"full"}` (y cierra).
 class RejectMessage extends WireMessage {
-  const RejectMessage(this.reason, {this.max});
+  const RejectMessage(this.reason, {this.max, this.game});
   final RejectReason reason;
+
+  /// `g`: juego del host, para el texto del motivo `game`.
+  final String? game;
 
   /// `mx`: máximo de la sala (v0.13), para el texto de sala llena.
   final int? max;
@@ -133,7 +177,10 @@ class RejectMessage extends WireMessage {
   /// Lo que ve el jugador rechazado.
   String get text => reason == RejectReason.full && max != null
       ? 'La sala está llena (máx. $max jugadores).'
-      : reason.message;
+      : reason == RejectReason.game && game != null
+          ? 'Esa sala es de «${WireGame.titleOf(game!)}»; desde este juego '
+              'no se puede entrar.'
+          : reason.message;
 }
 
 /// cliente → host: cualquier `SessionAction` (`{"t":"pos",...}`...).
@@ -190,6 +237,7 @@ class WireCodec {
             'p': m.profile.toJson(),
             if (m.balance != null) 'b': m.balance,
             'tv': m.tutorialVersion,
+            if (m.game != null) 'g': m.game,
           },
         WelcomeMessage() => {
             't': 'welcome',
@@ -202,6 +250,7 @@ class WireCodec {
             't': 'reject',
             'why': m.reason.name,
             if (m.max != null) 'mx': m.max,
+            if (m.game != null) 'g': m.game,
           },
         PingMessage() => {'t': 'ping', 'ts': m.ts},
         PongMessage() => {'t': 'pong', 'ts': m.ts},
@@ -267,13 +316,14 @@ class WireCodec {
           return HelloMessage(PlayerProfile.fromJson(j.obj('p')),
               version: j.integer('v'),
               balance: j.strOrNull('b'),
-              tutorialVersion: j.intOrNull('tv') ?? 0);
+              tutorialVersion: j.intOrNull('tv') ?? 0,
+              game: j.strOrNull('g'));
         case 'welcome':
           return WelcomeMessage(j.str('id'), j.str('code'),
               version: j.integer('v'), max: j.intOrNull('mx'));
         case 'reject':
           return RejectMessage(j.enumByName('why', RejectReason.values),
-              max: j.intOrNull('mx'));
+              max: j.intOrNull('mx'), game: j.strOrNull('g'));
         case 'ping':
           return PingMessage(j.integer('ts'));
         case 'pong':

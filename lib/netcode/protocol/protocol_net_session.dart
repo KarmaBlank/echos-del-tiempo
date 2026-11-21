@@ -36,9 +36,14 @@ abstract class ProtocolNetSession
     Duration Function()? clock,
     this.pingInterval = defaultPingInterval,
     this.maxPlayers = kDefaultMaxPlayers,
+    this.game = WireGame.mundo,
   })  : codec = WireCodec(catalog),
         balanceHash = catalog.balanceHash,
         _clock = clock ?? _monotonic;
+
+  /// Juego y versión de protocolo de esta sala (composition root,
+  /// docs/specs/netcode.md § "Un protocolo por juego").
+  final WireGame game;
 
   /// Hash del parche de balance propio (docs/specs/balance_admin.md § 4).
   final String balanceHash;
@@ -373,14 +378,18 @@ abstract class ProtocolNetSession
         if (!joined) {
           if (msg is! HelloMessage) return;
           timeout.cancel();
-          final reject = msg.version != kProtocolVersion
+          // Otro juego: con `g` el cliente entiende el motivo `game`; sin
+          // `g` es un Mundo viejo, que solo conoce `version`.
+          final reject = (msg.game ?? WireGame.mundo.id) != game.id
+              ? (msg.game == null ? RejectReason.version : RejectReason.game)
+              : msg.version != game.protocol
               ? RejectReason.version
               : balanceReject(msg.balance, balanceHash) ??
                   (_clients.length + 1 >= maxPlayers
                       ? RejectReason.full
                       : null);
           if (reject != null) {
-            link.send(codec.encode(RejectMessage(reject, max: maxPlayers)));
+            link.send(codec.encode(RejectMessage(reject, max: maxPlayers, game: game.id)));
             // `setTimeout(()=>c.close(),300)`: que llegue el mensaje.
             Timer(const Duration(milliseconds: 300),
                 () => unawaited(_quietly(link.close())));
@@ -389,7 +398,8 @@ abstract class ProtocolNetSession
           joined = true;
           _pending.remove(link);
           _clients[pid] = link;
-          link.send(codec.encode(WelcomeMessage(pid, _roomCode ?? '', max: maxPlayers)));
+          link.send(codec.encode(WelcomeMessage(pid, _roomCode ?? '',
+              version: game.protocol, max: maxPlayers)));
           _emit(PeerJoinedEvent(pid, msg.profile,
               tutorialVersion: msg.tutorialVersion));
           // Indicador de ping prendido: medir al nuevo enseguida.
@@ -487,7 +497,10 @@ abstract class ProtocolNetSession
     );
     link.send(
         codec.encode(HelloMessage(config.profile,
-            balance: balanceHash, tutorialVersion: config.tutorialVersion)));
+            version: game.protocol,
+            game: game.id,
+            balance: balanceHash,
+            tutorialVersion: config.tutorialVersion)));
     try {
       await welcome.future.timeout(welcomeTimeout,
           onTimeout: () => throw const NetException(

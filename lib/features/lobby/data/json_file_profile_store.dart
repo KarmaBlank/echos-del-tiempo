@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../../../core/edition/game_edition.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/profile_store.dart';
 
@@ -30,24 +31,37 @@ class JsonFileProfileStore implements ProfileStore {
     return dir == null ? null : JsonFileProfileStore(File('$dir/$fileName'));
   }
 
-  /// `%APPDATA%\EcosDelTiempo`, `~/Library/Application Support/EcosDelTiempo`
-  /// o `$XDG_DATA_HOME|~/.local/share` + `/ecos_del_tiempo`.
+  /// La carpeta de datos del juego instalado (`GameEdition.current`, la
+  /// elige el composition root): `%APPDATA%\<carpeta>`,
+  /// `~/Library/Application Support/<carpeta>` o
+  /// `$XDG_DATA_HOME|~/.local/share` + `/<carpeta linux>`. Ecos del Tiempo
+  /// usa `EcosDelTiempo`; Travesía, `EcosDelTiempo-Travesia`.
+  ///
+  /// Bajo `flutter test` (`FLUTTER_TEST`) nunca es la carpeta real: va a
+  /// un directorio temporal, así los tests no tocan `%APPDATA%`.
   static String? dataDirectory() {
+    final edition = GameEdition.current;
     final env = Platform.environment;
+    if (env['FLUTTER_TEST'] == 'true') {
+      return '${Directory.systemTemp.path}${Platform.pathSeparator}'
+          'ecos_test_data${Platform.pathSeparator}${edition.dataFolder}';
+    }
     if (Platform.isWindows) {
       final appData = env['APPDATA'];
-      return appData == null ? null : '$appData\\EcosDelTiempo';
+      return appData == null ? null : '$appData\\${edition.dataFolder}';
     }
     final home = env['HOME'];
     if (Platform.isMacOS) {
       return home == null
           ? null
-          : '$home/Library/Application Support/EcosDelTiempo';
+          : '$home/Library/Application Support/${edition.dataFolder}';
     }
     if (Platform.isLinux) {
       final xdg = env['XDG_DATA_HOME'];
-      if (xdg != null && xdg.isNotEmpty) return '$xdg/ecos_del_tiempo';
-      return home == null ? null : '$home/.local/share/ecos_del_tiempo';
+      if (xdg != null && xdg.isNotEmpty) {
+        return '$xdg/${edition.linuxDataFolder}';
+      }
+      return home == null ? null : '$home/.local/share/${edition.linuxDataFolder}';
     }
     return null;
   }

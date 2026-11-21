@@ -41,9 +41,64 @@ release no ofrece LAN. Para jugar por LAN hay que compilar
 contrato (lista de factories y selector en el título) — queda fuera de
 este spec.
 
+## Dos juegos, un repo
+
+El monorepo publica dos juegos que se instalan uno al lado del otro. Todo
+lo que los distingue vive en `GameEdition` (`lib/core/edition/
+game_edition.dart`), que instala el composition root con
+`registerSharedDependencies(edition:)`; nadie mira el nombre del flavor.
+
+| | Ecos del Tiempo | Ecos del Tiempo: Travesía |
+|---|---|---|
+| Flavor | `main_p2p.dart` | `main_roguelike.dart` |
+| Versión | `lib/app/app_version.dart` (= pubspec) | `lib/app/travesia_version.dart` (propia, desde 0.1.0) |
+| Tag | `vX.Y.Z` | `travesia-vX.Y.Z` |
+| Release | el "latest" del repo | siempre `--latest=false --prerelease` |
+| Actualizador | `GET /releases/latest` | `GET /releases?per_page=100`, filtra por `travesia-v`, semver más alta (prereleases incluidos) |
+| Instalador | `installer\ecos_del_tiempo.iss` → `EcosDelTiempo-Setup-X.Y.Z.exe` | `installer\ecos_travesia.iss` → `EcosDelTiempo-Travesia-Setup-X.Y.Z.exe` |
+| AppId | `{4C7488FB-…-FAED0FDD2981}` | `{BD419CB8-AA4F-41B8-95A1-89B11543044E}` |
+| Carpeta | `%LOCALAPPDATA%\Programs\Ecos del Tiempo` | `%LOCALAPPDATA%\Programs\Ecos del Tiempo Travesia` |
+| Datos | `%APPDATA%\EcosDelTiempo` | `%APPDATA%\EcosDelTiempo-Travesia` |
+| Protocolo | `mundo`, secuencia propia (31) | `travesia`, secuencia propia (1) |
+
+- El canal de releases es `ReleaseChannel` (`lib/core/update/
+  release_channel.dart`): prefijo del tag, prefijo del instalador y
+  estrategia. Un tag de un canal nunca cuenta para el otro.
+- Los AppId no se cambian nunca y no se repiten: cada uno es lo que hace
+  que la versión nueva de *ese* juego se instale encima de la anterior.
+- Ambos instalan `echos_del_tiempo.exe`, cada uno en su carpeta.
+- La carpeta de datos la resuelve un solo lugar
+  (`JsonFileProfileStore.dataDirectory`, según `GameEdition.current`).
+  Bajo `flutter test` (`FLUTTER_TEST`) apunta a un directorio temporal:
+  los tests nunca tocan `%APPDATA%`.
+- Los overrides del Editor no pueden ir en la carpeta de datos de ninguno
+  de los dos (`isInsideGameData`).
+- El Editor (`main_admin.dart`, Monitoreo / Parche) calcula la versión
+  siguiente solo con los tags `vX.Y.Z` y nunca propone un tag que ya
+  exista; los `travesia-v*` tienen su numeración aparte.
+
+### Publicar Travesía
+
+```powershell
+.\tool\release.ps1 -Juego Travesia -Version 0.1.0 -Notes "..." -DryRun   # prueba
+.\tool\release.ps1 -Juego Travesia -Version 0.1.0 -Notes "..."           # publica
+```
+
+Sin `-Juego` (o `-Juego Mundo`) el script hace exactamente lo de
+§ "Publicar un release". Con `-Juego Travesia`: escribe solo
+`lib/app/travesia_version.dart` (el pubspec queda como está; el build
+number del `.exe` es el del pubspec), compila
+`lib/app/flavors/main_roguelike.dart`, usa `installer\ecos_travesia.iss`,
+tag `travesia-vX.Y.Z`, título "Ecos del Tiempo: Travesía travesia-vX.Y.Z",
+capturas de `docs\release_shots\travesia-vX.Y.Z` y
+`docs\release_shots\travesia-base`, y publica con `--latest=false
+--prerelease`, así el "latest" del repo sigue siendo de Ecos del Tiempo y
+su actualizador no cambia. El commit es `chore(release): travesia-vX.Y.Z`.
+
 ## Perfil guardado
 
-El perfil vive en `%APPDATA%\EcosDelTiempo` (Roaming;
+El perfil vive en `%APPDATA%\EcosDelTiempo` (Travesía:
+`%APPDATA%\EcosDelTiempo-Travesia`; Roaming;
 `JsonFileProfileStore.forPlatform`, docs/specs/exploration.md §
 "Persistencia"), **fuera** de la carpeta de instalación (que está en
 `%LOCALAPPDATA%`). Ni la actualización ni la desinstalación lo tocan

@@ -5,15 +5,18 @@ import '../../core/balance/balance_asset_loader.dart';
 import '../../core/data/build_template_loader.dart';
 import '../../core/data/ult_data_loader.dart';
 import '../../core/di/service_locator.dart';
+import '../../core/edition/game_edition.dart';
 import '../../core/layout/layout_catalog.dart';
 import '../../core/persistence/exit_on_close.dart';
 import '../../core/settings/frame_limiter.dart';
 import '../../features/combat/presentation/scene/fx_bridge.dart';
-import '../../game_engine/models/game_mode.dart';
 import '../app.dart';
 import 'firebase_bootstrap.dart';
 
-/// Composition root del modo Travesía (docs/specs/roguelike.md): la misma
+/// Composition root de Ecos del Tiempo: Travesía, el segundo juego del
+/// repo (versión, releases `travesia-v*`, carpeta
+/// `%APPDATA%\EcosDelTiempo-Travesia` y protocolo propios:
+/// [GameEdition.travesia]). Modo Travesía (docs/specs/roguelike.md): la misma
 /// red P2P que `main_p2p.dart` (WebRTC + señalización Firestore), pero la
 /// sala juega la run (mapa ramificado, peleas, recompensas) en vez del
 /// Mundo. El personaje de la run nunca se guarda en la cuenta.
@@ -33,7 +36,7 @@ Future<void> main() async {
   registerSharedDependencies(
       balance: await BalanceAssetLoader.load(),
       ults: await UltDataLoader.load(),
-      gameMode: GameModeKind.travesia);
+      edition: GameEdition.travesia);
   // Cerrar la ventana guarda antes (docs/specs/characters.md § 1.4).
   installExitOnClose();
   // Sin party jugando solo (FeatureFlags.soloParty queda en false;
