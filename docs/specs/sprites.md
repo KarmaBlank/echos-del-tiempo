@@ -281,8 +281,11 @@ prototipo (pantalla 480×288, tile 16 px), con `(x, y)` = pies del actor.
     `lib/core/procedural/item_icons.dart`) pintado con las perillas de su
     entrada del Editor (`items.<tipo>`, game_editor.md § 7.5): recolorear
     un arma en el Editor cambia también el arma en mano. Ningún arte por
-    arma individual. `maza` y `martillo` son formas solo-en-mano (el
-    ícono de inventario de las familias con escudo sigue siendo el escudo).
+    arma individual. `maza` y `martillo` son formas solo-en-mano. El
+    ícono de inventario de las familias con escudo es la forma combinada
+    `espada_escudo` / `maza_escudo` / `martillo_escudo` (escudo a la
+    izquierda, arma de pie a la derecha; weapon_identity.md § 3.1); en
+    la mano se siguen dibujando por separado.
   - **Agarre** (`WeaponOverlay.kGrips`): por arte, forma, tamaño de celda
     (px del héroe), celda del ícono que cae en la mano, posición de la
     mano respecto de los pies, espejo y giro:

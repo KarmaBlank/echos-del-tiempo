@@ -9,6 +9,7 @@ import 'package:echos_del_tiempo/features/admin/domain/sprites/art_pack.dart';
 import 'package:echos_del_tiempo/features/admin/presentation/editor/sprite_editor_controller.dart';
 import 'package:echos_del_tiempo/features/combat/data/local_sprite_overrides_io.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/sprite_catalog.dart';
+import 'package:echos_del_tiempo/features/inventory/presentation/item_widgets.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -151,6 +152,23 @@ entries:
     expect(procKeyForType('báculo'), 'baculo');
     expect(procKeyForType('espada'), 'espada');
     expect(procKeyForType('xyz'), isNull);
+  });
+
+  test('armas con escudo: ícono propio arma + escudo, distinto por tipo', () {
+    final keys = [
+      for (final t in ['espada+escudo', 'maza+escudo', 'martillo+escudo'])
+        iconKeyForType(t)
+    ];
+    expect(keys, ['espada_escudo', 'maza_escudo', 'martillo_escudo']);
+    for (final k in keys) {
+      final rows = kItemIconRows[k]!;
+      expect(rows, isNot(kItemIconRows['escudo']), reason: k);
+      expect(rows.join().contains('h'), isTrue, reason: '$k: pomo para la ULT');
+      expect(kItemEntryShapes[k], k, reason: 'perillas del Editor');
+    }
+    expect(keys.map((k) => kItemIconRows[k]!.join()).toSet(), hasLength(3));
+    expect(iconKeyForType('escudo'), 'escudo');
+    expect(iconKeyForType('hacha'), 'hacha');
   });
 
   group('overrides en disco', () {

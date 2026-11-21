@@ -50,10 +50,17 @@ abstract final class RarityColors {
 // Las formas y el pintor son el generador `item_icon`
 // (lib/core/procedural/item_icons.dart; game_editor.md § 7.5).
 
-/// Clave del ícono de un tipo de arma (`espada+escudo` → `escudo`).
-String iconKeyForType(String type) => type.contains('escudo')
-    ? 'escudo'
-    : (kItemIconRows.containsKey(type) ? type : 'espada');
+/// Clave del ícono de un tipo de arma: las armas con escudo muestran la
+/// combinación (`espada+escudo` → `espada_escudo`); un tipo con escudo
+/// sin forma propia cae al escudo solo.
+String iconKeyForType(String type) {
+  if (kItemIconRows.containsKey(type)) return type;
+  if (type.contains('escudo')) {
+    final k = type.replaceAll('+', '_');
+    return kItemIconRows.containsKey(k) ? k : 'escudo';
+  }
+  return 'espada';
+}
 
 /// Clave y color de acento del ícono de una pila.
 (String, Color) iconForStack(StackKind k) => switch (k) {
