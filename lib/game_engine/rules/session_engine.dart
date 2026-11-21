@@ -598,7 +598,7 @@ class _Op {
     say('${p.name} aprendió la ULT ${kWeaponUltSkills[id]?.name ?? id} ($from).');
   }
 
-  /// Fragmento de ULT del jefe vencido (§ 2.3): uno por jugador, seguro
+  /// ULT de botín del jefe vencido (§ 2.3): uno por jugador, seguro
   /// mientras no lo tenga (la primera victoria).
   void _bossFragment(SessionBattle b) {
     final type = b.state.enemies.firstOrNull?.enemyType;
@@ -607,7 +607,7 @@ class _Op {
     final u = UltRules.bySource(UltSource.boss, base);
     if (u == null) return;
     for (final p in players) {
-      learnUlt(p, u.id, 'Fragmento de ULT');
+      learnUlt(p, u.id, 'Botín de jefe');
     }
   }
 

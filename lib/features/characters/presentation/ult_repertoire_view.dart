@@ -171,7 +171,15 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
           for (final s in UltSource.values) ...[
             Padding(
               padding: EdgeInsets.only(top: DsSpace.sm),
-              child: Text(s.label.toUpperCase(), style: DsText.subtitle()),
+              child: Row(children: [
+                Expanded(
+                    child: Text(s.label.toUpperCase(),
+                        style: DsText.subtitle())),
+                if (s == UltSource.boss)
+                  Text('Jefes vencidos: ${bossUltsDefeated(p)}/10',
+                      key: const ValueKey('ult-boss-progress'),
+                      style: DsText.detail()),
+              ]),
             ),
             for (final u in kUltV2List.where((u) => u.source == s))
               MouseRegion(
@@ -187,7 +195,16 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
                     : u.name,
                 titleColor: known.contains(u.id) ? null : DsColors.textSecondary,
                 detail: '${known.contains(u.id) ? 'Obtenida' : 'Falta'} · '
-                    '${ultHowText(u, name: _name)}',
+                    '${u.source == UltSource.boss ? bossUltShortText(u) : ultHowText(u, name: _name)}',
+                tooltip: u.source == UltSource.boss
+                    ? DsTooltipCard(title: u.name, children: [
+                        Text(ultHowText(u, name: _name),
+                            style: DsText.detail(DsColors.text)),
+                        if (!known.contains(u.id))
+                          Text(bossUltStatusText(u, p),
+                              style: DsText.detail()),
+                      ])
+                    : null,
               )),
           ],
         ],

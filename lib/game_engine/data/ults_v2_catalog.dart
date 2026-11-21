@@ -3,6 +3,9 @@ import '../models/passive_mechanic.dart' show BuffStat;
 import '../models/skill.dart';
 import '../models/status.dart';
 import '../models/ult_def.dart';
+import '../models/player_profile.dart';
+import '../models/zone_def.dart';
+import 'zones_catalog.dart';
 
 // ULT v2 (docs/specs/ultimates_v2.md § 3): 50 ULT de jugador repartidas
 // en armas, legendarios, árbol, hazañas, Ecos/Atlas/Maestría y jefes.
@@ -111,7 +114,7 @@ const List<UltDef> kUltV2List = [
   UltDef(source: _eco, ref: 'mastery:20', element: _fis, skill: SkillDef(id: 'ult2_ecoDoble', name: 'Eco Doble', kind: _phys, power: 4.164, echoLast: 0.8)),
   UltDef(source: _eco, ref: 'eco:raro', element: _fis, skill: SkillDef(id: 'ult2_loQueSera', name: 'Lo Que Será', kind: _phys, delayedHit: 4.853)),
 
-  // ================= 3.6 Botín de jefe (Fragmento de ULT) =================
+  // ================= 3.6 Botín de jefe ==================================
   UltDef(source: _boss, ref: 'reyLimo', element: _ven, skill: SkillDef(id: 'ult2_diluvioMenor', name: 'Diluvio Menor', kind: _mag, power: 2.066, allTargets: true, status: StatusApplication(_poi, 3))),
   UltDef(source: _boss, ref: 'golemReloj', element: _hie, skill: SkillDef(id: 'ult2_engranajePrestado', name: 'Engranaje Prestado', kind: _mag, power: 1.3, allTargets: true, status: StatusApplication(_frz, 2), delay: 0.4)),
   UltDef(source: _boss, ref: 'matriarca', element: _ven, skill: SkillDef(id: 'ult2_telarTiempo', name: 'Telar del Tiempo', kind: _mag, power: 1.901, allTargets: true, status: StatusApplication(_poi, 2), debuffs: [PartyBuff(_spd, -0.20, 2)])),
@@ -168,7 +171,55 @@ String ultHowText(UltDef u, {String Function(String id)? name}) {
         : r == 'eco:raro'
             ? 'Completá un Eco Raro o mejor.'
             : 'Completá un Eco con el nodo notable ${n(r)} del Atlas.',
-    UltSource.boss =>
-      'Fragmento de ULT de ${n(r)}: seguro en la primera victoria.',
+    UltSource.boss => bossUltHowText(u, name: name),
   };
 }
+
+/// Zona donde aparece el jefe de [u] (ULT de botín de jefe), o null.
+ZoneDef? bossUltZone(UltDef u) => u.source == UltSource.boss
+    ? kZones.where((z) => z.bossId == u.ref).firstOrNull
+    : null;
+
+/// Si [u] (botín de jefe) tiene versión del Abismo que también la enseña.
+bool bossUltHasAbyss(UltDef u) => kAbyssFragmentOf.containsValue(u.ref);
+
+/// Cómo se consigue una ULT de botín de jefe (§ 3.6): no se junta nada;
+/// la primera victoria contra ese jefe la enseña.
+String bossUltHowText(UltDef u, {String Function(String id)? name}) {
+  final z = bossUltZone(u);
+  final boss = z?.bossName ?? (name ?? (String s) => s)(u.ref);
+  final where = z == null
+      ? ''
+      : ' Aparece como jefe de la zona ${z.index}, ${z.name} '
+          '(Nv ${z.minLevel}–${z.maxLevel}).';
+  final abyss = bossUltHasAbyss(u)
+      ? ' Su versión del Abismo también la enseña.'
+      : '';
+  return 'Se aprende al vencer a $boss (la primera victoria la enseña).'
+      '$where$abyss';
+}
+
+/// Versión corta para la fila (el tooltip lleva [bossUltHowText]).
+String bossUltShortText(UltDef u) {
+  final z = bossUltZone(u);
+  return z == null
+      ? 'Vencé a ${u.ref}'
+      : 'Vencé a ${z.bossName} (zona ${z.index}, Nv ${z.minLevel}–${z.maxLevel})';
+}
+
+/// Estado del jefe de [u] para quien todavía no la aprendió.
+String bossUltStatusText(UltDef u, PlayerProfile p) => bossUltDefeated(u, p)
+    ? 'Ya lo venciste: volvé a vencerlo para aprenderla.'
+    : 'Todavía no lo venciste.';
+
+/// Venció al jefe de [u]: ya la aprendió o desbloqueó la zona siguiente.
+bool bossUltDefeated(UltDef u, PlayerProfile p) {
+  if (p.ultKnown.contains(u.id)) return true;
+  final z = bossUltZone(u);
+  return z != null && p.unlockedZone > z.index;
+}
+
+/// Jefes base vencidos (para "Jefes vencidos: X/10").
+int bossUltsDefeated(PlayerProfile p) => kUltV2List
+    .where((u) => u.source == UltSource.boss && bossUltDefeated(u, p))
+    .length;
