@@ -485,6 +485,7 @@ class BattleEngine {
       pierceWeakness: cls.pierceWeakness,
       statusWeakness: cls.statusWeakness,
       stunOnAttackChance: cls.stunOnAttackChance,
+      duoStunBonus: cls.duoStunBonus,
       build: m.build.withBonusDefense(0),
       classId: cls.id,
       weaponType: w.type,
@@ -962,6 +963,15 @@ class _Turn {
 
   /// `addStatus`. [source]: quién lo aplica; con [primary] (golpe
   /// primario de su acción) dispara `onStatusApplied`.
+  /// Escudo compartido: aturdir extra de [s] si tiene un aliado vivo.
+  double _duoStun(Combatant? s) =>
+      s != null &&
+              s.isPlayer &&
+              s.duoStunBonus > 0 &&
+              _aliveParty.any((q) => q.id != s.id)
+          ? s.duoStunBonus
+          : 0;
+
   bool _addStatus(Combatant a, StatusApplication st,
       {int bonus = 0, Combatant? source, bool primary = false}) {
     if (!a.alive) return false;
@@ -979,7 +989,12 @@ class _Turn {
         source.keystones.contains('almaHielo')) {
       return false;
     }
-    if (st.chance != null && _rand() >= st.chance!) return false;
+    if (st.chance != null &&
+        _rand() >=
+            st.chance! +
+                (st.kind == StatusKind.stun ? _duoStun(source) : 0)) {
+      return false;
+    }
     // Recién descongelado: resiste la Congelación (§ 7).
     if (st.kind == StatusKind.freeze && a.freezeResist > 0) {
       if (_immuneShown.add('${a.id}|resist')) {
@@ -4471,7 +4486,9 @@ class _Turn {
     if (_weaponElementStack(p, wel, [target])) {
       log += ' · ${wel!.label}: +1 pila';
     }
-    final stunChance = p.stunOnAttackChance;
+    final stunChance = p.stunOnAttackChance > 0
+        ? p.stunOnAttackChance + _duoStun(p)
+        : 0.0;
     if (stunChance > 0 &&
         target.alive &&
         _rand() < stunChance &&

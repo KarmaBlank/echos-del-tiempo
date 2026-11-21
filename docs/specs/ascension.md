@@ -308,7 +308,7 @@ quitó: era redundante con Protección, la ULT y el nodo Juramento Eterno.
 Ningún perfil los guarda (el kit sale de la ascensión, no del perfil) y
 una habilidad trasladada nunca puede ser del kit de una ascensión
 (`ItemRules.sanitize` la descarta). Los rasgos de clase del Paladín
-(DEF base 6, VIT 15, 3% de aturdir al atacar, débil a perforante ×1.5 y
+(DEF base 6, VIT 15, 3% de aturdir al atacar (+15% a todo aturdir con un aliado vivo, v0.20.5), Estocada Firme ×1.8 (v0.20.5), débil a perforante ×1.5 y
 a estados +1) no cambian.
 
 ### 4.1 Elementalista v0.7: catalizador

@@ -37,6 +37,7 @@ const Map<String, ClassDef> kClasses = {
     // Sin kit de clase desde v0.5: Aura Restauradora, Fortaleza y
     // Protección son el kit del Guardián (docs/specs/ascension.md § 4).
     stunOnAttackChance: 0.03,
+    duoStunBonus: 0.15,
     pierceWeakness: 1.5,
     statusWeakness: 1,
     baseAttributes: {

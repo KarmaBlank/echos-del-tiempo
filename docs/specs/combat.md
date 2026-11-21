@@ -156,7 +156,7 @@ jugador y está vivo; si no, `command` devuelve `null` y no cambia nada.
 Objetivo: el enemigo vivo pedido, o el primero vivo.
 
 - **Ataque**: `ATQ` al objetivo. Con keystone `imparable`: `ATQ × 0.6`
-  a todos. Paladín: 3% de aturdir. Rama `creyente`: 25% de curar 2% de
+  a todos. Paladín: 3% de aturdir; con un aliado vivo, **Escudo compartido** suma +15% a todo lo que aturde (básico y habilidades, `duoStunBonus`, editable en Balance → clase). Rama `creyente`: 25% de curar 2% de
   vida máx. a todos los aliados. Rama `inherente`: 25% de aplicar 1 Sagrado.
 - **Habilidad** (`SK`): debe estar en `kit de clase + habilidades del arma
   (+ habilidad fusionada) + kit de la ascensión` (+ combo de clase y

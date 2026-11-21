@@ -103,7 +103,7 @@ const Map<String, SkillDef> kSkills = {
   'metralla': SkillDef(id: 'metralla', name: 'Metralla Tóxica', mp: 6, kind: _phys, power: 0.9, allTargets: true, status: StatusApplication(_poi, 2)),
   // 'aura', 'fortaleza' y 'proteccion' (el viejo kit del Paladín) son
   // desde v0.5 el kit del Guardián: viven en `kAscensionSkills`.
-  'estocada': SkillDef(id: 'estocada', name: 'Estocada Firme', mp: 2, kind: _phys, power: 1.4, critBonus: 0.15, breaks: true),
+  'estocada': SkillDef(id: 'estocada', name: 'Estocada Firme', mp: 2, kind: _phys, power: 1.8, critBonus: 0.15, breaks: true),
   'temblor': SkillDef(id: 'temblor', name: 'Temblor', mp: 6, kind: _phys, power: 0.9, allTargets: true, status: StatusApplication(_stun, 1, chance: 0.15)),
   'sanar': SkillDef(id: 'sanar', name: 'Sanación', mp: 4, kind: SkillKind.heal, power: 1.1, cleanse: 1),
   'golpeEscudo': SkillDef(id: 'golpeEscudo', name: 'Golpe de Escudo', mp: 3, kind: _phys, power: 1.3, status: StatusApplication(_stun, 1, chance: 0.3), breaks: true),
