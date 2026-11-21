@@ -13,6 +13,7 @@ import 'package:echos_del_tiempo/features/admin/presentation/admin_controller.da
 import 'package:echos_del_tiempo/features/admin/presentation/editor/layout_editor_controller.dart';
 import 'package:echos_del_tiempo/features/admin/presentation/editor/layout_page.dart';
 import 'package:echos_del_tiempo/features/characters/presentation/stash_layout.dart';
+import 'package:echos_del_tiempo/features/inventory/presentation/inventory_layout.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -35,7 +36,11 @@ void main() {
     addTearDown(() => tmp.deleteSync(recursive: true));
     final repo = '${tmp.path}/repo';
     Directory('$repo/assets/layouts').createSync(recursive: true);
-    for (final f in ['layout_manifest.yaml', 'stash.layout.yaml']) {
+    for (final f in [
+      'layout_manifest.yaml',
+      'stash.layout.yaml',
+      'inventory.layout.yaml'
+    ]) {
       File('assets/layouts/$f').copySync('$repo/assets/layouts/$f');
     }
     overrides = LocalLayoutOverrides('${tmp.path}/overrides');
@@ -61,9 +66,39 @@ void main() {
     expect(c.staticIssues, isEmpty);
     expect(c.geometry.where((i) => i.error), isEmpty,
         reason: c.geometry.join('\n'));
-    await tester.tap(find.byKey(const ValueKey('layout-screen-inventory')));
+    await tester.tap(find.byKey(const ValueKey('layout-screen-craft.fuse')));
     await tester.pump();
     expect(find.textContaining('SIN VISTA PREVIA'), findsOneWidget);
+  });
+
+  testWidgets('INVENTARIO: datos de ejemplo; mover un grupo y un botón '
+      'suelto valida y se ve', (tester) async {
+    await setUpEditor(tester);
+    await tester.tap(find.byKey(const ValueKey('layout-screen-inventory')));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const ValueKey('inv-clean')), findsOneWidget);
+    expect(find.byKey(const ValueKey('inv-cell-0')), findsOneWidget);
+    expect(c.staticIssues, isEmpty);
+    expect(c.geometry.where((i) => i.error), isEmpty,
+        reason: c.geometry.join('\n'));
+    // El grupo ORDENAR / LIMPIAR / ALIJO abajo y ALIJO suelto arriba.
+    expect(c.move(InventoryTabLayout.tools, 'foot', 0), isTrue);
+    expect(c.move(InventoryTabLayout.stash, 'head', 1), isTrue);
+    await tester.pump();
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    final l = c.doc!.resolve(null);
+    expect(l.containerOf(InventoryTabLayout.tools), 'foot');
+    expect(l.containerOf(InventoryTabLayout.stash), 'head');
+    expect(c.staticIssues.where((i) => i.error), isEmpty);
+    expect(c.geometry.where((i) => i.error), isEmpty,
+        reason: c.geometry.join('\n'));
+    expect(find.byKey(const ValueKey('inv-stash')), findsOneWidget);
+    // La grilla es fija.
+    expect(c.move(InventoryTabLayout.grid, 'foot', 0), isFalse);
   });
 
   testWidgets('seleccionar, subir al grupo, mover, validar, guardar, '
@@ -79,8 +114,12 @@ void main() {
     await tester.pump();
     expect(c.selected, StashLayout.actions);
 
-    // Tab: la fila entera pasa a la siguiente región permitida (header).
+    // Tab: la fila entera pasa a la siguiente región permitida.
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(c.doc!.resolve(null).of('right'), contains(StashLayout.actions));
+    // Y se la lleva al encabezado.
+    expect(c.move(StashLayout.actions, 'header', 0), isTrue);
     await tester.pump();
     expect(c.doc!.resolve(null).of('header'), [StashLayout.actions]);
 
@@ -98,7 +137,7 @@ void main() {
     await tester.pump();
     expect(c.doc!.resolve(null).containerOf(StashLayout.pick), 'right');
     expect(c.doc!.resolve(null).of(StashLayout.actions),
-        [StashLayout.transfer, StashLayout.moveAll]);
+        [StashLayout.moveAll, StashLayout.transfer]);
     expect(tester.takeException(), isNull);
     expect(c.staticIssues.where((i) => i.error), isEmpty);
 
@@ -140,7 +179,9 @@ void main() {
       c.undo();
     }
     expect(c.doc!.sameAs(StashLayout.spec.defaults), isTrue);
-    c.redo();
+    c
+      ..redo()
+      ..redo();
     expect(c.doc!.resolve(null).of('header'), [StashLayout.actions]);
 
     // Publicar al repo: copia y borra el override.

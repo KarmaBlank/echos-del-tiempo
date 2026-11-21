@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/ds_layout_host.dart';
@@ -14,7 +15,15 @@ import '../../../../game_engine/rules/inventory_rules.dart';
 import '../../../../game_engine/rules/passive_tree_rules.dart';
 import '../../../../game_engine/rules/progression_rules.dart';
 import '../../../../game_engine/rules/stats_calculator.dart';
+import '../../../../game_engine/models/profile_store.dart';
+import '../../../../game_engine/rules/battle_engine.dart';
+import '../../../../game_engine/rules/session_engine.dart';
 import '../../../characters/domain/stash.dart';
+import '../../../inventory/presentation/inventory_layout.dart';
+import '../../../inventory/presentation/inventory_tab.dart';
+import '../../../inventory/presentation/shop_sections.dart';
+import '../../../world/presentation/session_controller.dart';
+import '../../../world/presentation/session_view.dart';
 import '../../../characters/presentation/stash_board.dart';
 import '../../../characters/presentation/stash_layout.dart';
 
@@ -36,7 +45,8 @@ class LayoutPreview {
 List<LayoutPreview> layoutPreviews() => [
       LayoutPreview(StashLayout.screen, 'ALIJO',
           spec: StashLayout.spec, build: _stash),
-      const LayoutPreview('inventory', 'INVENTARIO'),
+      LayoutPreview(InventoryTabLayout.screen, 'INVENTARIO',
+          spec: InventoryTabLayout.spec, build: _inventory),
       const LayoutPreview('craft.fuse', 'FUSIÓN'),
       const LayoutPreview('craft.forge', 'FORJA'),
       const LayoutPreview('craft.condense', 'CONDENSAR'),
@@ -143,4 +153,75 @@ Widget _stash(LayoutDoc doc, DsLayoutHooks? hooks) => PanelFrame(
           title: 'Ana · Guerrero · Nv 5',
           layout: doc,
           layoutHooks: hooks),
+    );
+
+// ------------------------------------------------------- INVENTARIO
+
+/// Sesión local de ejemplo (motor puro, perfil en memoria, sin reloj ni
+/// red): una sola para todas las vistas previas que la necesitan.
+SessionController? _sampleSession;
+SessionController sampleSession() => _sampleSession ??= SessionController(
+      engine: SessionEngine(
+          battles: BattleEngine(stats: sampleRules.stats),
+          progression: sampleRules,
+          achievementsEnabled: false),
+      store: InMemoryProfileStore(sampleProfile()),
+      clock: const SessionClock(autoStart: false),
+    )..start();
+
+/// Dibuja [build] con la vista de la sesión de ejemplo (vacío mientras
+/// carga). Solo se reconstruye cuando cambia la sesión.
+class _SessionPreview extends StatefulWidget {
+  const _SessionPreview(this.build);
+  final Widget Function(SessionView view, SessionController c) build;
+  @override
+  State<_SessionPreview> createState() => _SessionPreviewState();
+}
+
+class _SessionPreviewState extends State<_SessionPreview> {
+  final _c = sampleSession();
+  SessionView? _view;
+  void Function()? _off;
+
+  @override
+  void initState() {
+    super.initState();
+    _off = _c.addListener((v) {
+      if (mounted) setState(() => _view = v);
+    });
+  }
+
+  @override
+  void dispose() {
+    _off?.call();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final v = _view;
+    if (v == null) return const SizedBox(height: 200);
+    final child = widget.build(v, _c);
+    // Dentro de la app ya hay ProviderScope; el Editor suelto (tests)
+    // usa uno propio con el motor de ejemplo.
+    try {
+      ProviderScope.containerOf(context, listen: false);
+      return child;
+    } catch (_) {
+      return ProviderScope(overrides: [
+        sessionEngineProvider.overrideWithValue(_c.engine),
+      ], child: child);
+    }
+  }
+}
+
+Widget _inventory(LayoutDoc doc, DsLayoutHooks? hooks) => PanelFrame(
+      title: 'PERSONAJE · INVENTARIO',
+      width: 1000,
+      onClose: () {},
+      child: SizedBox(
+        height: 560,
+        child: _SessionPreview((v, c) => InventoryTab(
+            shop: ShopContext(v, c), layout: doc, layoutHooks: hooks)),
+      ),
     );

@@ -1,0 +1,23 @@
+# INVENTARIO (docs/specs/editor_layout.md § 4, fase 4). Regiones del
+# template: toolbar (barra), head (arriba de la grilla / costado), grid
+# (fija: aviso y grilla), foot (debajo de la grilla / costado).
+screen: inventory
+version: 1
+slots:
+  - {id: inv.owners, region: toolbar, order: 0}
+  - {id: inv.search, region: toolbar, order: 1}
+  - {id: inv.search_clear, region: toolbar, order: 2}
+  - id: inv.tools
+    region: toolbar
+    order: 3
+    children:
+      - inv.tools.sort
+      - inv.tools.clean
+      - inv.tools.stash
+  - {id: inv.notes, region: grid, order: 0}
+  - {id: inv.grid, region: grid, order: 1}
+  - {id: inv.equipped, region: head, order: 0}
+  - {id: inv.stacks, region: foot, order: 0}
+  - {id: inv.summary, region: foot, order: 1}
+  - {id: inv.selection, region: foot, order: 2}
+  - {id: inv.clean_menu, region: foot, order: 3}
