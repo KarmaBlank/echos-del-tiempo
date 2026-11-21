@@ -38,6 +38,9 @@ import '../session_controller.dart';
 import '../session_sfx.dart' show sfxServiceProvider;
 import '../session_view.dart';
 import 'party_member_bar.dart';
+import '../../../../app/design/ds_layout_host.dart';
+import '../../../../core/layout/layout_doc.dart';
+import 'character_layout.dart';
 
 /// Nombre y efecto de cada atributo (`STATN`, `STATD` del prototipo).
 const kAttributeInfo = {
@@ -103,7 +106,14 @@ class CharacterPanel extends StatefulWidget {
     required this.view,
     required this.controller,
     this.initialTab = CharacterTab.attributes,
+    this.layout,
+    this.layoutHooks,
   });
+
+  /// Layout fijo (Editor → LAYOUT); `null` = el del catálogo
+  /// (editor_layout.md § 6).
+  final LayoutDoc? layout;
+  final DsLayoutHooks? layoutHooks;
 
   final SessionView view;
   final SessionController controller;
@@ -228,49 +238,61 @@ class _CharacterPanelState extends State<CharacterPanel> {
     final isAttr = tab == CharacterTab.attributes;
     final treePts = UnusedPoints.of(prof, rules).tree;
     final confirmReason = guards.allocate(prof, _alloc);
-    // Barra de herramientas de ATRIBUTOS (design_system.md § 4): puntos y
-    // acciones arriba, en una fila; CONFIRMAR es la principal.
-    final attrBar = Padding(
-      padding: EdgeInsets.only(bottom: DsSpace.sm),
-      child: Wrap(
-        spacing: DsSpace.sm,
-        runSpacing: DsSpace.xs,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Text('Puntos: $left',
+    // Barra de herramientas de ATRIBUTOS (design_system.md § 4) y pie del
+    // marco, armados por datos (editor_layout.md § 6).
+    final slots = <String, DsSlotBuilder>{
+      CharacterLayout.points: (_) => !isAttr
+          ? null
+          : Text('Puntos: $left',
               key: const ValueKey('attr-points'),
               style: DsText.body(left > 0 ? DsColors.reward : DsColors.text)),
-          SizedBox(width: DsSpace.md),
-          if (guards.showRespec)
-            DsButton(
-                ProgressionRules.freeRespec
-                    ? 'REINICIAR PUNTOS (GRATIS)'
-                    : 'REINICIAR PUNTOS',
-                key: const ValueKey('respec'),
-                kind: DsButtonKind.ghost,
-                size: DsButtonSize.compact,
-                tooltip: guards.respec(),
-                onPressed: guards.respec() != null
-                    ? null
-                    : () {
-                        if (c.respec()) setState(_alloc.clear);
-                      }),
-          DsButton('DESHACER',
+      CharacterLayout.respec: (_) => !isAttr || !guards.showRespec
+          ? null
+          : DsButton(
+              ProgressionRules.freeRespec
+                  ? 'REINICIAR PUNTOS (GRATIS)'
+                  : 'REINICIAR PUNTOS',
+              key: const ValueKey('respec'),
+              kind: DsButtonKind.ghost,
+              size: DsButtonSize.compact,
+              tooltip: guards.respec(),
+              onPressed: guards.respec() != null
+                  ? null
+                  : () {
+                      if (c.respec()) setState(_alloc.clear);
+                    }),
+      CharacterLayout.undo: (_) => !isAttr
+          ? null
+          : DsButton('DESHACER',
               key: const ValueKey('undo-points'),
               size: DsButtonSize.compact,
-              onPressed: _allocSum == 0 ? null : () => setState(_alloc.clear)),
-          DsButton('CONFIRMAR PUNTOS',
+              onPressed:
+                  _allocSum == 0 ? null : () => setState(_alloc.clear)),
+      CharacterLayout.confirm: (_) => !isAttr
+          ? null
+          : DsButton('CONFIRMAR PUNTOS',
               key: const ValueKey('confirm-points'),
               kind: DsButtonKind.primary,
               size: DsButtonSize.compact,
               tooltip: confirmReason,
               onPressed: confirmReason == null ? _confirm : null),
-          if (confirmReason != null)
-            Text(confirmReason,
-                key: const ValueKey('confirm-reason'), style: DsText.detail()),
-        ],
-      ),
-    );
+      CharacterLayout.reason: (_) => !isAttr || confirmReason == null
+          ? null
+          : Text(confirmReason,
+              key: const ValueKey('confirm-reason'), style: DsText.detail()),
+      CharacterLayout.close: (_) => closeButton,
+    };
+    Widget host(Widget Function(DsRegions r) frame) => DsLayoutHost(
+        spec: CharacterLayout.spec,
+        doc: widget.layout,
+        hooks: widget.layoutHooks,
+        slots: slots,
+        frame: (context, box, r) => frame(r));
+    final attrBar = host((r) => r.isEmpty('toolbar')
+        ? const SizedBox.shrink()
+        : Padding(
+            padding: EdgeInsets.only(bottom: DsSpace.sm),
+            child: r.region('toolbar')));
 
     // Q / E, Ctrl+Tab y 1-5 cambian de pestaña (menu_focus.dart); no
     // mientras hay que repartir.
@@ -345,13 +367,19 @@ class _CharacterPanelState extends State<CharacterPanel> {
                             }),
                     ],
                   )),
-          actions: [closeButton],
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (isAttr) attrBar,
-              Expanded(child: body),
-            ],
+          actions: [host((r) => r.region('actions'))],
+          // Con muy poco alto la barra se desplaza (hasta la mitad) en vez
+          // de desbordar.
+          child: LayoutBuilder(
+            builder: (context, box) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: box.maxHeight / 2),
+                    child: SingleChildScrollView(child: attrBar)),
+                Expanded(child: body),
+              ],
+            ),
           ),
         ),
       ),
@@ -371,11 +399,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
     final guards = ShopContext(view, c).guards;
     final left = prof.points - _allocSum;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
+    final left0 = SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -472,12 +496,29 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 ],
               ],
             ),
-          ),
-        ),
-        SizedBox(width: DsSpace.lg),
-        SizedBox(width: RetroType.width(context, 380), child: _preview()),
-      ],
-    );
+          );
+    // Con poco ancho la vista previa va debajo (nunca desborda).
+    return LayoutBuilder(builder: (context, box) {
+      final side = RetroType.width(context, 380);
+      if (box.maxWidth < side * 2 + DsSpace.lg) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(flex: 3, child: left0),
+            SizedBox(height: DsSpace.sm),
+            Expanded(flex: 2, child: _preview()),
+          ],
+        );
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: left0),
+          SizedBox(width: DsSpace.lg),
+          SizedBox(width: side, child: _preview()),
+        ],
+      );
+    });
   }
 
   /// `previewOf`: stats con el reparto pendiente.
@@ -570,14 +611,53 @@ class _CharacterPanelState extends State<CharacterPanel> {
           color: add > 0
               ? DsColors.hover.withValues(alpha: 0.5)
               : Colors.transparent,
-          child: Row(
-            children: [
-              // Con texto ENORME: solo la sigla, sin anchos fijos; si aun
-              // así no entra, la sigla, el valor y la ★ se acomodan a la
-              // izquierda de los botones (nunca desborda).
-              if (big)
-                Expanded(
-                  child: Wrap(
+          // Con texto ENORME o poco ancho: sin anchos fijos; la sigla,
+          // el valor y la ★ en un wrap y los botones a la derecha (o
+          // debajo si no entran). Nunca desborda.
+          child: LayoutBuilder(builder: (context, box) {
+            final fixed = RetroType.em(context, 15, size: RetroType.body) +
+                RetroType.em(context, 7, size: RetroType.small) +
+                (targetText == null
+                    ? 0
+                    : RetroType.em(context, 9, size: RetroType.small));
+            final buttons = Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: DsSpace.xs,
+                children: [
+                DsButton.icon(
+                    Text('-',
+                        style: DsText.subtitle(add > 0
+                            ? DsColors.textPrimary
+                            : DsColors.textDisabled)),
+                    key: ValueKey('dec-${a.name}'),
+                    tooltip: add > 0
+                        ? 'Quitar $short (+$kAttrPerPoint sin confirmar)'
+                        : 'Solo quita puntos sin confirmar. Para reasignar '
+                            'los confirmados: REINICIAR PUNTOS'
+                            '${ProgressionRules.freeRespec ? ' (gratis)' : ''}',
+                    size: DsButtonSize.compact,
+                    onPressed: add > 0
+                        ? () => setState(() => _alloc[a] = add - 1)
+                        : null),
+                SizedBox(width: DsSpace.xs),
+                DsButton(
+                    full
+                        ? '+$kAttrPerPoint $short'
+                        : '+$kAttrPerPoint $short → +${num1(gain)}',
+                    key: ValueKey('inc-${a.name}'),
+                    size: DsButtonSize.compact,
+                    accent: full ? null : DsColors.warning,
+                    onPressed: left > 0
+                        ? () => setState(() => _alloc[a] = add + 1)
+                        : null),
+            ]);
+            if (big || box.maxWidth < fixed + RetroType.width(context, 200)) {
+              return Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                runSpacing: DsSpace.xs,
+                children: [
+                  Wrap(
                     spacing: 8,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
@@ -586,8 +666,12 @@ class _CharacterPanelState extends State<CharacterPanel> {
                       if (targetText != null) targetText
                     ],
                   ),
-                )
-              else ...[
+                  buttons,
+                ],
+              );
+            }
+            return Row(
+              children: [
                 SizedBox(
                     width: RetroType.em(context, 15, size: RetroType.body),
                     child: nameText),
@@ -599,39 +683,10 @@ class _CharacterPanelState extends State<CharacterPanel> {
                       width: RetroType.em(context, 9, size: RetroType.small),
                       child: targetText),
                 const Spacer(),
+                buttons,
               ],
-              // "−" quita solo el reparto pendiente (sin confirmar); los
-              // puntos confirmados se reasignan con REINICIAR PUNTOS
-              // (progression_v2.md § Reiniciar). El texto lleva su color:
-              // IconButton no apaga el color de un Text con estilo propio.
-              DsButton.icon(
-                  Text('-',
-                      style: DsText.subtitle(add > 0
-                          ? DsColors.textPrimary
-                          : DsColors.textDisabled)),
-                  key: ValueKey('dec-${a.name}'),
-                  tooltip: add > 0
-                      ? 'Quitar $short (+$kAttrPerPoint sin confirmar)'
-                      : 'Solo quita puntos sin confirmar. Para reasignar '
-                          'los confirmados: REINICIAR PUNTOS'
-                          '${ProgressionRules.freeRespec ? ' (gratis)' : ''}',
-                  size: DsButtonSize.compact,
-                  onPressed: add > 0
-                      ? () => setState(() => _alloc[a] = add - 1)
-                      : null),
-              SizedBox(width: DsSpace.xs),
-              DsButton(
-                  full
-                      ? '+$kAttrPerPoint $short'
-                      : '+$kAttrPerPoint $short → +${num1(gain)}',
-                  key: ValueKey('inc-${a.name}'),
-                  size: DsButtonSize.compact,
-                  accent: full ? null : DsColors.warning,
-                  onPressed: left > 0
-                      ? () => setState(() => _alloc[a] = add + 1)
-                      : null),
-            ],
-          ),
+            );
+          }),
         ));
   }
 

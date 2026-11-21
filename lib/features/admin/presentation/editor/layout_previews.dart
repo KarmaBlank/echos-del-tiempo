@@ -20,6 +20,8 @@ import '../../../../game_engine/rules/battle_engine.dart';
 import '../../../../game_engine/rules/session_engine.dart';
 import '../../../characters/domain/stash.dart';
 import '../../../inventory/presentation/condense_panel.dart';
+import '../../../world/presentation/panels/character_layout.dart';
+import '../../../world/presentation/panels/character_panel.dart';
 import '../../../inventory/presentation/craft_bench.dart';
 import '../../../inventory/presentation/craft_layout.dart';
 import '../../../inventory/presentation/inventory_layout.dart';
@@ -56,7 +58,8 @@ List<LayoutPreview> layoutPreviews() => [
           spec: ForgeLayout.spec, build: _forge),
       LayoutPreview(CondenseLayout.screen, 'CONDENSAR',
           spec: CondenseLayout.spec, build: _condense),
-      const LayoutPreview('character', 'PERSONAJE'),
+      LayoutPreview(CharacterLayout.screen, 'PERSONAJE',
+          spec: CharacterLayout.spec, build: _character),
       const LayoutPreview('shop', 'TIENDA'),
       const LayoutPreview('achievements', 'HAZAÑAS'),
       const LayoutPreview('settings', 'AJUSTES'),
@@ -260,3 +263,13 @@ Widget _condense(LayoutDoc doc, DsLayoutHooks? hooks) => _armory(
         layout: doc,
         layoutHooks: hooks,
         initialPending: (CraftMaterial.cristal, 1)));
+
+// ------------------------------------------------------------ PERSONAJE
+
+/// El panel entero (marco, pestañas, ATRIBUTOS) con la sesión de ejemplo.
+Widget _character(LayoutDoc doc, DsLayoutHooks? hooks) => SizedBox(
+      width: 1000,
+      height: 620,
+      child: _SessionPreview((v, c) => CharacterPanel(
+          view: v, controller: c, layout: doc, layoutHooks: hooks)),
+    );

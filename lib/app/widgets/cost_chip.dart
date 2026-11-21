@@ -43,7 +43,8 @@ class CostChip extends StatelessWidget {
     Color border;
     Widget child;
     if (reason != null) {
-      border = ProtoColors.red;
+      // Bloqueado = gris, como todo lo deshabilitado (no es un error).
+      border = ProtoColors.dim;
       child = Row(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,12 +52,12 @@ class CostChip extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 2),
             child: PixelIcon(PixelIconKind.lock,
-                size: icon, color: ProtoColors.red),
+                size: icon, color: ProtoColors.dim),
           ),
           const SizedBox(width: 6),
           Flexible(
             child: Text(retroText(reason!),
-                style: const TextStyle(color: ProtoColors.red)),
+                style: const TextStyle(color: ProtoColors.dim)),
           ),
         ],
       );

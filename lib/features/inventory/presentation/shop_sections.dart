@@ -634,7 +634,8 @@ class _ForgeTabState extends State<ForgeTab> {
                     key: const ValueKey('forge-passive-note')),
                 const SizedBox(height: 6),
                 CardGrid(
-                  minWidth: 220,
+                  // Las 4 mejoras en una fila siempre que entren.
+                  minWidth: 180,
                   children: [
                     for (final s in rules
                         .upgradeStatsFor(rules.catalog.weapons[it.baseId]!))

@@ -353,8 +353,24 @@ Tests:
   la sección; une secciones repetidas en una; idempotente). Lo usan
   layouts, fx, sfx y sprites. Al publicar un layout se conserva el
   comentario de cabecera que ya tenía el YAML del repo.
-- **Pendiente (fase 4+)**: PERSONAJE (marco, encabezado, pestañas) y sus
-  pestañas ATRIBUTOS, ÁRBOL, ULT, HAZAÑAS, BESTIARIO, BUILD; luego el
-  resto. Nota para ATRIBUTOS: a 800 de ancho con texto ENORME (y con `TextSize.huge`)
-  las filas de atributo ya desbordan antes de migrar (anchos fijos en
-  `_attrRow`); hay que arreglarlo antes de la matriz.
+- **ATRIBUTOS sin desbordes (v0.20.3)**: la fila de atributo deja los
+  anchos fijos cuando no entran (sigla, valor y ★ en un wrap; botones a
+  la derecha o debajo), con poco ancho la VISTA PREVIA va debajo y
+  `DsSectionHeader` achica la línea en vez de desbordar
+  (`attributes_overflow_test.dart`: 5 tamaños × 4 textos).
+- **PERSONAJE (fase 5, v0.20.3)** (`character_layout.dart`,
+  `CharacterLayout` + `character_panel.dart`): regiones `toolbar` (wrap,
+  barra de arriba del contenido; hoy solo ATRIBUTOS) y `actions` (pie
+  del marco, wrap a la derecha como `PanelFrame.actions`). Slots
+  `char.points`, grupo `char.attr_actions(.respec|.undo|.confirm)`,
+  `char.attr_reason` y `char.close`. Dos `DsLayoutHost` sobre el mismo
+  doc (barra y pie). Con muy poco alto la barra se desplaza (hasta la
+  mitad del alto). Golden `test/features/characters/goldens/
+  character_attributes_*.png` (árbol viejo) == YAML por defecto; matriz
+  en `character_layout_matrix_test.dart`; vista previa en el Editor con
+  la sesión de ejemplo.
+- **Pendiente (fase 5+)**: el título, la fila de pestañas (con la barra
+  de miembros) y el contenido de las pestañas ÁRBOL (árbol fijo; la
+  columna del hito como grupo), ULT (con su vista previa, sin
+  reconstruir por frame), HAZAÑAS, BESTIARIO y BUILD siguen siendo
+  template; después, el resto de las pantallas.
