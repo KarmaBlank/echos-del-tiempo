@@ -23,6 +23,7 @@ abstract final class TuningId {
   static const condense = 'condense';
   static const materials = 'materials';
   static const ecoTier = 'ecoTier';
+  static const buildGuide = 'buildGuide';
 }
 
 /// Los valores del código.
@@ -86,6 +87,20 @@ const Map<String, TuningDef> kTuningDefaults = {
   TuningId.ecoTier: TuningDef('Bonus de tier de Ecos', {
     'tierQuantity': 0.03,
     'partyQuantity': 0.10,
+  }),
+  // build_planner.md § 9: pesos de la guía del builder.
+  TuningId.buildGuide: TuningDef('Guía del builder', {
+    'dmgWeight': 2,
+    'elementWeight': 2,
+    'passiveWeight': 1.5,
+    'modWeight': 0.5,
+    'goalWeight': 2,
+    'fitWeight': 3,
+    'attrWeight': 2,
+    'treeWeight': 2,
+    'powerWeight': 1.5,
+    'reqPenalty': 0.6,
+    'recommendTop': 3,
   }),
 };
 

@@ -21,6 +21,7 @@ import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../app/widgets/menu_focus.dart';
+import '../../../../game_engine/rules/build_guide_rules.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/bestiary.dart';
 import '../../../../game_engine/models/build_plan.dart';
@@ -782,6 +783,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
     return Consumer(
       builder: (context, ref, _) => PassiveTreeView(
         planned: ref.watch(buildPlanProvider).planFor(_slot).treeNodes.toSet(),
+        planOrder: BuildGuideRules(c.engine.progression)
+            .treeOrder(ref.watch(buildPlanProvider).planFor(_slot), p),
         rules: c.engine.progression.treeRules,
         profile: p,
         inBattle: view.mode == SessionMode.battle,
