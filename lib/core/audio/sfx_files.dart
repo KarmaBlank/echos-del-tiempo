@@ -6,6 +6,7 @@ import 'package:flutter/services.dart' show AssetBundle, rootBundle;
 import 'package:yaml/yaml.dart';
 
 import 'sfx_overrides.dart';
+import '../data/manifest_text.dart';
 
 export 'sfx_overrides.dart';
 
@@ -174,25 +175,5 @@ Uint8List retuneWav(Uint8List wav, double pitch) {
 
 /// Suma (o corrige) `<id>: <path>` bajo `sfx:` en el texto de
 /// sfx_manifest.yaml, conservando comentarios.
-String addSfxManifestEntry(String manifest, String id, String path) {
-  final lines = const LineSplitter().convert(manifest);
-  var s = lines.indexWhere((l) => l == 'sfx:' || l.startsWith('sfx: {}'));
-  if (s < 0) return '${manifest.trimRight()}\nsfx:\n  $id: $path\n';
-  if (lines[s] != 'sfx:') lines[s] = 'sfx:';
-  var end = s + 1;
-  while (end < lines.length &&
-      (lines[end].startsWith(' ') || lines[end].trim().isEmpty)) {
-    end++;
-  }
-  final k = lines.indexWhere((l) => l.startsWith('  $id:'), s + 1);
-  if (k >= 0 && k < end) {
-    lines[k] = '  $id: $path';
-  } else {
-    var at = end;
-    while (at > s + 1 && lines[at - 1].trim().isEmpty) {
-      at--;
-    }
-    lines.insert(at, '  $id: $path');
-  }
-  return '${lines.join('\n')}\n';
-}
+String addSfxManifestEntry(String manifest, String id, String path) =>
+    upsertManifestEntry(manifest, 'sfx', id, path);

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import 'layout_catalog.dart';
 import 'layout_doc.dart';
+import '../data/manifest_text.dart';
 
 /// Overrides locales de layouts en disco (§ 2.6):
 /// `<root>/layouts/<screen>.layout.yaml`. Misma carpeta `overrides/` que
@@ -59,11 +60,16 @@ class LocalLayoutOverrides implements EditableLayoutOverrides {
 
   @override
   Future<bool> publish(String repoRoot, String screen) async {
-    final yaml = await read(screen);
+    var yaml = await read(screen);
     if (yaml == null) return false;
     LayoutDoc.parse(yaml); // nunca publica algo ilegible
     final dir = '$repoRoot/${LayoutCatalog.dir}';
     final out = File('$dir/$screen.layout.yaml');
+    // Se conserva el comentario de cabecera que ya tenía el archivo del
+    // repo (no se pisa con "Generado por Editor -> LAYOUT").
+    if (out.existsSync()) {
+      yaml = withYamlHeader(yaml, yamlHeaderComment(await out.readAsString()));
+    }
     await out.parent.create(recursive: true);
     await out.writeAsString(yaml, flush: true);
     final m = File('$repoRoot/${LayoutCatalog.manifestPath}');
@@ -77,31 +83,8 @@ class LocalLayoutOverrides implements EditableLayoutOverrides {
 }
 
 /// Suma `<screen>: <file>` bajo `screens:` conservando el resto.
-String addLayoutManifestEntry(String manifest, String screen, String file) {
-  final lines = manifest.split('\n');
-  final s = lines.indexOf('screens:');
-  if (s < 0) {
-    return '${manifest.trimRight()}${manifest.trim().isEmpty ? '' : '\n'}'
-        'screens:\n  $screen: $file\n';
-  }
-  var end = s + 1;
-  while (end < lines.length &&
-      (lines[end].startsWith(' ') || lines[end].trim().isEmpty)) {
-    end++;
-  }
-  final k = lines.indexWhere((l) => l.startsWith('  $screen:'), s + 1);
-  if (k >= 0 && k < end) {
-    lines[k] = '  $screen: $file';
-  } else {
-    var at = end;
-    while (at > s + 1 && lines[at - 1].trim().isEmpty) {
-      at--;
-    }
-    lines.insert(at, '  $screen: $file');
-  }
-  final out = lines.join('\n');
-  return out.endsWith('\n') ? out : '$out\n';
-}
+String addLayoutManifestEntry(String manifest, String screen, String file) =>
+    upsertManifestEntry(manifest, 'screens', screen, file);
 
 /// Crea la capa de overrides de layouts en [dir] (por defecto la carpeta
 /// `overrides/` de sprites: `ECOS_OVERRIDES` o `overrides/` del directorio
