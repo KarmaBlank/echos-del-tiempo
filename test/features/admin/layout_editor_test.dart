@@ -13,6 +13,7 @@ import 'package:echos_del_tiempo/features/admin/presentation/admin_controller.da
 import 'package:echos_del_tiempo/features/admin/presentation/editor/layout_editor_controller.dart';
 import 'package:echos_del_tiempo/features/admin/presentation/editor/layout_page.dart';
 import 'package:echos_del_tiempo/features/characters/presentation/stash_layout.dart';
+import 'package:echos_del_tiempo/features/inventory/presentation/craft_layout.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/inventory_layout.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,7 +40,10 @@ void main() {
     for (final f in [
       'layout_manifest.yaml',
       'stash.layout.yaml',
-      'inventory.layout.yaml'
+      'inventory.layout.yaml',
+      'craft.fuse.layout.yaml',
+      'craft.forge.layout.yaml',
+      'craft.condense.layout.yaml',
     ]) {
       File('assets/layouts/$f').copySync('$repo/assets/layouts/$f');
     }
@@ -66,7 +70,7 @@ void main() {
     expect(c.staticIssues, isEmpty);
     expect(c.geometry.where((i) => i.error), isEmpty,
         reason: c.geometry.join('\n'));
-    await tester.tap(find.byKey(const ValueKey('layout-screen-craft.fuse')));
+    await tester.tap(find.byKey(const ValueKey('layout-screen-character')));
     await tester.pump();
     expect(find.textContaining('SIN VISTA PREVIA'), findsOneWidget);
   });
@@ -100,6 +104,63 @@ void main() {
     // La grilla es fija.
     expect(c.move(InventoryTabLayout.grid, 'foot', 0), isFalse);
   });
+
+  for (final (screen, group, to, loose, looseTo, keys) in [
+    (
+      FuseLayout.screen,
+      FuseLayout.actions,
+      'crumbs',
+      FuseLayout.next,
+      'materials',
+      ['bench-condense', 'bench-next', 'craft-materials'],
+    ),
+    (
+      ForgeLayout.screen,
+      ForgeLayout.actions,
+      'detail',
+      ForgeLayout.equip,
+      'footer',
+      ['forge-cap'],
+    ),
+    (
+      CondenseLayout.screen,
+      CondenseLayout.actions,
+      'head',
+      CondenseLayout.cancel,
+      'confirm',
+      ['condense-go', 'condense-cancel', 'condense-back'],
+    ),
+  ]) {
+    testWidgets('$screen: datos de ejemplo; mover un grupo y un botón '
+        'suelto valida y se ve', (tester) async {
+      await setUpEditor(tester);
+      await tester.tap(find.byKey(ValueKey('layout-screen-$screen')));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      for (final k in keys) {
+        expect(find.byKey(ValueKey(k)), findsOneWidget, reason: k);
+      }
+      expect(c.staticIssues, isEmpty);
+      expect(c.geometry.where((i) => i.error), isEmpty,
+          reason: c.geometry.join('\n'));
+      expect(c.move(group, to, 0), isTrue);
+      expect(c.move(loose, looseTo, 0), isTrue);
+      await tester.pump();
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      final l = c.doc!.resolve(null);
+      expect(l.containerOf(group), to);
+      expect(l.containerOf(loose), looseTo);
+      expect(c.staticIssues.where((i) => i.error), isEmpty);
+      expect(c.geometry.where((i) => i.error), isEmpty,
+          reason: c.geometry.join('\n'));
+      for (final k in keys) {
+        expect(find.byKey(ValueKey(k)), findsOneWidget, reason: k);
+      }
+    });
+  }
 
   testWidgets('seleccionar, subir al grupo, mover, validar, guardar, '
       'recargar y deshacer', (tester) async {

@@ -19,6 +19,9 @@ import '../../../../game_engine/models/profile_store.dart';
 import '../../../../game_engine/rules/battle_engine.dart';
 import '../../../../game_engine/rules/session_engine.dart';
 import '../../../characters/domain/stash.dart';
+import '../../../inventory/presentation/condense_panel.dart';
+import '../../../inventory/presentation/craft_bench.dart';
+import '../../../inventory/presentation/craft_layout.dart';
 import '../../../inventory/presentation/inventory_layout.dart';
 import '../../../inventory/presentation/inventory_tab.dart';
 import '../../../inventory/presentation/shop_sections.dart';
@@ -47,9 +50,12 @@ List<LayoutPreview> layoutPreviews() => [
           spec: StashLayout.spec, build: _stash),
       LayoutPreview(InventoryTabLayout.screen, 'INVENTARIO',
           spec: InventoryTabLayout.spec, build: _inventory),
-      const LayoutPreview('craft.fuse', 'FUSIÓN'),
-      const LayoutPreview('craft.forge', 'FORJA'),
-      const LayoutPreview('craft.condense', 'CONDENSAR'),
+      LayoutPreview(FuseLayout.screen, 'FUSIÓN',
+          spec: FuseLayout.spec, build: _fuse),
+      LayoutPreview(ForgeLayout.screen, 'FORJA',
+          spec: ForgeLayout.spec, build: _forge),
+      LayoutPreview(CondenseLayout.screen, 'CONDENSAR',
+          spec: CondenseLayout.spec, build: _condense),
       const LayoutPreview('character', 'PERSONAJE'),
       const LayoutPreview('shop', 'TIENDA'),
       const LayoutPreview('achievements', 'HAZAÑAS'),
@@ -225,3 +231,32 @@ Widget _inventory(LayoutDoc doc, DsLayoutHooks? hooks) => PanelFrame(
             shop: ShopContext(v, c), layout: doc, layoutHooks: hooks)),
       ),
     );
+
+// ------------------------------------------- FUSIÓN / FORJA / CONDENSAR
+
+Widget _armory(String title, Widget Function(ShopContext shop) build) =>
+    PanelFrame(
+      title: 'ARMERÍA · $title',
+      width: 1000,
+      onClose: () {},
+      child: SizedBox(
+        height: 560,
+        child: _SessionPreview((v, c) => build(ShopContext(v, c))),
+      ),
+    );
+
+Widget _fuse(LayoutDoc doc, DsLayoutHooks? hooks) => _armory('FUSIÓN',
+    (shop) => CraftBench(shop: shop, layout: doc, layoutHooks: hooks));
+
+Widget _forge(LayoutDoc doc, DsLayoutHooks? hooks) => _armory('FORJA',
+    (shop) => ForgeTab(shop: shop, layout: doc, layoutHooks: hooks));
+
+/// Con una elección pendiente, para que se vea la confirmación.
+Widget _condense(LayoutDoc doc, DsLayoutHooks? hooks) => _armory(
+    'CONDENSAR',
+    (shop) => CondensePanel(
+        shop: shop,
+        onBack: () {},
+        layout: doc,
+        layoutHooks: hooks,
+        initialPending: (CraftMaterial.cristal, 1)));

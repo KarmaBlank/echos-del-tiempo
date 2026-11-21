@@ -43,13 +43,13 @@ class DsRegions {
   /// ¿La región no tiene nada? (en el Editor nunca: se ve como destino).
   bool isEmpty(String region) =>
       _host.hooks == null &&
-      layout.of(region).every((id) => _host._build(_context, id) == null);
+      layout.of(region).every((id) => !_host._visible(_context, id, layout));
 
   /// La región armada (columna, fila o wrap según su spec).
   Widget region(String id) {
     final spec = _host.spec.region(id);
     return _host._container(
-        _context, id, spec?.axis ?? LayoutAxis.column, layout, null);
+        _context, id, spec?.axis ?? LayoutAxis.column, layout, spec?.align);
   }
 }
 
@@ -102,6 +102,12 @@ class DsLayoutHost extends StatelessWidget {
 
   Widget? _build(BuildContext context, String id) => slots[id]?.call(context);
 
+  /// ¿Se ve algo de [id]? (un grupo, si se ve alguno de sus hijos).
+  bool _visible(BuildContext context, String id, ResolvedLayout l) =>
+      (spec.slots[id]?.group ?? false)
+          ? l.of(id).any((c) => _visible(context, c, l))
+          : _build(context, id) != null;
+
   static double _gap(String name) => switch (name) {
         'xs' => DsSpace.xs,
         'md' => DsSpace.md,
@@ -153,7 +159,9 @@ class DsLayoutHost extends StatelessWidget {
       case LayoutAxis.wrap:
         out = Wrap(
           spacing: isGroup ? groupGap : regionGap,
-          runSpacing: DsSpace.xs,
+          runSpacing: isGroup
+              ? _gap(spec.slots[id]?.groupRunSpacing ?? 'xs')
+              : _gap(spec.region(id)?.runSpacing ?? 'xs'),
           alignment: switch (align) {
             LayoutAlign.center => WrapAlignment.center,
             LayoutAlign.end => WrapAlignment.end,
