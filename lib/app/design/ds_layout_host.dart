@@ -107,7 +107,8 @@ class DsLayoutHost extends StatelessWidget {
         'md' => DsSpace.md,
         'lg' => DsSpace.lg,
         'xl' => DsSpace.xl,
-        _ => DsSpace.sm,
+        'none' => 0,
+        _ => double.tryParse(name) ?? DsSpace.sm,
       };
 
   Widget? _slot(BuildContext context, String id, String container, int index,
@@ -116,6 +117,11 @@ class DsLayoutHost extends StatelessWidget {
     final rule = l.ruleOf(id);
     Widget? w;
     if (s != null && s.group) {
+      // En el juego, un grupo sin nada visible no ocupa lugar.
+      if (hooks == null &&
+          l.of(id).every((c) => _build(context, c) == null)) {
+        return null;
+      }
       w = _container(context, id, rule.axis ?? s.groupAxis, l, rule.align);
     } else {
       w = _build(context, id);
@@ -140,11 +146,13 @@ class DsLayoutHost extends StatelessWidget {
       if (w != null) kids.add((ids[i], w));
     }
     final isGroup = spec.slots[id]?.group ?? false;
+    final groupGap = _gap(spec.slots[id]?.groupGap ?? 'sm');
+    final regionGap = _gap(spec.region(id)?.spacing ?? 'md');
     Widget out;
     switch (axis) {
       case LayoutAxis.wrap:
         out = Wrap(
-          spacing: isGroup ? DsSpace.sm : DsSpace.md,
+          spacing: isGroup ? groupGap : regionGap,
           runSpacing: DsSpace.xs,
           alignment: switch (align) {
             LayoutAlign.center => WrapAlignment.center,
@@ -152,7 +160,13 @@ class DsLayoutHost extends StatelessWidget {
             _ => WrapAlignment.start,
           },
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: [for (final (_, w) in kids) w],
+          children: [
+            for (var i = 0; i < kids.length; i++) ...[
+              if (i > 0 && spec.slots[kids[i].$1]?.lead != null)
+                SizedBox(width: _gap(spec.slots[kids[i].$1]!.lead!)),
+              kids[i].$2,
+            ],
+          ],
         );
       case LayoutAxis.row:
         out = Row(
@@ -164,7 +178,7 @@ class DsLayoutHost extends StatelessWidget {
             for (var i = 0; i < kids.length; i++) ...[
               if (i > 0)
                 SizedBox(
-                    width: isGroup ? DsSpace.sm : _gap(spec.slots[kids[i].$1]?.gap ?? 'sm')),
+                    width: isGroup ? groupGap : _gap(spec.slots[kids[i].$1]?.gap ?? 'sm')),
               _stretchRow(kids[i], l),
             ],
           ],

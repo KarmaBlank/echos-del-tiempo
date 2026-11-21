@@ -3,3 +3,4 @@
 # tocar pubspec (la carpeta va registrada entera).
 screens:
   stash: stash.layout.yaml
+  inventory: inventory.layout.yaml

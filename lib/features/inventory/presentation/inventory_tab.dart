@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
+import '../../../app/design/ds_layout_host.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
@@ -10,6 +11,7 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/widgets/menu_focus.dart';
+import '../../../core/layout/layout_doc.dart';
 import '../../../core/settings/settings_providers.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../../game_engine/models/attributes.dart';
@@ -32,6 +34,7 @@ import '../domain/weapon_compare.dart' show stripStats;
 import 'clean_selection.dart';
 import 'consumables_bar.dart';
 import 'inventory_action_menu.dart';
+import 'inventory_layout.dart';
 import 'inventory_sort_button.dart';
 import 'item_grid.dart';
 import 'item_hover_tip.dart';
@@ -44,9 +47,21 @@ import 'weapon_compare_view.dart';
 /// EQUIPAR / TIRAR / DAR A y los inventarios de los compañeros en solo
 /// lectura. Ver docs/specs/panels.md § "Inventario".
 class InventoryTab extends ConsumerStatefulWidget {
-  const InventoryTab({super.key, required this.shop, this.pending = const {}});
+  const InventoryTab(
+      {super.key,
+      required this.shop,
+      this.pending = const {},
+      this.layout,
+      this.layoutHooks});
 
   final ShopContext shop;
+
+  /// Layout fijo (Editor → LAYOUT); `null` = el de `LayoutCatalog`
+  /// (editor_layout.md § 2).
+  final LayoutDoc? layout;
+
+  /// Ganchos del Editor (selección, arrastre); en el juego `null`.
+  final DsLayoutHooks? layoutHooks;
 
   /// Reparto de puntos sin confirmar (colorea requisitos y equipar).
   final Map<Attribute, int> pending;
@@ -409,6 +424,72 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                 })),
     ];
 
+    // Barra de herramientas (design_system.md § 4): de quién es el
+    // inventario, búsqueda, ORDENAR y LIMPIAR; cada uno es un slot.
+    final toolSlots = <String, DsSlotBuilder>{
+      InventoryTabLayout.owners: (_) => Wrap(
+          spacing: DsSpace.xs,
+          runSpacing: DsSpace.xs,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: owners),
+      InventoryTabLayout.search: (_) => KeyedSubtree(
+            key: _searchKey,
+            child: KeyedSubtree(
+              key: const ValueKey('inv-search'),
+              child: DsSearchField(
+                hint: 'BUSCAR: nombre, tipo, mod',
+                width: 280,
+                controller: _search,
+                onChanged: (v) => setState(() => _query = v),
+              ),
+            ),
+          ),
+      InventoryTabLayout.searchClear: (_) => _query.isEmpty
+          ? null
+          : DsButton.icon(const Text('×'),
+              key: const ValueKey('inv-search-clear'),
+              tooltip: 'Borrar la búsqueda',
+              size: DsButtonSize.compact,
+              onPressed: () => setState(() {
+                    _search.clear();
+                    _query = '';
+                  })),
+      InventoryTabLayout.sort: (_) => !mine
+          ? null
+          : InventorySortButton(
+              current: _lastSort,
+              onSort: (k) {
+                setState(() => _lastSort = k);
+                shop.controller.sortInventory(k);
+              }),
+      InventoryTabLayout.clean: (_) => !mine
+          ? null
+          : DsButton('LIMPIAR',
+              key: const ValueKey('inv-clean'),
+              size: DsButtonSize.compact,
+              selected: _cleaning,
+              tooltip: 'Desarmar o vender varias armas de una vez',
+              onPressed: () => setState(() {
+                    _cleaning = !_cleaning;
+                    _cleanMenu = _cleaning;
+                    _picked = const [];
+                    _confirmDrop = false;
+                    _confirmCraft = null;
+                    _moveFrom = null;
+                  })),
+      // Deshabilitado (gris) con el motivo especial como tooltip.
+      InventoryTabLayout.stash: (_) => !mine
+          ? null
+          : DsButton('ALIJO',
+              key: const ValueKey('inv-stash'),
+              size: DsButtonSize.compact,
+              tooltip: shop.controller.stashBlock ??
+                  'Abrir el alijo de la cuenta [B]',
+              onPressed: shop.controller.stashBlock == null
+                  ? shop.controller.openStash
+                  : null),
+    };
+
     // Estado de cada casilla, ya resuelto para la grilla (DsItemGrid es
     // solo presentación).
     ItemSlotData slotAt(int i) {
@@ -512,7 +593,7 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     }
 
     final eq = p.equippedItem;
-    Widget buildLeft() {
+    Map<String, DsSlotBuilder> leftSlots() {
       final eqCell = eq == null
           ? ItemCell(rules: shop.rules, size: _cellSize)
           : _withTip(
@@ -555,33 +636,32 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
           ),
         ],
       );
-      final notes = <Widget>[
-        if (_picking)
-          Row(children: [
-            Expanded(
-                child: ProtoText(
-                    key: const ValueKey('inv-compare-pick'),
-                    style: DsText.body(DsColors.textSubtitle),
-                    'Elige el arma B para comparar con ${_cmpAName()}')),
-            DsButton('CANCELAR',
-                key: const ValueKey('inv-compare-cancel'),
-                size: DsButtonSize.compact,
-                onPressed: _closeCompare),
-          ])
-        else if (_moveFrom != null)
-          Row(children: [
-            Expanded(
-                child: Text('Elige la casilla destino',
-                    style: DsText.body(DsColors.textSubtitle))),
-            DsButton('CANCELAR',
-                key: const ValueKey('inv-move-cancel'),
-                size: DsButtonSize.compact,
-                onPressed: () => setState(() => _moveFrom = null)),
-          ])
-        else if (!mine)
-          Text('Inventario de ${owner.name} (solo lectura)',
-              style: DsText.detail()),
-      ];
+      final Widget? note = _picking
+          ? Row(children: [
+              Expanded(
+                  child: ProtoText(
+                      key: const ValueKey('inv-compare-pick'),
+                      style: DsText.body(DsColors.textSubtitle),
+                      'Elige el arma B para comparar con ${_cmpAName()}')),
+              DsButton('CANCELAR',
+                  key: const ValueKey('inv-compare-cancel'),
+                  size: DsButtonSize.compact,
+                  onPressed: _closeCompare),
+            ])
+          : _moveFrom != null
+              ? Row(children: [
+                  Expanded(
+                      child: Text('Elige la casilla destino',
+                          style: DsText.body(DsColors.textSubtitle))),
+                  DsButton('CANCELAR',
+                      key: const ValueKey('inv-move-cancel'),
+                      size: DsButtonSize.compact,
+                      onPressed: () => setState(() => _moveFrom = null)),
+                ])
+              : !mine
+                  ? Text('Inventario de ${owner.name} (solo lectura)',
+                      style: DsText.detail())
+                  : null;
       final gridBox = SizedBox(
         key: _gridKey,
         width: _gridW,
@@ -660,134 +740,76 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                   text: ' · ${layout.overflow.length} sin lugar',
                   style: DsText.body(DsColors.warning)),
           ])));
-      final tail = <Widget>[
-        if (mine && sel != null && _sel != null)
-          if (_selectionBar(p, me, mates, sel) case final bar?) bar,
-        if (mine && _cleaning && _cleanMenu) ...[
-          SizedBox(height: DsSpace.xs),
-          _cleanMenuBox(p),
-        ],
-      ];
-      if (_wide) {
-        // Ancho (v0.9.10): la grilla a la izquierda y, al lado, la
-        // EQUIPADA, las pilas y LIMPIAR (así la grilla puede crecer más).
-        return NavSection(
-            child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: _gridW,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ...notes,
-                  if (notes.isNotEmpty) SizedBox(height: DsSpace.xs),
-                  gridBox,
-                ],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                key: const ValueKey('inv-side'),
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  eqRow,
-                  const SizedBox(height: 8),
-                  stacksBar,
-                  const SizedBox(height: 6),
-                  summary,
-                  ...tail,
-                ],
-              ),
-            ),
-          ],
-        ));
-      }
-      return NavSection(
-          child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          eqRow,
-          SizedBox(height: DsSpace.sm),
-          ...notes,
-          if (notes.isNotEmpty) SizedBox(height: DsSpace.xs),
-          gridBox,
-          const SizedBox(height: 8),
-          stacksBar,
-          const SizedBox(height: 6),
-          summary,
-          ...tail,
-        ],
-      ));
+      final selBar = mine && sel != null && _sel != null
+          ? _selectionBar(p, me, mates, sel)
+          : null;
+      return {
+        InventoryTabLayout.notes: (_) => note,
+        InventoryTabLayout.grid: (_) => gridBox,
+        InventoryTabLayout.equipped: (_) => eqRow,
+        InventoryTabLayout.stacks: (_) => stacksBar,
+        InventoryTabLayout.summary: (_) => summary,
+        InventoryTabLayout.selection: (_) => selBar,
+        InventoryTabLayout.cleanMenu: (_) =>
+            mine && _cleaning && _cleanMenu ? _cleanMenuBox(p) : null,
+      };
     }
+
+    // La columna principal armada por datos (editor_layout.md § 4): en
+    // ancho (v0.9.10) la grilla a la izquierda y, al lado, `head` y
+    // `foot` (así la grilla puede crecer más); si no, todo apilado.
+    Widget buildLeft() => NavSection(
+        child: DsLayoutHost(
+            spec: InventoryTabLayout.spec,
+            doc: widget.layout,
+            hooks: widget.layoutHooks,
+            slots: {...leftSlots(), ...toolSlots},
+            frame: (context, box, r) {
+              final head = r.isEmpty('head') ? null : r.region('head');
+              final foot = r.isEmpty('foot') ? null : r.region('foot');
+              if (_wide) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(width: _gridW, child: r.region('grid')),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        key: const ValueKey('inv-side'),
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (head != null) head,
+                          if (head != null && foot != null)
+                            const SizedBox(height: 8),
+                          if (foot != null) foot,
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (head != null) ...[head, SizedBox(height: DsSpace.sm)],
+                  r.region('grid'),
+                  if (foot != null) ...[const SizedBox(height: 8), foot],
+                ],
+              );
+            }));
 
     // Barra de herramientas (design_system.md § 4): de quién es el
     // inventario, búsqueda, ORDENAR y LIMPIAR en una fila.
-    final toolbar = Padding(
-      key: const ValueKey('inv-toolbar'),
-      padding: EdgeInsets.only(bottom: DsSpace.sm),
-      child: Wrap(
-        spacing: DsSpace.xs,
-        runSpacing: DsSpace.xs,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          ...owners,
-          SizedBox(width: DsSpace.md),
-          KeyedSubtree(
-            key: _searchKey,
-            child: KeyedSubtree(
-              key: const ValueKey('inv-search'),
-              child: DsSearchField(
-                hint: 'BUSCAR: nombre, tipo, mod',
-                width: 280,
-                controller: _search,
-                onChanged: (v) => setState(() => _query = v),
-              ),
-            ),
-          ),
-          if (_query.isNotEmpty)
-            DsButton.icon(const Text('×'),
-                key: const ValueKey('inv-search-clear'),
-                tooltip: 'Borrar la búsqueda',
-                size: DsButtonSize.compact,
-                onPressed: () => setState(() {
-                      _search.clear();
-                      _query = '';
-                    })),
-          if (mine) ...[
-            SizedBox(width: DsSpace.md),
-            InventorySortButton(
-                current: _lastSort,
-                onSort: (k) {
-                  setState(() => _lastSort = k);
-                  shop.controller.sortInventory(k);
-                }),
-            DsButton('LIMPIAR',
-                key: const ValueKey('inv-clean'),
-                size: DsButtonSize.compact,
-                selected: _cleaning,
-                tooltip: 'Desarmar o vender varias armas de una vez',
-                onPressed: () => setState(() {
-                      _cleaning = !_cleaning;
-                      _cleanMenu = _cleaning;
-                      _picked = const [];
-                      _confirmDrop = false;
-                      _confirmCraft = null;
-                      _moveFrom = null;
-                    })),
-            DsButton('ALIJO',
-                key: const ValueKey('inv-stash'),
-                size: DsButtonSize.compact,
-                tooltip: shop.controller.stashBlock ??
-                    'Abrir el alijo de la cuenta [B]',
-                onPressed: shop.controller.stashBlock == null
-                    ? shop.controller.openStash
-                    : null),
-          ],
-        ],
-      ),
-    );
+    final toolbar = DsLayoutHost(
+        spec: InventoryTabLayout.spec,
+        doc: widget.layout,
+        hooks: widget.layoutHooks,
+        slots: {...leftSlots(), ...toolSlots},
+        frame: (context, box, r) => Padding(
+              key: const ValueKey('inv-toolbar'),
+              padding: EdgeInsets.only(bottom: DsSpace.sm),
+              child: r.region('toolbar'),
+            ));
 
     final cmpA = _cmpA, cmpB = _cmpB;
     if (cmpA != null && cmpB != null) {
