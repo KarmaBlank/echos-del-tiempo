@@ -211,6 +211,7 @@ abstract final class ExplorationRules {
       weight: w.weight,
       shieldDefense: w.shieldDefense,
       implicit: [...w.implicit, ...mods],
+      dropWeight: w.dropWeight,
     );
     return PlayerBuild(
       classId: b.classId,

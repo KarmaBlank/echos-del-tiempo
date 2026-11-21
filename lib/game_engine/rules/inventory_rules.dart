@@ -34,16 +34,20 @@ class InventoryRules {
   static int stackCount(PlayerProfile p, StackKind k) => switch (k) {
         StackKind.potion => p.potions,
         StackKind.ether => p.ethers,
+        StackKind.aether => p.aethers,
         _ => p.material(k.material!),
       };
 
   static int stackMax(StackKind k) =>
-      k == StackKind.potion || k == StackKind.ether ? kMaxItemStack : k.maxStack;
+      k == StackKind.potion || k == StackKind.ether || k == StackKind.aether
+          ? kMaxItemStack
+          : k.maxStack;
 
   static PlayerProfile withStack(PlayerProfile p, StackKind k, int n) =>
       switch (k) {
         StackKind.potion => p.copyWith(potions: n),
         StackKind.ether => p.copyWith(ethers: n),
+        StackKind.aether => p.copyWith(aethers: n),
         _ => p.copyWith(materials: {...p.materials, k.material!: n}),
       };
 
@@ -52,7 +56,11 @@ class InventoryRules {
   // ------------------------------------------------------------------
 
   /// Pilas de la sección CONSUMIBLES (v0.5.1): no ocupan casilla.
-  static const consumables = [StackKind.potion, StackKind.ether];
+  static const consumables = [
+    StackKind.potion,
+    StackKind.ether,
+    StackKind.aether,
+  ];
 
   /// Pilas de la sección MATERIALES (v0.5.1): no ocupan casilla.
   static final materials = [

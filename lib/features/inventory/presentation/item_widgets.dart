@@ -59,6 +59,7 @@ String iconKeyForType(String type) => type.contains('escudo')
 (String, Color) iconForStack(StackKind k) => switch (k) {
       StackKind.potion => ('pocion', ProtoColors.red),
       StackKind.ether => ('pocion', ProtoColors.ice),
+      StackKind.aether => ('pocion', ProtoColors.gold),
       StackKind.esquirla => ('esquirla', RarityColors.stack),
       StackKind.cristal => ('cristal', ProtoColors.violet),
       StackKind.prisma => ('prisma', ProtoColors.gold),

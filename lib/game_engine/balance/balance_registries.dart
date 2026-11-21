@@ -155,7 +155,8 @@ class BalanceBase {
         BalanceKind.ultCharge ||
         BalanceKind.condense ||
         BalanceKind.materials ||
-        BalanceKind.ecoTier =>
+        BalanceKind.ecoTier ||
+        BalanceKind.consumables =>
           {k.jsonKey: kTuningDefaults[k.jsonKey]!},
         BalanceKind.featReward => kAchievementsById,
       };

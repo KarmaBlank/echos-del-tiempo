@@ -9,6 +9,7 @@ enum LootSource { battle, elite, boss, chest, mission }
 enum StackKind {
   potion('pot', 'Poción de vida', 9),
   ether('eter', 'Poción de maná', 9),
+  aether('eterV', 'Éter', 9),
   esquirla('mat:esquirla', 'Esquirla del Eco', CraftMaterial.maxStack),
   cristal('mat:cristal', 'Cristal de Era', CraftMaterial.maxStack),
   prisma('mat:prisma', 'Prisma Roto', CraftMaterial.maxStack),

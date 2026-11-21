@@ -4,6 +4,7 @@ import '../../../game_engine/models/passive_mechanic.dart' show BuffStat;
 import '../../../game_engine/models/skill.dart';
 import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/js_math.dart';
+import '../../../game_engine/rules/revive_rules.dart';
 import 'element_text.dart';
 import 'summon_text.dart';
 
@@ -180,11 +181,7 @@ String describeSkillMarkup(SkillDef tk, Combatant? user,
             bonus: p?.statusBonus[st.kind] ?? 0));
       }
     case SkillKind.heal:
-      if (tk.revive > 0) {
-        l.add('${hexSpan('#ffd166', 'Revive')} al primer aliado caído con el '
-            '${jsRound(tk.revive * 100)}% de su vida máx.'
-            '${tk.cleanse > 0 ? ' y sin estados' : ''}. Si no hay caídos:');
-      }
+      if (tk.revive > 0) l.addAll(reviveLinesMarkup(tk, p));
       l.add('Cura MAG × ${fm(tk.power)} + 6'
           '${p != null ? ' = <b>${jsRound(p.magic * tk.power + 6)}</b>' : ''} '
           '${tk.lowestAlly ? 'al aliado más herido' : 'a cada aliado'}'
@@ -428,4 +425,34 @@ String skillSummaryMarkup(SkillDef sk, Combatant p) {
       hexSpan(statusHex(st.kind),
           '${st.chance != null ? '${jsRound(st.chance! * 100)}%' : '+${st.stacks}'} ${st.kind.label}'),
   ].join(' · ');
+}
+/// Líneas de revivir con la sinergia del árbol (combat.md § Revivir):
+/// con [p] muestra los números del lanzador; sin él, la regla.
+List<String> reviveLinesMarkup(SkillDef tk, Combatant? p) {
+  String pct(double v) => '${(v * 1000).round() / 10}%';
+  final base = '${hexSpan('#ffd166', 'Revive')} al primer aliado caído';
+  final tail = '${tk.cleanse > 0 ? ' y sin estados' : ''}. Si no hay caídos:';
+  if (p == null) {
+    return [
+      '$base con el ${pct(tk.revive)} de su vida máx.$tail',
+      '${hexSpan('#ffd166', 'Sinergia')}: +${pct(ReviveRules.espPer)} de '
+          'vida por punto de ESP y + Curación × ${ReviveRules.healScale} '
+          '(tope 100%). La Curación además le da el Velo del Retorno: '
+          'escudo de Curación × ${ReviveRules.shieldScale} de su vida '
+          '(tope ${pct(ReviveRules.shieldCap)}, '
+          '${ReviveRules.shieldTurns} turnos).',
+    ];
+  }
+  final frac = ReviveRules.lifeFor(p, tk.revive);
+  final sf = ReviveRules.shieldFraction(p.healBonus);
+  return [
+    '$base con el ${hexSpan('#7bed9f', pct(frac))} de su vida máx. '
+        '(base ${pct(tk.revive)} + ESP ${ReviveRules.espOf(p)} + Curación '
+        '${pct(p.healBonus)})$tail',
+    sf > 0
+        ? '${hexSpan('#ffd166', 'Velo del Retorno')}: escudo del '
+            '${pct(sf)} de su vida por ${ReviveRules.shieldTurns} turnos.'
+        : '${hexSpan('#ffd166', 'Velo del Retorno')}: sin Curación del '
+            'árbol no hay escudo.',
+  ];
 }

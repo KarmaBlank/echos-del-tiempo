@@ -511,7 +511,7 @@ class ItemsTab extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ProtoText('<b>${it.name}</b> '
-                      '${protoColor(ProtoColors.green, 'tienes ${it.key == 'pot' ? p.potions : p.ethers}/${ProgressionRules.maxItems}')}'),
+                      '${protoColor(ProtoColors.green, 'tienes ${p.itemCount(it.item)}/${ProgressionRules.maxItems}')}'),
                   ProtoText('<small>${it.description}</small>'),
                 ],
               ),

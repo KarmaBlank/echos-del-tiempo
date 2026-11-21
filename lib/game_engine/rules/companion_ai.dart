@@ -50,6 +50,10 @@ class CompanionAi {
       if (me.potions > 0) {
         return ItemCommand(BattleItem.potion, targetPlayerId: hurt.id);
       }
+      // Sin pociones, el Éter (más caro) solo para levantar a un caído.
+      if (!hurt.alive && !hurt.isSummon && me.aethers > 0) {
+        return ItemCommand(BattleItem.aether, targetPlayerId: hurt.id);
+      }
     }
 
     // 2. ULT lista.

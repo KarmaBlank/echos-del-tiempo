@@ -439,6 +439,35 @@ a distancia (`kSkillDelivery`, § 16.1).
 Las bases existentes no cambian (Flecha Rayo y Descarga pasan a ser de
 Electro, Marea Vital de Agua).
 
+### 8.8 Soporte de nivel bajo y revivir raro (v0.21)
+
+Pedido del dueño: más armas de apoyo en los primeros niveles y alguna
+que revive, rara. Antes, revivir con habilidad recién llegaba en el
+nivel 40 (Tomo de la Eternidad, Resurrección), 42 (Maza y Escudo
+Benditos) y 50 (Báculo del Origen, Llama Fénix); el Paladín además tenía
+un hueco de apoyo entre el 7 y el 13.
+
+Mismas fórmulas que § 8 (precio `100·L + 4·L²`). Bases nuevas:
+
+| id | Nombre | familia | tipo | nivel | requisitos | ATQ | MAG | habilidades | precio | peso de loot |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `baculo_rocio` | Báculo del Rocío | maga | báculo | 3 | ESP 15 | 4 + 0.4·FUE | 8 + 0.8·ESP | Rocío Sanador, Semilla Vital | 336 | 1 |
+| `maza_escudo_vigilia` | Maza y Escudo de la Vigilia | paladín | maza+escudo | 5 | VIT 21, ESP 12 | 4 + 0.2·FUE | 8 + 0.75·ESP | Sanación, Barrera (DEF escudo 4) | 600 | 1 |
+| `arco_alivio` | Arco del Alivio | tirador | arco | 6 | DES 13, ESP 8 | 10 + 0.6·DES + 0.2·AGI | — | Flecha Sanadora, Disparo Certero | 744 | 1 |
+| `maza_escudo_retorno` | Maza y Escudo del Retorno | paladín | maza+escudo | 10 | VIT 22, ESP 17 | 5 + 0.2·FUE | 11 + 0.78·ESP | Sanación, Eco de Regreso (DEF escudo 4) | no se vende | 0.25 |
+| `tomo_regreso` | Tomo del Regreso | maga | tomo | 11 | ESP 20 | 3 + 0.3·FUE | 12 + 0.9·ESP | Cura Focalizada, Eco de Regreso | no se vende | 0.25 |
+
+Rareza del revivir: Eco de Regreso solo está en esas 2 bases, que no se
+venden (precio 0) y salen de loot con `WeaponDef.dropWeight` 0.25 (×0.25
+sobre el peso normal de `LootRules.pickBase`). `dropWeight` es editable
+en Editor → Balance → Armas ("Peso al salir de loot").
+
+Eco de Regreso (`ecoRegreso`, Sagrado, familia curación): 10 MP, revive
+al primer caído con el 25% de la vida (más la sinergia de combat.md §
+"Revivir y el árbol"); sin caídos cura MAG × 0.8 + 6 al más herido. Es
+más débil que Resurrección (35%, 9 MP, nivel 40) para no romper la
+progresión.
+
 ### 8.3 Afijos
 
 | id | Nombre | Lado | Estadística | Peso | Solo en | Tiers (nivel: rango) |
@@ -1066,6 +1095,34 @@ snapshot lo lleva al cliente. Dónde se usa:
   2 sin panel abierto. No se muestran en batalla.
 
 Protocolo 23.
+
+### 17.6 Éter (v0.21)
+
+Consumible nuevo (`BattleItem.aether`, clave `eterV`, pila `StackKind.aether`
+en CONSUMIBLES, tope 9 como las pociones; `PlayerProfile.aethers`,
+`Combatant.aethers`, snapshot `eterV`). No confundir con la Poción de maná,
+cuya clave histórica es `eter`.
+
+- Efecto (solo en batalla): revive a un aliado caído con el 100% de su
+  vida máx., quita Quemadura y Veneno, `RevivedEvent`, su próximo turno es
+  `reloj + IV`. Objetivo: el caído elegido; sin objetivo válido, el primer
+  caído del grupo. Sin caídos la acción no vale y no se gasta. Usa el
+  flujo de pociones (`ItemCommand(BattleItem.aether, targetPlayerId)`),
+  así que en co-op lo resuelve el host como cualquier acción.
+- Fuera de batalla: `ConsumableRules.blockReason` devuelve `Solo en
+  batalla, sobre un aliado caído`.
+- Tienda: precio = `aetherMult` (5) × precio de la Poción de vida (30) =
+  150 créditos.
+- Cofres: del consumible de un cofre, la cola alta de la misma tirada
+  (`r ≥ 1 − aetherChestChance`, 5%) da Éter en vez de Poción de maná
+  (pociones de vida 60%, maná 35%, Éter 5%). No consume RNG extra.
+- Compañero automático: si no tiene pociones de vida y hay un caído,
+  usa Éter.
+
+Números editables en Editor → Balance → Apoyo (`kTuning['consumables']`, junto con la sinergia de revivir):
+`potionPrice` 30, `etherPrice` 40, `aetherMult` 5, `aetherChestChance` 0.05.
+
+Protocolo 31.
 
 ## 18. Red
 

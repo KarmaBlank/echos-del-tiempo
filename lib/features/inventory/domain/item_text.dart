@@ -361,6 +361,8 @@ String stackTooltipMarkup(StackKind k, int count) {
   final desc = switch (k) {
     StackKind.potion => 'Cura vida (también fuera de batalla).',
     StackKind.ether => 'Recupera maná (también fuera de batalla).',
+    StackKind.aether =>
+      'Revive a un aliado caído con toda la vida (solo en batalla).',
     _ => m!.description,
   };
   return '<b style="color:#78e6dc">${_esc(k.label)}</b> x$count<br>'

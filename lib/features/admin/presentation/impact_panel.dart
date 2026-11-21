@@ -212,6 +212,7 @@ class _ImpactPanelState extends State<ImpactPanel> {
       case BalanceKind.materials:
       case BalanceKind.ecoTier:
       case BalanceKind.featReward:
+      case BalanceKind.consumables:
         return const _Plan();
     }
   }

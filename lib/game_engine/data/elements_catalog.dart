@@ -119,6 +119,7 @@ const Map<String, GameElement> kSkillElement = {
   'purificar': _sagrado, // Purificación
   'resurreccion': _sagrado, // Resurrección
   'fenix': _sagrado, // Llama Fénix
+  'ecoRegreso': _sagrado, // Eco de Regreso
   'graciaDesbordante': _sagrado, // Gracia Desbordante
   'marea': _agua, // Marea Vital
   'flechaSanadora': _fisico, // Flecha Sanadora
