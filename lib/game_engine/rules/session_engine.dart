@@ -48,6 +48,7 @@ import 'zone_rules.dart';
 import 'ult_rules.dart';
 import '../data/ults_v2_catalog.dart';
 import '../data/branch_ults_catalog.dart' show kWeaponUltSkills;
+import '../data/tuning_catalog.dart';
 import '../models/ult_def.dart';
 import '../fx/cinematic_durations.dart';
 
@@ -532,6 +533,7 @@ class SessionEngine {
       ult: p.ult,
       potions: p.profile.potions,
       ethers: p.profile.ethers,
+      aethers: p.profile.aethers,
     );
   }
 }
@@ -2533,10 +2535,18 @@ class _Op {
       var msg = '${q.name}: +$cr créditos';
       BattleItem? item;
       if (_rand() < def.consumableChance) {
-        if (_rand() < 0.6) {
+        // Una sola tirada: la cola alta (aetherChestChance) es Éter,
+        // así no cambia la secuencia del RNG (loot.md § 17.6).
+        final r = _rand();
+        final aether = tuning(TuningId.consumables).d('aetherChestChance');
+        if (r < 0.6) {
           prof = prof.copyWith(
               potions: math.min(ProgressionRules.maxItems, prof.potions + 1));
           item = BattleItem.potion;
+        } else if (r >= 1 - aether) {
+          prof = prof.copyWith(
+              aethers: math.min(ProgressionRules.maxItems, prof.aethers + 1));
+          item = BattleItem.aether;
         } else {
           prof = prof.copyWith(
               ethers: math.min(ProgressionRules.maxItems, prof.ethers + 1));
@@ -3216,7 +3226,8 @@ class _Op {
         ..hp = c.hp.toDouble()
         ..mp = c.mp
         ..ult = c.ult
-        ..profile = p.profile.copyWith(potions: c.potions, ethers: c.ethers);
+        ..profile = p.profile.copyWith(
+            potions: c.potions, ethers: c.ethers, aethers: c.aethers);
     }
     if (!outcome.victory) return;
     final m = s.mission;

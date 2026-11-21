@@ -71,7 +71,11 @@ enum BalanceKind {
   ecoTier('ecoTier', 'Ecos: bonus de tier', 'Bonus de Ecos'),
 
   /// Recompensa de cada hazaña (achievements.md § 1).
-  featReward('featReward', 'Hazañas', 'Hazaña');
+  featReward('featReward', 'Hazañas', 'Hazaña'),
+
+  /// Precios de consumibles, Éter en cofres (loot.md § 17.6) y sinergia
+  /// de revivir con el árbol (combat.md § "Revivir y el árbol").
+  consumables('consumables', 'Apoyo', 'Consumibles y revivir');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -387,6 +391,7 @@ final weaponCodec = EntityCodec(
     BalanceField('atk', 'Fórmula de ATQ', BalanceFieldType.formula),
     BalanceField('mag', 'Fórmula de MAG', BalanceFieldType.formula, nullable: true),
     BalanceField('skillIds', 'Habilidades', BalanceFieldType.idList),
+    BalanceField('dropWeight', 'Peso al salir de loot', _dec, max: 10, step: 0.05),
   ],
   read: (o) {
     final w = o as WeaponDef;
@@ -400,6 +405,7 @@ final weaponCodec = EntityCodec(
       'atk': encodeFormula(w.atk),
       'mag': encodeFormula(w.mag),
       'skillIds': List<String>.from(w.skillIds),
+      'dropWeight': w.dropWeight,
     };
   },
   write: (o, f) {
@@ -419,6 +425,7 @@ final weaponCodec = EntityCodec(
       weight: f.d('weight'),
       shieldDefense: f.i('shieldDefense'),
       implicit: w.implicit,
+      dropWeight: f.d('dropWeight'),
     );
   },
   nameOf: (o) => (o as WeaponDef).name,
@@ -440,6 +447,7 @@ WeaponDef weaponWithSkills(WeaponDef w, List<String> skillIds) => WeaponDef(
       weight: w.weight,
       shieldDefense: w.shieldDefense,
       implicit: w.implicit,
+      dropWeight: w.dropWeight,
     );
 
 // ---------------------------------------------------------------------
@@ -1155,6 +1163,18 @@ final condenseCodec = _tuningCodec(BalanceKind.condense, const [
   BalanceField('prismaCredits', 'Prisma: créditos', _int, max: 100000, step: 50),
 ]);
 
+final consumablesCodec = _tuningCodec(BalanceKind.consumables, const [
+  BalanceField('potionPrice', 'Precio de la Poción de vida', _int, min: 1, max: 100000, step: 5),
+  BalanceField('etherPrice', 'Precio de la Poción de maná', _int, min: 1, max: 100000, step: 5),
+  BalanceField('aetherMult', 'Éter: precio × Poción de vida', _dec, min: 1, max: 50, step: 0.5),
+  BalanceField('aetherChestChance', 'Éter: chance en el consumible de un cofre', _frac, max: 1, step: 0.01),
+  BalanceField('espPer', 'Vida extra al revivir por punto de ESP', _frac, max: 0.05, step: 0.0005),
+  BalanceField('healScale', 'Vida extra al revivir × Curación del árbol', _dec, max: 5, step: 0.05),
+  BalanceField('shieldScale', 'Escudo al revivido × Curación del árbol', _dec, max: 5, step: 0.05),
+  BalanceField('shieldCap', 'Tope del escudo (fracción de su vida)', _frac, max: 1, step: 0.01),
+  BalanceField('shieldTurns', 'Turnos del escudo', _int, min: 1, max: 9),
+]);
+
 final materialsCodec = _tuningCodec(BalanceKind.materials, const [
   BalanceField('chanceEsquirla', 'Drop: Esquirla (prob. base)', _frac, max: 1, step: 0.005),
   BalanceField('chanceCristal', 'Drop: Cristal (prob. base)', _frac, max: 1, step: 0.005),
@@ -1248,6 +1268,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.materials => materialsCodec,
       BalanceKind.ecoTier => ecoTierCodec,
       BalanceKind.featReward => featRewardCodec,
+      BalanceKind.consumables => consumablesCodec,
     };
 
 /// Tipos de "Ajustes": un grupo de [kTuning] cada uno (id = jsonKey).
@@ -1258,4 +1279,5 @@ const kTuningKinds = [
   BalanceKind.condense,
   BalanceKind.materials,
   BalanceKind.ecoTier,
+  BalanceKind.consumables,
 ];

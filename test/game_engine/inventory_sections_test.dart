@@ -40,7 +40,8 @@ void main() {
       expect(toks, ['e1', 'r1', 'm1', 'c1', 'l1']);
       expect(InventoryRules.cellsUsed(p), 5);
       expect(InventoryRules.freeCells(p), 35);
-      expect(InventoryRules.consumables, [StackKind.potion, StackKind.ether]);
+      expect(InventoryRules.consumables,
+          [StackKind.potion, StackKind.ether, StackKind.aether]);
       expect(InventoryRules.materials, [
         StackKind.esquirla,
         StackKind.cristal,

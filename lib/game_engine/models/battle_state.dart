@@ -15,6 +15,7 @@ class BattlePartyMember {
   final double ult;
   final int potions;
   final int ethers;
+  final int aethers;
 
   /// Habilidad fusionada al arma equipada (`p.fuse[p.eq]`), si hay.
   final String? fusedSkillId;
@@ -28,6 +29,7 @@ class BattlePartyMember {
     this.ult = 0,
     this.potions = 0,
     this.ethers = 0,
+    this.aethers = 0,
     this.fusedSkillId,
   });
 }
@@ -70,6 +72,7 @@ class Combatant {
     List<String>? skillIds,
     this.potions = 0,
     this.ethers = 0,
+    this.aethers = 0,
     this.enemyType,
     this.elite = false,
     this.boss = false,
@@ -199,6 +202,7 @@ class Combatant {
   List<String> skillIds;
   int potions;
   int ethers;
+  int aethers;
 
   // ---- solo enemigos ----
   final String? enemyType;
@@ -481,6 +485,7 @@ class Combatant {
         skillIds: skillIds,
         potions: potions,
         ethers: ethers,
+        aethers: aethers,
         enemyType: enemyType,
         elite: elite,
         boss: boss,

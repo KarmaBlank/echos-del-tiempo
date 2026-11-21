@@ -50,6 +50,10 @@ class WeaponDef {
   final double weight; // resta velocidad
   final int shieldDefense; // armas con escudo: su implícito de DEF
 
+  /// Peso relativo de la base al salir de loot (1 = normal). Las bases
+  /// raras (p. ej. las que reviven de nivel bajo) usan < 1.
+  final double dropWeight;
+
   /// Implícito fijo de la base (además del DEF del escudo).
   final List<ItemMod> implicit;
 
@@ -68,6 +72,7 @@ class WeaponDef {
     this.weight = 0,
     this.shieldDefense = 0,
     this.implicit = const [],
+    this.dropWeight = 1,
   });
 
   String get family => classId;

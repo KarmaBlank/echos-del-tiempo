@@ -193,6 +193,9 @@ Objetivo: el enemigo vivo pedido, o el primero vivo.
   Si revive, su próximo turno es `reloj + IV`.
 - **Poción de maná**: 50% del maná máx. Sin objetivo: el aliado vivo con
   menor % de maná.
+- **Éter** (v0.21, loot.md § 17.6): revive a un aliado caído con el 100%
+  de su vida máx. y le quita Quemadura y Veneno; su próximo turno es
+  `reloj + IV`. Sin caídos no vale.
 - **Defender** (en la categoría ARMA desde v0.20.0, battle_attack_menu.md
   § 6): ½ daño hasta su próximo turno, que llega antes (`IV × 0.7`); +2
   Pulso (+1 si su turno anterior también fue Defender), +6 de ULT y +6
@@ -697,3 +700,30 @@ pila del estado del elemento al blanco. El contador es
 `Combatant.basicHits` (snapshot `bh`). Las habilidades del mismo elemento
 que el arma hacen ×1.08 (`kWeaponElementSynergy`, modificador
 `arma <Elemento>` en el desglose); con otro elemento, sin penalidad.
+
+## Revivir y el árbol (v0.21)
+
+Toda habilidad con `revive > 0` (Eco de Regreso, Resurrección, Llama
+Fénix y las ULT que reviven) suma la sinergia del lanzador
+(`rules/revive_rules.dart`, `ReviveRules`):
+
+- Vida al revivir: `min(100%, revive + ESP × espPer + Curación × healScale)`.
+  ESP es el atributo del lanzador; Curación es `Combatant.healBonus`
+  (nodos `heal` del árbol + `healPower` del arma).
+- Velo del Retorno: si Curación > 0, el revivido recibe un escudo
+  (`BuffStat.shield`, fuente `veloRetorno`, `ShieldEvent`) de
+  `min(shieldCap, Curación × shieldScale) × su vida máx.` por
+  `shieldTurns` turnos. Revivir otra vez lo reemplaza, no se apila.
+
+Valores (Editor → Balance → Apoyo, `kTuning['consumables']`):
+`espPer` 0.003 (+0.3% por ESP), `healScale` 0.5, `shieldScale` 1.0,
+`shieldCap` 0.25, `shieldTurns` 2.
+
+Ejemplos: Eco de Regreso (25%) con ESP 20 y sin Curación revive con 31%;
+con ESP 40 y Curación 20%, 25 + 12 + 10 = 47% y escudo del 20%.
+Llama Fénix (70%) con ESP 60 y Curación 20% llega a 98%.
+
+Tooltip (`reviveLinesMarkup`, skill_text.dart): con el lanzador muestra el
+% final con el desglose (base + ESP + Curación) y el escudo (o "sin
+Curación del árbol no hay escudo"); sin lanzador, la regla con los
+números vigentes. El log de batalla dice el % final y el escudo.

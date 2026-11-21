@@ -13,8 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('89 bases (80 + 9 de Agua y Electro v0.7), niveles 1–50 y las 32 del '
       'prototipo', () {
-    expect(kWeapons, hasLength(94)); // + 5 tomos del Invocador v0.8.1
-    const perFamily = {'guerrero': 23, 'maga': 29, 'tirador': 22, 'paladin': 20};
+    expect(kWeapons, hasLength(99)); // + 5 tomos del Invocador v0.8.1 + 5 de soporte v0.21
+    const perFamily = {'guerrero': 23, 'maga': 31, 'tirador': 23, 'paladin': 22};
     for (final cls in kClasses.keys) {
       expect(kWeapons.values.where((w) => w.classId == cls),
           hasLength(perFamily[cls]),

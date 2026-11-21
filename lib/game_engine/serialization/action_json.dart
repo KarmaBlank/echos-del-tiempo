@@ -19,11 +19,13 @@ abstract final class ActionJson {
   static String itemKey(BattleItem i) => switch (i) {
         BattleItem.potion => 'pot',
         BattleItem.ether => 'eter',
+        BattleItem.aether => 'eterV',
       };
 
   static BattleItem itemFromKey(String k) => switch (k) {
         'pot' => BattleItem.potion,
         'eter' => BattleItem.ether,
+        'eterV' => BattleItem.aether,
         _ => throw FormatException('JSON inválido: objeto de batalla', k),
       };
 

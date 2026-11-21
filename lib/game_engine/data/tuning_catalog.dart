@@ -24,6 +24,7 @@ abstract final class TuningId {
   static const materials = 'materials';
   static const ecoTier = 'ecoTier';
   static const buildGuide = 'buildGuide';
+  static const consumables = 'consumables';
 }
 
 /// Los valores del código.
@@ -101,6 +102,19 @@ const Map<String, TuningDef> kTuningDefaults = {
     'powerWeight': 1.5,
     'reqPenalty': 0.6,
     'recommendTop': 3,
+  }),
+  // loot.md § 17.6: precios de la tienda y Éter en cofres; combat.md §
+  // "Revivir y el árbol": sinergia de revivir con el árbol.
+  TuningId.consumables: TuningDef('Consumibles y revivir', {
+    'potionPrice': 30,
+    'etherPrice': 40,
+    'aetherMult': 5,
+    'aetherChestChance': 0.05,
+    'espPer': 0.003,
+    'healScale': 0.5,
+    'shieldScale': 1.0,
+    'shieldCap': 0.25,
+    'shieldTurns': 2,
   }),
 };
 

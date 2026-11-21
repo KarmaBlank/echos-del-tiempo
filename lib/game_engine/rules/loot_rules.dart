@@ -171,6 +171,7 @@ class LootRules {
         rng,
         pool,
         (w) =>
+            w.dropWeight *
             (w.level >= itemLevel - 10 ? 3.0 : 1.0) *
             (family != null && w.family == family ? 2.0 : 1.0))!;
   }

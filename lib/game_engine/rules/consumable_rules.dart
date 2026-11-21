@@ -11,6 +11,10 @@ abstract final class ConsumableRules {
   /// Motivo por el que [p] no puede usar [item] ahora, o `null` si puede.
   static String? blockReason(GameSession s, SessionPlayer p, BattleItem item) {
     if (s.mode == SessionMode.battle) return 'En batalla, usa su menú';
+    // El Éter solo sirve sobre un aliado caído (loot.md § 17.6).
+    if (item == BattleItem.aether) {
+      return 'Solo en batalla, sobre un aliado caído';
+    }
     final potion = item == BattleItem.potion;
     final left = potion ? p.profile.potions : p.profile.ethers;
     if (left <= 0) return 'No te quedan';
@@ -22,6 +26,7 @@ abstract final class ConsumableRules {
 
   /// Aplica [item] a [p] (ya validado). Devuelve lo que restauró.
   static int apply(SessionPlayer p, BattleItem item) {
+    if (item == BattleItem.aether) return 0;
     if (item == BattleItem.potion) {
       final a = jsRound(p.maxHp * 0.45);
       p

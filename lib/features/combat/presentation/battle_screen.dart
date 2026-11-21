@@ -214,6 +214,10 @@ class BattleViewState extends State<BattleView>
   /// Submenú de poción abierto (`potMode`): elegir a quién.
   BattleItem? _potMode;
 
+  /// Hay un aliado caído (el Éter solo sirve así).
+  bool get _anyDown =>
+      widget.battle.party.any((q) => !q.alive && !q.isSummon);
+
   /// Categoría elegida en la ventana de comandos.
   BattleCategory _category = BattleCategory.weapon;
 
@@ -817,8 +821,31 @@ class BattleViewState extends State<BattleView>
                     })
                 : null,
           ),
+          // Éter (loot.md § 17.6): solo sobre un aliado caído.
+          if (cur.aethers > 0)
+            BattleAction(
+              id: 'aether',
+              name: 'Éter',
+              value: hexSpan('#ffd166', '100%'),
+              count: cur.aethers,
+              reach: SkillReach.ally,
+              summary: '${hexSpan(SkillReach.ally.hex, 'A un caído')} · '
+                  '${hexSpan('#ffd166', 'revive con toda la vida')}',
+              description: 'Éter ▸ elegir a quién<br>Revive a un aliado '
+                  'caído con el 100% de su vida máx. y le quita '
+                  '${statusNameMarkup(StatusKind.burn)} y '
+                  '${statusNameMarkup(StatusKind.poison)}.',
+              reason: _anyDown ? null : 'No hay aliados caídos.',
+              onSelect: _anyDown
+                  ? () => setState(() {
+                        _potMode = BattleItem.aether;
+                        _selected = 0;
+                      })
+                  : null,
+            ),
         ],
-        badge: hexSpan('#9fb4ff', 'x${cur.potions + cur.ethers}')));
+        badge: hexSpan(
+            '#9fb4ff', 'x${cur.potions + cur.ethers + cur.aethers}')));
 
     // Pasar turno (v0.8.3, combat.md § "Pasar turno"). AUTO nunca pasa.
     // Después de una Instante, la misma tecla termina el turno sin el
@@ -887,6 +914,31 @@ class BattleViewState extends State<BattleView>
   List<BattleAction> _visible(Combatant cur) {
     final b = widget.battle;
     final item = _potMode;
+    if (item == BattleItem.aether) {
+      return [
+        for (final q in b.party)
+          if (!q.alive && !q.isSummon)
+            BattleAction(
+              id: 'give-${q.id}',
+              name: protoEsc(q.name),
+              value: hexSpan('#ffd166', '+${q.maxHp} ¡revive!'),
+              cost: hexSpan('#9fb4ff', '0/${q.maxHp} HP'),
+              description: 'Éter para ${protoEsc(q.name)}: revive con '
+                  '${q.maxHp}/${q.maxHp} HP',
+              onSelect: () =>
+                  _send(ItemCommand(BattleItem.aether, targetPlayerId: q.id)),
+            ),
+        BattleAction(
+          id: 'back',
+          name: '← Volver',
+          description: 'Vuelve a los objetos (Esc).',
+          onSelect: () => setState(() {
+            _potMode = null;
+            _selected = 0;
+          }),
+        ),
+      ];
+    }
     if (item != null) {
       final pot = item == BattleItem.potion;
       return [
@@ -1442,6 +1494,7 @@ class BattleViewState extends State<BattleView>
           '${statusNameMarkup(StatusKind.poison)})?</b>',
       BattleItem.ether => '<b>¿A quién le das la Poción de maná (+50% '
           'maná)?</b>',
+      BattleItem.aether => '¿A quién revives con el Éter (100% de la vida)?',
       // Después de una Instante el turno sigue (combat.md).
       _ => cur.chained
           ? hexSpan(kInstantHex, 'Encadenaste: te queda una acción')
