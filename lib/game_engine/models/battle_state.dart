@@ -59,6 +59,7 @@ class Combatant {
     this.pierceWeakness = 1,
     this.statusWeakness = 0,
     this.stunOnAttackChance = 0,
+    this.duoStunBonus = 0,
     this.lifeSteal = 0,
     this.regenPerTurn = 0,
     this.statusResist = 0,
@@ -178,6 +179,9 @@ class Combatant {
   final double pierceWeakness;
   final int statusWeakness;
   final double stunOnAttackChance;
+
+  /// Aturdir extra con un aliado vivo (Escudo compartido, clase).
+  final double duoStunBonus;
 
   // ---- afijos del arma (loot v2, solo jugadores) ----
   double lifeSteal;
@@ -466,6 +470,7 @@ class Combatant {
         pierceWeakness: pierceWeakness,
         statusWeakness: statusWeakness,
         stunOnAttackChance: stunOnAttackChance,
+        duoStunBonus: duoStunBonus,
         lifeSteal: lifeSteal,
         regenPerTurn: regenPerTurn,
         statusResist: statusResist,

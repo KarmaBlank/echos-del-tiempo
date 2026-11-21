@@ -76,7 +76,7 @@ Tests: `test/game_engine/balance_test.dart`,
 | `weapon` | `GameCatalog.weapons` | `tier`, `level`, `price`, `weight`, `shieldDefense`, `requirements`, `atk`, `mag`, `skillIds` |
 | `enemy` | `GameCatalog.enemies` | `hp`, `attack`, `speed`, `xp`, `credits`, `breakMax`, `armor`, `evasion`, `delayHit`, `markHit`, `pierce`, `areaAttack`, `inflicts`, `inflictCycle` |
 | `enemyUlt` | `GameCatalog.enemyUlts` | `power`, `allTargets`, `status`, `delayAll`, `wipeBuffs`, `guaranteedCrit`, `perAdd`, `turns` |
-| `class` | `GameCatalog.classes` | `baseDefense`, `baseAttributes`, `stunOnAttackChance`, `pierceWeakness`, `statusWeakness` |
+| `class` | `GameCatalog.classes` | `baseDefense`, `baseAttributes`, `stunOnAttackChance`, `duoStunBonus`, `pierceWeakness`, `statusWeakness` |
 | `affix` | `kAffixes` | `weight`, `tiers`, `disabled` |
 | `passiveNode` | `kPassiveTree.nodes` | `effects`, `disabled` |
 | `mechanic` | `kMechanics` + `kAscensionMechanics` | `chance`, `threshold`, `minStacks`, `status`, `effects`, `description`, `disabled` |

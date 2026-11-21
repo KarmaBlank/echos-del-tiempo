@@ -606,6 +606,7 @@ final classCodec = EntityCodec(
     BalanceField('baseDefense', 'DEF base', _int, max: 100),
     BalanceField('baseAttributes', 'Atributos base', BalanceFieldType.attributes),
     BalanceField('stunOnAttackChance', 'Aturdir con ataque', _frac, max: 1, step: 0.01),
+    BalanceField('duoStunBonus', 'Aturdir extra con aliado', _frac, max: 1, step: 0.01),
     BalanceField('pierceWeakness', 'Debilidad a perforantes (×)', _dec, max: 5, step: 0.05),
     BalanceField('statusWeakness', 'Stacks extra recibidos', _int, max: 5),
   ],
@@ -615,6 +616,7 @@ final classCodec = EntityCodec(
       'baseDefense': c.baseDefense,
       'baseAttributes': encodeAttributes(c.baseAttributes),
       'stunOnAttackChance': c.stunOnAttackChance,
+      'duoStunBonus': c.duoStunBonus,
       'pierceWeakness': c.pierceWeakness,
       'statusWeakness': c.statusWeakness,
     };
@@ -631,6 +633,7 @@ final classCodec = EntityCodec(
       kitSkillIds: c.kitSkillIds,
       baseAttributes: decodeAttributes(f.values['baseAttributes']),
       stunOnAttackChance: f.d('stunOnAttackChance'),
+      duoStunBonus: f.d('duoStunBonus'),
       pierceWeakness: f.d('pierceWeakness'),
       statusWeakness: f.i('statusWeakness'),
     );

@@ -16,6 +16,10 @@ class ClassDef {
   /// Probabilidad de aturdir con el ataque básico (`stunAtk`, Paladín 3%).
   final double stunOnAttackChance;
 
+  /// Escudo compartido (v0.20.5, Paladín +15%): con un aliado vivo, suma
+  /// esta probabilidad a todo lo que aturde (ataque básico y habilidades).
+  final double duoStunBonus;
+
   /// Multiplicador de daño recibido de enemigos perforantes
   /// (`weakPierce`, Paladín ×1.5). 1 = sin debilidad.
   final double pierceWeakness;
@@ -34,6 +38,7 @@ class ClassDef {
     this.kitSkillIds = const [],
     this.baseAttributes = const {},
     this.stunOnAttackChance = 0,
+    this.duoStunBonus = 0,
     this.pierceWeakness = 1,
     this.statusWeakness = 0,
   });

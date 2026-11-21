@@ -72,6 +72,8 @@ void main() {
       }
       // Los rasgos de clase siguen.
       expect(c.stunOnAttackChance, 0.03);
+      // Escudo compartido (v0.20.5): +15% de aturdir con un aliado vivo.
+      expect(c.duoStunBonus, 0.15);
       expect(c.pierceWeakness, 1.5);
     });
 
