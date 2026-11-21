@@ -71,13 +71,10 @@ String poiPromptText(MapPoi p, MissionRun m, MapFloor f, double time) {
               'velocidad ${kWindSeconds.round()} s';
     case PoiKind.waystone:
       if (!m.poiUsed.contains(p.id)) return '[E] Activar la piedra de paso';
-      final to = ExplorationRules.nextWaystone(f, m, p);
-      if (to == null) return 'Piedra de paso: activá otra para viajar';
-      final stones = [
-        for (final s in f.pois)
-          if (s.kind == PoiKind.waystone && m.poiUsed.contains(s.id)) s,
-      ];
-      return '[E] Viajar a la piedra ${stones.indexOf(to) + 1}/${stones.length}';
+      if (ExplorationRules.waystoneDestinations(f, m, p).isEmpty) {
+        return 'Piedra de paso: activá otra para viajar';
+      }
+      return '[E] Elegir destino en el mapa';
     case PoiKind.relic:
       return '';
   }

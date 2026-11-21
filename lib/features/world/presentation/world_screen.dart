@@ -748,7 +748,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       case WorldPanel.stash:
         return StashPanel(view: view, controller: controller);
       case WorldPanel.map:
-        return fullMapPanel(view, controller);
+        return fullMapPanel(view, controller,
+            reduceMotion:
+                ref.watch(gameSettingsProvider.select((g) => g.reduceMotion)));
       case WorldPanel.ecoPortal:
         return EcoPortalPanel(
             view: view,

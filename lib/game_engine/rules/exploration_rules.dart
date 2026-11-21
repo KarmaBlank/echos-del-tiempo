@@ -136,6 +136,22 @@ abstract final class ExplorationRules {
     return on[(on.indexOf(from) + 1) % on.length];
   }
 
+  /// Destinos de viaje desde la piedra [from]: las demás piedras
+  /// activadas del piso, en orden (vacío si [from] no está activada).
+  static List<MapPoi> waystoneDestinations(
+      MapFloor f, MissionRun m, MapPoi from) {
+    if (from.kind != PoiKind.waystone || !m.poiUsed.contains(from.id)) {
+      return const [];
+    }
+    return [
+      for (final p in f.pois)
+        if (p.kind == PoiKind.waystone &&
+            p.id != from.id &&
+            m.poiUsed.contains(p.id))
+          p,
+    ];
+  }
+
   /// Velocidad del jugador con el Viento del Eco activo.
   static double speedMult(MissionRun? m, double time) =>
       m != null && time < m.windUntil ? kWindSpeed : 1;

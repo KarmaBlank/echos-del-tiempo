@@ -1030,7 +1030,7 @@ class _Op {
         return _useStairs(p, a.down);
 
       case InteractPoiAction():
-        return _interactPoi(p, a.poiId);
+        return _interactPoi(p, a.poiId, toPoi: a.toPoi);
 
       case ProposeEcoAction():
         return !tutorialLocked && _proposeEco(p, a.uid);
@@ -2672,7 +2672,7 @@ class _Op {
   // ---------------- exploración v0.6 (worldgen.md § 11) ----------------
 
   /// `InteractPoiAction`: E frente a un punto de interés del piso.
-  bool _interactPoi(SessionPlayer p, int poiId) {
+  bool _interactPoi(SessionPlayer p, int poiId, {int? toPoi}) {
     final m = s.mission;
     if (s.mode != SessionMode.field || m == null || !p.alive) return false;
     final f = e.mapFor(s).floor(m.floor);
@@ -2709,7 +2709,15 @@ class _Op {
           m.poiUsed.add(poi.id);
           say('${p.name} activó una piedra de paso.');
         } else {
-          final to = ExplorationRules.nextWaystone(f, m, poi);
+          final MapPoi? to;
+          if (toPoi == null) {
+            to = ExplorationRules.nextWaystone(f, m, poi);
+          } else {
+            // Destino elegido en el mapa: otra piedra activada del piso.
+            to = ExplorationRules.waystoneDestinations(f, m, poi)
+                .where((q) => q.id == toPoi)
+                .firstOrNull;
+          }
           if (to == null) return false;
           // Viaje rápido: solo quien la usa (worldgen.md § 11.3).
           final pos = _besideTile(e.mapFor(s), to.tx, to.ty);

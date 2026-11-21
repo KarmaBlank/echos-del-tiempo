@@ -50,6 +50,9 @@ const _allow = <String, (int, String)>{
   'lib/features/world/presentation/hud/minimap.dart':
       (10, 'colores del ícono que elige el jugador en su filtro de loot y '
           'el vacío de AZUL; el terreno y las marcas son MapPalette'),
+  'lib/features/world/presentation/hud/full_map.dart':
+      (2, 'significado: celeste vivo de las piedras de paso y su número '
+          '(worldgen.md § 11.4)'),
   'lib/features/build_planner/presentation/build_fit_badge.dart':
       (1, 'significado: violeta del plan de build (kPlanColor)'),
   // Fuera del juego.
