@@ -946,7 +946,8 @@ List<MinimapLoot> minimapLootFor(
 }
 
 /// El mapa en grande (tecla M; panel `WorldPanel.map`).
-Widget fullMapPanel(SessionView view, SessionController controller) {
+Widget fullMapPanel(SessionView view, SessionController controller,
+    {bool reduceMotion = false}) {
   final s = view.session;
   final m = s.mission;
   final name = WorldHud(view: view, controller: controller)._missionName(s);
@@ -967,8 +968,27 @@ Widget fullMapPanel(SessionView view, SessionController controller) {
     loot: minimapLootFor(view, controller),
     bounds: MapGame.currentFloor(view)?.bounds,
     entranceOpen: _entranceOpen(view, controller),
+    waystones: _seenWaystones(view),
+    destinations: controller.travelDestinations,
+    originId: controller.travelOrigin?.id,
+    onTravel: controller.travelTo,
+    reduceMotion: reduceMotion,
     onClose: controller.closePanel,
   );
+}
+
+/// Piedras de paso descubiertas del piso actual (§ 11.7), activada o no.
+List<(MapPoi, bool)> _seenWaystones(SessionView view) {
+  final m = view.session.mission;
+  final f = MapGame.currentFloor(view);
+  if (m == null || f == null || view.session.mode != SessionMode.field) {
+    return const [];
+  }
+  return [
+    for (final p in f.pois)
+      if (p.kind == PoiKind.waystone && m.poiSeen.contains(p.id))
+        (p, m.poiUsed.contains(p.id)),
+  ];
 }
 
 /// Despliega / compacta las cajas del grupo del HUD y lo guarda (tecla H

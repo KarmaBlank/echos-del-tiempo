@@ -695,11 +695,25 @@ caminos: un tile rodeado de suelo, ≥ 6 de otro objeto, ≥ 8 del spawn y
 
 - **Piedras de paso**: la primera a ≤ 5 tiles del spawn, las otras por
   punto más lejano (≥ 25 pasos entre ellas). E sobre una sin activar la
-  **activa** (para todos). E sobre una activada **viaja** a la siguiente
-  activada del piso (en orden; el cartel dice `[E] Viajar a la piedra
-  2/3`). **Solo viaja quien la usa** (decisión simple: no hay votación; en
-  co-op cada uno va y vuelve; el host lo pone al lado de la piedra de
-  destino, época +1). Evento `PoiUsedEvent(..., toPoi)`.
+  **activa** (para todos). E sobre una activada con al menos otra
+  activada abre el **mapa en grande en modo "elegir destino"** (v0.20.6,
+  exploration.md § "Mapa en grande"): se puede viajar a **cualquiera** de
+  las otras piedras **activadas** del piso (`ExplorationRules.
+  waystoneDestinations`, en el orden del piso), no solo a la siguiente.
+  El cartel dice `[E] Elegir destino en el mapa` (o `Piedra de paso:
+  activá otra para viajar` si es la única activada).
+  - Acción: `InteractPoiAction(poiId, toPoi:)` (en red `{'t':'poi',
+    'id', 'to'}`, protocolo 31). Sin `toPoi` viaja a la siguiente activada
+    (`nextWaystone`, como antes).
+  - El **host valida**: modo campo (no en batalla, preparación ni
+    resultado), jugador vivo, piso actual, que `poiId` sea el PdI usable
+    más cercano al jugador (está junto a la piedra de origen), que el
+    origen esté activado y que `toPoi` sea otra piedra activada del mismo
+    piso. Si algo falla, no pasa nada.
+  - **Solo viaja quien la usa** (sin votación; en co-op cada uno va y
+    vuelve; el compañero se queda donde está): el host lo pone al lado de
+    la piedra de destino, época +1, y todos lo ven moverse por el estado.
+    Evento `PoiUsedEvent(..., toPoi)`.
 - **Viento del Eco**: santuario reusable. E → todo el grupo camina un
   **+40%** (`kWindSpeed = 1.4`) por **60 s** (`MissionRun.windUntil`, reloj
   de la sala). Lo aplica el cliente al moverse

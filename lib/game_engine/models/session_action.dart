@@ -183,9 +183,13 @@ class UseStairsAction extends SessionAction {
 }
 
 /// E frente a un punto de interés del piso (worldgen.md § 11.3).
+/// En una piedra de paso activada, [toPoi] elige la piedra de destino
+/// (mapa en grande en modo "elegir destino", § 11.4); sin [toPoi] viaja a
+/// la siguiente activada.
 class InteractPoiAction extends SessionAction {
   final int poiId;
-  const InteractPoiAction(this.poiId);
+  final int? toPoi;
+  const InteractPoiAction(this.poiId, {this.toPoi});
 }
 
 // ---------------- loot v2 (docs/specs/loot.md) ----------------
