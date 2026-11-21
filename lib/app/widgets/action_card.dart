@@ -239,7 +239,12 @@ class CardGrid extends StatelessWidget {
     return LayoutBuilder(builder: (context, box) {
       final min = RetroType.width(context, minWidth);
       final w = box.maxWidth;
-      final cols = ((w + gap) / (min + gap)).floor().clamp(1, 99);
+      final fit = ((w + gap) / (min + gap)).floor().clamp(1, 99);
+      // Filas parejas: con 4 tarjetas y lugar para 3, mejor 2 + 2 que
+      // 3 + 1 (una tarjeta huérfana abajo pasa desapercibida).
+      final n = children.isEmpty ? 1 : children.length;
+      final rows = (n / fit).ceil();
+      final cols = (n / rows).ceil().clamp(1, fit);
       final cw = (w - gap * (cols - 1)) / cols;
       return Wrap(
         spacing: gap,
