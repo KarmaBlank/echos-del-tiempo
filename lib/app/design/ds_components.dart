@@ -692,10 +692,15 @@ class DsSectionHeader extends StatelessWidget {
             child:
                 Text(retroText(text.toUpperCase()), style: DsText.subtitle()),
           ),
-          SizedBox(width: DsSpace.sm),
-          Expanded(child: Container(height: 2, color: DsColors.border)),
+          // Los márgenes van dentro de la línea: con muy poco ancho se
+          // achica la línea, no desborda la fila.
+          Expanded(
+              child: Padding(
+                  padding: EdgeInsets.only(
+                      left: DsSpace.sm,
+                      right: trailing == null ? 0 : DsSpace.sm),
+                  child: Container(height: 2, color: DsColors.border))),
           if (trailing != null) ...[
-            SizedBox(width: DsSpace.sm),
             ConstrainedBox(
                 constraints: BoxConstraints(maxWidth: box.maxWidth * 0.45),
                 child: trailing!),
