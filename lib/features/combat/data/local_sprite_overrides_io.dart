@@ -128,7 +128,20 @@ class LocalSpriteOverrides implements EditableSpriteOverrides {
       for (final id in overriddenFx) id: (await readFx(id))!,
     }, await readProcedural(), {
       for (final id in overriddenSfx) id: (await readSfx(id))!,
-    }).encode();
+    }, _readLayouts()).encode();
+  }
+
+  /// Layouts de `<root>/layouts/` (editor_layout.md § 2.6): viajan en el
+  /// mismo paquete de arte.
+  Map<String, String> _readLayouts() {
+    final d = Directory('$root/layouts');
+    if (!d.existsSync()) return const {};
+    return {
+      for (final f in d.listSync().whereType<File>())
+        if (f.uri.pathSegments.last.endsWith('.layout.yaml'))
+          f.uri.pathSegments.last.replaceAll('.layout.yaml', ''):
+              f.readAsStringSync(),
+    };
   }
 
   // ------------------------------------------------- perillas (§ 7.5)
@@ -192,10 +205,16 @@ class LocalSpriteOverrides implements EditableSpriteOverrides {
     for (final MapEntry(:key, :value) in pack.sfx.entries) {
       await putSfx(key, value);
     }
+    for (final MapEntry(:key, :value) in pack.layouts.entries) {
+      final f = _file('layouts/$key.layout.yaml');
+      await f.parent.create(recursive: true);
+      await f.writeAsString(value, flush: true);
+    }
     return [
       ...pack.sprites.keys,
       ...pack.fx.keys,
       ...pack.sfx.keys,
+      for (final k in pack.layouts.keys) 'layout:$k',
       if (pack.procedural != null) ArtPack.proceduralName,
     ];
   }

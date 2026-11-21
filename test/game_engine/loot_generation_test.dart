@@ -93,7 +93,9 @@ void main() {
           expect(i.affixes.length, inInclusiveRange(3, 4));
           expect(i.name, isNotNull);
         case Rarity.epico:
-          expect(i.affixes.length, inInclusiveRange(5, 6));
+          // Con elemento de base, 1 mod menos (weapon_identity.md § 6).
+          expect(i.affixes.length,
+              i.element != null ? inInclusiveRange(4, 5) : inInclusiveRange(5, 6));
           expect(weaponPassivePool(kWeapons[i.baseId]!.type)
               .map((p) => p.id), contains(i.passiveId));
         case Rarity.legendario:

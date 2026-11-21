@@ -4,6 +4,7 @@ import '../data/tuning_catalog.dart';
 import '../data/ascension_catalog.dart';
 import '../data/branch_ults_catalog.dart';
 import '../data/elements_catalog.dart';
+import '../data/weapon_elements_catalog.dart';
 import '../data/enemies_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/passive_mechanics.dart' show mechanicById;
@@ -138,6 +139,18 @@ class BattleEngine {
   /// Pasar turno (v0.8.3, combat.md § "Pasar turno"): el próximo turno
   /// llega en IV × esto (Defender: × 0.7; acción normal: × 1).
   static const passTurnFactor = 0.5;
+
+  // ---- Defender con valor (battle_attack_menu.md § 6) ----
+  /// Pulso de Defender elegido; baja a [defendPulseRepeat] si también
+  /// defendió (a mano) su turno anterior. La defensa automática por
+  /// tiempo agotado da solo el +1 normal y nada de ULT.
+  static const defendPulse = 2;
+  static const defendPulseRepeat = 1;
+
+  /// Carga de ULT al defender y, una vez por defensa, al recibir un
+  /// golpe defendiendo (escala con `ultChargeBonus`).
+  static const defendUlt = 6.0;
+  static const defendHitUlt = 6.0;
 
   // ---- Pulso (combo_balance.md § 5.2) ----
   /// Tope de Pulso por jugador.
@@ -366,6 +379,8 @@ class BattleEngine {
     final p = t.state.current!;
     t.events.add(ActionEvent(p.id, BattleActionKind.defend));
     p.defending = true;
+    p.guardStreak = false;
+    p.guardHitPending = false;
     t._gainPulse(p);
     t.tickEffects(p);
     p.nextTurn = t.state.clock + interval(p);
@@ -681,6 +696,9 @@ class _Turn {
       return;
     }
     if (best.isPlayer) {
+      // Racha de Defender: solo sigue si viene de un Defender elegido.
+      if (!best.defending) best.guardStreak = false;
+      best.guardHitPending = false;
       best.defending = false;
       best.protecting = false;
       best.extraTurn = best.extraTurn == 1 ? 2 : 0;
@@ -1121,6 +1139,12 @@ class _Turn {
     if (taken > 0) {
       p.ult =
           math.min(100, p.ult + taken / p.maxHp * _ultTaken * (1 + p.ultChargeBonus));
+    }
+    if (p.defending && p.guardHitPending) {
+      // Defender con valor: +6 de ULT al primer golpe recibido.
+      p.guardHitPending = false;
+      p.ult = math.min(
+          100, p.ult + BattleEngine.defendHitUlt * (1 + p.ultChargeBonus));
     }
     p.hp = math.max(0, p.hp - taken);
     events.add(DamageEvent(p.id, taken,
@@ -1784,6 +1808,9 @@ class _Turn {
     final el = element ??
         (catalyst > 0 ? _catalystElement(e) : null) ??
         elementOf(sk0?.id);
+    // Sinergia del elemento de base del arma (weapon_identity.md § 4):
+    // las habilidades del mismo elemento pegan +8 %.
+    final weaponEl = a == null ? null : weaponElementOf(a.build?.item);
     final phys = physical ??
         (_act?.skill == null || _act!.skill!.kind == SkillKind.physical);
     var chance = critChance;
@@ -1816,6 +1843,14 @@ class _Turn {
       if (aura != 0) {
         mult *= 1 + aura;
         mods.add('× ${fm(1 + aura)} aura');
+      }
+      if (weaponEl != null &&
+          primary &&
+          sk0 != null &&
+          el == weaponEl &&
+          kWeaponElementSynergy != 0) {
+        mult *= 1 + kWeaponElementSynergy;
+        mods.add('× ${fm(1 + kWeaponElementSynergy)} arma ${weaponEl.label}');
       }
       if (single && primary && a.keystones.contains('cadena')) {
         mult *= 0.8;
@@ -4314,7 +4349,15 @@ class _Turn {
       case DefendCommand():
         events.add(ActionEvent(p.id, BattleActionKind.defend));
         p.defending = true;
-        _gainPulse(p);
+        _gainPulse(
+            p,
+            p.guardStreak
+                ? BattleEngine.defendPulseRepeat
+                : BattleEngine.defendPulse);
+        p.guardStreak = true;
+        p.guardHitPending = true;
+        p.ult = math.min(
+            100, p.ult + BattleEngine.defendUlt * (1 + p.ultChargeBonus));
         state.log = '${p.name} se defiende (actúa antes)';
         _act = null;
         tickEffects(p);
@@ -4401,24 +4444,33 @@ class _Turn {
 
   void _attack(Combatant p, List<Combatant> foes, Combatant target) {
     final atk = _atk(p);
+    // Elemento de base del arma (weapon_identity.md § 4): el básico pasa a
+    // ser de ese elemento (respeta débil/resiste y reacciona) y aplica 1
+    // pila de su estado cada `kWeaponElementHitsPerStack` golpes.
+    final wel = weaponElementOf(p.build?.item);
     if (p.keystones.contains('imparable')) {
       final hits = [
-        for (final e in foes) _damageEnemy(e, atk * 0.6, p.critChance),
+        for (final e in foes)
+          _damageEnemy(e, atk * 0.6, p.critChance, element: wel),
       ];
+      _weaponElementStack(p, wel, foes);
       state.log = _damageLog(
           '${p.name} · Golpe Imparable (todos)', _atkText(p), atk, 0.6, hits,
           all: true);
       return;
     }
     final act = _act!..single = true;
-    final hit =
-        _damageEnemy(target, atk.toDouble(), p.critChance, single: true);
+    final hit = _damageEnemy(target, atk.toDouble(), p.critChance,
+        single: true, element: wel);
     act
       ..mainTarget = target
       ..mainHit = hit;
     var log = _damageLog(
         '${p.name} ataca → ${target.name}', _atkText(p), atk, 1, [hit],
         all: false);
+    if (_weaponElementStack(p, wel, [target])) {
+      log += ' · ${wel!.label}: +1 pila';
+    }
     final stunChance = p.stunOnAttackChance;
     if (stunChance > 0 &&
         target.alive &&
@@ -4442,6 +4494,26 @@ class _Turn {
       log += ' · Sagrado (5/turno, 3 turnos)';
     }
     state.log = log;
+  }
+
+  /// Cuenta un básico con elemento de arma y, cada
+  /// `kWeaponElementHitsPerStack`, aplica 1 pila del estado del elemento
+  /// a [targets]. `true` si entró en alguno.
+  bool _weaponElementStack(
+      Combatant p, GameElement? wel, List<Combatant> targets) {
+    final st = wel?.status;
+    if (st == null) return false;
+    p.basicHits++;
+    final every = math.max(1, kWeaponElementHitsPerStack);
+    if (p.basicHits % every != 0) return false;
+    var any = false;
+    for (final t in targets) {
+      if (t.alive &&
+          _addStatus(t, StatusApplication(st, 1), source: p, primary: true)) {
+        any = true;
+      }
+    }
+    return any;
   }
 
   /// Rama `tech`/`ult` de `battleCmd`. Devuelve la carga de ULT base de

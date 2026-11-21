@@ -1,0 +1,25 @@
+# ALIJO (docs/specs/editor_layout.md § 4, piloto). Regiones del template:
+# header, left (personaje), right (alijo), footer. Solo regiones y orden;
+# las grillas son fijas.
+screen: stash
+version: 1
+slots:
+  - id: stash.actions
+    region: footer
+    order: 0
+    children:
+      - stash.actions.transfer
+      - stash.actions.move_all
+      - stash.actions.pick
+  - {id: stash.status, region: footer, order: 1}
+  - {id: stash.title, region: left, order: 0}
+  - {id: stash.equipped, region: left, order: 1}
+  - {id: stash.inventory_label, region: left, order: 2}
+  - {id: stash.search_char, region: left, order: 3}
+  - {id: stash.inventory_grid, region: left, order: 4}
+  - {id: stash.stacks, region: left, order: 5}
+  - {id: stash.stash_header, region: right, order: 0}
+  - {id: stash.stash_tabs, region: right, order: 1}
+  - {id: stash.search_stash, region: right, order: 2}
+  - {id: stash.stash_grid, region: right, order: 3}
+  - {id: stash.eco_note, region: right, order: 4}

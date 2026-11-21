@@ -1143,11 +1143,13 @@ el resto (los sprites son chicos). En 1280×720 Normal: 302 px.
 `lib/features/combat/presentation/battle_command_window.dart`), solo en
 el turno propio (co-op: cada uno ve sus comandos):
 
-1. **Categorías**: ATACAR (Atacar + "Liberar a
-   X" si hay telaraña) · HABILIDADES (técnicas, con la cantidad) · DÚOS
+1. **Categorías** (v0.20.0, battle_attack_menu.md § 6): ARMA (Atacar ·
+   Defender · "Liberar a X" si hay telaraña · separador "Instante — no
+   terminan tu turno" y las Instante; Defender es la tecla `2`) ·
+   HABILIDADES (técnicas que terminan el turno, con la cantidad) · DÚOS
    (si hay) · ULTIMATE (gris hasta el 100 %, con el %) · OBJETOS (las dos
    pociones; elegir una abre "¿A quién le das...?" con el grupo) ·
-   DEFENDER · PASAR (v0.8.3, siempre la última: una acción "Pasar turno"
+   PASAR (v0.8.3, siempre la última: una acción "Pasar turno"
    con costo `próximo ×½` y la descripción "Terminás el turno sin actuar;
    tu próximo turno llega antes..."; combat.md § "Pasar turno"). Vale
    igual en el turno manual de un compañero (solo_party.md); el AUTO
@@ -1187,7 +1189,7 @@ descripción sale de la acción elegida en el momento. Cada fila se arma
 con `ValueKey('battle-act-<id>')` (id estable: `skill-<id>`, `duo-<aliado>`
 y `duo-<aliado>-<dúo de armas>` (v0.8.3),
 `attack`, `potion`, `give-<id>`...), así Flutter nunca reutiliza la fila
-de una técnica para otra, y el menú vuelve a ATACAR con la primera acción
+de una técnica para otra, y el menú vuelve a ARMA con la primera acción
 elegida en cada turno nuevo, al actuar o al perder el turno. Los
 tooltips (`RetroTooltip`) leen su mensaje del widget actual al dibujarse.
 
@@ -1527,6 +1529,11 @@ así que no hacen falta las tarjetas de los demás.
 
 Pedidos del dueño, para ahorrar espacio y no tapar la elección:
 
+- **v0.20.0:** las Instante pasan a ARMA, debajo de Atacar y Defender,
+  con el separador "Instante — no terminan tu turno" (no es acción: los
+  atajos no cambian); la insignia del panel derecho sigue igual.
+  Defender muestra en el panel `½ daño · +N Pulso · +6 ULT`. El tooltip
+  del enemigo suma Débil/Resiste/Inmune cuando la ficha dice "???".
 - **HABILIDADES sin banner arriba.** Ya no hay separador fijo
   "Instante — no terminan tu turno" sobre la lista (las Instante siguen
   primero, con su `DsTag.instant` en la fila). Cuando la acción bajo el

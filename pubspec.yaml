@@ -58,6 +58,9 @@ flutter:
     # por categoría de kFxCategories, todas registradas de antemano (el
     # Editor publica ahí sin tocar este archivo; test fx_assets_test).
     - assets/fx/fx_manifest.yaml
+    # Layouts como datos (docs/specs/editor_layout.md § 2.2): manifest +
+    # un YAML por pantalla en la misma carpeta.
+    - assets/layouts/
     - assets/fx/ult/
     - assets/fx/duo/
     - assets/fx/skill/

@@ -77,6 +77,7 @@ class Combatant {
     this.inflicts,
     Map<StatusKind, int>? statuses,
     this.holyTurns = 0,
+    this.basicHits = 0,
     this.nextTurn = 0,
     this.defending = false,
     this.protecting = false,
@@ -122,6 +123,8 @@ class Combatant {
     this.summonKills = 0,
     this.pulse = 0,
     this.chained = false,
+    this.guardStreak = false,
+    this.guardHitPending = false,
     this.practice = false,
     this.ultWeaken = 0,
     this.lastSkillId,
@@ -204,6 +207,10 @@ class Combatant {
   // ---- estado de batalla ----
   Map<StatusKind, int> statuses;
   int holyTurns;
+
+  /// Ataques básicos con elemento de arma dados (weapon_identity.md § 4:
+  /// 1 pila cada `kWeaponElementHitsPerStack`).
+  int basicHits;
   double nextTurn;
   bool defending;
   bool protecting;
@@ -361,6 +368,16 @@ class Combatant {
   /// una acción más, pero no otra Instante encadenada.
   bool chained;
 
+  /// Su última defensa fue un Defender elegido (no la automática por
+  /// tiempo agotado) y no hizo otra cosa desde entonces: el próximo
+  /// Defender da +1 Pulso en vez de +2 (battle_attack_menu.md § 6).
+  /// Lo decide el host; viaja en el estado como `gst` (opcional).
+  bool guardStreak;
+
+  /// Defendió a mano y todavía no le cobró el +6 de ULT por recibir un
+  /// golpe defendiendo (una vez por defensa).
+  bool guardHitPending;
+
   /// De práctica (combat_tutorial.md § 3): su vida nunca baja de 1, no
   /// cae ("se recompone").
   bool practice;
@@ -467,6 +484,7 @@ class Combatant {
         inflicts: inflicts,
         statuses: Map.of(statuses),
         holyTurns: holyTurns,
+        basicHits: basicHits,
         nextTurn: nextTurn,
         defending: defending,
         protecting: protecting,
@@ -512,6 +530,8 @@ class Combatant {
         summonKills: summonKills,
         pulse: pulse,
         chained: chained,
+        guardStreak: guardStreak,
+        guardHitPending: guardHitPending,
         practice: practice,
         ultWeaken: ultWeaken,
         lastSkillId: lastSkillId,

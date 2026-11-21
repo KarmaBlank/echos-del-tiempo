@@ -82,6 +82,9 @@ class ComparisonDelta extends StatelessWidget {
         _plus('Pasiva', _passive(cmp.passiveAfter!)),
       if (cmp.passiveChanged && cmp.passiveBefore != null)
         _minus('Pasiva', _passive(cmp.passiveBefore!)),
+      if (cmp.elementChanged)
+        'Elemento: ${protoEsc(cmp.elementBefore?.label ?? '—')} → '
+            '${protoEsc(cmp.elementAfter?.label ?? '—')}',
       if (cmp.ultChanged)
         protoColor(ProtoColors.pink,
             'ULT: ${protoEsc(cmp.ultBefore ?? '—')} → ${protoEsc(cmp.ultAfter ?? '—')}'),
@@ -231,6 +234,9 @@ class CompactComparison extends StatelessWidget {
         _plus('Pasiva', _passive(cmp.passiveAfter!)),
       if (cmp.passiveChanged && cmp.passiveBefore != null)
         _minus('Pasiva', _passive(cmp.passiveBefore!)),
+      if (cmp.elementChanged)
+        'Elemento: ${protoEsc(cmp.elementBefore?.label ?? '—')} → '
+            '${protoEsc(cmp.elementAfter?.label ?? '—')}',
       if (cmp.ultChanged)
         protoColor(ProtoColors.pink,
             'ULT: ${protoEsc(cmp.ultBefore ?? '—')} → ${protoEsc(cmp.ultAfter ?? '—')}'),

@@ -10,11 +10,14 @@ import '../../features/admin/data/admin_host.dart';
 import '../../features/admin/presentation/admin_app.dart';
 import '../../features/admin/presentation/admin_controller.dart';
 import '../../features/admin/presentation/editor/fx_editor_controller.dart';
+import '../../features/admin/presentation/editor/layout_editor_controller.dart';
 import '../../features/admin/presentation/editor/sprite_editor_controller.dart';
 import '../../features/combat/presentation/scene/fx_bridge.dart';
 import '../../features/combat/data/local_sprite_overrides.dart';
 import '../../features/combat/presentation/sprite_catalog.dart';
 import '../../firebase_options.dart';
+import '../../core/layout/layout_catalog.dart';
+import '../../core/layout/layout_overrides.dart';
 
 /// Composition root del admin de balance y monitoreo
 /// (docs/specs/balance_admin.md § 5):
@@ -60,8 +63,24 @@ Future<void> main() async {
     sfx: SfxService(player: AudioplayersSfxPlayer()),
   );
   sprites.fx = fx;
+  // LAYOUT (docs/specs/editor_layout.md § 3): YAML del repo en disco (para
+  // ver lo publicado sin recompilar) + overrides de la misma carpeta.
+  final layoutCatalog = LayoutCatalog(
+      bundle: repo == null ? null : repoAssetBundle(repo),
+      overrides: createLocalLayoutOverrides(
+          repo == null ? null : host.join(repo, 'overrides')));
+  await layoutCatalog.load();
+  final layouts = LayoutEditorController(
+    catalog: layoutCatalog,
+    overrides: layoutCatalog.overrides as EditableLayoutOverrides?,
+    repoPath: repo,
+  );
   unawaited(sprites.loadAll());
-  runApp(AdminApp(controller: controller, sprites: sprites, animations: fx));
+  runApp(AdminApp(
+      controller: controller,
+      sprites: sprites,
+      animations: fx,
+      layouts: layouts));
   // Releases publicados: la versión siguiente no puede repetir un tag.
   unawaited(controller.refreshReleases());
 }

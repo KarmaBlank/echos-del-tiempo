@@ -21,7 +21,8 @@ import '../../../../core/audio/sfx_files.dart' show sfxExtOf;
 /// ```
 class ArtPack {
   const ArtPack(this.sprites,
-      [this.fx = const {}, this.procedural, this.sfx = const {}]);
+      [this.fx = const {}, this.procedural, this.sfx = const {},
+       this.layouts = const {}]);
 
   /// Id de sonido → bytes WAV u OGG (game_editor.md § 7.6).
   final Map<String, Uint8List> sfx;
@@ -36,6 +37,9 @@ class ArtPack {
   final String? procedural;
 
   static const proceduralName = 'procedural.yaml';
+
+  /// Pantalla → texto `<screen>.layout.yaml` (editor_layout.md § 2.6).
+  final Map<String, String> layouts;
 
   static const indexName = 'art_pack.yaml';
   static const schema = 1;
@@ -62,6 +66,13 @@ class ArtPack {
         index.writeln('  $id: ${_sfxPath(id)}');
       }
     }
+    final layoutIds = layouts.keys.toList()..sort();
+    if (layoutIds.isNotEmpty) {
+      index.writeln('layouts:');
+      for (final id in layoutIds) {
+        index.writeln('  $id: layouts/$id.layout.yaml');
+      }
+    }
     final a = Archive();
     final idx = utf8.encode(index.toString());
     a.addFile(ArchiveFile(indexName, idx.length, idx));
@@ -78,6 +89,10 @@ class ArtPack {
     }
     for (final id in sfxIds) {
       a.addFile(ArchiveFile(_sfxPath(id), sfx[id]!.length, sfx[id]!));
+    }
+    for (final id in layoutIds) {
+      final b = utf8.encode(layouts[id]!);
+      a.addFile(ArchiveFile('layouts/$id.layout.yaml', b.length, b));
     }
     return Uint8List.fromList(ZipEncoder().encode(a)!);
   }
@@ -128,7 +143,15 @@ class ArtPack {
         sfx[key as String] = Uint8List.fromList(f.content as List<int>);
       }
     }
-    return ArtPack(out, fx, procedural, sfx);
+    final layouts = <String, String>{};
+    if (doc['layouts'] case final YamlMap l) {
+      for (final MapEntry(:key, :value) in l.entries) {
+        final f = a.findFile(value as String);
+        if (f == null) throw FormatException('Falta $value.');
+        layouts[key as String] = utf8.decode(f.content as List<int>);
+      }
+    }
+    return ArtPack(out, fx, procedural, sfx, layouts);
   }
 
   String _sfxPath(String id) => 'sfx/$id.${sfxExtOf(sfx[id]!)}';

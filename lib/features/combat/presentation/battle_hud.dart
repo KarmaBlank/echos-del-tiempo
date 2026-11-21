@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/procedural/weapon_look.dart';
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/party_box.dart';
@@ -1058,6 +1059,7 @@ class _PartyCard extends StatelessWidget {
                           key: ValueKey('hud-figure-${p.id}'),
                           classId: p.classId ?? '',
                           weaponType: p.weaponType,
+                          look: lookOfCombatant(p),
                           size: _avatar),
                 ),
                 const SizedBox(width: 5),
@@ -1361,6 +1363,7 @@ class BattleAllyList extends StatelessWidget {
                 : HeroFigure(img,
                     classId: p.classId ?? '',
                     weaponType: p.weaponType,
+                    look: lookOfCombatant(p),
                     size: const Size(32, 40)),
           ),
           const SizedBox(width: 5),

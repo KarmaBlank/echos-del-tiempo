@@ -559,6 +559,7 @@ class SessionJson {
               },
         'sts': enumIntMapToJson(c.statuses),
         'holy': c.holyTurns,
+        if (c.basicHits != 0) 'bh': c.basicHits,
         'nt': c.nextTurn,
         'dfd': c.defending,
         'prot': c.protecting,
@@ -627,6 +628,8 @@ class SessionJson {
         // Pulso e Instante v0.9 (opcionales; combo_balance.md § 5.2).
         if (c.pulse != 0) 'pls': c.pulse,
         if (c.chained) 'chn': true,
+        if (c.guardStreak) 'gst': true,
+        if (c.guardHitPending) 'ghp': true,
         if (c.practice) 'prac': true,
         // Letra de repetidos v0.13.1 (opcional).
         if (c.tag != null) 'tag': c.tag,
@@ -693,6 +696,7 @@ class SessionJson {
               chance: inf.dblOrNull('ch')),
       statuses: enumIntMap(j['sts'], StatusKind.values),
       holyTurns: j.integer('holy'),
+      basicHits: j['bh'] is num ? (j['bh'] as num).toInt() : 0,
       nextTurn: j.dbl('nt'),
       defending: j.boolean('dfd'),
       protecting: j.boolean('prot'),
@@ -756,6 +760,8 @@ class SessionJson {
       summonKills: j.intOrNull('smN') ?? 0,
       pulse: j.intOrNull('pls') ?? 0,
       chained: j.flag('chn'),
+      guardStreak: j.flag('gst'),
+      guardHitPending: j.flag('ghp'),
       practice: j.flag('prac'),
       tag: j.strOrNull('tag'),
     );

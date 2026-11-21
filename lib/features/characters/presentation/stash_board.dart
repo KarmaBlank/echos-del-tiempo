@@ -1,6 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
+import '../../../app/design/ds_layout_host.dart';
+import '../../../core/layout/layout_catalog.dart';
+import '../../../core/layout/layout_doc.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
@@ -20,6 +23,7 @@ import '../../inventory/presentation/item_grid.dart';
 import '../../inventory/presentation/item_hover_tip.dart';
 import '../../inventory/presentation/item_widgets.dart';
 import '../domain/stash.dart';
+import 'stash_layout.dart';
 
 /// Lo que el tablero del alijo necesita de quien lo abre: fuera de la
 /// sesión, la cuenta directa ([StashScreen]); en partida, el
@@ -58,9 +62,23 @@ enum _Side { character, stash }
 /// "Guardar en alijo" / "Sacar al inventario". MOVER TODO AL ALIJO y el
 /// modo ELEGIR (varias casillas, una sola operación).
 class StashBoard extends StatefulWidget {
-  const StashBoard({super.key, required this.host, this.title});
+  const StashBoard(
+      {super.key,
+      required this.host,
+      this.title,
+      this.layout,
+      this.layoutCatalog,
+      this.layoutHooks});
 
   final StashBoardHost host;
+
+  /// Layout fijo (Editor → LAYOUT); si es `null`, el de [layoutCatalog]
+  /// (por defecto `LayoutCatalog.instance`). editor_layout.md § 2.
+  final LayoutDoc? layout;
+  final LayoutCatalog? layoutCatalog;
+
+  /// Ganchos del Editor (selección, arrastre); `null` en el juego.
+  final DsLayoutHooks? layoutHooks;
 
   /// Encabezado del lado del personaje (nombre · clase · nivel).
   final String? title;
@@ -463,106 +481,101 @@ class StashBoardState extends State<StashBoard> {
           ? _pickedTokens.contains(t)
           : _side == _Side.character && _selToken == t);
 
-  Widget _characterSide(PlayerProfile p) {
-    final cells = InventoryRules.layout(p).cells;
+  /// Slots del lado del personaje (StashLayout.spec).
+  Widget? _title() => widget.title == null
+      ? null
+      : Text(retroText(widget.title!), style: DsText.title());
+
+  Widget _equipped(PlayerProfile p) {
     final eq = p.equippedItem;
     final eqContent = eq == null ? null : CellContent.item(eq);
-    return SizedBox(
-      width: _gridWidth(InventoryRules.columns),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+        spacing: DsSpace.sm,
+        runSpacing: DsSpace.xs,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          if (widget.title != null) ...[
-            Text(retroText(widget.title!), style: DsText.title()),
-            SizedBox(height: DsSpace.sm),
-          ],
-          Wrap(
-              spacing: DsSpace.sm,
-              runSpacing: DsSpace.xs,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-            Text('Equipada:', style: DsText.detail()),
-            _cell(
-              key: const ValueKey('stash-char-equipped'),
-              content: eqContent,
-              selected: _charSelected(eq?.uid),
-              viewer: p,
-              equipped: true,
-              blocked: eq == null ? null : _stashRules.blocked(p, eq.uid),
-              onTap: () => _tapCharacter(eq?.uid, null),
-            ),
-            Text(retroText('Créditos: ₵${p.credits}'),
-                style: DsText.body(DsColors.reward)),
-          ]),
-          SizedBox(height: DsSpace.sm),
-          Text(
-              'INVENTARIO (${InventoryRules.cellsUsed(p)}/${InventoryRules.cells})',
-              style: DsText.detail()),
-          SizedBox(height: DsSpace.xs),
-          KeyedSubtree(
-            key: const ValueKey('stash-search-char'),
-            child: DsSearchField(
-              hint: 'BUSCAR EN EL INVENTARIO',
-              width: 260,
-              controller: _searchChar,
-              onChanged: (v) => setState(() => _qChar = v),
-            ),
+          Text('Equipada:', style: DsText.detail()),
+          _cell(
+            key: const ValueKey('stash-char-equipped'),
+            content: eqContent,
+            selected: _charSelected(eq?.uid),
+            viewer: p,
+            equipped: true,
+            blocked: eq == null ? null : _stashRules.blocked(p, eq.uid),
+            onTap: () => _tapCharacter(eq?.uid, null),
           ),
-          SizedBox(height: DsSpace.sm),
-          RetroTipArea(
-              bounds: () => _tipBounds(character: true),
-              child: KeyedSubtree(
-                  key: _charGridKey,
-                  child: DsItemGrid(
-                    rules: _rules,
-                    count: InventoryRules.cells,
-                    columns: InventoryRules.columns,
-                    cellSize: _cellSize,
-                    gap: _gap,
-                    width: _gridWidth(InventoryRules.columns),
-                    cellKey: (i) => ValueKey('stash-char-$i'),
-                    slot: (i) {
-                      final t = cells[i];
-                      final c = _charContent(p, t);
-                      final sel = _charSelected(t);
-                      return ItemSlotData(
-                          content: c,
-                          selected: sel,
-                          highlight: sel,
-                          dimmed: c != null && !_matches(c, _qChar));
-                    },
-                    tip: (i, child, focused) {
-                      final t = cells[i]!;
-                      final c = _charContent(p, t)!;
-                      final blocked = _stashRules.blocked(p, t);
-                      return _tip(c, child,
-                          tooltip: _tooltip(p, c, blocked: blocked),
-                          viewer: p,
-                          focused: focused,
-                          blocked: blocked);
-                    },
-                    onTap: (i) => _tapCharacter(cells[i], i),
-                    onMenu: (i, at) => _menuCharacter(cells[i]!, i, at),
-                  ))),
-          SizedBox(height: DsSpace.sm),
-          // Los materiales no ocupan casilla (loot.md § 17.1); las pociones
-          // se ven pero no van al alijo.
-          InventoryStacksBar(
-            rules: _rules,
-            profile: p,
-            cell: _cellSize,
-            gap: _gap,
-            selected: _picking
-                ? (_pickedTokens.isEmpty ? null : _pickedTokens.last)
-                : _side == _Side.character
-                    ? _selToken
-                    : null,
-            onSelect: (t) => _tapCharacter(t, null),
-          ),
-        ],
-      ),
-    );
+          Text(retroText('Créditos: ₵${p.credits}'),
+              style: DsText.body(DsColors.reward)),
+        ]);
   }
+
+  Widget _inventoryLabel(PlayerProfile p) => Text(
+      'INVENTARIO (${InventoryRules.cellsUsed(p)}/${InventoryRules.cells})',
+      style: DsText.detail());
+
+  Widget _searchCharField() => KeyedSubtree(
+        key: const ValueKey('stash-search-char'),
+        child: DsSearchField(
+          hint: 'BUSCAR EN EL INVENTARIO',
+          width: 260,
+          controller: _searchChar,
+          onChanged: (v) => setState(() => _qChar = v),
+        ),
+      );
+
+  Widget _inventoryGrid(PlayerProfile p) {
+    final cells = InventoryRules.layout(p).cells;
+    return RetroTipArea(
+        bounds: () => _tipBounds(character: true),
+        child: KeyedSubtree(
+            key: _charGridKey,
+            child: DsItemGrid(
+              rules: _rules,
+              count: InventoryRules.cells,
+              columns: InventoryRules.columns,
+              cellSize: _cellSize,
+              gap: _gap,
+              width: _gridWidth(InventoryRules.columns),
+              cellKey: (i) => ValueKey('stash-char-$i'),
+              slot: (i) {
+                final t = cells[i];
+                final c = _charContent(p, t);
+                final sel = _charSelected(t);
+                return ItemSlotData(
+                    content: c,
+                    selected: sel,
+                    highlight: sel,
+                    dimmed: c != null && !_matches(c, _qChar));
+              },
+              tip: (i, child, focused) {
+                final t = cells[i]!;
+                final c = _charContent(p, t)!;
+                final blocked = _stashRules.blocked(p, t);
+                return _tip(c, child,
+                    tooltip: _tooltip(p, c, blocked: blocked),
+                    viewer: p,
+                    focused: focused,
+                    blocked: blocked);
+              },
+              onTap: (i) => _tapCharacter(cells[i], i),
+              onMenu: (i, at) => _menuCharacter(cells[i]!, i, at),
+            )));
+  }
+
+  // Los materiales no ocupan casilla (loot.md § 17.1); las pociones se ven
+  // pero no van al alijo.
+  Widget _stacks(PlayerProfile p) => InventoryStacksBar(
+        rules: _rules,
+        profile: p,
+        cell: _cellSize,
+        gap: _gap,
+        selected: _picking
+            ? (_pickedTokens.isEmpty ? null : _pickedTokens.last)
+            : _side == _Side.character
+                ? _selToken
+                : null,
+        onSelect: (t) => _tapCharacter(t, null),
+      );
 
   int _tabUsed(Stash s, int t) {
     var n = 0;
@@ -602,88 +615,81 @@ class StashBoardState extends State<StashBoard> {
     );
   }
 
-  Widget _stashSide(PlayerProfile p, Stash s) {
-    final base = _tab * Stash.perTab;
-    return SizedBox(
-      width: _gridWidth(Stash.columns),
-      child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-            spacing: DsSpace.md,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-          Text('ALIJO', style: DsText.title()),
-          Text('${s.used}/${Stash.size}',
-              key: const ValueKey('stash-used'), style: DsText.detail()),
-        ]),
-        SizedBox(height: DsSpace.xs),
-        // Pestañas en un Wrap (no el TabBar desplazable): con texto
-        // grande bajan de línea en vez de salirse del panel.
-        Wrap(
-          spacing: DsSpace.xs,
-          runSpacing: DsSpace.xs,
+  /// Slots del lado del alijo (StashLayout.spec).
+  Widget _stashHeader(Stash s) => Wrap(
+          spacing: DsSpace.md,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            for (var t = 0; t < Stash.tabs; t++) _tabButton(s, t),
-          ],
-        ),
-        SizedBox(height: DsSpace.xs),
-        KeyedSubtree(
-          key: const ValueKey('stash-search-stash'),
-          child: DsSearchField(
-            hint: 'BUSCAR EN EL ALIJO',
-            width: 260,
-            controller: _searchStash,
-            onChanged: (v) => setState(() => _qStash = v),
-          ),
-        ),
-        SizedBox(height: DsSpace.sm),
-        RetroTipArea(
-            bounds: () => _tipBounds(character: false),
-            child: KeyedSubtree(
-                key: _stashGridKey,
-                child: DsItemGrid(
-                  rules: _rules,
-                  count: Stash.perTab,
-                  columns: Stash.columns,
-                  cellSize: _cellSize,
-                  gap: _gap,
-                  width: _gridWidth(Stash.columns),
-                  cellKey: (k) => ValueKey('stash-cell-${base + k}'),
-                  slot: (k) {
-                    final i = base + k;
-                    final c = _stashContent(s.cells[i]);
-                    final sel = _picking
-                        ? _pickedCells.contains(i)
-                        : _side == _Side.stash && _selCell == i;
-                    return ItemSlotData(
-                        content: c,
-                        selected: sel,
-                        highlight: sel,
-                        dimmed: c != null && !_matches(c, _qStash));
-                  },
-                  tip: (k, child, focused) {
-                    final e = s.cells[base + k]!;
-                    final c = _stashContent(e)!;
-                    return _tip(c, child,
-                        tooltip: e.material != null
-                            ? _stashStackTooltip(e.material!, e.count)
-                            : _tooltip(p, c),
-                        viewer: p,
-                        focused: focused);
-                  },
-                  onTap: (k) => _tapStash(base + k),
-                  onMenu: (k, at) => _menuStash(base + k, at),
-                ))),
-        if (_tab == Stash.ecoTab) ...[
-          SizedBox(height: DsSpace.xs),
-          Text('Ecos y materiales del Atlas y del Abismo',
-              style: DsText.detail()),
+            Text('ALIJO', style: DsText.title()),
+            Text('${s.used}/${Stash.size}',
+                key: const ValueKey('stash-used'), style: DsText.detail()),
+          ]);
+
+  // Pestañas en un Wrap (no el TabBar desplazable): con texto grande bajan
+  // de línea en vez de salirse del panel.
+  Widget _stashTabs(Stash s) => Wrap(
+        spacing: DsSpace.xs,
+        runSpacing: DsSpace.xs,
+        children: [
+          for (var t = 0; t < Stash.tabs; t++) _tabButton(s, t),
         ],
-      ],
-      ),
-    );
+      );
+
+  Widget _searchStashField() => KeyedSubtree(
+        key: const ValueKey('stash-search-stash'),
+        child: DsSearchField(
+          hint: 'BUSCAR EN EL ALIJO',
+          width: 260,
+          controller: _searchStash,
+          onChanged: (v) => setState(() => _qStash = v),
+        ),
+      );
+
+  Widget _stashGrid(PlayerProfile p, Stash s) {
+    final base = _tab * Stash.perTab;
+    return RetroTipArea(
+        bounds: () => _tipBounds(character: false),
+        child: KeyedSubtree(
+            key: _stashGridKey,
+            child: DsItemGrid(
+              rules: _rules,
+              count: Stash.perTab,
+              columns: Stash.columns,
+              cellSize: _cellSize,
+              gap: _gap,
+              width: _gridWidth(Stash.columns),
+              cellKey: (k) => ValueKey('stash-cell-${base + k}'),
+              slot: (k) {
+                final i = base + k;
+                final c = _stashContent(s.cells[i]);
+                final sel = _picking
+                    ? _pickedCells.contains(i)
+                    : _side == _Side.stash && _selCell == i;
+                return ItemSlotData(
+                    content: c,
+                    selected: sel,
+                    highlight: sel,
+                    dimmed: c != null && !_matches(c, _qStash));
+              },
+              tip: (k, child, focused) {
+                final e = s.cells[base + k]!;
+                final c = _stashContent(e)!;
+                return _tip(c, child,
+                    tooltip: e.material != null
+                        ? _stashStackTooltip(e.material!, e.count)
+                        : _tooltip(p, c),
+                    viewer: p,
+                    focused: focused);
+              },
+              onTap: (k) => _tapStash(base + k),
+              onMenu: (k, at) => _menuStash(base + k, at),
+            )));
   }
+
+  Widget? _ecoNote() => _tab == Stash.ecoTab
+      ? Text('Ecos y materiales del Atlas y del Abismo',
+          style: DsText.detail())
+      : null;
 
   String? _selectionMarkup(PlayerProfile p, Stash s) {
     if (_side == null) return null;
@@ -697,132 +703,177 @@ class StashBoardState extends State<StashBoard> {
     return '<b style="color:#78e6dc">${protoEsc(c.stack!.label)}</b> x${c.count}';
   }
 
-  List<Widget> _actions(PlayerProfile p, Stash s) {
+  /// Slots de la fila de acciones (grupo `stash.actions`). En el modo
+  /// ELEGIR: cuenta + MOVER ELEGIDOS en el lugar de la transferencia y
+  /// CANCELAR en el de MOVER TODO.
+  Widget _transfer() {
     final busy = host.busy;
     final wait = busy ? 'Esperando...' : null;
     if (_picking) {
       final n = _pickedTokens.length + _pickedCells.length;
       final toStash = _pickedCells.isEmpty;
-      return [
-        Text('$n elegidos',
-            key: const ValueKey('stash-picked'), style: DsText.body()),
-        DsButton(toStash ? 'MOVER ELEGIDOS' : 'SACAR ELEGIDOS',
-            key: const ValueKey('stash-move-picked'),
-            kind: DsButtonKind.primary,
-            tooltip: wait ?? (n == 0 ? 'Elige casillas con clic' : null),
-            onPressed: n == 0 || busy ? null : _movePicked),
-        DsButton('CANCELAR',
-            key: const ValueKey('stash-pick-cancel'),
-            onPressed: () => setState(_cancelPick)),
-      ];
+      return Wrap(
+          spacing: DsSpace.sm,
+          runSpacing: DsSpace.xs,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text('$n elegidos',
+                key: const ValueKey('stash-picked'), style: DsText.body()),
+            DsButton(toStash ? 'MOVER ELEGIDOS' : 'SACAR ELEGIDOS',
+                key: const ValueKey('stash-move-picked'),
+                kind: DsButtonKind.primary,
+                tooltip: wait ?? (n == 0 ? 'Elige casillas con clic' : null),
+                onPressed: n == 0 || busy ? null : _movePicked),
+          ]);
     }
     final dry = _dryRun();
     final reason = wait ?? (dry == null ? 'Elige un objeto' : dry.error);
-    final all = _stashRules.movableTokens(p);
-    return [
-      if (_side == _Side.stash)
-        DsButton('< AL INVENTARIO',
+    return _side == _Side.stash
+        ? DsButton('< AL INVENTARIO',
             key: const ValueKey('stash-withdraw'),
             kind: DsButtonKind.primary,
             tooltip: reason,
             onPressed: reason == null ? _move : null)
-      else
-        DsButton('AL ALIJO >',
+        : DsButton('AL ALIJO >',
             key: const ValueKey('stash-deposit'),
             kind: DsButtonKind.primary,
             tooltip: reason,
-            onPressed: reason == null ? _move : null),
-      DsButton('MOVER TODO AL ALIJO',
-          key: const ValueKey('stash-move-all'),
-          tooltip: wait ??
-              (all.isEmpty
-                  ? 'No hay nada movible (la equipada, el arma inicial y las '
-                      'pociones se quedan)'
-                  : 'Armas no protegidas, Ecos y materiales'),
-          onPressed: all.isEmpty || busy ? null : _moveAll),
-      DsButton('ELEGIR',
+            onPressed: reason == null ? _move : null);
+  }
+
+  Widget _moveAllButton(PlayerProfile p) {
+    if (_picking) {
+      return DsButton('CANCELAR',
+          key: const ValueKey('stash-pick-cancel'),
+          onPressed: () => setState(_cancelPick));
+    }
+    final busy = host.busy;
+    final all = _stashRules.movableTokens(p);
+    return DsButton('MOVER TODO AL ALIJO',
+        key: const ValueKey('stash-move-all'),
+        tooltip: busy
+            ? 'Esperando...'
+            : all.isEmpty
+                ? 'No hay nada movible (la equipada, el arma inicial y las '
+                    'pociones se quedan)'
+                : 'Armas no protegidas, Ecos y materiales',
+        onPressed: all.isEmpty || busy ? null : _moveAll);
+  }
+
+  Widget? _pickButton() => _picking
+      ? null
+      : DsButton('ELEGIR',
           key: const ValueKey('stash-pick'),
           tooltip: 'Marcar varias casillas de un lado y moverlas juntas',
           onPressed: () => setState(() {
                 _clearSel();
                 _picking = true;
                 _error = null;
-              })),
-    ];
+              }));
+
+  Widget _status(PlayerProfile p, Stash s) {
+    final sel = _selectionMarkup(p, s);
+    final dry = _dryRun();
+    final line = _error ?? (dry != null && !dry.ok ? dry.error : null);
+    final notice = host.notice;
+    return SizedBox(
+      height: RetroType.line *
+          MediaQuery.textScalerOf(context).scale(RetroType.small),
+      child: line != null
+          ? Text(retroText(line),
+              key: const ValueKey('stash-error'),
+              style: DsText.body(DsColors.danger))
+          : notice != null
+              ? Text(retroText(notice),
+                  key: const ValueKey('stash-notice'),
+                  style: DsText.body(DsColors.success))
+              : sel != null
+                  ? ProtoText(sel)
+                  : Text(
+                      'Armas, Ecos y materiales se comparten; créditos '
+                      'y pociones no.',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: DsText.detail()),
+    );
+  }
+
+  Map<String, DsSlotBuilder> _slots(PlayerProfile p, Stash s) => {
+        StashLayout.title: (_) => _title(),
+        StashLayout.equipped: (_) => _equipped(p),
+        StashLayout.inventoryLabel: (_) => _inventoryLabel(p),
+        StashLayout.searchChar: (_) => _searchCharField(),
+        StashLayout.inventoryGrid: (_) => _inventoryGrid(p),
+        StashLayout.stacks: (_) => _stacks(p),
+        StashLayout.stashHeader: (_) => _stashHeader(s),
+        StashLayout.stashTabs: (_) => _stashTabs(s),
+        StashLayout.searchStash: (_) => _searchStashField(),
+        StashLayout.stashGrid: (_) => _stashGrid(p, s),
+        StashLayout.ecoNote: (_) => _ecoNote(),
+        StashLayout.transfer: (_) => _transfer(),
+        StashLayout.moveAll: (_) => _moveAllButton(p),
+        StashLayout.pick: (_) => _pickButton(),
+        StashLayout.status: (_) => _status(p, s),
+      };
+
+  /// El template del alijo: encabezado opcional, los dos lados (lado a
+  /// lado o apilados según [stashLayout]) y el pie.
+  Widget _frame(BuildContext context, BoxConstraints box, DsRegions r) {
+    // Cada lado pide, además de la grilla, lugar para su texto (buscador,
+    // encabezados) según el tamaño de letra.
+    final l = stashLayout(box.maxWidth, sideMin: RetroType.width(context, 300));
+    _wide = l.wide;
+    _scale = l.scale;
+    final left = SizedBox(
+        width: _gridWidth(InventoryRules.columns), child: r.region('left'));
+    final right =
+        SizedBox(width: _gridWidth(Stash.columns), child: r.region('right'));
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (!r.isEmpty('header')) ...[
+          r.region('header'),
+          SizedBox(height: DsSpace.md),
+        ],
+        _wide
+            ? Row(
+                key: _sidesKey,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  left,
+                  const SizedBox(width: StashBoard.sideGap),
+                  right,
+                ],
+              )
+            : Column(
+                key: _sidesKey,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [left, SizedBox(height: DsSpace.lg), right],
+              ),
+        if (!r.isEmpty('footer')) ...[
+          SizedBox(height: DsSpace.md),
+          r.region('footer'),
+        ],
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final p = host.profile, s = host.stash;
-    final sel = _selectionMarkup(p, s);
-    final dry = _dryRun();
-    final line = _error ?? (dry != null && !dry.ok ? dry.error : null);
-    final notice = host.notice;
     return MenuTabKeys(
       count: Stash.tabs,
       index: _tab,
       onChanged: (t) => setState(() => _tab = t),
-      child: LayoutBuilder(builder: (context, box) {
-        // Cada lado pide, además de la grilla, lugar para su texto
-        // (buscador, encabezados) según el tamaño de letra.
-        final l = stashLayout(box.maxWidth,
-            sideMin: RetroType.width(context, 300));
-        _wide = l.wide;
-        _scale = l.scale;
-        return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _wide
-              ? Row(
-                  key: _sidesKey,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _characterSide(p),
-                    const SizedBox(width: StashBoard.sideGap),
-                    _stashSide(p, s),
-                  ],
-                )
-              : Column(
-                  key: _sidesKey,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _characterSide(p),
-                    SizedBox(height: DsSpace.lg),
-                    _stashSide(p, s),
-                  ],
-                ),
-          SizedBox(height: DsSpace.md),
-          Wrap(
-            spacing: DsSpace.sm,
-            runSpacing: DsSpace.xs,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: _actions(p, s),
-          ),
-          SizedBox(height: DsSpace.sm),
-          SizedBox(
-            height: RetroType.line *
-                MediaQuery.textScalerOf(context).scale(RetroType.small),
-            child: line != null
-                ? Text(retroText(line),
-                    key: const ValueKey('stash-error'),
-                    style: DsText.body(DsColors.danger))
-                : notice != null
-                    ? Text(retroText(notice),
-                        key: const ValueKey('stash-notice'),
-                        style: DsText.body(DsColors.success))
-                    : sel != null
-                        ? ProtoText(sel)
-                        : Text(
-                            'Armas, Ecos y materiales se comparten; créditos '
-                            'y pociones no.',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: DsText.detail()),
-          ),
-        ],
-        );
-      }),
+      child: DsLayoutHost(
+        spec: StashLayout.spec,
+        doc: widget.layout,
+        catalog: widget.layoutCatalog,
+        hooks: widget.layoutHooks,
+        slots: _slots(p, s),
+        frame: _frame,
+      ),
     );
   }
 }

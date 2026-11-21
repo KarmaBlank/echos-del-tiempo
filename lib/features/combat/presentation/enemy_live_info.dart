@@ -8,7 +8,9 @@ import '../../../game_engine/data/enemies_catalog.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/enemy_def.dart';
 import '../../../game_engine/models/status.dart';
+import '../../../game_engine/rules/family_rules.dart';
 import '../../../game_engine/rules/js_math.dart';
+import '../../bestiary/domain/bestiary_text.dart' show familyTraitsMarkup;
 import '../domain/skill_text.dart';
 
 /// Estado en vivo del enemigo bajo el mouse, debajo de su ficha del
@@ -17,9 +19,21 @@ import '../domain/skill_text.dart';
 /// entre secciones. Lo largo ("qué hace") va plegado: se ve con Alt o
 /// Shift apretado (la ficha sigue al mouse y no recibe clics).
 class EnemyLiveInfo extends StatefulWidget {
-  const EnemyLiveInfo({super.key, required this.enemy, this.open});
+  const EnemyLiveInfo(
+      {super.key, required this.enemy, this.open, this.affinities = false});
 
   final Combatant enemy;
+
+  /// Muestra debilidades / resistencias / inmunidades de su familia
+  /// (battle_attack_menu.md § 6: gratis, aunque el bestiario todavía no
+  /// lo conozca). La batalla lo pide solo cuando la ficha dice "???".
+  final bool affinities;
+
+  /// Markup de las afinidades de [e], o vacío si su familia no tiene.
+  static String affinityMarkup(Combatant e) {
+    final r = familyRuleOf(e.enemyType);
+    return r == null ? '' : familyTraitsMarkup(r);
+  }
 
   /// Fuerza el pliegue (tests, capturas); `null` = sigue a Alt/Shift.
   final bool? open;
@@ -81,7 +95,11 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
     final ult = e.ultPending ? kEnemyUlts[e.ultId] : null;
     final mech = e.boss ? bossMechanicOf(kEnemies[e.enemyType]) : null;
     final states = EnemyLiveInfo.statusLines(e);
+    final aff = widget.affinities ? EnemyLiveInfo.affinityMarkup(e) : '';
     final sections = <Widget>[
+      if (aff.isNotEmpty)
+        ProtoText(aff,
+            key: const ValueKey('enemy-live-affinity'), style: DsText.body()),
       if (ult != null)
         Column(
           key: const ValueKey('enemy-live-ult'),

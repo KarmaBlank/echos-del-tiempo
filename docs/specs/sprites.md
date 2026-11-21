@@ -361,3 +361,17 @@ prototipo son primitivas dibujadas en código (cuadrados, rayos, burbujas),
 no imágenes: no hay PNG de efectos y el manifest no tiene sección
 `effects`. Si en el futuro se dibujan efectos a mano, se agregan como
 sección nueva del manifest + carpeta en `pubspec.yaml`.
+
+## Identidad del arma (v0.20.0)
+
+weapon_identity.md § 6. Sobre el ícono procedural del tipo, en la mano
+(mapa, batalla, retratos, ULT) y en el inventario, `paintItemIcon` con
+un `WeaponLook` suma: acento por rareza, reflejo en Épicos, variante por
+uid (tono del metal ± y gema; la silueta no cambia), aura de 1 celda
+del color del elemento con 2 partículas lentas, destello que recorre el
+metal en Legendarios y un píxel rosa en el pomo si el arma tiene ULT.
+Todo se regula con perillas del generador `item_icon` en el Editor:
+`aura` (intensidad 0–1, 0.5 por defecto), `aura_particles`, `sparkle`,
+`ult_mark` y `variation`. El aspecto sale de datos del arma que ya
+viajan (perfil y build del snapshot): el compañero se ve igual en todos
+los clientes.
