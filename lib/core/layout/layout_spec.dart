@@ -4,10 +4,13 @@ import 'layout_doc.dart';
 /// crea regiones (§ 5, P3).
 class LayoutRegionSpec {
   const LayoutRegionSpec(this.id,
-      {this.axis = LayoutAxis.column, this.label});
+      {this.axis = LayoutAxis.column, this.label, this.spacing = 'md'});
   final String id;
   final LayoutAxis axis;
   final String? label;
+
+  /// Separación entre slots de una región `wrap` (nombre de `DsSpace`).
+  final String spacing;
 }
 
 /// Slot del catálogo de una pantalla (§ 2.4): lo que es y qué se le
@@ -24,6 +27,8 @@ class LayoutSlotSpec {
     this.interactive = false,
     this.gap = 'sm',
     this.groupAxis = LayoutAxis.wrap,
+    this.lead,
+    this.groupGap = 'sm',
   });
 
   /// `pantalla.grupo[.elemento]`, estable.
@@ -47,11 +52,18 @@ class LayoutSlotSpec {
   final bool interactive;
 
   /// Separación antes del slot cuando no es el primero de su región
-  /// (nombre de `DsSpace`: xs/sm/md/lg/xl). Es del template, no del YAML.
+  /// (nombre de `DsSpace`: xs/sm/md/lg/xl, `none` o píxeles fijos como `6`). Es del template, no del YAML.
   final String gap;
 
   /// Eje por defecto de un grupo.
   final LayoutAxis groupAxis;
+
+  /// En una región `wrap`: espacio extra antes del slot (separador
+  /// visual entre bloques de una barra). `null` = solo el `spacing`.
+  final String? lead;
+
+  /// Separación entre los hijos de un grupo en fila o wrap.
+  final String groupGap;
 }
 
 /// Lo que una pantalla migrada declara en código: regiones, catálogo de
