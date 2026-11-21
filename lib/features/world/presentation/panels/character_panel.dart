@@ -38,6 +38,9 @@ import '../session_controller.dart';
 import '../session_sfx.dart' show sfxServiceProvider;
 import '../session_view.dart';
 import 'party_member_bar.dart';
+import '../../../../app/design/ds_layout_host.dart';
+import '../../../../core/layout/layout_doc.dart';
+import 'character_layout.dart';
 
 /// Nombre y efecto de cada atributo (`STATN`, `STATD` del prototipo).
 const kAttributeInfo = {
@@ -103,7 +106,14 @@ class CharacterPanel extends StatefulWidget {
     required this.view,
     required this.controller,
     this.initialTab = CharacterTab.attributes,
+    this.layout,
+    this.layoutHooks,
   });
+
+  /// Layout fijo (Editor → LAYOUT); `null` = el del catálogo
+  /// (editor_layout.md § 6).
+  final LayoutDoc? layout;
+  final DsLayoutHooks? layoutHooks;
 
   final SessionView view;
   final SessionController controller;
@@ -228,49 +238,61 @@ class _CharacterPanelState extends State<CharacterPanel> {
     final isAttr = tab == CharacterTab.attributes;
     final treePts = UnusedPoints.of(prof, rules).tree;
     final confirmReason = guards.allocate(prof, _alloc);
-    // Barra de herramientas de ATRIBUTOS (design_system.md § 4): puntos y
-    // acciones arriba, en una fila; CONFIRMAR es la principal.
-    final attrBar = Padding(
-      padding: EdgeInsets.only(bottom: DsSpace.sm),
-      child: Wrap(
-        spacing: DsSpace.sm,
-        runSpacing: DsSpace.xs,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Text('Puntos: $left',
+    // Barra de herramientas de ATRIBUTOS (design_system.md § 4) y pie del
+    // marco, armados por datos (editor_layout.md § 6).
+    final slots = <String, DsSlotBuilder>{
+      CharacterLayout.points: (_) => !isAttr
+          ? null
+          : Text('Puntos: $left',
               key: const ValueKey('attr-points'),
               style: DsText.body(left > 0 ? DsColors.reward : DsColors.text)),
-          SizedBox(width: DsSpace.md),
-          if (guards.showRespec)
-            DsButton(
-                ProgressionRules.freeRespec
-                    ? 'REINICIAR PUNTOS (GRATIS)'
-                    : 'REINICIAR PUNTOS',
-                key: const ValueKey('respec'),
-                kind: DsButtonKind.ghost,
-                size: DsButtonSize.compact,
-                tooltip: guards.respec(),
-                onPressed: guards.respec() != null
-                    ? null
-                    : () {
-                        if (c.respec()) setState(_alloc.clear);
-                      }),
-          DsButton('DESHACER',
+      CharacterLayout.respec: (_) => !isAttr || !guards.showRespec
+          ? null
+          : DsButton(
+              ProgressionRules.freeRespec
+                  ? 'REINICIAR PUNTOS (GRATIS)'
+                  : 'REINICIAR PUNTOS',
+              key: const ValueKey('respec'),
+              kind: DsButtonKind.ghost,
+              size: DsButtonSize.compact,
+              tooltip: guards.respec(),
+              onPressed: guards.respec() != null
+                  ? null
+                  : () {
+                      if (c.respec()) setState(_alloc.clear);
+                    }),
+      CharacterLayout.undo: (_) => !isAttr
+          ? null
+          : DsButton('DESHACER',
               key: const ValueKey('undo-points'),
               size: DsButtonSize.compact,
-              onPressed: _allocSum == 0 ? null : () => setState(_alloc.clear)),
-          DsButton('CONFIRMAR PUNTOS',
+              onPressed:
+                  _allocSum == 0 ? null : () => setState(_alloc.clear)),
+      CharacterLayout.confirm: (_) => !isAttr
+          ? null
+          : DsButton('CONFIRMAR PUNTOS',
               key: const ValueKey('confirm-points'),
               kind: DsButtonKind.primary,
               size: DsButtonSize.compact,
               tooltip: confirmReason,
               onPressed: confirmReason == null ? _confirm : null),
-          if (confirmReason != null)
-            Text(confirmReason,
-                key: const ValueKey('confirm-reason'), style: DsText.detail()),
-        ],
-      ),
-    );
+      CharacterLayout.reason: (_) => !isAttr || confirmReason == null
+          ? null
+          : Text(confirmReason,
+              key: const ValueKey('confirm-reason'), style: DsText.detail()),
+      CharacterLayout.close: (_) => closeButton,
+    };
+    Widget host(Widget Function(DsRegions r) frame) => DsLayoutHost(
+        spec: CharacterLayout.spec,
+        doc: widget.layout,
+        hooks: widget.layoutHooks,
+        slots: slots,
+        frame: (context, box, r) => frame(r));
+    final attrBar = host((r) => r.isEmpty('toolbar')
+        ? const SizedBox.shrink()
+        : Padding(
+            padding: EdgeInsets.only(bottom: DsSpace.sm),
+            child: r.region('toolbar')));
 
     // Q / E, Ctrl+Tab y 1-5 cambian de pestaña (menu_focus.dart); no
     // mientras hay que repartir.
@@ -345,13 +367,19 @@ class _CharacterPanelState extends State<CharacterPanel> {
                             }),
                     ],
                   )),
-          actions: [closeButton],
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (isAttr) attrBar,
-              Expanded(child: body),
-            ],
+          actions: [host((r) => r.region('actions'))],
+          // Con muy poco alto la barra se desplaza (hasta la mitad) en vez
+          // de desbordar.
+          child: LayoutBuilder(
+            builder: (context, box) => Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: box.maxHeight / 2),
+                    child: SingleChildScrollView(child: attrBar)),
+                Expanded(child: body),
+              ],
+            ),
           ),
         ),
       ),

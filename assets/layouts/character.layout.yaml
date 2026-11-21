@@ -1,0 +1,16 @@
+# PERSONAJE (docs/specs/editor_layout.md § 6, fase 5). Regiones del
+# template: toolbar (barra de arriba del contenido; hoy solo ATRIBUTOS) y
+# actions (pie del marco). Título, pestañas y contenido son fijos.
+screen: character
+version: 1
+slots:
+  - {id: char.points, region: toolbar, order: 0}
+  - id: char.attr_actions
+    region: toolbar
+    order: 1
+    children:
+      - char.attr_actions.respec
+      - char.attr_actions.undo
+      - char.attr_actions.confirm
+  - {id: char.attr_reason, region: toolbar, order: 2}
+  - {id: char.close, region: actions, order: 0}

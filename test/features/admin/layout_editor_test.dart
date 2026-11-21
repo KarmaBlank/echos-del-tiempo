@@ -15,6 +15,7 @@ import 'package:echos_del_tiempo/features/admin/presentation/editor/layout_page.
 import 'package:echos_del_tiempo/features/characters/presentation/stash_layout.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/craft_layout.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/inventory_layout.dart';
+import 'package:echos_del_tiempo/features/world/presentation/panels/character_layout.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -44,6 +45,7 @@ void main() {
       'craft.fuse.layout.yaml',
       'craft.forge.layout.yaml',
       'craft.condense.layout.yaml',
+      'character.layout.yaml',
     ]) {
       File('assets/layouts/$f').copySync('$repo/assets/layouts/$f');
     }
@@ -70,7 +72,7 @@ void main() {
     expect(c.staticIssues, isEmpty);
     expect(c.geometry.where((i) => i.error), isEmpty,
         reason: c.geometry.join('\n'));
-    await tester.tap(find.byKey(const ValueKey('layout-screen-character')));
+    await tester.tap(find.byKey(const ValueKey('layout-screen-shop')));
     await tester.pump();
     expect(find.textContaining('SIN VISTA PREVIA'), findsOneWidget);
   });
@@ -121,6 +123,14 @@ void main() {
       ForgeLayout.equip,
       'footer',
       ['forge-cap'],
+    ),
+    (
+      CharacterLayout.screen,
+      CharacterLayout.attrActions,
+      'actions',
+      CharacterLayout.confirm,
+      'toolbar',
+      ['respec', 'undo-points', 'confirm-points', 'attr-points'],
     ),
     (
       CondenseLayout.screen,
