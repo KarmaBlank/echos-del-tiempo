@@ -13,6 +13,7 @@ import '../../../app/theme/retro_text.dart';
 import '../../../app/widgets/menu_focus.dart';
 import '../../../core/layout/layout_doc.dart';
 import '../../../core/settings/settings_providers.dart';
+import '../../../game_engine/rules/build_guide_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/battle_command.dart';
@@ -120,10 +121,19 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       ? ItemFit.none
       : _fitRules!.itemFit(_plan, it);
 
-  /// La línea "★ Tu build — Cumple: ..." de la ficha, con salto antes.
+  /// Armas recomendadas para tu build (build_planner.md § 9.3), por uid.
+  Map<String, WeaponPick> _picks = const {};
+
+  /// La línea "★ Tu build — Cumple: ..." de la ficha y, si es de las
+  /// recomendadas, "» Recomendada: ...", con salto antes.
   String _fitLine(ItemInstance it) {
     final m = buildFitMarkup(_fit(it));
-    return m == null ? '' : '<br>$m';
+    final pick = _picks[it.uid];
+    return [
+      if (m != null) '<br>$m',
+      if (pick != null)
+        '<br>${protoColor(kPlanColor, '» Recomendada: ${protoEsc(pick.reasons.join(' · '))}')}',
+    ].join();
   }
 
   /// Foco propio: `Esc` cancela "elige B" sin cerrar el panel.
@@ -383,6 +393,13 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
     final owner = view.session.players[_owner] ?? me;
     final mine = owner.id == me.id;
     final p = owner.profile;
+    _picks = mine
+        ? {
+            for (final w in BuildGuideRules(_fitRules!.progression)
+                .rankItems(_plan, p))
+              if (w.recommended && w.item != null) w.item!.uid: w,
+          }
+        : const {};
     final attrs =
         me.profile.attributes.add(ProgressionRules.rawOf(widget.pending));
     final layout = InventoryRules.layout(p);
