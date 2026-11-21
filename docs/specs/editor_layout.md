@@ -298,5 +298,25 @@ Tests:
 - **Desbordes en el Editor**: además de "fuera de la ventana", un slot
   que se sale del rectángulo de su región cuenta como desborde. En los
   tests, además, `takeException` atrapa los `RenderFlex overflowed`.
-- **Pendiente (fase 4+)**: INVENTARIO, fusión/forja/condensar,
-  PERSONAJE y el resto, en ese orden.
+- **INVENTARIO (fase 4, v0.20.1)** (`inventory_layout.dart`,
+  `InventoryTabLayout` + `inventory_tab.dart`): regiones `toolbar`
+  (wrap, separación xs), `head` (arriba de la grilla; en ancho, arriba
+  de la columna del costado), `grid` (fija) y `foot` (debajo de la
+  grilla; en ancho, debajo de `head`). Slots `inv.owners`, `inv.search`,
+  `inv.search_clear`, grupo `inv.tools(.sort|.clean|.stash)`,
+  `inv.equipped`, `inv.stacks`, `inv.summary`, `inv.selection`,
+  `inv.clean_menu`; fijos `inv.notes` y `inv.grid`. La lógica de modos
+  (ancho / medio / angosto), la escala de las casillas y la franja de
+  CAMBIOS quedan en el template. La barra y el cuerpo son dos
+  `DsLayoutHost` sobre el mismo doc (el cuerpo mide su propio ancho).
+  Golden `test/features/inventory/goldens/inventory_default_*.png`
+  (árbol viejo) == YAML por defecto; árbol manual borrado. Vista previa
+  en el Editor con una sesión local de ejemplo (perfil en memoria, sin
+  reloj ni red).
+- **Host, agregados de fase 4**: `LayoutRegionSpec.spacing` (separación
+  de una región wrap), `LayoutSlotSpec.lead` (espacio extra antes del
+  slot en un wrap: separadores de barra), `groupGap` (entre hijos de un
+  grupo en fila/wrap), `gap` acepta `none` o píxeles (`'6'`). En el
+  juego, un grupo sin hijos visibles no ocupa lugar.
+- **Pendiente (fase 4+)**: fusión/forja/condensar, PERSONAJE y sus
+  pestañas, y el resto, en ese orden.
