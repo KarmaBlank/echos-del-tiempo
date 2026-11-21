@@ -1,0 +1,16 @@
+﻿# BATALLA (docs/specs/editor_layout.md § 6, fase 6). Lugares del template,
+# de izquierda a derecha: card, categories, actions, description (y top,
+# arriba de la fila). Dos slots en el mismo lugar se apilan. params:
+# perillas de la escena (§ 2.8).
+screen: battle
+version: 1
+slots:
+  - {id: battle.actions, region: actions, order: 0}
+  - {id: battle.waiting, region: actions, order: 1}
+  - {id: battle.card, region: card, order: 0}
+  - {id: battle.categories, region: categories, order: 0}
+  - {id: battle.description, region: description, order: 0}
+# Angosto (< 60 tx): la tarjeta sube arriba de la fila.
+breakpoints:
+  narrow:
+    battle.card: {region: top}

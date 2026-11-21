@@ -30,7 +30,18 @@ class SceneFrame {
     this.hoverId,
     this.turnTimeLeft,
     this.turnLimit = 30,
+    this.zoomOut = 0,
+    this.floatTopMargin = 4,
   });
+
+  /// Pasos de zoom que se aleja la cámara del encuadre base (perilla de
+  /// Editor → LAYOUT, pantalla `battle`).
+  final int zoomOut;
+
+  /// Margen mínimo (unidades de etiqueta) entre el borde de arriba del
+  /// mundo y un texto flotante (battle_presentation.md § "Textos
+  /// flotantes").
+  final double floatTopMargin;
 
   final BattleState battle;
   final SceneGeometry geometry;
@@ -500,7 +511,8 @@ class BattleSceneController extends ChangeNotifier {
 
   /// Encuadre base de [f] (docs/specs/battle_presentation.md § "Cámara
   /// y encuadre").
-  CameraView baseView(SceneFrame f) => f.layout.frame(f.geometry, f.arena);
+  CameraView baseView(SceneFrame f) =>
+      f.layout.frame(f.geometry, f.arena, zoomOut: f.zoomOut);
 
   void _updateCamera(SceneFrame f, double dt) {
     final base = baseView(f);

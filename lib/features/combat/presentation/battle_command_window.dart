@@ -1,8 +1,9 @@
-import 'dart:math' as math;
-
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
+import '../../../app/design/ds_layout_host.dart';
+import '../../../core/layout/layout_doc.dart';
+import 'battle_bar_layout.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
@@ -145,6 +146,9 @@ class BattleCommandWindow extends StatelessWidget {
     this.extra,
     this.mp,
     this.pulse,
+    this.card,
+    this.layout,
+    this.layoutHooks,
     this.hints =
         'Enter: confirmar · Esc: volver · Flechas: elegir · Q/Tab: objetivo'
             ' · P: pasar',
@@ -177,83 +181,55 @@ class BattleCommandWindow extends StatelessWidget {
   final int? pulse;
   final String hints;
 
+  /// La tarjeta del personaje que actúa (a la izquierda del menú por
+  /// defecto; battle_presentation.md § "Barra de abajo").
+  final Widget? card;
+
+  /// Layout fijo (Editor → LAYOUT); `null` = el del catálogo.
+  final LayoutDoc? layout;
+  final DsLayoutHooks? layoutHooks;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => BattleBarRow(
+        layout: layout,
+        hooks: layoutHooks,
+        slots: slots(),
+      );
+
+  /// Las piezas de la ventana como slots de la barra (BattleBarLayout).
+  Map<String, DsSlotBuilder> slots() {
     final sel =
         selected >= 0 && selected < visible.length ? visible[selected] : null;
-    final catW = RetroType.width(context, 170);
-    // En pantallas anchas la ventana no se estira: tope de ancho,
-    // centrada.
-    return LayoutBuilder(builder: (context, box) {
-      final w = math.min(box.maxWidth, RetroType.width(context, maxWidth));
-      return Align(
-        alignment: Alignment.topCenter,
-        child: SizedBox(
-          width: w,
-          height: box.maxHeight,
-          child: _window(context, catW, sel),
-        ),
-      );
-    });
-  }
-
-  /// Tope de ancho de la ventana a texto Normal (px lógicos).
-  static const maxWidth = 1240.0;
-
-  Widget _window(BuildContext context, double catW, BattleAction? sel) {
-    // Las filas no toman el foco: las teclas las maneja la batalla
-    // (Enter confirma la acción elegida, no la última fila clickeada).
-    return ExcludeFocus(
-      child: Container(
-        key: const ValueKey('battle-menu'),
-        padding: EdgeInsets.all(DsSpace.xs),
-        decoration: BoxDecoration(
-          color: DsColors.surface,
-          border: Border.all(color: DsColors.selected, width: 2),
-        ),
-        child: DefaultTextStyle.merge(
-          style: DsText.body(),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(
-                width: catW,
-                child: _Categories(
-                  categories: categories,
-                  category: category,
-                  onCategory: onCategory,
-                ),
-              ),
-              SizedBox(width: DsSpace.xs),
-              Expanded(
-                flex: 5,
-                child: _Actions(
-                  header: header,
-                  visible: visible,
-                  selected: selected,
-                  onHover: onHoverAction,
-                  mp: mp,
-                  pulse: pulse,
-                ),
-              ),
-              SizedBox(width: DsSpace.xs),
-              Expanded(
-                flex: 4,
-                child: _Description(
-                  actorName: actorName,
-                  action: sel,
-                  target: target,
-                  resources: resources,
-                  hints: hints,
-                  extra: extra,
-                ),
-              ),
-            ],
+    return {
+      BattleBarLayout.card: (_) => card,
+      BattleBarLayout.categories: (_) => _Categories(
+            categories: categories,
+            category: category,
+            onCategory: onCategory,
           ),
-        ),
-      ),
-    );
+      BattleBarLayout.actions: (_) => _Actions(
+            header: header,
+            visible: visible,
+            selected: selected,
+            onHover: onHoverAction,
+            mp: mp,
+            pulse: pulse,
+          ),
+      BattleBarLayout.description: (_) => _Description(
+            actorName: actorName,
+            action: sel,
+            target: target,
+            resources: resources,
+            hints: hints,
+            extra: extra,
+          ),
+      BattleBarLayout.waiting: (_) => null,
+    };
   }
+
+  /// Tope de ancho de la ventana a texto Normal (px lógicos), sin la
+  /// tarjeta.
+  static const maxWidth = 1240.0;
 }
 
 class _Categories extends StatelessWidget {
@@ -492,14 +468,22 @@ class _Description extends StatelessWidget {
               Padding(
                 key: const ValueKey('battle-instant-note'),
                 padding: EdgeInsets.only(bottom: DsSpace.xs),
-                child: Wrap(
-                  spacing: DsSpace.xs,
-                  runSpacing: 2,
-                  crossAxisAlignment: WrapCrossAlignment.center,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const DsTag.instant(),
-                    Text(retroText('· no termina tu turno'),
-                        style: DsText.body(DsColors.instant)),
+                    Wrap(
+                      spacing: DsSpace.xs,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const DsTag.instant(),
+                        Text(retroText('· no termina tu turno'),
+                            style: DsText.body(DsColors.instant)),
+                      ],
+                    ),
+                    // La regla del motor (combat.md § "Pulso,
+                    // precondiciones e Instante").
+                    Text(retroText(kInstantRule), style: DsText.detail()),
                   ],
                 ),
               ),
@@ -534,6 +518,12 @@ class _Description extends StatelessWidget {
     );
   }
 }
+
+/// Qué es un Instante, en el panel de la derecha (combat.md § "Pulso,
+/// precondiciones e Instante").
+const kInstantRule = 'Se usa sin gastar el turno, una vez por turno: '
+    'después te queda una acción más. Si en ese mismo turno volvés a usar '
+    'una Instante, cuenta como acción normal y termina el turno.';
 
 /// `<span style="color:hex">texto</span>` con el texto escapado.
 String hexSpanSafe(String hex, String text) =>

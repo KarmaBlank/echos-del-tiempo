@@ -81,6 +81,27 @@ class LayoutSlotSpec {
   final String groupRunSpacing;
 }
 
+/// Perilla numérica de una pantalla (editor_layout.md § 2.8): la declara
+/// el código con su rango; el YAML (`params:`) solo guarda el valor.
+class LayoutParamSpec {
+  const LayoutParamSpec(this.key,
+      {required this.label,
+      required this.defaultValue,
+      required this.min,
+      required this.max,
+      this.step = 1,
+      this.help});
+  final String key;
+  final String label;
+  final double defaultValue;
+  final double min, max, step;
+
+  /// Qué hace, en una línea (tooltip del Editor).
+  final String? help;
+
+  double clamp(double v) => v.clamp(min, max).toDouble();
+}
+
 /// Lo que una pantalla migrada declara en código: regiones, catálogo de
 /// slots y el layout por defecto (el de hoy, reexpresado como datos).
 class LayoutScreenSpec {
@@ -90,7 +111,25 @@ class LayoutScreenSpec {
     required this.regions,
     required List<LayoutSlotSpec> slots,
     required this.defaults,
+    this.params = const [],
   }) : slots = {for (final s in slots) s.id: s};
+
+  /// Perillas numéricas de la pantalla (editor_layout.md § 2.8).
+  final List<LayoutParamSpec> params;
+
+  LayoutParamSpec? paramSpec(String key) {
+    for (final p in params) {
+      if (p.key == key) return p;
+    }
+    return null;
+  }
+
+  /// Valor de la perilla [key] en [doc] (o su defecto), acotado a su rango.
+  double param(LayoutDoc doc, String key) {
+    final p = paramSpec(key);
+    final v = doc.params[key] ?? p?.defaultValue ?? 0;
+    return p == null ? v : p.clamp(v);
+  }
 
   final String screen;
   final String title;

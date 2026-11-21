@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/theme/proto_colors.dart';
 import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/features/combat/domain/skill_text.dart';
 import 'package:echos_del_tiempo/features/combat/presentation/battle_hud.dart';
@@ -58,6 +59,57 @@ void main() {
   Future<void> pump(WidgetTester tester, Widget w) => tester.pumpWidget(
       MaterialApp(theme: RetroTheme.build(), home: Scaffold(body: w)));
 
+  testWidgets(
+      'estados: uno por fila, nombre y color estándar, plegables (v0.20.6)',
+      (tester) async {
+    final e = start().enemies.first
+      ..statuses[StatusKind.burn] = 2
+      ..statuses[StatusKind.poison] = 1
+      ..statuses[StatusKind.holy] = 3;
+    Color? colorOf(StatusKind k) {
+      Color? found;
+      for (final rt in tester.widgetList<RichText>(find.descendant(
+          of: find.byKey(ValueKey('enemy-live-status-name-${k.name}')),
+          matching: find.byType(RichText)))) {
+        // El tramo más interno con color que contiene el nombre.
+        void walk(InlineSpan s) {
+          if (s is! TextSpan) return;
+          if (s.style?.color != null && s.toPlainText().contains(k.label)) {
+            found = s.style!.color;
+          }
+          for (final c in s.children ?? const <InlineSpan>[]) {
+            walk(c);
+          }
+        }
+
+        walk(rt.text);
+      }
+      return found;
+    }
+
+    await pump(tester, EnemyLiveInfo(enemy: e));
+    const kinds = [StatusKind.burn, StatusKind.poison, StatusKind.holy];
+    final tops = <double>[];
+    for (final k in kinds) {
+      final row = find.byKey(ValueKey('enemy-live-status-${k.name}'));
+      expect(row, findsOneWidget);
+      tops.add(tester.getTopLeft(row).dy);
+      expect(colorOf(k), ProtoColors.parse(statusHex(k)), reason: k.label);
+      expect(find.byKey(ValueKey('enemy-live-status-desc-${k.name}')),
+          findsNothing);
+    }
+    // En columna: cada uno más abajo que el anterior.
+    expect(tops[0] < tops[1] && tops[1] < tops[2], isTrue);
+    // Desplegados: qué hace cada uno.
+    await pump(tester, EnemyLiveInfo(enemy: e, open: true));
+    for (final k in kinds) {
+      final desc = find.byKey(ValueKey('enemy-live-status-desc-${k.name}'));
+      expect(desc, findsOneWidget);
+      expect(tester.widget<Text>(desc).data,
+          contains(statusDescriptionOf(k).substring(0, 12)));
+    }
+  });
+
   testWidgets('prepara ULT (plegada), mecánica y estados con nombre',
       (tester) async {
     final e = start().enemies.firstWhere((x) => x.boss);
@@ -70,7 +122,9 @@ void main() {
         findsOneWidget);
     expect(find.byKey(const ValueKey('enemy-live-ult-detail')), findsNothing);
     expect(find.byKey(const ValueKey('enemy-live-mech')), findsOneWidget);
-    expect(find.text('${StatusKind.burn.label} ×3'), findsOneWidget);
+    expect(
+        find.textContaining('${StatusKind.burn.label} ×3', findRichText: true),
+        findsOneWidget);
     // Desplegado: qué hace y cómo cancelarla.
     await pump(tester, EnemyLiveInfo(enemy: e, open: true));
     expect(

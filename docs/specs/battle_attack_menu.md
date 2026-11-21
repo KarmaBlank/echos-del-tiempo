@@ -224,7 +224,7 @@ Solo la etapa 1 de § 4, con un ajuste: las **Instante** se mudan a ARMA
 
 | # | Categoría | Filas (en orden) |
 |---|---|---|
-| 1 | **ARMA** | `Atacar` · `Defender` · `Liberar a X` (contextual) · separador "Instante — no terminan tu turno" · las Instante del kit |
+| 1 | **ARMA** | `Atacar` · `Defender` · `Liberar a X` (contextual) · las Instante del kit (sin separador desde v0.20.6: cada una lleva su etiqueta INSTANTE y el panel derecho explica la regla) |
 | 2 | HABILIDADES | solo las que terminan el turno (sin Instante; si no queda ninguna, la categoría no aparece) |
 | 3 | DÚOS | sin cambio |
 | 4 | ULTIMATE | sin cambio |
@@ -233,8 +233,7 @@ Solo la etapa 1 de § 4, con un ajuste: las **Instante** se mudan a ARMA
 
 La categoría DEFENDER desaparece. Costo por teclado al empezar el turno:
 Atacar `1`/`Enter` (1 tecla), **Defender `2` (1 tecla)**, Instante N
-`N` (1 tecla, después de Liberar si hay). El separador no cuenta para los
-atajos 1-9. El resaltado de objetivos de la escena vale para las Instante
+`N` (1 tecla, después de Liberar si hay). El resaltado de objetivos de la escena vale para las Instante
 en ARMA igual que en HABILIDADES.
 
 Panel derecho: cada fila trae su detalle. Atacar como antes; Defender:

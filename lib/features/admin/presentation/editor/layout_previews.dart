@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -18,7 +20,12 @@ import '../../../../game_engine/rules/stats_calculator.dart';
 import '../../../../game_engine/models/profile_store.dart';
 import '../../../../game_engine/rules/battle_engine.dart';
 import '../../../../game_engine/rules/session_engine.dart';
+import '../../../../game_engine/data/weapons_catalog.dart';
+import '../../../../game_engine/models/battle_state.dart';
+import '../../../../game_engine/models/player_state.dart';
 import '../../../characters/domain/stash.dart';
+import '../../../combat/presentation/battle_bar_layout.dart';
+import '../../../combat/presentation/battle_screen.dart';
 import '../../../inventory/presentation/condense_panel.dart';
 import '../../../world/presentation/panels/character_layout.dart';
 import '../../../world/presentation/panels/character_panel.dart';
@@ -67,8 +74,60 @@ List<LayoutPreview> layoutPreviews() => [
       const LayoutPreview('title', 'TÍTULO'),
       const LayoutPreview('lobby', 'SALA'),
       const LayoutPreview('world_hud', 'HUD DEL MAPA'),
-      const LayoutPreview('battle', 'BATALLA'),
+      LayoutPreview(BattleBarLayout.screen, 'BATALLA',
+          spec: BattleBarLayout.spec, build: _battle),
     ];
+
+// ------------------------------------------------------------ BATALLA
+
+BattlePartyMember _battleMember(String classId) {
+  final cls = kClasses[classId]!;
+  return BattlePartyMember(
+    id: classId,
+    name: cls.name,
+    potions: 2,
+    ethers: 1,
+    build: PlayerBuild(
+      classId: classId,
+      level: 6,
+      attributes: PlayerAttributes.base(cls.baseAttributes),
+      equippedWeapon: kWeapons[cls.startWeaponId]!,
+    ),
+  );
+}
+
+/// Batalla de ejemplo (motor puro, azar fijo): guerrero de turno contra
+/// un limo y un murciélago.
+BattleState? _sampleBattle;
+BattleState sampleBattle() => _sampleBattle ??= () {
+      final engine =
+          BattleEngine(stats: sampleRules.stats, random: () => 0.99);
+      final start = engine.start(
+        party: [_battleMember('guerrero'), _battleMember('maga')],
+        enemyTypes: const ['slime', 'bat'],
+        triggeredBy: 'guerrero',
+      );
+      return engine.nextTurn(start.state).state;
+    }();
+
+/// La batalla entera (escena + barra) al alto del lienzo, con el layout
+/// y las perillas en edición.
+Widget _battle(LayoutDoc doc, DsLayoutHooks? hooks) => Builder(builder: (context) {
+      final size = MediaQuery.sizeOf(context);
+      final b = sampleBattle();
+      return SizedBox(
+        width: size.width,
+        height: math.max(360, size.height - 48),
+        child: BattleView(
+          battle: b,
+          canAct: true,
+          localId: b.currentId,
+          onCommand: (_) => true,
+          layout: doc,
+          layoutHooks: hooks,
+        ),
+      );
+    });
 
 // ------------------------------------------------------------ ALIJO
 
