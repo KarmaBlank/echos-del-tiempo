@@ -8,3 +8,4 @@ screens:
   craft.fuse: craft.fuse.layout.yaml
   craft.forge: craft.forge.layout.yaml
   character: character.layout.yaml
+  battle: battle.layout.yaml

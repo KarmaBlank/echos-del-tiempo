@@ -976,8 +976,34 @@ class BattleScenePainter extends CustomPainter {
       }
       if (labelAlpha < 1) c.restore();
     }
-    _floating(c, vp, u, rects);
+    // Los textos flotantes van en la capa de arriba (BattleOverlayPainter
+    // → paintFloating): sin recorte del área del mundo.
     c.restore();
+  }
+
+  /// Rects (px de pantalla) de los textos flotantes del último frame
+  /// dibujado: para los tests de "siempre a la vista".
+  @visibleForTesting
+  static final debugFloatRects = <Rect>[];
+
+  /// Y de un texto flotante de alto [h] cuyo pie natural es [y], acotada
+  /// para que su borde de arriba no pase de [minTop]: si no entra, baja
+  /// y se apila ([stack]-ésimo acotado en la zona, de a [step]).
+  static double clampFloatY(
+      double y, double h, double minTop, int stack, double step) {
+    if (y - h >= minTop) return y;
+    return minTop + h + stack * step;
+  }
+
+  /// Los textos flotantes (números, estados, carteles de pasivas y de
+  /// reacción) encima de todo y sin recorte (battle_presentation.md
+  /// § "Textos flotantes"). Lo llama [BattleOverlayPainter].
+  void paintFloating(Canvas c) {
+    final f = scene.frame;
+    if (f == null) return;
+    final vp = SceneViewport(f.geometry.worldRect, scene.viewFor(f));
+    final u = f.geometry.labelUnit.toDouble();
+    _floating(c, vp, u, labelRects(f, vp), f.floatTopMargin);
   }
 
   /// Barra de quiebre (amarilla; parpadea quebrado), carga de ULT (roja;
@@ -1068,9 +1094,30 @@ class BattleScenePainter extends CustomPainter {
   }
 
   /// Números y textos flotantes (`num`, `txt`).
-  void _floating(
-      Canvas c, SceneViewport vp, double u, Map<String, Rect> labels) {
+  void _floating(Canvas c, SceneViewport vp, double u,
+      Map<String, Rect> labels, double margin) {
     final t = scene.t;
+    final minTop = vp.area.top + margin * u;
+    debugFloatRects.clear();
+    // Acotados por zona (x redondeada): se apilan hacia abajo.
+    // Zona → borde de arriba libre para el próximo acotado.
+    final stacks = <int, double>{};
+    double clampY(double x, double y, double h) {
+      if (y - h >= minTop) return y;
+      final zone = (x / (40 * u)).round();
+      final top = stacks[zone] ?? minTop;
+      final out = clampFloatY(y, h, top, 0, 0);
+      stacks[zone] = out + 2 * u;
+      return out;
+    }
+
+    void mark(String s, double x, double y, double size, double k,
+        {bool center = true}) {
+      final w = _pen.width(s, size) * k;
+      debugFloatRects.add(Rect.fromLTWH(
+          center ? x - w / 2 : x, y - size * k, w, size * k));
+    }
+
     for (final live in scene.fx) {
       final f = live.fx;
       final age = live.age(t);
@@ -1086,6 +1133,8 @@ class BattleScenePainter extends CustomPainter {
             k = 1 + 0.6 * (1 - q);
             y -= (math.sin(age / 80)).abs() * 6 * u * math.exp(-age / 260);
           }
+          y = clampY(p.dx, y, size * k).roundToDouble();
+          mark(f.text ?? '', p.dx, y, size, k);
           final alpha =
               age > f.durationMs - 200 ? (f.durationMs - age) / 200 : 1.0;
           if (alpha < 1) {
@@ -1107,10 +1156,12 @@ class BattleScenePainter extends CustomPainter {
           if (alpha < 1) c.restore();
         case FxKind.txt when age < BattleFx.txtMs:
           final p = vp.toScreen(Offset(f.x, f.y));
-          _pen.text(
-              c, f.text ?? '', p.dx, p.dy - age / 60 * 1.5 * u, f.color, 8 * u);
+          final y = clampY(p.dx, p.dy - age / 60 * 1.5 * u, 8 * u)
+              .roundToDouble();
+          mark(f.text ?? '', p.dx, y, 8 * u, 1);
+          _pen.text(c, f.text ?? '', p.dx, y, f.color, 8 * u);
         case FxKind.tag when age < BattleFx.tagMs:
-          _tag(c, vp, f, age, u, labels[f.who]);
+          _tag(c, vp, f, age, u, labels[f.who], minTop);
         case FxKind.warn when age < BattleFx.warnMs:
           _warnBanner(c, vp, f, age, u);
         default:
@@ -1127,8 +1178,11 @@ class BattleScenePainter extends CustomPainter {
           age >= f.durationMs) {
         continue;
       }
-      ReactionFxPainter.paintBanner(
-          c, f.reaction!, vp.toScreen(Offset(f.x, f.y)), age, u,
+      // El cartel se dibuja centrado en el punto: nunca más arriba que
+      // el margen (16·u de medio alto).
+      final p = vp.toScreen(Offset(f.x, f.y));
+      final at = Offset(p.dx, math.max(p.dy, minTop + 16 * u));
+      ReactionFxPainter.paintBanner(c, f.reaction!, at, age, u,
           o: _reactionOpts);
     }
   }
@@ -1203,7 +1257,7 @@ class BattleScenePainter extends CustomPainter {
   /// apila hacia abajo desde el borde); `big` (`¡OTRA VEZ!`): 16 px con
   /// contorno y un pop, sobre el cuerpo del actor.
   void _tag(Canvas c, SceneViewport vp, BattleFx f, double age, double u,
-      Rect? label) {
+      Rect? label, double minTop) {
     final s = f.text ?? '';
     final p = vp.toScreen(Offset(f.x, f.y));
     final size = (f.big ? 16 : 8) * u;
@@ -1217,7 +1271,7 @@ class BattleScenePainter extends CustomPainter {
         y = label.top - 4 * u;
       }
       y -= f.slot * h + age / 160 * u;
-      final minY = area.top + size + 4 * u;
+      final minY = minTop + size + 2 * u;
       if (y < minY) y = minY + f.slot * h;
       final half = _pen.width(s, size) / 2 + 5 * u;
       x = x.clamp(
@@ -1242,6 +1296,7 @@ class BattleScenePainter extends CustomPainter {
       final left = (x - w / 2).roundToDouble();
       final box = Rect.fromLTWH(
           left - 5 * u, y - size - 2 * u, w + 8 * u, size + 4 * u);
+      debugFloatRects.add(box);
       _pen.rect(
           c, const Color(0xBF000000), box.left, box.top, box.width, box.height);
       _pen.rect(c, f.color, box.left, box.top, 2 * u, box.height);
@@ -1961,15 +2016,20 @@ class BattleScenePainter extends CustomPainter {
 /// tarjeta con el nombre y destello blanco del impacto. Ver
 /// docs/specs/battle_presentation.md § "Ultimates".
 class BattleOverlayPainter extends CustomPainter {
-  BattleOverlayPainter(this.scene) : super(repaint: scene);
+  BattleOverlayPainter(this.scene)
+      : _floats = BattleScenePainter(scene),
+        super(repaint: scene);
 
   final BattleSceneController scene;
+  final BattleScenePainter _floats;
   static final _pen = _Pen();
 
   @override
   void paint(Canvas canvas, Size size) {
     final f = scene.frame;
     final intro = scene.intro;
+    // Textos flotantes: capa de arriba, sin recorte (debajo de la ULT).
+    _floats.paintFloating(canvas);
     if (f != null && intro != null) _intro(canvas, f, intro, size);
     final u = scene.ult;
     if (f == null || u == null) return;

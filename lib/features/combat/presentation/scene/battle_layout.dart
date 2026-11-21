@@ -441,7 +441,10 @@ class BattleLayout {
   /// Encuadre base: zoom entero que hace que la pelea llene el área del
   /// mundo de [g], centrado en la pelea y, si hay mapa, llevado hacia
   /// adentro del mapa mientras la pelea siga entera a la vista.
-  CameraView frame(SceneGeometry g, BattleArena? arena) {
+  ///
+  /// [zoomOut]: pasos enteros que se aleja del zoom que llena el área
+  /// (perilla de Editor → LAYOUT; nunca baja de 1).
+  CameraView frame(SceneGeometry g, BattleArena? arena, {int zoomOut = 0}) {
     final area = g.worldRect;
     final room = (labelRoom * g.hudUnit).toDouble();
     var fb = fightBox;
@@ -452,7 +455,7 @@ class BattleLayout {
     }
     final fit = math.min(
         area.width / fb.width, math.max(1.0, area.height - room) / fb.height);
-    final zoom = fit.floor().clamp(1, maxZoom).toDouble();
+    final zoom = (fit.floor() - zoomOut).clamp(1, maxZoom).toDouble();
     final vw = area.width / zoom, vh = area.height / zoom;
     final roomW = room / zoom;
     var cx = fb.center.dx;

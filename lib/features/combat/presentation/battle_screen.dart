@@ -6,6 +6,9 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
+import '../../../app/design/ds_layout_host.dart';
+import '../../../core/layout/layout_catalog.dart';
+import '../../../core/layout/layout_doc.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_panel.dart';
@@ -32,6 +35,7 @@ import '../../bestiary/presentation/enemy_info_card.dart';
 import '../domain/skill_text.dart';
 import '../domain/turn_order.dart';
 import 'enemy_live_info.dart';
+import 'battle_bar_layout.dart';
 import 'battle_command_window.dart';
 import 'battle_hud.dart';
 import 'game_sprites.dart';
@@ -73,7 +77,18 @@ class BattleView extends StatefulWidget {
     this.auto = const {},
     this.onAuto,
     this.actionGate,
+    this.layout,
+    this.layoutHooks,
+    this.layoutCatalog,
   });
+
+  /// Layout de la barra de abajo y perillas de la escena (Editor →
+  /// LAYOUT, pantalla `battle`); `null` = el del [layoutCatalog].
+  final LayoutDoc? layout;
+  final DsLayoutHooks? layoutHooks;
+
+  /// `null` = `LayoutCatalog.instance`.
+  final LayoutCatalog? layoutCatalog;
 
   /// Compañeros de la party de este dispositivo (docs/specs/
   /// solo_party.md § 4): su turno abre la ventana de comandos (sin AUTO)
@@ -198,6 +213,10 @@ class BattleViewState extends State<BattleView>
 
   /// Submenú de poción abierto (`potMode`): elegir a quién.
   BattleItem? _potMode;
+
+  /// Hay un aliado caído (el Éter solo sirve así).
+  bool get _anyDown =>
+      widget.battle.party.any((q) => !q.alive && !q.isSummon);
 
   /// Categoría elegida en la ventana de comandos.
   BattleCategory _category = BattleCategory.weapon;
@@ -697,13 +716,12 @@ class BattleViewState extends State<BattleView>
             onSelect: () => _send(AttackCommand(targetId: q.id)),
           ),
       // Las Instante viven en ARMA (battle_attack_menu.md § 6: "un
-      // instante es más un ataque que una habilidad"), después de un
-      // separador; el panel de la derecha dice "INSTANTE · no termina tu
-      // turno" (battle_presentation.md).
-      for (final (i, sk) in instants.indexed)
+      // instante es más un ataque que una habilidad"), sin separador
+      // (v0.20.6: ya llevan su etiqueta INSTANTE); el panel de la derecha
+      // explica la regla (battle_presentation.md).
+      for (final sk in instants)
         _skillAction(
-            sk, cur, tg, SkillRequirements.missing(sk, cur, tgC, foes: foes),
-            separatorBefore: i == 0 ? kInstantSeparator : null),
+            sk, cur, tg, SkillRequirements.missing(sk, cur, tgC, foes: foes)),
     ]));
 
     // HABILIDADES: las que terminan el turno (las Instante están en ARMA).
@@ -803,8 +821,31 @@ class BattleViewState extends State<BattleView>
                     })
                 : null,
           ),
+          // Éter (loot.md § 17.6): solo sobre un aliado caído.
+          if (cur.aethers > 0)
+            BattleAction(
+              id: 'aether',
+              name: 'Éter',
+              value: hexSpan('#ffd166', '100%'),
+              count: cur.aethers,
+              reach: SkillReach.ally,
+              summary: '${hexSpan(SkillReach.ally.hex, 'A un caído')} · '
+                  '${hexSpan('#ffd166', 'revive con toda la vida')}',
+              description: 'Éter ▸ elegir a quién<br>Revive a un aliado '
+                  'caído con el 100% de su vida máx. y le quita '
+                  '${statusNameMarkup(StatusKind.burn)} y '
+                  '${statusNameMarkup(StatusKind.poison)}.',
+              reason: _anyDown ? null : 'No hay aliados caídos.',
+              onSelect: _anyDown
+                  ? () => setState(() {
+                        _potMode = BattleItem.aether;
+                        _selected = 0;
+                      })
+                  : null,
+            ),
         ],
-        badge: hexSpan('#9fb4ff', 'x${cur.potions + cur.ethers}')));
+        badge: hexSpan(
+            '#9fb4ff', 'x${cur.potions + cur.ethers + cur.aethers}')));
 
     // Pasar turno (v0.8.3, combat.md § "Pasar turno"). AUTO nunca pasa.
     // Después de una Instante, la misma tecla termina el turno sin el
@@ -873,6 +914,31 @@ class BattleViewState extends State<BattleView>
   List<BattleAction> _visible(Combatant cur) {
     final b = widget.battle;
     final item = _potMode;
+    if (item == BattleItem.aether) {
+      return [
+        for (final q in b.party)
+          if (!q.alive && !q.isSummon)
+            BattleAction(
+              id: 'give-${q.id}',
+              name: protoEsc(q.name),
+              value: hexSpan('#ffd166', '+${q.maxHp} ¡revive!'),
+              cost: hexSpan('#9fb4ff', '0/${q.maxHp} HP'),
+              description: 'Éter para ${protoEsc(q.name)}: revive con '
+                  '${q.maxHp}/${q.maxHp} HP',
+              onSelect: () =>
+                  _send(ItemCommand(BattleItem.aether, targetPlayerId: q.id)),
+            ),
+        BattleAction(
+          id: 'back',
+          name: '← Volver',
+          description: 'Vuelve a los objetos (Esc).',
+          onSelect: () => setState(() {
+            _potMode = null;
+            _selected = 0;
+          }),
+        ),
+      ];
+    }
     if (item != null) {
       final pot = item == BattleItem.potion;
       return [
@@ -1093,9 +1159,10 @@ class BattleViewState extends State<BattleView>
       [double textFactor = 1, int partySize = 1, bool compact = false]) {
     final f = textFactor < 1 ? 1.0 : textFactor;
     final big = partySize > BattlePartyBar.slotCount;
-    // Grupo compacto con texto Normal: una sola tarjeta (−4 %, para la
-    // escena). Con texto grande el menú necesita ese alto.
-    final base = compact && f <= 1 ? 0.38 : 0.42;
+    // Grupo compacto (v0.20.6): la tarjeta va a la izquierda del menú, en
+    // la misma fila; sin la fila de abajo, la barra baja a 30 % (34 % con
+    // texto grande) y la escena gana ese alto.
+    final base = compact ? (f <= 1 ? 0.30 : 0.34) : 0.42;
     return math
         .min(h * (base + 0.08 * (f - 1) + (big ? 0.09 : 0)),
             h * (big ? 0.68 : 0.62))
@@ -1108,8 +1175,24 @@ class BattleViewState extends State<BattleView>
 
   @override
   Widget build(BuildContext context) {
-    final b = widget.battle;
     scene.options = widget.sceneOptions;
+    if (widget.layout == null) {
+      // Recarga en caliente del layout y las perillas (Editor → LAYOUT).
+      return ListenableBuilder(
+          listenable: widget.layoutCatalog ?? LayoutCatalog.instance,
+          builder: (context, _) => _body(context));
+    }
+    return _body(context);
+  }
+
+  /// El layout de la batalla vigente (barra y perillas).
+  LayoutDoc get _layoutDoc =>
+      widget.layout ??
+      (widget.layoutCatalog ?? LayoutCatalog.instance)
+          .docFor(BattleBarLayout.spec);
+
+  Widget _body(BuildContext context) {
+    final b = widget.battle;
     return ColoredBox(
       color: ProtoColors.bg,
       child: LayoutBuilder(builder: (context, cons) {
@@ -1172,10 +1255,19 @@ class BattleViewState extends State<BattleView>
       BattleLayout layoutFor(SceneGeometry g) => BattleLayout.compute(
           b, widget.arena,
           vw: g.virtualWidth, enemySize: enemySize);
+      // Perillas de Editor → LAYOUT (battle_presentation.md § "Cámara y
+      // encuadre", § "Textos flotantes").
+      final doc = _layoutDoc;
+      final zoomOut = BattleBarLayout.spec
+          .param(doc, BattleBarLayout.cameraZoomOut)
+          .round();
+      final floatMargin =
+          BattleBarLayout.spec.param(doc, BattleBarLayout.floatTopMargin);
       // Franja adaptable: la grande solo si no baja el zoom de la arena.
       final g = SceneGeometry.adaptive(cons.biggest,
           textFactor: RetroType.factorOf(context),
-          zoomOf: (g) => layoutFor(g).frame(g, widget.arena).zoom);
+          zoomOf: (g) =>
+              layoutFor(g).frame(g, widget.arena, zoomOut: zoomOut).zoom);
       final layout = layoutFor(g);
       scene.frame = SceneFrame(
         battle: b,
@@ -1192,6 +1284,8 @@ class BattleViewState extends State<BattleView>
         hoverId: hoveredId,
         turnTimeLeft: widget.turnTimeLeft,
         turnLimit: widget.turnLimit,
+        zoomOut: zoomOut,
+        floatTopMargin: floatMargin,
       );
       scene.sync(
         battleId: widget.battleId,
@@ -1277,12 +1371,51 @@ class BattleViewState extends State<BattleView>
   /// La barra de abajo: la ventana de comandos (o de quién es el turno)
   /// y la barra del grupo.
   Widget _bar(BattleState b, Combatant? me) {
+    // Grupo compacto (sin compañeros): la tarjeta propia va a la
+    // izquierda del menú, en la misma fila (battle_presentation.md
+    // § "Barra de abajo"). Con compañeros, la barra del grupo sigue
+    // debajo.
+    if (compactParty) {
+      final card = me == null ? null : _partyBar(b, me);
+      final row = _menu(card: card) ??
+          BattleBarRow(
+            layout: widget.layout,
+            hooks: widget.layoutHooks,
+            menuBorder: false,
+            slots: {
+              BattleBarLayout.card: (_) => card,
+              BattleBarLayout.waiting: (_) => _waiting(b, me),
+            },
+          );
+      return row;
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(child: _menu() ?? _waiting(b, me)),
         const SizedBox(height: _margin),
-        BattlePartyBar(
+        _partyBar(b, me),
+      ],
+    );
+  }
+
+  Widget _partyBar(BattleState b, Combatant? me) {
+    if (compactParty) {
+      // A la izquierda del menú: arriba y con scroll si el alto no
+      // alcanza; si es angosta, las cifras van arriba de las barras.
+      return LayoutBuilder(
+          key: const ValueKey('battle-card'),
+          builder: (context, box) => SingleChildScrollView(
+              child: _partyBarOf(b, me,
+                  stackBars: box.maxWidth <
+                      RetroType.em(context, 12) + 150)));
+    }
+    return _partyBarOf(b, me);
+  }
+
+  Widget _partyBarOf(BattleState b, Combatant? me, {bool stackBars = false}) {
+    return BattlePartyBar(
+          stackBars: stackBars,
           battle: b,
           localId: me?.id,
           sprites: widget.sprites,
@@ -1292,9 +1425,7 @@ class BattleViewState extends State<BattleView>
           auto: widget.auto,
           onAuto: widget.onAuto,
           onlyLocal: compactParty,
-        ),
-      ],
-    );
+        );
   }
 
   /// Fuera de mi turno: de quién es el turno y cuándo me toca.
@@ -1347,7 +1478,7 @@ class BattleViewState extends State<BattleView>
 
   /// La ventana de comandos: solo en el turno del jugador local (el
   /// prototipo la oculta en cualquier otro momento).
-  Widget? _menu() {
+  Widget? _menu({Widget? card}) {
     final cur = widget.battle.current;
     if (!widget.canAct || cur == null || !cur.isPlayer) return null;
     final entries = _entries(cur);
@@ -1363,6 +1494,7 @@ class BattleViewState extends State<BattleView>
           '${statusNameMarkup(StatusKind.poison)})?</b>',
       BattleItem.ether => '<b>¿A quién le das la Poción de maná (+50% '
           'maná)?</b>',
+      BattleItem.aether => '¿A quién revives con el Éter (100% de la vida)?',
       // Después de una Instante el turno sigue (combat.md).
       _ => cur.chained
           ? hexSpan(kInstantHex, 'Encadenaste: te queda una acción')
@@ -1392,6 +1524,9 @@ class BattleViewState extends State<BattleView>
       extra: bossMechanicRow(widget.battle),
       mp: cur.mp,
       pulse: cur.pulse,
+      card: card,
+      layout: widget.layout,
+      layoutHooks: widget.layoutHooks,
       onCategory: selectCategory,
       onHoverAction: (i) {
         if (i != _selected) setState(() => _selected = i);

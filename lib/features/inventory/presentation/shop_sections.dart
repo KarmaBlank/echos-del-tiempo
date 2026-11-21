@@ -10,6 +10,7 @@ import '../../../app/theme/proto_colors.dart';
 
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../game_engine/rules/build_guide_rules.dart';
 import '../../../game_engine/data/branch_ults_catalog.dart';
 import '../../../game_engine/data/items_catalog.dart';
 import '../../../game_engine/models/attributes.dart';
@@ -364,6 +365,12 @@ class _BuyTabState extends ConsumerState<BuyTab> {
         ? ItemFit.none
         : fitRules.itemFit(plan, ItemInstance.common('_shop', baseId));
     final fit = fitOf(w.id);
+    // » Recomendadas para tu build (build_planner.md § 9.3).
+    final picks = {
+      for (final x in BuildGuideRules(rules).rankBases(plan, p, list))
+        if (x.recommended) x.base.id: x,
+    };
+    final pick = picks[w.id];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -387,6 +394,7 @@ class _BuyTabState extends ConsumerState<BuyTab> {
                           onFocus: () => setState(() => _sel = x.id),
                           label:
                               '${fitOf(x.id).any ? '<span style="color:$kPlanHex">★</span> ' : ''}'
+                              '${picks.containsKey(x.id) ? '<span style="color:$kPlanHex">»</span> ' : ''}'
                               '${protoEsc(x.name)} '
                               '${protoColor(ProtoColors.dim, protoEsc(x.type))} '
                               '${weightTagMarkup(x)}',
@@ -432,6 +440,11 @@ class _BuyTabState extends ConsumerState<BuyTab> {
                 if (fit.any)
                   ProtoText(buildFitMarkup(fit, lead: 'Sirve')!,
                       key: const ValueKey('shop-build-fit')),
+                if (pick != null)
+                  ProtoText(
+                      key: const ValueKey('shop-build-pick'),
+                      protoColor(kPlanColor,
+                          '» Recomendada para tu build: ${protoEsc(pick.reasons.join(' · '))}')),
                 const SizedBox(height: 6),
                 // Primero lo que cambia (antes → después), después el
                 // costo y la ficha.
@@ -511,7 +524,7 @@ class ItemsTab extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ProtoText('<b>${it.name}</b> '
-                      '${protoColor(ProtoColors.green, 'tienes ${it.key == 'pot' ? p.potions : p.ethers}/${ProgressionRules.maxItems}')}'),
+                      '${protoColor(ProtoColors.green, 'tienes ${p.itemCount(it.item)}/${ProgressionRules.maxItems}')}'),
                   ProtoText('<small>${it.description}</small>'),
                 ],
               ),

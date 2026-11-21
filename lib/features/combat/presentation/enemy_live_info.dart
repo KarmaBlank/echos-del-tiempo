@@ -39,13 +39,21 @@ class EnemyLiveInfo extends StatefulWidget {
   final bool? open;
 
   /// "Quemadura ×3", "Mojado · 2 turnos", "Sagrado ×1 · 2 turnos".
-  static List<String> statusLines(Combatant e) => [
+  static List<String> statusLines(Combatant e) =>
+      [for (final (k, rest) in statusEntries(e)) '${k.label}$rest'];
+
+  /// Los estados de [e] en orden, con lo que sigue al nombre
+  /// (" ×3", " · 2 turnos").
+  static List<(StatusKind, String)> statusEntries(Combatant e) => [
         for (final k in StatusKind.values)
           if (e.stacks(k) case final n when n > 0)
-            k.timed
-                ? '${k.label} · $n ${n == 1 ? 'turno' : 'turnos'}'
-                : '${k.label} ×$n'
-                    '${k == StatusKind.holy && e.holyTurns > 0 ? ' · ${e.holyTurns} turnos' : ''}',
+            (
+              k,
+              k.timed
+                  ? ' · $n ${n == 1 ? 'turno' : 'turnos'}'
+                  : ' ×$n'
+                      '${k == StatusKind.holy && e.holyTurns > 0 ? ' · ${e.holyTurns} turnos' : ''}'
+            ),
       ];
 
   /// Qué hace la ULT [u] y cómo cancelarla (markup corto).
@@ -94,7 +102,7 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
     final open = widget.open ?? _keys;
     final ult = e.ultPending ? kEnemyUlts[e.ultId] : null;
     final mech = e.boss ? bossMechanicOf(kEnemies[e.enemyType]) : null;
-    final states = EnemyLiveInfo.statusLines(e);
+    final states = EnemyLiveInfo.statusEntries(e);
     final aff = widget.affinities ? EnemyLiveInfo.affinityMarkup(e) : '';
     final sections = <Widget>[
       if (aff.isNotEmpty)
@@ -138,7 +146,32 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            for (final s in states) Text(retroText(s), style: DsText.body()),
+            // Uno por fila, con el nombre y color de todo el juego y su
+            // pliegue (la flecha de DsFold): qué hace, con Alt / Shift
+            // (la ficha sigue al mouse y no recibe clics).
+            for (final (k, rest) in states)
+              Column(
+                key: ValueKey('enemy-live-status-${k.name}'),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ProtoText(
+                      '${open ? 'v' : '>'} ${statusNameMarkup(k)}'
+                      '${protoEsc(rest)}',
+                      key: ValueKey('enemy-live-status-name-${k.name}'),
+                      style: DsText.body()),
+                  if (open)
+                    Padding(
+                      padding: EdgeInsets.only(left: DsSpace.md),
+                      child: Text(retroText(statusDescriptionOf(k)),
+                          key: ValueKey('enemy-live-status-desc-${k.name}'),
+                          style: DsText.detail()),
+                    ),
+                ],
+              ),
+            if (!open)
+              Text(retroText('Qué hace cada uno: Alt / Shift'),
+                  style: DsText.detail(DsColors.textSecondary)),
           ],
         ),
     ];

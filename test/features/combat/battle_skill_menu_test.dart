@@ -132,13 +132,13 @@ void main() {
   });
 
   testWidgets('Instante en ARMA (no en HABILIDADES), con marca y '
-      'separador; teclas en orden', (tester) async {
+      'sin separador (v0.20.6); teclas en orden', (tester) async {
     final (menu, sent) = await pump(tester);
     expect(row(instant), findsNothing);
     expect(row(oneFoe), findsOneWidget);
     menu.selectCategory(BattleCategory.weapon);
     await tester.pump();
-    expect(find.byKey(ValueKey('battle-sep-skill-$instant')), findsOneWidget);
+    expect(find.byKey(ValueKey('battle-sep-skill-$instant')), findsNothing);
     expect(
         find.descendant(
             of: row(instant),
@@ -174,6 +174,11 @@ void main() {
       expect(
           find.descendant(
               of: note, matching: find.textContaining('no termina tu turno')),
+          findsOneWidget);
+      // La regla entera (combat.md § "Pulso, precondiciones e Instante").
+      expect(
+          find.descendant(
+              of: note, matching: find.textContaining('una vez por turno')),
           findsOneWidget);
       expect(find.descendant(of: note, matching: find.byType(DsTag)),
           findsOneWidget);

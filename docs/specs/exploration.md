@@ -539,8 +539,27 @@ build, chat plegado) como `DsToast`. Mismo orden, mismas teclas, misma
   Enemigos (cuadros de color de arte que crecen con el texto). Esc, M o
   `CERRAR [M]` lo cierran (Esc no abre la pausa). Como todo panel, el
   jugador local no camina mientras está abierto y en co-op el mundo
-  sigue. **Pendiente**: viajar a una piedra de paso con clic desde el
-  mapa (no entra en v0.8.1).
+  sigue. - **Piedras de paso en el mapa** (v0.20.6, worldgen.md § 11.4): las
+  piedras descubiertas (`poiSeen`) se marcan con un cuadro de color vivo
+  (`FullMap.waystoneColor` = `#00F0FF`; sin activar, al 45%; lado
+  `max(22, celda × 1.6)` px) con su
+  número en el orden del piso, que **parpadea** (opacidad 0.25 ↔ 1, ciclo
+  de `FullMap.blinkPeriod` = 700 ms ida y vuelta). Con la opción
+  **Reducir movimiento** (`GameSettings.reduceMotion`) quedan fijas a
+  opacidad 1. La leyenda `Piedra de paso` usa el mismo color.
+- **Modo "elegir destino"**: se entra con **E** junto a una piedra
+  activada (si hay otra activada) o con **M** / `MAPA [M]` estando junto
+  a una piedra activada (`SessionController.travelOrigin`). Decisión: M
+  desde cualquier otro lado abre el mapa normal (se ven las piedras, pero
+  no se elige destino), porque la regla de viaje exige estar en la piedra
+  de origen y el host la valida. En el modo: aviso `Elegí el destino:
+  clic en una piedra, su número o Tab y Enter`; un botón `VIAJAR A N [N]`
+  por destino (el resaltado con Tab, `selected`); clic en la marca de una
+  piedra destino, tecla de su número (1–9, también del teclado
+  numérico), o Tab (rota el resaltado, marcado con borde de 2 px) y
+  Enter. Al elegir se cierra el mapa y se manda
+  `InteractPoiAction(origen, toPoi:)`; el origen se marca con borde de
+  2 px y no es destino.
 - **Grupo** (abajo a la derecha, `#party`): una fila de `.pbox`
   (`PartyBox`, docs/specs/ui_style.md § "Caja de jugador"), una por
   jugador, con los colores de `hud()` (línea 1195): nombre +
@@ -803,8 +822,9 @@ de los tiles: no son sprites del manifiesto):
 - **Reliquia** (`ActorPainter.relic`): rombo ámbar que flota con halo.
 - **Cartel de E** (`WorldPrompt.poi`, texto en `promptText`): `[E] Romper
   la pared agrietada`, `[E] Abrir el atajo`, `[E] Santuario: <bendición>
-  (<efecto>)`, `[E] Activar la piedra de paso` / `[E] Viajar a la piedra
-  2/3`, `[E] Viento del Eco: +40% velocidad 60 s`, `[E] Encender el
+  (<efecto>)`, `[E] Activar la piedra de paso` / `[E] Elegir destino en el
+  mapa` (antes `[E] Viajar a la piedra
+  2/3`), `[E] Viento del Eco: +40% velocidad 60 s`, `[E] Encender el
   brasero`. Prioridad: sello > PdI > escalera.
 - **Cartel de misión opcional cumplida**: `¡Misión opcional cumplida!` +
   el texto de la misión, arriba al centro, 2.8 s (`MapGame.questToastMs`),

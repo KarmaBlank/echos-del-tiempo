@@ -17,6 +17,7 @@ import '../../../game_engine/models/build_plan.dart';
 import '../../../game_engine/models/item.dart' show ItemInstance;
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/attribute_advisor.dart';
+import '../../../game_engine/rules/build_guide_rules.dart';
 import '../../../game_engine/rules/build_plan_rules.dart';
 import '../../../game_engine/rules/build_template_rules.dart';
 import '../../passive_tree/presentation/passive_tree_view.dart';
@@ -98,6 +99,10 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
   BuildPlan get _plan => widget.plan;
   BuildPlanRules get _rules => widget.rules;
   PlayerProfile get _p => widget.profile;
+  BuildGuideRules get _guide => BuildGuideRules(_rules.progression);
+
+  /// Pasos del orden sugerido que se listan en la tarjeta Árbol.
+  static const orderPreview = 5;
 
   @override
   void didUpdateWidget(BuildPlannerView old) {
@@ -415,6 +420,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
             detailColor:
                 smallDone == small.length ? DsColors.success : DsColors.mp,
           ),
+        ..._treeOrderRows(),
         if (_takeNext() case final w?) w,
         Padding(
           padding: EdgeInsets.symmetric(
@@ -450,6 +456,78 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
       ],
       onAdd: _addAscension,
     );
+  }
+
+  /// Orden sugerido (build_planner.md § 9.2): el siguiente nodo con su
+  /// motivo y los próximos pasos numerados.
+  List<Widget> _treeOrderRows() {
+    final order = _guide.treeOrder(_plan, _p);
+    final next = order.next;
+    if (next == null) return const [];
+    final rest = order.steps.skip(1).take(orderPreview - 1).toList();
+    String name(String id) => _rules.nodeName(id);
+    return [
+      DsListRow(
+        key: const ValueKey('build-tree-next'),
+        leading: Text('SIG', style: DsText.detail(DsColors.reward)),
+        title: retroText('Siguiente nodo: ${name(next.node)}'),
+        titleColor: DsColors.reward,
+        detail: retroText(next.alternatives > 1
+            ? '${next.reason} (entre ${next.alternatives} opciones)'
+            : next.reason),
+        detailColor: DsColors.textSecondary,
+      ),
+      if (rest.isNotEmpty)
+        Padding(
+          key: const ValueKey('build-tree-order'),
+          padding: EdgeInsets.symmetric(
+              horizontal: DsSpace.md, vertical: DsSpace.xs),
+          child: Text(
+              retroText('Después: ${[
+                for (final s in rest) '${s.step}. ${name(s.node)}'
+              ].join(' · ')}${order.steps.length > orderPreview ? ' · ...' : ''}'),
+              style: DsText.detail(kPlanColor)),
+        ),
+    ];
+  }
+
+  /// Armas que te sirven (build_planner.md § 9.3): las mejores del
+  /// inventario y el alijo con su motivo; todos los motivos en el tooltip.
+  List<Widget> _weaponPicks() {
+    final picks = _guide
+        .rankItems(_plan, _p, stash: widget.stash)
+        .where((w) => w.recommended)
+        .toList();
+    if (picks.isEmpty) return const [];
+    final stashUids = {for (final s in widget.stash) s.uid};
+    return [
+      Padding(
+        padding: EdgeInsets.fromLTRB(
+            DsSpace.md, DsSpace.xs, DsSpace.md, 0),
+        child: Text(retroText('Armas que te sirven'),
+            key: const ValueKey('build-weapon-picks'),
+            style: DsText.detail(kPlanColor)),
+      ),
+      for (final (i, w) in picks.indexed)
+        DsListRow(
+          key: ValueKey('build-pick-$i'),
+          leading: Text('${i + 1}.', style: DsText.detail(kPlanColor)),
+          title: retroText([
+            w.item == null
+                ? w.base.name
+                : _rules.progression.items.displayName(w.item!),
+            if (w.equipped) '(equipada)',
+            if (stashUids.contains(w.item?.uid)) '(alijo)',
+          ].join(' ')),
+          titleColor: w.meets ? null : DsColors.textSecondary,
+          detail: retroText(w.reasons.first),
+          detailColor: w.meets ? DsColors.mp : DsColors.danger,
+          tooltip: DsTooltipCard(title: retroText(w.base.name), children: [
+            for (final r in w.reasons)
+              Text(retroText(r), style: DsText.detail()),
+          ]),
+        ),
+    ];
   }
 
   /// TOMAR SIGUIENTE DEL PLAN (build_planner_v2.md § 3).
@@ -639,6 +717,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
       progress,
       [
         _targets(),
+        ..._weaponPicks(),
         for (final g in progress.section(BuildSection.weapon))
           if (g.kind != BuildGoalKind.weaponTarget)
             _row(g, onRemove: () => _set(without(g))),
@@ -787,6 +866,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
                 showReset: false,
                 showHelp: false,
                 planned: planned,
+                planOrder: _guide.treeOrder(_plan, _p),
                 onPlan:
                     _editable ? (id) => _set(_plan.toggleTreeNode(id)) : null,
                 height: (box.maxHeight - 60).clamp(220.0, widget.treeHeight),

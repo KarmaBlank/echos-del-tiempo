@@ -31,7 +31,33 @@ class FullMap extends StatefulWidget {
     this.loot = const [],
     this.bounds,
     this.entranceOpen,
+    this.waystones = const [],
+    this.destinations = const [],
+    this.originId,
+    this.onTravel,
+    this.reduceMotion = false,
   });
+
+  /// Piedras de paso descubiertas del piso (en orden; activada o no):
+  /// se marcan con [waystoneColor] y parpadean (worldgen.md § 11.4).
+  final List<(MapPoi, bool)> waystones;
+
+  /// Modo "elegir destino": las piedras a las que se puede viajar desde
+  /// [originId] (vacío = mapa normal).
+  final List<MapPoi> destinations;
+  final int? originId;
+  final ValueChanged<int>? onTravel;
+
+  /// Sin parpadeo (opción de accesibilidad "reducir movimiento").
+  final bool reduceMotion;
+
+  /// Color vivo de las piedras de paso en el mapa grande.
+  static const waystoneColor = Color(0xFF00F0FF);
+
+  /// Período del parpadeo.
+  static const blinkPeriod = Duration(milliseconds: 700);
+
+  bool get choosing => destinations.isNotEmpty && onTravel != null;
 
   /// `Pradera Esmeralda · Piso 1/2` (o `Mapa del mundo`).
   final String title;
@@ -69,15 +95,57 @@ class FullMap extends StatefulWidget {
 
   /// La leyenda con los colores del tema activo.
   static List<(String, Color)> get legend => [
-        for (final (l, m) in legendMarks) (l, MapPalette.mark(m)),
+        for (final (l, m) in legendMarks)
+          (l, m == MapMark.waystone ? waystoneColor : MapPalette.mark(m)),
       ];
 
   @override
   State<FullMap> createState() => FullMapState();
 }
 
-class FullMapState extends State<FullMap> {
+class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
   double _zoom = 1;
+
+  late final AnimationController _blink =
+      AnimationController(vsync: this, duration: FullMap.blinkPeriod);
+
+  /// Destino resaltado con Tab (Enter viaja).
+  int _sel = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncBlink();
+  }
+
+  @override
+  void didUpdateWidget(FullMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncBlink();
+    if (_sel >= widget.destinations.length) _sel = 0;
+  }
+
+  void _syncBlink() {
+    final on = !widget.reduceMotion && widget.waystones.isNotEmpty;
+    if (on) {
+      if (!_blink.isAnimating) _blink.repeat(reverse: true);
+    } else {
+      _blink.stop();
+      _blink.value = 1;
+    }
+  }
+
+  @override
+  void dispose() {
+    _blink.dispose();
+    super.dispose();
+  }
+
+  /// Número de la piedra (1..n en el orden del piso).
+  int _number(MapPoi p) =>
+      widget.waystones.indexWhere((w) => w.$1.id == p.id) + 1;
+
+  void _travel(MapPoi p) => widget.onTravel?.call(p.id);
   Offset? _center;
 
   /// Lo último dibujado: para recortar el paneo a los bordes.
@@ -144,6 +212,24 @@ class FullMapState extends State<FullMap> {
       _zoomOut();
       return KeyEventResult.handled;
     }
+    if (widget.choosing) {
+      final d = widget.destinations;
+      if (k == LogicalKeyboardKey.tab) {
+        setState(() => _sel = (_sel + 1) % d.length);
+        return KeyEventResult.handled;
+      }
+      if (k == LogicalKeyboardKey.enter ||
+          k == LogicalKeyboardKey.numpadEnter) {
+        _travel(d[_sel.clamp(0, d.length - 1)]);
+        return KeyEventResult.handled;
+      }
+      final digit = _digit(k);
+      if (digit != null) {
+        final hit = d.where((p) => _number(p) == digit).firstOrNull;
+        if (hit != null) _travel(hit);
+        return KeyEventResult.handled;
+      }
+    }
     if (k == LogicalKeyboardKey.keyM) {
       widget.onClose();
       return KeyEventResult.handled;
@@ -155,8 +241,94 @@ class FullMapState extends State<FullMap> {
     return KeyEventResult.ignored;
   }
 
+  static int? _digit(LogicalKeyboardKey k) {
+    const rows = [
+      LogicalKeyboardKey.digit1,
+      LogicalKeyboardKey.digit2,
+      LogicalKeyboardKey.digit3,
+      LogicalKeyboardKey.digit4,
+      LogicalKeyboardKey.digit5,
+      LogicalKeyboardKey.digit6,
+      LogicalKeyboardKey.digit7,
+      LogicalKeyboardKey.digit8,
+      LogicalKeyboardKey.digit9,
+    ];
+    const pad = [
+      LogicalKeyboardKey.numpad1,
+      LogicalKeyboardKey.numpad2,
+      LogicalKeyboardKey.numpad3,
+      LogicalKeyboardKey.numpad4,
+      LogicalKeyboardKey.numpad5,
+      LogicalKeyboardKey.numpad6,
+      LogicalKeyboardKey.numpad7,
+      LogicalKeyboardKey.numpad8,
+      LogicalKeyboardKey.numpad9,
+    ];
+    final i = rows.indexOf(k);
+    if (i >= 0) return i + 1;
+    final j = pad.indexOf(k);
+    return j >= 0 ? j + 1 : null;
+  }
+
+  /// Las marcas de piedras de paso sobre la ventana [v] del mapa.
+  List<Widget> _stoneMarks(BuildContext context, Rect v) {
+    final size = math.max(22.0, _cell * 1.6);
+    final out = <Widget>[];
+    for (final (poi, on) in widget.waystones) {
+      final x = (poi.center.x / 16 - v.left) * _cell;
+      final y = (poi.center.y / 16 - v.top) * _cell;
+      if (x < 0 || y < 0 || x > v.width * _cell || y > v.height * _cell) {
+        continue;
+      }
+      final dest =
+          widget.choosing && widget.destinations.any((d) => d.id == poi.id);
+      final origin = poi.id == widget.originId;
+      final selected = dest && widget.destinations[_sel].id == poi.id;
+      final hi = selected || origin;
+      Widget mark = FadeTransition(
+        opacity: Tween(begin: 0.25, end: 1.0).animate(_blink),
+        child: Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: on
+                ? FullMap.waystoneColor
+                : FullMap.waystoneColor.withValues(alpha: 0.45),
+            border: Border.all(
+                color: hi ? ProtoColors.ink : ProtoColors.panelBorder,
+                width: hi ? 2 : 1),
+          ),
+          child: Text(retroText('${_number(poi)}'),
+              style: const TextStyle(color: Color(0xFF001014))),
+        ),
+      );
+      if (dest) {
+        mark = Semantics(
+          button: true,
+          label: 'Viajar a la piedra ${_number(poi)}',
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _travel(poi),
+              child: mark,
+            ),
+          ),
+        );
+      }
+      out.add(Positioned(
+          key: ValueKey('full-map-stone-${poi.id}'),
+          left: x - size / 2,
+          top: y - size / 2,
+          child: mark));
+    }
+    return out;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final choosing = widget.choosing;
     return PanelFrame(
       title: retroText('MAPA · ${widget.title}'),
       width: 1100,
@@ -171,6 +343,12 @@ class FullMapState extends State<FullMap> {
             key: const ValueKey('full-map-center'), onPressed: _recenter),
       ],
       actions: [
+        if (choosing)
+          for (final d in widget.destinations)
+            PanelButton('VIAJAR A ${_number(d)} [${_number(d)}]',
+                key: ValueKey('full-map-travel-${d.id}'),
+                selected: widget.destinations[_sel].id == d.id,
+                onPressed: () => _travel(d)),
         PanelButton('CERRAR [M]',
             key: const ValueKey('full-map-close'), onPressed: widget.onClose),
       ],
@@ -195,21 +373,25 @@ class FullMapState extends State<FullMap> {
                     },
                     child: GestureDetector(
                       onPanUpdate: (d) => _pan(-d.delta / _cell),
-                      child: Minimap(
-                        key: const ValueKey('full-map'),
-                        map: widget.map,
-                        session: widget.session,
-                        localId: widget.localId,
-                        localX: widget.localX,
-                        localY: widget.localY,
-                        time: widget.time,
-                        loot: widget.loot,
-                        bounds: widget.bounds,
-                        entranceOpen: widget.entranceOpen,
-                        cell: _cell,
-                        view: _view,
-                        center: _center ?? _player,
-                      ),
+                      child: Stack(clipBehavior: Clip.hardEdge, children: [
+                        Minimap(
+                          key: const ValueKey('full-map'),
+                          map: widget.map,
+                          session: widget.session,
+                          localId: widget.localId,
+                          localX: widget.localX,
+                          localY: widget.localY,
+                          time: widget.time,
+                          loot: widget.loot,
+                          bounds: widget.bounds,
+                          entranceOpen: widget.entranceOpen,
+                          cell: _cell,
+                          view: _view,
+                          center: _center ?? _player,
+                        ),
+                        ..._stoneMarks(context,
+                            Minimap.viewRect(a, _view, _center ?? _player)),
+                      ]),
                     ),
                   ),
                 );
@@ -237,6 +419,12 @@ class FullMapState extends State<FullMap> {
                     Text(retroText(label)),
                   ],
                 ),
+              if (choosing)
+                Text(
+                    key: const ValueKey('full-map-choose-hint'),
+                    retroText('Elegí el destino: clic en una piedra, su '
+                        'número o Tab y Enter'),
+                    style: const TextStyle(color: FullMap.waystoneColor)),
               Text(retroText('Rueda / + -: zoom · Arrastrar / flechas: mover'),
                   style: const TextStyle(color: ProtoColors.dim)),
             ],

@@ -783,7 +783,8 @@ visual si no hay override):
 Entradas del manifest → forma: `espada`, `hacha`, `lanza`, `dagas`,
 `arco`, `ballesta`, `rifle`, `varita`, `tomo`, `pocion` (iguales),
 `baculo` → `báculo`, `espada_escudo`/`maza_escudo`/`martillo_escudo` →
-`escudo`, `cofre` → `cofre` (forma nueva, solo editor por ahora). El
+su forma combinada del mismo nombre (arma + escudo, v0.20.6; las
+perillas de la entrada pintan las dos piezas), `cofre` → `cofre` (forma nueva, solo editor por ahora). El
 juego pide el ícono con la clave de la entrada (`procKeyForType`:
 `espada+escudo` → `espada_escudo`, `báculo` → `baculo`), así que un
 override por entrada afecta SOLO a esa arma.

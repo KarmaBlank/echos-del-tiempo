@@ -320,10 +320,12 @@ class LootPainter {
 
   void _stackIcon(Canvas c, StackKind k) {
     switch (k) {
-      case StackKind.potion || StackKind.ether:
-        final liquid = k == StackKind.potion
-            ? const Color(0xFFFF4757)
-            : const Color(0xFF74B9FF);
+      case StackKind.potion || StackKind.ether || StackKind.aether:
+        final liquid = switch (k) {
+          StackKind.potion => const Color(0xFFFF4757),
+          StackKind.aether => const Color(0xFFFFD166),
+          _ => const Color(0xFF74B9FF),
+        };
         _rect(c, const Color(0xFFDFE6E9), -1, -7, 2, 2);
         _rect(c, liquid, -2, -5, 4, 4);
         _rect(c, const Color(0xFFFFFFFF), -1, -4, 1, 1);

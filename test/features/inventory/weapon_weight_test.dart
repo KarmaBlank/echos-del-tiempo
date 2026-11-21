@@ -47,8 +47,8 @@ void main() {
         }
       }
       // Distribución del catálogo v0.8.4 (loot.md § 1.1).
-      expect(count[WeightClass.ligera], 42);
-      expect(count[WeightClass.media], 30);
+      expect(count[WeightClass.ligera], 44); // + soporte v0.21
+      expect(count[WeightClass.media], 33);
       expect(count[WeightClass.pesada], 22);
       // Ejemplos por tipo.
       expect(weightClassOf(weapons['espada_bronce']!), WeightClass.ligera);

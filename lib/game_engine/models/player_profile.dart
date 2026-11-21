@@ -4,6 +4,7 @@ import '../rules/passive_tree_rules.dart';
 import 'achievement.dart';
 import 'ascension.dart';
 import 'attributes.dart';
+import 'battle_command.dart';
 import 'eco.dart';
 import 'item.dart';
 import 'passive_tree.dart';
@@ -34,6 +35,7 @@ class PlayerProfile {
     String? equipped,
     int potions = defaultPotions,
     int ethers = defaultEthers,
+    int aethers = 0,
     Map<String, WeaponUpgradeLevels> upgrades = const {},
     Map<String, String> fused = const {},
     List<ItemInstance>? items,
@@ -70,6 +72,7 @@ class PlayerProfile {
       equippedUid: _resolve(list, equipped),
       potions: potions,
       ethers: ethers,
+      aethers: aethers,
       materials: Map.unmodifiable({
         for (final e in materials.entries)
           if (e.value > 0) e.key: e.value,
@@ -119,6 +122,7 @@ class PlayerProfile {
     required this.equippedUid,
     required this.potions,
     required this.ethers,
+    this.aethers = 0,
     required this.materials,
     required this.grid,
     required this.lootFilter,
@@ -144,7 +148,7 @@ class PlayerProfile {
   final AchievementProgress achievements;
 
   /// Repertorio de ULT aprendidas (JSON `uk`, ultimates_v2.md § 2.1):
-  /// árbol, hazañas, Ecos/Atlas/Maestría y fragmentos de jefe.
+  /// árbol, hazañas, Ecos/Atlas/Maestría y botín de jefe.
   final Set<String> ultKnown;
 
   /// ULT activa elegida (JSON `us`); `null` = el orden de siempre
@@ -237,6 +241,16 @@ class PlayerProfile {
   final String? equippedUid;
   final int potions;
   final int ethers;
+
+  /// Éter (loot.md § 17.6): revive a un aliado caído con toda la vida.
+  final int aethers;
+
+  /// Cuántos [item] lleva.
+  int itemCount(BattleItem item) => switch (item) {
+        BattleItem.potion => potions,
+        BattleItem.ether => ethers,
+        BattleItem.aether => aethers,
+      };
 
   /// Materiales de crafteo (solo los > 0).
   final Map<CraftMaterial, int> materials;
@@ -335,6 +349,7 @@ class PlayerProfile {
     String? equipped,
     int? potions,
     int? ethers,
+    int? aethers,
     Map<String, WeaponUpgradeLevels>? upgrades,
     Map<String, String>? fused,
     List<ItemInstance>? items,
@@ -381,6 +396,7 @@ class PlayerProfile {
       equippedUid: eq,
       potions: potions ?? this.potions,
       ethers: ethers ?? this.ethers,
+      aethers: aethers ?? this.aethers,
       materials: materials == null
           ? this.materials
           : Map.unmodifiable({
@@ -510,6 +526,7 @@ class PlayerProfile {
         'eq': equippedUid,
         'pot': potions,
         'eter': ethers,
+        if (aethers > 0) 'eterV': aethers,
         if (materials.isNotEmpty)
           'mats': {for (final e in materials.entries) e.key.name: e.value},
         if (grid.isNotEmpty) 'grid': grid,
@@ -616,6 +633,7 @@ class PlayerProfile {
       equipped: json['eq'] is String ? json['eq'] as String : null,
       potions: _int(json['pot'], defaultPotions),
       ethers: _int(json['eter'], defaultEthers),
+      aethers: _int(json['eterV']),
       upgrades: up,
       fused: fused,
       materials: mats,

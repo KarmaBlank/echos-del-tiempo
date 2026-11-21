@@ -23,6 +23,8 @@ abstract final class TuningId {
   static const condense = 'condense';
   static const materials = 'materials';
   static const ecoTier = 'ecoTier';
+  static const buildGuide = 'buildGuide';
+  static const consumables = 'consumables';
 }
 
 /// Los valores del código.
@@ -86,6 +88,33 @@ const Map<String, TuningDef> kTuningDefaults = {
   TuningId.ecoTier: TuningDef('Bonus de tier de Ecos', {
     'tierQuantity': 0.03,
     'partyQuantity': 0.10,
+  }),
+  // build_planner.md § 9: pesos de la guía del builder.
+  TuningId.buildGuide: TuningDef('Guía del builder', {
+    'dmgWeight': 2,
+    'elementWeight': 2,
+    'passiveWeight': 1.5,
+    'modWeight': 0.5,
+    'goalWeight': 2,
+    'fitWeight': 3,
+    'attrWeight': 2,
+    'treeWeight': 2,
+    'powerWeight': 1.5,
+    'reqPenalty': 0.6,
+    'recommendTop': 3,
+  }),
+  // loot.md § 17.6: precios de la tienda y Éter en cofres; combat.md §
+  // "Revivir y el árbol": sinergia de revivir con el árbol.
+  TuningId.consumables: TuningDef('Consumibles y revivir', {
+    'potionPrice': 30,
+    'etherPrice': 40,
+    'aetherMult': 5,
+    'aetherChestChance': 0.05,
+    'espPer': 0.003,
+    'healScale': 0.5,
+    'shieldScale': 1.0,
+    'shieldCap': 0.25,
+    'shieldTurns': 2,
   }),
 };
 

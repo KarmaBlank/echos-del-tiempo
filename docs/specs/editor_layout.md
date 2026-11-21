@@ -158,6 +158,28 @@ de un `LayoutBuilder` elige breakpoint y arma `Row`/`Column`/`Wrap`.
 La pantalla deja de componer a mano su árbol y solo entrega builders.
 Sin lógica de juego en el host; sin redondeos (estilo DS).
 
+### 2.8 Perillas de pantalla (v0.20.6)
+
+Algunas pantallas tienen números de presentación que no son slots
+(cámara, márgenes). Las declara el código en
+`LayoutScreenSpec.params` (`LayoutParamSpec`: clave, etiqueta, defecto,
+mínimo, máximo, paso, ayuda) y el YAML guarda solo las que pisan el
+defecto:
+
+```yaml
+params:
+  camera_zoom_out: 1
+  float_top_margin: 8
+```
+
+`LayoutScreenSpec.param(doc, clave)` devuelve el valor acotado a su
+rango (claves desconocidas o fuera de rango nunca rompen). En Editor →
+LAYOUT, la sección PERILLAS del panel derecho muestra `-` valor `+` y
+DEFECTO; volver al defecto la saca del YAML. Guardar / publicar /
+deshacer funcionan igual que con los slots. Hoy: BATALLA
+(`camera_zoom_out`, `float_top_margin`; battle_presentation.md
+§ "Textos flotantes").
+
 ## 3. Editor: área LAYOUT
 
 Nueva pestaña junto a Sprites/Animaciones
@@ -369,6 +391,17 @@ Tests:
   character_attributes_*.png` (árbol viejo) == YAML por defecto; matriz
   en `character_layout_matrix_test.dart`; vista previa en el Editor con
   la sesión de ejemplo.
+- **BATALLA (fase 6, v0.20.6)** (`battle_bar_layout.dart`,
+  `BattleBarLayout` + `BattleBarRow`): la barra de abajo en una fila,
+  lugares `top`, `card`, `categories`, `actions`, `description` (el
+  template fija anchos y pesos; dos slots en un lugar se apilan). Slots
+  `battle.card`, `battle.categories`, `battle.actions`,
+  `battle.description`, `battle.waiting`. Corte `narrow`: la tarjeta a
+  `top`. Vista previa: la batalla entera con una pelea de ejemplo (motor
+  puro). La escena y la barra del grupo con compañeros son template.
+  Matriz en `battle_bar_layout_test.dart`; detalle en
+  battle_presentation.md § "Barra de abajo (v0.20.6)".
+- **Perillas (§ 2.8, v0.20.6)**: ver abajo.
 - **Pendiente (fase 5+)**: el título, la fila de pestañas (con la barra
   de miembros) y el contenido de las pestañas ÁRBOL (árbol fijo; la
   columna del hito como grupo), ULT (con su vista previa, sin

@@ -164,8 +164,41 @@ const kItemIconRows = <String, List<String>>{
     '...mm...',
     '........',
   ],
+  // Íconos de inventario de las armas con escudo (weapon_identity.md
+  // § 3.1): el escudo a la izquierda y el arma de pie a la derecha, con
+  // una columna libre entre ambos para que se lean a 32 px.
+  'espada_escudo': [
+    '......m.',
+    '......m.',
+    'mmmm..m.',
+    'mggm..m.',
+    'mggm.hhh',
+    'mggm..h.',
+    '.mm...h.',
+    '......h.',
+  ],
+  'maza_escudo': [
+    '......g.',
+    '.....mmm',
+    'mmmm.gmg',
+    'mggm.mmm',
+    'mggm..h.',
+    'mggm..h.',
+    '.mm...h.',
+    '......h.',
+  ],
+  'martillo_escudo': [
+    '....mmmm',
+    '....mmmm',
+    'mmmm..h.',
+    'mggm..h.',
+    'mggm..h.',
+    'mggm..h.',
+    '.mm...h.',
+    '......h.',
+  ],
   // Armas en mano de las familias con escudo (sprites.md § "Armas en
-  // mano"): el ícono de inventario sigue siendo el escudo.
+  // mano"); en la mano el escudo va aparte, en el otro brazo.
   'maza': [
     '..g.g...',
     '.gmmmg..',
@@ -289,9 +322,9 @@ const kItemEntryShapes = <String, String>{
   'hacha': 'hacha',
   'lanza': 'lanza',
   'dagas': 'dagas',
-  'espada_escudo': 'escudo',
-  'maza_escudo': 'escudo',
-  'martillo_escudo': 'escudo',
+  'espada_escudo': 'espada_escudo',
+  'maza_escudo': 'maza_escudo',
+  'martillo_escudo': 'martillo_escudo',
   'arco': 'arco',
   'ballesta': 'ballesta',
   'rifle': 'rifle',

@@ -49,7 +49,7 @@ class ShopGuards {
   /// `BuyItemAction`.
   String? buyItem(PlayerProfile p, BattleItem item) {
     if (!canShop) return notShopping;
-    final have = item == BattleItem.potion ? p.potions : p.ethers;
+    final have = p.itemCount(item);
     if (have >= ProgressionRules.maxItems) {
       return 'Máximo ${ProgressionRules.maxItems}';
     }

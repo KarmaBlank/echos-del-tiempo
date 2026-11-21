@@ -254,6 +254,15 @@ class LayoutEditorController extends ChangeNotifier {
     _apply(d.withRule(_editBp, id, f));
   }
 
+  /// Cambia una perilla de la pantalla (§ 2.8); el defecto la saca del
+  /// YAML.
+  void setParam(String key, double v) {
+    final d = _doc, p = spec?.paramSpec(key);
+    if (d == null || p == null) return;
+    final c = p.clamp(v);
+    _apply(d.withParam(key, c == p.defaultValue ? null : c));
+  }
+
   /// La regla propia del corte que se edita (sin heredar) y la efectiva.
   (SlotRule own, SlotRule effective) ruleOf(String id) {
     final d = _doc;

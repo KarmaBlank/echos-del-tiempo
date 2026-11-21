@@ -232,6 +232,23 @@ const Map<String, WeaponDef> kWeapons = {
   'arco_eterno': WeaponDef(id: 'arco_eterno', name: 'Arco Eterno', classId: 'tirador', type: 'arco', tier: 3, level: 50, price: 15000,
       requirements: {_des: 60, _agi: 30}, atk: PowerFormula(base: 54, coefficients: {_des: 1.15, _agi: 0.2}),
       skillIds: ['flechaSolar', 'flechaSanadora', 'ojoAguila'], implicit: [ItemMod(ModStat.critChance, 5)]),
+  // ---- soporte de nivel bajo (loot.md § 8.8) ----
+  'baculo_rocio': WeaponDef(id: 'baculo_rocio', name: 'Báculo del Rocío', classId: 'maga', type: 'báculo', tier: 1, level: 3, price: 336,
+      requirements: {_esp: 15}, atk: PowerFormula(base: 4, coefficients: {_fue: 0.4}), mag: PowerFormula(base: 8, coefficients: {_esp: 0.8}),
+      skillIds: ['rocio', 'semilla']),
+  'maza_escudo_vigilia': WeaponDef(id: 'maza_escudo_vigilia', name: 'Maza y Escudo de la Vigilia', classId: 'paladin', type: 'maza+escudo', tier: 2, level: 5, price: 600, weight: 0.6, shieldDefense: 4,
+      requirements: {_vit: 21, _esp: 12}, atk: PowerFormula(base: 4, coefficients: {_fue: 0.2}), mag: PowerFormula(base: 8, coefficients: {_esp: 0.75}),
+      skillIds: ['sanar', 'barrera']),
+  'arco_alivio': WeaponDef(id: 'arco_alivio', name: 'Arco del Alivio', classId: 'tirador', type: 'arco', tier: 2, level: 6, price: 744,
+      requirements: {_des: 13, _esp: 8}, atk: PowerFormula(base: 10, coefficients: {_des: 0.6, _agi: 0.2}),
+      skillIds: ['flechaSanadora', 'certero']),
+  // Revivir raro: solo de loot (precio 0 = no se vende) y con poco peso.
+  'maza_escudo_retorno': WeaponDef(id: 'maza_escudo_retorno', name: 'Maza y Escudo del Retorno', classId: 'paladin', type: 'maza+escudo', tier: 3, level: 10, price: 0, weight: 0.6, shieldDefense: 4,
+      requirements: {_vit: 22, _esp: 17}, atk: PowerFormula(base: 5, coefficients: {_fue: 0.2}), mag: PowerFormula(base: 11, coefficients: {_esp: 0.78}),
+      skillIds: ['sanar', 'ecoRegreso'], dropWeight: 0.25),
+  'tomo_regreso': WeaponDef(id: 'tomo_regreso', name: 'Tomo del Regreso', classId: 'maga', type: 'tomo', tier: 3, level: 11, price: 0, weight: 0.4,
+      requirements: {_esp: 20}, atk: PowerFormula(base: 3, coefficients: {_fue: 0.3}), mag: PowerFormula(base: 12, coefficients: {_esp: 0.9}),
+      skillIds: ['curaFocal', 'ecoRegreso'], dropWeight: 0.25),
   // ---- paladin (bases nuevas) ----
   'espada_escudo_cruzado': WeaponDef(id: 'espada_escudo_cruzado', name: 'Espada y Escudo del Cruzado', classId: 'paladin', type: 'espada+escudo', tier: 3, level: 13, price: 1976, shieldDefense: 2,
       requirements: {_fue: 9, _esp: 22}, atk: PowerFormula(base: 7, coefficients: {_fue: 0.3}), mag: PowerFormula(base: 14, coefficients: {_esp: 0.8}),

@@ -366,3 +366,99 @@ objetivo `actual + puntos` (si ya había una meta mayor, queda la mayor;
 
 Tests: `test/game_engine/attribute_advisor_test.dart`,
 `test/features/world/attribute_advice_ui_test.dart`.
+
+## 9. Guía del builder: orden del árbol y armas recomendadas (v0.20.6)
+
+Pedido del dueño: "el builder no te dice mucho, cuesta seguirle la
+pista". El árbol marcaba el camino en violeta pero no en qué orden
+tomarlo, y no había forma de saber qué arma del inventario o de la
+armería le sirve más a tu build.
+
+Reglas puras en `lib/game_engine/rules/build_guide_rules.dart`
+(`BuildGuideRules(progression)`), deterministas. Pesos en
+`kTuning['buildGuide']` (Editor → Balance, grupo "Guía del builder").
+Es local: no viaja por la red (el protocolo no cambia).
+
+### 9.1 Afinidad (`BuildAffinity`)
+
+Un mapa etiqueta → peso, con de dónde salió cada etiqueta para armar el
+motivo. Etiquetas: stats `atk`, `mag`, `crit`, `hp`, `def`, `spd`,
+`heal`, `mp`; estados `s:<StatusKind>` (`s:burn`, `s:poison`...);
+disparadores `t:<ProcTrigger>` (`t:onCrit`...).
+
+- **Del arma** (`weaponAffinity(base, item)`): su stat de daño
+  (`dmgWeight`, MAG si es caster); cada habilidad (base, fusionadas y
+  ULT del arma): tipo físico → `atk`, mágico → `mag`, cura → `heal`,
+  guardia / provocar / proteger → `def` + `hp`, prisa → `spd`, estado →
+  `s:`, bono de crítico → `crit`; el elemento del arma → su estado
+  (`elementWeight`); la pasiva de arma: el disparador y el estado de sus
+  mecánicas (`passiveWeight`); los mods: su stat (`modWeight`).
+- **Del plan**: habilidades y pasiva de arma del plan (como arriba, a la
+  mitad) y la primera base del plan si no es la equipada.
+- **De un nodo**: sus efectos (`atk`, `mag`, `crit`... ; `burn` / `poi` /
+  `frz` → estado) y sus mecánicas (disparador y estado, × 1.5).
+
+`affinityOf(plan, profile)` = arma equipada + plan.
+`treeAffinity(plan, profile)` = nodos tomados + planificados.
+
+### 9.2 Orden del árbol (`treeOrder(plan, profile) → TreeOrder`)
+
+Secuencia numerada de los nodos del plan que faltan tomar:
+
+1. Si el plan tiene **línea de tiempo** (plantilla), manda: por cada paso
+   en orden de nivel, el camino que falta hasta él. Motivo: "Plantilla:
+   nivel N" (o el de afinidad si encaja con el arma).
+2. Lo que quede se ordena **goloso**: en cada paso los candidatos son
+   los nodos del plan pegados a lo ya tomado (o tomado antes en la
+   secuencia). Puntaje = afinidad del nodo con el arma + por cada
+   notable / keystone del plan que falta, si el candidato está en su
+   camino más corto: `goalWeight / largo del camino` + la afinidad de esa
+   meta × 0.5 / largo. Empate: el orden en que está en el plan.
+3. Si ningún nodo del plan está pegado (plan sin + CAMINOS), el primer
+   nodo del camino más corto al nodo del plan más cercano entra como
+   paso "Conecta con X" (fuera del plan).
+
+Cada `TreeOrderStep`: nodo, número (1..), motivo corto y cuántas
+opciones había en ese paso (`alternatives`; > 1 = había que elegir).
+`TreeOrder.next` es el paso 1; `numbers` mapea nodo → número.
+Motivos: "Encaja con Hendir (Quemadura)", "Camino a Keystone Demoledor",
+"Plantilla: nivel 12", "Del plan".
+
+En la UI:
+- Árbol (panel de personaje y BUILD): sobre cada nodo del plan que falta
+  su número de paso (cuadradito violeta con el número, tamaño fijo de
+  pantalla) y el siguiente en dorado con "SIG". La ficha del nodo dice
+  "Paso N del plan: motivo". Leyenda: "Orden".
+- BUILD, tarjeta Árbol: "Siguiente nodo: X — motivo" y los próximos 5
+  pasos numerados ("1. Impacto · 2. Golpe firme ..."). Con varias
+  opciones en el paso dice "(entre N opciones)".
+
+### 9.3 Armas que te sirven (`rankItems` / `rankBases`)
+
+`WeaponPick`: arma (instancia o base), puntaje, motivos cortos (como
+mucho 3), si cumple requisitos y si está equipada. Puntaje:
+
+- **plan**: `fitWeight` × metas del arma que cumple (`itemFit`): "Del
+  plan: base del plan";
+- **atributos**: el atributo de mayor coeficiente de su fórmula de daño;
+  si es de tus 2 más altos o tiene meta en el plan, `attrWeight`: "Usa
+  FUE, que tenés alta (32)" / "Usa FUE, la de tu plan";
+- **árbol**: Σ afinidad del arma × afinidad del árbol (normalizado a 1)
+  × `treeWeight`: "Su pasiva Furia encaja con tu rama (al critar)";
+- **poder**: su fórmula de daño con tus atributos / la mejor de la
+  lista × `powerWeight`;
+- **requisitos**: si no los cumple, × `reqPenalty` y "Te faltan 6 FUE"
+  (o "Nivel 12"); si los cumple, "Requisitos cumplidos" (último motivo).
+
+Orden: puntaje, después nivel de base, después uid / id. Las primeras
+`recommendTop` con puntaje > 0 son **recomendadas**; si alguna de la
+lista cumple requisitos, solo se recomiendan las que los cumplen.
+
+En la UI:
+- BUILD, tarjeta Arma y mods: "Armas que te sirven": las 3 mejores del
+  inventario y el alijo con sus motivos (tooltip con todos).
+- Inventario: la ficha de un arma recomendada suma "» Recomendada:
+  motivo · motivo".
+- Armería (COMPRAR): las bases recomendadas llevan **»** en la fila y el
+  detalle "» Recomendada para tu build: motivos". Sin plan también
+  recomienda (por arma equipada, árbol y atributos).

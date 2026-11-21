@@ -67,6 +67,29 @@ de datos que ya existen o de un único campo nuevo:
 Costo: todo vive en `WeaponOverlay`/`paintItemIcon` y en las perillas del
 Editor (§ 7.5). No hay sprites nuevos.
 
+### 3.1 Ícono de las armas con escudo (v0.20.6)
+
+En inventario, alijo, fusión, forja, tienda y tooltips, `espada+escudo`,
+`maza+escudo` y `martillo+escudo` ya no comparten el escudo solo: cada
+una tiene su forma 8 × 8 combinada en `kItemIconRows`
+(`espada_escudo`, `maza_escudo`, `martillo_escudo`), igual que el
+personaje en el mapa y la batalla (escudo en un brazo, arma en el otro).
+
+- Escudo de 4 × 5 celdas a la izquierda (borde `m`, centro `g` = color
+  de la rareza), una columna libre y el arma de pie a la derecha: espada
+  con guarda, maza de cabeza redonda con púas `g`, martillo de cabeza
+  ancha y plana. Se distinguen a 32 px por la silueta de la cabeza.
+- `iconKeyForType` elige la forma combinada; `kItemEntryShapes` asigna
+  cada entrada `items.<tipo>_escudo` a su forma, así que las perillas
+  del Editor (metal, mango, brillo, contorno, espejo, escala, aura...)
+  ajustan el ícono nuevo.
+- Las capas de § 3 se aplican igual: aura en el contorno de ambas
+  piezas, tinte de rareza en el escudo y las púas, destello del
+  legendario sobre el metal, marca de ULT en el pomo (la última celda
+  del mango) y variación por uid.
+- El arma en mano (`WeaponOverlay`) no cambia: sigue dibujando
+  `escudo` y el arma por separado.
+
 ## 4. Propuesta mecánica: "elemento de base" del arma
 
 - Campo nuevo `ItemInstance.element` (o en `UniqueDef` para los

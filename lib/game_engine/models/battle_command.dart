@@ -31,7 +31,9 @@ class DualCommand extends BattleCommand {
   const DualCommand(this.partnerId, {this.dualId});
 }
 
-enum BattleItem { potion, ether }
+/// `ether` es la Poción de maná (clave `eter`, histórica); `aether` es
+/// el Éter que revive con toda la vida (loot.md § 17.6).
+enum BattleItem { potion, ether, aether }
 
 class ItemCommand extends BattleCommand {
   final BattleItem item;

@@ -5,6 +5,8 @@ import 'package:echos_del_tiempo/game_engine/balance/balance_codecs.dart';
 import 'package:echos_del_tiempo/game_engine/balance/balance_patch.dart';
 import 'package:echos_del_tiempo/game_engine/balance/balance_registries.dart';
 import 'package:echos_del_tiempo/game_engine/data/achievements_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/items_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/craft_rules.dart';
@@ -35,6 +37,7 @@ void main() {
     'materials': ({'chancePrisma': 0.05, 'upRaroPrismas': 2},
         () => '${LootRules.materialChance[CraftMaterial.prisma]} ${CraftRules.upgradeRarityCost(Rarity.raro)}'),
     'ecoTier': ({'tierQuantity': 0.05}, () => EcoRules.tierQuantity),
+    'consumables': ({'aetherMult': 6}, () => kItems[BattleItem.aether]!.price),
   };
   for (final e in cases.entries) {
     test('Ajustes ${e.key}: se parchea, el motor lo lee y se revierte', () {

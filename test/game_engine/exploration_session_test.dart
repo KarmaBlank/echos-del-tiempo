@@ -128,6 +128,62 @@ void main() {
     expect(step.events.whereType<PoiUsedEvent>().single.toPoi, stones[0].id);
   });
 
+  test('piedras de paso: elegir cualquier destino activado (mapa)', () {
+    final r = start(
+        6, (f) => f.pois.where((p) => p.kind == PoiKind.waystone).length >= 3,
+        players: 2);
+    var s = r.s;
+    final e = r.e;
+    final stones = r.f.pois.where((p) => p.kind == PoiKind.waystone).toList();
+    s = use(e, s, stones[2]);
+    s = use(e, s, stones[1]);
+    // stones[0] sin activar: no es destino válido.
+    expect(
+        e.apply(s, 'p0', InteractPoiAction(stones[1].id, toPoi: stones[0].id)),
+        isNull);
+    // La misma piedra ni un PdI que no es piedra tampoco.
+    expect(
+        e.apply(s, 'p0', InteractPoiAction(stones[1].id, toPoi: stones[1].id)),
+        isNull);
+    expect(e.apply(s, 'p0', InteractPoiAction(stones[1].id, toPoi: 999999)),
+        isNull);
+    s = use(e, s, stones[0]);
+    expect(
+        ExplorationRules.waystoneDestinations(r.f, s.mission!, stones[0])
+            .map((p) => p.id),
+        [stones[1].id, stones[2].id]);
+    // Desde la 1 a la 3 (no es "la siguiente"): vale.
+    s = moveTo(e, s, 'p0', beside(e.mapFor(s), stones[0].tx, stones[0].ty).x,
+        beside(e.mapFor(s), stones[0].tx, stones[0].ty).y);
+    final other = (s.players['p1']!.x, s.players['p1']!.y);
+    final step =
+        e.apply(s, 'p0', InteractPoiAction(stones[0].id, toPoi: stones[2].id))!;
+    s = step.state;
+    final p0 = s.players['p0']!;
+    expect(
+        WorldRules.distance(p0.x, p0.y, stones[2].center.x, stones[2].center.y),
+        lessThan(20));
+    expect((s.players['p1']!.x, s.players['p1']!.y), other);
+    expect(step.events.whereType<PoiUsedEvent>().single.toPoi, stones[2].id);
+    // Lejos de una piedra el host lo rechaza (abrir el mapa con M desde
+    // cualquier lado no permite viajar).
+    s = moveTo(e, s, 'p0', r.s.players['p0']!.x, r.s.players['p0']!.y);
+    expect(
+        e.apply(s, 'p0', InteractPoiAction(stones[0].id, toPoi: stones[1].id)),
+        isNull);
+  });
+
+  test('InteractPoiAction con destino viaja por la red', () {
+    const a = InteractPoiAction(101, toPoi: 103);
+    final b = ActionJson.fromJson(ActionJson.toJson(a)) as InteractPoiAction;
+    expect((b.poiId, b.toPoi), (101, 103));
+    expect(
+        (ActionJson.fromJson(ActionJson.toJson(const InteractPoiAction(5)))
+                as InteractPoiAction)
+            .toPoi,
+        isNull);
+  });
+
   test('viento del eco: +40% de velocidad un rato, reusable', () {
     final r = start(1, (f) => f.pois.any((p) => p.kind == PoiKind.wind));
     var s = r.s;

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../data/tuning_catalog.dart';
+import 'revive_rules.dart';
 import '../data/ascension_catalog.dart';
 import '../data/branch_ults_catalog.dart';
 import '../data/elements_catalog.dart';
@@ -492,6 +493,7 @@ class BattleEngine {
       skillIds: skills,
       potions: m.potions,
       ethers: m.ethers,
+      aethers: m.aethers,
       ult: m.ult,
     );
     _refreshStats(c);
@@ -1518,9 +1520,11 @@ class _Turn {
           }} ${_turns(d.turns)}',
       ].join();
 
-  /// Revive a [q] con la fracción `revive` de su vida (Resurrección).
+  /// Revive a [q] con la fracción `revive` de su vida (Resurrección),
+  /// más la sinergia del árbol (combat.md § Revivir, [ReviveRules]).
   void _revive(Combatant p, Combatant q, SkillDef tk) {
-    final h = math.max(1, jsRound(q.maxHp * tk.revive));
+    final frac = ReviveRules.lifeFor(p, tk.revive);
+    final h = math.max(1, jsRound(q.maxHp * frac));
     _heal(q, h);
     if (tk.cleanse > 0) {
       for (final k in q.statuses.keys.toList()) {
@@ -1533,8 +1537,24 @@ class _Turn {
     q.nextTurn = state.clock + _iv(q);
     events.add(RevivedEvent(q.id));
     _fire(ProcTrigger.onHeal, p, target: q, amount: h);
+    // Velo del Retorno: escudo según la Curación del lanzador.
+    final shield = jsRound(q.maxHp * ReviveRules.shieldFraction(p.healBonus));
+    if (shield > 0) {
+      q.effects = [
+        for (final fx in q.effects)
+          if (fx.sourceId != kReviveVeilId) fx,
+        TimedEffect(
+            sourceId: kReviveVeilId,
+            stat: BuffStat.shield,
+            value: shield.toDouble(),
+            turns: ReviveRules.shieldTurns,
+            ownerId: p.id),
+      ];
+      events.add(ShieldEvent(q.id, shield));
+    }
     state.log = '${p.name} · ${tk.name}: ¡${q.name} revive con $h HP '
-        '(${_pct(tk.revive)} de su vida)!';
+        '(${_pct(frac)} de su vida)!'
+        '${shield > 0 ? ' · Velo del Retorno: escudo de $shield' : ''}';
   }
 
   /// Atraviesa y rebota (variantes): golpes secundarios tras el golpe a
@@ -4357,9 +4377,11 @@ class _Turn {
           ..dual = true;
         if (!_dual(p, partnerId, dualId, foes)) return false;
       case ItemCommand(:final item, :final targetPlayerId):
-        final ok = item == BattleItem.ether
-            ? _ether(p, targetPlayerId)
-            : _potion(p, targetPlayerId);
+        final ok = switch (item) {
+          BattleItem.ether => _ether(p, targetPlayerId),
+          BattleItem.potion => _potion(p, targetPlayerId),
+          BattleItem.aether => _aether(p, targetPlayerId),
+        };
         if (!ok) return false;
       case DefendCommand():
         events.add(ActionEvent(p.id, BattleActionKind.defend));
@@ -4944,6 +4966,30 @@ class _Turn {
     return true;
   }
 
+  /// Éter (loot.md § 17.6): revive a un aliado caído con toda la vida.
+  /// Sin caídos no se gasta (la acción no vale).
+  bool _aether(Combatant p, String? targetId) {
+    if (p.aethers <= 0) return false;
+    final chosen = targetId == null ? null : state.byId(targetId);
+    final t = chosen != null &&
+            chosen.isPlayer &&
+            !chosen.isSummon &&
+            !chosen.alive
+        ? chosen
+        : state.party.where((c) => !c.alive && !c.isSummon).firstOrNull;
+    if (t == null) return false;
+    events.add(ActionEvent(p.id, BattleActionKind.potion, targetId: t.id));
+    p.aethers--;
+    _heal(t, t.maxHp);
+    t.statuses[StatusKind.burn] = 0;
+    t.statuses[StatusKind.poison] = 0;
+    t.nextTurn = state.clock + _iv(t);
+    events.add(RevivedEvent(t.id));
+    state.log = '${p.name} usa Éter en ${t.name}: ¡revive con toda la '
+        'vida (${t.hp}/${t.maxHp})!';
+    return true;
+  }
+
   bool _potion(Combatant p, String? targetId) {
     if (p.potions <= 0) return false;
     final chosen = targetId == null ? null : state.byId(targetId);
@@ -4967,6 +5013,9 @@ class _Turn {
     return true;
   }
 }
+
+/// Id del escudo que deja revivir con Curación (Velo del Retorno).
+const kReviveVeilId = 'veloRetorno';
 
 /// Nombre de la postura del Caballero Hueco (`Combatant.stance`).
 String stanceName(int stance) => stance == 1

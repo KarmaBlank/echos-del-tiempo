@@ -215,6 +215,7 @@ const Map<String, SkillDelivery> kSkillDelivery = {
   'purificar': _any, // Purificación
   'resurreccion': _any, // Resurrección
   'fenix': _any, // Llama Fénix
+  'ecoRegreso': _any, // Eco de Regreso
   'graciaDesbordante': _any, // Gracia Desbordante
   'marea': _any, // Marea Vital
   'flechaSanadora': _ranged, // Flecha Sanadora

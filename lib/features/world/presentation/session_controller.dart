@@ -961,6 +961,38 @@ class SessionController extends StateNotifier<SessionView?> {
     return p;
   }
 
+  /// La piedra de paso activada junto al jugador local (origen del modo
+  /// "elegir destino" del mapa en grande, worldgen.md § 11.4), o `null`.
+  MapPoi? get travelOrigin {
+    final p = nearPoi;
+    final m = _s?.mission;
+    if (p == null || m == null || p.kind != PoiKind.waystone) return null;
+    return m.poiUsed.contains(p.id) ? p : null;
+  }
+
+  /// Las piedras a las que se puede viajar desde [travelOrigin].
+  List<MapPoi> get travelDestinations {
+    final from = travelOrigin;
+    final s = _s;
+    if (from == null || s == null) return const [];
+    final f = engine.mapFor(s).floor(s.mission!.floor);
+    return f == null
+        ? const []
+        : ExplorationRules.waystoneDestinations(f, s.mission!, from);
+  }
+
+  /// Viajar a la piedra [toPoi] desde [travelOrigin] (lo valida el host)
+  /// y cerrar el mapa.
+  bool travelTo(int toPoi) {
+    final from = travelOrigin;
+    if (from == null || !travelDestinations.any((p) => p.id == toPoi)) {
+      return false;
+    }
+    closePanel();
+    _apply(InteractPoiAction(from.id, toPoi: toPoi));
+    return true;
+  }
+
   /// La escalera del piso actual bajo el jugador local (campo).
   StairsKind? get nearStairs {
     final s = _s;
@@ -1019,7 +1051,12 @@ class SessionController extends StateNotifier<SessionView?> {
       if (seal != null) {
         _apply(ActivateSealAction(seal.id));
       } else if (nearPoi case final p?) {
-        _apply(InteractPoiAction(p.id));
+        // Piedra activada con destinos: mapa en modo "elegir destino".
+        if (travelDestinations.isNotEmpty) {
+          openPanel(WorldPanel.map);
+        } else {
+          _apply(InteractPoiAction(p.id));
+        }
       } else if (nearStairs case final k?) {
         useStairs(down: k == StairsKind.down);
       }

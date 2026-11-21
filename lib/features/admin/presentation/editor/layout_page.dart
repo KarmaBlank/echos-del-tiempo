@@ -5,6 +5,7 @@ import '../../../../app/design/design.dart';
 import '../../../../app/design/ds_layout_host.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../core/layout/layout_doc.dart';
+import '../../../../core/layout/layout_spec.dart';
 import '../../../../core/layout/layout_validator.dart';
 import 'layout_editor_controller.dart';
 
@@ -440,6 +441,11 @@ class LayoutPageState extends State<LayoutPage> {
               style: DsText.detail())
         else
           ..._props(id),
+        if (s != null && s.params.isNotEmpty) ...[
+          SizedBox(height: DsSpace.md),
+          const DsSectionHeader('PERILLAS'),
+          for (final p in s.params) _param(s, p),
+        ],
         SizedBox(height: DsSpace.md),
         const DsSectionHeader('VALIDACIÓN'),
         if (c.message != null)
@@ -462,6 +468,37 @@ class LayoutPageState extends State<LayoutPage> {
                       i.error ? DsColors.danger : DsColors.warning)),
             ),
       ],
+    );
+  }
+
+  /// Una perilla de la pantalla (§ 2.8): − valor + y DEFECTO.
+  Widget _param(LayoutScreenSpec s, LayoutParamSpec p) {
+    final d = c.doc;
+    if (d == null) return const SizedBox.shrink();
+    final v = s.param(d, p.key);
+    String fmt(double x) =>
+        x == x.roundToDouble() ? '${x.toInt()}' : x.toStringAsFixed(1);
+    return Padding(
+      key: ValueKey('layout-param-${p.key}'),
+      padding: EdgeInsets.only(bottom: DsSpace.xs),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(p.label, style: DsText.subtitle()),
+        if (p.help != null) Text(p.help!, style: DsText.detail()),
+        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+          _chip('-', false, v <= p.min ? null : () => c.setParam(p.key, v - p.step),
+              key: ValueKey('layout-param-${p.key}-minus')),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: DsSpace.xs, vertical: 6),
+            child: Text(fmt(v),
+                key: ValueKey('layout-param-${p.key}-value'),
+                style: DsText.body()),
+          ),
+          _chip('+', false, v >= p.max ? null : () => c.setParam(p.key, v + p.step),
+              key: ValueKey('layout-param-${p.key}-plus')),
+          _chip('DEFECTO (${fmt(p.defaultValue)})', v == p.defaultValue,
+              () => c.setParam(p.key, p.defaultValue)),
+        ]),
+      ]),
     );
   }
 

@@ -19,11 +19,13 @@ abstract final class ActionJson {
   static String itemKey(BattleItem i) => switch (i) {
         BattleItem.potion => 'pot',
         BattleItem.ether => 'eter',
+        BattleItem.aether => 'eterV',
       };
 
   static BattleItem itemFromKey(String k) => switch (k) {
         'pot' => BattleItem.potion,
         'eter' => BattleItem.ether,
+        'eterV' => BattleItem.aether,
         _ => throw FormatException('JSON inválido: objeto de batalla', k),
       };
 
@@ -75,7 +77,11 @@ abstract final class ActionJson {
         PauseAction() => {'t': 'pause', 'on': a.paused},
         BackToLobbyAction() => {'t': 'back'},
         UseStairsAction() => {'t': 'stairs', 'down': a.down},
-        InteractPoiAction() => {'t': 'poi', 'id': a.poiId},
+        InteractPoiAction() => {
+            't': 'poi',
+            'id': a.poiId,
+            if (a.toPoi != null) 'to': a.toPoi,
+          },
         CraftAction() => {
             't': 'craft',
             'op': a.op.name,
@@ -214,7 +220,7 @@ abstract final class ActionJson {
       case 'stairs':
         return UseStairsAction(down: j.boolean('down'));
       case 'poi':
-        return InteractPoiAction(j.integer('id'));
+        return InteractPoiAction(j.integer('id'), toPoi: j.intOrNull('to'));
       case 'craft':
         return CraftAction(j.enumByName('op', CraftOp.values), j.str('w'),
             sourceUid: j.strOrNull('src'),

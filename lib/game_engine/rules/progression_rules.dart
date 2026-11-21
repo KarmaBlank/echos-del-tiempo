@@ -306,6 +306,7 @@ class ProgressionRules {
       equipped: raw.equippedUid,
       potions: raw.potions.clamp(0, maxItems),
       ethers: raw.ethers.clamp(0, maxItems),
+      aethers: raw.aethers.clamp(0, maxItems),
       materials: {
         for (final e in raw.materials.entries)
           e.key: e.value.clamp(0, CraftMaterial.maxStack),
@@ -498,12 +499,13 @@ class ProgressionRules {
   /// `buyItem`.
   PlayerProfile? buyItem(PlayerProfile p, BattleItem item) {
     final def = kItems[item]!;
-    final have = item == BattleItem.potion ? p.potions : p.ethers;
+    final have = p.itemCount(item);
     if (have >= maxItems || p.credits < def.price) return null;
     return InventoryRules.relayout(p.copyWith(
       credits: p.credits - def.price,
       potions: item == BattleItem.potion ? have + 1 : null,
       ethers: item == BattleItem.ether ? have + 1 : null,
+      aethers: item == BattleItem.aether ? have + 1 : null,
     ));
   }
 

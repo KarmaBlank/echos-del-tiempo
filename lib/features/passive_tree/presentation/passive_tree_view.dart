@@ -13,6 +13,7 @@ import '../../../app/theme/ui_theme.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../game_engine/models/passive_tree.dart';
 import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/rules/build_guide_rules.dart';
 import '../../../game_engine/rules/passive_tree_rules.dart';
 import '../../build_planner/presentation/build_planner_view.dart'
     show PickOption, showBuildPicker;
@@ -37,6 +38,7 @@ class PassiveTreeView extends StatefulWidget {
     this.height = PassiveTreeView.viewportHeight,
     this.showHelp = true,
     this.planned = const {},
+    this.planOrder = TreeOrder.empty,
     this.onPlan,
     this.onTakePath,
     this.onMark,
@@ -82,6 +84,13 @@ class PassiveTreeView extends StatefulWidget {
 
   /// Nodos del plan de build: anillo violeta (build_planner.md § 4.2).
   final Set<String> planned;
+
+  /// Orden sugerido de los nodos del plan (build_planner.md § 9.2): número
+  /// de paso sobre cada nodo y "SIG" en el siguiente.
+  final TreeOrder planOrder;
+
+  /// Pasos numerados que se dibujan (el resto queda solo con el anillo).
+  static const maxOrderMarks = 12;
 
   /// Modo PLANIFICAR: el clic marca o desmarca el nodo en el plan en vez
   /// de tomarlo.
@@ -831,6 +840,23 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                   ),
                 ),
               ),
+              if (widget.planOrder.steps.isNotEmpty)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: AnimatedBuilder(
+                      animation: _transform,
+                      builder: (context, _) => CustomPaint(
+                        key: const ValueKey('tree-plan-order'),
+                        painter: PlanOrderPainter(
+                          catalog: _cat,
+                          order: widget.planOrder,
+                          transform: _transform.value.clone(),
+                          textScaler: MediaQuery.textScalerOf(context),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               if (milestone != null)
                 Positioned(
                   top: 0,
@@ -925,8 +951,19 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
                 color: milestoneColor),
           if (widget.planned.contains(id))
             const DsTag('★ EN TU BUILD', color: PassiveTreePainter.planColor),
+          if (widget.planOrder.of(id) case final s?)
+            DsTag(s.step == 1 ? 'SIGUIENTE' : 'PASO ${s.step}',
+                color: s.step == 1
+                    ? DsColors.reward
+                    : PassiveTreePainter.planColor),
         ],
         children: [
+          if (widget.planOrder.of(id) case final s?)
+            Text(retroText('Paso ${s.step} del plan: ${s.reason}'),
+                key: const ValueKey('tree-plan-step'),
+                style: DsText.detail(s.step == 1
+                    ? DsColors.reward
+                    : PassiveTreePainter.planColor)),
           if (kind.isNotEmpty || pathText != null)
             Text(
                 retroText([
@@ -1065,6 +1102,8 @@ class _PassiveTreeViewState extends State<PassiveTreeView> {
       ('Búsqueda', dot(PassiveTreePainter.searchColor, ring: true)),
       if (widget.planned.isNotEmpty || widget.planning)
         ('Plan', dot(PassiveTreePainter.planColor, ring: true)),
+      if (widget.planOrder.steps.isNotEmpty)
+        ('Orden (SIG = siguiente)', dot(DsColors.reward)),
     ];
     return FittedBox(
       key: const ValueKey('tree-legend'),
@@ -1561,4 +1600,70 @@ class TreeLabelsPainter extends CustomPainter {
       old.highlightPath != highlightPath ||
       old.textScaler != textScaler ||
       old.devicePixelRatio != devicePixelRatio;
+}
+
+/// Números de paso del orden sugerido (build_planner.md § 9.2), en px de
+/// pantalla y tamaño fijo: un cuadradito violeta con el número arriba a
+/// la derecha de cada nodo y "SIG" en dorado en el siguiente.
+class PlanOrderPainter extends CustomPainter {
+  PlanOrderPainter({
+    required this.catalog,
+    required this.order,
+    required this.transform,
+    required this.textScaler,
+  });
+
+  final PassiveTreeCatalog catalog;
+  final TreeOrder order;
+  final Matrix4 transform;
+  final TextScaler textScaler;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final zoom = transform.storage[0];
+    final steps = order.steps.take(PassiveTreeView.maxOrderMarks).toList();
+    // El siguiente, al final: queda arriba de todo.
+    for (final s in steps.reversed) {
+      final n = catalog.nodes[s.node];
+      if (n == null) continue;
+      final next = s.step == 1;
+      final color = next ? DsColors.reward : PassiveTreePainter.planColor;
+      final tp = TextPainter(
+        text: TextSpan(
+          text: next ? 'SIG' : '${s.step}',
+          style: RetroType.smallStyle.copyWith(color: ProtoColors.shadow),
+        ),
+        textScaler: textScaler,
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final c = MatrixUtils.transformPoint(
+          transform, PassiveTreeView.nodeCenter(n));
+      final r = PassiveTreeView.nodeRadius(n, start: false) * zoom;
+      final box = Rect.fromLTWH(c.dx + r * 0.6, c.dy - r * 0.6 - tp.height - 2,
+          tp.width + 6, tp.height + 2);
+      if (!box.overlaps(Offset.zero & size)) continue;
+      canvas.drawRect(box, Paint()..color = color);
+      canvas.drawRect(
+          box,
+          Paint()
+            ..color = ProtoColors.shadow
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1);
+      tp.paint(canvas, box.topLeft + const Offset(3, 1));
+      if (next) {
+        canvas.drawRect(
+            Rect.fromCircle(center: c, radius: r + 5),
+            Paint()
+              ..color = color
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 2);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(PlanOrderPainter old) =>
+      old.transform != transform ||
+      old.order != order ||
+      old.textScaler != textScaler;
 }

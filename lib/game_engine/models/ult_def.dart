@@ -19,8 +19,9 @@ enum UltSource {
   /// (aprendida).
   eco('eco', 'Ecos y Atlas'),
 
-  /// Fragmento de ULT de un jefe (aprendida).
-  boss('boss', 'Fragmento de jefe');
+  /// Botín de jefe: se aprende al vencer a ese jefe por primera vez
+  /// (aprendida). No hay contador ni nada que juntar.
+  boss('boss', 'Botín de jefe');
 
   const UltSource(this.key, this.label);
 
