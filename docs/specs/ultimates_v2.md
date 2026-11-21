@@ -70,8 +70,8 @@ futuro o del pasado, futuro inmutable, pasado magitec).
   - **De objeto** (armas Raras/Épicas con mod, legendarios/únicos): solo
     disponibles mientras el arma está equipada; no se aprenden. Si está
     equipada y es compatible, aparece en el selector.
-  - **Aprendidas** (árbol, hazañas, Ecos/Atlas/Maestría, botín de jefe
-    como "Fragmento de ULT"): quedan en el repertorio para siempre.
+  - **Aprendidas** (árbol, hazañas, Ecos/Atlas/Maestría, botín de jefe):
+    quedan en el repertorio para siempre.
 - Compatibilidad: cada ULT declara `weapons` (tipos de arma) y/o
   `classes`. Si el arma actual no cumple, la ULT sale gris y se usa la de
   respaldo (la del tipo de arma, siempre disponible).
@@ -169,7 +169,7 @@ ult_preview_test.dart`.
 | Hitos del árbol | 8 | 2 por clase (guerrero, maga, paladín, tirador) al gastar 20 y 40 puntos en el árbol de la clase |
 | Hazañas | 6 | recompensa de 6 hazañas nuevas (achievements.md § 2.5-2.7) |
 | Ecos / Atlas / Maestría | 6 | nodos notables del Atlas (3), Maestría (2), Eco con modificador raro (1) |
-| Jefes (botín) | 10 | "Fragmento de ULT" de cada jefe base, 1ª victoria garantizada, después 5% (Abismo: 15%) |
+| Jefes (botín) | 10 | "Botín de jefe": la 1ª victoria contra cada jefe base (o su versión del Abismo) la enseña |
 | **Total** | **50** | |
 
 ## 3. Catálogo de 50 ULT de jugador
@@ -251,7 +251,25 @@ Q = quiebre, R = reacción/Convergencia.
 | 39 | ult2_ecoDoble | Eco Doble | Maestría 50 | cualquiera | (la repetida) | S/D | repite la última habilidad del lanzador al 80% **[nuevo: `echoLast`]** | 80 | eco del portador repite su última animación en traslúcido; 2000 ms |
 | 40 | ult2_loQueSera | Lo Que Será | Eco con modificador raro | cualquiera | — | D1/Q | marca: tras 2 turnos del objetivo recibe 4.0 y quiebra si está Fisurado **[nuevo: `delayedHit`]** | 100 | reloj sobre el objetivo; el impacto "ya pasó" en el futuro; 2300 ms |
 
-### 3.6 Botín de jefe — 10 (aprendidas, "Fragmento de ULT")
+### 3.6 Botín de jefe — 10 (aprendidas)
+
+Etiqueta visible del origen: **Botín de jefe** (UltSource.boss, clave
+`boss` sin cambios). No hay contador ni nada que juntar: la ULT se aprende
+al vencer a ese jefe por primera vez. La palabra "Fragmento" queda
+reservada a los Fragmentos del Abismo (abyss_bosses.md), que solo piden
+los niveles altos de MEJORAR de 4 de estas ULT.
+
+En la pestaña ULT de PERSONAJE (v0.20.6):
+
+- Encabezado de la sección: `Jefes vencidos: X/10`. Un jefe cuenta como
+  vencido si su ULT ya está en el repertorio o si la zona siguiente está
+  desbloqueada (`unlockedZone > zona`).
+- Fila: `Falta · Vencé a <Jefe> (zona N, Nv a–b)` (u `Obtenida · ...`).
+- Tooltip: `Se aprende al vencer a <Jefe> (la primera victoria la
+  enseña). Aparece como jefe de la zona N, <Zona> (Nv a–b).` + `Su
+  versión del Abismo también la enseña.` si corresponde + estado
+  (`Ya lo venciste: volvé a vencerlo para aprenderla.` /
+  `Todavía no lo venciste.`) si falta.
 
 | # | id | Nombre | Jefe | Compat. | Afin. | Rol | Efecto | Costo | Visual |
 |---|---|---|---|---|---|---|---|---|---|
@@ -426,7 +444,7 @@ Enemigos: `EnemyDef.eliteUltId`; en `EnemyUltDef`: `hits`, `selfShield`,
 2. Script `tool/ult_balance.dart` y ajuste de números.
 3. ULT de élite (20) + nombres del Abismo + drenaje en aviso.
 4. Fuentes: mod de arma (12) y únicos (8); filtro de botín.
-5. Árbol (8), hazañas (6), Atlas/Maestría/Eco (6), fragmentos de jefe (10).
+5. Árbol (8), hazañas (6), Atlas/Maestría/Eco (6), botín de jefe (10).
 6. Campos de motor nuevos, uno por PR con su test.
 7. FXA de las 50 + 35 enemigas (lo arma el Editor; esta spec solo da la
    dirección). Capturas de release.
@@ -451,15 +469,15 @@ que cada `fx` exista y dure ≤ 2600 ms.
    abre decisiones de ritmo sin tocar la carga.
 5. **¿El Heraldo de las Eras sigue con ULT sin ser élite?** Recomiendo
    **no**: solo élite, con Anuncio de las Eras; ya tiene ciclo de estados.
-6. **Fragmentos de jefe en co-op**: recomiendo que **cada jugador** tire
-   su propio fragmento (botín por jugador como el resto del loot).
+6. **Botín de jefe en co-op**: recomiendo que **cada jugador** tire
+   su propia ULT (botín por jugador como el resto del loot).
 
 ## 7. Implementación (v0.17.0)
 
 Respuestas aprobadas: 1) las 144 de camino ya no caen (el mod de arma
 usa el pool de 12; las armas ya caídas conservan `ul`); 2) una ULT
 activa; 3) reemplazada (§ 2.1: nunca se pierden); 4) costos 60/80/100 (revertido después: toda ULT cuesta la barra llena);
-5) Heraldo con ULT solo como élite; 6) fragmento de jefe por jugador.
+5) Heraldo con ULT solo como élite; 6) botín de jefe por jugador.
 
 **Código**
 
@@ -489,7 +507,7 @@ activa; 3) reemplazada (§ 2.1: nunca se pierden); 4) costos 60/80/100 (revertid
   las Eras, martillo+escudo, con pasivas únicas nuevas), hitos (árbol de
   la clase con 20 y 40 nodos), 6 hazañas nuevas (pagan la ULT con
   `AchievementReward.ult`), Atlas (nodos notables resonancia / fortuna /
-  ecojefe al completar un Eco), Maestría, Eco Raro o mejor, fragmentos de
+  ecojefe al completar un Eco), Maestría, Eco Raro o mejor, botín de
   jefe (al ganar, por jugador; Abismo → el del jefe base).
 - UI: PERSONAJE → ULT (`ult_repertoire_view.dart`), botón de ULT con su
   costo, barra de objetivo con "Prepara <ULT>", Balance → ULT (las 50
@@ -609,7 +627,7 @@ elegida en el repertorio.
 
 - Maestría 25 / 50 no existe (tope 20): Golpe Maestro en Maestría 10 y
   Eco Doble en Maestría 20.
-- Fragmentos de jefe: el primero es seguro (mientras no la tenga); como
+- Botín de jefe: el primero es seguro (mientras no la tenga); como
   la ULT se aprende, la tirada de 5% / 15% posterior no aplica.
 - "Al azar" de Mil Ayeres y Lluvia de Ecos: los golpes van al objetivo
   (ráfaga), con atraviesa en Lluvia de Ecos.

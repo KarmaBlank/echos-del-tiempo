@@ -1136,7 +1136,7 @@ final ultUpgradeCodec = _tuningCodec(BalanceKind.ultUpgrade, const [
   BalanceField('credits', 'Créditos × nivel', _int, max: 100000, step: 100),
   BalanceField('cristal', 'Cristales de Era × nivel', _int, max: 20),
   BalanceField('prismaFrom', 'Prismas desde el nivel (1 + uno por nivel)', _int, min: 1, max: 6),
-  BalanceField('fragFrom', 'Fragmento de jefe desde el nivel', _int, min: 1, max: 6),
+  BalanceField('fragFrom', 'Fragmento del Abismo desde el nivel', _int, min: 1, max: 6),
 ]);
 
 final ultChargeCodec = _tuningCodec(BalanceKind.ultCharge, const [

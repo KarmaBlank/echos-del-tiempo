@@ -144,7 +144,7 @@ class PlayerProfile {
   final AchievementProgress achievements;
 
   /// Repertorio de ULT aprendidas (JSON `uk`, ultimates_v2.md § 2.1):
-  /// árbol, hazañas, Ecos/Atlas/Maestría y fragmentos de jefe.
+  /// árbol, hazañas, Ecos/Atlas/Maestría y botín de jefe.
   final Set<String> ultKnown;
 
   /// ULT activa elegida (JSON `us`); `null` = el orden de siempre
