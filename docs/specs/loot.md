@@ -300,8 +300,8 @@ orden (no cambia nada en la UI).
 | `arco_solar` | Arco Solar | tirador | arco | 7 | DES 20, AGI 14 | 18.0 + 0.75·DES | — | — | — | Flecha Solar, Ojo de Águila | — | 1450 |
 | `ballesta_glacial` | Ballesta Glacial | tirador | arco | 2 | DES 12, AGI 10 | 9.0 + 0.6·DES | — | — | — | Saeta Glacial, Flecha de Escarcha | — | 350 |
 | `rifle_pestilente` | Rifle Pestilente | tirador | rifle | 4 | DES 15, FUE 9 | 12.0 + 0.6·DES + 0.2·FUE | — | 0.6 | — | Metralla Tóxica, Bala Corrosiva, Disparo Certero | — | 720 |
-| `espada_escudo_novato` | Espada y Escudo de Novicio | paladin | espada+escudo | 1 | FUE 5 | 2.0 + 0.15·FUE | 4.0 + 0.6·ESP | — | — | Estocada Firme, Golpe de Escudo, Sanación ¹ | — | 0 |
-| `maza_escudo_roble` | Maza y Escudo de Roble | paladin | maza+escudo | 2 | FUE 7, VIT 16 | 2.0 + 0.15·FUE | 5.0 + 0.65·ESP | 0.4 | 3 | Golpe de Escudo, Sanación | — | 320 |
+| `espada_escudo_novato` | Espada y Escudo de Novicio | paladin | espada+escudo | 1 | FUE 5 | 6.0 + 0.4·FUE ³ | 4.0 + 0.6·ESP | — | — | Estocada Firme, Golpe de Escudo, Sanación ¹ | — | 0 |
+| `maza_escudo_roble` | Maza y Escudo de Roble | paladin | maza+escudo | 2 | FUE 7, VIT 16 | 4.0 + 0.3·FUE ³ | 5.0 + 0.65·ESP | 0.4 | 3 | Golpe de Escudo, Sanación | — | 320 |
 | `martillo_escudo_hierro` | Martillo y Escudo de Hierro | paladin | martillo+escudo | 2 | FUE 10 | 6.0 + 0.4·FUE | 4.0 + 0.5·ESP | 1.0 | — | Aplastar, Conmoción | — | 340 |
 | `espada_escudo_alba` | Espada y Escudo del Alba | paladin | espada+escudo | 4 | FUE 9, ESP 13 | 5.0 + 0.3·FUE | 8.0 + 0.8·ESP | — | 1 | Lanza de Luz, Égida Espinosa | — | 680 |
 | `maza_escudo_bastion` | Maza y Escudo Bastión | paladin | maza+escudo | 4 | VIT 20, ESP 11 | 3.0 + 0.2·FUE | 7.0 + 0.75·ESP | 0.6 | 5 | Provocar, Escudo de Fe | — | 700 |
@@ -391,6 +391,10 @@ Impulso; lanzas: Viento de Prisa. Las bases raras / de nivel alto llevan
 las variantes más vistosas (Fénix, Gracia Desbordante, Muralla de Fe,
 Virote de Asedio, Cadencia Letal). Las armas iniciales no cambian. Toda
 habilidad de `kSkills` la da al menos un arma o un kit de ascensión.
+
+³ **v0.20.4:** el ataque del Novicio (2 + 0.15·FUE, ~3 al empezar) era un
+quinto del de las otras clases. Pasa a 6 + 0.4·FUE (~9, 65 % del Guerrero)
+y la Maza de Roble a 4 + 0.3·FUE (~6). Sigue siendo el que menos pega.
 
 Conteo por tipo y banda de nivel:
 

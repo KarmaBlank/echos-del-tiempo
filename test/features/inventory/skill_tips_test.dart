@@ -10,6 +10,7 @@ import 'package:echos_del_tiempo/game_engine/rules/js_math.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/rules/inventory_rules.dart';
+import 'package:echos_del_tiempo/app/theme/retro_hover_card.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -91,6 +92,9 @@ void main() {
         .firstWhere((u) =>
             find.byKey(ValueKey('craft-source-$u')).evaluate().isNotEmpty);
     await _tap(tester, 'craft-source-$src');
+    // El clic deja la ficha del arma abierta; que no tape los botones.
+    RetroHoverCard.dismissAll();
+    await tester.pump();
     for (var i = 0; i < 4; i++) {
       final k = find.byKey(ValueKey('craft-pick-$i'));
       if (k.evaluate().isEmpty) break;

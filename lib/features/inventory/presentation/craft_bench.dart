@@ -1,3 +1,4 @@
+import 'weapon_compare_view.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -374,9 +375,12 @@ class _CraftBenchState extends State<CraftBench> {
                         key: ValueKey('${keyPrefix}tip-${it.uid}'),
                         padding: const EdgeInsets.all(6),
                         color: ProtoColors.bg,
+                        // Al ancho de la ficha de arriba (180), no al
+                        // de los tooltips de texto (360): si no, se sale.
                         child: RetroTipText(n,
                             maxWidth: RetroType.width(
-                                context, RetroHoverCard.textWidth))),
+                                    context, HoverCompareCard.cardWidth) -
+                                12)),
                 child: child);
           },
           onTap: (i) => onTap(list[i]),

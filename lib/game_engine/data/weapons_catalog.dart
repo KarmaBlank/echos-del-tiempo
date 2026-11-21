@@ -103,12 +103,12 @@ const Map<String, WeaponDef> kWeapons = {
 
   // ---- Paladín ----
   'espada_escudo_novato': WeaponDef(id: 'espada_escudo_novato', name: 'Espada y Escudo de Novicio', classId: 'paladin', type: 'espada+escudo', tier: 0, level: 1, price: 0,
-      requirements: {_fue: 5}, atk: PowerFormula(base: 2, coefficients: {_fue: 0.15}), mag: PowerFormula(base: 4, coefficients: {_esp: 0.6}),
+      requirements: {_fue: 5}, atk: PowerFormula(base: 6, coefficients: {_fue: 0.4}), mag: PowerFormula(base: 4, coefficients: {_esp: 0.6}),
       // + Sanación (v0.5): sin kit de clase, el Paladín empieza con apoyo.
       skillIds: ['estocada', 'golpeEscudo', 'sanar']),
   'maza_escudo_roble': WeaponDef(id: 'maza_escudo_roble', name: 'Maza y Escudo de Roble', classId: 'paladin', type: 'maza+escudo', tier: 1, level: 2, price: 320,
       weight: 0.4, shieldDefense: 3,
-      requirements: {_fue: 7, _vit: 16}, atk: PowerFormula(base: 2, coefficients: {_fue: 0.15}), mag: PowerFormula(base: 5, coefficients: {_esp: 0.65}),
+      requirements: {_fue: 7, _vit: 16}, atk: PowerFormula(base: 4, coefficients: {_fue: 0.3}), mag: PowerFormula(base: 5, coefficients: {_esp: 0.65}),
       skillIds: ['golpeEscudo', 'sanar']),
   'martillo_escudo_hierro': WeaponDef(id: 'martillo_escudo_hierro', name: 'Martillo y Escudo de Hierro', classId: 'paladin', type: 'martillo+escudo', tier: 1, level: 2, price: 340,
       weight: 1.0,
