@@ -161,6 +161,14 @@ abstract final class DsMetrics {
   static const minHeight = 40.0;
   static const minHeightCompact = 32.0;
   static const tooltipWidth = 360.0;
+
+  /// Tope del ancho de todo tooltip: [tooltipWidth] × factor de texto,
+  /// nunca más del 45 % del ancho de la ventana (regla global, v0.20.1).
+  static double tooltipMaxWidth(BuildContext context) {
+    final w = RetroType.width(context, tooltipWidth);
+    final cap = MediaQuery.sizeOf(context).width * 0.45;
+    return w < cap ? w : cap;
+  }
 }
 
 /// Extensión de tema con los roles (para quien prefiera
@@ -195,6 +203,7 @@ class DsTheme extends ThemeExtension<DsTheme> {
             border: Border.all(color: DsColors.borderControl, width: 2),
           ),
           textStyle: DsText.detail(DsColors.text),
+          constraints: const BoxConstraints(maxWidth: 720),
           waitDuration: const Duration(milliseconds: 300),
         ),
         badgeTheme: const BadgeThemeData(
