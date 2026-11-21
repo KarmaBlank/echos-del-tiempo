@@ -5,6 +5,7 @@ import '../../core/balance/balance_asset_loader.dart';
 import '../../core/data/build_template_loader.dart';
 import '../../core/data/ult_data_loader.dart';
 import '../../core/di/service_locator.dart';
+import '../../core/layout/layout_catalog.dart';
 import '../../core/persistence/exit_on_close.dart';
 import '../../core/settings/frame_limiter.dart';
 import '../../features/combat/presentation/scene/fx_bridge.dart';
@@ -22,6 +23,8 @@ Future<void> main() async {
   await installFx();
   // Sonidos como archivo (docs/specs/game_editor.md § 7.6).
   await SfxFiles.install();
+  // Layouts como datos (docs/specs/editor_layout.md § 2.6).
+  await LayoutCatalog.instance.load();
   // Plantillas de BUILD (docs/specs/build_planner_v2.md § 2.2).
   await BuildTemplateLoader.load();
   registerSharedDependencies(

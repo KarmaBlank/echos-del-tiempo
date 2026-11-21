@@ -1,0 +1,5 @@
+# Layouts como datos (docs/specs/editor_layout.md § 2.2): una pantalla por
+# archivo. Lo lee solo LayoutCatalog; Editor -> LAYOUT publica acá sin
+# tocar pubspec (la carpeta va registrada entera).
+screens:
+  stash: stash.layout.yaml
