@@ -3,6 +3,7 @@
 // overrides en disco, publicar y paquete de arte.
 import 'dart:io';
 
+import 'package:echos_del_tiempo/core/data/manifest_text.dart';
 import 'package:echos_del_tiempo/core/layout/layout_catalog.dart';
 import 'package:echos_del_tiempo/core/layout/layout_doc.dart';
 import 'package:echos_del_tiempo/core/layout/layout_overrides_io.dart';
@@ -10,6 +11,7 @@ import 'package:echos_del_tiempo/core/layout/layout_validator.dart';
 import 'package:echos_del_tiempo/features/admin/domain/sprites/art_pack.dart';
 import 'package:echos_del_tiempo/features/characters/presentation/stash_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yaml/yaml.dart';
 
 class _Over implements LayoutOverrideSource {
   _Over(this.files);
@@ -201,5 +203,56 @@ void main() {
     expect(m, contains('  other: other.layout.yaml'));
     expect(m, contains('  stash: stash.layout.yaml'));
     expect(addLayoutManifestEntry(m, 'stash', 'stash.layout.yaml'), m);
+  });
+
+  test('publicar dos veces (manifest CRLF) deja UNA clave screens y '
+      'conserva la cabecera del YAML', () async {
+    final tmp = Directory.systemTemp.createTempSync('ecos_layout_');
+    addTearDown(() => tmp.deleteSync(recursive: true));
+    final repo = '${tmp.path}/repo';
+    Directory('$repo/assets/layouts').createSync(recursive: true);
+    final mf = File('$repo/assets/layouts/layout_manifest.yaml');
+    // Como queda en Windows con autocrlf.
+    mf.writeAsStringSync(
+        '# cabecera\r\n# otra\r\nscreens:\r\n  stash: stash.layout.yaml\r\n');
+    File('$repo/assets/layouts/stash.layout.yaml')
+        .writeAsStringSync('# ALIJO original\n${def.encode()}');
+    final o = LocalLayoutOverrides('${tmp.path}/overrides');
+    final moved = def.move(StashLayout.actions, 'header', 0);
+    for (final s in ['stash', 'stash', 'nueva']) {
+      await o.put(s, moved.encode(header: 'Generado por Editor -> LAYOUT.'));
+      expect(await o.publish(repo, s), isTrue);
+    }
+    final m = mf.readAsStringSync();
+    expect(RegExp(r'^screens:', multiLine: true).allMatches(m), hasLength(1),
+        reason: m);
+    expect(m, startsWith('# cabecera\n# otra\n'));
+    final y = loadYaml(m) as Map;
+    expect(Map.of(y['screens'] as Map),
+        {'stash': 'stash.layout.yaml', 'nueva': 'nueva.layout.yaml'});
+    final pub =
+        File('$repo/assets/layouts/stash.layout.yaml').readAsStringSync();
+    expect(pub, startsWith('# ALIJO original\n'));
+    expect(pub, isNot(contains('Generado')));
+    expect(LayoutDoc.parse(pub).sameAs(moved), isTrue);
+  });
+
+  test('un manifest ya roto (screens repetido) se repara al publicar', () {
+    const broken = '# m\nscreens:\n  stash: stash.layout.yaml\n'
+        'screens:\n  stash: stash.layout.yaml\n  inv: inv.yaml\n';
+    final out = upsertManifestEntry(broken, 'screens', 'x', 'x.yaml');
+    expect(RegExp(r'^screens:', multiLine: true).allMatches(out),
+        hasLength(1));
+    expect(Map.of((loadYaml(out) as Map)['screens'] as Map),
+        {'stash': 'stash.layout.yaml', 'inv': 'inv.yaml', 'x': 'x.yaml'});
+    expect(upsertManifestEntry(out, 'screens', 'x', 'x.yaml'), out);
+    // fx / sfx / sprites usan lo mismo.
+    const fx = 'fx:\r\n  a: a.yaml\r\nfx:\r\n  b: b.yaml\r\n';
+    final f = addFxManifestEntry(fx, 'a', 'a2.yaml');
+    expect(Map.of((loadYaml(f) as Map)['fx'] as Map),
+        {'a': 'a2.yaml', 'b': 'b.yaml'});
+    const sp = 'heroes:\r\n  knight:\r\n    idle: k.png\r\n';
+    final s2 = setManifestPath(sp, 'heroes', 'mage', 'idle', 'm.png');
+    expect(RegExp(r'^heroes:', multiLine: true).allMatches(s2), hasLength(1));
   });
 }

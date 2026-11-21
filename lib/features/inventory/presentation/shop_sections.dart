@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/design/design.dart';
+import '../../../app/design/ds_layout_host.dart';
+import '../../../core/layout/layout_doc.dart';
 import '../../../app/theme/proto_colors.dart';
 
 import '../../../app/theme/proto_markup.dart';
@@ -38,6 +40,7 @@ import '../../../app/widgets/section_panel.dart';
 import '../domain/battle_impact.dart';
 import '../domain/skill_tip.dart';
 import 'craft_bench.dart';
+import 'craft_layout.dart';
 import 'item_grid.dart';
 import 'item_hover_tip.dart';
 import 'item_widgets.dart' show CellContent;
@@ -558,9 +561,14 @@ String passiveForgeNote(ItemInstance it) {
 /// valor y stats antes → después, con el tope de la rareza y la subida de
 /// la pasiva cada 2 niveles.
 class ForgeTab extends StatefulWidget {
-  const ForgeTab({super.key, required this.shop});
+  const ForgeTab({super.key, required this.shop, this.layout, this.layoutHooks});
 
   final ShopContext shop;
+
+  /// Layout fijo (Editor → LAYOUT); `null` = el del catálogo
+  /// (editor_layout.md § 6).
+  final LayoutDoc? layout;
+  final DsLayoutHooks? layoutHooks;
 
   @override
   State<ForgeTab> createState() => _ForgeTabState();
@@ -580,98 +588,115 @@ class _ForgeTabState extends State<ForgeTab> {
     final equipped = p.equippedUid == it.uid;
     final cap = ItemRules.forgeCapOf(it);
     final passive = rules.items.passiveText(it);
-    return PanelSplit(
-      list: [
-        NavSection(
-          child: InitialFocus(
-            // La misma grilla que el INVENTARIO (design_system.md
-            // § "Estructura atómica").
-            child: DsItemGrid(
-              rules: rules,
-              count: list.length,
-              cellKey: (i) => ValueKey('forge-row-${list[i].uid}'),
-              focusKeyPrefix: 'forge-row-at-',
-              slot: (i) => ItemSlotData(
-                  content: CellContent.item(list[i]),
-                  selected: list[i].uid == it.uid),
-              tip: (i, child, focused) => itemHoverTip(
-                  rules: rules,
-                  viewer: p,
-                  item: list[i],
-                  attributes: p.attributes,
-                  equipped: list[i].uid == p.equippedUid,
-                  focused: focused,
-                  note: p.equippedUid == list[i].uid
-                      ? protoColor(ProtoColors.gold, 'EQUIPADA')
-                      : protoColor(ProtoColors.dim,
-                          'forja ${list[i].forgeLevel}/${ItemRules.forgeCapOf(list[i])}'),
-                  child: child),
-              onTap: (i) => setState(() => _sel = list[i].uid),
-              onFocusCell: (i) => setState(() => _sel = list[i].uid),
+    // Slots del layout (editor_layout.md § 6): la grilla y las tarjetas
+    // de forja son fijas; nombre, habilidades, teclas y EQUIPAR se mueven.
+    final slots = <String, DsSlotBuilder>{
+      ForgeLayout.title: (_) => SizedBox(
+            width: double.infinity,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: ProtoText('${itemNameMarkup(rules, it)} '
+                      '<span class="k">${it.rarity.label}</span>'
+                      '${equipped ? '' : ' <small>(efecto si la equipas)</small>'}'),
+                ),
+                BuildFitBadge(item: it),
+              ],
             ),
           ),
-        ),
-      ],
-      detail: PanelDetail(
-        footer: [
+      ForgeLayout.skills: (_) => SkillChips(
+          rules: rules, item: it, stats: shop.preview.withItem(p, it)),
+      ForgeLayout.upgrades: (_) => SizedBox(
+            width: double.infinity,
+            child: SectionPanel(
+              icon: PixelIconKind.anvil,
+              title: 'FORJA',
+              subtitle: 'cada mejora sube 1 nivel una estadística (máx 5)',
+              children: [
+                Row(
+                  key: const ValueKey('forge-cap'),
+                  children: [
+                    Flexible(
+                      child: Text(retroText('Forja ${it.forgeLevel}/$cap  '))),
+                    LevelPips(it.forgeLevel.clamp(0, cap), cap),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(retroText('(tope de ${it.rarity.label})'),
+                          style: const TextStyle(color: ProtoColors.dim)),
+                    ),
+                  ],
+                ),
+                if (passive != null)
+                  ProtoText('Pasiva: <span style="color:$kPassiveHex">'
+                      '${protoEsc(passive)}</span>'),
+                ProtoText(passiveForgeNote(it),
+                    key: const ValueKey('forge-passive-note')),
+                const SizedBox(height: 6),
+                CardGrid(
+                  minWidth: 220,
+                  children: [
+                    for (final s in rules
+                        .upgradeStatsFor(rules.catalog.weapons[it.baseId]!))
+                      _UpgradeCard(shop: shop, item: it, stat: s),
+                  ],
+                ),
+              ],
+            ),
+          ),
+      ForgeLayout.keys: (_) =>
           const KeyHints(confirm: 'Forjar', back: 'Cerrar'),
-          if (equipped)
-            const Text('EQUIPADA', style: TextStyle(color: ProtoColors.gold))
-          else
-            PanelButton('EQUIPAR',
-                key: ValueKey('equip-${it.uid}'),
-                reason: shop.guards.equip(p, it.uid),
-                onPressed: () => shop.controller.equip(it.uid)),
-        ],
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: ProtoText('${itemNameMarkup(rules, it)} '
-                    '<span class="k">${it.rarity.label}</span>'
-                    '${equipped ? '' : ' <small>(efecto si la equipas)</small>'}'),
+      ForgeLayout.equipped: (_) => equipped
+          ? const Text('EQUIPADA', style: TextStyle(color: ProtoColors.gold))
+          : null,
+      ForgeLayout.equip: (_) => equipped
+          ? null
+          : PanelButton('EQUIPAR',
+              key: ValueKey('equip-${it.uid}'),
+              reason: shop.guards.equip(p, it.uid),
+              onPressed: () => shop.controller.equip(it.uid)),
+    };
+    return DsLayoutHost(
+      spec: ForgeLayout.spec,
+      doc: widget.layout,
+      hooks: widget.layoutHooks,
+      slots: slots,
+      frame: (context, box, r) => PanelSplit(
+        list: [
+          NavSection(
+            child: InitialFocus(
+              // La misma grilla que el INVENTARIO (design_system.md
+              // § "Estructura atómica").
+              child: DsItemGrid(
+                rules: rules,
+                count: list.length,
+                cellKey: (i) => ValueKey('forge-row-${list[i].uid}'),
+                focusKeyPrefix: 'forge-row-at-',
+                slot: (i) => ItemSlotData(
+                    content: CellContent.item(list[i]),
+                    selected: list[i].uid == it.uid),
+                tip: (i, child, focused) => itemHoverTip(
+                    rules: rules,
+                    viewer: p,
+                    item: list[i],
+                    attributes: p.attributes,
+                    equipped: list[i].uid == p.equippedUid,
+                    focused: focused,
+                    note: p.equippedUid == list[i].uid
+                        ? protoColor(ProtoColors.gold, 'EQUIPADA')
+                        : protoColor(ProtoColors.dim,
+                            'forja ${list[i].forgeLevel}/${ItemRules.forgeCapOf(list[i])}'),
+                    child: child),
+                onTap: (i) => setState(() => _sel = list[i].uid),
+                onFocusCell: (i) => setState(() => _sel = list[i].uid),
               ),
-              BuildFitBadge(item: it),
-            ],
-          ),
-          SkillChips(
-              rules: rules, item: it, stats: shop.preview.withItem(p, it)),
-          const SizedBox(height: 4),
-          SectionPanel(
-            icon: PixelIconKind.anvil,
-            title: 'FORJA',
-            subtitle: 'cada mejora sube 1 nivel una estadística (máx 5)',
-            children: [
-              Row(
-                key: const ValueKey('forge-cap'),
-                children: [
-                  Text(retroText('Forja ${it.forgeLevel}/$cap  ')),
-                  LevelPips(it.forgeLevel.clamp(0, cap), cap),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(retroText('(tope de ${it.rarity.label})'),
-                        style: const TextStyle(color: ProtoColors.dim)),
-                  ),
-                ],
-              ),
-              if (passive != null)
-                ProtoText('Pasiva: <span style="color:$kPassiveHex">'
-                    '${protoEsc(passive)}</span>'),
-              ProtoText(passiveForgeNote(it),
-                  key: const ValueKey('forge-passive-note')),
-              const SizedBox(height: 6),
-              CardGrid(
-                minWidth: 220,
-                children: [
-                  for (final s in rules
-                      .upgradeStatsFor(rules.catalog.weapons[it.baseId]!))
-                    _UpgradeCard(shop: shop, item: it, stat: s),
-                ],
-              ),
-            ],
+            ),
           ),
         ],
+        detail: PanelDetail(
+          footer: r.isEmpty('footer') ? const [] : [r.region('footer')],
+          children: [r.region('detail')],
+        ),
       ),
     );
   }
@@ -751,12 +776,10 @@ class _UpgradeCard extends StatelessWidget {
         footer: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                LevelPips(l, max),
-                const SizedBox(width: 8),
-                Text('$l/$max'),
-              ],
+            Wrap(
+              spacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [LevelPips(l, max), Text('$l/$max')],
             ),
             StatChange('Bono', l, atMax ? l : l + 1,
                 format: (x) => upgradeValueText(stat, x.toInt())),

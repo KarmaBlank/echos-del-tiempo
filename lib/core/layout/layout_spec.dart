@@ -4,10 +4,21 @@ import 'layout_doc.dart';
 /// crea regiones (§ 5, P3).
 class LayoutRegionSpec {
   const LayoutRegionSpec(this.id,
-      {this.axis = LayoutAxis.column, this.label, this.spacing = 'md'});
+      {this.axis = LayoutAxis.column,
+      this.label,
+      this.spacing = 'md',
+      this.runSpacing = 'xs',
+      this.align});
   final String id;
   final LayoutAxis axis;
   final String? label;
+
+  /// Separación entre líneas de una región `wrap`.
+  final String runSpacing;
+
+  /// Alineación de la región (`wrap`: de cada línea; `column`: de los
+  /// hijos). `null` = al principio.
+  final LayoutAlign? align;
 
   /// Separación entre slots de una región `wrap` (nombre de `DsSpace`).
   final String spacing;
@@ -29,6 +40,7 @@ class LayoutSlotSpec {
     this.groupAxis = LayoutAxis.wrap,
     this.lead,
     this.groupGap = 'sm',
+    this.groupRunSpacing = 'xs',
   });
 
   /// `pantalla.grupo[.elemento]`, estable.
@@ -64,6 +76,9 @@ class LayoutSlotSpec {
 
   /// Separación entre los hijos de un grupo en fila o wrap.
   final String groupGap;
+
+  /// Separación entre líneas de un grupo `wrap`.
+  final String groupRunSpacing;
 }
 
 /// Lo que una pantalla migrada declara en código: regiones, catálogo de

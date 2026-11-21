@@ -1,0 +1,17 @@
+# FORJA (docs/specs/editor_layout.md § 6, fase 4). Regiones del
+# template: detail (columna del detalle) y footer (pie del detalle).
+# La grilla de armas y las tarjetas de forja son fijas.
+screen: craft.forge
+version: 1
+slots:
+  - {id: forge.title, region: detail, order: 0}
+  - {id: forge.skills, region: detail, order: 1}
+  - {id: forge.upgrades, region: detail, order: 2}
+  - id: forge.actions
+    region: footer
+    order: 0
+    align: end
+    children:
+      - forge.actions.keys
+      - forge.actions.equipped
+      - forge.actions.equip

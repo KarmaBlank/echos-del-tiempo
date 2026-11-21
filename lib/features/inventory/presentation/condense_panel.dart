@@ -1,12 +1,15 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
+import '../../../app/design/ds_layout_host.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/session_action.dart';
+import '../../../core/layout/layout_doc.dart';
 import '../../../game_engine/rules/craft_rules.dart';
+import 'craft_layout.dart';
 import 'shop_sections.dart';
 
 /// CONDENSAR (mesa de fusión, v0.15; materials_economy.md § 4.3): una
@@ -15,10 +18,24 @@ import 'shop_sections.dart';
 /// que gastas y obtienes. Sin azar y sin vuelta atrás; el host valida
 /// los fondos (`CraftOp.condense`).
 class CondensePanel extends StatefulWidget {
-  const CondensePanel({super.key, required this.shop, required this.onBack});
+  const CondensePanel(
+      {super.key,
+      required this.shop,
+      required this.onBack,
+      this.layout,
+      this.layoutHooks,
+      this.initialPending});
 
   final ShopContext shop;
   final VoidCallback onBack;
+
+  /// Layout fijo (Editor → LAYOUT); `null` = el del catálogo
+  /// (editor_layout.md § 6).
+  final LayoutDoc? layout;
+  final DsLayoutHooks? layoutHooks;
+
+  /// Elección pendiente al abrir (vista previa del Editor).
+  final (CraftMaterial, int)? initialPending;
 
   @override
   State<CondensePanel> createState() => _CondensePanelState();
@@ -26,7 +43,7 @@ class CondensePanel extends StatefulWidget {
 
 class _CondensePanelState extends State<CondensePanel> {
   /// Elección pendiente de confirmar: material que sale y cuántos.
-  (CraftMaterial, int)? _pending;
+  late (CraftMaterial, int)? _pending = widget.initialPending;
 
   ShopContext get shop => widget.shop;
 
@@ -38,25 +55,78 @@ class _CondensePanelState extends State<CondensePanel> {
   @override
   Widget build(BuildContext context) {
     final p = shop.profile;
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          DsSectionHeader('Condensar materiales',
+    final pending = _pending;
+    final a = pending == null ? null : _action(pending.$1, pending.$2);
+    final why = a == null ? null : shop.guards.craft(p, a);
+    // Slots del layout (editor_layout.md § 6): título, explicación y
+    // recetas (fijas); lo de la confirmación solo con algo pendiente.
+    final slots = <String, DsSlotBuilder>{
+      CondenseLayout.title: (_) => SizedBox(
+          width: double.infinity,
+          child: DsSectionHeader('Condensar materiales',
               trailing: DsButton('‹ VOLVER',
                   key: const ValueKey('condense-back'),
                   kind: DsButtonKind.ghost,
                   size: DsButtonSize.compact,
-                  onPressed: widget.onBack)),
-          const ProtoText('Junta lo que te sobra en un material más alto. '
-              'Sin azar; <span class="k">no se puede deshacer</span>.'),
-          SizedBox(height: DsSpace.sm),
-          for (final out in CraftRules.condensable) ...[
-            _recipe(p, out),
+                  onPressed: widget.onBack))),
+      CondenseLayout.intro: (_) => const ProtoText(
+          'Junta lo que te sobra en un material más alto. '
+          'Sin azar; <span class="k">no se puede deshacer</span>.'),
+      CondenseLayout.recipes: (_) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final out in CraftRules.condensable) ...[
+                _recipe(p, out),
+                SizedBox(height: DsSpace.sm),
+              ],
+            ],
+          ),
+      CondenseLayout.summary: (_) => pending == null
+          ? null
+          : _summary(pending.$1, pending.$2),
+      CondenseLayout.error: (_) => why == null
+          ? null
+          : ProtoText(
+              key: const ValueKey('condense-error'),
+              protoColor(ProtoColors.red, 'No se puede: ${protoEsc(why)}')),
+      CondenseLayout.go: (_) => a == null
+          ? null
+          : DsButton('CONDENSAR',
+              key: const ValueKey('condense-go'),
+              kind: DsButtonKind.primary,
+              onPressed: why != null
+                  ? null
+                  : () {
+                      if (shop.controller.craft(a)) {
+                        setState(() => _pending = null);
+                      }
+                    }),
+      CondenseLayout.cancel: (_) => a == null
+          ? null
+          : DsButton('CANCELAR',
+              key: const ValueKey('condense-cancel'),
+              kind: DsButtonKind.ghost,
+              onPressed: () => setState(() => _pending = null)),
+    };
+    return DsLayoutHost(
+      spec: CondenseLayout.spec,
+      doc: widget.layout,
+      hooks: widget.layoutHooks,
+      slots: slots,
+      frame: (context, box, r) => SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            r.region('head'),
             SizedBox(height: DsSpace.sm),
+            r.region('recipes'),
+            if (!r.isEmpty('confirm'))
+              DsCard(
+                key: const ValueKey('condense-confirm'),
+                child: r.region('confirm'),
+              ),
           ],
-          if (_pending case (final out, final n)) _confirm(p, out, n),
-        ],
+        ),
       ),
     );
   }
@@ -106,44 +176,13 @@ class _CondensePanelState extends State<CondensePanel> {
     );
   }
 
-  Widget _confirm(PlayerProfile p, CraftMaterial out, int n) {
+  Widget _summary(CraftMaterial out, int n) {
     final (from, need, cr) = CraftRules.condenseRecipe(out)!;
-    final a = _action(out, n);
-    final why = shop.guards.craft(p, a);
-    return DsCard(
-      key: const ValueKey('condense-confirm'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ProtoText(
-              key: const ValueKey('condense-summary'),
-              'Gastas <span class="k">${need * n} ${protoEsc(from.label)}</span> y '
-              '<span class="k">₵${cr * n}</span>.<br>'
-              'Obtienes <span class="k">$n ${protoEsc(out.label)}</span>.<br>'
-              '${protoColor(ProtoColors.gold, 'No se puede deshacer.')}'),
-          if (why != null)
-            ProtoText(
-                key: const ValueKey('condense-error'),
-                protoColor(ProtoColors.red, 'No se puede: ${protoEsc(why)}')),
-          SizedBox(height: DsSpace.xs),
-          Wrap(spacing: DsSpace.sm, children: [
-            DsButton('CONDENSAR',
-                key: const ValueKey('condense-go'),
-                kind: DsButtonKind.primary,
-                onPressed: why != null
-                    ? null
-                    : () {
-                        if (shop.controller.craft(a)) {
-                          setState(() => _pending = null);
-                        }
-                      }),
-            DsButton('CANCELAR',
-                key: const ValueKey('condense-cancel'),
-                kind: DsButtonKind.ghost,
-                onPressed: () => setState(() => _pending = null)),
-          ]),
-        ],
-      ),
-    );
+    return ProtoText(
+        key: const ValueKey('condense-summary'),
+        'Gastas <span class="k">${need * n} ${protoEsc(from.label)}</span> y '
+        '<span class="k">₵${cr * n}</span>.<br>'
+        'Obtienes <span class="k">$n ${protoEsc(out.label)}</span>.<br>'
+        '${protoColor(ProtoColors.gold, 'No se puede deshacer.')}');
   }
 }

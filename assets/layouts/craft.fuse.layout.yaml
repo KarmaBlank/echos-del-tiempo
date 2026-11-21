@@ -1,0 +1,17 @@
+# FUSIÓN (docs/specs/editor_layout.md § 6, fase 4). Regiones del
+# template: crumbs, summary, materials (barra de arriba) y footer (pie
+# del paso 1 ARMA). Grillas y tarjetas de los pasos, fijas.
+screen: craft.fuse
+version: 1
+slots:
+  - {id: fuse.crumbs, region: crumbs, order: 0}
+  - {id: fuse.summary, region: summary, order: 0}
+  - {id: fuse.materials, region: materials, order: 0}
+  - {id: fuse.keys, region: footer, order: 0}
+  - id: fuse.actions
+    region: footer
+    order: 1
+    align: end
+    children:
+      - fuse.actions.condense
+      - fuse.actions.next

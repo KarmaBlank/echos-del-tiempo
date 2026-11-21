@@ -318,5 +318,43 @@ Tests:
   slot en un wrap: separadores de barra), `groupGap` (entre hijos de un
   grupo en fila/wrap), `gap` acepta `none` o píxeles (`'6'`). En el
   juego, un grupo sin hijos visibles no ocupa lugar.
-- **Pendiente (fase 4+)**: fusión/forja/condensar, PERSONAJE y sus
-  pestañas, y el resto, en ese orden.
+- **FUSIÓN / FORJA / CONDENSAR (fase 4, v0.20.2)** (`craft_layout.dart`):
+  - `craft.fuse` (`FuseLayout` + `craft_bench.dart`): regiones `crumbs`,
+    `summary`, `materials` (barra de arriba: en fila, o apiladas con
+    texto ENORME o poco ancho) y `footer` (pie del detalle del paso 1
+    ARMA, wrap a la derecha). Slots `fuse.crumbs`, `fuse.summary`,
+    `fuse.materials`, `fuse.keys`, grupo `fuse.actions(.condense|.next)`.
+    Grillas y tarjetas de los 3 pasos son del template (fijas).
+  - `craft.forge` (`ForgeLayout` + `ForgeTab` en `shop_sections.dart`):
+    regiones `detail` y `footer`; slots `forge.title`, `forge.skills`,
+    fijo `forge.upgrades` (tarjetas de forja) y grupo
+    `forge.actions(.keys|.equipped|.equip)`. EQUIPADA (aviso) y EQUIPAR
+    (botón) son dos slots: solo se ve uno, y el aviso no cuenta como
+    objetivo de clic.
+  - `craft.condense` (`CondenseLayout` + `condense_panel.dart`): regiones
+    `head`, `recipes` (fija) y `confirm` (dentro de la tarjeta de
+    confirmación; solo con una elección pendiente, o siempre en el
+    Editor). Slots `condense.title` (con ‹ VOLVER), `condense.intro`,
+    `condense.summary`, `condense.error`, grupo
+    `condense.actions(.go|.cancel)`.
+  - Goldens `test/features/inventory/goldens/craft_*_default_*.png`
+    (árbol viejo) == YAML por defecto; árboles manuales borrados.
+    Matriz 5 tamaños × 3 textos por pantalla (por defecto y con grupo +
+    botón suelto movidos) en `craft_layout_matrix_test.dart`. Arreglos
+    que destapó la matriz: la barra de la mesa ya no desborda con texto
+    grande o ventana angosta (los materiales se parten en líneas) y la
+    fila de nivel de las tarjetas de forja tampoco.
+- **Host, agregados (v0.20.2)**: `LayoutRegionSpec.align` y
+  `runSpacing` (un pie a la derecha como el de `PanelDetail`),
+  `LayoutSlotSpec.groupRunSpacing`. Una región cuyos slots son grupos
+  sin hijos visibles cuenta como vacía (`isEmpty`).
+- **PUBLICAR AL REPO**: el manifest se edita con
+  `core/data/manifest_text.dart` (robusto a CRLF y a comentarios tras
+  la sección; une secciones repetidas en una; idempotente). Lo usan
+  layouts, fx, sfx y sprites. Al publicar un layout se conserva el
+  comentario de cabecera que ya tenía el YAML del repo.
+- **Pendiente (fase 4+)**: PERSONAJE (marco, encabezado, pestañas) y sus
+  pestañas ATRIBUTOS, ÁRBOL, ULT, HAZAÑAS, BESTIARIO, BUILD; luego el
+  resto. Nota para ATRIBUTOS: a 800 de ancho con texto ENORME (y con `TextSize.huge`)
+  las filas de atributo ya desbordan antes de migrar (anchos fijos en
+  `_attrRow`); hay que arreglarlo antes de la matriz.

@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:yaml/yaml.dart';
 
 import '../../../../core/audio/sfx_files.dart' show sfxExtOf;
+import '../../../../core/data/manifest_text.dart';
 
 /// Paquete de arte (game_editor.md § 4.2): un zip con overrides de
 /// sprites y de animaciones (fx, paso 2) para pasárselo a un amigo sin
@@ -160,28 +161,8 @@ class ArtPack {
 /// Suma (o corrige) en el texto de fx_manifest.yaml la entrada
 /// `<id>: <path>` bajo `fx:`, conservando comentarios y el resto. Si ya
 /// apunta a [path], devuelve el texto igual.
-String addFxManifestEntry(String manifest, String id, String path) {
-  final lines = const LineSplitter().convert(manifest);
-  final s = lines.indexOf('fx:');
-  if (s < 0) return '${manifest.trimRight()}\nfx:\n  $id: $path\n';
-  var end = s + 1;
-  while (end < lines.length &&
-      (lines[end].startsWith(' ') || lines[end].trim().isEmpty)) {
-    end++;
-  }
-  final k = lines.indexWhere((l) => l.startsWith('  $id:'), s + 1);
-  if (k >= 0 && k < end) {
-    if (lines[k].trim() == '$id: $path') return manifest;
-    lines[k] = '  $id: $path';
-  } else {
-    var at = end;
-    while (at > s + 1 && lines[at - 1].trim().isEmpty) {
-      at--;
-    }
-    lines.insert(at, '  $id: $path');
-  }
-  return '${lines.join('\n')}\n';
-}
+String addFxManifestEntry(String manifest, String id, String path) =>
+    upsertManifestEntry(manifest, 'fx', id, path);
 
 /// Reescribe en el texto de sprite_manifest.yaml la entrada
 /// `<section>.<key>` para que apunte a [path] (frame [animation]),
@@ -190,16 +171,12 @@ String addFxManifestEntry(String manifest, String id, String path) {
 /// [path], devuelve el texto igual.
 String setManifestPath(String manifest, String section, String key,
     String animation, String path) {
-  final lines = const LineSplitter().convert(manifest);
-  final s = lines.indexOf('$section:');
+  final lines = normalizedManifestLines(manifest, section);
+  final s = manifestSectionIndex(lines, section);
   if (s < 0) {
     return '${manifest.trimRight()}\n$section:\n  $key:\n    $animation: $path\n';
   }
-  var end = s + 1;
-  while (end < lines.length &&
-      (lines[end].startsWith(' ') || lines[end].trim().isEmpty)) {
-    end++;
-  }
+  final end = manifestBlockEnd(lines, s);
   final block = ['  $key:', '    $animation: $path'];
   final k = lines.indexWhere((l) => l.startsWith('  $key:'), s + 1);
   if (k < 0 || k >= end) {
