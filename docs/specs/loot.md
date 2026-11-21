@@ -1526,3 +1526,13 @@ Por jugador (worldgen.md § 11.8), siempre al inventario (fuente
 - `CraftOp.essence` (MEJORAR): solo legendarios; cada mod fijo se tira 2
   veces dentro de su rango y queda el mayor, nunca por debajo del actual.
   1 Esencia, sin créditos.
+
+## 20. Elemento de base del arma (v0.20.0)
+
+Ver weapon_identity.md § 6. Resumen: `ItemInstance.element` (JSON `el`).
+Legendario siempre (el de su tema, `kUniqueWeaponElement`); Épico 40 %;
+Raro 15 %; Común y Mágico nunca. Bases con elemento en el nombre: desde
+Raro siempre el suyo. Se tira antes que los mods (consume una tirada
+desde Raro) y un Épico con elemento rueda 1 mod menos. Es una pasiva
+fija: no se quita ni se cambia. `sanitize` migra los legendarios viejos
+y descarta el elemento en Común/Mágico.

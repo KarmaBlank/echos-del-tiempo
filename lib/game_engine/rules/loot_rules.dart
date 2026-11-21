@@ -7,7 +7,9 @@ import '../data/ults_v2_catalog.dart' show ultV2ModsForType;
 import '../data/affixes_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/uniques_catalog.dart';
+import '../data/weapon_elements_catalog.dart';
 import '../data/weapon_passives.dart';
+import '../models/elements.dart';
 import '../models/item.dart';
 import '../models/loot.dart';
 import '../models/mission_def.dart';
@@ -276,7 +278,15 @@ class LootRules {
         ? catalog.weapons[baseId]!
         : pickBase(rng, il, family: family);
     var item = ItemInstance(uid: uid, baseId: w.id, rarity: r, itemLevel: il);
-    item = addRandomAffixes(rng, item, rollModCount(rng, r));
+    // Elemento de base (weapon_identity.md § 4): se tira antes que los
+    // mods porque un Épico con elemento rueda 1 mod menos.
+    final el = rollElement(rng, r, w);
+    var mods = rollModCount(rng, r);
+    if (el != null) {
+      item = item.copyWith(element: el);
+      if (r == Rarity.epico) mods = math.max(0, mods - 1);
+    }
+    item = addRandomAffixes(rng, item, mods);
     if (r == Rarity.raro || r == Rarity.epico) {
       item = item.copyWith(name: rareName(rng));
     }
@@ -287,6 +297,23 @@ class LootRules {
       item = item.copyWith(ultId: u);
     }
     return item;
+  }
+
+  /// Elemento de base de un arma nueva de rareza [r] sobre la base [w]
+  /// (weapon_identity.md § 4): Común y Mágico nunca; desde Raro, las
+  /// bases con elemento en el nombre siempre el suyo; si no, Épico 40 % y
+  /// Raro 15 % con uno del pool del tipo. Los Legendarios usan el de su
+  /// único (`generateUnique`). Siempre consume una tirada desde Raro.
+  GameElement? rollElement(RandomSource rng, Rarity r, WeaponDef w) {
+    if (!rarityAllowsElement(r) || r == Rarity.legendario) return null;
+    final roll = rng();
+    final named = kBaseWeaponElement[w.id];
+    if (named != null) return named;
+    final chance =
+        r == Rarity.epico ? kWeaponElementChanceEpic : kWeaponElementChanceRare;
+    if (roll >= chance) return null;
+    final pool = weaponElementPool(w.type);
+    return pool[(rng() * pool.length).floor().clamp(0, pool.length - 1)];
   }
 
   /// Mod especial "ULT: <nombre>" (docs/specs/branch_ults.md): Raro 8%,
@@ -317,6 +344,7 @@ class LootRules {
       itemLevel: math.max(itemLevel, w.level).clamp(1, maxLevel),
       uniqueId: u.id,
       passiveId: u.passiveId,
+      element: uniqueWeaponElement(u.id),
       affixes: const [],
     );
     // Mods fijos al nivel del objeto (combo_balance.md § 2).

@@ -9,6 +9,7 @@ import '../../../../game_engine/models/game_session.dart';
 import '../../../ascension/presentation/ascension_aura.dart';
 import '../../../combat/presentation/game_sprites.dart';
 import '../../../combat/presentation/sprite_catalog.dart';
+import '../../../../core/procedural/weapon_look.dart';
 import '../../../combat/presentation/weapon_overlay.dart';
 
 /// `drawHero`, `drawEnemy`, los objetos del campo y `txt` del prototipo
@@ -99,6 +100,7 @@ class ActorPainter {
     required bool dead,
     required bool blink,
     String? ascensionId,
+    WeaponLook? look,
   }) {
     final img = sprites.heroFor(classId, ascensionId);
     c.save();
@@ -118,7 +120,7 @@ class ActorPainter {
     if (!dead) paintAscensionAura(c, ascensionId, sprites: sprites, t: t);
     c.translate(0, -bob.toDouble());
     if (img != null) c.drawImage(img, const Offset(-7, -17), _sprite);
-    WeaponOverlay.draw(c, classId, weaponType);
+    WeaponOverlay.draw(c, classId, weaponType, look: look, time: t / 1000);
     if (alpha < 1) c.restore();
     c.restore();
   }

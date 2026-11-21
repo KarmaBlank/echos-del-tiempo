@@ -1,8 +1,8 @@
-# Identidad de las armas — BORRADOR (análisis, sin implementar)
+# Identidad de las armas — APROBADO (implementado en v0.20.0)
 
-Estado: propuesta para el dueño. Nada de esto está en el código salvo
-lo marcado como "hoy". El arma en mano por tipo ya existe (v0.19.1,
-sprites.md § "Armas en mano").
+Estado: **aprobado** por el dueño con las 6 recomendaciones de § 5 e
+implementado (ver § 6, que manda sobre §§ 3-4 donde difieran). El arma
+en mano por tipo ya existía (v0.19.1, sprites.md § "Armas en mano").
 
 ## 1. Qué diferencia hoy a un arma
 
@@ -122,3 +122,50 @@ Editor (§ 7.5). No hay sprites nuevos.
 6. **¿Marcamos la ULT del arma en el sprite (píxel rosa en el pomo) o
    alcanza con el inventario?** Recomiendo marcarla: ayuda a planear dúos
    en co-op.
+
+## 6. Decisiones e implementación (v0.20.0)
+
+Respuestas del dueño (las 6 recomendaciones):
+
+1. El elemento de base cambia **solo el ataque básico** (+1 pila cada 2
+   golpes, respeta débil/resiste y reacciona) y da **+8 %** a las
+   habilidades del mismo elemento. Las habilidades físicas no se tiñen.
+2. Legendario siempre; Épico 40 %; Raro 15 %; Común y Mágico nunca. Las
+   bases con elemento en el nombre (`kBaseWeaponElement`) llevan siempre
+   el suyo desde Raro. Un Épico con elemento rueda **1 mod menos**.
+3. No se puede cambiar ni quitar (fusión, condensado, Prisma y forja lo
+   conservan). Pendiente (fuera de alcance): un material muy raro de
+   endgame que lo vuelva a tirar.
+4. Aura siempre visible y tenue: mapa, batalla, retratos (HUD, PERSONAJE,
+   ULT) e ícono de inventario. Así se lee el arma del compañero.
+5. Variación suave por semilla del uid: 3 variantes (FNV-1a del uid % 3):
+   0 = normal, 1 = metal más claro, 2 = metal más oscuro + gema. Misma
+   silueta. Sin red nueva.
+6. Marca de ULT: un píxel rosa en el pomo (última celda del mango) si el
+   arma trae el mod "ULT: X" o es un legendario con ULT propia.
+
+Además: el acento `g` toma el color de la rareza en la mano (mismo que
+el inventario), los Épicos suman el reflejo y los Legendarios un
+destello (un píxel blanco que recorre metal y gema, con una pausa
+dorada).
+
+Implementación:
+
+| Pieza | Dónde |
+|---|---|
+| Campo | `ItemInstance.element` (JSON `el`, opcional) |
+| Datos | `data/weapon_elements_catalog.dart`: chances, sinergia, pilas, `kBaseWeaponElement`, `kUniqueWeaponElement`, pools por tipo, `weaponElementOf` |
+| Botín | `LootRules.rollElement` (antes de los mods), `generateUnique` |
+| Migración | `ItemRules.sanitize`: el legendario recibe el elemento de su tema; Raro/Épico conservan el suyo; Común/Mágico lo pierden. Las armas viejas no legendarias quedan sin elemento |
+| Motor | `BattleEngine._attack` (básico con `element:` y `_weaponElementStack`), sinergia en `_damageEnemy`; contador `Combatant.basicHits` (snapshot `bh`) |
+| UI | tooltip: línea/sección "Elemento X (fijo)"; comparación: "Elemento: A → B" |
+| Visual | `core/procedural/weapon_look.dart` (`WeaponLook`), `paintItemIcon(look:, time:)`, perillas `aura`, `aura_particles`, `sparkle`, `ult_mark`, `variation` del generador `item_icon` |
+
+Red y guardado: el campo `el` del arma y `bh` del combatiente son
+**aditivos** (un cliente viejo los ignora; un arma sin `el` se lee sin
+elemento). No se subió `kProtocolVersion`, pero host y cliente deben ir
+en la misma versión para que el básico elemental (que corre solo en el
+host) y el aura coincidan. Los números (40 %, 15 %, +8 %, cada 2 golpes)
+son constantes en el catálogo; hacerlos editables en Editor → Balance
+queda pendiente (el parche de balance hoy solo cubre afijos, nodos y
+mecánicas).

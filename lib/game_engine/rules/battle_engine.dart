@@ -4,6 +4,7 @@ import '../data/tuning_catalog.dart';
 import '../data/ascension_catalog.dart';
 import '../data/branch_ults_catalog.dart';
 import '../data/elements_catalog.dart';
+import '../data/weapon_elements_catalog.dart';
 import '../data/enemies_catalog.dart';
 import '../data/game_catalog.dart';
 import '../data/passive_mechanics.dart' show mechanicById;
@@ -1784,6 +1785,9 @@ class _Turn {
     final el = element ??
         (catalyst > 0 ? _catalystElement(e) : null) ??
         elementOf(sk0?.id);
+    // Sinergia del elemento de base del arma (weapon_identity.md § 4):
+    // las habilidades del mismo elemento pegan +8 %.
+    final weaponEl = a == null ? null : weaponElementOf(a.build?.item);
     final phys = physical ??
         (_act?.skill == null || _act!.skill!.kind == SkillKind.physical);
     var chance = critChance;
@@ -1816,6 +1820,14 @@ class _Turn {
       if (aura != 0) {
         mult *= 1 + aura;
         mods.add('× ${fm(1 + aura)} aura');
+      }
+      if (weaponEl != null &&
+          primary &&
+          sk0 != null &&
+          el == weaponEl &&
+          kWeaponElementSynergy != 0) {
+        mult *= 1 + kWeaponElementSynergy;
+        mods.add('× ${fm(1 + kWeaponElementSynergy)} arma ${weaponEl.label}');
       }
       if (single && primary && a.keystones.contains('cadena')) {
         mult *= 0.8;
@@ -4401,24 +4413,33 @@ class _Turn {
 
   void _attack(Combatant p, List<Combatant> foes, Combatant target) {
     final atk = _atk(p);
+    // Elemento de base del arma (weapon_identity.md § 4): el básico pasa a
+    // ser de ese elemento (respeta débil/resiste y reacciona) y aplica 1
+    // pila de su estado cada `kWeaponElementHitsPerStack` golpes.
+    final wel = weaponElementOf(p.build?.item);
     if (p.keystones.contains('imparable')) {
       final hits = [
-        for (final e in foes) _damageEnemy(e, atk * 0.6, p.critChance),
+        for (final e in foes)
+          _damageEnemy(e, atk * 0.6, p.critChance, element: wel),
       ];
+      _weaponElementStack(p, wel, foes);
       state.log = _damageLog(
           '${p.name} · Golpe Imparable (todos)', _atkText(p), atk, 0.6, hits,
           all: true);
       return;
     }
     final act = _act!..single = true;
-    final hit =
-        _damageEnemy(target, atk.toDouble(), p.critChance, single: true);
+    final hit = _damageEnemy(target, atk.toDouble(), p.critChance,
+        single: true, element: wel);
     act
       ..mainTarget = target
       ..mainHit = hit;
     var log = _damageLog(
         '${p.name} ataca → ${target.name}', _atkText(p), atk, 1, [hit],
         all: false);
+    if (_weaponElementStack(p, wel, [target])) {
+      log += ' · ${wel!.label}: +1 pila';
+    }
     final stunChance = p.stunOnAttackChance;
     if (stunChance > 0 &&
         target.alive &&
@@ -4442,6 +4463,26 @@ class _Turn {
       log += ' · Sagrado (5/turno, 3 turnos)';
     }
     state.log = log;
+  }
+
+  /// Cuenta un básico con elemento de arma y, cada
+  /// `kWeaponElementHitsPerStack`, aplica 1 pila del estado del elemento
+  /// a [targets]. `true` si entró en alguno.
+  bool _weaponElementStack(
+      Combatant p, GameElement? wel, List<Combatant> targets) {
+    final st = wel?.status;
+    if (st == null) return false;
+    p.basicHits++;
+    final every = math.max(1, kWeaponElementHitsPerStack);
+    if (p.basicHits % every != 0) return false;
+    var any = false;
+    for (final t in targets) {
+      if (t.alive &&
+          _addStatus(t, StatusApplication(st, 1), source: p, primary: true)) {
+        any = true;
+      }
+    }
+    return any;
   }
 
   /// Rama `tech`/`ult` de `battleCmd`. Devuelve la carga de ULT base de

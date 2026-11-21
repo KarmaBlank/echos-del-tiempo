@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import '../../../core/procedural/item_icons.dart';
 import '../../../core/procedural/procedural_art.dart';
+import '../../../core/procedural/weapon_look.dart';
 
 /// El arma dibujada en la mano del héroe (docs/specs/sprites.md
 /// § "Héroe" › "Armas en mano"), la misma en el mapa (`ActorPainter`),
@@ -87,14 +88,20 @@ abstract final class WeaponOverlay {
     return 'items.${(t == null ? null : procKeyForType(t)) ?? kGrips[artFor(classId, weaponType)]!.shape}';
   }
 
+  /// [look] suma la identidad del arma concreta (weapon_identity.md
+  /// § 3): aura del elemento, acento de rareza, destello, ULT y variante
+  /// por uid. Sale del arma que viaja en el perfil / snapshot, así que
+  /// el compañero en co-op se ve igual en todas las pantallas.
   static void draw(Canvas c, String classId, String? weaponType,
-      {Color accent = kItemDefaultAccent}) {
+      {Color accent = kItemDefaultAccent, WeaponLook? look, double time = 0}) {
     final grip = kGrips[artFor(classId, weaponType)]!;
+    // Acento por rareza (la misma regla que el inventario).
+    if (look != null) accent = look.rarityAccent;
     final params = ProceduralArt.instance.resolve(entryFor(classId, weaponType));
     if (hasShield(classId, weaponType)) {
       // Escudo en el brazo de atrás, con el puño en el centro.
       paintItemIcon(c, const Rect.fromLTWH(-11, -13, 8, 8),
-          kItemIconRows['escudo']!, accent, params);
+          kItemIconRows['escudo']!, accent, params, look: look, time: time);
     }
     c.save();
     c.translate(grip.handX, grip.handY);
@@ -106,7 +113,9 @@ abstract final class WeaponOverlay {
         Rect.fromLTWH(-grip.gripX - 0.5, -grip.gripY - 0.5, 8, 8),
         kItemIconRows[grip.shape]!,
         accent,
-        params);
+        params,
+        look: look,
+        time: time);
     c.restore();
     // La mano encima del mango: se ve agarrada.
     _fill.color = handColor;

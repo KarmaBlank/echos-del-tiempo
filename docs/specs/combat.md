@@ -678,3 +678,14 @@ postura multiplican el daño de los golpes primarios del grupo.
   al más débil; solo_party.md § 4.1). El tiempo de turno de la sala
   vale para cada turno.
 - Su tarjeta del grupo muestra la ULT y el botón `AUTO: SÍ / NO`.
+
+## Elemento de base del arma (v0.20.0)
+
+weapon_identity.md § 6. Con arma de elemento, el **ataque básico** (y
+Golpe Imparable) pega con ese elemento: entra en las debilidades y
+resistencias de familia y en las reacciones (sus pilas sirven para una
+Convergencia), y cada 2 básicos (`kWeaponElementHitsPerStack`) aplica 1
+pila del estado del elemento al blanco. El contador es
+`Combatant.basicHits` (snapshot `bh`). Las habilidades del mismo elemento
+que el arma hacen ×1.08 (`kWeaponElementSynergy`, modificador
+`arma <Elemento>` en el desglose); con otro elemento, sin penalidad.

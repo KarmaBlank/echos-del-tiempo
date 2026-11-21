@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/procedural/weapon_look.dart';
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
@@ -142,6 +143,9 @@ class CharacterSlotCard extends StatelessWidget {
                         key: ValueKey('char-figure-${slot.id}'),
                         classId: profile.classId,
                         weaponType: kWeapons[profile.equipped]?.type,
+                        look: profile.equippedItem == null
+                            ? null
+                            : WeaponLook.of(profile.equippedItem!),
                         size: const Size(56, 56)),
               ),
               const SizedBox(width: 10),

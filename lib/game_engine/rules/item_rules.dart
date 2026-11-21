@@ -1,3 +1,4 @@
+import '../data/weapon_elements_catalog.dart';
 import '../data/affixes_catalog.dart';
 import '../data/ascension_catalog.dart';
 import '../data/branch_ults_catalog.dart' show kBranchUltWeaponTypes;
@@ -278,6 +279,14 @@ class ItemRules {
       uniqueId: rarity == Rarity.legendario ? raw.uniqueId : null,
       ultId: ultModAllowed(rarity, w.type, raw.ultId) ? raw.ultId : null,
       quebrarReplaced: raw.quebrarReplaced,
+      // Elemento de base (weapon_identity.md § 4): el legendario recibe
+      // el de su tema (migración de los guardados sin el campo); Raro y
+      // Épico conservan el suyo; Común y Mágico nunca.
+      element: rarity == Rarity.legendario
+          ? uniqueWeaponElement(raw.uniqueId!)
+          : rarityAllowsElement(rarity)
+              ? raw.element
+              : null,
     );
     final kept = <AffixRoll>[];
     for (final a in raw.affixes) {

@@ -235,3 +235,11 @@ Lo que quedó en el código (el resto del spec sigue mandando):
   (passive_tree_v4.md § 8), con los disparadores `onReaction`,
   `onPrimedReaction` (quién preparó: `Combatant.primedBy`, JSON `prim`)
   y `onPartyReaction`.
+
+## 10. Elemento de base del arma (v0.20.0)
+
+El arma puede traer elemento (weapon_identity.md § 6). El ataque básico
+toma ese elemento: reacciona como un golpe de habilidad de ese elemento
+y sus pilas (1 cada 2 básicos) cuentan para las reacciones y las
+Convergencias. El arma no provoca una Convergencia sola: prepara y la
+habilidad detona. Habilidades del mismo elemento que el arma: +8 %.

@@ -6,6 +6,7 @@ import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/theme/vision_palette.dart';
 import '../../../core/procedural/item_icons.dart';
+import '../../../core/procedural/weapon_look.dart';
 import '../../build_planner/presentation/build_fit_badge.dart' show kPlanColor;
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/item.dart';
@@ -73,7 +74,11 @@ String iconKeyForType(String type) => type.contains('escudo')
 /// Ícono pixel (8 × 8 escalado) sin difuminado.
 class PixelIcon extends StatelessWidget {
   const PixelIcon(this.iconKey,
-      {super.key, this.accent = ProtoColors.ice, this.size = 32, this.procKey});
+      {super.key,
+      this.accent = ProtoColors.ice,
+      this.size = 32,
+      this.procKey,
+      this.look});
 
   final String iconKey;
   final Color accent;
@@ -83,12 +88,16 @@ class PixelIcon extends StatelessWidget {
   /// (`procKeyForType`); `null` = las de la familia `items`.
   final String? procKey;
 
+  /// Identidad del arma (aura sutil del elemento, ULT, variante).
+  final WeaponLook? look;
+
   @override
   Widget build(BuildContext context) => CustomPaint(
         size: Size.square(size),
         painter: ItemIconPainter(
             kItemIconRows[iconKey] ?? kItemIconRows['espada']!, accent,
-            procKey == null ? 'items' : 'items.$procKey'),
+            procKey == null ? 'items' : 'items.$procKey',
+            look: look),
       );
 }
 
@@ -160,7 +169,8 @@ class ItemCell extends StatelessWidget {
       icon = PixelIcon(iconKeyForType(type),
           accent: RarityColors.of(it.rarity),
           size: size - 12 * k,
-          procKey: procKeyForType(type));
+          procKey: procKeyForType(type),
+          look: WeaponLook.of(it));
     } else if (c?.eco case final e?) {
       border = RarityColors.of(e.rarity);
       // Más chico y arriba: abajo a la derecha va el tier.
