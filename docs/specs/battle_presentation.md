@@ -1502,9 +1502,10 @@ solo: `BattleView.companions` vacío) cada jugador maneja su personaje,
 así que no hacen falta las tarjetas de los demás.
 
 - Abajo, solo la tarjeta propia (`BattlePartyBar.onlyLocal`): HP, MP,
-  ULT, Pulso y estados. La barra (`barHeight(..., compact: true)`) usa
-  38 % de base en vez de 42 % con texto Normal: la escena recupera el
-  espacio.
+  ULT, Pulso y estados. Desde v0.20.6 va a la izquierda del menú, en la
+  misma fila (§ "Barra de abajo (v0.20.6)"); la barra
+  (`barHeight(..., compact: true)`) usa 30 % de base (34 % con texto
+  grande) en vez de 42 %: la escena recupera el espacio.
 - Los demás, en `BattleAllyList` a la derecha de la arena (debajo de la
   franja), de arriba hacia abajo en orden de grupo: avatar ×2, nombre,
   vida verde (6 px) y maná azul (4 px), y a la derecha `T+n`, `▶` si es
@@ -1532,6 +1533,13 @@ Pedidos del dueño, para ahorrar espacio y no tapar la elección:
 - **v0.20.0:** las Instante pasan a ARMA, debajo de Atacar y Defender,
   con el separador "Instante — no terminan tu turno" (no es acción: los
   atajos no cambian); la insignia del panel derecho sigue igual.
+  **v0.20.6:** sin separador (la fila ya lleva `DsTag.instant`); el panel
+  derecho, debajo de `[INSTANTE] · no termina tu turno`, explica la regla
+  del motor (`kInstantRule`, combat.md § "Pulso, precondiciones e
+  Instante"): se usa sin gastar el turno, una vez por turno, y después
+  queda una acción; otra Instante en ese mismo turno cuenta como acción
+  normal y termina el turno (en ese caso la fila ya no es Instante y la
+  nota no aparece).
   Defender muestra en el panel `½ daño · +N Pulso · +6 ULT`. El tooltip
   del enemigo suma Débil/Resiste/Inmune cuando la ficha dice "???".
 - **HABILIDADES sin banner arriba.** Ya no hay separador fijo
@@ -1561,5 +1569,69 @@ Pedidos del dueño, para ahorrar espacio y no tapar la elección:
   o drenar su carga); en jefes, su mecánica (con Alt / Shift, cómo
   contrarrestarla); y los estados con nombre completo ("Quemadura ×3",
   "Mojado · 2 turnos"). Las insignias abreviadas del HUD ya muestran
-  nombre y efecto al pasar el mouse.
+  nombre y efecto al pasar el mouse. **v0.20.6:** los estados van uno
+  por fila, en columna, con el nombre y color estándar de todo el juego
+  (`statusNameMarkup`: Quemadura en su rojo, Sagrado en su amarillo...),
+  cada uno con la flecha de pliegue de `DsFold` (`>` cerrado, `v`
+  abierto) y, plegado, qué hace (`statusDescriptionOf`: stacks y turnos).
+  Como el resto de la ficha, se despliegan con Alt / Shift (la ficha
+  sigue al mouse y no recibe clics); el tope de tamaño es el de
+  `DsTooltipCard`.
 - Tests: `battle_skill_menu_test.dart`, `enemy_live_info_test.dart`.
+
+## Barra de abajo (v0.20.6)
+
+Pedido del dueño: ganar alto para la escena. Con grupo compacto (sin
+compañeros) la tarjeta del personaje propio va a la izquierda del menú,
+en una sola fila: `[tarjeta: nombre, vida, maná, ULT, Pulso]
+[categorías] [lista de acciones] [descripción]`. No hay fila aparte para
+la tarjeta. Fuera del turno, la tarjeta sigue a la izquierda y a su
+lado el aviso de turno. Con compañeros (`soloParty`) sigue la barra del
+grupo debajo del menú, como antes.
+
+- **Por datos** (editor_layout.md § 6, fase 6): pantalla `battle`
+  (`BattleBarLayout`, `assets/layouts/battle.layout.yaml`). Lugares del
+  template: `top` (arriba de la fila, alto natural hasta 45 %), `card`
+  (250 × texto, hasta 30 % del ancho), `categories` (170 × texto, hasta
+  20 %), `actions` (peso 5) y `description` (peso 4). Slots
+  `battle.card`, `battle.categories`, `battle.actions`,
+  `battle.description` y `battle.waiting`; dos slots en un mismo lugar se
+  apilan mitad y mitad. Todo menos la tarjeta va dentro del borde dorado
+  de la ventana de comandos (`battle-menu`). Tope de ancho de la fila:
+  1240 + 250 × texto, centrada.
+- Corte `narrow` (< 60 tx: ventanas chicas o texto ENORME): la tarjeta
+  sube a `top` y el menú usa todo el ancho.
+- Tarjeta angosta: si no entran sigla + barra + cifras, las cifras van
+  arriba de cada barra (`BattlePartyBar.stackBars`). Con poco alto, la
+  tarjeta scrollea.
+- Tests: `battle_bar_layout_test.dart` (YAML == defecto; 5 tamaños ×
+  Normal / Muy grande / ENORME sin desbordes; tarjeta a la izquierda o
+  arriba; mover la tarjeta por datos). Capturas en
+  `docs/release_shots/v0.20.6/batalla/`.
+
+## Textos flotantes (v0.20.6)
+
+Con la cámara cerca, un objetivo alto en la escena mandaba sus números
+de daño, estados, carteles de pasivas (sinergias, combustión,
+convergencia) y carteles de reacción por encima del borde de la escena:
+quedaban recortados. Ahora:
+
+- Se dibujan en la capa de arriba (`BattleOverlayPainter` →
+  `BattleScenePainter.paintFloating`), encima de la franja, la barra y
+  todo, sin el recorte del área del mundo; debajo de la parte de pantalla
+  de la ULT.
+- Posición vertical acotada: el borde de arriba de cada texto nunca pasa
+  de `worldRect.top + margen × u` (perilla `float_top_margin`, 4 por
+  defecto). Si no hay lugar arriba del objetivo, el texto baja y los
+  acotados de una misma zona (40·u de ancho) se apilan hacia abajo sin
+  pisarse (`clampFloatY`). Los carteles de pasivas (`tag`) y de reacción
+  usan el mismo margen.
+- La cámara no cambia por defecto. Perilla `camera_zoom_out` (0–3 pasos
+  enteros, 0 por defecto) para alejarla si hiciera falta
+  (`BattleLayout.frame(zoomOut:)`, nunca baja de ×1).
+- Las dos perillas viven en Editor → LAYOUT → BATALLA → PERILLAS
+  (editor_layout.md § 2.8) y se guardan en el YAML (`params:`).
+- Test: objetivo muy por encima del borde → todos los rects de los
+  textos (`BattleScenePainter.debugFloatRects`) quedan dentro de la
+  pantalla y debajo del borde de arriba de la escena; los números
+  acotados no se pisan.

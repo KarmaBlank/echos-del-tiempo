@@ -862,7 +862,12 @@ class BattlePartyBar extends StatelessWidget {
     this.auto = const {},
     this.onAuto,
     this.onlyLocal = false,
+    this.stackBars = false,
   });
+
+  /// Cifras arriba de las barras (tarjeta angosta a la izquierda del
+  /// menú; battle_presentation.md § "Barra de abajo").
+  final bool stackBars;
 
   /// Solo la tarjeta propia (grupo compacto: los demás van en
   /// [BattleAllyList]).
@@ -888,7 +893,9 @@ class BattlePartyBar extends StatelessWidget {
     // los números quedan junto a sus barras.
     final mine = battle.party.where((p) => p.id == localId).toList();
     final party = onlyLocal && mine.isNotEmpty ? mine : battle.party;
-    final (rows, perRow) = gridFor(party.length);
+    // Tarjeta sola a la izquierda del menú: ocupa todo su lugar.
+    final (rows, perRow) =
+        onlyLocal && party.length == 1 ? (1, 1) : gridFor(party.length);
     final compact = party.length > slotCount;
     // Cada fila: todas arriba y del mismo alto (el de la más alta: la
     // local con ULT o la que tiene estados).
@@ -902,7 +909,7 @@ class BattlePartyBar extends StatelessWidget {
                   child: r * perRow + c >= party.length
                       ? const SizedBox.shrink()
                       : _card(party[r * perRow + c], order, compact,
-                          narrow: perRow > slotCount),
+                          narrow: perRow > slotCount || stackBars),
                 ),
               ],
             ],

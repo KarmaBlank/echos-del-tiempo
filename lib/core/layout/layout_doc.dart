@@ -222,7 +222,9 @@ class LayoutDoc {
     this.version = 1,
     required List<SlotPlacement> slots,
     Map<LayoutBreakpoint, Map<String, SlotRule>> breakpoints = const {},
+    Map<String, double> params = const {},
   })  : slots = List.unmodifiable(slots),
+        params = Map.unmodifiable(params),
         breakpoints = Map.unmodifiable({
           for (final MapEntry(:key, :value) in breakpoints.entries)
             if (value.isNotEmpty) key: Map<String, SlotRule>.unmodifiable(value),
@@ -232,6 +234,27 @@ class LayoutDoc {
   final int version;
   final List<SlotPlacement> slots;
   final Map<LayoutBreakpoint, Map<String, SlotRule>> breakpoints;
+
+  /// Perillas numéricas de la pantalla (`params:`; editor_layout.md
+  /// § 2.8): las declara el código en `LayoutScreenSpec.params`; acá solo
+  /// las que pisan el valor por defecto.
+  final Map<String, double> params;
+
+  /// Copia con la perilla [key] en [v] (`null` = vuelve al defecto).
+  LayoutDoc withParam(String key, double? v) {
+    final m = {...params};
+    if (v == null) {
+      m.remove(key);
+    } else {
+      m[key] = v;
+    }
+    return LayoutDoc(
+        screen: screen,
+        version: version,
+        slots: slots,
+        breakpoints: breakpoints,
+        params: m);
+  }
 
   static const schema = 1;
 
@@ -321,6 +344,7 @@ class LayoutDoc {
           s.copyWith(region: pos[s.id]!.$1, order: pos[s.id]!.$2),
       ],
       breakpoints: breakpoints,
+      params: params,
     );
   }
 
@@ -339,6 +363,7 @@ class LayoutDoc {
                 : s,
         ],
         breakpoints: breakpoints,
+        params: params,
       );
     }
     final m = {...?breakpoints[bp]};
@@ -353,6 +378,7 @@ class LayoutDoc {
       version: version,
       slots: slots,
       breakpoints: {...breakpoints, bp: m},
+      params: params,
     );
   }
 
@@ -417,11 +443,19 @@ class LayoutDoc {
         }
       }
     }
+    final params = <String, double>{};
+    final pr = doc['params'];
+    if (pr is YamlMap) {
+      for (final MapEntry(:key, :value) in pr.entries) {
+        if (key is String && value is num) params[key] = value.toDouble();
+      }
+    }
     return LayoutDoc(
         screen: doc['screen'] as String,
         version: version,
         slots: slots,
-        breakpoints: bps);
+        breakpoints: bps,
+        params: params);
   }
 
   /// Texto YAML estable (mismo doc → mismo texto). Los hijos de un grupo
@@ -491,6 +525,12 @@ class LayoutDoc {
         for (final id in m.keys.toList()..sort()) {
           b.writeln('    $id: ${m[id]!.encode()}');
         }
+      }
+    }
+    if (params.isNotEmpty) {
+      b.writeln('params:');
+      for (final k in params.keys.toList()..sort()) {
+        b.writeln('  $k: ${_num(params[k]!)}');
       }
     }
     return b.toString();
