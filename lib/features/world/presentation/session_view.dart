@@ -1,4 +1,4 @@
-import '../../../game_engine/models/battle_state.dart';
+﻿import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/battle_event.dart';
@@ -73,7 +73,7 @@ enum WorldPrompt {
   lostLoot('[E] Loot perdido'),
 
   /// Punto de pesca del lago (fishing.md § 4).
-  fishing('[E] Pescar'),
+  fishing('[E o clic] Pescar'),
 
   /// Puesto del comerciante (fishing.md § 5).
   trader('[E] Comerciante'),

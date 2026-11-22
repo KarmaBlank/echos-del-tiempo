@@ -1,4 +1,4 @@
-import '../../../game_engine/models/combat_mode.dart';
+﻿import '../../../game_engine/models/combat_mode.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -1495,19 +1495,19 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Texto del aviso de abajo mientras pesca.
   String fishingHint(MapFishing f) => switch (f.phase) {
         FishPhase.idle =>
-          '[E] mantené para cargar y soltá para tirar · [R] auto-pesca · Esc guarda',
+          '[E o clic] mantené para cargar y soltá para tirar · [R] auto-pesca · Esc guarda',
         FishPhase.charging => 'Cargando… soltá para tirar',
         FishPhase.flying => 'La boya vuela…',
         FishPhase.waiting => f.game.nibbling
             ? 'Tantea… todavía no'
             : 'Esperá la picada; si tirás antes, se va',
-        FishPhase.bite => '¡PICÓ! [E] ya',
+        FishPhase.bite => '¡PICÓ! [E o clic] ya',
         FishPhase.hooking => 'Clavado…',
-        FishPhase.reel => 'Mantené [E] para subir la zona; tené al pez adentro',
+        FishPhase.reel => 'Mantené [E o clic] para subir la zona; tené al pez adentro',
         FishPhase.won =>
-          'Sacaste ${f.fish?.def.name ?? 'un pez'} · [E] para tirar de nuevo',
+          'Sacaste ${f.fish?.def.name ?? 'un pez'} · [E o clic] para tirar de nuevo',
         FishPhase.lost =>
-          '${f.game.lostReason ?? 'Se escapó.'} [E] para tirar de nuevo',
+          '${f.game.lostReason ?? 'Se escapó.'} [E o clic] para tirar de nuevo',
       };
 
   /// `nearSeal`: el sello sin activar más cercano a menos de 26 px.
