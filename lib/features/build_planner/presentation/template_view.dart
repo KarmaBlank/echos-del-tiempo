@@ -15,6 +15,7 @@ import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/build_plan.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/rules/build_guide_rules.dart';
 import '../../../game_engine/rules/build_plan_rules.dart';
 import '../../../game_engine/rules/build_template_rules.dart';
 import '../../inventory/presentation/item_widgets.dart' hide PixelIcon;
@@ -22,6 +23,7 @@ import '../../passive_tree/presentation/passive_tree_view.dart';
 import '../data/template_files.dart';
 import 'build_fit_badge.dart' show kPlanColor;
 import 'build_planner_view.dart' show PickOption, showBuildPicker;
+import 'weapon_advice_block.dart';
 import 'weapon_target_view.dart';
 
 // BUILD v2 — plantillas (docs/specs/build_planner_v2.md § 2 y § 3): lista
@@ -485,6 +487,16 @@ class _TemplateViewState extends State<TemplateView> {
                 attributesAt: (l) =>
                     _tr.attributesAt(_t.classId, _t.attributes, l)),
           ),
+        // Consejo de arma con el plan de la plantilla (§ 9.4).
+        WeaponAdviceBlock(
+          key: const ValueKey('tpl-advice'),
+          advice: BuildGuideRules(widget.rules.progression)
+              .advice(plan.copyWith(chosenType: () => widget.plan.chosenType),
+                  widget.profile,
+                  stash: widget.stash),
+          nameOf: widget.rules.progression.items.displayName,
+          stashUids: {for (final s in widget.stash) s.uid},
+        ),
         if (ult != null) ...[
           const DsSectionHeader('ULT ACTIVA'),
           DsListRow(

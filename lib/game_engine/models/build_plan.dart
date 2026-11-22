@@ -94,6 +94,7 @@ class BuildPlan {
     this.weaponBases = const [],
     this.mods = const [],
     this.weaponPassive,
+    this.chosenType,
     this.skills = const [],
     this.targetLevel,
     this.targetMastery,
@@ -150,6 +151,10 @@ class BuildPlan {
 
   /// Pasiva de arma buscada (`kWeaponPassives`).
   final String? weaponPassive;
+
+  /// Tipo de arma que el jugador eligió para el consejo de arma (§ 9.5);
+  /// `null` = el ideal. No es una meta (no cuenta en el progreso).
+  final String? chosenType;
   final List<String> skills;
   final int? targetLevel;
   final int? targetMastery;
@@ -233,6 +238,7 @@ class BuildPlan {
     List<String>? weaponBases,
     List<ModGoal>? mods,
     String? Function()? weaponPassive,
+    String? Function()? chosenType,
     List<String>? skills,
     int? Function()? targetLevel,
     int? Function()? targetMastery,
@@ -257,6 +263,7 @@ class BuildPlan {
         mods: mods ?? this.mods,
         weaponPassive:
             weaponPassive != null ? weaponPassive() : this.weaponPassive,
+        chosenType: chosenType != null ? chosenType() : this.chosenType,
         skills: skills ?? this.skills,
         targetLevel: targetLevel != null ? targetLevel() : this.targetLevel,
         targetMastery:
@@ -323,6 +330,7 @@ class BuildPlan {
         if (weaponBases.isNotEmpty) 'bases': weaponBases,
         if (mods.isNotEmpty) 'mods': [for (final m in mods) m.toJson()],
         if (weaponPassive != null) 'wp': weaponPassive,
+        if (chosenType != null) 'wantType': chosenType,
         if (skills.isNotEmpty) 'skills': skills,
         if (targetLevel != null) 'lvl': targetLevel,
         if (targetMastery != null) 'ms': targetMastery,
@@ -421,6 +429,7 @@ class BuildPlan {
       weaponBases: strings(raw['bases']),
       mods: List.unmodifiable(mods),
       weaponPassive: str(raw['wp']),
+      chosenType: str(raw['wantType']),
       skills: strings(raw['skills']),
       targetLevel: lvl != null && lvl > 0 ? lvl : null,
       targetMastery: ms != null && ms > 0 ? ms : null,
