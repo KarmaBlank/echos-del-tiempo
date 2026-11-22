@@ -725,7 +725,7 @@ ni la sesión ni `features/*` miran el nombre del flavor.
 
 | Juego | id (`g`) | `v` | Constante |
 |---|---|---|---|
-| Ecos del Tiempo (Mundo) | `mundo` | 31 | `kProtocolVersion` |
+| Ecos del Tiempo (Mundo) | `mundo` | 32 | `kProtocolVersion` |
 | Ecos del Tiempo: Travesía | `travesia` | 2 | `kTravesiaProtocolVersion` |
 
 - `hello` lleva `g` (el id del juego del cliente). Es aditivo: un host
@@ -743,6 +743,17 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   vs 31) no coincide → `reject version`.
 - El `welcome` manda el `v` del juego de la sala.
 - Subir el protocolo de un juego no toca el del otro.
+
+## Mundo, protocolo 32 (v0.20.8: Condensar)
+
+- `CraftAction` no cambia de forma (`{"t":"craft","op":"condense","w":"<material>","i":N}`),
+  pero cambia la regla que valida el host: recetas por defecto
+  **20 Esquirlas + ₵100 → 1 Cristal** y **8 Cristales + ₵500 → 1 Prisma**
+  (materials_economy.md § 4.3, Editor → Balance → Condensar). Un host 31
+  cobraría 10/10, así que la sala no mezcla versiones: se sube a 32.
+- En la Travesía el host rechaza `op: condense` siempre (`runGate`), aun
+  en una parada de armería; la UI no muestra el botón. El protocolo de
+  Travesía no cambia (sigue en 2): ningún cliente Travesía la manda.
 
 ## Travesía, protocolo 1 (roguelike.md)
 

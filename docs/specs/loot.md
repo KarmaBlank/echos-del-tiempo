@@ -157,6 +157,11 @@ Tres materiales que también caen como loot.
 - **Cristal de Era**: agrega un afijo (si hay lugar).
 - **Prisma Roto**: sube la rareza un nivel (Común → Mágico → Raro →
   Épico, ver § 16).
+- **Condensar** (solo Mundo, mesa de fusión, materials_economy.md §
+  4.3): 20 Esquirlas + ₵100 → 1 Cristal; 8 Cristales + ₵500 → 1 Prisma.
+  Solo hacia arriba, sin azar, por lotes (×1 / ×5 / MÁX), ajustable en
+  el Editor → Balance (grupo Condensar).
+
 La forja (mejoras por stat) se mantiene con tope por rareza; la fusión de
 habilidades pasa a ser una operación de la fusión libre (§ 16).
 

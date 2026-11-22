@@ -167,9 +167,9 @@ class _CondensePanelState extends State<CondensePanel> {
                 '(tope ${CraftMaterial.maxStack}).')),
           SizedBox(height: DsSpace.xs),
           Wrap(spacing: DsSpace.sm, runSpacing: DsSpace.xs, children: [
-            amount('x1', 1, '1'),
-            amount('x5', 5, '5'),
-            amount('TODO ($max)', max, 'all'),
+            amount('×1', 1, '1'),
+            amount('×5', 5, '5'),
+            amount('MÁX ($max)', max, 'all'),
           ]),
         ],
       ),

@@ -534,7 +534,8 @@ class _CraftBenchState extends State<CraftBench> {
     final slots = {
       ..._headerSlots(p, target),
       FuseLayout.keys: (_) => _step == 0 ? const KeyHints(back: null) : null,
-      FuseLayout.condense: (_) => _step == 0 && !_condense
+      // Solo en el Mundo: la Travesía no condensa (el host lo rechaza).
+      FuseLayout.condense: (_) => _step == 0 && !_condense && shop.view.session.run == null
           ? PanelButton('CONDENSAR',
               key: const ValueKey('bench-condense'),
               accent: ProtoColors.violet,

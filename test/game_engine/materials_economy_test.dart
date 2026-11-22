@@ -100,27 +100,27 @@ void main() {
   group('condensar (§ 4.3)', () {
     test('recetas, máximo y resultado sin azar', () {
       expect(CraftRules.condenseRecipe(CraftMaterial.cristal),
-          (CraftMaterial.esquirla, 10, 100));
+          (CraftMaterial.esquirla, 20, 100));
       expect(CraftRules.condenseRecipe(CraftMaterial.prisma),
-          (CraftMaterial.cristal, 10, 500));
+          (CraftMaterial.cristal, 8, 500));
       expect(CraftRules.condenseRecipe(CraftMaterial.ancla), isNull);
       expect(CraftRules.condenseRecipe(CraftMaterial.esquirla), isNull);
-      final p = _p(credits: 350, mats: const {CraftMaterial.esquirla: 45});
+      final p = _p(credits: 350, mats: const {CraftMaterial.esquirla: 85});
       expect(CraftRules.condenseMax(p, CraftMaterial.cristal), 3,
-          reason: 'créditos para 3 (45 Esquirlas darían 4)');
+          reason: 'créditos para 3 (85 Esquirlas darían 4)');
       final r = _craft.condense(p, CraftMaterial.cristal, 3);
       expect(r.ok, isTrue);
-      expect(r.profile!.material(CraftMaterial.esquirla), 15);
+      expect(r.profile!.material(CraftMaterial.esquirla), 25);
       expect(r.profile!.material(CraftMaterial.cristal), 3);
       expect(r.profile!.credits, 50);
       expect(r.gainedMaterials, {CraftMaterial.cristal: 3});
     });
 
     test('fondos, tope de 99 y materiales que no se condensan', () {
-      final p = _p(credits: 5000, mats: const {CraftMaterial.esquirla: 15});
+      final p = _p(credits: 5000, mats: const {CraftMaterial.esquirla: 35});
       expect(_craft.condense(p, CraftMaterial.cristal, 2).error,
           'Falta Esquirla del Eco');
-      expect(_craft.condense(_p(credits: 50, mats: const {CraftMaterial.esquirla: 20}),
+      expect(_craft.condense(_p(credits: 50, mats: const {CraftMaterial.esquirla: 40}),
               CraftMaterial.cristal, 1).error,
           startsWith('Faltan'));
       expect(_craft.condense(p, CraftMaterial.cristal, 0).error, 'Elige cuántos');
@@ -137,7 +137,7 @@ void main() {
     test('en la sesión: el host valida y aplica a cada jugador (co-op)', () {
       final e = sessionEngine();
       var s = e.addPlayer(e.create(), 'p0',
-              _p(credits: 1000, mats: const {CraftMaterial.cristal: 20}))!
+              _p(credits: 1000, mats: const {CraftMaterial.cristal: 16}))!
           .state;
       s = e.addPlayer(s, 'p1', _p(credits: 100))!.state;
       const a = CraftAction(CraftOp.condense, 'prisma', index: 2);

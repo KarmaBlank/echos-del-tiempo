@@ -113,9 +113,13 @@ Campaña completa (cada misión una vez): **611 Esquirlas, 133 Cristales,
 
 Nueva operación de `CraftRules` en el mismo banco (sin edificio nuevo):
 
-- **10 Esquirlas + ₵100 → 1 Cristal**
-- **10 Cristales + ₵500 → 1 Prisma** (1 Prisma = 100 Esquirlas + ₵1500)
-- Sin vuelta atrás, sin azar, por lotes (x1 / x5 / todo).
+- **20 Esquirlas + ₵100 → 1 Cristal** (v0.20.8; era 10)
+- **8 Cristales + ₵500 → 1 Prisma** (v0.20.8; era 10) (1 Prisma = 160 Esquirlas + ₵1300)
+- Sin vuelta atrás (solo hacia arriba), sin azar, por lotes (×1 / ×5 / MÁX).
+- Solo en el Mundo: la Travesía no condensa (el host rechaza `op: condense`).
+- Las cantidades y los créditos son el grupo **Condensar** del Editor →
+  Balance (`TuningId.condense`: `cristalCost`, `cristalCredits`,
+  `prismaCost`, `prismaCredits`).
 - Ancla, Fragmentos y Esencia **no** se convierten (son llaves del endgame).
 - El tope de 99 hace que convertir antes de perder sea natural; la UI
   avisa "pila llena: condensar" cuando se pierde material.
@@ -224,6 +228,28 @@ excedente y gasta Esquirlas y Cristales en re-tirar y agregar mods):
 Épico ≈ 5–8 misiones medias, 3–6 tardías y 3–5 Ecos. Condensar todo un
 tramo tardío cuesta ≈ ₵1500 por Prisma, del orden de lo que paga una
 misión: acelera pero no reemplaza jugar.
+
+## 7.1 Recetas v0.20.8 (pedido del dueño)
+
+El dueño pidió ~20 Esquirlas por Cristal. Proporción de drop (§ 6):
+Esquirla 8% : Cristal 2.5% ≈ 3.2 : 1 y Cristal 2.5% : Prisma 0.6% ≈
+4.2 : 1. La receta tiene que costar bastante más que esa proporción
+(si no, condensar vale más que jugar) pero sin duplicar el impuesto del
+primer escalón en el segundo:
+
+- Esquirla → Cristal: **20** (≈ 6× la proporción de drop). Las Esquirlas
+  siguen teniendo salida, pero ya no reemplazan al Cristal que cae.
+- Cristal → Prisma: **8** (≈ 2× la proporción de drop; era 10). Con 10
+  el Prisma por la vía larga quedaba en 200 Esquirlas, demasiado lejos de
+  la meta de § 3; con 8 queda en 160 y el Cristal que cae (más escaso que
+  la Esquirla) rinde un poco más.
+- Créditos sin cambio (₵100 / ₵500).
+
+Por misión tardía (§ 7: 81 Esq, 9.9 Cri): condensando todo, antes
+8 + 9.9 ≈ 18 Cristales → 1.8 Prismas; ahora 4 + 9.9 ≈ 14 Cristales →
+1.75 Prismas. El Épico "condensando todo" casi no se mueve (≈ 3.3–3.4
+misiones tardías) y sigue en la meta; cambia el reparto: las Esquirlas
+valen menos y el Cristal más. Las tablas de § 7 se midieron con 10/10.
 
 ## 8. Fuera de alcance / pendiente
 

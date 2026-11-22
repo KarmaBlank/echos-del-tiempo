@@ -49,11 +49,11 @@ const Map<String, TuningDef> kTuningDefaults = {
     'enemyPerTurn': 25,
     'enemyPerHp': 100,
   }),
-  // materials_economy.md § 4.3.
+  // materials_economy.md § 4.3 (v0.20.8: 20 Esquirlas / 8 Cristales).
   TuningId.condense: TuningDef('Recetas de Condensar', {
-    'cristalCost': 10,
+    'cristalCost': 20,
     'cristalCredits': 100,
-    'prismaCost': 10,
+    'prismaCost': 8,
     'prismaCredits': 500,
   }),
   // materials_economy.md § 4.1-4.2 (economía v0.15).

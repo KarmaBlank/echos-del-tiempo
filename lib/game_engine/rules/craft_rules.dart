@@ -803,8 +803,8 @@ class CraftRules {
   // ------------------------------------------------------------------
 
   /// Receta para obtener 1 de [out]: (material que se gasta, cuántos,
-  /// créditos), o `null` si [out] no se condensa. 10 Esquirlas + ₵100 →
-  /// 1 Cristal; 10 Cristales + ₵500 → 1 Prisma.
+  /// créditos), o `null` si [out] no se condensa. 20 Esquirlas + ₵100 →
+  /// 1 Cristal; 8 Cristales + ₵500 → 1 Prisma (v0.20.8; Editor → Balance).
   static (CraftMaterial, int, int)? condenseRecipe(CraftMaterial out) =>
       switch (out) {
         CraftMaterial.cristal => (CraftMaterial.esquirla,

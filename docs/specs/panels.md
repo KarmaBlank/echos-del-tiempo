@@ -549,20 +549,21 @@ Tests: `test/features/inventory/craft_help_test.dart`.
 ### FUSIÓN (v0.15: CONDENSAR)
 
 materials_economy.md § 4.3. En el paso 1 (ARMA), al pie de la ficha:
-`CONDENSAR` (`bench-condense`) abre el panel `CondensePanel`
+`CONDENSAR` (`bench-condense`, solo en el Mundo: en una armería de la
+Travesía no aparece) abre el panel `CondensePanel`
 (`condense_panel.dart`, en lugar del paso 1; `‹ VOLVER` =
 `condense-back`):
 
 - Una tarjeta `DsCard` por receta (`condense-card-<material>`):
-  `10 Esquirla + ₵100 → 1 Cristal de Era` y `10 Cristal + ₵500 → 1 Prisma
-  Roto`; debajo lo que tienes y cuántos alcanzan (`condense-have-<m>`:
+  `20 Esquirla + ₵100 → 1 Cristal de Era` y `8 Cristal + ₵500 → 1 Prisma
+  Roto` (v0.20.8; los números salen del grupo Condensar del balance); debajo lo que tienes y cuántos alcanzan (`condense-have-<m>`:
   `Tienes 25 Esquirla · 0 Cristal · ₵1000 — alcanza para 2`,
   `CraftRules.condenseMax`: materiales, créditos y lugar hasta 99). Aviso
   dorado si la pila de origen está llena ("condensa para no perder lo que
   caiga") y rojo si la de destino está en 99.
-- Botones `x1` / `x5` / `TODO (N)` (`condense-<m>-1|5|all`), apagados si
-  no alcanzan.
-- Confirmación (`condense-confirm`): `Gastas 20 Esquirla del Eco y ₵200.
+- Botones `×1` / `×5` / `MÁX (N)` (`condense-<m>-1|5|all`, v0.20.8; antes
+  `x1` / `x5` / `TODO (N)`), grises si no alcanzan.
+- Confirmación (`condense-confirm`): `Gastas 40 Esquirla del Eco y ₵200.
   Obtienes 2 Cristal de Era. No se puede deshacer.` (`condense-summary`),
   el motivo si el host lo rechazaría (`condense-error`, `ShopGuards.craft`)
   y `CONDENSAR` (`condense-go`) / `CANCELAR` (`condense-cancel`).
