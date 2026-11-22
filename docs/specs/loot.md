@@ -120,6 +120,28 @@ Ver § 0.4 (5 rarezas).
   nivel 1, ..., T1 35–40% nivel 30) y un **peso** de aparición; algunos
   solo salen en ciertos tipos de arma (stacks de Congelación: báculos,
   tomos, rifles; DEF: escudos).
+
+### 3.1 Cómo se muestran (v0.20.19)
+
+En toda ficha de arma (tooltip del inventario, ficha completa) y en la
+forja / fusión los mods van agrupados por lado, con el mismo texto
+(`affixGroupsMarkup`, `lib/features/inventory/domain/item_text.dart`):
+
+- Línea `PREFIJOS (ataque) n/tope` y debajo sus mods; después
+  `SUFIJOS (atributos y defensa) n/tope`. `tope` =
+  `Rarity.affixSideCap` (la mitad del cupo, redondeado arriba). Si la
+  rareza no lleva mods y no tiene ninguno, no hay título.
+- En las listas de la forja (traer mod, quitar mod) cada mod lleva
+  delante su etiqueta `PREFIJO ·` / `SUFIJO ·`.
+- El `[?]` de los mods de la forja explica, en castellano llano, qué va
+  en cada lado, cuántos entran según la rareza y que al agregar o traer
+  un mod tiene que quedar lugar de su lado (`affixSidesHelp`).
+- Traer mod: en la lista de mods del arma de origen, los que no se pueden
+  traer a esta arma van en gris (`CraftRules.transferAffixBlock`: fijo
+  de un legendario, no sale en ese tipo de arma, ya lo tiene, sin lugar
+  en total o de su lado). El motivo sale en tooltip salvo el obvio (ya
+  lo tiene). Se pueden elegir igual para ver el motivo en el paso de
+  confirmar.
 - Los afijos se aplican en `StatsCalculator` en un paso nuevo, **antes**
   del árbol de pasivas, y aparecen en el desglose del log de combate
   ("ATQ 21 = base 15 + 40% arma").

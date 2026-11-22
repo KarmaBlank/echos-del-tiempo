@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../models/game_map.dart';
+import '../data/tuning_catalog.dart';
 import 'map_generator.dart';
 
 /// Colisión y movimiento en el mapa — puerto de `solidT`, `hit`,
@@ -9,8 +10,10 @@ import 'map_generator.dart';
 abstract final class WorldRules {
   static const tileSize = MapGenerator.tileSize;
 
-  /// Velocidad del jugador en px/s (`sp2` en `updateMe`).
-  static const playerSpeed = 78.0;
+  /// Velocidad del jugador en px/s (`sp2` en `updateMe`); ajuste de
+  /// balance `exploration.playerSpeed` (Editor → Balance → Exploración).
+  static double get playerSpeed =>
+      kTuning[TuningId.exploration]!.d('playerSpeed');
 
   /// Puntos de la caja del personaje que se prueban contra los tiles.
   static const _probes = [(-5, -3), (5, -3), (-5, 4), (5, 4)];

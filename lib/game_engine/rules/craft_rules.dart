@@ -334,24 +334,40 @@ class CraftRules {
       return const CraftResult.fail('Elige un afijo');
     }
     final a = s.affixes[index];
-    if (a.fixed) return const CraftResult.fail('Mod fijo de un legendario');
-    final def = items.affixOf(a);
-    final w = items.baseOf(t);
-    if (def == null || w == null || !def.allows(w.type)) {
-      return const CraftResult.fail('No sale en este tipo de arma');
-    }
-    if (t.affixes.any((x) => x.affixId == a.affixId)) {
-      return const CraftResult.fail('Ya tiene ese afijo');
-    }
-    if (!items.hasRoomFor(t, def)) {
-      return CraftResult.fail('Sin lugar (${t.rarity.label}: '
-          '${t.rarity.maxMods} mods, ${t.rarity.affixSideCap} '
-          '${def.slot == AffixSlot.prefix ? 'prefijos' : 'sufijos'})');
+    if (transferAffixBlock(t, a) case final why?) {
+      return CraftResult.fail(why);
     }
     final after = t.copyWith(affixes: [...t.affixes, a]);
     return _done(p, t, after,
         credits: transferAffixCost(a, t.rarity), consumed: [sourceUid]);
   }
+
+  /// Motivo de [transferAffix] que depende solo del mod [a] y del arma
+  /// [t] (sin costo ni sacrificio): `null` = entra. La forja lo usa para
+  /// mostrar en gris los mods que no se pueden traer.
+  String? transferAffixBlock(ItemInstance t, AffixRoll a) {
+    if (a.fixed) return 'Mod fijo de un legendario';
+    final def = items.affixOf(a);
+    final w = items.baseOf(t);
+    if (def == null || w == null || !def.allows(w.type)) {
+      return 'No sale en este tipo de arma';
+    }
+    if (t.affixes.any((x) => x.affixId == a.affixId)) return kAlreadyHasAffix;
+    if (!items.hasRoomFor(t, def)) {
+      final side = def.slot == AffixSlot.prefix ? 'prefijos' : 'sufijos';
+      if (t.rarity.maxMods == 0) {
+        return 'Sin lugar: un arma ${t.rarity.label} no lleva mods';
+      }
+      return t.affixes.length >= t.rarity.maxMods
+          ? 'Sin lugar: un arma ${t.rarity.label} lleva '
+              '${t.rarity.maxMods} mods y ya los tiene'
+          : 'Sin lugar de su lado: un arma ${t.rarity.label} lleva hasta '
+              '${t.rarity.affixSideCap} $side y ya los tiene';
+    }
+    return null;
+  }
+
+  static const kAlreadyHasAffix = 'Ya tiene ese afijo';
 
   CraftResult transferPassive(
       PlayerProfile p, String targetUid, String sourceUid) {

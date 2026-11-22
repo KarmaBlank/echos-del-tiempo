@@ -83,7 +83,9 @@ enum BalanceKind {
 
   /// Efectos encadenados, tope por golpe de jefes y élites, "aguanta una
   /// ronda" y velocidad (combat.md § "Límites").
-  combatLimits('combatLimits', 'Combate: límites', 'Límites de combate');
+  combatLimits('combatLimits', 'Combate: límites', 'Límites de combate'),
+  /// Movimiento en el mapa de campo (world.md § "Colisión y movimiento").
+  exploration('exploration', 'Exploración', 'Ajustes de exploración');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -1186,6 +1188,10 @@ final consumablesCodec = _tuningCodec(BalanceKind.consumables, const [
   BalanceField('shieldTurns', 'Turnos del escudo', _int, min: 1, max: 9),
 ]);
 
+final explorationCodec = _tuningCodec(BalanceKind.exploration, const [
+  BalanceField('playerSpeed', 'Velocidad del personaje en el mapa (px/s)', _dec, min: 20, max: 300, step: 1),
+]);
+
 final travesiaCodec = _tuningCodec(BalanceKind.travesia, const [
   BalanceField('boonSpell', 'Mejora: % daño de hechizos', _int, max: 200),
   BalanceField('boonAttack', 'Mejora: % ataque básico y físico', _int, max: 200),
@@ -1337,6 +1343,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.consumables => consumablesCodec,
       BalanceKind.travesia => travesiaCodec,
       BalanceKind.combatLimits => combatLimitsCodec,
+      BalanceKind.exploration => explorationCodec,
     };
 
 /// Tipos de "Ajustes": un grupo de [kTuning] cada uno (id = jsonKey).
@@ -1350,4 +1357,5 @@ const kTuningKinds = [
   BalanceKind.consumables,
   BalanceKind.travesia,
   BalanceKind.combatLimits,
+  BalanceKind.exploration,
 ];

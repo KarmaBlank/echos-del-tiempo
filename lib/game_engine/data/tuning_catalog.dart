@@ -27,10 +27,16 @@ abstract final class TuningId {
   static const consumables = 'consumables';
   static const travesia = 'travesia';
   static const combatLimits = 'combatLimits';
+  static const exploration = 'exploration';
 }
 
 /// Los valores del código.
 const Map<String, TuningDef> kTuningDefaults = {
+  // world.md § "Colisión y movimiento": px/s del jugador en el campo
+  // (v0.20.19: 78 → 98, +25 %).
+  TuningId.exploration: TuningDef('Exploración', {
+    'playerSpeed': 98,
+  }),
   // ultimates_v2.md § 2.4: +6% por nivel sobre el 1.
   TuningId.ultLevel: TuningDef('Escalado de ULT por nivel', {
     'perLevel': 0.06,

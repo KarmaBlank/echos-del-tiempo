@@ -42,10 +42,10 @@ void main() {
     expect(WorldRules.move(lobby, 100, 100, 3, -2), const WorldPoint(103, 98));
   });
 
-  test('stepPlayer normaliza la diagonal a 78 px/s', () {
+  test('stepPlayer normaliza la diagonal a 98 px/s (ajuste exploration.playerSpeed)', () {
     final p = WorldRules.stepPlayer(lobby, 150, 100, 1, 1, 0.1);
-    expect(p.x - 150, closeTo(7.8 / 1.4142135623730951, 1e-9));
-    expect(p.y - 100, closeTo(7.8 / 1.4142135623730951, 1e-9));
+    expect(p.x - 150, closeTo(9.8 / 1.4142135623730951, 1e-9));
+    expect(p.y - 100, closeTo(9.8 / 1.4142135623730951, 1e-9));
     expect(WorldRules.stepPlayer(lobby, 100, 120, 0, 0, 0.1),
         const WorldPoint(100, 120));
   });
