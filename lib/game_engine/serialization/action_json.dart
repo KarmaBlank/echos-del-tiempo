@@ -383,6 +383,9 @@ abstract final class ActionJson {
         // Pasar turno (v0.8.3): variante de `def` (aditivo, sin subir
         // kProtocolVersion; un host viejo lo toma como Defender).
         PassCommand() => {'a': 'def', 'ps': true},
+        // Modos de turno (turn_modes.md, protocolo 39).
+        WaitCommand() => {'a': 'wait'},
+        EndTurnCommand() => {'a': 'end'},
       };
 
   static BattleCommand commandFromJson(Json j) {
@@ -395,6 +398,8 @@ abstract final class ActionJson {
       'item' => ItemCommand(itemFromKey(j.str('it')),
           targetPlayerId: j.strOrNull('to')),
       'def' => j.flag('ps') ? const PassCommand() : const DefendCommand(),
+      'wait' => const WaitCommand(),
+      'end' => const EndTurnCommand(),
       _ => throw FormatException('JSON inválido: comando de batalla', a),
     };
   }

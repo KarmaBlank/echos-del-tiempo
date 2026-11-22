@@ -232,6 +232,7 @@ class GameSettings {
     this.colorVision = ColorVision.off,
     this.reduceMotion = false,
     this.turnTimer = TurnTimer.normal,
+    this.combatMode = '',
     this.perfOverlay = false,
     this.perfCorner = OverlayCorner.topRight,
     this.uiTheme = InterfaceTheme.highContrast,
@@ -298,6 +299,11 @@ class GameSettings {
   /// Tiempo de turno en batalla. Jugando solo vale este; en co-op, el
   /// del anfitrión de la sala.
   final TurnTimer turnTimer;
+
+  /// Modo de combate de la sala que arma este jugador como anfitrión
+  /// (turn_modes.md § 1): el `name` de un `CombatMode`; vacío = el de por
+  /// defecto.
+  final String combatMode;
 
   /// "FPS Y PING": indicador en una esquina (settings.md § 3.9).
   final bool perfOverlay;
@@ -383,6 +389,7 @@ class GameSettings {
     ColorVision? colorVision,
     bool? reduceMotion,
     TurnTimer? turnTimer,
+    String? combatMode,
     bool? perfOverlay,
     OverlayCorner? perfCorner,
     InterfaceTheme? uiTheme,
@@ -416,6 +423,7 @@ class GameSettings {
         colorVision: colorVision ?? this.colorVision,
         reduceMotion: reduceMotion ?? this.reduceMotion,
         turnTimer: turnTimer ?? this.turnTimer,
+        combatMode: combatMode ?? this.combatMode,
         perfOverlay: perfOverlay ?? this.perfOverlay,
         perfCorner: perfCorner ?? this.perfCorner,
         uiTheme: uiTheme ?? this.uiTheme,
@@ -456,6 +464,7 @@ class GameSettings {
         'colorVision': colorVision.name,
         'reduceMotion': reduceMotion,
         'turnTimer': turnTimer.name,
+        'combatMode': combatMode,
         'perfOverlay': perfOverlay,
         'perfCorner': perfCorner.name,
         'uiTheme': uiTheme.name,
@@ -498,6 +507,9 @@ class GameSettings {
       colorVision: ColorVision.fromName(json['colorVision'], d.colorVision),
       reduceMotion: flag(json['reduceMotion'], d.reduceMotion),
       turnTimer: TurnTimer.fromName(json['turnTimer'], d.turnTimer),
+      combatMode: json['combatMode'] is String
+          ? json['combatMode'] as String
+          : d.combatMode,
       perfOverlay: flag(json['perfOverlay'], d.perfOverlay),
       perfCorner: OverlayCorner.fromName(json['perfCorner'], d.perfCorner),
       uiTheme: InterfaceTheme.fromName(json['uiTheme'], d.uiTheme),
@@ -544,6 +556,7 @@ class GameSettings {
       other.colorVision == colorVision &&
       other.reduceMotion == reduceMotion &&
       other.turnTimer == turnTimer &&
+      other.combatMode == combatMode &&
       other.perfOverlay == perfOverlay &&
       other.perfCorner == perfCorner &&
       other.uiTheme == uiTheme &&
@@ -578,6 +591,7 @@ class GameSettings {
       colorVision,
       reduceMotion,
       turnTimer,
+      combatMode,
       perfOverlay,
       perfCorner,
       Object.hash(uiTheme, textColors, spacing, chat, chatNotices,

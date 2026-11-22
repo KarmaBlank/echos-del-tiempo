@@ -756,6 +756,22 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 40 (v0.20.23: modos de turno)
+
+- La sala suma `cm` opcional (modo de combate: `timeline` / `rounds` /
+  `phases`); sin `cm`, el de por defecto (Balance, `modeCoop` / `modeSolo`).
+  Lo fija solo el anfitrión (turn_modes.md § 1).
+- La batalla manda `tr` / `gp` / `act` / `rd` con cualquier regla que no
+  sea la línea de tiempo (`porBando`, `porRonda`, `porFases`); Por rondas
+  suma `ro` (orden de la ronda) y `wt` (quiénes esperaron).
+- Comandos nuevos: `{"t":"cmd","a":"wait"}` (ESPERAR) y
+  `{"t":"cmd","a":"end"}` (TERMINAR TURNO). El host valida el bloque o la
+  fase y descarta el segundo comando como en `porBando`.
+- La pausa de planificación de Por fases la lleva el host (reloj de turno
+  negativo); los clientes la ven en el estado.
+- Un host 39 no conoce las reglas ni los comandos: se sube a 40 (el 39 es
+  de v0.20.22).
+
 ## Mundo, protocolo 37 (v0.20.17: nada del piso se pierde)
 
 - La confirmación `rec:N` (`sk`) suma `bx: true` opcional: lo recuperado

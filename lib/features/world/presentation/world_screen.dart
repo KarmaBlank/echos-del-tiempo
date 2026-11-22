@@ -853,6 +853,15 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               onCancel: controller.cancelPrep,
               onCharacter: () => controller.openPanel(WorldPanel.character),
               turnTimer: s.turnTimer,
+              combatMode: s.effectiveCombatMode,
+              onCombatMode: controller.isClient
+                  ? null
+                  : (m) {
+                      final g = ref.read(gameSettingsProvider.notifier);
+                      g.update(ref
+                          .read(gameSettingsProvider)
+                          .copyWith(combatMode: m.name));
+                    },
               // Las pestañas de la armería (en `prep` la del lobby no se abre).
               shopTabs: [
                 for (final t in ArmoryTab.values)

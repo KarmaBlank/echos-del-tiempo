@@ -1,22 +1,35 @@
 # Spec: Modos de turno del RPG
 
-Estado: propuesta (sin código). Hoy `TurnRule` (battle_state.dart) tiene
-`velocidad` (el Mundo) y `porBando` (la Travesía, roguelike.md § 6.1).
-Esta spec agrega la elección en la sala del RPG y un tercer modo.
+Estado: implementado en v0.20.23 (protocolo Mundo 40). `TurnRule`
+(battle_state.dart) tiene `velocidad` (Línea de tiempo), `porBando` (la
+Travesía, roguelike.md § 6.1, sin cambios), `porRonda` (Por rondas) y
+`porFases` (Por fases). `BattleState.porBando` vale para `porBando` y
+`porFases` (comparten la fase de grupo); `grouped` es "cualquiera que no
+sea la línea de tiempo".
 
 ## 1. Opción en la sala
 
-El anfitrión elige "Modo de combate" en la sala, antes de salir:
+El anfitrión elige "Modo de combate" en la preparación de la misión
+(`PrepPanel`, selector con flechas; el resto lo ve con "lo elige el
+anfitrión"). Cada opción tiene un tooltip de una línea (`CombatMode.tip`).
 
 | opción | regla | por defecto |
 |---|---|---|
-| Línea de tiempo | `velocidad` con los topes de v0.20.20 | sí |
-| Por fases | `porBando` con la presentación de § 3 | no |
-| Por rondas | `porRonda` (nueva, § 4) | no |
+| Línea de tiempo | `velocidad` con los topes de v0.20.20 | solo |
+| Por rondas | `porRonda` (§ 4) | cooperativo |
+| Por fases | `porFases` (§ 3) | no |
 
-Se guarda en la sala (como la dificultad) y vale para todas las peleas
-de la sesión. Cambiarla en medio de una pelea no la afecta: rige desde
-la próxima. Los que entran tarde reciben la regla con el estado.
+Los defaults son ajustes de Balance (Editor → Balance → Límites de
+combate): `modeCoop` y `modeSolo` (0 línea de tiempo, 1 por rondas, 2 por
+fases). Cooperativo = más de un jugador humano (los compañeros de la party
+en solitario no cuentan).
+
+Se guarda en la sala (`GameSession.combatMode`, `null` = el de por
+defecto; `effectiveCombatMode` resuelve) y en el ajuste local del
+anfitrión (`GameSettings.combatMode`, persistido). Vale para todas las
+peleas del Mundo de la sesión. Cambiarla en medio de una pelea no la
+afecta: rige desde la próxima. Los que entran tarde reciben la regla con
+el estado. El TUTORIAL y la Travesía no la usan.
 
 ## 2. Línea de tiempo
 
@@ -26,72 +39,75 @@ por turno del aliado vivo más lento).
 
 ## 3. Por fases
 
-Es `porBando`, que ya existe, con estos agregados para el RPG:
+Es la fase de grupo de `porBando` con los enemigos primero:
 
-- Banner "FASE ENEMIGA": actúan los enemigos de a uno, en orden de lista.
-  Nada carga: ni barra ULT por turno propio de enemigos fuera de su
-  acción, ni efectos con duración del grupo.
-- Banner "FASE DE JUGADORES" y una pausa corta de planificación (ajuste
-  `planPause`, 2 s; el primer comando la corta).
-- Los jugadores actúan en cualquier orden (ya es así: actúa el primero
-  que manda un comando).
-- Cada jugador tiene un botón TERMINAR TURNO (hoy pasa con Pasar /
-  Defender); la fase termina cuando todos terminaron o actuaron. El que
-  terminó sin actuar no gana el Pulso de la acción.
-- La barra ULT, los turnos de los efectos y las cargas cuentan en la
-  fase de jugadores (al terminar cada jugador), no en la enemiga.
-- Tiempo por jugador: el mismo temporizador de turno; al agotarse,
-  Defender automático y terminado.
+- "FASE ENEMIGA" (franja de turnos): actúan los enemigos de a uno, en
+  orden de lista.
+- "FASE DE JUGADORES": arrancan los turnos de todos los jugadores (estados,
+  Pulso, aturdidos que pierden la fase) y actúan en cualquier orden (el
+  primero que manda un comando).
+- Pausa de planificación: al abrir la fase de jugadores el reloj de turno
+  arranca en `-planPause` (Balance, 2 s): esos segundos no cuentan para
+  el tiempo de turno. El primer comando la corta (el reloj vuelve a 0).
+- Cada jugador tiene TERMINAR TURNO (`EndTurnCommand`): cierra su parte
+  sin actuar. El que terminó sin actuar no gana el Pulso de una acción.
+  La fase termina cuando todos los vivos actuaron o terminaron; después
+  actúan las invocaciones y empieza la ronda siguiente (fase enemiga).
+- Nada del grupo cuenta en la fase enemiga: la barra ULT por turno, los
+  efectos con duración y las cargas del grupo cuentan en los turnos de
+  cada jugador. (La ULT por daño recibido sigue como siempre.)
+- Tiempo agotado: los que faltan se defienden solos.
 
-Lo que ya hace el motor: `groupPhase`, `acted`, `pendingGroup`,
-`awaitingGroup`, `_nextBando` y el banner `_bandoBanner` (TURNO DEL
-GRUPO / TURNO ENEMIGO). Falta: el comando `EndTurnCommand`, la pausa y
-los textos nuevos del banner.
+## 4. Por rondas
 
-## 4. Por rondas (nuevo)
+Cada combatiente vivo (jugadores, invocaciones, enemigos) actúa
+exactamente una vez por ronda. La velocidad decide el orden, nunca la
+cantidad de turnos.
 
-Cada combatiente actúa exactamente una vez por ronda. La velocidad decide
-el orden, nunca la cantidad de turnos.
-
-- Al empezar la ronda se ordena a todos los vivos por velocidad efectiva
-  (con la curva de rendimiento decreciente), empate por id.
-- Jugadores seguidos en el orden forman un bloque: dentro del bloque
-  actúan en cualquier orden (el primero que manda), como una mini fase
-  de jugadores.
-- Acción nueva "Esperar": el combatiente pasa al final de la ronda (una
-  vez por ronda). Si varios esperan, mantienen su orden relativo.
-- Los efectos que hoy mueven el turno (`nextTurn` ± intervalo: Prisa,
-  retrasos, Congelación) se traducen a posiciones: adelantar = sube un
-  lugar en la ronda en curso; retrasar = baja un lugar; "pierde el
-  turno" = salta esta ronda.
-- Turno extra: actúa otra vez inmediatamente (una por ronda).
-- Aguanta una ronda (combat.md § "Límites") usa esta misma ronda.
-
-Motor: `TurnRule.porRonda`, una lista `roundOrder` en `BattleState` y un
-`_nextRonda` paralelo a `_nextBando`. `cappedInterval` no se usa.
+- Al empezar la ronda se ordena a todos los vivos (no pasivos) por
+  velocidad efectiva (`BattleEngine.interval`, con la curva de rendimiento
+  decreciente); empate estable en orden de lista: grupo, invocaciones,
+  enemigos. El orden queda en `BattleState.roundOrder`.
+- Los cambios de velocidad (buffs, Congelación) rigen desde la ronda
+  siguiente. Los que llegan a mitad de ronda (invocaciones, jugadores que
+  entran) actúan desde la siguiente.
+- Jugadores seguidos al frente de lo que falta forman un bloque: arrancan
+  sus turnos juntos y actúan en cualquier orden (el primero que manda),
+  cada uno una vez. El bloque termina cuando todos actuaron o terminaron
+  (TERMINAR TURNO también vale acá). Las invocaciones actúan solas, con su
+  IA, como un enemigo.
+- ESPERAR (`WaitCommand`): el jugador del bloque pasa al final de la ronda.
+  Una vez por ronda, antes de actuar, y solo si queda alguien detrás
+  suyo; si varios esperan, mantienen su orden relativo. Su turno ya
+  arrancó: al volver no se repiten estados ni Pulso.
+- Turno extra (Danza de Cuchillas y otros): una acción extra dentro del
+  mismo turno (igual en Por fases).
+- Duraciones: cuentan en rondas (cada efecto baja 1 al final del turno de
+  su dueño, que es una vez por ronda).
+- Efectos que mueven el turno en la línea de tiempo (`nextTurn`: Prisa,
+  retrasos, Pasar ×½): no cambian el orden de la ronda. "Pierde el turno"
+  (aturdido, quebrado, telaraña) salta su lugar en esta ronda.
+- Aguanta una ronda (combat.md § "Límites") usa esta misma ronda (y en
+  Por fases, la ronda = fase enemiga + fase de jugadores).
 
 ## 5. Netcode
 
-- La regla viaja en el estado de batalla (`turnRule`, ya serializado) y
-  en la sala; agregar `porRonda` y `roundOrder` sube `kProtocolVersion`.
-- El host sigue siendo la única autoridad: decide el orden, valida "el
-  primero que manda" dentro de un bloque y descarta el segundo comando
-  con el mismo rechazo que hoy (`porBando`).
-- TERMINAR TURNO y Esperar son comandos nuevos (`BattleCommand`), con su
-  codec.
-- Pausa de planificación: la lleva el host (marca de tiempo en el
-  estado), para que todos vean el mismo conteo.
-- `netcode/rollback` y `netcode/dedicated_server` no cambian: la regla es
-  del motor (Dart puro), no de la red.
+- La regla viaja en el estado de batalla (`tr`, `gp`, `act`, `rd`; Por
+  rondas suma `ro` y `wt`) y el modo en la sala (`cm`). Protocolo Mundo 40.
+- El host es la única autoridad: decide el orden, valida "el primero que
+  manda" dentro del bloque o la fase y descarta el segundo comando.
+- ESPERAR y TERMINAR TURNO viajan como `{"a":"wait"}` y `{"a":"end"}`.
+- La pausa de planificación la lleva el host (reloj de turno negativo).
+- `netcode/rollback` y `netcode/dedicated_server` no cambian.
 
 ## 6. UI
 
 - Línea de tiempo: la franja de turnos de siempre.
-- Por fases: banner grande al cambiar de fase (FASE ENEMIGA / FASE DE
-  JUGADORES), lista de quiénes faltan (ya existe) y el botón TERMINAR
-  TURNO en la tarjeta de cada jugador.
-- Por rondas: la franja muestra la ronda en curso en orden, con el
-  bloque de jugadores agrupado y el número de ronda; "Esperar" en el
-  menú de acción, en gris si ya esperó en esta ronda.
-- Ayuda de la sala: una línea por modo ("Por rondas: todos actúan una
-  vez por ronda; la velocidad decide quién va primero").
+- Por fases: la franja muestra FASE ENEMIGA / FASE DE JUGADORES y quiénes
+  faltan.
+- Por rondas: la franja muestra lo que falta de la ronda en orden, con el
+  número de ronda y el bloque activo resaltado (íconos grandes).
+- En el menú de acción (categoría Pasar): TERMINAR TURNO en Por rondas y
+  Por fases; ESPERAR en Por rondas, en gris si ya esperó en esta ronda.
+- La IA de los compañeros con AUTO y la de los enemigos funcionan igual en
+  los tres modos (actúa el primero con AUTO que falta del bloque o fase).

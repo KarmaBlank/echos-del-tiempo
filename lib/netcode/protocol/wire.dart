@@ -85,7 +85,11 @@ import '../../game_engine/serialization/session_json.dart';
 /// 38 desde v0.20.20: el combatiente lleva `ubt` (carga de ULT extra del
 /// turno, con tope) y la ronda (`act` / `rd`) cuenta también en la línea
 /// de tiempo (aguanta una ronda, combat.md § "Límites").
-const kProtocolVersion = 38;
+/// 40 desde v0.20.23: modos de turno del RPG (turn_modes.md): `tr` puede
+/// ser `porRonda` / `porFases` (con `ro` / `wt` en Por rondas), comandos
+/// `wait` y `end`, y `cm` (modo de combate) en la sala. (El 39 es de
+/// v0.20.22.)
+const kProtocolVersion = 40;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

@@ -1843,10 +1843,13 @@ class BattleScenePainter extends CustomPainter {
     if (b.porBando) return const [];
     final bigIcon = g?.bigIcon ?? BattleScenePainter.bigIcon;
     final smallIcon = g?.smallIcon ?? BattleScenePainter.smallIcon;
-    final ids = [
-      for (final id in predictTurns(b, 10))
-        if (b.byId(id) != null) id,
-    ];
+    // Por rondas (turn_modes.md § 6): lo que falta de la ronda, en orden.
+    final ids = b.porRonda
+        ? [for (final c in b.roundRemaining.take(10)) c.id]
+        : [
+            for (final id in predictTurns(b, 10))
+              if (b.byId(id) != null) id,
+          ];
     final out = <({String id, Rect rect})>[];
     if (ids.isEmpty) return out;
     final need = bigIcon + 8 + (ids.length - 1) * (smallIcon + 4);
@@ -1890,7 +1893,9 @@ class BattleScenePainter extends CustomPainter {
     ];
     _pen.text(
         c,
-        group ? 'TURNO DEL GRUPO' : 'TURNO ENEMIGO',
+        b.porFases
+            ? (group ? 'FASE DE JUGADORES' : 'FASE ENEMIGA')
+            : (group ? 'TURNO DEL GRUPO' : 'TURNO ENEMIGO'),
         vw / 2,
         band / 2 - 4,
         group ? const Color(0xFFFFD166) : const Color(0xFFFF4757),
@@ -1940,12 +1945,17 @@ class BattleScenePainter extends CustomPainter {
       _bandoBanner(c, b, vw, iconBand);
       return;
     }
-    _pen.text(c, 'TURNOS', 30, iconBand / 2 + 3, const Color(0xFF9FB4FF), 8);
+    _pen.text(c, b.porRonda ? 'RONDA ${b.round}' : 'TURNOS', 30,
+        iconBand / 2 + 3, const Color(0xFF9FB4FF), 8);
 
     final slots = timelineSlots(b, vw, g);
+    // Por rondas: el bloque activo va resaltado (marco grueso).
+    final block = b.porRonda && b.groupPhase
+        ? {for (final p in b.pendingGroup) p.id}
+        : const <String>{};
     for (var i = 0; i < slots.length; i++) {
       final a = b.byId(slots[i].id)!;
-      final big = i == 0;
+      final big = i == 0 || block.contains(a.id);
       final r = slots[i].rect;
       final sz = r.width, x = r.left, y = r.top;
       _pen.rect(

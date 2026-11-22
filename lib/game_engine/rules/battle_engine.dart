@@ -421,6 +421,12 @@ class BattleEngine {
   /// (no es su turno, no le alcanza el MP, etc.): el estado no cambia.
   BattleStep? command(BattleState state, String playerId, BattleCommand cmd) {
     final cur = state.current;
+    if (cmd is WaitCommand) return _wait(state, playerId);
+    if (cmd is EndTurnCommand) {
+      // Línea de tiempo: TERMINAR TURNO es Pasar.
+      if (!state.grouped) return command(state, playerId, const PassCommand());
+      return _endTurnCmd(state, playerId);
+    }
     if (state.awaitingGroup) {
       // porBando (roguelike.md § 6): el primero del grupo que manda, actúa.
       if (!state.pendingGroup.any((p) => p.id == playerId)) return null;
@@ -436,6 +442,44 @@ class BattleEngine {
     }
     final t = _Turn(this, state.copy());
     return t.command(t.state.current!, cmd) ? t.result : null;
+  }
+
+  /// ESPERAR (turn_modes.md § 4): [playerId], del bloque en curso, pasa al
+  /// final de la ronda. Una vez por ronda, antes de actuar, y solo si
+  /// queda alguien detrás suyo.
+  BattleStep? _wait(BattleState state, String playerId) {
+    if (!state.porRonda || !state.awaitingGroup) return null;
+    if (!state.pendingGroup.any((p) => p.id == playerId)) return null;
+    if (state.waited.contains(playerId)) return null;
+    final rest = state.roundRemaining;
+    final i = rest.indexWhere((c) => c.id == playerId);
+    if (i < 0 || i == rest.length - 1) return null;
+    final s = state.copy();
+    final p = s.byId(playerId)!;
+    if (p.extraTurn == 2 || p.chained) return null;
+    s.roundOrder
+      ..remove(playerId)
+      ..add(playerId);
+    s.waited.add(playerId);
+    s.log = '${p.name} espera al final de la ronda';
+    return BattleStep(s, const []);
+  }
+
+  /// TERMINAR TURNO (turn_modes.md § 3): [playerId] cierra su parte de la
+  /// fase o del bloque sin actuar (o renuncia a la acción extra).
+  BattleStep? _endTurnCmd(BattleState state, String playerId) {
+    if (!state.awaitingGroup ||
+        !state.pendingGroup.any((p) => p.id == playerId)) {
+      return null;
+    }
+    final t = _Turn(this, state.copy()..currentId = playerId);
+    final p = t.state.current!;
+    // Si ya actuó (acción extra pendiente), sus efectos ya contaron.
+    if (p.extraTurn != 2 && !p.chained) t.tickEffects(p);
+    p.extraTurn = 0;
+    t.state.log = '${p.name} termina su turno';
+    t.endTurn();
+    return t.result;
   }
 
   /// Se le acabó el tiempo al jugador de turno: se defiende solo.
@@ -808,10 +852,122 @@ class _Turn {
     }
   }
 
+  /// `porFases` (turn_modes.md § 3): FASE ENEMIGA (enemigos de a uno, en
+  /// orden de lista) y después FASE DE JUGADORES (como el turno del grupo
+  /// de `porBando`); cuando todos los jugadores terminaron, actúan las
+  /// invocaciones y empieza la ronda siguiente. Los efectos y cargas del
+  /// grupo cuentan en sus propios turnos, nunca en la fase enemiga.
+  void _nextFases() {
+    if (state.round == 0) {
+      state
+        ..round = 1
+        ..acted.clear()
+        ..groupPhase = false;
+    }
+    if (state.groupPhase) {
+      if (state.pendingGroup.isNotEmpty) return;
+      for (final c in state.summons) {
+        if (c.alive && !state.acted.contains(c.id)) {
+          _beginTurn(c);
+          return;
+        }
+      }
+      state
+        ..round += 1
+        ..acted.clear()
+        ..groupPhase = false
+        ..clock += 1;
+    }
+    for (final c in state.enemies) {
+      if (c.alive && !_passive(c) && !state.acted.contains(c.id)) {
+        _beginTurn(c);
+        return;
+      }
+    }
+    state.groupPhase = true;
+    for (final p in [...state.party]) {
+      if (state.ended) return;
+      if (!p.alive) {
+        state.acted.add(p.id);
+        continue;
+      }
+      _beginTurn(p);
+      state.currentId = null;
+    }
+    if (!state.ended) {
+      final names = [for (final p in state.pendingGroup) p.name];
+      state.log = names.isEmpty
+          ? 'Fase de jugadores: nadie puede actuar'
+          : 'Fase de jugadores · ${names.join(', ')}';
+    }
+  }
+
+  /// `porRonda` (turn_modes.md § 4): al empezar la ronda se ordena a todos
+  /// los vivos por velocidad efectiva (empate: orden de lista, grupo,
+  /// invocaciones, enemigos). Cada uno actúa una vez. Los jugadores
+  /// seguidos al frente de lo que falta forman un bloque: arrancan sus
+  /// turnos juntos y actúa el primero que manda. Los cambios de velocidad
+  /// rigen desde la ronda siguiente.
+  void _nextRonda() {
+    if (state.groupPhase) {
+      if (state.pendingGroup.isNotEmpty) return;
+      state.groupPhase = false;
+    }
+    if (state.round == 0 || state.roundRemaining.isEmpty) {
+      final all = [
+        for (final c in [...state.party, ...state.summons, ...state.enemies])
+          if (c.alive && !_passive(c)) c
+      ];
+      final idx = {for (var i = 0; i < all.length; i++) all[i].id: i};
+      final iv = {for (final c in all) c.id: engine.interval(c)};
+      all.sort((a, b) {
+        final d = iv[a.id]!.compareTo(iv[b.id]!);
+        return d != 0 ? d : idx[a.id]!.compareTo(idx[b.id]!);
+      });
+      state
+        ..round += 1
+        ..acted.clear()
+        ..waited.clear()
+        ..clock += 1
+        ..roundOrder
+            .replaceRange(0, state.roundOrder.length, [for (final c in all) c.id]);
+      if (all.isEmpty) return;
+    }
+    final rest = state.roundRemaining;
+    if (rest.isEmpty) return;
+    final first = rest.first;
+    if (!first.isPlayer || first.isSummon) {
+      _beginTurn(first);
+      return;
+    }
+    state.groupPhase = true;
+    for (final p in state.roundBlock) {
+      if (state.ended) return;
+      // Quien esperó ya arrancó su turno en esta ronda.
+      if (state.waited.contains(p.id)) continue;
+      _beginTurn(p);
+      state.currentId = null;
+    }
+    if (!state.ended) {
+      final names = [for (final p in state.pendingGroup) p.name];
+      if (names.isNotEmpty) {
+        state.log = 'Ronda ${state.round} · ${names.join(', ')}';
+      }
+    }
+  }
+
   void nextTurn() {
     if (state.ended) return;
+    if (state.porFases) {
+      _nextFases();
+      return;
+    }
     if (state.porBando) {
       _nextBando();
+      return;
+    }
+    if (state.porRonda) {
+      _nextRonda();
       return;
     }
     Combatant? best;
@@ -903,7 +1059,7 @@ class _Turn {
             _iv(best) * (struggle ? kBossMechanics['telarana']!.soloValue : 1);
       }
       state.currentId = null;
-      if (state.porBando) {
+      if (state.grouped) {
         state.acted.add(best.id);
       } else if (best.isPlayer && !best.isSummon) {
         _markActed(best);
@@ -921,7 +1077,9 @@ class _Turn {
   void endTurn() {
     final cur = state.current;
     if (cur != null && cur.isPlayer) _tickVulnerable();
-    if (cur != null && state.porBando) {
+    if (cur != null && state.grouped) {
+      // Por rondas / Por fases: el turno extra es una acción extra dentro
+      // del mismo turno (turn_modes.md § 4).
       if (cur.isPlayer && !cur.isSummon && cur.extraTurn == 1 && cur.alive) {
         // Turno extra (Danza de Cuchillas): vuelve a actuar en este turno
         // del grupo (una vez).
@@ -2793,7 +2951,7 @@ class _Turn {
   /// en `porBando` la cierra `_nextBando`.
   void _markActed(Combatant p) {
     state.acted.add(p.id);
-    if (state.porBando || !p.isPlayer || p.isSummon) return;
+    if (state.grouped || !p.isPlayer || p.isSummon) return;
     final done = state.party
         .where((q) => q.alive && !q.isSummon)
         .every((q) => state.acted.contains(q.id));
@@ -4701,6 +4859,12 @@ class _Turn {
             _iv(p) * (acted ? 1 : BattleEngine.passTurnFactor);
         endTurn();
         return true;
+      // Los resuelve BattleEngine.command antes de llegar acá.
+      case WaitCommand():
+      case EndTurnCommand():
+        _act = null;
+        _attacker = null;
+        return false;
     }
 
     _resolveAction(p, act);
@@ -5205,7 +5369,7 @@ class _Turn {
         p.mp < BattleEngine.dualMpCost ||
         q.mp < BattleEngine.dualMpCost ||
         // porBando: el compañero gasta su acción de este turno del grupo.
-        (state.porBando && state.acted.contains(q.id))) {
+        (state.grouped && state.acted.contains(q.id))) {
       return false;
     }
     // Sin id: el dúo de clase del par (v0.8.2). Con id: ese dúo, si el
@@ -5220,7 +5384,7 @@ class _Turn {
     p.mp -= BattleEngine.dualMpCost;
     q.mp -= BattleEngine.dualMpCost;
     q.nextTurn = math.max(q.nextTurn, state.clock) + _iv(q);
-    if (state.porBando) state.acted.add(q.id);
+    if (state.grouped) state.acted.add(q.id);
 
     final pv = math.max(_atk(p), p.magic);
     final qv = math.max(_atk(q), q.magic);

@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/game_engine/models/combat_mode.dart';
 import 'package:echos_del_tiempo/game_engine/rules/party_limits.dart';
 import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/game_catalog.dart';
@@ -79,12 +80,16 @@ GameSession act(SessionEngine e, GameSession s, String id, SessionAction a) {
 
 /// Sala con [classes] (ids p0, p1...) ya en el campo de [missionId].
 GameSession inField(SessionEngine e, String missionId,
-    {List<String> classes = const ['guerrero'], List<PlayerProfile>? profiles}) {
+    {List<String> classes = const ['guerrero'],
+    List<PlayerProfile>? profiles,
+    // Las pruebas de sesión de siempre son de la línea de tiempo; `null` =
+    // el modo por defecto de la sala (turn_modes.md § 1).
+    CombatMode? mode = CombatMode.timeline}) {
   profiles ??= [
     for (var i = 0; i < classes.length; i++) newProfile('J$i', classes[i]),
   ];
   classes = [for (final p in profiles) p.classId];
-  var s = e.create();
+  var s = e.setCombatMode(e.create(), mode).state;
   for (var i = 0; i < profiles.length; i++) {
     s = e.addPlayer(s, 'p$i', profiles[i])!.state;
   }
