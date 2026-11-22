@@ -67,7 +67,7 @@ abstract final class DsColors {
   /// Borde de una acción cuya condición especial se está cumpliendo
   /// (habilidad con precondición lista; battle_presentation.md). Distinto
   /// del dorado de selección.
-  static const conditionReady = Color(0xFF4DA3FF);
+  static const conditionReady = ProtoColors.sky;
 
   /// Para la galería: nombre del rol → color.
   static Map<String, Color> get roles => {
