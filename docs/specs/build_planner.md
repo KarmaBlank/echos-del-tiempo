@@ -591,8 +591,25 @@ botón `build-step-go-<i>`):
    puede) si la mejor que tenés no está equipada; si no tenés del tipo
    vigente, "Conseguí un arma de tipo <Tipo>" (IR A LA ARMERÍA si hay
    callback).
-4. El primer mod que falta (§ 10.5), la primera habilidad y la ULT
-   activa que falten (sin botón).
+4. El primer mod que no está en tu arma (§ 10.5) y la primera
+   habilidad que falte (sin botón).
+5. La ULT activa que falte: "Equipá la ULT X" con IR A ULT
+   (`BuildStepAction.ult`, `onOpenUlt`: PERSONAJE pasa a la pestaña de
+   ULT).
+
+Cada paso puede traer `where` (v0.22.1): un plegable `DsFold`
+"DÓNDE LA CONSEGUÍS" (`build-step-where-<i>`, líneas
+`build-step-where-<i>-<j>`) con fuentes concretas:
+
+- Habilidad (`skillWhere`): "Ya la tenés en <arma> (inventario|alijo):
+  equipala"; las armas base que la dan (nombre, tipo, nivel; hasta 3,
+  menor nivel primero); el kit de ascensión si aplica; FUSIÓN "Traer una
+  habilidad" desde tu arma que la tiene (o "desde un arma que la tenga").
+- Mod (`modWhere`): el traslado posible o el motivo por el que no entra;
+  las rarezas que lo sacan al azar (y los tipos si está restringido);
+  FORJA "Agregar un mod"; FUSIÓN "Traer un mod" si no lo tenés.
+- Tipo de arma (`typeWhere`): hasta 3 bases del tipo (menor nivel
+  primero), ARMERÍA y FORJA "Reforjar base".
 
 Sin pasos: "Estás al día con tu plan". Regla de texto: palabras
 completas; una sigla de atributo solo entre paréntesis detrás de su
@@ -621,15 +638,28 @@ Dentro de Arma: "Mejor tipo: <Tipo>" con el motivo en una línea, y hasta
 IDEAL / SIRVE / DE PASO (`fitOf`): contra el objetivo principal si hay
 (≥ 80 % Ideal, ≥ 50 % Sirve), si no por tipo (del tipo vigente: Ideal;
 otro: Sirve); si no cumple requisitos: De paso. El % y los motivos van
-al tooltip.
+al tooltip. La primera, si es un arma tuya, lista en su subtítulo
+"Podés traerle en FUSIÓN:" y una línea por mod buscado que le falta y
+que otra arma tuya tiene y puede pasarle (`transferableTo`, respetando
+`CraftRules.transferAffixBlock`): "Feroz desde <arma>".
 
 ### 10.5 Mods buscados (`modsWanted`)
 
 Los del plan más los del objetivo de arma principal, sin repetir (gana
 el nivel más exigente). Uno por línea: marca, "Arcano, nivel 3 o mejor"
 (`tierText`: T1 = "nivel 1 (el mejor)", T5 = "cualquier nivel") y
-"Lo tenés" / "Falta" (alguna arma del inventario o el alijo lo tiene con
-ese nivel).
+su estado (`ModState`, v0.22.1) contra el arma objetivo
+(`targetWeapon`: la mejor candidata del objetivo principal o, si no hay,
+la equipada):
+
+- "En tu arma": el arma objetivo lo tiene con ese nivel (único estado
+  que cuenta como hecho en el progreso).
+- "Lo tenés en <arma>: pasalo a <objetivo> en FUSIÓN": otra arma tuya lo
+  tiene y `transferAffixBlock` lo deja entrar.
+- "Lo tenés en <arma>, pero no entra en <objetivo>: <motivo>" y, si hay,
+  "Podría ir en <otra arma tuya>" o "Entra en armas de tipo ...".
+- "Lo tenés en <arma>": sin arma objetivo ni equipada.
+- "Falta": ninguna arma tuya (inventario o alijo) lo tiene.
 
 ### 10.6 Editar plan
 

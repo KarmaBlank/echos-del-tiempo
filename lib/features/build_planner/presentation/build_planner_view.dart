@@ -49,6 +49,7 @@ class BuildPlannerView extends StatefulWidget {
     this.onOpenShop,
     this.onOpenAttributes,
     this.onOpenTree,
+    this.onOpenUlt,
   });
 
   final BuildPlanRules rules;
@@ -79,6 +80,9 @@ class BuildPlannerView extends StatefulWidget {
   /// [onOpenTree], el botón abre el árbol en modo planificar.
   final VoidCallback? onOpenAttributes;
   final VoidCallback? onOpenTree;
+
+  /// Abre la pestaña de ULT (paso "Equipá la ULT X").
+  final VoidCallback? onOpenUlt;
 
   static const help = '<b>Build</b><br>'
       'Elegí una plantilla de tu clase y seguí "Qué hacer ahora": hasta 3 '
@@ -161,6 +165,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
         onEdit: () => setState(() => _editing = true),
         onOpenTree: widget.onOpenTree ?? () => setState(() => _tree = true),
         onOpenAttributes: widget.onOpenAttributes,
+        onOpenUlt: widget.onOpenUlt,
         onOpenShop: widget.onOpenShop,
         onEquip: widget.onEquip,
         equipBlocked: widget.equipBlocked,

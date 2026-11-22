@@ -155,7 +155,9 @@ Reglas: palabras completas (la sigla solo entre paréntesis: "Fuerza
 (FUE)"); verde = listo y dorado = falta, explicado por una leyenda de
 una línea; nada se corta con "…" (`DsInfoRow` baja de línea). Piezas en
 `lib/app/design/ds_guide.dart`: `DsStatusMark`, `DsLegend`, `DsInfoRow`,
-`DsProgressFold`.
+`DsProgressFold`. Los pasos de habilidad, mod y tipo de arma pliegan
+"DÓNDE LA CONSEGUÍS" con `DsFold`; el de ULT lleva IR A ULT (v0.22.1).
 
-Tests: `test/features/build_planner/build_coach_ui_test.dart` (APLICAR,
+Tests: `test/game_engine/build_coach_where_test.dart`,
+`test/features/build_planner/build_coach_ui_test.dart` (APLICAR,
 pasos, controles escondidos, siglas, goldens `build_simple_*`).

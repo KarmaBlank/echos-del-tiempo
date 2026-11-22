@@ -4,7 +4,9 @@
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/features/build_planner/presentation/build_plan_providers.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/game_engine/data/build_templates_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/ults_v2_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/build_plan.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
@@ -132,6 +134,50 @@ void main() {
     await tapVisible(tester, find.byKey(const ValueKey('build-step-go-0')));
     await tester.pump();
     expect(find.byKey(const ValueKey('build-planner')), findsNothing);
+  });
+
+  testWidgets('pasos: "dónde la conseguís" plegable y IR A ULT',
+      (tester) async {
+    await _pump(tester, _ana());
+    await _container(tester).read(buildPlanProvider.notifier).save(
+        BuildPlan(skills: const ['hendir'], ultActive: kUltV2.keys.first));
+    await tester.pump();
+    var skill = -1, ult = -1;
+    for (var i = 0; i < 3; i++) {
+      final f = find.byKey(ValueKey('build-step-$i'));
+      if (f.evaluate().isEmpty) continue;
+      final t = _text(tester, f);
+      if (t.contains('habilidad')) skill = i;
+      if (t.contains('Equipá la ULT')) ult = i;
+    }
+    expect(skill, isNot(-1));
+    expect(ult, isNot(-1));
+    expect(_text(tester, find.byKey(ValueKey('build-step-$ult'))),
+        contains('IR A ULT'));
+    // Plegado: abrirlo muestra las fuentes.
+    expect(find.byKey(ValueKey('build-step-where-$skill-0')), findsNothing);
+    await tapVisible(
+        tester,
+        find.descendant(
+            of: find.byKey(ValueKey('build-step-where-$skill')),
+            matching: find.byType(DsButton)));
+    await tester.pump();
+    expect(find.byKey(ValueKey('build-step-where-$skill-0')), findsOneWidget);
+    // IR A ULT cambia a la pestaña de ULT.
+    await tapVisible(tester, find.byKey(ValueKey('build-step-go-$ult')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('build-planner')), findsNothing);
+  });
+
+  testWidgets('mods buscados: estado contra tu arma', (tester) async {
+    await _pump(tester, _ana());
+    await _container(tester)
+        .read(buildPlanProvider.notifier)
+        .save(const BuildPlan(mods: [ModGoal('letal', 5)]));
+    await tester.pump();
+    await _openArea(tester, 'mods');
+    expect(_text(tester, find.byKey(const ValueKey('build-mod-letal'))),
+        contains('Falta'));
   });
 
   testWidgets('EDITAR PLAN muestra los controles y LISTO vuelve',
