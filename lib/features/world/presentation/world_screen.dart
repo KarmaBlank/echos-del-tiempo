@@ -44,7 +44,6 @@ import 'hud/departure_cinematic.dart';
 import 'hud/pause_banner.dart';
 import 'hud/world_hud.dart';
 import 'map/map_game.dart';
-import 'panels/fishing_panel.dart';
 import 'panels/trader_panel.dart';
 import 'panels/character_panel.dart';
 import 'panels/party_member_bar.dart';
@@ -235,6 +234,15 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       _chatFocus.requestFocus();
       return KeyEventResult.handled;
     }
+    // Pesca en el mapa: soltar E / Espacio tira el lance o baja la zona
+    // (fishing.md § 4).
+    if (event is KeyUpEvent &&
+        (event.logicalKey == LogicalKeyboardKey.keyE ||
+            event.logicalKey == LogicalKeyboardKey.space) &&
+        tc.isFishing) {
+      tc.fishRelease();
+      return KeyEventResult.handled;
+    }
     if (event is! KeyDownEvent) {
       // Las de movimiento se leen del estado del teclado: que no lleguen
       // a los atajos de foco.
@@ -254,7 +262,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           battle.hasSubmenu;
       if (submenu) {
         battle.handleKey(event.logicalKey);
-      } else if (view.mode != SessionMode.battle && view.panel != null) {
+      } else if (view.mode != SessionMode.battle &&
+          (view.panel != null || controller.isFishing)) {
         controller.handleKey(event.logicalKey);
       } else {
         _openPause();
@@ -388,6 +397,16 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               child: GameWidget(game: game, autofocus: false),
             ),
           ),
+          // Pesca en el mapa: clic mantenido = E mantenida (sin ventana).
+          if (controller.isFishing)
+            Positioned.fill(
+              key: const ValueKey('fish-pointer'),
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (_) => controller.fishPress(),
+                onPointerUp: (_) => controller.fishRelease(),
+              ),
+            ),
           ..._overlays(view, controller, sprites.requireValue),
           // Hazaña lograda: arriba a la derecha, sobre el mapa y la batalla.
           Positioned(
@@ -831,8 +850,6 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return PartyPanel(view: view, controller: controller);
       case WorldPanel.lostLoot:
         return LostLootPanel(view: view, controller: controller);
-      case WorldPanel.fishing:
-        return FishingPanel(view: view, controller: controller);
       case WorldPanel.trader:
         return TraderPanel(view: view, controller: controller);
       case WorldPanel.stash:

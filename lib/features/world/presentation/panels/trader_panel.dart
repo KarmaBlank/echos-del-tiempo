@@ -6,7 +6,7 @@ import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/rules/fishing_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
-import 'fishing_panel.dart' show fishRarityColor;
+import 'fishing_widgets.dart' show fishRarityColor;
 
 /// Puesto del COMERCIANTE (fishing.md § 5): compra pescado por oro o por
 /// materiales (se elige en cada venta), canjea legendarios y vende cañas.
@@ -43,9 +43,11 @@ class _TraderPanelState extends State<TraderPanel> {
       actions: [
         PanelButton('VENDER TODO',
             key: const ValueKey('trade-sell-all'),
-            onPressed: sellAll
-                ? () => c.sellFish(materials: _materials)
-                : null),
+            onPressed:
+                sellAll ? () => c.sellFish(materials: _materials) : null),
+        // Auto-pesca sin ventana (fishing.md § 6).
+        PanelButton('AUTO-PESCA',
+            key: const ValueKey('fish-auto'), onPressed: c.autoFish),
         PanelButton('CERRAR',
             key: const ValueKey('trade-close'), onPressed: c.closePanel),
       ],
@@ -152,7 +154,6 @@ class _TraderPanelState extends State<TraderPanel> {
     return DsButton('COMPRAR ${r.price}',
         key: ValueKey('trade-rod-buy-${r.id}'),
         size: DsButtonSize.compact,
-        onPressed:
-            (p?.credits ?? 0) >= r.price ? () => c.buyRod(r.id) : null);
+        onPressed: (p?.credits ?? 0) >= r.price ? () => c.buyRod(r.id) : null);
   }
 }

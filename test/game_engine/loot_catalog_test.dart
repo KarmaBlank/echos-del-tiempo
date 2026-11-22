@@ -116,8 +116,9 @@ void main() {
 
   test('legendarios: base, mods fijos válidos y pasiva única', () {
     // v0.8: + 6 exclusivos de los Jefes del Abismo.
-    expect(kUniques.length, inInclusiveRange(22, 26));
-    expect(kUniques.values.where((u) => u.exclusive), hasLength(6));
+    // v0.22.2: + 3 exclusivos del agua (fishing.md § 8.3).
+    expect(kUniques.length, inInclusiveRange(25, 29));
+    expect(kUniques.values.where((u) => u.exclusive), hasLength(9));
     final perFamily = <String, int>{};
     for (final u in kUniques.values) {
       final w = kWeapons[u.baseId];

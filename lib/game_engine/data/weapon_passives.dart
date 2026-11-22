@@ -623,4 +623,36 @@ final List<WeaponPassiveDef> _uniques = [
     mech: (id, n, v, d) => _m(id, n, ProcTrigger.onReaction,
         [const ProcEffect(ProcEffectKind.extraTurn)], d, chance: v),
   ),
+  // Exclusivas de los legendarios del agua (fishing.md § 8.3, v0.22.2).
+  _one(
+    id: 'mareaHundida',
+    name: 'Marea Hundida',
+    unique: true,
+    values: [0.20, 0.25, 0.30, 0.35, 0.40],
+    describe: (v) => 'Todos tus golpes llenan el quiebre un ${_pct(v)} más.',
+    mech: (id, n, v, d) => _m(id, n, ProcTrigger.always,
+        [ProcEffect(ProcEffectKind.breakBonus, value: v)], d),
+  ),
+  _one(
+    id: 'engranajeAhogado',
+    name: 'Engranaje Ahogado',
+    unique: true,
+    values: [0.10, 0.14, 0.18, 0.22, 0.26],
+    describe: (v) => '${_pct(v)} de que una habilidad mágica se repita gratis '
+        'al 50% del daño base.',
+    mech: (id, n, v, d) => _m(id, n, ProcTrigger.onSkill,
+        [const ProcEffect(ProcEffectKind.repeatSkill, value: 0.5)], d,
+        filter: ProcFilter.magicalSkill, chance: v),
+  ),
+  _one(
+    id: 'ecoDeOrilla',
+    name: 'Eco de Orilla',
+    unique: true,
+    values: [0.30, 0.35, 0.40, 0.45, 0.50],
+    describe: (v) => 'Tus golpes a un solo objetivo rebotan a otro enemigo con '
+        'el ${_pct(v)} del daño.',
+    mech: (id, n, v, d) => _m(id, n, ProcTrigger.onHit,
+        [ProcEffect(ProcEffectKind.chain, value: v)], d,
+        filter: ProcFilter.singleTarget),
+  ),
 ];

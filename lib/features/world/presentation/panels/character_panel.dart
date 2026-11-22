@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'fishing_panel.dart' show lifeSkillsLine;
+import 'fishing_widgets.dart' show lifeSkillsLine;
 
 import '../../../../app/design/design.dart';
 import '../../../../app/feature_flags.dart';

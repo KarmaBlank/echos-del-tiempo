@@ -1,4 +1,4 @@
-# Spec: Pesca y comerciante (fase 3 de town_loop.md, v0.22.0)
+# Spec: Pesca y comerciante (fase 3 de town_loop.md, v0.22.0; en el mapa y botín del agua desde v0.22.2)
 
 Precisa town_loop.md § 3.1 (pesca), § 3.3 (comercio), § 10 (red), § 10b
 (solo y pocos clics), § 11c (habilidades de vida y herramientas) y § 12.
@@ -7,14 +7,18 @@ Solo el Mundo: la Travesía no tiene pueblo (rechaza todas las acciones).
 Código: datos en `lib/game_engine/data/fishing_catalog.dart`, reglas
 puras en `lib/game_engine/rules/fishing_rules.dart`, minijuego puro en
 `lib/game_engine/rules/fishing_minigame.dart`, sala en
-`session_engine_fishing.dart`; UI en `panels/fishing_panel.dart` y
+`session_engine_fishing.dart`; lance en el mapa en
+`lib/game_engine/rules/map_fishing.dart` (`FishingCast`, `MapFishing`);
+dibujo en `map/fishing_layer.dart`; comerciante en
 `panels/trader_panel.dart`. Tunables: Editor → Balance → **Pesca**
 (`TuningId.fishing`).
 
 ## 1. Dónde
 
-- Los tres puntos de pesca del lago (`f`, `TownLayout.fishingSpots`):
-  E abre el panel PESCA.
+- Desde v0.22.2 **no hay ventana de pesca**: se pesca en el mapa, desde
+  cualquier tile de la orilla del lago mirando al agua (o al costado si
+  hay agua; `FishingCast.castDir`). Los tres muelles (`f`,
+  `TownLayout.fishingSpots`) dan `dockBonus` (0.1) de rareza.
 - El cartel del lago (`Y`): aviso local con la cantidad de especies del
   lago y tu nivel de Pesca.
 - El puesto del comerciante (`M`): E abre COMERCIANTE.
@@ -67,7 +71,29 @@ Pesca, `rods` cañas propias, `rod` la equipada, `bag` bolsa de Pescados
   caña y cantidad de pescados.
 - Migración: un perfil sin `life` recibe la Caña de rama equipada.
 
-## 4. Minijuego (local, puro)
+## 4. Minijuego (local, puro) y pesca en el mapa
+
+### 4.0 En el mapa (v0.22.2)
+
+- Controles: E (o Espacio) en la orilla saca la caña (caña en la mano).
+  Mantener E o el clic carga (medidor sobre el personaje); soltar tira.
+  La boya vuela 1 .. `maxCastTiles` (5) tiles en la dirección que mira y
+  cae en ese tile del lago; si el tile no es agua (pasó el lago) el lance
+  se pierde ("Cayó en la orilla."). E / clic clava la picada y, en la
+  pelea, mantener sube la zona. R: auto-pesca con la caña afuera.
+  Caminar o Esc guarda la caña (en plena pelea cuenta como escapado).
+- En el mapa: sombras de peces que nadan solo por tiles de agua (las
+  cercanas se acercan a la boya), la boya tiembla con los señuelos, en la
+  picada "!" sobre el personaje y sonido, la barra vertical chica al lado
+  del personaje (no es un modal: el mundo sigue a la vista), y al sacarlo
+  el pez (o el hallazgo) salta del agua hacia el jugador con el texto
+  "Pescaste X (N cm)".
+- Los demás ven la caña, la línea, la boya, el "!" y el salto (`fLn`,
+  `fl`; § 7). El anfitrión sigue tirando el pez y validando.
+- La lógica es `MapFishing` (pura, testeable): envuelve al minijuego de
+  abajo y suma el lugar (orilla, dirección, tile de caída).
+
+### 4.1 Fases
 
 Fases: listo → carga (mantener; 1.2 s al máximo) → vuelo (0.5 s) →
 espera (señuelos) → picada → clavado → barra → sacado / escapado.
@@ -90,10 +116,8 @@ espera (señuelos) → picada → clavado → barra → sacado / escapado.
   salpicadura de partículas al caer y al sacar, sacudida de la escena
   con el pez afuera, sonidos del banco (lance, caída, señuelo, picada,
   tirón, sacado, escapado).
-- Mouse/toque mantenido o Espacio. Cerrar el panel en plena pelea cuenta
-  como escapado.
-- Arte procedural (`ui: escena_pesca, icono_pez` en
-  `sprite_manifest.yaml`); colores en `FishingPalette`.
+- Arte procedural en el mapa (`MapFishingLayer`); colores en
+  `FishingPalette` (map_themes.dart).
 
 ## 5. Cañas y comerciante
 
@@ -121,21 +145,65 @@ Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
 
 ## 6. Auto-pesca
 
-Botón AUTO-PESCA del panel: `autoCount` (3) peces de una, con XP ×
+AUTO-PESCA: botón del COMERCIANTE o R con la caña afuera (sin ventana): `autoCount` (3) peces de una, con XP ×
 `autoMult` (0.4), tamaños de la mitad baja del rango, **nunca
 legendarios**; espera `autoCooldownSec` (30 s) del anfitrión entre usos.
 
-## 7. Red (protocolo 42)
+## 7. Red (protocolo 43)
 
 - Acciones: `fBite {pw}` (clavó; carga del lance), `fRes {ok}`,
   `fAuto`, `fSell {sp?, mat?}`, `fSwap {sp}`, `rodBuy {r}`, `rodEq {r}`.
 - Eventos: `fBite {id, sp, cm}` (el pez que tiró el anfitrión),
   `fCaught {id, sp, cm, auto?}`.
-- El anfitrión valida: en el pueblo, no compañero, parado en un punto de
-  pesca, caña equipada propia, `minCastSec` (2 s) entre picadas, una
+- `fLn {l?}` (v0.22.2): lo que se ve de la pesca (`FishLine`: etapa
+  caña / carga / boya / picada / pelea y la boya en px). El host lo
+  valida (pueblo, agua cerca, boya en un tile del lago al alcance) y lo
+  guarda en el jugador (`fl` del snapshot); caminar lo borra.
+- Evento `fLoot {id, l, r}` (§ 8): un hallazgo del agua.
+- El anfitrión valida: en el pueblo, no compañero, a menos de 22 px del
+  agua (cualquier orilla), caña equipada propia, `minCastSec` (2 s) entre picadas, una
   picada pendiente por jugador y `minReelSec` (1.5 s) mínimos de pelea.
   El cliente solo dice si lo sacó; especie, tamaño y rareza los decide
   el anfitrión. Estado no persistido (`SessionEngine.fishing`).
 - Chat: "X se puso a pescar." (una vez por estadía), "X pescó <pez> (N
   cm, rareza)." y subidas de nivel de Pesca.
 - El perfil lleva `life`; viaja como siempre en `hello` y en el estado.
+
+## 8. Botín del agua (v0.22.2)
+
+El anfitrión decide al clavar (como el pez) si la captura es un pez o
+un hallazgo (`FishingRules.rollLoot`). Tunables en Editor → Balance →
+Pesca.
+
+### 8.1 Tipos y chances
+- `lootChance` (0.15) × (1 + `lootLevelBonus` (0.03) × (nivel − 1)) de
+  que no sea un pez. Pesos: basura `lootBasura` 60, materiales
+  `lootMateriales` 28, cofre hundido `lootCofre` 9, arma `lootArma` 3;
+  los tres buenos × (1 + bonus de nivel + suerte). Suerte = rareza
+  efectiva de la caña (+ muelle). Las mazmorras siguen siendo la fuente
+  principal de armas: la chance de arma queda baja.
+- Basura (Botas viejas, Rama empapada): va a la bolsa como un pez y se
+  vende por casi nada.
+- Materiales: `lootMatMin`..`lootMatMax` (1..3) Esquirlas del Eco, o 1
+  Cristal de Era (25 %).
+- Cofre hundido: oro + la tirada de un cofre de madera (o plata, 15 %)
+  con las reglas de cofres de siempre al nivel del personaje.
+- Arma: el generador de armas de siempre (cualquier rareza).
+- En la línea se ve "Algo pesado" (`bulto_hundido`, rareza rara para la
+  barra) hasta sacarlo.
+- Todo va al inventario con las reglas de siempre (lo que no entra, al
+  piso / alijo / Loot perdido). Aviso "Pescaste X", chat y el salto en
+  el mapa. +10 XP de Pesca por hallazgo.
+
+### 8.2 Pity
+`LifeSkills.dry` (JSON `dry`): capturas sin cofre ni arma. Al llegar a
+`lootPityAfter` (80): cofre (80 %) o arma seguro; cofre o arma lo
+reinician. La auto-pesca no lo toca.
+
+### 8.3 Legendarios del agua (exclusivos)
+Filo Hundido (espada), Báculo del Reloj Ahogado (báculo) y Arco de la
+Orilla Antigua (arco), con pasivas únicas propias. Solo cuando sale un
+arma, con Pesca nivel `lootLegendLevel` (15) o más y una caña de rareza
+`lootLegendRod` (2 = épica) o mejor: `lootLegendChance` (1 %). Nombres
+y textos con el lore base (ecos, pasado magitec); esperan el OK del
+dueño.

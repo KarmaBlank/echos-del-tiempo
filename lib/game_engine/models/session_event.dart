@@ -325,6 +325,15 @@ class FishBiteEvent extends SessionEvent {
   const FishBiteEvent(this.playerId, this.species, this.sizeCm);
 }
 
+/// [playerId] sacó del agua algo que no es un pez (fishing.md § 8):
+/// [label] para el aviso y [rarity] (índice de `Rarity`) para el color.
+class WaterLootEvent extends SessionEvent {
+  final String playerId;
+  final String label;
+  final int rarity;
+  const WaterLootEvent(this.playerId, this.label, this.rarity);
+}
+
 /// [playerId] sacó [species] ([sizeCm] cm); [auto]: por auto-pesca.
 class FishCaughtEvent extends SessionEvent {
   final String playerId;

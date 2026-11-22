@@ -10,6 +10,10 @@ class LocalPlayer {
   double x = 0;
   double y = 0;
   int dir = 1;
+
+  /// Hacia dónde mira en cuatro direcciones (la última tecla): para
+  /// pescar mirando al agua (fishing.md § 4).
+  int fx = 1, fy = 0;
   bool moving = false;
 
   /// Época de posición adoptada (`me.ep`); -1 = todavía ninguna.
@@ -39,5 +43,12 @@ class LocalPlayer {
     x = p.x;
     y = p.y;
     if (ix != 0) dir = ix > 0 ? 1 : -1;
+    if (ix.abs() >= iy.abs()) {
+      fx = ix > 0 ? 1 : -1;
+      fy = 0;
+    } else {
+      fx = 0;
+      fy = iy > 0 ? 1 : -1;
+    }
   }
 }

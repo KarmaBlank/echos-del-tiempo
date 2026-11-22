@@ -99,7 +99,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 42 desde v0.22.0: pesca y comerciante (fishing.md § 6): acciones
 /// `fBite` / `fRes` / `fAuto` / `fSell` / `fSwap` / `rodBuy` / `rodEq`,
 /// eventos `fBite` / `fCaught` y `life` en el perfil.
-const kProtocolVersion = 42;
+/// 43 desde v0.22.2: pesca en el mapa (fishing.md § 7): acción `fLn`
+/// (caña, línea y boya a la vista) y `fl` en cada jugador del snapshot.
+const kProtocolVersion = 43;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

@@ -36,6 +36,11 @@ import 'map_themes.dart';
 import 'tile_cache.dart';
 import 'tile_painter.dart';
 import 'void_painter.dart';
+import 'fishing_layer.dart';
+import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
+import '../panels/fishing_widgets.dart' show fishRarityColor;
+import '../../../../game_engine/data/fishing_catalog.dart';
+import '../../../../game_engine/rules/fishing_minigame.dart';
 
 /// Lee la entrada de movimiento (-1..1 en cada eje). Por defecto, el
 /// estado del teclado físico (WASD / flechas).
@@ -113,6 +118,10 @@ class MapGame extends Game {
   final tiles = TilePainter();
   late final tileLayer = TileLayerCache(tiles);
   final voidBg = VoidPainter();
+
+  /// Pesca en el mapa (fishing.md § 4).
+  final fishing = MapFishingLayer();
+  final _lastBobber = <String, (double, double)>{};
 
   /// Lo último dibujado: en [update] se graba de antemano un bloque de la
   /// capa estática que falte cerca (uno por cuadro).
@@ -301,6 +310,37 @@ class MapGame extends Game {
   void _onEvent(SessionEvent e) {
     if (e is FloorChangedEvent) _fadeT0 = t;
     if (e case FellIntoVoidEvent(:final playerId)) startFall(playerId);
+    if (e case WaterLootEvent(:final playerId, :final label, :final rarity)) {
+      final p = controller.session?.players[playerId];
+      final from = _lastBobber[playerId] ??
+          (p == null ? null : (p.x + p.dir * 24.0, p.y));
+      final r = Rarity.values[rarity.clamp(0, Rarity.values.length - 1)];
+      if (from != null) {
+        fishing.addPop(
+            playerId, from.$1, from.$2, label, RarityColors.of(r), t);
+      }
+    }
+    if (e
+        case FishCaughtEvent(
+          :final playerId,
+          :final species,
+          :final sizeCm,
+          :final auto
+        ) when !auto) {
+      final p = controller.session?.players[playerId];
+      final from = _lastBobber[playerId] ??
+          (p == null ? null : (p.x + p.dir * 24.0, p.y));
+      final def = kFish[species];
+      if (from != null) {
+        fishing.addPop(
+            playerId,
+            from.$1,
+            from.$2,
+            '${def?.name ?? species} $sizeCm cm',
+            fishRarityColor(def?.rarity ?? FishRarity.comun),
+            t);
+      }
+    }
     if (e case QuestDoneEvent(:final kind)) {
       _questT0 = t;
       _questText = questText(kind);
@@ -370,6 +410,11 @@ class MapGame extends Game {
     if (_pickEdge.poll(_pickKey())) tryPickUp();
     final view = controller.view;
     if (view != null) _updateCamera(view, dt);
+    if (view != null && view.map.lobby) {
+      final f = controller.mapFishing;
+      fishing.update(view.map, math.min(0.05, dt),
+          f != null && f.phase == FishPhase.waiting ? f.bobber : null);
+    }
     final pm = _prefetchMap, pv = _prefetchView;
     if (pm != null && pv != null) tileLayer.prefetch(pm, pv);
   }
@@ -537,8 +582,7 @@ class MapGame extends Game {
     if (map.lobby) {
       // Lugares del pueblo (town_loop.md § 2.1): nombre sobre cada uno.
       for (final l in TownLayout.landmarks) {
-        actors.text(c, l.name, l.center.x, l.y * ts - 8,
-            TownPalette.label, 6);
+        actors.text(c, l.name, l.center.x, l.y * ts - 8, TownPalette.label, 6);
       }
     }
 
@@ -554,6 +598,7 @@ class MapGame extends Game {
       _seen.putIfAbsent(l.ground.id, () => t);
       loot.drawItem(c, l, t);
     }
+    if (map.lobby) fishing.drawShadows(c);
 
     // Entidades ordenadas por y (desempate: orden de llegada).
     final ents = <(double, int, void Function())>[];
@@ -603,8 +648,27 @@ class MapGame extends Game {
         continue;
       }
       _lastDrawn[p.id] = (px, py);
+      final line = s.mode != SessionMode.lobby
+          ? null
+          : mine
+              ? controller.mapFishing?.line
+              : p.fishLine;
+      if (line == null && mine) fishing.barRect = null;
       add(py, () {
         hero(px, py);
+        if (line != null) {
+          final f = mine ? controller.mapFishing : null;
+          final b = f?.bobber ?? (line.hasBobber ? (line.bx, line.by) : null);
+          if (b != null) _lastBobber[p.id] = b;
+          fishing.drawAngler(c,
+              px: px,
+              py: py,
+              dir: mine ? controller.local.dir : p.dir,
+              line: line,
+              t: t,
+              mine: f,
+              text: (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
+        }
         actors.text(c, profileTitle(p.profile), px, py - 22,
             mine ? const Color(0xFFFFD166) : const Color(0xFFFFFFFF), 6);
       });
@@ -661,6 +725,10 @@ class MapGame extends Game {
     });
     for (final e in ents) {
       e.$3();
+    }
+    if (map.lobby) {
+      fishing.drawPops(c, t, (id) => _lastDrawn[id],
+          (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
     }
 
     // Carteles de las entradas de zona (mapa del mundo).

@@ -82,6 +82,25 @@ const Map<String, TuningDef> kTuningDefaults = {
     // Validación del host: segundos mínimos entre lances y de pelea.
     'minCastSec': 2,
     'minReelSec': 1.5,
+    // Pesca en el mapa (v0.22.2): tiles que vuela la boya con la carga al
+    // máximo y bonus de rareza por tirar desde un muelle.
+    'maxCastTiles': 5,
+    'dockBonus': 0.1,
+    // Botín del agua (fishing.md § 8): chance de que la captura no sea un
+    // pez, pesos de cada tipo, mejora por nivel de Pesca y caña, pity del
+    // cofre o arma y los legendarios exclusivos (nivel y caña mínimos).
+    'lootChance': 0.15,
+    'lootBasura': 60,
+    'lootMateriales': 28,
+    'lootCofre': 9,
+    'lootArma': 3,
+    'lootLevelBonus': 0.03,
+    'lootPityAfter': 80,
+    'lootLegendChance': 0.01,
+    'lootLegendLevel': 15,
+    'lootLegendRod': 2,
+    'lootMatMin': 1,
+    'lootMatMax': 3,
     // Auto-pesca: × de XP, peces por clic y espera entre usos (s).
     'autoMult': 0.4,
     'autoCount': 3,

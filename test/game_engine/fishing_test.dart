@@ -1,4 +1,5 @@
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
@@ -23,6 +24,14 @@ PlayerProfile _withFish(Map<String, int> bag, {int credits = 0}) =>
         credits: credits, life: LifeSkills(bag: bag));
 
 void main() {
+  // Sin botín del agua: estos tests miran solo los peces (fishing.md § 8).
+  setUp(() => kTuning[TuningId.fishing] = TuningDef('Pesca', {
+        ...kTuningDefaults[TuningId.fishing]!.values,
+        'lootChance': 0,
+        'lootPityAfter': 0,
+      }));
+  tearDown(
+      () => kTuning[TuningId.fishing] = kTuningDefaults[TuningId.fishing]!);
   group('reglas', () {
     test('rareza por pesos; auto-pesca nunca legendaria; pity', () {
       expect(FishingRules.rollRarity(0), FishRarity.comun);

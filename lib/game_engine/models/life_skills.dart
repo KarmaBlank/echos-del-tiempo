@@ -10,6 +10,7 @@ class LifeSkills {
     String? rod,
     Map<String, int> bag = const {},
     this.pity = 0,
+    this.dry = 0,
   })  : rods = List.unmodifiable(
             {kStarterRod, ...rods.where(kRods.containsKey)}),
         rod = rod != null && kRods.containsKey(rod) &&
@@ -18,7 +19,10 @@ class LifeSkills {
             : kStarterRod,
         bag = Map.unmodifiable({
           for (final e in bag.entries)
-            if (e.value > 0 && kFish.containsKey(e.key)) e.key: e.value,
+            if (e.value > 0 &&
+                kFish.containsKey(e.key) &&
+                e.key != kWaterBundle)
+              e.key: e.value,
         });
 
   /// Todo personaje nuevo o migrado: caña de rama equipada.
@@ -38,6 +42,9 @@ class LifeSkills {
   /// Capturas sin legendario desde el último (fishing.md § 2.3).
   final int pity;
 
+  /// Capturas sin cofre ni arma del agua (pity del botín, fishing.md § 8).
+  final int dry;
+
   int count(String species) => bag[species] ?? 0;
   int get bagTotal => bag.values.fold(0, (a, b) => a + b);
 
@@ -47,13 +54,15 @@ class LifeSkills {
     String? rod,
     Map<String, int>? bag,
     int? pity,
+    int? dry,
   }) =>
       LifeSkills(
           fishXp: fishXp ?? this.fishXp,
           rods: rods ?? this.rods,
           rod: rod ?? this.rod,
           bag: bag ?? this.bag,
-          pity: pity ?? this.pity);
+          pity: pity ?? this.pity,
+          dry: dry ?? this.dry);
 
   LifeSkills addFish(String species, [int n = 1]) =>
       copyWith(bag: {...bag, species: count(species) + n});
@@ -64,6 +73,7 @@ class LifeSkills {
         'rod': rod,
         if (bag.isNotEmpty) 'bag': bag,
         if (pity > 0) 'pity': pity,
+        if (dry > 0) 'dry': dry,
       };
 
   /// Tolerante; sin `life` (saves de antes de v0.22.0) → [initial]: así
@@ -81,6 +91,7 @@ class LifeSkills {
           ? {for (final e in bag.entries) '${e.key}': n(e.value)}
           : const {},
       pity: n(raw['pity']),
+      dry: n(raw['dry']),
     );
   }
 
@@ -90,6 +101,7 @@ class LifeSkills {
       other.fishXp == fishXp &&
       other.rod == rod &&
       other.pity == pity &&
+      other.dry == dry &&
       other.rods.join(',') == rods.join(',') &&
       other.bag.length == bag.length &&
       bag.entries.every((e) => other.bag[e.key] == e.value);

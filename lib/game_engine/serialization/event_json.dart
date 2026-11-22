@@ -85,6 +85,12 @@ class EventJson {
             'sp': e.species,
             'cm': e.sizeCm,
           },
+        WaterLootEvent() => {
+            't': 'fLoot',
+            'id': e.playerId,
+            'l': e.label,
+            'r': e.rarity,
+          },
         FishCaughtEvent() => {
             't': 'fCaught',
             'id': e.playerId,
@@ -233,6 +239,8 @@ class EventJson {
         return RunEndedEvent(j.boolean('win'));
       case 'fBite':
         return FishBiteEvent(j.str('id'), j.str('sp'), j.integer('cm'));
+      case 'fLoot':
+        return WaterLootEvent(j.str('id'), j.str('l'), j.integer('r'));
       case 'fCaught':
         return FishCaughtEvent(j.str('id'), j.str('sp'), j.integer('cm'),
             auto: j['auto'] == true);

@@ -267,4 +267,34 @@ const List<UniqueDef> _list = [
     passiveId: 'ecoGolpe',
     exclusive: true,
   ),
+  // ---------------- Exclusivos del agua (v0.22.2) ----------------
+  // fishing.md § 8.3: solo salen pescando (nivel de Pesca y caña mínimos).
+  // Nombres propuestos con el lore base; esperan el OK del dueño.
+  UniqueDef(
+    id: 'filoHundido',
+    name: 'Filo Hundido',
+    baseId: 'espada_templada',
+    fixed: [UniqueMod('feroz', 25, 35), UniqueMod('certero', 6, 9)],
+    passiveId: 'mareaHundida',
+    flavor: 'Hundida en otra era; el lago la devolvió cuando tenía que pasar.',
+    exclusive: true,
+  ),
+  UniqueDef(
+    id: 'relojAhogado',
+    name: 'Báculo del Reloj Ahogado',
+    baseId: 'baculo_ambar',
+    fixed: [UniqueMod('arcano', 25, 35), UniqueMod('del_eter', 12, 18)],
+    passiveId: 'engranajeAhogado',
+    flavor: 'Un mecanismo del pasado que ni el agua pudo detener.',
+    exclusive: true,
+  ),
+  UniqueDef(
+    id: 'cuerdaOrilla',
+    name: 'Arco de la Orilla Antigua',
+    baseId: 'arco_solar',
+    fixed: [UniqueMod('feroz', 20, 30), UniqueMod('letal', 20, 30)],
+    passiveId: 'ecoDeOrilla',
+    flavor: 'La cuerda vibra con un eco que todavía no llegó.',
+    exclusive: true,
+  ),
 ];

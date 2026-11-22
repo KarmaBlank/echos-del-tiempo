@@ -20,6 +20,9 @@ class FishCatch {
   int get hashCode => Object.hash(species, sizeCm);
 }
 
+/// Qué sale del agua en una captura (fishing.md § 8).
+enum WaterLootKind { fish, basura, materiales, cofre, arma }
+
 /// Resultado de vender en el comerciante.
 typedef FishSale = ({PlayerProfile profile, int credits, int esquirlas, int sold});
 
@@ -119,6 +122,49 @@ abstract final class FishingRules {
       r = FishRarity.values[r.index - 1];
     }
   }
+
+  // ---------------- botín del agua (§ 8) ----------------
+
+  /// Qué sale esta vez: un pez casi siempre; a veces basura, materiales,
+  /// un cofre hundido o (poco) un arma. El nivel de Pesca y [luck] (la
+  /// rareza de la caña) mejoran la chance y los tipos buenos. Pity: tras
+  /// `lootPityAfter` capturas sin cofre ni arma, cofre (o arma) seguro.
+  static WaterLootKind rollLoot(double Function() rand, PlayerProfile p,
+      {double luck = 0}) {
+    final after = t.i('lootPityAfter');
+    if (after > 0 && p.life.dry >= after) {
+      return rand() < 0.8 ? WaterLootKind.cofre : WaterLootKind.arma;
+    }
+    final lv = t.d('lootLevelBonus') * (level(p) - 1);
+    final good = 1 + lv + math.max(0, luck);
+    if (rand() >= t.d('lootChance') * (1 + lv)) return WaterLootKind.fish;
+    final w = {
+      WaterLootKind.basura: t.d('lootBasura'),
+      WaterLootKind.materiales: t.d('lootMateriales') * good,
+      WaterLootKind.cofre: t.d('lootCofre') * good,
+      WaterLootKind.arma: t.d('lootArma') * good,
+    };
+    final total = w.values.fold(0.0, (a, b) => a + b);
+    var x = rand().clamp(0.0, 0.999999) * total;
+    for (final e in w.entries) {
+      if (x < e.value) return e.key;
+      x -= e.value;
+    }
+    return WaterLootKind.basura;
+  }
+
+  /// Puede sacar uno de los legendarios del agua (nivel y caña mínimos).
+  static bool legendEligible(PlayerProfile p) =>
+      level(p) >= t.i('lootLegendLevel') &&
+      (kRods[p.life.rod]?.rarity.index ?? 0) >= t.i('lootLegendRod');
+
+  /// Anota la captura en el pity del botín: cofre o arma lo reinician.
+  static PlayerProfile markDry(PlayerProfile p, WaterLootKind k) =>
+      p.copyWith(
+          life: p.life.copyWith(
+              dry: k == WaterLootKind.cofre || k == WaterLootKind.arma
+                  ? 0
+                  : p.life.dry + 1));
 
   /// Segundos de espera hasta la picada real con el bonus de la caña.
   static double biteDelay(double roll, double biteBonus) {

@@ -5,6 +5,7 @@ import 'build_wants.dart';
 import 'combat_mode.dart';
 import 'eco.dart';
 import 'exploration.dart';
+import 'fish_line.dart';
 import 'game_map.dart' show WorldPoint;
 import 'item.dart';
 import 'loot.dart';
@@ -74,6 +75,7 @@ class SessionPlayer {
     this.trailEpoch = 0,
     this.tutorialVersion = 0,
     Map<String, StashAck>? stashAcks,
+    this.fishLine,
   })  : trail = trail ?? const [],
         stashAcks = stashAcks ?? {};
 
@@ -82,6 +84,11 @@ class SessionPlayer {
   /// (`sk`) junto al perfil ya cambiado: el cliente escribe su alijo local
   /// recién al verlas (docs/specs/characters.md § 3.2).
   final Map<String, StashAck> stashAcks;
+
+  /// Caña, línea y boya a la vista de todos (`fl`, fishing.md § 7); `null`
+  /// = no está pescando. Lo manda el propio jugador (`fLn`) y el host lo
+  /// valida y lo borra si camina.
+  FishLine? fishLine;
 
   /// Anota [ack] como [opId] (descarta las más viejas).
   void addStashAck(String opId, StashAck ack) {
@@ -172,6 +179,7 @@ class SessionPlayer {
         trailEpoch: trailEpoch,
         tutorialVersion: tutorialVersion,
         stashAcks: {...stashAcks},
+        fishLine: fishLine,
       );
 }
 

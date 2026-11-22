@@ -37,9 +37,6 @@ enum WorldPanel {
   /// El pozo Loot perdido del pueblo (missions.md § "Loot perdido").
   lostLoot,
 
-  /// Pesca en un punto del lago (fishing.md § 4).
-  fishing,
-
   /// Puesto del comerciante (fishing.md § 5).
   trader,
 }
