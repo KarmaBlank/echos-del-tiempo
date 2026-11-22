@@ -131,6 +131,9 @@ class FishingMinigame {
   /// El anfitrión rechazó la picada.
   void cancel() => _lose('Se escapó.');
 
+  /// Se pierde el lance por [why] (p. ej. la boya cayó en la orilla).
+  void fail(String why) => _lose(why);
+
   void tick(double dt) {
     phaseTime += dt;
     switch (phase) {

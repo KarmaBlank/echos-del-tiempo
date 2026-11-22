@@ -3,6 +3,7 @@ import 'attributes.dart';
 import 'battle_command.dart';
 import 'build_wants.dart';
 import 'eco.dart' show EcoCraftOp;
+import 'fish_line.dart';
 import 'inventory_sort.dart';
 import 'item.dart' show CraftOp, Rarity;
 import 'loot.dart' show LootDrop;
@@ -517,6 +518,7 @@ class RunRewardAction extends SessionAction {
 
   /// Fila ULT (Travesía v0.1.1, protocolo 2).
   final int? ult;
+
   /// Habilidad libre que se sacrifica si la nueva no entra (§ 12.2).
   final String? drop;
   const RunRewardAction(
@@ -561,6 +563,13 @@ class FishBiteAction extends SessionAction {
 class FishResultAction extends SessionAction {
   final bool success;
   const FishResultAction(this.success);
+}
+
+/// `fLn`: lo que se ve de la pesca del jugador en el mapa (caña, línea,
+/// boya; v0.22.2). [line] `null` = guardó la caña.
+class FishLineAction extends SessionAction {
+  final FishLine? line;
+  const FishLineAction(this.line);
 }
 
 /// `fAuto`: auto-pesca (recompensa reducida, nunca legendarios).

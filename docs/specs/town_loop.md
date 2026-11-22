@@ -293,7 +293,7 @@ Pueblo (`MapGenerator.town()`, datos en
 | Estatua del Tiempo | `S` | x 28–30, y 3 | ASCENSIÓN |
 | Fuente rúnica | `F` (nuevo) | x 16–17, y 10–11 | abre el tablero |
 | Cartel del lago | `Y` (nuevo) | (12, 15) | aviso del lago (v0.22.0) |
-| Puntos de pesca | `f` (nuevo) | (10,15) (10,18) (6,14) | panel PESCA (v0.22.0) |
+| Puntos de pesca | `f` (nuevo) | (10,15) (10,18) (6,14) | pesca en el mapa desde cualquier orilla (v0.22.2; muelles con bonus) |
 | Comerciante (puesto) | `M` | x 12–13, y 17 | COMERCIANTE (v0.22.0) |
 | Torre del Loot perdido | `L` | x 24–26, y 15 | pozo Loot perdido |
 

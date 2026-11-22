@@ -7,6 +7,7 @@ import '../models/attributes.dart';
 import '../models/battle_state.dart';
 import '../models/combat_mode.dart';
 import '../models/eco.dart';
+import '../models/fish_line.dart';
 import '../models/passive_mechanic.dart';
 import '../models/game_session.dart';
 import '../models/item.dart';
@@ -186,6 +187,8 @@ class SessionJson {
         'ult': p.ult,
         'lvup': p.levelUpPending,
         if (p.tutorialVersion != 0) 'tv': p.tutorialVersion,
+        // Protocolo 43: pesca en el mapa (fishing.md § 7).
+        if (p.fishLine case final l?) 'fl': l.toJson(),
         // Protocolo 21: confirmaciones del alijo (characters.md § 3.2).
         if (p.stashAcks.isNotEmpty)
           'sk': [
@@ -230,6 +233,7 @@ class SessionJson {
         levelUpPending: j.boolean('lvup'),
         tutorialVersion: j.intOrNull('tv') ?? 0,
         stashAcks: _stashAcks(j['sk']),
+        fishLine: FishLine.fromJson(j['fl']),
       );
 
   // ------------------------------------------------------------------

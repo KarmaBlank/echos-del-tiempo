@@ -3,6 +3,7 @@ import '../models/attributes.dart';
 import '../models/battle_command.dart';
 import '../models/build_wants.dart';
 import '../models/eco.dart' show EcoCraftOp;
+import '../models/fish_line.dart';
 import '../models/inventory_sort.dart';
 import '../models/item.dart' show CraftOp;
 import '../models/loot.dart' show LootDrop;
@@ -177,6 +178,11 @@ abstract final class ActionJson {
         FishBiteAction() => {'t': 'fBite', 'pw': a.power},
         FishResultAction() => {'t': 'fRes', 'ok': a.success},
         AutoFishAction() => {'t': 'fAuto'},
+        // Protocolo 43 (v0.22.2): pesca en el mapa.
+        FishLineAction() => {
+            't': 'fLn',
+            if (a.line case final l?) 'l': l.toJson(),
+          },
         SellFishAction() => {
             't': 'fSell',
             if (a.species != null) 'sp': a.species,
@@ -267,7 +273,9 @@ abstract final class ActionJson {
             index: j.intOrNull('i') ?? 0,
             skillId: j.strOrNull('sk'),
             replaceSkillId: j.strOrNull('rep'),
-            uids: j['us'] == null ? const [] : List.unmodifiable(j.strings('us')));
+            uids: j['us'] == null
+                ? const []
+                : List.unmodifiable(j.strings('us')));
       case 'give':
         return GiveItemAction(j.str('to'), j.str('tok'),
             count: j.intOrNull('n') ?? 1);
@@ -295,8 +303,12 @@ abstract final class ActionJson {
         return MoveInventoryAction(j.integer('a'), j.integer('b'));
       case 'seen':
         final u = j['u'];
-        return SeenItemsAction(
-            u is List ? [for (final e in u) if (e is String) e] : const []);
+        return SeenItemsAction(u is List
+            ? [
+                for (final e in u)
+                  if (e is String) e
+              ]
+            : const []);
       case 'invSort':
         return SortInventoryAction(j.enumByName('k', InventorySortKey.values));
       case 'filter':
@@ -311,7 +323,8 @@ abstract final class ActionJson {
       case 'eco':
         return ProposeEcoAction(j.str('u'));
       case 'ecoCraft':
-        return EcoCraftAction(j.str('u'), j.enumByName('op', EcoCraftOp.values));
+        return EcoCraftAction(
+            j.str('u'), j.enumByName('op', EcoCraftOp.values));
       case 'devEco':
         return DevGrantEcoAction(j.integer('tier'));
       case 'trial':
@@ -376,6 +389,8 @@ abstract final class ActionJson {
         return FishBiteAction(j.dbl('pw'));
       case 'fRes':
         return FishResultAction(j.boolean('ok'));
+      case 'fLn':
+        return FishLineAction(FishLine.fromJson(j['l']));
       case 'fAuto':
         return const AutoFishAction();
       case 'fSell':
@@ -393,13 +408,19 @@ abstract final class ActionJson {
 
   /// Las claves de `battleCmd` (`a`, `tg`, `tk`, `pt`, `du`, `it`, `to`).
   static Json commandToJson(BattleCommand c) => switch (c) {
-        AttackCommand() => {'a': 'atk', if (c.targetId != null) 'tg': c.targetId},
+        AttackCommand() => {
+            'a': 'atk',
+            if (c.targetId != null) 'tg': c.targetId
+          },
         SkillCommand() => {
             'a': 'tech',
             'tk': c.skillId,
             if (c.targetId != null) 'tg': c.targetId,
           },
-        UltimateCommand() => {'a': 'ult', if (c.targetId != null) 'tg': c.targetId},
+        UltimateCommand() => {
+            'a': 'ult',
+            if (c.targetId != null) 'tg': c.targetId
+          },
         // `du` (v0.8.3, aditivo, sin subir kProtocolVersion): qué dúo. Un
         // host viejo lo ignora y hace el dúo de clase del par.
         DualCommand() => {

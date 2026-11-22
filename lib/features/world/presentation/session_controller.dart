@@ -61,6 +61,10 @@ import '../../characters/domain/stash.dart';
 import '../../characters/presentation/characters_providers.dart';
 import '../../../game_engine/data/fishing_catalog.dart';
 import '../../../game_engine/rules/fishing_rules.dart';
+import '../../../game_engine/rules/fishing_minigame.dart';
+import '../../../game_engine/rules/map_fishing.dart';
+import '../../../game_engine/models/fish_line.dart';
+import '../../../core/audio/sfx_catalog.dart';
 import 'local_player.dart';
 import 'session_view.dart';
 import 'world_text.dart';
@@ -1024,6 +1028,14 @@ class SessionController extends StateNotifier<SessionView?> {
     // Escribiendo en el chat las teclas son texto, no movimiento; con el
     // menú de pausa abierto tampoco se camina.
     if (typing || menuOpen || s.paused) ix = iy = 0;
+    if (_fishing case final f?) {
+      // Caminar, salir del pueblo o abrir un panel guarda la caña.
+      if (ix != 0 || iy != 0 || s.mode != SessionMode.lobby || _panel != null) {
+        stopFishing();
+      } else {
+        _tickFishing(f, dt);
+      }
+    }
     local.step(engine.mapFor(s), ix, iy, dt,
         canMove: _canMove(s, me),
         gateOpen: s.gateOpen,
@@ -1157,6 +1169,175 @@ class SessionController extends StateNotifier<SessionView?> {
   bool buyRod(String id) => _apply(BuyRodAction(id));
   bool equipRod(String id) => _apply(EquipRodAction(id));
 
+  // ---- Pesca en el mapa (fishing.md § 4, v0.22.2) ----
+
+  MapFishing? _fishing;
+  FishPhase _fishPrev = FishPhase.idle;
+  FishLine? _fishSentLine;
+  bool _fishSent = false;
+  bool _fishNibble = false;
+  final _fishRand = math.Random();
+
+  /// Sonidos de la pesca (los conecta `sessionSfxProvider`).
+  void Function(String sfxId)? fishSfx;
+
+  /// La pesca del jugador local en el mapa (`null` = sin caña afuera).
+  MapFishing? get mapFishing => _fishing;
+  bool get isFishing => _fishing != null;
+
+  bool _townFree() {
+    final s = _s;
+    return s != null &&
+        !isRun &&
+        s.mode == SessionMode.lobby &&
+        _panel == null &&
+        s.players[localId] != null;
+  }
+
+  /// Mira al agua (o a un muelle) justo enfrente.
+  bool get facingWater =>
+      _townFree() &&
+      FishingCast.facingWater(
+          engine.mapFor(_s!), local.x, local.y, local.fx, local.fy);
+
+  /// Hay orilla del lago al lado (en cualquier dirección).
+  bool get canFish =>
+      _townFree() &&
+      FishingCast.castDir(
+              engine.mapFor(_s!), local.x, local.y, local.fx, local.fy) !=
+          null;
+
+  /// Saca la caña (E en la orilla). Devuelve si pudo.
+  bool startFishing() {
+    if (!canFish || _fishing != null) return false;
+    final s = _s!;
+    final p = s.players[localId]!.profile;
+    if (!FishingRules.plausible(p)) return false;
+    final b = FishingRules.rodBonus(p);
+    final f = MapFishing.start(
+        engine.mapFor(s), local.x, local.y, local.fx, local.fy,
+        rand: _fishRand.nextDouble, biteBonus: b.bite, zoneBonus: b.zone);
+    if (f == null) return false;
+    _fishing = f;
+    _fishPrev = f.phase;
+    _fishSentLine = null;
+    _fishSent = false;
+    _syncFishLine(f);
+    fishSfx?.call(Sfx.whump);
+    _emit();
+    return true;
+  }
+
+  /// Mantener E / clic: cargar, clavar, subir la zona.
+  void fishPress() {
+    final f = _fishing;
+    if (f == null) return;
+    f.press();
+    _fishFx(f);
+    _emit();
+  }
+
+  /// Soltar E / clic: tirar el lance, bajar la zona.
+  void fishRelease() {
+    final f = _fishing;
+    if (f == null) return;
+    f.release();
+    _fishFx(f);
+    _emit();
+  }
+
+  /// Guarda la caña (caminar o Esc). En plena pelea cuenta como escapado.
+  void stopFishing() {
+    final f = _fishing;
+    if (f == null) return;
+    if (f.phase == FishPhase.reel && !_fishSent) {
+      _fishSent = true;
+      fishResult(false);
+    }
+    f.cancel();
+    _fishing = null;
+    _fishSentLine = null;
+    if (_s?.players[localId]?.fishLine != null) {
+      _apply(const FishLineAction(null));
+    }
+    _emit();
+  }
+
+  void _tickFishing(MapFishing f, double dt) {
+    f.tick(dt);
+    // Clavado sin respuesta del anfitrión: se escapa.
+    if (f.phase == FishPhase.hooking && f.game.phaseTime > 3) f.game.cancel();
+    final nib = f.game.nibbling;
+    if (nib && !_fishNibble) fishSfx?.call(Sfx.turnTick);
+    _fishNibble = nib;
+    _fishFx(f);
+  }
+
+  /// Efectos de cada cambio de fase: sonidos, `fBite` / `fRes` y la línea.
+  void _fishFx(MapFishing f) {
+    final ph = f.phase;
+    if (ph != _fishPrev) {
+      final prev = _fishPrev;
+      _fishPrev = ph;
+      switch (ph) {
+        case FishPhase.flying:
+          fishSfx?.call(Sfx.frenzyWhoosh);
+        case FishPhase.waiting:
+          fishSfx?.call(Sfx.potion);
+        case FishPhase.bite:
+          fishSfx?.call(Sfx.bell);
+        case FishPhase.hooking:
+          _fishSent = false;
+          fishSfx?.call(Sfx.whump);
+          fishBite(f.game.power);
+        case FishPhase.reel:
+          fishSfx?.call(Sfx.clang);
+        case FishPhase.won:
+          fishSfx?.call(Sfx.lootPickup);
+          if (!_fishSent) {
+            _fishSent = true;
+            fishResult(true);
+          }
+        case FishPhase.lost:
+          fishSfx?.call(Sfx.thaw);
+          if (prev == FishPhase.reel && !_fishSent) {
+            _fishSent = true;
+            fishResult(false);
+          }
+        default:
+          break;
+      }
+      _emit();
+    }
+    _syncFishLine(f);
+  }
+
+  /// Manda `fLn` solo cuando cambia lo que ven los demás.
+  void _syncFishLine(MapFishing f) {
+    final l = f.line;
+    if (l == _fishSentLine) return;
+    _fishSentLine = l;
+    _apply(FishLineAction(l));
+  }
+
+  /// Texto del aviso de abajo mientras pesca.
+  String fishingHint(MapFishing f) => switch (f.phase) {
+        FishPhase.idle =>
+          '[E] mantené para cargar y soltá para tirar · [R] auto-pesca · Esc guarda',
+        FishPhase.charging => 'Cargando… soltá para tirar',
+        FishPhase.flying => 'La boya vuela…',
+        FishPhase.waiting => f.game.nibbling
+            ? 'Tantea… todavía no'
+            : 'Esperá la picada; si tirás antes, se va',
+        FishPhase.bite => '¡PICÓ! [E] ya',
+        FishPhase.hooking => 'Clavado…',
+        FishPhase.reel => 'Mantené [E] para subir la zona; tené al pez adentro',
+        FishPhase.won =>
+          'Sacaste ${f.fish?.def.name ?? 'un pez'} · [E] para tirar de nuevo',
+        FishPhase.lost =>
+          '${f.game.lostReason ?? 'Se escapó.'} [E] para tirar de nuevo',
+      };
+
   /// `nearSeal`: el sello sin activar más cercano a menos de 26 px.
   MissionItem? get nearSeal {
     final s = _s;
@@ -1284,12 +1465,14 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.ascension);
       } else if (nearLostLoot) {
         openPanel(WorldPanel.lostLoot);
-      } else if (nearFishing) {
-        openPanel(WorldPanel.fishing);
+      } else if (facingWater) {
+        startFishing();
       } else if (nearTrader) {
         openPanel(WorldPanel.trader);
       } else if (nearSign) {
         addLocalNotice(signText);
+      } else if (canFish) {
+        startFishing();
       } else if (nearEntrance case final e?) {
         enterZone(e);
       }
@@ -1331,6 +1514,22 @@ class SessionController extends StateNotifier<SessionView?> {
         return true;
       }
       return false;
+    }
+    // Pesca en el mapa (fishing.md § 4): E / Espacio mantenido, Esc
+    // guarda la caña, R auto-pesca.
+    if (_fishing != null) {
+      if (key == LogicalKeyboardKey.keyE || key == LogicalKeyboardKey.space) {
+        fishPress();
+        return true;
+      }
+      if (key == LogicalKeyboardKey.escape) {
+        stopFishing();
+        return true;
+      }
+      if (key == LogicalKeyboardKey.keyR) {
+        autoFish();
+        return true;
+      }
     }
     if (key == LogicalKeyboardKey.keyE || key == LogicalKeyboardKey.space) {
       interact();
@@ -2268,6 +2467,19 @@ class SessionController extends StateNotifier<SessionView?> {
         case LootDropEvent(:final playerId, :final drop)
             when playerId == localId:
           _missionLoot.add(drop);
+        // Pesca en el mapa: el pez que tiró el anfitrión y el aviso.
+        case FishBiteEvent(:final playerId, :final species, :final sizeCm)
+            when playerId == localId:
+          _fishing?.game.hook(FishCatch(species, sizeCm));
+        case WaterLootEvent(:final playerId, :final label)
+            when playerId == localId:
+          _messages.add('Pescaste $label');
+          if (_messages.length > maxMessages) _messages.removeAt(0);
+        case FishCaughtEvent(:final playerId, :final species, :final sizeCm)
+            when playerId == localId:
+          final name = kFish[species]?.name ?? species;
+          _messages.add('Pescaste $name ($sizeCm cm)');
+          if (_messages.length > maxMessages) _messages.removeAt(0);
         case BattleFinishedEvent(victory: true):
           _onBattleWon();
         // Hazañas (achievements.md § 5.1): la recompensa ya está en el
@@ -2473,7 +2685,6 @@ class SessionController extends StateNotifier<SessionView?> {
             _panel == WorldPanel.ecoPortal ||
             _panel == WorldPanel.ascension ||
             _panel == WorldPanel.lostLoot ||
-            _panel == WorldPanel.fishing ||
             _panel == WorldPanel.trader) &&
         mode != SessionMode.lobby &&
         !(_panel == WorldPanel.armory && _runShopOpen(s))) {
@@ -2543,9 +2754,11 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearStatue) return (WorldPrompt.statue, null);
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
-    if (nearFishing) return (WorldPrompt.fishing, null);
+    if (mapFishing case final f?) return (WorldPrompt.fishing, fishingHint(f));
+    if (facingWater) return (WorldPrompt.fishing, null);
     if (nearTrader) return (WorldPrompt.trader, null);
     if (nearSign) return (WorldPrompt.sign, null);
+    if (canFish) return (WorldPrompt.fishing, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
     if (nearPoi case final p?) {
       final s = _s!;

@@ -758,6 +758,18 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 43 (v0.22.2: pesca en el mapa)
+
+- Acción nueva `fLn {l?}` (fishing.md § 7): lo que se ve de la pesca de
+  un jugador. `l = [etapa, bx?, by?]` (etapa 0 caña, 1 cargando, 2 boya
+  en el agua, 3 picada, 4 pelea; la boya en px del mapa). Sin `l` =
+  guardó la caña.
+- Snapshot: cada jugador suma `fl` (la misma lista) mientras pesca. El
+  host lo valida (pueblo, cerca del agua, boya en un tile del lago al
+  alcance de un lance) y lo borra si el jugador camina.
+- Un cliente 42 abriría el panel PESCA que ya no existe y no vería las
+  cañas de los demás: la sala no mezcla versiones.
+
 ## Mundo, protocolo 42 (v0.22.0: pesca y comerciante)
 
 - Acciones nuevas (fishing.md § 7): `fBite {pw}`, `fRes {ok}`, `fAuto`,

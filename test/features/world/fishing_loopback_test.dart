@@ -1,5 +1,6 @@
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
@@ -13,6 +14,14 @@ import '../../game_engine/session_test_helpers.dart';
 /// Pesca en red (fishing.md § 7): el cliente clava, el anfitrión tira el
 /// pez, el cliente dice que lo sacó y el anfitrión lo otorga.
 void main() {
+  // Sin botín del agua: estos tests miran solo los peces (fishing.md § 8).
+  setUp(() => kTuning[TuningId.fishing] = TuningDef('Pesca', {
+        ...kTuningDefaults[TuningId.fishing]!.values,
+        'lootChance': 0,
+        'lootPityAfter': 0,
+      }));
+  tearDown(
+      () => kTuning[TuningId.fishing] = kTuningDefaults[TuningId.fishing]!);
   final controllers = <SessionController>[];
   tearDown(() {
     for (final c in controllers) {
@@ -70,6 +79,27 @@ void main() {
     me.teleport((spot.$1 + 1) * 16.0 + 4, (spot.$2 + 0.5) * 16.0);
     await tick(host, me);
     expect(me.nearFishing, isTrue);
+    // En el mapa (v0.22.2): sacar la caña, cargar y tirar; el host (y por
+    // el snapshot, todos) ven la boya en el agua.
+    expect(me.startFishing(), isTrue);
+    me.fishPress();
+    // El juego Flame llama `updateLocal` en cada cuadro.
+    for (var i = 0; i < 8; i++) {
+      me.updateLocal(0.05, 0, 0);
+      await tick(host, me);
+    }
+    me.fishRelease();
+    for (var i = 0; i < 16; i++) {
+      me.updateLocal(0.05, 0, 0);
+      await tick(host, me);
+    }
+    final seen = host.session!.players[me.localId]!.fishLine;
+    expect(seen?.hasBobber, isTrue);
+    expect(me.view!.session.players[me.localId]!.fishLine?.hasBobber, isTrue);
+    me.stopFishing();
+    await tick(host, me);
+    await tick(host, me);
+    expect(host.session!.players[me.localId]!.fishLine, isNull);
     me.fishBite(0.8);
     await tick(host, me);
     await tick(host, me);

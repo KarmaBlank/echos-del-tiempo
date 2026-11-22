@@ -45,6 +45,7 @@ final sessionSfxProvider = Provider.autoDispose<SessionSfx>((ref) {
   // juego vive (también en batalla, cuando el HUD no está montado).
   ref.watch(lootFeedProvider);
   final sub = controller.events.listen(sfx.onEvent);
+  controller.fishSfx = (id) => sfx.service.play(id);
   final removeView = controller.addListener(sfx.onView);
   ref.onDispose(() {
     unawaited(sub.cancel());

@@ -125,7 +125,29 @@ const kFish = <String, FishDef>{
       FishRarity.legendario,
       biome: 'zona1', minCm: 40, maxCm: 70, price: 1000, xp: 160,
       lore: 'Las escamas marcan una hora que no avanza.'),
+  // Botín del agua (fishing.md § 8, v0.22.2): la basura va a la bolsa y
+  // se vende por poco; el bulto es lo que se ve en la línea antes de saber
+  // qué es (nunca entra a la bolsa).
+  'botas_viejas': FishDef('botas_viejas', 'Botas viejas', FishRarity.comun,
+      biome: kWaterJunkBiome, minCm: 25, maxCm: 30, price: 2, xp: 2),
+  'rama_empapada': FishDef('rama_empapada', 'Rama empapada',
+      FishRarity.comun,
+      biome: kWaterJunkBiome, minCm: 30, maxCm: 80, price: 1, xp: 1),
+  kWaterBundle: FishDef(kWaterBundle, 'Algo pesado', FishRarity.raro,
+      biome: kWaterJunkBiome, minCm: 0, maxCm: 0, price: 0, xp: 0),
 };
+
+/// Bioma de la basura del agua (no es de ningún lago).
+const kWaterJunkBiome = 'basura';
+
+/// Lo que se clava cuando es un hallazgo (materiales, cofre o arma).
+const kWaterBundle = 'bulto_hundido';
+
+/// La basura del agua (fishing.md § 8).
+const kWaterJunk = ['botas_viejas', 'rama_empapada'];
+
+/// Armas legendarias que solo salen del agua (fishing.md § 8.3).
+const kFishingLegendaries = ['filoHundido', 'relojAhogado', 'cuerdaOrilla'];
 
 /// Especies iniciales del lago del pueblo (las del bioma de la zona 1).
 List<String> get kTownLakeDefault => [

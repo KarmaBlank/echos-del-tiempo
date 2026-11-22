@@ -17,6 +17,7 @@ import 'meta_progress_rules.dart';
 import '../models/build_wants.dart';
 import '../models/combat_mode.dart';
 import '../models/eco.dart';
+import '../models/fish_line.dart';
 import '../models/game_map.dart';
 import '../models/game_mode.dart';
 import '../models/game_session.dart';
@@ -40,6 +41,7 @@ import 'inventory_rules.dart';
 import 'js_math.dart';
 import 'loot_filter_rules.dart';
 import 'loot_rules.dart';
+import 'map_fishing.dart';
 import 'map_generator.dart';
 import 'mulberry32.dart';
 import 'party_limits.dart';
@@ -878,6 +880,8 @@ class _Op {
         if (a.y.isFinite && a.y != 0) p.y = a.y;
         p.dir = a.dir > 0 ? 1 : -1;
         p.moving = a.moving;
+        // Caminar guarda la caña (fishing.md § 4).
+        if (a.moving) p.fishLine = null;
         return true;
 
       case ProposeMissionAction():
@@ -1084,6 +1088,7 @@ class _Op {
       case FishBiteAction() ||
             FishResultAction() ||
             AutoFishAction() ||
+            FishLineAction() ||
             SellFishAction() ||
             ExchangeFishAction() ||
             BuyRodAction() ||

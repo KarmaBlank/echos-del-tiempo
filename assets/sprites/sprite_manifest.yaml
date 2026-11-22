@@ -224,7 +224,7 @@ tiles:
   puesto_comerciante: { procedural: true, size: [32, 16] }
 ui:
   # Pesca v0.22.0 (fishing.md § 4): escena del lago y pez de la barra,
-  # procedurales en el panel PESCA.
+  # procedurales de la pesca (en el mapa desde v0.22.2).
   escena_pesca: { procedural: true, size: [64, 32] }
   icono_pez: { procedural: true, size: [8, 8] }
   icono_oro: { procedural: true, size: [8, 8] }

@@ -252,7 +252,7 @@ abstract final class TownPalette {
   static const label = Color(0xFFFFF3C4);
 }
 
-/// Colores de la escena de pesca (fishing.md § 4; panel PESCA).
+/// Colores de la escena de pesca (fishing.md § 4; pesca en el mapa desde v0.22.2).
 abstract final class FishingPalette {
   static const water = Color(0xFF1F5F8B);
   static const waterDeep = Color(0xFF15425F);
@@ -264,4 +264,13 @@ abstract final class FishingPalette {
   static const bobber = TownPalette.bobber;
   static const foam = Color(0xCCFFFFFF);
   static const reed = Color(0xFF3E7B3A);
+  // Pesca en el mapa (v0.22.2).
+  static const rod = TownPalette.plankDark;
+  static const bang = Color(0xFFFFD166);
+  static const meter = Color(0xFFFFD166);
+  static const meterBack = Color(0xCC10141C);
+  static const barFrame = Color(0xFF0B0E14);
+  static const barBack = Color(0xFF26303F);
+  static const zoneIn = Color(0xAA4CD07D);
+  static const zoneOut = Color(0xAAE0A040);
 }

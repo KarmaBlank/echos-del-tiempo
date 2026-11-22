@@ -6,9 +6,12 @@ part of 'session_engine.dart';
 
 /// Picada pendiente de un jugador (solo en el motor del anfitrión).
 class FishPending {
-  FishPending(this.fish, this.at);
+  FishPending(this.fish, this.at, [this.kind = WaterLootKind.fish]);
   final FishCatch fish;
   final double at;
+
+  /// Pez, basura o hallazgo (fishing.md § 8).
+  final WaterLootKind kind;
 }
 
 /// Estado de pesca del anfitrión (no viaja en el snapshot).
@@ -48,6 +51,8 @@ extension _FishingOp on _Op {
         return _fishResult(p, success);
       case AutoFishAction():
         return _autoFish(p);
+      case FishLineAction(:final line):
+        return _fishLine(p, line);
       case SellFishAction(:final species, :final materials):
         if (!_inTown(p)) return false;
         final r = FishingRules.sell(p.profile,
@@ -84,18 +89,55 @@ extension _FishingOp on _Op {
 
   bool _fishBite(SessionPlayer p, double power) {
     if (!_inTown(p) || !FishingRules.plausible(p.profile)) return false;
-    if (WorldRules.townSpot(p.x, p.y) != TownSpot.fishing) return false;
+    // Cualquier orilla del lago (v0.22.2), no solo los muelles.
+    if (!FishingCast.nearWater(e.mapFor(s), p.x, p.y)) return false;
     final last = _f.lastCast[p.id];
     if (last != null && s.time - last < _ft.d('minCastSec')) return false;
     _f.lastCast[p.id] = s.time;
     final bonus = FishingRules.rodBonus(p.profile);
+    final dock = WorldRules.townSpot(p.x, p.y) == TownSpot.fishing
+        ? _ft.d('dockBonus')
+        : 0.0;
     final rare =
-        bonus.rare + _ft.d('distanceBonus') * power.clamp(0.0, 1.0);
-    final fish = FishingRules.roll(_rand, _f.lake,
-        rareBonus: rare, pity: p.profile.life.pity);
-    _f.pending[p.id] = FishPending(fish, s.time);
+        bonus.rare + dock + _ft.d('distanceBonus') * power.clamp(0.0, 1.0);
+    // Botín del agua (§ 8): a veces no es un pez.
+    final kind =
+        FishingRules.rollLoot(_rand, p.profile, luck: bonus.rare + dock);
+    final FishCatch fish;
+    switch (kind) {
+      case WaterLootKind.fish:
+        fish = FishingRules.roll(_rand, _f.lake,
+            rareBonus: rare, pity: p.profile.life.pity);
+      case WaterLootKind.basura:
+        final id = kWaterJunk[
+            (_rand() * kWaterJunk.length).floor() % kWaterJunk.length];
+        final d = kFish[id]!;
+        fish =
+            FishCatch(id, d.minCm + (_rand() * (d.maxCm - d.minCm)).round());
+      default:
+        fish = const FishCatch(kWaterBundle, 0);
+    }
+    _f.pending[p.id] = FishPending(fish, s.time, kind);
     events.add(FishBiteEvent(p.id, fish.species, fish.sizeCm));
     if (_f.announced.add(p.id)) say('${p.name} se puso a pescar.');
+    return true;
+  }
+
+  /// `fLn`: lo que los demás ven de la pesca (caña, línea, boya). Solo
+  /// en el pueblo, cerca del agua y con la boya en un tile del lago.
+  bool _fishLine(SessionPlayer p, FishLine? line) {
+    if (line == null) {
+      p.fishLine = null;
+      return true;
+    }
+    if (!_inTown(p) || !FishingRules.plausible(p.profile)) return false;
+    final map = e.mapFor(s);
+    if (!FishingCast.nearWater(map, p.x, p.y)) return false;
+    if (line.hasBobber &&
+        !FishingCast.plausibleBobber(map, p.x, p.y, line.bx, line.by)) {
+      return false;
+    }
+    p.fishLine = line;
     return true;
   }
 
@@ -104,7 +146,13 @@ extension _FishingOp on _Op {
     if (pend == null || !_inTown(p)) return false;
     if (success && s.time - pend.at < _ft.d('minReelSec')) return false;
     _f.pending.remove(p.id);
-    if (success) _grantFish(p, pend.fish);
+    if (!success) return true;
+    if (pend.kind == WaterLootKind.fish || pend.kind == WaterLootKind.basura) {
+      _grantFish(p, pend.fish);
+      p.profile = FishingRules.markDry(p.profile, pend.kind);
+    } else {
+      _grantWaterLoot(p, pend.kind);
+    }
     return true;
   }
 
@@ -116,11 +164,71 @@ extension _FishingOp on _Op {
     final bonus = FishingRules.rodBonus(p.profile);
     final n = math.max(1, _ft.i('autoCount'));
     for (var i = 0; i < n; i++) {
-      final fish = FishingRules.roll(_rand, _f.lake,
-          rareBonus: bonus.rare, auto: true);
+      final fish =
+          FishingRules.roll(_rand, _f.lake, rareBonus: bonus.rare, auto: true);
       _grantFish(p, fish, auto: true);
     }
     return true;
+  }
+
+  /// Materiales, cofre hundido o arma (fishing.md § 8). Va al inventario
+  /// con las reglas de siempre (lo que no entra, al piso o al alijo).
+  void _grantWaterLoot(SessionPlayer p, WaterLootKind kind) {
+    final lvl = math.max(1, p.profile.level);
+    final drops = <LootDrop>[];
+    var label = '';
+    var rarity = Rarity.raro;
+    switch (kind) {
+      case WaterLootKind.materiales:
+        final lo = _ft.i('lootMatMin');
+        final hi = math.max(lo, _ft.i('lootMatMax'));
+        final cristal = _rand() < 0.25;
+        final k = cristal ? StackKind.cristal : StackKind.esquirla;
+        final n = cristal ? 1 : lo + (_rand() * (hi - lo + 1)).floor();
+        drops.add(LootDrop.stack(k, n));
+        label = '$n ${k.label}';
+        rarity = cristal ? Rarity.epico : Rarity.raro;
+      case WaterLootKind.cofre:
+        final tier = _rand() < 0.15 ? ChestTier.plata : ChestTier.madera;
+        final def = kChestTiers[tier]!;
+        final cr = ((20 + (_rand() * 31).floor()) * def.creditMult).round();
+        p.profile = p.profile.copyWith(credits: p.profile.credits + cr);
+        drops.addAll(_chestDrops(p, def, lvl));
+        label = 'un cofre hundido (+$cr de oro)';
+        rarity = tier == ChestTier.plata ? Rarity.epico : Rarity.raro;
+      case WaterLootKind.arma:
+        final il =
+            LootRules.itemLevelFor(lvl, LootSource.chest, cap: _lootCap());
+        final pool = [
+          for (final id in kFishingLegendaries)
+            if (kUniques[id] case final u?
+                when catalog.weapons.containsKey(u.baseId))
+              u,
+        ];
+        final legend = pool.isNotEmpty &&
+            FishingRules.legendEligible(p.profile) &&
+            _rand() < _ft.d('lootLegendChance');
+        final item = legend
+            ? rules.loot.generateUnique(
+                _rand, pool[(_rand() * pool.length).floor() % pool.length], il)
+            : rules.loot.generate(_rand,
+                itemLevel: il,
+                family: p.profile.classId,
+                source: LootSource.chest);
+        final d = LootDrop.item(item);
+        drops.add(d);
+        label = _dropText(d);
+        rarity = item.rarity;
+      default:
+        return;
+    }
+    // Pity del botín y un poco de XP de Pesca por el hallazgo.
+    final marked = FishingRules.markDry(p.profile, kind);
+    p.profile = marked.copyWith(
+        life: marked.life.copyWith(fishXp: marked.life.fishXp + 10));
+    events.add(WaterLootEvent(p.id, label, rarity.index));
+    say('${p.name} sacó del agua $label.');
+    _deliver(p, drops, LootSource.mission, p.x, p.y);
   }
 
   void _grantFish(SessionPlayer p, FishCatch c, {bool auto = false}) {

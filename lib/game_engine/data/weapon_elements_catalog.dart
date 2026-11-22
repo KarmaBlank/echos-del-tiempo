@@ -56,6 +56,10 @@ const Map<String, GameElement> kBaseWeaponElement = {
 /// Elemento de cada legendario, coherente con su tema (también es la
 /// migración de los legendarios ya guardados).
 const Map<String, GameElement> kUniqueWeaponElement = {
+  // Legendarios del agua (fishing.md § 8.3).
+  'filoHundido': GameElement.agua,
+  'relojAhogado': GameElement.agua,
+  'cuerdaOrilla': GameElement.agua,
   'juramentoAlba': GameElement.sagrado,
   'segadoraEras': GameElement.veneno,
   'fauceVolcan': GameElement.fuego,
