@@ -328,7 +328,7 @@ void main() {
       final log = <SessionEvent>[];
       final seen = <SessionMode>{};
       var sawPlayerBuild = false, sawInflicts = false, sawStatuses = false;
-      for (var i = 0; i < 40000 && s.mode != SessionMode.result; i++) {
+      for (var i = 0; i < 40000 && s.result == null; i++) {
         if (i % 7 == 0) {
           _expectSessionRoundTrip(s);
           seen.add(s.mode);
@@ -369,7 +369,7 @@ void main() {
         log.addAll(step.events);
         s = step.state;
       }
-      expect(s.mode, SessionMode.result);
+      expect(s.result, isNotNull);
       _expectSessionRoundTrip(s);
       seen.add(s.mode);
       expect(seen, containsAll([SessionMode.field, SessionMode.battle, SessionMode.result]));

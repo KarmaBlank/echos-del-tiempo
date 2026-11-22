@@ -2,6 +2,7 @@ import 'dart:collection';
 
 import 'battle_state.dart';
 import 'build_wants.dart';
+import 'combat_mode.dart';
 import 'eco.dart';
 import 'exploration.dart';
 import 'game_map.dart' show WorldPoint;
@@ -668,13 +669,18 @@ class GameSession {
     List<String>? atlas,
     this.trial,
     this.turnTimer = TurnTimer.normal,
+    this.combatMode,
     this.abyss,
     this.abyssOwner,
     this.tutorial,
     this.tutorialRuns = 0,
     this.run,
+    Set<String>? leaveReady,
+    List<GroundLoot>? lostLoot,
   })  : players = players ?? LinkedHashMap(),
         ground = ground ?? [],
+        leaveReady = leaveReady ?? {},
+        lostLoot = lostLoot ?? [],
         atlas = List.unmodifiable(atlas ?? const <String>[]);
 
   SessionMode mode;
@@ -707,6 +713,19 @@ class GameSession {
 
   /// Contador para ids de [ground].
   int groundSeq;
+
+  /// Tras la victoria (v0.20.22, missions.md § "Fin de misión"): quién
+  /// tocó LISTO para volver al pueblo.
+  final Set<String> leaveReady;
+
+  /// Pozo Loot perdido de la sala (missions.md § "Loot perdido"): lo
+  /// que quedó en el piso al volver al pueblo. Lo toma cualquiera; se
+  /// vacía al empezar la próxima misión. Sin posición ni dueño.
+  final List<GroundLoot> lostLoot;
+
+  /// Se venció al jefe y el grupo sigue en el mapa juntando el botín
+  /// hasta que todos tocan LISTO.
+  bool get victoryLap => mode == SessionMode.field && result != null;
 
   /// Quién pausó la sala (`null` = corriendo). Mientras está pausada el
   /// host no avanza nada (docs/specs/settings.md § "Pausa"). Si ese
@@ -755,6 +774,16 @@ class GameSession {
   /// Tiempo de turno de la sala: el ajuste del anfitrión (o el local
   /// jugando solo). Ver [TurnTimer].
   TurnTimer turnTimer;
+
+  /// Modo de combate elegido por el anfitrión (turn_modes.md § 1);
+  /// `null` = el de por defecto según haya uno o varios jugadores.
+  CombatMode? combatMode;
+
+  /// El modo que rige la próxima pelea del RPG.
+  CombatMode get effectiveCombatMode =>
+      combatMode ??
+      CombatMode.defaultFor(
+          coop: players.values.where((p) => !p.isCompanion).length > 1);
 
   /// Segundos del turno de un jugador; `null` = sin límite.
   double? get turnLimit => turnTimer.seconds;
@@ -831,10 +860,13 @@ class GameSession {
         atlas: atlas,
         trial: trial,
         turnTimer: turnTimer,
+        combatMode: combatMode,
         abyss: abyss,
         abyssOwner: abyssOwner,
         tutorial: tutorial?.copy(),
         tutorialRuns: tutorialRuns,
         run: run?.copy(),
+        leaveReady: {...leaveReady},
+        lostLoot: [...lostLoot],
       );
 }

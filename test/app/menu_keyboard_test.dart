@@ -114,7 +114,8 @@ void main() {
     expect(_focusedKey(), startsWith('forge-row-'));
 
     // Tab: de la lista a la sección siguiente (las habilidades del arma,
-    // después las tarjetas de FORJA); Enter = +1.
+    // después las tarjetas de FORJA); Enter elige la mejora y FORJAR la
+    // aplica (ui_minimal.md § 4).
     await _key(tester, LogicalKeyboardKey.tab);
     expect(_focusedKey(), startsWith('skill-chip-'));
     await _key(tester, LogicalKeyboardKey.tab);
@@ -123,11 +124,14 @@ void main() {
     final stat = _focusedKey()!.split('-').last;
     final s = UpgradeStat.values.firstWhere((x) => x.key == stat);
     await _key(tester, LogicalKeyboardKey.enter);
-    expect(me().itemByUid(eq)!.forge.level(s), 1);
+    expect(me().itemByUid(eq)!.forge.level(s), 0);
     // Flecha a la derecha: otra tarjeta.
     await _key(tester, LogicalKeyboardKey.arrowRight);
     expect(_focusedKey(), startsWith('up-'));
     expect(_focusedKey(), isNot('up-$eq-$stat'));
+    await tester.tap(find.byKey(const ValueKey('forge-confirm')));
+    await tester.pump();
+    expect(me().itemByUid(eq)!.forge.level(s), 1);
   });
 
   testWidgets('personaje: Q / E / 1-5 cambian de pestaña; Enter en + reparte',

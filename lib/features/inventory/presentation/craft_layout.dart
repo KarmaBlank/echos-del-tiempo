@@ -1,10 +1,10 @@
 import '../../../core/layout/layout_doc.dart';
 import '../../../core/layout/layout_spec.dart';
 
-/// CONDENSAR como datos (docs/specs/editor_layout.md § 6, fase 4).
-/// Regiones del template: `head` (título y explicación), `recipes` (las
-/// tarjetas de receta, fijas) y `confirm` (dentro de la tarjeta de
-/// confirmación, solo con una elección pendiente).
+/// CONDENSAR (pestaña propia de la ARMERÍA, v0.20.25) como datos
+/// (docs/specs/editor_layout.md § 6). Regiones del template: `head`
+/// (título y una línea), `recipes` (fija: material → resultado y la
+/// cantidad) y `confirm` (lo que gastas y obtienes, motivo y CONDENSAR).
 abstract final class CondenseLayout {
   static const screen = 'craft.condense';
 
@@ -15,7 +15,6 @@ abstract final class CondenseLayout {
   static const error = 'condense.error';
   static const actions = 'condense.actions';
   static const go = 'condense.actions.go';
-  static const cancel = 'condense.actions.cancel';
 
   static const _text = {'head', 'confirm'};
 
@@ -24,32 +23,26 @@ abstract final class CondenseLayout {
     title: 'CONDENSAR',
     regions: const [
       LayoutRegionSpec('head', label: 'Arriba'),
-      LayoutRegionSpec('recipes', label: 'Recetas (fijas)'),
+      LayoutRegionSpec('recipes', label: 'Material → resultado (fijo)'),
       LayoutRegionSpec('confirm', label: 'Confirmación'),
     ],
     slots: const [
-      LayoutSlotSpec(title,
-          label: 'Título y ‹ VOLVER', interactive: true, allowedRegions: _text),
+      LayoutSlotSpec(title, label: 'Título', allowedRegions: _text),
       LayoutSlotSpec(intro,
           label: 'Explicación', gap: 'none', allowedRegions: _text),
-      LayoutSlotSpec(recipes, label: 'Recetas', movable: false),
+      LayoutSlotSpec(recipes, label: 'Material y cantidad', movable: false),
       LayoutSlotSpec(summary,
           label: 'Lo que gastas y obtienes', allowedRegions: _text),
       LayoutSlotSpec(error,
           label: 'Motivo si no se puede', gap: 'none', allowedRegions: _text),
       LayoutSlotSpec(actions,
-          label: 'CONDENSAR / CANCELAR',
+          label: 'CONDENSAR',
           group: true,
           interactive: true,
           gap: 'xs',
           allowedRegions: _text),
       LayoutSlotSpec(go,
           label: 'CONDENSAR',
-          interactive: true,
-          gap: 'xs',
-          allowedRegions: {..._text, actions}),
-      LayoutSlotSpec(cancel,
-          label: 'CANCELAR',
           interactive: true,
           gap: 'xs',
           allowedRegions: {..._text, actions}),
@@ -62,7 +55,6 @@ abstract final class CondenseLayout {
       SlotPlacement(error, 'confirm', 1),
       SlotPlacement(actions, 'confirm', 2),
       SlotPlacement(go, actions, 0),
-      SlotPlacement(cancel, actions, 1),
     ]),
   );
 }
@@ -80,7 +72,6 @@ abstract final class FuseLayout {
   static const materials = 'fuse.materials';
   static const keys = 'fuse.keys';
   static const actions = 'fuse.actions';
-  static const condense = 'fuse.actions.condense';
   static const next = 'fuse.actions.next';
 
   static const _all = {'crumbs', 'summary', 'materials', 'footer'};
@@ -102,7 +93,7 @@ abstract final class FuseLayout {
     ],
     slots: const [
       LayoutSlotSpec(crumbs,
-          label: '1 ARMA › 2 ACCIÓN › 3 CONFIRMAR',
+          label: '1 DESTINO › 2 ACCIÓN › 3 PREVIA',
           interactive: true,
           allowedRegions: _all),
       LayoutSlotSpec(summary,
@@ -110,16 +101,12 @@ abstract final class FuseLayout {
       LayoutSlotSpec(materials, label: 'Materiales', allowedRegions: _all),
       LayoutSlotSpec(keys, label: 'Teclas', allowedRegions: _all),
       LayoutSlotSpec(actions,
-          label: 'CONDENSAR / ELEGIR ›',
+          label: 'ELEGIR ›',
           group: true,
           interactive: true,
           groupGap: '8',
           groupRunSpacing: '8',
           allowedRegions: _all),
-      LayoutSlotSpec(condense,
-          label: 'CONDENSAR',
-          interactive: true,
-          allowedRegions: {..._all, actions}),
       LayoutSlotSpec(next,
           label: 'ELEGIR ›',
           interactive: true,
@@ -132,8 +119,7 @@ abstract final class FuseLayout {
       SlotPlacement(keys, 'footer', 0),
       SlotPlacement(actions, 'footer', 1,
           rule: SlotRule(align: LayoutAlign.end)),
-      SlotPlacement(condense, actions, 0),
-      SlotPlacement(next, actions, 1),
+      SlotPlacement(next, actions, 0),
     ]),
   );
 }

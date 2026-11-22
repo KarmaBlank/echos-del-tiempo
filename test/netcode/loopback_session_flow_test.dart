@@ -1,6 +1,7 @@
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_command.dart';
+import 'package:echos_del_tiempo/game_engine/models/combat_mode.dart';
 import 'package:echos_del_tiempo/game_engine/models/battle_event.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
@@ -23,6 +24,8 @@ void main() {
 
   Future<SessionController> make(NetSession net, ProfileStore store) async {
     final c = SessionController(
+      // Este flujo es de la línea de tiempo (turnos de a uno).
+      combatMode: CombatMode.timeline,
       engine: sessionEngine(),
       store: store,
       clock: const SessionClock(autoStart: false),
@@ -190,7 +193,7 @@ void main() {
         isTrue);
 
     // ---- hasta el resultado: el host va al jefe ----
-    for (var i = 0; i < 6000 && host.session!.mode != SessionMode.result; i++) {
+    for (var i = 0; i < 6000 && host.session!.result == null; i++) {
       final v = host.view!;
       switch (v.mode) {
         case SessionMode.battle:
@@ -212,8 +215,8 @@ void main() {
       }
       await net(0.1);
     }
-    expect(host.session!.mode, SessionMode.result);
-    expect(ana.view!.mode, SessionMode.result);
+    expect(host.session!.result, isNotNull);
+    expect(ana.view!.session.result, isNotNull);
     expect(ana.view!.session.result!.id, host.session!.result!.id);
     expect(ana.view!.session.result!.rank, host.session!.result!.rank);
     // El cliente guardó el perfil que le mandó el host (con su XP).

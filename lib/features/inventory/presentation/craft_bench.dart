@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/design/ds_layout_host.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/panel_widgets.dart';
@@ -12,10 +13,10 @@ import '../../../app/theme/retro_hover_card.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/action_card.dart';
+import '../../../app/widgets/action_row_icon.dart';
 import '../../../app/widgets/cost_chip.dart';
 import '../../../app/widgets/menu_widgets.dart';
 import '../../../app/widgets/pixel_icon.dart';
-import '../../../app/widgets/section_panel.dart';
 import '../../../core/layout/layout_doc.dart';
 import '../../../game_engine/data/skills_catalog.dart' show kBaseQuebrarIds;
 import '../../../game_engine/models/item.dart';
@@ -37,7 +38,6 @@ import '../domain/skill_tip.dart';
 import '../domain/weapon_text.dart' show fmtNum;
 import 'item_grid.dart';
 import 'item_hover_tip.dart';
-import 'condense_panel.dart';
 import 'craft_layout.dart';
 import 'item_widgets.dart' show CellContent;
 import 'shop_sections.dart';
@@ -213,10 +213,10 @@ String craftCostShort(CraftResult r) {
   return parts.isEmpty ? 'Gratis' : parts.join(' + ');
 }
 
-/// Mesa de fusión (pestaña FUSIÓN), en 3 pasos: **1 ARMA** (cuál) →
+/// Mesa de fusión (pestaña FUSIÓN), en 3 pasos: **1 DESTINO** (cuál) →
 /// **2 ACCIÓN** (qué hacerle: una línea cada una con el costo o el motivo
 /// a la derecha; el detalle explica la que tiene el mouse o el foco) →
-/// **3 CONFIRMAR** (solo las elecciones de esa acción a la izquierda —
+/// **3 PREVIA** + CONFIRMAR (solo las elecciones de esa acción a la izquierda —
 /// el arma origen y, debajo de ella, sus mods / habilidades — y a la
 /// derecha ahora → después, lo que gastás y lo que perdés, con el botón
 /// y su motivo). `Enter` confirma, `Esc` vuelve un paso. Ver
@@ -227,18 +227,14 @@ class CraftBench extends StatefulWidget {
       required this.shop,
       this.initialOp,
       this.layout,
-      this.layoutHooks,
-      this.condenseLayout,
-      this.condenseHooks});
+      this.layoutHooks});
 
   final ShopContext shop;
 
   /// Layout fijo (Editor → LAYOUT); `null` = el del catálogo
-  /// (editor_layout.md § 6). Igual para CONDENSAR.
+  /// (editor_layout.md § 6).
   final LayoutDoc? layout;
   final DsLayoutHooks? layoutHooks;
-  final LayoutDoc? condenseLayout;
-  final DsLayoutHooks? condenseHooks;
 
   /// Arranca en el paso 3 con esta operación (y la equipada).
   final CraftOp? initialOp;
@@ -260,8 +256,6 @@ class _CraftBenchState extends State<CraftBench> {
   /// Familia del filtro de bases al reforjar (`null` = todas).
   late String? _family = widget.shop.profile.classId;
 
-  /// CONDENSAR abierto (en lugar del paso 1; materials_economy.md § 4.3).
-  bool _condense = false;
 
   /// La destino antes de la última operación (para mostrar qué salió).
   ItemInstance? _lastBefore;
@@ -335,29 +329,44 @@ class _CraftBenchState extends State<CraftBench> {
   /// Grilla de armas de la mesa: la misma casilla, ficha y buscador que
   /// el INVENTARIO (design_system.md § "Estructura atómica"). [note]
   /// agrega markup al pie de la ficha.
-  Widget _weaponGrid(PlayerProfile p, List<ItemInstance> list,
-          {required String? selected,
-          required String keyPrefix,
-          required ValueChanged<ItemInstance> onTap,
-          ItemGridSearch? search,
-          String? empty,
-          String Function(ItemInstance)? note,
-          Set<String> Function(BuildPlan plan, BuildPlanRules rules)? stars}) =>
-      Consumer(builder: (context, ref, _) {
+  ///
+  /// Plantilla DsWeaponList (ui_minimal.md § 3): buscador siempre y la
+  /// equipada fija arriba. Si [list] no la trae (p. ej. el origen, que
+  /// nunca puede ser la equipada) se muestra igual, con candado.
+  Widget _weaponGrid(PlayerProfile p, List<ItemInstance> found,
+      {required String? selected,
+      required String keyPrefix,
+      required ValueChanged<ItemInstance> onTap,
+      required ItemGridSearch search,
+      String? empty,
+      String Function(ItemInstance)? note,
+      Set<String> Function(BuildPlan plan, BuildPlanRules rules)? stars}) {
+    final eq = p.itemByUid(p.equippedUid ?? '');
+    final eqIn = eq != null && found.any((it) => it.uid == eq.uid);
+    final list = [
+      if (eq != null) eq,
+      for (final it in found)
+        if (it.uid != eq?.uid) it
+    ];
+    final eqLocked = eq != null && !eqIn;
+    return Consumer(builder: (context, ref, _) {
         final plan = ref.watch(buildPlanProvider).plan;
         final fit = ref.watch(buildPlanRulesProvider);
         // ★ de BUILD v2 (build_planner_v2.md § 1.5): mejor candidata como
         // destino y donante sugerido como origen.
         final starred = stars?.call(plan, fit) ?? const <String>{};
-        return DsItemGrid(
+        return DsWeaponList(
           rules: shop.rules,
           count: list.length,
           search: search,
+          equipped: eq == null ? null : 0,
+          keyPrefix: keyPrefix,
           empty: empty,
           cellKey: (i) => ValueKey('$keyPrefix${list[i].uid}'),
           slot: (i) => ItemSlotData(
               content: CellContent.item(list[i]),
               selected: list[i].uid == selected,
+              locked: i == 0 && eqLocked,
               buildMatch: starred.contains(list[i].uid) ||
                   (plan.goalCount > 0 && fit.itemFit(plan, list[i]).any)),
           tip: (i, child, focused) {
@@ -388,9 +397,13 @@ class _CraftBenchState extends State<CraftBench> {
                                 12)),
                 child: child);
           },
-          onTap: (i) => onTap(list[i]),
+          onTap: (i) {
+            if (i == 0 && eqLocked) return;
+            onTap(list[i]);
+          },
         );
       });
+  }
 
   // ------------------------------------------------------------------
   // Elección por defecto y acción
@@ -563,14 +576,7 @@ class _CraftBenchState extends State<CraftBench> {
     final slots = {
       ..._headerSlots(p, target),
       FuseLayout.keys: (_) => _step == 0 ? const KeyHints(back: null) : null,
-      // Solo en el Mundo: la Travesía no condensa (el host lo rechaza).
-      FuseLayout.condense: (_) => _step == 0 && !_condense && shop.view.session.run == null
-          ? PanelButton('CONDENSAR',
-              key: const ValueKey('bench-condense'),
-              accent: ProtoColors.violet,
-              onPressed: () => setState(() => _condense = true))
-          : null,
-      FuseLayout.next: (_) => _step == 0 && !_condense
+      FuseLayout.next: (_) => _step == 0
           ? PanelButton('ELEGIR ›',
               key: const ValueKey('bench-next'),
               accent: ProtoColors.green,
@@ -584,14 +590,6 @@ class _CraftBenchState extends State<CraftBench> {
       slots: slots,
       frame: (context, box, r) {
         final body = switch (_step) {
-          0 when _condense => CondensePanel(
-              shop: shop,
-              layout: widget.condenseLayout,
-              layoutHooks: widget.condenseHooks,
-              onBack: () => setState(() {
-                    _condense = false;
-                    _focus.requestFocus();
-                  })),
           0 => _weaponStep(p, items, target,
               footer: r.isEmpty('footer') ? const [] : [r.region('footer')]),
           1 => _opStep(p, target),
@@ -629,7 +627,7 @@ class _CraftBenchState extends State<CraftBench> {
     ];
     return {
       FuseLayout.crumbs: (_) => StepCrumbs(
-            steps: const ['ARMA', 'ACCIÓN', 'CONFIRMAR'],
+            steps: const ['DESTINO', 'ACCIÓN', 'PREVIA'],
             tips: CraftHelp.steps,
             current: _step,
             keyPrefix: 'bench-crumb-',
@@ -712,31 +710,9 @@ class _CraftBenchState extends State<CraftBench> {
   // Piezas de las tarjetas
   // ------------------------------------------------------------------
 
-  static PixelIconKind _matIcon(CraftMaterial m) => switch (m) {
-        CraftMaterial.esquirla => PixelIconKind.shard,
-        CraftMaterial.cristal => PixelIconKind.gem,
-        CraftMaterial.prisma => PixelIconKind.prism,
-        CraftMaterial.ancla => PixelIconKind.anchor,
-        CraftMaterial.fragReloj ||
-        CraftMaterial.fragEco ||
-        CraftMaterial.fragCorona ||
-        CraftMaterial.fragEras =>
-          PixelIconKind.shard,
-        CraftMaterial.esencia => PixelIconKind.star,
-      };
+  static PixelIconKind matIcon(CraftMaterial m) => materialIcon(m);
 
-  static Color _matColor(CraftMaterial m) => switch (m) {
-        CraftMaterial.esquirla => ProtoColors.sky,
-        CraftMaterial.cristal => ProtoColors.violet,
-        CraftMaterial.prisma => ProtoColors.pink,
-        CraftMaterial.ancla => ProtoColors.gold,
-        CraftMaterial.fragReloj ||
-        CraftMaterial.fragEco ||
-        CraftMaterial.fragCorona ||
-        CraftMaterial.fragEras =>
-          ProtoColors.violet,
-        CraftMaterial.esencia => ProtoColors.crimson,
-      };
+  static Color matColor(CraftMaterial m) => materialColor(m);
 
   static PixelIconKind _opIcon(CraftOp op) => switch (op) {
         CraftOp.reroll => PixelIconKind.dice,
@@ -758,36 +734,29 @@ class _CraftBenchState extends State<CraftBench> {
 
   /// Chip de costo: moneda y cada material con su ícono, en verde lo que
   /// alcanza y en rojo lo que falta.
+  /// Costo corto como etiqueta (`₵200 · 1 Prisma`), dorado si alcanza.
+  Widget _costTag(CraftResult r, PlayerProfile p) {
+    final parts = [
+      if (r.credits > 0) '₵${r.credits}',
+      for (final e in r.materials.entries)
+        '${e.value} ${e.key.label.split(' ').first}',
+    ];
+    final ok = p.credits >= r.credits &&
+        r.materials.entries.every((e) => p.material(e.key) >= e.value);
+    return DsActionRow.costTag(parts.isEmpty ? 'GRATIS' : parts.join(' · '),
+        affordable: ok);
+  }
+
   CostChip _costChip(CraftResult r, PlayerProfile p) => CostChip([
         if (r.credits > 0)
           CostPart(PixelIconKind.coin, '${r.credits}',
               ok: p.credits >= r.credits),
         for (final e in r.materials.entries)
           CostPart(
-              _matIcon(e.key), '${e.value} ${e.key.label.split(' ').first}',
-              iconColor: _matColor(e.key), ok: p.material(e.key) >= e.value),
+              matIcon(e.key), '${e.value} ${e.key.label.split(' ').first}',
+              iconColor: matColor(e.key), ok: p.material(e.key) >= e.value),
       ]);
 
-  /// Efecto corto de [op] sobre [t] (se ve con el mouse sobre la tarjeta).
-  String _opPreview(ItemInstance t, CraftOp op) {
-    final n = t.modCount, max = t.rarity.maxMods;
-    final next = t.rarity.index + 1 < Rarity.values.length
-        ? Rarity.values[t.rarity.index + 1].label
-        : t.rarity.label;
-    return switch (op) {
-      CraftOp.reroll => 'Mods $n: valores nuevos al azar',
-      CraftOp.addAffix ||
-      CraftOp.transferAffix =>
-        'Mods $n/$max → ${n + 1}/$max',
-      CraftOp.upgradeRarity => 'Rareza ${t.rarity.label} → $next',
-      CraftOp.transferPassive => 'Pasiva → la de la otra arma',
-      CraftOp.transferSkill =>
-        'Habilidades traídas ${t.extraSkills.length} → ${t.extraSkills.length + 1}',
-      CraftOp.removeAffix => 'Mods $n/$max → ${n > 0 ? n - 1 : 0}/$max',
-      CraftOp.essence => 'Mods fijos: mejor de 2 tiradas, nunca bajan',
-      _ => 'Otro tipo de arma, misma rareza',
-    };
-  }
 
   // ------------------------------------------------------------------
   // Paso 1: ¿qué arma?
@@ -856,9 +825,10 @@ class _CraftBenchState extends State<CraftBench> {
           _focus.requestFocus();
         });
     _enter = () => choose(_op);
-    // Una sección enmarcada por grupo (ícono + título + qué hace) y una
-    // tarjeta por acción: ícono, nombre, explicación (con el mouse, el
-    // efecto) y el chip de costo o el motivo con candado.
+    // Una sección por grupo (título + línea fina, sin marco) y una fila
+    // DsActionRow por acción (ui_minimal.md § 6): ícono, nombre, una
+    // línea y el costo a la derecha; bloqueada en gris con candado y el
+    // motivo en la línea. El detalle, en el tooltip.
     Widget card(CraftOp op) {
       final why = _quickReason(p, target, op);
       // Costo con la elección por defecto; si esa no vale (p. ej. el mod
@@ -868,48 +838,42 @@ class _CraftBenchState extends State<CraftBench> {
       final tip = CraftHelp(shop.rules.crafting)
           .op(p, target, op, preview: pre, blocked: why)
           .markup(op.title);
-      // Tooltip con mouse o foco de teclado: qué hace, qué cambia en esta
-      // arma, qué cuesta, qué pierdes, por qué está bloqueada y un ejemplo.
       return RetroHoverCard(
         builder: (ctx) => RetroTipText(tip,
             key: ValueKey('bench-op-tip-${op.name}'),
             maxWidth: RetroType.width(ctx, RetroHoverCard.textWidth)),
-        child: ActionCard(
-        key: ValueKey('bench-op-${op.name}'),
-        selected: op == _op,
-        disabled: why != null,
-        icon: PixelIcon(_opIcon(op),
-            size: RetroType.width(context, 24),
-            color: why == null ? gColor : ProtoColors.dim),
-        title: '<b>${protoEsc(op.title)}</b>',
-        description: protoEsc(op.short),
-        preview: why == null ? protoEsc(_opPreview(target, op)) : null,
-        // ★ si el resultado (vista previa) avanza una meta de tu build.
-        badge: why == null && pre.error == null && pre.after != null
-            ? BuildFitBadge(item: pre.after, before: target)
-            : null,
-        footer: KeyedSubtree(
-          key: ValueKey('bench-op-why-${op.name}'),
-          child: why != null
-              ? CostChip.blocked(why)
-              : pre.error == null
-                  ? _costChip(pre, p)
-                  : const CostChip.note('Se puede · eliges en el paso 3'),
+        child: DsActionRow(
+          key: ValueKey('bench-op-${op.name}'),
+          selected: op == _op,
+          reason: why,
+          icon: actionRowIcon(context, _opIcon(op), gColor,
+              locked: why != null),
+          title: op.title,
+          description: op.short,
+          // ★ si el resultado (vista previa) avanza una meta de tu build.
+          extra: why == null && pre.error == null && pre.after != null
+              ? BuildFitBadge(item: pre.after, before: target)
+              : null,
+          cost: KeyedSubtree(
+            key: ValueKey('bench-op-why-${op.name}'),
+            child: why != null
+                ? const SizedBox.shrink()
+                : pre.error == null
+                    ? _costTag(pre, p)
+                    : DsActionRow.costTag('PASO 3'),
+          ),
+          lockedTap: true,
+          onTap: () => choose(op),
         ),
-        onTap: () => choose(op),
-      ));
+      );
     }
 
     Widget section(BenchGroup g) {
-      final (icon, color) = _groupIcon(g);
-      return SectionPanel(
+      return Column(
         key: ValueKey('bench-group-${g.name}'),
-        icon: icon,
-        color: color,
-        title: g.label,
-        subtitle: '— ${g.note}',
-        tooltip: g.help,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          RetroTooltip(message: g.help, child: DsSectionHeader(g.label)),
           for (final op in CraftOpText.bench)
             if (op.group == g) card(op),
         ],
@@ -1679,3 +1643,31 @@ class _CraftBenchState extends State<CraftBench> {
         : lines.join('<br>');
   }
 }
+
+/// Ícono de un material (FUSIÓN, CONDENSAR).
+PixelIconKind materialIcon(CraftMaterial m) => switch (m) {
+        CraftMaterial.esquirla => PixelIconKind.shard,
+        CraftMaterial.cristal => PixelIconKind.gem,
+        CraftMaterial.prisma => PixelIconKind.prism,
+        CraftMaterial.ancla => PixelIconKind.anchor,
+        CraftMaterial.fragReloj ||
+        CraftMaterial.fragEco ||
+        CraftMaterial.fragCorona ||
+        CraftMaterial.fragEras =>
+          PixelIconKind.shard,
+        CraftMaterial.esencia => PixelIconKind.star,
+      };
+
+/// Color del ícono de un material.
+Color materialColor(CraftMaterial m) => switch (m) {
+        CraftMaterial.esquirla => ProtoColors.sky,
+        CraftMaterial.cristal => ProtoColors.violet,
+        CraftMaterial.prisma => ProtoColors.pink,
+        CraftMaterial.ancla => ProtoColors.gold,
+        CraftMaterial.fragReloj ||
+        CraftMaterial.fragEco ||
+        CraftMaterial.fragCorona ||
+        CraftMaterial.fragEras =>
+          ProtoColors.violet,
+        CraftMaterial.esencia => ProtoColors.crimson,
+      };

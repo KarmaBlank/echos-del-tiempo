@@ -80,6 +80,10 @@ abstract final class Tile {
   /// Estatua del Tiempo del pueblo (sólida): abre el panel ASCENSIÓN.
   static const statue = 'S';
 
+  /// Torrecita del Loot perdido del pueblo (sólida, v0.20.22): abre el
+  /// pozo compartido de la sala (missions.md § "Loot perdido").
+  static const lostTower = 'L';
+
   /// Púas de la Prueba del Tiempo (caminables: dañan).
   static const spikes = 'x';
 
@@ -123,7 +127,7 @@ abstract final class Tile {
   /// ni las entradas de zona).
   static const solidTiles = {
     wall, water, counter, armory, merchant, tree, rock, lava, tombstone, gear,
-    portal, statue, cracked, secretFloor, shrine, shrineUsed, waystone,
+    portal, statue, lostTower, cracked, secretFloor, shrine, shrineUsed, waystone,
     waystoneOn, wind,
     shortcut, brazier, brazierLit,
   };

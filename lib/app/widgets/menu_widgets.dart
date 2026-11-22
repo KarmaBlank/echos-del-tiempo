@@ -256,7 +256,7 @@ class MenuHeader extends StatelessWidget {
       );
 }
 
-/// Migas de un asistente por pasos: `1 ARMA › 2 ACCIÓN › 3 CONFIRMAR`.
+/// Migas de un asistente por pasos: `1 DESTINO › 2 ACCIÓN › 3 PREVIA`.
 /// Se puede volver a cualquier paso; los de más adelante también se
 /// pueden tocar si [reachable] lo permite.
 class StepCrumbs extends StatelessWidget {

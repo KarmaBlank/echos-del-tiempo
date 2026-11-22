@@ -1,3 +1,4 @@
+import '../../../game_engine/models/combat_mode.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -156,6 +157,7 @@ final sessionControllerProvider =
     clock: ref.watch(sessionClockProvider),
     net: ref.read(activeNetSessionProvider),
     turnTimer: ref.read(gameSettingsProvider).turnTimer,
+    combatMode: CombatMode.fromName(ref.read(gameSettingsProvider).combatMode),
     // Sin FeatureFlags.soloParty no hay compañeros (solo_party.md § 0).
     party: FeatureFlags.instance.soloParty
         ? ref.read(partyStoreProvider)
@@ -165,6 +167,9 @@ final sessionControllerProvider =
   // sala si este dispositivo corre el motor (solo o anfitrión).
   ref.listen(gameSettingsProvider.select((s) => s.turnTimer),
       (_, t) => c.setTurnTimer(t));
+  // Modo de combate (turn_modes.md § 1): la elección del anfitrión.
+  ref.listen(gameSettingsProvider.select((s) => s.combatMode),
+      (_, m) => c.setCombatMode(CombatMode.fromName(m)));
   unawaited(c.start());
   return c;
 });
@@ -199,12 +204,14 @@ class SessionController extends StateNotifier<SessionView?> {
     BestiaryStore? bestiaryStore,
     TutorialStore? tutorialStore,
     TurnTimer turnTimer = TurnTimer.normal,
+    CombatMode? combatMode,
     this.party,
     this.stashStore,
     this.runSaveStore,
     this.metaStore,
   })  : localId = net?.localId ?? localId,
         _turnTimer = turnTimer,
+        _combatMode = combatMode,
         atlasStore = atlasStore ?? InMemoryAtlasStore(),
         bestiaryStore = bestiaryStore ?? InMemoryBestiaryStore(),
         tutorialStore = tutorialStore ?? InMemoryTutorialStore(kTutorialVersion),
@@ -581,6 +588,19 @@ class SessionController extends StateNotifier<SessionView?> {
     _emit();
   }
 
+  /// Modo de combate local (turn_modes.md § 1): como anfitrión o solo, lo
+  /// aplica a la sala; un cliente ve el del anfitrión.
+  CombatMode? _combatMode;
+  CombatMode? get combatMode => _combatMode;
+
+  void setCombatMode(CombatMode? m) {
+    _combatMode = m;
+    final s = _s;
+    if (isClient || s == null || !mounted) return;
+    _s = engine.setCombatMode(s, m).state;
+    _emit();
+  }
+
   /// El Atlas local (vacío hasta cargarlo).
   AtlasProgress get atlas => _atlas ?? AtlasProgress.empty;
 
@@ -702,8 +722,10 @@ class SessionController extends StateNotifier<SessionView?> {
     profile = AbyssRules.withAccount(profile, atlas);
     // El Atlas del anfitrión vale para toda la sala (ecos_atlas.md § 5.2).
     // Y su tiempo de turno (accessibility.md § 7).
-    final room = engine.setTurnTimer(
-        engine.setAtlas(engine.create(), atlas.nodes).state, _turnTimer);
+    final room = engine.setCombatMode(
+        engine.setTurnTimer(
+            engine.setAtlas(engine.create(), atlas.nodes).state, _turnTimer).state,
+        _combatMode);
     try {
       _tutorialVersion = await tutorialStore.load();
     } catch (_) {
@@ -1067,6 +1089,11 @@ class SessionController extends StateNotifier<SessionView?> {
   bool get nearStatue =>
       _s?.mode == SessionMode.lobby && WorldRules.nearStatue(local.x, local.y);
 
+  /// Frente a la torrecita del Loot perdido (missions.md § "Loot perdido").
+  bool get nearLostLoot =>
+      _s?.mode == SessionMode.lobby &&
+      WorldRules.nearLostLoot(local.x, local.y);
+
   /// `nearSeal`: el sello sin activar más cercano a menos de 26 px.
   MissionItem? get nearSeal {
     final s = _s;
@@ -1192,6 +1219,8 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.ecoPortal);
       } else if (nearStatue) {
         openPanel(WorldPanel.ascension);
+      } else if (nearLostLoot) {
+        openPanel(WorldPanel.lostLoot);
       } else if (nearEntrance case final e?) {
         enterZone(e);
       }
@@ -1393,6 +1422,35 @@ class SessionController extends StateNotifier<SessionView?> {
   bool useStairs({required bool down}) => _apply(UseStairsAction(down: down));
 
   bool setReady(bool ready) => _apply(ReadyAction(ready));
+
+  // ---------------- tras la victoria / Loot perdido (v0.20.22) ----------
+
+  /// LISTO para volver al pueblo tras la victoria (missions.md).
+  bool setLeaveReady(bool ready) => _apply(LeaveReadyAction(ready));
+
+  /// Toma la pieza [id] del pozo Loot perdido.
+  bool takeLostLoot(int id) => _apply(TakeLostLootAction(id));
+
+  int? _closedResult;
+
+  /// El jugador local cerró la ventana de victoria (solo local).
+  bool get resultClosed {
+    final r = _s?.result;
+    return r != null && r.id == _closedResult;
+  }
+
+  /// Cierra la ventana de victoria; tras una derrota vuelve al lobby.
+  void closeResult() {
+    final s = _s;
+    final r = s?.result;
+    if (s == null || r == null) return;
+    if (!s.victoryLap) {
+      backToLobby();
+      return;
+    }
+    _closedResult = r.id;
+    _emit();
+  }
 
   // ---------------- Travesía (docs/specs/roguelike.md) ----------------
 
@@ -2324,7 +2382,8 @@ class SessionController extends StateNotifier<SessionView?> {
     if ((_panel == WorldPanel.missionBoard ||
             _panel == WorldPanel.armory ||
             _panel == WorldPanel.ecoPortal ||
-            _panel == WorldPanel.ascension) &&
+            _panel == WorldPanel.ascension ||
+            _panel == WorldPanel.lostLoot) &&
         mode != SessionMode.lobby &&
         !(_panel == WorldPanel.armory && _runShopOpen(s))) {
       _panel = null;
@@ -2391,6 +2450,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearArmory) return (WorldPrompt.armory, null);
     if (nearPortal) return (WorldPrompt.ecoPortal, null);
     if (nearStatue) return (WorldPrompt.statue, null);
+    if (nearLostLoot) return (WorldPrompt.lostLoot, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
     if (nearPoi case final p?) {

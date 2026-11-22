@@ -955,6 +955,26 @@ class BattleViewState extends State<BattleView>
               'sirve para esperar la reacción o el cebado de un aliado.',
           onSelect: () => _send(const PassCommand()),
         ),
+      // Modos de turno (turn_modes.md § 6).
+      if (widget.battle.grouped)
+        BattleAction(
+          id: 'endTurn',
+          name: 'TERMINAR TURNO',
+          description: 'Cerrás tu parte de la fase o del bloque sin actuar '
+              '(o sin usar la acción extra).',
+          onSelect: () => _send(const EndTurnCommand()),
+        ),
+      if (widget.battle.porRonda)
+        BattleAction(
+          id: 'wait',
+          name: 'ESPERAR',
+          description: 'Pasás al final de la ronda en curso. Una vez por '
+              'ronda.',
+          reason: widget.battle.waited.contains(cur.id)
+              ? 'Ya esperaste en esta ronda'
+              : null,
+          onSelect: () => _send(const WaitCommand()),
+        ),
     ]));
     // TUTORIAL (combat_tutorial.md § 4.1): solo lo del paso, el resto
     // desactivado con el motivo.

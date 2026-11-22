@@ -212,3 +212,12 @@ const kLockedZoneColor = Color(0xFF6C6F7A);
 /// El pueblo dentro del mapa del mundo: tiles `0..25 × 0..13`
 /// (worldgen.md § 6.5). Ahí se dibuja con el estilo del lobby.
 bool inTown(int tx, int ty) => tx < 26 && ty < 14;
+
+/// Colores de la torrecita del Loot perdido del pueblo (v0.20.22).
+abstract final class LostTowerPalette {
+  static const base = Color(0xFF34404F);
+  static const rim = Color(0xFF8395A7);
+  static const stone = Color(0xFF6B7A8F);
+  static const cap = Color(0xFF4B5869);
+  static const glow = Color(0xFFFFD166);
+}

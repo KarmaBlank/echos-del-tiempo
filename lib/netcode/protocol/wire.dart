@@ -82,7 +82,16 @@ import '../../game_engine/serialization/session_json.dart';
 /// 37 desde v0.20.17: la confirmación `rec:N` puede llevar `bx` (lo que
 /// el filtro oculta va a Objetos sin recoger, loot.md § 4b.1); un cliente
 /// 36 lo mandaría al alijo y deduplicaría por uid, perdiendo armas.
-const kProtocolVersion = 37;
+/// 38 desde v0.20.20: el combatiente lleva `ubt` (carga de ULT extra del
+/// turno, con tope) y la ronda (`act` / `rd`) cuenta también en la línea
+/// de tiempo (aguanta una ronda, combat.md § "Límites").
+/// 39 desde v0.20.22: tras la victoria el grupo sigue en el campo hasta
+/// el LISTO de todos (`lr`, `leave`) y el pozo Loot perdido (`lost`).
+/// 40 desde v0.20.23: modos de turno del RPG (turn_modes.md): `tr` puede
+/// ser `porRonda` / `porFases` (con `ro` / `wt` en Por rondas), comandos
+/// `wait` y `end`, y `cm` (modo de combate) en la sala. (El 39 es de
+/// v0.20.22.)
+const kProtocolVersion = 40;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

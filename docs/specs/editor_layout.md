@@ -326,8 +326,8 @@ Tests:
   de la columna del costado), `grid` (fija) y `foot` (debajo de la
   grilla; en ancho, debajo de `head`). Slots `inv.owners`, `inv.search`,
   `inv.search_clear`, grupo `inv.tools(.sort|.clean|.stash)`,
-  `inv.equipped`, `inv.stacks`, `inv.summary`, `inv.selection`,
-  `inv.clean_menu`; fijos `inv.notes` y `inv.grid`. La lógica de modos
+  `inv.equipped`, `inv.stacks`, `inv.summary`, `inv.selection`
+  (v0.20.21: sin `inv.clean_menu`, LIMPIAR es un `DsMenuButton`); fijos `inv.notes` y `inv.grid`. La lógica de modos
   (ancho / medio / angosto), la escala de las casillas y la franja de
   CAMBIOS quedan en el template. La barra y el cuerpo son dos
   `DsLayoutHost` sobre el mismo doc (el cuerpo mide su propio ancho).

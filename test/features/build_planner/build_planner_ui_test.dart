@@ -41,6 +41,8 @@ void main() {
         build: (v, c) => CharacterPanel(
             view: v, controller: c, initialTab: CharacterTab.build));
     expect(find.byKey(const ValueKey('build-planner')), findsOneWidget);
+    // Vista avanzada (EDITAR PLAN / ARMAR A MANO).
+    await tapVisible(tester, find.byKey(const ValueKey('build-edit')));
     expect(_text(tester, 'build-next'), contains('plantilla'));
 
     await tapVisible(tester, find.byKey(const ValueKey('build-template')));

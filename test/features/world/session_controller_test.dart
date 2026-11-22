@@ -109,7 +109,7 @@ void main() {
     expect(events.whereType<BattleStepEvent>(), isNotEmpty);
 
     playUntilResult(c);
-    expect(c.view!.mode, SessionMode.result);
+    expect(c.view!.session.result, isNotNull);
     expect(c.view!.session.result, isNotNull);
     await pumpEventQueue();
     // Al terminar la misión el perfil se guarda.

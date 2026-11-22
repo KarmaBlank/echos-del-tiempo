@@ -7,7 +7,6 @@ import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:echos_del_tiempo/game_engine/models/loot.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
-import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/rules/inventory_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/loot_rules.dart';
 import 'package:echos_del_tiempo/netcode/contracts/net_session.dart';
@@ -17,7 +16,8 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../game_engine/session_test_helpers.dart';
 
 /// Regresión v0.20.17 (loot.md § 4b.1): en una sala de 3, las armas que
-/// quedaron en el piso con el inventario lleno vuelven al alijo (o a
+/// quedaron en el piso con el inventario lleno vuelven, al salir de la
+/// sala, al alijo (o a
 /// Objetos sin recoger) de cada jugador, y sobreviven a guardar/cargar.
 /// Antes el loot tirado traía el uid provisorio `nuevo` y el alijo
 /// descartaba la segunda como "duplicada".
@@ -112,12 +112,8 @@ void main() {
         id: gid++, drop: sword(Rarity.raro), x: 0, y: 0, byId: ids[2]));
     await tick();
     expect(host.session!.ground, hasLength(7));
-    host.session!.mode = SessionMode.result;
-    expect(host.backToLobby(), isTrue);
-    for (var i = 0; i < 10; i++) {
-      await tick();
-    }
-    expect(host.session!.ground, isEmpty);
+    // v0.20.22: volver al pueblo manda el piso al Loot perdido; lo que
+    // sigue recuperándose al alijo es lo propio al salir de la sala.
     for (final c in all) {
       c.dispose();
     }
@@ -133,22 +129,5 @@ void main() {
       // Uids distintos dentro del alijo.
       expect({for (final e in got) e.item!.uid}, hasLength(want));
     }
-  });
-
-  test('lo oculto por el filtro vuelve a Objetos sin recoger', () {
-    final e = sessionEngine();
-    var s = inField(e, 'm3');
-    s = act(e, s, 'p0', const SetLootFilterAction('Ocultar\n  Rareza Común\n'));
-    s.ground.add(GroundLoot(
-        id: 1, drop: sword(Rarity.comun), x: 0, y: 0, ownerId: 'p0'));
-    s.mode = SessionMode.result;
-    s = act(e, s, 'p0', const BackToLobbyAction());
-    final acks = s.players['p0']!.stashAcks.entries
-        .where((x) => StashAck.isRecover(x.key))
-        .toList();
-    expect(acks.single.value.box, isTrue);
-    final r = StashRules.recover(Stash.empty(), acks.single.value.drops.single!,
-        box: true);
-    expect(r.toBox, isTrue);
   });
 }

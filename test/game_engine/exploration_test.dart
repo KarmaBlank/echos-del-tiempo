@@ -170,15 +170,16 @@ void main() {
       for (final seed in seeds) {
         final m = MapGenerator.zone(kZones[5], seed);
         for (final f in m.floors) {
-          expect(f.bounds.w, inInclusiveRange(64, 72));
-          expect(f.bounds.h, inInclusiveRange(46, 52));
+          // v0.20.22: × √areaScale (worldgen.md § 6.8).
+          expect(f.bounds.w, inInclusiveRange(53, 61));
+          expect(f.bounds.h, inInclusiveRange(38, 44));
           final d = _bfs(m, [_t(f.spawn)]);
           expect(d[(f.arena!.cx, f.arena!.cy)], lessThanOrEqualTo(160));
         }
       }
-      // El resto conserva su tamaño de siempre.
+      // El resto conserva su rango de siempre (con el mismo recorte).
       final pr = MapGenerator.zone(kZones[0], 7).floors.first.bounds;
-      expect(pr.w, inInclusiveRange(58, 70));
+      expect(pr.w, inInclusiveRange(49, 59)); // 58–70 × √0.7
     });
   });
 

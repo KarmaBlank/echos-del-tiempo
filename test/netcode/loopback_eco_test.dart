@@ -118,7 +118,7 @@ void main() {
     await net(3);
     final boss = s.mission!.enemies.singleWhere((x) => x.boss);
     host.teleport(boss.x, boss.y);
-    for (var i = 0; i < 3000 && host.session!.mode != SessionMode.result; i++) {
+    for (var i = 0; i < 3000 && host.session!.result == null; i++) {
       final b = host.session!.battle;
       if (b != null) {
         for (final en in b.state.enemies) {

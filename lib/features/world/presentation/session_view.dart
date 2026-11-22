@@ -33,6 +33,9 @@ enum WorldPanel {
   /// La party jugando solo (tecla P, solo en el pueblo;
   /// docs/specs/solo_party.md § 2.3).
   party,
+
+  /// El pozo Loot perdido del pueblo (missions.md § "Loot perdido").
+  lostLoot,
 }
 
 /// Una línea del chat (`addChat`): de un jugador o de sistema (`sys`).
@@ -59,6 +62,9 @@ enum WorldPrompt {
 
   /// Frente a la Estatua del Tiempo (ascension.md § 1).
   statue('[E] Estatua del Tiempo'),
+
+  /// Frente a la torrecita del Loot perdido (v0.20.22).
+  lostLoot('[E] Loot perdido'),
 
   /// Frente a la entrada de una zona (mapa del mundo). El texto real
   /// (`[E] Entrar: <zona>`, bloqueada, próximamente) va en

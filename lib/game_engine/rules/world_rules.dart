@@ -100,6 +100,14 @@ abstract final class WorldRules {
       x > 19.5 * tileSize &&
       x < 23.5 * tileSize;
 
+  /// Frente a la torrecita del Loot perdido (tiles x 3–5, y 10; se usa
+  /// desde abajo, como la estatua). Ver missions.md § "Loot perdido".
+  static bool nearLostLoot(double x, double y) =>
+      y > 10.6 * tileSize &&
+      y < 12.9 * tileSize &&
+      x > 2.5 * tileSize &&
+      x < 6.5 * tileSize;
+
   /// Distancia a la que la UI ofrece activar un sello (`nearSeal`). El
   /// host acepta hasta `SessionEngine.sealRange`.
   static const sealPromptRange = 26.0;

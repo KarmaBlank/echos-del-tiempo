@@ -257,7 +257,9 @@ void main() {
           'bola');
       final r = _reactions(s).single;
       expect(r.amount, 160); // 20 × 2.5% = 50% → 40% de 400
-      expect(s.state.enemies.single.hp, 400 - 36 - 160);
+      // Tope absoluto de jefe por golpe (combat.md § "Límites"): 35% de
+      // 400 = 140.
+      expect(s.state.enemies.single.hp, 400 - 36 - 140);
       expect(s.state.log, contains('(tope)'));
     });
 

@@ -106,7 +106,7 @@ void main() {
 
     // ---- jugar hasta el resultado (subida de nivel por la UI) ----
     var allocatedInUi = false;
-    for (var i = 0; i < 40000 && c.view!.mode != SessionMode.result; i++) {
+    for (var i = 0; i < 40000 && c.view!.session.result == null; i++) {
       final v = c.view!;
       if (v.mode == SessionMode.levelUp && v.mustAllocate) {
         await tester.pump();
@@ -138,7 +138,7 @@ void main() {
       c.advance(0.05);
     }
     await tester.pump();
-    expect(c.view!.mode, SessionMode.result);
+    expect(c.view!.session.result, isNotNull);
     expect(find.byType(ResultsPanel), findsOneWidget);
     expect(
         find.text('MISION COMPLETADA').evaluate().length +

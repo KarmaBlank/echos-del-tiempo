@@ -26,7 +26,9 @@ abstract final class TuningId {
   static const buildGuide = 'buildGuide';
   static const consumables = 'consumables';
   static const travesia = 'travesia';
+  static const combatLimits = 'combatLimits';
   static const exploration = 'exploration';
+  static const mission = 'mission';
 }
 
 /// Los valores del código.
@@ -35,6 +37,13 @@ const Map<String, TuningDef> kTuningDefaults = {
   // (v0.20.19: 78 → 98, +25 %).
   TuningId.exploration: TuningDef('Exploración', {
     'playerSpeed': 98,
+  }),
+  // worldgen.md § 6.8 (v0.20.22): misiones cortas. Tope de pisos por
+  // misión, × de grupos normales por piso y × del área de cada piso.
+  TuningId.mission: TuningDef('Misiones', {
+    'maxFloors': 3,
+    'groupScale': 0.7,
+    'areaScale': 0.7,
   }),
   // ultimates_v2.md § 2.4: +6% por nivel sobre el 1.
   TuningId.ultLevel: TuningDef('Escalado de ULT por nivel', {
@@ -187,6 +196,40 @@ const Map<String, TuningDef> kTuningDefaults = {
     // Mundo, antes de la dificultad).
     'enemyHp': 0.4,
     'enemyAtk': 0.3,
+  }),
+  // combat.md § "Límites": efectos encadenados por acción, tope de daño
+  // por golpe de jefes y élites, "aguanta una ronda" de los comunes y
+  // rendimientos decrecientes de la velocidad.
+  TuningId.combatLimits: TuningDef('Límites de combate', {
+    // Efectos encadenados: total por acción y profundidad de la cadena
+    // (un efecto que dispara otro que dispara otro...).
+    'procMax': 64,
+    'procDepth': 6,
+    // Tope absoluto por golpe (fracción de la vida máxima; 0 = sin
+    // tope). Vale siempre, también con debilidad, reacción o quiebre.
+    'capBoss': 0.35,
+    'capElite': 0.60,
+    'capCommon': 0,
+    // Aguanta una ronda (1 = sí): el primer golpe letal a un común antes
+    // de que actúen todos los jugadores vivos lo deja en 1 de vida.
+    'holdCoop': 1,
+    'holdSolo': 0,
+    // Turnos como máximo por cada turno del aliado vivo más lento
+    // (0 = sin tope).
+    'turnsPerSlowest': 2,
+    // Velocidad efectiva sobre el umbral: lo que sobra rinde × el factor.
+    'speedSoftCap': 16,
+    'speedSoftFactor': 0.5,
+    // Carga de ULT extra (árbol, mods, efectos e invocaciones): tope por
+    // acción y por turno de quien la recibe, en puntos de la barra (100).
+    'ultBonusAction': 50,
+    'ultBonusTurn': 50,
+    // Modo de combate por defecto de la sala (turn_modes.md § 1): 0 línea
+    // de tiempo, 1 por rondas, 2 por fases.
+    'modeCoop': 1,
+    'modeSolo': 0,
+    // Por fases: pausa de planificación al abrir la fase de jugadores (s).
+    'planPause': 2,
   }),
 };
 
