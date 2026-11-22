@@ -1,5 +1,7 @@
 import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/widgets/action_card.dart';
+import 'package:echos_del_tiempo/app/widgets/menu_widgets.dart';
+import 'package:echos_del_tiempo/features/inventory/domain/inventory_menu.dart' show plainText;
 import 'package:echos_del_tiempo/features/build_planner/presentation/build_plan_providers.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/armory_panel.dart';
 import 'package:echos_del_tiempo/game_engine/models/build_plan.dart';
@@ -129,7 +131,14 @@ void main() {
     await _choose(tester, 'c1', CraftOp.transferAffix);
     await _tap(tester, 'craft-source-m1');
     expect(_confirm(tester).reason,
-        startsWith('Sin lugar (Común'));
+        startsWith('Sin lugar: un arma Común'));
+    // El mod que no entra va en gris, con el motivo en tooltip y su lado.
+    expect(find.byKey(const ValueKey('craft-pick-why-0')), findsOneWidget);
+    expect(tester.widget<MenuRow>(find.byKey(const ValueKey('craft-pick-0'))).dimmed,
+        isTrue);
+    expect(
+        plainText(tester.widget<MenuRow>(find.byKey(const ValueKey('craft-pick-0'))).label),
+        anyOf(contains('PREFIJO'), contains('SUFIJO')));
     expect(plain(tester, 'craft-error'), contains('No se puede'));
     await _choose(tester, 'e1', CraftOp.transferPassive);
     await _tap(tester, 'craft-source-l1');

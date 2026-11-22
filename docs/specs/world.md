@@ -123,8 +123,13 @@ está desactivado en el prototipo).
 - `move(map, x, y, dx, dy, gateOpen)`: primero intenta mover en X, después
   en Y (desde la X ya resuelta), cada eje por separado. Así el personaje
   se desliza contra las paredes.
-- Velocidad del jugador: 78 px/s, entrada normalizada en diagonal
-  (`WorldRules.playerSpeed`, `WorldRules.stepPlayer`). La barrera solo se
+- Velocidad del jugador: 98 px/s (v0.20.19, antes 78), entrada
+  normalizada en diagonal (`WorldRules.playerSpeed`,
+  `WorldRules.stepPlayer`). Es ajuste de balance: Editor → Balance →
+  Exploración (`exploration.playerSpeed`). La posición la calcula el
+  cliente y el host la acepta tal cual (`MoveAction`), así que no hay
+  simulación del host que desincronizar; el parche de balance se valida
+  por hash en el handshake. La barrera solo se
   abre para jugadores; los enemigos siempre la ven cerrada.
 
 ## IA de enemigos en el campo (`SessionEngine.tick`, modo `field`)

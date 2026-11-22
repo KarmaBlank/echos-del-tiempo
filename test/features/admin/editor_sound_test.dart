@@ -243,10 +243,11 @@ void main() {
       }
       for (final type in [NumberStepper, DsSearchField]) {
         for (final e in inPage(type).evaluate()) {
-          expect(
-              find.ancestor(
-                  of: find.byWidget(e.widget), matching: find.byType(Tooltip)),
-              findsWidgets,
+          bool tipped(Type t) => find
+              .ancestor(of: find.byWidget(e.widget), matching: find.byType(t))
+              .evaluate()
+              .isNotEmpty;
+          expect(tipped(Tooltip) || tipped(DsTooltip), isTrue,
               reason: '$where: $type sin tooltip');
         }
       }

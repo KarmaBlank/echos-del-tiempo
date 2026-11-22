@@ -79,7 +79,10 @@ enum BalanceKind {
 
   /// Mejoras directas, progreso entre runs y dificultad de la Travesía
   /// (roguelike.md § 4 y § 8). El Mundo no lo lee.
-  travesia('travesia', 'Travesía', 'Ajustes de la Travesía');
+  travesia('travesia', 'Travesía', 'Ajustes de la Travesía'),
+
+  /// Movimiento en el mapa de campo (world.md § "Colisión y movimiento").
+  exploration('exploration', 'Exploración', 'Ajustes de exploración');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -1182,6 +1185,10 @@ final consumablesCodec = _tuningCodec(BalanceKind.consumables, const [
   BalanceField('shieldTurns', 'Turnos del escudo', _int, min: 1, max: 9),
 ]);
 
+final explorationCodec = _tuningCodec(BalanceKind.exploration, const [
+  BalanceField('playerSpeed', 'Velocidad del personaje en el mapa (px/s)', _dec, min: 20, max: 300, step: 1),
+]);
+
 final travesiaCodec = _tuningCodec(BalanceKind.travesia, const [
   BalanceField('boonSpell', 'Mejora: % daño de hechizos', _int, max: 200),
   BalanceField('boonAttack', 'Mejora: % ataque básico y físico', _int, max: 200),
@@ -1317,6 +1324,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.featReward => featRewardCodec,
       BalanceKind.consumables => consumablesCodec,
       BalanceKind.travesia => travesiaCodec,
+      BalanceKind.exploration => explorationCodec,
     };
 
 /// Tipos de "Ajustes": un grupo de [kTuning] cada uno (id = jsonKey).
@@ -1329,4 +1337,5 @@ const kTuningKinds = [
   BalanceKind.ecoTier,
   BalanceKind.consumables,
   BalanceKind.travesia,
+  BalanceKind.exploration,
 ];

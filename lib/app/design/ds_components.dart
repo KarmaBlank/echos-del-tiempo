@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../theme/proto_colors.dart';
+import '../theme/retro_hover_card.dart';
 import '../theme/retro_text.dart';
 import '../theme/retro_theme.dart';
 import '../theme/ui_theme.dart';
@@ -860,8 +861,11 @@ class DsTooltipCard extends StatelessWidget {
   }
 }
 
-/// Muestra [card] (un [DsTooltipCard]) al pasar el mouse o con foco, sobre
-/// `Tooltip` sin caja propia.
+/// Muestra [card] (un [DsTooltipCard]) al pasar el mouse o con foco,
+/// sobre la misma caja que [RetroTooltip] ([RetroHoverCard] sin marco):
+/// anclada debajo del objetivo (arriba solo si casi no hay lugar), nunca
+/// salta al crecer, scrollea si no entra y sigue abierta con el mouse
+/// encima (ui_style.md § "Tooltips anclados").
 class DsTooltip extends StatelessWidget {
   const DsTooltip({super.key, required this.card, required this.child});
 
@@ -869,29 +873,14 @@ class DsTooltip extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    // El `Tooltip` arma la tarjeta dentro de un `Text.rich`, que agranda
-    // todo `WidgetSpan` por el textScaler (transform). La tarjeta ya
-    // escala su texto y su ancho: con eso el tamaño se aplicaba dos veces
-    // y el tip salía gigante (fix v0.20.1). El `Text.rich` va sin escala
-    // y la tarjeta (y el objetivo) recuperan el escalador real.
-    final scaler = MediaQuery.textScalerOf(context);
-    return MediaQuery.withNoTextScaling(
-      child: Tooltip(
-        richMessage: WidgetSpan(
-            child: MediaQuery(
-                data: MediaQuery.of(context).copyWith(textScaler: scaler),
-                child: card)),
-        decoration: const BoxDecoration(),
-        padding: EdgeInsets.zero,
-        waitDuration: const Duration(milliseconds: 250),
-        preferBelow: true,
-        child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(textScaler: scaler),
-            child: child),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => RetroHoverCard(
+        placement: RetroTipPlacement.below,
+        gap: 4,
+        interactive: true,
+        frameless: true,
+        builder: (_) => card,
+        child: child,
+      );
 }
 
 /// Tooltip del sistema de diseño en una línea (game_editor.md § 7.6; `DsTooltip` +

@@ -485,7 +485,9 @@ class RetroTooltip extends StatelessWidget {
     return RetroHoverCard(
       placement: RetroTipPlacement.below,
       gap: 4,
-      interactive: fold,
+      // Siempre toma el mouse: pasar a la caja la deja abierta (scroll,
+      // ▸ Más detalle); ui_style.md § "Tooltips anclados".
+      interactive: true,
       keyboardFocus: keyboardFocus,
       builder: (ctx) {
         final w = RetroType.width(ctx, RetroHoverCard.textWidth);

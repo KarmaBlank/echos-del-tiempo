@@ -75,6 +75,62 @@ String itemNameMarkup(ProgressionRules rules, ItemInstance it) =>
 String affixMarkup(ProgressionRules rules, AffixRoll a, {ItemInstance? on}) =>
     _c(a.fixed ? _orange : kModHex, _esc(rules.items.affixText(a, on: on)));
 
+/// Nombre visible del lado de un mod (loot.md § "Prefijos y sufijos").
+String affixSideLabel(AffixSlot s) =>
+    s == AffixSlot.prefix ? 'PREFIJO' : 'SUFIJO';
+
+/// Qué tipo de mod va en cada lado, en palabras del jugador.
+String affixSideKind(AffixSlot s) =>
+    s == AffixSlot.prefix ? 'ataque' : 'atributos y defensa';
+
+/// Explicación corta de prefijos y sufijos (tooltip de las etiquetas
+/// `PREFIJOS` / `SUFIJOS` en fichas y en la forja). [r]: con la rareza,
+/// cuántos entran de cada lado.
+String affixSidesHelp([Rarity? r]) {
+  final cupo = r == null || r.maxMods == 0
+      ? 'Cada arma tiene lugar para la mitad de sus mods de cada lado.'
+      : 'Un arma ${r.label} lleva hasta ${r.maxMods} mods: hasta '
+          '${r.affixSideCap} prefijos y hasta ${r.affixSideCap} sufijos.';
+  return '${_c(_sky, 'Prefijos y sufijos')}<br>'
+      '${_c(_sky, 'PREFIJO')}: mod de ataque (daño, magia, crítico, '
+      'velocidad, estados).<br>'
+      '${_c(_sky, 'SUFIJO')}: mod de atributos o defensa (FUE, VIT, HP, '
+      'MP, defensa, robo de vida...).<br>'
+      '$cupo<br>'
+      'Al agregar o traer un mod tiene que quedar lugar de su lado: si los '
+      'prefijos están llenos, solo entra un sufijo (y al revés).';
+}
+
+/// Mods de [it] agrupados por lado: una línea de título `PREFIJOS
+/// (ataque) n/tope` y sus mods, lo mismo con `SUFIJOS`. Los que no tienen
+/// lado conocido van al final, sin título. [line] arma cada mod (por
+/// defecto `• mod`; la forja marca nuevos y quitados).
+List<String> affixGroupsMarkup(ProgressionRules rules, ItemInstance it,
+    {String Function(AffixRoll a)? line}) {
+  final items = rules.items;
+  String mod(AffixRoll a) => line?.call(a) ?? '• ${affixMarkup(rules, a, on: it)}';
+  final cap = it.rarity.affixSideCap;
+  final out = <String>[];
+  for (final side in AffixSlot.values) {
+    final group = [
+      for (final a in it.affixes)
+        if (items.affixOf(a)?.slot == side) a
+    ];
+    if (group.isEmpty && (it.rarity.maxMods == 0 || cap == 0)) continue;
+    out.add('${_c(_sky, '${affixSideLabel(side)}S')} '
+        '${_c(_dim, '(${affixSideKind(side)}) ${group.length}/$cap')}');
+    for (final a in group) {
+      out.add(mod(a));
+      if (affixHelpMarkup(rules, a) case final h?) out.add('  $h');
+    }
+  }
+  for (final a in it.affixes) {
+    if (items.affixOf(a) != null) continue;
+    out.add(mod(a));
+  }
+  return out;
+}
+
 /// Línea de ayuda debajo del afijo Quebrantador en una ficha.
 String? affixHelpMarkup(ProgressionRules rules, AffixRoll a) =>
     rules.items.affixOf(a)?.stat == ModStat.breakSkill
@@ -211,10 +267,7 @@ String itemTooltipMarkup(
   }
   if (it.rarity.maxMods > 0 || it.affixes.isNotEmpty) {
     l.add('<span class="k">Mods ${it.modCount}/${it.rarity.maxMods}</span>');
-    for (final a in it.affixes) {
-      l.add('• ${affixMarkup(rules, a, on: it)}');
-      if (affixHelpMarkup(rules, a) case final h?) l.add('  $h');
-    }
+    l.addAll(affixGroupsMarkup(rules, it));
   }
   // El mod "ULT: <nombre>" ya no se muestra: la ULT se aprende al
   // conseguir el arma (ultimates_v2.md § 2.1).
@@ -275,10 +328,7 @@ String itemTooltipMarkup(
     if (implicit.isNotEmpty)
       '<span class="k">Implícito:</span> '
           '${implicit.map((m) => _esc(m.text)).join(', ')}',
-    for (final a in it.affixes) ...[
-      '• ${affixMarkup(rules, a, on: it)}',
-      if (affixHelpMarkup(rules, a) case final h?) '  $h',
-    ],
+    ...affixGroupsMarkup(rules, it),
   ];
   final passive = items.passiveText(it);
   final skills = itemSkillLinesMarkup(rules, it, stats: stats);
