@@ -725,7 +725,7 @@ ni la sesión ni `features/*` miran el nombre del flavor.
 
 | Juego | id (`g`) | `v` | Constante |
 |---|---|---|---|
-| Ecos del Tiempo (Mundo) | `mundo` | 33 | `kProtocolVersion` |
+| Ecos del Tiempo (Mundo) | `mundo` | 35 | `kProtocolVersion` |
 | Ecos del Tiempo: Travesía | `travesia` | 2 | `kTravesiaProtocolVersion` |
 
 - `hello` lleva `g` (el id del juego del cliente). Es aditivo: un host
@@ -755,6 +755,19 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   cuenta o a Objetos sin recoger. Un cliente 32 las ignoraría y perdería
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
+
+## Mundo, protocolo 35 (v0.20.14: curas a enemigos)
+
+- `SkillCommand` no cambia de forma (`{"t":"tech","tk":"<id>","tg":"<id>"}`),
+  pero cambia la regla del host: una cura (`SkillKind.heal`, sin revivir)
+  con `tg` = un enemigo vivo con `healHarm > 0` le hace daño Sagrado solo
+  a él en vez de curar; una cura de un blanco con `tg` = un aliado vivo
+  cura a ese aliado (bestiary.md § 1.4.1). El cliente ya no manda el
+  enemigo apuntado en las curas (sin `tg` = como siempre). Un host 34
+  curaría al grupo: la sala no mezcla versiones, se sube a 35.
+- Travesía comparte el motor y gana la misma regla; su protocolo no se
+  toca acá (un host Travesía viejo solo curaría: sin desincronía, el
+  host manda).
 
 ## Mundo, protocolo 34 (v0.20.12: Restaurar Quebrar)
 

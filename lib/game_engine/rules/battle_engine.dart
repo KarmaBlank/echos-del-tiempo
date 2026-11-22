@@ -4403,15 +4403,36 @@ class _Turn {
             _notes.add('${sk.name}: cuesta $cost HP');
           }
         }
+        // Curas (bestiary.md § 1.4.1): el objetivo elegido puede ser un
+        // enemigo con `healHarm` o (las de un blanco) un aliado vivo; si
+        // no es ninguno, la cura va como siempre.
+        Combatant? healPick;
+        if (isTargetableHeal(sk)) {
+          healPick = (sk.lowestAlly
+                  ? state.party
+                      .where((q) => q.id == targetId && q.alive)
+                      .firstOrNull
+                  : null) ??
+              (engine.familiesEnabled
+                  ? foes
+                      .where(
+                          (e) => e.id == targetId && healCanTargetFoe(sk, e))
+                      .firstOrNull
+                  : null);
+        }
+        final healFoe = healPick != null && !healPick.isPlayer;
         events.add(ActionEvent(p.id, BattleActionKind.skill,
             skillId: sk.id,
-            targetId: sk.dealsDamage && !sk.allTargets ? target.id : null,
+            targetId: healFoe || (sk.dealsDamage && !sk.allTargets)
+                ? target.id
+                : null,
             allTargets: sk.allTargets));
         act.skill = sk;
         p.lastSkillId = sk.id;
         // Reflejo de los Jefes del Abismo: copian la última habilidad.
         _abyssCopied(sk.id);
-        final gain = _useSkill(p, sk, foes, target, ultimate: false);
+        final gain = _useSkill(p, sk, foes, target,
+            ultimate: false, healPick: healPick);
         // Prisa sin aliados: ya terminó el turno.
         if (gain == null) return true;
         ultGain = gain;
@@ -4650,6 +4671,7 @@ class _Turn {
     List<Combatant> foes,
     Combatant target, {
     required bool ultimate,
+    Combatant? healPick,
   }) {
     state.log = '${p.name} · ${tk.name}';
     final allies = _aliveParty.toList();
@@ -4751,8 +4773,25 @@ class _Turn {
           }
           if (downs.isNotEmpty) allies.addAll(downs.where((q) => q.alive));
         }
+        if (healPick != null && !healPick.isPlayer) {
+          // Lanzada a un no muerto / espectro: daño Sagrado solo a él.
+          final d = healOnFoeDamage(a, healPick,
+              mult: engine.catalog.combo.healFoeMult,
+              bonus: _modTotal(p, ProcEffectKind.healHarmBonus));
+          final dealt = _procDamage(p, healPick, d, kHealHarmSourceId);
+          final fem =
+              engine.catalog.enemies[healPick.enemyType]?.feminine ?? false;
+          state.log = '${p.name} · ${tk.name}: ¡la cura quema '
+              '${fem ? 'a la' : 'al'} ${healPick.name}! $dealt';
+          return 8;
+        }
         final healed = tk.lowestAlly
-            ? [if (_lowest(allies, (c) => c.hp / c.maxHp) case final q?) q]
+            ? [
+                if (healPick ??
+                        _lowest(allies, (c) => c.hp / c.maxHp)
+                    case final q?)
+                  q
+              ]
             : allies;
         final m = _skillMech(tk);
         for (final q in healed) {

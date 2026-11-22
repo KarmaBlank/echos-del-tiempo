@@ -296,6 +296,77 @@ void main() {
     expect(menu.hasSubmenu, isFalse);
   });
 
+  testWidgets('cura con no muertos: elegir aliado o enemigo (bestiary § 1.4.1)',
+      (tester) async {
+    final start = engine.start(
+      party: [member('paladin')],
+      enemyTypes: const ['esqueleto', 'slime'],
+      triggeredBy: 'paladin',
+    );
+    state = engine.nextTurn(start.state).state;
+    final pal = state.byId('paladin')!;
+    expect(state.currentId, 'paladin');
+    if (!pal.skillIds.contains('sanar')) pal.skillIds.add('sanar');
+    pal.mp = pal.maxMp.toDouble();
+    BattleCommand? sent;
+    await pump(tester, canAct: true, onCommand: (c) {
+      sent = c;
+      return true;
+    });
+    final menu = tester.state<BattleViewState>(find.byType(BattleView));
+    if (act('skill-sanar').evaluate().isEmpty) {
+      await tester.tap(find.byKey(const ValueKey('battle-cat-skills')));
+      await tester.pump();
+    }
+    await tester.tap(act('skill-sanar'));
+    await tester.pump();
+    expect(sent, isNull, reason: 'abre el submenú, no lanza');
+    expect(menu.hasSubmenu, isTrue);
+    expect(find.textContaining('¿A quién lanzas Sanación?'), findsOneWidget);
+    expect(act('heal-lowest'), findsOneWidget);
+    expect(act('heal-foe-e0'), findsOneWidget); // Esqueleto
+    expect(act('heal-foe-e1'), findsNothing); // Limo: no es blanco
+    // ↓ hasta el no muerto: la escena lo resalta.
+    // Sanación es de grupo: "Al grupo" y luego los no muertos.
+    final rows = ['heal-lowest', 'heal-foe-e0'];
+    for (var i = 0; i < rows.indexOf('heal-foe-e0'); i++) {
+      menu.handleKey(LogicalKeyboardKey.arrowDown);
+    }
+    await tester.pump();
+    expect(menu.highlightedTargets, {'e0'});
+    await tester.tap(act('heal-foe-e0'));
+    await tester.pump();
+    expect(sent, isA<SkillCommand>());
+    expect((sent! as SkillCommand).targetId, 'e0');
+    expect(menu.hasSubmenu, isFalse);
+  });
+
+  testWidgets('cura sin no muertos: se lanza directo, sin submenú',
+      (tester) async {
+    final start = engine.start(
+      party: [member('paladin')],
+      enemyTypes: const ['slime'],
+      triggeredBy: 'paladin',
+    );
+    state = engine.nextTurn(start.state).state;
+    final pal = state.byId('paladin')!;
+    if (!pal.skillIds.contains('sanar')) pal.skillIds.add('sanar');
+    pal.mp = pal.maxMp.toDouble();
+    BattleCommand? sent;
+    await pump(tester, canAct: true, onCommand: (c) {
+      sent = c;
+      return true;
+    });
+    if (act('skill-sanar').evaluate().isEmpty) {
+      await tester.tap(find.byKey(const ValueKey('battle-cat-skills')));
+      await tester.pump();
+    }
+    await tester.tap(act('skill-sanar'));
+    await tester.pump();
+    expect(sent, isA<SkillCommand>());
+    expect((sent! as SkillCommand).targetId, isNull);
+  });
+
   testWidgets(
       'la descripción nunca es la de otra técnica cuando el menú cambia '
       'bajo el mouse', (tester) async {

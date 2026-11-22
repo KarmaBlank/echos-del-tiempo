@@ -274,6 +274,7 @@ class ComboRulesDef {
     this.groupBreakBase = 0.6,
     this.groupBreakPer = 0.3,
     this.steadyGauge = 0.5,
+    this.healFoeMult = 1.5,
   });
 
   String get id => 'combos';
@@ -316,6 +317,10 @@ class ComboRulesDef {
 
   /// Fisurado que llega a su turno: la barra vuelve a esta fracción.
   final double steadyGauge;
+
+  /// Cura de un blanco lanzada a un enemigo con `healHarm` (bestiary.md
+  /// § 1.4): × este factor sobre cura × `healHarm`.
+  final double healFoeMult;
 
   /// Multiplicador del umbral por tamaño del grupo.
   double groupBreak(int players) =>

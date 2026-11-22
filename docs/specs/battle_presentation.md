@@ -1148,7 +1148,13 @@ el turno propio (co-op: cada uno ve sus comandos):
    terminan tu turno" y las Instante; Defender es la tecla `2`) ·
    HABILIDADES (técnicas que terminan el turno, con la cantidad) · DÚOS
    (si hay) · ULTIMATE (gris hasta el 100 %, con el %) · OBJETOS (las dos
-   pociones; elegir una abre "¿A quién le das...?" con el grupo) ·
+   pociones; elegir una abre "¿A quién le das...?" con el grupo;
+   v0.20.14: una cura con un no muerto o espectro vivo abre "¿A quién
+   lanzas <cura>?" con "Al más herido" / "Al grupo", los aliados (si es
+   de un blanco) y cada enemigo con `healHarm` con el daño previsto en
+   rojo y "Daño a no muertos: N" en el detalle; elegir un enemigo lo
+   resalta en la escena; los demás enemigos no aparecen; sin no muertos
+   la cura se lanza directo, sin `tg`; bestiary.md § 1.4.1) ·
    PASAR (v0.8.3, siempre la última: una acción "Pasar turno"
    con costo `próximo ×½` y la descripción "Terminás el turno sin actuar;
    tu próximo turno llega antes..."; combat.md § "Pasar turno"). Vale

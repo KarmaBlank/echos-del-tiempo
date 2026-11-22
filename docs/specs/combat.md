@@ -448,6 +448,15 @@ Carga de ULT por acción (no al usar el ULT):
 con `base_acción` = 8 en curación, regen y Protección, 6 en Fortaleza, 0
 en el resto. `daño_total` no cuenta el daño que sobra al matar.
 
+### Objetivo de las curas (v0.20.14)
+
+`SkillCommand.targetId` de una cura (`SkillKind.heal` sin revivir): un
+enemigo vivo con `healHarm > 0` → daño Sagrado solo a él
+(bestiary.md § 1.4.1); un aliado vivo (solo curas de un blanco) → lo
+cura a él; cualquier otro valor o `null` → como siempre (más herido o
+grupo). El host lo valida; el cliente no manda el enemigo apuntado en
+las curas.
+
 ## Acciones enemigas (`BattleEngine.enemyTurn`)
 
 - Objetivo: el primer aliado vivo con Provocar (y le resta 1); si no hay,
