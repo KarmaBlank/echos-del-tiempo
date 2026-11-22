@@ -462,3 +462,70 @@ En la UI:
 - Armería (COMPRAR): las bases recomendadas llevan **»** en la fila y el
   detalle "» Recomendada para tu build: motivos". Sin plan también
   recomienda (por arma equipada, árbol y atributos).
+
+### 9.4 Consejo de arma (`advice(plan, profile, stash, shop) → WeaponAdvice`) (v0.20.10)
+
+Pedido del dueño: "cuesta saber qué arma le sirve a mi build". Al elegir
+o mirar una plantilla el builder dice, en 4 líneas:
+
+1. **Tipo ideal** (`idealTypes`, `idealAttribute`, `idealReason`): si el
+   plan tiene base, el tipo de la primera ("Base de tu plan: X · usa
+   FUE"); si tiene tipo, ese ("Tipo de tu plan"); si no, por cada tipo
+   permitido a la clase la base cuya afinidad (§ 9.1) más se parece a
+   lo que pide el plan (habilidades, pasiva, base) + el árbol (tomado y
+   planificado). Gana el de mayor solape; empate: el tipo equipado,
+   después alfabético. Se listan hasta 2 tipos a menos de `typeTie` del
+   primero. Atributo: la meta de atributo más alta del plan o, sin ella,
+   el de mayor coeficiente de la fórmula de daño. Sin plan ni árbol: "Sin
+   plan: el tipo que usás".
+2. **Mejor que tenés** (`best`): un solo ranking (§ 9.3) con inventario +
+   alijo + armería (así los puntajes se comparan). Valor de un arma tuya
+   = puntaje + `forgeWeight` × 0.12 × niveles de POT forjados. Solo las
+   que cumplen requisitos si alguna los cumple. Empate: la equipada,
+   después el uid. Marca si ya está equipada.
+3. **Mejor para mejorar** (`upgrade`, `ForgeProjection`): para cada arma
+   tuya que cumple requisitos, se proyectan **todos los niveles que le
+   quedan hasta su tope de forja** (`ItemRules.forgeCapOf`: rareza y
+   nivel de objeto), todos en POT (tope 5 por estadística). Elegido así
+   porque es lo que se ve en la forja y es determinista; CRÍT y VEL no se
+   proyectan. Costo = Σ `CraftRules.forgeCost` de esos niveles. Se
+   muestra si su valor proyectado le gana a la mejor por al menos
+   `upgradeMinGain`. Empate: más barata, después uid.
+4. **Para comprar** (`buy`): la primera base de la armería (las de tu
+   familia con precio, sin las que ya tenés) que cumple requisitos y le
+   gana a la mejor por `buyMinGain`.
+
+Pesos en `kTuning['buildGuide']`: `forgeWeight`, `upgradeMinGain`,
+`buyMinGain`, `typeTie`, `howToNames`.
+
+UI (`WeaponAdviceBlock`): arriba de la tarjeta Arma y mods de BUILD y en
+la vista de plantilla (columna ARMA, con el tipo elegido del plan
+actual). Tooltip con todos los motivos. Botones en su propia fila:
+EQUIPAR (si la mejor no está equipada ni en el alijo; gris con motivo si
+la guardia no deja), IR A FORJA / IR A LA ARMERÍA solo si quien monta la
+vista pasa el callback (hoy el panel de personaje no navega a la forja
+ni a la armería, así que no se muestran).
+
+### 9.5 Tipo elegido y "Cómo armarlo" (v0.20.10)
+
+En Mundo cualquier clase usa cualquier tipo. "Quiero usar: ‹ TIPO ›"
+elige entre IDEAL (el de 9.4) y todos los tipos del catálogo. Se guarda
+en el plan: `BuildPlan.chosenType` (JSON `wantType`, aditivo: planes
+viejos lo leen como `null`; no es meta, no suma a `goalCount`; local, no
+viaja en `BuildWants`, el protocolo no cambia). Un tipo desconocido se
+ignora.
+
+Con tipo elegido, las líneas 2-4 se filtran a ese tipo y la armería mira
+las bases de ese tipo de **cualquier** familia. Con IDEAL no se filtra.
+
+`howTo(plan, profile, type)` (`WeaponAdvice.howTo`) para el tipo vigente:
+- "Subí FUE y DES": los 2 atributos con más coeficiente sumado en las
+  fórmulas de daño de las bases del tipo;
+- "Te sirven del árbol: A, B, C": nodos del plan o tomados cuya afinidad
+  solapa con la del tipo (suma de `weaponAffinity` de sus bases), de
+  mayor a menor;
+- "No rinden con ARCO: X": notables / keystones sin solape que tienen
+  etiquetas ofensivas (daño, crítico, estados, disparadores); las
+  defensivas sirven con cualquier arma y no se listan;
+- "Suele traer: X, Y": las habilidades más repetidas entre sus bases.
+Como mucho `howToNames` nombres por línea.

@@ -102,6 +102,12 @@ const Map<String, TuningDef> kTuningDefaults = {
     'powerWeight': 1.5,
     'reqPenalty': 0.6,
     'recommendTop': 3,
+    // § 9.4 Consejo de arma.
+    'forgeWeight': 4,
+    'upgradeMinGain': 0.2,
+    'buyMinGain': 0.2,
+    'typeTie': 0.25,
+    'howToNames': 3,
   }),
   // loot.md § 17.6: precios de la tienda y Éter en cofres; combat.md §
   // "Revivir y el árbol": sinergia de revivir con el árbol.
