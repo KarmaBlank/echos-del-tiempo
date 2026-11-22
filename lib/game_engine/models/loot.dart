@@ -117,6 +117,7 @@ class GroundLoot {
     required this.y,
     this.ownerId,
     this.floor = 0,
+    this.byId,
   });
 
   final int id;
@@ -124,6 +125,13 @@ class GroundLoot {
   final double x, y;
   final String? ownerId;
   final int floor;
+
+  /// Quién lo soltó (loot compartido): al cerrarse el mapa vuelve a su
+  /// alijo si no lo levantó nadie (loot.md § 4b).
+  final String? byId;
+
+  /// A quién vuelve si nadie lo levanta: el dueño o quien lo soltó.
+  String? get recoverTo => ownerId ?? byId;
 
   bool visibleTo(String playerId) => ownerId == null || ownerId == playerId;
 }

@@ -132,6 +132,8 @@ class SessionJson {
         if (g.ownerId != null) 'own': g.ownerId,
         // v0.5.1: piso de la misión donde cayó (opcional; 0 si falta).
         if (g.floor != 0) 'f': g.floor,
+        // v0.20.11 (protocolo 33): quién soltó el loot compartido.
+        if (g.byId != null) 'by': g.byId,
       };
 
   GroundLoot groundFromJson(Json j) => GroundLoot(
@@ -142,6 +144,7 @@ class SessionJson {
         y: j.dbl('y'),
         ownerId: j.strOrNull('own'),
         floor: j.intOrNull('f') ?? 0,
+        byId: j.strOrNull('by'),
       );
 
   static T? _opt<T>(Json? j, T Function(Json) f) => j == null ? null : f(j);

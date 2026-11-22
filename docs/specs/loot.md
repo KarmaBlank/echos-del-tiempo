@@ -150,6 +150,52 @@ donde cada miembro carga lo suyo y se lo puede pasar a otro:
 - Ver el inventario de un compañero es solo lectura: no se le puede
   sacar nada.
 
+### 4b.1 Nada propio se pierde (v0.20.11, protocolo 33)
+
+Bug corregido: un Legendario de jefe con el inventario lleno caía al
+piso; la misión terminaba, se volvía al pueblo y el piso se vaciaba con
+el arma adentro. Regla: **un jugador nunca pierde loot que era suyo**.
+
+- Al cerrarse el mapa (empezar misión / Eco / Prueba / Abismo desde el
+  pueblo, volver al pueblo al terminar o abandonar), antes de vaciar el
+  piso, el host recorre **todos los pisos** (`SessionEngine._recoverGround`):
+  - lo **propio** (`GroundLoot.ownerId`) que el filtro del dueño muestra
+    vuelve a ese jugador;
+  - lo **compartido** que alguien soltó (`GroundLoot.byId`, quién lo
+    soltó) y nadie levantó vuelve a quien lo soltó;
+  - lo oculto por el filtro del dueño (el jugador eligió no verlo) y lo
+    de alguien que ya no está en la sala se descarta, como antes.
+- Cambiar de piso por la escalera no pierde nada: cada objeto queda en su
+  piso (§ 14.1) y lo que quede se recupera al cerrarse el mapa.
+- Si el piso llega a su tope (80), el objeto más viejo sale y, si era de
+  alguien, también vuelve a él.
+- "Vuelve" = confirmación del host `rec:N` en `SessionPlayer.stashAcks`
+  (`StashAck.recoverPrefix`, `put: true`, las piezas): viaja en el
+  snapshot (`sk`) como las del alijo en partida (characters.md § 3.2).
+  El dispositivo que controla a ese jugador (él mismo, o el líder de un
+  compañero, solo_party.md) la guarda en **su** alijo de cuenta
+  (`StashRules.recover`): al alijo si entra (pestaña según el tipo); si
+  no, a **Objetos sin recoger**. Aviso local por pieza: `<objeto> se
+  guardó en el alijo` / `… en Objetos sin recoger`. Un arma o Eco cuyo
+  uid ya está en el alijo o en la caja no se duplica.
+- Desconexión / salir de la sala / cerrar el juego: el dispositivo que
+  sale guarda en su cuenta lo suyo que estaba en el piso según el último
+  estado (`SessionController._recoverLocalGround`); el host, al ver la
+  salida, saca ese loot del piso (`removePlayer`), así no queda doble.
+- Travesía: no hay alijo ni piso (las acciones de piso están cerradas,
+  `runGate`); `_recover` no hace nada con una run activa y la entrega de
+  recompensas de la run no cambia.
+
+### 4b.2 Objetos sin recoger
+
+Caja por cuenta (`Stash.unclaimed`, JSON aditivo `uncl` dentro del
+alijo: un alijo viejo sin el campo carga con la caja vacía). Sin tope.
+Se ve en el ALIJO (en partida y fuera de ella) debajo del tablero, solo
+si tiene algo, con el título `OBJETOS SIN RECOGER` y la cantidad. Cada
+fila: `TOMAR` (al inventario; en partida pasa por el host como
+`stashTake`, entera o, un material, lo que entre) y `DESCARTAR`
+(solo local). Con una operación en curso los botones quedan grises.
+
 ## 5. Crafteo
 
 Tres materiales que también caen como loot.
@@ -811,8 +857,9 @@ que el filtro del dueño muestra; lo oculto y lo que no entra queda en el
 piso con dueño. El arma de fin de misión siempre va al inventario. El
 suelo se vacía al cambiar de mapa (empezar misión / volver al pueblo);
 dentro de una misión de varios pisos cada objeto queda en su piso
-(§ 14.1). Tope 80 objetos en total, sumando todos los pisos: se pierden
-los más viejos. Eventos: `LootDropEvent`, `LootPickedEvent`; se siguen
+(§ 14.1). Tope 80 objetos en total, sumando todos los pisos: salen los
+más viejos. Desde v0.20.11 lo propio que queda en el piso al cerrarse el
+mapa (o al salir por el tope) vuelve al alijo del dueño (§ 4b.1). Eventos: `LootDropEvent`, `LootPickedEvent`; se siguen
 emitiendo `WeaponDropEvent` (élite y fin de misión) y
 `ChestOpenedEvent.weaponId` con la base, y `MissionResult.drops` /
 `eliteDrops` guardan la base de la primera arma.
@@ -833,6 +880,18 @@ piso y todo eso viajaba en cada snapshot (más ping).
   queda en el piso para otro. Dar materiales (`give`) sigue rechazándose
   si el otro no tiene lugar.
 - Pociones y éter no cambian.
+
+### 14.3 Botín valioso con el inventario lleno (v0.20.11)
+
+- Un arma o Eco **Épico o Legendario** de un **jefe o un élite**
+  (`LootSource.boss` / `elite`) que no entra en el inventario no cae al
+  piso: va directo al alijo (§ 4b.1). Mensaje: `X obtuvo: … (inventario
+  lleno: <objeto> se guardó en el alijo)`; el dispositivo del dueño avisa
+  si terminó en Objetos sin recoger.
+- Lo demás que no entra sigue cayendo al piso con dueño (`inventario
+  lleno: quedó en el piso`) y se recupera al cerrarse el mapa (§ 4b.1).
+- Materiales al tope: sin cambios (§ 14.2, lo que sobra se descarta y el
+  mensaje lo dice).
 
 ### 14.1 Loot por piso (v0.5.1)
 

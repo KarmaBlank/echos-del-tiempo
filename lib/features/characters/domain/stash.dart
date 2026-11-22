@@ -57,10 +57,18 @@ class StashEntry {
 /// Alijo compartido por los personajes de la cuenta: [tabs] pestañas de
 /// [columns] × [rows]. Inmutable. Ver docs/specs/characters.md § 3.
 class Stash {
-  Stash._(this.cells);
+  Stash._(this.cells, [List<StashEntry> unclaimed = const []])
+      : unclaimed = List.unmodifiable(unclaimed);
 
   factory Stash.empty() =>
       Stash._(List.unmodifiable(List<StashEntry?>.filled(size, null)));
+
+  /// Objetos sin recoger (loot.md § 4b): lo propio que quedó en el piso o
+  /// no entró en el inventario y tampoco en el alijo. Sin tope: nada que
+  /// era de un jugador se pierde. Lo más nuevo, al final.
+  final List<StashEntry> unclaimed;
+
+  Stash withUnclaimed(List<StashEntry> next) => Stash._(cells, next);
 
   /// 2 pestañas generales + la de ECOS (characters.md § 3.1).
   static const tabs = 3;
@@ -128,7 +136,7 @@ class Stash {
   Stash put(int i, StashEntry? e) {
     final next = [...cells];
     next[i] = e;
-    return Stash._(List.unmodifiable(next));
+    return Stash._(List.unmodifiable(next), unclaimed);
   }
 
   Map<String, Object?> toJson() => {
@@ -136,6 +144,9 @@ class Stash {
           for (var i = 0; i < size; i++)
             if (cells[i] case final c?) {'i': i, ...c.toJson()},
         ],
+        // v0.20.11: Objetos sin recoger (opcional; vacío si falta).
+        if (unclaimed.isNotEmpty)
+          'uncl': [for (final e in unclaimed) e.toJson()],
       };
 
   /// Lectura tolerante: casillas fuera de rango, repetidas o inválidas se
@@ -164,7 +175,16 @@ class Stash {
         out[idx] = e;
       }
     }
-    return Stash._(List.unmodifiable(out));
+    final box = <StashEntry>[];
+    final rawBox = raw is Map ? raw['uncl'] : null;
+    if (rawBox is List) {
+      for (final r in rawBox) {
+        if (r is! Map) continue;
+        final e = StashEntry.fromJson(r, rules);
+        if (e != null) box.add(e);
+      }
+    }
+    return Stash._(List.unmodifiable(out), box);
   }
 }
 
@@ -402,6 +422,96 @@ class StashRules {
     if (m == null || e.material != m || e.count < d.count) return null;
     final left = e.count - d.count;
     return s.put(cell, left > 0 ? StashEntry.material(m, left) : null);
+  }
+
+  /// Guarda [d] (loot recuperado): al alijo si entra; si no, a Objetos
+  /// sin recoger. Un arma o Eco que ya está (mismo uid) no se duplica.
+  /// [toBox] dice dónde quedó.
+  static ({Stash stash, bool toBox}) recover(Stash s, LootDrop d,
+      {int tab = 0}) {
+    final uid = d.item?.uid ?? d.eco?.uid;
+    if (uid != null && _has(s, uid)) return (stash: s, toBox: false);
+    final at = store(s, d, tab: tab);
+    if (at != null) return (stash: at, toBox: false);
+    final StashEntry? e = d.item != null
+        ? StashEntry.item(d.item!)
+        : d.eco != null
+            ? StashEntry.eco(d.eco!)
+            : d.stack?.material != null
+                ? StashEntry.material(d.stack!.material!, d.count)
+                : null;
+    if (e == null) return (stash: s, toBox: false);
+    return (stash: s.withUnclaimed([...s.unclaimed, e]), toBox: true);
+  }
+
+  static bool _has(Stash s, String uid) => [...s.cells, ...s.unclaimed]
+      .any((c) => c != null && (c.item?.uid == uid || c.eco?.uid == uid));
+
+  /// Lo de la posición [i] de Objetos sin recoger como [LootDrop].
+  static LootDrop? unclaimedDrop(Stash s, int i) {
+    if (i < 0 || i >= s.unclaimed.length) return null;
+    final e = s.unclaimed[i];
+    if (e.item != null) return LootDrop.item(e.item!);
+    if (e.eco != null) return LootDrop.eco(e.eco!);
+    return LootDrop.stack(StackKind.of(e.material!), e.count);
+  }
+
+  /// Saca la posición [i] de Objetos sin recoger (TOMAR ya confirmado o
+  /// DESCARTAR). `null` si no existe.
+  static Stash? dropUnclaimed(Stash s, int i) {
+    if (i < 0 || i >= s.unclaimed.length) return null;
+    return s.withUnclaimed([...s.unclaimed]..removeAt(i));
+  }
+
+  /// Saca de Objetos sin recoger lo que el host confirmó de un TOMAR
+  /// ([d], pedido de la posición [i]). `null` si ya no está.
+  static Stash? untakeBox(Stash s, int i, LootDrop d) {
+    final uid = d.item?.uid ?? d.eco?.uid;
+    if (uid != null) {
+      final at = s.unclaimed
+          .indexWhere((e) => e.item?.uid == uid || e.eco?.uid == uid);
+      return at < 0 ? null : dropUnclaimed(s, at);
+    }
+    final m = d.stack?.material;
+    if (m == null || i < 0 || i >= s.unclaimed.length) return null;
+    final e = s.unclaimed[i];
+    if (e.material != m || e.count < d.count) return null;
+    final box = [...s.unclaimed];
+    if (e.count > d.count) {
+      box[i] = StashEntry.material(m, e.count - d.count);
+    } else {
+      box.removeAt(i);
+    }
+    return s.withUnclaimed(box);
+  }
+
+  /// TOMAR: la posición [i] de Objetos sin recoger al inventario (entera;
+  /// un material, lo que entre y el resto queda).
+  StashMove claim(PlayerProfile p, Stash s, int i) {
+    final d = unclaimedDrop(s, i);
+    if (d == null) return const StashMove.error('No está');
+    if (d.stack != null) {
+      final st = d.stack!;
+      final n = math.min(
+          d.count, InventoryRules.stackMax(st) - InventoryRules.stackCount(p, st));
+      if (n <= 0) return StashMove.error('Máximo ${InventoryRules.stackMax(st)}');
+      final take = LootDrop.stack(st, n);
+      final next = InventoryRules.receive(p, take, markNew: false);
+      if (next == null) return const StashMove.error('Inventario lleno');
+      final left = d.count - n;
+      final box = [...s.unclaimed];
+      if (left > 0) {
+        box[i] = StashEntry.material(st.material!, left);
+      } else {
+        box.removeAt(i);
+      }
+      return StashMove(next, s.withUnclaimed(box), drop: take);
+    }
+    final why = InventoryRules.cannotReceive(p, d);
+    if (why != null) return StashMove.error(why);
+    return StashMove(InventoryRules.receive(p, d, markNew: false)!,
+        dropUnclaimed(s, i)!,
+        drop: d);
   }
 
   /// Cambia de lugar dos casillas del alijo. `null` si no se puede (la
