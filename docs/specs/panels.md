@@ -249,8 +249,8 @@ instancias (`ItemInstance`, por `uid`) y ya no filtra por clase. Lo que
 sigue reemplaza a las subsecciones viejas de COMPRAR, FORJA y FUSIÓN
 donde difieren (esas quedan como referencia del prototipo).
 
-- **COMPRAR** (`Armas base por nivel; cualquier clase las equipa si
-  cumple los requisitos.`): selector `Familia ‹ GUERRERO ›`
+- **COMPRAR** (`Armas base para cualquier clase.`; v0.20.21: buscador
+  y equipada fija, ui_minimal.md § 3): selector `Familia ‹ GUERRERO ›`
   (`ChoiceCycler`, `buy-family-prev` / `-next` / `-value`: TODAS / una
   por clase; por defecto la tuya), bases con precio > 0 ordenadas por
   nivel (`shop-row-<id>`, `MenuRow` de una línea): nombre y tipo (`dim`)
@@ -446,8 +446,8 @@ elegir". Mismo asistente de 3 pasos y mismas reglas / motivos
 (`ShopGuards`); cambia la presentación (ui_style.md § "Menús: lista +
 detalle"). Donde difiere de la sección v0.2.0, manda esta:
 
-- **Arriba**: la línea de la pestaña (`Elige arma, acción y confirma: ves
-  el resultado antes de pagar.`) y en una fila las migas
+- **Arriba**: la línea de la pestaña (`Destino, acción, vista previa,
+  confirmar.`; v0.20.21, ui_minimal.md § 4) y en una fila las migas
   (`StepCrumbs`, `bench-crumb-<0|1|2>`) con los materiales a la derecha
   (`Esquirla x2 · Cristal x1 · Prisma x0 · Ancla x0`, `craft-materials`,
   tooltip igual). Sin líneas `Paso N de 3`. El arma y la acción elegidas
@@ -658,6 +658,13 @@ Cambios v0.11 (sistema de diseño, design_system.md § 10):
   dorado. Sin negritas.
 - LIMPIAR INVENTARIO: `DsSectionHeader`, `DESARMAR` / `VENDER` (qué se
   recibe en el tooltip); el plegable "Cómo funciona" pasó al "?".
+
+Cambios v0.20.21 (ui_minimal.md § 5): `LIMPIAR ▼` es un `DsMenuButton`
+(`inv-clean`, menú `inv-clean-menu`) y el único lugar de las acciones en
+lote: `Elegir a mano` y `Desarmar / Vender Comunes / Mágicos / Raros (N)`
+(gris sin armas). Elegir abre la confirmación al costado, sin selector
+de modo ni de rareza repetido. Ya no hay caja de LIMPIAR debajo de la
+grilla (`inv.clean_menu`).
 
 Cambios v0.9.13 (pedido del dueño):
 - Ficha del mouse de un arma no equipada (`HoverCompareCard`): una sola

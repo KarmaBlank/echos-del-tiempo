@@ -52,7 +52,7 @@ void main() {
         build: (v, c) => ArmoryPanel(view: v, controller: c));
     PlayerProfile me() => c.view!.me!.profile;
     expect(find.text('ARMERIA'), findsOneWidget);
-    expect(find.textContaining('cualquier clase las equipa'),
+    expect(find.textContaining('Armas base para cualquier clase'),
         findsOneWidget);
 
     // COMPRAR: por defecto la familia propia; comprar la Ígnea ($300).
@@ -78,7 +78,10 @@ void main() {
     await tapVisible(tester, find.byKey(ValueKey('forge-row-$uid')));
     await tapVisible(tester, find.byKey(ValueKey('equip-$uid')));
     expect(me().equippedUid, uid);
+    expect(button(tester, 'forge-confirm').reason, 'Elegí una mejora');
     await tapVisible(tester, find.byKey(ValueKey('up-$uid-pow')));
+    expect(me().itemByUid(uid)!.forge.level(UpgradeStat.pow), 0);
+    await tapVisible(tester, find.byKey(const ValueKey('forge-confirm')));
     expect(me().itemByUid(uid)!.forge.level(UpgradeStat.pow), 1);
     expect(me().credits,
         700 - CraftRules.forgeCost(progression.catalog.weapons['espada_ignea']!, Rarity.comun, 0));

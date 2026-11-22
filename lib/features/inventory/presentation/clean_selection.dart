@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/theme/panel_frame.dart';
+import '../../../app/design/design.dart';
+
 import '../../../app/theme/panel_widgets.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
@@ -129,31 +130,6 @@ class CleanCellMark extends StatelessWidget {
   }
 }
 
-/// `POR RAREZA` / `ELEGIR A MANO` del limpiador.
-class CleanModeToggle extends StatelessWidget {
-  const CleanModeToggle(
-      {super.key, required this.pick, required this.onChanged});
-
-  final bool pick;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        children: [
-          PanelButton('POR RAREZA',
-              key: const ValueKey('inv-clean-mode-rarity'),
-              selected: !pick,
-              onPressed: () => onChanged(false)),
-          PanelButton('ELEGIR A MANO',
-              key: const ValueKey('inv-clean-mode-pick'),
-              selected: pick,
-              onPressed: () => onChanged(true)),
-        ],
-      );
-}
-
 /// El detalle de LIMPIAR INVENTARIO en modo ELEGIR A MANO: verbo,
 /// atajos por rareza, `Elegidas: N`, el resumen (vista previa del motor),
 /// la lista `Se destruyen:` y `DESARMAR / VENDER N SELECCIONADAS`.
@@ -170,7 +146,6 @@ class CleanSelectionPanel extends StatelessWidget {
     required this.onClear,
     required this.onConfirm,
     required this.onCancel,
-    this.onMode,
   });
 
   final ProgressionRules rules;
@@ -185,9 +160,6 @@ class CleanSelectionPanel extends StatelessWidget {
   final VoidCallback onClear;
   final ValueChanged<CraftAction> onConfirm;
   final VoidCallback onCancel;
-
-  /// Cambiar a POR RAREZA (`null` = sin el selector de modo).
-  final ValueChanged<bool>? onMode;
 
   CraftAction get action => CraftAction.selected(
       sell ? CraftOp.sellSelected : CraftOp.salvageSelected, picked);
@@ -208,56 +180,58 @@ class CleanSelectionPanel extends StatelessWidget {
             'Toca armas de la grilla (o Espacio) para elegirlas.')
         : 'Vas a $verb ${protoColor(ProtoColors.gold, '$n arma${n == 1 ? '' : 's'}')} → '
             '${protoColor(ProtoColors.green, protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes)))}';
+    final block = n == 0 ? 'Elegí armas' : guards.craft(p, a);
     return PanelDetail(
       footer: [
-        PanelButton('CANCELAR',
-            key: const ValueKey('inv-clean-cancel'), onPressed: onCancel),
-        PanelButton(
+        DsButton('CANCELAR',
+            key: const ValueKey('inv-clean-cancel'),
+            size: DsButtonSize.compact,
+            onPressed: onCancel),
+        DsButton(
             '${sell ? 'VENDER' : 'DESARMAR'} ${n == 0 ? '' : '$n '}'
             'SELECCIONADA${n == 1 ? '' : 'S'}',
             key: const ValueKey('inv-clean-confirm'),
-            accent: ProtoColors.red,
-            reason: n == 0 ? 'Elige armas' : guards.craft(p, a),
-            onPressed: () => onConfirm(a)),
+            size: DsButtonSize.compact,
+            accent: DsColors.danger,
+            tooltip: block,
+            onPressed: block != null ? null : () => onConfirm(a)),
       ],
       children: [
-        const Text('LIMPIAR INVENTARIO',
-            style: TextStyle(color: ProtoColors.gold)),
-        const SizedBox(height: 4),
-        if (onMode case final m?) ...[
-          CleanModeToggle(pick: true, onChanged: m),
-          const SizedBox(height: 6),
-        ],
-        ProtoText(protoColor(
-            ProtoColors.dim,
-            'Elige en la grilla las armas a destruir (clic o Espacio). La '
-            'equipada y tu última arma inicial tienen candado.')),
-        const SizedBox(height: 8),
-        Wrap(spacing: 6, runSpacing: 6, children: [
-          PanelButton('DESARMAR (materiales)',
+        const DsSectionHeader('LIMPIAR INVENTARIO'),
+        // Una línea; la regla del candado vive en el tooltip de la casilla.
+        Text('Marcá armas en la grilla.', style: DsText.detail()),
+        SizedBox(height: DsSpace.sm),
+        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+          DsButton('DESARMAR',
               key: const ValueKey('inv-clean-salvage'),
+              size: DsButtonSize.compact,
+              tooltip: 'Recibís materiales',
               selected: !sell,
               onPressed: () => onSell(false)),
-          PanelButton('VENDER (créditos)',
+          DsButton('VENDER',
               key: const ValueKey('inv-clean-sell'),
+              size: DsButtonSize.compact,
+              tooltip: 'Recibís créditos',
               selected: sell,
               onPressed: () => onSell(true)),
         ]),
-        const SizedBox(height: 6),
-        Wrap(spacing: 6, runSpacing: 6, children: [
+        SizedBox(height: DsSpace.xs),
+        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
           for (final rr in kCleanAddRarities)
-            PanelButton(
+            DsButton(
                 '+ ${rarityPlural(rr).toUpperCase()} '
                 '(${addableCount(rules, p, picked, rr)})',
                 key: ValueKey('inv-clean-add-${rr.name}'),
+                size: DsButtonSize.compact,
                 onPressed: addableCount(rules, p, picked, rr) == 0
                     ? null
                     : () => onAdd(rr)),
-          PanelButton('NINGUNA',
+          DsButton('NINGUNA',
               key: const ValueKey('inv-clean-none'),
+              size: DsButtonSize.compact,
               onPressed: n == 0 ? null : onClear),
         ]),
-        const SizedBox(height: 8),
+        SizedBox(height: DsSpace.sm),
         Text(retroText('Elegidas: $n'),
             key: const ValueKey('inv-clean-count'),
             style: const TextStyle(color: ProtoColors.sky)),

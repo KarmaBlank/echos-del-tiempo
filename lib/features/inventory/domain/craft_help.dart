@@ -112,13 +112,12 @@ class CraftHelp {
         'báculo) y se queda con lo que sirva.',
   };
 
-  /// Una línea por paso de las migas (1 ARMA / 2 ACCIÓN / 3 CONFIRMAR).
+  /// Una línea por paso de las migas (1 DESTINO / 2 ACCIÓN / 3 VISTA
+  /// PREVIA; ui_minimal.md § 4).
   static const steps = [
-    'Paso 1: elige el arma que quieres mejorar (la que recibe el cambio).',
-    'Paso 2: elige qué hacerle. Pasa el mouse por cada acción para ver '
-        'qué cambia, qué cuesta y qué pierdes.',
-    'Paso 3: elige los detalles (de qué arma, qué mod) y mira ANTES → '
-        'DESPUÉS. Nada se gasta hasta que confirmas.',
+    'Paso 1: el arma destino (la que recibe el cambio).',
+    'Paso 2: qué hacerle o qué traer, con su costo.',
+    'Paso 3: ANTES → DESPUÉS. Nada se gasta hasta CONFIRMAR.',
   ];
 
   // ------------------------------------------------------------------

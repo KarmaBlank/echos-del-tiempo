@@ -20,4 +20,3 @@ slots:
   - {id: inv.stacks, region: foot, order: 0}
   - {id: inv.summary, region: foot, order: 1}
   - {id: inv.selection, region: foot, order: 2}
-  - {id: inv.clean_menu, region: foot, order: 3}
