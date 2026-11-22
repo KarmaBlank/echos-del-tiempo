@@ -1,3 +1,4 @@
+﻿import 'dart:typed_data';
 import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
@@ -177,10 +178,30 @@ class MapFishingLayer {
           Paint()..color = FishingPalette.meter);
     }
     if (mine != null) {
-      barRect = g != null && g.phase == FishPhase.reel
-          ? _bar(c, Rect.fromLTWH(px + 12, py - 38, 6, 34), g)
-          : null;
+      if (g != null && g.phase == FishPhase.reel) {
+        // La barra va por encima de nombres y carteles: se dibuja al final,
+        // en drawOverlay, con la transformación del mundo guardada acá.
+        barRect = Rect.fromLTWH(px + 12, py - 38, 6, 34);
+        _overlay = (Float64List.fromList(c.getTransform()), barRect!, g);
+      } else {
+        barRect = null;
+        _overlay = null;
+      }
     }
+  }
+
+  (Float64List, Rect, FishingMinigame)? _overlay;
+
+  /// Dibuja la barra del minijuego por encima de todo (etiquetas incluidas).
+  /// [c] ya está en px del lienzo virtual (antes de la cámara).
+  void drawOverlay(Canvas c) {
+    final o = _overlay;
+    _overlay = null;
+    if (o == null) return;
+    c.save();
+    c.transform(o.$1);
+    _bar(c, o.$2, o.$3);
+    c.restore();
   }
 
   Rect _bar(Canvas c, Rect r, FishingMinigame g) {

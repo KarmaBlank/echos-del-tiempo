@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -511,6 +511,9 @@ class MapGame extends Game {
     canvas.clipRect(dst);
     paintMapLabels(canvas, labels, dst, vw.toDouble(), labelPen,
         backdrop: labelBackdrop);
+    canvas.translate(dst.left, dst.top);
+    canvas.scale(dst.width / vw, dst.height / vh);
+    fishing.drawOverlay(canvas);
     canvas.restore();
   }
 
