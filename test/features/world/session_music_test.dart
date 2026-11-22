@@ -30,6 +30,20 @@ void main() {
       expect(MusicSelector.trackFor(mode: SessionMode.result), Music.town);
     });
 
+    test('pescando en el pueblo suena la variante de ocarina', () {
+      expect(
+          MusicSelector.trackFor(
+              mode: SessionMode.lobby, inTown: true, fishing: true),
+          Music.fishing);
+      expect(
+          MusicSelector.trackFor(
+              mode: SessionMode.lobby, inTown: false, fishing: true),
+          Music.overworld);
+      expect(MusicSelector.trackFor(mode: SessionMode.prep, fishing: true),
+          Music.town);
+      expect(kMusicCatalog.containsKey(Music.fishing), isTrue);
+    });
+
     test('cada zona en el campo (y en la pausa de nivel)', () {
       for (var z = 1; z <= 10; z++) {
         expect(
