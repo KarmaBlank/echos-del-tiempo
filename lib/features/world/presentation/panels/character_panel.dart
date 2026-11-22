@@ -193,6 +193,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 rules: ref.watch(buildPlanRulesProvider),
                 profile: prof,
                 plan: ref.watch(buildPlanProvider).planFor(_slot),
+                onEquip: c.equip,
+                equipBlocked: (uid) =>
+                    ShopContext(view, c).guards.equip(prof, uid),
                 stash: stashWeapons(c.stash),
                 onTakeNode: view.session.battle == null ? c.takeNode : null,
                 onChanged: (p) {

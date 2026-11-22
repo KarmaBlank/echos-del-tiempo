@@ -24,6 +24,7 @@ import '../../passive_tree/presentation/passive_tree_view.dart';
 import '../data/template_files.dart';
 import 'build_fit_badge.dart';
 import 'template_view.dart';
+import 'weapon_advice_block.dart';
 import 'weapon_target_view.dart';
 
 /// Pantalla BUILD (docs/specs/build_planner.md § 4): progreso total,
@@ -41,6 +42,10 @@ class BuildPlannerView extends StatefulWidget {
     this.stash = const [],
     this.templateFiles = const FileSelectorTemplateFiles(),
     this.onTakeNode,
+    this.onEquip,
+    this.equipBlocked,
+    this.onOpenForge,
+    this.onOpenShop,
   });
 
   final BuildPlanRules rules;
@@ -60,6 +65,12 @@ class BuildPlannerView extends StatefulWidget {
 
   /// TOMAR SIGUIENTE DEL PLAN (solo en la sesión, con el árbol real).
   final ValueChanged<String>? onTakeNode;
+
+  /// Consejo de arma (build_planner.md § 9.4): sin callback, sin botón.
+  final ValueChanged<String>? onEquip;
+  final String? Function(String uid)? equipBlocked;
+  final ValueChanged<String>? onOpenForge;
+  final VoidCallback? onOpenShop;
 
   static const help = '<b>Build</b><br>'
       'Armá un plan para tu personaje: atributos, nodos del árbol, '
@@ -530,6 +541,20 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     ];
   }
 
+  /// Consejo de arma (build_planner.md § 9.4), arriba de la tarjeta.
+  Widget _weaponAdvice() => WeaponAdviceBlock(
+        advice: _guide.advice(_plan, _p, stash: widget.stash),
+        nameOf: _rules.progression.items.displayName,
+        stashUids: {for (final s in widget.stash) s.uid},
+        onEquip: widget.onEquip,
+        equipBlocked: widget.equipBlocked,
+        onOpenForge: widget.onOpenForge,
+        onOpenShop: widget.onOpenShop,
+        onChooseType: _editable
+            ? (t) => _set(_plan.copyWith(chosenType: () => t))
+            : null,
+      );
+
   /// TOMAR SIGUIENTE DEL PLAN (build_planner_v2.md § 3).
   Widget? _takeNext() {
     final take = widget.onTakeNode;
@@ -716,6 +741,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
       BuildSection.weapon,
       progress,
       [
+        _weaponAdvice(),
         _targets(),
         ..._weaponPicks(),
         for (final g in progress.section(BuildSection.weapon))
