@@ -200,9 +200,7 @@ const kTierHelp = '<b>Tiers de los mods</b><br>'
     'Cada mod tiene un tier: <b>T1</b> es el mejor (valores más altos) y '
     '<b>T5</b> el más bajo. Los tiers altos solo salen en armas de nivel '
     'alto (T4 desde nivel 10 … T1 desde nivel 40).<br>'
-    '<span class="k">(único)</span> = mod fijo de un legendario.<br>'
-    'Cada rareza tiene lugar para N mods: la mitad ofensivos (prefijos) y '
-    'la mitad de atributos o defensa (sufijos).';
+    '<span class="k">(único)</span> = mod fijo de un legendario.';
 
 /// Costo de una operación para la columna derecha del paso 2:
 /// `₵300 + 1 Cristal` (`Gratis` si no gasta nada).
@@ -477,7 +475,7 @@ class _CraftBenchState extends State<CraftBench> {
     return switch (op) {
       CraftOp.transferAffix => [
           for (final a in source?.affixes ?? const <AffixRoll>[])
-            affixMarkup(rules, a, on: target),
+            _sideTagged(a, affixMarkup(rules, a, on: target)),
         ],
       CraftOp.transferSkill => [
           for (final id in source == null
@@ -486,10 +484,29 @@ class _CraftBenchState extends State<CraftBench> {
             protoEsc(skillName(rules, id)),
         ],
       CraftOp.removeAffix => [
-          for (final a in target.affixes) affixMarkup(rules, a, on: target),
+          for (final a in target.affixes)
+            _sideTagged(a, affixMarkup(rules, a, on: target)),
         ],
       _ => const [],
     };
+  }
+
+  /// `PREFIJO · mod` / `SUFIJO · mod` (mismo nombre que en las fichas).
+  String _sideTagged(AffixRoll a, String mod) {
+    final side = shop.rules.items.affixOf(a)?.slot;
+    if (side == null) return mod;
+    return '${protoColor(ProtoColors.sky, affixSideLabel(side))} '
+        '${protoColor(ProtoColors.dim, '·')} $mod';
+  }
+
+  /// Por qué el mod [i] de [sourceUid] no se puede traer a [target]
+  /// (`null` = se puede). Solo motivos del mod, no de costo.
+  String? _transferBlock(ItemInstance target, String? sourceUid, int i,
+      PlayerProfile p) {
+    final s = sourceUid == null ? null : p.itemByUid(sourceUid);
+    final a = s?.affixes.elementAtOrNull(i);
+    if (a == null) return null;
+    return shop.rules.crafting.transferAffixBlock(target, a);
   }
 
   /// Motivo corto para el paso 2 (con la elección por defecto).
@@ -1010,6 +1027,13 @@ class _CraftBenchState extends State<CraftBench> {
     final srcSkills =
         srcItem == null ? const <String>[] : rules.items.skillsOf(srcItem);
     final tipStats = shop.preview.withItem(p, target);
+    // Traer mod: los que no entran en esta arma, en gris.
+    final blocks = [
+      for (var i = 0; i < picks.length; i++)
+        op == CraftOp.transferAffix
+            ? _transferBlock(target, action.sourceUid, i, p)
+            : null
+    ];
     List<Widget> pickRows(
             {double indent = 0, List<Widget> afterSelected = const []}) =>
         [
@@ -1057,7 +1081,20 @@ class _CraftBenchState extends State<CraftBench> {
                   ),
                   child: ProtoText(skillTipMarkup(sk, stats: tipStats)),
                 ),
-            ] else
+            ] else if (blocks[i] case final why?)
+              // No se puede traer: gris; el motivo en tooltip salvo el
+              // obvio (ya lo tiene).
+              why == CraftRules.kAlreadyHasAffix
+                  ? row('craft-pick-$i', picks[i], i == action.index,
+                      () => _pick = i,
+                      indent: indent, dimmed: true)
+                  : RetroTooltip(
+                      key: ValueKey('craft-pick-why-$i'),
+                      message: protoEsc(why),
+                      child: row('craft-pick-$i', picks[i],
+                          i == action.index, () => _pick = i,
+                          indent: indent, dimmed: true))
+            else
               row('craft-pick-$i', picks[i], i == action.index, () => _pick = i,
                   indent: indent),
         ];
@@ -1536,10 +1573,10 @@ class _CraftBenchState extends State<CraftBench> {
         'Mods ${shown.modCount}/${shown.rarity.maxMods} '
             '${protoColor(ProtoColors.dim, '(lugar de un ${shown.rarity.label})')}',
         key: const ValueKey('craft-mods-title'),
-        extra: const RetroTooltip(
-          key: ValueKey('craft-tier-help'),
-          message: kTierHelp,
-          child: Text('[?]', style: TextStyle(color: ProtoColors.sky)),
+        extra: RetroTooltip(
+          key: const ValueKey('craft-tier-help'),
+          message: '$kTierHelp<br><br>${affixSidesHelp(shown.rarity)}',
+          child: const Text('[?]', style: TextStyle(color: ProtoColors.sky)),
         )));
     out.add(cmp(
         '',
@@ -1614,22 +1651,29 @@ class _CraftBenchState extends State<CraftBench> {
   String _modList(ItemInstance it) {
     final rules = shop.rules;
     if (it.affixes.isEmpty) return protoColor(ProtoColors.dim, '(sin mods)');
-    return [for (final a in it.affixes) '• ${affixMarkup(rules, a, on: it)}']
-        .join('<br>');
+    return affixGroupsMarkup(rules, it).join('<br>');
   }
 
-  /// Lista de mods después, con lo nuevo en verde y lo quitado en rojo.
+  /// Lista de mods después, agrupada por lado (prefijos / sufijos), con
+  /// lo nuevo en verde y lo quitado en rojo (en su grupo).
   String _diffMods(ItemInstance before, ItemInstance after) {
     final rules = shop.rules;
-    final lines = <String>[
+    final removed = [
       for (final a in before.affixes)
-        if (!after.affixes.contains(a))
-          '• ${protoColor(ProtoColors.red, '${protoEsc(rules.items.affixText(a, on: before))} (se quita)')}',
-      for (final a in after.affixes)
-        before.affixes.contains(a)
-            ? '• ${affixMarkup(rules, a, on: after)}'
-            : '• ${protoColor(ProtoColors.green, '<b>${protoEsc(rules.items.affixText(a, on: after))}</b> (nuevo)')}',
+        if (!after.affixes.contains(a)) a
     ];
+    // Los quitados se muestran en su grupo como si siguieran.
+    final shown = after.copyWith(affixes: [...after.affixes, ...removed]);
+    final lines = shown.affixes.isEmpty
+        ? const <String>[]
+        : affixGroupsMarkup(rules, shown, line: (a) {
+            if (removed.contains(a) && !after.affixes.contains(a)) {
+              return '• ${protoColor(ProtoColors.red, '${protoEsc(rules.items.affixText(a, on: before))} (se quita)')}';
+            }
+            return before.affixes.contains(a)
+                ? '• ${affixMarkup(rules, a, on: after)}'
+                : '• ${protoColor(ProtoColors.green, '${protoEsc(rules.items.affixText(a, on: after))} (nuevo)')}';
+          });
     return lines.isEmpty
         ? protoColor(ProtoColors.dim, '(sin mods)')
         : lines.join('<br>');

@@ -177,6 +177,30 @@ anterior; una caja se cierra cuando su widget sale del árbol
 `RetroHoverCard.dismissAll()` la cierra a mano (el menú contextual lo
 usa). Test: `test/app/retro_hover_card_test.dart`.
 
+### Tooltips anclados (v0.20.19)
+
+Una sola implementación para todo tooltip con caja: `RetroHoverCard`
+(`RetroTooltip` y `DsTooltip` la usan; `DsTooltip` sin marco propio,
+`frameless`, porque `DsTooltipCard` ya trae su caja). Reglas:
+
+- El lado se elige solo por la geometría del objetivo, nunca por el
+  alto de la caja: debajo si quedan al menos `_HoverLayout.minRoom`
+  (160 px) o si abajo hay más lugar que arriba; si no, arriba, pegada al
+  objetivo. Las de costado arrancan a la altura del objetivo (subidas
+  solo para dejar media pantalla de alto).
+- No se corre: si no entra, el alto máximo es el lugar de su lado y la
+  caja scrollea (rueda o barra). Desplegar `▸ Más detalle` la agranda
+  hacia el mismo lado y, si no entra, scrollea; nunca salta.
+- Las columnas de `RetroTipText` se calculan con el alto de la pantalla
+  entera, no con el lugar de su lado (así no se ensancha de golpe).
+- `RetroTooltip` y `DsTooltip` toman el mouse (`interactive`): pasar del
+  objetivo a la caja la deja abierta (`pinDelay`), y ahí se puede
+  scrollear y desplegar. Los atravesables de las grillas
+  (`pinOnClick`) siguen como abajo.
+- Quedan `Tooltip` de Flutter solo para frases de una línea (botones,
+  íconos); no tienen lugar para crecer.
+- Tests: `test/design/tooltip_anchor_test.dart`.
+
 ### Tooltips cortos con detalle desplegable (v0.9.7)
 
 - v0.9.13 (inventario, `RetroHoverCard(pinOnClick: true, hint: ...)`):

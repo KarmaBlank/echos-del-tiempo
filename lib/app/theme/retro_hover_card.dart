@@ -42,7 +42,12 @@ class RetroHoverCard extends StatefulWidget {
     this.keyboardFocus = false,
     this.pinOnClick = false,
     this.hint,
+    this.frameless = false,
   });
+
+  /// Sin la caja del `#tip`: [builder] trae su propia tarjeta (p. ej.
+  /// `DsTooltipCard`), que scrollea en el alto que le toca.
+  final bool frameless;
 
   /// Tooltip atravesable (v0.9.13, ui_style.md § "Tooltips cortos"): no
   /// toma el mouse (pasar a otra casilla, aunque la caja la tape, cambia
@@ -473,7 +478,21 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
     );
   }
 
-  Widget _box(BuildContext ctx) => Container(
+  double _columnsBound(BuildContext ctx, double room) {
+    final screen = MediaQuery.sizeOf(ctx).height -
+        2 * widget.margin -
+        RetroHoverCard.padding.vertical -
+        2 * UiTheme.buttonBorderWidth;
+    return screen > room ? screen : room;
+  }
+
+  Widget _box(BuildContext ctx) => widget.frameless
+      ? KeyedSubtree(
+          key: _boxKey,
+          child: DefaultTextStyle(
+              style: RetroHoverCard.textStyle,
+              child: Builder(builder: widget.builder)))
+      : Container(
         key: _boxKey,
         padding: RetroHoverCard.padding,
         decoration: BoxDecoration(
@@ -505,7 +524,9 @@ class _RetroHoverCardState extends State<RetroHoverCard> {
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: c.maxWidth),
                   child: RetroTipBounds(
-                    maxHeight: c.maxHeight,
+                    // Columnas solo si no entra en la pantalla entera;
+                    // si no entra en el lugar de su lado, scrollea.
+                    maxHeight: _columnsBound(ctx, c.maxHeight),
                     child: widget.hint == null
                         ? Builder(builder: widget.builder)
                         // La ayuda corta en el ancho de la ficha: nunca
@@ -665,23 +686,50 @@ class _HoverLayout extends SingleChildLayoutDelegate {
 
   double _px(double v) => (v * dpr).roundToDouble() / dpr;
 
-  /// Debajo; si no entra, arriba si entra; si no, del lado con más lugar
-  /// (y se corre).
-  double _vertical(Size size, Size child) {
-    final below = target.bottom + gap;
-    if (below + child.height <= size.height - margin) return below;
-    final above = target.top - gap - child.height;
-    return above >= margin || target.top > size.height - target.bottom
-        ? above
-        : below;
+  /// Lugar mínimo (px lógicos) que tiene que haber debajo para quedarse
+  /// debajo aunque arriba haya más (ui_style.md § "Tooltips anclados").
+  static const minRoom = 160.0;
+
+  double _roomBelow(Size size) =>
+      (size.height - margin - (target.bottom + gap)).clamp(0, double.infinity);
+  double _roomAbove(Size size) =>
+      (target.top - gap - margin).clamp(0, double.infinity);
+
+  /// Lado vertical elegido solo por la geometría del objetivo (nunca por
+  /// el alto de la caja): crecer (▸ Ver más) no la hace saltar.
+  bool _goesBelow(Size size) {
+    final b = _roomBelow(size);
+    return b >= minRoom || b >= _roomAbove(size);
   }
 
+  /// Arriba de la caja de costado: a la altura del objetivo, subida solo
+  /// lo justo para dejar [minRoom] (o media pantalla) de alto; tampoco
+  /// depende del alto de la caja.
+  double _sideTop(Size size) {
+    final want = (size.height / 2).clamp(minRoom, double.infinity);
+    final maxTop = size.height - margin - want;
+    return target.top.clamp(margin, maxTop < margin ? margin : maxTop);
+  }
+
+  /// Anclada debajo (o arriba, pegada al objetivo): no se corre; si no
+  /// entra, el alto máximo es el lugar de ese lado y la caja scrollea.
+  double _vertical(Size size, Size child) => _goesBelow(size)
+      ? target.bottom + gap
+      : target.top - gap - child.height;
+
   @override
-  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
-      BoxConstraints.loose(Size(
-        (constraints.maxWidth - 2 * margin).clamp(0, double.infinity),
-        (constraints.maxHeight - 2 * margin).clamp(0, double.infinity),
-      ));
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
+    final size = constraints.biggest;
+    final h = beside || placement == RetroTipPlacement.side
+        ? size.height - margin - _sideTop(size)
+        : _goesBelow(size)
+            ? _roomBelow(size)
+            : _roomAbove(size);
+    return BoxConstraints.loose(Size(
+      (constraints.maxWidth - 2 * margin).clamp(0, double.infinity),
+      h.clamp(0, double.infinity),
+    ));
+  }
 
   @override
   Offset getPositionForChild(Size size, Size child) {
@@ -698,21 +746,11 @@ class _HoverLayout extends SingleChildLayoutDelegate {
       final fitsR = child.width <= roomR, fitsL = child.width <= roomL;
       if (fitsR || fitsL) {
         x = (fitsR && (roomR >= roomL || !fitsL)) ? right : left;
-        return Offset(_px(x), _px(target.top.clamp(margin, maxY)));
+        return Offset(_px(x), _px(_sideTop(size)));
       }
       // No entra a ningún costado: debajo o arriba, sin tapar la casilla.
       x = (target.center.dx - child.width / 2).clamp(margin, maxX);
-      final below = target.bottom + gap;
-      final above = target.top - gap - child.height;
-      y = below + child.height <= size.height - margin
-          ? below
-          : above >= margin
-              ? above
-              : (size.height - margin - below >= target.top - gap - margin
-                      ? below
-                      : above)
-                  .clamp(margin, maxY);
-      return Offset(_px(x), _px(y));
+      return Offset(_px(x), _px(_vertical(size, child).clamp(margin, maxY)));
     }
     switch (placement) {
       case RetroTipPlacement.side:
@@ -720,7 +758,7 @@ class _HoverLayout extends SingleChildLayoutDelegate {
         if (x + child.width > size.width - margin) {
           x = target.left - gap - child.width;
         }
-        y = target.top;
+        y = _sideTop(size);
         if (x < margin) {
           // No entra a ningún costado: debajo (o arriba) de la casilla.
           x = target.center.dx - child.width / 2;
