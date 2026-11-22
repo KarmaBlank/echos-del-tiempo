@@ -346,13 +346,13 @@ void main() {
       var s = _afterGrace(e, inField(e, 'm3'));
       s = _touch(e, s, 0); // ghost + ghost contra un guerrero nivel 1
       s = runBattle(e, s);
-      expect(s.mode, SessionMode.result);
+      expect(s.result, isNotNull);
       final r = s.result!;
       expect(r.success, isFalse);
       expect(r.rank, MissionRank.d);
       expect(r.kos, greaterThanOrEqualTo(1));
       expect(s.players['p0']!.hp, 1);
-      s = act(e, s, 'p0', const BackToLobbyAction());
+      s = backToLobby(e, s);
       expect(s.mode, SessionMode.lobby);
       expect(s.mission, isNull);
       expect(s.players['p0']!.hp, s.players['p0']!.maxHp);
@@ -366,7 +366,7 @@ void main() {
       s = _touch(e, s, boss.id);
       expect(s.battle!.boss, isTrue);
       s = runBattle(e, s, log: log);
-      expect(s.mode, SessionMode.result);
+      expect(s.result, isNotNull);
       final r = s.result!;
       expect(r.success, isTrue);
       expect(r.rank, MissionRank.s);
@@ -385,7 +385,10 @@ void main() {
       // Zona: el promedio del grupo (50) manda sobre la misión (1).
       expect(p.items.last.itemLevel, 50, reason: 'fin de misión: zona + 1, tope 50');
       expect(log.whereType<MissionEndedEvent>(), hasLength(1));
+      // v0.20.22: sin regreso automático; el grupo sigue en el área.
       s = wait(e, s, SessionEngine.resultSeconds + 0.1);
+      expect(s.victoryLap, isTrue);
+      s = backToLobby(e, s);
       expect(s.mode, SessionMode.lobby);
     });
 

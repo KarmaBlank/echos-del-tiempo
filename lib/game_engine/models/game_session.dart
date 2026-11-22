@@ -673,8 +673,12 @@ class GameSession {
     this.tutorial,
     this.tutorialRuns = 0,
     this.run,
+    Set<String>? leaveReady,
+    List<GroundLoot>? lostLoot,
   })  : players = players ?? LinkedHashMap(),
         ground = ground ?? [],
+        leaveReady = leaveReady ?? {},
+        lostLoot = lostLoot ?? [],
         atlas = List.unmodifiable(atlas ?? const <String>[]);
 
   SessionMode mode;
@@ -707,6 +711,19 @@ class GameSession {
 
   /// Contador para ids de [ground].
   int groundSeq;
+
+  /// Tras la victoria (v0.20.22, missions.md § "Fin de misión"): quién
+  /// tocó LISTO para volver al pueblo.
+  final Set<String> leaveReady;
+
+  /// Pozo Loot perdido de la sala (missions.md § "Loot perdido"): lo
+  /// que quedó en el piso al volver al pueblo. Lo toma cualquiera; se
+  /// vacía al empezar la próxima misión. Sin posición ni dueño.
+  final List<GroundLoot> lostLoot;
+
+  /// Se venció al jefe y el grupo sigue en el mapa juntando el botín
+  /// hasta que todos tocan LISTO.
+  bool get victoryLap => mode == SessionMode.field && result != null;
 
   /// Quién pausó la sala (`null` = corriendo). Mientras está pausada el
   /// host no avanza nada (docs/specs/settings.md § "Pausa"). Si ese
@@ -836,5 +853,7 @@ class GameSession {
         tutorial: tutorial?.copy(),
         tutorialRuns: tutorialRuns,
         run: run?.copy(),
+        leaveReady: {...leaveReady},
+        lostLoot: [...lostLoot],
       );
 }

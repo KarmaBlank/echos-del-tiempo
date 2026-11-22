@@ -183,13 +183,13 @@ void main() {
     final bj = const SessionJson().toJson(s);
     expect(const SessionJson().fromJson(asJson(jsonDecode(jsonEncode(bj)))).battle!.level, 5);
     log.clear();
-    s = runBattle(e, s, until: (x) => x.mode == SessionMode.result, log: log);
+    s = runBattle(e, s, until: (x) => x.result != null, log: log);
     for (var i = 0; i < 5 && s.mode == SessionMode.levelUp; i++) {
       s = act(e, s, 'p0',
           AllocateStatsAction({Attribute.vit: s.players['p0']!.profile.points}));
-      s = runBattle(e, s, until: (x) => x.mode == SessionMode.result, log: log);
+      s = runBattle(e, s, until: (x) => x.result != null, log: log);
     }
-    expect(s.mode, SessionMode.result);
+    expect(s.result, isNotNull);
     final r = s.result!;
     expect(r.success, isTrue);
     expect(r.zone, 1);
@@ -222,14 +222,14 @@ void main() {
     expect(s.mission!.floor, 1);
     s = wait(e, s, s.graceLeft + 0.1);
     s = moveTo(e, s, 'p0', boss.x, boss.y);
-    s = runBattle(e, s, until: (x) => x.mode == SessionMode.result);
+    s = runBattle(e, s, until: (x) => x.result != null);
     for (var i = 0; i < 5 && s.mode == SessionMode.levelUp; i++) {
       for (final p in s.playerList) {
         if (p.profile.points > 0) {
           s = act(e, s, p.id, AllocateStatsAction({Attribute.vit: p.profile.points}));
         }
       }
-      s = runBattle(e, s, until: (x) => x.mode == SessionMode.result);
+      s = runBattle(e, s, until: (x) => x.result != null);
     }
     expect(s.result!.success, isTrue);
     expect(s.result!.unlocked, {'p1': 2});
@@ -243,7 +243,7 @@ void main() {
       final s = inField(e, id, profiles: [strong('Ana', zone: 5)]);
       final m = s.mission!;
       final z = zoneProgression.catalog.zoneOfMission(id)!;
-      expect(m.floors, z.floors, reason: id);
+      expect(m.floors, ZoneRules.missionFloors(z), reason: id);
       for (var f = 0; f < m.floors; f++) {
         expect(m.floorGoals[f], 4, reason: '$id piso $f');
         expect(m.enemiesOn(f).where((x) => x.elite), isNotEmpty);
@@ -255,7 +255,7 @@ void main() {
         }
       }
       expect(m.levels, [
-        for (var f = 0; f < z.floors; f++) ZoneRules.floorLevel(z, f),
+        for (var f = 0; f < ZoneRules.missionFloors(z); f++) ZoneRules.floorLevel(z, f),
       ]);
     }
   });

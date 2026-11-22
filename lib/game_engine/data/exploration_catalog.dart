@@ -228,3 +228,7 @@ const kQuestCreditsPerLevel = 6;
 
 /// Nivel desde el que el premio `eco` da un Eco.
 const kQuestEcoMinLevel = 45;
+
+/// Densidad mínima de PdI: uno (cofre o PdI) cada esto de tiles
+/// alcanzables (worldgen.md § 11.2; v0.20.22 la asegura en pisos chicos).
+const kPoiDensityArea = 220;

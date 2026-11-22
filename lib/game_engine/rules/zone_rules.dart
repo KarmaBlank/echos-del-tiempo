@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../data/game_catalog.dart';
+import '../data/tuning_catalog.dart';
 import '../data/zone_curve.dart';
 import '../data/zones_catalog.dart';
 import '../models/battle_state.dart';
@@ -19,9 +20,43 @@ abstract final class ZoneRules {
 
   // ---------------- niveles ----------------
 
+  /// Pisos que se juegan de la zona [z]: los suyos con el tope de
+  /// `Misiones.maxFloors` (worldgen.md § 6.8).
+  static int missionFloors(ZoneDef z) => capFloors(z.floors);
+
+  /// [n] pisos con el tope de `Misiones.maxFloors`.
+  static int capFloors(int n) =>
+      math.max(1, math.min(n, tuning(TuningId.mission).i('maxFloors')));
+
+  /// Piso de `floorGroups` que usa el piso jugado [f] de [played]
+  /// cuando la misión tenía [defined] pisos: el primero y el último se
+  /// conservan, los del medio se reparten.
+  static int sourceFloor(int f, int played, int defined) =>
+      played <= 1 || defined <= played
+          ? f
+          : (f * (defined - 1) / (played - 1)).round();
+
+  /// Grupos normales por piso: `floorGoal + 3` × `Misiones.groupScale`,
+  /// nunca menos que la cuota del piso.
+  static int groupsPerFloor(int floorGoal) => math.max(floorGoal,
+      ((floorGoal + 3) * tuning(TuningId.mission).d('groupScale')).round());
+
+  /// Tiempo del rango S de [m] jugada con [played] pisos: se achica en
+  /// proporción a los pisos y a los grupos normales por piso, así S no
+  /// se vuelve más fácil con misiones cortas (worldgen.md § 6.8).
+  static double sTimeFor(MissionDef m, int played) {
+    if (m.floorGoal <= 0 || m.floors <= 1 && played <= 1) {
+      return m.sTime.toDouble();
+    }
+    final floors = played / math.max(1, m.floors);
+    final groups = groupsPerFloor(m.floorGoal) / (m.floorGoal + 3);
+    return m.sTime * math.min(1.0, floors * groups);
+  }
+
   /// Nivel de los enemigos del piso [floor] (desde 0).
   static int floorLevel(ZoneDef z, int floor) =>
-      z.minLevel + (z.maxLevel - z.minLevel) * (floor + 1) ~/ (z.floors + 1);
+      z.minLevel +
+      (z.maxLevel - z.minLevel) * (floor + 1) ~/ (missionFloors(z) + 1);
 
   /// Nivel de los élites del piso [floor].
   static int eliteLevel(ZoneDef z, int floor) =>

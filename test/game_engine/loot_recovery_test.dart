@@ -40,7 +40,7 @@ void main() {
   }
 
   group('motor', () {
-    test('al volver al pueblo lo propio del piso va al alijo; lo oculto, no',
+    test('al volver al pueblo todo el piso va al Loot perdido (v0.20.22)',
         () {
       final e = sessionEngine();
       var s = inField(e, 'm3');
@@ -53,10 +53,11 @@ void main() {
       s.mode = SessionMode.result;
       s = act(e, s, 'p0', const BackToLobbyAction());
       expect(s.ground, isEmpty);
-      expect(recovered(s, 'p0').map((d) => d.item!.uid), ['a', 'b', 'c']);
+      expect(recovered(s, 'p0'), isEmpty);
+      expect(s.lostLoot.map((g) => g.drop.item!.uid), ['a', 'b', 'c', 'd']);
     });
 
-    test('lo que el filtro oculta vuelve, a Objetos sin recoger', () {
+    test('lo que el filtro oculta también va al Loot perdido', () {
       final e = sessionEngine();
       var s = inField(e, 'm3');
       s = act(e, s, 'p0',
@@ -65,11 +66,11 @@ void main() {
           id: 1, drop: sword('a', Rarity.comun), x: 0, y: 0, ownerId: 'p0'));
       s.mode = SessionMode.result;
       s = act(e, s, 'p0', const BackToLobbyAction());
-      expect(recovered(s, 'p0').single.item!.uid, 'a');
-      expect(s.players['p0']!.stashAcks.values.single.box, isTrue);
+      expect(recovered(s, 'p0'), isEmpty);
+      expect(s.lostLoot.single.drop.item!.uid, 'a');
     });
 
-    test('co-op: cada uno recibe lo suyo', () {
+    test('co-op: el pozo es de todos y viaja en el snapshot', () {
       final e = sessionEngine();
       var s = inField(e, 'm3', profiles: [
         newProfile('Ana', 'guerrero'),
@@ -80,13 +81,32 @@ void main() {
         ..add(GroundLoot(id: 2, drop: sword('b'), x: 0, y: 0, ownerId: 'p1'));
       s.mode = SessionMode.result;
       s = act(e, s, 'p0', const BackToLobbyAction());
-      expect(recovered(s, 'p0').single.item!.uid, 'a');
-      expect(recovered(s, 'p1').single.item!.uid, 'b');
-      // Viaja en el snapshot (host autoritativo; el cliente lo guarda).
+      expect(s.lostLoot, hasLength(2));
       const codec = SessionJson();
       final back = codec.fromJson(
           asJson(jsonDecode(jsonEncode(codec.toJson(s)))));
-      expect(recovered(back, 'p1').single.item!.uid, 'b');
+      expect(back.lostLoot.map((g) => g.id), [1, 2]);
+      // Beto toma lo de Ana; la misión siguiente borra el resto.
+      s = act(e, s, 'p1', const TakeLostLootAction(1));
+      expect(s.players['p1']!.profile.items.map((i) => i.baseId),
+          contains('espada_ignea'));
+      expect(s.lostLoot.single.id, 2);
+      expect(e.apply(s, 'p1', const TakeLostLootAction(1)), isNull);
+    });
+
+    test('empezar misión borra el Loot perdido', () {
+      final e = sessionEngine();
+      var s = inField(e, 'm3');
+      s.ground.add(GroundLoot(id: 1, drop: sword('a'), x: 0, y: 0, ownerId: 'p0'));
+      s.mode = SessionMode.result;
+      s = act(e, s, 'p0', const BackToLobbyAction());
+      expect(s.lostLoot, hasLength(1));
+      s = act(e, s, 'p0', const ProposeMissionAction('m3'));
+      s = e.tick(s, 0.05).state;
+      s = act(e, s, 'p0', const ReadyAction(true));
+      s = e.tick(s, 0.05).state;
+      expect(s.mode, SessionMode.field);
+      expect(s.lostLoot, isEmpty);
     });
 
     test('quien sale de la sala: el host saca lo suyo del piso', () {
@@ -132,7 +152,7 @@ void main() {
       );
       var s = inField(e, 'z9', profiles: [strong('Ana', zone: 9)]);
       final map = e.mapFor(s);
-      for (var f = 0; f < 4; f++) {
+      for (var f = 0; f < map.floors.length - 1; f++) {
         final down = map.floor(f)!.stairsDown!;
         s = moveTo(e, s, 'p0', down.x, down.y);
         s = e.tick(s, 0.05).state;
@@ -142,16 +162,16 @@ void main() {
           s = e.tick(s, 0.05).state;
         }
       }
-      expect(s.mission!.floor, 4);
+      expect(s.mission!.floor, map.floors.length - 1);
       s.players['p0']!.profile = full(s.players['p0']!.profile);
       final boss = s.mission!.enemies.singleWhere((x) => x.boss);
       s = wait(e, s, s.graceLeft + 0.1);
       s = moveTo(e, s, 'p0', boss.x, boss.y);
       final log = <SessionEvent>[];
-      s = runBattle(e, s, until: (x) => x.mode == SessionMode.result, log: log);
+      s = runBattle(e, s, until: (x) => x.result != null, log: log);
       for (var i = 0; i < 5 && s.mode == SessionMode.levelUp; i++) {
         s = runBattle(e, s,
-            until: (x) => x.mode == SessionMode.result, log: log);
+            until: (x) => x.result != null, log: log);
       }
       bool legend(LootDrop d) => d.item?.uniqueId == 'rompemundos';
       expect(s.ground.where((g) => legend(g.drop)), isEmpty);

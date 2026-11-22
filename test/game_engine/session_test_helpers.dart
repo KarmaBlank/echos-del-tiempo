@@ -143,3 +143,14 @@ GameSession wait(SessionEngine e, GameSession s, double seconds,
 GameSession moveTo(SessionEngine e, GameSession s, String id, double x, double y) =>
     act(e, s, id, MoveAction(x, y, epoch: s.players[id]!.epoch));
 
+
+/// Vuelta al lobby desde el resultado: tras una victoria todos los
+/// humanos tocan LISTO (missions.md, v0.20.22); tras una derrota, VOLVER.
+GameSession backToLobby(SessionEngine e, GameSession s) {
+  if (!s.victoryLap) return act(e, s, s.players.keys.first, const BackToLobbyAction());
+  for (final p in s.playerList.where((p) => !p.isCompanion).toList()) {
+    if (!s.victoryLap) break;
+    s = act(e, s, p.id, const LeaveReadyAction(true));
+  }
+  return s;
+}

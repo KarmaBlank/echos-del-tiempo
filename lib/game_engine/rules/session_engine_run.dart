@@ -84,6 +84,8 @@ extension _RunOp on _Op {
             StashPutAction() ||
             StashTakeAction() ||
             BackToLobbyAction() ||
+            LeaveReadyAction() ||
+            TakeLostLootAction() ||
             UseStairsAction() ||
             InteractPoiAction() ||
             PickUpAction() ||

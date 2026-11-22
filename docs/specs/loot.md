@@ -190,6 +190,14 @@ el arma adentro. Regla: **un jugador nunca pierde loot que era suyo**.
     el JSON) para no llenar el alijo de cosas que eligió no ver;
   - solo lo de alguien que ya no está en la sala se descarta en el host
     (su dispositivo ya lo guardó al salir, ver abajo).
+- v0.20.22 (protocolo 39): al **volver al pueblo** (`toLobby`) ya no se
+  recupera nada al alijo de cada uno: todo lo del piso va al pozo
+  compartido Loot perdido de la sala (missions.md § "Loot perdido"),
+  que se borra al empezar la próxima misión. Lo de arriba sigue valiendo
+  al empezar una misión desde el pueblo (lo tirado en el pueblo), en el
+  tope del piso y al salir de la sala. Se mantienen el botín valioso de
+  jefe / élite directo al alijo con el inventario lleno (§ 14.3) y la
+  caja Objetos sin recoger.
 - Cambiar de piso por la escalera no pierde nada: cada objeto queda en su
   piso (§ 14.1) y lo que quede se recupera al cerrarse el mapa.
 - Si el piso llega a su tope (80), el objeto más viejo sale y, si era de

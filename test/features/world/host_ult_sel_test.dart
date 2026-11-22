@@ -104,7 +104,7 @@ void main() {
       host.session!.mission!.blessing = BlessingKind.values[round];
       await tick(host.session!.graceLeft + 0.1);
       for (var i = 0;
-          i < 6000 && host.session!.mode != SessionMode.result;
+          i < 6000 && host.session!.result == null;
           i++) {
         final s = host.session!;
         switch (s.mode) {
@@ -133,7 +133,9 @@ void main() {
         await tick(0.1);
         check('tick $i (${s.mode.name})');
       }
-      expect(host.backToLobby(), isTrue);
+      for (final c in all) {
+        c.setLeaveReady(true);
+      }
       for (var i = 0; i < 40; i++) {
         await tick();
         check('volver');

@@ -228,6 +228,20 @@ class TilePainter {
           _rect(c, Color.fromRGBO(162, 155, 254, 0.25 + 0.25 * k), px - 2,
               py - 20, ts + 4, 2);
         }
+      case Tile.lostTower:
+        // Loot perdido (v0.20.22): base de piedra y, en el tile del medio,
+        // una torrecita con una ventana que brilla.
+        floor();
+        _rect(c, LostTowerPalette.base, px, py + 6, ts, ts - 6);
+        _rect(c, LostTowerPalette.rim, px, py + 6, ts, 2);
+        if (tx % 3 == 1) {
+          final k = 0.5 + 0.5 * math.sin(t / 260);
+          _rect(c, LostTowerPalette.stone, px + 3, py - 14, 10, 20);
+          _rect(c, LostTowerPalette.cap, px + 1, py - 18, 14, 4);
+          _rect(c, LostTowerPalette.cap, px + 5, py - 20, 6, 2);
+          _rect(c, LostTowerPalette.glow.withValues(alpha: 0.5 + 0.5 * k),
+              px + 6, py - 10, 4, 5);
+        }
       case Tile.spikes:
         // Púas de la Prueba: placa de metal y púas que suben y bajan.
         floor();
@@ -416,6 +430,7 @@ class TilePainter {
             Tile.gate ||
             Tile.portal ||
             Tile.statue ||
+            Tile.lostTower ||
             Tile.spikes ||
             Tile.pulse ||
             Tile.lava ||
@@ -442,7 +457,7 @@ class TilePainter {
   /// Ningún tile sobresale hacia abajo. Lo verifica `tile_cache_test.dart`.
   static (int, int, int, int) overflow(String ch) => switch (ch) {
         Tile.portal => (12, 14, 6, 0),
-        Tile.statue => (12, 20, 2, 0),
+        Tile.statue || Tile.lostTower => (12, 20, 2, 0),
         Tile.water ||
         Tile.grass ||
         Tile.rock ||
@@ -474,6 +489,7 @@ class TilePainter {
         Tile.counter,
         Tile.portal,
         Tile.statue,
+        Tile.lostTower,
         Tile.spikes,
         Tile.pulse,
         Tile.grass,

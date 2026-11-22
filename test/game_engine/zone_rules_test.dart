@@ -68,9 +68,10 @@ void main() {
       final z1 = cat.zone(1)!, z5 = cat.zone(5)!;
       expect([for (var f = 0; f < 2; f++) ZoneRules.floorLevel(z1, f)], [2, 3]);
       expect(ZoneRules.bossLevel(z1), 5);
-      expect([for (var f = 0; f < 4; f++) ZoneRules.floorLevel(z5, f)],
-          [21, 22, 23, 24]);
-      expect(ZoneRules.eliteLevel(z5, 3), 25);
+      // v0.20.22: la zona 5 juega 3 pisos (worldgen.md § 6.8).
+      expect([for (var f = 0; f < 3; f++) ZoneRules.floorLevel(z5, f)],
+          [22, 23, 24]);
+      expect(ZoneRules.eliteLevel(z5, 2), 25);
       expect(ZoneRules.floorLevel(cat.zone(3)!, 0), 12);
     });
 

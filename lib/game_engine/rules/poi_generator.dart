@@ -379,20 +379,30 @@ abstract final class PoiGenerator {
                 if (reach.containsKey((p.ty + dy) * w + p.tx + dx))
                   (p.tx + dx, p.ty + dy),
         ];
-    bool chestOk(int x, int y) {
+    bool chestOk(int x, int y, {int minN = 3}) {
       final c = at(x, y);
-      if (c != Tile.floor && c != Tile.path) return false;
+      // Relajado (pisos chicos): también sobre un puente (el cofre es un
+      // objeto, no un tile: no corta el paso).
+      if (c != Tile.floor &&
+          c != Tile.path &&
+          !(minN < 3 && c == Tile.bridge)) {
+        return false;
+      }
       if (noGo.any((q) => inRect(q, x, y))) return false;
       var n = 0;
       for (final (dx, dy) in _dirs) {
         if (passable(at(x + dx, y + dy))) n++;
       }
-      return n >= 3;
+      return n >= minN;
     }
 
     final gap = maze ? kMaxPoiGapMaze : kMaxPoiGap;
     final cap = math.max(kMinChestSpots, area ~/ kChestSpotArea);
-    while (chests.length < cap) {
+    // v0.20.22 (worldgen.md § 6.8): en los pisos chicos el tope por área
+    // no alcanza para la regla de § 11.2; se sigue (hasta 3× el tope)
+    // mientras quede un tile a más de [gap] o falte densidad.
+    bool dense() => (chests.length + pois.length) * kPoiDensityArea >= reach.length;
+    while (chests.length < cap * 3) {
       final d = bfs(sources().where((p) => reach.containsKey(p.$2 * w + p.$1)));
       var maxD = 0, maxK = -1;
       for (final e in d.entries) {
@@ -401,7 +411,11 @@ abstract final class PoiGenerator {
           maxK = e.key;
         }
       }
-      if (maxD <= gap && chests.length >= kMinChestSpots) break;
+      if (maxD <= gap &&
+          chests.length >= kMinChestSpots &&
+          dense()) {
+        break;
+      }
       if (maxK < 0 || maxD <= 2) break;
       // El tile más lejano o, si no sirve para un cofre, el más cercano a
       // él que sirva.
@@ -413,6 +427,18 @@ abstract final class PoiGenerator {
         if (chestOk(e.key % w, e.key ~/ w) && !chests.contains((e.key % w, e.key ~/ w))) {
           pick = (e.key % w, e.key ~/ w);
           break;
+        }
+      }
+      // v0.20.22: en pisos chicos (pasillos, puentes) el lugar "cómodo"
+      // más cercano puede quedar lejos; se acepta uno de pasillo.
+      if (pick == null || near[pick.$2 * w + pick.$1]! > gap ~/ 2) {
+        for (final e in order) {
+          if (e.value > gap ~/ 2) break;
+          final q = (e.key % w, e.key ~/ w);
+          if (chestOk(q.$1, q.$2, minN: 1) && !chests.contains(q)) {
+            pick = q;
+            break;
+          }
         }
       }
       if (pick == null) break;

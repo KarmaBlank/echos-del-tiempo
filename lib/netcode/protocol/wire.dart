@@ -85,7 +85,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 38 desde v0.20.20: el combatiente lleva `ubt` (carga de ULT extra del
 /// turno, con tope) y la ronda (`act` / `rd`) cuenta también en la línea
 /// de tiempo (aguanta una ronda, combat.md § "Límites").
-const kProtocolVersion = 38;
+/// 39 desde v0.20.22: tras la victoria el grupo sigue en el campo hasta
+/// el LISTO de todos (`lr`, `leave`) y el pozo Loot perdido (`lost`).
+const kProtocolVersion = 39;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

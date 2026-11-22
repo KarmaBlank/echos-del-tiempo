@@ -129,9 +129,19 @@ void main() {
   });
 
   test('piedras de paso: elegir cualquier destino activado (mapa)', () {
-    final r = start(
-        6, (f) => f.pois.where((p) => p.kind == PoiKind.waystone).length >= 3,
-        players: 2);
+    // v0.20.22: con los pisos más chicos, 3 piedras en un piso salen en
+    // menos zonas; se usa la primera que las tenga.
+    bool three(MapFloor f) =>
+        f.pois.where((p) => p.kind == PoiKind.waystone).length >= 3;
+    final zone = [for (var z = 1; z <= 10; z++) z].firstWhere((z) {
+      try {
+        seedWith(z, three);
+        return true;
+      } on StateError {
+        return false;
+      }
+    });
+    final r = start(zone, three, players: 2);
     var s = r.s;
     final e = r.e;
     final stones = r.f.pois.where((p) => p.kind == PoiKind.waystone).toList();

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import '../data/tuning_catalog.dart';
 import '../data/vaults_catalog.dart';
 import '../models/game_map.dart';
 import '../models/zone_def.dart';
@@ -197,16 +198,25 @@ abstract final class ZoneGenerators {
     // v0.6 (worldgen.md § 11.1): el laberinto, único recorte de tamaño.
     final maze = gen == ZoneGen.laberinto;
     final big = gen == ZoneGen.corazon;
-    final w = maze
-        ? ri(64, 72)
-        : big
-            ? ri(70, 80)
-            : ri(58, 70);
-    final h = maze
-        ? ri(46, 52)
-        : big
-            ? ri(50, 56)
-            : ri(42, 50);
+    // v0.20.22 (worldgen.md § 6.8): `Misiones.areaScale` achica el área
+    // (cada lado × √escala), con un mínimo para la arena y los vaults.
+    final side0 =
+        math.sqrt(tuning(TuningId.mission).d('areaScale').clamp(0.2, 1.5));
+    int sc(int v, int min) => math.max(min, (v * side0).round());
+    final w = sc(
+        maze
+            ? ri(64, 72)
+            : big
+                ? ri(70, 80)
+                : ri(58, 70),
+        44);
+    final h = sc(
+        maze
+            ? ri(46, 52)
+            : big
+                ? ri(50, 56)
+                : ri(42, 50),
+        32);
     final g = _Grid([for (var y = 0; y < h; y++) List.filled(w, Tile.wall)]);
     final abyss = gen.abyss;
     if (abyss) g.bridgeOver = const {Tile.voidTile, Tile.wall};

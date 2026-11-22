@@ -286,6 +286,39 @@ cuando el id existe.
   de la arena y de los vaults (en ruinas: los del `genMap` menos los
   pisados por vaults).
 
+### 6.8 Misiones cortas (v0.20.22)
+
+Pedido del dueño: una misión dura unos 10 a 12 minutos. Tres números de
+Editor → Balance (grupo `Misiones`, `TuningId.mission`):
+
+- `maxFloors` (3): tope de pisos que se juegan por misión
+  (`ZoneRules.missionFloors`). Las zonas de 4 y 5 pisos juegan 3; el
+  nivel de cada piso se reparte con ese número (§ 6.3) y cada piso jugado
+  usa los `floorGroups` de un piso de la definición
+  (`ZoneRules.sourceFloor`: el primero, el último y los del medio
+  repartidos). Jefe, élites guardianes y sellos no cambian de regla (los
+  sellos y fragmentos se reparten entre los pisos jugados).
+- `groupScale` (0.7): grupos normales por piso
+  `max(floorGoal, round((floorGoal + 3) × groupScale))` en vez de
+  `floorGoal + 3` (`ZoneRules.groupsPerFloor`). La cuota del piso no cambia.
+- `areaScale` (0.7): el área de los pisos orgánicos (todos menos ruinas)
+  se multiplica por la escala (cada lado × raíz de la escala, mínimo 44 ×
+  32). Las mismas tiradas del azar: la semilla sigue armando el mismo
+  estilo de mapa, más chico.
+
+- Rango S (missions.md): el `sTime` de la misión se multiplica por
+  `(pisos jugados / pisos definidos) × (grupos por piso / (floorGoal + 3))`
+  (tope 1; `ZoneRules.sTimeFor`), así S no es más fácil. A = 1.5 × eso.
+
+- Densidad de PdI (§ 11.2) en pisos chicos: los lugares de cofre ya no
+  paran en el tope por área (`área ÷ 100`); siguen (hasta 3× el tope)
+  mientras haya un tile a más del `gap` o falte un PdI cada 220 tiles
+  (`kPoiDensityArea`). Si el lugar cómodo más cercano queda lejos, vale
+  uno de pasillo (1 vecino caminable) o sobre un puente.
+
+Ecos, Pruebas y Jefes del Abismo usan el mismo atlas y también se
+achican. La Travesía tiene su propio generador y no cambia.
+
 ### 6.7 Misión por pisos (sesión)
 
 - `startMission` de una misión de zona (con `mulberry32(semilla + 7)`):
