@@ -24,6 +24,10 @@ class BattlePartyMember {
   /// roguelike.md § 8.1). El Mundo no las usa.
   final List<String> extraSkills;
 
+  /// Poder de cada habilidad (× sobre el del catálogo; mejoras de la
+  /// armería de la Travesía, roguelike.md § 12.2). Vacío en el Mundo.
+  final Map<String, double> skillScale;
+
   const BattlePartyMember({
     required this.id,
     required this.name,
@@ -36,6 +40,7 @@ class BattlePartyMember {
     this.aethers = 0,
     this.fusedSkillId,
     this.extraSkills = const [],
+    this.skillScale = const {},
   });
 }
 
@@ -137,6 +142,7 @@ class Combatant {
     this.practice = false,
     this.ultWeaken = 0,
     this.lastSkillId,
+    this.skillScale = const {},
     this.doom = 0,
     this.doomTurns = 0,
     this.doomBy,
@@ -404,6 +410,9 @@ class Combatant {
   /// Última habilidad que usó el jugador (Eco Doble la repite).
   String? lastSkillId;
 
+  /// Poder × por habilidad ([BattlePartyMember.skillScale]).
+  final Map<String, double> skillScale;
+
   /// Marca de Lo Que Será: daño que cae cuando [doomTurns] llega a 0
   /// (baja al empezar cada turno del marcado) y quién la puso.
   int doom;
@@ -550,6 +559,7 @@ class Combatant {
         practice: practice,
         ultWeaken: ultWeaken,
         lastSkillId: lastSkillId,
+        skillScale: skillScale,
         doom: doom,
         doomTurns: doomTurns,
         doomBy: doomBy,

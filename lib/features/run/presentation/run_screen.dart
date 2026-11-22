@@ -14,7 +14,11 @@ import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
 import '../../../game_engine/data/branch_ults_catalog.dart'
     show kWeaponUltSkills;
+import '../../../game_engine/models/item.dart';
+import '../../../game_engine/rules/reward_offer_rules.dart';
 import '../../../game_engine/rules/ult_rules.dart';
+import '../../combat/domain/skill_text.dart';
+import '../../inventory/presentation/item_hover_tip.dart';
 import 'run_character_panel.dart';
 import 'run_map_view.dart';
 import 'run_prep_view.dart';
@@ -85,8 +89,8 @@ class RunScreen extends StatelessWidget {
         children: [
           for (final p in s.playerList)
             Text(
-              '${p.name} · Nv ${p.profile.level} · '
-              'Vida ${p.hp.ceil()}/${p.maxHp} · Oro ${p.profile.credits}',
+              '${p.name} · Vida ${p.hp.ceil()}/${p.maxHp} · '
+              'Maná ${p.mp.ceil()}/${p.maxMp} · Oro ${p.profile.credits}',
               style: DsText.body(p.id == view.localId
                   ? DsColors.selected
                   : DsColors.text),
@@ -94,8 +98,17 @@ class RunScreen extends StatelessWidget {
         ],
       );
 
-  Widget _character() => DsButton('PERSONAJE [C]',
-      onPressed: () => controller.openPanel(WorldPanel.character));
+  /// PERSONAJE [C] e INVENTARIO [I] (las mismas teclas que en el Mundo).
+  Widget _character() => Wrap(spacing: DsSpace.sm, children: [
+        DsButton('PERSONAJE [C]',
+            key: const ValueKey('run-open-character'),
+            tooltip: 'Atributos, arma, ULT, mejoras y objetos de la run',
+            onPressed: () => controller.openPanel(WorldPanel.character)),
+        DsButton('INVENTARIO [I]',
+            key: const ValueKey('run-open-inventory'),
+            tooltip: 'Equipar armas, usar pociones y ordenar el bolso',
+            onPressed: () => controller.openPanel(WorldPanel.inventory)),
+      ]);
 
   Widget _lobby() => Center(
         child: PanelFrame(
@@ -206,8 +219,11 @@ class RunScreen extends StatelessWidget {
           spacing: DsSpace.md,
           children: [
             for (final t in RunNodeType.values)
-              Text('${runNodeLetter(t)} ${t.label}',
-                  style: DsText.detail(runNodeColor(t))),
+              DsTooltip(
+                card: runNodeTip(t),
+                child: Text('${runNodeLetter(t)} ${t.label}',
+                    style: DsText.detail(runNodeColor(t))),
+              ),
           ],
         ),
       ],
@@ -239,9 +255,11 @@ class RunScreen extends StatelessWidget {
     ];
     final text = switch (type) {
       RunNodeType.tienda =>
-        'Armas de tu clase, pociones y Éter a cambio de oro. También podés '
-            'vender armas desde la armería.',
-      RunNodeType.armeria => 'Forjá y fusioná tus armas antes de seguir.',
+        'Armas de tu clase, ULT, pociones y Éter a cambio de oro. Lo que '
+            'no uses lo vendés desde la misma tienda.',
+      RunNodeType.armeria =>
+        'Mejorá tus armas con oro (FORJA: poder, crítico, velocidad) o '
+            'pasá una habilidad de un arma a otra (FUSIÓN).',
       _ => 'El grupo descansa y recupera vida y maná.',
     };
     return Center(
@@ -252,9 +270,11 @@ class RunScreen extends StatelessWidget {
           _character(),
           if (type == RunNodeType.tienda)
             DsButton('ABRIR TIENDA',
+                key: const ValueKey('run-open-shop'),
                 onPressed: () => controller.openPanel(WorldPanel.armory)),
           if (type == RunNodeType.armeria)
             DsButton('ABRIR ARMERÍA',
+                key: const ValueKey('run-open-armory'),
                 onPressed: () => controller.openPanel(WorldPanel.armory)),
           DsButton('LISTO',
               key: const ValueKey('run-ready'),
@@ -265,6 +285,8 @@ class RunScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(text, style: DsText.body()),
+            if (type == RunNodeType.tienda) ..._ultShop(r),
+            if (type == RunNodeType.armeria) ..._skillForge(r),
             SizedBox(height: DsSpace.sm),
             _party(),
             SizedBox(height: DsSpace.sm),
@@ -274,6 +296,107 @@ class RunScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Mejora de habilidades libres en la armería (§ 12.2): cuánto cuesta y
+  /// cuánto poder suma cada nivel.
+  List<Widget> _skillForge(RunState r) {
+    final me = view.me;
+    if (me == null) return const [];
+    final c = controller;
+    final owned = r.ownedSkills(me.id);
+    final pct = (RunTuning.skillUpPower * 100).round();
+    return [
+      SizedBox(height: DsSpace.md),
+      const DsSectionHeader('MEJORAR HABILIDADES'),
+      Text(
+          'El arma (y lo que trae) se mejora en ABRIR ARMERÍA → FORJA. Acá, '
+          'cada nivel suma +$pct % de poder a una habilidad libre (hasta '
+          '+${RunTuning.skillUpMax}).',
+          style: DsText.detail()),
+      SizedBox(height: DsSpace.xs),
+      if (owned.isEmpty)
+        Text('No tenés habilidades libres para mejorar.',
+            style: DsText.detail()),
+      for (final id in owned)
+        if (c.engine.catalog.skills[id] case final sk?)
+          Padding(
+            padding: EdgeInsets.only(bottom: DsSpace.xs),
+            child: () {
+              final lv = r.skillLevel(me.id, id);
+              final max = lv >= RunTuning.skillUpMax;
+              final cost = RunTuning.skillUpCost(lv + 1);
+              final poor = me.profile.credits < cost;
+              return Row(children: [
+                Expanded(
+                  child: RetroTooltip(
+                    message: describeSkillMarkup(sk, null),
+                    child: Text(
+                        '${sk.name}  +$lv'
+                        '${max ? '' : '  →  +${lv + 1} (poder ${100 + pct * lv} % → ${100 + pct * (lv + 1)} %)'}',
+                        style: DsText.body()),
+                  ),
+                ),
+                DsButton(max ? 'MÁXIMO' : '$cost DE ORO',
+                    key: ValueKey('run-skill-up-$id'),
+                    size: DsButtonSize.compact,
+                    tooltip: max
+                        ? null
+                        : poor
+                            ? 'Te falta oro'
+                            : 'Mejorar a +${lv + 1}',
+                    onPressed:
+                        max || poor ? null : () => c.upgradeRunSkill(id)),
+              ]);
+            }(),
+          ),
+    ];
+  }
+
+  /// ULT a la venta en esta tienda (§ 12.2): caras y valiosas.
+  List<Widget> _ultShop(RunState r) {
+    final me = view.me;
+    if (me == null || r.node == null) return const [];
+    final c = controller;
+    final stock = RewardOfferRules(
+            tree: c.engine.progression.treeRules.catalog,
+            catalog: c.engine.catalog)
+        .shopUlts(me.profile, seed: r.seed, floor: r.floor, node: r.node!);
+    if (stock.isEmpty) return const [];
+    final price = RunTuning.ultPrice;
+    final gold = me.profile.credits;
+    return [
+      SizedBox(height: DsSpace.md),
+      const DsSectionHeader('ULT A LA VENTA'),
+      SizedBox(height: DsSpace.xs),
+      for (final id in stock)
+        if (kWeaponUltSkills[id] case final sk?)
+          Padding(
+            padding: EdgeInsets.only(bottom: DsSpace.xs),
+            child: Row(children: [
+              Expanded(
+                child: RetroTooltip(
+                  message: describeSkillMarkup(sk, null, ultimate: true),
+                  child: Text(
+                      '${sk.name}  ·  Con ${UltRules.weaponsOf(id).join(', ')}',
+                      style: DsText.body()),
+                ),
+              ),
+              DsButton(
+                  me.profile.ultKnown.contains(id) ? 'TENÉS' : '$price DE ORO',
+                  key: ValueKey('run-buy-ult-$id'),
+                  size: DsButtonSize.compact,
+                  tooltip: me.profile.ultKnown.contains(id)
+                      ? null
+                      : gold < price
+                          ? 'Te falta oro'
+                          : 'Queda aprendida y activa',
+                  onPressed: me.profile.ultKnown.contains(id) || gold < price
+                      ? null
+                      : () => c.buyRunUlt(id)),
+            ]),
+          ),
+    ];
   }
 
   Widget _over(RunState r) => Center(
@@ -305,8 +428,9 @@ class RunScreen extends StatelessWidget {
       );
 }
 
-/// Recompensa de un jugador (organismo): tres filas (Árbol / Arma /
-/// Extra), una opción por fila o SALTAR, y CONFIRMAR.
+/// Recompensa de un jugador (organismo): filas Objetos / Arma / (ULT) /
+/// Extra, una opción por fila o SALTAR, y CONFIRMAR. Cada tarjeta tiene
+/// su tooltip con el detalle.
 class RunRewardView extends StatefulWidget {
   const RunRewardView(
       {super.key, required this.offer, required this.controller});
@@ -323,7 +447,19 @@ class _RunRewardViewState extends State<RunRewardView> {
 
   static String attrName(Attribute a) => runAttributeName(a);
 
-  static String extraText(RunExtra x) => switch (x.kind) {
+  /// Pide sacrificar una habilidad libre (la nueva no entra).
+  bool _askDrop = false;
+
+  String _skillName(String? id) =>
+      widget.controller.engine.catalog.skills[id]?.name ?? id ?? '?';
+
+  String extraText(RunExtra x) => switch (x.kind) {
+        RunExtraKind.habilidad => 'Habilidad: ${_skillName(x.skill)}',
+        _ => extraTextOf(x),
+      };
+
+  static String extraTextOf(RunExtra x) => switch (x.kind) {
+        RunExtraKind.habilidad => 'Habilidad nueva',
         RunExtraKind.oro => '+${x.amount} de oro',
         RunExtraKind.pocion => '+${x.amount} pociones',
         RunExtraKind.eter => '+${x.amount} Éter',
@@ -332,14 +468,32 @@ class _RunRewardViewState extends State<RunRewardView> {
         RunExtraKind.mejora => RunBoon.byName(x.boon)?.text ?? 'Mejora',
       };
 
+  /// Qué hace cada extra (tooltip).
+  static String extraHelp(RunExtra x) => switch (x.kind) {
+        RunExtraKind.habilidad =>
+          'Habilidad libre: se equipa aparte de las del arma. Si no hay '
+              'lugar, tenés que sacrificar una.',
+        RunExtraKind.oro => 'Para la tienda y la forja de la armería.',
+        RunExtraKind.pocion => 'Cada poción cura vida en combate o fuera.',
+        RunExtraKind.eter => 'Cada Éter recupera maná en combate.',
+        RunExtraKind.atributo =>
+          'Sube ${attrName(x.attribute ?? Attribute.vit)} para el resto de '
+              'la run. ${runAttributeHelp(x.attribute ?? Attribute.vit)}',
+        RunExtraKind.mejora =>
+          'Mejora directa: dura toda la run y se apila si la repetís. '
+              'Se ve en MEJORAS, en PERSONAJE.',
+      };
+
   Widget _row(String label, int count, int? picked, ValueChanged<int?> onPick,
-      Widget Function(int i) card) {
+      Widget Function(int i) card,
+      {String? help, Widget Function(int i, Widget child)? tip}) {
     return Padding(
       padding: EdgeInsets.only(bottom: DsSpace.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           DsSectionHeader(label),
+          if (help != null) Text(help, style: DsText.detail()),
           SizedBox(height: DsSpace.xs),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,18 +502,22 @@ class _RunRewardViewState extends State<RunRewardView> {
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.only(right: DsSpace.sm),
-                    child: DsCard(
-                      key: ValueKey('run-offer-$label-$i'),
-                      selected: picked == i,
-                      onTap: () => onPick(picked == i ? null : i),
-                      child: card(i),
-                    ),
+                    child: () {
+                      final w = DsCard(
+                        key: ValueKey('run-offer-$label-$i'),
+                        selected: picked == i,
+                        onTap: () => onPick(picked == i ? null : i),
+                        child: card(i),
+                      );
+                      return tip == null ? w : tip(i, w);
+                    }(),
                   ),
                 ),
               if (count == 0)
                 Expanded(
                     child: Text('Nada para ofrecer.', style: DsText.detail())),
               DsButton('SALTAR',
+                  tooltip: 'No tomar nada de esta fila',
                   selected: picked == null, onPressed: () => onPick(null)),
             ],
           ),
@@ -367,6 +525,57 @@ class _RunRewardViewState extends State<RunRewardView> {
       ),
     );
   }
+
+  /// Las habilidades libres equipadas del jugador local.
+  List<String> get _equipped {
+    final c = widget.controller;
+    final v = c.view;
+    return v?.session.run?.loadout[v.actorId] ?? const [];
+  }
+
+  void _confirm({String? drop}) {
+    final x = _extra == null ? null : widget.offer.extras[_extra!];
+    if (drop == null &&
+        x?.skill != null &&
+        _equipped.length >= RunTuning.freeSkillSlots) {
+      setState(() => _askDrop = true);
+      return;
+    }
+    widget.controller.chooseRunReward(
+        tree: _tree, weapon: _weapon, extra: _extra, ult: _ult, drop: drop);
+  }
+
+  /// «Tenés que sacrificar una habilidad» (§ 12.2): solo las libres.
+  Widget _dropPrompt() => DsCard(
+        key: const ValueKey('run-drop-prompt'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const DsSectionHeader('TENÉS QUE SACRIFICAR UNA HABILIDAD'),
+            Text(
+                'No hay lugar para '
+                '${_skillName(widget.offer.extras[_extra!].skill)}. Elegí '
+                'cuál dejar (las del arma no se tocan).',
+                style: DsText.detail()),
+            SizedBox(height: DsSpace.sm),
+            Wrap(spacing: DsSpace.sm, runSpacing: DsSpace.xs, children: [
+              for (final id in _equipped)
+                if (widget.controller.engine.catalog.skills[id]
+                    case final sk?)
+                  RetroTooltip(
+                    message: describeSkillMarkup(sk, null),
+                    child: DsButton('SACRIFICAR ${sk.name}',
+                        key: ValueKey('run-drop-$id'),
+                        size: DsButtonSize.compact,
+                        onPressed: () => _confirm(drop: id)),
+                  ),
+              DsButton('CANCELAR',
+                  key: const ValueKey('run-drop-cancel'),
+                  onPressed: () => setState(() => _askDrop = false)),
+            ]),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -384,21 +593,40 @@ class _RunRewardViewState extends State<RunRewardView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _row('ÁRBOL', o.nodes.length, _tree,
+                _row('OBJETOS', o.nodes.length, _tree,
                     (i) => setState(() => _tree = i), (i) {
                   final n = tree.nodes[o.nodes[i]];
-                  final path = tree.paths[n?.pathId]?.name ?? '';
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(n?.name ?? o.nodes[i], style: DsText.subtitle()),
-                      Text(path, style: DsText.detail()),
                       if (n != null)
-                        for (final l in passiveEffectsText(n))
+                        for (final l in passiveEffectsClean(n))
                           Text(l, style: DsText.body()),
                     ],
                   );
-                }),
+                },
+                    help: 'Objetos de la run: un efecto pasivo que dura '
+                        'hasta el final de la Travesía.',
+                    tip: (i, child) {
+                      final n = tree.nodes[o.nodes[i]];
+                      if (n == null) return child;
+                      return DsTooltip(
+                        card: DsTooltipCard(
+                          title: n.name,
+                          tags: [
+                            if (tree.paths[n.pathId]?.name case final path?)
+                              DsTag(path, color: DsColors.textSecondary),
+                          ],
+                          children: [
+                            for (final l in passiveEffectsClean(n)) Text(l),
+                            Text('Se suma a OBJETOS DE LA RUN en PERSONAJE.',
+                                style: DsText.detail()),
+                          ],
+                        ),
+                        child: child,
+                      );
+                    }),
                 _row('ARMA', o.weapons.length, _weapon,
                     (i) => setState(() => _weapon = i), (i) {
                   final w = weapons[o.weapons[i]];
@@ -406,12 +634,25 @@ class _RunRewardViewState extends State<RunRewardView> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(w?.name ?? o.weapons[i], style: DsText.subtitle()),
-                      if (w != null)
-                        Text('${w.type} · Nv ${w.level}',
-                            style: DsText.detail()),
+                      if (w != null) Text(w.type, style: DsText.detail()),
                     ],
                   );
-                }),
+                },
+                    help: 'Va al bolso; se equipa sin nivel ni atributos '
+                        'mínimos.',
+                    tip: (i, child) {
+                      final w = weapons[o.weapons[i]];
+                      final me = c.view?.actor;
+                      if (w == null || me == null) return child;
+                      return itemHoverTip(
+                        rules: c.engine.progression,
+                        viewer: me.profile,
+                        item: ItemInstance.common('run-offer-$i', w.id,
+                            itemLevel: w.level),
+                        attributes: me.profile.attributes,
+                        child: child,
+                      );
+                    }),
                 if (o.ults.isNotEmpty)
                   _row('ULT', o.ults.length, _ult,
                       (i) => setState(() => _ult = i), (i) {
@@ -424,27 +665,56 @@ class _RunRewardViewState extends State<RunRewardView> {
                         if (types.isNotEmpty)
                           Text('Con ${types.join(', ')}',
                               style: DsText.detail()),
-                        Text('Queda activa; se cambia en PERSONAJE.',
-                            style: DsText.detail()),
                       ],
                     );
-                  }),
+                  },
+                      help: 'Rara y valiosa: queda aprendida y activa; se '
+                          'cambia en PERSONAJE.',
+                      tip: (i, child) {
+                        final sk = kWeaponUltSkills[o.ults[i]];
+                        if (sk == null) return child;
+                        return RetroTooltip(
+                            message:
+                                describeSkillMarkup(sk, null, ultimate: true),
+                            child: child);
+                      }),
                 _row('EXTRA', o.extras.length, _extra,
                     (i) => setState(() => _extra = i),
                     (i) => Text(extraText(o.extras[i]),
-                        style: DsText.subtitle())),
+                        style: DsText.subtitle()),
+                    help: 'Oro, consumibles, atributos, una mejora directa o '
+                        'una habilidad.',
+                    tip: (i, child) {
+                      final x = o.extras[i];
+                      final sk = c.engine.catalog.skills[x.skill];
+                      if (sk != null) {
+                        return RetroTooltip(
+                            message: '${describeSkillMarkup(sk, null)}<br>'
+                                '<span class="k">${extraHelp(x)}</span>',
+                            child: child);
+                      }
+                      return DsTooltip(
+                        card: DsTooltipCard(
+                          title: extraText(x),
+                          children: [Text(extraHelp(x))],
+                        ),
+                        child: child,
+                      );
+                    }),
               ],
             ),
           ),
         ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: DsButton('CONFIRMAR',
-              key: const ValueKey('run-reward-confirm'),
-              kind: DsButtonKind.primary,
-              onPressed: () => c.chooseRunReward(
-                  tree: _tree, weapon: _weapon, extra: _extra, ult: _ult)),
-        ),
+        if (_askDrop)
+          _dropPrompt()
+        else
+          Align(
+            alignment: Alignment.centerRight,
+            child: DsButton('CONFIRMAR',
+                key: const ValueKey('run-reward-confirm'),
+                kind: DsButtonKind.primary,
+                onPressed: _confirm),
+          ),
       ],
     );
   }

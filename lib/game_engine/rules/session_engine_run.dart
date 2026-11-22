@@ -22,7 +22,10 @@ extension _RunOp on _Op {
         a is RunPrepAction ||
         a is RunVoteAction ||
         a is RunRewardAction ||
-        a is RunReadyAction;
+        a is RunReadyAction ||
+        a is RunBuyUltAction ||
+        a is RunSkillAction ||
+        a is RunUpgradeSkillAction;
     if (!isRun) return isRunAction ? false : null;
     final r = s.run;
     final stop = r != null && r.phase == RunPhase.stop && r.node != null
@@ -46,6 +49,12 @@ extension _RunOp on _Op {
         return runReward(p, a);
       case RunReadyAction():
         return runReady(p);
+      case RunSkillAction(:final skillId, :final equip):
+        return runSkill(p, skillId, equip: equip);
+      case RunUpgradeSkillAction(:final skillId):
+        return stop == RunNodeType.armeria && runUpgradeSkill(p, skillId);
+      case RunBuyUltAction(:final ultId):
+        return stop == RunNodeType.tienda && runBuyUlt(p, ultId);
       // Comprar: solo en la tienda. Forjar / fusionar: solo en la armería.
       case BuyItemAction() || BuyWeaponAction():
         return stop == RunNodeType.tienda ? null : false;
@@ -95,24 +104,10 @@ extension _RunOp on _Op {
     }
   }
 
-  /// Un jugador nuevo de la Travesía entra con su personaje de run.
-  PlayerProfile runEntryProfile(PlayerProfile normalized) {
-    if (!isRun) return normalized;
-    final p = RunRules.runProfile(rules, normalized);
-    // Entra a mitad de la run: con lo que ya creció el grupo.
-    final r = s.run;
-    final per = r == null || r.phase == RunPhase.over
-        ? 0
-        : (r.grownTo - 1) * tuning(TuningId.travesia).i('attrPerLevel');
-    if (per <= 0) return p;
-    return p.copyWith(
-        attributes: p.attributes.add({
-      Attribute.vit: per,
-      Attribute.fue: per,
-      Attribute.esp: per,
-      Attribute.des: per,
-    }));
-  }
+  /// Un jugador nuevo de la Travesía entra con su personaje de run (sin
+  /// niveles: los atributos son la base de la clase, § 5).
+  PlayerProfile runEntryProfile(PlayerProfile normalized) =>
+      isRun ? RunRules.runProfile(rules, normalized) : normalized;
 
   // ---------------- guardado (§ 8.5) ----------------
 
@@ -124,7 +119,9 @@ extension _RunOp on _Op {
       ..offers.clear()
       ..ready.clear()
       ..boons.clear()
-      ..loadout.clear();
+      ..loadout.clear()
+      ..skills.clear()
+      ..skillUps.clear();
     return RunSave(run: run, players: [
       for (final p in players)
         RunSavePlayer(
@@ -134,6 +131,8 @@ extension _RunOp on _Op {
           ult: p.ult,
           boons: [...?r.boons[p.id]],
           loadout: [...?r.loadout[p.id]],
+          skills: [...?r.skills[p.id]],
+          skillUps: [...?r.skillUps[p.id]],
         ),
       // Los que no volvieron siguen en el guardado.
       ...e.runParked.values,
@@ -146,7 +145,9 @@ extension _RunOp on _Op {
       ..offers.clear()
       ..ready.clear()
       ..boons.clear()
-      ..loadout.clear();
+      ..loadout.clear()
+      ..skills.clear()
+      ..skillUps.clear();
     e.runParked
       ..clear()
       ..addEntries([for (final q in save.players) MapEntry(q.key, q)]);
@@ -192,6 +193,8 @@ extension _RunOp on _Op {
       ..mp = math.min(q.mp, p.maxMp.toDouble());
     if (q.boons.isNotEmpty) s.run!.boons[p.id] = [...q.boons];
     if (q.loadout.isNotEmpty) s.run!.loadout[p.id] = [...q.loadout];
+    if (q.skills.isNotEmpty) s.run!.skills[p.id] = [...q.skills];
+    if (q.skillUps.isNotEmpty) s.run!.skillUps[p.id] = [...q.skillUps];
   }
 
   /// Se fue un jugador: sus marcas dejan de contar.
@@ -232,20 +235,6 @@ extension _RunOp on _Op {
     return true;
   }
 
-  /// [q] suma atributos por [levels] niveles de crecimiento.
-  void _grow(SessionPlayer q, int levels) {
-    final per = tuning(TuningId.travesia).i('attrPerLevel') * levels;
-    if (per <= 0) return;
-    q.profile = q.profile.copyWith(
-        attributes: q.profile.attributes.add({
-      Attribute.vit: per,
-      Attribute.fue: per,
-      Attribute.esp: per,
-      Attribute.des: per,
-    }));
-    refresh(q, gain: true);
-  }
-
   /// Bonos del árbol de afuera y loadout de [q] (§ 8.1).
   void _applyPrep(RunState r, SessionPlayer q, RunPrep prep) {
     const cap = ProgressionRules.maxItems;
@@ -260,7 +249,8 @@ extension _RunOp on _Op {
       }),
     );
     final skills = [
-      for (final s in prep.skills.take(MetaProgressRules.loadoutSlots))
+      for (final s in prep.skills.take(math.min(
+          MetaProgressRules.loadoutSlots, RunTuning.freeSkillSlots)))
         if (catalog.skills.containsKey(s)) s,
     ];
     if (skills.isNotEmpty) r.loadout[q.id] = skills;
@@ -299,11 +289,82 @@ extension _RunOp on _Op {
     final next = RunRules.applyReward(rules, p.profile, offer,
         tree: a.tree, weapon: a.weapon, extra: a.extra, ult: a.ult);
     if (next == null) return false;
+    // Habilidad nueva (§ 12.2): entra si hay lugar; si no, se sacrifica
+    // una libre ([RunRewardAction.drop]).
+    final skill = a.extra == null ? null : offer.extras[a.extra!].skill;
+    if (skill != null) {
+      final eq = r.loadout[p.id] ??= [];
+      if (r.ownedSkills(p.id).contains(skill)) return false;
+      if (eq.length >= RunTuning.freeSkillSlots) {
+        final drop = a.drop;
+        if (drop == null || !eq.contains(drop)) return false;
+        eq.remove(drop);
+        r.skillUps[p.id]?.removeWhere((s) => s == drop);
+      }
+      eq.add(skill);
+    }
     p.profile = next;
     final boon = a.extra == null ? null : offer.extras[a.extra!].boon;
     if (boon != null) (r.boons[p.id] ??= []).add(boon);
     r.offers.remove(p.id);
     refresh(p, gain: true);
+    return true;
+  }
+
+  /// Compra en la tienda una ULT de su surtido (§ 12.2): queda aprendida
+  /// y activa.
+  bool runBuyUlt(SessionPlayer p, String ultId) {
+    final r = s.run;
+    if (r == null || r.node == null || p.isCompanion) return false;
+    final stock = _offers.shopUlts(p.profile,
+        seed: r.seed, floor: r.floor, node: r.node!);
+    final price = RunTuning.ultPrice;
+    if (!stock.contains(ultId) || p.profile.credits < price) return false;
+    p.profile = UltRules.learn(p.profile, ultId).copyWith(
+        credits: p.profile.credits - price, ultSel: () => ultId);
+    refresh(p);
+    say('${p.name} compró una ULT.');
+    return true;
+  }
+
+  /// Equipa o guarda una habilidad libre propia (fuera de combate).
+  bool runSkill(SessionPlayer p, String skillId, {required bool equip}) {
+    final r = s.run;
+    if (r == null ||
+        s.mode != SessionMode.run ||
+        r.phase == RunPhase.over ||
+        p.isCompanion) {
+      return false;
+    }
+    final eq = r.loadout[p.id] ??= [];
+    final bag = r.skills[p.id] ??= [];
+    if (equip) {
+      if (!bag.contains(skillId) || eq.length >= RunTuning.freeSkillSlots) {
+        return false;
+      }
+      bag.remove(skillId);
+      eq.add(skillId);
+    } else {
+      if (!eq.remove(skillId)) return false;
+      bag.add(skillId);
+    }
+    return true;
+  }
+
+  /// Mejora una habilidad libre propia en la armería (§ 12.2).
+  bool runUpgradeSkill(SessionPlayer p, String skillId) {
+    final r = s.run;
+    if (r == null || p.isCompanion || !r.ownedSkills(p.id).contains(skillId)) {
+      return false;
+    }
+    final lv = r.skillLevel(p.id, skillId);
+    if (lv >= RunTuning.skillUpMax) return false;
+    final cost = RunTuning.skillUpCost(lv + 1);
+    if (p.profile.credits < cost) return false;
+    p.profile = p.profile.copyWith(credits: p.profile.credits - cost);
+    (r.skillUps[p.id] ??= []).add(skillId);
+    say('${p.name} mejoró ${catalog.skills[skillId]?.name ?? skillId} '
+        '(nivel ${lv + 1}).');
     return true;
   }
 
@@ -350,30 +411,8 @@ extension _RunOp on _Op {
     final n = RunRules.floorOf(r).node(id);
     r.node = id;
     events.add(RunNodeEnteredEvent(r.floor, id));
+    // Sin niveles ni XP (§ 5): el personaje solo crece con recompensas.
     final level = RunRules.enemyLevel(r.floor, n);
-    // El personaje sigue el nivel de los enemigos (sin puntos: solo para
-    // poder equipar lo que sale), con tope antes de los hitos del árbol.
-    final target = math.min(RunTuning.maxPlayerLevel, level);
-    for (final q in players) {
-      if (q.profile.level < target) {
-        q.profile = q.profile.copyWith(level: target);
-        refresh(q, gain: true);
-      }
-    }
-    // Crecer con los enemigos (§ 12 "Balance"): atributos por nivel.
-    final grow = RunRules.enemyLevel(r.floor, n) -
-        (n.type == RunNodeType.elite
-            ? RunTuning.eliteLevelBonus
-            : n.type == RunNodeType.jefe
-                ? RunTuning.bossLevelBonus
-                : 0);
-    if (grow > r.grownTo) {
-      final gained = grow - r.grownTo;
-      r.grownTo = grow;
-      for (final q in players) {
-        _grow(q, gained);
-      }
-    }
     if (n.type.isFight) {
       _runBattle(r, n, level);
       return;
@@ -407,6 +446,11 @@ extension _RunOp on _Op {
         _runRules.enemyGroup(r.zones[r.floor], r.floor, n, _rand, elite: eliteType);
     if (eliteType != null) {
       level += RunRules.eliteRepeatLevels(r.eliteWins[eliteType] ?? 0);
+    }
+    // El maná arranca lleno en cada pelea; vida y carga de ULT siguen
+    // como quedaron (§ 6).
+    for (final p in players) {
+      p.mp = p.maxMp.toDouble();
     }
     s.seq++;
     final step = e.battles.start(
@@ -456,7 +500,8 @@ extension _RunOp on _Op {
     final mods = RunRules.boonMods(r.boons[p.id] ?? const [],
         eliteFight: n.type != RunNodeType.combate);
     final skills = r.loadout[p.id] ?? const <String>[];
-    if (mods.isEmpty && skills.isEmpty) return m;
+    final scale = RunRules.skillScale(r.skillUps[p.id] ?? const []);
+    if (mods.isEmpty && skills.isEmpty && scale.isEmpty) return m;
     return BattlePartyMember(
       id: m.id,
       name: m.name,
@@ -469,6 +514,7 @@ extension _RunOp on _Op {
       aethers: m.aethers,
       fusedSkillId: m.fusedSkillId,
       extraSkills: skills,
+      skillScale: scale,
     );
   }
 
@@ -506,13 +552,19 @@ extension _RunOp on _Op {
       return;
     }
     r.offers.clear();
-    // ULT de rama: el jefe siempre; la élite a veces (§ 4).
-    final ults = n.type == RunNodeType.jefe ||
-        (n.type == RunNodeType.elite && _rand() < RunTuning.eliteUltChance);
+    // ULT de rama: rara y valiosa (§ 12.2), de 1 a 3 opciones; la
+    // probabilidad sube con el tipo de pelea.
+    final ults = _rand() < RunTuning.ultChance(n.type);
+    final ultCount = ults ? RunTuning.ultCount(_rand()) : 0;
     for (final h in humans) {
       final streak = r.missStreak[h.id] ?? 0;
       final (offer, hit) = _offers.offer(h.profile,
-          floor: r.floor, rnd: _rand, missStreak: streak, ults: ults);
+          floor: r.floor,
+          rnd: _rand,
+          missStreak: streak,
+          ults: ults,
+          ultCount: ultCount,
+          ownedSkills: r.ownedSkills(h.id));
       r.offers[h.id] = offer;
       if (_offers.mainPath(h.profile) != null) {
         r.missStreak[h.id] = hit ? 0 : streak + 1;

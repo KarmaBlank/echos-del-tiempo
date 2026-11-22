@@ -215,8 +215,9 @@ class RunRules {
         RunExtraKind.atributo => next.copyWith(
             attributes: next.attributes
                 .add({x.attribute ?? Attribute.vit: x.amount})),
-        // La mejora vive en `RunState.boons` (la suma la sesión).
-        RunExtraKind.mejora => next,
+        // La mejora vive en `RunState.boons` y la habilidad en
+        // `RunState.loadout` (las suma la sesión).
+        RunExtraKind.mejora || RunExtraKind.habilidad => next,
       };
     }
     return next;
@@ -227,6 +228,15 @@ class RunRules {
         for (final id in boons)
           ...?RunBoon.byName(id)?.mods(eliteFight: eliteFight),
       ];
+
+  /// Poder × de cada habilidad mejorada ([ups]: un id por nivel).
+  static Map<String, double> skillScale(List<String> ups) {
+    final out = <String, double>{};
+    for (final s in ups) {
+      out[s] = (out[s] ?? 1) + RunTuning.skillUpPower;
+    }
+    return out;
+  }
 
   /// Pulso extra al empezar la pelea por las mejoras [boons].
   static int boonPulse(List<String> boons) => [

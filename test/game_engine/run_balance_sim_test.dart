@@ -6,7 +6,9 @@ import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/skill.dart';
 import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/mulberry32.dart';
+import 'package:echos_del_tiempo/game_engine/rules/progression_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/run_rules.dart';
+import 'package:echos_del_tiempo/game_engine/rules/run_tuning.dart';
 import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -27,7 +29,11 @@ class _Sim {
 _Sim _simulate(String classId, int seed) {
   final e = SessionEngine(
     battles: BattleEngine(stats: statsCalc, random: mulberry32(seed * 31 + 7)),
-    progression: zoneProgression,
+    // Como el composition root de la Travesía: armas sin requisitos.
+    progression: ProgressionRules(
+        stats: statsCalc,
+        catalog: GameCatalog.standard,
+        ignoreRequirements: true),
     random: mulberry32(seed),
     seeds: () => 1000 + seed,
     achievementsEnabled: false,
@@ -111,11 +117,19 @@ _Sim _simulate(String classId, int seed) {
         }
       case RunPhase.reward:
         final o = r.offers['p0']!;
+        // Habilidad nueva sin lugar: sacrifica la primera libre.
+        final eq = r.loadout['p0'] ?? const <String>[];
+        final drop = o.extras.isNotEmpty &&
+                o.extras.first.skill != null &&
+                eq.length >= RunTuning.freeSkillSlots
+            ? eq.first
+            : null;
         s = tryAct(RunRewardAction(
             tree: o.nodes.isEmpty ? null : 0,
             weapon: o.weapons.isEmpty ? null : 0,
             extra: o.extras.isEmpty ? null : 0,
-            ult: o.ults.isEmpty ? null : 0));
+            ult: o.ults.isEmpty ? null : 0,
+            drop: drop));
         // Equipa el arma más fuerte (ATQ o MAG base).
         final prof = s.players['p0']!.profile;
         num power(String id) {
@@ -151,7 +165,7 @@ _Sim _simulate(String classId, int seed) {
 /// mayoría de las semillas (cota floja: al menos la mitad de 10; con los
 /// valores de v0.2.0 dio guerrero 9, maga 7, paladín 6, tirador 7).
 void main() {
-  test('cada clase llega al jefe del piso 3 en la mayoría de las semillas',
+  test('cada clase llega al jefe del piso 3 y lo vence en la mayoría de las semillas',
       () {
     const seeds = 10;
     final report = StringBuffer();
@@ -167,7 +181,7 @@ void main() {
       }
       report.writeln('$cls: jefe del piso 3 $reach/$seeds, '
           'ganadas $wins/$seeds, piso medio ${floors / seeds}');
-      results[cls] = reach;
+      results[cls] = wins;
     }
     // ignore: avoid_print
     print(report);

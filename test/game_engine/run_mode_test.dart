@@ -85,6 +85,21 @@ void main() {
       }
     });
 
+    test('nunca dos paradas seguidas (tienda / armería / descanso)', () {
+      for (var seed = 1; seed <= 400; seed++) {
+        for (final f in gen.generate(seed).floors) {
+          for (final n in f.nodes) {
+            if (!n.type.isStop) continue;
+            for (final t in n.next) {
+              expect(f.node(t).type.isStop, isFalse,
+                  reason: 'semilla $seed piso ${f.index}: '
+                      '${n.type.label} → ${f.node(t).type.label}');
+            }
+          }
+        }
+      }
+    });
+
     test('misma semilla, mismo mapa; otra semilla, otro', () {
       String sig(int seed) => [
             for (final f in gen.generate(seed).floors)

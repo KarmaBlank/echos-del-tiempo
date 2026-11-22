@@ -93,10 +93,11 @@ enum RunPhase {
 }
 
 /// Tipo de recompensa de la fila «Extra».
-enum RunExtraKind { oro, pocion, eter, atributo, mejora }
+enum RunExtraKind { oro, pocion, eter, atributo, mejora, habilidad }
 
 class RunExtra {
-  const RunExtra(this.kind, this.amount, {this.attribute, this.boon});
+  const RunExtra(this.kind, this.amount,
+      {this.attribute, this.boon, this.skill});
   final RunExtraKind kind;
   final int amount;
   final Attribute? attribute;
@@ -104,16 +105,20 @@ class RunExtra {
   /// Mejora directa (`RunBoon.name`) si [kind] es `mejora`.
   final String? boon;
 
+  /// Habilidad libre (id) si [kind] es `habilidad` (§ 12.2).
+  final String? skill;
+
   @override
   bool operator ==(Object other) =>
       other is RunExtra &&
       other.kind == kind &&
       other.amount == amount &&
       other.attribute == attribute &&
-      other.boon == boon;
+      other.boon == boon &&
+      other.skill == skill;
 
   @override
-  int get hashCode => Object.hash(kind, amount, attribute, boon);
+  int get hashCode => Object.hash(kind, amount, attribute, boon, skill);
 }
 
 /// La oferta de recompensa de un jugador tras una pelea ganada (§ 4).
@@ -177,13 +182,23 @@ class RunState {
     this.wins = 0,
     Map<String, List<String>>? boons,
     Map<String, List<String>>? loadout,
+    Map<String, List<String>>? skills,
+    Map<String, List<String>>? skillUps,
     this.difficulty = 0,
     Map<String, int>? eliteWins,
     List<String>? elitesBeaten,
     this.bossesBeaten = 0,
-    this.grownTo = 1,
   })  : loadout = {
           for (final e in (loadout ?? const <String, List<String>>{}).entries)
+            e.key: [...e.value],
+        },
+        skills = {
+          for (final e in (skills ?? const <String, List<String>>{}).entries)
+            e.key: [...e.value],
+        },
+        skillUps = {
+          for (final e
+              in (skillUps ?? const <String, List<String>>{}).entries)
             e.key: [...e.value],
         },
         eliteWins = {...?eliteWins},
@@ -229,8 +244,29 @@ class RunState {
   /// apilarse; roguelike.md § 4).
   final Map<String, List<String>> boons;
 
-  /// Habilidades de arranque de cada jugador (loadout, § 8.1).
+  /// Habilidades libres EQUIPADAS de cada jugador (las de arranque y las
+  /// ganadas en la run; § 8.1 y § 12.2). Las del arma no cuentan.
   final Map<String, List<String>> loadout;
+
+  /// Todas las habilidades libres que tiene cada jugador en la run
+  /// (equipadas o no, § 12.2).
+  final Map<String, List<String>> skills;
+
+  /// Mejoras de habilidades libres en la armería: un id por nivel
+  /// (se repite al subir, § 12.2).
+  final Map<String, List<String>> skillUps;
+
+  /// Nivel de mejora de [skillId] para [playerId].
+  int skillLevel(String playerId, String skillId) =>
+      (skillUps[playerId] ?? const <String>[])
+          .where((s) => s == skillId)
+          .length;
+
+  /// Las habilidades libres que tiene [playerId] (equipadas primero).
+  List<String> ownedSkills(String playerId) => {
+        ...?loadout[playerId],
+        ...?skills[playerId],
+      }.toList();
 
   /// Dificultad de la run (§ 8.2; 0 = normal).
   final int difficulty;
@@ -242,10 +278,6 @@ class RunState {
   /// Élites vencidas en esta run (tipo de enemigo) y jefes vencidos.
   final List<String> elitesBeaten;
   int bossesBeaten;
-
-  /// Hasta qué nivel de enemigos ya creció el grupo (atributos por
-  /// nivel, § 12 "Balance").
-  int grownTo;
 
   RunState copy() => RunState(
         seed: seed,
@@ -261,10 +293,11 @@ class RunState {
         wins: wins,
         boons: boons,
         loadout: loadout,
+        skills: skills,
+        skillUps: skillUps,
         difficulty: difficulty,
         eliteWins: eliteWins,
         elitesBeaten: elitesBeaten,
         bossesBeaten: bossesBeaten,
-        grownTo: grownTo,
       );
 }

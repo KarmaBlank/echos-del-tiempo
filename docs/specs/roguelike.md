@@ -1,6 +1,6 @@
 # Modo Travesía (roguelike) — spec
 
-Estado: **borrador v2** (decisiones del dueño incorporadas). MVP jugable
+Estado: **borrador v3** (decisiones del dueño incorporadas). MVP jugable
 implementado (§ 12).
 
 Segunda versión del juego, armada con las mismas piezas que el modo actual
@@ -32,7 +32,7 @@ No se camina con el personaje en ningún momento.
   ni nodos especiales.
 - Reglas de generación (Editor de la Travesía, grupo «Mapa»): cantidad
   mín./máx. de cada tipo por piso, capa mínima de la primera élite, sin dos
-  descansos seguidos en una línea, descanso antes del jefe, al menos una
+  paradas (tienda / armería / descanso) seguidas en un camino (§ 12.2), descanso antes del jefe, al menos una
   tienda y una armería por línea.
 - **Zona del piso**: cada piso toma un bioma entre las zonas
   **desbloqueadas** (§ 8.3) según su profundidad. Enemigos y jefe salen
@@ -54,7 +54,7 @@ No se camina con el personaje en ningún momento.
 Al ganar, **cada jugador** ve su propia pantalla. Elige 1 de cada fila
 (o salta):
 
-- **Árbol**: 3 nodos de **cualquier** parte de las ramas de su clase, sin
+- **Objetos** (de la run; antes «Árbol», § 12.2): 3 nodos de **cualquier** parte de las ramas de su clase, sin
   importar si están conectados a lo que ya tomó. Se respetan las
   exclusiones entre keystones. La idea es experimentar.
 - **Arma**: 3 armas de los tipos permitidos para su clase.
@@ -194,8 +194,8 @@ modificadores acumulativos tomado de `ascension`).
 
 ### 8.4 Hazañas
 
-Hazañas propias de la Travesía que dan moneda o nodos del árbol de afuera,
-y avanzan junto con las zonas desbloqueadas.
+Descartado en v0.3.0 (decisión del dueño): la Travesía no tiene hazañas
+(§ 12.2).
 
 ### 8.5 Guardado
 
@@ -296,7 +296,7 @@ Las armas de la run se equipan **sin nivel ni atributos mínimos**
 (`ProgressionRules.ignoreRequirements`, lo inyecta el composition root).
 En la sala previa ya se puede abrir PERSONAJE (equipar, elegir ULT).
 
-**Personaje de la run.** Al entrar a la sala y al empezar cada run, cada
+**Personaje de la run.** (Desde v0.3.0 sin niveles: § 12.2.) Al entrar a la sala y al empezar cada run, cada
 jugador recibe un perfil descartable de su clase: arma inicial, atributos
 base, árbol vacío, `RunTuning.startGold` de oro. El nivel sigue al de los
 enemigos (sin puntos de atributo ni de árbol; solo para poder equipar lo
@@ -452,3 +452,105 @@ más fuerte que pueda pagar, equipa el arma más fuerte, primera opción de
 cada fila de recompensa, pociones en la tienda. Llegan al jefe del piso 3
 (y lo ganan): guerrero 9/10, maga 7/10, paladín 6/10, tirador 7/10. El
 test exige al menos 5/10 por clase.
+
+## 12.2 Travesía v0.3.0 (rama `feat/travesia-v0.3`)
+
+Protocolo Travesía **4** (`kTravesiaProtocolVersion`). El snapshot de la
+run ya no manda `gl` (crecimiento por nivel) y suma `sk` (habilidades
+libres sin equipar) y `su` (mejoras de habilidad); la oferta Extra puede
+traer `sk` (habilidad); `runReward` suma `d` (habilidad que se
+sacrifica); acciones nuevas `runBuyUlt`, `runSkill` y `runSkillUp`. El
+Mundo no manda ni lee nada de esto. Perillas nuevas, todas en el grupo
+**«Travesía»** (Editor → Balance → Travesía).
+
+**Sin niveles ni XP (§ 5).** El personaje de la run queda en nivel 1 toda
+la travesía: no gana XP, no sube de nivel, no reparte puntos y el nivel
+no se muestra (sala, mapa, paradas, PERSONAJE). Los atributos son la base
+de la clase al empezar más lo que sumen las recompensas de atributo.
+Lo que antes hacía el nivel y cómo se reemplazó:
+
+| antes (v0.2.0) | ahora |
+|---|---|
+| el nivel seguía al de los enemigos (tope 9) para poder equipar | armas sin requisitos (abajo) |
+| cada nivel de enemigos sumaba `attrPerLevel` (2) a los cuatro atributos | se quitó; solo crecen con recompensas (`attrReward`, 5 por recompensa) |
+| nivel 1→9 sumaba +2 de vida y +1 de maná por nivel | se compensa con enemigos más blandos (tabla de balance) |
+| la fila Arma ofrecía hasta 2 niveles sobre el del personaje | hasta `weaponLevelAhead` (2) sobre el nivel de enemigos de la entrada del piso |
+| el pool de arranque usaba el tope de nivel (9) | `MetaProgressRules.loadoutMaxLevel` (9), fijo |
+
+**Armas sin requisitos (§ 12).** Ya se equipaban sin nivel ni atributos
+(`ProgressionRules.ignoreRequirements`); ahora tampoco se muestran: las
+fichas, la comparación, la tienda y la fusión no dicen «Requiere» ni
+«Nv» de base cuando las reglas ignoran requisitos. Se mejoran en la
+armería.
+
+**Maná por pelea (§ 6).** Al empezar cada pelea el maná vuelve al máximo;
+la vida y la carga de ULT siguen como quedaron.
+
+**Recompensas.** La fila de nodos del árbol se llama **OBJETOS** (objetos
+de la run); en PERSONAJE, **OBJETOS DE LA RUN**. MEJORAS queda solo para
+las mejoras directas. Cada objeto muestra el nombre una vez (título) y
+abajo el efecto, sin repetir el nombre (`passiveEffectsClean`); la rama
+va como etiqueta del tooltip o como agrupador discreto. Cada tarjeta
+tiene tooltip (objeto, arma con su ficha, ULT, extra).
+
+**ULT como recompensa rara.** La fila ULT sale con
+`ultChanceCombate` (5 %), `ultChanceElite` (30 %) o `ultChanceJefe`
+(100 %) y trae 1 (50 %), 2 (30 %) o 3 (20 %) opciones. La elegida se
+aprende y queda activa; se cambia en PERSONAJE. **Tienda:** cada tienda
+vende `shopUlts` (2) ULT de las ramas de la clase (surtido fijo por run,
+piso y nodo) a `ultPrice` (260) de oro.
+
+**Habilidades libres.** Tope total `maxSkills` (6) contando ATACAR y
+DEFENDER: 4 lugares libres. Las del arma no cuentan (vienen con el arma).
+Libres = las de arranque (loadout) + las ganadas en la run. La fila Extra
+suma `skillsInExtra` (1) habilidad nueva de las armas de la clase (hasta
+el nivel de la fila Arma, sin provocaciones ni las que ya tiene). Al
+tomarla con los lugares llenos aparece «TENÉS QUE SACRIFICAR UNA
+HABILIDAD» con las libres equipadas (nunca las del arma); CANCELAR deja
+la recompensa abierta. `RunState.loadout` = equipadas; `RunState.skills`
+= las que tiene y no equipó; en PERSONAJE → HABILIDADES se equipan y se
+guardan (fuera de combate, respetando el tope).
+
+**Armería.** Dos cosas: (a) ABRIR ARMERÍA → FORJA mejora el arma con oro
+(y con ella sus habilidades, como siempre); (b) MEJORAR HABILIDADES sube
+de nivel una habilidad libre: cuesta `skillUpCost` (60) × nivel siguiente,
+suma `skillUpPower` (15 %) de poder por nivel, hasta `skillUpMax` (3). En
+la pelea entra como `BattlePartyMember.skillScale` (poder × al usarla).
+**Arreglo:** la ARMERÍA (y la TIENDA) del mapa no abrían: el controlador
+cerraba el panel `armory` en cualquier modo que no fuera el pueblo, y en
+la Travesía las paradas son `SessionMode.run`. Ahora queda abierto
+mientras el grupo esté parado en una tienda o una armería.
+
+**Mapa.** Menos caminos: `splitChance` 0.25 → 0.12 y `crossChance` 0.18
+→ 0.09 (la mitad de bifurcaciones y cruces). Regla nueva: **nunca dos
+paradas seguidas** (tienda, armería o descanso) en un camino, ni una
+parada justo antes de la capa de descanso; el relleno de «una tienda y
+una armería por línea» solo cambia combates sin paradas al lado.
+
+**Sin hazañas, alijo ni opciones del Mundo.** La Travesía no detecta ni
+paga hazañas. Se quitaron de la Travesía: HAZAÑAS, ALIJO, BUILD y
+BESTIARIO del título; el botón ALIJO y «Guardar en alijo» del
+inventario, y la tecla B; en CONFIGURACIÓN, CONFIRMAR AL TIRAR, AVISOS DE
+BUILD, CHAT, AVISOS DEL CHAT y FONDO DEL TEXTO EN EL MAPA; la ayuda de
+teclas del título ya no habla de moverse ni del chat.
+
+**Teclas.** C abre PERSONAJE e I el INVENTARIO, igual que en el Mundo;
+las pantallas de la run muestran PERSONAJE [C] e INVENTARIO [I].
+
+**Tooltips.** Nodos del mapa y leyenda (qué hace cada tipo), tarjetas de
+recompensa, atributos, habilidades del arma y libres, mejoras, botones
+de la sala y de las paradas.
+
+**Balance.** Sin crecimiento por nivel el grupo quedaba muy corto. Ahora:
+
+| perilla | v0.2.0 | v0.3.0 |
+|---|---|---|
+| `levelPerFloor` | 5 | 4 |
+| `levelPerLayer` | 0.3 | 0.25 |
+| `enemyHp` | 0.7 | 0.4 |
+| `enemyAtk` | 0.45 | 0.3 |
+| `attrPerLevel` | 2 | (quitada) |
+| `attrReward` (antes fijo 3) | 3 | 5 |
+
+Simulación (`run_balance_sim_test.dart`, ahora con armas sin requisitos
+y exigiendo ganarle al jefe del piso 3): guerrero 9/10, maga 9/10, paladín 5/10, tirador 6/10 (el test exige al menos 5/10 por clase).

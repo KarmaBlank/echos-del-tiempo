@@ -1298,6 +1298,20 @@ class SessionController extends StateNotifier<SessionView?> {
   // Paneles
   // ------------------------------------------------------------------
 
+  /// Travesía: el grupo está parado en una tienda o una armería del mapa
+  /// (ahí la ARMERÍA queda abierta aunque el modo no sea el pueblo).
+  static bool _runShopOpen(GameSession s) {
+    final r = s.run;
+    if (s.mode != SessionMode.run ||
+        r == null ||
+        r.phase != RunPhase.stop ||
+        r.node == null) {
+      return false;
+    }
+    final t = RunRules.floorOf(r).node(r.node!).type;
+    return t == RunNodeType.tienda || t == RunNodeType.armeria;
+  }
+
   void openPanel(WorldPanel panel) {
     if (_s == null) return;
     _panel = panel;
@@ -1447,11 +1461,23 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool voteRunNode(int nodeId) => _apply(RunVoteAction(nodeId));
 
-  bool chooseRunReward({int? tree, int? weapon, int? extra, int? ult}) =>
+  bool chooseRunReward(
+          {int? tree, int? weapon, int? extra, int? ult, String? drop}) =>
       _apply(RunRewardAction(
-          tree: tree, weapon: weapon, extra: extra, ult: ult));
+          tree: tree, weapon: weapon, extra: extra, ult: ult, drop: drop));
 
   bool runReady() => _apply(const RunReadyAction());
+
+  /// Travesía: compra una ULT del surtido de la tienda.
+  bool buyRunUlt(String ultId) => _apply(RunBuyUltAction(ultId));
+
+  /// Travesía: equipa / guarda una habilidad libre.
+  bool setRunSkill(String skillId, {required bool equip}) =>
+      _apply(RunSkillAction(skillId, equip: equip));
+
+  /// Travesía: mejora una habilidad libre (armería).
+  bool upgradeRunSkill(String skillId) =>
+      _apply(RunUpgradeSkillAction(skillId));
 
   bool cancelPrep() => _apply(const CancelPrepAction());
 
@@ -1737,6 +1763,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Tecla B / botón ALIJO [B].
   void toggleStash() {
+    if (isRun) return; // la Travesía no tiene alijo
     if (_panel == WorldPanel.stash) {
       closePanel();
     } else {
@@ -1745,7 +1772,7 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   bool openStash() {
-    if (stashBlock != null) return false;
+    if (isRun || stashBlock != null) return false;
     _panel = WorldPanel.stash;
     _emit();
     return true;
@@ -2298,7 +2325,8 @@ class SessionController extends StateNotifier<SessionView?> {
             _panel == WorldPanel.armory ||
             _panel == WorldPanel.ecoPortal ||
             _panel == WorldPanel.ascension) &&
-        mode != SessionMode.lobby) {
+        mode != SessionMode.lobby &&
+        !(_panel == WorldPanel.armory && _runShopOpen(s))) {
       _panel = null;
     }
     if (_panel == WorldPanel.party && !canEditParty) _panel = null;

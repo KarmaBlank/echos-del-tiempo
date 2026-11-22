@@ -70,7 +70,7 @@ void main() {
     expect(c.session!.run!.phase, RunPhase.reward);
     await show();
     expect(find.byKey(const ValueKey('run-reward-confirm')), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('run-offer-ÁRBOL-0')));
+    await tester.tap(find.byKey(const ValueKey('run-offer-OBJETOS-0')));
     await tester.pump();
     await tester.tap(find.byKey(const ValueKey('run-reward-confirm')));
     await tester.pump();

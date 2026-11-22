@@ -1247,8 +1247,8 @@ class _CraftBenchState extends State<CraftBench> {
                 keyboardFocus: focused,
                 message: '<b>${protoEsc(w.name)}</b> '
                     '${protoColor(ProtoColors.dim, protoEsc(w.type))} '
-                    '${weightTagMarkup(w)}<br>Nv ${w.level} '
-                    '${rules.meetsRequirements(p, w) ? protoColor(ProtoColors.green, 'OK') : protoColor(ProtoColors.red, 'Req')}',
+                    '${weightTagMarkup(w)}'
+                    '${rules.ignoreRequirements ? '' : '<br>Nv ${w.level} ${rules.meetsRequirements(p, w) ? protoColor(ProtoColors.green, 'OK') : protoColor(ProtoColors.red, 'Req')}'}',
                 child: child);
           },
           onTap: (i) {
@@ -1467,8 +1467,8 @@ class _CraftBenchState extends State<CraftBench> {
           '${protoEsc(b0?.name ?? target.baseId)} '
               '${protoColor(ProtoColors.dim, protoEsc(b0?.type ?? '?'))}',
           '<b>${protoEsc(b1?.name ?? after.baseId)}</b> '
-              '${protoColor(ProtoColors.dim, '${protoEsc(b1?.type ?? '?')} · Nv ${b1?.level ?? '?'}')}'
-              '${b1 == null ? '' : '<br>${requirementsLineMarkup(b1, p.level, p.attributes)}'}',
+              '${protoColor(ProtoColors.dim, '${protoEsc(b1?.type ?? '?')}${rules.ignoreRequirements ? '' : ' · Nv ${b1?.level ?? '?'}'}')}'
+              '${b1 == null || rules.ignoreRequirements ? '' : '<br>${requirementsLineMarkup(b1, p.level, p.attributes)}'}',
           key: const ValueKey('craft-base')));
       // Peso (panels.md § "Peso del arma"): la categoría y qué le cuesta
       // en turnos con la base nueva.

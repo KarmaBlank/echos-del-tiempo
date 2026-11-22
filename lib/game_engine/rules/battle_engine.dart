@@ -500,6 +500,7 @@ class BattleEngine {
       ethers: m.ethers,
       aethers: m.aethers,
       ult: m.ult,
+      skillScale: m.skillScale,
     );
     _refreshStats(c);
     c.hp = math.min(m.hp ?? c.maxHp, c.maxHp);
@@ -4368,7 +4369,11 @@ class _Turn {
         _attack(p, foes, target);
         _gainPulse(p);
       case SkillCommand(:final skillId):
-        final sk = engine.catalog.skills[skillId];
+        final base = engine.catalog.skills[skillId];
+        final scale = p.skillScale[skillId];
+        final sk = base == null || scale == null || scale == 1
+            ? base
+            : base.scaled(scale, keepCosts: true);
         // MP, Pulso y precondiciones (combo_balance.md § 5.2): el host
         // rechaza la acción si falta algo.
         if (sk == null ||

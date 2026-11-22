@@ -1,3 +1,5 @@
+import '../../../core/edition/game_edition.dart';
+import '../../../game_engine/models/game_mode.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -184,8 +186,7 @@ class _SettingsMenuState extends ConsumerState<SettingsMenu> {
                         onPressed: () =>
                             widget.onGroupPause!(!widget.groupPaused)),
                   // CONTINUAR es la acción principal.
-                  DsButton(
-                      widget.inGame ? 'CONTINUAR [ESC]' : 'CERRAR [ESC]',
+                  DsButton(widget.inGame ? 'CONTINUAR [ESC]' : 'CERRAR [ESC]',
                       key: const ValueKey('settings-close'),
                       kind: DsButtonKind.primary,
                       onPressed: widget.onClose),
@@ -306,7 +307,6 @@ class PauseMenuButton extends StatelessWidget {
       size: DsButtonSize.compact,
       leading: const _MenuGlyph(),
       onPressed: onPressed);
-
 }
 
 /// `≡` dibujado (la fuente pixel no lo tiene): tres barras de 2 px.
@@ -345,8 +345,8 @@ class _SettingRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final name = Row(mainAxisSize: MainAxisSize.min, children: [
       Flexible(
-          child: Text(retroText(label),
-              style: DsText.body(DsColors.textPrimary))),
+          child:
+              Text(retroText(label), style: DsText.body(DsColors.textPrimary))),
       if (hint != null) ...[
         SizedBox(width: DsSpace.xs),
         Text('?', style: DsText.detail(DsColors.textSecondary)),
@@ -860,21 +860,23 @@ class _AccessibilityTab extends ConsumerWidget {
             onChanged: (v) => c.update(s.copyWith(noticeDuration: v)),
           ),
         ),
-        _SettingRow(
-          label: 'FONDO DEL TEXTO EN EL MAPA',
-          hint: 'Detrás de nombres, carteles, avisos y loot del piso, para '
-              'leerlos sobre tiles cargados.',
-          control: _Choice<MapLabelBackdrop>(
-            keyPrefix: 'a11y-maplabels',
-            options: const {
-              MapLabelBackdrop.none: 'NINGUNO',
-              MapLabelBackdrop.shaded: 'SOMBREADO',
-              MapLabelBackdrop.box: 'CAJA OPACA',
-            },
-            value: s.mapLabelBackdrop,
-            onChanged: (v) => c.update(s.copyWith(mapLabelBackdrop: v)),
+        // Travesía: solo lo del Mundo (campo, plan de build, chat).
+        if (!_travesia)
+          _SettingRow(
+            label: 'FONDO DEL TEXTO EN EL MAPA',
+            hint: 'Detrás de nombres, carteles, avisos y loot del piso, para '
+                'leerlos sobre tiles cargados.',
+            control: _Choice<MapLabelBackdrop>(
+              keyPrefix: 'a11y-maplabels',
+              options: const {
+                MapLabelBackdrop.none: 'NINGUNO',
+                MapLabelBackdrop.shaded: 'SOMBREADO',
+                MapLabelBackdrop.box: 'CAJA OPACA',
+              },
+              value: s.mapLabelBackdrop,
+              onChanged: (v) => c.update(s.copyWith(mapLabelBackdrop: v)),
+            ),
           ),
-        ),
         _SettingRow(
           label: 'REGISTRO DE BATALLA',
           hint: s.battleLog == BattleLogMode.extended
@@ -991,7 +993,6 @@ class _SectionHeader extends StatelessWidget {
         padding: EdgeInsets.only(top: DsSpace.sm),
         child: DsSectionHeader(retroText(text)),
       );
-
 }
 
 /// Vista previa en vivo de la sección TEXTO (accessibility.md § 9): un
@@ -1264,56 +1265,64 @@ class _GameTab extends ConsumerWidget {
             onChanged: (v) => c.update(s.copyWith(turnTimer: v)),
           ),
         ),
-        _SettingRow(
-          label: 'CONFIRMAR AL TIRAR',
-          hint: 'Pregunta antes de tirar un objeto al piso. Vender y '
-              'desarmar siempre preguntan.',
-          control: _Choice<bool>(
-            keyPrefix: 'game-confirm-drop',
-            options: _yesNo,
-            value: s.confirmDrop,
-            onChanged: (v) => c.update(s.copyWith(confirmDrop: v)),
+        // Travesía: solo lo del Mundo (campo, plan de build, chat).
+        if (!_travesia)
+          _SettingRow(
+            label: 'CONFIRMAR AL TIRAR',
+            hint: 'Pregunta antes de tirar un objeto al piso. Vender y '
+                'desarmar siempre preguntan.',
+            control: _Choice<bool>(
+              keyPrefix: 'game-confirm-drop',
+              options: _yesNo,
+              value: s.confirmDrop,
+              onChanged: (v) => c.update(s.copyWith(confirmDrop: v)),
+            ),
           ),
-        ),
-        _SettingRow(
-          label: 'AVISOS DE BUILD',
-          hint: 'Cartel y línea en el chat cuando avanza una meta de tu '
-              'plan de build (pestaña BUILD del personaje).',
-          control: _Choice<bool>(
-            keyPrefix: 'game-build-notices',
-            options: _yesNo,
-            value: s.buildNotices,
-            onChanged: (v) => c.update(s.copyWith(buildNotices: v)),
+        // Travesía: solo lo del Mundo (campo, plan de build, chat).
+        if (!_travesia)
+          _SettingRow(
+            label: 'AVISOS DE BUILD',
+            hint: 'Cartel y línea en el chat cuando avanza una meta de tu '
+                'plan de build (pestaña BUILD del personaje).',
+            control: _Choice<bool>(
+              keyPrefix: 'game-build-notices',
+              options: _yesNo,
+              value: s.buildNotices,
+              onChanged: (v) => c.update(s.copyWith(buildNotices: v)),
+            ),
           ),
-        ),
         // HUD v0.8.1 (exploration.md § "Chat").
-        _SettingRow(
-          label: 'CHAT',
-          hint: 'OCULTO: una píldora CHAT [ENTER] con los mensajes nuevos; '
-              'Enter o clic lo abre.',
-          control: _Choice<ChatVisibility>(
-            keyPrefix: 'game-chat',
-            options: const {
-              ChatVisibility.hidden: 'OCULTO',
-              ChatVisibility.always: 'SIEMPRE VISIBLE',
-            },
-            value: s.chat,
-            onChanged: (v) => c.update(s.copyWith(chat: v)),
+        // Travesía: solo lo del Mundo (campo, plan de build, chat).
+        if (!_travesia)
+          _SettingRow(
+            label: 'CHAT',
+            hint: 'OCULTO: una píldora CHAT [ENTER] con los mensajes nuevos; '
+                'Enter o clic lo abre.',
+            control: _Choice<ChatVisibility>(
+              keyPrefix: 'game-chat',
+              options: const {
+                ChatVisibility.hidden: 'OCULTO',
+                ChatVisibility.always: 'SIEMPRE VISIBLE',
+              },
+              value: s.chat,
+              onChanged: (v) => c.update(s.copyWith(chat: v)),
+            ),
           ),
-        ),
-        _SettingRow(
-          label: 'AVISOS DEL CHAT',
-          hint: 'Con el chat oculto, los avisos importantes (misión '
-              'aceptada, piso despejado, subida de nivel) aparecen 4 s.',
-          control: _Choice<bool>(
-            keyPrefix: 'game-chat-notices',
-            options: _yesNo,
-            value: s.chatNotices,
-            onChanged: s.chat == ChatVisibility.always
-                ? null
-                : (v) => c.update(s.copyWith(chatNotices: v)),
+        // Travesía: solo lo del Mundo (campo, plan de build, chat).
+        if (!_travesia)
+          _SettingRow(
+            label: 'AVISOS DEL CHAT',
+            hint: 'Con el chat oculto, los avisos importantes (misión '
+                'aceptada, piso despejado, subida de nivel) aparecen 4 s.',
+            control: _Choice<bool>(
+              keyPrefix: 'game-chat-notices',
+              options: _yesNo,
+              value: s.chatNotices,
+              onChanged: s.chat == ChatVisibility.always
+                  ? null
+                  : (v) => c.update(s.copyWith(chatNotices: v)),
+            ),
           ),
-        ),
       ],
     );
   }
@@ -1394,3 +1403,7 @@ class _ControlsTab extends StatelessWidget {
     );
   }
 }
+
+/// Travesía (roguelike.md § 12.2): sin las opciones que solo tienen
+/// sentido en el Mundo.
+bool get _travesia => GameEdition.current.mode == GameModeKind.travesia;

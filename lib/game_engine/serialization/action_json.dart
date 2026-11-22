@@ -165,8 +165,12 @@ abstract final class ActionJson {
             if (a.weapon != null) 'w': a.weapon,
             if (a.extra != null) 'x': a.extra,
             if (a.ult != null) 'u': a.ult,
+            if (a.drop != null) 'd': a.drop,
           },
         RunReadyAction() => {'t': 'runReady'},
+        RunBuyUltAction() => {'t': 'runBuyUlt', 'u': a.ultId},
+        RunSkillAction() => {'t': 'runSkill', 's': a.skillId, 'on': a.equip},
+        RunUpgradeSkillAction() => {'t': 'runSkillUp', 's': a.skillId},
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -340,9 +344,16 @@ abstract final class ActionJson {
             tree: j.intOrNull('tr'),
             weapon: j.intOrNull('w'),
             extra: j.intOrNull('x'),
-            ult: j.intOrNull('u'));
+            ult: j.intOrNull('u'),
+            drop: j['d'] as String?);
       case 'runReady':
         return const RunReadyAction();
+      case 'runBuyUlt':
+        return RunBuyUltAction(j.str('u'));
+      case 'runSkill':
+        return RunSkillAction(j.str('s'), equip: j['on'] == true);
+      case 'runSkillUp':
+        return RunUpgradeSkillAction(j.str('s'));
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

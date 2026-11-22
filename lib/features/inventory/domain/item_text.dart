@@ -194,7 +194,10 @@ String itemTooltipMarkup(
       'nivel de objeto ${it.itemLevel}</span>'
       '${generated ? ' ${_c(_dim, _esc(base))}' : ''}'
       '${equipped ? ' ${_c(_orange, 'EQUIPADA')}' : ''}');
-  if (w != null) l.add(requirementsLineMarkup(w, level, attributes));
+  // Travesía: las armas no piden nivel ni atributos (roguelike.md § 12.2).
+  if (w != null && !rules.ignoreRequirements) {
+    l.add(requirementsLineMarkup(w, level, attributes));
+  }
   if (stats != null) {
     l.add('ATQ <b>${stats.attack}</b> · MAG <b>${stats.magic}</b>'
         '${_c(_dim, ' (con tus atributos)')}');
@@ -260,7 +263,8 @@ String itemTooltipMarkup(
         'nivel de objeto ${it.itemLevel}</span>'
         '${generated ? ' ${_c(_dim, _esc(base))}' : ''}'
         '${equipped ? ' ${_c(_orange, 'EQUIPADA')}' : ''}',
-    if (w != null) requirementsLineMarkup(w, level, attributes),
+    if (w != null && !rules.ignoreRequirements)
+      requirementsLineMarkup(w, level, attributes),
     if (stats != null)
       'ATQ <b>${stats.attack}</b> · MAG <b>${stats.magic}</b>'
           '${_c(_dim, ' (con tus atributos)')}',

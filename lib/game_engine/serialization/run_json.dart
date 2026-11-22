@@ -22,11 +22,12 @@ abstract final class RunJson {
         if (r.wins != 0) 'w': r.wins,
         if (r.boons.isNotEmpty) 'b': r.boons,
         if (r.loadout.isNotEmpty) 'lo': r.loadout,
+        if (r.skills.isNotEmpty) 'sk': r.skills,
+        if (r.skillUps.isNotEmpty) 'su': r.skillUps,
         if (r.difficulty != 0) 'df': r.difficulty,
         if (r.eliteWins.isNotEmpty) 'ew': r.eliteWins,
         if (r.elitesBeaten.isNotEmpty) 'eb': r.elitesBeaten,
         if (r.bossesBeaten != 0) 'bb': r.bossesBeaten,
-        if (r.grownTo != 1) 'gl': r.grownTo,
       };
 
   static RunState fromJson(Json j) => RunState(
@@ -51,11 +52,12 @@ abstract final class RunJson {
         wins: j.intOrNull('w') ?? 0,
         boons: _strMap(j['b']),
         loadout: _strMap(j['lo']),
+        skills: _strMap(j['sk']),
+        skillUps: _strMap(j['su']),
         difficulty: j.intOrNull('df') ?? 0,
         eliteWins: _intMap(j['ew']),
         elitesBeaten: j['eb'] == null ? null : j.strings('eb'),
         bossesBeaten: j.intOrNull('bb') ?? 0,
-        grownTo: j.intOrNull('gl') ?? 1,
       );
 
   static Map<String, List<String>>? _strMap(Object? raw) => raw == null
@@ -112,6 +114,7 @@ abstract final class RunJson {
               'a': x.amount,
               if (x.attribute != null) 'at': x.attribute!.name,
               if (x.boon != null) 'bn': x.boon,
+              if (x.skill != null) 'sk': x.skill,
             },
         ],
       };
@@ -129,6 +132,7 @@ abstract final class RunJson {
                 x.integer('a'),
                 attribute: x.enumOrNull('at', Attribute.values),
                 boon: x['bn'] as String?,
+                skill: x['sk'] as String?,
               );
             }(),
         ],

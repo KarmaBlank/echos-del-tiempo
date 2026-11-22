@@ -154,17 +154,33 @@ const Map<String, TuningDef> kTuningDefaults = {
     'diffAtk': 0.08,
     'diffHp': 0.10,
     'diffMax': 5,
-    // Curva (§ 12 "Balance"): atributos que gana cada personaje, en los
-    // cuatro, por cada nivel que suben los enemigos.
-    'attrPerLevel': 2,
+    // Sin niveles (v0.3.0): el personaje crece solo con recompensas.
+    // Puntos de la recompensa de atributo y niveles por encima de los
+    // enemigos de la entrada del piso de las armas ofrecidas.
+    'attrReward': 5,
+    // Habilidades (§ 12.2): tope total contando ATACAR y DEFENDER (las
+    // del arma no cuentan), habilidades nuevas en la fila Extra y mejora
+    // en la armería (oro base × nivel siguiente, + poder por nivel, tope).
+    'maxSkills': 6,
+    'skillsInExtra': 1,
+    'skillUpCost': 60,
+    'skillUpPower': 0.15,
+    'skillUpMax': 3,
+    // ULT como recompensa rara (por tipo de pelea) y en la tienda.
+    'ultChanceCombate': 0.05,
+    'ultChanceElite': 0.3,
+    'ultChanceJefe': 1.0,
+    'shopUlts': 2,
+    'ultPrice': 260,
+    'weaponLevelAhead': 2,
     // Nivel de los enemigos: 1 + piso × levelPerFloor + capa ×
     // levelPerLayer (+ élite / jefe).
-    'levelPerFloor': 5,
-    'levelPerLayer': 0.3,
+    'levelPerFloor': 4,
+    'levelPerLayer': 0.25,
     // Vida y ATQ de los enemigos de la Travesía (× sobre la curva del
     // Mundo, antes de la dificultad).
-    'enemyHp': 0.7,
-    'enemyAtk': 0.45,
+    'enemyHp': 0.4,
+    'enemyAtk': 0.3,
   }),
 };
 

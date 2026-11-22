@@ -393,7 +393,7 @@ class _BuyTabState extends ConsumerState<BuyTab> {
                               '${protoEsc(x.name)} '
                               '${protoColor(ProtoColors.dim, protoEsc(x.type))} '
                               '${weightTagMarkup(x)}',
-                          value: 'Nv ${x.level}  '
+                          value: '${rules.ignoreRequirements ? '' : 'Nv ${x.level}  '}'
                               '${p.items.any((i) => i.baseId == x.id) ? protoColor(ProtoColors.green, 'TIENES') : '${rules.meetsRequirements(p, x) ? '' : '${protoColor(ProtoColors.red, 'Req')} '}<b>₵${x.price}</b>'}',
                         ),
                     ],
