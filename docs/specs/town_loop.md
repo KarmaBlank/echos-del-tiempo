@@ -372,16 +372,32 @@ el pueblo también hace progresar. Esta sección precisa § 5 (Oficios).
     caña legendaria con Pesca baja funciona, pero con bonus reducidos.
 
 ### Propiedad: mundo del host, personaje propio
-- **El host es dueño del MUNDO**: pueblo, mejoras, estado de biomas,
-  huerta, eventos del ciclo.
-- **Cada jugador es dueño de su personaje**: nivel, habilidades de
-  vida, inventario, stash, herramientas.
-- Solo: progresás tu mundo con tu personaje. Al unirte a un amigo estás
-  **en su mundo con tus datos de personaje**. Lo que ganes ahí (XP,
-  objetos, herramientas) se va con vos; lo que construyas en su pueblo
-  queda en su mundo.
-- Red: el host valida la XP y los resultados (§ 10); el perfil del
-  personaje viaja como hoy (`netcode.md`, perfiles).
+- **Los mundos son por CUENTA**, no por personaje. Un mundo guarda:
+  pueblo, mejoras, estado de biomas, parcelas, eventos del ciclo y pool
+  de loot perdido.
+- **Los personajes** guardan nivel, habilidades de vida, inventario,
+  stash y herramientas, y **pueden entrar a cualquier mundo**.
+- **Varios mundos por cuenta**: "Crear mundo" con etiqueta
+  **Solitario** o **Cooperativo**. La etiqueta es solo el **valor por
+  defecto** y el **agrupamiento de la lista**: **no bloquea nada**.
+  - Cada vez que abrís un mundo elegís **"Jugar solo"** o **"Abrir
+    sala"** (lo hosteás y los amigos entran con sus propios
+    personajes). Un mundo Solitario se puede abrir como sala y uno
+    Cooperativo se puede jugar solo.
+  - La dificultad sigue al tamaño de la sala (§ 6), no a la etiqueta.
+  - Se puede seleccionar, renombrar y borrar mundos (borrar pide
+    confirmación). Al jugar se elige **mundo + personaje**.
+- Lo que ganes en el mundo de otro (XP, objetos, herramientas) se va
+  con tu personaje; lo que construyas en su pueblo queda en su mundo.
+- **Guardado**: en la carpeta de datos de cada edición,
+  `accounts/worlds/<id>.json` (un archivo por mundo; los personajes
+  siguen donde están hoy). **Migración compatible**: el estado actual
+  del pueblo se convierte en el **primer mundo** de la cuenta (etiqueta
+  por defecto a confirmar con el dueño); los saves viejos se leen sin
+  pérdida.
+- Red: **el mundo seleccionado por el host es el mundo de la sala**. El
+  host valida XP y resultados (§ 10); el perfil del personaje viaja
+  como hoy (`netcode.md`, perfiles).
 
 ## 12. Decisiones del dueño (mandan sobre el resto)
 
