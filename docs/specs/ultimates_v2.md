@@ -80,6 +80,10 @@ futuro o del pasado, futuro inmutable, pasado magitec).
   `uk`). Al obtener un arma con ULT propia sale el aviso «<arma> le dio a
   <jugador> la ULT <nombre>. Equipala desde el menú.»; el arma ya no la
   impone (branch_ults.md § 3).
+- **v0.20.13:** elegir una ULT la anota en `uk` (también las de tipo de
+  arma), así no depende de seguir teniendo el arma. Todo armado de
+  `PlayerBuild` (bendiciones de santuario incluidas) conserva `ultSel` y
+  `ultLevel`.
 - Orden si no hay `ultSel` (o es de otra clase): ascensión > base del arma
   (tomos del Invocador) > tipo de arma.
 - **Las ULT nunca se pierden** (cambio del dueño, reemplaza la respuesta

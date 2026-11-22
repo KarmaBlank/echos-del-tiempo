@@ -199,7 +199,11 @@ abstract final class UltRules {
 
   /// [id] puede estar en el repertorio (v2, de camino o de arma).
   static bool isLearnable(String id) =>
-      kUltV2.containsKey(id) || kWeaponUltSkills.containsKey(id);
+      kUltV2.containsKey(id) ||
+      kWeaponUltSkills.containsKey(id) ||
+      // Las de tipo de arma también (v0.20.13): una elegida queda en el
+      // repertorio aunque después el arma se venda, se funda o se guarde.
+      GameCatalog.standard.ultimates.values.any((u) => u.id == id);
 
   /// [id] es alguna ULT de jugador que existe (ascensión, arma, tipo de
   /// arma o v2).

@@ -991,7 +991,11 @@ class _Op {
             rules.equippedItem(prof), catalog)) {
           return false;
         }
-        p.profile = prof.copyWith(ultSel: () => ultId);
+        // La elegida se anota en el repertorio (v0.20.13): si venía de un
+        // arma (o del tipo de un arma) que después se vende, se funde o va
+        // al alijo, la elección no se pierde ni vuelve a la automática.
+        final learned = ultId == null ? prof : UltRules.learn(prof, ultId);
+        p.profile = learned.copyWith(ultSel: () => ultId);
         refresh(p);
         return true;
 
