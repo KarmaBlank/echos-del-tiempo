@@ -58,6 +58,7 @@ class PlayerProfile {
     Set<String> ultKnown = const {},
     String? ultSel,
     Map<String, int> ultLevels = const {},
+    Set<String> ultNew = const {},
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -95,10 +96,12 @@ class PlayerProfile {
       ultKnown: Set.unmodifiable(ultKnown),
       ultSel: ultSel,
       ultLevels: Map.unmodifiable(ultLevels),
+      ultNew: Set.unmodifiable(ultNew),
     );
   }
 
   const PlayerProfile._({
+    this.ultNew = const {},
     required this.ultLevels,
     required this.ultKnown,
     required this.ultSel,
@@ -158,6 +161,11 @@ class PlayerProfile {
   /// Nivel de mejora de cada ULT del repertorio (JSON `ulv`, 2-5; sin
   /// entrada = 1).
   final Map<String, int> ultLevels;
+
+  /// ULT recién aprendidas que el jugador todavía no miró en el menú
+  /// (marca NUEVA, JSON `un`, ultimates_v2.md § 2.1). Se desmarcan con
+  /// `SeenItemsAction` usando el id `ult:<id>`.
+  final Set<String> ultNew;
 
   /// Puntos de árbol ganados: nivel, Maestría, Pruebas e hitos elegidos.
   int get treePoints => PassiveTreeRules.pointsEarned(treeLevel,
@@ -372,6 +380,7 @@ class PlayerProfile {
     Set<String>? ultKnown,
     String? Function()? ultSel,
     Map<String, int>? ultLevels,
+    Set<String>? ultNew,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -423,6 +432,7 @@ class PlayerProfile {
       ultSel: ultSel == null ? this.ultSel : ultSel(),
       ultLevels:
           ultLevels == null ? this.ultLevels : Map.unmodifiable(ultLevels),
+      ultNew: ultNew == null ? this.ultNew : Set.unmodifiable(ultNew),
     );
   }
 
@@ -554,6 +564,7 @@ class PlayerProfile {
         if (ultKnown.isNotEmpty) 'uk': (ultKnown.toList()..sort()),
         if (ultSel != null) 'us': ultSel,
         if (ultLevels.isNotEmpty) 'ulv': ultLevels,
+        if (ultNew.isNotEmpty) 'un': (ultNew.toList()..sort()),
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -673,6 +684,7 @@ class PlayerProfile {
       achievements: AchievementProgress.fromJson(json['ach']),
       ultKnown: {..._strings(json['uk'])},
       ultSel: json['us'] is String ? json['us'] as String : null,
+      ultNew: {..._strings(json['un'])},
       ultLevels: {
         if (json['ulv'] case final Map m)
           for (final e in m.entries)

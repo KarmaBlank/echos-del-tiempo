@@ -84,8 +84,39 @@ futuro o del pasado, futuro inmutable, pasado magitec).
   arma), así no depende de seguir teniendo el arma. Todo armado de
   `PlayerBuild` (bendiciones de santuario incluidas) conserva `ultSel` y
   `ultLevel`.
-- Orden si no hay `ultSel` (o es de otra clase): ascensión > base del arma
-  (tomos del Invocador) > tipo de arma.
+- **v0.20.15 (dueño): las ULT ya no dependen del arma.**
+  - **ULT base:** cada clase tiene la ULT que traía su arma inicial
+    (`UltRules.baseUltId`: Maga → Meteoro `ult_baculo`, Guerrero → la de
+    espada, etc.). Está siempre en el repertorio y es la activa si no se
+    eligió otra.
+  - **Conseguir un arma enseña sus ULT en el momento** (`UltRules.taughtBy`):
+    la propia (mod "ULT: …", legendario/único, tomo del Invocador
+    `kWeaponUltOf`) **y la de su tipo** (decisión: un arma de un tipo
+    nuevo enseña la ULT de ese tipo; reemplaza a `ownedTypeUlts`). Se
+    anota en `uk`, sale el mensaje de sesión «<jugador>: ¡Nueva ULT:
+    <nombre>!» y queda con la marca **NUEVA** (`un` en el perfil) hasta
+    pasar el mouse por su fila en PERSONAJE → ULT; la pestaña ULT muestra
+    la insignia NUEVA mientras haya alguna. Se desmarca con
+    `SeenItemsAction` usando el id `ult:<id>` (sin acción nueva). La base
+    nunca sale como NUEVA. Las de jefe/Ecos/hazañas también usan NUEVA.
+  - **Combate** (`ultimateOf`): elegida (`ultSel`, solo la clase la
+    restringe) > ascensión > ULT base. **El arma equipada nunca decide**
+    (ni su tipo ni su ULT propia). Un `Combatant` sin build (enemigos,
+    pruebas) sigue con la del tipo.
+  - **El arma no muestra ULT**: tooltips, comparación, tienda, fusión,
+    inventario y chips de habilidad ya no listan la ULT del arma ni el mod
+    "ULT: …" (decisión: se quitó del todo, sin línea "Enseña…").
+  - **Mods "ULT" en fusión/forja:** se conservan como dato (el arma sigue
+    enseñando esa ULT a quien la consiga; el filtro de loot `Ult` sigue
+    sirviendo) y el traslado queda como estaba; en combate no importa.
+  - **Migración:** al normalizar el perfil (`ProgressionRules.normalize`)
+    se absorben sin marca NUEVA la base y las ULT de las armas del
+    inventario. El alijo no se recorre (vive en la cuenta, no en el
+    perfil): esas ULT se aprenden al sacar el arma. `ultSel` se conserva.
+  - **Travesía:** la run arranca con la ULT base de la clase (default) y
+    las recompensas siguen usando `ultSel`.
+- Orden si no hay `ultSel` (o es de otra clase): ascensión > ULT base de
+  la clase (v0.20.15; antes base del arma > tipo de arma).
 - **Las ULT nunca se pierden** (cambio del dueño, reemplaza la respuesta
   3): toda ULT que el personaje obtiene —también la de un arma con mod
   "ULT" o de un legendario— entra al repertorio permanente (`uk`) apenas

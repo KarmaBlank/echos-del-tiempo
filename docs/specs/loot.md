@@ -1270,7 +1270,8 @@ enum CraftOp { transferAffix, transferPassive, transferSkill, removeAffix,
 ```
 Base: `rules.catalog.weapons[item.baseId]` (`WeaponDef`: `name`, `type`,
 `level`, `requirements`, `implicit`, `shieldDefense`, `skillIds`,
-`classId` = familia). ULT: `rules.catalog.ultimates[w.type]`.
+`classId` = familia). Desde v0.20.15 el arma no muestra ULT: conseguirla la enseña al
+repertorio (`UltRules.taughtBy`, ultimates_v2.md § 2.1).
 
 Textos — `ItemRules` (`rules/item_rules.dart`, `rules.items`):
 ```dart

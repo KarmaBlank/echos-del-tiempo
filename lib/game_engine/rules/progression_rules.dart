@@ -169,7 +169,9 @@ class ProgressionRules {
     final it = equippedItem(p);
     final w = equippedWeapon(p);
     final item = it != null && it.baseId == w.id ? it : null;
-    final sel = UltRules.validSel(p, w, item, catalog);
+    // La elegida pasa tal cual (v0.20.15): el arma nunca la anula; solo
+    // la clase la invalida en el combate (`UltRules.selected`).
+    final sel = UltRules.isUltId(p.ultSel, catalog) ? p.ultSel : null;
     return PlayerBuild(
       classId: p.classId,
       level: p.level,
@@ -181,7 +183,7 @@ class ProgressionRules {
       ascension: p.ascension,
       ultSel: sel,
       ultLevel: UltRules.levelOf(
-          p, sel ?? (item == null ? null : UltRules.itemUltId(item)) ?? ''),
+          p, sel ?? UltRules.baseUlt(p.classId, catalog)?.id ?? ''),
     );
   }
 
@@ -342,6 +344,10 @@ class ProgressionRules {
           if (UltRules.isLearnable(e.key) && e.value > 1)
             e.key: e.value.clamp(1, UltRules.maxLevel),
       },
+      ultNew: {
+        for (final id in raw.ultNew)
+          if (UltRules.isLearnable(id)) id
+      },
       // Jefes del Abismo vencidos (v0.8): solo 1..5.
       abyssKills: {
         for (final n in raw.abyssKills)
@@ -375,6 +381,12 @@ class ProgressionRules {
     if (eq == null || !canEquip(p, eq.uid)) {
       p = p.copyWith(equipped: catalog.classes[cls]!.startWeaponId);
     }
+    // ULT libres del arma (ultimates_v2.md § 2.1): la ULT base de la clase
+    // y las que enseñan las armas que ya tiene entran al repertorio, sin
+    // marca NUEVA (migración de perfiles viejos; idempotente).
+    p = UltRules.absorb(p, markNew: false);
+    // La elegida queda anotada en el repertorio (nunca se pierde).
+    if (p.ultSel case final sel?) p = UltRules.learn(p, sel, markNew: false);
     return InventoryRules.relayout(p);
   }
 

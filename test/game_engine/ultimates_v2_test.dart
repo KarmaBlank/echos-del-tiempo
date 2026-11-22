@@ -239,7 +239,8 @@ void main() {
 
     test('perfil viejo sin uk/us: comportamiento de hoy; ida y vuelta', () {
       final p = prof();
-      expect(p.ultKnown, isEmpty);
+      // La normalización ya suma la ULT base de la clase (v0.20.15).
+      expect(p.ultKnown, {UltRules.baseUltId(p.classId)});
       expect(p.ultSel, isNull);
       final q = p.copyWith(
           ultKnown: {'ult2_sangreEco'},

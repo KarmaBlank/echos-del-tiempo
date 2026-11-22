@@ -31,6 +31,8 @@ BattleState summonBattle() {
         level: 44,
         attributes: PlayerAttributes.base(cls.baseAttributes),
         equippedWeapon: kWeapons['libro_cuatro']!,
+        // ULT libres del arma (v0.20.15): Portal se elige.
+        ultSel: 'ult_portal',
       ),
     ),
   ], enemyTypes: const ['slime', 'bat', 'slime'], triggeredBy: 'm').state;

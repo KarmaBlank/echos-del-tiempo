@@ -43,7 +43,8 @@ void main() {
     expect(t, contains(protoPlain('Ímpetu I:')));
     // Nivel de objeto 10: tope min(8, 2 + 10/5) = 4 (combo_balance.md § 2).
     expect(t, contains('Forja +1/4 (Poder 1)'));
-    expect(t, contains('ULT:'));
+    // ULT libres del arma (v0.20.15): la ficha ya no la muestra.
+    expect(t, isNot(contains('ULT:')));
   });
 
   test('requisitos que faltan en rojo y habilidad trasladada', () {
