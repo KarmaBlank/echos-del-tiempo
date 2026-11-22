@@ -208,6 +208,7 @@ class BattleEngine {
     required List<String> enemyTypes,
     bool elite = false,
     String? triggeredBy,
+    TurnRule turnRule = TurnRule.velocidad,
   }) {
     // Vida en cooperativo (combo_balance.md § 3.3): 0.6 + 0.3 × jugadores
     // (antes 0.55 + 0.45 × jugadores).
@@ -313,6 +314,7 @@ class BattleEngine {
       enemies: enemies,
       boss: first.boss,
       elite: elite,
+      turnRule: turnRule,
       log: first.boss
           ? '¡Jefe: ${first.name}!'
           : elite
@@ -361,6 +363,12 @@ class BattleEngine {
   /// (no es su turno, no le alcanza el MP, etc.): el estado no cambia.
   BattleStep? command(BattleState state, String playerId, BattleCommand cmd) {
     final cur = state.current;
+    if (state.awaitingGroup) {
+      // porBando (roguelike.md § 6): el primero del grupo que manda, actúa.
+      if (!state.pendingGroup.any((p) => p.id == playerId)) return null;
+      final t = _Turn(this, state.copy()..currentId = playerId);
+      return t.command(t.state.current!, cmd) ? t.result : null;
+    }
     if (state.ended ||
         cur == null ||
         !cur.isPlayer ||
@@ -374,19 +382,21 @@ class BattleEngine {
 
   /// Se le acabó el tiempo al jugador de turno: se defiende solo.
   BattleStep? timeout(BattleState state) {
+    if (state.awaitingGroup) {
+      // porBando: se acabó el tiempo del grupo; los que faltaban se
+      // defienden solos.
+      final t = _Turn(this, state.copy());
+      for (final p in t.state.pendingGroup) {
+        if (t.state.ended) break;
+        t.state.currentId = p.id;
+        t._autoDefend(p);
+      }
+      return t.result;
+    }
     final cur = state.current;
     if (state.ended || cur == null || !cur.isPlayer) return null;
     final t = _Turn(this, state.copy());
-    final p = t.state.current!;
-    t.events.add(ActionEvent(p.id, BattleActionKind.defend));
-    p.defending = true;
-    p.guardStreak = false;
-    p.guardHitPending = false;
-    t._gainPulse(p);
-    t.tickEffects(p);
-    p.nextTurn = t.state.clock + interval(p);
-    t.state.log = 'Tiempo agotado: ${p.name} se defiende automáticamente';
-    t.endTurn();
+    t._autoDefend(t.state.current!);
     return t.result;
   }
 
@@ -679,8 +689,67 @@ class _Turn {
 
   // ---------------- turnos ----------------
 
+  /// Tiempo agotado: [p] (que tiene el turno) se defiende solo.
+  void _autoDefend(Combatant p) {
+    events.add(ActionEvent(p.id, BattleActionKind.defend));
+    p.defending = true;
+    p.guardStreak = false;
+    p.guardHitPending = false;
+    _gainPulse(p);
+    tickEffects(p);
+    p.nextTurn = state.clock + _iv(p);
+    state.log = 'Tiempo agotado: ${p.name} se defiende automáticamente';
+    endTurn();
+  }
+
+  /// `porBando` (roguelike.md § 6): turno del grupo y turno enemigo.
+  /// Al empezar la ronda arrancan los turnos de todos los jugadores
+  /// (estados, Pulso, aturdidos que pierden el turno) y nadie queda con
+  /// el turno: actúa el primero que manda un comando. Cuando no queda
+  /// ninguno, actúan las invocaciones y después los enemigos, de a uno y
+  /// en orden de lista. La velocidad no cuenta.
+  void _nextBando() {
+    if (state.groupPhase) {
+      if (state.pendingGroup.isNotEmpty) return;
+      state.groupPhase = false;
+    }
+    // La pelea empieza con el turno del grupo.
+    if (state.round > 0) {
+      for (final c in [...state.summons, ...state.enemies]) {
+        if (c.alive && !_passive(c) && !state.acted.contains(c.id)) {
+          _beginTurn(c);
+          return;
+        }
+      }
+    }
+    state
+      ..round += 1
+      ..acted.clear()
+      ..groupPhase = true
+      ..clock += 1;
+    for (final p in [...state.party]) {
+      if (state.ended) return;
+      if (!p.alive) {
+        state.acted.add(p.id);
+        continue;
+      }
+      _beginTurn(p);
+      state.currentId = null;
+    }
+    if (!state.ended) {
+      final names = [for (final p in state.pendingGroup) p.name];
+      state.log = names.isEmpty
+          ? 'Turno del grupo: nadie puede actuar'
+          : 'Turno del grupo · ${names.join(', ')}';
+    }
+  }
+
   void nextTurn() {
     if (state.ended) return;
+    if (state.porBando) {
+      _nextBando();
+      return;
+    }
     Combatant? best;
     for (final c in [...state.party, ...state.enemies, ...state.summons]) {
       if (c.alive &&
@@ -690,8 +759,13 @@ class _Turn {
       }
     }
     if (best == null) return;
-
     state.clock = math.max(state.clock, best.nextTurn);
+    _beginTurn(best);
+  }
+
+  /// Empieza el turno de [best]: estados, Pulso, quiebre, trampas...
+  /// Si lo pierde (aturdido, quebrado) el turno queda libre.
+  void _beginTurn(Combatant best) {
     state.currentId = best.id;
     events.add(TurnStartedEvent(best.id));
     if (best.isSummon) {
@@ -764,6 +838,7 @@ class _Turn {
             _iv(best) * (struggle ? kBossMechanics['telarana']!.soloValue : 1);
       }
       state.currentId = null;
+      if (state.porBando) state.acted.add(best.id);
       _checkEnd();
     }
   }
@@ -777,6 +852,15 @@ class _Turn {
   void endTurn() {
     final cur = state.current;
     if (cur != null && cur.isPlayer) _tickVulnerable();
+    if (cur != null && state.porBando) {
+      if (cur.isPlayer && !cur.isSummon && cur.extraTurn == 1 && cur.alive) {
+        // Turno extra (Danza de Cuchillas): vuelve a actuar en este turno
+        // del grupo (una vez).
+        cur.extraTurn = 2;
+      } else {
+        state.acted.add(cur.id);
+      }
+    }
     _flush();
     state.currentId = null;
     _checkEnd();
@@ -4902,7 +4986,9 @@ class _Turn {
         q == p ||
         !q.alive ||
         p.mp < BattleEngine.dualMpCost ||
-        q.mp < BattleEngine.dualMpCost) {
+        q.mp < BattleEngine.dualMpCost ||
+        // porBando: el compañero gasta su acción de este turno del grupo.
+        (state.porBando && state.acted.contains(q.id))) {
       return false;
     }
     // Sin id: el dúo de clase del par (v0.8.2). Con id: ese dúo, si el
@@ -4917,6 +5003,7 @@ class _Turn {
     p.mp -= BattleEngine.dualMpCost;
     q.mp -= BattleEngine.dualMpCost;
     q.nextTurn = math.max(q.nextTurn, state.clock) + _iv(q);
+    if (state.porBando) state.acted.add(q.id);
 
     final pv = math.max(_atk(p), p.magic);
     final qv = math.max(_atk(q), q.magic);

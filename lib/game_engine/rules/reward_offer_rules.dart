@@ -1,3 +1,4 @@
+import '../data/branch_ults_catalog.dart' show kBranchUltList, kBranchUltPathTypes;
 import '../data/game_catalog.dart';
 import '../models/attributes.dart';
 import '../models/passive_tree.dart';
@@ -176,15 +177,40 @@ class RewardOfferRules {
     return _take(pool, rnd, RunTuning.offerSize);
   }
 
-  /// La oferta completa y si el árbol trajo la rama principal.
+  /// ULT de rama de las ramas de su clase que usa con algún arma de su
+  /// clase y que todavía no aprendió.
+  List<String> ultCandidates(PlayerProfile p) {
+    final paths = classPaths(p.classId).toSet();
+    final types = catalog.classes[p.classId]?.allowedWeaponTypes.toSet() ??
+        const <String>{};
+    return [
+      for (final (path, sk, _) in kBranchUltList)
+        if (paths.contains(path) &&
+            !p.ultKnown.contains(sk.id) &&
+            (kBranchUltPathTypes[path] ?? const []).any(types.contains))
+          sk.id,
+    ]..sort();
+  }
+
+  /// La fila ULT: [RunTuning.ultOfferSize] ULT de rama (§ 4: jefe
+  /// siempre, élite a veces).
+  List<String> ultOffer(PlayerProfile p, RandomSource rnd) =>
+      _take(ultCandidates(p), rnd, RunTuning.ultOfferSize);
+
+  /// La oferta completa y si el árbol trajo la rama principal. Con
+  /// [ults] suma la fila ULT.
   (RunOffer, bool) offer(PlayerProfile p,
-      {required int floor, required RandomSource rnd, int missStreak = 0}) {
+      {required int floor,
+      required RandomSource rnd,
+      int missStreak = 0,
+      bool ults = false}) {
     final (nodes, hit) = treeOffer(p, rnd, missStreak);
     return (
       RunOffer(
         nodes: List.unmodifiable(nodes),
         weapons: List.unmodifiable(weaponOffer(p, rnd)),
         extras: List.unmodifiable(extraOffer(floor, rnd)),
+        ults: ults ? List.unmodifiable(ultOffer(p, rnd)) : const [],
       ),
       hit,
     );

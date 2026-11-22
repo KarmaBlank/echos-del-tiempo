@@ -157,6 +157,7 @@ abstract final class ActionJson {
             if (a.tree != null) 'tr': a.tree,
             if (a.weapon != null) 'w': a.weapon,
             if (a.extra != null) 'x': a.extra,
+            if (a.ult != null) 'u': a.ult,
           },
         RunReadyAction() => {'t': 'runReady'},
       };
@@ -317,7 +318,8 @@ abstract final class ActionJson {
         return RunRewardAction(
             tree: j.intOrNull('tr'),
             weapon: j.intOrNull('w'),
-            extra: j.intOrNull('x'));
+            extra: j.intOrNull('x'),
+            ult: j.intOrNull('u'));
       case 'runReady':
         return const RunReadyAction();
     }

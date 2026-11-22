@@ -115,7 +115,14 @@ class RunExtra {
 /// La oferta de recompensa de un jugador tras una pelea ganada (§ 4).
 class RunOffer {
   const RunOffer(
-      {this.nodes = const [], this.weapons = const [], this.extras = const []});
+      {this.nodes = const [],
+      this.weapons = const [],
+      this.extras = const [],
+      this.ults = const []});
+
+  /// ULT de rama (ids) que se pueden aprender (jefe siempre, élite a
+  /// veces; vacío = sin fila ULT).
+  final List<String> ults;
 
   /// Nodos del árbol (ids).
   final List<String> nodes;

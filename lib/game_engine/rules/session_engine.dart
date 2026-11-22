@@ -3187,6 +3187,8 @@ class _Op {
     final before = b.state;
     final step = e.battles.command(b.state, p.id, cmd);
     if (step == null) return false;
+    // porBando: cada jugador que actúa le deja el reloj entero al resto.
+    if (step.state.porBando) b.turnTime = 0;
     if (s.tutorial != null) {
       _applyTutorialStep(b, step);
       afterTutorialCommand(p, cmd, before, step.events);
@@ -3320,7 +3322,7 @@ class _Op {
     final cur = b.state.current;
     if (cur != null && cur.isPlayer && !cur.alive) b.state.currentId = null;
 
-    if (b.state.currentId == null) {
+    if (b.state.currentId == null && !b.state.awaitingGroup) {
       final step = e.battles.nextTurn(b.state);
       _applyBattleStep(b, step);
       if (b.endTimer != null) return;
@@ -3336,7 +3338,10 @@ class _Op {
       return;
     }
 
-    if (!b.state.current!.isPlayer) {
+    // porBando (roguelike.md § 6): el grupo manda en el orden que quiera;
+    // el reloj de turno corre para todos los que faltan.
+    final cur2 = b.state.current;
+    if (cur2 != null && !cur2.isPlayer) {
       final step = e.battles.enemyTurn(b.state);
       if (step != null) _applyBattleStep(b, step);
       // ULT enemiga: la pausa de una ULT (cinemática); aviso: tiempo para

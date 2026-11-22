@@ -13,6 +13,7 @@ import 'mulberry32.dart';
 import 'progression_rules.dart';
 import 'run_map_generator.dart';
 import 'run_tuning.dart';
+import 'ult_rules.dart';
 import 'zone_rules.dart';
 
 /// Reglas de la Travesía que no dependen de la sesión (docs/specs/
@@ -145,14 +146,20 @@ class RunRules {
   /// algún índice no es válido.
   static PlayerProfile? applyReward(
       ProgressionRules rules, PlayerProfile p, RunOffer offer,
-      {int? tree, int? weapon, int? extra}) {
+      {int? tree, int? weapon, int? extra, int? ult}) {
     bool bad(int? i, int len) => i != null && (i < 0 || i >= len);
     if (bad(tree, offer.nodes.length) ||
         bad(weapon, offer.weapons.length) ||
-        bad(extra, offer.extras.length)) {
+        bad(extra, offer.extras.length) ||
+        bad(ult, offer.ults.length)) {
       return null;
     }
     var next = p;
+    if (ult != null) {
+      // La ULT nueva queda aprendida y activa (se cambia desde PERSONAJE).
+      final id = offer.ults[ult];
+      next = UltRules.learn(next, id).copyWith(ultSel: () => id);
+    }
     if (tree != null) {
       next = grantNode(rules, next, offer.nodes[tree]) ?? next;
     }

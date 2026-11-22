@@ -100,9 +100,47 @@ sobre todo) y cada elección se nota al instante.
   - `velocidad` (la de hoy);
   - `porBando`: **turno del grupo** → cada jugador actúa en el orden que
     quiera (el primero que tira, tira); cuando todos terminaron →
-    **turno de los enemigos**. La línea de tiempo queda como vista de
-    orden y ventanas de combo.
+    **turno de los enemigos**. Es la regla de la Travesía desde v0.1.1
+    (ver § 6.1); el Mundo sigue con `velocidad`.
 - Inventario dentro de la run: equipar, cambiar, llevar a la armería.
+
+### 6.1 Regla `porBando` (implementada, v0.1.1)
+
+`TurnRule` en `BattleState` (`battle_state.dart`); la elige quien arma la
+pelea: `BattleEngine.start(turnRule:)`. La Travesía pasa
+`TurnRule.porBando` (`session_engine_run.dart`); el Mundo y el tutorial
+usan el valor por defecto `velocidad` y no cambian.
+
+- **Ronda.** Empieza siempre con el turno del grupo (`groupPhase`,
+  `round` +1, `acted` vacío). Al empezar, a **todos** los jugadores vivos
+  se les corre el inicio de turno de siempre, en orden de lista: Pulso +1,
+  fin de Defender, estados (veneno, quemadura... con sus ticks), quiebre,
+  telaraña, regeneración, disparadores `onTurnStart`. El que lo pierde
+  (aturdido, quebrado, telaraña) queda marcado como que ya actuó. Los
+  muertos al empezar la ronda también.
+- **Turno del grupo.** Nadie tiene el turno (`currentId = null`,
+  `awaitingGroup`). El primer jugador pendiente que manda un comando toma
+  el turno y actúa; al terminar queda en `acted`. Un jugador no actúa dos
+  veces por ronda. Instante: sigue con el turno hasta su segunda acción.
+  Turno extra (Danza de Cuchillas): vuelve a quedar pendiente una vez.
+  Dúo: el compañero tiene que estar pendiente y gasta su acción.
+  Revivido a mitad del turno del grupo: puede actuar en ese mismo turno.
+- **Reloj de turno.** Corre para el grupo entero y se reinicia cada vez
+  que alguien actúa. Si se agota, todos los que faltaban se defienden
+  solos (Defender automático de siempre).
+- **Turno enemigo.** Con todos los jugadores hechos: actúan las
+  invocaciones del grupo y después cada enemigo vivo, de a uno, en orden
+  de lista (con su inicio de turno: estados, quiebre, trampas, ULT
+  enemiga). Después, ronda nueva.
+- **Velocidad.** No cuenta: `nextTurn` y los adelantos / retrasos de
+  turno (Prisa, retrasos de ULT, ralentizar) no tienen efecto en el
+  orden. ULT, estados, quiebre, combos y consumibles funcionan igual
+  (todo lo que contaba "por turno" sigue contando por turno de cada uno).
+- **Red.** El snapshot suma `tr` / `gp` / `act` / `rd` solo si la regla
+  es `porBando` (el Mundo manda lo mismo que en el protocolo 31).
+- **Pantalla.** Sin franja de turnos: arriba se lee TURNO DEL GRUPO (con
+  quiénes faltan) o TURNO ENEMIGO. El cliente muestra el menú del primer
+  pendiente que maneja (el local primero).
 - Grupo entero muerto = run perdida. Éter y revivir funcionan igual.
 
 ## 7. Datos separados por versión
@@ -210,7 +248,7 @@ Contrato nuevo `GameMode` (inyectado por el composition root, igual que
 5. Tienda, armería, descanso.
 6. Co-op: votación y pantallas individuales.
 7. Progreso permanente: árbol de afuera, loadout, zonas, élites, hazañas.
-8. Turnos `porBando` detrás de flag.
+8. Turnos `porBando` ✅ (v0.1.1, regla fija de la Travesía; § 6.1).
 9. Editor: selector de versión.
 
 ## 12. MVP implementado (rama `feat/travesia-mvp`)
@@ -237,6 +275,17 @@ contrato `GameMode` completo quedan para la fase 3. Reglas puras nuevas:
 **Flujo.** Título como siempre (se elige un personaje de la cuenta) →
 sala de la Travesía (EMPEZAR TRAVESÍA) → mapa → nodo → … → jefe del piso 3
 o grupo caído → pantalla de fin (NUEVA TRAVESÍA / VOLVER AL TÍTULO).
+
+**Personaje de la run (v0.1.1).** PERSONAJE abre una vista propia de la
+Travesía (`run_character_panel.dart`) con solo lo que se consiguió: los 4
+atributos (con lo ganado en la run), arma equipada y sus habilidades,
+bolso y consumibles, ULT ganadas (la activa y las que se pueden usar; se
+cambia fuera de combate) y los nodos tomados agrupados por rama (nombre +
+efecto). Nada del árbol en sí, ni reparto de puntos, ni pestañas del
+Mundo. Pestaña INVENTARIO: la de siempre (equipar, mover, usar).
+Las armas de la run se equipan **sin nivel ni atributos mínimos**
+(`ProgressionRules.ignoreRequirements`, lo inyecta el composition root).
+En la sala previa ya se puede abrir PERSONAJE (equipar, elegir ULT).
 
 **Personaje de la run.** Al entrar a la sala y al empezar cada run, cada
 jugador recibe un perfil descartable de su clase: arma inicial, atributos
@@ -277,7 +326,11 @@ Espíritu / Destreza). Tendencia: rama principal = la de más peso en lo
 tomado (notable 2, keystone 3); la primera opción la sigue con 75 %, la
 segunda sale de una rama vecina en el árbol con 60 %, el resto libre.
 Racha: con 2 ofertas seguidas sin la rama principal, la siguiente la
-garantiza. El nodo elegido entra directo al árbol (`RunRules.grantNode`,
+garantiza. **Fila ULT (v0.1.1):** tras un jefe siempre y tras una élite
+con `RunTuning.eliteUltChance` (35 %), 3 ULT de rama de las ramas de su
+clase, usables con algún tipo de arma de la clase y que todavía no
+aprendió; la elegida se aprende y queda activa. La run empieza con la ULT
+por defecto de la clase (la del tipo del arma inicial). El nodo elegido entra directo al árbol (`RunRules.grantNode`,
 sin puntos ni adyacencia) y vale por los calculadores de siempre.
 
 **Tienda / armería / descanso.** Tienda: la pestaña COMPRAR filtra a los
@@ -287,10 +340,11 @@ solo deja comprar en la tienda y forjar / fusionar en la armería.
 Descanso: cura el 60 % de vida y maná al entrar.
 
 **No implementado todavía.** Catálogo y balance propios de la Travesía
-(§ 7: se usa el del Mundo), atributos reducidos en la UI (la Agilidad sigue
-existiendo; solo las recompensas la evitan), mejoras directas en Extra,
-keystones / ULT de rama en el jefe, sinergia por etiquetas de
-`build_wants`, armas que pide un nodo, progreso permanente (§ 8), turnos
-`porBando` (§ 6), selector de versión en el Editor y guardado de la run.
+(§ 7: se usa el del Mundo), quitar la Agilidad del modelo (la vista de la
+run y las recompensas ya no la muestran ni la dan; el valor base sigue en
+el perfil), mejoras directas en Extra, keystones en el jefe, sinergia por
+etiquetas de `build_wants`, armas que pide un nodo, progreso permanente
+(§ 8), selector de versión en el Editor y guardado de la run.
 Las acciones de puntos del árbol, respec, misiones, pueblo y alijo se
-rechazan en la Travesía. Cada partida usa el protocolo propio de Travesía, versión 1 (netcode.md § "Un protocolo por juego").
+rechazan en la Travesía. Cada partida usa el protocolo propio de Travesía, versión 2 (v0.1.1:
+turnos porBando y fila ULT) (netcode.md § "Un protocolo por juego").

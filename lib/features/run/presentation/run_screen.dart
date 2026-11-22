@@ -10,6 +10,10 @@ import '../../../game_engine/rules/run_tuning.dart';
 import '../../passive_tree/domain/passive_text.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
+import '../../../game_engine/data/branch_ults_catalog.dart'
+    show kWeaponUltSkills;
+import '../../../game_engine/rules/ult_rules.dart';
+import 'run_character_panel.dart';
 import 'run_map_view.dart';
 
 /// Pantallas de la Travesía (docs/specs/roguelike.md), sobre la sesión:
@@ -96,6 +100,7 @@ class RunScreen extends StatelessWidget {
           width: 760,
           actions: [
             DsButton('VOLVER AL TÍTULO', onPressed: onExit),
+            _character(),
             DsButton('EMPEZAR TRAVESÍA',
                 key: const ValueKey('run-start'),
                 kind: DsButtonKind.primary,
@@ -107,7 +112,9 @@ class RunScreen extends StatelessWidget {
               Text(
                   'Tres pisos, un camino ramificado y un guardián al final '
                   'de cada uno. Cada uno arranca con un personaje nuevo de '
-                  'su clase: lo que se gana en la run se pierde al terminar.',
+                  'su clase: lo que se gana en la run se pierde al terminar. '
+                  'En PERSONAJE podés equipar tu arma y elegir tu ULT antes '
+                  'de salir.',
                   style: DsText.body()),
               SizedBox(height: DsSpace.md),
               if (view.roomCode case final code?)
@@ -276,15 +283,9 @@ class RunRewardView extends StatefulWidget {
 }
 
 class _RunRewardViewState extends State<RunRewardView> {
-  int? _tree, _weapon, _extra;
+  int? _tree, _weapon, _extra, _ult;
 
-  static String attrName(Attribute a) => switch (a) {
-        Attribute.vit => 'Vitalidad',
-        Attribute.fue => 'Fuerza',
-        Attribute.esp => 'Espíritu',
-        Attribute.des => 'Destreza',
-        Attribute.agi => 'Agilidad',
-      };
+  static String attrName(Attribute a) => runAttributeName(a);
 
   static String extraText(RunExtra x) => switch (x.kind) {
         RunExtraKind.oro => '+${x.amount} de oro',
@@ -374,6 +375,23 @@ class _RunRewardViewState extends State<RunRewardView> {
                     ],
                   );
                 }),
+                if (o.ults.isNotEmpty)
+                  _row('ULT', o.ults.length, _ult,
+                      (i) => setState(() => _ult = i), (i) {
+                    final sk = kWeaponUltSkills[o.ults[i]];
+                    final types = UltRules.weaponsOf(o.ults[i]);
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(sk?.name ?? o.ults[i], style: DsText.subtitle()),
+                        if (types.isNotEmpty)
+                          Text('Con ${types.join(', ')}',
+                              style: DsText.detail()),
+                        Text('Queda activa; se cambia en PERSONAJE.',
+                            style: DsText.detail()),
+                      ],
+                    );
+                  }),
                 _row('EXTRA', o.extras.length, _extra,
                     (i) => setState(() => _extra = i),
                     (i) => Text(extraText(o.extras[i]),
@@ -388,7 +406,7 @@ class _RunRewardViewState extends State<RunRewardView> {
               key: const ValueKey('run-reward-confirm'),
               kind: DsButtonKind.primary,
               onPressed: () => c.chooseRunReward(
-                  tree: _tree, weapon: _weapon, extra: _extra)),
+                  tree: _tree, weapon: _weapon, extra: _extra, ult: _ult)),
         ),
       ],
     );

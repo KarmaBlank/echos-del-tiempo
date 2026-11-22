@@ -798,11 +798,19 @@ class SessionController extends StateNotifier<SessionView?> {
     final s = _s;
     final b = s?.battle;
     if (s == null || b == null || s.paused || !b.waitingForPlayer) return;
-    final cur = b.state.currentId;
+    // porBando: en el turno del grupo, el primer compañero con AUTO que
+    // falta (roguelike.md § 6).
+    final cur = b.state.currentId ??
+        b.state.pendingGroup
+            .map((p) => p.id)
+            .where(_auto.contains)
+            .firstOrNull;
     if (cur == null || !_auto.contains(cur) || b.turnTime < autoDelay) {
       return;
     }
-    final pick = _ai.choose(b.state, cur);
+    final pick = _ai.choose(
+        b.state.currentId == null ? (b.state.copy()..currentId = cur) : b.state,
+        cur);
     for (final c in [if (pick != null) pick, ...CompanionAi.fallbacks]) {
       if (_applyFor(cur, BattleAction(c))) return;
     }
@@ -1243,8 +1251,9 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool voteRunNode(int nodeId) => _apply(RunVoteAction(nodeId));
 
-  bool chooseRunReward({int? tree, int? weapon, int? extra}) =>
-      _apply(RunRewardAction(tree: tree, weapon: weapon, extra: extra));
+  bool chooseRunReward({int? tree, int? weapon, int? extra, int? ult}) =>
+      _apply(RunRewardAction(
+          tree: tree, weapon: weapon, extra: extra, ult: ult));
 
   bool runReady() => _apply(const RunReadyAction());
 
@@ -1259,7 +1268,8 @@ class SessionController extends StateNotifier<SessionView?> {
   /// El comando de quien tiene el turno si lo controla este dispositivo
   /// (el local o un compañero; solo_party.md § 4); si no, del local.
   bool battleCommand(BattleCommand command) {
-    final cur = _s?.battle?.state.currentId;
+    // porBando: en el turno del grupo, el que muestra la vista.
+    final cur = _s?.battle?.state.currentId ?? view?.groupActor;
     return _applyFor(
         _companions.containsKey(cur) ? cur! : localId, BattleAction(command));
   }

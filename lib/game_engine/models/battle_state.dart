@@ -600,6 +600,17 @@ class BattleOutcome {
   const BattleOutcome({required this.victory, this.xp = 0, this.credits = 0});
 }
 
+/// Regla de turnos (docs/specs/roguelike.md § 6). La elige quien arma la
+/// batalla: el Mundo siempre [velocidad]; la Travesía [porBando].
+enum TurnRule {
+  /// Línea de tiempo por velocidad (la de siempre).
+  velocidad,
+
+  /// Turno del grupo (cada jugador una vez, en el orden que quiera) y
+  /// después turno enemigo (todos en orden). La velocidad no cuenta.
+  porBando,
+}
+
 /// Estado completo de una batalla (`S.battle` del prototipo, sin la
 /// parte visual: posiciones, efectos y tiempos de animación son de la UI).
 class BattleState {
@@ -613,7 +624,12 @@ class BattleState {
     this.outcome,
     this.boss = false,
     this.elite = false,
-  }) : summons = summons ?? [];
+    this.turnRule = TurnRule.velocidad,
+    this.groupPhase = false,
+    Set<String>? acted,
+    this.round = 0,
+  })  : summons = summons ?? [],
+        acted = acted ?? {};
 
   final List<Combatant> party;
   final List<Combatant> enemies;
@@ -634,6 +650,37 @@ class BattleState {
   final bool elite;
 
   bool get ended => outcome != null;
+
+  final TurnRule turnRule;
+
+  /// `porBando`: es el turno del grupo (si no, el de los enemigos).
+  bool groupPhase;
+
+  /// `porBando`: quiénes ya actuaron en esta ronda.
+  final Set<String> acted;
+
+  /// `porBando`: ronda en curso (1 = la primera).
+  int round;
+
+  bool get porBando => turnRule == TurnRule.porBando;
+
+  /// `porBando`: jugadores vivos que todavía no actuaron en el turno del
+  /// grupo (vacío fuera de él).
+  List<Combatant> get pendingGroup => !porBando || !groupPhase
+      ? const []
+      : [
+          for (final p in party)
+            if (p.alive && !acted.contains(p.id)) p
+        ];
+
+  /// `porBando`: nadie tiene el turno y el grupo puede mandar comandos
+  /// (el primero que manda, actúa).
+  bool get awaitingGroup =>
+      porBando &&
+      !ended &&
+      groupPhase &&
+      currentId == null &&
+      pendingGroup.isNotEmpty;
 
   Combatant? byId(String id) {
     for (final c in party) {
@@ -660,5 +707,9 @@ class BattleState {
         outcome: outcome,
         boss: boss,
         elite: elite,
+        turnRule: turnRule,
+        groupPhase: groupPhase,
+        acted: {...acted},
+        round: round,
       );
 }
