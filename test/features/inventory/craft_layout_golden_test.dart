@@ -26,7 +26,9 @@ void main() {
   final screens = <String, (ArmoryTab, List<String>)>{
     'fuse': (ArmoryTab.fuse, const []),
     'forge': (ArmoryTab.forge, const []),
-    'condense': (ArmoryTab.fuse, const ['bench-condense', 'condense-cristal-1']),
+    'condense': (ArmoryTab.condense, const []),
+    'forge_selected': (ArmoryTab.forge, const ['up-espada_bronce-pow']),
+    'fuse_actions': (ArmoryTab.fuse, const ['bench-next']),
   };
   for (final MapEntry(key: screen, value: (tab, taps)) in screens.entries) {
     for (final MapEntry(key: name, value: (size, text)) in cases.entries) {

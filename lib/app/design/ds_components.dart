@@ -371,10 +371,30 @@ class DsListRow extends StatelessWidget {
     this.autofocus = false,
     this.compact = false,
     this.highlighted = false,
+    this.subtitle,
+    this.subtitleColor,
+    this.subtitleWidget,
+    this.tapWhenDisabled = false,
+    this.shrinkTrailing = false,
   });
+
+  /// El dato de la derecha se achica (nunca desborda) si no entra.
+  final bool shrinkTrailing;
+
+  /// Segunda línea como widget (p. ej. un [DsStatLine]); si hay
+  /// [subtitle], manda el texto.
+  final Widget? subtitleWidget;
+
+  /// Gris pero tocable (abre el detalle con el motivo completo).
+  final bool tapWhenDisabled;
 
   final String title;
   final String? detail;
+
+  /// Segunda línea corta (Detalle) debajo del título: qué hace o el
+  /// motivo de una bloqueada. Una línea; se corta con "…".
+  final String? subtitle;
+  final Color? subtitleColor;
 
   /// Borde azul de "condición lista" ([DsColors.conditionReady]) cuando
   /// no está seleccionada (la selección manda con su dorado).
@@ -400,6 +420,11 @@ class DsListRow extends StatelessWidget {
   /// mínimo y `sm` a los lados.
   final bool compact;
 
+  /// Con [shrinkTrailing] mide el ancho (LayoutBuilder); si no, nada:
+  /// los menús que miden su contenido (intrínsecos) siguen andando.
+  Widget _maybeMeasured(Widget Function(BoxConstraints? box) row) =>
+      shrinkTrailing ? LayoutBuilder(builder: (_, box) => row(box)) : row(null);
+
   @override
   Widget build(BuildContext context) {
     Widget row(DsPressState s) => Container(
@@ -417,10 +442,10 @@ class DsListRow extends StatelessWidget {
                         : Colors.transparent,
                 width: 2),
           ),
-          child: Row(children: [
+          child: _maybeMeasured((box) => Row(children: [
             if (leading != null) ...[leading!, SizedBox(width: DsSpace.sm)],
-            Expanded(
-                child: Row(children: [
+            Expanded(child: () {
+              final line = Row(children: [
               Flexible(
                 child: Text(title,
                     maxLines: 1,
@@ -444,13 +469,42 @@ class DsListRow extends StatelessWidget {
                               : DsColors.textDisabled))),
                 ),
               ],
-            ])),
-            if (trailing != null) ...[SizedBox(width: DsSpace.sm), trailing!],
-          ]),
+            ]);
+              if (subtitle == null && subtitleWidget == null) return line;
+              return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    line,
+                    if (subtitle == null)
+                      subtitleWidget!
+                    else
+                    Text(subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: DsText.detail(subtitleColor ??
+                            (enabled
+                                ? DsColors.textSecondary
+                                : DsColors.textDisabled))),
+                  ]);
+            }()),
+            if (trailing != null) ...[
+              SizedBox(width: DsSpace.sm),
+              if (shrinkTrailing)
+                ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: box!.maxWidth * 0.5),
+                    child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: trailing!))
+              else
+                trailing!,
+            ],
+          ])),
         );
     final Widget body = DsPressable(
         focusNode: focusNode,
-        onTap: enabled ? (onTap ?? () {}) : null,
+        onTap: enabled || tapWhenDisabled ? (onTap ?? () {}) : null,
         autofocus: autofocus,
         builder: (_, s) => row(s));
     if (tooltip == null) return body;

@@ -1,6 +1,7 @@
 import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/panel_frame.dart';
 import 'package:echos_del_tiempo/app/widgets/action_card.dart';
+import 'package:echos_del_tiempo/features/inventory/presentation/shop_sections.dart' show ForgeUpgradeRow;
 import 'package:echos_del_tiempo/features/inventory/presentation/inventory_action_menu.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
@@ -120,6 +121,8 @@ ActionRef button(WidgetTester tester, String key) =>
       DsButton b => ActionRef(b.onPressed == null ? b.tooltip : null),
       ConfirmButton b => ActionRef(b.reason),
       ActionCard c => ActionRef(c.reason),
+      DsActionRow r => ActionRef(r.reason),
+      ForgeUpgradeRow r => ActionRef(r.reason),
       InventoryActionRow r => ActionRef(r.entry.reason),
       final w => throw StateError('$key no es un botón: ${w.runtimeType}'),
     };
@@ -130,3 +133,13 @@ String plain(WidgetTester tester, String key) => tester
         of: find.byKey(ValueKey(key)), matching: find.byType(Text)))
     .map((t) => t.textSpan?.toPlainText() ?? t.data ?? '')
     .join(' ');
+
+/// Abre "MÁS DETALLE" de la mejora elegida en FORJA.
+Future<void> openForgeMore(WidgetTester tester) async {
+  final f = find.descendant(
+      of: find.byKey(const ValueKey('forge-more')),
+      matching: find.byType(DsButton));
+  await tester.ensureVisible(f);
+  await tester.tap(f);
+  await tester.pump();
+}

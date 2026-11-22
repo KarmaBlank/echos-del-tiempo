@@ -1,4 +1,4 @@
-// Vista simple de BUILD (build_planner.md § 10, ui_minimal.md § 6).
+// Vista simple de BUILD (build_planner.md § 10, ui_minimal.md § 7).
 // Goldens:
 //   flutter test --update-goldens test/features/build_planner/build_coach_ui_test.dart
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';

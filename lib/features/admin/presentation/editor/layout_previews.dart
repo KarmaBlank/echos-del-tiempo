@@ -318,7 +318,6 @@ Widget _condense(LayoutDoc doc, DsLayoutHooks? hooks) => _armory(
     'CONDENSAR',
     (shop) => CondensePanel(
         shop: shop,
-        onBack: () {},
         layout: doc,
         layoutHooks: hooks,
         initialPending: (CraftMaterial.cristal, 1)));

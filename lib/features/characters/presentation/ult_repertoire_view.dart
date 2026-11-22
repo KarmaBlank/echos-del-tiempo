@@ -325,18 +325,26 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         DsSectionHeader(e.name.toUpperCase()),
-        if (isEq || e.owned)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: isEq
-                ? const DsBadge('EQUIPADA')
-                : DsButton('EQUIPAR',
+        // Acciones juntas arriba (v0.20.25): EQUIPAR y MEJORAR con su
+        // costo al lado, mismo tamaño.
+        if (isEq || e.owned || o != null)
+          Wrap(
+            spacing: DsSpace.sm,
+            runSpacing: DsSpace.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              if (isEq)
+                const DsBadge('EQUIPADA')
+              else if (e.owned)
+                DsButton('EQUIPAR',
                     key: const ValueKey('ult-equip'),
                     kind: DsButtonKind.primary,
                     size: DsButtonSize.compact,
                     onPressed: widget.editable && e.available
                         ? () => widget.onSelect(e.id)
                         : null),
+              if (o != null) ..._upgrade(o),
+            ],
           ),
         Text(
             [
@@ -368,9 +376,6 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
     final learned = o.kind == UltOptionKind.learned;
     final lv = learned ? UltRules.levelOf(p, o.id) : 1;
     final cost = learned ? UltRules.upgradeCost(o.id, lv) : null;
-    final affordable = cost != null &&
-        p.credits >= cost.credits &&
-        cost.materials.entries.every((e) => p.material(e.key) >= e.value);
     return DsCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,40 +393,57 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
                   'Próximo nivel ${lv + 1}: poder ×'
                   '${UltRules.levelFactor(lv + 1).toStringAsFixed(2)}',
                   style: DsText.body()),
-              Text('Costo: ${cost.text}',
-                  style: DsText.detail(
-                      affordable ? DsColors.textSecondary : DsColors.danger)),
-              SizedBox(height: DsSpace.sm),
-              Row(children: [
-                if (!_confirm)
-                  // Hover de MEJORAR: la vista previa muestra el próximo
-                  // nivel.
-                  MouseRegion(
-                    onEnter: (_) => setState(() => _hoverUpgrade = true),
-                    onExit: (_) => setState(() => _hoverUpgrade = false),
-                    child: DsButton('MEJORAR',
-                        kind: DsButtonKind.primary,
-                        onPressed: widget.editable && affordable
-                            ? () => setState(() => _confirm = true)
-                            : null),
-                  )
-                else ...[
-                  DsButton('CONFIRMAR MEJORA',
-                      kind: DsButtonKind.primary,
-                      onPressed: () {
-                        widget.onUpgrade(o.id);
-                        setState(() => _confirm = false);
-                      }),
-                  SizedBox(width: DsSpace.sm),
-                  DsButton('CANCELAR',
-                      onPressed: () => setState(() => _confirm = false)),
-                ],
-              ]),
             ] else
               Text('Nivel máximo.', style: DsText.detail()),
           ],
         ],
       ),
     );
+  }
+
+  /// MEJORAR (o CONFIRMAR / CANCELAR) con el costo al lado; gris si no
+  /// alcanza. Con el mouse encima, la vista previa muestra el próximo
+  /// nivel.
+  List<Widget> _upgrade(UltOption o) {
+    final p = widget.profile;
+    if (o.kind != UltOptionKind.learned) return const [];
+    final lv = UltRules.levelOf(p, o.id);
+    final cost = UltRules.upgradeCost(o.id, lv);
+    if (cost == null) return const [];
+    final affordable = p.credits >= cost.credits &&
+        cost.materials.entries.every((e) => p.material(e.key) >= e.value);
+    if (_confirm) {
+      return [
+        DsButton('CONFIRMAR',
+            key: const ValueKey('ult-upgrade-confirm'),
+            kind: DsButtonKind.primary,
+            size: DsButtonSize.compact,
+            onPressed: () {
+              widget.onUpgrade(o.id);
+              setState(() => _confirm = false);
+            }),
+        DsButton('CANCELAR',
+            key: const ValueKey('ult-upgrade-cancel'),
+            size: DsButtonSize.compact,
+            onPressed: () => setState(() => _confirm = false)),
+      ];
+    }
+    return [
+      MouseRegion(
+        onEnter: (_) => setState(() => _hoverUpgrade = true),
+        onExit: (_) => setState(() => _hoverUpgrade = false),
+        child: DsButton('MEJORAR',
+            key: const ValueKey('ult-upgrade'),
+            kind: DsButtonKind.primary,
+            size: DsButtonSize.compact,
+            onPressed: widget.editable && affordable
+                ? () => setState(() => _confirm = true)
+                : null),
+      ),
+      Text(cost.text,
+          key: const ValueKey('ult-upgrade-cost'),
+          style: DsText.detail(
+              affordable ? DsColors.textSecondary : DsColors.danger)),
+    ];
   }
 }

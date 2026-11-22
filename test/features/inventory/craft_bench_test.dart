@@ -56,6 +56,7 @@ Future<void> _family(WidgetTester tester, String label) async {
 /// Valor de la fila del paso 2: costo corto o motivo corto (el completo
 /// va en el detalle).
 String _why(WidgetTester tester, CraftOp op) =>
+    button(tester, 'bench-op-${op.name}').reason ??
     plain(tester, 'bench-op-why-${op.name}');
 
 /// El botón grande de confirmar del paso 3.
@@ -90,7 +91,7 @@ void main() {
     expect(find.textContaining('TRASLADAR'), findsWidgets);
     expect(_why(tester, CraftOp.reroll), contains('1 Esquirla'));
     expect(_why(tester, CraftOp.upgradeRarity), 'Falta Prisma Roto');
-    expect(_why(tester, CraftOp.transferPassive), 'Solo a un arma Epica');
+    expect(_why(tester, CraftOp.transferPassive), 'Solo a un arma Épica');
     expect(plain(tester, 'bench-summary'), contains('Eco Voraz'));
     // Paso 3 y volver.
     await _tap(tester, 'bench-op-reroll');
@@ -299,40 +300,36 @@ void main() {
     expect(it.affixes, isNotEmpty);
   });
 
-  testWidgets('condensar: cantidades, confirmación y sin vuelta atrás',
+  testWidgets('condensar: pestaña propia, material → resultado, cantidad',
       (tester) async {
-    final c = await _bench(
-        tester,
-        lootWarrior(
-            materials: const {CraftMaterial.esquirla: 50}, credits: 1000));
+    final c = await pumpPanel(tester,
+        profile: lootWarrior(
+            materials: const {CraftMaterial.esquirla: 50}, credits: 1000),
+        build: (v, c) => ArmoryPanel(
+            view: v, controller: c, initialTab: ArmoryTab.condense));
     PlayerProfile me() => c.view!.me!.profile;
-    await _tap(tester, 'bench-condense');
-    expect(plain(tester, 'condense-have-cristal'), contains('alcanza para 2'));
-    expect(plain(tester, 'condense-have-prisma'), contains('alcanza para 0'));
+    // FUSIÓN ya no tiene el botón.
+    expect(find.byKey(const ValueKey('bench-condense')), findsNothing);
+    expect(plain(tester, 'condense-pick-cristal'), contains('x50'));
+    expect(plain(tester, 'condense-have-cristal'), contains('Alcanza para 2'));
     String label(String k) =>
         tester.widget<DsButton>(find.byKey(ValueKey('condense-cristal-$k'))).label;
-    expect([label('1'), label('5'), label('all')], ['×1', '×5', 'MÁX (2)']);
+    expect([label('1'), label('all')], ['×1', 'MÁX (2)']);
     expect(tester.takeException(), isNull, reason: 'sin overflow');
-    // Sin Cristales suficientes, los botones del Prisma no se pueden usar.
-    expect(
-        tester
-            .widget<DsButton>(find.byKey(const ValueKey('condense-prisma-1')))
-            .onPressed,
-        isNull);
+    expect(plain(tester, 'condense-summary'), contains('20 Esquirla'));
     await _tap(tester, 'condense-cristal-all');
-    expect(plain(tester, 'condense-summary'), contains('Gastas 40 Esquirla'));
-    expect(plain(tester, 'condense-summary'), contains('200.'));
-    expect(plain(tester, 'condense-summary'), contains('No se puede deshacer'));
-    // Cancelar no gasta nada.
-    await _tap(tester, 'condense-cancel');
-    expect(me().material(CraftMaterial.esquirla), 50);
+    expect(plain(tester, 'condense-summary'), contains('40 Esquirla'));
+    expect(plain(tester, 'condense-summary'), contains('2 Cristal'));
+    // Prisma: sin Cristales, CONDENSAR gris.
+    await _tap(tester, 'condense-pick-prisma');
+    expect(plain(tester, 'condense-have-prisma'), contains('Alcanza para 0'));
+    expect(button(tester, 'condense-go').reason, isNotNull);
+    await _tap(tester, 'condense-pick-cristal');
     await _tap(tester, 'condense-cristal-1');
     await _tap(tester, 'condense-go');
     expect(me().material(CraftMaterial.esquirla), 30);
     expect(me().material(CraftMaterial.cristal), 1);
     expect(me().credits, 900);
-    await _tap(tester, 'condense-back');
-    expect(find.byKey(const ValueKey('bench-next')), findsOneWidget);
   });
 
   testWidgets('restaurar Quebrar: elegir la que sale, costo y sin desbordes',

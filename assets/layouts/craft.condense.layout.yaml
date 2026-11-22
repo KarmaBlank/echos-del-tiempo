@@ -14,4 +14,3 @@ slots:
     order: 2
     children:
       - condense.actions.go
-      - condense.actions.cancel

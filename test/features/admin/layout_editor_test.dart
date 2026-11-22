@@ -114,7 +114,7 @@ void main() {
       'crumbs',
       FuseLayout.next,
       'materials',
-      ['bench-condense', 'bench-next', 'craft-materials'],
+      ['bench-next', 'craft-materials'],
     ),
     (
       ForgeLayout.screen,
@@ -136,9 +136,9 @@ void main() {
       CondenseLayout.screen,
       CondenseLayout.actions,
       'head',
-      CondenseLayout.cancel,
+      CondenseLayout.go,
       'confirm',
-      ['condense-go', 'condense-cancel', 'condense-back'],
+      ['condense-go'],
     ),
   ]) {
     testWidgets('$screen: datos de ejemplo; mover un grupo y un botón '

@@ -47,7 +47,7 @@ void main() {
           .move(FuseLayout.next, 'materials', 0),
       (shop, doc, hooks, key) =>
           CraftBench(key: key, shop: shop, layout: doc, layoutHooks: hooks),
-      const ['bench-condense', 'bench-next', 'craft-materials'],
+      const ['bench-next', 'craft-materials'],
     ),
     'FORJA': (
       ForgeLayout.spec,
@@ -62,15 +62,14 @@ void main() {
       CondenseLayout.spec,
       CondenseLayout.spec.defaults
           .move(CondenseLayout.actions, 'head', 0)
-          .move(CondenseLayout.cancel, 'confirm', 0),
+          .move(CondenseLayout.go, 'confirm', 0),
       (shop, doc, hooks, key) => CondensePanel(
           key: key,
           shop: shop,
-          onBack: () {},
           layout: doc,
           layoutHooks: hooks,
           initialPending: (CraftMaterial.cristal, 1)),
-      const ['condense-go', 'condense-cancel', 'condense-back'],
+      const ['condense-go'],
     ),
   };
   const sizes = [

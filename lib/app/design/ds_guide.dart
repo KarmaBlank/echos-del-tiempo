@@ -7,7 +7,7 @@ import '../widgets/pixel_icon.dart';
 import 'ds_focus.dart';
 import 'ds_tokens.dart';
 
-// Piezas de las guías simples (build_planner.md § 10, ui_minimal.md § 6):
+// Piezas de las guías simples (build_planner.md § 10, ui_minimal.md § 7):
 // marca de estado con leyenda, fila que baja de línea (nunca "…") y
 // sección plegable con medidor.
 

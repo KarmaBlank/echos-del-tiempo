@@ -1,6 +1,5 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/theme/retro_hover_card.dart';
-import 'package:echos_del_tiempo/app/widgets/action_card.dart';
-import 'package:echos_del_tiempo/app/widgets/cost_chip.dart';
 import 'package:echos_del_tiempo/features/inventory/domain/craft_help.dart';
 import 'package:echos_del_tiempo/features/inventory/domain/shop_guards.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/armory_panel.dart';
@@ -152,12 +151,9 @@ void main() {
         expect(m, contains(l), reason: '${op.name} sin "$l"');
       }
       final card =
-          tester.widget<ActionCard>(find.byKey(ValueKey('bench-op-${op.name}')));
-      if (card.disabled) {
-        final chip = tester.widget<CostChip>(find.descendant(
-            of: find.byKey(ValueKey('bench-op-why-${op.name}')),
-            matching: find.byType(CostChip)));
-        expect(m, contains('Bloqueada:</span> ${chip.reason}'));
+          tester.widget<DsActionRow>(find.byKey(ValueKey('bench-op-${op.name}')));
+      if (card.locked) {
+        expect(m, contains('Bloqueada:</span> ${card.reason}'));
       } else {
         expect(m, isNot(contains('Bloqueada:')));
       }

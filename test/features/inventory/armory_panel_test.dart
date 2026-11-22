@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/armory_panel.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/shop_sections.dart';
 import 'package:echos_del_tiempo/game_engine/models/attributes.dart';
@@ -101,13 +102,18 @@ void main() {
     expect(plain(tester, 'forge-cap'), contains('Forja 1/4'));
     expect(plain(tester, 'forge-passive-note'),
         contains('Sube a nivel II en la próxima mejora'));
+    // La fila dice lo justo: CRIT antes → después y el costo.
+    expect(plain(tester, 'forge-stat-crit'), contains('CRIT'));
+    expect(plain(tester, 'forge-stat-crit'), isNot(contains('Bono')));
+    // Elegirla y abrir MÁS DETALLE: bono y la pasiva que sube.
+    await tapVisible(tester, find.byKey(const ValueKey('up-e1-crit')));
+    await openForgeMore(tester);
     final up = plain(tester, 'forge-passive-up-crit');
     expect(up, contains('La pasiva sube'));
     expect(up, contains('I → II'));
-    // Antes → después del stat (crítico) y bono.
-    final crit = plain(tester, 'forge-stat-crit');
-    expect(crit, contains('Bono +0% → +2%'));
-    expect(crit, contains('CRIT'));
+    final crit = plain(tester, 'forge-detail-crit');
+    expect(crit, contains('Bono +0%'));
+    expect(crit, contains('+2%'));
 
     // Común de nivel 1: tope min(3, 2 + 1/5) = 2.
     await tapVisible(tester, find.byKey(const ValueKey('forge-row-espada_bronce')));
@@ -131,6 +137,44 @@ void main() {
     await tapVisible(tester, find.byKey(const ValueKey('forge-row-x1')));
     expect(button(tester, 'up-x1-spd').reason, 'Tope de forja (3)');
     expect(find.text('Tope de forja (3)'), findsWidgets);
+    // Bloqueada: tocarla no la elige y FORJAR sigue gris.
+    await tapVisible(tester, find.byKey(const ValueKey('up-x1-spd')));
+    expect(button(tester, 'forge-confirm').reason, 'Elegí una mejora');
+  });
+
+  testWidgets('forja: elegir, costo a la derecha y gris si no alcanza',
+      (tester) async {
+    final w = progression.catalog.weapons['espada_bronce']!;
+    final cost = CraftRules.forgeCost(w, Rarity.comun, 0);
+    await pumpPanel(tester,
+        profile: lootWarrior(credits: cost - 1),
+        build: (v, c) =>
+            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.forge));
+    await tapVisible(tester, find.byKey(const ValueKey('forge-row-espada_bronce')));
+    expect(plain(tester, 'forge-cost-pow'), contains('$cost'));
+    final tag = tester.widget<DsTag>(find.byKey(const ValueKey('forge-cost-pow')));
+    final reason = button(tester, 'up-espada_bronce-pow').reason;
+    // Sin créditos: bloqueada (gris) o el costo en rojo.
+    expect(reason != null || tag.color == DsColors.danger, isTrue);
+    await tapVisible(tester, find.byKey(const ValueKey('up-espada_bronce-pow')));
+    expect(button(tester, 'forge-confirm').reason, isNotNull);
+  });
+
+  testWidgets('forja: con créditos, elegir marca la fila y habilita FORJAR',
+      (tester) async {
+    await pumpPanel(tester,
+        profile: lootWarrior(credits: 5000),
+        build: (v, c) =>
+            ArmoryPanel(view: v, controller: c, initialTab: ArmoryTab.forge));
+    await tapVisible(tester, find.byKey(const ValueKey('forge-row-espada_bronce')));
+    expect(button(tester, 'forge-confirm').reason, 'Elegí una mejora');
+    await tapVisible(tester, find.byKey(const ValueKey('up-espada_bronce-crit')));
+    expect(button(tester, 'forge-confirm').reason, isNull);
+    final row = tester.widget<DsActionRow>(find.descendant(
+        of: find.byKey(const ValueKey('up-espada_bronce-crit')),
+        matching: find.byType(DsActionRow)));
+    expect(row.selected, isTrue);
+    expect(find.byKey(const ValueKey('forge-more')), findsOneWidget);
   });
 
   testWidgets('armería: consumibles al máximo y sin créditos', (tester) async {

@@ -13,5 +13,4 @@ slots:
     order: 1
     align: end
     children:
-      - fuse.actions.condense
       - fuse.actions.next

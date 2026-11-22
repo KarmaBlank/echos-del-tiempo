@@ -179,6 +179,8 @@ void main() {
         ? '${x.round()}'
         : x.toStringAsFixed(1);
     final ib = engine.interval(tipUser(b)!), ia = engine.interval(tipUser(a)!);
+    await tapVisible(tester, find.byKey(ValueKey('up-${it.uid}-spd')));
+    await openForgeMore(tester);
     final text = plain(tester, 'forge-impact-spd');
     expect(text, contains('En batalla'));
     expect(text, contains('Tu turno llega cada ${f(ib)} → ${f(ia)}'));
