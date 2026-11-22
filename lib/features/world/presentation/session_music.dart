@@ -178,7 +178,10 @@ class SessionMusic {
     if (view == null) return;
     final s = view.session;
     final me = view.me;
-    if (me != null) {
+    // v0.21.0: sin overworld, todo el pueblo es pueblo (town_loop.md § 2).
+    if (view.map.theme != 'mundo') {
+      _inTown = true;
+    } else if (me != null) {
       const tile = MapGenerator.tileSize;
       _inTown = MusicSelector.inTown(
           (me.x / tile).floor(), (me.y / tile).floor(),

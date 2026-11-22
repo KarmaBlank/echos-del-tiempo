@@ -215,6 +215,13 @@ tiles:
   agua: { procedural: true, size: [16, 16] }
   hierba: { procedural: true, size: [16, 16] }
   puerta: { procedural: true, size: [16, 16] }
+  # Pueblo v0.21.0 (docs/specs/town_loop.md § 2.1): fuente rúnica (2×2,
+  # un cuarto por tile), punto de pesca, cartel del lago y puesto del
+  # comerciante.
+  fuente_runica: { procedural: true, size: [32, 32] }
+  punto_pesca: { procedural: true, size: [16, 16] }
+  cartel_lago: { procedural: true, size: [16, 16] }
+  puesto_comerciante: { procedural: true, size: [32, 16] }
 ui:
   icono_oro: { procedural: true, size: [8, 8] }
   icono_eco: { procedural: true, size: [8, 8] }

@@ -6,6 +6,7 @@ import '../../app/feature_flags.dart';
 import '../../features/characters/data/account_repository.dart';
 import '../../features/characters/data/account_store.dart';
 import '../../features/lobby/data/json_file_profile_store.dart';
+import '../../features/lobby/data/world_store.dart';
 import '../../game_engine/balance/balance_patch.dart';
 import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/data/passive_tree_catalog.dart';
@@ -154,6 +155,11 @@ void registerSharedDependencies(
     sl.registerLazySingleton<TravesiaMetaStore>(() =>
         JsonFileTravesiaMetaStore.forPlatform() ??
         InMemoryTravesiaMetaStore());
+  }
+  // Mundos por cuenta (docs/specs/town_loop.md § 11c), solo en el Mundo.
+  if (gameMode != GameModeKind.travesia) {
+    sl.registerLazySingleton<WorldStore>(
+        () => JsonFileWorldStore.forPlatform() ?? InMemoryWorldStore());
   }
   // Alijo en partida (docs/specs/characters.md § 3.2).
   sl.registerLazySingleton<StashStore>(

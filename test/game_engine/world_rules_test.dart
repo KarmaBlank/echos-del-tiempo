@@ -2,6 +2,7 @@ import 'package:echos_del_tiempo/game_engine/data/missions_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_map.dart';
 import 'package:echos_del_tiempo/game_engine/rules/map_generator.dart';
 import 'package:echos_del_tiempo/game_engine/rules/world_rules.dart';
+import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -50,10 +51,13 @@ void main() {
         const WorldPoint(100, 120));
   });
 
-  test('zonas del lobby', () {
-    expect(WorldRules.nearCounter(13 * 16, 4 * 16), isTrue);
-    expect(WorldRules.nearCounter(13 * 16, 5 * 16), isFalse);
-    expect(WorldRules.nearArmory(21 * 16, 4 * 16), isTrue);
-    expect(WorldRules.nearArmory(13 * 16, 4 * 16), isFalse);
+  test('lugares del pueblo (town_loop.md § 2.1)', () {
+    // Tablero x 10-15, y 3; forja x 19-23, y 3: se usan desde abajo.
+    expect(WorldRules.townSpot(13 * 16, 4 * 16 + 4), TownSpot.board);
+    expect(WorldRules.townSpot(13 * 16, 6 * 16), isNull);
+    expect(WorldRules.townSpot(21 * 16, 4 * 16 + 4), TownSpot.forge);
+    expect(WorldRules.townSpot(17 * 16, 9 * 16 + 8), TownSpot.fountain);
+    expect(WorldRules.townSpot(11 * 16 + 4, 15 * 16 + 8), TownSpot.fishing);
+    expect(WorldRules.townSpot(12 * 16 + 8, 16 * 16 + 4), TownSpot.sign);
   });
 }

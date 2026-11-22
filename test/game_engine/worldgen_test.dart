@@ -1,3 +1,4 @@
+import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:echos_del_tiempo/game_engine/data/vaults_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/zones_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_map.dart';
@@ -41,65 +42,64 @@ final _seeds = [
 ];
 
 void main() {
-  group('mapa del mundo', () {
-    final w = MapGenerator.overworld();
+  group('pueblo (sin overworld, town_loop.md § 2.1)', () {
+    final w = MapGenerator.town();
 
-    test('tamaño, tema y pueblo = el lobby de siempre (con salida al sur)', () {
-      expect(w.width, MapGenerator.worldWidth);
-      expect(w.height, MapGenerator.worldHeight);
+    test('tamaño, tema, sin entradas de zona y siempre el mismo', () {
+      expect(w.width, TownLayout.width);
+      expect(w.height, TownLayout.height);
       expect(w.rows.every((r) => r.length == w.width), isTrue);
-      expect(w.theme, 'mundo');
+      expect(w.theme, 'pueblo');
       expect(w.lobby, isTrue);
-      final lobby = MapGenerator.lobby();
-      expect(w.spawn, lobby.spawn);
-      for (var y = 0; y < lobby.height; y++) {
-        final row = w.rows[y].substring(0, lobby.width);
-        if (y == lobby.height - 1) {
-          expect(row, '############,,############');
-        } else {
-          expect(row, lobby.rows[y]);
+      expect(w.entrances, isEmpty);
+      expect(identical(MapGenerator.town(), w), isTrue);
+    });
+
+    test('lugares en su tile, alcanzables y detectables con E', () {
+      final sp = _tile(w.spawn);
+      final reach = _reach(w, sp.$1, sp.$2, gateOpen: false);
+      for (final l in TownLayout.landmarks) {
+        for (var y = l.y; y < l.y + l.h; y++) {
+          for (var x = l.x; x < l.x + l.w; x++) {
+            expect(w.tileAt(x, y), l.tile, reason: l.name);
+            expect(WorldRules.isSolid(w, x, y), isTrue, reason: l.name);
+          }
         }
+        // Algún vecino caminable alcanzable, y E desde ahí da el lugar.
+        var ok = false;
+        for (var y = l.y - 1; y <= l.y + l.h && !ok; y++) {
+          for (var x = l.x - 1; x <= l.x + l.w && !ok; x++) {
+            if (!reach.contains((x, y))) continue;
+            final px = x * 16 + 8.0, py = y * 16 + 8.0;
+            if (WorldRules.collides(w, px, py)) continue;
+            ok = WorldRules.townSpot(px, py) == l.spot;
+          }
+        }
+        expect(ok, isTrue, reason: '${l.name} inalcanzable');
       }
-      // El mostrador y la armería siguen donde la UI los busca.
-      expect(WorldRules.nearCounter(13 * 16.0, 4 * 16.0), isTrue);
-      expect(WorldRules.nearArmory(21 * 16.0, 4 * 16.0), isTrue);
-    });
-
-    test('siempre el mismo (semilla fija)', () {
-      expect(identical(MapGenerator.overworld(), w), isTrue);
-    });
-
-    test('10 entradas en su lugar, alcanzables y detectables con E', () {
-      expect(w.entrances, hasLength(10));
-      final reach = _reach(w, 13, 9, gateOpen: false);
-      for (var i = 0; i < 10; i++) {
-        final e = w.entrances[i];
-        expect(e.zone, i + 1);
-        expect((e.tx, e.ty), MapGenerator.entranceTiles[i]);
-        expect(w.tileAt(e.tx, e.ty), Tile.entrance(i + 1));
-        expect(Tile.entranceZone(w.tileAt(e.tx, e.ty)), i + 1);
-        expect(WorldRules.isSolid(w, e.tx, e.ty), isTrue);
-        expect(reach.contains((e.tx, e.ty + 1)), isTrue,
-            reason: 'frente de la zona ${i + 1} inalcanzable');
-        expect(WorldRules.nearEntrance(w, e.front.x, e.front.y)?.zone, i + 1);
+      for (final (x, y) in TownLayout.fishingSpots) {
+        expect(w.tileAt(x, y), Tile.fishing);
       }
-      expect(WorldRules.nearEntrance(w, w.spawn.x, w.spawn.y), isNull);
-      expect(Tile.entrance(10), '0');
-      expect(Tile.entranceZone('.'), isNull);
+      expect(WorldRules.townSpot(w.spawn.x, w.spawn.y), isNull);
     });
 
-    test('solo tiles conocidos; árboles y rocas son sólidos', () {
-      const known = {'#', '.', ',', '~', 'C', 'A', 'P', 'S', 'L', 'g', 'T', '^',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
+    test('lago con agua, camino al sur y solo tiles conocidos', () {
+      const known = {',', '~', 'C', 'A', 'P', 'S', 'L', 'M', 'g', 'T', 'F',
+        'f', 'Y'};
       for (final r in w.rows) {
         for (final c in r.split('')) {
           expect(known.contains(c), isTrue, reason: 'tile $c');
         }
       }
-      final reach = _reach(w, 13, 9, gateOpen: false);
+      expect(w.rows.join().split('').where((c) => c == Tile.water).length,
+          greaterThan(30));
+      // Salida de expedición: el camino de tierra llega al borde sur.
+      expect(w.tileAt(16, w.height - 1), Tile.path);
+      final sp = _tile(w.spawn);
+      final reach = _reach(w, sp.$1, sp.$2, gateOpen: false);
+      expect(reach.contains((16, w.height - 2)), isTrue);
       for (final (x, y) in reach) {
-        final c = w.tileAt(x, y);
-        expect(c == Tile.tree || c == Tile.rock, isFalse);
+        expect(Tile.isWalkable(w.tileAt(x, y)), isTrue);
       }
     });
   });

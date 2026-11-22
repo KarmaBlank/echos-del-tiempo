@@ -677,6 +677,8 @@ class GameSession {
     this.run,
     Set<String>? leaveReady,
     List<GroundLoot>? lostLoot,
+    this.worldId,
+    this.worldName,
   })  : players = players ?? LinkedHashMap(),
         ground = ground ?? [],
         leaveReady = leaveReady ?? {},
@@ -775,6 +777,11 @@ class GameSession {
   /// jugando solo). Ver [TurnTimer].
   TurnTimer turnTimer;
 
+  /// El mundo de la sala (town_loop.md § 11c, protocolo 41): el que eligió
+  /// el anfitrión. `null` = sin mundo (Travesía, tests viejos).
+  String? worldId;
+  String? worldName;
+
   /// Modo de combate elegido por el anfitrión (turn_modes.md § 1);
   /// `null` = el de por defecto según haya uno o varios jugadores.
   CombatMode? combatMode;
@@ -868,5 +875,7 @@ class GameSession {
         run: run?.copy(),
         leaveReady: {...leaveReady},
         lostLoot: [...lostLoot],
+        worldId: worldId,
+        worldName: worldName,
       );
 }

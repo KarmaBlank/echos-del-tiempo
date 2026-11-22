@@ -84,6 +84,16 @@ abstract final class Tile {
   /// pozo compartido de la sala (missions.md § "Loot perdido").
   static const lostTower = 'L';
 
+  // ---- pueblo v0.21.0 (docs/specs/town_loop.md § 2.1) ----
+  /// Fuente rúnica del centro del pueblo (sólida).
+  static const fountain = 'F';
+
+  /// Punto de pesca marcado en la orilla del lago (sólido).
+  static const fishing = 'f';
+
+  /// Cartel del lago (sólido).
+  static const sign = 'Y';
+
   /// Púas de la Prueba del Tiempo (caminables: dañan).
   static const spikes = 'x';
 
@@ -127,7 +137,7 @@ abstract final class Tile {
   /// ni las entradas de zona).
   static const solidTiles = {
     wall, water, counter, armory, merchant, tree, rock, lava, tombstone, gear,
-    portal, statue, lostTower, cracked, secretFloor, shrine, shrineUsed, waystone,
+    portal, statue, lostTower, fountain, fishing, sign, cracked, secretFloor, shrine, shrineUsed, waystone,
     waystoneOn, wind,
     shortcut, brazier, brazierLit,
   };

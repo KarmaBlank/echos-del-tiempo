@@ -10,6 +10,7 @@ import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
 import 'package:echos_del_tiempo/game_engine/rules/zone_rules.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/json_read.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
+import 'package:echos_del_tiempo/game_engine/rules/map_generator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
@@ -54,7 +55,9 @@ void main() {
     final e = sessionEngine(zones: true);
     var s = e.create();
     s = e.addPlayer(s, 'p0', newProfile('Ana', 'guerrero'))!.state;
-    expect(e.mapFor(s).entrances, hasLength(10), reason: 'lobby = mundo');
+    expect(identical(e.mapFor(s), MapGenerator.town()), isTrue,
+        reason: 'lobby = pueblo (sin overworld)');
+    expect(e.mapFor(s).entrances, isEmpty);
     expect(e.apply(s, 'p0', const ProposeMissionAction('z2')), isNull);
     expect(e.apply(s, 'p0', const ProposeMissionAction('m1')), isNotNull);
   });
@@ -203,7 +206,7 @@ void main() {
 
     // ---- vuelta al mundo: ahora puede proponer la zona 2 ----
     s = act(e, s, 'p0', const BackToLobbyAction());
-    expect(e.mapFor(s).entrances, hasLength(10));
+    expect(identical(e.mapFor(s), MapGenerator.town()), isTrue);
     expect(s.gateOpen, isFalse);
     expect(e.apply(s, 'p0', const ProposeMissionAction('z2')), isNotNull);
   });

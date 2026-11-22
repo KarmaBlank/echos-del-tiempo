@@ -1190,6 +1190,7 @@ final consumablesCodec = _tuningCodec(BalanceKind.consumables, const [
 
 final explorationCodec = _tuningCodec(BalanceKind.exploration, const [
   BalanceField('playerSpeed', 'Velocidad del personaje en el mapa (px/s)', _dec, min: 20, max: 300, step: 1),
+  BalanceField('departureSec', 'Cinemática de partida del pueblo (s)', _dec, max: 4, step: 0.5),
 ]);
 
 final travesiaCodec = _tuningCodec(BalanceKind.travesia, const [

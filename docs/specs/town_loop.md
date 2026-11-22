@@ -1,6 +1,8 @@
-# Spec (PROPUESTA, sin implementar): Pueblo y expediciones — el Mundo como mazmorra co-op con vida de pueblo
+# Spec: Pueblo y expediciones — el Mundo como mazmorra co-op con vida de pueblo
 
-Estado: visión del dueño pasada a spec. **Solo diseño, no hay código.**
+Estado: visión del dueño pasada a spec. **Fase 2 implementada en
+v0.21.0** (pueblo nuevo, sin overworld, mundos por cuenta; ver § 11.2);
+el resto sigue siendo diseño.
 Lore: únicamente `docs/lore.md` (tiempo, ecos, futuro inmutable, pasado
 magitec). Specs relacionadas que esta no reemplaza sino que reordena:
 `world.md`, `missions.md`, `loot.md`, `materials_economy.md`,
@@ -267,6 +269,86 @@ preguntas abiertas.
 - Tunables: duración de cinemática.
 - Tests: transición pueblo → tablero → expedición → pueblo; dificultad
   por sala (§ 6).
+
+### 11.2 Fase 2 tal como quedó (v0.21.0)
+
+Pueblo (`MapGenerator.town()`, datos en
+`lib/game_engine/data/town_layout.dart`, `TownLayout`):
+
+- 34 × 22 tiles, tema `pueblo` (al aire libre), `lobby = true`, sin
+  entradas de zona. Borde de árboles (dos de grosor a los lados), pasto
+  y matas sueltas; spawn en el camino al sur de la fuente
+  `(17×16, 14.5×16)`.
+- Caminos de tierra: el de los edificios (y = 5), el eje norte-sur
+  (x = 16..17) que llega al borde sur (salida de expedición), el anillo
+  de la fuente y el ramal y = 16 al lago y a la torre.
+- Lugares (todos sólidos; E a menos de `WorldRules.townRange` = 12 px
+  del borde, `WorldRules.townSpot`):
+
+| Lugar | Tile | Tiles | E |
+|---|---|---|---|
+| Portal del Eco | `P` | x 3–5, y 3 | panel del Portal |
+| Tablero de encargos | `C` | x 10–15, y 3 | tablero = mapa de viaje |
+| Forja | `A` | x 19–23, y 3 | armería |
+| Estatua del Tiempo | `S` | x 28–30, y 3 | ASCENSIÓN |
+| Fuente rúnica | `F` (nuevo) | x 16–17, y 10–11 | abre el tablero |
+| Cartel del lago | `Y` (nuevo) | (12, 15) | "Pesca · Pronto" |
+| Puntos de pesca | `f` (nuevo) | (10,15) (10,18) (6,14) | "Pesca · Pronto" |
+| Comerciante (puesto) | `M` | x 12–13, y 17 | "Comerciante · Pronto" |
+| Torre del Loot perdido | `L` | x 24–26, y 15 | pozo Loot perdido |
+
+- Lago `~` en x 3–10, y 14–19 (esquinas de pasto). Pesca y comercio
+  son de la fase 3: el aviso es solo local (no viaja por red).
+- Arte: procedural en `TilePainter` (colores en `TownPalette` y el tema
+  `pueblo` de `map_themes.dart`), registrado en `sprite_manifest.yaml`
+  (`tiles: fuente_runica, punto_pesca, cartel_lago,
+  puesto_comerciante`, `procedural: true`) para reemplazarlo por PNG
+  desde el Editor sin tocar Dart.
+- El layout queda en Dart puro (const) y no en YAML: el motor no lee
+  assets. Pasarlo a YAML queda pendiente para cuando el Editor lo edite.
+
+Sin overworld:
+
+- `MapGenerator.overworld()` y las 10 entradas de zona se fueron. Las
+  zonas se eligen en el tablero (que ya listaba las zonas con su estado
+  de desbloqueo); el voto es el de siempre. Qué se movió del overworld:
+  - Entradas de zona (E en la puerta → proponer / votar sí) → tablero
+    de encargos (y la fuente rúnica, que lo abre).
+  - Mapa en grande (M) del mundo → ya no hay mapa en el pueblo; el
+    tablero es el mapa de viaje. En los pisos M sigue igual.
+  - Piedras de paso, PdI, Prueba del Tiempo, Abismo, Portal del Eco,
+    Estatua y Loot perdido: no dependían del overworld (las piedras son
+    de los pisos; el resto ya estaba en el pueblo o en sus paneles).
+  - Música: el pueblo siempre suena con la pieza del pueblo (la del
+    overworld queda sin uso en el Mundo).
+- Cinemática de partida al pasar de preparación al campo: el camino de
+  tierra entre árboles con la party caminando y "Rumbo a <misión>".
+  `exploration.departureSec` (Editor → Balance → Exploración, 3 s, tope
+  4). Cualquier tecla o clic la salta (y sigue de largo); REDUCIR
+  MOVIMIENTO la omite. Local de cada jugador.
+
+Mundos por cuenta (§ 11c):
+
+- `WorldSave {id, name, label: Solitario|Cooperativo, created, town}` y
+  `TownState {upgrades (placeholder de la fase 4), lostLoot, cycle}` en
+  `lib/game_engine/models/world_save.dart`; la lista (`WorldBook`) crea,
+  renombra, borra, elige y agrupa por etiqueta.
+- Disco: `<carpeta de la edición>/accounts/worlds/<id>.json` (uno por
+  mundo) y el elegido en `accounts/world_selected.json`
+  (`JsonFileWorldStore`). Solo en el Mundo (la Travesía no tiene mundos).
+- Migración: si no hay ningún mundo (save de antes de v0.21.0) se arma
+  "Mi mundo", **Cooperativo**, con el estado del pueblo de hoy (vacío:
+  el pozo del Loot perdido no se guardaba) y se escribe. La cuenta y los
+  personajes no se tocan.
+- Título: arriba el MUNDO (agrupado por etiqueta, CREAR MUNDO /
+  RENOMBRAR MUNDO / BORRAR MUNDO con confirmación), abajo el personaje;
+  después JUGAR SOLO o ABRIR SALA (o UNIRSE con código). La etiqueta no
+  bloquea nada.
+- Sala: quien corre el motor pone `worldId` / `worldName` y carga el pozo
+  del Loot perdido del mundo (`SessionEngine.setWorld`); viaja en el
+  estado (`wid` / `wname`, protocolo 41). Al terminar una misión (si se
+  ganó, `cycle + 1`), al volver al pueblo y al salir, el anfitrión guarda
+  el pueblo en su mundo. El cliente no guarda nada del pueblo.
 
 ### Fase 3 — Pesca + comerciante
 - Datos: tablas de peces, cebos, precios.

@@ -9,7 +9,6 @@ import 'package:echos_del_tiempo/features/world/presentation/session_controller.
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -34,10 +33,8 @@ Future<SessionController> _controller() async {
 }
 
 void _startZone1(SessionController c) {
-  final e = c.view!.map.entrances.firstWhere((e) => e.zone == 1);
-  c.teleport(e.front.x, e.front.y);
-  c.advance(0.05);
-  c.handleKey(LogicalKeyboardKey.keyE);
+  // v0.21.0: sin overworld, la zona sale del tablero.
+  c.proposeMission(c.zoneStatus(1)!.mission!.id);
   c.advance(0.05);
   c.setReady(true);
   c.advance(0.05);
@@ -99,12 +96,18 @@ void main() {
         add('botón', find.byType(DsButton));
         expect(find.byType(DsButton), findsWidgets);
         add('barra', find.byKey(const ValueKey('hud-mission-bar')));
-        add(
-            'minimapa',
-            find
-                .ancestor(
-                    of: find.byType(Minimap), matching: find.byType(RetroPanel))
-                .first);
+        // v0.21.0: sin overworld, el pueblo no tiene minimapa.
+        if (field) {
+          add(
+              'minimapa',
+              find
+                  .ancestor(
+                      of: find.byType(Minimap),
+                      matching: find.byType(RetroPanel))
+                  .first);
+        } else {
+          expect(find.byType(Minimap), findsNothing);
+        }
         add('objetivos', find.byKey(const ValueKey('hud-objectives')));
         if (field) {
           expect(rects.keys.where((k) => k.startsWith('barra')), isNotEmpty);

@@ -16,7 +16,6 @@ import 'package:echos_del_tiempo/game_engine/models/loot.dart';
 import 'package:echos_del_tiempo/game_engine/models/party_store.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -122,10 +121,8 @@ Future<SessionController> pumpField(WidgetTester tester,
   final container =
       ProviderScope.containerOf(tester.element(find.byType(WorldScreen)));
   final c = container.read(sessionControllerProvider.notifier);
-  final e = c.view!.map.entrances.firstWhere((e) => e.zone == 1);
-  c.teleport(e.front.x, e.front.y);
-  c.advance(0.05);
-  c.handleKey(LogicalKeyboardKey.keyE);
+  // v0.21.0: sin overworld, la zona sale del tablero.
+  c.proposeMission(c.zoneStatus(1)!.mission!.id);
   c.advance(0.05);
   c.setReady(true);
   c.advance(0.05);

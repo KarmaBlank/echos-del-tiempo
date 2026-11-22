@@ -1,6 +1,7 @@
 import '../models/game_map.dart';
 import '../models/mission_def.dart';
 import '../models/zone_def.dart';
+import '../data/town_layout.dart';
 import 'mulberry32.dart';
 import 'zone_generators.dart';
 import 'zone_rules.dart';
@@ -308,154 +309,72 @@ abstract final class MapGenerator {
   // Mundo y zonas (docs/specs/worldgen.md § 6.5 y § 6.6)
   // ------------------------------------------------------------------
 
-  /// Semilla fija del mapa del mundo.
-  static const worldSeed = 20261117;
-  static const worldWidth = 80;
-  static const worldHeight = 56;
-
-  /// Tiles de las entradas de zona 1..10 (el frente es el tile de abajo).
-  static const entranceTiles = [
-    (8, 22), (24, 30), (40, 22), (56, 14), (70, 24),
-    (64, 38), (46, 44), (30, 48), (12, 44), (72, 50),
-  ];
-
   /// Columnas de muro entre pisos del atlas de una zona.
   static const floorGap = 18;
 
-  static GameMap? _world;
+  static GameMap? _town;
 
-  /// El mapa del mundo: el pueblo (el lobby de siempre, en las mismas
-  /// coordenadas) y las 10 entradas de zona. Siempre el mismo.
-  static GameMap overworld() => _world ??= _buildOverworld();
+  /// El pueblo (town_loop.md § 2.1, v0.21.0): claro de bosque con la
+  /// fuente rúnica al centro, caminos de tierra, el lago con puntos de
+  /// pesca, el puesto del comerciante, la forja, el tablero de encargos,
+  /// el Portal del Eco, la Estatua del Tiempo y la torre del Loot perdido.
+  /// Reemplaza al overworld caminable: las zonas se eligen desde el
+  /// tablero. Siempre el mismo (layout en `TownLayout`).
+  static GameMap town() => _town ??= _buildTown();
 
-  static GameMap _buildOverworld() {
-    const w = worldWidth, h = worldHeight;
-    final town = lobby();
-    final r = mulberry32(worldSeed);
-    int ri(int a, int b) => a + (r() * (b - a + 1)).floor();
-    final t = [for (var y = 0; y < h; y++) List.filled(w, Tile.grass)];
-    bool inTown(int x, int y) => x < town.width && y < town.height;
-
-    // Ruido de valor (árboles, rocas, lagos).
-    double Function(int, int) noise(int cell) {
-      final gw = w ~/ cell + 2, gh = h ~/ cell + 2;
-      final lat = [for (var i = 0; i < gw * gh; i++) r()];
-      double sm(double v) => v * v * (3 - 2 * v);
-      return (x, y) {
-        final gx = x ~/ cell, gy = y ~/ cell;
-        final fx = sm((x % cell) / cell), fy = sm((y % cell) / cell);
-        double v(int i, int j) => lat[j * gw + i];
-        final a = v(gx, gy) + (v(gx + 1, gy) - v(gx, gy)) * fx;
-        final b = v(gx, gy + 1) + (v(gx + 1, gy + 1) - v(gx, gy + 1)) * fx;
-        return a + (b - a) * fy;
-      };
+  static GameMap _buildTown() {
+    const w = TownLayout.width, h = TownLayout.height;
+    final t = [
+      for (var y = 0; y < h; y++)
+        [
+          for (var x = 0; x < w; x++)
+            x == 0 || y == 0 || x == w - 1 || y == h - 1
+                ? Tile.tree
+                : Tile.grass,
+        ],
+    ];
+    void put(int x0, int x1, int y0, int y1, String c) {
+      for (var y = y0; y <= y1; y++) {
+        for (var x = x0; x <= x1; x++) {
+          t[y][x] = c;
+        }
+      }
     }
 
-    final trees = noise(6), detail = noise(3), rocks = noise(8), lakes = noise(10);
+    // Bosque alrededor (dos de grosor en los lados) y matas sueltas.
     for (var y = 0; y < h; y++) {
-      for (var x = 0; x < w; x++) {
-        if (inTown(x, y)) {
-          t[y][x] = town.tileAt(x, y);
-          continue;
-        }
-        if (x < 2 || y < 2 || x >= w - 2 || y >= h - 2) {
-          t[y][x] = Tile.rock;
-          continue;
-        }
-        final tv = 0.7 * trees(x, y) + 0.3 * detail(x, y);
-        if (rocks(x, y) > 0.74) {
-          t[y][x] = Tile.rock;
-        } else if (lakes(x, y) < 0.17) {
-          t[y][x] = Tile.water;
-        } else if (tv > 0.6) {
-          t[y][x] = Tile.tree;
-        }
-      }
+      t[y][1] = Tile.tree;
+      t[y][w - 2] = Tile.tree;
     }
-    // Salida del pueblo.
-    for (var x = 12; x <= 13; x++) {
-      t[town.height - 1][x] = Tile.path;
+    for (final (x, y) in TownLayout.trees) {
+      t[y][x] = Tile.tree;
     }
-
-    // Claros y entradas.
-    final entrances = <ZoneEntrance>[];
-    for (var i = 0; i < entranceTiles.length; i++) {
-      final (ex, ey) = entranceTiles[i];
-      for (var y = ey - 1; y <= ey + 1; y++) {
-        for (var x = ex - 2; x <= ex + 2; x++) {
-          t[y][x] = Tile.grass;
-        }
-      }
-      t[ey][ex] = Tile.entrance(i + 1);
-      entrances.add(ZoneEntrance(i + 1, ex, ey));
+    // Caminos de tierra: frente a los edificios, el eje norte-sur con la
+    // salida de expedición al sur, el anillo de la fuente y el ramal del
+    // lago y de la torre.
+    put(3, w - 4, 5, 5, Tile.path);
+    put(16, 17, 5, h - 1, Tile.path);
+    put(14, 19, 8, 13, Tile.path);
+    put(11, 26, 16, 16, Tile.path);
+    // Lago (esquinas de pasto) y sus puntos de pesca.
+    put(3, 10, 14, 19, Tile.water);
+    for (final (x, y) in const [(3, 14), (10, 14), (3, 19), (10, 19)]) {
+      t[y][x] = Tile.grass;
     }
-
-    // Camino de 2 de ancho: pueblo -> 1 -> 2 -> ... -> 10.
-    void carve(int x, int y) {
-      if (x < 1 || y < 1 || x >= w - 1 || y >= h - 1 || inTown(x, y)) return;
-      if (Tile.entranceZone(t[y][x]) != null) return;
-      t[y][x] = Tile.path;
+    for (final (x, y) in TownLayout.fishingSpots) {
+      t[y][x] = Tile.fishing;
     }
-
-    void hs(int y, int a, int b) {
-      for (var x = a < b ? a : b; x <= (a > b ? a : b); x++) {
-        carve(x, y);
-        carve(x, y + 1);
-      }
+    // Lugares.
+    for (final l in TownLayout.landmarks) {
+      put(l.x, l.x + l.w - 1, l.y, l.y + l.h - 1, l.tile);
     }
-
-    void vs(int x, int a, int b) {
-      for (var y = a < b ? a : b; y <= (a > b ? a : b); y++) {
-        carve(x, y);
-        carve(x + 1, y);
-      }
-    }
-
-    var (px, py) = (12, town.height);
-    for (final e in entrances) {
-      final qx = e.tx, qy = e.ty + 1;
-      if (ri(0, 1) == 0) {
-        hs(py, px, qx);
-        vs(qx, py, qy);
-      } else {
-        vs(px, py, qy);
-        hs(qy, px, qx);
-      }
-      (px, py) = (qx, qy);
-    }
-
-    // Flood fill desde el spawn: el pasto inalcanzable se vuelve árbol.
-    final sx = (town.spawn.x / tileSize).floor(),
-        sy = (town.spawn.y / tileSize).floor();
-    bool walk(String c) =>
-        c == Tile.grass || c == Tile.floor || c == Tile.path;
-    final seen = <int>{sy * w + sx};
-    final stack = [(sx, sy)];
-    while (stack.isNotEmpty) {
-      final (x, y) = stack.removeLast();
-      for (final (dx, dy) in const [(1, 0), (-1, 0), (0, 1), (0, -1)]) {
-        final nx = x + dx, ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-        if (!walk(t[ny][nx]) || !seen.add(ny * w + nx)) continue;
-        stack.add((nx, ny));
-      }
-    }
-    for (var y = 0; y < h; y++) {
-      for (var x = 0; x < w; x++) {
-        if (t[y][x] == Tile.grass && !seen.contains(y * w + x)) {
-          t[y][x] = Tile.tree;
-        }
-      }
-    }
-
     return GameMap(
       width: w,
       height: h,
       rows: [for (final row in t) row.join()],
-      theme: 'mundo',
-      spawn: town.spawn,
+      theme: TownLayout.theme,
+      spawn: TownLayout.spawn,
       lobby: true,
-      entrances: entrances,
     );
   }
 

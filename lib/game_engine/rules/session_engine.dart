@@ -229,6 +229,19 @@ class SessionEngine {
     return SessionStep(s, const []);
   }
 
+  /// El mundo de la sala (town_loop.md § 11c): id, nombre y su pozo del
+  /// Loot perdido guardado. Lo pone quien corre el motor al abrir la sala.
+  SessionStep setWorld(GameSession session, String? id, String? name,
+      {List<GroundLoot> lostLoot = const []}) {
+    final s = session.copy()
+      ..worldId = id
+      ..worldName = name;
+    s.lostLoot
+      ..clear()
+      ..addAll(lostLoot);
+    return SessionStep(s, const []);
+  }
+
   SessionStep setTurnTimer(GameSession session, TurnTimer timer) {
     if (session.turnTimer == timer) return SessionStep(session, const []);
     final s = session.copy()..turnTimer = timer;
@@ -387,7 +400,7 @@ class SessionEngine {
   GameMap _baseMapFor(GameSession s) {
     final m = s.mission;
     if (m == null || s.mode == SessionMode.lobby) {
-      return MapGenerator.overworld();
+      return MapGenerator.town();
     }
     final eco = s.eco;
     if (m.missionId == EcoRules.missionId && eco != null) {

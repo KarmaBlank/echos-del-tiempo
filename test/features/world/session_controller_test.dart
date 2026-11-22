@@ -62,7 +62,9 @@ void main() {
   test('moverse hasta el mostrador y abrirlo con E', () async {
     await started();
     const ts = MapGenerator.tileSize;
-    // Hacia arriba hasta chocar con el mostrador (fila 2).
+    // v0.21.0: desde el camino de los edificios, hacia arriba hasta chocar
+    // con el tablero (fila 3; town_loop.md § 2.1).
+    c.teleport(13.0 * ts, 6.5 * ts);
     for (var i = 0; i < 60; i++) {
       c.updateLocal(0.05, 0, -1);
     }

@@ -37,6 +37,9 @@ const Map<String, TuningDef> kTuningDefaults = {
   // (v0.20.19: 78 → 98, +25 %).
   TuningId.exploration: TuningDef('Exploración', {
     'playerSpeed': 98,
+    // town_loop.md § 2 (v0.21.0): cinemática de partida del pueblo a la
+    // zona, en segundos (≤ 4, saltable).
+    'departureSec': 3,
   }),
   // worldgen.md § 6.8 (v0.20.22): misiones cortas. Tope de pisos por
   // misión, × de grupos normales por piso y × del área de cada piso.

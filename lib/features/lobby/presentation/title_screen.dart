@@ -39,6 +39,8 @@ import '../../combat/presentation/sprite_catalog.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../settings/presentation/settings_menu.dart';
 import '../../world/presentation/world_screen.dart';
+import 'world_picker.dart';
+import 'worlds_providers.dart';
 
 /// Pantalla de título (prototipo, HTML líneas 70-83 y `title()` desde la
 /// línea 1471) con la **selección de personaje** de la cuenta: lista de
@@ -77,7 +79,6 @@ bool get _travesia => GameEdition.current.mode == GameModeKind.travesia;
 String get _keysHelp => _travesia ? _keysHelpTravesia : _keysHelpMundo;
 
 class _TitleScreenState extends ConsumerState<TitleScreen> {
-
   final _name = TextEditingController();
   final _code = TextEditingController();
   Account? _account;
@@ -285,14 +286,14 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
 
   Future<void> _openBestiary() async {
     if (_busy) return;
-    await Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => const BestiaryScreen()));
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => const BestiaryScreen()));
   }
 
   Future<void> _openAchievements() async {
     if (_busy) return;
-    await Navigator.of(context).push(MaterialPageRoute<void>(
-        builder: (_) => const AchievementsScreen()));
+    await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const AchievementsScreen()));
   }
 
   Future<void> _openStash() async {
@@ -311,6 +312,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
   Future<PlayerProfile?> _prepare() async {
     // Se puede tocar antes de que termine de cargar la cuenta.
     await _loading;
+    // Y antes de los mundos: la sesión lee el elegido al arrancar.
+    if (!_travesia) await ref.read(worldBookProvider.notifier).loading;
     final c = _account?.selected;
     if (c == null || !mounted) return null;
     setState(() => _busy = true);
@@ -332,7 +335,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     // § 1.3).
     final atlas = ref.read(accountRepositoryProvider).current?.atlas;
     return mounted
-        ? (atlas == null ? _norm(slot) : AbyssRules.withAccount(_norm(slot), atlas))
+        ? (atlas == null
+            ? _norm(slot)
+            : AbyssRules.withAccount(_norm(slot), atlas))
         : null;
   }
 
@@ -462,7 +467,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             // JUGAR es la acción principal (borde y texto dorados).
-            DsButton('> JUGAR',
+            DsButton(_travesia ? '> JUGAR' : '> JUGAR SOLO',
                 key: const ValueKey('title-start'),
                 kind: DsButtonKind.primary,
                 onPressed: has ? _start : null),
@@ -721,7 +726,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
       alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        DsButton('CREAR SALA',
+        DsButton(_travesia ? 'CREAR SALA' : 'ABRIR SALA',
             key: const ValueKey('title-host'),
             onPressed: netOk ? () => _connect(factory) : null),
         Text('o', style: DsText.detail()),
@@ -819,6 +824,12 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
                   else if (creating)
                     _creator(a, sprites)
                   else ...[
+                    // Mundo + personaje (town_loop.md § 11c); la
+                    // Travesía no tiene mundos.
+                    if (!_travesia) ...[
+                      WorldPicker(busy: _busy),
+                      const SizedBox(height: 16),
+                    ],
                     _selector(a, sprites),
                     const SizedBox(height: 16),
                     _netRow(factory),

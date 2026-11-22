@@ -50,7 +50,7 @@ void main() {
     await _pump(tester,
         NetSessionFactory.unavailable('P2P', 'P2P por internet: falta configurar Firebase'));
     expect(find.text('P2P por internet: falta configurar Firebase'), findsOneWidget);
-    expect(_onPressed(tester, 'CREAR SALA'), isNull);
+    expect(_onPressed(tester, 'ABRIR SALA'), isNull);
     expect(_onPressed(tester, 'UNIRSE'), isNull);
   });
 
@@ -65,7 +65,7 @@ void main() {
             create: () => LoopbackNetSession(hub)));
     expect(find.text('Red: LAN'), findsOneWidget);
     expect(find.text('IP:PUERTO'), findsOneWidget);
-    expect(_onPressed(tester, 'CREAR SALA'), isNotNull);
+    expect(_onPressed(tester, 'ABRIR SALA'), isNotNull);
 
     await tester.tap(find.text('UNIRSE'));
     await tester.pump();

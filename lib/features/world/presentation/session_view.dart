@@ -66,6 +66,10 @@ enum WorldPrompt {
   /// Frente a la torrecita del Loot perdido (v0.20.22).
   lostLoot('[E] Loot perdido'),
 
+  /// Lugar del pueblo que llega en una fase próxima (pesca, comerciante;
+  /// town_loop.md § 2.1). El texto real va en [SessionView.promptText].
+  soon('[E] Pronto'),
+
   /// Frente a la entrada de una zona (mapa del mundo). El texto real
   /// (`[E] Entrar: <zona>`, bloqueada, próximamente) va en
   /// [SessionView.promptText].
