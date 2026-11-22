@@ -294,6 +294,47 @@ preguntas abiertas.
 
 ---
 
+## 11b. Exteriores de bioma y refuerzos
+
+### Exteriores de bioma
+- Se pesca **en el pueblo y en cada bioma**. Cada bioma tiene una
+  **zona exterior** (antes de sus mazmorras) con recolectables:
+  semillas, puntos de pesca, recursos. Sin combate obligatorio.
+- Se puede viajar a un bioma **solo a recolectar/pescar** y volver al
+  pueblo. La party puede **dividirse**: unos en el pueblo, otros en el
+  exterior de un bioma, otros en la mazmorra.
+- Tunables: `biome.gatherNodes`, `biome.nodeRespawnMissions`.
+
+### Refuerzos (unirse a una misión en curso)
+- Quien no está en la misión (pueblo o bioma) puede **unirse a mitad**:
+  prepararse → viajar al bioma → entrar a la mazmorra.
+- **Si la party está en batalla:** el refuerzo entra a esa batalla con
+  **penalidad de turno**: recién actúa tras un retraso
+  (`reinforce.battleDelay`: fin de la ronda actual o N ticks, tunable).
+- **Si la party está explorando:** aparece en la **entrada de la
+  mazmorra**.
+- La dificultad no cambia: ya está dimensionada para la sala (§ 6). El
+  botín por cabeza se recalcula con los presentes al cerrar la misión
+  (`reinforce.lootShare` tunable para el que llega tarde).
+- **"Pedir ayuda"**: ping de la party en mazmorra a toda la sala
+  (aviso + botón "Ir a ayudar" que arma el viaje). Cooldown
+  `reinforce.helpPingCooldown`.
+
+### Red
+- **Host autoritativo**: el host acepta el ingreso, ubica al refuerzo
+  (entrada o batalla) y lo agrega al snapshot.
+- Unirse a batalla = **agregar un combatiente a mitad de pelea**: el
+  host lo inserta en el timeline con el retraso; los clientes lo ven
+  por evento, sin reiniciar la batalla. Requiere subir versión de
+  protocolo (`netcode.md`).
+- Cada jugador tiene una **ubicación** en el estado de sala:
+  `pueblo | bioma:<id> | mazmorra:<id>:<piso>`.
+
+### UI
+- Indicador de **quién está dónde** (pueblo / bioma / mazmorra, con
+  piso y "en batalla") en el panel de sala y en el tablero.
+- Aviso visible del ping "pedir ayuda" y estado del refuerzo en viaje.
+
 ## 12. Decisiones del dueño (mandan sobre el resto)
 
 - Se elimina el overworld caminable.
