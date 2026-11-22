@@ -352,6 +352,8 @@ class ProgressionRules {
         for (final id in {...raw.ultOrder})
           if (UltRules.isLearnable(id)) id
       ],
+      // Pesca v0.22.0 (fishing.md § 3): el constructor ya limpia ids.
+      life: raw.life,
       // Jefes del Abismo vencidos (v0.8): solo 1..5.
       abyssKills: {
         for (final n in raw.abyssKills)

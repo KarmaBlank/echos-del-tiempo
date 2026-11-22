@@ -58,11 +58,15 @@ import 'ult_rules.dart';
 import '../data/ults_v2_catalog.dart';
 import '../data/branch_ults_catalog.dart' show kWeaponUltSkills;
 import '../data/tuning_catalog.dart';
+import '../data/fishing_catalog.dart';
+import '../data/town_layout.dart' show TownSpot;
+import 'fishing_rules.dart';
 import '../models/ult_def.dart';
 import '../fx/cinematic_durations.dart';
 
 part 'session_engine_tutorial.dart';
 part 'session_engine_run.dart';
+part 'session_engine_fishing.dart';
 
 /// Genera la semilla de cada misión (`(Math.random() * 1e9) | 0`).
 typedef SeedSource = int Function();
@@ -232,7 +236,8 @@ class SessionEngine {
   /// El mundo de la sala (town_loop.md § 11c): id, nombre y su pozo del
   /// Loot perdido guardado. Lo pone quien corre el motor al abrir la sala.
   SessionStep setWorld(GameSession session, String? id, String? name,
-      {List<GroundLoot> lostLoot = const []}) {
+      {List<GroundLoot> lostLoot = const [], List<String>? lake}) {
+    if (lake != null && lake.isNotEmpty) fishing.lake = List.unmodifiable(lake);
     final s = session.copy()
       ..worldId = id
       ..worldName = name;
@@ -241,6 +246,10 @@ class SessionEngine {
       ..addAll(lostLoot);
     return SessionStep(s, const []);
   }
+
+  /// Pesca del anfitrión (fishing.md § 6): picadas pendientes, tiempos y
+  /// el lago del mundo. No viaja en el snapshot.
+  final fishing = FishingHostState();
 
   SessionStep setTurnTimer(GameSession session, TurnTimer timer) {
     if (session.turnTimer == timer) return SessionStep(session, const []);
@@ -1071,6 +1080,15 @@ class _Op {
       case SetBuildWantsAction(:final wants):
         p.buildWants = wants == null || wants.isEmpty ? null : wants;
         return true;
+
+      case FishBiteAction() ||
+            FishResultAction() ||
+            AutoFishAction() ||
+            SellFishAction() ||
+            ExchangeFishAction() ||
+            BuyRodAction() ||
+            EquipRodAction():
+        return fishingAction(p, a);
 
       case BuyItemAction():
         if (!s.canShop) return false;
@@ -3806,6 +3824,7 @@ class _Op {
 
   /// `toLobby`.
   void toLobby() {
+    e.fishing.newStay();
     s
       ..eco = null
       ..ecoOwner = null

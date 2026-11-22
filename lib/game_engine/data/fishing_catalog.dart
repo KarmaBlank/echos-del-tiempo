@@ -1,0 +1,134 @@
+// Peces y cañas (docs/specs/fishing.md § 2 y § 4). Datos puros: los lee
+// `FishingRules`; la UI solo los muestra.
+
+/// Rareza de un pez o de una caña (fishing.md § 2).
+enum FishRarity {
+  comun('común'),
+  raro('raro'),
+  epico('épico'),
+  legendario('legendario');
+
+  const FishRarity(this.label);
+  final String label;
+
+  /// Sufijo de las claves de tunables (`weightComun`, `xpRaro`, …).
+  String get key => '${name[0].toUpperCase()}${name.substring(1)}';
+
+  static FishRarity fromName(Object? n) =>
+      values.firstWhere((v) => v.name == n, orElse: () => comun);
+}
+
+/// Una especie de pez.
+class FishDef {
+  const FishDef(this.id, this.name, this.rarity,
+      {required this.biome,
+      required this.minCm,
+      required this.maxCm,
+      required this.price,
+      required this.xp,
+      this.lore = ''});
+
+  final String id;
+  final String name;
+  final FishRarity rarity;
+
+  /// Bioma donde vive (fishing.md § 2.1): `zona1` … `zona10`. El lago del
+  /// pueblo arranca con las especies de `zona1` (`TownState.lake`).
+  final String biome;
+  final int minCm, maxCm;
+
+  /// Precio base en oro (el comerciante; fishing.md § 5).
+  final int price;
+
+  /// XP de Pesca base (antes de rareza y tamaño).
+  final int xp;
+  final String lore;
+
+  double get avgCm => (minCm + maxCm) / 2;
+}
+
+/// Una caña: herramienta en su propio espacio (no es un arma).
+class RodDef {
+  const RodDef(this.id, this.name, this.rarity,
+      {required this.reqLevel,
+      this.biteSpeed = 0,
+      this.zoneBonus = 0,
+      this.rareBonus = 0,
+      this.price = 0});
+
+  final String id;
+  final String name;
+  final FishRarity rarity;
+
+  /// Nivel de Pesca para rendir al 100 % (town_loop.md § 11c).
+  final int reqLevel;
+
+  /// Bonus base (antes de la efectividad): picada más rápida (fracción
+  /// menos de espera), zona de captura más ancha y chance de rareza.
+  final double biteSpeed, zoneBonus, rareBonus;
+
+  /// Precio en el comerciante (0 = no se vende).
+  final int price;
+}
+
+/// La caña que tiene todo personaje (migración v0.22.0).
+const kStarterRod = 'cana_rama';
+
+const kRods = <String, RodDef>{
+  'cana_rama': RodDef('cana_rama', 'Caña de rama', FishRarity.comun,
+      reqLevel: 1),
+  'cana_roble': RodDef('cana_roble', 'Caña de roble', FishRarity.raro,
+      reqLevel: 5, biteSpeed: 0.15, zoneBonus: 0.15, rareBonus: 0.2,
+      price: 400),
+  'cana_runica': RodDef('cana_runica', 'Caña de bronce rúnico',
+      FishRarity.epico,
+      reqLevel: 12, biteSpeed: 0.3, zoneBonus: 0.3, rareBonus: 0.45,
+      price: 1500),
+  'cana_eco': RodDef('cana_eco', 'Caña del Eco', FishRarity.legendario,
+      reqLevel: 22, biteSpeed: 0.45, zoneBonus: 0.5, rareBonus: 0.8,
+      price: 5000),
+};
+
+/// Bioma de las especies con que arranca el lago del pueblo.
+const kTownStartBiome = 'zona1';
+
+const kFish = <String, FishDef>{
+  'mojarra_claro': FishDef('mojarra_claro', 'Mojarra del claro',
+      FishRarity.comun,
+      biome: 'zona1', minCm: 8, maxCm: 16, price: 12, xp: 6),
+  'perca_rayada': FishDef('perca_rayada', 'Perca rayada', FishRarity.comun,
+      biome: 'zona1', minCm: 15, maxCm: 30, price: 15, xp: 7),
+  'carpa_musgo': FishDef('carpa_musgo', 'Carpa de musgo', FishRarity.comun,
+      biome: 'zona1', minCm: 20, maxCm: 45, price: 18, xp: 8),
+  'trucha_cobre': FishDef('trucha_cobre', 'Trucha de cobre', FishRarity.raro,
+      biome: 'zona1', minCm: 25, maxCm: 50, price: 45, xp: 16),
+  'bagre_ruinas': FishDef('bagre_ruinas', 'Bagre de las ruinas',
+      FishRarity.raro,
+      biome: 'zona1', minCm: 30, maxCm: 70, price: 55, xp: 18,
+      lore: 'Vive entre piedras talladas que se hundieron hace eras.'),
+  'anguila_runica': FishDef('anguila_runica', 'Anguila rúnica',
+      FishRarity.epico,
+      biome: 'zona1', minCm: 50, maxCm: 110, price: 140, xp: 40,
+      lore: 'Las runas del lomo brillan como las de la fuente.'),
+  'pez_engranaje': FishDef('pez_engranaje', 'Pez engranaje', FishRarity.epico,
+      biome: 'zona1', minCm: 20, maxCm: 40, price: 160, xp: 45,
+      lore: 'Mitad escama, mitad mecanismo antiguo movido por magia.'),
+  'carpa_manana': FishDef('carpa_manana', 'Carpa del Mañana',
+      FishRarity.legendario,
+      biome: 'zona1', minCm: 80, maxCm: 140, price: 900, xp: 150,
+      lore: 'Un eco del futuro: ya la pescaste, solo que todavía no.'),
+  'esturion_era': FishDef('esturion_era', 'Esturión de la Era Antigua',
+      FishRarity.legendario,
+      biome: 'zona1', minCm: 120, maxCm: 220, price: 1200, xp: 180,
+      lore: 'Nadaba cuando el pasado era más avanzado que el presente.'),
+  'pez_reloj': FishDef('pez_reloj', 'Pez del Reloj Quieto',
+      FishRarity.legendario,
+      biome: 'zona1', minCm: 40, maxCm: 70, price: 1000, xp: 160,
+      lore: 'Las escamas marcan una hora que no avanza.'),
+};
+
+/// Especies iniciales del lago del pueblo (las del bioma de la zona 1).
+List<String> get kTownLakeDefault => [
+      for (final f in kFish.values)
+        if (f.biome == kTownStartBiome) f.id
+    ];

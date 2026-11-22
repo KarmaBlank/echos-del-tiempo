@@ -20,13 +20,13 @@ enum TownSpot {
   /// Fuente rúnica: punto de reunión; abre el tablero.
   fountain,
 
-  /// Puesto del comerciante (fase 3: todavía "Pronto").
+  /// Puesto del comerciante: compra pescado, vende cañas (fishing.md § 5).
   trader,
 
-  /// Cartel del lago (pesca: fase 3, "Pronto").
+  /// Cartel del lago: qué especies hay y tu nivel de Pesca.
   sign,
 
-  /// Punto de pesca del lago (fase 3, "Pronto").
+  /// Punto de pesca del lago: abre la pesca (fishing.md § 4).
   fishing,
 }
 

@@ -86,6 +86,13 @@ extension _RunOp on _Op {
             BackToLobbyAction() ||
             LeaveReadyAction() ||
             TakeLostLootAction() ||
+            FishBiteAction() ||
+            FishResultAction() ||
+            AutoFishAction() ||
+            SellFishAction() ||
+            ExchangeFishAction() ||
+            BuyRodAction() ||
+            EquipRodAction() ||
             UseStairsAction() ||
             InteractPoiAction() ||
             PickUpAction() ||

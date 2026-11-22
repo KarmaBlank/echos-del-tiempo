@@ -36,6 +36,12 @@ enum WorldPanel {
 
   /// El pozo Loot perdido del pueblo (missions.md § "Loot perdido").
   lostLoot,
+
+  /// Pesca en un punto del lago (fishing.md § 4).
+  fishing,
+
+  /// Puesto del comerciante (fishing.md § 5).
+  trader,
 }
 
 /// Una línea del chat (`addChat`): de un jugador o de sistema (`sys`).
@@ -66,9 +72,14 @@ enum WorldPrompt {
   /// Frente a la torrecita del Loot perdido (v0.20.22).
   lostLoot('[E] Loot perdido'),
 
-  /// Lugar del pueblo que llega en una fase próxima (pesca, comerciante;
-  /// town_loop.md § 2.1). El texto real va en [SessionView.promptText].
-  soon('[E] Pronto'),
+  /// Punto de pesca del lago (fishing.md § 4).
+  fishing('[E] Pescar'),
+
+  /// Puesto del comerciante (fishing.md § 5).
+  trader('[E] Comerciante'),
+
+  /// Cartel del lago.
+  sign('[E] Leer cartel'),
 
   /// Frente a la entrada de una zona (mapa del mundo). El texto real
   /// (`[E] Entrar: <zona>`, bloqueada, próximamente) va en

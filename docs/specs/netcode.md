@@ -758,6 +758,18 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 42 (v0.22.0: pesca y comerciante)
+
+- Acciones nuevas (fishing.md § 7): `fBite {pw}`, `fRes {ok}`, `fAuto`,
+  `fSell {sp?, mat?}`, `fSwap {sp}`, `rodBuy {r}`, `rodEq {r}`.
+- Eventos nuevos: `fBite {id, sp, cm}` (el pez lo tira el anfitrión al
+  clavar) y `fCaught {id, sp, cm, auto?}`.
+- El perfil suma `life` (Pesca, cañas, bolsa de Pescados, pity). Un
+  cliente 41 no lo conoce y perdería lo pescado: la sala no mezcla
+  versiones.
+- El mundo guarda `town.lake` (especies del lago); solo lo lee el
+  anfitrión.
+
 ## Mundo, protocolo 41 (v0.21.0: pueblo nuevo y mundos por cuenta)
 
 - El lobby es el mapa del pueblo (`MapGenerator.town()`, town_loop.md

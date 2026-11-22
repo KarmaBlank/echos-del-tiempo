@@ -292,9 +292,9 @@ Pueblo (`MapGenerator.town()`, datos en
 | Forja | `A` | x 19–23, y 3 | armería |
 | Estatua del Tiempo | `S` | x 28–30, y 3 | ASCENSIÓN |
 | Fuente rúnica | `F` (nuevo) | x 16–17, y 10–11 | abre el tablero |
-| Cartel del lago | `Y` (nuevo) | (12, 15) | "Pesca · Pronto" |
-| Puntos de pesca | `f` (nuevo) | (10,15) (10,18) (6,14) | "Pesca · Pronto" |
-| Comerciante (puesto) | `M` | x 12–13, y 17 | "Comerciante · Pronto" |
+| Cartel del lago | `Y` (nuevo) | (12, 15) | aviso del lago (v0.22.0) |
+| Puntos de pesca | `f` (nuevo) | (10,15) (10,18) (6,14) | panel PESCA (v0.22.0) |
+| Comerciante (puesto) | `M` | x 12–13, y 17 | COMERCIANTE (v0.22.0) |
 | Torre del Loot perdido | `L` | x 24–26, y 15 | pozo Loot perdido |
 
 - Lago `~` en x 3–10, y 14–19 (esquinas de pasto). Pesca y comercio
@@ -350,10 +350,14 @@ Mundos por cuenta (§ 11c):
   ganó, `cycle + 1`), al volver al pueblo y al salir, el anfitrión guarda
   el pueblo en su mundo. El cliente no guarda nada del pueblo.
 
-### Fase 3 — Pesca + comerciante
-- Datos: tablas de peces, cebos, precios.
-- Tunables: `fishing.*`, precios de venta.
-- Tests: tablas con semilla, pity, validación del host.
+### Fase 3 — Pesca + comerciante (hecha en v0.22.0)
+- Ver **docs/specs/fishing.md** (manda sobre el detalle). Peces por
+  bioma y lago del pueblo por mundo (`TownState.lake`), Pesca por
+  personaje, cañas, minijuego local, comerciante (oro o materiales,
+  canje de legendarios, cañas) y auto-pesca sin legendarios.
+- Tunables: Editor → Balance → Pesca (`fishing.*` + precios/canje).
+- Pendiente: cebos y ofertas rotativas del comerciante; "Cría de <pez>"
+  para sumar especies de otros biomas al lago.
 
 ### Fase 4 — Mejoras del pueblo
 - Datos: tabla de mejoras y costos.

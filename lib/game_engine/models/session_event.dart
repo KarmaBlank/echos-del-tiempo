@@ -316,3 +316,21 @@ class RunEndedEvent extends SessionEvent {
   final bool victory;
   const RunEndedEvent(this.victory);
 }
+
+/// El host tiró el pez de la picada de [playerId] (fishing.md § 6).
+class FishBiteEvent extends SessionEvent {
+  final String playerId;
+  final String species;
+  final int sizeCm;
+  const FishBiteEvent(this.playerId, this.species, this.sizeCm);
+}
+
+/// [playerId] sacó [species] ([sizeCm] cm); [auto]: por auto-pesca.
+class FishCaughtEvent extends SessionEvent {
+  final String playerId;
+  final String species;
+  final int sizeCm;
+  final bool auto;
+  const FishCaughtEvent(this.playerId, this.species, this.sizeCm,
+      {this.auto = false});
+}

@@ -19,7 +19,15 @@ enum WorldLabel {
 /// Estado del pueblo de un mundo.
 class TownState {
   const TownState(
-      {this.upgrades = const {}, this.lostLoot = const [], this.cycle = 0});
+      {this.upgrades = const {},
+      this.lostLoot = const [],
+      this.cycle = 0,
+      this.lake});
+
+  /// Especies del lago del pueblo (fishing.md § 2.1); `null` = las de la
+  /// zona 1 (`kTownLakeDefault`). Más adelante la "Cría de <pez>" suma
+  /// especies de otros biomas.
+  final List<String>? lake;
 
   /// Mejoras del pueblo por id → nivel (fase 4: todavía sin efectos).
   final Map<String, int> upgrades;
@@ -35,16 +43,19 @@ class TownState {
     Map<String, int>? upgrades,
     List<Map<String, Object?>>? lostLoot,
     int? cycle,
+    List<String>? lake,
   }) =>
       TownState(
           upgrades: upgrades ?? this.upgrades,
           lostLoot: lostLoot ?? this.lostLoot,
-          cycle: cycle ?? this.cycle);
+          cycle: cycle ?? this.cycle,
+          lake: lake ?? this.lake);
 
   Map<String, Object?> toJson() => {
         if (upgrades.isNotEmpty) 'up': upgrades,
         if (lostLoot.isNotEmpty) 'lost': lostLoot,
         if (cycle != 0) 'cycle': cycle,
+        if (lake != null) 'lake': lake,
       };
 
   static TownState fromJson(Object? raw) {
@@ -65,6 +76,9 @@ class TownState {
             ]
           : const [],
       cycle: raw['cycle'] is num ? (raw['cycle'] as num).round() : 0,
+      lake: raw['lake'] is List
+          ? [for (final x in raw['lake'] as List) if (x is String) x]
+          : null,
     );
   }
 }
