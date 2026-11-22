@@ -127,6 +127,28 @@ femenino); con varios, `· ¡La cura quema a los no muertos! Esqueleto 36,
 Espectro 18`. FX: el número y el tajo en la luz del Sagrado
 (`procHitStyle('curaSagrada')`).
 
+#### 1.4.1 Lanzar la cura a un enemigo (v0.20.14)
+
+Una habilidad de cura (`SkillKind.heal`, sin `revive`; de un blanco
+como Cura Focalizada o de grupo como Sanación) se puede lanzar a **un
+enemigo vivo con `healHarm > 0`** (no muerto 100%, espectro 50%):
+
+- Daño Sagrado solo a ese enemigo: cura × `healHarm` × (1 +
+  `healHarmBonus` de pasivas) × `healFoeMult` (Editor → Balance →
+  Combos y quiebre, "Cura lanzada a un no muerto (×)", por defecto
+  1.5), mínimo 1. Mismo camino que el daño pasivo (`_procDamage`,
+  `sourceId = 'curaSagrada'`: Marca, quiebre, ecos; sin crítico).
+- No cura a nadie, no limpia estados ni hace el daño pasivo a los demás
+  no muertos. Log: `Paladín · Sanación: ¡la cura quema al Esqueleto! 42`.
+- Un enemigo sin `healHarm` no es blanco: el host ignora ese `tg` y la
+  cura va como siempre. Con las familias apagadas tampoco.
+- Las curas de un blanco aceptan además `tg` = un aliado vivo (lo cura
+  a él); sin `tg`, al más herido. Lanzadas a aliados, el daño pasivo de
+  § 1.4 sigue igual. Regeneración, resurrecciones y ULT no cambian.
+- Helpers puros en `family_rules.dart`: `isTargetableHeal`,
+  `healCanTargetFoe`, `skillHealAmount`, `healOnFoeDamage`.
+- IA de compañeros: no la usa todavía (sigue curando al grupo).
+
 ### 1.5 Estados
 
 - Inmune: el estado no entra (`_addStatus` devuelve `false`, sin

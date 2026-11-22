@@ -13,6 +13,7 @@ import '../../../game_engine/models/player_state.dart';
 import '../../../game_engine/models/weapon.dart';
 import '../../../game_engine/rules/battle_engine.dart';
 import '../../../game_engine/rules/combo_planner.dart';
+import '../../../game_engine/rules/family_rules.dart' show isTargetableHeal;
 import '../../../game_engine/rules/mulberry32.dart';
 import '../../../game_engine/rules/passive_tree_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
@@ -365,7 +366,8 @@ class ImpactSimulator {
                   : null) ??
               (quebrar != null ? engine.command(s, p.id, quebrar) : null) ??
               (sk != null && p.mp >= sk.mp
-                  ? engine.command(s, p.id, SkillCommand(sk.id, targetId: target))
+                  ? engine.command(s, p.id,
+                      SkillCommand(sk.id, targetId: isTargetableHeal(sk) ? null : target))
                   : null) ??
               engine.command(s, p.id, AttackCommand(targetId: target)) ??
               engine.timeout(s);

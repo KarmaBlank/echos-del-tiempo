@@ -992,6 +992,7 @@ final comboCodec = EntityCodec(
     BalanceField('groupBreakBase', 'Umbral: base del grupo', _dec, max: 3, step: 0.05),
     BalanceField('groupBreakPer', 'Umbral: + por jugador', _dec, max: 3, step: 0.05),
     BalanceField('steadyGauge', 'Fisurado que no se quiebra: barra a', _frac, max: 1, step: 0.05),
+    BalanceField('healFoeMult', 'Cura lanzada a un no muerto (×)', _dec, max: 5, step: 0.05),
   ],
   read: (o) {
     final c = o as ComboRulesDef;
@@ -1015,6 +1016,7 @@ final comboCodec = EntityCodec(
       'groupBreakBase': c.groupBreakBase,
       'groupBreakPer': c.groupBreakPer,
       'steadyGauge': c.steadyGauge,
+      'healFoeMult': c.healFoeMult,
     };
   },
   write: (o, f) => ComboRulesDef(
@@ -1037,6 +1039,7 @@ final comboCodec = EntityCodec(
     groupBreakBase: f.d('groupBreakBase'),
     groupBreakPer: f.d('groupBreakPer'),
     steadyGauge: f.d('steadyGauge'),
+    healFoeMult: f.d('healFoeMult'),
   ),
   nameOf: (o) => (o as ComboRulesDef).name,
 );
