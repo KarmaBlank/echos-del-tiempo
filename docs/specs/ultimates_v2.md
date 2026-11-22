@@ -709,3 +709,7 @@ elegida en el repertorio.
   ningún daño antes de tu segundo turno; "salvar aliados con escudo" =
   poner escudos a otro jugador; "rematadas" = golpes finales.
 - Anuncio de las Eras aplica el estado de su ciclo (uno por lanzamiento).
+
+### v0.21.1
+
+En la info de la ULT elegida (aprendida y no al máximo) se ve siempre "AL MEJORAR: NIVEL n → n+1": poder antes → después, costo y la descripción del próximo nivel. La vista previa muestra el próximo nivel también mientras se confirma.
