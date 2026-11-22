@@ -75,7 +75,11 @@ enum BalanceKind {
 
   /// Precios de consumibles, Éter en cofres (loot.md § 17.6) y sinergia
   /// de revivir con el árbol (combat.md § "Revivir y el árbol").
-  consumables('consumables', 'Apoyo', 'Consumibles y revivir');
+  consumables('consumables', 'Apoyo', 'Consumibles y revivir'),
+
+  /// Mejoras directas, progreso entre runs y dificultad de la Travesía
+  /// (roguelike.md § 4 y § 8). El Mundo no lo lee.
+  travesia('travesia', 'Travesía', 'Ajustes de la Travesía');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -1175,6 +1179,34 @@ final consumablesCodec = _tuningCodec(BalanceKind.consumables, const [
   BalanceField('shieldTurns', 'Turnos del escudo', _int, min: 1, max: 9),
 ]);
 
+final travesiaCodec = _tuningCodec(BalanceKind.travesia, const [
+  BalanceField('boonSpell', 'Mejora: % daño de hechizos', _int, max: 200),
+  BalanceField('boonAttack', 'Mejora: % ataque básico y físico', _int, max: 200),
+  BalanceField('boonHeal', 'Mejora: % curación', _int, max: 200),
+  BalanceField('boonCrit', 'Mejora: % crítico', _int, max: 100),
+  BalanceField('boonUlt', 'Mejora: % carga de ULT', _int, max: 200),
+  BalanceField('boonElite', 'Mejora: % daño contra élites y jefes', _int, max: 200),
+  BalanceField('boonPulse', 'Mejora: Pulso al empezar la pelea', _int, max: 5),
+  BalanceField('boonDefense', 'Mejora: DEF', _int, max: 100),
+  BalanceField('boonSteal', 'Mejora: % robo de vida', _int, max: 100),
+  BalanceField('boonsInExtra', 'Mejoras en el sorteo de la fila Extra', _int, max: 5),
+  BalanceField('coinPerFloor', 'Moneda por piso alcanzado', _int, max: 1000),
+  BalanceField('coinElite', 'Moneda por élite vencida', _int, max: 1000),
+  BalanceField('coinBoss', 'Moneda por jefe vencido', _int, max: 1000),
+  BalanceField('coinWin', 'Moneda por ganar la Travesía', _int, max: 1000),
+  BalanceField('zonesStart', 'Zonas en el sorteo al empezar', _int, min: 1, max: 20),
+  BalanceField('zoneUnlockFloor', 'Piso a alcanzar para sumar una zona', _int, min: 1, max: 3),
+  BalanceField('eliteRepeatLevel', 'Élite repetida: niveles extra por victoria', _int, max: 10),
+  BalanceField('diffAtk', 'Dificultad: + ATQ enemigo por nivel', _frac, max: 1, step: 0.01),
+  BalanceField('diffHp', 'Dificultad: + vida enemiga por nivel', _frac, max: 1, step: 0.01),
+  BalanceField('diffMax', 'Dificultad: niveles', _int, max: 20),
+  BalanceField('enemyHp', 'Vida enemiga (×, antes de la dificultad)', _dec, min: 0.1, max: 5, step: 0.05),
+  BalanceField('enemyAtk', 'ATQ enemigo (×, antes de la dificultad)', _dec, min: 0.1, max: 5, step: 0.05),
+  BalanceField('levelPerFloor', 'Nivel enemigo: + por piso', _int, max: 20),
+  BalanceField('levelPerLayer', 'Nivel enemigo: + por capa', _frac, max: 2, step: 0.05),
+  BalanceField('attrPerLevel', 'Atributos por nivel de enemigos (a los cuatro)', _int, max: 10),
+]);
+
 final materialsCodec = _tuningCodec(BalanceKind.materials, const [
   BalanceField('chanceEsquirla', 'Drop: Esquirla (prob. base)', _frac, max: 1, step: 0.005),
   BalanceField('chanceCristal', 'Drop: Cristal (prob. base)', _frac, max: 1, step: 0.005),
@@ -1270,6 +1302,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.ecoTier => ecoTierCodec,
       BalanceKind.featReward => featRewardCodec,
       BalanceKind.consumables => consumablesCodec,
+      BalanceKind.travesia => travesiaCodec,
     };
 
 /// Tipos de "Ajustes": un grupo de [kTuning] cada uno (id = jsonKey).
@@ -1281,4 +1314,5 @@ const kTuningKinds = [
   BalanceKind.materials,
   BalanceKind.ecoTier,
   BalanceKind.consumables,
+  BalanceKind.travesia,
 ];

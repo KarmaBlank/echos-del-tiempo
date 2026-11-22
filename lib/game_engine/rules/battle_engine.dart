@@ -459,6 +459,7 @@ class BattleEngine {
     for (final extra in [
       ...?m.build.item?.extraSkills,
       if (m.fusedSkillId != null) m.fusedSkillId!,
+      ...m.extraSkills,
     ]) {
       if (catalog.skills.containsKey(extra) && !skills.contains(extra)) {
         skills.add(extra);

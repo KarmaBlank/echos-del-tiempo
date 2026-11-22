@@ -20,6 +20,10 @@ class BattlePartyMember {
   /// Habilidad fusionada al arma equipada (`p.fuse[p.eq]`), si hay.
   final String? fusedSkillId;
 
+  /// Habilidades que trae aparte del arma (loadout de la Travesía,
+  /// roguelike.md § 8.1). El Mundo no las usa.
+  final List<String> extraSkills;
+
   const BattlePartyMember({
     required this.id,
     required this.name,
@@ -31,6 +35,7 @@ class BattlePartyMember {
     this.ethers = 0,
     this.aethers = 0,
     this.fusedSkillId,
+    this.extraSkills = const [],
   });
 }
 

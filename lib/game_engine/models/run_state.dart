@@ -93,23 +93,27 @@ enum RunPhase {
 }
 
 /// Tipo de recompensa de la fila «Extra».
-enum RunExtraKind { oro, pocion, eter, atributo }
+enum RunExtraKind { oro, pocion, eter, atributo, mejora }
 
 class RunExtra {
-  const RunExtra(this.kind, this.amount, {this.attribute});
+  const RunExtra(this.kind, this.amount, {this.attribute, this.boon});
   final RunExtraKind kind;
   final int amount;
   final Attribute? attribute;
+
+  /// Mejora directa (`RunBoon.name`) si [kind] es `mejora`.
+  final String? boon;
 
   @override
   bool operator ==(Object other) =>
       other is RunExtra &&
       other.kind == kind &&
       other.amount == amount &&
-      other.attribute == attribute;
+      other.attribute == attribute &&
+      other.boon == boon;
 
   @override
-  int get hashCode => Object.hash(kind, amount, attribute);
+  int get hashCode => Object.hash(kind, amount, attribute, boon);
 }
 
 /// La oferta de recompensa de un jugador tras una pelea ganada (§ 4).
@@ -132,6 +136,30 @@ class RunOffer {
   final List<RunExtra> extras;
 }
 
+/// Lo que un jugador trae a la run desde el progreso entre runs (§ 8.1):
+/// habilidades de arranque y bonos del árbol de afuera.
+class RunPrep {
+  const RunPrep({
+    this.skills = const [],
+    this.gold = 0,
+    this.potions = 0,
+    this.ethers = 0,
+    this.attributes = const {},
+    this.boons = const [],
+  });
+
+  static const none = RunPrep();
+
+  final List<String> skills;
+  final int gold;
+  final int potions;
+  final int ethers;
+  final Map<Attribute, int> attributes;
+
+  /// Mejoras directas con las que arranca (`RunBoon.name`).
+  final List<String> boons;
+}
+
 /// Estado autoritativo de la Travesía en curso. Mutable como el resto de
 /// `GameSession` (el motor trabaja sobre copias).
 class RunState {
@@ -147,7 +175,24 @@ class RunState {
     Map<String, int>? missStreak,
     this.victory,
     this.wins = 0,
-  })  : votes = {...?votes},
+    Map<String, List<String>>? boons,
+    Map<String, List<String>>? loadout,
+    this.difficulty = 0,
+    Map<String, int>? eliteWins,
+    List<String>? elitesBeaten,
+    this.bossesBeaten = 0,
+    this.grownTo = 1,
+  })  : loadout = {
+          for (final e in (loadout ?? const <String, List<String>>{}).entries)
+            e.key: [...e.value],
+        },
+        eliteWins = {...?eliteWins},
+        elitesBeaten = [...?elitesBeaten],
+        boons = {
+          for (final e in (boons ?? const <String, List<String>>{}).entries)
+            e.key: [...e.value],
+        },
+        votes = {...?votes},
         offers = {...?offers},
         ready = {...?ready},
         missStreak = {...?missStreak};
@@ -180,6 +225,28 @@ class RunState {
   /// Peleas ganadas.
   int wins;
 
+  /// Mejoras directas de cada jugador (`RunBoon.name`, se repiten al
+  /// apilarse; roguelike.md § 4).
+  final Map<String, List<String>> boons;
+
+  /// Habilidades de arranque de cada jugador (loadout, § 8.1).
+  final Map<String, List<String>> loadout;
+
+  /// Dificultad de la run (§ 8.2; 0 = normal).
+  final int difficulty;
+
+  /// Victorias previas contra cada élite (del progreso del anfitrión,
+  /// § 8.3): arman el pool y suben su nivel.
+  final Map<String, int> eliteWins;
+
+  /// Élites vencidas en esta run (tipo de enemigo) y jefes vencidos.
+  final List<String> elitesBeaten;
+  int bossesBeaten;
+
+  /// Hasta qué nivel de enemigos ya creció el grupo (atributos por
+  /// nivel, § 12 "Balance").
+  int grownTo;
+
   RunState copy() => RunState(
         seed: seed,
         zones: zones,
@@ -192,5 +259,12 @@ class RunState {
         missStreak: missStreak,
         victory: victory,
         wins: wins,
+        boons: boons,
+        loadout: loadout,
+        difficulty: difficulty,
+        eliteWins: eliteWins,
+        elitesBeaten: elitesBeaten,
+        bossesBeaten: bossesBeaten,
+        grownTo: grownTo,
       );
 }

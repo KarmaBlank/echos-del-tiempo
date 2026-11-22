@@ -10,6 +10,10 @@ import '../models/battle_command.dart';
 import '../models/battle_event.dart';
 import '../models/atlas.dart';
 import '../models/battle_state.dart';
+import '../models/run_save.dart';
+import '../models/attributes.dart';
+import '../data/run_boons.dart';
+import 'meta_progress_rules.dart';
 import '../models/build_wants.dart';
 import '../models/eco.dart';
 import '../models/game_map.dart';
@@ -479,6 +483,31 @@ class SessionEngine {
   }
 
   /// Un jugador se va de la sala. `null` si no estaba.
+  /// Travesía: la run en curso para guardar (§ 8.5), o `null` si no hay
+  /// una que valga la pena (sin empezar o terminada).
+  RunSave? runSaveOf(GameSession session) => _Op(this, session).runSave();
+
+  /// Travesía: retoma [save] en una sala recién creada (en el pueblo). Los
+  /// jugadores guardados que todavía no están quedan esperando: si entran
+  /// con el mismo nombre y clase, recuperan su personaje de la run.
+  SessionStep? resumeRun(GameSession session, RunSave save) {
+    if (gameMode != GameModeKind.travesia ||
+        session.mode != SessionMode.lobby) {
+      return null;
+    }
+    final op = _Op(this, session.copy());
+    op.resumeRun(save);
+    return op.result;
+  }
+
+  /// Jugadores de una run retomada que todavía no volvieron (por
+  /// [RunSavePlayer.key]). Solo del anfitrión: no viaja por la red.
+  final runParked = <String, RunSavePlayer>{};
+
+  /// Travesía: lo que cada jugador trae de su progreso (RunPrepAction).
+  /// Solo del anfitrión.
+  final runPreps = <String, RunPrep>{};
+
   SessionStep? removePlayer(GameSession session, String id) {
     if (!session.players.containsKey(id)) return null;
     final op = _Op(this, session.copy());
@@ -729,6 +758,7 @@ class _Op {
       if (s.tutorial case final t?) e.tutorials.applyKit(b.state, t, id);
     }
     s.players[id] = p;
+    runClaim(p);
     events.add(PlayerJoinedEvent(id));
     say(leaderId == null
         ? '${profile.name} se unió a la sala.'
@@ -801,6 +831,7 @@ class _Op {
     if (gate != null) return gate;
     switch (a) {
       case RunStartAction() ||
+            RunPrepAction() ||
             RunVoteAction() ||
             RunRewardAction() ||
             RunReadyAction():

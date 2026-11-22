@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import '../data/game_catalog.dart';
+import '../data/run_boons.dart';
+import '../data/tuning_catalog.dart';
 import '../models/attributes.dart';
 import '../models/item.dart';
 import '../models/player_profile.dart';
@@ -86,8 +88,16 @@ class RunRules {
 
   /// Zona de cada piso: la más difícil cuyo nivel mínimo no pasa el de
   /// la entrada del piso (y nunca una anterior a la del piso de antes).
-  List<int> floorZones() {
-    final zs = playableZones();
+  /// Con [unlocked] solo entran las primeras `zonesStart + unlocked`
+  /// zonas (§ 8.3); `null` = todas.
+  List<int> floorZones({int? unlocked}) {
+    var zs = playableZones();
+    if (unlocked != null) {
+      zs = zs
+          .take(math.max(1,
+              tuning(TuningId.travesia).i('zonesStart') + unlocked))
+          .toList();
+    }
     if (zs.isEmpty) return List.filled(RunTuning.floors, 0);
     final out = <int>[];
     var at = 0;
@@ -101,8 +111,29 @@ class RunRules {
     return out;
   }
 
-  /// Grupo de enemigos del nodo [n] con el pool de la zona [zone].
-  List<String> enemyGroup(int zone, int floorIndex, RunNode n, RandomSource rnd) {
+  /// Élite del nodo: la de la zona o una ya vencida antes (el pool crece
+  /// al vencerlas, § 8.3).
+  String eliteOf(int zone, Map<String, int> beaten, RandomSource rnd) {
+    final z = catalog.zone(zone);
+    final own = catalog.mission(z?.missionId ?? '')?.elite;
+    final pool = <String>{
+      if (own != null) own,
+      for (final e in beaten.keys)
+        if (catalog.enemies.containsKey(e)) e,
+    }.toList()
+      ..sort();
+    if (pool.isEmpty) return 'slime';
+    return pool[(rnd() * pool.length).floor()];
+  }
+
+  /// Niveles extra de una élite ya vencida [wins] veces.
+  static int eliteRepeatLevels(int wins) =>
+      wins * tuning(TuningId.travesia).i('eliteRepeatLevel');
+
+  /// Grupo de enemigos del nodo [n] con el pool de la zona [zone]. Con
+  /// [elite], esa es la élite (si no, la de la zona).
+  List<String> enemyGroup(int zone, int floorIndex, RunNode n, RandomSource rnd,
+      {String? elite}) {
     final z = catalog.zone(zone);
     final m = z == null ? null : catalog.mission(z.missionId ?? '');
     if (m == null) return [ZoneRules.resolveEnemy('slime', catalog)];
@@ -114,7 +145,7 @@ class RunRules {
     List<String> any() => g[(rnd() * g.length).floor()];
     return switch (n.type) {
       RunNodeType.jefe => res(m.boss),
-      RunNodeType.elite => res([m.elite, any().first]),
+      RunNodeType.elite => res([elite ?? m.elite, any().first]),
       _ => res(any()),
     };
   }
@@ -184,10 +215,24 @@ class RunRules {
         RunExtraKind.atributo => next.copyWith(
             attributes: next.attributes
                 .add({x.attribute ?? Attribute.vit: x.amount})),
+        // La mejora vive en `RunState.boons` (la suma la sesión).
+        RunExtraKind.mejora => next,
       };
     }
     return next;
   }
+
+  /// Modificadores de arma de las mejoras [boons] (§ 4).
+  static List<ItemMod> boonMods(List<String> boons, {required bool eliteFight}) => [
+        for (final id in boons)
+          ...?RunBoon.byName(id)?.mods(eliteFight: eliteFight),
+      ];
+
+  /// Pulso extra al empezar la pelea por las mejoras [boons].
+  static int boonPulse(List<String> boons) => [
+        for (final id in boons)
+          if (RunBoon.byName(id) == RunBoon.pulso) RunBoon.pulso.value,
+      ].fold(0, (a, b) => a + b);
 
   /// Vida o maná tras el descanso.
   static double rested(double now, int max) =>

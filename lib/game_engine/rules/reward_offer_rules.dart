@@ -1,5 +1,7 @@
 import '../data/branch_ults_catalog.dart' show kBranchUltList, kBranchUltPathTypes;
 import '../data/game_catalog.dart';
+import '../data/run_boons.dart';
+import '../data/tuning_catalog.dart';
 import '../models/attributes.dart';
 import '../models/passive_tree.dart';
 import '../models/player_profile.dart';
@@ -163,7 +165,8 @@ class RewardOfferRules {
     return _take(pool, rnd, RunTuning.offerSize);
   }
 
-  /// La fila Extra: oro, consumible o +atributo (sin Agilidad, § 5).
+  /// La fila Extra: oro, consumible, +atributo (sin Agilidad, § 5) o
+  /// mejora directa (las del grupo de ajustes «Travesía»).
   List<RunExtra> extraOffer(int floor, RandomSource rnd) {
     const attrs = [Attribute.vit, Attribute.fue, Attribute.esp, Attribute.des];
     final pool = <RunExtra>[
@@ -173,6 +176,9 @@ class RewardOfferRules {
       const RunExtra(RunExtraKind.eter, RunTuning.extraEthers),
       for (final a in _take(attrs, rnd, 2))
         RunExtra(RunExtraKind.atributo, RunTuning.extraAttribute, attribute: a),
+      for (final b in _take(RunBoon.values,
+          rnd, tuning(TuningId.travesia).i('boonsInExtra')))
+        RunExtra(RunExtraKind.mejora, 1, boon: b.name),
     ];
     return _take(pool, rnd, RunTuning.offerSize);
   }

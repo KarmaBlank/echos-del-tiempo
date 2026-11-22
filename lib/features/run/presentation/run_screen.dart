@@ -1,3 +1,4 @@
+import '../../../game_engine/data/run_boons.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
@@ -5,6 +6,7 @@ import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/game_session.dart';
+import '../../../game_engine/rules/meta_progress_rules.dart';
 import '../../../game_engine/rules/run_rules.dart';
 import '../../../game_engine/rules/run_tuning.dart';
 import '../../passive_tree/domain/passive_text.dart';
@@ -15,6 +17,7 @@ import '../../../game_engine/data/branch_ults_catalog.dart'
 import '../../../game_engine/rules/ult_rules.dart';
 import 'run_character_panel.dart';
 import 'run_map_view.dart';
+import 'run_prep_view.dart';
 
 /// Pantallas de la Travesía (docs/specs/roguelike.md), sobre la sesión:
 /// sala previa, mapa con votación, recompensa, tienda / armería /
@@ -101,10 +104,19 @@ class RunScreen extends StatelessWidget {
           actions: [
             DsButton('VOLVER AL TÍTULO', onPressed: onExit),
             _character(),
-            DsButton('EMPEZAR TRAVESÍA',
-                key: const ValueKey('run-start'),
-                kind: DsButtonKind.primary,
-                onPressed: controller.startRun),
+            if (controller.hasRunSave) ...[
+              DsButton('ABANDONAR',
+                  key: const ValueKey('run-abandon'),
+                  onPressed: controller.abandonRun),
+              DsButton('CONTINUAR TRAVESÍA',
+                  key: const ValueKey('run-continue'),
+                  kind: DsButtonKind.primary,
+                  onPressed: controller.continueRun),
+            ] else
+              DsButton('EMPEZAR TRAVESÍA',
+                  key: const ValueKey('run-start'),
+                  kind: DsButtonKind.primary,
+                  onPressed: controller.startRun),
           ],
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,6 +128,13 @@ class RunScreen extends StatelessWidget {
                   'En PERSONAJE podés equipar tu arma y elegir tu ULT antes '
                   'de salir.',
                   style: DsText.body()),
+              if (controller.hasRunSave) ...[
+                SizedBox(height: DsSpace.sm),
+                Text(
+                    'Hay una Travesía a medias. Podés seguirla donde la '
+                    'dejaste o abandonarla para empezar otra.',
+                    style: DsText.subtitle()),
+              ],
               SizedBox(height: DsSpace.md),
               if (view.roomCode case final code?)
                 Text('Código de sala: $code', style: DsText.subtitle()),
@@ -125,9 +144,17 @@ class RunScreen extends StatelessWidget {
                     '${p.name} · '
                     '${controller.engine.catalog.classes[p.profile.classId]?.name ?? p.profile.classId}',
                     style: DsText.body()),
+              SizedBox(height: DsSpace.md),
+              _prep(),
             ],
           ),
         ),
+      );
+
+  Widget _prep() => ConstrainedBox(
+        constraints: const BoxConstraints(maxHeight: 380),
+        child: SingleChildScrollView(
+            child: RunPrepView(controller: controller)),
       );
 
   Widget _map(RunState r) {
@@ -261,10 +288,19 @@ class RunScreen extends StatelessWidget {
             DsButton('NUEVA TRAVESÍA',
                 kind: DsButtonKind.primary, onPressed: controller.startRun),
           ],
-          child: Text(
-              'Piso alcanzado: ${r.floor + 1}/${RunTuning.floors} · '
-              'Peleas ganadas: ${r.wins}',
-              style: DsText.body()),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                  'Piso alcanzado: ${r.floor + 1}/${RunTuning.floors} · '
+                  'Peleas ganadas: ${r.wins} · '
+                  'Ecos ganados: ${MetaProgressRules.coinsOf(r)}',
+                  style: DsText.body()),
+              SizedBox(height: DsSpace.md),
+              _prep(),
+            ],
+          ),
         ),
       );
 }
@@ -293,6 +329,7 @@ class _RunRewardViewState extends State<RunRewardView> {
         RunExtraKind.eter => '+${x.amount} Éter',
         RunExtraKind.atributo =>
           '+${x.amount} ${attrName(x.attribute ?? Attribute.vit)}',
+        RunExtraKind.mejora => RunBoon.byName(x.boon)?.text ?? 'Mejora',
       };
 
   Widget _row(String label, int count, int? picked, ValueChanged<int?> onPick,

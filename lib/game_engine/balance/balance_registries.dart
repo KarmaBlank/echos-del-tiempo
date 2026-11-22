@@ -156,7 +156,8 @@ class BalanceBase {
         BalanceKind.condense ||
         BalanceKind.materials ||
         BalanceKind.ecoTier ||
-        BalanceKind.consumables =>
+        BalanceKind.consumables ||
+        BalanceKind.travesia =>
           {k.jsonKey: kTuningDefaults[k.jsonKey]!},
         BalanceKind.featReward => kAchievementsById,
       };

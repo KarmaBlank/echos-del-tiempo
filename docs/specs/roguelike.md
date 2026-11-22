@@ -167,10 +167,16 @@ revés.
 
 - **Árbol propio por personaje**, distinto del de la run. Se compra con una
   moneda que se gana en cada run (más si se llega lejos, jefes, hazañas).
-- **Loadout**: antes de empezar se eligen habilidades iniciales (casilleros
-  limitados). Nodos del árbol de afuera potencian habilidades del loadout
-  o combinaciones («si llevás X, +Y»).
-- Reutiliza el dibujo y los organismos del árbol existente.
+- **Loadout** (decisión del dueño): antes de cada run el jugador elige
+  **exactamente 2** habilidades de arranque de un pool de **~5 por clase**,
+  distintas y que definan la build. Algunas pueden empezar cerradas y
+  abrirse con el árbol de afuera, hazañas o jefes, pero cada clase tiene
+  **al menos 3 abiertas desde el inicio**. Solo se cambia en la pantalla de
+  preparación, entre runs; durante la run las habilidades salen solo de
+  las recompensas. Nodos del árbol de afuera potencian habilidades del
+  loadout o pares («si arrancás con X, +Y»).
+- Reutiliza el dibujo y los organismos del árbol existente (v0.2.0: lista
+  simple, ver § 12.1).
 
 ### 8.2 Dificultad
 
@@ -196,6 +202,7 @@ y avanzan junto con las zonas desbloqueadas.
 - Archivos propios (`travesia_*.json`); **nunca** pisan el personaje del
   Mundo.
 - La run en curso se guarda al entrar a cada nodo; al terminar se borra.
+  Implementado en v0.2.0 (§ 12.1).
 
 ## 9. Arquitectura
 
@@ -237,6 +244,8 @@ Contrato nuevo `GameMode` (inyectado por el composition root, igual que
 1. Atributos: ¿quedan Vitalidad, Fuerza, Espíritu y Destreza, o se funde
    Destreza en Fuerza y quedan solo 3?
 2. Nombre de la moneda y del árbol de afuera (desde docs/lore.md).
+   Propuesta en v0.2.0, pendiente del OK del dueño: moneda **Ecos**, árbol
+   **Legado del viajero**.
 
 ## 11. Fases
 
@@ -304,9 +313,10 @@ capa 0. Reglas cumplidas: capa 0 de combate, primera élite desde la capa
 4, nunca dos descansos seguidos en un camino, la capa 14 es toda de
 descanso (antes del jefe), al menos una tienda y una armería por línea.
 Zona de cada piso: las zonas jugables ordenadas por `minLevel`, la más
-difícil cuyo mínimo no pasa el nivel de entrada del piso (todavía no hay
-zonas desbloqueables, § 8.3). Nivel de enemigos: `1 + 6 × piso +
-0.35 × capa` (+1 élite, +2 jefe).
+difícil cuyo mínimo no pasa el nivel de entrada del piso (desde v0.2.0,
+solo entre las zonas desbloqueadas, § 12.1). Nivel de enemigos: `1 +
+levelPerFloor × piso + levelPerLayer × capa` (+1 élite, +2 jefe; valores
+en § 12.1).
 
 **Co-op (§ 3).** Votación: cada humano marca un nodo alcanzable, todos ven
 las iniciales; con todos los votos gana la mayoría y el empate se sortea
@@ -340,11 +350,105 @@ solo deja comprar en la tienda y forjar / fusionar en la armería.
 Descanso: cura el 60 % de vida y maná al entrar.
 
 **No implementado todavía.** Catálogo y balance propios de la Travesía
-(§ 7: se usa el del Mundo), quitar la Agilidad del modelo (la vista de la
-run y las recompensas ya no la muestran ni la dan; el valor base sigue en
-el perfil), mejoras directas en Extra, keystones en el jefe, sinergia por
-etiquetas de `build_wants`, armas que pide un nodo, progreso permanente
-(§ 8), selector de versión en el Editor y guardado de la run.
+(§ 7: se usa el del Mundo; datos separados por versión), quitar la
+Agilidad del modelo (la vista de la run y las recompensas ya no la
+muestran ni la dan; el valor base sigue en el perfil), keystones en el
+jefe, sinergia por etiquetas de `build_wants`, armas que pide un nodo,
+hazañas propias (§ 8.4), dibujo del árbol de afuera con los organismos
+del árbol, habilidades de loadout que se abren con hazañas o jefes, y el
+selector de versión en el Editor. Mejoras directas, guardado de la run y
+progreso entre runs: § 12.1.
 Las acciones de puntos del árbol, respec, misiones, pueblo y alijo se
-rechazan en la Travesía. Cada partida usa el protocolo propio de Travesía, versión 2 (v0.1.1:
+rechazan en la Travesía. Cada partida usa el protocolo propio de Travesía, versión 3 desde v0.2.0 (§ 12.1; versión 2 en v0.1.1:
 turnos porBando y fila ULT) (netcode.md § "Un protocolo por juego").
+
+## 12.1 Travesía v0.2.0 (rama `feat/travesia-v0.2`)
+
+Protocolo Travesía **3** (`kTravesiaProtocolVersion`): el snapshot de la
+run suma mejoras, loadout, dificultad, élites y crecimiento; la oferta
+Extra suma `mejora`; `RunStartAction` lleva zonas / dificultad / élites
+del anfitrión y hay una acción nueva `RunPrepAction`. El Mundo no manda
+ni lee nada de esto.
+
+Todos los números nuevos están en el grupo de ajustes **«Travesía»**
+(`TuningId.travesia`, Editor → Balance → Travesía); el Mundo no lo lee.
+
+**Mejoras directas (§ 4).** `RunBoon` (`run_boons.dart`): hechizos (+%
+MAG), ataque (+% ATQ), curas (+% curación), crítico, carga de ULT, élites
+(+% ATQ y MAG solo en élites y jefes), Pulso al empezar la pelea, DEF y
+robo de vida. La fila Extra suma `boonsInExtra` (2) mejoras al sorteo. Se
+apilan y viven en `RunState.boons` (por jugador); en la pelea entran como
+modificadores del arma (`ExplorationRules.withMods`, el mismo gancho de
+las bendiciones del Mundo) y el Pulso se suma al arrancar. PERSONAJE las
+lista en MEJORAS.
+
+**Guardado (§ 8.5).** `RunSave` (`run_save.dart`) en
+`travesia_run.json` de la carpeta de la Travesía (`JsonFileRunSaveStore`;
+solo lo registra la Travesía). Lo escribe quien corre el motor (solo o el
+anfitrión) al entrar a cada nodo y al volver al mapa; se borra al
+terminar. En la sala: CONTINUAR TRAVESÍA / ABANDONAR. Al retomar
+(`SessionEngine.resumeRun`): una pelea se vuelve a empezar, tienda /
+armería / descanso quedan como estaban, una recompensa sin elegir se
+pierde (se vuelve al mapa). Co-op: cada jugador guardado se reconoce por
+**nombre y clase**; el anfitrión toma el suyo (o el primero de su clase).
+Los que faltan **quedan esperando** (`runParked`, solo en el anfitrión) y
+siguen en el guardado: si entran con el mismo nombre y clase recuperan su
+personaje, vida, mejoras y loadout; si nunca vuelven, la run sigue sin
+ellos.
+
+**Progreso entre runs (§ 8), versión compacta.** `TravesiaMeta`
+(`travesia_meta.dart`) en `travesia_meta.json` (`JsonFileTravesiaMetaStore`),
+por dispositivo; reglas en `meta_progress_rules.dart`. Se ve y se gasta en
+la sala y en la pantalla de fin (`RunPrepView`).
+
+- **Moneda (Ecos):** `coinPerFloor` × piso alcanzado + `coinElite` por
+  élite + `coinBoss` por jefe + `coinWin` al ganar. Cada dispositivo cobra
+  la run una vez (por semilla) al verla terminada.
+- **Árbol de afuera (Legado del viajero):** 14 nodos iguales para todas las
+  clases, comprados por personaje (`nombre|clase`): oro, poción, Éter,
+  +2 a un atributo, Repertorio (abre la 4.ª y la 5.ª habilidad del pool),
+  mejora con la que se arranca y sinergias de loadout (dos físicas →
+  mejora Ataque; dos mágicas → Hechizos; una física y una de cura →
+  Curas). Algunos piden otro antes.
+- **Loadout:** pool de 5 por clase sacado de las habilidades de las armas
+  tempranas de sus tipos (hasta nivel 9, sin las del arma inicial ni
+  provocaciones), 3 abiertas. Se eligen 2; entran a la pelea como
+  habilidades extra (`BattlePartyMember.extraSkills`) toda la run,
+  aunque se cambie de arma. Cada jugador lo manda con `RunPrepAction`
+  (junto con los bonos del árbol) desde su propio progreso.
+- **Zonas:** al principio entran las primeras `zonesStart` (3) zonas
+  jugables por nivel; cada run que llega al piso `zoneUnlockFloor` (2)
+  suma una. La zona de cada piso sigue la regla de § 12 dentro de ese
+  subconjunto.
+- **Élites:** el pool de una élite = la de la zona + las ya vencidas
+  (de cualquier zona). Cada victoria previa contra esa élite le suma
+  `eliteRepeatLevel` (2) niveles.
+- **Dificultad:** ganar en la más alta abierta abre la siguiente (hasta
+  `diffMax`, 5). Cada nivel suma `diffHp` (10 %) de vida y `diffAtk`
+  (8 %) de ATQ enemigos, acumulativo. La elige el anfitrión.
+- En co-op las zonas, élites y dificultad son las del anfitrión; Ecos,
+  Legado y loadout son de cada uno.
+
+**Balance.** Antes: el personaje de la run quedaba en nivel 9 sin puntos
+y los enemigos llegaban a ~20; un jugador solo caía casi siempre en el
+piso 1. Ahora (todo en el grupo «Travesía»):
+
+| perilla | antes | ahora |
+|---|---|---|
+| nivel enemigo + por piso (`levelPerFloor`) | 6 | 5 |
+| nivel enemigo + por capa (`levelPerLayer`) | 0.35 | 0.3 |
+| vida enemiga × (`enemyHp`) | 1.0 | 0.7 |
+| ATQ enemigo × (`enemyAtk`) | 1.0 | 0.45 |
+| atributos por nivel de enemigos, a los cuatro (`attrPerLevel`) | 0 | 2 |
+
+Jefe del piso 3: nivel 17 (antes 20). El grupo crece con los enemigos
+(`RunState.grownTo`): cada nivel nuevo suma `attrPerLevel` a Vitalidad,
+Fuerza, Espíritu y Destreza de todos (y a quien entra a mitad de la run).
+
+Simulación sin UI (`test/game_engine/run_balance_sim_test.dart`): un
+jugador solo de cada clase, 10 semillas, ULT cuando está llena, poción
+con poca vida, cura propia por debajo de la mitad, la habilidad de daño
+más fuerte que pueda pagar, equipa el arma más fuerte, primera opción de
+cada fila de recompensa, pociones en la tienda. Llegan al jefe del piso 3
+(y lo ganan): guerrero 9/10, maga 7/10, paladín 6/10, tirador 7/10. El
+test exige al menos 5/10 por clase.

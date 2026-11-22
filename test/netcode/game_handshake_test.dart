@@ -13,7 +13,7 @@ void main() {
   test('Mundo en 34 (v0.20.12: Restaurar Quebrar) y Travesía arranca su secuencia en 1', () {
     expect(WireGame.mundo.protocol, 34);
     expect(kProtocolVersion, 34);
-    expect(WireGame.travesia.protocol, 2);
+    expect(WireGame.travesia.protocol, 3);
     expect(WireGame.mundo.id, isNot(WireGame.travesia.id));
   });
 

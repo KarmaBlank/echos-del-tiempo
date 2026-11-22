@@ -63,7 +63,12 @@ class EntityBrowser extends StatelessWidget {
       ),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        child: Wrap(spacing: 4, runSpacing: 4, children: [
+        // Con muchos tipos, las fichas se desplazan en vez de comerse la
+        // lista.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 120),
+          child: SingleChildScrollView(
+            child: Wrap(spacing: 4, runSpacing: 4, children: [
           for (final (key, label) in categories)
             ChoiceChip(
               label: Text(label, style: const TextStyle(fontSize: 12)),
@@ -73,7 +78,9 @@ class EntityBrowser extends StatelessWidget {
               visualDensity: VisualDensity.compact,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-        ]),
+            ]),
+          ),
+        ),
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
