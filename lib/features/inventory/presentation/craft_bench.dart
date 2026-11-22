@@ -70,6 +70,7 @@ extension CraftOpText on CraftOp {
     CraftOp.transferAffix,
     CraftOp.transferPassive,
     CraftOp.transferSkill,
+    CraftOp.restoreQuebrar,
     CraftOp.removeAffix,
     CraftOp.reforge,
   ];
@@ -105,6 +106,7 @@ extension CraftOpText on CraftOp {
         CraftOp.sellSelected => 'Vender elegidas',
         CraftOp.essence => 'Esencia del Abismo',
         CraftOp.condense => 'Condensar materiales',
+        CraftOp.restoreQuebrar => 'Restaurar Quebrar',
       };
 
   /// Explicación de 3-6 palabras para la fila del paso 2.
@@ -118,6 +120,7 @@ extension CraftOpText on CraftOp {
         CraftOp.removeAffix => 'Borra un mod (no los fijos)',
         CraftOp.reforge => 'Otro tipo de arma, mismos mods',
         CraftOp.essence => 'Mejora los mods fijos',
+        CraftOp.restoreQuebrar => 'Recupera el Quebrar de esta arma',
         _ => line,
       };
 
@@ -155,6 +158,9 @@ extension CraftOpText on CraftOp {
         CraftOp.condense =>
           'Junta materiales bajos en uno alto, con créditos. Sin azar y sin '
               'vuelta atrás.',
+        CraftOp.restoreQuebrar =>
+          'Vuelve a poner el Quebrar propio del arma en su ranura. Solo el de '
+              'su tipo; no sacrifica armas.',
       };
 
   /// Texto del botón de confirmar.
@@ -174,6 +180,7 @@ extension CraftOpText on CraftOp {
         CraftOp.sell || CraftOp.sellAll || CraftOp.sellSelected => 'VENDER',
         CraftOp.essence => 'USAR ESENCIA',
         CraftOp.condense => 'CONDENSAR',
+        CraftOp.restoreQuebrar => 'RESTAURAR QUEBRAR',
       };
 
   bool get needsSource =>
@@ -443,6 +450,11 @@ class _CraftBenchState extends State<CraftBench> {
     if (op == CraftOp.reforge) {
       return CraftAction(op, target.uid, sourceUid: base);
     }
+    if (op == CraftOp.restoreQuebrar) {
+      final ok = _replaceFor == '${target.uid}|restore' &&
+          target.extraSkills.contains(_replace);
+      return CraftAction(op, target.uid, replaceSkillId: ok ? _replace : null);
+    }
     String? replace;
     if (skill != null &&
         _replaceFor == '${target.uid}|$skill' &&
@@ -465,7 +477,7 @@ class _CraftBenchState extends State<CraftBench> {
     return switch (op) {
       CraftOp.transferAffix => [
           for (final a in source?.affixes ?? const <AffixRoll>[])
-            affixMarkup(rules, a),
+            affixMarkup(rules, a, on: target),
         ],
       CraftOp.transferSkill => [
           for (final id in source == null
@@ -474,7 +486,7 @@ class _CraftBenchState extends State<CraftBench> {
             protoEsc(skillName(rules, id)),
         ],
       CraftOp.removeAffix => [
-          for (final a in target.affixes) affixMarkup(rules, a),
+          for (final a in target.affixes) affixMarkup(rules, a, on: target),
         ],
       _ => const [],
     };
@@ -1024,6 +1036,12 @@ class _CraftBenchState extends State<CraftBench> {
                           : protoColor(ProtoColors.red, protoEsc(why)));
                 }),
               ),
+              Padding(
+                padding: EdgeInsets.only(left: indent + 12, bottom: 2),
+                child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: TransferFitMark(profile: p, skillId: sk.id)),
+              ),
               if (i == action.index) ...afterSelected,
               if (i == action.index)
                 Container(
@@ -1047,19 +1065,27 @@ class _CraftBenchState extends State<CraftBench> {
     // Cupos llenos: elegir cuál de las trasladadas se reemplaza (las de
     // la base no se tocan).
     List<Widget> replaceRows() {
-      final newSkill = action.skillId;
-      if (op != CraftOp.transferSkill ||
-          newSkill == null ||
-          !rules.items.needsReplaceChoice(target, newSkill)) {
+      final restore = op == CraftOp.restoreQuebrar;
+      final newSkill = restore ? 'restore' : action.skillId;
+      if (restore
+          ? !(target.quebrarReplaced &&
+              target.extraSkills.length > target.rarity.skillSlots)
+          : (op != CraftOp.transferSkill ||
+              newSkill == null ||
+              !rules.items.needsReplaceChoice(target, newSkill))) {
         return const [];
       }
-      final replaceable = rules.items.replaceableSkills(target);
+      final replaceable = restore
+          ? target.extraSkills
+          : rules.items.replaceableSkills(target);
       return [
         Padding(
           padding: const EdgeInsets.only(left: 24),
           child: Text(
-              retroText('¿Qué habilidad reemplazas? (el arma no tiene más '
-                  'lugar: elegí una de las traídas o Quebrar)'),
+              retroText(restore
+                  ? '¿Qué habilidad deja la ranura de Quebrar? (se pierde)'
+                  : '¿Qué habilidad reemplazas? (el arma no tiene más '
+                      'lugar: elegí una de las traídas o Quebrar)'),
               key: const ValueKey('craft-replace-title'),
               style: TextStyle(
                   color: action.replaceSkillId == null
@@ -1146,6 +1172,15 @@ class _CraftBenchState extends State<CraftBench> {
         }
         // Las elecciones del arma elegida, debajo de la grilla.
         final src = p.itemByUid(action.sourceUid ?? '');
+        if (op == CraftOp.transferPassive && src?.passiveId != null) {
+          list.add(Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Wrap(spacing: 6, runSpacing: 4, children: [
+                ProtoText(
+                    'Pasiva: ${protoEsc(rules.items.passiveOf(src!)?.name ?? '')}'),
+                TransferFitMark(profile: p, passiveId: src.passiveId),
+              ])));
+        }
         if (src != null && op != CraftOp.transferPassive) {
           list.add(Padding(
               padding: const EdgeInsets.only(top: 6),
@@ -1161,6 +1196,9 @@ class _CraftBenchState extends State<CraftBench> {
           list.addAll(pickRows(indent: 24, afterSelected: replaceRows()));
         }
       }
+    }
+    if (op == CraftOp.restoreQuebrar) {
+      list.addAll(replaceRows());
     }
     if (op == CraftOp.removeAffix) {
       list.add(const MenuHeader('¿Qué mod quitar?'));
@@ -1355,6 +1393,27 @@ class _CraftBenchState extends State<CraftBench> {
       out.add(ProtoText(
           key: const ValueKey('craft-error'),
           protoColor(ProtoColors.red, 'No se puede: ${protoEsc(r.error!)}')));
+    }
+    // Lo que entra al arma, con su marca de build (§ 9.6).
+    if (op == CraftOp.transferSkill || op == CraftOp.transferPassive) {
+      final src = p.itemByUid(r.consumed.firstOrNull ?? '');
+      final skill = op == CraftOp.transferSkill ? _action(p, target, op).skillId : null;
+      final passive = op == CraftOp.transferPassive ? src?.passiveId : null;
+      final name = skill != null
+          ? rules.catalog.skills[skill]?.name
+          : passive == null
+              ? null
+              : rules.items.passiveOf(src!)?.name;
+      if (name != null) {
+        out.add(Padding(
+          key: const ValueKey('craft-incoming'),
+          padding: const EdgeInsets.only(top: 4),
+          child: Wrap(spacing: 6, runSpacing: 4, children: [
+            ProtoText('Entra: ${protoEsc(name)}'),
+            TransferFitMark(profile: p, skillId: skill, passiveId: passive),
+          ]),
+        ));
+      }
     }
     out.add(const SizedBox(height: 8));
 
@@ -1555,7 +1614,7 @@ class _CraftBenchState extends State<CraftBench> {
   String _modList(ItemInstance it) {
     final rules = shop.rules;
     if (it.affixes.isEmpty) return protoColor(ProtoColors.dim, '(sin mods)');
-    return [for (final a in it.affixes) '• ${affixMarkup(rules, a)}']
+    return [for (final a in it.affixes) '• ${affixMarkup(rules, a, on: it)}']
         .join('<br>');
   }
 
@@ -1565,11 +1624,11 @@ class _CraftBenchState extends State<CraftBench> {
     final lines = <String>[
       for (final a in before.affixes)
         if (!after.affixes.contains(a))
-          '• ${protoColor(ProtoColors.red, '${protoEsc(rules.items.affixText(a))} (se quita)')}',
+          '• ${protoColor(ProtoColors.red, '${protoEsc(rules.items.affixText(a, on: before))} (se quita)')}',
       for (final a in after.affixes)
         before.affixes.contains(a)
-            ? '• ${affixMarkup(rules, a)}'
-            : '• ${protoColor(ProtoColors.green, '<b>${protoEsc(rules.items.affixText(a))}</b> (nuevo)')}',
+            ? '• ${affixMarkup(rules, a, on: after)}'
+            : '• ${protoColor(ProtoColors.green, '<b>${protoEsc(rules.items.affixText(a, on: after))}</b> (nuevo)')}',
     ];
     return lines.isEmpty
         ? protoColor(ProtoColors.dim, '(sin mods)')

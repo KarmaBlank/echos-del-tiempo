@@ -101,7 +101,7 @@ String itemSearchText(ProgressionRules rules, ItemInstance it) {
     w?.name ?? it.baseId,
     w?.type ?? '',
     it.rarity.label,
-    for (final a in it.affixes) plainText(affixMarkup(rules, a)),
+    for (final a in it.affixes) plainText(affixMarkup(rules, a, on: it)),
     items.passiveText(it) ?? '',
     for (final id in items.skillsOf(it)) rules.catalog.skills[id]?.name ?? '',
   ].join(' '));

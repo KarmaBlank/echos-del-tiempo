@@ -1199,6 +1199,7 @@ final materialsCodec = _tuningCodec(BalanceKind.materials, const [
   BalanceField('upRaroCredits', 'Subir Raro: créditos', _int, max: 100000, step: 50),
   BalanceField('transferCredits', 'Trasladar habilidad: créditos × rareza', _int, max: 100000, step: 10),
   BalanceField('transferCristales', 'Trasladar a Raro+: Cristales', _int, max: 99),
+  BalanceField('restoreQuebrarCredits', 'Restaurar Quebrar: créditos × rareza', _int, max: 100000, step: 10),
   BalanceField('addAffixCredits', 'Agregar afijo: créditos × rareza', _int, max: 100000, step: 5),
   BalanceField('rerollCredits', 'Retirar afijo: créditos × rareza', _int, max: 100000, step: 5),
 ]);

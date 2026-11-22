@@ -1523,6 +1523,7 @@ class _Op {
         CraftOp.reforge => 'base reforjada',
         CraftOp.essence => 'Esencia del Abismo: mods fijos mejorados',
         CraftOp.condense => 'materiales condensados',
+        CraftOp.restoreQuebrar => 'Quebrar restaurado',
         _ => 'desarmada / vendida', // destruyen: sin `after`, no se anuncia
       };
 

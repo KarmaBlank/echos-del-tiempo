@@ -529,3 +529,23 @@ las bases de ese tipo de **cualquier** familia. Con IDEAL no se filtra.
   defensivas sirven con cualquier arma y no se listan;
 - "Suele traer: X, Y": las habilidades más repetidas entre sus bases.
 Como mucho `howToNames` nombres por línea.
+
+### 9.6 Marcas de traslado en la fusión (v0.20.12)
+
+Al trasladar una habilidad (filas de las habilidades del arma de origen
+y "Entra:" de la vista previa) o una pasiva de arma (origen y "Entra:"),
+cada una lleva una marca `DsTag.buildFit`: PARA TU BUILD (verde,
+`DsColors.success`) o NO VA CON TU BUILD (apagada, `ProtoColors.dim`),
+con el motivo de una línea en su tooltip (`TransferFitMark`). Sin plan
+(`goalCount == 0`), sin marca.
+
+Regla pura `BuildGuideRules.skillFit` / `passiveFit(plan, profile, id) →
+BuildFit?`:
+- La pide el plan (`plan.skills` / `plan.weaponPassive`): va, "Tu plan
+  la pide" / "Tu plan pide esta pasiva".
+- Si no, se cruzan sus etiquetas (§ 9.1: de la habilidad o de las
+  mecánicas de la pasiva) con `buildAffinity(plan, profile)` = lo que
+  pide el plan + árbol (tomado y plan) + `typeAffinity(chosenType)` × 0.5.
+  No mira el arma equipada. Comparte alguna: va, "Suma <etiqueta> (como
+  <origen>)". Ninguna: no va, "Tu plan no usa <etiqueta principal>".
+- Sin etiquetas propias o plan sin etiquetas: `null` (sin marca).

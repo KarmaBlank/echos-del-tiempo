@@ -1,6 +1,9 @@
 import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/app/widgets/action_card.dart';
+import 'package:echos_del_tiempo/features/build_planner/presentation/build_plan_providers.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/armory_panel.dart';
+import 'package:echos_del_tiempo/game_engine/models/build_plan.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:echos_del_tiempo/features/inventory/presentation/shop_sections.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
@@ -317,5 +320,45 @@ void main() {
     expect(me().credits, 900);
     await _tap(tester, 'condense-back');
     expect(find.byKey(const ValueKey('bench-next')), findsOneWidget);
+  });
+
+  testWidgets('restaurar Quebrar: elegir la que sale, costo y sin desbordes',
+      (tester) async {
+    final c = await _bench(
+        tester,
+        lootWarrior(extra: const [
+          ItemInstance(
+              uid: 'q1',
+              baseId: 'espada_bronce',
+              quebrarReplaced: true,
+              extraSkills: ['tajoGemelo', 'dagaSaltarina']),
+        ]));
+    PlayerProfile me() => c.view!.me!.profile;
+    await _choose(tester, 'q1', CraftOp.restoreQuebrar);
+    expect(find.byKey(const ValueKey('craft-replace-title')), findsOneWidget);
+    expect(_confirm(tester).reason, isNotNull);
+    await _tap(tester, 'craft-replace-dagaSaltarina');
+    expect(_confirm(tester).reason, isNull);
+    final before = me().credits;
+    await _tap(tester, 'craft-confirm');
+    final w = me().itemByUid('q1')!;
+    expect(w.quebrarReplaced, isFalse);
+    expect(w.extraSkills, ['tajoGemelo']);
+    expect(me().credits, lessThan(before));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('traer habilidad: marcas de build con plan', (tester) async {
+    await _bench(tester, lootWarrior());
+    ProviderScope.containerOf(tester.element(find.byType(Scaffold).first))
+        .read(buildPlanProvider.notifier)
+        .save(const BuildPlan(weaponBases: ['espada_bronce']));
+    await tester.pump();
+    await tester.pump();
+    await _choose(tester, 'e1', CraftOp.transferSkill);
+    await _tap(tester, 'craft-source-c1');
+    expect(find.byKey(const ValueKey('craft-incoming')), findsOneWidget);
+    expect(find.textContaining('TU BUILD'), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 }

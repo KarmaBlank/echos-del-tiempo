@@ -725,7 +725,7 @@ ni la sesión ni `features/*` miran el nombre del flavor.
 
 | Juego | id (`g`) | `v` | Constante |
 |---|---|---|---|
-| Ecos del Tiempo (Mundo) | `mundo` | 32 | `kProtocolVersion` |
+| Ecos del Tiempo (Mundo) | `mundo` | 33 | `kProtocolVersion` |
 | Ecos del Tiempo: Travesía | `travesia` | 2 | `kTravesiaProtocolVersion` |
 
 - `hello` lleva `g` (el id del juego del cliente). Es aditivo: un host
@@ -743,6 +743,13 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   vs 31) no coincide → `reject version`.
 - El `welcome` manda el `v` del juego de la sala.
 - Subir el protocolo de un juego no toca el del otro.
+
+## Mundo, protocolo 33 (v0.20.12: Restaurar Quebrar)
+
+- `CraftAction` con un `op` nuevo: `{"t":"craft","op":"restoreQuebrar","w":"<uid>"}`
+  (+ `"rep":"<skillId>"` con la trasladada que se pierde si sobran; el
+  mismo campo que el reemplazo de traslado). Un host 32 no conoce el
+  `op`: se sube a 33 (loot.md § 16.3.1).
 
 ## Mundo, protocolo 32 (v0.20.8: Condensar)
 

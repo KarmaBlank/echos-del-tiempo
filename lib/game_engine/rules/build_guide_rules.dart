@@ -1055,4 +1055,83 @@ class BuildGuideRules {
     if (names.isNotEmpty) out.add('Suele traer: ${names.join(', ')}');
     return out;
   }
+
+  // ------------------------------------------------------------------
+  // Marcas de traslado (build_planner.md § 9.6)
+  // ------------------------------------------------------------------
+
+  /// Afinidad del plan para las marcas: lo que pide (habilidades, pasiva,
+  /// base), el árbol (tomado + plan) y el tipo elegido (`chosenType`). No
+  /// mira el arma equipada: la marca dice si va con el plan.
+  BuildAffinity buildAffinity(BuildPlan plan, PlayerProfile p) {
+    final a = BuildAffinity()
+      ..addAll(_planAffinity(plan))
+      ..addAll(treeAffinity(plan, p));
+    if (plan.chosenType case final t? when allWeaponTypes().contains(t)) {
+      a.addAll(typeAffinity(t), 0.5);
+    }
+    return a;
+  }
+
+  /// Marca de una habilidad a trasladar; `null` sin plan.
+  BuildFit? skillFit(BuildPlan plan, PlayerProfile p, String skillId) {
+    if (plan.goalCount == 0) return null;
+    final s = progression.catalog.skills[skillId];
+    if (s == null) return null;
+    if (plan.skills.contains(skillId)) {
+      return const BuildFit(true, 'Tu plan la pide');
+    }
+    final own = BuildAffinity();
+    _skill(own, s, 1, s.name);
+    return _fit(own, buildAffinity(plan, p));
+  }
+
+  /// Marca de una pasiva de arma a trasladar; `null` sin plan.
+  BuildFit? passiveFit(BuildPlan plan, PlayerProfile p, String passiveId) {
+    if (plan.goalCount == 0) return null;
+    final def = kWeaponPassives[passiveId];
+    if (def == null) return null;
+    if (plan.weaponPassive == passiveId) {
+      return const BuildFit(true, 'Tu plan pide esta pasiva');
+    }
+    final own = BuildAffinity();
+    for (final m in def.mechanicsAt(1)) {
+      _mechanic(own, m, 1, def.name);
+    }
+    return _fit(own, buildAffinity(plan, p));
+  }
+
+  /// Va si comparte alguna etiqueta con el plan (la de más peso da el
+  /// motivo). Sin etiquetas propias o sin plan con etiquetas: no marca.
+  BuildFit? _fit(BuildAffinity own, BuildAffinity plan) {
+    if (own.isEmpty || plan.isEmpty) return null;
+    String? best;
+    var bestV = 0.0;
+    own.weights.forEach((tag, w) {
+      final v = w * plan[tag];
+      if (v > bestV + 1e-9 || (v > 0 && (v - bestV).abs() <= 1e-9 &&
+          best != null && tag.compareTo(best!) < 0)) {
+        bestV = v;
+        best = tag;
+      }
+    });
+    if (best case final tag?) {
+      final from = plan.sources[tag];
+      return BuildFit(true,
+          'Suma ${tagLabel(tag)}${from == null ? '' : ' (como $from)'}');
+    }
+    final main = own.weights.entries.reduce((a, b) => b.value > a.value ? b : a);
+    return BuildFit(false,
+        'Tu plan no usa ${tagLabel(main.key)}');
+  }
+}
+
+/// Marca "para tu build" / "no va con tu build" (build_planner.md § 9.6).
+class BuildFit {
+  const BuildFit(this.fits, this.reason);
+
+  final bool fits;
+
+  /// Una línea para el tooltip.
+  final String reason;
 }

@@ -663,6 +663,11 @@ class DsTag extends StatelessWidget {
   const DsTag.canBreak({super.key})
       : text = 'PUEDE QUEBRAR',
         color = DsColors.warning;
+  /// Marca de traslado (build_planner.md § 9.6): verde si va con el
+  /// plan, apagada si no.
+  const DsTag.buildFit(bool fits, {super.key})
+      : text = fits ? 'PARA TU BUILD' : 'NO VA CON TU BUILD',
+        color = fits ? DsColors.success : ProtoColors.dim;
   const DsTag.isNew({super.key})
       : text = 'NUEVO',
         color = DsColors.reward;
