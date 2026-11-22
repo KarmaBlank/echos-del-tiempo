@@ -276,3 +276,7 @@ Los stats chicos de cada nodo no cambian, así que el balance de stats
 (`kReactions`, admin de balance `reaction`); las mecánicas nuevas se
 editan desde el admin como cualquier mecánica (probabilidad, efectos,
 descripción; el disparador, la reacción y la familia no se editan).
+
+## v0.20.16
+
+La insignia de `PERSONAJE [C]` cuenta solo lo que se reparte en ese panel (atributos, árbol, compañeros). Los puntos de ascensión se reparten en su propio panel y solo aparecen en el tooltip del botón.

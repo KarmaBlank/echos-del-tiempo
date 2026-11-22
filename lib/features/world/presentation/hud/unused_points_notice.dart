@@ -38,11 +38,13 @@ class UnusedPointsButton extends StatelessWidget {
         key: const ValueKey('hud-points-button'),
         size: DsButtonSize.compact,
         onPressed: onPressed,
-        trailing: PointsBadge(
-          key: const ValueKey('hud-points-badge'),
-          count: points.total,
-          reduceMotion: reduceMotion,
-        ),
+        trailing: points.characterTotal > 0
+            ? PointsBadge(
+                key: const ValueKey('hud-points-badge'),
+                count: points.characterTotal,
+                reduceMotion: reduceMotion,
+              )
+            : null,
       ),
     );
   }
