@@ -175,7 +175,9 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
     final p = widget.profile;
     final learned = _learned(e);
     final lv = learned ? UltRules.levelOf(p, e.id) : 1;
-    final next = learned && _hoverUpgrade && lv < UltRules.maxLevel;
+    final next = learned &&
+        (_hoverUpgrade || _confirm) &&
+        lv < UltRules.maxLevel;
     final shownLv = next ? lv + 1 : lv;
     return UltPreviewPanel(
       skill: UltRules.leveled(e.skill, shownLv),
@@ -389,10 +391,20 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
                 '${UltRules.levelFactor(lv).toStringAsFixed(2)}',
                 style: DsText.body()),
             if (cost != null) ...[
+              SizedBox(height: DsSpace.sm),
+              // Qué cambia al mejorar (v0.21.1): siempre a la vista, sin
+              // depender del hover.
+              DsSectionHeader('AL MEJORAR: NIVEL $lv → ${lv + 1}',
+                  key: const ValueKey('ult-upgrade-diff')),
               Text(
-                  'Próximo nivel ${lv + 1}: poder ×'
-                  '${UltRules.levelFactor(lv + 1).toStringAsFixed(2)}',
-                  style: DsText.body()),
+                  'Poder ×${UltRules.levelFactor(lv).toStringAsFixed(2)}'
+                  ' → ×${UltRules.levelFactor(lv + 1).toStringAsFixed(2)}',
+                  style: DsText.body(DsColors.success)),
+              Text('Costo: ${cost.text}', style: DsText.detail()),
+              SizedBox(height: DsSpace.xs),
+              ProtoText(describeSkillMarkup(
+                  UltRules.leveled(o.skill, lv + 1), null,
+                  ultimate: true)),
             ] else
               Text('Nivel máximo.', style: DsText.detail()),
           ],
