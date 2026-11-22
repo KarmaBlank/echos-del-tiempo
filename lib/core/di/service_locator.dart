@@ -13,6 +13,10 @@ import '../../game_engine/models/atlas_store.dart';
 import '../../game_engine/models/game_mode.dart';
 import '../../netcode/protocol/wire.dart' show WireGame;
 import '../edition/game_edition.dart';
+import '../../features/run/data/json_file_run_save_store.dart';
+import '../../features/run/data/json_file_travesia_meta_store.dart';
+import '../../game_engine/models/travesia_meta.dart';
+import '../../game_engine/models/run_save.dart';
 import '../../game_engine/models/bestiary.dart';
 import '../../game_engine/models/tutorial_store.dart';
 import '../../game_engine/models/party_store.dart';
@@ -142,6 +146,15 @@ void registerSharedDependencies(
         ? ReadOnlyProfileStore(store)
         : store;
   });
+  // Travesía: la run en curso y el progreso entre runs, en su propia
+  // carpeta (roguelike.md § 8). El Mundo no registra nada de esto.
+  if (gameMode == GameModeKind.travesia) {
+    sl.registerLazySingleton<RunSaveStore>(() =>
+        JsonFileRunSaveStore.forPlatform() ?? InMemoryRunSaveStore());
+    sl.registerLazySingleton<TravesiaMetaStore>(() =>
+        JsonFileTravesiaMetaStore.forPlatform() ??
+        InMemoryTravesiaMetaStore());
+  }
   // Alijo en partida (docs/specs/characters.md § 3.2).
   sl.registerLazySingleton<StashStore>(
     () => AccountStashStore(sl<AccountRepository>()),

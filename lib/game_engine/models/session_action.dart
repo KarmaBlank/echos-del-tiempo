@@ -1,3 +1,4 @@
+import 'run_state.dart';
 import 'attributes.dart';
 import 'battle_command.dart';
 import 'build_wants.dart';
@@ -471,7 +472,21 @@ class ClaimAchievementAction extends SessionAction {
 
 /// Empezar una Travesía desde la sala (o una nueva al terminar).
 class RunStartAction extends SessionAction {
-  const RunStartAction();
+  /// Del progreso del anfitrión (§ 8, protocolo Travesía 3): zonas
+  /// desbloqueadas además de las del arranque, dificultad elegida y
+  /// victorias contra cada élite.
+  final int zones;
+  final int difficulty;
+  final Map<String, int> eliteWins;
+  const RunStartAction(
+      {this.zones = 0, this.difficulty = 0, this.eliteWins = const {}});
+}
+
+/// Lo que cada jugador trae de su progreso entre runs (§ 8.1): loadout y
+/// bonos del árbol de afuera. Se manda en la sala, antes de empezar.
+class RunPrepAction extends SessionAction {
+  final RunPrep prep;
+  const RunPrepAction(this.prep);
 }
 
 /// Marcar el próximo nodo del mapa (§ 3: votación).

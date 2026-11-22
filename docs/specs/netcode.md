@@ -725,8 +725,8 @@ ni la sesión ni `features/*` miran el nombre del flavor.
 
 | Juego | id (`g`) | `v` | Constante |
 |---|---|---|---|
-| Ecos del Tiempo (Mundo) | `mundo` | 35 | `kProtocolVersion` |
-| Ecos del Tiempo: Travesía | `travesia` | 2 | `kTravesiaProtocolVersion` |
+| Ecos del Tiempo (Mundo) | `mundo` | 36 | `kProtocolVersion` |
+| Ecos del Tiempo: Travesía | `travesia` | 3 | `kTravesiaProtocolVersion` |
 
 - `hello` lleva `g` (el id del juego del cliente). Es aditivo: un host
   Mundo viejo (31) lo ignora, así que **Mundo sigue en 31** y los
@@ -811,3 +811,16 @@ manda Travesía).
 - Eventos: `runNode {f, n}` (el grupo entró a un nodo) y `runEnd {win}`.
 - El host decide todo (votación, empate por semilla, ofertas por
   jugador); el cliente solo marca y elige.
+
+## Travesía, protocolo 3 (roguelike.md § 12.1, v0.2.0)
+
+- `run` suma (opcionales): `b` mejoras `{id: [boon]}`, `lo` loadout
+  `{id: [skill]}`, `df` dificultad, `ew` victorias previas por élite,
+  `eb` élites vencidas en la run, `bb` jefes vencidos, `gl` nivel de
+  crecimiento. Una opción de Extra puede ser `{k: mejora, a: 1, bn}`.
+- `runStart` suma `z` zonas desbloqueadas, `df` y `ew` (del progreso del
+  anfitrión).
+- Acción nueva `runPrep {p: {s?, g?, p?, e?, a?, b?}}`: loadout y bonos
+  del árbol de afuera de cada jugador, en la sala o con la run terminada.
+- El guardado de la run (`travesia_run.json`) y el progreso
+  (`travesia_meta.json`) son locales: no viajan.

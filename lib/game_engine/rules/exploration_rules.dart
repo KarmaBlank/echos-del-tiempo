@@ -208,8 +208,12 @@ abstract final class ExplorationRules {
   }
 
   /// La build de batalla con la bendición [k] (implícitos extra del arma).
-  static PlayerBuild blessedBuild(PlayerBuild b, BlessingKind? k) {
-    final mods = k == null ? const <ItemMod>[] : kBlessings[k]!.mods;
+  static PlayerBuild blessedBuild(PlayerBuild b, BlessingKind? k) =>
+      withMods(b, k == null ? const <ItemMod>[] : kBlessings[k]!.mods);
+
+  /// [b] con [mods] sumados a los implícitos del arma equipada (bendición
+  /// del Mundo, mejoras directas de la Travesía).
+  static PlayerBuild withMods(PlayerBuild b, List<ItemMod> mods) {
     if (mods.isEmpty) return b;
     final w = b.equippedWeapon;
     final blessed = WeaponDef(

@@ -20,6 +20,13 @@ abstract final class RunJson {
         if (r.missStreak.isNotEmpty) 'ms': r.missStreak,
         if (r.victory != null) 'win': r.victory,
         if (r.wins != 0) 'w': r.wins,
+        if (r.boons.isNotEmpty) 'b': r.boons,
+        if (r.loadout.isNotEmpty) 'lo': r.loadout,
+        if (r.difficulty != 0) 'df': r.difficulty,
+        if (r.eliteWins.isNotEmpty) 'ew': r.eliteWins,
+        if (r.elitesBeaten.isNotEmpty) 'eb': r.elitesBeaten,
+        if (r.bossesBeaten != 0) 'bb': r.bossesBeaten,
+        if (r.grownTo != 1) 'gl': r.grownTo,
       };
 
   static RunState fromJson(Json j) => RunState(
@@ -42,6 +49,47 @@ abstract final class RunJson {
         missStreak: _intMap(j['ms']),
         victory: j['win'] as bool?,
         wins: j.intOrNull('w') ?? 0,
+        boons: _strMap(j['b']),
+        loadout: _strMap(j['lo']),
+        difficulty: j.intOrNull('df') ?? 0,
+        eliteWins: _intMap(j['ew']),
+        elitesBeaten: j['eb'] == null ? null : j.strings('eb'),
+        bossesBeaten: j.intOrNull('bb') ?? 0,
+        grownTo: j.intOrNull('gl') ?? 1,
+      );
+
+  static Map<String, List<String>>? _strMap(Object? raw) => raw == null
+      ? null
+      : {
+          for (final e in asJson(raw).entries)
+            e.key: [
+              for (final v in asList(e.value))
+                v is String ? v : throw FormatException('JSON inválido', v),
+            ],
+        };
+
+  static Json prepToJson(RunPrep p) => {
+        if (p.skills.isNotEmpty) 's': p.skills,
+        if (p.gold != 0) 'g': p.gold,
+        if (p.potions != 0) 'p': p.potions,
+        if (p.ethers != 0) 'e': p.ethers,
+        if (p.attributes.isNotEmpty)
+          'a': {for (final e in p.attributes.entries) e.key.name: e.value},
+        if (p.boons.isNotEmpty) 'b': p.boons,
+      };
+
+  static RunPrep prepFromJson(Json j) => RunPrep(
+        skills: j['s'] == null ? const [] : j.strings('s'),
+        gold: j.intOrNull('g') ?? 0,
+        potions: j.intOrNull('p') ?? 0,
+        ethers: j.intOrNull('e') ?? 0,
+        attributes: {
+          for (final e in (_intMap(j['a']) ?? const <String, int>{}).entries)
+            Attribute.values.firstWhere((a) => a.name == e.key,
+                orElse: () => throw FormatException('JSON inválido', e.key)):
+                e.value,
+        },
+        boons: j['b'] == null ? const [] : j.strings('b'),
       );
 
   static Map<String, int>? _intMap(Object? raw) => raw == null
@@ -63,6 +111,7 @@ abstract final class RunJson {
               'k': x.kind.name,
               'a': x.amount,
               if (x.attribute != null) 'at': x.attribute!.name,
+              if (x.boon != null) 'bn': x.boon,
             },
         ],
       };
@@ -79,6 +128,7 @@ abstract final class RunJson {
                 x.enumByName('k', RunExtraKind.values),
                 x.integer('a'),
                 attribute: x.enumOrNull('at', Attribute.values),
+                boon: x['bn'] as String?,
               );
             }(),
         ],

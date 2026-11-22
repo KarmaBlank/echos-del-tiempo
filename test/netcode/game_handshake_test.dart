@@ -13,7 +13,7 @@ void main() {
   test('Mundo en 36 (v0.20.15: ULT libres del arma) y Travesía arranca su secuencia en 1', () {
     expect(WireGame.mundo.protocol, 36);
     expect(kProtocolVersion, 36);
-    expect(WireGame.travesia.protocol, 2);
+    expect(WireGame.travesia.protocol, 3);
     expect(WireGame.mundo.id, isNot(WireGame.travesia.id));
   });
 

@@ -1,3 +1,4 @@
+import 'run_json.dart';
 import '../models/attributes.dart';
 import '../models/battle_command.dart';
 import '../models/build_wants.dart';
@@ -150,7 +151,13 @@ abstract final class ActionJson {
         // Hazañas v0.14 (achievements.md § 5.2).
         ClaimAchievementAction() => {'t': 'ach', 'id': a.id},
         // Travesía (protocolo Travesía 1; roguelike.md).
-        RunStartAction() => {'t': 'runStart'},
+        RunStartAction() => {
+            't': 'runStart',
+            if (a.zones != 0) 'z': a.zones,
+            if (a.difficulty != 0) 'df': a.difficulty,
+            if (a.eliteWins.isNotEmpty) 'ew': a.eliteWins,
+          },
+        RunPrepAction() => {'t': 'runPrep', 'p': RunJson.prepToJson(a.prep)},
         RunVoteAction() => {'t': 'runVote', 'n': a.nodeId},
         RunRewardAction() => {
             't': 'runReward',
@@ -311,7 +318,21 @@ abstract final class ActionJson {
       case 'ach':
         return ClaimAchievementAction(j.str('id'));
       case 'runStart':
-        return const RunStartAction();
+        return RunStartAction(
+          zones: j.intOrNull('z') ?? 0,
+          difficulty: j.intOrNull('df') ?? 0,
+          eliteWins: {
+            for (final e in (j['ew'] == null
+                    ? const <String, Object?>{}
+                    : asJson(j['ew']))
+                .entries)
+              e.key: e.value is num
+                  ? (e.value as num).toInt()
+                  : throw FormatException('JSON inválido', e.value),
+          },
+        );
+      case 'runPrep':
+        return RunPrepAction(RunJson.prepFromJson(asJson(j['p'])));
       case 'runVote':
         return RunVoteAction(j.integer('n'));
       case 'runReward':

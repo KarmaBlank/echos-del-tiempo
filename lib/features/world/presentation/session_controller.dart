@@ -11,6 +11,10 @@ import '../../../core/di/service_locator.dart';
 import '../../../core/persistence/ecos_log.dart';
 import '../../../core/persistence/exit_guard.dart';
 import '../../../core/settings/settings_providers.dart';
+import '../../../game_engine/models/run_save.dart';
+import '../../../game_engine/models/travesia_meta.dart';
+import '../../../game_engine/rules/meta_progress_rules.dart';
+import '../../../game_engine/rules/run_rules.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/atlas_store.dart';
 import '../../../game_engine/models/game_mode.dart';
@@ -113,6 +117,16 @@ final stashStoreProvider = Provider<StashStore>((ref) =>
         ? sl<StashStore>()
         : AccountStashStore(ref.watch(accountRepositoryProvider)));
 
+/// La run guardada de la Travesía (roguelike.md § 8.5); `null` en el
+/// Mundo.
+final runSaveStoreProvider = Provider<RunSaveStore?>((ref) =>
+    sl.isRegistered<RunSaveStore>() ? sl<RunSaveStore>() : null);
+
+/// El progreso entre runs de la Travesía (roguelike.md § 8); `null` en
+/// el Mundo.
+final travesiaMetaStoreProvider = Provider<TravesiaMetaStore?>((ref) =>
+    sl.isRegistered<TravesiaMetaStore>() ? sl<TravesiaMetaStore>() : null);
+
 final sessionClockProvider =
     Provider<SessionClock>((ref) => const SessionClock());
 
@@ -137,6 +151,8 @@ final sessionControllerProvider =
     bestiaryStore: ref.watch(bestiaryStoreProvider),
     tutorialStore: ref.watch(tutorialStoreProvider),
     stashStore: ref.watch(stashStoreProvider),
+    runSaveStore: ref.watch(runSaveStoreProvider),
+    metaStore: ref.watch(travesiaMetaStoreProvider),
     clock: ref.watch(sessionClockProvider),
     net: ref.read(activeNetSessionProvider),
     turnTimer: ref.read(gameSettingsProvider).turnTimer,
@@ -185,6 +201,8 @@ class SessionController extends StateNotifier<SessionView?> {
     TurnTimer turnTimer = TurnTimer.normal,
     this.party,
     this.stashStore,
+    this.runSaveStore,
+    this.metaStore,
   })  : localId = net?.localId ?? localId,
         _turnTimer = turnTimer,
         atlasStore = atlasStore ?? InMemoryAtlasStore(),
@@ -198,6 +216,116 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// El alijo de la cuenta (characters.md § 3.2); `null` = sin alijo.
   final StashStore? stashStore;
+
+  /// Travesía: dónde se guarda la run en curso (roguelike.md § 8.5).
+  /// Solo la usa quien corre el motor (local o anfitrión).
+  final RunSaveStore? runSaveStore;
+
+  /// Travesía: progreso entre runs de este dispositivo (§ 8).
+  final TravesiaMetaStore? metaStore;
+  TravesiaMeta _meta = TravesiaMeta.empty;
+  TravesiaMeta get meta => _meta;
+  bool _metaLoaded = false;
+  bool _prepSent = false;
+
+  MetaProgressRules get metaRules => MetaProgressRules(catalog: engine.catalog);
+
+  /// Clave del personaje local en el progreso (`nombre|clase`).
+  String? get metaKey {
+    final p = _s?.players[localId]?.profile;
+    return p == null ? null : TravesiaMeta.keyOf(p.name, p.classId);
+  }
+
+  /// Habilidades del arma inicial de la clase local (fuera del pool).
+  List<String> get startSkills {
+    final p = _s?.players[localId]?.profile;
+    if (p == null) return const [];
+    return engine.progression.weaponSkills(
+        RunRules.runProfile(engine.progression, p));
+  }
+
+  /// El pool de loadout del personaje local.
+  List<String> get loadoutPool {
+    final p = _s?.players[localId]?.profile;
+    return p == null ? const [] : metaRules.loadoutPool(p.classId, startSkills);
+  }
+
+  Future<void> _loadMeta() async {
+    final store = metaStore;
+    if (store == null || !isRun) return;
+    try {
+      _meta = await store.load();
+    } catch (_) {
+      _meta = TravesiaMeta.empty;
+    }
+    _metaLoaded = true;
+  }
+
+  void _setMeta(TravesiaMeta m) {
+    _meta = m;
+    unawaited(metaStore?.save(m).catchError((_) {}));
+    _prepSent = false;
+    _sendPrep();
+    _emit();
+  }
+
+  /// Compra un nodo del árbol de afuera.
+  bool buyMetaNode(String id) {
+    final key = metaKey;
+    if (key == null) return false;
+    final next = MetaProgressRules.buy(_meta, key, id);
+    if (next == null) return false;
+    _setMeta(next);
+    return true;
+  }
+
+  /// Elige las habilidades de arranque.
+  bool setLoadout(List<String> skills) {
+    final key = metaKey, p = _s?.players[localId]?.profile;
+    if (key == null || p == null) return false;
+    final next =
+        metaRules.setLoadout(_meta, key, p.classId, startSkills, skills);
+    if (next == null) return false;
+    _setMeta(next);
+    return true;
+  }
+
+  /// Elige la dificultad (hasta la desbloqueada).
+  void setDifficulty(int d) {
+    if (d < 0 || d > _meta.difficultyUnlocked) return;
+    _setMeta(_meta.copyWith(difficulty: d));
+  }
+
+  /// Manda el loadout y los bonos al anfitrión (en la sala o al terminar).
+  void _sendPrep() {
+    final s = _s, key = metaKey, p = _s?.players[localId]?.profile;
+    if (!isRun || !_metaLoaded || _prepSent || s == null || key == null ||
+        p == null) {
+      return;
+    }
+    final canPrep = s.mode == SessionMode.lobby ||
+        (s.mode == SessionMode.run && s.run?.phase == RunPhase.over);
+    if (!canPrep) return;
+    _prepSent = true;
+    _apply(RunPrepAction(metaRules.prepOf(_meta, key, p.classId, startSkills)));
+  }
+
+  /// Cobra la run terminada en el progreso de este dispositivo (una vez).
+  void _settleRun() {
+    final r = _s?.run;
+    if (!isRun || !_metaLoaded || r == null || r.phase != RunPhase.over) {
+      return;
+    }
+    if (_meta.lastSeed == r.seed) return;
+    final next = MetaProgressRules.settle(_meta, r,
+        playableZones: RunRules(catalog: engine.catalog).playableZones().length);
+    _setMeta(next);
+  }
+
+  /// La run guardada que se puede retomar (en la sala, antes de empezar).
+  RunSave? _runSave;
+  bool get hasRunSave => _runSave != null && !isClient;
+  String? _runSaveKey;
 
   /// Compañeros en la sala: id de jugador → ranura de la cuenta, en orden.
   final _companions = <String, String>{};
@@ -550,6 +678,8 @@ class SessionController extends StateNotifier<SessionView?> {
       if (!mounted) return;
       await _loadStash();
       if (!mounted) return;
+      await _loadMeta();
+      if (!mounted) return;
       _netSub = n!.events.listen(_onNet);
       if (clock.autoStart) {
         _timer = Timer.periodic(clock.interval, (_) => _clientTick(clock.dt));
@@ -592,6 +722,9 @@ class SessionController extends StateNotifier<SessionView?> {
       ]);
     }
     _lastSaved = null;
+    await _loadRunSave();
+    await _loadMeta();
+    if (!mounted) return;
     _step(step);
     _syncWants();
     _save(force: true);
@@ -1249,7 +1382,68 @@ class SessionController extends StateNotifier<SessionView?> {
 
   // ---------------- Travesía (docs/specs/roguelike.md) ----------------
 
-  bool startRun() => _apply(const RunStartAction());
+  bool startRun() {
+    final m = _meta;
+    final ok = _apply(RunStartAction(
+        zones: m.zones,
+        difficulty: m.difficulty.clamp(0, m.difficultyUnlocked),
+        eliteWins: m.eliteWins));
+    if (ok) _prepSent = false;
+    if (ok && _runSave != null) {
+      _runSave = null;
+      _emit();
+    }
+    return ok;
+  }
+
+  /// CONTINUAR TRAVESÍA: retoma la run guardada.
+  bool continueRun() {
+    final s = _s, save = _runSave;
+    if (s == null || save == null || isClient) return false;
+    final step = engine.resumeRun(s, save);
+    _runSave = null;
+    if (step == null) {
+      _emit();
+      return false;
+    }
+    _step(step);
+    return true;
+  }
+
+  /// ABANDONAR: borra la run guardada.
+  void abandonRun() {
+    _runSave = null;
+    unawaited(runSaveStore?.clear().catchError((_) {}));
+    _emit();
+  }
+
+  Future<void> _loadRunSave() async {
+    final store = runSaveStore;
+    if (store == null || !isRun) return;
+    try {
+      _runSave = await store.load();
+    } catch (_) {
+      _runSave = null;
+    }
+  }
+
+  /// Guarda la run al entrar a un nodo y al volver al mapa; la borra al
+  /// terminar (roguelike.md § 8.5).
+  void _saveRun() {
+    final store = runSaveStore;
+    final r = _s?.run;
+    if (store == null || !isRun || isClient || r == null) return;
+    final key = '${r.floor}/${r.node}/${r.phase.name}';
+    if (key == _runSaveKey) return;
+    _runSaveKey = key;
+    if (r.phase == RunPhase.over) {
+      unawaited(store.clear().catchError((_) {}));
+      return;
+    }
+    if (r.phase == RunPhase.reward) return;
+    final save = engine.runSaveOf(_s!);
+    if (save != null) unawaited(store.save(save).catchError((_) {}));
+  }
 
   bool voteRunNode(int nodeId) => _apply(RunVoteAction(nodeId));
 
@@ -1869,6 +2063,9 @@ class SessionController extends StateNotifier<SessionView?> {
 
   void _step(SessionStep step) {
     _s = step.state;
+    _saveRun();
+    _settleRun();
+    _sendPrep();
     if (step.state.battle case final b?) _lastBattle = b.state;
     if (role == SessionRole.host) _unsent.addAll(step.events);
     var forceSave = false;

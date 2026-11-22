@@ -86,7 +86,7 @@ const kProtocolVersion = 36;
 /// `runReady` y eventos `runNode` / `runEnd` (roguelike.md). 2: turnos
 /// porBando en la batalla (`tr` / `gp` / `act` / `rd`) y fila ULT en la
 /// recompensa (`u` en la oferta y en `runReward`).
-const kTravesiaProtocolVersion = 2;
+const kTravesiaProtocolVersion = 3;
 
 /// Qué juego habla por la red y con qué versión de protocolo. Lo decide
 /// el composition root (`GameEdition.wire`); la sesión nunca mira el

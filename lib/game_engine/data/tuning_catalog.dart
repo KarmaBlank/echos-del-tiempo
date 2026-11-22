@@ -25,6 +25,7 @@ abstract final class TuningId {
   static const ecoTier = 'ecoTier';
   static const buildGuide = 'buildGuide';
   static const consumables = 'consumables';
+  static const travesia = 'travesia';
 }
 
 /// Los valores del código.
@@ -122,6 +123,48 @@ const Map<String, TuningDef> kTuningDefaults = {
     'shieldScale': 1.0,
     'shieldCap': 0.25,
     'shieldTurns': 2,
+  }),
+  // roguelike.md § 4 y § 8: mejoras directas de la fila Extra, progreso
+  // entre runs y curva de la Travesía. Solo lo lee la Travesía.
+  TuningId.travesia: TuningDef('Travesía', {
+    // Mejoras directas (§ 4): valor de cada una (se apilan).
+    'boonSpell': 10,
+    'boonAttack': 15,
+    'boonHeal': 20,
+    'boonCrit': 5,
+    'boonUlt': 20,
+    'boonElite': 15,
+    'boonPulse': 1,
+    'boonDefense': 4,
+    'boonSteal': 4,
+    // Mejoras que entran al sorteo de la fila Extra.
+    'boonsInExtra': 2,
+    // Progreso entre runs (§ 8): moneda.
+    'coinPerFloor': 10,
+    'coinElite': 4,
+    'coinBoss': 12,
+    'coinWin': 20,
+    // Zonas: las primeras del sorteo y piso que hay que alcanzar
+    // (1 = el primero) para desbloquear una más.
+    'zonesStart': 3,
+    'zoneUnlockFloor': 2,
+    // Élites: niveles extra por cada vez que ya se venció a esa élite.
+    'eliteRepeatLevel': 2,
+    // Dificultad: + por nivel a ATQ y vida enemigos (acumulativo).
+    'diffAtk': 0.08,
+    'diffHp': 0.10,
+    'diffMax': 5,
+    // Curva (§ 12 "Balance"): atributos que gana cada personaje, en los
+    // cuatro, por cada nivel que suben los enemigos.
+    'attrPerLevel': 2,
+    // Nivel de los enemigos: 1 + piso × levelPerFloor + capa ×
+    // levelPerLayer (+ élite / jefe).
+    'levelPerFloor': 5,
+    'levelPerLayer': 0.3,
+    // Vida y ATQ de los enemigos de la Travesía (× sobre la curva del
+    // Mundo, antes de la dificultad).
+    'enemyHp': 0.7,
+    'enemyAtk': 0.45,
   }),
 };
 

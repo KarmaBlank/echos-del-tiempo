@@ -1,3 +1,5 @@
+import '../data/tuning_catalog.dart';
+
 /// Números de la Travesía (docs/specs/roguelike.md), todos juntos. Una
 /// fase posterior los pasa al Editor de la Travesía; mientras tanto, el
 /// único lugar para tocarlos es este.
@@ -31,10 +33,13 @@ abstract final class RunTuning {
 
   // ---------------- Enemigos ----------------
 
-  /// Nivel de los enemigos: base + piso × porPiso + capa × porCapa.
+  /// Nivel de los enemigos: base + piso × porPiso + capa × porCapa. Piso
+  /// y capa están en el grupo de ajustes «Travesía» (Editor → Balance).
   static const levelBase = 1;
-  static const levelPerFloor = 6;
-  static const levelPerLayer = 0.35;
+  static int get levelPerFloor =>
+      tuning(TuningId.travesia).i('levelPerFloor');
+  static double get levelPerLayer =>
+      tuning(TuningId.travesia).d('levelPerLayer');
 
   /// Niveles extra de la élite y del jefe.
   static const eliteLevelBonus = 1;

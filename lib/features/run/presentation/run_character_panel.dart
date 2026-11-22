@@ -1,3 +1,4 @@
+import '../../../game_engine/data/run_boons.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
@@ -112,6 +113,11 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
     final ults = UltRules.optionsOf(prof, weapon, item, catalog);
     final active = UltRules.validSel(prof, weapon, item, catalog);
     final canSwitch = widget.view.session.battle == null;
+    final boons = <String, int>{};
+    for (final b in widget.view.session.run?.boons[widget.view.actor!.id] ??
+        const <String>[]) {
+      boons[b] = (boons[b] ?? 0) + 1;
+    }
 
     Widget section(String title, List<Widget> rows) => Padding(
           padding: EdgeInsets.only(bottom: DsSpace.md),
@@ -184,6 +190,15 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
               ),
             ),
           if (ults.isEmpty) Text('Sin ULT todavía.', style: DsText.detail()),
+        ]),
+        section('MEJORAS', [
+          if (boons.isEmpty)
+            Text('Todavía no tomaste ninguna.', style: DsText.detail()),
+          for (final e in boons.entries)
+            Text(
+                '${RunBoon.byName(e.key)?.text ?? e.key}'
+                '${e.value > 1 ? '  ×${e.value}' : ''}',
+                style: DsText.body()),
         ]),
         section('NODOS DE LA RUN', [
           if (byPath.isEmpty)
