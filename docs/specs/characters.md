@@ -318,6 +318,10 @@ ancho. Como el inventario (panels.md § Inventario, "Cambios v0.12.0"):
 
 ### 3.2 Alijo en partida (v0.12.1, protocolo 22)
 
+> v0.20.11 (protocolo 33): el host también genera confirmaciones `rec:N`
+> con loot propio que vuelve al alijo, y el alijo tiene la caja Objetos
+> sin recoger (`uncl`). Ver loot.md § 4b.1 y § 4b.2.
+
 - Se abre en el **lobby y en misión, fuera de batalla** (modos `lobby` y
   `field`; nunca en batalla, preparación ni resultado: si el modo cambia,
   el panel se cierra). Accesos: botón `ALIJO [B]` del HUD (junto a

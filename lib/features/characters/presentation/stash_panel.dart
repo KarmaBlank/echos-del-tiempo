@@ -8,6 +8,7 @@ import '../../world/presentation/session_view.dart';
 import '../domain/stash.dart';
 import 'stash_board.dart';
 import 'stash_screen.dart' show stashHelp;
+import 'unclaimed_box.dart';
 
 /// Panel ALIJO dentro de la partida (tecla B; lobby y misión, fuera de
 /// batalla): el mismo tablero que fuera de la sesión, pero cada
@@ -39,10 +40,19 @@ class StashPanel extends StatelessWidget {
       ],
       child: p == null || stash == null
           ? const Text('Sin alijo')
-          : StashBoard(
-              key: const ValueKey('stash-board'),
-              host: _SessionStashHost(controller, rules, p, stash),
-              title: '${p.name} · $cls · Nv ${p.level}'),
+          : Column(mainAxisSize: MainAxisSize.min, children: [
+              StashBoard(
+                  key: const ValueKey('stash-board'),
+                  host: _SessionStashHost(controller, rules, p, stash),
+                  title: '${p.name} · $cls · Nv ${p.level}'),
+              UnclaimedBox(
+                entries: stash.unclaimed,
+                nameOf: (e) => stashEntryName(e, rules.items.displayName),
+                busy: controller.stashBusy,
+                onTake: controller.unclaimedTake,
+                onDiscard: controller.unclaimedDiscard,
+              ),
+            ]),
     );
   }
 }

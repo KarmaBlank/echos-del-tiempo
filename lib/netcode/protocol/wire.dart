@@ -70,9 +70,12 @@ import '../../game_engine/serialization/session_json.dart';
 /// 32 desde v0.20.8: Condensar con recetas nuevas (20 Esquirlas → 1
 /// Cristal, 8 Cristales → 1 Prisma, materials_economy.md § 4.3) y el host
 /// lo rechaza en la Travesía; un host 31 cobraría otra receta.
-/// 33 desde v0.20.12: operación de fusión `restoreQuebrar` (loot.md
-/// § 16.3.1); un host 32 no la conoce.
-const kProtocolVersion = 33;
+/// 33 desde v0.20.11: el loot propio que quedó en el piso vuelve al
+/// alijo al cerrarse el mapa (confirmaciones `rec:N` en `sk`) y el piso
+/// lleva `by` (quién soltó lo compartido); un cliente 32 lo perdería.
+/// 34 desde v0.20.12: operación de fusión `restoreQuebrar` (loot.md
+/// § 16.3.1); un host 33 no la conoce.
+const kProtocolVersion = 34;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

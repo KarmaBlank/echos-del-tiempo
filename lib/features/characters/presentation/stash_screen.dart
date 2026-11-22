@@ -12,6 +12,7 @@ import '../../world/presentation/session_controller.dart';
 import '../domain/stash.dart';
 import 'characters_providers.dart';
 import 'stash_board.dart';
+import 'unclaimed_box.dart';
 
 /// Pantalla `ALIJO COMPARTIDO` (fuera de la sesión): el tablero del alijo
 /// ([StashBoard]) sobre la cuenta directa, con el personaje
@@ -133,6 +134,24 @@ class _StashScreenState extends ConsumerState<StashScreen>
   String? take(List<int> cells) =>
       _batch(_stashRules.withdrawMany(_p!, _stash!, cells));
 
+  /// TOMAR de Objetos sin recoger al personaje (loot.md § 4b).
+  void _takeUnclaimed(int i) {
+    final m = _stashRules.claim(_p!, _stash!, i);
+    if (!m.ok) {
+      setState(() => _notice = m.error);
+      return;
+    }
+    _notice = 'Tomado';
+    _commit(m.profile!, m.stash!);
+  }
+
+  void _discardUnclaimed(int i) {
+    final next = StashRules.dropUnclaimed(_stash!, i);
+    if (next == null) return;
+    _notice = 'Descartado';
+    _commit(_p!, next);
+  }
+
   @override
   bool moveStash(int from, int to) {
     final next = StashRules.move(_stash!, from, to);
@@ -167,7 +186,17 @@ class _StashScreenState extends ConsumerState<StashScreen>
         ],
         child: p == null || s == null
             ? Text('Cargando...', style: DsText.detail())
-            : StashBoard(host: this, title: '${p.name} · $cls · Nv ${p.level}'),
+            : Column(mainAxisSize: MainAxisSize.min, children: [
+                StashBoard(
+                    host: this, title: '${p.name} · $cls · Nv ${p.level}'),
+                UnclaimedBox(
+                  entries: s.unclaimed,
+                  nameOf: (e) => stashEntryName(e, rules.items.displayName),
+                  busy: _saving,
+                  onTake: _takeUnclaimed,
+                  onDiscard: _discardUnclaimed,
+                ),
+              ]),
       ),
     );
   }

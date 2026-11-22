@@ -701,6 +701,7 @@ class SessionController extends StateNotifier<SessionView?> {
     _timer?.cancel();
     _broadcastTimer?.cancel();
     unawaited(_netSub?.cancel());
+    _recoverLocalGround();
     _save(force: true);
     ExitGuard.unregister(this);
     unawaited(_events.close());
@@ -776,6 +777,7 @@ class SessionController extends StateNotifier<SessionView?> {
         if (step != null) _step(step);
       case ConnectionLostEvent(:final reason):
         _disconnected = reason;
+        _recoverLocalGround();
         _dropStashOp('Se perdió la conexión: no se movió nada');
         _timer?.cancel();
         _broadcastTimer?.cancel();
@@ -1608,6 +1610,119 @@ class SessionController extends StateNotifier<SessionView?> {
     ));
   }
 
+  /// TOMAR de Objetos sin recoger (loot.md § 4b): la posición [i] al
+  /// inventario del jugador local, por el anfitrión.
+  String? unclaimedTake(int i) {
+    final why = _stashReady();
+    if (why != null) return why;
+    final me = _s!.players[localId]!;
+    final dry = stashRules.claim(me.profile, _stash!, i);
+    if (!dry.ok) {
+      _emit();
+      return _stashNotice = dry.error;
+    }
+    final id = _newStashOpId();
+    return _sendStash(_StashOp(
+      id,
+      StashTakeAction(id, [dry.drop!]),
+      put: false,
+      tab: 0,
+      left: 0,
+      reason: null,
+      cells: const [],
+      box: i,
+    ));
+  }
+
+  /// DESCARTAR de Objetos sin recoger (solo local).
+  bool unclaimedDiscard(int i) {
+    final s = _stash, st = stashStore;
+    final me = _s?.players[localId];
+    if (s == null || st == null || me == null || _stashOp != null) {
+      return false;
+    }
+    final next = StashRules.dropUnclaimed(s, i);
+    if (next == null) return false;
+    _stash = next;
+    _stashNotice = 'Descartado';
+    unawaited(st.commit(next, me.profile).catchError(_saveFailed));
+    _emit();
+    return true;
+  }
+
+  /// Confirmaciones `rec:N` del host ya guardadas (por jugador).
+  final _recApplied = <String>{};
+
+  /// Loot recuperado por el host (`rec:N`, loot.md § 4b) del jugador
+  /// local y sus compañeros: al alijo de la cuenta o, si no entra, a
+  /// Objetos sin recoger. Un aviso local por pieza.
+  void _settleRecovered() {
+    final s = _s, st = _stash, store = stashStore;
+    final me = s?.players[localId];
+    if (s == null || st == null || store == null || me == null) return;
+    var next = st;
+    final notes = <String>[];
+    for (final p in s.players.values) {
+      if (!controls(p.id)) continue;
+      for (final MapEntry(key: id, value: a) in p.stashAcks.entries) {
+        if (!StashAck.isRecover(id) || !_recApplied.add('${p.id}/$id')) {
+          continue;
+        }
+        for (final d in a.drops) {
+          if (d == null) continue;
+          final r = StashRules.recover(next, d);
+          next = r.stash;
+          notes.add('${_recoverName(d)} se guardó '
+              '${r.toBox ? 'en Objetos sin recoger' : 'en el alijo'}');
+        }
+      }
+    }
+    if (identical(next, st)) return;
+    _stash = next;
+    for (final n in notes) {
+      _messages.add(n);
+      if (_messages.length > maxMessages) _messages.removeAt(0);
+      _addChat(ChatLine.system(n));
+    }
+    final prof = me.profile;
+    unawaited(store.commit(next, prof).catchError(_saveFailed));
+  }
+
+  /// Al salir (desconexión o cerrar): lo propio que quedó en el piso del
+  /// último estado vuelve a la cuenta (el host lo saca del piso al ver la
+  /// salida). En la Travesía no hay piso ni alijo.
+  void _recoverLocalGround() {
+    final s = _s, st = _stash, store = stashStore;
+    final me = s?.players[localId];
+    if (s == null || st == null || store == null || me == null) return;
+    if (s.run != null || s.ground.isEmpty) return;
+    var next = st;
+    final left = <GroundLoot>[];
+    for (final g in s.ground) {
+      final to = s.players[g.recoverTo];
+      if (to == null || !controls(to.id)) continue;
+      if (g.ownerId != null &&
+          !engine
+              .lootVerdict(to.profile, g.drop, wants: to.buildWants)
+              .visible) {
+        continue;
+      }
+      next = StashRules.recover(next, g.drop).stash;
+      left.add(g);
+    }
+    if (left.isEmpty) return;
+    s.ground.removeWhere(left.contains);
+    _stash = next;
+    unawaited(store.commit(next, me.profile).catchError(_saveFailed));
+  }
+
+  String _recoverName(LootDrop d) {
+    final it = d.item;
+    if (it != null) return engine.progression.items.displayName(it);
+    if (d.eco != null) return 'Eco';
+    return '${d.count} ${d.stack!.label}';
+  }
+
   /// Reordena el alijo (solo local: no pasa por el anfitrión).
   bool stashMove(int from, int to) {
     final s = _stash, st = stashStore;
@@ -1693,7 +1808,9 @@ class SessionController extends StateNotifier<SessionView?> {
       if (d == null) continue;
       final next = op.put
           ? StashRules.store(s, d, tab: op.tab)
-          : i < op.cells.length
+          : op.box != null
+              ? StashRules.untakeBox(s, op.box!, d)
+              : i < op.cells.length
               ? StashRules.unstore(s, op.cells[i], d)
               : null;
       if (next == null) {
@@ -1825,6 +1942,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (me != null) local.sync(me);
     // Antes de cualquier guardado: alijo + perfil van juntos.
     _settleStash();
+    _settleRecovered();
     if (forceSave) _save(force: true);
     _emit();
   }
@@ -2083,7 +2201,8 @@ class _StashOp {
       required this.tab,
       required this.left,
       required this.reason,
-      required this.cells});
+      required this.cells,
+      this.box});
 
   final String id;
   final SessionAction action;
@@ -2092,6 +2211,9 @@ class _StashOp {
   final int left;
   final String? reason;
   final List<int> cells;
+
+  /// TOMAR de Objetos sin recoger: la posición pedida.
+  final int? box;
   double wait = 0;
   int tries = 0;
 }

@@ -744,6 +744,9 @@ class _Op {
   void removePlayer(String id) {
     final p = s.players.remove(id)!;
     runPlayerLeft(id);
+    // Lo suyo que quedó en el piso lo recupera su dispositivo al salir
+    // (loot.md § 4b): el host lo saca para no duplicarlo.
+    s.ground.removeWhere((g) => g.recoverTo == id);
     final b = s.battle;
     if (b != null) b.state = e.battles.leave(b.state, id).state;
     events.add(PlayerLeftEvent(id));
@@ -1555,7 +1558,7 @@ class _Op {
     final drop = t.drop;
     if (drop == null) return false;
     _profileChange(p, t.profile);
-    _toGround(drop, p.x, p.y);
+    _toGround(drop, p.x, p.y, by: p.id);
     say('${p.name} soltó ${_dropText(drop)}');
     return true;
   }
@@ -1672,7 +1675,8 @@ class _Op {
 
   /// Deja [d] en el piso actual cerca de ([x], [y]); [owner] = loot
   /// instanciado.
-  GroundLoot _toGround(LootDrop d, double x, double y, {String? owner}) {
+  GroundLoot _toGround(LootDrop d, double x, double y,
+      {String? owner, String? by}) {
     final id = ++s.groundSeq;
     // Desparramado en espiral, sin azar (determinístico).
     final ang = id * 2.4;
@@ -1684,10 +1688,59 @@ class _Op {
       y: y + math.sin(ang) * r,
       ownerId: owner,
       floor: s.groundFloor,
+      byId: owner == null ? by : null,
     );
     s.ground.add(g);
-    if (s.ground.length > SessionEngine.maxGround) s.ground.removeAt(0);
+    if (s.ground.length > SessionEngine.maxGround) {
+      // Lo más viejo sale del piso, pero si era de alguien vuelve a él.
+      _recoverGround([s.ground.removeAt(0)]);
+    }
     return g;
+  }
+
+  /// Manda [drops] al alijo de [p] (o a Objetos sin recoger si está
+  /// lleno): una confirmación `rec:N` que su dispositivo guarda en la
+  /// cuenta (loot.md § 4b). La Travesía no tiene alijo: no hace nada.
+  void _recover(SessionPlayer p, List<LootDrop> drops) {
+    if (drops.isEmpty || s.run != null) return;
+    p.addStashAck('${StashAck.recoverPrefix}${++s.groundSeq}',
+        StashAck(put: true, drops: drops));
+  }
+
+  /// Saca del piso [items] (por defecto todo) y devuelve a cada jugador
+  /// lo suyo que su filtro muestra (lo propio, o lo compartido que soltó
+  /// él). Lo oculto por el filtro y lo de alguien que ya no está se
+  /// pierde. Se llama al cerrarse el mapa (fin de misión, vuelta al
+  /// pueblo) antes de vaciar el piso.
+  void _recoverGround([List<GroundLoot>? items]) {
+    final list = items ?? [...s.ground];
+    if (list.isEmpty) return;
+    final byPlayer = <String, List<LootDrop>>{};
+    for (final g in list) {
+      s.ground.remove(g);
+      final to = g.recoverTo == null ? null : s.players[g.recoverTo];
+      if (to == null) continue;
+      if (g.ownerId != null &&
+          !e.lootVerdict(to.profile, g.drop, wants: to.buildWants).visible) {
+        continue;
+      }
+      (byPlayer[to.id] ??= []).add(g.drop);
+    }
+    for (final MapEntry(key: id, value: drops) in byPlayer.entries) {
+      final p = s.players[id]!;
+      _recover(p, drops);
+      say('${p.name}: ${drops.length == 1 ? 'lo que quedó' : '${drops.length} '
+          'cosas que quedaron'} en el piso ${drops.length == 1 ? 'va' : 'van'} '
+          'al alijo');
+    }
+  }
+
+  /// Botín valioso que nunca cae al piso con el inventario lleno: Épico
+  /// o Legendario de un jefe o un élite (loot.md § 14.3).
+  static bool _keepsOffFloor(LootDrop d, LootSource src) {
+    if (src != LootSource.boss && src != LootSource.elite) return false;
+    final r = d.item?.rarity ?? d.eco?.rarity;
+    return r == Rarity.legendario || r == Rarity.epico;
   }
 
   /// Entrega el loot de [p] (instanciado). Con `groundLoot` todo cae al
@@ -1701,6 +1754,7 @@ class _Op {
     var full = false;
     final capped = <String>{};
     final shown = <LootDrop>[];
+    final saved = <LootDrop>[];
     for (final d in drops) {
       final mission = src == LootSource.mission;
       final visible = mission ||
@@ -1725,13 +1779,20 @@ class _Op {
                       : null));
           continue;
         }
+        if (_keepsOffFloor(d, src) && s.run == null) {
+          saved.add(d);
+          continue;
+        }
         full = true;
       }
       final g = _toGround(d, x, y, owner: p.id);
       events.add(LootDropEvent(p.id, d, src, groundId: g.id));
     }
+    _recover(p, saved);
     if (shown.isEmpty) return;
     say('${p.name} obtuvo: ${shown.map(_dropText).join(', ')}'
+        '${saved.isEmpty ? '' : ' (inventario lleno: '
+            '${saved.map(_dropText).join(', ')} se guardó en el alijo)'}'
         '${full ? ' (inventario lleno: quedó en el piso)' : ''}'
         '${capped.isEmpty ? '' : ' (${capped.join(', ')} al tope de '
             '${CraftMaterial.maxStack}: lo que sobra se descarta)'}');
@@ -2511,6 +2572,7 @@ class _Op {
 
   /// Fin común de `startMission`: jugadores al spawn, gracia y avisos.
   void _enterField(MissionDef m, int seed) {
+    _recoverGround();
     s.ground.clear();
     s.mode = SessionMode.field;
     var i = 0;
@@ -3585,6 +3647,7 @@ class _Op {
       ..vote = null
       ..prep = null
       ..afterLevelUp = null;
+    _recoverGround();
     s.ground.clear();
     var i = 0;
     for (final p in players) {
