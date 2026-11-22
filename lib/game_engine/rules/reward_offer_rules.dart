@@ -6,7 +6,9 @@ import '../models/attributes.dart';
 import '../models/passive_tree.dart';
 import '../models/player_profile.dart';
 import '../models/run_state.dart';
+import '../models/skill.dart';
 import 'battle_engine.dart' show RandomSource;
+import 'mulberry32.dart';
 import 'run_tuning.dart';
 
 /// Ofertas de recompensa de la Travesía (docs/specs/roguelike.md § 4):
@@ -147,8 +149,12 @@ class RewardOfferRules {
   }
 
   /// La fila Arma: bases de los tipos de su clase hasta
-  /// [RunTuning.weaponLevelAhead] niveles por encima.
-  List<String> weaponOffer(PlayerProfile p, RandomSource rnd) {
+  /// [RunTuning.weaponLevelAhead] niveles por encima de los enemigos de la
+  /// entrada del piso [floor] (sin nivel del personaje, § 5).
+  List<String> weaponOffer(PlayerProfile p, RandomSource rnd, {int floor = 0}) {
+    final cap = RunTuning.levelBase +
+        floor * RunTuning.levelPerFloor +
+        RunTuning.weaponLevelAhead;
     final cls = catalog.classes[p.classId];
     if (cls == null) return const [];
     final types = cls.allowedWeaponTypes.toSet();
@@ -157,7 +163,7 @@ class RewardOfferRules {
       for (final w in catalog.weapons.values)
         if (w.price > 0 &&
             types.contains(w.type) &&
-            w.level <= p.level + RunTuning.weaponLevelAhead)
+            w.level <= cap)
           w.id,
     ]..sort();
     final fresh = [for (final id in all) if (!owned.contains(id)) id];
@@ -167,7 +173,35 @@ class RewardOfferRules {
 
   /// La fila Extra: oro, consumible, +atributo (sin Agilidad, § 5) o
   /// mejora directa (las del grupo de ajustes «Travesía»).
-  List<RunExtra> extraOffer(int floor, RandomSource rnd) {
+  /// Habilidades libres que se le pueden ofrecer a [p]: las de las armas
+  /// de su clase hasta el nivel de la fila Arma, sin provocaciones, sin
+  /// las que ya tiene ([owned]) ni las de su arma.
+  List<String> skillCandidates(PlayerProfile p, int floor,
+      {List<String> owned = const []}) {
+    final cls = catalog.classes[p.classId];
+    if (cls == null) return const [];
+    final types = cls.allowedWeaponTypes.toSet();
+    final cap = RunTuning.levelBase +
+        floor * RunTuning.levelPerFloor +
+        RunTuning.weaponLevelAhead;
+    final eq = catalog.weapons[p.equippedItem?.baseId ?? cls.startWeaponId];
+    final skip = {...owned, ...?eq?.skillIds, ...cls.kitSkillIds};
+    final out = <String>{};
+    for (final w in catalog.weapons.values) {
+      if (w.price <= 0 || !types.contains(w.type) || w.level > cap) continue;
+      for (final s in w.skillIds) {
+        final sk = catalog.skills[s];
+        if (sk == null || sk.kind == SkillKind.taunt || skip.contains(s)) {
+          continue;
+        }
+        out.add(s);
+      }
+    }
+    return out.toList()..sort();
+  }
+
+  List<RunExtra> extraOffer(int floor, RandomSource rnd,
+      {PlayerProfile? player, List<String> owned = const []}) {
     const attrs = [Attribute.vit, Attribute.fue, Attribute.esp, Attribute.des];
     final pool = <RunExtra>[
       RunExtra(RunExtraKind.oro,
@@ -179,6 +213,10 @@ class RewardOfferRules {
       for (final b in _take(RunBoon.values,
           rnd, tuning(TuningId.travesia).i('boonsInExtra')))
         RunExtra(RunExtraKind.mejora, 1, boon: b.name),
+      if (player != null)
+        for (final s in _take(skillCandidates(player, floor, owned: owned),
+            rnd, tuning(TuningId.travesia).i('skillsInExtra')))
+          RunExtra(RunExtraKind.habilidad, 1, skill: s),
     ];
     return _take(pool, rnd, RunTuning.offerSize);
   }
@@ -200,8 +238,18 @@ class RewardOfferRules {
 
   /// La fila ULT: [RunTuning.ultOfferSize] ULT de rama (§ 4: jefe
   /// siempre, élite a veces).
-  List<String> ultOffer(PlayerProfile p, RandomSource rnd) =>
-      _take(ultCandidates(p), rnd, RunTuning.ultOfferSize);
+  List<String> ultOffer(PlayerProfile p, RandomSource rnd, [int? n]) =>
+      _take(ultCandidates(p), rnd, n ?? RunTuning.ultOfferSize);
+
+  /// Surtido de ULT de la tienda del nodo [node] para [p]: siempre el
+  /// mismo para la misma run, piso y nodo (§ 12.2).
+  List<String> shopUlts(PlayerProfile p,
+          {required int seed, required int floor, required int node}) =>
+      _take(
+          ultCandidates(p),
+          mulberry32((seed ^ ((floor + 1) * 15485863) ^ ((node + 3) * 7919)) &
+              0xFFFFFFFF),
+          RunTuning.shopUlts);
 
   /// La oferta completa y si el árbol trajo la rama principal. Con
   /// [ults] suma la fila ULT.
@@ -209,14 +257,17 @@ class RewardOfferRules {
       {required int floor,
       required RandomSource rnd,
       int missStreak = 0,
-      bool ults = false}) {
+      bool ults = false,
+      int? ultCount,
+      List<String> ownedSkills = const []}) {
     final (nodes, hit) = treeOffer(p, rnd, missStreak);
     return (
       RunOffer(
         nodes: List.unmodifiable(nodes),
-        weapons: List.unmodifiable(weaponOffer(p, rnd)),
-        extras: List.unmodifiable(extraOffer(floor, rnd)),
-        ults: ults ? List.unmodifiable(ultOffer(p, rnd)) : const [],
+        weapons: List.unmodifiable(weaponOffer(p, rnd, floor: floor)),
+        extras: List.unmodifiable(
+            extraOffer(floor, rnd, player: p, owned: ownedSkills)),
+        ults: ults ? List.unmodifiable(ultOffer(p, rnd, ultCount)) : const [],
       ),
       hit,
     );

@@ -120,7 +120,8 @@ class ComparisonDelta extends StatelessWidget {
                   ProtoColors.dim, 'Mismas habilidades, mods y pasiva.')
               : lines.join('<br>')),
         ],
-        if (w != null) ProtoText(requirementsLineMarkup(w, level, attributes)),
+        if (w != null && !rules.ignoreRequirements)
+          ProtoText(requirementsLineMarkup(w, level, attributes)),
         if (!cmp.meetsRequirements)
           ProtoText(protoColor(ProtoColors.red,
               'No cumples los requisitos: hoy no podrías equiparla.')),

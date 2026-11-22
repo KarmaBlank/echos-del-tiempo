@@ -1,4 +1,5 @@
 import '../data/tuning_catalog.dart';
+import '../models/run_state.dart';
 
 /// Números de la Travesía (docs/specs/roguelike.md), todos juntos. Una
 /// fase posterior los pasa al Editor de la Travesía; mientras tanto, el
@@ -16,10 +17,10 @@ abstract final class RunTuning {
   static const layers = 15;
 
   /// Probabilidad de que una línea se abra en dos nodos en una capa.
-  static const splitChance = 0.25;
+  static const splitChance = 0.12;
 
   /// Probabilidad de un cruce hacia una línea vecina entre dos capas.
-  static const crossChance = 0.18;
+  static const crossChance = 0.09;
 
   /// Capa mínima (desde 0) de la primera élite.
   static const firstEliteLayer = 4;
@@ -55,11 +56,6 @@ abstract final class RunTuning {
   static const goldElite = 25;
   static const goldJefe = 50;
 
-  /// Tope del nivel del personaje de la run: sigue al de los enemigos
-  /// (para poder equipar las armas que salen) pero no llega a los hitos
-  /// del árbol del Mundo (nivel 10).
-  static const maxPlayerLevel = 9;
-
   /// Vida y maná que cura el descanso (fracción del máximo).
   static const restHeal = 0.6;
 
@@ -77,8 +73,10 @@ abstract final class RunTuning {
   /// Probabilidad de que la segunda opción salga de una rama con sinergia.
   static const synergyChance = 0.6;
 
-  /// Armas ofrecidas hasta este nivel por encima del personaje.
-  static const weaponLevelAhead = 2;
+  /// Armas ofrecidas hasta este nivel por encima del de los enemigos de
+  /// la entrada del piso (el personaje no tiene nivel, § 5).
+  static int get weaponLevelAhead =>
+      tuning(TuningId.travesia).i('weaponLevelAhead');
 
   /// Oro de la fila Extra: base + piso × porPiso.
   static const extraGoldBase = 40;
@@ -88,12 +86,43 @@ abstract final class RunTuning {
   static const extraPotions = 2;
   static const extraEthers = 1;
 
-  /// Puntos de atributo de la fila Extra.
-  static const extraAttribute = 3;
+  /// Puntos de atributo de la fila Extra (grupo «Travesía»).
+  static int get extraAttribute => tuning(TuningId.travesia).i('attrReward');
 
   /// ULT de rama que se ofrecen tras un jefe (siempre) o una élite.
   static const ultOfferSize = 3;
 
-  /// Probabilidad de que una élite ofrezca ULT.
-  static const eliteUltChance = 0.35;
+  /// Probabilidad de que la recompensa traiga la fila ULT, por tipo de
+  /// pelea (grupo «Travesía»): rara en combate, a veces en élite, casi
+  /// siempre en el jefe.
+  static double ultChance(RunNodeType t) => tuning(TuningId.travesia).d(
+      switch (t) {
+        RunNodeType.jefe => 'ultChanceJefe',
+        RunNodeType.elite => 'ultChanceElite',
+        _ => 'ultChanceCombate',
+      });
+
+  /// Cuántas ULT trae la fila: 1 a [ultOfferSize] (con [roll] en 0..1:
+  /// las de 1 opción son las más comunes).
+  static int ultCount(double roll) => roll < 0.5
+      ? 1
+      : roll < 0.8
+          ? 2
+          : ultOfferSize;
+
+  /// Habilidades libres equipables: el tope total (`maxSkills`) menos
+  /// ATACAR y DEFENDER; las del arma no cuentan (§ 12.2).
+  static int get freeSkillSlots =>
+      tuning(TuningId.travesia).i('maxSkills') - 2;
+
+  /// Mejora de habilidad libre en la armería.
+  static int skillUpCost(int nextLevel) =>
+      tuning(TuningId.travesia).i('skillUpCost') * nextLevel;
+  static double get skillUpPower =>
+      tuning(TuningId.travesia).d('skillUpPower');
+  static int get skillUpMax => tuning(TuningId.travesia).i('skillUpMax');
+
+  /// ULT a la venta en cada tienda y su precio (grupo «Travesía»).
+  static int get shopUlts => tuning(TuningId.travesia).i('shopUlts');
+  static int get ultPrice => tuning(TuningId.travesia).i('ultPrice');
 }

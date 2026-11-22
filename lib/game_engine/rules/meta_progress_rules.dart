@@ -7,7 +7,6 @@ import '../models/attributes.dart';
 import '../models/run_state.dart';
 import '../models/skill.dart';
 import '../models/travesia_meta.dart';
-import 'run_tuning.dart';
 
 /// Qué hace un nodo del árbol de afuera (§ 8.1).
 enum MetaEffect { oro, pocion, eter, atributo, mejora, repertorio, sinergia }
@@ -119,9 +118,12 @@ class MetaProgressRules {
   }
 
   /// El pool de habilidades de arranque de [classId]: las de las armas
-  /// tempranas de su clase (hasta [RunTuning.maxPlayerLevel]) que no trae
+  /// tempranas de su clase (hasta [loadoutMaxLevel]) que no trae
   /// el arma inicial, en orden de nivel del arma; las primeras
   /// [poolOpen] abiertas y el resto con Repertorio.
+  /// Nivel máximo de las armas de donde sale el pool de arranque.
+  static const loadoutMaxLevel = 9;
+
   List<String> loadoutPool(String classId, List<String> startSkills) {
     final cls = catalog.classes[classId];
     if (cls == null) return const [];
@@ -130,7 +132,7 @@ class MetaProgressRules {
       for (final w in catalog.weapons.values)
         if (w.price > 0 &&
             types.contains(w.type) &&
-            w.level <= RunTuning.maxPlayerLevel)
+            w.level <= loadoutMaxLevel)
           w,
     ]..sort((a, b) =>
         a.level != b.level ? a.level.compareTo(b.level) : a.id.compareTo(b.id));

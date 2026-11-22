@@ -17,6 +17,8 @@ import '../../../app/widgets/section_panel.dart';
 import '../../../app/widgets/pixel_icon.dart';
 import '../../../game_engine/models/item.dart';
 import '../../inventory/presentation/skill_chip.dart';
+import '../../../core/edition/game_edition.dart';
+import '../../../game_engine/models/game_mode.dart';
 import '../../../core/audio/music/music_catalog.dart';
 import '../../../core/audio/presentation/audio_providers.dart';
 import '../../../core/settings/settings_providers.dart';
@@ -57,11 +59,22 @@ class TitleScreen extends ConsumerStatefulWidget {
 }
 
 /// Los atajos del título (en el "?").
-const _keysHelp =
+const _keysHelpMundo =
     'Mover: WASD/Flechas · Interactuar: E/Espacio · Combate por turnos: '
     '1-9 o clic · Cambiar objetivo: Q o clic en enemigo · Chat: Enter\n'
     'Menús: flechas mueven · Enter elige (otra vez sobre tu personaje: '
     'jugar) · 1-9 eligen · Esc vuelve';
+
+/// Travesía: sin campo ni chat; personaje e inventario con C / I.
+const _keysHelpTravesia =
+    'Combate por turnos: 1-9 o clic · Cambiar objetivo: Q o clic en '
+    'enemigo · Personaje: C · Inventario: I\n'
+    'Menús: flechas mueven · Enter elige (otra vez sobre tu personaje: '
+    'jugar) · 1-9 eligen · Esc vuelve';
+
+bool get _travesia => GameEdition.current.mode == GameModeKind.travesia;
+
+String get _keysHelp => _travesia ? _keysHelpTravesia : _keysHelpMundo;
 
 class _TitleScreenState extends ConsumerState<TitleScreen> {
 
@@ -466,20 +479,26 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             DsButton('BORRAR',
                 key: const ValueKey('char-delete'),
                 onPressed: has ? _delete : null),
-            DsButton('ALIJO',
-                key: const ValueKey('char-stash'),
-                onPressed: has ? _openStash : null),
-            DsButton('BUILD',
-                key: const ValueKey('char-build'),
-                onPressed: has ? _openBuild : null),
-            // Bestiario de la cuenta, solo lectura (bestiary.md § 4).
-            DsButton('BESTIARIO',
-                key: const ValueKey('title-bestiary'),
-                onPressed: _busy ? null : _openBestiary),
+            // Travesía (roguelike.md § 12.2): sin alijo, plan de build ni
+            // bestiario (son del Mundo; la run no los usa ni los llena).
+            if (!_travesia) ...[
+              DsButton('ALIJO',
+                  key: const ValueKey('char-stash'),
+                  onPressed: has ? _openStash : null),
+              DsButton('BUILD',
+                  key: const ValueKey('char-build'),
+                  onPressed: has ? _openBuild : null),
+              // Bestiario de la cuenta, solo lectura (bestiary.md § 4).
+              DsButton('BESTIARIO',
+                  key: const ValueKey('title-bestiary'),
+                  onPressed: _busy ? null : _openBestiary),
+            ],
             // Hazañas de la cuenta, solo lectura (achievements.md § 7).
-            DsButton('HAZAÑAS',
-                key: const ValueKey('title-achievements'),
-                onPressed: _busy ? null : _openAchievements),
+            // La Travesía no tiene hazañas (roguelike.md § 12.2).
+            if (!_travesia)
+              DsButton('HAZAÑAS',
+                  key: const ValueKey('title-achievements'),
+                  onPressed: _busy ? null : _openAchievements),
             // Galería del sistema de diseño, solo en la versión de
             // desarrollo (design_system.md § 8).
             if (FeatureFlags.instance.devTools)

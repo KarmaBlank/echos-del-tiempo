@@ -140,3 +140,20 @@ TreeNodeStatus treeNodeStatus(
   }
   return const TreeNodeStatus(TreeNodeState.available);
 }
+
+/// Efectos de [node] sin repetir su nombre: las mecánicas y keystones
+/// traen `Nombre: texto`; la Travesía muestra el nombre una vez como
+/// título y debajo solo el efecto (roguelike.md § 12.2).
+List<String> passiveEffectsClean(PassiveNode node) {
+  final prefix = '${node.name}:';
+  return [
+    for (final l in passiveEffectsText(node))
+      () {
+        var t = l.trim();
+        while (t.startsWith(prefix)) {
+          t = t.substring(prefix.length).trim();
+        }
+        return t;
+      }(),
+  ];
+}

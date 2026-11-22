@@ -13,6 +13,8 @@ class RunSavePlayer {
     this.ult = 0,
     this.boons = const [],
     this.loadout = const [],
+    this.skills = const [],
+    this.skillUps = const [],
   });
 
   final PlayerProfile profile;
@@ -21,6 +23,10 @@ class RunSavePlayer {
   final double ult;
   final List<String> boons;
   final List<String> loadout;
+
+  /// Habilidades libres sin equipar y mejoras de habilidad (§ 12.2).
+  final List<String> skills;
+  final List<String> skillUps;
 
   String get key => keyOf(profile);
 
@@ -33,6 +39,8 @@ class RunSavePlayer {
         'u': ult,
         if (boons.isNotEmpty) 'b': boons,
         if (loadout.isNotEmpty) 'l': loadout,
+        if (skills.isNotEmpty) 's': skills,
+        if (skillUps.isNotEmpty) 'su': skillUps,
       };
 
   static RunSavePlayer fromJson(Json j) => RunSavePlayer(
@@ -42,6 +50,8 @@ class RunSavePlayer {
         ult: (j['u'] as num?)?.toDouble() ?? 0,
         boons: j['b'] == null ? const [] : j.strings('b'),
         loadout: j['l'] == null ? const [] : j.strings('l'),
+        skills: j['s'] == null ? const [] : j.strings('s'),
+        skillUps: j['su'] == null ? const [] : j.strings('su'),
       );
 }
 

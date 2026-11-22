@@ -3,8 +3,11 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
+import '../../combat/domain/skill_text.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/models/run_state.dart';
+import '../../../game_engine/rules/run_tuning.dart';
 import '../../../game_engine/rules/ult_rules.dart';
 import '../../inventory/presentation/inventory_tab.dart';
 import '../../inventory/presentation/shop_sections.dart';
@@ -35,6 +38,15 @@ String runAttributeName(Attribute a) => switch (a) {
       Attribute.esp => 'Espíritu',
       Attribute.des => 'Destreza',
       Attribute.agi => 'Agilidad',
+    };
+
+/// Qué hace cada atributo en la Travesía (tooltip).
+String runAttributeHelp(Attribute a) => switch (a) {
+      Attribute.vit => 'Más vida máxima.',
+      Attribute.fue => 'Más ATQ con armas que escalan con Fuerza.',
+      Attribute.esp => 'Más maná máximo y MAG con armas mágicas.',
+      Attribute.des => 'Más ATQ con armas de Destreza y más crítico.',
+      Attribute.agi => 'No se usa en la Travesía.',
     };
 
 /// Personaje de la Travesía (organismo, roguelike.md § 12): solo lo que
@@ -72,7 +84,7 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
       fill: true,
       onClose: c.closePanel,
       titleTrailing: Flexible(
-        child: Text('${prof.name}  $cls Nv ${prof.level}',
+        child: Text('${prof.name}  $cls',
             style: DsText.body(DsColors.textSubtitle)),
       ),
       header: DsTabBar(
@@ -113,6 +125,10 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
     final ults = UltRules.optionsOf(prof, weapon, item, catalog);
     final active = UltRules.validSel(prof, weapon, item, catalog);
     final canSwitch = widget.view.session.battle == null;
+    final run = widget.view.session.run ?? RunState(seed: 0, zones: const []);
+    final actorId = widget.view.actorId;
+    final equipped = run.loadout[actorId] ?? const <String>[];
+    final stored = run.skills[actorId] ?? const <String>[];
     final boons = <String, int>{};
     for (final b in widget.view.session.run?.boons[widget.view.actor!.id] ??
         const <String>[]) {
@@ -136,11 +152,23 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
       children: [
         section('ATRIBUTOS', [
           for (final a in kRunAttributes)
-            Text(
-                '${runAttributeName(a)} ${prof.attributes[a]}'
-                '${prof.attributes[a] > base[a] ? '  (+${prof.attributes[a] - base[a]} en la run)' : ''}',
-                key: ValueKey('run-attr-${a.name}'),
-                style: DsText.body()),
+            DsTooltip(
+              card: DsTooltipCard(
+                title: runAttributeName(a),
+                children: [
+                  Text(runAttributeHelp(a)),
+                  Text(
+                      'Base de la clase ${base[a]}. Sube solo con '
+                      'recompensas de atributo.',
+                      style: DsText.detail()),
+                ],
+              ),
+              child: Text(
+                  '${runAttributeName(a)} ${prof.attributes[a]}'
+                  '${prof.attributes[a] > base[a] ? '  (+${prof.attributes[a] - base[a]} en la run)' : ''}',
+                  key: ValueKey('run-attr-${a.name}'),
+                  style: DsText.body()),
+            ),
         ]),
         section('ARMA', [
           Text(
@@ -148,15 +176,83 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
                   ? weapon.name
                   : rules.weaponDisplayName(prof, item.uid),
               style: DsText.subtitle()),
-          for (final id in rules.weaponSkills(prof))
-            if (catalog.skills[id] case final sk?)
-              Text('${sk.name}${sk.mp > 0 ? ' · ${sk.mp} MP' : ''}',
-                  style: DsText.body()),
+          Wrap(
+            key: const ValueKey('run-weapon-skills'),
+            spacing: DsSpace.xs,
+            children: [
+              Text('trae:', style: DsText.detail()),
+              for (final (i, id) in rules.weaponSkills(prof).indexed)
+                if (catalog.skills[id] case final sk?)
+                  RetroTooltip(
+                    message: describeSkillMarkup(sk, null),
+                    child: Text(
+                        '${sk.name}'
+                        '${i < rules.weaponSkills(prof).length - 1 ? ',' : ''}',
+                        style: DsText.body()),
+                  ),
+            ],
+          ),
+          Text('Se mejora en la armería (FORJA), junto con sus habilidades.',
+              style: DsText.detail()),
+        ]),
+        section(
+            'HABILIDADES (${equipped.length}/${RunTuning.freeSkillSlots})',
+            [
+              Text(
+                  'Aparte de ATACAR, DEFENDER y las del arma. Tope '
+                  '${RunTuning.freeSkillSlots + 2} contando ATACAR y '
+                  'DEFENDER.',
+                  style: DsText.detail()),
+              if (equipped.isEmpty && stored.isEmpty)
+                Text('Todavía no tenés ninguna.', style: DsText.detail()),
+              for (final id in [...equipped, ...stored])
+                if (catalog.skills[id] case final sk?)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: DsSpace.xs),
+                    child: Row(children: [
+                      Expanded(
+                        child: RetroTooltip(
+                          message: describeSkillMarkup(sk, null),
+                          child: Text(
+                              '${sk.name}'
+                              '${run.skillLevel(actorId, id) > 0 ? '  +${run.skillLevel(actorId, id)}' : ''}'
+                              '${sk.mp > 0 ? ' · ${sk.mp} MP' : ''}',
+                              style: DsText.body(equipped.contains(id)
+                                  ? DsColors.text
+                                  : DsColors.textSecondary)),
+                        ),
+                      ),
+                      if (equipped.contains(id))
+                        DsButton('GUARDAR',
+                            key: ValueKey('run-skill-off-$id'),
+                            size: DsButtonSize.compact,
+                            tooltip: canSwitch ? null : 'Fuera de combate',
+                            onPressed: canSwitch
+                                ? () => c.setRunSkill(id, equip: false)
+                                : null)
+                      else
+                        DsButton('EQUIPAR',
+                            key: ValueKey('run-skill-on-$id'),
+                            size: DsButtonSize.compact,
+                            tooltip: !canSwitch
+                                ? 'Fuera de combate'
+                                : equipped.length >= RunTuning.freeSkillSlots
+                                    ? 'Sin lugar: guardá otra primero'
+                                    : null,
+                            onPressed: canSwitch &&
+                                    equipped.length < RunTuning.freeSkillSlots
+                                ? () => c.setRunSkill(id, equip: true)
+                                : null),
+                    ]),
+                  ),
+            ]),
+        section('BOLSO', [
           Text(
-              'Bolso: ${prof.items.length} arma${prof.items.length == 1 ? '' : 's'} '
+              '${prof.items.length} arma${prof.items.length == 1 ? '' : 's'} '
               '· Pociones ${prof.potions} · Éter ${prof.ethers} · '
               'Oro ${prof.credits}',
-              style: DsText.detail()),
+              style: DsText.body()),
+          Text('Equipar y ordenar: INVENTARIO [I].', style: DsText.detail()),
         ]),
         section('ULT', [
           for (final o in ults)
@@ -195,21 +291,40 @@ class _RunCharacterPanelState extends State<RunCharacterPanel> {
           if (boons.isEmpty)
             Text('Todavía no tomaste ninguna.', style: DsText.detail()),
           for (final e in boons.entries)
-            Text(
-                '${RunBoon.byName(e.key)?.text ?? e.key}'
-                '${e.value > 1 ? '  ×${e.value}' : ''}',
-                style: DsText.body()),
+            DsTooltip(
+              card: DsTooltipCard(
+                title: 'Mejora directa',
+                children: [
+                  Text(RunBoon.byName(e.key)?.text ?? e.key),
+                  Text('Dura toda la run; se apila si la repetís.',
+                      style: DsText.detail()),
+                ],
+              ),
+              child: Text(
+                  '${RunBoon.byName(e.key)?.text ?? e.key}'
+                  '${e.value > 1 ? '  ×${e.value}' : ''}',
+                  style: DsText.body()),
+            ),
         ]),
-        section('NODOS DE LA RUN', [
+        section('OBJETOS DE LA RUN', [
           if (byPath.isEmpty)
             Text('Todavía no tomaste ninguno.', style: DsText.detail()),
           for (final e in byPath.entries) ...[
-            Text(tree.paths[e.key]?.name ?? e.key, style: DsText.subtitle()),
+            // La rama solo agrupa (sutil); cada objeto: nombre y efecto.
+            Text(tree.paths[e.key]?.name ?? e.key, style: DsText.detail()),
             for (final id in e.value)
-              Text(
-                  '${tree.nodes[id]!.name}: '
-                  '${passiveEffectsText(tree.nodes[id]!).join(' · ')}',
-                  style: DsText.body()),
+              Padding(
+                padding: EdgeInsets.only(bottom: DsSpace.xs),
+                child: Column(
+                  key: ValueKey('run-item-$id'),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(tree.nodes[id]!.name, style: DsText.subtitle()),
+                    for (final l in passiveEffectsClean(tree.nodes[id]!))
+                      Text(l, style: DsText.body()),
+                  ],
+                ),
+              ),
           ],
         ]),
       ],

@@ -495,7 +495,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
                     _moveFrom = null;
                   })),
       // Deshabilitado (gris) con el motivo especial como tooltip.
-      InventoryTabLayout.stash: (_) => !mine
+      // La Travesía no tiene alijo (roguelike.md § 12.2).
+      InventoryTabLayout.stash: (_) => !mine || shop.controller.isRun
           ? null
           : DsButton('ALIJO',
               key: const ValueKey('inv-stash'),
@@ -1410,7 +1411,8 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             ? setState(() => _confirmDrop = true)
             : shop.controller.dropItem(token, count: count),
       ),
-      // Alijo de la cuenta (characters.md § 3.2).
+      // Alijo de la cuenta (characters.md § 3.2); no en la Travesía.
+      if (!shop.controller.isRun)
       InventoryMenuEntry(
         id: 'stash',
         label: 'Guardar en alijo',

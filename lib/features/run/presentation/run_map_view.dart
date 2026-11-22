@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../game_engine/models/run_state.dart';
+import '../../../game_engine/rules/run_tuning.dart';
 
 /// Color de cada tipo de nodo (siempre acompañado de su letra, no solo el
 /// color).
@@ -24,6 +25,32 @@ String runNodeLetter(RunNodeType t) => switch (t) {
       RunNodeType.armeria => 'A',
       RunNodeType.descanso => 'D',
     };
+
+/// Qué hace cada tipo de nodo (tooltip del mapa y de la leyenda).
+String runNodeHelp(RunNodeType t) => switch (t) {
+      RunNodeType.combate =>
+        'Pelea común. Al ganar: oro y una recompensa (objeto, arma o extra).',
+      RunNodeType.elite =>
+        'Pelea difícil contra una élite. Más oro y a veces una ULT de rama.',
+      RunNodeType.jefe =>
+        'El guardián del piso. Al vencerlo se pasa al piso siguiente.',
+      RunNodeType.tienda =>
+        'Comprá armas de tu clase, pociones y Éter con oro; vendé lo que sobre.',
+      RunNodeType.armeria =>
+        'Mejorá tus armas con oro (forja) y pasá habilidades entre armas (fusión).',
+      RunNodeType.descanso =>
+        'Recupera el ${(RunTuning.restHeal * 100).round()} % de vida y maná.',
+    };
+
+/// Tooltip de un tipo de nodo (molécula).
+Widget runNodeTip(RunNodeType t, {String? extra}) => DsTooltipCard(
+      title: t.label,
+      titleColor: runNodeColor(t),
+      children: [
+        Text(runNodeHelp(t)),
+        if (extra != null) Text(extra, style: DsText.detail()),
+      ],
+    );
 
 /// Un nodo del mapa (átomo): cuadrado con la letra del tipo. [reachable]
 /// lo resalta y lo hace votable; [current] es donde está el grupo;
@@ -78,8 +105,16 @@ class RunNodeTile extends StatelessWidget {
                     : c),
           ),
         );
-    if (onTap == null) return box(false);
-    return DsPressable(onTap: onTap, builder: (_, s) => box(s.hot));
+    final tip = runNodeTip(type,
+        extra: current
+            ? 'El grupo está acá.'
+            : reachable
+                ? 'Clic para votar este camino.'
+                : null);
+    if (onTap == null) return DsTooltip(card: tip, child: box(false));
+    return DsTooltip(
+        card: tip,
+        child: DsPressable(onTap: onTap, builder: (_, s) => box(s.hot)));
   }
 }
 

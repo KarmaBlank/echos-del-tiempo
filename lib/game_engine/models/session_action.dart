@@ -503,10 +503,33 @@ class RunRewardAction extends SessionAction {
 
   /// Fila ULT (Travesía v0.1.1, protocolo 2).
   final int? ult;
-  const RunRewardAction({this.tree, this.weapon, this.extra, this.ult});
+  /// Habilidad libre que se sacrifica si la nueva no entra (§ 12.2).
+  final String? drop;
+  const RunRewardAction(
+      {this.tree, this.weapon, this.extra, this.ult, this.drop});
 }
 
 /// LISTO en tienda / armería / descanso.
 class RunReadyAction extends SessionAction {
   const RunReadyAction();
+}
+
+/// Travesía: equipar ([equip]) o guardar una habilidad libre propia
+/// (§ 12.2). Equipar respeta el tope de habilidades.
+class RunSkillAction extends SessionAction {
+  final String skillId;
+  final bool equip;
+  const RunSkillAction(this.skillId, {required this.equip});
+}
+
+/// Travesía: mejorar una habilidad libre en la armería (§ 12.2).
+class RunUpgradeSkillAction extends SessionAction {
+  final String skillId;
+  const RunUpgradeSkillAction(this.skillId);
+}
+
+/// Travesía: comprar una ULT de la tienda del nodo (roguelike.md § 12.2).
+class RunBuyUltAction extends SessionAction {
+  final String ultId;
+  const RunBuyUltAction(this.ultId);
 }

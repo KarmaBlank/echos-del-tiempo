@@ -1207,7 +1207,18 @@ final travesiaCodec = _tuningCodec(BalanceKind.travesia, const [
   BalanceField('enemyAtk', 'ATQ enemigo (×, antes de la dificultad)', _dec, min: 0.1, max: 5, step: 0.05),
   BalanceField('levelPerFloor', 'Nivel enemigo: + por piso', _int, max: 20),
   BalanceField('levelPerLayer', 'Nivel enemigo: + por capa', _frac, max: 2, step: 0.05),
-  BalanceField('attrPerLevel', 'Atributos por nivel de enemigos (a los cuatro)', _int, max: 10),
+  BalanceField('ultChanceCombate', 'ULT en la recompensa: combate', _frac, max: 1, step: 0.01),
+  BalanceField('ultChanceElite', 'ULT en la recompensa: élite', _frac, max: 1, step: 0.01),
+  BalanceField('ultChanceJefe', 'ULT en la recompensa: jefe', _frac, max: 1, step: 0.01),
+  BalanceField('shopUlts', 'ULT a la venta por tienda', _int, max: 6),
+  BalanceField('ultPrice', 'Precio de una ULT en la tienda', _int, min: 1, max: 5000),
+  BalanceField('maxSkills', 'Máximo de habilidades (con ATACAR y DEFENDER)', _int, min: 2, max: 12),
+  BalanceField('skillsInExtra', 'Habilidades nuevas en la fila Extra', _int, max: 3),
+  BalanceField('skillUpCost', 'Mejora de habilidad: oro × nivel', _int, min: 1, max: 2000),
+  BalanceField('skillUpPower', 'Mejora de habilidad: + poder por nivel', _frac, max: 2, step: 0.01),
+  BalanceField('skillUpMax', 'Mejora de habilidad: nivel máximo', _int, max: 10),
+  BalanceField('attrReward', 'Recompensa de atributo: puntos', _int, min: 1, max: 30),
+  BalanceField('weaponLevelAhead', 'Armas ofrecidas: niveles sobre los enemigos', _int, max: 20),
 ]);
 
 final materialsCodec = _tuningCodec(BalanceKind.materials, const [

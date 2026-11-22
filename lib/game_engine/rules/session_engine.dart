@@ -831,7 +831,10 @@ class _Op {
             RunPrepAction() ||
             RunVoteAction() ||
             RunRewardAction() ||
-            RunReadyAction():
+            RunReadyAction() ||
+            RunBuyUltAction() ||
+            RunSkillAction() ||
+            RunUpgradeSkillAction():
         return false;
       case MoveAction():
         if (a.epoch != p.epoch ||
@@ -1246,6 +1249,8 @@ class _Op {
   void achievements(
       {SessionPlayer? actor, SessionAction? action, PlayerProfile? before}) {
     if (!e.achievementsEnabled) return;
+    // La Travesía no tiene hazañas (roguelike.md § 12.2).
+    if (e.gameMode == GameModeKind.travesia) return;
     if (s.tutorial != null) return; // práctica guionada: no cuenta
     final rules = e.achievements;
     final hits = <String, AchievementHits>{};

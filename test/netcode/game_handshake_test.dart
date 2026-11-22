@@ -13,7 +13,7 @@ void main() {
   test('Mundo en 37 (v0.20.17: nada del piso se pierde) y Travesía arranca su secuencia en 1', () {
     expect(WireGame.mundo.protocol, 37);
     expect(kProtocolVersion, 37);
-    expect(WireGame.travesia.protocol, 3);
+    expect(WireGame.travesia.protocol, 4);
     expect(WireGame.mundo.id, isNot(WireGame.travesia.id));
   });
 

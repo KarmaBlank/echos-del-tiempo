@@ -9,8 +9,8 @@ import 'run_tuning.dart';
 /// en todos los dispositivos (`mulberry32`).
 ///
 /// Reglas: la primera capa es de combate; la primera élite no aparece
-/// antes de [RunTuning.firstEliteLayer]; nunca dos descansos seguidos en
-/// un camino; la capa anterior al jefe es toda de descanso; cada línea
+/// antes de [RunTuning.firstEliteLayer]; nunca dos paradas seguidas
+/// (tienda, armería o descanso) en un camino; la capa anterior al jefe es toda de descanso; cada línea
 /// tiene al menos una tienda y una armería.
 class RunMapGenerator {
   const RunMapGenerator();
@@ -97,29 +97,58 @@ class RunMapGenerator {
           } else if (l == layers - 1) {
             types[id] = RunNodeType.descanso;
           } else {
-            final restOk = l < layers - 2 &&
-                !preds[id]!.any((p) => types[p] == RunNodeType.descanso);
+            // Nunca dos paradas seguidas (tienda / armería / descanso),
+            // ni una parada justo antes de la capa de descanso.
+            final stopOk = l < layers - 2 &&
+                !preds[id]!.any((p) => types[p].isStop);
             types[id] = _pick(rnd,
-                elite: l >= RunTuning.firstEliteLayer, rest: restOk);
+                elite: l >= RunTuning.firstEliteLayer, stop: stopOk);
           }
         }
       }
     }
-    // Al menos una tienda y una armería por línea (cambian un combate).
-    for (var lane = 0; lane < lanes; lane++) {
-      for (final want in const [RunNodeType.tienda, RunNodeType.armeria]) {
-        final inLane = [
-          for (var l = 0; l < layers; l++) ...ids[l][lane],
-        ];
-        if (inLane.any((id) => types[id] == want)) continue;
-        final options = [
-          for (var l = 2; l <= layers - 3; l++)
-            for (final id in ids[l][lane])
-              if (types[id] == RunNodeType.combate) id,
-        ];
-        if (options.isEmpty) continue;
-        types[options[(rnd() * options.length).floor()]] = want;
+    // Al menos una tienda y una armería por línea (cambian un combate sin
+    // paradas al lado; si no hay, uno sin parada antes y lo que le siga
+    // vuelve a combate). Varias pasadas: un arreglo puede romper otra línea.
+    final layerOf = <int, int>{
+      for (var l = 0; l < layers; l++)
+        for (final lane in ids[l])
+          for (final id in lane) id: l,
+    };
+    for (var pass = 0; pass < 8; pass++) {
+      var changed = false;
+      for (var lane = 0; lane < lanes; lane++) {
+        for (final want in const [RunNodeType.tienda, RunNodeType.armeria]) {
+          final inLane = [
+            for (var l = 0; l < layers; l++) ...ids[l][lane],
+          ];
+          if (inLane.any((id) => types[id] == want)) continue;
+          bool predsOk(int id) => !preds[id]!.any((p) => types[p].isStop);
+          bool calm(int id) =>
+              predsOk(id) && !edges[id]!.any((n) => types[n].isStop);
+          List<int> pick(bool Function(int) ok) => [
+                for (var l = 2; l <= layers - 3; l++)
+                  for (final id in ids[l][lane])
+                    if (types[id] == RunNodeType.combate && ok(id)) id,
+              ];
+          var options = pick(calm);
+          if (options.isEmpty) options = pick(predsOk);
+          if (options.isEmpty) options = pick((_) => true);
+          if (options.isEmpty) continue;
+          final id = options[(rnd() * options.length).floor()];
+          types[id] = want;
+          for (final n in preds[id]!) {
+            if (types[n].isStop) types[n] = RunNodeType.combate;
+          }
+          for (final n in edges[id]!) {
+            if (types[n].isStop && layerOf[n] != layers - 1) {
+              types[n] = RunNodeType.combate;
+            }
+          }
+          changed = true;
+        }
       }
+      if (!changed) break;
     }
 
     // 5. Nodos.
@@ -152,13 +181,13 @@ class RunMapGenerator {
   }
 
   static RunNodeType _pick(RandomSource rnd,
-      {required bool elite, required bool rest}) {
+      {required bool elite, required bool stop}) {
     final table = <(RunNodeType, int)>[
       (RunNodeType.combate, RunTuning.weightCombate),
       if (elite) (RunNodeType.elite, RunTuning.weightElite),
-      (RunNodeType.tienda, RunTuning.weightTienda),
-      (RunNodeType.armeria, RunTuning.weightArmeria),
-      if (rest) (RunNodeType.descanso, RunTuning.weightDescanso),
+      if (stop) (RunNodeType.tienda, RunTuning.weightTienda),
+      if (stop) (RunNodeType.armeria, RunTuning.weightArmeria),
+      if (stop) (RunNodeType.descanso, RunTuning.weightDescanso),
     ];
     final total = table.fold<int>(0, (a, e) => a + e.$2);
     var r = rnd() * total;
