@@ -1,4 +1,6 @@
 import 'dart:io';
+
+import '../../../core/edition/game_data_guard_io.dart';
 import 'dart:typed_data';
 
 import 'package:yaml/yaml.dart';
@@ -32,15 +34,11 @@ Future<EditableSpriteOverrides?> createLocalSpriteOverrides([String? dir]) async
 /// `main_dev` (`useLocalOverrides`); el juego publicado no.
 class LocalSpriteOverrides implements EditableSpriteOverrides {
   LocalSpriteOverrides(this.root) {
-    final appData = Platform.environment['APPDATA'];
-    if (appData != null &&
-        _norm(root).startsWith(_norm('$appData${Platform.pathSeparator}EcosDelTiempo'))) {
+    if (isInsideGameData(root)) {
       throw StateError('Los overrides no van en la carpeta de datos del juego');
     }
   }
 
-  static String _norm(String p) =>
-      File(p).absolute.path.replaceAll('\\', '/').toLowerCase();
 
   @override
   final String root;

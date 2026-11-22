@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import '../edition/game_data_guard_io.dart';
+
 import 'package:flutter/services.dart';
 
 import 'layout_catalog.dart';
@@ -12,16 +14,11 @@ import '../data/manifest_text.dart';
 /// datos del juego.
 class LocalLayoutOverrides implements EditableLayoutOverrides {
   LocalLayoutOverrides(this.root) {
-    final appData = Platform.environment['APPDATA'];
-    if (appData != null &&
-        _norm(root)
-            .startsWith(_norm('$appData${Platform.pathSeparator}EcosDelTiempo'))) {
+    if (isInsideGameData(root)) {
       throw StateError('Los overrides no van en la carpeta de datos del juego');
     }
   }
 
-  static String _norm(String p) =>
-      File(p).absolute.path.replaceAll('\\', '/').toLowerCase();
 
   final String root;
   static const folder = 'layouts';

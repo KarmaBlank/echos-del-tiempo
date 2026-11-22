@@ -714,3 +714,50 @@ misión 1): 2 jugadores 7.5 KB, 6 → 11.0 KB, 8 → 12.7 KB, 12 → 16.2 KB
 por cliente. El control de flujo es por cliente (`maxInFlight = 6`) y
 los perfiles van como deltas (§ "Perfiles solo cuando cambian"): crece
 la subida total del host (≈ × clientes), no el costo por cliente.
+
+## Un protocolo por juego (Ecos del Tiempo y Travesía)
+
+El repo publica dos juegos (distribution.md § "Dos juegos, un repo") y
+cada uno tiene **su propia secuencia** de protocolo. El composition root
+elige `WireGame` (vía `GameEdition.wire`) y se lo pasa a la sesión
+(`ProtocolNetSession(game:)`, `registerP2PNetcode` / `registerLanNetcode`);
+ni la sesión ni `features/*` miran el nombre del flavor.
+
+| Juego | id (`g`) | `v` | Constante |
+|---|---|---|---|
+| Ecos del Tiempo (Mundo) | `mundo` | 31 | `kProtocolVersion` |
+| Ecos del Tiempo: Travesía | `travesia` | 1 | `kTravesiaProtocolVersion` |
+
+- `hello` lleva `g` (el id del juego del cliente). Es aditivo: un host
+  Mundo viejo (31) lo ignora, así que **Mundo sigue en 31** y los
+  jugadores actuales no necesitan actualizar. Un `hello` sin `g` es un
+  Mundo anterior a la separación.
+- El host compara primero el juego y después `v`:
+  - otro juego y el cliente mandó `g` → `{"t":"reject","why":"game","g":"<juego del host>"}`;
+    el cliente ve «Esa sala es de «Ecos del Tiempo: Travesía»; desde este
+    juego no se puede entrar.» (o con «Ecos del Tiempo»).
+  - otro juego sin `g` (Mundo viejo en una sala de Travesía) → `reject
+    version`, el único motivo que ese cliente conoce.
+  - mismo juego, `v` distinta → `reject version`.
+- Travesía contra un host Mundo viejo (sin `g` en su lógica): el `v` (1
+  vs 31) no coincide → `reject version`.
+- El `welcome` manda el `v` del juego de la sala.
+- Subir el protocolo de un juego no toca el del otro.
+
+## Travesía, protocolo 1 (roguelike.md)
+
+Solo existe en el protocolo de Travesía; el formato de Mundo es el de
+siempre (el MVP lo había subido a 32 y se volvió a 31: el `run` del
+snapshot solo se escribe si hay una run, y las acciones de la run solo las
+manda Travesía).
+
+- Snapshot: `run` opcional (`RunState`: `seed`, `zones`, `f` piso, `n`
+  nodo actual, `ph` fase, `v` votos `{id: nodo}`, `o` ofertas pendientes
+  `{id: {n, w, x}}`, `ok` LISTO, `ms` racha, `win`, `w` peleas ganadas).
+  El mapa no viaja: cada dispositivo lo genera de `seed`
+  (`RunMapGenerator`, `mulberry32`).
+- Acciones: `runStart`, `runVote {n}`, `runReward {tr?, w?, x?}` (índice
+  por fila; ausente = saltar), `runReady`. El Mundo las rechaza.
+- Eventos: `runNode {f, n}` (el grupo entró a un nodo) y `runEnd {win}`.
+- El host decide todo (votación, empate por semilla, ofertas por
+  jugador); el cliente solo marca y elige.

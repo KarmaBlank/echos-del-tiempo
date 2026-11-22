@@ -1,7 +1,8 @@
 ﻿<#
 .SYNOPSIS
-  Arma y publica un release de Ecos del Tiempo para Windows (instalador +
-  auto-actualización). Ver docs/specs/distribution.md.
+  Arma y publica un release de Ecos del Tiempo (o, con -Juego Travesia, de
+  Ecos del Tiempo: Travesía) para Windows (instalador + auto-actualización).
+  Ver docs/specs/distribution.md § "Dos juegos, un repo".
 
 .DESCRIPTION
   1. (sin -DryRun) Verifica: rama main, árbol git limpio, al día con
@@ -19,14 +20,25 @@
   7. (sin -DryRun) Commit "chore(release): vX.Y.Z" del pubspec + versión,
      push a origin main y `gh release create vX.Y.Z <setup> <sha256>`.
 
+  -Juego Travesia (por defecto Mundo, el flujo de arriba sin cambios):
+  tag travesia-vX.Y.Z, versión en lib/app/travesia_version.dart (el
+  pubspec no se toca), flavor lib/app/flavors/main_roguelike.dart,
+  installer\ecos_travesia.iss -> dist\EcosDelTiempo-Travesia-Setup-X.Y.Z.exe,
+  capturas de docs\release_shots\travesia-vX.Y.Z y travesia-base, y el
+  release sale con --latest=false --prerelease (nunca es el "latest" del
+  repo, que sigue siendo de Ecos del Tiempo).
+
 .EXAMPLE
   .\tool\release.ps1 -Version 0.2.0 -Notes "Jefe nuevo y arreglos" -DryRun
   .\tool\release.ps1 -Version 0.2.0 -NotesFile notas.md
+  .\tool\release.ps1 -Juego Travesia -Version 0.1.0 -Notes "Primera Travesía" -DryRun
 #>
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
   [string]$Version,
+  [ValidateSet('Mundo', 'Travesia')]
+  [string]$Juego = 'Mundo',
   [string]$Notes = '',
   [string]$NotesFile = '',
   [switch]$DryRun,
@@ -51,9 +63,28 @@ $semver = '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z
 if ($Version.StartsWith('v')) { $Version = $Version.Substring(1) }
 if ($Version -notmatch $semver) { Fail "Versión inválida '$Version' (formato X.Y.Z o X.Y.Z-pre.N)" }
 $numeric = ($Version -split '-')[0]
-$Tag = "v$Version"
+
+# --- Juego (docs/specs/distribution.md § "Dos juegos, un repo") -----------
+if ($Juego -eq 'Travesia') {
+  $GameTitle = 'Ecos del Tiempo: Travesía'
+  $TagPrefix = 'travesia-v'
+  $Target = 'lib/app/flavors/main_roguelike.dart'
+  $IssFile = 'installer\ecos_travesia.iss'
+  $SetupPrefix = 'EcosDelTiempo-Travesia-Setup-'
+  $VersionFile = 'lib/app/travesia_version.dart'
+  $ShotsBase = 'docs\release_shots\travesia-base'
+} else {
+  $GameTitle = 'Ecos del Tiempo'
+  $TagPrefix = 'v'
+  $Target = 'lib/app/flavors/main_p2p.dart'
+  $IssFile = 'installer\ecos_del_tiempo.iss'
+  $SetupPrefix = 'EcosDelTiempo-Setup-'
+  $VersionFile = 'lib/app/app_version.dart'
+  $ShotsBase = 'docs\release_shots\base'
+}
+$Tag = "$TagPrefix$Version"
 if ($NotesFile) { $Notes = [IO.File]::ReadAllText((Resolve-Path $NotesFile), [Text.Encoding]::UTF8) }
-if (-not $Notes) { $Notes = "Ecos del Tiempo $Tag" }
+if (-not $Notes) { $Notes = "$GameTitle $Tag" }
 
 $env:Path = "$FlutterBin;$env:Path"
 $Flutter = Join-Path $FlutterBin 'flutter.bat'
@@ -88,13 +119,30 @@ if (-not $DryRun) {
 }
 
 # --- 1. Versión en pubspec y app_version.dart -----------------------------
-Step "Versión $Version"
+Step "Versión $Version ($GameTitle)"
 $pubspecPath = Join-Path $Root 'pubspec.yaml'
 $pubspec = [IO.File]::ReadAllText($pubspecPath, [Text.Encoding]::UTF8)
 $m = [regex]::Match($pubspec, '(?m)^version:[ \t]*([^\s+]+)(?:\+(\d+))?[ \t]*(?=\r?$)')
 if (-not $m.Success) { Fail 'No encuentro la línea version: en pubspec.yaml' }
 $oldVersion = $m.Groups[1].Value
 $oldBuild = if ($m.Groups[2].Success) { [int]$m.Groups[2].Value } else { 0 }
+if ($Juego -eq 'Travesia') {
+  # Travesía tiene su propia versión: el pubspec (de Ecos del Tiempo) no se
+  # toca; el build number del exe es el del pubspec tal cual.
+  $build = [math]::Max($oldBuild, 1)
+  $travesiaDart = @"
+// GENERADO por tool/release.ps1 -Juego Travesia — no editar a mano.
+// Versión propia de Ecos del Tiempo: Travesía (docs/specs/distribution.md
+// § "Dos juegos, un repo"): no sigue al ``version:`` del pubspec, que es la
+// de Ecos del Tiempo.
+
+/// Versión instalada de Travesía (``X.Y.Z``), la del tag ``travesia-vX.Y.Z``.
+const String travesiaVersion = '$Version';
+
+"@
+  [IO.File]::WriteAllText((Join-Path $Root 'lib\app\travesia_version.dart'), $travesiaDart.Replace("`r`n", "`n"), $Utf8NoBom)
+  Write-Host "travesia_version.dart -> $Version (pubspec sin cambios: $oldVersion+$oldBuild)"
+} else {
 $build = if ($oldVersion -eq $Version) { [math]::Max($oldBuild, 1) } else { $oldBuild + 1 }
 $pubspec = $pubspec.Substring(0, $m.Index) + "version: $Version+$build" +
   $pubspec.Substring($m.Index + $m.Length)
@@ -112,6 +160,7 @@ const String appVersion = '$Version';
 "@
 [IO.File]::WriteAllText((Join-Path $Root 'lib\app\app_version.dart'), $versionDart.Replace("`r`n", "`n"), $Utf8NoBom)
 Write-Host "pubspec: $oldVersion+$oldBuild -> $Version+$build"
+}
 
 # --- 2. Análisis y tests ---------------------------------------------------
 if (-not $SkipChecks) {
@@ -121,9 +170,9 @@ if (-not $SkipChecks) {
   Run $Flutter @('test')
 }
 
-# --- 3. Build release (flavor P2P) ----------------------------------------
-Step 'flutter build windows --release (main_p2p)'
-Run $Flutter @('build', 'windows', '--release', '-t', 'lib/app/flavors/main_p2p.dart',
+# --- 3. Build release (flavor del juego) ----------------------------------
+Step "flutter build windows --release ($Target)"
+Run $Flutter @('build', 'windows', '--release', '-t', $Target,
   '--build-name', $Version, '--build-number', "$build")
 $bundle = Join-Path $Root 'build\windows\x64\runner\Release'
 if (-not (Test-Path (Join-Path $bundle 'echos_del_tiempo.exe'))) { Fail "No está el exe en $bundle" }
@@ -154,8 +203,8 @@ $iscc = @(
 if (-not $iscc) { Fail 'No encuentro ISCC.exe (Inno Setup 6).' }
 Run $iscc @('/Q', "/DAppVersion=$Version", "/DAppVersionNumeric=$numeric",
   "/DSourceDir=$bundle", "/DRuntimeDir=$runtime", "/DOutputDir=$dist",
-  (Join-Path $Root 'installer\ecos_del_tiempo.iss'))
-$setupName = "EcosDelTiempo-Setup-$Version.exe"
+  (Join-Path $Root $IssFile))
+$setupName = "$SetupPrefix$Version.exe"
 $setup = Join-Path $dist $setupName
 if (-not (Test-Path $setup)) { Fail "ISCC no generó $setup" }
 
@@ -170,13 +219,17 @@ Write-Host "SHA-256:    $hash"
 
 if ($DryRun) {
   Write-Host "`nDRY RUN: no se publicó nada. Para publicar (desde main, árbol limpio):" -ForegroundColor Yellow
-  Write-Host "  .\tool\release.ps1 -Version $Version -Notes `"...`""
+  Write-Host "  .\tool\release.ps1 -Juego $Juego -Version $Version -Notes `"...`""
   exit 0
 }
 
 # --- 7. Commit + push + release --------------------------------------------
 Step "Publicando $Tag"
-Run git @('add', 'pubspec.yaml', 'lib/app/app_version.dart')
+if ($Juego -eq 'Travesia') {
+  Run git @('add', $VersionFile)
+} else {
+  Run git @('add', 'pubspec.yaml', $VersionFile)
+}
 & git diff --cached --quiet
 if ($LASTEXITCODE -ne 0) {
   Run git @('commit', '-m', "chore(release): $Tag")
@@ -184,6 +237,9 @@ if ($LASTEXITCODE -ne 0) {
 }
 $prerelease = @()
 if ($Version.Contains('-')) { $prerelease = @('--prerelease') }
+# Travesía nunca es el "latest" del repo: el actualizador de Ecos del Tiempo
+# usa releases/latest (docs/specs/distribution.md § "Dos juegos, un repo").
+if ($Juego -eq 'Travesia') { $prerelease = @('--latest=false', '--prerelease') }
 # Capturas (docs/specs/distribution.md § "Capturas en el release"): siempre
 # las base (docs/release_shots/base) y, si hay, las nuevas de esta versión
 # (docs/release_shots/vX.Y.Z). Se suben como archivos del release y se
@@ -192,8 +248,8 @@ $shotAssets = @()
 $shotMd = ''
 $baseUrl = "https://github.com/KarmaBlank/echos-del-tiempo/releases/download/$Tag"
 foreach ($sec in @(
-    @{ Dir = "docs\release_shots\v$Version"; Prefix = 'nuevo'; Title = "### Novedades de $Tag" },
-    @{ Dir = 'docs\release_shots\base'; Prefix = 'juego'; Title = '### El juego' })) {
+    @{ Dir = "docs\release_shots\$Tag"; Prefix = 'nuevo'; Title = "### Novedades de $Tag" },
+    @{ Dir = $ShotsBase; Prefix = 'juego'; Title = '### El juego' })) {
   $dir = Join-Path $Root $sec.Dir
   if (-not (Test-Path $dir)) { continue }
   $pngs = Get-ChildItem $dir -Filter *.png | Sort-Object Name
@@ -214,6 +270,6 @@ if ($shotMd) { $Notes = $Notes.TrimEnd() + "`n`n<!-- capturas -->`n## Capturas`n
 $notesTmp = Join-Path ([IO.Path]::GetTempPath()) "ecos-release-notes-$Tag.md"
 [IO.File]::WriteAllText($notesTmp, $Notes, (New-Object System.Text.UTF8Encoding($false)))
 Run gh (@('release', 'create', $Tag, $setup, $shaFile) + $shotAssets + @(
-  '--target', 'main', '--title', "Ecos del Tiempo $Tag", '--notes-file', $notesTmp) + $prerelease)
+  '--target', 'main', '--title', "$GameTitle $Tag", '--notes-file', $notesTmp) + $prerelease)
 Remove-Item $notesTmp -ErrorAction SilentlyContinue
 Write-Host "`nPublicado: https://github.com/KarmaBlank/echos-del-tiempo/releases/tag/$Tag" -ForegroundColor Green

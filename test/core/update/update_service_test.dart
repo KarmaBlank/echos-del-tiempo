@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:echos_del_tiempo/core/update/release_channel.dart';
 import 'package:echos_del_tiempo/core/update/release_info.dart';
 import 'package:echos_del_tiempo/core/update/sha256.dart';
 import 'package:echos_del_tiempo/core/update/update_service.dart';
@@ -45,8 +46,12 @@ class FakeGitHub {
   }
 
   Map<String, Object?> releaseJson(String tag,
-      {required List<int> installer, String? sha, bool withSha = true}) {
-    final name = 'EcosDelTiempo-Setup-${tag.substring(1)}.exe';
+      {required List<int> installer,
+      String? sha,
+      bool withSha = true,
+      String? installerName,
+      bool prerelease = false}) {
+    final name = installerName ?? 'EcosDelTiempo-Setup-${tag.substring(1)}.exe';
     files[name] = installer;
     final assets = <Map<String, Object?>>[
       {'name': name, 'size': installer.length, 'browser_download_url': dl(name)},
@@ -60,7 +65,13 @@ class FakeGitHub {
         'browser_download_url': dl('$name.sha256'),
       });
     }
-    return {'tag_name': tag, 'body': 'notas', 'draft': false, 'assets': assets};
+    return {
+      'tag_name': tag,
+      'body': 'notas',
+      'draft': false,
+      'prerelease': prerelease,
+      'assets': assets,
+    };
   }
 }
 
@@ -90,6 +101,55 @@ void main() {
       );
 
   final payload = List<int>.generate(70000, (i) => i % 251);
+
+  group('canal Travesía (/releases, prefijo travesia-v)', () {
+    GitHubUpdateService tsvc(String current) => GitHubUpdateService(
+          currentVersion: current,
+          channel: ReleaseChannel.travesia,
+          endpoint: gh.api,
+          checkTimeout: const Duration(milliseconds: 500),
+          downloadDir: tmp,
+          exitApp: (_) {},
+        );
+    Map<String, Object?> trav(String v, {bool pre = false}) => gh.releaseJson(
+        'travesia-v$v',
+        installer: payload,
+        installerName: 'EcosDelTiempo-Travesia-Setup-$v.exe',
+        prerelease: pre);
+
+    test('elige la semver más alta del prefijo, prereleases incluidos',
+        () async {
+      gh.apiJson = [
+        gh.releaseJson('v0.99.0', installer: payload),
+        trav('0.1.0'),
+        trav('0.3.0-beta.1', pre: true),
+        trav('0.2.0'),
+      ];
+      final r = await tsvc('0.1.0').check();
+      expect(r, isA<UpdateAvailable>());
+      final rel = (r as UpdateAvailable).release;
+      expect(rel.version.toString(), '0.3.0-beta.1');
+      expect(rel.installer.name,
+          'EcosDelTiempo-Travesia-Setup-0.3.0-beta.1.exe');
+    });
+
+    test('los tags de Mundo no cuentan', () async {
+      gh.apiJson = [gh.releaseJson('v0.99.0', installer: payload)];
+      final r = await tsvc('0.1.0').check();
+      expect(r, isA<UpToDate>());
+      expect((r as UpToDate).latest, isNull);
+    });
+
+    test('ya en la más alta: UpToDate', () async {
+      gh.apiJson = [trav('0.1.0')];
+      expect(await tsvc('0.1.0').check(), isA<UpToDate>());
+    });
+
+    test('Mundo ignora un release de Travesía', () async {
+      gh.apiJson = trav('0.2.0');
+      expect(await svc().check(), isA<UpdateCheckFailed>());
+    });
+  });
 
   group('check', () {
     test('versión mayor → UpdateAvailable', () async {

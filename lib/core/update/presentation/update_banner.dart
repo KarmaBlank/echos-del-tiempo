@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../app/app_version.dart';
+import '../../edition/game_edition.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
@@ -23,7 +23,8 @@ import 'update_controller.dart';
 class UpdateBanner extends StatefulWidget {
   const UpdateBanner({super.key, this.service, this.autoCheck});
 
-  /// `null`: GitHub Releases del repo con la versión de `app_version.dart`.
+  /// `null`: GitHub Releases del repo con la versión y el canal del juego
+  /// instalado (`GameEdition.current`).
   final UpdateService? service;
 
   /// Buscar al montarse. `null`: solo en builds release (lo que reciben
@@ -36,7 +37,9 @@ class UpdateBanner extends StatefulWidget {
 
 class _UpdateBannerState extends State<UpdateBanner> {
   late final UpdateController _c = UpdateController(
-      widget.service ?? GitHubUpdateService(currentVersion: appVersion));
+      widget.service ?? GitHubUpdateService(
+          currentVersion: GameEdition.current.version,
+          channel: GameEdition.current.releases));
 
   @override
   void initState() {

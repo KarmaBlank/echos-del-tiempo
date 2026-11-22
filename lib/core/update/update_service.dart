@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../persistence/exit_guard.dart';
+import 'release_channel.dart';
 import 'release_info.dart';
 import 'semver.dart';
 import 'sha256.dart';
@@ -80,6 +81,7 @@ abstract interface class UpdateService {
 class GitHubUpdateService implements UpdateService {
   GitHubUpdateService({
     required String currentVersion,
+    this.channel = ReleaseChannel.mundo,
     Uri? endpoint,
     HttpClient Function()? httpClient,
     this.checkTimeout = const Duration(seconds: 8),
@@ -90,7 +92,8 @@ class GitHubUpdateService implements UpdateService {
     Future<void> Function()? beforeExit,
   })  : currentVersion =
             SemVer.tryParse(currentVersion) ?? const SemVer(0, 0, 0),
-        endpoint = endpoint ?? defaultEndpoint,
+        endpoint = endpoint ??
+            (channel.useLatestEndpoint ? defaultEndpoint : listEndpoint),
         _httpClient = httpClient ?? HttpClient.new,
         _downloadDir = downloadDir,
         _exit = exitApp ?? exit,
@@ -99,6 +102,13 @@ class GitHubUpdateService implements UpdateService {
   /// Repo público del juego.
   static final defaultEndpoint = Uri.parse(
       'https://api.github.com/repos/KarmaBlank/echos-del-tiempo/releases/latest');
+
+  /// Lista de releases (canales que no son el "latest" del repo).
+  static final listEndpoint = Uri.parse(
+      'https://api.github.com/repos/KarmaBlank/echos-del-tiempo/releases?per_page=100');
+
+  /// De qué releases se actualiza este juego (composition root).
+  final ReleaseChannel channel;
 
   /// Argumentos de Inno Setup para actualizar sin preguntas. `/RELAUNCH`
   /// es propio de installer/ecos_del_tiempo.iss: abre el juego al terminar.
@@ -179,7 +189,9 @@ class GitHubUpdateService implements UpdateService {
           'No se pudo buscar actualizaciones (GitHub respondió '
           '${res.statusCode}).');
     }
-    final release = ReleaseInfo.tryFromJson(jsonDecode(body));
+    final json = jsonDecode(body);
+    if (!channel.useLatestEndpoint) return _pickFromList(json);
+    final release = ReleaseInfo.tryFromJson(json);
     if (release == null) {
       return const UpdateCheckFailed(
           'El último release publicado no trae un instalador válido.');
@@ -188,6 +200,25 @@ class GitHubUpdateService implements UpdateService {
       return UpdateAvailable(current: currentVersion, release: release);
     }
     return UpToDate(current: currentVersion, latest: release.version);
+  }
+
+  /// `/releases`: el de semver más alta entre los tags del canal.
+  UpdateCheck _pickFromList(Object? json) {
+    if (json is! List) throw const FormatException('se esperaba una lista');
+    ReleaseInfo? best;
+    for (final r in json) {
+      if (r is Map && r['prerelease'] == true && !channel.includePrereleases) {
+        continue;
+      }
+      final info = ReleaseInfo.tryFromJson(r, channel: channel);
+      if (info == null) continue;
+      if (info.version.isPrerelease && !channel.includePrereleases) continue;
+      if (best == null || info.version > best.version) best = info;
+    }
+    if (best != null && best.version > currentVersion) {
+      return UpdateAvailable(current: currentVersion, release: best);
+    }
+    return UpToDate(current: currentVersion, latest: best?.version);
   }
 
   static String _rateLimitMessage(HttpHeaders h) {

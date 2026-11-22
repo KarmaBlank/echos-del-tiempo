@@ -8,14 +8,19 @@ import 'game_map.dart' show WorldPoint;
 import 'item.dart';
 import 'loot.dart';
 import 'player_profile.dart';
+import 'run_state.dart';
 import 'turn_timer.dart';
 import 'tutorial.dart';
 
 export 'exploration.dart';
 export 'turn_timer.dart';
+export 'run_state.dart';
 
 /// Modo de la sesión (`S.mode` del prototipo).
-enum SessionMode { lobby, prep, field, battle, levelUp, result }
+///
+/// `run`: la Travesía fuera de batalla (mapa, recompensa, tienda / armería
+/// / descanso, fin; ver `RunState.phase` y docs/specs/roguelike.md).
+enum SessionMode { lobby, prep, field, battle, levelUp, result, run }
 
 /// Objetivo de una misión (`OBJN`).
 enum ObjectiveKind {
@@ -654,6 +659,7 @@ class GameSession {
     this.abyssOwner,
     this.tutorial,
     this.tutorialRuns = 0,
+    this.run,
   })  : players = players ?? LinkedHashMap(),
         ground = ground ?? [],
         atlas = List.unmodifiable(atlas ?? const <String>[]);
@@ -727,6 +733,9 @@ class GameSession {
   /// (§ 4.3).
   int tutorialRuns;
 
+  /// La Travesía en curso (docs/specs/roguelike.md); `null` en el Mundo.
+  RunState? run;
+
   /// Se juega el TUTORIAL.
   bool get inTutorial => tutorial != null;
 
@@ -767,7 +776,12 @@ class GameSession {
   }
 
   /// Tienda, herrería, fusión y equipar (`canShop`).
-  bool get canShop => mode == SessionMode.lobby || mode == SessionMode.prep;
+  bool get canShop =>
+      mode == SessionMode.lobby ||
+      mode == SessionMode.prep ||
+      // Travesía: equipar y el inventario fuera de batalla; comprar y
+      // craftear los acota el motor al nodo de tienda / armería.
+      (mode == SessionMode.run && run != null && run!.phase != RunPhase.over);
 
   /// Desarmar o vender (también en lote, "Limpiar inventario"): además
   /// del pueblo, en la aventura fuera de batalla (loot.md § 21).
@@ -808,5 +822,6 @@ class GameSession {
         abyssOwner: abyssOwner,
         tutorial: tutorial?.copy(),
         tutorialRuns: tutorialRuns,
+        run: run?.copy(),
       );
 }

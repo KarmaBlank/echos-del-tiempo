@@ -13,6 +13,7 @@ import '../models/battle_state.dart';
 import '../models/build_wants.dart';
 import '../models/eco.dart';
 import '../models/game_map.dart';
+import '../models/game_mode.dart';
 import '../models/game_session.dart';
 import '../models/item.dart';
 import '../models/loot.dart';
@@ -39,6 +40,9 @@ import 'mulberry32.dart';
 import 'party_limits.dart';
 import 'passive_tree_rules.dart';
 import 'progression_rules.dart';
+import 'reward_offer_rules.dart';
+import 'run_rules.dart';
+import 'run_tuning.dart';
 import 'trial_rules.dart';
 import 'tutorial_rules.dart';
 import 'companion_ai.dart';
@@ -53,6 +57,7 @@ import '../models/ult_def.dart';
 import '../fx/cinematic_durations.dart';
 
 part 'session_engine_tutorial.dart';
+part 'session_engine_run.dart';
 
 /// Genera la semilla de cada misión (`(Math.random() * 1e9) | 0`).
 typedef SeedSource = int Function();
@@ -109,6 +114,7 @@ class SessionEngine {
     int Function()? nowSeconds,
     this.achievementsEnabled = true,
     this.cinematics,
+    this.gameMode = GameModeKind.mundo,
   })  : nowSeconds = nowSeconds ??
             (() => DateTime.now().millisecondsSinceEpoch ~/ 1000),
         tutorials = tutorials ?? TutorialRules(catalog: progression.catalog),
@@ -116,6 +122,10 @@ class SessionEngine {
         _ecoRandom = ecoRandom ?? math.Random().nextDouble,
         _abyssRandom = abyssRandom ?? math.Random().nextDouble,
         _seeds = seeds ?? (() => math.Random().nextInt(1000000000));
+
+  /// Versión del juego (docs/specs/roguelike.md § 9): la inyecta el
+  /// composition root. En [GameModeKind.travesia] la sala juega la run.
+  final GameModeKind gameMode;
 
   /// Azar propio de los Jefes del Abismo (Fragmentos y recompensas
   /// exclusivas, docs/specs/abyss_bosses.md § 1.1): no mueve ninguna
@@ -684,6 +694,8 @@ class _Op {
       {String? leaderId, int tutorialVersion = kTutorialVersion}) {
     var profile = rules.normalize(raw);
     if (profile.name.isEmpty) profile = profile.copyWith(name: 'Héroe');
+    // Travesía: entra con un personaje de run (nunca el del Mundo).
+    profile = runEntryProfile(profile);
     final d = rules.derivedStats(profile);
     final sp = spawnPos(s.players.length);
     final p = SessionPlayer(
@@ -720,6 +732,7 @@ class _Op {
 
   void removePlayer(String id) {
     final p = s.players.remove(id)!;
+    runPlayerLeft(id);
     final b = s.battle;
     if (b != null) b.state = e.battles.leave(b.state, id).state;
     events.add(PlayerLeftEvent(id));
@@ -769,7 +782,15 @@ class _Op {
   // ---------------- acciones (`onMsg`) ----------------
 
   bool apply(SessionPlayer p, SessionAction a) {
+    // Travesía (roguelike.md): sus acciones y lo que acota del Mundo.
+    final gate = runGate(p, a);
+    if (gate != null) return gate;
     switch (a) {
+      case RunStartAction() ||
+            RunVoteAction() ||
+            RunRewardAction() ||
+            RunReadyAction():
+        return false;
       case MoveAction():
         if (a.epoch != p.epoch ||
             !(s.mode == SessionMode.lobby || s.mode == SessionMode.field) ||
@@ -1982,6 +2003,8 @@ class _Op {
         } else {
           battleTick(dt);
         }
+      case SessionMode.run:
+        runTick();
       case SessionMode.result:
         final r = s.result!;
         r.timeLeft -= dt;
@@ -3186,7 +3209,11 @@ class _Op {
   void _applyBattleStep(SessionBattle b, BattleStep step) {
     var evs = step.events;
     final won = step.state.outcome;
-    if (b.level > 0 && won != null && won.victory && b.endTimer == null) {
+    if (b.level > 0 &&
+        s.run == null &&
+        won != null &&
+        won.victory &&
+        b.endTimer == null) {
       // XP por nivel de zona (worldgen.md § 6.3).
       // Maestro del Eco (Atlas): +XP dentro de los Ecos.
       final xpBonus = _eco == null ? 0.0 : _atlas.xp;
@@ -3238,6 +3265,9 @@ class _Op {
             potions: c.potions, ethers: c.ethers, aethers: c.aethers);
     }
     if (!outcome.victory) return;
+    // Travesía: sin XP ni créditos de batalla (las recompensas los
+    // reemplazan; roguelike.md § 4).
+    if (s.run != null) return;
     final m = s.mission;
     if (m != null) {
       m.xp += outcome.xp;
@@ -3336,6 +3366,10 @@ class _Op {
     final b = s.battle!;
     final victory = b.state.outcome?.victory ?? false;
     events.add(BattleFinishedEvent(victory));
+    if (s.run != null) {
+      runBattleFinished(victory);
+      return;
+    }
     if (!victory) {
       missionEnd(false);
       return;

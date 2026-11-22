@@ -303,3 +303,16 @@ class AchievementUnlockedEvent extends SessionEvent {
   final String id;
   const AchievementUnlockedEvent(this.playerId, this.id);
 }
+
+/// Travesía: el grupo entró al nodo [nodeId] del piso [floor].
+class RunNodeEnteredEvent extends SessionEvent {
+  final int floor;
+  final int nodeId;
+  const RunNodeEnteredEvent(this.floor, this.nodeId);
+}
+
+/// Travesía: terminó la run ([victory] = venció al último jefe).
+class RunEndedEvent extends SessionEvent {
+  final bool victory;
+  const RunEndedEvent(this.victory);
+}

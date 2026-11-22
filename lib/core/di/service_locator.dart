@@ -10,6 +10,9 @@ import '../../game_engine/balance/balance_patch.dart';
 import '../../game_engine/data/game_catalog.dart';
 import '../../game_engine/data/passive_tree_catalog.dart';
 import '../../game_engine/models/atlas_store.dart';
+import '../../game_engine/models/game_mode.dart';
+import '../../netcode/protocol/wire.dart' show WireGame;
+import '../edition/game_edition.dart';
 import '../../game_engine/models/bestiary.dart';
 import '../../game_engine/models/tutorial_store.dart';
 import '../../game_engine/models/party_store.dart';
@@ -50,8 +53,18 @@ final sl = GetIt.instance;
 /// [balance] es el `balance.json` ya leído (`BalanceAssetLoader.load`,
 /// docs/specs/balance_admin.md § 3); `null` = el catálogo del código.
 void registerSharedDependencies(
-    {AccountStore? accountStore, BalanceParseResult? balance, UltData? ults}) {
+    {AccountStore? accountStore,
+    BalanceParseResult? balance,
+    UltData? ults,
+    GameEdition edition = GameEdition.mundo}) {
   if (sl.isRegistered<PassiveTreeRules>()) return;
+  // Qué juego es (docs/specs/distribution.md § "Dos juegos, un repo"):
+  // versión, canal de releases, carpeta de datos y protocolo. Va antes del
+  // log, que ya escribe en la carpeta del juego.
+  GameEdition.install(edition);
+  final gameMode = edition.mode;
+  // Versión del juego (docs/specs/roguelike.md § 9): Mundo o Travesía.
+  sl.registerSingleton<GameModeKind>(gameMode);
   // `ecos.log` junto a la cuenta (docs/specs/characters.md § 1.5).
   if (accountStore == null) {
     try {
@@ -104,6 +117,7 @@ void registerSharedDependencies(
       // (docs/specs/ecos_atlas.md § 8).
       devTools: FeatureFlags.instance.devTools,
       maxPlayers: FeatureFlags.instance.maxPlayers,
+      gameMode: gameMode,
     ),
   );
   // Cuenta con varios personajes y alijo (`account.json`, migra el
@@ -119,9 +133,14 @@ void registerSharedDependencies(
     ExitGuard.register(repo, repo.flush, last: true);
     return repo;
   });
-  sl.registerLazySingleton<ProfileStore>(
-    () => SelectedCharacterProfileStore(sl<AccountRepository>()),
-  );
+  sl.registerLazySingleton<ProfileStore>(() {
+    final store = SelectedCharacterProfileStore(sl<AccountRepository>());
+    // Travesía: el personaje de la run nunca pisa al de la cuenta
+    // (roguelike.md § 8.5); se lee el elegido y no se escribe nada.
+    return gameMode == GameModeKind.travesia
+        ? ReadOnlyProfileStore(store)
+        : store;
+  });
   // Alijo en partida (docs/specs/characters.md § 3.2).
   sl.registerLazySingleton<StashStore>(
     () => AccountStashStore(sl<AccountRepository>()),
@@ -200,7 +219,11 @@ void registerSharedDependencies(
 /// escritorio, SDK en web/móvil: `resolveP2PSignaling`); `null` = Firebase
 /// sin configurar y el título muestra [p2pUnavailable]. Ver
 /// docs/specs/netcode.md § "P2P por internet".
-void registerP2PNetcode({required SignalingService Function()? signaling}) {
+/// [game]: juego y protocolo de la sala; por defecto el de
+/// `GameEdition.current` (lo instaló `registerSharedDependencies`).
+void registerP2PNetcode(
+    {required SignalingService Function()? signaling, WireGame? game}) {
+  final wire = game ?? GameEdition.current.wire;
   if (signaling == null) {
     sl.registerSingleton<NetSessionFactory>(
         NetSessionFactory.unavailable('P2P', p2pUnavailable));
@@ -214,6 +237,7 @@ void registerP2PNetcode({required SignalingService Function()? signaling}) {
       signaling: sl<SignalingService>(),
       catalog: sl<GameCatalog>(),
       maxPlayers: FeatureFlags.instance.maxPlayers,
+      game: wire,
     ),
   ));
 }
@@ -222,13 +246,15 @@ const p2pUnavailable = 'P2P por internet: falta configurar Firebase';
 
 /// Variante LAN: WebSocket en la red local, código `IP:PUERTO`, sin
 /// Firebase. Ver docs/specs/netcode.md § "LAN".
-void registerLanNetcode() {
+void registerLanNetcode({WireGame? game}) {
+  final wire = game ?? GameEdition.current.wire;
   sl.registerSingleton<NetSessionFactory>(NetSessionFactory(
     label: 'LAN',
     codeHint: 'IP:PUERTO',
     create: () => LanNetSession(
         catalog: sl<GameCatalog>(),
-        maxPlayers: FeatureFlags.instance.maxPlayers),
+        maxPlayers: FeatureFlags.instance.maxPlayers,
+        game: wire),
   ));
 }
 

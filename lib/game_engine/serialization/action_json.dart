@@ -149,6 +149,16 @@ abstract final class ActionJson {
         DevAbyssAction() => {'t': 'devAbyss', 'k': a.kind},
         // Hazañas v0.14 (achievements.md § 5.2).
         ClaimAchievementAction() => {'t': 'ach', 'id': a.id},
+        // Travesía (protocolo Travesía 1; roguelike.md).
+        RunStartAction() => {'t': 'runStart'},
+        RunVoteAction() => {'t': 'runVote', 'n': a.nodeId},
+        RunRewardAction() => {
+            't': 'runReward',
+            if (a.tree != null) 'tr': a.tree,
+            if (a.weapon != null) 'w': a.weapon,
+            if (a.extra != null) 'x': a.extra,
+          },
+        RunReadyAction() => {'t': 'runReady'},
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -299,6 +309,17 @@ abstract final class ActionJson {
         return DevAbyssAction(j.str('k'));
       case 'ach':
         return ClaimAchievementAction(j.str('id'));
+      case 'runStart':
+        return const RunStartAction();
+      case 'runVote':
+        return RunVoteAction(j.integer('n'));
+      case 'runReward':
+        return RunRewardAction(
+            tree: j.intOrNull('tr'),
+            weapon: j.intOrNull('w'),
+            extra: j.intOrNull('x'));
+      case 'runReady':
+        return const RunReadyAction();
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

@@ -100,6 +100,9 @@ abstract final class MusicSelector {
       case SessionMode.prep:
       case SessionMode.result:
         return Music.town;
+      // Travesía fuera de batalla: el bucle del exterior.
+      case SessionMode.run:
+        return Music.overworld;
       case SessionMode.battle:
         if (!boss) return Music.battle;
         return abyssTrack(bossId) ??

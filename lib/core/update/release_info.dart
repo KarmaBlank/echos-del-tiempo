@@ -1,3 +1,4 @@
+import 'release_channel.dart';
 import 'semver.dart';
 
 /// Un archivo adjunto a un release de GitHub.
@@ -65,18 +66,21 @@ class ReleaseInfo {
   /// Parsea el JSON de la API. Devuelve `null` si no sirve como
   /// actualización: borrador, tag que no es `vX.Y.Z`, o sin instalador.
   /// Nunca lanza con JSON inesperado.
-  static ReleaseInfo? tryFromJson(Object? json) {
+  /// [channel] decide qué tags valen y el prefijo del instalador.
+  static ReleaseInfo? tryFromJson(Object? json,
+      {ReleaseChannel channel = ReleaseChannel.mundo}) {
     if (json is! Map) return null;
     if (json['draft'] == true) return null;
     final tag = json['tag_name'];
     if (tag is! String) return null;
-    final version = SemVer.tryParse(tag);
+    final version = channel.versionOf(tag);
     if (version == null) return null;
     final rawAssets = json['assets'];
     final assets = rawAssets is List
         ? rawAssets.map(ReleaseAsset.tryFromJson).whereType<ReleaseAsset>().toList()
         : const <ReleaseAsset>[];
-    final installer = pickInstaller(assets, version);
+    final installer =
+        pickInstaller(assets, version, prefix: channel.installerPrefix);
     if (installer == null) return null;
     final body = json['body'];
     final html = json['html_url'];
@@ -92,14 +96,15 @@ class ReleaseInfo {
 
   /// El `.exe` del instalador: nombre `EcosDelTiempo-Setup-*.exe` (sin
   /// importar mayúsculas). Si hay varios, el que nombra esta versión.
-  static ReleaseAsset? pickInstaller(List<ReleaseAsset> assets, SemVer v) {
+  static ReleaseAsset? pickInstaller(List<ReleaseAsset> assets, SemVer v,
+      {String prefix = installerPrefix}) {
     final candidates = assets.where((a) {
       final n = a.name.toLowerCase();
-      return n.startsWith(installerPrefix) && n.endsWith('.exe') && a.size > 0;
+      return n.startsWith(prefix) && n.endsWith('.exe') && a.size > 0;
     }).toList();
     if (candidates.isEmpty) return null;
-    final exact = candidates.where(
-        (a) => a.name.toLowerCase() == '$installerPrefix$v.exe');
+    final exact =
+        candidates.where((a) => a.name.toLowerCase() == '$prefix$v.exe');
     return exact.isNotEmpty ? exact.first : candidates.first;
   }
 

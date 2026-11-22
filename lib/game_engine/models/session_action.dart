@@ -466,3 +466,29 @@ class ClaimAchievementAction extends SessionAction {
   final String id;
   const ClaimAchievementAction(this.id);
 }
+
+// ---------------- Travesía (docs/specs/roguelike.md) ----------------
+
+/// Empezar una Travesía desde la sala (o una nueva al terminar).
+class RunStartAction extends SessionAction {
+  const RunStartAction();
+}
+
+/// Marcar el próximo nodo del mapa (§ 3: votación).
+class RunVoteAction extends SessionAction {
+  final int nodeId;
+  const RunVoteAction(this.nodeId);
+}
+
+/// Elegir la recompensa: un índice por fila o `null` para saltarla.
+class RunRewardAction extends SessionAction {
+  final int? tree;
+  final int? weapon;
+  final int? extra;
+  const RunRewardAction({this.tree, this.weapon, this.extra});
+}
+
+/// LISTO en tienda / armería / descanso.
+class RunReadyAction extends SessionAction {
+  const RunReadyAction();
+}

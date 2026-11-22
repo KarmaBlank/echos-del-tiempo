@@ -67,9 +67,16 @@ class ShopContext {
   PlayerProfile get profile => view.actor!.profile;
 
   /// Bases a la venta (cualquier familia: loot v2), por nivel.
+  /// En la Travesía, solo los tipos de arma de su clase (roguelike.md § 5).
   List<WeaponDef> forSale([String? family]) => [
         for (final w in rules.catalog.weapons.values)
-          if (w.price > 0 && (family == null || w.classId == family)) w,
+          if (w.price > 0 &&
+              (family == null || w.classId == family) &&
+              (view.session.run == null ||
+                  (rules.catalog.classes[profile.classId]?.allowedWeaponTypes
+                          .contains(w.type) ??
+                      true)))
+            w,
       ]..sort((a, b) => a.level != b.level
           ? a.level.compareTo(b.level)
           : a.price.compareTo(b.price));

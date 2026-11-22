@@ -25,3 +25,16 @@ class InMemoryProfileStore implements ProfileStore {
   @override
   Future<void> save(PlayerProfile profile) async => _json = profile.toJson();
 }
+
+/// Lee de [inner] y nunca escribe (personaje descartable de la Travesía;
+/// docs/specs/roguelike.md § 8.5).
+class ReadOnlyProfileStore implements ProfileStore {
+  const ReadOnlyProfileStore(this.inner);
+  final ProfileStore inner;
+
+  @override
+  Future<PlayerProfile?> load() => inner.load();
+
+  @override
+  Future<void> save(PlayerProfile profile) async {}
+}

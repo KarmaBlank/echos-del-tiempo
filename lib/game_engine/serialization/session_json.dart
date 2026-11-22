@@ -18,6 +18,7 @@ import '../models/upgrade_stat.dart';
 import '../models/weapon.dart';
 import '../models/tutorial.dart';
 import 'json_read.dart';
+import 'run_json.dart';
 
 /// `GameSession` completo ⇄ JSON: el snapshot que el host manda a los
 /// clientes (`{t:'state', s:S}` del prototipo). Claves en
@@ -72,6 +73,8 @@ class SessionJson {
         // TUTORIAL v0.9 (combat_tutorial.md § 6): opcionales.
         if (s.tutorial != null) 'tut': s.tutorial!.toJson(),
         if (s.tutorialRuns != 0) 'tutN': s.tutorialRuns,
+        // Travesía (protocolo Travesía 1; roguelike.md): opcional.
+        if (s.run != null) 'run': RunJson.toJson(s.run!),
       };
 
   GameSession fromJson(Json j) {
@@ -112,6 +115,7 @@ class SessionJson {
           ? null
           : TutorialState.fromJson(j.objOrNull('tut')!),
       tutorialRuns: j.intOrNull('tutN') ?? 0,
+      run: _opt(j.objOrNull('run'), RunJson.fromJson),
     );
   }
 
