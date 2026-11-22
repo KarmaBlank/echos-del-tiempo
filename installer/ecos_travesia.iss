@@ -4,7 +4,7 @@
 ; Lo compila tool/release.ps1:
 ;   ISCC.exe /DAppVersion=0.2.0 /DSourceDir=<bundle Release> /DRuntimeDir=<DLLs MSVC>
 ;            /DOutputDir=<dist> installer\ecos_travesia.iss
-;   (toolelease.ps1 -Juego Travesia)
+;   (tool\release.ps1 -Juego Travesia)
 ;
 ; - Instalación por usuario, sin admin: %LOCALAPPDATA%\Programs\Ecos del Tiempo Travesia.
 ;   Otra carpeta, otro AppId, otros accesos y otra entrada de desinstalación
