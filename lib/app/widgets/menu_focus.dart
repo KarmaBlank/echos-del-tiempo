@@ -664,13 +664,22 @@ class _InitialFocusState extends State<InitialFocus> {
     if (!widget.enabled) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      // Nunca en un campo de texto (los buscadores de las listas,
+      // ui_minimal.md § 3): las teclas de atajo se escribirían ahí.
       for (final n in _node.traversalDescendants) {
-        if (n.canRequestFocus && !n.skipTraversal) {
+        if (n.canRequestFocus && !n.skipTraversal && !_isText(n)) {
           n.requestFocus();
           return;
         }
       }
     });
+  }
+
+  static bool _isText(FocusNode n) {
+    final c = n.context;
+    if (c == null) return false;
+    return c.widget is EditableText ||
+        c.findAncestorWidgetOfExactType<EditableText>() != null;
   }
 
   @override

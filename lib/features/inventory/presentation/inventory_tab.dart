@@ -35,6 +35,7 @@ import '../domain/weapon_compare.dart' show stripStats;
 import 'clean_selection.dart';
 import 'consumables_bar.dart';
 import 'inventory_action_menu.dart';
+import 'inventory_clean_button.dart';
 import 'inventory_layout.dart';
 import 'inventory_sort_button.dart';
 import 'item_grid.dart';
@@ -189,8 +190,6 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
   final _search = TextEditingController();
   String _query = '';
 
-  /// Menú de LIMPIAR INVENTARIO abierto debajo del botón.
-  bool _cleanMenu = false;
 
   /// Marcas NUEVO ya mandadas a sacar (no repetir mientras llega).
   final _seenSent = <String>{};
@@ -481,14 +480,22 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
               }),
       InventoryTabLayout.clean: (_) => !mine
           ? null
-          : DsButton('LIMPIAR',
-              key: const ValueKey('inv-clean'),
-              size: DsButtonSize.compact,
-              selected: _cleaning,
-              tooltip: 'Desarmar o vender varias armas de una vez',
-              onPressed: () => setState(() {
-                    _cleaning = !_cleaning;
-                    _cleanMenu = _cleaning;
+          // LIMPIAR ▼: el único lugar de las acciones en lote
+          // (ui_minimal.md § 5); elegir abre la confirmación al costado.
+          : InventoryCleanButton(
+              count: (r) => shop.rules.crafting.batchTargets(p, r).length,
+              current: !_cleaning
+                  ? null
+                  : _cleanPick
+                      ? const CleanChoice.pick()
+                      : CleanChoice.batch(_cleanOp, _cleanRarity),
+              onChoose: (c) => setState(() {
+                    _cleaning = true;
+                    _cleanPick = c.pick;
+                    if (!c.pick) {
+                      _cleanOp = c.op!;
+                      _cleanRarity = c.rarity!;
+                    }
                     _picked = const [];
                     _confirmDrop = false;
                     _confirmCraft = null;
@@ -768,8 +775,6 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         InventoryTabLayout.stacks: (_) => stacksBar,
         InventoryTabLayout.summary: (_) => summary,
         InventoryTabLayout.selection: (_) => selBar,
-        InventoryTabLayout.cleanMenu: (_) =>
-            mine && _cleaning && _cleanMenu ? _cleanMenuBox(p) : null,
       };
     }
 
@@ -960,59 +965,11 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
             ],
           ));
 
-  /// Menú de LIMPIAR INVENTARIO (v0.9.7), debajo del botón: elegir a
-  /// mano o desarmar / vender todos los Comunes, Mágicos o Raros. Elegir
-  /// una opción la deja lista en el detalle para confirmar.
-  Widget _cleanMenuBox(PlayerProfile p) {
-    final rules = shop.rules;
-    InventoryMenuEntry batch(CraftOp op, Rarity r) {
-      final n = rules.crafting.batchTargets(p, r).length;
-      final sell = op == CraftOp.sellAll;
-      return InventoryMenuEntry(
-        id: 'clean-menu-${sell ? 'sell' : 'salvage'}-${r.name}',
-        label: '${sell ? 'Vender' : 'Desarmar'} todos los '
-            '${rarityPlural(r)} ($n)',
-        color: sell ? ProtoColors.gold : ProtoColors.sky,
-        reason: n == 0
-            ? 'No tenés ${rarityPlural(r).toLowerCase()} para '
-                '${sell ? 'vender' : 'desarmar'}'
-            : null,
-        onTap: () => setState(() {
-          _cleanPick = false;
-          _cleanOp = op;
-          _cleanRarity = r;
-        }),
-      );
-    }
-
-    const rs = [Rarity.comun, Rarity.magico, Rarity.raro];
-    return Container(
-      key: const ValueKey('inv-clean-menu'),
-      constraints: BoxConstraints(maxWidth: _gridW),
-      decoration: BoxDecoration(
-        color: DsColors.background,
-        border: Border.all(
-            color: DsColors.borderControl, width: DsMetrics.controlBorder),
-      ),
-      child: InventoryActionList(keyPrefix: 'inv-', entries: [
-        InventoryMenuEntry(
-          id: 'clean-menu-pick',
-          label: 'Elegir a mano',
-          note: 'marcá armas en la grilla',
-          onTap: () => setState(() => _cleanPick = true),
-        ),
-        for (final r in rs) batch(CraftOp.salvageAll, r),
-        for (final r in rs) batch(CraftOp.sellAll, r),
-      ]),
-    );
-  }
-
   /// LIMPIAR INVENTARIO: desarmar o vender de una vez todas las armas de
   /// una rareza, con el resumen antes de confirmar.
   Widget _cleaner(PlayerProfile p) {
     final rules = shop.rules;
     final g = shop.guards;
-    void mode(bool pick) => setState(() => _cleanPick = pick);
     if (_cleanPick) {
       return CleanSelectionPanel(
         rules: rules,
@@ -1020,7 +977,6 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
         profile: p,
         picked: _picked,
         sell: _cleanSell,
-        onMode: mode,
         onSell: (v) => setState(() => _cleanSell = v),
         onAdd: (r) =>
             setState(() => _picked = addRarityPicked(rules, p, _picked, r)),
@@ -1066,34 +1022,6 @@ class _InventoryTabState extends ConsumerState<InventoryTab> {
       ],
       children: [
         const DsSectionHeader('LIMPIAR INVENTARIO'),
-        CleanModeToggle(pick: false, onChanged: mode),
-        SizedBox(height: DsSpace.sm),
-        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-          DsButton('DESARMAR',
-              key: const ValueKey('inv-clean-salvage'),
-              size: DsButtonSize.compact,
-              tooltip: 'Recibís materiales',
-              selected: !sell,
-              onPressed: () => setState(() => _cleanOp = CraftOp.salvageAll)),
-          DsButton('VENDER',
-              key: const ValueKey('inv-clean-sell'),
-              size: DsButtonSize.compact,
-              tooltip: 'Recibís créditos',
-              selected: sell,
-              onPressed: () => setState(() => _cleanOp = CraftOp.sellAll)),
-        ]),
-        SizedBox(height: DsSpace.xs),
-        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-          for (final rr in const [Rarity.comun, Rarity.magico, Rarity.raro])
-            DsButton(
-                '${rarityPlural(rr).toUpperCase()} '
-                '(${rules.crafting.batchTargets(p, rr).length})',
-                key: ValueKey('inv-clean-rarity-${rr.name}'),
-                size: DsButtonSize.compact,
-                selected: _cleanRarity == rr,
-                onPressed: () => setState(() => _cleanRarity = rr)),
-        ]),
-        SizedBox(height: DsSpace.sm),
         ProtoText(summary, key: const ValueKey('inv-clean-summary')),
         if (r.lost.isNotEmpty)
           ProtoText(protoColor(

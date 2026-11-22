@@ -189,7 +189,7 @@ void main() {
       int cell(String t) => InventoryRules.layout(me()).cells.indexOf(t);
       final credits = me().credits;
       await tap(tester, 'inv-clean');
-      await tap(tester, 'inv-clean-mode-pick');
+      await tap(tester, 'inv-clean-menu-pick');
       expect(_k('inv-clean-count'), findsOneWidget);
       await tap(tester, 'inv-cell-${cell('m1')}');
       expect(_k('clean-check'), findsOneWidget);
@@ -207,9 +207,15 @@ void main() {
       expect(me().itemByUid(t), isNull);
       expect(me().credits, greaterThan(credits));
       expect(find.textContaining('Elegidas: 0'), findsOneWidget);
-      // POR RAREZA sigue.
-      await tap(tester, 'inv-clean-mode-rarity');
-      expect(_k('inv-clean-rarity-comun'), findsOneWidget);
+      // Por rareza, desde el mismo menú LIMPIAR (ui_minimal.md § 5).
+      await tap(tester, 'inv-clean');
+      final batch = [
+        for (final r in ['comun', 'magico', 'raro'])
+          if (button(tester, 'inv-clean-menu-salvage-$r').reason == null) r
+      ].first;
+      await tap(tester, 'inv-clean-menu-salvage-$batch');
+      expect(_k('inv-clean-summary'), findsOneWidget);
+      expect(_k('inv-clean-count'), findsNothing);
     });
   });
 
@@ -268,7 +274,7 @@ void main() {
       expect(added, Rarity.raro);
     });
 
-    testWidgets('sin elegir: motivo "Elige armas"', (tester) async {
+    testWidgets('sin elegir: motivo "Elegí armas"', (tester) async {
       await _pump(
           tester,
           SizedBox(
@@ -286,7 +292,7 @@ void main() {
               onCancel: () {},
             ),
           ));
-      expect(button(tester, 'inv-clean-confirm').reason, 'Elige armas');
+      expect(button(tester, 'inv-clean-confirm').reason, 'Elegí armas');
     });
 
     testWidgets('marca: ✓ elegida, candado bloqueada', (tester) async {

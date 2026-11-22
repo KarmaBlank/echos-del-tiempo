@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
+import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_type.dart';
 import '../../../app/widgets/menu_focus.dart';
 import '../../../game_engine/rules/progression_rules.dart';
@@ -120,6 +121,41 @@ class ItemSlot extends StatelessWidget {
   }
 }
 
+/// Molécula: la equipada fija arriba de una lista de armas, con la marca
+/// `EQUIPADA` (ui_minimal.md § 3). La usan [DsWeaponList] y las listas de
+/// catálogo (COMPRAR), que tienen filas en vez de casillas.
+class PinnedEquippedRow extends StatelessWidget {
+  const PinnedEquippedRow({super.key, required this.cell, this.note});
+
+  final Widget cell;
+
+  /// Una línea opcional al lado (p. ej. el nombre).
+  final String? note;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.only(bottom: DsSpace.xs),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          cell,
+          SizedBox(width: DsSpace.sm),
+          Flexible(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(retroText('EQUIPADA'), style: DsText.subtitle()),
+                if (note case final n?)
+                  Text(n,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: DsText.detail()),
+              ],
+            ),
+          ),
+        ]),
+      );
+}
+
 /// Campo de búsqueda de una grilla: Esc con texto lo limpia (sin texto,
 /// el Esc sigue de largo hacia la pantalla).
 class ItemGridSearch {
@@ -167,10 +203,18 @@ class DsItemGrid extends StatelessWidget {
     this.decorate,
     this.search,
     this.empty,
+    this.pinned,
+    this.pinnedKey,
   });
 
   final ProgressionRules rules;
   final int count;
+
+  /// Casilla fija arriba de la grilla con la marca `EQUIPADA`
+  /// (ui_minimal.md § 3): el índice sale de la grilla y se dibuja solo,
+  /// siempre visible aunque no coincida con la búsqueda.
+  final int? pinned;
+  final Key? pinnedKey;
   final ItemSlotData Function(int i) slot;
 
   /// Columnas para las flechas (`null`: las que entren en el ancho).
@@ -212,21 +256,53 @@ class DsItemGrid extends StatelessWidget {
     return KeyedSubtree(key: cellKey?.call(i), child: w);
   }
 
-  Widget _grid(int cols) => FocusGrid(
-        count: count,
-        columns: cols,
-        spacing: gap,
-        width: width,
-        keyPrefix: focusKeyPrefix,
-        cell: (_, i, focused) => _cell(i, focused),
-        onFocusCell: onFocusCell,
-        onActivate: onActivate ?? onTap,
-      );
+  /// Índice real de la casilla [j] de la grilla (sin la fijada).
+  int _at(int j) => pinned == null || j < pinned! ? j : j + 1;
+
+  int get _gridCount =>
+      pinned != null && pinned! >= 0 && pinned! < count ? count - 1 : count;
+
+  Widget _grid(int cols) {
+    final act = onActivate ?? onTap;
+    return FocusGrid(
+      count: _gridCount,
+      columns: cols,
+      spacing: gap,
+      width: width,
+      keyPrefix: focusKeyPrefix,
+      cell: (_, j, focused) => _cell(_at(j), focused),
+      onFocusCell: onFocusCell == null ? null : (j) => onFocusCell!(_at(j)),
+      onActivate: act == null ? null : (j) => act(_at(j)),
+    );
+  }
+
+  Widget? _pinnedRow() {
+    final i = pinned;
+    if (i == null || i < 0 || i >= count) return null;
+    // Su propia grilla de 1 (foco, Enter y tooltip iguales al resto).
+    final act = onActivate ?? onTap;
+    return PinnedEquippedRow(
+        key: pinnedKey,
+        cell: SizedBox(
+          width: cellSize,
+          child: FocusGrid(
+            count: 1,
+            columns: 1,
+            spacing: gap,
+            width: cellSize,
+            keyPrefix: focusKeyPrefix == null ? null : '${focusKeyPrefix}pin-',
+            cell: (_, __, focused) => _cell(i, focused),
+            onFocusCell: onFocusCell == null ? null : (_) => onFocusCell!(i),
+            onActivate: act == null ? null : (_) => act(i),
+          ),
+        ));
+  }
 
   @override
   Widget build(BuildContext context) {
     final s = search;
-    final Widget grid = count == 0 && empty != null
+    final pin = _pinnedRow();
+    final Widget grid = _gridCount == 0 && pin == null && empty != null
         ? Text(empty!, style: DsText.detail())
         : columns != null
             ? _grid(columns!)
@@ -237,7 +313,13 @@ class DsItemGrid extends StatelessWidget {
                     : 8;
                 return _grid(cols);
               });
-    if (s == null) return grid;
+    final body = pin == null
+        ? grid
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [pin, if (_gridCount > 0) grid]);
+    if (s == null) return body;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -264,8 +346,68 @@ class DsItemGrid extends StatelessWidget {
           ),
         ),
         SizedBox(height: DsSpace.xs),
-        grid,
+        body,
       ],
     );
   }
+}
+
+/// Organismo DsWeaponList (ui_minimal.md § 3): la ÚNICA plantilla de
+/// toda lista de armas (FUSIÓN destino y origen, FORJA, ALIJO,
+/// trasladar). Es un [DsItemGrid] con el buscador siempre presente y la
+/// equipada fija arriba con la marca `EQUIPADA` ([equipped] = su índice
+/// en la lista; `null` si la lista no la tiene).
+class DsWeaponList extends StatelessWidget {
+  const DsWeaponList({
+    super.key,
+    required this.rules,
+    required this.count,
+    required this.slot,
+    required this.search,
+    required this.equipped,
+    this.keyPrefix = 'wl-',
+    this.cellKey,
+    this.focusKeyPrefix,
+    this.onTap,
+    this.onFocusCell,
+    this.tip,
+    this.decorate,
+    this.empty,
+    this.width,
+  });
+
+  final ProgressionRules rules;
+  final int count;
+  final ItemSlotData Function(int i) slot;
+  final ItemGridSearch search;
+  final int? equipped;
+
+  /// Prefijo de la clave de la fila fijada (`<prefijo>pinned`).
+  final String keyPrefix;
+  final Key Function(int i)? cellKey;
+  final String? focusKeyPrefix;
+  final ValueChanged<int>? onTap;
+  final ValueChanged<int>? onFocusCell;
+  final Widget Function(int i, Widget child, bool focused)? tip;
+  final Widget Function(int i, Widget child)? decorate;
+  final String? empty;
+  final double? width;
+
+  @override
+  Widget build(BuildContext context) => DsItemGrid(
+        rules: rules,
+        count: count,
+        slot: slot,
+        search: search,
+        pinned: equipped,
+        pinnedKey: ValueKey('${keyPrefix}pinned'),
+        cellKey: cellKey,
+        focusKeyPrefix: focusKeyPrefix,
+        onTap: onTap,
+        onFocusCell: onFocusCell,
+        tip: tip,
+        decorate: decorate,
+        empty: empty,
+        width: width,
+      );
 }

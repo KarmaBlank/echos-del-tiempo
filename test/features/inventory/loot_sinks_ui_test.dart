@@ -79,16 +79,22 @@ void main() {
       (tester) async {
     final c = await _inventory(tester, _withCommons());
     PlayerProfile me() => c.view!.me!.profile;
+    // Un solo lugar (ui_minimal.md § 5): LIMPIAR ▼ con verbo y rareza.
+    Future<void> choose(String id) async {
+      await _tap(tester, 'inv-clean');
+      await _tap(tester, 'inv-clean-menu-$id');
+    }
+
     await _tap(tester, 'inv-clean');
-    // Por defecto: desarmar Comunes (no la equipada).
-    expect(find.text('COMUNES (3)'), findsOneWidget);
+    expect(find.text('Desarmar Comunes (3)'), findsOneWidget);
+    await _tap(tester, 'inv-clean-menu-salvage-comun');
     // c1 (Nv 2) 1 + c2 (Nv 30) 2 + c3 1 = 4 Esquirlas.
     expect(plain(tester, 'inv-clean-summary'),
         contains('Vas a desarmar 3 Comunes → +4 Esquirla del Eco'));
     expect(plain(tester, 'inv-clean-list'), contains('Báculo de Fuego'));
     expect(plain(tester, 'inv-clean-list'), isNot(contains('Espada de Bronce')));
     // Vender: suma de precios.
-    await _tap(tester, 'inv-clean-sell');
+    await choose('sell-comun');
     final crafting = c.engine.progression.crafting;
     final total = [
       for (final it in crafting.batchTargets(me(), Rarity.comun))
@@ -97,12 +103,11 @@ void main() {
     expect(plain(tester, 'inv-clean-summary'),
         contains('Vas a vender 3 Comunes → +\$$total'));
     // Mágicos: chance de Cristal.
-    await _tap(tester, 'inv-clean-salvage');
-    await _tap(tester, 'inv-clean-rarity-magico');
+    await choose('salvage-magico');
     expect(plain(tester, 'inv-clean-summary'), contains('1 Mágico'));
     expect(plain(tester, 'inv-clean-summary'), contains('25% de +1 Cristal'));
     // Confirmar desarmar Comunes.
-    await _tap(tester, 'inv-clean-rarity-comun');
+    await choose('salvage-comun');
     await _tap(tester, 'inv-clean-confirm');
     expect(me().items.where((i) => i.rarity == Rarity.comun).map((i) => i.uid),
         ['espada_bronce']);

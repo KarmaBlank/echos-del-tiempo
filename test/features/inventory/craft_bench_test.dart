@@ -105,9 +105,13 @@ void main() {
     final c = await _bench(tester, lootWarrior());
     PlayerProfile me() => c.view!.me!.profile;
     await _choose(tester, 'r1', CraftOp.transferAffix);
-    // La equipada no aparece para sacrificar.
-    expect(find.byKey(const ValueKey('craft-source-espada_bronce')),
-        findsNothing);
+    // La equipada se ve fija arriba (ui_minimal.md § 3), con candado: no
+    // se puede sacrificar.
+    expect(
+        find.descendant(
+            of: find.byKey(const ValueKey('craft-source-pinned')),
+            matching: find.byKey(const ValueKey('clean-lock'))),
+        findsOneWidget);
     await _tap(tester, 'craft-source-m1');
     await _tap(tester, 'craft-pick-0');
     expect(plain(tester, 'craft-mods-title'), contains('Mods 3/4'));

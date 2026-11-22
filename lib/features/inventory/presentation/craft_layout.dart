@@ -102,7 +102,7 @@ abstract final class FuseLayout {
     ],
     slots: const [
       LayoutSlotSpec(crumbs,
-          label: '1 ARMA › 2 ACCIÓN › 3 CONFIRMAR',
+          label: '1 DESTINO › 2 ACCIÓN › 3 PREVIA',
           interactive: true,
           allowedRegions: _all),
       LayoutSlotSpec(summary,

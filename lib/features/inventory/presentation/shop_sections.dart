@@ -27,6 +27,7 @@ import '../../build_planner/presentation/build_fit_badge.dart';
 import '../../build_planner/presentation/build_plan_providers.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
+import '../domain/inventory_menu.dart' show foldSearch, inventoryMatches;
 import '../domain/item_text.dart';
 import '../domain/shop_guards.dart';
 import '../domain/shop_preview.dart';
@@ -98,12 +99,9 @@ class ShopContext {
 /// Pestañas de la tienda (armería del lobby y preparación). Ver
 /// docs/specs/panels.md § "Armería" (loot v2).
 enum ArmoryTab {
-  buy('COMPRAR',
-      'Armas base por nivel; cualquier clase las equipa si cumple los requisitos.'),
-  forge(
-      'FORJA', 'Sube una estadística del arma; cada 2 niveles sube su pasiva.'),
-  fuse('FUSIÓN',
-      'Elige arma, acción y confirma: ves el resultado antes de pagar.'),
+  buy('COMPRAR', 'Armas base para cualquier clase.'),
+  forge('FORJA', 'Arma, mejora, confirmar.'),
+  fuse('FUSIÓN', 'Destino, acción, vista previa, confirmar.'),
   items('CONSUMIBLES',
       'Se usan en batalla. Máximo ${ProgressionRules.maxItems} de cada uno.');
 
@@ -129,7 +127,8 @@ const kShopHelp = '<b>Armería</b><br>'
     'compara con la equipada antes de pagar.<br>'
     '<span class="k">FORJA</span>: sube Poder, Crítico, Velocidad o Defensa '
     '(5 c/u, tope total por rareza). Cada 2 niveles sube la pasiva.<br>'
-    '<span class="k">FUSIÓN</span>: 1 ARMA → 2 ACCIÓN → 3 CONFIRMAR. '
+    '<span class="k">FUSIÓN</span>: 1 DESTINO → 2 ACCIÓN → 3 PREVIA → '
+    'CONFIRMAR. '
     'Mejora con materiales, trae mods / pasiva / habilidades de otra arma '
     '(que se destruye), quita mods o reforja la base a otro tipo.<br>'
     'Para <b>desarmar</b> o <b>vender</b> lo que no te sirve: Personaje › '
@@ -266,10 +265,8 @@ class CharacterStatRows extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DsStatLine('HP', now.maxHp, next.maxHp,
-            key: const ValueKey('stat-HP')),
-        DsStatLine('MP', now.maxMp, next.maxMp,
-            key: const ValueKey('stat-MP')),
+        DsStatLine('HP', now.maxHp, next.maxHp, key: const ValueKey('stat-HP')),
+        DsStatLine('MP', now.maxMp, next.maxMp, key: const ValueKey('stat-MP')),
         Tooltip(
           key: const ValueKey('stat-weight'),
           message: retroText('VEL = 6 + AGI×0.5 + DES×0.1 − peso del arma'),
@@ -291,7 +288,6 @@ class CharacterStatRows extends StatelessWidget {
             suffix: '(daño ×${next.critMultiplier == 2 ? '2' : '1.5'})'),
       ],
     );
-
   }
 }
 
@@ -327,12 +323,33 @@ class _BuyTabState extends ConsumerState<BuyTab> {
   String? _sel;
   late String? _family = widget.shop.profile.classId;
 
+  /// Buscador de la lista (plantilla de listas de armas, ui_minimal.md
+  /// § 3): nombre o tipo de la base.
+  final _q = TextEditingController();
+
+  @override
+  void dispose() {
+    _q.dispose();
+    super.dispose();
+  }
+
+  bool _hit(WeaponDef w) {
+    final words =
+        foldSearch(_q.text).split(RegExp(r'\s+')).where((x) => x.isNotEmpty);
+    final text = foldSearch('${w.name} ${w.type}');
+    return words.every(text.contains);
+  }
+
   @override
   Widget build(BuildContext context) {
     final shop = widget.shop;
     final p = shop.profile;
     final rules = shop.rules;
-    final list = shop.forSale(_family);
+    final all = shop.forSale(_family);
+    final list = [
+      for (final x in all)
+        if (x.id == _sel || _hit(x)) x
+    ];
     final families = rules.catalog.classes.values.toList();
     final filter = ChoiceCycler<String?>(
       label: 'Familia',
@@ -344,8 +361,40 @@ class _BuyTabState extends ConsumerState<BuyTab> {
           : (rules.catalog.classes[id]?.name ?? id).toUpperCase(),
       onChanged: (id) => setState(() => _family = id),
     );
-    if (list.isEmpty) {
+    final eqNow = shop.rules.equippedItem(p);
+    // Cabecera de la plantilla: buscador siempre y la equipada fija.
+    final head = [
+      DsSearchField(
+        key: const ValueKey('buy-search'),
+        hint: 'BUSCAR: nombre, tipo',
+        width: 320,
+        controller: _q,
+        onChanged: (_) => setState(() {}),
+      ),
+      SizedBox(height: DsSpace.xs),
+      if (eqNow != null)
+        PinnedEquippedRow(
+            key: const ValueKey('buy-pinned'),
+            cell: itemHoverTip(
+                rules: rules,
+                viewer: p,
+                item: eqNow,
+                attributes: p.attributes,
+                equipped: true,
+                child: ItemSlot(
+                    rules: rules,
+                    data: ItemSlotData(content: CellContent.item(eqNow)))),
+            note: eqNow.name),
+    ];
+    if (all.isEmpty) {
       return Column(children: [filter, const Text('No hay armas a la venta.')]);
+    }
+    if (list.isEmpty) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        filter,
+        ...head,
+        Text('Ninguna arma coincide con la búsqueda.', style: DsText.detail()),
+      ]);
     }
     final w = list.firstWhere((w) => w.id == _sel, orElse: () => list.first);
     final owned = p.items.any((i) => i.baseId == w.id);
@@ -380,6 +429,7 @@ class _BuyTabState extends ConsumerState<BuyTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      ...head,
                       for (final x in list)
                         MenuRow(
                           wrap: true,
@@ -393,7 +443,8 @@ class _BuyTabState extends ConsumerState<BuyTab> {
                               '${protoEsc(x.name)} '
                               '${protoColor(ProtoColors.dim, protoEsc(x.type))} '
                               '${weightTagMarkup(x)}',
-                          value: '${rules.ignoreRequirements ? '' : 'Nv ${x.level}  '}'
+                          value:
+                              '${rules.ignoreRequirements ? '' : 'Nv ${x.level}  '}'
                               '${p.items.any((i) => i.baseId == x.id) ? protoColor(ProtoColors.green, 'TIENES') : '${rules.meetsRequirements(p, x) ? '' : '${protoColor(ProtoColors.red, 'Req')} '}<b>₵${x.price}</b>'}',
                         ),
                     ],
@@ -569,7 +620,8 @@ String passiveForgeNote(ItemInstance it) {
 /// valor y stats antes → después, con el tope de la rareza y la subida de
 /// la pasiva cada 2 niveles.
 class ForgeTab extends StatefulWidget {
-  const ForgeTab({super.key, required this.shop, this.layout, this.layoutHooks});
+  const ForgeTab(
+      {super.key, required this.shop, this.layout, this.layoutHooks});
 
   final ShopContext shop;
 
@@ -585,14 +637,43 @@ class ForgeTab extends StatefulWidget {
 class _ForgeTabState extends State<ForgeTab> {
   String? _sel;
 
+  /// Paso 2: la mejora elegida (vista previa); FORJAR la confirma
+  /// (ui_minimal.md § 4, igual que FUSIÓN).
+  UpgradeStat? _stat;
+
+  void _pickWeapon(String uid) => setState(() {
+        if (_sel != uid) _stat = null;
+        _sel = uid;
+      });
+
+  /// Buscador de la lista (plantilla DsWeaponList, ui_minimal.md § 3).
+  final _q = TextEditingController();
+
+  @override
+  void dispose() {
+    _q.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final shop = widget.shop;
     final p = shop.profile;
     final rules = shop.rules;
-    final list = shop.owned;
-    if (list.isEmpty) return const Text('No tienes armas.');
-    final it = list.firstWhere((i) => i.uid == _sel, orElse: () => list.first);
+    final owned = shop.owned;
+    if (owned.isEmpty) return const Text('No tienes armas.');
+    final it = owned.firstWhere((i) => i.uid == _sel,
+        orElse: () => owned.firstWhere((i) => i.uid == p.equippedUid,
+            orElse: () => owned.first));
+    // La equipada primero (fija arriba); el resto, lo que coincida.
+    final eqItem = owned.where((i) => i.uid == p.equippedUid).firstOrNull;
+    final list = [
+      if (eqItem != null) eqItem,
+      for (final i in owned)
+        if (i.uid != p.equippedUid &&
+            (i.uid == it.uid || inventoryMatches(rules, _q.text, item: i)))
+          i
+    ];
     final equipped = p.equippedUid == it.uid;
     final cap = ItemRules.forgeCapOf(it);
     final passive = rules.items.passiveText(it);
@@ -620,13 +701,14 @@ class _ForgeTabState extends State<ForgeTab> {
             child: SectionPanel(
               icon: PixelIconKind.anvil,
               title: 'FORJA',
-              subtitle: 'cada mejora sube 1 nivel una estadística (máx 5)',
+              subtitle: 'elegí una y confirmá',
               children: [
                 Row(
                   key: const ValueKey('forge-cap'),
                   children: [
                     Flexible(
-                      child: Text(retroText('Forja ${it.forgeLevel}/$cap  '))),
+                        child:
+                            Text(retroText('Forja ${it.forgeLevel}/$cap  '))),
                     LevelPips(it.forgeLevel.clamp(0, cap), cap),
                     const SizedBox(width: 8),
                     Flexible(
@@ -647,7 +729,12 @@ class _ForgeTabState extends State<ForgeTab> {
                   children: [
                     for (final s in rules
                         .upgradeStatsFor(rules.catalog.weapons[it.baseId]!))
-                      _UpgradeCard(shop: shop, item: it, stat: s),
+                      _UpgradeCard(
+                          shop: shop,
+                          item: it,
+                          stat: s,
+                          selected: s == _stat,
+                          onSelect: () => setState(() => _stat = s)),
                   ],
                 ),
               ],
@@ -665,49 +752,102 @@ class _ForgeTabState extends State<ForgeTab> {
               reason: shop.guards.equip(p, it.uid),
               onPressed: () => shop.controller.equip(it.uid)),
     };
+    // Migas arriba de todo, como en FUSIÓN (ui_minimal.md § 4).
+    final crumbs = StepCrumbs(
+      steps: const ['ARMA', 'MEJORA', 'CONFIRMAR'],
+      current: _stat == null ? 1 : 2,
+      keyPrefix: 'forge-crumb-',
+      onStep: (i) => setState(() {
+        if (i < 2) _stat = null;
+      }),
+    );
     return DsLayoutHost(
       spec: ForgeLayout.spec,
       doc: widget.layout,
       hooks: widget.layoutHooks,
       slots: slots,
-      frame: (context, box, r) => PanelSplit(
-        list: [
-          NavSection(
-            child: InitialFocus(
-              // La misma grilla que el INVENTARIO (design_system.md
-              // § "Estructura atómica").
-              child: DsItemGrid(
-                rules: rules,
-                count: list.length,
-                cellKey: (i) => ValueKey('forge-row-${list[i].uid}'),
-                focusKeyPrefix: 'forge-row-at-',
-                slot: (i) => ItemSlotData(
-                    content: CellContent.item(list[i]),
-                    selected: list[i].uid == it.uid),
-                tip: (i, child, focused) => itemHoverTip(
+      frame: (context, box, r) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          crumbs,
+          SizedBox(height: DsSpace.xs),
+          Expanded(
+              child: PanelSplit(
+            list: [
+              NavSection(
+                child: InitialFocus(
+                  // La misma grilla que el INVENTARIO (design_system.md
+                  // § "Estructura atómica").
+                  child: DsWeaponList(
                     rules: rules,
-                    viewer: p,
-                    item: list[i],
-                    attributes: p.attributes,
-                    equipped: list[i].uid == p.equippedUid,
-                    focused: focused,
-                    note: p.equippedUid == list[i].uid
-                        ? protoColor(ProtoColors.gold, 'EQUIPADA')
-                        : protoColor(ProtoColors.dim,
-                            'forja ${list[i].forgeLevel}/${ItemRules.forgeCapOf(list[i])}'),
-                    child: child),
-                onTap: (i) => setState(() => _sel = list[i].uid),
-                onFocusCell: (i) => setState(() => _sel = list[i].uid),
+                    count: list.length,
+                    equipped: eqItem == null ? null : 0,
+                    keyPrefix: 'forge-',
+                    search: ItemGridSearch(
+                        fieldKey: const ValueKey('forge-search'),
+                        hint: 'BUSCAR: nombre, tipo, mod',
+                        controller: _q,
+                        onChanged: (_) => setState(() {})),
+                    empty: 'Ninguna arma coincide con la búsqueda.',
+                    cellKey: (i) => ValueKey('forge-row-${list[i].uid}'),
+                    focusKeyPrefix: 'forge-row-at-',
+                    slot: (i) => ItemSlotData(
+                        content: CellContent.item(list[i]),
+                        selected: list[i].uid == it.uid),
+                    tip: (i, child, focused) => itemHoverTip(
+                        rules: rules,
+                        viewer: p,
+                        item: list[i],
+                        attributes: p.attributes,
+                        equipped: list[i].uid == p.equippedUid,
+                        focused: focused,
+                        note: p.equippedUid == list[i].uid
+                            ? protoColor(ProtoColors.gold, 'EQUIPADA')
+                            : protoColor(ProtoColors.dim,
+                                'forja ${list[i].forgeLevel}/${ItemRules.forgeCapOf(list[i])}'),
+                        child: child),
+                    onTap: (i) => _pickWeapon(list[i].uid),
+                    onFocusCell: (i) => _pickWeapon(list[i].uid),
+                  ),
+                ),
               ),
+            ],
+            detail: PanelDetail(
+              footer: [
+                if (!r.isEmpty('footer')) r.region('footer'),
+                _confirm(p, it),
+              ],
+              children: [
+                r.region('detail'),
+              ],
             ),
-          ),
+          )),
         ],
-        detail: PanelDetail(
-          footer: r.isEmpty('footer') ? const [] : [r.region('footer')],
-          children: [r.region('detail')],
-        ),
       ),
     );
+  }
+
+  /// CONFIRMAR de la forja: gris con el motivo hasta elegir una mejora.
+  Widget _confirm(PlayerProfile p, ItemInstance it) {
+    final s = _stat;
+    final shop = widget.shop;
+    final atMax = s != null && it.forge.level(s) >= WeaponUpgradeLevels.upMax;
+    final reason = s == null
+        ? 'Elegí una mejora'
+        : atMax
+            ? 'Ya está al máximo'
+            : shop.guards.upgrade(p, it.uid, s);
+    return DsButton('FORJAR',
+        key: const ValueKey('forge-confirm'),
+        size: DsButtonSize.compact,
+        kind: DsButtonKind.primary,
+        tooltip: reason,
+        onPressed: reason != null
+            ? null
+            : () {
+                shop.controller.upgrade(it.uid, s!);
+                setState(() {});
+              });
   }
 }
 
@@ -731,11 +871,19 @@ const _forgeIcon = {
 /// completo). Clic / `Enter` = +1.
 class _UpgradeCard extends StatelessWidget {
   const _UpgradeCard(
-      {required this.shop, required this.item, required this.stat});
+      {required this.shop,
+      required this.item,
+      required this.stat,
+      required this.selected,
+      required this.onSelect});
 
   final ShopContext shop;
   final ItemInstance item;
   final UpgradeStat stat;
+
+  /// Elegida en el paso 2 (borde dorado); tocarla solo la elige.
+  final bool selected;
+  final VoidCallback onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -777,10 +925,9 @@ class _UpgradeCard extends StatelessWidget {
         description: _forgeWhat[stat],
         disabled: atMax,
         reason: reason,
+        selected: selected,
         onTap: () {
-          if (!atMax && reason == null) {
-            shop.controller.upgrade(item.uid, stat);
-          }
+          if (!atMax && reason == null) onSelect();
         },
         footer: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
