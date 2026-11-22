@@ -21,6 +21,7 @@ final sessionMusicProvider = Provider.autoDispose<SessionMusic>((ref) {
     ref.watch(musicServiceProvider),
     localId: controller.localId,
     themeOf: (id) => controller.engine.catalog.mission(id)?.theme,
+    fishing: () => controller.mapFishing != null,
   );
   final remove = controller.addListener(music.onView);
   ref.onDispose(remove);
@@ -93,9 +94,12 @@ abstract final class MusicSelector {
     String? theme,
     bool boss = false,
     String? bossId,
+    bool fishing = false,
   }) {
     switch (mode) {
       case SessionMode.lobby:
+        // Pescando en el pueblo: la variante de ocarina (music.md § 5.2).
+        if (inTown && fishing) return Music.fishing;
         return inTown ? Music.town : Music.overworld;
       case SessionMode.prep:
       case SessionMode.result:
@@ -146,13 +150,17 @@ abstract final class MusicSelector {
 /// nivel espera a que aparezca la pantalla de subida de nivel y ahí corta
 /// el de victoria.
 class SessionMusic {
-  SessionMusic(this.music, {required this.localId, this.themeOf});
+  SessionMusic(this.music,
+      {required this.localId, this.themeOf, this.fishing});
 
   final MusicService music;
   final String localId;
 
   /// Tema del mapa de una misión (para misiones sin zona).
   final String? Function(String missionId)? themeOf;
+
+  /// Si el jugador local tiene la caña afuera (pesca del mapa).
+  final bool Function()? fishing;
 
   bool _started = false;
   bool _inTown = true;
@@ -221,6 +229,7 @@ class SessionMusic {
       theme: m == null ? null : themeOf?.call(m.missionId),
       boss: s.battle?.boss ?? false,
       bossId: MusicSelector.bossIdOf(s.battle?.state),
+      fishing: fishing?.call() ?? false,
     );
     if (t != _track) {
       final leavingBattle =

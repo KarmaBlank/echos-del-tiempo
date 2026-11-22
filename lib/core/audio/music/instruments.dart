@@ -38,6 +38,34 @@ abstract final class Inst {
     echoGain: 0.33,
   );
 
+  /// Ocarina suave (pesca en el pueblo): ataque lento, un poco más de
+  /// soplo, vibrato leve y tardío, sin scoop marcado.
+  static const ocarinaSoft = Instrument(
+    voice: Voice.ocarina,
+    volume: 0.26,
+    attack: 0.08,
+    decay: 0.25,
+    sustain: 0.78,
+    release: 0.22,
+    gate: 0.97,
+    vibratoRate: 4.6,
+    vibratoDepth: 0.004,
+    vibratoDelay: 0.3,
+    breath: 0.08,
+    scoop: 0.12,
+  );
+
+  /// Bajo punteado muy suave (triángulo corto y bajo).
+  static const bassPluck = Instrument(
+    voice: Voice.triangle,
+    volume: 0.13,
+    attack: 0.004,
+    decay: 0.35,
+    sustain: 0.25,
+    release: 0.2,
+    gate: 0.8,
+  );
+
   /// Arpegio fino de pulso 12.5 %.
   static const arp = Instrument(
     voice: Voice.pulse12,

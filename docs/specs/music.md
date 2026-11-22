@@ -316,6 +316,7 @@ Pista según el estado (función pura `MusicSelector.trackFor`):
 |---|---|
 | Pantalla de título | `title` |
 | `lobby` dentro del pueblo (tiles `0..25 × 0..13`, `inTown`) | `town` |
+| `lobby` dentro del pueblo con la caña afuera (§ 5.2) | `fishing` |
 | `lobby` en el mapa del mundo | `overworld` |
 | `prep` | `town` |
 | `field` / `levelUp` en una misión de zona `z` (1–10) | `zone<z>` |
@@ -389,6 +390,20 @@ ULT (propia o enemiga): al llegar un paso de batalla nuevo
 (`battleEventSeq`) con una acción `ultimate` o un `EnemyUltEvent`, la
 música baja a 0.3 durante `UltScript.totalMs` de esa ULT y vuelve en
 0.6 s.
+
+### 5.2 Pesca en el pueblo (v0.22.4)
+
+Mientras el jugador local tiene la caña afuera en el mapa del pueblo
+(`SessionController.mapFishing != null`, modo `lobby` dentro del pueblo)
+suena `fishing` en lugar de `town`: la misma melodía y armonía del
+pueblo a 84 bpm, con `Inst.ocarinaSoft` (ataque lento, soplo leve,
+vibrato suave) sola al frente, un colchón (`Inst.pad`) que sostiene cada
+acorde y un bajo punteado muy suave (`Inst.bassPluck`) en el 1. Sin
+batería ni campanitas; el último compás es silencio de melodía, así el
+bucle cierra sin costura. Es solo local (cada jugador escucha su propia
+pesca; no cambia el protocolo). Entra y sale con el crossfade normal
+(`crossfadeSeconds`); `SessionMusic` solo pide la pieza cuando cambia,
+nunca la reinicia en cada vista. Al guardar la caña vuelve `town`.
 
 ## 6. `MusicService`
 

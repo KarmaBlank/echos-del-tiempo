@@ -15,6 +15,7 @@ void main() {
     expect(kMusicCatalog.keys.toSet(), {
       Music.title,
       Music.town,
+      Music.fishing,
       Music.overworld,
       for (final z in Music.zones) Music.zone(z),
       Music.battle,
