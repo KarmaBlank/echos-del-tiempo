@@ -1,4 +1,4 @@
-﻿// ULT de botín de jefe (ultimates_v2.md § 3.6): la etiqueta no habla de
+// ULT de botín de jefe (ultimates_v2.md § 3.6): la etiqueta no habla de
 // fragmentos, cada una dice qué jefe la enseña y dónde aparece, y la
 // sección muestra "Jefes vencidos: X/10". Con ULT_BOSS_SHOTS=<carpeta>
 // además guarda una captura de la sección.
@@ -8,7 +8,6 @@ import 'dart:ui' as ui;
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/game_engine/data/ults_v2_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/ult_def.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -65,11 +64,10 @@ void main() {
     final tab = CharacterTab.values.indexOf(CharacterTab.ults);
     await tester.tap(find.byKey(ValueKey('tab-$tab')));
     await tester.pump();
-    expect(find.text('BOTÍN DE JEFE'), findsOneWidget);
     expect(find.textContaining('FRAGMENTO'), findsNothing);
     final prog = find.byKey(const ValueKey('ult-boss-progress'));
     expect(tester.widget<Text>(prog).data, 'Jefes vencidos: 2/10');
-    final row = find.byKey(ValueKey('ult-all-${_boss('matriarca').id}'));
+    final row = find.byKey(ValueKey('ult-row-${_boss('matriarca').id}'));
     expect(
         find.descendant(
             of: row,
@@ -79,14 +77,11 @@ void main() {
     expect(bossUltStatusText(_boss('matriarca'), p),
         'Ya lo venciste: volvé a vencerlo para aprenderla.');
     expect(bossUltStatusText(_boss('devorador'), p), 'Todavía no lo venciste.');
-    // Tooltip: cómo se consigue y el estado.
-    await tester.ensureVisible(prog);
+    // Clic: la info de la derecha dice cómo se consigue y el estado.
+    await tester.ensureVisible(row);
     await tester.pump();
-    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await mouse.addPointer(location: Offset.zero);
-    addTearDown(mouse.removePointer);
-    await mouse.moveTo(tester.getCenter(row));
-    await tester.pump(const Duration(seconds: 1));
+    await tester.tap(row);
+    await tester.pump();
     expect(find.textContaining('Se aprende al vencer a Matriarca Araña'),
         findsOneWidget);
     expect(find.text('Ya lo venciste: volvé a vencerlo para aprenderla.'),

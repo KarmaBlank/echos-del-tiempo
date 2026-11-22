@@ -57,10 +57,12 @@ void main() {
     addTearDown(mouse.removePointer);
     var n = 0;
     for (final u in picks) {
-      final row = find.byKey(ValueKey('ult-all-${u.id}'));
+      // Solo el clic elige la ULT de la vista previa (el hover no).
+      final row = find.byKey(ValueKey('ult-row-${u.id}'));
       await tester.ensureVisible(row);
       await tester.pump();
       await mouse.moveTo(tester.getCenter(row));
+      await tester.tap(row);
       await tester.pump();
       // Hasta un poco después del primer impacto.
       final hit = ultPreviewImpact(ultPreviewTimeline(u.id)) + 260;

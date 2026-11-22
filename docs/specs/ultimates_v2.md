@@ -95,7 +95,8 @@ futuro o del pasado, futuro inmutable, pasado magitec).
     nuevo enseña la ULT de ese tipo; reemplaza a `ownedTypeUlts`). Se
     anota en `uk`, sale el mensaje de sesión «<jugador>: ¡Nueva ULT:
     <nombre>!» y queda con la marca **NUEVA** (`un` en el perfil) hasta
-    pasar el mouse por su fila en PERSONAJE → ULT; la pestaña ULT muestra
+    hacerle clic a su fila en PERSONAJE → ULT (v0.20.18; antes, al
+    pasar el mouse, § 2.1.1); la pestaña ULT muestra
     la insignia NUEVA mientras haya alguna. Se desmarca con
     `SeenItemsAction` usando el id `ult:<id>` (sin acción nueva). La base
     nunca sale como NUEVA. Las de jefe/Ecos/hazañas también usan NUEVA.
@@ -127,6 +128,40 @@ futuro o del pasado, futuro inmutable, pasado magitec).
   no hace falta el arma concreta. No hay fusión ni grabado de ULT.
   Migración: las armas que el personaje ya tiene con ULT propia (de
   camino, v2 o del Invocador) suman esa ULT al repertorio.
+
+### 2.1.1 Pestaña PERSONAJE → ULT (v0.20.18, dueño)
+
+- **Disposición:** a la izquierda la lista; a la derecha la vista previa
+  animada (§ 2.5) y, abajo de ella, la info de la ULT elegida (nombre,
+  origen y tipos de arma, motivo si no se puede usar, cómo se consigue si
+  falta, efecto, nivel y MEJORAR). En ventana angosta (< 760 px) la
+  vista previa con su info va arriba de la lista.
+- **ULT EQUIPADA:** sección fija arriba de la izquierda con la equipada
+  (la elegida válida o, si no, la que usa el motor). No aparece repetida
+  en la lista de abajo.
+- **REPERTORIO:** debajo, separado: contador `Las 50: n/50` y `Jefes
+  vencidos: x/10`, búsqueda por nombre (sin distinguir mayúsculas ni
+  tildes) y cuatro menús: ARMA (tipos presentes), ORIGEN, ESTADO (Todas /
+  Obtenidas / Faltan) y ORDEN. La lista incluye el repertorio y las ULT
+  de las 50 que faltan (gris, `Falta · <cómo>`).
+- **Origen** (`UltBrowseRules.originOf`, derivado de los catálogos): ULT
+  base de la clase, Tipo de arma, Arma Rara / Épica, Camino, Legendario,
+  Tomo, Ascensión, Hito del árbol, Hazaña, Ecos y Atlas, Botín de jefe.
+- **Orden:** Más nuevas (por defecto: orden de obtención, la más nueva
+  primero), Alfabético, Por nivel (mayor primero), Por origen y Por tipo
+  de arma. En Más nuevas y Por nivel las obtenidas van antes que las que
+  faltan; los empates, alfabéticos.
+- **Orden de obtención:** `PlayerProfile.ultOrder` (JSON `uo`, aditivo y
+  opcional). `copyWith` agrega al final cada id nuevo de `ultKnown`. Una
+  partida vieja no lo trae y sus ULT cuentan como las más viejas. No
+  cambia el protocolo (el perfil ya viaja como JSON tolerante).
+- **Interacción:** el hover no hace nada (ni vista previa, ni info, ni
+  NUEVA). Solo el clic elige una ULT: cambia la vista previa y la info y
+  le saca la NUEVA (`SeenItemsAction` con `ult:<id>`, una vez). Equipar
+  es el botón EQUIPAR de la info (gris fuera del pueblo o campamento o si
+  la clase no la puede usar).
+- **Ajustes:** filtros y orden (no el texto) se recuerdan por equipo en
+  `game.json`, clave `ultBrowse` (`UltBrowsePrefs`).
 
 ### 2.2 Costo
 
