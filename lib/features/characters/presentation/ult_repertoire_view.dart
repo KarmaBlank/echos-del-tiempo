@@ -11,6 +11,8 @@ import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/models/ult_def.dart';
 import '../../../game_engine/models/weapon.dart';
+import '../../../game_engine/rules/battle_engine.dart';
+import '../../../game_engine/rules/js_math.dart';
 import '../../../game_engine/rules/ult_browse_rules.dart';
 import '../../../game_engine/rules/ult_rules.dart';
 import '../../../core/audio/sfx_service.dart';
@@ -72,12 +74,14 @@ class UltRepertoireView extends StatefulWidget {
   /// Cambió un filtro o el orden (para guardarlo en los ajustes).
   final ValueChanged<UltBrowsePrefs>? onPrefs;
 
-  static const help = '<b>ULT</b><br>'
+  static String get help => '<b>ULT</b><br>'
       'Tu repertorio: toda ULT que conseguís queda para siempre. Al '
       'conseguir un arma que enseña una ULT la aprendés en el momento. '
       'Hacé clic en una para verla y equipala fuera de combate; el arma equipada no la cambia. '
       'Sin elegir, se usa la ULT base de tu clase.<br>'
-      'MEJORAR sube su nivel (1 a 5) con créditos y materiales.';
+      'MEJORAR sube su nivel (1 a 5) con créditos y materiales.<br>'
+      'Las cargas extra de ULT (árbol, mods, efectos) tienen un tope de '
+      '${jsRound(BattleEngine.ultBonusPerTurn)}% por turno.';
 
   @override
   State<UltRepertoireView> createState() => _UltRepertoireViewState();

@@ -214,6 +214,7 @@ class _ImpactPanelState extends State<ImpactPanel> {
       case BalanceKind.featReward:
       case BalanceKind.consumables:
       case BalanceKind.travesia:
+      case BalanceKind.combatLimits:
         return const _Plan();
     }
   }

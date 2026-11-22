@@ -649,6 +649,7 @@ class SessionJson {
         if (c.summonKills != 0) 'smN': c.summonKills,
         // Pulso e Instante v0.9 (opcionales; combo_balance.md § 5.2).
         if (c.pulse != 0) 'pls': c.pulse,
+        if (c.ultBonusTurn != 0) 'ubt': c.ultBonusTurn,
         if (c.chained) 'chn': true,
         if (c.guardStreak) 'gst': true,
         if (c.guardHitPending) 'ghp': true,
@@ -782,6 +783,7 @@ class SessionJson {
       summonTurns: j.intOrNull('smT') ?? 0,
       summonKills: j.intOrNull('smN') ?? 0,
       pulse: j.intOrNull('pls') ?? 0,
+      ultBonusTurn: j.dblOrNull('ubt') ?? 0,
       chained: j.flag('chn'),
       guardStreak: j.flag('gst'),
       guardHitPending: j.flag('ghp'),
