@@ -348,6 +348,10 @@ class ProgressionRules {
         for (final id in raw.ultNew)
           if (UltRules.isLearnable(id)) id
       },
+      ultOrder: [
+        for (final id in {...raw.ultOrder})
+          if (UltRules.isLearnable(id)) id
+      ],
       // Jefes del Abismo vencidos (v0.8): solo 1..5.
       abyssKills: {
         for (final n in raw.abyssKills)

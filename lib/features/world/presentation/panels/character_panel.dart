@@ -21,6 +21,7 @@ import '../../../../app/theme/proto_markup.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../app/widgets/menu_focus.dart';
+import '../../../../core/settings/settings_providers.dart';
 import '../../../../game_engine/rules/build_guide_rules.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/bestiary.dart';
@@ -181,6 +182,10 @@ class _CharacterPanelState extends State<CharacterPanel> {
               onSelect: c.selectUlt,
               onUpgrade: c.upgradeUlt,
               onSeen: c.markSeen,
+              // Filtros y orden, por equipo (ultimates_v2.md § 2.1.1).
+              prefs: ref.read(gameSettingsProvider).ultBrowse,
+              onPrefs: (p) => ref.read(gameSettingsProvider.notifier).update(
+                  ref.read(gameSettingsProvider).copyWith(ultBrowse: p)),
               // Vista previa (ultimates_v2.md § 2.5).
               stats: rules.derivedStats(prof),
               sprites: ref.watch(gameSpritesProvider).valueOrNull,

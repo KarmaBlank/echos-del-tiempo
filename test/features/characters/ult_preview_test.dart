@@ -186,7 +186,7 @@ void main() {
       expect(tester.takeException(), isNull, reason: '$w');
       final preview =
           tester.getRect(find.byKey(const ValueKey('ult-preview')));
-      final header = tester.getRect(find.text('ULT ACTIVA'));
+      final header = tester.getRect(find.text('ULT EQUIPADA'));
       if (narrow) {
         expect(preview.bottom, lessThanOrEqualTo(header.top));
       } else {
