@@ -549,3 +549,92 @@ BuildFit?`:
   No mira el arma equipada. Comparte alguna: va, "Suma <etiqueta> (como
   <origen>)". Ninguna: no va, "Tu plan no usa <etiqueta principal>".
 - Sin etiquetas propias o plan sin etiquetas: `null` (sin marca).
+
+## 10. Vista simple (v0.20.25)
+
+Pedido del dueño: el propósito del builder está bien pero, para quien
+solo quiere elegir una plantilla y no pensar, se veía confuso (siglas
+sueltas, "−5 +5 ×" y "Quitar meta" en cada fila, verde y dorado sin
+explicar, texto cortado con "…", porcentajes crudos). La pestaña BUILD
+abre ahora en una **vista simple** (`BuildCoachView`) con los tres
+niveles de ui_minimal.md § 1. La vista de antes (§ 4) queda entera como
+**EDITAR PLAN** (avanzado). Reglas puras en `BuildCoach`
+(`lib/game_engine/rules/build_coach_rules.dart`).
+
+### 10.1 Entrada
+
+- **Sin metas** (`goalCount == 0`): sección "Elegí una plantilla" con
+  las de tu clase (`buildTemplatesFor`). Cada fila (`build-tpl-<id>`):
+  ícono, nombre, etiqueta de dificultad FÁCIL / MEDIA / AVANZADA
+  (`difficulty` 1 / 2 / 3, verde / dorado / naranja,
+  `build-tpl-diff-<id>`), la primera línea de la descripción y "Arma:
+  <tipo>" (el del objetivo principal, `templateWeaponType`), y
+  **APLICAR** (`build-apply-<id>`, `applyTemplate`). Abajo: COMPARAR
+  PLANTILLAS (`build-template`, el navegador de siempre) y ARMAR A MANO
+  (`build-edit`).
+- **Con plan**: tarjeta `build-summary` "Tu plan: <nombre> · N%", barra,
+  **CAMBIAR PLANTILLA** (`build-template`) y **EDITAR PLAN**
+  (`build-edit`).
+
+### 10.2 Qué hacer ahora (`nextSteps`, máximo 3)
+
+En este orden, solo los que aplican, cortado en 3 (`build-step-<i>`,
+botón `build-step-go-<i>`):
+
+1. Puntos de atributo libres: "Poné N puntos en Fuerza (FUE)" (el tramo
+   de la plantilla a tu nivel; si no hay, el atributo al que más le
+   falta, N = lo que falta / 3 con tope en tus puntos). IR A ATRIBUTOS.
+2. El siguiente nodo del orden del árbol (§ 9.2): "Tomá el nodo X del
+   árbol", con "(te faltan N puntos)" si el camino pide más de los que
+   tenés. IR AL ÁRBOL (sin pestaña de árbol, abre el modo planificar).
+3. Arma (§ 9.4): "Equipá <arma>" (EQUIPAR, gris con motivo si no se
+   puede) si la mejor que tenés no está equipada; si no tenés del tipo
+   vigente, "Conseguí un arma de tipo <Tipo>" (IR A LA ARMERÍA si hay
+   callback).
+4. El primer mod que falta (§ 10.5), la primera habilidad y la ULT
+   activa que falten (sin botón).
+
+Sin pasos: "Estás al día con tu plan". Regla de texto: palabras
+completas; una sigla de atributo solo entre paréntesis detrás de su
+nombre (`attributeLabel`, `expandShorts` para textos del motor).
+
+### 10.3 Progreso por área (`areas`)
+
+Leyenda de una línea (`DsLegend`): tilde verde = listo, cajita dorada =
+falta; los mismos colores en toda la vista. Luego un `DsProgressFold`
+por área (`build-area-<area>`), **plegado por defecto**, con medidor y
+"hechas de total" (tilde al completar):
+
+| Área | Metas |
+|---|---|
+| Atributos | `attribute` ("Fuerza (FUE): 12 de 60") |
+| Árbol | `treeNode` (mayores una por fila, los de camino en una), `ascension`, `ascensionNode`; VER EN EL ÁRBOL |
+| Arma | `weaponType`, `weaponBase`, `weaponPassive`, `weaponTarget` |
+| Mods | `modsWanted` (§ 10.5) |
+| Habilidades | `skill` |
+| ULT | `ultActive`, `ultUpgrade`, `feat` |
+
+### 10.4 Armas recomendadas
+
+Dentro de Arma: "Mejor tipo: <Tipo>" con el motivo en una línea, y hasta
+3 armas tuyas (`rankItems` recomendadas) con una etiqueta en vez del %:
+IDEAL / SIRVE / DE PASO (`fitOf`): contra el objetivo principal si hay
+(≥ 80 % Ideal, ≥ 50 % Sirve), si no por tipo (del tipo vigente: Ideal;
+otro: Sirve); si no cumple requisitos: De paso. El % y los motivos van
+al tooltip.
+
+### 10.5 Mods buscados (`modsWanted`)
+
+Los del plan más los del objetivo de arma principal, sin repetir (gana
+el nivel más exigente). Uno por línea: marca, "Arcano, nivel 3 o mejor"
+(`tierText`: T1 = "nivel 1 (el mejor)", T5 = "cualquier nivel") y
+"Lo tenés" / "Falta" (alguna arma del inventario o el alijo lo tiene con
+ese nivel).
+
+### 10.6 Editar plan
+
+EDITAR PLAN cambia a la vista de § 4 (agregar, −5 / +5, ×, notas,
+objetivos de arma); **LISTO** (`build-edit-done`) vuelve a la simple.
+En la vista simple no hay ningún control de edición. Sin texto cortado:
+las filas de la vista simple (`DsInfoRow`) bajan de línea, y el nombre
+del plan en EDITAR PLAN ya no se corta.
