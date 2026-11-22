@@ -1563,7 +1563,7 @@ Pedidos del dueño, para ahorrar espacio y no tapar la elección:
 - **Condición lista (v0.20.9).** Una habilidad con precondición
   (objetivo Fisurado, stacks de un estado, Marca, vida propia baja) que
   hoy se cumple y se puede usar lleva **borde azul**
-  (`DsColors.conditionReady` #4DA3FF, `DsListRow.highlighted`,
+  (`DsColors.conditionReady` = `ProtoColors.sky`, `DsListRow.highlighted`,
   `BattleAction.conditionReady`), distinto del dorado de selección (la
   fila seleccionada muestra el dorado). Sin texto extra.
 - **Crítico en el detalle.** Todo lo que puede critear muestra
