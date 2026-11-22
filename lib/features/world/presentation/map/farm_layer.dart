@@ -48,6 +48,21 @@ class MapFarmLayer {
     }
   }
 
+  /// La azada en la mano del jugador local, mirando a [face] (-1/0/1).
+  void drawHoe(Canvas c, double px, double py, num face) {
+    final f = face < 0 ? -1.0 : 1.0;
+    final hand = Offset(px + f * 4, py - 6);
+    final top = Offset(px + f * 9, py - 17);
+    c.drawLine(
+        hand,
+        top,
+        Paint()
+          ..color = FarmPalette.hoeHandle
+          ..strokeWidth = 1.5);
+    c.drawRect(Rect.fromLTWH(top.dx - (f < 0 ? 4 : 0), top.dy, 4, 2),
+        Paint()..color = FarmPalette.hoeBlade);
+  }
+
   void _plot(Canvas c, FarmPlot p, double px, double py, double t) {
     final paint = Paint();
     c.drawRect(Rect.fromLTWH(px + 1, py + 1, ts - 2, ts - 2),

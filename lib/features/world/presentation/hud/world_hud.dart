@@ -44,6 +44,7 @@ import 'full_map.dart';
 import 'loot_feed.dart';
 import 'minimap.dart';
 import 'potion_shortcuts.dart';
+import 'tool_hud.dart';
 import 'unused_points_notice.dart';
 
 /// `m:ss` con minutos de dos dígitos (`mm:ss` del HUD del prototipo).
@@ -124,14 +125,14 @@ class WorldHud extends StatelessWidget {
       // defecto), así con texto ENORME entran dos cajas por fila.
       final n = players.length;
       int perRowFor(bool exp) {
-        final w = exp
-            ? PartyBox.widthOf(context)
-            : PartyBox.compactWidthOf(context);
+        final w =
+            exp ? PartyBox.widthOf(context) : PartyBox.compactWidthOf(context);
         final chatMin = RetroType.width(context, exp ? 240 : 200);
         final room =
             (box.maxWidth - chatMin - _gap * 3).clamp(w, double.infinity);
         return ((room + 6) / (w + 6)).floor().clamp(1, n == 0 ? 1 : n);
       }
+
       // Grupo grande (v0.13, cualquier n): desplegadas solo si entran en
       // [maxPartyRows] filas; si no, compactas aunque estén desplegadas.
       final expanded =
@@ -161,96 +162,99 @@ class WorldHud extends StatelessWidget {
                   LayoutId(
                     id: _TopSlot.bar,
                     child: Memo(
-                  deps: [
-                    _MissionBar.textFor(view, _missionName(s)),
-                    turnTimerNote(view),
-                  ],
-                  builder: (_) => _MissionBar(
-                    view: view,
-                    missionName: _missionName(s),
-                  ),
-                ),
+                      deps: [
+                        _MissionBar.textFor(view, _missionName(s)),
+                        turnTimerNote(view),
+                      ],
+                      builder: (_) => _MissionBar(
+                        view: view,
+                        missionName: _missionName(s),
+                      ),
+                    ),
                   ),
                   // `< TITULO` (solo en el lobby) y `≡ MENÚ` (siempre): la pausa
                   // con sonido, pantalla, juego, controles y salidas.
                   LayoutId(
                     id: _TopSlot.left,
                     child: Memo(
-                deps: [
-                  s.mode == SessionMode.lobby,
-                  onExit != null,
-                  onMenu != null,
-                  controller.canEditParty,
-                  controller.stashBlock == null,
-                  view.companions.length,
-                  _unusedKey(_unused(s)),
-                ],
-                builder: (_) => Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (s.mode == SessionMode.lobby && onExit != null) ...[
-                      DsButton('< TITULO',
-                          key: const ValueKey('hud-exit'),
-                          size: DsButtonSize.compact,
-                          onPressed: onExit),
-                      const SizedBox(width: 8),
-                    ],
-                    if (onMenu != null) PauseMenuButton(onPressed: onMenu!),
-                    // Alijo de la cuenta, fuera de batalla (characters.md
-                    // § 3.2).
-                    if (controller.stashBlock == null) ...[
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        key: const ValueKey('hud-stash'),
-                        style: RetroTheme.compactButton(),
-                        onPressed: controller.toggleStash,
-                        child: const Text('ALIJO [B]'),
+                      deps: [
+                        s.mode == SessionMode.lobby,
+                        onExit != null,
+                        onMenu != null,
+                        controller.canEditParty,
+                        controller.stashBlock == null,
+                        view.companions.length,
+                        _unusedKey(_unused(s)),
+                      ],
+                      builder: (_) => Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (s.mode == SessionMode.lobby &&
+                              onExit != null) ...[
+                            DsButton('< TITULO',
+                                key: const ValueKey('hud-exit'),
+                                size: DsButtonSize.compact,
+                                onPressed: onExit),
+                            const SizedBox(width: 8),
+                          ],
+                          if (onMenu != null)
+                            PauseMenuButton(onPressed: onMenu!),
+                          // Alijo de la cuenta, fuera de batalla (characters.md
+                          // § 3.2).
+                          if (controller.stashBlock == null) ...[
+                            const SizedBox(width: 8),
+                            ElevatedButton(
+                              key: const ValueKey('hud-stash'),
+                              style: RetroTheme.compactButton(),
+                              onPressed: controller.toggleStash,
+                              child: const Text('ALIJO [B]'),
+                            ),
+                          ],
+                          // Party jugando solo, en el pueblo (solo_party.md § 2.3).
+                          if (controller.canEditParty) ...[
+                            const SizedBox(width: 8),
+                            DsButton(
+                                'PARTY (${view.companions.length + 1}) [P]',
+                                key: const ValueKey('hud-party'),
+                                size: DsButtonSize.compact,
+                                onPressed: controller.toggleParty),
+                          ],
+                          // Puntos sin usar: `PERSONAJE [C]` con `+N` (solo si hay;
+                          // passive_tree_v4.md § 7).
+                          if (_unused(s).any) ...[
+                            const SizedBox(width: 8),
+                            Consumer(
+                              builder: (context, ref, _) => UnusedPointsButton(
+                                points: _unused(s),
+                                reduceMotion: ref.watch(gameSettingsProvider
+                                    .select((g) => g.reduceMotion)),
+                                onPressed: controller.toggleCharacter,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
-                    ],
-                    // Party jugando solo, en el pueblo (solo_party.md § 2.3).
-                    if (controller.canEditParty) ...[
-                      const SizedBox(width: 8),
-                      DsButton('PARTY (${view.companions.length + 1}) [P]',
-                          key: const ValueKey('hud-party'),
-                          size: DsButtonSize.compact,
-                          onPressed: controller.toggleParty),
-                    ],
-                    // Puntos sin usar: `PERSONAJE [C]` con `+N` (solo si hay;
-                    // passive_tree_v4.md § 7).
-                    if (_unused(s).any) ...[
-                      const SizedBox(width: 8),
-                      Consumer(
-                        builder: (context, ref, _) => UnusedPointsButton(
-                          points: _unused(s),
-                          reduceMotion: ref.watch(gameSettingsProvider
-                              .select((g) => g.reduceMotion)),
-                          onPressed: controller.toggleCharacter,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+                    ),
                   ),
                   // `Sala: CODIGO [Copiar]` del prototipo (HTML línea 87).
                   if (view.roomCode case final code?)
                     LayoutId(
                       id: _TopSlot.room,
                       child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Sala: $code',
-                        key: const ValueKey('hud-room-code'),
-                        style: DsText.body(DsColors.textTitle)),
-                    SizedBox(width: DsSpace.sm),
-                    DsButton('COPIAR',
-                        key: const ValueKey('hud-room-copy'),
-                        size: DsButtonSize.compact,
-                        tooltip: 'Copiar el código de la sala',
-                        onPressed: () =>
-                            Clipboard.setData(ClipboardData(text: code))),
-                  ],
-                ),
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Sala: $code',
+                              key: const ValueKey('hud-room-code'),
+                              style: DsText.body(DsColors.textTitle)),
+                          SizedBox(width: DsSpace.sm),
+                          DsButton('COPIAR',
+                              key: const ValueKey('hud-room-copy'),
+                              size: DsButtonSize.compact,
+                              tooltip: 'Copiar el código de la sala',
+                              onPressed: () =>
+                                  Clipboard.setData(ClipboardData(text: code))),
+                        ],
+                      ),
                     ),
                   // Minimapa con zoom (rueda o `-` `+`, se recuerda) y
                   // `MAPA [M]` (v0.8.1).
@@ -258,60 +262,63 @@ class WorldHud extends StatelessWidget {
                     LayoutId(
                       id: _TopSlot.minimap,
                       child: Consumer(builder: (context, ref, _) {
-                  final zoom = ref
-                      .watch(gameSettingsProvider.select((g) => g.minimapZoom));
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      RetroPanel(
-                        padding: const EdgeInsets.all(4),
-                        child: Listener(
-                          onPointerSignal: (e) {
-                            if (e is PointerScrollEvent) {
-                              setMinimapZoom(
-                                  ref, zoom + (e.scrollDelta.dy < 0 ? 1 : -1));
-                            }
-                          },
-                          child: hudMinimap(view, controller, zoom: zoom),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      // Los botones no toman el foco (el teclado sigue en
-                      // el juego).
-                      Memo(
-                        deps: [zoom],
-                        builder: (_) => ExcludeFocus(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              DsButton.icon(const Text('-'),
-                                  key: const ValueKey('minimap-zoom-out'),
-                                  tooltip: 'Alejar el minimapa',
-                                  size: DsButtonSize.compact,
-                                  onPressed: zoom > 1
-                                      ? () => setMinimapZoom(ref, zoom - 1)
-                                      : null),
-                              SizedBox(width: DsSpace.xs),
-                              DsButton.icon(const Text('+'),
-                                  key: const ValueKey('minimap-zoom-in'),
-                                  tooltip: 'Acercar el minimapa',
-                                  size: DsButtonSize.compact,
-                                  onPressed: zoom < GameSettings.minimapZooms
-                                      ? () => setMinimapZoom(ref, zoom + 1)
-                                      : null),
-                              SizedBox(width: DsSpace.xs),
-                              DsButton('MAPA [M]',
-                                  key: const ValueKey('minimap-open-map'),
-                                  size: DsButtonSize.compact,
-                                  onPressed: controller.toggleMap),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }),
+                        final zoom = ref.watch(
+                            gameSettingsProvider.select((g) => g.minimapZoom));
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            RetroPanel(
+                              padding: const EdgeInsets.all(4),
+                              child: Listener(
+                                onPointerSignal: (e) {
+                                  if (e is PointerScrollEvent) {
+                                    setMinimapZoom(ref,
+                                        zoom + (e.scrollDelta.dy < 0 ? 1 : -1));
+                                  }
+                                },
+                                child: hudMinimap(view, controller, zoom: zoom),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            // Los botones no toman el foco (el teclado sigue en
+                            // el juego).
+                            Memo(
+                              deps: [zoom],
+                              builder: (_) => ExcludeFocus(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    DsButton.icon(const Text('-'),
+                                        key: const ValueKey('minimap-zoom-out'),
+                                        tooltip: 'Alejar el minimapa',
+                                        size: DsButtonSize.compact,
+                                        onPressed: zoom > 1
+                                            ? () =>
+                                                setMinimapZoom(ref, zoom - 1)
+                                            : null),
+                                    SizedBox(width: DsSpace.xs),
+                                    DsButton.icon(const Text('+'),
+                                        key: const ValueKey('minimap-zoom-in'),
+                                        tooltip: 'Acercar el minimapa',
+                                        size: DsButtonSize.compact,
+                                        onPressed: zoom <
+                                                GameSettings.minimapZooms
+                                            ? () =>
+                                                setMinimapZoom(ref, zoom + 1)
+                                            : null),
+                                    SizedBox(width: DsSpace.xs),
+                                    DsButton('MAPA [M]',
+                                        key: const ValueKey('minimap-open-map'),
+                                        size: DsButtonSize.compact,
+                                        onPressed: controller.toggleMap),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
                     ),
                   // Objetivos plegables (J o clic en la cabecera; el estado
                   // se guarda), debajo de los botones y de la línea de
@@ -320,16 +327,16 @@ class WorldHud extends StatelessWidget {
                     LayoutId(
                       id: _TopSlot.objectives,
                       child: Consumer(
-                  builder: (context, ref, _) => _Objectives(
-                      mission: s.mission!,
-                      zoneName: _missionName(s),
-                      floorLevel: MapGame.currentFloor(view)?.level,
-                      floor: MapGame.currentFloor(view),
-                      time: s.time,
-                      collapsed: ref.watch(gameSettingsProvider
-                          .select((g) => g.objectivesCollapsed)),
-                      onToggle: () => toggleObjectives(ref)),
-                ),
+                        builder: (context, ref, _) => _Objectives(
+                            mission: s.mission!,
+                            zoneName: _missionName(s),
+                            floorLevel: MapGame.currentFloor(view)?.level,
+                            floor: MapGame.currentFloor(view),
+                            time: s.time,
+                            collapsed: ref.watch(gameSettingsProvider
+                                .select((g) => g.objectivesCollapsed)),
+                            onToggle: () => toggleObjectives(ref)),
+                      ),
                     ),
                 ],
               ),
@@ -399,50 +406,61 @@ class WorldHud extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-              // Pociones fuera de batalla (loot.md § 17.5).
-              if (s.mode != SessionMode.battle)
-                if (s.players[view.localId] case final me?)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: PotionShortcuts(controller: controller, player: me),
-                  ),
-              SizedBox(
-                key: const ValueKey('hud-party-boxes'),
-                width: partyWidth,
-                child: Wrap(
-                  alignment: WrapAlignment.end,
-                  crossAxisAlignment: WrapCrossAlignment.end,
-                  verticalDirection: VerticalDirection.up,
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    // Cada caja se arma solo si cambió lo que muestra.
-                    for (final p in players)
-                      Memo(
-                        key: ValueKey('hud-party-memo-${p.id}'),
-                        deps: [_boxKey(p, expanded)],
-                        builder: (_) => Consumer(
-                          builder: (context, ref, _) => _Toggle(
-                            key: ValueKey('hud-party-${p.id}'),
-                            expanded: expanded,
-                            onTap: () => togglePartyBoxes(ref),
-                            child: expanded
-                                ? _PlayerBox(
-                                    player: p,
-                                    local: p.id == view.localId,
-                                    progression: controller.engine.progression,
-                                  )
-                                : CompactPlayerBox(
-                                    player: p,
-                                    local: p.id == view.localId,
-                                    progression: controller.engine.progression,
-                                  ),
-                          ),
-                        ),
+                  // Herramienta en la mano y su aviso (solo en el pueblo).
+                  if (s.players[view.localId] case final me?
+                      when controller.activeTool != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child:
+                          ToolHud(controller: controller, profile: me.profile),
+                    ),
+                  // Pociones fuera de batalla (loot.md § 17.5).
+                  if (s.mode != SessionMode.battle)
+                    if (s.players[view.localId] case final me?)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child:
+                            PotionShortcuts(controller: controller, player: me),
                       ),
-                  ],
-                ),
-              ),
+                  SizedBox(
+                    key: const ValueKey('hud-party-boxes'),
+                    width: partyWidth,
+                    child: Wrap(
+                      alignment: WrapAlignment.end,
+                      crossAxisAlignment: WrapCrossAlignment.end,
+                      verticalDirection: VerticalDirection.up,
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        // Cada caja se arma solo si cambió lo que muestra.
+                        for (final p in players)
+                          Memo(
+                            key: ValueKey('hud-party-memo-${p.id}'),
+                            deps: [_boxKey(p, expanded)],
+                            builder: (_) => Consumer(
+                              builder: (context, ref, _) => _Toggle(
+                                key: ValueKey('hud-party-${p.id}'),
+                                expanded: expanded,
+                                onTap: () => togglePartyBoxes(ref),
+                                child: expanded
+                                    ? _PlayerBox(
+                                        player: p,
+                                        local: p.id == view.localId,
+                                        progression:
+                                            controller.engine.progression,
+                                      )
+                                    : CompactPlayerBox(
+                                        player: p,
+                                        local: p.id == view.localId,
+                                        progression:
+                                            controller.engine.progression,
+                                      ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -505,7 +523,11 @@ class WorldHud extends StatelessWidget {
                             kind: DsToastKind.reward),
                       ),
                     // `[E] ...`: caja `#000a` y texto dorado (sello violeta).
-                    if (view.promptLabel case final label?)
+                    // Pesca y huerta: el aviso va en el HUD de herramienta.
+                    if (view.prompt == WorldPrompt.fishing ||
+                        view.prompt == WorldPrompt.farm)
+                      const SizedBox.shrink()
+                    else if (view.promptLabel case final label?)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: _CanvasLabel(label,
@@ -844,8 +866,8 @@ class _MissionBar extends StatelessWidget {
       child: Container(
         key: const ValueKey('hud-mission-bar'),
         color: DsColors.surface,
-        padding: EdgeInsets.symmetric(
-            horizontal: DsSpace.md, vertical: DsSpace.sm),
+        padding:
+            EdgeInsets.symmetric(horizontal: DsSpace.md, vertical: DsSpace.sm),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1252,33 +1274,33 @@ class _Objectives extends StatelessWidget {
             '${floorLevel == null ? '' : ' · Lv $floorLevel'}'
         : zoneName;
     final header = ActionLink(
-        key: const ValueKey('hud-objectives-header'),
-        onTap: onToggle,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: kObjectiveLineGap),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Plegada, la cabecera ES el resumen (el nombre ya está en
-              // la barra de misión).
-              Flexible(
-                child: collapsed
-                    ? Text(retroText(objectivesSummaryText(mission, floor)),
-                        key: const ValueKey('hud-objectives-summary'),
-                        style: const TextStyle(color: DsColors.textPrimary))
-                    : Text(retroText(title),
-                        key: ValueKey(
-                            floors ? 'hud-floor' : 'hud-objectives-title'),
-                        style: const TextStyle(color: DsColors.textTitle)),
-              ),
-              SizedBox(width: DsSpace.sm),
-              Text(collapsed ? '[+]' : '[-]',
-                  key: const ValueKey('hud-objectives-toggle'),
-                  style: const TextStyle(color: DsColors.textSecondary)),
-            ],
-          ),
+      key: const ValueKey('hud-objectives-header'),
+      onTap: onToggle,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: kObjectiveLineGap),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Plegada, la cabecera ES el resumen (el nombre ya está en
+            // la barra de misión).
+            Flexible(
+              child: collapsed
+                  ? Text(retroText(objectivesSummaryText(mission, floor)),
+                      key: const ValueKey('hud-objectives-summary'),
+                      style: const TextStyle(color: DsColors.textPrimary))
+                  : Text(retroText(title),
+                      key: ValueKey(
+                          floors ? 'hud-floor' : 'hud-objectives-title'),
+                      style: const TextStyle(color: DsColors.textTitle)),
+            ),
+            SizedBox(width: DsSpace.sm),
+            Text(collapsed ? '[+]' : '[-]',
+                key: const ValueKey('hud-objectives-toggle'),
+                style: const TextStyle(color: DsColors.textSecondary)),
+          ],
         ),
+      ),
     );
     // `drawObjectives`: caja `#000a` con borde `#5b74c9`.
     return Container(
@@ -1474,7 +1496,6 @@ class _LevelUpBanner extends StatelessWidget {
             SizedBox(height: DsSpace.sm),
             Text(retroText('Esperando a: $waiting'),
                 style: DsText.body(DsColors.textPrimary)),
-
           ],
         ),
       ),

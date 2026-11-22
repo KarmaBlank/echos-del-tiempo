@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -38,7 +38,8 @@ import 'tile_painter.dart';
 import 'void_painter.dart';
 import 'fishing_layer.dart';
 import 'farm_layer.dart';
-import '../../../../game_engine/data/farming_catalog.dart' show kCrops, CropQuality;
+import '../../../../game_engine/data/farming_catalog.dart'
+    show kCrops, CropQuality;
 import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
 import '../panels/fishing_widgets.dart' show fishRarityColor;
 import '../../../../game_engine/data/fishing_catalog.dart';
@@ -368,7 +369,8 @@ class MapGame extends Game {
           :final helper
         )) {
       final def = kCrops[crop];
-      final q = CropQuality.values[quality.clamp(0, CropQuality.values.length - 1)];
+      final q =
+          CropQuality.values[quality.clamp(0, CropQuality.values.length - 1)];
       final rar = def?.rarity ?? FishRarity.comun;
       farm.addPop(
           helper ? '' : playerId,
@@ -379,7 +381,14 @@ class MapGame extends Game {
           FarmPalette.fruit[rar.index.clamp(0, 3)],
           t);
     }
-    if (e case FarmLootEvent(:final playerId, :final label, :final rarity, :final tx, :final ty)) {
+    if (e
+        case FarmLootEvent(
+          :final playerId,
+          :final label,
+          :final rarity,
+          :final tx,
+          :final ty
+        )) {
       final r = Rarity.values[rarity.clamp(0, Rarity.values.length - 1)];
       farm.addPop(playerId, tx, ty, label, RarityColors.of(r),
           RarityColors.of(r), t + 250);
@@ -708,6 +717,10 @@ class MapGame extends Game {
       if (line == null && mine) fishing.barRect = null;
       add(py, () {
         hero(px, py);
+        // Cerca de la huerta sale la azada equipada (farming.md § 4).
+        if (mine && line == null && controller.activeTool == ActiveTool.hoe) {
+          farm.drawHoe(c, px, py, controller.local.fx);
+        }
         if (line != null) {
           final f = mine ? controller.mapFishing : null;
           final b = f?.bobber ?? (line.hasBobber ? (line.bx, line.by) : null);

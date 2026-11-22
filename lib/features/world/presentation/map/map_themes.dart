@@ -269,6 +269,8 @@ abstract final class FarmPalette {
   static const pop = Color(0xFFFFF3C4);
   static const helper = Color(0xFFD9A066);
   static const helperHat = Color(0xFF8C6A3C);
+  static const hoeHandle = Color(0xFF8C6A3C);
+  static const hoeBlade = Color(0xFFB8C2CC);
 
   /// Color del fruto por rareza del cultivo (índice de `FishRarity`).
   static const fruit = [

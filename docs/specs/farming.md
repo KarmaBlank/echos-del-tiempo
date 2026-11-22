@@ -48,10 +48,28 @@ Código: `farming_catalog.dart`, `models/farm_skills.dart`,
 | Plantada, creciendo | Regar | Con la regadera; área según regadera |
 | Madura | Cosechar | Pop + aviso + chat |
 
-F abona la parcela de enfrente con el mejor abono que tengas. El aviso
-de abajo, de una línea, dice qué hace E y el avance ("[E] Regar · Trigo
-dorado 45 %"); con el cultivo maduro, tu chance de legendaria. El detalle
-completo está en el tooltip del mouse (§ 2.4).
+F abona la parcela de enfrente con el mejor abono que tengas. E o el
+clic izquierdo sobre el mapa hacen la labor (igual que la pesca).
+
+### 2.5 HUD de herramienta (v0.23.2)
+- A 2 tiles o menos de cualquier tierra de huerta (todas las zonas,
+  también las que suma ampliar el pueblo, porque se mira el tile `soil`
+  del mapa) sale la azada equipada: se ve en la mano y aparece el HUD de
+  herramienta arriba de las pociones ([1] Vida / [2] Maná). Cerca de la
+  orilla manda la caña (fishing.md § 4.0).
+- Arriba del HUD, el aviso compacto: "[E o clic] Arar", "[E o clic]
+  Plantar Nabo del claro", "[E o clic] Regar · 45 %", "[E o clic]
+  Cosechar · 3 % legendaria". Ya no hay cartel abajo en el centro para la
+  huerta ni la pesca.
+- Azada equipada; carrusel de semillas: la elegida grande al centro, la
+  anterior chica a la izquierda y la siguiente a la derecha (clic en
+  ellas para cambiar), nombre y cantidad abajo. Q o la rueda del mouse
+  cambian de semilla. Abajo, la regadera equipada: clic riega la parcela
+  de enfrente (gris si no hay nada para regar).
+- Solo en el pueblo; nunca en misiones.
+- Se equipan desde PERSONAJE → PESCA Y CULTIVO (§ 11) o el comerciante:
+  EQUIPAR en cada azada / regadera (`farmShop` `equipTool`, ya autoritativo
+  del anfitrión; no hace falta protocolo nuevo).
 
 ### 2.3 Crecimiento (elegido para co-op y para jugar afuera)
 - La huerta crece mientras la sala está abierta, en el pueblo y también
@@ -203,11 +221,13 @@ herramienta de área trabaja menos tiles.
   RECOGER) con `helperXpShare` (10 %) de la XP.
 - Se dibuja al costado de la huerta del pueblo.
 
-## 9. Comerciante (pestaña CULTIVO)
-- COMPRAR: semillas (×1 y ×5, con buscador), abonos (tooltip con lo que
-  sesgan), azadas y regaderas (EQUIPAR / EQUIPADA).
-- VENDER: el granero, cada cosecha por calidad (VENDER y, las
-  legendarias, CANJEAR por `legendCristales` Cristales de Era y
+## 9. Comerciante (vista CULTIVO)
+Estructura en fishing.md § 5.3 (COMPRAR / VENDER → PESCA / CULTIVO →
+categoría).
+- COMPRAR: Semillas (×1 y ×5), Abonos (tooltip con lo que sesgan),
+  Azadas y Regaderas (EQUIPAR / EQUIPADA).
+- VENDER: Cultivos (el granero y cada cosecha por calidad) y
+  Legendarios (VENDER o CANJEAR por `legendCristales` Cristales de Era y
   `legendPrismas` Prisma Roto). VENDER TODO no incluye las legendarias.
   Cobrar en oro o materiales (`matRate`, `matValue`), igual que la pesca.
 
