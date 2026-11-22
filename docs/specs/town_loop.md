@@ -335,6 +335,54 @@ preguntas abiertas.
   piso y "en batalla") en el panel de sala y en el tablero.
 - Aviso visible del ping "pedir ayuda" y estado del refuerzo en viaje.
 
+## 11c. Habilidades de vida, herramientas y propiedad del mundo
+
+Tono: **pueblo de fantasía tranquilo; mazmorras épicas.** Quedarse en
+el pueblo también hace progresar. Esta sección precisa § 5 (Oficios).
+
+### XP de personaje
+- Pescar y cultivar dan **un poco de XP de personaje** (el combate
+  sigue siendo la fuente principal). Monto según **rareza/calidad** de
+  lo pescado o cosechado: `life.charXp[rareza|calidad]`, con tope por
+  misión del ciclo `life.charXpCapPerCycle`.
+
+### Niveles de Pesca y Cultivo
+- Progresión **por personaje**, independiente de clase, armas y combate.
+  Cualquier clase pesca y cultiva.
+- La XP va **solo al jugador que hizo la acción**. Producción automática
+  de ayudantes: **propuesta** 10 % de la XP normal al dueño del
+  ayudante (`life.helperXpShare` = 0.1; 0 la apaga).
+- Curva: `life.levelCurve` (Pesca y Cultivo, máx. `life.maxLevel`,
+  propuesta 30).
+
+### Herramientas como equipo
+- **Cañas** y **herramientas** (regadera, azada, …) con tiers/rareza
+  como las armas. Mejores herramientas: más velocidad, más chance de
+  peces épicos/legendarios, riego en área, etc.
+- **Se pueden intercambiar** entre jugadores, pero el **rendimiento
+  escala con el nivel de habilidad de quien la usa**.
+- Fórmula (tunables):
+  - `ratio = clamp(nivelHabilidad / nivelRequerido(herramienta), 0, 1)`
+  - `bonusEfectivo = bonusBase × (piso + (1 − piso) × ratio^curva)`
+    con `tool.bonusFloor` (propuesta 0.4) y `tool.bonusCurve` (1.5).
+  - Tiempo de carga de efectos de área:
+    `carga = tool.chargeMaxSec × (1 − ratio)`; con ratio 1 es **clic
+    instantáneo**, con nivel bajo hay que **mantener para cargar**.
+  - Ejemplos: regadera de área con Cultivo máximo = clic instantáneo;
+    caña legendaria con Pesca baja funciona, pero con bonus reducidos.
+
+### Propiedad: mundo del host, personaje propio
+- **El host es dueño del MUNDO**: pueblo, mejoras, estado de biomas,
+  huerta, eventos del ciclo.
+- **Cada jugador es dueño de su personaje**: nivel, habilidades de
+  vida, inventario, stash, herramientas.
+- Solo: progresás tu mundo con tu personaje. Al unirte a un amigo estás
+  **en su mundo con tus datos de personaje**. Lo que ganes ahí (XP,
+  objetos, herramientas) se va con vos; lo que construyas en su pueblo
+  queda en su mundo.
+- Red: el host valida la XP y los resultados (§ 10); el perfil del
+  personaje viaja como hoy (`netcode.md`, perfiles).
+
 ## 12. Decisiones del dueño (mandan sobre el resto)
 
 - Se elimina el overworld caminable.
