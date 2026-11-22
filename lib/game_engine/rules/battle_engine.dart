@@ -176,22 +176,86 @@ class BattleEngine {
   static const maxBonusDefense = 12;
   static const dualMpCost = 4;
 
-  /// Tope de efectos disparados por el árbol en un paso del motor
-  /// (passive_tree_v2.md § 5, regla 4).
-  static const maxProcsPerStep = 64;
+  static TuningDef get _limits => tuning(TuningId.combatLimits);
+
+  /// Tope de efectos encadenados (árbol, armas, mods, invocaciones) en
+  /// un paso del motor, es decir, por acción (passive_tree_v2.md § 5,
+  /// regla 4; combat.md § "Límites"). Editable en Balance.
+  static int get maxProcsPerStep => math.max(1, _limits.i('procMax'));
+
+  /// Profundidad máxima de una cadena de efectos: un efecto que dispara
+  /// otro que dispara otro... (combat.md § "Límites").
+  static int get maxProcDepth => math.max(1, _limits.i('procDepth'));
+
+  /// Tope absoluto por golpe como fracción de la vida máxima (0 = sin
+  /// tope), aunque haya debilidad, reacción o quiebre (combat.md §
+  /// "Límites").
+  static double absoluteHitCap({required bool boss, required bool elite}) =>
+      _limits.d(boss
+          ? 'capBoss'
+          : elite
+              ? 'capElite'
+              : 'capCommon');
+
+  /// "Aguanta una ronda" de los comunes (combat.md § "Límites").
+  static bool holdsRound({required bool coop}) =>
+      _limits.i(coop ? 'holdCoop' : 'holdSolo') > 0;
+
+  /// Tope de carga de ULT extra (árbol, mods, efectos, invocaciones) por
+  /// acción y por turno de quien la recibe (combat.md § "Límites").
+  static double get ultBonusPerAction => _limits.d('ultBonusAction');
+  static double get ultBonusPerTurn => _limits.d('ultBonusTurn');
+
+  /// Turnos como máximo por cada turno del aliado vivo más lento (0 = sin
+  /// tope).
+  static double get turnsPerSlowest => _limits.d('turnsPerSlowest');
+
+  /// Velocidad efectiva con rendimiento decreciente: lo que pasa de
+  /// `speedSoftCap` rinde × `speedSoftFactor`.
+  static double softSpeed(double v) {
+    final cap = _limits.d('speedSoftCap');
+    if (v <= cap) return v;
+    return cap + (v - cap) * _limits.d('speedSoftFactor');
+  }
 
   /// Tope de la defensa de grupo sumada (`BuffStat.guard`, ascension.md).
   static const maxGuard = 0.6;
 
   /// Tiempo entre turnos (`IVa`): 100 / velocidad efectiva. Los buffs de
-  /// velocidad del árbol (Frenesí) suben la velocidad efectiva.
+  /// velocidad del árbol (Frenesí) suben la velocidad efectiva; sobre el
+  /// umbral rinden menos ([softSpeed]). No incluye el tope por el aliado
+  /// más lento: ese lo aplica el paso, que ve la batalla
+  /// ([cappedInterval]).
   double interval(Combatant a) =>
       100 /
-      (a.speed *
+      softSpeed(a.speed *
           (1 + a.effectTotal(BuffStat.speed)) *
           (1 -
               catalog.elementStatus(StatusKind.freeze).slowPerStack *
                   a.stacks(StatusKind.freeze)));
+
+  /// [interval] de [a] con el tope de turnos (combat.md § "Límites"):
+  /// nunca menor que el intervalo del aliado vivo más lento de su bando
+  /// / `turnsPerSlowest`. Bando: grupo + invocaciones, o enemigos.
+  double cappedInterval(BattleState s, Combatant a) {
+    final iv = interval(a);
+    final k = turnsPerSlowest;
+    if (k <= 0) return iv;
+    final side = a.isPlayer || a.isSummon
+        ? [...s.party, ...s.summons]
+        : s.enemies;
+    var slowest = 0.0;
+    for (final c in side) {
+      if (!c.alive ||
+          c.speed <= 0 ||
+          (!c.isPlayer && (catalog.enemies[c.enemyType]?.passive ?? false))) {
+        continue;
+      }
+      slowest = math.max(slowest, interval(c));
+    }
+    if (slowest <= 0) return iv;
+    return math.max(iv, slowest / k);
+  }
 
   // ------------------------------------------------------------------
   // API pública
@@ -639,6 +703,10 @@ class _Turn {
   final _notes = <String>[];
   int _procBudget = BattleEngine.maxProcsPerStep;
 
+  /// Profundidad de la cadena de disparos en curso (`_fire` dentro de
+  /// `_fire`), con tope en [BattleEngine.maxProcDepth].
+  int _fireDepth = 0;
+
   /// Enemigos quebrados en este paso (su vulnerabilidad empieza a
   /// contar en el próximo turno del grupo).
   final _brokenNow = <String>{};
@@ -671,7 +739,7 @@ class _Turn {
   BattleStep get result => BattleStep(state, List.unmodifiable(events));
 
   double _rand() => engine._random();
-  double _iv(Combatant c) => engine.interval(c);
+  double _iv(Combatant c) => engine.cappedInterval(state, c);
   Iterable<Combatant> get _aliveParty => state.party.where((p) => p.alive);
 
   /// Agrega los efectos disparados a la línea del log.
@@ -763,6 +831,7 @@ class _Turn {
   /// Si lo pierde (aturdido, quebrado) el turno queda libre.
   void _beginTurn(Combatant best) {
     state.currentId = best.id;
+    best.ultBonusTurn = 0;
     events.add(TurnStartedEvent(best.id));
     if (best.isSummon) {
       state.log = 'Turno de ${best.name}';
@@ -834,7 +903,11 @@ class _Turn {
             _iv(best) * (struggle ? kBossMechanics['telarana']!.soloValue : 1);
       }
       state.currentId = null;
-      if (state.porBando) state.acted.add(best.id);
+      if (state.porBando) {
+        state.acted.add(best.id);
+      } else if (best.isPlayer && !best.isSummon) {
+        _markActed(best);
+      }
       _checkEnd();
     }
   }
@@ -856,6 +929,8 @@ class _Turn {
       } else {
         state.acted.add(cur.id);
       }
+    } else if (cur != null && cur.isPlayer && !cur.isSummon) {
+      _markActed(cur);
     }
     _flush();
     state.currentId = null;
@@ -982,6 +1057,7 @@ class _Turn {
     }
 
     if (total > 0) {
+      total = _limitEnemyHit(a, total);
       _chargeUlt(a, math.min(total, a.hp));
       a.hp = math.max(0, a.hp - total);
       final shift = !a.isPlayer && _gatePhase(a);
@@ -1234,14 +1310,12 @@ class _Turn {
     var taken = dmg - absorbed;
     if (taken >= p.hp && p.hp > 0) taken = _cheatDeath(p, taken);
     if (taken > 0) {
-      p.ult =
-          math.min(100, p.ult + taken / p.maxHp * _ultTaken * (1 + p.ultChargeBonus));
+      _ultWithBonus(p, taken / p.maxHp * _ultTaken);
     }
     if (p.defending && p.guardHitPending) {
       // Defender con valor: +6 de ULT al primer golpe recibido.
       p.guardHitPending = false;
-      p.ult = math.min(
-          100, p.ult + BattleEngine.defendHitUlt * (1 + p.ultChargeBonus));
+      _ultWithBonus(p, BattleEngine.defendHitUlt);
     }
     p.hp = math.max(0, p.hp - taken);
     events.add(DamageEvent(p.id, taken,
@@ -1492,10 +1566,12 @@ class _Turn {
       return;
     }
     events.add(ProcEvent(owner.id, sourceId, targetId: target.id));
-    final d = target.hp;
-    target.hp = 0;
+    // Aguanta una ronda (combat.md § "Límites"): el remate también.
+    final d = _limitEnemyHit(target, target.hp);
+    target.hp -= d;
     if (owner == _attacker) _dealt += d;
     events.add(DamageEvent(target.id, d, sourceId: sourceId));
+    if (target.alive) return;
     _knockedOut(target);
     _notes.add('$name: ¡${target.name} rematado!');
   }
@@ -2110,6 +2186,12 @@ class _Turn {
         dmg = cap;
       }
     }
+    // Límites (combat.md § "Límites"): tope absoluto y aguanta una ronda.
+    final limited = _limitEnemyHit(e, dmg);
+    if (limited != dmg) {
+      mods.add('→ $limited (${limited == e.hp - 1 ? 'aguanta' : 'tope'})');
+      dmg = limited;
+    }
     // Quebrar (combo_balance.md § 5): el golpe quiebra a un Fisurado de
     // antes de este paso. Se mira antes de que el golpe sume puntos.
     final quebrar = primary &&
@@ -2183,15 +2265,17 @@ class _Turn {
     final taken = e.effectTotal(BuffStat.damageTaken);
     final vul = e.broken;
     final abyss = _abyssFactor(e, null);
-    final dmg = abyss == 0
-        ? 0
-        : math.max(
-            1,
-            jsRound(amount *
-                (1 + taken) *
-                _echoFactor(e) *
-                abyss *
-                (vul ? 1 + BattleEngine.vulnerableBonus : 1)));
+    final dmg = _limitEnemyHit(
+        e,
+        abyss == 0
+            ? 0
+            : math.max(
+                1,
+                jsRound(amount *
+                    (1 + taken) *
+                    _echoFactor(e) *
+                    abyss *
+                    (vul ? 1 + BattleEngine.vulnerableBonus : 1))));
     final before = e.hp;
     e.hp = math.max(0, e.hp - dmg);
     final shift = _gatePhase(e);
@@ -2577,8 +2661,7 @@ class _Turn {
       var taken = amount - absorbed;
       if (taken >= t.hp) taken = _cheatDeath(t, taken);
       if (taken > 0) {
-        t.ult = math.min(
-            100, t.ult + taken / t.maxHp * _ultTaken * (1 + t.ultChargeBonus));
+        _ultWithBonus(t, taken / t.maxHp * _ultTaken);
       }
       t.hp = math.max(0, t.hp - taken);
       events.add(DamageEvent(t.id, taken, sourceId: sourceId));
@@ -2592,6 +2675,7 @@ class _Turn {
     if (sourceId != kAbyssHealSourceId && _abyssFactor(t, null) == 0) {
       return 0;
     }
+    amount = _limitEnemyHit(t, amount);
     final before = t.hp;
     t.hp = math.max(0, t.hp - amount);
     final shift = _gatePhase(t);
@@ -2640,6 +2724,86 @@ class _Turn {
   /// Tope de daño de un golpe de [a] a [e] (combo_balance.md § 3.2), o
   /// `null` si no hay: golpe a una debilidad, reacción, enemigo quebrado
   /// o [a] con `overLevel` o más niveles sobre [e].
+  /// Límites de un golpe a un enemigo (combat.md § "Límites"), después de
+  /// todo lo demás: tope absoluto de jefe / élite (fracción de su vida
+  /// máxima, aunque haya debilidad o quiebre) y "aguanta una ronda" de
+  /// los comunes. Devuelve el daño que entra.
+  int _limitEnemyHit(Combatant e, int dmg) {
+    if (e.isPlayer || e.isSummon || dmg <= 0 || !e.alive) return dmg;
+    final f = BattleEngine.absoluteHitCap(boss: e.boss, elite: e.elite);
+    if (f > 0 && f < 1) {
+      dmg = math.min(dmg, math.max(1, (e.maxHp * f).ceil()));
+    }
+    if (dmg >= e.hp && e.hp > 1 && _holds(e)) {
+      state.acted.add(holdKey(e.id));
+      dmg = e.hp - 1;
+      _notes.add('${e.name} aguanta la ronda (queda en 1)');
+    }
+    return dmg;
+  }
+
+  /// Clave en `state.acted` de un común que ya aguantó en esta ronda.
+  static String holdKey(String id) => '!aguanta:$id';
+
+  /// [e] (común) aguanta un golpe letal: está activo para el grupo, no lo
+  /// usó en esta ronda y queda algún jugador vivo, aparte del que tiene
+  /// el turno, sin actuar en la ronda.
+  bool _holds(Combatant e) {
+    if (e.boss || e.elite) return false;
+    final players = [
+      for (final p in state.party)
+        if (!p.isSummon) p
+    ];
+    if (!BattleEngine.holdsRound(coop: players.length > 1)) return false;
+    if (state.acted.contains(holdKey(e.id))) return false;
+    return players.any((p) =>
+        p.alive && p.id != state.currentId && !state.acted.contains(p.id));
+  }
+
+  /// Carga de ULT extra ganada por cada combatiente en esta acción.
+  final _ultBonusAct = <String, double>{};
+
+  /// Suma a [c] carga de ULT extra (árbol, mods, efectos, invocaciones)
+  /// con los topes por acción y por turno (combat.md § "Límites").
+  /// Devuelve lo que entró. Lo negativo (mods en contra) no tiene tope.
+  double _bonusUlt(Combatant c, double amount) {
+    if (amount <= 0) {
+      c.ult = math.max(0, math.min(100, c.ult + amount));
+      return amount;
+    }
+    final act = BattleEngine.ultBonusPerAction - (_ultBonusAct[c.id] ?? 0);
+    final turn = BattleEngine.ultBonusPerTurn - c.ultBonusTurn;
+    final g = math.max(0.0, math.min(amount, math.min(act, turn)));
+    if (g <= 0) return 0;
+    _ultBonusAct[c.id] = (_ultBonusAct[c.id] ?? 0) + g;
+    c.ultBonusTurn += g;
+    c.ult = math.min(100, c.ult + g);
+    return g;
+  }
+
+  /// Carga de ULT [base] (sin tope) más la parte de `ultChargeBonus`
+  /// (árbol, mods) como carga extra con tope.
+  void _ultWithBonus(Combatant c, double base) {
+    c.ult = math.min(100, c.ult + base);
+    _bonusUlt(c, base * c.ultChargeBonus);
+  }
+
+  /// Marca que [p] actuó en la ronda. En `velocidad` la ronda termina
+  /// cuando actuaron todos los jugadores vivos (combat.md § "Límites");
+  /// en `porBando` la cierra `_nextBando`.
+  void _markActed(Combatant p) {
+    state.acted.add(p.id);
+    if (state.porBando || !p.isPlayer || p.isSummon) return;
+    final done = state.party
+        .where((q) => q.alive && !q.isSummon)
+        .every((q) => state.acted.contains(q.id));
+    if (done) {
+      state
+        ..round += 1
+        ..acted.clear();
+    }
+  }
+
   int? _hitCapFor(Combatant a, Combatant e,
       {required bool weak, required bool reacted, required bool broken}) {
     if (e.isPlayer || weak || reacted || broken) return null;
@@ -2836,6 +3000,23 @@ class _Turn {
       int amount = 0,
       Set<String>? once}) {
     if (owner.mechanics.isEmpty) return;
+    // Cadena demasiado profunda (combat.md § "Límites"): el efecto que
+    // dispararía otro más no dispara nada.
+    if (_fireDepth >= BattleEngine.maxProcDepth) return;
+    _fireDepth++;
+    try {
+      _fireAll(trigger, owner,
+          target: target, status: status, amount: amount, once: once);
+    } finally {
+      _fireDepth--;
+    }
+  }
+
+  void _fireAll(ProcTrigger trigger, Combatant owner,
+      {Combatant? target,
+      StatusKind? status,
+      int amount = 0,
+      Set<String>? once}) {
     for (final m in _mechanicsOf(owner).toList()) {
       if (m.trigger != trigger || m.effects.isEmpty) continue;
       if (!_passes(m, owner, target, status)) continue;
@@ -2935,7 +3116,7 @@ class _Turn {
         if (allies.isEmpty) return;
         events.add(ProcEvent(owner.id, m.id));
         for (final q in allies) {
-          q.ult = math.min(100, q.ult + fx.value);
+          _bonusUlt(q, fx.value);
         }
         _notes.add('${m.name}: aliados +${jsRound(fx.value)} carga de ULT');
       case ProcEffectKind.drainUlt:
@@ -3215,7 +3396,7 @@ class _Turn {
         _shield(owner, owner, m, jsRound(owner.maxHp * fx.value), fx.turns);
       case ProcEffectKind.ultCharge:
         events.add(ProcEvent(owner.id, m.id));
-        owner.ult = math.min(100, owner.ult + fx.value);
+        _bonusUlt(owner, fx.value);
         _notes.add('${m.name}: +${jsRound(fx.value)} carga de ULT');
       case ProcEffectKind.holyDamage:
         if (target == null || !target.alive) return;
@@ -4017,8 +4198,7 @@ class _Turn {
       final dmg = math.max(1, jsRound(atk * power * (1 - p.defensePercent)));
       final taken = dmg - _absorb(p, dmg);
       if (taken > 0) {
-        p.ult = math.min(
-            100, p.ult + taken / p.maxHp * _ultTaken * (1 + p.ultChargeBonus));
+        _ultWithBonus(p, taken / p.maxHp * _ultTaken);
       }
       p.hp = math.max(0, p.hp - taken);
       events.add(DamageEvent(p.id, taken));
@@ -4498,8 +4678,7 @@ class _Turn {
                 : BattleEngine.defendPulse);
         p.guardStreak = true;
         p.guardHitPending = true;
-        p.ult = math.min(
-            100, p.ult + BattleEngine.defendUlt * (1 + p.ultChargeBonus));
+        _ultWithBonus(p, BattleEngine.defendUlt);
         state.log = '${p.name} se defiende (actúa antes)';
         _act = null;
         tickEffects(p);
@@ -4555,8 +4734,7 @@ class _Turn {
                   tuning(TuningId.ultCharge).d('dealtBase') +
                       _dealt / _dealtMaxHp * tuning(TuningId.ultCharge).d('dealtScale'))
               : 0.0;
-      p.ult = math.min(
-          100, p.ult + (ultGain + dealtBonus) * (1 + p.ultChargeBonus));
+      _ultWithBonus(p, (ultGain + dealtBonus));
     }
     _attacker = null;
     _act = null;

@@ -86,7 +86,12 @@ Combatant _foe(String id,
 
 BattleState _battle(List<Combatant> party, List<Combatant> enemies,
         {String? current = 'p1'}) =>
-    BattleState(party: party, enemies: enemies, currentId: current);
+    // Los demás ya actuaron en la ronda: los comunes no aguantan el golpe
+    // (combat.md § "Límites"); estos tests miran solo las mecánicas.
+    BattleState(party: party, enemies: enemies, currentId: current, acted: {
+      for (final p in party)
+        if (p.id != current) p.id
+    });
 
 BattleStep _cmd(BattleEngine e, BattleState s, BattleCommand c) =>
     e.command(s, 'p1', c)!;
