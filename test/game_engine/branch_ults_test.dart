@@ -180,7 +180,7 @@ void main() {
   });
 
   group('motor', () {
-    BattleState start(BattleEngine e, ItemInstance it) {
+    BattleState start(BattleEngine e, ItemInstance it, {String? ultSel}) {
       final w = kWeapons[it.baseId]!;
       final cls = kClasses[w.classId] ?? kClasses['guerrero']!;
       final s = e.start(party: [
@@ -193,6 +193,7 @@ void main() {
             attributes: PlayerAttributes.base(cls.baseAttributes),
             equippedWeapon: w,
             item: it,
+            ultSel: ultSel,
           ),
         ),
       ], enemyTypes: const ['golem', 'golem']).state;
@@ -203,12 +204,15 @@ void main() {
       return s;
     }
 
-    test('el arma con el mod usa esa ULT y cada ULT de camino se ejecuta', () {
+    test('el mod no impone su ULT: vale solo si se elige en el menú, y cada ULT de camino se ejecuta', () {
       final e = BattleEngine(stats: _stats, random: () => 0.5, breakEnabled: false, familiesEnabled: false);
       for (final s in kBranchUltSkills.values) {
         final base = _baseOf(kBranchUltWeaponTypes[s.id]!.first);
         final it = ItemInstance(uid: 'u', baseId: base, rarity: Rarity.raro, ultId: s.id);
-        final st = start(e, it);
+        // Sin elegirla en el menú, manda la del tipo de arma.
+        final plain = start(e, it);
+        expect(ultimateOf(plain.party.first)!.id, isNot(s.id), reason: s.id);
+        final st = start(e, it, ultSel: s.id);
         expect(ultimateOf(st.party.first)!.id, s.id, reason: s.id);
         final r = e.command(st, 'p1', const UltimateCommand(targetId: 'e0'));
         expect(r, isNotNull, reason: s.id);

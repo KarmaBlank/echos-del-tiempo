@@ -40,8 +40,9 @@ part 'battle_engine_summons.dart';
 typedef RandomSource = double Function();
 
 /// La ULT de [c]: la de su ascensión si ascendió (docs/specs/ascension.md
-/// § 4); si no, la propia de su arma (tomos del Invocador,
-/// docs/specs/summoner.md § 7) o la de su tipo de arma.
+/// § 4); si no, la de la base de su arma (tomos del Invocador,
+/// docs/specs/summoner.md § 7) o la de su tipo de arma. La ULT de una
+/// instancia (mod o legendario) nunca entra acá: solo por el menú.
 ///
 /// ULT v2 (ultimates_v2.md § 2.1): si el jugador eligió una ULT activa
 /// válida (`PlayerBuild.ultSel`), esa; si no, el orden de siempre.
@@ -60,8 +61,10 @@ SkillDef? ultimateOf(Combatant c,
     final u = kAscensionUltimates[asc.id];
     if (u != null) return u;
   }
-  // Mod "ULT: <nombre>" / legendario (branch_ults.md) o base propia.
-  final own = ownWeaponUlt(c.build?.equippedWeapon.id, c.build?.item);
+  // Base propia (tomos del Invocador). El mod "ULT: <nombre>" y la de
+  // los legendarios NO se imponen: pasan al repertorio y solo valen si se
+  // eligen en el menú (v0.20.7, ultimates_v2.md § 2.1).
+  final own = ownWeaponUlt(c.build?.equippedWeapon.id, null);
   // Una ULT v2 que trae el arma sale del catálogo (con el parche de
   // balance), no del registro fijo.
   if (own != null) {

@@ -42,10 +42,18 @@ Implementación: `lib/game_engine/data/branch_ults_catalog.dart`
 
 ## 3. Prioridad en combate (`ultimateOf`)
 
-1. ULT de la ascensión de tu clase (sin cambios).
-2. La propia del arma: mod "ULT: <nombre>" > la del legendario > la de la
-   base (tomos del Invocador, `kWeaponUltOf`).
-3. La del tipo de arma.
+Desde v0.20.7 **manda siempre la ULT elegida en el menú** (repertorio,
+ultimates_v2.md § 2.1) si se puede usar con el arma equipada. La ULT de
+un arma (mod "ULT: <nombre>" o legendario) **no se impone**: al tenerla,
+pasa al repertorio y solo se usa si se la elige.
+
+1. La elegida en el menú, si es compatible con el arma equipada.
+2. ULT de la ascensión de tu clase.
+3. La de la base del arma (tomos del Invocador, `kWeaponUltOf`).
+4. La del tipo de arma.
+
+Si la elegida no sirve con el arma equipada, en el menú se ve en gris y
+en combate se usa la básica (pasos 2–4), nunca la del arma.
 
 ## 4. Legendarios con ULT propia
 

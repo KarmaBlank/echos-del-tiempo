@@ -1330,6 +1330,10 @@ class BattleAllyList extends StatelessWidget {
     final i = order.indexOf(p.id);
     final stunned = p.stacks(StatusKind.stun) > 0;
     final stunIcon = statusIconOf(StatusKind.stun);
+    final chips = [
+      for (final c in combatantChips(p))
+        if (c.short != 'K.O.') c,
+    ];
     final Widget mark;
     if (!p.alive) {
       mark = Text('K.O.', style: DsText.detail(DsColors.danger));
@@ -1398,6 +1402,12 @@ class BattleAllyList extends StatelessWidget {
                     max: p.maxMp,
                     color: ProtoColors.mp,
                     height: 4),
+                // Estados, buffs y escudos del aliado (lo mismo que la
+                // tarjeta propia; K.O. ya va en la marca).
+                if (chips.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  _chips(chips),
+                ],
               ],
             ),
           ),
