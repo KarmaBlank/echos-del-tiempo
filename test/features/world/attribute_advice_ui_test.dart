@@ -153,6 +153,7 @@ void main() {
         profile: start,
         build: (v, c) => CharacterPanel(
             view: v, controller: c, initialTab: CharacterTab.build));
+    await tapVisible(tester, find.byKey(const ValueKey('build-edit')));
     final pts = AttributeAdvisor.horizonPoints(start);
     expect(pts, 2 + 5);
     final s =

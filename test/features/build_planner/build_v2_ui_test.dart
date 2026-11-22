@@ -47,9 +47,8 @@ class _FakeFiles implements TemplateFiles {
   }
 }
 
-PlayerProfile _guerrero({List<ItemInstance>? items}) =>
-    progression.normalize(PlayerProfile(
-        name: 'Ana', classId: 'guerrero', level: 24, items: items));
+PlayerProfile _guerrero({List<ItemInstance>? items}) => progression.normalize(
+    PlayerProfile(name: 'Ana', classId: 'guerrero', level: 24, items: items));
 
 Future<void> _pumpView(WidgetTester tester,
     {required PlayerProfile profile,
@@ -57,6 +56,7 @@ Future<void> _pumpView(WidgetTester tester,
     List<ItemInstance> stash = const [],
     TemplateFiles? files,
     TextSize? textSize,
+    bool edit = true,
     ValueChanged<BuildPlan>? onChanged}) async {
   var current = plan;
   await pumpPanel(tester,
@@ -75,6 +75,8 @@ Future<void> _pumpView(WidgetTester tester,
                   set(() => current = p);
                 },
               )));
+  // Las pruebas de acá usan la vista avanzada (EDITAR PLAN).
+  if (edit) await tapVisible(tester, find.byKey(const ValueKey('build-edit')));
 }
 
 void main() {
@@ -87,6 +89,7 @@ void main() {
         profile: _guerrero(),
         build: (v, c) => CharacterPanel(
             view: v, controller: c, initialTab: CharacterTab.build));
+    await tapVisible(tester, find.byKey(const ValueKey('build-edit')));
     await tapVisible(tester, find.byKey(const ValueKey('build-add-target')));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('base-search')), findsOneWidget);
@@ -163,13 +166,15 @@ void main() {
     expect(find.byKey(const ValueKey('tpl-notice')), findsOneWidget);
   });
 
-  testWidgets('vista de plantilla: slider con teclado, línea de tiempo y '
+  testWidgets(
+      'vista de plantilla: slider con teclado, línea de tiempo y '
       'COMPARAR', (tester) async {
     BuildPlan? got;
     await _pumpView(tester, profile: _guerrero(), onChanged: (p) => got = p);
     await tapVisible(tester, find.byKey(const ValueKey('build-template')));
     await tester.pumpAndSettle();
-    await tapVisible(tester, find.byKey(const ValueKey('tpl-gue_tormenta_filo')));
+    await tapVisible(
+        tester, find.byKey(const ValueKey('tpl-gue_tormenta_filo')));
     await tester.pumpAndSettle();
     expect(_text(tester, 'tpl-level'), contains('Nv 24'));
     // Fin: al último nivel (Maestría 20); Inicio: al 1.
@@ -199,7 +204,7 @@ void main() {
         build: (v, c) => CharacterPanel(
             view: v, controller: c, initialTab: CharacterTab.filter));
     await _container(tester).read(buildPlanProvider.notifier).save(
-        const BuildPlan(weaponTargets: [
+            const BuildPlan(weaponTargets: [
           WeaponTarget(base: 'hacha_tronante', rarity: Rarity.epico)
         ]));
     await tester.pump();
@@ -207,7 +212,8 @@ void main() {
     await tapVisible(
         tester, find.byKey(const ValueKey('filter-build-kind-upgrade')));
     expect(_text(tester, 'filter-build-line'), contains('BuildMejora'));
-    await tapVisible(tester, find.byKey(const ValueKey('filter-build-kind-mod')));
+    await tapVisible(
+        tester, find.byKey(const ValueKey('filter-build-kind-mod')));
     expect(_text(tester, 'filter-build-line'), contains('Build Mod'));
   });
 
@@ -220,8 +226,8 @@ void main() {
           rarity: Rarity.raro,
           itemLevel: 30,
           affixes: [AffixRoll('feroz', 3, 20)]);
-      final plan = BuildPlanRules(progression).applyTemplate(
-          BuildPlan.empty, buildTemplate('gue_tormenta_filo')!);
+      final plan = BuildPlanRules(progression)
+          .applyTemplate(BuildPlan.empty, buildTemplate('gue_tormenta_filo')!);
       await _pumpView(tester,
           profile: _guerrero(items: const [
             ItemInstance(uid: 'c', baseId: 'espada_coral'),
@@ -243,7 +249,8 @@ void main() {
       await tapVisible(tester, find.byKey(const ValueKey('build-add-target')));
       await tester.pumpAndSettle();
       expect(roundedUi(tester), isEmpty);
-      await tapVisible(tester, find.byKey(const ValueKey('base-search-cancel')));
+      await tapVisible(
+          tester, find.byKey(const ValueKey('base-search-cancel')));
       await tester.pumpAndSettle();
       // Vista de plantilla.
       await tapVisible(tester, find.byKey(const ValueKey('build-template')));

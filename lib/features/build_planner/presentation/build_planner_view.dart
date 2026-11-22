@@ -22,6 +22,7 @@ import '../../../game_engine/rules/build_plan_rules.dart';
 import '../../../game_engine/rules/build_template_rules.dart';
 import '../../passive_tree/presentation/passive_tree_view.dart';
 import '../data/template_files.dart';
+import 'build_coach_view.dart';
 import 'build_fit_badge.dart';
 import 'template_view.dart';
 import 'weapon_advice_block.dart';
@@ -46,6 +47,8 @@ class BuildPlannerView extends StatefulWidget {
     this.equipBlocked,
     this.onOpenForge,
     this.onOpenShop,
+    this.onOpenAttributes,
+    this.onOpenTree,
   });
 
   final BuildPlanRules rules;
@@ -72,10 +75,17 @@ class BuildPlannerView extends StatefulWidget {
   final ValueChanged<String>? onOpenForge;
   final VoidCallback? onOpenShop;
 
+  /// IR A ATRIBUTOS / IR AL ÁRBOL de "Qué hacer ahora" (§ 10.2). Sin
+  /// [onOpenTree], el botón abre el árbol en modo planificar.
+  final VoidCallback? onOpenAttributes;
+  final VoidCallback? onOpenTree;
+
   static const help = '<b>Build</b><br>'
-      'Armá un plan para tu personaje: atributos, nodos del árbol, '
-      'ascensión, arma, mods y habilidades. El progreso se calcula solo '
-      'con lo que tenés.<br>'
+      'Elegí una plantilla de tu clase y seguí "Qué hacer ahora": hasta 3 '
+      'pasos con su botón. Abajo, el progreso por área (tocá una para ver '
+      'el detalle). Tilde verde: listo; cajita dorada: falta.<br>'
+      '<span class="k">EDITAR PLAN</span> (avanzado): agregar y quitar '
+      'metas a mano, con todo lo de abajo.<br>'
       '<span class="k">PLANTILLA</span>: un plan listo de tu clase.<br>'
       '<span class="k">★ Tu build</span>: marca en la tienda, el inventario '
       'y la fusión lo que sirve para el plan.<br>'
@@ -103,6 +113,9 @@ class BuildPlannerView extends StatefulWidget {
 
 class _BuildPlannerViewState extends State<BuildPlannerView> {
   bool _tree = false;
+
+  /// "Editar plan" (§ 10.6): la vista con todos los controles.
+  bool _editing = false;
   late final _notes = TextEditingController(text: widget.plan.notes);
   bool _notesDirty = false;
 
@@ -135,6 +148,25 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
   Widget build(BuildContext context) {
     if (_tree) return _treeMode();
     final progress = _rules.evaluate(_plan, _p, stash: widget.stash);
+    if (!_editing) {
+      return BuildCoachView(
+        key: const ValueKey('build-coach'),
+        rules: _rules,
+        profile: _p,
+        plan: _plan,
+        progress: progress,
+        stash: widget.stash,
+        onApply: _editable ? (t) => _set(_rules.applyTemplate(_plan, t)) : null,
+        onChangeTemplate: _chooseTemplate,
+        onEdit: () => setState(() => _editing = true),
+        onOpenTree: widget.onOpenTree ?? () => setState(() => _tree = true),
+        onOpenAttributes: widget.onOpenAttributes,
+        onOpenShop: widget.onOpenShop,
+        onEquip: widget.onEquip,
+        equipBlocked: widget.equipBlocked,
+        editable: _editable,
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -194,14 +226,11 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
             Flexible(
               child: Text.rich(
                 key: const ValueKey('build-name'),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
                 TextSpan(children: [
                   TextSpan(
                       text: retroText(name), style: DsText.body(kPlanColor)),
                   TextSpan(
-                      text: retroText(
-                          '  ${progress.doneCount}/$counted metas'),
+                      text: retroText('  ${progress.doneCount}/$counted metas'),
                       style: DsText.detail()),
                 ]),
               ),
@@ -212,6 +241,12 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
                 style: DsText.body(kPlanColor)),
           ]),
           actions: [
+            DsButton('LISTO',
+                key: const ValueKey('build-edit-done'),
+                kind: DsButtonKind.primary,
+                size: DsButtonSize.compact,
+                tooltip: 'Volver a la vista simple',
+                onPressed: () => setState(() => _editing = false)),
             if (_editable) ...[
               DsButton('PLANTILLA',
                   key: const ValueKey('build-template'),
@@ -366,8 +401,8 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     final same = goals == _plan;
     return Padding(
       key: const ValueKey('build-attr-advice'),
-      padding: EdgeInsets.symmetric(
-          horizontal: DsSpace.md, vertical: DsSpace.xs),
+      padding:
+          EdgeInsets.symmetric(horizontal: DsSpace.md, vertical: DsSpace.xs),
       child: Wrap(
         spacing: DsSpace.sm,
         runSpacing: DsSpace.xs,
@@ -513,8 +548,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
     final stashUids = {for (final s in widget.stash) s.uid};
     return [
       Padding(
-        padding: EdgeInsets.fromLTRB(
-            DsSpace.md, DsSpace.xs, DsSpace.md, 0),
+        padding: EdgeInsets.fromLTRB(DsSpace.md, DsSpace.xs, DsSpace.md, 0),
         child: Text(retroText('Armas que te sirven'),
             key: const ValueKey('build-weapon-picks'),
             style: DsText.detail(kPlanColor)),
@@ -550,9 +584,8 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
         equipBlocked: widget.equipBlocked,
         onOpenForge: widget.onOpenForge,
         onOpenShop: widget.onOpenShop,
-        onChooseType: _editable
-            ? (t) => _set(_plan.copyWith(chosenType: () => t))
-            : null,
+        onChooseType:
+            _editable ? (t) => _set(_plan.copyWith(chosenType: () => t)) : null,
       );
 
   /// TOMAR SIGUIENTE DEL PLAN (build_planner_v2.md § 3).
@@ -596,8 +629,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
             best: tr.best(_plan.weaponTargets[i], _p, stash: widget.stash),
             onTap: () => _openTarget(i),
           ),
-        if (_editable &&
-            _plan.weaponTargets.length < WeaponTarget.maxPerPlan)
+        if (_editable && _plan.weaponTargets.length < WeaponTarget.maxPerPlan)
           Padding(
             padding: EdgeInsets.symmetric(
                 horizontal: DsSpace.md, vertical: DsSpace.xs),
@@ -704,8 +736,7 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
         if (u.classes.isEmpty || u.classes.contains(_p.classId)) u
     ];
     final id = await _pick<String>(what == 'ult' ? 'ULT ACTIVA' : 'ULT', [
-      for (final u in list)
-        PickOption(u.id, u.name, u.how, key: 'ult-${u.id}'),
+      for (final u in list) PickOption(u.id, u.name, u.how, key: 'ult-${u.id}'),
     ]);
     if (id == null) return;
     if (what == 'ult') {
@@ -860,8 +891,6 @@ class _BuildPlannerViewState extends State<BuildPlannerView> {
                   retroText(_editable
                       ? 'PLANIFICAR · ${planned.length} nodos en el plan'
                       : '${planned.length} nodos en el plan'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: DsText.body(kPlanColor)),
             ),
           ]),
