@@ -59,6 +59,7 @@ class PlayerProfile {
     String? ultSel,
     Map<String, int> ultLevels = const {},
     Set<String> ultNew = const {},
+    List<String> ultOrder = const [],
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -97,11 +98,13 @@ class PlayerProfile {
       ultSel: ultSel,
       ultLevels: Map.unmodifiable(ultLevels),
       ultNew: Set.unmodifiable(ultNew),
+      ultOrder: List.unmodifiable(ultOrder),
     );
   }
 
   const PlayerProfile._({
     this.ultNew = const {},
+    this.ultOrder = const [],
     required this.ultLevels,
     required this.ultKnown,
     required this.ultSel,
@@ -166,6 +169,12 @@ class PlayerProfile {
   /// (marca NUEVA, JSON `un`, ultimates_v2.md § 2.1). Se desmarcan con
   /// `SeenItemsAction` usando el id `ult:<id>`.
   final Set<String> ultNew;
+
+  /// Orden en que se consiguieron las ULT del repertorio, de la más vieja
+  /// a la más nueva (JSON `uo`, opcional, ultimates_v2.md § 2.1.1). Lo
+  /// mantiene `copyWith`: cada id nuevo de `ultKnown` va al final. Una
+  /// partida vieja no lo trae: sus ULT cuentan como las más viejas.
+  final List<String> ultOrder;
 
   /// Puntos de árbol ganados: nivel, Maestría, Pruebas e hitos elegidos.
   int get treePoints => PassiveTreeRules.pointsEarned(treeLevel,
@@ -381,6 +390,7 @@ class PlayerProfile {
     String? Function()? ultSel,
     Map<String, int>? ultLevels,
     Set<String>? ultNew,
+    List<String>? ultOrder,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -433,7 +443,21 @@ class PlayerProfile {
       ultLevels:
           ultLevels == null ? this.ultLevels : Map.unmodifiable(ultLevels),
       ultNew: ultNew == null ? this.ultNew : Set.unmodifiable(ultNew),
+      ultOrder: List.unmodifiable(
+          _order(ultOrder ?? this.ultOrder, this.ultKnown, ultKnown)),
     );
+  }
+
+  /// [order] con los ids que [next] suma a [prev] al final (en orden
+  /// alfabético si llegan varios juntos).
+  static List<String> _order(
+      List<String> order, Set<String> prev, Set<String>? next) {
+    if (next == null) return order;
+    final have = order.toSet();
+    final added = next.where((id) => !prev.contains(id) && !have.contains(id))
+        .toList()
+      ..sort();
+    return added.isEmpty ? order : [...order, ...added];
   }
 
   // ------------------------------------------------------------------
@@ -565,6 +589,7 @@ class PlayerProfile {
         if (ultSel != null) 'us': ultSel,
         if (ultLevels.isNotEmpty) 'ulv': ultLevels,
         if (ultNew.isNotEmpty) 'un': (ultNew.toList()..sort()),
+        if (ultOrder.isNotEmpty) 'uo': ultOrder,
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -685,6 +710,7 @@ class PlayerProfile {
       ultKnown: {..._strings(json['uk'])},
       ultSel: json['us'] is String ? json['us'] as String : null,
       ultNew: {..._strings(json['un'])},
+      ultOrder: _strings(json['uo']),
       ultLevels: {
         if (json['ulv'] case final Map m)
           for (final e in m.entries)

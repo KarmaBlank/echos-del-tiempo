@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../game_engine/models/turn_timer.dart';
+import '../../game_engine/rules/ult_browse_rules.dart';
 import 'frame_limiter.dart';
 import 'graphics.dart';
 import 'window_mode.dart';
@@ -246,6 +247,7 @@ class GameSettings {
     this.noticeDuration = NoticeDuration.normal,
     this.mapLabelBackdrop = MapLabelBackdrop.none,
     this.battleLog = BattleLogMode.normal,
+    this.ultBrowse = const UltBrowsePrefs(),
   });
 
   /// Pantalla completa sin bordes (solo Windows; ver `WindowMode`).
@@ -350,6 +352,10 @@ class GameSettings {
   /// Banda del log de batalla: una línea o las 3 últimas (v0.8.1).
   final BattleLogMode battleLog;
 
+  /// Filtros y orden de PERSONAJE → ULT (ultimates_v2.md § 2.1.1), por
+  /// equipo.
+  final UltBrowsePrefs ultBrowse;
+
   /// Sacudida efectiva (REDUCIR MOVIMIENTO la apaga).
   bool get shakeOn => screenShake && !reduceMotion;
 
@@ -392,6 +398,7 @@ class GameSettings {
     NoticeDuration? noticeDuration,
     MapLabelBackdrop? mapLabelBackdrop,
     BattleLogMode? battleLog,
+    UltBrowsePrefs? ultBrowse,
   }) =>
       GameSettings(
         fullscreen: fullscreen ?? this.fullscreen,
@@ -424,6 +431,7 @@ class GameSettings {
         noticeDuration: noticeDuration ?? this.noticeDuration,
         mapLabelBackdrop: mapLabelBackdrop ?? this.mapLabelBackdrop,
         battleLog: battleLog ?? this.battleLog,
+        ultBrowse: ultBrowse ?? this.ultBrowse,
       );
 
   /// Versión del formato guardado. v2 (v0.13.1): `readingTitles` pasó a SÍ
@@ -463,6 +471,7 @@ class GameSettings {
         'noticeDuration': noticeDuration.name,
         'mapLabelBackdrop': mapLabelBackdrop.name,
         'battleLog': battleLog.name,
+        'ultBrowse': ultBrowse.toJson(),
       };
 
   /// Valores inválidos o ausentes caen al de por defecto. Claves viejas
@@ -513,6 +522,7 @@ class GameSettings {
       mapLabelBackdrop: MapLabelBackdrop.fromName(
           json['mapLabelBackdrop'], d.mapLabelBackdrop),
       battleLog: BattleLogMode.fromName(json['battleLog'], d.battleLog),
+      ultBrowse: UltBrowsePrefs.fromJson(json['ultBrowse']),
     );
   }
 
@@ -548,7 +558,8 @@ class GameSettings {
       other.letterSpacing == letterSpacing &&
       other.noticeDuration == noticeDuration &&
       other.mapLabelBackdrop == mapLabelBackdrop &&
-      other.battleLog == battleLog;
+      other.battleLog == battleLog &&
+      other.ultBrowse == ultBrowse;
 
   @override
   int get hashCode => Object.hash(
@@ -572,7 +583,7 @@ class GameSettings {
       Object.hash(uiTheme, textColors, spacing, chat, chatNotices,
           objectivesCollapsed, minimapZoom),
       Object.hash(readingTitles, letterSpacing, noticeDuration,
-          mapLabelBackdrop, battleLog, partyExpanded));
+          mapLabelBackdrop, battleLog, partyExpanded, ultBrowse));
 
   @override
   String toString() => 'GameSettings(${toJson()})';
