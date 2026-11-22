@@ -439,6 +439,25 @@ class CraftHelp {
           blocked: blocked,
           example: 'vender esta arma da ₵${rules.sellPrice(t)}.',
         ),
+      CraftOp.restoreQuebrar => CraftOpHelp(
+          what: 'Vuelve a poner el Quebrar propio de esta arma en su '
+              'ranura. No sacrifica ningún arma.',
+          change: !t.quebrarReplaced
+              ? 'Ya tiene su Quebrar: no hay nada que restaurar.'
+              : t.extraSkills.length > r.skillSlots
+                  ? 'Habilidades traídas ${t.extraSkills.length}/'
+                      '${t.skillCapacity} → ${r.skillSlots}/${r.skillSlots}: '
+                      'elegí cuál deja la ranura.'
+                  : 'Habilidades traídas ${t.extraSkills.length}/'
+                      '${r.skillSlots} y vuelve Quebrar.',
+          cost: cost(CraftRules.restoreQuebrarCost(r), const {}),
+          lose: t.extraSkills.length > r.skillSlots
+              ? 'La habilidad traída que elijas (se pierde).'
+              : 'Nada.',
+          blocked: blocked,
+          example: 'un hacha que cambió Quebrar por otra habilidad lo '
+              'recupera; el Quebrar de otro tipo de arma no se puede poner.',
+        ),
       CraftOp.condense => CraftOpHelp(
           what: 'Junta materiales bajos en uno alto: 10 Esquirlas → 1 '
               'Cristal, 10 Cristales → 1 Prisma.',

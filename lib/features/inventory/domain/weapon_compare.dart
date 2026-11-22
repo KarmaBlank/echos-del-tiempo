@@ -148,8 +148,8 @@ WeaponComparison compareWeapons(
 
   final modsA = a == null
       ? const <String>[]
-      : [for (final r in a.affixes) items.affixText(r)];
-  final modsB = [for (final r in to.affixes) items.affixText(r)];
+      : [for (final r in a.affixes) items.affixText(r, on: a)];
+  final modsB = [for (final r in to.affixes) items.affixText(r, on: to)];
 
   String? ult(ItemInstance? i) {
     final w = i == null ? null : items.baseOf(i);

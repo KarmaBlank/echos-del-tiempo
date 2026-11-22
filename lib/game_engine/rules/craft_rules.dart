@@ -167,6 +167,11 @@ class CraftRules {
           ? {CraftMaterial.cristal: tuning(TuningId.materials).i('transferCristales')}
           : const {};
 
+  /// Restaurar el Quebrar propio (loot.md § 16.3.1): créditos × rareza,
+  /// sin materiales ni arma sacrificada.
+  static int restoreQuebrarCost(Rarity r) => jsRound(
+      tuning(TuningId.materials).d('restoreQuebrarCredits') * r.costFactor);
+
   static int addAffixCost(Rarity r) => jsRound(tuning(TuningId.materials).d('addAffixCredits') * r.costFactor);
 
   static int rerollCost(Rarity r) => jsRound(tuning(TuningId.materials).d('rerollCredits') * r.costFactor);
@@ -432,6 +437,40 @@ class CraftRules {
         consumed: [sourceUid],
         replaced: replaced == null ? null : catalog.skills[replaced]?.name,
         replacedSkillId: replaced);
+  }
+
+  /// Restaurar el Quebrar del tipo de [uid] si se reemplazó por fusión
+  /// (loot.md § 16.3.1). La ranura vuelve a ser de Quebrar: si las
+  /// trasladadas no entran en los cupos de la rareza, hay que elegir
+  /// [replaceSkillId], que se pierde (como al reemplazar).
+  CraftResult restoreQuebrar(PlayerProfile p, String uid,
+      {String? replaceSkillId}) {
+    final t = p.itemByUid(uid);
+    if (t == null) return const CraftResult.fail('No la tienes');
+    final w = items.baseOf(t);
+    if (w == null) return const CraftResult.fail('No la tienes');
+    if (!t.quebrarReplaced) return const CraftResult.fail('Ya tiene su Quebrar');
+    final full = t.extraSkills.length > t.rarity.skillSlots;
+    String? lost;
+    if (replaceSkillId != null && full) {
+      if (!t.extraSkills.contains(replaceSkillId)) {
+        return const CraftResult.fail('No tiene esa habilidad');
+      }
+      lost = replaceSkillId;
+    } else if (full) {
+      return const CraftResult.fail('Elegí qué habilidad deja su ranura');
+    }
+    final after = t.copyWith(quebrarReplaced: false, extraSkills: [
+      for (final x in t.extraSkills)
+        if (x != lost) x,
+    ]);
+    return _done(p, t, after,
+        credits: restoreQuebrarCost(t.rarity),
+        replaced: lost == null ? null : catalog.skills[lost]?.name,
+        replacedSkillId: lost,
+        lost: [
+          if (lost != null) catalog.skills[lost]?.name ?? lost,
+        ]);
   }
 
   CraftResult removeAffix(PlayerProfile p, String uid, int index) {
@@ -796,6 +835,8 @@ class CraftRules {
             final m? => condense(p, m, index),
             null => const CraftResult.fail('Elige un material'),
           },
+        CraftOp.restoreQuebrar =>
+          restoreQuebrar(p, targetUid, replaceSkillId: replaceSkillId),
       };
 
   // ------------------------------------------------------------------

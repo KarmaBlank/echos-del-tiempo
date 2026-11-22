@@ -74,8 +74,14 @@ String itemNameMarkup(ProgressionRules rules, ItemInstance it) =>
     '${_esc(rules.items.displayName(it))}</b>';
 
 /// Texto de un mod con su tier, en azul (los fijos de un único, naranja).
-String affixMarkup(ProgressionRules rules, AffixRoll a) =>
-    _c(a.fixed ? _orange : kModHex, _esc(rules.items.affixText(a)));
+String affixMarkup(ProgressionRules rules, AffixRoll a, {ItemInstance? on}) =>
+    _c(a.fixed ? _orange : kModHex, _esc(rules.items.affixText(a, on: on)));
+
+/// Línea de ayuda debajo del afijo Quebrantador en una ficha.
+String? affixHelpMarkup(ProgressionRules rules, AffixRoll a) =>
+    rules.items.affixOf(a)?.stat == ModStat.breakSkill
+        ? _c(_dim, _esc(ItemRules.breakSkillHelp))
+        : null;
 
 /// Habilidades del objeto (base y trasladadas) y la ULT del tipo.
 String itemSkillsMarkup(ProgressionRules rules, ItemInstance it) {
@@ -215,7 +221,8 @@ String itemTooltipMarkup(
   if (it.rarity.maxMods > 0 || it.affixes.isNotEmpty) {
     l.add('<span class="k">Mods ${it.modCount}/${it.rarity.maxMods}</span>');
     for (final a in it.affixes) {
-      l.add('• ${affixMarkup(rules, a)}');
+      l.add('• ${affixMarkup(rules, a, on: it)}');
+      if (affixHelpMarkup(rules, a) case final h?) l.add('  $h');
     }
   }
   // Mod especial "ULT: <nombre>" (branch_ults.md): reemplaza la del tipo.
@@ -278,7 +285,10 @@ String itemTooltipMarkup(
     if (implicit.isNotEmpty)
       '<span class="k">Implícito:</span> '
           '${implicit.map((m) => _esc(m.text)).join(', ')}',
-    for (final a in it.affixes) '• ${affixMarkup(rules, a)}',
+    for (final a in it.affixes) ...[
+      '• ${affixMarkup(rules, a, on: it)}',
+      if (affixHelpMarkup(rules, a) case final h?) '  $h',
+    ],
     if (itemUlt(it) case final u?) '• ${_c(_pink, 'ULT: ${_esc(u.name)}')}',
   ];
   final passive = items.passiveText(it);

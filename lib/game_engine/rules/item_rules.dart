@@ -10,6 +10,7 @@ import '../data/uniques_catalog.dart';
 import '../data/weapon_passives.dart';
 import '../data/weapons_catalog.dart' show kWeaponTypeCategory;
 import '../models/item.dart';
+import 'break_rules.dart';
 import '../models/skill.dart' show SkillDelivery;
 import '../models/upgrade_stat.dart';
 import '../models/weapon.dart';
@@ -113,7 +114,12 @@ class ItemRules {
   /// `null` si puede. Solo valida la forma de entrega (no cupos ni costo).
   String? canReceiveSkill(ItemInstance weapon, String skillId) {
     if (kBaseQuebrarIds.contains(skillId)) {
-      return 'Quebrar no se trae: cada arma trae la suya';
+      // loot.md § 16.3.1: el Quebrar no se traslada; el propio se
+      // restaura (CraftOp.restoreQuebrar), el de otro tipo nunca.
+      final own = quebrarSkillFor(baseOf(weapon)?.type);
+      return skillId == own && weapon.quebrarReplaced
+          ? 'Usá Restaurar Quebrar: no hace falta sacrificar un arma'
+          : 'Solo podés restaurar el Quebrar propio de esta arma';
     }
     final d = skillCategory(skillId);
     if (d == null) return 'Elige una habilidad';
@@ -202,11 +208,33 @@ class ItemRules {
   }
 
   /// Texto de un afijo con su tier: `+12% ATQ (T3)`.
-  String affixText(AffixRoll r) {
+  /// Texto de [r]. Con [on] (el arma que lo lleva), Quebrantador nombra
+  /// la habilidad que puede quebrar (`BreakRules.modSkillOf`).
+  String affixText(AffixRoll r, {ItemInstance? on}) {
     final m = modOf(r);
     if (m == null) return r.affixId;
-    return '${m.text} (${r.fixed ? 'único' : 'T${r.tier}'})';
+    final tier = r.fixed ? 'único' : 'T${r.tier}';
+    if (m.stat == ModStat.breakSkill && on != null) {
+      if (breakSkillText(on) case final t?) return '$t ($tier)';
+    }
+    return '${m.text} ($tier)';
   }
+
+  /// Quebrantador sobre [i]: `<Habilidad> puede quebrar` o `sin habilidad
+  /// que pueda quebrar`; `null` si la base no existe.
+  String? breakSkillText(ItemInstance i) {
+    final w = baseOf(i);
+    if (w == null) return null;
+    final id = BreakRules.modSkillOf(w, catalog.skills);
+    final name = id == null ? null : catalog.skills[id]?.name;
+    return name == null
+        ? 'Sin habilidad que pueda quebrar'
+        : '$name puede quebrar';
+  }
+
+  /// Línea de ayuda del afijo Quebrantador (tooltips).
+  static const breakSkillHelp = 'Quebrantador: la primera habilidad de daño '
+      'a un objetivo del arma que todavía no quiebra pasa a poder quebrar';
 
   /// Rango del valor de [r] (su tier, o el del mod fijo del único al
   /// nivel del objeto; con [scaled] en `false`, el rango de diseño).

@@ -1,11 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/ds_components.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/build_plan.dart';
 import '../../../game_engine/models/item.dart';
+import '../../../game_engine/models/player_profile.dart';
+import '../../../game_engine/rules/build_guide_rules.dart';
 import '../../../game_engine/rules/build_plan_rules.dart';
 import '../../world/presentation/session_controller.dart';
 import 'build_plan_providers.dart';
@@ -78,6 +81,35 @@ class BuildFitBadge extends ConsumerWidget {
         child: Text(compact ? '★' : '★ TU BUILD',
             style: const TextStyle(color: kPlanColor, height: 1.1)),
       ),
+    );
+  }
+}
+
+/// Marca "PARA TU BUILD" / "NO VA CON TU BUILD" de una habilidad
+/// ([skillId]) o pasiva ([passiveId]) a trasladar en la fusión
+/// (build_planner.md § 9.6). Sin plan, nada. El motivo va en el tooltip.
+class TransferFitMark extends ConsumerWidget {
+  const TransferFitMark(
+      {super.key, required this.profile, this.skillId, this.passiveId})
+      : assert((skillId == null) != (passiveId == null));
+
+  final PlayerProfile profile;
+  final String? skillId;
+  final String? passiveId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plan = ref.watch(buildPlanProvider).plan;
+    final viewer = profile;
+    final guide = BuildGuideRules(ref.watch(buildPlanRulesProvider).progression);
+    final fit = skillId != null
+        ? guide.skillFit(plan, viewer, skillId!)
+        : guide.passiveFit(plan, viewer, passiveId!);
+    if (fit == null) return const SizedBox.shrink();
+    return RetroTooltip(
+      message: protoEsc(fit.reason),
+      child: DsTag.buildFit(fit.fits,
+          key: ValueKey('transfer-fit-${skillId ?? passiveId}')),
     );
   }
 }

@@ -1028,8 +1028,11 @@ Pedido del dueño: Quebrar viene de base pero se puede quitar.
   Quebrar** y el arma queda sin Quebrar (`ItemInstance.quebrarReplaced`,
   JSON `nq: 1`). El cupo de trasladadas pasa a ser
   `skillCapacity = rarity.skillSlots + 1`. Mismo costo que un traslado.
-- Quebrar **no se trae** de otra arma (`canReceiveSkill`: "Quebrar no se
-  trae: cada arma trae la suya"); para volver a tenerla, otra arma.
+- Quebrar **no se traslada** de otra arma (`canReceiveSkill`). Desde
+  v0.20.12 el motivo es "Solo podés restaurar el Quebrar propio de esta
+  arma" (Quebrar de otro tipo, o el arma no lo perdió) o "Usá Restaurar
+  Quebrar: no hace falta sacrificar un arma" (es el suyo y lo perdió).
+  Para recuperarlo: § 16.3.1.
 - `sanitize` conserva `nq` y nunca deja Quebrar en `extraSkills`.
 - **Migración versionada:** `kBalanceVersion` 1 → 2. Sin `nq` el arma
   tiene Quebrar, así que las armas viejas quedan con Quebrar en su
@@ -1038,6 +1041,37 @@ Pedido del dueño: Quebrar viene de base pero se puede quitar.
 - En la mesa de fusión la tarjeta de Quebrar dice `Ranura de Quebrar` y
   el título `elegí una de las traídas o Quebrar`.
 - Red: protocolo 15.
+
+### 16.3.1 Restaurar Quebrar (v0.20.12)
+
+Pedido del dueño: si se puede quitar Quebrar, se tiene que poder volver a
+poner.
+- Operación `CraftOp.restoreQuebrar` (mesa de fusión, grupo CAMBIAR,
+  "Restaurar Quebrar"), sobre un arma con `quebrarReplaced`. Pone de
+  nuevo **el Quebrar de su propio tipo** (`quebrarSkillFor(type)`: el
+  arcano en lanzadores); nunca el de otro tipo. Sin arma sacrificada.
+- Costo: `restoreQuebrarCredits` × `costFactor` de la rareza (por
+  defecto ₵100 × factor; sin materiales). Editor → Balance → Materiales
+  ("Restaurar Quebrar: créditos × rareza").
+- Ranura: `quebrarReplaced` vuelve a `false` y el cupo de trasladadas
+  vuelve a `rarity.skillSlots`. Si hay más trasladadas que ese cupo, el
+  jugador elige cuál deja la ranura (`replaceSkillId`), que **se
+  pierde** (como al reemplazar en § 16.2; sale en "Pierdes"). Sin
+  elegir: "Elegí qué habilidad deja su ranura". Si entran todas, no se
+  pierde nada.
+- Sin `quebrarReplaced`: "Ya tiene su Quebrar".
+- En batalla el arma vuelve a traer su Quebrar (`battle_engine`).
+- Validado por el host (`CraftRules.apply`). Red: Mundo protocolo 33.
+
+### 16.3.2 Quebrantador nombra su habilidad (v0.20.12)
+
+Con un arma conocida, el afijo `ModStat.breakSkill` se muestra como
+"<Habilidad> puede quebrar (T1)" (`ItemRules.affixText(r, on: item)`,
+habilidad = `BreakRules.modSkillOf(base)`); si la base no tiene
+habilidad de daño: "Sin habilidad que pueda quebrar". Sin arma, el texto
+genérico. Las fichas agregan la línea "Quebrantador: la primera
+habilidad de daño a un objetivo del arma que todavía no quiebra pasa a
+poder quebrar".
 
 ## 17. Inventario y acciones
 

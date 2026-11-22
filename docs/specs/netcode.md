@@ -756,6 +756,13 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 34 (v0.20.12: Restaurar Quebrar)
+
+- `CraftAction` con un `op` nuevo: `{"t":"craft","op":"restoreQuebrar","w":"<uid>"}`
+  (+ `"rep":"<skillId>"` con la trasladada que se pierde si sobran; el
+  mismo campo que el reemplazo de traslado). Un host 33 no conoce el
+  `op`: se sube a 34 (loot.md § 16.3.1).
+
 ## Mundo, protocolo 32 (v0.20.8: Condensar)
 
 - `CraftAction` no cambia de forma (`{"t":"craft","op":"condense","w":"<material>","i":N}`),

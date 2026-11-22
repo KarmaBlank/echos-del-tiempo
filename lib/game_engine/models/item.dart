@@ -284,7 +284,12 @@ enum CraftOp {
   /// Condensar materiales bajos en uno alto (v0.15,
   /// materials_economy.md § 4.3): `targetUid` = nombre del material que
   /// se obtiene (`cristal` / `prisma`), `index` = cuántos. Sin azar.
-  condense;
+  condense,
+
+  /// Restaurar el Quebrar propio de un arma que lo reemplazó por fusión
+  /// (v0.20.12, loot.md § 16.3.1). `replaceSkillId` = trasladada que se
+  /// pierde si sobran (cupos llenos). Protocolo Mundo 33.
+  restoreQuebrar;
 
   /// Destruye el arma (o las armas) en vez de cambiarla.
   bool get destroys =>

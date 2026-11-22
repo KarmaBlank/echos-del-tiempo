@@ -81,6 +81,7 @@ const Map<String, TuningDef> kTuningDefaults = {
     'upRaroCredits': 800,
     'transferCredits': 200,
     'transferCristales': 2,
+    'restoreQuebrarCredits': 100,
     'addAffixCredits': 50,
     'rerollCredits': 25,
   }),
