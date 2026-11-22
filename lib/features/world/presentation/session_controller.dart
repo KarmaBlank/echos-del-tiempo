@@ -1864,7 +1864,7 @@ class SessionController extends StateNotifier<SessionView?> {
         }
         for (final d in a.drops) {
           if (d == null) continue;
-          final r = StashRules.recover(next, d);
+          final r = StashRules.recover(next, d, box: a.box);
           next = r.stash;
           notes.add('${_recoverName(d)} se guardó '
               '${r.toBox ? 'en Objetos sin recoger' : 'en el alijo'}');
@@ -1895,13 +1895,12 @@ class SessionController extends StateNotifier<SessionView?> {
     for (final g in s.ground) {
       final to = s.players[g.recoverTo];
       if (to == null || !controls(to.id)) continue;
-      if (g.ownerId != null &&
+      // Lo que el filtro oculta también vuelve, a Objetos sin recoger.
+      final hidden = g.ownerId != null &&
           !engine
               .lootVerdict(to.profile, g.drop, wants: to.buildWants)
-              .visible) {
-        continue;
-      }
-      next = StashRules.recover(next, g.drop).stash;
+              .visible;
+      next = StashRules.recover(next, g.drop, box: hidden).stash;
       left.add(g);
     }
     if (left.isEmpty) return;

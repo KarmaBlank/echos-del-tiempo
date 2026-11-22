@@ -1737,30 +1737,36 @@ class _Op {
   /// Manda [drops] al alijo de [p] (o a Objetos sin recoger si está
   /// lleno): una confirmación `rec:N` que su dispositivo guarda en la
   /// cuenta (loot.md § 4b). La Travesía no tiene alijo: no hace nada.
-  void _recover(SessionPlayer p, List<LootDrop> drops) {
+  void _recover(SessionPlayer p, List<LootDrop> drops, {bool box = false}) {
     if (drops.isEmpty || s.run != null) return;
     p.addStashAck('${StashAck.recoverPrefix}${++s.groundSeq}',
-        StashAck(put: true, drops: drops));
+        StashAck(put: true, drops: drops, box: box));
   }
 
   /// Saca del piso [items] (por defecto todo) y devuelve a cada jugador
-  /// lo suyo que su filtro muestra (lo propio, o lo compartido que soltó
-  /// él). Lo oculto por el filtro y lo de alguien que ya no está se
-  /// pierde. Se llama al cerrarse el mapa (fin de misión, vuelta al
+  /// lo suyo (lo propio, o lo compartido que soltó él). Lo que su filtro
+  /// oculta también vuelve, pero directo a Objetos sin recoger. Solo se
+  /// descarta lo de alguien que ya no está (su dispositivo ya lo guardó
+  /// al salir). Se llama al cerrarse el mapa (fin de misión, vuelta al
   /// pueblo) antes de vaciar el piso.
   void _recoverGround([List<GroundLoot>? items]) {
     final list = items ?? [...s.ground];
     if (list.isEmpty) return;
     final byPlayer = <String, List<LootDrop>>{};
+    final hidden = <String, List<LootDrop>>{};
     for (final g in list) {
       s.ground.remove(g);
       final to = g.recoverTo == null ? null : s.players[g.recoverTo];
       if (to == null) continue;
       if (g.ownerId != null &&
           !e.lootVerdict(to.profile, g.drop, wants: to.buildWants).visible) {
+        (hidden[to.id] ??= []).add(g.drop);
         continue;
       }
       (byPlayer[to.id] ??= []).add(g.drop);
+    }
+    for (final MapEntry(key: id, value: drops) in hidden.entries) {
+      _recover(s.players[id]!, drops, box: true);
     }
     for (final MapEntry(key: id, value: drops) in byPlayer.entries) {
       final p = s.players[id]!;

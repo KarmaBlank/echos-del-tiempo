@@ -178,9 +178,13 @@ class SessionPlayer {
 /// perfil hacia el alijo; si no, entró al perfil desde el alijo. [drop] es
 /// lo que se movió.
 class StashAck {
-  const StashAck({required this.put, required this.drops});
+  const StashAck({required this.put, required this.drops, this.box = false});
 
   final bool put;
+
+  /// Recuperado que el filtro del dueño oculta: va directo a Objetos sin
+  /// recoger, sin ocupar el alijo (loot.md § 4b.1, protocolo 37).
+  final bool box;
 
   /// Una por pieza pedida, en el mismo orden: lo que se movió, o `null`
   /// si esa pieza se rechazó.
