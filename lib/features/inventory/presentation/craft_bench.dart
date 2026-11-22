@@ -213,10 +213,10 @@ String craftCostShort(CraftResult r) {
   return parts.isEmpty ? 'Gratis' : parts.join(' + ');
 }
 
-/// Mesa de fusión (pestaña FUSIÓN), en 3 pasos: **1 ARMA** (cuál) →
+/// Mesa de fusión (pestaña FUSIÓN), en 3 pasos: **1 DESTINO** (cuál) →
 /// **2 ACCIÓN** (qué hacerle: una línea cada una con el costo o el motivo
 /// a la derecha; el detalle explica la que tiene el mouse o el foco) →
-/// **3 CONFIRMAR** (solo las elecciones de esa acción a la izquierda —
+/// **3 PREVIA** + CONFIRMAR (solo las elecciones de esa acción a la izquierda —
 /// el arma origen y, debajo de ella, sus mods / habilidades — y a la
 /// derecha ahora → después, lo que gastás y lo que perdés, con el botón
 /// y su motivo). `Enter` confirma, `Esc` vuelve un paso. Ver
@@ -335,29 +335,44 @@ class _CraftBenchState extends State<CraftBench> {
   /// Grilla de armas de la mesa: la misma casilla, ficha y buscador que
   /// el INVENTARIO (design_system.md § "Estructura atómica"). [note]
   /// agrega markup al pie de la ficha.
-  Widget _weaponGrid(PlayerProfile p, List<ItemInstance> list,
-          {required String? selected,
-          required String keyPrefix,
-          required ValueChanged<ItemInstance> onTap,
-          ItemGridSearch? search,
-          String? empty,
-          String Function(ItemInstance)? note,
-          Set<String> Function(BuildPlan plan, BuildPlanRules rules)? stars}) =>
-      Consumer(builder: (context, ref, _) {
+  ///
+  /// Plantilla DsWeaponList (ui_minimal.md § 3): buscador siempre y la
+  /// equipada fija arriba. Si [list] no la trae (p. ej. el origen, que
+  /// nunca puede ser la equipada) se muestra igual, con candado.
+  Widget _weaponGrid(PlayerProfile p, List<ItemInstance> found,
+      {required String? selected,
+      required String keyPrefix,
+      required ValueChanged<ItemInstance> onTap,
+      required ItemGridSearch search,
+      String? empty,
+      String Function(ItemInstance)? note,
+      Set<String> Function(BuildPlan plan, BuildPlanRules rules)? stars}) {
+    final eq = p.itemByUid(p.equippedUid ?? '');
+    final eqIn = eq != null && found.any((it) => it.uid == eq.uid);
+    final list = [
+      if (eq != null) eq,
+      for (final it in found)
+        if (it.uid != eq?.uid) it
+    ];
+    final eqLocked = eq != null && !eqIn;
+    return Consumer(builder: (context, ref, _) {
         final plan = ref.watch(buildPlanProvider).plan;
         final fit = ref.watch(buildPlanRulesProvider);
         // ★ de BUILD v2 (build_planner_v2.md § 1.5): mejor candidata como
         // destino y donante sugerido como origen.
         final starred = stars?.call(plan, fit) ?? const <String>{};
-        return DsItemGrid(
+        return DsWeaponList(
           rules: shop.rules,
           count: list.length,
           search: search,
+          equipped: eq == null ? null : 0,
+          keyPrefix: keyPrefix,
           empty: empty,
           cellKey: (i) => ValueKey('$keyPrefix${list[i].uid}'),
           slot: (i) => ItemSlotData(
               content: CellContent.item(list[i]),
               selected: list[i].uid == selected,
+              locked: i == 0 && eqLocked,
               buildMatch: starred.contains(list[i].uid) ||
                   (plan.goalCount > 0 && fit.itemFit(plan, list[i]).any)),
           tip: (i, child, focused) {
@@ -388,9 +403,13 @@ class _CraftBenchState extends State<CraftBench> {
                                 12)),
                 child: child);
           },
-          onTap: (i) => onTap(list[i]),
+          onTap: (i) {
+            if (i == 0 && eqLocked) return;
+            onTap(list[i]);
+          },
         );
       });
+  }
 
   // ------------------------------------------------------------------
   // Elección por defecto y acción
@@ -629,7 +648,7 @@ class _CraftBenchState extends State<CraftBench> {
     ];
     return {
       FuseLayout.crumbs: (_) => StepCrumbs(
-            steps: const ['ARMA', 'ACCIÓN', 'CONFIRMAR'],
+            steps: const ['DESTINO', 'ACCIÓN', 'PREVIA'],
             tips: CraftHelp.steps,
             current: _step,
             keyPrefix: 'bench-crumb-',

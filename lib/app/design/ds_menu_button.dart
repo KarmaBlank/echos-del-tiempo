@@ -23,6 +23,7 @@ class DsMenuButton<T> extends StatefulWidget {
     this.buttonKey,
     this.menuKey,
     this.optionKey,
+    this.optionReason,
     this.initiallyOpen = false,
   });
 
@@ -35,6 +36,10 @@ class DsMenuButton<T> extends StatefulWidget {
   final Key? buttonKey;
   final Key? menuKey;
   final Key? Function(T)? optionKey;
+
+  /// Por qué una opción no se puede elegir (`null` = se puede): queda
+  /// gris, con el motivo de tooltip (ui_minimal.md § 4).
+  final String? Function(T)? optionReason;
 
   /// Abre el menú al aparecer (capturas y tests).
   final bool initiallyOpen;
@@ -131,7 +136,10 @@ class _DsMenuButtonState<T> extends State<DsMenuButton<T>> {
                               kind: DsButtonKind.ghost,
                               size: DsButtonSize.compact,
                               selected: widget.current == k,
-                              onPressed: () => _choose(k)),
+                              tooltip: widget.optionReason?.call(k),
+                              onPressed: widget.optionReason?.call(k) != null
+                                  ? null
+                                  : () => _choose(k)),
                         ),
                     ],
                   ),

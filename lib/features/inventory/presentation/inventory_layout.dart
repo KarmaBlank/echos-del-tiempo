@@ -24,7 +24,6 @@ abstract final class InventoryTabLayout {
   static const stacks = 'inv.stacks';
   static const summary = 'inv.summary';
   static const selection = 'inv.selection';
-  static const cleanMenu = 'inv.clean_menu';
 
   static const _main = {'toolbar', 'head', 'foot'};
   static const _side = {'head', 'foot'};
@@ -78,11 +77,6 @@ abstract final class InventoryTabLayout {
           interactive: true,
           gap: 'none',
           allowedRegions: _side),
-      LayoutSlotSpec(cleanMenu,
-          label: 'Menú de LIMPIAR',
-          interactive: true,
-          gap: 'xs',
-          allowedRegions: _side),
     ],
     defaults: LayoutDoc(screen: screen, slots: const [
       SlotPlacement(owners, 'toolbar', 0),
@@ -98,7 +92,6 @@ abstract final class InventoryTabLayout {
       SlotPlacement(stacks, 'foot', 0),
       SlotPlacement(summary, 'foot', 1),
       SlotPlacement(selection, 'foot', 2),
-      SlotPlacement(cleanMenu, 'foot', 3),
     ]),
   );
 }

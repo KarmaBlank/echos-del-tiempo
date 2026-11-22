@@ -494,7 +494,7 @@ class StashBoardState extends State<StashBoard> {
         runSpacing: DsSpace.xs,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text('Equipada:', style: DsText.detail()),
+          Text(retroText('EQUIPADA'), style: DsText.subtitle()),
           _cell(
             key: const ValueKey('stash-char-equipped'),
             content: eqContent,
