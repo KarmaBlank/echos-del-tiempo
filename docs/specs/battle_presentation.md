@@ -1560,6 +1560,12 @@ Pedidos del dueño, para ahorrar espacio y no tapar la elección:
   raros (precondición `Necesita: …` de la habilidad, regla del tutorial)
   suman un tooltip (`BattleAction.disabledHint`) al pasar el mouse por la
   fila. No hay fila "sin compañía": sin compañero DÚOS no aparece.
+- **Condición lista (v0.20.9).** Una habilidad con precondición
+  (objetivo Fisurado, stacks de un estado, Marca, vida propia baja) que
+  hoy se cumple y se puede usar lleva **borde azul**
+  (`DsColors.conditionReady` #4DA3FF, `DsListRow.highlighted`,
+  `BattleAction.conditionReady`), distinto del dorado de selección (la
+  fila seleccionada muestra el dorado). Sin texto extra.
 - **Crítico en el detalle.** Todo lo que puede critear muestra
   `Crítico P%: N`: probabilidad efectiva (crítico del personaje +
   `critBonus` de la técnica, tope 100 %) y daño crítico. Atacar, daño

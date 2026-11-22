@@ -643,6 +643,8 @@ class BattleViewState extends State<BattleView>
       // Una línea roja por condición que falta (arriba del detalle).
       reason: ok ? null : lines.join('\n'),
       separatorBefore: separatorBefore,
+      // Precondición (objetivo Fisurado, stacks, vida baja…) cumplida.
+      conditionReady: ok && sk.requires.isNotEmpty,
       onSelect: ok ? () => _send(SkillCommand(sk.id, targetId: tg)) : null,
     );
   }

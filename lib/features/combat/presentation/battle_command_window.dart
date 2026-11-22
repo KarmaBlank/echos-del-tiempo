@@ -58,6 +58,7 @@ class BattleAction {
     this.ultCharge,
     this.count,
     this.summary,
+    this.conditionReady = false,
   });
 
   final String id;
@@ -116,6 +117,9 @@ class BattleAction {
 
   /// Resumen de una línea arriba del detalle (markup).
   final String? summary;
+
+  /// Tiene una condición especial y se está cumpliendo: borde azul.
+  final bool conditionReady;
 }
 
 /// Una categoría con sus acciones (vacía = no se muestra).
@@ -392,6 +396,7 @@ class _Actions extends StatelessWidget {
                     : null,
                 titleColor: a.dual ? DsColors.warning : null,
                 selected: i == selected,
+                highlighted: a.conditionReady,
                 enabled: a.onSelect != null,
                 onTap: a.onSelect,
                 compact: true,
