@@ -550,7 +550,7 @@ BuildFit?`:
   <origen>)". Ninguna: no va, "Tu plan no usa <etiqueta principal>".
 - Sin etiquetas propias o plan sin etiquetas: `null` (sin marca).
 
-## 10. Vista simple (v0.20.25)
+## 10. Vista simple (v0.20.24)
 
 Pedido del dueño: el propósito del builder está bien pero, para quien
 solo quiere elegir una plantilla y no pensar, se veía confuso (siglas

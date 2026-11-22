@@ -1,4 +1,4 @@
-# Spec: UI mínima (v0.20.21, BUILD simple v0.20.25)
+# Spec: UI mínima (v0.20.21, BUILD simple v0.20.24)
 
 Pedido del dueño: una UI accesible, tranquila y minimalista, con menos
 texto en pantalla. La profundidad sigue estando, pero no se impone: se
@@ -93,7 +93,7 @@ grilla).
   fija en FUSIÓN (destino y origen), FORJA y COMPRAR; flujo de pasos de
   FUSIÓN y FORJA; LIMPIAR como único lugar de lotes.
 
-## 6. BUILD: vista simple (v0.20.25)
+## 6. BUILD: vista simple (v0.20.24)
 
 La pestaña BUILD sigue los tres niveles (build_planner.md § 10):
 
