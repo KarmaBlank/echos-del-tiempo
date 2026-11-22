@@ -631,6 +631,16 @@ enum TurnRule {
   /// Turno del grupo (cada jugador una vez, en el orden que quiera) y
   /// después turno enemigo (todos en orden). La velocidad no cuenta.
   porBando,
+
+  /// Por rondas (docs/specs/turn_modes.md § 4): cada combatiente vivo
+  /// actúa una vez por ronda, en orden de velocidad; los jugadores
+  /// seguidos en el orden forman un bloque y actúan en cualquier orden.
+  porRonda,
+
+  /// Por fases (turn_modes.md § 3): fase enemiga y después fase de
+  /// jugadores (cada uno actúa o TERMINA TURNO). Es `porBando` con los
+  /// enemigos primero.
+  porFases,
 }
 
 /// Estado completo de una batalla (`S.battle` del prototipo, sin la
@@ -650,8 +660,12 @@ class BattleState {
     this.groupPhase = false,
     Set<String>? acted,
     this.round = 0,
+    List<String>? roundOrder,
+    Set<String>? waited,
   })  : summons = summons ?? [],
-        acted = acted ?? {};
+        acted = acted ?? {},
+        roundOrder = roundOrder ?? [],
+        waited = waited ?? {};
 
   final List<Combatant> party;
   final List<Combatant> enemies;
@@ -684,13 +698,46 @@ class BattleState {
   /// `porBando`: ronda en curso (1 = la primera).
   int round;
 
-  bool get porBando => turnRule == TurnRule.porBando;
+  /// Regla de fase de grupo: la de la Travesía y Por fases (comparten el
+  /// turno del grupo, `groupPhase` y `acted`).
+  bool get porBando =>
+      turnRule == TurnRule.porBando || turnRule == TurnRule.porFases;
+
+  bool get porFases => turnRule == TurnRule.porFases;
+  bool get porRonda => turnRule == TurnRule.porRonda;
+
+  /// Cualquier regla que no sea la línea de tiempo.
+  bool get grouped => turnRule != TurnRule.velocidad;
+
+  /// `porRonda`: orden de la ronda en curso (ids), fijado al empezarla.
+  final List<String> roundOrder;
+
+  /// `porRonda`: quiénes ya usaron Esperar en esta ronda.
+  final Set<String> waited;
+
+  /// `porRonda`: los que faltan actuar en la ronda, en orden (vivos).
+  List<Combatant> get roundRemaining => [
+        for (final id in roundOrder)
+          if (byId(id) case final c? when c.alive && !acted.contains(id)) c
+      ];
+
+  /// `porRonda`: el bloque de jugadores al frente de lo que falta.
+  List<Combatant> get roundBlock {
+    final out = <Combatant>[];
+    for (final c in roundRemaining) {
+      if (!c.isPlayer || c.isSummon) break;
+      out.add(c);
+    }
+    return out;
+  }
 
   /// `porBando`: jugadores vivos que todavía no actuaron en el turno del
   /// grupo (vacío fuera de él).
-  List<Combatant> get pendingGroup => !porBando || !groupPhase
+  List<Combatant> get pendingGroup => !grouped || !groupPhase
       ? const []
-      : [
+      : porRonda
+          ? roundBlock
+          : [
           for (final p in party)
             if (p.alive && !acted.contains(p.id)) p
         ];
@@ -698,7 +745,7 @@ class BattleState {
   /// `porBando`: nadie tiene el turno y el grupo puede mandar comandos
   /// (el primero que manda, actúa).
   bool get awaitingGroup =>
-      porBando &&
+      grouped &&
       !ended &&
       groupPhase &&
       currentId == null &&
@@ -733,5 +780,7 @@ class BattleState {
         groupPhase: groupPhase,
         acted: {...acted},
         round: round,
+        roundOrder: [...roundOrder],
+        waited: {...waited},
       );
 }

@@ -15,6 +15,7 @@ import '../models/attributes.dart';
 import '../data/run_boons.dart';
 import 'meta_progress_rules.dart';
 import '../models/build_wants.dart';
+import '../models/combat_mode.dart';
 import '../models/eco.dart';
 import '../models/game_map.dart';
 import '../models/game_mode.dart';
@@ -220,6 +221,14 @@ class SessionEngine {
   /// (docs/specs/accessibility.md § 7): al crearla y cada vez que lo
   /// cambia en CONFIGURACIÓN. Un turno en curso sigue con lo que lleva;
   /// con [TurnTimer.unlimited] nunca se pasa por tiempo.
+  /// El anfitrión elige el modo de combate de la sala (turn_modes.md § 1).
+  /// Rige desde la próxima pelea; la que está en curso no cambia.
+  SessionStep setCombatMode(GameSession session, CombatMode? mode) {
+    if (session.combatMode == mode) return SessionStep(session, const []);
+    final s = session.copy()..combatMode = mode;
+    return SessionStep(s, const []);
+  }
+
   SessionStep setTurnTimer(GameSession session, TurnTimer timer) {
     if (session.turnTimer == timer) return SessionStep(session, const []);
     final s = session.copy()..turnTimer = timer;
@@ -3299,6 +3308,7 @@ class _Op {
       enemyTypes: en.group,
       elite: en.elite,
       triggeredBy: trigger.id,
+      turnRule: s.effectiveCombatMode.turnRule,
     );
     final level = _levelFor(en);
     ZoneRules.scaleBattle(step.state, level, curve: catalog.curve);
@@ -3337,7 +3347,8 @@ class _Op {
     final step = e.battles.command(b.state, p.id, cmd);
     if (step == null) return false;
     // porBando: cada jugador que actúa le deja el reloj entero al resto.
-    if (step.state.porBando) b.turnTime = 0;
+    // Por rondas / Por fases también (y corta la pausa de planificación).
+    if (step.state.grouped) b.turnTime = 0;
     if (s.tutorial != null) {
       _applyTutorialStep(b, step);
       afterTutorialCommand(p, cmd, before, step.events);
@@ -3472,10 +3483,17 @@ class _Op {
     if (cur != null && cur.isPlayer && !cur.alive) b.state.currentId = null;
 
     if (b.state.currentId == null && !b.state.awaitingGroup) {
+      final wasGroup = b.state.groupPhase;
       final step = e.battles.nextTurn(b.state);
       _applyBattleStep(b, step);
       if (b.endTimer != null) return;
       b.turnTime = 0;
+      // Por fases: pausa de planificación al abrir la fase de jugadores
+      // (turn_modes.md § 3); el reloj de turno arranca después y el primer
+      // comando la corta.
+      if (b.state.porFases && !wasGroup && b.state.awaitingGroup) {
+        b.turnTime = -CombatMode.planPause;
+      }
       final statusText = step.events.any((ev) =>
           (ev is DamageEvent && ev.fromStatus) ||
           ev is HealEvent ||
