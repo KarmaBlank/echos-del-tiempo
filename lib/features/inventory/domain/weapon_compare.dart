@@ -1,4 +1,3 @@
-import '../../../game_engine/data/branch_ults_catalog.dart' show itemUlt;
 import '../../../game_engine/data/weapon_elements_catalog.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/models/elements.dart';
@@ -151,10 +150,9 @@ WeaponComparison compareWeapons(
       : [for (final r in a.affixes) items.affixText(r, on: a)];
   final modsB = [for (final r in to.affixes) items.affixText(r, on: to)];
 
-  String? ult(ItemInstance? i) {
-    final w = i == null ? null : items.baseOf(i);
-    return w == null ? null : (itemUlt(i!) ?? cat.ultimates[w.type])?.name;
-  }
+  // ULT libres del arma (ultimates_v2.md § 2.1): la comparación no
+  // muestra ULT.
+  String? ult(ItemInstance? i) => null;
 
   final wA = a == null ? null : items.baseOf(a);
   final wB = items.baseOf(to);

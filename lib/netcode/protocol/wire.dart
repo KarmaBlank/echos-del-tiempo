@@ -77,7 +77,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// § 16.3.1); un host 33 no la conoce.
 /// 35 desde v0.20.14: `tech` de una cura puede llevar `tg` = un enemigo
 /// no muerto / espectro (bestiary.md § 1.4.1); un host 34 curaría.
-const kProtocolVersion = 35;
+/// 36 desde v0.20.15: ULT libres del arma (perfil `un`, `seen` con
+/// `ult:<id>`, `ultimateOf` sin el arma; ultimates_v2.md § 2.1).
+const kProtocolVersion = 36;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

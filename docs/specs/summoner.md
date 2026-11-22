@@ -127,12 +127,12 @@ v0.8.0).
   elemento (tokens `ProtoColors`), barra de vida y turnos (`∞` con Pacto).
 - Tarjeta del grupo: fila compacta (vida · turnos) con tooltip.
 - Tooltip de las habilidades: qué hace, stats con tus números y el tope.
-- Tooltip del tomo: bonos a las invocaciones y su ULT propia.
+- Tooltip del tomo: bonos a las invocaciones (desde v0.20.15 ya no
+  muestra la ULT: conseguir el tomo la enseña al repertorio y se elige en
+  PERSONAJE → ULT, ultimates_v2.md § 2.1).
 - **GRIMORIO** (ATRIBUTOS): las que tenés (stats con tu equipo, de qué
   arma salen, trasladadas) y las que no, con "Se obtiene con: …".
 
 ## 8. Pendiente
 
 - Arte propio (hoy procedural; cuando haya, al manifiesto de sprites).
-- Los tooltips de `item_text` / `weapon_compare` / `skill_chip` todavía
-  muestran la ULT del tipo de arma: usar `weaponBaseUlt`.

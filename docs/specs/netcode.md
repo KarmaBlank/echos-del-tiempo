@@ -756,6 +756,13 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 36 (v0.20.15: ULT libres del arma)
+
+- El perfil suma `un` (ULT NUEVA sin ver; lista opcional, aditiva).
+- `SeenItemsAction` (`seen`) acepta ids `ult:<id>` para desmarcarlas.
+- Cambia la regla de `ultimateOf` (elegida > ascensión > ULT base de la
+  clase; el arma nunca decide) que también usan los clientes para su UI:
+  un cliente 35 mostraría otra ULT. Se sube a 36 (ultimates_v2.md § 2.1).
 ## Mundo, protocolo 35 (v0.20.14: curas a enemigos)
 
 - `SkillCommand` no cambia de forma (`{"t":"tech","tk":"<id>","tg":"<id>"}`),

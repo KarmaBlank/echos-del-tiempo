@@ -1,4 +1,3 @@
-import '../../../game_engine/data/branch_ults_catalog.dart' show itemUlt;
 import '../../../game_engine/data/eco_catalog.dart';
 import '../../../game_engine/data/weapon_elements_catalog.dart';
 import '../../../game_engine/models/atlas.dart';
@@ -27,7 +26,6 @@ const _green = '#7bed9f';
 const _red = '#ff6b81';
 const _sky = '#9fb4ff';
 const _orange = '#ff9f43';
-const _pink = '#e84393';
 const _dim = '#7d8bc4';
 
 /// Azul claro de los mods (como los de los ARPG, legible sobre el panel).
@@ -94,28 +92,21 @@ String itemSkillsMarkup(ProgressionRules rules, ItemInstance it) {
             ? _esc(s.name)
             : '${_esc(s.name)} ${_c(_orange, '(trasladada)')}',
   ];
-  final ult =
-      itemUlt(it)?.name ?? (w == null ? null : cat.ultimates[w.type]?.name);
-  return [
-    names.isEmpty ? '—' : names.join(' · '),
-    if (ult != null) _c(_pink, 'ULT: ${_esc(ult)}'),
-  ].join(' · ');
+  // ULT libres del arma (ultimates_v2.md § 2.1): el arma no muestra ULT.
+  return names.isEmpty ? '—' : names.join(' · ');
 }
 
 /// Una línea por habilidad (`• Nombre (8 MP · Físico): efecto · ...`, las
-/// trasladadas con `(trasladada)`) y la de la ULT (`ULT: ...`).
+/// trasladadas con `(trasladada)`). La ULT ya no es del arma.
 List<String> itemSkillLinesMarkup(ProgressionRules rules, ItemInstance it,
     {DerivedStats? stats}) {
   final cat = rules.catalog;
   final w = cat.weapons[it.baseId];
-  final ult = itemUlt(it) ?? (w == null ? null : cat.ultimates[w.type]);
   return [
     for (final id in rules.items.skillsOf(it))
       if (cat.skills[id] case final s?)
         '• ${skillOneLineMarkup(s, stats: stats)}'
             '${(w?.skillIds.contains(id) ?? false) ? '' : ' ${_c(_orange, '(trasladada)')}'}',
-    if (ult != null)
-      '• ${skillOneLineMarkup(ult, stats: stats, ultimate: true)}',
   ];
 }
 
@@ -157,7 +148,6 @@ List<String> _skillFolds(
     ProgressionRules rules, ItemInstance it, DerivedStats? stats) {
   final cat = rules.catalog;
   final w = cat.weapons[it.baseId];
-  final ult = itemUlt(it) ?? (w == null ? null : cat.ultimates[w.type]);
   String one((String, String) p, [String tail = '']) =>
       p.$2.isEmpty ? '• ${p.$1}$tail' : tipSubFold('${p.$1}$tail', p.$2);
   return [
@@ -168,8 +158,6 @@ List<String> _skillFolds(
             (w?.skillIds.contains(id) ?? false)
                 ? ''
                 : ' ${_c(_orange, '(trasladada)')}'),
-    if (ult != null)
-      one(skillShortLineMarkup(ult, stats: stats, ultimate: true)),
   ];
 }
 
@@ -225,10 +213,8 @@ String itemTooltipMarkup(
       if (affixHelpMarkup(rules, a) case final h?) l.add('  $h');
     }
   }
-  // Mod especial "ULT: <nombre>" (branch_ults.md): reemplaza la del tipo.
-  if (itemUlt(it) case final u?) {
-    l.add('• ${_c(_pink, 'ULT: ${_esc(u.name)}')}');
-  }
+  // El mod "ULT: <nombre>" ya no se muestra: la ULT se aprende al
+  // conseguir el arma (ultimates_v2.md § 2.1).
   if (weaponElementMarkup(it) case final el?) l.add(el);
   final passive = items.passiveText(it);
   if (passive != null) {
@@ -289,7 +275,6 @@ String itemTooltipMarkup(
       '• ${affixMarkup(rules, a, on: it)}',
       if (affixHelpMarkup(rules, a) case final h?) '  $h',
     ],
-    if (itemUlt(it) case final u?) '• ${_c(_pink, 'ULT: ${_esc(u.name)}')}',
   ];
   final passive = items.passiveText(it);
   final skills = itemSkillLinesMarkup(rules, it, stats: stats);

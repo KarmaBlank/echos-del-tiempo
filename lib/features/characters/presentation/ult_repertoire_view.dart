@@ -31,6 +31,7 @@ class UltRepertoireView extends StatefulWidget {
     required this.editable,
     required this.onSelect,
     required this.onUpgrade,
+    this.onSeen,
     this.stats,
     this.sprites,
     this.sfx,
@@ -56,10 +57,15 @@ class UltRepertoireView extends StatefulWidget {
   final bool Function(String? id) onSelect;
   final bool Function(String id) onUpgrade;
 
+  /// Desmarca la NUEVA de una ULT al pasar el mouse por su fila (manda
+  /// `SeenItemsAction` con `ult:<id>`, ultimates_v2.md § 2.1).
+  final void Function(List<String> ids)? onSeen;
+
   static const help = '<b>ULT</b><br>'
-      'Tu repertorio: toda ULT que conseguís queda para siempre, también '
-      'la de un arma (aunque la vendas o la desarmes). Elegí la activa '
-      'fuera de combate; se usa con cualquier arma del tipo compatible.<br>'
+      'Tu repertorio: toda ULT que conseguís queda para siempre. Al '
+      'conseguir un arma que enseña una ULT la aprendés en el momento. '
+      'Elegí la activa fuera de combate; el arma equipada no la cambia. '
+      'Sin elegir, se usa la ULT base de tu clase.<br>'
       'MEJORAR sube su nivel (1 a 5) con créditos y materiales.';
 
   @override
@@ -71,6 +77,12 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
   String? _hover;
   bool _hoverUpgrade = false;
   bool _confirm = false;
+  final _seenSent = <String>{};
+
+  void _seen(String id) {
+    if (!widget.profile.ultNew.contains(id) || !_seenSent.add(id)) return;
+    widget.onSeen?.call(['${UltRules.seenPrefix}$id']);
+  }
 
   String _name(String id) =>
       kUniques[id]?.name ??
@@ -149,7 +161,7 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
                   p.ultSel == null
                       ? 'Automática'
                       : active == null
-                          ? 'No compatible con tu arma: se usa la automática'
+                          ? 'No disponible: se usa la ULT base'
                           : 'Elegida',
                   style: DsText.detail())),
           if (focus != null) ...[
@@ -216,11 +228,22 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
     final lv = o.kind == UltOptionKind.learned ? ' · Nv ${o.level}' : '';
     final kind = switch (o.kind) {
       UltOptionKind.ascension => 'Ascensión',
-      UltOptionKind.weaponType => 'Del tipo de arma',
+      UltOptionKind.weaponType => 'ULT base de la clase',
       UltOptionKind.learned => o.def?.source.label ?? 'De arma',
     };
+    final fresh = widget.profile.ultNew.contains(o.id);
+    final pick = isActive
+        ? const DsBadge('ACTIVA')
+        : DsButton('ELEGIR',
+            size: DsButtonSize.compact,
+            onPressed: widget.editable && o.available
+                ? () => widget.onSelect(o.id)
+                : null);
     return MouseRegion(
-      onEnter: (_) => setState(() => _hover = o.id),
+      onEnter: (_) {
+        _seen(o.id);
+        setState(() => _hover = o.id);
+      },
       onExit: (_) {
         if (_hover == o.id) setState(() => _hover = null);
       },
@@ -235,13 +258,13 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
         _focus = o.id;
         _confirm = false;
       }),
-      trailing: isActive
-          ? const DsBadge('ACTIVA')
-          : DsButton('ELEGIR',
-              size: DsButtonSize.compact,
-              onPressed: widget.editable && o.available
-                  ? () => widget.onSelect(o.id)
-                  : null),
+      trailing: fresh
+          ? Row(mainAxisSize: MainAxisSize.min, children: [
+              DsBadge('NUEVA', key: ValueKey('ult-new-${o.id}')),
+              SizedBox(width: DsSpace.sm),
+              pick,
+            ])
+          : pick,
       ),
     );
   }
