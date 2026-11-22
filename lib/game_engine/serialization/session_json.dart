@@ -175,6 +175,7 @@ class SessionJson {
               {
                 'id': id,
                 if (a.put) 'put': true,
+                if (a.box) 'bx': true,
                 'd': [for (final d in a.drops) d?.toJson()],
               },
           ],
@@ -189,6 +190,7 @@ class SessionJson {
       if (id is! String || d is! List) continue;
       out[id] = StashAck(
           put: r['put'] == true,
+          box: r['bx'] == true,
           drops: [for (final x in d) LootDrop.fromJson(x)]);
     }
     return out;

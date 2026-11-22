@@ -79,7 +79,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// no muerto / espectro (bestiary.md § 1.4.1); un host 34 curaría.
 /// 36 desde v0.20.15: ULT libres del arma (perfil `un`, `seen` con
 /// `ult:<id>`, `ultimateOf` sin el arma; ultimates_v2.md § 2.1).
-const kProtocolVersion = 36;
+/// 37 desde v0.20.17: la confirmación `rec:N` puede llevar `bx` (lo que
+/// el filtro oculta va a Objetos sin recoger, loot.md § 4b.1); un cliente
+/// 36 lo mandaría al alijo y deduplicaría por uid, perdiendo armas.
+const kProtocolVersion = 37;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

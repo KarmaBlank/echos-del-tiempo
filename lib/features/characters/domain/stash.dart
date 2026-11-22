@@ -424,15 +424,19 @@ class StashRules {
     return s.put(cell, left > 0 ? StashEntry.material(m, left) : null);
   }
 
-  /// Guarda [d] (loot recuperado): al alijo si entra; si no, a Objetos
-  /// sin recoger. Un arma o Eco que ya está (mismo uid) no se duplica.
-  /// [toBox] dice dónde quedó.
+  /// Guarda [d] (loot recuperado): al alijo si entra; si no (o con [box],
+  /// lo que el filtro oculta), a Objetos sin recoger. Nunca se descarta:
+  /// el loot recién tirado trae el uid provisorio (`nuevo`) y los uid de
+  /// distintos personajes se repiten, así que un uid que ya está en el
+  /// alijo o en la caja se renombra en vez de tomarse como duplicado
+  /// (loot.md § 4b.1). [toBox] dice dónde quedó.
   static ({Stash stash, bool toBox}) recover(Stash s, LootDrop d,
-      {int tab = 0}) {
-    final uid = d.item?.uid ?? d.eco?.uid;
-    if (uid != null && _has(s, uid)) return (stash: s, toBox: false);
-    final at = store(s, d, tab: tab);
-    if (at != null) return (stash: at, toBox: false);
+      {int tab = 0, bool box = false}) {
+    d = _freshUid(s, d);
+    if (!box) {
+      final at = store(s, d, tab: tab);
+      if (at != null) return (stash: at, toBox: false);
+    }
     final StashEntry? e = d.item != null
         ? StashEntry.item(d.item!)
         : d.eco != null
@@ -444,8 +448,27 @@ class StashRules {
     return (stash: s.withUnclaimed([...s.unclaimed, e]), toBox: true);
   }
 
-  static bool _has(Stash s, String uid) => [...s.cells, ...s.unclaimed]
-      .any((c) => c != null && (c.item?.uid == uid || c.eco?.uid == uid));
+  /// [d] con un uid que no está en [s] (`r<n>` si el suyo ya está).
+  static LootDrop _freshUid(Stash s, LootDrop d) {
+    final it = d.item, eco = d.eco;
+    if (it == null && eco == null) return d;
+    final taken = {
+      for (final c in [...s.cells, ...s.unclaimed])
+        if (c != null) ...[
+          if (c.item != null) c.item!.uid,
+          if (c.eco != null) c.eco!.uid,
+        ],
+    };
+    final uid = it?.uid ?? eco!.uid;
+    if (!taken.contains(uid)) return d;
+    var n = taken.length;
+    while (taken.contains('r$n')) {
+      n++;
+    }
+    return it != null
+        ? LootDrop.item(it.copyWith(uid: 'r$n'))
+        : LootDrop.eco(eco!.copyWith(uid: 'r$n'));
+  }
 
   /// Lo de la posición [i] de Objetos sin recoger como [LootDrop].
   static LootDrop? unclaimedDrop(Stash s, int i) {

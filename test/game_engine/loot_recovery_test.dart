@@ -56,7 +56,7 @@ void main() {
       expect(recovered(s, 'p0').map((d) => d.item!.uid), ['a', 'b', 'c']);
     });
 
-    test('lo que el filtro oculta no se recupera', () {
+    test('lo que el filtro oculta vuelve, a Objetos sin recoger', () {
       final e = sessionEngine();
       var s = inField(e, 'm3');
       s = act(e, s, 'p0',
@@ -65,7 +65,8 @@ void main() {
           id: 1, drop: sword('a', Rarity.comun), x: 0, y: 0, ownerId: 'p0'));
       s.mode = SessionMode.result;
       s = act(e, s, 'p0', const BackToLobbyAction());
-      expect(recovered(s, 'p0'), isEmpty);
+      expect(recovered(s, 'p0').single.item!.uid, 'a');
+      expect(s.players['p0']!.stashAcks.values.single.box, isTrue);
     });
 
     test('co-op: cada uno recibe lo suyo', () {
@@ -162,12 +163,19 @@ void main() {
   });
 
   group('alijo y Objetos sin recoger', () {
-    test('entra al alijo; lleno, a la caja; sin duplicar', () {
+    test('entra al alijo; lleno, a la caja; un uid repetido no se pierde',
+        () {
       var st = Stash.empty();
-      final r1 = StashRules.recover(st, sword('a'));
+      final r1 = StashRules.recover(st, sword('nuevo'));
       expect(r1.toBox, isFalse);
       st = r1.stash;
-      expect(StashRules.recover(st, sword('a')).stash, same(st));
+      // Otra arma recién tirada (mismo uid provisorio): se renombra.
+      st = StashRules.recover(st, sword('nuevo')).stash;
+      final uids = [for (final c in st.cells) if (c?.item != null) c!.item!.uid];
+      expect(uids, hasLength(2));
+      expect(uids.toSet(), hasLength(2));
+      expect(StashRules.recover(Stash.empty(), sword('a'), box: true).toBox,
+          isTrue);
       // Alijo lleno.
       var fullSt = Stash.empty();
       for (var i = 0; i < Stash.size; i++) {

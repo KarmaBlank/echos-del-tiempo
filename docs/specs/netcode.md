@@ -725,7 +725,7 @@ ni la sesión ni `features/*` miran el nombre del flavor.
 
 | Juego | id (`g`) | `v` | Constante |
 |---|---|---|---|
-| Ecos del Tiempo (Mundo) | `mundo` | 36 | `kProtocolVersion` |
+| Ecos del Tiempo (Mundo) | `mundo` | 37 | `kProtocolVersion` |
 | Ecos del Tiempo: Travesía | `travesia` | 3 | `kTravesiaProtocolVersion` |
 
 - `hello` lleva `g` (el id del juego del cliente). Es aditivo: un host
@@ -755,6 +755,15 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   cuenta o a Objetos sin recoger. Un cliente 32 las ignoraría y perdería
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
+
+## Mundo, protocolo 37 (v0.20.17: nada del piso se pierde)
+
+- La confirmación `rec:N` (`sk`) suma `bx: true` opcional: lo recuperado
+  que el filtro del dueño oculta va directo a Objetos sin recoger.
+- Cambia la regla del cliente al guardar lo recuperado (`StashRules.recover`):
+  ya no descarta por uid repetido (el loot tirado trae el uid provisorio
+  `nuevo`), lo renombra. Un cliente 36 perdería armas: se sube a 37
+  (loot.md § 4b.1).
 
 ## Mundo, protocolo 36 (v0.20.15: ULT libres del arma)
 

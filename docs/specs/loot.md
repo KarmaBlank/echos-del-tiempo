@@ -163,8 +163,11 @@ el arma adentro. Regla: **un jugador nunca pierde loot que era suyo**.
     vuelve a ese jugador;
   - lo **compartido** que alguien soltó (`GroundLoot.byId`, quién lo
     soltó) y nadie levantó vuelve a quien lo soltó;
-  - lo oculto por el filtro del dueño (el jugador eligió no verlo) y lo
-    de alguien que ya no está en la sala se descarta, como antes.
+  - lo oculto por el filtro del dueño también vuelve (v0.20.17, protocolo
+    37), pero directo a **Objetos sin recoger** (`StashAck.box`, `bx` en
+    el JSON) para no llenar el alijo de cosas que eligió no ver;
+  - solo lo de alguien que ya no está en la sala se descarta en el host
+    (su dispositivo ya lo guardó al salir, ver abajo).
 - Cambiar de piso por la escalera no pierde nada: cada objeto queda en su
   piso (§ 14.1) y lo que quede se recupera al cerrarse el mapa.
 - Si el piso llega a su tope (80), el objeto más viejo sale y, si era de
@@ -176,11 +179,21 @@ el arma adentro. Regla: **un jugador nunca pierde loot que era suyo**.
   compañero, solo_party.md) la guarda en **su** alijo de cuenta
   (`StashRules.recover`): al alijo si entra (pestaña según el tipo); si
   no, a **Objetos sin recoger**. Aviso local por pieza: `<objeto> se
-  guardó en el alijo` / `… en Objetos sin recoger`. Un arma o Eco cuyo
-  uid ya está en el alijo o en la caja no se duplica.
+  guardó en el alijo` / `… en Objetos sin recoger`.
+- Bug corregido en v0.20.17: hasta v0.20.16 un arma o Eco cuyo uid ya
+  estaba en el alijo o en la caja se tomaba como duplicado y se
+  descartaba en silencio. Pero el loot tirado trae el uid provisorio
+  `nuevo` (`LootRules.newUid`, el perfil asigna el real al recibirlo) y
+  los uid `i<n>` se repiten entre personajes: la segunda arma recuperada
+  (y todas las siguientes) se perdía. Ahora `StashRules.recover` nunca
+  descarta: si el uid ya está, la pieza se guarda con uno nuevo (`r<n>`).
+  No hace falta deduplicar: el host saca del piso lo que recupera en el
+  mismo snapshot que lleva la confirmación, y al salir el host saca lo
+  del que se fue (`removePlayer`), así que nunca se guarda dos veces.
 - Desconexión / salir de la sala / cerrar el juego: el dispositivo que
   sale guarda en su cuenta lo suyo que estaba en el piso según el último
-  estado (`SessionController._recoverLocalGround`); el host, al ver la
+  estado (`SessionController._recoverLocalGround`, incluido lo que su
+  filtro oculta, a Objetos sin recoger); el host, al ver la
   salida, saca ese loot del piso (`removePlayer`), así no queda doble.
 - Travesía: no hay alijo ni piso (las acciones de piso están cerradas,
   `runGate`); `_recover` no hace nada con una run activa y la entrega de
