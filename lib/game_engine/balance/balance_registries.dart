@@ -158,6 +158,7 @@ class BalanceBase {
         BalanceKind.ecoTier ||
         BalanceKind.consumables ||
         BalanceKind.travesia ||
+        BalanceKind.combatLimits ||
         BalanceKind.exploration =>
           {k.jsonKey: kTuningDefaults[k.jsonKey]!},
         BalanceKind.featReward => kAchievementsById,

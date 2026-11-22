@@ -736,3 +736,109 @@ Tooltip (`reviveLinesMarkup`, skill_text.dart): con el lanzador muestra el
 % final con el desglose (base + ESP + Curación) y el escudo (o "sin
 Curación del árbol no hay escudo"); sin lanzador, la regla con los
 números vigentes. El log de batalla dice el % final y el escudo.
+
+## Límites (v0.20.20)
+
+Todos los números de esta sección son ajustes de Balance (Editor →
+Balance → "Combate: límites", `TuningId.combatLimits`). El motor los lee
+en cada paso; cambiar el parche cambia la pelea sin tocar código.
+
+### Efectos encadenados
+
+Auditoría (v0.20.19, antes de este cambio): no había bucles infinitos
+posibles. Lo que ya los cortaba:
+
+- Un paso del motor (una acción: comando de jugador, turno enemigo,
+  turno de invocación) tiene un presupuesto de 64 efectos (`_spend`);
+  cada disparo del árbol, de armas, mods, ascensión e invocaciones gasta
+  1. Al llegar a 0 no se dispara nada más en ese paso.
+- En una acción de jugador cada mecánica dispara una sola vez (por
+  objetivo si su efecto va al objetivo): el registro `fired` de la acción.
+- Rebote, explosión, eco arcano y ataque gratis se guardan en la acción y
+  se resuelven una vez al final (`_resolveAction`); sus golpes no vuelven
+  a guardar otro rebote. Cadena Infinita recorre cada enemigo una vez.
+- Turno extra: una vez por turno (`extraTurn` 0 → 1 → 2).
+- Lo que no tenía tope propio era la profundidad (un efecto que aplica un
+  estado que dispara otro efecto que daña y dispara otro...): solo lo
+  frenaba el presupuesto de 64.
+
+Desde v0.20.20 el límite es explícito y editable:
+
+| ajuste | valor | qué hace |
+|---|---|---|
+| `procMax` | 64 | efectos encadenados como máximo por acción |
+| `procDepth` | 6 | pasos como máximo de una cadena (`_fire` dentro de `_fire`) |
+
+Se muestra en la ayuda del árbol: "Los efectos encadenados tienen un
+límite: como máximo N por acción". Tests: `combat_limits_test.dart`
+(peor caso con todas las mecánicas y keystones, con el tope por defecto
+y con el tope bajado a 5).
+
+### Tope absoluto por golpe
+
+Además del tope de combo_balance.md § 3.2 (que no vale con debilidad,
+reacción o quiebre), cada golpe a un jefe o élite saca como máximo una
+fracción de su vida máxima, siempre:
+
+| ajuste | valor |
+|---|---|
+| `capBoss` | 0.35 |
+| `capElite` | 0.60 |
+| `capCommon` | 0 (sin tope) |
+
+Vale para golpes, daño de efectos, reacciones, daño crudo y estados por
+turno. La ficha del enemigo en combate lo dice: "No cae de un golpe: cada
+golpe le saca como máximo el N% de su vida."
+
+### Aguanta una ronda
+
+Un común (ni jefe ni élite) aguanta el primer golpe letal de la ronda si
+todavía queda algún jugador vivo, aparte del que actúa, sin actuar en la
+ronda: queda en 1 de vida ("aguanta la ronda"). Una vez por enemigo y por
+ronda; el remate también respeta la regla. `holdCoop` = 1 (con 2 o más
+jugadores), `holdSolo` = 0.
+
+Ronda: en `porBando` la de siempre; en `velocidad` termina cuando actuaron
+todos los jugadores vivos (`state.acted` / `state.round` también se usan
+en la línea de tiempo; la marca del enemigo es `!aguanta:<id>`).
+
+### Velocidad
+
+- Rendimiento decreciente: la velocidad efectiva que pasa de
+  `speedSoftCap` (16) rinde × `speedSoftFactor` (0.5).
+  `interval = 100 / softSpeed(VEL × buffs × congelación)`.
+- Tope de turnos: el intervalo de un combatiente nunca es menor que el
+  del aliado vivo más lento de su bando / `turnsPerSlowest` (2). Bando:
+  grupo + invocaciones, o enemigos (sin los pasivos). 0 = sin tope.
+  Lo aplica el paso (`cappedInterval`); `interval` solo es la curva.
+
+### Carga de ULT extra
+
+Auditoría de fuentes (máximo por disparo, catálogo v0.20.19):
+
+| fuente | máximo |
+|---|---|
+| ATACAR / habilidad (daño hecho) | `dealtCap` 22 + la ganancia de la habilidad |
+| Defender / golpe defendiendo | 6 / 6 |
+| daño recibido | 110 × fracción de vida perdida |
+| árbol / ascensión: `ultCharge` | 20 (árbol), 15 (ascensión) |
+| árbol: `ultChargeParty` | 10 a cada aliado |
+| pasivas de arma (crítico, matar, aliados) | según la tirada del arma |
+| `% carga de ULT` (árbol `ult`, afijos, implícitos 8-12%, objetos 25%, mejora de la Travesía 20) | multiplica toda la carga |
+| mod de invocación `invokeUlt` | por invocación |
+| combo entre jugadores | `combo.ultBonus` (regla de combos, sin tope) |
+
+Lo que sumaba el caso reportado (Instante con +60% y otra acción en el
+mismo turno) era la parte extra: el multiplicador `% carga de ULT` y los
+disparos. Desde v0.20.20 la carga extra (la parte del multiplicador sobre
+1, los `ultCharge` / `ultChargeParty`, las pasivas de arma y la de
+invocación) pasa por `_bonusUlt`, con tope:
+
+| ajuste | valor |
+|---|---|
+| `ultBonusAction` | 50 por acción |
+| `ultBonusTurn` | 50 por turno de quien la recibe (`Combatant.ultBonusTurn`, vuelve a 0 al empezar su turno) |
+
+La carga base (golpes, Defender, daño recibido, ganancia de la
+habilidad) no tiene tope. La ayuda de ULT lo dice: "Las cargas extra de
+ULT tienen un tope de 50% por turno."

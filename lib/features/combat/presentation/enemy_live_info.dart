@@ -8,6 +8,7 @@ import '../../../game_engine/data/enemies_catalog.dart';
 import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/enemy_def.dart';
 import '../../../game_engine/models/status.dart';
+import '../../../game_engine/rules/battle_engine.dart';
 import '../../../game_engine/rules/family_rules.dart';
 import '../../../game_engine/rules/js_math.dart';
 import '../../bestiary/domain/bestiary_text.dart' show familyTraitsMarkup;
@@ -33,6 +34,16 @@ class EnemyLiveInfo extends StatefulWidget {
   static String affinityMarkup(Combatant e) {
     final r = familyRuleOf(e.enemyType);
     return r == null ? '' : familyTraitsMarkup(r);
+  }
+
+  /// Tope absoluto por golpe de jefes y élites (combat.md § "Límites"),
+  /// o vacío si no tiene.
+  static String hitCapText(Combatant e) {
+    if (e.isPlayer || (!e.boss && !e.elite)) return '';
+    final f = BattleEngine.absoluteHitCap(boss: e.boss, elite: e.elite);
+    if (f <= 0 || f >= 1) return '';
+    return 'No cae de un golpe: cada golpe le saca como máximo el '
+        '${jsRound(f * 100)}% de su vida.';
   }
 
   /// Fuerza el pliegue (tests, capturas); `null` = sigue a Alt/Shift.
@@ -104,7 +115,12 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
     final mech = e.boss ? bossMechanicOf(kEnemies[e.enemyType]) : null;
     final states = EnemyLiveInfo.statusEntries(e);
     final aff = widget.affinities ? EnemyLiveInfo.affinityMarkup(e) : '';
+    final cap = EnemyLiveInfo.hitCapText(e);
     final sections = <Widget>[
+      if (cap.isNotEmpty)
+        Text(retroText(cap),
+            key: const ValueKey('enemy-live-hitcap'),
+            style: DsText.detail(DsColors.textSecondary)),
       if (aff.isNotEmpty)
         ProtoText(aff,
             key: const ValueKey('enemy-live-affinity'), style: DsText.body()),
