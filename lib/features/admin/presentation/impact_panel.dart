@@ -216,6 +216,9 @@ class _ImpactPanelState extends State<ImpactPanel> {
       case BalanceKind.travesia:
       case BalanceKind.combatLimits:
       case BalanceKind.exploration:
+      case BalanceKind.farming:
+      case BalanceKind.town:
+      case BalanceKind.lifeTree:
         return const _Plan();
     }
   }

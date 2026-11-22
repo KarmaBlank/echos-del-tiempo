@@ -1,5 +1,6 @@
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/ascension_rules.dart';
+import '../../../game_engine/rules/life_tree_rules.dart';
 import '../../../game_engine/rules/passive_tree_rules.dart';
 import '../../../game_engine/rules/progression_rules.dart';
 
@@ -13,6 +14,7 @@ class UnusedPoints {
     this.ascension = 0,
     this.companions = const [],
     this.milestone = 0,
+    this.oficios = 0,
   });
 
   /// Hito pendiente (10 o 20; 0 = ninguno; progression_v2.md § 5).
@@ -25,6 +27,7 @@ class UnusedPoints {
         tree: tree,
         ascension: ascension,
         milestone: milestone,
+        oficios: oficios,
         companions: [
           for (final c in list)
             if (c.$2 > 0) c
@@ -41,6 +44,7 @@ class UnusedPoints {
                 0, (a, m) => a + PassiveTreeRules.milestonePoints[m]!),
         ascension: _ascension.free(p.ascension).clamp(0, 1 << 20),
         milestone: p.pendingMilestones.isEmpty ? 0 : p.pendingMilestones.first,
+        oficios: LifeTreeRules.freeTotal(p),
       );
 
   static const _ascension = AscensionRules();
@@ -51,6 +55,9 @@ class UnusedPoints {
   final int tree;
   final int ascension;
 
+  /// Puntos de los árboles de oficios (life_skill_trees.md § 3).
+  final int oficios;
+
   /// Compañeros con puntos sin usar: (nombre, total).
   final List<(String, int)> companions;
 
@@ -58,14 +65,14 @@ class UnusedPoints {
   int get companionTotal => companions.fold(0, (a, c) => a + c.$2);
 
   /// Los del personaje (sin los compañeros).
-  int get own => attributes + tree + ascension;
+  int get own => attributes + tree + ascension + oficios;
 
   int get total => own + companionTotal;
 
   /// Lo que se reparte desde PERSONAJE (atributos, árbol, compañeros): la
   /// insignia del botón. La ascensión tiene su propio panel y solo va en
   /// el tooltip (v0.20.16).
-  int get characterTotal => attributes + tree + companionTotal;
+  int get characterTotal => attributes + tree + oficios + companionTotal;
   bool get any => total > 0;
 
   static String _n(int n, String what) =>
@@ -83,6 +90,7 @@ class UnusedPoints {
         if (attributes > 0) _n(attributes, 'atributos'),
         if (tree > 0) _n(tree, 'árbol'),
         if (ascension > 0) _n(ascension, 'ascensión'),
+        if (oficios > 0) _n(oficios, 'oficios'),
       ];
 
   /// Texto del aviso al subir de nivel (o al ganar puntos de ascensión):
@@ -101,7 +109,7 @@ class UnusedPoints {
     ];
     if (p.isEmpty && mates.isEmpty) return null;
     if (p.isEmpty) return '${mates.join(' · ')} · [C]';
-    final where = attributes > 0 || tree > 0 || mates.isNotEmpty
+    final where = attributes > 0 || tree > 0 || oficios > 0 || mates.isNotEmpty
         ? '[C]${ascension > 0 ? ' · ascensión: Estatua del Tiempo' : ''}'
         : 'Estatua del Tiempo';
     final list = p.length == 1

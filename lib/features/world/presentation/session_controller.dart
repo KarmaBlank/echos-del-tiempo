@@ -63,6 +63,8 @@ import '../../../game_engine/data/fishing_catalog.dart';
 import '../../../game_engine/rules/fishing_rules.dart';
 import '../../../game_engine/rules/fishing_minigame.dart';
 import '../../../game_engine/rules/map_fishing.dart';
+import '../../../game_engine/rules/farming_rules.dart';
+import '../../../game_engine/rules/life_tree_rules.dart';
 import '../../../game_engine/models/fish_line.dart';
 import '../../../core/audio/sfx_catalog.dart';
 import 'local_player.dart';
@@ -763,7 +765,7 @@ class SessionController extends StateNotifier<SessionView?> {
         } catch (_) {}
       }
       room0 = engine
-          .setWorld(room0, w.id, w.name, lostLoot: lost, lake: w.town.lake)
+          .setWorld(room0, w.id, w.name, lostLoot: lost, town: w.town)
           .state;
     }
     try {
@@ -1129,9 +1131,9 @@ class SessionController extends StateNotifier<SessionView?> {
       ? WorldRules.townSpot(local.x, local.y)
       : null;
 
-  /// Frente al tablero de encargos (o a la fuente rúnica, que lo abre).
-  bool get nearCounter =>
-      townSpot == TownSpot.board || townSpot == TownSpot.fountain;
+  /// Frente al tablero de encargos (la fuente rúnica tiene su panel, que
+  /// también lo abre; v0.23.0).
+  bool get nearCounter => townSpot == TownSpot.board;
 
   bool get nearArmory => townSpot == TownSpot.forge;
 
@@ -1152,8 +1154,8 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Lo que dice el cartel del lago: especies y tu nivel de Pesca.
   String get signText {
     final p = _s?.players[localId]?.profile;
-    final lake = world?.town.lake ?? kTownLakeDefault;
-    return 'Lago: ${lake.length} especies. Pesca nivel '
+    final lake = town.lake ?? kTownLakeDefault;
+    return 'Lago: ${lake.length} especies, ${town.stockTotal} peces soltados. Pesca nivel '
         '${p == null ? 1 : FishingRules.level(p)}. Acercate a un muelle y '
         'tocá E.';
   }
@@ -1168,6 +1170,176 @@ class SessionController extends StateNotifier<SessionView?> {
   bool exchangeFish(String species) => _apply(ExchangeFishAction(species));
   bool buyRod(String id) => _apply(BuyRodAction(id));
   bool equipRod(String id) => _apply(EquipRodAction(id));
+
+  // ---- Huerta, pueblo y oficios (farming.md § 4 y § 10, v0.23.0) ----
+
+  /// Frente a la fuente rúnica: mejoras del pueblo y el tablero.
+  bool get nearFountain => townSpot == TownSpot.fountain;
+
+  /// El pueblo de la sala (huerta, ampliaciones, lago).
+  TownState get town => _s?.town ?? const TownState();
+
+  /// Soy el dueño del mundo (el anfitrión o el que juega solo).
+  bool get isWorldOwner =>
+      _s?.playerList.where((p) => !p.isCompanion).firstOrNull?.id == localId;
+
+  bool _isSoil(int x, int y) {
+    final s = _s;
+    if (s == null) return false;
+    final m = engine.mapFor(s);
+    return x >= 0 &&
+        y >= 0 &&
+        x < m.width &&
+        y < m.height &&
+        m.tileAt(x, y) == Tile.soil;
+  }
+
+  /// El tile de tierra con que trabaja el jugador local: el de enfrente
+  /// (a 10 px) o el que pisa. `null` = no está en la huerta.
+  (int, int)? get farmTile {
+    if (!_townFree()) return null;
+    final fx = local.fx, fy = local.fy;
+    final ax = ((local.x + fx * 10) / 16).floor();
+    final ay = ((local.y + fy * 10) / 16).floor();
+    if (_isSoil(ax, ay)) return (ax, ay);
+    final tx = (local.x / 16).floor(), ty = (local.y / 16).floor();
+    if (_isSoil(tx, ty)) return (tx, ty);
+    return null;
+  }
+
+  FarmPlot? plotAt(int x, int y) => town.plots[plotKey(x, y)];
+
+  /// Qué hace E en la huerta ahora (`null` = nada).
+  FarmOp? get farmOp {
+    final t = farmTile;
+    final p = _s?.players[localId]?.profile;
+    if (t == null || p == null) return null;
+    final pl = plotAt(t.$1, t.$2);
+    if (pl == null) return FarmOp.till;
+    if (!pl.planted) return p.life.farm.activeSeed == null ? null : FarmOp.plant;
+    if (FarmingRules.ripe(pl)) return FarmOp.harvest;
+    return FarmOp.water;
+  }
+
+  /// E en la huerta: arar, plantar, regar o cosechar.
+  bool farmWork() {
+    final t = farmTile;
+    final op = farmOp;
+    if (t == null || op == null) return false;
+    final p = _s!.players[localId]!.profile;
+    final ok = _apply(FarmTileAction(op, t.$1, t.$2,
+        seed: op == FarmOp.plant ? p.life.farm.activeSeed : null));
+    if (ok) {
+      fishSfx?.call(switch (op) {
+        FarmOp.till => Sfx.whump,
+        FarmOp.plant => Sfx.turnTick,
+        FarmOp.water => Sfx.potion,
+        FarmOp.fert => Sfx.potion,
+        FarmOp.harvest => Sfx.lootPickup,
+      });
+    }
+    return ok;
+  }
+
+  /// F: abonar la parcela de enfrente con el mejor abono que tengas.
+  bool farmFertilize() {
+    final t = farmTile;
+    if (t == null) return false;
+    final pl = plotAt(t.$1, t.$2);
+    if (pl == null || !pl.planted || pl.fert != null) return false;
+    return _apply(FarmTileAction(FarmOp.fert, t.$1, t.$2));
+  }
+
+  /// Q: la semilla siguiente.
+  bool cycleSeed() {
+    final p = _s?.players[localId]?.profile;
+    if (p == null) return false;
+    final next = FarmingRules.nextSeed(p);
+    if (next == null) return false;
+    return _apply(FarmShopAction(FarmShopOp.selectSeed, id: next));
+  }
+
+  static String _pct(double v) =>
+      v >= 0.1 ? '${(v * 100).round()} %' : '${(v * 100).toStringAsFixed(1)} %';
+
+  /// Lo que se sabe de una parcela (aviso y tooltip): quién plantó, quién
+  /// regó, el abono y las chances si la cosechás vos.
+  String plotInfo(int x, int y) {
+    final pl = plotAt(x, y);
+    final me = _s?.players[localId]?.profile;
+    if (pl == null) return 'Tierra sin arar.';
+    if (!pl.planted) return 'Parcela arada y vacía.';
+    final c = kCrops[pl.seed]!;
+    final r = FarmingRules.ratio(pl);
+    final parts = <String>[
+      '${c.name} · ${r >= 1 ? 'madura' : '${(r * 100).round()} %'}'
+          '${pl.watered ? ' · regada' : ' · seca'}',
+      if (pl.planter != null) 'Plantó ${pl.planter}',
+      if (pl.waterer != null) 'Regó ${pl.waterer} (${pl.waterings})',
+      if (kFertilizers[pl.fert] case final f?)
+        '${f.name}${pl.fertBy == null ? '' : ' de ${pl.fertBy}'}',
+    ];
+    if (me != null) {
+      final o = FarmingRules.odds(me, pl);
+      parts.add('Si la cosechás vos: '
+          '${_pct(o[CropQuality.epico]!)} épica · '
+          '${_pct(o[CropQuality.legendario]!)} legendaria');
+    }
+    return parts.join('\n');
+  }
+
+  /// Texto del aviso de abajo en la huerta.
+  String? farmHint() {
+    final t = farmTile;
+    final p = _s?.players[localId]?.profile;
+    if (t == null || p == null) return null;
+    final pl = plotAt(t.$1, t.$2);
+    final seed = p.life.farm.activeSeed;
+    final fert = pl != null && pl.planted && pl.fert == null &&
+            p.life.farm.ferts.isNotEmpty
+        ? ' · [F] abonar'
+        : '';
+    if (pl == null) return '[E] Arar';
+    if (!pl.planted) {
+      return seed == null
+          ? 'Sin semillas: comprá en el comerciante'
+          : '[E] Plantar ${kCrops[seed]!.name} (${p.life.farm.seedCount(seed)}) · [Q] otra semilla';
+    }
+    // Corto (una línea): el detalle completo está en el tooltip del mouse.
+    if (FarmingRules.ripe(pl)) {
+      final o = FarmingRules.odds(p, pl);
+      return '[E] Cosechar · ${_pct(o[CropQuality.legendario]!)} legendaria';
+    }
+    final r = (FarmingRules.ratio(pl) * 100).round();
+    return '[E] Regar · ${kCrops[pl.seed]!.name} $r %$fert';
+  }
+
+  bool buySeed(String id, [int n = 1]) =>
+      _apply(FarmShopAction(FarmShopOp.buySeed, id: id, n: n));
+  bool buyFarmTool(String id) =>
+      _apply(FarmShopAction(FarmShopOp.buyTool, id: id));
+  bool equipFarmTool(String id) =>
+      _apply(FarmShopAction(FarmShopOp.equipTool, id: id));
+  bool buyFert(String id, [int n = 1]) =>
+      _apply(FarmShopAction(FarmShopOp.buyAbono, id: id, n: n));
+  bool sellCrop(String? key, {bool materials = false}) => _apply(
+      FarmShopAction(key == null ? FarmShopOp.sellAll : FarmShopOp.sell,
+          id: key, materials: materials));
+  bool exchangeCrop(String key) =>
+      _apply(FarmShopAction(FarmShopOp.exchange, id: key));
+  bool collectSilo() =>
+      _apply(const FarmShopAction(FarmShopOp.collectSilo));
+  bool selectSeed(String id) =>
+      _apply(FarmShopAction(FarmShopOp.selectSeed, id: id));
+  bool expandTown() => _apply(const TownAction(TownOp.expand));
+  bool assignZone(TownZoneKind k) => _apply(
+      TownAction(k == TownZoneKind.lago ? TownOp.zoneLago : TownOp.zoneHuerta));
+  bool stockFish(String species) =>
+      _apply(TownAction(TownOp.stock, id: species));
+  bool hireHelper() => _apply(const TownAction(TownOp.hireHelper));
+  bool takeLifeNode(LifeSkillKind k, String node) =>
+      _apply(LifeTreeAction(k.name, node));
+  bool resetLifeTree(LifeSkillKind k) => _apply(LifeTreeAction(k.name, null));
 
   // ---- Pesca en el mapa (fishing.md § 4, v0.22.2) ----
 
@@ -1465,6 +1637,10 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.ascension);
       } else if (nearLostLoot) {
         openPanel(WorldPanel.lostLoot);
+      } else if (nearFountain) {
+        openPanel(WorldPanel.fountain);
+      } else if (farmOp != null) {
+        farmWork();
       } else if (facingWater) {
         startFishing();
       } else if (nearTrader) {
@@ -1538,6 +1714,17 @@ class SessionController extends StateNotifier<SessionView?> {
     if (key == LogicalKeyboardKey.escape) {
       closePanel();
       return true;
+    }
+    // Huerta (farming.md § 4): Q otra semilla, F abonar.
+    if (_panel == null && farmTile != null) {
+      if (key == LogicalKeyboardKey.keyQ) {
+        cycleSeed();
+        return true;
+      }
+      if (key == LogicalKeyboardKey.keyF) {
+        farmFertilize();
+        return true;
+      }
     }
     if (key == LogicalKeyboardKey.keyC && s.mode != SessionMode.battle) {
       toggleCharacter();
@@ -2546,7 +2733,8 @@ class SessionController extends StateNotifier<SessionView?> {
     final codec = SessionJson(engine.catalog);
     cb(
         w.id,
-        w.town.copyWith(
+        s.town.copyWith(
+            upgrades: w.town.upgrades,
             lostLoot: [for (final g in s.lostLoot) codec.groundToJson(g)],
             cycle: _worldCycle));
   }
@@ -2685,7 +2873,8 @@ class SessionController extends StateNotifier<SessionView?> {
             _panel == WorldPanel.ecoPortal ||
             _panel == WorldPanel.ascension ||
             _panel == WorldPanel.lostLoot ||
-            _panel == WorldPanel.trader) &&
+            _panel == WorldPanel.trader ||
+            _panel == WorldPanel.fountain) &&
         mode != SessionMode.lobby &&
         !(_panel == WorldPanel.armory && _runShopOpen(s))) {
       _panel = null;
@@ -2754,6 +2943,8 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearStatue) return (WorldPrompt.statue, null);
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
+    if (nearFountain) return (WorldPrompt.fountain, null);
+    if (farmHint() case final h?) return (WorldPrompt.farm, h);
     if (mapFishing case final f?) return (WorldPrompt.fishing, fishingHint(f));
     if (facingWater) return (WorldPrompt.fishing, null);
     if (nearTrader) return (WorldPrompt.trader, null);

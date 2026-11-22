@@ -85,7 +85,6 @@ abstract final class TownLayout {
     (29, 8),
     (30, 9),
     (29, 10),
-    (22, 19),
     (23, 20),
     (27, 19),
     (12, 9),
@@ -95,6 +94,28 @@ abstract final class TownLayout {
     (9, 7),
     (24, 8),
   ];
+
+  // ---- huerta y ampliaciones (farming.md § 2 y § 6, v0.23.0) ----
+
+  /// Huerta del pueblo base (tiles de tierra cultivable).
+  static const baseFarm = (x: 19, y: 18, w: 4, h: 3);
+
+  /// Columnas que suma cada ampliación al este.
+  static const stripWidth = 8;
+
+  /// Ancho con [expansions] ampliaciones.
+  static int widthFor(int expansions) => width + stripWidth * expansions;
+
+  /// Columna del camino de la franja [i] (la primera reemplaza al borde
+  /// de árboles del pueblo base).
+  static int stripX(int i) => width - 2 + stripWidth * i;
+
+  /// Rectángulo (en tiles) del espacio [slot]: los pares al norte, los
+  /// impares al sur de su franja.
+  static ({int x, int y, int w, int h}) slotRect(int slot) {
+    final x0 = stripX(slot ~/ 2) + 1;
+    return (x: x0, y: slot.isEven ? 7 : 14, w: 6, h: 6);
+  }
 
   static TownLandmark landmark(TownSpot s) =>
       landmarks.firstWhere((l) => l.spot == s);

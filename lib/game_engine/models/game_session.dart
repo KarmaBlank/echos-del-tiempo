@@ -12,6 +12,7 @@ import 'loot.dart';
 import 'player_profile.dart';
 import 'run_state.dart';
 import 'turn_timer.dart';
+import 'world_save.dart' show TownState;
 import 'tutorial.dart';
 
 export 'exploration.dart';
@@ -687,6 +688,7 @@ class GameSession {
     List<GroundLoot>? lostLoot,
     this.worldId,
     this.worldName,
+    this.town = const TownState(),
   })  : players = players ?? LinkedHashMap(),
         ground = ground ?? [],
         leaveReady = leaveReady ?? {},
@@ -790,6 +792,11 @@ class GameSession {
   String? worldId;
   String? worldName;
 
+  /// El pueblo del mundo que se ve en la sala (protocolo 44): ampliaciones,
+  /// zonas, parcelas, lago y ayudante (farming.md § 10). Inmutable: el
+  /// host lo reemplaza.
+  TownState town;
+
   /// Modo de combate elegido por el anfitrión (turn_modes.md § 1);
   /// `null` = el de por defecto según haya uno o varios jugadores.
   CombatMode? combatMode;
@@ -885,5 +892,6 @@ class GameSession {
         lostLoot: [...lostLoot],
         worldId: worldId,
         worldName: worldName,
+        town: town,
       );
 }

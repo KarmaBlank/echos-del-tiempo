@@ -91,6 +91,24 @@ class EventJson {
             'l': e.label,
             'r': e.rarity,
           },
+        CropHarvestedEvent() => {
+            't': 'cHarv',
+            'id': e.playerId,
+            'c': e.crop,
+            'q': e.quality,
+            'n': e.count,
+            'x': e.tx,
+            'y': e.ty,
+            if (e.helper) 'h': true,
+          },
+        FarmLootEvent() => {
+            't': 'cLoot',
+            'id': e.playerId,
+            'l': e.label,
+            'r': e.rarity,
+            'x': e.tx,
+            'y': e.ty,
+          },
         FishCaughtEvent() => {
             't': 'fCaught',
             'id': e.playerId,
@@ -241,6 +259,13 @@ class EventJson {
         return FishBiteEvent(j.str('id'), j.str('sp'), j.integer('cm'));
       case 'fLoot':
         return WaterLootEvent(j.str('id'), j.str('l'), j.integer('r'));
+      case 'cHarv':
+        return CropHarvestedEvent(j.str('id'), j.str('c'), j.integer('q'),
+            j.integer('n'), j.integer('x'), j.integer('y'),
+            helper: j['h'] == true);
+      case 'cLoot':
+        return FarmLootEvent(j.str('id'), j.str('l'), j.integer('r'),
+            j.integer('x'), j.integer('y'));
       case 'fCaught':
         return FishCaughtEvent(j.str('id'), j.str('sp'), j.integer('cm'),
             auto: j['auto'] == true);

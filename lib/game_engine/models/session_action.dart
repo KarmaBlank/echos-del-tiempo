@@ -597,6 +597,59 @@ class BuyRodAction extends SessionAction {
   const BuyRodAction(this.rodId);
 }
 
+// ---- Cultivo, pueblo y oficios (v0.23.0, protocolo 44; farming.md § 10) ----
+
+/// Labor sobre un tile de la huerta.
+enum FarmOp { till, plant, water, fert, harvest }
+
+/// `farm`: una labor en el tile ([tx], [ty]); [seed] al plantar.
+class FarmTileAction extends SessionAction {
+  final FarmOp op;
+  final int tx, ty;
+  final String? seed;
+  const FarmTileAction(this.op, this.tx, this.ty, {this.seed});
+}
+
+/// Compra, venta y equipo de la huerta en el comerciante.
+enum FarmShopOp {
+  buySeed,
+  buyTool,
+  equipTool,
+  buyAbono,
+  sell,
+  sellAll,
+  exchange,
+  collectSilo,
+  selectSeed
+}
+
+/// `farmShop`: [id] = cultivo, herramienta o clave de cosecha.
+class FarmShopAction extends SessionAction {
+  final FarmShopOp op;
+  final String? id;
+  final int n;
+  final bool materials;
+  const FarmShopAction(this.op, {this.id, this.n = 1, this.materials = false});
+}
+
+/// Mejoras del pueblo en la fuente rúnica.
+enum TownOp { expand, zoneLago, zoneHuerta, stock, hireHelper }
+
+/// `town`: [id] = especie al soltar un pez.
+class TownAction extends SessionAction {
+  final TownOp op;
+  final String? id;
+  const TownAction(this.op, {this.id});
+}
+
+/// `lifeTree`: tomar un nodo ([node]) o reiniciar ([node] `null`) del
+/// árbol de un oficio (life_skill_trees.md).
+class LifeTreeAction extends SessionAction {
+  final String skill;
+  final String? node;
+  const LifeTreeAction(this.skill, this.node);
+}
+
 /// `rodEq`: equipar una caña propia (espacio de herramienta).
 class EquipRodAction extends SessionAction {
   final String rodId;

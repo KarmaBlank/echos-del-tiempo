@@ -67,11 +67,16 @@ void main() {
     }
     await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowUp);
     await tester.pump(const Duration(milliseconds: 100));
-    expect(c.view!.prompt, WorldPrompt.missionBoard);
-    expect(find.text('[E] Ver misiones'), findsOneWidget);
+    // v0.23.0: subiendo se llega a la fuente rúnica; su panel tiene el
+    // botón del tablero (farming.md § 6).
+    expect(c.view!.prompt, WorldPrompt.fountain);
+    expect(find.text('[E] Fuente rúnica'), findsOneWidget);
 
-    // ---- E abre el mostrador; proponer la misión ----
+    // ---- E abre la fuente; TABLERO; proponer la misión ----
     await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
+    await tester.pump();
+    expect(find.byKey(const ValueKey('panel-fountain')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('fountain-board')));
     await tester.pump();
     expect(find.text('TABLERO DE ENCARGOS'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('propose-m1')));

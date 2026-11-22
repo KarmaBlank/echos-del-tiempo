@@ -2,6 +2,10 @@
 /// pueblo; los personajes siguen aparte y entran a cualquier mundo.
 library;
 
+import 'farm_plot.dart';
+
+export 'farm_plot.dart';
+
 /// Etiqueta del mundo: solo valor por defecto y agrupamiento de la lista.
 /// **No bloquea nada**: un Solitario se abre como sala y un Cooperativo
 /// se juega solo.
@@ -22,11 +26,16 @@ class TownState {
       {this.upgrades = const {},
       this.lostLoot = const [],
       this.cycle = 0,
-      this.lake});
+      this.lake,
+      this.expansions = 0,
+      this.zones = const [],
+      this.plots = const {},
+      this.stock = const {},
+      this.helper = 0,
+      this.silo = const {}});
 
   /// Especies del lago del pueblo (fishing.md § 2.1); `null` = las de la
-  /// zona 1 (`kTownLakeDefault`). Más adelante la "Cría de <pez>" suma
-  /// especies de otros biomas.
+  /// zona 1 (`kTownLakeDefault`).
   final List<String>? lake;
 
   /// Mejoras del pueblo por id → nivel (fase 4: todavía sin efectos).
@@ -39,29 +48,88 @@ class TownState {
   /// Misiones completadas en el ciclo del pueblo (§ 7).
   final int cycle;
 
+  /// Ampliaciones compradas en la fuente rúnica (farming.md § 6).
+  final int expansions;
+
+  /// Zona elegida para cada espacio de las ampliaciones, en orden (los
+  /// espacios sin elegir no están).
+  final List<TownZoneKind> zones;
+
+  /// Parcelas aradas: `"x,y"` → parcela.
+  final Map<String, FarmPlot> plots;
+
+  /// Peces soltados en el lago: especie → cantidad (farming.md § 7).
+  final Map<String, int> stock;
+
+  /// Nivel del ayudante de la huerta (0 = sin contratar).
+  final int helper;
+
+  /// Granero del ayudante: `cropKey` → cantidad (lo recoge cualquiera).
+  final Map<String, int> silo;
+
+  int get stockTotal => stock.values.fold(0, (a, b) => a + b);
+  int zoneCount(TownZoneKind k) => zones.where((z) => z == k).length;
+
   TownState copyWith({
     Map<String, int>? upgrades,
     List<Map<String, Object?>>? lostLoot,
     int? cycle,
     List<String>? lake,
+    int? expansions,
+    List<TownZoneKind>? zones,
+    Map<String, FarmPlot>? plots,
+    Map<String, int>? stock,
+    int? helper,
+    Map<String, int>? silo,
   }) =>
       TownState(
           upgrades: upgrades ?? this.upgrades,
           lostLoot: lostLoot ?? this.lostLoot,
           cycle: cycle ?? this.cycle,
-          lake: lake ?? this.lake);
+          lake: lake ?? this.lake,
+          expansions: expansions ?? this.expansions,
+          zones: zones ?? this.zones,
+          plots: plots ?? this.plots,
+          stock: stock ?? this.stock,
+          helper: helper ?? this.helper,
+          silo: silo ?? this.silo);
+
+  /// Lo del pueblo que ven todos en la sala (protocolo 44, `town` del
+  /// estado): sin el pozo (viaja aparte) ni las mejoras sin efecto.
+  Map<String, Object?> farmJson() => {
+        if (lake != null) 'lake': lake,
+        if (expansions > 0) 'exp': expansions,
+        if (zones.isNotEmpty) 'zones': [for (final z in zones) z.name],
+        if (plots.isNotEmpty)
+          'plots': {for (final e in plots.entries) e.key: e.value.toJson()},
+        if (stock.isNotEmpty) 'stock': stock,
+        if (helper > 0) 'helper': helper,
+        if (silo.isNotEmpty) 'silo': silo,
+      };
 
   Map<String, Object?> toJson() => {
         if (upgrades.isNotEmpty) 'up': upgrades,
         if (lostLoot.isNotEmpty) 'lost': lostLoot,
         if (cycle != 0) 'cycle': cycle,
-        if (lake != null) 'lake': lake,
+        ...farmJson(),
       };
 
+  static Map<String, int> _ints(Object? v) => v is Map
+      ? {
+          for (final e in v.entries)
+            if (e.value is num && (e.value as num) > 0)
+              '${e.key}': (e.value as num).round(),
+        }
+      : const {};
+
+  /// Tolerante: los saves de antes de v0.23.0 no tienen las claves de la
+  /// huerta y quedan con el pueblo sin ampliar.
   static TownState fromJson(Object? raw) {
     if (raw is! Map) return const TownState();
     final up = raw['up'];
     final lost = raw['lost'];
+    final plots = raw['plots'];
+    final zones = raw['zones'];
     return TownState(
       upgrades: up is Map
           ? {
@@ -79,6 +147,24 @@ class TownState {
       lake: raw['lake'] is List
           ? [for (final x in raw['lake'] as List) if (x is String) x]
           : null,
+      expansions:
+          raw['exp'] is num ? (raw['exp'] as num).round().clamp(0, 9) : 0,
+      zones: zones is List
+          ? [
+              for (final z in zones)
+                if (TownZoneKind.fromName(z) case final k?) k,
+            ]
+          : const [],
+      plots: plots is Map
+          ? {
+              for (final e in plots.entries)
+                if (parsePlotKey('${e.key}') != null)
+                  '${e.key}': FarmPlot.fromJson(e.value),
+            }
+          : const {},
+      stock: _ints(raw['stock']),
+      helper: raw['helper'] is num ? (raw['helper'] as num).round() : 0,
+      silo: _ints(raw['silo']),
     );
   }
 }

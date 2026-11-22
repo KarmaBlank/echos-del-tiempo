@@ -334,6 +334,30 @@ class WaterLootEvent extends SessionEvent {
   const WaterLootEvent(this.playerId, this.label, this.rarity);
 }
 
+/// [playerId] cosechó [count] de [crop] con calidad [quality] (índice de
+/// `CropQuality`) en el tile ([tx], [ty]); [helper]: lo hizo el ayudante.
+class CropHarvestedEvent extends SessionEvent {
+  final String playerId;
+  final String crop;
+  final int quality;
+  final int count;
+  final int tx, ty;
+  final bool helper;
+  const CropHarvestedEvent(this.playerId, this.crop, this.quality, this.count,
+      this.tx, this.ty,
+      {this.helper = false});
+}
+
+/// Hallazgo de la huerta (farming.md § 5): [label] y [rarity] (índice de
+/// `Rarity`).
+class FarmLootEvent extends SessionEvent {
+  final String playerId;
+  final String label;
+  final int rarity;
+  final int tx, ty;
+  const FarmLootEvent(this.playerId, this.label, this.rarity, this.tx, this.ty);
+}
+
 /// [playerId] sacó [species] ([sizeCm] cm); [auto]: por auto-pesca.
 class FishCaughtEvent extends SessionEvent {
   final String playerId;

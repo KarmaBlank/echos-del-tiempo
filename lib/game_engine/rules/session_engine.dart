@@ -63,12 +63,17 @@ import '../data/tuning_catalog.dart';
 import '../data/fishing_catalog.dart';
 import '../data/town_layout.dart' show TownSpot;
 import 'fishing_rules.dart';
+import 'farming_rules.dart';
+import 'life_tree_rules.dart';
+import 'town_rules.dart';
+import '../models/world_save.dart' show TownState, TownZoneKind;
 import '../models/ult_def.dart';
 import '../fx/cinematic_durations.dart';
 
 part 'session_engine_tutorial.dart';
 part 'session_engine_run.dart';
 part 'session_engine_fishing.dart';
+part 'session_engine_farming.dart';
 
 /// Genera la semilla de cada misión (`(Math.random() * 1e9) | 0`).
 typedef SeedSource = int Function();
@@ -238,11 +243,17 @@ class SessionEngine {
   /// El mundo de la sala (town_loop.md § 11c): id, nombre y su pozo del
   /// Loot perdido guardado. Lo pone quien corre el motor al abrir la sala.
   SessionStep setWorld(GameSession session, String? id, String? name,
-      {List<GroundLoot> lostLoot = const [], List<String>? lake}) {
-    if (lake != null && lake.isNotEmpty) fishing.lake = List.unmodifiable(lake);
+      {List<GroundLoot> lostLoot = const [],
+      List<String>? lake,
+      TownState? town}) {
     final s = session.copy()
       ..worldId = id
       ..worldName = name;
+    // El pueblo del mundo (farming.md § 10): huerta, ampliaciones y lago.
+    if (town != null) s.town = town;
+    if (lake != null && lake.isNotEmpty) {
+      s.town = s.town.copyWith(lake: List.unmodifiable(lake));
+    }
     s.lostLoot
       ..clear()
       ..addAll(lostLoot);
@@ -252,6 +263,9 @@ class SessionEngine {
   /// Pesca del anfitrión (fishing.md § 6): picadas pendientes, tiempos y
   /// el lago del mundo. No viaja en el snapshot.
   final fishing = FishingHostState();
+
+  /// Huerta del anfitrión (farming.md § 10): tiempos y acumuladores.
+  final farming = FarmingHostState();
 
   SessionStep setTurnTimer(GameSession session, TurnTimer timer) {
     if (session.turnTimer == timer) return SessionStep(session, const []);
@@ -411,7 +425,7 @@ class SessionEngine {
   GameMap _baseMapFor(GameSession s) {
     final m = s.mission;
     if (m == null || s.mode == SessionMode.lobby) {
-      return MapGenerator.town();
+      return MapGenerator.townOf(s.town);
     }
     final eco = s.eco;
     if (m.missionId == EcoRules.missionId && eco != null) {
@@ -1094,6 +1108,12 @@ class _Op {
             BuyRodAction() ||
             EquipRodAction():
         return fishingAction(p, a);
+
+      case FarmTileAction() ||
+            FarmShopAction() ||
+            TownAction() ||
+            LifeTreeAction():
+        return farmingAction(p, a);
 
       case BuyItemAction():
         if (!s.canShop) return false;
@@ -1851,7 +1871,7 @@ class _Op {
   /// que no entra cae al piso. El de fin de misión va siempre al
   /// inventario (el mapa se cierra). Un mensaje por jugador con lo visible.
   void _deliver(SessionPlayer p, List<LootDrop> drops, LootSource src,
-      double x, double y) {
+      double x, double y, {bool stashOverflow = false}) {
     if (drops.isEmpty) return;
     var full = false;
     final capped = <String>{};
@@ -1881,7 +1901,11 @@ class _Op {
                       : null));
           continue;
         }
-        if (_keepsOffFloor(d, src) && s.run == null) {
+        // Botín del agua en el pueblo (fishing.md § 8.4): el equipo que no
+        // entra va al alijo, no al piso.
+        if ((_keepsOffFloor(d, src) ||
+                (stashOverflow && st?.material == null)) &&
+            s.run == null) {
           saved.add(d);
           continue;
         }
@@ -2164,6 +2188,7 @@ class _Op {
 
   void tick(double dt) {
     s.time += dt;
+    farmTick(dt);
     final m = s.mission;
     if (m != null &&
         s.result == null &&
@@ -3738,6 +3763,7 @@ class _Op {
     s.leaveReady.clear();
     if (lap) s.graceUntil = s.time + SessionEngine.missionStartGrace;
     events.add(MissionEndedEvent(result));
+    if (ok && s.run == null && s.tutorial == null) farmMissionWon();
     if (lap) {
       say('¡Victoria! Junten el botín y toquen LISTO para volver al pueblo.');
     }
@@ -3830,6 +3856,7 @@ class _Op {
   /// `toLobby`.
   void toLobby() {
     e.fishing.newStay();
+    e.farming.newStay();
     s
       ..eco = null
       ..ecoOwner = null

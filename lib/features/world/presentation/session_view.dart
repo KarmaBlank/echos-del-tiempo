@@ -39,6 +39,9 @@ enum WorldPanel {
 
   /// Puesto del comerciante (fishing.md § 5).
   trader,
+
+  /// Fuente rúnica: mejoras del pueblo, lago y ayudante (farming.md § 6).
+  fountain,
 }
 
 /// Una línea del chat (`addChat`): de un jugador o de sistema (`sys`).
@@ -77,6 +80,13 @@ enum WorldPrompt {
 
   /// Cartel del lago.
   sign('[E] Leer cartel'),
+
+  /// Fuente rúnica (farming.md § 6).
+  fountain('[E] Fuente rúnica'),
+
+  /// Huerta: el texto real (arar, plantar, regar, cosechar) va en
+  /// [SessionView.promptText].
+  farm('[E] Huerta'),
 
   /// Frente a la entrada de una zona (mapa del mundo). El texto real
   /// (`[E] Entrar: <zona>`, bloqueada, próximamente) va en

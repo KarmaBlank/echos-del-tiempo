@@ -85,7 +85,7 @@ void main() {
 
     test('lago con agua, camino al sur y solo tiles conocidos', () {
       const known = {',', '~', 'C', 'A', 'P', 'S', 'L', 'M', 'g', 'T', 'F',
-        'f', 'Y'};
+        'f', 'Y', 'u'};
       for (final r in w.rows) {
         for (final c in r.split('')) {
           expect(known.contains(c), isTrue, reason: 'tile $c');

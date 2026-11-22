@@ -93,6 +93,10 @@ extension _RunOp on _Op {
             ExchangeFishAction() ||
             BuyRodAction() ||
             EquipRodAction() ||
+            FarmTileAction() ||
+            FarmShopAction() ||
+            TownAction() ||
+            LifeTreeAction() ||
             UseStairsAction() ||
             InteractPoiAction() ||
             PickUpAction() ||

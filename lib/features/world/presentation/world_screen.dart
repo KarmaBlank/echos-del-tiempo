@@ -45,6 +45,7 @@ import 'hud/pause_banner.dart';
 import 'hud/world_hud.dart';
 import 'map/map_game.dart';
 import 'panels/trader_panel.dart';
+import 'panels/fountain_panel.dart';
 import 'panels/character_panel.dart';
 import 'panels/party_member_bar.dart';
 import 'panels/lost_loot_panel.dart';
@@ -74,6 +75,8 @@ class WorldScreen extends ConsumerStatefulWidget {
 }
 
 class _WorldScreenState extends ConsumerState<WorldScreen> {
+  /// Parcela bajo el mouse (tile, posición en pantalla).
+  ((int, int), Offset)? _hover;
   final _focus = FocusNode(debugLabel: 'world');
   final _chatFocus = FocusNode(debugLabel: 'chat');
   final _battleKey = GlobalKey<BattleViewState>();
@@ -397,6 +400,41 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               child: GameWidget(game: game, autofocus: false),
             ),
           ),
+          // Huerta: el mouse sobre una parcela muestra quién plantó, regó y
+          // abonó y las chances si la cosechás vos (farming.md § 2.4).
+          if (view.mode == SessionMode.lobby && view.panel == null)
+            Positioned.fill(
+              key: const ValueKey('farm-hover'),
+              child: MouseRegion(
+                opaque: false,
+                hitTestBehavior: HitTestBehavior.translucent,
+                onExit: (_) => setState(() => _hover = null),
+                onHover: (e) {
+                  final tile = game.tileAtScreen(e.localPosition);
+                  final next = tile != null &&
+                          controller.plotAt(tile.$1, tile.$2) != null
+                      ? (tile, e.localPosition)
+                      : null;
+                  if (next?.$1 != _hover?.$1) setState(() => _hover = next);
+                },
+              ),
+            ),
+          if (_hover case final h?
+              when view.mode == SessionMode.lobby && view.panel == null)
+            Positioned(
+              key: const ValueKey('farm-tooltip'),
+              left: h.$2.dx + 16,
+              top: h.$2.dy + 16,
+              child: IgnorePointer(
+                child: DsTooltipCard(
+                  title: 'PARCELA',
+                  children: [
+                    Text(controller.plotInfo(h.$1.$1, h.$1.$2),
+                        style: DsText.detail()),
+                  ],
+                ),
+              ),
+            ),
           // Pesca en el mapa: clic mantenido = E mantenida (sin ventana).
           if (controller.isFishing)
             Positioned.fill(
@@ -852,6 +890,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return LostLootPanel(view: view, controller: controller);
       case WorldPanel.trader:
         return TraderPanel(view: view, controller: controller);
+      case WorldPanel.fountain:
+        return FountainPanel(view: view, controller: controller);
       case WorldPanel.stash:
         return StashPanel(view: view, controller: controller);
       case WorldPanel.map:

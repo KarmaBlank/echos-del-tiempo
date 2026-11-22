@@ -191,6 +191,31 @@ abstract final class ActionJson {
         ExchangeFishAction() => {'t': 'fSwap', 'sp': a.species},
         BuyRodAction() => {'t': 'rodBuy', 'r': a.rodId},
         EquipRodAction() => {'t': 'rodEq', 'r': a.rodId},
+        // Protocolo 44 (v0.23.0): huerta, pueblo y árboles de oficios.
+        FarmTileAction() => {
+            't': 'farm',
+            'o': a.op.name,
+            'x': a.tx,
+            'y': a.ty,
+            if (a.seed != null) 'sd': a.seed,
+          },
+        FarmShopAction() => {
+            't': 'farmShop',
+            'o': a.op.name,
+            if (a.id != null) 'id': a.id,
+            if (a.n != 1) 'n': a.n,
+            if (a.materials) 'mat': true,
+          },
+        TownAction() => {
+            't': 'town',
+            'o': a.op.name,
+            if (a.id != null) 'id': a.id,
+          },
+        LifeTreeAction() => {
+            't': 'lifeTree',
+            'k': a.skill,
+            if (a.node != null) 'n': a.node,
+          },
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -402,6 +427,20 @@ abstract final class ActionJson {
         return BuyRodAction(j.str('r'));
       case 'rodEq':
         return EquipRodAction(j.str('r'));
+      case 'farm':
+        return FarmTileAction(j.enumByName('o', FarmOp.values),
+            j.integer('x'), j.integer('y'),
+            seed: j.strOrNull('sd'));
+      case 'farmShop':
+        return FarmShopAction(j.enumByName('o', FarmShopOp.values),
+            id: j.strOrNull('id'),
+            n: j.intOrNull('n') ?? 1,
+            materials: j['mat'] == true);
+      case 'town':
+        return TownAction(j.enumByName('o', TownOp.values),
+            id: j.strOrNull('id'));
+      case 'lifeTree':
+        return LifeTreeAction(j.str('k'), j.strOrNull('n'));
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

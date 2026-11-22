@@ -26,9 +26,6 @@ class FishingHostState {
   /// Quién ya avisó en el chat que se puso a pescar (por estadía).
   final announced = <String>{};
 
-  /// Especies del lago del pueblo del mundo (`TownState.lake`).
-  List<String> lake = kTownLakeDefault;
-
   void newStay() {
     pending.clear();
     charXp.clear();
@@ -98,15 +95,18 @@ extension _FishingOp on _Op {
     final dock = WorldRules.townSpot(p.x, p.y) == TownSpot.fishing
         ? _ft.d('dockBonus')
         : 0.0;
-    final rare =
-        bonus.rare + dock + _ft.d('distanceBonus') * power.clamp(0.0, 1.0);
+    // Lago del mundo (farming.md § 7): zonas de LAGO y peces criando.
+    final rare = bonus.rare +
+        dock +
+        TownRules.lakeRare(s.town) +
+        _ft.d('distanceBonus') * power.clamp(0.0, 1.0);
     // Botín del agua (§ 8): a veces no es un pez.
     final kind =
         FishingRules.rollLoot(_rand, p.profile, luck: bonus.rare + dock);
     final FishCatch fish;
     switch (kind) {
       case WaterLootKind.fish:
-        fish = FishingRules.roll(_rand, _f.lake,
+        fish = FishingRules.roll(_rand, TownRules.lakeRoll(s.town),
             rareBonus: rare, pity: p.profile.life.pity);
       case WaterLootKind.basura:
         final id = kWaterJunk[
@@ -162,10 +162,12 @@ extension _FishingOp on _Op {
     if (next != null && s.time < next) return false;
     _f.nextAuto[p.id] = s.time + _ft.d('autoCooldownSec');
     final bonus = FishingRules.rodBonus(p.profile);
-    final n = math.max(1, _ft.i('autoCount'));
+    final n = math.max(1,
+        _ft.i('autoCount') + LifeTreeRules.fish(p.profile, LifeFx.auto).round());
     for (var i = 0; i < n; i++) {
       final fish =
-          FishingRules.roll(_rand, _f.lake, rareBonus: bonus.rare, auto: true);
+          FishingRules.roll(_rand, TownRules.lakeRoll(s.town),
+              rareBonus: bonus.rare, auto: true);
       _grantFish(p, fish, auto: true);
     }
     return true;
@@ -228,7 +230,7 @@ extension _FishingOp on _Op {
         life: marked.life.copyWith(fishXp: marked.life.fishXp + 10));
     events.add(WaterLootEvent(p.id, label, rarity.index));
     say('${p.name} sacó del agua $label.');
-    _deliver(p, drops, LootSource.mission, p.x, p.y);
+    _deliver(p, drops, LootSource.mission, p.x, p.y, stashOverflow: true);
   }
 
   void _grantFish(SessionPlayer p, FishCatch c, {bool auto = false}) {

@@ -252,6 +252,33 @@ abstract final class TownPalette {
   static const label = Color(0xFFFFF3C4);
 }
 
+/// Colores de la huerta (farming.md § 2.3, v0.23.0).
+abstract final class FarmPalette {
+  static const soil = Color(0xFF7A5534);
+  static const soilDark = Color(0xFF5C3D24);
+  static const tilled = Color(0xFF5A3A22);
+  static const furrow = Color(0xFF3E2716);
+  static const wet = Color(0xFF3A2414);
+  static const fert = Color(0xFFB8A27A);
+  static const sprout = Color(0xFF7BD36B);
+  static const leaf = Color(0xFF3E9B45);
+  static const leafDark = Color(0xFF2D6E32);
+  static const stem = Color(0xFF4F8A3A);
+  static const ripeGlow = Color(0x66FFE680);
+  static const droplet = Color(0xFF7FC8FF);
+  static const pop = Color(0xFFFFF3C4);
+  static const helper = Color(0xFFD9A066);
+  static const helperHat = Color(0xFF8C6A3C);
+
+  /// Color del fruto por rareza del cultivo (índice de `FishRarity`).
+  static const fruit = [
+    Color(0xFFE8C170),
+    Color(0xFFE85C5C),
+    Color(0xFFB57CFF),
+    Color(0xFFFFD166),
+  ];
+}
+
 /// Colores de la escena de pesca (fishing.md § 4; pesca en el mapa desde v0.22.2).
 abstract final class FishingPalette {
   static const water = Color(0xFF1F5F8B);

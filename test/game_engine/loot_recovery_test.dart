@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:echos_del_tiempo/features/characters/domain/stash.dart';
 import 'package:echos_del_tiempo/game_engine/data/game_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
+import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/enemy_def.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_session.dart';
 import 'package:echos_del_tiempo/game_engine/models/item.dart';
@@ -179,6 +181,33 @@ void main() {
       expect(
           log.whereType<SystemMessageEvent>().map((m) => m.text).join('\n'),
           contains('se guardó en el alijo'));
+    });
+
+    test('botÃ­n del agua con el inventario lleno: el arma va al alijo '
+        '(fishing.md Â§ 9)', () {
+      kTuning[TuningId.fishing] = TuningDef('Pesca', {
+        ...kTuningDefaults[TuningId.fishing]!.values,
+        'lootChance': 1,
+        'lootBasura': 0,
+        'lootMateriales': 0,
+        'lootCofre': 0,
+        'lootArma': 1,
+      });
+      addTearDown(() =>
+          kTuning[TuningId.fishing] = kTuningDefaults[TuningId.fishing]!);
+      final e = sessionEngine();
+      final spot = TownLayout.fishingSpots.first;
+      var s = e
+          .addPlayer(e.create(), 'p0', full(newProfile('Ana', 'guerrero')))!
+          .state;
+      s = moveTo(e, s, 'p0', (spot.$1 + 1) * 16.0 + 4, (spot.$2 + 0.5) * 16.0);
+      final items = s.players['p0']!.profile.items.length;
+      s = act(e, s, 'p0', const FishBiteAction(0.5));
+      s = wait(e, s, 2);
+      s = act(e, s, 'p0', const FishResultAction(true));
+      expect(s.players['p0']!.profile.items.length, items);
+      expect(s.ground, isEmpty);
+      expect(recovered(s, 'p0').where((d) => d.isItem), hasLength(1));
     });
   });
 
