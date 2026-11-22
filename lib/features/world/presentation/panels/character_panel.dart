@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'fishing_widgets.dart' show lifeSkillsLine;
+import 'life_items_view.dart';
+import 'life_skills_view.dart';
+import '../../../../game_engine/rules/life_tree_rules.dart';
 
 import '../../../../app/design/design.dart';
 import '../../../../app/feature_flags.dart';
@@ -66,11 +69,19 @@ enum CharacterTab {
       'ATRIBUTOS',
       'Cada nivel da 1 punto (+3 a un atributo). Hasta el tope rinde '
           'completo; después, la mitad. Nada cambia hasta CONFIRMAR.'),
+  oficios(
+      'OFICIOS',
+      'Pesca y Cultivo: nivel, XP y un árbol por oficio. 1 punto por nivel '
+          'de oficio; algunos nodos se excluyen entre sí. Reiniciar es gratis.'),
   inventory(
       'INVENTARIO',
       'Arrastra para mover · clic para ver · clic derecho (o Enter): '
           'acciones. ORDENAR · LIMPIAR INVENTARIO: por rareza o elegidas a '
           'mano.'),
+  lifeItems(
+      'PESCA Y CULTIVO',
+      'Herramientas de oficio, pescados, semillas, abonos y cosechas. No '
+          'ocupan casilleros del inventario. Solo en el pueblo.'),
   tree(
       'ÁRBOL',
       'Pasivas de clase: 1 punto por nivel. Clic en un nodo lejano: tomar el '
@@ -193,6 +204,18 @@ class _CharacterPanelState extends State<CharacterPanel> {
               stats: rules.derivedStats(prof),
               sprites: ref.watch(gameSpritesProvider).valueOrNull,
               sfx: ref.read(sfxServiceProvider))),
+      CharacterTab.oficios => LifeSkillsView(
+          key: ValueKey('oficios-${view.actorId}'),
+          profile: prof,
+          editBlocked: view.session.battle != null ? 'En batalla' : null,
+          onTake: c.takeLifeNode,
+          onReset: c.resetLifeTree),
+      CharacterTab.lifeItems => LifeItemsView(
+          key: ValueKey('life-items-${view.actorId}'),
+          profile: prof,
+          controller: c,
+          inTown: view.session.mode == SessionMode.lobby &&
+              view.session.run == null),
       CharacterTab.filter => LootFilterTab(
           key: ValueKey('filter-tab-${view.actorId}'),
           shop: ShopContext(view, c)),
@@ -385,6 +408,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
                             badge: switch (t) {
                               CharacterTab.attributes when left > 0 => '$left',
                               CharacterTab.tree when treePts > 0 => '$treePts',
+                              CharacterTab.oficios
+                                  when LifeTreeRules.freeTotal(prof) > 0 =>
+                                '${LifeTreeRules.freeTotal(prof)}',
                               // ULT aprendidas sin mirar (ultimates_v2.md § 2.1).
                               CharacterTab.ults when prof.ultNew.isNotEmpty =>
                                 'NUEVA',

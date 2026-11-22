@@ -1,0 +1,240 @@
+# Spec: Cultivo, huerta compartida y ampliaciones del pueblo
+
+Estado: implementado en v0.23.0 (protocolo 44). Visión: `town_loop.md`
+§ 3.2, § 3.4, § 4 y § 11c; la profundidad toma como referencia la pesca
+(`fishing.md`). Árboles de talentos de los oficios:
+`life_skill_trees.md`. Lore: solo `docs/lore.md` (tiempo, ecos, futuro
+inmutable, pasado magitec).
+
+Todo número de esta spec está en Editor → Balance → Cultivo
+(`kTuning['farming']`), → Pueblo (`kTuning['town']`) o → Oficios:
+árboles (`kTuning['lifeTree']`), salvo los datos de catálogo (cultivos,
+herramientas, abonos), que viven en `lib/game_engine/data/farming_catalog.dart`.
+
+Código: `farming_catalog.dart`, `models/farm_skills.dart`,
+`models/farm_plot.dart`, `rules/farming_rules.dart`,
+`rules/town_rules.dart`, `rules/session_engine_farming.dart`,
+`map/farm_layer.dart`, `panels/fountain_panel.dart`,
+`panels/trader_panel.dart`, `panels/life_items_view.dart`.
+
+---
+
+## 1. Cultivo (habilidad de vida)
+
+- XP y nivel por personaje, como Pesca: `xpBase × l^xpExp` por nivel,
+  tope `maxLevel` (30). JSON `life.farm.xp`.
+- Se ve donde se ve Pesca: PERSONAJE (línea OFICIOS y pestaña OFICIOS),
+  el comerciante y la pestaña PESCA Y CULTIVO.
+- XP por cosecha: `xp base × xp<Rareza> × qualityMult<Calidad>` (+ el
+  árbol). Arar, plantar y regar dan `workXp` (1). XP de personaje por
+  cosecha `charXp<Rareza>` con tope `charXpCap` por estadía en el pueblo
+  (aparte del de la pesca).
+
+## 2. Huerta en el mapa (sin ventanas)
+
+### 2.1 Dónde
+- Tile nuevo `u` (tierra, caminable). Huerta del pueblo base: x 19–22,
+  y 18–20 (12 parcelas, al sur del camino de la torre). Cada zona de
+  HUERTA de una ampliación suma 6 × 4 = 24 (§ 6).
+- Se trabaja el tile de enfrente (a 10 px en la dirección que mira) o
+  el que se pisa. El host acepta labores a ≤ `reachPx` (30 px) del centro
+  del tile y como mucho una cada `minWorkSec`.
+
+### 2.2 Labores (tecla E, contextual)
+| Estado de la parcela | E hace | Notas |
+|---|---|---|
+| Tierra sin arar | Arar | Con la azada; área según azada (§ 4) |
+| Arada vacía | Plantar la semilla elegida | Q cambia de semilla |
+| Plantada, creciendo | Regar | Con la regadera; área según regadera |
+| Madura | Cosechar | Pop + aviso + chat |
+
+F abona la parcela de enfrente con el mejor abono que tengas. El aviso
+de abajo, de una línea, dice qué hace E y el avance ("[E] Regar · Trigo
+dorado 45 %"); con el cultivo maduro, tu chance de legendaria. El detalle
+completo está en el tooltip del mouse (§ 2.4).
+
+### 2.3 Crecimiento (elegido para co-op y para jugar afuera)
+- La huerta crece mientras la sala está abierta, en el pueblo y también
+  durante las misiones (el host la avanza de a 1 s): regada a ritmo del
+  riego (`waterRate`), seca a `dryRate` (0.35). Cada riego dura
+  `waterSec` (240 s, más con la regadera y el árbol).
+- Cada misión ganada suma `missionGrowSec` (420 s) a todo lo plantado.
+  Así una expedición de 10–12 min deja la huerta lista aunque nadie
+  riegue.
+- Con el juego cerrado no crece nada (sin reloj real: nadie pierde ni
+  gana por no conectarse, town_loop.md § 1).
+- Etapas visibles: semilla (< 20 %), brote, crecido (≥ 55 %), maduro
+  (100 %, con brillo). Arado con surcos; regado, tierra oscura y una gota;
+  abonado, granitos claros. Dibujado en `MapFarmLayer` (colores en
+  `FarmPalette`); registrado como procedural.
+- La cosecha "salta" del tile hacia quien cosechó con chispas (como el
+  pez) y el nombre con la calidad arriba del personaje.
+
+### 2.4 Huerta compartida: cada labor usa a quien la hace
+Cualquiera planta, riega, abona o cosecha cualquier parcela. Cada parcela
+guarda los aportes (JSON de la parcela):
+
+| Aporte | Guarda | Efecto |
+|---|---|---|
+| Plantar | `pq` potencial (puntaje de quien plantó con su azada), `b` velocidad del árbol, `pb` nombre | potencial base de la calidad |
+| Regar | `wq` calidad media de los riegos, `wn` cantidad, `wr` ritmo del último riego, `wb` nombre | un regador de nivel bajo riega más lento (`waterRateMin` 0.6 con nivel 1, 1 desde el 10) |
+| Abonar | `f` abono, `fb` nombre | sesgo de calidad del abono y × crecimiento |
+| Cosechar | — | el puntaje de quien cosecha pesa más (`sHarvest`) |
+
+Puntaje de una persona: `pBase + (nivel − 1) × pPerLevel + calidad de
+la herramienta (azada o regadera, con su efectividad) + «calidad» del
+árbol`.
+
+Puntaje S de la cosecha:
+`S = pq × sPlant + wq × fracción regada × sWater + sesgo del abono +
+puntaje de quien cosecha × sHarvest`.
+
+Calidad (normal / rara / épica / legendaria): pesos `wQNormal`,
+`wQRaro`, `wQEpico`, `wQLegendario` (70/22/7/1), multiplicados por
+`(1 + S)^0..3`. Con nivel bajo casi todo sale normal; con nivel alto,
+abono del Eco y buenos nodos la legendaria sube muchísimo (el test de
+reglas compara cosechador bajo y alto sobre la misma parcela).
+
+Al pasar el mouse por una parcela, un tooltip (ancho fijo) dice quién
+plantó, quién regó (y cuántas veces), el abono y de quién, y "Si la
+cosechás vos: X % épica · Y % legendaria", para coordinar quién cosecha.
+
+## 3. Semillas, cultivos y calidad
+
+### 3.1 Zona 1 (11 cultivos)
+| Cultivo | Rareza | Crece | Precio | Semilla |
+|---|---|---|---|---|
+| Nabo del claro | común | 2.5 min | 10 | 4 |
+| Trigo dorado | común | 3.3 min | 13 | 5 |
+| Papa de piedra | común | 4 min | 16 | 6 |
+| Calabaza del sendero | común | 5 min | 20 | 8 |
+| Frutilla de rocío | rara | 7 min | 42 | 25 |
+| Cebolla de cobre | rara | 8 min | 50 | 30 |
+| Flor rúnica | épica | 14 min | 130 | no se vende |
+| Melón engranaje | épica | 15 min | 150 | no se vende |
+| Trigo del Mañana | legendaria | 25 min | 850 | no se vende |
+| Rosa del Reloj Quieto | legendaria | 27.5 min | 950 | no se vende |
+| Raíz de la Era Antigua | legendaria | 30 min | 1100 | no se vende |
+
+Los legendarios son ecos (futuro inmutable, reloj quieto, pasado
+magitec): nombres y textos esperan el OK del dueño. Todo personaje
+arranca con 6 semillas de nabo, azada de rama y regadera de lata.
+
+### 3.2 Abonos
+| Abono | Precio | Sesgo (`fert<K>Bias`) | Crecimiento (`fert<K>Speed`) |
+|---|---|---|---|
+| Abono | 20 | +0.4 | × 1.15 |
+| Abono rúnico | 120 | +1 | × 1.3 |
+| Abono del Eco | 600 | +2 | × 1.5 |
+
+Tooltip: "Mejora las chances: normal / rara / épica / legendaria".
+
+### 3.3 Precio por calidad
+`qualityMult<Calidad>`: normal 1, rara 1.3, épica 1.8, legendaria 3
+(precio y XP).
+
+## 4. Herramientas (como las cañas)
+Espacio de herramienta aparte de las armas; se compran en el comerciante
+y rinden según `efectividad = piso + (1 − piso) × (nivel/requerido)^curva`
+(town_loop.md § 11c).
+
+| Herramienta | Nivel | Calidad | Área | Extra | Precio |
+|---|---|---|---|---|---|
+| Azada de rama | 1 | 0 | 1 tile | — | inicial |
+| Azada de hierro | 5 | 0.15 | cruz | 10 % cosecha doble | 350 |
+| Azada de bronce rúnico | 12 | 0.3 | 3 × 3 | 20 % | 1400 |
+| Azada del Eco | 22 | 0.5 | 3 × 3 | 35 % | 4800 |
+| Regadera de lata | 1 | 0 | 1 tile | — | inicial |
+| Regadera de cobre | 5 | 0.1 | cruz | riego + 25 % | 300 |
+| Regadera de bronce rúnico | 12 | 0.2 | 3 × 3 | + 50 % | 1300 |
+| Regadera del Eco | 22 | 0.35 | 3 × 3 | + 100 % | 4500 |
+
+El área efectiva es `floor(área × efectividad)`: con nivel bajo, una
+herramienta de área trabaja menos tiles.
+
+## 5. Hallazgos de la huerta (como el botín del agua, más chico)
+- Cada cosecha devuelve una semilla del mismo cultivo con
+  `seedDropChance` (40 %; no las legendarias).
+- Hallazgo: `lootChance` (7 %) × (1 + `lootLevelBonus` × (nivel − 1)) ×
+  árbol. Pesos: semilla rara o épica 60, Esquirlas 35
+  (`lootMatMin`..`lootMatMax`), semilla legendaria 5.
+- Pity: `farm.dry` cosechas sin hallazgo → a las `lootPityAfter` (40),
+  semilla rara o Esquirlas seguras. `farm.pity` cosechas sin semilla
+  legendaria → a las `legendPityAfter` (150), una segura.
+- Aviso "encontró en la tierra: …", chat y un pop con el color de la
+  rareza.
+
+## 6. Ampliaciones del pueblo (fuente rúnica)
+- E en la fuente abre FUENTE RÚNICA (antes abría el tablero; ahora el
+  tablero es un botón del panel).
+- Cada ampliación agrega una franja de 8 columnas al este (el borde de
+  árboles se corre) con un camino norte-sur y dos espacios (norte y
+  sur, 6 × 6). Tope `maxExpansions` (3).
+- Costo de la n-ésima: oro `expGoldBase × expGoldMult^(n−1)`
+  (1500, 3750, 9375), Esquirlas `expEsquirlas × n`, Cristales de Era
+  `expCristales × (n − 1)` desde la segunda.
+- Solo el dueño del mundo (el anfitrión) amplía y elige. No se puede
+  ampliar con un espacio sin elegir.
+- Cada espacio: LAGO (agua 6 × 6 con esquinas de pasto; se pesca de
+  cualquier orilla) o HUERTA (24 parcelas). Etiquetas LAGO / HUERTA /
+  TERRENO LIBRE arriba de cada espacio, sobre el pasto.
+- El mapa del pueblo sale de `MapGenerator.townOf(TownState)`
+  (determinístico por ampliaciones y zonas): todos lo ven igual.
+
+## 7. Peces en el lago
+- Desde la fuente o la pestaña PESCA Y CULTIVO se suelta un pez de la
+  bolsa en el lago (no la basura). Capacidad `lakeBase` (6) +
+  `lakePerZone` (8) por zona de LAGO.
+- Sesgo: cada pez soltado agrega su especie `stockWeight` veces más a la
+  tirada (tope `stockWeightCap` por especie). Una especie que no era del
+  lago pasa a estar (así se traen especies de otros biomas).
+- Cría: al ganar una misión, cada especie con 2 o más cría (+1) con
+  `breedChance`, hasta la capacidad. Rareza extra: `lakeZoneRare` por
+  zona de LAGO + `breedRare` por especie criando (tope `breedRareCap`).
+
+## 8. Ayudante de la huerta
+- Se contrata y mejora en la fuente: nivel 1..`helperMax` (3), costo
+  `helperCost × nivel` de oro, pide Cultivo `helperLevel × nivel`.
+- Cada `helperEverySec` (45 s) de sala abierta riega las secas y
+  cosecha las maduras (calidad normal, sin hallazgos) de hasta
+  `helperPlots × nivel` parcelas (+ «Capataz» del árbol), y replanta la
+  misma semilla. Lo cosechado va al granero (`town.silo`).
+- Cualquiera recoge el granero en el comerciante (CULTIVO → VENDER →
+  RECOGER) con `helperXpShare` (10 %) de la XP.
+- Se dibuja al costado de la huerta del pueblo.
+
+## 9. Comerciante (pestaña CULTIVO)
+- COMPRAR: semillas (×1 y ×5, con buscador), abonos (tooltip con lo que
+  sesgan), azadas y regaderas (EQUIPAR / EQUIPADA).
+- VENDER: el granero, cada cosecha por calidad (VENDER y, las
+  legendarias, CANJEAR por `legendCristales` Cristales de Era y
+  `legendPrismas` Prisma Roto). VENDER TODO no incluye las legendarias.
+  Cobrar en oro o materiales (`matRate`, `matValue`), igual que la pesca.
+
+## 10. Red y persistencia (protocolo 44)
+- `GameSession.town` viaja en el estado (`town`: `lake`, `exp`,
+  `zones`, `plots`, `stock`, `helper`, `silo`); el cliente arma el mapa
+  con eso. El host lo guarda en el mundo (`accounts/worlds/<id>.json`,
+  `town`) al volver de misión y al salir.
+- Acciones: `farm {o: till|plant|water|fert|harvest, x, y, sd?}`,
+  `farmShop {o, id?, n?, mat?}`, `town {o: expand|zoneLago|zoneHuerta|
+  stock|hireHelper, id?}`, `lifeTree {k, n?}`. Eventos: `cHarv {id, c, q,
+  n, x, y, h?}`, `cLoot {id, l, r, x, y}`.
+- Todo lo valida el host (pueblo, tile de tierra, alcance, cadencia,
+  semillas y abonos propios, dueño para ampliar).
+- Perfil: `life.farm {xp, hoes, hoe, cans, can, seeds, crops, sd,
+  ferts, pity, dry, tree}`. Saves de antes de v0.23.0: sin `farm` →
+  inicial (azada, regadera, 6 nabos). Mundo viejo: sin claves nuevas →
+  pueblo sin ampliar y sin parcelas.
+
+## 11. Pestaña PESCA Y CULTIVO (PERSONAJE)
+Solo en el pueblo (en una misión dice "Disponible en el pueblo."). No
+usa casilleros del inventario. Secciones: HERRAMIENTAS (cañas, azadas y
+regaderas, la equipada con EQUIPADA y las otras con EQUIPAR), PESCADOS
+(con SOLTAR EN EL LAGO), basura del agua, SEMILLAS (ELEGIR / PARA
+PLANTAR), abonos y COSECHAS por calidad.
+
+## 12. Pendiente
+- Semillas de otros biomas en sus mazmorras (hoy solo zona 1).
+- Arte en PNG (hoy procedural, como la pesca).
+- Ciclo de eventos del pueblo (town_loop.md § 7).

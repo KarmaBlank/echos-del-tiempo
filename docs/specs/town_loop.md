@@ -155,6 +155,10 @@ mezcla de ambas fuentes). Tabla en `assets/balance` / YAML de datos.
   atrase a nadie (`trade.charXpShare`).
 - **Nadie queda encerrado en un rol**: cualquier jugador hace cualquier
   oficio, sin elegir clase de oficio ni exclusividades.
+- Desde v0.23.0: árboles de talentos por oficio en PERSONAJE → OFICIOS
+  (`life_skill_trees.md`); la huerta, las ampliaciones en la fuente
+  rúnica (LAGO / HUERTA), los peces en el lago y el ayudante están en
+  `farming.md`.
 
 ---
 

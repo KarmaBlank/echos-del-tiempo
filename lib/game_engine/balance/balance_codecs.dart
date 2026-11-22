@@ -1,3 +1,4 @@
+import '../data/life_tree_catalog.dart' show kLifeTrees;
 import '../data/enemy_families.dart' show ComboRulesDef, HitCapDef;
 import '../data/ults_v2_catalog.dart' show kUltV2;
 import '../data/zone_curve.dart';
@@ -85,7 +86,16 @@ enum BalanceKind {
   /// ronda" y velocidad (combat.md § "Límites").
   combatLimits('combatLimits', 'Combate: límites', 'Límites de combate'),
   /// Movimiento en el mapa de campo (world.md § "Colisión y movimiento").
-  exploration('exploration', 'Exploración', 'Ajustes de exploración');
+  exploration('exploration', 'Exploración', 'Ajustes de exploración'),
+
+  /// Cultivo, huerta y comerciante (farming.md, v0.23.0).
+  farming('farming', 'Cultivo', 'Ajustes de Cultivo'),
+
+  /// Ampliaciones, lago y ayudante (farming.md § 6–8).
+  town('town', 'Pueblo', 'Ajustes del pueblo'),
+
+  /// Puntos y valor de los nodos de oficios (life_skill_trees.md).
+  lifeTree('lifeTree', 'Oficios: árboles', 'Árboles de oficios');
 
   const BalanceKind(this.jsonKey, this.plural, this.singular,
       {this.disable = false});
@@ -1318,6 +1328,122 @@ final featRewardCodec = EntityCodec(
   nameOf: (o) => (o as AchievementDef).name,
 );
 
+/// Campos de un grupo de ajustes armados desde sus valores por defecto
+/// (v0.23.0): entero si el valor lo es, decimal si no; la etiqueta sale
+/// de [labels] (o de la clave).
+List<BalanceField> _autoFields(String id, Map<String, String> labels) {
+  final out = <BalanceField>[];
+  for (final e in kTuningDefaults[id]!.values.entries) {
+    final v = e.value;
+    final label = labels[e.key] ?? e.key;
+    if (v is int) {
+      final max = v <= 0 ? 100.0 : (v * 10).toDouble().clamp(10.0, 1e7);
+      out.add(BalanceField(e.key, label, _int,
+          max: max, step: v >= 1000 ? 50 : 1));
+    } else {
+      final d = v.toDouble();
+      out.add(BalanceField(e.key, label, _dec,
+          max: (d * 10).clamp(1.0, 1e6), step: 0.01));
+    }
+  }
+  return out;
+}
+
+const _farmLabels = {
+  'maxLevel': 'Nivel máximo',
+  'xpBase': 'XP base por nivel',
+  'xpExp': 'Exponente de XP',
+  'xpComun': 'XP × común',
+  'xpRaro': 'XP × rara',
+  'xpEpico': 'XP × épica',
+  'xpLegendario': 'XP × legendaria',
+  'charXpComun': 'XP de personaje: común',
+  'charXpRaro': 'XP de personaje: rara',
+  'charXpEpico': 'XP de personaje: épica',
+  'charXpLegendario': 'XP de personaje: legendaria',
+  'charXpCap': 'Tope de XP de personaje por estadía',
+  'bonusFloor': 'Herramienta: piso de efectividad',
+  'bonusCurve': 'Herramienta: curva de efectividad',
+  'dryRate': 'Crecimiento sin regar (×)',
+  'waterSec': 'Segundos que dura un riego',
+  'waterRateMin': 'Ritmo de riego con nivel 1 (×)',
+  'missionGrowSec': 'Segundos que suma cada misión ganada',
+  'workXp': 'XP por arar, plantar o regar',
+  'wQNormal': 'Peso calidad normal',
+  'wQRaro': 'Peso calidad rara',
+  'wQEpico': 'Peso calidad épica',
+  'wQLegendario': 'Peso calidad legendaria',
+  'sPlant': 'Peso de quien planta',
+  'sWater': 'Peso de los riegos',
+  'sHarvest': 'Peso de quien cosecha',
+  'pBase': 'Puntaje base de una persona',
+  'pPerLevel': 'Puntaje por nivel',
+  'fertComunBias': 'Abono: sesgo',
+  'fertComunSpeed': 'Abono: crecimiento (×)',
+  'fertRunicoBias': 'Abono rúnico: sesgo',
+  'fertRunicoSpeed': 'Abono rúnico: crecimiento (×)',
+  'fertEcoBias': 'Abono del Eco: sesgo',
+  'fertEcoSpeed': 'Abono del Eco: crecimiento (×)',
+  'qualityMultNormal': 'Precio y XP × normal',
+  'qualityMultRaro': 'Precio y XP × rara',
+  'qualityMultEpico': 'Precio y XP × épica',
+  'qualityMultLegendario': 'Precio y XP × legendaria',
+  'seedDropChance': 'Chance de devolver semilla',
+  'lootChance': 'Chance de hallazgo',
+  'lootSemilla': 'Peso hallazgo: semilla rara o épica',
+  'lootMateriales': 'Peso hallazgo: Esquirlas',
+  'lootLegendaria': 'Peso hallazgo: semilla legendaria',
+  'lootLevelBonus': 'Hallazgo extra por nivel',
+  'lootPityAfter': 'Pity de hallazgo (cosechas)',
+  'legendPityAfter': 'Pity de semilla legendaria (cosechas)',
+  'lootMatMin': 'Esquirlas mínimas',
+  'lootMatMax': 'Esquirlas máximas',
+  'matRate': 'Cobro en materiales (×)',
+  'matValue': 'Oro por Esquirla',
+  'legendCristales': 'Canje legendario: Cristales de Era',
+  'legendPrismas': 'Canje legendario: Prismas Rotos',
+  'reachPx': 'Alcance de una labor (px)',
+  'minWorkSec': 'Segundos entre labores',
+};
+
+const _townLabels = {
+  'maxExpansions': 'Ampliaciones máximas',
+  'expGoldBase': 'Oro de la primera ampliación',
+  'expGoldMult': 'Oro × por ampliación',
+  'expEsquirlas': 'Esquirlas × ampliación',
+  'expCristales': 'Cristales de Era desde la segunda',
+  'lakeBase': 'Capacidad base del lago',
+  'lakePerZone': 'Capacidad por zona de LAGO',
+  'stockWeight': 'Peso extra por pez soltado',
+  'stockWeightCap': 'Tope de peso por especie',
+  'lakeZoneRare': 'Rareza por zona de LAGO',
+  'breedRare': 'Rareza por especie criando',
+  'breedRareCap': 'Tope de rareza por cría',
+  'breedChance': 'Chance de cría por misión ganada',
+  'helperLevel': 'Ayudante: nivel de Cultivo × nivel',
+  'helperCost': 'Ayudante: oro × nivel',
+  'helperMax': 'Ayudante: nivel máximo',
+  'helperPlots': 'Ayudante: parcelas por nivel',
+  'helperEverySec': 'Ayudante: segundos entre rondas',
+  'helperXpShare': 'Granero: parte de la XP',
+};
+
+Map<String, String> _lifeTreeLabels() => {
+      'pointsPerLevel': 'Puntos por nivel',
+      for (final e in kLifeTrees.entries)
+        for (final n in e.value) ...{
+          n.id: '${e.key.label}: ${n.name}',
+          '${n.id}_2': '${e.key.label}: ${n.name} (2.º)',
+        },
+    };
+
+final farmingCodec =
+    _tuningCodec(BalanceKind.farming, _autoFields('farming', _farmLabels));
+final townCodec =
+    _tuningCodec(BalanceKind.town, _autoFields('town', _townLabels));
+final lifeTreeCodec = _tuningCodec(
+    BalanceKind.lifeTree, _autoFields('lifeTree', _lifeTreeLabels()));
+
 /// El codec de cada tipo.
 EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.abyssBoss => abyssBossCodec,
@@ -1348,6 +1474,9 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.travesia => travesiaCodec,
       BalanceKind.combatLimits => combatLimitsCodec,
       BalanceKind.exploration => explorationCodec,
+      BalanceKind.farming => farmingCodec,
+      BalanceKind.town => townCodec,
+      BalanceKind.lifeTree => lifeTreeCodec,
     };
 
 /// Tipos de "Ajustes": un grupo de [kTuning] cada uno (id = jsonKey).
@@ -1362,4 +1491,7 @@ const kTuningKinds = [
   BalanceKind.travesia,
   BalanceKind.combatLimits,
   BalanceKind.exploration,
+  BalanceKind.farming,
+  BalanceKind.town,
+  BalanceKind.lifeTree,
 ];

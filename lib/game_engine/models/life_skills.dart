@@ -1,4 +1,7 @@
 import '../data/fishing_catalog.dart';
+import 'farm_skills.dart';
+
+export 'farm_skills.dart';
 
 /// Habilidades de vida del personaje (town_loop.md § 11c, fishing.md § 3):
 /// Pesca (XP total; el nivel sale de la curva), cañas, la bolsa de
@@ -11,7 +14,11 @@ class LifeSkills {
     Map<String, int> bag = const {},
     this.pity = 0,
     this.dry = 0,
-  })  : rods = List.unmodifiable(
+    FarmSkills? farm,
+    List<String> fishTree = const [],
+  })  : farm = farm ?? FarmSkills.initial,
+        fishTree = List.unmodifiable(fishTree.toSet()),
+        rods = List.unmodifiable(
             {kStarterRod, ...rods.where(kRods.containsKey)}),
         rod = rod != null && kRods.containsKey(rod) &&
                 (rods.contains(rod) || rod == kStarterRod)
@@ -45,6 +52,12 @@ class LifeSkills {
   /// Capturas sin cofre ni arma del agua (pity del botín, fishing.md § 8).
   final int dry;
 
+  /// Cultivo (farming.md § 3).
+  final FarmSkills farm;
+
+  /// Nodos tomados del árbol de Pesca (life_skill_trees.md).
+  final List<String> fishTree;
+
   int count(String species) => bag[species] ?? 0;
   int get bagTotal => bag.values.fold(0, (a, b) => a + b);
 
@@ -55,6 +68,8 @@ class LifeSkills {
     Map<String, int>? bag,
     int? pity,
     int? dry,
+    FarmSkills? farm,
+    List<String>? fishTree,
   }) =>
       LifeSkills(
           fishXp: fishXp ?? this.fishXp,
@@ -62,7 +77,9 @@ class LifeSkills {
           rod: rod ?? this.rod,
           bag: bag ?? this.bag,
           pity: pity ?? this.pity,
-          dry: dry ?? this.dry);
+          dry: dry ?? this.dry,
+          farm: farm ?? this.farm,
+          fishTree: fishTree ?? this.fishTree);
 
   LifeSkills addFish(String species, [int n = 1]) =>
       copyWith(bag: {...bag, species: count(species) + n});
@@ -74,6 +91,8 @@ class LifeSkills {
         if (bag.isNotEmpty) 'bag': bag,
         if (pity > 0) 'pity': pity,
         if (dry > 0) 'dry': dry,
+        'farm': farm.toJson(),
+        if (fishTree.isNotEmpty) 'ft': fishTree,
       };
 
   /// Tolerante; sin `life` (saves de antes de v0.22.0) → [initial]: así
@@ -92,6 +111,10 @@ class LifeSkills {
           : const {},
       pity: n(raw['pity']),
       dry: n(raw['dry']),
+      farm: FarmSkills.fromJson(raw['farm']),
+      fishTree: raw['ft'] is List
+          ? [for (final x in raw['ft'] as List) if (x is String) x]
+          : const [],
     );
   }
 
@@ -102,6 +125,8 @@ class LifeSkills {
       other.rod == rod &&
       other.pity == pity &&
       other.dry == dry &&
+      other.farm == farm &&
+      other.fishTree.join(',') == fishTree.join(',') &&
       other.rods.join(',') == rods.join(',') &&
       other.bag.length == bag.length &&
       bag.entries.every((e) => other.bag[e.key] == e.value);

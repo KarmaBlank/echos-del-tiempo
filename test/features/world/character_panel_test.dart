@@ -30,10 +30,14 @@ void main() {
         build: (v, c) => CharacterPanel(view: v, controller: c));
     // Regla pixel: ninguna pestaña de PERSONAJE tiene redondeos.
     for (var i = 0; i < CharacterTab.values.length; i++) {
+      await tester.ensureVisible(find.byKey(ValueKey('tab-$i')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(ValueKey('tab-$i')));
       await tester.pumpAndSettle();
       expect(roundedUi(tester), isEmpty, reason: 'pestaña $i');
     }
+    await tester.ensureVisible(find.byKey(const ValueKey('tab-0')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('tab-0')));
     await tester.pumpAndSettle();
     final before = progression.derivedStats(start);
@@ -102,8 +106,8 @@ void main() {
   testWidgets(
       'personaje: "−" quita lo pendiente; sin pendiente se ve apagado y '
       'explica REINICIAR PUNTOS', (tester) async {
-    final start = progression.normalize(
-        PlayerProfile(name: 'Ana', classId: 'guerrero', level: 3));
+    final start = progression
+        .normalize(PlayerProfile(name: 'Ana', classId: 'guerrero', level: 3));
     final c = await pumpPanel(tester,
         profile: start,
         build: (v, c) => CharacterPanel(view: v, controller: c));
@@ -138,8 +142,10 @@ void main() {
     // El host no acepta repartos negativos (no baja del base).
     final p = c.view!.me!.profile;
     expect(progression.allocate(p, {Attribute.fue: -1}), isNull);
-    expect(progression.allocate(p, {Attribute.fue: -1, Attribute.vit: 1})
-        ?.attributes[Attribute.fue], p.attributes[Attribute.fue]);
+    expect(
+        progression.allocate(p,
+            {Attribute.fue: -1, Attribute.vit: 1})?.attributes[Attribute.fue],
+        p.attributes[Attribute.fue]);
   });
 
   testWidgets('personaje: cambio de clase en el lobby y equipar en Inventario',
@@ -153,7 +159,8 @@ void main() {
         build: (v, c) => CharacterPanel(view: v, controller: c));
     // Pestaña INVENTARIO con la Ígnea elegida en la grilla.
     Future<void> armas() async {
-      await tapVisible(tester, find.byKey(const ValueKey('tab-1')));
+      await tapVisible(
+          tester, find.byKey(ValueKey('tab-${CharacterTab.inventory.index}')));
       final cell = InventoryRules.layout(c.view!.me!.profile)
           .cells
           .indexOf('espada_ignea');

@@ -94,6 +94,10 @@ abstract final class Tile {
   /// Cartel del lago (sólido).
   static const sign = 'Y';
 
+  /// Tierra de la huerta (caminable; farming.md § 2, v0.23.0). Las
+  /// parcelas aradas y los cultivos se dibujan encima, desde el estado.
+  static const soil = 'u';
+
   /// Púas de la Prueba del Tiempo (caminables: dañan).
   static const spikes = 'x';
 

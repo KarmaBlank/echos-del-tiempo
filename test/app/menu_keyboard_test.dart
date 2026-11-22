@@ -147,11 +147,11 @@ void main() {
     await _key(tester, LogicalKeyboardKey.arrowDown);
     expect(_focusedKey(), 'inc-esp');
     await _key(tester, LogicalKeyboardKey.keyE);
-    expect(_tab(tester, CharacterTab.inventory.index), isTrue);
+    expect(_tab(tester, CharacterTab.oficios.index), isTrue);
     await _key(tester, LogicalKeyboardKey.keyQ);
     expect(_tab(tester, CharacterTab.attributes.index), isTrue);
     await _key(tester, LogicalKeyboardKey.digit3);
-    expect(_tab(tester, CharacterTab.tree.index), isTrue);
+    expect(_tab(tester, CharacterTab.inventory.index), isTrue);
     await _key(tester, LogicalKeyboardKey.keyQ);
     await _key(tester, LogicalKeyboardKey.keyQ);
     expect(_tab(tester, CharacterTab.attributes.index), isTrue);

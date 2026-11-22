@@ -37,6 +37,8 @@ import 'tile_cache.dart';
 import 'tile_painter.dart';
 import 'void_painter.dart';
 import 'fishing_layer.dart';
+import 'farm_layer.dart';
+import '../../../../game_engine/data/farming_catalog.dart' show kCrops, CropQuality;
 import '../../../inventory/presentation/item_widgets.dart' show RarityColors;
 import '../panels/fishing_widgets.dart' show fishRarityColor;
 import '../../../../game_engine/data/fishing_catalog.dart';
@@ -121,6 +123,9 @@ class MapGame extends Game {
 
   /// Pesca en el mapa (fishing.md § 4).
   final fishing = MapFishingLayer();
+
+  /// Huerta del pueblo (farming.md § 2.3).
+  final farm = MapFarmLayer();
   final _lastBobber = <String, (double, double)>{};
 
   /// Lo último dibujado: en [update] se graba de antemano un bloque de la
@@ -165,6 +170,17 @@ class MapGame extends Game {
   /// Dónde se dibuja el mundo virtual dentro de [screen].
   Rect viewRect(Size screen) =>
       mapViewRect(screen, Size(vw.toDouble(), vh.toDouble()), scaleMode);
+
+  /// El tile del mundo bajo el punto [p] de la pantalla (para el tooltip
+  /// de las parcelas; farming.md § 2.4).
+  (int, int)? tileAtScreen(Offset p) {
+    final r = viewRect(Size(size.x, size.y));
+    if (!r.contains(p) || r.width <= 0) return null;
+    final k = vw / r.width;
+    final wx = (p.dx - r.left) * k + camX.roundToDouble();
+    final wy = (p.dy - r.top) * k + camY.roundToDouble();
+    return ((wx / ts).floor(), (wy / ts).floor());
+  }
 
   /// Cámara (`cam`), esquina superior izquierda en px del mundo.
   double camX = 0, camY = 0;
@@ -340,6 +356,33 @@ class MapGame extends Game {
             fishRarityColor(def?.rarity ?? FishRarity.comun),
             t);
       }
+    }
+    if (e
+        case CropHarvestedEvent(
+          :final playerId,
+          :final crop,
+          :final quality,
+          :final count,
+          :final tx,
+          :final ty,
+          :final helper
+        )) {
+      final def = kCrops[crop];
+      final q = CropQuality.values[quality.clamp(0, CropQuality.values.length - 1)];
+      final rar = def?.rarity ?? FishRarity.comun;
+      farm.addPop(
+          helper ? '' : playerId,
+          tx,
+          ty,
+          '${count > 1 ? '$count × ' : ''}${def?.name ?? crop} (${q.label})',
+          fishRarityColor(FishRarity.values[q.index.clamp(0, 3)]),
+          FarmPalette.fruit[rar.index.clamp(0, 3)],
+          t);
+    }
+    if (e case FarmLootEvent(:final playerId, :final label, :final rarity, :final tx, :final ty)) {
+      final r = Rarity.values[rarity.clamp(0, Rarity.values.length - 1)];
+      farm.addPop(playerId, tx, ty, label, RarityColors.of(r),
+          RarityColors.of(r), t + 250);
     }
     if (e case QuestDoneEvent(:final kind)) {
       _questT0 = t;
@@ -587,6 +630,8 @@ class MapGame extends Game {
       for (final l in TownLayout.landmarks) {
         actors.text(c, l.name, l.center.x, l.y * ts - 8, TownPalette.label, 6);
       }
+      farm.drawZoneLabels(c, s.town,
+          (txt, x, y, col, size) => actors.text(c, txt, x, y, col, size));
     }
 
     // Loot en el piso (debajo de los actores; docs/specs/loot.md § 4).
@@ -601,7 +646,11 @@ class MapGame extends Game {
       _seen.putIfAbsent(l.ground.id, () => t);
       loot.drawItem(c, l, t);
     }
-    if (map.lobby) fishing.drawShadows(c);
+    if (map.lobby) {
+      fishing.drawShadows(c);
+      farm.drawPlots(c, s.town, worldView, t);
+      farm.drawHelper(c, s.town, t);
+    }
 
     // Entidades ordenadas por y (desempate: orden de llegada).
     final ents = <(double, int, void Function())>[];
@@ -731,6 +780,8 @@ class MapGame extends Game {
     }
     if (map.lobby) {
       fishing.drawPops(c, t, (id) => _lastDrawn[id],
+          (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
+      farm.drawPops(c, t, (id) => _lastDrawn[id],
           (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
     }
 

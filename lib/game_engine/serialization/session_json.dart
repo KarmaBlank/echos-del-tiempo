@@ -19,6 +19,7 @@ import '../models/status.dart';
 import '../models/upgrade_stat.dart';
 import '../models/weapon.dart';
 import '../models/tutorial.dart';
+import '../models/world_save.dart' show TownState;
 import 'json_read.dart';
 import 'run_json.dart';
 
@@ -87,6 +88,8 @@ class SessionJson {
         // § 11c).
         if (s.worldId != null) 'wid': s.worldId,
         if (s.worldName != null) 'wname': s.worldName,
+        // v0.23.0 (protocolo 44): huerta, ampliaciones y lago.
+        if (s.town.farmJson() case final t when t.isNotEmpty) 'town': t,
       };
 
   GameSession fromJson(Json j) {
@@ -135,6 +138,7 @@ class SessionJson {
           : [for (final raw in j.list('lost')) groundFromJson(asJson(raw))],
       worldId: j.strOrNull('wid'),
       worldName: j.strOrNull('wname'),
+      town: TownState.fromJson(j['town']),
     );
   }
 

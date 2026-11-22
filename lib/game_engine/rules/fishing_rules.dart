@@ -4,6 +4,7 @@ import '../data/fishing_catalog.dart';
 import '../data/tuning_catalog.dart';
 import '../models/item.dart' show CraftMaterial;
 import '../models/player_profile.dart';
+import 'life_tree_rules.dart';
 
 /// Un pez sacado (o por sacar): especie, tamaño y rareza.
 class FishCatch {
@@ -75,7 +76,12 @@ abstract final class FishingRules {
   static ({double bite, double zone, double rare}) rodBonus(PlayerProfile p) {
     final r = kRods[p.life.rod] ?? kRods[kStarterRod]!;
     final k = effectiveness(level(p), r.reqLevel);
-    return (bite: r.biteSpeed * k, zone: r.zoneBonus * k, rare: r.rareBonus * k);
+    // Árbol de Pesca (life_skill_trees.md § 2).
+    return (
+      bite: r.biteSpeed * k + LifeTreeRules.fish(p, LifeFx.bite),
+      zone: r.zoneBonus * k + LifeTreeRules.fish(p, LifeFx.zone),
+      rare: r.rareBonus * k + LifeTreeRules.fish(p, LifeFx.legend),
+    );
   }
 
   // ---------------- tiradas ----------------
@@ -137,7 +143,8 @@ abstract final class FishingRules {
     }
     final lv = t.d('lootLevelBonus') * (level(p) - 1);
     final good = 1 + lv + math.max(0, luck);
-    if (rand() >= t.d('lootChance') * (1 + lv)) return WaterLootKind.fish;
+    final tree = 1 + LifeTreeRules.fish(p, LifeFx.loot);
+    if (rand() >= t.d('lootChance') * (1 + lv) * tree) return WaterLootKind.fish;
     final w = {
       WaterLootKind.basura: t.d('lootBasura'),
       WaterLootKind.materiales: t.d('lootMateriales') * good,
@@ -193,7 +200,9 @@ abstract final class FishingRules {
     final l = p.life;
     return p.copyWith(
         life: l.addFish(c.species).copyWith(
-            fishXp: l.fishXp + fishXp(c, auto: auto),
+            fishXp: l.fishXp +
+                (fishXp(c, auto: auto) * (1 + LifeTreeRules.fish(p, LifeFx.xp)))
+                    .round(),
             pity: auto
                 ? l.pity
                 : c.rarity == FishRarity.legendario
@@ -229,6 +238,7 @@ abstract final class FishingRules {
       take(species, k);
     }
     if (sold == 0) return null;
+    value = (value * (1 + LifeTreeRules.fish(p, LifeFx.sell))).round();
     var credits = value, esq = 0;
     if (materials) {
       final v = (value * t.d('matRate')).round();

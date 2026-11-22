@@ -159,7 +159,10 @@ class BalanceBase {
         BalanceKind.consumables ||
         BalanceKind.travesia ||
         BalanceKind.combatLimits ||
-        BalanceKind.exploration =>
+        BalanceKind.exploration ||
+        BalanceKind.farming ||
+        BalanceKind.town ||
+        BalanceKind.lifeTree =>
           {k.jsonKey: kTuningDefaults[k.jsonKey]!},
         BalanceKind.featReward => kAchievementsById,
       };

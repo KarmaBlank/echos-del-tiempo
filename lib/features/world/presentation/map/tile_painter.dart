@@ -288,6 +288,12 @@ class TilePainter {
         }
       case Tile.grass:
         _grass(c, th, px, py, h);
+      // Tierra de la huerta (farming.md § 2.3): lo arado y los cultivos
+      // los dibuja la capa de la huerta, desde el estado.
+      case Tile.soil:
+        _rect(c, FarmPalette.soil, px, py, ts, ts);
+        if (h % 3 == 0) _rect(c, FarmPalette.soilDark, px + 3 + h % 7, py + 4 + h % 5, 2, 1);
+        if (h % 5 == 1) _rect(c, FarmPalette.soilDark, px + 9, py + 11, 2, 1);
       case Tile.tree:
         _grass(c, th, px, py, h);
         _tree(c, th, px, py, h);
@@ -496,6 +502,7 @@ class TilePainter {
   /// incluidos). Ver worldgen.md § 7.6.
   static bool handles(String ch) =>
       const {
+        Tile.soil,
         Tile.floor,
         Tile.path,
         Tile.wall,

@@ -207,3 +207,16 @@ arma, con Pesca nivel `lootLegendLevel` (15) o más y una caña de rareza
 `lootLegendRod` (2 = épica) o mejor: `lootLegendChance` (1 %). Nombres
 y textos con el lore base (ecos, pasado magitec); esperan el OK del
 dueño.
+
+## 9. v0.23.0: comerciante con pestañas, PESCA Y CULTIVO y árbol
+
+- El comerciante tiene pestañas PESCA y CULTIVO, cada una con COMPRAR y
+  VENDER (buscador en las listas largas). Lo de cultivo: farming.md § 9.
+- PERSONAJE → PESCA Y CULTIVO (solo en el pueblo): cañas, pescados (con
+  SOLTAR EN EL LAGO), basura del agua y lo de la huerta; no usa
+  casilleros del inventario (farming.md § 11).
+- Botín del agua que no entra (equipo con la mochila llena): va al alijo
+  por el camino de recuperación (`StashAck`), no se pierde. Los
+  materiales al tope siguen la regla de siempre.
+- Árbol de talentos de Pesca: `life_skill_trees.md` § 3. Peces soltados
+  en el lago y cría: farming.md § 7.

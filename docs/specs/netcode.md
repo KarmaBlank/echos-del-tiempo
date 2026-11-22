@@ -758,6 +758,19 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 44 (v0.23.0: huerta, pueblo y oficios)
+
+- Snapshot: `town` (farming.md § 10): lago (`lake`), ampliaciones
+  (`exp`), zonas (`zones`), parcelas con sus aportes (`plots`), peces
+  soltados (`stock`), ayudante (`helper`) y granero (`silo`). El cliente
+  arma el mapa del pueblo con eso (`MapGenerator.townOf`).
+- Acciones nuevas: `farm`, `farmShop`, `town`, `lifeTree`. Eventos
+  nuevos: `cHarv` (cosecha, con el pop) y `cLoot` (hallazgo de la tierra).
+- El botín del agua que no entra va al alijo por el mismo camino de
+  recuperación (`StashAck`).
+- Un cliente 43 vería otro mapa del pueblo y no podría cultivar: la sala
+  no mezcla versiones.
+
 ## Mundo, protocolo 43 (v0.22.2: pesca en el mapa)
 
 - Acción nueva `fLn {l?}` (fishing.md § 7): lo que se ve de la pesca de

@@ -30,6 +30,9 @@ abstract final class TuningId {
   static const exploration = 'exploration';
   static const mission = 'mission';
   static const fishing = 'fishing';
+  static const farming = 'farming';
+  static const town = 'town';
+  static const lifeTree = 'lifeTree';
 }
 
 /// Los valores del código.
@@ -111,6 +114,151 @@ const Map<String, TuningDef> kTuningDefaults = {
     'matValue': 25,
     'legendCristales': 3,
     'legendPrismas': 1,
+  }),
+  // farming.md (v0.23.0): Cultivo, herramientas, huerta y comerciante.
+  TuningId.farming: TuningDef('Cultivo', {
+    // Nivel: misma forma que Pesca.
+    'maxLevel': 30,
+    'xpBase': 40,
+    'xpExp': 1.5,
+    // × de XP de Cultivo por rareza del cultivo.
+    'xpComun': 1,
+    'xpRaro': 2.5,
+    'xpEpico': 6,
+    'xpLegendario': 15,
+    // XP de personaje por rareza y tope por estadía en el pueblo.
+    'charXpComun': 2,
+    'charXpRaro': 5,
+    'charXpEpico': 12,
+    'charXpLegendario': 30,
+    'charXpCap': 60,
+    // Herramientas (town_loop.md § 11c).
+    'bonusFloor': 0.4,
+    'bonusCurve': 1.5,
+    // Crecimiento: × sin regar, segundos de riego, segundos que suma cada
+    // misión ganada y XP por arar/plantar/regar. Un regador de nivel bajo
+    // riega más lento: × crecimiento = waterRateMin + (1 − min) × efect.
+    'dryRate': 0.35,
+    'waterSec': 240,
+    'waterRateMin': 0.6,
+    'missionGrowSec': 420,
+    'workXp': 1,
+    // Calidad (farming.md § 3): pesos base de normal / rara / épica /
+    // legendaria; el puntaje S de los aportes multiplica la rara × (1+S),
+    // la épica × (1+S)^2 y la legendaria × (1+S)^3.
+    'wQNormal': 70,
+    'wQRaro': 22,
+    'wQEpico': 7,
+    'wQLegendario': 1,
+    // Aporte de cada uno al puntaje S: quien planta (potencial), los
+    // riegos (calidad media × fracción regada) y quien cosecha (pesa más).
+    'sPlant': 0.6,
+    'sWater': 0.5,
+    'sHarvest': 1.4,
+    // Puntaje de una persona: base + nivel × perLevel + herramienta +
+    // árbol (el «quality» de sus nodos).
+    'pBase': 0.05,
+    'pPerLevel': 0.04,
+    // Abonos: sesgo al puntaje y × de crecimiento por tipo.
+    'fertComunBias': 0.4,
+    'fertComunSpeed': 1.15,
+    'fertRunicoBias': 1,
+    'fertRunicoSpeed': 1.3,
+    'fertEcoBias': 2,
+    'fertEcoSpeed': 1.5,
+    // × de precio y XP por calidad.
+    'qualityMultNormal': 1,
+    'qualityMultRaro': 1.3,
+    'qualityMultEpico': 1.8,
+    'qualityMultLegendario': 3,
+    // Semillas: chance de que la cosecha devuelva una (no legendarias).
+    'seedDropChance': 0.4,
+    // Hallazgos de la huerta (farming.md § 5): chance, pesos, mejora por
+    // nivel, pity del hallazgo y de la semilla legendaria.
+    'lootChance': 0.07,
+    'lootSemilla': 60,
+    'lootMateriales': 35,
+    'lootLegendaria': 5,
+    'lootLevelBonus': 0.03,
+    'lootPityAfter': 40,
+    'legendPityAfter': 150,
+    'lootMatMin': 1,
+    'lootMatMax': 2,
+    // Comerciante: × en materiales, oro por Esquirla y canje de un
+    // legendario.
+    'matRate': 1.2,
+    'matValue': 25,
+    'legendCristales': 3,
+    'legendPrismas': 1,
+    // Validación del host: alcance (px) y segundos entre labores.
+    'reachPx': 30,
+    'minWorkSec': 0.15,
+  }),
+  // farming.md § 6–8 (v0.23.0): ampliaciones, lago y ayudante.
+  TuningId.town: TuningDef('Pueblo', {
+    // Ampliaciones (cada una suma una franja con 2 espacios): tope y costo
+    // de la n-ésima (oro = base × mult^(n−1); Esquirlas × n; Cristales
+    // desde la 2.ª).
+    'maxExpansions': 3,
+    'expGoldBase': 1500,
+    'expGoldMult': 2.5,
+    'expEsquirlas': 6,
+    'expCristales': 2,
+    // Lago: capacidad base y por zona de LAGO, peso extra por pez
+    // soltado (tope por especie), rareza por zona y por especie criando,
+    // chance de cría por misión ganada.
+    'lakeBase': 6,
+    'lakePerZone': 8,
+    'stockWeight': 1,
+    'stockWeightCap': 4,
+    'lakeZoneRare': 0.05,
+    'breedRare': 0.03,
+    'breedRareCap': 0.15,
+    'breedChance': 0.35,
+    // Ayudante: nivel de Cultivo para contratar, costo (× nivel), tope,
+    // parcelas por nivel, cada cuántos segundos trabaja, × de XP al que
+    // recoge el granero.
+    'helperLevel': 5,
+    'helperCost': 800,
+    'helperMax': 3,
+    'helperPlots': 8,
+    'helperEverySec': 45,
+    'helperXpShare': 0.1,
+  }),
+  // life_skill_trees.md (v0.23.0): puntos y valor de cada nodo.
+  TuningId.lifeTree: TuningDef('Oficios: árboles', {
+    'pointsPerLevel': 1,
+    'p_r': 0.05,
+    'p_a1': 0.06,
+    'p_a2': 0.08,
+    'p_a3': 0.1,
+    'p_a4': 0.1,
+    'p_a4_2': 0.1,
+    'p_m': 0.1,
+    'p_b1': 0.15,
+    'p_b2': 0.2,
+    'p_b3': 0.1,
+    'p_b4': 0.2,
+    'p_k1': 1,
+    'p_k2': 0.15,
+    'p_f': 0.1,
+    'p_f_2': 0.15,
+    'c_r': 0.05,
+    'c_a1': 0.08,
+    'c_a2': 0.3,
+    'c_a3': 0.12,
+    'c_a4': 0.12,
+    'c_a4_2': 0.1,
+    'c_m': 0.1,
+    'c_b1': 0.1,
+    'c_b2': 0.1,
+    'c_b3': 0.25,
+    'c_b4': 0.2,
+    'c_b4_2': 0.15,
+    'c_k1': 0.5,
+    'c_k2': 0.15,
+    'c_f': 0.1,
+    'c_f_2': 0.15,
   }),
   // world.md § "Colisión y movimiento": px/s del jugador en el campo
   // (v0.20.19: 78 → 98, +25 %).

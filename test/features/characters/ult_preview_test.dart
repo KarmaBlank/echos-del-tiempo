@@ -79,7 +79,9 @@ void main() {
 
   test('números de ejemplo según la ULT y el nivel', () {
     final dmg = kUltV2List.firstWhere((u) =>
-        u.skill.power > 0 && u.skill.charge == 0 && u.skill.hits <= 1 &&
+        u.skill.power > 0 &&
+        u.skill.charge == 0 &&
+        u.skill.hits <= 1 &&
         u.skill.kind.name == 'physical');
     final a = ultPreviewSamples(UltRules.leveled(dmg.skill, 1),
         attack: 100, magic: 10, maxHp: 100);
@@ -99,6 +101,8 @@ void main() {
     var notes = 0;
     final remove = c.addListener((_) => notes++, fireImmediately: false);
     addTearDown(remove);
+    await tester.ensureVisible(find.byKey(ValueKey('tab-$ultTab')));
+    await tester.pump();
     await tester.tap(find.byKey(ValueKey('tab-$ultTab')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 16));
@@ -140,7 +144,9 @@ void main() {
     // Cambiar de pestaña con la vista previa corriendo.
     await tester.tap(find.byKey(const ValueKey('tab-0')));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 16));
+    // La barra de pestañas se desliza hasta la elegida (v0.23.0: más
+    // pestañas que el ancho).
+    await tester.pump(const Duration(milliseconds: 600));
     expect(find.byKey(const ValueKey('ult-preview')), findsNothing);
     expect(tester.binding.hasScheduledFrame, isFalse);
   });
@@ -151,6 +157,8 @@ void main() {
           profile: newProfile('Ana', 'maga'),
           textSize: size,
           build: (v, c) => CharacterPanel(view: v, controller: c));
+      await tester.ensureVisible(find.byKey(ValueKey('tab-$ultTab')));
+      await tester.pump();
       await tester.tap(find.byKey(ValueKey('tab-$ultTab')));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('ult-preview')), findsOneWidget);
@@ -164,28 +172,26 @@ void main() {
     for (final (w, narrow) in [(520.0, true), (1000.0, false)]) {
       await pumpPanel(tester,
           profile: newProfile('Ana', 'guerrero'),
-          textSize: TextSize.huge,
-          build: (v, c) {
-            final rules = c.engine.progression;
-            final p = v.actor!.profile;
-            return Align(
-                alignment: Alignment.topLeft,
-                child: SizedBox(
-                    width: w,
-                    height: 700,
-                    child: UltRepertoireView(
-                        profile: p,
-                        weapon: rules.equippedWeapon(p),
-                        item: rules.equippedItem(p),
-                        editable: true,
-                        stats: rules.derivedStats(p),
-                        onSelect: (_) => true,
-                        onUpgrade: (_) => true)));
-          });
+          textSize: TextSize.huge, build: (v, c) {
+        final rules = c.engine.progression;
+        final p = v.actor!.profile;
+        return Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+                width: w,
+                height: 700,
+                child: UltRepertoireView(
+                    profile: p,
+                    weapon: rules.equippedWeapon(p),
+                    item: rules.equippedItem(p),
+                    editable: true,
+                    stats: rules.derivedStats(p),
+                    onSelect: (_) => true,
+                    onUpgrade: (_) => true)));
+      });
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: '$w');
-      final preview =
-          tester.getRect(find.byKey(const ValueKey('ult-preview')));
+      final preview = tester.getRect(find.byKey(const ValueKey('ult-preview')));
       final header = tester.getRect(find.text('ULT EQUIPADA'));
       if (narrow) {
         expect(preview.bottom, lessThanOrEqualTo(header.top));
