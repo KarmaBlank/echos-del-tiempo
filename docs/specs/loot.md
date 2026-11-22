@@ -190,7 +190,7 @@ el arma adentro. Regla: **un jugador nunca pierde loot que era suyo**.
     el JSON) para no llenar el alijo de cosas que eligió no ver;
   - solo lo de alguien que ya no está en la sala se descarta en el host
     (su dispositivo ya lo guardó al salir, ver abajo).
-- v0.20.22 (protocolo 38): al **volver al pueblo** (`toLobby`) ya no se
+- v0.20.22 (protocolo 39): al **volver al pueblo** (`toLobby`) ya no se
   recupera nada al alijo de cada uno: todo lo del piso va al pozo
   compartido Loot perdido de la sala (missions.md § "Loot perdido"),
   que se borra al empezar la próxima misión. Lo de arriba sigue valiendo

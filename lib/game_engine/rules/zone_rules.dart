@@ -41,6 +41,18 @@ abstract final class ZoneRules {
   static int groupsPerFloor(int floorGoal) => math.max(floorGoal,
       ((floorGoal + 3) * tuning(TuningId.mission).d('groupScale')).round());
 
+  /// Tiempo del rango S de [m] jugada con [played] pisos: se achica en
+  /// proporción a los pisos y a los grupos normales por piso, así S no
+  /// se vuelve más fácil con misiones cortas (worldgen.md § 6.8).
+  static double sTimeFor(MissionDef m, int played) {
+    if (m.floorGoal <= 0 || m.floors <= 1 && played <= 1) {
+      return m.sTime.toDouble();
+    }
+    final floors = played / math.max(1, m.floors);
+    final groups = groupsPerFloor(m.floorGoal) / (m.floorGoal + 3);
+    return m.sTime * math.min(1.0, floors * groups);
+  }
+
   /// Nivel de los enemigos del piso [floor] (desde 0).
   static int floorLevel(ZoneDef z, int floor) =>
       z.minLevel +

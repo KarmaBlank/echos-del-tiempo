@@ -136,6 +136,7 @@ class Combatant {
     this.summonTurns = 0,
     this.summonKills = 0,
     this.pulse = 0,
+    this.ultBonusTurn = 0,
     this.chained = false,
     this.guardStreak = false,
     this.guardHitPending = false,
@@ -383,6 +384,11 @@ class Combatant {
   /// `pulseStart`). Enemigos e invocaciones: 0.
   int pulse;
 
+  /// Carga de ULT extra (árbol, mods, efectos) ganada desde que empezó su
+  /// turno en curso, con tope por turno (combat.md § "Límites"). Vuelve a
+  /// 0 al empezar su turno.
+  double ultBonusTurn;
+
   /// Ya usó una habilidad Instante en este turno: el turno sigue para
   /// una acción más, pero no otra Instante encadenada.
   bool chained;
@@ -553,6 +559,7 @@ class Combatant {
         summonTurns: summonTurns,
         summonKills: summonKills,
         pulse: pulse,
+        ultBonusTurn: ultBonusTurn,
         chained: chained,
         guardStreak: guardStreak,
         guardHitPending: guardHitPending,

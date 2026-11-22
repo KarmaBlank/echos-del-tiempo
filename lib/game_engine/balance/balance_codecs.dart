@@ -81,6 +81,9 @@ enum BalanceKind {
   /// (roguelike.md § 4 y § 8). El Mundo no lo lee.
   travesia('travesia', 'Travesía', 'Ajustes de la Travesía'),
 
+  /// Efectos encadenados, tope por golpe de jefes y élites, "aguanta una
+  /// ronda" y velocidad (combat.md § "Límites").
+  combatLimits('combatLimits', 'Combate: límites', 'Límites de combate'),
   /// Movimiento en el mapa de campo (world.md § "Colisión y movimiento").
   exploration('exploration', 'Exploración', 'Ajustes de exploración');
 
@@ -1228,6 +1231,21 @@ final travesiaCodec = _tuningCodec(BalanceKind.travesia, const [
   BalanceField('weaponLevelAhead', 'Armas ofrecidas: niveles sobre los enemigos', _int, max: 20),
 ]);
 
+final combatLimitsCodec = _tuningCodec(BalanceKind.combatLimits, const [
+  BalanceField('procMax', 'Efectos encadenados: máximo por acción', _int, min: 1, max: 200),
+  BalanceField('procDepth', 'Efectos encadenados: profundidad máxima', _int, min: 1, max: 20),
+  BalanceField('capBoss', 'Tope por golpe: jefe (fracción de vida, 0 = sin tope)', _frac, max: 1, step: 0.01),
+  BalanceField('capElite', 'Tope por golpe: élite (fracción de vida, 0 = sin tope)', _frac, max: 1, step: 0.01),
+  BalanceField('capCommon', 'Tope por golpe: común (fracción de vida, 0 = sin tope)', _frac, max: 1, step: 0.01),
+  BalanceField('holdCoop', 'Aguanta una ronda en cooperativo (1 = sí)', _int, max: 1),
+  BalanceField('holdSolo', 'Aguanta una ronda en solitario (1 = sí)', _int, max: 1),
+  BalanceField('turnsPerSlowest', 'Turnos máx. por turno del aliado más lento (0 = sin tope)', _dec, max: 10, step: 0.5),
+  BalanceField('speedSoftCap', 'Velocidad: umbral de rendimiento decreciente', _dec, min: 1, max: 100, step: 1),
+  BalanceField('speedSoftFactor', 'Velocidad: rinde × sobre el umbral', _frac, max: 1, step: 0.05),
+  BalanceField('ultBonusAction', 'ULT extra (árbol, mods, efectos): tope por acción', _dec, max: 100, step: 1),
+  BalanceField('ultBonusTurn', 'ULT extra (árbol, mods, efectos): tope por turno', _dec, max: 100, step: 1),
+]);
+
 final materialsCodec = _tuningCodec(BalanceKind.materials, const [
   BalanceField('chanceEsquirla', 'Drop: Esquirla (prob. base)', _frac, max: 1, step: 0.005),
   BalanceField('chanceCristal', 'Drop: Cristal (prob. base)', _frac, max: 1, step: 0.005),
@@ -1324,6 +1342,7 @@ EntityCodec codecOf(BalanceKind k) => switch (k) {
       BalanceKind.featReward => featRewardCodec,
       BalanceKind.consumables => consumablesCodec,
       BalanceKind.travesia => travesiaCodec,
+      BalanceKind.combatLimits => combatLimitsCodec,
       BalanceKind.exploration => explorationCodec,
     };
 
@@ -1337,5 +1356,6 @@ const kTuningKinds = [
   BalanceKind.ecoTier,
   BalanceKind.consumables,
   BalanceKind.travesia,
+  BalanceKind.combatLimits,
   BalanceKind.exploration,
 ];

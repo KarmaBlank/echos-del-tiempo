@@ -727,7 +727,7 @@ ni la sesión ni `features/*` miran el nombre del flavor.
 
 | Juego | id (`g`) | `v` | Constante |
 |---|---|---|---|
-| Ecos del Tiempo (Mundo) | `mundo` | 38 | `kProtocolVersion` |
+| Ecos del Tiempo (Mundo) | `mundo` | 39 | `kProtocolVersion` |
 | Ecos del Tiempo: Travesía | `travesia` | 4 | `kTravesiaProtocolVersion` |
 
 - `hello` lleva `g` (el id del juego del cliente). Es aditivo: un host
@@ -758,10 +758,10 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
-## Mundo, protocolo 38 (v0.20.22: vuelta con LISTO y Loot perdido)
+## Mundo, protocolo 39 (v0.20.22: vuelta con LISTO y Loot perdido)
 
 - Tras vencer al jefe el modo es `field` con `result` puesto (antes
-  `result`): un cliente 37 mostraría el campo sin ventana ni LISTO.
+  `result`): un cliente 38 mostraría el campo sin ventana ni LISTO.
 - Snapshot suma `lr` (ids listos para volver, opcional) y `lost` (pozo
   Loot perdido, misma forma que `ground[]`, opcional).
 - Acciones nuevas: `LeaveReadyAction` `{"t":"leave","ok":true}` y

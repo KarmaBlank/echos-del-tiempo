@@ -3588,10 +3588,12 @@ class _Op {
     final m = s.mission!;
     final t = m.elapsed;
     var rank = MissionRank.d;
+    // v0.20.22: el tiempo S se achica con la misión (worldgen.md § 6.8).
+    final sTime = ZoneRules.sTimeFor(def, m.floors);
     if (ok) {
-      rank = t <= def.sTime && m.kos == 0
+      rank = t <= sTime && m.kos == 0
           ? MissionRank.s
-          : t <= def.sTime * 1.5
+          : t <= sTime * 1.5
               ? MissionRank.a
               : MissionRank.b;
     }

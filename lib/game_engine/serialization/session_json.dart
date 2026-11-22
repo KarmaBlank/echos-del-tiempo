@@ -75,7 +75,7 @@ class SessionJson {
         if (s.tutorialRuns != 0) 'tutN': s.tutorialRuns,
         // Travesía (protocolo Travesía 1; roguelike.md): opcional.
         if (s.run != null) 'run': RunJson.toJson(s.run!),
-        // v0.20.22 (protocolo 38): LISTO tras la victoria y Loot perdido.
+        // v0.20.22 (protocolo 39): LISTO tras la victoria y Loot perdido.
         if (s.leaveReady.isNotEmpty) 'lr': [...s.leaveReady],
         if (s.lostLoot.isNotEmpty)
           'lost': [for (final g in s.lostLoot) groundToJson(g)],
@@ -657,6 +657,7 @@ class SessionJson {
         if (c.summonKills != 0) 'smN': c.summonKills,
         // Pulso e Instante v0.9 (opcionales; combo_balance.md § 5.2).
         if (c.pulse != 0) 'pls': c.pulse,
+        if (c.ultBonusTurn != 0) 'ubt': c.ultBonusTurn,
         if (c.chained) 'chn': true,
         if (c.guardStreak) 'gst': true,
         if (c.guardHitPending) 'ghp': true,
@@ -790,6 +791,7 @@ class SessionJson {
       summonTurns: j.intOrNull('smT') ?? 0,
       summonKills: j.intOrNull('smN') ?? 0,
       pulse: j.intOrNull('pls') ?? 0,
+      ultBonusTurn: j.dblOrNull('ubt') ?? 0,
       chained: j.flag('chn'),
       guardStreak: j.flag('gst'),
       guardHitPending: j.flag('ghp'),

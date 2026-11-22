@@ -22,6 +22,7 @@ import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../app/widgets/menu_focus.dart';
 import '../../../../core/settings/settings_providers.dart';
+import '../../../../game_engine/rules/battle_engine.dart';
 import '../../../../game_engine/rules/build_guide_rules.dart';
 import '../../../../game_engine/models/attributes.dart';
 import '../../../../game_engine/models/bestiary.dart';
@@ -328,6 +329,11 @@ class _CharacterPanelState extends State<CharacterPanel> {
             CharacterTab.build => BuildPlannerView.help,
             CharacterTab.bestiary => BestiaryView.help,
             CharacterTab.achievements => AchievementsView.help,
+            // combat.md § "Límites": nada se encadena sin fin.
+            CharacterTab.tree => '${CharacterPanel.help}<br>Los efectos '
+                'encadenados tienen un límite: como máximo '
+                '${BattleEngine.maxProcsPerStep} por acción, y una cadena '
+                'no pasa de ${BattleEngine.maxProcDepth} pasos.',
             _ => CharacterPanel.help,
           }}<br><br><span class="k">${tab.label}</span>: ${protoEsc(tab.hint)}',
           onClose: close,

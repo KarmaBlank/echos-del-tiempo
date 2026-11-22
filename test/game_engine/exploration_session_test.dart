@@ -15,7 +15,6 @@ import 'package:echos_del_tiempo/game_engine/serialization/action_json.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/event_json.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/json_read.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
-import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
@@ -130,14 +129,19 @@ void main() {
   });
 
   test('piedras de paso: elegir cualquier destino activado (mapa)', () {
-    // Con el área de antes (v0.20.22 achica los pisos): hace falta un
-    // piso con 3 piedras.
-    kTuning[TuningId.mission] =
-        const TuningDef('Misiones', {'maxFloors': 3, 'groupScale': 0.7, 'areaScale': 1});
-    addTearDown(() => kTuning[TuningId.mission] = kTuningDefaults[TuningId.mission]!);
-    final r = start(
-        6, (f) => f.pois.where((p) => p.kind == PoiKind.waystone).length >= 3,
-        players: 2);
+    // v0.20.22: con los pisos más chicos, 3 piedras en un piso salen en
+    // menos zonas; se usa la primera que las tenga.
+    bool three(MapFloor f) =>
+        f.pois.where((p) => p.kind == PoiKind.waystone).length >= 3;
+    final zone = [for (var z = 1; z <= 10; z++) z].firstWhere((z) {
+      try {
+        seedWith(z, three);
+        return true;
+      } on StateError {
+        return false;
+      }
+    });
+    final r = start(zone, three, players: 2);
     var s = r.s;
     final e = r.e;
     final stones = r.f.pois.where((p) => p.kind == PoiKind.waystone).toList();

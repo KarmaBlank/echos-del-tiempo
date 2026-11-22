@@ -306,6 +306,16 @@ Editor → Balance (grupo `Misiones`, `TuningId.mission`):
   32). Las mismas tiradas del azar: la semilla sigue armando el mismo
   estilo de mapa, más chico.
 
+- Rango S (missions.md): el `sTime` de la misión se multiplica por
+  `(pisos jugados / pisos definidos) × (grupos por piso / (floorGoal + 3))`
+  (tope 1; `ZoneRules.sTimeFor`), así S no es más fácil. A = 1.5 × eso.
+
+- Densidad de PdI (§ 11.2) en pisos chicos: los lugares de cofre ya no
+  paran en el tope por área (`área ÷ 100`); siguen (hasta 3× el tope)
+  mientras haya un tile a más del `gap` o falte un PdI cada 220 tiles
+  (`kPoiDensityArea`). Si el lugar cómodo más cercano queda lejos, vale
+  uno de pasillo (1 vecino caminable) o sobre un puente.
+
 Ecos, Pruebas y Jefes del Abismo usan el mismo atlas y también se
 achican. La Travesía tiene su propio generador y no cambia.
 

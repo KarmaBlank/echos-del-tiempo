@@ -188,7 +188,7 @@ batalla vuelven al jugador.
 - Los caídos quedan con 1 de vida.
 - Derrota: modo `result` por 25 s (`BackToLobbyAction` lo corta antes)
   y vuelta al lobby.
-- Victoria (v0.20.22, protocolo 38; no en el TUTORIAL ni la Travesía):
+- Victoria (v0.20.22, protocolo 39; no en el TUTORIAL ni la Travesía):
   el modo vuelve a `field` con `result` puesto (`GameSession.victoryLap`).
   Cada jugador ve la ventana de victoria y la cierra cuando quiere (solo
   local); el grupo sigue en el área del jefe con el botín en el piso para
