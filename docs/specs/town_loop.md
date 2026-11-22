@@ -22,7 +22,7 @@ El pueblo cambia ◄── Invertir en el pueblo ◄── Revelar/ajustar botí
 ```
 
 1. **Pueblo**: zona segura, sin combate, ritmo lento. Se prepara la
-   party, se pesca, se cultiva, se cocina, se comercia.
+   party, se pesca, se cultiva y se comercia.
 2. **Expedición**: máximo **3 pisos**, duración objetivo **10–12 min**.
    Peleas de **2–3 rondas** de timeline en promedio (contra comunes);
    jefe de piso final más largo pero acotado.
@@ -43,9 +43,12 @@ Tunables: `expedition.maxFloors` (3), `expedition.targetMinutes` (11),
 
 - Se **quita el overworld** como zona de juego. El presente se vive en
   el pueblo; el peligro está en las expediciones.
-- **Selección de zona**: tablero de encargos + mapa de viaje (lista
-  visual de zonas desbloqueadas, con dificultad y botín esperado). La
-  votación de `missions.md` se mantiene, ahora sobre el tablero.
+- **Estructura**: el pueblo es el **hub**; desde ahí, **viaje rápido**
+  por un **mapa de viaje con biomas** (viajes cortos). Cada bioma tiene
+  sus **mazmorras, recursos, semillas y peces** propios.
+- **Selección de zona**: tablero de encargos + mapa de biomas (zonas
+  desbloqueadas, con dificultad y botín esperado). La votación de
+  `missions.md` se mantiene, ahora sobre el tablero.
 - **Cinemática de partida corta** (≤ 4 s, saltable cuando todos están
   listos): la party sale por el camino de tierra hacia la zona.
 - `MapGenerator.lobby` se reemplaza por el mapa del pueblo;
@@ -63,7 +66,7 @@ restos del pasado magitec:
 | **Huerta** | Cultivo | Tierra cerca de raíces de ruinas antiguas |
 | **Comerciante** | Compra/venta | Viajero del presente; único que compra pescado y cosecha |
 | **Torre de loot perdido** | Revelar botín, pool de objetos sin recoger (`loot.md` § 4b.2) | Ruina magitec que atrae ecos de objetos perdidos |
-| **Forja / Cocina / Posada** | Crafteo, comidas, descanso | Edificios mejorables (§ 4) |
+| **Forja / Posada** | Crafteo y mejora de equipo, descanso | Edificios mejorables (§ 4) |
 | **Caminos de tierra** | Navegación; uno lleva a la salida de expedición | — |
 
 Nombres finales de lugares y NPCs: **propuesta, esperan OK del dueño**.
@@ -79,36 +82,51 @@ se quedan, o todos alternan).
 | Fuente | Produce SOLO ahí | Por qué lo necesita el que va a la mazmorra |
 |---|---|---|
 | **Mazmorra** | Armas, oro, materiales base, **semillas raras** | — (es la fuente de equipo) |
-| **Pesca** | Cebos, **escamas de eco**, peces legendarios, pescado | Escamas = forja de mods del tier más alto; peces legendarios = recetas únicas / legendarios exclusivos; pescado → comidas con buffs de misión |
-| **Huerta** | Hierbas, **reactivos**, **flores de eco** | Hierbas → pociones/elixires que no se compran en misión; reactivos (de semillas raras) → subir nivel de arma y ascensión; flores de eco → mejora de ULT más barata (`ultimates_v2.md` § 2.4) |
-| **Cocina** | Comidas | Buff de la próxima expedición (uno activo por jugador) |
-| **Mejoras del pueblo** | Ventajas permanentes de sala | Más espacio, mejor forja, comidas de tier alto, posada |
-| **Comercio** | Oro por pescado/cosecha (solo el comerciante del pueblo compra eso) | Oro para mejoras y reroll |
+| **Pesca** | Pescado (por bioma y calidad) | Se **vende** a comerciantes por oro o materiales para mejoras del pueblo y de armas/equipo |
+| **Huerta** | Cosechas (por bioma y calidad) | Igual: **comercio** por oro o materiales de mejora |
+| **Mejoras del pueblo** | Ventajas permanentes | Más espacio, mejor forja, posada, automatización |
+| **Comercio** | Oro y materiales a cambio de pescado/cosecha (solo los comerciantes del pueblo compran eso) | Financia mejoras de pueblo y de equipo |
+
+**Sin sistema de cocina** (decisión del dueño). Opcional más adelante:
+unos pocos peces/cultivos **especiales** como insumo raro (p. ej. forja
+de mods de tier alto o descuento de mejora de ULT), sin recetas.
 
 ### 3.1 Pesca
-- Minijuego corto (tensión + timing), local al jugador (§ 9).
-- Cebos: se craftean con materiales base de mazmorra o se compran.
-- Tablas por lago/tier de cebo; peces legendarios con chance baja y
-  pity tunable.
+- **Minijuego de barra simple** (mantener el pez dentro de la zona),
+  ~15–30 s por pez, local al jugador (§ 10). Tiene que sentirse bien:
+  tirón con sacudida leve, salpicadura y sonido al sacar.
+- Cebos: se compran o se hacen con materiales base de mazmorra.
+- Tablas por bioma/lago/cebo; peces legendarios con chance baja y pity.
 - Tunables: `fishing.legendaryChance`, `fishing.pityAfter`,
-  `fishing.scaleYield`, `fishing.baitTiers`.
+  `fishing.barSpeed`, `fishing.baitTiers`.
 
-### 3.2 Huerta
-- Parcelas compartidas por la sala. Crece **por cantidad de misiones
-  completadas** (no tiempo real): `crop.missionsToGrow`.
-- Semillas comunes se compran; **semillas raras** solo caen en mazmorra.
-- Productos: hierbas (pociones/elixires), reactivos (nivel de arma,
-  ascensión), flores de eco (mejora de ULT con descuento
-  `ult.upgradeEchoFlowerDiscount`).
+### 3.2 Huerta (manual y satisfactoria)
+- **Parcelas por tiles**: arar → plantar → regar, con **etapas de
+  crecimiento visibles** por cultivo (brote, crecido, maduro).
+- Crece **por misiones completadas** (no tiempo real):
+  `crop.missionsToGrow`; regar sube la calidad.
+- **Calidad por tiers** (normal / buena / excelente / eco) que sube el
+  precio de venta.
+- **Cosecha con "pop"**: partícula chica + sonido. Estaciones opcionales
+  (más adelante).
+- Semillas comunes se compran; las de cada bioma caen en sus mazmorras.
+- Arte: sprites pixel **mínimos pero lindos**, vía `sprite_manifest.yaml`.
 
-### 3.3 Cocina
-- Recetas: pescado + hierbas (+ receta única de pez legendario).
-- Un buff de comida activo por jugador por expedición. Tier de comida
-  limitado por mejora de cocina.
+### 3.3 Comercio
+- Los comerciantes compran pescado y cosecha por **oro o materiales**
+  (mejoras del pueblo, mejora de armas/equipo). Venden cebos, semillas
+  comunes y ofertas rotativas por ciclo.
+- Tunables: `trade.prices`, `trade.qualityMult`, `trade.materialRates`.
 
-### 3.4 Comercio
-- El comerciante compra pescado y cosecha (nadie más). Vende cebos,
-  semillas comunes, ofertas rotativas por ciclo.
+### 3.4 Automatización (progresión ganada)
+- Se **contratan ayudantes NPC con oro**. Arrancan **lentos y con poco
+  rendimiento**; se mejoran: velocidad, rendimiento, más parcelas,
+  **regadores automáticos**, **redes de auto-pesca**.
+- En endgame la automatización es **buena pero cara**: se la gana.
+- Los ayudantes trabajan mientras la party está en misión.
+- Tunables: `helper.hireCost`, `helper.upgradeCosts`,
+  `helper.yieldMult` (inicial 0.3), `helper.speed`,
+  `autoNet.yieldMult`, `autoWater.cost`.
 
 ---
 
@@ -118,7 +136,7 @@ se quedan, o todos alternan).
 |---|---|---|
 | Almacén | + espacio de stash compartido/por jugador | 1–5 |
 | Forja | Desbloquea tiers de mod, abarata condensar (`materials_economy.md` § 4.3) | 1–5 |
-| Cocina | Tier máximo de comida | 1–4 |
+| Ayudantes | Contratar y mejorar automatización (§ 3.4) | 1–5 |
 | Posada | Descanso: buff menor de inicio, más espacio de huéspedes | 1–3 |
 | Muelle / Huerta | Más parcelas, mejores lagos | 1–3 |
 
@@ -129,8 +147,8 @@ mezcla de ambas fuentes). Tabla en `assets/balance` / YAML de datos.
 
 ## 5. Oficios
 
-- **Pescador, granjero, cocinero**: XP propia por actividad.
-- Niveles dan: mejor rendimiento, recetas, cosméticos/títulos, y una
+- **Pescador, granjero**: XP propia por actividad.
+- Niveles dan: mejor rendimiento y calidad, cosméticos/títulos, y una
   pequeña parte de XP de personaje para que quedarse en el pueblo no
   atrase a nadie (`trade.charXpShare`).
 - **Nadie queda encerrado en un rol**: cualquier jugador hace cualquier
@@ -197,7 +215,7 @@ Los eventos son estado de sala (§ 9). No hay temporizadores reales.
 
 ## 10. Red
 
-- Actividades del pueblo (pesca, cocina, huerta individual) corren
+- Actividades del pueblo (pesca, huerta individual) corren
   **localmente** en cada jugador; el cliente manda el **resultado** y el
   **host valida** (rango posible, semilla, cebo consumido) y otorga la
   recompensa. Sin desconfianza extrema: co-op entre amigos.
@@ -216,24 +234,19 @@ Los eventos son estado de sala (§ 9). No hay temporizadores reales.
    en § 3 es "solo del pueblo" también se consigue **lento** por
    misiones (drop raro) o por el comerciante (precio alto), con tasa
    peor: `town.fallbackRateMult` (propuesta 0.35).
-2. **Producción pasiva.** Huerta: **1 clic por tanda** ("plantar todo" /
-   "cosechar todo"); crece por misión. Compañeros de la party solo
-   (`solo_party.md`) o un ayudante contratado pueden **atender huerta y
-   pesca solos** mientras estás en misión, con rendimiento menor
-   (`town.helperYieldMult`, propuesta 0.5).
-3. **Pesca:** un minijuego rápido por pez, **~15–30 s**; opción
-   **auto-pesca** con recompensa reducida (`fishing.autoYieldMult`) y
-   sin chance de legendario o con chance muy baja.
-4. **Cocina:** botón **"cocinar todo lo posible"** (1 clic).
+2. **Producción pasiva.** La huerta es manual y satisfactoria (§ 3.2),
+   con atajos "plantar todo" / "cosechar todo". La automatización viene
+   de ayudantes contratados y mejorados (§ 3.4).
+3. **Pesca:** minijuego de barra por pez, **~15–30 s**; las redes de
+   auto-pesca dan recompensa reducida y **nunca legendarios**.
+4. Sin cocina (eliminada por el dueño).
 5. **Presupuesto de tiempo:** el loop del pueblo entre misiones
    entra en **≤ 2–3 min** si se quiere, y es **saltable del todo**
    (ir directo al tablero sin perder nada obligatorio).
 6. **Sala de 1 = dificultad solo** (§ 6).
 
-**Alcance acotado:** se arranca solo con **pesca + huerta + mejoras**.
-La **cocina se fusiona** si es posible en los resultados de huerta/pesca
-(p. ej. "preparar" como acción del mismo panel, sin edificio ni menú
-propio); se separa solo si el dueño lo pide. Cualquier actividad nueva
+**Alcance acotado:** solo **pesca + huerta + comercio + mejoras**.
+Cualquier actividad nueva
 tiene que justificar algo que ninguna otra cubra.
 
 ---
@@ -264,10 +277,11 @@ preguntas abiertas.
 - Datos: tabla de mejoras y costos.
 - Tests: aplicar efectos (stash, forja), persistencia en sala.
 
-### Fase 5 — Huerta + cocina + ciclo de eventos
-- Datos: cultivos, recetas, eventos.
-- Tunables: `crop.*`, `cycle.*`, descuento de flores de eco.
-- Tests: crecimiento por misión, buffs de comida, disparo de evento.
+### Fase 5 — Huerta + ayudantes + ciclo de eventos
+- Datos: cultivos por bioma, etapas, calidades, ayudantes, eventos.
+- Tunables: `crop.*`, `helper.*`, `cycle.*`.
+- Tests: crecimiento por misión, calidad, rendimiento de ayudantes,
+  disparo de evento.
 
 ### Fase 6 — Oficios
 - Datos: curvas de XP por oficio, recompensas.
@@ -280,7 +294,22 @@ preguntas abiertas.
 
 ---
 
-## 12. Preguntas abiertas para el dueño
+## 12. Decisiones del dueño (mandan sobre el resto)
+
+- Se elimina el overworld caminable.
+- El botín se **revela automáticamente** al volver.
+- Peso por ausente: **0.6**.
+- Los que se quedan en el pueblo **no** reciben botín de mazmorra.
+- Stash **personal**.
+- Eventos cada **5 misiones**, solo por ciclo (sin fechas reales).
+- El nivel de arma **se suma** a la mejora actual.
+- Las mejoras del pueblo son **del host**.
+- Pesca: **minijuego de barra simple**.
+- Solo: **todas las actividades**, rendimiento ajustado.
+- Auto-pesca: **sin legendarios**.
+- Sin cocina; pescado y cosecha son para comercio.
+
+## 12b. Preguntas originales (resueltas arriba salvo 2 y 8)
 
 1. ¿Se elimina el overworld del todo o queda alguna zona caminable
    (p. ej. la Torre del Tiempo / Prueba del Tiempo)?
