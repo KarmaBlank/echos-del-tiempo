@@ -31,6 +31,7 @@ class BuildCoachView extends StatelessWidget {
     this.onEdit,
     this.onOpenTree,
     this.onOpenAttributes,
+    this.onOpenUlt,
     this.onOpenShop,
     this.onEquip,
     this.equipBlocked,
@@ -47,6 +48,7 @@ class BuildCoachView extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onOpenTree;
   final VoidCallback? onOpenAttributes;
+  final VoidCallback? onOpenUlt;
   final VoidCallback? onOpenShop;
   final ValueChanged<String>? onEquip;
   final String? Function(String uid)? equipBlocked;
@@ -233,14 +235,46 @@ class BuildCoachView extends StatelessWidget {
       for (final (i, s) in steps.indexed)
         KeyedSubtree(
           key: ValueKey('build-step-$i'),
-          child: DsInfoRow(
-            leading: Text('${i + 1}.', style: DsText.body(DsColors.reward)),
-            title: s.text,
-            actions: [if (_stepButton(s, i) case final b?) b],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DsInfoRow(
+                leading: Text('${i + 1}.', style: DsText.body(DsColors.reward)),
+                title: s.text,
+                actions: [if (_stepButton(s, i) case final b?) b],
+              ),
+              if (s.where.isNotEmpty) _where(s, i),
+            ],
           ),
         ),
     ];
   }
+
+  /// "Dónde la conseguís": sub-lista plegable bajo el paso (§ 10.2).
+  Widget _where(BuildStep s, int i) => Padding(
+        key: ValueKey('build-step-where-$i'),
+        padding: EdgeInsets.fromLTRB(DsSpace.lg, 0, DsSpace.md, DsSpace.xs),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: DsFold(
+            label: s.text.contains(' el mod ')
+                ? 'DÓNDE LO CONSEGUÍS'
+                : 'DÓNDE LA CONSEGUÍS',
+            tooltip: 'De dónde sacarlo',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final (j, w) in s.where.indexed)
+                  Text(retroText('- ${_x(w)}'),
+                      key: ValueKey('build-step-where-$i-$j'),
+                      style: DsText.detail()),
+              ],
+            ),
+          ),
+        ),
+      );
 
   Widget? _stepButton(BuildStep s, int i) {
     DsButton b(String label, VoidCallback? on, {String? tooltip}) =>
@@ -254,6 +288,7 @@ class BuildCoachView extends StatelessWidget {
         b('IR A ATRIBUTOS', onOpenAttributes),
       BuildStepAction.tree when onOpenTree != null =>
         b('IR AL ÁRBOL', onOpenTree),
+      BuildStepAction.ult when onOpenUlt != null => b('IR A ULT', onOpenUlt),
       BuildStepAction.armory when onOpenShop != null =>
         b('IR A LA ARMERÍA', onOpenShop),
       BuildStepAction.equip when onEquip != null && s.ref != null => () {
@@ -382,6 +417,9 @@ class BuildCoachView extends StatelessWidget {
       for (final (i, w) in picks.indexed)
         () {
           final fit = _coach.fitOf(w, plan, advice);
+          final moves = i == 0 && w.item != null
+              ? _coach.transferableTo(w.item!, plan, profile, stash: stash)
+              : const <String>[];
           final r = _coach.targetRatio(w, plan);
           final name = w.item == null
               ? w.base.name
@@ -397,6 +435,10 @@ class BuildCoachView extends StatelessWidget {
             ]),
             child: DsInfoRow(
               leading: _icon(DsColors.textSecondary),
+              subtitle: moves.isEmpty
+                  ? null
+                  : ['Podés traerle en FUSIÓN:', for (final m in moves) '- $m']
+                      .join('\n'),
               title: [
                 name,
                 if (w.equipped) '(equipada)',
@@ -430,8 +472,7 @@ class BuildCoachView extends StatelessWidget {
             style: DsText.detail(kPlanColor)),
       ),
       for (final m in mods)
-        _status('build-mod-${m.affixId}', m.have, m.text,
-            sub: m.have ? 'Lo tenés' : 'Falta'),
+        _status('build-mod-${m.affixId}', m.have, m.text, sub: m.status),
     ];
   }
 

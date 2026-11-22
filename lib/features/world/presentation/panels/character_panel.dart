@@ -208,6 +208,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
                 onOpenAttributes: () =>
                     setState(() => _tab = CharacterTab.attributes),
                 onOpenTree: () => setState(() => _tab = CharacterTab.tree),
+                onOpenUlt: () => setState(() => _tab = CharacterTab.ults),
                 onChanged: (p) {
                   final slot = _slot;
                   ref
