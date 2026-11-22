@@ -1,6 +1,6 @@
 import 'package:echos_del_tiempo/app/design/ds_components.dart';
 import 'package:echos_del_tiempo/app/design/ds_tokens.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Color? _border(WidgetTester t) {
