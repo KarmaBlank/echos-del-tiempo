@@ -597,7 +597,7 @@ botón `build-step-go-<i>`):
    (`BuildStepAction.ult`, `onOpenUlt`: PERSONAJE pasa a la pestaña de
    ULT).
 
-Cada paso puede traer `where` (v0.21.2): un plegable `DsFold`
+Cada paso puede traer `where` (v0.22.1): un plegable `DsFold`
 "DÓNDE LA CONSEGUÍS" (`build-step-where-<i>`, líneas
 `build-step-where-<i>-<j>`) con fuentes concretas:
 
@@ -648,7 +648,7 @@ que otra arma tuya tiene y puede pasarle (`transferableTo`, respetando
 Los del plan más los del objetivo de arma principal, sin repetir (gana
 el nivel más exigente). Uno por línea: marca, "Arcano, nivel 3 o mejor"
 (`tierText`: T1 = "nivel 1 (el mejor)", T5 = "cualquier nivel") y
-su estado (`ModState`, v0.21.2) contra el arma objetivo
+su estado (`ModState`, v0.22.1) contra el arma objetivo
 (`targetWeapon`: la mejor candidata del objetivo principal o, si no hay,
 la equipada):
 

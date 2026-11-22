@@ -156,7 +156,7 @@ Reglas: palabras completas (la sigla solo entre paréntesis: "Fuerza
 una línea; nada se corta con "…" (`DsInfoRow` baja de línea). Piezas en
 `lib/app/design/ds_guide.dart`: `DsStatusMark`, `DsLegend`, `DsInfoRow`,
 `DsProgressFold`. Los pasos de habilidad, mod y tipo de arma pliegan
-"DÓNDE LA CONSEGUÍS" con `DsFold`; el de ULT lleva IR A ULT (v0.21.2).
+"DÓNDE LA CONSEGUÍS" con `DsFold`; el de ULT lleva IR A ULT (v0.22.1).
 
 Tests: `test/game_engine/build_coach_where_test.dart`,
 `test/features/build_planner/build_coach_ui_test.dart` (APLICAR,
