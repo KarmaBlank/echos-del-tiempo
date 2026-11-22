@@ -79,6 +79,19 @@ class EventJson {
         ReturnedToLobbyEvent() => {'t': 'lobby'},
         RunNodeEnteredEvent() => {'t': 'runNode', 'f': e.floor, 'n': e.nodeId},
         RunEndedEvent() => {'t': 'runEnd', 'win': e.victory},
+        FishBiteEvent() => {
+            't': 'fBite',
+            'id': e.playerId,
+            'sp': e.species,
+            'cm': e.sizeCm,
+          },
+        FishCaughtEvent() => {
+            't': 'fCaught',
+            'id': e.playerId,
+            'sp': e.species,
+            'cm': e.sizeCm,
+            if (e.auto) 'auto': true,
+          },
         FloorChangedEvent() => {'t': 'floor', 'f': e.floor, 'down': e.down},
         StairsOpenedEvent() => {'t': 'stairs', 'f': e.floor},
         PoiUsedEvent() => {
@@ -218,6 +231,11 @@ class EventJson {
         return RunNodeEnteredEvent(j.integer('f'), j.integer('n'));
       case 'runEnd':
         return RunEndedEvent(j.boolean('win'));
+      case 'fBite':
+        return FishBiteEvent(j.str('id'), j.str('sp'), j.integer('cm'));
+      case 'fCaught':
+        return FishCaughtEvent(j.str('id'), j.str('sp'), j.integer('cm'),
+            auto: j['auto'] == true);
       case 'floor':
         return FloorChangedEvent(j.integer('f'), down: j.boolean('down'));
       case 'stairs':

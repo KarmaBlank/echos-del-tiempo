@@ -29,10 +29,70 @@ abstract final class TuningId {
   static const combatLimits = 'combatLimits';
   static const exploration = 'exploration';
   static const mission = 'mission';
+  static const fishing = 'fishing';
 }
 
 /// Los valores del código.
 const Map<String, TuningDef> kTuningDefaults = {
+  // fishing.md (v0.22.0): Pesca, cañas, minijuego y comerciante.
+  TuningId.fishing: TuningDef('Pesca', {
+    // Nivel: XP para pasar del nivel l = xpBase × l^xpExp; tope maxLevel.
+    'maxLevel': 30,
+    'xpBase': 40,
+    'xpExp': 1.5,
+    // Pesos de rareza (la caña y el lance sube los no comunes).
+    'weightComun': 70,
+    'weightRaro': 22,
+    'weightEpico': 7,
+    'weightLegendario': 1,
+    // Capturas sin legendario que garantizan uno (0 = sin pity).
+    'pityAfter': 200,
+    // Lance largo: + chance de rareza con la carga al máximo.
+    'distanceBonus': 0.3,
+    // × de XP de Pesca por rareza.
+    'xpComun': 1,
+    'xpRaro': 2.5,
+    'xpEpico': 6,
+    'xpLegendario': 15,
+    // XP de personaje por rareza y tope por estadía en el pueblo.
+    'charXpComun': 2,
+    'charXpRaro': 5,
+    'charXpEpico': 12,
+    'charXpLegendario': 30,
+    'charXpCap': 60,
+    // Herramientas (town_loop.md § 11c).
+    'bonusFloor': 0.4,
+    'bonusCurve': 1.5,
+    // Picada: espera en segundos, ventana para clavar y señuelos.
+    'biteMinSec': 2.5,
+    'biteMaxSec': 7,
+    'biteWindowSec': 1.1,
+    'nibblesMax': 3,
+    // Barra: zona (fracción de la barra), velocidad del pez, progreso.
+    'zoneBase': 0.24,
+    'barSpeed': 1,
+    'progressStart': 0.25,
+    'progressGain': 0.1,
+    'progressDrain': 0.12,
+    // Dificultad (× velocidad y nervio del pez) por rareza.
+    'diffComun': 0.6,
+    'diffRaro': 0.9,
+    'diffEpico': 1.25,
+    'diffLegendario': 1.6,
+    // Validación del host: segundos mínimos entre lances y de pelea.
+    'minCastSec': 2,
+    'minReelSec': 1.5,
+    // Auto-pesca: × de XP, peces por clic y espera entre usos (s).
+    'autoMult': 0.4,
+    'autoCount': 3,
+    'autoCooldownSec': 30,
+    // Comerciante: × del valor si se cobra en materiales, oro por
+    // Esquirla y recompensa del canje de un legendario.
+    'matRate': 1.2,
+    'matValue': 25,
+    'legendCristales': 3,
+    'legendPrismas': 1,
+  }),
   // world.md § "Colisión y movimiento": px/s del jugador en el campo
   // (v0.20.19: 78 → 98, +25 %).
   TuningId.exploration: TuningDef('Exploración', {

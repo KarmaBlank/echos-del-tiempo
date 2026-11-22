@@ -96,7 +96,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// anfitrión) y el lobby es el mapa del pueblo (otros tiles, sin entradas
 /// de zona: un cliente 40 dibujaría el mundo viejo y caminaría a puertas
 /// que ya no existen).
-const kProtocolVersion = 41;
+/// 42 desde v0.22.0: pesca y comerciante (fishing.md § 6): acciones
+/// `fBite` / `fRes` / `fAuto` / `fSell` / `fSwap` / `rodBuy` / `rodEq`,
+/// eventos `fBite` / `fCaught` y `life` en el perfil.
+const kProtocolVersion = 42;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

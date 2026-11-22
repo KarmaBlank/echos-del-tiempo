@@ -173,6 +173,18 @@ abstract final class ActionJson {
         RunBuyUltAction() => {'t': 'runBuyUlt', 'u': a.ultId},
         RunSkillAction() => {'t': 'runSkill', 's': a.skillId, 'on': a.equip},
         RunUpgradeSkillAction() => {'t': 'runSkillUp', 's': a.skillId},
+        // Pesca v0.22.0 (protocolo 42, fishing.md § 6).
+        FishBiteAction() => {'t': 'fBite', 'pw': a.power},
+        FishResultAction() => {'t': 'fRes', 'ok': a.success},
+        AutoFishAction() => {'t': 'fAuto'},
+        SellFishAction() => {
+            't': 'fSell',
+            if (a.species != null) 'sp': a.species,
+            if (a.materials) 'mat': true,
+          },
+        ExchangeFishAction() => {'t': 'fSwap', 'sp': a.species},
+        BuyRodAction() => {'t': 'rodBuy', 'r': a.rodId},
+        EquipRodAction() => {'t': 'rodEq', 'r': a.rodId},
       };
 
   /// Lanza [FormatException] si [j] no es una acción conocida y bien formada.
@@ -360,6 +372,21 @@ abstract final class ActionJson {
         return RunSkillAction(j.str('s'), equip: j['on'] == true);
       case 'runSkillUp':
         return RunUpgradeSkillAction(j.str('s'));
+      case 'fBite':
+        return FishBiteAction(j.dbl('pw'));
+      case 'fRes':
+        return FishResultAction(j.boolean('ok'));
+      case 'fAuto':
+        return const AutoFishAction();
+      case 'fSell':
+        return SellFishAction(
+            species: j.strOrNull('sp'), materials: j['mat'] == true);
+      case 'fSwap':
+        return ExchangeFishAction(j.str('sp'));
+      case 'rodBuy':
+        return BuyRodAction(j.str('r'));
+      case 'rodEq':
+        return EquipRodAction(j.str('r'));
     }
     throw FormatException('JSON inválido: acción desconocida', t);
   }

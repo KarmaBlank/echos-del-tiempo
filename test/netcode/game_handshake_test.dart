@@ -10,9 +10,9 @@ import '../game_engine/session_test_helpers.dart';
 /// Un protocolo por juego (docs/specs/netcode.md § "Un protocolo por
 /// juego"): Mundo y Travesía no comparten salas.
 void main() {
-  test('Mundo en 40 (v0.20.23: modos de turno) y Travesía arranca su secuencia en 1', () {
-    expect(WireGame.mundo.protocol, 41);
-    expect(kProtocolVersion, 41);
+  test('Mundo en 42 (v0.22.0: pesca) y Travesía arranca su secuencia en 1', () {
+    expect(WireGame.mundo.protocol, 42);
+    expect(kProtocolVersion, 42);
     expect(WireGame.travesia.protocol, 4);
     expect(WireGame.mundo.id, isNot(WireGame.travesia.id));
   });

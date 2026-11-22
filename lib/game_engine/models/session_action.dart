@@ -547,3 +547,49 @@ class RunBuyUltAction extends SessionAction {
   final String ultId;
   const RunBuyUltAction(this.ultId);
 }
+
+// ---- Pesca y comerciante (v0.22.0, docs/specs/fishing.md § 6) ----
+
+/// `fBite`: picada clavada en un punto de pesca. El host tira el pez
+/// (con [power], la carga del lance 0..1) y lo manda en `FishBiteEvent`.
+class FishBiteAction extends SessionAction {
+  final double power;
+  const FishBiteAction(this.power);
+}
+
+/// `fRes`: el minijuego local terminó; el cliente solo dice si lo sacó.
+class FishResultAction extends SessionAction {
+  final bool success;
+  const FishResultAction(this.success);
+}
+
+/// `fAuto`: auto-pesca (recompensa reducida, nunca legendarios).
+class AutoFishAction extends SessionAction {
+  const AutoFishAction();
+}
+
+/// `fSell`: vender en el comerciante. [species] `null` = Vender todo
+/// (menos legendarios). [materials]: cobrar en Esquirlas.
+class SellFishAction extends SessionAction {
+  final String? species;
+  final bool materials;
+  const SellFishAction({this.species, this.materials = false});
+}
+
+/// `fSwap`: canjear un pez legendario por materiales raros.
+class ExchangeFishAction extends SessionAction {
+  final String species;
+  const ExchangeFishAction(this.species);
+}
+
+/// `rodBuy`: comprar una caña.
+class BuyRodAction extends SessionAction {
+  final String rodId;
+  const BuyRodAction(this.rodId);
+}
+
+/// `rodEq`: equipar una caña propia (espacio de herramienta).
+class EquipRodAction extends SessionAction {
+  final String rodId;
+  const EquipRodAction(this.rodId);
+}
