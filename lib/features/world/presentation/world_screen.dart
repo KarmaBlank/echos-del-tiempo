@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flame/game.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -444,6 +445,31 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 onPointerDown: (_) => controller.fishPress(),
                 onPointerUp: (_) => controller.fishRelease(),
               ),
+            )
+          // Con una herramienta en la mano: clic = E (sacar la caña, arar,
+          // plantar, regar, cosechar); la rueda cambia de semilla.
+          else if (view.panel == null && controller.activeTool != null)
+            Positioned.fill(
+              key: const ValueKey('tool-pointer'),
+              child: Listener(
+                behavior: HitTestBehavior.translucent,
+                onPointerDown: (e) {
+                  if (e.buttons != kPrimaryMouseButton) return;
+                  if (controller.activeTool == ActiveTool.rod) {
+                    controller.startFishing();
+                  } else {
+                    controller.farmWork();
+                  }
+                },
+                onPointerSignal: (e) {
+                  if (e is PointerScrollEvent &&
+                      controller.activeTool == ActiveTool.hoe) {
+                    e.scrollDelta.dy < 0
+                        ? controller.prevSeedPick()
+                        : controller.cycleSeed();
+                  }
+                },
+              ),
             ),
           ..._overlays(view, controller, sprites.requireValue),
           // Hazaña lograda: arriba a la derecha, sobre el mapa y la batalla.
@@ -472,8 +498,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 final id? => controller.engine.catalog.mission(id)?.name,
                 null => null,
               },
-              reduceMotion: ref
-                  .watch(gameSettingsProvider.select((s) => s.reduceMotion)),
+              reduceMotion:
+                  ref.watch(gameSettingsProvider.select((s) => s.reduceMotion)),
             ),
           ),
           // Elegir ascensión desde el resultado de la Prueba I.
@@ -619,8 +645,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                     voted: controller.tutorialVoted,
                     hud: tutorialHudParts(rules.hudFocus(tut)),
                     rules: rules,
-                    canControl: humans.length <= 1 ||
-                        humans.first.id == view.localId,
+                    canControl:
+                        humans.length <= 1 || humans.first.id == view.localId,
                     onNext: () => controller.ackTutorial(),
                     onControl: (op) => controller.tutorialControl(op),
                     options: rules.options(tut),
@@ -632,7 +658,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                         ? tut.narration
                         : const [],
                   ),
-          ),          // `≡ MENÚ`: la pausa también se abre con el mouse en batalla.
+          ), // `≡ MENÚ`: la pausa también se abre con el mouse en batalla.
           // Abajo a la izquierda de la escena, justo encima de la barra
           // (arriba está la franja de turnos).
           Positioned.fill(
@@ -691,8 +717,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               right: 0,
               child: Center(child: _leaveReadyBar(view, controller)),
             ),
-            if (!controller.resultClosed)
-              ..._resultOverlay(view, controller),
+            if (!controller.resultClosed) ..._resultOverlay(view, controller),
           ],
         ];
     }
@@ -705,7 +730,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final n = humans.where((p) => s.leaveReady.contains(p.id)).length;
     final mine = s.leaveReady.contains(view.localId);
     return DsButton(
-      mine ? 'LISTO $n/${humans.length} · CANCELAR' : 'LISTO ($n/${humans.length})',
+      mine
+          ? 'LISTO $n/${humans.length} · CANCELAR'
+          : 'LISTO ($n/${humans.length})',
       key: const ValueKey('leave-ready'),
       kind: mine ? DsButtonKind.secondary : DsButtonKind.primary,
       selected: mine,
@@ -715,11 +742,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     );
   }
 
-
   /// Ventana de resultado: derrota (modo `result`) o victoria (campo
   /// con `result`, se cierra localmente; missions.md § "Fin de misión").
-  List<Widget> _resultOverlay(
-      SessionView view, SessionController controller) {
+  List<Widget> _resultOverlay(SessionView view, SessionController controller) {
     final s = view.session;
     final r = s.result;
     if (r == null) return const [];
@@ -748,10 +773,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               ? ecoAtlasText(view.atlasGain)
               : null,
           abyss: switch (controller.lastAbyss) {
-            (final n, final points) when r.success =>
-              abyssResultText(
-                  controller.engine.catalog.abyssBosses[n]?.name ?? '?',
-                  points),
+            (final n, final points) when r.success => abyssResultText(
+                controller.engine.catalog.abyssBosses[n]?.name ?? '?', points),
             _ => null,
           },
           trial: switch (controller.lastTrial) {
@@ -760,8 +783,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             _ => null,
           },
           onAscend: r.success &&
-                  (view.me?.profile.ascension.trials.contains(1) ??
-                      false) &&
+                  (view.me?.profile.ascension.trials.contains(1) ?? false) &&
                   view.me?.profile.ascension.id == null
               ? () => setState(() => _choosing = true)
               : null,
@@ -770,13 +792,11 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               if (view.me case final me?)
                 ResultDrop(
                   dropLabelText(controller.engine.progression, d),
-                  controller.engine.lootVerdict(me.profile, d,
-                      wants: controller.localWants),
-                  exclusive:
-                      kUniques[d.item?.uniqueId]?.exclusive ?? false,
+                  controller.engine
+                      .lootVerdict(me.profile, d, wants: controller.localWants),
+                  exclusive: kUniques[d.item?.uniqueId]?.exclusive ?? false,
                   tooltip: d.eco != null
-                      ? ecoTooltipMarkup(
-                          controller.engine.progression, d.eco!)
+                      ? ecoTooltipMarkup(controller.engine.progression, d.eco!)
                       : d.item == null
                           ? stackTooltipMarkup(d.stack!, d.count)
                           : itemTooltipMarkup(
@@ -851,8 +871,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           zones: controller.zones,
           // TUTORIAL: Ecos de práctica (combat_tutorial.md § 1-2).
           lockText: controller.tutorialRules.lockText(s),
-          tutorialDone:
-              controller.tutorialRules.upToDate(me.tutorialVersion),
+          tutorialDone: controller.tutorialRules.upToDate(me.tutorialVersion),
           tutorial: TutorialSealDetail(
             rules: controller.tutorialRules,
             done: controller.tutorialRules.upToDate(me.tutorialVersion),

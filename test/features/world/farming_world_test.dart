@@ -23,7 +23,7 @@ void main() {
     c.teleport((bf.x + 1.5) * 16, (bf.y + 1.5) * 16);
     await h.frames(6);
     expect(c.view!.prompt, WorldPrompt.farm);
-    expect(find.textContaining('[E] Arar'), findsOneWidget);
+    expect(find.textContaining('[E o clic] Arar'), findsOneWidget);
     final (tx, ty) = c.farmTile!;
 
     Future<void> press(FarmOp op) async {
@@ -34,10 +34,10 @@ void main() {
 
     await press(FarmOp.till);
     expect(c.plotAt(tx, ty), isNotNull);
-    expect(find.textContaining('[E] Plantar'), findsOneWidget);
+    expect(find.textContaining('[E o clic] Plantar'), findsOneWidget);
     await press(FarmOp.plant);
     expect(c.plotAt(tx, ty)!.planted, isTrue);
-    expect(find.textContaining('[E] Regar'), findsOneWidget);
+    expect(find.textContaining('[E o clic] Regar'), findsOneWidget);
     await press(FarmOp.water);
     expect(c.plotAt(tx, ty)!.watered, isTrue);
 

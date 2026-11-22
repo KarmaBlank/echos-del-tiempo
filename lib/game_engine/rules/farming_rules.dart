@@ -479,4 +479,13 @@ abstract final class FarmingRules {
     final i = have.indexOf(f.activeSeed ?? '');
     return have[(i + 1) % have.length];
   }
+
+  /// La semilla anterior a la elegida (carrusel del HUD, farming.md § 4).
+  static String? prevSeed(PlayerProfile p) {
+    final f = p.life.farm;
+    final have = [for (final c in kCrops.keys) if (f.seedCount(c) > 0) c];
+    if (have.isEmpty) return null;
+    final i = have.indexOf(f.activeSeed ?? '');
+    return have[(i <= 0 ? have.length : i) - 1];
+  }
 }

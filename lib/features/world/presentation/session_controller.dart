@@ -1,4 +1,4 @@
-﻿import '../../../game_engine/models/combat_mode.dart';
+import '../../../game_engine/models/combat_mode.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -133,8 +133,8 @@ final stashStoreProvider = Provider<StashStore>((ref) =>
 
 /// La run guardada de la Travesía (roguelike.md § 8.5); `null` en el
 /// Mundo.
-final runSaveStoreProvider = Provider<RunSaveStore?>((ref) =>
-    sl.isRegistered<RunSaveStore>() ? sl<RunSaveStore>() : null);
+final runSaveStoreProvider = Provider<RunSaveStore?>(
+    (ref) => sl.isRegistered<RunSaveStore>() ? sl<RunSaveStore>() : null);
 
 /// El progreso entre runs de la Travesía (roguelike.md § 8); `null` en
 /// el Mundo.
@@ -173,9 +173,8 @@ final sessionControllerProvider =
     turnTimer: ref.read(gameSettingsProvider).turnTimer,
     combatMode: CombatMode.fromName(ref.read(gameSettingsProvider).combatMode),
     // Sin FeatureFlags.soloParty no hay compañeros (solo_party.md § 0).
-    party: FeatureFlags.instance.soloParty
-        ? ref.read(partyStoreProvider)
-        : null,
+    party:
+        FeatureFlags.instance.soloParty ? ref.read(partyStoreProvider) : null,
     // Mundo elegido en el título (town_loop.md § 11c).
     world: ref.read(worldBookProvider)?.selected,
     onWorldTown: books.saveTown,
@@ -233,7 +232,8 @@ class SessionController extends StateNotifier<SessionView?> {
         _combatMode = combatMode,
         atlasStore = atlasStore ?? InMemoryAtlasStore(),
         bestiaryStore = bestiaryStore ?? InMemoryBestiaryStore(),
-        tutorialStore = tutorialStore ?? InMemoryTutorialStore(kTutorialVersion),
+        tutorialStore =
+            tutorialStore ?? InMemoryTutorialStore(kTutorialVersion),
         super(null);
 
   /// Compañeros de la party jugando solo (docs/specs/solo_party.md);
@@ -274,8 +274,8 @@ class SessionController extends StateNotifier<SessionView?> {
   List<String> get startSkills {
     final p = _s?.players[localId]?.profile;
     if (p == null) return const [];
-    return engine.progression.weaponSkills(
-        RunRules.runProfile(engine.progression, p));
+    return engine.progression
+        .weaponSkills(RunRules.runProfile(engine.progression, p));
   }
 
   /// El pool de loadout del personaje local.
@@ -333,7 +333,11 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Manda el loadout y los bonos al anfitrión (en la sala o al terminar).
   void _sendPrep() {
     final s = _s, key = metaKey, p = _s?.players[localId]?.profile;
-    if (!isRun || !_metaLoaded || _prepSent || s == null || key == null ||
+    if (!isRun ||
+        !_metaLoaded ||
+        _prepSent ||
+        s == null ||
+        key == null ||
         p == null) {
       return;
     }
@@ -352,7 +356,8 @@ class SessionController extends StateNotifier<SessionView?> {
     }
     if (_meta.lastSeed == r.seed) return;
     final next = MetaProgressRules.settle(_meta, r,
-        playableZones: RunRules(catalog: engine.catalog).playableZones().length);
+        playableZones:
+            RunRules(catalog: engine.catalog).playableZones().length);
     _setMeta(next);
   }
 
@@ -574,9 +579,9 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Este jugador ya votó SIGUIENTE en el cartel abierto.
   bool get tutorialVoted => _s?.tutorial?.votes.contains(localId) ?? false;
+
   /// Menú de pausa del tutorial: Repetir, Repetir etapa, Salir.
-  bool tutorialControl(TutorialControl op) =>
-      _apply(TutorialControlAction(op));
+  bool tutorialControl(TutorialControl op) => _apply(TutorialControlAction(op));
 
   /// Voto en las votaciones del final del tutorial (Repetir con otros
   /// roles / ENTRENAR / Salir, el rol elegido, Reiniciar).
@@ -750,8 +755,10 @@ class SessionController extends StateNotifier<SessionView?> {
     // El Atlas del anfitrión vale para toda la sala (ecos_atlas.md § 5.2).
     // Y su tiempo de turno (accessibility.md § 7).
     final room = engine.setCombatMode(
-        engine.setTurnTimer(
-            engine.setAtlas(engine.create(), atlas.nodes).state, _turnTimer).state,
+        engine
+            .setTurnTimer(
+                engine.setAtlas(engine.create(), atlas.nodes).state, _turnTimer)
+            .state,
         _combatMode);
     var room0 = room.state;
     // El mundo del anfitrión es el de la sala (town_loop.md § 11c).
@@ -953,7 +960,11 @@ class SessionController extends StateNotifier<SessionView?> {
           _step(SessionStep(session, events));
           _syncWants();
         }
-      case PeerJoinedEvent(:final peerId, :final profile, :final tutorialVersion):
+      case PeerJoinedEvent(
+          :final peerId,
+          :final profile,
+          :final tutorialVersion
+        ):
         if (s == null || isClient) return;
         final step = engine.addPlayer(s, peerId, profile,
             tutorialVersion: tutorialVersion);
@@ -1001,10 +1012,7 @@ class SessionController extends StateNotifier<SessionView?> {
     // porBando: en el turno del grupo, el primer compañero con AUTO que
     // falta (roguelike.md § 6).
     final cur = b.state.currentId ??
-        b.state.pendingGroup
-            .map((p) => p.id)
-            .where(_auto.contains)
-            .firstOrNull;
+        b.state.pendingGroup.map((p) => p.id).where(_auto.contains).firstOrNull;
     if (cur == null || !_auto.contains(cur) || b.turnTime < autoDelay) {
       return;
     }
@@ -1209,6 +1217,56 @@ class SessionController extends StateNotifier<SessionView?> {
 
   FarmPlot? plotAt(int x, int y) => town.plots[plotKey(x, y)];
 
+  /// A 2 tiles o menos de cualquier tierra de huerta (todas las zonas,
+  /// también las que suma ampliar el pueblo): sale la azada equipada.
+  bool get nearFarm {
+    if (!_townFree()) return false;
+    final tx = (local.x / 16).floor(), ty = (local.y / 16).floor();
+    for (var dy = -2; dy <= 2; dy++) {
+      for (var dx = -2; dx <= 2; dx++) {
+        if (_isSoil(tx + dx, ty + dy)) return true;
+      }
+    }
+    return false;
+  }
+
+  /// La herramienta que el jugador tiene en la mano en el mapa (solo en
+  /// el pueblo; nunca en misiones). La caña manda cerca del agua.
+  ActiveTool? get activeTool {
+    if (!_townFree()) return null;
+    if (_fishing != null || canFish) return ActiveTool.rod;
+    if (nearFarm) return ActiveTool.hoe;
+    return null;
+  }
+
+  /// Aviso compacto sobre las pociones (farming.md § 4, fishing.md § 4).
+  String? get toolPrompt {
+    if (_fishing case final f?) return fishingHint(f);
+    if (farmHint() case final h?) return h;
+    if (canFish) return WorldPrompt.fishing.label;
+    return null;
+  }
+
+  /// Carrusel: la semilla anterior.
+  bool prevSeedPick() {
+    final p = _s?.players[localId]?.profile;
+    if (p == null) return false;
+    final prev = FarmingRules.prevSeed(p);
+    if (prev == null) return false;
+    return _apply(FarmShopAction(FarmShopOp.selectSeed, id: prev));
+  }
+
+  /// Clic en la regadera del HUD: riega la parcela de enfrente.
+  bool farmWaterClick() => farmOp == FarmOp.water && farmWork();
+
+  /// Clic en la caña del HUD: la siguiente caña propia.
+  bool cycleRod() {
+    final life = _s?.players[localId]?.profile.life;
+    if (life == null || life.rods.length < 2) return false;
+    final i = life.rods.indexOf(life.rod);
+    return equipRod(life.rods[(i + 1) % life.rods.length]);
+  }
+
   /// Qué hace E en la huerta ahora (`null` = nada).
   FarmOp? get farmOp {
     final t = farmTile;
@@ -1216,7 +1274,9 @@ class SessionController extends StateNotifier<SessionView?> {
     if (t == null || p == null) return null;
     final pl = plotAt(t.$1, t.$2);
     if (pl == null) return FarmOp.till;
-    if (!pl.planted) return p.life.farm.activeSeed == null ? null : FarmOp.plant;
+    if (!pl.planted) {
+      return p.life.farm.activeSeed == null ? null : FarmOp.plant;
+    }
     if (FarmingRules.ripe(pl)) return FarmOp.harvest;
     return FarmOp.water;
   }
@@ -1288,30 +1348,32 @@ class SessionController extends StateNotifier<SessionView?> {
     return parts.join('\n');
   }
 
-  /// Texto del aviso de abajo en la huerta.
+  /// Texto del aviso de la huerta (sobre las pociones).
   String? farmHint() {
     final t = farmTile;
     final p = _s?.players[localId]?.profile;
     if (t == null || p == null) return null;
     final pl = plotAt(t.$1, t.$2);
     final seed = p.life.farm.activeSeed;
-    final fert = pl != null && pl.planted && pl.fert == null &&
+    final fert = pl != null &&
+            pl.planted &&
+            pl.fert == null &&
             p.life.farm.ferts.isNotEmpty
         ? ' · [F] abonar'
         : '';
-    if (pl == null) return '[E] Arar';
+    if (pl == null) return '[E o clic] Arar';
     if (!pl.planted) {
       return seed == null
           ? 'Sin semillas: comprá en el comerciante'
-          : '[E] Plantar ${kCrops[seed]!.name} (${p.life.farm.seedCount(seed)}) · [Q] otra semilla';
+          : '[E o clic] Plantar ${kCrops[seed]!.name}';
     }
     // Corto (una línea): el detalle completo está en el tooltip del mouse.
     if (FarmingRules.ripe(pl)) {
       final o = FarmingRules.odds(p, pl);
-      return '[E] Cosechar · ${_pct(o[CropQuality.legendario]!)} legendaria';
+      return '[E o clic] Cosechar · ${_pct(o[CropQuality.legendario]!)} legendaria';
     }
     final r = (FarmingRules.ratio(pl) * 100).round();
-    return '[E] Regar · ${kCrops[pl.seed]!.name} $r %$fert';
+    return '[E o clic] Regar · $r %$fert';
   }
 
   bool buySeed(String id, [int n = 1]) =>
@@ -1322,13 +1384,12 @@ class SessionController extends StateNotifier<SessionView?> {
       _apply(FarmShopAction(FarmShopOp.equipTool, id: id));
   bool buyFert(String id, [int n = 1]) =>
       _apply(FarmShopAction(FarmShopOp.buyAbono, id: id, n: n));
-  bool sellCrop(String? key, {bool materials = false}) => _apply(
-      FarmShopAction(key == null ? FarmShopOp.sellAll : FarmShopOp.sell,
+  bool sellCrop(String? key, {bool materials = false}) =>
+      _apply(FarmShopAction(key == null ? FarmShopOp.sellAll : FarmShopOp.sell,
           id: key, materials: materials));
   bool exchangeCrop(String key) =>
       _apply(FarmShopAction(FarmShopOp.exchange, id: key));
-  bool collectSilo() =>
-      _apply(const FarmShopAction(FarmShopOp.collectSilo));
+  bool collectSilo() => _apply(const FarmShopAction(FarmShopOp.collectSilo));
   bool selectSeed(String id) =>
       _apply(FarmShopAction(FarmShopOp.selectSeed, id: id));
   bool expandTown() => _apply(const TownAction(TownOp.expand));
@@ -1503,7 +1564,8 @@ class SessionController extends StateNotifier<SessionView?> {
             : 'Esperá la picada; si tirás antes, se va',
         FishPhase.bite => '¡PICÓ! [E o clic] ya',
         FishPhase.hooking => 'Clavado…',
-        FishPhase.reel => 'Mantené [E o clic] para subir la zona; tené al pez adentro',
+        FishPhase.reel =>
+          'Mantené [E o clic] para subir la zona; tené al pez adentro',
         FishPhase.won =>
           'Sacaste ${f.fish?.def.name ?? 'un pez'} · [E o clic] para tirar de nuevo',
         FishPhase.lost =>
@@ -1745,7 +1807,8 @@ class SessionController extends StateNotifier<SessionView?> {
     // Atajos de pociones fuera de batalla (exploration.md): 1 vida, 2 maná.
     if (s.mode != SessionMode.battle &&
         _panel == null &&
-        (key == LogicalKeyboardKey.digit1 || key == LogicalKeyboardKey.digit2)) {
+        (key == LogicalKeyboardKey.digit1 ||
+            key == LogicalKeyboardKey.digit2)) {
       useItem(key == LogicalKeyboardKey.digit1
           ? BattleItem.potion
           : BattleItem.ether);
@@ -2149,9 +2212,7 @@ class SessionController extends StateNotifier<SessionView?> {
     final p = _s?.players[playerId]?.profile;
     if (p == null) return null;
     return engine.lootVerdict(p, d,
-        wants: playerId == localId
-            ? _localWants
-            : _companionWants[playerId]);
+        wants: playerId == localId ? _localWants : _companionWants[playerId]);
   }
 
   bool takeNode(String nodeId) => _applyFor(actingId, TakeNodeAction(nodeId));
@@ -2160,8 +2221,7 @@ class SessionController extends StateNotifier<SessionView?> {
   bool untakeNode(String nodeId) =>
       _applyFor(actingId, UntakeNodeAction(nodeId));
 
-  bool takeNodes(List<String> ids) =>
-      _applyFor(actingId, TakeNodesAction(ids));
+  bool takeNodes(List<String> ids) => _applyFor(actingId, TakeNodesAction(ids));
 
   /// Hito del nivel [milestone] (progression_v2.md § 5).
   bool chooseMilestone(int milestone, String keystoneId) =>
@@ -2437,9 +2497,7 @@ class SessionController extends StateNotifier<SessionView?> {
       if (to == null || !controls(to.id)) continue;
       // Lo que el filtro oculta también vuelve, a Objetos sin recoger.
       final hidden = g.ownerId != null &&
-          !engine
-              .lootVerdict(to.profile, g.drop, wants: to.buildWants)
-              .visible;
+          !engine.lootVerdict(to.profile, g.drop, wants: to.buildWants).visible;
       next = StashRules.recover(next, g.drop, box: hidden).stash;
       left.add(g);
     }
@@ -2544,8 +2602,8 @@ class SessionController extends StateNotifier<SessionView?> {
           : op.box != null
               ? StashRules.untakeBox(s, op.box!, d)
               : i < op.cells.length
-              ? StashRules.unstore(s, op.cells[i], d)
-              : null;
+                  ? StashRules.unstore(s, op.cells[i], d)
+                  : null;
       if (next == null) {
         EcosLog.error('Alijo: pieza sin lugar en ${op.id}');
         continue;
@@ -2561,8 +2619,9 @@ class SessionController extends StateNotifier<SessionView?> {
             '${(op.reason ?? 'rechazados').toLowerCase()}';
     final p = me.profile;
     _lastSaved = p;
-    unawaited(store.commit(s, p).then((_) => _saveOk(p),
-        onError: (Object e) => _saveFailed(e)));
+    unawaited(store
+        .commit(s, p)
+        .then((_) => _saveOk(p), onError: (Object e) => _saveFailed(e)));
   }
 
   /// Enter en el campo de chat (`send({t:'chat'})`).
@@ -2999,3 +3058,6 @@ class _StashOp {
   double wait = 0;
   int tries = 0;
 }
+
+/// Herramienta de oficio en la mano (HUD de herramienta, farming.md § 4).
+enum ActiveTool { rod, hoe }

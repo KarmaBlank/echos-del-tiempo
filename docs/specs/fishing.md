@@ -90,6 +90,12 @@ Pesca, `rods` cañas propias, `rod` la equipada, `bag` bolsa de Pescados
   "Pescaste X (N cm)".
 - Los demás ven la caña, la línea, la boya, el "!" y el salto (`fLn`,
   `fl`; § 7). El anfitrión sigue tirando el pez y validando.
+- HUD de herramienta (v0.23.2): con la orilla al lado o pescando, arriba
+  de las pociones aparece la caña equipada (clic: la siguiente caña
+  propia, si tenés más de una; todavía no hay carnada) y el aviso
+  compacto ("[E o clic] Pescar" y las fases: cargando, picada, pelea).
+  Reemplaza al cartel de abajo. Solo en el pueblo, nunca en misiones.
+  Clic izquierdo en el mapa con la orilla al lado saca la caña, como E.
 - La lógica es `MapFishing` (pura, testeable): envuelve al minijuego de
   abajo y suma el lugar (orilla, dirección, tile de caída).
 
@@ -142,6 +148,18 @@ Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
   `legendPrismas` (1) Prisma Roto.
 - Cebos y ofertas rotativas: más adelante (la tabla de cañas ya tiene
   precio, el panel lista lo que está en el catálogo).
+
+### 5.3 Puesto del comerciante (v0.23.2)
+- Primer nivel: COMPRAR o VENDER. Segundo: PESCA o CULTIVO. Tercero:
+  categorías (botones arriba de la lista, que también filtran; con TODO
+  la lista sale agrupada con un encabezado por categoría, nunca mezclada).
+  - COMPRAR · PESCA: Cañas (Carnada cuando exista).
+  - COMPRAR · CULTIVO: Semillas, Abonos, Azadas, Regaderas.
+  - VENDER · PESCA: Peces, Basura, Legendarios (VENDER o CANJEAR).
+  - VENDER · CULTIVO: Cultivos, Legendarios.
+- Buscador siempre visible en los dos modos, sin importar cuántos ítems
+  haya.
+- "Cobrar en" (ORO / MATERIALES) y VENDER TODO solo en VENDER.
 
 ## 6. Auto-pesca
 
@@ -210,8 +228,8 @@ dueño.
 
 ## 9. v0.23.0: comerciante con pestañas, PESCA Y CULTIVO y árbol
 
-- El comerciante tiene pestañas PESCA y CULTIVO, cada una con COMPRAR y
-  VENDER (buscador en las listas largas). Lo de cultivo: farming.md § 9.
+- El comerciante tiene pestañas PESCA y CULTIVO (desde v0.23.2, primero
+  COMPRAR / VENDER: § 5.3). Lo de cultivo: farming.md § 9.
 - PERSONAJE → PESCA Y CULTIVO (solo en el pueblo): cañas, pescados (con
   SOLTAR EN EL LAGO), basura del agua y lo de la huerta; no usa
   casilleros del inventario (farming.md § 11).
