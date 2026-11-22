@@ -288,11 +288,15 @@ void main() {
     final c = await _bench(
         tester,
         lootWarrior(
-            materials: const {CraftMaterial.esquirla: 25}, credits: 1000));
+            materials: const {CraftMaterial.esquirla: 50}, credits: 1000));
     PlayerProfile me() => c.view!.me!.profile;
     await _tap(tester, 'bench-condense');
     expect(plain(tester, 'condense-have-cristal'), contains('alcanza para 2'));
     expect(plain(tester, 'condense-have-prisma'), contains('alcanza para 0'));
+    String label(String k) =>
+        tester.widget<DsButton>(find.byKey(ValueKey('condense-cristal-$k'))).label;
+    expect([label('1'), label('5'), label('all')], ['×1', '×5', 'MÁX (2)']);
+    expect(tester.takeException(), isNull, reason: 'sin overflow');
     // Sin Cristales suficientes, los botones del Prisma no se pueden usar.
     expect(
         tester
@@ -300,15 +304,15 @@ void main() {
             .onPressed,
         isNull);
     await _tap(tester, 'condense-cristal-all');
-    expect(plain(tester, 'condense-summary'), contains('Gastas 20 Esquirla'));
+    expect(plain(tester, 'condense-summary'), contains('Gastas 40 Esquirla'));
     expect(plain(tester, 'condense-summary'), contains('200.'));
     expect(plain(tester, 'condense-summary'), contains('No se puede deshacer'));
     // Cancelar no gasta nada.
     await _tap(tester, 'condense-cancel');
-    expect(me().material(CraftMaterial.esquirla), 25);
+    expect(me().material(CraftMaterial.esquirla), 50);
     await _tap(tester, 'condense-cristal-1');
     await _tap(tester, 'condense-go');
-    expect(me().material(CraftMaterial.esquirla), 15);
+    expect(me().material(CraftMaterial.esquirla), 30);
     expect(me().material(CraftMaterial.cristal), 1);
     expect(me().credits, 900);
     await _tap(tester, 'condense-back');

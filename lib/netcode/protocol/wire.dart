@@ -67,7 +67,10 @@ import '../../game_engine/serialization/session_json.dart';
 /// ([kTravesiaProtocolVersion]); cada composition root elige [WireGame]
 /// (docs/specs/netcode.md § "Un protocolo por juego"). El `g` del `hello`
 /// es aditivo: un host 31 viejo lo ignora, así que Mundo sigue en 31.
-const kProtocolVersion = 31;
+/// 32 desde v0.20.8: Condensar con recetas nuevas (20 Esquirlas → 1
+/// Cristal, 8 Cristales → 1 Prisma, materials_economy.md § 4.3) y el host
+/// lo rechaza en la Travesía; un host 31 cobraría otra receta.
+const kProtocolVersion = 32;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

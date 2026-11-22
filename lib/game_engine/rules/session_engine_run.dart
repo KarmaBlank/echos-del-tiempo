@@ -39,6 +39,10 @@ extension _RunOp on _Op {
       // Comprar: solo en la tienda. Forjar / fusionar: solo en la armería.
       case BuyItemAction() || BuyWeaponAction():
         return stop == RunNodeType.tienda ? null : false;
+      // Condensar es del Mundo (materials_economy.md § 4.3): la Travesía
+      // no tiene economía de materiales entre runs.
+      case CraftAction(op: CraftOp.condense):
+        return false;
       case CraftAction(:final op) when !op.destroys:
         return stop == RunNodeType.armeria ? null : false;
       case FuseAction() || UpgradeAction() || EcoCraftAction():

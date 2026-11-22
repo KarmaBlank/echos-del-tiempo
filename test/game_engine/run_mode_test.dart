@@ -17,6 +17,7 @@ import 'package:echos_del_tiempo/game_engine/rules/run_tuning.dart';
 import 'package:echos_del_tiempo/game_engine/rules/session_engine.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/action_json.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
+import 'package:echos_del_tiempo/game_engine/models/item.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
@@ -196,6 +197,32 @@ void main() {
       var s = e.create();
       s = e.addPlayer(s, 'p0', newProfile('A', 'guerrero'))!.state;
       expect(e.apply(s, 'p0', const RunStartAction()), isNull);
+    });
+
+    test('Condensar: rechazado en la Travesía, aun en la armería', () {
+      final e = engine();
+      var s = e.create();
+      s = e.addPlayer(s, 'p0', newProfile('A', 'guerrero'))!.state;
+      s = act(e, s, 'p0', const RunStartAction());
+      final r = s.run!;
+      final armory = RunRules.floorOf(r)
+          .nodes
+          .firstWhere((n) => n.type == RunNodeType.armeria);
+      r
+        ..node = armory.id
+        ..phase = RunPhase.stop;
+      final p = s.players['p0']!;
+      p.profile = p.profile.copyWith(
+          credits: 99999,
+          materials: {CraftMaterial.esquirla: 99, CraftMaterial.cristal: 50});
+      expect(
+          e.apply(s, 'p0',
+              const CraftAction(CraftOp.condense, 'cristal', index: 1)),
+          isNull);
+      expect(
+          e.apply(s, 'p0',
+              const CraftAction(CraftOp.condense, 'prisma', index: 1)),
+          isNull);
     });
 
     test('empezar → votar → pelea ganada → recompensa elegida', () {
