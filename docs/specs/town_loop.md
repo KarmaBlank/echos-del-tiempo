@@ -209,6 +209,35 @@ Los eventos son estado de sala (§ 9). No hay temporizadores reales.
 
 ---
 
+## 10b. Jugar solo y pocos clics
+
+1. **Solo progresa bien.** Las actividades del pueblo son
+   **aceleradores opcionales, nunca puertas obligatorias**. Todo lo que
+   en § 3 es "solo del pueblo" también se consigue **lento** por
+   misiones (drop raro) o por el comerciante (precio alto), con tasa
+   peor: `town.fallbackRateMult` (propuesta 0.35).
+2. **Producción pasiva.** Huerta: **1 clic por tanda** ("plantar todo" /
+   "cosechar todo"); crece por misión. Compañeros de la party solo
+   (`solo_party.md`) o un ayudante contratado pueden **atender huerta y
+   pesca solos** mientras estás en misión, con rendimiento menor
+   (`town.helperYieldMult`, propuesta 0.5).
+3. **Pesca:** un minijuego rápido por pez, **~15–30 s**; opción
+   **auto-pesca** con recompensa reducida (`fishing.autoYieldMult`) y
+   sin chance de legendario o con chance muy baja.
+4. **Cocina:** botón **"cocinar todo lo posible"** (1 clic).
+5. **Presupuesto de tiempo:** el loop del pueblo entre misiones
+   entra en **≤ 2–3 min** si se quiere, y es **saltable del todo**
+   (ir directo al tablero sin perder nada obligatorio).
+6. **Sala de 1 = dificultad solo** (§ 6).
+
+**Alcance acotado:** se arranca solo con **pesca + huerta + mejoras**.
+La **cocina se fusiona** si es posible en los resultados de huerta/pesca
+(p. ej. "preparar" como acción del mismo panel, sin edificio ni menú
+propio); se separa solo si el dueño lo pide. Cualquier actividad nueva
+tiene que justificar algo que ninguna otra cubra.
+
+---
+
 ## 11. Plan por fases
 
 Cada fase: alcance, datos, tunables, tests (`game_engine/` puro) y
