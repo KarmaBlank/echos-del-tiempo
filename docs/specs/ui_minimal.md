@@ -1,4 +1,4 @@
-# Spec: UI mínima (v0.20.21)
+# Spec: UI mínima (v0.20.21, armería v0.20.25)
 
 Pedido del dueño: una UI accesible, tranquila y minimalista, con menos
 texto en pantalla. La profundidad sigue estando, pero no se impone: se
@@ -62,10 +62,42 @@ la derecha.
   confirmar (el verbo de la acción) en el paso 3. El costo se ve en cada
   fila del paso 2 y otra vez junto al botón. Las acciones que no se
   pueden quedan grises con el motivo.
+- **FUSIÓN paso 2 (ACCIÓN)**: los grupos son `DsSectionHeader` (título
+  + línea fina, sin marco; tooltip con qué hace el grupo, clave
+  `bench-group-<grupo>`) y cada acción una `DsActionRow`
+  (`bench-op-<op>`): ícono, nombre, una línea de qué hace y el costo a la
+  derecha (`bench-op-why-<op>`). Las bloqueadas, grises con candado y el
+  motivo en la línea; se pueden tocar igual (el paso 3 da el motivo
+  completo). Ya no hay botón CONDENSAR en FUSIÓN.
 - **FORJA**: `1 ARMA › 2 MEJORA › 3 CONFIRMAR` (`forge-crumb-<n>`).
-  Tocar una tarjeta de mejora solo la elige (borde dorado, ANTES →
-  DESPUÉS y costo en la tarjeta); `FORJAR` (`forge-confirm`) la aplica.
-  Sin elegir, `FORJAR` está gris con el motivo `Elegí una mejora`.
+  - Cabecera: nombre del arma (Título, color de rareza) + `DsTag` de
+    rareza; `Forja n/tope` con cuadritos (`forge-cap`, tooltip con el
+    tope); la pasiva en una línea (`forge-passive-note`: nombre en color
+    de pasiva + cuándo sube; la descripción, con el mouse).
+  - Habilidades: `SkillChips` como etiquetas (sin "?"); la ficha con el
+    mouse o el foco.
+  - Mejoras: `DsSectionHeader('Mejoras')` y una `DsActionRow` por
+    estadística (`up-<uid>-<stat>`): ícono, nombre, la línea clave
+    (`MAG 29 → 32`, `DsStatLine`: verde / rojo solo en los números),
+    cuadritos n/5 y el costo (`forge-cost-<stat>`, `DsTag` dorado; rojo
+    si no alcanza; `MAX` gris al tope). Tocarla solo la elige (borde
+    dorado); bloqueada no se elige.
+  - Nivel 2 / 3: el tooltip de la fila y `MÁS DETALLE` (`forge-more`, un
+    `DsFold`, solo con una elegida) muestran bono, la pasiva que sube
+    (`forge-passive-up-<stat>`) y qué cambia en batalla
+    (`forge-impact-<stat>`).
+  - Pie: `FORJAR` (`forge-confirm`, `DsButton` primario) gris con el
+    motivo `Elegí una mejora` hasta elegir; `EQUIPAR` (`DsButton`) o la
+    etiqueta `EQUIPADA`; teclas mínimas (`Enter Forjar`).
+- **CONDENSAR** (pestaña propia desde v0.20.25, entre FUSIÓN y
+  CONSUMIBLES): izquierda "Elegí material" (`DsActionRow` por receta,
+  `condense-pick-<resultado>`, con lo que tenés), flecha, derecha "Se
+  condensa en" (`condense-result`); con poco ancho, una debajo de la
+  otra. Abajo: cantidad `×1` / `MÁX (n)` (`condense-<resultado>-1` /
+  `-all`), la receta (`condense-summary`: `20 Esquirla + ₵100 → 1
+  Cristal`), `Alcanza para n` (`condense-have-<resultado>`) y
+  `CONDENSAR` (`condense-go`), gris con el motivo si no alcanza o en la
+  Travesía.
 
 ## 5. Acciones en lote del inventario: un solo lugar
 
@@ -87,8 +119,24 @@ componentes del sistema de diseño (`DsButton`).
 Se quitó el slot `inv.clean_menu` (la caja con el menú debajo de la
 grilla).
 
+## 6. Componentes de la ARMERÍA (mismo patrón en todas las pestañas)
+
+| Qué | Componente |
+|---|---|
+| Acción elegible (mejora, acción de fusión, receta) | `DsActionRow` (sobre `DsListRow`): sin marco propio; elegida = borde dorado |
+| Sección / grupo | `DsSectionHeader` (título Subtítulo + línea fina), nunca un panel enmarcado |
+| Costo | `DsActionRow.costTag` (`DsTag`): dorado si alcanza, rojo si no, gris bloqueada |
+| Bloqueada | gris (`DsColors.textDisabled`), candado como ícono y el motivo en la segunda línea (sin caja) |
+| Cambio de un número | `DsStatLine` (flecha + verde / rojo solo en el número) |
+| Detalle | tooltip `DsTooltipCard` (nivel 2) y `DsFold` `MÁS DETALLE` (nivel 3) |
+| Botones del pie | `DsButton` (primario para la acción, compacto para EQUIPAR) |
+
 ## Tests
 
 - `test/features/inventory/ui_minimal_test.dart`: buscador + equipada
   fija en FUSIÓN (destino y origen), FORJA y COMPRAR; flujo de pasos de
   FUSIÓN y FORJA; LIMPIAR como único lugar de lotes.
+- `test/features/inventory/armory_panel_test.dart`: FORJA elegir / costo
+  / bloqueada; `craft_bench_test.dart`: CONDENSAR como pestaña.
+- Goldens: `test/features/inventory/goldens/craft_*_default_*.png`
+  (FUSIÓN, FUSIÓN paso 2, FORJA, FORJA con una elegida, CONDENSAR).

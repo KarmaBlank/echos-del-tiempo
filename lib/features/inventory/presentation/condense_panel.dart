@@ -2,39 +2,38 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/design/ds_layout_host.dart';
-import '../../../app/theme/proto_colors.dart';
-import '../../../app/theme/proto_markup.dart';
-import '../../../game_engine/models/item.dart';
-import '../../../game_engine/models/player_profile.dart';
-import '../../../game_engine/models/session_action.dart';
+import '../../../app/widgets/action_row_icon.dart';
+import '../../../app/theme/retro_type.dart';
 import '../../../core/layout/layout_doc.dart';
+import '../../../game_engine/models/item.dart';
+import '../../../game_engine/models/session_action.dart';
 import '../../../game_engine/rules/craft_rules.dart';
+import 'craft_bench.dart' show materialColor, materialIcon;
 import 'craft_layout.dart';
 import 'shop_sections.dart';
 
-/// CONDENSAR (mesa de fusión, v0.15; materials_economy.md § 4.3): una
-/// tarjeta por receta (10 Esquirlas → 1 Cristal, 10 Cristales → 1
-/// Prisma) con lo que tienes, x1 / x5 / TODO y una confirmación con lo
-/// que gastas y obtienes. Sin azar y sin vuelta atrás; el host valida
-/// los fondos (`CraftOp.condense`).
+/// CONDENSAR: pestaña propia de la ARMERÍA (v0.20.25; materials_economy.md
+/// § 4.3, ui_minimal.md § 4). Izquierda "Elegí material" (las fuentes con
+/// lo que tienes), flecha, derecha "Se condensa en" (el resultado); abajo
+/// la receta, cuántas veces alcanza, la cantidad (×1 / MÁX) y CONDENSAR.
+/// Sin azar y sin vuelta atrás; el host valida los fondos
+/// (`CraftOp.condense`).
 class CondensePanel extends StatefulWidget {
   const CondensePanel(
       {super.key,
       required this.shop,
-      required this.onBack,
       this.layout,
       this.layoutHooks,
       this.initialPending});
 
   final ShopContext shop;
-  final VoidCallback onBack;
 
   /// Layout fijo (Editor → LAYOUT); `null` = el del catálogo
   /// (editor_layout.md § 6).
   final LayoutDoc? layout;
   final DsLayoutHooks? layoutHooks;
 
-  /// Elección pendiente al abrir (vista previa del Editor).
+  /// Material que sale y cantidad al abrir (vista previa del Editor).
   final (CraftMaterial, int)? initialPending;
 
   @override
@@ -42,71 +41,63 @@ class CondensePanel extends StatefulWidget {
 }
 
 class _CondensePanelState extends State<CondensePanel> {
-  /// Elección pendiente de confirmar: material que sale y cuántos.
-  late (CraftMaterial, int)? _pending = widget.initialPending;
+  late CraftMaterial _out =
+      widget.initialPending?.$1 ?? CraftRules.condensable.first;
+
+  /// Cantidad pedida; `null` = MÁX.
+  late int? _n = widget.initialPending?.$2 ?? 1;
 
   ShopContext get shop => widget.shop;
 
   static String _short(CraftMaterial m) => m.label.split(' ').first;
 
-  CraftAction _action(CraftMaterial out, int n) =>
-      CraftAction(CraftOp.condense, out.name, index: n);
-
   @override
   Widget build(BuildContext context) {
     final p = shop.profile;
-    final pending = _pending;
-    final a = pending == null ? null : _action(pending.$1, pending.$2);
-    final why = a == null ? null : shop.guards.craft(p, a);
-    // Slots del layout (editor_layout.md § 6): título, explicación y
-    // recetas (fijas); lo de la confirmación solo con algo pendiente.
+    final (from, need, cr) = CraftRules.condenseRecipe(_out)!;
+    final max = CraftRules.condenseMax(p, _out);
+    final n = (_n ?? max).clamp(1, max < 1 ? 1 : max);
+    final a = CraftAction(CraftOp.condense, _out.name, index: n);
+    final why = shop.view.session.run != null
+        ? 'Solo en el Mundo'
+        : max < 1
+            ? 'No alcanza'
+            : shop.guards.craft(p, a);
     final slots = <String, DsSlotBuilder>{
-      CondenseLayout.title: (_) => SizedBox(
-          width: double.infinity,
-          child: DsSectionHeader('Condensar materiales',
-              trailing: DsButton('‹ VOLVER',
-                  key: const ValueKey('condense-back'),
-                  kind: DsButtonKind.ghost,
-                  size: DsButtonSize.compact,
-                  onPressed: widget.onBack))),
-      CondenseLayout.intro: (_) => const ProtoText(
-          'Junta lo que te sobra en un material más alto. '
-          'Sin azar; <span class="k">no se puede deshacer</span>.'),
-      CondenseLayout.recipes: (_) => Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      CondenseLayout.title: (_) => const DsSectionHeader('Condensar'),
+      CondenseLayout.intro: (_) =>
+          Text('Sin azar. No se puede deshacer.', style: DsText.detail()),
+      CondenseLayout.recipes: (_) => _picker(context, max),
+      CondenseLayout.summary: (_) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final out in CraftRules.condensable) ...[
-                _recipe(p, out),
-                SizedBox(height: DsSpace.sm),
-              ],
+              KeyedSubtree(
+                key: const ValueKey('condense-summary'),
+                child: Text(
+                    '${need * n} ${_short(from)} + ₵${cr * n} → '
+                    '$n ${_short(_out)}',
+                    style: DsText.body()),
+              ),
+              KeyedSubtree(
+                key: ValueKey('condense-have-${_out.name}'),
+                child: Text('Alcanza para $max', style: DsText.detail()),
+              ),
             ],
           ),
-      CondenseLayout.summary: (_) => pending == null
-          ? null
-          : _summary(pending.$1, pending.$2),
       CondenseLayout.error: (_) => why == null
           ? null
-          : ProtoText(
+          : KeyedSubtree(
               key: const ValueKey('condense-error'),
-              protoColor(ProtoColors.red, 'No se puede: ${protoEsc(why)}')),
-      CondenseLayout.go: (_) => a == null
-          ? null
-          : DsButton('CONDENSAR',
-              key: const ValueKey('condense-go'),
-              kind: DsButtonKind.primary,
-              onPressed: why != null
-                  ? null
-                  : () {
-                      if (shop.controller.craft(a)) {
-                        setState(() => _pending = null);
-                      }
-                    }),
-      CondenseLayout.cancel: (_) => a == null
-          ? null
-          : DsButton('CANCELAR',
-              key: const ValueKey('condense-cancel'),
-              kind: DsButtonKind.ghost,
-              onPressed: () => setState(() => _pending = null)),
+              child: Text(why, style: DsText.detail(DsColors.textDisabled))),
+      CondenseLayout.go: (_) => DsButton('CONDENSAR',
+          key: const ValueKey('condense-go'),
+          kind: DsButtonKind.primary,
+          tooltip: why,
+          onPressed: why != null
+              ? null
+              : () {
+                  if (shop.controller.craft(a)) setState(() => _n = 1);
+                }),
     };
     return DsLayoutHost(
       spec: CondenseLayout.spec,
@@ -120,69 +111,98 @@ class _CondensePanelState extends State<CondensePanel> {
             r.region('head'),
             SizedBox(height: DsSpace.sm),
             r.region('recipes'),
-            if (!r.isEmpty('confirm'))
-              DsCard(
+            SizedBox(height: DsSpace.md),
+            KeyedSubtree(
                 key: const ValueKey('condense-confirm'),
-                child: r.region('confirm'),
-              ),
+                child: r.region('confirm')),
           ],
         ),
       ),
     );
   }
 
-  Widget _recipe(PlayerProfile p, CraftMaterial out) {
-    final (from, need, cr) = CraftRules.condenseRecipe(out)!;
-    final max = CraftRules.condenseMax(p, out);
-    final full = p.material(out) >= CraftMaterial.maxStack;
-    final fromFull = p.material(from) >= CraftMaterial.maxStack;
-    Widget amount(String label, int n, String key) => DsButton(label,
-        key: ValueKey('condense-${out.name}-$key'),
-        size: DsButtonSize.compact,
-        selected: _pending == (out, n),
-        onPressed: n < 1 || n > max
-            ? null
-            : () => setState(() => _pending = (out, n)));
-    return DsCard(
-      key: ValueKey('condense-card-${out.name}'),
-      selected: _pending?.$1 == out,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ProtoText(
-              '<span class="k">$need ${protoEsc(_short(from))} + ₵$cr</span> → '
-              '1 ${protoEsc(out.label)}'),
-          ProtoText(
-              key: ValueKey('condense-have-${out.name}'),
-              'Tienes ${p.material(from)} ${protoEsc(_short(from))} · '
-              '${p.material(out)} ${protoEsc(_short(out))} · ₵${p.credits}'
-              ' — alcanza para <span class="k">$max</span>'),
-          if (fromFull)
-            ProtoText(protoColor(ProtoColors.gold,
-                'Pila de ${protoEsc(_short(from))} llena: condensa para no '
-                'perder lo que caiga.')),
-          if (full)
-            ProtoText(protoColor(ProtoColors.red,
-                'Pila de ${protoEsc(_short(out))} llena '
-                '(tope ${CraftMaterial.maxStack}).')),
-          SizedBox(height: DsSpace.xs),
-          Wrap(spacing: DsSpace.sm, runSpacing: DsSpace.xs, children: [
-            amount('×1', 1, '1'),
-            amount('×5', 5, '5'),
-            amount('MÁX ($max)', max, 'all'),
-          ]),
-        ],
-      ),
+  /// Material (izquierda) → resultado (derecha) y la cantidad.
+  Widget _picker(BuildContext context, int max) {
+    final p = shop.profile;
+    Widget icon(CraftMaterial m) =>
+        actionRowIcon(context, materialIcon(m), materialColor(m));
+    final left = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const DsSectionHeader('Elegí material'),
+        for (final out in CraftRules.condensable)
+          if (CraftRules.condenseRecipe(out) case (final src, final need, _))
+            DsActionRow(
+              key: ValueKey('condense-pick-${out.name}'),
+              icon: icon(src),
+              title: _short(src),
+              description: '$need → 1 ${_short(out)}',
+              extra: Text('x${p.material(src)}', style: DsText.body()),
+              selected: out == _out,
+              onTap: () => setState(() {
+                _out = out;
+                _n = 1;
+              }),
+            ),
+      ],
     );
-  }
-
-  Widget _summary(CraftMaterial out, int n) {
-    final (from, need, cr) = CraftRules.condenseRecipe(out)!;
-    return ProtoText(
-        key: const ValueKey('condense-summary'),
-        'Gastas <span class="k">${need * n} ${protoEsc(from.label)}</span> y '
-        '<span class="k">₵${cr * n}</span>.<br>'
-        'Obtienes <span class="k">$n ${protoEsc(out.label)}</span>.<br>'
-        '${protoColor(ProtoColors.gold, 'No se puede deshacer.')}');
+    final right = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const DsSectionHeader('Se condensa en'),
+        DsListRow(
+          key: const ValueKey('condense-result'),
+          leading: icon(_out),
+          title: _short(_out),
+          titleColor: DsColors.textTitle,
+          subtitle: _out.description,
+          trailing: Text('x${p.material(_out)}', style: DsText.body()),
+        ),
+      ],
+    );
+    Widget amount(String label, int? n, String key) => DsButton(label,
+        key: ValueKey('condense-${_out.name}-$key'),
+        size: DsButtonSize.compact,
+        selected: _n == n,
+        onPressed: max < 1 ? null : () => setState(() => _n = n));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        LayoutBuilder(builder: (context, box) {
+          final arrow = Padding(
+            padding: EdgeInsets.all(DsSpace.sm),
+            child: Text('→', style: RetroType.style(RetroType.title, color: DsColors.textSecondary)),
+          );
+          // Angosto (o texto ENORME): una debajo de la otra.
+          if (box.maxWidth < RetroType.width(context, 640)) {
+            return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  left,
+                  Center(
+                      child: Text('↓',
+                          style: RetroType.style(RetroType.title,
+                              color: DsColors.textSecondary))),
+                  right
+                ]);
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [Expanded(child: left), arrow, Expanded(child: right)],
+          );
+        }),
+        SizedBox(height: DsSpace.sm),
+        Wrap(
+          spacing: DsSpace.sm,
+          runSpacing: DsSpace.xs,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text('CANTIDAD', style: DsText.subtitle()),
+            amount('×1', 1, '1'),
+            amount('MÁX ($max)', null, 'all'),
+          ],
+        ),
+      ],
+    );
   }
 }

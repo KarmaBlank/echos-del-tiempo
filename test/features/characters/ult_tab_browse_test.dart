@@ -1,6 +1,7 @@
 // Pestaña ULT rediseñada (docs/specs/ultimates_v2.md § 2.1.1): ULT
 // EQUIPADA fija arriba, repertorio con búsqueda, filtros y orden, vista
 // previa e info a la derecha; solo el clic elige y desmarca la NUEVA.
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/features/characters/presentation/ult_repertoire_view.dart';
 import 'package:echos_del_tiempo/game_engine/data/classes_catalog.dart';
@@ -78,15 +79,37 @@ void main() {
     expect(seen, isEmpty);
     expect(find.byKey(ValueKey('ult-info-$base')), findsOneWidget);
     expect(find.byKey(ValueKey('ult-info-${a.id}')), findsNothing);
-    await tester.tap(row(a.id));
+    await tester.tap(find.byKey(ValueKey('ult-row-${a.id}')));
     await tester.pump();
     expect(seen, ['${UltRules.seenPrefix}${a.id}']);
     expect(find.byKey(ValueKey('ult-info-${a.id}')), findsOneWidget);
     expect(find.byKey(const ValueKey('ult-equip')), findsOneWidget);
     // Otro clic a la misma no la vuelve a mandar.
-    await tester.tap(row(a.id));
+    await tester.tap(find.byKey(ValueKey('ult-row-${a.id}')));
     await tester.pump();
     expect(seen, hasLength(1));
+  });
+
+  testWidgets('MEJORAR al lado de EQUIPAR, con el costo; gris sin fondos',
+      (tester) async {
+    // Sin créditos: MEJORAR gris, el costo a la vista.
+    await pump(tester, profile().copyWith(credits: 0));
+    await tester.tap(find.byKey(ValueKey('ult-row-${a.id}')));
+    await tester.pump();
+    final up = find.byKey(const ValueKey('ult-upgrade'));
+    expect(up, findsOneWidget);
+    expect(tester.widget<DsButton>(up).onPressed, isNull);
+    expect(find.byKey(const ValueKey('ult-upgrade-cost')), findsOneWidget);
+    // En la misma fila que EQUIPAR / EQUIPADA (sin scrollear).
+    final actions = find.ancestor(of: up, matching: find.byType(Wrap)).first;
+    expect(
+        find.descendant(
+            of: actions,
+            matching: find.byWidgetPredicate((w) =>
+                w is DsBadge ||
+                (w is DsButton && w.key == const ValueKey('ult-equip')))),
+        findsOneWidget);
+    expect(tester.getBottomLeft(up).dy, lessThan(800));
   });
 
   testWidgets('la equipada va fija arriba, antes de los filtros',

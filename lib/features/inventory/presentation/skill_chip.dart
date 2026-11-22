@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
@@ -44,7 +45,6 @@ class SkillChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? (ultimate ? ProtoColors.pink : ProtoColors.ink);
     return RetroTooltip(
       message:
           skillTipMarkup(skill, stats: stats, ultimate: ultimate, note: note),
@@ -55,21 +55,23 @@ class SkillChip extends StatelessWidget {
       // tomar el clic: el clic sigue a la tarjeta o fila de abajo.
       child: _ChipFocus(
         key: ValueKey('skill-chip-${skill.id}'),
+        // Etiqueta del sistema de diseño (como DsTag): borde fino, sin
+        // "?" (la ficha sale con el mouse o el foco; ui_minimal.md § 6).
         builder: (hot) => Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+          padding: EdgeInsets.symmetric(horizontal: DsSpace.xs + 2, vertical: 1),
           decoration: BoxDecoration(
-            color: hot
-                ? ProtoColors.button
-                : ProtoColors.bg.withValues(alpha: 0.5),
+            color: hot ? DsColors.hover : null,
             border: Border.all(
-                color: hot ? ProtoColors.sky : ProtoColors.panelBorder,
+                color: hot ? DsColors.focus : DsColors.border,
                 width: RetroTheme.thinBorderWidth),
           ),
-          child: ProtoText(
-              '${ultimate ? 'ULT ' : ''}${protoEsc(skill.name)}'
-              '${suffix == null ? '' : ' $suffix'} '
-              '${protoColor(ProtoColors.sky, '?')}',
-              style: TextStyle(color: c)),
+          child: Text(
+              '${ultimate ? 'ULT ' : ''}${skill.name}'
+              '${suffix == null ? '' : ' $suffix'}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: DsText.detail(color ??
+                  (ultimate ? ProtoColors.pink : DsColors.textPrimary))),
         ),
       ),
     );
@@ -109,8 +111,7 @@ class SkillChips extends StatelessWidget {
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         if (label != null)
-          Text(retroText(label!),
-              style: const TextStyle(color: ProtoColors.sky)),
+          Text(retroText(label!.toUpperCase()), style: DsText.subtitle()),
         for (final id in rules.items.skillsOf(item))
           if (cat.skills[id] case final s?)
             SkillChip(
