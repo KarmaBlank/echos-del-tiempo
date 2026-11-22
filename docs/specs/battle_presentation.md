@@ -1509,7 +1509,10 @@ así que no hacen falta las tarjetas de los demás.
 - Los demás, en `BattleAllyList` a la derecha de la arena (debajo de la
   franja), de arriba hacia abajo en orden de grupo: avatar ×2, nombre,
   vida verde (6 px) y maná azul (4 px), y a la derecha `T+n`, `▶` si es
-  su turno, `K.O.` en rojo o el ícono de Aturdido. Borde dorado el de
+  su turno, `K.O.` en rojo o el ícono de Aturdido. Debajo de las barras,
+  los mismos chips de estados, buffs, debuffs y escudos que la tarjeta
+  propia (`combatantChips`, sin K.O.; v0.20.7), cada uno con su tooltip.
+  Borde dorado el de
   turno, blanco el señalado con el mouse. Ancho 250 × tamaño de texto
   (como mucho 30 % de la escena). Hasta `maxRows` (12) filas se achica
   entera para entrar; con más, scroll.
