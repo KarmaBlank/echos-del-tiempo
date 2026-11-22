@@ -408,7 +408,7 @@ el pueblo también hace progresar. Esta sección precisa § 5 (Oficios).
 - Stash **personal**.
 - Eventos cada **5 misiones**, solo por ciclo (sin fechas reales).
 - El nivel de arma **se suma** a la mejora actual.
-- Las mejoras del pueblo son **del host**.
+- Las mejoras del pueblo son **del mundo** (de la cuenta del host; § 11c).
 - Pesca: **minijuego de barra simple**.
 - Solo: **todas las actividades**, rendimiento ajustado.
 - Auto-pesca: **sin legendarios**.
