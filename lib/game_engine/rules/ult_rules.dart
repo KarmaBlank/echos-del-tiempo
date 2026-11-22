@@ -160,6 +160,15 @@ abstract final class UltRules {
           if (itemUltId(i) case final id?) id,
       };
 
+  /// ULT de tipo de las armas que [p] tiene (v0.20.9): se pueden elegir
+  /// en el menú aunque tenga equipada otra. No se anotan en `uk`.
+  static Set<String> ownedTypeUlts(PlayerProfile p,
+          [GameCatalog catalog = GameCatalog.standard]) =>
+      {
+        for (final i in p.items)
+          if (catalog.ultimates[kWeapons[i.baseId]?.type] case final u?) u.id,
+      };
+
   static bool _earned(UltDef u, PlayerProfile p) {
     final parts = u.ref.split(':');
     return switch (u.source) {
@@ -212,7 +221,9 @@ abstract final class UltRules {
   }
 
   static SkillDef? _skill(String id, GameCatalog catalog) =>
-      catalog.playerUlts[id] ?? kWeaponUltSkills[id];
+      catalog.playerUlts[id] ??
+      kWeaponUltSkills[id] ??
+      catalog.ultimates.values.where((u) => u.id == id).firstOrNull;
 
   /// Las ULT que [classId] con un arma de tipo [weapon] puede elegir:
   /// ascensión, tipo de arma y el repertorio ([known]); las
@@ -243,13 +254,11 @@ abstract final class UltRules {
       final sk = _skill(id, catalog);
       if (sk == null) continue;
       final def = kUltV2[id];
-      final ws = weaponsOf(id);
+      // v0.20.9: la ULT elegida vale con cualquier arma; solo la clase
+      // la puede restringir.
       final cls = def?.classes ?? const <String>[];
-      final reason = cls.isNotEmpty && !cls.contains(classId)
-          ? 'Solo ${cls.join(', ')}'
-          : ws.isNotEmpty && !ws.contains(weapon.type)
-              ? 'Pide ${ws.join(', ')}'
-              : null;
+      final reason =
+          cls.isNotEmpty && !cls.contains(classId) ? 'Solo ${cls.join(', ')}' : null;
       add(UltOption(sk, UltOptionKind.learned,
           def: def, reason: reason, level: (levels[id] ?? 1).clamp(1, maxLevel)));
     }
@@ -267,6 +276,7 @@ abstract final class UltRules {
           known: {
             ...p.ultKnown,
             ...earned(p),
+            ...ownedTypeUlts(p, catalog),
             if (item != null && itemUltId(item) != null) itemUltId(item)!,
           },
           levels: p.ultLevels,
@@ -306,14 +316,13 @@ abstract final class UltRules {
       final u = kAscensionUltimates[asc.id];
       if (u != null && u.id == sel) return u;
     }
-    final type = catalog.ultimates[b.equippedWeapon.type];
-    if (type != null && type.id == sel) return type;
+    // La elegida manda con cualquier arma (v0.20.9): ni el arma equipada
+    // ni el árbol la pisan; solo la clase la puede invalidar.
     final sk = _skill(sel, catalog);
     if (sk == null) return null;
-    final ws = weaponsOf(sel);
     final cls = kUltV2[sel]?.classes ?? const <String>[];
-    if (ws.isNotEmpty && !ws.contains(b.equippedWeapon.type)) return null;
     if (cls.isNotEmpty && !cls.contains(b.classId)) return null;
+    if (catalog.ultimates.values.any((u) => u.id == sel)) return sk;
     return leveled(sk, b.ultLevel);
   }
 

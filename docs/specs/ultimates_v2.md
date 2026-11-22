@@ -72,12 +72,16 @@ futuro o del pasado, futuro inmutable, pasado magitec).
     equipada y es compatible, aparece en el selector.
   - **Aprendidas** (árbol, hazañas, Ecos/Atlas/Maestría, botín de jefe):
     quedan en el repertorio para siempre.
-- Compatibilidad: cada ULT declara `weapons` (tipos de arma) y/o
-  `classes`. Si el arma actual no cumple, la ULT sale gris y se usa la de
-  respaldo (la del tipo de arma, siempre disponible).
-- Orden si `ultSel` no es válida: ascensión > arma propia > tipo de arma
-  (el `ultimateOf` actual, sin cambios). Así nada se rompe para perfiles
-  viejos (`ultSel` ausente = comportamiento de hoy).
+- **v0.20.9 (dueño): manda la elegida.** La ULT activa se usa con
+  cualquier arma equipada: ni el arma ni el árbol la pisan. Solo `classes`
+  la restringe (una ULT de otra clase sale gris). `weapons` queda como
+  dato informativo. Las ULT del tipo de cada arma que el personaje tiene
+  también se pueden elegir (`UltRules.ownedTypeUlts`, no se anotan en
+  `uk`). Al obtener un arma con ULT propia sale el aviso «<arma> le dio a
+  <jugador> la ULT <nombre>. Equipala desde el menú.»; el arma ya no la
+  impone (branch_ults.md § 3).
+- Orden si no hay `ultSel` (o es de otra clase): ascensión > base del arma
+  (tomos del Invocador) > tipo de arma.
 - **Las ULT nunca se pierden** (cambio del dueño, reemplaza la respuesta
   3): toda ULT que el personaje obtiene —también la de un arma con mod
   "ULT" o de un legendario— entra al repertorio permanente (`uk`) apenas

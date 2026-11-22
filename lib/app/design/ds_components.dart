@@ -369,10 +369,15 @@ class DsListRow extends StatelessWidget {
     this.focusNode,
     this.autofocus = false,
     this.compact = false,
+    this.highlighted = false,
   });
 
   final String title;
   final String? detail;
+
+  /// Borde azul de "condición lista" ([DsColors.conditionReady]) cuando
+  /// no está seleccionada (la selección manda con su dorado).
+  final bool highlighted;
 
   /// Foco propio (listas que se recorren con flechas).
   final FocusNode? focusNode;
@@ -404,7 +409,11 @@ class DsListRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: s.hot ? DsColors.hover : Colors.transparent,
             border: Border.all(
-                color: selected ? DsColors.selected : Colors.transparent,
+                color: selected
+                    ? DsColors.selected
+                    : highlighted && enabled
+                        ? DsColors.conditionReady
+                        : Colors.transparent,
                 width: 2),
           ),
           child: Row(children: [

@@ -111,13 +111,13 @@ void main() {
       expect(e.command(low, 'p1', const UltimateCommand()), isNull);
     });
 
-    test('ULT activa inválida (otra clase o tipo) cae al orden de siempre', () {
+    test('ULT activa de otra clase cae al orden de siempre; la de otro tipo de arma manda igual (v0.20.9)', () {
       final p = _turn(e(), [_member('p1', 'guerrero', ult: 100, sel: 'ult2_ojoFuturo')],
           ['golem']).party.single;
       expect(ultimateOf(p)!.id, isNot('ult2_ojoFuturo'));
       final q = _turn(e(), [_member('p1', 'guerrero', ult: 100, sel: 'ult2_milAyeres')],
           ['golem']).party.single;
-      expect(ultimateOf(q)!.id, isNot('ult2_milAyeres'));
+      expect(ultimateOf(q)!.id, 'ult2_milAyeres');
     });
 
     test('pulseParty: +2 Pulso a todo el grupo', () {
@@ -266,10 +266,10 @@ void main() {
           contains(old.ultId));
     });
 
-    test('la elegida se usa con cualquier arma del tipo, no la concreta', () {
+    test('la elegida se usa con cualquier arma, de cualquier tipo (v0.20.9)', () {
       final p = prof().copyWith(ultKnown: {'ult2_ecoFilo'}, ultSel: () => 'ult2_ecoFilo');
       expect(UltRules.validSel(p, kWeapons['espada_bronce']!, null), 'ult2_ecoFilo');
-      expect(UltRules.validSel(p, kWeapons['hacha_rompe']!, null), isNull);
+      expect(UltRules.validSel(p, kWeapons['hacha_rompe']!, null), 'ult2_ecoFilo');
     });
 
     test('mejorar valida fondos y paga', () {

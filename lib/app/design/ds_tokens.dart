@@ -64,6 +64,11 @@ abstract final class DsColors {
   /// Instante: celeste fijo (el de Congelación súbita, en `UiTheme.keep`).
   static const instant = Color(0xFF81ECEC);
 
+  /// Borde de una acción cuya condición especial se está cumpliendo
+  /// (habilidad con precondición lista; battle_presentation.md). Distinto
+  /// del dorado de selección.
+  static const conditionReady = Color(0xFF4DA3FF);
+
   /// Para la galería: nombre del rol → color.
   static Map<String, Color> get roles => {
         'superficie': surface,

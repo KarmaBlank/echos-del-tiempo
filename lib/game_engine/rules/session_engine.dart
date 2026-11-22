@@ -50,6 +50,7 @@ import 'consumable_rules.dart';
 import 'world_rules.dart';
 import 'zone_rules.dart';
 import 'ult_rules.dart';
+import '../data/weapons_catalog.dart' show kWeapons;
 import '../data/ults_v2_catalog.dart';
 import '../data/branch_ults_catalog.dart' show kWeaponUltSkills;
 import '../data/tuning_catalog.dart';
@@ -598,7 +599,17 @@ class _Op {
     final added = next.ultKnown.difference(p.profile.ultKnown);
     p.profile = next;
     for (final id in added) {
-      say('${p.name} aprendió la ULT ${kWeaponUltSkills[id]?.name ?? id}.');
+      final name = kWeaponUltSkills[id]?.name ?? id;
+      // Si vino de un arma, se dice cuál (v0.20.9): la ULT queda en el
+      // repertorio y se equipa desde el menú, no desde el arma.
+      final from = p.profile.items
+          .where((i) => UltRules.itemUltId(i) == id)
+          .map((i) => kWeapons[i.baseId]?.name)
+          .whereType<String>()
+          .firstOrNull;
+      say(from == null
+          ? '${p.name} aprendió la ULT $name.'
+          : '$from le dio a ${p.name} la ULT $name. Equipala desde el menú.');
     }
   }
 
