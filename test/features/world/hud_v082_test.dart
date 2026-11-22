@@ -47,10 +47,8 @@ Future<SessionController> _party4() async {
     clock: const SessionClock(autoStart: false),
   );
   await c.start();
-  final e = c.view!.map.entrances.firstWhere((e) => e.zone == 1);
-  c.teleport(e.front.x, e.front.y);
-  c.advance(0.05);
-  c.handleKey(LogicalKeyboardKey.keyE);
+  // v0.21.0: sin overworld, la zona sale del tablero.
+  c.proposeMission(c.zoneStatus(1)!.mission!.id);
   c.advance(0.05);
   c.setReady(true);
   c.advance(0.05);

@@ -11,6 +11,7 @@ import '../../../../core/perf/perf_log.dart';
 import '../../../../core/procedural/weapon_look.dart';
 import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/build_wants.dart';
+import '../../../../game_engine/data/town_layout.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/item.dart';
@@ -534,14 +535,11 @@ class MapGame extends Game {
           c, 'TIENDA', merchant.x, merchant.y - 34, const Color(0xFFFFD166), 6);
     }
     if (map.lobby) {
-      actors.text(c, 'MOSTRADOR DE MISIONES', 13 * ts, ts + 10,
-          const Color(0xFF48DBFB), 7);
-      actors.text(c, 'ARMERÍA', 21.5 * ts, ts + 10, const Color(0xFFFF9F43), 7);
-      // Portal del Eco (docs/specs/ecos_atlas.md § 1).
-      actors.text(c, 'PORTAL', 4.5 * ts, ts + 10, const Color(0xFF5AE6D2), 7);
-      // Estatua del Tiempo (docs/specs/ascension.md § 1).
-      actors.text(c, 'ESTATUA DEL TIEMPO', 21.5 * ts, 9 * ts - 12,
-          const Color(0xFFA29BFE), 6);
+      // Lugares del pueblo (town_loop.md § 2.1): nombre sobre cada uno.
+      for (final l in TownLayout.landmarks) {
+        actors.text(c, l.name, l.center.x, l.y * ts - 8,
+            TownPalette.label, 6);
+      }
     }
 
     // Loot en el piso (debajo de los actores; docs/specs/loot.md § 4).

@@ -758,6 +758,19 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 41 (v0.21.0: pueblo nuevo y mundos por cuenta)
+
+- El lobby es el mapa del pueblo (`MapGenerator.town()`, town_loop.md
+  § 2.1): tiles nuevos `F` (fuente rúnica), `f` (punto de pesca) e `Y`
+  (cartel), y sin entradas de zona. Un cliente 40 regeneraría el
+  overworld viejo: la sala no mezcla versiones.
+- La sala suma `wid` y `wname` (opcionales): el mundo elegido por el
+  anfitrión (town_loop.md § 11c). El cliente solo lo muestra; el pueblo
+  (pozo del Loot perdido, ciclo) se guarda en el disco del anfitrión.
+- Las zonas se proponen desde el tablero (`ProposeMissionAction`, la
+  misma de siempre); no hay acciones nuevas.
+- La cinemática de partida es local de cada cliente (no viaja).
+
 ## Mundo, protocolo 40 (v0.20.23: modos de turno)
 
 - La sala suma `cm` opcional (modo de combate: `timeline` / `rounds` /

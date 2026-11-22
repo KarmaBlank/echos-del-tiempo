@@ -69,7 +69,8 @@ class MissionBoardPanel extends StatefulWidget {
       'grupo.<br>'
       'Cuando <b>todos</b> votan SÍ pasan a la preparación (tienda, forja, '
       'equipo) y la misión empieza cuando todos marcan ¡LISTO!.<br>'
-      'Con zonas también se entra por las puertas del mapa del mundo.<br>'
+      'Es también el mapa de viaje: las zonas desbloqueadas se eligen '
+      'acá (no hay mundo para caminar).<br>'
       '<span class="k">Rango</span>: S si terminas a tiempo sin K.O.; más '
       'rango = más créditos y más chance de arma.<br>'
       '<span class="k">Flechas / 1-9</span> eligen · '
@@ -168,7 +169,7 @@ class _MissionBoardPanelState extends State<MissionBoardPanel> {
         index: idx < 0 ? 0 : idx,
         onChanged: (i) => setState(() => _sel = entries[i].$1.id),
         child: PanelFrame(
-          title: 'MOSTRADOR DE MISIONES',
+          title: 'TABLERO DE ENCARGOS',
           width: 1000,
           fill: true,
           help: MissionBoardPanel.help,

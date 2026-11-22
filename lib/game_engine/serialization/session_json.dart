@@ -82,6 +82,10 @@ class SessionJson {
         if (s.leaveReady.isNotEmpty) 'lr': [...s.leaveReady],
         if (s.lostLoot.isNotEmpty)
           'lost': [for (final g in s.lostLoot) groundToJson(g)],
+        // v0.21.0 (protocolo 41): el mundo del anfitrión (town_loop.md
+        // § 11c).
+        if (s.worldId != null) 'wid': s.worldId,
+        if (s.worldName != null) 'wname': s.worldName,
       };
 
   GameSession fromJson(Json j) {
@@ -128,6 +132,8 @@ class SessionJson {
       lostLoot: j['lost'] == null
           ? null
           : [for (final raw in j.list('lost')) groundFromJson(asJson(raw))],
+      worldId: j.strOrNull('wid'),
+      worldName: j.strOrNull('wname'),
     );
   }
 

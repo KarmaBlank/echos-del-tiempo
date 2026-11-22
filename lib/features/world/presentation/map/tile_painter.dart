@@ -60,6 +60,8 @@ class TilePainter {
       lobby = inTown(tx, ty);
       if (lobby) themeId = 'lobby';
     }
+    // El pueblo v0.21.0 es al aire libre (town_loop.md § 2.1).
+    if (themeId == 'pueblo') lobby = false;
     final th = mapTheme(themeId);
     final h = tileHash(tx, ty);
 
@@ -242,6 +244,15 @@ class TilePainter {
           _rect(c, LostTowerPalette.glow.withValues(alpha: 0.5 + 0.5 * k),
               px + 6, py - 10, 4, 5);
         }
+      case Tile.fountain:
+        _grass(c, th, px, py, h);
+        _fountain(c, px, py, tx, ty, t);
+      case Tile.fishing:
+        _rect(c, th.water, px, py, ts, ts);
+        _fishingSpot(c, px, py, t);
+      case Tile.sign:
+        _grass(c, th, px, py, h);
+        _sign(c, px, py);
       case Tile.spikes:
         // Púas de la Prueba: placa de metal y púas que suben y bajan.
         floor();
@@ -394,6 +405,7 @@ class TilePainter {
       lobby = inTown(tx, ty);
       if (lobby) themeId = 'lobby';
     }
+    if (themeId == 'pueblo') lobby = false;
     // Niebla del cementerio: sobre todo lo que no es vacío.
     if (themeId == 'cementerio' && ch != Tile.voidTile) return true;
     final h = tileHash(tx, ty);
@@ -409,7 +421,7 @@ class TilePainter {
     }
 
     switch (ch) {
-      case Tile.path || Tile.grass || Tile.tree || Tile.rock:
+      case Tile.path || Tile.grass || Tile.tree || Tile.rock || Tile.sign:
         return false;
       case Tile.floor ||
             Tile.merchant ||
@@ -431,6 +443,8 @@ class TilePainter {
             Tile.portal ||
             Tile.statue ||
             Tile.lostTower ||
+            Tile.fountain ||
+            Tile.fishing ||
             Tile.spikes ||
             Tile.pulse ||
             Tile.lava ||
@@ -461,11 +475,14 @@ class TilePainter {
         Tile.water ||
         Tile.grass ||
         Tile.rock ||
+        Tile.fountain ||
+        Tile.fishing ||
         Tile.voidTile ||
         Tile.bridge ||
         Tile.lava =>
           (0, 0, 0, 0),
         Tile.tree => (0, 1, 0, 0),
+        Tile.sign => (0, 0, 0, 0),
         _ when Tile.entranceZone(ch) != null => (0, 0, 0, 0),
         _ when !handles(ch) => (0, 0, 0, 0),
         // Suelo y todo lo que se apoya en él (muros, PdI, mostradores...).
@@ -490,6 +507,9 @@ class TilePainter {
         Tile.portal,
         Tile.statue,
         Tile.lostTower,
+        Tile.fountain,
+        Tile.fishing,
+        Tile.sign,
         Tile.spikes,
         Tile.pulse,
         Tile.grass,
@@ -622,6 +642,50 @@ class TilePainter {
   // ------------------------------------------------------------------
 
   /// Pasto: verde claro con matas y alguna flor (sin cuadriculado).
+  // ------------------------------------------------------------------
+  // Pueblo v0.21.0 (town_loop.md § 2.1)
+  // ------------------------------------------------------------------
+
+  /// Fuente rúnica de 2×2 (empieza en tile par): pileta de piedra con
+  /// agua y, donde se juntan los cuatro tiles, el pilar con runas que
+  /// laten. Cada tile dibuja su cuarto.
+  void _fountain(Canvas c, double px, double py, int tx, int ty, double t) {
+    final left = tx.isEven, top = ty.isEven;
+    _rect(c, TownPalette.stoneDark, px, py, ts, ts);
+    _rect(c, TownPalette.stone, px + (left ? 1 : 0), py + (top ? 1 : 0),
+        ts - 1, ts - 1);
+    _rect(c, TownPalette.basin, px + (left ? 3 : 0), py + (top ? 3 : 0),
+        ts - 3, ts - 3);
+    final o = (t / 300 + tx + ty).floor() % 3;
+    _rect(c, TownPalette.foam, px + (left ? 5 : 2) + o * 2,
+        py + (top ? 7 : 4), 3, 1);
+    // Pilar central (cuarto de un cuadrado de 6×6 en la esquina interior).
+    final cx = left ? px + ts - 3 : px, cy = top ? py + ts - 3 : py;
+    _rect(c, TownPalette.stoneDark, cx, cy, 3, 3);
+    final k = 0.5 + 0.5 * math.sin(t / 280);
+    _rect(c, TownPalette.rune.withValues(alpha: 0.45 + 0.5 * k),
+        left ? cx + 1 : cx, top ? cy + 1 : cy, 2, 2);
+  }
+
+  /// Punto de pesca: muellecito de tablas sobre el agua y una boya.
+  void _fishingSpot(Canvas c, double px, double py, double t) {
+    _rect(c, TownPalette.plankDark, px + 2, py + 3, 12, 8);
+    for (var i = 0; i < 3; i++) {
+      _rect(c, TownPalette.plank, px + 3 + i * 4, py + 4, 3, 6);
+    }
+    final bob = (math.sin(t / 240) * 1.2).roundToDouble();
+    _rect(c, TownPalette.foam, px + 5, py + 13, 6, 1);
+    _rect(c, TownPalette.bobber, px + 7, py + 11 + bob, 2, 2);
+  }
+
+  /// Cartel del lago (pesca: "Pronto").
+  void _sign(Canvas c, double px, double py) {
+    _rect(c, TownPalette.plankDark, px + 7, py + 8, 2, 8);
+    _rect(c, TownPalette.plankDark, px + 2, py + 2, 12, 7);
+    _rect(c, TownPalette.signBoard, px + 3, py + 3, 10, 5);
+    _rect(c, TownPalette.plankDark, px + 5, py + 5, 6, 1);
+  }
+
   void _grass(Canvas c, MapTheme th, double px, double py, int h) {
     _rect(c, th.grass, px, py, ts, ts);
     if (h % 3 == 0) {

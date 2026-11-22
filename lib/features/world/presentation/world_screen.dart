@@ -40,6 +40,7 @@ import '../../missions/presentation/mission_board_panel.dart';
 import '../../missions/presentation/prep_panel.dart';
 import '../../missions/presentation/results_panel.dart';
 import '../../settings/presentation/settings_menu.dart';
+import 'hud/departure_cinematic.dart';
 import 'hud/pause_banner.dart';
 import 'hud/world_hud.dart';
 import 'map/map_game.dart';
@@ -399,6 +400,22 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                 inBattle: view.mode == SessionMode.battle,
                 fade: ref
                     .watch(gameSettingsProvider.select((s) => s.reduceMotion))),
+          ),
+          // Partida del pueblo a la zona (town_loop.md § 2, v0.21.0).
+          // Con clave: los overlays de antes cambian de cantidad entre la
+          // preparación y el campo, y sin ella se perdería el estado.
+          Positioned.fill(
+            key: const ValueKey('departure-layer'),
+            child: DepartureCinematic(
+              mode: view.mode,
+              enabled: !controller.isRun,
+              destination: switch (view.session.mission?.missionId) {
+                final id? => controller.engine.catalog.mission(id)?.name,
+                null => null,
+              },
+              reduceMotion: ref
+                  .watch(gameSettingsProvider.select((s) => s.reduceMotion)),
+            ),
           ),
           // Elegir ascensión desde el resultado de la Prueba I.
           if (_choosing && view.me != null)

@@ -217,12 +217,12 @@ void main() {
       // Arranca en el pueblo.
       expect(music.current, Music.town);
 
-      // Fuera del pueblo, en el mapa del mundo.
+      // v0.21.0: sin overworld, cualquier rincón del pueblo es pueblo.
       const ts = MapGenerator.tileSize;
-      ctrl.teleport(40.0 * ts, 30.0 * ts);
+      ctrl.teleport(30.0 * ts, 18.0 * ts);
       ctrl.advance(0.05);
       expect(ctrl.view!.mode, SessionMode.lobby);
-      expect(music.current, Music.overworld);
+      expect(music.current, Music.town);
 
       // Misión de la pradera.
       ctrl.proposeMission('m1');
@@ -243,8 +243,6 @@ void main() {
       expect(
           tracks,
           containsAllInOrder([
-            Music.town,
-            Music.overworld,
             Music.town,
             Music.zone(1),
             Music.battle,
@@ -293,7 +291,7 @@ void main() {
 
   group('fin de batalla: jingles y pieza de fondo (reloj falso)', () {
     SessionView view(GameSession s) =>
-        SessionView(session: s, localId: 'p0', map: MapGenerator.overworld());
+        SessionView(session: s, localId: 'p0', map: MapGenerator.town());
 
     Combatant enemy() => Combatant(
         id: 'e1',
@@ -486,7 +484,7 @@ void main() {
 
   group('jingles del resultado', () {
     SessionView view(GameSession s) =>
-        SessionView(session: s, localId: 'p0', map: MapGenerator.overworld());
+        SessionView(session: s, localId: 'p0', map: MapGenerator.town());
 
     GameSession session(SessionMode mode, {MissionResult? result}) =>
         GameSession(

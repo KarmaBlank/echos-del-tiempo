@@ -91,7 +91,12 @@ import '../../game_engine/serialization/session_json.dart';
 /// ser `porRonda` / `porFases` (con `ro` / `wt` en Por rondas), comandos
 /// `wait` y `end`, y `cm` (modo de combate) en la sala. (El 39 es de
 /// v0.20.22.)
-const kProtocolVersion = 40;
+/// 41 desde v0.21.0: pueblo nuevo sin overworld y mundos por cuenta
+/// (town_loop.md § 2 y § 11c): la sala suma `wid` / `wname` (el mundo del
+/// anfitrión) y el lobby es el mapa del pueblo (otros tiles, sin entradas
+/// de zona: un cliente 40 dibujaría el mundo viejo y caminaría a puertas
+/// que ya no existen).
+const kProtocolVersion = 41;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

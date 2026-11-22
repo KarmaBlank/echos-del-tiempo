@@ -43,18 +43,16 @@ Future<SessionController> _controller({int unlockedZone = 1}) async {
   return c;
 }
 
-/// Pone al jugador frente a la entrada de la zona [zone] y recalcula.
-void _toEntrance(SessionController c, int zone) {
-  final e = c.view!.map.entrances.firstWhere((e) => e.zone == zone);
-  c.teleport(e.front.x, e.front.y);
+/// Propone la zona [zone] desde el tablero (v0.21.0: sin overworld).
+bool _propose(SessionController c, int zone) {
+  final ok = c.proposeMission(c.zoneStatus(zone)!.mission!.id);
   c.advance(0.05);
+  return ok;
 }
 
-/// Entra a la zona 1 por su puerta y la arranca (un jugador).
+/// Elige la zona 1 en el tablero y la arranca (un jugador).
 void _startZone1(SessionController c) {
-  _toEntrance(c, 1);
-  c.handleKey(LogicalKeyboardKey.keyE);
-  c.advance(0.05); // la votación de uno pasa sola
+  _propose(c, 1); // la votación de uno pasa sola
   expect(c.view!.mode, SessionMode.prep);
   c.setReady(true);
   c.advance(0.05);
@@ -75,7 +73,7 @@ void main() {
     Set<String> chars(GameMap m) => {for (final r in m.rows) ...r.split('')};
 
     test('el mundo y los pisos de las zonas 1-5 solo usan tiles conocidos', () {
-      final all = <String>{...chars(MapGenerator.overworld())};
+      final all = <String>{...chars(MapGenerator.town())};
       for (final z in _cat.zones.where((z) => z.playable)) {
         for (final seed in [1, 777, 500000000]) {
           all.addAll(chars(MapGenerator.zone(z, seed)));
@@ -86,12 +84,12 @@ void main() {
       for (final ch in [
         Tile.grass,
         Tile.tree,
-        Tile.rock,
         Tile.stairsDown,
         Tile.stairsUp,
         Tile.vaultFloor,
-        '1',
-        '0',
+        Tile.fountain,
+        Tile.fishing,
+        Tile.sign,
       ]) {
         expect(all, contains(ch));
       }
@@ -101,11 +99,12 @@ void main() {
         () {
       final codes = [
         '.', ',', '#', '~', 'G', 'C', 'A', 'M', 'g', 'T', '^', '>', '<', ':',
+        'F', 'f', 'Y',
         for (var z = 0; z < 10; z++) '$z',
       ];
       final p = TilePainter();
       for (final theme in [
-        'mundo', 'lobby', 'pradera', 'bosque', 'ruinas', 'cavernas',
+        'mundo', 'lobby', 'pueblo', 'pradera', 'bosque', 'ruinas', 'cavernas',
         'fortaleza', 'abismo',
       ]) {
         for (final ch in codes) {
@@ -128,58 +127,39 @@ void main() {
     });
   });
 
-  group('mapa del mundo', () {
+  group('tablero = mapa de viaje (sin overworld)', () {
     late SessionController c;
     tearDown(() {
       if (c.mounted) c.dispose();
     });
 
-    test('la entrada abierta propone la misión de su zona con E', () async {
+    test('el pueblo no tiene entradas: la zona abierta sale del tablero',
+        () async {
       c = await _controller();
-      expect(c.view!.map.entrances, hasLength(10));
-      _toEntrance(c, 1);
-      expect(c.view!.prompt, WorldPrompt.entrance);
-      expect(c.view!.promptLabel, '[E] Entrar: Pradera Esmeralda (Lv 1-5)');
-      expect(c.handleKey(LogicalKeyboardKey.keyE), isTrue);
+      expect(c.view!.map.entrances, isEmpty);
+      expect(c.mapAvailable, isFalse, reason: 'sin mapa del mundo en el pueblo');
+      expect(c.zones, hasLength(10));
+      expect(_propose(c, 1), isTrue);
       final s = c.view!.session;
       expect(s.vote?.missionId ?? s.prep?.missionId, 'm1');
     });
 
-    test('bloqueada y próximamente: el aviso dice por qué y E no hace nada',
-        () async {
+    test('bloqueada: el tablero dice por qué y no se propone', () async {
       c = await _controller();
-      _toEntrance(c, 2);
-      expect(c.view!.promptLabel,
-          'Bosque Hondo · Lv 6-10 · Bloqueada: vencé a Rey Limo en Pradera Esmeralda');
-      c.handleKey(LogicalKeyboardKey.keyE);
+      expect(c.zoneStatus(2)!.label,
+          'Bloqueada: vencé a Rey Limo en Pradera Esmeralda');
+      expect(_propose(c, 2), isFalse);
       expect(c.view!.session.vote, isNull);
       expect(c.view!.mode, SessionMode.lobby);
-
-      // v0.3.0: ya no hay "Próximamente"; la 10 también se bloquea.
-      _toEntrance(c, 10);
-      expect(c.view!.promptLabel,
+      expect(c.zoneStatus(10)!.label,
           contains('Bloqueada: vencé a Centinela del Vacío'));
-      c.handleKey(LogicalKeyboardKey.keyE);
-      expect(c.view!.session.vote, isNull);
     });
 
-    test('con todo desbloqueado, la entrada 10 propone z10', () async {
+    test('con todo desbloqueado, el tablero propone z10', () async {
       c = await _controller(unlockedZone: 10);
-      _toEntrance(c, 10);
-      expect(c.view!.promptLabel,
-          '[E] Entrar: Corazón del Tiempo (Lv 46-50)');
-      c.handleKey(LogicalKeyboardKey.keyE);
+      expect(_propose(c, 10), isTrue);
       final s = c.view!.session;
       expect(s.vote?.missionId ?? s.prep?.missionId, 'z10');
-    });
-
-    test('con la zona desbloqueada, la entrada 2 propone z2', () async {
-      c = await _controller(unlockedZone: 2);
-      _toEntrance(c, 2);
-      expect(c.view!.promptLabel, '[E] Entrar: Bosque Hondo (Lv 6-10)');
-      c.handleKey(LogicalKeyboardKey.keyE);
-      final s = c.view!.session;
-      expect(s.vote?.missionId ?? s.prep?.missionId, 'z2');
     });
   });
 

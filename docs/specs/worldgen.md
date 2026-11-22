@@ -221,6 +221,10 @@ cuando el id existe.
 
 ### 6.5 Mapa del mundo (`MapGenerator.overworld()`)
 
+> Retirado en v0.21.0: el lobby es el pueblo (`MapGenerator.town()`) y las
+> zonas se eligen en el tablero (town_loop.md § 11.2). Lo que sigue queda
+> como historia.
+
 - 80 × 56 tiles, semilla fija `MapGenerator.worldSeed = 20261117`
   (mismo mapa para todos; no viaja por red). Tema `mundo`, `lobby = true`.
 - El **pueblo** es el lobby de siempre en las mismas coordenadas (tiles

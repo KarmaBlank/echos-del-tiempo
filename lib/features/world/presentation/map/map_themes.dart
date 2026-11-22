@@ -79,6 +79,21 @@ const Map<String, MapTheme> kMapThemes = {
     path2: Color(0xFF4A2F5A),
     water: Color(0xFF48DBFB),
   ),
+  // El pueblo v0.21.0 (town_loop.md § 2.1): claro de bosque al aire
+  // libre, caminos de tierra y el lago.
+  'pueblo': MapTheme(
+    ground: Color(0xFF4A9A44),
+    ground2: Color(0xFF5FB153),
+    wall: Color(0xFF1F5F2A),
+    wall2: Color(0xFF2F7D37),
+    path: Color(0xFFB08A55),
+    path2: Color(0xFF977445),
+    water: Color(0xFF2F7FC8),
+    grass: Color(0xFF4A9A44),
+    grass2: Color(0xFF5FB153),
+    tree: Color(0xFF1C5A2A),
+    tree2: Color(0xFF2E7A38),
+  ),
   // Mapa del mundo fuera del pueblo (el pueblo usa `lobby`).
   'mundo': MapTheme(
     ground: Color(0xFF4FA046),
@@ -220,4 +235,19 @@ abstract final class LostTowerPalette {
   static const stone = Color(0xFF6B7A8F);
   static const cap = Color(0xFF4B5869);
   static const glow = Color(0xFFFFD166);
+}
+
+/// Colores de los lugares nuevos del pueblo v0.21.0 (fuente rúnica,
+/// puntos de pesca y cartel del lago; town_loop.md § 2.1).
+abstract final class TownPalette {
+  static const stone = Color(0xFF8C93A3);
+  static const stoneDark = Color(0xFF5B6170);
+  static const basin = Color(0xFF3F8FD6);
+  static const rune = Color(0xFF5AE6D2);
+  static const plank = Color(0xFF9A6B3C);
+  static const plankDark = Color(0xFF6B4423);
+  static const bobber = Color(0xFFE74C3C);
+  static const foam = Color(0x66FFFFFF);
+  static const signBoard = Color(0xFFC08A4A);
+  static const label = Color(0xFFFFF3C4);
 }

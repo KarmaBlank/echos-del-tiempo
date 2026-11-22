@@ -21,6 +21,11 @@ import '../../../game_engine/models/atlas_store.dart';
 import '../../../game_engine/models/game_mode.dart';
 import '../../../game_engine/models/attributes.dart';
 import '../../../game_engine/data/achievements_catalog.dart';
+import '../../../game_engine/data/town_layout.dart';
+import '../../../game_engine/models/world_save.dart';
+import '../../../game_engine/serialization/json_read.dart';
+import '../../../game_engine/serialization/session_json.dart';
+import '../../lobby/presentation/worlds_providers.dart';
 import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/build_wants.dart';
 import '../../../game_engine/models/loot_filter.dart' show FilterVerdict;
@@ -145,6 +150,7 @@ final netSessionFactoryProvider = Provider<NetSessionFactory?>((ref) =>
 /// de `WorldScreen`.
 final sessionControllerProvider =
     StateNotifierProvider.autoDispose<SessionController, SessionView?>((ref) {
+  final books = ref.read(worldBookProvider.notifier);
   final c = SessionController(
     engine: ref.watch(sessionEngineProvider),
     store: ref.watch(profileStoreProvider),
@@ -162,6 +168,9 @@ final sessionControllerProvider =
     party: FeatureFlags.instance.soloParty
         ? ref.read(partyStoreProvider)
         : null,
+    // Mundo elegido en el título (town_loop.md § 11c).
+    world: ref.read(worldBookProvider)?.selected,
+    onWorldTown: books.saveTown,
   );
   // Tiempo de turno (accessibility.md § 7): el ajuste local manda en la
   // sala si este dispositivo corre el motor (solo o anfitrión).
@@ -209,6 +218,8 @@ class SessionController extends StateNotifier<SessionView?> {
     this.stashStore,
     this.runSaveStore,
     this.metaStore,
+    this.world,
+    this.onWorldTown,
   })  : localId = net?.localId ?? localId,
         _turnTimer = turnTimer,
         _combatMode = combatMode,
@@ -227,6 +238,14 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Travesía: dónde se guarda la run en curso (roguelike.md § 8.5).
   /// Solo la usa quien corre el motor (local o anfitrión).
   final RunSaveStore? runSaveStore;
+
+  /// El mundo elegido (town_loop.md § 11c): solo lo usa quien corre el
+  /// motor (solo o anfitrión); es el mundo de la sala. `null` = sin mundo.
+  final WorldSave? world;
+
+  /// Guarda el pueblo del mundo jugado (pozo del Loot perdido, ciclo).
+  final void Function(String worldId, TownState town)? onWorldTown;
+  int _worldCycle = 0;
 
   /// Travesía: progreso entre runs de este dispositivo (§ 8).
   final TravesiaMetaStore? metaStore;
@@ -726,13 +745,26 @@ class SessionController extends StateNotifier<SessionView?> {
         engine.setTurnTimer(
             engine.setAtlas(engine.create(), atlas.nodes).state, _turnTimer).state,
         _combatMode);
+    var room0 = room.state;
+    // El mundo del anfitrión es el de la sala (town_loop.md § 11c).
+    if (world case final w? when !isRun) {
+      _worldCycle = w.town.cycle;
+      final lost = <GroundLoot>[];
+      final codec = SessionJson(engine.catalog);
+      for (final raw in w.town.lostLoot) {
+        try {
+          lost.add(codec.groundFromJson(asJson(raw)));
+        } catch (_) {}
+      }
+      room0 = engine.setWorld(room0, w.id, w.name, lostLoot: lost).state;
+    }
     try {
       _tutorialVersion = await tutorialStore.load();
     } catch (_) {
       _tutorialVersion = 0; // sin disco: el sello pide el tutorial
     }
     if (!mounted) return;
-    var step = engine.addPlayer(room.state, localId, profile,
+    var step = engine.addPlayer(room0, localId, profile,
         tutorialVersion: _tutorialVersion)!;
     final code = n?.roomCode;
     if (code != null) {
@@ -853,6 +885,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   @override
   void dispose() {
+    _saveWorld();
     _timer?.cancel();
     _broadcastTimer?.cancel();
     unawaited(_netSub?.cancel());
@@ -1075,24 +1108,33 @@ class SessionController extends StateNotifier<SessionView?> {
   // Interacción
   // ------------------------------------------------------------------
 
-  bool get nearCounter =>
-      _s?.mode == SessionMode.lobby && WorldRules.nearCounter(local.x, local.y);
+  /// El lugar del pueblo frente al jugador local (town_loop.md § 2.1).
+  TownSpot? get townSpot => _s?.mode == SessionMode.lobby
+      ? WorldRules.townSpot(local.x, local.y)
+      : null;
 
-  bool get nearArmory =>
-      _s?.mode == SessionMode.lobby && WorldRules.nearArmory(local.x, local.y);
+  /// Frente al tablero de encargos (o a la fuente rúnica, que lo abre).
+  bool get nearCounter =>
+      townSpot == TownSpot.board || townSpot == TownSpot.fountain;
+
+  bool get nearArmory => townSpot == TownSpot.forge;
 
   /// Frente al Portal del Eco del pueblo (ecos_atlas.md § 1).
-  bool get nearPortal =>
-      _s?.mode == SessionMode.lobby && WorldRules.nearPortal(local.x, local.y);
+  bool get nearPortal => townSpot == TownSpot.portal;
 
   /// Frente a la Estatua del Tiempo (ascension.md § 1).
-  bool get nearStatue =>
-      _s?.mode == SessionMode.lobby && WorldRules.nearStatue(local.x, local.y);
+  bool get nearStatue => townSpot == TownSpot.statue;
 
-  /// Frente a la torrecita del Loot perdido (missions.md § "Loot perdido").
-  bool get nearLostLoot =>
-      _s?.mode == SessionMode.lobby &&
-      WorldRules.nearLostLoot(local.x, local.y);
+  /// Frente a la torre del Loot perdido (missions.md § "Loot perdido").
+  bool get nearLostLoot => townSpot == TownSpot.lostLoot;
+
+  /// Texto de un lugar del pueblo que todavía no funciona (pesca y
+  /// comerciante, fase 3 de town_loop.md), o `null`.
+  String? get soonText => switch (townSpot) {
+        TownSpot.fishing || TownSpot.sign => 'Pesca · Pronto',
+        TownSpot.trader => 'Comerciante · Pronto',
+        _ => null,
+      };
 
   /// `nearSeal`: el sello sin activar más cercano a menos de 26 px.
   MissionItem? get nearSeal {
@@ -1221,6 +1263,8 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.ascension);
       } else if (nearLostLoot) {
         openPanel(WorldPanel.lostLoot);
+      } else if (soonText case final t?) {
+        addLocalNotice(t);
       } else if (nearEntrance case final e?) {
         enterZone(e);
       }
@@ -2153,6 +2197,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (step.state.battle case final b?) _lastBattle = b.state;
     if (role == SessionRole.host) _unsent.addAll(step.events);
     var forceSave = false;
+    var worldSave = false;
     // Un mismo tick puede traer varios pasos de batalla (p. ej. el turno
     // del enemigo y el inicio del siguiente): se juntan todos para que la
     // UI anime cada uno, en orden.
@@ -2208,8 +2253,13 @@ class SessionController extends StateNotifier<SessionView?> {
           final name = kAchievementsById[id]?.name ?? id;
           _addChat(ChatLine.system('Hazaña: $name'));
           forceSave = true;
-        case MissionEndedEvent() || ReturnedToLobbyEvent():
+        case MissionEndedEvent(:final result):
           forceSave = true;
+          if (result.success) _worldCycle++;
+          worldSave = true;
+        case ReturnedToLobbyEvent():
+          forceSave = true;
+          worldSave = true;
         default:
           break;
       }
@@ -2225,6 +2275,7 @@ class SessionController extends StateNotifier<SessionView?> {
     _settleStash();
     _settleRecovered();
     if (forceSave) _save(force: true);
+    if (worldSave) _saveWorld();
     _emit();
   }
 
@@ -2249,6 +2300,19 @@ class SessionController extends StateNotifier<SessionView?> {
   /// La Travesía no guarda nada de la cuenta: el personaje de la run es
   /// descartable (docs/specs/roguelike.md § 8.5).
   bool get _persist => engine.gameMode != GameModeKind.travesia;
+
+  /// El pueblo del mundo jugado a disco (lo llama al volver de misión y
+  /// al salir). Solo quien corre el motor.
+  void _saveWorld() {
+    final w = world, cb = onWorldTown, s = _s;
+    if (w == null || cb == null || s == null || isClient || isRun) return;
+    final codec = SessionJson(engine.catalog);
+    cb(
+        w.id,
+        w.town.copyWith(
+            lostLoot: [for (final g in s.lostLoot) codec.groundToJson(g)],
+            cycle: _worldCycle));
+  }
 
   /// Se juega la Travesía (la UI arma sus pantallas en vez del pueblo).
   bool get isRun => engine.gameMode == GameModeKind.travesia;
@@ -2452,6 +2516,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearStatue) return (WorldPrompt.statue, null);
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
+    if (soonText case final t?) return (WorldPrompt.soon, '[E] $t');
     if (nearSeal != null) return (WorldPrompt.seal, null);
     if (nearPoi case final p?) {
       final s = _s!;

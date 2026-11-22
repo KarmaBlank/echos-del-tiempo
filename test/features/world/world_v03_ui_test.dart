@@ -21,7 +21,6 @@ import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/profile_store.dart';
 import 'package:echos_del_tiempo/game_engine/rules/map_generator.dart';
 import 'package:echos_del_tiempo/game_engine/rules/zone_rules.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -68,10 +67,8 @@ Future<SessionController> _controller(int unlockedZone) async {
 
 /// Entra a la zona [zone] por su puerta y la arranca (un jugador).
 void _startZone(SessionController c, int zone) {
-  final e = c.view!.map.entrances.firstWhere((e) => e.zone == zone);
-  c.teleport(e.front.x, e.front.y);
-  c.advance(0.05);
-  c.handleKey(LogicalKeyboardKey.keyE);
+  // v0.21.0: sin overworld, la zona sale del tablero.
+  c.proposeMission(c.zoneStatus(zone)!.mission!.id);
   c.advance(0.05);
   expect(c.view!.mode, SessionMode.prep);
   c.setReady(true);

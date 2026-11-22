@@ -19,6 +19,7 @@ import 'package:echos_del_tiempo/game_engine/serialization/event_json.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/json_read.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
 import 'package:echos_del_tiempo/netcode/protocol/wire.dart';
+import 'package:echos_del_tiempo/game_engine/data/town_layout.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'ecos_session_test.dart' show lobby, winBattle;
@@ -155,11 +156,13 @@ void main() {
     });
 
     test('la Estatua del Tiempo está en el pueblo y es sólida', () {
-      final w = MapGenerator.overworld();
-      expect(w.tileAt(21, 10), Tile.statue);
-      expect(WorldRules.isSolid(w, 21, 10), isTrue);
-      expect(WorldRules.nearStatue(21.5 * 16, 11.5 * 16), isTrue);
-      expect(WorldRules.nearStatue(13 * 16, 9 * 16), isFalse);
+      final w = MapGenerator.town();
+      final st = TownLayout.landmark(TownSpot.statue);
+      expect(w.tileAt(st.x + 1, st.y), Tile.statue);
+      expect(WorldRules.isSolid(w, st.x + 1, st.y), isTrue);
+      expect(WorldRules.townSpot(st.center.x, (st.y + 1.5) * 16),
+          TownSpot.statue);
+      expect(WorldRules.townSpot(w.spawn.x, w.spawn.y), isNull);
     });
   });
 

@@ -114,7 +114,7 @@ void main() {
     expect(repo.current!.selected!.profile.points, 0,
         reason: 'la cuenta en memoria tiene lo jugado en la sala');
 
-    await tester.tap(find.text('> JUGAR'));
+    await tester.tap(find.text('> JUGAR SOLO'));
     for (var i = 0; i < 6; i++) {
       await tester.pump(const Duration(milliseconds: 200));
     }

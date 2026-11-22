@@ -11,8 +11,8 @@ import '../game_engine/session_test_helpers.dart';
 /// juego"): Mundo y Travesía no comparten salas.
 void main() {
   test('Mundo en 40 (v0.20.23: modos de turno) y Travesía arranca su secuencia en 1', () {
-    expect(WireGame.mundo.protocol, 40);
-    expect(kProtocolVersion, 40);
+    expect(WireGame.mundo.protocol, 41);
+    expect(kProtocolVersion, 41);
     expect(WireGame.travesia.protocol, 4);
     expect(WireGame.mundo.id, isNot(WireGame.travesia.id));
   });

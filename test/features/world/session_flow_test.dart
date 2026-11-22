@@ -49,7 +49,7 @@ void main() {
 
     // ---- título → lobby ----
     await tester.pump(); // carga la cuenta
-    await tester.tap(find.text('> JUGAR'));
+    await tester.tap(find.text('> JUGAR SOLO'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byType(WorldScreen), findsOneWidget);
@@ -73,7 +73,7 @@ void main() {
     // ---- E abre el mostrador; proponer la misión ----
     await tester.sendKeyEvent(LogicalKeyboardKey.keyE);
     await tester.pump();
-    expect(find.text('MOSTRADOR DE MISIONES'), findsOneWidget);
+    expect(find.text('TABLERO DE ENCARGOS'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('propose-m1')));
     await tester.pump(const Duration(milliseconds: 100));
 
@@ -157,7 +157,7 @@ void main() {
     await tester.tap(find.text('< TITULO'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('> JUGAR'), findsOneWidget);
+    expect(find.text('> JUGAR SOLO'), findsOneWidget);
     final saved = await store.load();
     expect(saved!.level, greaterThan(1));
     // La lista del título se refrescó con el progreso guardado.

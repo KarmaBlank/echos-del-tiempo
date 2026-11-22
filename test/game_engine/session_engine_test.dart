@@ -49,9 +49,10 @@ void main() {
       }
       expect(e.addPlayer(s, 'p9', newProfile('X', 'maga')), isNull);
       expect(e.addPlayer(s, 'p0', newProfile('X', 'maga')), isNull);
-      // spawnPos(i) en el lobby: (208, 144) ± 7 en cuadrícula de 2 × 2.
+      // spawnPos(i) en el pueblo (v0.21.0): (272, 232) ± 7 en cuadrícula
+      // de 2 × 2.
       expect([for (final p in s.playerList) '${p.x},${p.y}'],
-          ['201.0,137.0', '215.0,137.0', '201.0,151.0', '215.0,151.0']);
+          ['265.0,225.0', '279.0,225.0', '265.0,239.0', '279.0,239.0']);
       final p0 = s.players['p0']!;
       expect(p0.hp, p0.maxHp);
       expect(p0.mp, p0.maxMp);

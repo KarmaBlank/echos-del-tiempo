@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../models/game_map.dart';
+import '../data/town_layout.dart';
 import '../data/tuning_catalog.dart';
 import 'map_generator.dart';
 
@@ -80,33 +81,33 @@ abstract final class WorldRules {
     return math.sqrt(dx * dx + dy * dy);
   }
 
-  /// `nearCounter`: frente al mostrador de misiones del lobby.
-  static bool nearCounter(double x, double y) =>
-      y < 4.6 * tileSize && x > 8.5 * tileSize && x < 17.5 * tileSize;
+  /// Distancia (px) del personaje al borde de un lugar del pueblo para
+  /// usarlo con E (town_loop.md § 2.1).
+  static const townRange = 12.0;
 
-  /// `nearArm`: frente a la armería del lobby.
-  static bool nearArmory(double x, double y) =>
-      y < 4.6 * tileSize && x > 18.5 * tileSize && x < 24.5 * tileSize;
+  /// El lugar del pueblo frente al que está el personaje en (x, y) px, o
+  /// `null` (el más cercano si hay dos). Ver `TownLayout`.
+  static TownSpot? townSpot(double x, double y) {
+    TownSpot? best;
+    var bd = townRange;
+    double rectDist(int tx, int ty, int w, int h) {
+      final x0 = tx * tileSize, y0 = ty * tileSize;
+      final x1 = x0 + w * tileSize, y1 = y0 + h * tileSize;
+      final dx = math.max(math.max(x0 - x, 0.0), x - x1);
+      final dy = math.max(math.max(y0 - y, 0.0), y - y1);
+      return math.sqrt(dx * dx + dy * dy);
+    }
 
-  /// Frente al Portal del Eco del pueblo (tiles x 3–5, y 2).
-  static bool nearPortal(double x, double y) =>
-      y < 4.6 * tileSize && x > 2.5 * tileSize && x < 6.5 * tileSize;
-
-  /// Frente a la Estatua del Tiempo (tiles x 20–22, y 10; se usa desde
-  /// abajo). Ver docs/specs/ascension.md § 1.
-  static bool nearStatue(double x, double y) =>
-      y > 10.6 * tileSize &&
-      y < 12.9 * tileSize &&
-      x > 19.5 * tileSize &&
-      x < 23.5 * tileSize;
-
-  /// Frente a la torrecita del Loot perdido (tiles x 3–5, y 10; se usa
-  /// desde abajo, como la estatua). Ver missions.md § "Loot perdido".
-  static bool nearLostLoot(double x, double y) =>
-      y > 10.6 * tileSize &&
-      y < 12.9 * tileSize &&
-      x > 2.5 * tileSize &&
-      x < 6.5 * tileSize;
+    for (final l in TownLayout.landmarks) {
+      final d = rectDist(l.x, l.y, l.w, l.h);
+      if (d < bd) (bd, best) = (d, l.spot);
+    }
+    for (final (fx, fy) in TownLayout.fishingSpots) {
+      final d = rectDist(fx, fy, 1, 1);
+      if (d < bd) (bd, best) = (d, TownSpot.fishing);
+    }
+    return best;
+  }
 
   /// Distancia a la que la UI ofrece activar un sello (`nearSeal`). El
   /// host acepta hasta `SessionEngine.sealRange`.
