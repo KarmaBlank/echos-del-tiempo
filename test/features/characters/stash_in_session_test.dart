@@ -306,6 +306,57 @@ void main() {
       expect(me.stashPut(['mat:cristal']), isNotNull);
     });
 
+    test('loot propio del piso: al cerrarse el mapa va al alijo del cliente '
+        '(y lleno, a Objetos sin recoger)', () async {
+      final (host, me, repo) = await setup();
+      final id = me.localId;
+      host.session!.ground
+        ..add(GroundLoot(id: 500, drop: const LootDrop.item(epicSword), x: 0, y: 0,
+            ownerId: id))
+        ..add(GroundLoot(id: 501, drop: const LootDrop.item(rareAxe), x: 0, y: 0,
+            ownerId: host.localId));
+      expect(host.proposeMission('m1'), isTrue);
+      await tick(host, [host, me]);
+      me.vote(true);
+      await tick(host, [host, me], 0.1);
+      await tick(host, [host, me], 0.1);
+      host.setReady(true);
+      me.setReady(true);
+      await tick(host, [host, me], 0.1);
+      await settle(host, me);
+      expect(me.session!.mode, SessionMode.field);
+      final a = await repo.load();
+      expect(a.stash.cells.any((c) => c?.item?.uid == epicSword.uid), isTrue);
+      // Lo del host, en el alijo del host (no en el del cliente).
+      expect(a.stash.cells.any((c) => c?.item?.uid == rareAxe.uid), isFalse);
+      expect(host.stash!.cells.any((c) => c?.item?.uid == rareAxe.uid), isTrue);
+      expect(me.view!.messages.join(' '), contains('se guardó en el alijo'));
+    });
+
+    test('Objetos sin recoger: TOMAR pasa por el host, DESCARTAR es local',
+        () async {
+      final (host, me, repo) = await setup();
+      await repo.update((a) => a.withStash(Stash.empty().withUnclaimed([
+            const StashEntry.item(epicSword),
+            const StashEntry.material(CraftMaterial.prisma, 2),
+          ])));
+      // Recargar el alijo del controlador.
+      final me2 = make(null, SelectedCharacterProfileStore(repo),
+          AccountStashStore(repo));
+      await me2.start();
+      expect(me2.stash!.unclaimed, hasLength(2));
+      final before = me2.view!.me!.profile.items.length;
+      expect(me2.unclaimedTake(0), isNull);
+      me2.advance(0.05);
+      await pumpEventQueue();
+      expect(me2.stash!.unclaimed, hasLength(1));
+      expect(me2.view!.me!.profile.items.length, before + 1);
+      expect(me2.unclaimedDiscard(0), isTrue);
+      await pumpEventQueue();
+      expect((await repo.load()).stash.unclaimed, isEmpty);
+      expect(host.mounted && me.mounted, isTrue);
+    });
+
     test('rechazo de la equipada y alijo lleno (no se manda nada)', () async {
       final (host, me, repo) = await setup();
       final p = me.view!.me!.profile;

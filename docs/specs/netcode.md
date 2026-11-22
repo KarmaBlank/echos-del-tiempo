@@ -725,7 +725,7 @@ ni la sesión ni `features/*` miran el nombre del flavor.
 
 | Juego | id (`g`) | `v` | Constante |
 |---|---|---|---|
-| Ecos del Tiempo (Mundo) | `mundo` | 32 | `kProtocolVersion` |
+| Ecos del Tiempo (Mundo) | `mundo` | 33 | `kProtocolVersion` |
 | Ecos del Tiempo: Travesía | `travesia` | 2 | `kTravesiaProtocolVersion` |
 
 - `hello` lleva `g` (el id del juego del cliente). Es aditivo: un host
@@ -743,6 +743,18 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   vs 31) no coincide → `reject version`.
 - El `welcome` manda el `v` del juego de la sala.
 - Subir el protocolo de un juego no toca el del otro.
+
+## Mundo, protocolo 33 (v0.20.11: nada propio se pierde)
+
+- Snapshot, piso: `ground[]` suma `by` (opcional, quién soltó un objeto
+  compartido).
+- Snapshot, `sk` (confirmaciones del alijo, characters.md § 3.2): el host
+  agrega por su cuenta confirmaciones con id `rec:N` (`put: true`) con el
+  loot propio que vuelve al alijo (loot.md § 4b.1). Misma forma de
+  siempre; el cliente las aplica una vez (por jugador e id) a su alijo de
+  cuenta o a Objetos sin recoger. Un cliente 32 las ignoraría y perdería
+  ese loot: la sala no mezcla versiones.
+- Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
 ## Mundo, protocolo 32 (v0.20.8: Condensar)
 

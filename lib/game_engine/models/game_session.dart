@@ -188,6 +188,13 @@ class StashAck {
 
   /// Cuántas confirmaciones se guardan por jugador.
   static const keep = 32;
+
+  /// Prefijo de las confirmaciones que genera el host solo: loot propio
+  /// recuperado del piso (o que no entró en el inventario) que el
+  /// cliente guarda en su alijo o en Objetos sin recoger (loot.md § 4b).
+  static const recoverPrefix = 'rec:';
+
+  static bool isRecover(String opId) => opId.startsWith(recoverPrefix);
 }
 
 /// Un grupo de enemigos en el campo (`S.fe`).
