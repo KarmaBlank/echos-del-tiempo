@@ -4,4 +4,4 @@
 // de Ecos del Tiempo.
 
 /// Versión instalada de Travesía (`X.Y.Z`), la del tag `travesia-vX.Y.Z`.
-const String travesiaVersion = '0.2.0';
+const String travesiaVersion = '0.3.0';
