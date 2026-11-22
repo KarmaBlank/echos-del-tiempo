@@ -29,7 +29,7 @@ void waitForMyTurn(SessionController c, {int maxTicks = 2000}) {
 /// Juega solo hasta el resultado: ataca en cada turno, reparte puntos en
 /// VIT al subir de nivel y, en el campo, va directo al jefe.
 void playUntilResult(SessionController c, {int maxTicks = 40000}) {
-  for (var i = 0; i < maxTicks && c.view!.mode != SessionMode.result; i++) {
+  for (var i = 0; i < maxTicks && c.view!.session.result == null; i++) {
     final v = c.view!;
     switch (v.mode) {
       case SessionMode.battle when v.myTurn:

@@ -126,7 +126,7 @@ GameSession winFight(SessionEngine e, GameSession s, int id,
 /// Al jefe y a ganar.
 GameSession beatBoss(SessionEngine e, GameSession s, List<SessionEvent> log) =>
     winFight(e, s, s.mission!.enemies.singleWhere((x) => x.boss).id,
-        log: log, until: (x) => x.mode == SessionMode.result);
+        log: log, until: (x) => x.result != null);
 
 /// Un grupo normal del piso actual.
 int normalEnemy(GameSession s) => s.mission!.enemies
@@ -250,7 +250,7 @@ void main() {
               .where((d) => d.drop.isEco && d.source == LootSource.mission),
           hasLength(2));
       // Vuelta al pueblo: se limpia el Eco de la sala.
-      s = act(e, s, 'p0', const BackToLobbyAction());
+      s = backToLobby(e, s);
       expect(s.eco, isNull);
       expect(s.ecoOwner, isNull);
     });
@@ -275,7 +275,7 @@ void main() {
           ..maxHp = 999999
           ..attack = 999999;
       }
-      s = runBattle(e, s, until: (x) => x.mode == SessionMode.result, log: log);
+      s = runBattle(e, s, until: (x) => x.result != null, log: log);
       expect(s.result!.success, isFalse);
       expect(log.whereType<EcoCompletedEvent>(), isEmpty);
       expect(s.players['p0']!.profile.ecos, isEmpty);

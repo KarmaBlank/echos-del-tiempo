@@ -783,6 +783,7 @@ class _Op {
     // Lo suyo que quedó en el piso lo recupera su dispositivo al salir
     // (loot.md § 4b): el host lo saca para no duplicarlo.
     s.ground.removeWhere((g) => g.recoverTo == id);
+    s.leaveReady.remove(id);
     final b = s.battle;
     if (b != null) b.state = e.battles.leave(b.state, id).state;
     events.add(PlayerLeftEvent(id));
@@ -1105,9 +1106,17 @@ class _Op {
         return true;
 
       case BackToLobbyAction():
+        // Tras la victoria, VOLVER cuenta como LISTO (missions.md).
+        if (s.victoryLap) return _leaveReady(p, true);
         if (s.mode != SessionMode.result) return false;
         toLobby();
         return true;
+
+      case LeaveReadyAction():
+        return _leaveReady(p, a.ready);
+
+      case TakeLostLootAction():
+        return _takeLost(p, a.lostId);
 
       case UseStairsAction():
         return _useStairs(p, a.down);
@@ -1139,7 +1148,8 @@ class _Op {
       case ChooseAscensionAction():
         if (s.mode != SessionMode.lobby &&
             s.mode != SessionMode.prep &&
-            s.mode != SessionMode.result) {
+            s.mode != SessionMode.result &&
+            !s.victoryLap) {
           return false;
         }
         if (!_profileChange(
@@ -2120,6 +2130,7 @@ class _Op {
     s.time += dt;
     final m = s.mission;
     if (m != null &&
+        s.result == null &&
         (s.mode == SessionMode.field || s.mode == SessionMode.battle)) {
       m.elapsed += dt;
     }
@@ -2335,11 +2346,17 @@ class _Op {
     final enemies = <FieldEnemy>[];
     final goals = <int>[];
     var id = 0;
+    // v0.20.22 (worldgen.md § 6.8): con el tope de pisos, cada piso
+    // jugado usa los grupos de un piso de la definición (el último, los
+    // del último) y hay menos grupos normales por piso.
+    List<List<String>> groupsOf(int f) => m.groupsFor(
+        ZoneRules.sourceFloor(f, map.floors.length, m.floors));
+    final perFloor = ZoneRules.groupsPerFloor(m.floorGoal);
     for (final fl in map.floors) {
       final spots = fl.spots;
-      final groups = m.groupsFor(fl.index);
+      final groups = groupsOf(fl.index);
       var placed = 0;
-      for (var i = 0; i < m.floorGoal + 3; i++) {
+      for (var i = 0; i < perFloor; i++) {
         for (var tries = 0; tries < 90; tries++) {
           if (spots.isEmpty) break;
           final (tx, ty) = spots[pick(spots.length)];
@@ -2435,7 +2452,7 @@ class _Op {
       final q = mark < fl.eliteMarks.length
           ? px(fl.eliteMarks[mark])
           : freeSpot(fl, 80);
-      final groups = m.groupsFor(fl.index);
+      final groups = groupsOf(fl.index);
       final en = FieldEnemy(
         id: id++,
         x: q.x,
@@ -2475,7 +2492,7 @@ class _Op {
           : (commons / (curve.eliteEveryC - 1)).ceil();
       final spots = fl.spots;
       if (spots.isEmpty) continue;
-      final groups = m.groupsFor(fl.index);
+      final groups = groupsOf(fl.index);
       for (var k = have; k < want; k++) {
         WorldPoint? q;
         for (var t = 0; t < 120 && q == null; t++) {
@@ -2630,6 +2647,11 @@ class _Op {
   void _enterField(MissionDef m, int seed) {
     _recoverGround();
     s.ground.clear();
+    // El pozo Loot perdido se borra al empezar la misión siguiente.
+    if (s.lostLoot.isNotEmpty) {
+      s.lostLoot.clear();
+      say('Se borró el Loot perdido del pueblo.');
+    }
     s.mode = SessionMode.field;
     var i = 0;
     for (final p in players) {
@@ -3170,6 +3192,12 @@ class _Op {
       openChest(pl, it);
     }
     _autoPickup();
+    // Tras la victoria: sin peleas, escaleras ni reloj; se espera el LISTO
+    // de todos (quien se desconectó ya no cuenta).
+    if (s.result != null) {
+      _checkLeave();
+      return;
+    }
 
     final map = e.mapFor(s);
     _explorationTick(map, m);
@@ -3578,10 +3606,12 @@ class _Op {
     final m = s.mission!;
     final t = m.elapsed;
     var rank = MissionRank.d;
+    // v0.20.22: el tiempo S se achica con la misión (worldgen.md § 6.8).
+    final sTime = ZoneRules.sTimeFor(def, m.floors);
     if (ok) {
-      rank = t <= def.sTime && m.kos == 0
+      rank = t <= sTime && m.kos == 0
           ? MissionRank.s
-          : t <= def.sTime * 1.5
+          : t <= sTime * 1.5
               ? MissionRank.a
               : MissionRank.b;
     }
@@ -3662,11 +3692,75 @@ class _Op {
       zone: def.zone,
       unlocked: Map.unmodifiable(unlocked),
     );
+    // v0.20.22: la victoria deja al grupo en el área del jefe con el
+    // botín en el piso hasta que todos tocan LISTO (missions.md).
+    final lap = ok && s.tutorial == null && s.run == null;
     s
       ..result = result
       ..battle = null
-      ..mode = SessionMode.result;
+      ..mode = lap ? SessionMode.field : SessionMode.result;
+    s.leaveReady.clear();
+    if (lap) s.graceUntil = s.time + SessionEngine.missionStartGrace;
     events.add(MissionEndedEvent(result));
+    if (lap) {
+      say('¡Victoria! Junten el botín y toquen LISTO para volver al pueblo.');
+    }
+  }
+
+  /// LISTO para volver tras la victoria ([ready] `false` lo saca).
+  bool _leaveReady(SessionPlayer p, bool ready) {
+    if (!s.victoryLap || p.isCompanion) return false;
+    final changed =
+        ready ? s.leaveReady.add(p.id) : s.leaveReady.remove(p.id);
+    if (!changed) return false;
+    if (ready) {
+      final n = humans.where((h) => s.leaveReady.contains(h.id)).length;
+      say('${p.name} está listo para volver ($n/${humans.length}).');
+    }
+    _checkLeave();
+    return true;
+  }
+
+  /// Todos los humanos que siguen en la sala tocaron LISTO: al pueblo.
+  void _checkLeave() {
+    if (!s.victoryLap) return;
+    final hs = humans.toList();
+    if (hs.isEmpty || !hs.every((h) => s.leaveReady.contains(h.id))) return;
+    toLobby();
+  }
+
+  /// `TakeLostLootAction`: del pozo Loot perdido al inventario de [p]
+  /// (en el pueblo; entero o nada).
+  bool _takeLost(SessionPlayer p, int id) {
+    if (s.mode != SessionMode.lobby && s.mode != SessionMode.prep) {
+      return false;
+    }
+    final g = s.lostLoot.where((x) => x.id == id).firstOrNull;
+    if (g == null) return false;
+    final next = rules.grant(p.profile, g.drop);
+    if (next == null) return false;
+    _profileChange(p, next);
+    s.lostLoot.remove(g);
+    say('${p.name} tomó ${_dropText(g.drop)} del Loot perdido.');
+    return true;
+  }
+
+  /// Al volver al pueblo, todo lo del piso (de cualquiera, de todos los
+  /// pisos, también lo que oculta el filtro) va al pozo Loot perdido.
+  void _groundToLostPool() {
+    if (s.run != null) {
+      _recoverGround();
+      return;
+    }
+    final n = s.ground.length;
+    for (final g in s.ground) {
+      s.lostLoot.add(GroundLoot(id: g.id, drop: g.drop, x: 0, y: 0));
+    }
+    s.ground.clear();
+    if (n > 0) {
+      say('${n == 1 ? 'Un objeto quedó' : '$n objetos quedaron'} en el Loot '
+          'perdido del pueblo (se borra al empezar la próxima misión).');
+    }
   }
 
   /// Eco completado: evento para el Atlas de cada jugador y el loot de
@@ -3712,7 +3806,8 @@ class _Op {
       ..vote = null
       ..prep = null
       ..afterLevelUp = null;
-    _recoverGround();
+    s.leaveReady.clear();
+    _groundToLostPool();
     s.ground.clear();
     var i = 0;
     for (final p in players) {

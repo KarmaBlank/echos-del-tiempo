@@ -1089,6 +1089,11 @@ class SessionController extends StateNotifier<SessionView?> {
   bool get nearStatue =>
       _s?.mode == SessionMode.lobby && WorldRules.nearStatue(local.x, local.y);
 
+  /// Frente a la torrecita del Loot perdido (missions.md § "Loot perdido").
+  bool get nearLostLoot =>
+      _s?.mode == SessionMode.lobby &&
+      WorldRules.nearLostLoot(local.x, local.y);
+
   /// `nearSeal`: el sello sin activar más cercano a menos de 26 px.
   MissionItem? get nearSeal {
     final s = _s;
@@ -1214,6 +1219,8 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.ecoPortal);
       } else if (nearStatue) {
         openPanel(WorldPanel.ascension);
+      } else if (nearLostLoot) {
+        openPanel(WorldPanel.lostLoot);
       } else if (nearEntrance case final e?) {
         enterZone(e);
       }
@@ -1415,6 +1422,35 @@ class SessionController extends StateNotifier<SessionView?> {
   bool useStairs({required bool down}) => _apply(UseStairsAction(down: down));
 
   bool setReady(bool ready) => _apply(ReadyAction(ready));
+
+  // ---------------- tras la victoria / Loot perdido (v0.20.22) ----------
+
+  /// LISTO para volver al pueblo tras la victoria (missions.md).
+  bool setLeaveReady(bool ready) => _apply(LeaveReadyAction(ready));
+
+  /// Toma la pieza [id] del pozo Loot perdido.
+  bool takeLostLoot(int id) => _apply(TakeLostLootAction(id));
+
+  int? _closedResult;
+
+  /// El jugador local cerró la ventana de victoria (solo local).
+  bool get resultClosed {
+    final r = _s?.result;
+    return r != null && r.id == _closedResult;
+  }
+
+  /// Cierra la ventana de victoria; tras una derrota vuelve al lobby.
+  void closeResult() {
+    final s = _s;
+    final r = s?.result;
+    if (s == null || r == null) return;
+    if (!s.victoryLap) {
+      backToLobby();
+      return;
+    }
+    _closedResult = r.id;
+    _emit();
+  }
 
   // ---------------- Travesía (docs/specs/roguelike.md) ----------------
 
@@ -2346,7 +2382,8 @@ class SessionController extends StateNotifier<SessionView?> {
     if ((_panel == WorldPanel.missionBoard ||
             _panel == WorldPanel.armory ||
             _panel == WorldPanel.ecoPortal ||
-            _panel == WorldPanel.ascension) &&
+            _panel == WorldPanel.ascension ||
+            _panel == WorldPanel.lostLoot) &&
         mode != SessionMode.lobby &&
         !(_panel == WorldPanel.armory && _runShopOpen(s))) {
       _panel = null;
@@ -2413,6 +2450,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearArmory) return (WorldPrompt.armory, null);
     if (nearPortal) return (WorldPrompt.ecoPortal, null);
     if (nearStatue) return (WorldPrompt.statue, null);
+    if (nearLostLoot) return (WorldPrompt.lostLoot, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
     if (nearPoi case final p?) {

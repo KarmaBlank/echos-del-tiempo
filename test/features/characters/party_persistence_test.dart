@@ -126,7 +126,7 @@ void main() {
     expect(c.session!.mode, SessionMode.field);
     await tick(c, c.session!.graceLeft + 0.1);
     final actors = <String>{};
-    for (var i = 0; i < 6000 && c.session!.mode != SessionMode.result; i++) {
+    for (var i = 0; i < 6000 && c.session!.result == null; i++) {
       final s = c.session!;
       switch (s.mode) {
         case SessionMode.battle:
@@ -151,7 +151,7 @@ void main() {
       }
       await tick(c, 0.1);
     }
-    expect(c.session!.mode, SessionMode.result);
+    expect(c.session!.result, isNotNull);
     expect(actors, containsAll(['local', 'local-c2', 'local-c3']),
         reason: 'cada compañero actuó en su turno');
     expect(c.backToLobby(), isTrue);

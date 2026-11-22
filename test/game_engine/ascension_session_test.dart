@@ -69,7 +69,7 @@ GameSession beatTrial(SessionEngine e, GameSession s, List<SessionEvent> log) {
   s = e.tick(s, 0.05).state;
   expect(s.mode, SessionMode.battle);
   s = winBattle(e, s,
-      until: (x) => x.mode == SessionMode.result || x.mode == SessionMode.levelUp,
+      until: (x) => x.result != null || x.mode == SessionMode.levelUp,
       log: log);
   for (var i = 0; i < 20 && s.mode == SessionMode.levelUp; i++) {
     for (final p in s.playerList) {
@@ -82,7 +82,7 @@ GameSession beatTrial(SessionEngine e, GameSession s, List<SessionEvent> log) {
     log.addAll(st.events);
     s = st.state;
   }
-  expect(s.mode, SessionMode.result);
+  expect(s.result, isNotNull);
   return s;
 }
 
@@ -205,7 +205,7 @@ void main() {
           'berserker');
       expect(st.state.players['p0']!.profile.ascension.id, 'berserker');
       // Volver al pueblo limpia la Prueba.
-      s = act(e, st.state, 'p0', const BackToLobbyAction());
+      s = backToLobby(e, st.state);
       expect(s.trial, isNull);
     });
 

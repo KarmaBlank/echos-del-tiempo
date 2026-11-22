@@ -377,6 +377,6 @@ void main() {
   test('textos de piso', () {
     expect(floorLabelText('Bosque Hondo', 1, 3), 'Bosque Hondo · Piso 2/3');
     expect(zoneLineText(_cat.zone(5)!),
-        startsWith('Zona 5 · Fortaleza Caída · Lv 21-25 · 4 pisos · Jefe: '));
+        startsWith('Zona 5 · Fortaleza Caída · Lv 21-25 · 3 pisos · Jefe: '));
   });
 }

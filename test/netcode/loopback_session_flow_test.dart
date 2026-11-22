@@ -193,7 +193,7 @@ void main() {
         isTrue);
 
     // ---- hasta el resultado: el host va al jefe ----
-    for (var i = 0; i < 6000 && host.session!.mode != SessionMode.result; i++) {
+    for (var i = 0; i < 6000 && host.session!.result == null; i++) {
       final v = host.view!;
       switch (v.mode) {
         case SessionMode.battle:
@@ -215,8 +215,8 @@ void main() {
       }
       await net(0.1);
     }
-    expect(host.session!.mode, SessionMode.result);
-    expect(ana.view!.mode, SessionMode.result);
+    expect(host.session!.result, isNotNull);
+    expect(ana.view!.session.result, isNotNull);
     expect(ana.view!.session.result!.id, host.session!.result!.id);
     expect(ana.view!.session.result!.rank, host.session!.result!.rank);
     // El cliente guardó el perfil que le mandó el host (con su XP).

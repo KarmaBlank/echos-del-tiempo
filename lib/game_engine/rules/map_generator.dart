@@ -48,6 +48,10 @@ abstract final class MapGenerator {
     for (var x = 20; x <= 22; x++) {
       t[10][x] = Tile.statue;
     }
+    // Loot perdido (v0.20.22), debajo de la fuente izquierda.
+    for (var x = 3; x <= 5; x++) {
+      t[10][x] = Tile.lostTower;
+    }
     for (var y = 3; y < h - 1; y++) {
       for (var x = 12; x <= 13; x++) {
         t[y][x] = Tile.path;
@@ -458,11 +462,13 @@ abstract final class MapGenerator {
   /// El atlas de pisos de la zona [z] para la misión con [seed]: todos
   /// los pisos uno al lado del otro (worldgen.md § 6.6).
   static GameMap zone(ZoneDef z, int seed) {
+    // v0.20.22: tope de pisos por misión (worldgen.md § 6.8).
+    final n = ZoneRules.missionFloors(z);
     final gens = [
-      for (var f = 0; f < z.floors; f++)
+      for (var f = 0; f < n; f++)
         ZoneGenerators.floor(
             z.gen, (seed + 7919 * f + 104729 * z.index).toSigned(32),
-            last: f == z.floors - 1, hasUp: f > 0),
+            last: f == n - 1, hasUp: f > 0),
     ];
     final height = gens.map((g) => g.height).reduce((a, b) => a > b ? a : b);
     final width =

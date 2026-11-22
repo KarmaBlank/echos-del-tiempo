@@ -47,7 +47,15 @@ class ResultsPanel extends StatelessWidget {
     this.trial,
     this.onAscend,
     this.abyss,
+    this.victoryLap = false,
   });
+
+  /// Victoria v0.20.22: la ventana se cierra y el grupo sigue en el mapa
+  /// hasta que todos tocan LISTO (sin regreso automático).
+  final bool victoryLap;
+
+  static const lapHint =
+      'Junten el botín y toquen LISTO para volver al pueblo.';
 
   /// Jefe del Abismo vencido: `X vencido: +2 puntos de Atlas`
   /// (docs/specs/abyss_bosses.md § 4).
@@ -217,7 +225,7 @@ class ResultsPanel extends StatelessWidget {
               onPressed: onAscend),
         // Abre con el foco en el primario: Enter = volver.
         InitialFocus(
-          child: PanelButton('VOLVER AL LOBBY',
+          child: PanelButton(victoryLap ? 'CERRAR' : 'VOLVER AL LOBBY',
               key: const ValueKey('results-back'), onPressed: onBack),
         ),
       ],
@@ -314,10 +322,15 @@ class ResultsPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                    retroText('Regreso automático en ${r.timeLeft.ceil()}s'),
+                    retroText(victoryLap
+                        ? lapHint
+                        : 'Regreso automático en ${r.timeLeft.ceil()}s'),
+                    key: const ValueKey('results-footer'),
                     style: const TextStyle(color: ProtoColors.dim)),
               ),
-              const KeyHints(confirm: 'Volver al lobby', back: null),
+              KeyHints(
+                  confirm: victoryLap ? 'Cerrar' : 'Volver al lobby',
+                  back: null),
             ],
           ),
         ],

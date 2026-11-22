@@ -188,6 +188,8 @@ Las claves de `onMsg` del prototipo (`lib/game_engine/serialization/action_json.
 | `BuyWeaponAction` | `{"t":"buy","w":arma}` |
 | `ChatAction` | `{"t":"chat","txt":"hola"}` |
 | `BackToLobbyAction` | `{"t":"back"}` |
+| `LeaveReadyAction` | `{"t":"leave","ok":true}` |
+| `TakeLostLootAction` | `{"t":"lost","id":3}` |
 | `UseStairsAction` | `{"t":"stairs","down":true}` (worldgen.md § 6.7) |
 | `PauseAction` | `{"t":"pause","on":true}` (pausa de grupo, settings.md § 6) |
 | `SetBuildWantsAction` | `{"t":"wants","w":{...}}` (v0.5.1, § "Build y filtro") |
@@ -725,7 +727,7 @@ ni la sesión ni `features/*` miran el nombre del flavor.
 
 | Juego | id (`g`) | `v` | Constante |
 |---|---|---|---|
-| Ecos del Tiempo (Mundo) | `mundo` | 37 | `kProtocolVersion` |
+| Ecos del Tiempo (Mundo) | `mundo` | 39 | `kProtocolVersion` |
 | Ecos del Tiempo: Travesía | `travesia` | 4 | `kTravesiaProtocolVersion` |
 
 - `hello` lleva `g` (el id del juego del cliente). Es aditivo: un host
@@ -771,6 +773,17 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   negativo); los clientes la ven en el estado.
 - Un host 39 no conoce las reglas ni los comandos: se sube a 40 (el 39 es
   de v0.20.22).
+
+## Mundo, protocolo 39 (v0.20.22: vuelta con LISTO y Loot perdido)
+
+- Tras vencer al jefe el modo es `field` con `result` puesto (antes
+  `result`): un cliente 38 mostraría el campo sin ventana ni LISTO.
+- Snapshot suma `lr` (ids listos para volver, opcional) y `lost` (pozo
+  Loot perdido, misma forma que `ground[]`, opcional).
+- Acciones nuevas: `LeaveReadyAction` `{"t":"leave","ok":true}` y
+  `TakeLostLootAction` `{"t":"lost","id":N}` (missions.md).
+- Al volver al lobby el host ya no manda confirmaciones `rec:N` con lo
+  del piso: va al pozo (loot.md § 4b.1).
 
 ## Mundo, protocolo 37 (v0.20.17: nada del piso se pierde)
 
