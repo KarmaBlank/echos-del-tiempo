@@ -54,7 +54,6 @@ import 'consumable_rules.dart';
 import 'world_rules.dart';
 import 'zone_rules.dart';
 import 'ult_rules.dart';
-import '../data/weapons_catalog.dart' show kWeapons;
 import '../data/ults_v2_catalog.dart';
 import '../data/branch_ults_catalog.dart' show kWeaponUltSkills;
 import '../data/tuning_catalog.dart';
@@ -621,33 +620,31 @@ class _Op {
 
   // ---------------- ULT v2 (ultimates_v2.md § 2) ----------------
 
-  /// Anota las ULT ganadas por progreso (hitos del árbol, Maestría).
+  /// Anota las ULT ganadas (hitos del árbol, Maestría y las que enseñan
+  /// las armas al conseguirlas, ultimates_v2.md § 2.1) y avisa
+  /// «¡Nueva ULT: <nombre>!». Quedan con la marca NUEVA hasta verlas.
   void learnEarnedUlts(SessionPlayer p) {
     final next = UltRules.absorb(p.profile);
     if (identical(next, p.profile)) return;
     final added = next.ultKnown.difference(p.profile.ultKnown);
     p.profile = next;
     for (final id in added) {
-      final name = kWeaponUltSkills[id]?.name ?? id;
-      // Si vino de un arma, se dice cuál (v0.20.9): la ULT queda en el
-      // repertorio y se equipa desde el menú, no desde el arma.
-      final from = p.profile.items
-          .where((i) => UltRules.itemUltId(i) == id)
-          .map((i) => kWeapons[i.baseId]?.name)
-          .whereType<String>()
-          .firstOrNull;
-      say(from == null
-          ? '${p.name} aprendió la ULT $name.'
-          : '$from le dio a ${p.name} la ULT $name. Equipala desde el menú.');
+      if (!next.ultNew.contains(id)) continue;
+      say('${p.name}: ¡Nueva ULT: ${_ultName(id)}!');
     }
   }
+
+  String _ultName(String id) =>
+      kWeaponUltSkills[id]?.name ??
+      catalog.ultimates.values.where((u) => u.id == id).firstOrNull?.name ??
+      id;
 
   /// [p] aprende la ULT [id] (si no la tenía) y se avisa.
   void learnUlt(SessionPlayer p, String id, String from) {
     final next = UltRules.learn(p.profile, id);
     if (identical(next, p.profile)) return;
     p.profile = next;
-    say('${p.name} aprendió la ULT ${kWeaponUltSkills[id]?.name ?? id} ($from).');
+    say('${p.name}: ¡Nueva ULT: ${_ultName(id)}! ($from)');
   }
 
   /// ULT de botín del jefe vencido (§ 2.3): uno por jugador, seguro
@@ -1004,7 +1001,10 @@ class _Op {
         return _profileChange(p, rules.inventory.sort(p.profile, a.key));
 
       case SeenItemsAction():
-        return _profileChange(p, InventoryRules.markSeen(p.profile, a.uids));
+        // `ult:<id>` desmarca una ULT NUEVA del menú (ultimates_v2.md § 2.1).
+        final seen = InventoryRules.markSeen(p.profile, a.uids);
+        return _profileChange(
+            p, UltRules.markSeen(seen ?? p.profile, a.uids) ?? seen);
 
       case SetLootFilterAction():
         final t = a.text;
@@ -1022,7 +1022,12 @@ class _Op {
             rules.equippedItem(prof), catalog)) {
           return false;
         }
-        p.profile = prof.copyWith(ultSel: () => ultId);
+        // La elegida se anota en el repertorio (v0.20.13): si venía de un
+        // arma (o del tipo de un arma) que después se vende, se funde o va
+        // al alijo, la elección no se pierde ni vuelve a la automática.
+        final learned =
+            ultId == null ? prof : UltRules.learn(prof, ultId, markNew: false);
+        p.profile = learned.copyWith(ultSel: () => ultId);
         refresh(p);
         return true;
 

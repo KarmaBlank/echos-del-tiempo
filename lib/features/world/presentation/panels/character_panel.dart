@@ -180,6 +180,7 @@ class _CharacterPanelState extends State<CharacterPanel> {
               editable: view.session.battle == null,
               onSelect: c.selectUlt,
               onUpgrade: c.upgradeUlt,
+              onSeen: c.markSeen,
               // Vista previa (ultimates_v2.md § 2.5).
               stats: rules.derivedStats(prof),
               sprites: ref.watch(gameSpritesProvider).valueOrNull,
@@ -367,6 +368,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
                             badge: switch (t) {
                               CharacterTab.attributes when left > 0 => '$left',
                               CharacterTab.tree when treePts > 0 => '$treePts',
+                              // ULT aprendidas sin mirar (ultimates_v2.md § 2.1).
+                              CharacterTab.ults when prof.ultNew.isNotEmpty =>
+                                'NUEVA',
                               _ => null,
                             }),
                     ],

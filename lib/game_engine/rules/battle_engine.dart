@@ -39,13 +39,9 @@ part 'battle_engine_summons.dart';
 /// Los tests inyectan una secuencia fija para que todo sea reproducible.
 typedef RandomSource = double Function();
 
-/// La ULT de [c]: la de su ascensión si ascendió (docs/specs/ascension.md
-/// § 4); si no, la de la base de su arma (tomos del Invocador,
-/// docs/specs/summoner.md § 7) o la de su tipo de arma. La ULT de una
-/// instancia (mod o legendario) nunca entra acá: solo por el menú.
-///
-/// ULT v2 (ultimates_v2.md § 2.1): si el jugador eligió una ULT activa
-/// válida (`PlayerBuild.ultSel`), esa; si no, el orden de siempre.
+/// La ULT de [c] (ultimates_v2.md § 2.1): la elegida (`PlayerBuild.ultSel`)
+/// si es válida; si no, la de su ascensión; si no, la ULT base de su
+/// clase. El arma equipada nunca decide qué ULT se lanza.
 /// Carga de ULT por recibir el 100% de la vida en daño (Ajustes → Carga de barra ULT).
 double get _ultTaken => tuning(TuningId.ultCharge).d('takenFactor');
 
@@ -61,16 +57,11 @@ SkillDef? ultimateOf(Combatant c,
     final u = kAscensionUltimates[asc.id];
     if (u != null) return u;
   }
-  // Base propia (tomos del Invocador). El mod "ULT: <nombre>" y la de
-  // los legendarios NO se imponen: pasan al repertorio y solo valen si se
-  // eligen en el menú (v0.20.7, ultimates_v2.md § 2.1).
-  final own = ownWeaponUlt(c.build?.equippedWeapon.id, null);
-  // Una ULT v2 que trae el arma sale del catálogo (con el parche de
-  // balance), no del registro fijo.
-  if (own != null) {
-    return UltRules.leveled(catalog.playerUlts[own.id] ?? own, b?.ultLevel ?? 1);
-  }
-  return catalog.ultimates[c.weaponType];
+  // ULT libres del arma (ultimates_v2.md § 2.1): sin elegida ni
+  // ascensión, la ULT base de la clase. El arma equipada nunca decide.
+  // Sin build (enemigos, invocaciones, pruebas sin perfil): la del tipo.
+  if (b == null) return catalog.ultimates[c.weaponType];
+  return UltRules.baseUltLeveled(b.classId, b.ultLevel, catalog);
 }
 
 /// La ULT de [c] se puede lanzar: tiene la carga de su costo
@@ -4404,15 +4395,36 @@ class _Turn {
             _notes.add('${sk.name}: cuesta $cost HP');
           }
         }
+        // Curas (bestiary.md § 1.4.1): el objetivo elegido puede ser un
+        // enemigo con `healHarm` o (las de un blanco) un aliado vivo; si
+        // no es ninguno, la cura va como siempre.
+        Combatant? healPick;
+        if (isTargetableHeal(sk)) {
+          healPick = (sk.lowestAlly
+                  ? state.party
+                      .where((q) => q.id == targetId && q.alive)
+                      .firstOrNull
+                  : null) ??
+              (engine.familiesEnabled
+                  ? foes
+                      .where(
+                          (e) => e.id == targetId && healCanTargetFoe(sk, e))
+                      .firstOrNull
+                  : null);
+        }
+        final healFoe = healPick != null && !healPick.isPlayer;
         events.add(ActionEvent(p.id, BattleActionKind.skill,
             skillId: sk.id,
-            targetId: sk.dealsDamage && !sk.allTargets ? target.id : null,
+            targetId: healFoe || (sk.dealsDamage && !sk.allTargets)
+                ? target.id
+                : null,
             allTargets: sk.allTargets));
         act.skill = sk;
         p.lastSkillId = sk.id;
         // Reflejo de los Jefes del Abismo: copian la última habilidad.
         _abyssCopied(sk.id);
-        final gain = _useSkill(p, sk, foes, target, ultimate: false);
+        final gain = _useSkill(p, sk, foes, target,
+            ultimate: false, healPick: healPick);
         // Prisa sin aliados: ya terminó el turno.
         if (gain == null) return true;
         ultGain = gain;
@@ -4651,6 +4663,7 @@ class _Turn {
     List<Combatant> foes,
     Combatant target, {
     required bool ultimate,
+    Combatant? healPick,
   }) {
     state.log = '${p.name} · ${tk.name}';
     final allies = _aliveParty.toList();
@@ -4752,8 +4765,25 @@ class _Turn {
           }
           if (downs.isNotEmpty) allies.addAll(downs.where((q) => q.alive));
         }
+        if (healPick != null && !healPick.isPlayer) {
+          // Lanzada a un no muerto / espectro: daño Sagrado solo a él.
+          final d = healOnFoeDamage(a, healPick,
+              mult: engine.catalog.combo.healFoeMult,
+              bonus: _modTotal(p, ProcEffectKind.healHarmBonus));
+          final dealt = _procDamage(p, healPick, d, kHealHarmSourceId);
+          final fem =
+              engine.catalog.enemies[healPick.enemyType]?.feminine ?? false;
+          state.log = '${p.name} · ${tk.name}: ¡la cura quema '
+              '${fem ? 'a la' : 'al'} ${healPick.name}! $dealt';
+          return 8;
+        }
         final healed = tk.lowestAlly
-            ? [if (_lowest(allies, (c) => c.hp / c.maxHp) case final q?) q]
+            ? [
+                if (healPick ??
+                        _lowest(allies, (c) => c.hp / c.maxHp)
+                    case final q?)
+                  q
+              ]
             : allies;
         final m = _skillMech(tk);
         for (final q in healed) {

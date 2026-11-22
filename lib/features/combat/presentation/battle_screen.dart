@@ -16,7 +16,8 @@ import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/data/classes_catalog.dart';
 import '../../../game_engine/data/elements_catalog.dart' show elementOfDual;
-import '../../../game_engine/data/enemy_families.dart' show EnemyFamily;
+import '../../../game_engine/data/enemy_families.dart'
+    show ComboRulesDef, EnemyFamily;
 import '../../../game_engine/data/skills_catalog.dart';
 import '../../../game_engine/data/weapon_duals_catalog.dart';
 import '../../../game_engine/models/battle_command.dart';
@@ -28,6 +29,8 @@ import '../../../game_engine/models/status.dart';
 import '../../../game_engine/rules/battle_engine.dart'
     show BattleEngine, ultReady, ultimateOf;
 import '../../../game_engine/rules/dual_rules.dart';
+import '../../../game_engine/rules/family_rules.dart'
+    show healCanTargetFoe, healOnFoeDamage, isTargetableHeal, skillHealAmount;
 import '../../../game_engine/rules/js_math.dart';
 import '../../../game_engine/rules/skill_requirements.dart';
 import '../../bestiary/domain/bestiary_text.dart';
@@ -214,6 +217,13 @@ class BattleViewState extends State<BattleView>
   /// Submenú de poción abierto (`potMode`): elegir a quién.
   BattleItem? _potMode;
 
+  /// Submenú de una cura de un blanco con no muertos a la vista
+  /// (bestiary.md § 1.4.1): elegir aliado o enemigo.
+  SkillDef? _healMode;
+
+  /// Algún submenú de "¿a quién?" abierto.
+  bool get _picking => _potMode != null || _healMode != null;
+
   /// Hay un aliado caído (el Éter solo sirve así).
   bool get _anyDown =>
       widget.battle.party.any((q) => !q.alive && !q.isSummon);
@@ -250,6 +260,9 @@ class BattleViewState extends State<BattleView>
     final v = _visible(cur);
     if (_selected < 0 || _selected >= v.length) return const {};
     final id = v[_selected].id;
+    if (_healMode != null) {
+      return id.startsWith('heal-foe-') ? {id.substring(9)} : const {};
+    }
     if (!id.startsWith('skill-')) return const {};
     final sk = kSkills[id.substring(6)];
     if (sk == null) return const {};
@@ -333,6 +346,7 @@ class BattleViewState extends State<BattleView>
 
   void _resetMenu() {
     _potMode = null;
+    _healMode = null;
     _category = BattleCategory.weapon;
     _selected = 0;
     _page = 0;
@@ -370,9 +384,10 @@ class BattleViewState extends State<BattleView>
 
   /// Cambia de categoría (la lista vuelve a la primera acción).
   void selectCategory(BattleCategory c) {
-    if (_potMode == null && c == _category) return;
+    if (!_picking && c == _category) return;
     setState(() {
       _potMode = null;
+      _healMode = null;
       _category = c;
       _selected = 0;
       _page = 0;
@@ -399,9 +414,10 @@ class BattleViewState extends State<BattleView>
       cycleTarget();
       return true;
     }
-    if (key == LogicalKeyboardKey.escape && _potMode != null) {
+    if (key == LogicalKeyboardKey.escape && _picking) {
       setState(() {
         _potMode = null;
+        _healMode = null;
         _selected = 0;
       });
       return true;
@@ -419,7 +435,7 @@ class BattleViewState extends State<BattleView>
     // se pierde un turno por una tecla suelta).
     if (key == LogicalKeyboardKey.keyP) {
       if (acting) {
-        if (_potMode == null && _category == BattleCategory.pass) {
+        if (!_picking && _category == BattleCategory.pass) {
           _send(const PassCommand());
         } else {
           selectCategory(BattleCategory.pass);
@@ -429,7 +445,7 @@ class BattleViewState extends State<BattleView>
     }
     if (key == LogicalKeyboardKey.arrowLeft ||
         key == LogicalKeyboardKey.arrowRight) {
-      if (acting && _potMode == null) {
+      if (acting && !_picking) {
         _moveCategory(key == LogicalKeyboardKey.arrowLeft ? -1 : 1);
       }
       return true;
@@ -645,8 +661,73 @@ class BattleViewState extends State<BattleView>
       separatorBefore: separatorBefore,
       // Precondición (objetivo Fisurado, stacks, vida baja…) cumplida.
       conditionReady: ok && sk.requires.isNotEmpty,
-      onSelect: ok ? () => _send(SkillCommand(sk.id, targetId: tg)) : null,
+      onSelect: !ok
+          ? null
+          : isTargetableHeal(sk)
+              // Cura: con no muertos a la vista se elige a quién; si no,
+              // va como siempre (al más herido o al grupo).
+              ? () => _foes.any((e) => healCanTargetFoe(sk, e))
+                  ? setState(() {
+                      _healMode = sk;
+                      _selected = 0;
+                    })
+                  : _send(SkillCommand(sk.id))
+              : () => _send(SkillCommand(sk.id, targetId: tg)),
     );
+  }
+
+  /// Filas del submenú de la cura [sk]: el más herido (o el grupo), cada
+  /// aliado vivo (si es de un blanco) y cada enemigo al que la cura daña (con el daño previsto).
+  List<BattleAction> _healTargets(SkillDef sk, Combatant cur) {
+    final b = widget.battle;
+    final a = skillHealAmount(cur, sk);
+    final mult = const ComboRulesDef().healFoeMult;
+    return [
+      BattleAction(
+        id: 'heal-lowest',
+        name: sk.lowestAlly ? 'Al más herido' : 'Al grupo',
+        value: hexSpan('#7bed9f', '+$a${sk.lowestAlly ? '' : ' c/u'}'),
+        description: sk.lowestAlly
+            ? '${protoEsc(sk.name)} al aliado con menos vida: +$a HP'
+            : '${protoEsc(sk.name)} a cada aliado: +$a HP',
+        onSelect: () => _send(SkillCommand(sk.id)),
+      ),
+      for (final q in b.party)
+        if (q.alive && sk.lowestAlly)
+          BattleAction(
+            id: 'heal-ally-${q.id}',
+            name: q.id == cur.id
+                ? 'Yo (${protoEsc(q.name)})'
+                : protoEsc(q.name),
+            value: hexSpan('#7bed9f', '+$a'),
+            cost: hexSpan('#9fb4ff', '${q.hp}/${q.maxHp} HP'),
+            description: '${protoEsc(sk.name)} para ${protoEsc(q.name)}: '
+                '${q.hp}/${q.maxHp} HP → +$a',
+            onSelect: () => _send(SkillCommand(sk.id, targetId: q.id)),
+          ),
+      for (final e in _foes)
+        if (healCanTargetFoe(sk, e))
+          BattleAction(
+            id: 'heal-foe-${e.id}',
+            name: protoEsc(e.name),
+            value: hexSpan('#ff6b81',
+                '−${healOnFoeDamage(a, e, mult: mult)}'),
+            cost: hexSpan('#9fb4ff', '${e.hp}/${e.maxHp} HP'),
+            description: '${protoEsc(sk.name)} contra ${protoEsc(e.name)}: '
+                'Daño a no muertos: ${healOnFoeDamage(a, e, mult: mult)} '
+                '(Sagrado)',
+            onSelect: () => _send(SkillCommand(sk.id, targetId: e.id)),
+          ),
+      BattleAction(
+        id: 'back',
+        name: '← Volver',
+        description: 'Vuelve a las habilidades (Esc).',
+        onSelect: () => setState(() {
+          _healMode = null;
+          _selected = 0;
+        }),
+      ),
+    ];
   }
 
   /// Defender en ARMA (battle_attack_menu.md § 6): ½ daño, próximo turno
@@ -916,6 +997,7 @@ class BattleViewState extends State<BattleView>
   List<BattleAction> _visible(Combatant cur) {
     final b = widget.battle;
     final item = _potMode;
+    if (_healMode case final sk?) return _healTargets(sk, cur);
     if (item == BattleItem.aether) {
       return [
         for (final q in b.party)
@@ -1173,7 +1255,7 @@ class BattleViewState extends State<BattleView>
 
   /// Si hay un submenú abierto (el de pociones o una página del menú
   /// que no es la primera): `Esc` lo cierra en vez de abrir la pausa.
-  bool get hasSubmenu => _potMode != null || _page > 0;
+  bool get hasSubmenu => _picking || _page > 0;
 
   @override
   Widget build(BuildContext context) {
@@ -1497,6 +1579,9 @@ class BattleViewState extends State<BattleView>
       BattleItem.ether => '<b>¿A quién le das la Poción de maná (+50% '
           'maná)?</b>',
       BattleItem.aether => '¿A quién revives con el Éter (100% de la vida)?',
+      _ when _healMode != null =>
+        '¿A quién lanzas ${protoEsc(_healMode!.name)}? (a un no muerto le '
+            'hace daño)',
       // Después de una Instante el turno sigue (combat.md).
       _ => cur.chained
           ? hexSpan(kInstantHex, 'Encadenaste: te queda una acción')

@@ -53,6 +53,8 @@ BattleState _start(BattleEngine e, String weapon, {int enemies = 2}) {
         level: 10,
         attributes: PlayerAttributes.base(cls.baseAttributes),
         equippedWeapon: kWeapons[weapon]!,
+        // ULT libres del arma: la del tomo vale si se eligió.
+        ultSel: kWeaponUltOf[weapon],
       ),
     ),
   ], enemyTypes: [for (var i = 0; i < enemies; i++) 'golem']).state;

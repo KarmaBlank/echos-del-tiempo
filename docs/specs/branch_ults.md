@@ -47,13 +47,15 @@ ultimates_v2.md § 2.1) si se puede usar con el arma equipada. La ULT de
 un arma (mod "ULT: <nombre>" o legendario) **no se impone**: al tenerla,
 pasa al repertorio y solo se usa si se la elige.
 
-1. La elegida en el menú, si es compatible con el arma equipada.
-2. ULT de la ascensión de tu clase.
-3. La de la base del arma (tomos del Invocador, `kWeaponUltOf`).
-4. La del tipo de arma.
+Desde v0.20.15 las ULT **no dependen del arma** (ultimates_v2.md § 2.1):
 
-Si la elegida no sirve con el arma equipada, en el menú se ve en gris y
-en combate se usa la básica (pasos 2–4), nunca la del arma.
+1. La elegida en el menú (solo la clase la restringe).
+2. ULT de la ascensión de tu clase.
+3. La ULT base de la clase (la del arma inicial: Maga → Meteoro).
+
+El arma equipada nunca decide. Conseguir un arma con mod "ULT: …" o un
+legendario enseña esa ULT al instante (NUEVA en el menú); el arma ya no
+la muestra en su tooltip.
 
 ## 4. Legendarios con ULT propia
 

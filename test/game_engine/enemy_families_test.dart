@@ -167,7 +167,8 @@ void main() {
   group('las curas dañan a los no muertos', () {
     test('Cura sobre el grupo quema al Esqueleto con el mismo número', () {
       final b = _B([_foe('esqueleto')], hero: _hero(skill: 'cura'));
-      final step = b.use('cura');
+      // Lanzada al grupo (no al enemigo): el daño pasivo de siempre.
+      final step = b.use('cura', target: 'p1');
       // (MAG 20 × 1.5 + 6) = 36.
       expect(b.foe().hp, 500 - 36);
       final dmg = step.events.whereType<DamageEvent>().single;
@@ -188,12 +189,79 @@ void main() {
     test('espectros: a medias; varios: "a los no muertos"', () {
       final b = _B([_foe('esqueleto'), _foe('ghost', id: 'e1'), _foe('lobo', id: 'e2')],
           hero: _hero(skill: 'cura'));
-      b.use('cura');
+      b.use('cura', target: 'p1');
       expect(b.foe('e0').hp, 500 - 36);
       expect(b.foe('e1').hp, 500 - 18);
       expect(b.foe('e2').hp, 500); // la bestia no
       expect(b.s.log,
           contains('¡La cura quema a los no muertos! Esqueleto 36, Espectro 18'));
+    });
+
+    group('lanzada a un enemigo (§ 1.4.1)', () {
+      // curaFocal: (MAG 20 × 2.6 + 6) = 58; × healFoeMult 1.5.
+      test('de un blanco a un no muerto: daño × healHarm × 1.5, sin curar',
+          () {
+        final hero = _hero(skill: 'curaFocal')..hp = 40;
+        final b = _B([_foe('esqueleto'), _foe('esqueleto', id: 'e1')],
+            hero: hero);
+        final step = b.use('curaFocal', target: 'e0');
+        expect(b.foe('e0').hp, 500 - 87);
+        expect(b.foe('e1').hp, 500); // solo al elegido
+        expect(b.s.byId('p1')!.hp, 40); // no cura
+        final dmg = step.events.whereType<DamageEvent>().single;
+        expect(dmg.sourceId, kHealHarmSourceId);
+        expect(b.s.log, contains('¡la cura quema al Esqueleto! 87'));
+      });
+
+      test('a un espectro: a medias', () {
+        final b = _B([_foe('ghost')], hero: _hero(skill: 'curaFocal'));
+        b.use('curaFocal', target: 'e0');
+        expect(b.foe('e0').hp, 500 - 44); // 58 × 0.5 × 1.5 = 43.5
+      });
+
+      test('un enemigo normal no es blanco: cura al más herido', () {
+        final hero = _hero(skill: 'curaFocal')..hp = 40;
+        final b = _B([_foe('lobo')], hero: hero);
+        expect(healCanTargetFoe(kSkills['curaFocal']!, _foe('lobo')), isFalse);
+        final step = b.use('curaFocal', target: 'e0');
+        expect(b.foe('e0').hp, 500);
+        expect(step.events.whereType<DamageEvent>(), isEmpty);
+        expect(b.s.byId('p1')!.hp, 98);
+      });
+
+      test('a un aliado: cura como siempre', () {
+        final hero = _hero(skill: 'curaFocal')..hp = 40;
+        final b = _B([_foe('esqueleto')], hero: hero);
+        b.use('curaFocal', target: 'p1');
+        expect(b.s.byId('p1')!.hp, 98);
+        expect(b.foe('e0').hp, 500 - 58); // y el daño pasivo de siempre
+      });
+
+      test('de grupo (Sanación) a un no muerto: solo a él, sin curar', () {
+        final hero = _hero(skill: 'sanar')..hp = 40;
+        final b = _B([_foe('esqueleto'), _foe('ghost', id: 'e1')],
+            hero: hero);
+        b.use('sanar', target: 'e0');
+        // (20 × 1.1 + 6) = 28 × 1.5 = 42; el espectro, nada.
+        expect(b.foe('e0').hp, 500 - 42);
+        expect(b.foe('e1').hp, 500);
+        expect(b.s.byId('p1')!.hp, 40);
+      });
+
+      test('de grupo al grupo: el daño pasivo de siempre', () {
+        final b = _B([_foe('esqueleto'), _foe('ghost', id: 'e1')],
+            hero: _hero(skill: 'sanar'));
+        b.use('sanar', target: 'p1');
+        expect(b.foe('e0').hp, 500 - 28);
+        expect(b.foe('e1').hp, 500 - 14);
+      });
+
+      test('con las familias apagadas, no daña', () {
+        final b = _B([_foe('esqueleto')],
+            hero: _hero(skill: 'curaFocal'), families: false);
+        b.use('curaFocal', target: 'e0');
+        expect(b.foe().hp, 500);
+      });
     });
 
     test('contra enemigos vivos normales la cura no hace daño', () {

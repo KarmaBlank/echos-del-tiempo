@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import '../data/elements_catalog.dart';
 import '../data/enemy_families.dart';
 import '../models/battle_state.dart';
 import '../models/skill.dart';
 import '../models/status.dart';
+import 'js_math.dart';
 
 export '../data/enemy_families.dart';
 
@@ -21,6 +24,36 @@ FamilyRule? familyRuleOf(String? enemyType) {
   final f = familyOf(enemyType);
   return f == null ? null : kFamilyRules[f];
 }
+
+/// Habilidad de cura (`heal`, sin revivir) que se puede lanzar a un
+/// enemigo con `healHarm` (bestiary.md § 1.4.1), sea de un blanco o de
+/// grupo (Sanación).
+bool isTargetableHeal(SkillDef sk) =>
+    sk.kind == SkillKind.heal && sk.revive <= 0;
+
+/// [e] es un blanco válido para la cura [sk]: enemigo vivo
+/// cuya familia tiene `healHarm > 0` (no muerto, espectro).
+bool healCanTargetFoe(SkillDef sk, Combatant e) =>
+    isTargetableHeal(sk) &&
+    !e.isPlayer &&
+    e.alive &&
+    (kFamilyRules[e.family]?.healHarm ?? 0) > 0;
+
+/// Cura base de [sk] lanzada por [p] (`MAG × poder + 6`, × cura bonus).
+int skillHealAmount(Combatant p, SkillDef sk) =>
+    jsRound((p.magic * sk.power + 6) * (1 + p.healBonus));
+
+/// Daño Sagrado de una cura de [heal] lanzada directo a [e]:
+/// cura × `healHarm` × (1 + [bonus]) × [mult] (mínimo 1). Sin Marca ni
+/// quiebre (los suma el motor).
+int healOnFoeDamage(int heal, Combatant e,
+        {required double mult, double bonus = 0}) =>
+    math.max(
+        1,
+        jsRound(heal *
+            (kFamilyRules[e.family]?.healHarm ?? 0) *
+            (1 + bonus) *
+            mult));
 
 /// [c] es de la familia / raza [f] (para notables / pasivas:
 /// `isFamily(target, EnemyFamily.undead)`). Simétrico desde v0.7: vale

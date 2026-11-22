@@ -6,7 +6,6 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/menu_focus.dart';
-import '../../../game_engine/data/branch_ults_catalog.dart' show itemUlt;
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_state.dart';
 import '../../../game_engine/models/skill.dart';
@@ -101,7 +100,6 @@ class SkillChips extends StatelessWidget {
   Widget build(BuildContext context) {
     final cat = rules.catalog;
     final w = cat.weapons[item.baseId];
-    final ult = itemUlt(item) ?? (w == null ? null : cat.ultimates[w.type]);
     // Una sección: Tab salta todas las habilidades de una vez.
     return NavSection(
         child: Wrap(
@@ -128,7 +126,6 @@ class SkillChips extends StatelessWidget {
                   ? null
                   : protoColor(ProtoColors.orange, 'Trasladada de otra arma'),
             ),
-        if (ult != null) SkillChip(skill: ult, stats: stats, ultimate: true),
       ],
     ));
   }

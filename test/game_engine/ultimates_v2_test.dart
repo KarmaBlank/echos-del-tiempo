@@ -17,6 +17,8 @@ import 'package:echos_del_tiempo/game_engine/models/player_state.dart';
 import 'package:echos_del_tiempo/game_engine/models/session_action.dart';
 import 'package:echos_del_tiempo/game_engine/models/ult_def.dart';
 import 'package:echos_del_tiempo/game_engine/rules/battle_engine.dart';
+import 'package:echos_del_tiempo/game_engine/rules/exploration_rules.dart';
+import 'package:echos_del_tiempo/game_engine/models/exploration.dart';
 import 'package:echos_del_tiempo/game_engine/rules/passive_tree_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/stats_calculator.dart';
 import 'package:echos_del_tiempo/game_engine/rules/ult_rules.dart';
@@ -237,7 +239,8 @@ void main() {
 
     test('perfil viejo sin uk/us: comportamiento de hoy; ida y vuelta', () {
       final p = prof();
-      expect(p.ultKnown, isEmpty);
+      // La normalización ya suma la ULT base de la clase (v0.20.15).
+      expect(p.ultKnown, {UltRules.baseUltId(p.classId)});
       expect(p.ultSel, isNull);
       final q = p.copyWith(
           ultKnown: {'ult2_sangreEco'},
@@ -310,6 +313,39 @@ void main() {
       s = act(e, s, 'a', const UpgradeUltAction('ult2_sangreEco'));
       expect(UltRules.levelOf(s.players['a']!.profile, 'ult2_sangreEco'), 2);
       expect(s.players['b']!.profile.ultLevels, isEmpty, reason: 'por personaje');
+    });
+
+    test('v0.20.13: la ULT elegida de otra arma sigue al deshacerse de esa arma', () {
+      final e = sessionEngine();
+      final base = newProfile('Ana', 'maga');
+      final tomo = ItemInstance.common('t1', 'tomo_plaga');
+      var s = e.addPlayer(e.create(), 'a',
+          base.copyWith(items: [...base.items, tomo]))!.state;
+      s = act(e, s, 'a', const SelectUltAction('ult_tomo'));
+      expect(s.players['a']!.profile.ultKnown, contains('ult_tomo'));
+      // El tomo se va (venta, fusión o alijo): la elección se mantiene.
+      final p = s.players['a']!.profile;
+      final sin = p.copyWith(items: [for (final i in p.items) if (i.uid != 't1') i]);
+      final rules = e.progression;
+      expect(UltRules.validSel(sin, rules.equippedWeapon(sin), rules.equippedItem(sin)),
+          'ult_tomo');
+      expect(UltRules.isLearnable('ult_baculo'), isTrue);
+    });
+
+    test('v0.20.13: una bendición no borra la ULT elegida', () {
+      for (final k in BlessingKind.values) {
+        final b = ExplorationRules.blessedBuild(
+            PlayerBuild(
+                classId: 'maga',
+                level: 10,
+                attributes: const PlayerAttributes({}),
+                equippedWeapon: kWeapons['tomo_plaga']!,
+                ultSel: 'ult2_ecoFilo',
+                ultLevel: 3),
+            k);
+        expect(b.ultSel, 'ult2_ecoFilo', reason: '$k');
+        expect(b.ultLevel, 3, reason: '$k');
+      }
     });
 
     test('el build lleva ULT activa y nivel (snapshot de batalla)', () {

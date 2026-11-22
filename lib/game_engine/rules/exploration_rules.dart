@@ -243,6 +243,10 @@ abstract final class ExplorationRules {
       item: b.item,
       bonusDefense: b.bonusDefense,
       ascension: b.ascension,
+      // Sin esto la bendición borraba la ULT elegida y el combate volvía a
+      // la automática (la del tipo de arma) mientras durara (v0.20.13).
+      ultSel: b.ultSel,
+      ultLevel: b.ultLevel,
     );
   }
 }

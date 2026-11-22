@@ -106,11 +106,9 @@ void main() {
           [for (final a in epicSword.affixes) items.affixText(a)]);
       expect(cmp.passiveAfter, isNull);
       expect(cmp.passiveBefore, isNotNull);
-      final ult = progression.catalog.ultimates;
-      expect(cmp.ultBefore,
-          ult[progression.catalog.weapons['espada_ignea']!.type]?.name);
-      expect(cmp.ultAfter,
-          ult[progression.catalog.weapons['hacha_rompe']!.type]?.name);
+      // ULT libres del arma (v0.20.15): la comparación no muestra ULT.
+      expect(cmp.ultBefore, isNull);
+      expect(cmp.ultAfter, isNull);
       // El báculo pide ESP 14.
       expect(compareWeapons(progression, p, to: commonStaff).meetsRequirements,
           isFalse);

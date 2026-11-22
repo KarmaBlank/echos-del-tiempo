@@ -19,7 +19,8 @@ enum UltOptionKind {
   /// La de la ascensión elegida.
   ascension,
 
-  /// La del tipo de arma (respaldo, siempre disponible).
+  /// La ULT base de la clase (la del tipo de su arma inicial; siempre
+  /// disponible y la activa por defecto, ultimates_v2.md § 2.1).
   weaponType,
 
   /// Una del repertorio (aprendida: árbol, hazaña, Ecos, jefe, o sacada
@@ -151,22 +152,52 @@ abstract final class UltRules {
   /// La ULT propia de un arma (mod, legendario o base), si tiene.
   static String? itemUltId(ItemInstance i) => ownWeaponUlt(i.baseId, i)?.id;
 
-  /// ULT que [p] ya ganó y quizá no estén anotadas en `uk`: hitos del
-  /// árbol, Maestría y las de las armas que tiene (mod / legendario).
-  static Set<String> earned(PlayerProfile p) => {
-        for (final u in kUltV2List)
-          if (_earned(u, p)) u.id,
-        for (final i in p.items)
-          if (itemUltId(i) case final id?) id,
-      };
-
-  /// ULT de tipo de las armas que [p] tiene (v0.20.9): se pueden elegir
-  /// en el menú aunque tenga equipada otra. No se anotan en `uk`.
-  static Set<String> ownedTypeUlts(PlayerProfile p,
+  /// Las ULT que enseña el arma [i] al conseguirla (ultimates_v2.md
+  /// § 2.1): la propia (mod, legendario, tomo) y la de su tipo.
+  static Set<String> taughtBy(ItemInstance i,
           [GameCatalog catalog = GameCatalog.standard]) =>
       {
-        for (final i in p.items)
-          if (catalog.ultimates[kWeapons[i.baseId]?.type] case final u?) u.id,
+        if (itemUltId(i) case final id?) id,
+        if (catalog.ultimates[kWeapons[i.baseId]?.type] case final u?) u.id,
+      };
+
+  /// Id de la ULT base de [classId]: la que traía su arma inicial (la
+  /// propia del tomo o la de su tipo). Siempre en el repertorio y la
+  /// activa por defecto (ultimates_v2.md § 2.1).
+  static String? baseUltId(String classId,
+      [GameCatalog catalog = GameCatalog.standard]) {
+    final start = catalog.classes[classId]?.startWeaponId;
+    if (start == null) return null;
+    return ownWeaponUlt(start, null)?.id ??
+        catalog.ultimates[catalog.weapons[start]?.type]?.id;
+  }
+
+  /// La ULT base de [classId] (sin nivel aplicado).
+  static SkillDef? baseUlt(String classId,
+      [GameCatalog catalog = GameCatalog.standard]) {
+    final id = baseUltId(classId, catalog);
+    return id == null ? null : _skill(id, catalog);
+  }
+
+  /// La ULT base de [classId] lista para el combate, con su nivel.
+  static SkillDef? baseUltLeveled(String classId, int level,
+      [GameCatalog catalog = GameCatalog.standard]) {
+    final sk = baseUlt(classId, catalog);
+    if (sk == null) return null;
+    if (catalog.ultimates.values.any((u) => u.id == sk.id)) return sk;
+    return leveled(sk, level);
+  }
+
+  /// ULT que [p] ya ganó y quizá no estén anotadas en `uk`: la base de la
+  /// clase, hitos del árbol, Maestría y las que enseñan las armas que
+  /// tiene (propia y de tipo).
+  static Set<String> earned(PlayerProfile p,
+          [GameCatalog catalog = GameCatalog.standard]) =>
+      {
+        if (baseUltId(p.classId, catalog) case final id?) id,
+        for (final u in kUltV2List)
+          if (_earned(u, p)) u.id,
+        for (final i in p.items) ...taughtBy(i, catalog),
       };
 
   static bool _earned(UltDef u, PlayerProfile p) {
@@ -183,23 +214,49 @@ abstract final class UltRules {
   }
 
   /// Anota en `uk` lo ganado (idempotente: devuelve [p] si no hay nada
-  /// nuevo). También es la migración: las armas que ya tenía con ULT
-  /// propia la suman al repertorio.
-  static PlayerProfile absorb(PlayerProfile p) {
+  /// nuevo). Con [markNew] lo nuevo (salvo la base) queda con la marca
+  /// NUEVA (`un`); la migración del perfil lo llama sin marca.
+  static PlayerProfile absorb(PlayerProfile p, {bool markNew = true}) {
     final e = earned(p);
     if (p.ultKnown.containsAll(e)) return p;
-    return p.copyWith(ultKnown: {...p.ultKnown, ...e});
+    final added = e.difference(p.ultKnown);
+    final base = baseUltId(p.classId);
+    return p.copyWith(
+        ultKnown: {...p.ultKnown, ...e},
+        ultNew: markNew
+            ? {...p.ultNew, ...added.where((id) => id != base)}
+            : null);
   }
 
-  /// Aprende [id]. Sin cambios si ya la tenía o no existe.
-  static PlayerProfile learn(PlayerProfile p, String id) {
+  /// Aprende [id] (marca NUEVA con [markNew]). Sin cambios si ya la tenía
+  /// o no existe.
+  static PlayerProfile learn(PlayerProfile p, String id,
+      {bool markNew = true}) {
     if (!isLearnable(id) || p.ultKnown.contains(id)) return p;
-    return p.copyWith(ultKnown: {...p.ultKnown, id});
+    return p.copyWith(
+        ultKnown: {...p.ultKnown, id},
+        ultNew: markNew ? {...p.ultNew, id} : null);
+  }
+
+  /// Prefijo de los ids de `SeenItemsAction` que desmarcan una ULT NUEVA.
+  static const seenPrefix = 'ult:';
+
+  /// Quita la marca NUEVA de las ULT de [ids] (`ult:<id>`); `null` si no
+  /// cambia nada.
+  static PlayerProfile? markSeen(PlayerProfile p, Iterable<String> ids) {
+    final next = {...p.ultNew}..removeAll(ids
+        .where((u) => u.startsWith(seenPrefix))
+        .map((u) => u.substring(seenPrefix.length)));
+    return next.length == p.ultNew.length ? null : p.copyWith(ultNew: next);
   }
 
   /// [id] puede estar en el repertorio (v2, de camino o de arma).
   static bool isLearnable(String id) =>
-      kUltV2.containsKey(id) || kWeaponUltSkills.containsKey(id);
+      kUltV2.containsKey(id) ||
+      kWeaponUltSkills.containsKey(id) ||
+      // Las de tipo de arma también (v0.20.13): una elegida queda en el
+      // repertorio aunque después el arma se venda, se funda o se guarde.
+      GameCatalog.standard.ultimates.values.any((u) => u.id == id);
 
   /// [id] es alguna ULT de jugador que existe (ascensión, arma, tipo de
   /// arma o v2).
@@ -247,8 +304,13 @@ abstract final class UltRules {
       final u = kAscensionUltimates[asc.id];
       if (u != null) add(UltOption(u, UltOptionKind.ascension));
     }
-    final type = catalog.ultimates[weapon.type];
-    if (type != null) add(UltOption(type, UltOptionKind.weaponType));
+    // La ULT base de la clase (nunca la del arma equipada).
+    final base = baseUlt(classId, catalog);
+    if (base != null) {
+      add(UltOption(base, UltOptionKind.weaponType,
+          def: kUltV2[base.id],
+          level: (levels[base.id] ?? 1).clamp(1, maxLevel)));
+    }
     final ids = known.toList()..sort();
     for (final id in ids) {
       final sk = _skill(id, catalog);
@@ -273,12 +335,7 @@ abstract final class UltRules {
           classId: p.classId,
           weapon: weapon,
           ascension: p.ascension,
-          known: {
-            ...p.ultKnown,
-            ...earned(p),
-            ...ownedTypeUlts(p, catalog),
-            if (item != null && itemUltId(item) != null) itemUltId(item)!,
-          },
+          known: {...p.ultKnown, ...earned(p, catalog)},
           levels: p.ultLevels,
           catalog: catalog);
 
