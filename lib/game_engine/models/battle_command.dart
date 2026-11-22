@@ -54,3 +54,16 @@ class DefendCommand extends BattleCommand {
 class PassCommand extends BattleCommand {
   const PassCommand();
 }
+
+/// ESPERAR (turn_modes.md § 4, solo Por rondas): el jugador pasa al final
+/// de la ronda en curso, una vez por ronda.
+class WaitCommand extends BattleCommand {
+  const WaitCommand();
+}
+
+/// TERMINAR TURNO (turn_modes.md § 3): el jugador da por cerrada su parte
+/// de la fase o del bloque sin actuar (o sin usar la acción extra). En la
+/// línea de tiempo equivale a Pasar.
+class EndTurnCommand extends BattleCommand {
+  const EndTurnCommand();
+}

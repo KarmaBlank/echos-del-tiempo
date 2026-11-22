@@ -1244,6 +1244,9 @@ final combatLimitsCodec = _tuningCodec(BalanceKind.combatLimits, const [
   BalanceField('speedSoftFactor', 'Velocidad: rinde × sobre el umbral', _frac, max: 1, step: 0.05),
   BalanceField('ultBonusAction', 'ULT extra (árbol, mods, efectos): tope por acción', _dec, max: 100, step: 1),
   BalanceField('ultBonusTurn', 'ULT extra (árbol, mods, efectos): tope por turno', _dec, max: 100, step: 1),
+  BalanceField('modeCoop', 'Modo de combate por defecto, cooperativo (0 línea de tiempo, 1 rondas, 2 fases)', _int, max: 2),
+  BalanceField('modeSolo', 'Modo de combate por defecto, solitario (0 línea de tiempo, 1 rondas, 2 fases)', _int, max: 2),
+  BalanceField('planPause', 'Por fases: pausa de planificación (s)', _dec, max: 10, step: 0.5),
 ]);
 
 final materialsCodec = _tuningCodec(BalanceKind.materials, const [

@@ -9,6 +9,7 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../game_engine/models/mission_def.dart';
 import '../../../game_engine/models/turn_timer.dart';
+import '../../../game_engine/models/combat_mode.dart';
 import '../../../app/widgets/menu_focus.dart';
 import '../../../app/widgets/menu_widgets.dart';
 import '../../../app/widgets/pixel_icon.dart';
@@ -47,8 +48,15 @@ class PrepPanel extends StatefulWidget {
     this.ethers = 0,
     this.shopTabs = const [],
     this.turnTimer = TurnTimer.normal,
+    this.combatMode = CombatMode.timeline,
+    this.onCombatMode,
     this.members,
   });
+
+  /// Modo de combate de la sala (turn_modes.md § 1): lo elige el
+  /// anfitrión ([onCombatMode] no nulo); el resto lo ve.
+  final CombatMode combatMode;
+  final ValueChanged<CombatMode>? onCombatMode;
 
   /// Selector de miembro de la party jugando solo, arriba de las pestañas
   /// (solo_party.md § 6.2); `null` = sin selector.
@@ -88,6 +96,33 @@ class PrepPanel extends StatefulWidget {
 }
 
 class _PrepPanelState extends State<PrepPanel> {
+  /// Modo de combate: selector para el anfitrión, texto para el resto;
+  /// el tooltip explica el modo en una línea.
+  Widget _combatModeLine() {
+    final w = widget;
+    final on = w.onCombatMode;
+    final child = on == null
+        ? InfoLine('Combate',
+            '${w.combatMode.label} <span class="k">· lo elige el anfitrión</span>',
+            labelEms: 13)
+        : Padding(
+            padding: EdgeInsets.symmetric(
+                horizontal: DsSpace.md, vertical: DsSpace.xs),
+            child: ChoiceCycler<CombatMode>(
+              label: 'Combate',
+              options: CombatMode.values,
+              value: w.combatMode,
+              display: (m) => m.label,
+              onChanged: on,
+              keyPrefix: 'prep-combat-mode-',
+            ),
+          );
+    return RetroTooltip(
+        key: const ValueKey('prep-combat-mode'),
+        message: w.combatMode.tip,
+        child: child);
+  }
+
   Widget _header(Widget tabs) {
     final m = widget.members;
     return m == null
@@ -214,6 +249,7 @@ class _PrepPanelState extends State<PrepPanel> {
                     InfoLine('Turnos',
                         '${w.turnTimer.label} <span class="k">· lo elige el anfitrión</span>',
                         key: const ValueKey('prep-turn-timer'), labelEms: 13),
+                    _combatModeLine(),
                     InfoLine('Créditos', '<b>₵${w.credits}</b>', labelEms: 13),
                   ],
                 ),
