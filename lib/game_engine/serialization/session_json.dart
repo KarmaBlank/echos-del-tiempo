@@ -492,6 +492,14 @@ class SessionJson {
               },
         'boss': s.boss,
         'elite': s.elite,
+        // Travesía, turnos porBando (roguelike.md § 6); el Mundo no los
+        // manda (mismo formato que el protocolo 31).
+        if (s.porBando) ...{
+          'tr': s.turnRule.name,
+          'gp': s.groupPhase,
+          'act': s.acted.toList(),
+          'rd': s.round,
+        },
       };
 
   BattleState battleStateFromJson(Json j) {
@@ -518,6 +526,10 @@ class SessionJson {
             ),
       boss: j.boolean('boss'),
       elite: j.boolean('elite'),
+      turnRule: j.enumOrNull('tr', TurnRule.values) ?? TurnRule.velocidad,
+      groupPhase: j['gp'] as bool? ?? false,
+      acted: j['act'] == null ? null : j.strings('act').toSet(),
+      round: j.intOrNull('rd') ?? 0,
     );
   }
 

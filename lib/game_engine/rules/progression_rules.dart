@@ -49,10 +49,17 @@ class ProgressionRules {
   const ProgressionRules({
     required this.stats,
     this.catalog = GameCatalog.standard,
+    this.ignoreRequirements = false,
   });
 
   final StatsCalculator stats;
   final GameCatalog catalog;
+
+  /// Travesía (roguelike.md § 6): las armas de la run se equipan sin
+  /// nivel ni atributos mínimos (el nivel tiene tope y no hay puntos; las
+  /// ofertas ya salen de los tipos de la clase). Lo inyecta el
+  /// composition root; el Mundo siempre `false`.
+  final bool ignoreRequirements;
 
   PassiveTreeRules get treeRules => stats.treeRules;
 
@@ -139,7 +146,8 @@ class ProgressionRules {
 
   bool meetsRequirements(PlayerProfile p, WeaponDef w,
           {PlayerAttributes? attributes}) =>
-      p.level >= w.level && w.meetsRequirements(attributes ?? p.attributes);
+      ignoreRequirements ||
+      (p.level >= w.level && w.meetsRequirements(attributes ?? p.attributes));
 
   /// La instancia que realmente usa: la equipada si puede, si no la del
   /// arma inicial de su clase (como `stats(p)`). `null` si no tiene

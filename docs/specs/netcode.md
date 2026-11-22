@@ -726,7 +726,7 @@ ni la sesión ni `features/*` miran el nombre del flavor.
 | Juego | id (`g`) | `v` | Constante |
 |---|---|---|---|
 | Ecos del Tiempo (Mundo) | `mundo` | 31 | `kProtocolVersion` |
-| Ecos del Tiempo: Travesía | `travesia` | 1 | `kTravesiaProtocolVersion` |
+| Ecos del Tiempo: Travesía | `travesia` | 2 | `kTravesiaProtocolVersion` |
 
 - `hello` lleva `g` (el id del juego del cliente). Es aditivo: un host
   Mundo viejo (31) lo ignora, así que **Mundo sigue en 31** y los

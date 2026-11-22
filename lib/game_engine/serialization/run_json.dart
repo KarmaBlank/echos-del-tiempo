@@ -56,6 +56,7 @@ abstract final class RunJson {
   static Json offerToJson(RunOffer o) => {
         'n': o.nodes,
         'w': o.weapons,
+        if (o.ults.isNotEmpty) 'u': o.ults,
         'x': [
           for (final x in o.extras)
             {
@@ -69,6 +70,7 @@ abstract final class RunJson {
   static RunOffer offerFromJson(Json j) => RunOffer(
         nodes: j.strings('n'),
         weapons: j.strings('w'),
+        ults: j['u'] == null ? const [] : j.strings('u'),
         extras: [
           for (final raw in j.list('x'))
             () {

@@ -1,3 +1,7 @@
+import 'package:echos_del_tiempo/game_engine/data/branch_ults_catalog.dart';
+import 'package:echos_del_tiempo/game_engine/models/battle_state.dart';
+import 'package:echos_del_tiempo/game_engine/rules/progression_rules.dart';
+import 'package:echos_del_tiempo/game_engine/serialization/run_json.dart';
 import 'package:echos_del_tiempo/game_engine/data/game_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/passive_tree_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/game_mode.dart';
@@ -276,6 +280,70 @@ void main() {
       s = act(e, s, 'p1', RunVoteAction(opts[0]));
       s = e.tick(s, 0.05).state;
       expect(s.mode, SessionMode.battle);
+    });
+
+    test('v0.1.1: la pelea de la run usa turnos porBando', () {
+      final e = engine();
+      var s = e.create();
+      s = e.addPlayer(s, 'p0', newProfile('A', 'guerrero'))!.state;
+      s = act(e, s, 'p0', const RunStartAction());
+      s = act(e, s, 'p0', RunVoteAction(RunRules.reachable(s.run!).first));
+      s = e.tick(s, 0.05).state;
+      expect(s.battle!.state.turnRule, TurnRule.porBando);
+      for (var k = 0; k < 200 && !s.battle!.waitingForPlayer; k++) {
+        s = e.tick(s, 0.05).state;
+      }
+      expect(s.battle!.state.awaitingGroup, isTrue);
+      expect(s.battle!.waitingForPlayer, isTrue);
+    });
+  });
+
+  group('v0.1.1', () {
+    final offers =
+        RewardOfferRules(tree: kPassiveTree, catalog: GameCatalog.standard);
+
+    test('equipar en la run no pide nivel ni atributos', () {
+      final run = ProgressionRules(
+          stats: statsCalc,
+          catalog: GameCatalog.standard,
+          ignoreRequirements: true);
+      final p = run.normalize(PlayerProfile(name: 'X', classId: 'guerrero'));
+      final types = GameCatalog.standard.classes['guerrero']!
+          .allowedWeaponTypes
+          .toSet();
+      final w = GameCatalog.standard.weapons.values.firstWhere(
+          (w) => types.contains(w.type) && w.level > 9 && w.price > 0);
+      final got = RunRules.applyReward(
+          run, p, RunOffer(weapons: [w.id]),
+          weapon: 0)!;
+      final uid = got.items.firstWhere((i) => i.baseId == w.id).uid;
+      expect(zoneProgression.equip(got, uid), isNull);
+      expect(run.equip(got, uid)?.equippedUid, uid);
+    });
+
+    test('ULT de rama: de las ramas de la clase, se aprende y queda activa',
+        () {
+      final p = zoneProgression
+          .normalize(PlayerProfile(name: 'X', classId: 'guerrero'));
+      final ids = offers.ultOffer(p, mulberry32(3));
+      expect(ids, hasLength(RunTuning.ultOfferSize));
+      final paths = offers.classPaths('guerrero').toSet();
+      for (final id in ids) {
+        expect(
+            kBranchUltList.any((u) => u.$2.id == id && paths.contains(u.$1)),
+            isTrue);
+      }
+      final o = RunOffer(ults: ids);
+      final got = RunRules.applyReward(zoneProgression, p, o, ult: 1)!;
+      expect(got.ultKnown, contains(ids[1]));
+      expect(got.ultSel, ids[1]);
+      expect(offers.ultCandidates(got), isNot(contains(ids[1])));
+      // Viaja por la red (protocolo de Travesía 2).
+      final back = RunJson.offerFromJson(RunJson.offerToJson(o));
+      expect(back.ults, ids);
+      final a = ActionJson.fromJson(
+          ActionJson.toJson(const RunRewardAction(ult: 2))) as RunRewardAction;
+      expect(a.ult, 2);
     });
   });
 }

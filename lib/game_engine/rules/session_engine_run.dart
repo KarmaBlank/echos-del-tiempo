@@ -142,7 +142,7 @@ extension _RunOp on _Op {
       return false;
     }
     final next = RunRules.applyReward(rules, p.profile, offer,
-        tree: a.tree, weapon: a.weapon, extra: a.extra);
+        tree: a.tree, weapon: a.weapon, extra: a.extra, ult: a.ult);
     if (next == null) return false;
     p.profile = next;
     r.offers.remove(p.id);
@@ -234,6 +234,8 @@ extension _RunOp on _Op {
       enemyTypes: group,
       elite: n.type == RunNodeType.elite,
       triggeredBy: humans.firstOrNull?.id,
+      // Travesía: turno del grupo / turno enemigo (§ 6).
+      turnRule: TurnRule.porBando,
     );
     ZoneRules.scaleBattle(step.state, level, curve: catalog.curve);
     final boss = n.type == RunNodeType.jefe;
@@ -279,10 +281,13 @@ extension _RunOp on _Op {
       return;
     }
     r.offers.clear();
+    // ULT de rama: el jefe siempre; la élite a veces (§ 4).
+    final ults = n.type == RunNodeType.jefe ||
+        (n.type == RunNodeType.elite && _rand() < RunTuning.eliteUltChance);
     for (final h in humans) {
       final streak = r.missStreak[h.id] ?? 0;
       final (offer, hit) = _offers.offer(h.profile,
-          floor: r.floor, rnd: _rand, missStreak: streak);
+          floor: r.floor, rnd: _rand, missStreak: streak, ults: ults);
       r.offers[h.id] = offer;
       if (_offers.mainPath(h.profile) != null) {
         r.missStreak[h.id] = hit ? 0 : streak + 1;

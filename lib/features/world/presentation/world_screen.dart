@@ -52,6 +52,7 @@ import 'session_controller.dart';
 import 'session_music.dart';
 import 'session_sfx.dart';
 import 'session_view.dart';
+import '../../run/presentation/run_character_panel.dart';
 import '../../run/presentation/run_screen.dart';
 
 /// Pantalla raíz del juego: dibuja lo que pide `session.mode` (mapa +
@@ -785,6 +786,19 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             view: view,
             controller: controller,
             sprites: ref.read(gameSpritesProvider).valueOrNull);
+      // Travesía: el personaje de la run (roguelike.md § 12), sin árbol
+      // ni pestañas del Mundo.
+      case WorldPanel.character when controller.isRun:
+        return RunCharacterPanel(
+            key: const ValueKey('panel-run-character'),
+            view: view,
+            controller: controller);
+      case WorldPanel.inventory when controller.isRun:
+        return RunCharacterPanel(
+            key: const ValueKey('panel-run-inventory'),
+            view: view,
+            controller: controller,
+            initialTab: RunCharacterTab.inventory);
       case WorldPanel.character:
         return CharacterPanel(
             key: const ValueKey('panel-character'),

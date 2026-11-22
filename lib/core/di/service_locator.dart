@@ -103,6 +103,7 @@ void registerSharedDependencies(
     () => ProgressionRules(
       stats: sl<StatsCalculator>(),
       catalog: sl<GameCatalog>(),
+      ignoreRequirements: gameMode == GameModeKind.travesia,
     ),
   );
   // Una sala nueva = un motor nuevo (cachea los mapas de sus misiones).

@@ -76,7 +76,7 @@ class _SessionBattleScreenState extends State<SessionBattleScreen> {
     }
     return BattleView(
       key: widget.battleKey,
-      battle: b.state,
+      battle: view.shownBattle ?? b.state,
       events: view.battleEvents,
       eventSeq: view.battleEventSeq,
       battleId: b.id,

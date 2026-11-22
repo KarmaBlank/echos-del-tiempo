@@ -1,3 +1,4 @@
+import '../../../game_engine/models/battle_state.dart';
 import '../../../game_engine/models/atlas.dart';
 import '../../../game_engine/models/bestiary.dart';
 import '../../../game_engine/models/battle_event.dart';
@@ -195,9 +196,36 @@ class SessionView {
 
   /// Le toca al jugador local (o a un compañero suyo sin AUTO) y el host
   /// espera su comando.
+  /// Turnos porBando (Travesía, roguelike.md § 6): en el turno del grupo
+  /// nadie tiene el turno; manda el primero de los que faltan que maneja
+  /// este dispositivo (el local primero, después sus compañeros sin AUTO).
+  String? get groupActor {
+    final st = session.battle?.state;
+    if (st == null || !st.awaitingGroup) return null;
+    final ids = [for (final p in st.pendingGroup) p.id];
+    if (ids.contains(localId) && !auto.contains(localId)) return localId;
+    for (final id in ids) {
+      if (controls(id) && !auto.contains(id)) return id;
+    }
+    return null;
+  }
+
+  /// Quien actúa ahora desde este dispositivo (el del turno, o en el
+  /// turno del grupo [groupActor]).
+  String? get turnActor => session.battle?.state.currentId ?? groupActor;
+
+  /// El estado de batalla que se dibuja: en el turno del grupo, con
+  /// [groupActor] como el de turno (solo vista; el host no cambia).
+  BattleState? get shownBattle {
+    final st = session.battle?.state;
+    final g = groupActor;
+    if (st == null || g == null) return st;
+    return st.copy()..currentId = g;
+  }
+
   bool get myTurn {
     final b = session.battle;
-    final cur = b?.state.currentId;
+    final cur = turnActor;
     return b != null &&
         b.waitingForPlayer &&
         controls(cur) &&

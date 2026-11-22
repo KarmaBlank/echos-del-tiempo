@@ -13,7 +13,7 @@ void main() {
   test('Mundo sigue en 31 y Travesía arranca su secuencia en 1', () {
     expect(WireGame.mundo.protocol, 31);
     expect(kProtocolVersion, 31);
-    expect(WireGame.travesia.protocol, 1);
+    expect(WireGame.travesia.protocol, 2);
     expect(WireGame.mundo.id, isNot(WireGame.travesia.id));
   });
 

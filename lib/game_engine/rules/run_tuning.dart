@@ -85,4 +85,10 @@ abstract final class RunTuning {
 
   /// Puntos de atributo de la fila Extra.
   static const extraAttribute = 3;
+
+  /// ULT de rama que se ofrecen tras un jefe (siempre) o una élite.
+  static const ultOfferSize = 3;
+
+  /// Probabilidad de que una élite ofrezca ULT.
+  static const eliteUltChance = 0.35;
 }

@@ -525,7 +525,9 @@ class SessionBattle {
   /// Le toca a un jugador y la sesión espera su `BattleAction`.
   bool get waitingForPlayer {
     final cur = state.current;
-    return endTimer == null && wait <= 0 && cur != null && cur.isPlayer;
+    return endTimer == null &&
+        wait <= 0 &&
+        ((cur != null && cur.isPlayer) || state.awaitingGroup);
   }
 
   SessionBattle copy() => SessionBattle(

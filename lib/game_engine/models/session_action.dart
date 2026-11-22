@@ -485,7 +485,10 @@ class RunRewardAction extends SessionAction {
   final int? tree;
   final int? weapon;
   final int? extra;
-  const RunRewardAction({this.tree, this.weapon, this.extra});
+
+  /// Fila ULT (Travesía v0.1.1, protocolo 2).
+  final int? ult;
+  const RunRewardAction({this.tree, this.weapon, this.extra, this.ult});
 }
 
 /// LISTO en tienda / armería / descanso.

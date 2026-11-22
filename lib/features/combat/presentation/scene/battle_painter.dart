@@ -1839,6 +1839,8 @@ class BattleScenePainter extends CustomPainter {
   /// 10 no entran en [vw], se achican todos por igual (nunca se cortan).
   static List<({String id, Rect rect})> timelineSlots(BattleState b,
       [double vw = 480, SceneGeometry? g]) {
+    // porBando (Travesía): sin línea de tiempo.
+    if (b.porBando) return const [];
     final bigIcon = g?.bigIcon ?? BattleScenePainter.bigIcon;
     final smallIcon = g?.smallIcon ?? BattleScenePainter.smallIcon;
     final ids = [
@@ -1878,6 +1880,32 @@ class BattleScenePainter extends CustomPainter {
   static const logTop = 58.0;
   static const logHeight = 16.0;
 
+  /// porBando (roguelike.md § 6): en vez de la franja, de quién es el
+  /// turno y qué jugadores faltan.
+  void _bandoBanner(Canvas c, BattleState b, double vw, double band) {
+    final group = b.groupPhase;
+    final missing = [
+      for (final p in b.party)
+        if (p.alive && !b.acted.contains(p.id)) p.name
+    ];
+    _pen.text(
+        c,
+        group ? 'TURNO DEL GRUPO' : 'TURNO ENEMIGO',
+        vw / 2,
+        band / 2 - 4,
+        group ? const Color(0xFFFFD166) : const Color(0xFFFF4757),
+        12);
+    if (group) {
+      _pen.text(
+          c,
+          missing.isEmpty ? 'Todos actuaron' : 'Faltan: ${missing.join(', ')}',
+          vw / 2,
+          band / 2 + 12,
+          const Color(0xFF9FB4FF),
+          8);
+    }
+  }
+
   void _timeline(Canvas c, SceneFrame f) {
     final t = scene.t;
     final b = f.battle;
@@ -1907,6 +1935,10 @@ class BattleScenePainter extends CustomPainter {
           iconBand + 1,
           vw * l / full,
           4);
+    }
+    if (b.porBando) {
+      _bandoBanner(c, b, vw, iconBand);
+      return;
     }
     _pen.text(c, 'TURNOS', 30, iconBand / 2 + 3, const Color(0xFF9FB4FF), 8);
 

@@ -112,7 +112,9 @@ GameSession runBattle(SessionEngine e, GameSession s,
   for (var i = 0; i < maxTicks && !until(s); i++) {
     final b = s.battle;
     if (b != null && b.waitingForPlayer) {
-      final step = e.apply(s, b.state.currentId!, const BattleAction(AttackCommand()));
+      // porBando (Travesía): en el turno del grupo, el primero que falta.
+      final who = b.state.currentId ?? b.state.pendingGroup.first.id;
+      final step = e.apply(s, who, const BattleAction(AttackCommand()));
       if (step != null) {
         log?.addAll(step.events);
         s = step.state;
