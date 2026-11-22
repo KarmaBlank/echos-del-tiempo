@@ -244,7 +244,7 @@ Contrato nuevo `GameMode` (inyectado por el composition root, igual que
 1. Atributos: ¿quedan Vitalidad, Fuerza, Espíritu y Destreza, o se funde
    Destreza en Fuerza y quedan solo 3?
 2. Nombre de la moneda y del árbol de afuera (desde docs/lore.md).
-   Propuesta en v0.2.0, pendiente del OK del dueño: moneda **Ecos**, árbol
+   Decidido (OK del dueño, 2026-11-22): moneda **Ecos**, árbol
    **Legado del viajero**.
 
 ## 11. Fases
