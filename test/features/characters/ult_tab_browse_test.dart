@@ -100,6 +100,8 @@ void main() {
     expect(up, findsOneWidget);
     expect(tester.widget<DsButton>(up).onPressed, isNull);
     expect(find.byKey(const ValueKey('ult-upgrade-cost')), findsOneWidget);
+    // Qué mejora: siempre a la vista, sin hover (v0.21.1).
+    expect(find.byKey(const ValueKey('ult-upgrade-diff')), findsOneWidget);
     // En la misma fila que EQUIPAR / EQUIPADA (sin scrollear).
     final actions = find.ancestor(of: up, matching: find.byType(Wrap)).first;
     expect(
