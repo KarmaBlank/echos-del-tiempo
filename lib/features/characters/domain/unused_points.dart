@@ -61,6 +61,11 @@ class UnusedPoints {
   int get own => attributes + tree + ascension;
 
   int get total => own + companionTotal;
+
+  /// Lo que se reparte desde PERSONAJE (atributos, árbol, compañeros): la
+  /// insignia del botón. La ascensión tiene su propio panel y solo va en
+  /// el tooltip (v0.20.16).
+  int get characterTotal => attributes + tree + companionTotal;
   bool get any => total > 0;
 
   static String _n(int n, String what) =>
