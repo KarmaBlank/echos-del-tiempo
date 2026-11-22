@@ -176,6 +176,20 @@ class BackToLobbyAction extends SessionAction {
   const BackToLobbyAction();
 }
 
+/// `leave` (v0.20.22): tras la victoria, LISTO para volver al pueblo
+/// ([ready] `false` lo saca). Ver missions.md § "Fin de misión".
+class LeaveReadyAction extends SessionAction {
+  final bool ready;
+  const LeaveReadyAction(this.ready);
+}
+
+/// `lost` (v0.20.22): tomar del pozo Loot perdido del pueblo la pieza
+/// [lostId]. Ver missions.md § "Loot perdido".
+class TakeLostLootAction extends SessionAction {
+  final int lostId;
+  const TakeLostLootAction(this.lostId);
+}
+
 /// `stairs`: usar la escalera del piso con E (bajar en `>`, subir en
 /// `<`). Mueve a todo el grupo. Ver docs/specs/worldgen.md § 6.7.
 class UseStairsAction extends SessionAction {

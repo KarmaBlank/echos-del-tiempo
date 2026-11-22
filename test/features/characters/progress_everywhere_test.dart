@@ -160,7 +160,7 @@ void main() {
     expect(host.session!.mode, SessionMode.field);
     await tick(host, all, host.session!.graceLeft + 0.1);
     for (var i = 0;
-        i < 6000 && host.session!.mode != SessionMode.result;
+        i < 6000 && host.session!.result == null;
         i++) {
       final s = host.session!;
       switch (s.mode) {
@@ -192,9 +192,11 @@ void main() {
       }
       await tick(host, all, 0.1);
     }
-    expect(host.session!.mode, SessionMode.result);
+    expect(host.session!.result, isNotNull);
     expect(host.session!.result!.success, isTrue);
-    expect(host.backToLobby(), isTrue);
+    for (final c in all) {
+      c.setLeaveReady(true);
+    }
     for (var i = 0; i < 50; i++) {
       await tick(host, all);
     }

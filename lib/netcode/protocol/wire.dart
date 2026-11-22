@@ -82,7 +82,7 @@ import '../../game_engine/serialization/session_json.dart';
 /// 37 desde v0.20.17: la confirmación `rec:N` puede llevar `bx` (lo que
 /// el filtro oculta va a Objetos sin recoger, loot.md § 4b.1); un cliente
 /// 36 lo mandaría al alijo y deduplicaría por uid, perdiendo armas.
-const kProtocolVersion = 37;
+const kProtocolVersion = 38;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

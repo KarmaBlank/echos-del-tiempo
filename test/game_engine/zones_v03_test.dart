@@ -128,10 +128,10 @@ void main() {
         final map = e.mapFor(s);
         var m = s.mission!;
         expect(m.zone, z.index);
-        expect(m.floors, z.floors);
+        expect(m.floors, ZoneRules.missionFloors(z));
         expect(map.theme, z.theme);
         expect(m.levels,
-            [for (var f = 0; f < z.floors; f++) ZoneRules.floorLevel(z, f)]);
+            [for (var f = 0; f < ZoneRules.missionFloors(z); f++) ZoneRules.floorLevel(z, f)]);
         for (var f = 0; f < m.floors; f++) {
           expect(m.floorGoals[f], 4, reason: '$id piso $f');
           expect(m.enemiesOn(f).where((x) => x.elite), isNotEmpty);
@@ -153,7 +153,7 @@ void main() {
           expect(WorldRules.overVoid(map, en.x, en.y), isFalse);
         }
         // Bajar piso por piso (el host confía en la posición).
-        for (var f = 0; f < z.floors - 1; f++) {
+        for (var f = 0; f < ZoneRules.missionFloors(z) - 1; f++) {
           final down = map.floor(f)!.stairsDown!;
           s = moveTo(e, s, 'p0', down.x, down.y);
           s = e.tick(s, 0.05).state;
@@ -165,7 +165,7 @@ void main() {
           expect(s.mission!.floor, f + 1, reason: '$id piso $f');
         }
         m = s.mission!;
-        expect(m.zoneLevel, ZoneRules.floorLevel(z, z.floors - 1));
+        expect(m.zoneLevel, ZoneRules.floorLevel(z, ZoneRules.missionFloors(z) - 1));
         final boss = m.enemies.singleWhere((x) => x.boss);
         s = wait(e, s, s.graceLeft + 0.1);
         s = moveTo(e, s, 'p0', boss.x, boss.y);
@@ -283,7 +283,7 @@ void main() {
       var s = inField(e, 'z9', profiles: [strong('Ana', zone: 9)]);
       final map = e.mapFor(s);
       final log = <SessionEvent>[];
-      for (var f = 0; f < 4; f++) {
+      for (var f = 0; f < map.floors.length - 1; f++) {
         final down = map.floor(f)!.stairsDown!;
         s = moveTo(e, s, 'p0', down.x, down.y);
         s = e.tick(s, 0.05).state;
@@ -293,13 +293,13 @@ void main() {
           s = e.tick(s, 0.05).state;
         }
       }
-      expect(s.mission!.floor, 4);
+      expect(s.mission!.floor, map.floors.length - 1);
       final boss = s.mission!.enemies.singleWhere((x) => x.boss);
       s = wait(e, s, s.graceLeft + 0.1);
       s = moveTo(e, s, 'p0', boss.x, boss.y);
-      s = runBattle(e, s, until: (x) => x.mode == SessionMode.result, log: log);
+      s = runBattle(e, s, until: (x) => x.result != null, log: log);
       for (var i = 0; i < 5 && s.mode == SessionMode.levelUp; i++) {
-        s = runBattle(e, s, until: (x) => x.mode == SessionMode.result, log: log);
+        s = runBattle(e, s, until: (x) => x.result != null, log: log);
       }
       expect(s.result?.success, isTrue);
       expect(s.result!.zone, 9);
@@ -312,7 +312,7 @@ void main() {
       expect(legend.single.drop.item!.itemLevel, greaterThanOrEqualTo(45));
       expect(log.whereType<SystemMessageEvent>().map((x) => x.text).join('\n'),
           isNot(contains('Próximamente')));
-      s = act(e, s, 'p0', const BackToLobbyAction());
+      s = backToLobby(e, s);
       expect(e.apply(s, 'p0', const ProposeMissionAction('z10')), isNotNull);
     });
   });

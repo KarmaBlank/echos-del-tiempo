@@ -185,8 +185,38 @@ batalla vuelven al jugador.
 - Nivel de zona: `LootRules.zoneLevel` al empezar la misión
   (`MissionRun.zoneLevel`, loot.md § 14). El loot del piso se vacía al
   empezar la misión y al volver al lobby.
-- Los caídos quedan con 1 de vida. Modo `result` por 25 s
-  (`BackToLobbyAction` lo corta antes).
+- Los caídos quedan con 1 de vida.
+- Derrota: modo `result` por 25 s (`BackToLobbyAction` lo corta antes)
+  y vuelta al lobby.
+- Victoria (v0.20.22, protocolo 38; no en el TUTORIAL ni la Travesía):
+  el modo vuelve a `field` con `result` puesto (`GameSession.victoryLap`).
+  Cada jugador ve la ventana de victoria y la cierra cuando quiere (solo
+  local); el grupo sigue en el área del jefe con el botín en el piso para
+  levantarlo, venderlo, desarmarlo o guardarlo en el alijo. El reloj de
+  la misión se detiene, no hay peleas nuevas (los enemigos que quedan no
+  se mueven ni tocan) y no se baja de piso. Cada uno marca LISTO
+  (`LeaveReadyAction`, `{"t":"leave","ok":true}`; `BackToLobbyAction`
+  también cuenta como LISTO) y el HUD muestra `LISTO (2/3)`. Cuando
+  todos los humanos que siguen en la sala están listos
+  (`GameSession.leaveReady`), `toLobby`. Quien se desconecta sale de
+  `players` y deja de contar; si se va el anfitrión se cierra la sala
+  como siempre. Sin tope de tiempo.
+
+## Loot perdido (v0.20.22)
+
+- Al volver al lobby (`toLobby`, tras una victoria, una derrota o
+  abandonar), **todo** lo que quedó en el piso (de cualquier jugador, en
+  cualquier piso, incluido lo que el filtro de su dueño oculta) pasa a
+  `GameSession.lostLoot`, un pozo compartido de la sala. Reemplaza la
+  recuperación al alijo de cada uno al cerrar el mapa (loot.md § 4b.1).
+- En el pueblo hay una torrecita, el Loot perdido (tiles x 3–5, y 10,
+  debajo de la fuente izquierda; `Tile.lostTower`), que se usa con E
+  desde abajo y abre el panel LOOT PERDIDO: lista de objetos con TOMAR
+  y el aviso `Se borra al empezar la próxima misión.`
+- Cualquier jugador toma lo que quiera (`TakeLostLootAction`,
+  `{"t":"lost","id":N}`, solo en lobby o preparación): entra entero al
+  inventario o no se toma.
+- El pozo se vacía al empezar la próxima misión (`_enterField`).
 
 ## Vuelta al lobby (`toLobby`)
 

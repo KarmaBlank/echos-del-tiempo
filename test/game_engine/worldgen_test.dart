@@ -5,6 +5,7 @@ import 'package:echos_del_tiempo/game_engine/models/zone_def.dart';
 import 'package:echos_del_tiempo/game_engine/rules/map_generator.dart';
 import 'package:echos_del_tiempo/game_engine/rules/world_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/zone_generators.dart';
+import 'package:echos_del_tiempo/game_engine/rules/zone_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Tiles alcanzables desde ([sx], [sy]) caminando (colisión de
@@ -88,7 +89,7 @@ void main() {
     });
 
     test('solo tiles conocidos; árboles y rocas son sólidos', () {
-      const known = {'#', '.', ',', '~', 'C', 'A', 'P', 'S', 'g', 'T', '^',
+      const known = {'#', '.', ',', '~', 'C', 'A', 'P', 'S', 'L', 'g', 'T', '^',
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
       for (final r in w.rows) {
         for (final c in r.split('')) {
@@ -155,12 +156,12 @@ void main() {
           expect(m.zone, z.index);
           expect(m.theme, z.theme);
           expect(m.rows.every((r) => r.length == m.width), isTrue);
-          expect(m.floors, hasLength(z.floors));
+          expect(m.floors, hasLength(ZoneRules.missionFloors(z)));
           expect(m.spawn, m.floors.first.spawn);
           expect(m.boss, m.floors.last.boss);
           for (final f in m.floors) {
             final why = '${z.id} semilla $seed piso ${f.index}';
-            final last = f.index == z.floors - 1;
+            final last = f.index == ZoneRules.missionFloors(z) - 1;
             expect(f.last, last);
             final sp = _tile(f.spawn);
             expect(f.containsTile(sp.$1, sp.$2), isTrue, reason: why);
@@ -208,7 +209,8 @@ void main() {
                   StairsKind.up);
             }
             // Spots: suficientes, caminables y sin pasar la barrera.
-            expect(f.spots.length, greaterThan(60), reason: why);
+            // v0.20.22: pisos más chicos (worldgen.md § 6.8).
+            expect(f.spots.length, greaterThan(40), reason: why);
             for (final s in f.spots) {
               expect(closed.contains(s), isTrue, reason: '$why spot $s');
             }
@@ -224,7 +226,7 @@ void main() {
             expect(m.floorAt(f.spawn.x, f.spawn.y), same(f));
           }
         }
-        expect(vaults, greaterThanOrEqualTo(_seeds.length * z.floors),
+        expect(vaults, greaterThanOrEqualTo(_seeds.length * ZoneRules.missionFloors(z)),
             reason: 'al menos un vault por piso');
       });
     }
@@ -335,8 +337,9 @@ void main() {
     test('laberinto: el único recorte de v0.6 (worldgen.md § 11.1)', () {
       final lab = MapGenerator.zone(kZones[5], 7);
       for (final f in lab.floors) {
-        expect(f.bounds.w, inInclusiveRange(64, 72));
-        expect(f.bounds.h, inInclusiveRange(46, 52));
+        // v0.20.22: × √areaScale (worldgen.md § 6.8).
+        expect(f.bounds.w, inInclusiveRange(53, 61));
+        expect(f.bounds.h, inInclusiveRange(38, 44));
       }
     });
 

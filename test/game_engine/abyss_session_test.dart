@@ -212,7 +212,7 @@ void main() {
       var s = lobby(e, [_withMats(endgamer('Ana'), {CraftMaterial.fragReloj: 5}), endgamer('Bo')]);
       s = _open(e, s, 1);
       final log = <SessionEvent>[];
-      s = winBattle(e, s, until: (x) => x.mode == SessionMode.result, log: log);
+      s = winBattle(e, s, until: (x) => x.result != null, log: log);
       expect(s.result!.success, isTrue);
       expect(s.result!.missionId, AbyssRules.missionId);
       for (final id in ['p0', 'p1']) {
@@ -251,7 +251,7 @@ void main() {
       }
       s.battle!.state.currentId = null;
       s = wait(e, s, 6);
-      expect(s.mode, SessionMode.result);
+      expect(s.result, isNotNull);
       expect(s.result!.success, isFalse);
       expect(s.players['p0']!.profile.material(CraftMaterial.fragEras), 0);
       expect(s.players['p0']!.profile.abyssKills, isEmpty);

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../build_planner/presentation/build_feed.dart';
+import '../../../app/design/design.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../core/settings/game_settings.dart';
@@ -17,6 +18,7 @@ import '../../../game_engine/models/session_event.dart';
 import '../../../game_engine/rules/eco_rules.dart';
 import '../../../game_engine/rules/run_rules.dart';
 import '../../../game_engine/rules/trial_rules.dart';
+import '../../../game_engine/rules/zone_rules.dart';
 import '../../characters/presentation/stash_panel.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../ascension/domain/ascension_text.dart';
@@ -43,6 +45,7 @@ import 'hud/world_hud.dart';
 import 'map/map_game.dart';
 import 'panels/character_panel.dart';
 import 'panels/party_member_bar.dart';
+import 'panels/lost_loot_panel.dart';
 import 'panels/party_panel.dart';
 import '../../../game_engine/models/tutorial.dart' show TutorialPhase;
 import '../../tutorial/presentation/tutorial_widgets.dart';
@@ -577,72 +580,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           ),
         ];
       case SessionMode.result:
-        final r = s.result;
-        if (r == null) return const [];
-        final weapons = controller.engine.catalog.weapons;
-        return [
-          Positioned.fill(
-            child: ColoredBox(color: ProtoColors.scrim(0.8)),
-          ),
-          Positioned.fill(
-            child: ResultsPanel(
-              result: r,
-              localId: view.localId,
-              playerName: (id) => s.players[id]?.name ?? '?',
-              weaponName: (id) => weapons[id]?.name ?? id,
-              onBack: controller.backToLobby,
-              zoneProgress: _zoneProgress(s, r, controller),
-              unlocked: switch (r.unlocked[view.localId]) {
-                final z? =>
-                  zoneUnlockedText(z, controller.engine.catalog.zone(z)?.name),
-                null => null,
-              },
-              othersUnlocked: _othersUnlocked(s, r, view.localId),
-              finalVictory: ResultsPanel.isFinalVictory(r),
-              ecoAtlas: r.missionId == EcoRules.missionId && r.success
-                  ? ecoAtlasText(view.atlasGain)
-                  : null,
-              abyss: switch (controller.lastAbyss) {
-                (final n, final points) when r.success =>
-                  abyssResultText(
-                      controller.engine.catalog.abyssBosses[n]?.name ?? '?',
-                      points),
-                _ => null,
-              },
-              trial: switch (controller.lastTrial) {
-                (final n, final gained) when r.success =>
-                  trialResultText(n, gained),
-                _ => null,
-              },
-              onAscend: r.success &&
-                      (view.me?.profile.ascension.trials.contains(1) ??
-                          false) &&
-                      view.me?.profile.ascension.id == null
-                  ? () => setState(() => _choosing = true)
-                  : null,
-              loot: [
-                for (final d in view.missionLoot)
-                  if (view.me case final me?)
-                    ResultDrop(
-                      dropLabelText(controller.engine.progression, d),
-                      controller.engine.lootVerdict(me.profile, d,
-                          wants: controller.localWants),
-                      exclusive:
-                          kUniques[d.item?.uniqueId]?.exclusive ?? false,
-                      tooltip: d.eco != null
-                          ? ecoTooltipMarkup(
-                              controller.engine.progression, d.eco!)
-                          : d.item == null
-                              ? stackTooltipMarkup(d.stack!, d.count)
-                              : itemTooltipMarkup(
-                                  controller.engine.progression, d.item!,
-                                  level: me.profile.level,
-                                  attributes: me.profile.attributes),
-                    ),
-              ],
-            ),
-          ),
-        ];
+        return _resultOverlay(view, controller);
       // Travesía (roguelike.md): sus pantallas en vez del pueblo / campo.
       case SessionMode.lobby || SessionMode.run when controller.isRun:
         return [
@@ -670,8 +608,110 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           ),
           if (view.panel case final panel?)
             Positioned.fill(child: _panel(panel, view, controller)),
+          if (s.victoryLap) ...[
+            Positioned(
+              top: 8,
+              left: 0,
+              right: 0,
+              child: Center(child: _leaveReadyBar(view, controller)),
+            ),
+            if (!controller.resultClosed)
+              ..._resultOverlay(view, controller),
+          ],
         ];
     }
+  }
+
+  /// LISTO para volver tras la victoria, con `LISTO (2/3)`.
+  Widget _leaveReadyBar(SessionView view, SessionController controller) {
+    final s = view.session;
+    final humans = s.playerList.where((p) => !p.isCompanion).toList();
+    final n = humans.where((p) => s.leaveReady.contains(p.id)).length;
+    final mine = s.leaveReady.contains(view.localId);
+    return DsButton(
+      mine ? 'LISTO $n/${humans.length} · CANCELAR' : 'LISTO ($n/${humans.length})',
+      key: const ValueKey('leave-ready'),
+      kind: mine ? DsButtonKind.secondary : DsButtonKind.primary,
+      selected: mine,
+      tooltip: 'Vuelven al pueblo cuando todos están listos. Lo que quede '
+          'en el piso va al Loot perdido.',
+      onPressed: () => controller.setLeaveReady(!mine),
+    );
+  }
+
+
+  /// Ventana de resultado: derrota (modo `result`) o victoria (campo
+  /// con `result`, se cierra localmente; missions.md § "Fin de misión").
+  List<Widget> _resultOverlay(
+      SessionView view, SessionController controller) {
+    final s = view.session;
+    final r = s.result;
+    if (r == null) return const [];
+    final weapons = controller.engine.catalog.weapons;
+    return [
+      Positioned.fill(
+        child: ColoredBox(color: ProtoColors.scrim(0.8)),
+      ),
+      Positioned.fill(
+        child: ResultsPanel(
+          result: r,
+          localId: view.localId,
+          playerName: (id) => s.players[id]?.name ?? '?',
+          weaponName: (id) => weapons[id]?.name ?? id,
+          onBack: controller.closeResult,
+          victoryLap: s.victoryLap,
+          zoneProgress: _zoneProgress(s, r, controller),
+          unlocked: switch (r.unlocked[view.localId]) {
+            final z? =>
+              zoneUnlockedText(z, controller.engine.catalog.zone(z)?.name),
+            null => null,
+          },
+          othersUnlocked: _othersUnlocked(s, r, view.localId),
+          finalVictory: ResultsPanel.isFinalVictory(r),
+          ecoAtlas: r.missionId == EcoRules.missionId && r.success
+              ? ecoAtlasText(view.atlasGain)
+              : null,
+          abyss: switch (controller.lastAbyss) {
+            (final n, final points) when r.success =>
+              abyssResultText(
+                  controller.engine.catalog.abyssBosses[n]?.name ?? '?',
+                  points),
+            _ => null,
+          },
+          trial: switch (controller.lastTrial) {
+            (final n, final gained) when r.success =>
+              trialResultText(n, gained),
+            _ => null,
+          },
+          onAscend: r.success &&
+                  (view.me?.profile.ascension.trials.contains(1) ??
+                      false) &&
+                  view.me?.profile.ascension.id == null
+              ? () => setState(() => _choosing = true)
+              : null,
+          loot: [
+            for (final d in view.missionLoot)
+              if (view.me case final me?)
+                ResultDrop(
+                  dropLabelText(controller.engine.progression, d),
+                  controller.engine.lootVerdict(me.profile, d,
+                      wants: controller.localWants),
+                  exclusive:
+                      kUniques[d.item?.uniqueId]?.exclusive ?? false,
+                  tooltip: d.eco != null
+                      ? ecoTooltipMarkup(
+                          controller.engine.progression, d.eco!)
+                      : d.item == null
+                          ? stackTooltipMarkup(d.stack!, d.count)
+                          : itemTooltipMarkup(
+                              controller.engine.progression, d.item!,
+                              level: me.profile.level,
+                              attributes: me.profile.attributes),
+                ),
+          ],
+        ),
+      ),
+    ];
   }
 
   /// Lo que la escena de batalla toma de los ajustes del jugador.
@@ -693,7 +733,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       GameSession s, MissionResult r, SessionController controller) {
     final z = controller.engine.catalog.zone(r.zone);
     if (z == null) return null;
-    final floors = s.mission?.floors ?? z.floors;
+    final floors = s.mission?.floors ?? ZoneRules.missionFloors(z);
     final reached = r.success ? floors : (s.mission?.floor ?? 0) + 1;
     final eco = s.eco;
     if (r.missionId == TrialRules.missionId) {
@@ -770,6 +810,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
             initialTab: forge ? ArmoryTab.forge : ArmoryTab.buy);
       case WorldPanel.party:
         return PartyPanel(view: view, controller: controller);
+      case WorldPanel.lostLoot:
+        return LostLootPanel(view: view, controller: controller);
       case WorldPanel.stash:
         return StashPanel(view: view, controller: controller);
       case WorldPanel.map:

@@ -75,6 +75,10 @@ class SessionJson {
         if (s.tutorialRuns != 0) 'tutN': s.tutorialRuns,
         // Travesía (protocolo Travesía 1; roguelike.md): opcional.
         if (s.run != null) 'run': RunJson.toJson(s.run!),
+        // v0.20.22 (protocolo 38): LISTO tras la victoria y Loot perdido.
+        if (s.leaveReady.isNotEmpty) 'lr': [...s.leaveReady],
+        if (s.lostLoot.isNotEmpty)
+          'lost': [for (final g in s.lostLoot) groundToJson(g)],
       };
 
   GameSession fromJson(Json j) {
@@ -116,6 +120,10 @@ class SessionJson {
           : TutorialState.fromJson(j.objOrNull('tut')!),
       tutorialRuns: j.intOrNull('tutN') ?? 0,
       run: _opt(j.objOrNull('run'), RunJson.fromJson),
+      leaveReady: j['lr'] == null ? null : j.strings('lr').toSet(),
+      lostLoot: j['lost'] == null
+          ? null
+          : [for (final raw in j.list('lost')) groundFromJson(asJson(raw))],
     );
   }
 

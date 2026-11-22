@@ -7,6 +7,7 @@ import 'package:echos_del_tiempo/game_engine/models/zone_def.dart';
 import 'package:echos_del_tiempo/game_engine/rules/map_generator.dart';
 import 'package:echos_del_tiempo/game_engine/rules/trial_rules.dart';
 import 'package:echos_del_tiempo/game_engine/rules/world_rules.dart';
+import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// BFS (pasos) desde [from] caminando sin caerse, con la barrera abierta.
@@ -55,6 +56,12 @@ void main() {
   final seeds = [for (var i = 1; i <= 20; i++) i * 7919 + 3];
 
   group('densidad de interés (worldgen.md § 11.2)', () {
+    // La densidad de PdI se mide con el área base del generador; el
+    // recorte de v0.20.22 (worldgen.md § 6.8) la deja apenas por encima.
+    setUpAll(() => kTuning[TuningId.mission] = const TuningDef(
+        'Misiones', {'maxFloors': 3, 'groupScale': 0.7, 'areaScale': 1}));
+    tearDownAll(() =>
+        kTuning[TuningId.mission] = kTuningDefaults[TuningId.mission]!);
     for (final z in kZones) {
       test('${z.name}: PdI a ≤ gap de todo tile caminable', () {
         final gap = z.gen == ZoneGen.laberinto ? kMaxPoiGapMaze : kMaxPoiGap;
@@ -170,15 +177,16 @@ void main() {
       for (final seed in seeds) {
         final m = MapGenerator.zone(kZones[5], seed);
         for (final f in m.floors) {
-          expect(f.bounds.w, inInclusiveRange(64, 72));
-          expect(f.bounds.h, inInclusiveRange(46, 52));
+          // v0.20.22: × √areaScale (worldgen.md § 6.8).
+          expect(f.bounds.w, inInclusiveRange(53, 61));
+          expect(f.bounds.h, inInclusiveRange(38, 44));
           final d = _bfs(m, [_t(f.spawn)]);
           expect(d[(f.arena!.cx, f.arena!.cy)], lessThanOrEqualTo(160));
         }
       }
-      // El resto conserva su tamaño de siempre.
+      // El resto conserva su rango de siempre (con el mismo recorte).
       final pr = MapGenerator.zone(kZones[0], 7).floors.first.bounds;
-      expect(pr.w, inInclusiveRange(58, 70));
+      expect(pr.w, inInclusiveRange(49, 59)); // 58–70 × √0.7
     });
   });
 

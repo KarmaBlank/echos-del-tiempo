@@ -77,6 +77,8 @@ abstract final class ActionJson {
         ChatAction() => {'t': 'chat', 'txt': a.text},
         PauseAction() => {'t': 'pause', 'on': a.paused},
         BackToLobbyAction() => {'t': 'back'},
+        LeaveReadyAction() => {'t': 'leave', 'ok': a.ready},
+        TakeLostLootAction() => {'t': 'lost', 'id': a.lostId},
         UseStairsAction() => {'t': 'stairs', 'down': a.down},
         InteractPoiAction() => {
             't': 'poi',
@@ -239,6 +241,10 @@ abstract final class ActionJson {
         return PauseAction(j.boolean('on'));
       case 'back':
         return const BackToLobbyAction();
+      case 'leave':
+        return LeaveReadyAction(j.boolean('ok'));
+      case 'lost':
+        return TakeLostLootAction(j.integer('id'));
       case 'stairs':
         return UseStairsAction(down: j.boolean('down'));
       case 'poi':

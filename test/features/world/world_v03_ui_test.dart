@@ -309,7 +309,7 @@ void main() {
         expect(
             find.textContaining(
                 retroText('Zona $z · ${zone.name} · ${zone.levelText} · '
-                    '${zone.floors} pisos')),
+                    '${ZoneRules.missionFloors(zone)} pisos')),
             findsOneWidget);
         final b = tester.widget<DsButton>(find.byKey(ValueKey('propose-${zone.missionId}')));
         expect(b.tooltip, z <= 8 ? isNull : 'Bloqueada', reason: 'zona $z');

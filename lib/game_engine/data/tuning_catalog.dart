@@ -27,6 +27,7 @@ abstract final class TuningId {
   static const consumables = 'consumables';
   static const travesia = 'travesia';
   static const exploration = 'exploration';
+  static const mission = 'mission';
 }
 
 /// Los valores del código.
@@ -35,6 +36,13 @@ const Map<String, TuningDef> kTuningDefaults = {
   // (v0.20.19: 78 → 98, +25 %).
   TuningId.exploration: TuningDef('Exploración', {
     'playerSpeed': 98,
+  }),
+  // worldgen.md § 6.8 (v0.20.22): misiones cortas. Tope de pisos por
+  // misión, × de grupos normales por piso y × del área de cada piso.
+  TuningId.mission: TuningDef('Misiones', {
+    'maxFloors': 3,
+    'groupScale': 0.7,
+    'areaScale': 0.7,
   }),
   // ultimates_v2.md § 2.4: +6% por nivel sobre el 1.
   TuningId.ultLevel: TuningDef('Escalado de ULT por nivel', {

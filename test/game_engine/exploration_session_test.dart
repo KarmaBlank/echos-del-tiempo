@@ -15,6 +15,7 @@ import 'package:echos_del_tiempo/game_engine/serialization/action_json.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/event_json.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/json_read.dart';
 import 'package:echos_del_tiempo/game_engine/serialization/session_json.dart';
+import 'package:echos_del_tiempo/game_engine/data/tuning_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'session_test_helpers.dart';
@@ -129,6 +130,11 @@ void main() {
   });
 
   test('piedras de paso: elegir cualquier destino activado (mapa)', () {
+    // Con el área de antes (v0.20.22 achica los pisos): hace falta un
+    // piso con 3 piedras.
+    kTuning[TuningId.mission] =
+        const TuningDef('Misiones', {'maxFloors': 3, 'groupScale': 0.7, 'areaScale': 1});
+    addTearDown(() => kTuning[TuningId.mission] = kTuningDefaults[TuningId.mission]!);
     final r = start(
         6, (f) => f.pois.where((p) => p.kind == PoiKind.waystone).length >= 3,
         players: 2);
