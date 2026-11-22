@@ -137,8 +137,7 @@ class _TemplateBrowserState extends State<TemplateBrowser> {
   }
 
   Future<void> _export(List<BuildTemplate> list, String name) async {
-    final ok =
-        await widget.files.saveYaml(BuildTemplateYaml.write(list), name);
+    final ok = await widget.files.saveYaml(BuildTemplateYaml.write(list), name);
     if (ok) _say('Exportadas ${list.length} a $name');
   }
 
@@ -162,11 +161,10 @@ class _TemplateBrowserState extends State<TemplateBrowser> {
         if (FeatureFlags.instance.devTools)
           DsButton('RECARGAR PLANTILLAS',
               key: const ValueKey('tpl-reload'),
-              kind: DsButtonKind.ghost,
-              onPressed: () async {
-                await BuildTemplateLoader.load();
-                if (mounted) _say('Plantillas recargadas');
-              }),
+              kind: DsButtonKind.ghost, onPressed: () async {
+            await BuildTemplateLoader.load();
+            if (mounted) _say('Plantillas recargadas');
+          }),
         DsButton('IMPORTAR',
             key: const ValueKey('tpl-import'), onPressed: _import),
         DsButton('EXPORTAR CLASE',
@@ -313,7 +311,10 @@ class _TemplateViewState extends State<TemplateView> {
     final shown = p.copyWith(
       level: math.min(_level, 50),
       mastery: math.max(0, _level - 50),
-      tree: [for (final s in tl.steps) if (taken.contains(s.node)) s.node],
+      tree: [
+        for (final s in tl.steps)
+          if (taken.contains(s.node)) s.node
+      ],
       milestone10: () => null,
       milestone20: () => null,
     );
@@ -357,15 +358,15 @@ class _TemplateViewState extends State<TemplateView> {
           // El visor arma su propia fila de arriba: crece en alto con el
           // texto grande en vez de desbordar.
           final tree = PassiveTreeView(
-              key: const ValueKey('tpl-tree'),
-              rules: widget.rules.progression.treeRules,
-              profile: shown,
-              inBattle: false,
-              onTake: (_) {},
-              showReset: false,
-              showHelp: false,
-              planned: planned,
-              height: widget.treeHeight,
+            key: const ValueKey('tpl-tree'),
+            rules: widget.rules.progression.treeRules,
+            profile: shown,
+            inBattle: false,
+            onTake: (_) {},
+            showReset: false,
+            showHelp: false,
+            planned: planned,
+            height: widget.treeHeight,
           );
           final timeline = Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -423,7 +424,8 @@ class _TemplateViewState extends State<TemplateView> {
         40: _violet,
         50: _violet,
         for (final w in _t.weapons)
-          w.level: w.rarity == null ? DsColors.reward : RarityColors.of(w.rarity!),
+          w.level:
+              w.rarity == null ? DsColors.reward : RarityColors.of(w.rarity!),
       };
 
   List<DsTimelineMark> _timelineMarks() {
@@ -490,10 +492,10 @@ class _TemplateViewState extends State<TemplateView> {
         // Consejo de arma con el plan de la plantilla (§ 9.4).
         WeaponAdviceBlock(
           key: const ValueKey('tpl-advice'),
-          advice: BuildGuideRules(widget.rules.progression)
-              .advice(plan.copyWith(chosenType: () => widget.plan.chosenType),
-                  widget.profile,
-                  stash: widget.stash),
+          advice: BuildGuideRules(widget.rules.progression).advice(
+              plan.copyWith(chosenType: () => widget.plan.chosenType),
+              widget.profile,
+              stash: widget.stash),
           nameOf: widget.rules.progression.items.displayName,
           stashUids: {for (final s in widget.stash) s.uid},
         ),
@@ -545,13 +547,13 @@ class _TemplateViewState extends State<TemplateView> {
 
   Future<void> _follow() async {
     if (widget.plan.goalCount > 0) {
-      final ok = await showBuildPicker<bool>(context, '¿SEGUIR ESTA PLANTILLA?',
-          const [
-            PickOption(true, 'Sí, seguirla',
-                'Reemplaza las metas; tus notas y tu checklist se quedan.',
-                key: 'follow-yes'),
-            PickOption(false, 'No', null, key: 'follow-no'),
-          ]);
+      final ok = await showBuildPicker<bool>(
+          context, '¿SEGUIR ESTA PLANTILLA?', const [
+        PickOption(true, 'Sí, seguirla',
+            'Reemplaza las metas; tus notas y tu checklist se quedan.',
+            key: 'follow-yes'),
+        PickOption(false, 'No', null, key: 'follow-no'),
+      ]);
       if (ok != true || !mounted) return;
     }
     widget.onFollow?.call(_tr.follow(widget.plan, _t));

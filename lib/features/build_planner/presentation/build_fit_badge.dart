@@ -101,7 +101,8 @@ class TransferFitMark extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final plan = ref.watch(buildPlanProvider).plan;
     final viewer = profile;
-    final guide = BuildGuideRules(ref.watch(buildPlanRulesProvider).progression);
+    final guide =
+        BuildGuideRules(ref.watch(buildPlanRulesProvider).progression);
     final fit = skillId != null
         ? guide.skillFit(plan, viewer, skillId!)
         : guide.passiveFit(plan, viewer, passiveId!);

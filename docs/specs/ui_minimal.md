@@ -1,4 +1,4 @@
-# Spec: UI mínima (v0.20.21, armería v0.20.25)
+# Spec: UI mínima (v0.20.21, BUILD simple v0.20.24, armería v0.20.25)
 
 Pedido del dueño: una UI accesible, tranquila y minimalista, con menos
 texto en pantalla. La profundidad sigue estando, pero no se impone: se
@@ -140,3 +140,22 @@ grilla).
   / bloqueada; `craft_bench_test.dart`: CONDENSAR como pestaña.
 - Goldens: `test/features/inventory/goldens/craft_*_default_*.png`
   (FUSIÓN, FUSIÓN paso 2, FORJA, FORJA con una elegida, CONDENSAR).
+
+## 7. BUILD: vista simple (v0.20.24)
+
+La pestaña BUILD sigue los tres niveles (build_planner.md § 10):
+
+| Nivel | Qué |
+|---|---|
+| 1 | Elegí una plantilla (nombre, una línea, dificultad, arma, APLICAR) o "Tu plan" + Qué hacer ahora (máximo 3 pasos, un botón cada uno) |
+| 2 | Áreas plegables con medidor; los % y motivos de las armas en tooltip |
+| 3 | EDITAR PLAN (avanzado): agregar y quitar metas, −5 / +5, ×, notas |
+
+Reglas: palabras completas (la sigla solo entre paréntesis: "Fuerza
+(FUE)"); verde = listo y dorado = falta, explicado por una leyenda de
+una línea; nada se corta con "…" (`DsInfoRow` baja de línea). Piezas en
+`lib/app/design/ds_guide.dart`: `DsStatusMark`, `DsLegend`, `DsInfoRow`,
+`DsProgressFold`.
+
+Tests: `test/features/build_planner/build_coach_ui_test.dart` (APLICAR,
+pasos, controles escondidos, siglas, goldens `build_simple_*`).

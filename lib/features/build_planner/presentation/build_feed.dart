@@ -248,6 +248,5 @@ class BuildToastBox extends StatelessWidget {
       closeFocusable: false,
       onClose: onDismiss,
     );
-
   }
 }

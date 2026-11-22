@@ -205,6 +205,9 @@ class _CharacterPanelState extends State<CharacterPanel> {
                     ShopContext(view, c).guards.equip(prof, uid),
                 stash: stashWeapons(c.stash),
                 onTakeNode: view.session.battle == null ? c.takeNode : null,
+                onOpenAttributes: () =>
+                    setState(() => _tab = CharacterTab.attributes),
+                onOpenTree: () => setState(() => _tab = CharacterTab.tree),
                 onChanged: (p) {
                   final slot = _slot;
                   ref

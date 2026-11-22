@@ -5,6 +5,7 @@ import '../data/game_catalog.dart';
 import '../models/ascension.dart';
 import '../models/attributes.dart';
 import '../models/battle_state.dart';
+import '../models/combat_mode.dart';
 import '../models/eco.dart';
 import '../models/passive_mechanic.dart';
 import '../models/game_session.dart';
@@ -67,6 +68,8 @@ class SessionJson {
         // Tiempo de turno v0.5.1 (accessibility.md § 7): opcional, solo
         // si no es el normal (un cliente viejo lo ignora).
         if (s.turnTimer != TurnTimer.normal) 'tt': s.turnTimer.name,
+        // Modo de combate (turn_modes.md § 1, protocolo 39): opcional.
+        if (s.combatMode != null) 'cm': s.combatMode!.name,
         // Jefes del Abismo v0.8 (abyss_bosses.md § 5): opcionales.
         if (s.abyss != null) 'abyss': s.abyss,
         if (s.abyssOwner != null) 'abyssBy': s.abyssOwner,
@@ -113,6 +116,7 @@ class SessionJson {
       atlas: j['atlas'] == null ? null : j.strings('atlas'),
       trial: j.intOrNull('trial'),
       turnTimer: TurnTimer.fromName(j['tt']),
+      combatMode: CombatMode.fromName(j['cm']),
       abyss: j.intOrNull('abyss'),
       abyssOwner: j.strOrNull('abyssBy'),
       tutorial: j.objOrNull('tut') == null
@@ -507,11 +511,17 @@ class SessionJson {
         'elite': s.elite,
         // Travesía, turnos porBando (roguelike.md § 6); el Mundo no los
         // manda (mismo formato que el protocolo 31).
-        if (s.porBando) ...{
+        // Por fases y Por rondas (turn_modes.md, protocolo 39) usan las
+        // mismas claves; Por rondas suma el orden y quiénes esperaron.
+        if (s.grouped) ...{
           'tr': s.turnRule.name,
           'gp': s.groupPhase,
           'act': s.acted.toList(),
           'rd': s.round,
+        },
+        if (s.porRonda) ...{
+          'ro': s.roundOrder,
+          'wt': s.waited.toList(),
         },
       };
 
@@ -543,6 +553,8 @@ class SessionJson {
       groupPhase: j['gp'] as bool? ?? false,
       acted: j['act'] == null ? null : j.strings('act').toSet(),
       round: j.intOrNull('rd') ?? 0,
+      roundOrder: j['ro'] == null ? null : j.strings('ro'),
+      waited: j['wt'] == null ? null : j.strings('wt').toSet(),
     );
   }
 

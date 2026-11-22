@@ -224,6 +224,12 @@ const Map<String, TuningDef> kTuningDefaults = {
     // acción y por turno de quien la recibe, en puntos de la barra (100).
     'ultBonusAction': 50,
     'ultBonusTurn': 50,
+    // Modo de combate por defecto de la sala (turn_modes.md § 1): 0 línea
+    // de tiempo, 1 por rondas, 2 por fases.
+    'modeCoop': 1,
+    'modeSolo': 0,
+    // Por fases: pausa de planificación al abrir la fase de jugadores (s).
+    'planPause': 2,
   }),
 };
 

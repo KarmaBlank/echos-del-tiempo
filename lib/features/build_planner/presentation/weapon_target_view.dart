@@ -168,8 +168,8 @@ class _BaseSearchState extends State<_BaseSearch> {
                 size: DsButtonSize.compact,
                 kind: DsButtonKind.ghost,
                 selected: on.contains(v),
-                onPressed: () => setState(
-                    () => on.contains(v) ? on.remove(v) : on.add(v))),
+                onPressed: () =>
+                    setState(() => on.contains(v) ? on.remove(v) : on.add(v))),
         ],
       ),
     );
@@ -221,7 +221,10 @@ class _BaseSearchState extends State<_BaseSearch> {
               (c) => _categoryNames[c]!, 'bs-cat'),
           _toggles(
               'ELEMENTO',
-              [for (final e in GameElement.values) if (e != GameElement.fisico) e],
+              [
+                for (final e in GameElement.values)
+                  if (e != GameElement.fisico) e
+              ],
               _elements,
               (e) => e.label.toUpperCase(),
               'bs-el'),
@@ -229,7 +232,8 @@ class _BaseSearchState extends State<_BaseSearch> {
             padding: EdgeInsets.only(top: DsSpace.xs),
             child: Wrap(children: [
               DsButton(
-                  retroText('PUEDO USARLA AL NIVEL DEL PLAN (${widget.planLevel})'),
+                  retroText(
+                      'PUEDO USARLA AL NIVEL DEL PLAN (${widget.planLevel})'),
                   key: const ValueKey('bs-usable'),
                   size: DsButtonSize.compact,
                   kind: DsButtonKind.ghost,
@@ -254,17 +258,17 @@ class _BaseSearchState extends State<_BaseSearch> {
       for (final e in w.requirements.entries)
         '${e.key.name.toUpperCase()} ${e.value}'
     ].join(' ');
-    final skills = [
-      for (final s in w.skillIds) widget.rules.skillName(s)
-    ].join(', ');
+    final skills =
+        [for (final s in w.skillIds) widget.rules.skillName(s)].join(', ');
     return DsListRow(
       key: ValueKey('base-${w.id}'),
       leading: widget.starred.contains(w.id)
           ? Text('★', style: DsText.body(DsColors.reward))
           : null,
       title: retroText(w.name),
-      detail: retroText('${w.type} · Nv ${w.level}${req.isEmpty ? '' : ' · $req'}'
-          '${miss.isEmpty ? '' : ' (no llegás)'}'),
+      detail:
+          retroText('${w.type} · Nv ${w.level}${req.isEmpty ? '' : ' · $req'}'
+              '${miss.isEmpty ? '' : ' (no llegás)'}'),
       detailColor: miss.isEmpty ? null : DsColors.danger,
       onTap: () => Navigator.of(context).pop(w),
       tooltip: DsTooltipCard(title: retroText(w.name), children: [
@@ -277,10 +281,7 @@ class _BaseSearchState extends State<_BaseSearch> {
         if (req.isNotEmpty)
           Text(retroText('Pide $req'),
               style: DsText.detail(miss.isEmpty ? null : DsColors.danger)),
-        Text(
-            retroText(w.price > 0
-                ? 'Armería ₵${w.price}'
-                : 'Sale como loot'),
+        Text(retroText(w.price > 0 ? 'Armería ₵${w.price}' : 'Sale como loot'),
             style: DsText.detail()),
       ]),
     );
@@ -359,10 +360,10 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
   @override
   Widget build(BuildContext context) {
     final cands = _r.candidates(_t, _p, stash: widget.stash);
-    final cur = cands.where((c) => c.item.uid == _uid).firstOrNull ??
-        cands.firstOrNull;
-    final errors = _r.validate(_t,
-        attributes: widget.attributesAt?.call(_t.level));
+    final cur =
+        cands.where((c) => c.item.uid == _uid).firstOrNull ?? cands.firstOrNull;
+    final errors =
+        _r.validate(_t, attributes: widget.attributesAt?.call(_t.level));
     final name = _r.targetName(_t);
     return PanelFrame(
       key: const ValueKey('target-detail'),
@@ -469,8 +470,8 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
               size: DsButtonSize.compact,
               kind: DsButtonKind.ghost,
               selected: !_t.keepQuebrar,
-              onPressed: () =>
-                  setState(() => _t = _t.copyWith(keepQuebrar: !_t.keepQuebrar))),
+              onPressed: () => setState(
+                  () => _t = _t.copyWith(keepQuebrar: !_t.keepQuebrar))),
           if (_t.mods.isNotEmpty || _t.skills.isNotEmpty)
             DsButton('QUITAR REQUISITO',
                 key: const ValueKey('target-edit-drop'),
@@ -506,8 +507,7 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
           ),
         if (plan.steps.isNotEmpty) ...[
           DsSectionHeader('PLAN DE FUSIÓN',
-              trailing: Text(
-                  retroText(WeaponTargetRules.credits(plan.credits)),
+              trailing: Text(retroText(WeaponTargetRules.credits(plan.credits)),
                   style: DsText.body(DsColors.reward))),
           for (var i = 0; i < plan.steps.length; i++)
             Padding(
@@ -535,8 +535,14 @@ class _WeaponTargetDetailState extends State<WeaponTargetDetail> {
   }
 
   Widget _candidates(List<WeaponMatch> cands, WeaponMatch? cur) {
-    final inv = [for (final c in cands) if (!c.inStash) c];
-    final st = [for (final c in cands) if (c.inStash) c];
+    final inv = [
+      for (final c in cands)
+        if (!c.inStash) c
+    ];
+    final st = [
+      for (final c in cands)
+        if (c.inStash) c
+    ];
     Widget grid(String key, List<WeaponMatch> list) => DsItemGrid(
           key: ValueKey(key),
           rules: widget.rules.progression,
