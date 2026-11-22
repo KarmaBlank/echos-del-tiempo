@@ -251,3 +251,17 @@ abstract final class TownPalette {
   static const signBoard = Color(0xFFC08A4A);
   static const label = Color(0xFFFFF3C4);
 }
+
+/// Colores de la escena de pesca (fishing.md § 4; panel PESCA).
+abstract final class FishingPalette {
+  static const water = Color(0xFF1F5F8B);
+  static const waterDeep = Color(0xFF15425F);
+  static const ripple = Color(0x55FFFFFF);
+  static const shadow = Color(0x66061A2A);
+  static const dock = TownPalette.plank;
+  static const dockDark = TownPalette.plankDark;
+  static const line = Color(0xCCEFEFEF);
+  static const bobber = TownPalette.bobber;
+  static const foam = Color(0xCCFFFFFF);
+  static const reed = Color(0xFF3E7B3A);
+}

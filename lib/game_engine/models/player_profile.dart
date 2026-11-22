@@ -7,6 +7,7 @@ import 'attributes.dart';
 import 'battle_command.dart';
 import 'eco.dart';
 import 'item.dart';
+import 'life_skills.dart';
 import 'passive_tree.dart';
 import 'upgrade_stat.dart';
 import 'weapon.dart';
@@ -60,6 +61,7 @@ class PlayerProfile {
     Map<String, int> ultLevels = const {},
     Set<String> ultNew = const {},
     List<String> ultOrder = const [],
+    LifeSkills? life,
   }) {
     final list = items ?? _legacyItems(inventory, upgrades, fused);
     return PlayerProfile._(
@@ -99,10 +101,12 @@ class PlayerProfile {
       ultLevels: Map.unmodifiable(ultLevels),
       ultNew: Set.unmodifiable(ultNew),
       ultOrder: List.unmodifiable(ultOrder),
+      life: life ?? LifeSkills.initial,
     );
   }
 
   const PlayerProfile._({
+    required this.life,
     this.ultNew = const {},
     this.ultOrder = const [],
     required this.ultLevels,
@@ -137,6 +141,9 @@ class PlayerProfile {
     required this.treeRefunded,
     required this.unlockedZone,
   });
+
+  /// Pesca, cañas y bolsa de Pescados (JSON `life`, fishing.md § 3).
+  final LifeSkills life;
 
   /// `uid` de armas y Ecos recién levantados, todavía sin mirar (marca
   /// NUEVO del inventario; JSON `nw`, perfil v4; loot.md § 17.4). Se
@@ -391,6 +398,7 @@ class PlayerProfile {
     Map<String, int>? ultLevels,
     Set<String>? ultNew,
     List<String>? ultOrder,
+    LifeSkills? life,
   }) {
     var list = items ?? this.items;
     if (inventory != null) list = _fromIds(list, inventory);
@@ -445,6 +453,7 @@ class PlayerProfile {
       ultNew: ultNew == null ? this.ultNew : Set.unmodifiable(ultNew),
       ultOrder: List.unmodifiable(
           _order(ultOrder ?? this.ultOrder, this.ultKnown, ultKnown)),
+      life: life ?? this.life,
     );
   }
 
@@ -590,6 +599,8 @@ class PlayerProfile {
         if (ultLevels.isNotEmpty) 'ulv': ultLevels,
         if (ultNew.isNotEmpty) 'un': (ultNew.toList()..sort()),
         if (ultOrder.isNotEmpty) 'uo': ultOrder,
+        // Pesca v0.22.0 (fishing.md § 3).
+        'life': life.toJson(),
       };
 
   /// Lectura tolerante: lo que falta o tiene otro tipo toma su valor por
@@ -711,6 +722,7 @@ class PlayerProfile {
       ultSel: json['us'] is String ? json['us'] as String : null,
       ultNew: {..._strings(json['un'])},
       ultOrder: _strings(json['uo']),
+      life: LifeSkills.fromJson(json['life']),
       ultLevels: {
         if (json['ulv'] case final Map m)
           for (final e in m.entries)

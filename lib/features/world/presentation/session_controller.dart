@@ -59,6 +59,8 @@ import '../../ascension/domain/ascension_text.dart';
 import '../../characters/data/account_repository.dart';
 import '../../characters/domain/stash.dart';
 import '../../characters/presentation/characters_providers.dart';
+import '../../../game_engine/data/fishing_catalog.dart';
+import '../../../game_engine/rules/fishing_rules.dart';
 import 'local_player.dart';
 import 'session_view.dart';
 import 'world_text.dart';
@@ -756,7 +758,9 @@ class SessionController extends StateNotifier<SessionView?> {
           lost.add(codec.groundFromJson(asJson(raw)));
         } catch (_) {}
       }
-      room0 = engine.setWorld(room0, w.id, w.name, lostLoot: lost).state;
+      room0 = engine
+          .setWorld(room0, w.id, w.name, lostLoot: lost, lake: w.town.lake)
+          .state;
     }
     try {
       _tutorialVersion = await tutorialStore.load();
@@ -1128,13 +1132,30 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Frente a la torre del Loot perdido (missions.md § "Loot perdido").
   bool get nearLostLoot => townSpot == TownSpot.lostLoot;
 
-  /// Texto de un lugar del pueblo que todavía no funciona (pesca y
-  /// comerciante, fase 3 de town_loop.md), o `null`.
-  String? get soonText => switch (townSpot) {
-        TownSpot.fishing || TownSpot.sign => 'Pesca · Pronto',
-        TownSpot.trader => 'Comerciante · Pronto',
-        _ => null,
-      };
+  /// Frente a un punto de pesca, al puesto o al cartel del lago.
+  bool get nearFishing => townSpot == TownSpot.fishing;
+  bool get nearTrader => townSpot == TownSpot.trader;
+  bool get nearSign => townSpot == TownSpot.sign;
+
+  /// Lo que dice el cartel del lago: especies y tu nivel de Pesca.
+  String get signText {
+    final p = _s?.players[localId]?.profile;
+    final lake = world?.town.lake ?? kTownLakeDefault;
+    return 'Lago: ${lake.length} especies. Pesca nivel '
+        '${p == null ? 1 : FishingRules.level(p)}. Acercate a un muelle y '
+        'tocá E.';
+  }
+
+  // ---- Pesca y comerciante (fishing.md § 6): el host valida ----
+
+  bool fishBite(double power) => _apply(FishBiteAction(power));
+  bool fishResult(bool ok) => _apply(FishResultAction(ok));
+  bool autoFish() => _apply(const AutoFishAction());
+  bool sellFish({String? species, bool materials = false}) =>
+      _apply(SellFishAction(species: species, materials: materials));
+  bool exchangeFish(String species) => _apply(ExchangeFishAction(species));
+  bool buyRod(String id) => _apply(BuyRodAction(id));
+  bool equipRod(String id) => _apply(EquipRodAction(id));
 
   /// `nearSeal`: el sello sin activar más cercano a menos de 26 px.
   MissionItem? get nearSeal {
@@ -1263,8 +1284,12 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.ascension);
       } else if (nearLostLoot) {
         openPanel(WorldPanel.lostLoot);
-      } else if (soonText case final t?) {
-        addLocalNotice(t);
+      } else if (nearFishing) {
+        openPanel(WorldPanel.fishing);
+      } else if (nearTrader) {
+        openPanel(WorldPanel.trader);
+      } else if (nearSign) {
+        addLocalNotice(signText);
       } else if (nearEntrance case final e?) {
         enterZone(e);
       }
@@ -2447,7 +2472,9 @@ class SessionController extends StateNotifier<SessionView?> {
             _panel == WorldPanel.armory ||
             _panel == WorldPanel.ecoPortal ||
             _panel == WorldPanel.ascension ||
-            _panel == WorldPanel.lostLoot) &&
+            _panel == WorldPanel.lostLoot ||
+            _panel == WorldPanel.fishing ||
+            _panel == WorldPanel.trader) &&
         mode != SessionMode.lobby &&
         !(_panel == WorldPanel.armory && _runShopOpen(s))) {
       _panel = null;
@@ -2516,7 +2543,9 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearStatue) return (WorldPrompt.statue, null);
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);
-    if (soonText case final t?) return (WorldPrompt.soon, '[E] $t');
+    if (nearFishing) return (WorldPrompt.fishing, null);
+    if (nearTrader) return (WorldPrompt.trader, null);
+    if (nearSign) return (WorldPrompt.sign, null);
     if (nearSeal != null) return (WorldPrompt.seal, null);
     if (nearPoi case final p?) {
       final s = _s!;

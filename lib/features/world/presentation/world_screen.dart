@@ -44,6 +44,8 @@ import 'hud/departure_cinematic.dart';
 import 'hud/pause_banner.dart';
 import 'hud/world_hud.dart';
 import 'map/map_game.dart';
+import 'panels/fishing_panel.dart';
+import 'panels/trader_panel.dart';
 import 'panels/character_panel.dart';
 import 'panels/party_member_bar.dart';
 import 'panels/lost_loot_panel.dart';
@@ -829,6 +831,10 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         return PartyPanel(view: view, controller: controller);
       case WorldPanel.lostLoot:
         return LostLootPanel(view: view, controller: controller);
+      case WorldPanel.fishing:
+        return FishingPanel(view: view, controller: controller);
+      case WorldPanel.trader:
+        return TraderPanel(view: view, controller: controller);
       case WorldPanel.stash:
         return StashPanel(view: view, controller: controller);
       case WorldPanel.map:

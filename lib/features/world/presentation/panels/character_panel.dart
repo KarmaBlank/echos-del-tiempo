@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'fishing_panel.dart' show lifeSkillsLine;
+
 import '../../../../app/design/design.dart';
 import '../../../../app/feature_flags.dart';
 import '../../../ascension/domain/ascension_text.dart';
@@ -460,6 +462,8 @@ class _CharacterPanelState extends State<CharacterPanel> {
                     ],
                   );
                 }),
+                // Oficios (fishing.md § 3): Pesca y la caña equipada.
+                lifeSkillsLine(prof),
                 if (view.mustAllocate)
                   Padding(
                     padding: EdgeInsets.only(top: DsSpace.sm),

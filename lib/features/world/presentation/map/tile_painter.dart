@@ -678,7 +678,7 @@ class TilePainter {
     _rect(c, TownPalette.bobber, px + 7, py + 11 + bob, 2, 2);
   }
 
-  /// Cartel del lago (pesca: "Pronto").
+  /// Cartel del lago (pesca).
   void _sign(Canvas c, double px, double py) {
     _rect(c, TownPalette.plankDark, px + 7, py + 8, 2, 8);
     _rect(c, TownPalette.plankDark, px + 2, py + 2, 12, 7);
