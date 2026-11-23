@@ -62,6 +62,10 @@ class FountainPanel extends StatelessWidget {
                     key: ValueKey(key),
                     kind: DsButtonKind.primary,
                     details: [why ?? line],
+                    // Bloqueada porque otro edita (town_editor.md § 1.3).
+                    tooltip: why != null && why.startsWith('Está editando')
+                        ? why
+                        : null,
                     onPressed: why == null ? () => go() : null),
               ),
           ],

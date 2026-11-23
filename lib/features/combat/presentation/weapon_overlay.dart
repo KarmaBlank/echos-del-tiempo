@@ -100,27 +100,40 @@ abstract final class WeaponOverlay {
     final params = ProceduralArt.instance.resolve(entryFor(classId, weaponType));
     if (hasShield(classId, weaponType)) {
       // Escudo en el brazo de atrás, con el puño en el centro.
-      paintItemIcon(c, const Rect.fromLTWH(-11, -13, 8, 8),
-          kItemIconRows['escudo']!, accent, params, look: look, time: time);
+      _icon(c, const Rect.fromLTWH(-11, -13, 8, 8), 'escudo', accent,
+          params, look, time);
     }
     c.save();
     c.translate(grip.handX, grip.handY);
     if (grip.quarterTurns != 0) c.rotate(grip.quarterTurns * math.pi / 2);
     if (grip.mirror) c.scale(-1, 1);
     c.scale(grip.cell);
-    paintItemIcon(
-        c,
-        Rect.fromLTWH(-grip.gripX - 0.5, -grip.gripY - 0.5, 8, 8),
-        kItemIconRows[grip.shape]!,
-        accent,
-        params,
-        look: look,
-        time: time);
+    _icon(c, Rect.fromLTWH(-grip.gripX - 0.5, -grip.gripY - 0.5, 8, 8),
+        grip.shape, accent, params, look, time);
     c.restore();
     // La mano encima del mango: se ve agarrada.
     _fill.color = handColor;
     c.drawRect(
         Rect.fromLTWH(grip.handX - 1, grip.handY - 1, 2, 2), _fill);
+  }
+}
+
+/// Dibuja la forma [shape] en [r]: el PNG del manifest (`items.<clave>`,
+/// el mismo del inventario; tool/export_item_icons.dart) con su acento y
+/// la identidad del arma encima; sin PNG cargado, el dibujo procedural.
+void _icon(Canvas c, Rect r, String shape, Color accent, ProcParams params,
+    WeaponLook? look, double time) {
+  final rows = kItemIconRows[shape]!;
+  final key = ItemIconImages.keyOf(shape);
+  final png = ItemIconImages.base(key);
+  if (png == null) {
+    paintItemIcon(c, r, rows, accent, params, look: look, time: time);
+    return;
+  }
+  paintItemIconPng(c, r, png, ItemIconImages.accent(key), accent);
+  if (look != null) {
+    paintItemIcon(c, r, rows, accent, params,
+        look: look, time: time, base: false);
   }
 }
 

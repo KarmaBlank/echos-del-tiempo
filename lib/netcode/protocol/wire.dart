@@ -114,7 +114,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 49 (v0.27.0): día, noche y clima (`town.sky`), faros (`town.lt`),
 /// nivel y mejoras de cada ayudante (`cr`), `helperUpgrade`, evento
 /// `bolt` y materiales de oficio en el perfil (`life.cf`).
-const kProtocolVersion = 49;
+/// 50 (v0.28.0): candado de la edición del pueblo (town_editor.md § 1.3):
+/// `ted` en el snapshot y `town` con `lock` / `unlock`.
+const kProtocolVersion = 50;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

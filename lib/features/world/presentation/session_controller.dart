@@ -1700,20 +1700,32 @@ class SessionController extends StateNotifier<SessionView?> {
 
   TownEdit? _edit;
 
-  /// La edición en curso (`null` = jugando). Solo del dueño del mundo y
-  /// solo en el pueblo; el resto de la sala sigue jugando.
-  TownEdit? get townEdit =>
-      _edit != null && _s?.mode == SessionMode.lobby && isWorldOwner
-          ? _edit
-          : null;
+  /// La edición en curso (`null` = jugando). Cualquiera de la sala, de
+  /// a uno (town_editor.md § 1.3): si el candado del anfitrión es de otro,
+  /// la edición se cierra.
+  TownEdit? get townEdit {
+    final ed = _s?.townEditor;
+    return _edit != null &&
+            _s?.mode == SessionMode.lobby &&
+            _s?.place == null &&
+            (ed == null || ed == localId)
+        ? _edit
+        : null;
+  }
+
   bool get editingTown => townEdit != null;
 
-  /// Por qué no se puede entrar a EDITAR PUEBLO (o `null`).
-  String? get cannotEditTown =>
-      isWorldOwner ? null : 'Solo el dueño del mundo edita el pueblo';
+  /// Por qué no se puede entrar a EDITAR PUEBLO (o `null`): otro jugador
+  /// tiene el candado.
+  String? get cannotEditTown {
+    final ed = _s?.townEditor;
+    if (ed == null || ed == localId) return null;
+    return 'Está editando ${_s?.players[ed]?.name ?? 'otro jugador'}';
+  }
 
   bool enterTownEdit() {
     if (cannotEditTown != null || _s?.mode != SessionMode.lobby) return false;
+    if (!_apply(const TownAction(TownOp.lock))) return false;
     _panel = null;
     _edit = TownEdit();
     stopFishing();
@@ -1724,9 +1736,7 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Por qué no se puede elegir dónde contratar un ayudante de [kind]
   /// (o `null`): solo el dueño, y tiene que haber alguna huerta o lago.
   String? cannotPickHire(BuildKind kind) {
-    if (cannotEditTown != null) {
-      return 'Solo el dueño del mundo contrata ayudantes';
-    }
+    if (cannotEditTown case final why?) return why;
     if (!town.builds.any((b) => b.kind == kind)) {
       return kind == BuildKind.huerta
           ? 'No hay huertas en el pueblo'
@@ -1739,7 +1749,9 @@ class SessionController extends StateNotifier<SessionView?> {
   /// edición y clic en la huerta o el lago (farming.md § 8).
   bool enterHirePick(BuildKind kind) {
     if (cannotPickHire(kind) != null || !enterTownEdit()) return false;
-    _edit!.hire = kind;
+    _edit!
+      ..hire = kind
+      ..center = true;
     _emit();
     return true;
   }
@@ -1754,6 +1766,9 @@ class SessionController extends StateNotifier<SessionView?> {
   void exitTownEdit() {
     if (_edit == null) return;
     _edit = null;
+    if (_s?.townEditor == localId || isClient) {
+      _apply(const TownAction(TownOp.unlock));
+    }
     _emit();
   }
 

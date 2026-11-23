@@ -302,8 +302,10 @@ herramienta de área trabaja menos tiles.
   el tope. El cartel y las opciones dicen "Granjeros 1 / 2 · cada uno
   atiende 8 parcelas".
 - Áreas automáticas sin pisarse: el granjero i atiende las parcelas
-  i·8 … i·8+7 de la huerta, fila por fila. El pescador i, un lugar de la
-  orilla repartido por el borde.
+  i·8 … i·8+7 de la huerta, fila por fila. El pescador i (v0.28.0), un tile de
+  la orilla pegado al agua por un lado (nunca la esquina en diagonal),
+  libre del cartel, el cofre y otras construcciones: el primero, el más
+  cerca del cartel; los demás, cada vez más lejos (`fisherSpot`).
 - NPC visibles con sprite propio (`items.vida_npc_granjero[_trabajo]`,
   `vida_npc_pescador[_trabajo]`, `tool/export_life_icons.dart`). El
   granjero va de parcela en parcela de su área (trabaja 60 % del paso,

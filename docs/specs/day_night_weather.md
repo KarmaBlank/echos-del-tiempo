@@ -24,6 +24,15 @@ Pueblo y mapas al aire libre (temas `pradera`, `bosque`, `mundo`,
 cavernas ni el abismo. En EDITAR PUEBLO no se dibuja el cielo (se edita
 con luz).
 
+### 1.1 Reloj del HUD (v0.28.0)
+En el pueblo y los exteriores (no en mazmorras ni batallas), debajo del
+minimapa a la derecha: "Día N · HH:MM" y un ícono chico del clima de
+ahora (sol, luna de noche, lluvia, tormenta). El día del reloj va de las
+06:00 a las 20:00 y la noche de las 20:00 a las 06:00 (`SkyRules.hourOf`,
+minutos de a 10). No tapa la barra de herramientas (va arriba) y los
+tooltips quedan siempre encima. El mouse sobre el reloj dice el clima y
+el pronóstico.
+
 ## 2. Luces
 
 - De noche el mapa se tiñe (`SkyPalette.night`, alfa hasta 0.72) y cada

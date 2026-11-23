@@ -91,6 +91,25 @@ abstract final class SkyRules {
 
   static bool isNight(SkyState s) => darkness(s) >= 0.5;
 
+  /// La hora del reloj del HUD (day_night_weather.md § 1.1): el día va de
+  /// las 06:00 a las 20:00 y la noche de las 20:00 a las 06:00, cada
+  /// tramo estirado a su duración. Minutos de a 10.
+  static (int, int) hourOf(SkyState s) {
+    final c = s.clock.clamp(0.0, length);
+    final h = c < daySec
+        ? 6 + 14 * c / daySec
+        : 20 + 10 * (c - daySec) / nightSec;
+    var m = ((h % 24) * 60).floor();
+    m -= m % 10;
+    return (m ~/ 60 % 24, m % 60);
+  }
+
+  /// "14:30".
+  static String clockLabel(SkyState s) {
+    final (h, m) = hourOf(s);
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+  }
+
   /// Segundos que faltan para que se haga de noche o de día.
   static double untilChange(SkyState s) {
     final c = s.clock;

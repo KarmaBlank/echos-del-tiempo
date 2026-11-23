@@ -15,8 +15,9 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
   con el motivo en esa línea): EDITAR PUEBLO, CONTRATAR GRANJERO,
   CONTRATAR PESCADOR (farming.md § 8.1), TABLERO DE ENCARGOS, y CERRAR
   abajo. Sin contador de ampliaciones.
-- EDITAR PUEBLO: solo el dueño del mundo (el primer humano de la sala);
-  para el resto el botón sale gris con el motivo.
+- EDITAR PUEBLO (v0.28.0): cualquiera de la sala, de a uno (§ 1.3).
+  Mientras otro edita, el botón (y CONTRATAR GRANJERO / PESCADOR) sale
+  gris con "Está editando <nombre>" en su línea y en el tooltip.
 - El personaje se queda donde está (no camina, no pesca, E no hace
   nada). La cámara queda libre: WASD / flechas, arrastrar con el mouse,
   rueda para zoom (1×, 1,5×, 2×). Puede salirse del mapa hasta una
@@ -25,6 +26,17 @@ HUERTA de v0.23 (`farming.md` § 6). Código: `TownState` (modelo),
   paso base sale. LISTO [ESC] sale siempre.
 - Los demás siguen jugando. Cada cambio es una acción al anfitrión, que
   lo valida y lo manda en el estado: todos ven el pueblo nuevo al toque.
+
+### 1.3 Candado de edición (v0.28.0, protocolo 50)
+- El anfitrión guarda quién edita (`GameSession.townEditor`, `ted`).
+  Entrar manda `town lock`: lo da si está libre (o ya es tuyo). Salir
+  (LISTO / Esc) manda `unlock`.
+- Se suelta solo si quien lo tiene se va de la sala, deja el pueblo
+  (mazmorra, viaje) o deja de estar en la sala del pueblo (lo revisa el
+  tick del anfitrión).
+- `expand`, `place`, `move`, `remove` y las acciones de ayudantes se
+  validan contra quien tiene el candado; sin candado, contra el dueño.
+  Si el candado es de otro, la edición local se cierra.
 
 ### 1.2 Pasos (clic sin arrastrar)
 | Clic en | Abre |
@@ -190,7 +202,7 @@ la izquierda son el eje de caminos).
 - AGREGAR ESPECIES (en las opciones del lago) suelta peces de la bolsa
   en ese lago. La pestaña PESCA Y CULTIVO sigue con SOLTAR EN EL LAGO:
   va al lago más cercano. Soltar lo puede hacer cualquiera (son sus
-  peces); construir, mover, borrar y ampliar, solo el dueño.
+  peces); construir, mover, borrar y ampliar, quien tiene el candado (§ 1.3).
 
 - Huertas pegadas también se funden (v0.25.5): una huerta más grande con
   las parcelas, semillas, ayudantes y cofre de las dos.
@@ -229,12 +241,12 @@ Sin `builds`: `exp` pasa a ser ampliaciones al ESTE; cada zona i de
 par): LAGO 6 × 6 en (33 + 8·franja, 7 | 14), HUERTA 6 × 4 una fila más
 abajo; `stock` al lago base; las parcelas a la huerta que las contiene.
 
-## 8. Red (protocolo 46)
+## 8. Red (protocolo 46; candado en 50, § 1.3)
 `town {o: expand|place|move|remove|stock|hireHelper, id?, tg?, x?, y?}`:
 `expand` con `id` = lado (`n`/`s`/`e`/`o`); `place` con `id` = la del
 catálogo y (x, y) la esquina en tiles del mapa; `move` con `tg` y (x,
 y) (`tg` = `@<lugar>` mueve un lugar fijo, § 3.3; v0.25.2, protocolo 46); `remove` con `tg`; `stock` con `id` = especie y `tg` = lago. El
-anfitrión valida todo (pueblo, dueño, reglas de § 3.2) y el pueblo
+anfitrión valida todo (pueblo, candado, reglas de § 3.2) y el pueblo
 viaja en el estado.
 
 ## 8.1 Faros (v0.27.0)

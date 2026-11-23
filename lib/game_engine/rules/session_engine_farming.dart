@@ -30,6 +30,20 @@ extension _FarmingOp on _Op {
   /// El dueño del mundo: el primer humano de la sala (el anfitrión).
   bool _isOwner(SessionPlayer p) => humans.firstOrNull?.id == p.id;
 
+  /// Puede cambiar el pueblo (town_editor.md § 1.3): quien tiene el
+  /// candado; sin candado, el dueño (compatibilidad con las acciones
+  /// sueltas).
+  bool _mayEdit(SessionPlayer p) =>
+      s.townEditor == null ? _isOwner(p) : s.townEditor == p.id;
+
+  /// Suelta el candado si quien lo tiene ya no está o salió del pueblo.
+  void releaseTownLock() {
+    final id = s.townEditor;
+    if (id == null) return;
+    final p = s.players[id];
+    if (p == null || !_inTown(p) || s.place != null) s.townEditor = null;
+  }
+
   bool farmingAction(SessionPlayer p, SessionAction a) {
     switch (a) {
       case FarmTileAction():
@@ -425,9 +439,18 @@ extension _FarmingOp on _Op {
   bool _townAction(SessionPlayer p, TownAction a) {
     if (!_inTown(p)) return false;
     switch (a.op) {
+      case TownOp.lock:
+        if (s.place != null) return false;
+        if (s.townEditor != null && s.townEditor != p.id) return false;
+        s.townEditor = p.id;
+        return true;
+      case TownOp.unlock:
+        if (s.townEditor != p.id) return false;
+        s.townEditor = null;
+        return true;
       case TownOp.expand:
         final side = TownSide.fromCode(a.id);
-        if (!_isOwner(p) || side == null) return false;
+        if (!_mayEdit(p) || side == null) return false;
         final r = TownRules.expand(p.profile, s.town, side);
         if (r == null) return false;
         final before = s.town;
@@ -438,7 +461,7 @@ extension _FarmingOp on _Op {
         return true;
       case TownOp.place when a.id == kFaroId:
         final x = a.x, y = a.y;
-        if (!_isOwner(p) || x == null || y == null) return false;
+        if (!_mayEdit(p) || x == null || y == null) return false;
         final r = TownRules.placeLight(p.profile, s.town, x, y);
         if (r == null) return false;
         s.town = r.$2;
@@ -447,13 +470,13 @@ extension _FarmingOp on _Op {
         return true;
       case TownOp.move when TownState.parseLightId(a.target) != null:
         final x = a.x, y = a.y;
-        if (!_isOwner(p) || x == null || y == null) return false;
+        if (!_mayEdit(p) || x == null || y == null) return false;
         final r = TownRules.moveLight(s.town, a.target!, x, y);
         if (r == null) return false;
         s.town = r;
         return true;
       case TownOp.remove when TownState.parseLightId(a.target) != null:
-        if (!_isOwner(p)) return false;
+        if (!_mayEdit(p)) return false;
         final r = TownRules.removeLight(s.town, a.target!);
         if (r == null) return false;
         s.town = r;
@@ -461,7 +484,7 @@ extension _FarmingOp on _Op {
         return true;
       case TownOp.place:
         final id = a.id, x = a.x, y = a.y;
-        if (!_isOwner(p) || id == null || x == null || y == null) return false;
+        if (!_mayEdit(p) || id == null || x == null || y == null) return false;
         final r = TownRules.place(s.town, id, x, y);
         if (r.town == null) return false;
         s.town = r.town!;
@@ -469,7 +492,7 @@ extension _FarmingOp on _Op {
         return true;
       case TownOp.move:
         final id = a.target, x = a.x, y = a.y;
-        if (!_isOwner(p) || id == null || x == null || y == null) return false;
+        if (!_mayEdit(p) || id == null || x == null || y == null) return false;
         final r = TownRules.move(s.town, id, x, y);
         if (r.town == null) return false;
         s.town = r.town!;
@@ -480,7 +503,7 @@ extension _FarmingOp on _Op {
         return true;
       case TownOp.remove:
         final id = a.target;
-        if (!_isOwner(p) || id == null) return false;
+        if (!_mayEdit(p) || id == null) return false;
         final b = s.town.build(id);
         final r = TownRules.remove(p.profile, s.town, id);
         if (b == null || r == null) return false;
@@ -499,7 +522,7 @@ extension _FarmingOp on _Op {
         return true;
       case TownOp.hireHelper:
         final id = a.target;
-        if (!_isOwner(p) || id == null) return false;
+        if (!_mayEdit(p) || id == null) return false;
         final r = TownRules.hire(p.profile, s.town, id);
         if (r == null) return false;
         s.town = r.$2;
@@ -510,14 +533,14 @@ extension _FarmingOp on _Op {
         return true;
       case TownOp.fireHelper:
         final id = a.target;
-        if (!_isOwner(p) || id == null) return false;
+        if (!_mayEdit(p) || id == null) return false;
         final r = TownRules.fire(s.town, id);
         if (r == null) return false;
         s.town = r;
         return true;
       case TownOp.helperTasks:
         final id = a.target, i = a.x;
-        if (!_isOwner(p) || id == null || i == null) return false;
+        if (!_mayEdit(p) || id == null || i == null) return false;
         final r = TownRules.setTasks(s.town, id, i, a.n);
         if (r == null) return false;
         s.town = r;
@@ -534,7 +557,7 @@ extension _FarmingOp on _Op {
         return true;
       case TownOp.helperUpgrade:
         final id = a.target, i = a.x, u = HelperUpgrade.fromName(a.id);
-        if (!_isOwner(p) || id == null || i == null || u == null) return false;
+        if (!_mayEdit(p) || id == null || i == null || u == null) return false;
         final r = HelperRules.upgrade(p.profile, s.town, id, i, u);
         if (r == null) return false;
         s.town = r.$2;

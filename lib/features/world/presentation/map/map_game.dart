@@ -251,6 +251,17 @@ class MapGame extends Game {
       camY += dy;
       e.shift = null;
     }
+    final mw0 = view.map.width * ts, mh0 = view.map.height * ts;
+    if (e.center) {
+      // Elegir dónde contratar: el pueblo entero (si entra) y centrado.
+      e.center = false;
+      editZoom = editZooms.firstWhere(
+          (z) => mw0 <= vw * z && mh0 <= vh * z,
+          orElse: () => editZooms.last);
+      camX = (mw0 - vw * editZoom) / 2;
+      camY = (mh0 - vh * editZoom) / 2;
+      return;
+    }
     camX += ix * 260 * zoom * dt;
     camY += iy * 260 * zoom * dt;
     const m = (kTownStrip + 1) * ts;

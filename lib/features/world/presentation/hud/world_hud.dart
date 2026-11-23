@@ -44,6 +44,7 @@ import 'full_map.dart';
 import 'loot_feed.dart';
 import 'minimap.dart';
 import 'potion_shortcuts.dart';
+import 'day_clock.dart';
 import 'tool_hud.dart';
 import 'unused_points_notice.dart';
 
@@ -328,6 +329,13 @@ class WorldHud extends StatelessWidget {
                                 ),
                               ),
                             ),
+                            // Reloj del día (day_night_weather.md § 1.1):
+                            // arriba, lejos de la barra de herramientas.
+                            if (s.mode == SessionMode.lobby &&
+                                s.town.sky.started) ...[
+                              const SizedBox(height: 4),
+                              DayClock(sky: s.town.sky),
+                            ],
                           ],
                         );
                       }),
