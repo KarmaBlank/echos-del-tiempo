@@ -35,9 +35,14 @@ el pronóstico.
 
 ## 2. Luces
 
-- De noche el mapa se tiñe (`SkyPalette.night`, alfa hasta 0.72) y cada
-  luz "come" la noche con un círculo suave: faros del pueblo (§ 5),
-  braseros encendidos de las misiones (`Tile.brazierLit`) y luciérnagas.
+- Desde v0.32.0 la noche la pone el sistema de iluminación
+  (lighting.md): ambiente blanco de día, color del atardecer y el
+  amanecer, azul oscuro de noche; la lluvia y la tormenta lo oscurecen y
+  el destello de un rayo ilumina todo un instante. Faros, braseros,
+  fuente, portal, ventanas de las casas, forja, luciérnagas y la luz de
+  cada jugador alumbran con caída suave y los muros y árboles las
+  cortan o atenúan. (Antes: tinte con alfa hasta 0.72 y círculos que
+  "comían" la noche.)
 - Luciérnagas: con oscuridad > 0.3, una cada tanto por celda de 5×5
   tiles, flotando y titilando, con un halito propio. Respetan la
   densidad de partículas.
@@ -83,6 +88,7 @@ lluvia o tormenta, "Llueve" / "Tormenta".
 - Destello del rayo × `GameSettings.flashFactor` (reducir destellos y
   reducir movimiento lo bajan o lo apagan).
 - Reducir movimiento: lluvia más lenta, sin parpadeo de las luces.
+- OSCURIDAD (NORMAL / SUAVE / APAGADA) aclara la noche (lighting.md § 7).
 
 ## 5. Faros del pueblo
 

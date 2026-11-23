@@ -982,6 +982,21 @@ class _AccessibilityTab extends ConsumerWidget {
             onChanged: (v) => c.update(s.copyWith(flashes: v)),
           ),
         ),
+        _SettingRow(
+          label: 'OSCURIDAD',
+          hint: 'Cuánto oscurecen la noche y las mazmorras oscuras. '
+              'SUAVE aclara las sombras; APAGADA deja todo como de día.',
+          control: _Choice<DarknessLevel>(
+            keyPrefix: 'display-darkness',
+            options: const {
+              DarknessLevel.normal: 'NORMAL',
+              DarknessLevel.soft: 'SUAVE',
+              DarknessLevel.off: 'APAGADA',
+            },
+            value: s.darkness,
+            onChanged: (v) => c.update(s.copyWith(darkness: v)),
+          ),
+        ),
       ],
     );
   }

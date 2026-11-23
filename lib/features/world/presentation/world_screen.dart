@@ -406,6 +406,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         // Destellos del rayo y lluvia (accessibility.md; day_night_weather.md § 4).
         ..flashFactor = gfx.flashFactor
         ..reduceMotion = gfx.reduceMotion
+        // Oscuridad (lighting.md § 7).
+        ..darknessKeep = gfx.darkness.keep
         // Texto del mapa (accessibility.md § 9.5 y 9.6).
         ..noticeFactor = gfx.noticeDuration.factor
         ..labelBackdrop = gfx.mapLabelBackdrop;

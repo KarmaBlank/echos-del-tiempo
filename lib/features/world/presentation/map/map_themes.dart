@@ -714,3 +714,30 @@ abstract final class SkyPalette {
   static const faroPost = Color(0xFF4A4F5C);
   static const faroHead = Color(0xFF6B7080);
 }
+
+/// Colores de la iluminación (docs/specs/lighting.md § 6). Las claves de
+/// [tints] son las `tint` de `kLightDefs`. Tonos elegidos para que se
+/// distingan por brillo, no solo por matiz (seguros para daltonismo).
+abstract final class LightPalette {
+  static const tints = <String, Color>{
+    'calida': Color(0xFFFFD9A0),
+    'brasa': Color(0xFFFFB070),
+    'runa': Color(0xFFA8E6FF),
+    'eco': Color(0xFFD2B8FF),
+    'luciernaga': Color(0xFFE8FF9A),
+    'flora': Color(0xFFB8FFD8),
+    'agua': Color(0xFFA8D0FF),
+    'botin': Color(0xFFFFE8A8),
+  };
+  static const fallback = Color(0xFFFFFFFF);
+
+  /// Ambiente del atardecer / amanecer y de la noche cerrada.
+  static const dusk = Color(0xFFD8A890);
+  static const night = Color(0xFF2A3466);
+
+  /// Ambiente de una mazmorra oscura (casi negro).
+  static const darkDungeon = Color(0xFF0A0A12);
+
+  /// Silueta de un enemigo en la penumbra.
+  static const silhouette = Color(0xFF000000);
+}
