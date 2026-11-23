@@ -6,8 +6,10 @@ import '../models/session_action.dart';
 import '../models/session_event.dart';
 import '../models/session_world.dart';
 import '../models/tutorial.dart' show kTutorialVersion;
+import '../models/world_save.dart' show TownState;
 import 'abyss_rules.dart';
 import 'biome_rules.dart';
+import 'dungeon_rules.dart';
 import 'session_engine.dart';
 import 'trial_rules.dart';
 import 'zone_rules.dart';
@@ -128,6 +130,17 @@ class WorldEngine {
       op.put(k, engine.tick(s, dt, world: k == kTownRoom || !split));
     }
     return op.finish();
+  }
+
+  /// El pueblo para guardar el mundo: con las mazmorras de zona que
+  /// siguen abiertas guardadas tal como están (persistent_dungeons.md § 2).
+  TownState savedTown(SessionWorld w) {
+    var t = w.town.town;
+    for (final e in w.rooms.entries) {
+      if (!SessionWorld.isDungeon(e.key) || e.value.mission == null) continue;
+      t = DungeonRules.park(e.value.copy()..town = t, engine.catalog);
+    }
+    return t;
   }
 
   static bool _starts(SessionAction a) =>
@@ -271,7 +284,14 @@ class _W {
   void _dropEmpty(String key) {
     if (key == kTownRoom) return;
     final r = w.rooms[key];
-    if (r != null && r.players.isEmpty) w.rooms.remove(key);
+    if (r == null || r.players.isNotEmpty) return;
+    // Sale el último: la mazmorra de zona queda guardada en el mundo
+    // (persistent_dungeons.md § 2), no se descarta.
+    if (SessionWorld.isDungeon(key) && r.mission != null) {
+      w.rooms[key] = engine.parkDungeon(r);
+      _share(key);
+    }
+    w.rooms.remove(key);
   }
 
   /// Sale solo de la mazmorra al exterior donde está su entrada (o al

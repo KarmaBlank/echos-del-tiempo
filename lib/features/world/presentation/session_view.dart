@@ -65,6 +65,9 @@ enum WorldPanel {
   /// Un ayudante (granjero o pescador): semillas, tareas y cofre
   /// (farming.md § 8, v0.25.5).
   helper,
+
+  /// Altar de la Ofrenda del jefe vencido (persistent_dungeons.md § 4).
+  offering,
 }
 
 /// Una línea del chat (`addChat`): de un jugador o de sistema (`sys`).
