@@ -3,10 +3,12 @@
 library;
 
 import 'farm_plot.dart';
+import 'resident.dart';
 import 'sky.dart';
 import 'town_build.dart';
 
 export 'farm_plot.dart';
+export 'resident.dart';
 export 'sky.dart';
 export 'town_build.dart';
 
@@ -42,7 +44,24 @@ class TownState {
       this.marks = const {},
       this.wild = const {},
       this.lights = const [],
-      this.sky = const SkyState()});
+      this.sky = const SkyState(),
+      this.residents = const {}});
+
+  /// Habitantes de bioma (overworld_biomes.md § 10): relación, encargos,
+  /// pedidos y si viven en el pueblo. Por id del habitante.
+  final Map<String, ResidentState> residents;
+
+  /// El estado de [npc] (vacío si todavía no hay nada).
+  ResidentState resident(String npc) =>
+      residents[npc] ?? ResidentState(npc);
+
+  /// La casa donde vive [npc], o `null`.
+  TownBuild? houseOf(String npc) => builds
+      .where((b) => b.kind == BuildKind.casa && b.resident == npc)
+      .firstOrNull;
+
+  Iterable<TownBuild> get houses =>
+      builds.where((b) => b.kind == BuildKind.casa);
 
   /// Faros puestos en EDITAR PUEBLO (day_night_weather.md § 5): tiles de
   /// 1×1 en coordenadas del pueblo base. No son sólidos ni cortan caminos.
@@ -169,6 +188,7 @@ class TownState {
     List<(int, int)>? lights,
     SkyState? sky,
     Map<String, int>? wild,
+    Map<String, ResidentState>? residents,
   }) {
     final next = TownState(
         upgrades: upgrades ?? this.upgrades,
@@ -180,7 +200,8 @@ class TownState {
         marks: marks ?? this.marks,
         lights: lights ?? this.lights,
         sky: sky ?? this.sky,
-        wild: wild ?? this.wild);
+        wild: wild ?? this.wild,
+        residents: residents ?? this.residents);
     return plots == null
         ? next
         : next.copyWith(builds: next._withPlots(plots));
@@ -203,7 +224,16 @@ class TownState {
           },
         if (lights.isNotEmpty) 'lt': [for (final l in lights) [l.$1, l.$2]],
         if (sky.started) 'sky': sky.toJson(),
+        if (residents.isNotEmpty)
+          'res': [
+            for (final k in (residents.keys.toList()..sort()))
+              residents[k]!.toJson()
+          ],
       };
+
+  /// [r] guardado (por su id).
+  TownState withResident(ResidentState r) =>
+      copyWith(residents: {...residents, r.npc: r});
 
   /// Una construcción cambiada (por id).
   TownState withBuild(TownBuild b) =>
@@ -280,6 +310,12 @@ class TownState {
             }.toList()
           : const [],
       sky: SkyState.fromJson(raw['sky']),
+      residents: raw['res'] is List
+          ? {
+              for (final v in raw['res'] as List)
+                if (ResidentState.fromJson(v) case final r?) r.npc: r,
+            }
+          : const {},
     );
     final bs = raw['builds'];
     if (bs is List) {

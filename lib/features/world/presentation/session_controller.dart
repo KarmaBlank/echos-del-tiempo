@@ -29,6 +29,7 @@ import '../../../game_engine/models/world_save.dart';
 import '../../../game_engine/data/construction_catalog.dart' show kFaroId;
 import '../../../game_engine/rules/helper_rules.dart';
 import '../../../game_engine/rules/sky_rules.dart';
+import '../../../game_engine/rules/resident_rules.dart';
 import '../../../game_engine/rules/town_rules.dart';
 import 'town_edit.dart';
 
@@ -1226,11 +1227,28 @@ class SessionController extends StateNotifier<SessionView?> {
       BiomeRules.lockedReason(
           id, _s?.players[localId]?.profile.unlockedZone ?? 1);
 
+  /// El habitante con el que se abrió la pantalla (los del pueblo
+  /// caminan: la pantalla sigue con él aunque se aleje).
+  BiomeNpcDef? talkNpc;
+
   /// El habitante del exterior frente al jugador local (§ 9), o `null`.
   BiomeNpcDef? get nearNpc {
     final s = _s;
     final lay = biomeLayout(s?.place);
-    if (s == null || s.mode != SessionMode.lobby || lay == null) return null;
+    if (s == null || s.mode != SessionMode.lobby) return null;
+    if (lay == null) {
+      // En el pueblo: el habitante que camina frente a su casa (§ 10.1).
+      if (s.place != null || editingTown) return null;
+      final night = SkyRules.isNight(s.town.sky);
+      for (final n in ResidentRules.living(s.town)) {
+        final pos = ResidentRules.position(s.town, n.id, s.time, night: night);
+        if (pos == null) continue;
+        if (WorldRules.distance(local.x, local.y, pos.$1, pos.$2) < 26) {
+          return n;
+        }
+      }
+      return null;
+    }
     final (nx, ny) = lay.npc.tile;
     return WorldRules.distance(
                 local.x, local.y, (nx + 0.5) * 16, (ny + 0.5) * 16) <
@@ -1619,6 +1637,13 @@ class SessionController extends StateNotifier<SessionView?> {
 
   bool buySeed(String id, [int n = 1]) =>
       _apply(FarmShopAction(FarmShopOp.buySeed, id: id, n: n));
+
+  // Habitantes (overworld_biomes.md § 10): todo lo valida el anfitrión.
+  bool residentOp(TownOp op, String npc, {String? target}) =>
+      _apply(TownAction(op, id: npc, target: target));
+
+  /// El pueblo de la sala (habitantes, casas).
+  TownState get townState => _s?.town ?? const TownState();
   bool buyFarmTool(String id) =>
       _apply(FarmShopAction(FarmShopOp.buyTool, id: id));
   bool equipFarmTool(String id) =>
@@ -2024,9 +2049,15 @@ class SessionController extends StateNotifier<SessionView?> {
   (String, String)? signAt(int tx, int ty) {
     final b = TownRules.buildAtSign(town, tx, ty);
     if (b == null) return null;
-    return b.kind == BuildKind.lago
-        ? ('LAGO', TownRules.lakeSignText(town, b))
-        : ('HUERTA', TownRules.farmSignText(b));
+    return switch (b.kind) {
+      BuildKind.lago => ('LAGO', TownRules.lakeSignText(town, b)),
+      BuildKind.huerta => ('HUERTA', TownRules.farmSignText(b)),
+      BuildKind.casa => (
+          'CASA',
+          'Nivel ${b.level}'
+              '${b.resident == null ? ' · vacía' : ' · vive ${biomeNpcName(b.resident!)}'}'
+        ),
+    };
   }
 
   bool takeLifeNode(LifeSkillKind k, String node) =>
@@ -2337,7 +2368,8 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.fountain);
       } else if (nearTravel) {
         openPanel(WorldPanel.travel);
-      } else if (nearNpc != null) {
+      } else if (nearNpc case final n?) {
+        talkNpc = n;
         openPanel(WorldPanel.biomeNpc);
       } else if (nearForage != null) {
         forage();
@@ -3597,6 +3629,7 @@ class SessionController extends StateNotifier<SessionView?> {
             _panel == WorldPanel.fountain ||
             _panel == WorldPanel.travel ||
             _panel == WorldPanel.biomeNpc ||
+            _panel == WorldPanel.questLog ||
             _panel == WorldPanel.helper) &&
         mode != SessionMode.lobby &&
         !(_panel == WorldPanel.armory && _runShopOpen(s))) {

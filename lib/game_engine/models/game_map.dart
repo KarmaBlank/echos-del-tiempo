@@ -96,6 +96,10 @@ abstract final class Tile {
   /// Cartel del lago (sólido).
   static const sign = 'Y';
 
+  /// Casa de un habitante (sólida; town_editor.md § 3.4, v0.30.0): se
+  /// dibuja pasto y el sprite de la casa va encima.
+  static const house = 'z';
+
   /// Tierra de la huerta (caminable; farming.md § 2, v0.23.0). Las
   /// parcelas aradas y los cultivos se dibujan encima, desde el estado.
   static const soil = 'u';
@@ -151,7 +155,7 @@ abstract final class Tile {
     wall, water, counter, armory, merchant, tree, rock, lava, tombstone, gear,
     portal, statue, lostTower, fountain, fishing, sign, cracked, secretFloor, shrine, shrineUsed, waystone,
     waystoneOn, wind,
-    shortcut, brazier, brazierLit, forage, forageUsed,
+    shortcut, brazier, brazierLit, forage, forageUsed, house,
   };
 
   /// Se puede pisar (el vacío cuenta: se pisa y se cae).

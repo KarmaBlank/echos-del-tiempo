@@ -442,3 +442,6 @@ const kForestSeeds = <String, double>{
   'arandano_sombra': 0.25,
   'seta_reloj': 0.05,
 };
+
+/// Nombre del habitante [id] (o el id si no existe).
+String biomeNpcName(String id) => biomeNpc(id)?.name ?? id;

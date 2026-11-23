@@ -312,6 +312,7 @@ class ProgressionRules {
       credits: math.max(0, raw.credits),
       attributes: raw.attributes,
       points: raw.points,
+      treeBonus: raw.treeBonus.clamp(0, 99),
       items: list,
       equipped: raw.equippedUid,
       potions: raw.potions.clamp(0, maxItems),
@@ -536,10 +537,11 @@ class ProgressionRules {
   }
 
   /// `up`: forja 1 nivel de una estadística (`CraftRules.forge`).
-  PlayerProfile? upgrade(PlayerProfile p, String weaponId, UpgradeStat stat) {
+  PlayerProfile? upgrade(PlayerProfile p, String weaponId, UpgradeStat stat,
+      {double discount = 0}) {
     final it = p.item(weaponId);
     if (it == null) return null;
-    return crafting.forge(p, it.uid, stat).profile;
+    return crafting.forge(p, it.uid, stat, discount: discount).profile;
   }
 
   /// `fuse` (compatibilidad): [baseId] hereda [skillId] de [sacrificeId],

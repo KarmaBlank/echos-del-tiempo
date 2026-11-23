@@ -181,12 +181,26 @@ beneficio que daría en el pueblo y sus semillas en la grilla de oficios
   grupo está en el bioma de quien la vende (`BiomeRules.vendorPrice`).
   Sin cambio de red.
 
-## 10. Habitantes en el pueblo (diseño v0.29.0; reglas puras hechas)
+## 10. Habitantes en el pueblo (v0.30.0)
 
 El ciclo central: biomas → botín → pueblo → partidas más fuertes. Las
 reglas están en `ResidentRules` / `ResidentState` (puras, con test); el
-cableado al motor, al guardado y a la UI es deuda (tech_debt.md v0.29.0).
-Tunables en Editor → Balance → Pueblo (`res*`).
+estado va en `TownState.residents` (JSON `res`, se guarda en el mundo y
+viaja en el snapshot). Tunables en Editor → Balance → Pueblo (`res*`,
+`order*`, `com*`). Red: protocolo 51 (netcode.md).
+
+Pantalla del habitante (en su bioma o en el pueblo, E cerca): frase,
+relación, etapa y "Beneficio: …" con el del nivel siguiente; pestañas
+TIENDA, ENCARGOS, PEDIDOS (orden del día y pedido), REGALOS y CASA, cada
+una una grilla con el detalle a la derecha.
+
+En el pueblo caminan frente a su casa de día (ida y vuelta por la fila de
+abajo, del reloj de la sala) y de noche están adentro. Un "!" encima si
+tienen pedido u orden. La pantalla sigue con él aunque se aleje.
+
+La relación sube con regalos (el primero de cada día del mundo: +1; se
+aceptan productos silvestres, cultivos y peces de su bioma), encargos,
+pedidos y órdenes.
 
 ### 10.1 Invitar
 - Relación con el habitante (sube con encargos y pedidos cumplidos). Con
@@ -199,17 +213,31 @@ Tunables en Editor → Balance → Pueblo (`res*`).
 - Cadena de 2 a 4 pasos por habitante (`kResidentQuests`): recolectar,
   pescar, cultivar, bajar a una mazmorra de su bioma, vencer un élite.
   Cada paso da oro y relación; el último, un objeto único. Se ven en su
-  pantalla y en un registro de encargos (subpestañas por habitante,
-  grilla, nunca secciones apiladas). Valida el anfitrión; se guarda en el
-  mundo. Primera cadena: Ilda (hierbas de rocío ×3, trucha musgosa,
-  helecho dulce ×2, Bosque Hondo; premio Frasco de Ilda).
+  pantalla y en un registro de encargos (FUENTE → REGISTRO DE ENCARGOS:
+  subpestañas por habitante, grilla, detalle a la derecha). Valida el
+  anfitrión; se guarda en el mundo. Los pasos de recolectar, pescar y
+  cultivar se ENTREGAN desde la bolsa (lo que haya, hasta completarlo,
+  en el bioma o en el pueblo); los de mazmorra y élite cuentan solos al
+  ganar esa zona (o vencer un élite en ella) y pagan el oro a cada uno de
+  la party.
+- Cadenas: Ilda (hierbas de rocío ×3, trucha musgosa, helecho dulce ×2,
+  Bosque Hondo; Frasco de Ilda), Velda (musgo de cobre ×3, pez piñón,
+  Ruinas Cronales; Placa de Velda), Kael (cristales de escarcha ×3,
+  trucha de hielo, élite del Laberinto Temporal; Silbato de Kael), Brann
+  (raíces ígneas ×3, chile de volcán ×2, Grieta Ígnea; Martillo de Brann),
+  Oren (polvo de eco ×3, pez eco, trigo del eco ×2, Abismo; Reloj de
+  Oren).
+- Objeto único: un recuerdo guardado en su estado (`relic`); mientras
+  vive en el pueblo, su beneficio sube un nivel.
 
 ### 10.3 Etapas y beneficio
+- Invitar: con `resInviteRep` (3), INVITAR AL PUEBLO en su pantalla.
 - Recién llegado → Asentado (`resSettledRep` 5) → Arraigado
-  (`resRootedRep` 12). Nivel del beneficio = etapa + nivel del edificio
-  − 1 (tope `resMaxTier`), permanente mientras viva en el pueblo y para
-  todos los de la sala (lo aplica el anfitrión). Sin casa no hay
-  beneficio.
+  (`resRootedRep` 12). Nivel del beneficio = etapa + nivel de su casa
+  − 1 (+1 con su objeto único, −1 descontento, nunca debajo de 0; tope
+  `resMaxTier`), permanente mientras viva en el pueblo y para todos los
+  de la sala (lo aplica el anfitrión). Sin casa no hay beneficio. La
+  FUENTE muestra un resumen.
 - Valor: `res<rol>Base + res<rol>Step × nivel`. Su pantalla muestra
   "Beneficio: …" y el del nivel siguiente; la fuente, un resumen.
 
@@ -224,3 +252,29 @@ Tunables en Editor → Balance → Pueblo (`res*`).
   `resRequestRep` (2) de relación y se le pasa el descontento.
 - Ignorado `resUnhappyDays` (4) días: "descontento", el beneficio baja un
   nivel (nunca debajo de la base). Nunca se va.
+- Subir la casa (CASA → INVERTIR): `resHouseGold` × nivel de oro,
+  `resHouseMat` × nivel tablas y `resHouseLoot` × nivel del primer
+  producto silvestre de su bioma. Cumple el pedido de casa. Sprite por
+  nivel (`items.vida_casa_<n>`).
+- Los demás pedidos (camino: la casa tiene camino a la plaza; faro,
+  huerta, lago: a menos de `resNearTiles` de la casa) se marcan con
+  CUMPLIDO cuando ya están.
+- Tienda: la semilla común siempre; la rara en su bioma o desde el nivel
+  `resStockRare`; la legendaria del bioma desde `resStockLegend` (al
+  triple de la rara). En el pueblo el anfitrión acepta `buySeed` de lo
+  que vende algún habitante con casa.
+
+### 10.5 Órdenes de entrega
+Ver roles.md § 3 (pedido diario de pescados y cosechas, XP de personaje
+con tope diario, oro, relación, puntos de árbol) y § 4 (encargo de forja
+de Brann).
+
+### 10.6 Cómo se aplica cada beneficio (anfitrión)
+- Ilda: la poción cura 45 % × (1 + beneficio) dentro y fuera de batalla.
+- Velda: al estar en un piso, sus primeros N PdI (N = beneficio) se ven
+  en el mapa.
+- Kael: la XP de cada batalla ganada × (1 + beneficio), para todos.
+- Brann: la forja de estadísticas cuesta beneficio % menos.
+- Oren: vida máxima × (1 + beneficio) y vida llena al volver de una
+  misión.
+- La Travesía y el tutorial no los usan.

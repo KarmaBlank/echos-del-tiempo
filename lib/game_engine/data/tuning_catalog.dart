@@ -295,6 +295,34 @@ const Map<String, TuningDef> kTuningDefaults = {
     'resRequestEveryDays': 2,
     'resUnhappyDays': 4,
     'resRequestRep': 2,
+    // v0.30.0: casa (tablas y botín del bioma por nivel), cercanía de
+    // los pedidos (tiles), stock por nivel y órdenes de entrega (XP de
+    // personaje con tope diario, oro, relación y un punto de árbol cada
+    // `orderSkillEvery` órdenes).
+    'resHouseMat': 3,
+    'resHouseLoot': 3,
+    'resNearTiles': 6,
+    'resStockRare': 1,
+    'resStockLegend': 3,
+    'orderEveryDays': 1,
+    'orderXpPerValue': 2.0,
+    'orderXpDayCap': 4000,
+    'orderGoldPerValue': 0.6,
+    'orderSkillEvery': 5,
+    'orderRep': 1,
+    'lifeLevelCharXp': 120,
+    // roles.md § 3 y § 4: dificultad de las órdenes por oficio y encargo
+    // de forja de Brann.
+    'orderRarityLevels': 12,
+    'orderAnyBiomeLevel': 20,
+    'orderQualityLevel': 15,
+    'comGold': 40,
+    'comMat': 4,
+    'comLoot': 5,
+    'comRareScore': 15,
+    'comEpicScore': 40,
+    'comLegendLevel': 40,
+    'comIlGap': 2,
     'resherbolariaBase': 10,
     'resherbolariaStep': 5,
     'resarchivistaBase': 1,

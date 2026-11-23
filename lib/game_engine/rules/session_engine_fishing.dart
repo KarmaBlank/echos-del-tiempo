@@ -239,6 +239,9 @@ extension _FishingOp on _Op {
     say('${p.name} pescó ${c.def.name} (${c.sizeCm} cm, ${c.rarity.label})'
         '${auto ? ' con la red' : ''}.');
     final lvl1 = FishingRules.level(prof);
-    if (lvl1 > lvl0) say('${p.name} subió Pesca a nivel $lvl1.');
+    if (lvl1 > lvl0) {
+      say('${p.name} subió Pesca a nivel $lvl1.');
+      lifeLevelXp(p, lvl1);
+    }
   }
 }

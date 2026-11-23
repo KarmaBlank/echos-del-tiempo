@@ -465,6 +465,9 @@ extension _RunOp on _Op {
       p.mp = p.maxMp.toDouble();
     }
     s.seq++;
+    e.battles
+      ..townPotion = 0
+      ..townHp = 0;
     final step = e.battles.start(
       party: [for (final p in players) _runMember(r, p, n)],
       enemyTypes: group,

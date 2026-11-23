@@ -48,6 +48,9 @@ extension _TutorialOp on _Op {
         if (s.players[id] case final q?) q,
     ];
     s.seq++;
+    e.battles
+      ..townPotion = 0
+      ..townHp = 0;
     final step = e.battles.start(
       party: [
         for (final q in members)

@@ -138,6 +138,10 @@ class CraftRules {
   static int forgeCost(WeaponDef w, Rarity r, int level) =>
       jsRound(math.max(w.price, 200) * 0.22 * (level + 1) * r.costFactor);
 
+  /// [cost] con el descuento [discount] (fracción, 0 a 0,9).
+  static int discounted(int cost, double discount) =>
+      jsRound(cost * (1 - discount.clamp(0.0, 0.9)));
+
   /// Peso del tier para los costos: T5 1, T4 2, T3 3, T2 5, T1 8, fijo 8.
   static int tierCost(int tier) => switch (tier) {
         5 => 1,
@@ -292,7 +296,10 @@ class CraftRules {
 
   /// Subir 1 nivel [stat] del arma [uid]: tope 5 por estadística y tope
   /// total según rareza. Cada 2 niveles totales la pasiva sube 1.
-  CraftResult forge(PlayerProfile p, String uid, UpgradeStat stat) {
+  /// [discount]: lo que descuenta Brann (0,05 = 5 %; overworld_biomes.md
+  /// § 10.6).
+  CraftResult forge(PlayerProfile p, String uid, UpgradeStat stat,
+      {double discount = 0}) {
     final it = p.itemByUid(uid);
     if (it == null) return const CraftResult.fail('No la tienes');
     final w = items.baseOf(it);
@@ -306,7 +313,7 @@ class CraftRules {
     if (it.forgeLevel >= cap) {
       return CraftResult.fail('Tope de forja ($cap)');
     }
-    final cost = forgeCost(w, it.rarity, l);
+    final cost = discounted(forgeCost(w, it.rarity, l), discount);
     final after = it.copyWith(forge: it.forge.withLevel(stat, l + 1));
     return _done(p, it, after, credits: cost);
   }

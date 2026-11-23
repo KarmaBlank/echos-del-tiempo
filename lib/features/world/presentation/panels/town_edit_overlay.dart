@@ -2,10 +2,13 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
 import '../../../../game_engine/data/construction_catalog.dart';
+import '../../../../game_engine/data/biomes_catalog.dart';
 import '../../../../game_engine/data/fishing_catalog.dart';
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/rules/town_plan.dart';
 import '../../../../game_engine/rules/helper_rules.dart';
+import '../../../../game_engine/models/session_action.dart' show TownOp;
+import '../../../../game_engine/rules/resident_rules.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../session_controller.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
@@ -238,13 +241,26 @@ class TownEditOverlay extends StatelessWidget {
         return col([
           const DsSectionHeader('CONSTRUIR'),
           for (final d in kConstructions)
-            DsListRow(
-              key: ValueKey('town-edit-build-${d.id}'),
-              compact: true,
-              title: d.name,
-              detail: '${d.w}×${d.h} · ${d.detail}',
-              onTap: () => c.editChoose(d.id),
-            ),
+            Builder(builder: (_) {
+              // La CASA cuesta oro y tablas (town_editor.md § 3.4).
+              final casa = d.kind == BuildKind.casa;
+              final p = c.view?.me?.profile;
+              final cost = ResidentRules.placeCost();
+              final why = !casa
+                  ? null
+                  : p == null
+                      ? 'Sin personaje'
+                      : HelperRules.cannotPay(p, cost);
+              return DsListRow(
+                key: ValueKey('town-edit-build-${d.id}'),
+                compact: true,
+                title: d.name,
+                detail: '${d.w}×${d.h} · ${d.detail}'
+                    '${casa ? ' · ${HelperRules.costText(cost)}' : ''}',
+                enabled: why == null,
+                onTap: why == null ? () => c.editChoose(d.id) : null,
+              );
+            }),
           Builder(builder: (_) {
             final p = c.view?.me?.profile;
             final cost = TownRules.faroCost;
@@ -301,6 +317,46 @@ class TownEditOverlay extends StatelessWidget {
           ]);
         }
         if (b == null) return null;
+        if (b.kind == BuildKind.casa) {
+          // Casa (town_editor.md § 3.4): a quién se le asigna.
+          final living = ResidentRules.living(town);
+          return col([
+            DsSectionHeader('CASA · NIVEL ${b.level}'),
+            Text(
+                b.resident == null
+                    ? 'Vacía. Asignásela a un habitante invitado.'
+                    : 'Vive ${biomeNpcName(b.resident!)}.',
+                key: const ValueKey('town-edit-info'),
+                style: DsText.detail()),
+            SizedBox(height: DsSpace.xs),
+            Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+              for (final n in living)
+                DsButton('ASIGNAR A ${n.name.toUpperCase()}',
+                    key: ValueKey('town-edit-assign-${n.id}'),
+                    size: DsButtonSize.compact,
+                    onPressed: b.resident == n.id
+                        ? null
+                        : () =>
+                            c.residentOp(TownOp.assign, n.id, target: b.id)),
+              if (living.isEmpty)
+                Text('Nadie vive en el pueblo todavía: invitá a alguien '
+                    'desde su bioma.',
+                    style: DsText.detail()),
+            ]),
+            SizedBox(height: DsSpace.xs),
+            Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
+              DsButton('MOVER',
+                  key: const ValueKey('town-edit-move'),
+                  size: DsButtonSize.compact,
+                  onPressed: c.editStartMove),
+              DsButton('BORRAR',
+                  key: const ValueKey('town-edit-delete'),
+                  size: DsButtonSize.compact,
+                  onPressed: () => c.editStep(TownEditStep.confirmDelete)),
+              cancel(),
+            ]),
+          ]);
+        }
         final lake = b.kind == BuildKind.lago;
         return col([
           DsSectionHeader(b.kind.label),
@@ -427,9 +483,16 @@ class TownEditOverlay extends StatelessWidget {
         final lake = b.kind == BuildKind.lago;
         final n = lake ? b.stockTotal : TownRules.seedsBack(b);
         return col([
-          DsSectionHeader(lake ? 'BORRAR LAGO' : 'BORRAR HUERTA'),
+          DsSectionHeader(b.kind == BuildKind.casa
+              ? 'BORRAR CASA'
+              : lake
+                  ? 'BORRAR LAGO'
+                  : 'BORRAR HUERTA'),
           Text(
-              lake
+              b.kind == BuildKind.casa
+                  ? 'Se pierde la casa y su nivel. Quien vivía queda sin '
+                      'casa (sigue en el pueblo, sin beneficio).'
+                  : lake
                   ? (n > 0
                       ? 'Se pierden los $n peces soltados en este lago.'
                       : 'El lago no tiene peces soltados.')

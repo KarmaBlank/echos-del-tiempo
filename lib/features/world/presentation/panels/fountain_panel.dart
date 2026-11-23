@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/panel_frame.dart';
 import '../../../../game_engine/models/town_build.dart';
+import '../../../../game_engine/rules/resident_rules.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 
@@ -39,7 +40,20 @@ class FountainPanel extends StatelessWidget {
       ('fountain-travel', 'MAPA DE VIAJE',
           'Viajá con el grupo al Bosque y a otros lugares.', null,
           () => c.openPanel(WorldPanel.travel)),
+      // Registro de encargos de los habitantes (overworld_biomes.md § 10.2).
+      ('fountain-quests', 'REGISTRO DE ENCARGOS',
+          'Encargos, pedidos y órdenes de cada habitante.', null,
+          () => c.openPanel(WorldPanel.questLog)),
     ];
+    // Resumen de los beneficios permanentes (§ 10.3).
+    final town = c.town;
+    final living = ResidentRules.living(town);
+    final summary = living.isEmpty
+        ? 'Habitantes: nadie vive en el pueblo todavía.'
+        : 'Habitantes: ${[
+            for (final n in living)
+              '${n.name}: ${ResidentRules.tier(town.resident(n.id)) < 0 ? 'sin casa' : ResidentRules.benefitText(n, ResidentRules.tier(town.resident(n.id)))}'
+          ].join(' · ')}';
     return PanelFrame(
       key: const ValueKey('panel-fountain'),
       title: 'FUENTE RÚNICA',
@@ -55,6 +69,13 @@ class FountainPanel extends StatelessWidget {
           spacing: DsSpace.sm,
           runSpacing: DsSpace.sm,
           children: [
+            SizedBox(
+              width: box.maxWidth,
+              child: Text(summary,
+                  key: const ValueKey('fountain-residents'),
+                  softWrap: true,
+                  style: DsText.detail(DsColors.textSecondary)),
+            ),
             for (final (key, label, line, why, go) in actions)
               SizedBox(
                 width: w,

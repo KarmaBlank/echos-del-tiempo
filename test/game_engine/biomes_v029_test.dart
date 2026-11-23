@@ -59,9 +59,9 @@ void main() {
     expect(sad.unhappy, isTrue);
     expect(ResidentRules.tier(sad), ResidentRules.tier(r) - 1);
     final ok = ResidentRules.fulfill(sad, 21);
-    expect(ok.house, 2);
+    expect(ok.request, isNull);
     expect(ok.unhappy, isFalse);
-    expect(ResidentState.fromJson(ok.toJson())!.house, 2);
+    expect(ResidentState.fromJson(ok.toJson()), ok);
     expect(ResidentRules.benefit(NpcRole.herbolaria, 1), greaterThan(
         ResidentRules.benefit(NpcRole.herbolaria, 0)));
   });

@@ -661,7 +661,21 @@ enum TownOp {
   /// v0.28.0 (protocolo 50): pedir / soltar el candado de la edición
   /// del pueblo (town_editor.md § 1.3).
   lock,
-  unlock
+  unlock,
+
+  /// v0.30.0 (protocolo 51): habitantes (overworld_biomes.md § 10), con
+  /// [TownAction.id] = habitante. `assign`: [TownAction.target] = casa;
+  /// `gift`: [TownAction.target] = producto.
+  invite,
+  assign,
+  gift,
+  turnIn,
+  fulfil,
+  invest,
+  order,
+
+  /// Encargo de forja de Brann (roles.md § 4): un arma de tu clase.
+  commission
 }
 
 /// `town` (town_editor.md § 8): [id] = lado al ampliar (`n`/`s`/`e`/`o`),

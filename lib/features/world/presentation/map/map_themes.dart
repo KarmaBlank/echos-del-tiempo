@@ -326,6 +326,9 @@ abstract final class TownPalette {
   static const foam = Color(0x66FFFFFF);
   static const signBoard = Color(0xFFC08A4A);
   static const label = Color(0xFFFFF3C4);
+
+  /// "!" de un habitante con pedido u orden (overworld_biomes.md § 10.4).
+  static const request = Color(0xFFFFC83D);
 }
 
 /// Colores de la edición del pueblo (town_editor.md § 1.3).

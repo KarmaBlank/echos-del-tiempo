@@ -121,7 +121,11 @@ abstract final class TownRules {
       final v = int.tryParse(b.id.substring(1)) ?? 0;
       if (v >= n) n = v + 1;
     }
-    return '${k == BuildKind.lago ? 'l' : 'h'}$n';
+    return '${switch (k) {
+      BuildKind.lago => 'l',
+      BuildKind.huerta => 'h',
+      BuildKind.casa => 'c',
+    }}$n';
   }
 
   static Map<String, int> _sum(Map<String, int> a, Map<String, int> b) {
@@ -179,7 +183,7 @@ abstract final class TownRules {
       while (grew) {
         grew = false;
         for (final o in [...rest]) {
-          if (o.kind != b.kind) continue;
+          if (o.kind != b.kind || b.kind == BuildKind.casa) continue;
           final touch = o.parts
               .any((p) => merged.parts.any((q) => p.touches(q)));
           if (!touch) continue;
@@ -709,6 +713,7 @@ abstract final class TownRules {
       {double r = 18}) {
     final (ox, oy) = s.origin;
     for (final b in s.builds) {
+      if (b.kind == BuildKind.casa) continue;
       final (cx, cy) = chestOf(s, b);
       final px = (cx + ox + 0.5) * 16, py = (cy + oy + 0.5) * 16;
       if ((px - x).abs() <= r && (py - y).abs() <= r) return b;
