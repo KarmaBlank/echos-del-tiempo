@@ -273,8 +273,7 @@ class MapGame extends Game {
     if (e.center) {
       // Elegir dónde contratar: el pueblo entero (si entra) y centrado.
       e.center = false;
-      editZoom = editZooms.firstWhere(
-          (z) => mw0 <= vw * z && mh0 <= vh * z,
+      editZoom = editZooms.firstWhere((z) => mw0 <= vw * z && mh0 <= vh * z,
           orElse: () => editZooms.last);
       camX = (mw0 - vw * editZoom) / 2;
       camY = (mh0 - vh * editZoom) / 2;
@@ -789,7 +788,8 @@ class MapGame extends Game {
     if (map.lobby && map.place != null) {
       // Exterior de bioma (overworld_biomes.md § 3): sus carteles.
       var rank = 0;
-      for (final (txt, x, y) in biomeLayout(map.place)?.labels ?? const <(String, int, int)>[]) {
+      for (final (txt, x, y)
+          in biomeLayout(map.place)?.labels ?? const <(String, int, int)>[]) {
         _rankedText(
             c, txt, (x + 0.5) * ts, y * ts - 4, TownPalette.label, 6, rank++);
       }
@@ -830,19 +830,19 @@ class MapGame extends Game {
       }
       // La huerta y los ayudantes son del pueblo, no de los exteriores.
       if (map.place == null) {
-      farm.drawPlots(c, s.town, worldView, t);
-      farm.drawHelpers(
-          c,
-          s.town,
-          s.time,
-          t,
-          (id) => sprites.lifeIcon(id, 'herramienta'),
-          (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
-          hover: controller.hoverHelper,
-          markOf: _npcMark);
-      _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
-      _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
-      _drawLandmarkSprite(c, map, TownSpot.forge, 'forja');
+        farm.drawPlots(c, s.town, worldView, t);
+        farm.drawHelpers(
+            c,
+            s.town,
+            s.time,
+            t,
+            (id) => sprites.lifeIcon(id, 'herramienta'),
+            (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
+            hover: controller.hoverHelper,
+            markOf: _npcMark);
+        _drawLandmarkSprite(c, map, TownSpot.workshop, 'taller_oficios');
+        _drawLandmarkSprite(c, map, TownSpot.armory, 'armeria');
+        _drawLandmarkSprite(c, map, TownSpot.forge, 'forja');
       } else if (biomeLayout(map.place) case final lay?
           when !s.town.resident(lay.npc.id).invited) {
         // Habitante del bioma (overworld_biomes.md § 9); si ya se mudó al
@@ -852,12 +852,14 @@ class MapGame extends Game {
         if (im != null) {
           final w = im.width.toDouble(), h = im.height.toDouble();
           final cx = (nx + 0.5) * ts, bottom = (ny + 1) * ts;
-          c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+          c.drawImageRect(
+              im,
+              Rect.fromLTWH(0, 0, w, h),
               Rect.fromLTWH(cx - w / 2, bottom - h, w, h),
               SpriteCatalog.pixelPaint());
         }
-        _rankedText(c, lay.npc.name.toUpperCase(), (nx + 0.5) * ts,
-            ny * ts - 4, TownPalette.label, 6, 899);
+        _rankedText(c, lay.npc.name.toUpperCase(), (nx + 0.5) * ts, ny * ts - 4,
+            TownPalette.label, 6, 899);
         drawNpcMark(
             (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 901),
             _npcMark(lay.npc),
@@ -872,12 +874,14 @@ class MapGame extends Game {
           final im = sprites.lifeIcon(f.sprite, 'herramienta');
           if (im != null) {
             final w = im.width.toDouble(), h = im.height.toDouble();
-            c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+            c.drawImageRect(
+                im,
+                Rect.fromLTWH(0, 0, w, h),
                 Rect.fromLTWH(fx - w / 2, fy + 8 - h, w, h),
                 SpriteCatalog.pixelPaint());
           }
-          _rankedText(c, f.name.toUpperCase(), fx, fy - 12,
-              TownPalette.label, 6, 898);
+          _rankedText(
+              c, f.name.toUpperCase(), fx, fy - 12, TownPalette.label, 6, 898);
         }
       }
       // Objetivo del próximo E / clic (solo el jugador local).
@@ -961,12 +965,14 @@ class MapGame extends Game {
         continue;
       }
       _lastDrawn[p.id] = (px, py);
-      if (p.hp > 0 && (darkMap || night)) {
+      final wisp = p.hp > 0 &&
+          LightRules.wispActive(
+              toggled: p.wisp,
+              outdoor: outdoor,
+              night: SkyRules.isNight(s.town.sky));
+      if (p.hp > 0 && (darkMap || night || wisp)) {
         movingLights.add(LightSource(
-            px / ts,
-            py / ts,
-            LightRules.carried(
-                dark: darkMap, bonus: LightRules.wispBonusFor(p.wisp))));
+            px / ts, py / ts, LightRules.carried(dark: darkMap, wisp: wisp)));
       }
       final line = s.mode != SessionMode.lobby
           ? null
@@ -974,8 +980,11 @@ class MapGame extends Game {
               ? controller.mapFishing?.line
               : p.fishLine;
       if (line == null && mine) fishing.barRect = null;
-      if (p.hp > 0 && p.wisp) {
-        add(py + 0.5, () => _drawWisp(c, px, py, t, p.id.hashCode));
+      if (wisp) {
+        final w = _wispFollow(p.id, px, py);
+        add(py + 0.5, () => _drawWisp(c, w));
+      } else {
+        _wisps.remove(p.id);
       }
       add(py, () {
         hero(px, py);
@@ -1050,7 +1059,8 @@ class MapGame extends Game {
         if (b.floor == mission.floor) {
           add(b.homeY, () {
             actors.relic(c, b.homeX, b.homeY, t);
-            actors.text(c, 'OFRENDA', b.homeX, b.homeY - 22, ProtoColors.gold, 6);
+            actors.text(
+                c, 'OFRENDA', b.homeX, b.homeY - 22, ProtoColors.gold, 6);
           });
         }
       }
@@ -1122,21 +1132,21 @@ class MapGame extends Game {
       final lit = darkMap || dk > 0.05;
       if (lit && outdoor) {
         for (final (o, b) in sky.fireflies(worldView, t, particleDensity)) {
-          movingLights.add(LightSource(o.dx / ts, o.dy / ts,
-              kLightDefs[LightId.luciernaga]!, scale: b * dk));
+          movingLights.add(LightSource(
+              o.dx / ts, o.dy / ts, kLightDefs[LightId.luciernaga]!,
+              scale: b * dk));
         }
       }
       if (lit) {
         for (final l in floor) {
           if (!l.legendary || l.hidden) continue;
-          movingLights.add(LightSource(l.ground.x / ts, l.ground.y / ts,
-              kLightDefs[LightId.botin]!));
+          movingLights.add(LightSource(
+              l.ground.x / ts, l.ground.y / ts, kLightDefs[LightId.botin]!));
         }
       }
       final (ox, oy) = map.townOrigin;
-      final townLights = map.lobby && map.place == null
-          ? s.town.lights
-          : const <(int, int)>[];
+      final townLights =
+          map.lobby && map.place == null ? s.town.lights : const <(int, int)>[];
       if (ambient.$1 < 0.995 || ambient.$3 < 0.995) {
         light.draw(c, map, worldView,
             ambient: ambient,
@@ -1264,24 +1274,45 @@ class MapGame extends Game {
     actors.text(c, txt, vw / 2, 40, SkyPalette.forecast, 6);
   }
 
-  /// Llama errante (lighting.md § 3.1.1): una llamita que gira alrededor
-  /// del personaje dejando dos ecos detrás. [seed] desfasa la órbita.
-  void _drawWisp(Canvas c, double px, double py, double t, int seed) {
-    final ph = (seed % 628) / 100.0;
+  /// Llama errante por jugador: posición suavizada y estela.
+  final _wisps = <String, _Wisp>{};
+
+  /// Mueve la Llama errante de [id] (lighting.md § 3.1.1): flota sobre la
+  /// cabeza del personaje con un vaivén lento y lo sigue con retraso.
+  _Wisp _wispFollow(String id, double px, double py) {
+    final ph = (id.hashCode % 628) / 100.0;
+    final sec = t / 1000;
+    final tx =
+        px + math.sin(sec * 0.45 + ph) * 8 + math.sin(sec * 1.1 + ph * 2) * 3;
+    final ty = py - 24 + math.sin(sec * 1.6 + ph) * 2.5;
+    final w = _wisps[id];
+    if (w == null || (w.x - tx).abs() + (w.y - ty).abs() > 160) {
+      return _wisps[id] = _Wisp(tx, ty, t);
+    }
+    final dt = ((t - w.at) / 1000).clamp(0.0, 0.1);
+    final k = 1 - math.exp(-dt * 3.5);
+    w
+      ..x += (tx - w.x) * k
+      ..y += (ty - w.y) * k
+      ..at = t
+      ..push();
+    return w;
+  }
+
+  /// Dibuja la Llama errante [w] con dos ecos tenues detrás.
+  void _drawWisp(Canvas c, _Wisp w) {
+    final pulse = 1 + math.sin(t / 420) * 0.12;
     for (var k = 2; k >= 0; k--) {
-      final a = t * 2.2 + ph - k * 0.35;
-      final x = px + math.cos(a) * 14;
-      final y = py - 14 + math.sin(a) * 6 + math.sin(t * 5 + ph) * 1.5;
+      final (x, y) = w.echo(k * 8);
       final fade = 1.0 - k * 0.35;
       c.drawCircle(
           Offset(x, y),
-          5.0 * fade,
+          5.0 * fade * pulse,
           Paint()
             ..color = LightPalette.wispHalo.withValues(alpha: 0.35 * fade)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
       if (k == 0) {
-        c.drawCircle(Offset(x, y), 2.2,
-            Paint()..color = LightPalette.wispCore);
+        c.drawCircle(Offset(x, y), 2.2, Paint()..color = LightPalette.wispCore);
       }
     }
   }
@@ -1371,9 +1402,28 @@ class MapGame extends Game {
     final (ox, oy) = map.townOrigin;
     final w = im.width.toDouble(), h = im.height.toDouble();
     final cx = (l.x + ox + l.w / 2) * ts, bottom = (l.y + oy + l.h) * ts;
-    c.drawImageRect(im, Rect.fromLTWH(0, 0, w, h),
+    c.drawImageRect(
+        im,
+        Rect.fromLTWH(0, 0, w, h),
         Rect.fromLTWH((cx - w / 2).roundToDouble(), bottom - h, w, h),
         SpriteCatalog.pixelPaint());
   }
+}
 
+/// Estado de dibujo de una Llama errante: posición y estela corta.
+class _Wisp {
+  _Wisp(this.x, this.y, this.at);
+  double x, y, at;
+  final _trail = <(double, double)>[];
+
+  void push() {
+    _trail.add((x, y));
+    if (_trail.length > 20) _trail.removeAt(0);
+  }
+
+  /// Posición de hace [back] cuadros.
+  (double, double) echo(int back) {
+    if (back == 0 || _trail.isEmpty) return (x, y);
+    return _trail[math.max(0, _trail.length - 1 - back)];
+  }
 }

@@ -111,22 +111,36 @@ sala en la que estás con comodidad sin ver la siguiente (y con las
 sombras de § 2.1 lo de atrás de las esquinas sigue oculto). De noche al
 aire libre: radio 4.5, intensidad 0.6.
 
-### 3.1.1 Llama errante (v0.37.0)
+### 3.1.1 Llama errante (v0.37.0, v0.37.2)
 
-Una llamita que orbita al jugador; se prende y se apaga con L (fuera de
-batalla). Es el eco de una luz que todavía no se encendió: alumbra más,
-pero también se deja ver.
+Una llamita que acompaña al jugador. Es el eco de una luz que todavía no
+se encendió: alumbra más, pero en lo profundo también se deja ver.
 
-- Prendida, la luz que lleva suma `LightRules.wispBonus` (3 tiles) al
-  radio: `carried(dark:, bonus: LightRules.wispBonusFor(on))`.
-- Contra: si el lugar está oscuro (mazmorra oscura según `isDark`, o de
-  noche al aire libre, `SkyRules.isNight`), los enemigos lo detectan desde
-  `SessionEngine.aggroRange × LightRules.aggroFactor(wisp:, dark:)`
-  (× 1.5 prendida y en lo oscuro; × 1 en cualquier otro caso). Lo calcula
-  el host por jugador.
-- Dibujo: procedural (un punto de luz con halo que gira alrededor del
-  personaje, color `calida` del tema). Sin sprite.
-- Los demás la ven: el estado viaja en el snapshot (§ 8).
+- Cuándo está prendida: `LightRules.wispActive(toggled:, outdoor:, night:)`.
+  Al aire libre (mundo y pueblo, `SkyRules.outdoor`) va sola de noche
+  (`SkyRules.isNight`) y se apaga de día; L no hace nada ahí. En
+  mazmorras nunca es automática: se prende y se apaga con L (fuera de
+  batalla), como en v0.37.0.
+- Luz: `carried(dark:, wisp: true)` suma `LightRules.wispBonus`
+  (5 tiles) al radio y sube la intensidad a `wispIntensity` (1) como
+  mínimo. v0.37.2: antes solo sumaba 3 tiles al radio con la misma
+  intensidad; con la caída cuadrática la ganancia quedaba en la franja
+  tenue, bajo el umbral de penumbra (`seenLum` = 0.12), y en el pueblo
+  (intensidad 0.6) casi no se notaba. `visibleRadius(def)` mide hasta
+  dónde se distingue algo; con la Llama crece más de 2.5 tiles.
+- Contra: solo en mazmorra oscura (`isDark`) y prendida a mano, los
+  enemigos lo detectan desde `SessionEngine.aggroRange ×
+  LightRules.aggroFactor(wisp:, dark:, outdoor:)` (× 1.5). Al aire libre
+  de noche no castiga: es automática y no se puede apagar. Lo calcula el
+  host por jugador.
+- Movimiento: flota sobre la cabeza del personaje (unos 24 px arriba)
+  con un vaivén lento (senos de pocos ciclos por minuto) y lo sigue con
+  retraso suave (acercamiento exponencial). Deja dos ecos tenues de sus
+  posiciones recientes. Nada de órbitas rápidas.
+- Dibujo: procedural (punto de luz con halo, `LightPalette.wispCore` /
+  `wispHalo`). Sin sprite.
+- Los demás la ven: el estado a mano (`wisp`) viaja en el snapshot (§ 8);
+  la de la noche cada cliente la deduce del cielo.
 
 ### 3.2 Titileo
 

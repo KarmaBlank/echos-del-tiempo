@@ -83,31 +83,55 @@ abstract final class LightRules {
       kDarkThemes.contains(theme) ||
       (kDarkFloorThemes.contains(theme) && floor.isOdd);
 
-  /// Radio de la luz que lleva un jugador. [bonus]: gancho para
-  /// linternas, pasivas o bonos de habitantes (tiles extra; hoy 0).
-  static LightDef carried({required bool dark, double bonus = 0}) {
+  /// Luz que lleva un jugador. [bonus]: tiles extra de radio (linternas,
+  /// pasivas). [wisp]: con la Llama errante (lighting.md § 3.1.1) suma
+  /// [wispBonus] al radio y sube la intensidad a [wispIntensity] como
+  /// mínimo: estirar solo el radio dejaba la ganancia en la franja tenue
+  /// (caída cuadrática) y casi no se notaba.
+  static LightDef carried(
+      {required bool dark, double bonus = 0, bool wisp = false}) {
     final d = kLightDefs[dark ? LightId.jugadorOscuro : LightId.jugadorPueblo]!;
-    if (bonus == 0) return d;
+    final extra = bonus + (wisp ? wispBonus : 0);
+    if (extra == 0) return d;
     return LightDef(
-        radius: d.radius + bonus,
-        intensity: d.intensity,
+        radius: d.radius + extra,
+        intensity: wisp ? math.max(d.intensity, wispIntensity) : d.intensity,
         tint: d.tint,
         flicker: d.flicker);
   }
 
-  /// Tiles extra de radio con la Llama errante prendida (lighting.md
-  /// § 3.1.1).
-  static const wispBonus = 3.0;
+  /// Tiles extra de radio con la Llama errante (lighting.md § 3.1.1).
+  static const wispBonus = 5.0;
 
-  /// Bono de radio de [carried] según la Llama errante.
-  static double wispBonusFor(bool on) => on ? wispBonus : 0;
+  /// Intensidad mínima de la luz con la Llama errante.
+  static const wispIntensity = 1.0;
+
+  /// Si la Llama errante está prendida (lighting.md § 3.1.1): al aire
+  /// libre (mundo y pueblo) sola de noche, sin importar [toggled]; en
+  /// mazmorras, solo si el jugador la prendió con L ([toggled]).
+  static bool wispActive(
+          {required bool toggled,
+          required bool outdoor,
+          required bool night}) =>
+      outdoor ? night : toggled;
 
   /// Multiplicador del radio en que los enemigos detectan a un jugador:
-  /// con la Llama errante prendida en un lugar oscuro se lo ve de lejos
+  /// con la Llama errante prendida a mano en una mazmorra oscura se lo ve
+  /// de lejos. Al aire libre (la de la noche, automática) no castiga
   /// (lighting.md § 3.1.1).
   static const wispAggro = 1.5;
-  static double aggroFactor({required bool wisp, required bool dark}) =>
-      wisp && dark ? wispAggro : 1;
+  static double aggroFactor(
+          {required bool wisp, required bool dark, bool outdoor = false}) =>
+      wisp && dark && !outdoor ? wispAggro : 1;
+
+  /// Visibilidad mínima con la que se distingue algo (la de los enemigos
+  /// en la penumbra).
+  static const seenLum = 0.12;
+
+  /// Radio en tiles hasta donde la luz [d] supera [seenLum] (sin muros).
+  static double visibleRadius(LightDef d) => d.intensity <= seenLum
+      ? 0
+      : d.radius * (1 - math.sqrt(seenLum / d.intensity));
 
   /// Bloqueo según los tiles del mapa.
   static LightBlock blockOf(GameMap map) => (tx, ty) {

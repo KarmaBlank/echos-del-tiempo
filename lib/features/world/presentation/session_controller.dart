@@ -753,6 +753,12 @@ class SessionController extends StateNotifier<SessionView?> {
 
   GameMap get map => engine.mapFor(_s ?? engine.create());
 
+  /// Al aire libre la Llama errante va sola (lighting.md § 3.1.1).
+  bool _wispOutdoor() {
+    final m = map;
+    return SkyRules.outdoor(m.theme, town: m.lobby);
+  }
+
   // ------------------------------------------------------------------
   // Ciclo de vida
   // ------------------------------------------------------------------
@@ -2745,8 +2751,11 @@ class SessionController extends StateNotifier<SessionView?> {
       toggleInventory();
       return true;
     }
-    // L: Llama errante (lighting.md § 3.1.1).
-    if (key == LogicalKeyboardKey.keyL && s.mode != SessionMode.battle) {
+    // L: Llama errante (lighting.md § 3.1.1). Al aire libre va sola de
+    // noche: L solo cuenta en mazmorras.
+    if (key == LogicalKeyboardKey.keyL &&
+        s.mode != SessionMode.battle &&
+        !_wispOutdoor()) {
       _apply(WispAction(!(s.players[localId]?.wisp ?? false)));
       return true;
     }
