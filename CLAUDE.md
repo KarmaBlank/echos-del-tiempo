@@ -9,6 +9,10 @@ primera tarea real acá: validar que compila y arreglar lo que falle.
 
 ## Decisiones de arquitectura (ya tomadas, no las reabras sin preguntar)
 
+- **Monorepo de juegos (plan).** El repo pasa a ser un monorepo Melos
+  (pub workspaces) con `games/` (un juego por app), `apps/` (un editor por
+  juego) y `packages/` compartidos. Paquetes, grafo, mapeo desde `lib/` y
+  migración por PRs: `docs/specs/monorepo.md`.
 - **Clean Architecture + Feature-First.** `lib/features/<feature>/{domain,data,presentation}`.
 - **Netcode agnóstico vía interfaz.** `lib/netcode/contracts/net_session.dart`
   (`NetSession`) es lo único que `game_engine/` y `features/*` conocen
