@@ -731,6 +731,7 @@ class SessionController extends StateNotifier<SessionView?> {
   bool _started = false;
 
   WorldPanel? _panel;
+  WorldPanel? _shownPanel;
   bool _autoChar = false;
   SessionMode? _lastMode;
   final _messages = <String>[];
@@ -3872,6 +3873,7 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Marca [f] como guardado en curso para el aviso del HUD.
   Future<T> _tracked<T>(Future<T> f) {
+    if (!_announceSaves) return f;
     _beginSave();
     return f.whenComplete(_endSave);
   }
@@ -3919,14 +3921,41 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Se juega la Travesía (la UI arma sus pantallas en vez del pueblo).
   bool get isRun => engine.gameMode == GameModeKind.travesia;
 
+  /// Política de guardado (save_indicator.md § 1): una vez por día de
+  /// juego, al cerrar un menú ([_saveSoon] desde [_emit]; dentro del
+  /// menú no se guarda nada) y forzado al terminar misión / salir. Si un
+  /// guardado falló se reintenta cada [saveEvery] s.
   void _save({bool force = false}) {
     if (!_persist) return;
-    if (!force && _sinceSave < saveEvery) return;
+    final day = _s?.town.sky.day;
+    // Día 0 = cielo sin arrancar: pasar a 1 no es un día nuevo.
+    final newDay = day != null && (_savedDay ?? 0) > 0 && day != _savedDay;
+    if (day != null) _savedDay = day;
+    final soon = _saveSoonAt != null &&
+        DateTime.now().difference(_saveSoonAt!) < saveSoonWindow;
+    if (!soon) _saveSoonAt = null;
+    final retry = _saveError != null && _sinceSave >= saveEvery;
+    if (!force && !newDay && !soon && !retry) return;
+    _sinceSave = 0;
+    _announceSaves = true;
     for (final id in _companions.keys) {
-      if (_saveCompanion(id)) _sinceSave = 0;
+      _saveCompanion(id);
     }
     _saveLocal();
+    _announceSaves = false;
   }
+
+  int? _savedDay;
+  DateTime? _saveSoonAt;
+
+  /// Tras cerrar un menú se guarda lo que cambie en
+  /// este lapso (al cliente el perfil nuevo le llega con un snapshot).
+  static const saveSoonWindow = Duration(seconds: 2);
+
+  void _saveSoon() => _saveSoonAt = DateTime.now();
+
+  /// Los guardados de perfil en curso se muestran en el HUD.
+  bool _announceSaves = false;
 
   /// El compañero [id] si cambió; devuelve si mandó a escribir.
   bool _saveCompanion(String id) {
@@ -4078,6 +4107,9 @@ class SessionController extends StateNotifier<SessionView?> {
     if (mode == SessionMode.battle || mode == SessionMode.result) _panel = null;
     // El mapa en grande solo vale donde hay minimapa (campo / mundo).
     if (_panel == WorldPanel.map && !mapAvailable) _panel = null;
+    // Menú cerrado (o cambiado): se guarda lo hecho con él abierto.
+    if (_shownPanel != null && _panel != _shownPanel) _saveSoon();
+    _shownPanel = _panel;
 
     final (prompt, promptText) = _prompt();
     final prev = state;

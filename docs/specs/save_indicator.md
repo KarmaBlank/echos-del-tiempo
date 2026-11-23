@@ -22,12 +22,36 @@
 - Abajo a la izquierda del HUD del mundo, justo debajo del chat (o del
   registro de mensajes si el chat está oculto): ícono que gira en bucle +
   `Guardando… no cierres el juego`.
-- Se ve mientras haya cualquier escritura a disco en curso: pueblo del
-  mundo, perfil del jugador local, compañeros de la party y niebla.
-  Queda a la vista al menos 1,5 s (`savingMinVisible`) para poder leerlo.
+- Se ve en todos los guardados del perfil (ya son pocos, ver § 3), del
+  pueblo del mundo y de la niebla. Queda a la vista al menos 1,5 s
+  (`savingMinVisible`) para poder leerlo; sin timers, se recalcula en
+  cada paso del juego.
 - El cliente lo muestra cuando se guarda su propio perfil.
 - Ícono: `items.eco` del manifest (cargado por `SpriteCatalog` con los
   íconos de ítems), rotado en bucle; con REDUCIR MOVIMIENTO queda quieto.
   Texto con `DsText.detail`, sin negrita ni bordes redondeados, no toma
   el mouse.
 - `SessionView.saving` lleva el estado a la UI.
+
+## 3. Cuándo se guarda el perfil (v0.38.3)
+
+`SessionController._save`. Ya no hay autoguardado cada 2 s.
+
+- **Una vez por día de juego**: al cambiar `town.sky.day` (el reloj del
+  cielo). El paso del día 0 al 1 (el cielo arrancando) no cuenta.
+- **Al cerrar un menú o pantalla** (personaje, inventario, tiendas,
+  forja, diario, party, alijo, mapa…): `_emit` ve que `panel` deja de
+  ser el que estaba abierto y marca un guardado; durante los 2 s
+  siguientes (`saveSoonWindow`) se escribe todo lo que cambió, así al
+  cliente le da tiempo a recibir su perfil nuevo en un snapshot.
+  Mientras el menú sigue abierto no se guarda nada (comprar, vender,
+  equipar, forjar… se guardan al cerrarlo).
+- **Forzados** (como antes): fin de misión, volver al lobby, hazañas,
+  sacar a un compañero de la party, salir (`ExitGuard` / `dispose`).
+- **Pueblo**: al terminar la edición (§ 1).
+- Si una escritura falla se reintenta cada `saveEvery` (2 s) hasta
+  que entra.
+- El cliente guarda su propio perfil con las mismas reglas.
+- Riesgo aceptado: si el juego se cae (sin pasar por salir) se pierde
+  lo hecho fuera de menús desde el último guardado (como mucho un día
+  de juego).
