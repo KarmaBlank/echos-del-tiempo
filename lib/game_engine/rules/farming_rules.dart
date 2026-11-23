@@ -332,8 +332,12 @@ abstract final class FarmingRules {
   /// Una semilla al azar de la rareza [min] o mejor (sin legendarias).
   static String rareSeed(double Function() rand) {
     final pool = [
+      // Solo las del pueblo: las de cada bioma salen de su exterior
+      // (overworld_biomes.md § 3.3).
       for (final c in kCrops.values)
-        if (c.rarity == FishRarity.raro || c.rarity == FishRarity.epico) c.id
+        if (c.biome == kFarmStartBiome &&
+            (c.rarity == FishRarity.raro || c.rarity == FishRarity.epico))
+          c.id
     ];
     return pool[(rand() * pool.length).floor().clamp(0, pool.length - 1)];
   }

@@ -267,11 +267,17 @@ class BattleEngine {
     bool elite = false,
     String? triggeredBy,
     TurnRule turnRule = TurnRule.velocidad,
+    double roomExtra = 0,
   }) {
     // Vida en cooperativo (combo_balance.md § 3.3): 0.6 + 0.3 × jugadores
-    // (antes 0.55 + 0.45 × jugadores).
+    // (antes 0.55 + 0.45 × jugadores). [roomExtra]: jugadores de la sala
+    // que no están en la pelea, ya ponderados (overworld_biomes.md § 6).
     final curve = catalog.curve;
-    final mult = curve.groupHp(party.length);
+    final n = party.length;
+    double lerp(double Function(int) f) =>
+        f(n) + (f(n + 1) - f(n)) * roomExtra;
+    final mult = lerp(curve.groupHp);
+    final atkMult = lerp(curve.groupAtk);
     final solo = party.length == 1;
     final first = catalog.enemies[enemyTypes.first]!;
     // Jefe en solitario: escolta recortada (§ 3.3, ajuste del paso 5).
@@ -301,7 +307,7 @@ class BattleEngine {
         attack: jsRound(d.attack *
             (el ? 1.35 : 1) *
             (soloBoss ? curve.soloBossAtk : 1) *
-            curve.groupAtk(party.length)),
+            atkMult),
         critChance: el ? 0.15 : (d.boss ? 0.12 : 0.08),
         enemyType: d.id,
         elite: el,
@@ -505,13 +511,16 @@ class BattleEngine {
   /// Un jugador llega a mitad de batalla (`addPlayer` con `S.battle`):
   /// entra con su vida/maná y su primer turno en `reloj + IV`. Si ya
   /// estaba, no cambia nada.
-  BattleStep join(BattleState state, BattlePartyMember member) {
+  /// [delay]: intervalos extra de espera del refuerzo (overworld_biomes.md
+  /// § 5, `reinforceDelay`).
+  BattleStep join(BattleState state, BattlePartyMember member,
+      {double delay = 0}) {
     final s = state.copy();
     if (s.ended || s.party.any((c) => c.id == member.id)) {
       return BattleStep(s, const []);
     }
     final c = _playerCombatant(member);
-    c.nextTurn = s.clock + interval(c);
+    c.nextTurn = s.clock + interval(c) * (1 + math.max(0.0, delay));
     s.party.add(c);
     assignCombatantTags(s);
     return BattleStep(s, const []);

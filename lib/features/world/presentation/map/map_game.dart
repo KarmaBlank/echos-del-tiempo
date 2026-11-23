@@ -12,6 +12,7 @@ import '../../../../core/procedural/weapon_look.dart';
 import '../../../../core/settings/graphics.dart';
 import '../../../../game_engine/models/build_wants.dart';
 import '../../../../game_engine/data/town_layout.dart';
+import '../../../../game_engine/data/biomes_catalog.dart' show BosqueLayout;
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/town_build.dart' show kTownStrip;
 import '../../../../game_engine/models/game_session.dart';
@@ -736,7 +737,14 @@ class MapGame extends Game {
       actors.text(
           c, 'TIENDA', merchant.x, merchant.y - 34, const Color(0xFFFFD166), 6);
     }
-    if (map.lobby) {
+    if (map.lobby && map.place != null) {
+      // Exterior de bioma (overworld_biomes.md § 3): sus carteles.
+      var rank = 0;
+      for (final (txt, x, y) in BosqueLayout.labels) {
+        _rankedText(
+            c, txt, (x + 0.5) * ts, y * ts - 4, TownPalette.label, 6, rank++);
+      }
+    } else if (map.lobby) {
       // Lugares del pueblo (town_loop.md § 2.1): nombre sobre cada uno.
       final (ox, oy) = map.townOrigin;
       // Con prioridad: no se pisan (ui_style.md § "Etiquetas en el
@@ -767,6 +775,8 @@ class MapGame extends Game {
     }
     if (map.lobby) {
       fishing.drawShadows(c);
+      // La huerta y los ayudantes son del pueblo, no de los exteriores.
+      if (map.place == null) {
       farm.drawPlots(c, s.town, worldView, t);
       farm.drawHelpers(
           c,
@@ -776,6 +786,7 @@ class MapGame extends Game {
           (id) => sprites.lifeIcon(id, 'herramienta'),
           (txt, x, y, col, size) => _rankedText(c, txt, x, y, col, size, 900),
           hover: controller.hoverHelper);
+      }
       // Objetivo del próximo E / clic (solo el jugador local).
       if (controller.farmTarget case final ft?) {
         farm.drawTarget(c, ft.tiles, ft.ok);
@@ -950,7 +961,7 @@ class MapGame extends Game {
     lifeLevels.draw(c, t, controller.localId, (id) => _lastDrawn[id],
         (s, x, y, col, size) => actors.text(c, s, x, y, col, size));
 
-    if (map.lobby) {
+    if (map.lobby && map.place == null) {
       TownEditLayer.draw(c, controller, map,
           (s, x, y, col, size) => actors.text(c, s, x, y, col, size),
           view: worldView);

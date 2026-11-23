@@ -109,7 +109,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// el pueblo con los lugares en su sitio de siempre.
 /// 47 (v0.25.5): granjeros y pescadores con cofre por construcción
 /// (farming.md § 8); se va la auto-pesca.
-const kProtocolVersion = 47;
+/// 48 (v0.26.0): mapa de viaje y exteriores de bioma (overworld_biomes.md):
+/// `place` en el snapshot, `town.wild` y acciones `travel` / `forage`.
+const kProtocolVersion = 48;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
