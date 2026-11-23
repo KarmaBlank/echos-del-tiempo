@@ -297,8 +297,9 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
       _game?.dismissNotices();
       return KeyEventResult.handled;
     }
-    // J: pliega / despliega la caja de objetivos (campo, sin panel).
-    if (event.logicalKey == LogicalKeyboardKey.keyJ &&
+    // O: pliega / despliega la caja de objetivos (campo, sin panel; J
+    // abre el DIARIO).
+    if (event.logicalKey == LogicalKeyboardKey.keyO &&
         view.mode == SessionMode.field &&
         view.panel == null) {
       toggleObjectives(ref);

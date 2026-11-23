@@ -389,7 +389,7 @@ void main() {
       _startZone1(c);
       await tester.pump();
       expect(find.text('[-]'), findsOneWidget);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyO);
       await tester.pump();
       expect(container.read(gameSettingsProvider).objectivesCollapsed, isTrue);
       expect(
@@ -397,7 +397,7 @@ void main() {
               of: find.byKey(const ValueKey('hud-objectives')),
               matching: find.text('[+]')),
           findsOneWidget);
-      await tester.sendKeyEvent(LogicalKeyboardKey.keyJ);
+      await tester.sendKeyEvent(LogicalKeyboardKey.keyO);
       await tester.pump();
       expect(container.read(gameSettingsProvider).objectivesCollapsed, isFalse);
     });
