@@ -623,11 +623,26 @@ abstract final class TownRules {
     ];
   }
 
-  /// El lugar de pesca del pescador [i] de [b] (repartidos por la orilla).
-  static (int, int) fisherSpot(TownBuild b, int i) {
-    final ring = shoreTiles(b);
-    final cap = math.max(1, helperCap(b));
-    return ring[(i * ring.length ~/ cap) % ring.length];
+  /// El lugar de pesca del pescador [i] de [b] (farming.md § 8.1): un
+  /// tile de la orilla pegado al agua (de lado, nunca en diagonal), libre
+  /// de otras construcciones, del cartel y del cofre; el primero, el más
+  /// cercano al cartel y su cofre, los demás cada vez más lejos.
+  static (int, int) fisherSpot(TownState s, TownBuild b, int i) {
+    final sign = TownPlan.signOf(s, b), chest = chestOf(s, b);
+    bool wet(int x, int y) => b.contains(x, y);
+    final ring = [
+      for (final (x, y) in shoreTiles(b))
+        if ((wet(x + 1, y) || wet(x - 1, y) || wet(x, y + 1) || wet(x, y - 1)) &&
+            (x, y) != sign &&
+            (x, y) != chest &&
+            !s.builds.any((o) => o.contains(x, y)))
+          (x, y)
+    ];
+    if (ring.isEmpty) return shoreTiles(b).first;
+    int d((int, int) p) =>
+        (p.$1 - sign.$1).abs() + (p.$2 - sign.$2).abs();
+    ring.sort((a, z) => d(a).compareTo(d(z)));
+    return ring[i % ring.length];
   }
 
   /// Dónde está el ayudante [i] de [b] en el segundo [time] de la sala
@@ -639,7 +654,7 @@ abstract final class TownRules {
     final (ox, oy) = s.origin;
     final (ax, ay) = b.anchor;
     if (b.kind == BuildKind.lago) {
-      final (x, y) = fisherSpot(b, i);
+      final (x, y) = fisherSpot(s, b, i);
       return (x: (x + ox + 0.5) * 16, y: (y + oy + 0.5) * 16, work: true);
     }
     final area = helperArea(b, i);

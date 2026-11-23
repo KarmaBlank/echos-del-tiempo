@@ -365,7 +365,7 @@ class MapFarmLayer {
             for (final (x, y) in TownRules.helperArea(b, h.index))
               (x + b.anchor.$1, y + b.anchor.$2)
           ]
-        : [TownRules.fisherSpot(b, h.index)];
+        : [TownRules.fisherSpot(town, b, h.index)];
     for (final (x, y) in tiles) {
       c.drawRect(
           Rect.fromLTWH((x + ox) * ts + 0.5, (y + oy) * ts + 0.5, ts - 1, ts - 1),

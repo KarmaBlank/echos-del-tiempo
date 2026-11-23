@@ -690,6 +690,7 @@ class GameSession {
     this.worldName,
     this.town = const TownState(),
     this.place,
+    this.townEditor,
   })  : players = players ?? LinkedHashMap(),
         ground = ground ?? [],
         leaveReady = leaveReady ?? {},
@@ -803,6 +804,10 @@ class GameSession {
   /// Lo decide el anfitrión; todos viajan juntos.
   String? place;
 
+  /// Quién está editando el pueblo (town_editor.md § 1.3, protocolo 50):
+  /// el candado lo tiene el anfitrión; uno a la vez. `null` = nadie.
+  String? townEditor;
+
   /// Modo de combate elegido por el anfitrión (turn_modes.md § 1);
   /// `null` = el de por defecto según haya uno o varios jugadores.
   CombatMode? combatMode;
@@ -900,5 +905,6 @@ class GameSession {
         worldName: worldName,
         town: town,
         place: place,
+        townEditor: townEditor,
       );
 }

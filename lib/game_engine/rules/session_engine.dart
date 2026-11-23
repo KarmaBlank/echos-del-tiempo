@@ -836,6 +836,7 @@ class _Op {
 
   void removePlayer(String id) {
     final p = s.players.remove(id)!;
+    if (s.townEditor == id) s.townEditor = null;
     runPlayerLeft(id);
     // Lo suyo que quedó en el piso lo recupera su dispositivo al salir
     // (loot.md § 4b): el host lo saca para no duplicarlo.
@@ -2209,6 +2210,7 @@ class _Op {
 
   void tick(double dt) {
     s.time += dt;
+    releaseTownLock();
     farmTick(dt);
     final m = s.mission;
     if (m != null &&

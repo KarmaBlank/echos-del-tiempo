@@ -656,7 +656,12 @@ enum TownOp {
   collectChest,
 
   /// v0.27.0: mejora [id] (`HelperUpgrade`) del ayudante [x] de [target].
-  helperUpgrade
+  helperUpgrade,
+
+  /// v0.28.0 (protocolo 50): pedir / soltar el candado de la edición
+  /// del pueblo (town_editor.md § 1.3).
+  lock,
+  unlock
 }
 
 /// `town` (town_editor.md § 8): [id] = lado al ampliar (`n`/`s`/`e`/`o`),

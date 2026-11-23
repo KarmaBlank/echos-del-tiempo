@@ -321,7 +321,11 @@ prototipo (pantalla 480×288, tile 16 px), con `(x, y)` = pies del actor.
   (loot v2: cualquier clase equipa cualquier arma); sin tipo conocido,
   el arma de siempre de la clase (`guerrero` espada, `maga` báculo,
   `paladin` espada+escudo, `tirador` rifle).
-  - **Dibujo**: el ícono procedural 8×8 del tipo (`kItemIconRows`,
+  - **Dibujo** (v0.28.0): el PNG del tipo del manifest (`items.<clave>`
+    + `_acento` teñido por rareza, el mismo del inventario;
+    `tool/export_item_icons.dart`) en la celda 8×8 del agarre, con la
+    identidad del arma encima; sin PNG cargado (o formas solo-en-mano
+    sin PNG), el ícono procedural 8×8 del tipo (`kItemIconRows`,
     `lib/core/procedural/item_icons.dart`) pintado con las perillas de su
     entrada del Editor (`items.<tipo>`, game_editor.md § 7.5): recolorear
     un arma en el Editor cambia también el arma en mano. Ningún arte por

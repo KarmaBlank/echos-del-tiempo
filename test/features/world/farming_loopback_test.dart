@@ -58,9 +58,12 @@ void main() {
     for (var i = 0; i < 3; i++) {
       await tick(host, me);
     }
-    // Solo el dueño edita.
-    expect(me.enterTownEdit(), isFalse);
+    // Uno a la vez (town_editor.md § 1.3): edita el host y el cliente
+    // ve el botón bloqueado.
     expect(host.enterTownEdit(), isTrue);
+    await tick(host, me);
+    expect(me.cannotEditTown, 'Está editando Host');
+    expect(me.enterTownEdit(), isFalse);
     host.editClick(20, 19);
     expect(host.townEdit!.step, TownEditStep.options);
     expect(host.editSelected!.id, 'h0');

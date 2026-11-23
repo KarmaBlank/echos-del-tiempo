@@ -761,6 +761,16 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 50 (v0.28.0: candado de la edición del pueblo)
+
+- Snapshot: `ted` (opcional) = id de quien edita el pueblo.
+- `town` suma `lock` y `unlock` (sin campos). El anfitrión da el candado
+  si nadie lo tiene, lo suelta al salir de la edición, al irse de la
+  sala o al dejar el pueblo, y valida `expand` / `place` / `move` /
+  `remove` y los ayudantes contra quien lo tiene (sin candado, el
+  dueño). town_editor.md § 1.3.
+- Un cliente 49 no sabría quién edita: la sala no mezcla versiones.
+
 ## Mundo, protocolo 49 (v0.27.0: día, noche y clima)
 
 - `town` suma `sky` (`d` día, `c` reloj, `w` / `f` / `t` clima de hoy y su

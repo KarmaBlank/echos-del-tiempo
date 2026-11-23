@@ -92,6 +92,8 @@ class SessionJson {
         if (s.town.farmJson() case final t when t.isNotEmpty) 'town': t,
         // v0.26.0 (protocolo 48): exterior de bioma donde está el grupo.
         if (s.place != null) 'place': s.place,
+        // v0.28.0 (protocolo 50): quién edita el pueblo.
+        if (s.townEditor != null) 'ted': s.townEditor,
       };
 
   GameSession fromJson(Json j) {
@@ -142,6 +144,7 @@ class SessionJson {
       worldName: j.strOrNull('wname'),
       town: TownState.fromJson(j['town']),
       place: j.strOrNull('place'),
+      townEditor: j.strOrNull('ted'),
     );
   }
 

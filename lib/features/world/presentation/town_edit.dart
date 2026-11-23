@@ -49,6 +49,10 @@ class TownEdit {
   /// oeste; lo consume el mapa.
   (double, double)? shift;
 
+  /// Centrar la cámara en el pueblo al entrar (elegir dónde contratar,
+  /// farming.md § 8.1); lo consume el mapa.
+  bool center = false;
+
   /// Franja fantasma bajo el mouse (panel de info, § 1.3).
   TownSide? hoverSide;
 
