@@ -1307,6 +1307,8 @@ class SessionController extends StateNotifier<SessionView?> {
   /// Aviso compacto sobre las pociones (farming.md § 4, fishing.md § 4).
   String? get toolPrompt {
     if (_fishing case final f?) return fishingHint(f);
+    // Junto a un ayudante, su pantalla primero (antes que "Sin semillas…").
+    if (nearHelper != null) return WorldPrompt.helper.label;
     if (farmHint() case final h?) return h;
     if (canFish) return WorldPrompt.fishing.label;
     return null;
