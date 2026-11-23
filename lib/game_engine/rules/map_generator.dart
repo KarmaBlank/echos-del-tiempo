@@ -4,6 +4,8 @@ import '../models/mission_def.dart';
 import '../models/zone_def.dart';
 import '../data/biomes_catalog.dart';
 import '../data/town_layout.dart';
+import 'lantern_rules.dart';
+import 'light_rules.dart';
 import 'mulberry32.dart';
 import 'zone_generators.dart';
 import 'town_plan.dart';
@@ -389,6 +391,32 @@ abstract final class MapGenerator {
             z.gen, (seed + 7919 * f + 104729 * z.index).toSigned(32),
             last: f == n - 1, hasUp: f > 0),
     ];
+    // Faroles de los pisos oscuros (lighting.md § 5.5), en coordenadas
+    // del piso; se escriben en las filas y salen de los lugares de enemigos.
+    final lanterns = [
+      for (var f = 0; f < n; f++)
+        LightRules.isDark(z.theme, floor: f)
+            ? LanternRules.place(
+                gens[f], (seed + 7919 * f + 104729 * z.index).toSigned(32))
+            : const <(int, int)>[],
+    ];
+    final floorRows = [
+      for (var f = 0; f < n; f++)
+        if (lanterns[f].isEmpty)
+          gens[f].rows
+        else
+          [
+            for (var y = 0; y < gens[f].rows.length; y++)
+              lanterns[f].any((l) => l.$2 == y)
+                  ? [
+                      for (var x = 0; x < gens[f].rows[y].length; x++)
+                        lanterns[f].contains((x, y))
+                            ? Tile.lantern
+                            : gens[f].rows[y][x],
+                    ].join()
+                  : gens[f].rows[y],
+          ],
+    ];
     final height = gens.map((g) => g.height).reduce((a, b) => a > b ? a : b);
     final width =
         gens.fold(0, (a, g) => a + g.width) + floorGap * (gens.length - 1);
@@ -396,7 +424,8 @@ abstract final class MapGenerator {
     final rows = <String>[
       for (var y = 0; y < height; y++)
         [
-          for (final g in gens) y < g.height ? g.rows[y] : Tile.wall * g.width,
+          for (var f = 0; f < n; f++)
+            y < gens[f].height ? floorRows[f][y] : Tile.wall * gens[f].width,
         ].join(gap),
     ];
 
@@ -412,7 +441,10 @@ abstract final class MapGenerator {
       final g = gens[f];
       final last = f == gens.length - 1;
       final ar = sh(g.arena, ox);
-      final fspots = [for (final s in g.spots) (s.$1 + ox, s.$2)];
+      final fspots = [
+        for (final s in g.spots)
+          if (!lanterns[f].contains(s)) (s.$1 + ox, s.$2),
+      ];
       final down = g.stairsDown;
       floors.add(MapFloor(
         index: f,
@@ -437,6 +469,14 @@ abstract final class MapGenerator {
           for (final p in g.pois)
             p.shifted(ox, f, f * 100 + p.id,
                 newQuest: p.quest == null ? null : f * 100 + p.quest!),
+          for (var k = 0; k < lanterns[f].length; k++)
+            MapPoi(
+              id: LanternRules.idOf(f, k),
+              kind: PoiKind.lantern,
+              tx: lanterns[f][k].$1 + ox,
+              ty: lanterns[f][k].$2,
+              floor: f,
+            ),
         ],
         quests: [for (final q in g.quests) q.shifted(f, f * 100 + q.id)],
         chestSpots: [for (final c in g.chestSpots) (c.$1 + ox, c.$2)],

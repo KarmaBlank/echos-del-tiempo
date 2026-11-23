@@ -150,11 +150,16 @@ abstract final class Tile {
   static const brazier = 'B';
   static const brazierLit = 'b';
 
+  /// Farol de mazmorra oscura apagado / encendido (sólidos; lighting.md
+  /// § 5.5).
+  static const lantern = 'l';
+  static const lanternLit = 'n';
+
   /// Tiles de los puntos de interés de v0.6 (todos sólidos).
   static const poiTiles = {
     cracked, secretFloor, shrine, shrineUsed, waystone, waystoneOn, wind,
     shortcut,
-    brazier, brazierLit,
+    brazier, brazierLit, lantern, lanternLit,
   };
 
   /// Tiles sólidos fijos (sin la barrera, que depende de si está abierta,
@@ -163,7 +168,7 @@ abstract final class Tile {
     wall, water, counter, armory, merchant, tree, rock, lava, tombstone, gear,
     portal, statue, lostTower, fountain, fishing, sign, cracked, secretFloor, shrine, shrineUsed, waystone,
     waystoneOn, wind,
-    shortcut, brazier, brazierLit, forage, forageUsed, house,
+    shortcut, brazier, brazierLit, lantern, lanternLit, forage, forageUsed, house,
     workshop, shop,
   };
 
@@ -206,6 +211,10 @@ enum PoiKind {
   /// Reliquia perdida de una misión opcional (se levanta al tocarla; no
   /// es un tile).
   relic,
+
+  /// Farol de una mazmorra oscura: se enciende con E y alumbra fuerte
+  /// toda la misión (lighting.md § 5.5).
+  lantern,
 }
 
 /// Un punto de interés de un piso. Coordenadas del atlas (tiles).
