@@ -726,6 +726,10 @@ abstract final class SkyPalette {
 /// [tints] son las `tint` de `kLightDefs`. Tonos elegidos para que se
 /// distingan por brillo, no solo por matiz (seguros para daltonismo).
 abstract final class LightPalette {
+  /// Llama errante (lighting.md § 3.1.1): núcleo y halo.
+  static const wispCore = Color(0xFFFFF1D6);
+  static const wispHalo = Color(0xFFD2B8FF);
+
   static const tints = <String, Color>{
     'calida': Color(0xFFFFD9A0),
     'brasa': Color(0xFFFFB070),

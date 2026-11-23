@@ -963,7 +963,10 @@ class MapGame extends Game {
       _lastDrawn[p.id] = (px, py);
       if (p.hp > 0 && (darkMap || night)) {
         movingLights.add(LightSource(
-            px / ts, py / ts, LightRules.carried(dark: darkMap)));
+            px / ts,
+            py / ts,
+            LightRules.carried(
+                dark: darkMap, bonus: LightRules.wispBonusFor(p.wisp))));
       }
       final line = s.mode != SessionMode.lobby
           ? null
@@ -971,6 +974,9 @@ class MapGame extends Game {
               ? controller.mapFishing?.line
               : p.fishLine;
       if (line == null && mine) fishing.barRect = null;
+      if (p.hp > 0 && p.wisp) {
+        add(py + 0.5, () => _drawWisp(c, px, py, t, p.id.hashCode));
+      }
       add(py, () {
         hero(px, py);
         // Cerca de la huerta sale la azada equipada (farming.md § 4).
@@ -1256,6 +1262,28 @@ class MapGame extends Game {
     c.drawRect(const Rect.fromLTWH(vw / 2 - 110, 30, 220, 14),
         Paint()..color = SkyPalette.forecastBack);
     actors.text(c, txt, vw / 2, 40, SkyPalette.forecast, 6);
+  }
+
+  /// Llama errante (lighting.md § 3.1.1): una llamita que gira alrededor
+  /// del personaje dejando dos ecos detrás. [seed] desfasa la órbita.
+  void _drawWisp(Canvas c, double px, double py, double t, int seed) {
+    final ph = (seed % 628) / 100.0;
+    for (var k = 2; k >= 0; k--) {
+      final a = t * 2.2 + ph - k * 0.35;
+      final x = px + math.cos(a) * 14;
+      final y = py - 14 + math.sin(a) * 6 + math.sin(t * 5 + ph) * 1.5;
+      final fade = 1.0 - k * 0.35;
+      c.drawCircle(
+          Offset(x, y),
+          5.0 * fade,
+          Paint()
+            ..color = LightPalette.wispHalo.withValues(alpha: 0.35 * fade)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3));
+      if (k == 0) {
+        c.drawCircle(Offset(x, y), 2.2,
+            Paint()..color = LightPalette.wispCore);
+      }
+    }
   }
 
   /// Primera mitad de la caída: el héroe se achica (a 0.2) y se desvanece

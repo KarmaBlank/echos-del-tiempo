@@ -213,6 +213,8 @@ class SessionJson {
         if (p.tutorialVersion != 0) 'tv': p.tutorialVersion,
         // Protocolo 43: pesca en el mapa (fishing.md § 7).
         if (p.fishLine case final l?) 'fl': l.toJson(),
+        // Protocolo 60: Llama errante (lighting.md § 3.1.1).
+        if (p.wisp) 'wi': true,
         // Protocolo 21: confirmaciones del alijo (characters.md § 3.2).
         if (p.stashAcks.isNotEmpty)
           'sk': [
@@ -258,6 +260,7 @@ class SessionJson {
         tutorialVersion: j.intOrNull('tv') ?? 0,
         stashAcks: _stashAcks(j['sk']),
         fishLine: FishLine.fromJson(j['fl']),
+        wisp: j['wi'] == true,
       );
 
   // ------------------------------------------------------------------

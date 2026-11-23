@@ -95,6 +95,20 @@ abstract final class LightRules {
         flicker: d.flicker);
   }
 
+  /// Tiles extra de radio con la Llama errante prendida (lighting.md
+  /// § 3.1.1).
+  static const wispBonus = 3.0;
+
+  /// Bono de radio de [carried] según la Llama errante.
+  static double wispBonusFor(bool on) => on ? wispBonus : 0;
+
+  /// Multiplicador del radio en que los enemigos detectan a un jugador:
+  /// con la Llama errante prendida en un lugar oscuro se lo ve de lejos
+  /// (lighting.md § 3.1.1).
+  static const wispAggro = 1.5;
+  static double aggroFactor({required bool wisp, required bool dark}) =>
+      wisp && dark ? wispAggro : 1;
+
   /// Bloqueo según los tiles del mapa.
   static LightBlock blockOf(GameMap map) => (tx, ty) {
         if (!map.contains(tx, ty)) return double.infinity;

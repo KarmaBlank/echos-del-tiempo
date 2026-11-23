@@ -139,7 +139,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 59 (v0.35.0): Ecos por zona (ecos_zone.md): portales de Ecos en los
 /// exteriores (cambia el plano de cada bioma), `travel` con `ez` y perfil
 /// con `ezt` (tier completado por zona).
-const kProtocolVersion = 59;
+/// 60 (v0.37.0): Llama errante (lighting.md § 3.1.1): acción `wisp` y
+/// `wi` en el jugador del snapshot.
+const kProtocolVersion = 60;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /
