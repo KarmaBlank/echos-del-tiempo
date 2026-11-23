@@ -1,3 +1,4 @@
+import '../../../../core/text/text_detail.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
@@ -241,7 +242,8 @@ class _TraderPanelState extends State<TraderPanel> {
             sell: true,
             DsListRow(
               key: ValueKey('trade-row-${f.id}'),
-              leading: LifeIcon(f.id,
+              leading: LifeIcon(
+                  f.id,
                   f.biome == kWaterJunkBiome
                       ? LifeIconKind.basura
                       : LifeIconKind.pescado),
@@ -348,13 +350,22 @@ class _TraderPanelState extends State<TraderPanel> {
               titleColor: fishRarityColor(d.rarity),
               detail: 'Mejora las chances: normal / rara / épica / legendaria '
                   '(+${t.d('fert${d.key}Bias')}) · tenés ${f?.fertCount(d.id) ?? 0}',
-              tooltip: DsTooltipCard(title: d.name, children: [
-                Text(
-                    'Mejora las chances: normal / rara / épica / legendaria. '
-                    'Se usa con F sobre un cultivo y lo hace crecer '
-                    '× ${t.d('fert${d.key}Speed')}.',
-                    style: DsText.detail()),
-              ]),
+              tooltip: DsTooltipCard(
+                  title: d.name,
+                  detail:
+                      'Mejora las chances: normal / rara / épica / legendaria. '
+                      'Se usa con F sobre un cultivo y lo hace crecer '
+                      '× ${t.d('fert${d.key}Speed')}.',
+                  children: [
+                    Text(
+                        TextDetail.isSummary
+                            ? 'Mejora la cosecha y la hace crecer más rápido. '
+                                'Usalo con F sobre un cultivo.'
+                            : 'Mejora las chances: normal / rara / épica / '
+                                'legendaria. Se usa con F sobre un cultivo y '
+                                'lo hace crecer × ${t.d('fert${d.key}Speed')}.',
+                        style: DsText.detail()),
+                  ]),
               trailing: DsButton('COMPRAR ${d.price}',
                   key: ValueKey('trade-fert-buy-${d.id}'),
                   size: DsButtonSize.compact,
