@@ -343,13 +343,13 @@ herramienta de área trabaja menos tiles.
 
 ### 8.3 Cofre
 - Cada huerta y cada lago tiene un cofre al lado del cartel (se mueve
-  con la construcción, no es sólido) con el número de cosas encima. E al
+  con la construcción, no es sólido) (sin número encima desde v0.38.1). E al
   lado: RECOGER todo a la bolsa PESCA Y CULTIVO, con `helperXpShare`
   (10 %) de la XP. Tope `chestMax` (200): lleno, no cosechan ni pescan.
 - Estado a la vista (v0.33.1): vacío se dibuja apagado
   (`FarmPalette.chestEmpty`, multiplicado sobre el sprite y opaco; desde
   v0.36.4 sin transparencia, que lo fundía con el pasto); con cosas, con un brillo atrás
-  (`chestGlow`) y el número; lleno, con marco y número en `chestFull`.
+  (`chestGlow`); lleno, con marco en `chestFull`. Sin número (v0.38.1).
   Mouse encima: tooltip del mapa "Cofre vacío", "Cofre: N objetos" o
   "Cofre lleno" (`HelperRules.chestText`). Sale del pueblo del estado,
   sin cambio de protocolo.
