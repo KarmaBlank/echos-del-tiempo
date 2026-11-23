@@ -333,8 +333,11 @@ items:
   # TALLER DE OFICIOS del pueblo (town_loop.md § 2.1, v0.32.3): arte
   # provisorio (la casa de nivel 3); se cambia acá sin tocar Dart.
   vida_taller_oficios: { idle: items/vida_casa_3.png, size: [48, 48] }
-  # ARMERÍA del pueblo (v0.32.3): arte provisorio (la casa de nivel 2).
-  vida_armeria: { idle: items/vida_casa_2.png, size: [48, 48] }
+  # ARMERÍA del pueblo: tienda con emblema de espada y escudos
+  # (tool/export_building_sprites.dart).
+  vida_armeria: { idle: items/vida_armeria.png, size: [48, 48] }
+  # FORJA del pueblo: fragua con yunque, 5 tiles de ancho (mismo tool).
+  vida_forja: { idle: items/vida_forja.png, size: [80, 32] }
 tiles:
   suelo: { procedural: true, size: [16, 16] }
   pared: { procedural: true, size: [16, 16] }
