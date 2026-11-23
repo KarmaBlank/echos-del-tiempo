@@ -350,7 +350,7 @@ abstract final class FarmingRules {
     return pool[(rand() * pool.length).floor().clamp(0, pool.length - 1)];
   }
 
-  // ---------------- comerciante ----------------
+  // ---------------- agropecuario ----------------
 
   static int unitPrice(PlayerProfile p, CropDef c, CropQuality q) =>
       (c.price *

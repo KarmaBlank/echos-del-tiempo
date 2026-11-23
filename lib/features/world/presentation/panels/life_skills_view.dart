@@ -1,3 +1,5 @@
+import '../../../../core/text/plain_text.dart';
+import '../../../../core/text/text_detail.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
@@ -52,22 +54,29 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
 
   @override
   Widget build(BuildContext context) {
+    // Tres columnas (v0.24.4): oficios | árbol | detalle del nodo, cada
+    // una con su ancho, sin cortar nada.
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
-          width: 300,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final k in LifeSkillKind.values) _skillRow(k),
-              SizedBox(height: DsSpace.sm),
-              Expanded(child: _detail()),
-            ],
+          width: 240,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final k in LifeSkillKind.values) ...[
+                  _skillRow(k),
+                  SizedBox(height: DsSpace.xs),
+                ],
+              ],
+            ),
           ),
         ),
         SizedBox(width: DsSpace.md),
         Expanded(child: _tree()),
+        SizedBox(width: DsSpace.md),
+        SizedBox(width: 260, child: SingleChildScrollView(child: _detail())),
       ],
     );
   }
@@ -81,24 +90,44 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
     final tool = k == LifeSkillKind.pesca
         ? kRods[p.life.rod]?.name ?? ''
         : '${kFarmTools[p.life.farm.hoe]?.name} · ${kFarmTools[p.life.farm.can]?.name}';
-    return DsListRow(
+    // Tarjeta del oficio (v0.24.4): nombre y puntos libres arriba, el
+    // nivel grande, la XP con lo que falta y la barra; todo entero.
+    return DsCard(
       key: ValueKey('life-row-${k.name}'),
       selected: _kind == k,
       onTap: () => setState(() {
         _kind = k;
         _sel = null;
       }),
-      title: '${k.label} · nivel $lvl',
-      trailing: free > 0
-          ? DsBadge('$free', key: ValueKey('life-free-${k.name}'))
-          : null,
-      detail: need > 0 ? '$cur / $need XP · $tool' : 'Nivel máximo · $tool',
-      subtitleWidget: Padding(
-        padding: EdgeInsets.only(top: DsSpace.xs),
-        child: DsPercent(need > 0 ? (cur * 100 ~/ need) : 100,
-            key: ValueKey('life-xp-${k.name}'),
-            label: 'XP de ${k.label}',
-            barWidth: 160),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(children: [
+            Expanded(
+                child: Text(k.label.toUpperCase(), style: DsText.subtitle())),
+            if (free > 0)
+              DsBadge('$free libre${free == 1 ? '' : 's'}',
+                  key: ValueKey('life-free-${k.name}')),
+          ]),
+          SizedBox(height: DsSpace.xs),
+          Text('Nivel $lvl',
+              key: ValueKey('life-level-${k.name}'),
+              style: DsText.title(DsColors.reward)),
+          SizedBox(height: DsSpace.xs),
+          Text(
+              need > 0
+                  ? '$cur / $need XP · faltan ${need - cur}'
+                  : 'Nivel máximo',
+              style: DsText.body()),
+          SizedBox(height: DsSpace.xs),
+          DsPercent(need > 0 ? (cur * 100 ~/ need) : 100,
+              key: ValueKey('life-xp-${k.name}'),
+              label: 'XP de ${k.label}',
+              barWidth: 160),
+          SizedBox(height: DsSpace.xs),
+          Text(tool, style: DsText.detail()),
+        ],
       ),
     );
   }
@@ -126,8 +155,8 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
             '${LifeTreeRules.earned(p, k)}',
             key: const ValueKey('life-points'),
             style: DsText.detail()),
-        const Spacer(),
-        Row(children: [
+        SizedBox(height: DsSpace.md),
+        Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
           DsButton('REINICIAR (GRATIS)',
               key: const ValueKey('life-reset'),
               size: DsButtonSize.compact,
@@ -135,7 +164,6 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
                       LifeTreeRules.taken(p, k).isEmpty
                   ? null
                   : () => widget.onReset(k)),
-          SizedBox(width: DsSpace.xs),
           if (!has)
             DsButton('TOMAR',
                 key: const ValueKey('life-take'),
@@ -152,9 +180,8 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
     final nodes = kLifeTrees[k]!;
     return LayoutBuilder(builder: (context, box) {
       const cols = 5, rows = 6;
-      final cell = (box.maxWidth / cols)
-          .clamp(0.0, box.maxHeight / rows)
-          .toDouble();
+      final cell =
+          (box.maxWidth / cols).clamp(0.0, box.maxHeight / rows).toDouble();
       Offset at(LifeTreeNode n) =>
           Offset((n.x + 2.5) * cell, (n.y + 0.5) * cell);
       return Center(
@@ -182,9 +209,15 @@ class _LifeSkillsViewState extends State<LifeSkillsView> {
       top: c.dy - size / 2,
       width: cell,
       child: DsTooltip(
-        card: DsTooltipCard(
-            title: n.name,
-            children: [Text(lifeNodeText(n), style: DsText.detail())]),
+        // TEXTOS (ui_minimal.md § 8): corto en RESUMIDO, con el texto
+        // completo en MÁS DETALLE.
+        card: DsTooltipCard(title: n.name, detail: lifeNodeText(n), children: [
+          Text(
+              TextDetail.isSummary
+                  ? plainShort(lifeNodeText(n))
+                  : lifeNodeText(n),
+              style: DsText.detail())
+        ]),
         child: GestureDetector(
           key: ValueKey('life-node-${n.id}'),
           onTap: () => setState(() => _sel = n.id),
@@ -235,7 +268,8 @@ class _Links extends CustomPainter {
       for (final l in n.links) {
         final o = lifeTreeNode(k, l);
         if (o == null || o.id.compareTo(n.id) < 0) continue;
-        final both = LifeTreeRules.has(p, k, n.id) && LifeTreeRules.has(p, k, o.id);
+        final both =
+            LifeTreeRules.has(p, k, n.id) && LifeTreeRules.has(p, k, o.id);
         paint.color = both ? DsColors.reward : DsColors.border;
         canvas.drawLine(at(n), at(o), paint);
       }

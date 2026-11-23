@@ -1,4 +1,4 @@
-# Spec: Pesca y comerciante (fase 3 de town_loop.md, v0.22.0; en el mapa y botín del agua desde v0.22.2)
+# Spec: Pesca y agropecuario (fase 3 de town_loop.md, v0.22.0; en el mapa y botín del agua desde v0.22.2)
 
 Precisa town_loop.md § 3.1 (pesca), § 3.3 (comercio), § 10 (red), § 10b
 (solo y pocos clics), § 11c (habilidades de vida y herramientas) y § 12.
@@ -9,7 +9,7 @@ puras en `lib/game_engine/rules/fishing_rules.dart`, minijuego puro en
 `lib/game_engine/rules/fishing_minigame.dart`, sala en
 `session_engine_fishing.dart`; lance en el mapa en
 `lib/game_engine/rules/map_fishing.dart` (`FishingCast`, `MapFishing`);
-dibujo en `map/fishing_layer.dart`; comerciante en
+dibujo en `map/fishing_layer.dart`; agropecuario en
 `panels/trader_panel.dart`. Tunables: Editor → Balance → **Pesca**
 (`TuningId.fishing`).
 
@@ -21,7 +21,7 @@ dibujo en `map/fishing_layer.dart`; comerciante en
   `TownLayout.fishingSpots`) dan `dockBonus` (0.1) de rareza.
 - El cartel del lago (`Y`): aviso local con la cantidad de especies del
   lago y tu nivel de Pesca.
-- El puesto del comerciante (`M`): E abre COMERCIANTE.
+- El puesto del agropecuario (`M`): E abre AGROPECUARIO.
 - Se quitaron los avisos "Pronto".
 
 ## 2. Peces
@@ -136,7 +136,7 @@ espera (señuelos) → picada → clavado → barra → sacado / escapado.
 - Arte procedural en el mapa (`MapFishingLayer`); colores en
   `FishingPalette` (map_themes.dart).
 
-## 5. Cañas y comerciante
+## 5. Cañas y agropecuario
 
 ### 5.1 Cañas (espacio de herramienta, aparte de las armas)
 | Caña | Rareza | Nivel | Picada | Zona | Rareza+ | Precio |
@@ -148,7 +148,7 @@ espera (señuelos) → picada → clavado → barra → sacado / escapado.
 
 Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
 1)`, `bonus = base × (bonusFloor + (1 − bonusFloor) × ratio^bonusCurve)`
-(0.4, 1.5). Se compran en el comerciante y se equipan ahí.
+(0.4, 1.5). Se compran en el agropecuario y se equipan ahí.
 
 ### 5.2 Venta
 - Por especie (VENDER) o VENDER TODO (no incluye legendarios).
@@ -160,7 +160,10 @@ Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
 - Cebos y ofertas rotativas: más adelante (la tabla de cañas ya tiene
   precio, el panel lista lo que está en el catálogo).
 
-### 5.3 Puesto del comerciante (v0.23.2)
+### 5.3 Puesto del agropecuario (v0.23.2)
+- Desde v0.24.4: grilla de casillas por categoría (farming.md § 11) con
+  el detalle de la elegida a la derecha (tipo, rareza, nivel, rinde,
+  rareza extra, precio y acciones). El nombre ya no repite el tipo.
 - Primer nivel: COMPRAR o VENDER. Segundo: PESCA o CULTIVO. Tercero:
   categorías (botones arriba de la lista, que también filtran; con TODO
   la lista sale agrupada con un encabezado por categoría, nunca mezclada).
@@ -174,7 +177,7 @@ Efectividad (town_loop.md § 11c): `ratio = clamp(nivel / requerido, 0,
 
 ## 6. Auto-pesca
 
-AUTO-PESCA: botón del COMERCIANTE o R con la caña afuera (sin ventana): `autoCount` (3) peces de una, con XP ×
+AUTO-PESCA: botón del AGROPECUARIO o R con la caña afuera (sin ventana): `autoCount` (3) peces de una, con XP ×
 `autoMult` (0.4), tamaños de la mitad baja del rango, **nunca
 legendarios**; espera `autoCooldownSec` (30 s) del anfitrión entre usos.
 
@@ -237,9 +240,9 @@ arma, con Pesca nivel `lootLegendLevel` (15) o más y una caña de rareza
 y textos con el lore base (ecos, pasado magitec); esperan el OK del
 dueño.
 
-## 9. v0.23.0: comerciante con pestañas, PESCA Y CULTIVO y árbol
+## 9. v0.23.0: agropecuario con pestañas, PESCA Y CULTIVO y árbol
 
-- El comerciante tiene pestañas PESCA y CULTIVO (desde v0.23.2, primero
+- El agropecuario tiene pestañas PESCA y CULTIVO (desde v0.23.2, primero
   COMPRAR / VENDER: § 5.3). Lo de cultivo: farming.md § 9.
 - PERSONAJE → PESCA Y CULTIVO (solo en el pueblo): cañas, pescados (con
   SOLTAR EN EL LAGO), basura del agua y lo de la huerta; no usa

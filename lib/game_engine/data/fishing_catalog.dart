@@ -37,7 +37,7 @@ class FishDef {
   final String biome;
   final int minCm, maxCm;
 
-  /// Precio base en oro (el comerciante; fishing.md § 5).
+  /// Precio base en oro (el agropecuario; fishing.md § 5).
   final int price;
 
   /// XP de Pesca base (antes de rareza y tamaño).
@@ -67,7 +67,7 @@ class RodDef {
   /// menos de espera), zona de captura más ancha y chance de rareza.
   final double biteSpeed, zoneBonus, rareBonus;
 
-  /// Precio en el comerciante (0 = no se vende).
+  /// Precio en el agropecuario (0 = no se vende).
   final int price;
 }
 

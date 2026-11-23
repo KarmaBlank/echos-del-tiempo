@@ -758,6 +758,16 @@ ni la sesión ni `features/*` miran el nombre del flavor.
   ese loot: la sala no mezcla versiones.
 - Travesía no cambia (sigue en 2): no tiene piso ni alijo.
 
+## Mundo, protocolo 46 (v0.26.0: mapa de viaje y Bosque)
+
+- Snapshot: `place` (opcional; `null` = pueblo, `bosque` = exterior del
+  Bosque) y `town.wild` (recolectables usados → segundo de rebrote).
+- Acciones nuevas: `{"t":"travel","p":"bosque"}` (solo el dueño del
+  mundo; viaja todo el grupo) y `{"t":"forage","i":3}`. Host autoritativo.
+- Un refuerzo que entra en batalla actúa con `reinforceDelay` intervalos
+  de espera. Un cliente 45 dibujaría el pueblo estando en el Bosque: la
+  sala no mezcla versiones. Ver `overworld_biomes.md`.
+
 ## Mundo, protocolo 44 (v0.23.0: huerta, pueblo y oficios)
 
 - Snapshot: `town` (farming.md § 10): lago (`lake`), ampliaciones
@@ -783,7 +793,7 @@ ni la sesión ni `features/*` miran el nombre del flavor.
 - Un cliente 42 abriría el panel PESCA que ya no existe y no vería las
   cañas de los demás: la sala no mezcla versiones.
 
-## Mundo, protocolo 42 (v0.22.0: pesca y comerciante)
+## Mundo, protocolo 42 (v0.22.0: pesca y agropecuario)
 
 - Acciones nuevas (fishing.md § 7): `fBite {pw}`, `fRes {ok}`, `fAuto`,
   `fSell {sp?, mat?}`, `fSwap {sp}`, `rodBuy {r}`, `rodEq {r}`.

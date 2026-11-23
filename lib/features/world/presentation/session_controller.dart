@@ -1174,7 +1174,7 @@ class SessionController extends StateNotifier<SessionView?> {
         'la orilla o a un muelle y tocá E.';
   }
 
-  // ---- Pesca y comerciante (fishing.md § 6): el host valida ----
+  // ---- Pesca y agropecuario (fishing.md § 6): el host valida ----
 
   bool fishBite(double power) => _apply(FishBiteAction(power));
   bool fishResult(bool ok) => _apply(FishResultAction(ok));
@@ -1398,13 +1398,22 @@ class SessionController extends StateNotifier<SessionView?> {
           : pl.planted
               ? 'Ya está plantada'
               : p.life.farm.activeSeed == null
-                  ? 'Sin semillas: comprá en el comerciante'
+                  ? 'Sin semillas: comprá en el agropecuario'
                   : null,
       FarmHand.can => pl == null
           ? 'Primero arala'
           : !pl.planted
               ? 'Primero plantá'
               : null,
+      FarmHand.fert => pl == null
+          ? 'Primero arala'
+          : !pl.planted
+              ? 'Primero plantá'
+              : pl.fert != null
+                  ? 'Ya tiene abono'
+                  : farmFert == null
+                      ? 'Sin abono: comprá en el agropecuario'
+                      : null,
     };
   }
 
@@ -1431,6 +1440,7 @@ class SessionController extends StateNotifier<SessionView?> {
       FarmHand.hoe => FarmOp.till,
       FarmHand.seed => FarmOp.plant,
       FarmHand.can => FarmOp.water,
+      FarmHand.fert => FarmOp.fert,
     };
   }
 
@@ -1441,7 +1451,11 @@ class SessionController extends StateNotifier<SessionView?> {
     if (t == null || op == null) return false;
     final p = _s!.players[localId]!.profile;
     final ok = _apply(FarmTileAction(op, t.$1, t.$2,
-        seed: op == FarmOp.plant ? p.life.farm.activeSeed : null));
+        seed: op == FarmOp.plant
+            ? p.life.farm.activeSeed
+            : op == FarmOp.fert
+                ? farmFert
+                : null));
     if (ok) {
       fishSfx?.call(switch (op) {
         FarmOp.till => Sfx.whump,
@@ -1459,8 +1473,41 @@ class SessionController extends StateNotifier<SessionView?> {
     final t = farmTile;
     if (t == null) return false;
     final pl = plotAt(t.$1, t.$2);
-    if (pl == null || !pl.planted || pl.fert != null) return false;
-    return _apply(FarmTileAction(FarmOp.fert, t.$1, t.$2));
+    final fid = farmFert;
+    if (pl == null || !pl.planted || pl.fert != null || fid == null) {
+      return false;
+    }
+    return _apply(FarmTileAction(FarmOp.fert, t.$1, t.$2, seed: fid));
+  }
+
+  String? _fert;
+
+  /// Abonos propios, de peor a mejor (orden del catálogo).
+  List<String> get ownedFerts {
+    final f = _s?.players[localId]?.profile.life.farm;
+    if (f == null) return const [];
+    return [
+      for (final id in kFertilizers.keys)
+        if (f.fertCount(id) > 0) id
+    ];
+  }
+
+  /// El abono para E / F (farming.md § 2.5): el elegido si te queda; si
+  /// no, el mejor que tengas.
+  String? get farmFert {
+    final own = ownedFerts;
+    if (own.isEmpty) return null;
+    return own.contains(_fert) ? _fert : own.last;
+  }
+
+  /// Selector del casillero ABONO: el siguiente abono propio.
+  bool cycleFert() {
+    final own = ownedFerts;
+    if (own.length < 2) return false;
+    final i = own.indexOf(farmFert!);
+    _fert = own[(i + 1) % own.length];
+    _emit();
+    return true;
   }
 
   /// Q: la semilla siguiente.
@@ -1511,8 +1558,9 @@ class SessionController extends StateNotifier<SessionView?> {
     final fert = pl != null &&
             pl.planted &&
             pl.fert == null &&
-            p.life.farm.ferts.isNotEmpty
-        ? ' · [F] abonar'
+            farmFert != null &&
+            farmHand != FarmHand.fert
+        ? ' · [F] Abonar'
         : '';
     // Corto (una línea): el detalle completo está en el tooltip del mouse.
     if (pl != null && pl.planted && FarmingRules.ripe(pl)) {
@@ -1520,6 +1568,9 @@ class SessionController extends StateNotifier<SessionView?> {
       return '[E o clic] Cosechar · ${_pct(o[CropQuality.legendario]!)} legendaria';
     }
     if (farmBlockReason case final r?) return r;
+    if (farmHand == FarmHand.fert && pl != null && pl.planted) {
+      return '[E o clic] Abonar con ${kFertilizers[farmFert]?.name ?? 'abono'}';
+    }
     if (pl == null) return '[E o clic] Arar';
     if (!pl.planted) return '[E o clic] Plantar ${kCrops[seed]!.name}';
     final r = (FarmingRules.ratio(pl) * 100).round();
@@ -3448,4 +3499,4 @@ class _StashOp {
 enum ActiveTool { rod, hoe }
 
 /// Herramienta de huerta en la mano (farming.md § 2.5).
-enum FarmHand { hoe, seed, can }
+enum FarmHand { hoe, seed, can, fert }

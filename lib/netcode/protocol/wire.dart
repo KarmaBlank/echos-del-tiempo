@@ -96,7 +96,7 @@ import '../../game_engine/serialization/session_json.dart';
 /// anfitrión) y el lobby es el mapa del pueblo (otros tiles, sin entradas
 /// de zona: un cliente 40 dibujaría el mundo viejo y caminaría a puertas
 /// que ya no existen).
-/// 42 desde v0.22.0: pesca y comerciante (fishing.md § 6): acciones
+/// 42 desde v0.22.0: pesca y agropecuario (fishing.md § 6): acciones
 /// `fBite` / `fRes` / `fAuto` / `fSell` / `fSwap` / `rodBuy` / `rodEq`,
 /// eventos `fBite` / `fCaught` y `life` en el perfil.
 /// 43 desde v0.22.2: pesca en el mapa (fishing.md § 7): acción `fLn`
@@ -104,7 +104,9 @@ import '../../game_engine/serialization/session_json.dart';
 /// 44 (v0.23.0): huerta, ampliaciones del pueblo y árboles de oficios.
 /// 45 (v0.24.0): edición del pueblo (town_editor.md § 8): `town` con
 /// lados, construcciones y lagos propios.
-const kProtocolVersion = 45;
+/// 46 (v0.26.0): mapa de viaje y exteriores de bioma (overworld_biomes.md):
+/// `place` en el snapshot, `town.wild` y acciones `travel` / `forage`.
+const kProtocolVersion = 46;
 
 /// Protocolo de Ecos del Tiempo: Travesía (secuencia propia). 1: `run` en
 /// el snapshot, acciones `runStart` / `runVote` / `runReward` /

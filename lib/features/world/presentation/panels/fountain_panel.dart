@@ -86,7 +86,7 @@ class FountainPanel extends StatelessWidget {
                       Text(
                           '${TownRules.helperCost(t.helper + 1)} de oro · '
                           'hasta ${TownRules.t.i('helperPlots') * (t.helper + 1)} '
-                          'parcelas · cosecha al granero del comerciante',
+                          'parcelas · cosecha al granero del agropecuario',
                           softWrap: true,
                           style: DsText.detail()),
                       // El motivo del botón gris, a la vista.

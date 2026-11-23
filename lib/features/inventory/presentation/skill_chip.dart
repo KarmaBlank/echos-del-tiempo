@@ -7,6 +7,7 @@ import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
 import '../../../app/theme/retro_theme.dart';
 import '../../../app/widgets/menu_focus.dart';
+import '../../../core/text/text_detail.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/models/player_state.dart';
 import '../../../game_engine/models/skill.dart';
@@ -51,6 +52,9 @@ class SkillChip extends StatelessWidget {
       // Tooltip corto (ui_style.md § "Tooltips cortos"): nombre, costo,
       // tipo y el primer efecto; el resto, plegado.
       foldAfter: 3,
+      // RESUMIDO: la ficha completa, plegada en MÁS DETALLE.
+      detail: TextDetail.fullIfSummary(() =>
+          skillTipMarkup(skill, stats: stats, ultimate: ultimate, note: note)),
       // Enfocable (Tab / flechas: la ficha aparece con el foco) pero sin
       // tomar el clic: el clic sigue a la tarjeta o fila de abajo.
       child: _ChipFocus(
@@ -58,7 +62,8 @@ class SkillChip extends StatelessWidget {
         // Etiqueta del sistema de diseño (como DsTag): borde fino, sin
         // "?" (la ficha sale con el mouse o el foco; ui_minimal.md § 6).
         builder: (hot) => Container(
-          padding: EdgeInsets.symmetric(horizontal: DsSpace.xs + 2, vertical: 1),
+          padding:
+              EdgeInsets.symmetric(horizontal: DsSpace.xs + 2, vertical: 1),
           decoration: BoxDecoration(
             color: hot ? DsColors.hover : null,
             border: Border.all(
