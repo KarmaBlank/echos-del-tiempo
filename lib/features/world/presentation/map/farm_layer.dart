@@ -380,10 +380,6 @@ class MapFarmLayer {
               ..style = PaintingStyle.stroke
               ..strokeWidth = 1);
       }
-      if (!empty) {
-        text('${b.chestTotal}', px, py - ts - 2,
-            full ? FarmPalette.chestFull : TownPalette.label, 6);
-      }
       for (var i = 0; i < b.helper; i++) {
         final pos = TownRules.helperPos(town, b, i, time);
         final farm = b.kind == BuildKind.huerta;
