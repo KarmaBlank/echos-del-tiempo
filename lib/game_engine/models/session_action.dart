@@ -38,7 +38,7 @@ class TravelAction extends SessionAction {
   const TravelAction(this.place);
 }
 
-/// `leaveD` (protocolo 54, free_movement.md § 2.4): salir solo de la
+/// `leaveD` (protocolo 55, free_movement.md § 2.4): salir solo de la
 /// mazmorra, caminando a la entrada del piso 1 o desde una piedra de paso
 /// activada ([poiId]). Los demás siguen adentro.
 class LeaveDungeonAction extends SessionAction {

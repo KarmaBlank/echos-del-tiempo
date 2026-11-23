@@ -55,6 +55,11 @@ class MapLightLayer {
   static (double, double, double) get dungeonAmbient =>
       _rgb(LightPalette.darkDungeon);
 
+  /// Alinea [v] al bloque de [chunk] hacia abajo. Con `~/` los negativos
+  /// se truncaban hacia 0: cerca del borde superior/izquierdo la malla
+  /// arrancaba en el centro del tile 0 y media fila quedaba sin oscurecer.
+  static int floorChunk(int v) => (v / chunk).floor() * chunk;
+
   /// Dibuja la luz sobre [view] (px del mundo). [fixed]: luces fijas
   /// (tiles y faros); [moving]: las de este cuadro. [keep]: ajuste
   /// OSCURIDAD (1 = normal, 0 = apagada). [motion]: titileo.
@@ -66,10 +71,10 @@ class MapLightLayer {
       required double t,
       double keep = 1,
       bool motion = true}) {
-    final x0 = ((view.left / ts).floor() - margin) ~/ chunk * chunk;
-    final y0 = ((view.top / ts).floor() - margin) ~/ chunk * chunk;
-    final x1 = (((view.right / ts).ceil() + margin) ~/ chunk + 1) * chunk;
-    final y1 = (((view.bottom / ts).ceil() + margin) ~/ chunk + 1) * chunk;
+    final x0 = floorChunk((view.left / ts).floor() - margin);
+    final y0 = floorChunk((view.top / ts).floor() - margin);
+    final x1 = floorChunk((view.right / ts).ceil() + margin) + chunk;
+    final y1 = floorChunk((view.bottom / ts).ceil() + margin) + chunk;
     final w = x1 - x0, h = y1 - y0;
     final block = LightRules.blockOf(map);
     final src = fixed(x0 - margin, y0 - margin, x1 + margin, y1 + margin);

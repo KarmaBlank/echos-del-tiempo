@@ -692,6 +692,7 @@ class GameSession {
     this.place,
     this.townEditor,
     this.ownerId,
+    this.instance = '',
     List<AwayPlayer>? away,
   })  : players = players ?? LinkedHashMap(),
         away = List.unmodifiable(away ?? const <AwayPlayer>[]),
@@ -813,8 +814,12 @@ class GameSession {
 
   /// El dueño del mundo (free_movement.md § 2): el primer jugador de la
   /// sala, aunque esté en otra instancia. `null` = el primer humano de
-  /// esta instancia. Solo host: no viaja.
+  /// esta instancia. Viaja (`own`) para que la UI oculte lo del dueño.
   String? ownerId;
+
+  /// Clave de la instancia en el host (`pueblo`, `d1`...; '' = sala
+  /// única). Solo host: no viaja.
+  String instance;
 
   /// Los jugadores que están en otro lugar (free_movement.md § 3, `aw`).
   List<AwayPlayer> away;
@@ -918,6 +923,7 @@ class GameSession {
         place: place,
         townEditor: townEditor,
         ownerId: ownerId,
+        instance: instance,
         away: away,
       );
 }

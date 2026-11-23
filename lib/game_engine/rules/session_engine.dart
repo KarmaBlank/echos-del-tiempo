@@ -182,7 +182,12 @@ class SessionEngine {
 
   /// Seguimiento de la batalla actual para las hazañas de combate (solo
   /// en el host; no viaja).
-  final achievementTracker = AchievementBattleTracker();
+  final _trackers = <String, AchievementBattleTracker>{};
+
+  /// Uno por instancia (free_movement.md § 2): dos peleas a la vez no se
+  /// mezclan.
+  AchievementBattleTracker trackerFor(String instance) =>
+      _trackers.putIfAbsent(instance, AchievementBattleTracker.new);
 
   /// Reglas de los Jefes del Abismo.
   AbyssRules get abyssRules => AbyssRules(catalog: catalog);
@@ -1475,9 +1480,9 @@ class _Op {
     for (final ev in events) {
       switch (ev) {
         case BattleStartedEvent():
-          e.achievementTracker.reset();
+          e.trackerFor(s.instance).reset();
         case BattleStepEvent(events: final list):
-          rules.fromBattle(hits, list, e.achievementTracker,
+          rules.fromBattle(hits, list, e.trackerFor(s.instance),
               isPlayer: (id) => s.players.containsKey(id),
               isBoss: (id) => battle?.byId(id)?.boss ?? false,
               skill: (id) => catalog.skills[id]);
@@ -3073,6 +3078,9 @@ class _Op {
             ? (0, 0)
             : ExplorationRules.questProgress(q, m, f);
         say('${p.name} encendió un brasero ($a/$b).');
+      case PoiKind.lantern:
+        m.poiUsed.add(poi.id);
+        say('${p.name} encendió un farol.');
       case PoiKind.shrine:
         m.poiUsed.add(poi.id);
         _bless(BlessingKind.values[poi.variant % BlessingKind.values.length],

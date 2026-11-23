@@ -9,6 +9,7 @@ import '../../../../app/theme/panel_frame.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../game_engine/models/fog_of_war.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import 'minimap.dart';
@@ -36,7 +37,11 @@ class FullMap extends StatefulWidget {
     this.originId,
     this.onTravel,
     this.reduceMotion = false,
+    this.fog,
   });
+
+  /// Niebla de mazmorra oscura (lighting.md § 5.4).
+  final FogOfWar? fog;
 
   /// Piedras de paso descubiertas del piso (en orden; activada o no):
   /// se marcan con [waystoneColor] y parpadean (worldgen.md § 11.4).
@@ -388,6 +393,7 @@ class FullMapState extends State<FullMap> with SingleTickerProviderStateMixin {
                           cell: _cell,
                           view: _view,
                           center: _center ?? _player,
+                          fog: widget.fog,
                         ),
                         ..._stoneMarks(context,
                             Minimap.viewRect(a, _view, _center ?? _player)),

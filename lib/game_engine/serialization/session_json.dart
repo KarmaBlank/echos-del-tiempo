@@ -94,7 +94,8 @@ class SessionJson {
         if (s.place != null) 'place': s.place,
         // v0.28.0 (protocolo 50): quién edita el pueblo.
         if (s.townEditor != null) 'ted': s.townEditor,
-        // v0.33.0 (protocolo 54): los que están en otro lugar.
+        // v0.33.0 (protocolo 55): los que están en otro lugar.
+        if (s.ownerId != null) 'own': s.ownerId,
         if (s.away.isNotEmpty)
           'aw': [
             for (final a in s.away) [a.id, a.name, a.where]
@@ -150,6 +151,7 @@ class SessionJson {
       town: TownState.fromJson(j['town']),
       place: j.strOrNull('place'),
       townEditor: j.strOrNull('ted'),
+      ownerId: j.strOrNull('own'),
       away: j['aw'] == null
           ? null
           : [

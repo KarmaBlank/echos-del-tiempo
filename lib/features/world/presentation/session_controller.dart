@@ -1,4 +1,5 @@
 import '../../../game_engine/models/combat_mode.dart';
+import '../../../game_engine/models/fog_of_war.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
@@ -682,6 +683,10 @@ class SessionController extends StateNotifier<SessionView?> {
   static const saveEvery = 2.0;
 
   final local = LocalPlayer();
+
+  /// Niebla de exploración del jugador local en mazmorras oscuras
+  /// (lighting.md § 5.4). Solo del cliente: no viaja ni se guarda.
+  final fog = FogOfWar();
   final _events = StreamController<SessionEvent>.broadcast();
   GameSession? _s;
   Timer? _timer;
@@ -1411,7 +1416,9 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Soy el dueño del mundo (el anfitrión o el que juega solo).
   bool get isWorldOwner =>
-      _s?.playerList.where((p) => !p.isCompanion).firstOrNull?.id == localId;
+      (_s?.ownerId ??
+          _s?.playerList.where((p) => !p.isCompanion).firstOrNull?.id) ==
+      localId;
 
   bool _isSoil(int x, int y) {
     final s = _s;
@@ -2620,9 +2627,8 @@ class SessionController extends StateNotifier<SessionView?> {
       toggleInventory();
       return true;
     }
-    // J: DIARIO de encargos en el pueblo (roles.md § 8.1; en el campo J
-    // pliega los objetivos).
-    if (key == LogicalKeyboardKey.keyJ && s.mode == SessionMode.lobby) {
+    // J: DIARIO de encargos, en el pueblo o en el campo (roles.md § 8.1).
+    if (key == LogicalKeyboardKey.keyJ && s.mode != SessionMode.battle) {
       toggleJournal();
       return true;
     }

@@ -41,7 +41,8 @@ class WorldEngine {
       engine.freeMovement && engine.gameMode == GameModeKind.mundo;
 
   /// Arma el mundo con [town] como pueblo.
-  SessionWorld create(GameSession town) => SessionWorld(town);
+  SessionWorld create(GameSession town) =>
+      SessionWorld(town.copy()..instance = kTownRoom);
 
   // ---------------- entradas ----------------
 
@@ -283,7 +284,7 @@ class _W {
     }
     final place = s.place;
     final to = place ?? kTownRoom;
-    w.rooms.putIfAbsent(to, () => _fresh(place));
+    w.rooms.putIfAbsent(to, () => _fresh(place)..instance = to);
     final zone = s.mission?.zone ?? 0;
     final label = we.placeLabel(w, to);
     _move(p, key, to,
@@ -317,7 +318,7 @@ class _W {
     }
     final to = place == kPueblo ? kTownRoom : place;
     if (to == key) return false;
-    w.rooms.putIfAbsent(to, () => _fresh(to == kTownRoom ? null : to));
+    w.rooms.putIfAbsent(to, () => _fresh(to == kTownRoom ? null : to)..instance = to);
     final name = biomeDef(place)?.name ?? place;
     _move(p, key, to,
         leave: '${p.name} viajó a $name.', arrive: '${p.name} llegó.');
@@ -338,7 +339,7 @@ class _W {
       return true;
     }
     final to = 'd${w.nextDungeon++}';
-    w.rooms[to] = _fresh(s.place);
+    w.rooms[to] = _fresh(s.place)..instance = to;
     _move(p, key, to, leave: null);
     final ok = _start(to, p.id, a);
     if (!ok) {

@@ -1131,6 +1131,16 @@ class MapGame extends Game {
             keep: darknessKeep,
             motion: !reduceMotion);
       }
+      // Niebla del minimapa (lighting.md § 5.4): lo que ve el jugador.
+      final lg = light.last;
+      final m = s.mission;
+      if (darkMap && darknessKeep > 0 && m != null && lg != null) {
+        controller.fog
+          ..begin((m.missionId, m.seed), map.width, map.height)
+          ..reveal(lg.x0, lg.y0, lg.w, lg.h, lg.lum, darkSeen * darknessKeep);
+      } else {
+        controller.fog.reset();
+      }
       if (outdoor) {
         sky.draw(c, s.town.sky, worldView, t,
             lights: lights,

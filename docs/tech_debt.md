@@ -24,10 +24,6 @@ sumarse a amigos, dos mazmorras a la vez, `aw` en el snapshot).
   cinemática ni confirmación.
 - No hay unirse a un Eco ni a un TUTORIAL ajeno (solo misión / Prueba /
   Jefe del Abismo iguales).
-- `achievementTracker` es uno por motor: dos peleas a la vez pueden mezclar
-  los golpes de las hazañas de combate.
-- `ownerId` no viaja: la UI de un cliente que queda primero en una
-  instancia puede mostrar botones del dueño que el host rechaza.
 - La UI de votación / preparación (VotePanel, PrepPanel) queda en el código
   pero el Mundo ya no la muestra (la votación se resuelve sola). El modo de
   combate se elige desde los ajustes.

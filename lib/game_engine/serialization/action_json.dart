@@ -223,7 +223,7 @@ abstract final class ActionJson {
         // Protocolo 46 (v0.26.0): mapa de viaje y recolección.
         TravelAction() => {'t': 'travel', 'p': a.place},
         ForageAction() => {'t': 'forage', 'i': a.spot},
-        // Protocolo 54 (v0.33.0): salir solo de la mazmorra.
+        // Protocolo 55 (v0.33.0): salir solo de la mazmorra.
         LeaveDungeonAction() => {
             't': 'leaveD',
             if (a.poiId != null) 'i': a.poiId,

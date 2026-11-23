@@ -125,11 +125,19 @@ abstract final class LightRules {
     (-1, 1, math.sqrt2), (-1, -1, math.sqrt2),
   ];
 
+  /// Sobreestimación máxima del camino de 8 vecinos respecto de la línea
+  /// recta (a 22.5°: cos + (√2 − 1)·sen ≈ 1.0824). Ese sobrante no es un
+  /// rodeo: se descuenta para que la luz sea redonda y no octogonal.
+  static const octileSlack = 0.0824;
+
   /// Suma la luz de [sources] en [grid] (lighting.md § 2). Cada luz se
-  /// propaga tile a tile (camino más corto, 8 vecinos) hasta su radio:
-  /// los tiles opacos se iluminan pero no dejan pasar; los que atenúan
-  /// cuestan recorrido extra. Caída suave: (1 − d/r)². [tintOf]: color de
-  /// cada clave (r, g, b).
+  /// propaga tile a tile (camino más corto, 8 vecinos) desde el tile de la
+  /// fuente: los tiles opacos se iluminan pero no dejan pasar; los que
+  /// atenúan cuestan recorrido extra. La distancia final de un tile es la
+  /// recta desde la posición exacta de la fuente más el rodeo del camino
+  /// (lo que el camino tiene de más que la recta desde el tile de la
+  /// fuente): la luz sigue a la fuente sin saltos ni estela.
+  /// Caída suave: (1 − d/r)². [tintOf]: color de cada clave (r, g, b).
   static void accumulate(LightGrid grid, Iterable<LightSource> sources,
       LightBlock block, (double, double, double) Function(String) tintOf) {
     for (final s in sources) {
@@ -137,13 +145,15 @@ abstract final class LightRules {
       final k0 = s.def.intensity * s.scale;
       if (r <= 0 || k0 <= 0) continue;
       final sx = s.x.floor(), sy = s.y.floor();
-      final ri = r.ceil() + 1;
+      // El camino se mide desde el centro del tile de la fuente; la fuente
+      // puede estar hasta ~0.71 tiles corrida: se propaga un poco más.
+      final reach = r + 1.5;
+      final ri = reach.ceil() + 1;
       // Ventana local de la luz.
       final lx0 = sx - ri, ly0 = sy - ri, n = ri * 2 + 1;
       final dist = Float64List(n * n)..fillRange(0, n * n, double.infinity);
       final (tr, tg, tb) = tintOf(s.def.tint);
-      final d0 = math.sqrt(math.pow(s.x - sx - 0.5, 2) + math.pow(s.y - sy - 0.5, 2));
-      dist[(sy - ly0) * n + (sx - lx0)] = d0;
+      dist[(sy - ly0) * n + (sx - lx0)] = 0;
       // Bloqueo de la ventana local, leído una sola vez.
       final blk = Float64List(n * n);
       for (var cy = 0; cy < n; cy++) {
@@ -173,7 +183,7 @@ abstract final class LightRules {
             continue;
           }
           final nd = d + step + (b.isInfinite ? 0 : b);
-          if (nd >= r) continue;
+          if (nd >= reach) continue;
           final j = ny * n + nx;
           if (nd < dist[j] - 1e-6) {
             dist[j] = nd;
@@ -187,7 +197,14 @@ abstract final class LightRules {
         for (var cx = 0; cx < n; cx++) {
           final tx = cx + lx0;
           if (tx < grid.x0 || tx >= grid.x0 + grid.w) continue;
-          final d = dist[cy * n + cx];
+          final path = dist[cy * n + cx];
+          if (path.isInfinite) continue;
+          // Rodeo = camino − recta (ambos desde el centro del tile de la
+          // fuente), sin la sobreestimación propia de los 8 vecinos.
+          final straight = _len(tx + 0.5 - sx - 0.5, ty + 0.5 - sy - 0.5);
+          final detour =
+              math.max(0.0, path - straight * (1 + octileSlack));
+          final d = _len(tx + 0.5 - s.x, ty + 0.5 - s.y) + detour;
           if (d >= r) continue;
           final f = 1 - d / r;
           final k = k0 * f * f;
@@ -199,6 +216,8 @@ abstract final class LightRules {
       }
     }
   }
+
+  static double _len(double dx, double dy) => math.sqrt(dx * dx + dy * dy);
 
   /// Titileo suave de una llama en el instante [tMs] (lighting.md § 3.2):
   /// factor alrededor de 1 con amplitud [amp], distinto por luz ([seed]).
