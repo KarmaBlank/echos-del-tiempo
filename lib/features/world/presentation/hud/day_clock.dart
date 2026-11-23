@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/retro_panel.dart';
 import '../../../../game_engine/rules/sky_rules.dart';
+import '../world_strings.dart';
 
 /// Reloj del día del HUD (day_night_weather.md § 1.1): "Día N · HH:MM"
 /// y el ícono del clima de ahora. El mouse encima dice el clima y el
@@ -17,9 +18,10 @@ class DayClock extends StatelessWidget {
     if (!sky.started) return const SizedBox.shrink();
     final night = SkyRules.isNight(sky);
     final w = SkyRules.now(sky);
-    final label = 'Día ${sky.day} · ${SkyRules.clockLabel(sky)}';
+    final label = context.t('ui.world.clock.day',
+        {'day': sky.day, 'time': SkyRules.clockLabel(sky)});
     final now = w == Weather.despejado
-        ? (night ? 'Noche despejada' : 'Despejado')
+        ? context.t(night ? 'ui.world.clock.clear_night' : 'ui.world.clock.clear')
         : w.label;
     return DsTooltip(
       card: DsTooltipCard(title: now, children: [

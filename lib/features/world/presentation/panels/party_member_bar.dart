@@ -11,6 +11,7 @@ import '../../../../game_engine/models/game_session.dart';
 import '../../../characters/domain/unused_points.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
+import '../world_strings.dart';
 
 /// Selector de miembro de la party jugando solo (docs/specs/
 /// solo_party.md § 6.2): `Ana (vos) · Leo · Mia · Cid`, cada uno con su
@@ -56,26 +57,27 @@ class PartyMemberBar extends StatelessWidget {
         runSpacing: 6,
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          Text(retroText('PERSONAJE:'), style: dim),
+          Text(retroText(context.t('ui.world.party.character')), style: dim),
           for (final id in [view.localId, ...view.companions])
             if (view.session.players[id] case final SessionPlayer p)
-              _member(p, id == actor, UnusedPoints.of(p.profile, rules)),
+              _member(context, p, id == actor, UnusedPoints.of(p.profile, rules)),
           // Sin flechas Unicode: la fuente pixel no las tiene.
-          Text(retroText('Ctrl+Izq / Ctrl+Der'), style: dim),
+          Text(retroText(context.t('ui.world.party.switch_keys')), style: dim),
         ],
       ),
     );
   }
 
-  Widget _member(SessionPlayer p, bool selected, UnusedPoints points) {
+  Widget _member(BuildContext context, SessionPlayer p, bool selected,
+      UnusedPoints points) {
     final local = p.id == view.localId;
     return RetroTooltip(
       message: points.any
-          ? '<b>${retroText(p.name)}</b>: puntos sin usar<br>'
+          ? '<b>${retroText(p.name)}</b>: ${context.t('ui.world.party.unused')}<br>'
               '${points.parts.map(retroText).join('<br>')}'
-          : '<b>${retroText(p.name)}</b>: sin puntos sin usar',
+          : '<b>${retroText(p.name)}</b>: ${context.t('ui.world.party.no_unused')}',
       // La insignia dentro del botón, a la derecha del nombre (v0.10.1).
-      child: PanelButton(local ? '${p.name} (vos)' : p.name,
+      child: PanelButton(local ? context.t('ui.world.party.you', {'name': p.name}) : p.name,
           key: ValueKey('member-${p.id}'),
           selected: selected,
           onPressed: () => controller.setActing(p.id),

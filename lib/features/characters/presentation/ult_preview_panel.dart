@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'character_strings.dart';
+
 import '../../../app/design/design.dart';
 import '../../../core/audio/sfx_catalog.dart';
 import '../../../core/fx/fx_catalog.dart' show FxTimeline;
@@ -206,14 +208,19 @@ class _UltPreviewPanelState extends State<UltPreviewPanel>
         ),
         SizedBox(height: DsSpace.xs),
         Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-          DsButton(_playing ? 'PAUSA' : 'REPRODUCIR',
+          DsButton(
+              charStrings(context).t(_playing
+                  ? 'ui.characters.ult.pause'
+                  : 'ui.characters.ult.play'),
               key: const ValueKey('ult-preview-play'),
               size: DsButtonSize.compact,
               onPressed: () => setState(() {
                     _playing = !_playing;
                     _sync();
                   })),
-          DsButton(_sound ? 'SONIDO: SÍ' : 'SONIDO: NO',
+          DsButton(
+              charStrings(context)
+                  .t('ui.characters.ult.sound', {'on': '$_sound'}),
               key: const ValueKey('ult-preview-sound'),
               size: DsButtonSize.compact,
               onPressed: w.sfx == null

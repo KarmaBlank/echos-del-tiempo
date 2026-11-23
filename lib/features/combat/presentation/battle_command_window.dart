@@ -4,6 +4,7 @@ import '../../../app/design/design.dart';
 import '../../../app/design/ds_layout_host.dart';
 import '../../../core/layout/layout_doc.dart';
 import 'battle_bar_layout.dart';
+import 'combat_strings.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/proto_markup.dart';
 import '../../../app/theme/retro_text.dart';
@@ -23,17 +24,19 @@ import '../domain/skill_text.dart' show SkillReach;
 enum BattleCategory {
   /// ARMA (battle_attack_menu.md § 6): Atacar, Defender, filas
   /// contextuales (Liberar a X) y las Instante.
-  weapon('ARMA'),
-  skills('HABILIDADES'),
-  duos('DÚOS'),
-  ultimate('ULTIMATE'),
-  items('OBJETOS'),
+  weapon('ui.combat.cat.weapon'),
+  skills('ui.combat.cat.skills'),
+  duos('ui.combat.cat.duos'),
+  ultimate('ui.combat.cat.ultimate'),
+  items('ui.combat.cat.items'),
 
   /// Pasar turno (v0.8.3): siempre la última.
-  pass('PASAR');
+  pass('ui.combat.cat.pass');
 
-  const BattleCategory(this.label);
-  final String label;
+  const BattleCategory(this.labelKey);
+
+  /// i18n key of the label (`ui.combat.cat.*`).
+  final String labelKey;
 }
 
 /// Una acción del menú. [id] es estable (el id de la técnica, del dúo,
@@ -153,9 +156,7 @@ class BattleCommandWindow extends StatelessWidget {
     this.card,
     this.layout,
     this.layoutHooks,
-    this.hints =
-        'Enter: confirmar · Esc: volver · Flechas: elegir · Q/Tab: objetivo'
-            ' · P: pasar',
+    this.hints,
   });
 
   final String actorName;
@@ -183,7 +184,7 @@ class BattleCommandWindow extends StatelessWidget {
   /// MP y Pulso de quien actúa: el costo que no alcanza va en rojo.
   final num? mp;
   final int? pulse;
-  final String hints;
+  final String? hints;
 
   /// La tarjeta del personaje que actúa (a la izquierda del menú por
   /// defecto; battle_presentation.md § "Barra de abajo").
@@ -197,11 +198,11 @@ class BattleCommandWindow extends StatelessWidget {
   Widget build(BuildContext context) => BattleBarRow(
         layout: layout,
         hooks: layoutHooks,
-        slots: slots(),
+        slots: slots(context),
       );
 
   /// Las piezas de la ventana como slots de la barra (BattleBarLayout).
-  Map<String, DsSlotBuilder> slots() {
+  Map<String, DsSlotBuilder> slots(BuildContext context) {
     final sel =
         selected >= 0 && selected < visible.length ? visible[selected] : null;
     return {
@@ -224,7 +225,7 @@ class BattleCommandWindow extends StatelessWidget {
             action: sel,
             target: target,
             resources: resources,
-            hints: hints,
+            hints: hints ?? combatStrings(context).t('ui.combat.keys.hints'),
             extra: extra,
           ),
       BattleBarLayout.waiting: (_) => null,
@@ -256,7 +257,7 @@ class _Categories extends StatelessWidget {
           for (final c in categories)
             DsListRow(
               key: ValueKey('battle-cat-${c.category.name}'),
-              title: retroText(c.category.label),
+              title: retroText(combatStrings(context).t(c.category.labelKey)),
               selected: c.category == category,
               enabled: c.actions.any((a) => a.onSelect != null),
               onTap: () => onCategory(c.category),
@@ -482,13 +483,14 @@ class _Description extends StatelessWidget {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         const DsTag.instant(),
-                        Text(retroText('· no termina tu turno'),
+                        Text(retroText(combatStrings(context).t('ui.combat.instant.note')),
                             style: DsText.body(DsColors.instant)),
                       ],
                     ),
                     // La regla del motor (combat.md § "Pulso,
                     // precondiciones e Instante").
-                    Text(retroText(kInstantRule), style: DsText.detail()),
+                    Text(retroText(combatStrings(context).t(kInstantRule)),
+                        style: DsText.detail()),
                   ],
                 ),
               ),
@@ -526,9 +528,7 @@ class _Description extends StatelessWidget {
 
 /// Qué es un Instante, en el panel de la derecha (combat.md § "Pulso,
 /// precondiciones e Instante").
-const kInstantRule = 'Se usa sin gastar el turno, una vez por turno: '
-    'después te queda una acción más. Si en ese mismo turno volvés a usar '
-    'una Instante, cuenta como acción normal y termina el turno.';
+const kInstantRule = 'ui.combat.instant.rule';
 
 /// `<span style="color:hex">texto</span>` con el texto escapado.
 String hexSpanSafe(String hex, String text) =>

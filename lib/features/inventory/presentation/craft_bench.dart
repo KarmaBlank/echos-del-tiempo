@@ -42,17 +42,18 @@ import 'craft_layout.dart';
 import 'item_widgets.dart' show CellContent;
 import 'shop_sections.dart';
 import 'skill_chip.dart';
+import 'inventory_strings.dart';
+import '../../../core/i18n/strings.dart';
 
 /// Grupos de la mesa (paso 2), en orden.
 enum BenchGroup {
-  improve('MEJORAR', 'cambia los mods de esta arma (con materiales)'),
-  transfer('TRASLADAR', 'trae algo de otra arma (esa arma se destruye)'),
-  remove('QUITAR', 'saca un mod para hacer lugar'),
-  change('CAMBIAR', 'cambia la base del arma');
+  improve,
+  transfer,
+  remove,
+  change;
 
-  const BenchGroup(this.label, this.note);
-  final String label;
-  final String note;
+  String label(Strings s) => s.t('ui.inventory.craft.group.$name.label');
+  String note(Strings s) => s.t('ui.inventory.craft.group.$name.note');
 
   /// Tooltip del encabezado (una línea, `CraftHelp.groups`).
   String get help => CraftHelp.groups[name]!;
@@ -89,98 +90,57 @@ extension CraftOpText on CraftOp {
         _ => BenchGroup.change,
       };
 
-  String get title => switch (this) {
-        CraftOp.reroll => 'Re-tirar valores',
-        CraftOp.addAffix => 'Agregar un mod',
-        CraftOp.upgradeRarity => 'Subir rareza',
-        CraftOp.transferAffix => 'Traer un mod',
-        CraftOp.transferPassive => 'Traer la pasiva',
-        CraftOp.transferSkill => 'Traer una habilidad',
-        CraftOp.removeAffix => 'Quitar un mod',
-        CraftOp.reforge => 'Reforjar base',
-        CraftOp.salvage => 'Desarmar',
-        CraftOp.sell => 'Vender',
-        CraftOp.salvageAll => 'Desarmar todas',
-        CraftOp.sellAll => 'Vender todas',
-        CraftOp.salvageSelected => 'Desarmar elegidas',
-        CraftOp.sellSelected => 'Vender elegidas',
-        CraftOp.essence => 'Esencia del Abismo',
-        CraftOp.condense => 'Condensar materiales',
-        CraftOp.restoreQuebrar => 'Restaurar Quebrar',
+  /// Key fragment of this operation (`ui.inventory.craft.op.<id>.*`).
+  String get textId => switch (this) {
+        CraftOp.reroll => 'reroll',
+        CraftOp.addAffix => 'add_affix',
+        CraftOp.upgradeRarity => 'upgrade_rarity',
+        CraftOp.transferAffix => 'transfer_affix',
+        CraftOp.transferPassive => 'transfer_passive',
+        CraftOp.transferSkill => 'transfer_skill',
+        CraftOp.removeAffix => 'remove_affix',
+        CraftOp.reforge => 'reforge',
+        CraftOp.salvage => 'salvage',
+        CraftOp.sell => 'sell',
+        CraftOp.salvageAll => 'salvage_all',
+        CraftOp.sellAll => 'sell_all',
+        CraftOp.salvageSelected => 'salvage_selected',
+        CraftOp.sellSelected => 'sell_selected',
+        CraftOp.essence => 'essence',
+        CraftOp.condense => 'condense',
+        CraftOp.restoreQuebrar => 'restore_quebrar',
       };
 
+  String title(Strings s) => s.t('ui.inventory.craft.op.$textId.title');
+
   /// Explicación de 3-6 palabras para la fila del paso 2.
-  String get short => switch (this) {
-        CraftOp.reroll => 'Nuevos valores para cada mod',
-        CraftOp.addAffix => 'Suma un mod al azar',
-        CraftOp.upgradeRarity => 'Más lugar para mods',
-        CraftOp.transferAffix => 'Copia un mod de otra arma',
-        CraftOp.transferPassive => 'Trae la pasiva de otra Épica',
-        CraftOp.transferSkill => 'Aprende una habilidad de otra arma',
-        CraftOp.removeAffix => 'Borra un mod (no los fijos)',
-        CraftOp.reforge => 'Otro tipo de arma, mismos mods',
-        CraftOp.essence => 'Mejora los mods fijos',
-        CraftOp.restoreQuebrar => 'Recupera el Quebrar de esta arma',
-        _ => line,
+  String short(Strings s) => switch (this) {
+        CraftOp.salvage ||
+        CraftOp.sell ||
+        CraftOp.salvageAll ||
+        CraftOp.sellAll ||
+        CraftOp.salvageSelected ||
+        CraftOp.sellSelected ||
+        CraftOp.condense =>
+          line(s),
+        _ => s.t('ui.inventory.craft.op.$textId.short'),
       };
 
   /// Una línea "qué hace".
-  String get line => switch (this) {
-        CraftOp.reroll =>
-          'Nuevos valores para cada mod, dentro de su rango. Usa 1 Esquirla '
-              'del Eco.',
-        CraftOp.addAffix =>
-          'Un mod al azar, si el arma tiene lugar. Usa 1 Cristal de Era.',
-        CraftOp.upgradeRarity =>
-          'Común → Mágico → Raro → Épico: más lugar para mods (y pasiva en '
-              'Épico). Usa Prismas Rotos.',
-        CraftOp.transferAffix =>
-          'Copia un mod de otra arma a esta. La otra arma se destruye.',
-        CraftOp.transferPassive =>
-          'La pasiva de otra arma pasa a esta (las dos Épicas). La otra se '
-              'destruye.',
-        CraftOp.transferSkill =>
-          'Esta arma aprende una habilidad de otra, que se destruye.',
-        CraftOp.removeAffix =>
-          'Borra un mod. Los mods fijos de un legendario no se quitan.',
-        CraftOp.reforge =>
-          'Cambia el tipo de arma (p. ej. arco → báculo) y conserva rareza, '
-              'mods y forja.',
-        CraftOp.salvage => 'Destruye el arma y te da materiales de fusión.',
-        CraftOp.sell => 'Destruye el arma y te da créditos.',
-        CraftOp.salvageAll => 'Desarma todas las armas de una rareza.',
-        CraftOp.sellAll => 'Vende todas las armas de una rareza.',
-        CraftOp.salvageSelected => 'Desarma las armas que elegiste.',
-        CraftOp.sellSelected => 'Vende las armas que elegiste.',
-        CraftOp.essence =>
-          'Solo legendarios: cada mod fijo se tira 2 veces y queda el mayor; '
-              'nunca baja. Usa 1 Esencia del Abismo.',
-        CraftOp.condense =>
-          'Junta materiales bajos en uno alto, con créditos. Sin azar y sin '
-              'vuelta atrás.',
-        CraftOp.restoreQuebrar =>
-          'Vuelve a poner el Quebrar propio del arma en su ranura. Solo el de '
-              'su tipo; no sacrifica armas.',
-      };
+  String line(Strings s) =>
+      s.t('ui.inventory.craft.op.$textId.line', const {'to': '→'});
 
   /// Texto del botón de confirmar.
-  String get verb => switch (this) {
-        CraftOp.reroll => 'RE-TIRAR',
-        CraftOp.addAffix => 'AGREGAR MOD',
-        CraftOp.upgradeRarity => 'SUBIR RAREZA',
-        CraftOp.transferAffix => 'TRAER MOD',
-        CraftOp.transferPassive => 'TRAER PASIVA',
-        CraftOp.transferSkill => 'TRAER HABILIDAD',
-        CraftOp.removeAffix => 'QUITAR MOD',
-        CraftOp.reforge => 'REFORJAR',
+  String verb(Strings s) => switch (this) {
         CraftOp.salvage ||
         CraftOp.salvageAll ||
         CraftOp.salvageSelected =>
-          'DESARMAR',
-        CraftOp.sell || CraftOp.sellAll || CraftOp.sellSelected => 'VENDER',
-        CraftOp.essence => 'USAR ESENCIA',
-        CraftOp.condense => 'CONDENSAR',
-        CraftOp.restoreQuebrar => 'RESTAURAR QUEBRAR',
+          s.t('ui.inventory.craft.verb.salvage'),
+        CraftOp.sell ||
+        CraftOp.sellAll ||
+        CraftOp.sellSelected =>
+          s.t('ui.inventory.craft.verb.sell'),
+        _ => s.t('ui.inventory.craft.op.$textId.verb'),
       };
 
   bool get needsSource =>
@@ -196,21 +156,17 @@ extension CraftOpText on CraftOp {
 }
 
 /// Ayuda de los tiers (tooltip junto a los mods).
-const kTierHelp = '<b>Tiers de los mods</b><br>'
-    'Cada mod tiene un tier: <b>T1</b> es el mejor (valores más altos) y '
-    '<b>T5</b> el más bajo. Los tiers altos solo salen en armas de nivel '
-    'alto (T4 desde nivel 10 … T1 desde nivel 40).<br>'
-    '<span class="k">(único)</span> = mod fijo de un legendario.';
+String tierHelp(Strings s) => s.t('ui.inventory.craft.tier_help');
 
 /// Costo de una operación para la columna derecha del paso 2:
 /// `₵300 + 1 Cristal` (`Gratis` si no gasta nada).
-String craftCostShort(CraftResult r) {
+String craftCostShort(Strings s, CraftResult r) {
   final parts = [
     if (r.credits > 0) '₵${r.credits}',
     for (final e in r.materials.entries)
       '${e.value} ${e.key.label.split(' ').first}',
   ];
-  return parts.isEmpty ? 'Gratis' : parts.join(' + ');
+  return parts.isEmpty ? s.t('ui.inventory.craft.free') : parts.join(' + ');
 }
 
 /// Mesa de fusión (pestaña FUSIÓN), en 3 pasos: **1 DESTINO** (cuál) →
@@ -244,6 +200,8 @@ class CraftBench extends StatefulWidget {
 }
 
 class _CraftBenchState extends State<CraftBench> {
+  Strings get _s => invStrings(context);
+
   late int _step = widget.initialOp == null ? 0 : 2;
   late CraftOp _op = widget.initialOp ?? CraftOp.reroll;
   String? _target, _source, _base;
@@ -373,7 +331,7 @@ class _CraftBenchState extends State<CraftBench> {
             final it = list[i];
             final base = note?.call(it);
             final n = starred.contains(it.uid)
-                ? '★ Sugerida para tu arma objetivo'
+                ? '★ ${_s.t('ui.inventory.craft.suggested')}'
                     '${base == null ? '' : '<br>$base'}'
                 : base;
             return itemHoverTip(
@@ -526,15 +484,15 @@ class _CraftBenchState extends State<CraftBench> {
   String? _quickReason(PlayerProfile p, ItemInstance target, CraftOp op) {
     if (op.needsSource && _sources(p, target, op).isEmpty) {
       return switch (op) {
-        CraftOp.transferAffix => 'No tienes otra arma con mods',
-        CraftOp.transferPassive => 'No tienes otra arma con pasiva',
-        _ => 'No tienes otra arma',
+        CraftOp.transferAffix => _s.t('ui.inventory.craft.no_other_with_mods'),
+        CraftOp.transferPassive => _s.t('ui.inventory.craft.no_other_with_passive'),
+        _ => _s.t('ui.inventory.craft.no_other'),
       };
     }
     if (op == CraftOp.reforge &&
         target.rarity != Rarity.legendario &&
         shop.rules.crafting.reforgeBases(target).isEmpty) {
-      return 'No hay bases de su nivel';
+      return _s.t('ui.inventory.craft.no_bases');
     }
     if (op == CraftOp.transferAffix || op == CraftOp.transferPassive) {
       // "Se puede" si alguna combinación (arma × mod) es válida; si no, el
@@ -556,7 +514,7 @@ class _CraftBenchState extends State<CraftBench> {
       // El filtro de familia puede dejar la lista vacía: probamos todas.
       final any = shop.rules.crafting.reforgeBases(target).firstOrNull;
       return any == null
-          ? 'No hay bases de su nivel'
+          ? _s.t('ui.inventory.craft.no_bases')
           : shop.guards.craft(p, CraftAction.reforge(target.uid, any.id));
     }
     return shop.guards.craft(p, a);
@@ -568,7 +526,7 @@ class _CraftBenchState extends State<CraftBench> {
   Widget build(BuildContext context) {
     final p = shop.profile;
     final items = shop.owned;
-    if (items.isEmpty) return const Text('No tienes armas.');
+    if (items.isEmpty) return Text(_s.t('ui.inventory.craft.no_weapons'));
     final target =
         items.firstWhere((i) => i.uid == _target, orElse: () => items.first);
     _target = target.uid;
@@ -577,7 +535,7 @@ class _CraftBenchState extends State<CraftBench> {
       ..._headerSlots(p, target),
       FuseLayout.keys: (_) => _step == 0 ? const KeyHints(back: null) : null,
       FuseLayout.next: (_) => _step == 0
-          ? PanelButton('ELEGIR ›',
+          ? PanelButton(_s.t('ui.inventory.craft.choose'),
               key: const ValueKey('bench-next'),
               accent: ProtoColors.green,
               onPressed: () => _go(1))
@@ -627,7 +585,7 @@ class _CraftBenchState extends State<CraftBench> {
     ];
     return {
       FuseLayout.crumbs: (_) => StepCrumbs(
-            steps: const ['DESTINO', 'ACCIÓN', 'PREVIA'],
+            steps: [_s.t('ui.inventory.craft.step.target'), _s.t('ui.inventory.craft.step.action'), _s.t('ui.inventory.craft.step.preview')],
             tips: CraftHelp.steps,
             current: _step,
             keyPrefix: 'bench-crumb-',
@@ -638,7 +596,7 @@ class _CraftBenchState extends State<CraftBench> {
           : ProtoText(
               key: const ValueKey('bench-summary'),
               '${itemNameMarkup(shop.rules, target)}'
-              '${_step == 2 ? ' · <span class="k">${protoEsc(_op.title)}</span>' : ''}'),
+              '${_step == 2 ? ' · <span class="k">${protoEsc(_op.title(_s))}</span>' : ''}'),
       // Un tooltip por material: para qué sirve y dónde se consigue.
       FuseLayout.materials: (_) => Wrap(
             key: const ValueKey('craft-materials'),
@@ -743,7 +701,7 @@ class _CraftBenchState extends State<CraftBench> {
     ];
     final ok = p.credits >= r.credits &&
         r.materials.entries.every((e) => p.material(e.key) >= e.value);
-    return DsActionRow.costTag(parts.isEmpty ? 'GRATIS' : parts.join(' · '),
+    return DsActionRow.costTag(parts.isEmpty ? _s.t('ui.inventory.craft.free_upper') : parts.join(' · '),
         affordable: ok);
   }
 
@@ -780,8 +738,8 @@ class _CraftBenchState extends State<CraftBench> {
           keyPrefix: 'bench-weapon-',
           stars: (plan, r) => _bestTarget(plan, r, p),
           search: _search('bench-weapon-search', _weaponQ,
-              'BUSCAR: nombre, tipo, mod'),
-          empty: 'Ninguna arma coincide con la búsqueda.',
+              _s.t('ui.inventory.craft.search_weapon')),
+          empty: _s.t('ui.inventory.craft.no_match_weapon'),
           onTap: (it) {
             if (it.uid == target.uid) return _go(1);
             setState(() {
@@ -837,7 +795,7 @@ class _CraftBenchState extends State<CraftBench> {
       final (_, gColor) = _groupIcon(op.group);
       final tip = CraftHelp(shop.rules.crafting)
           .op(p, target, op, preview: pre, blocked: why)
-          .markup(op.title);
+          .markup(op.title(_s));
       return RetroHoverCard(
         builder: (ctx) => RetroTipText(tip,
             key: ValueKey('bench-op-tip-${op.name}'),
@@ -848,8 +806,8 @@ class _CraftBenchState extends State<CraftBench> {
           reason: why,
           icon: actionRowIcon(context, _opIcon(op), gColor,
               locked: why != null),
-          title: op.title,
-          description: op.short,
+          title: op.title(_s),
+          description: op.short(_s),
           // ★ si el resultado (vista previa) avanza una meta de tu build.
           extra: why == null && pre.error == null && pre.after != null
               ? BuildFitBadge(item: pre.after, before: target)
@@ -860,7 +818,7 @@ class _CraftBenchState extends State<CraftBench> {
                 ? const SizedBox.shrink()
                 : pre.error == null
                     ? _costTag(pre, p)
-                    : DsActionRow.costTag('PASO 3'),
+                    : DsActionRow.costTag(_s.t('ui.inventory.craft.step3')),
           ),
           lockedTap: true,
           onTap: () => choose(op),
@@ -873,7 +831,7 @@ class _CraftBenchState extends State<CraftBench> {
         key: ValueKey('bench-group-${g.name}'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          RetroTooltip(message: g.help, child: DsSectionHeader(g.label)),
+          RetroTooltip(message: g.help, child: DsSectionHeader(g.label(_s))),
           for (final op in CraftOpText.bench)
             if (op.group == g) card(op),
         ],
@@ -1084,9 +1042,8 @@ class _CraftBenchState extends State<CraftBench> {
           padding: const EdgeInsets.only(left: 24),
           child: Text(
               retroText(restore
-                  ? '¿Qué habilidad deja la ranura de Quebrar? (se pierde)'
-                  : '¿Qué habilidad reemplazas? (el arma no tiene más '
-                      'lugar: elegí una de las traídas o Quebrar)'),
+                  ? _s.t('ui.inventory.craft.replace_quebrar_q')
+                  : _s.t('ui.inventory.craft.replace_skill_q')),
               key: const ValueKey('craft-replace-title'),
               style: TextStyle(
                   color: action.replaceSkillId == null
@@ -1112,13 +1069,13 @@ class _CraftBenchState extends State<CraftBench> {
                       description: '${sk.mp} MP · ${skillKindLabel(sk)}',
                       selected: id == action.replaceSkillId,
                       reason:
-                          replaceable.contains(id) ? null : 'Habilidad base',
+                          replaceable.contains(id) ? null : _s.t('ui.inventory.craft.base_skill'),
                       footer: replaceable.contains(id)
                           ? CostChip.note(id == action.replaceSkillId
-                              ? 'Se reemplaza'
+                              ? _s.t('ui.inventory.craft.replaced')
                               : kBaseQuebrarIds.contains(id)
-                                  ? 'Ranura de Quebrar'
-                                  : 'Trasladada')
+                                  ? _s.t('ui.inventory.craft.quebrar_slot')
+                                  : _s.t('ui.inventory.craft.transferred'))
                           : null,
                       onTap: () {
                         if (!replaceable.contains(id)) return;
@@ -1138,13 +1095,13 @@ class _CraftBenchState extends State<CraftBench> {
       ];
     }
 
-    final list = <Widget>[dim(op.line)];
+    final list = <Widget>[dim(op.line(_s))];
     if (op.needsSource) {
       final sources = _sources(p, target, op);
-      list.add(const MenuHeader('¿De qué arma? (se destruye)'));
+      list.add(MenuHeader(_s.t('ui.inventory.craft.source_q')));
       if (sources.isEmpty) {
         list.add(dim(_quickReason(p, target, op) ??
-            'No hay armas (no la equipada ni tu última arma inicial)'));
+            _s.t('ui.inventory.craft.no_sources')));
       } else {
         list.add(_weaponGrid(
           p,
@@ -1156,7 +1113,7 @@ class _CraftBenchState extends State<CraftBench> {
           keyPrefix: 'craft-source-',
           stars: (plan, r) => _donors(plan, r, p, target, op),
           search: _search('craft-source-search', _sourceQ,
-              'BUSCAR: nombre, tipo, mod, habilidad'),
+              _s.t('ui.inventory.craft.search_source')),
           note: (it) => CraftHelp(rules.crafting).source(it, op),
           onTap: (it) {
             setState(() {
@@ -1169,7 +1126,7 @@ class _CraftBenchState extends State<CraftBench> {
           },
         ));
         if (!sources.any((it) => _hit(_sourceQ, it))) {
-          list.add(dim('Ninguna arma coincide con la búsqueda.'));
+          list.add(dim(_s.t('ui.inventory.craft.no_match_weapon')));
         }
         // Las elecciones del arma elegida, debajo de la grilla.
         final src = p.itemByUid(action.sourceUid ?? '');
@@ -1178,7 +1135,7 @@ class _CraftBenchState extends State<CraftBench> {
               padding: const EdgeInsets.only(top: 6),
               child: Wrap(spacing: 6, runSpacing: 4, children: [
                 ProtoText(
-                    'Pasiva: ${protoEsc(rules.items.passiveOf(src!)?.name ?? '')}'),
+                    _s.t('ui.inventory.craft.passive_of', {'name': protoEsc(rules.items.passiveOf(src!)?.name ?? '')})),
                 TransferFitMark(profile: p, passiveId: src.passiveId),
               ])));
         }
@@ -1191,8 +1148,8 @@ class _CraftBenchState extends State<CraftBench> {
             list.add(Padding(
                 padding: const EdgeInsets.only(left: 24),
                 child: dim(op == CraftOp.transferSkill
-                    ? '(sin habilidades)'
-                    : '(no tiene mods)')));
+                    ? _s.t('ui.inventory.craft.no_skills')
+                    : _s.t('ui.inventory.craft.no_mods_has'))));
           }
           list.addAll(pickRows(indent: 24, afterSelected: replaceRows()));
         }
@@ -1202,19 +1159,19 @@ class _CraftBenchState extends State<CraftBench> {
       list.addAll(replaceRows());
     }
     if (op == CraftOp.removeAffix) {
-      list.add(const MenuHeader('¿Qué mod quitar?'));
-      if (picks.isEmpty) list.add(dim('(no tiene mods)'));
+      list.add(MenuHeader(_s.t('ui.inventory.craft.remove_q')));
+      if (picks.isEmpty) list.add(dim(_s.t('ui.inventory.craft.no_mods_has')));
       list.addAll(pickRows());
     }
     if (op == CraftOp.reforge) {
-      list.add(const MenuHeader('¿Qué base nueva?'));
+      list.add(MenuHeader(_s.t('ui.inventory.craft.base_q')));
       list.add(ChoiceCycler<String?>(
-        label: 'Familia',
+        label: _s.t('ui.inventory.craft.family'),
         keyPrefix: 'bench-family-',
         options: [null, ...rules.catalog.classes.keys],
         value: _family,
         display: (id) => id == null
-            ? 'TODAS'
+            ? _s.t('ui.inventory.craft.all')
             : (rules.catalog.classes[id]?.name ?? id).toUpperCase(),
         onChanged: (id) => setState(() {
           _family = id;
@@ -1225,7 +1182,7 @@ class _CraftBenchState extends State<CraftBench> {
       list.add(const SizedBox(height: 4));
       final bases = _bases(target);
       if (bases.isEmpty) {
-        list.add(dim('(ninguna de esta familia)'));
+        list.add(dim(_s.t('ui.inventory.craft.none_in_family')));
       } else {
         final shown = [
           for (final w in bases)
@@ -1249,7 +1206,7 @@ class _CraftBenchState extends State<CraftBench> {
                 message: '<b>${protoEsc(w.name)}</b> '
                     '${protoColor(ProtoColors.dim, protoEsc(w.type))} '
                     '${weightTagMarkup(w)}'
-                    '${rules.ignoreRequirements ? '' : '<br>Nv ${w.level} ${rules.meetsRequirements(p, w) ? protoColor(ProtoColors.green, 'OK') : protoColor(ProtoColors.red, 'Req')}'}',
+                    '${rules.ignoreRequirements ? '' : '<br>${_s.t('ui.inventory.craft.level_short', {'n': w.level})} ${rules.meetsRequirements(p, w) ? protoColor(ProtoColors.green, 'OK') : protoColor(ProtoColors.red, 'Req')}'}',
                 child: child);
           },
           onTap: (i) {
@@ -1262,12 +1219,12 @@ class _CraftBenchState extends State<CraftBench> {
           },
         ));
         if (!bases.any(_baseHit)) {
-          list.add(dim('Ninguna base coincide con la búsqueda.'));
+          list.add(dim(_s.t('ui.inventory.craft.no_match_base')));
         }
       }
     }
     if (list.length == 1) {
-      list.add(dim('No hay nada que elegir: mira el resultado a la derecha.'));
+      list.add(dim(_s.t('ui.inventory.craft.nothing_to_pick')));
     }
     list.add(const SizedBox(height: 8));
     list.add(const KeyHints());
@@ -1277,9 +1234,9 @@ class _CraftBenchState extends State<CraftBench> {
       list: list,
       detail: PanelDetail(
         footer: [
-          PanelButton('‹ OTRA ACCIÓN',
+          PanelButton(_s.t('ui.inventory.craft.other_action'),
               key: const ValueKey('bench-back'), onPressed: () => _go(1)),
-          ConfirmButton(op.verb,
+          ConfirmButton(op.verb(_s),
               key: const ValueKey('craft-confirm'),
               reason: reason,
               cost: r.credits > 0 || r.materials.isNotEmpty
@@ -1342,14 +1299,13 @@ class _CraftBenchState extends State<CraftBench> {
                     q.kind == TargetReqKind.passive))
               if (tr.donor(t, before, q.key, p, stash: _stash)
                   case final d? when d.inStash)
-                '${q.label}: ${protoEsc(shop.rules.items.displayName(d.item))} '
-                    'está en el alijo (sacala primero)',
+                _s.t('ui.inventory.craft.in_stash', {'req': q.label, 'name': protoEsc(shop.rules.items.displayName(d.item))}),
         ];
         final text = after == null
             ? '$a%'
             : '$a% → ${tr.match(t, after, viewer: p).percent}%';
         return InfoLine(
-            'Objetivo',
+            _s.t('ui.inventory.craft.target'),
             '★ ${protoEsc(tr.targetName(t))}: $text'
                 '${stashHint.isEmpty ? '' : '<br>${stashHint.join('<br>')}'}',
             key: const ValueKey('craft-target'),
@@ -1368,32 +1324,32 @@ class _CraftBenchState extends State<CraftBench> {
       out.add(ProtoText(
           key: const ValueKey('craft-last'),
           last == target
-              ? protoColor(ProtoColors.green, '¡Listo!')
-              : '${protoColor(ProtoColors.green, '¡Listo! Ahora:')} '
+              ? protoColor(ProtoColors.green, _s.t('ui.inventory.craft.done'))
+              : '${protoColor(ProtoColors.green, _s.t('ui.inventory.craft.done_now'))} '
                   '${_diffMods(last, target)}'));
     }
 
     // Lo que cuesta y lo que se pierde, primero: se ve sin bajar.
-    out.add(InfoLine('Gastas', _spendMarkup(r, p),
+    out.add(InfoLine(_s.t('ui.inventory.craft.spend'), _spendMarkup(r, p),
         key: const ValueKey('craft-cost'), color: ProtoColors.gold));
     final lost = <String>[
       for (final uid in r.consumed)
         if (p.itemByUid(uid) case final it?)
-          '${itemNameMarkup(rules, it)} (se destruye con sus mods, pasiva y forja)',
-      if (r.replaced != null) 'Reemplaza ${protoEsc(r.replaced!)}',
+          _s.t('ui.inventory.craft.consumed', {'name': itemNameMarkup(rules, it)}),
+      if (r.replaced != null) _s.t('ui.inventory.craft.replaces', {'name': protoEsc(r.replaced!)}),
       for (final l in r.lost) protoEsc(l),
     ];
     out.add(InfoLine(
-        'Pierdes',
+        _s.t('ui.inventory.craft.lose'),
         key: const ValueKey('craft-lost'),
         color: ProtoColors.gold,
         lost.isEmpty
-            ? protoColor(ProtoColors.green, 'Nada')
+            ? protoColor(ProtoColors.green, _s.t('ui.inventory.craft.nothing'))
             : protoColor(ProtoColors.red, lost.join('<br>'))));
     if (r.error != null) {
       out.add(ProtoText(
           key: const ValueKey('craft-error'),
-          protoColor(ProtoColors.red, 'No se puede: ${protoEsc(r.error!)}')));
+          protoColor(ProtoColors.red, _s.t('ui.inventory.craft.cannot', {'why': protoEsc(r.error!)}))));
     }
     // Lo que entra al arma, con su marca de build (§ 9.6).
     if (op == CraftOp.transferSkill || op == CraftOp.transferPassive) {
@@ -1410,7 +1366,7 @@ class _CraftBenchState extends State<CraftBench> {
           key: const ValueKey('craft-incoming'),
           padding: const EdgeInsets.only(top: 4),
           child: Wrap(spacing: 6, runSpacing: 4, children: [
-            ProtoText('Entra: ${protoEsc(name)}'),
+            ProtoText(_s.t('ui.inventory.craft.enters', {'name': protoEsc(name)})),
             TransferFitMark(profile: p, skillId: skill, passiveId: passive),
           ]),
         ));
@@ -1451,11 +1407,11 @@ class _CraftBenchState extends State<CraftBench> {
     final random = after == null && op.isRandom;
     final shown = after ?? target;
     final same = protoColor(ProtoColors.dim, '=');
-    out.add(cmp('', '<b style="color:#ffd166">ANTES</b>',
-        '<b style="color:#ffd166">DESPUÉS</b>${random ? ' ${protoColor(ProtoColors.sky, '(al azar)')}' : ''}'));
+    out.add(cmp('', '<b style="color:#ffd166">${_s.t('ui.inventory.craft.before')}</b>',
+        '<b style="color:#ffd166">${_s.t('ui.inventory.craft.after')}</b>${random ? ' ${protoColor(ProtoColors.sky, _s.t('ui.inventory.craft.random'))}' : ''}'));
     final n0 = rules.items.displayName(target);
     out.add(cmp(
-        'Arma',
+        _s.t('ui.inventory.craft.row.weapon'),
         itemNameMarkup(rules, target),
         after == null || rules.items.displayName(after) == n0
             ? same
@@ -1464,11 +1420,11 @@ class _CraftBenchState extends State<CraftBench> {
     if (after != null && after.baseId != target.baseId) {
       final b0 = rules.items.baseOf(target), b1 = rules.items.baseOf(after);
       out.add(cmp(
-          'Base',
+          _s.t('ui.inventory.craft.row.base'),
           '${protoEsc(b0?.name ?? target.baseId)} '
               '${protoColor(ProtoColors.dim, protoEsc(b0?.type ?? '?'))}',
           '<b>${protoEsc(b1?.name ?? after.baseId)}</b> '
-              '${protoColor(ProtoColors.dim, '${protoEsc(b1?.type ?? '?')}${rules.ignoreRequirements ? '' : ' · Nv ${b1?.level ?? '?'}'}')}'
+              '${protoColor(ProtoColors.dim, '${protoEsc(b1?.type ?? '?')}${rules.ignoreRequirements ? '' : ' · ${_s.t('ui.inventory.craft.level_short', {'n': b1?.level ?? '?'})}'}')}'
               '${b1 == null || rules.ignoreRequirements ? '' : '<br>${requirementsLineMarkup(b1, p.level, p.attributes)}'}',
           key: const ValueKey('craft-base')));
       // Peso (panels.md § "Peso del arma"): la categoría y qué le cuesta
@@ -1477,7 +1433,7 @@ class _CraftBenchState extends State<CraftBench> {
         final turn = weightTurnLine(
             rules, shop.preview.withItem(p, after), b1.weight);
         out.add(cmp(
-            'Peso',
+            _s.t('ui.inventory.craft.row.weight'),
             '${weightTagMarkup(b0)} ${protoColor(ProtoColors.dim, fmtNum(b0.weight))}',
             b0.weight == b1.weight
                 ? '${weightTagMarkup(b1)} $same'
@@ -1489,7 +1445,7 @@ class _CraftBenchState extends State<CraftBench> {
       }
     }
     out.add(cmp(
-        'Rareza',
+        _s.t('ui.inventory.craft.row.rarity'),
         '<span style="color:${rarityHex(target.rarity)}">${target.rarity.label}</span>',
         after == null || after.rarity == target.rarity
             ? same
@@ -1499,7 +1455,7 @@ class _CraftBenchState extends State<CraftBench> {
     final pAfter = after == null ? pBefore : rules.items.passiveText(after);
     if (pBefore != null || pAfter != null) {
       out.add(cmp(
-          'Pasiva',
+          _s.t('ui.inventory.craft.row.passive'),
           '<span style="color:$kPassiveHex">${protoEsc(pBefore ?? '—')}</span>',
           pBefore == pAfter
               ? same
@@ -1509,16 +1465,16 @@ class _CraftBenchState extends State<CraftBench> {
     final sBefore = rules.items.skillsOf(target);
     final sAfter = after == null ? sBefore : rules.items.skillsOf(after);
     out.add(cmp(
-        'Habilidades',
+        _s.t('ui.inventory.craft.row.skills'),
         sBefore.map((id) => protoEsc(skillName(rules, id))).join('<br>'),
         '${[
           for (final id in sAfter)
             sBefore.contains(id)
                 ? protoEsc(skillName(rules, id))
                 : protoColor(ProtoColors.green,
-                    '<b>${protoEsc(skillName(rules, id))}</b> (nueva) ▲'),
+                    '<b>${protoEsc(skillName(rules, id))}</b> ${_s.t('ui.inventory.craft.new_f')} ▲'),
         ].join('<br>')}<br>'
-            '${protoColor(ProtoColors.dim, 'traídas ${shown.extraSkills.length}/${shown.rarity.skillSlots}')}',
+            '${protoColor(ProtoColors.dim, _s.t('ui.inventory.craft.brought', {'n': shown.extraSkills.length, 'max': shown.rarity.skillSlots}))}',
         key: const ValueKey('craft-skills')));
     // Las de DESPUÉS con su ficha (mouse / foco = tooltip).
     out.add(Padding(
@@ -1527,19 +1483,19 @@ class _CraftBenchState extends State<CraftBench> {
       child: SkillChips(
           rules: rules,
           item: shown,
-          label: 'Qué hacen:',
+          label: _s.t('ui.inventory.craft.what_they_do'),
           stats: shop.preview.withItem(p, shown),
           isNew: (id) => !sBefore.contains(id)),
     ));
     out.add(cmp(
-        'Mods',
-        'Mods ${target.modCount}/${target.rarity.maxMods}',
-        'Mods ${shown.modCount}/${shown.rarity.maxMods} '
-            '${protoColor(ProtoColors.dim, '(lugar de un ${shown.rarity.label})')}',
+        _s.t('ui.inventory.craft.row.mods'),
+        _s.t('ui.inventory.craft.mods_count', {'n': target.modCount, 'max': target.rarity.maxMods}),
+        '${_s.t('ui.inventory.craft.mods_count', {'n': shown.modCount, 'max': shown.rarity.maxMods})} '
+            '${protoColor(ProtoColors.dim, _s.t('ui.inventory.craft.room_of', {'rarity': shown.rarity.label}))}',
         key: const ValueKey('craft-mods-title'),
         extra: RetroTooltip(
           key: const ValueKey('craft-tier-help'),
-          message: '$kTierHelp<br><br>${affixSidesHelp(shown.rarity)}',
+          message: '${tierHelp(_s)}<br><br>${affixSidesHelp(shown.rarity)}',
           child: const Text('[?]', style: TextStyle(color: ProtoColors.sky)),
         )));
     out.add(cmp(
@@ -1547,7 +1503,7 @@ class _CraftBenchState extends State<CraftBench> {
         _modList(target),
         after == null
             ? protoColor(ProtoColors.sky,
-                random ? 'Se decide al confirmar' : '(sin cambios)')
+                random ? _s.t('ui.inventory.craft.decided_on_confirm') : _s.t('ui.inventory.craft.no_changes'))
             : _sameMods(target, after)
                 ? same
                 : _diffMods(target, after),
@@ -1565,16 +1521,16 @@ class _CraftBenchState extends State<CraftBench> {
 
       String i(num x) => '${x.round()}';
       for (final (l, x0, x1, f) in [
-        ('ATQ', b.attack, a.attack, i),
-        ('MAG', b.magic, a.magic, i),
-        ('VEL', b.speed, a.speed, (num x) => x.toStringAsFixed(1)),
+        (_s.t('ui.inventory.craft.stat.atk'), b.attack, a.attack, i),
+        (_s.t('ui.inventory.craft.stat.mag'), b.magic, a.magic, i),
+        (_s.t('ui.inventory.craft.stat.spd'), b.speed, a.speed, (num x) => x.toStringAsFixed(1)),
         (
-          'CRÍT',
+          _s.t('ui.inventory.craft.stat.crit'),
           b.critChance,
           a.critChance,
           (num x) => '${(x * 100).round()}%'
         ),
-        ('DEF', b.defense, a.defense, i),
+        (_s.t('ui.inventory.craft.stat.def'), b.defense, a.defense, i),
         ('HP', b.maxHp, a.maxHp, i),
       ]) {
         out.add(cmp(l, f(x0), delta(x0, x1, f)));
@@ -1597,13 +1553,13 @@ class _CraftBenchState extends State<CraftBench> {
     final parts = [
       if (r.credits > 0)
         part(p.credits >= r.credits,
-            '<b>₵${r.credits}</b> (tienes ₵${p.credits})'),
+            '<b>₵${r.credits}</b> ${_s.t('ui.inventory.craft.have', {'n': '₵${p.credits}'})}'),
       for (final e in r.materials.entries)
         part(p.material(e.key) >= e.value,
-            '${e.value} ${e.key.label} (tienes ${p.material(e.key)})'),
+            '${e.value} ${e.key.label} ${_s.t('ui.inventory.craft.have', {'n': p.material(e.key)})}'),
     ];
     return parts.isEmpty
-        ? protoColor(ProtoColors.green, 'Nada')
+        ? protoColor(ProtoColors.green, _s.t('ui.inventory.craft.nothing'))
         : parts.join(' · ');
   }
 
@@ -1614,7 +1570,7 @@ class _CraftBenchState extends State<CraftBench> {
 
   String _modList(ItemInstance it) {
     final rules = shop.rules;
-    if (it.affixes.isEmpty) return protoColor(ProtoColors.dim, '(sin mods)');
+    if (it.affixes.isEmpty) return protoColor(ProtoColors.dim, _s.t('ui.inventory.craft.no_mods'));
     return affixGroupsMarkup(rules, it).join('<br>');
   }
 
@@ -1632,14 +1588,14 @@ class _CraftBenchState extends State<CraftBench> {
         ? const <String>[]
         : affixGroupsMarkup(rules, shown, line: (a) {
             if (removed.contains(a) && !after.affixes.contains(a)) {
-              return '• ${protoColor(ProtoColors.red, '${protoEsc(rules.items.affixText(a, on: before))} (se quita)')}';
+              return '• ${protoColor(ProtoColors.red, '${protoEsc(rules.items.affixText(a, on: before))} ${_s.t('ui.inventory.craft.removed')}')}';
             }
             return before.affixes.contains(a)
                 ? '• ${affixMarkup(rules, a, on: after)}'
-                : '• ${protoColor(ProtoColors.green, '${protoEsc(rules.items.affixText(a, on: after))} (nuevo)')}';
+                : '• ${protoColor(ProtoColors.green, '${protoEsc(rules.items.affixText(a, on: after))} ${_s.t('ui.inventory.craft.new_m')}')}';
           });
     return lines.isEmpty
-        ? protoColor(ProtoColors.dim, '(sin mods)')
+        ? protoColor(ProtoColors.dim, _s.t('ui.inventory.craft.no_mods'))
         : lines.join('<br>');
   }
 }

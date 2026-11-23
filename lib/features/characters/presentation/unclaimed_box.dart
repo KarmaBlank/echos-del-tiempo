@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../app/design/design.dart';
 import '../../../game_engine/models/item.dart';
 import '../domain/stash.dart';
+import 'character_strings.dart';
 
 /// Organismo "Objetos sin recoger" (loot.md § 4b): lo propio que no
 /// entró en el inventario ni en el alijo. Cada fila: TOMAR (al
@@ -28,13 +29,14 @@ class UnclaimedBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) return const SizedBox.shrink();
+    final s = charStrings(context);
     return Column(
       key: const ValueKey('unclaimed-box'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(children: [
-          Text('OBJETOS SIN RECOGER', style: DsText.subtitle()),
+          Text(s.t('ui.characters.unclaimed.title'), style: DsText.subtitle()),
           const SizedBox(width: 8),
           DsBadge('${entries.length}', key: const ValueKey('unclaimed-count')),
         ]),
@@ -50,12 +52,12 @@ class UnclaimedBox extends StatelessWidget {
                   compact: true,
                   title: nameOf(entries[i]),
                   trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                    DsButton('TOMAR',
+                    DsButton(s.t('ui.characters.unclaimed.take'),
                         key: ValueKey('unclaimed-take-$i'),
                         size: DsButtonSize.compact,
                         onPressed: busy ? null : () => onTake(i)),
                     const SizedBox(width: 4),
-                    DsButton('DESCARTAR',
+                    DsButton(s.t('ui.characters.unclaimed.discard'),
                         key: ValueKey('unclaimed-discard-$i'),
                         size: DsButtonSize.compact,
                         kind: DsButtonKind.ghost,
@@ -71,8 +73,12 @@ class UnclaimedBox extends StatelessWidget {
 }
 
 /// Nombre corto de una entrada del alijo para listas.
-String stashEntryName(StashEntry e, String Function(ItemInstance) itemName) {
+String stashEntryName(StashEntry e, String Function(ItemInstance) itemName,
+    {Strings? strings}) {
   if (e.item != null) return itemName(e.item!);
-  if (e.eco != null) return 'Eco (${e.eco!.rarity.label})';
+  if (e.eco != null) {
+    return (strings ?? fallbackCharStrings()).t(
+        'ui.characters.stash.eco_unclaimed', {'rarity': e.eco!.rarity.label});
+  }
   return '${e.count} ${e.material!.label}';
 }

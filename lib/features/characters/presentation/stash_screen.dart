@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
+import '../../../core/i18n/i18n_providers.dart';
 import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/models/achievement.dart';
 import '../../../game_engine/models/player_profile.dart';
@@ -84,13 +85,20 @@ class _StashScreenState extends ConsumerState<StashScreen>
           .read(accountRepositoryProvider)
           .update((a) => a.replace(widget.characterId, save).withStash(s));
     } catch (e) {
-      if (mounted) setState(() => _notice = 'No se pudo guardar: $e');
+      if (mounted) {
+        setState(() => _notice = ref
+            .read(stringsProvider)
+            .t('ui.characters.stash.save_failed', {'error': '$e'}));
+      }
     }
     if (mounted) setState(() => _saving = false);
   }
 
   String? _batch(StashBatch b) {
-    if (b.moved.isEmpty) return b.reason ?? 'Nada para mover';
+    if (b.moved.isEmpty) {
+      return b.reason ??
+          ref.read(stringsProvider).t('ui.characters.stash.nothing_to_move');
+    }
     _notice = b.summary();
     _commit(b.profile, b.stash);
     return null;
@@ -122,9 +130,13 @@ class _StashScreenState extends ConsumerState<StashScreen>
       final slot = a.byId(widget.characterId);
       setState(() {
         if (slot != null) _p = rules.normalize(slot.profile);
+        final s = ref.read(stringsProvider);
         _notice = [
           for (final u in got)
-            'HAZAÑA · ${kAchievementsById[u.id]?.name ?? u.id} · ${u.reward.text}'
+            s.t('ui.characters.stash.achievement', {
+              'name': kAchievementsById[u.id]?.name ?? u.id,
+              'reward': u.reward.text,
+            })
         ].join('  ');
       });
     }).catchError((Object _) {});
@@ -141,14 +153,14 @@ class _StashScreenState extends ConsumerState<StashScreen>
       setState(() => _notice = m.error);
       return;
     }
-    _notice = 'Tomado';
+    _notice = ref.read(stringsProvider).t('ui.characters.stash.taken');
     _commit(m.profile!, m.stash!);
   }
 
   void _discardUnclaimed(int i) {
     final next = StashRules.dropUnclaimed(_stash!, i);
     if (next == null) return;
-    _notice = 'Descartado';
+    _notice = ref.read(stringsProvider).t('ui.characters.stash.discarded');
     _commit(_p!, next);
   }
 
@@ -172,26 +184,30 @@ class _StashScreenState extends ConsumerState<StashScreen>
   Widget build(BuildContext context) {
     final p = _p, s = _stash;
     final cls = p == null ? '' : rules.catalog.classes[p.classId]?.name ?? p.classId;
+    final st = ref.strings;
     return Scaffold(
       body: PanelFrame(
         key: const ValueKey('stash-screen'),
-        title: 'ALIJO COMPARTIDO',
+        title: st.t('ui.characters.stash.screen_title'),
         width: 1000,
         onClose: () => Navigator.of(context).maybePop(),
-        help: stashHelp,
+        help: stashHelp(st),
         actions: [
-          PanelButton('VOLVER',
+          PanelButton(st.t('ui.characters.stash.back'),
               key: const ValueKey('stash-close'),
               onPressed: () => Navigator.of(context).maybePop()),
         ],
         child: p == null || s == null
-            ? Text('Cargando...', style: DsText.detail())
+            ? Text(st.t('ui.characters.stash.loading'), style: DsText.detail())
             : Column(mainAxisSize: MainAxisSize.min, children: [
                 StashBoard(
-                    host: this, title: '${p.name} · $cls · Nv ${p.level}'),
+                    host: this,
+                    title: st.t('ui.characters.common.name_class_level',
+                        {'name': p.name, 'cls': cls, 'level': p.level})),
                 UnclaimedBox(
                   entries: s.unclaimed,
-                  nameOf: (e) => stashEntryName(e, rules.items.displayName),
+                  nameOf: (e) =>
+                      stashEntryName(e, rules.items.displayName, strings: st),
                   busy: _saving,
                   onTake: _takeUnclaimed,
                   onDiscard: _discardUnclaimed,
@@ -203,10 +219,5 @@ class _StashScreenState extends ConsumerState<StashScreen>
 }
 
 /// Ayuda ("?") del alijo, dentro y fuera de la sesión.
-const stashHelp =
-    'Clic elige, el botón de abajo (o doble clic) lo pasa al otro lado; '
-    'clic derecho: Guardar en alijo / Sacar al inventario. ELEGIR marca '
-    'varias casillas de un lado; MOVER TODO AL ALIJO lleva todo lo movible.'
-    '<br>No se guardan la <b>equipada</b>, la última <b>arma inicial</b> ni '
-    'las pociones. Los materiales se apilan hasta ${Stash.maxMaterialStack}. '
-    'La pestaña ECOS es para Ecos y materiales de endgame.';
+String stashHelp(Strings s) =>
+    s.t('ui.characters.stash.help', {'max': Stash.maxMaterialStack});

@@ -16,6 +16,8 @@ import '../../../game_engine/rules/weapon_weight.dart';
 import '../domain/battle_impact.dart';
 import '../domain/item_text.dart';
 import '../domain/weapon_compare.dart';
+import '../../../core/i18n/strings.dart';
+import 'inventory_strings.dart';
 import 'shop_sections.dart';
 import 'skill_chip.dart';
 
@@ -50,6 +52,47 @@ String _weightTag(WeightClass c) =>
 String _passive(String t) =>
     '<span style="color:$kPassiveHex">${protoEsc(t)}</span>';
 
+String _weightLine(Strings s, WeaponComparison cmp) =>
+    s.t('ui.inventory.compare.weight', {
+      'from': _weightTag(cmp.weightClassBefore),
+      'arrow': '→',
+      'to': _weightTag(cmp.weightClassAfter),
+    });
+
+/// Skill, mod, passive, element and ULT lines that change from A to B.
+List<String> _changeLines(Strings s, WeaponComparison cmp) {
+  final skill = s.t('ui.inventory.compare.skill');
+  final mod = s.t('ui.inventory.compare.mod');
+  final passive = s.t('ui.inventory.compare.passive');
+  return [
+    if (cmp.skillsGained.isNotEmpty)
+      _plus(skill, protoEsc(cmp.skillsGained.join(', '))),
+    if (cmp.skillsLost.isNotEmpty)
+      _minus(skill, protoEsc(cmp.skillsLost.join(', '))),
+    if (cmp.modsGained.isNotEmpty) _plus(mod, _mods(cmp.modsGained)),
+    if (cmp.modsLost.isNotEmpty) _minus(mod, _mods(cmp.modsLost)),
+    // La pasiva y la ULT solo si cambian.
+    if (cmp.passiveChanged && cmp.passiveAfter != null)
+      _plus(passive, _passive(cmp.passiveAfter!)),
+    if (cmp.passiveChanged && cmp.passiveBefore != null)
+      _minus(passive, _passive(cmp.passiveBefore!)),
+    if (cmp.elementChanged)
+      s.t('ui.inventory.compare.element', {
+        'from': protoEsc(cmp.elementBefore?.label ?? '—'),
+        'arrow': '→',
+        'to': protoEsc(cmp.elementAfter?.label ?? '—'),
+      }),
+    if (cmp.ultChanged)
+      protoColor(
+          ProtoColors.pink,
+          s.t('ui.inventory.compare.ult', {
+            'from': protoEsc(cmp.ultBefore ?? '—'),
+            'arrow': '→',
+            'to': protoEsc(cmp.ultAfter ?? '—'),
+          })),
+  ];
+}
+
 /// Stats finales de A → B y qué cambia ([WeaponComparison]).
 class ComparisonDelta extends StatelessWidget {
   const ComparisonDelta({
@@ -71,31 +114,13 @@ class ComparisonDelta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lines = <String>[
-      if (cmp.skillsGained.isNotEmpty)
-        _plus('Habilidad', protoEsc(cmp.skillsGained.join(', '))),
-      if (cmp.skillsLost.isNotEmpty)
-        _minus('Habilidad', protoEsc(cmp.skillsLost.join(', '))),
-      if (cmp.modsGained.isNotEmpty) _plus('Mod', _mods(cmp.modsGained)),
-      if (cmp.modsLost.isNotEmpty) _minus('Mod', _mods(cmp.modsLost)),
-      if (cmp.passiveChanged && cmp.passiveAfter != null)
-        _plus('Pasiva', _passive(cmp.passiveAfter!)),
-      if (cmp.passiveChanged && cmp.passiveBefore != null)
-        _minus('Pasiva', _passive(cmp.passiveBefore!)),
-      if (cmp.elementChanged)
-        'Elemento: ${protoEsc(cmp.elementBefore?.label ?? '—')} → '
-            '${protoEsc(cmp.elementAfter?.label ?? '—')}',
-      if (cmp.ultChanged)
-        protoColor(ProtoColors.pink,
-            'ULT: ${protoEsc(cmp.ultBefore ?? '—')} → ${protoEsc(cmp.ultAfter ?? '—')}'),
-    ];
+    final str = invStrings(context);
+    final lines = _changeLines(str, cmp);
     // Peso (panels.md § "Peso del arma"): la categoría si cambia y lo que
     // cambia el turno, con el mismo cálculo que la batalla.
     final speedChanged = (cmp.before.speed - cmp.after.speed).abs() > 1e-6;
     final weightLines = <String>[
-      if (cmp.weightClassChanged)
-        'Peso: ${_weightTag(cmp.weightClassBefore)} → '
-            '${_weightTag(cmp.weightClassAfter)}',
+      if (cmp.weightClassChanged) _weightLine(str, cmp),
       if (speedChanged) turnIntervalLine(rules, cmp.before, cmp.after.speed),
     ];
     final w = rules.items.baseOf(cmp.to);
@@ -105,7 +130,8 @@ class ComparisonDelta extends StatelessWidget {
         if (title != null)
           ProtoText(title!, style: const TextStyle(color: ProtoColors.sky)),
         if (cmp.same)
-          ProtoText(protoColor(ProtoColors.dim, 'Es la misma arma.'))
+          ProtoText(protoColor(
+              ProtoColors.dim, str.t('ui.inventory.compare.same_weapon')))
         else ...[
           Wrap(
             spacing: 16,
@@ -116,15 +142,15 @@ class ComparisonDelta extends StatelessWidget {
             ProtoText(weightLines.join('<br>'),
                 key: const ValueKey('cmp-weight')),
           ProtoText(lines.isEmpty
-              ? protoColor(
-                  ProtoColors.dim, 'Mismas habilidades, mods y pasiva.')
+              ? protoColor(ProtoColors.dim,
+                  str.t('ui.inventory.compare.same_skills_mods_passive'))
               : lines.join('<br>')),
         ],
         if (w != null && !rules.ignoreRequirements)
           ProtoText(requirementsLineMarkup(w, level, attributes)),
         if (!cmp.meetsRequirements)
           ProtoText(protoColor(ProtoColors.red,
-              'No cumples los requisitos: hoy no podrías equiparla.')),
+              str.t('ui.inventory.compare.unmet_requirements_long'))),
       ],
     );
   }
@@ -215,32 +241,14 @@ class CompactComparison extends StatelessWidget {
   final double maxWidth;
 
   /// Markup de la sección plegada `Cambios` (vacío si no hay nada).
-  static String changesMarkup(ProgressionRules rules, WeaponComparison cmp,
-      int level, PlayerAttributes attributes) {
+  static String changesMarkup(Strings s, ProgressionRules rules,
+      WeaponComparison cmp, int level, PlayerAttributes attributes) {
     final speedChanged = (cmp.before.speed - cmp.after.speed).abs() > 1e-6;
     final w = rules.items.baseOf(cmp.to);
     return [
-      if (cmp.weightClassChanged)
-        'Peso: ${_weightTag(cmp.weightClassBefore)} → '
-            '${_weightTag(cmp.weightClassAfter)}',
+      if (cmp.weightClassChanged) _weightLine(s, cmp),
       if (speedChanged) turnIntervalLine(rules, cmp.before, cmp.after.speed),
-      if (cmp.skillsGained.isNotEmpty)
-        _plus('Habilidad', protoEsc(cmp.skillsGained.join(', '))),
-      if (cmp.skillsLost.isNotEmpty)
-        _minus('Habilidad', protoEsc(cmp.skillsLost.join(', '))),
-      if (cmp.modsGained.isNotEmpty) _plus('Mod', _mods(cmp.modsGained)),
-      if (cmp.modsLost.isNotEmpty) _minus('Mod', _mods(cmp.modsLost)),
-      // La pasiva y la ULT solo si cambian.
-      if (cmp.passiveChanged && cmp.passiveAfter != null)
-        _plus('Pasiva', _passive(cmp.passiveAfter!)),
-      if (cmp.passiveChanged && cmp.passiveBefore != null)
-        _minus('Pasiva', _passive(cmp.passiveBefore!)),
-      if (cmp.elementChanged)
-        'Elemento: ${protoEsc(cmp.elementBefore?.label ?? '—')} → '
-            '${protoEsc(cmp.elementAfter?.label ?? '—')}',
-      if (cmp.ultChanged)
-        protoColor(ProtoColors.pink,
-            'ULT: ${protoEsc(cmp.ultBefore ?? '—')} → ${protoEsc(cmp.ultAfter ?? '—')}'),
+      ..._changeLines(s, cmp),
       if (w != null && !cmp.meetsRequirements)
         requirementsLineMarkup(w, level, attributes),
     ].join('<br>');
@@ -255,18 +263,22 @@ class CompactComparison extends StatelessWidget {
     // Dos columnas si cada una tiene ~20 letras; si no, una.
     final half = (maxWidth - 8) / 2;
     final cellW = half >= RetroType.width(context, 160) ? half : maxWidth;
-    final changes = changesMarkup(rules, cmp, level, attributes);
+    final str = invStrings(context);
+    final changes = changesMarkup(str, rules, cmp, level, attributes);
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ProtoText(protoColor(ProtoColors.sky, 'Si la equipas:')),
+          ProtoText(protoColor(
+              ProtoColors.sky, str.t('ui.inventory.compare.if_equipped'))),
           if (cmp.same)
-            ProtoText(protoColor(ProtoColors.dim, 'Es la misma arma.'))
+            ProtoText(protoColor(
+                ProtoColors.dim, str.t('ui.inventory.compare.same_weapon')))
           else if (changed.isEmpty)
-            ProtoText(protoColor(ProtoColors.dim, 'Mismas estadísticas.'))
+            ProtoText(protoColor(
+                ProtoColors.dim, str.t('ui.inventory.compare.same_stats')))
           else
             Wrap(
               spacing: 8,
@@ -276,10 +288,13 @@ class CompactComparison extends StatelessWidget {
               ],
             ),
           if (!cmp.meetsRequirements)
-            ProtoText(
-                protoColor(ProtoColors.red, 'No cumples los requisitos.')),
+            ProtoText(protoColor(ProtoColors.red,
+                str.t('ui.inventory.compare.unmet_requirements'))),
           if (!cmp.same && changes.isNotEmpty)
-            RetroTipFold(title: 'Cambios', body: changes, maxWidth: maxWidth),
+            RetroTipFold(
+                title: str.t('ui.inventory.compare.changes'),
+                body: changes,
+                maxWidth: maxWidth),
         ],
       ),
     );
@@ -384,7 +399,10 @@ class HoverCompareCard extends StatelessWidget {
         attributes: attributes,
         label: ownerName == null
             ? null
-            : protoColor(ProtoColors.dim, 'de ${protoEsc(ownerName!)}'));
+            : protoColor(
+                ProtoColors.dim,
+                invStrings(context).t('ui.inventory.compare.owner',
+                    {'name': protoEsc(ownerName!)})));
     if (!withEquipped) {
       return SizedBox(
           key: const ValueKey('inv-cmp-tip'), width: width, child: card);
@@ -404,14 +422,17 @@ class HoverCompareCard extends StatelessWidget {
             key: const ValueKey('inv-cmp-tip-equipped'),
             width: width,
             child: eq == null
-                ? ProtoText(protoColor(ProtoColors.dim, 'Sin arma equipada'))
+                ? ProtoText(protoColor(ProtoColors.dim,
+                    invStrings(context).t('ui.inventory.compare.no_equipped')))
                 : _LabeledCard(
                     rules: rules,
                     item: eq,
                     level: viewer.level,
                     attributes: attributes,
                     equipped: true,
-                    label: '<b style="color:#ffd166">EQUIPADA</b>'),
+                    label: '<b style="color:#ffd166">'
+                        '${invStrings(context).t('ui.inventory.bag.equipped')}'
+                        '</b>'),
           ),
         ],
       ),
@@ -478,7 +499,11 @@ class ChangeStrip extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(hovering ? 'CAMBIOS' : 'ACTUAL', style: DsText.subtitle()),
+          Text(
+              invStrings(context).t(hovering
+                  ? 'ui.inventory.compare.strip_changes'
+                  : 'ui.inventory.compare.strip_current'),
+              style: DsText.subtitle()),
           SizedBox(height: DsSpace.xs),
           // Una línea por stat; sin arma mirada, solo el valor actual.
           for (final s in stats)
@@ -596,6 +621,7 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
     }
     final cmp =
         compareWeapons(rules, viewer, from: a, to: b, attributes: attrs);
+    final s = invStrings(context);
 
     Widget column(String letter, WeaponRef ref, ItemInstance it) {
       final owner = session.players[ref.owner];
@@ -613,8 +639,8 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ProtoText('<span style="color:#ffd166">$letter</span>'
-                  '${mine ? '' : ' ${protoColor(ProtoColors.dim, 'de ${protoEsc(owner?.name ?? '?')}')}'}'
-                  '${using ? ' ${protoColor(ProtoColors.orange, 'EQUIPADA')}' : ''}'),
+                  '${mine ? '' : ' ${protoColor(ProtoColors.dim, s.t('ui.inventory.compare.owner', {'name': protoEsc(owner?.name ?? '?')}))}'}'
+                  '${using ? ' ${protoColor(ProtoColors.orange, s.t('ui.inventory.bag.equipped'))}' : ''}'),
               SizedBox(height: DsSpace.xs),
               Expanded(
                 child: SingleChildScrollView(
@@ -638,24 +664,30 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
                 spacing: DsSpace.xs,
                 runSpacing: DsSpace.xs,
                 children: !mine
-                    ? [Text('Solo lectura', style: DsText.detail())]
+                    ? [
+                        Text(s.t('ui.inventory.bag.read_only'),
+                            style: DsText.detail())
+                      ]
                     : [
                         _btn(
-                            'DESARMAR',
+                            s.t('ui.inventory.compare.salvage'),
                             'cmp-salvage-$k',
                             g.craft(
                                 viewer, CraftAction(CraftOp.salvage, it.uid)),
                             () => setState(
                                 () => _confirm = (letter, CraftOp.salvage))),
                         _btn(
-                            'VENDER ₵${rules.crafting.sellPrice(it)}',
+                            s.t('ui.inventory.bag.sell_for', {
+                              'price': '₵${rules.crafting.sellPrice(it)}'
+                            }),
                             'cmp-sell-$k',
                             g.craft(viewer, CraftAction(CraftOp.sell, it.uid)),
                             () => setState(
                                 () => _confirm = (letter, CraftOp.sell))),
                         if (!using)
                           _btn(
-                              'EQUIPAR $letter',
+                              s.t('ui.inventory.compare.equip_letter',
+                                  {'letter': letter}),
                               'cmp-equip-$k',
                               g.equip(viewer, it.uid, pending: widget.pending),
                               () => shop.controller.equip(it.uid),
@@ -680,17 +712,29 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
         Expanded(
           child: ProtoText(
               key: const ValueKey('cmp-craft-question'),
-              '¿${sell ? 'Vender' : 'Desarmar'} ${confirm.$1}: '
-              '${protoEsc(rules.items.displayName(it))}? '
-              'Recibes ${protoColor(ProtoColors.green, protoEsc(gainsText(credits: r.gainedCredits, materials: r.gainedMaterials, chances: r.outcomes)))}. '
-              '${protoColor(ProtoColors.red, 'El arma se destruye.')}'
-              '${r.lost.isEmpty ? '' : ' ${protoColor(ProtoColors.orange, 'Se pierde: ${protoEsc(r.lost.join(', '))}')}'}'),
+              '${s.t('ui.inventory.compare.craft_question', {
+                    'op': sell ? 'sell' : 'salvage',
+                    'letter': confirm.$1,
+                    'name': protoEsc(rules.items.displayName(it)),
+                    'gains': protoColor(
+                        ProtoColors.green,
+                        protoEsc(gainsText(
+                            credits: r.gainedCredits,
+                            materials: r.gainedMaterials,
+                            chances: r.outcomes))),
+                  })} '
+              '${protoColor(ProtoColors.red, s.t('ui.inventory.bag.weapon_destroyed'))}'
+              '${r.lost.isEmpty ? '' : ' ${protoColor(ProtoColors.orange, s.t('ui.inventory.compare.lost', {'what': protoEsc(r.lost.join(', '))}))}'}'),
         ),
         SizedBox(width: DsSpace.sm),
-        _btn('CANCELAR', 'cmp-craft-cancel', null,
+        _btn(s.t('ui.inventory.common.cancel'), 'cmp-craft-cancel', null,
             () => setState(() => _confirm = null)),
         SizedBox(width: DsSpace.xs),
-        _btn(sell ? 'VENDER ₵${r.gainedCredits}' : 'DESARMAR',
+        _btn(
+            sell
+                ? s.t('ui.inventory.bag.sell_for',
+                    {'price': '₵${r.gainedCredits}'})
+                : s.t('ui.inventory.compare.salvage'),
             'cmp-craft-confirm', shop.guards.craft(viewer, act), () {
           shop.controller.craft(act);
           setState(() => _confirm = null);
@@ -699,10 +743,12 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
     } else {
       footer.addAll([
         const Spacer(),
-        _btn('INTERCAMBIAR A/B', 'cmp-swap', null, widget.onSwap),
+        _btn(s.t('ui.inventory.compare.swap'), 'cmp-swap', null,
+            widget.onSwap),
         SizedBox(width: DsSpace.xs),
-        _btn('CERRAR [ESC]', 'cmp-close', null, widget.onClose,
-            tooltip: 'Cerrar la comparación'),
+        _btn(s.t('ui.inventory.armory.close'), 'cmp-close', null,
+            widget.onClose,
+            tooltip: s.t('ui.inventory.compare.close_tip')),
       ]);
     }
 
@@ -714,9 +760,11 @@ class _WeaponCompareViewState extends State<WeaponCompareView> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text.rich(TextSpan(children: [
-            TextSpan(text: 'COMPARAR', style: DsText.subtitle()),
             TextSpan(
-                text: '  Si equiparas B en vez de A', style: DsText.detail()),
+                text: s.t('ui.inventory.bag.compare'), style: DsText.subtitle()),
+            TextSpan(
+                text: '  ${s.t('ui.inventory.compare.subtitle')}',
+                style: DsText.detail()),
           ])),
           SizedBox(height: DsSpace.sm),
           Expanded(

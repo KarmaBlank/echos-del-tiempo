@@ -61,8 +61,7 @@ void main() {
     expect(find.text('LANGUAGE', findRichText: true), findsOneWidget);
     expect(find.text('GAME', findRichText: true), findsOneWidget);
     expect(find.text('CLOSE [ESC]', findRichText: true), findsOneWidget);
-    // Lo no migrado sigue en español (fallback por literal, fase 2).
-    expect(find.text('NUMEROS FLOTANTES', findRichText: true), findsOneWidget);
+    expect(find.text('FLOATING NUMBERS', findRichText: true), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('game-locale-AUTO')));
     await tester.pumpAndSettle();

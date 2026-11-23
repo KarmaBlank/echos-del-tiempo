@@ -9,6 +9,7 @@ import '../../../characters/presentation/characters_providers.dart';
 import '../../../characters/presentation/party_picker.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
+import '../world_strings.dart';
 
 /// Panel PARTY del pueblo (tecla P; docs/specs/solo_party.md § 2.3):
 /// agregar o sacar compañeros entre misiones y su AUTO. Solo jugando
@@ -60,14 +61,12 @@ class _PartyPanelState extends ConsumerState<PartyPanel> {
     ];
     return PanelFrame(
       key: const ValueKey('panel-party'),
-      title: 'PARTY',
+      title: context.t('ui.world.party.title'),
       width: 760,
-      help: 'Tus otros personajes de la cuenta te acompañan jugando solo. '
-          'Ganan XP y loot propio y se guardan en su ranura. Solo se cambia '
-          'en el pueblo, entre misiones.',
+      help: context.t('ui.world.party.help'),
       onClose: c.closePanel,
       actions: [
-        PanelButton('CERRAR [P]',
+        PanelButton(context.t('ui.world.party.close'),
             key: const ValueKey('party-close'), onPressed: c.closePanel),
       ],
       child: PartyPicker(

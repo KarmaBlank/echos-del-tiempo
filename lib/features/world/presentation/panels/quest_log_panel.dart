@@ -13,6 +13,7 @@ import 'biome_npc_panel.dart'
     show orderCell, questCells, residentItemIcon, trackButton;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
+import '../world_strings.dart';
 
 /// DIARIO (roles.md § 8.1, antes "registro de encargos"): la subpestaña
 /// SEGUIDOS con los encargos que seguís y una por habitante con su orden
@@ -55,11 +56,11 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
     final r = n == null ? null : town.resident(n.id);
     return PanelFrame(
       key: const ValueKey('panel-quest-log'),
-      title: 'DIARIO',
+      title: context.t('ui.town.journal.title'),
       width: 760,
       onClose: c.closePanel,
       actions: [
-        PanelButton('CERRAR',
+        PanelButton(context.t('ui.town.journal.close'),
             key: const ValueKey('quest-log-close'), onPressed: c.closePanel),
       ],
       child: Column(
@@ -68,7 +69,7 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
         children: [
           DsTabBar(
             tabs: [
-              DsTab('SEGUIDOS',
+              DsTab(context.t('ui.town.journal.tracked'),
                   badge: tracked.isEmpty ? null : '${tracked.length}',
                   key: const ValueKey('quest-log-tab-seguidos')),
               for (var i = 0; i < npcs.length; i++)
@@ -91,9 +92,18 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
           SizedBox(height: DsSpace.xs),
           if (n != null && r != null)
             Text(
-                '${n.role.label} · relación ${r.rep}'
-                '${r.invited ? ' · ${ResidentRules.stage(r).label}' : ' · vive en ${biomeDef(n.biome)?.name ?? n.biome}'}'
-                '${r.request != null ? ' · pide: ${r.request!.label.toLowerCase()}' : ''}',
+                [
+                  context.t('ui.town.journal.status_rep',
+                      {'role': n.role.label, 'rep': r.rep}),
+                  r.invited
+                      ? ResidentRules.stage(r).label
+                      : context.t('ui.town.journal.status_lives', {
+                          'place': biomeDef(n.biome)?.name ?? n.biome
+                        }),
+                  if (r.request != null)
+                    context.t('ui.town.journal.status_asks',
+                        {'what': r.request!.label.toLowerCase()}),
+                ].join(' · '),
                 key: const ValueKey('quest-log-status'),
                 softWrap: true,
                 style: DsText.detail(DsColors.textSecondary)),
@@ -105,16 +115,17 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
                 if (n == null)
                   for (final a in tracked) _trackedCell(a, p),
                 if (n != null && r != null) ...[
-                  if (orderCell(c, n, r, p, home: c.place == kPueblo)
+                  if (orderCell(worldStrings(context), c, n, r, p,
+                          home: c.place == kPueblo)
                       case final o?)
                     o,
-                  ...questCells(c, n, r, p),
+                  ...questCells(worldStrings(context), c, n, r, p),
                 ],
               ]),
             ],
             empty: n == null
-                ? 'No seguís ningún encargo. Marcá SEGUIR en uno activo.'
-                : 'Sin encargos.',
+                ? context.t('ui.town.journal.none_tracked')
+                : context.t('ui.town.journal.no_quests'),
           ),
         ],
       ),
@@ -137,9 +148,9 @@ class _QuestLogPanelState extends State<QuestLogPanel> {
           nameColor: DsColors.textTitle,
           tags: [
             (a.kind.label.toUpperCase(), DsColors.textSecondary),
-            if (a.ready) ('LISTO', DsColors.success),
+            if (a.ready) (context.t('ui.town.journal.ready'), DsColors.success),
           ],
-          lines: [a.title, questProgressText(a)],
+          lines: [a.title, questProgressText(worldStrings(context), a)],
           actions: [trackButton(widget.controller, p, a.npc.id, a.kind)],
         ),
       );

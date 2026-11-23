@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
@@ -5,17 +6,18 @@ import '../../../game_engine/data/tuning_catalog.dart';
 import '../../../game_engine/models/travesia_meta.dart';
 import '../../../game_engine/rules/meta_progress_rules.dart';
 import '../../world/presentation/session_controller.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Preparación de la Travesía (organismo; docs/specs/roguelike.md § 8):
 /// moneda, dificultad, loadout (2 habilidades de arranque) y árbol de
 /// afuera del personaje. Solo arma la vista; guarda el controlador.
-class RunPrepView extends StatelessWidget {
+class RunPrepView extends ConsumerWidget {
   const RunPrepView({super.key, required this.controller});
 
   final SessionController controller;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = controller;
     final m = c.meta;
     final key = c.metaKey;
@@ -42,19 +44,26 @@ class RunPrepView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-            'Ecos: ${m.coins} · Travesías: ${m.runs} (ganadas ${m.wins}) · '
-            'Zonas en el sorteo: ${zonesStart + m.zones}',
+            ref.t('ui.run.prep.meta', {
+              'coins': m.coins,
+              'runs': m.runs,
+              'wins': m.wins,
+              'zones': zonesStart + m.zones,
+            }),
             key: const ValueKey('run-meta-coins'),
             style: DsText.subtitle()),
         SizedBox(height: DsSpace.sm),
         if (!c.isClient)
-          section('DIFICULTAD', [
+          section(ref.t('ui.run.prep.difficulty'), [
             Wrap(
               spacing: DsSpace.sm,
               runSpacing: DsSpace.xs,
               children: [
                 for (var d = 0; d <= m.difficultyUnlocked; d++)
-                  DsButton(d == 0 ? 'NORMAL' : 'NIVEL $d',
+                  DsButton(
+                      d == 0
+                          ? ref.t('ui.run.prep.normal')
+                          : ref.t('ui.run.prep.level', {'level': d}),
                       key: ValueKey('run-diff-$d'),
                       size: DsButtonSize.compact,
                       selected: m.difficulty == d,
@@ -62,13 +71,14 @@ class RunPrepView extends StatelessWidget {
               ],
             ),
             Text(
-                'Cada nivel suma vida y ataque a los enemigos. Ganá en la '
-                'más alta para abrir la siguiente.',
+                ref.t('ui.run.prep.difficulty_hint'),
                 style: DsText.detail()),
           ]),
         section(
-            'HABILIDADES DE ARRANQUE (${ch.loadout.length}/'
-            '${MetaProgressRules.loadoutSlots})',
+            ref.t('ui.run.prep.loadout', {
+              'n': ch.loadout.length,
+              'max': MetaProgressRules.loadoutSlots,
+            }),
             [
               Wrap(
                 spacing: DsSpace.sm,
@@ -92,7 +102,7 @@ class RunPrepView extends StatelessWidget {
                                     : null)),
                             Text(
                                 i >= open
-                                    ? 'Se abre con Repertorio'
+                                    ? ref.t('ui.run.prep.opens_with_repertoire')
                                     : '${skills[pool[i]]?.mp ?? 0} MP',
                                 style: DsText.detail()),
                           ],
@@ -101,10 +111,10 @@ class RunPrepView extends StatelessWidget {
                     ),
                 ],
               ),
-              Text('Se suman a las de tu arma durante toda la Travesía.',
+              Text(ref.t('ui.run.prep.loadout_hint'),
                   style: DsText.detail()),
             ]),
-        section('LEGADO DEL VIAJERO', [
+        section(ref.t('ui.run.prep.legacy'), [
           for (final n in kMetaNodes)
             Padding(
               padding: EdgeInsets.only(bottom: DsSpace.xs),
@@ -117,9 +127,9 @@ class RunPrepView extends StatelessWidget {
                             : DsColors.text)),
                   ),
                   if (ch.nodes.contains(n.id))
-                    Text('TOMADO', style: DsText.detail())
+                    Text(ref.t('ui.run.prep.taken'), style: DsText.detail())
                   else
-                    DsButton('${n.cost} ECOS',
+                    DsButton(ref.t('ui.run.prep.cost', {'n': n.cost}),
                         key: ValueKey('run-meta-${n.id}'),
                         size: DsButtonSize.compact,
                         tooltip: MetaProgressRules.cantBuy(n, ch, m.coins),

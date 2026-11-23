@@ -1,6 +1,7 @@
 import '../../../game_engine/models/eco.dart';
 import '../../../game_engine/models/item.dart';
 import '../../../game_engine/rules/progression_rules.dart';
+import '../../../core/i18n/strings.dart';
 import 'item_text.dart';
 
 /// Buscador y menú de acciones del inventario (v0.9.7, docs/specs/panels.md
@@ -16,12 +17,27 @@ enum InventoryMenuAction {
   salvage('Desarmar', 'desarmar'),
   sell('Vender', 'vender');
 
-  const InventoryMenuAction(this.label, this.verb);
+  const InventoryMenuAction(this.labelEs, this.verbEs);
 
-  final String label;
+  /// Spanish source text (the shown one comes from [label]).
+  final String labelEs;
+  final String verbEs;
 
-  /// Infinitivo para el motivo (`No podés <verb> ...`).
-  final String verb;
+  String get _id => switch (this) {
+        InventoryMenuAction.equip => 'equip',
+        InventoryMenuAction.compare => 'compare',
+        InventoryMenuAction.move => 'move',
+        InventoryMenuAction.give => 'give',
+        InventoryMenuAction.drop => 'drop',
+        InventoryMenuAction.salvage => 'salvage',
+        InventoryMenuAction.sell => 'sell',
+      };
+
+  /// Menu label in the active language.
+  String label(Strings s) => s.t('ui.inventory.menu.action.$_id');
+
+  /// Infinitive for the reason (`No podés <verb> ...`).
+  String verb(Strings s) => s.t('ui.inventory.menu.verb.$_id');
 }
 
 /// El motivo corto de las reglas (`Equipada`, `Arma inicial`, `No en
@@ -29,24 +45,24 @@ enum InventoryMenuAction {
 /// equipada", "No podés dársela a otro jugador: está equipada".
 /// Los motivos de contexto (`No en batalla`, `No hay compañeros en la
 /// sala`, `Solo en el lobby o en el campo`) quedan como vienen.
-String inventoryReasonLine(InventoryMenuAction a, String reason) {
+String inventoryReasonLine(Strings s, InventoryMenuAction a, String reason) {
   final r = reason.trim();
   if (r == 'Equipada' || r == 'Está equipada') {
     return switch (a) {
-      InventoryMenuAction.give =>
-        'No podés dársela a otro jugador: está equipada',
-      InventoryMenuAction.equip => 'Ya es tu arma equipada',
-      _ => 'No podés ${a.verb} el arma equipada',
+      InventoryMenuAction.give => s.t('ui.inventory.menu.reason.give_equipped'),
+      InventoryMenuAction.equip =>
+        s.t('ui.inventory.menu.reason.already_equipped'),
+      _ => s.t('ui.inventory.menu.reason.equipped', {'verb': a.verb(s)}),
     };
   }
   if (r == 'Arma inicial') {
     return a == InventoryMenuAction.give
-        ? 'No podés dársela a otro jugador: es tu última arma inicial'
-        : 'No podés ${a.verb} tu última arma inicial';
+        ? s.t('ui.inventory.menu.reason.give_starter')
+        : s.t('ui.inventory.menu.reason.starter', {'verb': a.verb(s)});
   }
   if (a == InventoryMenuAction.equip &&
       (r.startsWith('Requisitos') || r.startsWith('Nivel'))) {
-    return 'No podés equiparla. $r';
+    return s.t('ui.inventory.menu.reason.cannot_equip', {'reason': r});
   }
   return r;
 }
@@ -54,14 +70,19 @@ String inventoryReasonLine(InventoryMenuAction a, String reason) {
 /// Motivo corto para la misma línea del menú (v0.9.9): "equipada",
 /// "arma inicial", "sin compañeros"... El completo
 /// ([inventoryReasonLine]) va en el tooltip de la fila.
-String inventoryReasonShort(InventoryMenuAction a, String reason) {
+String inventoryReasonShort(Strings s, InventoryMenuAction a, String reason) {
   final r = reason.trim();
   if (r == 'Equipada' || r == 'Está equipada') {
-    return a == InventoryMenuAction.equip ? 'ya equipada' : 'equipada';
+    return s.t(a == InventoryMenuAction.equip
+        ? 'ui.inventory.menu.short.already_equipped'
+        : 'ui.inventory.menu.short.equipped');
   }
-  if (r == 'Arma inicial') return 'arma inicial';
-  if (r == 'No hay compañeros en la sala') return 'sin compañeros';
-  if (r == 'No en batalla') return 'en batalla';
+  if (r == 'Arma inicial') return s.t('ui.inventory.menu.short.starter');
+  if (r == 'No hay compañeros en la sala' ||
+      r == s.t('ui.inventory.menu.reason.no_mates')) {
+    return s.t('ui.inventory.menu.short.no_mates');
+  }
+  if (r == 'No en batalla') return s.t('ui.inventory.menu.short.in_battle');
   if (r.length <= 24) return r;
   final cut = r.indexOf(RegExp(r'[:.]'));
   final head = cut > 0 ? r.substring(0, cut) : r;

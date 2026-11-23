@@ -1,0 +1,17 @@
+{
+  "ui.achievements.filter.all": "All",
+  "ui.achievements.filter.pending": "Pending",
+  "ui.achievements.filter.done": "Earned",
+  "ui.achievements.done_count": "Earned",
+  "ui.achievements.empty": "Nothing here yet.",
+  "ui.achievements.state.done": "Earned",
+  "ui.achievements.state.pending": "Pending",
+  "ui.achievements.reward": "Reward: {reward}",
+  "ui.achievements.progress": "Progress: {progress}",
+  "ui.achievements.done_on": "Earned on {date}",
+  "ui.achievements.title": "FEATS",
+  "ui.achievements.back": "BACK",
+  "ui.achievements.loading": "Loading...",
+  "ui.achievements.toast_head": "FEAT EARNED",
+  "ui.achievements.help": "<b>Feats</b><br>Once per account: each one pays credits, materials or potions to the character who earns it. They work as a guide: hover over a row (or press and hold it) to see how to get it.<br>Counter feats (II, III) count from when feats were added."
+}

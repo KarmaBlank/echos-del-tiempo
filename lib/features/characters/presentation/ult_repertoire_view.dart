@@ -20,6 +20,7 @@ import '../../../core/text/text_detail.dart';
 import '../../../game_engine/models/player_state.dart';
 import '../../combat/domain/skill_text.dart';
 import '../../combat/presentation/game_sprites.dart';
+import 'character_strings.dart';
 import 'ult_preview_panel.dart';
 
 /// Pestaña ULT de PERSONAJE (docs/specs/panels.md § Pestaña ULT,
@@ -76,14 +77,11 @@ class UltRepertoireView extends StatefulWidget {
   /// Cambió un filtro o el orden (para guardarlo en los ajustes).
   final ValueChanged<UltBrowsePrefs>? onPrefs;
 
-  static String get help => '<b>ULT</b><br>'
-      'Tu repertorio: toda ULT que conseguís queda para siempre. Al '
-      'conseguir un arma que enseña una ULT la aprendés en el momento. '
-      'Hacé clic en una para verla y equipala fuera de combate; el arma equipada no la cambia. '
-      'Sin elegir, se usa la ULT base de tu clase.<br>'
-      'MEJORAR sube su nivel (1 a 5) con créditos y materiales.<br>'
-      'Las cargas extra de ULT (árbol, mods, efectos) tienen un tope de '
-      '${jsRound(BattleEngine.ultBonusPerTurn)}% por turno.';
+  /// Help ("?") text; without [strings], the context-free fallback.
+  static String helpOf(Strings strings) => strings.t(
+      'ui.characters.ult.help', {'cap': jsRound(BattleEngine.ultBonusPerTurn)});
+
+  static String get help => helpOf(fallbackCharStrings());
 
   @override
   State<UltRepertoireView> createState() => _UltRepertoireViewState();
@@ -93,6 +91,7 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
   /// La ULT elegida con clic (`null` = la equipada).
   String? _selected;
   String _text = '';
+  Strings get _s => charStrings(context);
   late UltBrowsePrefs _prefs = widget.prefs;
   bool _hoverUpgrade = false;
   final _topKey = GlobalKey();
@@ -150,17 +149,17 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
     final top = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DsSectionHeader('ULT EQUIPADA',
+        DsSectionHeader(_s.t('ui.characters.ult.equipped_header'),
             trailing: Text(
-                p.ultSel == null
-                    ? 'Automática'
+                _s.t(p.ultSel == null
+                    ? 'ui.characters.ult.mode_auto'
                     : active == null
-                        ? 'No disponible: se usa la ULT base'
-                        : 'Elegida',
+                        ? 'ui.characters.ult.mode_unavailable'
+                        : 'ui.characters.ult.mode_chosen'),
                 style: DsText.detail())),
         if (eq != null)
           _row(eq, equipped, sel?.id, key: ValueKey('ult-equipped-${eq.id}')),
-        const DsSectionHeader('REPERTORIO'),
+        DsSectionHeader(_s.t('ui.characters.ult.repertoire')),
         _filters(p, all),
         SizedBox(height: DsSpace.sm),
       ],
@@ -169,26 +168,26 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
       key: const ValueKey('ult-table'),
       columns: [
         DsColumn(
-            header: 'LISTA',
+            header: _s.t('ui.characters.ult.col_list'),
             key: const ValueKey('ult-col-list'),
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (shown.isEmpty)
-                    Text('Ninguna ULT con estos filtros.',
+                    Text(_s.t('ui.characters.ult.empty'),
                         style: DsText.detail()),
                   for (final e in shown) _row(e, equipped, sel?.id),
                 ])),
         DsColumn(
-            header: 'DESCRIPCIÓN',
+            header: _s.t('ui.characters.ult.col_description'),
             key: const ValueKey('ult-col-desc'),
             child: sel == null ? const SizedBox() : _description(sel)),
         DsColumn(
-            header: 'ACCIONES',
+            header: _s.t('ui.characters.ult.col_actions'),
             key: const ValueKey('ult-col-actions'),
             child: sel == null ? const SizedBox() : _actions(sel, equipped)),
         DsColumn(
-            header: 'PREVISUALIZACIÓN',
+            header: _s.t('ui.characters.ult.col_preview'),
             key: const ValueKey('ult-col-preview'),
             scrollable: false,
             child: sel == null ? const SizedBox() : _preview(sel)),
@@ -254,13 +253,16 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
     final origins = UltBrowseRules.origins(all);
     final known = {...p.ultKnown, ...UltRules.earned(p)};
     final got = kUltV2List.where((u) => known.contains(u.id)).length;
-    final weaponLabel = _prefs.weapon == null ? 'Todas' : _cap(_prefs.weapon!);
+    final allF = _s.t('ui.characters.ult.all_f');
+    final allM = _s.t('ui.characters.ult.all_m');
+    final weaponLabel = _prefs.weapon == null ? allF : _cap(_prefs.weapon!);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Wrap(spacing: DsSpace.sm, children: [
-          Text('Las 50: $got/50', style: DsText.detail()),
-          Text('Jefes vencidos: ${bossUltsDefeated(p)}/10',
+          Text(_s.t('ui.characters.ult.of_50', {'got': got}),
+              style: DsText.detail()),
+          Text(_s.t('ui.characters.ult.bosses', {'n': bossUltsDefeated(p)}),
               key: const ValueKey('ult-boss-progress'),
               style: DsText.detail()),
         ]),
@@ -273,28 +275,30 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
           children: [
             DsSearchField(
                 key: const ValueKey('ult-search'),
-                hint: 'BUSCAR POR NOMBRE',
+                hint: _s.t('ui.characters.ult.search'),
                 width: 200,
                 onChanged: (t) => setState(() => _text = t)),
             DsMenuButton<String?>(
-                label: 'ARMA: $weaponLabel',
+                label: _s.t('ui.characters.ult.filter_weapon', {'value': weaponLabel}),
                 options: [null, ...weapons],
-                optionLabel: (w) => w == null ? 'Todas' : _cap(w),
+                optionLabel: (w) => w == null ? allF : _cap(w),
                 current: _prefs.weapon,
                 onChanged: (w) => _setPrefs(_prefs.copyWith(weapon: () => w)),
                 buttonKey: const ValueKey('ult-filter-weapon'),
                 optionKey: (w) => ValueKey('ult-filter-weapon-${w ?? 'all'}')),
             DsMenuButton<UltOrigin?>(
-                label: 'ORIGEN: ${_prefs.origin?.label ?? 'Todos'}',
+                label: _s.t('ui.characters.ult.filter_origin',
+                    {'value': _prefs.origin?.label ?? allM}),
                 options: [null, ...origins],
-                optionLabel: (o) => o?.label ?? 'Todos',
+                optionLabel: (o) => o?.label ?? allM,
                 current: _prefs.origin,
                 onChanged: (o) => _setPrefs(_prefs.copyWith(origin: () => o)),
                 buttonKey: const ValueKey('ult-filter-origin'),
                 optionKey: (o) =>
                     ValueKey('ult-filter-origin-${o?.name ?? 'all'}')),
             DsMenuButton<UltOwnedFilter>(
-                label: 'ESTADO: ${_prefs.owned.label}',
+                label: _s.t('ui.characters.ult.filter_state',
+                    {'value': _prefs.owned.label}),
                 options: UltOwnedFilter.values,
                 optionLabel: (o) => o.label,
                 current: _prefs.owned,
@@ -302,7 +306,7 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
                 buttonKey: const ValueKey('ult-filter-owned'),
                 optionKey: (o) => ValueKey('ult-filter-owned-${o.name}')),
             DsMenuButton<UltSort>(
-                label: 'ORDEN: ${_prefs.sort.label}',
+                label: _s.t('ui.characters.ult.sort', {'value': _prefs.sort.label}),
                 options: UltSort.values,
                 optionLabel: (o) => o.label,
                 current: _prefs.sort,
@@ -328,8 +332,11 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
     // Nombre solo en su línea (completo, puede bajar); nivel y origen
     // abajo, también completos (v0.24.4).
     final detail = [
-      if (_learned(e)) 'Nv ${e.level}',
-      if (!e.owned) 'Falta · ${_how(e)}' else e.origin.label,
+      if (_learned(e)) _s.t('ui.characters.ult.level_short', {'level': e.level}),
+      if (!e.owned)
+        _s.t('ui.characters.ult.missing', {'how': _how(e)})
+      else
+        e.origin.label,
       if (e.owned && reason != null) reason,
     ].join(' · ');
     final fresh = widget.profile.ultNew.contains(e.id);
@@ -347,9 +354,13 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
       onTap: () => _select(e.id),
       trailing: fresh || isEq
           ? Row(mainAxisSize: MainAxisSize.min, children: [
-              if (fresh) DsBadge('NUEVA', key: ValueKey('ult-new-${e.id}')),
+              if (fresh)
+                DsBadge(_s.t('ui.characters.ult.badge_new'),
+                    key: ValueKey('ult-new-${e.id}')),
               if (fresh && isEq) SizedBox(width: DsSpace.sm),
-              if (isEq) const DsBadge('EQUIPADA', neutral: true),
+              if (isEq)
+                DsBadge(_s.t('ui.characters.ult.badge_equipped'),
+                    neutral: true),
             ])
           : null,
     );
@@ -389,8 +400,8 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
         SizedBox(height: DsSpace.xs),
         DsFold(
             key: const ValueKey('ult-detail-fold'),
-            label: 'VER DETALLE',
-            openLabel: 'OCULTAR DETALLE',
+            label: _s.t('ui.characters.ult.see_detail'),
+            openLabel: _s.t('ui.characters.ult.hide_detail'),
             child: ProtoText(TextDetail.run(TextDetail.full,
                 () => describeSkillMarkup(skill, null, ultimate: true)))),
       ],
@@ -415,9 +426,9 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             if (isEq)
-              const DsBadge('EQUIPADA')
+              DsBadge(_s.t('ui.characters.ult.badge_equipped'))
             else if (e.owned)
-              DsButton('EQUIPAR',
+              DsButton(_s.t('ui.characters.ult.equip'),
                   key: const ValueKey('ult-equip'),
                   kind: DsButtonKind.primary,
                   size: DsButtonSize.compact,
@@ -430,15 +441,18 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
         if (learned) ...[
           SizedBox(height: DsSpace.sm),
           Text(
-              'Nivel $lv/${UltRules.maxLevel}: poder ×'
-              '${UltRules.levelFactor(lv).toStringAsFixed(2)}',
+              _s.t('ui.characters.ult.level_power', {
+                'level': lv,
+                'max': UltRules.maxLevel,
+                'factor': '×${UltRules.levelFactor(lv).toStringAsFixed(2)}',
+              }),
               style: DsText.body()),
           if (cost == null)
-            Text('Nivel máximo.', style: DsText.detail())
+            Text(_s.t('ui.characters.ult.max_level'), style: DsText.detail())
           else
             _upgradeSummary(lv, cost),
         ] else if (!e.owned)
-          Text('Todavía no la tenés.', style: DsText.detail()),
+          Text(_s.t('ui.characters.ult.not_owned'), style: DsText.detail()),
       ],
     );
   }
@@ -453,21 +467,38 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(height: DsSpace.xs),
-        Text('AL MEJORAR: NIVEL $lv → ${lv + 1}', style: DsText.subtitle()),
-        Text('Poder ×${a.toStringAsFixed(2)} → ×${b.toStringAsFixed(2)}',
+        Text(
+            _s.t('ui.characters.ult.upgrade_header',
+                {'levels': '$lv → ${lv + 1}'}),
+            style: DsText.subtitle()),
+        Text(
+            _s.t('ui.characters.ult.power_change', {
+              'change':
+                  '×${a.toStringAsFixed(2)} → ×${b.toStringAsFixed(2)}',
+            }),
             style: DsText.body(DsColors.success)),
-        Text('Daño y curación +$pct %', style: DsText.body(DsColors.success)),
-        Text('Escudos, trampas y golpes diferidos +$pct %',
+        Text(_s.t('ui.characters.ult.damage_up', {'pct': pct}),
+            style: DsText.body(DsColors.success)),
+        Text(_s.t('ui.characters.ult.shields_up', {'pct': pct}),
             style: DsText.detail()),
         SizedBox(height: DsSpace.xs),
-        Text('COSTO', style: DsText.subtitle()),
-        Text('Créditos: ₵${cost.credits} (tenés ₵${p.credits})',
+        Text(_s.t('ui.characters.ult.cost'), style: DsText.subtitle()),
+        Text(
+            _s.t('ui.characters.ult.cost_credits', {
+              'cost': '₵${cost.credits}',
+              'have': '₵${p.credits}',
+            }),
             key: const ValueKey('ult-upgrade-cost'),
             style: DsText.detail(p.credits >= cost.credits
                 ? DsColors.textSecondary
                 : DsColors.danger)),
         for (final m in cost.materials.entries)
-          Text('${m.key.label}: ${m.value} (tenés ${p.material(m.key)})',
+          Text(
+              _s.t('ui.characters.ult.cost_material', {
+                'material': m.key.label,
+                'cost': m.value,
+                'have': p.material(m.key),
+              }),
               style: DsText.detail(p.material(m.key) >= m.value
                   ? DsColors.textSecondary
                   : DsColors.danger)),
@@ -488,7 +519,7 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
         cost.materials.entries.every((e) => p.material(e.key) >= e.value);
     if (_confirm) {
       return [
-        DsButton('CONFIRMAR',
+        DsButton(_s.t('ui.characters.ult.confirm'),
             key: const ValueKey('ult-upgrade-confirm'),
             kind: DsButtonKind.primary,
             size: DsButtonSize.compact,
@@ -496,7 +527,7 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
               widget.onUpgrade(o.id);
               setState(() => _confirm = false);
             }),
-        DsButton('CANCELAR',
+        DsButton(_s.t('ui.characters.common.cancel'),
             key: const ValueKey('ult-upgrade-cancel'),
             size: DsButtonSize.compact,
             onPressed: () => setState(() => _confirm = false)),
@@ -506,7 +537,7 @@ class _UltRepertoireViewState extends State<UltRepertoireView> {
       MouseRegion(
         onEnter: (_) => setState(() => _hoverUpgrade = true),
         onExit: (_) => setState(() => _hoverUpgrade = false),
-        child: DsButton('MEJORAR',
+        child: DsButton(_s.t('ui.characters.ult.upgrade'),
             key: const ValueKey('ult-upgrade'),
             kind: DsButtonKind.primary,
             size: DsButtonSize.compact,

@@ -142,7 +142,12 @@ enum WorldPrompt {
   poi('[E] Usar');
 
   const WorldPrompt(this.label);
+
+  /// The es-AR text; the shown one is [key] (docs/specs/i18n.md).
   final String label;
+
+  /// Key of the shown text in `ui.world`.
+  String get key => 'ui.world.prompt.$name';
 }
 
 /// Lo que la UI dibuja: el snapshot autoritativo de la sesión + el

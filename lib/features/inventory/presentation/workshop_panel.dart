@@ -12,6 +12,7 @@ import '../../world/presentation/panels/life_icon.dart';
 import '../../world/presentation/panels/party_member_bar.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../world/presentation/session_view.dart';
+import 'inventory_strings.dart';
 import 'shop_sections.dart';
 
 /// Oficio de cada receta del taller (filtro de chip).
@@ -22,12 +23,8 @@ const kWorkshopOficio = <String, String>{
 };
 
 /// Ayuda `[?]` del taller.
-const kWorkshopHelp = '<b>Taller de oficios</b><br>'
-    'Cosechas y pescados (nunca legendarios; primero los de menos valor) '
-    'se condensan en materiales de oficio para contratar y mejorar '
-    'ayudantes.<br>'
-    'Elegí una casilla; los botones ×1 / ×5 / MÁX están en el detalle de '
-    'la derecha. Las armas y sus materiales se trabajan en la ARMERÍA.';
+String workshopHelp(BuildContext context) =>
+    invStrings(context).t('ui.inventory.workshop.help');
 
 /// TALLER DE OFICIOS del pueblo (town_loop.md § 2.1, materials_economy.md
 /// § 4.4, ui_minimal.md § 4.1; v0.32.3): todo lo de los oficios que antes
@@ -46,26 +43,28 @@ class WorkshopPanel extends StatelessWidget {
     final close = view.mustAllocate ? null : controller.closePanel;
     final shop = ShopContext(view, controller);
     final p = shop.profile;
+    final s = invStrings(context);
     return PartyMemberKeys(
       view: view,
       controller: controller,
       child: PanelFrame(
-        title: 'TALLER DE OFICIOS',
+        title: s.t('ui.inventory.workshop.title'),
         width: 1000,
         fill: true,
-        help: kWorkshopHelp,
+        help: workshopHelp(context),
         onClose: close,
-        titleTrailing: ProtoText('Créditos <b>₵${p.credits}</b>'),
+        titleTrailing: ProtoText(s.t('ui.inventory.workshop.credits',
+            {'credits': '₵${p.credits}'})),
         header: PartyMemberBar.header(view, controller, const SizedBox.shrink()),
         actions: [
-          PanelButton('PERSONAJE [TAB]',
+          PanelButton(s.t('ui.inventory.armory.character'),
               onPressed: () => controller.openPanel(WorldPanel.character)),
-          PanelButton('CERRAR [ESC]', onPressed: close),
+          PanelButton(s.t('ui.inventory.armory.close'), onPressed: close),
         ],
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const PanelHint('Receta, cantidad, condensar. Sin azar.'),
+            PanelHint(s.t('ui.inventory.workshop.hint')),
             Expanded(
               child: KeyedSubtree(
                 key: ValueKey(view.actorId),
@@ -89,19 +88,20 @@ class WorkshopGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = shop.profile;
     final inWorld = shop.view.session.run == null;
+    final s = invStrings(context);
     DsCraftItem item(String id) {
       final d = kLifeMaterials[id]!;
       final max = LifeCraftRules.maxTimes(p, id);
-      Widget go(String label, int n) {
+      Widget go(String label, int n, [String? keyLabel]) {
         final a = CraftAction(CraftOp.condense, '${LifeCraftRules.prefix}$id',
             index: n);
         final why = !inWorld
-            ? 'Solo en el Mundo'
+            ? s.t('ui.inventory.workshop.world_only')
             : max < n || n < 1
-                ? 'No alcanza'
+                ? s.t('ui.inventory.workshop.not_enough')
                 : shop.guards.craft(p, a);
         return DsButton(label,
-            key: ValueKey('workshop-$id-$label'),
+            key: ValueKey('workshop-$id-${keyLabel ?? label}'),
             size: DsButtonSize.compact,
             kind: DsButtonKind.primary,
             tooltip: why,
@@ -121,20 +121,27 @@ class WorkshopGrid extends StatelessWidget {
         count: p.life.craft(id),
         description: d.description,
         lines: [
-          'Receta: ${LifeCraftRules.recipeText(id)}',
-          'Tenés ${p.life.craft(id)} · alcanza para $max',
+          s.t('ui.inventory.workshop.recipe',
+              {'recipe': LifeCraftRules.recipeText(id)}),
+          s.t('ui.inventory.workshop.have',
+              {'n': p.life.craft(id), 'max': max}),
         ],
-        actions: [go('×1', 1), go('×5', 5), go('MÁX', max)],
+        actions: [
+          go('×1', 1),
+          go('×5', 5),
+          // The key keeps the es-AR label so tests and macros stay stable.
+          go(s.t('ui.inventory.workshop.max'), max, 'MÁX'),
+        ],
       );
     }
 
     return DsCraftGridTemplate(
       key: const ValueKey('workshop-grid'),
       keyPrefix: 'workshop',
-      filters: const [
-        DsTransferFilter('TODOS', null),
-        DsTransferFilter('CULTIVO', 'cultivo'),
-        DsTransferFilter('PESCA', 'pesca'),
+      filters: [
+        DsTransferFilter(s.t('ui.inventory.workshop.filter.all'), null),
+        DsTransferFilter(s.t('ui.inventory.workshop.filter.farming'), 'cultivo'),
+        DsTransferFilter(s.t('ui.inventory.workshop.filter.fishing'), 'pesca'),
       ],
       items: [for (final id in kLifeMaterialIds) item(id)],
     );

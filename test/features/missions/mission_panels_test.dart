@@ -5,6 +5,7 @@ import 'package:echos_del_tiempo/features/missions/presentation/mission_board_pa
 import 'package:echos_del_tiempo/features/missions/presentation/prep_panel.dart';
 import 'package:echos_del_tiempo/game_engine/data/game_catalog.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -12,10 +13,10 @@ Future<void> _pump(WidgetTester tester, Widget child) async {
   tester.view.physicalSize = const Size(1280, 720);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  await tester.pumpWidget(MaterialApp(
+  await tester.pumpWidget(ProviderScope(child: MaterialApp(
     theme: RetroTheme.build(),
     home: Scaffold(body: child),
-  ));
+  )));
   await tester.pump();
 }
 

@@ -14,6 +14,8 @@ import 'package:echos_del_tiempo/game_engine/serialization/action_json.dart';
 import 'package:echos_del_tiempo/netcode/protocol/wire.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
+import 'package:echos_del_tiempo/core/i18n/locale_id.dart';
+import 'package:echos_del_tiempo/core/i18n/string_tables.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -37,25 +39,27 @@ Future<void> _tap(WidgetTester tester, String key) =>
 int _cell(PlayerProfile p, String token) =>
     InventoryRules.layout(p).cells.indexOf(token);
 
+final _es = StringTables.loadDirectorySync(StringTables.assetRoot)!
+    .strings(LocaleId.source);
+
 void main() {
   group('dominio', () {
     test('motivos en una línea', () {
-      expect(inventoryReasonLine(InventoryMenuAction.salvage, 'Está equipada'),
+      expect(inventoryReasonLine(_es, InventoryMenuAction.salvage, 'Está equipada'),
           'No podés desarmar el arma equipada');
-      expect(inventoryReasonLine(InventoryMenuAction.give, 'Equipada'),
+      expect(inventoryReasonLine(_es, InventoryMenuAction.give, 'Equipada'),
           'No podés dársela a otro jugador: está equipada');
-      expect(inventoryReasonLine(InventoryMenuAction.drop, 'Arma inicial'),
+      expect(inventoryReasonLine(_es, InventoryMenuAction.drop, 'Arma inicial'),
           'No podés tirar tu última arma inicial');
-      expect(inventoryReasonLine(InventoryMenuAction.give, 'No en batalla'),
+      expect(inventoryReasonLine(_es, InventoryMenuAction.give, 'No en batalla'),
           'No en batalla');
       // Corto, para la misma línea del menú (v0.9.9).
-      expect(inventoryReasonShort(InventoryMenuAction.drop, 'Equipada'),
+      expect(inventoryReasonShort(_es, InventoryMenuAction.drop, 'Equipada'),
           'equipada');
       expect(
-          inventoryReasonShort(
-              InventoryMenuAction.give, 'No hay compañeros en la sala'),
+          inventoryReasonShort(_es, InventoryMenuAction.give, 'No hay compañeros en la sala'),
           'sin compañeros');
-      expect(inventoryReasonShort(InventoryMenuAction.sell, 'Arma inicial'),
+      expect(inventoryReasonShort(_es, InventoryMenuAction.sell, 'Arma inicial'),
           'arma inicial');
     });
 

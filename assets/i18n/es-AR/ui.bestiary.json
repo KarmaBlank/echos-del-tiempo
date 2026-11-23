@@ -1,0 +1,20 @@
+{
+  "ui.bestiary.discovered": "Descubiertos ",
+  "ui.bestiary.showing": " · mostrando {n}",
+  "ui.bestiary.search": "Buscar...",
+  "ui.bestiary.empty": "Nada con ese filtro todavía",
+  "ui.bestiary.section.abyss": "Jefes del Abismo",
+  "ui.bestiary.section.other": "Otros",
+  "ui.bestiary.section.zone": "Zona {zone} · {name}",
+  "ui.bestiary.family.ice_short": "ELEM. ESCARCHA",
+  "ui.bestiary.family.aberration_short": "ABERRACIÓN",
+  "ui.bestiary.filter.all": "TODAS",
+  "ui.bestiary.boss": "JEFE",
+  "ui.bestiary.card": "Ficha",
+  "ui.bestiary.zone_and_loot": "ZONA Y BOTÍN",
+  "ui.bestiary.zone": "Zona: {zone}{name}",
+  "ui.bestiary.title": "BESTIARIO",
+  "ui.bestiary.help": "<b>Bestiario</b><br>Cada enemigo que derrotás (solo o en grupo) se agrega acá, para toda la cuenta. La ficha dice su familia, a qué es débil, qué resiste y a qué es inmune.<br>En batalla, pasá el mouse sobre un enemigo para ver su ficha; si nunca lo derrotaste verás \"???\".<br>La búsqueda y los filtros solo ven lo descubierto.<br>Flechas arriba / abajo: moverse por la lista · Tab: filtros / búsqueda.",
+  "ui.bestiary.back": "VOLVER",
+  "ui.bestiary.loading": "Cargando..."
+}

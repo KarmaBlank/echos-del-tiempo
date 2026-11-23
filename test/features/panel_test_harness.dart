@@ -39,6 +39,7 @@ Future<SessionController> pumpPanel(
   bool readingTitles = false,
   bool wideLetters = false,
   double devicePixelRatio = 1,
+  List<Override> extraOverrides = const [],
 }) async {
   // Fuentes reales: el desborde depende del ancho de los glifos.
   await loadRealFonts(tester);
@@ -65,6 +66,7 @@ Future<SessionController> pumpPanel(
       if (party != null) partyStoreProvider.overrideWithValue(party),
       sessionClockProvider
           .overrideWithValue(const SessionClock(autoStart: false)),
+      ...extraOverrides,
     ],
     child: MaterialApp(
       debugShowCheckedModeBanner: false,

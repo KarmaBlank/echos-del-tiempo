@@ -7,8 +7,10 @@ import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
 import '../../../app/theme/proto_colors.dart';
 import '../../../app/theme/retro_text.dart';
+import '../../../core/i18n/i18n_providers.dart';
 import '../../../game_engine/models/world_save.dart';
 import '../../characters/presentation/character_widgets.dart';
+import 'lobby_strings.dart';
 import 'worlds_providers.dart';
 
 /// Elegir mundo en el título (town_loop.md § 11c): la lista agrupada por
@@ -24,14 +26,17 @@ class WorldPicker extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final book = ref.watch(worldBookProvider);
     final ctl = ref.read(worldBookProvider.notifier);
-    if (book == null) return Text('Cargando mundos...', style: DsText.detail());
+    if (book == null) {
+      return Text(ref.t('ui.lobby.world.loading'), style: DsText.detail());
+    }
     final sel = book.selected;
     final groups = book.grouped;
     return Column(
       key: const ValueKey('world-picker'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('MUNDO (${book.worlds.length})', style: DsText.subtitle()),
+        Text(ref.t('ui.lobby.world.header', {'count': book.worlds.length}),
+            style: DsText.subtitle()),
         const SizedBox(height: 8),
         for (final l in WorldLabel.values)
           if (groups[l]!.isNotEmpty) ...[
@@ -59,7 +64,7 @@ class WorldPicker extends ConsumerWidget {
           runSpacing: 8,
           alignment: WrapAlignment.center,
           children: [
-            DsButton('CREAR',
+            DsButton(ref.t('ui.lobby.world.create'),
                 key: const ValueKey('world-create'),
                 onPressed: busy
                     ? null
@@ -68,7 +73,7 @@ class WorldPicker extends ConsumerWidget {
                             context, (_) => const _CreateWorldDialog());
                         if (r != null) await ctl.create(r.$1, r.$2);
                       }),
-            DsButton('CAMBIAR NOMBRE',
+            DsButton(ref.t('ui.lobby.world.rename'),
                 key: const ValueKey('world-rename'),
                 onPressed: busy || sel == null
                     ? null
@@ -77,7 +82,7 @@ class WorldPicker extends ConsumerWidget {
                             context, (_) => _RenameWorldDialog(sel));
                         if (n != null) await ctl.rename(sel.id, n);
                       }),
-            DsButton('BORRAR',
+            DsButton(ref.t('ui.lobby.world.delete'),
                 key: const ValueKey('world-delete'),
                 accent: DsColors.danger,
                 onPressed: busy || sel == null
@@ -122,52 +127,53 @@ class _CreateWorldDialogState extends State<_CreateWorldDialog> {
   void _ok() => Navigator.of(context).pop((_name.text, _label));
 
   @override
-  Widget build(BuildContext context) => PanelFrame(
-        key: const ValueKey('world-create-dialog'),
-        title: 'CREAR MUNDO',
-        width: 480,
-        onClose: () => Navigator.of(context).pop(),
-        actions: [
-          PanelButton('CANCELAR',
-              key: const ValueKey('world-create-cancel'),
-              onPressed: () => Navigator.of(context).pop()),
-          PanelButton('CREAR',
-              key: const ValueKey('world-create-ok'), onPressed: _ok),
-        ],
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              const Text('Nombre:'),
-              const SizedBox(width: 8),
-              Expanded(
-                child: RetroTextField(
-                  key: const ValueKey('world-create-name'),
-                  controller: _name,
-                  autofocus: true,
-                  hint: 'Mundo nuevo',
-                  maxLength: WorldSave.maxName,
-                  onSubmitted: (_) => _ok(),
-                ),
+  Widget build(BuildContext context) {
+    final s = lobbyStrings(context);
+    return PanelFrame(
+      key: const ValueKey('world-create-dialog'),
+      title: s.t('ui.lobby.world.create_title'),
+      width: 480,
+      onClose: () => Navigator.of(context).pop(),
+      actions: [
+        PanelButton(s.t('ui.lobby.world.cancel'),
+            key: const ValueKey('world-create-cancel'),
+            onPressed: () => Navigator.of(context).pop()),
+        PanelButton(s.t('ui.lobby.world.create'),
+            key: const ValueKey('world-create-ok'), onPressed: _ok),
+      ],
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Text(s.t('ui.lobby.world.name_label')),
+            const SizedBox(width: 8),
+            Expanded(
+              child: RetroTextField(
+                key: const ValueKey('world-create-name'),
+                controller: _name,
+                autofocus: true,
+                hint: s.t('ui.lobby.world.name_hint'),
+                maxLength: WorldSave.maxName,
+                onSubmitted: (_) => _ok(),
               ),
-            ]),
-            const SizedBox(height: 8),
-            Wrap(spacing: 8, children: [
-              for (final l in WorldLabel.values)
-                PanelButton(l.text.toUpperCase(),
-                    key: ValueKey('world-label-${l.name}'),
-                    selected: _label == l,
-                    onPressed: () => setState(() => _label = l)),
-            ]),
-            const SizedBox(height: 8),
-            Text(
-                retroText('La etiqueta solo agrupa la lista: cualquier mundo '
-                    'se juega solo o se abre como sala.'),
-                style: DsText.detail(ProtoColors.dim)),
-          ],
-        ),
-      );
+            ),
+          ]),
+          const SizedBox(height: 8),
+          Wrap(spacing: 8, children: [
+            for (final l in WorldLabel.values)
+              PanelButton(l.text.toUpperCase(),
+                  key: ValueKey('world-label-${l.name}'),
+                  selected: _label == l,
+                  onPressed: () => setState(() => _label = l)),
+          ]),
+          const SizedBox(height: 8),
+          Text(retroText(s.t('ui.lobby.world.label_note')),
+              style: DsText.detail(ProtoColors.dim)),
+        ],
+      ),
+    );
+  }
 }
 
 class _RenameWorldDialog extends StatefulWidget {
@@ -190,24 +196,28 @@ class _RenameWorldDialogState extends State<_RenameWorldDialog> {
   void _ok() => Navigator.of(context).pop(_name.text);
 
   @override
-  Widget build(BuildContext context) => PanelFrame(
-        key: const ValueKey('world-rename-dialog'),
-        title: 'RENOMBRAR MUNDO',
-        width: 420,
-        onClose: () => Navigator.of(context).pop(),
-        actions: [
-          PanelButton('CANCELAR', onPressed: () => Navigator.of(context).pop()),
-          PanelButton('GUARDAR',
-              key: const ValueKey('world-rename-ok'), onPressed: _ok),
-        ],
-        child: RetroTextField(
-          key: const ValueKey('world-rename-field'),
-          controller: _name,
-          autofocus: true,
-          maxLength: WorldSave.maxName,
-          onSubmitted: (_) => _ok(),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final s = lobbyStrings(context);
+    return PanelFrame(
+      key: const ValueKey('world-rename-dialog'),
+      title: s.t('ui.lobby.world.rename_title'),
+      width: 420,
+      onClose: () => Navigator.of(context).pop(),
+      actions: [
+        PanelButton(s.t('ui.lobby.world.cancel'),
+            onPressed: () => Navigator.of(context).pop()),
+        PanelButton(s.t('ui.lobby.world.save'),
+            key: const ValueKey('world-rename-ok'), onPressed: _ok),
+      ],
+      child: RetroTextField(
+        key: const ValueKey('world-rename-field'),
+        controller: _name,
+        autofocus: true,
+        maxLength: WorldSave.maxName,
+        onSubmitted: (_) => _ok(),
+      ),
+    );
+  }
 }
 
 class _DeleteWorldDialog extends StatelessWidget {
@@ -215,23 +225,25 @@ class _DeleteWorldDialog extends StatelessWidget {
   final WorldSave world;
 
   @override
-  Widget build(BuildContext context) => PanelFrame(
-        key: const ValueKey('world-delete-dialog'),
-        title: 'BORRAR MUNDO',
-        width: 520,
-        onClose: () => Navigator.of(context).pop(false),
-        actions: [
-          PanelButton('CANCELAR',
-              key: const ValueKey('world-delete-cancel'),
-              onPressed: () => Navigator.of(context).pop(false)),
-          PanelButton('BORRAR',
-              key: const ValueKey('world-delete-ok'),
-              accent: ProtoColors.red,
-              onPressed: () => Navigator.of(context).pop(true)),
-        ],
-        child: Text(
-            retroText('Vas a borrar el mundo "${world.name}" con su pueblo. '
-                'Los personajes no se tocan. No se puede deshacer.'),
-            style: const TextStyle(color: ProtoColors.red)),
-      );
+  Widget build(BuildContext context) {
+    final s = lobbyStrings(context);
+    return PanelFrame(
+      key: const ValueKey('world-delete-dialog'),
+      title: s.t('ui.lobby.world.delete_title'),
+      width: 520,
+      onClose: () => Navigator.of(context).pop(false),
+      actions: [
+        PanelButton(s.t('ui.lobby.world.cancel'),
+            key: const ValueKey('world-delete-cancel'),
+            onPressed: () => Navigator.of(context).pop(false)),
+        PanelButton(s.t('ui.lobby.world.delete'),
+            key: const ValueKey('world-delete-ok'),
+            accent: ProtoColors.red,
+            onPressed: () => Navigator.of(context).pop(true)),
+      ],
+      child: Text(
+          retroText(s.t('ui.lobby.world.delete_body', {'name': world.name})),
+          style: const TextStyle(color: ProtoColors.red)),
+    );
+  }
 }

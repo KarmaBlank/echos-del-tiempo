@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/design/design.dart';
 import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../world_strings.dart';
 
 /// Detalle de un ítem de oficio (panel de la derecha): todo escrito
 /// completo, nunca con "…".
@@ -139,7 +140,7 @@ class _LifeItemGridState extends State<LifeItemGrid> {
             if (g.title != null)
               DsSectionHeader(g.title!,
                   key: g.headerKey,
-                  trailing: DsBadge('${g.cells.length}', neutral: true)),
+                  trailing: DsBadge(g.cells.length.toString(), neutral: true)),
             Wrap(
               spacing: DsSpace.xs,
               runSpacing: DsSpace.xs,
@@ -205,7 +206,7 @@ class _LifeItemGridState extends State<LifeItemGrid> {
           Positioned(
             right: 2,
             bottom: 0,
-            child: Text('${c.count}',
+            child: Text(c.count.toString(),
                 textScaler: fixed,
                 style: const TextStyle(
                     fontFamily: RetroType.pixelFamily,
@@ -241,7 +242,7 @@ class _LifeItemGridState extends State<LifeItemGrid> {
     if (cmp == null || cmp.isEmpty) return const [];
     return [
       SizedBox(height: DsSpace.xs),
-      Text('VS EQUIPADA', style: DsText.detail()),
+      Text(context.t('ui.town.trades.vs_equipped'), style: DsText.detail()),
       for (final (t, better) in cmp)
         Text(t,
             style: DsText.body(better ? DsColors.success : DsColors.danger)),

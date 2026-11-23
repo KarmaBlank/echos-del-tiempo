@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../app/theme/panel_frame.dart';
+import '../../../core/i18n/i18n_providers.dart';
 import '../../../game_engine/models/achievement.dart';
 import '../../characters/presentation/characters_providers.dart';
 import 'achievements_view.dart';
@@ -37,18 +38,18 @@ class _AchievementsScreenState extends ConsumerState<AchievementsScreen> {
     return Scaffold(
       body: PanelFrame(
         key: const ValueKey('achievements-screen'),
-        title: 'HAZAÑAS',
+        title: ref.t('ui.achievements.title'),
         width: 1000,
         fill: true,
-        help: AchievementsView.help,
+        help: ref.t('ui.achievements.help'),
         onClose: () => Navigator.of(context).maybePop(),
         actions: [
-          DsButton('VOLVER',
+          DsButton(ref.t('ui.achievements.back'),
               key: const ValueKey('achievements-screen-close'),
               onPressed: () => Navigator.of(context).maybePop()),
         ],
         child: p == null
-            ? Text('Cargando...', style: DsText.detail())
+            ? Text(ref.t('ui.achievements.loading'), style: DsText.detail())
             : AchievementsView(progress: p),
       ),
     );

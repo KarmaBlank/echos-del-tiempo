@@ -1,15 +1,17 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../app/design/design.dart';
 import '../../../game_engine/data/biomes_catalog.dart';
 import '../../../game_engine/models/player_profile.dart';
 import '../../../game_engine/rules/eco_portal_rules.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Los 16 tiers de un portal de Ecos en grilla (ecos_zone.md § 3):
 /// `T<n>` con cuántos Ecos de ese tier hay; los cerrados en gris con el
 /// motivo en el tooltip. Molécula compartida por el portal de la zona y
 /// el centro de viaje.
-class EcoTierGrid extends StatelessWidget {
+class EcoTierGrid extends ConsumerWidget {
   const EcoTierGrid({
     super.key,
     required this.profile,
@@ -28,7 +30,7 @@ class EcoTierGrid extends StatelessWidget {
   final String keyPrefix;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final counts = EcoPortalRules.countByTier(profile, zone);
     return Wrap(
       spacing: DsSpace.xs,
@@ -37,13 +39,13 @@ class EcoTierGrid extends StatelessWidget {
         for (var t = 1; t <= EcoPortalRules.maxTier; t++)
           SizedBox(
             width: 64,
-            child: _cell(t, counts[t] ?? 0),
+            child: _cell(ref, t, counts[t] ?? 0),
           ),
       ],
     );
   }
 
-  Widget _cell(int t, int n) {
+  Widget _cell(WidgetRef ref, int t, int n) {
     final why =
         EcoPortalRules.lockReason(profile, zone, t, zoneName: zoneName);
     return DsButton(
@@ -52,9 +54,7 @@ class EcoTierGrid extends StatelessWidget {
       size: DsButtonSize.compact,
       selected: t == selected,
       tooltip: why ??
-          (n == 0
-              ? 'Portal T$t abierto. No tenés Ecos de este tier y zona.'
-              : 'Portal T$t abierto: tenés $n Eco${n == 1 ? '' : 's'}.'),
+          ref.t('ui.endgame.hub.tier_open', {'tier': t, 'n': n}),
       onPressed: why == null ? () => onSelect(t) : null,
     );
   }
@@ -65,7 +65,7 @@ class EcoTierGrid extends StatelessWidget {
 /// Ecos tenés de cada tier) con IR, que viaja al exterior de esa zona y
 /// te deja frente a su portal. Organismo único: lo usan el Portal del Eco
 /// del pueblo y el mapa de viaje.
-class EcoZoneHub extends StatefulWidget {
+class EcoZoneHub extends ConsumerStatefulWidget {
   const EcoZoneHub({
     super.key,
     required this.profile,
@@ -89,10 +89,10 @@ class EcoZoneHub extends StatefulWidget {
   final int? here;
 
   @override
-  State<EcoZoneHub> createState() => _EcoZoneHubState();
+  ConsumerState<EcoZoneHub> createState() => _EcoZoneHubState();
 }
 
-class _EcoZoneHubState extends State<EcoZoneHub> {
+class _EcoZoneHubState extends ConsumerState<EcoZoneHub> {
   int? _zone;
   final _tier = <int, int>{};
 
@@ -142,13 +142,15 @@ class _EcoZoneHubState extends State<EcoZoneHub> {
     final open = EcoPortalRules.unlockedTier(p, zone);
     final total = p.ecos.where((e) => e.zone == zone).length;
     return DsButton(
-      'ZONA $zone',
+      ref.t('ui.endgame.hub.zone_button', {'zone': zone}),
       key: ValueKey('eco-hub-zone-$zone'),
       size: DsButtonSize.compact,
       selected: zone == sel,
       details: [
         widget.zoneName(zone),
-        open == 0 ? 'Cerrado' : 'T1–T$open · $total Eco${total == 1 ? '' : 's'}',
+        open == 0
+            ? ref.t('ui.endgame.hub.closed')
+            : ref.t('ui.endgame.hub.zone_open', {'open': open, 'n': total}),
       ],
       onPressed: () => setState(() => _zone = zone),
     );
@@ -159,21 +161,25 @@ class _EcoZoneHubState extends State<EcoZoneHub> {
     final name = widget.zoneName(zone);
     final open = EcoPortalRules.unlockedTier(p, zone);
     final tier = (_tier[zone] ?? open).clamp(1, EcoPortalRules.maxTier);
-    final why = widget.here == zone ? 'Ya estás frente a este portal' :
+    final why = widget.here == zone
+        ? ref.t('ui.endgame.hub.already_here')
+        :
         widget.goBlocked(zone);
     final lock = EcoPortalRules.lockReason(p, zone, 1, zoneName: name);
     return Column(
       key: ValueKey('eco-hub-detail-$zone'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Zona $zone · $name', style: DsText.subtitle()),
-        Text('Portal en: ${biomeDef(spot.biome)?.name ?? spot.biome}',
+        Text(ref.t('ui.endgame.hub.zone_title', {'zone': zone, 'name': name}),
+            style: DsText.subtitle()),
+        Text(
+            ref.t('ui.endgame.hub.portal_in',
+                {'biome': biomeDef(spot.biome)?.name ?? spot.biome}),
             style: DsText.detail()),
         SizedBox(height: DsSpace.sm),
         Text(
             lock ??
-                'Abiertos: T1–T$open. Completá un Eco del tier más alto para '
-                    'abrir el siguiente.',
+                ref.t('ui.endgame.hub.open_tiers', {'open': open}),
             softWrap: true,
             style: DsText.detail(lock == null ? null : DsColors.warning)),
         SizedBox(height: DsSpace.sm),
@@ -188,7 +194,7 @@ class _EcoZoneHubState extends State<EcoZoneHub> {
         SizedBox(height: DsSpace.md),
         Align(
           alignment: Alignment.centerLeft,
-          child: DsButton('IR AL PORTAL',
+          child: DsButton(ref.t('ui.endgame.go_to_portal'),
               key: ValueKey('eco-hub-go-$zone'),
               kind: DsButtonKind.primary,
               tooltip: why,

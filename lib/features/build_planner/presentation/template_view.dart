@@ -23,6 +23,7 @@ import '../../passive_tree/presentation/passive_tree_view.dart';
 import '../data/template_files.dart';
 import 'build_fit_badge.dart' show kPlanColor;
 import 'build_planner_view.dart' show PickOption, showBuildPicker;
+import 'build_text.dart';
 import 'weapon_advice_block.dart';
 import 'weapon_target_view.dart';
 
@@ -106,6 +107,8 @@ class _TemplateBrowserState extends State<TemplateBrowser> {
         _noticeError = error;
       });
 
+  Strings get _s => context.buildStrings;
+
   Future<void> _import() async {
     final raw = await widget.files.pickYaml();
     if (raw == null) return;
@@ -127,18 +130,24 @@ class _TemplateBrowserState extends State<TemplateBrowser> {
       if (mine.isNotEmpty) _id = mine.first.id;
     });
     if (added.isEmpty) {
-      _say(bad.isEmpty ? 'El archivo no trae plantillas' : bad.first,
+      _say(bad.isEmpty ? _s.t('ui.build.tpl.file_empty') : bad.first,
           error: true);
     } else {
-      _say('Importadas ${added.length}'
-          '${mine.length < added.length ? ' (${mine.length} de tu clase)' : ''}'
-          '${bad.isEmpty ? '' : ' · ${bad.length} descartadas'}');
+      _say(_s.t('ui.build.tpl.imported', {'n': added.length}) +
+          (mine.length < added.length
+              ? _s.t('ui.build.tpl.imported_mine', {'n': mine.length})
+              : '') +
+          (bad.isEmpty
+              ? ''
+              : _s.t('ui.build.tpl.imported_bad', {'n': bad.length})));
     }
   }
 
   Future<void> _export(List<BuildTemplate> list, String name) async {
     final ok = await widget.files.saveYaml(BuildTemplateYaml.write(list), name);
-    if (ok) _say('Exportadas ${list.length} a $name');
+    if (ok) {
+      _say(_s.t('ui.build.tpl.exported', {'n': list.length, 'name': name}));
+    }
   }
 
   @override
@@ -152,27 +161,27 @@ class _TemplateBrowserState extends State<TemplateBrowser> {
     final sel = all.where((t) => t.id == _id).firstOrNull;
     return PanelFrame(
       key: const ValueKey('template-browser'),
-      title: 'PLANTILLAS',
+      title: _s.t('ui.build.tpl.title'),
       width: 1180,
       fill: true,
       onClose: () => Navigator.of(context).pop(),
       actions: [
         // main_dev: probar cambios del YAML sin recompilar (§ 2.2).
         if (FeatureFlags.instance.devTools)
-          DsButton('RECARGAR PLANTILLAS',
+          DsButton(_s.t('ui.build.tpl.reload'),
               key: const ValueKey('tpl-reload'),
               kind: DsButtonKind.ghost, onPressed: () async {
             await BuildTemplateLoader.load();
-            if (mounted) _say('Plantillas recargadas');
+            if (mounted) _say(_s.t('ui.build.tpl.reloaded'));
           }),
-        DsButton('IMPORTAR',
+        DsButton(_s.t('ui.build.tpl.import'),
             key: const ValueKey('tpl-import'), onPressed: _import),
-        DsButton('EXPORTAR CLASE',
+        DsButton(_s.t('ui.build.tpl.export_class'),
             key: const ValueKey('tpl-export-all'),
             onPressed: all.isEmpty
                 ? null
                 : () => _export(all, 'plantillas_${_p.classId}.yaml')),
-        DsButton('CERRAR',
+        DsButton(_s.t('ui.build.tpl.close'),
             key: const ValueKey('tpl-close'),
             onPressed: () => Navigator.of(context).pop()),
       ],
@@ -184,25 +193,25 @@ class _TemplateBrowserState extends State<TemplateBrowser> {
             // Etiquetas en una sola fila que se desliza de costado: la
             // lista se queda con el alto (v0.24.4).
             SingleChildScrollView(
-              key: const ValueKey('tpl-tag-bar'),
-              scrollDirection: Axis.horizontal,
-              child: Row(children: [
-              for (final w in <Widget>[
-              DsButton('TODAS',
-                  key: const ValueKey('tpl-tag-all'),
-                  size: DsButtonSize.compact,
-                  kind: DsButtonKind.ghost,
-                  selected: _tag == null,
-                  onPressed: () => setState(() => _tag = null)),
-              for (final t in tags)
-                DsButton(retroText(t.toUpperCase()),
-                    key: ValueKey('tpl-tag-$t'),
-                    size: DsButtonSize.compact,
-                    kind: DsButtonKind.ghost,
-                    selected: _tag == t,
-                    onPressed: () => setState(() => _tag = t)),
-              ]) ...[w, SizedBox(width: DsSpace.xs)],
-            ])),
+                key: const ValueKey('tpl-tag-bar'),
+                scrollDirection: Axis.horizontal,
+                child: Row(children: [
+                  for (final w in <Widget>[
+                    DsButton(_s.t('ui.build.tpl.all'),
+                        key: const ValueKey('tpl-tag-all'),
+                        size: DsButtonSize.compact,
+                        kind: DsButtonKind.ghost,
+                        selected: _tag == null,
+                        onPressed: () => setState(() => _tag = null)),
+                    for (final t in tags)
+                      DsButton(retroText(t.toUpperCase()),
+                          key: ValueKey('tpl-tag-$t'),
+                          size: DsButtonSize.compact,
+                          kind: DsButtonKind.ghost,
+                          selected: _tag == t,
+                          onPressed: () => setState(() => _tag = t)),
+                  ]) ...[w, SizedBox(width: DsSpace.xs)],
+                ])),
             SizedBox(height: DsSpace.xs),
             for (final t in list)
               DsListRow(
@@ -214,8 +223,8 @@ class _TemplateBrowserState extends State<TemplateBrowser> {
                 wrap: true,
                 title: retroText(t.name),
                 subtitle: retroText('${'♦' * t.difficulty}'
-                    '${t.imported ? ' · importada' : ''}'
-                    '${t.isGroup ? ' · grupo' : ''}'),
+                    '${t.imported ? _s.t('ui.build.tpl.tag_imported') : ''}'
+                    '${t.isGroup ? _s.t('ui.build.tpl.tag_group') : ''}'),
                 selected: t.id == _id,
                 onTap: () => setState(() => _id = t.id),
               ),
@@ -230,8 +239,7 @@ class _TemplateBrowserState extends State<TemplateBrowser> {
           ],
         );
         final view = sel == null
-            ? Text(retroText('Sin plantillas para tu clase'),
-                style: DsText.detail())
+            ? Text(retroText(_s.t('ui.build.tpl.none')), style: DsText.detail())
             : TemplateView(
                 key: ValueKey('tpl-view-${sel.id}'),
                 rules: widget.rules,
@@ -302,6 +310,8 @@ class _TemplateViewState extends State<TemplateView> {
 
   String _node(String id) => widget.rules.nodeName(id);
 
+  Strings get _s => context.buildStrings;
+
   bool _major(String id) {
     final k = widget.rules.progression.treeRules.catalog.nodes[id]?.kind;
     return k == 'n' || k == 'k';
@@ -328,7 +338,9 @@ class _TemplateViewState extends State<TemplateView> {
       milestone20: () => null,
     );
     final planned = {for (final s in tl.steps) s.node}..removeAll(taken);
-    final lvlLabel = _level > 50 ? 'Maestría ${_level - 50}' : 'Nv $_level';
+    final lvlLabel = _level > 50
+        ? _s.t('ui.build.tpl.mastery', {'n': _level - 50})
+        : _s.t('ui.build.tpl.level', {'n': _level});
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -344,7 +356,9 @@ class _TemplateViewState extends State<TemplateView> {
                   style: DsText.body(DsColors.reward)),
               for (final tag in _t.tags)
                 DsTag(tag.toUpperCase(), color: DsColors.textSecondary),
-              Text(retroText('dificultad ${'♦' * _t.difficulty}'),
+              Text(
+                  retroText(_s.t(
+                      'ui.build.tpl.difficulty', {'d': '♦' * _t.difficulty})),
                   style: DsText.detail()),
               if (asc != null)
                 Text(retroText('· ${asc.name}'), style: DsText.detail()),
@@ -386,7 +400,7 @@ class _TemplateViewState extends State<TemplateView> {
                 value: _level,
                 min: 1,
                 max: BuildTemplateRules.maxTreeLevel,
-                semanticLabel: 'Nivel de la plantilla',
+                semanticLabel: _s.t('ui.build.tpl.slider'),
                 marks: _marks(),
                 onChanged: (v) => setState(() {
                   _level = v;
@@ -394,8 +408,16 @@ class _TemplateViewState extends State<TemplateView> {
                 }),
               ),
               Text(
-                  retroText('$lvlLabel · $pts puntos'
-                      '${next == null ? '' : ' · próximo: ${_node(next.node)} (Nv ${next.level > 50 ? 'M${next.level - 50}' : next.level})'}'),
+                  retroText(_s.t('ui.build.tpl.points',
+                          {'label': lvlLabel, 'n': pts}) +
+                      (next == null
+                          ? ''
+                          : _s.t('ui.build.tpl.next', {
+                              'name': _node(next.node),
+                              'level': next.level > 50
+                                  ? 'M${next.level - 50}'
+                                  : '${next.level}',
+                            }))),
                   key: const ValueKey('tpl-level'),
                   style: DsText.body()),
               DsTimeline(
@@ -439,13 +461,19 @@ class _TemplateViewState extends State<TemplateView> {
 
   List<DsTimelineMark> _timelineMarks() {
     final out = <DsTimelineMark>[
-      const DsTimelineMark(10, '10 HITO', color: DsColors.warning),
-      const DsTimelineMark(20, '20 HITO', color: DsColors.warning),
-      const DsTimelineMark(30, '30 PRUEBA I', color: _violet),
-      const DsTimelineMark(40, '40 PRUEBA II', color: _violet),
-      const DsTimelineMark(50, '50 PRUEBA III', color: _violet),
+      DsTimelineMark(10, _s.t('ui.build.tpl.mark_milestone', {'n': 10}),
+          color: DsColors.warning),
+      DsTimelineMark(20, _s.t('ui.build.tpl.mark_milestone', {'n': 20}),
+          color: DsColors.warning),
+      DsTimelineMark(30, _s.t('ui.build.tpl.mark_trial', {'n': 30, 'r': 'I'}),
+          color: _violet),
+      DsTimelineMark(40, _s.t('ui.build.tpl.mark_trial', {'n': 40, 'r': 'II'}),
+          color: _violet),
+      DsTimelineMark(50, _s.t('ui.build.tpl.mark_trial', {'n': 50, 'r': 'III'}),
+          color: _violet),
       for (final w in _t.weapons)
-        DsTimelineMark(w.level, '${w.level} ARMA',
+        DsTimelineMark(
+            w.level, _s.t('ui.build.tpl.mark_weapon', {'n': w.level}),
             key: ValueKey('tpl-mark-arma-${w.level}'),
             color: w.rarity == null
                 ? DsColors.reward
@@ -453,7 +481,7 @@ class _TemplateViewState extends State<TemplateView> {
       if (_t.endgame.mastery.isNotEmpty)
         DsTimelineMark(
             50 + _t.endgame.mastery.map((m) => m.ms).reduce(math.max),
-            'MAESTRÍA 1-20',
+            _s.t('ui.build.tpl.mark_mastery'),
             color: DsColors.mp),
     ]..sort((a, b) => a.value.compareTo(b.value));
     return out;
@@ -473,17 +501,18 @@ class _TemplateViewState extends State<TemplateView> {
       key: const ValueKey('tpl-side'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DsSectionHeader('ATRIBUTOS AL NV $lvl'),
+        DsSectionHeader(_s.t('ui.build.tpl.attrs_at', {'n': lvl})),
         for (final a in Attribute.values)
           DsStatLine(a.name.toUpperCase(), attrs[a], attrs[a],
               key: ValueKey('tpl-attr-${a.name}'),
               showChange: false,
               suffix: attrs[a] > kAttrSoftCap[a]!
-                  ? 'pasa el tope ${kAttrSoftCap[a]}'
+                  ? _s.t('ui.build.tpl.over_cap', {'n': kAttrSoftCap[a]})
                   : null),
-        const DsSectionHeader('ARMA'),
+        DsSectionHeader(_s.t('ui.build.tpl.weapon')),
         if (target == null)
-          Text(retroText('Sin arma objetivo'), style: DsText.detail())
+          Text(retroText(_s.t('ui.build.tpl.no_target')),
+              style: DsText.detail())
         else
           WeaponTargetRow(
             key: const ValueKey('tpl-weapon'),
@@ -509,21 +538,22 @@ class _TemplateViewState extends State<TemplateView> {
           stashUids: {for (final s in widget.stash) s.uid},
         ),
         if (ult != null) ...[
-          const DsSectionHeader('ULT ACTIVA'),
+          DsSectionHeader(_s.t('ui.build.pick.ult_active_title')),
           DsListRow(
               title: retroText(ult.name),
               detail: retroText(_t.ultUpgrades.isEmpty
                   ? ult.how
-                  : 'mejorar a nivel ${_t.ultUpgrades.values.reduce(math.max)}')),
+                  : _s.t('ui.build.tpl.ult_upgrade',
+                      {'n': _t.ultUpgrades.values.reduce(math.max)}))),
         ],
         SizedBox(height: DsSpace.sm),
         Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
           if (widget.editable && widget.onFollow != null)
-            DsButton('SEGUIR ESTA PLANTILLA',
+            DsButton(_s.t('ui.build.tpl.follow'),
                 key: const ValueKey('tpl-follow'),
                 kind: DsButtonKind.primary,
                 onPressed: _follow),
-          DsButton('COMPARAR',
+          DsButton(_s.t('ui.build.tpl.compare'),
               key: const ValueKey('tpl-compare'),
               onPressed: () => setState(() => _compare = _tr.compare(
                   _t,
@@ -531,13 +561,14 @@ class _TemplateViewState extends State<TemplateView> {
                   widget.profile.attributes,
                   _level))),
           if (widget.onExport != null)
-            DsButton('EXPORTAR',
+            DsButton(_s.t('ui.build.tpl.export'),
                 key: const ValueKey('tpl-export'),
                 kind: DsButtonKind.ghost,
                 onPressed: widget.onExport),
         ]),
         if (_compare != null) ...[
-          DsSectionHeader('TU PERSONAJE VS. PLANTILLA AL $lvlLabelShort'),
+          DsSectionHeader(
+              _s.t('ui.build.tpl.compare_title', {'label': lvlLabelShort})),
           for (final l in _compare!)
             Padding(
               padding: EdgeInsets.symmetric(
@@ -551,17 +582,18 @@ class _TemplateViewState extends State<TemplateView> {
     );
   }
 
-  String get lvlLabelShort =>
-      _level > 50 ? 'MAESTRÍA ${_level - 50}' : 'NV $_level';
+  String get lvlLabelShort => _level > 50
+      ? _s.t('ui.build.tpl.mastery_short', {'n': _level - 50})
+      : _s.t('ui.build.tpl.level_short', {'n': _level});
 
   Future<void> _follow() async {
     if (widget.plan.goalCount > 0) {
       final ok = await showBuildPicker<bool>(
-          context, '¿SEGUIR ESTA PLANTILLA?', const [
-        PickOption(true, 'Sí, seguirla',
-            'Reemplaza las metas; tus notas y tu checklist se quedan.',
+          context, _s.t('ui.build.tpl.follow_title'), [
+        PickOption(true, _s.t('ui.build.tpl.follow_yes'),
+            _s.t('ui.build.tpl.follow_note'),
             key: 'follow-yes'),
-        PickOption(false, 'No', null, key: 'follow-no'),
+        PickOption(false, _s.t('ui.build.pick.no'), null, key: 'follow-no'),
       ]);
       if (ok != true || !mounted) return;
     }

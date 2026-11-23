@@ -13,6 +13,7 @@ import '../../../game_engine/rules/family_rules.dart';
 import '../../../game_engine/rules/js_math.dart';
 import '../../bestiary/domain/bestiary_text.dart' show familyTraitsMarkup;
 import '../domain/skill_text.dart';
+import 'combat_strings.dart';
 
 /// Estado en vivo del enemigo bajo el mouse, debajo de su ficha del
 /// bestiario (battle_ui.md § "Tooltip del enemigo"): ULT que prepara,
@@ -38,43 +39,44 @@ class EnemyLiveInfo extends StatefulWidget {
 
   /// Tope absoluto por golpe de jefes y élites (combat.md § "Límites"),
   /// o vacío si no tiene.
-  static String hitCapText(Combatant e) {
+  static String hitCapText(Strings s, Combatant e) {
     if (e.isPlayer || (!e.boss && !e.elite)) return '';
     final f = BattleEngine.absoluteHitCap(boss: e.boss, elite: e.elite);
     if (f <= 0 || f >= 1) return '';
-    return 'No cae de un golpe: cada golpe le saca como máximo el '
-        '${jsRound(f * 100)}% de su vida.';
+    return s.t('ui.combat.enemy.hit_cap', {'pct': jsRound(f * 100)});
   }
 
   /// Fuerza el pliegue (tests, capturas); `null` = sigue a Alt/Shift.
   final bool? open;
 
   /// "Quemadura ×3", "Mojado · 2 turnos", "Sagrado ×1 · 2 turnos".
-  static List<String> statusLines(Combatant e) =>
-      [for (final (k, rest) in statusEntries(e)) '${k.label}$rest'];
+  static List<String> statusLines(Strings s, Combatant e) =>
+      [for (final (k, rest) in statusEntries(s, e)) '${k.label}$rest'];
 
   /// Los estados de [e] en orden, con lo que sigue al nombre
   /// (" ×3", " · 2 turnos").
-  static List<(StatusKind, String)> statusEntries(Combatant e) => [
+  static List<(StatusKind, String)> statusEntries(Strings s, Combatant e) =>
+      [
         for (final k in StatusKind.values)
           if (e.stacks(k) case final n when n > 0)
             (
               k,
               k.timed
-                  ? ' · $n ${n == 1 ? 'turno' : 'turnos'}'
+                  ? ' · ${s.t('ui.combat.turns', {'n': n})}'
                   : ' ×$n'
-                      '${k == StatusKind.holy && e.holyTurns > 0 ? ' · ${e.holyTurns} turnos' : ''}'
+                      '${k == StatusKind.holy && e.holyTurns > 0 ? ' · ${s.t('ui.combat.turns', {'n': e.holyTurns})}' : ''}'
             ),
       ];
 
   /// Qué hace la ULT [u] y cómo cancelarla (markup corto).
-  static String ultDetail(EnemyUltDef u) => [
-        'ATQ × ${fm(u.power)} ${u.allTargets ? 'a todo el grupo' : 'al objetivo'}',
+  static String ultDetail(Strings s, EnemyUltDef u) => [
+        s.t(u.allTargets ? 'ui.combat.enemy.ult_power_all' : 'ui.combat.enemy.ult_power_one',
+            {'x': fm(u.power)}),
         if (u.status case final st?) statusApplicationMarkup(st),
-        if (u.delayAll > 0) 'Retrasa a todo el grupo',
-        if (u.wipeBuffs) 'Borra los buffs del grupo',
-        if (u.guaranteedCrit) 'Crítico seguro',
-        'Cancelala: quebralo (barra QB) o drená su carga',
+        if (u.delayAll > 0) s.t('ui.combat.enemy.ult_delay_all'),
+        if (u.wipeBuffs) s.t('ui.combat.enemy.ult_wipe_buffs'),
+        if (u.guaranteedCrit) s.t('ui.combat.enemy.ult_sure_crit'),
+        s.t('ui.combat.enemy.ult_cancel'),
       ].join('<br>');
 
   @override
@@ -110,12 +112,13 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
   @override
   Widget build(BuildContext context) {
     final e = widget.enemy;
+    final s = combatStrings(context);
     final open = widget.open ?? _keys;
     final ult = e.ultPending ? kEnemyUlts[e.ultId] : null;
     final mech = e.boss ? bossMechanicOf(kEnemies[e.enemyType]) : null;
-    final states = EnemyLiveInfo.statusEntries(e);
+    final states = EnemyLiveInfo.statusEntries(s, e);
     final aff = widget.affinities ? EnemyLiveInfo.affinityMarkup(e) : '';
-    final cap = EnemyLiveInfo.hitCapText(e);
+    final cap = EnemyLiveInfo.hitCapText(s, e);
     final sections = <Widget>[
       if (cap.isNotEmpty)
         Text(retroText(cap),
@@ -130,14 +133,14 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(retroText('Prepara ${ult.name}: la lanza en su turno'),
+            Text(retroText(s.t('ui.combat.enemy.ult_prepares', {'name': ult.name})),
                 style: DsText.body(DsColors.danger)),
             if (open)
-              ProtoText(EnemyLiveInfo.ultDetail(ult),
+              ProtoText(EnemyLiveInfo.ultDetail(s, ult),
                   key: const ValueKey('enemy-live-ult-detail'),
                   style: DsText.detail())
             else
-              Text(retroText('Qué hace: Alt / Shift'),
+              Text(retroText(s.t('ui.combat.enemy.what_it_does_hint')),
                   style: DsText.detail(DsColors.textSecondary)),
           ],
         ),
@@ -147,12 +150,12 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(retroText('Mecánica: ${mech.name}'),
+            Text(retroText(s.t('ui.combat.enemy.mechanic', {'name': mech.name})),
                 style: DsText.body(DsColors.warning)),
             if (open)
               ProtoText(mech.counter, style: DsText.detail())
             else
-              Text(retroText('Cómo contrarrestarla: Alt / Shift'),
+              Text(retroText(s.t('ui.combat.enemy.counter_hint')),
                   style: DsText.detail(DsColors.textSecondary)),
           ],
         ),
@@ -186,7 +189,7 @@ class _EnemyLiveInfoState extends State<EnemyLiveInfo> {
                 ],
               ),
             if (!open)
-              Text(retroText('Qué hace cada uno: Alt / Shift'),
+              Text(retroText(s.t('ui.combat.enemy.each_hint')),
                   style: DsText.detail(DsColors.textSecondary)),
           ],
         ),

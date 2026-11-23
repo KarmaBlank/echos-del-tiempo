@@ -13,9 +13,12 @@ import 'package:flutter_test/flutter_test.dart';
 /// [knownGaps]: faltantes ya sabidos por fuente (no frenan el test, pero
 /// uno nuevo sí). Se achica cuando se arregla la fuente.
 const knownGaps = <String, Set<String>>{
-  'PressStart2P': {},
-  'VT323': {},
-  'AtkinsonHyperlegible': {},
+  // Símbolos que la UI ya usaba antes de pasar a tablas (flechas del
+  // TUTORIAL y del HUD del mundo, ★ del plan, − de las púas, ₵ de
+  // créditos; en combate, ▲▼ de buffs, ▸ y ← de los menús).
+  'PressStart2P': {'−', '₵', '▸'},
+  'VT323': {'★', '→', '↑', '↓', '▲', '▼', '←', '▸'},
+  'AtkinsonHyperlegible': {'★', '→', '₵', '↑', '↓', '▲', '▼', '←', '▸'},
 };
 
 const fonts = {
