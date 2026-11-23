@@ -5,4 +5,4 @@
 // se desincronice del pubspec.
 
 /// Versión instalada (`X.Y.Z`), la misma que el tag `vX.Y.Z` del release.
-const String appVersion = '0.36.4';
+const String appVersion = '0.37.0';
