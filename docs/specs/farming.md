@@ -209,6 +209,13 @@ silvestres (Moras del bosque, Hierba de rocío, Hongo ámbar) son cosechas
 de calidad normal que no se plantan. Recolectar da XP de Cultivo. Ver
 `overworld_biomes.md` § 3.2 y § 3.3.
 
+### 3.1c Biomas de v0.29.0
+
+Tres semillas exclusivas por bioma (Ruinas, Cavernas, Grieta, Abismo;
+lista en overworld_biomes.md § 3.5) y tres productos silvestres. Salen de
+recolectar; la común y la rara también las vende el habitante del bioma
+(overworld_biomes.md § 9.1). Cada una tiene su `CropLook`.
+
 ### 3.2 Abonos
 | Abono | Precio | Sesgo (`fert<K>Bias`) | Crecimiento (`fert<K>Speed`) |
 |---|---|---|---|

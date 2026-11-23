@@ -28,7 +28,7 @@ void main() {
     expect(m.lobby, isTrue);
     expect(m.entrances.map((e) => e.zone), [1, 2]);
     expect(m.rows.join().split(Tile.forage).length - 1,
-        BosqueLayout.forage.length);
+        bosqueLayout.forage.length);
     expect(m.rows.join().contains(Tile.fishing), isTrue);
     final sp = m.spawn;
     expect(WorldRules.collides(m, sp.x, sp.y), isFalse);
@@ -49,8 +49,8 @@ void main() {
     expect(s.place, kBosque);
     expect(e.mapFor(s).place, kBosque);
     for (final p in s.playerList) {
-      expect(WorldRules.distance(p.x, p.y, BosqueLayout.spawn.x,
-              BosqueLayout.spawn.y) <
+      expect(WorldRules.distance(p.x, p.y, bosqueLayout.spawn.x,
+              bosqueLayout.spawn.y) <
           40, isTrue);
     }
     // El tablero sigue andando: una misión desde el Bosque.
@@ -69,7 +69,7 @@ void main() {
       () {
     final e = sessionEngine(zones: true);
     var s = act(e, room(), 'p0', const TravelAction(kBosque));
-    final f = BosqueLayout.forage[0];
+    final f = bosqueLayout.forage[0];
     expect(e.apply(s, 'p0', const ForageAction(0)), isNull, reason: 'lejos');
     s = moveTo(e, s, 'p0', (f.x + 0.5) * 16, (f.y + 1.5) * 16);
     final xp0 = s.players['p0']!.profile.life.farm.xp;

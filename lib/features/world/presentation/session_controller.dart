@@ -1220,8 +1220,32 @@ class SessionController extends StateNotifier<SessionView?> {
     return null;
   }
 
+  /// Por qué el bioma [id] sigue cerrado para el dueño del mundo.
+  /// (Lo valida el anfitrión con su perfil; acá se mira el propio.)
+  String? travelLocked(String id) =>
+      BiomeRules.lockedReason(
+          id, _s?.players[localId]?.profile.unlockedZone ?? 1);
+
+  /// El habitante del exterior frente al jugador local (§ 9), o `null`.
+  BiomeNpcDef? get nearNpc {
+    final s = _s;
+    final lay = biomeLayout(s?.place);
+    if (s == null || s.mode != SessionMode.lobby || lay == null) return null;
+    final (nx, ny) = lay.npc.tile;
+    return WorldRules.distance(
+                local.x, local.y, (nx + 0.5) * 16, (ny + 0.5) * 16) <
+            26
+        ? lay.npc
+        : null;
+  }
+
+  /// Frase del habitante (cambia con el día del mundo).
+  String npcLine(BiomeNpcDef n) =>
+      n.lines[town.sky.day % n.lines.length];
+
   bool travelPlace(String id) {
     if (cannotTravel != null || id == place) return false;
+    if (travelLocked(id) != null) return false;
     closePanel();
     stopFishing();
     return _apply(TravelAction(id));
@@ -1230,11 +1254,12 @@ class SessionController extends StateNotifier<SessionView?> {
   /// La mata del exterior frente al jugador local (índice), o `null`.
   int? get nearForage {
     final s = _s;
-    if (s == null || s.mode != SessionMode.lobby || s.place != kBosque) {
+    final lay = biomeLayout(s?.place);
+    if (s == null || s.mode != SessionMode.lobby || lay == null) {
       return null;
     }
-    for (var i = 0; i < BosqueLayout.forage.length; i++) {
-      final f = BosqueLayout.forage[i];
+    for (var i = 0; i < lay.forage.length; i++) {
+      final f = lay.forage[i];
       if (WorldRules.distance(local.x, local.y, (f.x + 0.5) * 16,
               (f.y + 0.5) * 16) <
           24) {
@@ -1245,9 +1270,9 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   String forageHint(int i) {
-    final k = kForageKinds[BosqueLayout.forage[i].kind];
-    final left =
-        BiomeRules.regrowIn(town, kBosque, i, _s?.time ?? 0).ceil();
+    final lay = biomeLayout(_s?.place) ?? bosqueLayout;
+    final k = kForageKinds[lay.forage[i].kind];
+    final left = BiomeRules.regrowIn(town, lay.id, i, _s?.time ?? 0).ceil();
     return left > 0
         ? '${k.name}: vuelven a crecer en ${left}s'
         : '[E] Recolectar ${k.name.toLowerCase()}';
@@ -2312,6 +2337,8 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.fountain);
       } else if (nearTravel) {
         openPanel(WorldPanel.travel);
+      } else if (nearNpc != null) {
+        openPanel(WorldPanel.biomeNpc);
       } else if (nearForage != null) {
         forage();
       } else if (nearChest case final b? when b.chest.isNotEmpty) {
@@ -3569,6 +3596,7 @@ class SessionController extends StateNotifier<SessionView?> {
             _panel == WorldPanel.trader ||
             _panel == WorldPanel.fountain ||
             _panel == WorldPanel.travel ||
+            _panel == WorldPanel.biomeNpc ||
             _panel == WorldPanel.helper) &&
         mode != SessionMode.lobby &&
         !(_panel == WorldPanel.armory && _runShopOpen(s))) {
@@ -3640,6 +3668,9 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearCounter) return (WorldPrompt.missionBoard, null);
     if (nearFountain) return (WorldPrompt.fountain, null);
     if (nearTravel) return (WorldPrompt.poi, '[E] Mapa de viaje');
+    if (nearNpc case final n?) {
+      return (WorldPrompt.poi, '[E] Hablar con ${n.name}');
+    }
     if (nearForage case final i?) return (WorldPrompt.poi, forageHint(i));
     final helperTip = nearHelper == null ? '' : ' · ${WorldPrompt.helper.label}';
     if (farmHint() case final h?) return (WorldPrompt.farm, '$h$helperTip');

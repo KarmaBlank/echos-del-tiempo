@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import '../../../../core/settings/graphics.dart';
-import '../../../../game_engine/data/biomes_catalog.dart' show BosqueLayout;
+import '../../../../game_engine/data/biomes_catalog.dart' show kBiomeLayouts;
 import '../../../../game_engine/models/game_map.dart';
 import 'map_themes.dart';
 
@@ -62,7 +62,7 @@ class TilePainter {
       if (lobby) themeId = 'lobby';
     }
     // El pueblo v0.21.0 es al aire libre (town_loop.md § 2.1).
-    if (themeId == 'pueblo' || themeId == 'bosque_ext') lobby = false;
+    if (themeId == 'pueblo' || themeId.endsWith('_ext')) lobby = false;
     final th = mapTheme(themeId);
     final h = tileHash(tx, ty);
 
@@ -416,7 +416,7 @@ class TilePainter {
       lobby = inTown(tx, ty);
       if (lobby) themeId = 'lobby';
     }
-    if (themeId == 'pueblo' || themeId == 'bosque_ext') lobby = false;
+    if (themeId == 'pueblo' || themeId.endsWith('_ext')) lobby = false;
     // Niebla del cementerio: sobre todo lo que no es vacío.
     if (themeId == 'cementerio' && ch != Tile.voidTile) return true;
     final h = tileHash(tx, ty);
@@ -710,7 +710,7 @@ class TilePainter {
   /// Mata recolectable: con frutos del color de su tipo, o pelada.
   void _forageBush(Canvas c, double px, double py, int tx, int ty,
       {required bool used}) {
-    final kind = BosqueLayout.forage
+    final kind = [for (final l in kBiomeLayouts.values) ...l.forage]
         .where((f) => f.x == tx && f.y == ty)
         .map((f) => f.kind)
         .firstOrNull ?? 0;

@@ -48,12 +48,19 @@ class TravelPanel extends StatelessWidget {
                   style: DsText.detail(b.open ? null : DsColors.textDisabled)),
               trailing: b.id == here
                   ? DsBadge('ACÁ', key: ValueKey('travel-here-${b.id}'))
-                  : DsButton(b.open ? 'VIAJAR' : 'PRÓXIMAMENTE',
+                  : DsButton(
+                      !b.open
+                          ? 'PRÓXIMAMENTE'
+                          : c.travelLocked(b.id) == null
+                              ? 'VIAJAR'
+                              : 'ZONA ${b.unlockZone}',
                       key: ValueKey('travel-go-${b.id}'),
                       size: DsButtonSize.compact,
                       kind: DsButtonKind.primary,
-                      tooltip: b.open ? why : null,
-                      onPressed: b.open && why == null
+                      tooltip: b.open ? (c.travelLocked(b.id) ?? why) : null,
+                      onPressed: b.open &&
+                              why == null &&
+                              c.travelLocked(b.id) == null
                           ? () => c.travelPlace(b.id)
                           : null),
             ),

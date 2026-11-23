@@ -47,7 +47,7 @@ void main() {
     await h.frames(30);
     expect(c.place, kBosque);
     await _shot(tester, 'bosque_llegada');
-    final f = BosqueLayout.forage[6];
+    final f = bosqueLayout.forage[6];
     // ignore: invalid_use_of_visible_for_testing_member
     c.teleport((f.x + 0.5) * 16, (f.y + 1.5) * 16);
     await h.frames(20);

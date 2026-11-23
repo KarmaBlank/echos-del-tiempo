@@ -20,8 +20,13 @@ abstract final class SkyRules {
   /// mazmorras, ruinas ni el abismo; § 1.3).
   static const outdoorThemes = {'pradera', 'bosque', 'mundo', 'lobby', 'pueblo'};
 
+  /// Exteriores de bioma sin cielo (overworld_biomes.md § 3.5): ni noche
+  /// ni clima aunque sean zona segura.
+  static const undergroundThemes = {'cavernas_ext'};
+
   static bool outdoor(String theme, {bool town = false}) =>
-      town || outdoorThemes.contains(theme);
+      !undergroundThemes.contains(theme) &&
+      (town || outdoorThemes.contains(theme));
 
   /// El primer día: arranca a media mañana, despejado, con pronóstico.
   static SkyState start(double Function() rand) => SkyState(

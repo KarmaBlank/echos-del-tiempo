@@ -433,8 +433,9 @@ class SessionEngine {
     final m = s.mission;
     if (m == null || s.mode == SessionMode.lobby) {
       // Exterior de bioma (overworld_biomes.md § 2): el grupo viajó.
-      if (s.place == kBosque) {
-        return MapGenerator.bosque(BiomeRules.picked(s.town, kBosque, s.time));
+      if (biomeLayout(s.place) case final lay?) {
+        return MapGenerator.biome(
+            lay, BiomeRules.picked(s.town, lay.id, s.time));
       }
       return MapGenerator.townOf(s.town);
     }

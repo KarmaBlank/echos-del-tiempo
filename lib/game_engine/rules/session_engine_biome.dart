@@ -25,7 +25,8 @@ extension _BiomeOp on _Op {
         s.prep != null ||
         p.isCompanion ||
         !_isOwner(p) ||
-        !BiomeRules.canTravelTo(place)) {
+        !BiomeRules.canTravelTo(place,
+            unlockedZone: ZoneRules.unlockedZone(p.profile))) {
       return false;
     }
     final next = place == kPueblo ? null : place;
@@ -47,18 +48,18 @@ extension _BiomeOp on _Op {
 
   bool _forage(SessionPlayer p, int spot) {
     if (s.mode != SessionMode.lobby ||
-        s.place != kBosque ||
-        p.isCompanion ||
-        spot < 0 ||
-        spot >= BosqueLayout.forage.length) {
+        p.isCompanion) {
       return false;
     }
-    final f = BosqueLayout.forage[spot];
+    final lay = biomeLayout(s.place);
+    if (lay == null || spot < 0 || spot >= lay.forage.length) return false;
+    final biome = lay.id;
+    final f = lay.forage[spot];
     final cx = (f.x + 0.5) * 16, cy = (f.y + 0.5) * 16;
     if (WorldRules.distance(p.x, p.y, cx, cy) > forageReach) return false;
-    if (BiomeRules.regrowIn(s.town, kBosque, spot, s.time) > 0) return false;
-    s.town = BiomeRules.pick(s.town, kBosque, spot, s.time);
-    final r = BiomeRules.forage(_rand, f.kind);
+    if (BiomeRules.regrowIn(s.town, biome, spot, s.time) > 0) return false;
+    s.town = BiomeRules.pick(s.town, biome, spot, s.time);
+    final r = BiomeRules.forage(_rand, f.kind, lay.seeds);
     final crop = kCrops[r.item]!;
     final lvl0 = FarmingRules.level(p.profile);
     var farm = p.profile.life.farm.addCrop(cropKey(crop.id, CropQuality.normal));

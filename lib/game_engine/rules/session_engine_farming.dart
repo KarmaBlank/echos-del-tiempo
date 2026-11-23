@@ -366,8 +366,11 @@ extension _FarmingOp on _Op {
     final id = a.id;
     switch (a.op) {
       case FarmShopOp.buySeed:
+        // Habitante del bioma (overworld_biomes.md § 9.1): sus semillas.
+        final vendor = id == null ? null : BiomeRules.vendorPrice(s.place, id);
         return id != null &&
-            _profileChange(p, FarmingRules.buySeed(prof, id, a.n));
+            _profileChange(
+                p, FarmingRules.buySeed(prof, id, a.n, vendor));
       case FarmShopOp.buyTool:
         if (id == null || !_profileChange(p, FarmingRules.buyTool(prof, id))) {
           return false;
