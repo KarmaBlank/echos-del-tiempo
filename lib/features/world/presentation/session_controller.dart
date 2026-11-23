@@ -1642,6 +1642,36 @@ class SessionController extends StateNotifier<SessionView?> {
     return true;
   }
 
+  /// Por qué no se puede elegir dónde contratar un ayudante de [kind]
+  /// (o `null`): solo el dueño, y tiene que haber alguna huerta o lago.
+  String? cannotPickHire(BuildKind kind) {
+    if (cannotEditTown != null) {
+      return 'Solo el dueño del mundo contrata ayudantes';
+    }
+    if (!town.builds.any((b) => b.kind == kind)) {
+      return kind == BuildKind.huerta
+          ? 'No hay huertas en el pueblo'
+          : 'No hay lagos en el pueblo';
+    }
+    return null;
+  }
+
+  /// CONTRATAR GRANJERO / PESCADOR de la fuente: cámara libre de la
+  /// edición y clic en la huerta o el lago (farming.md § 8).
+  bool enterHirePick(BuildKind kind) {
+    if (cannotPickHire(kind) != null || !enterTownEdit()) return false;
+    _edit!.hire = kind;
+    _emit();
+    return true;
+  }
+
+  /// Por qué no se puede contratar en [b] en el modo de elegir (o `null`).
+  String? hireWhy(TownBuild b) {
+    final p = _s?.players[localId]?.profile;
+    if (p == null) return 'Sin personaje';
+    return TownRules.cannotHire(p, town, b.id);
+  }
+
   void exitTownEdit() {
     if (_edit == null) return;
     _edit = null;
@@ -1652,7 +1682,9 @@ class SessionController extends StateNotifier<SessionView?> {
   void editBack() {
     final e = _edit;
     if (e == null) return;
-    if (e.step == TownEditStep.browse) return exitTownEdit();
+    if (e.step == TownEditStep.browse || e.hire != null) {
+      return exitTownEdit();
+    }
     e.reset();
     _emit();
   }
@@ -1735,6 +1767,14 @@ class SessionController extends StateNotifier<SessionView?> {
   void editClick(int tx, int ty) {
     final e = _edit;
     if (e == null) return;
+    if (e.hire case final kind?) {
+      final b = TownRules.buildAt(town, tx, ty) ??
+          TownRules.buildAtSign(town, tx, ty);
+      if (b != null && b.kind == kind && hireWhy(b) == null) {
+        if (hireHelper(b.id)) return exitTownEdit();
+      }
+      return;
+    }
     switch (e.step) {
       case TownEditStep.moving || TownEditStep.placing:
         e.ghost = (tx, ty);
@@ -1751,7 +1791,10 @@ class SessionController extends StateNotifier<SessionView?> {
             TownRules.buildAtSign(town, tx, ty);
         final l = b == null ? TownRules.landmarkAt(town, tx, ty) : null;
         e.reset();
-        if (side != null) {
+        // Franja de un lado al tope: gris, no se elige (town_editor.md § 1.3).
+        if (side != null && TownRules.sideFull(town, side) != null) {
+          // nada
+        } else if (side != null) {
           e
             ..step = TownEditStep.side
             ..side = side;

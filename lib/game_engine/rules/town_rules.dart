@@ -62,9 +62,9 @@ abstract final class TownRules {
 
   /// Por qué el pueblo no se puede ampliar más hacia [side] (o `null`).
   static String? sideFull(TownState s, TownSide side) {
-    if (s.expansions >= maxExpansions) return 'El pueblo ya está al máximo';
+    if (s.expansions >= maxExpansions) return 'Límite de ampliación alcanzado';
     if (s.side(side) >= maxPerSide) {
-      return 'No se puede ampliar más al ${side.label.toLowerCase()}';
+      return 'Límite de este lado';
     }
     return null;
   }

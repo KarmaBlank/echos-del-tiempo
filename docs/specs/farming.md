@@ -254,7 +254,17 @@ herramienta de área trabaja menos tiles.
 - En EDITAR PUEBLO (solo el dueño): clic en una huerta o un lago →
   GRANJEROS / PESCADORES "1 / 3" → CONTRATAR AYUDANTE (`helperCost`, 800
   de oro; pide Cultivo o Pesca `helperLevel`, 5) o DESPEDIR (el último;
-  sin devolver oro). La fuente rúnica ya no contrata.
+  sin devolver oro).
+- Atajo desde la FUENTE RÚNICA (v0.25.7): CONTRATAR GRANJERO / CONTRATAR
+  PESCADOR cierra el panel y entra a la cámara libre de la edición en
+  modo elegir (`TownEdit.hire`): barra "Elegí una huerta para contratar
+  un granjero" / "¿En qué lago querés el pescador?" con CANCELAR [ESC];
+  solo se resaltan las huertas (o los lagos), verdes si se puede y grises
+  si no, cada una con su tarjeta "Granjeros n / max" y el costo o el
+  motivo (lleno, falta oro, falta nivel de Cultivo o Pesca). Clic en una
+  habilitada = la misma acción `TownOp.hireHelper` y sale. Solo el dueño;
+  sin huertas (o lagos) el botón sale gris con el motivo. Sin cambio de
+  protocolo.
 - Tope por tamaño: huerta `ceil(parcelas / helperPlots)` (8), lago
   `ceil(tiles / fisherTiles)` (18). Huertas pegadas se funden en una
   (como los lagos): suman parcelas, ayudantes, semillas y cofre, y crece

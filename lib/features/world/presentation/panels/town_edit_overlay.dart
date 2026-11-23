@@ -54,7 +54,13 @@ class TownEditOverlay extends StatelessWidget {
           padding: EdgeInsets.symmetric(
               horizontal: DsSpace.md, vertical: DsSpace.xs),
           child: Row(children: [
-            Text('EDICIÓN DEL PUEBLO', style: DsText.title()),
+            Text(
+                switch (e.hire) {
+                  BuildKind.huerta => 'CONTRATAR GRANJERO',
+                  BuildKind.lago => 'CONTRATAR PESCADOR',
+                  _ => 'EDICIÓN DEL PUEBLO',
+                },
+                style: DsText.title()),
             SizedBox(width: DsSpace.md),
             Expanded(
                 child: Text(_hint(c, e),
@@ -63,8 +69,9 @@ class TownEditOverlay extends StatelessWidget {
                     softWrap: true,
                     style: DsText.subtitle())),
             SizedBox(width: DsSpace.md),
-            DsButton('LISTO [ESC]',
-                key: const ValueKey('town-edit-done'),
+            DsButton(e.hire == null ? 'LISTO [ESC]' : 'CANCELAR [ESC]',
+                key: ValueKey(
+                    e.hire == null ? 'town-edit-done' : 'town-hire-cancel'),
                 size: DsButtonSize.compact,
                 kind: DsButtonKind.primary,
                 onPressed: c.exitTownEdit),
@@ -114,6 +121,20 @@ class TownEditOverlay extends StatelessWidget {
     final town = c.town;
     if (e.step != TownEditStep.browse) return null;
     final b = town.builds.where((b) => b.id == e.hoverBuild).firstOrNull;
+    if (e.hire case final kind?) {
+      if (b == null || b.kind != kind) return null;
+      final why = c.hireWhy(b);
+      return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DsSectionHeader(b.kind.label),
+            Text(TownRules.helperLine(b), style: DsText.detail()),
+            Text(why ?? '${TownRules.helperCost} de oro. Clic para contratar.',
+                key: const ValueKey('town-hire-info'),
+                style: DsText.detail(why == null ? null : DsColors.textDisabled)),
+          ]);
+    }
     if (b == null) {
       final l = TownPlan.landmarksOf(town)
           .where((l) => l.id == e.hoverBuild)
@@ -147,6 +168,9 @@ class TownEditOverlay extends StatelessWidget {
       'rearman solos hasta la fuente.';
 
   static String _hint(SessionController c, TownEdit e) => switch (e.step) {
+        _ when e.hire == BuildKind.huerta =>
+          'Elegí una huerta para contratar un granjero',
+        _ when e.hire == BuildKind.lago => '¿En qué lago querés el pescador?',
         TownEditStep.moving ||
         TownEditStep.placing =>
           c.editGhostError ?? 'Clic para dejarlo acá',
@@ -171,9 +195,7 @@ class TownEditOverlay extends StatelessWidget {
         final side = e.side!;
         final why = c.cannotExpandTown(side);
         return col([
-          DsSectionHeader('AMPLIAR AL ${side.label}',
-              trailing:
-                  DsBadge('${town.expansions}/${TownRules.maxExpansions}')),
+          DsSectionHeader('AMPLIAR AL ${side.label}'),
           Text(
               'Suma una franja de $kTownStrip tiles de terreno libre. '
               '${TownRules.costText(TownRules.cost(town.expansions + 1))}',

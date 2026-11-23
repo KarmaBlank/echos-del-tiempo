@@ -2,6 +2,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
+import '../../../../game_engine/models/town_build.dart';
 import '../../../../game_engine/models/world_save.dart';
 import '../../../../game_engine/rules/town_rules.dart';
 import '../map/map_game.dart';
@@ -69,10 +70,36 @@ class _TownStripCardsState extends State<TownStripCards>
     final lines = TownRules.costLines(p, cost);
     final w = view.map.width * TownEditLayer.ts,
         h = view.map.height * TownEditLayer.ts;
+    final hire = c.townEdit?.hire;
+    final (ox, oy) = town.origin;
+    const ts = TownEditLayer.ts;
     return IgnorePointer(
       child: Stack(children: [
-        for (final side in TownSide.values)
-          if (TownRules.sideFull(town, side) == null)
+        // Elegir dónde contratar (farming.md § 8): una tarjeta por huerta
+        // o lago con los ayudantes, el costo o el motivo.
+        if (hire != null)
+          for (final b in town.builds)
+            if (b.kind == hire)
+              if (g
+                      .worldToScreen(b.parts
+                          .map((p) => Rect.fromLTWH((p.x + ox) * ts,
+                              (p.y + oy) * ts, p.w * ts, p.h * ts))
+                          .reduce((a, r) => a.expandToInclude(r)))
+                      .intersect(area)
+                  case final r when r.width > 8 && r.height > 8)
+                // Tamaño legible fijo, centrada en la construcción (puede
+                // salirse de su borde; nunca se achica).
+                Positioned(
+                  left: r.center.dx - 120,
+                  top: r.center.dy - 36,
+                  width: 240,
+                  child: Center(
+                    child: _hireCard(b, c.hireWhy(b),
+                        hot: c.townEdit?.hoverBuild == b.id),
+                  ),
+                ),
+        if (hire == null)
+          for (final side in TownSide.values)
             if (g.worldToScreen(TownEditLayer.stripRect(side, w, h))
                     .intersect(area)
                 case final r when r.width > 24 && r.height > 24)
@@ -82,6 +109,7 @@ class _TownStripCardsState extends State<TownStripCards>
                   child: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: _card(side, lines,
+                        full: TownRules.sideFull(town, side),
                         hot: c.townEdit?.hoverSide == side ||
                             c.townEdit?.side == side,
                         maxWidth: r.width - 8),
@@ -92,8 +120,37 @@ class _TownStripCardsState extends State<TownStripCards>
     );
   }
 
+  Widget _hireCard(TownBuild b, String? why, {required bool hot}) {
+    final ok = why == null;
+    return Container(
+      key: ValueKey('town-hire-${b.id}'),
+      constraints: const BoxConstraints(maxWidth: 260),
+      padding: EdgeInsets.all(DsSpace.sm),
+      decoration: BoxDecoration(
+        color: DsColors.background,
+        border: Border.all(
+            color: hot && ok ? DsColors.selected : DsColors.border, width: 2),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+              '${b.kind == BuildKind.huerta ? 'Granjeros' : 'Pescadores'} '
+              '${b.helper} / ${TownRules.helperCap(b)}',
+              style: DsText.title(ok ? null : DsColors.textDisabled)),
+          SizedBox(height: DsSpace.xs),
+          Text(why ?? '${TownRules.helperCost} de oro · clic para contratar',
+              key: ValueKey('town-hire-${b.id}-line'),
+              softWrap: true,
+              style: DsText.subtitle(ok ? DsColors.reward : DsColors.textDisabled)),
+        ],
+      ),
+    );
+  }
+
   Widget _card(TownSide side, List<({String name, int need, int have})> lines,
-      {required bool hot, required double maxWidth}) {
+      {String? full, required bool hot, required double maxWidth}) {
     return Container(
       key: ValueKey('town-strip-${side.code}'),
       constraints: BoxConstraints(maxWidth: maxWidth.clamp(160, 360)),
@@ -101,15 +158,24 @@ class _TownStripCardsState extends State<TownStripCards>
       decoration: BoxDecoration(
         color: DsColors.background,
         border: Border.all(
-            color: hot ? DsColors.selected : DsColors.border, width: 2),
+            color: hot && full == null ? DsColors.selected : DsColors.border,
+            width: 2),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('AMPLIAR', style: DsText.title()),
+          Text('AMPLIAR',
+              style: DsText.title(full == null ? null : DsColors.textDisabled)),
           SizedBox(height: DsSpace.xs),
-          for (final l in lines)
+          // Al tope: gris con el motivo, sin costo (town_editor.md § 1.3).
+          if (full != null)
+            Text(full,
+                key: ValueKey('town-strip-${side.code}-full'),
+                softWrap: true,
+                style: DsText.subtitle(DsColors.textDisabled)),
+          if (full == null)
+            for (final l in lines)
             Text('${l.name} ${l.need} (tenés ${l.have})',
                 key: ValueKey('town-strip-${side.code}-${l.name}'),
                 softWrap: true,

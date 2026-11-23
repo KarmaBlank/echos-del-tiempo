@@ -1,5 +1,10 @@
 # Deuda técnica
 
+## v0.25.7
+
+- test/features/world/farming_world_test.dart: CONTRATAR GRANJERO desde la fuente con nivel y oro: clic en la huerta contrata (helper +1, se cobra) y sale del modo elegir; no dueño ve los botones grises con el motivo.
+- test/features/world/town_strip_cards_test.dart: lado al tope muestra la tarjeta gris "Límite de ampliación alcanzado" / "Límite de este lado" y el clic en la franja no abre AMPLIAR (solo se vio en la captura).
+
 ## v0.25.5
 
 - test/features/world/helper_panel_test.dart: pantalla del granjero (G al lado del NPC): PASAR 1 / 10 / TODO y DEVOLVER entre las dos grillas, filtro por rareza y buscador, TAREAS cambia los bits, RECOGER TODO del cofre.
