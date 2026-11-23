@@ -6,21 +6,20 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/design/design.dart';
 import '../../../../core/procedural/item_icons.dart';
 import '../../../../core/settings/settings_providers.dart';
-import '../../../combat/presentation/game_sprites.dart';
 
-/// Aviso de guardado del HUD (docs/specs/save_indicator.md § 2): el ícono
+/// Aviso de guardado del HUD (docs/specs/save_indicator.md Â§ 2): el Ã­cono
 /// `items.eco` del manifest girando en bucle (de a octavos de vuelta, al
 /// estilo pixel art) + el texto, mientras algo se escribe a disco. Con
-/// REDUCIR MOVIMIENTO el ícono queda quieto.
+/// REDUCIR MOVIMIENTO el Ã­cono queda quieto.
 class SaveIndicator extends ConsumerStatefulWidget {
   const SaveIndicator({super.key});
 
-  static const text = 'Guardando… no cierres el juego';
+  static const text = 'Guardandoâ€¦ no cierres el juego';
 
-  /// Sprite del ícono (id lógico del manifest, sección `items`).
+  /// Sprite del Ã­cono (id lÃ³gico del manifest, secciÃ³n `items`).
   static const spriteKey = 'eco';
 
-  /// Cada cuánto avanza un octavo de vuelta.
+  /// Cada cuÃ¡nto avanza un octavo de vuelta.
   static const step = Duration(milliseconds: 125);
 
   @override
@@ -32,11 +31,12 @@ class _SaveIndicatorState extends ConsumerState<SaveIndicator> {
   // ya hace el HUD en cada paso del juego. Un timer que pide cuadros no
   // deja asentarse a los tests (pumpAndSettle) ni suma trabajo extra.
   int get _frame =>
-      (DateTime.now().millisecondsSinceEpoch ~/ SaveIndicator.step.inMilliseconds) % 8;
+      (DateTime.now().millisecondsSinceEpoch ~/
+          SaveIndicator.step.inMilliseconds) %
+      8;
 
   @override
   Widget build(BuildContext context) {
-    // Los íconos de ítems se cargan junto con los sprites del juego.
     final still =
         ref.watch(gameSettingsProvider.select((s) => s.reduceMotion));
     final frame = still ? 0 : _frame;
