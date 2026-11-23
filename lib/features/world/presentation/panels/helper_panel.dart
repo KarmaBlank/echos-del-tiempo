@@ -15,8 +15,8 @@ import 'life_icon.dart';
 import 'life_item_grid.dart';
 
 /// Pantalla de un ayudante (farming.md § 8, v0.25.5; tecla G al lado del
-/// NPC). Granjero: SEMILLAS (dos grillas: las tuyas y las de la huerta,
-/// con PASAR → / ← DEVOLVER), TAREAS (plantar, regar, cosechar) y COFRE.
+/// NPC). Granjero: SEMILLAS (plantilla TRASPASO: las tuyas a la
+/// izquierda, las de la huerta a la derecha), TAREAS (plantar, regar, cosechar) y COFRE.
 /// Pescador: MEJORAS y COFRE. MEJORAS (v0.27.0, farming.md § 8.5): grilla
 /// de mejoras de este ayudante con su rango, costo y MEJORAR. Todo lo valida el anfitrión.
 class HelperPanel extends StatefulWidget {
@@ -31,9 +31,6 @@ class HelperPanel extends StatefulWidget {
 
 class _HelperPanelState extends State<HelperPanel> {
   int _tab = 0;
-  String _query = '';
-  FishRarity? _rarity;
-
 
   SessionController get c => widget.controller;
 
@@ -103,94 +100,56 @@ class _HelperPanelState extends State<HelperPanel> {
 
   // ---------------- SEMILLAS ----------------
 
-  LifeItemCellData _seedCell(TownBuild b, String id, int n, bool theirs) {
+  static final _rarityFilters = [
+    const DsTransferFilter('TODAS', null),
+    for (final r in FishRarity.values)
+      DsTransferFilter(r.label.toUpperCase(), r.name),
+  ];
+
+  DsTransferItem _seedItem(TownBuild b, String id, int n, bool theirs) {
     final d = kCrops[id]!;
     final mine = widget.view.me?.profile.life.farm.seedCount(id) ?? 0;
     final there = b.seeds[id] ?? 0;
-    Widget btn(String label, int q) => DsButton(
-        theirs ? '← DEVOLVER $label' : 'PASAR $label →',
-        key: ValueKey('helper-${theirs ? 'take' : 'give'}-$label'),
-        size: DsButtonSize.compact,
-        kind: theirs ? DsButtonKind.secondary : DsButtonKind.primary,
-        onPressed: () => theirs
-            ? c.takeSeeds(b.id, id, q)
-            : c.giveSeeds(b.id, id, q));
-    return LifeItemCellData(
-      id: 'helper-cell-${theirs ? 'r' : 'l'}-$id',
+    return DsTransferItem(
+      id: id,
       icon: LifeIcon('semilla_$id', LifeIconKind.semilla,
           size: LifeItemGrid.iconSize),
+      name: d.seedName,
       border: fishRarityColor(d.rarity),
-      search: d.seedName,
       count: n,
-      detail: LifeItemDetail(
-        name: d.seedName,
-        nameColor: fishRarityColor(d.rarity),
-        tags: [
-          (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
-          (theirs ? 'DE LA HUERTA' : 'TUYA', DsColors.textSecondary),
-        ],
-        lines: ['Tenés $mine', 'La huerta tiene $there'],
-        description: theirs
-            ? 'Los granjeros plantan de acá en sus parcelas.'
-            : 'Pasala a la huerta: los granjeros la plantan solos.',
-        actions: [btn('1', 1), if (n >= 10) btn('10', 10), btn('TODO', 0)],
-      ),
+      tag: d.rarity.name,
+      info: '${d.rarity.label} · tenés $mine · la huerta tiene $there',
     );
   }
 
-  Widget _seeds(TownBuild b) {
-    final p = widget.view.me?.profile;
-    final mine = p?.life.farm.seeds ?? const <String, int>{};
-    final q = _query.toLowerCase();
-    bool pass(String id) {
-      final d = kCrops[id];
-      if (d == null) return false;
-      if (_rarity != null && d.rarity != _rarity) return false;
-      return q.isEmpty || d.seedName.toLowerCase().contains(q);
-    }
+  List<DsTransferItem> _sorted(
+          Map<String, int> m, DsTransferItem? Function(String, int) f) =>
+      [
+        for (final e in (m.entries.toList()
+          ..sort((a, b) => a.key.compareTo(b.key))))
+          if (e.value > 0)
+            if (f(e.key, e.value) case final x?) x
+      ];
 
-    List<LifeItemCellData> cells(Map<String, int> m, bool theirs) => [
-          for (final e in (m.entries.toList()
-            ..sort((a, b) => a.key.compareTo(b.key))))
-            if (e.value > 0 && pass(e.key)) _seedCell(b, e.key, e.value, theirs)
-        ];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(children: [
-          DsSearchField(
-              key: const ValueKey('helper-search'),
-              hint: 'BUSCAR SEMILLA',
-              onChanged: (v) => setState(() => _query = v)),
-          SizedBox(width: DsSpace.sm),
-          Expanded(
-            child: Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-              for (final r in [null, ...FishRarity.values])
-                DsButton((r?.label ?? 'Todas').toUpperCase(),
-                    key: ValueKey('helper-filter-${r?.name ?? 'todas'}'),
-                    size: DsButtonSize.compact,
-                    selected: _rarity == r,
-                    onPressed: () => setState(() => _rarity = r)),
-            ]),
-          ),
-        ]),
-        SizedBox(height: DsSpace.sm),
-        SizedBox(
-          height: 360,
-          child: LifeItemGrid(
-            key: const ValueKey('helper-seeds'),
-            groups: [
-              LifeItemGroup('TUS SEMILLAS', cells(mine, false),
-                  headerKey: const ValueKey('helper-mine')),
-              LifeItemGroup('SEMILLAS DE LA HUERTA', cells(b.seeds, true),
-                  headerKey: const ValueKey('helper-theirs')),
-            ],
-            empty: 'No hay semillas que coincidan. Comprá en el agropecuario '
-                'o cosechá para conseguir.',
-          ),
-        ),
-      ],
+  Widget _seeds(TownBuild b) {
+    final mine =
+        widget.view.me?.profile.life.farm.seeds ?? const <String, int>{};
+    return DsTransferTemplate(
+      key: const ValueKey('helper-seeds'),
+      keyPrefix: 'helper',
+      leftTitle: 'TUS SEMILLAS',
+      rightTitle: 'SEMILLAS DE LA HUERTA',
+      left: _sorted(mine,
+          (k, n) => kCrops[k] == null ? null : _seedItem(b, k, n, false)),
+      right: _sorted(b.seeds,
+          (k, n) => kCrops[k] == null ? null : _seedItem(b, k, n, true)),
+      filters: _rarityFilters,
+      searchHint: 'BUSCAR SEMILLA',
+      leftEmpty: 'No tenés semillas. Comprá en el agropecuario o cosechá.',
+      rightEmpty: 'La huerta no tiene semillas: pasale de las tuyas.',
+      onMove: (from, id, q) => from == DsTransferSide.left
+          ? c.giveSeeds(b.id, id, q)
+          : c.takeSeeds(b.id, id, q),
     );
   }
 
@@ -305,67 +264,68 @@ class _HelperPanelState extends State<HelperPanel> {
 
   Widget _chest(TownBuild b) {
     final lake = b.kind == BuildKind.lago;
-    final items = b.chest.entries.toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
-    final collect = DsButton('RECOGER TODO',
-        key: const ValueKey('helper-collect'),
-        size: DsButtonSize.compact,
-        kind: DsButtonKind.primary,
-        onPressed: b.chest.isEmpty ? null : () => c.collectChest(b.id));
-    LifeItemCellData cell(String k, int n) {
+    final p = widget.view.me?.profile;
+    DsTransferItem? cell(String k, int n) {
       if (lake) {
         final f = kFish[k];
-        return LifeItemCellData(
-          id: 'helper-chest-$k',
+        return DsTransferItem(
+          id: k,
           icon: LifeIcon(k, LifeIconKind.pescado, size: LifeItemGrid.iconSize),
+          name: f?.name ?? k,
           border: f == null ? DsColors.border : fishRarityColor(f.rarity),
-          search: f?.name ?? k,
           count: n,
-          detail: LifeItemDetail(
-              name: f?.name ?? k,
-              nameColor: f == null ? DsColors.textPrimary : fishRarityColor(f.rarity),
-              lines: ['×$n en el cofre'],
-              actions: [collect]),
+          tag: f?.rarity.name,
+          info: 'en el cofre',
         );
       }
       final pc = parseCropKey(k);
-      final col = pc == null ? DsColors.border : fishRarityColor(pc.$1.rarity);
-      return LifeItemCellData(
-        id: 'helper-chest-$k',
+      return DsTransferItem(
+        id: k,
         icon: LifeIcon('cosecha_${pc?.$1.id ?? k}', LifeIconKind.cosecha,
             size: LifeItemGrid.iconSize),
-        border: col,
-        search: pc?.$1.name ?? k,
+        name: pc == null ? k : '${pc.$1.name} (${pc.$2.label.toLowerCase()})',
+        border: pc == null ? DsColors.border : fishRarityColor(pc.$1.rarity),
         count: n,
-        detail: LifeItemDetail(
-            name: pc?.$1.name ?? k,
-            nameColor: col,
-            tags: [if (pc != null) (pc.$2.label.toUpperCase(), col)],
-            lines: ['×$n en el cofre'],
-            actions: [collect]),
+        tag: pc?.$1.rarity.name,
+        info: 'en el cofre',
       );
     }
 
+    // Lo tuyo del mismo tipo (solo para ver, el cofre se recoge entero).
+    final mine = p == null
+        ? const <String, int>{}
+        : lake
+            ? p.life.bag
+            : p.life.farm.crops;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(children: [
-          Text('${b.chestTotal}/${TownRules.t.i('chestMax')} en el cofre',
-              key: const ValueKey('helper-chest-count'),
-              style: DsText.detail()),
-          const Spacer(),
-          collect,
-        ]),
+        Text('${b.chestTotal}/${TownRules.t.i('chestMax')} en el cofre',
+            key: const ValueKey('helper-chest-count'),
+            style: DsText.detail()),
         SizedBox(height: DsSpace.xs),
-        SizedBox(
-          height: 300,
-          child: LifeItemGrid(
-            groups: [
-              LifeItemGroup(null, [for (final e in items) cell(e.key, e.value)])
-            ],
-            empty: 'Vacío. Lo que junten los ayudantes cae acá.',
-          ),
+        DsTransferTemplate(
+          key: const ValueKey('helper-chest'),
+          keyPrefix: 'helper-chest',
+          leftTitle: lake ? 'TUS PECES' : 'TUS COSECHAS',
+          rightTitle: 'COFRE',
+          left: _sorted(mine, cell),
+          right: _sorted(b.chest, cell),
+          filters: _rarityFilters,
+          allowLeftToRight: false,
+          allowRightToLeft: false,
+          leftEmpty: lake ? 'No tenés peces.' : 'Lo que recojas va a tu bolsa.',
+          rightEmpty: 'Vacío. Lo que junten los ayudantes cae acá.',
+          extraActions: [
+            DsButton('← RECOGER TODO',
+                key: const ValueKey('helper-collect'),
+                size: DsButtonSize.compact,
+                kind: DsButtonKind.primary,
+                onPressed:
+                    b.chest.isEmpty ? null : () => c.collectChest(b.id)),
+          ],
+          onMove: (a, b, n) {},
         ),
       ],
     );

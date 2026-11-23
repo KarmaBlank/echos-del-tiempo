@@ -280,7 +280,8 @@ con `FeatureFlags.devTools` (flavor dev), o directo con
 (AZUL / OSCURO / ALTO CONTRASTE) y ESPACIADO. Secciones: Paleta,
 Tipografía, Botones, Pestañas y barra, Campos y filas, Valores,
 Superficies, Ejemplos (mockups: barra de PERSONAJE, fila de inventario
-con tooltip, menú de habilidades de batalla).
+con tooltip, menú de habilidades de batalla, plantilla TRASPASO con datos de ejemplo
+— ver ui_minimal.md § 9).
 
 Capturas: `docs/design/*.png` (1920×1080, fuentes reales, tema por
 defecto del jugador: ALTO CONTRASTE + colores REDUCIDOS), generadas por

@@ -165,3 +165,13 @@ Funcionalidad pendiente:
   de UI de la pantalla del habitante ni del botón "ZONA N" del mapa de
   viaje.
 - Peces y semillas nuevos usan el ícono genérico de su tipo.
+
+## v0.30.1 (plantilla TRASPASO)
+
+- El alijo (`StashBoard`) no se migró a `DsTransferTemplate`: tiene
+  pestañas, eco, armas equipadas, pilas y teclado propios; migrarlo sin
+  cambiar comportamiento pide un paso aparte.
+- El COFRE del ayudante solo se recoge entero (RECOGER TODO): sacar un
+  ítem suelto pediría una acción nueva del protocolo.
+- Sin test de UI de la pantalla del ayudante ni del lago con la plantilla
+  (solo el test de `DsTransferTemplate`); sin captura nueva de la galería.
