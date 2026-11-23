@@ -1,5 +1,4 @@
 import 'package:echos_del_tiempo/game_engine/data/biomes_catalog.dart';
-import 'package:echos_del_tiempo/game_engine/data/fishing_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/data/npc_talk_catalog.dart';
 import 'package:echos_del_tiempo/game_engine/models/player_profile.dart';
 import 'package:echos_del_tiempo/game_engine/models/world_save.dart';
