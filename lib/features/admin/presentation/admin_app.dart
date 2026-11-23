@@ -12,11 +12,13 @@ import 'editor/npc_editor_controller.dart';
 import 'editor/npcs_page.dart';
 import 'editor/sprite_editor_controller.dart';
 import 'editor/sprites_page.dart';
+import '../../screen_editor/presentation/screen_editor_controller.dart';
+import '../../screen_editor/presentation/screen_editor_page.dart';
 import 'monitoring_page.dart';
 import 'patch_page.dart';
 
 /// Áreas del Editor (docs/specs/game_editor.md § 6).
-enum EditorArea { monitoring, balance, visuals, layout, npcs }
+enum EditorArea { monitoring, balance, visuals, layout, screens, npcs }
 
 /// El Editor del juego (game_editor.md; antes "admin de balance",
 /// balance_admin.md § 5): Monitoreo · Balance · Visuales. Tema Material
@@ -29,6 +31,7 @@ class AdminApp extends StatelessWidget {
       this.sprites,
       this.animations,
       this.layouts,
+      this.screens,
       this.npcs,
       this.animateFx = true,
       this.initialArea = EditorArea.balance,
@@ -38,6 +41,8 @@ class AdminApp extends StatelessWidget {
   /// LAYOUT (editor_layout.md § 3; `null`: sin área de layout).
   final LayoutEditorController? layouts;
 
+  /// PANTALLAS (screen_editor.md § 5; `null`: sin área).
+  final ScreenEditorController? screens;
   /// NPC (npc_editor.md; `null`: sin área de habitantes).
   final NpcEditorController? npcs;
 
@@ -69,6 +74,7 @@ class AdminApp extends StatelessWidget {
             sprites: sprites,
             animations: animations,
             layouts: layouts,
+            screens: screens,
             npcs: npcs,
             animateFx: animateFx,
             initialArea: initialArea,
@@ -83,6 +89,7 @@ class AdminShell extends StatefulWidget {
       this.sprites,
       this.animations,
       this.layouts,
+      this.screens,
       this.npcs,
       this.animateFx = true,
       this.initialArea = EditorArea.balance,
@@ -93,6 +100,8 @@ class AdminShell extends StatefulWidget {
   /// LAYOUT (editor_layout.md § 3).
   final LayoutEditorController? layouts;
 
+  /// PANTALLAS (screen_editor.md § 5).
+  final ScreenEditorController? screens;
   /// NPC (npc_editor.md; `null`: sin área de habitantes).
   final NpcEditorController? npcs;
 
@@ -134,6 +143,7 @@ class _AdminShellState extends State<AdminShell> {
         }
       case EditorArea.monitoring:
       case EditorArea.layout:
+      case EditorArea.screens:
       case EditorArea.npcs:
         break;
     }
@@ -169,6 +179,7 @@ class _AdminShellState extends State<AdminShell> {
                   DsTab('BALANCE', badge: pending > 0 ? '$pending' : null),
                   DsTab('VISUALES', badge: overrides > 0 ? '$overrides' : null),
                   const DsTab('LAYOUT'),
+                  const DsTab('PANTALLAS'),
                   DsTab('NPC',
                       badge: widget.npcs?.dirty ?? false ? '!' : null),
                 ],
@@ -217,6 +228,11 @@ class _AdminShellState extends State<AdminShell> {
         return l == null
             ? Center(child: Text('SIN ÁREA DE LAYOUT', style: DsText.detail()))
             : LayoutPage(c: l);
+      case EditorArea.screens:
+        final sc = widget.screens;
+        return sc == null
+            ? Center(child: Text('SIN ÁREA DE PANTALLAS', style: DsText.detail()))
+            : ScreenEditorPage(c: sc);
       case EditorArea.balance:
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           DsTabBar(

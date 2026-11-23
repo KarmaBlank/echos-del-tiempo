@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:yaml/yaml.dart';
 
+import '../screen_layout/screen_layout_catalog.dart';
 import 'layout_doc.dart';
 import 'layout_spec.dart';
 import 'layout_validator.dart';
@@ -77,6 +78,10 @@ class LayoutCatalog extends ChangeNotifier {
     }
     for (final s in _manifest.keys) {
       await _read(s);
+    }
+    // Layouts de pantallas del editor de pantallas (screen_editor.md § 3).
+    if (identical(this, instance)) {
+      await ScreenLayoutCatalog.instance.load(bundle: _bundle);
     }
     _docs.clear();
     notifyListeners();
