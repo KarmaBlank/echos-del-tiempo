@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/theme/map_palette.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../../../../game_engine/models/fog_of_war.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/models/loot_filter.dart';
@@ -107,7 +108,12 @@ class Minimap extends StatelessWidget {
     this.cell = baseCell,
     this.view,
     this.center,
+    this.fog,
   });
+
+  /// Niebla de una mazmorra oscura (lighting.md § 5.4): sin explorar no
+  /// se ve; los enemigos, solo a la vista. `null` o inactiva = sin niebla.
+  final FogOfWar? fog;
 
   /// Rectángulo del atlas a mostrar (el piso actual); `null` = todo.
   final TileRect? bounds;
@@ -185,6 +191,9 @@ class Minimap extends StatelessWidget {
 final _baseCache = Expando<(Object, ui.Image)>('minimapa');
 
 /// Estrella del jefe (dos colores que parpadean) por tamaño: se mide una vez.
+/// Máscara de la niebla (1 px por tile) por versión de lo explorado.
+final _fogCache = Expando<(int, ui.Picture)>('niebla');
+
 final _bossStar = <(bool, double), TextPainter>{};
 
 class _MinimapPainter extends CustomPainter {
@@ -246,7 +255,22 @@ class _MinimapPainter extends CustomPainter {
           ..filterQuality = FilterQuality.none
           ..isAntiAlias = false
           ..color = const Color.fromRGBO(0, 0, 0, 0.85));
+    final fog = w.fog != null && w.fog!.active ? w.fog : null;
+    if (fog != null) {
+      canvas.save();
+      canvas.scale(cell);
+      canvas.drawPicture(_fogMask(fog, map));
+      canvas.restore();
+    }
     canvas.restore();
+
+    // Con niebla: lo no explorado no se marca y los enemigos solo se ven
+    // si están a la vista en este cuadro (nunca en lo recordado).
+    int tile(double px) => (px / _ts).floor();
+    bool known(double px, double py) =>
+        fog == null || fog.explored(tile(px), tile(py));
+    bool inSight(double px, double py) =>
+        fog == null || fog.visible(tile(px), tile(py));
 
     final p = Paint()..isAntiAlias = false;
     final x0 = math.max(b.x, v.left.floor());
@@ -256,6 +280,7 @@ class _MinimapPainter extends CustomPainter {
     for (var y = y0; y < y1; y++) {
       for (var x = x0; x < x1; x++) {
         if (map.tileAt(x, y) != Tile.gate) continue;
+        if (fog != null && !fog.explored(x, y)) continue;
         p.color = s.gateOpen ? MapPalette.good : MapPalette.bad;
         canvas.drawRect(Rect.fromLTWH(x * cell, y * cell, cell, cell), p);
       }
@@ -287,7 +312,7 @@ class _MinimapPainter extends CustomPainter {
     if (m != null) {
       for (final e in m.enemies) {
         if (e.floor != m.floor) continue;
-        if (e.alive && !e.boss) {
+        if (e.alive && !e.boss && inSight(e.x, e.y)) {
           dot(
               e.x,
               e.y,
@@ -296,7 +321,7 @@ class _MinimapPainter extends CustomPainter {
         }
       }
       for (final it in m.items) {
-        if (it.floor != m.floor) continue;
+        if (it.floor != m.floor || !known(it.x, it.y)) continue;
         switch (it.kind) {
           case MissionItemKind.fragment when !it.done:
             dot(it.x, it.y, MapPalette.mark(MapMark.fragment), 3);
@@ -314,10 +339,12 @@ class _MinimapPainter extends CustomPainter {
       }
       // Puntos de interés descubiertos (worldgen.md § 11.7).
       for (final (poi, c) in minimapPois(map.floor(m.floor), m)) {
+        if (!known(poi.center.x, poi.center.y)) continue;
         dot(poi.center.x, poi.center.y, c, 3);
       }
       for (final e in m.enemies) {
         if (!e.boss || !e.alive || e.floor != m.floor) continue;
+        if (!inSight(e.x, e.y)) continue;
         final blink = (w.time * 1000 / 300).floor() % 2 == 1;
         final tp = _bossStar.putIfAbsent(
             (blink, 8 * dk),
@@ -341,6 +368,7 @@ class _MinimapPainter extends CustomPainter {
       }
     }
     for (final l in w.loot) {
+      if (!known(l.x, l.y)) continue;
       _lootIcon(canvas, p, l, dk);
     }
     final merchant = map.merchant;
@@ -354,6 +382,39 @@ class _MinimapPainter extends CustomPainter {
           MapPalette.mark(mine ? MapMark.me : MapMark.ally), mine ? 3.5 : 3);
     }
     canvas.restore();
+  }
+
+  /// Tiles sin explorar, tapados con el color del vacío (1 px por tile),
+  /// en tramos por fila; se rehace solo cuando se descubre algo.
+  ui.Picture _fogMask(FogOfWar fog, GameMap map) {
+    final cached = _fogCache[fog];
+    if (cached != null && cached.$1 == fog.version) return cached.$2;
+    cached?.$2.dispose();
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec);
+    final p = Paint()
+      ..isAntiAlias = false
+      ..color = kMinimapVoid;
+    for (var y = 0; y < map.height; y++) {
+      var x = 0;
+      while (x < map.width) {
+        if (fog.explored(x, y)) {
+          x++;
+          continue;
+        }
+        final start = x;
+        while (x < map.width && !fog.explored(x, y)) {
+          x++;
+        }
+        c.drawRect(
+            Rect.fromLTWH(start.toDouble(), y.toDouble(),
+                (x - start).toDouble(), 1),
+            p);
+      }
+    }
+    final pic = rec.endRecording();
+    _fogCache[fog] = (fog.version, pic);
+    return pic;
   }
 
   /// Ícono de 5 px (de pantalla) con contorno negro.

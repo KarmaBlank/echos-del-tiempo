@@ -1,4 +1,4 @@
-# Iluminación (v0.32.0)
+# Iluminación (v0.32.2)
 
 Sistema de luz por tile para el mapa (pueblo, exteriores y mazmorras).
 La batalla no cambia. Código: reglas puras en
@@ -16,17 +16,33 @@ llega ninguna luz queda el ambiente (de día, blanco: no cambia nada).
 ## 2. Propagación
 
 - Cada luz (`LightSource`: posición en tiles con fracción, `LightDef`,
-  escala) se propaga tile a tile por el camino más corto con 8 vecinos
-  (paso recto 1, diagonal √2) hasta su `radius`.
+  escala) se propaga tile a tile (relleno por inundación) por el camino
+  más corto con 8 vecinos (paso recto 1, diagonal √2) desde el centro de
+  su tile, hasta `radius + 1.5`. Eso decide a dónde llega (oclusión) y
+  cuánto rodeo hace.
+- Distancia de cada tile: `d = recta(posición exacta de la fuente,
+  centro del tile) + rodeo`, con `rodeo = máx(0, camino − recta desde el
+  centro del tile de la fuente × (1 + 0.0824))`. El 0.0824 es lo que un
+  camino de 8 vecinos se pasa de la recta en el peor ángulo: así en campo
+  abierto la luz es redonda (no octogonal) y solo cuentan los rodeos de
+  verdad (muros, esquinas, árboles).
+- La luz sigue a la fuente al instante: sin suavizado en el tiempo, sin
+  estela. Como se mide desde la posición exacta (no desde el tile), al
+  moverse dentro de un tile la luz se corre con ella en vez de quedarse
+  atrás y saltar (eso era la "estela" de v0.32.0).
 - Caída suave: brillo = `intensity × escala × (1 − d/r)²`, por el color
-  de su `tint`.
+  de su `tint`: radial, sin borde duro (pendiente 0 en el radio).
 - Tiles opacos (`kOpaqueTiles`: muros, rocas, paredes agrietadas, atajos,
   engranajes, barrera): se iluminan pero la luz no sigue. Por una
   diagonal entre dos opacos no se cuela.
 - Tiles que atenúan (`kAttenuatingTiles`: árboles, lápidas): la luz pasa
   pero cuesta `kAttenuationCost` (2.5) tiles extra.
 - Las luces se suman; cada canal se recorta a 1 al combinar con el
-  ambiente.
+  ambiente; luz que sigue la posición exacta (sin estela) y caída redonda.
+`test/game_engine/fog_of_war_test.dart`: explorado que se recuerda,
+visible solo en el cuadro, reinicio por misión.
+`test/features/world/light_layer_test.dart`: la malla cubre los bordes
+del mapa (alineación de la ventana hacia abajo con negativos).
 
 ## 3. Emisores (datos)
 
@@ -63,7 +79,9 @@ REDUCIR MOVIMIENTO no titilan.
 ## 4. Dibujo y rendimiento
 
 - La ventana de tiles = vista + margen (el radio más grande + 1),
-  alineada a bloques de 16 tiles. Las luces fijas (tiles y faros) se
+  alineada a bloques de 16 tiles siempre hacia abajo (también con
+  negativos: si no, en el borde de arriba o la izquierda la malla
+  arrancaba en el centro del tile 0 y media fila quedaba sin oscurecer). Las luces fijas (tiles y faros) se
   calculan una vez por ventana y conjunto de luces; solo se recalculan
   si cambian (se cuentan en la línea de rendimiento: "luz N recálculos").
 - Por cuadro: copia de la capa fija + capa de llamas × titileo + luces
@@ -97,11 +115,30 @@ aclara).
   el piso, que todos los clientes ya tienen: no hay dato nuevo en la red.
 - Ambiente casi negro (`LightPalette.darkDungeon`); se ve lo que alumbran
   los jugadores, las antorchas de pared y los braseros.
-- Los enemigos fuera de la luz (brillo < `MapGame.darkSeen` = 0.12 × `keep`
-  de § 7) no se dibujan; los jefes sí, siempre. En la batalla no hay
-  oscuridad (deuda técnica).
-- El mapa no tiene niebla de exploración hoy; el minimapa no se oscurece
-  (deuda técnica).
+- "A la vista" = brillo ≥ `MapGame.darkSeen` = 0.12 × `keep` (§ 7).
+- Los enemigos que no están a la vista no se dibujan en el mapa; los
+  jefes sí, siempre. En la batalla no hay oscuridad (deuda técnica).
+- La luz no atraviesa muros (§ 2): por un pasillo se ve hasta la
+  esquina y lo de atrás aparece recién al avanzar.
+
+### 5.4 Niebla del minimapa
+
+Solo en mazmorras oscuras (§ 5.3) y con OSCURIDAD distinta de APAGADA.
+`FogOfWar` (`lib/game_engine/models/fog_of_war.dart`, Dart puro) vive en
+el `SessionController`: es del cliente y del jugador local, no viaja por
+la red ni se guarda.
+
+- Cada cuadro, después de la luz, se marcan "a la vista" los tiles de la
+  ventana de luz que llegan al umbral de § 5.3, y se suman a lo
+  explorado. Los muros se iluminan (§ 2), así que el contorno queda.
+- Lo explorado dura toda la misión (todos los pisos: el atlas los tiene
+  en zonas distintas). Otra misión (`missionId` + `seed`) o salir de la
+  mazmorra oscura lo borra.
+- Minimapa y mapa grande (M): lo no explorado se tapa con el color del
+  vacío (máscara de 1 px por tile, rehecha solo cuando se descubre algo).
+  Rejas, cofres, objetivos, PdI e íconos de loot solo se marcan en lo
+  explorado. Los enemigos (jefes incluidos) solo mientras están a la
+  vista en ese cuadro: nunca en lo recordado. Los aliados se ven siempre.
 
 ## 6. Colores
 
@@ -122,7 +159,8 @@ juego ni de la red.
 ## 8. Red
 
 Sin cambios: todo se deduce del tema, el piso, el reloj y las
-posiciones que ya viajan. Protocolo igual (51).
+posiciones que ya viajan; la niebla es solo del cliente. Protocolo igual
+(53).
 
 ## 9. Tests
 
