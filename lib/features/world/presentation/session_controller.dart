@@ -960,8 +960,8 @@ class SessionController extends StateNotifier<SessionView?> {
 
   @override
   void dispose() {
+    _disposing = true;
     _townSaveTimer?.cancel();
-    _savingHide?.cancel();
     _saveWorld();
     fog.reset();
     _saveFog();
@@ -970,7 +970,6 @@ class SessionController extends StateNotifier<SessionView?> {
     unawaited(_netSub?.cancel());
     _recoverLocalGround();
     _save(force: true);
-    _savingHide?.cancel();
     ExitGuard.unregister(this);
     unawaited(_events.close());
     unawaited(net?.disconnect());
@@ -3835,7 +3834,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (ended) {
       _flushTownSave(emit: false);
     } else if (changed) {
-      _townSaveTimer ??= Timer(townSaveDelay, _flushTownSave);
+      if (!_disposing) _townSaveTimer ??= Timer(townSaveDelay, _flushTownSave);
     }
   }
 
@@ -3847,31 +3846,28 @@ class SessionController extends StateNotifier<SessionView?> {
   }
 
   int _savesInFlight = 0;
+  bool _disposing = false;
   DateTime? _savingSince;
-  Timer? _savingHide;
 
-  /// Hay una escritura a disco en curso (o terminó hace menos de
-  /// [savingMinVisible]).
-  bool get saving => _savingSince != null;
+  /// Hay una escritura a disco en curso (o empezó hace menos de
+  /// [savingMinVisible]). Sin timers: la vista se recalcula en cada paso
+  /// del juego, así que el aviso se apaga solo en el siguiente.
+  bool get saving {
+    final since = _savingSince;
+    if (since == null) return false;
+    if (_savesInFlight > 0) return true;
+    if (DateTime.now().difference(since) < savingMinVisible) return true;
+    _savingSince = null;
+    return false;
+  }
 
   void _beginSave() {
     _savesInFlight++;
     _savingSince ??= DateTime.now();
-    _savingHide?.cancel();
-    _savingHide = null;
   }
 
   void _endSave() {
     if (_savesInFlight > 0) _savesInFlight--;
-    if (_savesInFlight > 0 || _savingSince == null || !mounted) return;
-    final left = savingMinVisible - DateTime.now().difference(_savingSince!);
-    _savingHide?.cancel();
-    _savingHide = Timer(left.isNegative ? Duration.zero : left, () {
-      _savingHide = null;
-      if (_savesInFlight > 0) return;
-      _savingSince = null;
-      _emit();
-    });
   }
 
   /// Marca [f] como guardado en curso para el aviso del HUD.
