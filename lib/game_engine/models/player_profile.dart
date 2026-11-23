@@ -53,6 +53,7 @@ class PlayerProfile {
     int mastery = 0,
     AscensionProgress ascension = AscensionProgress.empty,
     Set<int> abyssKills = const {},
+    Map<int, int> ecoTiers = const {},
     Set<String> fresh = const {},
     String? milestone10,
     String? milestone20,
@@ -96,6 +97,7 @@ class PlayerProfile {
       mastery: mastery.clamp(0, maxMastery),
       ascension: ascension,
       abyssKills: Set.unmodifiable(abyssKills),
+      ecoTiers: Map.unmodifiable(ecoTiers),
       fresh: Set.unmodifiable(fresh),
       milestone10: milestone10,
       milestone20: milestone20,
@@ -126,6 +128,7 @@ class PlayerProfile {
     required this.fresh,
     required this.ascension,
     required this.abyssKills,
+    required this.ecoTiers,
     required this.ecos,
     required this.ecosUnlocked,
     required this.mastery,
@@ -245,6 +248,10 @@ class PlayerProfile {
   /// docs/specs/abyss_bosses.md § 1.3). Se le suman los de la cuenta al
   /// entrar a jugar.
   final Set<int> abyssKills;
+
+  /// Tier más alto de Eco completado por zona (zona → tier, JSON `ezt`;
+  /// docs/specs/ecos_zone.md § 3): abre el portal del tier siguiente.
+  final Map<int, int> ecoTiers;
 
   EcoItem? ecoByUid(String uid) {
     for (final e in ecos) {
@@ -414,6 +421,7 @@ class PlayerProfile {
     int? mastery,
     AscensionProgress? ascension,
     Set<int>? abyssKills,
+    Map<int, int>? ecoTiers,
     Set<String>? fresh,
     String? Function()? milestone10,
     String? Function()? milestone20,
@@ -470,6 +478,7 @@ class PlayerProfile {
       ascension: ascension ?? this.ascension,
       abyssKills:
           abyssKills == null ? this.abyssKills : Set.unmodifiable(abyssKills),
+      ecoTiers: ecoTiers == null ? this.ecoTiers : Map.unmodifiable(ecoTiers),
       fresh: fresh == null ? this.fresh : Set.unmodifiable(fresh),
       milestone10: milestone10 == null ? this.milestone10 : milestone10(),
       milestone20: milestone20 == null ? this.milestone20 : milestone20(),
@@ -618,6 +627,9 @@ class PlayerProfile {
         if (!ascension.isEmpty) 'asc': ascension.toJson(),
         // Jefes del Abismo v0.8 (abyss_bosses.md § 1.3): opcional.
         if (abyssKills.isNotEmpty) 'aby': (abyssKills.toList()..sort()),
+        // Ecos por zona v0.35 (ecos_zone.md § 3): opcional.
+        if (ecoTiers.isNotEmpty)
+          'ezt': {for (final e in ecoTiers.entries) '${e.key}': e.value},
         // Marca NUEVO v0.9.7 (loot.md § 17.4): opcional.
         if (fresh.isNotEmpty) 'nw': (fresh.toList()..sort()),
         if (!achievements.isEmpty) 'ach': achievements.toJson(),
@@ -741,6 +753,14 @@ class PlayerProfile {
           ? {
               for (final v in json['aby'] as List)
                 if (v is num && v >= 1 && v <= 5) v.toInt()
+            }
+          : const {},
+      ecoTiers: json['ezt'] is Map
+          ? {
+              for (final e in (json['ezt'] as Map).entries)
+                if (int.tryParse('${e.key}') case final z?
+                    when z >= 1 && z <= 10 && e.value is num)
+                  z: (e.value as num).toInt().clamp(1, 16)
             }
           : const {},
       fresh: {..._strings(json['nw'])},

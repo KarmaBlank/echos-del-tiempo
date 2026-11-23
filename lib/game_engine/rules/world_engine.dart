@@ -10,6 +10,7 @@ import '../models/world_save.dart' show TownState;
 import 'abyss_rules.dart';
 import 'biome_rules.dart';
 import 'dungeon_rules.dart';
+import 'eco_portal_rules.dart';
 import 'session_engine.dart';
 import 'trial_rules.dart';
 import 'zone_rules.dart';
@@ -88,7 +89,9 @@ class WorldEngine {
         return op.leave(key, p, action.poiId) ? op.finish() : null;
       }
       if (action is TravelAction) {
-        return op.travel(key, p, action.place) ? op.finish() : null;
+        return op.travel(key, p, action.place, ecoZone: action.ecoZone)
+            ? op.finish()
+            : null;
       }
       if (_starts(action) &&
           !SessionWorld.isDungeon(key) &&
@@ -326,8 +329,10 @@ class _W {
     return true;
   }
 
-  bool travel(String key, SessionPlayer p, String place) {
+  bool travel(String key, SessionPlayer p, String place, {int? ecoZone}) {
     final s = w.rooms[key]!;
+    final portal = ecoZone == null ? null : EcoPortalRules.of(ecoZone);
+    if (ecoZone != null && portal?.biome != place) return false;
     if (s.mode != SessionMode.lobby ||
         s.run != null ||
         p.isCompanion ||
@@ -337,11 +342,27 @@ class _W {
       return false;
     }
     final to = place == kPueblo ? kTownRoom : place;
-    if (to == key) return false;
-    w.rooms.putIfAbsent(to, () => _fresh(to == kTownRoom ? null : to)..instance = to);
-    final name = biomeDef(place)?.name ?? place;
-    _move(p, key, to,
-        leave: '${p.name} viajó a $name.', arrive: '${p.name} llegó.');
+    if (to == key && portal == null) return false;
+    if (to != key) {
+      w.rooms.putIfAbsent(
+          to, () => _fresh(to == kTownRoom ? null : to)..instance = to);
+      final name = biomeDef(place)?.name ?? place;
+      _move(p, key, to,
+          leave: '${p.name} viajó a $name.', arrive: '${p.name} llegó.');
+    }
+    // ECOS: frente al portal de esa zona (ecos_zone.md § 5).
+    if (portal != null && w.rooms[to]!.players.containsKey(p.id)) {
+      final n = w.rooms[to]!.copy();
+      final f = portal.front;
+      for (final q in n.playerList) {
+        if (q.id != p.id && q.leaderId != p.id) continue;
+        q
+          ..x = f.x
+          ..y = f.y
+          ..moving = false;
+      }
+      w.rooms[to] = n;
+    }
     return true;
   }
 
@@ -360,7 +381,14 @@ class _W {
     }
     final to = 'd${w.nextDungeon++}';
     w.rooms[to] = _fresh(s.place)..instance = to;
+    final (px, py) = (p.x, p.y);
     _move(p, key, to, leave: null);
+    // Mismo lugar (p. ej. frente al portal de Ecos, ecos_zone.md § 4).
+    if (w.rooms[to]!.players[p.id] case final q?) {
+      q
+        ..x = px
+        ..y = py;
+    }
     final ok = _start(to, p.id, a);
     if (!ok) {
       final back = w.rooms[to]!.players[p.id];

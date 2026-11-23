@@ -26,6 +26,7 @@ import '../../../game_engine/data/achievements_catalog.dart';
 import '../../../game_engine/data/town_layout.dart';
 import '../../../game_engine/data/biomes_catalog.dart';
 import '../../../game_engine/rules/biome_rules.dart';
+import '../../../game_engine/rules/eco_portal_rules.dart';
 import '../../../game_engine/rules/town_plan.dart';
 import '../../../game_engine/models/world_save.dart';
 import '../../../game_engine/data/construction_catalog.dart' show kFaroId;
@@ -1254,6 +1255,40 @@ class SessionController extends StateNotifier<SessionView?> {
 
   /// Frente al Portal del Eco del pueblo (ecos_atlas.md § 1).
   bool get nearPortal => townSpot == TownSpot.portal;
+
+  /// La zona del portal de Ecos frente al jugador (en el exterior de su
+  /// bioma; ecos_zone.md § 4), o `null`.
+  int? get nearEcoPortal {
+    final s = _s;
+    if (s == null || s.mode != SessionMode.lobby) return null;
+    return EcoPortalRules.near(s.place, local.x, local.y);
+  }
+
+  /// La zona del portal de Ecos abierto (panel `ecoZone`).
+  int? ecoZone;
+
+  /// El tier elegido en el centro de viaje antes de ir (lo toma el panel
+  /// del portal al abrirse).
+  int? ecoTier;
+
+  /// Viajar al exterior de [zone] y quedar frente a su portal de Ecos
+  /// (ecos_zone.md § 5). Sirve también estando ya en ese exterior.
+  bool travelToEcoPortal(int zone, {int? tier}) {
+    final spot = EcoPortalRules.of(zone);
+    if (spot == null || cannotTravel != null) return false;
+    ecoTier = tier;
+    if (travelLocked(spot.biome) != null) return false;
+    closePanel();
+    stopFishing();
+    return _apply(TravelAction(spot.biome, ecoZone: zone));
+  }
+
+  /// Por qué no se puede ir al portal de Ecos de [zone], o `null`.
+  String? ecoTravelBlocked(int zone) {
+    final spot = EcoPortalRules.of(zone);
+    if (spot == null) return 'Sin portal';
+    return cannotTravel ?? travelLocked(spot.biome);
+  }
 
   /// Frente a la Estatua del Tiempo (ascension.md § 1).
   bool get nearStatue => townSpot == TownSpot.statue;
@@ -2565,6 +2600,9 @@ class SessionController extends StateNotifier<SessionView?> {
         openPanel(WorldPanel.workshop);
       } else if (nearPortal) {
         openPanel(WorldPanel.ecoPortal);
+      } else if (nearEcoPortal case final z?) {
+        ecoZone = z;
+        openPanel(WorldPanel.ecoZone);
       } else if (nearStatue) {
         openPanel(WorldPanel.ascension);
       } else if (nearLostLoot) {
@@ -3921,6 +3959,7 @@ class SessionController extends StateNotifier<SessionView?> {
             _panel == WorldPanel.workshop ||
             _panel == WorldPanel.forge ||
             _panel == WorldPanel.ecoPortal ||
+            _panel == WorldPanel.ecoZone ||
             _panel == WorldPanel.ascension ||
             _panel == WorldPanel.lostLoot ||
             _panel == WorldPanel.trader ||
@@ -3997,6 +4036,7 @@ class SessionController extends StateNotifier<SessionView?> {
     if (nearForge) return (WorldPrompt.forge, null);
     if (nearWorkshop) return (WorldPrompt.workshop, null);
     if (nearPortal) return (WorldPrompt.ecoPortal, null);
+    if (nearEcoPortal != null) return (WorldPrompt.ecoZone, null);
     if (nearStatue) return (WorldPrompt.statue, null);
     if (nearLostLoot) return (WorldPrompt.lostLoot, null);
     if (nearCounter) return (WorldPrompt.missionBoard, null);

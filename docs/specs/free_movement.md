@@ -13,7 +13,8 @@ Cada jugador decide solo dónde está:
 - Viajar por el mapa de viaje es instantáneo y de a uno: sin votación,
   sin "decide el anfitrión", sin pantalla de espera. Cada uno usa su
   propia zona desbloqueada para saber qué biomas puede abrir.
-- **ENTRAR** en una entrada (o abrir un Eco, una Prueba, un Jefe del
+- **ENTRAR** en una entrada (o abrir un Eco en el portal de su zona,
+  ecos_zone.md § 4, una Prueba, un Jefe del
   Abismo, el TUTORIAL) mete solo a ese jugador (y a sus compañeros de
   party de solitario). Sin votación ni LISTO de preparación.
 - Si ya hay amigos jugando esa misma misión (o esa misma Prueba / ese

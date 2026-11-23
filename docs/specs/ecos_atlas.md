@@ -13,6 +13,11 @@ Código: `lib/game_engine/models/eco.dart` (modelo), `models/atlas.dart`,
 
 ## 1. Desbloqueo: el Portal del Eco
 
+> **v0.35.0** (ecos_zone.md): el Portal del pueblo ya no abre Ecos; es el
+> centro de viaje a los portales de cada zona (pestaña ZONAS), el crafteo,
+> el Atlas y el Abismo. Los Ecos se abren en el portal de su zona, con
+> tiers abiertos por personaje.
+
 - Tile nuevo `Tile.portal` (`'P'`, sólido) en el pueblo: x 3–5, y 2 (a
   la izquierda del mostrador). Frente a él: `[E] Portal del Eco`
   (`WorldRules.nearPortal`: `y < 4.6 tiles`, `2.5 < x < 6.5 tiles`).
@@ -118,8 +123,8 @@ cambian de orden.
 
 ## 4. Abrir, completar y fallar
 
-1. En el pueblo, en el Portal (panel ECOS), el jugador elige un Eco suyo
-   y **ABRIR**: `ProposeEcoAction(uid)`. El host valida: modo lobby, sin
+1. **Desde v0.35.0** en el portal de Ecos de la zona del Eco (ecos_zone.md
+   § 4), el jugador elige un Eco suyo y **ABRIR**: `ProposeEcoAction(uid)`. El host valida: modo lobby, sin
    votación, portal activado, el Eco existe en su inventario.
 2. Votación y preparación como cualquier misión (`MissionVote` con
    `missionId = 'eco'`; el Eco en `GameSession.eco` y su dueño en

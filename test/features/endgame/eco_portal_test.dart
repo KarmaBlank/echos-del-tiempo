@@ -3,7 +3,9 @@ import 'package:echos_del_tiempo/app/theme/retro_theme.dart';
 import 'package:echos_del_tiempo/core/settings/game_settings.dart';
 import 'package:echos_del_tiempo/core/settings/settings_providers.dart';
 import 'package:echos_del_tiempo/features/endgame/presentation/atlas_view.dart';
+import 'package:echos_del_tiempo/app/design/design.dart';
 import 'package:echos_del_tiempo/features/endgame/presentation/eco_portal_panel.dart';
+import 'package:echos_del_tiempo/features/endgame/presentation/eco_zone_portal_panel.dart';
 import 'package:echos_del_tiempo/features/world/presentation/hud/world_hud.dart';
 import 'package:echos_del_tiempo/features/world/presentation/panels/character_panel.dart';
 import 'package:echos_del_tiempo/features/world/presentation/session_controller.dart';
@@ -48,7 +50,11 @@ PlayerProfile _hero(
   final p = zoneProgression
       .normalize(PlayerProfile(name: 'Ana', classId: 'guerrero', level: 50));
   var q = zoneProgression.allocate(p, {Attribute.vit: p.points})!.copyWith(
-      ecosUnlocked: unlocked, mastery: mastery, xp: xp);
+      ecosUnlocked: unlocked,
+      mastery: mastery,
+      xp: xp,
+      unlockedZone: 10,
+      ecoTiers: {2: 4});
   for (final e in ecos) {
     q = InventoryRules.addEco(q, e).$1;
   }
@@ -65,7 +71,7 @@ Future<SessionController> _portal(WidgetTester tester, PlayerProfile p,
             EcoPortalPanel(view: v, controller: c, initialTab: tab));
 
 void main() {
-  testWidgets('ECOS: lista, ficha clara y ABRIR propone al grupo',
+  testWidgets('ECOS: lista, ficha clara e IR AL PORTAL de su zona',
       (tester) async {
     final c = await _portal(tester, _hero());
     final uid = c.view!.me!.profile.ecos.single.uid;
@@ -84,22 +90,55 @@ void main() {
     expect(button(tester, 'eco-craft-reroll').reason, 'Falta Esquirla del Eco');
     // Sin devTools no hay atajos.
     expect(find.byKey(const ValueKey('eco-dev-1')), findsNothing);
-    await tapVisible(tester, find.byKey(const ValueKey('eco-open')));
+    // El pueblo ya no abre Ecos (ecos_zone.md § 1).
+    expect(find.byKey(const ValueKey('eco-open')), findsNothing);
+    await tapVisible(tester, find.byKey(const ValueKey('eco-go')));
     final s = c.session!;
-    expect(s.vote?.missionId, 'eco');
-    expect(s.eco?.uid, uid);
+    expect(s.vote, isNull);
+    expect(s.place, 'bosque');
+    expect(c.nearEcoPortal, 2);
+    expect(c.ecoTier, 5);
   });
 
-  testWidgets('portal apagado: aviso y ABRIR bloqueado', (tester) async {
-    await _portal(tester, _hero(unlocked: false));
-    expect(find.textContaining('Portal apagado'), findsOneWidget);
-    expect(button(tester, 'eco-open').reason, 'Vencé al Devorador de Eras');
+  testWidgets('ZONAS: tiers abiertos y cerrados con el motivo',
+      (tester) async {
+    final c = await _portal(tester, _hero(), tab: EcoPortalTab.zonas);
+    await tapVisible(tester, find.byKey(const ValueKey('eco-hub-zone-2')));
+    // ecoTiers {2: 4}: T1–T5 abiertos; T6 cerrado.
+    expect(find.byKey(const ValueKey('eco-hub-tier-5')), findsOneWidget);
+    expect(tester.widget<DsButton>(find.byKey(const ValueKey('eco-hub-tier-6')))
+        .onPressed, isNull);
+    expect(
+        tester.widget<DsButton>(find.byKey(const ValueKey('eco-hub-tier-6')))
+            .tooltip,
+        contains('Completá un Eco T5'));
+    await tapVisible(tester, find.byKey(const ValueKey('eco-hub-go-2')));
+    expect(c.session!.place, 'bosque');
+    expect(c.nearEcoPortal, 2);
+  });
+
+  testWidgets('portal de la zona: sin Eco no abre; con Eco ABRIR lo propone',
+      (tester) async {
+    final c = await pumpPanel(tester,
+        profile: _hero(),
+        engine: sessionEngine(zones: true),
+        build: (v, c) => EcoZonePortalPanel(view: v, controller: c));
+    expect(c.travelToEcoPortal(2, tier: 3), isTrue);
+    c.ecoZone = 2;
+    await tester.pump();
+    expect(find.byKey(const ValueKey('eco-zone-empty')), findsOneWidget);
+    expect(button(tester, 'eco-zone-open').reason,
+        'Necesitás un Eco T3 de esta zona');
+    await tapVisible(tester, find.byKey(const ValueKey('eco-zone-tier-5')));
+    expect(button(tester, 'eco-zone-open').reason, isNull);
+    await tapVisible(tester, find.byKey(const ValueKey('eco-zone-open')));
+    expect(c.session!.vote?.missionId, 'eco');
   });
 
   testWidgets('sin Ecos: explica de dónde salen', (tester) async {
     await _portal(tester, _hero(ecos: const []));
     expect(find.textContaining('No tenés Ecos'), findsOneWidget);
-    expect(find.byKey(const ValueKey('eco-open')), findsNothing);
+    expect(find.byKey(const ValueKey('eco-go')), findsNothing);
   });
 
   testWidgets('ATLAS: puntos, ficha del nodo, tomar y reiniciar',

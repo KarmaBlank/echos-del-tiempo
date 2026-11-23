@@ -51,7 +51,8 @@ mismo esqueleto: borde sólido, camino del sur, ramal norte a las dos
 entradas, lago con dos muelles, matas, obstáculos y un habitante).
 Mapa del Bosque: tema `bosque_ext`: borde de
 árboles, camino de tierra del sur al cruce del norte, lago al este con dos
-muelles, ocho matas y dos entradas de mazmorra.
+muelles, ocho matas y dos entradas de mazmorra; desde v0.35.0, a la
+derecha de cada entrada, el portal de Ecos de esa zona (ecos_zone.md § 2).
 
 ### 3.1 Lago del Bosque
 - Tabla propia `kForestFish`: Mojarra de sombra, Bagre de raíz (comunes),

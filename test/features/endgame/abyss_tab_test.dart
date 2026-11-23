@@ -106,14 +106,14 @@ void main() {
     expect(button(tester, 'abyss-open').reason, isNull);
   });
 
-  testWidgets('teclado: 3 abre ABISMO, flechas recorren las tarjetas, Enter elige', (tester) async {
+  testWidgets('teclado: 4 abre ABISMO, flechas recorren las tarjetas, Enter elige', (tester) async {
     await pumpPanel(tester,
         profile: _hero(),
         engine: sessionEngine(zones: true),
         build: (v, c) => EcoPortalPanel(view: v, controller: c));
-    await _key(tester, LogicalKeyboardKey.digit3);
+    await _key(tester, LogicalKeyboardKey.digit4);
     await tester.pump();
-    expect(tester.widget<PanelButton>(find.byKey(const ValueKey('tab-2'))).selected, isTrue);
+    expect(tester.widget<PanelButton>(find.byKey(const ValueKey('tab-3'))).selected, isTrue);
     expect(find.byKey(const ValueKey('abyss-view')), findsOneWidget);
     // El foco entra a las tarjetas y Enter elige la que tiene el foco.
     for (var i = 0; i < 6 && !(_focusedKey()?.startsWith('abyss-card-') ?? false); i++) {
