@@ -17,6 +17,7 @@ import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
 import 'npc_talk.dart';
+import '../world_strings.dart';
 
 /// Las ventanas del arraigado.
 enum _FisherMenu { pedido, puesto }
@@ -67,10 +68,7 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
   String _giftText(NpcTalkDef? d) => [
         ...?d?.decline,
         if (d != null && d.gift.isNotEmpty)
-          '(${d.gift}: +${NpcTalkRules.giftGold} de oro, '
-              '+${NpcTalkRules.giftFishXp} XP de Pesca, '
-              '+${NpcTalkRules.giftPoints} punto de árbol y sus pedidos '
-              'pagan más oro.)',
+          context.t('ui.town.fisher.gift_text', {'gift': d.gift, 'gold': NpcTalkRules.giftGold, 'xp': NpcTalkRules.giftFishXp, 'points': NpcTalkRules.giftPoints}),
       ].join(' ');
 
   Widget _dialogue(SessionController c, BiomeFisherDef f, PlayerProfile p,
@@ -92,29 +90,29 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
             portrait: LifeIcon(f.sprite, LifeIconKind.herramienta,
                 size: DsDialogueBox.portraitSize),
             name: f.name,
-            role: 'Pescador',
+            role: context.t('ui.town.fisher.role'),
             text: talk.text(_answer ?? _greet ?? f.lines.first),
             onCancel: c.closePanel,
             choices: talk.active
                 ? talk.choices(town, refresh, inTown: false)
                 : [
                     talk.entry(town, refresh, inTown: false),
-                    DsChoice('Pedido del día',
+                    DsChoice(context.t('ui.town.fisher.menu_order'),
                         key: const ValueKey('fisher-choice-pedido'),
                         onSelected: () => open(_FisherMenu.pedido)),
                     if (declined)
-                      DsChoice('Puesto',
+                      DsChoice(context.t('ui.town.fisher.menu_stall'),
                           key: const ValueKey('fisher-choice-puesto'),
                           onSelected: () => open(_FisherMenu.puesto)),
                     if (canInvite)
-                      DsChoice('Invitar al pueblo',
+                      DsChoice(context.t('ui.town.npc.invite'),
                           key: const ValueKey('fisher-invite'),
                           onSelected: () {
                         if (c.nativeInvite()) {
                           setState(() => _answer = _giftText(npcTalk(id)));
                         }
                       }),
-                    DsChoice('Adiós',
+                    DsChoice(context.t('ui.town.npc.bye'),
                         key: const ValueKey('fisher-close'),
                         onSelected: c.closePanel),
                   ],
@@ -129,23 +127,26 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
     const goal = NpcTalkRules.inviteRep;
     return DsStatusStrip([
       DsStatusCell(
-          'Amistad',
+          context.t('ui.town.fisher.friendship'),
           key: const ValueKey('fisher-rep'),
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(b.declined ? '${b.rep}' : '${b.rep} / $goal',
+              Text(
+                  b.declined
+                      ? b.rep.toString()
+                      : context.t('ui.town.npc.rep_value', {'n': b.rep, 'goal': goal}),
                   style: DsText.body(DsColors.mp)),
               SizedBox(height: DsSpace.xs),
               DsMeter(b.rep, goal, color: DsColors.mp),
             ],
           )),
-      DsStatusCell('Pedidos cumplidos',
-          Text('${b.orders}', style: DsText.body(DsColors.success))),
-      DsStatusCell('Tu oro',
+      DsStatusCell(context.t('ui.town.fisher.orders_done'),
+          Text(b.orders.toString(), style: DsText.body(DsColors.success))),
+      DsStatusCell(context.t('ui.town.npc.your_gold'),
           key: const ValueKey('fisher-gold'),
-          Text('${p.credits}', style: DsText.body(DsColors.reward))),
+          Text(p.credits.toString(), style: DsText.body(DsColors.reward))),
     ]);
   }
 
@@ -154,28 +155,28 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
     void back() => setState(() => _menu = null);
     final (title, cells, empty) = switch (menu) {
       _FisherMenu.pedido => (
-          'PEDIDO DEL DÍA',
+          context.t('ui.town.fisher.order_title'),
           _order(c, f, p),
-          'Hoy no pide nada.'
+          context.t('ui.town.fisher.no_order')
         ),
       _FisherMenu.puesto => (
-          'PUESTO',
+          context.t('ui.town.fisher.stall_title'),
           _stall(c, f, p, town),
-          'Hoy no tiene nada.'
+          context.t('ui.town.fisher.no_stall')
         ),
     };
     return PanelFrame(
       key: const ValueKey('panel-biome-fisher'),
-      title: '${f.name.toUpperCase()} · PESCADOR · $title',
+      title: context.t('ui.town.fisher.window_title', {'name': f.name.toUpperCase(), 'menu': title}),
       width: 1000,
       onClose: back,
       header: _status(f, p, town),
       leading: [
-        PanelButton('VOLVER',
+        PanelButton(context.t('ui.town.npc.back'),
             key: const ValueKey('fisher-back'), onPressed: back),
       ],
       actions: [
-        PanelButton('ADIÓS',
+        PanelButton(context.t('ui.town.npc.bye_button'),
             key: const ValueKey('fisher-bye'), onPressed: c.closePanel),
       ],
       child: LifeItemGrid(
@@ -204,25 +205,23 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
         count: r.n,
         caption: '${r.cm} cm',
         detail: LifeItemDetail(
-          name: 'Pedido de ${f.name}',
+          name: context.t('ui.town.fisher.order_name', {'name': f.name}),
           nameColor: DsColors.textTitle,
           tags: [
-            ('PEDIDO DEL DÍA', DsColors.reward),
+            (context.t('ui.town.fisher.order_title'), DsColors.reward),
             (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
           ],
           lines: [
-            '${r.n} × ${d.name} (de ${r.cm} cm o más)',
-            'Tenés ${p.life.count(d.id)} · tu récord: '
-                '${p.life.log[d.id] ?? 0} cm',
-            'XP de Pesca: +${w.fishXp}',
-            'XP de personaje: +${w.charXp}',
-            'Oro: +${BiomeFisherRules.favorGold(c.townState, f.biome, w.gold)}',
-            'Amistad: +${NpcTalkRules.orderRep}',
+            context.t('ui.town.npc.order_line_cm', {'n': r.n, 'item': d.name, 'cm': r.cm}),
+            context.t('ui.town.fisher.have_record', {'n': p.life.count(d.id), 'cm': p.life.log[d.id] ?? 0}),
+            context.t('ui.town.fisher.fish_xp', {'n': w.fishXp}),
+            context.t('ui.town.fisher.char_xp', {'n': w.charXp}),
+            context.t('ui.town.fisher.gold_plus', {'n': BiomeFisherRules.favorGold(c.townState, f.biome, w.gold)}),
+            context.t('ui.town.fisher.friendship_plus', {'n': NpcTalkRules.orderRep}),
           ],
-          description: 'Solo se pesca en este lago. Pide algo nuevo cada '
-              'día del mundo, según tu nivel de Pesca.',
+          description: context.t('ui.town.fisher.order_desc'),
           actions: [
-            DsButton('ENTREGAR',
+            DsButton(context.t('ui.town.npc.turn_in'),
                 key: const ValueKey('fisher-deliver'),
                 size: DsButtonSize.compact,
                 tooltip: why,
@@ -248,25 +247,24 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
         icon: LifeIcon(d.id, LifeIconKind.pescado, size: 32),
         border: fishRarityColor(d.rarity),
         search: d.name,
-        caption: '${g.price} oro',
+        caption: context.t('ui.town.npc.gold_short', {'n': g.price}),
         detail: LifeItemDetail(
           name: d.name,
           nameColor: fishRarityColor(d.rarity),
           tags: [
-            ('VENDE', DsColors.reward),
-            if (g.fresh) ('NOVEDAD', DsColors.success),
+            (context.t('ui.town.fisher.sells'), DsColors.reward),
+            if (g.fresh) (context.t('ui.town.fisher.new'), DsColors.success),
             (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
           ],
           lines: [
-            'Precio: ${g.price} oro',
-            'Tenés ${p.life.count(d.id)}',
+            context.t('ui.town.fisher.price', {'n': g.price}),
+            context.t('ui.town.npc.have', {'n': p.life.count(d.id)}),
           ],
           description: g.fresh
-              ? 'Lo trajo hoy. Trae algo así cada '
-                  '${NpcTalkRules.freshEvery} días.'
-              : 'De su lago.',
+              ? context.t('ui.town.fisher.fresh_desc', {'n': NpcTalkRules.freshEvery})
+              : context.t('ui.town.fisher.from_lake'),
           actions: [
-            DsButton('COMPRAR',
+            DsButton(context.t('ui.town.npc.buy'),
                 key: ValueKey('fisher-buy-${d.id}'),
                 size: DsButtonSize.compact,
                 onPressed:
@@ -285,25 +283,25 @@ class _BiomeFisherPanelState extends State<BiomeFisherPanel> {
         border: fishRarityColor(d.rarity),
         search: d.name,
         count: e.value,
-        caption: 'COMPRA',
+        caption: context.t('ui.town.fisher.buys'),
         detail: LifeItemDetail(
           name: d.name,
           nameColor: fishRarityColor(d.rarity),
           tags: [
-            ('TE COMPRA', DsColors.textSecondary),
+            (context.t('ui.town.fisher.buys_from_you'), DsColors.textSecondary),
             (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
           ],
           lines: [
-            'Paga $pr oro c/u',
-            'Tenés ${e.value}',
+            context.t('ui.town.fisher.pays_each', {'n': pr}),
+            context.t('ui.town.npc.have', {'n': e.value}),
           ],
-          description: 'Solo compra peces de su lago.',
+          description: context.t('ui.town.fisher.buys_desc'),
           actions: [
-            DsButton('VENDER 1',
+            DsButton(context.t('ui.town.fisher.sell_one'),
                 key: ValueKey('fisher-sell-${d.id}'),
                 size: DsButtonSize.compact,
                 onPressed: () => c.nativeTrade(d.id, 1, buy: false)),
-            DsButton('VENDER TODO',
+            DsButton(context.t('ui.town.fisher.sell_all'),
                 key: ValueKey('fisher-sell-all-${d.id}'),
                 size: DsButtonSize.compact,
                 onPressed: () => c.nativeTrade(d.id, e.value, buy: false)),

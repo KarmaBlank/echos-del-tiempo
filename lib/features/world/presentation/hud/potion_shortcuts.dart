@@ -4,6 +4,7 @@ import '../../../../app/design/design.dart';
 import '../../../../game_engine/models/battle_command.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../session_controller.dart';
+import '../world_strings.dart';
 
 /// Atajos de pociones del HUD del mundo (exploration.md § HUD): dos
 /// botones compactos con el contador, teclas 1 (vida) y 2 (maná). Fuera
@@ -26,7 +27,7 @@ class PotionShortcuts extends StatelessWidget {
         '[$key] $name ×$count',
         key: ValueKey('hud-use-${item.name}'),
         size: DsButtonSize.compact,
-        tooltip: why ?? 'Usar $name',
+        tooltip: why ?? context.t('ui.world.hud.use_item', {'item': name}),
         onPressed: why == null ? () => controller.useItem(item) : null,
       );
     }

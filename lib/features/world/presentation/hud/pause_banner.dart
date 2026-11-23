@@ -5,6 +5,7 @@ import '../../../../app/theme/proto_colors.dart';
 import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_text.dart';
 import '../../../../app/theme/retro_theme.dart';
+import '../world_strings.dart';
 
 /// Cartel de la pausa de grupo, centrado y para todos los jugadores:
 /// `<nombre> pausó el juego` + REANUDAR (cualquiera reanuda), o
@@ -37,7 +38,7 @@ class PauseBanner extends StatelessWidget {
         child: Center(
           child: RetroPanel(
             key: const ValueKey('pause-banner-resumed'),
-            child: Text(retroText('$resumedBy reanudó el juego'),
+            child: Text(retroText(context.t('ui.world.pause.resumed', {'name': resumedBy})),
                 style: TextStyle(
                     fontFamily: RetroType.bodyFamily,
                     letterSpacing: RetroType.letterSpacing,
@@ -57,13 +58,13 @@ class PauseBanner extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(retroText('$paused pausó el juego'),
+              Text(retroText(context.t('ui.world.pause.paused', {'name': paused})),
                   style: TextStyle(
                       fontFamily: RetroType.titleFamily,
                       fontSize: 16,
                       color: ProtoColors.gold)),
               const SizedBox(height: 8),
-              Text('Cualquier jugador puede reanudar.',
+              Text(context.t('ui.world.pause.anyone'),
                   style: TextStyle(
                       fontFamily: RetroType.bodyFamily,
                       letterSpacing: RetroType.letterSpacing,

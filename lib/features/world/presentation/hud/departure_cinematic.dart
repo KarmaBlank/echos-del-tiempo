@@ -6,6 +6,7 @@ import '../../../../app/theme/retro_text.dart';
 import '../../../../game_engine/data/tuning_catalog.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../map/map_themes.dart';
+import '../world_strings.dart';
 
 /// Cinemática corta de partida (town_loop.md § 2, v0.21.0): cuando la
 /// misión arranca (preparación → campo) la party sale por el camino de
@@ -105,11 +106,12 @@ class DepartureCinematicState extends State<DepartureCinematic>
                     children: [
                       Text(
                           retroText(widget.destination == null
-                              ? 'La party sale del pueblo'
-                              : 'Rumbo a ${widget.destination}'),
+                              ? context.t('ui.world.departure.leaving')
+                              : context.t('ui.world.departure.heading',
+                                  {'place': widget.destination})),
                           style: DsText.title()),
                       const SizedBox(height: 6),
-                      Text('Cualquier tecla o clic: saltar',
+                      Text(context.t('ui.world.departure.skip'),
                           style: DsText.body()),
                     ],
                   ),

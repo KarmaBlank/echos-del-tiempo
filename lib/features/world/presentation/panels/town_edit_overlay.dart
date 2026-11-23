@@ -14,6 +14,7 @@ import '../session_controller.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
+import '../world_strings.dart';
 
 /// Interfaz de la edición del pueblo (town_editor.md § 1): barra de
 /// arriba con LISTO, y a la derecha el menú del paso en curso (ampliar,
@@ -44,8 +45,9 @@ class TownEditOverlay extends StatelessWidget {
     final c = controller;
     final e = c.townEdit;
     if (e == null) return const SizedBox.shrink();
-    final menu = _menu(c, e);
-    final info = _info(c, e);
+    final s = worldStrings(context);
+    final menu = _menu(s, c, e);
+    final info = _info(s, c, e);
     // Barra de arriba a todo el ancho y, debajo a la derecha, una sola
     // columna: el menú del paso y el panel de info de lo que está bajo
     // el mouse (town_editor.md § 1.3). Nada se superpone.
@@ -60,20 +62,20 @@ class TownEditOverlay extends StatelessWidget {
           child: Row(children: [
             Text(
                 switch (e.hire) {
-                  BuildKind.huerta => 'CONTRATAR GRANJERO',
-                  BuildKind.lago => 'CONTRATAR PESCADOR',
-                  _ => 'EDICIÓN DEL PUEBLO',
+                  BuildKind.huerta => s.t('ui.town.edit.hire_farmer'),
+                  BuildKind.lago => s.t('ui.town.edit.hire_fisher'),
+                  _ => s.t('ui.town.edit.title'),
                 },
                 style: DsText.title()),
             SizedBox(width: DsSpace.md),
             Expanded(
-                child: Text(_hint(c, e),
+                child: Text(_hint(s, c, e),
                     key: const ValueKey('town-edit-hint'),
                     maxLines: 2,
                     softWrap: true,
                     style: DsText.subtitle())),
             SizedBox(width: DsSpace.md),
-            DsButton(e.hire == null ? 'LISTO [ESC]' : 'CANCELAR [ESC]',
+            DsButton(e.hire == null ? s.t('ui.town.edit.done') : s.t('ui.town.edit.cancel_esc'),
                 key: ValueKey(
                     e.hire == null ? 'town-edit-done' : 'town-hire-cancel'),
                 size: DsButtonSize.compact,
@@ -121,7 +123,7 @@ class TownEditOverlay extends StatelessWidget {
 
   /// Info de la construcción bajo el mouse (las franjas muestran su
   /// costo en su tarjeta). `null` si no hay nada o si ya hay un menú.
-  static Widget? _info(SessionController c, TownEdit e) {
+  static Widget? _info(Strings s, SessionController c, TownEdit e) {
     final town = c.town;
     if (e.step != TownEditStep.browse) return null;
     final b = town.builds.where((b) => b.id == e.hoverBuild).firstOrNull;
@@ -136,8 +138,9 @@ class TownEditOverlay extends StatelessWidget {
             Text(TownRules.helperLine(b), style: DsText.detail()),
             Text(
                 why ??
-                    '${HelperRules.costText(HelperRules.hireCost(b.kind))}. '
-                        'Clic para contratar.',
+                    s.t('ui.town.edit.hire_info', {
+                      'cost': HelperRules.costText(HelperRules.hireCost(b.kind))
+                    }),
                 key: const ValueKey('town-hire-info'),
                 style: DsText.detail(why == null ? null : DsColors.textDisabled)),
           ]);
@@ -147,9 +150,9 @@ class TownEditOverlay extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const DsSectionHeader('FARO'),
-            Text(_faroText, style: DsText.detail()),
-            Text('Clic para ver opciones.', style: DsText.detail()),
+            DsSectionHeader(s.t('ui.town.edit.lamp')),
+            Text(s.t('ui.town.edit.lamp_text'), style: DsText.detail()),
+            Text(s.t('ui.town.edit.click_options'), style: DsText.detail()),
           ]);
     }
     if (b == null) {
@@ -162,8 +165,8 @@ class TownEditOverlay extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             DsSectionHeader(l.name),
-            Text(_landmarkText, style: DsText.detail()),
-            Text('Clic para moverlo.', style: DsText.detail()),
+            Text(s.t('ui.town.edit.landmark_text'), style: DsText.detail()),
+            Text(s.t('ui.town.edit.click_move'), style: DsText.detail()),
           ]);
     }
     return Column(
@@ -176,32 +179,25 @@ class TownEditOverlay extends StatelessWidget {
                   ? TownRules.lakeSignText(town, b)
                   : TownRules.farmSignText(b),
               style: DsText.detail()),
-          Text('Clic para ver opciones.', style: DsText.detail()),
+          Text(s.t('ui.town.edit.click_options'), style: DsText.detail()),
         ]);
   }
 
-  static const _faroText =
-      'Alumbra alrededor de noche. No es sólido: se puede pasar por '
-      'encima.';
-
-  static const _landmarkText =
-      'Lugar fijo del pueblo: se puede mover, no borrar. Los caminos se '
-      'rearman solos hasta la fuente.';
-
-  static String _hint(SessionController c, TownEdit e) => switch (e.step) {
+  static String _hint(Strings s, SessionController c, TownEdit e) =>
+      switch (e.step) {
         _ when e.hire == BuildKind.huerta =>
-          'Elegí una huerta para contratar un granjero',
-        _ when e.hire == BuildKind.lago => '¿En qué lago querés el pescador?',
+          s.t('ui.town.edit.hint_hire_farmer'),
+        _ when e.hire == BuildKind.lago => s.t('ui.town.edit.hint_hire_fisher'),
         TownEditStep.moving ||
         TownEditStep.placing =>
-          c.editGhostError ?? 'Clic para dejarlo acá',
-        _ => 'WASD/arrastrar: mover · rueda: zoom · clic: elegir',
+          c.editGhostError ?? s.t('ui.town.edit.hint_place'),
+        _ => s.t('ui.town.edit.hint_browse'),
       };
 
-  Widget? _menu(SessionController c, TownEdit e) {
+  Widget? _menu(Strings s, SessionController c, TownEdit e) {
     final town = c.town;
     final b = c.editSelected;
-    Widget cancel() => DsButton('CANCELAR',
+    Widget cancel() => DsButton(s.t('ui.town.edit.cancel'),
         key: const ValueKey('town-edit-cancel'),
         size: DsButtonSize.compact,
         onPressed: c.editBack);
@@ -216,14 +212,16 @@ class TownEditOverlay extends StatelessWidget {
         final side = e.side!;
         final why = c.cannotExpandTown(side);
         return col([
-          DsSectionHeader('AMPLIAR AL ${side.label}'),
+          DsSectionHeader(s.t('ui.town.edit.expand_title', {'side': side.label})),
           Text(
-              'Suma una franja de $kTownStrip tiles de terreno libre. '
-              '${TownRules.costText(TownRules.cost(town.expansions + 1))}',
+              s.t('ui.town.edit.expand_text', {
+                'tiles': kTownStrip,
+                'cost': TownRules.costText(TownRules.cost(town.expansions + 1))
+              }),
               style: DsText.detail()),
           SizedBox(height: DsSpace.xs),
           Row(children: [
-            DsButton('AMPLIAR',
+            DsButton(s.t('ui.town.edit.expand'),
                 key: const ValueKey('town-edit-expand'),
                 size: DsButtonSize.compact,
                 kind: DsButtonKind.primary,
@@ -239,7 +237,7 @@ class TownEditOverlay extends StatelessWidget {
         ]);
       case TownEditStep.choose:
         return col([
-          const DsSectionHeader('CONSTRUIR'),
+          DsSectionHeader(s.t('ui.town.edit.build')),
           for (final d in kConstructions)
             Builder(builder: (_) {
               // La CASA cuesta oro y tablas (town_editor.md § 3.4).
@@ -249,7 +247,7 @@ class TownEditOverlay extends StatelessWidget {
               final why = !casa
                   ? null
                   : p == null
-                      ? 'Sin personaje'
+                      ? s.t('ui.town.edit.no_character')
                       : HelperRules.cannotPay(p, cost);
               return DsListRow(
                 key: ValueKey('town-edit-build-${d.id}'),
@@ -265,15 +263,15 @@ class TownEditOverlay extends StatelessWidget {
             final p = c.view?.me?.profile;
             final cost = TownRules.faroCost;
             final why = p == null
-                ? 'Sin personaje'
+                ? s.t('ui.town.edit.no_character')
                 : p.credits < cost
-                    ? 'Falta oro (${p.credits}/$cost)'
+                    ? s.t('ui.town.edit.missing_gold', {'have': p.credits, 'need': cost})
                     : null;
             return DsListRow(
               key: const ValueKey('town-edit-build-faro'),
               compact: true,
-              title: 'FARO',
-              detail: '1×1 · $cost de oro · alumbra de noche',
+              title: s.t('ui.town.edit.lamp'),
+              detail: s.t('ui.town.edit.lamp_detail', {'cost': cost}),
               enabled: why == null,
               onTap: why == null ? () => c.editChoose(kFaroId) : null,
             );
@@ -284,16 +282,16 @@ class TownEditOverlay extends StatelessWidget {
       case TownEditStep.options:
         if (TownState.parseLightId(e.selected) != null) {
           return col([
-            const DsSectionHeader('FARO'),
-            Text(_faroText,
+            DsSectionHeader(s.t('ui.town.edit.lamp')),
+            Text(s.t('ui.town.edit.lamp_text'),
                 key: const ValueKey('town-edit-info'), style: DsText.detail()),
             SizedBox(height: DsSpace.xs),
             Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-              DsButton('MOVER',
+              DsButton(s.t('ui.town.edit.move'),
                   key: const ValueKey('town-edit-move'),
                   size: DsButtonSize.compact,
                   onPressed: c.editStartMove),
-              DsButton('BORRAR',
+              DsButton(s.t('ui.town.edit.delete'),
                   key: const ValueKey('town-edit-delete-ok'),
                   size: DsButtonSize.compact,
                   onPressed: c.editRemove),
@@ -304,11 +302,11 @@ class TownEditOverlay extends StatelessWidget {
         if (c.editLandmark case final l? when b == null) {
           return col([
             DsSectionHeader(l.name),
-            Text(_landmarkText,
+            Text(s.t('ui.town.edit.landmark_text'),
                 key: const ValueKey('town-edit-info'), style: DsText.detail()),
             SizedBox(height: DsSpace.xs),
             Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-              DsButton('MOVER',
+              DsButton(s.t('ui.town.edit.move'),
                   key: const ValueKey('town-edit-move'),
                   size: DsButtonSize.compact,
                   onPressed: c.editStartMove),
@@ -321,17 +319,17 @@ class TownEditOverlay extends StatelessWidget {
           // Casa (town_editor.md § 3.4): a quién se le asigna.
           final living = ResidentRules.living(town);
           return col([
-            DsSectionHeader('CASA · NIVEL ${b.level}'),
+            DsSectionHeader(s.t('ui.town.edit.house_title', {'level': b.level})),
             Text(
                 b.resident == null
-                    ? 'Vacía. Asignásela a un habitante invitado.'
-                    : 'Vive ${biomeNpcName(b.resident!)}.',
+                    ? s.t('ui.town.edit.house_empty')
+                    : s.t('ui.town.edit.house_lives', {'name': biomeNpcName(b.resident!)}),
                 key: const ValueKey('town-edit-info'),
                 style: DsText.detail()),
             SizedBox(height: DsSpace.xs),
             Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
               for (final n in living)
-                DsButton('ASIGNAR A ${n.name.toUpperCase()}',
+                DsButton(s.t('ui.town.edit.assign', {'name': n.name.toUpperCase()}),
                     key: ValueKey('town-edit-assign-${n.id}'),
                     size: DsButtonSize.compact,
                     onPressed: b.resident == n.id
@@ -339,17 +337,16 @@ class TownEditOverlay extends StatelessWidget {
                         : () =>
                             c.residentOp(TownOp.assign, n.id, target: b.id)),
               if (living.isEmpty)
-                Text('Nadie vive en el pueblo todavía: invitá a alguien '
-                    'desde su bioma.',
+                Text(s.t('ui.town.edit.nobody_lives'),
                     style: DsText.detail()),
             ]),
             SizedBox(height: DsSpace.xs),
             Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-              DsButton('MOVER',
+              DsButton(s.t('ui.town.edit.move'),
                   key: const ValueKey('town-edit-move'),
                   size: DsButtonSize.compact,
                   onPressed: c.editStartMove),
-              DsButton('BORRAR',
+              DsButton(s.t('ui.town.edit.delete'),
                   key: const ValueKey('town-edit-delete'),
                   size: DsButtonSize.compact,
                   onPressed: () => c.editStep(TownEditStep.confirmDelete)),
@@ -368,24 +365,24 @@ class TownEditOverlay extends StatelessWidget {
               style: DsText.detail()),
           SizedBox(height: DsSpace.xs),
           // Ayudantes (farming.md § 8): uno por área, tope por tamaño.
-          DsSectionHeader(lake ? 'PESCADORES' : 'GRANJEROS',
-              trailing: DsBadge('${b.helper} / ${TownRules.helperCap(b)}',
+          DsSectionHeader(lake ? s.t('ui.town.edit.fishers') : s.t('ui.town.edit.farmers'),
+              trailing: DsBadge(s.t('ui.town.edit.count_of', {'n': b.helper, 'max': TownRules.helperCap(b)}),
                   key: const ValueKey('town-edit-helpers'))),
           Text(TownRules.helperLine(b), style: DsText.detail()),
           Builder(builder: (_) {
             final p = c.view?.me?.profile;
             final why = p == null
-                ? 'Sin personaje'
+                ? s.t('ui.town.edit.no_character')
                 : TownRules.cannotHire(p, town, b.id);
             return Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
-              DsButton('CONTRATAR AYUDANTE',
+              DsButton(s.t('ui.town.edit.hire_helper'),
                   key: const ValueKey('town-edit-hire'),
                   size: DsButtonSize.compact,
                   kind: DsButtonKind.primary,
                   tooltip: why ??
                       HelperRules.costText(HelperRules.hireCost(b.kind)),
                   onPressed: why == null ? () => c.hireHelper(b.id) : null),
-              DsButton('DESPEDIR',
+              DsButton(s.t('ui.town.edit.fire'),
                   key: const ValueKey('town-edit-fire'),
                   size: DsButtonSize.compact,
                   onPressed: b.helper > 0 ? () => c.fireHelper(b.id) : null),
@@ -394,15 +391,15 @@ class TownEditOverlay extends StatelessWidget {
           SizedBox(height: DsSpace.xs),
           Wrap(spacing: DsSpace.xs, runSpacing: DsSpace.xs, children: [
             if (lake)
-              DsButton('AGREGAR ESPECIES',
+              DsButton(s.t('ui.town.edit.add_species'),
                   key: const ValueKey('town-edit-stock'),
                   size: DsButtonSize.compact,
                   onPressed: () => c.editStep(TownEditStep.stocking)),
-            DsButton('MOVER',
+            DsButton(s.t('ui.town.edit.move'),
                 key: const ValueKey('town-edit-move'),
                 size: DsButtonSize.compact,
                 onPressed: c.editStartMove),
-            DsButton(lake ? 'BORRAR LAGO' : 'BORRAR',
+            DsButton(lake ? s.t('ui.town.edit.delete_lake') : s.t('ui.town.edit.delete'),
                 key: const ValueKey('town-edit-delete'),
                 size: DsButtonSize.compact,
                 onPressed: () => c.editStep(TownEditStep.confirmDelete)),
@@ -418,20 +415,19 @@ class TownEditOverlay extends StatelessWidget {
             if ((p?.life.count(f.id) ?? 0) > 0 && f.biome != kWaterJunkBiome) f
         ];
         return col([
-          DsSectionHeader('AGREGAR ESPECIES',
+          DsSectionHeader(s.t('ui.town.edit.add_species'),
               trailing: DsBadge('${b.stockTotal}/$cap',
                   key: const ValueKey('town-edit-lake-count'))),
           Text(
-              'Soltá peces de tu bolsa en este lago: esa especie sale más '
-              'seguido y, con dos o más, cría al ganar misiones.',
+              s.t('ui.town.edit.stock_text'),
               style: DsText.detail()),
           SizedBox(height: DsSpace.xs),
           // Plantilla TRASPASO: tu bolsa a la izquierda, el lago a la derecha.
           DsTransferTemplate(
             key: const ValueKey('town-edit-release-grid'),
             keyPrefix: 'town-edit-release',
-            leftTitle: 'TU BOLSA',
-            rightTitle: 'EN ESTE LAGO',
+            leftTitle: s.t('ui.town.edit.your_bag'),
+            rightTitle: s.t('ui.town.edit.in_lake'),
             left: [
               for (final f in fish)
                 DsTransferItem(
@@ -442,7 +438,8 @@ class TownEditOverlay extends StatelessWidget {
                   border: fishRarityColor(f.rarity),
                   count: p?.life.count(f.id) ?? 0,
                   tag: f.rarity.name,
-                  info: '${f.rarity.label} · en este lago: ${b.stock[f.id] ?? 0}',
+                  info: s.t('ui.town.edit.fish_info',
+                      {'rarity': f.rarity.label, 'n': b.stock[f.id] ?? 0}),
                 ),
             ],
             right: [
@@ -456,27 +453,27 @@ class TownEditOverlay extends StatelessWidget {
                     border: fishRarityColor(f.rarity),
                     count: en.value,
                     tag: f.rarity.name,
-                    info: en.value >= 2 ? 'cría al ganar misiones' : 'soltá otro para que críe',
+                    info: en.value >= 2 ? s.t('ui.town.edit.breeds') : s.t('ui.town.edit.release_more'),
                   ),
             ],
             filters: [
-              const DsTransferFilter('TODAS', null),
+              DsTransferFilter(s.t('ui.town.edit.all'), null),
               for (final r in FishRarity.values)
                 DsTransferFilter(r.label.toUpperCase(), r.name),
             ],
-            searchHint: 'BUSCAR PEZ',
+            searchHint: s.t('ui.town.edit.search_fish'),
             quantities: const [1],
             allowRightToLeft: false,
-            leftEmpty: 'No tenés peces en la bolsa.',
-            rightEmpty: 'El lago todavía no tiene especies.',
-            canMove: (s, id) =>
-                b.stockTotal >= cap ? 'El lago está lleno' : null,
-            onMove: (s, id, n) => c.stockFish(id, b.id),
+            leftEmpty: s.t('ui.town.edit.bag_empty'),
+            rightEmpty: s.t('ui.town.edit.lake_empty'),
+            canMove: (_, id) =>
+                b.stockTotal >= cap ? s.t('ui.town.edit.lake_full') : null,
+            onMove: (_, id, n) => c.stockFish(id, b.id),
           ),
           SizedBox(height: DsSpace.xs),
           Align(
               alignment: Alignment.centerLeft,
-              child: DsButton('VOLVER',
+              child: DsButton(s.t('ui.town.edit.back'),
                   key: const ValueKey('town-edit-back'),
                   size: DsButtonSize.compact,
                   onPressed: () => c.editStep(TownEditStep.options))),
@@ -487,27 +484,21 @@ class TownEditOverlay extends StatelessWidget {
         final n = lake ? b.stockTotal : TownRules.seedsBack(b);
         return col([
           DsSectionHeader(b.kind == BuildKind.casa
-              ? 'BORRAR CASA'
+              ? s.t('ui.town.edit.delete_house')
               : lake
-                  ? 'BORRAR LAGO'
-                  : 'BORRAR HUERTA'),
+                  ? s.t('ui.town.edit.delete_lake')
+                  : s.t('ui.town.edit.delete_farm')),
           Text(
               b.kind == BuildKind.casa
-                  ? 'Se pierde la casa y su nivel. Quien vivía queda sin '
-                      'casa (sigue en el pueblo, sin beneficio).'
+                  ? s.t('ui.town.edit.delete_house_warn')
                   : lake
-                  ? (n > 0
-                      ? 'Se pierden los $n peces soltados en este lago.'
-                      : 'El lago no tiene peces soltados.')
-                  : (n > 0
-                      ? 'Se pierden los cultivos; te vuelven $n semillas, '
-                          'una por parcela plantada.'
-                      : 'La huerta no tiene nada plantado.'),
+                      ? s.t('ui.town.edit.delete_lake_warn', {'n': n})
+                      : s.t('ui.town.edit.delete_farm_warn', {'n': n}),
               key: const ValueKey('town-edit-delete-warn'),
               style: DsText.detail()),
           SizedBox(height: DsSpace.xs),
           Row(children: [
-            DsButton('BORRAR',
+            DsButton(s.t('ui.town.edit.delete'),
                 key: const ValueKey('town-edit-delete-ok'),
                 size: DsButtonSize.compact,
                 kind: DsButtonKind.primary,
@@ -519,15 +510,15 @@ class TownEditOverlay extends StatelessWidget {
       case TownEditStep.moving || TownEditStep.placing:
         return col([
           DsSectionHeader(e.step == TownEditStep.moving
-              ? 'MOVER'
+              ? s.t('ui.town.edit.move')
               : e.placeDef == kFaroId
-                  ? 'FARO'
+                  ? s.t('ui.town.edit.lamp')
                   : construction(e.placeDef ?? '')?.name ?? ''),
-          Text(c.editGhostError ?? 'Clic en el mapa para dejarlo.',
+          Text(c.editGhostError ?? s.t('ui.town.edit.click_map_place'),
               key: const ValueKey('town-edit-ghost'), style: DsText.detail()),
           if (e.step == TownEditStep.moving &&
               c.editSelected?.kind == BuildKind.lago)
-            Text('Pegado a otro lago, se funden en uno con todos sus peces.',
+            Text(s.t('ui.town.edit.lake_merge'),
                 style: DsText.detail()),
           SizedBox(height: DsSpace.xs),
           Align(alignment: Alignment.centerLeft, child: cancel()),

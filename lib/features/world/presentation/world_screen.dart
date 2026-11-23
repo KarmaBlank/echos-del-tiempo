@@ -72,6 +72,7 @@ import 'session_view.dart';
 import '../../run/presentation/run_character_panel.dart';
 import '../../run/presentation/run_screen.dart';
 import 'hud/map_hover_tip.dart';
+import '../../../core/i18n/i18n_providers.dart';
 
 /// Pantalla raíz del juego: dibuja lo que pide `session.mode` (mapa +
 /// HUD + paneles, batalla o resultado) y reparte el teclado. Ver
@@ -338,6 +339,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // A language change rebuilds the HUD and panels (world_strings.dart).
+    ref.watch(stringsProvider);
     final view = ref.watch(sessionControllerProvider);
     final sprites = ref.watch(gameSpritesProvider);
     final controller = ref.read(sessionControllerProvider.notifier);
@@ -375,8 +378,8 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('DESCONECTADO',
-                style: TextStyle(color: RetroPalette.gold)),
+            Text(ref.t('ui.world.screen.disconnected'),
+                style: const TextStyle(color: RetroPalette.gold)),
             const SizedBox(height: 8),
             Text(lost, style: const TextStyle(color: RetroPalette.muted)),
             const SizedBox(height: 16),
@@ -384,7 +387,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               key: const Key('lost-back'),
               autofocus: true,
               onPressed: () => _leaveLost(lost),
-              child: const Text('VOLVER AL TÍTULO'),
+              child: Text(ref.t('ui.world.screen.back_to_title')),
             ),
           ],
         ),
@@ -392,7 +395,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     } else if (view == null || !sprites.hasValue) {
       body = Center(
         child: Text(
-          sprites.hasError ? 'ERROR AL CARGAR SPRITES' : 'CARGANDO...',
+          sprites.hasError ? ref.t('ui.world.screen.sprites_error') : ref.t('ui.world.screen.loading'),
           style: const TextStyle(color: RetroPalette.gold),
         ),
       );
@@ -648,12 +651,12 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
               child: ColoredBox(
                 color: ProtoColors.scrim(0.8),
                 child: PanelFrame(
-                  title: 'ELEGÍ TU ASCENSIÓN',
+                  title: ref.t('ui.world.screen.choose_ascension'),
                   width: 1040,
                   fill: true,
                   onClose: () => setState(() => _choosing = false),
                   actions: [
-                    PanelButton('MÁS TARDE [ESC]',
+                    PanelButton(ref.t('ui.world.screen.later'),
                         onPressed: () => setState(() => _choosing = false)),
                   ],
                   child: AscensionChoiceView(
@@ -697,7 +700,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     color: ProtoColors.scrim(0.8),
                     child: Text(
-                      '$err (ver ecos.log)',
+                      ref.t('ui.world.screen.save_error', {'error': err}),
                       style: TextStyle(
                           fontFamily: RetroType.titleFamily,
                           fontSize: RetroType.label,
@@ -874,13 +877,12 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final mine = s.leaveReady.contains(view.localId);
     return DsButton(
       mine
-          ? 'LISTO $n/${humans.length} · CANCELAR'
-          : 'LISTO ($n/${humans.length})',
+          ? ref.t('ui.world.screen.ready_cancel', {'n': n, 'total': humans.length})
+          : ref.t('ui.world.screen.ready', {'n': n, 'total': humans.length}),
       key: const ValueKey('leave-ready'),
       kind: mine ? DsButtonKind.secondary : DsButtonKind.primary,
       selected: mine,
-      tooltip: 'Vuelven al pueblo cuando todos están listos. Lo que quede '
-          'en el piso va al Loot perdido.',
+      tooltip: ref.t('ui.world.screen.ready_tip'),
       onPressed: () => controller.setLeaveReady(!mine),
     );
   }
@@ -904,13 +906,13 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
           weaponName: (id) => weapons[id]?.name ?? id,
           onBack: controller.closeResult,
           victoryLap: s.victoryLap,
-          zoneProgress: _zoneProgress(s, r, controller),
+          zoneProgress: _zoneProgress(ref.strings, s, r, controller),
           unlocked: switch (r.unlocked[view.localId]) {
             final z? =>
               zoneUnlockedText(z, controller.engine.catalog.zone(z)?.name),
             null => null,
           },
-          othersUnlocked: _othersUnlocked(s, r, view.localId),
+          othersUnlocked: _othersUnlocked(ref.strings, s, r, view.localId),
           finalVictory: ResultsPanel.isFinalVictory(r),
           ecoAtlas: r.missionId == EcoRules.missionId && r.success
               ? ecoAtlasText(view.atlasGain)
@@ -968,7 +970,7 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
 
   /// `Zona 2 · Bosque Hondo · Piso 3/3` del resultado de una misión de
   /// zona (piso alcanzado; todos en una victoria).
-  static String? _zoneProgress(
+  static String? _zoneProgress(Strings str,
       GameSession s, MissionResult r, SessionController controller) {
     final z = controller.engine.catalog.zone(r.zone);
     if (z == null) return null;
@@ -976,26 +978,36 @@ class _WorldScreenState extends ConsumerState<WorldScreen> {
     final reached = r.success ? floors : (s.mission?.floor ?? 0) + 1;
     final eco = s.eco;
     if (r.missionId == TrialRules.missionId) {
-      return '${z.name} · Piso $reached/$floors';
+      return str.t('ui.world.screen.trial_progress', {'zone': z.name, 'n': reached, 'floors': floors});
     }
     if (r.missionId == EcoRules.missionId && eco != null) {
-      return 'Eco T${eco.tier} · ${z.name} · '
-          '${controller.engine.ecoRules.bossName(eco)} · Piso $reached/$floors';
+      return str.t('ui.world.screen.eco_progress', {
+        'tier': eco.tier,
+        'zone': z.name,
+        'boss': controller.engine.ecoRules.bossName(eco),
+        'n': reached,
+        'floors': floors
+      });
     }
-    return 'Zona ${z.index} · ${z.name} · Piso $reached/$floors';
+    return str.t('ui.world.screen.zone_progress', {
+      'index': z.index,
+      'zone': z.name,
+      'n': reached,
+      'floors': floors
+    });
   }
 
   /// Los demás jugadores que desbloquearon una zona (`Bo: Zona 3`).
-  static String? _othersUnlocked(
+  static String? _othersUnlocked(Strings str,
       GameSession s, MissionResult r, String localId) {
     final others = [
       for (final e in r.unlocked.entries)
         if (e.key != localId)
-          '${s.players[e.key]?.name ?? e.key}: Zona ${e.value}',
+          str.t('ui.world.screen.unlocked_zone', {'name': s.players[e.key]?.name ?? e.key, 'n': e.value}),
     ];
     return others.isEmpty
         ? null
-        : 'También desbloquearon · ${others.join(' · ')}';
+        : str.t('ui.world.screen.others_unlocked', {'list': others.join(' · ')});
   }
 
   Widget _panel(

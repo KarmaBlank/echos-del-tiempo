@@ -5,8 +5,10 @@ import '../../../../app/theme/panel_frame.dart';
 import '../../../inventory/presentation/item_widgets.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
+import '../world_strings.dart';
 
-/// Aviso fijo del panel (missions.md § "Loot perdido").
+/// Aviso fijo del panel (missions.md § "Loot perdido"), en es-AR; el
+/// que se muestra es `ui.world.lost_loot.notice`.
 const kLostLootNotice = 'Se borra al empezar la próxima misión.';
 
 /// Panel LOOT PERDIDO de la torrecita del pueblo: lo que quedó en el piso
@@ -25,11 +27,11 @@ class LostLootPanel extends StatelessWidget {
     final rules = controller.engine.progression;
     return PanelFrame(
       key: const ValueKey('panel-lost-loot'),
-      title: 'LOOT PERDIDO',
+      title: context.t('ui.world.lost_loot.title'),
       width: 640,
       onClose: controller.closePanel,
       actions: [
-        PanelButton('CERRAR',
+        PanelButton(context.t('ui.world.lost_loot.close'),
             key: const ValueKey('lost-close'), onPressed: controller.closePanel),
       ],
       child: Column(
@@ -37,16 +39,16 @@ class LostLootPanel extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(children: [
-            Text('LO QUE QUEDÓ EN EL PISO', style: DsText.subtitle()),
+            Text(context.t('ui.world.lost_loot.header'), style: DsText.subtitle()),
             const SizedBox(width: 8),
-            DsBadge('${pool.length}', key: const ValueKey('lost-count')),
+            DsBadge(pool.length.toString(), key: const ValueKey('lost-count')),
           ]),
           const SizedBox(height: 4),
-          Text(kLostLootNotice,
+          Text(context.t('ui.world.lost_loot.notice'),
               key: const ValueKey('lost-notice'), style: DsText.detail()),
           const SizedBox(height: 6),
           if (pool.isEmpty)
-            Text('No hay nada.',
+            Text(context.t('ui.world.lost_loot.empty'),
                 key: const ValueKey('lost-empty'), style: DsText.detail())
           else
             ConstrainedBox(
@@ -59,7 +61,7 @@ class LostLootPanel extends StatelessWidget {
                       key: ValueKey('lost-row-${g.id}'),
                       compact: true,
                       title: dropLabelText(rules, g.drop),
-                      trailing: DsButton('TOMAR',
+                      trailing: DsButton(context.t('ui.world.lost_loot.take'),
                           key: ValueKey('lost-take-${g.id}'),
                           size: DsButtonSize.compact,
                           onPressed: () => controller.takeLostLoot(g.id)),

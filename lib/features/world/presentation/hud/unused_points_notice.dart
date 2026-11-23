@@ -9,6 +9,7 @@ import '../../../../app/theme/retro_theme.dart';
 
 import '../../../../app/widgets/points_badge.dart';
 import '../../../characters/domain/unused_points.dart';
+import '../world_strings.dart';
 
 /// Botón `PERSONAJE [TAB]` del HUD con la insignia `+N` de puntos sin usar
 /// (passive_tree_v4.md § 7). Solo aparece si hay puntos: no ocupa lugar
@@ -29,12 +30,12 @@ class UnusedPointsButton extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!points.any) return const SizedBox.shrink();
     return RetroTooltip(
-      message: '<b>Puntos sin usar</b><br>'
+      message: '<b>${context.t('ui.world.hud.unused_points')}</b><br>'
           '${points.parts.map(retroText).join('<br>')}',
       // La insignia va dentro del botón, a la derecha del texto (v0.10.1):
       // suma al ancho y nunca lo tapa.
       child: DsButton(
-        'PERSONAJE [TAB]',
+        context.t('ui.world.hud.character'),
         key: const ValueKey('hud-points-button'),
         size: DsButtonSize.compact,
         onPressed: onPressed,

@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../app/design/design.dart';
 import '../../../../core/procedural/item_icons.dart';
 import '../../../../core/settings/settings_providers.dart';
+import '../world_strings.dart';
 
 /// Aviso de guardado del HUD (docs/specs/save_indicator.md § 2): el ícono
 /// `items.eco` del manifest girando en bucle (de a octavos de vuelta, al
@@ -51,7 +52,7 @@ class _SaveIndicatorState extends ConsumerState<SaveIndicator> {
                 size: 16),
           ),
           SizedBox(width: DsSpace.sm),
-          Flexible(child: Text(SaveIndicator.text, style: DsText.detail())),
+          Flexible(child: Text(context.t('ui.world.notice.saving'), style: DsText.detail())),
         ],
       ),
     );

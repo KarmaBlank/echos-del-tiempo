@@ -8,6 +8,7 @@ import '../../../inventory/presentation/craft_bench.dart'
     show materialColor, materialIcon;
 import '../session_controller.dart';
 import '../session_view.dart';
+import '../world_strings.dart';
 
 /// OFRENDA (persistent_dungeons.md § 4): el altar que queda en la sala del
 /// jefe vencido. La grilla muestra los materiales que pide (estilo
@@ -26,19 +27,19 @@ class OfferingPanel extends StatelessWidget {
     final zone = m?.zone ?? 1;
     final cost = DungeonRules.offeringCost(zone);
     final why = me == null
-        ? 'No estás en la mazmorra'
+        ? context.t('ui.world.offering.not_in_dungeon')
         : DungeonRules.cannotOffer(me.profile, zone);
     return PanelFrame(
       key: const ValueKey('panel-offering'),
-      title: 'OFRENDA',
+      title: context.t('ui.world.offering.title'),
       width: 640,
       onClose: controller.closePanel,
       actions: [
-        PanelButton('OFRENDAR',
+        PanelButton(context.t('ui.world.offering.offer'),
             key: const ValueKey('offering-pay'),
             reason: why,
             onPressed: why == null ? controller.offerBoss : null),
-        PanelButton('CERRAR',
+        PanelButton(context.t('ui.world.offering.close'),
             key: const ValueKey('offering-close'),
             onPressed: controller.closePanel),
       ],
@@ -46,14 +47,14 @@ class OfferingPanel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('El eco del jefe vuelve a su sala a cambio de materiales.',
+          Text(context.t('ui.world.offering.notice'),
               key: const ValueKey('offering-notice'), style: DsText.detail()),
           const SizedBox(height: 6),
           SizedBox(
             height: 260,
             child: DsCraftGridTemplate(
               keyPrefix: 'offering',
-              empty: 'No pide nada.',
+              empty: context.t('ui.world.offering.empty'),
               items: [
                 for (final e in cost.entries)
                   () {
@@ -67,8 +68,9 @@ class OfferingPanel extends StatelessWidget {
                       count: have,
                       description: e.key.description,
                       lines: [
-                        'Pide ${e.value} · tenés $have',
-                        if (have < e.value) 'Te faltan ${e.value - have}',
+                        context.t('ui.world.offering.asks', {'n': e.value, 'have': have}),
+                        if (have < e.value)
+                          context.t('ui.world.offering.missing', {'n': e.value - have}),
                       ],
                     );
                   }(),

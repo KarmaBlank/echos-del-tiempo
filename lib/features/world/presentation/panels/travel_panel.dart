@@ -6,6 +6,7 @@ import '../../../../game_engine/data/biomes_catalog.dart';
 import '../session_controller.dart';
 import '../session_view.dart';
 import '../../../endgame/presentation/eco_zone_hub.dart';
+import '../world_strings.dart';
 
 /// MAPA DE VIAJE (overworld_biomes.md § 1): el pueblo y los biomas; cada
 /// uno viaja por su cuenta. Los biomas que faltan se ven en gris
@@ -31,17 +32,17 @@ class _TravelPanelState extends State<TravelPanel> {
     final profile = widget.view.actor?.profile;
     return PanelFrame(
       key: const ValueKey('panel-travel'),
-      title: 'MAPA DE VIAJE',
+      title: context.t('ui.world.travel.title'),
       width: ecos ? 960 : 640,
       onClose: c.closePanel,
       header: PanelTabs(
         key: const ValueKey('travel-tabs'),
-        labels: const ['VIAJAR', 'ECOS'],
+        labels: [context.t('ui.world.travel.tab_travel'), context.t('ui.world.travel.tab_echoes')],
         index: _tab,
         onChanged: (i) => setState(() => _tab = i),
       ),
       actions: [
-        PanelButton('CERRAR',
+        PanelButton(context.t('ui.world.travel.close'),
             key: const ValueKey('travel-close'), onPressed: c.closePanel),
       ],
       child: ecos && profile != null
@@ -51,7 +52,8 @@ class _TravelPanelState extends State<TravelPanel> {
                   key: const ValueKey('travel-eco-hub'),
                   profile: profile,
                   here: c.nearEcoPortal,
-                  zoneName: (z) => c.engine.catalog.zone(z)?.name ?? 'Zona $z',
+                  zoneName: (z) => c.engine.catalog.zone(z)?.name ??
+                      context.t('ui.world.travel.zone', {'n': z}),
                   goBlocked: c.ecoTravelBlocked,
                   onGo: (z, t) => c.travelToEcoPortal(z, tier: t)),
             )
@@ -67,8 +69,7 @@ class _TravelPanelState extends State<TravelPanel> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-              'Viaje rápido entre lugares desbloqueados. Cada uno viaja por '
-              'su cuenta.',
+              context.t('ui.world.travel.help'),
               style: DsText.detail()),
           SizedBox(height: DsSpace.sm),
           for (final b in kBiomes)
@@ -80,13 +81,13 @@ class _TravelPanelState extends State<TravelPanel> {
                   softWrap: true,
                   style: DsText.detail(b.open ? null : DsColors.textDisabled)),
               trailing: b.id == here
-                  ? DsBadge('ACÁ', key: ValueKey('travel-here-${b.id}'))
+                  ? DsBadge(context.t('ui.world.travel.here'), key: ValueKey('travel-here-${b.id}'))
                   : DsButton(
                       !b.open
-                          ? 'PRÓXIMAMENTE'
+                          ? context.t('ui.world.travel.soon')
                           : c.travelLocked(b.id) == null
-                              ? 'VIAJAR'
-                              : 'ZONA ${b.unlockZone}',
+                              ? context.t('ui.world.travel.go')
+                              : context.t('ui.world.travel.zone_caps', {'n': b.unlockZone}),
                       key: ValueKey('travel-go-${b.id}'),
                       size: DsButtonSize.compact,
                       kind: DsButtonKind.primary,

@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../app/design/design.dart';
 import '../../../../core/update/presentation/update_controller.dart';
+import '../world_strings.dart';
 
 /// Aviso del HUD del mundo cuando el actualizador sabe que hay una versión
 /// nueva (docs/specs/update_notice.md): texto que late suave y una X que
@@ -10,6 +11,7 @@ import '../../../../core/update/presentation/update_controller.dart';
 class UpdateNotice extends StatefulWidget {
   const UpdateNotice({super.key, this.source});
 
+  /// The es-AR text (tests); the shown one is `ui.world.notice.update`.
   static const text = 'Hay una nueva actualización';
 
   /// `null`: [UpdateController.newerVersion].
@@ -58,7 +60,7 @@ class _UpdateNoticeState extends State<UpdateNotice>
                 children: [
                   FadeTransition(
                     opacity: _opacity,
-                    child: Text(UpdateNotice.text,
+                    child: Text(context.t('ui.world.notice.update'),
                         style: DsText.detail(DsColors.reward)),
                   ),
                   SizedBox(width: DsSpace.sm),

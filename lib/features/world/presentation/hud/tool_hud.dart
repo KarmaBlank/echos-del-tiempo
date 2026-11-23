@@ -6,6 +6,7 @@ import '../../../../game_engine/models/player_profile.dart';
 import '../../../../game_engine/rules/farming_rules.dart';
 import '../panels/life_icon.dart';
 import '../session_controller.dart';
+import '../world_strings.dart';
 
 /// HUD de la herramienta en la mano (farming.md § 2.5, fishing.md § 4),
 /// abajo al centro como barra (v0.24.4): el aviso de una línea
@@ -56,14 +57,14 @@ class ToolHud extends StatelessWidget {
           ],
           DsCard(
             padding: EdgeInsets.all(DsSpace.xs),
-            child: tool == ActiveTool.rod ? _rod() : _farm(),
+            child: tool == ActiveTool.rod ? _rod(context) : _farm(context),
           ),
         ],
       ),
     );
   }
 
-  Widget _rod() {
+  Widget _rod(BuildContext context) {
     final life = profile.life;
     final rod = kRods[life.rod];
     final many = life.rods.length > 1;
@@ -91,14 +92,14 @@ class ToolHud extends StatelessWidget {
         children: [
           SizedBox(
               width: seedW,
-              child: many ? card.tip('Cambiar a la siguiente caña') : card),
+              child: many ? card.tip(context.t('ui.world.tools.next_rod')) : card),
         ]);
   }
 
   /// Barra de tres casilleros (Azada | Semilla | Regadera), de ancho fijo
   /// para que ningún rótulo se corte. Clic en uno lo deja en la mano (no
   /// hace la labor); el elegido va con borde dorado.
-  Widget _farm() {
+  Widget _farm(BuildContext context) {
     final f = profile.life.farm;
     final hoe = kFarmTools[f.hoe];
     final can = kFarmTools[f.can];
@@ -126,10 +127,14 @@ class ToolHud extends StatelessWidget {
     }
 
     // Herramientas con la letra de los botones; la semilla, de lectura.
+    final hoeName = context.t('ui.world.tools.hoe');
+    final canName = context.t('ui.world.tools.can');
+    final fertName = context.t('ui.world.tools.fert');
+    final toolNames = {hoeName, canName, fertName};
     Widget label(String text) => Text(text,
         maxLines: 2,
         textAlign: TextAlign.center,
-        style: text == 'Azada' || text == 'Regadera' || text == 'Abono [F]'
+        style: toolNames.contains(text)
             ? DsText.subtitle(DsColors.text)
             : DsText.body());
 
@@ -159,19 +164,19 @@ class ToolHud extends StatelessWidget {
             FarmHand.hoe,
             slotW,
             'hud-tool-hoe',
-            const ['Azada'],
-            'Azada: ${hoe?.name ?? f.hoe} · [R] o rueda: herramienta',
+            [hoeName],
+            context.t('ui.world.tools.hoe_tip', {'name': hoe?.name ?? f.hoe}),
             LifeIcon(f.hoe, LifeIconKind.herramienta, size: iconSize)),
         slot(
             FarmHand.seed,
             seedW,
             'hud-tool-seed',
             d == null
-                ? const ['Sin semillas']
+                ? [context.t('ui.world.tools.no_seeds')]
                 : [d.seedName, '×${f.seedCount(d.id)}'],
             d == null
-                ? 'Sin semillas: comprá en el agropecuario'
-                : '${d.seedName} · [Q] o [ ]: otra semilla',
+                ? context.t('ui.world.tools.no_seeds_tip')
+                : context.t('ui.world.tools.seed_tip', {'name': d.seedName}),
             Row(
               key: const ValueKey('hud-seed-carousel'),
               mainAxisAlignment: MainAxisAlignment.center,
@@ -189,8 +194,8 @@ class ToolHud extends StatelessWidget {
             FarmHand.can,
             slotW,
             'hud-tool-can',
-            const ['Regadera'],
-            'Regadera: ${can?.name ?? f.can}',
+            [canName],
+            context.t('ui.world.tools.can_tip', {'name': can?.name ?? f.can}),
             LifeIcon(f.can, LifeIconKind.herramienta, size: iconSize)),
         // ABONO (v0.24.4): E con este casillero abona; F también, con
         // cualquier herramienta. Clic en el ícono elige otro abono.
@@ -199,12 +204,14 @@ class ToolHud extends StatelessWidget {
             slotW,
             'hud-tool-fert',
             [
-              'Abono [F]',
+              fertName,
               if (fert != null) '×${f.fertCount(fert.id)}',
             ],
             fert == null
-                ? 'Sin abono: comprá en el agropecuario'
-                : '${fert.name}${controller.ownedFerts.length > 1 ? ' · clic en el ícono: otro abono' : ''}',
+                ? context.t('ui.world.tools.no_fert_tip')
+                : controller.ownedFerts.length > 1
+                    ? context.t('ui.world.tools.fert_tip_more', {'name': fert.name})
+                    : fert.name,
             fert == null
                 ? const SizedBox(width: iconSize, height: iconSize)
                 : GestureDetector(

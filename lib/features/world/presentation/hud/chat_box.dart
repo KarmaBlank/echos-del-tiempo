@@ -11,6 +11,7 @@ import '../../../../app/theme/retro_panel.dart';
 import '../../../../app/theme/retro_theme.dart';
 import '../../../../game_engine/models/session_action.dart';
 import '../session_view.dart';
+import '../world_strings.dart';
 
 /// Línea de sistema que merece aviso con el chat plegado (v0.8.1): las
 /// que empiezan con `¡` (misión aceptada, piso despejado, subida de
@@ -259,7 +260,7 @@ class _ChatBoxState extends State<ChatBox> {
             decoration: InputDecoration(
               isDense: true,
               counterText: '',
-              hintText: 'Enter para chatear…',
+              hintText: context.t('ui.world.chat.hint'),
               hintStyle: TextStyle(
                   fontFamily: RetroType.bodyFamily,
                   letterSpacing: RetroType.letterSpacing,
@@ -299,7 +300,7 @@ class _ChatBoxState extends State<ChatBox> {
           // La píldora no toma el foco: el teclado sigue en el juego.
           ExcludeFocus(
             child: DsButton(
-              'CHAT [ENTER]',
+              context.t('ui.world.chat.open'),
               key: const ValueKey('chat-pill'),
               size: DsButtonSize.compact,
               onPressed: widget.focusNode.requestFocus,

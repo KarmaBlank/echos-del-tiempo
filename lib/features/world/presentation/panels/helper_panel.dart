@@ -13,6 +13,7 @@ import '../session_view.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
+import '../world_strings.dart';
 
 /// Pantalla de un ayudante (farming.md § 8, v0.25.5; tecla G al lado del
 /// NPC). Granjero: SEMILLAS (plantilla TRASPASO: las tuyas a la
@@ -41,10 +42,10 @@ class _HelperPanelState extends State<HelperPanel> {
     if (b == null || hp!.$2 >= b.helper) {
       return PanelFrame(
           key: const ValueKey('panel-helper'),
-          title: 'AYUDANTE',
+          title: context.t('ui.town.helper.title'),
           width: 480,
           onClose: c.closePanel,
-          child: Text('Este ayudante ya no está.', style: DsText.detail()));
+          child: Text(context.t('ui.town.helper.gone'), style: DsText.detail()));
     }
     final farm = b.kind == BuildKind.huerta;
     final i = hp.$2;
@@ -54,11 +55,12 @@ class _HelperPanelState extends State<HelperPanel> {
     final tab = _tab.clamp(0, tabs.length - 1);
     return PanelFrame(
       key: const ValueKey('panel-helper'),
-      title: '${farm ? 'GRANJERO' : 'PESCADOR'} ${i + 1}',
+      title: context.t(farm ? 'ui.town.helper.farmer_n' : 'ui.town.helper.fisher_n',
+          {'n': i + 1}),
       width: 820,
       onClose: c.closePanel,
       actions: [
-        PanelButton('CERRAR',
+        PanelButton(context.t('ui.town.helper.close'),
             key: const ValueKey('helper-close'), onPressed: c.closePanel),
       ],
       child: Column(
@@ -79,9 +81,9 @@ class _HelperPanelState extends State<HelperPanel> {
             final st = b.stat(i);
             final (xp, need) = HelperRules.progress(st);
             return Text(
-                'Nivel ${HelperRules.level(st)}'
-                '${need > 0 ? ' · XP $xp / $need' : ' · nivel máximo'}'
-                ' · gana XP trabajando',
+                need > 0
+                    ? context.t('ui.town.helper.level_xp', {'level': HelperRules.level(st), 'xp': xp, 'need': need})
+                    : context.t('ui.town.helper.level_max', {'level': HelperRules.level(st)}),
                 key: const ValueKey('helper-level'),
                 style: DsText.body());
           }),
@@ -90,7 +92,8 @@ class _HelperPanelState extends State<HelperPanel> {
             DsTabBar(
               tabs: [
                 for (final t in tabs)
-                  DsTab(t, key: ValueKey('helper-tab-${t.toLowerCase()}')),
+                  DsTab(_tabLabel(t),
+                      key: ValueKey('helper-tab-${t.toLowerCase()}')),
               ],
               index: tab,
               onChanged: (v) => setState(() => _tab = v),
@@ -107,10 +110,17 @@ class _HelperPanelState extends State<HelperPanel> {
     );
   }
 
+  String _tabLabel(String t) => context.t(switch (t) {
+        'SEMILLAS' => 'ui.town.helper.tab.seeds',
+        'TAREAS' => 'ui.town.helper.tab.tasks',
+        'MEJORAS' => 'ui.town.helper.tab.upgrades',
+        _ => 'ui.town.helper.tab.chest',
+      });
+
   // ---------------- SEMILLAS ----------------
 
-  static final _rarityFilters = [
-    const DsTransferFilter('TODAS', null),
+  List<DsTransferFilter> get _rarityFilters => [
+    DsTransferFilter(context.t('ui.town.helper.all'), null),
     for (final r in FishRarity.values)
       DsTransferFilter(r.label.toUpperCase(), r.name),
   ];
@@ -127,7 +137,7 @@ class _HelperPanelState extends State<HelperPanel> {
       border: fishRarityColor(d.rarity),
       count: n,
       tag: d.rarity.name,
-      info: '${d.rarity.label} · tenés $mine · la huerta tiene $there',
+      info: context.t('ui.town.helper.seed_info', {'rarity': d.rarity.label, 'mine': mine, 'there': there}),
     );
   }
 
@@ -146,16 +156,16 @@ class _HelperPanelState extends State<HelperPanel> {
     return DsTransferTemplate(
       key: const ValueKey('helper-seeds'),
       keyPrefix: 'helper',
-      leftTitle: 'TUS SEMILLAS',
-      rightTitle: 'SEMILLAS DE LA HUERTA',
+      leftTitle: context.t('ui.town.helper.your_seeds'),
+      rightTitle: context.t('ui.town.helper.farm_seeds'),
       left: _sorted(mine,
           (k, n) => kCrops[k] == null ? null : _seedItem(b, k, n, false)),
       right: _sorted(b.seeds,
           (k, n) => kCrops[k] == null ? null : _seedItem(b, k, n, true)),
       filters: _rarityFilters,
-      searchHint: 'BUSCAR SEMILLA',
-      leftEmpty: 'No tenés semillas. Comprá en el agropecuario o cosechá.',
-      rightEmpty: 'La huerta no tiene semillas: pasale de las tuyas.',
+      searchHint: context.t('ui.town.helper.search_seed'),
+      leftEmpty: context.t('ui.town.helper.no_seeds'),
+      rightEmpty: context.t('ui.town.helper.farm_no_seeds'),
       onMove: (from, id, q) => from == DsTransferSide.left
           ? c.giveSeeds(b.id, id, q)
           : c.takeSeeds(b.id, id, q),
@@ -172,8 +182,7 @@ class _HelperPanelState extends State<HelperPanel> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-            'Cada vuelta hace una sola tarea: la primera prendida que tenga '
-            'algo para hacer en su área, en este orden.',
+            context.t('ui.town.helper.tasks_text'),
             style: DsText.detail()),
         SizedBox(height: DsSpace.xs),
         Wrap(spacing: DsSpace.sm, runSpacing: DsSpace.xs, children: [
@@ -186,8 +195,7 @@ class _HelperPanelState extends State<HelperPanel> {
         ]),
         SizedBox(height: DsSpace.sm),
         Text(
-            'Próximo ciclo: ${next?.label.toLowerCase() ?? 'descansa'} · '
-            '${c.helperRoundIn.ceil()} s',
+            context.t('ui.town.helper.next_cycle', {'task': next?.label.toLowerCase() ?? context.t('ui.town.helper.rests'), 's': c.helperRoundIn.ceil()}),
             key: const ValueKey('helper-next'),
             style: DsText.body()),
       ],
@@ -205,7 +213,7 @@ class _HelperPanelState extends State<HelperPanel> {
       final max = r >= HelperRules.maxRank;
       final cost = max ? null : HelperRules.upgradeCost(b.kind, r + 1);
       final why = p == null
-          ? 'Sin personaje'
+          ? context.t('ui.town.helper.no_character')
           : HelperRules.cannotUpgrade(p, b, i, u);
       final col = max ? DsColors.textTitle : DsColors.border;
       return LifeItemCellData(
@@ -218,14 +226,18 @@ class _HelperPanelState extends State<HelperPanel> {
         detail: LifeItemDetail(
           name: u.label,
           nameColor: DsColors.textTitle,
-          tags: [('RANGO $r / ${HelperRules.maxRank}', DsColors.textSecondary)],
+          tags: [
+            (context.t('ui.town.helper.rank', {'n': r, 'max': HelperRules.maxRank}),
+                DsColors.textSecondary)
+          ],
           lines: [
-            'Cada rango: ${HelperRules.effectText(u)}',
-            if (cost != null) 'Cuesta: ${HelperRules.costText(cost)}',
-            if (cost != null) 'Pide nivel ${cost.level} del ayudante',
+            context.t('ui.town.helper.per_rank', {'effect': HelperRules.effectText(u)}),
+            if (cost != null)
+              context.t('ui.town.helper.costs', {'cost': HelperRules.costText(cost)}),
+            if (cost != null) context.t('ui.town.helper.needs_level', {'n': cost.level}),
           ],
           actions: [
-            DsButton(max ? 'MÁXIMO' : 'MEJORAR',
+            DsButton(max ? context.t('ui.town.helper.max') : context.t('ui.town.helper.upgrade'),
                 key: ValueKey('helper-up-go-${u.name}'),
                 size: DsButtonSize.compact,
                 kind: DsButtonKind.primary,
@@ -243,13 +255,10 @@ class _HelperPanelState extends State<HelperPanel> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-            'Mejoras de este ${b.kind == BuildKind.huerta ? 'granjero' : 'pescador'}. '
-            'Cuestan oro, ${kLifeMaterials[mat]!.name.toLowerCase()} y tablas '
-            '(se hacen en el TALLER DE OFICIOS); los rangos altos piden más nivel.',
+            context.t('ui.town.helper.upgrades_text', {'who': b.kind == BuildKind.huerta ? 'farmer' : 'fisher', 'mat': kLifeMaterials[mat]!.name.toLowerCase()}),
             style: DsText.detail()),
         Text(
-            'Tenés: ${p?.life.craft(mat) ?? 0} ${kLifeMaterials[mat]!.name.toLowerCase()}'
-            ' · ${p?.life.craft('tabla') ?? 0} tablas · ${p?.credits ?? 0} de oro',
+            context.t('ui.town.helper.upgrades_have', {'n': p?.life.craft(mat) ?? 0, 'mat': kLifeMaterials[mat]!.name.toLowerCase(), 'planks': p?.life.craft('tabla') ?? 0, 'gold': p?.credits ?? 0}),
             key: const ValueKey('helper-up-have'),
             style: DsText.body()),
         SizedBox(height: DsSpace.xs),
@@ -258,11 +267,11 @@ class _HelperPanelState extends State<HelperPanel> {
           child: LifeItemGrid(
             key: const ValueKey('helper-upgrades'),
             groups: [
-              LifeItemGroup('MEJORAS', [
+              LifeItemGroup(context.t('ui.town.helper.tab.upgrades'), [
                 for (final u in HelperRules.upgradesOf(b.kind)) cell(u)
               ]),
             ],
-            empty: 'Sin mejoras.',
+            empty: context.t('ui.town.helper.no_upgrades'),
           ),
         ),
       ],
@@ -284,7 +293,7 @@ class _HelperPanelState extends State<HelperPanel> {
           border: f == null ? DsColors.border : fishRarityColor(f.rarity),
           count: n,
           tag: f?.rarity.name,
-          info: 'en el cofre',
+          info: context.t('ui.town.helper.in_chest'),
         );
       }
       final pc = parseCropKey(k);
@@ -296,7 +305,7 @@ class _HelperPanelState extends State<HelperPanel> {
         border: pc == null ? DsColors.border : fishRarityColor(pc.$1.rarity),
         count: n,
         tag: pc?.$1.rarity.name,
-        info: 'en el cofre',
+        info: context.t('ui.town.helper.in_chest'),
       );
     }
 
@@ -310,24 +319,24 @@ class _HelperPanelState extends State<HelperPanel> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('${b.chestTotal}/${TownRules.t.i('chestMax')} en el cofre',
+        Text(context.t('ui.town.helper.chest_count', {'n': b.chestTotal, 'max': TownRules.t.i('chestMax')}),
             key: const ValueKey('helper-chest-count'),
             style: DsText.detail()),
         SizedBox(height: DsSpace.xs),
         DsTransferTemplate(
           key: const ValueKey('helper-chest'),
           keyPrefix: 'helper-chest',
-          leftTitle: lake ? 'TUS PECES' : 'TUS COSECHAS',
-          rightTitle: 'COFRE',
+          leftTitle: lake ? context.t('ui.town.helper.your_fish') : context.t('ui.town.helper.your_crops'),
+          rightTitle: context.t('ui.town.helper.tab.chest'),
           left: _sorted(mine, cell),
           right: _sorted(b.chest, cell),
           filters: _rarityFilters,
           allowLeftToRight: false,
           allowRightToLeft: false,
-          leftEmpty: lake ? 'No tenés peces.' : 'Lo que recojas va a tu bolsa.',
-          rightEmpty: 'Vacío. Lo que junten los ayudantes cae acá.',
+          leftEmpty: lake ? context.t('ui.town.helper.no_fish') : context.t('ui.town.helper.collect_to_bag'),
+          rightEmpty: context.t('ui.town.helper.chest_empty'),
           extraActions: [
-            DsButton('← RECOGER TODO',
+            DsButton(context.t('ui.town.helper.collect_all'),
                 key: const ValueKey('helper-collect'),
                 size: DsButtonSize.compact,
                 kind: DsButtonKind.primary,

@@ -14,8 +14,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// uno nuevo sí). Se achica cuando se arregla la fuente.
 const knownGaps = <String, Set<String>>{
   'PressStart2P': {},
-  'VT323': {},
-  'AtkinsonHyperlegible': {},
+  // Flechas y estrella del HUD del mundo: ya se dibujaban con la fuente
+  // de respaldo (RetroType.bodyFallback) antes de pasar a las tablas.
+  'VT323': {'→', '←', '★'},
+  'AtkinsonHyperlegible': {'→', '←', '★'},
 };
 
 const fonts = {

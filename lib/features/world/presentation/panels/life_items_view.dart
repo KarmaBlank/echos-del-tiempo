@@ -16,6 +16,7 @@ import '../session_controller.dart';
 import 'fishing_widgets.dart' show fishRarityColor;
 import 'life_icon.dart';
 import 'life_item_grid.dart';
+import '../world_strings.dart';
 
 /// OFICIOS → INVENTARIO de PERSONAJE (docs/specs/oficio_storage.md,
 /// farming.md § 11, fishing.md § 5.1): una bolsa por oficio (PESCA,
@@ -47,24 +48,24 @@ enum LifeItemsCategory {
   materiales
 }
 
-/// Filtros de cada bolsa: (id, etiqueta, prefijos de id de celda).
+/// Filtros de cada bolsa: (id, clave del rótulo, prefijos de id de celda).
 const _filters = <OficioBag, List<(String, String, List<String>)>>{
   OficioBag.pesca: [
-    ('todo', 'TODO', ['life-tool-cana', 'life-fish-', 'life-junk-']),
-    ('canas', 'CAÑAS', ['life-tool-cana']),
-    ('pescados', 'PESCADOS', ['life-fish-']),
-    ('basura', 'BASURA', ['life-junk-']),
-    ('bestiario', 'BESTIARIO', ['life-log-']),
+    ('todo', 'ui.town.bag.filter.all', ['life-tool-cana', 'life-fish-', 'life-junk-']),
+    ('canas', 'ui.town.bag.filter.rods', ['life-tool-cana']),
+    ('pescados', 'ui.town.bag.filter.fish', ['life-fish-']),
+    ('basura', 'ui.town.bag.filter.junk', ['life-junk-']),
+    ('bestiario', 'ui.town.bag.filter.log', ['life-log-']),
   ],
   OficioBag.cultivo: [
-    ('todo', 'TODO', ['life-tool-a', 'life-tool-r', 'life-seed-', 'life-fert-', 'life-crop-']),
-    ('herramientas', 'HERRAMIENTAS', ['life-tool-a', 'life-tool-r']),
-    ('semillas', 'SEMILLAS', ['life-seed-']),
-    ('abonos', 'ABONOS', ['life-fert-']),
-    ('cosechas', 'COSECHAS', ['life-crop-']),
+    ('todo', 'ui.town.bag.filter.all', ['life-tool-a', 'life-tool-r', 'life-seed-', 'life-fert-', 'life-crop-']),
+    ('herramientas', 'ui.town.bag.filter.tools', ['life-tool-a', 'life-tool-r']),
+    ('semillas', 'ui.town.bag.filter.seeds', ['life-seed-']),
+    ('abonos', 'ui.town.bag.filter.ferts', ['life-fert-']),
+    ('cosechas', 'ui.town.bag.filter.crops', ['life-crop-']),
   ],
   OficioBag.herreria: [
-    ('todo', 'TODO', ['life-craft-']),
+    ('todo', 'ui.town.bag.filter.all', ['life-craft-']),
   ],
 };
 
@@ -88,8 +89,8 @@ class _LifeItemsViewState extends State<LifeItemsView> {
   /// filtran por hora: su horario es "???").
   DayTime? _logTime;
 
-  static String _biomeLabel(String id) => id == 'zona1'
-      ? 'PUEBLO'
+  String _biomeLabel(String id) => id == 'zona1'
+      ? context.t('ui.town.bag.town')
       : kBiomes.where((b) => b.id == id).firstOrNull?.name ?? id.toUpperCase();
 
   static List<String> get _logBiomes => {
@@ -101,7 +102,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
   Widget build(BuildContext context) {
     if (!widget.inTown) {
       return Center(
-        child: Text('Disponible en el pueblo.',
+        child: Text(context.t('ui.town.bag.in_town_only'),
             key: const ValueKey('life-items-away'), style: DsText.detail()),
       );
     }
@@ -152,7 +153,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
           SizedBox(height: DsSpace.xs),
           Wrap(spacing: DsSpace.xs, children: [
             for (final e in filters)
-              DsButton(e.$2,
+              DsButton(context.t(e.$2),
                   key: ValueKey('oficio-filter-${e.$1}'),
                   size: DsButtonSize.compact,
                   selected: f.$1 == e.$1,
@@ -172,7 +173,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
           SizedBox(height: DsSpace.xs),
           Wrap(spacing: DsSpace.xs, children: [
             for (final t in [null, ...DayTime.values])
-              DsButton((t?.label ?? 'Todas las horas').toUpperCase(),
+              DsButton((t?.label ?? context.t('ui.town.bag.all_hours')).toUpperCase(),
                   key: ValueKey('life-log-time-${t?.name ?? 'todas'}'),
                   size: DsButtonSize.compact,
                   selected: _logTime == t,
@@ -184,7 +185,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
           child: LifeItemGrid(
             key: ValueKey('life-list-${_bag.name}-${f.$1}'),
             groups: [LifeItemGroup(null, shown)],
-            empty: q.isEmpty ? 'No hay nada acá.' : 'Sin resultados.',
+            empty: q.isEmpty ? context.t('ui.town.bag.empty') : context.t('ui.town.bag.no_results'),
             emptyKey: const ValueKey('life-items-empty'),
           ),
         ),
@@ -223,7 +224,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
               border: fishRarityColor(r),
               search: '$name $kind',
               equipped: equipped,
-              caption: 'Nv $reqLevel',
+              caption: context.t('ui.town.bag.req_level', {'n': reqLevel}),
               detail: LifeItemDetail(
                 name: name,
                 nameColor: fishRarityColor(r),
@@ -236,8 +237,8 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 hoverTip: true,
                 actions: [
                   equipped
-                      ? const DsTag('EQUIPADA', color: DsColors.reward)
-                      : DsButton('EQUIPAR',
+                      ? DsTag(context.t('ui.town.trader.equipped'), color: DsColors.reward)
+                      : DsButton(context.t('ui.town.trader.equip'),
                           key: ValueKey('life-tool-eq-$id'),
                           size: DsButtonSize.compact,
                           onPressed: onEquip),
@@ -247,7 +248,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
         return [
           for (final id in life.rods)
             if (kRods[id] case final r?)
-              tool(id, r.name, r.rarity, 'Caña', r.reqLevel, life.rod == id,
+              tool(id, r.name, r.rarity, context.t('ui.town.bag.rod'), r.reqLevel, life.rod == id,
                   () => c.equipRod(id), rodLines(r, fishLv),
                   rodCompare(r, kRods[life.rod] ?? kRods[kStarterRod]!, fishLv)),
           for (final id in [...f.hoes, ...f.cans])
@@ -275,37 +276,37 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 border: fishRarityColor(d.rarity),
                 search: d.name,
                 count: life.count(d.id),
-                caption: '${d.price} oro',
+                caption: context.t('ui.town.trader.price_short', {'n': d.price}),
                 detail: LifeItemDetail(
                   name: d.name,
                   nameColor: fishRarityColor(d.rarity),
                   tags: [
-                    ('PESCADO', DsColors.textSecondary),
+                    (context.t('ui.town.trader.tag_fish'), DsColors.textSecondary),
                     (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
                   ],
                   lines: [
-                    'Tenés ${life.count(d.id)}',
-                    'Vale ${d.price} de oro c/u',
+                    context.t('ui.town.trader.have', {'n': life.count(d.id)}),
+                    context.t('ui.town.trader.worth_each', {'n': d.price}),
                   ],
                   actions: [
-                    DsButton('SOLTAR EN EL LAGO',
+                    DsButton(context.t('ui.town.bag.release'),
                         key: ValueKey('life-fish-stock-${d.id}'),
                         size: DsButtonSize.compact,
                         tooltip: lake == null
-                            ? 'Acercate a un lago'
-                            : (lakeFull ? 'El lago está lleno' : null),
+                            ? context.t('ui.town.bag.go_to_lake')
+                            : (lakeFull ? context.t('ui.town.edit.lake_full') : null),
                         onPressed:
                             lakeFull ? null : () => c.stockFish(d.id, lake.id)),
                     // Con varios lagos: elegir en cuál.
                     if (c.town.lakes.length > 1)
                       for (final (i, l) in c.town.lakes.indexed)
                         if (l.id != lake?.id)
-                          DsButton('LAGO ${i + 1}',
+                          DsButton(context.t('ui.town.bag.lake_n', {'n': i + 1}),
                               key: ValueKey('life-fish-stock-${d.id}-${l.id}'),
                               size: DsButtonSize.compact,
                               tooltip: l.stockTotal >= TownRules.lakeCapacity(l)
-                                  ? 'El lago está lleno'
-                                  : '${l.stockTotal}/${TownRules.lakeCapacity(l)} soltados',
+                                  ? context.t('ui.town.edit.lake_full')
+                                  : context.t('ui.town.bag.released', {'n': l.stockTotal, 'max': TownRules.lakeCapacity(l)}),
                               onPressed: l.stockTotal >= TownRules.lakeCapacity(l)
                                   ? null
                                   : () => c.stockFish(d.id, l.id)),
@@ -320,14 +321,14 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 border: DsColors.textSecondary,
                 search: d.name,
                 count: life.count(d.id),
-                caption: '${d.price} oro',
+                caption: context.t('ui.town.trader.price_short', {'n': d.price}),
                 detail: LifeItemDetail(
                   name: d.name,
                   nameColor: DsColors.text,
-                  tags: const [('BASURA DEL AGUA', DsColors.textSecondary)],
+                  tags: [(context.t('ui.town.trader.tag_junk'), DsColors.textSecondary)],
                   lines: [
-                    'Tenés ${life.count(d.id)}',
-                    'Vale ${d.price} de oro c/u',
+                    context.t('ui.town.trader.have', {'n': life.count(d.id)}),
+                    context.t('ui.town.trader.worth_each', {'n': d.price}),
                   ],
                 ),
               ),
@@ -342,7 +343,7 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                   icon: LifeIcon(d.id, LifeIconKind.pescado, size: _icon),
                   border: fishRarityColor(d.rarity),
                   search: d.name,
-                  caption: '$rec cm',
+                  caption: context.t('ui.town.bag.cm', {'n': rec}),
                   detail: LifeItemDetail(
                     name: d.name,
                     nameColor: fishRarityColor(d.rarity),
@@ -351,10 +352,10 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                       (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
                     ],
                     lines: [
-                      'Récord: $rec cm',
-                      'Tamaño: ${d.minCm} a ${d.maxCm} cm',
-                      'Pica: ${LifeTimeRules.fishTimeText(d.id)}',
-                      'Vale ${d.price} de oro',
+                      context.t('ui.town.bag.record', {'n': rec}),
+                      context.t('ui.town.bag.size', {'min': d.minCm, 'max': d.maxCm}),
+                      context.t('ui.town.bag.bites', {'time': LifeTimeRules.fishTimeText(d.id)}),
+                      context.t('ui.town.bag.worth', {'n': d.price}),
                     ],
                   ),
                 )
@@ -370,15 +371,14 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                   search: '',
                   caption: '?',
                   detail: LifeItemDetail(
-                    name: 'Sin descubrir',
+                    name: context.t('ui.town.bag.undiscovered'),
                     nameColor: DsColors.textSecondary,
                     tags: [(_biomeLabel(d.biome), DsColors.textSecondary)],
                     lines: [
-                      'Tamaño: ${d.minCm} a ${d.maxCm} cm',
-                      'Pica: ???',
-                      'Pescalo en ${_biomeLabel(d.biome).toLowerCase()} '
-                          'para anotarlo.',
-                      'La primera captura da XP de Pesca y de personaje.',
+                      context.t('ui.town.bag.size', {'min': d.minCm, 'max': d.maxCm}),
+                      context.t('ui.town.bag.bites', {'time': '???'}),
+                      context.t('ui.town.bag.catch_in', {'place': _biomeLabel(d.biome).toLowerCase()}),
+                      context.t('ui.town.bag.first_catch'),
                     ],
                   ),
                 ),
@@ -395,25 +395,25 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 search: d.seedName,
                 count: e.value,
                 equipped: f.activeSeed == d.id,
-                caption: '${(d.growSec / 60).round()} min',
+                caption: context.t('ui.town.npc.minutes', {'n': (d.growSec / 60).round()}),
                 detail: LifeItemDetail(
                   name: d.seedName,
                   nameColor: fishRarityColor(d.rarity),
                   tags: [
-                    ('SEMILLA', DsColors.textSecondary),
+                    (context.t('ui.town.trader.tag_seed'), DsColors.textSecondary),
                     (d.rarity.label.toUpperCase(), fishRarityColor(d.rarity)),
                   ],
                   lines: [
-                    'Tenés ${e.value}',
-                    'Crece en ${(d.growSec / 60).round()} min',
-                    'Origen: ${_biomeLabel(d.biome).toLowerCase()}',
+                    context.t('ui.town.trader.have', {'n': e.value}),
+                    context.t('ui.town.trader.grows_in', {'min': (d.growSec / 60).round()}),
+                    context.t('ui.town.bag.origin', {'place': _biomeLabel(d.biome).toLowerCase()}),
                     LifeTimeRules.cropAffinity(d.id).label,
-                    'Rinde ${d.price} de oro por cosecha normal',
+                    context.t('ui.town.bag.yields', {'n': d.price}),
                   ],
                   actions: [
                     f.activeSeed == d.id
-                        ? const DsTag('PARA PLANTAR', color: DsColors.reward)
-                        : DsButton('ELEGIR',
+                        ? DsTag(context.t('ui.town.bag.to_plant'), color: DsColors.reward)
+                        : DsButton(context.t('ui.town.bag.pick'),
                             key: ValueKey('life-seed-pick-${d.id}'),
                             size: DsButtonSize.compact,
                             onPressed: () => c.selectSeed(d.id)),
@@ -431,10 +431,9 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 detail: LifeItemDetail(
                   name: d.name,
                   nameColor: fishRarityColor(d.rarity),
-                  tags: const [('ABONO', DsColors.textSecondary)],
-                  lines: ['Tenés ${e.value}'],
-                  description: 'Mejora la calidad de la cosecha. Se usa con F '
-                      'sobre un cultivo.',
+                  tags: [(context.t('ui.town.trader.tag_fert'), DsColors.textSecondary)],
+                  lines: [context.t('ui.town.trader.have', {'n': e.value})],
+                  description: context.t('ui.town.bag.fert_desc'),
                 ),
               ),
         ];
@@ -459,10 +458,10 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                   detail: LifeItemDetail(
                     name: d.name,
                     nameColor: DsColors.textTitle,
-                    tags: const [
-                      ('MATERIAL DE OFICIO', DsColors.textSecondary)
+                    tags: [
+                      (context.t('ui.town.bag.tag_material'), DsColors.textSecondary)
                     ],
-                    lines: ['Tenés ${life.craft(id)}'],
+                    lines: [context.t('ui.town.trader.have', {'n': life.craft(id)})],
                     description: d.description,
                   ),
                 ),
@@ -478,18 +477,18 @@ class _LifeItemsViewState extends State<LifeItemsView> {
                 border: cropQualityColor(q),
                 search: '${d.name} ${q.label}',
                 count: e.value,
-                caption: '${d.price} oro',
+                caption: context.t('ui.town.trader.price_short', {'n': d.price}),
                 detail: LifeItemDetail(
                   name: d.name,
                   nameColor: cropQualityColor(q),
                   tags: [
-                    ('COSECHA', DsColors.textSecondary),
+                    (context.t('ui.town.trader.tag_crop'), DsColors.textSecondary),
                     (q.label.toUpperCase(), cropQualityColor(q)),
                   ],
                   lines: [
-                    'Tenés ${e.value}',
-                    'Calidad ${q.label}',
-                    'Vale ${d.price} de oro c/u',
+                    context.t('ui.town.trader.have', {'n': e.value}),
+                    context.t('ui.town.bag.quality', {'q': q.label}),
+                    context.t('ui.town.trader.worth_each', {'n': d.price}),
                   ],
                 ),
               ),

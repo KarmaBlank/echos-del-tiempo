@@ -7,6 +7,7 @@ import '../../../../game_engine/data/exploration_catalog.dart';
 import '../../../../game_engine/models/game_map.dart';
 import '../../../../game_engine/models/game_session.dart';
 import '../../../../game_engine/rules/exploration_rules.dart';
+import '../world_strings.dart';
 
 /// Separación entre líneas de la caja de objetivos (compacta, v0.8.1).
 const kObjectiveLineGap = 2.0;
@@ -56,8 +57,10 @@ List<Widget> explorationLines(MissionRun m, MapFloor? f, double time) {
     out.add(Padding(
       key: const ValueKey('hud-optional-header'),
       padding: const EdgeInsets.only(top: 2, bottom: kObjectiveLineGap),
-      child: Text(retroText('Opcional'),
-          style: const TextStyle(color: ProtoColors.dim)),
+      child: Builder(
+          builder: (context) => Text(
+              retroText(context.t('ui.world.hud.optional')),
+              style: const TextStyle(color: ProtoColors.dim))),
     ));
   }
   for (final q in f.quests) {
