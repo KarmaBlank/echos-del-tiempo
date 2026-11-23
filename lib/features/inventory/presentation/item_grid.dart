@@ -145,10 +145,7 @@ class PinnedEquippedRow extends StatelessWidget {
               children: [
                 Text(retroText('EQUIPADA'), style: DsText.subtitle()),
                 if (note case final n?)
-                  Text(n,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: DsText.detail()),
+                  Text(n, style: DsText.detail()),
               ],
             ),
           ),

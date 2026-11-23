@@ -65,7 +65,8 @@ String inventoryReasonShort(InventoryMenuAction a, String reason) {
   if (r.length <= 24) return r;
   final cut = r.indexOf(RegExp(r'[:.]'));
   final head = cut > 0 ? r.substring(0, cut) : r;
-  return head.length <= 24 ? head : '${head.substring(0, 22).trimRight()}…';
+  // Whole clause, never cut with an ellipsis (ui_style.md, v0.36.1).
+  return head;
 }
 
 /// Minúsculas sin tildes (para buscar).

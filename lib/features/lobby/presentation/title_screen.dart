@@ -42,6 +42,7 @@ import '../../combat/presentation/sprite_catalog.dart';
 import '../../world/presentation/session_controller.dart';
 import '../../settings/presentation/settings_menu.dart';
 import '../../world/presentation/world_loading.dart';
+import 'patch_notes_panel.dart';
 import 'world_picker.dart';
 import 'worlds_providers.dart';
 
@@ -433,16 +434,22 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     final has = sel != null && !_busy;
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('PERSONAJES (${a.characters.length}/${Account.maxCharacters})',
-            style: DsText.subtitle()),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+              'PERSONAJES (${a.characters.length}/${Account.maxCharacters})',
+              style: DsText.subtitle()),
+        ),
         const SizedBox(height: 12),
+        // Grilla: tantas tarjetas por fila como entren en el ancho del
+        // hueco (title_screen.md § 3).
         SizedBox(
-          width: 4 * CharacterSlotCard.widthOf(context) + 3 * 12,
+          width: double.infinity,
           child: Wrap(
             spacing: 12,
             runSpacing: 12,
-            alignment: WrapAlignment.center,
             children: [
               for (final c in a.characters)
                 CharacterSlotCard(
@@ -466,21 +473,10 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            // JUGAR es la acción principal (borde y texto dorados).
-            DsButton(_travesia ? '> JUGAR' : '> JUGAR SOLO',
-                key: const ValueKey('title-start'),
-                kind: DsButtonKind.primary,
-                onPressed: has ? _start : null),
-            DsButton('CREAR PERSONAJE',
-                key: const ValueKey('char-create'),
-                tooltip: a.isFull
-                    ? 'Máximo ${Account.maxCharacters} personajes'
-                    : null,
-                onPressed:
-                    _busy || a.isFull ? null : () => setState(_openCreator)),
+            // JUGAR y NUEVO PERSONAJE van en la columna de acciones
+            // (title_screen.md § 1).
             DsButton('RENOMBRAR',
                 key: const ValueKey('char-rename'),
                 onPressed: has ? _rename : null),
@@ -726,7 +722,6 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         DsButton(_travesia ? 'CREAR SALA' : 'ABRIR SALA',
@@ -734,7 +729,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             onPressed: netOk ? () => _connect(factory) : null),
         Text('o', style: DsText.detail()),
         SizedBox(
-          width: 170,
+          // Crece con el texto (el hint "CODIGO" nunca se corta).
+          width: RetroType.em(context, 8) + 2 * DsSpace.sm,
           child: TextField(
             key: const ValueKey('title-code'),
             controller: _code,
@@ -825,6 +821,7 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
             ScreenAction(_busy || _travesia ? null : _openBestiary),
         'abrirHazanas':
             ScreenAction(_busy || _travesia ? null : _openAchievements),
+        'verNotasParche': ScreenAction(() => showPatchNotes(context)),
       },
       data: {
         'personajes': [
@@ -833,19 +830,24 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
         ],
       },
       slots: {
-        'avisos': SingleChildScrollView(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const UpdateBanner(),
-            if (notice != null) notice,
-          ]),
+        if (notice != null) 'avisos': SingleChildScrollView(child: notice),
+        // Versión y actualización, chico en la esquina (title_screen.md
+        // § 1): pegado abajo; si crece (versión nueva), se desplaza.
+        'version': const Align(
+          alignment: Alignment.bottomLeft,
+          child: SingleChildScrollView(child: UpdateBanner()),
         ),
         'personajes': SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: _mainBlock(a, sprites, factory, creating),
           ),
         ),
-        if (status != null) 'estadoRed': status,
+        if (status != null)
+          'estadoRed': Align(
+              alignment: Alignment.centerRight,
+              child: SingleChildScrollView(child: status)),
       },
     );
   }
@@ -867,8 +869,8 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
     if (status == null) return null;
     return Text(retroText(status),
         key: const ValueKey('title-net-status'),
-        textAlign: TextAlign.center,
-        style: DsText.body(
+        textAlign: TextAlign.end,
+        style: DsText.detail(
             _netError ? DsColors.danger : DsColors.textSecondary));
   }
 
@@ -884,7 +886,9 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
           // Mundo + personaje (town_loop.md § 11c); la Travesía no tiene
           // mundos.
           if (!_travesia) ...[
-            WorldPicker(busy: _busy),
+            Align(
+                alignment: Alignment.centerLeft,
+                child: WorldPicker(busy: _busy)),
             const SizedBox(height: 16),
           ],
           _selector(a, sprites),
@@ -893,67 +897,118 @@ class _TitleScreenState extends ConsumerState<TitleScreen> {
         ],
       ];
 
-  /// La pantalla armada en código (fallback sin layout de datos).
+  /// Columna de acciones del título (title_screen.md § 1), la del
+  /// fallback; el layout de datos tiene los mismos botones como elementos.
+  Widget _menuColumn(Account? a) {
+    final has = a?.selected != null && !_busy;
+    final full = a != null && a.isFull;
+    Widget item(Widget b) => Padding(
+          padding: EdgeInsets.only(bottom: DsSpace.sm + DsSpace.xs),
+          child: SizedBox(width: RetroType.width(context, 288), child: b),
+        );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // JUGAR es la acción principal (borde y texto dorados).
+        item(DsButton(_travesia ? '> JUGAR' : '> JUGAR SOLO',
+            key: const ValueKey('title-start'),
+            kind: DsButtonKind.primary,
+            onPressed: has ? _start : null)),
+        item(DsButton('NUEVO PERSONAJE',
+            key: const ValueKey('char-create'),
+            tooltip: full ? 'Máximo ${Account.maxCharacters} personajes' : null,
+            onPressed: _busy || a == null || full
+                ? null
+                : () => setState(_openCreator))),
+        item(DsButton('VER NOTAS DEL PARCHE',
+            key: const ValueKey('title-patch-notes'),
+            onPressed: () => showPatchNotes(context))),
+        item(DsButton('CONFIGURACIÓN',
+            key: const ValueKey('title-settings'),
+            onPressed: () => showSettingsDialog(context))),
+        // Salida segura (v0.8.2): confirma y guarda todo (ExitGuard)
+        // antes de cerrar, como la pausa.
+        item(DsButton('SALIR DEL JUEGO',
+            key: const ValueKey('title-quit'),
+            accent: DsColors.danger,
+            onPressed: _quitGame)),
+      ],
+    );
+  }
+
+  /// La pantalla armada en código (fallback sin layout de datos): la
+  /// misma disposición que el layout por defecto.
   Widget _codeLayout(TextTheme text, Account? a, GameSprites? sprites,
       NetSessionFactory? factory, bool creating) {
     final notice = _noticeText(), status = _netStatusText();
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: DefaultTextStyle.merge(
-          style: text.bodySmall,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('ECOS DEL TIEMPO',
-                  textAlign: TextAlign.center,
-                  style: text.displayLarge?.copyWith(
-                    color: RetroPalette.gold,
-                    shadows: const [
-                      Shadow(color: RetroPalette.red, offset: Offset(4, 4)),
-                    ],
-                  )),
-              const SizedBox(height: 16),
-              Text(retroText('Co-op JRPG táctico · 1-8 jugadores'),
-                  style: DsText.detail()),
-              const SizedBox(height: 12),
-              // Aviso de versión nueva (docs/specs/distribution.md).
-              const UpdateBanner(),
-              if (notice != null) ...[
-                const SizedBox(height: 8),
-                notice,
-              ],
-              const SizedBox(height: 20),
-              ..._mainBlock(a, sprites, factory, creating),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.center,
+    final gap = DsSpace.lg;
+    return DefaultTextStyle.merge(
+      style: text.bodySmall,
+      child: Padding(
+        padding: EdgeInsets.all(gap),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  DsButton('CONFIGURACIÓN',
-                      key: const ValueKey('title-settings'),
-                      onPressed: () => showSettingsDialog(context)),
-                  // Salida segura (v0.8.2): confirma y guarda todo
-                  // (ExitGuard) antes de cerrar, como la pausa.
-                  DsButton('SALIR DEL JUEGO',
-                      key: const ValueKey('title-quit'),
-                      accent: DsColors.danger,
-                      onPressed: _quitGame),
-                  // Atajos de teclado al "?" (design_system.md § 2,
-                  // principio 0: nada de textos de ayuda fijos).
-                  DsButton.icon(const Text('?'),
-                      key: const ValueKey('title-help'),
-                      tooltip: _keysHelp,
-                      onPressed: () {}),
+                  SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('ECOS DEL TIEMPO', style: DsText.display()),
+                        SizedBox(height: DsSpace.xl * 2),
+                        _menuColumn(a),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: gap * 2),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (notice != null) ...[
+                            notice,
+                            SizedBox(height: DsSpace.sm),
+                          ],
+                          ..._mainBlock(a, sprites, factory, creating),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
-              if (status != null) ...[
-                const SizedBox(height: 8),
-                status,
+            ),
+            SizedBox(height: DsSpace.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Versión y actualización (docs/specs/distribution.md).
+                const Flexible(
+                    child: Align(
+                        alignment: Alignment.bottomLeft,
+                        child: UpdateBanner())),
+                SizedBox(width: gap),
+                Expanded(
+                  child: Align(
+                      alignment: Alignment.bottomRight,
+                      child: status ?? const SizedBox.shrink()),
+                ),
+                SizedBox(width: DsSpace.sm),
+                // Atajos de teclado al "?" (design_system.md § 2,
+                // principio 0: nada de textos de ayuda fijos).
+                DsButton.icon(const Text('?'),
+                    key: const ValueKey('title-help'),
+                    tooltip: _keysHelp,
+                    onPressed: () {}),
               ],
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

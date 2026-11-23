@@ -203,6 +203,13 @@ Una sola implementación para todo tooltip con caja: `RetroHoverCard`
 
 ### Tooltips cortos con detalle desplegable (v0.9.7)
 
+- **v0.36.1 — nada se corta con "…"**: dentro de un tooltip, una ficha
+  o un panel de detalle ningún texto termina en "…" ni se corta a mitad
+  de oración. El ancho máximo y la fuente fija del tooltip siguen; el
+  texto baja de línea y, si la caja no entra en alto, la caja fijada
+  scrollea. `MÁS DETALLE` puede seguir para el texto extra, pero lo que
+  se ve arriba son oraciones completas.
+
 - v0.9.13 (inventario, `RetroHoverCard(pinOnClick: true, hint: ...)`):
   - Atravesable: por defecto la caja no toma el mouse (`IgnorePointer`);
     pasar a otra casilla, aunque la caja la tape, cambia al instante al

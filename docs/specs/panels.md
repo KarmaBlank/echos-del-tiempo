@@ -262,6 +262,22 @@ Antes un solo panel ARMERÍA abría desde el edificio con el cartel FORJA
   equipada no se vende), grises con el motivo. Vender también sigue en
   Personaje › Inventario. CONSUMIBLES queda acá por ahora (pendiente: el
   dueño decide si se muda).
+- **v0.36.1 (COMPRAR y VENDER, misma lectura que el INVENTARIO):**
+  - Pasar el mouse por una casilla muestra la **misma ficha del mouse**
+    que el inventario (`itemHoverTip`: atravesable, Alt detalle, Shift
+    comparar, clic fija). En COMPRAR la ficha es la de la base Común.
+  - El detalle de la derecha trae la ficha entera del arma (nombre,
+    rareza, stats base, mods, pasiva; el mismo resumen de
+    `itemTipSummaryParts`) con un plegable `▸ VER DETALLE` para el
+    texto largo, y abajo el precio y `COMPRAR ₵n` / `VENDER ₵n`.
+  - A la izquierda, la franja de stats del INVENTARIO (`ChangeStrip` +
+    `stripStats`, sin duplicar): con el arma bajo el mouse (o la
+    elegida) muestra `CAMBIOS` contra la equipada (verde ▲ / rojo ▼);
+    si el arma es la equipada, `ACTUAL`. Clave `armory-buy-side` /
+    `armory-sell-side`.
+  - La plantilla `DsCraftGridTemplate` solo suma ganchos genéricos
+    (`side`, `DsCraftItem.cellWrap`, `DsCraftItem.body`); no sabe de
+    armas.
 - Preparación: las pestañas de las dos (ARMERÍA y después FORJA).
 - Sin cartel ni cofre: son lugares fijos, no construcciones.
 
